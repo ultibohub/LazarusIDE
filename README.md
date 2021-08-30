@@ -1,3 +1,9 @@
+## Ultibo Edition (Work in Progress)
+
+This repository is not in use, we are currently working on an upgrade to Lazarus 2.2 but it is not ready for use yet.
+
+Please continue to use the current [Lazarus](https://github.com/ultibohub/Lazarus) repository until this update is released.
+
 Welcome to Lazarus
 ==================
 
