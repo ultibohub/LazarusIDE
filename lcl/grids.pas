@@ -302,7 +302,7 @@ type
     ActiveControl: boolean;
   end;
 
-  TCompositeCellEditor = class(TWinControl)
+  TCompositeCellEditor = class(TCustomControl)
   private
     FGrid: TCustomGrid;
     FCol,FRow: Integer;
@@ -324,7 +324,10 @@ type
     function GetActiveControl: TWinControl;
     procedure VisibleChanging; override;
     function  SendChar(AChar: TUTF8Char): Integer;
+    procedure SetColor(Value: TColor); override;
     procedure WndProc(var TheMessage : TLMessage); override;
+    procedure CustomAlignPosition(AControl: TControl; var ANewLeft, ANewTop, ANewWidth,
+      ANewHeight: Integer; var AlignRect: TRect; AlignInfo: TAlignInfo); override;
   public
     destructor Destroy; override;
     procedure AddEditor(aEditor: TWinControl; aAlign: TAlign; ActiveCtrl:boolean);
@@ -5561,7 +5564,7 @@ end;
 function TCustomGrid.GetEditorBorderStyle: TBorderStyle;
 begin
   result := bsSingle;
-  if FEditor = FStringEditor then
+  if (FEditor = FStringEditor) or (FEditor = FButtonStringEditor) then
     Result := FStringEditor.BorderStyle
   else if FEditor = FPickListEditor then
     Result := FPickListEditor.BorderStyle;
@@ -8573,8 +8576,18 @@ end;
 procedure TCustomGrid.EditorPos;
 var
   msg: TGridMessage;
-  CellR: TRect;
+  CellR, editorBounds: TRect;
   PosValid: Boolean;
+
+  procedure CalcEditorBounds(aEditor: TWinControl; var refRect: TRect);
+  begin
+    if (aEditor = FStringEditor) and (EditorBorderStyle = bsNone) then
+      refRect := TWSCustomGridClass(WidgetSetClass).
+        GetEditorBoundsFromCellRect(Canvas, refRect, GetColumnLayout(FCol, False))
+    else
+      AdjustInnerCellRect(refRect);
+  end;
+
 begin
   {$ifdef dbgGrid} DebugLn('Grid.EditorPos INIT');{$endif}
   if HandleAllocated and (FEditor<>nil) then begin
@@ -8605,13 +8618,16 @@ begin
     Canvas.Font.Assign(Font);
 
     if FEditorOptions and EO_AUTOSIZE = EO_AUTOSIZE then begin
-      if (FEditor = FStringEditor) and (EditorBorderStyle = bsNone) then
-        CellR := TWSCustomGridClass(WidgetSetClass).
-          GetEditorBoundsFromCellRect(Canvas, CellR, GetColumnLayout(FCol, False))
-      else
-        AdjustInnerCellRect(CellR);
+      CalcEditorBounds(FEditor, CellR);
       FEditor.BoundsRect := CellR;
     end else begin
+      if FEditor=FButtonStringEditor then begin
+        // here we ensure that FStringEditor which is the ActiveControl in
+        // FButtonStringEditor get its bounds right
+        editorBounds := CellR;
+        CalcEditorBounds(FStringEditor, editorBounds);
+        FStringEditor.BoundsRect := editorBounds;
+      end;
       Msg.LclMsg.msg:=GM_SETBOUNDS;
       Msg.CellRect:=CellR;
       Msg.Grid:=Self;
@@ -9852,7 +9868,7 @@ begin
   FButtonStringEditor := TCompositeCellEditor.Create(nil);
   FButtonStringEditor.Name:='ButtonTextEditor';
   FButtonStringEditor.Visible:=False;
-  FButtonStringEditor.AddEditor(FStringEditor, alClient, true);
+  FButtonStringEditor.AddEditor(FStringEditor, alCustom, true);
   FButtonStringEditor.AddEditor(FButtonEditor, alRight, false);
 
   FFastEditing := True;
@@ -13667,6 +13683,16 @@ begin
   inherited WndProc(TheMessage);
 end;
 
+procedure TCompositeCellEditor.CustomAlignPosition(AControl: TControl;
+  var ANewLeft, ANewTop, ANewWidth, ANewHeight: Integer; var AlignRect: TRect;
+  AlignInfo: TAlignInfo);
+begin
+  // Currently there is only one custom aligned control, so no provision is for
+  // calling CustomAlignInsertBefore() or share the space with other editors.
+  aNewLeft := 0;
+  aNewWidth := AlignRect.Width;
+  aNewTop := alignRect.Height div 2 - aNewHeight div 2;
+end;
 
 function TCompositeCellEditor.DoUTF8KeyPress(var UTF8Key: TUTF8Char): boolean;
 begin
@@ -13689,6 +13715,16 @@ begin
     TWSCustomGridClass(FGrid.WidgetSetClass).SendCharToEditor(ActCtrl, AChar);
     Result:=1;
   end;
+end;
+
+procedure TCompositeCellEditor.SetColor(Value: TColor);
+var
+  activeCtrl: TWinControl;
+begin
+  inherited SetColor(Value);
+  activeCtrl := ActiveControl;
+  if activeCtrl<>nil then
+    activeCtrl.Color := Value;
 end;
 
 destructor TCompositeCellEditor.Destroy;
