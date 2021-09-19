@@ -672,12 +672,12 @@ var
 
     ADrawer.Pen := LinePen;
     imgPt1 := ParentChart.GraphToImage(gp);
-    col1 := GetPtColor(i);
+    col1 := GetPtColor(i + FLoBound);
 
     // First line for line type ltFromOrigin
     if LineType = ltFromOrigin then begin
       origin := ParentChart.GraphToImage(AxisToGraph(ZeroDoublePoint));
-      ADrawer.SetPenParams(FLinePen.Style, col1);
+      ADrawer.SetPenParams(FLinePen.Style, col1, FLinePen.Width);
       ADrawer.Line(origin, imgPt1);
     end;
 
@@ -693,14 +693,14 @@ var
           hasBreak := false;
         end;
         imgPt2 := ParentChart.GraphToImage(gp);
-        col2 := GetPtColor(i);
+        col2 := GetPtColor(i + FLoBound);
         if imgPt1 <> imgPt2 then begin
           case FColorEach of
             ceLineBefore, cePointAndLineBefore: col := col2;
             ceLineAfter, cePointAndLineAfter: col := col1;
             else raise Exception.Create('TLineSeries: ColorEach error');
           end;
-          ADrawer.SetPenParams(FLinePen.Style, col);
+          ADrawer.SetPenParams(FLinePen.Style, col, FLinePen.Width);
           case LineType of
             ltFromPrevious:
               ADrawer.Line(imgPt1, imgPt2);
