@@ -995,7 +995,7 @@ var
   lOldWorkingDir, lInitialDir: string;
   Dialog: IFileOpenDialog;
 begin
-  if ACommonDialog.Handle <> 0 then
+  if ACommonDialog.HandleAllocated and (ACommonDialog.Handle <> INVALID_HANDLE_VALUE) then
   begin
     State := SaveApplicationState;
     lOldWorkingDir := GetCurrentDirUTF8;
@@ -1341,6 +1341,7 @@ var
 begin
   if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
   begin
+    WidgetSet.AppInit(ScreenInfo);
     if Succeeded(CoCreateInstance(CLSID_FileOpenDialog, nil, CLSCTX_INPROC_SERVER, IFileOpenDialog, Dialog)) and Assigned(Dialog) then
     begin
       Dialog._AddRef;

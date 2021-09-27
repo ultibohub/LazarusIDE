@@ -1213,7 +1213,9 @@ begin
   DefaultSchemeGrp := ColorSchemeFactory.ColorSchemeGroup[ColorSchemeButton.Caption];
   if DefaultSchemeGrp = nil then
     exit;
-  if FIsEditingDefaults or FCurHighlightElement.IsUsingSchemeGlobals then
+  if FIsEditingDefaults or
+     (OnlySelected and FCurHighlightElement.IsUsingSchemeGlobals)
+  then
     DefaultColorScheme := DefaultSchemeGrp.DefaultColors
   else
     DefaultColorScheme := DefaultSchemeGrp.ColorScheme[FCurrentColorScheme.Language];
@@ -1238,6 +1240,7 @@ begin
        (FCurrentColorScheme.IndexOfAttr
          (TColorSchemeAttribute(ColorElementTree.Items[i].Data)) < 0)
     then begin
+      // Should not get here / This does not correctly re-apply the new elements. See Issue #39388 / ff2da4d6be28d9939231ea6c41a97679e4e98598
       debugln('Error: missing Attr after assign');
       FillColorElementListBox;
       break;
