@@ -645,6 +645,12 @@ begin
   page := GetCocoaTabPageFromHandle(AWinControl.Handle);
   if not Assigned(page) then Exit;
   page.setLabel(ControlTitleToNSStr(AText));
+
+  if (AWinControl.Parent <> nil)
+    and (AWinControl.Parent is TCustomTabControl)
+    and (AWinControl.HandleAllocated)
+  then
+    UpdateTabAndArrowVisibility( TCocoaTabControl(AWinControl.Parent.Handle) );
 end;
 
 class function TCocoaWSCustomPage.GetText(const AWinControl: TWinControl;
@@ -1456,8 +1462,14 @@ end;
 
 class procedure TCocoaWSCustomListView.ItemShow(const ALV: TCustomListView;
   const AIndex: Integer; const AItem: TListItem; const PartialOK: Boolean);
+var
+  lCocoaLV: TCocoaListView;
+  lTableLV: TCocoaTableListView;
 begin
-  inherited ItemShow(ALV, AIndex, AItem, PartialOK);
+  //inherited ItemShow(ALV, AIndex, AItem, PartialOK);
+  if not CheckParams(lCocoaLV, lTableLV, ALV) then
+    Exit;
+  lTableLV.scrollRowToVisible(AItem.Index);
 end;
 
 class function TCocoaWSCustomListView.GetFocused(const ALV: TCustomListView): Integer;

@@ -1809,7 +1809,7 @@ begin
     inc(SrcPos);
   DirLen:=SrcPos-DirStart;
   if DirLen>255 then DirLen:=255;
-  FDirectiveName:=copy(Src,DirStart,DirLen);
+  FDirectiveName:=UpperCase(Copy(Src,DirStart,DirLen));
   DoDirective(DirStart,DirLen);
   SrcPos:=CommentEndPos;
 end;
@@ -3594,7 +3594,7 @@ begin
       inc(SrcPos);
     DirLen:=SrcPos-DirStart;
     if DirLen>255 then DirLen:=255;
-    FDirectiveName:=copy(Src,DirStart,DirLen);
+    FDirectiveName:=UpperCase(Copy(Src,DirStart,DirLen));
     Result:=DoDirective(DirStart,DirLen);
   end else
     Result:=true;
@@ -3979,15 +3979,14 @@ end;
 
 function TLinkScanner.IncludePathDirective: boolean;
 // {$includepath path_addition}
-var AddPath, PathDivider: string;
+var AddPath: string;
 begin
   if StoreDirectives then
     FDirectives[FDirectivesCount-1].Kind:=lsdkIncludePath;
   inc(SrcPos);
   AddPath:=Trim(copy(Src,SrcPos,CommentInnerEndPos-SrcPos));
-  PathDivider:=':';
   Values.Variables[ExternalMacroStart+'INCPATH']:=
-    Values.Variables[ExternalMacroStart+'INCPATH']+PathDivider+AddPath;
+    Values.Variables[ExternalMacroStart+'INCPATH']+':'+AddPath;
   Result:=true;
 end;
 

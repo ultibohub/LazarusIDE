@@ -32,6 +32,17 @@ begin
   RegisterCustomFloatSpinEdit;
 end;
 
+procedure TCustomFloatSpinEdit.Change;
+begin
+  //This needs to be done here, not in TextChanged, since the WS causes a Change, but not a TextChanged.
+  if FForceModifiedIsFalseInOnChange then
+  begin
+    Modified := False;
+    FForceModifiedIsFalseInOnChange := False;
+  end;
+  inherited Change;
+end;
+
 function TCustomFloatSpinEdit.RealGetText: TCaption;
 begin
   if HandleAllocated then
@@ -140,6 +151,11 @@ begin
   // clear FValueChanged to prevent getting the old value from the widget
   FValueChanged := False;
   FUpdatePending := True;
+
+  //UpdateControl will trigger an OnChange through the WS code
+  //Modified will no be reset to True by the WS code, but in this case we need it to be False
+  if not (csLoading in ComponentState) then
+    FForceModifiedIsFalseInOnChange := True;
   UpdateControl;
 
   if not HandleAllocated
@@ -185,7 +201,8 @@ constructor TCustomFloatSpinEdit.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   FCompStyle := csSpinEdit;
-  
+
+  FForceModifiedIsFalseInOnChange := False;
   FIncrement := DefIncrement;
   FDecimals := DefDecimals;
   FMaxValue := DefMaxValue;

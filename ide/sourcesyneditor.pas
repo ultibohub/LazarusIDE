@@ -86,6 +86,7 @@ type
     function ViewToTextIndex(AIndex: TLineIdx): TLineIdx; override;
   public
     constructor Create;
+    procedure ClearLineMap;
     property LineMapCount: integer read FLineMapCount write SetLineMapCount;
     property LineMap[Index: Integer]: Integer read GetLineMap write SetLineMap;
   end;
@@ -1200,7 +1201,8 @@ procedure TSourceLazSynTopInfoView.SetLineMapCount(AValue: integer);
 begin
   if FLineMapCount = AValue then Exit;
   FLineMapCount := AValue;
-  SetLength(FLineMap, AValue);
+  if (length(FLineMap) < AValue) or (length(FLineMap) > (AValue+1) * 2) then
+    SetLength(FLineMap, AValue);
 end;
 
 procedure TSourceLazSynTopInfoView.SetHighlighterTokensLine(ALine: TLineIdx;
@@ -1238,7 +1240,13 @@ end;
 
 constructor TSourceLazSynTopInfoView.Create;
 begin
-  LineMapCount := 0;
+  ClearLineMap;
+end;
+
+procedure TSourceLazSynTopInfoView.ClearLineMap;
+begin
+  FLineMapCount := 0;
+  SetLength(FLineMap, 0);
 end;
 
 { TSourceLazSynSurfaceGutter }
@@ -1433,6 +1441,17 @@ end;
 procedure TIDESynEditor.DoHighlightChanged(Sender: TSynEditStrings; AIndex, ACount: Integer);
 begin
   FTopInfoNestList.Clear;
+  if (AIndex = -1) and (ACount = -1) then begin
+    // New Highlighter was assigned
+    if (FFoldView.HighLighter = nil) or not(FFoldView.HighLighter is TSynPasSyn) then begin
+      FSrcSynCaretChangedNeeded := False;
+      FTopInfoDisplay.ClearLineMap;
+      if TSourceLazSynSurfaceManager(FPaintArea).TopLineCount <> 0 then begin
+        TSourceLazSynSurfaceManager(FPaintArea).TopLineCount := 0;
+        Invalidate; // TODO: move to PaintArea
+      end;
+    end
+  end;
   if FSrcSynCaretChangedNeeded then
     SrcSynCaretChanged(nil);
 end;
@@ -1456,6 +1475,7 @@ begin
 
   if FFoldView.HighLighter.NeedScan then begin
     FSrcSynCaretChangedNeeded := True;
+    FTopInfoDisplay.LineMapCount := 0;
     exit;
   end;
   FSrcSynCaretChangedNeeded := False;
