@@ -570,6 +570,7 @@ type
     FOnUpdateProc: TNotifyProcedure;
     FUsers: TIDESpecialCommands;
 
+    function GetEnabled: Boolean;
     function GetUser(Index: Integer): TIDESpecialCommand;
     function GetUserCount: Integer;
     procedure SetOnExecute(const aOnExecute: TNotifyEvent);
@@ -609,7 +610,7 @@ type
     procedure DoOnUpdate; overload;
     procedure DoOnUpdate(Sender: TObject); overload;
   public
-    property Enabled: Boolean write SetEnabled; // set Enabled of all "Users" TIDESpecialCommand, use Users to read
+    property Enabled: Boolean read GetEnabled write SetEnabled;
     property Caption: string write SetCaption; // set Caption of all "Users" TIDESpecialCommand, use Users to read
     property Hint: string write SetHint; // set Hint of all "Users" TIDESpecialCommand, use Users to read
     // don't add Visible property here - it is not generic. Tool buttons should never be hidden programmatically
@@ -1298,6 +1299,14 @@ begin
   Result := FUsers[Index];
 end;
 
+function TIDECommand.GetEnabled: Boolean;
+begin
+  if FUsers.Count > 0 then
+    Result := FUsers[0].Enabled
+  else
+    Result := True;   // A command without SpecialCommands is enabled.
+end;
+
 function TIDECommand.GetUserCount: Integer;
 begin
   Result := FUsers.Count;
@@ -1315,7 +1324,7 @@ procedure TIDECommand.SetOnExecute(const aOnExecute: TNotifyEvent);
 var
   xUser: TIDESpecialCommand;
 begin
-  if CompareMethods(TMethod(FOnExecute), TMethod(aOnExecute)) then Exit;
+  if SameMethod(TMethod(FOnExecute), TMethod(aOnExecute)) then Exit;
   FOnExecute := aOnExecute;
   for xUser in FUsers do
     if xUser.SyncProperties then
@@ -1813,7 +1822,7 @@ end;
 
 procedure TIDESpecialCommand.SetOnClickMethod(const aOnClick: TNotifyEvent);
 begin
-  if CompareMethods(TMethod(FOnClickMethod), TMethod(aOnClick)) then Exit;
+  if SameMethod(TMethod(FOnClickMethod), TMethod(aOnClick)) then Exit;
   FOnClickMethod := aOnClick;
   if (FCommand<>nil) and SyncAvailable then
     FCommand.OnExecute:=aOnClick;

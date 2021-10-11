@@ -3506,7 +3506,7 @@ var
   IDECmd: TIDECommand;
   s: String;
 begin
-  //debugln('TMainIDE.OnProcessIDECommand ',dbgs(Command));
+  //DebugLn('TMainIDE.OnProcessIDECommand START ',dbgs(Command));
   Handled:=true;
 
   case Command of
@@ -3548,7 +3548,6 @@ begin
     if ToolStatus = itNone then begin
       if DebugBoss.InitDebugger([difInitForAttach]) then begin
         s := GetPidForAttach;
-
         if s <> '' then begin
           ToolStatus := itDebugger;
           DebugBoss.Attach(s);
@@ -3635,7 +3634,7 @@ begin
     // custom commands
     IDECmd:=IDECommandList.FindIDECommand(Command);
     //DebugLn('TMainIDE.OnProcessIDECommand Command=',dbgs(Command),' ',dbgs(IDECmd));
-    if IDECmd<>nil then
+    if Assigned(IDECmd) and IDECmd.Enabled then
       Handled:=IDECmd.Execute(IDECmd);
   end;
   //DebugLn('TMainIDE.OnProcessIDECommand Handled=',dbgs(Handled),' Command=',dbgs(Command));
@@ -4416,7 +4415,9 @@ procedure TMainIDE.ProjectOptionsHelper(const AFilter: array of TAbstractIDEOpti
 var
   Capt: String;
 begin
-  if Project1=nil then exit;
+  // This is not called only through ecProjectOptions command. Test for Enabled.
+  if (Project1=nil) or not MainIDEBar.itmProjectOptions.Enabled then exit;
+
   // This is kind of a hack. Copy OtherDefines from project to current
   //  buildmode's compiler options and then back after they are modified.
   // Only needed for projects, because packages don't have buildmodes.
@@ -4431,8 +4432,8 @@ begin
     Project1.DefineTemplates.AllChanged(false);
     IncreaseBuildMacroChangeStamp;
     MainBuildBoss.SetBuildTargetProject1(false);
-    MainIDE.UpdateCaption;
-    MainIDE.UpdateDefineTemplates;
+    UpdateCaption;
+    UpdateDefineTemplates;
   end;
 end;
 
@@ -4639,7 +4640,7 @@ end;
 
 procedure TMainIDE.mnuStopProjectClicked(Sender: TObject);
 begin
-  if (MainIDE.ToolStatus = itBuilder) then
+  if (ToolStatus = itBuilder) then
     mnuAbortBuildProjectClicked(Sender)
   else
     DebugBoss.DoStopProject;
@@ -6543,7 +6544,6 @@ begin
   if ProjInspector=nil then begin
     IDEWindowCreators.CreateForm(ProjInspector,TProjectInspectorForm,
        State=iwgfDisabled,LazarusIDE.OwningComponent);
-    ProjInspector.OnShowOptions:=@mnuProjectOptionsClicked;
     ProjInspector.OnAddUnitToProject:=@ProjInspectorAddUnitToProject;
     ProjInspector.OnAddDependency:=@PkgBoss.ProjectInspectorAddDependency;
     ProjInspector.OnRemoveFile:=@ProjInspectorRemoveFile;
