@@ -484,6 +484,10 @@ type
   { TFPRegisters }
 
   TFPRegisters = class(TRegisterSupplier)
+  private
+    FThr: TDbgThread;
+    FRegisterList: TDbgRegisterValueList;
+    procedure GetRegisterValueList();
   public
     procedure RequestData(ARegisters: TRegisters); override;
   end;
@@ -560,6 +564,7 @@ type
     FRegContext: TFpDbgLocationContext;
     FRegResult: Boolean;
     procedure DoReadRegister;
+    procedure DoRegisterSize;
   protected
     function GetDbgProcess: TDbgProcess; override;
     function GetDbgThread(AContext: TFpDbgLocationContext): TDbgThread; override;
@@ -571,6 +576,7 @@ type
     function ReadMemoryEx(AnAddress, AnAddressSpace: TDbgPtr; ASize: Cardinal; ADest: Pointer): Boolean; override;
     function ReadRegister(ARegNum: Cardinal; out AValue: TDbgPtr;
       AContext: TFpDbgLocationContext): Boolean; override;
+    function RegisterSize(ARegNum: Cardinal): Integer; override;
     //WriteMemory is not overwritten. It must ONLY be called in the debug-thread
   end;
 
@@ -1402,6 +1408,11 @@ begin
   FRegResult := inherited ReadRegister(FRegNum, FRegValue, FRegContext);
 end;
 
+procedure TFpDbgMemReader.DoRegisterSize;
+begin
+  FRegValue := inherited RegisterSize(FRegNum);
+end;
+
 constructor TFpDbgMemReader.create(AFpDebugDebuger: TFpDebugDebugger);
 begin
   FFpDebugDebugger := AFpDebugDebuger;
@@ -1437,6 +1448,17 @@ begin
   FFpDebugDebugger.ExecuteInDebugThread(@DoReadRegister);
   AValue := FRegValue;
   result := FRegResult;
+end;
+
+function TFpDbgMemReader.RegisterSize(ARegNum: Cardinal): Integer;
+begin
+  // Shortcut, if in debug-thread / do not use Self.F*
+  if ThreadID = FFpDebugDebugger.FWorkerThreadId then
+    exit(inherited RegisterSize(ARegNum));
+
+  FRegNum := ARegNum;
+  FFpDebugDebugger.ExecuteInDebugThread(@DoRegisterSize);
+  result := FRegValue;
 end;
 
 { TFPCallStackSupplier }
@@ -1962,6 +1984,11 @@ end;
 
 { TFPRegisters }
 
+procedure TFPRegisters.GetRegisterValueList();
+begin
+  FRegisterList :=  FThr.RegisterValueList;
+end;
+
 procedure TFPRegisters.RequestData(ARegisters: TRegisters);
 var
   ARegisterList: TDbgRegisterValueList;
@@ -1982,7 +2009,9 @@ begin
 
   ARegisterList := nil;
   if ARegisters.StackFrame = 0 then begin
-    ARegisterList :=  thr.RegisterValueList;
+    FThr := thr;
+    TFpDebugDebugger(Debugger).ExecuteInDebugThread(@GetRegisterValueList);
+    ARegisterList :=  FRegisterList;
   end
   else begin
     frm := thr.CallStackEntryList[ARegisters.StackFrame];
@@ -2406,6 +2435,7 @@ begin
       exit;
     end;
   end;
+  FDebugger.FDbgController.DefaultContext; // Make sure it is avail and cached / so it can be called outside the thread
 
   if CurrentThread = nil then
     exit;
@@ -3805,7 +3835,8 @@ begin
     result.SrcLine:=0;
 
     if AnAddress=0 then
-      result.Address := FDbgController.CurrentThread.GetInstructionPointerRegisterValue
+      result.Address := FDbgController.DefaultContext.Address // DefaultContext has the InstrPtr cached
+      //result.Address := FDbgController.CurrentThread.GetInstructionPointerRegisterValue
     else
       result.Address := AnAddress;
 

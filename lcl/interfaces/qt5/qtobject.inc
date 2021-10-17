@@ -826,19 +826,9 @@ begin
       begin
         FAppActive := True;
         {$IF DEFINED(QTDEBUGAPPACTIVATE) OR DEFINED(VerboseQtEvents)}
-        DebugLn('TQtWidgetSet.EventFilter: Application is activated - time ',dbgs(GetTickCount));
+        DebugLn('TQtWidgetSet.EventFilter: Application is activated: ',dbgs(GetTickCount));
         {$ENDIF}
-        // check if activated form is StayOnTop, if it's so, we must
-        // eat next appdeactivate & appactivate since we are changing form
-        // flags !
-        if (StayOnTopList <> nil) then
-          W := TQtWidget(GetActiveWindow)
-        else
-          W := nil;
         Application.IntfAppActivate;
-        QtRestoreStayOnTop;
-        if (W <> nil) and Assigned(StayOnTopList) and StayOnTopList.HasId(W) then
-          W.Activate;
         Result := True;
       end;
 
@@ -897,14 +887,12 @@ begin
           exit(True);
         end;
         {$IF DEFINED(QTDEBUGAPPACTIVATE) OR DEFINED(VerboseQtEvents)}
-        DebugLn('TQtWidgetSet.EventFilter: Application is deactivated - time ',dbgs(GetTickCount));
+        DebugLn('TQtWidgetSet.EventFilter: Application is deactivated: ',dbgs(GetTickCount));
         {$ENDIF}
         FAppActive := False;
         Application.IntfAppDeactivate;
-        QtRemoveStayOnTop;
         Result := True;
       end;
-
     QEventApplicationPaletteChange:
       begin
         if Sender = App then
