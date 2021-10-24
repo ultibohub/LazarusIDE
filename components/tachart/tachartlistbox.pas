@@ -31,7 +31,7 @@ interface
 
 uses
   Classes, Controls, SysUtils, Types, Math,
-  StdCtrls, Graphics, LCLIntf, LCLType, Themes,
+  StdCtrls, Graphics, LCLIntf, LCLType, LMessages, Themes,
   IntegerList, LazUTF8,
   TAChartUtils, TACustomSeries, TALegend, TAGraph,
   TACustomSource, TADrawerCanvas, TADrawUtils, TAEnumerators, TAGeometry;
@@ -101,6 +101,7 @@ type
     procedure ClickedSeriesIcon(AIndex: Integer); virtual;
     function CreateLegendItems: TChartLegendItems;
     procedure Notification(AComponent: TComponent; AOperation: TOperation); override;
+    procedure SetBiDiMode(AValue: TBiDiMode); override;
 
   public
     constructor Create(AOwner: TComponent); override;
@@ -150,7 +151,7 @@ type
     property Font;
     property IntegralHeight;
 //    property Items;
-    property ItemHeight;
+    property ItemHeight default 0;
     property MultiSelect;
     property OnChangeBounds;
     property OnClick;
@@ -257,32 +258,39 @@ begin
   inherited;
 end;
 
+{ Based on the rect of a listbox item, calculates the locations of the
+  checkbox and of the series icon }
 procedure TChartListbox.CalcRects(
   const AItemRect: TRect; out ACheckboxRect, ASeriesIconRect: TRect);
-{ based on the rect of a listbox item, calculates the locations of the
-  checkbox and of the series icon }
 const
   MARGIN = 4;
 var
-  x: Integer;
+  x, y, h: Integer;
+  isRTL: Boolean;
 begin
   ACheckBoxRect := ZeroRect;
   ASeriesIconRect := ZeroRect;
+  isRTL := IsRightToLeft;
 
-  x := AItemRect.Left + MARGIN;
+  x := IfThen(isRTL, AItemRect.Right - MARGIN, AItemRect.Left + MARGIN);
+  
   if cloShowCheckboxes in Options then begin
     ACheckBoxRect := Rect(0, 0, FCheckboxSize.CX, FCheckboxSize.CY);
+    if isRTL then dec(x, FCheckboxSize.CX);
     OffsetRect(ACheckboxRect, x, (AItemRect.Top + AItemRect.Bottom - FCheckboxSize.CY) div 2);
-    if cloShowIcons in Options then
-      x += ACheckboxRect.Right;
-  end
-  else begin
-    if cloShowIcons in Options then
-      x += AItemRect.Left;
+    if cloShowIcons in Options then 
+      x := IfThen(isRTL, ACheckboxRect.Left - MARGIN, ACheckboxRect.Right + MARGIN);
   end;
+  
   if cloShowIcons in Options then
-    ASeriesIconRect := Rect(
-      x, AItemRect.Top + 2, x + FChart.Legend.SymbolWidth, AItemRect.Bottom - 2);
+  begin
+    h := CalculateStandardItemHeight;
+    y := (AItemRect.Top + AItemRect.Bottom - h) div 2;
+    if isRTL then
+      ASeriesIconRect := Rect(x - FChart.Legend.SymbolWidth, y, x, y + h)
+    else
+      ASeriesIconRect := Rect(x, y, x + FChart.Legend.SymbolWidth, y + h);
+  end;
 end;
 
 procedure TChartListbox.ClickedCheckbox(AIndex: Integer);
@@ -347,9 +355,9 @@ begin
     Result := 2;
 end;
 
+{ Draws the listbox item }
 procedure TChartListbox.DrawItem(
   AIndex: Integer; ARect: TRect; AState: TOwnerDrawState);
-{ draws the listbox item }
 const
   THEMED_BASE: array [TCheckboxesStyle, Boolean] of TThemedButton = (
     (tbCheckBoxUncheckedNormal, tbCheckBoxCheckedNormal),
@@ -358,9 +366,10 @@ const
 var
   id: IChartDrawer;
   rcb, ricon: TRect;
-  x: Integer;
+  x, y, w: Integer;
   tb: TThemedButton;
   tbBase, tbOffs: Integer;
+  isRTL: Boolean;
   {$IFDEF USE_BITMAPS}
   bmp: TBitmap;
   {$ELSE}
@@ -375,6 +384,8 @@ begin
   if (FChart = nil) or not InRange(AIndex, 0, Count - 1) then
     exit;
 
+  isRTL := IsRightToLeft;
+  
   Canvas.FillRect(ARect);
   if cloShowCheckboxes in Options then begin
     tbBase := ord(THEMED_BASE[FCheckStyle, Checked[AIndex]]);
@@ -397,19 +408,26 @@ begin
     {$ELSE}
     ThemeServices.DrawElement(Canvas.Handle, ted, rcb);
     {$ENDIF}
-    x := rcb.Right;
+    x := IfThen(isRTL, rcb.Left, rcb.Right);
   end
   else
-    x := ARect.Left;
+    x := IfThen(isRTL, ARect.Right, ARect.Left);
 
   Canvas.Brush.Style := bsClear;
   if cloShowIcons in Options then begin
     id := TCanvasDrawer.Create(Canvas);
     id.Pen := Chart.Legend.SymbolFrame;
+    id.SetRightToLeft(isRTL);
     FLegendItems[AIndex].Draw(id, ricon);
   end
-  else
-    Canvas.TextOut(x + 2, ARect.Top, FLegendItems.Items[AIndex].Text);
+  else begin
+    y := (ARect.Top + ARect.Bottom - Canvas.TextHeight('Tg')) div 2;
+    if IsRightToLeft then begin
+      w := Canvas.TextWidth(FLegendItems.Items[AIndex].Text);
+      Canvas.TextOut(x - 2 - w, y, FLegendItems.Items[AIndex].Text);
+    end else
+      Canvas.TextOut(x + 2, y, FLegendItems.Items[AIndex].Text);
+  end;
 end;
 
 procedure TChartListbox.EnsureSingleChecked(AIndex: Integer);
@@ -507,9 +525,14 @@ end;
 // Item height is determined as maximum of:
 // checkbox height, text height, ItemHeight property value.
 procedure TChartListbox.MeasureItem(AIndex: Integer; var AHeight: Integer);
+var
+  hText: Integer;
 begin
   inherited MeasureItem(AIndex, AHeight);
-  AHeight := Max(CalculateStandardItemHeight, AHeight);
+  hText := CalculateStandardItemHeight;
+  if Options * [cloShowIcons, cloShowCheckboxes] <> [] then
+    inc(hText, 4);
+  AHeight := Max(AHeight, hText);
   if cloShowCheckboxes in Options then
     AHeight := Max(AHeight, GetSystemMetrics(SM_CYMENUCHECK) + 2);
 end;
@@ -644,6 +667,12 @@ begin
     EnsureSingleChecked;
 end;
 
+procedure TChartListbox.SetBiDiMode(AValue: TBiDiMode);
+begin
+  inherited SetBiDiMode(AValue);
+  Invalidate;
+end;
+
 procedure TChartListbox.SetChart(AValue: TChart);
 { connects the ListBox to the chart }
 begin
@@ -706,6 +735,7 @@ begin
   if FOptions = AValue then exit;
   FOptions := AValue;
   EnsureSingleChecked;
+  RecreateWnd(Self);
   Invalidate;
 end;
 
