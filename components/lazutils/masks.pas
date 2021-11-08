@@ -11,7 +11,7 @@
   DOS/Windows compatible mask which behaves differently from standard mask.
 
  Author: José Mejuto
- Changes and improvements by Juha Manninen
+ Changes and improvements by Juha Manninen and Bart Broersma
 }
 unit Masks;
 
@@ -45,19 +45,12 @@ type
     property Code: TMaskExceptionCode read FCode;
   end;
 
-  TMaskFailCause = (
-    mfcSuccess,
-    mfcMatchStringExhausted,
-    mfcMaskExhausted,
-    mfcMaskNotMatch,
-    mfcUnexpectedEnd
-  );
 
   TMaskOpCode=(mocAnyChar,          //treat ? as a wildcard to match exactly one char
                mocAnyCharOrNone,    //treat [?] to match any char or the absence of a char
                mocAnyText,          //treat * as a wildcard to mach zero or any mumber of chars
-               mocRange,            //treat [a-c] to match either 'a', 'b' or 'c'. '-' is treated as a range indicator.
-                                    //to have a literal '-' in a range, it must be the first character in the range: [-a-c] matches '-', 'a', 'b', or 'c'.
+               mocRange,            //treat [a-c] to match either 'a', 'b' or 'c'. '-' is always treated as a range indicator.
+                                    //to have a literal '-' in a range, you must escape it with EscapeChar (defaults to '\'): [+-\-] matches '+', ',', or '-'.
                mocSet,              //treat [a-c] to match either 'a', '-' or 'c'
                mocNegateGroup,      //treat [!a-c] to not match 'a', 'b', or 'c', but match any other char. Requires mocRange and/or mocSet
                mocEscapeChar        //treat EscapeChar (defaults to '\') to take the next char as a literal, so '\*' is treated as a literal '*'.
@@ -73,32 +66,19 @@ type
     Anyth*ng.abc    = "*" matches 0 or more of chars
 
     ------- Quirks -------
+   *)
+  TWindowsQuirk=(wqAnyExtension,      // Anything*.*     : ".*" is removed.
+                 wqFilenameEnd,       // Anything??.abc  : "?" matches 1 or 0 chars (except '.')
+                                      // (Not the same as "Anything*.abc", but the same
+                                      // as regex "Anything.{0,2}\.abc")
+                                      // Internally converted to "Anything[??].abc"
 
-    --wqAnyExtension
-      Anything*.*     = ".*" is removed.
-
-    --wqFilenameEnd
-      Anything??.abc  = "?" matches 1 or 0 chars (except '.')
-                        (Not the same as "Anything*.abc", but the same
-                        as regex "Anything.{0,2}\.abc")
-                        Internally converted to "Anything[??].abc"
-
-    --wqExtension3More
-      Anything.abc    = Matches "Anything.abc" but also "Anything.abc*" (3 char extension)
-      Anything.ab     = Matches "Anything.ab" and never "anything.abcd"
-      *.pas           = Matches "Unit1.pas.bak". Not good.
-
-    --wqEmptyIsAny
-      ""              = Empty string matches anything "*"
-
-    --wqAllByExtension (Not in use anymore)
-      .abc            = Runs as "*.abc"
-
-    --wqNoExtension
-      Anything*.      = Matches "Anything*" without extension
-  *)
-  TWindowsQuirk=(wqAnyExtension, wqFilenameEnd, wqExtension3More,
-                 wqEmptyIsAny, wqAllByExtension, wqNoExtension);
+                 wqExtension3More,    // Anything.abc    : Matches "Anything.abc" but also "Anything.abc*" (3 char extension)
+                                      // Anything.ab     : Matches "Anything.ab" and never "anything.abcd"
+                                      // *.pas           : Matches "Unit1.pas.bak". Not good.
+                 wqEmptyIsAny,        // ""              : Empty string matches anything "*"
+                 wqAllByExtension,    // .abc            : Runs as "*.abc" (Not in use anymore)
+                 wqNoExtension);      // Anything*.      : Matches "Anything*" without extension
   TWindowsQuirks=set of TWindowsQuirk;
 
 const
@@ -140,7 +120,7 @@ const
                        mocSet,
                        mocNegateGroup];
 
-  DefaultMaskOpCodes=MaskOpCodesNoEscape;
+  DefaultMaskOpCodes=AllMaskOpCodes-[mocEscapeChar];//MaskOpCodesNoEscape;
 
 type
 
@@ -152,7 +132,10 @@ type
 
   TMaskBase = class
   private
+    procedure SetAutoReverseRange(AValue: Boolean);
+    procedure SetCaseSensitive(AValue: Boolean);
     procedure SetMaskEscapeChar(AValue: Char);
+    procedure SetMaskOpCodesAllowed(AValue: TMaskOpCodes);
   protected
     // Literal = It must match
     // Range = Match any char in the range
@@ -175,6 +158,13 @@ type
       OptionalChar=6,
       CharsGroupBegin=10,
       CharsGroupEnd=11
+    );
+    TMaskFailCause = (
+      mfcSuccess,
+      mfcMatchStringExhausted,
+      mfcMaskExhausted,
+      mfcMaskNotMatch,
+      mfcUnexpectedEnd
     );
     const GROW_BY=100;
     procedure Add(aLength: integer; aData: PBYTE);
@@ -208,9 +198,10 @@ type
       aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes);
     constructor Create(aOptions: TMaskOptions);
   public
-    property CaseSensitive: Boolean read fCaseSensitive;
-    property AutoReverseRange: Boolean read fAutoReverseRange write fAutoReverseRange;
-    property EscapeChar: Char read fMaskEscapeChar write SetMaskEscapeChar;
+    property CaseSensitive: Boolean read fCaseSensitive write SetCaseSensitive;
+    property AutoReverseRange: Boolean read fAutoReverseRange write SetAutoReverseRange;
+    property EscapeChar: Char read fMaskEscapeChar write SetMaskEscapeChar;  //Must be lower ASCII (#0-#127)
+    property MaskOpCodes: TMaskOpCodes read fMaskOpcodesAllowed write SetMaskOpCodesAllowed;
   end;
 
   { TMaskUTF8 }
@@ -225,9 +216,11 @@ type
     fMask: String;
     procedure AddAnyChar;
     procedure AddLiteral;
-    procedure AddRange;
+    procedure AddRange(lFirstRange, lSecondRange: Integer);
     procedure CompileRange;
-    procedure ReverseRange;
+    function GetMask: String; virtual;
+    procedure ReverseRange(lFirstRange, lSecondRange: Integer);
+    procedure SetMask(AValue: String); virtual;
   protected
     fOriginalMask: String;
     class function CompareUTF8Sequences(const P1,P2: PChar): integer; static;
@@ -244,8 +237,7 @@ type
     function MatchesWindowsMask(const AFileName: String): Boolean;
         deprecated 'Create with TMaskWindows.Create, then call Matches.'; // in Lazarus 2.3, remove in 2.5.
   public
-    property Mask: String read fOriginalMask write fOriginalMask;
-    property OPCodesAllowed: TMaskOpCodes read fMaskOpcodesAllowed;// write fMaskOpcodesAllowed;
+    property Mask: String read GetMask write SetMask;
   end;
 
   TMask = class(TMaskUTF8);
@@ -253,6 +245,10 @@ type
   { TWindowsMaskUTF8 }
 
   TWindowsMaskUTF8=class(TMask)
+  private
+    procedure SetMask(AValue: String); override;
+    function GetMask: String; override;
+    procedure SetWindowsQuirkAllowed(AValue: TWindowsQuirks);
   protected
     fWindowsQuirkAllowed: TWindowsQuirks;
     fWindowsQuirkInUse: TWindowsQuirks;
@@ -266,8 +262,7 @@ type
     procedure Compile; override;
     function Matches(const aFileName: String): Boolean; override;
   public
-    property Mask: String read fWindowsMask write fWindowsMask;
-    property Quirks: TWindowsQuirks read fWindowsQuirkAllowed;// write fWindowsQuirkAllowed;
+    property Quirks: TWindowsQuirks read fWindowsQuirkAllowed write SetWindowsQuirkAllowed;
   end;
 
   TWindowsMask = class(TWindowsMaskUTF8);
@@ -285,12 +280,19 @@ type
 
   TMaskList = class
   private
+    fAutoReverseRange: Boolean;
     fMasks: TObjectList;
     FMaskClass: TMaskClass;
-    // Creating also Windows masks is a hack needed for deprecated MatchesWindowsMask.
-    fWindowsMasks: TObjectList;  // remove in 2.5
+    fMask: String;
+    fSeparator: Char;
+    fCaseSensitive: Boolean;
+    fMaskOpcodes: TMaskOpcodes;
     function GetCount: Integer;
     function GetItem(Index: Integer): TMask;
+    procedure SetAutoReverseRange(AValue: Boolean);
+    procedure SetCaseSensitive(AValue: Boolean);
+    procedure SetMask(AValue: String); virtual;
+    procedure SetMaskOpCodes(AValue: TMaskOpCodes);
   protected
     function GetMaskClass: TMaskClass; virtual;
     procedure AddMasksToList(const aValue: String; aSeparator: Char; CaseSensitive: Boolean;
@@ -313,6 +315,10 @@ type
 
     property Count: Integer read GetCount;
     property Items[Index: Integer]: TMask read GetItem;
+    property Mask: String read fMask write SetMask;
+    property MaskOpCodes: TMaskOpCodes read fMaskOpCodes write SetMaskOpCodes;
+    property AutoReverseRange: Boolean read fAutoReverseRange write SetAutoReverseRange;
+    property CaseSensitive: Boolean read fCaseSensitive write SetCaseSensitive;
   end;
 
 
@@ -321,12 +327,13 @@ type
   TWindowsMaskList = class(TMaskList)
   private
     fWindowsQuirks: TWindowsQuirks;
+    procedure SetQuirks(AValue: TWindowsQuirks);
   protected
     function GetMaskClass: TMaskClass; override;
-    procedure AddMasksToList(const aValue: String; aSeparator: Char; CaseSensitive: Boolean;
+    procedure AddMasksToList(const aValue: String; aSeparator: Char; aCaseSensitive: Boolean;
       aOpcodesAllowed: TMaskOpCodes); override;
   public
-    constructor Create(const aValue: String; aSeparator: Char=';'; CaseSensitive: Boolean=False;
+    constructor Create(const aValue: String; aSeparator: Char=';'; aCaseSensitive: Boolean=False;
       aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes;
       aWindowsQuirksAllowed: TWindowsQuirks=DefaultWindowsQuirks); reintroduce;
 
@@ -336,10 +343,10 @@ type
 
     //Remove in 2.5
     function MatchesWindowsMask(const AFileName: String): Boolean; reintroduce;
-      deprecated 'Use a TWindowsMaskList instead.';
+      deprecated 'Use a Matches instead.';
 
 
-    property Quirks: TWindowsQuirks read fWindowsQuirks;
+    property Quirks: TWindowsQuirks read fWindowsQuirks write SetQuirks;
   end;
 
 function MatchesMask(const FileName, Mask: String; CaseSensitive: Boolean=False;
@@ -496,33 +503,53 @@ end;
 
 { TWindowsMaskList }
 
+procedure TWindowsMaskList.SetQuirks(AValue: TWindowsQuirks);
+var
+  i: Integer;
+begin
+  if fWindowsQuirks = AValue then Exit;
+  fWindowsQuirks := AValue;
+  if (wqFilenameEnd in fWindowsQuirks) then
+    Include(fMaskOpcodes, mocAnyCharOrNone);
+  for i := 0 to fMasks.Count - 1 do
+  begin
+    TWindowsMask(fMasks.Items[i]).Quirks := FWindowsQuirks;
+    TWindowsMask(fMasks.Items[i]).MaskOpCodes := fMaskOpcodes;
+    //TWindowsMask(fMasks.Items[i]).Compile; //to apply Quirks
+  end;
+  //fMasks.Clear;
+  //AddMasksToList(fMask, fSeparator, fCaseSensitive, fMaskOpCodes);
+end;
+
 function TWindowsMaskList.GetMaskClass: TMaskClass;
 begin
   Result := TWindowsMask;
 end;
 
 procedure TWindowsMaskList.AddMasksToList(const aValue: String;
-  aSeparator: Char; CaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes);
+  aSeparator: Char; aCaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes);
 var
   i: Integer;
 begin
-  inherited AddMasksToList(aValue, aSeparator, CaseSensitive, aOpcodesAllowed);
+  inherited AddMasksToList(aValue, aSeparator, aCaseSensitive, aOpcodesAllowed);
   if (FWindowsQuirks <> DefaultWindowsQuirks) then  //inherited did not pass Quirks to the constructor
     begin
     for i := 0 to fMasks.Count - 1 do
     begin
       TWindowsMask(fMasks.Items[i]).fWindowsQuirkAllowed := FWindowsQuirks;
-      TWindowsMask(fMasks.Items[i]).Compile; //to apply Quirks
+      //TWindowsMask(fMasks.Items[i]).Compile; //to apply Quirks
     end;
   end;
 end;
 
 constructor TWindowsMaskList.Create(const aValue: String; aSeparator: Char;
-  CaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes;
+  aCaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes;
   aWindowsQuirksAllowed: TWindowsQuirks);
 begin
-  FWindowsQuirks := aWindowsQuirksAllowed;
-  inherited Create(aValue, aSeparator, CaseSensitive, aOpcodesAllowed);
+  fWindowsQuirks := aWindowsQuirksAllowed;
+  if (wqFilenameEnd in aWindowsQuirksAllowed) then
+    Include(aOpcodesAllowed, mocAnyCharOrNone);
+  inherited Create(aValue, aSeparator, aCaseSensitive, aOpcodesAllowed);
 end;
 
 constructor TWindowsMaskList.Create(const aValue: String; aSeparator: Char;
@@ -552,12 +579,34 @@ end;
 
 { TMaskBase }
 
+procedure TMaskBase.SetAutoReverseRange(AValue: Boolean);
+begin
+  if fAutoReverseRange = AValue then Exit;
+  fAutoReverseRange := AValue;
+  fMaskIsCompiled := False;
+end;
+
+procedure TMaskBase.SetCaseSensitive(AValue: Boolean);
+begin
+  if fCaseSensitive = AValue then Exit;
+  fCaseSensitive := AValue;
+  fMaskIsCompiled := False;
+end;
+
 procedure TMaskBase.SetMaskEscapeChar(AValue: Char);
 begin
   if fMaskEscapeChar=AValue then Exit;
   if fMaskEscapeChar>#127 then
     Exception_InvalidEscapeChar();
   fMaskEscapeChar:=AValue;
+  fMaskIsCompiled:=False;
+end;
+
+procedure TMaskBase.SetMaskOpCodesAllowed(AValue: TMaskOpCodes);
+begin
+  if fMaskOpcodesAllowed = AValue then Exit;
+  fMaskOpcodesAllowed := AValue;
+  fMaskIsCompiled := False;
 end;
 
 procedure TMaskBase.Add(aLength: integer; aData: PBYTE);
@@ -600,6 +649,9 @@ end;
 
 procedure TMaskBase.Compile;
 begin
+  fMaskCompiled := nil;
+  fMaskCompiledAllocated := 0;
+  fMaskCompiledIndex := 0;
   fMaskIsCompiled:=true;
 end;
 
@@ -671,26 +723,69 @@ begin
   fLastOC:=TMaskParsedCode.Literal;
 end;
 
-procedure TMaskUTF8.AddRange;
+procedure TMaskUTF8.AddRange(lFirstRange, lSecondRange: Integer);
 begin
-  Add(fCPLength,@fMask[fMaskInd]);
-  inc(fMaskInd,fCPLength+1);  // Add 1 for "-"
-  fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
-  Add(fCPLength,@fMask[fMaskInd]);
+  fCPLength:=UTF8CodepointSizeFast(@fMask[lFirstRange]);
+  Add(fCPLength,@fMask[lFirstRange]);
+  fCPLength:=UTF8CodepointSizeFast(@fMask[lSecondRange]);
+  Add(fCPLength,@fMask[lSecondRange]);
+  fMaskInd:=lSecondRange;
 end;
 
-procedure TMaskUTF8.ReverseRange;
+procedure TMaskUTF8.ReverseRange(lFirstRange, lSecondRange: Integer);
 begin
-  Add(UTF8CodepointSizeFast(@fMask[fMaskInd+fCPLength+1]),@fMask[fMaskInd+fCPLength+1]);
-  Add(fCPLength,@fMask[fMaskInd]);
-  inc(fMaskInd,fCPLength+1);
-  fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
+  fCPLength:=UTF8CodepointSizeFast(@fMask[lSecondRange]);
+  Add(fCPLength,@fMask[lSecondRange]);
+  Add(UTF8CodepointSizeFast(@fMask[lFirstRange]),@fMask[lFirstRange]);
+  fMaskInd:=lSecondRange;
+end;
+
+procedure TMaskUTF8.SetMask(AValue: String);
+begin
+  if fOriginalMask = AValue then Exit;
+  fOriginalMask := AValue;
+  fMaskIsCompiled := False;
 end;
 
 procedure TMaskUTF8.CompileRange;
+  function IsARange(aPosition: integer; out aFirstSequence: integer; out aSecondSequence: integer): Boolean;// {$IFDEF USE_INLINE}inline;{$ENDIF}
+    var
+      llCPL: integer;
+    begin
+      Result:=false;
+      aFirstSequence:=0;
+      aSecondSequence:=0;
+      if (mocEscapeChar in FMaskOpcodesAllowed) and (fMask[aPosition]=FMaskEscapeChar) then begin
+        llCPL:=UTF8CodepointSizeFast(@fMask[aPosition]);
+        if aPosition+llCPL>fMaskLimit then exit; // ==>
+        inc(aPosition,llCPL);
+        aFirstSequence:=aPosition;
+      end else begin
+        aFirstSequence:=aPosition;
+      end;
+      llCPL:=UTF8CodepointSizeFast(@fMask[aPosition]);
+      inc(aPosition,llCPL);
+      if aPosition+llCPL>fMaskLimit then exit; // ==>
+      // It is not a range, return false
+      if fMask[aPosition]<>'-' then exit;
+
+      llCPL:=UTF8CodepointSizeFast(@fMask[aPosition]);
+      inc(aPosition,llCPL);
+      if (mocEscapeChar in FMaskOpcodesAllowed) and (fMask[aPosition]=FMaskEscapeChar) then begin
+        llCPL:=UTF8CodepointSizeFast(@fMask[aPosition]);
+        if aPosition+llCPL>fMaskLimit then exit; // ==>
+        inc(aPosition,llCPL);
+        aSecondSequence:=aPosition;
+      end else begin
+        aSecondSequence:=aPosition;
+      end;
+      Result:=true;
+    end;
+
 var
-  lCharsGroupInsertSize: integer;
+  lCharsGroupInsertSize, lFirstRange, lSecondRange: integer;
 begin
+  //writeln('CompileRange');
   fLastOC:=TMaskParsedCode.CharsGroupBegin;
   Add(TMaskParsedCode.CharsGroupBegin);
   inc(fMatchMinimumLiteralBytes,1);
@@ -709,7 +804,7 @@ begin
 
   while fMaskInd<=fMaskLimit do begin
     fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
-    if (fMask[fMaskInd]='?') and (mocAnyCharOrNone in fMaskOpcodesAllowed) then begin
+    if (fMask[fMaskInd]='?') and (mocAnyCharOrNone in fMaskOpcodesAllowed) then begin //mocAnyCharOrNone and '?' found
       // This syntax is permitted [??] but not this one [?a] or [a?]
       if (fLastOC=TMaskParsedCode.CharsGroupBegin) or (fLastOC=TMaskParsedCode.AnyCharOrNone) then begin
         if fLastOC=TMaskParsedCode.AnyCharOrNone then begin
@@ -732,43 +827,58 @@ begin
         fLastOC:=TMaskParsedCode.AnyCharOrNone;
       end
       else
-        Exception_InvalidCharMask(fMask[fMaskInd],fMaskInd);
-    end
-    else if (fLastOC=TMaskParsedCode.AnyCharOrNone) and (fMask[fMaskInd]<>']') then begin
+        begin
+          Exception_InvalidCharMask(fMask[fMaskInd],fMaskInd);
+        end;
+    end //mocAnyCharOrNone and '?' found
+    else if (fLastOC=TMaskParsedCode.AnyCharOrNone) and (fMask[fMaskInd]<>']') then begin //mocAnyCharOrNone and inside [?
+      //writeln('Compile found not ? after [?: ',fMask[fMaskInd]);
       //fMask[fMaskInd] is not '?', but previous mask was '?' and it is an invalid sequence.
       // "[??] = Valid" // "[a?] or [?a] = Invalid"
       Exception_InvalidCharMask(fMask[fMaskInd],fMaskInd);
     end
-    else if ((fMaskInd+fCPLength+1)<=fMaskLimit) and (fMask[fMaskInd+fCPLength]='-')
-    and (mocRange in fMaskOpcodesAllowed) then begin
-      // fMaskInd+fCPLength+1 --explained--
-      //------------------------------
-      // fMaskInd+fCPLength is next UTF8 after current UTF8 CP
-      // +1 is at least one byte in UTF8 sequence after "-"
-      // Check if it is a range
+    else if (mocRange in fMaskOpcodesAllowed) and IsARange(fMaskInd,lFirstRange,lSecondRange) then begin //is a range
       Add(TMaskParsedCode.Range);
       // Check if reverse range is needed
       if (not fAutoReverseRange)
-      or (CompareUTF8Sequences(@fMask[fMaskInd],@fMask[fMaskInd+fCPLength+1])<0) then
-        AddRange
+      or (CompareUTF8Sequences(@fMask[lFirstRange],@fMask[lSecondRange])<0) then
+        AddRange(lFirstRange, lSecondRange)
       else
-        ReverseRange;
+        ReverseRange(lFirstRange, lSecondRange);
       fLastOC:=TMaskParsedCode.Range;
 
-    end else if fMask[fMaskInd]=']' then begin
-      if fLastOC=TMaskParsedCode.CharsGroupBegin then
-        Exception_InvalidCharMask(fMask[fMaskInd],fMaskInd); //Error empty match
+    end //is a range
+    else if fMask[fMaskInd]=']' then begin  //found ]
+      if (fLastOC=TMaskParsedCode.CharsGroupBegin) or (fLastOC=TMaskParsedCode.Negate) then
+        begin //empty set or range
+          //writeln('CompileRange: empty match');
+          Exception_InvalidCharMask(fMask[fMaskInd],fMaskInd); //Error empty match
+        end; //empty set or range
       // Insert the new offset in case of a positive match in CharsGroup
       PInteger(@fMaskCompiled[lCharsGroupInsertSize])^:=fMaskCompiledIndex;
       Add(TMaskParsedCode.CharsGroupEnd);
       fLastOC:=TMaskParsedCode.CharsGroupEnd;
       break;
-    end else begin
+    end // end of range or set
+    else begin  //not a range, not AnyCharOrNone, must be a set
+      // handle escaping if mocSet is enabled, but mocRange not
+      if (fMask[fMaskInd]=FMaskEscapeChar) and (mocEscapeChar in fMaskOpcodesAllowed) then begin
+        // next is optional char in set or literal
+        inc(fMaskInd,fCPLength);
+        if fMaskInd<=fMaskLimit then begin
+          fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
+        end else begin
+          //writeln('CompileRange: incomplete mask');
+          Exception_IncompleteMask();
+        end;
+      end;
+
       if (mocSet in fMaskOpcodesAllowed) then begin
         Add(TMaskParsedCode.OptionalChar);
         Add(fCPLength,@fMask[fMaskInd]);
         fLastOC:=TMaskParsedCode.OptionalChar;
       end else begin
+         //writeln('CompileRange: exception but why??');
          Exception_InvalidCharMask(fMask[fMaskInd],fMaskInd);
       end;
     end;
@@ -776,11 +886,83 @@ begin
   end;
   if fMaskInd>fMaskLimit then
     Exception_MissingCloseChar(']',fMaskLimit);
+  //writeln('CompileRange end.');
+end;
+
+function TMaskUTF8.GetMask: String;
+begin
+  Result := fOriginalMask;
 end;
 
 procedure TMaskUTF8.Compile;
+  procedure HandleEscapeCharPlusLiteral;
+  begin
+    inc(fMaskInd,fCPLength);
+    if fMaskInd<=fMaskLimit then begin
+      fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
+      AddLiteral;
+      inc(fMaskInd,fCPLength);
+    end
+    else
+      Exception_IncompleteMask();
+  end;
+
+  procedure HandleSpecialChar;
+  begin
+    case fMask[fMaskInd] of
+      '*':
+        begin
+          if mocAnyText in fMaskOpcodesAllowed then begin
+            if fLastOC<>TMaskParsedCode.AnyCharToNext then begin
+              Add(TMaskParsedCode.AnyCharToNext);
+              fLastOC:=TMaskParsedCode.AnyCharToNext;
+              // * = No limit
+              fMatchMaximumLiteralBytes:=High(fMatchMaximumLiteralBytes);
+            end;
+          end
+          else
+            AddLiteral;
+        end;
+      '?':
+        begin
+          if mocAnyChar in fMaskOpcodesAllowed then
+            AddAnyChar
+          else
+            AddLiteral;
+        end;
+      '[':
+        begin
+          if ([mocSet,mocRange,
+              mocAnyCharOrNone] * fMaskOpcodesAllowed <> [])
+              and not
+              (
+                ([mocSet,mocRange]*fMaskOpCodesAllowed = []) //only mocAnyCharOrNone enabled
+                 and
+                (fMaskInd<fMaskLimit) and (fMask[fMaskInd+1]<>'?')// next char is not '?', so basically then the '[' is a literal (or an escapechar)
+              )
+          then
+            CompileRange
+          else begin
+            if (fMask[fMaskInd]=FMaskEscapeChar) and (mocEscapeChar in FMaskOpcodesAllowed) then begin  //DEAD CODE?
+              // next is Literal
+              inc(fMaskInd,fCPLength);
+              if fMaskInd<=fMaskLimit then begin
+                fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
+              end else begin
+                Exception_IncompleteMask();
+              end;
+            end; //DEAD CODE??
+            AddLiteral;
+          end;
+        end;
+    end;
+  end;
+
 begin
   inherited Compile;
+  //if Compile fails and a new call to Matches is made and Mask is unchanged
+  //then Matches simply returns False, when raising the exception again would be more appropriate IMO (BB)
+  fMaskIsCompiled:=False;
   if fCaseSensitive then
     fMask:=fOriginalMask
   else
@@ -789,65 +971,26 @@ begin
   fLastOC:=TMaskParsedCode.Literal;
   SetLength(fMaskCompiled,0);
   fMaskInd:=1;
-  while fMaskInd<=fMaskLimit do begin
+
+  while fMaskInd<=fMaskLimit do begin //while
     fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
-    if (mocEscapeChar in fMaskOpcodesAllowed)
-    and (fMask[fMaskInd]=fMaskEscapeChar) then begin
-      // next is Literal
-      inc(fMaskInd,fCPLength);
-      if fMaskInd<=fMaskLimit then begin
-        fCPLength:=UTF8CodepointSizeFast(@fMask[fMaskInd]);
-        Add(TMaskParsedCode.Literal);
-        Add(fCPLength,@fMask[fMaskInd]);
-        inc(fMatchMinimumLiteralBytes,fCPLength);
-        if fMatchMaximumLiteralBytes<High(fMatchMaximumLiteralBytes) then
-          inc(fMatchMaximumLiteralBytes,fCPLength);
-        fLastOC:=TMaskParsedCode.Literal;
-        inc(fMaskInd,fCPLength);
-      end
+    if (mocEscapeChar in fMaskOpcodesAllowed) and (fMask[fMaskInd]=fMaskEscapeChar) then
+      HandleEscapeCharPlusLiteral
+    else begin // not an escaped literal
+      if fMask[fMaskInd] in ['*','?','['] then begin // handle special chars
+        HandleSpecialChar;
+      end  //handle special chars
       else
-        Exception_IncompleteMask();
-    end else begin
-      if fMask[fMaskInd] in ['*','?','['] then begin
-        case fMask[fMaskInd] of
-          '*':
-            begin
-              if mocAnyText in fMaskOpcodesAllowed then begin
-                if fLastOC<>TMaskParsedCode.AnyCharToNext then begin
-                  Add(TMaskParsedCode.AnyCharToNext);
-                  fLastOC:=TMaskParsedCode.AnyCharToNext;
-                  // * = No limit
-                  fMatchMaximumLiteralBytes:=High(fMatchMaximumLiteralBytes);
-                end;
-              end
-              else
-                AddLiteral;
-            end;
-          '?':
-            begin
-              if mocAnyChar in fMaskOpcodesAllowed then
-                AddAnyChar
-              else
-                AddLiteral;
-            end;
-          '[':
-            begin
-              if [mocSet,mocRange,
-                  mocAnyCharOrNone] * fMaskOpcodesAllowed <> []
-              then
-                CompileRange
-              else
-                AddLiteral;
-            end;
-        end;
-      end
-      else
+      begin
         AddLiteral;
+      end;
       inc(fMaskInd,fCPLength);
-    end;
-  end;
+    end; //not an escaped literal
+  end;  //while
+
   SetLength(fMaskCompiled,fMaskCompiledIndex);
   fMaskCompiledLimit:=fMaskCompiledIndex-1;
+  fMaskIsCompiled:=True;
 end;
 
 class function TMaskUTF8.CompareUTF8Sequences(const P1, P2: PChar): integer;
@@ -1060,7 +1203,7 @@ function TMaskUTF8.MatchesWindowsMask(const AFileName: String): Boolean;
 var
   WinMask: TWindowsMaskUTF8;
 begin
-  WinMask:=TWindowsMaskUTF8.Create(fOriginalMask, CaseSensitive, OPCodesAllowed);
+  WinMask:=TWindowsMaskUTF8.Create(fOriginalMask, CaseSensitive, fMaskOpCodesAllowed);
   try
     Result:=WinMask.Matches(AFileName);
   finally
@@ -1069,6 +1212,27 @@ begin
 end;
 
 { TWindowsMask }
+
+procedure TWindowsMaskUTF8.SetMask(AValue: String);
+begin
+  if (AValue = fWindowsMask) then Exit;
+  inherited SetMask(AValue);
+  fWindowsMask := AValue;
+end;
+
+function TWindowsMaskUTF8.GetMask: String;
+begin
+  Result := fWindowsMask;
+end;
+
+procedure TWindowsMaskUTF8.SetWindowsQuirkAllowed(AValue: TWindowsQuirks);
+begin
+  if fWindowsQuirkAllowed = AValue then Exit;
+  fWindowsQuirkAllowed := AValue;
+  if (wqFilenameEnd in fWindowsQuirkAllowed) then
+    Include(fMaskOpcodesAllowed, mocAnyCharOrNone);
+  fMaskIsCompiled := False;
+end;
 
 class procedure TWindowsMaskUTF8.SplitFileNameExtension(
   const aSourceFileName: String; out aFileName: String;
@@ -1109,8 +1273,13 @@ constructor TWindowsMaskUTF8.Create(const aMask: String; aCaseSensitive: Boolean
 begin
   fWindowsQuirkAllowed:=aWindowsQuirksAllowed;
   fWindowsMask:=aMask;
+  if (wqFilenameEnd in fWindowsQuirkAllowed) then
+    Include(aOpcodesAllowed, mocAnyCharOrNone);
   inherited Create(aMask,aCaseSensitive,aOpcodesAllowed);
+  //don't compile on create: we do NOT want a crash in the constructor
+  {
   Compile;
+  }
 end;
 
 procedure TWindowsMaskUTF8.Compile;
@@ -1132,6 +1301,7 @@ procedure TWindowsMaskUTF8.Compile;
     Result:=aMask;
   end;
 
+  {
   function EscapeSpecialChars(const aString: String): String;
   var
     j: integer;
@@ -1144,7 +1314,7 @@ procedure TWindowsMaskUTF8.Compile;
       end;
     end;
   end;
-
+  }
 var
   lFileNameMask: String;
   lExtensionMask: String;
@@ -1189,9 +1359,11 @@ begin
     end;
   end;
 
+  //Don't disable ranges for Windows
+  {
   lFileNameMask:=EscapeSpecialChars(lFileNameMask);
   lExtensionMask:=EscapeSpecialChars(lExtensionMask);
-
+  }
   // Quirk "file???.ab?" matches "file1.ab1" and "file123.ab"
   if wqFilenameEnd in fWindowsQuirkAllowed then begin
     lFileNameMask:=OptionalQMarksAtEnd(lFileNameMask);
@@ -1200,7 +1372,7 @@ begin
 
   if wqNoExtension in fWindowsQuirkAllowed then begin
     if Length(lExtensionMask)=1 then begin
-      fWindowsQuirkInUse:=[wqNoExtension];
+      fWindowsQuirkInUse:=fWindowsQuirkInUse+[wqNoExtension];
       lExtensionMask:='';
     end;
   end;
@@ -1213,6 +1385,8 @@ function TWindowsMaskUTF8.Matches(const aFileName: String): Boolean;
 var
   lFileName, lExtension: String;
 begin
+  if not fMaskIsCompiled then
+    Compile;
   if wqNoExtension in fWindowsQuirkInUse then begin
     SplitFileNameExtension(aFileName,lFileName,lExtension,false);
     // wqNoExtension = Empty extension
@@ -1248,9 +1422,14 @@ end;
 constructor TMaskList.Create(const aValue: String; aSeparator: Char;
   CaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes);
 begin
+  fMask := aValue;
+  fSeparator := aSeparator;
+  fCaseSensitive := CaseSensitive;
+  fMaskOpcodes := aOpcodesAllowed;
+  fAutoReverseRange := True;
+
   fMasks := TObjectList.Create(True);
   FMaskClass := GetMaskClass;
-  fWindowsMasks := TObjectList.Create(True);
   AddMasksToList(aValue, aSeparator, CaseSensitive, aOpcodesAllowed);
 end;
 
@@ -1269,7 +1448,6 @@ end;
 
 destructor TMaskList.Destroy;
 begin
-  fWindowsMasks.Free;
   fMasks.Free;
   inherited Destroy;
 end;
@@ -1277,6 +1455,44 @@ end;
 function TMaskList.GetItem(Index: Integer): TMask;
 begin
   Result := TMask(fMasks.Items[Index]);
+end;
+
+procedure TMaskList.SetAutoReverseRange(AValue: Boolean);
+var
+  i: Integer;
+begin
+  if fAutoReverseRange = AValue then Exit;
+  fAutoReverseRange := AValue;
+  for i := 0 to fMasks.Count - 1 do
+    TMask(fMasks.Items[i]).AutoReverseRange := fAutoReverseRange;
+end;
+
+procedure TMaskList.SetCaseSensitive(AValue: Boolean);
+var
+  i: Integer;
+begin
+  if fCaseSensitive = AValue then Exit;
+  fCaseSensitive := AValue;
+  for i := 0 to fMasks.Count - 1 do
+    TMask(fMasks.Items[i]).CaseSensitive := fCaseSensitive;
+end;
+
+procedure TMaskList.SetMask(AValue: String);
+begin
+  if fMask = AValue then Exit;
+  fMask := AValue;
+  fMasks.Clear;
+  AddMasksToList(fMask, fSeparator, fCaseSensitive, fMaskOpCodes);
+end;
+
+procedure TMaskList.SetMaskOpCodes(AValue: TMaskOpCodes);
+var
+  i: Integer;
+begin
+  if FMaskOpCodes = AValue then Exit;
+  fMaskOpCodes := AValue;
+  for i := 0 to fMasks.Count - 1 do
+    TMask(fMasks.Items[i]).MaskOpCodes := fMaskOpcodes;
 end;
 
 function TMaskList.GetMaskClass: TMaskClass;
@@ -1294,8 +1510,6 @@ begin
   try
     for i := 0 to S.Count-1 do begin
       fMasks.Add(FMaskClass.Create(S[i], CaseSensitive, aOpcodesAllowed));
-      // A hack, add also to fWindowsMasks.
-      fWindowsMasks.Add(TWindowsMask.Create(S[i], CaseSensitive, aOpcodesAllowed));
     end;
   finally
     S.Free;
@@ -1318,17 +1532,16 @@ begin
 end;
 
 function TMaskList.MatchesWindowsMask(const AFileName: String): Boolean;
-// Uses a hack FWindowsMasks which can be removed when this method is removed.
+//use the same hack as in TMask.MatchesWindowsMask
 var
-  I: Integer;
+  WML: TWindowsMaskList;
 begin
-  Result := False;
-  for I := 0 to fWindowsMasks.Count-1 do
-  begin
-    if TWindowsMask(fWindowsMasks.Items[I]).Matches(AFileName) then
-      Exit(True);
+  WML := TWindowsMaskList.Create(fMask, fSeparator, fCaseSensitive, fMaskOpcodes, DefaultWindowsQuirks);
+  try
+    Result := WML.Matches(AFileName);
+  finally
+    WML.Free;
   end;
-  //raise Exception.Create('Create with TMaskList.CreateWindows, then call Matches.');
 end;
 
 end.
