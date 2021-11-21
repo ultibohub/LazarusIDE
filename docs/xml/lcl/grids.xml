@@ -9503,7 +9503,7 @@
             </dd>
             <dt>VK_ESCAPE</dt>
             <dd>
-              Resets the value in the cell Editor, and hides the Editor control.
+              Resets the value in the cell Editor, and hides the Editor control when it is both assigned and visible.  
             </dd>
           </dl>
           <p>
@@ -10442,7 +10442,7 @@
             StartPushCell updates the GridState property to the value gsButtonColumnClicking, and calls the DoPushCell method to cache and redraw the clicked cell.
           </p>
           <p>
-            StartPushCell is called from the MouseDown method when a mouse click has occured over a cell using a button-style Editor in the non-fixed area for the grid control.
+            StartPushCell is called from the MouseDown method when a mouse click has occurred over a cell using a button-style Editor in the non-fixed area for the grid control.
           </p>
         </descr>
         <seealso/>

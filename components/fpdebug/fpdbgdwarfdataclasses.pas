@@ -485,7 +485,7 @@ type
   public
     constructor Create(const AName: String; AnInformationEntry: TDwarfInformationEntry);
     constructor Create(const AName: String; AnInformationEntry: TDwarfInformationEntry;
-                       AKind: TDbgSymbolKind; AAddress: TFpDbgMemLocation);
+                       AKind: TDbgSymbolKind; const AAddress: TFpDbgMemLocation);
     destructor Destroy; override;
 
     function CreateSymbolScope(ALocationContext: TFpDbgLocationContext; ADwarfInfo: TFpDwarfInfo): TFpDbgSymbolScope; virtual; overload;
@@ -787,6 +787,7 @@ type
     FContext: TFpDbgLocationContext;
     FCurrentObjectAddress: TFpDbgMemLocation;
     FFrameBase: TDbgPtr;
+    FIsDwAtFrameBase: Boolean;
     FLastError: TFpError;
     FOnFrameBaseNeeded: TNotifyEvent;
     FStack: TDwarfLocationStack;
@@ -800,13 +801,14 @@ type
     procedure SetLastError(ALastError: TFpError);
     procedure Evaluate;
     function ResultData: TFpDbgMemLocation;
-    procedure Push(AValue: TFpDbgMemLocation);
+    procedure Push(const AValue: TFpDbgMemLocation);
     property  FrameBase: TDbgPtr read FFrameBase write FFrameBase;
     property  OnFrameBaseNeeded: TNotifyEvent read FOnFrameBaseNeeded write FOnFrameBaseNeeded;
     property LastError: TFpError read FLastError;
     property Context: TFpDbgLocationContext read FContext write FContext;
     // for DW_OP_push_object_address
     property CurrentObjectAddress: TFpDbgMemLocation read FCurrentObjectAddress write FCurrentObjectAddress;
+    property IsDwAtFrameBase: Boolean read FIsDwAtFrameBase write FIsDwAtFrameBase;
     end;
 
 function ULEB128toOrdinal(var p: PByte): QWord;
@@ -2122,6 +2124,13 @@ var
       SetError(fpErrLocationParserNoAddressOnStack);
   end;
 
+  function AssertAddressOrRegOnStack: Boolean; inline;
+  begin
+    Result := (FStack.PeekKind in [mlfTargetMem, mlfSelfMem, mlfConstantDeref, mlfTargetRegister]);
+    if not Result then
+      SetError(fpErrLocationParserNoAddressOnStack);
+  end;
+
   function AssertMinCount(ACnt: Integer): Boolean; inline;
   begin
     Result := FStack.Count >= ACnt;
@@ -2129,7 +2138,7 @@ var
       SetError(fpErrLocationParserMinStack);
   end;
 
-  function ReadAddressFromMemory(AnAddress: TFpDbgMemLocation; ASize: Cardinal; out AValue: TFpDbgMemLocation): Boolean;
+  function ReadAddressFromMemory(const AnAddress: TFpDbgMemLocation; ASize: Cardinal; out AValue: TFpDbgMemLocation): Boolean;
   begin
     //TODO: zero fill / sign extend
     if (ASize > SizeOf(AValue)) or (ASize > AddrSize) then exit(False);
@@ -2138,7 +2147,7 @@ var
       SetError;
   end;
 
-  function ReadAddressFromMemoryEx(AnAddress: TFpDbgMemLocation; AnAddrSpace: TDbgPtr; ASize: Cardinal; out AValue: TFpDbgMemLocation): Boolean;
+  function ReadAddressFromMemoryEx(const AnAddress: TFpDbgMemLocation; AnAddrSpace: TDbgPtr; ASize: Cardinal; out AValue: TFpDbgMemLocation): Boolean;
   begin
     //TODO: zero fill / sign extend
     if (ASize > SizeOf(AValue)) or (ASize > AddrSize) then exit(False);
@@ -2198,7 +2207,7 @@ begin
           FStack.Push(FCU.ReadTargetAddressFromDwarfSection(CurData, True)); // always mlfTargetMem;
         end;
       DW_OP_deref: begin
-          if not AssertAddressOnStack then exit;
+          if not AssertAddressOrRegOnStack then exit;
           EntryP := FStack.PeekForDeref;
           if not ReadAddressFromMemory(EntryP^, AddrSize, NewLoc) then exit;
           EntryP^ := NewLoc; // mlfTargetMem;
@@ -2213,7 +2222,7 @@ begin
           EntryP^ := NewLoc; // mlfTargetMem;
         end;
       DW_OP_deref_size: begin
-          if not AssertAddressOnStack then exit;
+          if not AssertAddressOrRegOnStack then exit;
           EntryP := FStack.PeekForDeref;
           if not ReadAddressFromMemory(EntryP^, ReadUnsignedFromExpression(CurData, 1), NewLoc) then exit;
           EntryP^ := NewLoc; // mlfTargetMem;
@@ -2240,15 +2249,37 @@ begin
       DW_OP_consts:  FStack.PushConst(ReadSignedFromExpression(CurData, 0));
       DW_OP_lit0..DW_OP_lit31: FStack.PushConst(CurInstr^-DW_OP_lit0);
 
+      (* DW_OP_reg0..31 and DW_OP_regx
+         The DWARF spec does *not* specify that those should push the result on
+         the stack.
+         However it does not matter, since there can be no other instruction
+         after it to access the stack.
+         From the spec:
+           "A register location description must stand alone as the entire
+            description of an object or a piece of an object"
+
+         For DW_AT_frame_base the spec (dwarf 5) says:
+           "The use of one of the DW_OP_reg<n> operations in this context is
+            equivalent to using DW_OP_breg<n>(0) but more compact"
+         However, it does not say if this removes the "stand alone" restriction.
+      *)
       DW_OP_reg0..DW_OP_reg31: begin
-          if not FContext.ReadRegister(CurInstr^-DW_OP_reg0, NewValue) then begin
-            SetError;
-            exit;
+          FStack.PushTargetRegister(CurInstr^-DW_OP_reg0);
+          // Dwarf-5
+          if FIsDwAtFrameBase then begin
+            EntryP := FStack.PeekForDeref;
+            if not ReadAddressFromMemory(EntryP^, AddrSize, NewLoc) then exit;
+            EntryP^ := NewLoc; // mlfTargetMem;
           end;
-          FStack.PushConst(NewValue);
         end;
       DW_OP_regx: begin
           FStack.PushTargetRegister(ULEB128toOrdinal(CurData));
+          // Dwarf-5
+          if FIsDwAtFrameBase then begin
+            EntryP := FStack.PeekForDeref;
+            if not ReadAddressFromMemory(EntryP^, AddrSize, NewLoc) then exit;
+            EntryP^ := NewLoc; // mlfTargetMem;
+          end;
         end;
 
       DW_OP_breg0..DW_OP_breg31: begin
@@ -2568,7 +2599,7 @@ begin
     Result := InvalidLoc;
 end;
 
-procedure TDwarfLocationExpression.Push(AValue: TFpDbgMemLocation);
+procedure TDwarfLocationExpression.Push(const AValue: TFpDbgMemLocation);
 begin
   FStack.Push(AValue);
 end;
@@ -3825,7 +3856,7 @@ end;
 
 constructor TDbgDwarfSymbolBase.Create(const AName: String;
   AnInformationEntry: TDwarfInformationEntry; AKind: TDbgSymbolKind;
-  AAddress: TFpDbgMemLocation);
+  const AAddress: TFpDbgMemLocation);
 begin
   FCU := AnInformationEntry.CompUnit;
   FInformationEntry := AnInformationEntry;

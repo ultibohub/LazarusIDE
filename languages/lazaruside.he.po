@@ -12025,10 +12025,6 @@ msgstr "שמור את הקובץ שהומר פתוח בעורך"
 msgid "All project files will be open in editor after conversion"
 msgstr "כל קבצי הפרוייקט ישארו פתוחים בעורך אחרי ההמרה"
 
-#: lazarusidestrconsts.liskeepininstalllist
-msgid "Keep in install list"
-msgstr "שמור ברשימת ההתקנות"
-
 #: lazarusidestrconsts.liskeepname
 msgid "Keep name"
 msgstr "שמור שם"
@@ -18473,10 +18469,6 @@ msgstr ""
 msgid "Remove %s files from package \"%s\"?"
 msgstr ""
 
-#: lazarusidestrconsts.lisremovefrominstalllist
-msgid "Remove from install list"
-msgstr "הסר מרשימת ההתקנות"
-
 #: lazarusidestrconsts.lisremovefromproject
 #, fuzzy
 #| msgid "Remove from project"
@@ -22198,6 +22190,10 @@ msgstr "קטלנית"
 #: lazarusidestrconsts.rslanguagechinese
 msgid "Chinese"
 msgstr "סינית"
+
+#: lazarusidestrconsts.rslanguagecorsican
+msgid "Corsican"
+msgstr ""
 
 #: lazarusidestrconsts.rslanguageczech
 msgid "Czech"

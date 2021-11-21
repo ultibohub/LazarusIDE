@@ -40,7 +40,12 @@ uses
   ClipBrd, HelpIntfs, Controls, ImgList, Themes,
   // LazUtils
   LazFileUtils, LazUTF8, Maps, IntegerList, LazMethodList, LazLoggerBase,
-  LazUtilities, GraphType, UITypes
+  LazUtilities, GraphType,
+  {$IF FPC_FULLVERSION >= 30200}
+  System.UITypes
+  {$ELSE}
+  UITypes
+  {$ENDIF}
   {$ifndef wince},gettext{$endif}// remove ifdefs when gettext is fixed and a new fpc is released
   ;
 
@@ -421,8 +426,13 @@ type
     );
   TFormState = set of TFormStateType;
 
+  {$IF FPC_FULLVERSION >= 30200}
+  TModalResult = System.UITypes.TModalResult;
+  PModalResult = ^System.UITypes.TModalResult;
+  {$ELSE}
   TModalResult = UITypes.TModalResult;
   PModalResult = ^UITypes.TModalResult;
+  {$ENDIF}
 
   TFormHandlerType = (
     fhtFirstShow,
@@ -651,7 +661,7 @@ type
     procedure IntfDropFiles(const FileNames: array of String);
     procedure IntfHelp(AComponent: TComponent);
     function IsShortcut(var Message: TLMKey): boolean; virtual;
-    procedure MakeFullyVisible(AMonitor: TMonitor = nil; UseWorkarea: Boolean = False);
+    procedure MakeFullyVisible(AMonitor: TMonitor = nil; UseWorkarea: Boolean = True);
     function AutoSizeDelayedHandle: Boolean; override;
     procedure GetPreferredSize(var PreferredWidth, PreferredHeight: integer;
                                Raw: boolean = false;
@@ -922,17 +932,17 @@ type
   protected
     class procedure WSRegisterClass; override;
     procedure WMNCHitTest(var Message: TLMessage); message LM_NCHITTEST;
-    procedure ActivateSub;
+    procedure ActivateSub; virtual;
     procedure DoShowWindow; override;
-    procedure UpdateRegion;
+    procedure UpdateRegion; virtual;
     procedure SetColor(Value: TColor); override;
-    function UseBGThemes: Boolean;
-    function UseFGThemes: Boolean;
+    function UseBGThemes: Boolean; virtual;
+    function UseFGThemes: Boolean; virtual;
     procedure Paint; override;
   private class var
     FSysHintFont: TFont;
   protected
-    class function SysHintFont: TFont;
+    class function SysHintFont: TFont; virtual;
   public
     class destructor Destroy;
   public

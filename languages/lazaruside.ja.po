@@ -11649,10 +11649,6 @@ msgstr "エディタ内に変換済みのファイルを開いたままにして
 msgid "All project files will be open in editor after conversion"
 msgstr "変換後にすべてのプロジェクトファイルがエディタ内に開かれます"
 
-#: lazarusidestrconsts.liskeepininstalllist
-msgid "Keep in install list"
-msgstr "インストールリストに保持"
-
 #: lazarusidestrconsts.liskeepname
 msgid "Keep name"
 msgstr "名前を保持"
@@ -17671,10 +17667,6 @@ msgstr "プロパティを削除\"%s\""
 msgid "Remove %s files from package \"%s\"?"
 msgstr "パッケージ\"%s\"から%s を削除しますか？"
 
-#: lazarusidestrconsts.lisremovefrominstalllist
-msgid "Remove from install list"
-msgstr "インストールリストから削除"
-
 #: lazarusidestrconsts.lisremovefromproject
 msgid "Remove from Project"
 msgstr "プロジェクトから削除"
@@ -21299,6 +21291,10 @@ msgstr "カタロニア語"
 #: lazarusidestrconsts.rslanguagechinese
 msgid "Chinese"
 msgstr "中国語"
+
+#: lazarusidestrconsts.rslanguagecorsican
+msgid "Corsican"
+msgstr ""
 
 #: lazarusidestrconsts.rslanguageczech
 msgid "Czech"

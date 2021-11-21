@@ -11532,10 +11532,6 @@ msgstr "Conserver les fichiers convertis ouverts dans l'éditeur"
 msgid "All project files will be open in editor after conversion"
 msgstr "Tous les fichiers du projet seront ouverts dans l'éditeur après la conversion"
 
-#: lazarusidestrconsts.liskeepininstalllist
-msgid "Keep in install list"
-msgstr "Conserver dans la liste d'installation"
-
 #: lazarusidestrconsts.liskeepname
 msgid "Keep name"
 msgstr "Préserver le nom"
@@ -17476,10 +17472,6 @@ msgstr "Propriété supprimée : \"%s\"."
 msgid "Remove %s files from package \"%s\"?"
 msgstr "Faut-il supprimer %s fichiers du paquet \"%s\" ?"
 
-#: lazarusidestrconsts.lisremovefrominstalllist
-msgid "Remove from install list"
-msgstr "Retirer de la liste d'installation"
-
 #: lazarusidestrconsts.lisremovefromproject
 msgid "Remove from Project"
 msgstr "Retirer du projet"
@@ -21050,6 +21042,10 @@ msgstr "Catalan"
 #: lazarusidestrconsts.rslanguagechinese
 msgid "Chinese"
 msgstr "Chinois"
+
+#: lazarusidestrconsts.rslanguagecorsican
+msgid "Corsican"
+msgstr ""
 
 #: lazarusidestrconsts.rslanguageczech
 msgid "Czech"

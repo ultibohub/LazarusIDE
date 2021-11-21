@@ -3549,6 +3549,7 @@ resourcestring
   rsLanguageTurkish      = 'Turkish';
   rsLanguageCzech        = 'Czech';
   rsLanguageHungarian    = 'Hungarian';
+  rsLanguageCorsican     = 'Corsican';
 
   // Unit dependencies
   dlgUnitDepCaption      = 'Unit Dependencies';
@@ -4423,8 +4424,8 @@ resourcestring
   lisPkgMangUnableToCreatePackageSourceDirectoryForPackage = 'Unable to '
     +'create package source directory "%s"%sfor package %s.';
   lisPkgMangUnableToLoadPackage = 'Unable to load package';
-  lisPkgMangUnableToOpenThePackage = 'Unable to open the package "%s".%s'
-    +'This package was marked for installation.';
+  lisPkgMangUnableToOpenThePackage = 'Unable to open the package "%s".'
+    +'%sThis package was marked for installation.';
   lisOpenPackage2 = 'Open package %s';
   lisPkgMangThePackageNameOfTheFileIsInvalid = 'The package name "%s" of'
     +'%sthe file "%s" is invalid.';
@@ -6131,8 +6132,6 @@ resourcestring
     +'the main unit. The new main unit will be %s.pas.';
   lisRemoveFilesFromPackage = 'Remove %s files from package "%s"?';
   lisDirectivesForNewUnit = 'Directives for new unit';
-  lisRemoveFromInstallList = 'Remove from install list';
-  lisKeepInInstallList = 'Keep in install list';
   lisInformationAboutUsedFPC = 'Information about used FPC';
 
   //Build mode differences dialog

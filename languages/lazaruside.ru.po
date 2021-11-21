@@ -5,7 +5,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2021-08-01 23:48+0300\n"
+"PO-Revision-Date: 2021-11-17 00:26+0300\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
@@ -11511,10 +11511,6 @@ msgstr "Оставлять преобразованные файлы откры�
 msgid "All project files will be open in editor after conversion"
 msgstr "Все файлы проекта будут открыты в редакторе после преобразования"
 
-#: lazarusidestrconsts.liskeepininstalllist
-msgid "Keep in install list"
-msgstr "Оставить в списке на установку"
-
 #: lazarusidestrconsts.liskeepname
 msgid "Keep name"
 msgstr "Сохранить имя"
@@ -17450,10 +17446,6 @@ msgstr "Удалено свойство \"%s\"."
 msgid "Remove %s files from package \"%s\"?"
 msgstr "Удалить файлы (%s шт.) из пакета \"%s\"?"
 
-#: lazarusidestrconsts.lisremovefrominstalllist
-msgid "Remove from install list"
-msgstr "Удалить из списка на установку"
-
 #: lazarusidestrconsts.lisremovefromproject
 msgid "Remove from Project"
 msgstr "Удалить из проекта"
@@ -21024,6 +21016,10 @@ msgstr "Каталанский"
 #: lazarusidestrconsts.rslanguagechinese
 msgid "Chinese"
 msgstr "Китайский"
+
+#: lazarusidestrconsts.rslanguagecorsican
+msgid "Corsican"
+msgstr "Корсиканский"
 
 #: lazarusidestrconsts.rslanguageczech
 msgid "Czech"

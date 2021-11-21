@@ -11787,10 +11787,6 @@ msgstr ""
 msgid "All project files will be open in editor after conversion"
 msgstr ""
 
-#: lazarusidestrconsts.liskeepininstalllist
-msgid "Keep in install list"
-msgstr ""
-
 #: lazarusidestrconsts.liskeepname
 msgid "Keep name"
 msgstr "Houd naam"
@@ -18059,10 +18055,6 @@ msgstr ""
 msgid "Remove %s files from package \"%s\"?"
 msgstr ""
 
-#: lazarusidestrconsts.lisremovefrominstalllist
-msgid "Remove from install list"
-msgstr ""
-
 #: lazarusidestrconsts.lisremovefromproject
 #, fuzzy
 #| msgid "Remove from project"
@@ -21705,6 +21697,10 @@ msgstr "Catalaans"
 #: lazarusidestrconsts.rslanguagechinese
 msgid "Chinese"
 msgstr "Chinees"
+
+#: lazarusidestrconsts.rslanguagecorsican
+msgid "Corsican"
+msgstr ""
 
 #: lazarusidestrconsts.rslanguageczech
 msgid "Czech"
