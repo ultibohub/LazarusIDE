@@ -3715,8 +3715,7 @@ begin
     OnActivated:=@DesignerActivated;
     OnCloseQuery:=@DesignerCloseQuery;
     OnPersistentDeleted:=@DesignerPersistentDeleted;
-    OnGetNonVisualCompIcon:=
-                 @TComponentPalette(IDEComponentPalette).OnGetNonVisualCompIcon;
+    OnGetNonVisualCompIcon:=@TComponentPalette(IDEComponentPalette).GetNonVisualCompIcon;
     OnGetSelectedComponentClass:=@DesignerGetSelectedComponentClass;
     OnModified:=@DesignerModified;
     OnPasteComponents:=@DesignerPasteComponents;
@@ -4865,7 +4864,8 @@ begin
     fBuilder:=TLazarusBuilder.Create;    // Will be freed in the very end.
   MainBuildBoss.SetBuildTargetIDE;
   try
-    DlgResult:=fBuilder.ShowConfigureBuildLazarusDlg(MiscellaneousOptions.BuildLazProfiles);
+    DlgResult:=fBuilder.ShowConfigBuildLazDlg(MiscellaneousOptions.BuildLazProfiles,
+                                              ToolStatus in [itDebugger,itBuilder]);
   finally
     MainBuildBoss.SetBuildTargetProject1(true);
   end;
