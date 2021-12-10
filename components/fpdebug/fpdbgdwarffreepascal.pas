@@ -8,7 +8,7 @@ interface
 uses
   Classes, SysUtils, Types, math,
   FpDbgDwarfDataClasses, FpDbgDwarf, FpDbgInfo,
-  FpDbgUtil, FpDbgDwarfConst, FpErrorMessages, FpdMemoryTools,
+  FpDbgUtil, FpDbgDwarfConst, FpErrorMessages, FpdMemoryTools, FpDbgClasses,
   DbgIntfBaseTypes,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazStringUtils;
 
@@ -36,8 +36,9 @@ type
     function GetDwarfSymbolClass(ATag: Cardinal): TDbgDwarfSymbolBaseClass; override;
     function CreateScopeForSymbol(ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
       ADwarf: TFpDwarfInfo): TFpDbgSymbolScope; override;
-    //class function CreateProcSymbol(ACompilationUnit: TDwarfCompilationUnit;
-    //  AInfo: PDwarfAddressInfo; AAddress: TDbgPtr): TDbgDwarfSymbolBase; override;
+    function CreateProcSymbol(ACompilationUnit: TDwarfCompilationUnit;
+      AInfo: PDwarfAddressInfo; AAddress: TDbgPtr; ADbgInfo: TFpDwarfInfo
+      ): TDbgDwarfSymbolBase; override;
 
     function GetInstanceClassNameFromPVmt(APVmt: TDbgPtr;
       AContext: TFpDbgLocationContext; ASizeOfAddr: Integer;
@@ -72,6 +73,8 @@ type
     class function ClassCanHandleCompUnit(ACU: TDwarfCompilationUnit): Boolean; override;
   public
     function GetDwarfSymbolClass(ATag: Cardinal): TDbgDwarfSymbolBaseClass; override;
+    function CreateScopeForSymbol(ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
+      ADwarf: TFpDwarfInfo): TFpDbgSymbolScope; override;
     //class function CreateSymbolScope(AThreadId, AStackFrame: Integer; AnAddress: TDBGPtr; ASymbol: TFpSymbol;
     //  ADwarf: TFpDwarfInfo): TFpDbgSymbolScope; override;
     //class function CreateProcSymbol(ACompilationUnit: TDwarfCompilationUnit;
@@ -88,11 +91,23 @@ type
   private
     FOuterNestContext: TFpDbgSymbolScope;
     FOuterNotFound: Boolean;
+    FClassVarStaticPrefix: String;
   protected
     function FindLocalSymbol(const AName: String; const ANameInfo: TNameSearchInfo;
       InfoEntry: TDwarfInformationEntry; out ADbgValue: TFpValue): Boolean; override;
+    function FindSymbolInStructure(const AName: String;
+      const ANameInfo: TNameSearchInfo; InfoEntry: TDwarfInformationEntry; out
+      ADbgValue: TFpValue): Boolean; override;
+    procedure Init; override;
   public
     destructor Destroy; override;
+  end;
+
+  { TFpDwarfFreePascalSymbolScopeDwarf3 }
+
+  TFpDwarfFreePascalSymbolScopeDwarf3 = class(TFpDwarfFreePascalSymbolScope)
+  protected
+    procedure Init; override;
   end;
 
   {%EndRegion }
@@ -230,6 +245,12 @@ type
     function GetAsWideString: WideString; override;
   end;
 
+  { TFpSymbolDwarfFreePascalDataProc }
+
+  TFpSymbolDwarfFreePascalDataProc = class(TFpSymbolDwarfDataProc)
+  public
+    function ResolveInternalFinallySymbol(Process: Pointer): TFpSymbol; override;
+  end;
   {%EndRegion }
 
 implementation
@@ -353,6 +374,7 @@ begin
     DW_TAG_structure_type,
     DW_TAG_class_type:       Result := TFpSymbolDwarfFreePascalTypeStructure;
     DW_TAG_array_type:       Result := TFpSymbolDwarfFreePascalSymbolTypeArray;
+    DW_TAG_subprogram:       Result := TFpSymbolDwarfFreePascalDataProc;
     else                     Result := inherited GetDwarfSymbolClass(ATag);
   end;
 end;
@@ -362,6 +384,13 @@ function TFpDwarfFreePascalSymbolClassMap.CreateScopeForSymbol(
   ADwarf: TFpDwarfInfo): TFpDbgSymbolScope;
 begin
   Result := TFpDwarfFreePascalSymbolScope.Create(ALocationContext, ASymbol, ADwarf);
+end;
+
+function TFpDwarfFreePascalSymbolClassMap.CreateProcSymbol(
+  ACompilationUnit: TDwarfCompilationUnit; AInfo: PDwarfAddressInfo;
+  AAddress: TDbgPtr; ADbgInfo: TFpDwarfInfo): TDbgDwarfSymbolBase;
+begin
+  Result := TFpSymbolDwarfFreePascalDataProc.Create(ACompilationUnit, AInfo, AAddress, ADbgInfo);
 end;
 
 function TFpDwarfFreePascalSymbolClassMap.GetInstanceClassNameFromPVmt(
@@ -448,6 +477,13 @@ begin
     else
       Result := inherited GetDwarfSymbolClass(ATag);
   end;
+end;
+
+function TFpDwarfFreePascalSymbolClassMapDwarf3.CreateScopeForSymbol(
+  ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
+  ADwarf: TFpDwarfInfo): TFpDbgSymbolScope;
+begin
+  Result := TFpDwarfFreePascalSymbolScopeDwarf3.Create(ALocationContext, ASymbol, ADwarf);
 end;
 
 type
@@ -613,10 +649,61 @@ begin
   Result := True; // self, global was done by outer
 end;
 
+function TFpDwarfFreePascalSymbolScope.FindSymbolInStructure(
+  const AName: String; const ANameInfo: TNameSearchInfo;
+  InfoEntry: TDwarfInformationEntry; out ADbgValue: TFpValue): Boolean;
+var
+  CU: TDwarfCompilationUnit;
+  CurClassName, StaticName, FoundName: String;
+  MangledNameInfo: TNameSearchInfo;
+  FoundInfoEntry: TDwarfInformationEntry;
+  IsExternal: Boolean;
+begin
+  Result := inherited FindSymbolInStructure(AName, ANameInfo, InfoEntry, ADbgValue);
+  if Result then
+    exit;
+
+  CU := InfoEntry.CompUnit;
+  if (CU <> nil) and InfoEntry.HasValidScope and
+     InfoEntry.ReadName(CurClassName) and not InfoEntry.IsArtificial
+  then begin
+    StaticName := FClassVarStaticPrefix + LowerCase(CurClassName) + '_' + UpperCase(AName);
+    MangledNameInfo := NameInfoForSearch(StaticName);
+
+    if CU.KnownNameHashes^[MangledNameInfo.NameHash and KnownNameHashesBitMask] then begin
+      if FindExportedSymbolInUnit(CU, MangledNameInfo, FoundInfoEntry, IsExternal) then begin
+        if {(IsExternal) and} (FoundInfoEntry.ReadName(FoundName)) then begin
+          if FoundName = StaticName then begin // must be case-sensitive
+            ADbgValue := SymbolToValue(TFpSymbolDwarf.CreateSubClass(AName, FoundInfoEntry));
+            Result := True;
+          end;
+        end;
+        FoundInfoEntry.ReleaseReference;
+        if Result then
+          exit;
+      end;
+    end;
+  end;
+end;
+
+procedure TFpDwarfFreePascalSymbolScope.Init;
+begin
+  inherited Init;
+  FClassVarStaticPrefix := '_static_';
+end;
+
 destructor TFpDwarfFreePascalSymbolScope.Destroy;
 begin
   FOuterNestContext.ReleaseReference;
   inherited Destroy;
+end;
+
+{ TFpDwarfFreePascalSymbolScopeDwarf3 }
+
+procedure TFpDwarfFreePascalSymbolScopeDwarf3.Init;
+begin
+  inherited Init;
+  FClassVarStaticPrefix := '$_static_';
 end;
 
 { TFpSymbolDwarfV2FreePascalTypeStructure }
@@ -1439,6 +1526,102 @@ begin
     if Context.ReadMemory(Addr, SizeVal(2), @Codepage) then
       Result := CodePageToCodePageName(Codepage) <> '';
   end;
+end;
+
+{ TFpSymbolDwarfFreePascalDataProc }
+
+function TFpSymbolDwarfFreePascalDataProc.ResolveInternalFinallySymbol(
+  Process: Pointer): TFpSymbol;
+{$IfDef WINDOWS}
+var
+  StartPC, EndPC: TDBGPtr;
+  HelpSymbol, HelpSymbol2: TFpSymbolDwarf;
+  AnAddresses: TDBGPtrArray;
+  FndLine, i: Integer;
+  IsDone: Boolean;
+{$EndIf}
+begin
+  Result := Self;
+
+  {$IfDef WINDOWS}
+  // On Windows: If in an SEH finally block, try to get the real procedure
+  // Look for the line, before the finally statement.
+  // TODO: This needs to move to a win-specific class, and ideally a FPC specific class too.
+  if ('$fin' = copy(Name,1, 4) ) then begin
+    IsDone := False;
+    if CompilationUnit.GetProcStartEnd(ProcAddress, StartPC, EndPC) and
+       (StartPC <> 0)
+    then begin
+      // TODO: use the assembler to skip the prologue
+      StartPC := StartPC + 9; // fpc puts the first 9 bytes on "end"
+
+      if StartPC = ProcAddress then begin
+        TFpSymbol(HelpSymbol) := Result;
+        HelpSymbol.AddReference;
+      end
+      else
+        TFpSymbol(HelpSymbol) := TDbgProcess(Process).FindProcSymbol(StartPC);
+
+      if not ( (HelpSymbol <> nil) and  HelpSymbol.InheritsFrom(TFpSymbolDwarf) ) then begin
+        HelpSymbol.ReleaseReference;
+        exit;
+      end;
+
+      AnAddresses := nil;
+      if HelpSymbol.CompilationUnit.GetLineAddresses(HelpSymbol.FileName, HelpSymbol.Line, AnAddresses, fsBefore, @FndLine)
+      then begin
+        if (FndLine = HelpSymbol.Line) then begin
+          if Length(AnAddresses) > 1 then begin // may be an internal finally on the begin/end line, sharing a line number
+            for i := 0 to Length(AnAddresses) - 1 do
+              if (AnAddresses[i] > StartPC) or (AnAddresses[i] < StartPC - 9) then begin
+                TFpSymbol(HelpSymbol2) := TDbgProcess(Process).FindProcSymbol(AnAddresses[i]);
+                if not HelpSymbol2.InheritsFrom(TFpSymbolDwarf) then begin
+                  HelpSymbol2.ReleaseReference;
+                  HelpSymbol2 := nil;
+                end;
+                if (HelpSymbol2 <> nil) then begin
+                  if ('$fin' = copy(HelpSymbol2.Name,1, 4) ) then begin
+                    HelpSymbol2.ReleaseReference;
+                  end
+                  else begin
+                    Result.ReleaseReference;
+                    TFpSymbol(Result) := HelpSymbol2;
+                    IsDone := True;
+                    break;
+                  end;
+                end;
+              end;
+          end;
+
+          AnAddresses := nil;
+          if not IsDone then
+            if not HelpSymbol.CompilationUnit.GetLineAddresses(HelpSymbol.FileName, HelpSymbol.Line-1, AnAddresses, fsBefore)
+            then
+              AnAddresses := nil;
+        end;
+      end
+      else begin
+        AnAddresses := nil;
+        if not HelpSymbol.CompilationUnit.GetLineAddresses(HelpSymbol.FileName, HelpSymbol.Line-1, AnAddresses, fsBefore)
+        then
+          AnAddresses := nil;
+      end;
+
+      if (not IsDone) and
+         (AnAddresses <> nil)
+      then begin
+        HelpSymbol.ReleaseReference;
+        TFpSymbol(HelpSymbol) := TDbgProcess(Process).FindProcSymbol(AnAddresses[0]);
+        if (HelpSymbol <> nil) and  HelpSymbol.InheritsFrom(TFpSymbolDwarf) then begin
+          Result.ReleaseReference;
+          Result := HelpSymbol;
+          HelpSymbol := nil;
+        end;
+      end;
+      HelpSymbol.ReleaseReference;
+    end;
+  end;
+  {$EndIf}
 end;
 
 initialization

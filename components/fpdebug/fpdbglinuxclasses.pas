@@ -13,6 +13,9 @@ uses
   BaseUnix,
   termio, fgl,
   process,
+  Contnrs,
+  StrUtils,
+  Types,
   FpDbgClasses,
   FpDbgLoader, FpDbgDisasX86,
   DbgIntfBaseTypes, DbgIntfDebuggerBase,
@@ -22,7 +25,8 @@ uses
   UTF8Process,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, Maps,
   FpDbgCommon, FpdMemoryTools,
-  FpErrorMessages;
+  FpErrorMessages,
+  FpImgReaderBase;
 
 type
   user_regs_struct64 = record
@@ -241,6 +245,21 @@ type
     function GetNextSignal(out APID: THandle; out AWaitStatus: cint): Boolean;
   end;
 
+  { TDbgLinuxMemoryMapping }
+
+  // Corresponds to the structure in /proc/[pid]/maps, see the Linux documentation
+  // 'man 5 proc' for more info.
+  TDbgLinuxMemoryMapping = class(TObject)
+    AddressFrom: PtrInt;
+    AddressTill: PtrInt;
+    Rights: string;
+    Offset: PtrInt;
+    DeviceId: string;
+    Inode: QWord;
+    FileName: string;
+  end;
+  TDbgLinuxMemoryMappingList = class(TObjectList);
+
   { TDbgLinuxThread }
 
   TDbgLinuxThread = class(TDbgThread)
@@ -290,6 +309,8 @@ type
     FIsTerminating: boolean;
     FMasterPtyFd: cint;
     FCurrentThreadId: THandle;
+    // This breakpoint is triggered after dynamic libraries have been (un)loaded
+    FSOLibEventBreakpoint: TFpDbgBreakpoint;
     {$ifndef VER2_6}
     procedure OnForkEvent(Sender : TObject);
     {$endif}
@@ -301,6 +322,22 @@ type
     function CreateThread(AthreadIdentifier: THandle; out IsMainThread: boolean): TDbgThread; override;
     function AnalyseDebugEvent(AThread: TDbgThread): TFPDEvent; override;
     function CreateWatchPointData: TFpWatchPointData; override;
+    // On Linux, dynamic loading of Libraries isn't done by the kernel, but by
+    // a library. At startup a breakpoint is set within this library to provide
+    // an hook for the event a library has been (un)loaded. This function
+    // analyzes deBreakpoint events and checks if they are triggered by this
+    // special breakpoint. And when this is the case, it evaluates the state
+    // of the process to determine if a library has been (un)loaded or that
+    // nothing has happened. And returns the corresponding TFPDEvent.
+    // (deLoadLibrary, deUnloadLibrary, deInternalContinue or deBreakpoint when
+    // the breakpoint is not this 'special' breakpoint).
+    function CheckForSOLibDebugEvent(AThread: TDbgThread): TFPDEvent;
+    // Searches in /proc/[pid]/maps for dynamically loaded libraries and
+    // synchronizes these results with the list of loaded libraries.
+    function SynchronizeProcMapsWithLibraryList: TFPDEvent;
+    // Scan /proc/[pid]/maps and return the results
+    function ObtainProcMaps: TDbgLinuxMemoryMappingList;
+    procedure AddLib(const ALibrary: TDbgLibrary);
   public
     class function isSupported(ATargetInfo: TTargetDescriptor): boolean; override;
     constructor Create(const AFileName: string; AnOsClasses: TOSDbgClasses; AMemManager: TFpDbgMemManager; AProcessConfig: TDbgProcessConfig = nil); override;
@@ -324,21 +361,58 @@ type
     function Pause: boolean; override;
     function Detach(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
 
+    procedure LoadInfo; override;
+
     function Continue(AProcess: TDbgProcess; AThread: TDbgThread; SingleStep: boolean): boolean; override;
     function WaitForDebugEvent(out ProcessIdentifier, ThreadIdentifier: THandle): boolean; override;
   end;
   TDbgLinuxProcessClass = class of TDbgLinuxProcess;
 
+  { tDbgLinuxLibrary }
+
+  tDbgLinuxLibrary = class(TDbgLibrary)
+  protected
+    procedure InitializeLoaders; override;
+  public
+    constructor Create(const AProcess: TDbgProcess; const AFileName: string; const AModuleHandle: THandle; const ABaseAddr: TDbgPtr);
+  end;
+
+
 implementation
 
 var
-  DBG_VERBOSE, DBG_WARNINGS: PLazLoggerLogGroup;
+  DBG_VERBOSE, DBG_WARNINGS, FPDBG_LINUX: PLazLoggerLogGroup;
   GConsoleTty: string;
   GSlavePTyFd: cint;
 
 Function WIFSTOPPED(Status: Integer): Boolean;
 begin
   WIFSTOPPED:=((Status and $FF)=$7F);
+end;
+
+{ tDbgLinuxLibrary }
+
+procedure tDbgLinuxLibrary.InitializeLoaders;
+var
+  Loader: TDbgImageLoader;
+begin
+  Loader := TDbgImageLoader.Create(Name, nil, BaseAddr);
+  // The dynamic-loader (dl) on Linux also loads other stuff then ELF-
+  // formatted libraries.
+  // So it is reasonable likely that the loaded 'library' can not be handled
+  // by the detault readers from the loader.
+  if Loader.IsValid then
+    Loader.AddToLoaderList(LoaderList)
+  else
+    Loader.Free;
+end;
+
+constructor tDbgLinuxLibrary.Create(const AProcess: TDbgProcess; const AFileName: string; const AModuleHandle: THandle; const ABaseAddr: TDbgPtr);
+begin
+  Inherited Create(AProcess, AFileName, AModuleHandle, ABaseAddr);
+  SetFileName(AFileName);
+
+  LoadInfo;
 end;
 
 { TFpDbgLinuxSignal }
@@ -494,7 +568,7 @@ begin
 
   result := fpkill(ID, SIGSTOP)=0;
   {$IFDEF DebuglnLinuxDebugEvents}
-  debugln('TDbgLinuxThread.RequestInternalPause fpkill(%d, SIGSTOP) => %s', [ID, dbgs(Result)]);
+  debugln(FPDBG_LINUX, 'TDbgLinuxThread.RequestInternalPause fpkill(%d, SIGSTOP) => %s', [ID, dbgs(Result)]);
   {$ENDIF}
   if not result then
     begin
@@ -810,8 +884,14 @@ begin
 end;
 
 procedure TDbgLinuxProcess.InitializeLoaders;
+var
+  Loader: TDbgImageLoader;
 begin
-  TDbgImageLoader.Create(Name).AddToLoaderList(LoaderList);
+  Loader := TDbgImageLoader.Create(Name);
+  if Loader.IsValid then
+    Loader.AddToLoaderList(LoaderList)
+  else
+    Loader.Free;
 end;
 
 function TDbgLinuxProcess.CreateThread(AthreadIdentifier: THandle; out IsMainThread: boolean): TDbgThread;
@@ -829,6 +909,176 @@ end;
 function TDbgLinuxProcess.CreateWatchPointData: TFpWatchPointData;
 begin
   Result := TFpIntelWatchPointData.Create;
+end;
+
+function TDbgLinuxProcess.CheckForSOLibDebugEvent(AThread: TDbgThread): TFPDEvent;
+var
+  CurrentAddr: TDBGPtr;
+  BList: TFpInternalBreakpointArray;
+  SOLibBreakpointFound: Boolean;
+  RegularBreakpointFound: Boolean;
+  i: Integer;
+  ProcMaps: TDbgLinuxMemoryMappingList;
+  ProcMap: TDbgLinuxMemoryMapping;
+begin
+  // When we are not dealing with an SOLibDebugEvent, we have a 'normal'
+  // Breakpoint.
+  Result := deBreakpoint;
+
+  // When the SOLib-breakpoint has not been set, this is not a SOLibDebugEvent.
+  if not Assigned(FSOLibEventBreakpoint) then
+    Exit;
+
+  // Loop through all defined breakpoints at the
+  // instruction-pointer location, and see if the SOLib or any other breakpoint
+  // has been set on the current location,
+  RegularBreakpointFound:=False;
+  SOLibBreakpointFound:=False;
+  CurrentAddr:=AThread.GetInstructionPointerRegisterValue;
+  BList := FBreakMap.GetInternalBreaksAtLocation(CurrentAddr);
+  if BList <> nil then
+    begin
+    for i := 0 to Length(BList) -1 do
+      begin
+      if BList[i] = FSOLibEventBreakpoint then
+        SOLibBreakpointFound := True
+      else
+        RegularBreakpointFound := True;
+      end;
+    end;
+
+  if RegularBreakpointFound then
+    begin
+    // Regular breakpoints have precedense. In case there is a library-change,
+    // handle that one later.
+    //if SOLibBreakpointFound then
+    //  FAwaitingLibSOEventsPresent:=True;
+    end
+  else if SOLibBreakpointFound then
+    Result := SynchronizeProcMapsWithLibraryList();
+end;
+
+function TDbgLinuxProcess.SynchronizeProcMapsWithLibraryList: TFPDEvent;
+var
+  ProcMaps: TDbgLinuxMemoryMappingList;
+  i: Integer;
+  ProcMap: TDbgLinuxMemoryMapping;
+begin
+  Result := deInternalContinue;
+  FLibMap.ClearAddedAndRemovedLibraries;
+  ProcMaps := ObtainProcMaps;
+  try
+    // The first entry is the application itself, which we skip, so start with
+    // 1.
+    for i := 1 to ProcMaps.Count -1 do
+      begin
+      ProcMap := ProcMaps.Items[i] as TDbgLinuxMemoryMapping;
+      // Check if the ProcMap is the first entry of a valid library
+      // If the Offset <> 0, it is probably not the 'main' entry we are looking
+      // for. When there is no filename, we can not handle it, and when the
+      // filename starts with '[', it is a general placeholder.
+      if (ProcMap.Offset = 0) and (ProcMap.FileName <> '') and (Copy(ProcMap.FileName,1,1) <> '[') then
+        begin
+        // Check if this library is already known.
+        if not (FLibMap.HasId(ProcMap.AddressFrom)) then
+          begin
+          // Add the library and trigger a deLoadLibrary event
+          AddLib(tDbgLinuxLibrary.Create(Self, ProcMap.FileName, ProcMap.Inode, ProcMap.AddressFrom));
+          Result := deLoadLibrary;
+          end
+        end;
+      end;
+  finally
+    ProcMaps.Free;
+  end;
+end;
+
+function TDbgLinuxProcess.ObtainProcMaps: TDbgLinuxMemoryMappingList;
+
+  procedure ParseMapsLine(const Line: string);
+  var
+    Mapping: TDbgLinuxMemoryMapping;
+    Parts: TStringDynArray;
+    Addresses: TStringDynArray;
+  begin
+    Mapping := TDbgLinuxMemoryMapping.Create;
+    try
+      Parts := Line.Split([' '], TStringSplitOptions.ExcludeEmpty);
+      Addresses := Parts[0].Split(['-']);
+      Mapping.AddressFrom:=Hex2Dec64(Addresses[0]);
+      Mapping.AddressTill:=Hex2Dec64(Addresses[1]);
+
+      Mapping.Rights:=Parts[1];
+      Mapping.Offset:=Hex2Dec64(Parts[2]);
+      Mapping.DeviceId:=Parts[3];
+      Mapping.Inode:=StrToInt64(Parts[4]);
+      if Length(Parts) > 5 then
+        Mapping.FileName:=Parts[5]
+      else
+        Mapping.FileName:='';
+
+      Result.Add(Mapping);
+      Mapping := nil;
+    finally
+      Mapping.Free;
+    end;
+  end;
+
+var
+  FN: string;
+  Buf: string;
+  FS: TFileStream;
+  BytesRead: Int64;
+  TotalBytesRead: Int64;
+  BlockLength: Int64;
+  MapsStrings: TStringList;
+  i: Integer;
+begin
+  Result := TDbgLinuxMemoryMappingList.Create(True);
+  // All memory-mappings are retrieved from /proc/<ps>/maps and stored in
+  // FMemoryMappingList
+  FN := '/proc/'+IntToStr(ProcessID)+'/maps';
+
+  // First read the contents of /proc/<ps>/maps and place it in a buffer
+
+  // In principle the file should be read in one read-operation, or the file
+  // might be changed while reading it. So we use a relatively large buffer.
+  // (In principle it is still possible that the file isn't
+  // being read in one operation. But let's ignore this for now.)
+  FS := TFileStream.Create(FN, fmOpenRead);
+  try
+    BlockLength:=64*1024;
+    TotalBytesRead := 0;
+    repeat
+    SetLength(Buf, TotalBytesRead + BlockLength);
+    BytesRead := FS.Read(Buf[TotalBytesRead+1], BlockLength);
+    TotalBytesRead:=TotalBytesRead+BytesRead;
+    until BytesRead <= BlockLength;
+    SetLength(Buf, TotalBytesRead);
+  finally
+    FS.Free;
+  end;
+
+  // Now use a TStringList to parse the contents of the buffer.
+  MapsStrings := TStringList.Create;
+  try
+    MapsStrings.Text := Buf;
+    // Parse the file line-by-line and add the mappings to FMemoryMappingList
+    for i := 0 to MapsStrings.Count -1 do
+      ParseMapsLine(MapsStrings[i]);
+  finally
+    MapsStrings.Free;
+  end;
+end;
+
+procedure TDbgLinuxProcess.AddLib(const ALibrary: TDbgLibrary);
+var
+  ID: TDbgPtr;
+begin
+  ID := ALibrary.BaseAddr;
+  FLibMap.Add(ID, ALibrary);
+  if (ALibrary.DbgInfo.HasInfo) or (ALibrary.SymbolTableInfo.HasInfo) then
+    FSymInstances.Add(ALibrary);
 end;
 
 constructor TDbgLinuxProcess.Create(const AFileName: string;
@@ -1161,6 +1411,46 @@ begin
   Result := True;
 end;
 
+procedure TDbgLinuxProcess.LoadInfo;
+var
+  i: Integer;
+  InterpSection: PDbgImageSection;
+  Astat: Stat;
+  ALib: TDbgLibrary;
+
+begin
+  inherited LoadInfo;
+
+  // This would be strange, but you never know.
+  if Assigned(FSOLibEventBreakpoint) then
+    Raise Exception.Create('SOLib event-breakpoint already exists.');
+
+  // Check if the library supports dynamic loading by searching for the
+  // .interp section.
+  for i := 0 to LoaderList.Count -1 do
+    begin
+    InterpSection := LoaderList.Items[i].Section['.interp'];
+    if assigned(InterpSection) then
+      begin
+      // Try to retrieve the inode of the file (library) in the .interp section.
+      // This is the filename of the library that handles the dynamic loading.
+      if FpStat(PChar(InterpSection^.RawData), AStat) = 0 then
+        begin
+        // Syncronize all loaded libraries, and obtain the library for the
+        // dynamic-loading, based on the .interp section.
+        SynchronizeProcMapsWithLibraryList();
+        if FLibMap.GetLib(Astat.st_ino, ALib) then
+          begin
+          // Set a breakpoint at _dl_debug_state. This procedure is called after
+          // one or more libraries have been loaded. This breakpoint is used to
+          // detect the (un)loading of libraries.
+          FSOLibEventBreakpoint := ALib.AddBreak('_dl_debug_state');
+          end
+        end;
+      end;
+    end;
+end;
+
 function TDbgLinuxProcess.Continue(AProcess: TDbgProcess; AThread: TDbgThread; SingleStep: boolean): boolean;
   function CheckNoError: Boolean;
   var
@@ -1198,7 +1488,7 @@ begin
   // check for pending events in other threads
   if FPostponedSignals.Count > 0 then begin
     {$IFDEF DebuglnLinuxDebugEvents}
-    debugln(['Exit for DEFERRED event TID']);
+    debugln(FPDBG_LINUX, ['Exit for DEFERRED event TID']);
     {$ENDIF}
     exit;
   end;
@@ -1214,7 +1504,7 @@ begin
         while (ThreadToContinue.GetInstructionPointerRegisterValue = IP) do begin
           fpseterrno(0);
           {$IFDEF DebuglnLinuxDebugEvents}
-          Debugln(['Single-stepping other TID: ', ThreadToContinue.ID]);
+          Debugln(FPDBG_LINUX, ['Single-stepping other TID: ', ThreadToContinue.ID]);
           {$ENDIF}
           fpPTrace(PTRACE_SINGLESTEP, ThreadToContinue.ID, pointer(1), pointer(TDbgLinuxThread(ThreadToContinue).FExceptionSignal));
 
@@ -1244,7 +1534,7 @@ begin
 
   if FPostponedSignals.Count > 0 then begin
     {$IFDEF DebuglnLinuxDebugEvents}
-    debugln(['Exit for DEFERRED SingleSteps event TID']);
+    debugln(FPDBG_LINUX, ['Exit for DEFERRED SingleSteps event TID']);
     {$ENDIF}
     exit;
   end;
@@ -1256,7 +1546,7 @@ begin
     fpseterrno(0);
     AThread.BeforeContinue;
     {$IFDEF DebuglnLinuxDebugEvents}
-    Debugln(['Single-stepping current']);
+    Debugln(FPDBG_LINUX, ['Single-stepping current']);
     {$ENDIF}
     fpPTrace(PTRACE_SINGLESTEP, AThread.ID, pointer(1), pointer(TDbgLinuxThread(AThread).FExceptionSignal));
     TDbgLinuxThread(AThread).ResetPauseStates;
@@ -1273,7 +1563,7 @@ begin
     if (ThreadToContinue <> AThread) and (ThreadToContinue.FIsPaused) then begin
       fpseterrno(0);
       {$IFDEF DebuglnLinuxDebugEvents}
-      Debugln(['RUN other TID: ', ThreadToContinue.ID]);
+      Debugln(FPDBG_LINUX, ['RUN other TID: ', ThreadToContinue.ID]);
       {$ENDIF}
       fpPTrace(PTRACE_CONT, ThreadToContinue.ID, pointer(1), pointer(ThreadToContinue.FExceptionSignal));
       CheckNoError; // only log
@@ -1286,7 +1576,7 @@ begin
     fpseterrno(0);
     //AThread.BeforeContinue;
     {$IFDEF DebuglnLinuxDebugEvents}
-    Debugln(['RUN ']);
+    Debugln(FPDBG_LINUX, ['RUN ']);
     {$ENDIF}
     if AThread.NextIsSingleStep then
       fpPTrace(PTRACE_SINGLESTEP, AThread.ID, pointer(1), pointer(TDbgLinuxThread(AThread).FExceptionSignal))
@@ -1326,7 +1616,7 @@ begin
 
     ProcessIdentifier := ProcessID;
     {$IFDEF DebuglnLinuxDebugEvents}
-    debugln(['##### GOT EVENT FOR ',pid, ' st ', FStatus]);
+    debugln(FPDBG_LINUX, ['##### GOT EVENT FOR ',pid, ' st ', FStatus]);
     {$ENDIF}
     end;
 end;
@@ -1489,6 +1779,12 @@ begin
 
   TDbgLinuxThread(AThread).FIsSteppingBreakPoint := False;
 
+
+  if (result = deBreakpoint) and (AThread <> nil) then
+    // Check if the breakpoint is the special breakpoint that is inserted to
+    // detect the (un)loading of libraries.
+    Result := CheckForSOLibDebugEvent(AThread);
+
   if Result in [deException, deBreakpoint, deFinishedStep] then begin // deFinishedStep will not be set here
     {$IFDEF DebuglnLinuxDebugEvents}
     debuglnenter('STOP ALL THREADS');
@@ -1542,8 +1838,8 @@ begin
 
   {$IFDEF DebuglnLinuxDebugEvents}
   for TDbgThread(ThreadToPause) in FThreadMap do
-  debugln([ThreadToPause.id, ' =athrd:', ThreadToPause = AThread, ' psd:', ThreadToPause.FIsPaused,ThreadToPause.FIsInInternalPause, ' exs:', ThreadToPause.FExceptionSignal, '  sstep:',ThreadToPause.NextIsSingleStep]);
-  debugln('<<<<<<<<<<<<<<<<<<<<<<<<');
+  debugln(FPDBG_LINUX, [ThreadToPause.id, ' =athrd:', ThreadToPause = AThread, ' psd:', ThreadToPause.FIsPaused,ThreadToPause.FIsInInternalPause, ' exs:', ThreadToPause.FExceptionSignal, '  sstep:',ThreadToPause.NextIsSingleStep]);
+  debugln(FPDBG_LINUX, '<<<<<<<<<<<<<<<<<<<<<<<<');
   {$ENDIF}
 
 end;
@@ -1551,6 +1847,7 @@ end;
 initialization
   DBG_VERBOSE := DebugLogger.FindOrRegisterLogGroup('DBG_VERBOSE' {$IFDEF DBG_VERBOSE} , True {$ENDIF} );
   DBG_WARNINGS := DebugLogger.FindOrRegisterLogGroup('DBG_WARNINGS' {$IFDEF DBG_WARNINGS} , True {$ENDIF} );
+  FPDBG_LINUX := DebugLogger.FindOrRegisterLogGroup('FPDBG_LINUX' {$IFDEF DebuglnLinuxDebugEvents} , True {$ENDIF} );
 
   RegisterDbgOsClasses(TOSDbgClasses.Create(
     TDbgLinuxProcess,

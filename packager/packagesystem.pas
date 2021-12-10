@@ -435,7 +435,6 @@ type
     procedure RegisterComponentsHandler(const Page: string;
                                     ComponentClasses: array of TComponentClass);
     procedure RegistrationError(const Msg: string);
-    procedure RegisterStaticBasePackages;
     procedure RegisterStaticPackage(APackage: TLazPackage;
                                     RegisterProc: TRegisterProc);
     procedure CallRegisterProc(RegisterProc: TRegisterProc);
@@ -2243,9 +2242,6 @@ begin
   LoadLazarusBasePackage('LazControlDsgn');
 
   SortAutoInstallDependencies;
-
-  // register them
-  RegisterStaticBasePackages;
 end;
 
 procedure TLazPackageGraph.LoadAutoInstallPackages(PkgList: TStringList);
@@ -5675,26 +5671,39 @@ begin
   Result:=true;
 end;
 
-procedure TLazPackageGraph.RegisterStaticBasePackages;
-begin
-  BeginUpdate(true);
-  // IDE built-in packages
-  if Assigned(OnTranslatePackage) then
-  begin
-    OnTranslatePackage(BuildIntfPackage);
-    OnTranslatePackage(CodeToolsPackage);
-  end;
-  EndUpdate;
-end;
-
 procedure TLazPackageGraph.RegisterStaticPackage(APackage: TLazPackage;
   RegisterProc: TRegisterProc);
+var
+  PkgList: TFPList;
+  i: Integer;
+  Pkg: TLazPackage;
 begin
   if AbortRegistration then exit;
   //DebugLn(['TLazPackageGraph.RegisterStaticPackage ',APackage.IDAsString]);
-  RegistrationPackage:=APackage;
+
+  // translate (load resourcestrings) package and dependencies
   if Assigned(OnTranslatePackage) then
-    OnTranslatePackage(APackage);
+  begin
+    PkgList:=nil;
+    try
+      PackageGraph.GetAllRequiredPackages(APackage,APackage.FirstRequiredDependency,PkgList,[]);
+      if PkgList<>nil then
+      begin
+        for i:=0 to PkgList.Count-1 do
+        begin
+          Pkg:=TLazPackage(PkgList[i]);
+          if (Pkg.Translated='') and (Pkg.POOutputDirectory<>'') then
+            OnTranslatePackage(Pkg);
+        end;
+      end;
+    finally
+      PkgList.Free;
+    end;
+    if (APackage.Translated='') and (APackage.POOutputDirectory<>'') then
+      OnTranslatePackage(APackage);
+  end;
+
+  RegistrationPackage:=APackage;
   CallRegisterProc(RegisterProc);
   APackage.Registered:=true;
   RegistrationPackage:=nil;
