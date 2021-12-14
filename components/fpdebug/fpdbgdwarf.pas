@@ -962,6 +962,7 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
     function GetValueAddress(AValueObj: TFpValueDwarf; out
       AnAddress: TFpDbgMemLocation): Boolean; override;
 
+    property DbgInfo: TFpDwarfInfo read FDwarf;
     property ProcAddress: TDBGPtr read FAddress;
   public
     constructor Create(ACompilationUnit: TDwarfCompilationUnit; AInfo: PDwarfAddressInfo; AAddress: TDbgPtr; ADbgInfo: TFpDwarfInfo = nil); overload;
@@ -1322,7 +1323,7 @@ function TFpDwarfInfoSymbolScope.FindExportedSymbolInUnit(
   CU: TDwarfCompilationUnit; const ANameInfo: TNameSearchInfo; out
   AnInfoEntry: TDwarfInformationEntry; out AnIsExternal: Boolean): Boolean;
 var
-  i, ExtVal: Integer;
+  ExtVal: Integer;
   InfoEntry: TDwarfInformationEntry;
   s: String;
 begin
@@ -1375,7 +1376,7 @@ var
   i, j: Integer;
   CU: TDwarfCompilationUnit;
   CUList: TDwarfCompilationUnitArray;
-  InfoEntry, FoundInfoEntry: TDwarfInformationEntry;
+  FoundInfoEntry: TDwarfInformationEntry;
   IsExt: Boolean;
   WorkItem, PrevWorkItem: TFpThreadWorkerFindSymbolInUnits;
 begin
