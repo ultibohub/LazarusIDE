@@ -137,9 +137,9 @@ msgstr "Új CSS fájl létrehozása ..."
 msgid "Enter your classes/style definitions here"
 msgstr "Írja ide az osztály/stílus meghatározásokat"
 
-#: fpwebstrconsts.sdocumentlocation
-msgid "&Location"
-msgstr "&Hely"
+#: fpwebstrconsts.sdefaultrouteservesfiles
+msgid "Serve files from default location"
+msgstr ""
 
 #: fpwebstrconsts.sdocumentroot
 msgid "&Directory"
@@ -148,6 +148,10 @@ msgstr "&Könyvtár"
 #: fpwebstrconsts.senteryoutext
 msgid "Enter your text ..."
 msgstr "Írja be a szöveget ..."
+
+#: fpwebstrconsts.sfileserving
+msgid "File serving"
+msgstr ""
 
 #: fpwebstrconsts.shtmlautor
 msgid "Html &author - <meta name=\"author\">"
@@ -509,6 +513,10 @@ msgstr "Új HTML fájl tulajdonságok"
 #: fpwebstrconsts.snewhttpapp
 msgid "New HTTP application"
 msgstr "Új HTTP alkalmazás"
+
+#: fpwebstrconsts.snofiles
+msgid "Do not serve files"
+msgstr ""
 
 #: fpwebstrconsts.sregisterfiles
 msgid "&Register location to serve files from"

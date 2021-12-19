@@ -116,8 +116,8 @@ msgstr "Utwórz nowy plik CSS..."
 msgid "Enter your classes/style definitions here"
 msgstr ""
 
-#: fpwebstrconsts.sdocumentlocation
-msgid "&Location"
+#: fpwebstrconsts.sdefaultrouteservesfiles
+msgid "Serve files from default location"
 msgstr ""
 
 #: fpwebstrconsts.sdocumentroot
@@ -126,6 +126,10 @@ msgstr "&Folder"
 
 #: fpwebstrconsts.senteryoutext
 msgid "Enter your text ..."
+msgstr ""
+
+#: fpwebstrconsts.sfileserving
+msgid "File serving"
 msgstr ""
 
 #: fpwebstrconsts.shtmlautor
@@ -487,6 +491,10 @@ msgstr ""
 
 #: fpwebstrconsts.snewhttpapp
 msgid "New HTTP application"
+msgstr ""
+
+#: fpwebstrconsts.snofiles
+msgid "Do not serve files"
 msgstr ""
 
 #: fpwebstrconsts.sregisterfiles

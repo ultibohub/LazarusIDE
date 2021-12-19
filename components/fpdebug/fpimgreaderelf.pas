@@ -411,6 +411,11 @@ begin
   //FSections.Duplicates := dupError;
   FSections.CaseSensitive := False;
 
+  // Elf-binaries do not have an internal offset encoded into the binary (ImageBase)
+  // so their reloction-offset is just equal to the location at which the binary
+  // has been loaded into memory. (The LoadedTargetImageAddr)
+  SetRelocationOffset(ALoadedTargetImageAddr, sPositive);
+
   FFileLoader := ASource;
   fOwnSource := OwnSource;
   fElfFile := TElfFile.Create;

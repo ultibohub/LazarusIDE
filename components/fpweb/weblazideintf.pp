@@ -24,7 +24,7 @@ interface
 uses
   Classes, SysUtils, fpWeb, fpHTML, fpdatasetform,
   fpextjs, extjsjson, extjsxml, fpjsonrpc, jstree,jsparser,
-  fpextdirect,fpwebdata,
+  fpextdirect,fpwebdata, fpwebfile,
 {$IF FPC_FULLVERSION>=30004}
   fphttpclient,
   fphttpserver,
@@ -36,6 +36,7 @@ uses
 {$ENDIF}
   webjsonrpc,
   Controls, Dialogs, Forms,
+  frmnewhttpapp,
   LazFileUtils,
   IDEExternToolIntf, ProjectIntf,
   LazIDEIntf, SrcEditorIntf, IDEMsgIntf,
@@ -177,12 +178,13 @@ type
   { THTTPApplicationDescriptor }
   THTTPApplicationDescriptor = class(TProjectDescriptor)
   private
-    FThreaded,
-    fReg : Boolean;
+    FThreaded : Boolean;
+    fServeFiles : TServeFiles;
     FDir,
     FLoc : String;
     FPort : Integer;
-    function GetOPtions: TModalResult;
+    FDefaultFiles : Boolean;
+    function GetOptions: TModalResult;
   public
     constructor Create; override;
     function GetLocalizedName: string; override;
@@ -210,7 +212,7 @@ procedure Register;
 implementation
 
 uses LazarusPackageIntf,FormEditingIntf, PropEdits, DBPropEdits, sqldbwebdata, LResources,
-     frmrpcmoduleoptions,frmnewhttpapp, registersqldb, sqlstringspropertyeditordlg;
+     frmrpcmoduleoptions, registersqldb, sqlstringspropertyeditordlg;
 
 Const
   fpWebTab = 'fpWeb';
@@ -806,7 +808,7 @@ begin
   Result:=rsHTTPAppli2;
 end;
 
-function THTTPApplicationDescriptor.GetOPtions : TModalResult;
+function THTTPApplicationDescriptor.GetOptions : TModalResult;
 
 begin
   With TNewHTTPApplicationForm.Create(Application) do
@@ -816,12 +818,12 @@ begin
         begin
         FThreaded:=Threaded;
         FPort:=Port;
-        FReg:=ServeFiles;
-        if Freg then
+        FServeFiles:=ServeFiles;
+        if FServeFiles<>sfNoFiles then
           begin
-          FLoc:=Location;
+          FLoc:=FileRoute;
           FDir:=Directory;
-          end;
+          end
         end;
     finally
       Free;
@@ -852,17 +854,25 @@ begin
     +'{$mode objfpc}{$H+}'+le
     +le
     +'uses'+le;
-  if FReg then
+  if FServeFiles<>sfNoFiles then
     NewSource:=NewSource+'  fpwebfile,'+le;
   NewSource:=NewSource
     +'  fphttpapp;'+le
     +le
     +'begin'+le;
-  if Freg then
+  Case FServeFiles of
+  sfSingleRoute:
     begin
     S:=Format('  RegisterFileLocation(''%s'',''%s'');',[FLoc,FDir]);
     NewSource:=NewSource+S+le
     end;
+  sfDefaultRoute:
+    begin
+    S:='  TSimpleFileModule.BaseDir:='+Format('''%s'';',[StringReplace(FDir,'''','''''',[rfReplaceAll])]);
+    S:=S+le+'  TSimpleFileModule.RegisterDefaultRoute;';
+    NewSource:=NewSource+S+le;
+    end;
+  end;
   NewSource:=NewSource
     +'  Application.Title:=''httpproject1'';'+le
     +Format('  Application.Port:=%d;'+le,[FPort]);
@@ -962,7 +972,7 @@ function TFileDescWebJSONRPCModule.GetImplementationSource(const Filename,
 
 Var
   RH,RM : Boolean;
-  HP : String;
+  JRC, HP : String;
 
 begin
   RH:=False;
@@ -974,6 +984,7 @@ begin
         begin
         RH:=RegisterHandlers;
         RM:=RegisterModule;
+        JRC:=JSONRPCClass;
         If RM then
           HP:=HTTPPath;
         end;
@@ -986,7 +997,7 @@ begin
   If RM then
     Result:=Result+'  RegisterHTTPModule('''+HP+''',T'+ResourceName+');'+LineEnding;
   If RH then
-    Result:=Result+'  JSONRPCHandlerManager.RegisterDatamodule(T'+ResourceName+','''+HP+''',);'+LineEnding;
+    Result:=Result+'  JSONRPCHandlerManager.RegisterDatamodule(T'+ResourceName+','''+JRC+''');'+LineEnding;
 end;
 
 { TFileDescExtDirectModule }

@@ -45,7 +45,7 @@ uses
   Classes, Types, SysUtils, contnrs, Math, Maps, LazClasses, LazFileUtils,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazUTF8, lazCollections,
   // FpDebug
-  FpDbgUtil, FpDbgInfo, FpDbgDwarfConst,
+  FpDbgUtil, FpDbgInfo, FpDbgDwarfConst, FpDbgCommon,
   FpDbgLoader, FpImgReaderBase, FpdMemoryTools, FpErrorMessages, DbgIntfBaseTypes;
 
 type
@@ -705,8 +705,8 @@ type
     // On Darwin it could be that the debug-information is not included into the executable by the linker.
     // This function is to map object-file addresses into the corresponding addresses in the executable.
     function MapAddressToNewValue(AValue: QWord): QWord;
-    // Calculates an address after relocation while (dynamically) loading a library
-    // into memory, based on the library's ImageBase.
+    // Calculates an address taking the relocation after being loaded (dynamically)
+    // into memory into account, based on the library's ImageBase.
     // Conceptually it would be better to let the TDbgLibrary take the relocation
     // into account. But it was chosen to do the relocation during the loading of
     // the Dwarf-information due to performance reasons. And because of consistency
@@ -757,7 +757,7 @@ type
     FFiles: array of TDwarfDebugFile;
   private
     FImageBase: QWord;
-    FRelocationOffset: TDBGPtr;
+    FRelocationOffset: TDBGPtrOffset;
     function GetCompilationUnit(AIndex: Integer): TDwarfCompilationUnit; inline;
   protected
     function GetCompilationUnitClass: TDwarfCompilationUnitClass; virtual;
@@ -780,7 +780,7 @@ type
     property CompilationUnits[AIndex: Integer]: TDwarfCompilationUnit read GetCompilationUnit;
 
     property ImageBase: QWord read FImageBase;
-    property RelocationOffset: TDBGPtr read FRelocationOffset;
+    property RelocationOffset: TDBGPtrOffset read FRelocationOffset;
     property WorkQueue: TFpGlobalThreadWorkerQueue read FWorkQueue;
   end;
 

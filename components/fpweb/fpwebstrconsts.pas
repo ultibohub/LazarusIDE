@@ -116,9 +116,12 @@ resourcestring
   sHTTPPort = '&Port to listen for requests:';
   sNewHTTPApp = 'New HTTP application';
   sRegisterFiles = '&Register location to serve files from';
-  sDocumentLocation = '&Location';
   sDocumentRoot = '&Directory';
   sUseThreads = 'Use &threads to serve requests in';
+  sFileServing = 'File serving';
+  sNoFiles = 'Do not serve files';
+  sDefaultRouteServesFiles = 'Serve files from default location';
+
 
   sCaption = 'Create a new JSON-RPC module';
   sRegisterJSON = 'Register JSON-RPC handlers in factory';

@@ -138,9 +138,9 @@ msgstr "创建新CSS文件..."
 msgid "Enter your classes/style definitions here"
 msgstr "输入你的类/样式定义"
 
-#: fpwebstrconsts.sdocumentlocation
-msgid "&Location"
-msgstr "位置(&L)"
+#: fpwebstrconsts.sdefaultrouteservesfiles
+msgid "Serve files from default location"
+msgstr ""
 
 #: fpwebstrconsts.sdocumentroot
 msgid "&Directory"
@@ -149,6 +149,10 @@ msgstr "目录(&D)"
 #: fpwebstrconsts.senteryoutext
 msgid "Enter your text ..."
 msgstr "输入你的文本..."
+
+#: fpwebstrconsts.sfileserving
+msgid "File serving"
+msgstr ""
 
 #: fpwebstrconsts.shtmlautor
 msgid "Html &author - <meta name=\"author\">"
@@ -510,6 +514,10 @@ msgstr "新建Html文件属性"
 #: fpwebstrconsts.snewhttpapp
 msgid "New HTTP application"
 msgstr "新建HTTP应用"
+
+#: fpwebstrconsts.snofiles
+msgid "Do not serve files"
+msgstr ""
 
 #: fpwebstrconsts.sregisterfiles
 msgid "&Register location to serve files from"
