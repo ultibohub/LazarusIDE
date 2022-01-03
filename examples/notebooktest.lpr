@@ -1,4 +1,11 @@
+{  $Id$  }
 {
+ /***************************************************************************
+                               NoteBookTest.pp  
+                             -------------------
+
+ ***************************************************************************/
+
  ***************************************************************************
  *                                                                         *
  *   This source is free software; you can redistribute it and/or modify   *
@@ -18,15 +25,33 @@
  *                                                                         *
  ***************************************************************************
 }
-program bitbutton;
+{
+@abstract(An example application for TNotebook)
+@author(NoteBookTest.pp - Marc Weustink <weus@quicknet.nl>)
+}
+
+program notebooktest;
 
 {$mode objfpc}{$H+}
 
 uses
-  interfaces, forms, bitbtnform;
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  {$IFDEF HASAMIGA}
+  athreads,
+  {$ENDIF}
+  Interfaces, // this includes the LCL widgetset
+  Forms, NoteBookTestFrm
+  { you can add units after this };
+
+{$R *.res}
 
 begin
-   Application.Initialize;
-   Application.CreateForm(TForm1, Form1);
-   Application.Run;
+  RequireDerivedFormResource:=True;
+  Application.Scaled:=True;
+  Application.Initialize;
+  Application.CreateForm(TForm1, Form1);
+  Application.Run;
 end.
+

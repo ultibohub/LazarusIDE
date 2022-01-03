@@ -65,6 +65,7 @@ type
   public
     class function isValid(ASource: TDbgFileLoader): Boolean; override;
     class function UserName: AnsiString; override;
+    function EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean; override;
   public
     constructor Create(ASource: TDbgFileLoader; ADebugMap: TObject; ALoadedTargetImageAddr: TDbgPtr; OwnSource: Boolean); override;
     destructor Destroy; override;
@@ -462,10 +463,9 @@ begin
   // relocated) all addresses need a correction.
   // The difference between the LoadedTargetImageAddr and ImageBase is the offset
   // that has to be used to calculate the actual addresses in memory.
-  if LoadedTargetImageAddr >= ImageBase then
-    SetRelocationOffset(LoadedTargetImageAddr-ImageBase, sPositive)
-  else
-    SetRelocationOffset(ImageBase-LoadedTargetImageAddr, sNegative);
+  {$PUSH}{$Q-}{$R-}
+  SetRelocationOffset(LoadedTargetImageAddr-ImageBase);
+  {$POP}
   FCodeBase := NtHeaders.W32.OptionalHeader.BaseOfCode;
   SectionMax := FFileLoader.LoadMemory(
     DosHeader.e_lfanew +
@@ -527,6 +527,22 @@ begin
   Result:='PE file';
 end;
 
+function TPEFileSource.EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean;
+var
+  i: Integer;
+  ex: PDbgImageSectionEx;
+  s: PDbgImageSection;
+begin
+  for i := 0 to FSections.Count - 1 do
+    begin
+    ex := PDbgImageSectionEx(FSections.Objects[i]);
+    s := @ex^.Sect;
+    if (s^.VirtualAddress+LoadedTargetImageAddr <= AStartAddress) and
+       (s^.VirtualAddress + s^.Size + LoadedTargetImageAddr >= AnEndAddress) then
+      Exit(True);
+    end;
+  Result := False;
+end;
 
 initialization
   DBG_WARNINGS := DebugLogger.FindOrRegisterLogGroup('DBG_WARNINGS' {$IFDEF DBG_WARNINGS} , True {$ENDIF} );

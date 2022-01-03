@@ -55,6 +55,10 @@ msgstr "Extra parancssori paraméterek a HTTP kiszolgáló számára (soronként
 msgid "Add extra command-line options for the command which starts the webserver."
 msgstr "Extra parancssori paraméterek megadása a webkiszolgálót indító parancs számára."
 
+#: strpas2jsdesign.pjsdletrtlshowuncaughtexceptions
+msgid "Let RTL show uncaught exceptions"
+msgstr ""
+
 #: strpas2jsdesign.pjsdmaintainhtmlpage
 msgid "Maintain HTML page"
 msgstr "HTML lap karbantartása"
@@ -219,6 +223,10 @@ msgstr "Ez a böngésző legyen használva amikor egy böngészős projekt URL-j
 msgid "Use this URL to start application"
 msgstr "Az alkalmazás indításához ezt az URL-t használja"
 
+#: strpas2jsdesign.pjsdusewasiapplicationobject
+msgid "Run WebAssembly program:"
+msgstr ""
+
 #: strpas2jsdesign.pjsdvisualstudiocodeextensiontemplatedirectory
 msgid "Visual Studio Code extension template directory"
 msgstr ""
@@ -241,6 +249,10 @@ msgstr "Web projekt (pas2js)"
 #, object-pascal-format
 msgid "You can use IDE macros like $MakeExe(). Without a full path, %s is searched in PATH."
 msgstr "Használhatók az IDE makrók, mint a $MakeExe(). Teljes útvonal nélkül a PATH-ban felsorolt helyeken lesz keresve a(z) %s."
+
+#: strpas2jsdesign.pjswasiprogramfiletexthint
+msgid "Name of your WebAssembly file"
+msgstr ""
 
 #: strpas2jsdesign.spasjswebservercaption
 msgctxt "strpas2jsdesign.spasjswebservercaption"

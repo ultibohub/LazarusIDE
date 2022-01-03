@@ -57,6 +57,10 @@ msgstr "Додаткові параметри командного рядка HT
 msgid "Add extra command-line options for the command which starts the webserver."
 msgstr "Додайте параметри командного рядка для команди запуску вебсервера."
 
+#: strpas2jsdesign.pjsdletrtlshowuncaughtexceptions
+msgid "Let RTL show uncaught exceptions"
+msgstr ""
+
 #: strpas2jsdesign.pjsdmaintainhtmlpage
 msgid "Maintain HTML page"
 msgstr "Підтримувати HTML-сторінку"
@@ -219,6 +223,10 @@ msgstr "Для відкривання URL або HTML-файлів проєкт�
 msgid "Use this URL to start application"
 msgstr "Для запуску застосунку використати цей URL"
 
+#: strpas2jsdesign.pjsdusewasiapplicationobject
+msgid "Run WebAssembly program:"
+msgstr ""
+
 #: strpas2jsdesign.pjsdvisualstudiocodeextensiontemplatedirectory
 msgid "Visual Studio Code extension template directory"
 msgstr "Теку шаблонів розширень Visual Studio Code"
@@ -239,6 +247,10 @@ msgstr "Веб-проєкт (pas2js)"
 #, object-pascal-format
 msgid "You can use IDE macros like $MakeExe(). Without a full path, %s is searched in PATH."
 msgstr "Можна використовувати макроси ІСР на зразок $MakeExe(). Без повного шляху %s буде шукатись у PATH."
+
+#: strpas2jsdesign.pjswasiprogramfiletexthint
+msgid "Name of your WebAssembly file"
+msgstr ""
 
 #: strpas2jsdesign.spasjswebservercaption
 msgctxt "strpas2jsdesign.spasjswebservercaption"

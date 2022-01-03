@@ -1,4 +1,12 @@
 {
+ /***************************************************************************
+                               combobox.pp  
+                              -------------
+                   Example/test program for combobox usage in lcl
+
+
+ ***************************************************************************/
+
  ***************************************************************************
  *                                                                         *
  *   This source is free software; you can redistribute it and/or modify   *
@@ -18,50 +26,28 @@
  *                                                                         *
  ***************************************************************************
 }
-program LoadPicture;
+program combobox;
 
 {$mode objfpc}{$H+}
 
 uses
-  Interfaces,
-  Classes, SysUtils, Forms, Controls, Graphics, ExtCtrls;
-  
-type
-  TLoadBitmapForm = class(TForm)
-    Image1: TImage;
-  public
-    constructor Create(TheOwner: TComponent); override;
-  end;
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  {$IFDEF HASAMIGA}
+  athreads,
+  {$ENDIF}
+  Interfaces, // this includes the LCL widgetset
+  Forms, ComboBoxFrm
+  { you can add units after this };
 
-{ TLoadBitmapForm }
+{$R *.res}
 
-constructor TLoadBitmapForm.Create(TheOwner: TComponent);
-var
-  Filename: String;
 begin
-  inherited CreateNew(TheOwner, 1);
-  
-  Filename:=SetDirSeparators('../images/splash_logo.xpm');
-
-  Caption := 'Example: Loading picture from file';
-  Width := 429;
-  Height := 341;
-  Position:= poScreenCenter;
-
-  Image1:=TImage.Create(Self);
-  with Image1 do begin
-    Name:='Image1';
-    Parent:=Self;
-    Align:=alClient;
-    Picture.LoadFromFile(Filename);
-  end;
-end;
-
-var
-  LoadBitmapForm: TLoadBitmapForm;
-begin
+  RequireDerivedFormResource:=True;
+  Application.Scaled:=True;
   Application.Initialize;
-  Application.CreateForm(TLoadBitmapForm,LoadBitmapForm);
+  Application.CreateForm(TForm1, Form1);
   Application.Run;
 end.
 

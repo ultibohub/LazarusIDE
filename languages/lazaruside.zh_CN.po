@@ -12641,7 +12641,9 @@ msgid "library path"
 msgstr "库路径"
 
 #: lazarusidestrconsts.lislibraryprogramdescriptor
-msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under MacOS X)."
+#, fuzzy
+#| msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under MacOS X)."
+msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under macOS)."
 msgstr "一个Free Pascal共享库(在Windows下.dll,在Linux下.so,在MacOS X下.dylib)."
 
 #: lazarusidestrconsts.lisline
@@ -19441,6 +19443,11 @@ msgstr "\"%s\"是一个无效的工程名.%s请选择另一个 (例如project.lp
 #: lazarusidestrconsts.listhereisnofpcexeinthedirectoryofusuallythemakeexecu
 #, object-pascal-format
 msgid "There is no fpc.exe in the directory of %s. Usually the make executable is installed together with the FPC compiler."
+msgstr ""
+
+#: lazarusidestrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
+#, object-pascal-format
+msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
 msgstr ""
 
 #: lazarusidestrconsts.listheremustbeatleastonebuildmode

@@ -97,7 +97,7 @@ type
   private
     FImageBase: QWord;
     FImageSize: QWord;
-    FRelocationOffset: TDBGPtrOffset;
+    FRelocationOffset: QWord;
     FLoadedTargetImageAddr: TDBGPtr;
     FReaderErrors: String;
     FUUID: TGuid;
@@ -110,7 +110,7 @@ type
     procedure SetUUID(AGuid: TGuid);
     procedure SetImageBase(ABase: QWord);
     procedure SetImageSize(ASize: QWord);
-    procedure SetRelocationOffset(AnOffset: TDBGPtr; Sign: TDBGPtrSign);
+    procedure SetRelocationOffset(AnOffset: QWord);
     procedure AddReaderError(AnError: String);
     function  ReadGnuDebugLinkSection(out AFileName: String; out ACrc: Cardinal): Boolean;
     function  LoadGnuDebugLink(ASearchPath, AFileName: String; ACrc: Cardinal): TDbgFileLoader;
@@ -130,6 +130,7 @@ type
     // LoadedTargetImageAddr.
     constructor Create({%H-}ASource: TDbgFileLoader; {%H-}ADebugMap: TObject; ALoadedTargetImageAddr: TDbgPtr; OwnSource: Boolean); virtual;
     procedure AddSubFilesToLoaderList(ALoaderList: TObject; PrimaryLoader: TObject); virtual;
+    function EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean; virtual;
     // The ImageBase is the address at which the linker assumed the binary will be
     // loaded at. So it is stored inside the binary itself and all addresses inside
     // the binary assume that once loaded into memory, it is loaded at this
@@ -143,7 +144,7 @@ type
     // On linux it is equal to the LoadedTargetImageAddr.
     // On Windows it is 0, except for libraries which are re-located. In that
     // case the offset is LoadedTargetImageAddr-ImageBase.
-    property RelocationOffset: TDBGPtrOffset read FRelocationOffset;
+    property RelocationOffset: QWord read FRelocationOffset;
 
     property TargetInfo: TTargetDescriptor read FTargetInfo;
 
@@ -322,7 +323,7 @@ begin
   FMapHandle := CreateFileMapping(FFileHandle, nil, PAGE_READONLY{ or SEC_IMAGE}, 0, 0, nil);
   if FMapHandle = 0
   then begin
-    raise Exception.Create('Could not create module mapping');
+    raise Exception.CreateFmt('Could not create module mapping, error %d', [GetLastError]);
     Exit;
   end;
 
@@ -432,10 +433,9 @@ begin
   FImageSize := ASize;
 end;
 
-procedure TDbgImageReader.SetRelocationOffset(AnOffset: TDBGPtr; Sign: TDBGPtrSign);
+procedure TDbgImageReader.SetRelocationOffset(AnOffset: QWord);
 begin
-  FRelocationOffset.Offset := AnOffset;
-  FRelocationOffset.Sign := Sign;
+  FRelocationOffset := AnOffset;
 end;
 
 procedure TDbgImageReader.AddReaderError(AnError: String);
@@ -535,6 +535,10 @@ begin
   //
 end;
 
+function TDbgImageReader.EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean;
+begin
+  Result := False;
+end;
 
 procedure InitDebugInfoLists;
 begin

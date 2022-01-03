@@ -12687,7 +12687,9 @@ msgid "library path"
 msgstr "percorso libreria"
 
 #: lazarusidestrconsts.lislibraryprogramdescriptor
-msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under MacOS X)."
+#, fuzzy
+#| msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under MacOS X)."
+msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under macOS)."
 msgstr "Una libreria condivisa Free Pascal (.dll in Windows, .so in Linux, .dylib in MacOS X)."
 
 #: lazarusidestrconsts.lisline
@@ -19508,6 +19510,11 @@ msgstr "C'è già una unit con nome \"%s\" nel progetto.%sScegliere un altro nom
 #, object-pascal-format
 msgid "There is no fpc.exe in the directory of %s. Usually the make executable is installed together with the FPC compiler."
 msgstr "Non c'è un fpc.exe nella cartella di %s. Normalmente l'eseguibile di make è installato insieme al compilatore FPC"
+
+#: lazarusidestrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
+#, object-pascal-format
+msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
+msgstr ""
 
 #: lazarusidestrconsts.listheremustbeatleastonebuildmode
 msgid "There must be at least one build mode."

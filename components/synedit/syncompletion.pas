@@ -171,7 +171,7 @@ type
     procedure ScrollScroll(Sender: TObject; ScrollCode: TScrollCode;
       var ScrollPos: Integer);
     procedure SetItemList(const Value: TStrings);
-    procedure SetPosition(const Value: Integer);
+    procedure SetPosition(Value: Integer);
     procedure SetNbLinesInWindow(const Value: Integer);
     {$IFDEF HintClickWorkaround}
     procedure HintWindowMouseDown(Sender: TObject; Button: TMouseButton;
@@ -206,6 +206,7 @@ type
     procedure IncHintLock;
     procedure DecHintLock;
     procedure DoOnDragResize(Sender: TObject);
+    procedure ClearCurrentString;
   public
     constructor Create(AOwner: Tcomponent); override;
     destructor Destroy; override;
@@ -264,9 +265,22 @@ type
 
   { TSynBaseCompletion }
 
+  TSynBaseCompletion = class;
+  TOnBeforeExeucteFlag = (befAbort);
+  TOnBeforeExeucteFlags = set of TOnBeforeExeucteFlag;
+
+  TOnBeforeExecuteEvent = procedure(
+    ASender: TSynBaseCompletion;
+    var ACurrentString: String;
+    var APosition: Integer; // Defaults to -1. If left at -1 position will be calculated from CurrentString
+    var AnX, AnY: Integer;        // Coordinates for the form
+    var AnResult: TOnBeforeExeucteFlags
+  ) of object;
+
   TSynBaseCompletion = class(TLazSynMultiEditPlugin)
   private
     FAutoUseSingleIdent: Boolean;
+    FOnBeforeExecute: TOnBeforeExecuteEvent;
     Form: TSynBaseCompletionForm;
     FAddedPersistentCaret, FChangedNoneBlink: boolean;
     FOnExecute: TNotifyEvent;
@@ -342,6 +356,7 @@ type
     property ClSelect: TColor read GetClSelect write SetClSelect; deprecated; // use SelectedColor
     property NbLinesInWindow: Integer read GetNbLinesInWindow write SetNbLinesInWindow; deprecated;
   published
+    property OnBeforeExecute: TOnBeforeExecuteEvent read FOnBeforeExecute write FOnBeforeExecute;
     property OnExecute: TNotifyEvent read FOnExecute write FOnExecute;
     property OnPaintItem: TSynBaseCompletionPaintItem
              read GetOnPaintItem write SetOnPaintItem;
@@ -1330,6 +1345,12 @@ begin
     FOnDragResized(Sender);
 end;
 
+procedure TSynBaseCompletionForm.ClearCurrentString;
+begin
+  FCurrentString := '';
+  FPosition := 0;
+end;
+
 procedure TSynBaseCompletionForm.SetItemList(const Value: TStrings);
 begin
   FItemList.Assign(Value);
@@ -1349,18 +1370,17 @@ begin
   end;
 end;
 
-procedure TSynBaseCompletionForm.SetPosition(const Value: Integer);
+procedure TSynBaseCompletionForm.SetPosition(Value: Integer);
 begin
-  if Value < ItemList.Count then begin
-    if FPosition <> Value then begin
-      FPosition := Value;
-      if Position < Scroll.Position then
-        Scroll.Position := Position
-      else if Scroll.Position < Position - NbLinesInWindow + 1 then
-        Scroll.Position := Position - NbLinesInWindow + 1;
-      Invalidate;
-      if Assigned(OnPositionChanged) then OnPositionChanged(Self);
-    end;
+  Value := MinMax(Value, 0, ItemList.Count - 1);
+  if FPosition <> Value then begin
+    FPosition := Value;
+    if Position < Scroll.Position then
+      Scroll.Position := Position
+    else if Scroll.Position < Position - NbLinesInWindow + 1 then
+      Scroll.Position := Position - NbLinesInWindow + 1;
+    Invalidate;
+    if Assigned(OnPositionChanged) then OnPositionChanged(Self);
   end;
   if Showing then
     ShowItemHint(Position);
@@ -1457,6 +1477,8 @@ end;
 procedure TSynBaseCompletion.Execute(s: string; x, y: integer);
 var
   CurSynEdit: TCustomSynEdit;
+  p: Integer;
+  r: TOnBeforeExeucteFlags;
 begin
   //writeln('TSynBaseCompletion.Execute ',Form.CurrentEditor.Name);
 
@@ -1464,7 +1486,19 @@ begin
   FAddedPersistentCaret := False;
   FChangedNoneBlink := False;
 
+  Form.ClearCurrentString;
+  p := -1;
+  r := [];
+  if Assigned(OnBeforeExecute) then
+    OnBeforeExecute(Self, s, p, x, y, r);
+  if befAbort in r then
+    exit;
+
+
   CurrentString := s;
+  if p >= 0 then
+    Position := p;
+
   if Assigned(OnExecute) then
     OnExecute(Self);
   if (ItemList.Count=1) and Assigned(OnValidate) and FAutoUseSingleIdent then begin

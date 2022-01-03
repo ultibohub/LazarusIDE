@@ -62,7 +62,7 @@ type
     FImgReader: TDbgImageReader;
     function GetAddressMapList: TDbgAddressMapList;
     function GetImageBase: QWord;
-    function GetRelocationOffset: TDBGPtrOffset;
+    function GetRelocationOffset: QWord;
     function GetReaderErrors: String;
     function GetSubFiles: TStrings;
     function GetTargetInfo: TTargetDescriptor;
@@ -84,9 +84,11 @@ type
     procedure CloseFileLoader;
     procedure AddToLoaderList(ALoaderList: TDbgImageLoaderList);
     function IsValid: Boolean;
+    function EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean;
+
     property FileName: String read FFileName; // Empty if using USE_WIN_FILE_MAPPING
     property ImageBase: QWord read GetImageBase;
-    property RelocationOffset: TDBGPtrOffset read GetRelocationOffset;
+    property RelocationOffset: QWord read GetRelocationOffset;
     property TargetInfo: TTargetDescriptor read GetTargetInfo;
 
     property UUID: TGuid read GetUUID;
@@ -112,15 +114,17 @@ type
 
   TDbgImageLoaderList = class(TFPObjectList)
   private
-    function GetRelocationOffset: TDBGPtrOffset;
+    function GetRelocationOffset: QWord;
     function GetImageBase: QWord;
     function GetTargetInfo: TTargetDescriptor;
     function GetItem(Index: Integer): TDbgImageLoader;
     procedure SetItem(Index: Integer; AValue: TDbgImageLoader);
   public
+    function EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean;
+
     property Items[Index: Integer]: TDbgImageLoader read GetItem write SetItem; default;
     property ImageBase: QWord read GetImageBase;
-    property RelocationOffset: TDBGPtrOffset read GetRelocationOffset;
+    property RelocationOffset: QWord read GetRelocationOffset;
     property TargetInfo: TTargetDescriptor read GetTargetInfo;
   end;
 
@@ -128,15 +132,12 @@ implementation
 
 { TDbgImageLoaderList }
 
-function TDbgImageLoaderList.GetRelocationOffset: TDBGPtrOffset;
+function TDbgImageLoaderList.GetRelocationOffset: QWord;
 begin
   if Count>0 then
     result := Items[0].RelocationOffset
   else
-    begin
-    Result.Offset := 0;
-    Result.Sign := sPositive;
-    end;
+    Result := 0;
 end;
 
 function TDbgImageLoaderList.GetImageBase: QWord;
@@ -163,6 +164,16 @@ end;
 procedure TDbgImageLoaderList.SetItem(Index: Integer; AValue: TDbgImageLoader);
 begin
   inherited SetItem(Index, AValue);
+end;
+
+function TDbgImageLoaderList.EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean;
+var
+  i: Integer;
+begin
+  for i := 0 to Count -1 do
+    if Items[0].EnclosesAddressRange(AStartAddress, AnEndAddress) then
+      Exit(True);
+  Result := False;
 end;
 
 { TDbgImageLoaderLibrary }
@@ -200,15 +211,12 @@ begin
     Result := 0;
 end;
 
-function TDbgImageLoader.GetRelocationOffset: TDBGPtrOffset;
+function TDbgImageLoader.GetRelocationOffset: QWord;
 begin
   if Assigned(FImgReader) then
     Result := FImgReader.RelocationOffset
   else
-    begin
-    Result.Offset := 0;
-    Result.Sign := sPositive;
-    end;
+    Result := 0;
 end;
 
 function TDbgImageLoader.GetReaderErrors: String;
@@ -303,6 +311,14 @@ end;
 function TDbgImageLoader.IsValid: Boolean;
 begin
   Result := FImgReader <> nil;
+end;
+
+function TDbgImageLoader.EnclosesAddressRange(AStartAddress, AnEndAddress: TDBGPtr): Boolean;
+begin
+  Result := False;
+  if not IsValid then
+    Exit;
+  Result := FImgReader.EnclosesAddressRange(AStartAddress, AnEndAddress);
 end;
 
 end.
