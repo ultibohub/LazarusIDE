@@ -757,6 +757,7 @@ type
 
   TIdeWatchesMonitor = class(TWatchesMonitor)
   private
+    FWatches: TWatches;
     FSnapshots: TDebuggerDataSnapShotList;
     FOnModified: TNotifyEvent;
     FIgnoreModified: Integer;
@@ -768,12 +769,13 @@ type
     procedure DoStateLeavePause; override;
     procedure DoStateLeavePauseClean; override;
     procedure DoModified; override;
+    procedure InvalidateWatchValues; override;
     //procedure NotifyChange
     procedure NotifyAdd(const AWatches: TCurrentWatches; const AWatch: TCurrentWatch);
     procedure NotifyRemove(const AWatches: TCurrentWatches; const AWatch: TCurrentWatch);
     procedure NotifyUpdate(const AWatches: TCurrentWatches; const AWatch: TCurrentWatch);
     procedure RequestData(AWatchValue: TCurrentWatchValue);
-    function CreateWatches: TWatches; override;
+    function CreateWatches: TWatches; virtual;
     function CreateSnapshot(CreateEmpty: Boolean = False): TObject;
   public
     constructor Create;
@@ -782,6 +784,7 @@ type
     procedure RemoveNotification(const ANotification: TWatchesNotification);
     procedure NewSnapshot(AnID: Pointer; CreateEmpty: Boolean = False);
     procedure RemoveSnapshot(AnID: Pointer);
+    property Watches: TWatches read FWatches;
     property CurrentWatches: TCurrentWatches read GetCurrentWatches;// FCurrentWatches;
     property Snapshots[AnID: Pointer]: TIdeWatches read GetSnapshot;
   public
@@ -882,6 +885,7 @@ type
 
   TIdeLocalsMonitor = class(TLocalsMonitor)
   private
+    FLocalsList: TLocalsList;
     FSnapshots: TDebuggerDataSnapShotList;
     FNotificationList: TDebuggerChangeNotificationList;
     function GetCurrentLocalsList: TCurrentLocalsList;
@@ -890,11 +894,12 @@ type
     procedure DoStateEnterPause; override;
     procedure DoStateLeavePause; override;
     procedure DoStateLeavePauseClean; override;
+    procedure InvalidateLocals; override;
     procedure NotifyChange(ALocals: TCurrentLocals);
     procedure DoNewSupplier; override;
     procedure RequestData(ALocals: TCurrentLocals);
     function CreateSnapshot(CreateEmpty: Boolean = False): TObject;
-    function CreateLocalsList: TLocalsList; override;
+    function CreateLocalsList: TLocalsList;
   public
     constructor Create;
     destructor Destroy; override;
@@ -903,6 +908,7 @@ type
     procedure RemoveNotification(const ANotification: TLocalsNotification);
     procedure NewSnapshot(AnID: Pointer; CreateEmpty: Boolean = False);
     procedure RemoveSnapshot(AnID: Pointer);
+    property  LocalsList: TLocalsList read FLocalsList;
     property  CurrentLocalsList: TCurrentLocalsList read GetCurrentLocalsList;
     property  Snapshots[AnID: Pointer]: TIDELocalsList read GetSnapshot;
   end;
@@ -3134,9 +3140,17 @@ begin
   Clear;
 end;
 
+procedure TIdeLocalsMonitor.InvalidateLocals;
+begin
+  inherited InvalidateLocals;
+  if FLocalsList <> nil then
+    FLocalsList.Clear;
+end;
+
 procedure TIdeLocalsMonitor.NotifyChange(ALocals: TCurrentLocals);
 begin
-  FNotificationList.NotifyChange(ALocals);
+  if FNotificationList <> nil then
+    FNotificationList.NotifyChange(ALocals);
 end;
 
 procedure TIdeLocalsMonitor.DoNewSupplier;
@@ -3166,6 +3180,8 @@ end;
 
 constructor TIdeLocalsMonitor.Create;
 begin
+  FLocalsList := CreateLocalsList;
+  FLocalsList.AddReference;
   FSnapshots := TDebuggerDataSnapShotList.Create;
   inherited;
   FNotificationList := TDebuggerChangeNotificationList.Create;
@@ -3176,6 +3192,7 @@ begin
   FSnapshots.Clear;
   FNotificationList.Clear;
   inherited Destroy;
+  ReleaseRefAndNil(FLocalsList);
   FreeAndNil(FNotificationList);
   FreeAndNil(FSnapshots);
 end;
@@ -3496,6 +3513,13 @@ begin
     FOnModified(Self);
 end;
 
+procedure TIdeWatchesMonitor.InvalidateWatchValues;
+begin
+  inherited InvalidateWatchValues;
+  if Watches <> nil then
+    Watches.ClearValues;
+end;
+
 procedure TIdeWatchesMonitor.NotifyAdd(const AWatches: TCurrentWatches; const AWatch: TCurrentWatch);
 begin
   FNotificationList.NotifyAdd(AWatches, AWatch);
@@ -3532,6 +3556,7 @@ end;
 
 constructor TIdeWatchesMonitor.Create;
 begin
+  FWatches := CreateWatches;
   FSnapshots := TDebuggerDataSnapShotList.Create;
   FIgnoreModified := 0;
   FNotificationList := TWatchesNotificationList.Create;
@@ -3543,6 +3568,7 @@ begin
   FSnapshots.Clear;
   FNotificationList.Clear;
   inherited Destroy;
+  FreeAndNil(FWatches);
   FreeAndNil(FNotificationList);
   FreeAndNil(FSnapshots);
 end;

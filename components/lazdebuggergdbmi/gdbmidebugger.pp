@@ -3091,8 +3091,6 @@ var
   end;
 
   procedure DoLogStream(const Line: String);
-  const
-    LogWarning = 'warning:';
   var
     Warning: String;
   begin
@@ -3740,9 +3738,8 @@ var
   Cmd: TGDBMIDebuggerCommandThreads;
   i: Integer;
 begin
-  if Monitor = nil then exit;
-  Cmd := TGDBMIDebuggerCommandThreads(Sender);
   if CurrentThreads = nil then exit;
+  Cmd := TGDBMIDebuggerCommandThreads(Sender);
 
   if not Cmd.Success then begin
     CurrentThreads.SetValidity(ddsInvalid);
@@ -3828,7 +3825,7 @@ end;
 
 procedure TGDBMIThreads.DoCleanAfterPause;
 begin
-  if (Debugger.State <> dsRun) or (Monitor = nil) then begin
+  if (Debugger.State <> dsRun) or (CurrentThreads = nil) then begin
     inherited DoCleanAfterPause;
     exit;
   end;
@@ -6486,12 +6483,9 @@ function TGDBMIDebuggerCommandExecute.ProcessStopped(const AParams: String;
   end;
 
   procedure CheckSehFinallyExited(const AFrame: String);
-  var
-    Location: TDBGLocationRec;
   begin
     if not (FStepStartedInFinSub = sfsStepStarted) then
       exit;
-    Location := FrameToLocation(AFrame);
 
     if IsSehFinallyFuncName(FTheDebugger.FCurrentLocation.FuncName) then // check if we left the seh handler
       exit;
@@ -11172,8 +11166,7 @@ end;
 
 procedure TGDBMILocals.Changed;
 begin
-  if CurrentLocalsList <> nil
-  then CurrentLocalsList.Clear;
+  TriggerInvalidateLocals;
 end;
 
 constructor TGDBMILocals.Create(const ADebugger: TDebuggerIntf);
@@ -11271,8 +11264,7 @@ end;
 procedure TGDBMIWatches.Changed;
 begin
   SetLength(FParentFPList, 0);
-  if CurrentWatches <> nil
-  then CurrentWatches.ClearValues;
+  TriggerInvalidateWatchValues;
 end;
 
 procedure TGDBMIWatches.Clear;

@@ -256,11 +256,11 @@ type
     FDebugger: TDebuggerIntf;
     FMonitor: TDebuggerDataMonitor;
     procedure SetMonitor(const AValue: TDebuggerDataMonitor);
+    property  Monitor: TDebuggerDataMonitor read FMonitor write SetMonitor;
   protected
     procedure DoNewMonitor; virtual;
     property  Debugger: TDebuggerIntf read FDebugger write FDebugger;
   protected
-    property  Monitor: TDebuggerDataMonitor read FMonitor write SetMonitor;
 
     procedure DoStateLeavePauseClean; override;
     procedure DoStateChange(const AOldState: TDBGState); virtual;
@@ -768,32 +768,27 @@ type
 
   TWatchesSupplier = class(TDebuggerDataSupplier)
   private
-    function GetCurrentWatches: TWatches;
     function GetMonitor: TWatchesMonitor;
     procedure SetMonitor(AValue: TWatchesMonitor);
+    property Monitor: TWatchesMonitor read GetMonitor write SetMonitor;
   protected
     procedure DoStateChange(const AOldState: TDBGState); override; // workaround for state changes during TWatchValue.GetValue
     procedure InternalRequestData(AWatchValue: TWatchValue); virtual;
   public
     constructor Create(const ADebugger: TDebuggerIntf);
+    procedure TriggerInvalidateWatchValues;
     procedure RequestData(AWatchValue: TWatchValue);
-    property CurrentWatches: TWatches read GetCurrentWatches;
-    property Monitor: TWatchesMonitor read GetMonitor write SetMonitor;
   end;
 
   { TWatchesMonitor }
 
   TWatchesMonitor = class(TDebuggerDataMonitor)
   private
-    FWatches: TWatches;
     function GetSupplier: TWatchesSupplier;
     procedure SetSupplier(AValue: TWatchesSupplier);
   protected
-    function CreateWatches: TWatches; virtual;
+    procedure InvalidateWatchValues; virtual;
   public
-    constructor Create;
-    destructor Destroy; override;
-    property Watches: TWatches read FWatches;
     property Supplier: TWatchesSupplier read GetSupplier write SetSupplier;
   end;
 
@@ -859,29 +854,23 @@ type
 
   TLocalsSupplier = class(TDebuggerDataSupplier)
   private
-    function GetCurrentLocalsList: TLocalsList;
     function GetMonitor: TLocalsMonitor;
     procedure SetMonitor(AValue: TLocalsMonitor);
-  protected
-  public
-    procedure RequestData(ALocals: TLocals); virtual;
-    property  CurrentLocalsList: TLocalsList read GetCurrentLocalsList;
     property  Monitor: TLocalsMonitor read GetMonitor write SetMonitor;
+  public
+    procedure TriggerInvalidateLocals;
+    procedure RequestData(ALocals: TLocals); virtual;
   end;
 
   { TLocalsMonitor }
 
   TLocalsMonitor = class(TDebuggerDataMonitor)
   private
-    FLocalsList: TLocalsList;
     function GetSupplier: TLocalsSupplier;
     procedure SetSupplier(AValue: TLocalsSupplier);
   protected
-    function CreateLocalsList: TLocalsList; virtual;
+    procedure InvalidateLocals; virtual;
   public
-    constructor Create;
-    destructor Destroy; override;
-    property LocalsList: TLocalsList read FLocalsList;
     property Supplier: TLocalsSupplier read GetSupplier write SetSupplier;
   end;
 
@@ -1210,6 +1199,7 @@ type
     function GetCurrentCallStackList: TCallStackList;
     function GetMonitor: TCallStackMonitor;
     procedure SetMonitor(AValue: TCallStackMonitor);
+    property Monitor: TCallStackMonitor read GetMonitor write SetMonitor;
   protected
     //procedure CurrentChanged;
     procedure Changed;
@@ -1220,7 +1210,6 @@ type
     procedure RequestEntries(ACallstack: TCallStackBase); virtual;
     procedure UpdateCurrentIndex; virtual;
     property CurrentCallStackList: TCallStackList read GetCurrentCallStackList;
-    property Monitor: TCallStackMonitor read GetMonitor write SetMonitor;
   end;
 
   { TCallStackMonitor }
@@ -1548,6 +1537,7 @@ type
     function GetCurrentThreads: TThreads;
     function GetMonitor: TThreadsMonitor;
     procedure SetMonitor(AValue: TThreadsMonitor);
+    property  Monitor: TThreadsMonitor read GetMonitor write SetMonitor;
   protected
     procedure DoStateChange(const AOldState: TDBGState); override;
     procedure DoStateLeavePauseClean; override;
@@ -1557,7 +1547,6 @@ type
     procedure ChangeCurrentThread({%H-}ANewId: Integer); virtual;
     procedure Changed; // TODO: needed because entries can not notify the monitor
     property  CurrentThreads: TThreads read GetCurrentThreads;
-    property  Monitor: TThreadsMonitor read GetMonitor write SetMonitor;
   end;
 
   { TThreadsMonitor }
@@ -4415,13 +4404,6 @@ begin
   else AWatchValue.SetValidity(ddsInvalid);
 end;
 
-function TWatchesSupplier.GetCurrentWatches: TWatches;
-begin
-  Result := Nil;
-  if Monitor <> nil then
-    Result := Monitor.Watches;
-end;
-
 function TWatchesSupplier.GetMonitor: TWatchesMonitor;
 begin
   Result := TWatchesMonitor(inherited Monitor);
@@ -4445,6 +4427,12 @@ begin
   AWatchValue.SetValidity(ddsInvalid);
 end;
 
+procedure TWatchesSupplier.TriggerInvalidateWatchValues;
+begin
+  if Monitor <> nil then
+    Monitor.InvalidateWatchValues;
+end;
+
 constructor TWatchesSupplier.Create(const ADebugger: TDebuggerIntf);
 begin
   inherited Create(ADebugger);
@@ -4463,31 +4451,12 @@ begin
   inherited Supplier := AValue;
 end;
 
-function TWatchesMonitor.CreateWatches: TWatches;
+procedure TWatchesMonitor.InvalidateWatchValues;
 begin
-  Result := TWatches.Create;
-end;
-
-constructor TWatchesMonitor.Create;
-begin
-  FWatches := CreateWatches;
-  inherited Create;
-end;
-
-destructor TWatchesMonitor.Destroy;
-begin
-  inherited Destroy;
-  FreeAndNil(FWatches);
+  //
 end;
 
 { TLocalsSupplier }
-
-function TLocalsSupplier.GetCurrentLocalsList: TLocalsList;
-begin
-  Result := nil;
-  if Monitor <> nil then
-    Result := Monitor.LocalsList;
-end;
 
 function TLocalsSupplier.GetMonitor: TLocalsMonitor;
 begin
@@ -4497,6 +4466,12 @@ end;
 procedure TLocalsSupplier.SetMonitor(AValue: TLocalsMonitor);
 begin
   inherited Monitor := AValue;
+end;
+
+procedure TLocalsSupplier.TriggerInvalidateLocals;
+begin
+  if Monitor <> nil then
+    Monitor.InvalidateLocals;
 end;
 
 procedure TLocalsSupplier.RequestData(ALocals: TLocals);
@@ -4516,22 +4491,9 @@ begin
   inherited Supplier := AValue;
 end;
 
-function TLocalsMonitor.CreateLocalsList: TLocalsList;
+procedure TLocalsMonitor.InvalidateLocals;
 begin
-  Result := TLocalsList.Create;
-end;
-
-constructor TLocalsMonitor.Create;
-begin
-  FLocalsList := CreateLocalsList;
-  FLocalsList.AddReference;
-  inherited Create;
-end;
-
-destructor TLocalsMonitor.Destroy;
-begin
-  inherited Destroy;
-  ReleaseRefAndNil(FLocalsList);
+  //
 end;
 
 { TBaseLineInfo }
@@ -6285,7 +6247,7 @@ var
 begin
   dummy.Code := nil;
   dummy.Data := nil;
-  ReqCmd(ACommand, AParams, dummy);
+  Result := ReqCmd(ACommand, AParams, dummy);
 end;
 
 class function TDebuggerIntf.GetSupportedCommands: TDBGCommands;
