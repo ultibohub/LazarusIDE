@@ -34,7 +34,7 @@ uses
   // IdeIntf
   IDEWindowIntf, IDEImagesIntf, ObjectInspector, PropEdits,
   // DebuggerIntf
-  DbgIntfDebuggerBase, DbgIntfBaseTypes,
+  DbgIntfDebuggerBase, DbgIntfBaseTypes, LazDebuggerIntf,
   // IDE
   LazarusIDEStrConsts, BaseDebugManager, InputHistory, IDEProcs,
   Debugger, DebuggerDlg, DebuggerStrConst, EnvironmentOpts;
@@ -226,7 +226,7 @@ procedure TIDEInspectDlg.DataGridDoubleClick(Sender: TObject);
 var
   i: Integer;
   s: String;
-  TestOpts: TDBGEvaluateFlags;
+  TestOpts: TWatcheEvaluateFlags;
 begin
   if FTestUpdateLock then
     exit;
@@ -938,7 +938,7 @@ end;
 
 procedure TIDEInspectDlg.UpdateData;
 var
-  Opts: TDBGEvaluateFlags;
+  Opts: TWatcheEvaluateFlags;
 begin
   FExpressionWasEvaluated := False;
   if DebugBoss.State in [dsRun, dsStop, dsIdle] then begin

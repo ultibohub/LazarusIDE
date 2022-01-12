@@ -64,7 +64,7 @@ uses
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfDebuggerBase,
   // CmdLineDebuggerBase
-  DebuggerPropertiesBase,
+  DebuggerPropertiesBase, LazDebuggerIntf,
 {$IFDEF DBG_ENABLE_TERMINAL}
   DbgIntfPseudoTerminal,
 {$ENDIF}
@@ -872,7 +872,7 @@ type
     procedure Changed;
     procedure Clear;
     function  ForceQueuing: Boolean;
-    procedure InternalRequestData(AWatchValue: TWatchValue); override;
+    procedure InternalRequestData(AWatchValue: TWatchValueIntf); override;
     property  ParentFPListChangeStamp: Integer read FParentFPListChangeStamp;
   public
     constructor Create(const ADebugger: TDebuggerIntf);
@@ -953,7 +953,7 @@ type
     procedure DoPseudoTerminalRead(Sender: TObject);
     // Implementation of external functions
     function  GDBEnvironment(const AVariable: String; const ASet: Boolean): Boolean;
-    function  GDBEvaluate(const AExpression: String; EvalFlags: TDBGEvaluateFlags; ACallback: TDBGEvaluateResultCallback): Boolean;
+    function  GDBEvaluate(const AExpression: String; EvalFlags: TWatcheEvaluateFlags; ACallback: TDBGEvaluateResultCallback): Boolean;
     procedure GDBEvaluateCommandCancelled(Sender: TObject);
     procedure GDBEvaluateCommandExecuted(Sender: TObject);
     function  GDBModify(const AExpression, ANewValue: String): Boolean;
@@ -1468,10 +1468,10 @@ type
   TGDBMIDebuggerCommandEvaluate = class(TGDBMIDebuggerCommand)
   private
     FCallback: TDBGEvaluateResultCallback;
-    FEvalFlags: TDBGEvaluateFlags;
+    FEvalFlags: TWatcheEvaluateFlags;
     FExpression: String;
     FDisplayFormat: TWatchDisplayFormat;
-    FWatchValue: TWatchValue;
+    FWatchValue: TWatchValueIntf;
     FTextValue: String;
     FTypeInfo: TGDBType;
     FValidity: TDebuggerDataState;
@@ -1489,11 +1489,11 @@ type
     procedure UnSelectContext;
   public
     constructor Create(AOwner: TGDBMIDebuggerBase; AExpression: String; ADisplayFormat: TWatchDisplayFormat);
-    constructor Create(AOwner: TGDBMIDebuggerBase; AWatchValue: TWatchValue);
+    constructor Create(AOwner: TGDBMIDebuggerBase; AWatchValue: TWatchValueIntf);
     destructor Destroy; override;
     function DebugText: String; override;
     property Expression: String read FExpression;
-    property EvalFlags: TDBGEvaluateFlags read FEvalFlags write FEvalFlags;
+    property EvalFlags: TWatcheEvaluateFlags read FEvalFlags write FEvalFlags;
     property DisplayFormat: TWatchDisplayFormat read FDisplayFormat;
     property TextValue: String read FTextValue;
     property TypeInfo: TGDBType read GetTypeInfo;
@@ -9563,7 +9563,7 @@ begin
 end;
 
 function TGDBMIDebuggerBase.GDBEvaluate(const AExpression: String;
-  EvalFlags: TDBGEvaluateFlags; ACallback: TDBGEvaluateResultCallback): Boolean;
+  EvalFlags: TWatcheEvaluateFlags; ACallback: TDBGEvaluateResultCallback): Boolean;
 var
   CommandObj: TGDBMIDebuggerCommandEvaluate;
 begin
@@ -10111,7 +10111,7 @@ end;
 function TGDBMIDebuggerBase.RequestCommand(const ACommand: TDBGCommand;
   const AParams: array of const; const ACallback: TMethod): Boolean;
 var
-  EvalFlags: TDBGEvaluateFlags;
+  EvalFlags: TWatcheEvaluateFlags;
 begin
   LockRelease;
   try
@@ -10130,7 +10130,7 @@ begin
       dcEvaluate:    begin
                        EvalFlags := [];
                        if high(AParams) >= 1 then
-                         EvalFlags := TDBGEvaluateFlags(AParams[1].VInteger);
+                         EvalFlags := TWatcheEvaluateFlags(AParams[1].VInteger);
                        Result := GDBEvaluate(String(AParams[0].VAnsiString),
                          EvalFlags, TDBGEvaluateResultCallback(ACallback));
                      end;
@@ -11288,7 +11288,7 @@ begin
             and (Debugger.State <> dsInternalPause);
 end;
 
-procedure TGDBMIWatches.InternalRequestData(AWatchValue: TWatchValue);
+procedure TGDBMIWatches.InternalRequestData(AWatchValue: TWatchValueIntf);
 var
   EvaluationCmdObj: TGDBMIDebuggerCommandEvaluate;
 begin
@@ -14719,9 +14719,9 @@ begin
 end;
 
 constructor TGDBMIDebuggerCommandEvaluate.Create(AOwner: TGDBMIDebuggerBase;
-  AWatchValue: TWatchValue);
+  AWatchValue: TWatchValueIntf);
 begin
-  Create(AOwner, AWatchValue.Watch.Expression, AWatchValue.DisplayFormat);
+  Create(AOwner, AWatchValue.Expression, AWatchValue.DisplayFormat);
   EvalFlags := AWatchValue.EvaluateFlags;
   FWatchValue := AWatchValue;
   FWatchValue.AddFreeNotification(@DoWatchFreed);

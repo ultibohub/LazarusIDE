@@ -187,7 +187,9 @@ type
     FBuildIntfPackage: TLazPackage;
     FIDEIntfPackage: TLazPackage;
     FDebuggerIntfPackage: TLazPackage;
+    FLazDebuggerIntfPackage: TLazPackage;
     FLazDebuggerGdbmiPackage: TLazPackage;
+    FIdeDebuggerPackage: TLazPackage;
     FItems: TFPList;   // unsorted list of TLazPackage
     FLazarusBasePackages: TFPList;
     FLazUtilsPackage: TLazPackage;
@@ -474,8 +476,10 @@ type
     property CodeToolsPackage: TLazPackage read FCodeToolsPackage;
     property BuildIntfPackage: TLazPackage read FBuildIntfPackage;
     property IDEIntfPackage: TLazPackage read FIDEIntfPackage;
+    property LazDebuggerIntfPackage: TLazPackage read FLazDebuggerIntfPackage;
     property DebuggerIntfPackage: TLazPackage read FDebuggerIntfPackage;
     property LazDebuggerGdbmiPackage: TLazPackage read FLazDebuggerGdbmiPackage;
+    property IdeDebuggerPackage: TLazPackage read FIdeDebuggerPackage;
     property LazarusBasePackages: TFPList read FLazarusBasePackages;
 
     // events
@@ -1141,10 +1145,14 @@ begin
     FLCLPackage:=nil
   else if CurPkg=IDEIntfPackage then
     FIDEIntfPackage:=nil
+  else if CurPkg=LazDebuggerIntfPackage then
+    FLazDebuggerIntfPackage:=nil
   else if CurPkg=DebuggerIntfPackage then
     FDebuggerIntfPackage:=nil
   else if CurPkg=LazDebuggerGdbmiPackage then
     FLazDebuggerGdbmiPackage:=nil
+  else if CurPkg=IdeDebuggerPackage then
+    FIdeDebuggerPackage:=nil
   else if CurPkg=SynEditPackage then
     FSynEditPackage:=nil
   else if CurPkg=LazControlsPackage then
@@ -2115,10 +2123,14 @@ begin
       SetBasePackage(FIDEIntfPackage);
       APackage.SetAllComponentPriorities(IDEIntfCompPriority);
     end
+    else if SysUtils.CompareText(APackage.Name,'LazDebuggerIntf')=0 then
+      SetBasePackage(FLazDebuggerIntfPackage)
     else if SysUtils.CompareText(APackage.Name,'DebuggerIntf')=0 then
       SetBasePackage(FDebuggerIntfPackage)
     else if SysUtils.CompareText(APackage.Name,'LazDebuggerGdbmi')=0 then
       SetBasePackage(FLazDebuggerGdbmiPackage)
+    else if SysUtils.CompareText(APackage.Name,'IdeDebugger')=0 then
+      SetBasePackage(FIdeDebuggerPackage)
     else if SysUtils.CompareText(APackage.Name,'SynEdit')=0 then
       SetBasePackage(FSynEditPackage)
     else if SysUtils.CompareText(APackage.Name,'LazControls')=0 then
@@ -2235,8 +2247,10 @@ begin
   LoadLazarusBasePackage('SynEdit');
   LoadLazarusBasePackage('BuildIntf');
   LoadLazarusBasePackage('IDEIntf');
+  LoadLazarusBasePackage('LazDebuggerIntf');
   LoadLazarusBasePackage('DebuggerIntf');
   LoadLazarusBasePackage('LazDebuggerGdbmi');
+  LoadLazarusBasePackage('IdeDebugger');
   LoadLazarusBasePackage('LazControls');
   LoadLazarusBasePackage('CodeTools');
   LoadLazarusBasePackage('LazControlDsgn');
@@ -2369,8 +2383,10 @@ begin
        or (PackageName='lcl')
        or (PackageName='synedit')
        or (PackageName='ideintf')
+       or (PackageName='lazdebuggerintf')
        or (PackageName='debuggerintf')
        or (PackageName='lazdebuggergdbmi')
+       or (PackageName='idedebugger')
        or (PackageName='codetools')
        or (PackageName='buildintf')
        or (PackageName='lazcontrols')

@@ -52,13 +52,14 @@ uses
   CompOptsIntf, IDEDialogs, ToolBarIntf,
   // IDE
   CompilerOptions, EnvironmentOpts, SourceEditor, ProjectDefs, Project,
-  InputHistory, Debugger, LazarusIDEStrConsts, TransferMacros,
-  MainBar, MainIntf, MainBase, BaseBuildManager, SourceMarks, DebuggerDlg,
-  Watchesdlg, BreakPointsdlg, BreakPropertyDlg, LocalsDlg, WatchPropertyDlg,
-  CallStackDlg, EvaluateDlg, RegistersDlg, AssemblerDlg, DebugOutputForm,
-  ExceptionDlg, InspectDlg, DebugEventsForm, PseudoTerminalDlg, FeedbackDlg,
-  ThreadDlg, HistoryDlg, ProcessDebugger, DbgIntfBaseTypes, DbgIntfDebuggerBase,
-  DbgIntfMiscClasses, DbgIntfPseudoTerminal, BaseDebugManager;
+  InputHistory, Debugger, LazarusIDEStrConsts, TransferMacros, MainBar,
+  MainIntf, MainBase, BaseBuildManager, SourceMarks, DebuggerDlg, Watchesdlg,
+  BreakPointsdlg, BreakPropertyDlg, LocalsDlg, WatchPropertyDlg, CallStackDlg,
+  EvaluateDlg, RegistersDlg, AssemblerDlg, DebugOutputForm, ExceptionDlg,
+  InspectDlg, DebugEventsForm, PseudoTerminalDlg, FeedbackDlg, ThreadDlg,
+  HistoryDlg, ProcessDebugger, DbgIntfBaseTypes, DbgIntfDebuggerBase,
+  DbgIntfMiscClasses, DbgIntfPseudoTerminal, LazDebuggerIntf,
+  BaseDebugManager;
 
 
 type
@@ -246,7 +247,7 @@ type
     procedure Detach; override;
 
     function Evaluate(const AExpression: String; ACallback: TDBGEvaluateResultCallback;
-                      EvalFlags: TDBGEvaluateFlags = []): Boolean; override;
+                      EvalFlags: TWatcheEvaluateFlags = []): Boolean; override;
     function Modify(const AExpression, ANewValue: String): Boolean; override;
 
     procedure EvaluateModify(const AExpression: String); override;
@@ -2959,7 +2960,7 @@ begin
 end;
 
 function TDebugManager.Evaluate(const AExpression: String;
-  ACallback: TDBGEvaluateResultCallback; EvalFlags: TDBGEvaluateFlags): Boolean;
+  ACallback: TDBGEvaluateResultCallback; EvalFlags: TWatcheEvaluateFlags): Boolean;
 begin
   Result := (not Destroying)
         and (MainIDE.ToolStatus = itDebugger)
@@ -3277,7 +3278,7 @@ begin
   end
   else begin
     TManagedBreakpoints(FBreakpoints).Master := FDebugger.BreakPoints;
-    FWatches.Supplier := FDebugger.Watches;
+    FWatches.Supplier := FDebugger.WatchSupplier;
     FThreads.Supplier := FDebugger.Threads;
     FThreads.UnitInfoProvider := FUnitInfoProvider;
     FLocals.Supplier := FDebugger.Locals;

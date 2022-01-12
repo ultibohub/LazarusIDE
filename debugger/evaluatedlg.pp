@@ -43,7 +43,7 @@ uses
   // IdeIntf
   IDEWindowIntf, IDEImagesIntf,
   // DebuggerIntf
-  DbgIntfDebuggerBase,
+  DbgIntfDebuggerBase, LazDebuggerIntf,
   // IDE
   LazarusIDEStrConsts, BaseDebugManager, InputHistory, IDEProcs,
   Debugger, DebuggerDlg, DebuggerStrConst, EnvironmentOpts;
@@ -215,7 +215,7 @@ end;
 procedure TEvaluateDlg.Evaluate;
 var
   S: String;
-  Opts: TDBGEvaluateFlags;
+  Opts: TWatcheEvaluateFlags;
 begin
   S := cmbExpression.Text;
   if S = '' then Exit;

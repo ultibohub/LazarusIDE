@@ -49,6 +49,7 @@ uses
   IDEOptionsIntf, IDEOptEditorIntf,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfDebuggerBase, DbgIntfPseudoTerminal,
+  LazDebuggerIntf,
   // IDE
   Debugger, SourceMarks, Project, ProjectDefs, LazarusIDEStrConsts;
 
@@ -184,7 +185,7 @@ type
     function FillProcessList(AList: TRunningProcessInfoList): boolean; virtual; abstract;
 
     function Evaluate(const AExpression: String; ACallback: TDBGEvaluateResultCallback;
-                      EvalFlags: TDBGEvaluateFlags = []): Boolean; virtual; abstract; // Evaluates the given expression, returns true if valid
+                      EvalFlags: TWatcheEvaluateFlags = []): Boolean; virtual; abstract; // Evaluates the given expression, returns true if valid
     function Modify(const AExpression: String; const ANewValue: String): Boolean; virtual; abstract; // Modify the given expression, returns true if valid
 
     function GetFullFilename(const AUnitinfo: TDebuggerUnitInfo;

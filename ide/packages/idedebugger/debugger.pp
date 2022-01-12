@@ -43,7 +43,8 @@ uses
   Laz2_XMLCfg, LazFileUtils, LazStringUtils, LazUtilities, LazLoggerBase,
   LazConfigStorage, LazClasses, Maps,
   // DebuggerIntf
-  DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase;
+  DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase,
+  LazDebuggerIntf, IdeDebuggerBase;
 
 const
   XMLBreakPointsNode = 'BreakPoints';
@@ -583,8 +584,6 @@ type
     procedure NotifyRemove(const ASender: TCurrentWatches; const AWatch: TCurrentWatch);
     property Items[AIndex: Integer]: TWatchesNotification read GetItem; default;
   end;
-
-  { TWatchValue }
 
   { TIdeWatchValue }
 
@@ -3538,7 +3537,7 @@ end;
 procedure TIdeWatchesMonitor.RequestData(AWatchValue: TCurrentWatchValue);
 begin
   if Supplier <> nil
-  then Supplier.RequestData(AWatchValue)
+  then Supplier.RequestData(TWatchValueIntf(AWatchValue))
   else AWatchValue.Validity := ddsInvalid;
 end;
 

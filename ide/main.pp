@@ -102,7 +102,7 @@ uses
   // debugger
   LazDebuggerGdbmi, GDBMIDebugger,
   RunParamsOpts, BaseDebugManager, DebugManager, debugger, DebuggerDlg,
-  DebugAttachDialog, DbgIntfBaseTypes, DbgIntfDebuggerBase,
+  DebugAttachDialog, DbgIntfBaseTypes, DbgIntfDebuggerBase, LazDebuggerIntf,
   // packager
   PackageSystem, PkgManager, BasePkgManager, LPKCache,
   // source editing
@@ -11289,7 +11289,7 @@ end;
 procedure TSrcNotebookHintCallback.AddDebuggerResult(Sender: TObject;
   ASuccess: Boolean; ResultText: String; ResultDBGType: TDBGType);
 var
-  Opts: TDBGEvaluateFlags;
+  Opts: TWatcheEvaluateFlags;
 begin
   try
     if not ASuccess then begin
@@ -11375,7 +11375,7 @@ var
   ActiveUnitInfo: TUnitInfo;
   BaseURL, SmartHintStr, Expression: String;
   HasHint: Boolean;
-  Opts: TDBGEvaluateFlags;
+  Opts: TWatcheEvaluateFlags;
   AtomStartPos, AtomEndPos: integer;
   AtomRect: TRect;
   DebugHint: TSrcNotebookHintCallback;

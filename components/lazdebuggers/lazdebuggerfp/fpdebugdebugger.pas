@@ -36,7 +36,7 @@ uses
   Forms, Dialogs, syncobjs,
   Maps, LazLoggerBase, LazUTF8, lazCollections,
   DbgIntfBaseTypes, DbgIntfDebuggerBase,
-  FpDebugDebuggerUtils, FpDebugDebuggerWorkThreads,
+  FpDebugDebuggerUtils, FpDebugDebuggerWorkThreads, LazDebuggerIntf,
   // FpDebug
   {$IFDEF FPDEBUG_THREAD_CHECK} FpDbgCommon, {$ENDIF}
   FpDbgClasses, FpDbgInfo, FpErrorMessages, FpPascalBuilder, FpdMemoryTools,
@@ -134,13 +134,13 @@ type
 
   TFpThreadWorkerWatchValueEvalUpdate = class(TFpThreadWorkerWatchValueEval)
   private
-    FWatchValue: TWatchValue;
+    FWatchValue: TWatchValueIntf;
     procedure DoWatchFreed_DecRef(Sender: TObject);
   protected
     procedure UpdateWatch_DecRef(Data: PtrInt = 0); override;
     procedure DoRemovedFromLinkedList; override; // _DecRef
   public
-    constructor Create(ADebugger: TFpDebugDebuggerBase; AWatchValue: TWatchValue);
+    constructor Create(ADebugger: TFpDebugDebuggerBase; AWatchValue: TWatchValueIntf);
   end;
 
   { TFpThreadWorkerBreakPointSetUpdate }
@@ -471,7 +471,7 @@ type
     function  FpDebugger: TFpDebugDebugger;
     procedure StopWorkes;
     procedure DoStateLeavePause; override;
-    procedure InternalRequestData(AWatchValue: TWatchValue); override;
+    procedure InternalRequestData(AWatchValue: TWatchValueIntf); override;
   public
     destructor Destroy; override;
   end;
@@ -1071,7 +1071,7 @@ begin
 end;
 
 constructor TFpThreadWorkerWatchValueEvalUpdate.Create(
-  ADebugger: TFpDebugDebuggerBase; AWatchValue: TWatchValue);
+  ADebugger: TFpDebugDebuggerBase; AWatchValue: TWatchValueIntf);
 begin
   assert(system.ThreadID = classes.MainThreadID, 'TFpThreadWorkerWatchValueEval.Create: system.ThreadID = classes.MainThreadID');
   FWatchValue := AWatchValue;
@@ -2287,7 +2287,7 @@ begin
   FWatchEvalWorkers.WaitForWorkers(True);
 end;
 
-procedure TFPWatches.InternalRequestData(AWatchValue: TWatchValue);
+procedure TFPWatches.InternalRequestData(AWatchValue: TWatchValueIntf);
 var
   WorkItem: TFpThreadWorkerWatchValueEvalUpdate;
 begin
@@ -3568,7 +3568,7 @@ end;
 function TFpDebugDebugger.RequestCommand(const ACommand: TDBGCommand;
   const AParams: array of const; const ACallback: TMethod): Boolean;
 var
-  EvalFlags: TDBGEvaluateFlags;
+  EvalFlags: TWatcheEvaluateFlags;
   AConsoleTty, ResText: string;
   addr: TDBGPtrArray;
   Cmd: TDBGCommand;
@@ -3629,7 +3629,8 @@ begin
       else
         ResText := GetFpErrorHandler.ErrorAsString(FDbgController.LastError);
       DoDbgEvent(ecProcess, etProcessExit, ResText); // or ecDebugger?
-      OnFeedback(self, ResText, '', ftError, [frOk]);
+      if Assigned(OnFeedback) then
+        OnFeedback(self, ResText, '', ftError, [frOk]);
       Exit;
     end;
     // TODO: any step commond should run to "main" or "pascalmain"
@@ -3730,7 +3731,7 @@ begin
       end;
     dcEvaluate:
       begin
-        EvalFlags := TDBGEvaluateFlags(AParams[1].VInteger);
+        EvalFlags := TWatcheEvaluateFlags(AParams[1].VInteger);
         GetCurrentThreadAndStackFrame(AThreadId, AStackFrame);
         if FEvalWorkItem <> nil then begin
           EvalWorkItem := FEvalWorkItem;

@@ -5,10 +5,10 @@ unit TestBase;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, fpcunit, testregistry, LCLProc,
-  LazLogger, LazFileUtils, DbgIntfDebuggerBase, Dialogs, Forms, RegExpr,
-  GDBMIDebugger, TestDbgConfig, TestDbgTestSuites, TTestDbgExecuteables,
-  TTestDebuggerClasses, TestDbgCompilerProcess, TestDbgControl, TestOutputLogger; // , FpGdbmiDebugger;
+  Classes, SysUtils, FileUtil, fpcunit, testregistry, LCLProc, LazLogger,
+  LazFileUtils, DbgIntfDebuggerBase, Dialogs, Forms, RegExpr, GDBMIDebugger,
+  TestDbgConfig, TestDbgTestSuites, TTestDbgExecuteables, TTestDebuggerClasses,
+  TestDbgCompilerProcess, TestDbgControl, TestOutputLogger, LazDebuggerIntf; // , FpGdbmiDebugger;
   // EnvironmentOpts, ExtToolDialog, TransferMacros,
 
 
@@ -93,7 +93,7 @@ type
       ResultText: String; ResultDBGType: TDBGType);
   public
     function EvaluateWait(const AExpression: String; var ARes: String;
-      var AResType: TDBGType; EvalFlags: TDBGEvaluateFlags = []; ATimeOut: Integer = -1): Boolean;
+      var AResType: TDBGType; EvalFlags: TWatcheEvaluateFlags = []; ATimeOut: Integer = -1): Boolean;
   end;
 
 
@@ -191,7 +191,7 @@ begin
 end;
 
 function TGDBMIDebuggerForTest.EvaluateWait(const AExpression: String;
-  var ARes: String; var AResType: TDBGType; EvalFlags: TDBGEvaluateFlags;
+  var ARes: String; var AResType: TDBGType; EvalFlags: TWatcheEvaluateFlags;
   ATimeOut: Integer): Boolean;
 var
   t: QWord;

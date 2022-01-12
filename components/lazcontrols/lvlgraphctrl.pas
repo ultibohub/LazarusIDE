@@ -291,9 +291,11 @@ type
     procedure SetAllNodeDrawSizes(PixelPerWeight: single = 1.0; MinWeight: single = 0.0);
     procedure MarkBackEdges;
     procedure MinimizeCrossings; // permutate nodes to minimize crossings
+    // MinimizeOverlappings: Adjust Node.DrawPosition to ensure all nodes have the required gaps between them.
     procedure MinimizeOverlappings(MinPos: integer = 0;
-      NodeGapAbove: integer = 1; NodeGapBelow: integer = 1;
-      aLevel: integer = -1); // set all Node.Position to minimize overlappings
+      NodeGapAbove: integer = 1; NodeGapBelow: integer = 1);
+    procedure MinimizeOverlappings(MinPos: integer; NodeGapAbove: integer;
+      NodeGapBelow: integer; aLevel: integer);
     procedure StraightenGraph;
     procedure SetColors(Palette: TLazCtrlPalette);
 
@@ -520,6 +522,7 @@ type
     FOnSelectionChanged: TNotifyEvent;
     FOnStartAutoLayout: TNotifyEvent;
     FOptions: TLvlGraphCtrlOptions;
+    FZoom: Single;
     FPixelPerWeight: single;
     FScrollLeft: integer;
     FScrollLeftMax: integer;
@@ -540,11 +543,20 @@ type
     procedure SetOptions(AValue: TLvlGraphCtrlOptions);
     procedure SetScrollLeft(AValue: integer);
     procedure SetScrollTop(AValue: integer);
+    function  ClientPosFor(AGraphPoint: TPoint): TPoint; overload;
+    function  ClientPosFor(AGraphRect: TRect): TRect; overload;
+    function  ApplyZoom(c: Integer): Integer; overload;
+    function  ApplyZoom(p: TPoint): TPoint; overload;
+    function  ApplyZoom(r: TRect): TRect; overload;
+    function  GetZoomedTop(ANode: TLvlGraphNode): Integer; overload;
+    function  GetZoomedCenter(ANode: TLvlGraphNode): Integer; overload;
+    function  GetZoomedBottom(ANode: TLvlGraphNode): Integer; overload;
     procedure SetSelectedNode(AValue: TLvlGraphNode);
     procedure UpdateScrollBars;
     procedure WMHScroll(var Msg: TLMScroll); message LM_HSCROLL;
     procedure WMVScroll(var Msg: TLMScroll); message LM_VSCROLL;
     procedure WMMouseWheel(var Message: TLMMouseEvent); message LM_MOUSEWHEEL;
+    procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure ImageListChange(Sender: TObject);
   protected
     procedure GraphInvalidate(Sender: TObject); virtual;
@@ -726,6 +738,7 @@ type
     Graph: TMinXGraph;
     Index: integer;
     PrevSameSwitchPair, NextSameSwitchPair: TMinXPair;
+    NextChangedSinceBestStored: TMinXPair;
     constructor Create(aLevel: TMinXLevel; aIndex: integer);
     destructor Destroy; override;
     procedure UnbindFromSwitchList;
@@ -741,25 +754,36 @@ type
   TMinXGraph = class
   private
     FGraphNodeToNode: TPointerToPointerTree; // TLvlGraphNode to TMinXNode
+    PairsChangedSinceBestStored: TMinXPair;
+    procedure InitPairs;
     procedure UnbindPairs;
     procedure BindPairs;
     function ComputeCrossCount: integer;
     procedure StoreAsBest(CheckIfBetter: boolean);
-    function ComputeLowestSwitchDiff(StartAtOld: boolean; IgnorePair: TMinXPair): integer;
+    procedure StoreAsBest(APair: TMinXPair);
+    function ComputeHighestSwitchDiff(StartAtOld: boolean; IgnorePair: TMinXPair): integer;
   public
     Graph: TLvlGraph;
     Levels: array of TMinXLevel;
     Pairs: array of TMinXPair;
-    SameSwitchDiffPairs: array of TMinXPair; //
-    SameSwitchDiffPair0: integer;
-    LowestSwitchDiff: integer;
+    (* SameSwitchDiffPairs:
+         TMinXPair ordered by their SwitchDiff.
+         - SwitchDiff is negative (for pairs that have "resolvable crossings")
+         - Pairs are stored at: SameSwitchDiffPairs[ - SwitchDiff]
+       HighestSwitchDiff:
+         - The highest index in use in SameSwitchDiffPairs.
+         - The index to the pair(s) with the most resolvable crossings"
+           This is Max(Abs(SwitchDiff))  OR  Abs(Min(SwitchDiff))
+    *)
+    SameSwitchDiffPairs: array of TMinXPair;
+    HighestSwitchDiff: integer;
     CrossCount: integer;
     BestCrossCount: integer;
     constructor Create(aGraph: TLvlGraph);
     destructor Destroy; override;
     procedure InitSearch;
     function FindBestPair: TMinXPair;
-    procedure SwitchCrossingPairs(MaxRun: int64; var Run: int64);
+    procedure SwitchCrossingPairs(MaxRun: int64; var Run: int64; ZeroRunLimit: int64);
     procedure Shuffle;
     procedure SwitchAndShuffle(MaxSingleRun, MaxTotalRun: int64);
     procedure SwitchPair(Pair: TMinXPair);
@@ -1465,13 +1489,13 @@ end;
 
 procedure TMinXPair.UnbindFromSwitchList;
 begin
+  if SwitchDiff > 0 then
+    exit;
   if PrevSameSwitchPair<>nil then
     PrevSameSwitchPair.NextSameSwitchPair:=NextSameSwitchPair
-  else if Graph.SameSwitchDiffPairs[Graph.SameSwitchDiffPair0+SwitchDiff]=Self
+  else if Graph.SameSwitchDiffPairs[-SwitchDiff]=Self
   then begin
-    Graph.SameSwitchDiffPairs[Graph.SameSwitchDiffPair0+SwitchDiff]:=NextSameSwitchPair;
-    if (NextSameSwitchPair=nil) and (Graph.LowestSwitchDiff=SwitchDiff) then
-      Graph.LowestSwitchDiff:=Graph.ComputeLowestSwitchDiff(true,Self);
+    Graph.SameSwitchDiffPairs[-SwitchDiff]:=NextSameSwitchPair;
   end;
   if NextSameSwitchPair<>nil then
     NextSameSwitchPair.PrevSameSwitchPair:=PrevSameSwitchPair;
@@ -1484,7 +1508,9 @@ var
   n: TMinXPair;
 begin
   Result := 0;
-  n:=Graph.SameSwitchDiffPairs[Graph.SameSwitchDiffPair0+SwitchDiff];
+  if SwitchDiff > 0 then
+    exit;
+  n:=Graph.SameSwitchDiffPairs[-SwitchDiff];
   if AtEnd and (n<> nil) then begin
     while n.NextSameSwitchPair <> nil do begin
       n:=n.NextSameSwitchPair;
@@ -1495,12 +1521,11 @@ begin
     exit;
   end;
   NextSameSwitchPair:=n;
-  Graph.SameSwitchDiffPairs[Graph.SameSwitchDiffPair0+SwitchDiff]:=Self;
+  Graph.SameSwitchDiffPairs[-SwitchDiff]:=Self;
   if NextSameSwitchPair<>nil then
     NextSameSwitchPair.PrevSameSwitchPair:=Self;
-  if (Graph.LowestSwitchDiff+Graph.SameSwitchDiffPair0<0)
-  or (Graph.LowestSwitchDiff>SwitchDiff) then
-    Graph.LowestSwitchDiff:=SwitchDiff;
+  if (Graph.HighestSwitchDiff<-SwitchDiff) then
+    Graph.HighestSwitchDiff:=-SwitchDiff;
 end;
 
 procedure TMinXPair.ComputeCrossingCount(out Crossing,
@@ -1592,6 +1617,7 @@ begin
     end;
   end;
 
+  InitPairs;
   BindPairs;
 
   {$IFDEF CheckMinXGraph}
@@ -1614,6 +1640,37 @@ begin
   inherited Destroy;
 end;
 
+procedure TMinXGraph.InitPairs;
+var
+  Cnt: Integer;
+  i, n: Integer;
+  Level: TMinXLevel;
+  Pair: TMinXPair;
+begin
+  Cnt:=0;
+  for i:=0 to length(Levels)-1 do
+    Cnt+=Max(0,length(Levels[i].Nodes)-1);
+  SetLength(Pairs,Cnt);
+
+  Cnt:=0;
+  for i:=0 to length(Levels)-1 do begin
+    Level:=Levels[i];
+    if length(Level.Nodes) > 0 then
+      SetLength(Level.Pairs,length(Level.Nodes)-1);
+    for n:=0 to length(Level.Pairs)-1 do begin
+      Pair:=TMinXPair.Create(Level,n);
+      Pairs[Cnt]:=Pair;
+      Level.Pairs[n]:=Pair;
+      Cnt+=1;
+    end;
+  end;
+
+  HighestSwitchDiff:=-1;
+  // TODO: CountOfEdges (even less: Max(Cnt(Level.OutEdges))
+  // Worst case: half the nodes are on Level[0], the other half on Level[1]
+  SetLength(SameSwitchDiffPairs,Graph.NodeCount*Graph.NodeCount div 4 +1);
+end;
+
 procedure TMinXGraph.UnbindPairs;
 var
   i: Integer;
@@ -1624,43 +1681,16 @@ end;
 
 procedure TMinXGraph.BindPairs;
 var
-  Cnt: Integer;
   i: Integer;
   Level: TMinXLevel;
-  n: Integer;
   Pair: TMinXPair;
-  First: Boolean;
 begin
-  First:=length(Pairs)=0;
-  if First then begin
-    Cnt:=0;
-    for i:=0 to length(Levels)-1 do
-      Cnt+=Max(0,length(Levels[i].Nodes)-1);
-    SetLength(Pairs,Cnt);
+  for i:=0 to length(Pairs)-1 do begin
+    Pair:=Pairs[i];
+    Pair.FSwitchDiff:=Pair.ComputeSwitchDiff;
+    Pair.BindToSwitchList;
   end;
-  Cnt:=0;
-  for i:=0 to length(Levels)-1 do begin
-    Level:=Levels[i];
-    if length(Level.Nodes) > 0 then
-      SetLength(Level.Pairs,length(Level.Nodes)-1);
-    for n:=0 to length(Level.Pairs)-1 do begin
-      if First then begin
-        Pair:=TMinXPair.Create(Level,n);
-        Pairs[Cnt]:=Pair;
-        Level.Pairs[n]:=Pair;
-      end else
-        Pair:=Pairs[Cnt];
-      Pair.FSwitchDiff:=Pair.ComputeSwitchDiff;
-      Cnt+=1;
-    end;
-  end;
-  if First then begin
-    SameSwitchDiffPair0:=Graph.NodeCount*Graph.NodeCount;
-    LowestSwitchDiff:=-SameSwitchDiffPair0-1;
-    SetLength(SameSwitchDiffPairs,2*SameSwitchDiffPair0+1);
-  end;
-  for i:=0 to length(Pairs)-1 do
-    Pairs[i].BindToSwitchList;
+
   CrossCount:=ComputeCrossCount;
 end;
 
@@ -1708,9 +1738,17 @@ var
   Level: TMinXLevel;
   n: Integer;
 begin
+  if CheckIfBetter then begin // e.g. after Shuffly => a new full StoreAsBest is needed
+    PairsChangedSinceBestStored := TMinXPair(PtrUInt(-1));
+  end;
+
   if CheckIfBetter and (BestCrossCount>=0) and (BestCrossCount<CrossCount) then
     exit;
+  PairsChangedSinceBestStored := nil;
   BestCrossCount:=CrossCount;
+
+  for l:=0 to length(Pairs)-1 do
+    Pairs[l].NextChangedSinceBestStored := nil;
   for l:=0 to length(Levels)-1 do begin
     Level:=Levels[l];
     for n:=0 to length(Level.Nodes)-1 do
@@ -1718,40 +1756,76 @@ begin
   end;
 end;
 
-function TMinXGraph.ComputeLowestSwitchDiff(StartAtOld: boolean;
+procedure TMinXGraph.StoreAsBest(APair: TMinXPair);
+var
+  idx: Integer;
+  NextPair: TMinXPair;
+begin
+  if PairsChangedSinceBestStored = TMinXPair(PtrUInt(-1)) then begin
+    StoreAsBest(True);
+    exit;
+  end;
+  if (BestCrossCount>=0) and (BestCrossCount<CrossCount) then begin
+    if APair.NextChangedSinceBestStored = nil then begin
+      APair.NextChangedSinceBestStored := PairsChangedSinceBestStored;
+      PairsChangedSinceBestStored := APair;
+    end;
+    exit;
+  end;
+  BestCrossCount:=CrossCount;
+
+  while APair <> nil do begin
+    with APair.Level do begin
+      idx := APair.Index;
+      BestNodes[idx]:=Nodes[idx].GraphNode;
+      inc(idx);
+      BestNodes[idx]:=Nodes[idx].GraphNode;
+    end;
+    NextPair := APair.NextChangedSinceBestStored;
+    APair.NextChangedSinceBestStored := nil;
+    APair := NextPair;
+  end;
+end;
+
+function TMinXGraph.ComputeHighestSwitchDiff(StartAtOld: boolean;
   IgnorePair: TMinXPair): integer;
 var
   i: Integer;
   Pair: TMinXPair;
 begin
   if StartAtOld then begin
-    for i:=LowestSwitchDiff to Graph.NodeCount-1 do begin
-      if SameSwitchDiffPairs[i+SameSwitchDiffPair0]<>nil then
+    for i:=HighestSwitchDiff-1 downto 0 do begin
+      if SameSwitchDiffPairs[i]<>nil then
         exit(i);
     end;
+    exit(-1);
   end;
-  Result:=SameSwitchDiffPair0+1;
+
+  // Search all Pairs
+  Result:= -1;
   for i:=0 to length(Pairs)-1 do begin
     Pair:=Pairs[i];
     if IgnorePair=Pair then continue;
-    Result:=Min(Result,Pairs[i].SwitchDiff);
+    Result:=Max(Result,-Pair.SwitchDiff);
   end;
-  if Result>SameSwitchDiffPair0 then
-    Result:=-1-SameSwitchDiffPair0;
 end;
 
 function TMinXGraph.FindBestPair: TMinXPair;
-var
-  i: Integer;
 begin
-  i:=LowestSwitchDiff+SameSwitchDiffPair0;
-  if i>=0 then
-    Result:=SameSwitchDiffPairs[i]
+  if HighestSwitchDiff>=0 then begin
+    Result:=SameSwitchDiffPairs[HighestSwitchDiff];
+    if Result = nil then begin
+      HighestSwitchDiff := ComputeHighestSwitchDiff(True, nil);
+      if HighestSwitchDiff>=0 then
+        Result:=SameSwitchDiffPairs[HighestSwitchDiff];
+    end;
+  end
   else
     Result:=nil;
 end;
 
-procedure TMinXGraph.SwitchCrossingPairs(MaxRun: int64; var Run: int64);
+procedure TMinXGraph.SwitchCrossingPairs(MaxRun: int64; var Run: int64;
+  ZeroRunLimit: int64);
 (* Calculating how many rounds to go for ZeroRun
    Switching a node with SwitchDiff=0, can move other zero-nodes (i.e.,
    remove them in one place, and create another in a new place)
@@ -1764,38 +1838,56 @@ procedure TMinXGraph.SwitchCrossingPairs(MaxRun: int64; var Run: int64);
 *)
 var
   Pair: TMinXPair;
-  LastInsertIdx, ZeroRun: Integer;
+  CountOfZeroDiffNodes, ZeroRun, ZeroBest: Integer;
 begin
-  ZeroRun := 0;
   while (MaxRun>0) and (BestCrossCount<>0) do begin
     //debugln(['TMinXGraph.SwitchCrossingPairs ',MaxRun,' ',Run]);
     Pair:=FindBestPair;
-    Run+=1;
     if (Pair=nil) then exit;
-    if (Pair.SwitchDiff=0) then begin
-      dec(ZeroRun);
-      if ZeroRun = 0 then
-        exit;
-    end
-    else
-      ZeroRun := 0;
+    if (Pair.SwitchDiff=0) then break; // Enter ZeroRun
+    Run+=1;
     SwitchPair(Pair);
-    if (Pair.SwitchDiff=0) then begin
+    MaxRun-=1;
+  end;
+
+  ZeroRun := -1;
+  ZeroBest := high(ZeroBest);
+  while (MaxRun>0) and (BestCrossCount<>0) do begin
+    if (Pair.SwitchDiff<0) then begin
+      SwitchPair(Pair);
+      if CrossCount < ZeroBest then
+        ZeroRun := -1;
+    end
+    else begin
+      if ZeroRun > 0 then begin
+        dec(ZeroRun);
+        if ZeroRun = 0 then
+          exit;
+      end;
+
+      SwitchPair(Pair);
       Pair.UnbindFromSwitchList;
-      LastInsertIdx := Pair.BindToSwitchList(True);
-      If ZeroRun = -1 then
-        if CrossCount < BestCrossCount + BestCrossCount div 8 then // add 12% to BestCrossCount
-          ZeroRun := 8 * LastInsertIdx+1 // closer to a new BestCrossCount, search harder
-        else
-          ZeroRun := 2 * LastInsertIdx+1;
+      CountOfZeroDiffNodes := Pair.BindToSwitchList(True);
+      if (ZeroRun < 0) then begin
+        ZeroRun := Max(4 * CountOfZeroDiffNodes+1, Graph.NodeCount);
+        if CrossCount < BestCrossCount * 4 then
+          ZeroRun := ZeroRun * 4;
+        ZeroRun := Min(ZeroRun, ZeroRunLimit);
+        if CrossCount < ZeroBest then
+          ZeroBest := CrossCount;
+      end;
     end;
+
+    Pair:=FindBestPair;
+    if (Pair=nil) then exit;
+    Run+=1;
     MaxRun-=1;
   end;
 end;
 
 procedure TMinXGraph.Shuffle;
 var
-  l: Integer;
+  l, i: Integer;
   Level: TMinXLevel;
   n1: Integer;
   n2: Integer;
@@ -1807,7 +1899,8 @@ begin
   UnbindPairs;
   for l:=0 to length(Levels)-1 do begin
     Level:=Levels[l];
-    for n1:=0 to length(Level.Nodes)-1 do begin
+    for i:=0 to 1 do begin
+      n1:=Random(length(Level.Nodes));
       n2:=Random(length(Level.Nodes));
       if n1=n2 then continue;
       Node:=Level.Nodes[n1];
@@ -1826,14 +1919,18 @@ end;
 
 procedure TMinXGraph.SwitchAndShuffle(MaxSingleRun, MaxTotalRun: int64);
 var
-  Run: int64;
+  Run, LastRun: int64;
 begin
   Run:=1;
+  LastRun := 0;
   while BestCrossCount<>0 do begin
-    SwitchCrossingPairs(MaxSingleRun,Run);
-    if Run>MaxTotalRun then exit;
+    SwitchCrossingPairs(MaxSingleRun,Run,Graph.NodeCount div 2);
+    if Run = LastRun then exit;
+    if Run>MaxTotalRun then break;
     Shuffle;
+    LastRun := Run;
   end;
+  SwitchCrossingPairs(MaxSingleRun,Run, MaxTotalRun);
 end;
 
 procedure TMinXGraph.SwitchPair(Pair: TMinXPair);
@@ -1900,7 +1997,7 @@ begin
     for j:=0 to length(Node2.InEdges)-1 do
       UpdateSwitchDiff(Node1.InEdges[i],Node2.InEdges[j]);
 
-  StoreAsBest(true);
+  StoreAsBest(Pair);
 
   {$IFDEF CheckMinXGraph}
   ConsistencyCheck;
@@ -2011,7 +2108,7 @@ begin
   for i:=0 to length(SameSwitchDiffPairs)-1 do begin
     Pair:=SameSwitchDiffPairs[i];
     while Pair<>nil do begin
-      if Pair.SwitchDiff<>i-SameSwitchDiffPair0 then
+      if -Pair.SwitchDiff<>i then
         Err(Pair.AsString);
       if Pair.PrevSameSwitchPair<>nil then begin
         if Pair.PrevSameSwitchPair.NextSameSwitchPair<>Pair then
@@ -2030,8 +2127,9 @@ begin
 
   if CrossCount<>ComputeCrossCount then
     Err;
-  if LowestSwitchDiff<>ComputeLowestSwitchDiff(false,nil) then
-    Err;
+  if (HighestSwitchDiff < 0) or (SameSwitchDiffPairs[HighestSwitchDiff] <> nil) then
+    if HighestSwitchDiff<>ComputeHighestSwitchDiff(false,nil) then
+      Err;
 end;
 
 { TMinXLevel }
@@ -2074,15 +2172,20 @@ procedure TMinXLevel.GetCrossingCount(Node1, Node2: TMinXNode; out
 var
   i: Integer;
   j: Integer;
+  n: TMinXNode;
 begin
+  if (Node1.IndexInLevel>Node2.IndexInLevel) then begin
+    n := Node1;
+    Node1 := Node2;
+    Node2 := n;
+  end;
+
   Crossing:=0;
   SwitchCrossing:=0;
   for i:=0 to length(Node1.OutEdges)-1 do begin
     for j:=0 to length(Node2.OutEdges)-1 do begin
       if Node1.OutEdges[i]=Node2.OutEdges[j] then continue;
-      // these two edges can cross
-      if (Node1.IndexInLevel<Node2.IndexInLevel)
-        <>(Node1.OutEdges[i].IndexInLevel<Node2.OutEdges[j].IndexInLevel)
+      if (Node1.OutEdges[i].IndexInLevel>Node2.OutEdges[j].IndexInLevel)
       then
         Crossing+=1
       else
@@ -2093,8 +2196,7 @@ begin
     for j:=0 to length(Node2.InEdges)-1 do begin
       if Node1.InEdges[i]=Node2.InEdges[j] then continue;
       // these two edges can cross
-      if (Node1.IndexInLevel<Node2.IndexInLevel)
-        <>(Node1.InEdges[i].IndexInLevel<Node2.InEdges[j].IndexInLevel)
+      if (Node1.InEdges[i].IndexInLevel>Node2.InEdges[j].IndexInLevel)
       then
         Crossing+=1
       else
@@ -2427,8 +2529,6 @@ var
   i: Integer;
   TxtW: Integer;
   p: TPoint;
-  x: Integer;
-  y: Integer;
   Details: TThemedElementDetails;
   NodeRect: TRect;
 begin
@@ -2440,20 +2540,19 @@ begin
       if (Node.Caption='') or (not Node.Visible) then continue;
       TxtW:=Canvas.TextWidth(Node.Caption);
       case NodeStyle.CaptionPosition of
-      lgncLeft,lgncRight: p.y:=Node.DrawCenter-(TxtH div 2);
-      lgncTop: p.y:=Node.DrawPosition-NodeStyle.GapTop-TxtH;
-      lgncBottom: p.y:=Node.DrawPositionEnd+NodeStyle.GapBottom;
+      lgncLeft,lgncRight: p.y:=GetZoomedCenter(Node)-(TxtH div 2);
+      lgncTop: p.y:=GetZoomedTop(Node)-NodeStyle.GapTop-TxtH;
+      lgncBottom: p.y:=GetZoomedBottom(Node)+NodeStyle.GapBottom;
       end;
       case NodeStyle.CaptionPosition of
-      lgncLeft: p.x:=Level.DrawPosition-NodeStyle.GapLeft-TxtW;
-      lgncRight: p.x:=Level.DrawPosition+NodeStyle.Width+NodeStyle.GapRight;
-      lgncTop,lgncBottom: p.x:=Level.DrawPosition+((NodeStyle.Width-TxtW) div 2);
+      lgncLeft: p.x:=ApplyZoom(Level.DrawPosition)-NodeStyle.GapLeft-TxtW;
+      lgncRight: p.x:=ApplyZoom(Level.DrawPosition)+NodeStyle.Width+NodeStyle.GapRight;
+      lgncTop,lgncBottom: p.x:=ApplyZoom(Level.DrawPosition)+((NodeStyle.Width-TxtW) div 2);
       end;
       //debugln(['TCustomLvlGraphControl.Paint ',Node.Caption,' DrawPosition=',Node.DrawPosition,' DrawSize=',Node.DrawSize,' TxtH=',TxtH,' TxtW=',TxtW,' p=',dbgs(p),' Selected=',Node.Selected]);
-      x:=p.x-ScrollLeft;
-      y:=p.y-ScrollTop;
-      NodeRect:=Bounds(x,y,TxtW,TxtH);
-      Node.FDrawnCaptionRect:=NodeRect;
+      Node.FDrawnCaptionRect:=Bounds(p.x,p.y,TxtW,TxtH);
+      p := ClientPosFor(p);
+      NodeRect:=Bounds(p.x,p.y,TxtW,TxtH);
       if Node.Selected then begin
         if lgcFocusedPainting in FFlags then
           Details := ThemeServices.GetElementDetails(ttItemSelected)
@@ -2467,7 +2566,7 @@ begin
       end;
       ThemeServices.DrawText(Canvas, Details, Node.Caption, NodeRect,
            DT_CENTER or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX, 0)
-      //Canvas.TextOut(x,y,Node.Caption);
+      //Canvas.TextOut(p.x,p.y,Node.Caption);
     end;
   end;
 end;
@@ -2494,7 +2593,7 @@ begin
       // out edges
       TotalWeight:=Node.OutWeight;
       Weight:=0.0;
-      Start:=Node.DrawCenter-ScrollTop-integer(round(TotalWeight*PixelPerWeight) div 2);
+      Start:=GetZoomedCenter(Node)-integer(round(TotalWeight*PixelPerWeight) div 2);
       for e:=0 to Node.OutEdgeCount-1 do begin
         Edge:=Node.OutEdges[e];
         Edge.FDrawnAt.Top:=Start+round(Weight*PixelPerWeight);
@@ -2504,7 +2603,7 @@ begin
       // in edges
       TotalWeight:=Node.InWeight;
       Weight:=0.0;
-      Start:=Node.DrawCenter-ScrollTop-integer(round(TotalWeight*PixelPerWeight) div 2);
+      Start:=GetZoomedCenter(Node)-integer(round(TotalWeight*PixelPerWeight) div 2);
       for e:=0 to Node.InEdgeCount-1 do begin
         Edge:=Node.InEdges[e];
         Edge.FDrawnAt.Bottom:=Start+round(Weight*PixelPerWeight);
@@ -2515,8 +2614,8 @@ begin
       for e:=0 to Node.OutEdgeCount-1 do begin
         Edge:=Node.OutEdges[e];
         TargetNode:=Edge.Target;
-        x1:=Level.DrawPosition-ScrollLeft;
-        x2:=TargetNode.Level.DrawPosition-ScrollLeft;
+        x1:=ApplyZoom(Level.DrawPosition);
+        x2:=ApplyZoom(TargetNode.Level.DrawPosition);
         if TargetNode.Level.Index>Level.Index then begin
           // normal dependency
           // => draw line from right of Node to left of TargetNode
@@ -2574,8 +2673,8 @@ begin
       // draw shape
       Canvas.Brush.Color:=FPColorToTColor(Node.Color);
       Canvas.Pen.Color:=Darker(Canvas.Brush.Color);
-      x:=Level.DrawPosition-ScrollLeft;
-      y:=Node.DrawPosition-ScrollTop;
+      x:=ApplyZoom(Level.DrawPosition)-ScrollLeft;
+      y:=GetZoomedTop(Node)-ScrollTop;
       case NodeStyle.Shape of
       lgnsRectangle:
         Canvas.Rectangle(x, y, x+NodeStyle.Width, y+Node.DrawSize);
@@ -2585,15 +2684,18 @@ begin
 
       // draw image and overlay
       if (Images<>nil) then begin
-        x:=Level.DrawPosition+((NodeStyle.Width-Images.Width) div 2)-ScrollLeft;
-        y:=Node.DrawCenter-(Images.Height div 2)-ScrollTop;
+        x:=ApplyZoom(Level.DrawPosition)+((NodeStyle.Width-Images.Width) div 2)-ScrollLeft;
+        y:=GetZoomedCenter(Node)-(Images.Height div 2)-ScrollTop;
         ImgIndex:=Node.ImageIndex;
         if (ImgIndex<0) or (ImgIndex>=Images.Count) then
           ImgIndex:=NodeStyle.DefaultImageIndex;
         if (ImgIndex>=0) and (ImgIndex<Images.Count) then begin
           Images.Draw(Canvas, x, y, ImgIndex, Node.FImageEffect);
-          if (Node.OverlayIndex>=0) and (Node.OverlayIndex<Images.Count) then
-            Images.DrawOverlay(Canvas, x, y, ImgIndex, Node.OverlayIndex, Node.FImageEffect);
+          if (Node.OverlayIndex>=0) and (Node.OverlayIndex<Images.Count) then begin
+            Images.Overlay(Node.OverlayIndex, 0);
+            Images.DrawOverlay(Canvas, x, y, ImgIndex, 0, Node.FImageEffect);
+            Images.Overlay(-1, 0);
+          end;
         end;
       end;
     end;
@@ -2657,6 +2759,51 @@ begin
   FScrollTop:=AValue;
   UpdateScrollBars;
   Invalidate;
+end;
+
+function TCustomLvlGraphControl.ClientPosFor(AGraphPoint: TPoint): TPoint;
+begin
+  Result := AGraphPoint;
+  Result.X := Result.X - ScrollLeft;
+  Result.Y := Result.Y - ScrollTop;
+end;
+
+function TCustomLvlGraphControl.ClientPosFor(AGraphRect: TRect): TRect;
+begin
+  Result.TopLeft     := ClientPosFor(AGraphRect.TopLeft);
+  Result.BottomRight := ClientPosFor(AGraphRect.BottomRight);
+end;
+
+function TCustomLvlGraphControl.ApplyZoom(c: Integer): Integer;
+begin
+  Result := round(c*FZoom);
+end;
+
+function TCustomLvlGraphControl.ApplyZoom(p: TPoint): TPoint;
+begin
+  Result.X := round(p.X*FZoom);
+  Result.Y := round(p.Y*FZoom);
+end;
+
+function TCustomLvlGraphControl.ApplyZoom(r: TRect): TRect;
+begin
+  Result.TopLeft := ApplyZoom(r.TopLeft);
+  Result.BottomRight := ApplyZoom(r.BottomRight);
+end;
+
+function TCustomLvlGraphControl.GetZoomedTop(ANode: TLvlGraphNode): Integer;
+begin
+  Result := ApplyZoom(ANode.DrawCenter)-(ANode.DrawSize div 2);
+end;
+
+function TCustomLvlGraphControl.GetZoomedCenter(ANode: TLvlGraphNode): Integer;
+begin
+  Result := ApplyZoom(ANode.DrawCenter);
+end;
+
+function TCustomLvlGraphControl.GetZoomedBottom(ANode: TLvlGraphNode): Integer;
+begin
+  Result := ApplyZoom(ANode.DrawCenter)-(ANode.DrawSize div 2)+ANode.DrawSize;
 end;
 
 procedure TCustomLvlGraphControl.SetSelectedNode(AValue: TLvlGraphNode);
@@ -2739,6 +2886,16 @@ end;
 
 procedure TCustomLvlGraphControl.WMMouseWheel(var Message: TLMMouseEvent);
 begin
+  if (Message.State * [ssShift, ssAlt, ssAltGr, ssCtrl] = [ssCtrl]) then
+  begin
+    FZoom := FZoom + Message.WheelDelta / (120 * 20);
+    if FZoom < 0.3 then FZoom := 0.3;
+    if FZoom > 25 then FZoom := 25;
+    ComputeEdgeCoords;
+    UpdateScrollBars;
+    Invalidate;
+  end
+  else
   if Mouse.WheelScrollLines=-1 then
   begin
     // -1 : scroll by page
@@ -2751,6 +2908,20 @@ begin
         (Message.WheelDelta * Mouse.WheelScrollLines*NodeStyle.Width) div 240;
   end;
   Message.Result := 1;
+end;
+
+procedure TCustomLvlGraphControl.MouseUp(Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  if (Button = mbMiddle) and (Shift * [ssShift, ssAlt, ssAltGr, ssCtrl] = [ssCtrl])
+  then begin
+    FZoom := 1;
+    ComputeEdgeCoords;
+    UpdateScrollBars;
+    Invalidate;
+    exit;
+  end;
+  inherited MouseUp(Button, Shift, X, Y);
 end;
 
 procedure TCustomLvlGraphControl.DoAutoLayoutLevels(TxtHeight: integer);
@@ -2850,7 +3021,7 @@ begin
     end;
   end;
 
-  r:=Edge.DrawnAt;
+  r:=ClientPosFor(Edge.DrawnAt);
   if Edge.FNoGapCircle then begin
     if EdgeStyle.Shape = lgesCurved then begin
       if Edge.BackEdge then begin
@@ -2946,7 +3117,6 @@ begin
   end;
 
   // draw edges, node captions, nodes
-  ComputeEdgeCoords;
   if Draw(lgdsNormalEdges) then
     DrawEdges(false);
   if Draw(lgdsNodeCaptions) then
@@ -3076,6 +3246,7 @@ end;
 constructor TCustomLvlGraphControl.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FZoom := 1;
   ControlStyle:=ControlStyle+[csAcceptsControls];
   Color := clWhite;
   FOptions:=DefaultLvlGraphCtrlOptions;
@@ -3199,6 +3370,7 @@ begin
 
     DoEndAutoLayout;
 
+    ComputeEdgeCoords;
     Exclude(FFlags,lgcNeedAutoLayout);
   finally
     EndUpdate;
@@ -3253,11 +3425,11 @@ begin
   // check in reverse painting order
   for l:=Graph.LevelCount-1 downto 0 do begin
     Level:=Graph.Levels[l];
-    if (X<Level.DrawPosition) or (X>=Level.DrawPosition+NodeStyle.Width) then continue;
+    if (X<ApplyZoom(Level.DrawPosition)) or (X>=ApplyZoom(Level.DrawPosition)+NodeStyle.Width) then continue;
     for n:=Level.Count-1 downto 0 do begin
       Node:=Level.Nodes[n];
       if not Node.Visible then continue;
-      if (Y<Node.DrawPosition) or (Y>=Node.DrawPositionEnd) then continue;
+      if (Y<GetZoomedTop(Node)) or (Y>=GetZoomedBottom(Node)) then continue;
       exit(Node);
     end;
   end;
@@ -3276,6 +3448,8 @@ var
   r: TRect;
 begin
   Result:=nil;
+  X+=ScrollLeft;
+  Y+=ScrollTop;
   Distance:=High(Integer);
   // check in reverse painting order
   for l:=Graph.LevelCount-1 downto 0 do begin
@@ -3318,15 +3492,15 @@ begin
       Node:=Level[n];
       CaptionRect:=Node.DrawnCaptionRect;
 
-      Result.Y:=Max(Result.Y,Node.DrawPositionEnd+NodeStyle.GapBottom);
-      Result.Y:=Max(Result.Y,CaptionRect.Bottom+ScrollTop);
+      Result.Y:=Max(Result.Y,GetZoomedBottom(Node)+NodeStyle.GapBottom);
+      Result.Y:=Max(Result.Y,CaptionRect.Bottom);
 
       x:=NodeStyle.GapRight;
       if Node.OutEdgeCount>0 then
         x:=Max(x,NodeStyle.Width);
       x+=Level.DrawPosition+NodeStyle.Width;
-      Result.X:=Max(Result.X,x);
-      Result.X:=Max(Result.X,CaptionRect.Right+ScrollLeft);
+      Result.X:=Max(Result.X,ApplyZoom(x));
+      Result.X:=Max(Result.X,CaptionRect.Right);
     end;
   end;
 end;
@@ -4544,33 +4718,40 @@ begin
 end;
 
 procedure TLvlGraph.MinimizeOverlappings(MinPos: integer;
+  NodeGapAbove: integer; NodeGapBelow: integer);
+var
+  i: Integer;
+begin
+  for i:=0 to LevelCount-1 do
+    MinimizeOverlappings(MinPos,NodeGapAbove,NodeGapBelow,i);
+end;
+
+procedure TLvlGraph.MinimizeOverlappings(MinPos: integer;
   NodeGapAbove: integer; NodeGapBelow: integer; aLevel: integer);
 var
-  i, Below: Integer;
+  Below, i: Integer;
   Level: TLvlGraphLevel;
   Node: TLvlGraphNode;
-  Last: TLvlGraphNode;
+  PreviousNode: TLvlGraphNode;
 begin
-  if aLevel<0 then begin
-    for i:=0 to LevelCount-1 do
-      MinimizeOverlappings(MinPos,NodeGapAbove,NodeGapBelow,i);
-  end else begin
-    Level:=Levels[aLevel];
-    Last:=nil;
-    for i:=0 to Level.Count-1 do begin
-      Node:=Level[i];
-      Below := 0;
-      if (Last <> nil) and Last.Visible then
-        Below := NodeGapBelow;
-      if Last=nil then
-        Node.DrawPosition:=MinPos+NodeGapAbove
-      else if Node.Visible then
-        Node.DrawPosition:=Max(Node.DrawPosition,Last.DrawPositionEnd+Below+NodeGapAbove)
-      else
-        Node.DrawPosition:=Max(Node.DrawPosition,Last.DrawPositionEnd+1+Below);
-      //debugln(['TLvlGraph.MinimizeOverlappings Level=',aLevel,' Node=',Node.Caption,' Size=',Node.DrawSize,' Position=',Node.DrawPosition]);
-      Last:=Node;
-    end;
+  Level:=Levels[aLevel];
+  if Level.Count = 0 then
+    exit;
+
+  PreviousNode := Level[0];
+  PreviousNode.DrawPosition:=MinPos+NodeGapAbove;
+
+  for i:=1 to Level.Count-1 do begin
+    Node:=Level[i];
+    Below := 0;
+    if PreviousNode.Visible then
+      Below := NodeGapBelow;
+    if Node.Visible then
+      Node.DrawPosition:=Max(Node.DrawPosition,PreviousNode.DrawPositionEnd+Below+NodeGapAbove)
+    else
+      Node.DrawPosition:=Max(Node.DrawPosition,PreviousNode.DrawPositionEnd+1+Below);
+    //debugln(['TLvlGraph.MinimizeOverlappings Level=',aLevel,' Node=',Node.Caption,' Size=',Node.DrawSize,' Position=',Node.DrawPosition]);
+    PreviousNode:=Node;
   end;
 end;
 

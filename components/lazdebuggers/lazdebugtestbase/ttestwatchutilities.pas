@@ -8,8 +8,9 @@ interface
 
 uses
   Classes, SysUtils, math, DbgIntfBaseTypes, DbgIntfDebuggerBase,
-  FpPascalBuilder, LazLoggerBase, Forms, RegExpr, TestDbgTestSuites,
-  TTestDebuggerClasses, TTestDbgExecuteables, TestDbgConfig, TestOutputLogger;
+  FpPascalBuilder, LazLoggerBase, Forms, IdeDebuggerBase, RegExpr,
+  TestDbgTestSuites, TTestDebuggerClasses, TTestDbgExecuteables, TestDbgConfig,
+  LazDebuggerIntf, TestOutputLogger;
 
 type
   TWatchExpectationResultKind = (
@@ -132,7 +133,7 @@ type
     TstTestName: String;
     TstWatch: TTestWatch;
 
-    EvalCallTestFlags: TDBGEvaluateFlags;
+    EvalCallTestFlags: TWatcheEvaluateFlags;
     EvalCallResReceived: Boolean;
     EvalCallResSuccess: Boolean;
     EvalCallResText: String;
@@ -140,7 +141,7 @@ type
 
     //TstDspFormat: TWatchDisplayFormat;
     //TstRepeatCount: Integer;
-    //TstEvaluateFlags: TDBGEvaluateFlags;
+    //TstEvaluateFlags: TWatcheEvaluateFlags;
     TstStackFrame: Integer;
     TstMinDbg, TstMinFpc: Integer;
 
@@ -162,7 +163,7 @@ type
     function AddFlag(AFlag: TWatchExpErrorHandlingFlag; ACond: Boolean): PWatchExpectation;
     function AddFlag(AFlags: TWatchExpErrorHandlingFlags; ACond: Boolean): PWatchExpectation;
 
-    function AddEvalFlag(AFlags: TDBGEvaluateFlags; ACond: Boolean = True): PWatchExpectation;
+    function AddEvalFlag(AFlags: TWatcheEvaluateFlags; ACond: Boolean = True): PWatchExpectation;
 
     function Skip(ASymTypes: TSymbolTypes = []): PWatchExpectation;
     function SkipIf(ACond: Boolean; ASymTypes: TSymbolTypes = []): PWatchExpectation;
@@ -263,14 +264,14 @@ type
     ): PWatchExpectation;
 
     function Add(ATestName: String;
-      AnExpr:  string; // AEvaluateFlags: TDBGEvaluateFlags; // AFmt: TWatchDisplayFormat;
+      AnExpr:  string; // AEvaluateFlags: TWatcheEvaluateFlags; // AFmt: TWatchDisplayFormat;
       AnExpect: TWatchExpectationResult;
       AStackFrame: Integer = 0; AMinFpc: Integer = 0; AMinDbg: Integer = 0
       // ASpecialFlags: ... // Ignore this or that // maybe per result
     ): PWatchExpectation;
 
     function Add(
-      AnExpr:  string; // AEvaluateFlags: TDBGEvaluateFlags; // AFmt: TWatchDisplayFormat;
+      AnExpr:  string; // AEvaluateFlags: TWatcheEvaluateFlags; // AFmt: TWatchDisplayFormat;
       AnExpect: TWatchExpectationResult;
       AStackFrame: Integer = 0; AMinFpc: Integer = 0; AMinDbg: Integer = 0
     ): PWatchExpectation;
@@ -955,7 +956,7 @@ begin
     Result := Self;
 end;
 
-function TWatchExpectationHelper.AddEvalFlag(AFlags: TDBGEvaluateFlags;
+function TWatchExpectationHelper.AddEvalFlag(AFlags: TWatcheEvaluateFlags;
   ACond: Boolean): PWatchExpectation;
 begin
   Result := Self;

@@ -17,7 +17,7 @@ uses
   GDBTypeInfo, LCLProc, Forms, FpDbgLoader, FpDbgDwarf, LazLoggerBase,
   LazLoggerProfiling, LazClasses, FpPascalParser, FpPascalBuilder,
   FpErrorMessages, FpDbgDwarfDataClasses, FpDbgDwarfFreePascal, FpDbgCommon,
-  MenuIntf;
+  MenuIntf, LazDebuggerIntf;
 
 type
 
@@ -102,11 +102,11 @@ type
   protected
     procedure ClearWatchEvalList;
     procedure DoWatchFreed(Sender: TObject);
-    function EvaluateExpression(AWatchValue: TWatchValue;
+    function EvaluateExpression(AWatchValue: TWatchValueIntf;
                                 AExpression: String;
                                 out AResText: String;
                                 out ATypeInfo: TDBGType;
-                                EvalFlags: TDBGEvaluateFlags = []): Boolean;
+                                EvalFlags: TWatcheEvaluateFlags = []): Boolean;
     property CurrentThreadId;
     property CurrentStackFrame;
   public
@@ -161,7 +161,7 @@ type
     //procedure DoStateChange(const AOldState: TDBGState); override;
     procedure ProcessEvalList;
     procedure QueueCommand;
-    procedure InternalRequestData(AWatchValue: TWatchValue); override;
+    procedure InternalRequestData(AWatchValue: TWatchValueIntf); override;
   public
   end;
 
@@ -227,12 +227,13 @@ begin
     CurrentDebugger.Locals.TriggerInvalidateLocals;
 end;
 
-// This Accessor hack is temporarilly needed / the final version will not show gdb data
-type TWatchValueHack = class(TWatchValue) end;
-procedure MarkWatchValueAsGdb(AWatchValue: TWatchValue);
+procedure MarkWatchValueAsGdb(AWatchValue: TWatchValueIntf);
 begin
   AWatchValue.Value := '{GDB:}' + AWatchValue.Value;
-  TWatchValueHack(AWatchValue).DoDataValidityChanged(ddsRequested);
+  if AWatchValue.Validity = ddsValid then begin
+    AWatchValue.Validity := ddsEvaluating;
+    AWatchValue.Validity := ddsValid;
+  end;
 end;
 
 { TFpGDBMIDebuggerCommandLocals }
@@ -559,7 +560,7 @@ end;
 
 procedure TFPGDBMIWatches.ProcessEvalList;
 var
-  WatchValue: TWatchValue;
+  WatchValue: TWatchValueIntf;
   ResTypeInfo: TDBGType;
   ResText: String;
 
@@ -582,7 +583,7 @@ begin
   try // TODO: if the stack/thread is changed, registers will be wrong
     while (FpDebugger.FWatchEvalList.Count > 0) and (FEvaluationCmdObj = nil) do begin
       try
-        WatchValue := TWatchValue(FpDebugger.FWatchEvalList[0]);
+        WatchValue := TWatchValueIntf(FpDebugger.FWatchEvalList[0]);
         ResTypeInfo := nil;
         if UseGDB then begin
           inherited InternalRequestData(WatchValue);
@@ -620,7 +621,7 @@ begin
   FpDebugger.QueueCommand(FEvaluationCmdObj, ForceQueuing);
 end;
 
-procedure TFPGDBMIWatches.InternalRequestData(AWatchValue: TWatchValue);
+procedure TFPGDBMIWatches.InternalRequestData(AWatchValue: TWatchValueIntf);
 begin
   if (Debugger = nil) or not(Debugger.State in [dsPause, dsInternalPause]) then begin
     AWatchValue.Validity := ddsInvalid;
@@ -818,13 +819,13 @@ end;
 function TFpGDBMIDebugger.RequestCommand(const ACommand: TDBGCommand;
   const AParams: array of const; const ACallback: TMethod): Boolean;
 var
-  EvalFlags: TDBGEvaluateFlags;
+  EvalFlags: TWatcheEvaluateFlags;
   ResText: String;
   ResType: TDBGType;
 begin
   if (ACommand = dcEvaluate) then begin
     EvalFlags := [];
-    EvalFlags := TDBGEvaluateFlags(AParams[1].VInteger);
+    EvalFlags := TWatcheEvaluateFlags(AParams[1].VInteger);
     Result := False;
     if (HasDwarf) and (not UseGDB) then begin
       Result := EvaluateExpression(nil, String(AParams[0].VAnsiString),
@@ -989,7 +990,7 @@ var
   i: Integer;
 begin
   for i := 0 to FWatchEvalList.Count - 1 do begin
-    TWatchValue(FWatchEvalList[i]).RemoveFreeNotification(@DoWatchFreed);
+    TWatchValueIntf(FWatchEvalList[i]).RemoveFreeNotification(@DoWatchFreed);
     //TWatchValueBase(FWatchEvalList[i]).Validity := ddsInvalid;
   end;
   FWatchEvalList.Clear;
@@ -1006,8 +1007,8 @@ begin
   FWatchEvalList.Remove(pointer(Sender));
 end;
 
-function TFpGDBMIDebugger.EvaluateExpression(AWatchValue: TWatchValue; AExpression: String;
-  out AResText: String; out ATypeInfo: TDBGType; EvalFlags: TDBGEvaluateFlags): Boolean;
+function TFpGDBMIDebugger.EvaluateExpression(AWatchValue: TWatchValueIntf; AExpression: String;
+  out AResText: String; out ATypeInfo: TDBGType; EvalFlags: TWatcheEvaluateFlags): Boolean;
 var
   Ctx: TFpDbgSymbolScope;
   PasExpr, PasExpr2: TFpPascalExpression;
