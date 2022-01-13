@@ -218,6 +218,9 @@ begin
 end;
 
 function TDateTimeIntervalsHelper.NextValue(AValue: TDateTime): Double;
+var
+  y, m, d: Word;
+  month_steps: Byte;
 begin
   case FBestStep of
     dtsYear:
@@ -226,6 +229,19 @@ begin
         Result := AValue + FStepLen
       else
         Result := IncYear(AValue, Round(FBestStepCoeff));
+    dtsQuarter:
+      begin
+        DecodeDate(AValue, y,m,d);
+        if SameValue(FStepLen, YEAR/4, 1E-3) then  
+          month_steps := 3
+        else
+          month_steps := 6; 
+        m := ((m - 1) div month_steps) * month_steps + month_steps + 1;
+        if m <= 12 then
+          Result := EncodeDate(y, m, 1)
+        else
+          Result := EncodeDate(y+1, 1, 1);
+      end;
     dtsMonth: Result := IncMonth(AValue, Round(FBestStepCoeff));
     otherwise Result := AValue + FStepLen;
   end;
@@ -616,7 +632,7 @@ var
       dtsYear:
         Result := FormatDateTime(DateTimeStepFormat.YearFormat, AValue);
       dtsQuarter:
-        Result := IntToRoman(Floor(AValue / helper.FStepLen) mod 4 + 1) + '/' +
+        Result := IntToRoman((MonthOf(AValue)-1) div 3 + 1) + '/' +
           FormatDateTime(DateTimeStepFormat.YearFormat, AValue);
       dtsMonth:
         if FSuppressPrevUnit and (st.Year = prevSt.Year) then
