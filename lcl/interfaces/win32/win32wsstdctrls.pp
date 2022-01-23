@@ -392,7 +392,11 @@ begin
           WindowInfo^.WinControl.Handle := Window;
           WindowInfo^.DefWndProc := NCCreateParams^.DefWndProc;
           WindowInfo^.needParentPaint := False;
-          SetWindowLong(Window, GWL_ID, PtrInt(NCCreateParams^.WinControl));
+          // Important: do not store the object pointer here because GWL_ID can take only 32bit values
+          //   Windows Handles are always 32bit (also on 64bit system) so it is safe to store the Handle and find the WinControl from the Handle then
+          //   We need to set the WinControl property here because WM_MEASUREITEM needs to read it and it is set too late in InitializeWnd
+          SetProp(Window, 'WinControl', WindowInfo^.WinControl);
+          SetWindowLongPtrW(Window, GWL_ID, PtrInt(Window));
           NCCreateParams^.Handled := True;
         end;
       end;
@@ -544,9 +548,9 @@ begin
       SetScrollInfo(Handle, SB_CTL, ScrollInfo, IsEnabled);;
     case Kind of
       sbHorizontal:
-        SetWindowLong(Handle, GWL_STYLE, GetWindowLong(Handle, GWL_STYLE) or SBS_HORZ);
+        SetWindowLongPtrW(Handle, GWL_STYLE, GetWindowLong(Handle, GWL_STYLE) or SBS_HORZ);
       sbVertical:
-        SetWindowLong(Handle, GWL_STYLE, GetWindowLong(Handle, GWL_STYLE) or SBS_VERT);
+        SetWindowLongPtrW(Handle, GWL_STYLE, GetWindowLong(Handle, GWL_STYLE) or SBS_VERT);
     end;
   end;
 end;
@@ -723,7 +727,11 @@ begin
           WindowInfo^.DefWndProc := NCCreateParams^.DefWndProc;
           // listbox is not a transparent control -> no need for parentpainting
           WindowInfo^.needParentPaint := False;
-          SetWindowLong(Window, GWL_ID, PtrInt(NCCreateParams^.WinControl));
+          // Important: do not store the object pointer here because GWL_ID can take only 32bit values
+          //   Windows Handles are always 32bit (also on 64bit system) so it is safe to store the Handle and find the WinControl from the Handle then
+          //   We need to set the WinControl property here because WM_MEASUREITEM needs to read it and it is set too late in InitializeWnd
+          SetProp(Window, 'WinControl', WindowInfo^.WinControl);
+          SetWindowLongPtrW(Window, GWL_ID, PtrInt(Window));
           NCCreateParams^.Handled := True;
         end;
       end;
@@ -943,7 +951,7 @@ begin
     StyleEx := StyleEx or WS_EX_CLIENTEDGE
   else
     StyleEx := StyleEx and not WS_EX_CLIENTEDGE;
-  SetWindowLong(Handle, GWL_EXSTYLE, StyleEx);
+  SetWindowLongPtrW(Handle, GWL_EXSTYLE, StyleEx);
 end;
 
 class procedure TWin32WSCustomListBox.SetColumnCount(const ACustomListBox: TCustomListBox;

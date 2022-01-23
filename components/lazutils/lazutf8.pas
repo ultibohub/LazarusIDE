@@ -118,15 +118,15 @@ procedure UTF8Delete(var s: String; StartCharIndex, CharCount: PtrInt);
 procedure UTF8Insert(const source: Utf8String; var s: Utf8String; StartCharIndex: PtrInt);
 procedure UTF8Insert(const source: String; var s: String; StartCharIndex: PtrInt);
 function UTF8StringReplace(const S, OldPattern, NewPattern: String;
-  Flags: TReplaceFlags; ALanguage: string=''): String; inline;
+  Flags: TReplaceFlags; const ALanguage: string=''): String; inline;
 function UTF8StringReplace(const S, OldPattern, NewPattern: String;
-  Flags: TReplaceFlags; out Count: Integer; ALanguage: string=''): String;
+  Flags: TReplaceFlags; out Count: Integer; const ALanguage: string=''): String;
 
-function UTF8LowerCase(const AInStr: string; ALanguage: string=''): string;
+function UTF8LowerCase(const AInStr: string; const ALanguage: string=''): string;
 function UTF8LowerString(const s: string): string; inline;
-function UTF8UpperCase(const AInStr: string; ALanguage: string=''): string;
+function UTF8UpperCase(const AInStr: string; const ALanguage: string=''): string;
 function UTF8UpperString(const s: string): string; inline;
-function UTF8SwapCase(const AInStr: string; ALanguage: string=''): string;
+function UTF8SwapCase(const AInStr: string; const ALanguage: string=''): string;
 // Capitalize the first letters of every word
 function UTF8ProperCase(const AInStr: string; const WordDelims: TSysCharSet): string;
 function FindInvalidUTF8Codepoint(p: PChar; Count: PtrInt; StopOnNonUTF8: Boolean = true): PtrInt;
@@ -1172,7 +1172,7 @@ begin
 end;
 
 function UTF8StringReplace(const S, OldPattern, NewPattern: String;
-  Flags: TReplaceFlags; ALanguage: string): String; inline;
+  Flags: TReplaceFlags; const ALanguage: string): String; inline;
 var
   DummyCount: Integer;
 begin
@@ -1180,45 +1180,97 @@ begin
 end;
 
 function UTF8StringReplace(const S, OldPattern, NewPattern: String;
-  Flags: TReplaceFlags; out Count: Integer; ALanguage: string=''): String;
-// same algorithm as StringReplace, but using UTF8LowerCase
+  Flags: TReplaceFlags; out Count: Integer; const ALanguage: string=''): String;
+// same algorithm as fpc's StringReplace, but using UTF8LowerCase
 // for case insensitive search
 var
-  Srch, OldP, RemS: string;
-  P: Integer;
+  Srch, OldP: string;
+  P, PrevP, PatLength, NewPatLength, Cnt: Integer;
+  c, d: PChar;
 begin
   Srch := S;
   OldP := OldPattern;
   Count := 0;
-  if rfIgnoreCase in Flags then
+  PatLength:=Length(OldPattern);
+  if PatLength=0 then
+  begin
+    Result:=S;
+    Exit;
+  end;
+
+  if (rfIgnoreCase in Flags) then
   begin
     Srch := UTF8LowerCase(Srch,ALanguage);
     OldP := UTF8LowerCase(OldP,ALanguage);
   end;
-  RemS := S;
-  Result := '';
-  while Length(Srch) <> 0 do
-  begin
-    P := Pos(OldP, Srch);
-    if P = 0 then
-    begin
-      Result := Result + RemS;
-      Srch := '';
-    end
-    else
-    begin
-      Inc(Count);
-      Result := Result + Copy(RemS,1,P-1) + NewPattern;
-      P := P + Length(OldP);
-      RemS := Copy(RemS, P, Length(RemS)-P+1);
-      if not (rfReplaceAll in Flags) then
+  PatLength := Length(OldP);
+
+  if (Length(NewPattern) = PatLength) then
+  begin //length will not change
+    Result := S;
+    P := 1;
+    repeat
+      P := Pos(OldP,Srch,P);
+      if (P > 0) then
       begin
-        Result := Result + RemS;
-        Srch := '';
-      end
-      else
-        Srch := Copy(Srch, P, Length(Srch)-P+1);
+        Inc(Count);
+        Move(NewPattern[1],Result[P],PatLength*SizeOf(Char));
+        if not (rfReplaceAll in Flags) then Exit;
+        Inc(P,PatLength);
+      end;
+    until (P = 0);
+  end
+  else
+  begin
+    //Different pattern length -> Result length will change
+    //To avoid creating a lot of temporary strings, we count how many
+    //replacements we're going to make.
+    P := 1;
+    repeat
+      P:=Pos(OldP,Srch,P);
+      if (P > 0) then
+      begin
+        Inc(P,PatLength);
+        Inc(Count);
+        if not (rfReplaceAll in Flags) then Break;
+      end;
+    until (P = 0);
+    if (Count = 0) then
+    begin
+      Result:=S;
+      Exit;
     end;
+    NewPatLength := Length(NewPattern);
+    SetLength(Result, Length(S) + Count*(NewPatLength - PatLength));
+    P := 1;
+    PrevP := 0;
+    c := PChar(Result);
+    d := PChar(S);
+    repeat
+      P:=Pos(OldP, Srch, P);
+      if (P > 0) then
+      begin
+        Cnt := P - PrevP - 1;
+        if (Cnt > 0) then
+        begin
+          Move(d^, c^, Cnt*SizeOf(Char));
+          Inc(c,Cnt);
+          Inc(d,Cnt);
+        end;
+        if (NewPatLength > 0) then
+        begin
+          Move(NewPattern[1], c^, NewPatLength*SizeOf(Char));
+          Inc(c,NewPatLength);
+        end;
+        Inc(P,PatLength);
+        Inc(d,PatLength);
+        PrevP:=P-1;
+        if not (rfReplaceAll in Flags) then Break;
+      end;
+    until (P = 0);
+    Cnt := Length(S) - PrevP;
+    if (Cnt > 0) then
+      Move(d^, c^, Cnt*SizeOf(Char));
   end;
 end;
 
@@ -1232,7 +1284,7 @@ end;
   ALanguage - The language. Use '' for maximum speed if one desires to ignore the language
     (See UTF8LowerCase comment for more details on ALanguage parameter.)
 }
-function UTF8SwapCase(const AInStr: string; ALanguage: string=''): string;
+function UTF8SwapCase(const AInStr: string; const ALanguage: string=''): string;
 var
   xUpperCase: string;
   xLowerCase: string;
@@ -1296,7 +1348,7 @@ end;
   The columns in the file UnicodeData.txt are explained here:
   http://www.ksu.ru/eng/departments/ktk/test/perl/lib/unicode/UCDFF301.html#Case Mappings
 }
-function UTF8LowerCase(const AInStr: string; ALanguage: string=''): string;
+function UTF8LowerCase(const AInStr: string; const ALanguage: string=''): string;
 var
   CounterDiff: PtrInt;
   InStr, InStrEnd, OutStr: PChar;
@@ -2448,7 +2500,7 @@ end;
   The columns in the file UnicodeData.txt are explained here:
   http://www.ksu.ru/eng/departments/ktk/test/perl/lib/unicode/UCDFF301.html#Case Mappings
 }
-function UTF8UpperCase(const AInStr: string; ALanguage: string=''): string;
+function UTF8UpperCase(const AInStr: string; const ALanguage: string=''): string;
 var
   i, InCounter, OutCounter: PtrInt;
   OutStr: PChar;
@@ -2937,30 +2989,72 @@ const
     '[CAN]', '[EM]' , '[SUB]', '[ESC]', '[FS]' , '[GS]' , '[RS]' , '[US]');
 var
   Ch: Char;
-  i: Integer;
+  i,ResLen: Integer;
+  SLen, SubLen: SizeInt;
+const
+  MaxGrowFactor: array[TEscapeMode] of integer = (3, 4, 5, 5, 5);
 begin
   if FindInvalidUTF8Codepoint(PChar(S), Length(S)) <> -1 then
   begin
     UTF8FixBroken(S);
   end;
   Result := '';
+  SetLength(Result, Length(S)*MaxGrowFactor[EscapeMode]);
+  ResLen := 0;
   //a byte < 127 cannot be part of a multi-byte codepoint, so this is safe
-  for i := 1 to Length(S) do
+
+  //for i := 1 to Length(S) do
+  i := 1;
+  SLen := Length(S);
+  while (i <= SLen) do
   begin
+    Inc(ResLen);
     Ch := S[i];
     if (Ch < #32) then
     begin
       case EscapeMode of
-        emPascal: Result := Result + PascalEscapeStrings[Ch];
-        emHexPascal: Result := Result + HexEscapePascalStrings[Ch];
-        emHexC: Result := Result + HexEscapeCStrings[Ch];
-        emC: Result := Result + CEscapeStrings[Ch];
-        emAsciiControlNames: Result := Result + AsciiControlStrings[Ch];
+        emPascal:
+        begin
+          Move(PascalEscapeStrings[Ch][1], Result[ResLen], 3);
+          Inc(ResLen, 3-1);
+        end;
+        emHexPascal:
+        begin
+          Move(HexEscapePascalStrings[Ch][1], Result[ResLen], 4);
+          Inc(ResLen, 4-1);
+        end;
+        emHexC:
+        begin
+          Move(HexEscapeCStrings[Ch][1], Result[ResLen], 5);
+          Inc(ResLen, 5-1);
+        end;
+        emC:
+        begin
+          SubLen := Length(CEscapeStrings[Ch]);
+          Move(CEscapeStrings[Ch][1], Result[ResLen], SubLen);
+          Inc(ResLen, SubLen-1);
+        end;
+        emAsciiControlNames:
+        begin
+          SubLen := Length(AsciiControlStrings[Ch]);
+          Move(AsciiControlStrings[Ch][1], Result[ResLen], SubLen);
+          Inc(ResLen, SubLen-1);
+        end;
       end;//case
+      Inc(i);
     end
     else
-      Result := Result + Ch;
+    begin
+      //Result[ResLen] := Ch;
+      SubLen := 1;
+      while (i + SubLen <= SLen) and (S[i+SubLen] > #31) do
+        Inc(SubLen);
+      Move(S[i], Result[ResLen], SubLen);
+      Inc(ResLen, SubLen-1);
+      Inc(i, SubLen);
+    end;
   end;
+  SetLength(Result, ResLen);
 end;
 
 function UTF8StringOfChar(AUtf8Char: String; N: Integer): String;

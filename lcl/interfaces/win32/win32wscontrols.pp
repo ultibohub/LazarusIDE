@@ -247,12 +247,16 @@ begin
         WindowInfo^.WinControl := AWinControl;
         AWinControl.Handle := Window;
         if Assigned(SubClassWndProc) then
-          WindowInfo^.DefWndProc := Windows.WNDPROC(SetWindowLong(
+          WindowInfo^.DefWndProc := Windows.WNDPROC(SetWindowLongPtrW(
             Window, GWL_WNDPROC, PtrInt(SubClassWndProc)));
         // Set control ID to map WinControl. This is required for messages that sent to parent
         // to extract control from the passed ID.
         // In case of subclassing this ID will be set in WM_NCCREATE message handler
-        SetWindowLong(Window, GWL_ID, PtrInt(AWinControl));
+        // Important: do not store the object pointer here because GWL_ID can take only 32bit values
+        //   Windows Handles are always 32bit (also on 64bit system) so it is safe to store the Handle and find the WinControl from the Handle then
+        //   We set the WinControl property here in case InitializeWnd is too late
+        SetProp(Window, 'WinControl', WindowInfo^.WinControl);
+        SetWindowLongPtrW(Window, GWL_ID, PtrInt(Window));
       end;
 
       if AWinControl.Font.IsDefault then
@@ -274,7 +278,7 @@ begin
     begin
       BuddyWindowInfo := AllocWindowInfo(Buddy);
       BuddyWindowInfo^.AWinControl := AWinControl;
-      BuddyWindowInfo^.DefWndProc := Windows.WNDPROC(SetWindowLong(
+      BuddyWindowInfo^.DefWndProc := Windows.WNDPROC(SetWindowLongPtrW(
         Buddy, GWL_WNDPROC, PtrInt(SubClassWndProc)));
       if AWinControl.Font.IsDefault then
         lhFont := Win32Widgetset.DefaultFont
@@ -363,7 +367,7 @@ begin
     FlagsEx := FlagsEx or WS_EX_RTLREADING ;
   if UseRightToLeftScrollBar then
     FlagsEx := FlagsEx or WS_EX_LEFTSCROLLBAR;
-  SetWindowLong(AWinControl.Handle, GWL_EXSTYLE, FlagsEx);
+  SetWindowLongPtrW(AWinControl.Handle, GWL_EXSTYLE, FlagsEx);
 end;
 
 class procedure TWin32WSWinControl.SetBorderStyle(const AWinControl: TWinControl; const ABorderStyle: TBorderStyle);
@@ -576,7 +580,7 @@ var
 begin
   Handle := AWinControl.Handle;
   {$ifdef RedirectDestroyMessages}
-  SetWindowLong(Handle, GWL_WNDPROC, PtrInt(@DestroyWindowProc));
+  SetWindowLongPtrW(Handle, GWL_WNDPROC, PtrInt(@DestroyWindowProc));
   {$endif}
   // Instead of calling DestroyWindow directly, we need to call WM_MDIDESTROY for MDI children
   if Assigned(Application.MainForm) and (Application.MainForm.FormStyle=fsMDIForm) and

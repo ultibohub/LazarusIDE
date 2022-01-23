@@ -813,8 +813,8 @@ type
     function DoRunProject: TModalResult; override;
     function DoRunProjectWithoutDebug: TModalResult; override;
     function DoSaveProjectToTestDirectory(Flags: TSaveFlags): TModalResult;
+    procedure RunFinished(Sender: TObject);
     function QuitIDE: boolean;
-
     // edit menu
     procedure DoCommand(ACommand: integer); override;
     procedure DoSourceEditorCommand(EditorCommand: integer;
@@ -7298,22 +7298,22 @@ var
   Process: TProcessUTF8;
   RunCmdLine, RunWorkingDirectory, ExeFile: string;
   Params: TStringList;
-  RunAppBundle, Handled: Boolean;
+  Handled: Boolean;
   ARunMode: TRunParamsOptionsMode;
 begin
   debugln(['Hint: (lazarus) [TMainIDE.DoRunProjectWithoutDebug] START']);
   if Project1=nil then
     Exit(mrNone);
 
-  Handled:=false;
-  Result:=DoCallRunWithoutDebugBuilding(Handled);
+  Handled := false;
+  Result := DoCallRunWithoutDebugBuilding(Handled);
   if Handled then exit;
 
   Result := DoBuildProject(crRun,[]);
   if Result <> mrOK then
     Exit;
 
-  Result:=DoCallRunWithoutDebugInit(Handled);
+  Result := DoCallRunWithoutDebugInit(Handled);
   if Handled then exit;
 
   RunCmdLine := MainBuildBoss.GetRunCommandLine;
@@ -7325,22 +7325,18 @@ begin
     Exit(mrNone);
   end;
 
-  Params:=TStringList.Create;
+  Params := TStringList.Create;
   Process := TProcessUTF8.Create(nil);
   try
-    RunAppBundle:={$IFDEF Darwin}true{$ELSE}false{$ENDIF};
-    RunAppBundle:=RunAppBundle and Project1.UseAppBundle;
-
     SplitCmdLineParams(RunCmdLine,Params);
     if Params.Count=0 then begin
       IDEMessageDialog(lisUnableToRun,
         Format(lisUnableToRun2, ['<project has no target file>']),
         mtError, [mbOK]);
       exit(mrCancel);
-    end else begin
-      ExeFile:=Params[0];
-      Params.Delete(0);
     end;
+    ExeFile := Params[0];
+    Params.Delete(0);
     //writeln('TMainIDE.DoRunProjectWithoutDebug ExeFile=',ExeFile);
     Process.Executable := ExeFile;
     Process.Parameters.Assign(Params);
@@ -7353,28 +7349,28 @@ begin
     if not GlobalMacroList.SubstituteStr(RunWorkingDirectory) then
       RunWorkingDirectory := '';
     if RunWorkingDirectory = '' then
-      RunWorkingDirectory := ExtractFilePath(Process.Executable);
+      RunWorkingDirectory := ExtractFilePath(ExeFile);
     Process.CurrentDirectory := RunWorkingDirectory;
 
-    if RunAppBundle
-        and (FileExistsUTF8(Process.Executable)
-        or DirectoryExistsUTF8(Process.Executable))
-        and FileExistsUTF8('/usr/bin/open') then
+    if MainBuildBoss.GetProjectUsesAppBundle
+    and (FileExistsUTF8(ExeFile) or DirectoryExistsUTF8(ExeFile))
+    and FileExistsUTF8('/usr/bin/open') then
     begin
       // run bundle via open
-      Process.Parameters.Insert(0,Process.Executable);
+      Process.Parameters.Insert(0,'-W');
+      Process.Parameters.Insert(1,ExeFile);
       Process.Executable := '/usr/bin/open';
-    end else if not FileIsExecutable(Process.Executable) then
+    end
+    else if not FileIsExecutable(ExeFile) then
     begin
       MainBuildBoss.WriteDebug_RunCommandLine;
       if (ARunMode<>nil) and ARunMode.UseLaunchingApplication then
         IDEMessageDialog(lisLaunchingApplicationInvalid,
           Format(lisTheLaunchingApplicationDoesNotExistsOrIsNotExecuta,
-                 [Process.Executable, LineEnding, LineEnding+LineEnding]),
+                 [ExeFile, LineEnding, LineEnding+LineEnding]),
           mtError, [mbOK])
       else
-        IDEMessageDialog(lisUnableToRun,
-          Format(lisUnableToRun2, [Process.Executable]),
+        IDEMessageDialog(lisUnableToRun, Format(lisUnableToRun2, [ExeFile]),
           mtError, [mbOK]);
       Exit(mrCancel);
     end;
@@ -7389,8 +7385,11 @@ begin
       Exit(mrNone);
     end;
 
+    AddHandlerOnRunFinished(@RunFinished);
     Project1.RunParameterOptions.AssignEnvironmentTo(Process.Environment);
     try
+      if EnvironmentOptions.Desktop.HideIDEOnRun then
+        HideIDE;
       TNotifyProcessEnd.Create(Process, @DoCallRunFinishedHandler);
       Process:=nil; // Process is freed by TNotifyProcessEnd
     except
@@ -7401,6 +7400,12 @@ begin
     Process.Free;
     Params.Free;
   end;
+end;
+
+procedure TMainIDE.RunFinished(Sender: TObject);
+begin
+  if EnvironmentOptions.Desktop.HideIDEOnRun then
+    UnhideIDE;
 end;
 
 procedure TMainIDE.DoRestart;
