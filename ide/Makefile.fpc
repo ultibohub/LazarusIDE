@@ -14,7 +14,7 @@ packages=regexpr
 programs=lazarus startlazarus lazbuild
 
 [compiler]
-options=-gl -vbqewnhi -Sci -dlcl$(LCL_PLATFORM) $(DBG_OPTIONS)
+options=-vbqewnhi -Sci -dlcl$(LCL_PLATFORM) $(DBG_OPTIONS)
 unittargetdir=../units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM)
 unitdir=../designer \
         ../debugger \
