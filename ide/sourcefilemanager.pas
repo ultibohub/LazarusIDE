@@ -49,7 +49,7 @@ uses
   NewItemIntf, ProjectIntf, PackageIntf, PackageDependencyIntf, IDEExternToolIntf,
   // IdeIntf
   IDEDialogs, PropEdits, IDEMsgIntf, LazIDEIntf, MenuIntf, IDEWindowIntf, FormEditingIntf,
-  ObjectInspector, ComponentReg, SrcEditorIntf, EditorSyntaxHighlighterDef, UnitResources,
+  ObjectInspector, SrcEditorIntf, EditorSyntaxHighlighterDef, UnitResources,
   // IDE
   IDEProcs, DialogProcs, IDEProtocol, LazarusIDEStrConsts, NewDialog, NewProjectDlg,
   MainBase, MainBar, MainIntf, Project, ProjectDefs, ProjectInspector, CompilerOptions,
@@ -3352,6 +3352,7 @@ var
   LFMClassName: String;
   anUnitName: String;
   LFMCode: TCodeBuffer;
+  AlreadyOpen: Boolean;
 begin
   if Project1=nil then exit(mrCancel);
   MainIDE.GetCurrentUnit(ActiveSourceEditor, ActiveUnitInfo);
@@ -3360,6 +3361,7 @@ begin
     CurUnitInfo:=Project1.Units[i];
     if not CurUnitInfo.IsPartOfProject then
       Continue;
+    AlreadyOpen := CurUnitInfo.OpenEditorInfoCount > 0;
     if ItemType in [piComponent, piFrame] then
     begin
       // add all form names of project
@@ -3368,7 +3370,7 @@ begin
         if (ItemType = piComponent) or
            ((ItemType = piFrame) and (CurUnitInfo.ResourceBaseClass = pfcbcFrame)) then
           ItemList.Add(CurUnitInfo.ComponentName,
-                       CurUnitInfo.Filename, i, CurUnitInfo = ActiveUnitInfo);
+                       CurUnitInfo.Filename, i, CurUnitInfo = ActiveUnitInfo, AlreadyOpen);
       end else if FilenameIsAbsolute(CurUnitInfo.Filename)
       and FilenameIsPascalSource(CurUnitInfo.Filename)
       and FileExistsCached(CurUnitInfo.Filename) then
@@ -3385,7 +3387,7 @@ begin
             if anUnitName='' then
               anUnitName:=ExtractFileNameOnly(LFMFilename);
             ItemList.Add(LFMComponentName, CurUnitInfo.Filename,
-              i, CurUnitInfo = ActiveUnitInfo);
+              i, CurUnitInfo = ActiveUnitInfo, AlreadyOpen);
           end;
         end;
       end;
@@ -3397,7 +3399,7 @@ begin
         AUnitName := ExtractFileName(CurUnitInfo.Filename);
         if ItemList.Find(AUnitName) = nil then
           ItemList.Add(AUnitName, CurUnitInfo.Filename,
-                       i, CurUnitInfo = ActiveUnitInfo);
+                       i, CurUnitInfo = ActiveUnitInfo, AlreadyOpen);
       end
       else
       if Project1.MainUnitID = i then
@@ -3409,7 +3411,7 @@ begin
           if (AUnitName <> '') and (ItemList.Find(AUnitName) = nil) then
           begin
             ItemList.Add(AUnitName, MainUnitInfo.Filename,
-                         i, MainUnitInfo = ActiveUnitInfo);
+                         i, MainUnitInfo = ActiveUnitInfo, MainUnitInfo.OpenEditorInfoCount > 0);
           end;
         end;
       end;
@@ -3556,7 +3558,7 @@ begin
     for S2SItem in UnitToFilename do begin
       AnUnitName:=S2SItem^.Name;
       AFilename:=S2SItem^.Value;
-      UnitList.Add(AnUnitName,AFilename,i,false);
+      UnitList.Add(AnUnitName,AFilename,i,false,false);
       inc(i);
     end;
     // show dialog
@@ -3595,7 +3597,7 @@ Begin
       if (AnUnitInfo.IsPartOfProject) and (i<>Project1.MainUnitID) then
       begin
         AName := Project1.RemoveProjectPathFromFilename(AnUnitInfo.FileName);
-        ViewUnitEntries.Add(AName,AnUnitInfo.FileName,i,false);
+        ViewUnitEntries.Add(AName,AnUnitInfo.FileName,i,false,false);
       end;
     end;
     if ShowViewUnitsDlg(ViewUnitEntries,true,lisRemoveFromProject,piUnit) <> mrOk then
@@ -6581,36 +6583,6 @@ var
     Result:=true;
   end;
 
-  function TryRegisteredClasses(aClassName: string;
-    out FoundComponentClass: TComponentClass;
-    out TheModalResult: TModalResult): boolean;
-  var
-    RegComp: TRegisteredComponent;
-  begin
-    {$IFDEF VerboseLFMSearch}
-    debugln(['  TryRegisteredClasses aClassName="',aClassName,'"']);
-    {$ENDIF}
-    Result:=false;
-    TheModalResult:=mrCancel;
-    FoundComponentClass:=nil;
-    if AnUnitInfo.UnitResourceFileformat<>nil then
-      FoundComponentClass:=AnUnitInfo.UnitResourceFileformat.FindComponentClass(aClassName);
-    if FoundComponentClass=nil then
-    begin
-      RegComp:=IDEComponentPalette.FindRegComponent(aClassName);
-      if (RegComp<>nil) and
-      not RegComp.ComponentClass.InheritsFrom(TCustomFrame) then // Nested TFrame
-        FoundComponentClass:=RegComp.ComponentClass;
-    end;
-    if FoundComponentClass=nil then
-      FoundComponentClass:=FormEditor1.FindDesignerBaseClassByName(aClassName,true);
-    if FoundComponentClass<>nil then begin
-      DebugLn(['SearchComponentClass.TryRegisteredClasses found: ',FoundComponentClass.ClassName]);
-      TheModalResult:=mrOk;
-      Result:=true;
-    end;
-  end;
-
   function TryLFM(const UnitFilename, AClassName: string;
     out TheModalResult: TModalResult): boolean;
   var
@@ -6723,8 +6695,10 @@ var
     NewTool: TFindDeclarationTool;
     InheritedNode: TCodeTreeNode;
     ClassNode: TCodeTreeNode;
+    {$IFDEF VerboseLFMSearch}
     AncestorNode: TCodeTreeNode;
     AncestorClassName: String;
+    {$ENDIF}
     Node: TCodeTreeNode;
     ok: Boolean;
   begin
@@ -6803,21 +6777,21 @@ var
         exit;
       end;
       StoreComponentClassDeclaration(NewTool.MainFilename);
+      {$IFDEF VerboseLFMSearch}
       AncestorNode:=InheritedNode.FirstChild;
       AncestorClassName:=GetIdentifier(@NewTool.Src[AncestorNode.StartPos]);
+      {$ENDIF}
       //debugln(['TryFindDeclaration declaration of ',AComponentClassName,' found at ',NewTool.CleanPosToStr(NewNode.StartPos),' ancestor="',AncestorClassName,'"']);
 
       // try unit component
       if TryUnitComponent(NewTool.MainFilename,TheModalResult) then
         exit(true);
 
-      // try lfm
-      if TryLFM(NewTool.MainFilename,AComponentClassName,TheModalResult) then
+      // try lfm (dead, can be removed)
+      if TryLFM(NewTool.MainFilename,AComponentClassName,TheModalResult) then begin
+        Assert(False, 'TryFindDeclaration: TryLFM returned True!');
         exit(true);
-
-      // search ancestor in registered classes
-      if TryRegisteredClasses(AncestorClassName,AncestorClass,TheModalResult) then
-        exit(true);
+      end;
 
       {$IFDEF VerboseLFMSearch}
       debugln(['TryFindDeclaration declaration of ',AComponentClassName,' found at ',NewTool.CleanPosToStr(NewNode.StartPos),' Ancestor="',AncestorClassName,'", but no lfm and no registered class found']);
@@ -6864,8 +6838,6 @@ var
       exit;
     end;
     StoreComponentClassDeclaration(UnitFilename);
-    if TryRegisteredClasses(AncestorClassName,AncestorClass,TheModalResult) then
-      exit(true);
   end;
 
 var
@@ -6897,9 +6869,6 @@ begin
     if TryUnitComponent(AnUnitInfo.Filename,Result) then exit;
   end;
 
-  // then try registered global classes
-  if TryRegisteredClasses(AComponentClassName,AComponentClass,Result) then exit;
-
   // search in used units
   UsedUnitFilenames:=nil;
   try
@@ -6917,7 +6886,8 @@ begin
     if (UsedUnitFilenames<>nil) then begin
       // search every used unit for .lfm file. The list is backwards, last unit first.
       for i:=0 to UsedUnitFilenames.Count-1 do begin
-        if TryLFM(UsedUnitFilenames[i],AComponentClassName,Result) then exit;
+        if TryLFM(UsedUnitFilenames[i],AComponentClassName,Result) then
+          exit;
       end;
       // search class via codetools
       if TryFindDeclaration(Result) then exit;
@@ -6970,7 +6940,7 @@ function LoadComponentDependencyHidden(AnUnitInfo: TUnitInfo;
     not found, user wants to skip this step and continue
 }
 
-  function TryLFM(LFMFilename: string): TModalResult;
+  function TryDepLFM(LFMFilename: string): TModalResult;
   var
     UnitFilename: String;
     CurUnitInfo: TUnitInfo;
@@ -6983,7 +6953,7 @@ function LoadComponentDependencyHidden(AnUnitInfo: TUnitInfo;
     Result:=LoadCodeBuffer(LFMCode,LFMFilename,[lbfCheckIfText],true);
     if Result<>mrOk then begin
       {$IFDEF VerboseLFMSearch}
-      debugln(['  TryLFM LoadCodeBuffer failed ',LFMFilename]);
+      debugln(['  TryDepLFM LoadCodeBuffer failed ',LFMFilename]);
       {$ENDIF}
       exit;
     end;
@@ -7015,7 +6985,7 @@ function LoadComponentDependencyHidden(AnUnitInfo: TUnitInfo;
       if SysUtils.CompareText(CurUnitInfo.Component.ClassName,LFMClassName)<>0
       then begin
         {$IFDEF VerboseLFMSearch}
-        debugln(['  TryLFM ERROR lfmclass=',LFMClassName,' unit.component=',DbgSName(CurUnitInfo.Component)]);
+        debugln(['  TryDepLFM ERROR lfmclass=',LFMClassName,' unit.component=',DbgSName(CurUnitInfo.Component)]);
         {$ENDIF}
         IDEMessageDialog('Error','Unable to load "'+LFMFilename+'".'
           +' The component '+DbgSName(CurUnitInfo.Component)
@@ -7095,7 +7065,7 @@ begin
     //   componentclass does not exist, but the ancestor is a registered class
 
     if (Result=mrOk) and (AComponentClass=nil) and (LFMFilename<>'') then
-      exit(TryLFM(LFMFilename));
+      exit(TryDepLFM(LFMFilename));
 
     if MustHaveLFM and (AComponentClass=nil) then
       Result:=mrCancel;

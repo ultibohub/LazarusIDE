@@ -2845,6 +2845,7 @@ type
     nsHasChildren,   // = Node.HasChildren
     nsDeleting,      // = Node.Deleting, set on Destroy
     nsVisible,       // = Node.Visible
+    nsEnabled,       // = Node.Enabled
     nsBound,          // bound to a tree, e.g. has Parent or is top lvl node
     nsValidHasChildren// Node.HasChildren has been assigned
     );
@@ -2877,6 +2878,7 @@ type
     ncImageIndex,    //The Node's Image Index has changed
     ncParentChanged, //The Node's Parent has changed
     ncVisibility,    //The Node's Visibility has changed
+    ncEnablement,    //The Node's Enabled/Disabled state has changed
     ncOverlayIndex,  //The Node's Overlay Index has Changed
     ncStateIndex,    //The Node's State Index has Changed
     ncSelectedIndex  //The Node's Selected Index has Changed
@@ -2987,7 +2989,8 @@ type
     FSubTreeCount: integer;// total of all child nodes and self
     FText: string;
     FTop: integer;        // top coordinate
-    function AreParentsExpandedAndVisible: Boolean;
+    function ParentsExpandedVisible: Boolean;
+    function ParentsExpandedVisibleEnabled: Boolean;
     procedure BindToMultiSelected;
     function CompareCount(CompareMe: Integer): Boolean;
     function DoCanExpand(ExpandIt: Boolean): Boolean;
@@ -3007,11 +3010,13 @@ type
     function GetLevel: Integer;
     function GetMultiSelected: Boolean;
     function GetSelected: Boolean;
-    function GetState(NodeState: TNodeState): Boolean;
+    function GetState(NodeState: TNodeState): Boolean; inline;
     function GetTreeNodes: TTreeNodes;
     function GetTreeView: TCustomTreeView;
     function GetTop: integer;
     function GetVisible: Boolean;
+    function GetEnabled: Boolean;
+    function HasStates(NodeStates: TNodeStates): Boolean; inline;
     procedure InternalMove(ANode: TTreeNode; AddMode: TAddMode);
     function IsEqual(Node: TTreeNode): Boolean;
     function IsNodeVisible: Boolean;
@@ -3036,6 +3041,7 @@ type
     procedure SetStateIndex(AValue: Integer);
     procedure SetText(const S: string);
     procedure SetVisible(const AValue: Boolean);
+    procedure SetEnabled(const AValue: Boolean);
     procedure Unbind;
     procedure UnbindFromMultiSelected;
     procedure WriteData(Stream: TStream; StreamVersion: integer);
@@ -3064,27 +3070,35 @@ type
     function GetFirstChild: TTreeNode;
     function GetFirstSibling: TTreeNode;
     function GetFirstVisibleChild: TTreeNode;
+    function GetFirstVisibleEnabledChild: TTreeNode;
     function GetHandle: THandle;
     function GetLastChild: TTreeNode;
     function GetLastSibling: TTreeNode;
     function GetLastSubChild: TTreeNode;
     function GetLastVisibleChild: TTreeNode;
+    function GetLastVisibleEnabledChild: TTreeNode;
     function GetNext: TTreeNode;
     function GetNextChild(AValue: TTreeNode): TTreeNode;
     function GetNextExpanded: TTreeNode;
+    function GetNextExpandedEnabled: TTreeNode;
     function GetNextMultiSelected: TTreeNode;
     function GetNextSibling: TTreeNode;
     function GetNextSkipChildren: TTreeNode;
     function GetNextVisible: TTreeNode;
+    function GetNextVisibleEnabled: TTreeNode;
     function GetNextVisibleSibling: TTreeNode;
+    function GetNextVisibleEnabledSibling: TTreeNode;
     function GetParentNodeOfAbsoluteLevel(TheAbsoluteLevel: integer): TTreeNode;
     function GetPrev: TTreeNode;
     function GetPrevChild(AValue: TTreeNode): TTreeNode;
     function GetPrevExpanded: TTreeNode;
+    function GetPrevExpandedEnabled: TTreeNode;
     function GetPrevMultiSelected: TTreeNode;
     function GetPrevSibling: TTreeNode;
     function GetPrevVisible: TTreeNode;
+    function GetPrevVisibleEnabled: TTreeNode;
     function GetPrevVisibleSibling: TTreeNode;
+    function GetPrevVisibleEnabledSibling: TTreeNode;
     function GetTextPath: string;
     function HasAsParent(AValue: TTreeNode): Boolean;
     function IndexOf(AValue: TTreeNode): Integer;
@@ -3135,6 +3149,7 @@ type
     property TreeNodes: TTreeNodes read GetTreeNodes;
     property TreeView: TCustomTreeView read GetTreeView;
     property Visible: Boolean read GetVisible write SetVisible default True;
+    property Enabled: Boolean read GetEnabled write SetEnabled default True;
   end;
 
   { TTreeNodesEnumerator }
@@ -3223,10 +3238,12 @@ type
     function GetEnumerator: TTreeNodesEnumerator;
     function GetFirstNode: TTreeNode;
     function GetFirstVisibleNode: TTreeNode;
-    function GetLastExpandedSubNode: TTreeNode; // absolute last node
+    function GetFirstVisibleEnabledNode: TTreeNode;
+    function GetLastExpandedSubNode: TTreeNode; // absolute last visible enabled node
     function GetLastNode: TTreeNode; // last top level node
     function GetLastSubNode: TTreeNode; // absolute last node
     function GetLastVisibleNode: TTreeNode;
+    function GetLastVisibleEnabledNode: TTreeNode;
     function GetSelections(const AIndex: Integer): TTreeNode;
     function Insert(NextNode: TTreeNode; const S: string): TTreeNode;
     function InsertBehind(PrevNode: TTreeNode; const S: string): TTreeNode;

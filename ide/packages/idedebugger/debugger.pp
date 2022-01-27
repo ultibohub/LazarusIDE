@@ -41,7 +41,8 @@ uses
   TypInfo, Classes, SysUtils, math,
   // LazUtils
   Laz2_XMLCfg, LazFileUtils, LazStringUtils, LazUtilities, LazLoggerBase,
-  LazConfigStorage, LazClasses, Maps,
+  //LazConfigStorage,
+  LazClasses, Maps,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase,
   LazDebuggerIntf, IdeDebuggerBase;
@@ -53,63 +54,6 @@ const
   XMLExceptionsNode = 'Exceptions';
 
 type
-
-  { TDebuggerConfigStore }
-  (* TODO: maybe revert relations. Create this in Debugger, and call environmentoptions for the configstore only? *)
-
-  { TDebuggerConfigStoreBase }
-
-  TDebuggerConfigStoreBase = class(TPersistent)
-  private
-    FConfigStore: TConfigStorage;
-  public
-    property ConfigStore: TConfigStorage read FConfigStore write FConfigStore;
-    procedure Init; virtual;
-    procedure Load; virtual;
-    procedure Save; virtual;
-  end;
-
-  { TDebuggerWatchesDlgConfig }
-
-  TDebuggerWatchesDlgConfig = class(TDebuggerConfigStoreBase)
-  private
-    FColumnNameWidth: Integer;
-    FColumnValueWidth: Integer;
-  public
-    constructor Create;
-    procedure Init; override;
-  published
-    property ColumnNameWidth: Integer read FColumnNameWidth write FColumnNameWidth;
-    property ColumnValueWidth: Integer read FColumnValueWidth write FColumnValueWidth;
-  end;
-
-  { TDebuggerWatchesDlgConfig }
-
-  TDebuggerCallStackDlgConfig = class(TDebuggerConfigStoreBase)
-  private
-    FViewCount: Integer;
-  public
-    constructor Create;
-    procedure Init; override;
-  published
-    property ViewCount: Integer read FViewCount write FViewCount;
-  end;
-
-  TDebuggerConfigStore = class(TDebuggerConfigStoreBase)
-  private
-    FDlgCallStackConfig: TDebuggerCallStackDlgConfig;
-    FTDebuggerWatchesDlgConfig: TDebuggerWatchesDlgConfig;
-  public
-    procedure Load; override;
-    procedure Save; override;
-  public
-    constructor Create;
-    destructor Destroy; override;
-    property DlgWatchesConfig: TDebuggerWatchesDlgConfig read FTDebuggerWatchesDlgConfig;
-    property DlgCallStackConfig: TDebuggerCallStackDlgConfig read FDlgCallStackConfig write FDlgCallStackConfig;
-  published
-  end;
-
 
   TDebuggerLocationType = (dltUnknown,        // not jet looked up
                            dltUnresolvable,   // lookup failed
@@ -593,6 +537,7 @@ type
   protected
     function GetTypeInfo: TDBGType; override;
     function GetValue: String; override;
+    function GetExpression: String; override;
 
     procedure RequestData; virtual;
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
@@ -635,12 +580,23 @@ type
 
   TIdeWatch = class(TWatch)
   private
+    FChildWatches: TIdeWatches;
+    FParentWatch: TIdeWatch;
+
+    function GetTopParentWatch: TIdeWatch;
     function GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
+    function GetAnyValidParentWatchValue(AThreadId: Integer; AStackFrame: Integer): TIdeWatchValue;
   protected
+    procedure InitChildWatches;
+    function CreateChildWatches: TIdeWatches; virtual;
+    function GetChildrenByName(AName: String): TIdeWatch; virtual;
+    procedure SetParentWatch(AValue: TIdeWatch); virtual;
+
     function CreateValueList: TWatchValueList; override;
     procedure DoEnableChange; override;
     procedure DoExpressionChange; override;
     procedure DoDisplayFormatChanged; override;
+    function  GetFullExpression(AThreadId: Integer; AStackFrame: Integer): String;
   protected
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
                                 const APath: string);
@@ -648,7 +604,15 @@ type
                               const APath: string);
   public
     constructor Create(ACollection: TCollection); override;
+    destructor Destroy; override;
     procedure ClearValues; override;
+
+    procedure BeginChildUpdate;
+    procedure EndChildUpdate;
+    property ChildrenByName[AName: String]: TIdeWatch read GetChildrenByName;
+    function HasAllValidParents(AThreadId: Integer; AStackFrame: Integer): boolean;
+    property ParentWatch: TIdeWatch read FParentWatch;
+    property TopParentWatch: TIdeWatch read GetTopParentWatch;
   public
     property Values[const AThreadId: Integer; const AStackFrame: Integer]: TIdeWatchValue
              read GetValue;
@@ -658,6 +622,8 @@ type
 
   TIdeWatches = class(TWatches)
   private
+    //FParentWatches: TIdeWatches;
+
     function GetItem(const AnIndex: Integer): TIdeWatch;
     procedure SetItem(const AnIndex: Integer; const AValue: TIdeWatch);
   protected
@@ -701,8 +667,11 @@ type
   TCurrentWatch = class(TIdeWatch)
   private
     FSnapShot: TIdeWatch;
+    FAdded: Boolean;
     procedure SetSnapShot(const AValue: TIdeWatch);
   protected
+    function CreateChildWatches: TIdeWatches; override;
+    procedure SetParentWatch(AValue: TIdeWatch); override;
     function CreateValueList: TWatchValueList; override;
     procedure DoChanged; override;
     procedure DoModified; override;
@@ -724,6 +693,7 @@ type
     FMonitor: TIdeWatchesMonitor;
     FSnapShot: TIdeWatches;
     FDestroying: Boolean;
+    FSkipUpdatedNotification: integer;
     procedure SetSnapShot(const AValue: TIdeWatches);
     procedure WatchesChanged(Sender: TObject);
   protected
@@ -1835,18 +1805,6 @@ begin
   Result:=bpaStop;
 end;
 
-{ TDebuggerCallStackDlgConfig }
-
-constructor TDebuggerCallStackDlgConfig.Create;
-begin
-  Init;
-end;
-
-procedure TDebuggerCallStackDlgConfig.Init;
-begin
-  inherited Init;
-end;
-
 { TIdeThreadFrameEntry }
 
 function TIdeThreadFrameEntry.GetUnitInfoProvider: TDebuggerUnitInfoProvider;
@@ -1923,91 +1881,6 @@ end;
 function TIDEBreakPointGroupList.Count: Integer;
 begin
   Result := FList.Count;
-end;
-
-{ TDebuggerWatchesDlgConfig }
-
-constructor TDebuggerWatchesDlgConfig.Create;
-begin
-  Init;
-end;
-
-procedure TDebuggerWatchesDlgConfig.Init;
-begin
-  FColumnNameWidth := -1;
-  FColumnValueWidth := -1;
-end;
-
-{ TDebuggerConfigStoreBase }
-
-procedure TDebuggerConfigStoreBase.Init;
-begin
-  //
-end;
-
-procedure TDebuggerConfigStoreBase.Load;
-begin
-  Init;
-  ConfigStore.ReadObject('', self);
-end;
-
-procedure TDebuggerConfigStoreBase.Save;
-begin
-  ConfigStore.WriteObject('', self);
-end;
-
-{ TDebuggerConfigStore }
-
-procedure TDebuggerConfigStore.Load;
-begin
-  inherited;
-  ConfigStore.AppendBasePath('WatchesDlg/');
-  try
-    FTDebuggerWatchesDlgConfig.ConfigStore := ConfigStore;
-    FTDebuggerWatchesDlgConfig.Load;
-  finally
-    ConfigStore.UndoAppendBasePath;
-  end;
-  ConfigStore.AppendBasePath('CallStackDlg/');
-  try
-    FDlgCallStackConfig.ConfigStore := ConfigStore;
-    FDlgCallStackConfig.Load;
-  finally
-    ConfigStore.UndoAppendBasePath;
-  end;
-end;
-
-procedure TDebuggerConfigStore.Save;
-begin
-  inherited;
-  ConfigStore.DeletePath('Type');
-  ConfigStore.AppendBasePath('WatchesDlg/');
-  try
-    FTDebuggerWatchesDlgConfig.ConfigStore := ConfigStore;
-    FTDebuggerWatchesDlgConfig.Save;
-  finally
-    ConfigStore.UndoAppendBasePath;
-  end;
-  ConfigStore.AppendBasePath('CallStackDlg/');
-  try
-    FDlgCallStackConfig.ConfigStore := ConfigStore;
-    FDlgCallStackConfig.Save;
-  finally
-    ConfigStore.UndoAppendBasePath;
-  end;
-end;
-
-constructor TDebuggerConfigStore.Create;
-begin
-  FTDebuggerWatchesDlgConfig := TDebuggerWatchesDlgConfig.Create;
-  FDlgCallStackConfig := TDebuggerCallStackDlgConfig.Create;
-end;
-
-destructor TDebuggerConfigStore.Destroy;
-begin
-  inherited Destroy;
-  FreeAndNil(FTDebuggerWatchesDlgConfig);
-  FreeAndNil(FDlgCallStackConfig);
 end;
 
 { TDebuggerUnitInfoProvider }
@@ -3374,6 +3247,11 @@ begin
     ddsError:                    Result := '<Error: '+ (inherited GetValue) +'>';
   end;
 
+end;
+
+function TIdeWatchValue.GetExpression: String;
+begin
+  Result := Watch.GetFullExpression(FThreadId, FStackFrame);
 end;
 
 function TIdeWatchValue.GetWatch: TIdeWatch;
@@ -5428,12 +5306,44 @@ begin
   inherited Create(ACollection);
 end;
 
+destructor TIdeWatch.Destroy;
+begin
+  FreeAndNil(FChildWatches);
+  inherited Destroy;
+end;
+
 procedure TIdeWatch.ClearValues;
 begin
+  if FChildWatches <> nil then
+    FChildWatches.ClearValues;
+
   inherited ClearValues;
   TCurrentWatches(Collection).Update(Self);
 end;
 
+procedure TIdeWatch.BeginChildUpdate;
+begin
+  if FChildWatches = nil then
+    InitChildWatches;
+  FChildWatches.BeginUpdate;
+end;
+
+procedure TIdeWatch.EndChildUpdate;
+begin
+  if FChildWatches <> nil then
+    FChildWatches.EndUpdate;
+end;
+
+function TIdeWatch.HasAllValidParents(AThreadId: Integer; AStackFrame: Integer
+  ): boolean;
+begin
+  Result := FParentWatch = nil;
+  if Result then
+    exit;
+
+  Result := (GetAnyValidParentWatchValue(AThreadId, AStackFrame) <> nil) and
+            FParentWatch.HasAllValidParents(AThreadId, AStackFrame);
+end;
 
 procedure TIdeWatch.DoEnableChange;
 begin
@@ -5453,9 +5363,91 @@ begin
   DoModified;
 end;
 
+function TIdeWatch.GetFullExpression(AThreadId: Integer; AStackFrame: Integer
+  ): String;
+var
+  wv: TIdeWatchValue;
+begin
+  Result := Expression;
+  if FParentWatch <> nil then begin
+    Result := '(' + FParentWatch.GetFullExpression(AThreadId, AStackFrame) + ').' + Result;
+    if (defClassAutoCast in FParentWatch.FEvaluateFlags) then begin
+      wv := GetAnyValidParentWatchValue(AThreadId, AStackFrame);
+      if wv <> nil then
+        Result := wv.TypeInfo.TypeName + Result;
+    end;
+  end;
+end;
+
 function TIdeWatch.GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
 begin
   Result := TIdeWatchValue(inherited Values[AThreadId, AStackFrame]);
+end;
+
+function TIdeWatch.GetAnyValidParentWatchValue(AThreadId: Integer;
+  AStackFrame: Integer): TIdeWatchValue;
+var
+  i: Integer;
+  vl: TWatchValueList;
+begin
+  Result := nil;
+  if FParentWatch = nil then
+    exit;
+  vl := FParentWatch.FValueList;
+  i := vl.Count - 1;
+  while (i >= 0) and (
+    (vl.EntriesByIdx[i].Validity <> ddsValid) or
+    (vl.EntriesByIdx[i].ThreadId <> AThreadId) or
+    (vl.EntriesByIdx[i].StackFrame <> AStackFrame) or
+    (vl.EntriesByIdx[i].TypeInfo = nil)
+  ) do
+    dec(i);
+  if i >= 0 then
+    Result := TIdeWatchValue(vl.EntriesByIdx[i]);
+end;
+
+procedure TIdeWatch.SetParentWatch(AValue: TIdeWatch);
+begin
+  if FParentWatch = AValue then Exit;
+  FParentWatch := AValue;
+end;
+
+procedure TIdeWatch.InitChildWatches;
+begin
+  if FChildWatches <> nil then
+    exit;
+
+  FChildWatches := CreateChildWatches;
+  //FChildWatches.FParentWatches := TIdeWatches(Collection);
+end;
+
+function TIdeWatch.GetTopParentWatch: TIdeWatch;
+begin
+  Result := Self;
+  while Result.FParentWatch <> nil do
+    Result := Result.FParentWatch;
+end;
+
+function TIdeWatch.GetChildrenByName(AName: String): TIdeWatch;
+begin
+  if FChildWatches <> nil then begin
+    Result := FChildWatches.Find(AName);
+    if Result <> nil then
+      exit;
+  end;
+
+  BeginChildUpdate;
+  Result := FChildWatches.Add(AName);
+  Result.SetParentWatch(Self);
+  Result.Enabled       := Enabled;
+  Result.DisplayFormat := DisplayFormat;
+  //snapshot
+  EndChildUpdate;
+end;
+
+function TIdeWatch.CreateChildWatches: TIdeWatches;
+begin
+  Result := TIdeWatches.Create;
 end;
 
 procedure TIdeWatch.LoadDataFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
@@ -5501,12 +5493,39 @@ begin
   FSnapShot := AValue;
   if FSnapShot = nil then begin
     TCurrentWatchValueList(FValueList).SnapShot := nil;
+    if FChildWatches <> nil then
+      TCurrentWatches(FChildWatches).SnapShot := nil;
   end else begin
     // TODO: FValueList is copied twice ?
     FSnapShot.Assign(self);
     FSnapShot.Enabled := True; // Snapshots are always enabled
     TCurrentWatchValueList(FValueList).SnapShot := TIdeWatchValueList(FSnapShot.FValueList);
+
+    if FParentWatch <> nil then
+      FSnapShot.SetParentWatch(TCurrentWatch(FParentWatch).SnapShot);
+
+    if FChildWatches <> nil then begin
+      FSnapShot.InitChildWatches;
+      TCurrentWatches(FChildWatches).SnapShot := FSnapShot.FChildWatches;
+    end;
   end;
+end;
+
+function TCurrentWatch.CreateChildWatches: TIdeWatches;
+begin
+  Result := TCurrentWatches.Create(TCurrentWatches(Collection).FMonitor);
+  if FSnapShot <> nil then begin
+    FSnapShot.InitChildWatches;
+    TCurrentWatches(Result).SnapShot := FSnapShot.FChildWatches;
+  end;
+end;
+
+procedure TCurrentWatch.SetParentWatch(AValue: TIdeWatch);
+begin
+  inherited SetParentWatch(AValue);
+
+  if (SnapShot <> nil) and (FParentWatch <> nil) then
+    SnapShot.SetParentWatch(TCurrentWatch(FParentWatch).SnapShot);
 end;
 
 function TCurrentWatch.CreateValueList: TWatchValueList;
@@ -5529,19 +5548,31 @@ end;
 
 procedure TCurrentWatch.RequestData(AWatchValue: TCurrentWatchValue);
 begin
+  if FParentWatch <> nil then begin
+    if not (FParentWatch is TCurrentWatch) then
+      exit;
+    TCurrentWatch(FParentWatch).RequestData(AWatchValue);
+    exit;
+  end;
+
   if Collection <> nil
   then TCurrentWatches(Collection).RequestData(AWatchValue)
   else AWatchValue.Validity := ddsInvalid;
 end;
 
 destructor TCurrentWatch.Destroy;
+var
+  w: TCurrentWatches;
 begin
   if (TCurrentWatches(Collection) <> nil)
   then begin
     TCurrentWatches(Collection).NotifyRemove(Self);
     TCurrentWatches(Collection).DoModified;
   end;
+  w := TCurrentWatches(Collection);
+  inc(w.FSkipUpdatedNotification);
   inherited Destroy;
+  dec(w.FSkipUpdatedNotification);
 end;
 
 procedure TCurrentWatch.LoadFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
@@ -5582,10 +5613,8 @@ end;
 
 function TIdeWatches.Add(const AExpression: String): TIdeWatch;
 begin
-  BeginUpdate;
-  Result := TIdeWatch(inherited Add);
+  Result := TIdeWatch(inherited Add); // calls update
   Result.Expression := AExpression;
-  EndUpdate;
 end;
 
 function TIdeWatches.GetItem(const AnIndex: Integer): TIdeWatch;
@@ -5638,7 +5667,9 @@ var
   R: TIdeWatch;
 begin
   // if this is modified, then also update LoadFromXMLConfig
+  inc(FSkipUpdatedNotification);
   Result := TCurrentWatch(inherited Add(AExpression));
+  dec(FSkipUpdatedNotification);
   if FSnapShot <> nil then begin
     R := FSnapShot.Add(AExpression);
     Result.SnapShot := R;
@@ -5729,6 +5760,11 @@ end;
 
 procedure TCurrentWatches.NotifyAdd(const AWatch: TCurrentWatch);
 begin
+  if UpdateCount > 0 then begin
+    AWatch.FAdded := True;
+    exit;
+  end;
+  AWatch.FAdded := False;
   FMonitor.NotifyAdd(Self, AWatch);
 end;
 
@@ -5775,12 +5811,17 @@ procedure TCurrentWatches.Update(Item: TCollectionItem);
 var
   m, c: Integer;
 begin
+  if (UpdateCount > 0) or (FSkipUpdatedNotification > 0) then
+    exit;
+
   if Item <> nil then begin
     FMonitor.NotifyUpdate(Self, TCurrentWatch(Item));
   end else begin
     m := 0;
     c := Count;
     while m < c do begin
+      if Items[m].FAdded then
+        NotifyAdd(Items[m]);
       FMonitor.NotifyUpdate(Self, Items[m]);
       if c <> Count then begin
         m := Max(0, m - Max(0, Count - c));
