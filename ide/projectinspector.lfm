@@ -110,8 +110,8 @@ object ProjectInspectorForm: TProjectInspectorForm
       AnchorSideTop.Control = SortAlphabeticallyButton
       AnchorSideTop.Side = asrCenter
       Left = 95
-      Height = 32
-      Top = -2
+      Height = 30
+      Top = -1
       Width = 365
       ButtonWidth = 23
       Anchors = [akTop, akLeft, akRight]
@@ -157,32 +157,10 @@ object ProjectInspectorForm: TProjectInspectorForm
     OnPopup = ItemsPopupMenuPopup
     Left = 72
     Top = 112
-    object MenuItem1: TMenuItem
-      Caption = 'New Item1'
-    end
   end
   object AddPopupMenu: TPopupMenu
+    OnPopup = AddPopupMenuPopup
     Left = 74
     Top = 163
-    object mnuAddDiskFile: TMenuItem
-      Caption = 'Add file from disk'
-      Default = True
-      OnClick = mnuAddDiskFileClick
-    end
-    object MenuItem2: TMenuItem
-      Caption = '-'
-    end
-    object mnuAddEditorFiles: TMenuItem
-      Caption = 'Add editor files'
-      OnClick = mnuAddEditorFilesClick
-    end
-    object mnuAddReq: TMenuItem
-      Caption = 'Add requirement'
-      OnClick = mnuAddReqClick
-    end
-    object mnuAddFPMakeReq: TMenuItem
-      Caption = 'Add FPMake requirement'
-      OnClick = mnuAddFPMakeReqClick
-    end
   end
 end

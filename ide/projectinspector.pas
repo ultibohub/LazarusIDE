@@ -69,11 +69,41 @@ uses
   ProjectIntf, PackageIntf, PackageLinkIntf, PackageDependencyIntf,
   // IDEIntf
   IDEHelpIntf, IDECommands, IDEDialogs, IDEImagesIntf, LazIDEIntf, ToolBarIntf,
+  MenuIntf,
   // IDE
   LazarusIDEStrConsts, MainBase, MainBar, IDEProcs, DialogProcs, IDEOptionDefs, Project,
   InputHistory, TransferMacros, EnvironmentOpts, BuildManager, BasePkgManager,
   ProjPackChecks, ProjPackEditing, ProjPackFilePropGui, PackageDefs,
   AddToProjectDlg, AddPkgDependencyDlg, AddFPMakeDependencyDlg, LResources;
+
+const
+  ProjectInspectorMenuItemsRootName = 'ProjectInspectorItems';
+  ProjectInspectorMenuAddRootName = 'ProjectInspectorAdd';
+var
+  // items popupmenu: files
+  ProjInspMenuAddDiskFile: TIDEMenuCommand;
+  ProjInspMenuRemoveNonExistingFiles: TIDEMenuCommand;
+  ProjInspMenuOpenFolder: TIDEMenuCommand;
+  ProjInspMenuOpen: TIDEMenuCommand; // open file or dependency
+  ProjInspMenuRemove: TIDEMenuCommand;
+  ProjInspMenuCopyMoveFileToDir: TIDEMenuCommand;
+  ProjInspMenuEnableI18NForLFM: TIDEMenuCommand;
+  ProjInspMenuDisableI18NForLFM: TIDEMenuCommand;
+
+  // items popupmenu: dependencies
+  ProjInspMenuAddDependency: TIDEMenuCommand;
+  ProjInspMenuReAddDependency: TIDEMenuCommand;
+  ProjInspMenuMoveDependencyUp: TIDEMenuCommand;
+  ProjInspMenuMoveDependencyDown: TIDEMenuCommand;
+  ProjInspMenuStoreFilenameAsDefaultOfDependencyDown: TIDEMenuCommand;
+  ProjInspMenuStoreFilenameAsPreferredOfDependencyDown: TIDEMenuCommand;
+  ProjInspMenuClearPreferredFilenameOfDependencyDown: TIDEMenuCommand;
+
+  // add popupmenu
+  ProjInspAddMenuDiskFile: TIDEMenuCommand;
+  ProjInspAddMenuEditorFiles: TIDEMenuCommand;
+  ProjInspAddMenuDependency: TIDEMenuCommand;
+  ProjInspAddMenuFPMakeDependency: TIDEMenuCommand;
 
 type
   TOnAddUnitToProject =
@@ -93,12 +123,6 @@ type
     DirectoryHierarchyButton: TSpeedButton;
     FilterEdit: TTreeFilterEdit;
     PropsGroupBox: TGroupBox;
-    MenuItem1: TMenuItem;
-    MenuItem2: TMenuItem;
-    mnuAddFPMakeReq: TMenuItem;
-    mnuAddEditorFiles: TMenuItem;
-    mnuAddDiskFile: TMenuItem;
-    mnuAddReq: TMenuItem;
     OpenButton: TSpeedButton;
     ItemsTreeView: TTreeView;
     ItemsPopupMenu: TPopupMenu;
@@ -111,6 +135,7 @@ type
     RemoveBitBtn: TToolButton;
     OptionsBitBtn: TToolButton;
     HelpBitBtn: TToolButton;
+    procedure AddPopupMenuPopup(Sender: TObject);
     procedure CopyMoveToDirMenuItemClick(Sender: TObject);
     procedure DirectoryHierarchyButtonClick(Sender: TObject);
     procedure FilterEditKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
@@ -279,7 +304,7 @@ var
 
 
 function UpdateUnitInfoResourceBaseClass(AnUnitInfo: TUnitInfo; Quiet: boolean): boolean;
-
+procedure RegisterStandardProjectInspectorMenuItems;
 
 implementation
 
@@ -402,6 +427,52 @@ begin
   finally
     FreeListOfPFindContext(ListOfPFindContext);
   end;
+end;
+
+procedure RegisterStandardProjectInspectorMenuItems;
+var
+  AParent: TIDEMenuSection;
+begin
+  // items popupmenu
+  ProjectInspectorItemsMenuRoot:=RegisterIDEMenuRoot(ProjectInspectorMenuItemsRootName);
+
+  // register the section for operations on selected files
+  ProjInspMenuSectionFiles:=RegisterIDEMenuSection(ProjectInspectorMenuItemsRootName,'Files');
+  AParent:=ProjInspMenuSectionFiles;
+  ProjInspMenuAddDiskFile:=RegisterIDEMenuCommand(AParent,'Add disk file',lisBtnDlgAdd);
+  ProjInspMenuRemoveNonExistingFiles:=RegisterIDEMenuCommand(AParent,'Remove non existing files',lisRemoveNonExistingFiles);
+  ProjInspMenuOpenFolder:=RegisterIDEMenuCommand(AParent,'Open folder',lisMenuOpenFolder);
+  ProjInspMenuAddDependency:=RegisterIDEMenuCommand(AParent,'Add dependency',lisBtnDlgAdd);
+  ProjInspMenuOpen:=RegisterIDEMenuCommand(AParent,'Open',lisBtnDlgAdd);
+  ProjInspMenuRemove:=RegisterIDEMenuCommand(AParent,'Remove',lisRemove);
+  ProjInspMenuCopyMoveFileToDir:=RegisterIDEMenuCommand(AParent,'Copy/Move File to Directory',lisCopyMoveFileToDirectory);
+  ProjInspMenuEnableI18NForLFM:=RegisterIDEMenuCommand(AParent,'Enable I18N for LFM',lisEnableI18NForLFM);
+  ProjInspMenuDisableI18NForLFM:=RegisterIDEMenuCommand(AParent,'Disable I18N for LFM',lisDisableI18NForLFM);
+
+  // register the section for operations on dependencies
+  ProjInspMenuSectionDependencies:=RegisterIDEMenuSection(ProjectInspectorMenuItemsRootName,'Dependencies');
+  AParent:=ProjInspMenuSectionDependencies;
+  ProjInspMenuReAddDependency:=RegisterIDEMenuCommand(AParent,'ReAdd dependency',lisPckEditReAddDependency);
+  ProjInspMenuMoveDependencyUp:=RegisterIDEMenuCommand(AParent,'Move dependency up',lisPckEditMoveDependencyUp);
+  ProjInspMenuMoveDependencyDown:=RegisterIDEMenuCommand(AParent,'Move dependency down',lisPckEditMoveDependencyDown);
+  ProjInspMenuStoreFilenameAsDefaultOfDependencyDown:=RegisterIDEMenuCommand(AParent,'Store filename as default of dependency',lisPckEditStoreFileNameAsDefaultForThisDependency);
+  ProjInspMenuStoreFilenameAsPreferredOfDependencyDown:=RegisterIDEMenuCommand(AParent,'Store filename as preferred of dependency',lisPckEditStoreFileNameAsPreferredForThisDependency);
+  ProjInspMenuClearPreferredFilenameOfDependencyDown:=RegisterIDEMenuCommand(AParent,'Clear preferred filename of dependency',lisPckEditClearDefaultPreferredFilenameOfDependency);
+
+  // add popupmenu
+  ProjectInspectorAddMenuRoot:=RegisterIDEMenuRoot(ProjectInspectorMenuAddRootName);
+
+  // register the section for adding files
+  ProjInspAddMenuSectionFiles:=RegisterIDEMenuSection(ProjectInspectorMenuAddRootName,'Files');
+  AParent:=ProjInspAddMenuSectionFiles;
+  ProjInspAddMenuDiskFile:=RegisterIDEMenuCommand(AParent,'Add disk file',lisBtnDlgAdd);
+  ProjInspAddMenuEditorFiles:=RegisterIDEMenuCommand(AParent,'Add editor files',lisProjAddEditorFile);
+
+  // register the section for adding dependency
+  ProjInspAddMenuSectionDependencies:=RegisterIDEMenuSection(ProjectInspectorMenuAddRootName,'Dependencies');
+  AParent:=ProjInspAddMenuSectionFiles;
+  ProjInspAddMenuDependency:=RegisterIDEMenuCommand(AParent,'Add dependency',lisProjAddNewRequirement);
+  ProjInspAddMenuFPMakeDependency:=RegisterIDEMenuCommand(AParent,'Add fpmake dependency',lisProjAddNewFPMakeRequirement);
 end;
 
 
@@ -702,6 +773,24 @@ begin
   OnCopyMoveFiles(Self);
 end;
 
+procedure TProjectInspectorForm.AddPopupMenuPopup(Sender: TObject);
+
+  procedure SetItem(Item: TIDEMenuCommand; AnOnClick: TNotifyEvent;
+                    aShow: boolean = true; AEnable: boolean = true);
+  begin
+    Item.OnClick:=AnOnClick;
+    Item.Visible:=aShow;
+    Item.Enabled:=AEnable;
+  end;
+
+begin
+  ProjectInspectorAddMenuRoot.MenuItem:=AddPopupMenu.Items;
+  SetItem(ProjInspAddMenuDiskFile,@mnuAddDiskFileClick);
+  SetItem(ProjInspAddMenuEditorFiles,@mnuAddEditorFilesClick);
+  SetItem(ProjInspAddMenuDependency,@mnuAddReqClick);
+  SetItem(ProjInspAddMenuFPMakeDependency,@mnuAddFPMakeReqClick);
+end;
+
 procedure TProjectInspectorForm.DirectoryHierarchyButtonClick(Sender: TObject);
 begin
   ShowDirectoryHierarchy:=DirectoryHierarchyButton.Down;
@@ -766,26 +855,13 @@ begin
 end;
 
 procedure TProjectInspectorForm.ItemsPopupMenuPopup(Sender: TObject);
-var
-  ItemCnt: integer;
 
-  function AddPopupMenuItem(const ACaption: string; AnEvent: TNotifyEvent;
-    EnabledFlag: boolean = True): TMenuItem;
+  procedure SetItem(Item: TIDEMenuCommand; AnOnClick: TNotifyEvent;
+                    aShow: boolean = true; AEnable: boolean = true);
   begin
-    if ItemsPopupMenu.Items.Count<=ItemCnt then begin
-      Result:=TMenuItem.Create(Self);
-      ItemsPopupMenu.Items.Add(Result);
-    end else
-      Result:=ItemsPopupMenu.Items[ItemCnt];
-    Result.Caption:=ACaption;
-    Result.OnClick:=AnEvent;
-    Result.Enabled:=EnabledFlag;
-    Result.Checked:=false;
-    Result.ShowAlwaysCheckable:=false;
-    Result.Visible:=true;
-    Result.RadioItem:=false;
-    Result.ImageIndex:=-1;
-    inc(ItemCnt);
+    Item.OnClick:=AnOnClick;
+    Item.Visible:=aShow;
+    Item.Enabled:=AEnable;
   end;
 
 var
@@ -806,8 +882,9 @@ var
   CanClearDep: Integer;
   CanMoveFileCount: Integer;
   OpenItemCapt: String;
+  OnlyFilesNodeSelected, OnlyDependenciesNodeSelected, CanI18NforLFM: Boolean;
 begin
-  ItemCnt:=0;
+  ProjectInspectorItemsMenuRoot.MenuItem:=ItemsPopupMenu.Items;
 
   CanRemoveCount:=0;
   CanOpenCount:=0;
@@ -856,72 +933,50 @@ begin
     end;
   end;
 
-  if ItemsTreeView.Selected = FFilesNode then
-  begin
-    // Only the Files node is selected.
-    Assert(AddBitBtn.Enabled, 'AddBitBtn not Enabled');
-    AddPopupMenuItem(lisBtnDlgAdd, @mnuAddDiskFileClick);
-    if not LazProject.IsVirtual then
-      AddPopupMenuItem(lisRemoveNonExistingFiles,@RemoveNonExistingFilesMenuItemClick);
-    AddPopupMenuItem(cLineCaption, Nil, False);                // Separator
-    AddPopupMenuItem(lisMenuOpenFolder, @mnuOpenFolderClick);
-  end
-  else if ItemsTreeView.Selected = FDependenciesNode then
-  begin
-    // Only the Required Packages node is selected.
-    AddPopupMenuItem(lisBtnDlgAdd, @mnuAddReqClick);
-  end
-  else begin
-    // Files, dependencies or everything mixed is selected.
-    if CanOpenCount>0 then begin
-      OpenItemCapt := lisOpen;
-      if Assigned(SingleSelectedDep) then
-        case SingleSelectedDep.LoadPackageResult of
-          lprAvailableOnline:
-            OpenItemCapt:=lisPckEditInstall;
-          lprNotFound:
-            if Assigned(OPMInterface) and not OPMInterface.IsPackageListLoaded then
-              OpenItemCapt:=lisPckEditCheckAvailabilityOnline;
-        end;
-      AddPopupMenuItem(OpenItemCapt, @OpenButtonClick);
-    end;
-    if CanRemoveCount>0 then
-      AddPopupMenuItem(lisRemove, @RemoveBitBtnClick);
-    // files section
-    if CanMoveFileCount>0 then
-      AddPopupMenuItem(lisCopyMoveFileToDirectory,@CopyMoveToDirMenuItemClick);
-  end;
+  OnlyFilesNodeSelected:=ItemsTreeView.Selected = FFilesNode;
+  SetItem(ProjInspMenuAddDiskFile,@mnuAddDiskFileClick,OnlyFilesNodeSelected);
+  SetItem(ProjInspMenuRemoveNonExistingFiles,@RemoveNonExistingFilesMenuItemClick,OnlyFilesNodeSelected and not LazProject.IsVirtual);
+  SetItem(ProjInspMenuOpenFolder,@mnuOpenFolderClick,OnlyFilesNodeSelected);
 
-  if LazProject.EnableI18N and LazProject.EnableI18NForLFM
-  and (HasLFMCount>0) then begin
-    AddPopupMenuItem(lisEnableI18NForLFM,
-      @EnableI18NForLFMMenuItemClick, DisabledI18NForLFMCount>0);
-    AddPopupMenuItem(lisDisableI18NForLFM,
-      @DisableI18NForLFMMenuItemClick, DisabledI18NForLFMCount<HasLFMCount);
+  OnlyDependenciesNodeSelected:=ItemsTreeView.Selected = FDependenciesNode;
+  SetItem(ProjInspMenuAddDependency,@mnuAddReqClick,OnlyDependenciesNodeSelected);
+
+  // open, remove
+  if CanOpenCount>0 then begin
+    OpenItemCapt := lisOpen;
+    if Assigned(SingleSelectedDep) then
+      case SingleSelectedDep.LoadPackageResult of
+        lprAvailableOnline:
+          OpenItemCapt:=lisPckEditInstall;
+        lprNotFound:
+          if Assigned(OPMInterface) and not OPMInterface.IsPackageListLoaded then
+            OpenItemCapt:=lisPckEditCheckAvailabilityOnline;
+      end;
+    SetItem(ProjInspMenuOpen,@OpenButtonClick,true);
+    ProjInspMenuOpen.Caption:=OpenItemCapt;
+  end else begin
+    SetItem(ProjInspMenuOpen,@OpenButtonClick,false);
   end;
+  SetItem(ProjInspMenuRemove,@RemoveBitBtnClick,CanRemoveCount>0);
+
+  // move
+  SetItem(ProjInspMenuCopyMoveFileToDir,@CopyMoveToDirMenuItemClick,CanMoveFileCount>0);
+
+  // i18n for lfm
+  CanI18NforLFM:=LazProject.EnableI18N and LazProject.EnableI18NForLFM and (HasLFMCount>0);
+  SetItem(ProjInspMenuEnableI18NForLFM,@EnableI18NForLFMMenuItemClick,CanI18NforLFM,DisabledI18NForLFMCount>0);
+  SetItem(ProjInspMenuDisableI18NForLFM,@DisableI18NForLFMMenuItemClick,CanI18NforLFM,DisabledI18NForLFMCount<HasLFMCount);
 
   // Required packages section
-  if CanReAddCount>0 then
-    AddPopupMenuItem(lisPckEditReAddDependency, @ReAddMenuItemClick, true);
-  if SingleSelectedDep<>nil then begin
-    AddPopupMenuItem(lisPckEditMoveDependencyUp, @MoveDependencyUpClick,
-                     (SingleSelectedDep.PrevRequiresDependency<>nil));
-    AddPopupMenuItem(lisPckEditMoveDependencyDown, @MoveDependencyDownClick,
-                     (SingleSelectedDep.NextRequiresDependency<>nil));
-  end;
-  if HasValidDep>0 then begin
-    AddPopupMenuItem(lisPckEditStoreFileNameAsDefaultForThisDependency,
-                     @SetDependencyDefaultFilenameMenuItemClick, true);
-    AddPopupMenuItem(lisPckEditStoreFileNameAsPreferredForThisDependency,
-                     @SetDependencyPreferredFilenameMenuItemClick, true);
-  end;
-  if CanClearDep>0 then begin
-    AddPopupMenuItem(lisPckEditClearDefaultPreferredFilenameOfDependency,
-                     @ClearDependencyFilenameMenuItemClick, true);
-  end;
-
-  while ItemsPopupMenu.Items.Count>ItemCnt do
-    ItemsPopupMenu.Items.Delete(ItemsPopupMenu.Items.Count-1);
+  // undo delete
+  SetItem(ProjInspMenuReAddDependency,@ReAddMenuItemClick,CanReAddCount>0);
+  // move up/down
+  SetItem(ProjInspMenuMoveDependencyUp,@MoveDependencyUpClick,(SingleSelectedDep<>nil) and (SingleSelectedDep.PrevRequiresDependency<>nil));
+  SetItem(ProjInspMenuMoveDependencyDown,@MoveDependencyDownClick,(SingleSelectedDep<>nil) and (SingleSelectedDep.NextRequiresDependency<>nil));
+  // default and preferred filename
+  SetItem(ProjInspMenuStoreFilenameAsDefaultOfDependencyDown,@SetDependencyDefaultFilenameMenuItemClick,HasValidDep>0);
+  SetItem(ProjInspMenuStoreFilenameAsPreferredOfDependencyDown,@SetDependencyPreferredFilenameMenuItemClick,HasValidDep>0);
+  SetItem(ProjInspMenuClearPreferredFilenameOfDependencyDown,@ClearDependencyFilenameMenuItemClick,CanClearDep>0);
 end;
 
 procedure TProjectInspectorForm.ItemsTreeViewAdvancedCustomDrawItem(
@@ -1264,10 +1319,6 @@ begin
   HelpBitBtn    := CreateToolButton('HelpBitBtn', GetButtonCaption(idButtonHelp), lisMenuOnlineHelp, 'btn_help', @HelpBitBtnClick);
 
   AddBitBtn.DropdownMenu:=AddPopupMenu;
-  mnuAddDiskFile.Caption:=lisPckEditAddFilesFromFileSystem;
-  mnuAddEditorFiles.Caption:=lisProjAddEditorFile;
-  mnuAddReq.Caption:=lisProjAddNewRequirement;
-  mnuAddFPMakeReq.Caption:=lisProjAddNewFPMakeRequirement;
 
   IDEImages.AssignImage(OpenButton, 'laz_open');
   OpenButton.Caption:='';
