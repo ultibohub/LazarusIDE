@@ -11,14 +11,16 @@ uses
   // LazUtils
   LazLoggerBase,
   // IdeIntf
-  ProjectIntf, CompOptsIntf, LazIDEIntf, IDEOptionsIntf, IDEOptEditorIntf,
+  ProjectIntf, CompOptsIntf, LazIDEIntf, IDEOptionsIntf, IDEOptEditorIntf, IDEMsgIntf, IDEExternToolIntf,
   // Pas2js
-  PJSDsgnOptions, PJSDsgnOptsFrame;
+  idehtml2class, PJSDsgnOptions, PJSDsgnOptsFrame;
 
 const
   ProjDescNamePas2JSWebApp = 'Web Application';
   ProjDescNamePas2JSNodeJSApp = 'NodeJS Application';
-
+  ProjDescNamePas2JSModuleApp = 'Pas2JS Library';
+  FileDescNameClassFromHTMLFile = 'Class definition from HTML file';
+  SMessageViewHTMLToForm = 'HTML To Class conversion';
 
 type
 
@@ -79,6 +81,38 @@ type
     property Options : TNodeJSApplicationOptions Read FOptions Write FOptions;
   end;
 
+  TProjectPas2JSModuleApp = class(TProjectDescriptor)
+  protected
+    function CreateProjectSource: String; virtual;
+  public
+    constructor Create; override;
+    Function DoInitDescriptor : TModalResult; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end;
+
+  { TPas2JSHTMLClassDef }
+
+  TPas2JSHTMLClassDef = class(TFileDescPascalUnit)
+  private
+    FUseWebWidgets : Boolean;
+    FOptions : THTML2ClassOptions;
+    procedure DoConvLog(Sender: TObject; const Msg: String);
+  public
+    constructor Create; override;
+    destructor destroy; override;
+    function Init(var {%H-}NewFilename: string; {%H-}NewOwner: TObject;
+                  var {%H-}NewSource: string; {%H-}Quiet: boolean): TModalResult; override;
+    function ShowOptionDialog : TModalResult;
+    function CreateSource(const Filename, SourceName,
+                          ResourceName: string): string; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+  end;
+
+
 var
   PJSOptionsFrameID: integer = 1000;
 
@@ -95,6 +129,7 @@ uses
   frmpas2jsnodejsprojectoptions,
   frmpas2jsbrowserprojectoptions,
   pjsprojectoptions,
+  frmhtmltoform,
   pjscontroller, strpas2jsdesign, IDECommands, ToolbarIntf, MenuIntf;
 
 procedure ShowServerDialog(Sender: TObject);
@@ -105,6 +140,9 @@ end;
 
 Const
   sPas2JSWebserverName = 'Pas2JSWebservers';
+
+Var
+  Pas2JSHTMLClassDef : TPas2JSHTMLClassDef;
 
 procedure Register;
 
@@ -119,6 +157,10 @@ begin
   // register new-project items
   RegisterProjectDescriptor(TProjectPas2JSWebApp.Create);
   RegisterProjectDescriptor(TProjectPas2JSNodeJSApp.Create);
+  RegisterProjectDescriptor(TProjectPas2JSModuleApp.Create);
+  Pas2JSHTMLClassDef:=TPas2JSHTMLClassDef.Create;
+  RegisterProjectFileDescriptor(Pas2JSHTMLClassDef);
+
   // add IDE options frame
   PJSOptionsFrameID:=RegisterIDEOptionsEditor(GroupEnvironment,TPas2jsOptionsFrame,
                                               PJSOptionsFrameID)^.Index;
@@ -133,6 +175,94 @@ begin
   RegisterIdeMenuCommand(itmViewDebugWindows,sPas2JSWebserverName,SPasJSWebserverCaption,nil,@ShowServerDialog);
   // Add project options frame
   RegisterIDEOptionsEditor(GroupProject,TPas2JSProjectOptionsFrame, Pas2JSOptionsIndex);
+end;
+
+{ TPas2JSHTMLClassDef }
+
+procedure TPas2JSHTMLClassDef.DoConvLog(Sender: TObject; const Msg: String);
+begin
+  IDEMessagesWindow.AddCustomMessage(TMessageLineUrgency.mluProgress,Msg,'',0,0,SMessageViewHTMLToForm);
+end;
+
+constructor TPas2JSHTMLClassDef.Create;
+begin
+  inherited Create;
+  FUseWebWidgets:=False;
+  FOptions:=THTML2ClassOptions.Create;
+  Name:=FileDescNameClassFromHTMLFile;
+end;
+
+destructor TPas2JSHTMLClassDef.destroy;
+begin
+  FreeAndNil(FOptions);
+  inherited destroy;
+end;
+
+function TPas2JSHTMLClassDef.Init(var NewFilename: string; NewOwner: TObject;
+  var NewSource: string; Quiet: boolean): TModalResult;
+begin
+  FOptions.Reset;
+  Result:=ShowOptionDialog;
+end;
+
+function TPas2JSHTMLClassDef.ShowOptionDialog: TModalResult;
+
+Var
+  Frm : TfrmHTML2Form;
+
+begin
+  frm:=TfrmHTML2Form.Create(Nil);
+  try
+    frm.LoadOptions(FOptions);
+    Result:=Frm.ShowModal;
+    if Result=mrOK then
+      frm.SaveOptions(FOptions);
+  finally
+    frm.Free;
+  end;
+end;
+
+function TPas2JSHTMLClassDef.CreateSource(const Filename, SourceName, ResourceName: string): string;
+
+Var
+  CG : TFormCodeGen;
+  Conv : THTMLToFormELements;
+  HTMLFile : TLazProjectFile;
+
+begin
+  Conv:=Nil;
+  CG:=TFormCodeGen.Create(Nil);
+  try
+    Conv:=THTMLToFormELements.Create(nil);
+    Conv.LoadOptions(FOptions);
+    Conv.LoadFromFile(Foptions.HTMLFileName);
+    Conv.OnLog:=@DoConvLog;
+    CG.LoadOptions(Foptions);
+    CG.FormElements:=Conv.FormElements;
+    Cg.OutputUnitName:=ChangeFileExt(ExtractFileName(FileName),'');
+    CG.Execute;
+    Result:=CG.Source.Text;
+    if FOptions.AddHTMLToProject then
+      begin
+      HTMLFile:=LazarusIDE.ActiveProject.CreateProjectFile(Foptions.HTMLFileName);
+      HTMLFile.IsPartOfProject:=true;
+      HTMLFile.CustomData.Add('HTMLClassFile',SourceName);
+      end;
+  finally
+    CG.Free;
+    Conv.Free;
+  end;
+end;
+
+
+function TPas2JSHTMLClassDef.GetLocalizedName: string;
+begin
+  Result:=rsCreateClassFromHTMLName;
+end;
+
+function TPas2JSHTMLClassDef.GetLocalizedDescription: string;
+begin
+  Result:=rsCreateClassFromHTMLDescription;
 end;
 
 { TProjectPas2JSNodeJSApp }
@@ -358,16 +488,16 @@ begin
         SO(UseRunOnReady,baoRunOnReady);
         SO(ShowUncaughtExceptions,baoShowException);
         SO(UseWASI,baoUseWASI);
-        DebugLN(['Start server:', CO(baoStartServer)]);
-        if CO(baoStartServer) then
+        SO(StartHTTPServer,baoStartServer);
+        Self.ProjectPort:=ServerPort;
+        SO(UseURL,baoUseURL);
+        if baoStartServer in FOptions then
           begin
-          Self.ProjectPort:=ServerPort;
           DebugLN(['Start server port: ', Self.ProjectPort,'from: ',ServerPort]);
           end
         else
           begin
-          UseURL:=CO(baoUseURL);
-          if UseURL then
+          if baoUseURL in Options then
             FProjectURL:=URL;
           end;
         end;
@@ -597,6 +727,115 @@ begin
     Result:=LazarusIDE.DoOpenEditorFile('project1.html',-1,-1,
                                         [ofProjectLoading,ofRegularFile]);
 end;
+
+{ ----------------------------------------------------------------------
+  Module
+  ----------------------------------------------------------------------}
+
+{ TProjectPas2JSModuleApp }
+
+function TProjectPas2JSModuleApp.CreateProjectSource: String;
+Var
+  Src : TStrings;
+  units : string;
+
+  Procedure Add(aLine : String);
+
+  begin
+    Src.Add(aLine);
+  end;
+
+  Procedure AddLn(aLine : String);
+
+  begin
+    if (Aline<>'') then
+      Aline:=Aline+';';
+    Add(Aline);
+  end;
+
+
+begin
+  Units:=' JS, Classes, SysUtils';
+  Src:=TStringList.Create;
+  try
+    // create program source
+    AddLn('library Project1');
+    AddLn('');
+    Add('{$mode objfpc}');
+    Add('');
+    Add('uses');
+    AddLn(units) ;
+    Add('');
+    Add('// add functions/procedures here');
+    Add('');
+    Add('// Add your exports statement here: ');
+    Add('// exports yourfunction {as functionalias} ;');
+    Add('');
+    Add('begin');
+    Add('  // Your library initialization code here');
+    Add('end.');
+    Result:=Src.Text;
+  finally
+    Src.Free;
+  end;
+end;
+
+
+constructor TProjectPas2JSModuleApp.Create;
+begin
+  inherited Create;
+  Name:= ProjDescNamePas2JSModuleApp;
+  Flags:=DefaultProjectNoApplicationFlags-[pfRunnable];
+end;
+
+function TProjectPas2JSModuleApp.DoInitDescriptor: TModalResult;
+begin
+  Result:=mrOK;
+end;
+
+function TProjectPas2JSModuleApp.GetLocalizedName: string;
+begin
+  Result:=pjsdModuleApplication;
+end;
+
+function TProjectPas2JSModuleApp.GetLocalizedDescription: string;
+begin
+  Result:=pjsdModuleAppDescription;
+end;
+
+function TProjectPas2JSModuleApp.InitProject(AProject: TLazProject ): TModalResult;
+
+var
+  MainFile : TLazProjectFile;
+  CompOpts : TLazCompilerOptions;
+
+begin
+  Result:=inherited InitProject(AProject);
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+  CompOpts:=AProject.LazBuildModes.BuildModes[0].LazCompilerOptions;
+  SetDefaultModuleCompileOptions(CompOpts);
+  CompOpts.TargetFilename:='js/project1';
+
+  SetDefaultWebRunParams(AProject.RunParameters.GetOrCreate('Default'));
+
+  // create program source
+  AProject.MainFile.SetSourceText(CreateProjectSource,true);
+
+  //AProject.AddPackageDependency('pas2js_rtl');
+  //if naoUseNodeJSApp in Options then
+  //  AProject.AddPackageDependency('fcl_base_pas2js');
+end;
+
+function TProjectPas2JSModuleApp.CreateStartFiles(AProject: TLazProject
+  ): TModalResult;
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
 
 end.
 

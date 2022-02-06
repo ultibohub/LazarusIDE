@@ -69,6 +69,14 @@ msgstr "Підтримувати HTML-сторінку"
 msgid "missing path to pas2js"
 msgstr "відсутній шлях до pas2js"
 
+#: strpas2jsdesign.pjsdmoduleappdescription
+msgid "A pas2js library that is transpiled to a javascript module."
+msgstr ""
+
+#: strpas2jsdesign.pjsdmoduleapplication
+msgid "Pas2JS Library/Javascript module"
+msgstr ""
+
 #: strpas2jsdesign.pjsdnewatompackage
 msgid "Atom package"
 msgstr "Пакунок Atom"
@@ -250,6 +258,14 @@ msgstr "Можна використовувати макроси ІСР на з�
 
 #: strpas2jsdesign.pjswasiprogramfiletexthint
 msgid "Name of your WebAssembly file"
+msgstr ""
+
+#: strpas2jsdesign.rscreateclassfromhtmldescription
+msgid "Create a pas2js \"form\" class definition from HTML file using ID attributes in the HTML file."
+msgstr ""
+
+#: strpas2jsdesign.rscreateclassfromhtmlname
+msgid "pas2js class definition from HTML file"
 msgstr ""
 
 #: strpas2jsdesign.spasjswebservercaption

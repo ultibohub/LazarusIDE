@@ -23,10 +23,17 @@ const
   DEF_BOX_WIDTH = 50;
   DEF_WHISKERS_WIDTH = 25;
   DEF_OHLC_TICK_WIDTH = 25;
+  
   DEF_YINDEX_OPEN = 1;
   DEF_YINDEX_HIGH = 3;
   DEF_YINDEX_LOW = 0;
   DEF_YINDEX_CLOSE = 2;
+  
+  DEF_YINDEX_WHISKERMIN = 0;
+  DEF_YINDEX_BOXMIN = 1;
+  DEF_YINDEX_CENTER = 2;
+  DEF_YINDEX_BOXMAX = 3;
+  DEF_YINDEX_WHISKERMAX = 4;
 
 type
 
@@ -91,6 +98,7 @@ type
 
   TBoxAndWhiskerSeriesLegendDir = (bwlHorizontal, bwlVertical, bwlAuto);
   TBoxAndWhiskerSeriesWidthStyle = (bwsPercent, bwsPercentMin);
+  TBoxAndWhiskerYDataLayout = (bwlNormal, bwlLegacy, bwlCustom);
 
   TBoxAndWhiskerSeries = class(TBasicPointSeries)
   strict private
@@ -102,6 +110,12 @@ type
     FWhiskersPen: TPen;
     FWhiskersWidth: Integer;
     FWidthStyle: TBoxAndWhiskerSeriesWidthStyle;
+    FYDataLayout: TBoxAndWhiskerYDataLayout;
+    FYIndexWhiskerMin: Integer;
+    FYIndexBoxMin: Integer;
+    FYIndexCenter: Integer;
+    FYIndexBoxMax: Integer;
+    FYIndexWhiskerMax: Integer;
     procedure SetBoxBrush(AValue: TBrush);
     procedure SetBoxPen(AValue: TPen);
     procedure SetBoxWidth(AValue: Integer);
@@ -109,6 +123,13 @@ type
     procedure SetMedianPen(AValue: TPen);
     procedure SetWhiskersPen(AValue: TPen);
     procedure SetWhiskersWidth(AValue: Integer);
+    procedure SetYDataLayout(AValue: TBoxAndWhiskerYDataLayout);
+    procedure SetYIndexBoxMax(AValue: Integer);
+    procedure SetYIndexBoxMin(AValue: Integer);
+    procedure SetYIndexCenter(AValue: Integer);
+    procedure SetYIndexWhiskerMax(AValue: Integer);
+    procedure SetYIndexWhiskerMin(AValue: Integer);
+    procedure UpdateYDataLayout;
   protected
     procedure GetLegendItems(AItems: TChartLegendItems); override;
     function GetSeriesColor: TColor; override;
@@ -143,6 +164,18 @@ type
     property WhiskersPen: TPen read FWhiskersPen write SetWhiskersPen;
     property WhiskersWidth: Integer
       read FWhiskersWidth write SetWhiskersWidth default DEF_WHISKERS_WIDTH;
+    property YDataLayout: TBoxAndWhiskerYDataLayout
+      read FYDataLayout write SetYDataLayout default bwlLegacy;
+    property YIndexBoxMax: Integer
+      read FYIndexBoxMax write SetYIndexBoxMax default DEF_YINDEX_BOXMAX;
+    property YIndexBoxMin: Integer
+      read FYIndexBoxMin write SetYIndexBoxMin default DEF_YINDEX_BOXMIN;
+    property YIndexCenter: Integer
+      read FYIndexCenter write SetYIndexCenter default DEF_YINDEX_CENTER;
+    property YIndexWhiskerMax: Integer
+      read FYIndexWhiskerMax write SetYIndexWhiskerMax default DEF_YINDEX_WHISKERMAX;
+    property YIndexWhiskerMin: Integer
+      read FYIndexWhiskerMin write SetYIndexWhiskerMin default DEF_YINDEX_WHISKERMIN;
   published
     property AxisIndexX;
     property AxisIndexY;
@@ -914,9 +947,30 @@ end;
 function TBoxAndWhiskerSeries.AddXY(
   AX, AYLoWhisker, AYLoBox, AY, AYHiBox, AYHiWhisker: Double; AXLabel: String;
   AColor: TColor): Integer;
+var
+  y: Double;
 begin
-  Result := AddXY(
-    AX, AYLoWhisker, [AYLoBox, AY, AYHiBox, AYHiWhisker], AXLabel, AColor);
+  if FYIndexWhiskerMin = 0 then
+    y := AYLoWhisker
+  else if FYIndexBoxMin = 0 then
+    y := AYLoBox
+  else if FYIndexCenter = 0 then
+    y := AY
+  else if FYIndexBoxMax = 0 then
+    y := AYHiBox
+  else if FYIndexWhiskerMax = 0 then
+    y := AYHiWhisker
+  else
+    raise Exception.Create('[TBoxAndWhiskerSeries.AddXY] Ordinary y value missing');
+
+  Result := ListSource.Add(AX, y, AXLabel, AColor);
+  with ListSource.Item[Result]^ do begin
+    SetY(FYIndexWhiskerMin, AYLoWhisker);
+    SetY(FYIndexBoxMin, AYLoBox);
+    SetY(FYIndexCenter, AY);
+    SetY(FYIndexBoxMax, AYHiBox);
+    SetY(FYIndexWhiskerMax, AYHiWhisker);
+  end;
 end;
 
 procedure TBoxAndWhiskerSeries.Assign(ASource: TPersistent);
@@ -929,6 +983,12 @@ begin
       Self.MedianPen.Assign(FMedianPen);
       Self.WhiskersPen.Assign(FWhiskersPen);
       Self.FWhiskersWidth := FWhiskersWidth;
+      Self.FYDataLayout := FYDataLayout;
+      Self.FYIndexWhiskerMin := FYIndexWhiskerMin;
+      Self.FYIndexBoxMin := FYIndexBoxMin;
+      Self.FYIndexCenter := FYIndexCenter;
+      Self.FYIndexBoxMax := FYIndexBoxMax;
+      Self.FYIndexWhiskerMax := FYIndexWhiskerMax;
     end;
   inherited Assign(ASource);
 end;
@@ -948,6 +1008,12 @@ begin
   FWhiskersPen := TPen.Create;
   FWhiskersPen.OnChange := @StyleChanged;
   FWhiskersWidth := DEF_WHISKERS_WIDTH;
+  FYDataLayout := bwlLegacy;
+  FYIndexWhiskerMin := DEF_YINDEX_WHISKERMIN;
+  FYIndexBoxMin := DEF_YINDEX_BOXMIN;
+  FYIndexCenter := DEF_YINDEX_CENTER;
+  FYIndexBoxMax := DEF_YINDEX_BOXMAX;
+  FYIndexWhiskerMax := DEF_YINDEX_WHISKERMAX;
 end;
 
 destructor TBoxAndWhiskerSeries.Destroy;
@@ -961,37 +1027,150 @@ end;
 
 procedure TBoxAndWhiskerSeries.Draw(ADrawer: IChartDrawer);
 
-  function MaybeRotate(AX, AY: Double): TPoint;
+  procedure GraphToImage_Whisker(X, XW, Y1, Y2: Double; 
+    out iX1, iX, iX2, iY1, iY2: Integer);
   begin
     if IsRotated then
-      Exchange(AX, AY);
-    Result := ParentChart.GraphToImage(DoublePoint(AX, AY));
-  end;
-
-  procedure DoLine(AX1, AY1, AX2, AY2: Double);
-  begin
-    ADrawer.Line(MaybeRotate(AX1, AY1), MaybeRotate(AX2, AY2));
-  end;
-
-  procedure DoRect(AX1, AY1, AX2, AY2: Double);
-  var
-    r: TRect;
-  begin
-    with ParentChart do begin
-      r.TopLeft := MaybeRotate(AX1, AY1);
-      r.BottomRight := MaybeRotate(AX2, AY2);
+    begin
+      iX1 := ParentChart.YGraphToImage(X - XW);
+      iX2 := ParentChart.YGraphToImage(X + XW);
+      if iX1 <> iX2 then
+        iX := ParentChart.YGraphToImage(X)
+      else
+        iX := iX1;
+      iY1 := ParentChart.XGraphToImage(Y1);
+      iY2 := ParentChart.XGraphToImage(Y2);      
+    end else
+    begin
+      iX1 := ParentChart.XGraphToImage(X - XW);
+      iX2 := ParentChart.XGraphToImage(X + XW);
+      if iX1 <> iX2 then
+        iX := ParentChart.XGraphToImage(X)
+      else
+        iX := iX1;
+      iY1 := ParentChart.YGraphToImage(Y1);
+      iY2 := ParentChart.YGraphToImage(Y2);
     end;
-    if (r.Left = r.Right) or (r.Top = r.Bottom) then
-      ADrawer.Line(r.TopLeft, r.BottomRight)
+  end;
+  
+  procedure GraphToImage_Bar(X1, X2, Y1, Y2: Double; 
+    out iX1, iX2, iY1, iY2: Integer);
+  begin
+    if IsRotated then
+    begin
+      iX1 := ParentChart.YGraphToImage(X1);
+      iX2 := ParentChart.YGraphToImage(X2);
+      iY1 := ParentChart.XGraphToImage(Y1);
+      iY2 := ParentChart.XGraphToImage(Y2);
+    end else
+    begin
+      iX1 := ParentChart.XGraphToImage(X1);
+      iX2 := ParentChart.XGraphToImage(X2);
+      iY1 := ParentChart.YGraphToImage(Y1);
+      iY2 := ParentChart.YGraphToImage(Y2);
+    end;
+  end;
+  
+  procedure GraphToImage_Median(Y: Double; out iY: Integer);
+  begin
+    if IsRotated then
+      iY := ParentChart.XGraphToImage(Y)
     else
-      ADrawer.Rectangle(r);
+      iY := ParentChart.YGraphToImage(Y);
   end;
 
+  procedure PrepareLine(i: Integer; APen: TPen);
+  begin
+    ADrawer.Pen := APen;
+    if (Source[i]^.Color <> clTAColor) and (APen.Color = clTAColor) then
+      ADrawer.SetPenColor(Source[i]^.Color);
+    ADrawer.SetBrushParams(bsClear, clTAColor);
+  end;
+    
+  procedure PrepareBox(i: Integer);
+  begin
+    ADrawer.Pen := BoxPen;
+    if Source[i]^.Color <> clTAColor then
+    begin
+      if BoxPen.Color = clTAColor then
+        ADrawer.SetPenColor(Source[i]^.Color);
+      ADrawer.SetBrushParams(bsSolid, Source[i]^.Color);
+    end
+    else
+      ADrawer.Brush := BoxBrush;
+  end;
+  
+  {    X1   X   X2
+       |----+----|       Y
+            |
+      +-----+-----+      YBox
+      |           |
+      |           |
+  }
+  procedure DrawWhisker(X1, X, X2, Y, YBox: Integer);
+  begin
+    if IsRotated then
+    begin
+      if X1 <> X2 then
+        ADrawer.Line(Y, X1, Y, X2);
+      ADrawer.Line(Y, X, YBox, X);
+    end else
+    begin
+      if X1 <> X2 then
+        ADrawer.Line(X1, Y, X2, Y);
+      ADrawer.Line(X, Y, X, YBox);
+    end;
+  end;
+  
+  procedure DrawBox(XBox1, XBox2, YBox1, YBox2: Integer);
+  begin
+    if XBox1 = XBox2 then
+    begin
+      if IsRotated then
+        ADrawer.Line(YBox1, XBox1, YBox2, XBox2)
+      else
+        ADrawer.Line(XBox1, YBox1, XBox2, YBox2);
+    end else
+    begin
+      if IsRotated then
+        ADrawer.Rectangle(YBox1, XBox1, YBox2, XBox2)
+      else
+        ADrawer.Rectangle(XBox1, YBox1, XBox2, YBox2);
+    end;
+  end;
+  
+  procedure DrawMedian(X1, X2, Y: Integer);
+  begin
+    if IsRotated then
+      ADrawer.Line(Y, X1, Y, X2)
+    else
+      ADrawer.Line(X1, Y, X2, Y);
+  end;
+
+  function GetY(AItem: PChartDataItem; AYIndex: Integer; out AY: Double): Boolean;
+  var
+    y: Double;
+  begin
+    Result := false;
+    if AYIndex = 0 then
+      y := AItem^.Y
+    else
+      y := AItem^.YList[AYIndex-1];
+    if IsNaN(y) then
+      exit;
+
+    AY := AxisToGraphY(y);
+    Result := true;
+  end;
+    
 var
   ext2: TDoubleRect;
   x, ymin, yqmin, ymed, yqmax, ymax, wb, ww, w: Double;
   i: Integer;
+  ix, ixb1, ixb2, ixw1, ixw2: Integer;
+  iymin, iyqmin, iymed, iyqmax, iymax: Integer;
   nx, ny: Cardinal;
+  item: PChartDataItem;
 begin
   if IsEmpty or (not Active) then exit;
 
@@ -1005,46 +1184,41 @@ begin
   PrepareGraphPoints(ext2, true);
 
   for i := FLoBound to FUpBound do begin
+    // Get values from source and convert to graph units.
+    item := Source[i];
     x := GetGraphPointX(i);
-    ymin := GetGraphPointY(i);
-    if IsNaN(x) or IsNaN(ymin) then
-      continue;
-    with Source[i]^ do begin
-      if IsNaN(YList[0]) then continue else yqmin := AxisToGraphY(YList[0]);
-      if IsNaN(YList[1]) then continue else ymed := AxisToGraphY(YList[1]);
-      if IsNaN(YList[2]) then continue else yqmax := AxisToGraphY(YList[2]);
-      if IsNaN(YList[3]) then continue else ymax := AxisToGraphY(YList[3]);
-    end;
+    if IsNaN(x) then continue;
+    if not GetY(item, FYIndexWhiskerMin, ymin) then continue;
+    if not GetY(item, FYIndexBoxMin, yqmin) then continue;
+    if not GetY(item, FYIndexCenter, ymed) then continue;
+    if not GetY(item, FYIndexBoxMax, yqmax) then continue;
+    if not GetY(item, FYIndexWhiskerMax, ymax) then continue;
+    
     case FWidthStyle of
       bwsPercent: w := GetXRange(x, i) * PERCENT / 2;
       bwsPercentMin: w := FMinXRange * PERCENT / 2;
     end;
     wb := w * BoxWidth;
     ww := w * WhiskersWidth;
-
+    
+    // Calculate image coordiantes
+    GraphToImage_Whisker(x, ww, ymin, ymax, ixw1, ix, ixw2, iymin, iymax);
+    GraphToImage_Bar(x-wb, x+wb, yqmin, yqmax, ixb1, ixb2, iyqmin, iyqmax);
+    GraphToImage_Median(ymed, iymed);
+     
+    // Draw whisker
+    PrepareLine(i, WhiskersPen);
+    DrawWhisker(ixw1, ix, ixw2, iymin, iyqmin);
+    DrawWhisker(ixw1, ix, ixw2, iymax, iyqmax);
+    
+    // Draw box
+    PrepareBox(i);
+    DrawBox(ixb1, ixb2, iyqmin, iyqmax);
     ADrawer.Pen := WhiskersPen;
-    if (Source[i]^.Color <> clTAColor) and (WhiskersPen.Color = clTAColor) then
-      ADrawer.SetPenColor(Source[i]^.Color);
-    ADrawer.SetBrushParams(bsClear, clTAColor);
-    DoLine(x - ww, ymin, x + ww, ymin);
-    DoLine(x, ymin, x, yqmin);
-    DoLine(x - ww, ymax, x + ww, ymax);
-    DoLine(x, ymax, x, yqmax);
-    ADrawer.Pen := BoxPen;
-    if Source[i]^.Color <> clTAColor then
-    begin
-      if BoxPen.Color = clTAColor then
-        ADrawer.SetPenColor(Source[i]^.Color);
-      ADrawer.SetBrushParams(bsSolid, Source[i]^.Color);
-    end
-    else
-      ADrawer.Brush := BoxBrush;
-    DoRect(x - wb, yqmin, x + wb, yqmax);
-    ADrawer.Pen := MedianPen;
-    if (Source[i]^.Color <> clTAColor) and (MedianPen.Color = clTAColor) then
-      ADrawer.SetPenColor(Source[i]^.Color);
-    ADrawer.SetBrushParams(bsClear, clTAColor);
-    DoLine(x - wb, ymed, x + wb, ymed);
+    
+    // Draw median line
+    PrepareLine(i, MedianPen);
+    DrawMedian(ixb1, ixb2, iymed);
   end;
 
   GetXYCountNeeded(nx, ny);
@@ -1066,6 +1240,9 @@ var
 
 begin
   Result := Source.ExtentList;
+  if Source.Count = 0 then
+    exit;
+  
   // Show first and last boxes fully.
   j := -1;
   x := NaN;
@@ -1133,8 +1310,8 @@ begin
     dist := MaxInt;
 
     // click inside box
-    R.a := DoublePoint(x - wb, y[1]);  // index 1 --> lower quartile
-    R.b := DoublePoint(x + wb, y[3]);  // index 3 --> upper quartile
+    R.a := DoublePoint(x - wb, y[FYIndexBoxMin]);  
+    R.b := DoublePoint(x + wb, y[FYIndexBoxMax]);  
     if InRange(graphClickPt.X, R.a.x, R.b.x) and InRange(graphClickPt.Y, R.a.Y, R.b.Y) then
     begin
       dist := 0;
@@ -1143,7 +1320,8 @@ begin
 
     // click on whisker line
     xImg := ParentChart.XGraphToImage(x);
-    if InRange(graphClickPt.Y, y[0], y[1]) or InRange(graphClickPt.Y, y[3], y[4])
+    if InRange(graphClickPt.Y, y[FYIndexWhiskerMin], y[FYIndexBoxMin]) or 
+       InRange(graphClickPt.Y, y[FYIndexWhiskerMax], y[FYIndexBoxMax])
     then begin
       dist := sqr(pImg.X - xImg);
       AResults.FYIndex := -1;
@@ -1224,6 +1402,68 @@ begin
   UpdateParentChart;
 end;
 
+procedure TBoxAndWhiskerSeries.SetYIndexBoxMax(AValue: Integer);
+begin
+  if FYIndexBoxMax = AValue then exit;
+  FYIndexBoxMax := AValue;
+  UpdateYDataLayout;
+  UpdateParentChart;
+end;
+
+procedure TBoxAndWhiskerSeries.SetYIndexBoxMin(AValue: Integer);
+begin
+  if FYIndexBoxMin = AValue then exit;
+  FYIndexBoxMin := AValue;
+  UpdateYDataLayout;
+  UpdateParentChart;
+end;
+
+procedure TBoxAndWhiskerSeries.SetYIndexCenter(AValue: Integer);
+begin
+  if FYIndexCenter = AValue then exit;
+  FYIndexCenter := AValue;
+  UpdateYDataLayout;
+  UpdateParentChart;
+end;
+
+procedure TBoxAndWhiskerSeries.SetYIndexWhiskerMax(AValue: Integer);
+begin
+  if FYIndexWhiskerMax = AValue then exit;
+  FYIndexWhiskerMax := AValue;
+  UpdateYDataLayout;
+  UpdateParentChart;
+end;
+
+procedure TBoxAndWhiskerSeries.SetYIndexWhiskerMin(AValue: Integer);
+begin
+  if FYIndexWhiskerMin = AValue then exit;
+  FYIndexWhiskerMin := AValue;
+  UpdateYDataLayout;
+  UpdateParentChart;
+end;
+
+procedure TBoxAndWhiskerSeries.SetYDataLayout(AValue: TBoxAndWhiskerYDataLayout);
+
+  procedure SetYIndices(AWhiskerMin, ABoxMin, ACenter, ABoxMax, AWhiskerMax: Integer);
+  begin
+    FYIndexWhiskerMin := AWhiskerMin;
+    FYIndexBoxMin := ABoxMin;
+    FYIndexCenter := ACenter;
+    FYIndexBoxMax := ABoxMax;
+    FYIndexWhiskerMax := AWhiskerMax;
+  end;
+
+begin
+  if FYDataLayout = AValue then exit;
+  FYDataLayout := AValue;
+  case FYDataLayout of
+    bwlNormal: SetYIndices(1, 2, 0, 3, 4);   
+    bwlLegacy: SetYIndices(0, 1, 2, 3, 4);
+    bwlCustom: ;
+  end;
+  UpdateParentChart;
+end;
+
 function TBoxAndWhiskerSeries.SkipMissingValues(AIndex: Integer): Boolean;
 begin
   Result := IsNaN(Source[AIndex]^.Point);
@@ -1235,7 +1475,7 @@ function TBoxAndWhiskerSeries.ToolTargetDistance(
   const AParams: TNearestPointParams; AGraphPt: TDoublePoint;
   APointIdx, AXIdx, AYIdx: Integer): Integer;
 
-  // All in image coordinates traansformed to have a horizontal x axis
+  // All in image coordinates transformed to have a horizontal x axis
   function DistanceToLine(Pt: TPoint; x1, x2, y: Integer): Integer;
   begin
     if InRange(Pt.X, x1, x2) then
@@ -1276,26 +1516,49 @@ begin
   xb2 := ParentChart.XGraphToImage(AGraphPt.X + wb);
   y := ParentChart.YGraphToImage(AGraphPt.Y);
 
-  case AYIdx of
-    0, 4:     // Min, Max --> Whisker
-      Result := DistanceToLine(clickPt, xw1, xw2, y);
-    1, 2, 3:  // Box lines
-      Result := DistancetoLine(clickPt, xb1, xb2, y);
-  end;
+  if AYIdx in [FYIndexWhiskerMax, FYIndexWhiskerMin] then   
+    Result := DistanceToLine(clickPt, xw1, xw2, y)
+  else if AYIdx in [FYIndexBoxMax, FYIndexCenter, FYIndexBoxMin] then
+    Result := DistanceToLine(clickPt, xb1, xb2, y)
+  else
+    raise Exception.Create('[TBoxAndWhiskerSeries.ToolTargetDistance] Unknown y index.');
 end;
 
 procedure TBoxAndWhiskerSeries.UpdateLabelDirectionReferenceLevel(
   AIndex, AYIndex: Integer; var ALevel: Double);
 var
   item: PChartDataItem;
+  y0, y3: Double;
 begin
-  case AYIndex of
-    0: ALevel := +Infinity;
-    3: ALevel := -Infinity;
-    else
-       item := Source.Item[AIndex];
-       ALevel := (AxisToGraphY(item^.GetY(0)) + AxisToGraphY(item^.GetY(3)))*0.5;
+  { ToDo: The version before introducing FYIndex* variables had used the values 
+    0 and 3 here. 3 means: FYIndexBoxMax. Interpreted this as a typo, but there
+    is some chance that it would be correct --> needs to be checked. }
+  if (AYIndex = FYIndexWhiskerMin) then
+    ALevel := +Infinity
+  else if (AYIndex = FYIndexWhiskerMax) then
+    ALevel := -Infinity
+  else
+  begin
+    item := Source.Item[AIndex];
+    y0 := AxisToGraphY(item^.GetY(FYIndexWhiskerMin));
+    y3 := AxisToGraphY(item^.GetY(FYIndexWhiskerMax));
+    ALevel := (y0 + y3) * 0.5;
   end;
+end;
+
+procedure TBoxAndWhiskerSeries.UpdateYDataLayout;
+begin
+  if (FYIndexWhiskerMin = 0) and (FYIndexBoxMin = 1) and (FYIndexCenter = 2) and
+     (FYIndexBoxMax = 3) and (FYIndexWhiskerMax = 4) 
+  then 
+    FYDataLayout := bwlLegacy
+  else
+  if (FYIndexCenter = 0) and (FYIndexWhiskerMin = 1) and (FYIndexBoxMin = 2) and
+     (FYIndexBoxMax = 3) and (FYIndexWhiskerMax = 4) 
+  then 
+    FYDataLayout := bwlNormal
+  else
+    FYDataLayout := bwlCustom;
 end;
 
 

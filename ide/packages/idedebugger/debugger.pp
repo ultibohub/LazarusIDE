@@ -41,8 +41,7 @@ uses
   TypInfo, Classes, SysUtils, math,
   // LazUtils
   Laz2_XMLCfg, LazFileUtils, LazStringUtils, LazUtilities, LazLoggerBase,
-  //LazConfigStorage,
-  LazClasses, Maps,
+  LazClasses, Maps, LazMethodList,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase,
   LazDebuggerIntf, IdeDebuggerBase;
@@ -633,21 +632,38 @@ type
     procedure SaveDataToXMLConfig(const AConfig: TXMLConfig;
                               APath: string);
   public
-    function Add(const AExpression: String): TIdeWatch;
+{$IfOpt C+}
+    function Add: TCollectionItem; reintroduce;
+{$EndIF}
+    function Add(const AExpression: String): TIdeWatch; virtual;
     function Find(const AExpression: String): TIdeWatch; reintroduce;
     property Items[const AnIndex: Integer]: TIdeWatch read GetItem write SetItem; default;
   end;
 
   { TCurrentWatchValue }
 
-  TCurrentWatchValue = class(TIdeWatchValue)
+  TCurrentWatchValue = class(TIdeWatchValue, TWatchValueIntf)
+  private
+    FCurrentExpression: String;
+    FUpdateCount: Integer;
+    FEvents: array [TWatcheEvaluateEvent] of TMethodList;
+
+    procedure BeginUpdate;
+    procedure EndUpdate;
+    procedure AddNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
+    procedure RemoveNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
   private
     FSnapShot: TIdeWatchValue;
     procedure SetSnapShot(const AValue: TIdeWatchValue);
   protected
+    procedure SetWatch(AValue: TWatch); override;
+    function GetExpression: String; override;
+    function GetValidity: TDebuggerDataState;
     procedure RequestData; override;
+    procedure CancelRequestData;
     procedure DoDataValidityChanged({%H-}AnOldValidity: TDebuggerDataState); override;
   public
+    destructor Destroy; override;
     property SnapShot: TIdeWatchValue read FSnapShot write SetSnapShot;
   end;
 
@@ -711,7 +727,7 @@ type
     constructor Create(AMonitor: TIdeWatchesMonitor);
     destructor Destroy; override;
     // Watch
-    function Add(const AExpression: String): TCurrentWatch;
+    function Add(const AExpression: String): TCurrentWatch; override;
     function Find(const AExpression: String): TCurrentWatch; reintroduce;
     // IDE
     procedure LoadFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
@@ -3099,6 +3115,42 @@ end;
 
 { TCurrentWatchValue }
 
+procedure TCurrentWatchValue.BeginUpdate;
+begin
+  AddReference;
+  if FUpdateCount = 0 then
+    FCurrentExpression := Expression;
+  inc(FUpdateCount);
+end;
+
+procedure TCurrentWatchValue.EndUpdate;
+begin
+  dec(FUpdateCount);
+  if (FUpdateCount = 0) then begin
+    if Validity = ddsRequested then
+      SetValidity(ddsValid)
+    else
+      DoDataValidityChanged(ddsRequested);
+  end;
+  ReleaseReference; // Last statemnet, may call Destroy
+end;
+
+procedure TCurrentWatchValue.AddNotification(AnEventType: TWatcheEvaluateEvent;
+  AnEvent: TNotifyEvent);
+begin
+  if FEvents[AnEventType] = nil then
+    FEvents[AnEventType] := TMethodList.Create;
+  FEvents[AnEventType].Add(TMethod(AnEvent));
+end;
+
+procedure TCurrentWatchValue.RemoveNotification(
+  AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
+begin
+  if FEvents[AnEventType] = nil then
+    exit;
+  FEvents[AnEventType].Remove(TMethod(AnEvent));
+end;
+
 procedure TCurrentWatchValue.SetSnapShot(const AValue: TIdeWatchValue);
 begin
   assert((FSnapShot=nil) or (AValue=nil), 'TCurrentWatchValue already have snapshot');
@@ -3108,17 +3160,57 @@ begin
   then FSnapShot.Assign(self);
 end;
 
+procedure TCurrentWatchValue.SetWatch(AValue: TWatch);
+begin
+  CancelRequestData;
+  inherited SetWatch(AValue);
+end;
+
+function TCurrentWatchValue.GetExpression: String;
+begin
+  if FUpdateCount > 0 then
+    Result := FCurrentExpression
+  else
+    Result := inherited GetExpression;
+end;
+
+function TCurrentWatchValue.GetValidity: TDebuggerDataState;
+begin
+  if FUpdateCount > 0 then
+    Result := ddsRequested  // prevent reading FValue
+  else
+    Result := inherited GetValidity;
+end;
+
 procedure TCurrentWatchValue.RequestData;
 begin
   TCurrentWatch(Watch).RequestData(self);
 end;
 
+procedure TCurrentWatchValue.CancelRequestData;
+begin
+  if FEvents[weeCancel] <> nil then
+    FEvents[weeCancel].CallNotifyEvents(Self);
+end;
+
 procedure TCurrentWatchValue.DoDataValidityChanged(AnOldValidity: TDebuggerDataState);
 begin
+  if FUpdateCount > 0 then
+    exit;
   if Validity = ddsRequested then exit;
-  TCurrentWatches(TCurrentWatch(Watch).Collection).Update(Watch);
+  if Watch <> nil then
+    TCurrentWatches(TCurrentWatch(Watch).Collection).Update(Watch);
   if FSnapShot <> nil
   then FSnapShot.Assign(self);
+end;
+
+destructor TCurrentWatchValue.Destroy;
+var
+  e: TMethodList;
+begin
+  for e in FEvents do
+    e.Free;
+  inherited Destroy;
 end;
 
 { TCurrentWatchValueList }
@@ -3141,7 +3233,6 @@ begin
     FSnapShot.Clear;
     for i := 0 to Count - 1 do begin
       R := TIdeWatchValue.Create(FSnapShot.Watch);
-      R.Assign(EntriesByIdx[i]);
       FSnapShot.Add(R);
       TCurrentWatchValue(EntriesByIdx[i]).SnapShot := R;
     end;
@@ -5441,7 +5532,6 @@ begin
   Result.SetParentWatch(Self);
   Result.Enabled       := Enabled;
   Result.DisplayFormat := DisplayFormat;
-  //snapshot
   EndChildUpdate;
 end;
 
@@ -5653,6 +5743,13 @@ begin
     Items[i].SaveDataToXMLConfig(AConfig, APath + IntToStr(i) + '/');
 end;
 
+{$IfOpt C+}
+function TIdeWatches.Add: TCollectionItem;
+begin
+  assert(False, 'TIdeWatches.Add: False');
+end;
+{$EndIf}
+
 function TIdeWatches.Find(const AExpression: String): TIdeWatch;
 begin
   Result := TIdeWatch(inherited Find(AExpression));
@@ -5719,7 +5816,6 @@ begin
     FSnapShot.Clear;
     for i := 0 to Count - 1 do begin
       R := FSnapShot.Add('');
-      R.Assign(Items[i]);
       Items[i].SnapShot := R;
     end;
   end;

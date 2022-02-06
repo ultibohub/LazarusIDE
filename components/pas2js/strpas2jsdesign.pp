@@ -12,6 +12,8 @@ Resourcestring
   pjsdWebAppDescription = 'A pas2js program running in the browser.';
   pjsdNodeJSApplication = 'Node.js Application';
   pjsdNodeJSAppDescription = 'A pas2js program running in node.js.';
+  pjsdModuleApplication = 'Pas2JS Library/Javascript module';
+  pjsdModuleAppDescription = 'A pas2js library that is transpiled to a javascript module.';
   pjsdNewAtomPackage = 'Atom package';
   pjsdNewAtomPackageDescr = 'A pas2js program running as Atom package.';
   pjsdNewVSCodeExtension = 'Visual Studio Code extension';
@@ -88,6 +90,11 @@ Resourcestring
   // New NodeJS project options form
   pjsdNodeJSProjectOptions = 'NodeJS project options';
   pjsdUseNodeJSApplicationObject = 'Use NodeJS Application object';
+
+  // New class definition from HTML File
+  rsCreateClassFromHTMLName = 'Pas2JS class definition from HTML file';
+  rsCreateClassFromHTMLDescription = 'Create a Pas2JS "form" class definition from HTML file using ID attributes in the HTML file.';
+
 
   // Macros names
   pjsdPas2JSExecutable = 'Pas2JS executable';
