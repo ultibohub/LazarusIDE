@@ -1458,14 +1458,14 @@ begin
     end;
   end;
 
-  ConfigFile:=EnvironmentOptions.GetParsedFppkgConfig;
-  // check fppkg configuration
-  if (not ShowSetupDialog)
-  and (CheckFppkgConfiguration(ConfigFile, Note)<>sddqCompatible)
-  then begin
-    debugln('Warning: (lazarus) fppkg not properly configured.');
-    ShowSetupDialog:=true;
-  end;
+  //ConfigFile:=EnvironmentOptions.GetParsedFppkgConfig; //Ultibo
+  //// check fppkg configuration //Ultibo
+  //if (not ShowSetupDialog) //Ultibo
+  //and (CheckFppkgConfiguration(ConfigFile, Note)<>sddqCompatible) //Ultibo
+  //then begin //Ultibo
+  //  debugln('Warning: (lazarus) fppkg not properly configured.'); //Ultibo
+  //  ShowSetupDialog:=true; //Ultibo
+  //end; //Ultibo
 
   // show setup dialog
   if ShowSetupDialog then begin

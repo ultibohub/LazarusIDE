@@ -539,8 +539,8 @@ begin
   TVNodeMakeExe:=PropertiesTreeView.Items.Add(nil,MakeExeTabSheet.Caption);
   TVNodeDebugger:=PropertiesTreeView.Items.Add(nil,DebuggerTabSheet.Caption);
   {$IF FPC_FULLVERSION>30100}
-  TVNodeFppkg:=PropertiesTreeView.Items.Add(nil,FppkgTabSheet.Caption);
-  FppkgTabSheet.TabVisible := True;
+  TVNodeFppkg:=nil; //PropertiesTreeView.Items.Add(nil,FppkgTabSheet.Caption); //Ultibo
+  FppkgTabSheet.TabVisible := False; //True; //Ultibo
   {$ELSE}
   FppkgTabSheet.TabVisible := False;
   {$ENDIF FPC_FULLVERSION>30100}
@@ -869,7 +869,7 @@ begin
   TVNodeMakeExe.Text:=MakeExeTabSheet.Caption;
   TVNodeDebugger.Text:=DebuggerTabSheet.Caption;
   {$IF FPC_FULLVERSION>30100}
-  TVNodeFppkg.Text:=FppkgTabSheet.Caption;
+  //TVNodeFppkg.Text:=FppkgTabSheet.Caption; //Ultibo
   {$ENDIF FPC_FULLVERSION>30100}
 
   LazDirBrowseButton.Caption:=lisPathEditBrowse;
@@ -1566,8 +1566,8 @@ begin
 
   {$IF FPC_FULLVERSION>30100}
   ImageIndex:=QualityToImgIndex(Quality);
-  TVNodeFppkg.ImageIndex:=ImageIndex;
-  TVNodeFppkg.SelectedIndex:=ImageIndex;
+  //TVNodeFppkg.ImageIndex:=ImageIndex; //Ultibo
+  //TVNodeFppkg.SelectedIndex:=ImageIndex; //Ultibo
   {$ENDIF FPC_FULLVERSION>30100}
 
   IdleConnected:=true;

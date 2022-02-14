@@ -338,6 +338,8 @@ begin
   {Darwin Options}
   DarwinDividerBevel.Enabled := False; //Ultibo
   UseAppBundleCheckBox.Enabled := False; //Ultibo
+  LblNSPrincipalClass.Enabled := False; //Ultibo
+  EdNSPrincipalClass.Enabled := False; //Ultibo
   CreateAppBundleButton .Enabled := False; //Ultibo 
 end;
 

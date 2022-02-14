@@ -866,14 +866,20 @@ procedure TBuildManager.RescanCompilerDefines(ResetBuildTarget,
     ConfigCache: TPCTargetConfigCache;
     AFilename: string;
   begin
-    Result:=false;
+	Result:=false;
     ConfigCache:=UnitSetCache.GetConfigCache(false);
     if ConfigCache=nil then exit;
-    if ConfigCache.Units=nil then exit;
-    AFilename:=ConfigCache.Units['system'];
-    if AFilename='' then exit;
-    if not FilenameExtIs(AFilename,'ppu',true) then exit;
-    Result:=true;
+	
+	if ConfigCache.TargetOS = 'ultibo' then //Ultibo
+	  Result:=true //Ultibo
+	else //Ultibo
+	begin //Ultibo
+      if ConfigCache.Units=nil then exit;
+      AFilename:=ConfigCache.Units['system'];
+      if AFilename='' then exit;
+      if not FilenameExtIs(AFilename,'ppu',true) then exit;
+      Result:=true;
+	end; //Ultibo
   end;
 
   function PPUFilesAndCompilerMatch: boolean;
