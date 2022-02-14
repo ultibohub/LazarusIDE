@@ -700,6 +700,8 @@ begin
 
   if Draw then
   begin
+    if not HasGlyph then 
+      S := 0;
     case CurLayout of
       blGlyphLeft : begin
         Offset.X:= M;
@@ -710,19 +712,19 @@ begin
       blGlyphRight : begin
         Offset.X:= ClientSize.cx - M - GlyphWidth;
         Offset.Y:= (ClientSize.cy - GlyphHeight) div 2;
-        OffsetCap.X:= Offset.X - S - TextSize.cx;
+        OffsetCap.X:= M; 
         OffsetCap.Y:= (ClientSize.cy - TextSize.cy) div 2;
       end;
       blGlyphTop : begin
         Offset.X:= (ClientSize.cx - GlyphWidth) div 2;
         Offset.Y:= M;
-        OffsetCap.X:= (ClientSize.cx - TextSize.cx) div 2;
+        OffsetCap.X:= 0; 
         OffsetCap.Y:= Offset.Y + GlyphHeight + S;
       end;
       blGlyphBottom : begin
         Offset.X:= (ClientSize.cx - GlyphWidth) div 2;
         Offset.Y:= ClientSize.cy - M - GlyphHeight;
-        OffsetCap.X:= (ClientSize.cx - TextSize.cx) div 2;
+        OffsetCap.X:= 0; 
         OffsetCap.Y:= Offset.Y - S - TextSize.cy;
       end;
     end;
@@ -731,13 +733,21 @@ begin
 
     if FShowCaption and (Caption <> '') then
     begin
-      with PaintRect, OffsetCap do
+      with PaintRect do
       begin
-        Left := Left + X;
-        Top := Top + Y;
+        Left := Left + OffsetCap.X;
+        Top := Top + OffsetCap.Y;
+        case CurLayout of
+          blGlyphLeft: Right := Left + TextSize.CX; 
+          blGlyphRight: 
+            begin
+              Right := ClientSize.cx - M - GlyphWidth - S;
+              Left := Right - TextSize.CX;
+            end;
+        end;
       end;
 
-      TextFlags := DT_LEFT or DT_TOP;
+      TextFlags := DT_TOP or DT_CENTER; 
       if UseRightToLeftReading then
         TextFlags := TextFlags or DT_RTLREADING;
 
@@ -1070,7 +1080,14 @@ var
   AImageRes: TScaledImageListResolution;
   AIndex: Integer;
   AEffect: TGraphicsDrawEffect;
-begin
+begin           
+  if (FGlyph.Glyph.Empty) and ((Images = nil) or (ImageIndex = -1)) and (FGlyph.LCLGlyphName <> '') then
+  begin
+    Result.CX := 0;
+    Result.CY := 0;
+    exit;
+  end;            
+  
   FGlyph.GetImageIndexAndEffect(Low(TButtonState), Font.PixelsPerInch,
     GetCanvasScaleFactor, AImageRes, AIndex, AEffect);
   Result.CX := AImageRes.Width;
