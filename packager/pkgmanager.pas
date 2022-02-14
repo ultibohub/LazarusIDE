@@ -2975,15 +2975,15 @@ end;
 procedure TPkgManager.ConnectMainBarEvents;
 begin
   with MainIDEBar do begin
-    itmPkgNewPackage.OnClick:=@MainIDEitmPkgNewPackageClick;
-    itmPkgOpenLoadedPackage.OnClick:=@MainIDEitmPkgOpenLoadedPackageClicked;
-    itmPkgOpenPackageFile.OnClick:=@MainIDEitmPkgOpenPackageFileClick;
-    itmPkgOpenPackageOfCurUnit.OnClick:=@MainIDEitmPkgOpenPackageOfCurUnitClicked;
-    itmPkgAddCurFileToPkg.OnClick:=@MainIDEitmPkgAddCurFileToPkgClick;
-    itmPkgAddNewComponentToPkg.OnClick:=@MainIDEitmPkgNewComponentClick;
-    itmPkgPkgGraph.OnClick:=@MainIDEitmPkgPkgGraphClick;
-    itmPkgPackageLinks.OnClick:=@MainIDEitmPackageLinksClicked;
-    itmPkgEditInstallPkgs.OnClick:=@MainIDEitmPkgEditInstallPkgsClick;
+    //itmPkgNewPackage.OnClick:=@MainIDEitmPkgNewPackageClick; //Ultibo
+    //itmPkgOpenLoadedPackage.OnClick:=@MainIDEitmPkgOpenLoadedPackageClicked; //Ultibo
+    //itmPkgOpenPackageFile.OnClick:=@MainIDEitmPkgOpenPackageFileClick; //Ultibo
+    //itmPkgOpenPackageOfCurUnit.OnClick:=@MainIDEitmPkgOpenPackageOfCurUnitClicked; //Ultibo
+    //itmPkgAddCurFileToPkg.OnClick:=@MainIDEitmPkgAddCurFileToPkgClick; //Ultibo
+    //itmPkgAddNewComponentToPkg.OnClick:=@MainIDEitmPkgNewComponentClick; //Ultibo
+    //itmPkgPkgGraph.OnClick:=@MainIDEitmPkgPkgGraphClick; //Ultibo
+    //itmPkgPackageLinks.OnClick:=@MainIDEitmPackageLinksClicked; //Ultibo
+    //itmPkgEditInstallPkgs.OnClick:=@MainIDEitmPkgEditInstallPkgsClick; //Ultibo
   end;
   
   SetRecentPackagesMenu;
@@ -6652,8 +6652,8 @@ end;
 
 procedure TLazPackageDescriptors.AddDefaultPackageDescriptors;
 begin
-  NewIDEItems.Add(TNewLazIDEItemCategoryPackage.Create(PkgDescGroupName));
-  RegisterPackageDescriptor(TPackageDescriptorStd.Create);
+  //NewIDEItems.Add(TNewLazIDEItemCategoryPackage.Create(PkgDescGroupName)); //Ultibo
+  //RegisterPackageDescriptor(TPackageDescriptorStd.Create); //Ultibo
 end;
 
 { TPackageDescriptorStd }

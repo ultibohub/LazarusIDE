@@ -357,6 +357,9 @@ const
   // window menu
   ecManageSourceEditors     = ecFirstLazarus + 840;
 
+  ecBuildUltiboRTL          = ecFirstLazarus + 850; //Ultibo
+  ecRunInQEMU               = ecFirstLazarus + 851; //Ultibo
+
   // help menu
   ecAboutLazarus            = ecFirstLazarus + 900;
   ecOnlineHelp              = ecFirstLazarus + 901;
@@ -366,6 +369,10 @@ const
   ecFocusHint               = ecFirstLazarus + 906;
   ecSmartHint               = ecFirstLazarus + 907;
 
+  ecUltiboHelp              = ecFirstLazarus + 950; //Ultibo
+  ecUltiboForum             = ecFirstLazarus + 951; //Ultibo
+  ecUltiboWiki              = ecFirstLazarus + 952; //Ultibo
+  
   // designer
   ecDesignerCopy            = ecFirstLazarus + 1000;
   ecDesignerCut             = ecFirstLazarus + 1001;
@@ -1944,7 +1951,7 @@ begin
 end;
 
 const
-  IDEEditorCommandStrs: array[0..323] of TIdentMapEntry = (
+  IDEEditorCommandStrs: array[0..328] of TIdentMapEntry = ( //Ultibo
   // search
     (Value: ecFind;                                   Name: 'ecFind'),
     (Value: ecFindAgain;                              Name: 'ecFindAgain'),
@@ -2225,6 +2232,8 @@ const
     (Value: ecEnvironmentOptions;                     Name: 'ecEnvironmentOptions'),
     (Value: ecManageDesktops;                         Name: 'ecManageDesktops'),
     (Value: ecRescanFPCSrcDir;                        Name: 'ecRescanFPCSrcDir'),
+    (Value: ecBuildUltiboRTL;                         Name: 'ecBuildUltiboRTL'), //Ultibo
+    (Value: ecRunInQEMU;                              Name: 'ecRunInQEMU'), //Ultibo
     (Value: ecEditCodeTemplates;                      Name: 'ecEditCodeTemplates'),
     (Value: ecCodeToolsDefinesEd;                     Name: 'ecCodeToolsDefinesEd'),
 
@@ -2246,6 +2255,10 @@ const
     (Value: ecFocusHint;                              Name: 'ecFocusHint'),
     (Value: ecSmartHint;                              Name: 'ecSmartHint'),
 
+    (Value: ecUltiboHelp;                             Name: 'ecUltiboHelp'), //Ultibo
+    (Value: ecUltiboForum;                            Name: 'ecUltiboForum'), //Ultibo
+    (Value: ecUltiboWiki;                             Name: 'ecUltiboWiki'), //Ultibo
+	
   // designer
     (Value: ecDesignerCopy;                           Name: 'ecDesignerCopy'),
     (Value: ecDesignerCut;                            Name: 'ecDesignerCut'),

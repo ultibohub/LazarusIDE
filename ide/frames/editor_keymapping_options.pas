@@ -84,6 +84,7 @@ type
     fModified: Boolean;
     function GeneralPage: TEditorGeneralOptionsFrame; inline;
     procedure FillKeyMappingTreeView;
+	function FillKeyMappingTreeViewExclusion(const AName:String):Boolean; //Ultibo
     procedure EditCommandMapping(ANode: TTreeNode);
     procedure EditConflict(ANode: TTreeNode);
     procedure EditCommandRelation(ARelation: TKeyCommandRelation);
@@ -475,18 +476,24 @@ begin
       for j := 0 to CurCategory.Count - 1 do
       begin
         CurKeyRelation := TKeyCommandRelation(CurCategory[j]);
-        ItemCaption:=KeyMappingRelationToCaption(CurKeyRelation);
-        if NewCategoryNode.Count > ChildNodeIndex then
-        begin
-          NewKeyNode := NewCategoryNode.Items[ChildNodeIndex];
-          NewKeyNode.Text := ItemCaption;
-          NewKeyNode.Data := CurKeyRelation;
-        end
-        else
-          NewKeyNode := Items.AddChildObject(NewCategoryNode,ItemCaption, CurKeyRelation);
-        NewKeyNode.ImageIndex := GetIDECommandImageIndex(CurKeyRelation);
-        NewKeyNode.SelectedIndex := NewKeyNode.ImageIndex;
-        inc(ChildNodeIndex);
+        
+        {Check Exclusion}
+        if not FillKeyMappingTreeViewExclusion(CurKeyRelation.LocalizedName) then //Ultibo
+         begin
+          ItemCaption:=KeyMappingRelationToCaption(CurKeyRelation);
+          if NewCategoryNode.Count > ChildNodeIndex then
+          begin
+            NewKeyNode := NewCategoryNode.Items[ChildNodeIndex];
+            NewKeyNode.Text := ItemCaption;
+            NewKeyNode.Data := CurKeyRelation;
+          end
+          else
+            NewKeyNode := Items.AddChildObject(NewCategoryNode,ItemCaption, CurKeyRelation);
+          NewKeyNode.ImageIndex := GetIDECommandImageIndex(CurKeyRelation);
+          NewKeyNode.SelectedIndex := NewKeyNode.ImageIndex;
+          inc(ChildNodeIndex);
+         end; //Ultibo
+		
       end;
       // delete unneeded ones
       while NewCategoryNode.Count > ChildNodeIndex do
@@ -499,6 +506,40 @@ begin
     EndUpdate;
   end;
 end;
+
+function TEditorKeymappingOptionsFrame.FillKeyMappingTreeViewExclusion(const AName:String):Boolean; //Ultibo
+begin
+ {}
+ Result:=True;
+ 
+ {Check Name (File)}
+ if Uppercase(AName) = Uppercase(lisMenuNewForm) then Exit;
+ 
+ {Check Name (View)}
+ if Uppercase(AName) = Uppercase(lisKMToggleViewObjectInspector) then Exit;
+ if Uppercase(AName) = Uppercase(lisKMToggleBetweenUnitAndForm) then Exit;
+ 
+ {Check Name (Project)}
+ if Uppercase(AName) = Uppercase(lisHintViewForms) then Exit;
+ 
+ {Check Name (Package)}
+ if Uppercase(AName) = Uppercase(lisKMNewPackage) then Exit;
+ if Uppercase(AName) = Uppercase(lisCompPalOpenPackage) then Exit;
+ if Uppercase(AName) = Uppercase(lisKMOpenPackageFile) then Exit;
+ if Uppercase(AName) = Uppercase(lisMenuOpenPackageOfCurUnit) then Exit;
+ if Uppercase(AName) = Uppercase(lisMenuAddCurFileToPkg) then Exit;
+ if Uppercase(AName) = Uppercase(lisMenuPkgNewPackageComponent) then Exit;
+ if Uppercase(AName) = Uppercase(lisMenuPackageGraph) then Exit;
+ if Uppercase(AName) = Uppercase(lisMenuPackageLinks) then Exit;
+ if Uppercase(AName) = Uppercase(lisInstallUninstallPackages) then Exit;
+ if Uppercase(AName) = Uppercase(lisKMConfigureCustomComponents) then Exit;
+ 
+ {Check Name (Tools)}
+ if Uppercase(AName) = Uppercase(lisKMConvertDFMFileToLFM) then Exit;
+ if Uppercase(AName) = Uppercase(lisKMConvertDelphiPackageToLazarusPackage) then Exit;
+ 
+ Result:=False;
+end; //Ultibo
 
 procedure TEditorKeymappingOptionsFrame.FilterEditAfterFilter(Sender: TObject);
 begin

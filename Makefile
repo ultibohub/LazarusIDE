@@ -3725,6 +3725,9 @@ basecomponents:
 	$(MAKE) -C components/synedit
 	$(MAKE) -C components/lazdebuggergdbmi
 	$(MAKE) -C components/lazcontrols/design
+	$(MAKE) -C components/anchordocking
+	$(MAKE) -C components/anchordocking/design
+	$(MAKE) -C components/jcf2/IdePlugin/lazarus
 bigidecomponents:
 	$(MAKE) -C components bigide
 tools:

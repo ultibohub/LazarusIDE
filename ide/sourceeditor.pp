@@ -1768,10 +1768,12 @@ begin
   {%region *** Debug Section ***}
     // Commands will be assigned by DebugManager
     SrcEditMenuSectionDebug:=RegisterIDEMenuSection(SourceEditorMenuRoot, 'Debug section');
+	SrcEditMenuSectionDebug.Enabled:=False; //Ultibo
     // register the Debug submenu
     SrcEditSubMenuDebug:=RegisterIDESubMenu(SrcEditMenuSectionDebug,
                                             'Debug', uemDebugWord, nil, nil, 'debugger');
-    AParent:=SrcEditSubMenuDebug;
+    SrcEditSubMenuDebug.Enabled:=False; //Ultibo
+	AParent:=SrcEditSubMenuDebug;
 
       // register the Debug submenu items
       SrcEditMenuToggleBreakpoint:=RegisterIDEMenuCommand(AParent,
@@ -10243,7 +10245,7 @@ begin
   Inc(aBounds.Top, MulDiv(30, Screen.PixelsPerInch, 96)*i);
   aBounds.Right:=ScreenR.Right-MulDiv(30, Screen.PixelsPerInch, 96);
   aBounds.Bottom:=ScreenR.Bottom-MulDiv(200, Screen.PixelsPerInch, 96);
-  if (i=0) and (IDEDockMaster<>nil) then begin
+  if (i=0) and (IDEDockMaster<>nil) and not(IDEDockDisabled) then begin //Ultibo
     DockSibling:=NonModalIDEWindowNames[nmiwMainIDE];
     DockAlign:=alBottom;
   end;

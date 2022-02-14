@@ -1820,6 +1820,9 @@ basecomponents:
 	$(MAKE) -C debuggerintf
 	$(MAKE) -C lazdebuggergdbmi
 	$(MAKE) -C lazcontrols/design
+	$(MAKE) -C anchordocking
+	$(MAKE) -C anchordocking/design
+	$(MAKE) -C jcf2/IdePlugin/lazarus
 bigide:
 	$(MAKE) -C synedit/design
 	$(MAKE) -C rtticontrols
@@ -1840,7 +1843,6 @@ bigide:
 	$(MAKE) -C todolist
 	$(MAKE) -C datetimectrls
 	$(MAKE) -C datetimectrls/design
-	$(MAKE) -C jcf2/IdePlugin/lazarus
 	$(MAKE) -C mouseandkeyinput
 	$(MAKE) -C chmhelp/packages/help
 	$(MAKE) -C chmhelp/packages/idehelp
@@ -1885,6 +1887,8 @@ clean:
 	$(MAKE) -C todolist clean
 	$(MAKE) -C datetimectrls clean
 	$(MAKE) -C datetimectrls/design clean
+	$(MAKE) -C anchordocking clean
+	$(MAKE) -C anchordocking/design clean
 	$(MAKE) -C jcf2/IdePlugin/lazarus clean
 	$(MAKE) -C mouseandkeyinput clean
 	$(MAKE) -C chmhelp/packages/help clean
@@ -1930,6 +1934,8 @@ distclean:
 	$(MAKE) -C todolist distclean
 	$(MAKE) -C datetimectrls distclean
 	$(MAKE) -C datetimectrls/design distclean
+	$(MAKE) -C anchordocking distclean
+	$(MAKE) -C anchordocking/design distclean
 	$(MAKE) -C jcf2/IdePlugin/lazarus distclean
 	$(MAKE) -C mouseandkeyinput distclean
 	$(MAKE) -C chmhelp/packages/help distclean

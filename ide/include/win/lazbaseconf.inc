@@ -24,13 +24,14 @@
 }
 
 const
+  //To Do //Ultibo
   DefaultFPCSrcDirs: array[1..2] of string = (
     '$(LazarusDir)\fpcsrc',  // this value is set in internalinit
     'c:\pp\source'
     );
 
   DefaultLazarusSrcDirs: array[1..1] of string = (
-    'c:\lazarus'
+    'c:\ultibo\core' //'c:\lazarus' //Ultibo
     );
 
 var
@@ -63,12 +64,12 @@ end;
 
 function FindDefaultCompilerPath: string;
 begin
-  Result := SearchFileInPath(GetDefaultCompilerFilename,
-             format('%sfpc\%s\bin\%s',
-               [AppendPathDelim(ProgramDirectory), DefaultFPCVersion, DefaultFPCTarget]),
-             GetEnvironmentVariableUTF8('PATH'),';',
-             []);
-  if Result <> '' then exit;
+  //Result := SearchFileInPath(GetDefaultCompilerFilename,
+  //           format('%sfpc\%s\bin\%s',
+  //             [AppendPathDelim(ProgramDirectory), DefaultFPCVersion, DefaultFPCTarget]),
+  //           GetEnvironmentVariableUTF8('PATH'),';',
+  //           []);
+  //if Result <> '' then exit; //Ultibo
   Result := DefaultDrive + AppendPathDelim(ProgramDirectory) +
     format('fpc\%s\bin\%s\%s',
     [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename]);
@@ -78,12 +79,12 @@ end;
 
 function FindDefaultMakePath: string;
 begin
-  Result := SearchFileInPath('make.exe',
-             format('%sfpc\%s\bin\%s',
-               [AppendPathDelim(ProgramDirectory), DefaultFPCVersion, DefaultFPCTarget]),
-             GetEnvironmentVariableUTF8('PATH'),';',
-                            []);
-  if Result <> '' then exit;
+  //Result := SearchFileInPath('make.exe',
+  //           format('%sfpc\%s\bin\%s',
+  //             [AppendPathDelim(ProgramDirectory), DefaultFPCVersion, DefaultFPCTarget]),
+  //           GetEnvironmentVariableUTF8('PATH'),';',
+  //                          []);
+  //if Result <> '' then exit; //Ultibo
   Result := FindExecutableInList(@GetDefaultMakeFilenames)
 end;
 
@@ -108,16 +109,16 @@ end;
 
 procedure GetDefaultCompilerFilenames(List: TStrings);
 begin
-  List.Add(DefaultDrive + format('\fpc\%s\bin\%s\%s',
-    [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename]));
+//  List.Add(DefaultDrive + format('\fpc\%s\bin\%s\%s',
+//    [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename])); //Ultibo
   List.Add(AppendPathDelim(ProgramDirectory) + format('fpc\%s\bin\%s\%s',
     [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename]));
 end;
 
 procedure GetDefaultMakeFilenames(List: TStrings);
 begin
-  List.Add(DefaultDrive + format('\fpc\%s\bin\%s\make.exe',
-    [DefaultFPCVersion, DefaultFPCTarget]));
+//  List.Add(DefaultDrive + format('\fpc\%s\bin\%s\make.exe',
+//    [DefaultFPCVersion, DefaultFPCTarget])); //Ultibo
   List.Add(AppendPathDelim(ProgramDirectory) +
     format('fpc\%s\bin\%s\make.exe',[DefaultFPCVersion, DefaultFPCTarget]));
 end;
@@ -148,9 +149,9 @@ begin
   // the last part of the path returned by GetAppConfigDir is the application
   // name. Replace that by 'lazarus', to make sure that lazbuild uses
   // the same primary config path
-  PrimaryConfigPath:= ExtractFilePath(ChompPathDelim(GetAppConfigDirUTF8(False))) + 'lazarus';
+  PrimaryConfigPath:= ExtractFilePath(ChompPathDelim(GetAppConfigDirUTF8(False))) + 'Ultibo\Core'; //'lazarus' //Ultibo
   SecondaryConfigPath:=ChompPathDelim(ProgramDirectory);
   DefaultFPCSrcDirs[1] := AppendPathDelim(ProgramDirectory) + 'fpcsrc';
-  DefaultLazarusSrcDirs[1] := DefaultDrive + '\lazarus';
+  DefaultLazarusSrcDirs[1] := DefaultDrive + '\ultibo\core'; //'\lazarus' //Ultibo
 end;
 

@@ -65,13 +65,19 @@ uses
   // use the custom IDE static packages AFTER 'main'
   {$IFDEF AddStaticPkgs}
   {$I staticpackages.inc}
+  {$ELSE}
+  freetypelaz, //Ultibo
+  anchordockpkg, //Ultibo
+  anchordockingdsgn, //Ultibo
+  jcfidelazarus, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
     AllSynEditDsgn, DateTimeCtrlsDsgn,
     RunTimeTypeInfoControls, Printer4Lazarus, Printers4LazIDE,
     LeakView, MemDSLaz, SDFLaz, InstantFPCLaz, ExternHelp,
     TurboPowerIPro, TurboPowerIProDsgn,
-    jcfidelazarus, chmhelppkg,
+    //jcfidelazarus, //Ultibo
+	chmhelppkg,
     FPCUnitTestRunner, FPCUnitIDE, ProjTemplates, TAChartLazarusPkg,
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
     EditorMacroScript,

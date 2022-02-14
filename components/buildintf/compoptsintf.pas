@@ -246,6 +246,7 @@ type
     fTargetOS: String;
     fTargetCPU: string;
     fTargetProc: string;
+	fTargetController: string; //Ultibo
     fOptLevel: Integer;
     fVarsInReg: Boolean;
     fUncertainOpt: Boolean;
@@ -322,6 +323,7 @@ type
     procedure SetTargetFilename(const AValue: String); virtual; abstract;
     procedure SetTargetOS(const AValue: string); virtual; abstract;
     procedure SetTargetProc(const AValue: string); virtual; abstract;
+	procedure SetTargetController(const AValue: string); virtual; abstract; //Ultibo
     procedure SetUnitOutputDir(const AValue: string); virtual; abstract;
     procedure SetUnitPaths(const AValue: String); virtual; abstract;
   public
@@ -413,6 +415,7 @@ type
     property TargetOS: string read fTargetOS write SetTargetOS;
     property TargetCPU: string read fTargetCPU write SetTargetCPU; // general type
     property TargetProcessor: String read fTargetProc write SetTargetProc; // specific
+	property TargetController: String read fTargetController write SetTargetController; //Ultibo
     property OptimizationLevel: Integer read fOptLevel write SetOptLevel;
     property VariablesInRegisters: Boolean read fVarsInReg write SetVarsInReg;
     property UncertainOptimizations: Boolean read fUncertainOpt write SetUncertainOpt;

@@ -341,7 +341,8 @@ var
 
     // help menu
     mnuHelp: TIDEMenuSection;
-      itmOnlineHelps: TIDEMenuSection;
+      itmUltiboHelps: TIDEMenuSection; //Ultibo
+	  itmOnlineHelps: TIDEMenuSection;
       itmInfoHelps: TIDEMenuSection;
       itmHelpTools: TIDEMenuSection;
 

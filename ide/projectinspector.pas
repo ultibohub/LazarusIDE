@@ -1267,7 +1267,9 @@ begin
   mnuAddDiskFile.Caption:=lisPckEditAddFilesFromFileSystem;
   mnuAddEditorFiles.Caption:=lisProjAddEditorFile;
   mnuAddReq.Caption:=lisProjAddNewRequirement;
+  mnuAddReq.Visible:=False;  //Ultibo
   mnuAddFPMakeReq.Caption:=lisProjAddNewFPMakeRequirement;
+  mnuAddFPMakeReq.Visible:=False;  //Ultibo
 
   IDEImages.AssignImage(OpenButton, 'laz_open');
   OpenButton.Caption:='';
@@ -1287,6 +1289,7 @@ begin
     FDependenciesNode:=Items.Add(nil, lisPckEditRequiredPackages);
     FDependenciesNode.ImageIndex:=FPropGui.ImageIndexRequired;
     FDependenciesNode.SelectedIndex:=FDependenciesNode.ImageIndex;
+	FDependenciesNode.Visible:=False; //Ultibo
   end;
 end;
 

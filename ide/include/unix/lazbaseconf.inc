@@ -24,6 +24,7 @@
 }
 
 const
+  //To Do //Ultibo
   DefaultFPCSrcDirs: array[1..15] of string = (
     // search first for sources with right version
     '/usr/share/fpcsrc/$(FPCVer)',
@@ -47,14 +48,14 @@ const
     );
 
   DefaultLazarusSrcDirs: array[1..8] of string = (
-    '/usr/share/lazarus',
-    '/usr/local/share/lazarus',
-    '/usr/local/lib/lazarus',
-    '/usr/local/lazarus',
-    '/usr/lib/lazarus',
-    '/usr/lib/lazarus/'+LazarusVersionStr,
-    '~/pascal/lazarus',
-    '~/lazarus'
+    '/usr/share/ultibo/core', //'/usr/share/lazarus', //Ultibo
+    '/usr/local/share/ultibo/core', //'/usr/local/share/lazarus', //Ultibo
+    '/usr/local/lib/ultibo/core', //'/usr/local/lib/lazarus', //Ultibo
+    '/usr/local/ultibo/core', //'/usr/local/lazarus', //Ultibo
+    '/usr/lib/ultibo/core', //'/usr/lib/lazarus', //Ultibo
+    '/usr/lib/ultibo/core/'+LazarusVersionStr, //'/usr/lib/lazarus/'+LazarusVersionStr, //Ultibo
+    '~/pascal/ultibo/core', //'~/pascal/lazarus', //Ultibo
+    '~/ultibo/core' //'~/lazarus' //Ultibo
     );
 
 var
@@ -98,6 +99,7 @@ end;
 
 procedure GetDefaultCompilerFilenames(List: TStrings);
 begin
+  //To Do //Ultibo
   AddFilenameToList(List,'/usr/local/bin/'+GetDefaultCompilerFilename);
   AddFilenameToList(List,'/usr/bin/'+GetDefaultCompilerFilename);
   AddFilenameToList(List,'/opt/fpc/'+GetDefaultCompilerFilename);
@@ -147,8 +149,8 @@ begin
   // The RTL defines AllowDirectorySeparators ['/','\'] for historical reasons.
   AllowDirectorySeparators:=['/'];
 
-  PrimaryConfigPath:=ExpandFileNameUTF8('~/.lazarus');
-  SecondaryConfigPath:='/etc/lazarus';
+  PrimaryConfigPath:=ExpandFileNameUTF8('~/.ultibo/core'); //'~/.lazarus' //Ultibo
+  SecondaryConfigPath:='/etc/ultibo/core'; //'/etc/lazarus'; //Ultibo
 end;
 
 

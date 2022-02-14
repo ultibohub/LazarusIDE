@@ -824,7 +824,7 @@ type
     property PageAreaInPercent: integer read FPageAreaInPercent write SetPageAreaInPercent default 40; // size of inner mouse snapping area for page docking
     property ShowHeader: boolean read FShowHeader write SetShowHeader default true; // set to false to hide all headers
     property ShowMenuItemShowHeader: boolean read FShowMenuItemShowHeader write SetShowMenuItemShowHeader default false;
-    property ShowHeaderCaption: boolean read FShowHeaderCaption write SetShowHeaderCaption default true; // set to false to remove the text in the headers
+    property ShowHeaderCaption: boolean read FShowHeaderCaption write SetShowHeaderCaption default false; //true; // set to false to remove the text in the headers //Ultibo
     property HideHeaderCaptionFloatingControl: boolean read FHideHeaderCaptionFloatingControl
                           write SetHideHeaderCaptionFloatingControl default true; // disables ShowHeaderCaption for floating controls
     property HeaderAlignTop: integer read FHeaderAlignTop write SetHeaderAlignTop default 80; // move header to top, when (width/height)*100<=HeaderAlignTop
@@ -1519,13 +1519,13 @@ begin
   HeaderFilled                     := Config.GetValue('HeaderFilled',true);
   HeaderFlatten                    := Config.GetValue('HeaderFlatten',true);
   HeaderHighlightFocused           := Config.GetValue('HeaderHighlightFocused',False);
-  HeaderStyle                      := Config.GetValue('HeaderStyle','Frame3D');
+  HeaderStyle                      := Config.GetValue('HeaderStyle','Points'); //Frame3D //Ultibo
   HideHeaderCaptionFloatingControl := Config.GetValue('HideHeaderCaptionFloatingControl',true);
   MultiLinePages                   := Config.GetValue('MultiLinePages',false);
   PageAreaInPercent                := Config.GetValue('PageAreaInPercent',40);
   ScaleOnResize                    := Config.GetValue('ScaleOnResize',true);
   ShowHeader                       := Config.GetValue('ShowHeader',true);
-  ShowHeaderCaption                := Config.GetValue('ShowHeaderCaption',true);
+  ShowHeaderCaption                := Config.GetValue('ShowHeaderCaption',false); //true //Ultibo
   SplitterWidth                    := Config.GetValue('SplitterWidth',4);
   Config.UndoAppendBasePath;
 end;
@@ -1543,13 +1543,13 @@ begin
   Config.SetDeleteValue(Path+'HeaderFilled',HeaderFilled,true);
   Config.SetDeleteValue(Path+'HeaderFlatten',HeaderFlatten,true);
   Config.SetDeleteValue(Path+'HeaderHighlightFocused',HeaderHighlightFocused,False);
-  Config.SetDeleteValue(Path+'HeaderStyle',HeaderStyle,'Frame3D');
+  Config.SetDeleteValue(Path+'HeaderStyle',HeaderStyle,'Points'); //Frame3D //Ultibo
   Config.SetDeleteValue(Path+'HideHeaderCaptionFloatingControl',HideHeaderCaptionFloatingControl,true);
   Config.SetDeleteValue(Path+'MultiLinePages',MultiLinePages,false);
   Config.SetDeleteValue(Path+'PageAreaInPercent',PageAreaInPercent,40);
   Config.SetDeleteValue(Path+'ScaleOnResize',ScaleOnResize,true);
   Config.SetDeleteValue(Path+'ShowHeader',ShowHeader,true);
-  Config.SetDeleteValue(Path+'ShowHeaderCaption',ShowHeaderCaption,true);
+  Config.SetDeleteValue(Path+'ShowHeaderCaption',ShowHeaderCaption,false); //true //Ultibo
   Config.SetDeleteValue(Path+'SplitterWidth',SplitterWidth,4);
 end;
 
@@ -1567,13 +1567,13 @@ begin
   Config.SetDeleteValue('HeaderFilled',HeaderFilled,true);
   Config.SetDeleteValue('HeaderFlatten',HeaderFlatten,true);
   Config.SetDeleteValue('HeaderHighlightFocused',HeaderHighlightFocused,False);
-  Config.SetDeleteValue('HeaderStyle',HeaderStyle,'Frame3D');
+  Config.SetDeleteValue('HeaderStyle',HeaderStyle,'Points'); //Frame3D //Ultibo
   Config.SetDeleteValue('HideHeaderCaptionFloatingControl',HideHeaderCaptionFloatingControl,true);
   Config.SetDeleteValue('MultiLinePages',MultiLinePages,false);
   Config.SetDeleteValue('PageAreaInPercent',PageAreaInPercent,40);
   Config.SetDeleteValue('ScaleOnResize',ScaleOnResize,true);
   Config.SetDeleteValue('ShowHeader',ShowHeader,true);
-  Config.SetDeleteValue('ShowHeaderCaption',ShowHeaderCaption,true);
+  Config.SetDeleteValue('ShowHeaderCaption',ShowHeaderCaption,false); //true //Ultibo
   Config.SetDeleteValue('SplitterWidth',SplitterWidth,4);
   Config.UndoAppendBasePath;
 end;
@@ -1617,13 +1617,13 @@ begin
   HeaderFilled                     := Config.GetValue(Path+'HeaderFilled',true);
   HeaderFlatten                    := Config.GetValue(Path+'HeaderFlatten',true);
   HeaderHighlightFocused           := Config.GetValue(Path+'HeaderHighlightFocused',false);
-  HeaderStyle                      := Config.GetValue(Path+'HeaderStyle','Frame3D');
+  HeaderStyle                      := Config.GetValue(Path+'HeaderStyle','Points'); //Frame3D //Ultibo
   HideHeaderCaptionFloatingControl := Config.GetValue(Path+'HideHeaderCaptionFloatingControl',true);
   MultiLinePages                   := Config.GetValue(Path+'MultiLinePages',false);
   PageAreaInPercent                := Config.GetValue(Path+'PageAreaInPercent',40);
   ScaleOnResize                    := Config.GetValue(Path+'ScaleOnResize',true);
   ShowHeader                       := Config.GetValue(Path+'ShowHeader',true);
-  ShowHeaderCaption                := Config.GetValue(Path+'ShowHeaderCaption',true);
+  ShowHeaderCaption                := Config.GetValue(Path+'ShowHeaderCaption',false); //true //Ultibo
   SplitterWidth                    := Config.GetValue(Path+'SplitterWidth',4);
 end;
 
@@ -3119,7 +3119,7 @@ begin
   FHeaderHint:='';
   FMultiLinePages:=false;
   FShowHeader:=true;
-  FShowHeaderCaption:=true;
+  FShowHeaderCaption:=false; //true; //Ultibo
   FHideHeaderCaptionFloatingControl:=true;
   FSplitterWidth:=4;
   FScaleOnResize:=true;
@@ -6819,7 +6819,7 @@ end;
 constructor TAnchorDockHeader.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
-  FHeaderPosition:=adlhpAuto;
+  FHeaderPosition:=adlhpTop; //adlhpAuto; //Ultibo
   BevelOuter:=bvNone;
   BorderWidth:=0;
   FCloseButton:=TAnchorDockCloseButton.Create(Self);

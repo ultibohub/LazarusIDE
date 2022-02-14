@@ -60,6 +60,7 @@ const
   DebugLogOptEnable='--debug-enable=';
   LanguageOpt='--language=';
   LazarusDirOpt ='--lazarusdir=';
+  DisableDockingOpt = '--disabledocking'; //Ultibo
 const
   // startlazarus options
   StartLazarusPidOpt   = '--lazarus-pid=';

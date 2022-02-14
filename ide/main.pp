@@ -373,6 +373,8 @@ type
     procedure mnuEnvCodeTemplatesClicked(Sender: TObject);
     procedure mnuEnvCodeToolsDefinesEditorClicked(Sender: TObject);
     procedure mnuEnvRescanFPCSrcDirClicked(Sender: TObject);
+    procedure mnuToolBuildUltiboRTLClicked(Sender: TObject); //Ultibo
+    procedure mnuToolRunInQEMUClicked(Sender: TObject); //Ultibo
 
     // windows menu
     procedure mnuWindowManagerClicked(Sender: TObject);
@@ -976,6 +978,7 @@ var
   SkipAutoLoadingLastProject: boolean = false;
   StartedByStartLazarus: boolean = false;
   ShowSetupDialog: boolean = false;
+  DisableDocking: boolean = false; //Ultibo
 
 type
   TDoDropFilesAsyncParams = class(TComponent)
@@ -1153,7 +1156,12 @@ begin
   end;
 
   ParseGuiCmdLineParams(SkipAutoLoadingLastProject, StartedByStartLazarus,
-    EnableRemoteControl, ShowSplashScreen, ShowSetupDialog);
+    EnableRemoteControl, ShowSplashScreen, ShowSetupDialog, DisableDocking); //Ultibo
+
+  if DisableDocking then //Ultibo
+  begin
+    IDEDockDisabled := True; //Ultibo
+  end;
 
   if ConsoleVerbosity>=0 then
   begin
@@ -1501,6 +1509,8 @@ begin
   inherited Create(TheOwner);
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.Create INHERITED');{$ENDIF}
 
+  IDEProjectInspectorCaption := NonModalIDEWindowNames[nmiwProjectInspector]; //Ultibo
+
   FWaitForClose := False;
 
   SetupDialogs;
@@ -1546,7 +1556,7 @@ begin
   Layout:=IDEWindowCreators.SimpleLayoutStorage.ItemByFormID(MainIDEBar.Name);
   if not (Layout.WindowState in [iwsNormal,iwsMaximized]) then
     Layout.WindowState:=iwsNormal;
-  if IDEDockMaster<>nil then
+  if (IDEDockMaster<>nil) and not(IDEDockDisabled) then //Ultibo
     IDEDockMaster.MakeIDEWindowDockSite(MainIDEBar);
 
   HiddenWindowsOnRun:=TFPList.Create;
@@ -2068,7 +2078,7 @@ begin
   IDECommandList.StopUpdateEvents;
   DoCallNotifyHandler(lihtIDEClose);
   SaveEnvironment(true);
-  if IDEDockMaster<>nil then
+  if (IDEDockMaster<>nil) and not(IDEDockDisabled) then //Ultibo
     IDEDockMaster.CloseAll
   else
     CloseAllForms;
@@ -2371,7 +2381,7 @@ begin
       // create new project
       PrjDesc := ProjectDescriptors.FindByName(EnvironmentOptions.NewProjectTemplateAtStart);
       if PrjDesc = nil then
-        PrjDesc := ProjectDescriptorApplication;  // Fallback to Application
+        PrjDesc := ProjectDescriptorSimpleProgram; //ProjectDescriptorApplication;  // Fallback to Application //Ultibo
       DoNewProject(PrjDesc);
     end;
   end;
@@ -2411,7 +2421,7 @@ begin
     nil,@CreateIDEWindow,'250','75%','+70%','+100',
     NonModalIDEWindowNames[nmiwSourceNoteBook],alBottom,false,@GetLayoutHandler);
   IDEWindowCreators.Add(NonModalIDEWindowNames[nmiwCodeExplorer],
-    nil,@CreateIDEWindow,'72%','120','+170','-200',
+	nil,@CreateIDEWindow,'72%','120','+250','-200', //'72%','120','+170','-200' //Ultibo
      NonModalIDEWindowNames[nmiwSourceNoteBook],alRight);
   IDEWindowCreators.Add(NonModalIDEWindowNames[nmiwUnitDependencies],
     nil,@CreateIDEWindow,'200','200','','');
@@ -2420,7 +2430,7 @@ begin
   //IDEWindowCreators.Add(NonModalIDEWindowNames[nmiwClipbrdHistory],
   //  nil,@CreateIDEWindow,'250','200','','');
   IDEWindowCreators.Add(NonModalIDEWindowNames[nmiwProjectInspector],
-    nil,@CreateIDEWindow,'200','150','+300','+400');
+	nil,@CreateIDEWindow,'10','150','+300','+600');   //'200','150','+300','+400' //Ultibo
   IDEWindowCreators.Add(NonModalIDEWindowNames[nmiwSearchResultsView],
     nil,@CreateIDEWindow,'250','250','+70%','+300');
   IDEWindowCreators.Add(NonModalIDEWindowNames[nmiwAnchorEditor],
@@ -2572,7 +2582,7 @@ end;
 procedure TMainIDE.SetupStandardProjectTypes;
 begin
   NewIDEItems.Add(TNewLazIDEItemCategoryFile.Create(FileDescGroupName));
-  NewIDEItems.Add(TNewLazIDEItemCategoryInheritedItem.Create(InheritedItemsGroupName));
+  //NewIDEItems.Add(TNewLazIDEItemCategoryInheritedItem.Create(InheritedItemsGroupName)); //Ultibo
   NewIDEItems.Add(TNewLazIDEItemCategoryProject.Create(ProjDescGroupName));
 
   // file descriptors
@@ -2580,20 +2590,26 @@ begin
   LazProjectFileDescriptors.DefaultPascalFileExt:=
                         PascalExtension[EnvironmentOptions.PascalFileExtension];
   RegisterProjectFileDescriptor(TFileDescPascalUnit.Create);
-  RegisterProjectFileDescriptor(TFileDescPascalUnitWithForm.Create);
-  RegisterProjectFileDescriptor(TFileDescPascalUnitWithDataModule.Create);
-  RegisterProjectFileDescriptor(TFileDescPascalUnitWithFrame.Create);
+  //RegisterProjectFileDescriptor(TFileDescPascalUnitWithForm.Create); //Ultibo
+  //RegisterProjectFileDescriptor(TFileDescPascalUnitWithDataModule.Create); //Ultibo
+  //RegisterProjectFileDescriptor(TFileDescPascalUnitWithFrame.Create); //Ultibo
   RegisterProjectFileDescriptor(TFileDescText.Create);
 
-  RegisterProjectFileDescriptor(TFileDescInheritedComponent.Create, InheritedItemsGroupName);
+  //RegisterProjectFileDescriptor(TFileDescInheritedComponent.Create, InheritedItemsGroupName); //Ultibo
 
   // project descriptors
   LazProjectDescriptors:=TLazProjectDescriptors.Create;
-  RegisterProjectDescriptor(TProjectApplicationDescriptor.Create);
+  //RegisterProjectDescriptor(TProjectApplicationDescriptor.Create); //Ultibo
+  RegisterProjectDescriptor(TProjectRaspberryPiProgramDescriptor.Create); //Ultibo
+  RegisterProjectDescriptor(TProjectRaspberryPi2ProgramDescriptor.Create); //Ultibo
+  RegisterProjectDescriptor(TProjectRaspberryPi3ProgramDescriptor.Create); //Ultibo
+  RegisterProjectDescriptor(TProjectRaspberryPi4ProgramDescriptor.Create); //Ultibo
+  RegisterProjectDescriptor(TProjectRaspberryPiZeroProgramDescriptor.Create); //Ultibo
+  RegisterProjectDescriptor(TProjectQEMUVersatilePBProgramDescriptor.Create); //Ultibo
   RegisterProjectDescriptor(TProjectSimpleProgramDescriptor.Create);
   RegisterProjectDescriptor(TProjectProgramDescriptor.Create);
-  RegisterProjectDescriptor(TProjectConsoleApplicationDescriptor.Create);
-  RegisterProjectDescriptor(TProjectLibraryDescriptor.Create);
+  //RegisterProjectDescriptor(TProjectConsoleApplicationDescriptor.Create); //Ultibo
+  //RegisterProjectDescriptor(TProjectLibraryDescriptor.Create); //Ultibo
 end;
 
 procedure TMainIDE.SetupFileMenu;
@@ -2601,7 +2617,7 @@ begin
   inherited SetupFileMenu;
   with MainIDEBar do begin
     itmFileNewUnit.OnClick := @mnuNewUnitClicked;
-    itmFileNewForm.OnClick := @mnuNewFormClicked;
+    //itmFileNewForm.OnClick := @mnuNewFormClicked; //Ultibo
     itmFileNewOther.OnClick := @mnuNewOtherClicked;
     itmFileOpen.OnClick := @mnuOpenClicked;
     itmFileOpenUnit.OnClick := @mnuOpenUnitClicked;
@@ -2665,23 +2681,36 @@ procedure TMainIDE.SetupViewMenu;
 begin
   inherited SetupViewMenu;
   with MainIDEBar do begin
-    itmViewToggleFormUnit.OnClick := @mnuToggleFormUnitClicked;
-    itmViewInspector.OnClick := @mnuViewInspectorClicked;
+    //itmViewToggleFormUnit.OnClick := @mnuToggleFormUnitClicked; //Ultibo
+    //itmViewInspector.OnClick := @mnuViewInspectorClicked; //Ultibo
     itmViewSourceEditor.OnClick := @mnuViewSourceEditorClicked;
     itmViewCodeExplorer.OnClick := @mnuViewCodeExplorerClick;
     itmViewCodeBrowser.OnClick := @mnuViewCodeBrowserClick;
-    itmViewRestrictionBrowser.OnClick := @mnuViewRestrictionBrowserClick;
-    itmViewComponents.OnClick := @mnuViewComponentsClick;
+    //itmViewRestrictionBrowser.OnClick := @mnuViewRestrictionBrowserClick; //Ultibo
+    //itmViewComponents.OnClick := @mnuViewComponentsClick; //Ultibo
     itmMacroListView.OnClick := @mnuViewMacroListClick;
     itmViewFPDocEditor.OnClick := @mnuViewFPDocEditorClicked;
     itmViewMessage.OnClick := @mnuViewMessagesClick;
     itmViewSearchResults.OnClick := @mnuViewSearchResultsClick;
-    itmViewAnchorEditor.OnClick := @mnuViewAnchorEditorClicked;
-    itmViewTabOrder.OnClick := @mnuViewTabOrderClicked;
+    //itmViewAnchorEditor.OnClick := @mnuViewAnchorEditorClicked; //Ultibo
+    //itmViewTabOrder.OnClick := @mnuViewTabOrderClicked; //Ultibo
 
     itmViewFPCInfo.OnClick:=@mnuViewFPCInfoClicked;
     itmViewIDEInfo.OnClick:=@mnuViewIDEInfoClicked;
     itmViewNeedBuild.OnClick:=@mnuViewNeedBuildClicked;
+
+    itmViewDebugWindows.Visible:=False; //Ultibo
+     itmViewWatches.Visible:=False; //Ultibo
+     itmViewBreakpoints.Visible:=False; //Ultibo
+     itmViewLocals.Visible:=False; //Ultibo
+     itmViewRegisters.Visible:=False; //Ultibo
+     itmViewCallStack.Visible:=False; //Ultibo
+     itmViewThreads.Visible:=False; //Ultibo
+     itmViewAssembler.Visible:=False; //Ultibo
+     itmViewDebugOutput.Visible:=False; //Ultibo
+     itmViewDebugEvents.Visible:=False; //Ultibo
+     if itmViewPseudoTerminal <> nil then itmViewPseudoTerminal.Visible:=False; //Ultibo
+     itmViewDbgHistory.Visible:=False; //Ultibo
   end;
 end;
 
@@ -2762,7 +2791,7 @@ begin
     itmProjectAddTo.OnClick := @mnuAddToProjectClicked;
     itmProjectRemoveFrom.OnClick := @mnuRemoveFromProjectClicked;
     itmProjectViewUnits.OnClick := @mnuViewUnitsClicked;
-    itmProjectViewForms.OnClick := @mnuViewFormsClicked;
+    //itmProjectViewForms.OnClick := @mnuViewFormsClicked; //Ultibo
     itmProjectViewSource.OnClick := @mnuViewProjectSourceClicked;
   end;
 end;
@@ -2770,11 +2799,38 @@ end;
 procedure TMainIDE.SetupRunMenu;
 begin
   inherited SetupRunMenu;
+  with MainIDEBar do begin //Ultibo
+    itmRunMenuRun.Visible:=False; //Ultibo
+    itmRunMenuPause.Visible:=False; //Ultibo
+    itmRunMenuShowExecutionPoint.Visible:=False; //Ultibo
+    itmRunMenuStepInto.Visible:=False; //Ultibo
+    itmRunMenuStepOver.Visible:=False; //Ultibo
+    itmRunMenuStepOut.Visible:=False; //Ultibo
+    itmRunMenuRunToCursor.Visible:=False; //Ultibo
+    itmRunMenuStop.Visible:=False; //Ultibo
+    itmRunMenuAttach.Visible:=False; //Ultibo
+    itmRunMenuDetach.Visible:=False; //Ultibo
+    itmRunMenuRunParameters.Visible:=False; //Ultibo
+    itmRunMenuResetDebugger.Visible:=False; //Ultibo
+    
+    itmRunMenuRunFile.Visible:=False; //Ultibo
+    
+    itmRunMenuInspect.Visible:=False; //Ultibo
+    itmRunMenuEvaluate.Visible:=False; //Ultibo
+    itmRunMenuAddWatch.Visible:=False; //Ultibo
+    
+    itmRunMenuAddBreakpoint.Visible:=False; //Ultibo
+     itmRunMenuAddBpSource.Visible:=False; //Ultibo
+     itmRunMenuAddBpAddress.Visible:=False; //Ultibo
+     itmRunMenuAddBpWatchPoint.Visible:=False; //Ultibo
+  end; //Ultibo
 end;
 
 procedure TMainIDE.SetupPackageMenu;
 begin
   inherited SetupPackageMenu;
+
+  mnuPackage.Visible:=False; //Ultibo
 end;
 
 procedure TMainIDE.SetupToolsMenu;
@@ -2783,6 +2839,12 @@ begin
   with MainIDEBar do begin
     itmEnvGeneralOptions.OnClick := @mnuEnvGeneralOptionsClicked;
     itmToolRescanFPCSrcDir.OnClick := @mnuEnvRescanFPCSrcDirClicked;
+    itmToolBuildUltiboRTL.OnClick := @mnuToolBuildUltiboRTLClicked; //Ultibo
+    itmToolRunInQEMU.OnClick := @mnuToolRunInQEMUClicked; //Ultibo
+
+    itmToolBuildUltiboRTL.Visible := FileExistsUTF8(AppendPathDelim(AppendPathDelim(EnvironmentOptions.GetParsedLazarusDirectory) + 'tools') + 'BuildRTL' + GetExecutableExt); //Ultibo
+    itmToolRunInQEMU.Visible := FileExistsUTF8(AppendPathDelim(AppendPathDelim(EnvironmentOptions.GetParsedLazarusDirectory) + 'tools') + 'QEMULauncher' + GetExecutableExt); //Ultibo
+
     itmEnvCodeTemplates.OnClick := @mnuEnvCodeTemplatesClicked;
     itmEnvCodeToolsDefinesEditor.OnClick := @mnuEnvCodeToolsDefinesEditorClicked;
 
@@ -2791,11 +2853,11 @@ begin
     itmToolManageExamples.OnClick := @mnuToolManageExamplesClicked;
     itmToolDiff.OnClick := @mnuToolDiffClicked;
 
-    itmToolCheckLFM.OnClick := @mnuToolCheckLFMClicked;
-    itmToolConvertDFMtoLFM.OnClick := @mnuToolConvertDFMtoLFMClicked;
+    //itmToolCheckLFM.OnClick := @mnuToolCheckLFMClicked; //Ultibo
+    //itmToolConvertDFMtoLFM.OnClick := @mnuToolConvertDFMtoLFMClicked; //Ultibo
     itmToolConvertDelphiUnit.OnClick := @mnuToolConvertDelphiUnitClicked;
     itmToolConvertDelphiProject.OnClick := @mnuToolConvertDelphiProjectClicked;
-    itmToolConvertDelphiPackage.OnClick := @mnuToolConvertDelphiPackageClicked;
+    //itmToolConvertDelphiPackage.OnClick := @mnuToolConvertDelphiPackageClicked; //Ultibo
     itmToolConvertEncoding.OnClick := @mnuToolConvertEncodingClicked;
     itmToolBuildLazarus.OnClick := @mnuToolBuildLazarusClicked;
     itmToolConfigureBuildLazarus.OnClick := @mnuToolConfigBuildLazClicked;
@@ -2845,7 +2907,7 @@ begin
   with MainIDEBar do begin
     // file menu
     itmFileNewUnit.Command:=GetCommand(ecNewUnit, nil, TNewUnitToolButton);
-    itmFileNewForm.Command:=GetCommand(ecNewForm, nil, TNewFormToolButton);
+    //itmFileNewForm.Command:=GetCommand(ecNewForm, nil, TNewFormToolButton); //Ultibo
     itmFileNewOther.Command:=GetIdeCmdRegToolBtn(ecNew);
     itmFileOpen.Command:=GetCommand(ecOpen, nil, TOpenFileToolButton);
     itmFileOpenUnit.Command:=GetIdeCmdRegToolBtn(ecOpenUnit);
@@ -2924,20 +2986,20 @@ begin
     itmSearchProcedureList.Command:=GetIdeCmdRegToolBtn(ecProcedureList);
 
     // view menu
-    itmViewToggleFormUnit.Command:=GetIdeCmdRegToolBtn(ecToggleFormUnit);
-    itmViewInspector.Command:=GetIdeCmdRegToolBtn(ecToggleObjectInsp);
+    //itmViewToggleFormUnit.Command:=GetIdeCmdRegToolBtn(ecToggleFormUnit); //Ultibo
+    //itmViewInspector.Command:=GetIdeCmdRegToolBtn(ecToggleObjectInsp); //Ultibo
     itmViewSourceEditor.Command:=GetIdeCmdRegToolBtn(ecToggleSourceEditor);
     itmViewCodeExplorer.Command:=GetIdeCmdRegToolBtn(ecToggleCodeExpl);
     itmViewFPDocEditor.Command:=GetIdeCmdRegToolBtn(ecToggleFPDocEditor);
     itmViewCodeBrowser.Command:=GetIdeCmdRegToolBtn(ecToggleCodeBrowser);
-    itmViewRestrictionBrowser.Command:=GetIdeCmdRegToolBtn(ecToggleRestrictionBrowser);
-    itmViewComponents.Command:=GetIdeCmdRegToolBtn(ecViewComponents);
+    //itmViewRestrictionBrowser.Command:=GetIdeCmdRegToolBtn(ecToggleRestrictionBrowser); //Ultibo
+    //itmViewComponents.Command:=GetIdeCmdRegToolBtn(ecViewComponents); //Ultibo
     itmMacroListView.Command:=GetIdeCmdRegToolBtn(ecViewMacroList);
     itmJumpHistory.Command:=GetIdeCmdRegToolBtn(ecViewJumpHistory);
     itmViewMessage.Command:=GetIdeCmdRegToolBtn(ecToggleMessages);
     itmViewSearchResults.Command:=GetIdeCmdRegToolBtn(ecToggleSearchResults);
-    itmViewAnchorEditor.Command:=GetIdeCmdRegToolBtn(ecViewAnchorEditor);
-    itmViewTabOrder.Command:=GetIdeCmdRegToolBtn(ecViewTabOrder);
+    //itmViewAnchorEditor.Command:=GetIdeCmdRegToolBtn(ecViewAnchorEditor); //Ultibo
+    //itmViewTabOrder.Command:=GetIdeCmdRegToolBtn(ecViewTabOrder); //Ultibo
     //itmPkgPackageLinks.Command:=GetIdeCmdRegToolBtn(ec?);
 
     // source menu
@@ -3009,7 +3071,7 @@ begin
     itmProjectAddTo.Command:=GetIdeCmdRegToolBtn(ecAddCurUnitToProj);
     itmProjectRemoveFrom.Command:=GetIdeCmdRegToolBtn(ecRemoveFromProj);
     itmProjectViewUnits.Command:=GetIdeCmdRegToolBtn(ecViewProjectUnits);
-    itmProjectViewForms.Command:=GetIdeCmdRegToolBtn(ecViewProjectForms);
+    //itmProjectViewForms.Command:=GetIdeCmdRegToolBtn(ecViewProjectForms); //Ultibo
     itmProjectViewSource.Command:=GetIdeCmdRegToolBtn(ecViewProjectSource);
     GetIdeCmdAndToolBtn(ecProjectChangeBuildMode, xBtnItem);
     xBtnItem.Caption := lisChangeBuildMode;
@@ -3043,20 +3105,22 @@ begin
     itmRunMenuConfigBuildFile.Command:=GetCommand(ecConfigBuildFile, @mnuConfigBuildFileClicked);
 
     // package menu
-    itmPkgNewPackage.Command:=GetIdeCmdRegToolBtn(ecNewPackage);
-    itmPkgOpenLoadedPackage.Command:=GetIdeCmdRegToolBtn(ecOpenPackage);
-    itmPkgOpenPackageFile.Command:=GetCommand_DropDown(ecOpenPackageFile, itmPkgOpenRecent);
-    itmPkgOpenPackageOfCurUnit.Command:=GetIdeCmdRegToolBtn(ecOpenPackageOfCurUnit);
-    GetCommand_ButtonDrop(ecOpenRecentPackage, itmPkgOpenRecent);
-    itmPkgAddCurFileToPkg.Command:=GetIdeCmdRegToolBtn(ecAddCurFileToPkg);
-    itmPkgAddNewComponentToPkg.Command:=GetIdeCmdRegToolBtn(ecNewPkgComponent);
-    itmPkgPkgGraph.Command:=GetIdeCmdRegToolBtn(ecPackageGraph);
-    itmPkgPackageLinks.Command:=GetIdeCmdRegToolBtn(ecPackageLinks);
-    itmPkgEditInstallPkgs.Command:=GetIdeCmdRegToolBtn(ecEditInstallPkgs);
+    //itmPkgNewPackage.Command:=GetIdeCmdRegToolBtn(ecNewPackage); //Ultibo
+    //itmPkgOpenLoadedPackage.Command:=GetIdeCmdRegToolBtn(ecOpenPackage); //Ultibo
+    //itmPkgOpenPackageFile.Command:=GetCommand_DropDown(ecOpenPackageFile, itmPkgOpenRecent); //Ultibo
+    //itmPkgOpenPackageOfCurUnit.Command:=GetIdeCmdRegToolBtn(ecOpenPackageOfCurUnit); //Ultibo
+    //GetCommand_ButtonDrop(ecOpenRecentPackage, itmPkgOpenRecent); //Ultibo
+    //itmPkgAddCurFileToPkg.Command:=GetIdeCmdRegToolBtn(ecAddCurFileToPkg); //Ultibo
+    //itmPkgAddNewComponentToPkg.Command:=GetIdeCmdRegToolBtn(ecNewPkgComponent); //Ultibo
+    //itmPkgPkgGraph.Command:=GetIdeCmdRegToolBtn(ecPackageGraph); //Ultibo
+    //itmPkgPackageLinks.Command:=GetIdeCmdRegToolBtn(ecPackageLinks); //Ultibo
+    //itmPkgEditInstallPkgs.Command:=GetIdeCmdRegToolBtn(ecEditInstallPkgs); //Ultibo
 
     // tools menu
     itmEnvGeneralOptions.Command:=GetIdeCmdRegToolBtn(ecEnvironmentOptions);
     itmToolRescanFPCSrcDir.Command:=GetIdeCmdRegToolBtn(ecRescanFPCSrcDir);
+	itmToolBuildUltiboRTL.Command:=GetIdeCmdRegToolBtn(ecBuildUltiboRTL); //Ultibo
+	itmToolRunInQEMU.Command:=GetIdeCmdRegToolBtn(ecRunInQEMU); //Ultibo
     itmEnvCodeTemplates.Command:=GetIdeCmdRegToolBtn(ecEditCodeTemplates);
     itmEnvCodeToolsDefinesEditor.Command:=GetIdeCmdRegToolBtn(ecCodeToolsDefinesEd);
 
@@ -3066,11 +3130,11 @@ begin
     itmToolManageExamples.Command:=GetIdeCmdRegToolBtn(ecManageExamples);
     itmToolDiff.Command:=GetIdeCmdRegToolBtn(ecDiff);
 
-    itmToolConvertDFMtoLFM.Command:=GetIdeCmdRegToolBtn(ecConvertDFM2LFM);
-    itmToolCheckLFM.Command:=GetIdeCmdRegToolBtn(ecCheckLFM);
+    //itmToolConvertDFMtoLFM.Command:=GetIdeCmdRegToolBtn(ecConvertDFM2LFM); //Ultibo
+    //itmToolCheckLFM.Command:=GetIdeCmdRegToolBtn(ecCheckLFM); //Ultibo
     itmToolConvertDelphiUnit.Command:=GetIdeCmdRegToolBtn(ecConvertDelphiUnit);
     itmToolConvertDelphiProject.Command:=GetIdeCmdRegToolBtn(ecConvertDelphiProject);
-    itmToolConvertDelphiPackage.Command:=GetIdeCmdRegToolBtn(ecConvertDelphiPackage);
+    //itmToolConvertDelphiPackage.Command:=GetIdeCmdRegToolBtn(ecConvertDelphiPackage); //Ultibo
     itmToolConvertEncoding.Command:=GetIdeCmdRegToolBtn(ecConvertEncoding);
     itmToolBuildLazarus.Command:=GetIdeCmdRegToolBtn(ecBuildLazarus);
     itmToolConfigureBuildLazarus.Command:=GetIdeCmdRegToolBtn(ecConfigBuildLazarus);
@@ -3082,6 +3146,10 @@ begin
     itmHelpAboutLazarus.Command:=GetIdeCmdRegToolBtn(ecAboutLazarus);
     itmHelpOnlineHelp.Command:=GetIdeCmdRegToolBtn(ecOnlineHelp);
     itmHelpReportingBug.Command:=GetIdeCmdRegToolBtn(ecReportingBug);
+	
+	itmHelpUltiboHelp.Command:=GetIdeCmdRegToolBtn(ecUltiboHelp); //Ultibo
+	itmHelpUltiboForum.Command:=GetIdeCmdRegToolBtn(ecUltiboForum); //Ultibo
+	itmHelpUltiboWiki.Command:=GetIdeCmdRegToolBtn(ecUltiboWiki); //Ultibo
   end;
 
   SourceEditorManager.SetupShortCuts;
@@ -3558,6 +3626,8 @@ begin
   ecDiff:                     DoDiff;
   ecConvertDFM2LFM:           DoConvertDFMtoLFM;
   ecRescanFPCSrcDir:          mnuEnvRescanFPCSrcDirClicked(Self);
+  ecBuildUltiboRTL:           mnuToolBuildUltiboRTLClicked(Self);
+  ecRunInQEMU:                mnuToolRunInQEMUClicked(Self);
   ecManageExamples:           mnuToolManageExamplesClicked(Self);
   ecBuildLazarus:             mnuToolBuildLazarusClicked(Self);
   ecBuildAdvancedLazarus:     mnuToolBuildAdvancedLazarusClicked(Self);
@@ -4140,12 +4210,12 @@ begin
     CanOpenPkgOfFile:=Assigned(PkgFile);
     CanAddCurFile:=(not AUnitInfo.IsVirtual) and FileExistsUTF8(AUnitInfo.Filename)
           and not AUnitInfo.IsPartOfProject;
-    MainIDEBar.itmPkgOpenPackageOfCurUnit.Enabled:=CanOpenPkgOfFile;
-    MainIDEBar.itmPkgAddCurFileToPkg.Enabled:=CanAddCurFile;
+    //MainIDEBar.itmPkgOpenPackageOfCurUnit.Enabled:=CanOpenPkgOfFile; //Ultibo
+    //MainIDEBar.itmPkgAddCurFileToPkg.Enabled:=CanAddCurFile; //Ultibo
   end else
   begin
-    MainIDEBar.itmPkgOpenPackageOfCurUnit.Enabled:=False;
-    MainIDEBar.itmPkgAddCurFileToPkg.Enabled:=False;
+    //MainIDEBar.itmPkgOpenPackageOfCurUnit.Enabled:=False; //Ultibo
+    //MainIDEBar.itmPkgAddCurFileToPkg.Enabled:=False; //Ultibo
   end;
 end;
 
@@ -5246,6 +5316,74 @@ begin
   IncreaseBuildMacroChangeStamp;
   MainBuildBoss.RescanCompilerDefines(false,true,false,false);
 end;
+
+procedure TMainIDE.mnuToolBuildUltiboRTLClicked(Sender: TObject); //Ultibo
+var
+ ExternalToolOptions:TIDEExternalToolOptions;
+begin
+ ExternalToolOptions:=TIDEExternalToolOptions.Create;
+ try
+  ExternalToolOptions.Title:=lisMenuBuildUltiboRTL;
+  ExternalToolOptions.WorkingDirectory:='$(LazarusDir)tools';
+  ExternalToolOptions.CmdLineParams:='';
+  ExternalToolOptions.Executable:=AppendPathDelim('$(LazarusDir)tools') + 'BuildRTL' + GetExecutableExt;
+ 
+  RunExternalTool(ExternalToolOptions);
+ finally
+  ExternalToolOptions.Free;
+ end;
+end; //Ultibo
+
+procedure TMainIDE.mnuToolRunInQEMUClicked(Sender: TObject); //Ultibo
+
+ function GetCmdLineParams:String;
+ var
+  WorkingDir:String;
+ begin
+  Result:='';
+  if Project1 = nil then Exit;
+  
+  if not Project1.IsVirtual then
+   begin
+    WorkingDir:=Project1.Directory;
+    if Length(WorkingDir) <> 0 then
+     begin
+      Result:='Project=' + CreateAbsolutePath(Project1.MainUnitInfo.Filename,WorkingDir);
+     end
+    else
+     begin
+      Result:='Project=' + Project1.ProjectInfoFile;
+     end;
+   end
+  else
+   begin
+    WorkingDir:=GetTestBuildDirectory;
+    Result:='Project=' + MainBuildBoss.GetTestUnitFilename(Project1.MainUnitInfo);
+   end;
+  
+  Result:=Result + ' CPU=' + Project1.CompilerOptions.TargetCPU;
+  Result:=Result + ' Processor=' + Project1.CompilerOptions.TargetProcessor;
+  Result:=Result + ' Controller=' + Project1.CompilerOptions.TargetController;
+ end;
+ 
+var
+ ExternalToolOptions:TIDEExternalToolOptions;
+begin
+ if Project1 = nil then Exit;
+ 
+ ExternalToolOptions:=TIDEExternalToolOptions.Create;
+ try
+  ExternalToolOptions.Title:=lisMenuRunInQEMU;
+  ExternalToolOptions.WorkingDirectory:='$(LazarusDir)tools';
+  ExternalToolOptions.CmdLineParams:=GetCmdLineParams;
+  if Length(ExternalToolOptions.CmdLineParams) = 0 then Exit;
+  ExternalToolOptions.Executable:=AppendPathDelim('$(LazarusDir)tools') + 'QEMULauncher' + GetExecutableExt;
+ 
+  RunExternalTool(ExternalToolOptions);
+ finally
+  ExternalToolOptions.Free;
+ end;
+end; //Ultibo
 
 procedure TMainIDE.mnuWindowManagerClicked(Sender: TObject);
 begin
@@ -7539,7 +7677,7 @@ procedure TMainIDE.DoExecuteRemoteControl;
 
     if not ProjectLoaded then begin
       // create new project
-      DoNewProject(ProjectDescriptorApplication);
+      DoNewProject(ProjectDescriptorSimpleProgram); //ProjectDescriptorApplication //Ultibo
     end;
 
     // load the files
@@ -10910,8 +11048,8 @@ begin
                                                ASrcEdit.SourceNotebook.WindowID);
   if UnitInfo = nil then Exit;
   UpdateSaveMenuItemsAndButtons(false);
-  MainIDEBar.itmViewToggleFormUnit.Enabled := (UnitInfo.Component<>nil)
-                                           or (UnitInfo.ComponentName<>'');
+  //MainIDEBar.itmViewToggleFormUnit.Enabled := (UnitInfo.Component<>nil)
+  //                                         or (UnitInfo.ComponentName<>''); //Ultibo
 end;
 
 procedure TMainIDE.SrcNotebookEditorPlaceBookmark(Sender: TObject; var Mark: TSynEditMark);
@@ -12282,7 +12420,7 @@ begin
     begin
       AnIDesigner:=Screen.ActiveForm.Designer;
       if AnIDesigner is TDesigner then
-        MainIDEBar.itmViewToggleFormUnit.Enabled := true
+        //MainIDEBar.itmViewToggleFormUnit.Enabled := true //Ultibo
       else
       begin
         HasResources:=false;
@@ -12297,7 +12435,7 @@ begin
           then
             HasResources:=true;
         end;
-        MainIDEBar.itmViewToggleFormUnit.Enabled := HasResources;
+        //MainIDEBar.itmViewToggleFormUnit.Enabled := HasResources; //Ultibo
       end;
       DebugBoss.UpdateButtonsAndMenuItems;
     end;
@@ -12677,7 +12815,7 @@ begin
         ScreenR.Right-MainIDEBar.Scale96ToForm(250),
         ScreenR.Bottom-MainIDEBar.Scale96ToForm(50));
     end;
-    if IDEDockMaster<>nil then begin
+	if (IDEDockMaster<>nil) and not(IDEDockDisabled) then begin //Ultibo
       DockSibling:=NonModalIDEWindowNames[nmiwSourceNoteBook];
       DockAlign:=alBottom;
     end;

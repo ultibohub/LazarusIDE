@@ -109,7 +109,7 @@ const
   VirtualTempDir='TEMPORARYDIRECTORY';
   
   // FPC operating systems and processor types
-  FPCOperatingSystemNames: array[1..38] of shortstring =(
+  FPCOperatingSystemNames: array[1..39] of shortstring =( //Ultibo
      'linux',
      'win32','win64','wince',
      'darwin','macos',
@@ -139,11 +139,12 @@ const
      'qnx',
      'solaris',
      'symbian',
+	 'ultibo', //Ultibo
      'watcom',
      'wdosx',
      'wii'
     );
-  FPCOperatingSystemCaptions: array[1..38] of shortstring =(
+  FPCOperatingSystemCaptions: array[1..39] of shortstring =( //Ultibo
      'AIX',
      'Amiga',
      'Android',
@@ -176,7 +177,8 @@ const
      'QNX',
      'Solaris',
      'Symbian',
-     'Watcom',
+     'Ultibo', //Ultibo
+	 'Watcom',
      'wdosx',
      'Win32',
      'Win64',
@@ -206,6 +208,23 @@ const
       'x86_64',
       'xtensa'
     );
+  FPCControllerNames: array[1..15] of shortstring =(  //Ultibo
+      'RPIA',
+      'RPIB',
+      'RPIZERO',
+      'RPI2B',
+      'RPI3A',
+      'RPI3B',
+      'RPI4B',
+      'RPI400',
+      'RPIZERO2W',
+      'QEMUVPB',
+      'QEMURPIA',
+      'QEMURPIZERO',
+      'QEMURPI2B',
+      'QEMURPI3A',
+      'QEMURPI3B'
+    );  
   FPCSyntaxModes: array[1..6] of shortstring = (
     'FPC', 'ObjFPC', 'Delphi', 'TP', 'MacPas', 'ISO'
     );
@@ -3743,7 +3762,7 @@ begin
   else if SysUtils.CompareText(TargetCPU,'ia64')=0 then
     Result:=Result+'ia64'
   else if SysUtils.CompareText(TargetCPU,'aarch64')=0 then
-    Result:=Result+'aarch64'
+    Result:=Result+'a64' //Ultibo //Note: a64 not aarch64
   else if SysUtils.CompareText(TargetCPU,'xtensa')=0 then
     Result:=Result+'xtensa'
   else
@@ -3775,6 +3794,11 @@ procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
     aList.Add('CORTEXM3');
   end;
 
+  procedure Aarch64; //Ultibo
+  begin
+    aList.Add('ARMV8');
+  end;
+  
   procedure Intel_i386;
   begin
     aList.Add('80386');
@@ -3894,7 +3918,7 @@ begin
     'x86_64' : Intel_x86_64;
     'mipsel','mips' : Mips;
     'jvm'    : ;
-    'aarch64'  : ;
+    'aarch64'  : Aarch64; //Ultibo
     'xtensa' : Xtensa;
   end;
 end;

@@ -305,6 +305,40 @@ begin
   IconImage.KeepOriginXWhenClipped := True;
   IconImage.KeepOriginYWhenClipped := True;
   IconImagePictureChanged(nil);
+  
+  {Icon Options}
+  IconLabel.Enabled := False; //Ultibo
+  IconPanel.Enabled := False; //Ultibo
+  IconImage.Enabled := False; //Ultibo
+  IconTrack.Enabled := False; //Ultibo
+  IconTrackLabel.Enabled := False; //Ultibo
+  
+  LoadIconButton.Enabled := False; //Ultibo
+  DefaultIconButton.Enabled := False; //Ultibo
+  SaveIconButton.Enabled := False; //Ultibo
+  ClearIconButton.Enabled := False; //Ultibo
+  UseLCLScalingCheckBox.Enabled := False; //Ultibo
+  
+  {Windows Options}
+  WindowsDividerBevel.Enabled := False; //Ultibo
+  UseXPManifestCheckBox.Enabled := False; //Ultibo
+  
+  DpiAwareLabel.Enabled := False; //Ultibo
+  DpiAwareComboBox.Enabled := False; //Ultibo
+  ExecutionLevelLabel.Enabled := False; //Ultibo
+  ExecutionLevelComboBox.Enabled := False; //Ultibo
+  UIAccessCheckBox.Enabled := False; //Ultibo
+  LongPathCheckBox.Enabled := False; //Ultibo
+  AnsiUTF8CheckBox.Enabled := False; //Ultibo
+  NameLabel.Enabled := False; //Ultibo
+  NameEdit.Enabled := False; //Ultibo
+  DescriptionLabel.Enabled := False; //Ultibo
+  DescriptionEdit.Enabled := False; //Ultibo
+  
+  {Darwin Options}
+  DarwinDividerBevel.Enabled := False; //Ultibo
+  UseAppBundleCheckBox.Enabled := False; //Ultibo
+  CreateAppBundleButton .Enabled := False; //Ultibo 
 end;
 
 procedure TProjectApplicationOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);
