@@ -2,7 +2,7 @@ msgid ""
 msgstr "Content-Type: text/plain; charset=UTF-8"
 
 #: glazresmain.cbtncancel
-msgid "Cancel"
+msgid "Close"
 msgstr ""
 
 #: glazresmain.defilter
@@ -57,7 +57,7 @@ msgstr ""
 
 #: glazresmain.msgresourcenametype
 #, object-pascal-format
-msgid " Resource name = \"%s\", Type = \"%s\""
+msgid "Resource name = \"%s\", Type = \"%s\""
 msgstr ""
 
 #: glazresmain.msgsuccess
@@ -90,8 +90,18 @@ msgctxt "glazresmain.opdopenexistingpicture"
 msgid "Open existing picture"
 msgstr ""
 
+#: tglazresform.addanybtn.caption
+msgctxt "tglazresform.addanybtn.caption"
+msgid "Add files"
+msgstr ""
+
 #: tglazresform.addanybtn.hint
 msgid "Add (any kind of) files to the list"
+msgstr ""
+
+#: tglazresform.addimgbtn.caption
+msgctxt "tglazresform.addimgbtn.caption"
+msgid "Add images"
 msgstr ""
 
 #: tglazresform.addimgbtn.hint
@@ -103,15 +113,21 @@ msgid "LRS Builder"
 msgstr ""
 
 #: tglazresform.clearbtn.caption
-msgid "Clear"
+msgctxt "tglazresform.clearbtn.caption"
+msgid "Delete all"
 msgstr ""
 
 #: tglazresform.clearbtn.hint
-msgid "Cleare the entire list"
+msgid "Clear the entire list"
 msgstr ""
 
 #: tglazresform.closebtn.hint
 msgid "Exit the program"
+msgstr ""
+
+#: tglazresform.deletebtn.caption
+msgctxt "tglazresform.deletebtn.caption"
+msgid "Delete selected"
 msgstr ""
 
 #: tglazresform.deletebtn.hint
@@ -131,7 +147,8 @@ msgid "Messages"
 msgstr ""
 
 #: tglazresform.startbtn.caption
-msgid "Create LRS"
+msgctxt "tglazresform.startbtn.caption"
+msgid "Create"
 msgstr ""
 
 #: tglazresform.startbtn.hint

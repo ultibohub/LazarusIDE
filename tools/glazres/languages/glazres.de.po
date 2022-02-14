@@ -1,24 +1,24 @@
 msgid ""
 msgstr ""
-"Content-Type: text/plain; charset=UTF-8\n"
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
 "PO-Revision-Date: \n"
 "Last-Translator: Swen Heinig <swen@heinig.email>\n"
 "Language-Team: \n"
-"MIME-Version: 1.0\n"
-"Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 2.0.4\n"
 "Language: de\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.0.1\n"
 
 #: glazresmain.cbtncancel
-msgid "Cancel"
-msgstr "Abbrechen"
+msgid "Close"
+msgstr "Beenden"
 
 #: glazresmain.defilter
 msgctxt "glazresmain.defilter"
 msgid "Lazarus Resource Files|*.lrs|All Files|*"
-msgstr "Lazarus-Ressourcen-Dateien|*.lrs|Alle Dateien|*"
+msgstr "Lazarus-Ressourcendateien|*.lrs|Alle Dateien|*"
 
 #: glazresmain.desaveresourcefileas
 msgctxt "glazresmain.desaveresourcefileas"
@@ -67,20 +67,17 @@ msgstr "Verarbeite \"%s\""
 
 #: glazresmain.msgresourcenametype
 #, object-pascal-format
-msgid " Resource name = \"%s\", Type = \"%s\""
-msgstr " Ressourcenname = \"%s\", Typ = \"%s\""
+msgid "Resource name = \"%s\", Type = \"%s\""
+msgstr "Ressourcenname = \"%s\", Typ = \"%s\""
 
 #: glazresmain.msgsuccess
-#, object-pascal-format, fuzzy
-#| msgid ""
-#| "Done.\n"
-#| "Number of resources added: %d.\n"
+#, object-pascal-format
 msgid ""
 "Done.\n"
 "Number of resources added: %d."
 msgstr ""
 "Erledigt.\n"
-"Anzahl hinzugefügter Ressourcen: %d.\n"
+"Anzahl hinzugefügter Ressourcen: %d."
 
 #: glazresmain.msgwrongext
 msgid "Filename does not have the required extension: fix it?"
@@ -92,8 +89,6 @@ msgid "Open existing file"
 msgstr "Existierende Datei öffnen"
 
 #: glazresmain.opdfilter
-#, fuzzy
-#| msgid "Graphic (*.png;*.xpm;*.bmp;*.cur;*.ico;*.icns;*.jpeg;*.jpg;*.jpe;*.jfif;*.tif;*.tiff;*.gif;*.pbm;*.pgm;*.ppm;*.gif;*.tga)|*.png;*.xpm;*.bmp;*.cur;*.ico;*.icns;*.jpeg;*.jpg;*.jpe;*.jfif;*.tif;*.tiff;*.gif;*.pbm;*.pgm;*.ppm;*.gif;*.tga|Portable Network Graphic (*.png)|*.png|Pixmap (*.xpm)|*.xpm|Bitmaps (*.bmp)|*.bmp|Cursor (*.cur)|*.cur|Icon (*.ico)|*.ico|Mac OS X Icon (*.icns)|*.icns|Joint Picture Expert Group (*.jpeg;*.jpg;*.jpe;*.jfif)|*.jpeg;*.jpg;*.jpe;*.jfif|Tagged Image File Format (*.tif;*.tiff)|*.tif;*.tiff|Graphics Interchange Format (*.gif)|*.gif|Portable PixMap (*.pbm;*.pgm;*.ppm)|*.pbm;*.pgm;*.ppm|Animated GIF (*.gif)|*.gif|TGA Image File (*.tga)|*.tga|"
 msgctxt "glazresmain.opdfilter"
 msgid "Graphic (*.png;*.xpm;*.bmp;*.cur;*.ico;*.icns;*.jpeg;*.jpg;*.jpe;*.jfif;*.tif;*.tiff;*.gif;*.pbm;*.pgm;*.ppm;*.gif;*.tga)|*.png;*.xpm;*.bmp;*.cur;*.ico;*.icns;*.jpeg;*.jpg;*.jpe;*.jfif;*.tif;*.tiff;*.gif;*.pbm;*.pgm;*.ppm;*.gif;*.tga|Portable Network Graphic (*.png)|*.png|Pixmap (*.xpm)|*.xpm|Bitmaps (*.bmp)|*.bmp|Cursor (*.cur)|*.cur|Icon (*.ico)|*.ico|macOS Icon (*.icns)|*.icns|Joint Picture Expert Group (*.jpeg;*.jpg;*.jpe;*.jfif)|*.jpeg;*.jpg;*.jpe;*.jfif|Tagged Image File Format (*.tif;*.tiff)|*.tif;*.tiff|Graphics Interchange Format (*.gif)|*.gif|Portable PixMap (*.pbm;*.pgm;*.ppm)|*.pbm;*.pgm;*.ppm|Animated GIF (*.gif)|*.gif|TGA Image File (*.tga)|*.tga|"
 msgstr "Grafik (*.png;*.xpm;*.bmp;*.cur;*.ico;*.icns;*.jpeg;*.jpg;*.jpe;*.jfif;*.tif;*.tiff;*.gif;*.pbm;*.pgm;*.ppm;*.gif;*.tga)|*.png;*.xpm;*.bmp;*.cur;*.ico;*.icns;*.jpeg;*.jpg;*.jpe;*.jfif;*.tif;*.tiff;*.gif;*.pbm;*.pgm;*.ppm;*.gif;*.tga|Portable Network Graphic (*.png)|*.png|Pixmap (*.xpm)|*.xpm|Bitmaps (*.bmp)|*.bmp|Cursor (*.cur)|*.cur|Icon (*.ico)|*.ico|Mac OS X Icon (*.icns)|*.icns|Joint Picture Expert Group (*.jpeg;*.jpg;*.jpe;*.jfif)|*.jpeg;*.jpg;*.jpe;*.jfif|Tagged Image File Format (*.tif;*.tiff)|*.tif;*.tiff|Graphics Interchange Format (*.gif)|*.gif|Portable PixMap (*.pbm;*.pgm;*.ppm)|*.pbm;*.pgm;*.ppm|Animiertes GIF (*.gif)|*.gif|TGA Image Datei (*.tga)|*.tga|"
@@ -107,9 +102,19 @@ msgctxt "glazresmain.opdopenexistingpicture"
 msgid "Open existing picture"
 msgstr "Existierendes Bild öffnen"
 
+#: tglazresform.addanybtn.caption
+msgctxt "tglazresform.addanybtn.caption"
+msgid "Add files"
+msgstr "Dateien hinzuf"
+
 #: tglazresform.addanybtn.hint
 msgid "Add (any kind of) files to the list"
 msgstr "Beliebige Dateien zur Liste hinzufügen"
+
+#: tglazresform.addimgbtn.caption
+msgctxt "tglazresform.addimgbtn.caption"
+msgid "Add images"
+msgstr "Bilder hinzuf"
 
 #: tglazresform.addimgbtn.hint
 msgid "Add images to the list"
@@ -117,19 +122,27 @@ msgstr "Bilder zur Liste hinzufügen"
 
 #: tglazresform.caption
 msgid "LRS Builder"
-msgstr "LRS-Ersteller"
+msgstr "LRS-Erzeuger"
 
 #: tglazresform.clearbtn.caption
-msgid "Clear"
-msgstr "Löschen"
+msgctxt "tglazresform.clearbtn.caption"
+msgid "Delete all"
+msgstr "Alle löschen"
 
 #: tglazresform.clearbtn.hint
-msgid "Cleare the entire list"
+#, fuzzy
+#| msgid "Cleare the entire list"
+msgid "Clear the entire list"
 msgstr "Die ganze Liste löschen"
 
 #: tglazresform.closebtn.hint
 msgid "Exit the program"
 msgstr "Das Programm beenden"
+
+#: tglazresform.deletebtn.caption
+msgctxt "tglazresform.deletebtn.caption"
+msgid "Delete selected"
+msgstr "Auswahl löschen"
 
 #: tglazresform.deletebtn.hint
 msgid "Delete selected files from the list"
@@ -137,7 +150,7 @@ msgstr "Ausgewählte Dateien aus Liste löschen"
 
 #: tglazresform.fileslabel.caption
 msgid "Files to include"
-msgstr "Dateien zum Einschliessen"
+msgstr "Einzuschließende Dateien"
 
 #: tglazresform.lrslabel.caption
 msgid "Lazarus Resource Filename"
@@ -148,10 +161,11 @@ msgid "Messages"
 msgstr "Meldungen"
 
 #: tglazresform.startbtn.caption
-msgid "Create LRS"
-msgstr "LRS erzeugen"
+msgctxt "tglazresform.startbtn.caption"
+msgid "Create"
+msgstr "Erstellen"
 
 #: tglazresform.startbtn.hint
 msgid "Create the output LRS file"
-msgstr "Die Ausgabe-LRS-Datei erstellen"
+msgstr "Die Ausgabe-Ressourcendatei erstellen"
 
