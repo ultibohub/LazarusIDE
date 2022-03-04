@@ -24,37 +24,37 @@
 }
 
 const
-  //To Do //Ultibo
-  DefaultFPCSrcDirs: array[1..15] of string = (
+  DefaultFPCSrcDirs: array[1..1] of string = ( //Ultibo
     // search first for sources with right version
-    '/usr/share/fpcsrc/$(FPCVer)',
+    //'/usr/share/fpcsrc/$(FPCVer)', //Ultibo
     // then search for global paths
-    '/usr/share/fpcsrc',
-    '/usr/local/share/fpcsrc',
-    '/usr/fpcsrc',
-    '/usr/share/fpc/src',
-    '/usr/fpc/src',
-    '/usr/local/fpc/src',
-    '/usr/local/share/fpc/src',
-    '/usr/local/src/fpc',
-    '/usr/lib/fpc/src',
-    '/usr/local/lib/fpc/src',
-    '/vol/fpc/src',
-    '/vol/lib/fpc/src',
+    //'/usr/share/fpcsrc', //Ultibo
+    //'/usr/local/share/fpcsrc', //Ultibo
+    //'/usr/fpcsrc', //Ultibo
+    //'/usr/share/fpc/src', //Ultibo
+    //'/usr/fpc/src', //Ultibo
+    //'/usr/local/fpc/src', //Ultibo
+    //'/usr/local/share/fpc/src', //Ultibo
+    //'/usr/local/src/fpc', //Ultibo
+    //'/usr/lib/fpc/src', //Ultibo
+    //'/usr/local/lib/fpc/src', //Ultibo
+    //'/vol/fpc/src', //Ultibo
+    //'/vol/lib/fpc/src', //Ultibo
     // These paths are created by the fpc rpm creation script and do not
     // contain all sources. So, they are searched last.
-    '/usr/src/fpc',
-    '/vol/src/fpc'
+    //'/usr/src/fpc', //Ultibo
+    //'/vol/src/fpc' //Ultibo
+    '~/ultibo/core/fpc/source' //Ultibo
     );
 
-  DefaultLazarusSrcDirs: array[1..8] of string = (
-    '/usr/share/ultibo/core', //'/usr/share/lazarus', //Ultibo
-    '/usr/local/share/ultibo/core', //'/usr/local/share/lazarus', //Ultibo
-    '/usr/local/lib/ultibo/core', //'/usr/local/lib/lazarus', //Ultibo
-    '/usr/local/ultibo/core', //'/usr/local/lazarus', //Ultibo
-    '/usr/lib/ultibo/core', //'/usr/lib/lazarus', //Ultibo
-    '/usr/lib/ultibo/core/'+LazarusVersionStr, //'/usr/lib/lazarus/'+LazarusVersionStr, //Ultibo
-    '~/pascal/ultibo/core', //'~/pascal/lazarus', //Ultibo
+  DefaultLazarusSrcDirs: array[1..1] of string = ( //Ultibo
+    //'/usr/share/lazarus', //Ultibo
+    //'/usr/local/share/lazarus', //Ultibo
+    //'/usr/local/lib/lazarus', //Ultibo
+    //'/usr/local/lazarus', //Ultibo
+    //'/usr/lib/lazarus', //Ultibo
+    //'/usr/lib/lazarus/'+LazarusVersionStr, //Ultibo
+    //'~/pascal/lazarus', //Ultibo
     '~/ultibo/core' //'~/lazarus' //Ultibo
     );
 
@@ -99,10 +99,10 @@ end;
 
 procedure GetDefaultCompilerFilenames(List: TStrings);
 begin
-  //To Do //Ultibo
-  AddFilenameToList(List,'/usr/local/bin/'+GetDefaultCompilerFilename);
-  AddFilenameToList(List,'/usr/bin/'+GetDefaultCompilerFilename);
-  AddFilenameToList(List,'/opt/fpc/'+GetDefaultCompilerFilename);
+  //AddFilenameToList(List,'/usr/local/bin/'+GetDefaultCompilerFilename); //Ultibo
+  //AddFilenameToList(List,'/usr/bin/'+GetDefaultCompilerFilename); //Ultibo
+  //AddFilenameToList(List,'/opt/fpc/'+GetDefaultCompilerFilename); //Ultibo
+  AddFilenameToList(List,'~/ultibo/core/fpc/bin/'+GetDefaultCompilerFilename); //Ultibo
 end;
 
 procedure GetDefaultMakeFilenames(List: TStrings);

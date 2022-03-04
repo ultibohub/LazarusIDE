@@ -124,10 +124,10 @@ end;
 
 procedure TProjectVersionInfoOptionsFrame.EnableVersionInfo(UseVersionInfo: boolean);
 begin
-  VersionInfoGroupBox.Enabled := UseVersionInfo;
-  LanguageSettingsGroupBox.Enabled := UseVersionInfo;
-  OtherInfoGroupBox.Enabled := UseVersionInfo;
-  AttributesGroupBox.Enabled := UseVersionInfo;
+  VersionInfoGroupBox.Enabled := UseVersionInfo and UseVersionInfoCheckBox.Enabled; //Ultibo;
+  LanguageSettingsGroupBox.Enabled := UseVersionInfo and UseVersionInfoCheckBox.Enabled; //Ultibo;
+  OtherInfoGroupBox.Enabled := UseVersionInfo and UseVersionInfoCheckBox.Enabled; //Ultibo;
+  AttributesGroupBox.Enabled := UseVersionInfo and UseVersionInfoCheckBox.Enabled; //Ultibo;
 end;
 
 procedure TProjectVersionInfoOptionsFrame.DeleteKey(AKey: String);
@@ -156,7 +156,21 @@ begin
 end;
 
 procedure TProjectVersionInfoOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+
 var
+  IsUltibo: Boolean; //Ultibo
   Items: TStringList;
   Attr: TProjectVersionAttribute;
 begin
@@ -191,6 +205,11 @@ begin
   finally
     Items.Free;
   end;
+  
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+  
+  UseVersionInfoCheckBox.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TProjectVersionInfoOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

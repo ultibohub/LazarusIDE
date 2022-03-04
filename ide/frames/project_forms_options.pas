@@ -186,6 +186,21 @@ begin
 end;
 
 procedure TProjectFormsOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   FormsAutoCreatedLabel.Caption := dlgAutoCreateForms;
   FormsAutoCreatedListBox.Hint := dlgAutoCreateFormsHint;
@@ -196,6 +211,19 @@ begin
   IDEImages.AssignImage(FormsMoveAutoCreatedFormsDownBtn, 'arrow_down');
   IDEImages.AssignImage(FormsAddToAutoCreatedFormsBtn, 'arrow_left');
   IDEImages.AssignImage(FormsRemoveFromAutoCreatedFormsBtn, 'arrow_right');
+  
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+
+  FormsAddToAutoCreatedFormsBtn.Enabled := not IsUltibo; //Ultibo
+  FormsAutoCreatedLabel.Enabled := not IsUltibo; //Ultibo
+  FormsAutoCreatedListBox.Enabled := not IsUltibo; //Ultibo
+  FormsAutoCreateNewFormsCheckBox.Enabled := not IsUltibo; //Ultibo
+  FormsAvailFormsLabel.Enabled := not IsUltibo; //Ultibo
+  FormsAvailFormsListBox.Enabled := not IsUltibo; //Ultibo
+  FormsMoveAutoCreatedFormsDownBtn.Enabled := not IsUltibo; //Ultibo
+  FormsMoveAutoCreatedFormUpBtn.Enabled := not IsUltibo; //Ultibo
+  FormsRemoveFromAutoCreatedFormsBtn.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TProjectFormsOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

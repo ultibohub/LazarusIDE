@@ -3728,6 +3728,7 @@ basecomponents:
 	$(MAKE) -C components/anchordocking
 	$(MAKE) -C components/anchordocking/design
 	$(MAKE) -C components/jcf2/IdePlugin/lazarus
+	$(MAKE) -C components/synedit/design
 bigidecomponents:
 	$(MAKE) -C components bigide
 tools:

@@ -36,7 +36,7 @@ uses
   // IdeIntf
   ObjectInspector, IDEOptionsIntf, IDEOptEditorIntf, IDEImagesIntf,
   // IDE
-  LazarusIDEStrConsts, EnvironmentOpts;
+  LazarusIDEStrConsts, EnvironmentOpts, Project; //Ultibo
 
 type
   TOIColor = (
@@ -138,7 +138,7 @@ const
     Options: (
       { ooShowComponentTree  } True,
       { ooShowHints          } False,
-      { ooAutoShow           } False, //True, //Ultibo
+      { ooAutoShow           } True,
       { ooCheckboxForBoolean } True,
       { ooBoldNonDefault     } True,
       { ooDrawGridLines      } True,
@@ -168,7 +168,7 @@ const
     Options: (
       { ooShowComponentTree  } True,
       { ooShowHints          } False,
-      { ooAutoShow           } False, //True, //Ultibo
+      { ooAutoShow           } True,
       { ooCheckboxForBoolean } False,
       { ooBoldNonDefault     } True,
       { ooDrawGridLines      } False,
@@ -182,6 +182,21 @@ const
 { TOIOptionsFrame }
 
 procedure TOIOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+  
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   ObjectInspectorColorsGroupBox.Caption := dlgColors;
   OIMiscGroupBox.Caption := dlgOIMiscellaneous;
@@ -215,6 +230,14 @@ begin
   OIDrawGridLinesCheckBox.Hint := lisHorizontalLinesBetweenProperties;
 
   FLoaded := False;
+  
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+
+  OIMiscGroupBox.Enabled := not IsUltibo; //Ultibo
+  ObjectInspectorSpeedSettingsGroupBox.Enabled := not IsUltibo; //Ultibo
+  ObjectInspectorColorsGroupBox.Enabled := not IsUltibo; //Ultibo
+  OIOptionsGroupBox.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TOIOptionsFrame.ColorsListBoxGetColors(Sender: TCustomColorListBox;

@@ -4043,7 +4043,7 @@ begin
     FGutterEdgeColor:=ConfigStore.GetValue(Path+'Color/GutterEdge',DefGutterEdgeColor);
 
     FShowHints:=ConfigStore.GetValue(Path+'ShowHints',FileVersion>=3);
-    FAutoShow := False; //ConfigStore.GetValue(Path+'AutoShow',True); //Ultibo
+    FAutoShow := ConfigStore.GetValue(Path+'AutoShow',True);
     FCheckboxForBoolean := ConfigStore.GetValue(Path+'CheckboxForBoolean',True);
     FBoldNonDefaultValues := ConfigStore.GetValue(Path+'BoldNonDefaultValues',True);
     FDrawGridLines := ConfigStore.GetValue(Path+'DrawGridLines',True);
@@ -4261,7 +4261,7 @@ begin
   FEnableHookGetSelection := true;
   FPropertyEditorHook := nil;
   FSelection := TPersistentSelectionList.Create;
-  FAutoShow := False; //True; //Ultibo
+  FAutoShow := True;
   FDefaultItemHeight := 0;
   ComponentPanelHeight := 160;
   FShowComponentTree := True;
@@ -4274,8 +4274,6 @@ begin
   FShowInfoBox := True;
   FComponentEditor := nil;
   FFilter := DefaultOITypeKinds;
-
-  Visible := False; //Ultibo
 
   Caption := oisObjectInspector;
   CompFilterLabel.Caption := oisBtnComponents;

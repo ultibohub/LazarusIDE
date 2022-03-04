@@ -24,10 +24,9 @@
 }
 
 const
-  //To Do //Ultibo
-  DefaultFPCSrcDirs: array[1..2] of string = (
-    '$(LazarusDir)\fpcsrc',  // this value is set in internalinit
-    'c:\pp\source'
+  DefaultFPCSrcDirs: array[1..1] of string = ( //Ultibo
+    '$(LazarusDir)\fpc\$(FPCVer)\source' //'$(LazarusDir)\fpcsrc',  // this value is set in internalinit //Ultibo
+    //'c:\pp\source' //Ultibo
     );
 
   DefaultLazarusSrcDirs: array[1..1] of string = (
@@ -151,7 +150,7 @@ begin
   // the same primary config path
   PrimaryConfigPath:= ExtractFilePath(ChompPathDelim(GetAppConfigDirUTF8(False))) + 'Ultibo\Core'; //'lazarus' //Ultibo
   SecondaryConfigPath:=ChompPathDelim(ProgramDirectory);
-  DefaultFPCSrcDirs[1] := AppendPathDelim(ProgramDirectory) + 'fpcsrc';
+  DefaultFPCSrcDirs[1] := AppendPathDelim(ProgramDirectory) + 'fpc\$(FPCVer)\source'; //'fpcsrc' //Ultibo
   DefaultLazarusSrcDirs[1] := DefaultDrive + '\ultibo\core'; //'\lazarus' //Ultibo
 end;
 

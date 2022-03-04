@@ -196,6 +196,7 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       BorderSpacing.Right = 6
       BorderSpacing.Bottom = 6
       ItemHeight = 0
+      OnSelect = TargetControllerComboBoxSelect
       Style = csDropDownList
       TabOrder = 2
     end

@@ -54,11 +54,11 @@ basecomponents:
 	$(MAKE) -C anchordocking
 	$(MAKE) -C anchordocking/design
 	$(MAKE) -C jcf2/IdePlugin/lazarus
+	$(MAKE) -C synedit/design
 
 #-----------------------------------------------------------------------------
 # build the extra packages needed by the bigide
 bigide:
-	$(MAKE) -C synedit/design
 	$(MAKE) -C rtticontrols
 	$(MAKE) -C cairocanvas
 	$(MAKE) -C printers

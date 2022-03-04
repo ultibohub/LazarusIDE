@@ -1823,8 +1823,8 @@ basecomponents:
 	$(MAKE) -C anchordocking
 	$(MAKE) -C anchordocking/design
 	$(MAKE) -C jcf2/IdePlugin/lazarus
-bigide:
 	$(MAKE) -C synedit/design
+bigide:
 	$(MAKE) -C rtticontrols
 	$(MAKE) -C cairocanvas
 	$(MAKE) -C printers

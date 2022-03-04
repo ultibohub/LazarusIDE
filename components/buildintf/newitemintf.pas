@@ -27,6 +27,14 @@ type
     );
   TNewIDEItemFlags = set of TNewIDEItemFlag;
 
+  // Attributes for the items
+  TNewIDEItemAttribute = ( //Ultibo
+     niiaIsModule,         // Item is a module
+     niiaIsProject,        // Item is a project
+     niiaRequireForms      // Item requires form support
+    ); //Ultibo
+  TNewIDEItemAttributes = set of TNewIDEItemAttribute; //Ultibo
+
   TNewIDEItemTemplate = class;
 
 
@@ -38,8 +46,11 @@ type
   protected
     FName: string;
     FItems: TFPList;
+    FIsModule: boolean; //Ultibo
+    FIsProject: boolean; //Ultibo
     function GetCount: integer; virtual;
     function GetItems(Index: integer): TNewIDEItemTemplate; virtual;
+    procedure InitDefaults;  virtual; //Ultibo
   public
     constructor Create(const AName: string); virtual;
     destructor Destroy; override;
@@ -55,6 +66,8 @@ type
     property Count: integer read GetCount;
     property Items[Index: integer]: TNewIDEItemTemplate read GetItems; default;
     property Name: string read FName;
+    property IsModule: boolean read FIsModule; //Ultibo
+    property IsProject: boolean read FIsProject; //Ultibo
     property VisibleInNewDialog: boolean read FVisibleInNewDialog write FVisibleInNewDialog;
   end;
 
@@ -90,11 +103,17 @@ type
   protected
     FAllowedFlags: TNewIDEItemFlags;
     FDefaultFlag: TNewIDEItemFlag;
+    FItemAttributes: TNewIDEItemAttributes; //Ultibo
     FName: string;
+    function GetIsModule: Boolean; //Ultibo
+    function GetIsProject: Boolean; //Ultibo
+    function GetRequireForms: Boolean; //Ultibo
+    procedure InitDefaults; virtual; //Ultibo
   public
     constructor Create(const AName: string;
                        ADefaultFlag: TNewIDEItemFlag = niifCopy;
-                       TheAllowedFlags: TNewIDEItemFlags = [niifCopy]);
+                       TheAllowedFlags: TNewIDEItemFlags = [niifCopy];
+                       TheItemAttributes: TNewIDEItemAttributes = []); //Ultibo
     function LocalizedName: string; virtual;
     function Description: string; virtual;
     function CreateCopy: TNewIDEItemTemplate; virtual;
@@ -102,8 +121,12 @@ type
   public
     property DefaultFlag: TNewIDEItemFlag read FDefaultFlag;
     property AllowedFlags: TNewIDEItemFlags read FAllowedFlags;
+    property ItemAttributes: TNewIDEItemAttributes read FItemAttributes; //Ultibo
     property Name: string read FName;
     property Category: TNewIDEItemCategory read fCategory write fCategory; // main category
+    property IsModule: boolean read GetIsModule; //Ultibo
+    property IsProject: boolean read GetIsProject; //Ultibo
+    property RequireForms: boolean read GetRequireForms; //Ultibo
     property VisibleInNewDialog: boolean read FVisibleInNewDialog write FVisibleInNewDialog;
     property IsInheritedItem: boolean read FIsInherited write FIsInherited;
   end;
@@ -153,11 +176,18 @@ begin
   Result:=TNewIDEItemTemplate(FItems[Index]);
 end;
 
+procedure TNewIDEItemCategory.InitDefaults; //Ultibo
+begin
+  // Nothing
+end; //Ultibo
+
 constructor TNewIDEItemCategory.Create(const AName: string);
 begin
   FVisibleInNewDialog:=true;
   FItems := TFPList.Create;
   FName  := AName;
+  
+  InitDefaults; //Ultibo
 end;
 
 destructor TNewIDEItemCategory.Destroy;
@@ -228,15 +258,38 @@ end;
 
 { TNewIDEItemTemplate }
 
+function TNewIDEItemTemplate.GetIsModule: Boolean; //Ultibo
+begin
+  Result := (niiaIsModule in FItemAttributes);
+end; //Ultibo
+
+function TNewIDEItemTemplate.GetIsProject: Boolean; //Ultibo
+begin
+  Result := (niiaIsProject in FItemAttributes);
+end; //Ultibo
+
+function TNewIDEItemTemplate.GetRequireForms: Boolean; //Ultibo
+begin
+  Result := (niiaRequireForms in FItemAttributes);
+end; //Ultibo
+
+procedure TNewIDEItemTemplate.InitDefaults; //Ultibo
+begin
+  // Nothing
+end; //Ultibo
+
 constructor TNewIDEItemTemplate.Create(const AName: string;
-  ADefaultFlag: TNewIDEItemFlag; TheAllowedFlags: TNewIDEItemFlags);
+  ADefaultFlag: TNewIDEItemFlag; TheAllowedFlags: TNewIDEItemFlags; TheItemAttributes: TNewIDEItemAttributes); //Ultibo
 begin
   FName:=AName;
   FDefaultFlag:=ADefaultFlag;
   FAllowedFlags:=TheAllowedFlags;
+  FItemAttributes:=TheItemAttributes; //Ultibo
   FVisibleInNewDialog:=true;
   FIsInherited := False;
   Include(FAllowedFlags,FDefaultFlag);
+  
+  InitDefaults; //Ultibo
 end;
 
 function TNewIDEItemTemplate.LocalizedName: string;

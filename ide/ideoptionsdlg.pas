@@ -556,15 +556,14 @@ begin
  Result:=True;
  
  {Check Title (IDE Options)}
- if Uppercase(ATitle) = Uppercase(dlgFrmEditor) then Exit;
- if Uppercase(ATitle) = Uppercase(lisMenuViewComponentPalette) then Exit;
- if Uppercase(ATitle) = Uppercase(dlgObjInsp) then Exit;
+ //if Uppercase(ATitle) = Uppercase(dlgFrmEditor) then Exit;
+ //if Uppercase(ATitle) = Uppercase(lisMenuViewComponentPalette) then Exit;
+ //if Uppercase(ATitle) = Uppercase(dlgObjInsp) then Exit;
  
  {Check Title (Project Options)}
- if Uppercase(ATitle) = Uppercase(dlgPOFroms) then Exit;
- if Uppercase(ATitle) = Uppercase(dlgPOI18n) then Exit;
- //if Uppercase(ATitle) = Uppercase(dlgPOResources) then Exit;
- if Uppercase(ATitle) = Uppercase(VersionInfoTitle) then Exit;
+ //if Uppercase(ATitle) = Uppercase(dlgPOFroms) then Exit;
+ //if Uppercase(ATitle) = Uppercase(dlgPOI18n) then Exit;
+ //if Uppercase(ATitle) = Uppercase(VersionInfoTitle) then Exit;
  
  Result:=False;
 end; //Ultibo

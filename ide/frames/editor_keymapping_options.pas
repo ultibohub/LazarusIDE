@@ -513,30 +513,30 @@ begin
  Result:=True;
  
  {Check Name (File)}
- if Uppercase(AName) = Uppercase(lisMenuNewForm) then Exit;
+ //if Uppercase(AName) = Uppercase(lisMenuNewForm) then Exit;
  
  {Check Name (View)}
- if Uppercase(AName) = Uppercase(lisKMToggleViewObjectInspector) then Exit;
- if Uppercase(AName) = Uppercase(lisKMToggleBetweenUnitAndForm) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMToggleViewObjectInspector) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMToggleBetweenUnitAndForm) then Exit;
  
  {Check Name (Project)}
- if Uppercase(AName) = Uppercase(lisHintViewForms) then Exit;
+ //if Uppercase(AName) = Uppercase(lisHintViewForms) then Exit;
  
  {Check Name (Package)}
- if Uppercase(AName) = Uppercase(lisKMNewPackage) then Exit;
- if Uppercase(AName) = Uppercase(lisCompPalOpenPackage) then Exit;
- if Uppercase(AName) = Uppercase(lisKMOpenPackageFile) then Exit;
- if Uppercase(AName) = Uppercase(lisMenuOpenPackageOfCurUnit) then Exit;
- if Uppercase(AName) = Uppercase(lisMenuAddCurFileToPkg) then Exit;
- if Uppercase(AName) = Uppercase(lisMenuPkgNewPackageComponent) then Exit;
- if Uppercase(AName) = Uppercase(lisMenuPackageGraph) then Exit;
- if Uppercase(AName) = Uppercase(lisMenuPackageLinks) then Exit;
- if Uppercase(AName) = Uppercase(lisInstallUninstallPackages) then Exit;
- if Uppercase(AName) = Uppercase(lisKMConfigureCustomComponents) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMNewPackage) then Exit;
+ //if Uppercase(AName) = Uppercase(lisCompPalOpenPackage) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMOpenPackageFile) then Exit;
+ //if Uppercase(AName) = Uppercase(lisMenuOpenPackageOfCurUnit) then Exit;
+ //if Uppercase(AName) = Uppercase(lisMenuAddCurFileToPkg) then Exit;
+ //if Uppercase(AName) = Uppercase(lisMenuPkgNewPackageComponent) then Exit;
+ //if Uppercase(AName) = Uppercase(lisMenuPackageGraph) then Exit;
+ //if Uppercase(AName) = Uppercase(lisMenuPackageLinks) then Exit;
+ //if Uppercase(AName) = Uppercase(lisInstallUninstallPackages) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMConfigureCustomComponents) then Exit;
  
  {Check Name (Tools)}
- if Uppercase(AName) = Uppercase(lisKMConvertDFMFileToLFM) then Exit;
- if Uppercase(AName) = Uppercase(lisKMConvertDelphiPackageToLazarusPackage) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMConvertDFMFileToLFM) then Exit;
+ //if Uppercase(AName) = Uppercase(lisKMConvertDelphiPackageToLazarusPackage) then Exit;
  
  Result:=False;
 end; //Ultibo

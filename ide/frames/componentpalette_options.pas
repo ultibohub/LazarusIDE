@@ -36,7 +36,7 @@ uses
   // IdeIntf
   IDEOptionsIntf, IDEOptEditorIntf, IDEImagesIntf, FormEditingIntf, ComponentReg,
   // IDE
-  EnvironmentOpts, LazarusIDEStrConsts, IDEOptionDefs, PackageDefs;
+  EnvironmentOpts, LazarusIDEStrConsts, IDEOptionDefs, PackageDefs, Project; //Ultibo
 
 type
 
@@ -154,6 +154,21 @@ begin
 end;
 
 procedure TCompPaletteOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+  
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   fDialog := ADialog;
   cbPaletteVisible.Caption := lisCmpPaletteVisible;
@@ -193,6 +208,13 @@ begin
   fPrevPageIndex := -1;
   UpdatePageMoveButtons(PagesListBox.ItemIndex);
   UpdateCompMoveButtons(ComponentsListView.ItemIndex);
+  
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+  
+  cbPaletteVisible.Enabled := not IsUltibo; //Ultibo
+  ComponentsGroupBox.Enabled := not IsUltibo; //Ultibo
+  PagesGroupBox.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TCompPaletteOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

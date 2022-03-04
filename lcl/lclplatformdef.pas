@@ -89,6 +89,9 @@ var
     {$IFDEF HASAMIGA}{$DEFINE WidgetSetDefined}
     lpMUI;
     {$ENDIF}
+    {$IFDEF ULTIBO}{$DEFINE WidgetSetDefined} //Ultibo
+    lpNoGUI;
+    {$ENDIF}
     {$IFNDEF WidgetSetDefined}
     lpGtk2;
     {$ENDIF}

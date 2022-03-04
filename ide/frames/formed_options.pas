@@ -31,7 +31,7 @@ uses
   // IdeIntf
   IDEOptionsIntf, IDEOptEditorIntf,
   // IDE
-  EnvironmentOpts, LazarusIDEStrConsts;
+  EnvironmentOpts, LazarusIDEStrConsts, Project; //Ultibo
 
 type
   TDesignerColor = (
@@ -146,6 +146,21 @@ procedure TFormEditorOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
     ForceDPIScalingInDesignTimeCheckBox.Caption:=dlgForceDPIScalingInDesignTime;
     ForceDPIScalingInDesignTimeCheckBox.Hint:=dlgForceDPIScalingInDesignTimeHint;
   end;
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+  
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   GridGroupBox.Caption := dlgEnvGrid;
   GuideLinesGroupBox.Caption := dlgEnvLGuideLines;
@@ -155,6 +170,14 @@ begin
   SetupGuideLinesGroupBox;
   SetupMiscGroupBox;
   FLoaded := False;
+
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+  
+  FormEditMiscGroupBox.Enabled := not IsUltibo; //Ultibo
+  GridGroupBox.Enabled := not IsUltibo; //Ultibo
+  GuideLinesGroupBox.Enabled := not IsUltibo; //Ultibo
+  DesignerColorsGroupBox.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TFormEditorOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

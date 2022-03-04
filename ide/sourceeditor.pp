@@ -1768,11 +1768,9 @@ begin
   {%region *** Debug Section ***}
     // Commands will be assigned by DebugManager
     SrcEditMenuSectionDebug:=RegisterIDEMenuSection(SourceEditorMenuRoot, 'Debug section');
-	SrcEditMenuSectionDebug.Enabled:=False; //Ultibo
     // register the Debug submenu
     SrcEditSubMenuDebug:=RegisterIDESubMenu(SrcEditMenuSectionDebug,
                                             'Debug', uemDebugWord, nil, nil, 'debugger');
-    SrcEditSubMenuDebug.Enabled:=False; //Ultibo
 	AParent:=SrcEditSubMenuDebug;
 
       // register the Debug submenu items
@@ -7039,6 +7037,7 @@ begin
   SrcEditMenuReadOnly.Checked:=ASrcEdit.ReadOnly;
   SrcEditMenuShowLineNumbers.Checked := ASrcEdit.EditorComponent.Gutter.LineNumberPart.Visible;
   SrcEditMenuDisableI18NForLFM.Visible:=false;
+  SrcEditSubMenuDebug.Enabled:=MainIDEInterface.AllowDebugControls; //Ultibo
 
   UpdateHighlightMenuItems(ASrcEdit);
   UpdateEncodingMenuItems(ASrcEdit);
@@ -7113,6 +7112,7 @@ end;
 procedure TSourceNotebook.DbgPopUpMenuPopup(Sender: TObject);
 begin
   SrcEditSubMenuDebug.MenuItem:=DbgPopUpMenu.Items;
+  SrcEditSubMenuDebug.Enabled:=MainIDEInterface.AllowDebugControls; //Ultibo
 end;
 
 procedure TSourceNotebook.NotebookShowTabHint(Sender: TObject;

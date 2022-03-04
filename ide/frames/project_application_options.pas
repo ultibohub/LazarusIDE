@@ -247,10 +247,24 @@ begin
 end;
 
 procedure TProjectApplicationOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+ 
 var
   ExecutionLevel: TXPManifestExecutionLevel;
   DpiLevel: TXPManifestDpiAware;
   DpiLevelNames: array[TXPManifestDpiAware] of string;
+  IsUltibo: Boolean; //Ultibo
 begin
   AppSettingsGroupBox.Caption := dlgApplicationSettings;
   TitleLabel.Caption := dlgPOTitle;
@@ -306,41 +320,44 @@ begin
   IconImage.KeepOriginYWhenClipped := True;
   IconImagePictureChanged(nil);
   
-  {Icon Options}
-  IconLabel.Enabled := False; //Ultibo
-  IconPanel.Enabled := False; //Ultibo
-  IconImage.Enabled := False; //Ultibo
-  IconTrack.Enabled := False; //Ultibo
-  IconTrackLabel.Enabled := False; //Ultibo
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
   
-  LoadIconButton.Enabled := False; //Ultibo
-  DefaultIconButton.Enabled := False; //Ultibo
-  SaveIconButton.Enabled := False; //Ultibo
-  ClearIconButton.Enabled := False; //Ultibo
-  UseLCLScalingCheckBox.Enabled := False; //Ultibo
+  // Icon Options
+  IconLabel.Enabled := not IsUltibo; //Ultibo
+  IconPanel.Enabled := not IsUltibo; //Ultibo
+  IconImage.Enabled := not IsUltibo; //Ultibo
+  IconTrack.Enabled := not IsUltibo; //Ultibo
+  IconTrackLabel.Enabled := not IsUltibo; //Ultibo
   
-  {Windows Options}
-  WindowsDividerBevel.Enabled := False; //Ultibo
-  UseXPManifestCheckBox.Enabled := False; //Ultibo
+  LoadIconButton.Enabled := not IsUltibo; //Ultibo
+  DefaultIconButton.Enabled := not IsUltibo; //Ultibo
+  SaveIconButton.Enabled := not IsUltibo; //Ultibo
+  ClearIconButton.Enabled := not IsUltibo; //Ultibo
+  UseLCLScalingCheckBox.Enabled := not IsUltibo; //Ultibo
   
-  DpiAwareLabel.Enabled := False; //Ultibo
-  DpiAwareComboBox.Enabled := False; //Ultibo
-  ExecutionLevelLabel.Enabled := False; //Ultibo
-  ExecutionLevelComboBox.Enabled := False; //Ultibo
-  UIAccessCheckBox.Enabled := False; //Ultibo
-  LongPathCheckBox.Enabled := False; //Ultibo
-  AnsiUTF8CheckBox.Enabled := False; //Ultibo
-  NameLabel.Enabled := False; //Ultibo
-  NameEdit.Enabled := False; //Ultibo
-  DescriptionLabel.Enabled := False; //Ultibo
-  DescriptionEdit.Enabled := False; //Ultibo
+  // Windows Options
+  WindowsDividerBevel.Enabled := not IsUltibo; //Ultibo
+  UseXPManifestCheckBox.Enabled := not IsUltibo; //Ultibo
   
-  {Darwin Options}
-  DarwinDividerBevel.Enabled := False; //Ultibo
-  UseAppBundleCheckBox.Enabled := False; //Ultibo
-  LblNSPrincipalClass.Enabled := False; //Ultibo
-  EdNSPrincipalClass.Enabled := False; //Ultibo
-  CreateAppBundleButton .Enabled := False; //Ultibo 
+  DpiAwareLabel.Enabled := not IsUltibo; //Ultibo
+  DpiAwareComboBox.Enabled := not IsUltibo; //Ultibo
+  ExecutionLevelLabel.Enabled := not IsUltibo; //Ultibo
+  ExecutionLevelComboBox.Enabled := not IsUltibo; //Ultibo
+  UIAccessCheckBox.Enabled := not IsUltibo; //Ultibo
+  LongPathCheckBox.Enabled := not IsUltibo; //Ultibo
+  AnsiUTF8CheckBox.Enabled := not IsUltibo; //Ultibo
+  NameLabel.Enabled := not IsUltibo; //Ultibo
+  NameEdit.Enabled := not IsUltibo; //Ultibo
+  DescriptionLabel.Enabled := not IsUltibo; //Ultibo
+  DescriptionEdit.Enabled := not IsUltibo; //Ultibo
+  
+  // Darwin Options
+  DarwinDividerBevel.Enabled := not IsUltibo; //Ultibo
+  UseAppBundleCheckBox.Enabled := not IsUltibo; //Ultibo
+  LblNSPrincipalClass.Enabled := not IsUltibo; //Ultibo
+  EdNSPrincipalClass.Enabled := not IsUltibo; //Ultibo
+  CreateAppBundleButton .Enabled := not IsUltibo; //Ultibo 
 end;
 
 procedure TProjectApplicationOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

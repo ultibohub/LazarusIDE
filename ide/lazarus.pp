@@ -70,9 +70,11 @@ uses
   anchordockpkg, //Ultibo
   anchordockingdsgn, //Ultibo
   jcfidelazarus, //Ultibo
+  allsyneditdsgn, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
-    AllSynEditDsgn, DateTimeCtrlsDsgn,
+    //AllSynEditDsgn, //Ultibo
+    DateTimeCtrlsDsgn,
     RunTimeTypeInfoControls, Printer4Lazarus, Printers4LazIDE,
     LeakView, MemDSLaz, SDFLaz, InstantFPCLaz, ExternHelp,
     TurboPowerIPro, TurboPowerIProDsgn,

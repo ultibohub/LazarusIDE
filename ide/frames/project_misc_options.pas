@@ -58,6 +58,21 @@ begin
 end;
 
 procedure TProjectMiscOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   MainUnitIsPascalSourceCheckBox.Caption := lisMainUnitIsPascalSource;
   MainUnitIsPascalSourceCheckBox.Hint := lisMainUnitIsPascalSourceHint;
@@ -90,10 +105,13 @@ begin
                                +lisChangeToUnix+LineEnding
                                +lisChangeToWindows;
 
-  MainUnitHasCreateFormStatementsCheckBox.Enabled := False; //Ultibo
-  MainUnitHasTitleStatementCheckBox.Enabled := False; //Ultibo
-  RunnableCheckBox.Enabled := False; //Ultibo
-  UseDesignTimePkgsCheckBox.Enabled := False; //Ultibo
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+
+  MainUnitHasCreateFormStatementsCheckBox.Enabled := not IsUltibo; //Ultibo
+  MainUnitHasTitleStatementCheckBox.Enabled := not IsUltibo; //Ultibo
+  RunnableCheckBox.Enabled := not IsUltibo; //Ultibo
+  UseDesignTimePkgsCheckBox.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TProjectMiscOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

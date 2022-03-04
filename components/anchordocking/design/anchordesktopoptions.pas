@@ -176,7 +176,7 @@ var
   Config: TRttiXMLConfig;
   LayoutResource: TLazarusResourceStream;
 begin
-  LayoutResource := TLazarusResourceStream.Create('ADLayoutDefault', nil);
+  LayoutResource := TLazarusResourceStream.Create('ADLayoutUltibo', nil); //'ADLayoutDefault' //Ultibo
   try
     Config := TRttiXMLConfig.Create(nil);
     try
@@ -299,7 +299,7 @@ end;
 
 initialization
 
-{$I ADLayoutDefault.lrs}
+{$I ADLayoutUltibo.lrs} //{$I ADLayoutDefault.lrs} //Ultibo
 
 end.
 

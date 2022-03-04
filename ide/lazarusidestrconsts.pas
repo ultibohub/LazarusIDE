@@ -2844,7 +2844,8 @@ resourcestring
   dlgFromCursor = 'From c&ursor';
   dlgFromBeginning = 'From b&eginning';
   dlgSearchScope = 'Search scope';
-  dlgProject = 'Project';
+  dlgProject = 'Other Project'; //Ultibo
+  dlgUltiboProject = 'Ultibo Project'; //Ultibo
   lisProjectSession = 'Project Session';
   lisWithRequiredPackages = 'With required packages';
   lisLevels = 'Levels';
@@ -5281,13 +5282,17 @@ resourcestring
 
   lisCustomProgram = 'Custom Program';
   lisSimpleProgram = 'Simple Program';
+  lisSimpleUltiboProgram = 'Simple Ultibo Program'; //Ultibo
   lisProgram = 'Program';
+  lisUltiboProgram = 'Ultibo Program'; //Ultibo
   lisConsoleApplication = 'Console application';
 
   lisApplicationProgramDescriptor = 'A graphical Free Pascal application using'
     +' the cross-platform LCL library for its GUI.';
   lisSimpleProgramProgramDescriptor = 'A most simple Free Pascal command line program.';
+  lisSimpleUltiboProgramProgramDescriptor = 'A simple Ultibo program.'; //Ultibo
   lisProgramProgramDescriptor = 'A Free Pascal command line program with some useful settings added.';
+  lisUltiboProgramProgramDescriptor = 'An Ultibo program with some useful settings added.'; //Ultibo
   lisConsoleApplicationProgramDescriptor = 'A Free Pascal command line program using'
     +' TCustomApplication to easily check command line options, handling exceptions, etc.';
   lisCustomProgramProgramDescriptor = 'A Custom Free Pascal program.';
@@ -5441,7 +5446,8 @@ resourcestring
   lisDebugOptionsFrmBreakpoint = 'Breakpoint';
   lisDebugOptionsFrmProcess = 'Process';
   lisDebugOptionsFrmThread = 'Thread';
-  lisDebugOptionsFrmModule = 'Module';
+  lisDebugOptionsFrmModule = 'Other Module'; //Ultibo
+  lisDebugOptionsFrmUltiboModule = 'Ultibo Module'; //Ultibo
   lisDebugOptionsFrmOutput = 'Output';
   lisDebugOptionsFrmWindows = 'Windows';
   lisDebugOptionsFrmDebugger = 'Debugger';

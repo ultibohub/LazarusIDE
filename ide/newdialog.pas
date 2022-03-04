@@ -89,14 +89,25 @@ type
   { TNewLazIDEItemCategoryFile }
 
   TNewLazIDEItemCategoryFile = class(TNewLazIDEItemCategory)
+  protected
+    procedure InitDefaults; override; //Ultibo
   public
     function LocalizedName: string; override;
     function Description: string; override;
   end;
 
+  { TNewLazIDEItemCategoryUltiboFile } //Ultibo
+
+  TNewLazIDEItemCategoryUltiboFile = class(TNewLazIDEItemCategoryFile) //Ultibo
+  public
+    function LocalizedName: string; override;
+  end; //Ultibo
+
   { TNewLazIDEItemCategoryInheritedItem }
 
   TNewLazIDEItemCategoryInheritedItem = class(TNewLazIDEItemCategory)
+  protected
+    procedure InitDefaults; override; //Ultibo
   public
     function LocalizedName: string; override;
     function Description: string; override;
@@ -105,14 +116,25 @@ type
   { TNewLazIDEItemCategoryProject }
 
   TNewLazIDEItemCategoryProject = class(TNewLazIDEItemCategory)
+  protected
+    procedure InitDefaults; override; //Ultibo
   public
     function LocalizedName: string; override;
     function Description: string; override;
   end;
 
+  { TNewLazIDEItemCategoryUltiboProject } //Ultibo
+
+  TNewLazIDEItemCategoryUltiboProject = class(TNewLazIDEItemCategoryProject) //Ultibo
+  public
+    function LocalizedName: string; override;
+  end; //Ultibo
+
   { TNewLazIDEItemCategoryPackage }
 
   TNewLazIDEItemCategoryPackage = class(TNewLazIDEItemCategory)
+  protected
+    procedure InitDefaults; override; //Ultibo
   public
     function LocalizedName: string; override;
     function Description: string; override;
@@ -144,19 +166,19 @@ type
     ImageIndexTemplate: integer;
     FNewItem: TNewIDEItemTemplate;
     procedure FillProjectInheritableItemsList;
-    procedure FillItemsTree(AOnlyModules: boolean);
+    procedure FillItemsTree(AOnlyModules, AAllowForms: boolean); //Ultibo
     procedure SetupComponents;
     procedure UpdateDescription;
     function FindItem(const aName: string): TTreeNode;
   public
-    constructor Create(TheOwner: TComponent; AOnlyModules: boolean); reintroduce;
+    constructor Create(TheOwner: TComponent; AOnlyModules, AAllowForms: boolean); reintroduce; //Ultibo
     destructor Destroy; override;
   public
     property NewItem: TNewIDEItemTemplate Read FNewItem;
   end;
 
 function ShowNewIDEItemDialog(out NewItem: TNewIDEItemTemplate;
-  AOnlyModules: boolean = false): TModalResult;
+  AOnlyModules: boolean = false; AAllowForms: boolean = true): TModalResult; //Ultibo
 
 
 implementation
@@ -164,12 +186,12 @@ implementation
 {$R *.lfm}
 
 function ShowNewIDEItemDialog(out NewItem: TNewIDEItemTemplate;
-  AOnlyModules: boolean): TModalResult;
+  AOnlyModules: boolean; AAllowForms: boolean): TModalResult; //Ultibo
 var
   NewOtherDialog: TNewOtherDialog;
 begin
   NewItem := nil;
-  NewOtherDialog := TNewOtherDialog.Create(nil, AOnlyModules);
+  NewOtherDialog := TNewOtherDialog.Create(nil, AOnlyModules, AAllowForms); //Ultibo
   Result := NewOtherDialog.ShowModal;
   if Result = mrOk then
     NewItem := NewOtherDialog.NewItem;
@@ -302,7 +324,7 @@ Begin
   end;
 end;
 
-procedure TNewOtherDialog.FillItemsTree(AOnlyModules: boolean);
+procedure TNewOtherDialog.FillItemsTree(AOnlyModules, AAllowForms: boolean); //Ultibo
 var
   NewParentNode, ChildNode: TTreeNode;
   CategoryID, TemplateID, CategoryCount: integer;
@@ -312,12 +334,14 @@ begin
   ItemsTreeView.BeginUpdate;
   ItemsTreeView.Items.Clear;
   CategoryCount := NewIDEItems.Count;
-  if AOnlyModules and (CategoryCount > 1) then
-    CategoryCount := 1;
+  //if AOnlyModules and (CategoryCount > 1) then //Ultibo
+  //  CategoryCount := 1;
   for CategoryID := 0 to CategoryCount-1 do
   begin
     Category := NewIDEItems[CategoryID];
     if not Category.VisibleInNewDialog then continue;
+    if AOnlyModules and not(Category.IsModule) then //Ultibo
+      Continue; //Ultibo  
     NewParentNode := ItemsTreeView.Items.AddObject(nil,Category.LocalizedName, Category);
     NewParentNode.ImageIndex := ImageIndexFolder;
     NewParentNode.SelectedIndex := ImageIndexFolder;
@@ -327,6 +351,9 @@ begin
       //DebugLn('TNewOtherDialog.FillItemsTree ',Template.Name,' ',dbgs(Template.VisibleInNewDialog));
       if Template.VisibleInNewDialog then
       begin
+        if not(AAllowForms) and (niiaRequireForms in Template.ItemAttributes) then //Ultibo
+          Continue; //Ultibo
+          
         ChildNode := ItemsTreeView.Items.AddChildObject(NewParentNode, Template.LocalizedName, Template);
         ChildNode.ImageIndex := ImageIndexTemplate;
         ChildNode.SelectedIndex := ImageIndexTemplate;
@@ -434,14 +461,14 @@ begin
   end;
 end;
 
-constructor TNewOtherDialog.Create(TheOwner: TComponent; AOnlyModules: boolean);
+constructor TNewOtherDialog.Create(TheOwner: TComponent; AOnlyModules, AAllowForms: boolean); //Ultibo
 var
   Node: TTreeNode;
 begin
   inherited Create(TheOwner);
   Caption := lisMenuNewOther;
   SetupComponents;
-  FillItemsTree(AOnlyModules);
+  FillItemsTree(AOnlyModules, AAllowForms); //Ultibo
   FillProjectInheritableItemsList;
   CompFilterEdit.Visible := false;
   InheritableComponentsListView.Visible := false;
@@ -608,6 +635,11 @@ end;
 
 { TNewLazIDEItemCategoryFile }
 
+procedure TNewLazIDEItemCategoryFile.InitDefaults; //Ultibo
+begin
+  FIsModule := True;
+end; //Ultibo
+
 function TNewLazIDEItemCategoryFile.LocalizedName: string;
 begin
   Result := lisDebugOptionsFrmModule;
@@ -618,7 +650,19 @@ begin
   Result := lisChooseOneOfTheseItemsToCreateANewFile;
 end;
 
+{ TNewLazIDEItemCategoryUltiboFile } //Ultibo
+
+function TNewLazIDEItemCategoryUltiboFile.LocalizedName: string; //Ultibo
+begin
+  Result := lisDebugOptionsFrmUltiboModule;
+end; //Ultibo
+
 { TNewLazIDEItemCategoryProject }
+
+procedure TNewLazIDEItemCategoryProject.InitDefaults; //Ultibo
+begin
+  FIsProject := True;
+end; //Ultibo
 
 function TNewLazIDEItemCategoryProject.LocalizedName: string;
 begin
@@ -630,7 +674,19 @@ begin
   Result := lisChooseOneOfTheseItemsToCreateANewProject;
 end;
 
+{ TNewLazIDEItemCategoryUltiboProject } //Ultibo
+
+function TNewLazIDEItemCategoryUltiboProject.LocalizedName: string; //Ultibo
+begin
+  Result := dlgUltiboProject;
+end; //Ultibo
+
 { TNewLazIDEItemCategoryPackage }
+
+procedure TNewLazIDEItemCategoryPackage.InitDefaults; //Ultibo
+begin
+  FIsProject := True;
+end; //Ultibo
 
 function TNewLazIDEItemCategoryPackage.LocalizedName: string;
 begin
@@ -644,6 +700,11 @@ end;
 
 
 { TNewLazIDEItemCategoryInheritedItem }
+
+procedure TNewLazIDEItemCategoryInheritedItem.InitDefaults; //Ultibo
+begin
+  FIsModule := True;
+end; //Ultibo
 
 function TNewLazIDEItemCategoryInheritedItem.LocalizedName: string;
 begin

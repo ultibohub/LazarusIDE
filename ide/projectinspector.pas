@@ -202,6 +202,8 @@ type
     procedure UpdateProperties(Immediately: boolean = false);
     procedure UpdateButtons(Immediately: boolean = false);
     procedure UpdatePending;
+    function IsUltiboProject: boolean; //Ultibo
+    procedure UpdateAddPopupMenu(Sender: TObject); //Ultibo
   protected
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure IdleHandler(Sender: TObject; var {%H-}Done: Boolean);
@@ -726,6 +728,8 @@ begin
   end;
   if OPMInterface <> nil then
     OPMInterface.AddPackageListNotification(@PackageListAvailable);
+
+  AddPopupMenu.OnPopup := @UpdateAddPopupMenu; //Ultibo
 end;
 
 procedure TProjectInspectorForm.FormDestroy(Sender: TObject);
@@ -869,7 +873,7 @@ begin
   else if ItemsTreeView.Selected = FDependenciesNode then
   begin
     // Only the Required Packages node is selected.
-    AddPopupMenuItem(lisBtnDlgAdd, @mnuAddReqClick);
+    AddPopupMenuItem(lisBtnDlgAdd, @mnuAddReqClick, not IsUltiboProject); //Ultibo
   end
   else begin
     // Files, dependencies or everything mixed is selected.
@@ -1267,9 +1271,7 @@ begin
   mnuAddDiskFile.Caption:=lisPckEditAddFilesFromFileSystem;
   mnuAddEditorFiles.Caption:=lisProjAddEditorFile;
   mnuAddReq.Caption:=lisProjAddNewRequirement;
-  mnuAddReq.Visible:=False;  //Ultibo
   mnuAddFPMakeReq.Caption:=lisProjAddNewFPMakeRequirement;
-  mnuAddFPMakeReq.Visible:=False;  //Ultibo
 
   IDEImages.AssignImage(OpenButton, 'laz_open');
   OpenButton.Caption:='';
@@ -1289,7 +1291,6 @@ begin
     FDependenciesNode:=Items.Add(nil, lisPckEditRequiredPackages);
     FDependenciesNode.ImageIndex:=FPropGui.ImageIndexRequired;
     FDependenciesNode.SelectedIndex:=FDependenciesNode.ImageIndex;
-	FDependenciesNode.Visible:=False; //Ultibo
   end;
 end;
 
@@ -1769,6 +1770,29 @@ begin
     ItemsTreeView.EndUpdate;
   end;
 end;
+
+function TProjectInspectorForm.IsUltiboProject: boolean; //Ultibo
+begin
+  Result := False;
+    
+  if FLazProject = nil then
+    Exit;
+     
+  if LowerCase(FLazProject.CompilerOptions.TargetOS) = 'ultibo' then
+  //if LowerCase(FLazProject.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+    Result := True;
+end; //Ultibo
+
+procedure TProjectInspectorForm.UpdateAddPopupMenu(Sender: TObject); //Ultibo
+var
+  IsUltibo: Boolean;
+begin
+  // Check Target
+  IsUltibo := IsUltiboProject;
+  
+  mnuAddReq.Enabled := not IsUltibo;
+  mnuAddFPMakeReq.Enabled := not IsUltibo;
+end; //Ultibo
 
 function TProjectInspectorForm.CanUpdate(Flag: TPEFlag; Immediately: boolean): boolean;
 begin
