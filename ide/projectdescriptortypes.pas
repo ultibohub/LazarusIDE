@@ -54,6 +54,72 @@ type
     function CreateStartFiles(AProject: TLazProject): TModalResult; override;
   end;
 
+  { TProjectRaspberryPiProgramDescriptor } //Ultibo
+
+  TProjectRaspberryPiProgramDescriptor = class(TProjectDescriptor) //Ultibo
+  public
+    constructor Create; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end; //Ultibo
+  
+  { TProjectRaspberryPi2ProgramDescriptor } //Ultibo
+
+  TProjectRaspberryPi2ProgramDescriptor = class(TProjectDescriptor) //Ultibo
+  public
+    constructor Create; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end; //Ultibo
+
+  { TProjectRaspberryPi3ProgramDescriptor } //Ultibo
+
+  TProjectRaspberryPi3ProgramDescriptor = class(TProjectDescriptor) //Ultibo
+  public
+    constructor Create; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end; //Ultibo
+
+  { TProjectRaspberryPi4ProgramDescriptor } //Ultibo
+
+  TProjectRaspberryPi4ProgramDescriptor = class(TProjectDescriptor) //Ultibo
+  public
+    constructor Create; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end; //Ultibo
+  
+  { TProjectRaspberryPiZeroProgramDescriptor } //Ultibo
+
+  TProjectRaspberryPiZeroProgramDescriptor = class(TProjectDescriptor) //Ultibo
+  public
+    constructor Create; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end; //Ultibo
+
+  { TProjectQEMUVersatilePBProgramDescriptor } //Ultibo
+
+  TProjectQEMUVersatilePBProgramDescriptor = class(TProjectDescriptor) //Ultibo
+  public
+    constructor Create; override;
+    function GetLocalizedName: string; override;
+    function GetLocalizedDescription: string; override;
+    function InitProject(AProject: TLazProject): TModalResult; override;
+    function CreateStartFiles(AProject: TLazProject): TModalResult; override;
+  end; //Ultibo
+
   { TProjectConsoleApplicationDescriptor }
 
   TProjectConsoleApplicationDescriptor = class(TProjectDescriptor)
@@ -182,6 +248,7 @@ begin
   inherited Create;
   Name:=ProjDescNameSimpleProgram;
   Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfMainUnitHasScaledStatement]
+              -[pfRunnable,pfUseDesignTimePackages] //Ultibo
               +[pfUseDefaultCompilerOptions];
 end;
 
@@ -209,14 +276,38 @@ begin
 
   // create program source
   NewSource:='program Project1;'+LineEnding
+    +LineEnding //Ultibo
+    +'{ Getting Started                                                              }'+LineEnding //Ultibo
+    +'{  Add your program code below, add a "uses" section and additional units if   }'+LineEnding //Ultibo
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding //Ultibo
+    +'{                                                                              }'+LineEnding //Ultibo
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding //Ultibo
+    +'{                                                                              }'+LineEnding //Ultibo
+    +'{ Tip                                                                          }'+LineEnding //Ultibo
+    +'{  To start a new project with specific settings for Raspberry Pi select File, }'+LineEnding //Ultibo
+    +'{  New ... from the menu and choose the application that suits the model of    }'+LineEnding //Ultibo
+    +'{  Raspberry Pi you have.                                                      }'+LineEnding //Ultibo
+    +'{                                                                              }'+LineEnding //Ultibo
+    +'{  Some simple example programs are available under Tools, Example Projects.   }'+LineEnding //Ultibo
     +LineEnding
     +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding //Ultibo
     +'end.'+LineEnding
     +LineEnding;
   AProject.MainFile.SetSourceText(NewSource,true);
 
   AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
   AProject.LazCompilerOptions.TargetFilename:='project1';
+
+  AProject.LazCompilerOptions.TargetCPU:='arm'; //Ultibo
+  AProject.LazCompilerOptions.TargetOS:='ultibo'; //Ultibo
+  AProject.LazCompilerOptions.TargetProcessor:=''; //Ultibo
+  AProject.LazCompilerOptions.TargetController:=''; //Ultibo
+  AProject.LazCompilerOptions.OptimizationLevel:=2; //Ultibo
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False; //Ultibo
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False; //Ultibo
+  AProject.LazCompilerOptions.SmartLinkUnit:=True; //Ultibo
+  AProject.LazCompilerOptions.LinkSmart:=True; //Ultibo
 end;
 
 function TProjectSimpleProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult;
@@ -232,6 +323,7 @@ begin
   inherited Create;
   Name:=ProjDescNameProgram;
   Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfMainUnitHasScaledStatement]
+              -[pfRunnable,pfUseDesignTimePackages] //Ultibo
               +[pfUseDefaultCompilerOptions];
 end;
 
@@ -261,24 +353,558 @@ begin
   NewSource:='program Project1;'+LineEnding
     +LineEnding
     +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding //Ultibo
+    +'{ Getting Started                                                              }'+LineEnding //Ultibo
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding //Ultibo
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding //Ultibo
+    +'{                                                                              }'+LineEnding //Ultibo
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding //Ultibo
+    +'{                                                                              }'+LineEnding //Ultibo
+    +'{ Tip                                                                          }'+LineEnding //Ultibo
+    +'{  To start a new project with specific settings for Raspberry Pi select File, }'+LineEnding //Ultibo
+    +'{  New ... from the menu and choose the application that suits the model of    }'+LineEnding //Ultibo
+    +'{  Raspberry Pi you have.                                                      }'+LineEnding //Ultibo
+    +'{                                                                              }'+LineEnding //Ultibo
+    +'{  Some simple example programs are available under Tools, Example Projects.   }'+LineEnding //Ultibo
     +LineEnding
     +'uses'+LineEnding
-    +'  {$IFDEF UNIX}'+LineEnding
-    +'  cthreads,'+LineEnding
-    +'  {$ENDIF}'+LineEnding
-    +'  Classes'+LineEnding
-    +'  { you can add units after this };'+LineEnding
+    //+'  {$IFDEF UNIX}'+LineEnding //Ultibo
+    //+'  cthreads,'+LineEnding //Ultibo
+    //+'  {$ENDIF}'+LineEnding //Ultibo
+    //+'  Classes'+LineEnding //Ultibo
+    //+'  { you can add units after this };'+LineEnding //Ultibo
+    +'  GlobalConfig,'+LineEnding //Ultibo
+    +'  GlobalConst,'+LineEnding //Ultibo
+    +'  GlobalTypes,'+LineEnding //Ultibo
+    +'  Platform,'+LineEnding //Ultibo
+    +'  Threads,'+LineEnding //Ultibo
+    +'  SysUtils,'+LineEnding //Ultibo
+    +'  Classes,'+LineEnding //Ultibo
+    +'  Ultibo'+LineEnding //Ultibo
+    +'  { Add additional units here };'+LineEnding //Ultibo
     +LineEnding
     +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding //Ultibo
     +'end.'+LineEnding
     +LineEnding;
   AProject.MainFile.SetSourceText(NewSource,true);
 
   AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
   AProject.LazCompilerOptions.TargetFilename:='project1';
+
+  AProject.LazCompilerOptions.TargetCPU:='arm'; //Ultibo
+  AProject.LazCompilerOptions.TargetOS:='ultibo'; //Ultibo
+  AProject.LazCompilerOptions.TargetProcessor:=''; //Ultibo
+  AProject.LazCompilerOptions.TargetController:=''; //Ultibo
+  AProject.LazCompilerOptions.OptimizationLevel:=2; //Ultibo
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False; //Ultibo
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False; //Ultibo
+  AProject.LazCompilerOptions.SmartLinkUnit:=True; //Ultibo
+  AProject.LazCompilerOptions.LinkSmart:=True; //Ultibo
 end;
 
 function TProjectProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult;
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
+{ TProjectRaspberryPiProgramDescriptor } //Ultibo
+
+constructor TProjectRaspberryPiProgramDescriptor.Create; //Ultibo
+begin
+  inherited Create;
+  Name:=ProjDescNameRaspberryPiProgram;
+  Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfRunnable,pfUseDesignTimePackages]; //Ultibo
+              //+[pfUseDefaultCompilerOptions]; //Do not use defaults for specific model templates
+end;
+
+function TProjectRaspberryPiProgramDescriptor.GetLocalizedName: string; //Ultibo
+begin
+  Result:=lisRaspberryPiProgram;
+end;
+
+function TProjectRaspberryPiProgramDescriptor.GetLocalizedDescription: string; //Ultibo
+begin
+  Result := GetLocalizedName + LineEnding+LineEnding + lisRaspberryPiProgramProgramDescriptor;
+end;
+
+function TProjectRaspberryPiProgramDescriptor.InitProject(AProject: TLazProject): TModalResult; //Ultibo
+var
+  NewSource: String;
+  MainFile: TLazProjectFile;
+begin
+  Result:=inherited InitProject(AProject);
+
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+
+  // create program source
+  NewSource:='program Project1;'+LineEnding
+    +LineEnding
+    +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding 
+    +'{ Raspberry Pi Application                                                     }'+LineEnding 
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding 
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To build for the QEMU target select Project, Project Options ... from the   }'+LineEnding 
+    +'{  menu, go to Config and Target and choose the appropriate Target Controller. }'+LineEnding 
+    +LineEnding
+    +'uses'+LineEnding
+    +'  RaspberryPi,'+LineEnding
+    +'  GlobalConfig,'+LineEnding 
+    +'  GlobalConst,'+LineEnding 
+    +'  GlobalTypes,'+LineEnding 
+    +'  Platform,'+LineEnding
+    +'  Threads,'+LineEnding
+    +'  SysUtils,'+LineEnding
+    +'  Classes,'+LineEnding
+    +'  Ultibo'+LineEnding
+    +'  { Add additional units here };'+LineEnding
+    +LineEnding
+    +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding
+    +'end.'+LineEnding
+    +LineEnding;
+  AProject.MainFile.SetSourceText(NewSource,true);
+
+  AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
+  AProject.LazCompilerOptions.TargetFilename:='project1';
+  
+  AProject.LazCompilerOptions.TargetCPU:='arm';
+  AProject.LazCompilerOptions.TargetOS:='ultibo';
+  AProject.LazCompilerOptions.TargetProcessor:='armv6'; 
+  AProject.LazCompilerOptions.TargetController:='RPIB'; 
+  AProject.LazCompilerOptions.OptimizationLevel:=2; 
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False; 
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False;
+  AProject.LazCompilerOptions.SmartLinkUnit:=True; 
+  AProject.LazCompilerOptions.LinkSmart:=True; 
+end;
+
+function TProjectRaspberryPiProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult; //Ultibo
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
+{ TProjectRaspberryPi2ProgramDescriptor } //Ultibo
+
+constructor TProjectRaspberryPi2ProgramDescriptor.Create; //Ultibo
+begin
+  inherited Create;
+  Name:=ProjDescNameRaspberryPi2Program;
+  Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfRunnable,pfUseDesignTimePackages]; //Ultibo
+              //+[pfUseDefaultCompilerOptions]; //Do not use defaults for specific model templates
+end;
+
+function TProjectRaspberryPi2ProgramDescriptor.GetLocalizedName: string; //Ultibo
+begin
+  Result:=lisRaspberryPi2Program;
+end;
+
+function TProjectRaspberryPi2ProgramDescriptor.GetLocalizedDescription: string; //Ultibo
+begin
+  Result := GetLocalizedName + LineEnding+LineEnding + lisRaspberryPi2ProgramProgramDescriptor;
+end;
+
+function TProjectRaspberryPi2ProgramDescriptor.InitProject(AProject: TLazProject): TModalResult; //Ultibo
+var
+  NewSource: String;
+  MainFile: TLazProjectFile;
+begin
+  Result:=inherited InitProject(AProject);
+
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+
+  // create program source
+  NewSource:='program Project1;'+LineEnding
+    +LineEnding
+    +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding
+    +'{ Raspberry Pi 2 Application                                                   }'+LineEnding 
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding 
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To build for the QEMU target select Project, Project Options ... from the   }'+LineEnding 
+    +'{  menu, go to Config and Target and choose the appropriate Target Controller. }'+LineEnding 
+    +LineEnding
+    +'uses'+LineEnding
+    +'  RaspberryPi2,'+LineEnding
+    +'  GlobalConfig,'+LineEnding 
+    +'  GlobalConst,'+LineEnding 
+    +'  GlobalTypes,'+LineEnding 
+    +'  Platform,'+LineEnding
+    +'  Threads,'+LineEnding
+    +'  SysUtils,'+LineEnding
+    +'  Classes,'+LineEnding
+    +'  Ultibo'+LineEnding
+    +'  { Add additional units here };'+LineEnding
+    +LineEnding
+    +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding
+    +'end.'+LineEnding
+    +LineEnding;
+  AProject.MainFile.SetSourceText(NewSource,true);
+
+  AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
+  AProject.LazCompilerOptions.TargetFilename:='project1';
+  
+  AProject.LazCompilerOptions.TargetCPU:='arm';
+  AProject.LazCompilerOptions.TargetOS:='ultibo';
+  AProject.LazCompilerOptions.TargetProcessor:='armv7a';
+  AProject.LazCompilerOptions.TargetController:='RPI2B';
+  AProject.LazCompilerOptions.OptimizationLevel:=2;
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False;
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False;
+  AProject.LazCompilerOptions.SmartLinkUnit:=True;
+  AProject.LazCompilerOptions.LinkSmart:=True;
+end;
+
+function TProjectRaspberryPi2ProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult; //Ultibo
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
+{ TProjectRaspberryPi3ProgramDescriptor } //Ultibo
+
+constructor TProjectRaspberryPi3ProgramDescriptor.Create; //Ultibo
+begin
+  inherited Create;
+  Name:=ProjDescNameRaspberryPi3Program;
+  Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfRunnable,pfUseDesignTimePackages]; //Ultibo
+              //+[pfUseDefaultCompilerOptions]; //Do not use defaults for specific model templates
+end;
+
+function TProjectRaspberryPi3ProgramDescriptor.GetLocalizedName: string; //Ultibo
+begin
+  Result:=lisRaspberryPi3Program;
+end;
+
+function TProjectRaspberryPi3ProgramDescriptor.GetLocalizedDescription: string; //Ultibo
+begin
+  Result := GetLocalizedName + LineEnding+LineEnding + lisRaspberryPi3ProgramProgramDescriptor;
+end;
+
+function TProjectRaspberryPi3ProgramDescriptor.InitProject(AProject: TLazProject): TModalResult; //Ultibo
+var
+  NewSource: String;
+  MainFile: TLazProjectFile;
+begin
+  Result:=inherited InitProject(AProject);
+
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+
+  // create program source
+  NewSource:='program Project1;'+LineEnding
+    +LineEnding
+    +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding
+    +'{ Raspberry Pi 3 Application                                                   }'+LineEnding 
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding 
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To build for the QEMU target select Project, Project Options ... from the   }'+LineEnding 
+    +'{  menu, go to Config and Target and choose the appropriate Target Controller. }'+LineEnding 
+    +LineEnding
+    +'uses'+LineEnding
+    +'  RaspberryPi3,'+LineEnding
+    +'  GlobalConfig,'+LineEnding 
+    +'  GlobalConst,'+LineEnding 
+    +'  GlobalTypes,'+LineEnding 
+    +'  Platform,'+LineEnding
+    +'  Threads,'+LineEnding
+    +'  SysUtils,'+LineEnding
+    +'  Classes,'+LineEnding
+    +'  Ultibo'+LineEnding
+    +'  { Add additional units here };'+LineEnding
+    +LineEnding
+    +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding
+    +'end.'+LineEnding
+    +LineEnding;
+  AProject.MainFile.SetSourceText(NewSource,true);
+
+  AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
+  AProject.LazCompilerOptions.TargetFilename:='project1';
+  
+  AProject.LazCompilerOptions.TargetCPU:='arm';
+  AProject.LazCompilerOptions.TargetOS:='ultibo';
+  AProject.LazCompilerOptions.TargetProcessor:='armv7a';
+  AProject.LazCompilerOptions.TargetController:='RPI3B';
+  AProject.LazCompilerOptions.OptimizationLevel:=2;
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False;
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False;
+  AProject.LazCompilerOptions.SmartLinkUnit:=True;
+  AProject.LazCompilerOptions.LinkSmart:=True;
+end;
+
+function TProjectRaspberryPi3ProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult; //Ultibo
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
+{ TProjectRaspberryPi4ProgramDescriptor } //Ultibo
+
+constructor TProjectRaspberryPi4ProgramDescriptor.Create; //Ultibo
+begin
+  inherited Create;
+  Name:=ProjDescNameRaspberryPi4Program;
+  Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfRunnable,pfUseDesignTimePackages]; //Ultibo
+              //+[pfUseDefaultCompilerOptions]; //Do not use defaults for specific model templates
+end;
+
+function TProjectRaspberryPi4ProgramDescriptor.GetLocalizedName: string; //Ultibo
+begin
+  Result:=lisRaspberryPi4Program;
+end;
+
+function TProjectRaspberryPi4ProgramDescriptor.GetLocalizedDescription: string; //Ultibo
+begin
+  Result := GetLocalizedName + LineEnding+LineEnding + lisRaspberryPi4ProgramProgramDescriptor;
+end;
+
+function TProjectRaspberryPi4ProgramDescriptor.InitProject(AProject: TLazProject): TModalResult; //Ultibo
+var
+  NewSource: String;
+  MainFile: TLazProjectFile;
+begin
+  Result:=inherited InitProject(AProject);
+
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+
+  // create program source
+  NewSource:='program Project1;'+LineEnding
+    +LineEnding
+    +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding
+    +'{ Raspberry Pi 4 Application                                                   }'+LineEnding 
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding 
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding 
+//    +'{                                                                              }'+LineEnding 
+//    +'{  To build for the QEMU target select Project, Project Options ... from the   }'+LineEnding 
+//    +'{  menu, go to Config and Target and choose the appropriate Target Controller. }'+LineEnding 
+    +LineEnding
+    +'uses'+LineEnding
+    +'  RaspberryPi4,'+LineEnding
+    +'  GlobalConfig,'+LineEnding 
+    +'  GlobalConst,'+LineEnding 
+    +'  GlobalTypes,'+LineEnding 
+    +'  Platform,'+LineEnding
+    +'  Threads,'+LineEnding
+    +'  SysUtils,'+LineEnding
+    +'  Classes,'+LineEnding
+    +'  Ultibo'+LineEnding
+    +'  { Add additional units here };'+LineEnding
+    +LineEnding
+    +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding
+    +'end.'+LineEnding
+    +LineEnding;
+  AProject.MainFile.SetSourceText(NewSource,true);
+
+  AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
+  AProject.LazCompilerOptions.TargetFilename:='project1';
+  
+  AProject.LazCompilerOptions.TargetCPU:='arm';
+  AProject.LazCompilerOptions.TargetOS:='ultibo';
+  AProject.LazCompilerOptions.TargetProcessor:='armv7a';
+  AProject.LazCompilerOptions.TargetController:='RPI4B';
+  AProject.LazCompilerOptions.OptimizationLevel:=2;
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False;
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False;
+  AProject.LazCompilerOptions.SmartLinkUnit:=True;
+  AProject.LazCompilerOptions.LinkSmart:=True;
+end;
+
+function TProjectRaspberryPi4ProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult; //Ultibo
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
+{ TProjectRaspberryPiZeroProgramDescriptor } //Ultibo
+
+constructor TProjectRaspberryPiZeroProgramDescriptor.Create; //Ultibo
+begin
+  inherited Create;
+  Name:=ProjDescNameRaspberryPiZeroProgram;
+  Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfRunnable,pfUseDesignTimePackages]; //Ultibo
+              //+[pfUseDefaultCompilerOptions]; //Do not use defaults for specific model templates
+end;
+
+function TProjectRaspberryPiZeroProgramDescriptor.GetLocalizedName: string; //Ultibo
+begin
+  Result:=lisRaspberryPiZeroProgram;
+end;
+
+function TProjectRaspberryPiZeroProgramDescriptor.GetLocalizedDescription: string; //Ultibo
+begin
+  Result := GetLocalizedName + LineEnding+LineEnding + lisRaspberryPiZeroProgramProgramDescriptor;
+end;
+
+function TProjectRaspberryPiZeroProgramDescriptor.InitProject(AProject: TLazProject): TModalResult; //Ultibo
+var
+  NewSource: String;
+  MainFile: TLazProjectFile;
+begin
+  Result:=inherited InitProject(AProject);
+
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+
+  // create program source
+  NewSource:='program Project1;'+LineEnding
+    +LineEnding
+    +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding
+    +'{ Raspberry Pi Zero Application                                                }'+LineEnding 
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding 
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To build for the QEMU target select Project, Project Options ... from the   }'+LineEnding 
+    +'{  menu, go to Config and Target and choose the appropriate Target Controller. }'+LineEnding 
+    +LineEnding
+    +'uses'+LineEnding
+    +'  RaspberryPi,'+LineEnding
+    +'  GlobalConfig,'+LineEnding 
+    +'  GlobalConst,'+LineEnding 
+    +'  GlobalTypes,'+LineEnding 
+    +'  Platform,'+LineEnding
+    +'  Threads,'+LineEnding
+    +'  SysUtils,'+LineEnding
+    +'  Classes,'+LineEnding
+    +'  Ultibo'+LineEnding
+    +'  { Add additional units here };'+LineEnding
+    +LineEnding
+    +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding
+    +'end.'+LineEnding
+    +LineEnding;
+  AProject.MainFile.SetSourceText(NewSource,true);
+
+  AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
+  AProject.LazCompilerOptions.TargetFilename:='project1';
+  
+  AProject.LazCompilerOptions.TargetCPU:='arm';
+  AProject.LazCompilerOptions.TargetOS:='ultibo';
+  AProject.LazCompilerOptions.TargetProcessor:='armv6';
+  AProject.LazCompilerOptions.TargetController:='RPIZERO';
+  AProject.LazCompilerOptions.OptimizationLevel:=2;
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False;
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False;
+  AProject.LazCompilerOptions.SmartLinkUnit:=True;
+  AProject.LazCompilerOptions.LinkSmart:=True;
+end;
+
+function TProjectRaspberryPiZeroProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult; //Ultibo
+begin
+  Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
+                                      [ofProjectLoading,ofRegularFile]);
+end;
+
+{ TProjectQEMUVersatilePBProgramDescriptor } //Ultibo
+
+constructor TProjectQEMUVersatilePBProgramDescriptor.Create; //Ultibo
+begin
+  inherited Create;
+  Name:=ProjDescNameQEMUVersatilePBProgram;
+  Flags:=Flags-[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfRunnable,pfUseDesignTimePackages]; //Ultibo
+              //+[pfUseDefaultCompilerOptions]; //Do not use defaults for specific model templates
+end;
+
+function TProjectQEMUVersatilePBProgramDescriptor.GetLocalizedName: string; //Ultibo
+begin
+  Result:=lisQEMUVersatilePBProgram;
+end;
+
+function TProjectQEMUVersatilePBProgramDescriptor.GetLocalizedDescription: string; //Ultibo
+begin
+  Result := GetLocalizedName + LineEnding+LineEnding + lisQEMUVersatilePBProgramProgramDescriptor;
+end;
+
+function TProjectQEMUVersatilePBProgramDescriptor.InitProject(AProject: TLazProject): TModalResult; //Ultibo
+var
+  NewSource: String;
+  MainFile: TLazProjectFile;
+begin
+  Result:=inherited InitProject(AProject);
+
+  MainFile:=AProject.CreateProjectFile('project1.lpr');
+  MainFile.IsPartOfProject:=true;
+  AProject.AddFile(MainFile,false);
+  AProject.MainFileID:=0;
+
+  // create program source
+  NewSource:='program Project1;'+LineEnding
+    +LineEnding
+    +'{$mode objfpc}{$H+}'+LineEnding
+    +LineEnding
+    +'{ QEMU VersatilePB Application                                                 }'+LineEnding 
+    +'{  Add your program code below, add additional units to the "uses" section if  }'+LineEnding 
+    +'{  required and create new units by selecting File, New Unit from the menu.    }'+LineEnding 
+    +'{                                                                              }'+LineEnding 
+    +'{  To compile your program select Run, Compile (or Run, Build) from the menu.  }'+LineEnding 
+    +LineEnding
+    +'uses'+LineEnding
+    +'  QEMUVersatilePB,'+LineEnding
+    +'  GlobalConfig,'+LineEnding 
+    +'  GlobalConst,'+LineEnding 
+    +'  GlobalTypes,'+LineEnding 
+    +'  Platform,'+LineEnding
+    +'  Threads,'+LineEnding
+    +'  SysUtils,'+LineEnding
+    +'  Classes,'+LineEnding
+    +'  Ultibo'+LineEnding
+    +'  { Add additional units here };'+LineEnding
+    +LineEnding
+    +'begin'+LineEnding
+    +' { Add your program code here }'+LineEnding
+    +'end.'+LineEnding
+    +LineEnding;
+  AProject.MainFile.SetSourceText(NewSource,true);
+
+  AProject.LazCompilerOptions.UnitOutputDirectory:='lib'+PathDelim+'$(TargetCPU)-$(TargetOS)';
+  AProject.LazCompilerOptions.TargetFilename:='project1';
+  
+  AProject.LazCompilerOptions.TargetCPU:='arm';
+  AProject.LazCompilerOptions.TargetOS:='ultibo';
+  AProject.LazCompilerOptions.TargetProcessor:='armv7a';
+  AProject.LazCompilerOptions.TargetController:='QEMUVPB';
+  AProject.LazCompilerOptions.OptimizationLevel:=2;
+  AProject.LazCompilerOptions.GenerateDebugInfo:=False;
+  AProject.LazCompilerOptions.UseLineInfoUnit:=False;
+  AProject.LazCompilerOptions.SmartLinkUnit:=True;
+  AProject.LazCompilerOptions.LinkSmart:=True;
+end;
+
+function TProjectQEMUVersatilePBProgramDescriptor.CreateStartFiles(AProject: TLazProject): TModalResult; //Ultibo
 begin
   Result:=LazarusIDE.DoOpenEditorFile(AProject.MainFile.Filename,-1,-1,
                                       [ofProjectLoading,ofRegularFile]);

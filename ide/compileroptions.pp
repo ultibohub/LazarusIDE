@@ -446,6 +446,7 @@ type
     procedure SetDebugPath(const AValue: string); override;
     procedure SetTargetCPU(const AValue: string); override;
     procedure SetTargetProc(const AValue: string); override;
+	procedure SetTargetController(const AValue: string); override; //Ultibo
     procedure SetTargetOS(const AValue: string); override;
     procedure SetTargetFileExt(const AValue: String); override;
     procedure SetTargetFilename(const AValue: String); override;
@@ -1251,6 +1252,18 @@ begin
   IncreaseChangeStamp;
 end;
 
+procedure TBaseCompilerOptions.SetTargetController(const AValue: string); //Ultibo
+begin
+  if fTargetController=AValue then exit;
+  fTargetController:=AValue;
+  if ParsedOpts.InvalidateParseOnChange then
+    IncreaseBuildMacroChangeStamp;
+  {$IFDEF VerboseIDEModified}
+  debugln(['TBaseCompilerOptions.SetTargetController ',AValue]);
+  {$ENDIF}
+  IncreaseChangeStamp;
+end; //Ultibo
+
 procedure TBaseCompilerOptions.SetTargetOS(const AValue: string);
 var
   NewValue: String;
@@ -1498,7 +1511,7 @@ var
     if FileVersion<3 then
       SmartLinkUnit := aXMLConfig.GetValue(p+'UnitStyle/Value', 1)=2
     else
-      SmartLinkUnit := aXMLConfig.GetValue(p+'SmartLinkUnit/Value', false);
+      SmartLinkUnit := aXMLConfig.GetValue(p+'SmartLinkUnit/Value', True); //false //Ultibo
   end;
 
   procedure ReadLinkSmart;
@@ -1506,7 +1519,7 @@ var
     if FileVersion<3 then
       LinkSmart := aXMLConfig.GetValue(p+'LinkStyle/Value', 1)=3
     else
-      LinkSmart := aXMLConfig.GetValue(p+'LinkSmart/Value', false);
+      LinkSmart := aXMLConfig.GetValue(p+'LinkSmart/Value', True); //false //Ultibo
   end;
 
   procedure ReadListOfMessageFlags(aPath: string; aValue: TCompilerFlagValue);
@@ -1618,17 +1631,18 @@ begin
     end;
   end else
     TargetProcessor := aXMLConfig.GetValue(p+'TargetProcessor/Value', '');
-  TargetCPU := aXMLConfig.GetValue(p+'TargetCPU/Value', '');
-  TargetOS := aXMLConfig.GetValue(p+'TargetOS/Value', '');
-  OptimizationLevel := aXMLConfig.GetValue(p+'Optimizations/OptimizationLevel/Value', 1);
+  TargetController := aXMLConfig.GetValue(p+'TargetController/Value', ''); //Ultibo
+  TargetCPU := aXMLConfig.GetValue(p+'TargetCPU/Value', 'arm'); //'' //Ultibo
+  TargetOS := aXMLConfig.GetValue(p+'TargetOS/Value', 'ultibo'); //'' //Ultibo
+  OptimizationLevel := aXMLConfig.GetValue(p+'Optimizations/OptimizationLevel/Value', 2); //1 //Ultibo
   VariablesInRegisters := aXMLConfig.GetValue(p+'Optimizations/VariablesInRegisters/Value', false);
   UncertainOptimizations := aXMLConfig.GetValue(p+'Optimizations/UncertainOptimizations/Value', false);
   ReadSmaller;
 
   { Linking }
   p:=Path+'Linking/';
-  GenerateDebugInfo := aXMLConfig.GetValue(p+'Debugging/GenerateDebugInfo/Value', FileVersion >= 11); // Default = True, since version 11 (was False before)
-  UseLineInfoUnit := aXMLConfig.GetValue(p+'Debugging/UseLineInfoUnit/Value', true);
+  GenerateDebugInfo := aXMLConfig.GetValue(p+'Debugging/GenerateDebugInfo/Value', False); //FileVersion >= 11 // Default = True, since version 11 (was False before) //Ultibo
+  UseLineInfoUnit := aXMLConfig.GetValue(p+'Debugging/UseLineInfoUnit/Value', False); //true //Ultibo
   UseHeaptrc := aXMLConfig.GetValue(p+'Debugging/UseHeaptrc/Value', false);
   TrashVariables := aXMLConfig.GetValue(p+'Debugging/TrashVariables/Value', false);
   UseValgrind := aXMLConfig.GetValue(p+'Debugging/UseValgrind/Value', false);
@@ -1816,7 +1830,7 @@ begin
 
   { CodeGeneration }
   p:=Path+'CodeGeneration/';
-  aXMLConfig.SetDeleteValue(p+'SmartLinkUnit/Value', SmartLinkUnit,false);
+  aXMLConfig.SetDeleteValue(p+'SmartLinkUnit/Value', SmartLinkUnit,true); //false //Ultibo
   aXMLConfig.SetDeleteValue(p+'RelocatableUnit/Value', RelocatableUnit,false);
   aXMLConfig.SetDeleteValue(p+'Checks/IOChecks/Value', IOChecks,false);
   aXMLConfig.SetDeleteValue(p+'Checks/RangeChecks/Value', RangeChecks,false);
@@ -1827,28 +1841,29 @@ begin
   aXMLConfig.SetDeleteValue(p+'StackSize/Value', StackSize,0);
   aXMLConfig.SetDeleteValue(p+'VerifyObjMethodCallValidity/Value', VerifyObjMethodCall,false);
   aXMLConfig.SetDeleteValue(p+'TargetProcessor/Value', TargetProcessor,'');
+  aXMLConfig.SetDeleteValue(p+'TargetController/Value', TargetController,''); //Ultibo
   aXMLConfig.SetDeleteValue(p+'TargetCPU/Value', TargetCPU,'');
   aXMLConfig.SetDeleteValue(p+'TargetOS/Value', TargetOS,'');
-  aXMLConfig.SetDeleteValue(p+'Optimizations/OptimizationLevel/Value', OptimizationLevel,1);
+  aXMLConfig.SetDeleteValue(p+'Optimizations/OptimizationLevel/Value', OptimizationLevel,2); //1 //Ultibo
   aXMLConfig.SetDeleteValue(p+'Optimizations/VariablesInRegisters/Value', VariablesInRegisters,false);
   aXMLConfig.SetDeleteValue(p+'Optimizations/UncertainOptimizations/Value', UncertainOptimizations,false);
   aXMLConfig.SetDeleteValue(p+'SmallerCode/Value', SmallerCode, false);
 
   { Linking }
   p:=Path+'Linking/';
-  aXMLConfig.SetDeleteValue(p+'Debugging/GenerateDebugInfo/Value', GenerateDebugInfo, True); // Default = True, since version 11 (was False before)
+  aXMLConfig.SetDeleteValue(p+'Debugging/GenerateDebugInfo/Value', GenerateDebugInfo, False); //True // Default = True, since version 11 (was False before) //Ultibo
   s:='';
   WriteStr(s, DebugInfoType);
   aXMLConfig.SetDeleteValue(p+'Debugging/DebugInfoType/Value', s, 'dsAuto');
   aXMLConfig.DeletePath(p+'Debugging/GenerateDwarf'); // old deprecated setting
-  aXMLConfig.SetDeleteValue(p+'Debugging/UseLineInfoUnit/Value', UseLineInfoUnit,true);
+  aXMLConfig.SetDeleteValue(p+'Debugging/UseLineInfoUnit/Value', UseLineInfoUnit,false); //true //Ultibo
   aXMLConfig.SetDeleteValue(p+'Debugging/UseHeaptrc/Value', UseHeaptrc,false);
   aXMLConfig.SetDeleteValue(p+'Debugging/TrashVariables/Value', TrashVariables,false);
   aXMLConfig.SetDeleteValue(p+'Debugging/UseValgrind/Value', UseValgrind,false);
   aXMLConfig.SetDeleteValue(p+'Debugging/GenGProfCode/Value', GenGProfCode,false);
   aXMLConfig.SetDeleteValue(p+'Debugging/StripSymbols/Value', StripSymbols,false);
   aXMLConfig.SetDeleteValue(p+'Debugging/UseExternalDbgSyms/Value', UseExternalDbgSyms,false);
-  aXMLConfig.SetDeleteValue(p+'LinkSmart/Value', LinkSmart,false);
+  aXMLConfig.SetDeleteValue(p+'LinkSmart/Value', LinkSmart,true); //false //Ultibo
   aXMLConfig.SetDeleteValue(p+'Options/PassLinkerOptions/Value', PassLinkerOptions,false);
   aXMLConfig.SetDeleteValue(p+'Options/LinkerOptions/Value',
                                f(LineBreaksToSystemLineBreaks(LinkerOptions)),'');
@@ -2885,6 +2900,45 @@ begin
   { TargetProcessor }
   if TargetProcessor<>'' then
     Switches:=Switches+' -Cp'+UpperCase(TargetProcessor);
+  { TargetController }
+  if TargetController<>'' then
+    Switches:=Switches+' -Wp'+UpperCase(TargetController); //Ultibo
+
+  { Controller Options}
+  if TargetController <> '' then //Ultibo
+   begin
+    if Uppercase(TargetController) = 'QEMUVPB' then
+     begin
+      {QEMU VersatilePB}
+      Switches:=Switches + ' @' + ExtractFilePath(RealCompilerFilename) + 'QEMUVPB.CFG';
+     end
+    else if (Uppercase(TargetController) = 'RPI2B') or
+            (Uppercase(TargetController) = 'QEMURPI2B') then
+     begin
+      {Raspberry Pi 2B/QEMU}
+      Switches:=Switches + ' @' + ExtractFilePath(RealCompilerFilename) + 'RPI2.CFG';
+     end
+    else if (Uppercase(TargetController) = 'RPI3A') or
+            (Uppercase(TargetController) = 'RPI3B') or
+            (Uppercase(TargetController) = 'RPIZERO2W') or
+            (Uppercase(TargetController) = 'QEMURPI3A') or
+            (Uppercase(TargetController) = 'QEMURPI3B') then
+     begin
+      {Raspberry Pi 3B/3B+/3A+/Zero2W/QEMU}
+      Switches:=Switches + ' @' + ExtractFilePath(RealCompilerFilename) + 'RPI3.CFG';
+     end
+    else if (Uppercase(TargetController) = 'RPI4B') or
+            (Uppercase(TargetController) = 'RPI400') then
+     begin
+      {Raspberry Pi 4B/400}
+      Switches:=Switches + ' @' + ExtractFilePath(RealCompilerFilename) + 'RPI4.CFG';
+     end
+    else
+     begin
+      {Raspberry Pi A/B/A+/B+/Zero/QEMU}
+      Switches:=Switches + ' @' + ExtractFilePath(RealCompilerFilename) + 'RPI.CFG';
+     end;
+   end; //Ultibo
 
   { --------------- Parsing Tab ------------------- }
 
@@ -3322,6 +3376,7 @@ begin
   fTargetOS := '';
   fTargetCPU := '';
   fTargetProc := '';
+  fTargetController := ''; //Ultibo
   fOptLevel := 1;
   fVarsInReg := false;
   fUncertainOpt := false;
@@ -3432,6 +3487,7 @@ begin
   fTargetOS := CompOpts.fTargetOS;
   fTargetCPU := CompOpts.fTargetCPU;
   fTargetProc := CompOpts.fTargetProc;
+  fTargetController := CompOpts.fTargetController; //Ultibo
   fOptLevel := CompOpts.fOptLevel;
   fVarsInReg := CompOpts.fVarsInReg;
   fUncertainOpt := CompOpts.fUncertainOpt;
@@ -3581,6 +3637,7 @@ begin
   if Done(Tool.AddDiff('TargetOS',fTargetOS,CompOpts.fTargetOS)) then exit;
   if Done(Tool.AddDiff('TargetCPU',fTargetCPU,CompOpts.fTargetCPU)) then exit;
   if Done(Tool.AddDiff('TargetProc',fTargetProc,CompOpts.fTargetProc)) then exit;
+  if Done(Tool.AddDiff('TargetController',fTargetController,CompOpts.fTargetController)) then exit; //Ultibo
   if Done(Tool.AddDiff('OptLevel',fOptLevel,CompOpts.fOptLevel)) then exit;
   if Done(Tool.AddDiff('VarsInReg',fVarsInReg,CompOpts.fVarsInReg)) then exit;
   if Done(Tool.AddDiff('UncertainOpt',fUncertainOpt,CompOpts.fUncertainOpt)) then exit;

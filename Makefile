@@ -3723,6 +3723,9 @@ basecomponents:
 	$(MAKE) -C components/lclextensions
 	$(MAKE) -C components/virtualtreeview
 	$(MAKE) -C ide/packages/idedebugger
+	$(MAKE) -C components/anchordocking
+	$(MAKE) -C components/anchordocking/design
+	$(MAKE) -C components/jcf2/IdePlugin/lazarus
 bigidecomponents:
 	$(MAKE) -C components bigide
 tools:

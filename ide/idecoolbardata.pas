@@ -281,13 +281,13 @@ begin
   with ToolBarOpts.ButtonNames do
   begin
     Add('NewUnit');
-    Add('NewForm');
+    //Add('NewForm'); //Ultibo
     Add(cIDEToolbarDivider);
     Add('Open');
     Add('Save');
     Add('SaveAll');
-    Add(cIDEToolbarDivider);
-    Add('Toggle between Unit and Form');
+    //Add(cIDEToolbarDivider); //Ultibo
+    //Add('Toggle between Unit and Form'); //Ultibo
     Add(cIDEToolbarDivider);
     Add('Manage desktops');
   end;
@@ -300,15 +300,17 @@ begin
   with ToolBarOpts.ButtonNames do
   begin
     Add('View Units');
-    Add('View Forms');
+    //Add('View Forms'); //Ultibo
     Add(cIDEToolbarDivider);
     Add('Change build mode');
-    Add('Run program');
-    Add('Pause program');
-    Add('Stop program');
-    Add('Step over');
-    Add('Step into');
-    Add('Step out');
+    //Add('Run program'); //Ultibo
+    //Add('Pause program'); //Ultibo
+    //Add('Stop program'); //Ultibo
+    //Add('Step over'); //Ultibo
+    //Add('Step into'); //Ultibo
+    //Add('Step out'); //Ultibo
+    Add('Compile project/program'); //Ultibo
+    Add('Build project/program'); //Ultibo
   end;
   FToolBars.Add(ToolBarOpts);
 end;

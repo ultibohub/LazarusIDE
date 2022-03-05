@@ -57,10 +57,12 @@ type
     lblTargetCPU: TLabel;
     lblTargetOS: TLabel;
     lblTargetProc: TLabel;
+	lblTargetController: TLabel; //Ultibo
     LCLWidgetTypeLabel: TLabel;
     TargetCPUComboBox: TComboBox;
     TargetOSComboBox: TComboBox;
     TargetProcComboBox: TComboBox;
+	TargetControllerComboBox: TComboBox; //Ultibo
     procedure chkCustomConfigFileClick(Sender: TObject);
     procedure TargetOSComboBoxSelect(Sender: TObject);
     procedure TargetCPUComboBoxSelect(Sender: TObject);
@@ -73,6 +75,7 @@ type
     FIsPackage: boolean;
     procedure UpdateByTargetOS(aTargetOS: string);
     procedure UpdateByTargetCPU(aTargetCPU: string);
+	procedure UpdateByTargetCPUUltibo(aTargetCPU: string); //Ultibo
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -141,6 +144,21 @@ begin
     Result := aCaption;
 end;
 
+function ControllerToCaption(const aController: string): string; //Ultibo
+begin
+  if aController = '' then
+    Result := '('+lisDefault+')'
+  else
+    Result := aController;
+end; //Ultibo
+
+function CaptionToController(const aCaption: string): string; //Ultibo
+begin
+  if aCaption = '('+lisDefault+')' then
+    Result := ''
+  else
+    Result := aCaption;
+end; //Ultibo
 
 { TCompilerConfigTargetFrame }
 
@@ -256,6 +274,64 @@ begin
   ParsingFrame.grpAsmStyle.Visible := (aTargetCPU='i386') or (aTargetCPU='x86_64');
 end;
 
+procedure TCompilerConfigTargetFrame.UpdateByTargetCPUUltibo(aTargetCPU: string); //Ultibo
+var
+  ParsingFrame: TCompilerParsingOptionsFrame;
+  sl: TStringList;
+  i: Integer;
+  aTargetController: String;
+begin
+  if aTargetCPU = '' then
+  begin
+    aTargetCPU := '$(TargetCPU)';
+    if not GlobalMacroList.SubstituteStr(aTargetCPU) then
+      raise Exception.CreateFmt('Cannot substitute macro "%s".', [aTargetCPU]);
+  end;
+
+  // Update selection list for target processor
+  sl:=TStringList.Create;
+  GetTargetProcessors(aTargetCPU,sl);
+  sl.Sort;
+  sl.Insert(0,'('+lisDefault+')');
+  for i:=0 to sl.Count-1 do
+    sl[i]:=ProcessorToCaption(sl[i]);
+  TargetProcComboBox.Items.Assign(sl);
+  sl.Free;
+  
+  // Check for arm
+  if aTargetCPU='arm' then
+  begin
+    // Get target controller
+    aTargetController := CaptionToController(TargetControllerComboBox.Text); 
+    
+    // Check for RPI2, RPI3, RPI4, RPIZERO2W or QEMU
+    if (aTargetController='RPI2B') or 
+       (aTargetController='RPI3A') or
+       (aTargetController='RPI3B') or
+       (aTargetController='RPI4B') or
+       (aTargetController='RPI400') or
+       (aTargetController='RPIZERO2W') or
+       (aTargetController='QEMURPI2B') or
+       (aTargetController='QEMURPI3A') or
+       (aTargetController='QEMURPI3B') then
+      TargetProcComboBox.ItemIndex := TargetProcComboBox.Items.IndexOf('ARMV7A') 
+    else  
+      TargetProcComboBox.ItemIndex := TargetProcComboBox.Items.IndexOf('ARMV6');
+  end
+  // Check for aarch64
+  else if aTargetCPU='aarch64' then
+  begin
+    TargetProcComboBox.ItemIndex := TargetProcComboBox.Items.IndexOf('ARMV8')
+  end
+  else
+    TargetProcComboBox.ItemIndex := 0;
+
+  // Update selection list for assembler style
+  ParsingFrame := TCompilerParsingOptionsFrame(FDialog.FindEditor(TCompilerParsingOptionsFrame));
+  Assert(Assigned(ParsingFrame));
+  ParsingFrame.grpAsmStyle.Visible := (aTargetCPU='i386') or (aTargetCPU='x86_64');
+end; //Ultibo
+
 procedure TCompilerConfigTargetFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
 var
   s: ShortString;
@@ -302,11 +378,27 @@ begin
 
     // Target CPU
     lblTargetProc.Caption := dlgTargetProc+' (-Cp)';
+
+    // Target Controller
+    lblTargetController.Caption := dlgTargetController+' (-Wp)'; //Ultibo
+    List.Clear; //Ultibo
+    List.Add('(' + lisDefault + ')'); //Ultibo
+    for s in FPCControllerNames do //Ultibo
+      List.Add(s); //Ultibo
+    with TargetControllerComboBox do //Ultibo
+    begin
+      Items.Assign(List); //Ultibo
+	  ItemIndex := 0; //Ultibo
+    end;
+
     // Target-specific options
     grbTargetOptions.Caption := dlgTargetSpecificOptions;
     chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG)';
     // WidgetSet
     LCLWidgetTypeLabel.Caption := lisSelectAnotherLCLWidgetSet;
+
+	chkWin32GraphicApp.Enabled:=False; //Ultibo
+    TargetOSComboBox.Enabled:=False; //Ultibo
   finally
     List.Free;
   end;
@@ -334,6 +426,7 @@ begin
       TargetCPUComboBox.ItemIndex := 0;
       TargetCPUComboBox.Text := 'default';
       TargetProcComboBox.Text := 'default';
+	  TargetControllerComboBox.Text := 'default'; //Ultibo
       CurrentWidgetTypeLabel.Visible:=false;
       LCLWidgetTypeLabel.Visible:=false;
     end else begin
@@ -352,6 +445,8 @@ begin
       UpdateByTargetCPU(TargetCPU);
       UpdateByTargetOS(TargetOS);
       TargetProcComboBox.Text := ProcessorToCaption(TargetProcessor);
+      // Target Controller
+      TargetControllerComboBox.Text := ControllerToCaption(TargetController); //Ultibo
       PkgDep:=TProjectCompilerOptions(AOptions).LazProject.FindDependencyByName('LCL');
       CurrentWidgetTypeLabel.Visible:=Assigned(PkgDep);
       LCLWidgetTypeLabel.Visible:=Assigned(PkgDep);
@@ -387,6 +482,7 @@ begin
         NewTargetCPU := '';
       TargetCPU := CaptionToCPU(NewTargetCPU);
       TargetProcessor := CaptionToProcessor(TargetProcComboBox.Text);
+	  TargetController := CaptionToController(TargetControllerComboBox.Text); //Ultibo
     end;
     Win32GraphicApp := chkWin32GraphicApp.Checked;
   end;
@@ -420,6 +516,10 @@ begin
     s :=''
   else
     s := cb.Text;
+
+  if CaptionToOS(TargetOSComboBox.Text) = 'ultibo' then //Ultibo
+    UpdateByTargetCPUUltibo(s) //Ultibo
+  else 
   UpdateByTargetCPU(s);
 end;
 

@@ -788,8 +788,8 @@ begin
   ProjectInspectorAddMenuRoot.MenuItem:=AddPopupMenu.Items;
   SetItem(ProjInspAddMenuDiskFile,@mnuAddDiskFileClick);
   SetItem(ProjInspAddMenuEditorFiles,@mnuAddEditorFilesClick);
-  SetItem(ProjInspAddMenuDependency,@mnuAddReqClick);
-  SetItem(ProjInspAddMenuFPMakeDependency,@mnuAddFPMakeReqClick);
+  SetItem(ProjInspAddMenuDependency,@mnuAddReqClick, True, False); //Ultibo
+  SetItem(ProjInspAddMenuFPMakeDependency,@mnuAddFPMakeReqClick, True, False); //Ultibo
 end;
 
 procedure TProjectInspectorForm.DirectoryHierarchyButtonClick(Sender: TObject);
@@ -940,7 +940,7 @@ begin
   SetItem(ProjInspMenuOpenFolder,@mnuOpenFolderClick,OnlyFilesNodeSelected);
 
   OnlyDependenciesNodeSelected:=ItemsTreeView.Selected = FDependenciesNode;
-  SetItem(ProjInspMenuAddDependency,@mnuAddReqClick,OnlyDependenciesNodeSelected);
+  SetItem(ProjInspMenuAddDependency,@mnuAddReqClick,OnlyDependenciesNodeSelected, False); //Ultibo
 
   // open, remove
   if CanOpenCount>0 then begin
@@ -1339,6 +1339,7 @@ begin
     FDependenciesNode:=Items.Add(nil, lisPckEditRequiredPackages);
     FDependenciesNode.ImageIndex:=FPropGui.ImageIndexRequired;
     FDependenciesNode.SelectedIndex:=FDependenciesNode.ImageIndex;
+	FDependenciesNode.Visible:=False; //Ultibo
   end;
 end;
 

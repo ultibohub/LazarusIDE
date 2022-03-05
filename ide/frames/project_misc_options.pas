@@ -89,6 +89,11 @@ begin
   PathDelimComboBox.Items.Text:=lisDoNotChange+LineEnding
                                +lisChangeToUnix+LineEnding
                                +lisChangeToWindows;
+
+  MainUnitHasCreateFormStatementsCheckBox.Enabled := False; //Ultibo
+  MainUnitHasTitleStatementCheckBox.Enabled := False; //Ultibo
+  RunnableCheckBox.Enabled := False; //Ultibo
+  UseDesignTimePkgsCheckBox.Enabled := False; //Ultibo
 end;
 
 procedure TProjectMiscOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

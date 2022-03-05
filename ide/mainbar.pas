@@ -83,7 +83,7 @@ type
     //mnuFile: TIDEMenuSection;
       //itmFileNew: TIDEMenuSection;
         itmFileNewUnit: TIDEMenuCommand;
-        itmFileNewForm: TIDEMenuCommand;
+        //itmFileNewForm: TIDEMenuCommand; //Ultibo
         itmFileNewOther: TIDEMenuCommand;
       //itmFileOpenSave: TIDEMenuSection;
         itmFileOpen: TIDEMenuCommand;
@@ -168,20 +168,20 @@ type
     // view menu
     //mnuView: TIDEMenuSection;
       //itmViewMainWindows: TIDEMenuSection;
-        itmViewToggleFormUnit: TIDEMenuCommand;
-        itmViewInspector: TIDEMenuCommand;
+        //itmViewToggleFormUnit: TIDEMenuCommand; //Ultibo
+        //itmViewInspector: TIDEMenuCommand; //Ultibo
         itmViewSourceEditor: TIDEMenuCommand;
         itmViewCodeExplorer: TIDEMenuCommand;
         itmViewFPDocEditor: TIDEMenuCommand;
         itmViewCodeBrowser: TIDEMenuCommand;
         itmSourceUnitDependencies: TIDEMenuCommand;
-        itmViewRestrictionBrowser: TIDEMenuCommand;
-        itmViewComponents: TIDEMenuCommand;
+        //itmViewRestrictionBrowser: TIDEMenuCommand; //Ultibo
+        //itmViewComponents: TIDEMenuCommand; //Ultibo
         itmJumpHistory: TIDEMenuCommand;
         itmMacroListView: TIDEMenuCommand;
       //itmViewSecondaryWindows: TIDEMenuSection;
-        itmViewAnchorEditor: TIDEMenuCommand;
-        itmViewTabOrder: TIDEMenuCommand;
+        //itmViewAnchorEditor: TIDEMenuCommand; //Ultibo
+        //itmViewTabOrder: TIDEMenuCommand; //Ultibo
         itmViewMessage: TIDEMenuCommand;
         itmViewSearchResults: TIDEMenuCommand;
         //itmViewDebugWindows: TIDEMenuSection;
@@ -281,7 +281,7 @@ type
         itmProjectAddTo: TIDEMenuCommand;
         itmProjectRemoveFrom: TIDEMenuCommand;
         itmProjectViewUnits: TIDEMenuCommand;
-        itmProjectViewForms: TIDEMenuCommand;
+        //itmProjectViewForms: TIDEMenuCommand; //Ultibo
         itmProjectViewSource: TIDEMenuCommand;
 
     // run menu
@@ -342,6 +342,8 @@ type
       //itmOptionsDialogs: TIDEMenuSection;
         itmEnvGeneralOptions: TIDEMenuCommand;
         itmToolRescanFPCSrcDir: TIDEMenuCommand;
+        itmToolBuildUltiboRTL: TIDEMenuCommand; //Ultibo
+        itmToolRunInQEMU: TIDEMenuCommand; //Ultibo
         itmEnvCodeTemplates: TIDEMenuCommand;
         itmEnvCodeToolsDefinesEditor: TIDEMenuCommand;
       //itmCustomTools: TIDEMenuSection;
@@ -351,11 +353,11 @@ type
         itmToolManageExamples: TIDEMenuCommand;
         itmToolDiff: TIDEMenuCommand;
       //itmDelphiConversion: TIDEMenuSection;
-        itmToolCheckLFM: TIDEMenuCommand;
+        //itmToolCheckLFM: TIDEMenuCommand; //Ultibo
         itmToolConvertDelphiUnit: TIDEMenuCommand;
         itmToolConvertDelphiProject: TIDEMenuCommand;
-        itmToolConvertDelphiPackage: TIDEMenuCommand;
-        itmToolConvertDFMtoLFM: TIDEMenuCommand;
+        //itmToolConvertDelphiPackage: TIDEMenuCommand; //Ultibo
+        //itmToolConvertDFMtoLFM: TIDEMenuCommand; //Ultibo
         itmToolConvertEncoding: TIDEMenuCommand;
       //itmBuildingLazarus: TIDEMenuSection;
         itmToolBuildLazarus: TIDEMenuCommand;
@@ -368,6 +370,10 @@ type
 
     // help menu
     //mnuHelp: TIDEMenuSection;
+      //itmUltiboHelps: TIDEMenuSection; //Ultibo
+        itmHelpUltiboHelp: TIDEMenuCommand; //Ultibo
+        itmHelpUltiboForum: TIDEMenuCommand; //Ultibo
+        itmHelpUltiboWiki: TIDEMenuCommand; //Ultibo
       //itmOnlineHelps: TIDEMenuSection;
         itmHelpOnlineHelp: TIDEMenuCommand;
         itmHelpReportingBug: TIDEMenuCommand;
@@ -427,7 +433,7 @@ begin
 
   DisableAutoSizing{$IFDEF DebugDisableAutoSizing}('TMainIDEBar.DoSetMainIDEHeight'){$ENDIF};
   try
-    if Assigned(IDEDockMaster) then
+    if Assigned(IDEDockMaster) and not(IDEDockDisabled) then //Ultibo
     begin
       if EnvironmentOptions.Desktop.AutoAdjustIDEHeight then
       begin
@@ -860,9 +866,11 @@ begin
   itmRunMenuCleanUpAndBuild.Enabled:=aAllow;
   itmRunMenuAbortBuild.Enabled:=not aAllow;
   // Package menu
-  itmPkgEditInstallPkgs.Enabled:=aAllow;
+  //itmPkgEditInstallPkgs.Enabled:=aAllow; //Ultibo
   // Tools menu
   itmToolRescanFPCSrcDir.Enabled:=aAllow;
+  itmToolBuildUltiboRTL.Enabled:=aAllow; //Ultibo
+  itmToolRunInQEMU.Enabled:=aAllow; //Ultibo
   itmToolBuildLazarus.Enabled:=aAllow;
   //itmToolConfigureBuildLazarus.Enabled:=aAllow;
 end;

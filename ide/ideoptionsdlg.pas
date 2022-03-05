@@ -97,6 +97,7 @@ type
     procedure LoadIDEOptions(Sender: TObject; AOptions: TAbstractIDEOptions);
     procedure SaveIDEOptions(Sender: TObject; AOptions: TAbstractIDEOptions);
     procedure CreateEditors;
+	function CreateEditorsExclusion(const ATitle:String):Boolean; //Ultibo
     function SearchEditorNode(AEditor: TAbstractIDEOptionsEditorClass): TTreeNode;
     function SearchEditorNode(const IDEOptionsEditorClassName: string): TTreeNode;
     function PassesFilter(ARec: PIDEOptionsGroupRec): Boolean;
@@ -515,22 +516,30 @@ begin
         Instance.Parent := EditorsPanel;
         Instance.Rec := Rec^.Items[j];
 
-        ItemParent := GroupNode;
-        if Rec^.Items[j]^.Parent <> NoParent then begin
-          ItemParent := SearchNode(GroupNode.GetFirstChild, Rec^.Items[j]^.Parent);
-          if ItemParent = nil then
-            ItemParent := GroupNode;
-        end;
-
-        ItemNode := CategoryTree.Items.AddChild(ItemParent, Instance.GetTitle);
-        ItemNode.Data := Instance;
-
-        if ItemParent.Data <> nil then begin
-          Instance := TAbstractIDEOptionsEditor(ItemParent.Data);
-          ItemParent.Expanded := not Instance.Rec^.Collapsed;
-        end;
-        if IDEEditorGroups.LastSelected = Rec^.Items[j] then
-          FSelectNode := ItemNode;
+        {Check Exclusion}
+        if not CreateEditorsExclusion(Instance.GetTitle) then //Ultibo
+         begin
+          ItemParent := GroupNode;
+          if Rec^.Items[j]^.Parent <> NoParent then begin
+            ItemParent := SearchNode(GroupNode.GetFirstChild, Rec^.Items[j]^.Parent);
+            if ItemParent = nil then
+              ItemParent := GroupNode;
+          end;
+  
+          ItemNode := CategoryTree.Items.AddChild(ItemParent, Instance.GetTitle);
+          ItemNode.Data := Instance;
+  
+          if ItemParent.Data <> nil then begin
+            Instance := TAbstractIDEOptionsEditor(ItemParent.Data);
+            ItemParent.Expanded := not Instance.Rec^.Collapsed;
+          end;
+          if IDEEditorGroups.LastSelected = Rec^.Items[j] then
+            FSelectNode := ItemNode;
+         end
+        else
+         begin
+          Instance.Free;
+         end; //Ultibo
       end;
       if (GroupNode.GetFirstChild <> nil) and (GroupNode.GetFirstChild.Data <> nil) then
         TAbstractIDEOptionsEditor(GroupNode.GetFirstChild.Data).GroupRec := Rec;
@@ -540,6 +549,25 @@ begin
   if FSelectNode <> nil then
     FSelectNode.Selected := True;
 end;
+
+function TIDEOptionsDialog.CreateEditorsExclusion(const ATitle:String):Boolean; //Ultibo
+begin
+ {}
+ Result:=True;
+ 
+ {Check Title (IDE Options)}
+ if Uppercase(ATitle) = Uppercase(dlgFrmEditor) then Exit;
+ if Uppercase(ATitle) = Uppercase(lisMenuViewComponentPalette) then Exit;
+ if Uppercase(ATitle) = Uppercase(dlgObjInsp) then Exit;
+ 
+ {Check Title (Project Options)}
+ if Uppercase(ATitle) = Uppercase(dlgPOFroms) then Exit;
+ if Uppercase(ATitle) = Uppercase(dlgPOI18n) then Exit;
+ //if Uppercase(ATitle) = Uppercase(dlgPOResources) then Exit;
+ if Uppercase(ATitle) = Uppercase(VersionInfoTitle) then Exit;
+ 
+ Result:=False;
+end; //Ultibo
 
 function TIDEOptionsDialog.SearchEditorNode(AEditor: TAbstractIDEOptionsEditorClass): TTreeNode;
 

@@ -629,6 +629,13 @@ resourcestring
   lisMenuEditCodeTemplates = 'Code Templates ...';
   dlgEdCodeTempl = 'Code Templates';
 
+  lisMenuUltiboHelp = 'Ultibo.org'; //Ultibo
+  lisMenuUltiboForum = 'Ultibo Forum'; //Ultibo
+  lisMenuUltiboWiki = 'Ultibo Wiki'; //Ultibo
+  lisUltiboURL = 'https://ultibo.org/'; //Ultibo
+  lisUltiboForumURL = 'https://ultibo.org/forum/index.php'; //Ultibo
+  lisUltiboWikiURL = 'https://ultibo.org/wiki/Main_Page'; //Ultibo
+
   lisMenuOnlineHelp = 'Online Help';
   lisMenuReportingBug = 'Reporting a Bug';
   lisReportingBugURL = 'http://wiki.lazarus.freepascal.org/How_do_I_create_a_bug_report';
@@ -934,7 +941,7 @@ resourcestring
   lisDeleteAmbiguousFile = 'Delete ambiguous file?';
   lisAmbiguousFileFoundThisFileCanBeMistakenWithDelete = 'Ambiguous file '
     +'found: "%s"%sThis file can be mistaken with "%s"%sDelete the ambiguous file?';
-  lisLazarusEditorV = 'Lazarus IDE v%s';
+  lisLazarusEditorV = 'Lazarus IDE (Ultibo Edition) v%s'; //'Lazarus IDE v%s'; //Ultibo
   lisnewProject = '(new project)';
   liscompiling = '%s (compiling ...)';
   lisdebugging = '%s (debugging ...)';
@@ -2408,6 +2415,7 @@ resourcestring
   dlgHeapSize = 'Heap size';
   dlgStackSize = 'Stack size';
   dlgTargetProc = 'Target processor';
+  dlgTargetController = 'Target controller';  //Ultibo
   dlgTargetPlatform = 'Target platform';
   dlgOptimizationLevels = 'Optimization levels';
   dlgOtherOptimizations = 'Other optimizations';
@@ -3446,6 +3454,8 @@ resourcestring
   lisCodeToolsDefsCodeToolsDefinesEditor = 'CodeTools Defines Editor';
   lisMenuCodeToolsDefinesEditor          = 'CodeTools Defines Editor ...';
   lisMenuRescanFPCSourceDirectory = 'Rescan FPC Source Directory';
+  lisMenuBuildUltiboRTL           = 'Build Ultibo RTL ...'; //Ultibo
+  lisMenuRunInQEMU                = 'Run in QEMU ...'; //Ultibo
   srkmecMakeResourceString        = 'Make Resource String';
   lisDesktops                     = 'Desktops ...';
   lisKMDiffEditorFiles            = 'Diff Editor Files';
@@ -5267,6 +5277,13 @@ resourcestring
   lisTabOrderRecursionHint = 'Calculate tab order recursively for child controls';
   lisTabOrderConfirmSort = 'Sort tab orders of all child controls of "%s" by their positions?';
 
+  lisRaspberryPiProgram = 'Raspberry Pi A/B/A+/B+ Application'; //Ultibo
+  lisRaspberryPi2Program = 'Raspberry Pi 2B Application'; //Ultibo
+  lisRaspberryPi3Program = 'Raspberry Pi 3B/3B+/3A+/Zero2W Application'; //Ultibo
+  lisRaspberryPi4Program = 'Raspberry Pi 4B/400 Application'; //Ultibo
+  lisRaspberryPiZeroProgram = 'Raspberry Pi Zero/ZeroW Application'; //Ultibo
+  lisQEMUVersatilePBProgram = 'QEMU VersatilePB Application'; //Ultibo
+
   lisCustomProgram = 'Custom Program';
   lisSimpleProgram = 'Simple Program';
   lisProgram = 'Program';
@@ -5281,6 +5298,13 @@ resourcestring
   lisCustomProgramProgramDescriptor = 'A Custom Free Pascal program.';
   lisLibraryProgramDescriptor = 'A Free Pascal shared library (.dll under Windows,'
     +' .so under Linux, .dylib under macOS).';
+
+  lisRaspberryPiProgramProgramDescriptor = 'An application with Raspberry Pi A/B/A+/B+ or QEMU specific settings.'; //Ultibo
+  lisRaspberryPi2ProgramProgramDescriptor = 'An application with Raspberry Pi 2B or QEMU specific settings.'; //Ultibo
+  lisRaspberryPi3ProgramProgramDescriptor = 'An application with Raspberry Pi 3B/3B+/3A+/Zero2W or QEMU specific settings.'; //Ultibo
+  lisRaspberryPi4ProgramProgramDescriptor = 'An application with Raspberry Pi 4B/400 specific settings.'; //Ultibo
+  lisRaspberryPiZeroProgramProgramDescriptor = 'An application with Raspberry Pi Zero/ZeroW or QEMU specific settings.'; //Ultibo
+  lisQEMUVersatilePBProgramProgramDescriptor = 'An application with QEMU VersatilePB specific settings.'; //Ultibo
 
   lisNPCreateANewProject = 'Create a new project';
   lisNPCreate = 'Create';
@@ -6277,7 +6301,7 @@ resourcestring
   lisInvalidVersionIn = 'invalid version in %s';
   lisWrongVersionIn = 'wrong version in %s: %s';
   lisFPCSources = 'FPC sources';
-  lisConfigureLazarusIDE = 'Configure Lazarus IDE';
+  lisConfigureLazarusIDE = 'Configure Lazarus IDE (Ultibo Edition)'; //'Configure Lazarus IDE'; //Ultibo
   lisFileIsNotAnExecutable = 'File is not an executable';
   lisUnusualPas2jsCompilerFileNameUsuallyItStartsWithPa = 'Unusual pas2js '
     +'compiler file name. Usually it starts with pas2js.';
@@ -6288,7 +6312,7 @@ resourcestring
     +'file name. Usually it starts with fpc, ppc or ppcross.';
   lisCompilerCfgIsMissing = '%s is missing.';
   lisSystemPpuNotFoundCheckYourFpcCfg = 'system.ppu not found. Check your fpc.cfg.';
-  lisWelcomeToLazarusIDE = 'Welcome to Lazarus IDE %s';
+  lisWelcomeToLazarusIDE = 'Welcome to Lazarus IDE (Ultibo Edition) %s'; //'Welcome to Lazarus IDE %s'; //Ultibo
   lisStartIDE = 'Start IDE';
   lisUnableToLoadFile2 = 'unable to load file %s: %s';
   lisDirectoryNotFound2 = 'directory %s not found';
@@ -6369,7 +6393,7 @@ resourcestring
 
   lisUIClearIncludedByReference = 'Clear include cache';
   lisChangeParent = 'Change Parent';
-  lisLazarusIDE = 'Lazarus IDE';
+  lisLazarusIDE = 'Lazarus IDE (Ultibo Edition)'; //'Lazarus IDE'; //Ultibo
   lisProject = 'Project %s';
   lisWhatNeedsBuilding = 'What needs building';
   lisTarget = 'Target:';

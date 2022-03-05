@@ -52,7 +52,8 @@ procedure ParseGuiCmdLineParams(var SkipAutoLoadingLastProject,
                                     StartedByStartLazarus,
                                     EnableRemoteControl,
                                     ShowSplashScreen,
-                                    Setup: Boolean);
+                                    Setup,
+									DisableDocking: Boolean); //Ultibo
 
 // remote control
 const
@@ -158,7 +159,7 @@ begin
 end;
 
 procedure ParseGuiCmdLineParams(var SkipAutoLoadingLastProject,
-  StartedByStartLazarus, EnableRemoteControl, ShowSplashScreen, Setup: Boolean);
+  StartedByStartLazarus, EnableRemoteControl, ShowSplashScreen, Setup, DisableDocking: Boolean); //Ultibo
 var
   i: Integer;
 begin
@@ -177,6 +178,8 @@ begin
       StartedByStartLazarus := true
     else if ParamIsOption(i, EnableRemoteControlOpt) then
       EnableRemoteControl := true
+    else if ParamIsOption(i, DisableDockingOpt) then //Ultibo
+      DisableDocking := true
     else if ParamIsOption(i, '--verbose') then
       ConsoleVerbosity:=Max(1,ConsoleVerbosity+1)
     else if ParamIsOption(i, '--quiet') then

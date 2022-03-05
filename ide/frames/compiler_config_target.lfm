@@ -109,6 +109,17 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       Caption = 'lblTargetProc'
       ParentColor = False
     end
+    object lblTargetController: TLabel
+      AnchorSideLeft.Control = lblTargetCPU
+      AnchorSideTop.Control = TargetControllerComboBox
+      AnchorSideTop.Side = asrCenter
+      Left = 6
+      Height = 15
+      Top = 92
+      Width = 81
+      Caption = 'lblTargetController'
+      ParentColor = False
+    end
     object TargetOSComboBox: TComboBox
       AnchorSideLeft.Control = lblTargetOS
       AnchorSideLeft.Side = asrBottom
@@ -158,6 +169,26 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       Left = 93
       Height = 25
       Top = 59
+      Width = 491
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 6
+      BorderSpacing.Top = 3
+      BorderSpacing.Right = 6
+      BorderSpacing.Bottom = 6
+      ItemHeight = 0
+      Style = csDropDownList
+      TabOrder = 2
+    end
+    object TargetControllerComboBox: TComboBox
+      AnchorSideLeft.Control = lblTargetController
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = TargetProcComboBox
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = grbTargetPlatform
+      AnchorSideRight.Side = asrBottom
+      Left = 93
+      Height = 25
+      Top = 87
       Width = 491
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Left = 6

@@ -172,6 +172,9 @@ type
     procedure mnuHelpAboutLazarusClicked(Sender: TObject);
     procedure mnuHelpOnlineHelpClicked(Sender: TObject);
     procedure mnuHelpReportBugClicked(Sender: TObject);
+    procedure mnuHelpUltiboHelpClicked(Sender: TObject); //Ultibo
+    procedure mnuHelpUltiboForumClicked(Sender: TObject); //Ultibo
+    procedure mnuHelpUltiboWikiClicked(Sender: TObject); //Ultibo
     // fpdoc
     procedure mnuSearchInFPDocFilesClick(Sender: TObject);
     // messages
@@ -1078,6 +1081,21 @@ begin
   OpenURL(lisReportingBugURL);
 end;
 
+procedure TIDEHelpManager.mnuHelpUltiboHelpClicked(Sender: TObject); //Ultibo
+begin
+  OpenURL(lisUltiboURL);
+end;
+
+procedure TIDEHelpManager.mnuHelpUltiboForumClicked(Sender: TObject); //Ultibo
+begin
+  OpenURL(lisUltiboForumURL);
+end;
+
+procedure TIDEHelpManager.mnuHelpUltiboWikiClicked(Sender: TObject); //Ultibo
+begin
+  OpenURL(lisUltiboWikiURL);
+end;
+
 procedure TIDEHelpManager.RegisterIDEHelpDatabases;
 
   procedure CreateMainIDEHelpDB;
@@ -1396,6 +1414,10 @@ begin
   {$ENDIF}
   MainIDEBar.itmHelpOnlineHelp.OnClick := @mnuHelpOnlineHelpClicked;
   MainIDEBar.itmHelpReportingBug.OnClick := @mnuHelpReportBugClicked;
+
+  MainIDEBar.itmHelpUltiboHelp.OnClick := @mnuHelpUltiboHelpClicked; //Ultibo
+  MainIDEBar.itmHelpUltiboForum.OnClick := @mnuHelpUltiboForumClicked; //Ultibo
+  MainIDEBar.itmHelpUltiboWiki.OnClick := @mnuHelpUltiboWikiClicked; //Ultibo
 
   {$IFDEF EnableFPDocSearch}
   MainIDEBar.itmSearchInFPDocFiles.OnClick:=@mnuSearchInFPDocFilesClick;

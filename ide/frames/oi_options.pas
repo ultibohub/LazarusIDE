@@ -138,7 +138,7 @@ const
     Options: (
       { ooShowComponentTree  } True,
       { ooShowHints          } False,
-      { ooAutoShow           } True,
+      { ooAutoShow           } False, //True, //Ultibo
       { ooCheckboxForBoolean } True,
       { ooBoldNonDefault     } True,
       { ooDrawGridLines      } True,
@@ -168,7 +168,7 @@ const
     Options: (
       { ooShowComponentTree  } True,
       { ooShowHints          } False,
-      { ooAutoShow           } True,
+      { ooAutoShow           } False, //True, //Ultibo
       { ooCheckboxForBoolean } False,
       { ooBoldNonDefault     } True,
       { ooDrawGridLines      } False,

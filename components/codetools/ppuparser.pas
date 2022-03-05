@@ -908,7 +908,11 @@ type
         system_aarch64_ios,        { 86 }
         system_x86_64_iphonesim,   { 87 }
         system_aarch64_win64,      { 107 }
-        system_aarch64_darwin      { 111 }
+        system_aarch64_darwin,     { 111 }
+        system_arm_ultibo,         { 119 } //Ultibo
+        system_i386_ultibo,        { 120 } //Ultibo
+        system_x86_64_ultibo,      { 121 } //Ultibo
+        system_aarch64_ultibo      { 122 } //Ultibo
       );
 const
   // taken form ppudump.pp
@@ -1002,7 +1006,11 @@ const
   { 86 }  'iOS-AArch64',
   { 87 }  'iPhoneSim-x86-64',
   { 107 }  'Win64-AArch64',
-  { 111 }  'Darwin-AArch64'
+  { 111 }  'Darwin-AArch64',
+  { 119 }  'Ultibo-arm',    //Ultibo
+  { 120 }  'Ultibo-i386',   //Ultibo   
+  { 121 }  'Ultibo-x86-64', //Ultibo
+  { 122 }  'Ultibo-AArch64' //Ultibo    
   );
 begin
   if w<=ord(high(ttarget)) then

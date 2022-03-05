@@ -735,6 +735,8 @@ begin
     // tools menu
     ecEnvironmentOptions      : Result:= srkmecEnvironmentOptions;
     ecRescanFPCSrcDir         : Result:= lisMenuRescanFPCSourceDirectory;
+    ecBuildUltiboRTL          : Result:= lisMenuBuildUltiboRTL; //Ultibo
+    ecRunInQEMU               : Result:= lisMenuRunInQEMU; //Ultibo
     ecEditCodeTemplates       : Result:= lisMenuEditCodeTemplates;
     ecCodeToolsDefinesEd      : Result:= lisKMCodeToolsDefinesEditor;
     ecManageDesktops          : Result:= lisDesktops;
@@ -759,6 +761,10 @@ begin
     ecReportingBug            : Result:= srkmecReportingBug;
     ecFocusHint               : Result:= lisFocusHint;
     ecSmartHint               : Result:= lisMenuShowSmartHint;
+
+    ecUltiboHelp              : Result:= lisMenuUltiboHelp; //Ultibo
+    ecUltiboForum             : Result:= lisMenuUltiboForum; //Ultibo
+    ecUltiboWiki              : Result:= lisMenuUltiboWiki; //Ultibo
 
     // desginer
     ecDesignerCopy            : Result:= lisDsgCopyComponents;
@@ -1396,6 +1402,8 @@ begin
   // tools menu
   ecEnvironmentOptions:  SetSingle(VK_O,[ssShift,XCtrl]);
   ecRescanFPCSrcDir:     SetSingle(VK_UNKNOWN,[]);
+  ecBuildUltiboRTL:      SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecRunInQEMU:           SetSingle(VK_UNKNOWN,[]); //Ultibo
   ecEditCodeTemplates:   SetSingle(VK_UNKNOWN,[]);
   ecCodeToolsDefinesEd:  SetSingle(VK_UNKNOWN,[]);
 
@@ -1416,6 +1424,10 @@ begin
   ecEditContextHelp:     SetSingle(VK_F1,[ssShift,XCtrl]);
   ecReportingBug:        SetSingle(VK_UNKNOWN,[]);
   ecFocusHint:           SetSingle(VK_UNKNOWN,[]);
+
+  ecUltiboHelp:          SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecUltiboForum:         SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecUltiboWiki:          SetSingle(VK_UNKNOWN,[]); //Ultibo
 
   // designer
   ecDesignerCopy:        SetSingle(VK_C,[XCtrl],   VK_Insert,[XCtrl]);
@@ -1841,6 +1853,8 @@ begin
   // tools menu
   ecEnvironmentOptions:  SetSingle(VK_O,[ssShift,ssCtrl]);
   ecRescanFPCSrcDir:     SetSingle(VK_UNKNOWN,[]);
+  ecBuildUltiboRTL:      SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecRunInQEMU:           SetSingle(VK_UNKNOWN,[]); //Ultibo
   ecEditCodeTemplates:   SetSingle(VK_UNKNOWN,[]);
   ecCodeToolsDefinesEd:  SetSingle(VK_UNKNOWN,[]);
 
@@ -1861,6 +1875,10 @@ begin
   ecEditContextHelp:     SetSingle(VK_F1,[ssCtrl,ssShift]);
   ecReportingBug:        SetSingle(VK_UNKNOWN,[]);
   ecFocusHint:           SetSingle(VK_UNKNOWN,[]);
+
+  ecUltiboHelp:          SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecUltiboForum:         SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecUltiboWiki:          SetSingle(VK_UNKNOWN,[]); //Ultibo
 
   // designer
   ecDesignerCopy:        SetSingle(VK_C,[ssCtrl],    VK_Insert,[ssCtrl]);
@@ -2473,6 +2491,8 @@ begin
   // tools menu
   ecEnvironmentOptions:  SetSingle(VK_LCL_COMMA,[ssMeta]); // Cmd-semicolon
   ecRescanFPCSrcDir:     SetSingle(VK_UNKNOWN,[]);
+  ecBuildUltiboRTL:      SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecRunInQEMU:           SetSingle(VK_UNKNOWN,[]); //Ultibo
   ecEditCodeTemplates:   SetSingle(VK_UNKNOWN,[]);
   ecCodeToolsDefinesEd:  SetSingle(VK_UNKNOWN,[]);
 
@@ -2494,6 +2514,10 @@ begin
   ecReportingBug:        SetSingle(VK_UNKNOWN,[]);
   ecFocusHint:           SetSingle(VK_UNKNOWN,[]);
   ecSmartHint:           SetSingle(VK_UNKNOWN,[]);
+
+  ecUltiboHelp:          SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecUltiboForum:         SetSingle(VK_UNKNOWN,[]); //Ultibo
+  ecUltiboWiki:          SetSingle(VK_UNKNOWN,[]); //Ultibo
 
   // designer
   ecDesignerCopy:        SetSingle(VK_C,[ssMeta]);
@@ -3205,6 +3229,8 @@ begin
 //  C:=Categories[AddCategory('EnvironmentMenu',srkmCatEnvMenu,nil)];
   AddDefault(C, 'General environment options', srkmecEnvironmentOptions, ecEnvironmentOptions);
   AddDefault(C, 'Rescan FPC source directory', lisMenuRescanFPCSourceDirectory, ecRescanFPCSrcDir);
+  AddDefault(C, 'Build Ultibo RTL', lisMenuBuildUltiboRTL, ecBuildUltiboRTL); //Ultibo
+  AddDefault(C, 'Run in QEMU', lisMenuRunInQEMU, ecRunInQEMU); //Ultibo
   AddDefault(C, 'Edit Code Templates', lisKMEditCodeTemplates, ecEditCodeTemplates);
   AddDefault(C, 'CodeTools defines editor', lisKMCodeToolsDefinesEditor, ecCodeToolsDefinesEd);
   AddDefault(C, 'Manage desktops', dlgManageDesktops, ecManageDesktops);
@@ -3235,6 +3261,10 @@ begin
   AddDefault(C, 'Reporting a bug', srkmecReportingBug, ecReportingBug);
   AddDefault(C, 'Focus hint', lisFocusHint, ecFocusHint);
   AddDefault(C, 'Context sensitive smart hint', lisMenuShowSmartHint, ecSmartHint);
+
+  AddDefault(C, 'Ultibo.org', lisMenuUltiboHelp, ecUltiboHelp); //Ultibo
+  AddDefault(C, 'Ultibo Forum', lisMenuUltiboForum, ecUltiboForum); //Ultibo
+  AddDefault(C, 'Ultibo Wiki', lisMenuUltiboWiki, ecUltiboWiki); //Ultibo
 
   // designer  - without menu items in the IDE bar (at least not directly)
   C:=Categories[AddCategory('Designer',lisKeyCatDesigner,IDECmdScopeDesignerOnly)];
