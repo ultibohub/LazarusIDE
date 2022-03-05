@@ -14,6 +14,14 @@ msgctxt "strpas2jsdesign.pjsdbrowsertoopenhtmlpage"
 msgid "Browser to open HTML page, macro $(Pas2JSBrowser)"
 msgstr ""
 
+#: strpas2jsdesign.pjsdbtnselectfile
+msgid "Select the file"
+msgstr ""
+
+#: strpas2jsdesign.pjsdbuttoncancel
+msgid "Cancel refresh"
+msgstr ""
+
 #: strpas2jsdesign.pjsdcreateinitialhtmlpage
 msgid "Create initial HTML page"
 msgstr ""
@@ -35,6 +43,22 @@ msgstr ""
 #: strpas2jsdesign.pjsdfilenotfound
 #, object-pascal-format
 msgid "file \"%s\" not found"
+msgstr ""
+
+#: strpas2jsdesign.pjsdhtmlfilenotfound
+#, object-pascal-format
+msgid ""
+"Cannot find the HTML Source file for the class in unit %s:\n"
+"%s\n"
+"Would you like to select the file from disk?"
+msgstr ""
+
+#: strpas2jsdesign.pjsdhtmlfilter
+msgid "HTML Files|*.html|All files|*.*"
+msgstr ""
+
+#: strpas2jsdesign.pjsdhtmlsourcefilenotfound
+msgid "HTML Source not found"
 msgstr ""
 
 #: strpas2jsdesign.pjsdhttpserveroptslabelcaption
@@ -244,6 +268,14 @@ msgstr ""
 msgid "You can use IDE macros like $MakeExe(). Without a full path, %s is searched in PATH."
 msgstr ""
 
+#: strpas2jsdesign.pjsrefreshallclassesfromhtml
+msgid "Refresh all classes from HTML source"
+msgstr ""
+
+#: strpas2jsdesign.pjsrefreshclassfromhtml
+msgid "Refresh class from HTML source"
+msgstr ""
+
 #: strpas2jsdesign.pjswasiprogramfiletexthint
 msgid "Name of your WebAssembly file"
 msgstr ""
@@ -254,6 +286,23 @@ msgstr ""
 
 #: strpas2jsdesign.rscreateclassfromhtmlname
 msgid "Pas2JS class definition from HTML file"
+msgstr ""
+
+#: strpas2jsdesign.rscreateunitfromtypescript
+msgid "Pas2JS import unit from TypeScript declaration module"
+msgstr ""
+
+#: strpas2jsdesign.rscreateunitfromtypescriptdescription
+msgid "Create a Pas2JS import unit from a TypeScript declaration module."
+msgstr ""
+
+#: strpas2jsdesign.rsdtsdidnotproduceoutput
+msgid "The DTS2pas tool did not produce an output file."
+msgstr ""
+
+#: strpas2jsdesign.rshttprequestfailed
+#, object-pascal-format
+msgid "HTML request to service URL %s failed: %s"
 msgstr ""
 
 #: strpas2jsdesign.spasjswebservercaption

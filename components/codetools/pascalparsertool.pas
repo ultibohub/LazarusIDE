@@ -1345,7 +1345,7 @@ function TPascalParserTool.KeyWordFuncClassMethod: boolean;
 
  proc specifiers without parameters:
    stdcall, virtual, abstract, dynamic, overload, override, cdecl, inline,
-   rtlproc, noreturn
+   rtlproc, noinline, noreturn
 
  proc specifiers with parameters:
    message <id or number>
@@ -1906,6 +1906,11 @@ begin
     end else if UpAtomIs('ALIAS') then begin
       if not ReadNextAtomIsChar(':') then
         SaveRaiseCharExpectedButAtomFound(20170421195502,':');
+      ReadNextAtom;
+      ReadConstant(true,false,[]);
+    end else if UpAtomIs('INTERNPROC') then begin
+      if not ReadNextAtomIsChar(':') then
+        SaveRaiseCharExpectedButAtomFound(20210616075400,':');
       ReadNextAtom;
       ReadConstant(true,false,[]);
     end else if UpAtomIs('INTERRUPT') then begin

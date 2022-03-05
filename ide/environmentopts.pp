@@ -846,7 +846,7 @@ type
     procedure CreateConfig;
     property OldLazarusVersion: string read FOldLazarusVersion;
 
-    function GetParsedLazarusDirectory: string;
+    function GetParsedLazarusDirectory: string; override;
     function GetParsedTestBuildDirectory: string;
     function GetParsedCompilerFilename: string; override;
     function GetParsedFPCSourceDirectory(FPCVer: string = ''): string;

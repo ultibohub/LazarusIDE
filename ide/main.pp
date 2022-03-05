@@ -2996,7 +2996,7 @@ begin
     itmViewCodeBrowser.Command:=GetIdeCmdRegToolBtn(ecToggleCodeBrowser);
     //itmViewRestrictionBrowser.Command:=GetIdeCmdRegToolBtn(ecToggleRestrictionBrowser); //Ultibo
     //itmViewComponents.Command:=GetIdeCmdRegToolBtn(ecViewComponents); //Ultibo
-    itmMacroListView.Command:=GetIdeCmdRegToolBtn(ecViewMacroList);
+    itmMacroListView.Command:=GetCommand(ecViewMacroList,nil,TMacrosToolButton);
     itmJumpHistory.Command:=GetIdeCmdRegToolBtn(ecViewJumpHistory);
     itmViewMessage.Command:=GetIdeCmdRegToolBtn(ecToggleMessages);
     itmViewSearchResults.Command:=GetIdeCmdRegToolBtn(ecToggleSearchResults);
@@ -5898,7 +5898,18 @@ begin
   FileList := TStringList.Create;
   FileList.AddStrings(FileNames);
   try
-    MaybeOpenProject(FileList);
+    if FilenameExtIs(FileList[0],'lpr') then
+    begin
+      SourceEditorManager.IncUpdateLock;
+      OpenEditorFile(FileList[0],-1,WindowIndex,Nil,[ofAddToRecent]);
+      SourceEditorManager.DecUpdateLock;
+      FileList.Delete(0);
+    end
+    else if FilenameExtIs(FileList[0],'lpi',true) then
+    begin
+      DoOpenProjectFile(FileList[0],[ofAddToRecent]);
+      FileList.Delete(0);
+    end;
     MaybeOpenEditorFiles(FileList, WindowIndex);
   finally
     FileList.Free;

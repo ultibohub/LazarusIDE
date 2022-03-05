@@ -13,7 +13,7 @@
 # Binding Release Version 2.6 against Qt5 5.6 LTS release.
 # WebKit widgets are disabled until webenginewidgets are implemented.
 
-VERSION = 1.2.9
+VERSION = 1.2.10
 
 QT += gui network printsupport
 TARGET = Qt5Pas
@@ -212,6 +212,7 @@ HEADERS +=  \
            qtextdocumentwriter_c.h \
            qicon_c.h \
            qpixmap_c.h \
+           qpixmapcache_c.h \
            qimage_c.h \
            qbitmap_c.h \
            qpicture_c.h \
@@ -556,6 +557,7 @@ SOURCES +=  \
            qtextdocumentwriter_c.cpp \
            qicon_c.cpp \
            qpixmap_c.cpp \
+           qpixmapcache_c.cpp \
            qimage_c.cpp \
            qbitmap_c.cpp \
            qpicture_c.cpp \

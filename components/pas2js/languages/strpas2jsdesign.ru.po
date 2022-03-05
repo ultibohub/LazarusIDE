@@ -24,6 +24,14 @@ msgctxt "strpas2jsdesign.pjsdbrowsertoopenhtmlpage"
 msgid "Browser to open HTML page, macro $(Pas2JSBrowser)"
 msgstr "Браузер для открытия страницы HTML, макрос $(Pas2JSBrowser)"
 
+#: strpas2jsdesign.pjsdbtnselectfile
+msgid "Select the file"
+msgstr "Выбрать файл"
+
+#: strpas2jsdesign.pjsdbuttoncancel
+msgid "Cancel refresh"
+msgstr "Отменить обновление"
+
 #: strpas2jsdesign.pjsdcreateinitialhtmlpage
 msgid "Create initial HTML page"
 msgstr "Создать первоначальную страницу HTML"
@@ -46,6 +54,25 @@ msgstr "файл \"%s\" не является исполнимым"
 #, object-pascal-format
 msgid "file \"%s\" not found"
 msgstr "файл \"%s\" не найден"
+
+#: strpas2jsdesign.pjsdhtmlfilenotfound
+#, object-pascal-format
+msgid ""
+"Cannot find the HTML Source file for the class in unit %s:\n"
+"%s\n"
+"Would you like to select the file from disk?"
+msgstr ""
+"Невозможно найти файл с исходным текстом HTML для класса в модуле %s:\n"
+"%s\n"
+"Выбрать файл на диске?"
+
+#: strpas2jsdesign.pjsdhtmlfilter
+msgid "HTML Files|*.html|All files|*.*"
+msgstr "Файлы HTML|*.html|Все файлы|*.*"
+
+#: strpas2jsdesign.pjsdhtmlsourcefilenotfound
+msgid "HTML Source not found"
+msgstr "Не найден исходный текст HTML"
 
 #: strpas2jsdesign.pjsdhttpserveroptslabelcaption
 msgid "HTTP Server extra command-line options (one per line)"
@@ -254,6 +281,14 @@ msgstr "Веб-проект (pas2js)"
 msgid "You can use IDE macros like $MakeExe(). Without a full path, %s is searched in PATH."
 msgstr "Можно использовать макросы IDE, например, $MakeExe(). Если полный путь не указан, поиск %s производится при помощи переменной окружения PATH."
 
+#: strpas2jsdesign.pjsrefreshallclassesfromhtml
+msgid "Refresh all classes from HTML source"
+msgstr "Обновить все классы из исходного текста HTML"
+
+#: strpas2jsdesign.pjsrefreshclassfromhtml
+msgid "Refresh class from HTML source"
+msgstr "Обновить класс из исходного текста HTML"
+
 #: strpas2jsdesign.pjswasiprogramfiletexthint
 msgid "Name of your WebAssembly file"
 msgstr "Имя файла WebAssembly"
@@ -265,6 +300,23 @@ msgstr "Создать объявление класса \"формы\" Pas2JS �
 #: strpas2jsdesign.rscreateclassfromhtmlname
 msgid "Pas2JS class definition from HTML file"
 msgstr "Объявление класса Pas2JS из файла HTML"
+
+#: strpas2jsdesign.rscreateunitfromtypescript
+msgid "Pas2JS import unit from TypeScript declaration module"
+msgstr "Модуль импорта Pas2JS из модуля объявлений TypeScript"
+
+#: strpas2jsdesign.rscreateunitfromtypescriptdescription
+msgid "Create a Pas2JS import unit from a TypeScript declaration module."
+msgstr "Создать модуль импорта Pas2JS из модуля объявлений TypeScript."
+
+#: strpas2jsdesign.rsdtsdidnotproduceoutput
+msgid "The DTS2pas tool did not produce an output file."
+msgstr "Средство DTS2pas не создало файл вывода."
+
+#: strpas2jsdesign.rshttprequestfailed
+#, object-pascal-format
+msgid "HTML request to service URL %s failed: %s"
+msgstr "Запрос HTML по адресу сервиса %s завершился с ошибкой: %s"
 
 #: strpas2jsdesign.spasjswebservercaption
 msgctxt "strpas2jsdesign.spasjswebservercaption"

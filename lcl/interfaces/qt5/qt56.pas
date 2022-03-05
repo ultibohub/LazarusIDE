@@ -5540,6 +5540,8 @@ function QGuiApplication_isSessionRestored(handle: QGuiApplicationH): Boolean; c
 procedure QGuiApplication_sessionId(handle: QGuiApplicationH; retval: PWideString); cdecl; external Qt5PasLib name 'QGuiApplication_sessionId';
 procedure QGuiApplication_sessionKey(handle: QGuiApplicationH; retval: PWideString); cdecl; external Qt5PasLib name 'QGuiApplication_sessionKey';
 function QGuiApplication_isSavingSession(handle: QGuiApplicationH): Boolean; cdecl; external Qt5PasLib name 'QGuiApplication_isSavingSession';
+function QGuiApplication_isFallbackSessionManagementEnabled(): Boolean; cdecl; external Qt5PasLib name 'QGuiApplication_isFallbackSessionManagementEnabled';
+procedure QGuiApplication_setFallbackSessionManagementEnabled(AEnabled: boolean); cdecl; external Qt5PasLib name 'QGuiApplication_setFallbackSessionManagementEnabled';
 
 
 type
@@ -8958,6 +8960,8 @@ procedure QIcon_themeSearchPaths(retval: QStringListH); cdecl; external Qt5PasLi
 procedure QIcon_setThemeSearchPaths(searchpath: QStringListH); cdecl; external Qt5PasLib name 'QIcon_setThemeSearchPaths';
 procedure QIcon_themeName(retval: PWideString); cdecl; external Qt5PasLib name 'QIcon_themeName';
 procedure QIcon_setThemeName(path: PWideString); cdecl; external Qt5PasLib name 'QIcon_setThemeName';
+
+procedure QPixmapCache_Clear(); cdecl; external Qt5PasLib name 'QPixmapCache_Clear';
 
 function QPixmap_Create(): QPixmapH; cdecl; external Qt5PasLib name 'QPixmap_Create';
 procedure QPixmap_Destroy(handle: QPixmapH); cdecl; external Qt5PasLib name 'QPixmap_Destroy'; 

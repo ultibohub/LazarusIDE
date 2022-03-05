@@ -2181,6 +2181,7 @@ begin
     ARegisterValue := ARegisters.EntriesByName[ARegisterList[i].Name];
     ARegisterValue.ValueObj.SetAsNum(ARegisterList[i].NumValue, ARegisterList[i].Size);
     ARegisterValue.ValueObj.SetAsText(ARegisterList[i].StrValue);
+    ARegisterValue.Modified := ARegisterList.IsModified[ARegisterList[i]];
     ARegisterValue.DataValidity:=ddsValid;
     end;
   ARegisters.DataValidity:=ddsValid;
@@ -3098,6 +3099,7 @@ begin
     {$IFDEF MSWINDOWS}
     {$IFDEF WIN64}
     bplFpcSpecific, bplRtlRestoreContext, bplRtlUnwind,
+    bplSehW64Finally, bplSehW64Except, bplSehW64Unwound,
     {$ENDIF}
     bplFpcExceptHandler ,bplFpcFinallyHandler, bplFpcLeaveHandler,
     bplSehW32Except, bplSehW32Finally,

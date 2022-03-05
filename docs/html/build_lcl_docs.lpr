@@ -1,7 +1,7 @@
 program update_lcl_docs;
 
-{ Runs FPC's fpdoc document generator to generate LCL documentation,
-  e.g. in CHM format }
+{ Runs the FPC fpdoc document generator to generate LCL and LazUtils
+  documentation in CHM or HTML format }
 
 {$mode objfpc}{$H+}
 {$IFDEF MSWINDOWS}
@@ -9,7 +9,7 @@ program update_lcl_docs;
 {$ENDIF}
 
 uses
-  Classes, Sysutils, GetOpts, LazFileUtils, FileUtil, UTF8Process, LazUtilities,
+  Classes, Sysutils, GetOpts, LazFileUtils, FileUtil, UTF8Process,
   LazStringUtils, Process;
 
 var
@@ -22,7 +22,7 @@ var
   DefaultXCTDir: String;
   DefaultFPDocParams: string = '';
   DefaultOutFormat: string = 'html';
-  DefaultFooterFilename: string = 'locallclfooter.xml'; // ToDo
+  DefaultFooterFilename: string = ''; // default is no footer(s)
 
 type
   TFPDocRunStep = (
@@ -79,7 +79,7 @@ type
     procedure InitVars;
     procedure AddFilesToList(Dir: String; List: TStrings);
     procedure FindSourceFiles;
-    procedure CreateOuputDir;
+    procedure CreateOutputDir;
     procedure RunFPDoc;
     procedure CopyToXCTDir;
     procedure Execute;
@@ -94,7 +94,7 @@ type
     property PackageName: string read FPackageName;
     property PasSrcDir: string read FPasSrcDir write SetPasSrcDir;
     property Step: TFPDocRunStep read FStep;
-    property UsedPkgs: TStringList read FUsedPkgs; // e.g. 'rtl','fcl', 'lazutils'
+    property UsedPkgs: TStringList read FUsedPkgs; // e.g. 'rtl','fcl', 'lcl', 'lazutils'
     property XCTDir: string read FXCTDir write SetXCTDir;
     property XMLSrcDir: string read FXMLSrcDir write SetXMLSrcDir;
     property XCTFile: string read FXCTFile;
@@ -205,7 +205,7 @@ begin
 
   if DefaultOutFormat = '' then
   begin
-    writeln('Error: Param outfmt wrong');
+    writeln('Error: Parameter outfmt is missing');
     PrintHelp;
   end;
 end;
@@ -239,11 +239,41 @@ begin
   FCSSFile:=AValue;
 end;
 
+{ Handles fpdoc 3.3.1 changed usage of the --footer argument. It can be
+   either a string with the content for the footer, or a file name when
+   prefixed with @. Handles both old and new syntax.
+   @ cannot be included in the call to TrimAndExpandFilename.
+   All file name validation occurs here. }
 procedure TFPDocRun.SetFooterFilename(AValue: String);
+var
+  vFilename: String;
 begin
-  AValue:=TrimAndExpandFilename(AValue);
-  if FFooterFilename=AValue then Exit;
-  FFooterFilename:=AValue;
+  vFileName := '';
+  if (AValue <> '') then
+  begin
+    // check for fpdoc 3.3.1 file name with @ prefix
+    if (AValue[1] = '@') then
+    begin
+      vFilename := TrimAndExpandFilename(Copy(AValue, 2, Length(AValue)-1));
+      if not FileExistsUTF8(vFileName) then
+         AValue := '"Footer file not found: @' + vFileName + '"'
+      else
+         AValue := '@' + vFilename;
+    end
+    // wrap anything with spaces in Quote characters when needed
+    else if (Pos(' ', AValue) <> 0) and (aValue[1] <> '"') then
+    begin
+     AValue :='"' + AValue + '"';
+    end
+    // expand and validate file name without the @ prefix
+    else
+    begin
+      vFilename := TrimAndExpandFilename(AValue);
+      if FileExistsUTF8(vFileName) then AValue := vFilename;
+    end;
+  end;
+  if FFooterFilename = AValue then Exit;
+  FFooterFilename := AValue;
 end;
 
 procedure TFPDocRun.SetPasSrcDir(AValue: string);
@@ -345,11 +375,21 @@ begin
     Params.Add('--auto-toc');
     Params.Add('--auto-index');
     Params.Add('--make-searchable');
+
+    // set an explicit title used in the LHelp TOC navigation tree
+    if (LowerCase(PackageName) = 'lcl') then
+      Params.Add('--chm-title="(LCL) Lazarus Component Library"')
+    else
+      Params.Add('--chm-title="(LazUtils) Lazarus Utilities"');
+
     if CSSFile<>'' then
       Params.Add('--css-file='+ExtractFileName(CSSFile)); // the css file is copied to the OutDir
   end;
 
-  if (FooterFilename<>'') and FileExistsUTF8(FooterFilename) then
+  { In fpdoc 3.3.1 footerfilename is no longer just a file name. It can be the
+    footer text or a file name when prefixed with @.
+    Validation and quoting handled in the property setter. }
+  if (FooterFilename<>'') then // and FileExistsUTF8(FooterFilename) then
     Params.Add('--footer='+FooterFilename);
 
   if EnvParams<>'' then
@@ -405,7 +445,7 @@ var
   XMLFile, Filename: String;
 begin
   if ord(Step)>=ord(frsFilesGathered) then
-    raise Exception.Create('TFPDocRun.FindSourceFiles not again');
+    raise Exception.Create('TFPDocRun.FindSourceFiles already called');
   if ord(Step)<ord(frsVarsInitialized) then
     InitVars;
 
@@ -446,18 +486,18 @@ begin
   FStep:=frsFilesGathered;
 end;
 
-procedure TFPDocRun.CreateOuputDir;
+procedure TFPDocRun.CreateOutputDir;
 var
   TargetCSSFile: String;
 begin
   if ord(Step)>=ord(frsOutDirCreated) then
-    raise Exception.Create('TFPDocRun.CreateOuputDir not again');
+    raise Exception.Create('TFPDocRun.CreateOutputDir already called');
 
   if Not DirectoryExistsUTF8(OutDir) then
   begin
     writeln('Creating directory "',OutDir,'"');
     if not CreateDirUTF8(OutDir) then
-      raise Exception.Create('unable to create directory "'+OutDir+'"');
+      raise Exception.Create('Unable to create directory "'+OutDir+'"');
   end;
 
   if ord(Step)<ord(frsFilesGathered) then
@@ -469,7 +509,7 @@ begin
     if CompareFilenames(TargetCSSFile,CSSFile)<>0 then
     begin
       if not CopyFile(CSSFile,TargetCSSFile) then
-        raise Exception.Create('unable to copy css file: CSSfile="'+CSSFile+'" to "'+TargetCSSFile+'"');
+        raise Exception.Create('Unable to copy css file: CSSfile="'+CSSFile+'" to "'+TargetCSSFile+'"');
     end;
   end;
 
@@ -482,9 +522,9 @@ var
   CmdLine: String;
 begin
   if ord(Step)>=ord(frsFPDocExecuted) then
-    raise Exception.Create('TFPDocRun.Run not again');
+    raise Exception.Create('TFPDocRun.Run already called');
   if ord(Step)<ord(frsOutDirCreated) then
-    CreateOuputDir;
+    CreateOutputDir;
 
   if ShowCmd then
   begin
@@ -537,7 +577,7 @@ var
   TargetXCTFile, SrcCHMFile, TargetCHMFile: String;
 begin
   if ord(Step)>=ord(frsCopiedToXCTDir) then
-    raise Exception.Create('TFPDocRun.CopyToXCTDir not again');
+    raise Exception.Create('TFPDocRun.CopyToXCTDir already called');
   if ord(Step)<ord(frsFPDocExecuted) then
     RunFPDoc;
 
@@ -548,7 +588,7 @@ begin
     if ShowCmd then
       writeln('cp ',XCTFile,' ',TargetXCTFile)
     else if not CopyFile(XCTFile,TargetXCTFile) then
-      raise Exception.Create('unable to copy xct file: "'+XCTFile+'" to "'+TargetXCTFile+'"');
+      raise Exception.Create('Unable to copy xct file: "'+XCTFile+'" to "'+TargetXCTFile+'"');
     writeln('Created ',TargetXCTFile);
     if OutFormat='chm' then
     begin
@@ -557,7 +597,7 @@ begin
       if ShowCmd then
         writeln('cp ',SrcCHMFile,' ',TargetCHMFile)
       else if not CopyFile(SrcCHMFile,TargetCHMFile) then
-        raise Exception.Create('unable to copy chm file: "'+SrcCHMFile+'" to "'+TargetCHMFile+'"');
+        raise Exception.Create('Unable to copy chm file: "'+SrcCHMFile+'" to "'+TargetCHMFile+'"');
       writeln('Created ',TargetCHMFile);
     end;
   end;
@@ -569,7 +609,7 @@ procedure TFPDocRun.Execute;
 begin
   writeln('===================================================================');
   if ord(Step)>=ord(frsComplete) then
-    raise Exception.Create('TFPDocRun.Execute not again');
+    raise Exception.Create('TFPDocRun.Execute already called');
   if ord(Step)<ord(frsCopiedToXCTDir) then
     CopyToXCTDir;
 
@@ -581,8 +621,22 @@ var
 begin
   ReadOptions;
 
+  {
+    LazUtils was never built with external links to LCL (See Also and source
+    declarations) because lcl.xct could not be imported. The file does not exist
+    when LazUtils is built.
+
+    To solve this problem, the output format for LazUtils is built twice. It is the
+    smaller of the two packages. Building LazUtils twice ensures that the
+    "chicken or the egg" problem with inter-file links is avoided.
+
+    Build LazUtils WITHOUT any external links (faster).
+    Build LCL with links to RTL, FCL, LazUtils.
+    Build LazUtils with links to RTL, FCL, LCL.
+  }
+  // build lazutils WITHOUT any external links
   Run:=TFPDocRun.Create('lazutils');
-  Run.ExtraOptions:='-MObjFPC -Scghi'; // extra options from in lazutils makefile.
+  Run.ExtraOptions:='-MObjFPC -Scghi -dUseSystemUITypes'; // extra options from in lazutils makefile.
   Run.UsedPkgs.Add('rtl');
   Run.UsedPkgs.Add('fcl');
   Run.XMLSrcDir := '..'+PathDelim+'xml'+PathDelim+'lazutils';
@@ -590,8 +644,9 @@ begin
   Run.Execute;
   Run.Free;
 
+  // build lcl with links to rtl, fcl, lazutils
   Run:=TFPDocRun.Create('lcl');
-  Run.ExtraOptions:='-MObjFPC -Sic'; // extra options from in LCL makefile.
+  Run.ExtraOptions:='-MObjFPC -Sic -dUseSystemUITypes'; // extra options from in LCL makefile.
   Run.UsedPkgs.Add('rtl');
   Run.UsedPkgs.Add('fcl');
   Run.UsedPkgs.Add('lazutils');
@@ -601,7 +656,17 @@ begin
   Run.Execute;
   Run.Free;
 
-  if ShowCmd then
-    writeln('Not executing, simulation ended. Stop');
-end.
+  // build lazutils with links to rtl, fcl, lcl
+  Run:=TFPDocRun.Create('lazutils');
+  Run.ExtraOptions:='-MObjFPC -Scghi -dUseSystemUITypes'; // extra options from in lazutils makefile.
+  Run.UsedPkgs.Add('rtl');
+  Run.UsedPkgs.Add('fcl');
+  Run.UsedPkgs.Add('lcl');
+  Run.XMLSrcDir := '..'+PathDelim+'xml'+PathDelim+'lazutils';
+  Run.PasSrcDir := '..'+PathDelim+'..'+PathDelim+'components'+PathDelim+'lazutils';
+  Run.Execute;
+  Run.Free;
 
+  if ShowCmd then
+    writeln('Not executed... simulation ended');
+end.

@@ -35,7 +35,6 @@ begin
 
     P.Flags.Add('LazarusDsgnPkg');
 
-    D := P.Dependencies.Add('fcl-image');
     D := P.Dependencies.Add('fcl');
     P.Options.Add('-MObjFPC');
     P.Options.Add('-Scghi');
@@ -44,7 +43,6 @@ begin
     P.Options.Add('-gl');
     P.Options.Add('-l');
     P.Options.Add('-vewnhibq');
-    P.Options.Add('-dFASTCGI_STDIN');
     P.UnitPath.Add('.');
     D := P.Dependencies.Add('winunits-base');
     D.OSes := AllWindowsOSes;
