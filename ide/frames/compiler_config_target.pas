@@ -66,6 +66,7 @@ type
     procedure chkCustomConfigFileClick(Sender: TObject);
     procedure TargetOSComboBoxSelect(Sender: TObject);
     procedure TargetCPUComboBoxSelect(Sender: TObject);
+	procedure TargetControllerComboBoxSelect(Sender: TObject); //Ultibo
     procedure LCLWidgetTypeLabelClick(Sender: TObject);
     procedure LCLWidgetTypeLabelMouseEnter(Sender: TObject);
     procedure LCLWidgetTypeLabelMouseLeave(Sender: TObject);
@@ -76,6 +77,7 @@ type
     procedure UpdateByTargetOS(aTargetOS: string);
     procedure UpdateByTargetCPU(aTargetCPU: string);
 	procedure UpdateByTargetCPUUltibo(aTargetCPU: string); //Ultibo
+	procedure UpdateByTargetController(aTargetController: string); //Ultibo
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -229,6 +231,8 @@ begin
 end;
 
 procedure TCompilerConfigTargetFrame.UpdateByTargetOS(aTargetOS: string);
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   if aTargetOS = '' then
   begin
@@ -242,6 +246,16 @@ begin
   else
     chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG, '+
       lisOptionValueIgnored+')';
+
+  // Check Target 
+  IsUltibo := Lowercase(aTargetOS) = 'ultibo'; //Ultibo
+  
+  chkWin32GraphicApp.Enabled := not IsUltibo; //Ultibo
+  LCLWidgetTypeLabel.Enabled := not IsUltibo; //Ultibo
+  CurrentWidgetTypeLabel.Enabled := not IsUltibo; //Ultibo
+ 
+  lblTargetController.Enabled := IsUltibo; //Ultibo
+  TargetControllerComboBox.Enabled := IsUltibo; //Ultibo
 end;
 
 procedure TCompilerConfigTargetFrame.UpdateByTargetCPU(aTargetCPU: string);
@@ -332,6 +346,53 @@ begin
   ParsingFrame.grpAsmStyle.Visible := (aTargetCPU='i386') or (aTargetCPU='x86_64');
 end; //Ultibo
 
+procedure TCompilerConfigTargetFrame.UpdateByTargetController(aTargetController: string); //Ultibo
+begin
+  // Check for RPI, RPIZERO or QEMU
+  if (aTargetController='RPIA') or 
+     (aTargetController='RPIB') or
+     (aTargetController='RPIZERO') or
+     (aTargetController='QEMUVPB') or
+     (aTargetController='QEMURPIA') or
+     (aTargetController='QEMURPIZERO') then
+  begin
+    if (TargetCPUComboBox.ItemIndex = 0) or (TargetCPUComboBox.Text <> 'arm') then
+      TargetCPUComboBox.ItemIndex := TargetCPUComboBox.Items.IndexOf('arm');
+    
+    // Update the Target CPU
+    TargetCPUComboBoxSelect(TargetCPUComboBox);
+    //if (TargetProcComboBox.ItemIndex = 0) or (TargetProcComboBox.Text <> 'ARMV6') then 
+    //  TargetProcComboBox.ItemIndex := TargetProcComboBox.Items.IndexOf('ARMV6');
+  end
+  // Check for RPI2, RPI3, RPI4, RPIZERO2W or QEMU
+  else if (aTargetController='RPI2B') or 
+          (aTargetController='RPI3A') or
+          (aTargetController='RPI3B') or
+          (aTargetController='RPI4B') or
+          (aTargetController='RPI400') or
+          (aTargetController='RPIZERO2W') or
+          (aTargetController='QEMURPI2B') or
+          (aTargetController='QEMURPI3A') or
+          (aTargetController='QEMURPI3B') then
+  begin
+    if (TargetCPUComboBox.ItemIndex = 0) or ((TargetCPUComboBox.Text <> 'arm') and (TargetCPUComboBox.Text <> 'aarch64')) then
+      TargetCPUComboBox.ItemIndex := TargetCPUComboBox.Items.IndexOf('arm');
+      
+    // Update the Target CPU
+    TargetCPUComboBoxSelect(TargetCPUComboBox);
+    //if TargetCPUComboBox.Text = 'arm' then
+    //begin
+    //  if (TargetProcComboBox.ItemIndex = 0) or (TargetProcComboBox.Text <> 'ARMV7A') then 
+    //    TargetProcComboBox.ItemIndex := TargetProcComboBox.Items.IndexOf('ARMV7A');
+    //end
+    //else if TargetCPUComboBox.Text = 'aarch64' then
+    //begin
+    //  if (TargetProcComboBox.ItemIndex = 0) or (TargetProcComboBox.Text <> 'ARMV8') then 
+    //    TargetProcComboBox.ItemIndex := TargetProcComboBox.Items.IndexOf('ARMV8');
+    //end;
+  end;
+end; //Ultibo
+
 procedure TCompilerConfigTargetFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
 var
   s: ShortString;
@@ -396,9 +457,6 @@ begin
     chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG)';
     // WidgetSet
     LCLWidgetTypeLabel.Caption := lisSelectAnotherLCLWidgetSet;
-
-	chkWin32GraphicApp.Enabled:=False; //Ultibo
-    TargetOSComboBox.Enabled:=False; //Ultibo
   finally
     List.Free;
   end;
@@ -522,6 +580,19 @@ begin
   else 
   UpdateByTargetCPU(s);
 end;
+
+procedure TCompilerConfigTargetFrame.TargetControllerComboBoxSelect(Sender: TObject); //Ultibo
+var
+  cb: TComboBox;
+  s: String;
+begin
+  cb := Sender as TComboBox;
+  if cb.ItemIndex = 0 then
+    s :=''
+  else
+    s := cb.Text;
+  UpdateByTargetController(s);
+end; //Ultibo
 
 procedure TCompilerConfigTargetFrame.LCLWidgetTypeLabelClick(Sender: TObject);
 begin

@@ -88,9 +88,9 @@ end;
 
 procedure TProjectI18NOptionsFrame.Enablei18nInfo(Usei18n: boolean);
 begin
-  I18NGroupBox.Enabled := Usei18n;
-  ExcludedGroupBox.Enabled := Usei18n;
-  ForceUpdatePoFilesCheckBox.Enabled := Usei18n;
+  I18NGroupBox.Enabled := Usei18n and EnableI18NCheckBox.Enabled; //Ultibo
+  ExcludedGroupBox.Enabled := Usei18n and EnableI18NCheckBox.Enabled; //Ultibo
+  ForceUpdatePoFilesCheckBox.Enabled := Usei18n and EnableI18NCheckBox.Enabled; //Ultibo
 end;
 
 function TProjectI18NOptionsFrame.GetTitle: string;
@@ -99,6 +99,21 @@ begin
 end;
 
 procedure TProjectI18NOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
+
+  function IsUltiboProject: boolean; //Ultibo
+  begin
+    Result := False;
+    
+    if Project1 = nil then
+      Exit;
+     
+    if LowerCase(Project1.CompilerOptions.TargetOS) = 'ultibo' then
+    //if LowerCase(Project1.CompilerOptions.GetEffectiveTargetOS) = 'ultibo' then // Don't use EffectiveTargetOS
+      Result := True;
+  end; //Ultibo
+
+var
+  IsUltibo: Boolean; //Ultibo
 begin
   EnableI18NCheckBox.Caption := rsEnableI18n;
   EnableI18NCheckBox.Hint:=lisEnableInternationalizationAndTranslationSupport;
@@ -112,6 +127,11 @@ begin
   ExcludedIdentifiersLabel.Caption := rsI18nIdentifiers;
   ExcludedOriginalsLabel.Caption := rsI18nOriginals;
   ForceUpdatePoFilesCheckBox.Caption := rsI18nForceUpdatePoFilesOnNextBuild;
+
+  // Check Target
+  IsUltibo := IsUltiboProject; //Ultibo
+
+  EnableI18NCheckBox.Enabled := not IsUltibo; //Ultibo
 end;
 
 procedure TProjectI18NOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

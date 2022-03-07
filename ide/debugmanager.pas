@@ -2099,6 +2099,7 @@ var
   AnUnitInfo: TUnitInfo;
   AvailCommands: TDBGCommands;
   CurState: TDBGState;
+  AllowDebug: Boolean; //Ultibo
 begin
   if (MainIDE=nil) or (MainIDE.ToolStatus = itExiting) then exit;
 
@@ -2125,6 +2126,8 @@ begin
                  ((Project1.RunParameterOptions.GetActiveMode<>nil) and (Project1.RunParameterOptions.GetActiveMode.HostApplicationFilename<>'')))
                and (pfRunnable in Project1.Flags)
               );
+    AllowDebug := MainIDE.AllowDebugControls; //Ultibo
+    CanRun := CanRun and AllowDebug; //Ultibo
     // Run
     itmRunMenuRun.Enabled          := CanRun and (dcRun in AvailCommands);
     // Pause
@@ -2147,8 +2150,8 @@ begin
       (MainIDE.ToolStatus = itBuilder);
 
     //Attach / Detach
-    itmRunMenuAttach.Enabled          := DebuggerIsValid and (dcAttach in AvailCommands);
-    itmRunMenuDetach.Enabled          := DebuggerIsValid and (dcDetach in AvailCommands);
+    itmRunMenuAttach.Enabled          := DebuggerIsValid and (dcAttach in AvailCommands) and AllowDebug; //Ultibo
+    itmRunMenuDetach.Enabled          := DebuggerIsValid and (dcDetach in AvailCommands) and AllowDebug; //Ultibo
 
     // Evaluate
     itmRunMenuEvaluate.Enabled        := CanRun and (dcEvaluate in AvailCommands);
@@ -2158,17 +2161,17 @@ begin
     SrcEditMenuInspect.Enabled        := CanRun and (dcEvaluate in AvailCommands);
     itmRunMenuInspect.Enabled         := CanRun and (dcEvaluate in AvailCommands);
     // Add watch
-    itmRunMenuAddWatch.Enabled        := True; // always allow to add a watch
+    itmRunMenuAddWatch.Enabled        := AllowDebug; //True; // always allow to add a watch //Ultibo
 
     // Add Breakpoint
-    itmRunMenuAddBpSource.Enabled := True;
-    itmRunMenuAddBpAddress.Enabled := True;
-    itmRunMenuAddBpWatchPoint.Enabled := True;
+    itmRunMenuAddBpSource.Enabled := AllowDebug; //True; //Ultibo
+    itmRunMenuAddBpAddress.Enabled := AllowDebug; //True; //Ultibo
+    itmRunMenuAddBpWatchPoint.Enabled := AllowDebug; //True; //Ultibo
 
     // TODO: add capacibilities to DebuggerClass
     // menu view
-    //itmViewRegisters.Enabled := DebuggerIsValid;
-    //itmViewAssembler.Enabled := DebuggerIsValid;
+    //itmViewRegisters.Enabled := DebuggerIsValid and AllowDebug; //Ultibo
+    //itmViewAssembler.Enabled := DebuggerIsValid and AllowDebug; //Ultibo
   end;
 end;
 

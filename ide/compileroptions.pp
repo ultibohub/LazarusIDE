@@ -1632,8 +1632,8 @@ begin
   end else
     TargetProcessor := aXMLConfig.GetValue(p+'TargetProcessor/Value', '');
   TargetController := aXMLConfig.GetValue(p+'TargetController/Value', ''); //Ultibo
-  TargetCPU := aXMLConfig.GetValue(p+'TargetCPU/Value', 'arm'); //'' //Ultibo
-  TargetOS := aXMLConfig.GetValue(p+'TargetOS/Value', 'ultibo'); //'' //Ultibo
+  TargetCPU := aXMLConfig.GetValue(p+'TargetCPU/Value', '');
+  TargetOS := aXMLConfig.GetValue(p+'TargetOS/Value', '');
   OptimizationLevel := aXMLConfig.GetValue(p+'Optimizations/OptimizationLevel/Value', 2); //1 //Ultibo
   VariablesInRegisters := aXMLConfig.GetValue(p+'Optimizations/VariablesInRegisters/Value', false);
   UncertainOptimizations := aXMLConfig.GetValue(p+'Optimizations/UncertainOptimizations/Value', false);

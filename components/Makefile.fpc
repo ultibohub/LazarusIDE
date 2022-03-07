@@ -40,7 +40,6 @@ base:
 #-----------------------------------------------------------------------------
 # build the extra packages needed by the bigide, requires lcl
 bigide:
-	$(MAKE) -C synedit/design
 	$(MAKE) -C rtticontrols
 	$(MAKE) -C cairocanvas
 	$(MAKE) -C printers

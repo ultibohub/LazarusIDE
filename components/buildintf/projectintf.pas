@@ -24,6 +24,7 @@ uses
 
 const
   FileDescGroupName = 'File';
+  FileDescGroupNameUltibo = 'Ultibo File'; //Ultibo
   FileDescNamePascalUnit = 'Unit';
   FileDescNameLCLForm = 'Form';
   FileDescNameDatamodule = 'Datamodule';
@@ -34,13 +35,16 @@ const
   FileDescNameLCLInheritedComponent = 'Inherited Component';
 
   ProjDescGroupName = 'Project';
-  ProjDescNameApplication = 'Application';
+  ProjDescGroupNameUltibo = 'Ultibo Project'; //Ultibo
   ProjDescNameRaspberryPiProgram = 'Raspberry Pi A/B/A+/B+ Application'; //Ultibo
   ProjDescNameRaspberryPi2Program = 'Raspberry Pi 2B Application'; //Ultibo
   ProjDescNameRaspberryPi3Program = 'Raspberry Pi 3B/3B+/3A+/Zero2W Application'; //Ultibo
   ProjDescNameRaspberryPi4Program = 'Raspberry Pi 4B/400 Application'; //Ultibo
   ProjDescNameRaspberryPiZeroProgram = 'Raspberry Pi Zero/ZeroW Application'; //Ultibo
   ProjDescNameQEMUVersatilePBProgram = 'QEMU VersatilePB Application'; //Ultibo
+  ProjDescNameSimpleUltiboProgram = 'Simple Ultibo Program'; //Ultibo
+  ProjDescNameUltiboProgram = 'Ultibo Program'; //Ultibo
+  ProjDescNameApplication = 'Application';
   ProjDescNameSimpleProgram = 'Simple Program';
   ProjDescNameProgram = 'Program';
   ProjDescNameConsoleApplication = 'Console application';
@@ -156,6 +160,8 @@ type
   TNewItemProjectFile = class(TNewIDEItemTemplate)
   private
     FDescriptor: TProjectFileDescriptor;
+  protected
+    procedure InitDefaults; override; //Ultibo
   public
     function LocalizedName: string; override;
     function Description: string; override;
@@ -316,15 +322,18 @@ type
     FDefaultExt: string;
     FFlags: TProjectFlags;
     FName: string;
+    FGroup: string; //Ultibo
     FReferenceCount: integer;
     FVisibleInNewDialog: boolean;
   protected
     procedure SetName(const AValue: string); virtual;
+    procedure SetGroup(const AValue: string); virtual; //Ultibo
     procedure SetFlags(const AValue: TProjectFlags); virtual;
     function DoInitDescriptor: TModalResult; virtual;// put here option dialogs
   public
     constructor Create; virtual;
     function GetLocalizedName: string; virtual;
+    function GetLocalizedGroup: string; virtual; //Ultibo
     function GetLocalizedDescription: string; virtual;
     procedure Release;
     procedure Reference;
@@ -333,6 +342,7 @@ type
     function CreateStartFiles({%H-}AProject: TLazProject): TModalResult; virtual; // called after all global settings are done, you can now create and open files
   public
     property Name: string read FName write SetName;
+    property Group: string read FGroup write SetGroup; //Ultibo
     property VisibleInNewDialog: boolean read FVisibleInNewDialog
                                          write FVisibleInNewDialog;
     property Flags: TProjectFlags read FFlags write SetFlags;
@@ -346,6 +356,8 @@ type
   TNewItemProject = class(TNewIDEItemTemplate)
   private
     FDescriptor: TProjectDescriptor;
+  protected
+    procedure InitDefaults; override; //Ultibo
   public
     function LocalizedName: string; override;
     function Description: string; override;
@@ -630,13 +642,15 @@ type
 var
   ProjectDescriptors: TProjectDescriptors; // will be set by the IDE
 
-function ProjectDescriptorApplication: TProjectDescriptor;
 function ProjectDescriptorRaspberryPiProgram: TProjectDescriptor; //Ultibo
 function ProjectDescriptorRaspberryPi2Program: TProjectDescriptor; //Ultibo
 function ProjectDescriptorRaspberryPi3Program: TProjectDescriptor; //Ultibo
 function ProjectDescriptorRaspberryPi4Program: TProjectDescriptor; //Ultibo
 function ProjectDescriptorRaspberryPiZeroProgram: TProjectDescriptor; //Ultibo
 function ProjectDescriptorQEMUVersatilePBProgram: TProjectDescriptor; //Ultibo
+function ProjectDescriptorUltiboProgram: TProjectDescriptor; //Ultibo
+function ProjectDescriptorSimpleUltiboProgram: TProjectDescriptor; //Ultibo
+function ProjectDescriptorApplication: TProjectDescriptor;
 function ProjectDescriptorProgram: TProjectDescriptor;
 function ProjectDescriptorSimpleProgram: TProjectDescriptor; //Ultibo
 function ProjectDescriptorConsoleApplication: TProjectDescriptor;
@@ -663,11 +677,15 @@ function StrToProjectSessionStorage(const s: string): TProjectSessionStorage;
 function CompilationExecutableTypeNameToType(const s: string): TCompilationExecutableType;
 
 procedure RegisterProjectFileDescriptor(FileDesc: TProjectFileDescriptor);
+procedure RegisterProjectFileDescriptorForm(FileDesc: TProjectFileDescriptor); //Ultibo
+procedure RegisterProjectFileDescriptorUltibo(FileDesc: TProjectFileDescriptor); //Ultibo
 procedure RegisterProjectDescriptor(ProjDesc: TProjectDescriptor);
+procedure RegisterProjectDescriptorUltibo(ProjDesc: TProjectDescriptor); //Ultibo
 procedure RegisterProjectFileDescriptor(FileDesc: TProjectFileDescriptor;
                        const ACategory : String;
                        DefaultCreateFlag: TNewIDEItemFlag = niifCopy;
-                       const AllowedCreateFlags: TNewIDEItemFlags = [niifCopy]);
+                       const AllowedCreateFlags: TNewIDEItemFlags = [niifCopy];
+					   const ItemAttributes: TNewIDEItemAttributes = []); //Ultibo
 procedure RegisterProjectDescriptor(ProjDesc: TProjectDescriptor;
                        const ACategory : String;
                        DefaultCreateFlag: TNewIDEItemFlag = niifCopy;
@@ -695,16 +713,27 @@ begin
   RegisterProjectFileDescriptor(FileDesc,FileDescGroupName);
 end;
 
+procedure RegisterProjectFileDescriptorForm(FileDesc: TProjectFileDescriptor); //Ultibo
+begin
+  RegisterProjectFileDescriptor(FileDesc,FileDescGroupName,niifCopy,[niifCopy],[niiaRequireForms]);
+end; //Ultibo
+
+procedure RegisterProjectFileDescriptorUltibo(FileDesc: TProjectFileDescriptor); //Ultibo
+begin
+  RegisterProjectFileDescriptor(FileDesc,FileDescGroupName + ';' + FileDescGroupNameUltibo);
+end; //Ultibo
+
 procedure RegisterProjectFileDescriptor(FileDesc: TProjectFileDescriptor;
   const ACategory : String;
-  DefaultCreateFlag: TNewIDEItemFlag; const AllowedCreateFlags: TNewIDEItemFlags);
+  DefaultCreateFlag: TNewIDEItemFlag; const AllowedCreateFlags: TNewIDEItemFlags;
+  const ItemAttributes: TNewIDEItemAttributes); //Ultibo
 var
   NewItemFile: TNewItemProjectFile;
 begin
   ProjectFileDescriptors.RegisterFileDescriptor(FileDesc);
   if FileDesc.VisibleInNewDialog then begin
     NewItemFile:=TNewItemProjectFile.Create(FileDesc.Name,
-                                          DefaultCreateFlag,AllowedCreateFlags);
+                                          DefaultCreateFlag,AllowedCreateFlags,ItemAttributes); //Ultibo
     NewItemFile.Descriptor:=FileDesc;
     RegisterNewDialogItem(ACategory,NewItemFile);
   end;
@@ -715,12 +744,20 @@ begin
   RegisterProjectDescriptor(ProjDesc,ProjDescGroupName);
 end;
 
+procedure RegisterProjectDescriptorUltibo(ProjDesc: TProjectDescriptor); //Ultibo
+begin
+  RegisterProjectDescriptor(ProjDesc,ProjDescGroupNameUltibo);
+end; //Ultibo
+
 procedure RegisterProjectDescriptor(ProjDesc: TProjectDescriptor;
   const ACategory : String;
   DefaultCreateFlag: TNewIDEItemFlag; const AllowedCreateFlags: TNewIDEItemFlags);
 var
   NewItemProject: TNewItemProject;
 begin
+  if Length(ACategory) <> 0 then
+    ProjDesc.Group := ACategory; //Ultibo
+
   ProjectDescriptors.RegisterDescriptor(ProjDesc);
   if ProjDesc.VisibleInNewDialog then begin
     NewItemProject:=TNewItemProject.Create(ProjDesc.Name,
@@ -748,11 +785,6 @@ end;
 function FileDescriptorText: TProjectFileDescriptor;
 begin
   Result:=ProjectFileDescriptors.FindByName(FileDescNameText);
-end;
-
-function ProjectDescriptorApplication: TProjectDescriptor;
-begin
-  Result:=ProjectDescriptors.FindByName(ProjDescNameApplication);
 end;
 
 function ProjectDescriptorRaspberryPiProgram: TProjectDescriptor; //Ultibo
@@ -783,6 +815,21 @@ end;
 function ProjectDescriptorQEMUVersatilePBProgram: TProjectDescriptor; //Ultibo
 begin
   Result:=ProjectDescriptors.FindByName(ProjDescNameQEMUVersatilePBProgram); //Ultibo
+end;
+
+function ProjectDescriptorUltiboProgram: TProjectDescriptor; //Ultibo
+begin
+  Result:=ProjectDescriptors.FindByName(ProjDescNameUltiboProgram); //Ultibo
+end;
+
+function ProjectDescriptorSimpleUltiboProgram: TProjectDescriptor; //Ultibo
+begin
+  Result:=ProjectDescriptors.FindByName(ProjDescNameSimpleUltiboProgram); //Ultibo
+end;
+
+function ProjectDescriptorApplication: TProjectDescriptor;
+begin
+  Result:=ProjectDescriptors.FindByName(ProjDescNameApplication);
 end;
 
 function ProjectDescriptorProgram: TProjectDescriptor;
@@ -1289,6 +1336,12 @@ begin
   FName:=AValue;
 end;
 
+procedure TProjectDescriptor.SetGroup(const AValue: string); //Ultibo
+begin
+  if FGroup=AValue then exit;
+  FGroup:=AValue;
+end; //Ultibo
+
 constructor TProjectDescriptor.Create;
 begin
   FReferenceCount:=1;
@@ -1301,6 +1354,11 @@ function TProjectDescriptor.GetLocalizedName: string;
 begin
   Result:=Name;
 end;
+
+function TProjectDescriptor.GetLocalizedGroup: string; //Ultibo
+begin
+  Result:=Group;
+end; //Ultibo
 
 function TProjectDescriptor.GetLocalizedDescription: string;
 begin
@@ -1608,6 +1666,11 @@ end;
 
 { TNewItemProjectFile }
 
+procedure TNewItemProjectFile.InitDefaults; //Ultibo
+begin
+  FItemAttributes := FItemAttributes + [niiaIsModule];
+end; //Ultibo
+
 function TNewItemProjectFile.LocalizedName: string;
 begin
   Result:=Descriptor.GetLocalizedName;
@@ -1626,6 +1689,11 @@ begin
 end;
 
 { TNewItemProject }
+
+procedure TNewItemProject.InitDefaults; //Ultibo
+begin
+  FItemAttributes := FItemAttributes + [niiaIsProject];
+end;//Ultibo
 
 function TNewItemProject.LocalizedName: string;
 begin

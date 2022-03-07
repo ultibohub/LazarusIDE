@@ -83,7 +83,7 @@ type
     //mnuFile: TIDEMenuSection;
       //itmFileNew: TIDEMenuSection;
         itmFileNewUnit: TIDEMenuCommand;
-        //itmFileNewForm: TIDEMenuCommand; //Ultibo
+        itmFileNewForm: TIDEMenuCommand;
         itmFileNewOther: TIDEMenuCommand;
       //itmFileOpenSave: TIDEMenuSection;
         itmFileOpen: TIDEMenuCommand;
@@ -168,20 +168,20 @@ type
     // view menu
     //mnuView: TIDEMenuSection;
       //itmViewMainWindows: TIDEMenuSection;
-        //itmViewToggleFormUnit: TIDEMenuCommand; //Ultibo
-        //itmViewInspector: TIDEMenuCommand; //Ultibo
+        itmViewToggleFormUnit: TIDEMenuCommand;
+        itmViewInspector: TIDEMenuCommand;
         itmViewSourceEditor: TIDEMenuCommand;
         itmViewCodeExplorer: TIDEMenuCommand;
         itmViewFPDocEditor: TIDEMenuCommand;
         itmViewCodeBrowser: TIDEMenuCommand;
         itmSourceUnitDependencies: TIDEMenuCommand;
-        //itmViewRestrictionBrowser: TIDEMenuCommand; //Ultibo
-        //itmViewComponents: TIDEMenuCommand; //Ultibo
+        itmViewRestrictionBrowser: TIDEMenuCommand;
+        itmViewComponents: TIDEMenuCommand;
         itmJumpHistory: TIDEMenuCommand;
         itmMacroListView: TIDEMenuCommand;
       //itmViewSecondaryWindows: TIDEMenuSection;
-        //itmViewAnchorEditor: TIDEMenuCommand; //Ultibo
-        //itmViewTabOrder: TIDEMenuCommand; //Ultibo
+        itmViewAnchorEditor: TIDEMenuCommand;
+        itmViewTabOrder: TIDEMenuCommand;
         itmViewMessage: TIDEMenuCommand;
         itmViewSearchResults: TIDEMenuCommand;
         //itmViewDebugWindows: TIDEMenuSection;
@@ -281,7 +281,7 @@ type
         itmProjectAddTo: TIDEMenuCommand;
         itmProjectRemoveFrom: TIDEMenuCommand;
         itmProjectViewUnits: TIDEMenuCommand;
-        //itmProjectViewForms: TIDEMenuCommand; //Ultibo
+        itmProjectViewForms: TIDEMenuCommand;
         itmProjectViewSource: TIDEMenuCommand;
 
     // run menu
@@ -353,11 +353,11 @@ type
         itmToolManageExamples: TIDEMenuCommand;
         itmToolDiff: TIDEMenuCommand;
       //itmDelphiConversion: TIDEMenuSection;
-        //itmToolCheckLFM: TIDEMenuCommand; //Ultibo
+        itmToolCheckLFM: TIDEMenuCommand;
         itmToolConvertDelphiUnit: TIDEMenuCommand;
         itmToolConvertDelphiProject: TIDEMenuCommand;
-        //itmToolConvertDelphiPackage: TIDEMenuCommand; //Ultibo
-        //itmToolConvertDFMtoLFM: TIDEMenuCommand; //Ultibo
+        itmToolConvertDelphiPackage: TIDEMenuCommand;
+        itmToolConvertDFMtoLFM: TIDEMenuCommand;
         itmToolConvertEncoding: TIDEMenuCommand;
       //itmBuildingLazarus: TIDEMenuSection;
         itmToolBuildLazarus: TIDEMenuCommand;
@@ -399,7 +399,7 @@ type
     procedure SetMainIDEHeight;
     procedure DoSetMainIDEHeight(const AIDEIsMaximized: Boolean; ANewHeight: Integer = 0);
     procedure DoSetViewComponentPalette(aVisible: Boolean);
-    procedure AllowCompilation(aAllow: Boolean);
+    procedure AllowCompilation(aAllow, aAllowForm, aAllowDebug, aAllowPackage, aAllowEmulation: Boolean); //Ultibo
     procedure InitPaletteAndCoolBar;
   end;
 
@@ -853,24 +853,24 @@ begin
   SetMainIDEHeight;
 end;
 
-procedure TMainIDEBar.AllowCompilation(aAllow: Boolean);
+procedure TMainIDEBar.AllowCompilation(aAllow, aAllowForm, aAllowDebug, aAllowPackage, aAllowEmulation: Boolean); //Ultibo
 // Enables or disables IDE GUI controls associated with compiling and building.
 // Does it interfere with DebugBoss.UpdateButtonsAndMenuItems? Maybe should be refactored and combined.
 begin
   // Run menu
-  itmRunMenuRunWithoutDebugging.Enabled:=aAllow;
-  itmRunMenuRun.Enabled:=aAllow;
+  itmRunMenuRunWithoutDebugging.Enabled:=aAllow and aAllowDebug; //Ultibo
+  itmRunMenuRun.Enabled:=aAllow and aAllowDebug; //Ultibo
   itmRunMenuCompile.Enabled:=aAllow;
   itmRunMenuBuild.Enabled:=aAllow;
   itmRunMenuQuickCompile.Enabled:=aAllow;
   itmRunMenuCleanUpAndBuild.Enabled:=aAllow;
   itmRunMenuAbortBuild.Enabled:=not aAllow;
   // Package menu
-  //itmPkgEditInstallPkgs.Enabled:=aAllow; //Ultibo
+  itmPkgEditInstallPkgs.Enabled:=aAllow;
   // Tools menu
   itmToolRescanFPCSrcDir.Enabled:=aAllow;
   itmToolBuildUltiboRTL.Enabled:=aAllow; //Ultibo
-  itmToolRunInQEMU.Enabled:=aAllow; //Ultibo
+  itmToolRunInQEMU.Enabled:=aAllow and aAllowEmulation; //Ultibo
   itmToolBuildLazarus.Enabled:=aAllow;
   //itmToolConfigureBuildLazarus.Enabled:=aAllow;
 end;

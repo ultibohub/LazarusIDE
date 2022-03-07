@@ -2328,7 +2328,7 @@ var
   NewIDEItem: TNewIDEItemTemplate;
   NewProjFile: TNewItemProjectFile;
 begin
-  Result:=ShowNewIDEItemDialog(NewIDEItem);
+  Result:=ShowNewIDEItemDialog(NewIDEItem, False, MainIDE.AllowFormControls); //Ultibo
   if Result<>mrOk then exit;
   if NewIDEItem is TNewItemProjectFile then begin
     // file

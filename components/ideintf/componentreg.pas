@@ -429,7 +429,7 @@ begin
   FPageNamesCompNames := TStringListUTF8Fast.Create;
   FPageNamesCompNames.OwnsObjects := True;
   FHiddenPageNames := TStringListUTF8Fast.Create;
-  FVisible := False; //True; //Ultibo
+  FVisible := True;
 end;
 
 destructor TCompPaletteOptions.Destroy;
@@ -491,7 +491,7 @@ begin
   Path := Path + BasePath;
   try
     FName:=XMLConfig.GetValue(Path+'Name/Value','');
-    FVisible:=False; //XMLConfig.GetValue(Path+'Visible/Value',true); //Ultibo
+    FVisible:=XMLConfig.GetValue(Path+'Visible/Value',true);
 
     // Pages
     FPageNames.Clear;

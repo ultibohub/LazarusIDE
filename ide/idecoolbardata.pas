@@ -281,13 +281,13 @@ begin
   with ToolBarOpts.ButtonNames do
   begin
     Add('NewUnit');
-    //Add('NewForm'); //Ultibo
+    Add('NewForm');
     Add(cIDEToolbarDivider);
     Add('Open');
     Add('Save');
     Add('SaveAll');
-    //Add(cIDEToolbarDivider); //Ultibo
-    //Add('Toggle between Unit and Form'); //Ultibo
+    Add(cIDEToolbarDivider);
+    Add('Toggle between Unit and Form');
     Add(cIDEToolbarDivider);
     Add('Manage desktops');
   end;
@@ -300,15 +300,15 @@ begin
   with ToolBarOpts.ButtonNames do
   begin
     Add('View Units');
-    //Add('View Forms'); //Ultibo
+    Add('View Forms');
     Add(cIDEToolbarDivider);
     Add('Change build mode');
-    //Add('Run program'); //Ultibo
-    //Add('Pause program'); //Ultibo
-    //Add('Stop program'); //Ultibo
-    //Add('Step over'); //Ultibo
-    //Add('Step into'); //Ultibo
-    //Add('Step out'); //Ultibo
+    Add('Run program');
+    Add('Pause program');
+    Add('Stop program');
+    Add('Step over');
+    Add('Step into');
+    Add('Step out');
     Add('Compile project/program'); //Ultibo
     Add('Build project/program'); //Ultibo
   end;
@@ -326,7 +326,7 @@ begin
   if ToolBarCount = 0 then  // Old format
     ToolbarCount := XMLConfig.GetValue(Path + 'ToolBarCount/Value', 0);
   FVisible := XMLConfig.GetValue(Path + 'Visible/Value', True);
-  FWidth := XMLConfig.GetValue(Path + 'Width/Value', 230);
+  FWidth := XMLConfig.GetValue(Path + 'Width/Value', 290); //230 //Ultibo
   FGrabStyle := XMLConfig.GetValue(Path + 'GrabStyle/Value', 1);
   FGrabWidth := XMLConfig.GetValue(Path + 'GrabWidth/Value', 5);
   FBorderStyle := XMLConfig.GetValue(Path + 'BorderStyle/Value', 1);

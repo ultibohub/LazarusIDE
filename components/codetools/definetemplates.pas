@@ -243,7 +243,7 @@ const
     'ECMAScript6'
     );
 
-  Lazarus_CPU_OS_Widget_Combinations: array[1..106] of shortstring = (
+  Lazarus_CPU_OS_Widget_Combinations: array[1..107] of shortstring = ( //Ultibo
     'i386-linux-gtk',
     'i386-linux-gtk2',
     'i386-linux-qt',
@@ -318,6 +318,7 @@ const
     'arm-linux-nogui',
     'arm-darwin-carbon',
     'arm-darwin-nogui',
+    'arm-ultibo-nogui', //Ultibo
     'x86_64-freebsd-gtk',
     'x86_64-freebsd-gtk2',
     'x86_64-freebsd-qt',

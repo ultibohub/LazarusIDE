@@ -118,7 +118,7 @@ end;
 procedure TNewProjectDialog.SetupComponents;
 var
   NIndexTemplate, NIndexFolder: integer;
-  RootNode, ItemNode: TTreeNode;
+  RootNode, UltiboNode, ItemNode: TTreeNode; //Ultibo
   i: integer;
 begin
   Tree.Images:=IDEImages.Images_16;
@@ -126,14 +126,21 @@ begin
   NIndexTemplate:=IDEImages.LoadImage('template');
 
   Tree.Items.BeginUpdate;
+  UltiboNode:=Tree.Items.Add(nil, dlgUltiboProject); //Ultibo
+  UltiboNode.ImageIndex:=NIndexFolder; //Ultibo
+  UltiboNode.SelectedIndex:=NIndexFolder; //Ultibo
   RootNode:=Tree.Items.Add(nil, dlgProject);
   RootNode.ImageIndex:=NIndexFolder;
   RootNode.SelectedIndex:=NIndexFolder;
   for i:=0 to ProjectDescriptors.Count-1 do
     if ProjectDescriptors[i].VisibleInNewDialog then
     begin
-      ItemNode:=Tree.Items.AddChildObject(RootNode, ProjectDescriptors[i].GetLocalizedName,
-                                                    ProjectDescriptors[i]);
+      if ProjectDescriptors[i].GetLocalizedGroup = dlgUltiboProject then //Ultibo
+        ItemNode:=Tree.Items.AddChildObject(UltiboNode, ProjectDescriptors[i].GetLocalizedName,
+                                                        ProjectDescriptors[i]) //Ultibo
+      else //Ultibo
+        ItemNode:=Tree.Items.AddChildObject(RootNode, ProjectDescriptors[i].GetLocalizedName,
+                                                      ProjectDescriptors[i]);
       ItemNode.ImageIndex:=NIndexTemplate;
       ItemNode.SelectedIndex:=NIndexTemplate;
     end;

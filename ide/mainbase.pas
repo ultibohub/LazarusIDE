@@ -438,7 +438,7 @@ end;
 
 class procedure TNewFormToolButton.UpdateHint(const AHint: string);
 begin
-  //MainIDEBar.itmFileNewForm.Hint := AHint; //Ultibo
+  MainIDEBar.itmFileNewForm.Hint := AHint;
 end;
 
 { TNewUnitToolButton }
@@ -952,7 +952,7 @@ begin
     CreateMenuSeparatorSection(mnuFile,itmFileNew,'itmFileNew');
     ParentMI:=itmFileNew;
     CreateMenuItem(ParentMI,itmFileNewUnit,'itmFileNewUnit',lisMenuNewUnit,'menu_new_unit');
-    //CreateMenuItem(ParentMI,itmFileNewForm,'itmFileNewForm',lisMenuNewForm,'menu_new_form'); //Ultibo
+    CreateMenuItem(ParentMI,itmFileNewForm,'itmFileNewForm',lisMenuNewForm,'menu_new_form');
     CreateMenuItem(ParentMI,itmFileNewOther,'itmFileNewOther',lisMenuNewOther,'menu_new');
 
     CreateMenuSeparatorSection(mnuFile,itmFileOpenSave,'itmFileOpenSave');
@@ -1088,23 +1088,23 @@ begin
   with MainIDEBar do begin
     CreateMenuSeparatorSection(mnuView,itmViewMainWindows,'itmViewMainWindows');
     ParentMI:=itmViewMainWindows;
-    //CreateMenuItem(ParentMI,itmViewToggleFormUnit,'itmViewToggleFormUnit',lisMenuViewToggleFormUnit, 'menu_view_toggle_form_unit'); //Ultibo
-    //CreateMenuItem(ParentMI,itmViewInspector,'itmViewInspector',lisMenuViewObjectInspector, 'menu_view_inspector'); //Ultibo
+    CreateMenuItem(ParentMI,itmViewToggleFormUnit,'itmViewToggleFormUnit',lisMenuViewToggleFormUnit, 'menu_view_toggle_form_unit');
+    CreateMenuItem(ParentMI,itmViewInspector,'itmViewInspector',lisMenuViewObjectInspector, 'menu_view_inspector');
     CreateMenuItem(ParentMI,itmViewSourceEditor,'itmViewSourceEditor',lisMenuViewSourceEditor, 'menu_view_source_editor');
     CreateMenuItem(ParentMI,itmViewMessage,'itmViewMessage',lisMenuViewMessages, 'menu_view_messages');
     CreateMenuItem(ParentMI,itmViewCodeExplorer,'itmViewCodeExplorer',lisMenuViewCodeExplorer, 'menu_view_code_explorer');
     CreateMenuItem(ParentMI,itmViewFPDocEditor,'itmViewFPDocEditor',lisFPDocEditor);
     CreateMenuItem(ParentMI,itmViewCodeBrowser,'itmViewCodeBrowser',lisMenuViewCodeBrowser, 'menu_view_code_browser');
     CreateMenuItem(ParentMI,itmSourceUnitDependencies,'itmSourceUnitDependencies',lisMenuViewUnitDependencies);
-    //CreateMenuItem(ParentMI,itmViewRestrictionBrowser,'itmViewRestrictionBrowser',lisMenuViewRestrictionBrowser, 'menu_view_restriction_browser'); //Ultibo
-    //CreateMenuItem(ParentMI,itmViewComponents,'itmViewComponents',lisMenuViewComponents, 'menu_view_components'); //Ultibo
+    CreateMenuItem(ParentMI,itmViewRestrictionBrowser,'itmViewRestrictionBrowser',lisMenuViewRestrictionBrowser, 'menu_view_restriction_browser');
+    CreateMenuItem(ParentMI,itmViewComponents,'itmViewComponents',lisMenuViewComponents, 'menu_view_components');
     CreateMenuItem(ParentMI,itmJumpHistory,'itmJumpHistory',lisMenuViewJumpHistory, 'menu_view_jump_history');
     CreateMenuItem(ParentMI,itmMacroListView,'itmMacroListView',lisMenuMacroListView);
 
-    //CreateMenuSeparatorSection(mnuView,itmViewDesignerWindows,'itmViewDesignerWindows'); //Ultibo
-    //ParentMI:=itmViewDesignerWindows; //Ultibo
-    //CreateMenuItem(ParentMI,itmViewAnchorEditor,'itmViewAnchorEditor',lisMenuViewAnchorEditor,'menu_view_anchor_editor'); //Ultibo
-    //CreateMenuItem(ParentMI,itmViewTabOrder,'itmViewTabOrder',lisMenuViewTabOrder,'tab_order'); //Ultibo
+    CreateMenuSeparatorSection(mnuView,itmViewDesignerWindows,'itmViewDesignerWindows');
+    ParentMI:=itmViewDesignerWindows;
+    CreateMenuItem(ParentMI,itmViewAnchorEditor,'itmViewAnchorEditor',lisMenuViewAnchorEditor,'menu_view_anchor_editor');
+    CreateMenuItem(ParentMI,itmViewTabOrder,'itmViewTabOrder',lisMenuViewTabOrder,'tab_order');
 
     CreateMenuSeparatorSection(mnuView,itmViewSecondaryWindows,'itmViewSecondaryWindows');
     ParentMI:=itmViewSecondaryWindows;
@@ -1256,7 +1256,7 @@ begin
     CreateMenuItem(ParentMI,itmProjectAddTo,'itmProjectAddTo',lisMenuAddToProject, 'menu_project_add');
     CreateMenuItem(ParentMI,itmProjectRemoveFrom,'itmProjectRemoveFrom',lisMenuRemoveFromProject, 'menu_project_remove');
     CreateMenuItem(ParentMI,itmProjectViewUnits,'itmProjectViewUnits',lisMenuViewUnits, 'menu_view_units');
-    //CreateMenuItem(ParentMI,itmProjectViewForms,'itmProjectViewForms',lisMenuViewForms, 'menu_view_forms'); //Ultibo
+    CreateMenuItem(ParentMI,itmProjectViewForms,'itmProjectViewForms',lisMenuViewForms, 'menu_view_forms');
     CreateMenuItem(ParentMI,itmProjectViewSource,'itmProjectViewSource',lisMenuViewProjectSource, 'item_project_source');
   end;
 end;
@@ -1320,22 +1320,22 @@ begin
   with MainIDEBar do begin
     CreateMenuSeparatorSection(mnuComponent,itmPkgOpening,'itmPkgOpening');
     ParentMI:=itmPkgOpening;
-    //CreateMenuItem(ParentMI,itmPkgNewPackage,'itmPkgNewPackage',lisMenuNewPackage); //Ultibo
-    //CreateMenuItem(ParentMI,itmPkgOpenLoadedPackage,'itmPkgOpenPackage',lisMenuOpenPackage,'pkg_installed'); //Ultibo
-    //CreateMenuItem(ParentMI,itmPkgOpenPackageFile,'itmPkgOpenPackageFile',lisMenuOpenPackageFile,'pkg_open'); //Ultibo
-    //CreateMenuItem(ParentMI,itmPkgOpenPackageOfCurUnit,'itmPkgOpenPackageOfCurUnit',lisMenuOpenPackageOfCurUnit); //Ultibo
+    CreateMenuItem(ParentMI,itmPkgNewPackage,'itmPkgNewPackage',lisMenuNewPackage);
+    CreateMenuItem(ParentMI,itmPkgOpenLoadedPackage,'itmPkgOpenPackage',lisMenuOpenPackage,'pkg_installed');
+    CreateMenuItem(ParentMI,itmPkgOpenPackageFile,'itmPkgOpenPackageFile',lisMenuOpenPackageFile,'pkg_open');
+    CreateMenuItem(ParentMI,itmPkgOpenPackageOfCurUnit,'itmPkgOpenPackageOfCurUnit',lisMenuOpenPackageOfCurUnit);
     CreateMenuSubSection(ParentMI,itmPkgOpenRecent,'itmPkgOpenRecent',lisMenuOpenRecentPkg, 'pkg_open_recent');
 
     CreateMenuSeparatorSection(mnuComponent,itmPkgUnits,'itmPkgUnits');
     ParentMI:=itmPkgUnits;
-    //CreateMenuItem(ParentMI,itmPkgAddCurFileToPkg,'itmPkgAddCurFileToPkg',lisMenuAddCurFileToPkg,'pkg_add'); //Ultibo
-    //CreateMenuItem(ParentMI, itmPkgAddNewComponentToPkg, 'itmPkgAddNewComponentToPkg', lisMenuNewComponent+' ...', 'pkg_add'); //Ultibo
+    CreateMenuItem(ParentMI,itmPkgAddCurFileToPkg,'itmPkgAddCurFileToPkg',lisMenuAddCurFileToPkg,'pkg_add');
+    CreateMenuItem(ParentMI, itmPkgAddNewComponentToPkg, 'itmPkgAddNewComponentToPkg', lisMenuNewComponent+' ...', 'pkg_add');
 
     CreateMenuSeparatorSection(mnuComponent,itmPkgGraphSection,'itmPkgGraphSection');
     ParentMI:=itmPkgGraphSection;
-    //CreateMenuItem(ParentMI,itmPkgPkgGraph,'itmPkgPkgGraph',lisMenuPackageGraph+' ...','pkg_graph'); //Ultibo
-    //CreateMenuItem(ParentMI,itmPkgPackageLinks,'itmPkgPackageLinks',lisMenuPackageLinks); //Ultibo
-    //CreateMenuItem(ParentMI,itmPkgEditInstallPkgs,'itmPkgEditInstallPkgs',lisMenuEditInstallPkgs,'pkg_properties'); //Ultibo
+    CreateMenuItem(ParentMI,itmPkgPkgGraph,'itmPkgPkgGraph',lisMenuPackageGraph+' ...','pkg_graph');
+    CreateMenuItem(ParentMI,itmPkgPackageLinks,'itmPkgPackageLinks',lisMenuPackageLinks);
+    CreateMenuItem(ParentMI,itmPkgEditInstallPkgs,'itmPkgEditInstallPkgs',lisMenuEditInstallPkgs,'pkg_properties');
   end;
 end;
 
@@ -1376,14 +1376,14 @@ begin
     CreateMenuSeparatorSection(mnuTools,itmConversion,'itmConversion');
     ParentMI:=itmConversion;
     CreateMenuItem(ParentMI,itmToolConvertEncoding,'itmToolConvertEncoding',lisMenuConvertEncoding);
-    //CreateMenuItem(ParentMI,itmToolCheckLFM,'itmToolCheckLFM',lisMenuCheckLFM, 'menu_tool_check_lfm'); //Ultibo
+    CreateMenuItem(ParentMI,itmToolCheckLFM,'itmToolCheckLFM',lisMenuCheckLFM, 'menu_tool_check_lfm');
 
     CreateMenuSubSection(mnuTools,itmDelphiConversion,'itmDelphiConversion',lisMenuDelphiConversion,'menu_tool_del_to_laz');
     ParentMI:=itmDelphiConversion;
     CreateMenuItem(ParentMI,itmToolConvertDelphiUnit,'itmToolConvertDelphiUnit',lisMenuConvertDelphiUnit,'menu_tool_del_to_laz_unit');
     CreateMenuItem(ParentMI,itmToolConvertDelphiProject,'itmToolConvertDelphiProject',lisMenuConvertDelphiProject,'menu_tool_del_to_laz_project');
-    //CreateMenuItem(ParentMI,itmToolConvertDelphiPackage,'itmToolConvertDelphiPackage',lisMenuConvertDelphiPackage,'menu_tool_del_to_laz_pkg'); //Ultibo
-    //CreateMenuItem(ParentMI,itmToolConvertDFMtoLFM,'itmToolConvertDFMtoLFM',lisMenuConvertDFMtoLFM,'menu_tool_del_to_laz_form'); //Ultibo
+    CreateMenuItem(ParentMI,itmToolConvertDelphiPackage,'itmToolConvertDelphiPackage',lisMenuConvertDelphiPackage,'menu_tool_del_to_laz_pkg');
+    CreateMenuItem(ParentMI,itmToolConvertDFMtoLFM,'itmToolConvertDFMtoLFM',lisMenuConvertDFMtoLFM,'menu_tool_del_to_laz_form');
 
     CreateMenuSeparatorSection(mnuTools,itmBuildingLazarus,'itmBuildingLazarus');
     ParentMI:=itmBuildingLazarus;
@@ -1477,18 +1477,18 @@ begin
   with MainIDEBar do
   case AForm.ClassName of
     'TCharacterMapDialog':     Exit(-1);                      // for future icon
-    //'TObjectInspectorDlg':     Exit(itmViewInspector.ImageIndex); //Ultibo
+    'TObjectInspectorDlg':     Exit(itmViewInspector.ImageIndex);
     'TSourceNotebook':         Exit(itmViewSourceEditor.ImageIndex);
     'TMessagesView':           Exit(itmViewMessage.ImageIndex);
     'TCodeExplorerView':       Exit(itmViewCodeExplorer.ImageIndex);
     'TFPDocEditor':            Exit(-1);                      // for future icon
     'TCodeBrowserView':        Exit(itmViewCodeBrowser.ImageIndex);
     'TUnitDependenciesWindow': Exit(-1);                      // for future icon
-    //'TRestrictionBrowserView': Exit(itmViewRestrictionBrowser.ImageIndex); //Ultibo
-    //'TComponentListForm':      Exit(itmViewComponents.ImageIndex); //Ultibo
+    'TRestrictionBrowserView': Exit(itmViewRestrictionBrowser.ImageIndex);
+    'TComponentListForm':      Exit(itmViewComponents.ImageIndex);
     'TJumpHistoryViewWin':     Exit(itmJumpHistory.ImageIndex);
     'TMacroListView':          Exit(-1);                      // for future icon
-    //'TTabOrderDialog':         Exit(itmViewTabOrder.ImageIndex); //Ultibo
+    'TTabOrderDialog':         Exit(itmViewTabOrder.ImageIndex);
     'TSearchResultsView':      Exit(itmViewSearchResults.ImageIndex);
     'TWatchesDlg':             Exit(itmViewWatches.ImageIndex);
     'TBreakPointsDlg':         Exit(itmViewBreakPoints.ImageIndex);

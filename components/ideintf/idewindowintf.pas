@@ -470,7 +470,8 @@ var
   IDEDockDisabled: Boolean = false; //Ultibo
 
 var
-  IDEProjectInspectorCaption:String; //Ultibo
+  IDECodeExplorerCaption: String; //Ultibo
+  IDEProjectInspectorCaption: String; //Ultibo
 
 procedure MakeIDEWindowDockable(AControl: TWinControl);
 procedure MakeIDEWindowDockSite(AForm: TCustomForm);
@@ -1168,10 +1169,12 @@ begin
   // state
   fWindowState:=StrToIDEWindowState(Config.GetValue(
     P+'WindowState/Value',IDEWindowStateNames[iwsNormal]));
-  if FormID = IDEProjectInspectorCaption then //Ultibo
-   FVisible:=Config.GetValue(P+'Visible/Value',True) //Ultibo
+  if FormID = IDECodeExplorerCaption then //Ultibo
+    FVisible:=Config.GetValue(P+'Visible/Value',True) //Ultibo
+  else if FormID = IDEProjectInspectorCaption then //Ultibo
+    FVisible:=Config.GetValue(P+'Visible/Value',True) //Ultibo
   else //Ultibo
-   FVisible:=Config.GetValue(P+'Visible/Value',false);
+    FVisible:=Config.GetValue(P+'Visible/Value',false);
   //debugln(['TSimpleWindowLayout.LoadFromConfig ',FormID,' ',Left,',',Top,',',Width,',',Height]);
   FDividers.LoadFromConfig(Config, P + 'Divider/');
 end;
@@ -1207,7 +1210,12 @@ begin
   Config.SetDeleteValue(P+'CustomPosition/Height', Height, 0);
   // state
   Config.SetDeleteValue(P+'WindowState/Value',IDEWindowStateNames[fWindowState],IDEWindowStateNames[iwsNormal]);
-  Config.SetDeleteValue(P+'Visible/Value',FVisible,false);
+  if FormID = IDECodeExplorerCaption then //Ultibo
+    Config.SetDeleteValue(P+'Visible/Value',FVisible,true) //Ultibo
+  else if FormID = IDEProjectInspectorCaption then //Ultibo
+    Config.SetDeleteValue(P+'Visible/Value',FVisible,true) //Ultibo
+  else //Ultibo
+    Config.SetDeleteValue(P+'Visible/Value',FVisible,false);
   FDividers.SaveToConfig(Config, P + 'Divider/');
 end;
 

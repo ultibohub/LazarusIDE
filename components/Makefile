@@ -1839,7 +1839,6 @@ base:
 	$(MAKE) -C buildintf
 	$(MAKE) -C freetype
 bigide:
-	$(MAKE) -C synedit/design
 	$(MAKE) -C rtticontrols
 	$(MAKE) -C cairocanvas
 	$(MAKE) -C printers

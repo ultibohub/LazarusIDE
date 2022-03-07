@@ -130,6 +130,14 @@ type
     procedure UnhideIDE; virtual; abstract;
     procedure SaveIncludeLinks; virtual; abstract;
 
+    function IsUltiboProject: boolean; virtual; abstract; //Ultibo
+    
+    function AllowFormControls: boolean; virtual; abstract; //Ultibo
+    function AllowDebugControls: boolean; virtual; abstract; //Ultibo
+    function AllowPackageControls: boolean; virtual; abstract; //Ultibo
+    function AllowEmulationControls: boolean; virtual; abstract; //Ultibo
+    procedure UpdateControlState; virtual; abstract; //Ultibo
+
     procedure GetCurrentUnitInfo(out ActiveSourceEditor: TSourceEditorInterface;
                               out ActiveUnitInfo: TUnitInfo); virtual; abstract;
     procedure GetUnitInfoForDesigner(ADesigner: TIDesigner;
