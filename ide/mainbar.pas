@@ -866,7 +866,7 @@ begin
   itmRunMenuCleanUpAndBuild.Enabled:=aAllow;
   itmRunMenuAbortBuild.Enabled:=not aAllow;
   // Package menu
-  itmPkgEditInstallPkgs.Enabled:=aAllow and aAllowPackage; //Ultibo
+  itmPkgEditInstallPkgs.Enabled:=aAllow;
   // Tools menu
   itmToolRescanFPCSrcDir.Enabled:=aAllow;
   itmToolBuildUltiboRTL.Enabled:=aAllow; //Ultibo

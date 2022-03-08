@@ -98,6 +98,7 @@ type
   TNewIDEItemTemplate = class(TPersistent)
   private
     fCategory: TNewIDEItemCategory;
+	fCategoryCount: Integer; //Ultibo
     FVisibleInNewDialog: boolean;
     FIsInherited: boolean;
   protected
@@ -124,6 +125,7 @@ type
     property ItemAttributes: TNewIDEItemAttributes read FItemAttributes; //Ultibo
     property Name: string read FName;
     property Category: TNewIDEItemCategory read fCategory write fCategory; // main category
+	property CategoryCount: Integer read fCategoryCount write fCategoryCount; //Ultibo
     property IsModule: boolean read GetIsModule; //Ultibo
     property IsProject: boolean read GetIsProject; //Ultibo
     property RequireForms: boolean read GetRequireForms; //Ultibo
@@ -202,7 +204,12 @@ var
   i: Integer;
 begin
   for i := 0 to FItems.Count - 1 do
-    Items[i].Free;
+  begin
+	if Items[i].CategoryCount = 1 then //Ultibo
+	  Items[i].Free
+	else //Ultibo
+	  Items[i].CategoryCount := Items[i].CategoryCount - 1; //Ultibo
+  end;
   FItems.Clear;
 end;
 
@@ -210,6 +217,7 @@ procedure TNewIDEItemCategory.Add(ATemplate: TNewIDEItemTemplate);
 begin
   FItems.Add(ATemplate);
   ATemplate.Category := Self;
+  ATemplate.CategoryCount := ATemplate.CategoryCount + 1; //Ultibo
 end;
 
 function TNewIDEItemCategory.LocalizedName: string;

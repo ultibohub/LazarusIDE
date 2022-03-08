@@ -102,7 +102,7 @@ begin
   //AddFilenameToList(List,'/usr/local/bin/'+GetDefaultCompilerFilename); //Ultibo
   //AddFilenameToList(List,'/usr/bin/'+GetDefaultCompilerFilename); //Ultibo
   //AddFilenameToList(List,'/opt/fpc/'+GetDefaultCompilerFilename); //Ultibo
-  AddFilenameToList(List,'~/ultibo/core/fpc/bin/'+GetDefaultCompilerFilename); //Ultibo
+  AddFilenameToList(List,AppendPathDelim(ProgramDirectory)+'fpc/bin/'+GetDefaultCompilerFilename); //Ultibo
 end;
 
 procedure GetDefaultMakeFilenames(List: TStrings);
@@ -150,7 +150,10 @@ begin
   AllowDirectorySeparators:=['/'];
 
   PrimaryConfigPath:=ExpandFileNameUTF8('~/.ultibo/core'); //'~/.lazarus' //Ultibo
-  SecondaryConfigPath:='/etc/ultibo/core'; //'/etc/lazarus'; //Ultibo
+  SecondaryConfigPath:=ChompPathDelim(ProgramDirectory); //'/etc/lazarus'; //Ultibo
+  
+  DefaultFPCSrcDirs[1] := AppendPathDelim(ProgramDirectory) + 'fpc/source'; //Ultibo
+  DefaultLazarusSrcDirs[1] := ChompPathDelim(ProgramDirectory); //Ultibo
 end;
 
 
