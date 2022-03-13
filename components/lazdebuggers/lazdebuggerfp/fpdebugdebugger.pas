@@ -3068,6 +3068,7 @@ begin
     {$IFDEF MSWINDOWS}
     {$IFDEF WIN64}
     bplFpcSpecific, bplRtlRestoreContext, bplRtlUnwind,
+    bplSehW64Finally, bplSehW64Except, bplSehW64Unwound,
     {$ENDIF}
     bplFpcExceptHandler ,bplFpcFinallyHandler, bplFpcLeaveHandler,
     bplSehW32Except, bplSehW32Finally,
@@ -3609,7 +3610,8 @@ begin
       else
         ResText := GetFpErrorHandler.ErrorAsString(FDbgController.LastError);
       DoDbgEvent(ecProcess, etProcessExit, ResText); // or ecDebugger?
-      OnFeedback(self, ResText, '', ftError, [frOk]);
+      if Assigned(OnFeedback) then
+        OnFeedback(self, ResText, '', ftError, [frOk]);
       Exit;
     end;
     // TODO: any step commond should run to "main" or "pascalmain"
