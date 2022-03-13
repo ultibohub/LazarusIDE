@@ -1391,6 +1391,10 @@ msgstr "Тип зневаджувача і шлях"
 msgid "Default editor font"
 msgstr "Типовий шрифт редактора"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Типове значення"
@@ -8009,6 +8013,10 @@ msgstr "Відкрити модуль %s"
 msgid ", CPU: %s"
 msgstr ", ЦП: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Спочатку створіть проєкт!"
@@ -9238,6 +9246,7 @@ msgid "Editor Colors"
 msgstr "Кольори редактора"
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "Макроси редактора"
 
@@ -11705,10 +11714,6 @@ msgstr "Задужкувати вибране"
 msgid "Evaluate/Modify"
 msgstr "Обчислити/Змінити"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "Приклади проєктів"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Налаштування зовнішніх інструментів"
@@ -13490,10 +13495,6 @@ msgstr "Задужкувати вибране ..."
 msgid "E&valuate/Modify ..."
 msgstr "Об&числити/Змінити..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "Приклади проєктів ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "Витягти процедуру ..."
@@ -13706,7 +13707,10 @@ msgid "Lowercase Selection"
 msgstr "Вибір в нижньому регістрі"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "Макрос редактора ..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

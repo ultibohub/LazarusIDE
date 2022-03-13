@@ -1370,7 +1370,6 @@ begin
     CreateMenuSeparatorSection(mnuTools,itmSecondaryTools,'itmSecondaryTools');
     ParentMI:=itmSecondaryTools;
     CreateMenuItem(ParentMI,itmToolManageDesktops,'itmToolManageDesktops', lisDesktops, 'menu_manage_desktops');
-    CreateMenuItem(ParentMI,itmToolManageExamples,'itmToolManageExamples',lisMenuExampleProjects, 'camera');
     CreateMenuItem(ParentMI,itmToolDiff,'itmToolDiff',lisMenuCompareFiles, 'menu_tool_diff');
 
     CreateMenuSeparatorSection(mnuTools,itmConversion,'itmConversion');

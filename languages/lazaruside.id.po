@@ -1424,6 +1424,10 @@ msgstr "Path dan Tipe Debugger"
 msgid "Default editor font"
 msgstr "Font editor default"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Nilai default"
@@ -8283,6 +8287,10 @@ msgstr "Buka Unit %s"
 msgid ", CPU: %s"
 msgstr ""
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Buat proyek dulu!"
@@ -9525,6 +9533,7 @@ msgid "Editor Colors"
 msgstr ""
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr ""
 
@@ -12015,10 +12024,6 @@ msgstr "Tutupi pilihan"
 msgid "Evaluate/Modify"
 msgstr "Evaluasi/Ubah"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr ""
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Seting Piranti Eksternal"
@@ -13912,10 +13917,6 @@ msgstr "Tutupi pilihan ..."
 msgid "E&valuate/Modify ..."
 msgstr "Evaluasi/Ubah ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr ""
-
 #: lazarusidestrconsts.lismenuextractproc
 #, fuzzy
 #| msgid "Extract procedure ..."
@@ -14180,7 +14181,8 @@ msgid "Lowercase Selection"
 msgstr "Kecilkan huruf pilihan"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr ""
 
 #: lazarusidestrconsts.lismenumakeresourcestring

@@ -82,7 +82,7 @@ uses
 	chmhelppkg,
     FPCUnitTestRunner, FPCUnitIDE, ProjTemplates, TAChartLazarusPkg,
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
-    EditorMacroScript,
+    EditorMacroScript, ExampleProjects,
     laz.virtualtreeview_package, OnlinePackageManager, Pas2jsDsgn,
     LazDebuggerFpLldb, LazDebuggerFp,
   {$ENDIF}

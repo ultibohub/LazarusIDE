@@ -1398,6 +1398,10 @@ msgstr "调试器类型和路径"
 msgid "Default editor font"
 msgstr "默认的编辑器字体"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "默认值"
@@ -8016,6 +8020,10 @@ msgstr "打开单元%s"
 msgid ", CPU: %s"
 msgstr ", CPU: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "请先创建一个工程!"
@@ -9251,6 +9259,7 @@ msgid "Editor Colors"
 msgstr "编辑器颜色"
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "编辑器宏命令"
 
@@ -11716,10 +11725,6 @@ msgstr "封装(Enclose)选中的东西"
 msgid "Evaluate/Modify"
 msgstr "评估/修改"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "示例工程"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "外部工具设置"
@@ -13504,10 +13509,6 @@ msgstr "封装(Enclose)选中的东西 ..."
 msgid "E&valuate/Modify ..."
 msgstr "诊断/评估/修改...(&E)"
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "示例工程..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "提取过程(Procedure)..."
@@ -13720,7 +13721,10 @@ msgid "Lowercase Selection"
 msgstr "小写选择"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "编辑器宏命令..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

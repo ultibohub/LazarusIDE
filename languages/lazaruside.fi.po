@@ -1385,6 +1385,10 @@ msgstr "Virheenjäljittimen tyyppi ja polku"
 msgid "Default editor font"
 msgstr "Editorin oletuskirjasin"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Oletusarvo"
@@ -7995,6 +7999,10 @@ msgstr "Avaa käännösyksikkö %s"
 msgid ", CPU: %s"
 msgstr ""
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Luo ensin projekti!"
@@ -9216,6 +9224,7 @@ msgid "Editor Colors"
 msgstr "Editorin värit"
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "Editorin makrot"
 
@@ -11648,10 +11657,6 @@ msgstr "Kapseloi valinta"
 msgid "Evaluate/Modify"
 msgstr "Arvioi/Muuta"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "Esimerkkiprojektit"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Ulkoisten työkalujen asetukset"
@@ -13418,10 +13423,6 @@ msgstr "Kapseloi valinta ..."
 msgid "E&valuate/Modify ..."
 msgstr "&Arvioi/Muuta ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "Esimerkkiprojektit ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "Erota aliohjelma ..."
@@ -13633,7 +13634,10 @@ msgid "Lowercase Selection"
 msgstr "Valinta pieniksi kirjaimiksi"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "Editorin makrot ..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

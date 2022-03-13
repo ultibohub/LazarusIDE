@@ -1416,6 +1416,10 @@ msgstr "デバッガの種類とパス"
 msgid "Default editor font"
 msgstr "初期エディタ フォント"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "デフォルト値"
@@ -8127,6 +8131,10 @@ msgstr "ユニット %s を開く"
 msgid ", CPU: %s"
 msgstr ", CPU: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "初めにプロジェクトを作成してください！"
@@ -9363,6 +9371,7 @@ msgstr "色を編集"
 #: lazarusidestrconsts.liseditormacros
 #, fuzzy
 #| msgid "Editor macros"
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "マクロエディタ"
 
@@ -11823,10 +11832,6 @@ msgstr "選択部分を囲む"
 msgid "Evaluate/Modify"
 msgstr "評価/変更"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "サンプルプロジェクト"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "外部ツールの設定"
@@ -13645,10 +13650,6 @@ msgstr "選択部分を囲む ..."
 msgid "E&valuate/Modify ..."
 msgstr "評価/変更(&v) ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "サンプルプロジェクト ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "手続きを展開 ..."
@@ -13861,7 +13862,10 @@ msgid "Lowercase Selection"
 msgstr "選択部を小文字化"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "マクロを編集 ..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

@@ -5,7 +5,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2022-02-16 01:44+0300\n"
+"PO-Revision-Date: 2022-03-12 01:00+0300\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
@@ -1382,6 +1382,10 @@ msgstr "Тип отладчика и путь"
 #: lazarusidestrconsts.dlgdefaulteditorfont
 msgid "Default editor font"
 msgstr "Шрифт редактора по умолчанию"
+
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr "Шрифт заголовка вкладки по умолчанию"
 
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
@@ -7986,6 +7990,10 @@ msgstr "Открыть модуль %s"
 msgid ", CPU: %s"
 msgstr ", процессор: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr "Создать и редактировать"
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Сначала необходимо создать проект!"
@@ -9215,6 +9223,7 @@ msgid "Editor Colors"
 msgstr "Цвета редактора"
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "Макросы редактора"
 
@@ -11682,10 +11691,6 @@ msgstr "Заключить выделенное"
 msgid "Evaluate/Modify"
 msgstr "Вычислить/Изменить"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "Примеры проектов"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Настройка внешних средств"
@@ -13464,10 +13469,6 @@ msgstr "Заключить выделенное в ..."
 msgid "E&valuate/Modify ..."
 msgstr "&Вычислить/Изменить ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "Примеры проектов ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "Извлечь в процедуру ..."
@@ -13680,8 +13681,9 @@ msgid "Lowercase Selection"
 msgstr "Нижний регистр выделенного"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
-msgstr "Макросы редактора ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
+msgstr "Макросы редактора"
 
 #: lazarusidestrconsts.lismenumakeresourcestring
 msgid "Make Resource String ..."

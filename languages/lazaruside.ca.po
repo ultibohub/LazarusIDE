@@ -1422,6 +1422,10 @@ msgstr "Tipus i trajectòria del depurador"
 msgid "Default editor font"
 msgstr "Font de l'editor predeterminat"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Valor per defecte"
@@ -8224,6 +8228,10 @@ msgstr "Obre Unitat %s"
 msgid ", CPU: %s"
 msgstr ""
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Creeu primer un projecte!"
@@ -9463,6 +9471,7 @@ msgid "Editor Colors"
 msgstr ""
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr ""
 
@@ -11914,10 +11923,6 @@ msgstr ""
 msgid "Evaluate/Modify"
 msgstr ""
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr ""
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr ""
@@ -13733,10 +13738,6 @@ msgstr "Tanca la selecció ..."
 msgid "E&valuate/Modify ..."
 msgstr "Avalua/Modifica ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr ""
-
 #: lazarusidestrconsts.lismenuextractproc
 #, fuzzy
 #| msgid "Extract procedure ..."
@@ -14001,7 +14002,8 @@ msgid "Lowercase Selection"
 msgstr "Fica a minúscules la selecció"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr ""
 
 #: lazarusidestrconsts.lismenumakeresourcestring

@@ -1458,6 +1458,10 @@ msgstr "סוג מנפה השגיאות והנתיב אליו"
 msgid "Default editor font"
 msgstr "גופן ברירת מחדל של העורך"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "ערך ברירת מחדל"
@@ -8434,6 +8438,10 @@ msgstr "פתח יחידה %s"
 msgid ", CPU: %s"
 msgstr ""
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "צור קודם פרויקט!"
@@ -9696,6 +9704,7 @@ msgid "Editor Colors"
 msgstr ""
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr ""
 
@@ -12215,10 +12224,6 @@ msgstr "צרף את הבחירה"
 msgid "Evaluate/Modify"
 msgstr "חשב/שנה"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr ""
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "הגדרת כלים חצוניים"
@@ -14170,10 +14175,6 @@ msgstr "צרף את הבחירה"
 msgid "E&valuate/Modify ..."
 msgstr "הערכה/שינוי ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr ""
-
 #: lazarusidestrconsts.lismenuextractproc
 #, fuzzy
 #| msgid "Extract procedure ..."
@@ -14444,7 +14445,8 @@ msgid "Lowercase Selection"
 msgstr "בחירת אותיות קטנות"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr ""
 
 #: lazarusidestrconsts.lismenumakeresourcestring

@@ -1399,6 +1399,10 @@ msgstr "Typ a cesta ladiče"
 msgid "Default editor font"
 msgstr "Výchozí písmo editoru"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Výchozí hodnota"
@@ -8051,6 +8055,10 @@ msgstr "Otevřít jednotku %s"
 msgid ", CPU: %s"
 msgstr ", CPU: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Vytvořte nejdříve projekt!"
@@ -9284,6 +9292,7 @@ msgid "Editor Colors"
 msgstr "Barvy Editoru"
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "Návrhář maker"
 
@@ -11742,10 +11751,6 @@ msgstr "Zabalit výběr do bloku kódu"
 msgid "Evaluate/Modify"
 msgstr "Vyhodnocení/Upravení"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "Ukázkový projekt"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Nastavení vnějších nástrojů"
@@ -13548,10 +13553,6 @@ msgstr "Obklopit výběr ..."
 msgid "E&valuate/Modify ..."
 msgstr "Vyhodnocení/Upravení ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "Ukázkové projekty ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "Vyjmout proceduru ..."
@@ -13764,7 +13765,10 @@ msgid "Lowercase Selection"
 msgstr "Změnit výběr na malá písmena"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "Návrhář maker ..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

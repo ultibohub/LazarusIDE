@@ -1425,6 +1425,10 @@ msgstr "Tipo de depurador y ruta"
 msgid "Default editor font"
 msgstr "Fuente predeterminada del editor"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Valor predeterminado"
@@ -8185,6 +8189,10 @@ msgstr "Abrir Unidad %s"
 msgid ", CPU: %s"
 msgstr ", CPU: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "¡Cree un proyecto primero!"
@@ -9428,6 +9436,7 @@ msgstr "Editar colores"
 #: lazarusidestrconsts.liseditormacros
 #, fuzzy
 #| msgid "Editor macros"
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "Editar macros"
 
@@ -11942,10 +11951,6 @@ msgstr "Encerrar Selección"
 msgid "Evaluate/Modify"
 msgstr "Evaluar/Modificar"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "Projectos Ejemplo"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Opciones de herramientas externas"
@@ -13837,10 +13842,6 @@ msgstr "Encerrar Selección ..."
 msgid "E&valuate/Modify ..."
 msgstr "Evaluar/Modificar ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "Proyectos Ejemplo ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "Extraer Procedimiento ..."
@@ -14055,7 +14056,10 @@ msgid "Lowercase Selection"
 msgstr "Selección en Minúsculas"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "Editor Macros ..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

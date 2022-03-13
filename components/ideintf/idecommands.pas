@@ -349,7 +349,7 @@ const
 
   ecExtToolSettings         = ecFirstLazarus + 824;
   ecManageDesktops          = ecFirstLazarus + 825;
-  ecManageExamples          = ecFirstLazarus + 826;
+  // ecManageExamples          = ecFirstLazarus + 826;
   ecConfigBuildLazarus      = ecFirstLazarus + 830;
   ecBuildLazarus            = ecFirstLazarus + 831;
   ecBuildAdvancedLazarus    = ecFirstLazarus + 832;
@@ -1951,7 +1951,7 @@ begin
 end;
 
 const
-  IDEEditorCommandStrs: array[0..328] of TIdentMapEntry = ( //Ultibo
+  IDEEditorCommandStrs: array[0..327] of TIdentMapEntry = (         // DRB reduced elements from 323 //Ultibo
   // search
     (Value: ecFind;                                   Name: 'ecFind'),
     (Value: ecFindAgain;                              Name: 'ecFindAgain'),
@@ -2238,7 +2238,6 @@ const
     (Value: ecCodeToolsDefinesEd;                     Name: 'ecCodeToolsDefinesEd'),
 
     (Value: ecExtToolSettings;                        Name: 'ecExtToolSettings'),
-    (Value: ecManageExamples;                         Name: 'ecManageExamples'),
     (Value: ecConfigBuildLazarus;                     Name: 'ecConfigBuildLazarus'),
     (Value: ecBuildLazarus;                           Name: 'ecBuildLazarus'),
     (Value: ecBuildAdvancedLazarus;                   Name: 'ecBuildAdvancedLazarus'),

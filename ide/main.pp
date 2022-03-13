@@ -146,7 +146,7 @@ uses
   CodeTemplatesDlg, CodeBrowser, FindUnitDlg, InspectChksumChangedDlg,
   IdeOptionsDlg, EditDefineTree, EnvironmentOpts, TransferMacros,
   KeyMapping, IDETranslations, IDEProcs, ExtToolDialog, ExtToolEditDlg,
-  JumpHistoryView, DesktopManager, ExampleManager, DiskDiffsDialog,
+  JumpHistoryView, DesktopManager, DiskDiffsDialog,
   BuildLazDialog, BuildProfileManager, BuildManager, CheckCompOptsForNewUnitDlg,
   MiscOptions, InputHistory, InputhistoryWithSearchOpt, UnitDependencies,
   IDEFPCInfo, IDEInfoDlg, IDEInfoNeedBuild, ProcessList, InitialSetupDlgs,
@@ -361,7 +361,6 @@ type
     procedure mnuToolConvertDelphiPackageClicked(Sender: TObject);
     procedure mnuToolConvertEncodingClicked(Sender: TObject);
     procedure mnuToolManageDesktopsClicked(Sender: TObject);
-    procedure mnuToolManageExamplesClicked(Sender: TObject);
     procedure mnuToolBuildLazarusClicked(Sender: TObject);
     procedure mnuToolBuildAdvancedLazarusClicked(Sender: TObject);
     procedure mnuToolConfigBuildLazClicked(Sender: TObject);
@@ -984,6 +983,7 @@ var
   ShowSplashScreen: boolean = false;
 
 implementation
+
 
 var
   ParamBaseDirectory: string = '';
@@ -2850,7 +2850,7 @@ begin
 
     itmToolConfigure.OnClick := @mnuToolConfigureUserExtToolsClicked;
     itmToolManageDesktops.OnClick := @mnuToolManageDesktopsClicked;
-    itmToolManageExamples.OnClick := @mnuToolManageExamplesClicked;
+
     itmToolDiff.OnClick := @mnuToolDiffClicked;
 
     itmToolCheckLFM.OnClick := @mnuToolCheckLFMClicked;
@@ -3127,7 +3127,7 @@ begin
     itmToolConfigure.Command:=GetIdeCmdRegToolBtn(ecExtToolSettings);
 
     itmToolManageDesktops.Command:=GetCommand(ecManageDesktops, nil, TShowDesktopsToolButton);
-    itmToolManageExamples.Command:=GetIdeCmdRegToolBtn(ecManageExamples);
+
     itmToolDiff.Command:=GetIdeCmdRegToolBtn(ecDiff);
 
     itmToolConvertDFMtoLFM.Command:=GetIdeCmdRegToolBtn(ecConvertDFM2LFM);
@@ -3628,7 +3628,6 @@ begin
   ecRescanFPCSrcDir:          mnuEnvRescanFPCSrcDirClicked(Self);
   ecBuildUltiboRTL:           mnuToolBuildUltiboRTLClicked(Self); //Ultibo
   ecRunInQEMU:                mnuToolRunInQEMUClicked(Self); //Ultibo
-  ecManageExamples:           mnuToolManageExamplesClicked(Self);
   ecBuildLazarus:             mnuToolBuildLazarusClicked(Self);
   ecBuildAdvancedLazarus:     mnuToolBuildAdvancedLazarusClicked(Self);
   ecConfigBuildLazarus:       mnuToolConfigBuildLazClicked(Self);
@@ -4878,11 +4877,6 @@ end;
 procedure TMainIDE.mnuToolManageDesktopsClicked(Sender: TObject);
 begin
   ShowDesktopManagerDlg;
-end;
-
-procedure TMainIDE.mnuToolManageExamplesClicked(Sender: TObject);
-begin
-  DoExampleManager();
 end;
 
 procedure TMainIDE.mnuToolBuildLazarusClicked(Sender: TObject);
@@ -6504,7 +6498,7 @@ begin
         end;
       end;
     tpws_examples:
-      mnuToolManageExamplesClicked(Sender);
+      DoExampleManager();
     tpws_convert:
       mnuToolConvertDelphiProjectClicked(Sender);
     tpws_closeIDE:
@@ -7810,8 +7804,16 @@ begin
 end;
 
 function TMainIDE.DoExampleManager: TModalResult;
+var
+  AKey : word;
+  ExCommand : TIDECommand;
 begin
-  Result:=ShowExampleManagerDlg;
+  Result := mrOK;
+  EXCommand := IDECommandList.FindCommandByName('Example Projects');
+  if ExCommand = nil then
+    debugln('TMainIDE.DoExampleManager - Maybe Example Manager Package is not installed !')
+  else
+    ExCommand.Execute(self);
 end;
 
 function TMainIDE.DoBuildLazarusSub(Flags: TBuildLazarusFlags): TModalResult;

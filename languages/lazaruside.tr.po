@@ -1383,6 +1383,10 @@ msgstr "Hata ayıklayıcı türü ve yolu"
 msgid "Default editor font"
 msgstr "Varsayılan düzenleyici yazı tipi"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Varsayılan değer"
@@ -7957,6 +7961,10 @@ msgstr "Birimi aç %s"
 msgid ", CPU: %s"
 msgstr ", CPU: %s"
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Önce bir proje oluştur!"
@@ -9186,6 +9194,7 @@ msgid "Editor Colors"
 msgstr "Editör Renkleri"
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr "Editör makroları"
 
@@ -11654,10 +11663,6 @@ msgstr "Seçimi Dahil Et"
 msgid "Evaluate/Modify"
 msgstr "Değiştir / değerlendirin"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr "Örnek Projeler"
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr "Harici Araçlar ayarları"
@@ -13426,10 +13431,6 @@ msgstr "Seçimi Dahil Et..."
 msgid "E&valuate/Modify ..."
 msgstr "&Değerlendir/Değiştir ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr "Örnek Projeler ..."
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr "İşlemi Ayıkla ..."
@@ -13640,7 +13641,10 @@ msgid "Lowercase Selection"
 msgstr "Küçük harf seçimi"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+#, fuzzy
+#| msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr "Editör Makroları ..."
 
 #: lazarusidestrconsts.lismenumakeresourcestring

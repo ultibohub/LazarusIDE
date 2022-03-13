@@ -1424,6 +1424,10 @@ msgstr "Debuggertype en pad"
 msgid "Default editor font"
 msgstr "Standaard editorfont"
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr "Standaardwaarde"
@@ -8260,6 +8264,10 @@ msgstr "Open unit %s"
 msgid ", CPU: %s"
 msgstr ""
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr "Maak eerst een project!"
@@ -9501,6 +9509,7 @@ msgid "Editor Colors"
 msgstr ""
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr ""
 
@@ -11964,10 +11973,6 @@ msgstr ""
 msgid "Evaluate/Modify"
 msgstr "Evalueer/bewerk"
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr ""
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr ""
@@ -13829,10 +13834,6 @@ msgstr "Omsluit Selectie ..."
 msgid "E&valuate/Modify ..."
 msgstr "Evalueer/Wijzig ..."
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr ""
-
 #: lazarusidestrconsts.lismenuextractproc
 #, fuzzy
 #| msgid "Extract procedure ..."
@@ -14097,7 +14098,8 @@ msgid "Lowercase Selection"
 msgstr "Wijzig selectie in kleine letters"
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr ""
 
 #: lazarusidestrconsts.lismenumakeresourcestring

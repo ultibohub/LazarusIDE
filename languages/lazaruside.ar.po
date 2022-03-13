@@ -1390,6 +1390,10 @@ msgstr ""
 msgid "Default editor font"
 msgstr ""
 
+#: lazarusidestrconsts.dlgdefaulttabfont
+msgid "Default tab font"
+msgstr ""
+
 #: lazarusidestrconsts.dlgdefvaluecolor
 msgid "Default Value"
 msgstr ""
@@ -8010,6 +8014,10 @@ msgstr ""
 msgid ", CPU: %s"
 msgstr ""
 
+#: lazarusidestrconsts.liscreateandedit
+msgid "Create and edit"
+msgstr ""
+
 #: lazarusidestrconsts.liscreateaprojectfirst
 msgid "Create a project first!"
 msgstr ""
@@ -9240,6 +9248,7 @@ msgid "Editor Colors"
 msgstr ""
 
 #: lazarusidestrconsts.liseditormacros
+msgctxt "lazarusidestrconsts.liseditormacros"
 msgid "Editor Macros"
 msgstr ""
 
@@ -11675,10 +11684,6 @@ msgstr ""
 msgid "Evaluate/Modify"
 msgstr ""
 
-#: lazarusidestrconsts.liskmexampleprojects
-msgid "Example Projects"
-msgstr ""
-
 #: lazarusidestrconsts.liskmexternaltoolssettings
 msgid "External Tools settings"
 msgstr ""
@@ -13443,10 +13448,6 @@ msgstr ""
 msgid "E&valuate/Modify ..."
 msgstr ""
 
-#: lazarusidestrconsts.lismenuexampleprojects
-msgid "Example Projects ..."
-msgstr ""
-
 #: lazarusidestrconsts.lismenuextractproc
 msgid "Extract Procedure ..."
 msgstr ""
@@ -13661,7 +13662,8 @@ msgid "Lowercase Selection"
 msgstr ""
 
 #: lazarusidestrconsts.lismenumacrolistview
-msgid "Editor Macros ..."
+msgctxt "lazarusidestrconsts.lismenumacrolistview"
+msgid "Editor Macros"
 msgstr ""
 
 #: lazarusidestrconsts.lismenumakeresourcestring

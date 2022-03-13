@@ -1613,7 +1613,6 @@ type
     procedure SetBounds(aLeft, aTop, aWidth, aHeight: integer); override;
     property AutoSize default True;
     property Color default clNone;
-    property ParentColor default False;
   end;
 
 
@@ -1677,7 +1676,8 @@ procedure Register;
 implementation
 
 uses
-  WSControls, WSStdCtrls, interfacebase; // Widgetset uses circle is allowed
+  WSControls, WSStdCtrls, interfacebase,  // Widgetset uses circle is allowed
+  Graphmath; 
 
 
 type

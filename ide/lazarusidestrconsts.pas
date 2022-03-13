@@ -390,7 +390,7 @@ resourcestring
   lisMenuJumpForward = 'Jump Forward';
   lisMenuAddJumpPointToHistory = 'Add Jump Point to History';
   lisMenuViewJumpHistory = 'Jump History';
-  lisMenuMacroListView = 'Editor Macros ...';
+  lisMenuMacroListView = 'Editor Macros';
   lisMenuFindBlockOtherEndOfCodeBlock = 'Find Other End of Code Block';
   lisMenuFindCodeBlockStart = 'Find Start of Code Block';
   lisMenuFindDeclarationAtCursor = 'Find Declaration at Cursor';
@@ -592,8 +592,6 @@ resourcestring
   lisMenuConvertDelphiPackage = 'Convert Delphi Package to Lazarus Package ...';
   lisMenuConvertEncoding = 'Convert Encoding of Projects/Packages ...';
   lisConvertEncodingOfProjectsPackages = 'Convert encoding of projects/packages';
-  lisMenuExampleProjects = 'Example Projects ...';
-  lisKMExampleProjects = 'Example Projects';
   lisMenuBuildLazarus = 'Build Lazarus with Current Profile';
   lisMenuBuildLazarusProf = 'Build Lazarus with Profile: %s';
   lisMenuConfigureBuildLazarus = 'Configure "Build Lazarus" ...';
@@ -1961,6 +1959,7 @@ resourcestring
   dlgGutterColor = 'Gutter Color';
   dlgDefaultEditorFont='Default editor font';
   dlgEditorFontSize = 'Editor font size';
+  dlgDefaultTabFont='Default tab font';
   dlgExtraCharSpacing = 'Extra character spacing';
   dlgExtraLineSpacing = 'Extra line spacing';
   dlgDisableAntialiasing = 'Disable anti-aliasing';
@@ -6413,6 +6412,7 @@ resourcestring
   lisPlay = 'Play';
   lisRecord = 'Record';
   lisRepeat = 'Repeat';
+  lisCreateAndEdit = 'Create and edit';
   lisDeleteSelectedMacro = 'Delete selected macro?';
   lisReallyDelete = 'Really delete?';
   lisSaveMacroAs = 'Save macro as';
