@@ -70,6 +70,7 @@ uses
   anchordockpkg, //Ultibo
   anchordockingdsgn, //Ultibo
   jcfidelazarus, //Ultibo
+  laz.virtualtreeview_package, //Ultibo
   allsyneditdsgn, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
@@ -83,7 +84,8 @@ uses
     FPCUnitTestRunner, FPCUnitIDE, ProjTemplates, TAChartLazarusPkg,
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
     EditorMacroScript, ExampleProjects,
-    laz.virtualtreeview_package, OnlinePackageManager, Pas2jsDsgn,
+    //laz.virtualtreeview_package, //Ultibo
+    OnlinePackageManager, Pas2jsDsgn,
     LazDebuggerFpLldb, LazDebuggerFp,
   {$ENDIF}
   MainBase;

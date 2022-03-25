@@ -9110,6 +9110,7 @@ begin
       Lines.Add('anchordockpkg,');
       Lines.Add('anchordockingdsgn,');
       Lines.Add('jcfidelazarus,');
+      Lines.Add('laz.virtualtreeview_package,');
       Lines.Add('allsyneditdsgn,');
 
       Lines.SaveToFile(Path + 'staticpackages.inc');
@@ -9142,6 +9143,11 @@ begin
   if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('jcfidelazarus') < 0 then
   begin
     MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('jcfidelazarus');
+    Update := True;
+  end;
+  if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('laz.virtualtreeview_package') < 0 then
+  begin
+    MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('laz.virtualtreeview_package');
     Update := True;
   end;
 
