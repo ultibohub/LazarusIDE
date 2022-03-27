@@ -1586,16 +1586,44 @@ msgstr "Editor StringGrid"
 msgid "Clean"
 msgstr "Pulisci"
 
+#: objinspstrconsts.sccssgedtdelcol
+msgid "Delete Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelcolno
+#, object-pascal-format
+msgid "Delete column #%d?"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrow
+msgid "Delete Row"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrowno
+#, object-pascal-format
+msgid "Delete row #%d?"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtgrp
 msgid "String Grid"
 msgstr "String Grid"
+
+#: objinspstrconsts.sccssgedtinscol
+msgid "Insert Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtinsrow
+msgid "Insert Row"
+msgstr ""
 
 #: objinspstrconsts.sccssgedtload
 msgid "Load ..."
 msgstr "Carica..."
 
 #: objinspstrconsts.sccssgedtmoverowscols
-msgid "Move Rows/Cols"
+#, fuzzy
+#| msgid "Move Rows/Cols"
+msgid "Move Rows/Columns"
 msgstr "Sposta Righe/Colonne"
 
 #: objinspstrconsts.sccssgedtopendialog

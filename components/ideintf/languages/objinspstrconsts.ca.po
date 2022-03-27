@@ -1639,8 +1639,34 @@ msgstr "Editor de la cadena de la graella"
 msgid "Clean"
 msgstr "Netejar"
 
+#: objinspstrconsts.sccssgedtdelcol
+msgid "Delete Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelcolno
+#, object-pascal-format
+msgid "Delete column #%d?"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrow
+msgid "Delete Row"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrowno
+#, object-pascal-format
+msgid "Delete row #%d?"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtgrp
 msgid "String Grid"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtinscol
+msgid "Insert Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtinsrow
+msgid "Insert Row"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtload
@@ -1650,7 +1676,7 @@ msgid "Load ..."
 msgstr "Carrega..."
 
 #: objinspstrconsts.sccssgedtmoverowscols
-msgid "Move Rows/Cols"
+msgid "Move Rows/Columns"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtopendialog

@@ -10,6 +10,9 @@
       <SearchPaths>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
+      <Other>
+        <CustomOptions Value="$(IDEBuildOptions)"/>
+      </Other>
     </CompilerOptions>
     <Description Value="An interface for integrating Debugger-Backends into the IDE"/>
     <License Value="LGPL with linking exception
@@ -29,6 +32,10 @@ See LCL license for details."/>
         <Filename Value="lazdebuggerintfpackage.pas"/>
         <Type Value="Main Unit"/>
         <UnitName Value="lazdebuggerintfpackage"/>
+      </Item>
+      <Item>
+        <Filename Value="lazdebuggerintfbasetypes.pas"/>
+        <UnitName Value="lazdebuggerintfbasetypes"/>
       </Item>
     </Files>
     <RequiredPkgs>

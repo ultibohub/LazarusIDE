@@ -1591,16 +1591,44 @@ msgstr "文字列グリッドエディタ"
 msgid "Clean"
 msgstr "掃除する"
 
+#: objinspstrconsts.sccssgedtdelcol
+msgid "Delete Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelcolno
+#, object-pascal-format
+msgid "Delete column #%d?"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrow
+msgid "Delete Row"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrowno
+#, object-pascal-format
+msgid "Delete row #%d?"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtgrp
 msgid "String Grid"
 msgstr "文字列グリッド"
+
+#: objinspstrconsts.sccssgedtinscol
+msgid "Insert Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtinsrow
+msgid "Insert Row"
+msgstr ""
 
 #: objinspstrconsts.sccssgedtload
 msgid "Load ..."
 msgstr "読み込み ..."
 
 #: objinspstrconsts.sccssgedtmoverowscols
-msgid "Move Rows/Cols"
+#, fuzzy
+#| msgid "Move Rows/Cols"
+msgid "Move Rows/Columns"
 msgstr "行/列を移動"
 
 #: objinspstrconsts.sccssgedtopendialog

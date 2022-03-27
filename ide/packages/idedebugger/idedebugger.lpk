@@ -11,6 +11,9 @@
       <SearchPaths>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
+      <Other>
+        <CustomOptions Value="$(IDEBuildOptions)"/>
+      </Other>
     </CompilerOptions>
     <Description Value="GUI Debugger Frontend for the IDE"/>
     <License Value="GPL-2"/>
@@ -39,7 +42,15 @@
       </Item>
       <Item>
         <Filename Value="debuggertreeview.pas"/>
-        <UnitName Value="debuggertreeview"/>
+        <UnitName Value="DebuggerTreeView"/>
+      </Item>
+      <Item>
+        <Filename Value="idedebuggerutils.pas"/>
+        <UnitName Value="IdeDebuggerUtils"/>
+      </Item>
+      <Item>
+        <Filename Value="idedebuggerwatchresult.pas"/>
+        <UnitName Value="IdeDebuggerWatchResult"/>
       </Item>
     </Files>
     <RequiredPkgs>

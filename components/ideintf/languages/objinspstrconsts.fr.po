@@ -1580,16 +1580,44 @@ msgstr "Éditeur de grille de chaînes"
 msgid "Clean"
 msgstr "Nettoyer"
 
+#: objinspstrconsts.sccssgedtdelcol
+msgid "Delete Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelcolno
+#, object-pascal-format
+msgid "Delete column #%d?"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrow
+msgid "Delete Row"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtdelrowno
+#, object-pascal-format
+msgid "Delete row #%d?"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtgrp
 msgid "String Grid"
 msgstr "Grille de chaînes"
+
+#: objinspstrconsts.sccssgedtinscol
+msgid "Insert Column"
+msgstr ""
+
+#: objinspstrconsts.sccssgedtinsrow
+msgid "Insert Row"
+msgstr ""
 
 #: objinspstrconsts.sccssgedtload
 msgid "Load ..."
 msgstr "Charger..."
 
 #: objinspstrconsts.sccssgedtmoverowscols
-msgid "Move Rows/Cols"
+#, fuzzy
+#| msgid "Move Rows/Cols"
+msgid "Move Rows/Columns"
 msgstr "Déplacer les rangées/colonnes"
 
 #: objinspstrconsts.sccssgedtopendialog

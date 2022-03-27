@@ -9,7 +9,7 @@ uses
   DbgIntfBaseTypes, DbgIntfDebuggerBase, TestBase, FpGdbmiDebugger, LCLProc,
   IdeDebuggerBase, TestWatchUtils, GDBMIDebugger, FpErrorMessages,
   TestDbgControl, TestDbgConfig, TTestDbgExecuteables, TestDbgTestSuites,
-  LazDebuggerIntf;
+  LazDebuggerIntf, LazDebuggerIntfBaseTypes;
 
 const
   BREAK_COUNT_TestWatchesUnitSimple = 17;
@@ -188,8 +188,9 @@ begin
   end;
   s := OtherWatchExp.TheWatch.Values[1,0].Value;
   delete(s, 1, pos('$', s) - 1); delete(s, pos(')', s), 99);
+  s := QuoteRegExprMetaChars(s);
   for st := low(TSymbolType) to high(TSymbolType) do
-    AWatchExp^.Result[st].ExpMatch := '\'+s;
+    AWatchExp^.Result[st].ExpMatch := s;
 end;
 
 procedure TTestWatches.AdjustArrayExpectToAddress(AWatchExp: PWatchExpectation);
