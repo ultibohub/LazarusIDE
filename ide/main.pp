@@ -4025,7 +4025,9 @@ begin
     IDECommandList.FindIDECommand(ecCut).Enabled := SelEditable;
     IDECommandList.FindIDECommand(ecCopy).Enabled := SelAvail;
     IDECommandList.FindIDECommand(ecPaste).Enabled := Editable;
-    IDECommandList.FindIDECommand(ecSelectAll).Enabled := Assigned(ASrcEdit) and (ASrcEdit.SourceText<>'');
+    IDECommandList.FindIDECommand(ecSelectAll).Enabled := Assigned(ASrcEdit) and
+      ((ASrcEdit.LineCount>1) or ((ASrcEdit.LineCount=1) and (ASrcEdit.Lines[0] <> '')));
+
   end;
 
   IDECommandList.FindIDECommand(ecMultiPaste).Enabled := Editable;
@@ -6405,20 +6407,35 @@ end;
 
 function TMainIDE.CreateProjectObject(ProjectDesc,
   FallbackProjectDesc: TProjectDescriptor): TProject;
+var
+  NeedsEndUpdate, ok: Boolean;
 begin
   Result:=TProject.Create(ProjectDesc);
   // custom initialization
   Result.BeginUpdate(true);
-  if ProjectDesc.InitProject(Result)<>mrOk then begin
-    Result.EndUpdate;
-    Result.Free;
-    Result:=nil;
-    if FallbackProjectDesc=nil then exit;
-    Result:=TProject.Create(FallbackProjectDesc);
-    FallbackProjectDesc.InitProject(Result);
-  end
-  else
-    Result.EndUpdate;
+  NeedsEndUpdate:=true;
+  ok:=false;
+  try
+    if ProjectDesc.InitProject(Result)<>mrOk then begin
+      Result.EndUpdate;
+      NeedsEndUpdate:=false;
+      Result.Free;
+      Result:=nil;
+      if FallbackProjectDesc=nil then exit;
+      Result:=TProject.Create(FallbackProjectDesc);
+      Result.BeginUpdate(true);
+      NeedsEndUpdate:=true;
+      FallbackProjectDesc.InitProject(Result);
+    end;
+    ok:=true;
+  finally
+    if not ok then begin
+      NeedsEndUpdate:=false;
+      FreeAndNil(Result);
+    end;
+    if (Result<>nil) and NeedsEndUpdate then
+      Result.EndUpdate;
+  end;
 
   Result.MainProject:=true;
   Result.OnFileBackup:=@MainBuildBoss.BackupFileForWrite;

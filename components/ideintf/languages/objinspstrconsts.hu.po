@@ -1583,8 +1583,13 @@ msgstr "StringGrid szerkesztő"
 msgid "Clean"
 msgstr "Tisztítás"
 
+#: objinspstrconsts.sccssgedtcolrowinfo
+#, object-pascal-format
+msgid "(%d columns, %d rows)"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtdelcol
-msgid "Delete Column"
+msgid "Delete column"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtdelcolno
@@ -1593,7 +1598,7 @@ msgid "Delete column #%d?"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtdelrow
-msgid "Delete Row"
+msgid "Delete row"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtdelrowno
@@ -1601,16 +1606,28 @@ msgstr ""
 msgid "Delete row #%d?"
 msgstr ""
 
+#: objinspstrconsts.sccssgedteditcoltitle
+msgid "Edit column title"
+msgstr ""
+
+#: objinspstrconsts.sccssgedteditfixedcoltitle
+msgid "Edit fixed column title"
+msgstr ""
+
+#: objinspstrconsts.sccssgedteditrowheader
+msgid "Edit row header"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtgrp
 msgid "String Grid"
 msgstr "String Grid"
 
 #: objinspstrconsts.sccssgedtinscol
-msgid "Insert Column"
+msgid "Insert column"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtinsrow
-msgid "Insert Row"
+msgid "Insert row"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtload
@@ -1620,7 +1637,7 @@ msgstr "Betöltés ..."
 #: objinspstrconsts.sccssgedtmoverowscols
 #, fuzzy
 #| msgid "Move Rows/Cols"
-msgid "Move Rows/Columns"
+msgid "Move rows/columns"
 msgstr "Sorok/Oszlopok mozgatása"
 
 #: objinspstrconsts.sccssgedtopendialog
@@ -1637,6 +1654,10 @@ msgstr "Mentés ..."
 msgctxt "objinspstrconsts.sccssgedtsavedialog"
 msgid "Save"
 msgstr "Mentés"
+
+#: objinspstrconsts.sccssgedttitle
+msgid "Title"
+msgstr ""
 
 #: objinspstrconsts.sccstredt
 msgctxt "objinspstrconsts.sccstredt"

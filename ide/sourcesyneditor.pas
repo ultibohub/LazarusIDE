@@ -76,6 +76,7 @@ type
   private
     FLineMapCount: integer;
     FLineMap: array of integer;
+    FSkipTextToView: Boolean;
     function GetLineMap(Index: Integer): Integer;
     procedure SetLineMap(Index: Integer; AValue: Integer);
     procedure SetLineMapCount(AValue: integer);
@@ -131,9 +132,9 @@ type
   public
     constructor Create(AOwner: TWinControl; AnOriginalManager: TLazSynSurfaceManager);
     destructor Destroy; override;
-    procedure  InvalidateLines(FirstTextLine, LastTextLine: TLineIdx); override;
-    procedure InvalidateTextLines(FirstTextLine, LastTextLine: TLineIdx); override;
-    procedure InvalidateGutterLines(FirstTextLine, LastTextLine: TLineIdx); override;
+    procedure  InvalidateLines(FirstTextLine, LastTextLine: TLineIdx; AScreenLineOffset: Integer = 0); override;
+    procedure InvalidateTextLines(FirstTextLine, LastTextLine: TLineIdx; AScreenLineOffset: Integer = 0); override;
+    procedure InvalidateGutterLines(FirstTextLine, LastTextLine: TLineIdx; AScreenLineOffset: Integer = 0); override;
     property ExtraManager: TLazSynSurfaceManager read FExtraManager write FExtraManager;
     property OriginalManager: TLazSynSurfaceManager read FOriginalManager write FOriginalManager;
     property TopLineCount: Integer read FTopLineCount write SetTopLineCount;
@@ -1222,6 +1223,11 @@ var
   i: Integer;
   r: TLineRange;
 begin
+  if FSkipTextToView then begin
+    Result.Top := AIndex;
+    Result.Bottom := AIndex;
+    exit;
+  end;
   Result.Top := -1;
   Result.Bottom := -1;
   r := inherited TextToViewIndex(AIndex);
@@ -1418,21 +1424,24 @@ begin
   FOriginalManager.Free;
 end;
 
-procedure TSourceLazSynSurfaceManager.InvalidateLines(FirstTextLine, LastTextLine: TLineIdx);
+procedure TSourceLazSynSurfaceManager.InvalidateLines(FirstTextLine,
+  LastTextLine: TLineIdx; AScreenLineOffset: Integer);
 begin
-  FOriginalManager.InvalidateLines(FirstTextLine, LastTextLine);
+  FOriginalManager.InvalidateLines(FirstTextLine, LastTextLine, AScreenLineOffset);
   FExtraManager.InvalidateLines(FirstTextLine, LastTextLine);
 end;
 
-procedure TSourceLazSynSurfaceManager.InvalidateTextLines(FirstTextLine, LastTextLine: TLineIdx);
+procedure TSourceLazSynSurfaceManager.InvalidateTextLines(FirstTextLine,
+  LastTextLine: TLineIdx; AScreenLineOffset: Integer);
 begin
-  FOriginalManager.InvalidateTextLines(FirstTextLine, LastTextLine);
+  FOriginalManager.InvalidateTextLines(FirstTextLine, LastTextLine, AScreenLineOffset);
   FExtraManager.InvalidateTextLines(FirstTextLine, LastTextLine);
 end;
 
-procedure TSourceLazSynSurfaceManager.InvalidateGutterLines(FirstTextLine, LastTextLine: TLineIdx);
+procedure TSourceLazSynSurfaceManager.InvalidateGutterLines(FirstTextLine,
+  LastTextLine: TLineIdx; AScreenLineOffset: Integer);
 begin
-  FOriginalManager.InvalidateGutterLines(FirstTextLine, LastTextLine);
+  FOriginalManager.InvalidateGutterLines(FirstTextLine, LastTextLine, AScreenLineOffset);
   FExtraManager.InvalidateGutterLines(FirstTextLine, LastTextLine);
 end;
 
@@ -1551,11 +1560,13 @@ begin
       Invalidate; // TODO: move to PaintArea
     end;
 
+    FTopInfoDisplay.FSkipTextToView := True;
     for i := 0 to ListCnt - 1 do begin
       if FTopInfoDisplay.LineMap[ListCnt-1-i] <> InfList[i].LineIndex then
         TSourceLazSynSurfaceManager(FPaintArea).ExtraManager.InvalidateLines(ListCnt-1-i, ListCnt-1-i);
       FTopInfoDisplay.LineMap[ListCnt-1-i] := InfList[i].LineIndex;
     end;
+    FTopInfoDisplay.FSkipTextToView := False;
 
   finally
     FSrcSynCaretChangedLock := False;

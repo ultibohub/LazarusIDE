@@ -1580,8 +1580,13 @@ msgstr "StringGrid 编辑器"
 msgid "Clean"
 msgstr "清理"
 
+#: objinspstrconsts.sccssgedtcolrowinfo
+#, object-pascal-format
+msgid "(%d columns, %d rows)"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtdelcol
-msgid "Delete Column"
+msgid "Delete column"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtdelcolno
@@ -1590,7 +1595,7 @@ msgid "Delete column #%d?"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtdelrow
-msgid "Delete Row"
+msgid "Delete row"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtdelrowno
@@ -1598,16 +1603,28 @@ msgstr ""
 msgid "Delete row #%d?"
 msgstr ""
 
+#: objinspstrconsts.sccssgedteditcoltitle
+msgid "Edit column title"
+msgstr ""
+
+#: objinspstrconsts.sccssgedteditfixedcoltitle
+msgid "Edit fixed column title"
+msgstr ""
+
+#: objinspstrconsts.sccssgedteditrowheader
+msgid "Edit row header"
+msgstr ""
+
 #: objinspstrconsts.sccssgedtgrp
 msgid "String Grid"
 msgstr "String 网格"
 
 #: objinspstrconsts.sccssgedtinscol
-msgid "Insert Column"
+msgid "Insert column"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtinsrow
-msgid "Insert Row"
+msgid "Insert row"
 msgstr ""
 
 #: objinspstrconsts.sccssgedtload
@@ -1617,7 +1634,7 @@ msgstr "加载..."
 #: objinspstrconsts.sccssgedtmoverowscols
 #, fuzzy
 #| msgid "Move Rows/Cols"
-msgid "Move Rows/Columns"
+msgid "Move rows/columns"
 msgstr "移动 行/列"
 
 #: objinspstrconsts.sccssgedtopendialog
@@ -1634,6 +1651,10 @@ msgstr "保存..."
 msgctxt "objinspstrconsts.sccssgedtsavedialog"
 msgid "Save"
 msgstr "保存"
+
+#: objinspstrconsts.sccssgedttitle
+msgid "Title"
+msgstr ""
 
 #: objinspstrconsts.sccstredt
 msgctxt "objinspstrconsts.sccstredt"

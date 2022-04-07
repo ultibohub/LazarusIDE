@@ -178,6 +178,14 @@ msgstr ""
 msgid "Port number to start allocating from, macro $(Pas2JSWebServerPort)"
 msgstr ""
 
+#: strpas2jsdesign.pjsdprogressivewebappdescription
+msgid "A Web Application using a service worker, a manifest, and more to be installable."
+msgstr ""
+
+#: strpas2jsdesign.pjsdprogressivewebapplication
+msgid "Progressive Web Application"
+msgstr ""
+
 #: strpas2jsdesign.pjsdprojecthtmlpage
 msgid "Project HTML page:"
 msgstr ""
@@ -230,6 +238,14 @@ msgstr ""
 
 #: strpas2jsdesign.pjsdserverinstanceswillbestartedwithaportstartingfromt
 msgid "Server instances will be started with a port starting from this number, increasing per new project"
+msgstr ""
+
+#: strpas2jsdesign.pjsdserviceworker
+msgid "Pas2JS Service Worker"
+msgstr ""
+
+#: strpas2jsdesign.pjsdserviceworkerdescription
+msgid "A pas2js program running as cache for a web app. It does not run standalone."
 msgstr ""
 
 #: strpas2jsdesign.pjsdstarthttpserveronport

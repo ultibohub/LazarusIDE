@@ -80,6 +80,7 @@ Const
   // Custom settings in .lpi
   PJSProject = 'Pas2JSProject'; // Project is pas2js project
   PJSProjectWebBrowser =  'PasJSWebBrowserProject'; // Web browser project
+  PJSProjectServiceWorker =  'PJSProjectServiceWorker'; // Service Worker project
   PJSProjectNodeJS =  'PJSProjectNodeJS'; // NodeJS project
   PJSProjectModule =  'PJSProjectModule'; // Module project
   PJSProjectVSCode =  'PJSProjectVSCode'; // VS Code project
@@ -87,6 +88,8 @@ Const
   PJSProjectHTMLFile = 'PasJSHTMLFile';
   PJSIsProjectHTMLFile = 'PasJSIsProjectHTMLFile';
   PJSProjectMaintainHTML = 'MaintainHTML';
+  PJSProjectManifestFile = 'PasJSManifestFile';
+  PJSProjectCSSFile = 'PasJSCSSFile';
   PJSProjectUseBrowserConsole = 'BrowserConsole';
   PJSProjectRunAtReady = 'RunAtReady';
   PJSProjectPort = 'PasJSPort';

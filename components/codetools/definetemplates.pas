@@ -3873,9 +3873,9 @@ procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
 
   procedure Sparc;
   begin
-    aList.Add('SPARC V7');
-    aList.Add('SPARC V8');
-    aList.Add('SPARC V9');
+    aList.Add('SPARCV7');
+    aList.Add('SPARCV8');
+    aList.Add('SPARCV9');
   end;
 
   procedure Mips;

@@ -178,6 +178,14 @@ msgstr "Путь к %s, макрос $(Pas2JSWebServer)"
 msgid "Port number to start allocating from, macro $(Pas2JSWebServerPort)"
 msgstr "Начало диапазона запрашиваемых портов, макрос $(Pas2JSWebServerPort)"
 
+#: strpas2jsdesign.pjsdprogressivewebappdescription
+msgid "A Web Application using a service worker, a manifest, and more to be installable."
+msgstr "Веб-приложение, использующее вспомогательный процесс, файл описания (manifest) и другие средства для обеспечения возможности быть установленным."
+
+#: strpas2jsdesign.pjsdprogressivewebapplication
+msgid "Progressive Web Application"
+msgstr "Прогрессивное веб-приложение"
+
 #: strpas2jsdesign.pjsdprojecthtmlpage
 msgid "Project HTML page:"
 msgstr "Страница HTML проекта:"
@@ -231,6 +239,14 @@ msgstr "Выберите исполнимый файл %s"
 #: strpas2jsdesign.pjsdserverinstanceswillbestartedwithaportstartingfromt
 msgid "Server instances will be started with a port starting from this number, increasing per new project"
 msgstr "Экземпляры серверов будут запускаться на портах с номерами, начинающимися с указанного и увеличивающимися в каждом новом проекте"
+
+#: strpas2jsdesign.pjsdserviceworker
+msgid "Pas2JS Service Worker"
+msgstr "Вспомогательный процесс Pas2JS"
+
+#: strpas2jsdesign.pjsdserviceworkerdescription
+msgid "A pas2js program running as cache for a web app. It does not run standalone."
+msgstr "Программа pas2js, использующаяся в качестве кэша веб-приложения. Она не запускается самостоятельно."
 
 #: strpas2jsdesign.pjsdstarthttpserveronport
 msgid "Start HTTP Server on port"
