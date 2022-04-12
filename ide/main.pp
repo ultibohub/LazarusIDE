@@ -719,6 +719,8 @@ type
     // methods for creating a project
     procedure OnLoadProjectInfoFromXMLConfig(TheProject: TProject;
                                              XMLConfig: TXMLConfig; Merge: boolean);
+    procedure OnLoadSaveCustomData(Sender: TObject; Load: boolean;
+      Data: TStringToStringTree; PathDelimChanged: boolean);
     procedure OnSaveProjectInfoToXMLConfig(TheProject: TProject;
                          XMLConfig: TXMLConfig; WriteFlags: TProjectWriteFlags);
     procedure OnProjectChangeInfoFile(TheProject: TProject);
@@ -5790,6 +5792,19 @@ begin
     EditorMacroListViewer.LoadProjectSpecificInfo(XMLConfig);
 end;
 
+procedure TMainIDE.OnLoadSaveCustomData(Sender: TObject; Load: boolean;
+  Data: TStringToStringTree; PathDelimChanged: boolean);
+var
+  Handler: TMethodList;
+  i: Integer;
+begin
+  Handler:=FLazarusIDEHandlers[lihtLoadSafeCustomData];
+  i := Handler.Count;
+  while Handler.NextDownIndex(i) do begin
+    TLazLoadSaveCustomDataEvent(Handler[i])(Sender,Load,Data,PathDelimChanged);
+  end;
+end;
+
 procedure TMainIDE.OnSaveProjectInfoToXMLConfig(TheProject: TProject;
   XMLConfig: TXMLConfig; WriteFlags: TProjectWriteFlags);
 begin
@@ -6440,6 +6455,7 @@ begin
   Result.MainProject:=true;
   Result.OnFileBackup:=@MainBuildBoss.BackupFileForWrite;
   Result.OnLoadProjectInfo:=@OnLoadProjectInfoFromXMLConfig;
+  Result.OnLoadSafeCustomData:=@OnLoadSaveCustomData;
   Result.OnSaveProjectInfo:=@OnSaveProjectInfoToXMLConfig;
   Result.OnSaveUnitSessionInfo:=@OnSaveProjectUnitSessionInfo;
   Result.OnChangeProjectInfoFile:=@OnProjectChangeInfoFile;
@@ -7822,7 +7838,6 @@ end;
 
 function TMainIDE.DoExampleManager: TModalResult;
 var
-  AKey : word;
   ExCommand : TIDECommand;
 begin
   Result := mrOK;

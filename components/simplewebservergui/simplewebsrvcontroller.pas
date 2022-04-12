@@ -4,8 +4,8 @@
 Working:
 - Start/Stop compileserver
 - server log
-- on socketerror find conflicting process (Linux, Windows, macos)
-- on socketerror find free port (Linux, Windows, macos)
+- on socketerror find conflicting process (Linux, Windows, Macos)
+- on socketerror find free port (Linux, Windows, Macos)
 - option: port
 - option: interfaceaddress
 - change port
@@ -31,9 +31,8 @@ Working:
 
 ToDos:
  - log with time and port
- - ide macro SWSExe param: 'resolved', 'base', 'used' and ''
+ - ide macro SWSExe param: 'base', 'used' and ''
  - Windows: add GetUDPTable2
- - resourcestrings
  - SSL
 }
 unit SimpleWebSrvController;
@@ -43,16 +42,19 @@ unit SimpleWebSrvController;
 interface
 
 uses
-  Math, Classes, SysUtils, process, Pipes, Contnrs, fpjson, fphttpclient,
+  Math, Types, Classes, SysUtils, process, Pipes, Contnrs, fpjson, fphttpclient,
   Sockets,
   // lazutils
   LazLoggerBase, FileUtil, LazUTF8, LazFileUtils, LazMethodList, LazUtilities,
-  LazStringUtils,
+  LazStringUtils, LazFileCache,
   // LCL
-  Forms, Dialogs, Controls,
+  Forms, Dialogs, Controls, LazHelpIntf, LCLIntf,
   // IDEIntf
   IDEDialogs, IDEMsgIntf, LazIDEIntf, IDEExternToolIntf, MacroIntf,
-  MacroDefIntf, SimpleWebSrvUtils, SimpleWebSrvOptions;
+  MacroDefIntf,
+  // sws
+  ProjectIntf, SimpleWebSrvUtils, SimpleWebSrvOptions,
+  SimpleWebSrvStrConsts;
 
 type
   ESimpleWebServerException = class(Exception)
@@ -232,10 +234,31 @@ type
     // custom servers
     function AddServer(Port: word; Exe: string; Params: TStrings;
       Path, Origin: string; ResolveMacros, Interactive: boolean): TSWSInstance; virtual;
-    function FindServer(Port: word): TSWSInstance; virtual;
-    function FindFreePort(Interactive: boolean; aStartPort: word = 0): word; virtual;
+    function AddProjectServer(aProject: TLazProject; Port: word;
+      Path: string; Interactive: boolean): TSWSInstance; virtual;
+    function FindServerWithPort(Port: word): TSWSInstance; virtual;
+    function FindServerWithOrigin(Origin: string): TSWSInstance; virtual;
+    function FindFreePort(Interactive, CheckServers: boolean; aStartPort: word = 0): word; virtual;
     function StopServer(Instance: TSWSInstance; Interactive: boolean): boolean; virtual;
     function SubstitutePortMacro(aValue, aPort: string): string;
+    function SubstituteURLMacro(aValue, AnURL: string): string;
+    function GetDefaultServerExe: string; virtual;
+    // browser
+    function GetURLWithServer(aServer: TSWSInstance; HTMLFilename: string): string; virtual;
+    function OpenBrowserWithURL(URL, WorkDir: string): boolean; virtual;
+    function OpenBrowserWithServer(aServer: TSWSInstance; HTMLFilename: string): boolean; virtual;
+    function FindBrowserFile(ShortFilename: string): string; virtual;
+    function FindBrowserPath(Filenames: array of string; URL: string; Params: TStrings): string; virtual;
+    function GetBrowserChrome(URL: string; Params: TStrings): string; virtual;
+    function GetBrowserFirefox(URL: string; Params: TStrings): string; virtual;
+    function GetBrowserOpera(URL: string; Params: TStrings): string; virtual;
+    function GetBrowserVivaldi(URL: string; Params: TStrings): string; virtual;
+    {$IFDEF Darwin}
+    function GetBrowserSafari(URL: string; Params: TStrings): string; virtual;
+    {$ENDIF}
+    {$IFDEF MSWindows}
+    function GetBrowserEdge(URL: string; Params: TStrings): string; virtual;
+    {$ENDIF}
   public
     property Destroying: boolean read FDestroying;
     property LocationCount: integer read GetLocationCount;
@@ -410,7 +433,7 @@ begin
   FMainSrvBindAny:=Options.BindAny;
   FMainSrvAddr:=Options.ServerAddr;
   FMainSrvInstance.Exe:=Options.ServerExe;
-  FMainSrvInstance.Port:=Options.Port;
+  FMainSrvInstance.Port:=Options.ServerPort;
   if OldRunning then
     StartMainServer(true);
 end;
@@ -450,22 +473,25 @@ begin
         IPAddr:=StrToHostAddr(MainSrvAddr);
       if not FUtility.FindProcessListeningOnPort(IPAddr,MainSrvPort,aProcDescription,aPID) then
       begin
-        IDEMessageDialog('Error',
+        IDEMessageDialog(rsSWError,
            ViewCaption+':'+sLineBreak
-           +'Binding of socket failed: '+MainSrvAddr+':'+IntToStr(MainSrvPort),mtError,[mbOk]);
+           +rsSWBindingOfSocketFailed+': '+MainSrvAddr+':'+IntToStr(MainSrvPort
+             ), mtError, [mbOk]);
         exit;
       end;
 
-      r:=IDEQuestionDialog('Error',
+      r:=IDEQuestionDialog(rsSWError,
          ViewCaption+':'+sLineBreak
-         +'Binding of socket failed: '+MainSrvAddr+':'+IntToStr(MainSrvPort)+sLineBreak
+         +rsSWBindingOfSocketFailed+': '+MainSrvAddr+':'+IntToStr(MainSrvPort)+
+           sLineBreak
          +sLineBreak
-         +'The following process already listens:'+sLineBreak
+         +rsSWTheFollowingProcessAlreadyListens+sLineBreak
          +'PID: '+IntToStr(aPID)+sLineBreak
          +aProcDescription+sLineBreak
          +sLineBreak
-         +'Kill process?'
-         ,mtError,[mrYes,'Kill PID '+IntToStr(aPID),mrRetry,'Try another port',mrCancel],'');
+         +rsSWKillProcess
+         , mtError, [mrYes, Format(rsSWKillPID, [IntToStr(aPID)]), mrRetry,
+           rsSWTryAnotherPort, mrCancel], '');
 
       case r of
       mrYes:
@@ -473,7 +499,7 @@ begin
           exit;
       mrRetry:
         begin
-          NewPort:=FindFreePort(true);
+          NewPort:=FindFreePort(true,false);
           if NewPort=0 then
             NewPort:=GetNextIPPort(MainSrvInstance.Port);
           FMainSrvInstance.Port:=NewPort;
@@ -891,7 +917,7 @@ begin
       Instance.ErrorDesc:='missing server exe. '+LinePostfix;
       AddIDEMessageInfo('20220127115641',Instance.ErrorDesc);
       if Interactive then
-        ErrDlg('Missing Server Exe','Missing server executable',true);
+        ErrDlg(rsSWError, rsSWMissingServerExecutable, true);
       exit;
     end;
     if PathUsed='' then
@@ -899,7 +925,7 @@ begin
       Instance.ErrorDesc:='missing local directory. '+LinePostfix;
       AddIDEMessageInfo('20220127115738',Instance.ErrorDesc);
       if Interactive then
-        ErrDlg('Missing Local Directory','Missing local directory',false);
+        ErrDlg(rsSWError, rsSWMissingLocalDirectory, false);
       exit;
     end;
 
@@ -911,7 +937,8 @@ begin
       Instance.ErrorDesc:='server directory not found "'+PathUsed+'". '+LinePostfix;
       AddIDEMessageInfo('20220127122933',Instance.ErrorDesc);
       if Interactive then
-        ErrDlg('Missing Server Directory','Server directory "'+PathUsed+'" not found.',false);
+        ErrDlg(rsSWError, Format(rsSWServerDirectoryNotFound, [PathUsed]), false
+          );
       exit;
     end;
 
@@ -926,7 +953,8 @@ begin
         Instance.ErrorDesc:='server exe "'+ExeUsed+'" not found in PATH. '+LinePostfix;
         AddIDEMessageInfo('20220127115917',Instance.ErrorDesc);
         if Interactive then
-          ErrDlg('Missing Server Exe','Server executable "'+ExeUsed+'" not found in PATH.',true);
+          ErrDlg(rsSWError, Format(rsSWServerExecutableNotFoundInPATH, [ExeUsed]
+            ), true);
         exit;
       end;
       ExeUsed:=s;
@@ -939,14 +967,15 @@ begin
       begin
       AddIDEMessageInfo('20220127114637','Error: server exe not found "'+ExeUsed+'"');
       if Interactive then
-        ErrDlg('Error','File not found: "'+ExeUsed+'"',true);
+        ErrDlg(rsSWError, Format(rsSWFileNotFound, [ExeUsed]), true);
       exit;
     end;
     if not FileIsExecutable(ExeUsed) then
     begin
       AddIDEMessageInfo('20220127121636','Error: server exe not executable "'+ExeUsed+'"');
       if Interactive then
-        ErrDlg('Error','Server exe is not executable: "'+ExeUsed+'"',true);
+        ErrDlg(rsSWError, Format(rsSWServerExeIsNotExecutable, [ExeUsed]), true
+          );
       exit;
     end;
 
@@ -1210,6 +1239,8 @@ begin
   FMainSrvInstance.Params:=TStringListUTF8Fast.Create;
   FMainSrvInstance.Params.Add('-c');
   FMainSrvInstance.Params.Add(IniFilename);
+  // append custom options last
+  FMainSrvInstance.Params.AddStrings(Options.ServerOpts);
 
   FMainSrvInstance.Path:=AppendPathDelim(LazarusIDE.GetPrimaryConfigPath)+'simplewebserverdir';
 
@@ -1223,7 +1254,7 @@ begin
     debugln(['Error: [TSimpleWebServerController.StartServerInstance] invalid ServerExe="',Options.ServerExe,'". ',ErrMsg]);
     AddIDEMessageInfo('20220118164525',ErrMsg);
     if Interactive then
-      ErrDlg('Error','Wrong compileserver exe: '+ErrMsg,true);
+      ErrDlg(rsSWError, Format(rsSWWrongCompileserverExe, [ErrMsg]), true);
     exit;
   end;
 
@@ -1232,9 +1263,9 @@ begin
   begin
     if CreateDirUTF8(PathUsed) then
       break;
-    MsgResult:=IDEMessageDialog('Error',
+    MsgResult:=IDEMessageDialog(rsSWError,
       ViewCaption+':'+sLineBreak
-      +'Error creating directory'+sLineBreak
+      +rsSWErrorCreatingDirectory+sLineBreak
       +'"'+PathUsed+'"'+sLineBreak,
       mtError,[mbRetry,mbCancel]);
     case MsgResult of
@@ -1265,7 +1296,7 @@ begin
       if not DirectoryExists(Loc.Path) then
       begin
         AddIDEMessageInfo('20220118165651','Warn: location "'+Loc.Location+'" directory not found: "'+Loc.Path+'"');
-        Loc.ErrorDesc:='Directory not found';
+        Loc.ErrorDesc:=rsSWDirectoryNotFound;
         continue;
       end else
         Loc.ErrorDesc:='';
@@ -1285,9 +1316,9 @@ begin
           AddIDEMessageInfo('20220127123435',FMainSrvInstance.ErrorDesc);
           if Interactive then
           begin
-            MsgResult:=IDEMessageDialog('Error',
+            MsgResult:=IDEMessageDialog(rsSWError,
               ViewCaption+':'+sLineBreak
-              +'Error writing "'+IniFilename+'"'+sLineBreak
+              +Format(rsSWErrorWriting, [IniFilename])+sLineBreak
               +E.Message,
             mtError,[mbRetry,mbCancel]);
             case MsgResult of
@@ -1351,7 +1382,7 @@ begin
     // already exists
     Result:=Locations[i];
     if DirNotFound then
-      Result.ErrorDesc:='Directory not found';
+      Result.ErrorDesc:=rsSWDirectoryNotFound;
     if (Result.Enable=Enable) and (Result.Path=ExpPath) and (Result.Origin=Origin) then
       exit;
     if Result.Enable then
@@ -1508,8 +1539,8 @@ begin
   Result:=nil;
   try
     if Port=0 then
-      Port:=FindFreePort(Interactive);
-    if FindServer(Port)<>nil then
+      Port:=FindFreePort(Interactive,true);
+    if FindServerWithPort(Port)<>nil then
       raise ESimpleWebServerException.Create('port '+IntToStr(Port)+' already in use');
 
     Result:=TSWSInstance.Create;
@@ -1532,7 +1563,138 @@ begin
   end;
 end;
 
-function TSimpleWebServerController.FindServer(Port: word): TSWSInstance;
+function TSimpleWebServerController.AddProjectServer(aProject: TLazProject;
+  Port: word; Path: string; Interactive: boolean): TSWSInstance;
+var
+  aServer: TSWSInstance;
+
+  function StopOldServer(ID: int64; const Msg: string): boolean;
+  begin
+    if not StopServer(aServer,Interactive) then
+    begin
+      debugln(['Error: TSimpleWebServerController.AddProjectServer ',ID,': ',Msg,', unable to stop old server']);
+      exit(false);
+    end;
+    aServer:=nil;
+    Result:=true;
+  end;
+
+var
+  Exe, Origin, aProcDescription, SrvAddr: String;
+  Params: TStringList;
+  ConflictServer: TSWSInstance;
+  IPAddr: in_addr;
+  aPID: integer;
+  r: TModalResult;
+begin
+  Result:=nil;
+
+  if aProject.IsVirtual then
+    Origin:=SWSTestprojectOrigin
+  else
+    Origin:=aProject.ProjectInfoFile;
+  aServer:=FindServerWithOrigin(Origin);
+
+  if (aServer=nil) and not aProject.IsVirtual then
+    aServer:=FindServerWithOrigin(SWSTestprojectOrigin);
+
+  if (aServer<>nil) and (aServer.Path<>Path) then
+    if not StopOldServer(20220410145323,'Path changed') then exit;
+
+  if (aServer<>nil) and (Port>0) and (aServer.Port<>Port) then
+    if not StopOldServer(20220410145340,'Port changed') then exit;
+
+  Exe:=GetDefaultServerExe;
+  if (aServer<>nil) and (aServer.Exe<>Exe) then
+    if not StopOldServer(20220410145357,'ServerExe changed') then exit;
+
+  if Port=0 then
+  begin
+    if aServer<>nil then
+      Port:=aServer.Port // keep port
+    else
+      Port:=FindFreePort(Interactive,true);
+  end else begin
+    ConflictServer:=FindServerWithPort(Port);
+    if (ConflictServer<>nil) and (ConflictServer<>aServer) then
+    begin
+      // conflicting server
+      if (ConflictServer=MainSrvInstance) or not Interactive then
+        r:=mrRetry
+      else
+        r:=IDEQuestionDialog(rsSWError,
+          'There is already a server on port '+IntToStr(Port)+':'+sLineBreak
+          +'Origin: '+ConflictServer.Origin+sLineBreak
+          +'Path: '+ConflictServer.Path+sLineBreak,
+          mtError,[mrYes, 'Stop server', mrRetry, rsSWTryAnotherPort, mrCancel],
+          '');
+      case r of
+      mrYes:
+        if not StopServer(ConflictServer,Interactive) then
+          exit;
+      mrRetry:
+        Port:=FindFreePort(Interactive,true);
+      else
+        exit;
+      end;
+    end
+    else if (aServer=nil) or (aServer.ErrorDesc<>'') then begin
+      SrvAddr:='127.0.0.1';
+      IPAddr:=StrToHostAddr(SrvAddr);
+      if FUtility.FindProcessListeningOnPort(IPAddr,Port,aProcDescription,aPID) then
+      begin
+        // conflicting foreign process
+        r:=IDEQuestionDialog(rsSWError,
+           ViewCaption+':'+sLineBreak
+           +rsSWBindingOfSocketFailed+': '+MainSrvAddr+':'+IntToStr(MainSrvPort)+sLineBreak
+           +sLineBreak
+           +rsSWTheFollowingProcessAlreadyListens+sLineBreak
+           +'PID: '+IntToStr(aPID)+sLineBreak
+           +aProcDescription+sLineBreak
+           +sLineBreak
+           +rsSWKillProcess
+           , mtError, [mrYes, Format(rsSWKillPID, [IntToStr(aPID)]), mrRetry,
+             rsSWTryAnotherPort, mrCancel], '');
+
+        case r of
+        mrYes:
+          if not FUtility.KillProcess(aPID) then
+            exit;
+        mrRetry:
+          begin
+            Port:=FindFreePort(true,true);
+          end;
+        else
+          exit;
+        end;
+      end;
+    end;
+  end;
+
+  Params:=TStringList.Create;
+  try
+    Params.Add('-s');
+    Params.Add('-n');
+    Params.Add('-I');
+    Params.Add('127.0.0.1');
+    Params.Add('--port='+IntToStr(Port));
+    if (aServer<>nil) and not Params.Equals(aServer.Params) then
+      if not StopOldServer(20220410145559,'Params changed') then exit;
+
+    if aServer<>nil then
+      begin
+      aServer.Origin:=Origin;
+      Result:=aServer;
+      exit;
+      end;
+
+    Result:=AddServer(Port,Exe,Params,Path,Origin,false,Interactive);
+  finally
+    Params.Free;
+  end;
+end;
+
+function TSimpleWebServerController.FindServerWithPort(Port: word): TSWSInstance;
 var
   i: Integer;
 begin
@@ -1542,12 +1704,34 @@ begin
   Result:=nil;
 end;
 
-function TSimpleWebServerController.FindFreePort(Interactive: boolean;
-  aStartPort: word): word;
+function TSimpleWebServerController.FindServerWithOrigin(Origin: string
+  ): TSWSInstance;
+var
+  i: Integer;
+begin
+  for i:=0 to ServerCount-1 do
+    if Servers[i].Origin=Origin then
+     exit(Servers[i]);
+  Result:=nil;
+end;
+
+function TSimpleWebServerController.FindFreePort(Interactive,
+  CheckServers: boolean; aStartPort: word): word;
+var
+  AvoidPorts: TWordDynArray;
+  i: Integer;
 begin
   if aStartPort=0 then
     aStartPort:=MainSrvPort;
-  Result:=FUtility.FindFreePort(aStartPort,Interactive);
+  if CheckServers then
+  begin
+    Setlength(AvoidPorts{%H-},ServerCount);
+    for i:=0 to ServerCount-1 do
+      AvoidPorts[i]:=Servers[i].Port;
+  end else
+    AvoidPorts:=nil;
+
+  Result:=FUtility.FindFreePort(aStartPort,Interactive,AvoidPorts);
 end;
 
 function TSimpleWebServerController.StopServer(Instance: TSWSInstance;
@@ -1575,6 +1759,197 @@ begin
   //debugln(['TSimpleWebServerController.SubstitutePortMacro Result="',Result,'"']);
 end;
 
+function TSimpleWebServerController.SubstituteURLMacro(aValue, AnURL: string
+  ): string;
+var
+  l, i: SizeInt;
+begin
+  Result:=aValue;
+  l:=length('$(url)');
+  for i:=length(Result)-l+1 downto 1 do
+  begin
+    if (Result[i]='$') and SameText(copy(Result,i,l),'$(url)') then
+      LazStringUtils.ReplaceSubstring(Result,i,l,AnURL);
+  end;
+end;
+
+function TSimpleWebServerController.GetDefaultServerExe: string;
+begin
+  Result:=Options.ServerExe;
+  if IDEMacros.SubstituteMacros(Result) then
+    exit;
+  debugln(['TSimpleWebServerController.GetDefaultServerExe Options.ServerExe=[',Options.ServerExe,']']);
+  raise Exception.Create('TSimpleWebServerController.GetDefaultServerExe: invalid macro');
+end;
+
+function TSimpleWebServerController.GetURLWithServer(aServer: TSWSInstance;
+  HTMLFilename: string): string;
+begin
+  Result:=CreateRelativePath(HTMLFilename,aServer.Path);
+  Result:=FilenameToURLPath(Result);
+  Result:='http://127.0.0.1:'+IntToStr(aServer.Port)+'/'+Result;
+end;
+
+function TSimpleWebServerController.OpenBrowserWithURL(URL, WorkDir: string
+  ): boolean;
+var
+  Params: TStringList;
+  Cmd, Exe: String;
+  Tool: TIDEExternalToolOptions;
+begin
+  Params:=TStringList.Create;
+  try
+    case Options.BrowserKind of
+    swsbkCustom:
+      begin
+        Cmd:=Options.BrowserCmd;
+        Cmd:=SubstituteURLMacro(Cmd,URL);
+        if not IDEMacros.SubstituteMacros(Cmd) then
+        begin
+          IDEMessageDialog(rsSWError, rsSWInvalidMacroSee+sLineBreak +
+            rsSWToolsOptionsSimpleWebServerBrowser,mtError,[mbOk]);
+          exit(false);
+        end;
+        SplitCmdLineParams(Cmd,Params);
+        Exe:=Params[0];
+        Params.Delete(0);
+      end;
+    swsbkFirefox: Exe:=GetBrowserFirefox(URL,Params);
+    swsbkChrome: Exe:=GetBrowserChrome(URL,Params);
+    swsbkOpera: Exe:=GetBrowserOpera(URL,Params);
+    swsbkVivaldi: Exe:=GetBrowserVivaldi(URL,Params);
+    {$IFDEF Darwin}
+    swsbkSafari: Exe:=GetBrowserSafari(URL,Params);
+    {$ENDIF}
+    {$IFDEF MSWindows}
+    swsbkEdge: Exe:=GetBrowserEdge(URL,Params);
+    {$ENDIF}
+    else
+      begin
+        Result:=OpenURL(URL);
+        exit;
+      end;
+    end;
+
+    if Exe='' then
+    begin
+      IDEMessageDialog(rsSWError,
+        rsSWCannotFindBrowserSee+sLineBreak
+        +rsSWToolsOptionsSimpleWebServerBrowser,mtError,[mbOk]);
+      exit(false);
+    end;
+
+    Tool:=TIDEExternalToolOptions.Create;
+    Tool.Title:='Browser('+ExtractFileName(Exe)+')';
+    Tool.Executable:=Exe;
+    Tool.CmdLineParams:=MergeCmdLineParams(Params);
+    Tool.WorkingDirectory:=WorkDir;
+    Tool.MaxIdleInMS:=1000;
+    Result:=RunExternalTool(Tool);
+  finally
+    Params.Free;
+  end;
+end;
+
+function TSimpleWebServerController.OpenBrowserWithServer(
+  aServer: TSWSInstance; HTMLFilename: string): boolean;
+var
+  URL: String;
+begin
+  if aServer=nil then
+    raise Exception.Create('TSimpleWebServerController.OpenBrowserWithServer 20220410185207');
+  if not FilenameIsAbsolute(HTMLFilename) then
+    raise Exception.Create('TSimpleWebServerController.OpenBrowserWithServer 20220410185208');
+
+  URL:=GetURLWithServer(aServer,HTMLFilename);
+
+  Result:=OpenBrowserWithURL(URL,ExtractFilePath(HTMLFilename));
+end;
+
+function TSimpleWebServerController.FindBrowserFile(ShortFilename: string
+  ): string;
+begin
+  Result := SearchFileInPath(ShortFilename + GetExeExt, '',
+                    GetEnvironmentVariableUTF8('PATH'), PathSeparator,
+                    [sffDontSearchInBasePath]);
+end;
+
+function TSimpleWebServerController.FindBrowserPath(Filenames: array of string;
+  URL: string; Params: TStrings): string;
+var
+  i: Integer;
+  aFilename: String;
+begin
+  Result:='';
+  for i:=low(Filenames) to high(Filenames) do
+  begin
+    aFilename:=Filenames[i];
+    if FilenameIsAbsolute(aFilename) then
+    begin
+      if FileExistsCached(aFilename) then
+      begin
+        Result:=aFilename;
+        break;
+      end;
+    end else begin
+      Result := FindBrowserFile(aFilename);
+      if Result<>'' then break;
+    end;
+  end;
+  if Result<>'' then
+  begin
+    Params.Add(URL);
+  end;
+end;
+
+function TSimpleWebServerController.GetBrowserChrome(URL: string;
+  Params: TStrings): string;
+begin
+  Result := FindBrowserPath([
+    {$IFDEF Darwin}'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',{$ENDIF}
+    'google-chrome'],URL,Params);
+end;
+
+function TSimpleWebServerController.GetBrowserFirefox(URL: string;
+  Params: TStrings): string;
+begin
+  Result := FindBrowserPath([
+    {$IFDEF Darwin}'/Applications/Firefox.app/Contents/MacOS/firefox',{$ENDIF}
+    'firefox','mozilla'],URL,Params);
+end;
+
+function TSimpleWebServerController.GetBrowserOpera(URL: string;
+  Params: TStrings): string;
+begin
+  Result := FindBrowserPath([
+    {$IFDEF Darwin}'/Applications/Opera.app/Contents/MacOS/Opera',{$ENDIF}
+    'opera'],URL,Params);
+end;
+
+function TSimpleWebServerController.GetBrowserVivaldi(URL: string;
+  Params: TStrings): string;
+begin
+  Result := FindBrowserPath([
+    {$IFDEF Darwin}'/Applications/Vivaldi.app/Contents/MacOS/Vivaldi',{$ENDIF}
+    'vivaldi'],URL,Params);
+end;
+
+{$IFDEF Darwin}
+function TSimpleWebServerController.GetBrowserSafari(URL: string; Params: TStrings
+  ): string;
+begin
+  Result := FindBrowserPath(['/Applications/Safari.app/Contents/MacOS/Safari','safari'],URL,Params);
+end;
+{$ENDIF}
+
+{$IFDEF MSWindows}
+function TSimpleWebServerController.GetBrowserEdge(URL: string; Params: TStrings
+  ): string;
+begin
+  Result := FindBrowserPath(['edge'],URL,Params);
+end;
+{$ENDIF}
+
 procedure TSimpleWebServerController.HookMacros;
 
   function Add(const AName, ADescription: string;
@@ -1585,9 +1960,9 @@ procedure TSimpleWebServerController.HookMacros;
   end;
 
 begin
-  IDEMacroSWSAddress:=Add('SWSAddress', 'Simple Web Server Address', @GetSWSAddress);
-  IDEMacroSWSPort:=Add('SWSPort', 'Simple Web Server Port', @GetSWSPort);
-  IDEMacroSWSExe:=Add('SWSExe', 'Simple Web Server Executable', @GetSWSExe);
+  IDEMacroSWSAddress:=Add('SWSAddress', rsSWSimpleWebServerAddress, @GetSWSAddress);
+  IDEMacroSWSPort:=Add('SWSPort', rsSWSimpleWebServerPort, @GetSWSPort);
+  IDEMacroSWSExe:=Add('SWSExe', rsSWSimpleWebServerExecutable, @GetSWSExe);
 end;
 
 procedure TSimpleWebServerController.UnhookMacros;

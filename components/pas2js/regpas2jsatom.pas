@@ -5,7 +5,7 @@ interface
 
 uses
   Classes, SysUtils, LResources, Forms, Controls, Graphics, Dialogs,
-  ProjectIntf, BaseIDEIntf, LazIDEIntf, LazFileUtils;
+  ProjectIntf, LazIDEIntf, LazFileUtils;
 
 type
 
@@ -60,7 +60,7 @@ uses
   baseunix,
   {$ENDIF}
   fpjson,frmpas2jsatompackagesettings, CompOptsIntf, pjscontroller,
-  NewItemIntf, MenuIntf, pjsprojectoptions, pjsdsgnoptions, strpas2jsdesign;
+  MenuIntf, pjsprojectoptions, pjsdsgnoptions, strpas2jsdesign;
 
 Var
   AtomProjDesc:TAtomPackageProjectDescriptor;
@@ -175,7 +175,9 @@ Const
 
 Var
   S : String;
+  {$IFDEF UNIX}
   L : String;
+  {$ENDIF}
 
 begin
   FPackageDir:=IncludeLeadingPathDelimiter(FPackageDir);
@@ -479,7 +481,6 @@ begin
   AProject.Title:=FPackageName;
   AProject.ProjectInfoFile:=FPackageDir+StripNonIdentifierChars(FPackageName)+'.lpi';
   AProject.CustomData.Values[PJSProject]:='1';
-  AProject.CustomData.Values[PJSProjectAtom]:='1';
   CreateProjectDirs;
   CompOpts:=AProject.LazCompilerOptions;
   SetDefaultNodeJSCompileOptions(CompOpts);

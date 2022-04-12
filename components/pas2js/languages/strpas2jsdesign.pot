@@ -1,6 +1,10 @@
 msgid ""
 msgstr "Content-Type: text/plain; charset=UTF-8"
 
+#: strpas2jsdesign.pjscreateajavascriptmoduleinsteadofascript
+msgid "Create a javascript module instead of a script"
+msgstr ""
+
 #: strpas2jsdesign.pjsdatompackagetemplatedirectory
 msgid "Atom package template directory"
 msgstr ""
@@ -181,16 +185,16 @@ msgstr ""
 msgid "Project is a Web Browser (pas2js) project"
 msgstr ""
 
-#: strpas2jsdesign.pjsdprojectneedsahttpserver
-msgid "Project needs a HTTP server"
-msgstr ""
-
 #: strpas2jsdesign.pjsdresetcompilecommand
 msgid "Reset Compile command"
 msgstr ""
 
 #: strpas2jsdesign.pjsdresetruncommand
 msgid "Reset Run command"
+msgstr ""
+
+#: strpas2jsdesign.pjsdrun
+msgid "Run"
 msgstr ""
 
 #: strpas2jsdesign.pjsdrunrtlwhenallpageresourcesarefullyloaded
@@ -244,7 +248,7 @@ msgid "Use Browser Application object"
 msgstr ""
 
 #: strpas2jsdesign.pjsdusebrowserconsoleunittodisplaywritelnoutput
-msgid "Use Browser Console unit to display writeln() output"
+msgid "Use BrowserConsole unit to display writeln() output"
 msgstr ""
 
 #: strpas2jsdesign.pjsdusenodejsapplicationobject
@@ -284,6 +288,14 @@ msgstr ""
 msgid "You can use IDE macros like $MakeExe(). Without a full path, %s is searched in PATH."
 msgstr ""
 
+#: strpas2jsdesign.pjsexecuterunparameters
+msgid "Execute Run Parameters"
+msgstr ""
+
+#: strpas2jsdesign.pjsmakepas2jsproject
+msgid "Make pas2js project"
+msgstr ""
+
 #: strpas2jsdesign.pjsrefreshallclassesfromhtml
 msgid "Refresh all classes from HTML source"
 msgstr ""
@@ -319,51 +331,5 @@ msgstr ""
 #: strpas2jsdesign.rshttprequestfailed
 #, object-pascal-format
 msgid "HTML request to service URL %s failed: %s"
-msgstr ""
-
-#: strpas2jsdesign.spasjswebservercaption
-msgctxt "strpas2jsdesign.spasjswebservercaption"
-msgid "Pas2JS WebServers"
-msgstr ""
-
-#: strpas2jsdesign.sstatuserror
-msgid "Error starting"
-msgstr ""
-
-#: strpas2jsdesign.sstatusrunning
-msgid "Running"
-msgstr ""
-
-#: strpas2jsdesign.sstatusstopped
-msgid "Stopped"
-msgstr ""
-
-#: strpas2jsdesign.swebserversbasedir
-msgid "Root directory"
-msgstr ""
-
-#: strpas2jsdesign.swebserverscaption
-msgid "Web server processes"
-msgstr ""
-
-#: strpas2jsdesign.swebserverscount
-#, object-pascal-format
-msgid "Number of webserver processes: %s"
-msgstr ""
-
-#: strpas2jsdesign.swebserversextra
-msgid "Additional info"
-msgstr ""
-
-#: strpas2jsdesign.swebserversport
-msgid "Port"
-msgstr ""
-
-#: strpas2jsdesign.swebserversproject
-msgid "Project"
-msgstr ""
-
-#: strpas2jsdesign.swebserversstatus
-msgid "Status"
 msgstr ""
 

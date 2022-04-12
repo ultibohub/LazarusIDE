@@ -16,10 +16,14 @@ uses
   {$IFDEF Unix}
   BaseUnix, Errors,
   {$ENDIF}
-  Classes, SysUtils, Sockets, Process,
+  Classes, SysUtils, Types, Sockets, Process,
+  // lazutils
   LazLoggerBase, FileUtil,
+  // LCL
   Dialogs,
-  IDEDialogs;
+  // IDEIntf
+  IDEDialogs,
+  SimpleWebSrvStrConsts;
 
 type
 
@@ -31,22 +35,22 @@ type
     {$IFDEF Darwin}
     function FindProcessListeningOnPortMac(const IPAddr: in_addr; aPort: word; out aDesc: string; out aPID: integer): boolean;
     function KillProcessMac(aPID: integer): boolean;
-    function FindFreePortMac(aStartPort: word): word;
+    function FindFreePortMac(aStartPort: word; AvoidPorts: TWordDynArray): word;
     {$ENDIF}
     {$IFDEF Linux}
     function FindProcessListeningOnPortLinux(const IPAddr: in_addr; aPort: word; out aDesc: string; out aPID: integer): boolean;
     function KillProcessLinux(aPID: integer): boolean;
-    function FindFreePortLinux(aStartPort: word): word;
+    function FindFreePortLinux(aStartPort: word; AvoidPorts: TWordDynArray): word;
     {$ENDIF}
     {$IFDEF MSWindows}
     function FindProcessListeningOnPortWin(const IPAddr: in_addr; aPort: word; out aDesc: string; out aPID: integer): boolean;
     function KillProcessWin(aPID: integer): boolean;
-    function FindFreePortWin(aStartPort: word): word;
+    function FindFreePortWin(aStartPort: word; AvoidPorts: TWordDynArray): word;
     {$ENDIF}
   public
     function FindProcessListeningOnPort(const IPAddr: in_addr; aPort: word; out aDesc: string; out aPID: integer): boolean;
     function KillProcess(aPID: integer): boolean;
-    function FindFreePort(aStartPort: word; Interactive: boolean): word;
+    function FindFreePort(aStartPort: word; Interactive: boolean; AvoidPorts: TWordDynArray): word;
     function SameInAddr(const A,B: in_addr): boolean;
     property ViewCaption: string read FViewCaption write FViewCaption;
   end;
@@ -133,9 +137,10 @@ begin
     {$ENDIF}
   except
     on E: Exception do begin
-      IDEMessageDialog('Error',
+      IDEMessageDialog(rsSWError,
         ViewCaption+':'+sLineBreak
-        +'Error checking which process uses TCP port '+IntToStr(aPort)+sLineBreak
+        +Format(rsSWErrorCheckingWhichProcessUsesTCPPort, [IntToStr(aPort)])+
+          sLineBreak
         +E.Message,mtError,[mbOK]);
     end;
   end;
@@ -156,35 +161,35 @@ begin
     {$ENDIF}
   except
     on E: Exception do begin
-      IDEMessageDialog('Error',
+      IDEMessageDialog(rsSWError,
         ViewCaption+':'+sLineBreak
-        +'Error killing process '+IntToStr(aPID)+sLineBreak
+        +Format(rsSWErrorKillingProcess, [IntToStr(aPID)])+sLineBreak
         +E.Message,mtError,[mbOK]);
     end;
   end;
 end;
 
 function TSimpleWebServerUtility.FindFreePort(aStartPort: word;
-  Interactive: boolean): word;
+  Interactive: boolean; AvoidPorts: TWordDynArray): word;
 begin
   Result:=0;
   try
     {$IFDEF Darwin}
-    Result:=FindFreePortMac(aStartPort);
+    Result:=FindFreePortMac(aStartPort,AvoidPorts);
     {$ENDIF}
     {$IFDEF Linux}
-    Result:=FindFreePortLinux(aStartPort);
+    Result:=FindFreePortLinux(aStartPort,AvoidPorts);
     {$ENDIF}
     {$IFDEF MSWindows}
-    Result:=FindFreePortWin(aStartPort);
+    Result:=FindFreePortWin(aStartPort,AvoidPorts);
     {$ENDIF}
   except
     on E: Exception do begin
       if not Interactive then
         exit(0);
-      IDEMessageDialog('Error',
+      IDEMessageDialog(rsSWError,
         ViewCaption+':'+sLineBreak
-        +'Error finding free TCP port:'+sLineBreak
+        +rsSWErrorFindingFreeTCPPort+sLineBreak
         +E.Message,mtError,[mbOK]);
     end;
   end;
@@ -367,7 +372,8 @@ begin
   Result:=false;
 end;
 
-function TSimpleWebServerUtility.FindFreePortMac(aStartPort: word): word;
+function TSimpleWebServerUtility.FindFreePortMac(aStartPort: word;
+  AvoidPorts: TWordDynArray): word;
 const
   lsofparams = '-nPi4';
 var
@@ -396,7 +402,7 @@ begin
     exit;
   end;
 
-  Ports:=[];
+  Ports:=copy(AvoidPorts);
   sl:=TStringList.Create;
   try
     sl.Text:=OutStr;
@@ -576,7 +582,8 @@ begin
   Result:=false;
 end;
 
-function TSimpleWebServerUtility.FindFreePortLinux(aStartPort: word): word;
+function TSimpleWebServerUtility.FindFreePortLinux(aStartPort: word;
+  AvoidPorts: TWordDynArray): word;
 const NetstatParams = '-nlptu4';
 var
   ExePath, OutStr, Line, CurLocalAddr: String;
@@ -584,7 +591,7 @@ var
   i: Integer;
   LocalAddrPos, ForeignAddrPos, p, l: SizeInt;
   CurPort: LongInt;
-  Ports: array of word;
+  Ports: TWordDynArray;
 begin
   Result:=0;
   // query netstat to find the IPv4 tcp/udp ports
@@ -606,7 +613,7 @@ begin
     exit;
   end;
 
-  Ports:=[];
+  Ports:=copy(AvoidPorts);
   sl:=TStringList.Create;
   try
     sl.Text:=OutStr;
@@ -733,7 +740,8 @@ begin
   end;
 end;
 
-function TSimpleWebServerUtility.FindFreePortWin(aStartPort: word): word;
+function TSimpleWebServerUtility.FindFreePortWin(aStartPort: word;
+  AvoidPorts: TWordDynArray): word;
 var
   pTCPTable: PMIB_TCPTABLE2;
   aSize, r: DWord;
@@ -757,8 +765,8 @@ begin
     r:=GetTcpTable2(pTCPTable,aSize,true);
     if r<>NO_ERROR then exit;
 
+    Ports:=copy(AvoidPorts);
     {$R-}
-    Ports:=[];
     for i:=0 to pTCPTable^.dwNumEntries-1 do
     begin
       LocalPort:=NToHs(word(pTCPTable^.table[i].dwLocalPort));

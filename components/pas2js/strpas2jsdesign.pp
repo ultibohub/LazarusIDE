@@ -1,4 +1,4 @@
-unit strpas2jsdesign;
+unit StrPas2JSDesign;
 
 {$mode objfpc}{$H+}
 
@@ -22,23 +22,6 @@ Resourcestring
   pjsdNewAtomPackageDescr = 'A pas2js program running as Atom package.';
   pjsdNewVSCodeExtension = 'Visual Studio Code extension';
   pjsdNewVSCodeExtensionDescr = 'A pas2js program running as Visual Studio Code extension.';
-
-  // menu item
-  SPasJSWebserverCaption = 'Pas2JS WebServers';
-
-  // Static texts webservers form
-  SWebserversStatus  = 'Status';
-  SWebserversPort    = 'Port';
-  SWebserversBaseDir = 'Root directory';
-  SWebserversProject = 'Project';
-  SWebserversExtra   = 'Additional info';
-  SWebserversCount   = 'Number of webserver processes: %s';
-  SWebserversCaption = 'Web server processes';
-
-  // Dynamic texts webservers form
-  SStatusRunning = 'Running';
-  SStatusStopped = 'Stopped';
-  SStatusError   = 'Error starting';
 
   // IDE options frame
   pjsdSelectPas2jsExecutable = 'Select pas2js executable';
@@ -73,15 +56,19 @@ Resourcestring
     +'project';
   pjsdProjectHTMLPage = 'Project HTML page:';
   pjsdMaintainHTMLPage = 'Maintain HTML page';
-  pjsdUseBrowserConsoleUnitToDisplayWritelnOutput = 'Use Browser Console unit '
+  pjsdUseBrowserConsoleUnitToDisplayWritelnOutput = 'Use BrowserConsole unit '
     +'to display writeln() output';
   pjsdRunRTLWhenAllPageResourcesAreFullyLoaded = 'Run RTL when all page '
     +'resources are fully loaded';
-  pjsdProjectNeedsAHTTPServer = 'Project needs a HTTP server';
+  pjsdRun = 'Run';
   pjsdStartHTTPServerOnPort = 'Start HTTP Server on port';
+  pjsCreateAJavascriptModuleInsteadOfAScript = 'Create a javascript module '
+    +'instead of a script';
   pjsdUseThisURLToStartApplication = 'Use this URL to start application';
+  pjsExecuteRunParameters = 'Execute Run Parameters';
   pjsdResetRunCommand = 'Reset Run command';
   pjsdResetCompileCommand = 'Reset Compile command';
+  pjsMakePas2jsProject = 'Make pas2js project';
 
   // New browser project options form
   pjsdPas2JSBrowserProjectOptions = 'Pas2JS Browser project options';

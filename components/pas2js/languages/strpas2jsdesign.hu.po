@@ -11,6 +11,10 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 2.0.6\n"
 
+#: strpas2jsdesign.pjscreateajavascriptmoduleinsteadofascript
+msgid "Create a javascript module instead of a script"
+msgstr ""
+
 #: strpas2jsdesign.pjsdatompackagetemplatedirectory
 msgid "Atom package template directory"
 msgstr ""
@@ -193,10 +197,6 @@ msgstr "A projekt HTML lapja:"
 msgid "Project is a Web Browser (pas2js) project"
 msgstr "A projekt egy webböngészős (pas2js) projekt"
 
-#: strpas2jsdesign.pjsdprojectneedsahttpserver
-msgid "Project needs a HTTP server"
-msgstr "A projektnek egy HTTP kiszolgálóra van szüksége"
-
 #: strpas2jsdesign.pjsdresetcompilecommand
 msgid "Reset Compile command"
 msgstr "A fordítás parancs alaphelyzetbe állítása"
@@ -204,6 +204,10 @@ msgstr "A fordítás parancs alaphelyzetbe állítása"
 #: strpas2jsdesign.pjsdresetruncommand
 msgid "Reset Run command"
 msgstr "A futtatás parancs alaphelyzetbe állítása"
+
+#: strpas2jsdesign.pjsdrun
+msgid "Run"
+msgstr ""
 
 #: strpas2jsdesign.pjsdrunrtlwhenallpageresourcesarefullyloaded
 msgid "Run RTL when all page resources are fully loaded"
@@ -256,7 +260,9 @@ msgid "Use Browser Application object"
 msgstr "Webböngésző alkalmazásobjektum használata"
 
 #: strpas2jsdesign.pjsdusebrowserconsoleunittodisplaywritelnoutput
-msgid "Use Browser Console unit to display writeln() output"
+#, fuzzy
+#| msgid "Use Browser Console unit to display writeln() output"
+msgid "Use BrowserConsole unit to display writeln() output"
 msgstr "Böngészőkonzol használata a writeln() kimenet megjelenítésére"
 
 #: strpas2jsdesign.pjsdusenodejsapplicationobject
@@ -298,6 +304,14 @@ msgstr "Web projekt (pas2js)"
 msgid "You can use IDE macros like $MakeExe(). Without a full path, %s is searched in PATH."
 msgstr "Használhatók az IDE makrók, mint a $MakeExe(). Teljes útvonal nélkül a PATH-ban felsorolt helyeken lesz keresve a(z) %s."
 
+#: strpas2jsdesign.pjsexecuterunparameters
+msgid "Execute Run Parameters"
+msgstr ""
+
+#: strpas2jsdesign.pjsmakepas2jsproject
+msgid "Make pas2js project"
+msgstr ""
+
 #: strpas2jsdesign.pjsrefreshallclassesfromhtml
 msgid "Refresh all classes from HTML source"
 msgstr ""
@@ -334,50 +348,4 @@ msgstr ""
 #, object-pascal-format
 msgid "HTML request to service URL %s failed: %s"
 msgstr ""
-
-#: strpas2jsdesign.spasjswebservercaption
-msgctxt "strpas2jsdesign.spasjswebservercaption"
-msgid "Pas2JS WebServers"
-msgstr "Pas2JS webkiszolgálók"
-
-#: strpas2jsdesign.sstatuserror
-msgid "Error starting"
-msgstr "Hiba az indításkor"
-
-#: strpas2jsdesign.sstatusrunning
-msgid "Running"
-msgstr "Fut"
-
-#: strpas2jsdesign.sstatusstopped
-msgid "Stopped"
-msgstr "Leállítva"
-
-#: strpas2jsdesign.swebserversbasedir
-msgid "Root directory"
-msgstr "Gyökérkönyvtár"
-
-#: strpas2jsdesign.swebserverscaption
-msgid "Web server processes"
-msgstr "Webkiszolgáló folyamatai"
-
-#: strpas2jsdesign.swebserverscount
-#, object-pascal-format
-msgid "Number of webserver processes: %s"
-msgstr "Webkiszolgáló folyamatainak száma: %s"
-
-#: strpas2jsdesign.swebserversextra
-msgid "Additional info"
-msgstr "További infó"
-
-#: strpas2jsdesign.swebserversport
-msgid "Port"
-msgstr "Port"
-
-#: strpas2jsdesign.swebserversproject
-msgid "Project"
-msgstr "Projekt"
-
-#: strpas2jsdesign.swebserversstatus
-msgid "Status"
-msgstr "Állapot"
 

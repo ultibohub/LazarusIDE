@@ -10,16 +10,17 @@ uses
   Forms, Controls, Dialogs, LazHelpIntf,
   // LazUtils
   LazLoggerBase, LazFileUtils, FileUtil,
+  // codetools
+  CodeToolManager, CodeCache,
   // IdeIntf
-  IDECommands, ToolbarIntf, MenuIntf, ProjectIntf, CompOptsIntf, LazIDEIntf,
+  IDECommands, MenuIntf, ProjectIntf, CompOptsIntf, LazIDEIntf,
   IDEOptionsIntf, IDEOptEditorIntf, ComponentEditors, SrcEditorIntf, IDEMsgIntf,
   IDEDialogs, IDEExternToolIntf, MacroIntf, PackageIntf,
   // Pas2js
   idehtml2class, PJSDsgnOptions, PJSDsgnOptsFrame, idedtstopas,
-  frmpas2jswebservers, frmpas2jsnodejsprojectoptions,
-  frmpas2jsbrowserprojectoptions, pjsprojectoptions, idehtmltools,
-  frmhtmltoform, pjscontroller, strpas2jsdesign, CodeToolManager, CodeCache;
-
+  frmpas2jsnodejsprojectoptions,
+  frmpas2jsbrowserprojectoptions, PJSProjectOptions, idehtmltools,
+  frmhtmltoform, PJSController, StrPas2JSDesign;
 
 const
   ProjDescNamePas2JSWebApp = 'Web Application';
@@ -35,16 +36,17 @@ const
 type
 
   { TProjectPas2JSWebApp }
+
   TBrowserApplicationOption = (baoCreateHtml,        // Create template HTML page
                                baoMaintainHTML,      // Maintain the template HTML page
                                baoRunOnReady,        // Run in document.onReady
-                               baoUseBrowserApp,     // Use browser app object
-                               baoUseBrowserConsole, // use browserconsole unit to display Writeln()
-                               baoStartServer,       // Start simple server
-                               baoUseURL,            // Use this URL to run/show project in browser
                                baoShowException,     // let RTL show uncaught exceptions
+                               baoUseBrowserApp,     // Use browser app object
                                baoUseWASI,           // Use WASI browser app object
-                               baoUseModule          // include as module as opposed to regular script
+                               baoUseBrowserConsole, // use browserconsole unit to display Writeln()
+                               baoUseModule,         // include as module as opposed to regular script
+                               baoStartServer,       // Start simple server
+                               baoUseURL             // Use this URL to run/show project in browser
                                );
   TBrowserApplicationOptions = set of TBrowserApplicationOption;
 
@@ -229,47 +231,35 @@ implementation
 Var
   SrcMnuItem,PrjMnuItem,PrjMnuItemAll : TIDEmenuCommand;
 
-procedure ShowServerDialog(Sender: TObject);
-begin
-  TPasJSWebserverProcessesForm.Instance.Show;
-  TPasJSWebserverProcessesForm.Instance.BringToFront;
-end;
-
 Type
 
-  { TPas2JSMenuHandler }
+  { TPas2JSHandler }
 
-  TPas2JSMenuHandler = Class(TObject)
-    procedure DoConvLog(Sender: TObject; const Msg: String);
-    Procedure OnRefreshHTMLFormContext(Sender : TObject);
-    Procedure OnRefreshProjHTMLFormContext(Sender : TObject);
-    Procedure OnRefreshProjHTMLFormAllContext(Sender : TObject);
-    Procedure OnSrcEditPopup(Sender : TObject);
-    Procedure OnPrjInspPopup(Sender : TObject);
-  private
-    function AskUserFile(aUnitName,aHTMLFileName: String): string;
-    function RefreshHTML(aFile: TLazProjectFile; out aSource: String): Boolean;
+  TPas2JSHandler = Class(TObject)
+  protected
+    function AskUserFile(aUnitName,aHTMLFileName: String): string; virtual;
+    function RefreshHTML(aFile: TLazProjectFile; out aSource: String): Boolean; virtual;
+  public
+    procedure DoConvLog(Sender: TObject; const Msg: String); virtual;
+    Procedure OnRefreshHTMLFormContext(Sender : TObject); virtual;
+    Procedure OnRefreshProjHTMLFormContext(Sender : TObject); virtual;
+    Procedure OnRefreshProjHTMLFormAllContext(Sender : TObject); virtual;
+    Procedure OnSrcEditPopup(Sender : TObject); virtual;
+    Procedure OnPrjInspPopup(Sender : TObject); virtual;
   end;
-
-Const
-  sPas2JSWebserverName = 'Pas2JSWebservers';
 
 Var
   Pas2JSHTMLClassDef : TPas2JSHTMLClassDef;
   Pas2JSDTSToPasUnitDef : TPas2JSDTSToPasUnitDef;
-  MenuHandler : TPas2JSMenuHandler;
+  Pas2JSHandler : TPas2JSHandler;
 
 procedure Register;
-
 Var
-  ViewCategory : TIDECommandCategory;
-  IDECommand : TIDECommand;
   SrvWorker: TProjectPas2JSServiceWorker;
   PWA: TProjectPas2JSProgressiveWebApp;
-
 begin
-  MenuHandler:=TPas2JSMenuHandler.Create;
-  if Assigned(MenuHandler) then; // Silence compiler warning
+  Pas2JSHandler:=TPas2JSHandler.Create;
+  if Assigned(Pas2JSHandler) then; // Silence compiler warning
   PJSOptions:=TPas2jsOptions.Create;
   PJSOptions.Load;
   TPJSController.Instance.Hook;
@@ -291,28 +281,19 @@ begin
   // add IDE options frame
   PJSOptionsFrameID:=RegisterIDEOptionsEditor(GroupEnvironment,TPas2jsOptionsFrame,
                                               PJSOptionsFrameID)^.Index;
-  ViewCategory := IDECommandList.FindCategoryByName(CommandCategoryViewName);
-  if ViewCategory <> nil then
-    begin
-    IDECommand := RegisterIDECommand(ViewCategory,sPas2JSWebserverName,SPasJSWebserverCaption,
-                                     CleanIDEShortCut,CleanIDEShortCut,Nil,@ShowServerDialog);
-    if IDECommand <> nil then
-      RegisterIDEButtonCommand(IDECommand);
-    end;
-  RegisterIdeMenuCommand(itmViewDebugWindows,sPas2JSWebserverName,SPasJSWebserverCaption,nil,@ShowServerDialog);
 
   // Add project options frame
   RegisterIDEOptionsEditor(GroupProject,TPas2JSProjectOptionsFrame, Pas2JSOptionsIndex);
 
   // pop menu items
   SrcMnuItem:=RegisterIDEMenuCommand(SrcEditMenuSectionFirstStatic,
-     'HTMLFormClassRefresh', pjsRefreshClassFromHTML,@MenuHandler.OnRefreshHTMLFormContext);
-  SourceEditorMenuRoot.AddHandlerOnShow(@MenuHandler.OnSrcEditPopup);
+     'HTMLFormClassRefresh', pjsRefreshClassFromHTML,@Pas2JSHandler.OnRefreshHTMLFormContext);
+  SourceEditorMenuRoot.AddHandlerOnShow(@Pas2JSHandler.OnSrcEditPopup);
   PrjMnuItem:=RegisterIDEMenuCommand(ProjInspMenuSectionFiles,
-      'PrjHTMLFormClassRefresh',pjsRefreshClassFromHTML,@MenuHandler.OnRefreshProjHTMLFormContext);
+      'PrjHTMLFormClassRefresh',pjsRefreshClassFromHTML,@Pas2JSHandler.OnRefreshProjHTMLFormContext);
   PrjMnuItemAll:=RegisterIDEMenuCommand(ProjInspMenuSectionFiles,
-      'PrjHTMLFormClassRefreshAll',pjsRefreshAllClassesFromHTML,@MenuHandler.OnRefreshProjHTMLFormAllContext);
-  ProjectInspectorItemsMenuRoot.AddHandlerOnShow(@MenuHandler.OnPrjInspPopup);
+      'PrjHTMLFormClassRefreshAll',pjsRefreshAllClassesFromHTML,@Pas2JSHandler.OnRefreshProjHTMLFormAllContext);
+  ProjectInspectorItemsMenuRoot.AddHandlerOnShow(@Pas2JSHandler.OnPrjInspPopup);
 end;
 
 { TProjectPas2JSProgressiveWebApp }
@@ -439,7 +420,6 @@ begin
   //debugln(['Info: [TProjectPas2JSProgressiveWebApp.CreateManifestFile] "',AFileName,'"']);
   Result:=AProject.CreateProjectFile(AFileName);
   Result.IsPartOfProject:=true;
-  AProject.CustomData.Values[PJSProjectManifestFile]:=CreateRelativePath(Result.Filename,ProjectDir);
   AProject.AddFile(Result,false);
   Src:=TStringList.Create;
   try
@@ -481,7 +461,6 @@ begin
   //debugln(['Info: [TProjectPas2JSProgressiveWebApp.CreateCSSStyle] "',AFileName,'"']);
   Result:=AProject.CreateProjectFile(AFileName);
   Result.IsPartOfProject:=true;
-  AProject.CustomData.Values[PJSProjectCSSFile]:=CreateRelativePath(Result.Filename,ProjectDir);
   AProject.AddFile(Result,false);
   Src:=TStringList.Create;
   try
@@ -617,7 +596,7 @@ var
   i: Integer;
 begin
   inherited Clear;
-  FOptions:=[baoCreateHtml,baoMaintainHTML,baoUseBrowserApp];
+  FOptions:=[baoCreateHtml,baoMaintainHTML,baoUseBrowserApp,baoStartServer];
   FWebDir:='www';
   FImagesDir:='images';
   FHTMLFilename:='index.html';
@@ -684,21 +663,19 @@ begin
   CompOpts:=AProject.LazCompilerOptions;
   TargetFilename:=AppendPathDelim(WebDir)+'ServiceWorker';
 
-  // save ServiceWorker.lpr
+  // save ServiceWorker.lpr and open it in source editor
   if not InteractiveSaveFile(ServiceWorkerLPR) then exit;
   LazarusIDE.DoOpenEditorFile(ServiceWorkerLPR,-1,-1,
                                       [ofProjectLoading,ofRegularFile]);
   // save ServiceWorker.lpi
   if LazarusIDE.DoSaveProject([sfQuietUnitCheck])<>mrOk then exit;
-  LazarusIDE.DoCloseEditorFile(ServiceWorkerLPR,[cfQuiet,cfProjectClosing]);
 
   // delete ServiceWorker.lpr from project
+  LazarusIDE.DoCloseEditorFile(ServiceWorkerLPR,[cfQuiet,cfProjectClosing]);
   if AProject.MainFileID<>0 then
     raise Exception.Create('20220405231537');
   AProject.MainFileID:=-1;
   AProject.RemoveUnit(0,false);
-
-  AProject.CustomData.Remove(PJSProjectServiceWorker);
 
   // initialize PWA project
   AProject.ProjectInfoFile:=ChangeFileExt(MainSrcFileName,'.lpi');
@@ -816,7 +793,6 @@ begin
   SetDefaultServiceWorkerRunParams(AProject.RunParameters.GetOrCreate('Default'));
   AProject.MainFile.SetSourceText(CreateProjectSource,true);
   AProject.CustomData.Values[PJSProject]:='1';
-  AProject.CustomData.Values[PJSProjectServiceWorker]:='1';
   Result:=mrOk;
 end;
 
@@ -899,12 +875,12 @@ end;
 
 { TPas2JSMenuHandler }
 
-procedure TPas2JSMenuHandler.DoConvLog(Sender: TObject; const Msg: String);
+procedure TPas2JSHandler.DoConvLog(Sender: TObject; const Msg: String);
 begin
   IDEMessagesWindow.AddCustomMessage(TMessageLineUrgency.mluProgress,Msg,'',0,0,SMessageViewHTMLToForm);
 end;
 
-procedure TPas2JSMenuHandler.OnSrcEditPopup(Sender: TObject);
+procedure TPas2JSHandler.OnSrcEditPopup(Sender: TObject);
 
 Var
   Editor : TSourceEditorInterface;
@@ -919,7 +895,7 @@ begin
   SrcMnuItem.Visible:=IsPas2js and Assigned(AFile) and (aFile.CustomData.Values[SHTML2FormOptions]<>'');
 end;
 
-procedure TPas2JSMenuHandler.OnPrjInspPopup(Sender: TObject);
+procedure TPas2JSHandler.OnPrjInspPopup(Sender: TObject);
 
 Var
   Idx : Integer;
@@ -961,7 +937,7 @@ begin
   PrjMnuItemAll.Visible:=AnyOK;
 end;
 
-function TPas2JSMenuHandler.AskUserFile(aUnitName,aHTMLFileName: String): string;
+function TPas2JSHandler.AskUserFile(aUnitName,aHTMLFileName: String): string;
 
 Var
   Dlg : TOpenDialog;
@@ -984,7 +960,7 @@ begin
   end;
 end;
 
-procedure TPas2JSMenuHandler.OnRefreshHTMLFormContext(Sender: TObject);
+procedure TPas2JSHandler.OnRefreshHTMLFormContext(Sender: TObject);
 Var
   Editor : TSourceEditorInterface;
   aFile : TLazProjectFile;
@@ -1002,12 +978,13 @@ begin
     end;
 end;
 
-Function TPas2JSMenuHandler.RefreshHTML(aFile : TLazProjectFile; Out aSource : String) : Boolean;
+function TPas2JSHandler.RefreshHTML(aFile: TLazProjectFile; out aSource: String
+  ): Boolean;
 
 Var
   aOptions: THTML2ClassOptions;
   CG : TFormCodeGen;
-  Conv : THTMLToFormELements;
+  Conv : THTMLToFormElements;
   aFileName : String;
 
 begin
@@ -1028,7 +1005,7 @@ begin
        LazarusIDE.ActiveProject.Modified:=True;
        end;
     CG:=TFormCodeGen.Create(Nil);
-    Conv:=THTMLToFormELements.Create(nil);
+    Conv:=THTMLToFormElements.Create(nil);
     Conv.LoadOptions(aOptions);
     Conv.LoadFromFile(aoptions.HTMLFileName);
     Conv.OnLog:=@DoConvLog;
@@ -1045,7 +1022,7 @@ begin
   end;
 end;
 
-procedure TPas2JSMenuHandler.OnRefreshProjHTMLFormContext(Sender: TObject);
+procedure TPas2JSHandler.OnRefreshProjHTMLFormContext(Sender: TObject);
 
 Var
   Idx : Integer;
@@ -1075,7 +1052,7 @@ begin
    end;
 end;
 
-procedure TPas2JSMenuHandler.OnRefreshProjHTMLFormAllContext(Sender: TObject);
+procedure TPas2JSHandler.OnRefreshProjHTMLFormAllContext(Sender: TObject);
 Var
   Idx : Integer;
   HasHTMLInfo : Boolean;
@@ -1156,14 +1133,14 @@ function TPas2JSHTMLClassDef.CreateSource(const Filename, SourceName, ResourceNa
 
 Var
   CG : TFormCodeGen;
-  Conv : THTMLToFormELements;
+  Conv : THTMLToFormElements;
   HTMLFile : TLazProjectFile;
 
 begin
   Conv:=Nil;
   CG:=TFormCodeGen.Create(Nil);
   try
-    Conv:=THTMLToFormELements.Create(nil);
+    Conv:=THTMLToFormElements.Create(nil);
     Conv.LoadOptions(FOptions);
     Conv.LoadFromFile(Foptions.HTMLFileName);
     Conv.OnLog:=@DoConvLog;
@@ -1332,7 +1309,6 @@ begin
   AProject.AddFile(MainFile,false);
   AProject.MainFileID:=0;
   AProject.CustomData.Values[PJSProject]:='1';
-  AProject.CustomData.Values[PJSProjectNodeJS]:='1';
   CompOpts:=AProject.LazBuildModes.BuildModes[0].LazCompilerOptions;
   SetDefaultNodeJSCompileOptions(CompOpts);
   CompOpts.TargetFilename:=ExtractFileNameOnly(MainFile.Filename);
@@ -1367,7 +1343,7 @@ end;
 procedure TProjectPas2JSWebApp.Clear;
 begin
   // Reset options
-  FOptions:=[baoCreateHtml,baoMaintainHTML];
+  FOptions:=[baoCreateHtml,baoMaintainHTML,baoStartServer];
   ProjectPort:=0;
   ProjectURL:='';
 end;
@@ -1409,45 +1385,51 @@ begin
     try
       CreateHTML:=CO(baoCreateHtml);
       MaintainHTML:=CO(baoCreateHtml) and Co(baoMaintainHTML);
-      UseBrowserApp:=CO(baoUseBrowserApp);
-      UseBrowserConsole:=CO(baoUseBrowserConsole);
-      StartHTTPServer:=CO(baoStartServer);
       UseRunOnReady:=CO(baoRunOnReady);
-      UseWASI:=CO(baoUseWASI);
-      UseModule:=CO(baoUseModule);
       ShowUncaughtExceptions:=CO(baoShowException);
+      UseBrowserConsole:=CO(baoUseBrowserConsole);
+
+      UseBrowserApp:=CO(baoUseBrowserApp);
+      UseWASI:=CO(baoUseWASI);
+      WasmProgramURL:='';
+
+      UseModule:=CO(baoUseModule);
+
+      if CO(baoStartServer) then
+        RunServerAtPort:=true
+      else if CO(baoUseURL) then
+        RunBrowserWithURL:=true
+      else
+        RunDefault:=true;
+
       // We allocate the new port in all cases.
       ServerPort:=GetNextPort;
       URL:='';
-      WasmProgramURL:='';
-      if Not CO(baoStartServer) then
-        UseURL:=CO(baoUseURL);
+
       Result:=ShowModalOptions(Frm);
       if Result=mrOK then
         begin
         SO(CreateHTML,baoCreateHtml);
         SO(MaintainHTML,baoCreateHtml);
-        SO(UseBrowserApp,baoUseBrowserApp);
-        SO(UseBrowserConsole,baoUseBrowserConsole);
-        SO(StartHTTPServer,baoStartServer);
         SO(UseRunOnReady,baoRunOnReady);
+        SO(UseBrowserConsole,baoUseBrowserConsole);
         SO(ShowUncaughtExceptions,baoShowException);
+
+        SO(UseBrowserApp,baoUseBrowserApp);
         SO(UseWASI,baoUseWASI);
-        SO(UseModule,baoUseModule);
-        SO(StartHTTPServer,baoStartServer);
-        Self.ProjectPort:=ServerPort;
-        SO(UseURL,baoUseURL);
-        if baoStartServer in FOptions then
-          begin
-          DebugLN(['Info: Start server port: ', Self.ProjectPort,'from: ',ServerPort]);
-          end
-        else
-          begin
-          if baoUseURL in Options then
-            FProjectURL:=URL;
-          end;
-        end;
         FProjectWasmURL:=WasmProgramURL;
+
+        SO(UseModule,baoUseModule);
+
+        Self.ProjectPort:=ServerPort;
+        SO(RunServerAtPort,baoStartServer);
+        SO(RunBrowserWithURL,baoUseURL);
+        if baoStartServer in FOptions then
+          DebugLN(['Info: Start server port: ', Self.ProjectPort,' from: ',ServerPort])
+        else if baoUseURL in FOptions then
+          FProjectURL:=URL;
+
+        end;
     finally
       Free;
     end;
@@ -1520,7 +1502,7 @@ Var
 begin
   HTMLFile:=AProject.CreateProjectFile(HTMLFilename);
   HTMLFile.IsPartOfProject:=true;
-  AProject.CustomData.Values[PJSProjectHTMLFile]:=ExtractFileName(HTMLFile.Filename);
+  AProject.CustomData.Values[PJSProjectHTMLFile]:=HTMLFile.Filename;
   AProject.AddFile(HTMLFile,false);
   ScriptType:='';
   if baoUseModule in Options then
@@ -1587,12 +1569,12 @@ Var
 begin
   Units:='';
   if baoUseBrowserConsole in Options then
-    Units:=' browserconsole,';
+    Units:=' BrowserConsole,';
   if baoUseBrowserApp in Options then
     begin
-    Units:=Units+' browserapp,' ;
+    Units:=Units+' BrowserApp,' ;
     if baoUseWASI in options then
-      Units:=Units+' wasihostapp,' ;
+      Units:=Units+' WASIHostApp,' ;
     end;
   Units:=Units+' JS, Classes, SysUtils, Web';
   Src:=TStringList.Create;
@@ -1803,7 +1785,6 @@ begin
   AProject.AddFile(MainFile,false);
   AProject.MainFileID:=0;
   AProject.CustomData.Values[PJSProject]:='1';
-  AProject.CustomData.Values[PJSProjectModule]:='1';
   CompOpts:=AProject.LazBuildModes.BuildModes[0].LazCompilerOptions;
   SetDefaultModuleCompileOptions(CompOpts);
   CompOpts.TargetFilename:='js/project1';

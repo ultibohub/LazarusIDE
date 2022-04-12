@@ -958,7 +958,7 @@
       </element>
       <element name="TDBEdit">
         <short>
-          <var>TDBEdit </var> - a data-aware edit box for processing a single text-string from a dataset.
+          <var>TDBEdit</var> - a data-aware edit box for processing a single text-string from a dataset.
         </short>
         <descr>
           <p>
@@ -1555,7 +1555,7 @@
         </short>
         <descr>
           <p>
-            <var>OnKeyUp</var>is an  event handler signalled when a key is up (not pressed) while the control has focus. The key may already have been up when the control received focus, or a pressed key may become released during the time the control has focus.
+            <var>OnKeyUp</var> is an event handler signalled when a key is up (not pressed) while the control has focus. The key may already have been up when the control received focus, or a pressed key may become released during the time the control has focus.
           </p>
         </descr>
         <seealso>
@@ -1921,9 +1921,10 @@
         <short>Indicates if text is wrapped at the right edge of the control.</short>
         <descr>
           <p>
-            <var>WordWrap</var>indicates whether a word is to be wrapped to the next line if the text is about to become too long for the width available in the control.
+            <var>WordWrap</var> indicates whether a word is to be wrapped to the next line if the text is about to become too long for the width available in the control.
           </p>
-          <p>The default value for the property is  <b>False</b>.
+          <p>
+            The default value for the property is <b>False</b>.
           </p>
         </descr>
         <seealso>
@@ -2188,7 +2189,7 @@
       <element name="TCustomDBListBox.Destroy">
         <short>Destructor for the class instance.</short>
         <descr>
-          <var>Destroy</var>is the overridden destructor for the class instance. Destroy frees resources allocated to internal members in the class instance, and calls the inherited destructor prior to exiting from the method.
+          <var>Destroy</var> is the overridden destructor for the class instance. Destroy frees resources allocated to internal members in the class instance, and calls the inherited destructor prior to exiting from the method.
         </descr>
         <seealso>
           <link id="#lcl.stdctrls.TCustomListBox.Destroy">CustomListBox.Destroy</link>
@@ -2331,7 +2332,7 @@
         </short>
         <descr>
           <p>
-            <var>TDBListBox </var> implements a data-aware version of
+            <var>TDBListBox</var> implements a data-aware version of
             <var>TListBox</var>.
             The control allows selection and storage of a value from a scrolling list of choices to the current record in a linked dataset.
           </p>
@@ -2476,7 +2477,7 @@
         </short>
         <descr>
           <p>
-            <var>OnDrawItem</var>is an event handler used to draw an Item on the data-aware list box.
+            <var>OnDrawItem</var> is an event handler used to draw an Item on the data-aware list box.
           </p>
           <p>
             For example, selecting an item may require it to be highlighted or have its font or background changed.
@@ -4059,7 +4060,7 @@
       <element link="#lcl.controls.TControl.PopupMenu" name="TDBCheckBox.PopupMenu"/>
       <element name="TDBCheckBox.ReadOnly">
         <short>
-          <var>ReadOnly </var>- if
+          <var>ReadOnly</var> - if
           <b>True</b>, data may be read but not written or modified (doesn't make much sense for a check-box unless the box is NOT Enabled!).
         </short>
         <descr/>
@@ -4598,13 +4599,13 @@
         </short>
         <descr>
           <p>
-            <var>TDBComboBox </var>has properties similar to
-            <var>TComboBox</var> and
-            <var>TCustomComboBox</var>. It consists of an Edit Box which is the Data-aware part of the component, and a drop-down list box.
+            <var>TDBComboBox</var> has properties similar to <var>TComboBox</var> and <var>TCustomComboBox</var>. It consists of an Edit Box which is the Data-aware part of the component, and a drop-down list box.
           </p>
-          <p>In a typical application a user would be presented with the drop-down list, would make a selection and then this would appear in the edit box and become the data value for that cell in the database.
+          <p>
+            In a typical application a user would be presented with the drop-down list, would make a selection and then this would appear in the edit box and become the data value for that cell in the database.
           </p>
-          <p>As an example, a list of countries might be presented, and the selected value from the list would be used to populate the appropriate field ('Country') in that record of the database.
+          <p>
+            As an example, a list of countries might be presented, and the selected value from the list would be used to populate the appropriate field ('Country') in that record of the database.
           </p>
         </descr>
         <seealso>
@@ -4686,9 +4687,7 @@
         </short>
         <descr>
           <p>
-            <var>AutoDropDown </var> indicates whether the drop-down list for the control appears as soon as the control receives the input focus. When set to
-            <b>False</b>, the drop-down list appears when the downward triangular glyph for the control is clicked. The default value for the property is
-            <b>False</b>.
+            <var>AutoDropDown</var> indicates whether the drop-down list for the control appears as soon as the control receives the input focus. When set to <b>False</b>, the drop-down list appears when the downward triangular glyph for the control is clicked. The default value for the property is <b>False</b>.
           </p>
         </descr>
         <seealso>
@@ -5318,7 +5317,7 @@
       <element link="#lcl.controls.TControl.Visible" name="TDBLookupComboBox.Visible"/>
       <element name="TDBMemo">
         <short>
-          <var>TDBMemo </var> - a data-aware Memo box to process the multi-line text of a single field in a dataset.
+          <var>TDBMemo</var> - a data-aware Memo box to process the multi-line text of a single field in a dataset.
         </short>
         <descr>
           <p>
@@ -6286,7 +6285,7 @@
 
       <element name="TDBImage">
         <short>
-          <var>TDBImage </var>- a data-aware Image box to display a single image from a dataset.
+          <var>TDBImage</var> - a data-aware Image box to display a single image from a dataset.
         </short>
         <descr>
           <p>TDBImage is a TCustomImage descendant which implements a data-aware image control.
@@ -8055,7 +8054,7 @@
 
       <element  name="TDBNavigator">
         <short>
-          <var>TDBNavigator </var>- a data-aware Button-Bar to facilitate navigating between records of a dataset.
+          <var>TDBNavigator</var> - a data-aware Button-Bar to facilitate navigating between records of a dataset.
         </short>
         <descr>
           <p>
