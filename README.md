@@ -1,8 +1,14 @@
-## Ultibo Edition (Work in Progress)
+# Lazarus Source code repository
 
-This repository is not in use, we are currently working on an upgrade to Lazarus 2.2 but it is not ready for use yet.
+## Ultibo Edition
 
-Please continue to use the current [Lazarus](https://github.com/ultibohub/Lazarus) repository until this update is released.
+This repository contains the Ultibo Edition of the Lazarus IDE which is currently based on Lazarus 2.2.0 (2.3.0).
+
+You can choose from either the [Stable](https://github.com/ultibohub/LazarusIDE/tree/ultibo-2.2) or [Main](https://github.com/ultibohub/LazarusIDE/tree/ultibo) branches.
+
+For all information on developing with Ultibo, building the source and getting started please see the [Ultibo.org website](https://ultibo.org)
+
+To obtain a prepackaged installer for Windows or an install script for Linux please see the Ultibo [downloads page](https://ultibo.org/download/)
 
 Welcome to Lazarus
 ==================
