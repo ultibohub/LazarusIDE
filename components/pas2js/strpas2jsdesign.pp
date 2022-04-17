@@ -34,9 +34,9 @@ Resourcestring
     +'macros like $MakeExe(). Without a full path, %s is searched in PATH.';
   pjsdPathOfXMacroPas2js = 'Path of %s, macro $(pas2js)';
   pjsdBrowse = 'Browse';
-  pjsdPathOfXMacroPas2JSWebServer = 'Path of %s, macro $(Pas2JSWebServer)';
   pjsdPortNumberToStartAllocatingFrom = 'Port number to start allocating '
     +'from, macro $(Pas2JSWebServerPort)';
+  pjsdWebServerOptions = 'Web server options';
   pjsdServerInstancesWillBeStartedWithAPortStartingFromT = 'Server instances '
     +'will be started with a port starting from this number, increasing per '
     +'new project';
@@ -44,8 +44,6 @@ Resourcestring
   pjsdUseThisBrowserWhenOpeningTheURLOrHTMLFileOfAWebBro = 'Use this browser '
     +'when opening the URL or HTML file of a web browser project';
   pjsdPathOfNodeJsExecutable = 'Path of Node.js executable, macro $(Pas2JSNodeJS)';
-  pjsdHTTPServerOptsLabelCaption = 'HTTP Server extra command-line options (one per line)';
-  pjsdHTTPServerOptsLabelHint = 'Add extra command-line options for the command which starts the webserver.';
   pjsdAtomPackageTemplateDirectory = 'Atom package template directory';
   pjsdVisualStudioCodeExtensionTemplateDirectory = 'Visual Studio Code '
     +'extension template directory';
@@ -93,8 +91,6 @@ Resourcestring
 
   // Macros names
   pjsdPas2JSExecutable = 'Pas2JS executable';
-  pjsdPas2JSWebServerExe = 'Pas2JS webserver executable';
-  pjsdPas2JSWebServerPort = 'Pas2JS webserver port';
   pjsdPas2JSSelectedBrowserExecutable = 'Pas2JS selected browser executable';
   pjsdPas2JSSelectedNodeJSExcutable = 'Pas2JS selected NodeJS excutable';
   pjsdPas2JSCurrentProjectURL = 'Pas2JS current project URL';

@@ -15,12 +15,12 @@ uses
   // IdeIntf
   IDECommands, MenuIntf, ProjectIntf, CompOptsIntf, LazIDEIntf,
   IDEOptionsIntf, IDEOptEditorIntf, ComponentEditors, SrcEditorIntf, IDEMsgIntf,
-  IDEDialogs, IDEExternToolIntf, MacroIntf, PackageIntf,
+  IDEDialogs, ProjectGroupIntf, IDEExternToolIntf, MacroIntf, PackageIntf,
   // Pas2js
   idehtml2class, PJSDsgnOptions, PJSDsgnOptsFrame, idedtstopas,
   frmpas2jsnodejsprojectoptions,
   frmpas2jsbrowserprojectoptions, PJSProjectOptions, idehtmltools,
-  frmhtmltoform, PJSController, StrPas2JSDesign;
+  frmhtmltoform, PJSController, StrPas2JSDesign, ProjectGroup;
 
 const
   ProjDescNamePas2JSWebApp = 'Web Application';
@@ -126,6 +126,7 @@ type
       ): TLazProjectFile; virtual;
     function CreateCSSStyle(AProject: TLazProject; AFileName: String
       ): TLazProjectFile; virtual;
+    function CreateProjectGroup(AProject: TLazProject): boolean; virtual;
     function CopyFavIcon: boolean; virtual;
     function CopyIcons: boolean; virtual;
     function InteractiveForceDir(Dir: string; AutoDelete: boolean): boolean; virtual;
@@ -584,6 +585,36 @@ begin
   Result:=false;
 end;
 
+function TProjectPas2JSProgressiveWebApp.CreateProjectGroup(
+  AProject: TLazProject): boolean;
+var
+  LPGFilename, ServiceWorkerLPI, WebAppLPI: String;
+  Grp: TProjectGroup;
+begin
+  Result:=false;
+
+  WebAppLPI:=AProject.ProjectInfoFile;
+  LPGFilename:=ChangeFileExt(WebAppLPI,'.lpg');
+  ServiceWorkerLPI:=ChangeFileExt(ServiceWorkerLPR,'.lpi');
+
+  if not IDEProjectGroupManager.NewProjectGroup(false) then
+  begin
+    debugln(['Error: TProjectPas2JSProgressiveWebApp.CreateProjectGroup failed to create new project group ']);
+    exit;
+  end;
+  Grp:=IDEProjectGroupManager.CurrentProjectGroup;
+  Grp.FileName:=LPGFilename;
+  Grp.AddTarget(WebAppLPI);
+  Grp.AddTarget(ServiceWorkerLPI);
+  if not IDEProjectGroupManager.SaveProjectGroup then
+  begin
+    debugln(['Error: TProjectPas2JSProgressiveWebApp.CreateProjectGroup failed writing project group "',Grp.FileName,'"']);
+    exit;
+  end;
+
+  Result:=true;
+end;
+
 constructor TProjectPas2JSProgressiveWebApp.Create;
 begin
   inherited Create;
@@ -714,6 +745,9 @@ begin
 
   // save lpi
   if LazarusIDE.DoSaveProject([sfQuietUnitCheck])<>mrOk then exit;
+
+  // project group
+  if not CreateProjectGroup(AProject) then exit;
 
   Result:=mrOk;
 end;

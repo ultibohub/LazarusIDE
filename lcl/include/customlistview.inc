@@ -333,9 +333,9 @@ begin
             DoItemChecked(Item);
                        
           // end editing
-          if FEditor.Visible then
+          if IsEditing then
             HideEditor;
-                         
+
           // focus
           if (nm^.uOldState and LVIS_FOCUSED) <> (nm^.uNewState and LVIS_FOCUSED) then
           begin
@@ -446,7 +446,12 @@ var
 begin
   S := FEditor.Text;
   if FEditor.Item <> nil then
-    DoEndEdit(FEditor.Item, S);
+  begin
+    if MultiSelect and OwnerData then
+      DoEndEdit(Items[FSelectedIdx], S)
+    else
+      DoEndEdit(FEditor.Item, S);
+  end;
   FEditor.Item := nil;
   FEditor.Visible := False;
   FEditor.SetBounds(0, 0, 0, 0);

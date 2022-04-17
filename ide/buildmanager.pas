@@ -35,7 +35,7 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, Laz_AVL_Tree,
+  Classes, SysUtils, Types, Laz_AVL_Tree,
   // LCL
   InterfaceBase, LCLPlatformDef, Dialogs, Forms, Controls,
   // CodeTools
@@ -57,6 +57,9 @@ uses
   Compiler, FPCSrcScan, PackageDefs, PackageSystem, Project, ProjectIcon,
   ModeMatrixOpts, BaseBuildManager, ApplicationBundle, RunParamsOpts;
   
+const
+  cInvalidCompiler = 'InvalidCompiler';
+
 type
 
   { TBuildManager }
@@ -85,6 +88,9 @@ type
     // cache
     FFPCompilerFilename: string;
     FFPCompilerFilenameStamp: Integer;
+    {$IFDEF EnableDefaultMacroEnvVar}
+    fEnv: TStringDynArray;
+    {$ENDIF}
     procedure DoOnRescanFPCDirectoryCache(Sender: TObject);
     function GetTargetFilename: String;
     procedure OnMacroSubstitution(TheMacro: TTransferMacro;
@@ -302,8 +308,38 @@ end;
 procedure TBuildManager.OnMacroSubstitution(TheMacro: TTransferMacro;
   const MacroName: string; var s: string; const Data: PtrInt; var Handled,
   Abort: boolean; Depth: integer);
+{$IFDEF EnableDefaultMacroEnvVar}
+var
+  VarCnt, i: Integer;
+  EnvStr, UpperMacroName: String;
+  p: SizeInt;
+{$ENDIF}
 begin
   if TheMacro=nil then begin
+    {$IFDEF EnableDefaultMacroEnvVar}
+    if s='' then begin
+      // default: use uppercase environment variable
+      VarCnt:=GetEnvironmentVariableCountUTF8;
+      if length(fEnv)<>VarCnt then begin
+        SetLength(fEnv,VarCnt);
+        for i:=0 to VarCnt-1 do
+          fEnv[i]:=GetEnvironmentStringUTF8(i+1);
+      end;
+      UpperMacroName:=UTF8UpperCase(MacroName);
+      for i:=0 to VarCnt-1 do begin
+        EnvStr:=fEnv[i];
+        p:=Pos('=',EnvStr);
+        if p<2 then continue;
+        if (p-1=length(UpperMacroName)) and CompareMem(@UpperMacroName[1],@EnvStr[1],p-1) then
+        begin
+          Handled:=true;
+          s:=copy(EnvStr,p+1,length(EnvStr));
+          exit;
+        end;
+      end;
+    end;
+    {$ENDIF}
+
     if ConsoleVerbosity>=0 then
       DebugLn('Warning: (lazarus) Macro not defined: "'+MacroName+'".');
     {$IFDEF VerboseMacroNotDefined}
@@ -717,8 +753,14 @@ begin
         Result:=''
       else if (Pos('$',Result)<1) and (FilenameIsAbsolute(Result)) then
         Result:=TrimFilename(Result)
-      else
+      else begin
         Result:=FBuildTarget.GetCompilerFilename;
+        if Result='' then
+        begin
+          Result:=cInvalidCompiler;
+          debugln(['Error: (lazarus) [TBuildManager.GetCompilerFilename] invalid compiler "',Opts.CompilerPath,'"']);
+        end;
+      end;
       //debugln(['TBuildManager.GetCompilerFilename project compiler="',Result,'"']);
     end;
   end;
@@ -2829,7 +2871,7 @@ var
   LCLTargetChanged: Boolean;
   CompilerTargetOS: string;
   CompilerTargetCPU: string;
-  CompQueryOptions: String;
+  CompQueryOptions, CompilerFilename: String;
 begin
   {$IFDEF VerboseDefaultCompilerTarget}
   debugln(['TBuildManager.SetBuildTarget TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" LCLWidgetType="',LCLWidgetType,'"']);
@@ -2870,8 +2912,12 @@ begin
     else if fTargetOS<>'' then
       CompQueryOptions:='-T'+GetFPCTargetOS(fTargetOS);
     // Note: resolving the comiler filename requires macros
+    CompilerFilename:=GetCompilerFilename;
+    if CompilerFilename=cInvalidCompiler then
+      exit;
+
     CodeToolBoss.CompilerDefinesCache.ConfigCaches.GetDefaultCompilerTarget(
-      GetCompilerFilename,CompQueryOptions,CompilerTargetOS,CompilerTargetCPU);
+      CompilerFilename,CompQueryOptions,CompilerTargetOS,CompilerTargetCPU);
     if fTargetOS='' then
       fTargetOS:=CompilerTargetOS;
     if fTargetOS='' then

@@ -11,7 +11,8 @@ uses
   // LCL
   Forms, Controls, LazHelpIntf,
   // IdeIntf
-  MacroIntf, MacroDefIntf, ProjectIntf, CompOptsIntf, LazIDEIntf,
+  MacroIntf, MacroDefIntf, ProjectIntf, CompOptsIntf, IDEExternToolIntf,
+  LazIDEIntf, ProjectGroupIntf,
   // pas2js
   SimpleWebSrvController, StrPas2JSDesign, PJSDsgnOptions, CodeToolManager,
   CodeCache;
@@ -24,14 +25,14 @@ Type
   Private
     FOnRefresh: TNotifyEvent;
     function GetPas2JSPath(const s: string; const {%H-}Data: PtrInt; var Abort: boolean): string;
-    function GetPas2JSWebServerPath(const s: string; const {%H-}Data: PtrInt; var Abort: boolean): string;
-    function GetPas2JSWebServerPort(const s: string; const {%H-}Data: PtrInt; var Abort: boolean): string;
     function GetPas2JSBrowser(const s: string; const {%H-}Data: PtrInt; var Abort: boolean): string;
     function GetPas2JSNodeJS(const s: string; const {%H-}Data: PtrInt; var Abort: boolean): string;
     function GetPas2jsProjectURL(const s: string; const {%H-}Data: PtrInt; var Abort: boolean): string;
     procedure OnLoadSaveCustomData(Sender: TObject; Load: boolean;
       CustomData: TStringToStringTree; PathDelimChanged: boolean);
     function OnProjectBuilding(Sender: TObject): TModalResult;
+    function OnProjectGroupRunLazbuild({%H-}Target: TPGCompileTarget;
+      Tool: TAbstractExternalTool): boolean;
     function OnRunDebugInit(Sender: TObject; var Handled: boolean
       ): TModalResult;
     function OnRunWithoutDebugInit(Sender: TObject; var Handled: boolean): TModalResult;
@@ -93,28 +94,6 @@ begin
     Result:='pas2js'; // always return something to get nicer error messages
 end;
 
-function TPJSController.GetPas2JSWebServerPath(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Abort:=False;
-  if (s<>'') and (ConsoleVerbosity>=0) then
-    debugln(['Hint: (lazarus) [TPJSController.GetPas2JSWebServerPath] ignoring macro Pas2JSWebServer parameter "',s,'"']);
-  Result:=PJSOptions.GetParsedWebServerFilename;
-  if Result='' then
-    Result:=PJSDefaultWebServerName; // always return something to get nicer error messages
-end;
-
-function TPJSController.GetPas2JSWebServerPort(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Abort:=False;
-  if (s<>'') and (ConsoleVerbosity>=0) then
-    debugln(['Hint: (lazarus) [TPJSController.GetPas2JSWebServerPort] ignoring macro Pas2JSWebServerPort parameter "',s,'"']);
-  Result:=PJSOptions.GetParsedWebServerFilename;
-  if Result='' then
-    Result:=PJSDefaultWebServerName; // always return something to get nicer error messages
-end;
-
 function TPJSController.GetPas2JSBrowser(const s: string; const Data: PtrInt; var Abort: boolean): string;
 
 begin
@@ -146,16 +125,16 @@ begin
 
   aProject:=LazarusIDE.ActiveProject;
   if ConsoleVerbosity>0 then
-    DebugLN(['LazarusIDE.ActiveProject.CustomData[PJSProjectWebBrowser]: ',aProject.CustomData[PJSProjectWebBrowser]]);
+    DebugLN(['Hint: (lazarus) [TPJSController.GetPas2jsProjectURL] LazarusIDE.ActiveProject.CustomData[PJSProjectWebBrowser]: ',aProject.CustomData[PJSProjectWebBrowser]]);
   Abort:=aProject.CustomData[PJSProjectWebBrowser]<>'1';
   if Abort then
     exit;
   if ConsoleVerbosity>0 then
-    DebugLN(['LazarusIDE.ActiveProject.CustomData[PJSProjectURL]: ',aProject.CustomData[PJSProjectURL]]);
+    DebugLN(['Hint: (lazarus) [TPJSController.GetPas2jsProjectURL] LazarusIDE.ActiveProject.CustomData[PJSProjectURL]: ',aProject.CustomData[PJSProjectURL]]);
   Result:=GetProjectURL(aProject);
   Abort:=(Result='');
   if ConsoleVerbosity>0 then
-    DebugLN(['GetPas2jsProjectURL : ',Result]);
+    DebugLN(['Hint: (lazarus) [TPJSController.GetPas2jsProjectURL] Result="',Result,'"']);
 end;
 
 procedure TPJSController.OnLoadSaveCustomData(Sender: TObject; Load: boolean;
@@ -195,6 +174,17 @@ begin
     if not SaveHTMLFileToTestDir(aProject) then
       exit(mrCancel);
     end;
+end;
+
+function TPJSController.OnProjectGroupRunLazbuild(Target: TPGCompileTarget;
+  Tool: TAbstractExternalTool): boolean;
+var
+  Pas2jsFilename: String;
+begin
+  Result:=true;
+  Pas2jsFilename:=PJSOptions.GetParsedCompilerFilename;
+  if Pas2jsFilename<>'' then
+    Tool.EnvironmentOverrides.Values['PAS2JS']:=Pas2jsFilename;
 end;
 
 function TPJSController.OnRunDebugInit(Sender: TObject; var Handled: boolean
@@ -261,7 +251,10 @@ begin
     exit('');
   Result:=aProject.CustomData[PJSProjectURL];
   if Result<>'' then
+    begin
     IDEMacros.SubstituteMacros(Result);
+    exit;
+    end;
 
   if Result='' then
     begin
@@ -309,10 +302,10 @@ begin
   if SimpleWebServerController.Options.ServerExe='compileserver'+GetExeExt then
     begin
     // simplewebservergui package has default value
-    if CompareFilenames(ExtractFilename(PJSOptions.WebServerFileName),'compileserver'+GetExeExt)=0 then
+    if CompareFilenames(ExtractFilename(PJSOptions.OldWebServerFileName),'compileserver'+GetExeExt)=0 then
       begin
-      // this package has a compileserver -> for compatibility set our value
-      SimpleWebServerController.Options.ServerExe:=PJSOptions.WebServerFileName;
+      // user had used compileserver too -> migrate to simplewebservergui
+      SimpleWebServerController.Options.ServerExe:=PJSOptions.OldWebServerFileName;
       end;
     end;
 
@@ -322,7 +315,7 @@ begin
   ServerPort:=StrToIntDef(aProject.CustomData[PJSProjectPort],-1);
   URL:=aProject.CustomData[PJSProjectURL];
   if (ServerPort<0) and (URL='') then
-    exit;
+    exit; // compile normally and run the run-parameters
 
   // Run webproject with Debug: build, start webserver, open browser
 
@@ -427,10 +420,6 @@ procedure TPJSController.Hook;
 begin
   IDEMacros.Add(TTransferMacro.Create('Pas2JS', '', pjsdPas2JSExecutable, @
     GetPas2JSPath, []));
-  IDEMacros.Add(TTransferMacro.Create('Pas2JSWebServer', '', pjsdPas2JSWebServerExe, @
-    GetPas2JSWebServerPath, []));
-  IDEMacros.Add(TTransferMacro.Create('Pas2JSWebServerPort', '', pjsdPas2JSWebServerPort, @
-    GetPas2JSWebServerPort, []));
   IDEMacros.Add(TTransferMacro.Create('Pas2JSBrowser', '',
     pjsdPas2JSSelectedBrowserExecutable, @GetPas2JSBrowser, []));
   IDEMacros.Add(TTransferMacro.Create('Pas2JSNodeJS', '',
@@ -441,6 +430,7 @@ begin
   LazarusIDE.AddHandlerOnRunDebugInit(@OnRunDebugInit);
   LazarusIDE.AddHandlerOnRunWithoutDebugInit(@OnRunWithoutDebugInit);
   LazarusIDE.AddHandlerOnLoadSaveCustomData(@OnLoadSaveCustomData);
+  ProjectGroupManager.AddHandlerOnRunLazbuild(@OnProjectGroupRunLazbuild);
 end;
 
 procedure TPJSController.UnHook;

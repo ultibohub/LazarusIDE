@@ -1113,9 +1113,9 @@ begin
   begin
     Instance:=Servers[i];
     aThread:=Instance.Thread;
-    Instance.State:=swssStopping;
     if (Instance.State=swssRunning) and (aThread<>nil) then
     begin
+      Instance.State:=swssStopping;
       aThread.TerminateProcess;
       aThread.Terminate;
     end;
@@ -1126,10 +1126,10 @@ begin
   // wait for all threads (max 2 seconds)
   i:=0;
   repeat
-    sleep(20);
+    sleep(15); // windows sleep has a resolution of 1/64th of a second
     CheckSynchronize(1);
     inc(i);
-  until CleanUp or (i=100);
+  until CleanUp or (i=140);
 
   // free all instances
   FMainSrvInstance:=nil;
@@ -1235,14 +1235,22 @@ begin
   for i:=0 to 15 do
     FAPIKey:=FAPIKey+HexStr(PByte(@SecretGUID)[i],2);
 
+  if not ForceDirectoriesUTF8(PathUsed) then
+  begin
+    ErrMsg:=rsSWErrorCreatingDirectory+' "'+PathUsed+'"';
+    AddIDEMessageInfo('20220414180151',ErrMsg);
+    if Interactive then
+      ErrDlg(rsSWError, ErrMsg, false);
+    exit;
+  end;
+
   FMainSrvInstance.Params.Free;
   FMainSrvInstance.Params:=TStringListUTF8Fast.Create;
   FMainSrvInstance.Params.Add('-c');
   FMainSrvInstance.Params.Add(IniFilename);
   // append custom options last
   FMainSrvInstance.Params.AddStrings(Options.ServerOpts);
-
-  FMainSrvInstance.Path:=AppendPathDelim(LazarusIDE.GetPrimaryConfigPath)+'simplewebserverdir';
+  FMainSrvInstance.Path:=PathUsed;
 
   ExeUsed:=Options.ServerExe;
   ErrMsg:=CheckCompileServerExeQuality(ExeUsed,'',false);
@@ -1251,7 +1259,7 @@ begin
   begin
     if Options.ServerExe<>ExeUsed then
       ErrMsg:=ErrMsg+'. Path="'+ExeUsed+'"';
-    debugln(['Error: [TSimpleWebServerController.StartServerInstance] invalid ServerExe="',Options.ServerExe,'". ',ErrMsg]);
+    debugln(['Error: [TSimpleWebServerController.StartServerInstance] invalid ServerExe="',Options.ServerExe,'".']);
     AddIDEMessageInfo('20220118164525',ErrMsg);
     if Interactive then
       ErrDlg(rsSWError, Format(rsSWWrongCompileserverExe, [ErrMsg]), true);
@@ -1623,10 +1631,10 @@ begin
         r:=mrRetry
       else
         r:=IDEQuestionDialog(rsSWError,
-          'There is already a server on port '+IntToStr(Port)+':'+sLineBreak
-          +'Origin: '+ConflictServer.Origin+sLineBreak
-          +'Path: '+ConflictServer.Path+sLineBreak,
-          mtError,[mrYes, 'Stop server', mrRetry, rsSWTryAnotherPort, mrCancel],
+          Format(rsSWThereIsAlreadyAServerOnPortOriginPath, [IntToStr(Port),
+            sLineBreak, ConflictServer.Origin+sLineBreak, ConflictServer.Path+
+            sLineBreak]),
+          mtError,[mrYes, rsSWStopServer, mrRetry, rsSWTryAnotherPort, mrCancel],
           '');
       case r of
       mrYes:

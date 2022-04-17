@@ -85,7 +85,8 @@ uses
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
     EditorMacroScript, ExampleProjects,
     //laz.virtualtreeview_package, //Ultibo
-    OnlinePackageManager, Pas2jsDsgn,
+    OnlinePackageManager,
+    SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn,
     LazDebuggerFpLldb, LazDebuggerFp,
   {$ENDIF}
   MainBase;
