@@ -951,7 +951,7 @@
         <short>Indicates if the control uses the background from the parent.</short>
         <descr>
           <p>
-            The write access specifier is overridden in <var>TCustomGroupBox</var>. It calls the inherited method on enty.
+            The write access specifier is overridden in <var>TCustomGroupBox</var>. It calls the inherited method on entry.
           </p>
           <p>
             If <var>AParentBackground</var> is <b>True</b> and ParentColor is <b>True</b>, the <var>Color</var> from the <var>Parent</var> control is assigned to the <var>Color</var> property. Otherwise, the value <var>clDefault</var> is stored in the Color property.
@@ -2197,7 +2197,7 @@
         </seealso>
       </element>
       <element name="TCustomComboBox.SetSelLength.Val">
-        <short>New value for the SelLength sproperty.</short>
+        <short>New value for the SelLength property.</short>
       </element>
 
       <element name="TCustomComboBox.SetSelStart">
@@ -3252,7 +3252,7 @@
         <short>Appearance and behavior of the combo-box.</short>
         <descr>
           <p>
-            Style is quite Windows centric, reflecting the evolution of combo-box styles. The basic styles are:
+            Style is quite Windows-centric, reflecting the evolution of combo-box styles. The basic styles are:
           </p>
           <dl>
             <dt>csSimple</dt>
@@ -3911,7 +3911,9 @@
         <short>Value for the Selected property.</short>
       </element>
       <element name="TCustomListBox.GetSelected.Index">
-        <short>Ordinal position for the item retrun as the property value.</short>
+        <short>
+          Ordinal position for the item returned as the property value.
+        </short>
       </element>
 
       <element name="TCustomListBox.GetCachedDataSize">
@@ -5002,7 +5004,7 @@
           </p>
         </descr>
         <seealso>
-          <link id="#lcl.controls.TWinControl.TabStop"/>
+          <link id="#lcl.controls.TWinControl.TabStop">TWinControl.TabStop</link>
         </seealso>
       </element>
 
@@ -6331,7 +6333,7 @@
         </descr>
         <seealso>
           <link id="#lcl.controls.TControl.Text">TControl.Text</link>
-          <link id="#lcl.stdctrls.TEditCharCase"/>
+          <link id="#lcl.stdctrls.TEditCharCase">TEditCharCase</link>
         </seealso>
       </element>
 
@@ -7016,7 +7018,7 @@ end;
         <seealso>
           <link id="TCustomMemo.ScrollBars"/>
           <link id="TCustomMemo.WordWrap"/>
-          <link id="#lcl.controls.TWinControl.Loaded"/>
+          <link id="#lcl.controls.TWinControl.Loaded">TWinControl.Loaded</link>
         </seealso>
       </element>
 
@@ -8395,7 +8397,7 @@ end;
         </descr>
         <seealso>
           <link id="TCustomButton.UpdateDefaultCancel"/>
-          <link id="#lcl.controls.TWinControl.Loaded"/>
+          <link id="#lcl.controls.TWinControl.Loaded">TWinControl.Loaded</link>
         </seealso>
       </element>
 
@@ -8421,7 +8423,7 @@ end;
           <link id="TCustomButton.Active"/>
           <link id="TCustomButton.WSSetDefault"/>
           <link id="#lcl.forms.GetParentForm">GetParentForm</link>
-          <link id="#lcl.forms.TCustomForm.CancelControl"/>
+          <link id="#lcl.forms.TCustomForm.CancelControl">TCustomForm.CancelControl</link>
           <link id="#lcl.forms.TCustomForm.DefaultControl">TCustomForm.DefaultControl</link>
         </seealso>
       </element>
@@ -8723,7 +8725,7 @@ end;
           </p>
         </descr>
         <seealso>
-          <link id="#lcl.controls.TWinControl.TabStop"/>
+          <link id="#lcl.controls.TWinControl.TabStop">TWinControl.TabStop</link>
         </seealso>
       </element>
 
@@ -9171,7 +9173,7 @@ end;
             <var>ShortCutKey2</var> is a <var>TShortCut</var> property with the secondary  shortcut key or accelerator key for the control. The property value contains both the virtual key code and the shift modifier combined to form the short cut key.
           </p>
           <p>
-            The property value (along with Shortcut) is passed to the widgetst class when the WSSetText method is called.
+            The property value (along with Shortcut) is passed to the widgetset class when the WSSetText method is called.
           </p>
           <p>
             Use the <var>ShortCut</var> and <var>ShortCutToKey</var> routines in the <file>menu.pp</file> unit to convert to and from virtual key codes with shift modifiers.
@@ -10661,7 +10663,7 @@ end;
             <tr>
               <td>Items</td>
               <td>
-                The list of 'Things' that the object contains, such as a group of images, a series of lines of text, a number of actions in an actionlist, etc.
+                The list of 'Things' that the object contains, such as a group of images, a series of lines of text, a number of actions in an action list, etc.
               </td>
             </tr>
             <tr>

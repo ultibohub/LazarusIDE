@@ -85,58 +85,13 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     Caption = 'Standard server port'
     ParentColor = False
   end
-  object BrowserComboBox: TComboBox
-    AnchorSideLeft.Control = BrowserLabel
-    AnchorSideTop.Control = BrowserLabel
-    AnchorSideTop.Side = asrBottom
-    AnchorSideRight.Control = BBrowserBrowseButton
-    Left = 6
-    Height = 30
-    Top = 150
-    Width = 470
-    Anchors = [akTop, akLeft, akRight]
-    BorderSpacing.Top = 2
-    ItemHeight = 0
-    TabOrder = 3
-    Text = 'BrowserComboBox'
-  end
-  object BrowserLabel: TLabel
+  object NodeJSLabel: TLabel
     AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = ServerPortSpinEdit
     AnchorSideTop.Side = asrBottom
     Left = 6
     Height = 15
     Top = 133
-    Width = 258
-    BorderSpacing.Left = 6
-    BorderSpacing.Top = 6
-    Caption = 'Browser to launch when opening project HTML'
-    ParentColor = False
-  end
-  object BBrowserBrowseButton: TButton
-    AnchorSideTop.Control = BrowserComboBox
-    AnchorSideRight.Control = Owner
-    AnchorSideRight.Side = asrBottom
-    AnchorSideBottom.Control = BrowserComboBox
-    AnchorSideBottom.Side = asrBottom
-    Left = 476
-    Height = 30
-    Top = 150
-    Width = 25
-    Anchors = [akTop, akRight, akBottom]
-    AutoSize = True
-    BorderSpacing.Right = 6
-    Caption = '...'
-    OnClick = BBrowserBrowseButtonClick
-    TabOrder = 4
-  end
-  object NodeJSLabel: TLabel
-    AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = BrowserComboBox
-    AnchorSideTop.Side = asrBottom
-    Left = 6
-    Height = 15
-    Top = 186
     Width = 105
     BorderSpacing.Left = 6
     BorderSpacing.Top = 6
@@ -150,12 +105,12 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     AnchorSideRight.Control = NodeJSBrowseButton
     Left = 6
     Height = 30
-    Top = 203
+    Top = 150
     Width = 470
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 2
     ItemHeight = 0
-    TabOrder = 5
+    TabOrder = 3
     Text = 'NodeJSComboBox'
   end
   object NodeJSBrowseButton: TButton
@@ -166,18 +121,18 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     AnchorSideBottom.Side = asrBottom
     Left = 476
     Height = 30
-    Top = 203
+    Top = 150
     Width = 25
     Anchors = [akTop, akRight, akBottom]
     AutoSize = True
     BorderSpacing.Right = 6
     Caption = '...'
     OnClick = NodeJSBrowseButtonClick
-    TabOrder = 6
+    TabOrder = 4
   end
   object lblAtomTemplateDir: TLabel
     AnchorSideLeft.Control = Owner
-    AnchorSideTop.Control = NodeJSComboBox
+    AnchorSideTop.Control = ElectronExeComboBox
     AnchorSideTop.Side = asrBottom
     Left = 6
     Height = 15
@@ -200,7 +155,7 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 2
     ItemHeight = 0
-    TabOrder = 7
+    TabOrder = 5
     Text = 'AtomTemplateDirComboBox'
   end
   object AtomTemplateDirBrowseButton: TButton
@@ -218,7 +173,7 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     BorderSpacing.Right = 6
     Caption = '...'
     OnClick = AtomTemplateDirBrowseButtonClick
-    TabOrder = 8
+    TabOrder = 6
   end
   object lblVSCodeTemplateDir: TLabel
     AnchorSideLeft.Control = Owner
@@ -245,7 +200,7 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     Anchors = [akTop, akLeft, akRight]
     BorderSpacing.Top = 2
     ItemHeight = 0
-    TabOrder = 9
+    TabOrder = 7
     Text = 'VSCodeTemplateDirComboBox'
   end
   object VSCodeTemplateDirBrowseButton: TButton
@@ -263,7 +218,7 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     BorderSpacing.Right = 6
     Caption = '...'
     OnClick = VSCodeTemplateDirBrowseButtonClick
-    TabOrder = 10
+    TabOrder = 8
   end
   object SimpleWebServerLinkLabel: TLabel
     AnchorSideLeft.Control = Owner
@@ -273,13 +228,58 @@ object Pas2jsOptionsFrame: TPas2jsOptionsFrame
     Left = 6
     Height = 15
     Top = 59
-    Width = 107
+    Width = 178
     BorderSpacing.Left = 6
     BorderSpacing.Top = 6
-    Caption = 'Web server options'
+    Caption = 'Web server and browser options'
     Font.Color = clBlue
     ParentColor = False
     ParentFont = False
     OnClick = SimpleWebServerLinkLabelClick
+  end
+  object lblElectronExe: TLabel
+    AnchorSideLeft.Control = Owner
+    AnchorSideTop.Control = NodeJSComboBox
+    AnchorSideTop.Side = asrBottom
+    Left = 6
+    Height = 15
+    Top = 186
+    Width = 111
+    BorderSpacing.Left = 6
+    BorderSpacing.Top = 6
+    Caption = 'Electron executable'
+    ParentColor = False
+  end
+  object ElectronExeComboBox: TComboBox
+    AnchorSideLeft.Control = lblElectronExe
+    AnchorSideTop.Control = lblElectronExe
+    AnchorSideTop.Side = asrBottom
+    AnchorSideRight.Control = NodeJSBrowseButton
+    Left = 6
+    Height = 30
+    Top = 203
+    Width = 470
+    Anchors = [akTop, akLeft, akRight]
+    BorderSpacing.Top = 2
+    ItemHeight = 0
+    TabOrder = 9
+    Text = 'ElectronExeComboBox'
+  end
+  object ElectronExeBrowseButton: TButton
+    AnchorSideTop.Control = ElectronExeComboBox
+    AnchorSideRight.Control = Owner
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = ElectronExeComboBox
+    AnchorSideBottom.Side = asrBottom
+    Left = 476
+    Height = 30
+    Top = 203
+    Width = 25
+    Anchors = [akTop, akRight, akBottom]
+    AutoSize = True
+    BorderSpacing.Right = 6
+    Caption = '...'
+    OnClick = ElectronExeBrowseButtonClick
+    TabOrder = 10
   end
 end

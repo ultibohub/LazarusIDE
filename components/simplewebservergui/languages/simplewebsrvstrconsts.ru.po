@@ -25,7 +25,7 @@ msgstr "Добавить расположение"
 
 #: simplewebsrvstrconsts.rsswaddsimplewebserverlocation
 msgid "Add Simple Web Server Location"
-msgstr "Добавить расположение простого веб-сервера"
+msgstr "Добавить расположение на простом веб-сервере"
 
 #: simplewebsrvstrconsts.rsswanarbitrarynamefortheurlsubfolder
 msgid "An arbitrary name for the URL subfolder"
@@ -154,6 +154,10 @@ msgstr "Отсутствует исполнимый файл сервера."
 msgid "Parameters (please use macro $(port))"
 msgstr "Параметры (используйте макрос $(port))"
 
+#: simplewebsrvstrconsts.rsswport
+msgid "Port"
+msgstr "Порт"
+
 #: simplewebsrvstrconsts.rsswportalreadyused
 msgid "Port already used."
 msgstr "Порт уже используется."
@@ -217,7 +221,8 @@ msgstr "Порт простого веб-сервера"
 msgid "Path of compileserver, macro $(SWSExe)"
 msgstr "Путь к серверу компиляции, макрос $(SWSExe)"
 
-#: simplewebsrvstrconsts.rsswsport
+#: simplewebsrvstrconsts.rsswsportmacro
+msgctxt "simplewebsrvstrconsts.rsswsportmacro"
 msgid "Port, macro $(SWSPort)"
 msgstr "Порт, макрос $(SWSPort)"
 

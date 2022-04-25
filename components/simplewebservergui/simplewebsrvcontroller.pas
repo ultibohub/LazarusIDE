@@ -91,12 +91,14 @@ type
   { TSWSInstance }
 
   TSWSInstance = class(TPersistent)
+  Private
+    FParams: TStrings;
+    procedure SetParams(AValue: TStrings);
   public
     Controller: TSimpleWebServerController;
 
     Exe: string; // may contain macros and not expanded
     ExeUsed: string; // resolved macros, expanded filename
-    Params: TStrings;
     Port: word;
 
     Path: string; // path on disk, can contain macros
@@ -107,8 +109,9 @@ type
     State: TSWebServerState;
     Thread: TSWServerThread;
     ExitCode: integer;
-
+    constructor Create;
     destructor Destroy; override;
+    Property Params : TStrings Read FParams Write SetParams;
   end;
 
   TSWServerLogEvent = procedure(Sender: TObject; OutLines: TStrings) of object;
@@ -176,7 +179,6 @@ type
     function GetLocationCount: integer;
     function GetLocations(Index: integer): TSWSLocation;
     function GetMainSrvExe: string;
-    function GetMainSrvExeUsed: string;
     function GetMainSrvExitCode: integer;
     function GetMainSrvPort: word;
     function GetMainSrvState: TSWebServerState;
@@ -216,14 +218,16 @@ type
     procedure HookMacros; virtual;
     procedure UnhookMacros; virtual;
   public
-    // main server
+    // main server where multiple locations share one port
     function StartMainServer(Interactive: boolean): boolean; virtual;
     function StopMainServer(Interactive: boolean): boolean; virtual;
     function AddLocation(Location, Path, Origin: string; Enable: boolean): TSWSLocation; virtual;
+    function AddProjectLocation(aProject: TLazProject; Location, Path: string; Interactive: boolean): TSWSLocation; virtual;
     procedure DeleteLocation(Location: string); virtual;
     procedure EnableLocation(Location: string; Enable: boolean); virtual;
     function IndexOfLocation(Location: string): integer; virtual;
     function FindLocation(Location: string): TSWSLocation; virtual;
+    function FindLocationWithOrigin(Origin: string): TSWSLocation; virtual;
     procedure AddHandlerLocationsChanged(const OnLocationsChanged: TNotifyEvent; AsLast: boolean = false);
     procedure RemoveHandlerLocationsChanged(const OnLocationsChanged: TNotifyEvent);
     procedure AddHandlerStateChanged(const OnStateChanged: TSWServerStateChangedEvent; AsLast: boolean = false);
@@ -245,10 +249,13 @@ type
     function GetDefaultServerExe: string; virtual;
     // browser
     function GetURLWithServer(aServer: TSWSInstance; HTMLFilename: string): string; virtual;
+    function GetURLWithLocation(aLocation: TSWSLocation; HTMLFilename: string): string; virtual;
     function OpenBrowserWithURL(URL, WorkDir: string): boolean; virtual;
+    function OpenBrowserWithLocation(aLocation: TSWSLocation; HTMLFilename: string): boolean; virtual;
     function OpenBrowserWithServer(aServer: TSWSInstance; HTMLFilename: string): boolean; virtual;
     function FindBrowserFile(ShortFilename: string): string; virtual;
     function FindBrowserPath(Filenames: array of string; URL: string; Params: TStrings): string; virtual;
+    function GetBrowser(URL: string; Params: TStrings): string; virtual;
     function GetBrowserChrome(URL: string; Params: TStrings): string; virtual;
     function GetBrowserFirefox(URL: string; Params: TStrings): string; virtual;
     function GetBrowserOpera(URL: string; Params: TStrings): string; virtual;
@@ -271,7 +278,6 @@ type
     property MainSrvAddr: string read FMainSrvAddr;
     property MainSrvError: TSWebServerError read FMainSrvError;
     property MainSrvExe: string read GetMainSrvExe;
-    property MainSrvExeUsed: string read GetMainSrvExeUsed;
     property MainSrvExitCode: integer read GetMainSrvExitCode;
     property MainSrvThread: TSWServerThread read GetMainSrvThread;
     property MainSrvState: TSWebServerState read GetMainSrvState;
@@ -280,7 +286,7 @@ type
     property ServerCount: integer read GetServerCount;
     property Servers[Index: integer]: TSWSInstance read GetServers;
     property Utility: TSimpleWebServerUtility read FUtility;
-    property ViewCaption: string read FViewCaption;
+    property ViewCaption: string read FViewCaption; // the title in the IDE's Messages window
   end;
 
 var
@@ -333,9 +339,21 @@ end;
 
 { TSWSInstance }
 
+procedure TSWSInstance.SetParams(AValue: TStrings);
+begin
+  if FParams=AValue then Exit;
+  FParams.Assign(AValue);
+end;
+
+constructor TSWSInstance.Create;
+begin
+ FParams:=TStringList.Create;
+end;
+
 destructor TSWSInstance.Destroy;
 begin
-  FreeAndNil(Params);
+  FreeAndNil(Thread);
+  FreeAndNil(FParams);
   inherited Destroy;
 end;
 
@@ -352,11 +370,6 @@ begin
 end;
 
 function TSimpleWebServerController.GetMainSrvExe: string;
-begin
-  Result:=FMainSrvInstance.Exe;
-end;
-
-function TSimpleWebServerController.GetMainSrvExeUsed: string;
 begin
   Result:=FMainSrvInstance.Exe;
 end;
@@ -985,7 +998,7 @@ begin
     SetServerState(Instance,swssStarting);
 
     // start process
-    AddIDEMessageInfo('20210909125756','run: '+MaybeQuote(MainSrvExeUsed)+' '+MergeCmdLineParams(Params));
+    AddIDEMessageInfo('20210909125756','run: '+MaybeQuote(ExeUsed)+' '+MergeCmdLineParams(Params));
 
     TheProcess := TProcess.Create(nil);
     try
@@ -1001,7 +1014,7 @@ begin
     except
       on E: Exception do begin
         AddIDEMessageInfo('20210909125752',
-          'unable to run '+MaybeQuote(MainSrvExeUsed)+' '+MergeCmdLineParams(Params)+': '+E.Message);
+          'unable to run '+MaybeQuote(ExeUsed)+' '+MergeCmdLineParams(Params)+': '+E.Message);
         TheProcess.Free;
         exit;
       end;
@@ -1103,15 +1116,10 @@ procedure TSimpleWebServerController.StopAllServers;
     Result:=ServerCount=0;
   end;
 
-var
-  i: Integer;
-  Instance: TSWSInstance;
-  aThread: TSWServerThread;
-begin
-  // terminate all processes and threads
-  for i:=0 to ServerCount-1 do
+  procedure TerminateSrv(Instance: TSWSInstance);
+  var
+    aThread: TSWServerThread;
   begin
-    Instance:=Servers[i];
     aThread:=Instance.Thread;
     if (Instance.State=swssRunning) and (aThread<>nil) then
     begin
@@ -1120,6 +1128,14 @@ begin
       aThread.Terminate;
     end;
   end;
+
+var
+  i: Integer;
+  Instance: TSWSInstance;
+begin
+  // terminate all processes and threads
+  for i:=0 to ServerCount-1 do
+    TerminateSrv(Servers[i]);
 
   if CleanUp then exit;
 
@@ -1162,6 +1178,7 @@ begin
   FLogLines:=TStringListUTF8Fast.Create;
   FInstances:=TFPList.Create;
   FMainSrvInstance:=TSWSInstance.Create;
+  FInstances.Add(FMainSrvInstance);
   FMainSrvInstance.Controller:=Self;
   FMainSrvInstance.Port:=SWSDefaultServerPort;
   FMainSrvInstance.Exe:='compileserver'+GetExeExt;
@@ -1420,6 +1437,42 @@ begin
     AddServerLocation(Location,ExpPath);
 end;
 
+function TSimpleWebServerController.AddProjectLocation(aProject: TLazProject;
+  Location, Path: string; Interactive: boolean): TSWSLocation;
+var
+  aServer: TSWSInstance;
+
+  function StopOldServer(ID: int64; const Msg: string): boolean;
+  begin
+    if not StopServer(aServer,Interactive) then
+    begin
+      debugln(['Error: TSimpleWebServerController.AddProjectLocation ',ID,': ',Msg,', unable to stop old server']);
+      exit(false);
+    end;
+    aServer:=nil;
+    Result:=true;
+  end;
+
+var
+  Origin: String;
+begin
+  Result:=nil;
+
+  if aProject.IsVirtual then
+    Origin:=SWSTestprojectOrigin
+  else
+    Origin:=aProject.ProjectInfoFile;
+
+  aServer:=FindServerWithOrigin(Origin);
+  if (aServer<>nil) and (aServer<>MainSrvInstance) then
+    if not StopOldServer(20220423152004,'Path changed') then exit;
+
+  Result:=AddLocation(Location,Path,Origin,true);
+
+  if not StartMainServer(Interactive) then
+    exit(nil);
+end;
+
 procedure TSimpleWebServerController.DeleteLocation(Location: string);
 var
   i: Integer;
@@ -1494,6 +1547,20 @@ begin
     Result:=nil
   else
     Result:=Locations[i];
+end;
+
+function TSimpleWebServerController.FindLocationWithOrigin(Origin: string
+  ): TSWSLocation;
+var
+  i: Integer;
+begin
+  for i:=0 to LocationCount-1 do
+  begin
+    Result:=Locations[i];
+    if Result.Origin=Origin then
+      exit;
+  end;
+  Result:=nil;
 end;
 
 procedure TSimpleWebServerController.AddHandlerLocationsChanged(
@@ -1594,6 +1661,7 @@ var
   IPAddr: in_addr;
   aPID: integer;
   r: TModalResult;
+  aLocation: TSWSLocation;
 begin
   Result:=nil;
 
@@ -1601,10 +1669,21 @@ begin
     Origin:=SWSTestprojectOrigin
   else
     Origin:=aProject.ProjectInfoFile;
-  aServer:=FindServerWithOrigin(Origin);
 
+  aLocation:=FindLocationWithOrigin(Origin);
+  if aLocation<>nil then
+    DeleteLocation(aLocation.Location);
+
+  aServer:=FindServerWithOrigin(Origin);
   if (aServer=nil) and not aProject.IsVirtual then
     aServer:=FindServerWithOrigin(SWSTestprojectOrigin);
+
+  if aServer=FMainSrvInstance then
+    begin
+    debugln(['Error: TSimpleWebServerController.AddProjectServer 20220423165802 origin=mainsrv origin']);
+    IDEMessageDialog('Error','Conflict with main server',mtError,[mbOk]);
+    exit;
+    end;
 
   if (aServer<>nil) and (aServer.Path<>Path) then
     if not StopOldServer(20220410145323,'Path changed') then exit;
@@ -1654,7 +1733,7 @@ begin
         // conflicting foreign process
         r:=IDEQuestionDialog(rsSWError,
            ViewCaption+':'+sLineBreak
-           +rsSWBindingOfSocketFailed+': '+MainSrvAddr+':'+IntToStr(MainSrvPort)+sLineBreak
+           +rsSWBindingOfSocketFailed+': '+SrvAddr+':'+IntToStr(Port)+sLineBreak
            +sLineBreak
            +rsSWTheFollowingProcessAlreadyListens+sLineBreak
            +'PID: '+IntToStr(aPID)+sLineBreak
@@ -1719,7 +1798,7 @@ var
 begin
   for i:=0 to ServerCount-1 do
     if Servers[i].Origin=Origin then
-     exit(Servers[i]);
+      exit(Servers[i]);
   Result:=nil;
 end;
 
@@ -1795,49 +1874,27 @@ function TSimpleWebServerController.GetURLWithServer(aServer: TSWSInstance;
 begin
   Result:=CreateRelativePath(HTMLFilename,aServer.Path);
   Result:=FilenameToURLPath(Result);
-  Result:='http://127.0.0.1:'+IntToStr(aServer.Port)+'/'+Result;
+  Result:='http://'+MainSrvAddr+':'+IntToStr(aServer.Port)+'/'+Result;
+end;
+
+function TSimpleWebServerController.GetURLWithLocation(aLocation: TSWSLocation;
+  HTMLFilename: string): string;
+begin
+  Result:=CreateRelativePath(HTMLFilename,aLocation.Path);
+  Result:=FilenameToURLPath(Result);
+  Result:='http://'+MainSrvAddr+':'+IntToStr(MainSrvPort)+'/'+aLocation.Location+'/'+Result;
 end;
 
 function TSimpleWebServerController.OpenBrowserWithURL(URL, WorkDir: string
   ): boolean;
 var
   Params: TStringList;
-  Cmd, Exe: String;
+  Exe: String;
   Tool: TIDEExternalToolOptions;
 begin
   Params:=TStringList.Create;
   try
-    case Options.BrowserKind of
-    swsbkCustom:
-      begin
-        Cmd:=Options.BrowserCmd;
-        Cmd:=SubstituteURLMacro(Cmd,URL);
-        if not IDEMacros.SubstituteMacros(Cmd) then
-        begin
-          IDEMessageDialog(rsSWError, rsSWInvalidMacroSee+sLineBreak +
-            rsSWToolsOptionsSimpleWebServerBrowser,mtError,[mbOk]);
-          exit(false);
-        end;
-        SplitCmdLineParams(Cmd,Params);
-        Exe:=Params[0];
-        Params.Delete(0);
-      end;
-    swsbkFirefox: Exe:=GetBrowserFirefox(URL,Params);
-    swsbkChrome: Exe:=GetBrowserChrome(URL,Params);
-    swsbkOpera: Exe:=GetBrowserOpera(URL,Params);
-    swsbkVivaldi: Exe:=GetBrowserVivaldi(URL,Params);
-    {$IFDEF Darwin}
-    swsbkSafari: Exe:=GetBrowserSafari(URL,Params);
-    {$ENDIF}
-    {$IFDEF MSWindows}
-    swsbkEdge: Exe:=GetBrowserEdge(URL,Params);
-    {$ENDIF}
-    else
-      begin
-        Result:=OpenURL(URL);
-        exit;
-      end;
-    end;
+    Exe:=GetBrowser(URL,Params);
 
     if Exe='' then
     begin
@@ -1857,6 +1914,21 @@ begin
   finally
     Params.Free;
   end;
+end;
+
+function TSimpleWebServerController.OpenBrowserWithLocation(
+  aLocation: TSWSLocation; HTMLFilename: string): boolean;
+var
+  URL: String;
+begin
+  if aLocation=nil then
+    raise Exception.Create('TSimpleWebServerController.OpenBrowserWithLocation 20220423153505');
+  if not FilenameIsAbsolute(HTMLFilename) then
+    raise Exception.Create('TSimpleWebServerController.OpenBrowserWithLocation 20220423153507');
+
+  URL:=GetURLWithLocation(aLocation,HTMLFilename);
+
+  Result:=OpenBrowserWithURL(URL,ExtractFilePath(HTMLFilename));
 end;
 
 function TSimpleWebServerController.OpenBrowserWithServer(
@@ -1907,6 +1979,46 @@ begin
   if Result<>'' then
   begin
     Params.Add(URL);
+  end;
+end;
+
+function TSimpleWebServerController.GetBrowser(URL: string; Params: TStrings
+  ): string;
+var
+  Cmd: String;
+begin
+  Result:='';
+  case Options.BrowserKind of
+  swsbkCustom:
+    begin
+      Cmd:=Options.BrowserCmd;
+      Cmd:=SubstituteURLMacro(Cmd,URL);
+      if not IDEMacros.SubstituteMacros(Cmd) then
+      begin
+        IDEMessageDialog(rsSWError, rsSWInvalidMacroSee+sLineBreak +
+          rsSWToolsOptionsSimpleWebServerBrowser,mtError,[mbOk]);
+        exit;
+      end;
+      SplitCmdLineParams(Cmd,Params);
+      Result:=Params[0];
+      Params.Delete(0);
+    end;
+  swsbkFirefox: Result:=GetBrowserFirefox(URL,Params);
+  swsbkChrome: Result:=GetBrowserChrome(URL,Params);
+  swsbkOpera: Result:=GetBrowserOpera(URL,Params);
+  swsbkVivaldi: Result:=GetBrowserVivaldi(URL,Params);
+  {$IFDEF Darwin}
+  swsbkSafari: Result:=GetBrowserSafari(URL,Params);
+  {$ENDIF}
+  {$IFDEF MSWindows}
+  swsbkEdge: Result:=GetBrowserEdge(URL,Params);
+  {$ENDIF}
+  else
+    begin
+      FindDefaultBrowser(Result,Cmd);
+      Cmd:=Format(Cmd,[URL]);
+      SplitCmdLineParams(Cmd,Params);
+    end;
   end;
 end;
 

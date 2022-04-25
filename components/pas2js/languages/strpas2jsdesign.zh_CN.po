@@ -20,13 +20,12 @@ msgstr ""
 msgid "Atom package template directory"
 msgstr ""
 
-#: strpas2jsdesign.pjsdbrowse
-msgid "Browse"
+#: strpas2jsdesign.pjsdawebapplicationusingelectrontorunasdesktopapplicat
+msgid "A pas2js Web Application using Electron to run as desktop application."
 msgstr ""
 
-#: strpas2jsdesign.pjsdbrowsertoopenhtmlpage
-msgctxt "strpas2jsdesign.pjsdbrowsertoopenhtmlpage"
-msgid "Browser to open HTML page, macro $(Pas2JSBrowser)"
+#: strpas2jsdesign.pjsdbrowse
+msgid "Browse"
 msgstr ""
 
 #: strpas2jsdesign.pjsdbtnselectfile
@@ -44,6 +43,14 @@ msgstr ""
 #: strpas2jsdesign.pjsddirectorynotfound
 #, object-pascal-format
 msgid "directory \"%s\" not found"
+msgstr ""
+
+#: strpas2jsdesign.pjsdelectronwebapplication
+msgid "Electron Web Application"
+msgstr ""
+
+#: strpas2jsdesign.pjsderror
+msgid "Error"
 msgstr ""
 
 #: strpas2jsdesign.pjsdfilenamedoesnotstartwithpas2js
@@ -80,6 +87,10 @@ msgstr ""
 msgid "Let RTL show uncaught exceptions"
 msgstr ""
 
+#: strpas2jsdesign.pjsdlocationonsimplewebserver
+msgid "Location on Simple Web Server"
+msgstr ""
+
 #: strpas2jsdesign.pjsdmaintainhtmlpage
 msgid "Maintain HTML page"
 msgstr ""
@@ -104,6 +115,10 @@ msgstr ""
 msgid "A pas2js program running as Atom package."
 msgstr ""
 
+#: strpas2jsdesign.pjsdnewprojectfile
+msgid "New project file"
+msgstr ""
+
 #: strpas2jsdesign.pjsdnewvscodeextension
 msgid "Visual Studio Code extension"
 msgstr ""
@@ -126,6 +141,14 @@ msgstr "Node.js应用程序"
 msgid "NodeJS project options"
 msgstr ""
 
+#: strpas2jsdesign.pjsdoverwrite
+msgid "Overwrite?"
+msgstr ""
+
+#: strpas2jsdesign.pjsdoverwritefiles
+msgid "Overwrite files:"
+msgstr ""
+
 #: strpas2jsdesign.pjsdpas2jsbrowserprojectoptions
 msgid "Pas2JS Browser project options"
 msgstr ""
@@ -142,8 +165,16 @@ msgstr ""
 msgid "Pas2JS selected browser executable"
 msgstr ""
 
+#: strpas2jsdesign.pjsdpas2jsselectedelectronexcutable
+msgid "Pas2JS selected Electron excutable"
+msgstr ""
+
 #: strpas2jsdesign.pjsdpas2jsselectednodejsexcutable
 msgid "Pas2JS selected NodeJS excutable"
+msgstr ""
+
+#: strpas2jsdesign.pjsdpathofelectronexecutablemacropas2jselectron
+msgid "Path of Electron executable, macro $(Pas2JSElectron)"
 msgstr ""
 
 #: strpas2jsdesign.pjsdpathofnodejsexecutable
@@ -156,12 +187,16 @@ msgctxt "strpas2jsdesign.pjsdpathofxmacropas2js"
 msgid "Path of %s, macro $(pas2js)"
 msgstr ""
 
+#: strpas2jsdesign.pjsdpleasechooseafilewithfullpath
+msgid "Please choose a file with full path."
+msgstr ""
+
 #: strpas2jsdesign.pjsdportnumbertostartallocatingfrom
 msgid "Port number to start allocating from, macro $(Pas2JSWebServerPort)"
 msgstr ""
 
 #: strpas2jsdesign.pjsdprogressivewebappdescription
-msgid "A Web Application using a service worker, a manifest, and more to be installable."
+msgid "A pas2js Web Application using a service worker, a manifest, and more to be installable."
 msgstr ""
 
 #: strpas2jsdesign.pjsdprogressivewebapplication
@@ -174,6 +209,10 @@ msgstr ""
 
 #: strpas2jsdesign.pjsdprojectisawebbrowserpas2jsproject
 msgid "Project is a Web Browser (pas2js) project"
+msgstr ""
+
+#: strpas2jsdesign.pjsdprojectpascalfile
+msgid "Project Pascal file"
 msgstr ""
 
 #: strpas2jsdesign.pjsdresetcompilecommand
@@ -234,6 +273,10 @@ msgstr ""
 msgid "Start HTTP Server on port"
 msgstr ""
 
+#: strpas2jsdesign.pjsdthesimplewebserverisautomaticallystartedonrunthelo
+msgid "The Simple Web Server is automatically started on Run. The location is like a subfolder in the URL serving the disk folder of the HTML file."
+msgstr ""
+
 #: strpas2jsdesign.pjsdusebrowserapplicationobject
 msgid "Use Browser Application object"
 msgstr ""
@@ -246,12 +289,12 @@ msgstr ""
 msgid "Use NodeJS Application object"
 msgstr ""
 
-#: strpas2jsdesign.pjsdusethisbrowserwhenopeningtheurlorhtmlfileofawebbro
-msgid "Use this browser when opening the URL or HTML file of a web browser project"
-msgstr ""
-
 #: strpas2jsdesign.pjsdusethisurltostartapplication
 msgid "Use this URL to start application"
+msgstr ""
+
+#: strpas2jsdesign.pjsdusethiswhenyoustartyourownhttpserver
+msgid "Use this when you start your own HTTP server"
 msgstr ""
 
 #: strpas2jsdesign.pjsdusewasiapplicationobject
@@ -276,8 +319,8 @@ msgstr "网页浏览器(Web Browser)应用程序"
 msgid "Web Project (pas2js)"
 msgstr ""
 
-#: strpas2jsdesign.pjsdwebserveroptions
-msgid "Web server options"
+#: strpas2jsdesign.pjsdwebserverandbrowseroptions
+msgid "Web server and browser options"
 msgstr ""
 
 #: strpas2jsdesign.pjsdyoucanuseidemacroslikemakeexewithoutafullpathissea

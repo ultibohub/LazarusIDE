@@ -11,7 +11,16 @@ Resourcestring
   pjsdWebApplication = 'Web Browser Application';
   pjsdWebAppDescription = 'A pas2js program running in the browser.';
   pjsdProgressiveWebApplication = 'Progressive Web Application';
-  pjsdProgressiveWebAppDescription = 'A Web Application using a service worker, a manifest, and more to be installable.';
+  pjsdElectronWebApplication = 'Electron Web Application';
+  pjsdAWebApplicationUsingElectronToRunAsDesktopApplicat = 'A pas2js Web Application '
+    +'using Electron to run as desktop application.';
+  pjsdOverwrite = 'Overwrite?';
+  pjsdError = 'Error';
+  pjsdNewProjectFile = 'New project file';
+  pjsdProjectPascalFile = 'Project Pascal file';
+  pjsdPleaseChooseAFileWithFullPath = 'Please choose a file with full path.';
+  pjsdOverwriteFiles = 'Overwrite files:';
+  pjsdProgressiveWebAppDescription = 'A pas2js Web Application using a service worker, a manifest, and more to be installable.';
   pjsdServiceWorker = 'Pas2JS Service Worker';
   pjsdServiceWorkerDescription = 'A pas2js program running as cache for a web app. It does not run standalone.';
   pjsdNodeJSApplication = 'Node.js Application';
@@ -34,17 +43,16 @@ Resourcestring
     +'macros like $MakeExe(). Without a full path, %s is searched in PATH.';
   pjsdPathOfXMacroPas2js = 'Path of %s, macro $(pas2js)';
   pjsdBrowse = 'Browse';
+  pjsdWebServerAndBrowserOptions = 'Web server and browser options';
   pjsdPortNumberToStartAllocatingFrom = 'Port number to start allocating '
     +'from, macro $(Pas2JSWebServerPort)';
-  pjsdWebServerOptions = 'Web server options';
   pjsdServerInstancesWillBeStartedWithAPortStartingFromT = 'Server instances '
     +'will be started with a port starting from this number, increasing per '
     +'new project';
-  pjsdBrowserToOpenHTMLPage = 'Browser to open HTML page, macro $(Pas2JSBrowser)';
-  pjsdUseThisBrowserWhenOpeningTheURLOrHTMLFileOfAWebBro = 'Use this browser '
-    +'when opening the URL or HTML file of a web browser project';
   pjsdPathOfNodeJsExecutable = 'Path of Node.js executable, macro $(Pas2JSNodeJS)';
   pjsdAtomPackageTemplateDirectory = 'Atom package template directory';
+  pjsdPathOfElectronExecutableMacroPas2JSElectron = 'Path of Electron '
+    +'executable, macro $(Pas2JSElectron)';
   pjsdVisualStudioCodeExtensionTemplateDirectory = 'Visual Studio Code '
     +'extension template directory';
 
@@ -60,10 +68,16 @@ Resourcestring
     +'resources are fully loaded';
   pjsdRun = 'Run';
   pjsdStartHTTPServerOnPort = 'Start HTTP Server on port';
+  pjsdTheSimpleWebServerIsAutomaticallyStartedOnRunTheLo = 'The Simple Web '
+    +'Server is automatically started on Run. The location is like a subfolder '
+    +'in the URL serving the disk folder of the HTML file.';
+  pjsdLocationOnSimpleWebServer = 'Location on Simple Web Server';
   pjsCreateAJavascriptModuleInsteadOfAScript = 'Create a javascript module '
     +'instead of a script';
   pjsdUseThisURLToStartApplication = 'Use this URL to start application';
   pjsExecuteRunParameters = 'Execute Run Parameters';
+  pjsdUseThisWhenYouStartYourOwnHttpServer = 'Use this when you start your own'
+    +' HTTP server';
   pjsdResetRunCommand = 'Reset Run command';
   pjsdResetCompileCommand = 'Reset Compile command';
   pjsMakePas2jsProject = 'Make pas2js project';
@@ -93,6 +107,7 @@ Resourcestring
   pjsdPas2JSExecutable = 'Pas2JS executable';
   pjsdPas2JSSelectedBrowserExecutable = 'Pas2JS selected browser executable';
   pjsdPas2JSSelectedNodeJSExcutable = 'Pas2JS selected NodeJS excutable';
+  pjsdPas2JSSelectedElectronExcutable = 'Pas2JS selected Electron excutable';
   pjsdPas2JSCurrentProjectURL = 'Pas2JS current project URL';
 
   // Error descriptions

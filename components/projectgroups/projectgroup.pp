@@ -1523,7 +1523,9 @@ begin
     exit(arFailed);
   end;
 
-  WorkingDir:=ExtractFilePath(Filename);
+  WorkingDir:='$(LazarusDir)';
+  IDEMacros.SubstituteMacros(WorkingDir);
+
   Params:=TStringList.Create;
   if AAction=taCompileClean then
     Params.Add('-B');
@@ -1541,9 +1543,10 @@ begin
     Tool.Process.Executable:=LazBuildFilename;
     Tool.Process.Parameters:=Params;
     Tool.Process.CurrentDirectory:=WorkingDir;
-    FPCParser:=TFPCParser(Tool.AddParsers(SubToolFPC));
+    FPCParser:=Tool.AddParsers(SubToolFPC) as TFPCParser;
     FPCParser.HideHintsSenderNotUsed:=true; //not AProject.CompilerOptions.ShowHintsForSenderNotUsed;
     FPCParser.HideHintsUnitNotUsedInMainSource:=true; //not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc;
+    FPCParser.UseTranslationUrgency:=false;
     //if (not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc)
     //and (AProject.MainFilename<>'') then
     //  FPCParser.FilesToIgnoreUnitNotUsed.Add(AProject.MainFilename);
