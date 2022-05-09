@@ -25,7 +25,6 @@ Notes -
     David Bannon, Feb 2022
 }
 {$mode objfpc}{$H+}
-{x$define EXTESTMODE}
 
 {X$define ONLINE_EXAMPLES}
 
@@ -61,6 +60,7 @@ type
         procedure ButtonViewClick(Sender: TObject);
         procedure CheckGroupCategoryDblClick(Sender: TObject);
         procedure CheckGroupCategoryItemClick(Sender: TObject; Index: integer);
+        procedure EditSearchChange(Sender: TObject);
         procedure EditSearchExit(Sender: TObject);
         procedure EditSearchKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
         procedure FormCreate(Sender: TObject);
@@ -68,6 +68,8 @@ type
         procedure FormShow(Sender: TObject);
         procedure ListView1Click(Sender: TObject);
         procedure ListView1DblClick(Sender: TObject);
+        procedure ListView1KeyDown(Sender: TObject; var Key: Word;
+          Shift: TShiftState);
         procedure ListView1SelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
     private
         procedure BuildSearchList(SL: TStringList; const Term: AnsiString);
@@ -182,6 +184,15 @@ begin
     ButtonOpenClick(self);
 end;
 
+procedure TFormLazExam.ListView1KeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+     if Key = vk_return then begin
+         Key := 0;
+         ListView1DblClick(Sender);
+     end;
+end;
+
 // --------------------- B U T T O N S -----------------------------------------
 
 procedure TFormLazExam.ButtonOpenClick(Sender: TObject);
@@ -267,6 +278,7 @@ var
 begin
     for i := 0 to CheckGroupCategory.Items.Count -1 do
         CheckGroupCategory.Checked[i] := not CheckGroupCategory.Checked[i];
+    CheckGroupCategoryItemClick(Sender, 0);
 end;
 
 procedure TFormLazExam.CheckGroupCategoryItemClick(Sender: TObject; Index: integer);
@@ -277,6 +289,7 @@ begin
     PrimeCatFilter();
     LoadUpListView();
 end;
+
 
 // ---------------------- Setting Project to Open ------------------------------
 
@@ -378,6 +391,12 @@ begin
       LoadUpListView();
 end;
 
+procedure TFormLazExam.EditSearchChange(Sender: TObject);
+begin
+    if (EditSearch.Text <> '') and (EditSearch.Text <> rsExSearchPrompt) then
+       KeyWordSearch();
+end;
+
 procedure TFormLazExam.EditSearchKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
 begin
     // Must do this here to stop LCL from selecting the text on VK_RETURN
@@ -419,6 +438,7 @@ begin
     ListView1.Column[2].Visible := false;
     ListView1.ReadOnly := True;
     EditSearch.text := rsExSearchPrompt;
+    CheckGroupCategory.Hint := rsGroupHint;
     Ex := nil;
     // These are ObjectInspector set but I believe I cannot get OI literals set in a Package ??
     ButtonClose.Caption := rsExampleClose;
@@ -445,6 +465,9 @@ var
     i : integer;
 begin
     Memo1.clear;
+    Top := Screen.Height div 10;
+    Height := Screen.Height * 7 div 10;
+    ListView1.Height:= Screen.Height * 3 div 10;
     if Ex <> Nil then Ex.Free;
     StatusBar1.SimpleText := rsExSearchingForExamples;
     Ex := TExampleData.Create();
@@ -470,8 +493,6 @@ begin
     if EditSearch.Text <> rsExSearchPrompt then
         KeyWordSearch()
     else EditSearch.SetFocus;
-
-
 end;
 
 {   Must add a FormClose event 

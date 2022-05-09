@@ -964,7 +964,13 @@ begin
     end
   end
   else
-    if KeyComp('And') then Result := tkKey else Result := tkIdentifier;
+    if KeyComp('And') then begin
+      Result := tkKey;
+      if rsProperty in fRange then
+        fRange := fRange + [rsAtPropertyOrReadWrite];
+    end
+    else
+      Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func20: TtkTokenKind;
@@ -1070,7 +1076,13 @@ begin
     end;
   end
   else
-    if KeyComp('In') then Result := tkKey else Result := tkIdentifier;
+    if KeyComp('In') then begin
+      Result := tkKey;
+      if rsProperty in fRange then
+        fRange := fRange + [rsAtPropertyOrReadWrite];
+    end
+    else
+      Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func25: TtkTokenKind;
@@ -1096,7 +1108,7 @@ begin
      KeyComp('Read')
   then begin
     Result := tkKey;
-    fRange := fRange + [rsAtPropertyOrReadWrite];
+    fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
   end
   else if KeyComp('Case') then begin
     if TopPascalCodeFoldBlockType in PascalStatementBlocks + [cfbtUnitSection] then
@@ -1127,7 +1139,11 @@ begin
     Result := tkKey;
   end
   else
-  if KeyComp('Mod') then Result := tkKey
+  if KeyComp('Mod') then begin
+    Result := tkKey;
+    if rsProperty in fRange then
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+  end
   else
   if KeyComp('File') then Result := tkKey
   else
@@ -1136,7 +1152,11 @@ end;
 
 function TSynPasSyn.Func33: TtkTokenKind;
 begin
-  if KeyComp('Or') then Result := tkKey
+  if KeyComp('Or') then begin
+    Result := tkKey;
+    if rsProperty in fRange then
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+  end
   else
   if KeyComp('Asm') then
   begin
@@ -1152,9 +1172,19 @@ end;
 
 function TSynPasSyn.Func35: TtkTokenKind;
 begin
-  if KeyComp('Nil') then Result := tkKey else
-    if KeyComp('To') then Result := tkKey else
-      if KeyComp('Div') then Result := tkKey else Result := tkIdentifier;
+  if KeyComp('Nil') then
+    Result := tkKey
+  else
+  if KeyComp('To') then
+    Result := tkKey
+  else
+  if KeyComp('Div') then begin
+    Result := tkKey;
+    if rsProperty in fRange then
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+  end
+  else
+    Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func37: TtkTokenKind;
@@ -1191,7 +1221,13 @@ begin
       StartPascalCodeFoldBlock(cfbtForDo);
   end
   else
-    if KeyComp('Shl') then Result := tkKey else Result := tkIdentifier;
+  if KeyComp('Shl') then begin
+    Result := tkKey;
+    if rsProperty in fRange then
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+   end
+   else
+     Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func40: TtkTokenKind;
@@ -1271,7 +1307,13 @@ end;
 
 function TSynPasSyn.Func45: TtkTokenKind;
 begin
-  if KeyComp('Shr') then Result := tkKey else Result := tkIdentifier;
+  if KeyComp('Shr') then begin
+    Result := tkKey;
+    if rsProperty in fRange then
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+  end
+  else
+    Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func46: TtkTokenKind;
@@ -1303,7 +1345,15 @@ end;
 
 function TSynPasSyn.Func49: TtkTokenKind;
 begin
-  if KeyComp('Not') then Result := tkKey else Result := tkIdentifier;
+  if KeyComp('Not') then begin
+    Result := tkKey;
+    if rsProperty in fRange then begin
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+      FOldRange := FOldRange - [rsAtPropertyOrReadWrite];
+    end;
+  end
+  else
+    Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func52: TtkTokenKind;
@@ -1350,8 +1400,12 @@ begin
   begin
     if (fRange * [rsProperty, rsAtPropertyOrReadWrite, rsAfterEqualOrColon] =  [rsProperty]) and
        (PasCodeFoldRange.BracketNestLevel = 0)
-    then
-      Result := tkKey else Result := tkIdentifier;
+    then begin
+      Result := tkKey;
+      fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+    end
+    else
+      Result := tkIdentifier;
   end
   else
     if KeyComp('Out') then Result := tkKey else Result := tkIdentifier;
@@ -1365,7 +1419,13 @@ begin
       StartPascalCodeFoldBlock(cfbtWhileDo);
     end
     else
-      if KeyComp('Xor') then Result := tkKey else Result := tkIdentifier;
+    if KeyComp('Xor') then begin
+      Result := tkKey;
+      if rsProperty in fRange then
+        fRange := fRange + [rsAtPropertyOrReadWrite];
+    end
+    else
+      Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func58: TtkTokenKind;
@@ -1496,8 +1556,18 @@ end;
 function TSynPasSyn.Func69: TtkTokenKind;
 begin
   if KeyComp('Default') then begin
-    if (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) then
-      Result := tkKey
+    if (PasCodeFoldRange.BracketNestLevel = 0) and
+       (fRange * [rsAtPropertyOrReadWrite, rsAfterEqualOrColon, rsInProcHeader] = []) and
+       ( ( (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) and
+           (rsAfterClassMembers in fRange)
+         ) or
+         (rsProperty in fRange)
+       )
+    then begin
+      Result := tkKey;
+      if rsProperty in fRange then
+        fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+    end
     else
       Result := tkIdentifier;
   end else
@@ -1569,7 +1639,7 @@ begin
       KeyComp('Write') then
   begin
     Result := tkKey;
-    fRange := fRange + [rsAtPropertyOrReadWrite];
+    fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
   end
   else
     Result := tkIdentifier;
@@ -1990,8 +2060,13 @@ begin
     fRange := fRange + [rsInProcHeader];
     Result := tkKey;
   end
-  else if KeyComp('specialize') then
-    Result := tkKey
+  else if KeyComp('specialize') then begin
+    Result := tkKey;
+    if rsProperty in fRange then begin
+      fRange := fRange + [rsAtPropertyOrReadWrite];
+      FOldRange := FOldRange - [rsAtPropertyOrReadWrite];
+    end;
+  end
   else
     Result := tkIdentifier;
 end;
@@ -2858,7 +2933,7 @@ begin
   else begin
     fRange := fRange + [rsAfterEqualOrColon] - [rsAtCaseLabel];
     if (TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType, cfbtClass, cfbtClassSection, cfbtRecord]) and
-       not(rsAfterClassMembers in fRange)
+       ( (rsProperty in fRange) or not(rsAfterClassMembers in fRange) )
     then
       fRange := fRange + [rsVarTypeInSpecification];
   end;
@@ -2869,7 +2944,9 @@ begin
   fTokenID := tkSymbol;
   inc(Run);
   if fLine[Run] = '=' then
-    inc(Run)
+    inc(Run);
+  if fRange * [rsProperty, rsVarTypeInSpecification] = [rsProperty] then
+    fRange := fRange + [rsAtPropertyOrReadWrite];
 end;
 
 procedure TSynPasSyn.CRProc;
@@ -2936,6 +3013,10 @@ begin
   fTokenID := tkSymbol;
   inc(Run);
   if fLine[Run] in ['=', '>'] then inc(Run);
+  if rsProperty in fRange then begin
+    fRange := fRange + [rsAtPropertyOrReadWrite];
+    FOldRange := FOldRange - [rsAtPropertyOrReadWrite];
+  end;
 end;
 
 procedure TSynPasSyn.CaretProc;
@@ -3001,7 +3082,13 @@ procedure TSynPasSyn.PointProc;
 begin
   fTokenID := tkSymbol;
   inc(Run);
-  if fLine[Run] in ['.', ')'] then inc(Run);
+  if fLine[Run] in ['.', ')'] then
+    inc(Run)
+  else
+  if fRange * [rsProperty, rsAfterClassMembers] <> [] then begin // Also happens for result-type of functions (if they have a dot)
+    fRange := fRange + [rsAtPropertyOrReadWrite];
+    FOldRange := FOldRange - [rsAtPropertyOrReadWrite];
+  end;
 end;
 
 procedure TSynPasSyn.AnsiProc;
@@ -3106,6 +3193,8 @@ begin
      not(rsAfterClassMembers in fRange)
   then
     fRange := fRange + [rsVarTypeInSpecification];
+  if rsProperty in fRange then
+    fRange := fRange + [rsAtPropertyOrReadWrite];
 end;
 
 procedure TSynPasSyn.SemicolonProc;
@@ -3163,6 +3252,8 @@ begin
   end else begin
     Inc(Run);
     fTokenID := tkSymbol;
+    if rsProperty in fRange then
+      fRange := fRange + [rsAtPropertyOrReadWrite];
   end;
 end;
 
@@ -3218,6 +3309,10 @@ procedure TSynPasSyn.SymbolProc;
 begin
   inc(Run);
   fTokenID := tkSymbol;
+  if rsProperty in fRange then begin
+    fRange := fRange + [rsAtPropertyOrReadWrite];
+    FOldRange := FOldRange - [rsAtPropertyOrReadWrite];
+  end;
 end;
 
 function TSynPasSyn.TypeHelpersIsStored: Boolean;

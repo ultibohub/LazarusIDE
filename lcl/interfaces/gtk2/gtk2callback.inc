@@ -797,7 +797,8 @@ begin
   {$ENDIF}
 end;
 
-function GTKKeyPress(Widget: PGtkWidget; Event: PGdkEventKey; Data: gPointer) : GBoolean; cdecl;
+function GTKKeyPress(Widget: PGtkWidget; Event: pgdkeventkey; Data: gPointer
+  ): GBoolean; cdecl;
 begin
   Result := HandleGtkKeyUpDown(Widget,Event,Data,true,True,'key-press-event');
 end;
@@ -807,7 +808,8 @@ begin
   Result := HandleGtkKeyUpDown(Widget,Event,Data,false,True,'key-press-event');
 end;
 
-function GTKKeyRelease(Widget: PGtkWidget; Event: PGdkEventKey; Data: gPointer) : GBoolean; cdecl;
+function GTKKeyRelease(Widget: PGtkWidget; Event: pgdkeventkey; Data: gPointer
+  ): GBoolean; cdecl;
 begin
   Result := HandleGtkKeyUpDown(Widget,Event,Data,true,False,'key-release-event');
 end;
@@ -1800,13 +1802,9 @@ function gtkMouseBtnPress(widget: PGtkWidget; event: pgdkEventButton; data: gPoi
   end;
 
 var
-  DesignOnlySignal: boolean;
-  Msg: TLMContextMenu;
-  x, y: gint;
-  W: PGtkWidget;
-  Info: PWidgetInfo;
-  Old: TObject;
+  DesignOnlySignal, StopSignal: boolean;
   Path: PGtkTreePath;
+  x, y: gint;
   Column: PGtkTreeViewColumn;
   {$IFDEF VerboseMouseBugfix}
   AWinControl: TWinControl;
@@ -1842,6 +1840,9 @@ begin
     exit(false);
   end;
   {$ENDIF}
+  //debugln('[gtkMouseBtnPress] called DeliverMouseDownMessage Result=',dbgs(Result));
+
+  StopSignal:=false;
 
   if not (csDesigning in TComponent(Data).ComponentState) then
   begin
@@ -1863,29 +1864,7 @@ begin
     // if LCL process LM_CONTEXTMENU then stop the event propagation
     if (Event^.button = 3) then
     begin
-      W := Widget;
-      gdk_display_get_pointer(gtk_widget_get_display(Widget), nil, @x, @y, nil);
-      Old := nil;
-      while W <> nil do
-      begin
-        Info := GetWidgetInfo(W);
-        if (Info <> nil) and (Info^.LCLObject <> Old) then
-        begin
-          Old := Info^.LCLObject;
-          FillChar(Msg{%H-}, SizeOf(Msg), #0);
-          Msg.Msg := LM_CONTEXTMENU;
-          Msg.hWnd := {%H-}HWND(W);
-          Msg.XPos := x;
-          Msg.YPos := y;
-
-          Result := DeliverMessage(Old, Msg) <> 0;
-          if Result then break;
-        end;
-        // check if widget has a standard popup menu
-        if (W = widget) and Assigned(GTK_WIDGET_GET_CLASS(W)^.popup_menu) then
-          break;
-        W := gtk_widget_get_parent(W);
-      end;
+      Result:=DeliverContextMenuMessage(widget,true);
 
       {emit selection change when right mouse button pressed
        otherwise LCL is not updated since ChangeLock = 1 in case
@@ -1901,7 +1880,7 @@ begin
           gtk_tree_view_set_cursor(GTK_TREE_VIEW(Widget), Path, Column, False);
           gtk_widget_queue_draw(Widget);
         end;
-        g_signal_stop_emission_by_name(PGTKObject(Widget), 'button-press-event');
+        StopSignal:=true;
       end;
 
     end;
@@ -1915,9 +1894,12 @@ begin
     begin
       // stop the signal, so that the widget does not auto react
       //DebugLn(['gtkMouseBtnPress stop signal']);
-      g_signal_stop_emission_by_name(PGTKObject(Widget), 'button-press-event');
+      StopSignal:=true;
     end;
   end;
+  if StopSignal then
+    g_signal_stop_emission_by_name(PGTKObject(Widget), 'button-press-event');
+
   {$IFDEF Gtk2CallMouseDownBeforeContext}
   {$ELSE}
   //debugln('[gtkMouseBtnPress] calling DeliverMouseDownMessage Result=',dbgs(Result));
@@ -2123,6 +2105,41 @@ begin
       g_object_set_data({%H-}PGObject(AWinControl.Handle),
         'lclnotebookdragging', gpointer(PtrInt(1)));
     end;
+  end;
+end;
+
+function DeliverContextMenuMessage(Widget: PGtkWidget;
+  CheckGtkPopupMenu: boolean): gboolean;
+var
+  x, y: gint;
+  W: PGtkWidget;
+  Info: PWidgetInfo;
+  Old: TObject;
+  Msg: TLMContextMenu;
+begin
+  Result:=CallBackDefaultReturn;
+  W := Widget;
+  gdk_display_get_pointer(gtk_widget_get_display(Widget), nil, @x, @y, nil);
+  Old := nil;
+  while W <> nil do
+  begin
+    Info := GetWidgetInfo(W);
+    if (Info <> nil) and (Info^.LCLObject <> Old) then
+    begin
+      Old := Info^.LCLObject;
+      FillByte(Msg{%H-}, SizeOf(Msg), 0);
+      Msg.Msg := LM_CONTEXTMENU;
+      Msg.hWnd := {%H-}HWND(W);
+      Msg.XPos := x;
+      Msg.YPos := y;
+
+      Result := DeliverMessage(Old, Msg) <> 0;
+      if Result then break;
+    end;
+    // check if widget has a standard popup menu
+    if (W = widget) and CheckGtkPopupMenu and Assigned(GTK_WIDGET_GET_CLASS(W)^.popup_menu) then
+      break;
+    W := gtk_widget_get_parent(W);
   end;
 end;
 
@@ -2342,6 +2359,14 @@ begin
     end;
   end else
     ReleaseMouseCapture;
+
+  if (csDesigning in TComponent(Data).ComponentState) then
+  begin
+    if (Event^.button = 3) then
+    begin
+      Result:=DeliverContextMenuMessage(widget,false);
+    end;
+  end;
 end;
 
 {-------------------------------------------------------------------------------
@@ -2369,10 +2394,10 @@ begin
 
   ResetDefaultIMContext;
 
-  if (csDesigning in TComponent(Data).ComponentState) then exit;
-  if ControlGetsMouseUpBefore(TControl(Data)) then exit;
-
-  DeliverMouseUpMessage(Widget,Event,TWinControl(Data));
+  if (csDesigning in TComponent(Data).ComponentState) then
+  else if ControlGetsMouseUpBefore(TControl(Data)) then
+  else
+    DeliverMouseUpMessage(Widget,Event,TWinControl(Data));
 end;
 
 function gtkMouseWheelCB(widget: PGtkWidget; event: PGdkEventScroll;
@@ -3701,13 +3726,9 @@ end;
 
 //DRAG CALLBACK FUNCTIONS
 
-function edit_drag_data_received({%H-}widget : pgtkWidget;
-  Context : pGdkDragContext;
-  {%H-}X, {%H-}Y : Integer;
-  SelData : pGtkSelectionData;
-  {%H-}info : Integer;
-  time : Integer;
-  data : pointer) : GBoolean; cdecl;
+function edit_drag_data_received(widget: pgtkWidget; Context: pGdkDragContext;
+  X: Integer; Y: Integer; seldata: pGtkSelectionData; info: Integer;
+  time: Integer; data: pointer): GBoolean; cdecl;
 Var
   Texts : String;
 Begin
@@ -3759,8 +3780,8 @@ Begin
 end;
 
 
-function Edit_source_drag_data_delete ({%H-}Widget: pGtkWidget;
-  {%H-}Context: pGdkDragContext; {%H-}Data: gpointer): gBoolean ; cdecl;
+function Edit_source_drag_data_delete(widget: pGtkWidget;
+  context: pGdkDragContext; data: gpointer): gBoolean; cdecl;
 begin
   //DebugLn('Trace:***************');
   //DebugLn('Trace:DELETE THE DATA');
