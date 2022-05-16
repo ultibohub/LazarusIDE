@@ -22,15 +22,19 @@ uses
 type
   TChartGUIConnectorAggPas = class(TChartGUIConnector)
   private
+    FFontDir: String;
     FPixelFormat: TAggFPImgPixelFormat;
     procedure SetPixelFormat(AValue: TAggFPImgPixelFormat);
   public
+    constructor Create(AOwner: TComponent); override;
     procedure CreateDrawer(var AData: TChartGUIConnectorData); override;
     procedure SetBounds(var AData: TChartGUIConnectorData); override;
     procedure Display(var AData: TChartGUIConnectorData); override;
   published
+    property FontDir: String
+      read FFontDir write FFontDir;
     property PixelFormat: TAggFPImgPixelFormat
-      read FPixelFormat write SetPixelFormat default afpimRGB24;
+      read FPixelFormat write SetPixelFormat default afpimRGBA32;
   end;
 
 procedure Register;
@@ -40,8 +44,8 @@ implementation
 {$R taaggpas.res}
 
 uses
-  Agg_LCL, Graphics, SysUtils, TAChartUtils, TADrawerAggPas, TADrawerCanvas,
-  TAGeometry;
+  Agg_LCL, Graphics, GraphType, SysUtils, fpImage, IntfGraphics,
+  TAChartUtils, TADrawerAggPas, TADrawerCanvas, TAGeometry;
 
 type
   TAggPasOwnerDrawer = class(TAggPasDrawer)
@@ -62,17 +66,23 @@ end;
 
 { TChartGUIConnectorAggPas }
 
+constructor TChartGUIConnectorAggPas.Create(AOwner: TComponent); 
+begin
+  inherited;
+  FPixelFormat := afpimRGBA32;
+end;
+
 procedure TChartGUIConnectorAggPas.CreateDrawer(
   var AData: TChartGUIConnectorData);
 begin
   AData.FDrawer := TAggPasOwnerDrawer.Create(TAggLCLCanvas.Create);
   AData.FDrawer.DoGetFontOrientation := @CanvasGetFontOrientationFunc;
+  (AData.FDrawer as TAggPasOwnerDrawer).FontDir := FFontDir;
 end;
 
 procedure TChartGUIConnectorAggPas.Display(var AData: TChartGUIConnectorData);
 begin
-  (AData.FDrawer as TAggPasOwnerDrawer).PaintOnCanvas(
-    AData.FCanvas, AData.FBounds);
+  (AData.FDrawer as TAggPasOwnerDrawer).PaintOnCanvas(AData.FCanvas, AData.FBounds);
 end;
 
 procedure TChartGUIConnectorAggPas.SetBounds(var AData: TChartGUIConnectorData);
@@ -110,10 +120,31 @@ end;
 
 procedure TAggPasOwnerDrawer.PaintOnCanvas(
   ACanvas: TCanvas; const ARect: TRect);
+{$IF DEFINED(LCLWin32) or DEFINED(LCLCocoa)}
 begin
   FBitmap.LoadFromIntfImage(FCanvas.Image.IntfImg);
   ACanvas.Draw(ARect.Left, ARect.Top, FBitmap);
 end;
+{$ELSE}
+{ The default pixel settings of AggPas are correct for Windows. 
+  On Linux, however, the red and blue components are interchanged. 
+  The following work-around creates an auxiliary image in which R and B are 
+  swapped to be compatible with AggPas. }
+var
+  img: TLazIntfImage;
+  raw: TRawImage;
+begin
+  FCanvas.Image.IntfImg.GetRawImage(raw, false);
+  img := TLazIntfImage.Create(raw, false);
+  try
+    SwapRedBlue(img);
+    FBitmap.LoadFromIntfImage(img);
+  finally
+    img.Free;
+  end;
+  ACanvas.Draw(ARect.Left, ARect.Top, FBitmap);
+end;
+{$ENDIF}
 
 procedure TAggPasOwnerDrawer.SetSize(ASize: TPoint);
 begin

@@ -5881,6 +5881,9 @@ begin
   Result := FStateMachine <> nil;
   if Result then Exit;
 
+  Result := FAddressInfo <> nil;
+  if not result then exit;
+
   if FAddressInfo^.StateMachine = nil
   then begin
     CompilationUnit.BuildLineInfo(FAddressInfo, False);
