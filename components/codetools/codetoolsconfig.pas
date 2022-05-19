@@ -96,7 +96,7 @@ type
     FProjectDir: string;
     FSourceCaches: TFPCSourceCaches;
     FTargetOS: string;
-    FTargetProcessor: string;
+    FTargetCPU: string; //Ultibo
     FTestPascalFile: string;
     FUnitLinkList: string;
     FUnitLinkListValid: boolean;
@@ -111,7 +111,7 @@ type
     procedure SetPPUExt(const AValue: string);
     procedure SetProjectDir(const AValue: string);
     procedure SetTargetOS(const AValue: string);
-    procedure SetTargetProcessor(const AValue: string);
+    procedure SetTargetCPU(const AValue: string); //Ultibo
     procedure SetTestPascalFile(const AValue: string);
     procedure SetUnitLinkList(const AValue: string);
     procedure SetUnitLinkListValid(const AValue: boolean);
@@ -133,7 +133,7 @@ type
     property FPCPath: string read FFPCPath write SetFPCPath; // e.g. /usr/bin/fpc or /usr/bin/ppc386
     property FPCOptions: string read FFPCOptions write SetFPCOptions; // extra options for fpc
     property TargetOS: string read FTargetOS write SetTargetOS;
-    property TargetProcessor: string read FTargetProcessor write SetTargetProcessor;
+    property TargetCPU: string read FTargetCPU write SetTargetCPU; //Ultibo
     property TestPascalFile: string read FTestPascalFile write SetTestPascalFile; // points to an empty unit
     property FPCUnitPath: string read FFPCUnitPath write SetFPCUnitPath;
     property PPUExt: string read FPPUExt write SetPPUExt;
@@ -244,10 +244,10 @@ begin
   Modified:=true;
 end;
 
-procedure TCodeToolsOptions.SetTargetProcessor(const AValue: string);
+procedure TCodeToolsOptions.SetTargetCPU(const AValue: string); //Ultibo
 begin
-  if FTargetProcessor=AValue then exit;
-  FTargetProcessor:=AValue;
+  if FTargetCPU=AValue then exit; //Ultibo
+  FTargetCPU:=AValue; //Ultibo
   FUnitLinkListValid:=false;
   Modified:=true;
 end;
@@ -310,7 +310,7 @@ begin
   if GetEnvironmentVariableUTF8('FPCTARGET')<>'' then
     TargetOS:=GetEnvironmentVariableUTF8('FPCTARGET');
   if GetEnvironmentVariableUTF8('FPCTARGETCPU')<>'' then
-    TargetProcessor:=GetEnvironmentVariableUTF8('FPCTARGETCPU');
+    TargetCPU:=GetEnvironmentVariableUTF8('FPCTARGETCPU'); //Ultibo
 end;
 
 function TCodeToolsOptions.FindDefaultCompilerFilename: string;
@@ -327,7 +327,7 @@ begin
   XMLConfig.SetDeleteValue(Path+'FPC/SrcDir/Value',FPCSrcDir,'');
   XMLConfig.SetDeleteValue(Path+'FPC/UnitPath/Value',FPCUnitPath,'');
   XMLConfig.SetDeleteValue(Path+'FPC/TargetOS/Value',TargetOS,'');
-  XMLConfig.SetDeleteValue(Path+'FPC/TargetProcessor/Value',TargetProcessor,'');
+  XMLConfig.SetDeleteValue(Path+'FPC/TargetCPU/Value',TargetCPU,''); //Ultibo
   XMLConfig.SetDeleteValue(Path+'FPC/PPUExt/Value',PPUExt,'.ppu');
   XMLConfig.SetDeleteValue(Path+'FPC/TestPascalFile/Value',TestPascalFile,'');
   XMLConfig.SetDeleteValue(Path+'FPC/UnitLinkList/Value',UnitLinkList,'');
@@ -356,7 +356,7 @@ begin
       UnitPath[i]:=';';
   FPCUnitPath:=UnitPath;
   TargetOS:=XMLConfig.GetValue(Path+'FPC/TargetOS/Value','');
-  TargetProcessor:=XMLConfig.GetValue(Path+'FPC/TargetProcessor/Value','');
+  TargetCPU:=XMLConfig.GetValue(Path+'FPC/TargetCPU/Value',''); //Ultibo
   PPUExt:=XMLConfig.GetValue(Path+'FPC/PPUExt/Value','.ppu');
   TestPascalFile:=XMLConfig.GetValue(Path+'FPC/TestPascalFile/Value','');
   UnitLinkList:=XMLConfig.GetValue(Path+'FPC/UnitLinkList/Value','');
