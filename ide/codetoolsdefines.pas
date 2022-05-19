@@ -568,7 +568,7 @@ var InputFileDlg: TInputFileDialog;
   DefaultFPCSrcDir, DefaultCompiler,
   CompilerPath, FPCSrcDir: string;
   DirTemplate, FPCTemplate: TDefineTemplate;
-  TargetOS, TargetProcessor: string;
+  TargetOS, TargetCPU: string; //Ultibo
   UnitSetCache: TFPCUnitSetCache;
 begin
   InputFileDlg:=GetInputFileDialog;
@@ -613,10 +613,10 @@ begin
     if Macros<>nil then Macros.SubstituteStr(CompilerPath);
     DebugLn('  CompilerPath="',CompilerPath,'"');
     TargetOS:='';
-    TargetProcessor:='';
+    TargetCPU:=''; //Ultibo
 
     UnitSetCache:=Boss.CompilerDefinesCache.FindUnitSet(CompilerPath,
-                                    TargetOS,TargetProcessor,'',FPCSrcDir,true);
+                                    TargetOS,TargetCPU,'',FPCSrcDir,true); //Ultibo
 
     // create directory defines
     DirTemplate:=TDefineTemplate.Create('FPC Project ('+FileNames[0]+')',
@@ -644,7 +644,7 @@ procedure TCodeToolsDefinesEditor.InsertFPCompilerDefinesTemplateMenuItemClick(
 var InputFileDlg: TInputFileDialog;
   CompilerPath, DefaultCompiler: string;
   FPCTemplate: TDefineTemplate;
-  UnitSearchPath, TargetOS, TargetProcessor: string;
+  UnitSearchPath, TargetOS, TargetCPU: string; //Ultibo
 begin
   InputFileDlg:=GetInputFileDialog;
   InputFileDlg.Macros:=Macros;
@@ -672,10 +672,10 @@ begin
     FPCTemplate:=Boss.DefinePool.CreateFPCTemplate(CompilerPath,'',
                                            CreateCompilerTestPascalFilename,
                                            UnitSearchPath,
-                                           TargetOS,TargetProcessor,
-                                           CodeToolsOpts);
-    if (TargetOS='') or (TargetProcessor='') or (UnitSearchPath='') then
-      DebugLn(['TCodeToolsDefinesEditor.InsertFPCompilerDefinesTemplateMenuItemClick TargetOS="',TargetOS,'" TargetProcessor="',TargetProcessor,'"']);
+                                           TargetOS,TargetCPU,
+                                           CodeToolsOpts); //Ultibo
+    if (TargetOS='') or (TargetCPU='') or (UnitSearchPath='') then //Ultibo
+      DebugLn(['TCodeToolsDefinesEditor.InsertFPCompilerDefinesTemplateMenuItemClick TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'"']); //Ultibo
     if FPCTemplate=nil then exit;
     FPCTemplate.Name:='Free Pascal Compiler ('+CompilerPath+')';
     InsertTemplate(FPCTemplate);
@@ -686,7 +686,7 @@ procedure TCodeToolsDefinesEditor.InsertFPCSourceDirDefinesTemplateMenuItemClick
   (Sender: TObject);
 var InputFileDlg: TInputFileDialog;
   DefaultCompiler, CompilerPath, FPCSrcDir: string;
-  TargetOS, TargetProcessor: string;
+  TargetOS, TargetCPU: string; //Ultibo
   FPCSrcTemplate: TDefineTemplate;
   UnitSetCache: TFPCUnitSetCache;
 begin
@@ -719,13 +719,13 @@ begin
     DebugLn('  CompilerPath="',CompilerPath,'"');
 
     TargetOS:='';
-    TargetProcessor:='';
+    TargetCPU:=''; //Ultibo
     FPCSrcDir:=FileNames[0];
     if Macros<>nil then Macros.SubstituteStr(FPCSrcDir);
     DebugLn('  FPCSrcDir="',FPCSrcDir,'"');
 
     UnitSetCache:=Boss.CompilerDefinesCache.FindUnitSet(CompilerPath,
-                                    TargetOS,TargetProcessor,'',FPCSrcDir,true);
+                                    TargetOS,TargetCPU,'',FPCSrcDir,true); //Ultibo
     // create FPC Source defines
     FPCSrcTemplate:=CreateFPCSourceTemplate(UnitSetCache,CodeToolsOpts);
     if FPCSrcTemplate=nil then begin

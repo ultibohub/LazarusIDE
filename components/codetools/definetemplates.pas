@@ -773,7 +773,7 @@ type
     fpciCompilerOS,        // -iSO       Return compiler OS
     fpciCompilerProcessor, // -iSP       Return compiler host processor
     fpciTargetOS,          // -iTO       Return target OS
-    fpciTargetProcessor    // -iTP       Return target processor
+    fpciTargetCPU          // -iTP       Return target processor //Ultibo
     );
   TFPCInfoTypes = set of TFPCInfoType;
   TFPCInfoStrings = array[TFPCInfoType] of string;
@@ -1146,7 +1146,7 @@ type
   // fpc parameter effecting search for compiler
   TFPCFrontEndParam = (
     fpcpT, // -T<targetos>
-    fpcpP, // -P<targetprocessor>
+    fpcpP, // -P<targetcpu> //Ultibo
     fpcpV, // -V<postfix>
     fpcpXp // -Xp<directory>
     );
@@ -1614,7 +1614,7 @@ begin
   if fpciCompilerOS in InfoTypes then Param:=Param+'SO';
   if fpciCompilerProcessor in InfoTypes then Param:=Param+'SP';
   if fpciTargetOS in InfoTypes then Param:=Param+'TO';
-  if fpciTargetProcessor in InfoTypes then Param:=Param+'TP';
+  if fpciTargetCPU in InfoTypes then Param:=Param+'TP'; //Ultibo
   if Param='' then exit;
   Param:='-i'+Param;
   List:=nil;
@@ -10400,12 +10400,12 @@ begin
 
       // check if this is a FPC compatible compiler and get version, OS and CPU
       // Note: fpc.exe calls the real compiler depending on -T and -P
-      InfoTypes:=[fpciTargetOS,fpciTargetProcessor,fpciFullVersion];
+      InfoTypes:=[fpciTargetOS,fpciTargetCPU,fpciFullVersion]; //Ultibo
       Info:=RunFPCInfo(Compiler,InfoTypes,ExtraOptions);
       if ParseFPCInfo(Info,InfoTypes,Infos) then begin
         // fpc or pas2js
         RealTargetOS:=Infos[fpciTargetOS];
-        RealTargetCPU:=Infos[fpciTargetProcessor];
+        RealTargetCPU:=Infos[fpciTargetCPU]; //Ultibo
         FullVersion:=Infos[fpciFullVersion];
         if FullVersion='' then
           debugln(['Warning: [TPCTargetConfigCache.Update] cannot determine compiler version: Compiler="'+Compiler+'" Options="'+ExtraOptions+'"']);
