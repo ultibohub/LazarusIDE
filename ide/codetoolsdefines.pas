@@ -568,7 +568,7 @@ var InputFileDlg: TInputFileDialog;
   DefaultFPCSrcDir, DefaultCompiler,
   CompilerPath, FPCSrcDir: string;
   DirTemplate, FPCTemplate: TDefineTemplate;
-  TargetOS, TargetCPU: string; //Ultibo
+  TargetOS, TargetCPU, TargetProcessor: string; //Ultibo
   UnitSetCache: TFPCUnitSetCache;
 begin
   InputFileDlg:=GetInputFileDialog;
@@ -614,9 +614,10 @@ begin
     DebugLn('  CompilerPath="',CompilerPath,'"');
     TargetOS:='';
     TargetCPU:=''; //Ultibo
+    TargetProcessor:=''; //Ultibo
 
     UnitSetCache:=Boss.CompilerDefinesCache.FindUnitSet(CompilerPath,
-                                    TargetOS,TargetCPU,'',FPCSrcDir,true); //Ultibo
+                                    TargetOS,TargetCPU,TargetProcessor,'',FPCSrcDir,true); //Ultibo
 
     // create directory defines
     DirTemplate:=TDefineTemplate.Create('FPC Project ('+FileNames[0]+')',
@@ -686,7 +687,7 @@ procedure TCodeToolsDefinesEditor.InsertFPCSourceDirDefinesTemplateMenuItemClick
   (Sender: TObject);
 var InputFileDlg: TInputFileDialog;
   DefaultCompiler, CompilerPath, FPCSrcDir: string;
-  TargetOS, TargetCPU: string; //Ultibo
+  TargetOS, TargetCPU, TargetProcessor: string; //Ultibo
   FPCSrcTemplate: TDefineTemplate;
   UnitSetCache: TFPCUnitSetCache;
 begin
@@ -720,12 +721,13 @@ begin
 
     TargetOS:='';
     TargetCPU:=''; //Ultibo
+    TargetProcessor:=''; //Ultibo
     FPCSrcDir:=FileNames[0];
     if Macros<>nil then Macros.SubstituteStr(FPCSrcDir);
     DebugLn('  FPCSrcDir="',FPCSrcDir,'"');
 
     UnitSetCache:=Boss.CompilerDefinesCache.FindUnitSet(CompilerPath,
-                                    TargetOS,TargetCPU,'',FPCSrcDir,true); //Ultibo
+                                    TargetOS,TargetCPU,TargetProcessor,'',FPCSrcDir,true); //Ultibo
     // create FPC Source defines
     FPCSrcTemplate:=CreateFPCSourceTemplate(UnitSetCache,CodeToolsOpts);
     if FPCSrcTemplate=nil then begin

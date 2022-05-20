@@ -870,6 +870,7 @@ var
   cp: TParsedCompilerOptString;
   TargetCPU: String;
   TargetOS: String;
+  TargetProcessor: String; //Ultibo
   CfgCache: TPCTargetConfigCache;
   FPC_PPUs: TStrings;
 begin
@@ -911,8 +912,9 @@ begin
 
     TargetOS:=Options.TargetOS;
     TargetCPU:=Options.TargetCPU;
+    TargetProcessor:=Options.TargetProcessor; //Ultibo
     CfgCache:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(CompilerFilename,
-                                                    '',TargetOS,TargetCPU,true);
+                                                    '',TargetOS,TargetCPU,TargetProcessor,true); //Ultibo
     if CfgCache.NeedsUpdate then
       CfgCache.Update(CodeToolBoss.CompilerDefinesCache.TestFilename,
                       CodeToolBoss.CompilerDefinesCache.ExtraOptions);

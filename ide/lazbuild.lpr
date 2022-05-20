@@ -74,6 +74,7 @@ type
     FMaxProcessCount: integer;
     FNoWriteProject: Boolean;
     fOSOverride: String;
+    fProcessorOverride: String; //Ultibo
     FPackageAction: TPkgAction;
     FPkgGraphVerbosity: TPkgVerbosityFlags;
     FSkipDependencies: boolean;
@@ -171,6 +172,7 @@ type
                                             write fWidgetsetOverride;
     property OSOverride: String read fOSOverride write fOSOverride;
     property CPUOverride: String read fCPUOverride write fCPUOverride;
+    property ProcessorOverride: String read fProcessorOverride write fProcessorOverride; //Ultibo
     property CompilerOverride: String read fCompilerOverride write fCompilerOverride;
     property LazarusDirOverride: String read fLazarusDirOverride write fLazarusDirOverride;
     property BuildModeOverride: String read FBuildModeOverride write FBuildModeOverride;
@@ -465,6 +467,8 @@ begin
     APackage.CompilerOptions.TargetOS:=OSOverride;
   if (Length(CPUOverride) <> 0) then
     APackage.CompilerOptions.TargetCPU:=CPUOverride;
+  if (Length(ProcessorOverride) <> 0) then //Ultibo
+    APackage.CompilerOptions.TargetProcessor:=ProcessorOverride; //Ultibo
 
   if CreateMakefile then
     DoCreateMakefile(APackage)
@@ -786,6 +790,8 @@ var
       Project1.CompilerOptions.TargetOS:=OSOverride;
     if (CPUOverride<>'') then
       Project1.CompilerOptions.TargetCPU:=CPUOverride;
+    if (ProcessorOverride<>'') then //Ultibo
+      Project1.CompilerOptions.TargetProcessor:=ProcessorOverride; //Ultibo
     if (WidgetSetOverride<>'') then begin
       MatrixOption:=Project1.BuildModes.SessionMatrixOptions.Add(bmotIDEMacro);
       MatrixOption.Modes:=Project1.ActiveBuildMode.Identifier;
@@ -1173,7 +1179,7 @@ begin
   // load static base packages
   PackageGraph.LoadStaticBasePackages;
 
-  MainBuildBoss.SetBuildTarget(OSOverride,CPUOverride,WidgetSetOverride,smsfsSkip,true);
+  MainBuildBoss.SetBuildTarget(OSOverride,CPUOverride,ProcessorOverride,WidgetSetOverride,smsfsSkip,true); //Ultibo
 
   fInitResult:=true;
   Result:=fInitResult;
@@ -1566,6 +1572,7 @@ begin
     LongOptions.Add('operating-system:');
     LongOptions.Add('os:');
     LongOptions.Add('cpu:');
+    LongOptions.Add('processor:'); //Ultibo
     LongOptions.Add('bm:');
     LongOptions.Add('build-mode:');
     LongOptions.Add('compiler:');
@@ -1702,6 +1709,13 @@ begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: cpu=',CPUOverride);
     end;
+
+    // processor //Ultibo
+    if HasOption('processor') then begin //Ultibo
+      ProcessorOverride := GetOptionValue('processor'); //Ultibo
+      if ConsoleVerbosity>=0 then //Ultibo
+        writeln('Parameter: processor=',ProcessorOverride); //Ultibo
+    end; //Ultibo
 
     // build mode
     if HasOption('bm') then begin

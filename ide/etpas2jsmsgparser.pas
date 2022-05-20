@@ -43,8 +43,8 @@ type
     destructor Destroy; override;
     function LoadCurrentEnglishFile(UpdateFromDisk: boolean; AThread: TThread
       ): TFPCMsgFilePoolItem; override;
-    procedure GetMsgFileNames({%H-}CompilerFilename, {%H-}TargetOS, {%H-}TargetCPU: string;
-      out anEnglishFile, aTranslationFile: string); override;
+    procedure GetMsgFileNames({%H-}CompilerFilename, {%H-}TargetOS, {%H-}TargetCPU, {%H-}TargetProcessor: string;
+      out anEnglishFile, aTranslationFile: string); override; //Ultibo
   end;
 
   { TIDEPas2jsParser }
@@ -92,7 +92,7 @@ begin
 end;
 
 procedure TPas2jsMsgFilePool.GetMsgFileNames(CompilerFilename, TargetOS,
-  TargetCPU: string; out anEnglishFile, aTranslationFile: string);
+  TargetCPU, TargetProcessor: string; out anEnglishFile, aTranslationFile: string); //Ultibo
 begin
   anEnglishFile:=AppendPathDelim(EnvironmentOptions.GetParsedLazarusDirectory)+'ide'+PathDelim+'pas2jsmsg.txt';
   aTranslationFile:='';
