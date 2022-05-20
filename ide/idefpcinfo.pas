@@ -107,6 +107,7 @@ var
   sl: TStringList;
   TargetOS: String;
   TargetCPU: String;
+  TargetProcessor: String; //Ultibo
   CompilerFilename: String;
   FPCSrcDir: String;
   UnitSetCache: TFPCUnitSetCache;
@@ -121,10 +122,11 @@ begin
 
     TargetOS:=BuildBoss.GetTargetOS;
     TargetCPU:=BuildBoss.GetTargetCPU;
+    TargetProcessor:=BuildBoss.GetTargetProcessor; //Ultibo
     CompilerFilename:=LazarusIDE.GetCompilerFilename;
     FPCSrcDir:=EnvironmentOptions.GetParsedFPCSourceDirectory; // needs FPCVer macro
     UnitSetCache:=CodeToolBoss.CompilerDefinesCache.FindUnitSet(
-      CompilerFilename,TargetOS,TargetCPU,'',FPCSrcDir,true);
+      CompilerFilename,TargetOS,TargetCPU,TargetProcessor,'',FPCSrcDir,true); //Ultibo
     GatherFPCExecutable(UnitSetCache,sl);
 
     ValuesMemo.Lines.Assign(sl);
@@ -137,6 +139,7 @@ procedure TIDEFPCInfoDialog.UpdateCmdLinePage;
 var
   TargetOS: String;
   TargetCPU: String;
+  TargetProcessor: String; //Ultibo
   CompilerFilename: String;
   CompilerOptions: String;
   Cfg: TPCTargetConfigCache;
@@ -168,7 +171,7 @@ begin
       sl.Add('ERROR: design time event (lihtGetFPCFrontEndParams) failed to extend fpc front end parameters: "'+CompilerOptions+'"');
     end;
     Cfg:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-                        CompilerFilename,CompilerOptions,'','',true);
+                        CompilerFilename,CompilerOptions,'','','',true); //Ultibo
     // fpc -i
     ExtraOptions:=Cfg.GetFPCInfoCmdLineOptions(CodeToolBoss.CompilerDefinesCache.ExtraOptions);
     Params:=Trim('-iTOTP '+ExtraOptions);
@@ -188,8 +191,9 @@ begin
     // fpc -va
     TargetOS:=BuildBoss.GetTargetOS;
     TargetCPU:=BuildBoss.GetTargetCPU;
+    TargetProcessor:=BuildBoss.GetTargetProcessor; //Ultibo
     Cfg:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-                        CompilerFilename,CompilerOptions,TargetOS,TargetCPU,true);
+                        CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,true); //Ultibo
     TestFilename:=CodeToolBoss.CompilerDefinesCache.TestFilename;
     Filename:=ExtractFileName(TestFilename);
     WorkDir:=ExtractFilePath(TestFilename);
@@ -277,6 +281,7 @@ begin
     sl.Add('Directory='+Project1.Directory);
     sl.Add('TargetOS='+Project1.CompilerOptions.TargetOS);
     sl.Add('TargetCPU='+Project1.CompilerOptions.TargetCPU);
+    sl.Add('TargetProcessor='+Project1.CompilerOptions.TargetProcessor); //Ultibo
     sl.Add('CompilerFilename='+Project1.CompilerOptions.CompilerPath);
     sl.Add('CompilerOptions='+ExtractFPCFrontEndParameters(Project1.CompilerOptions.CompilerPath));
   end else begin
@@ -290,6 +295,7 @@ begin
   sl.Add('Active target:');
   sl.Add('TargetOS='+BuildBoss.GetTargetOS);
   sl.Add('TargetCPU='+BuildBoss.GetTargetCPU);
+  sl.Add('TargetProcessor='+BuildBoss.GetTargetProcessor); //Ultibo
   sl.Add('');
 end;
 

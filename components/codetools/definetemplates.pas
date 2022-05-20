@@ -854,6 +854,7 @@ type
     // key
     TargetOS: string; // will be passed lowercase
     TargetCPU: string; // will be passed lowercase
+    TargetProcessor: string; // will be passed lowercase //Ultibo
     Compiler: string; // full file name
     CompilerOptions: string; // e.g. -V<version> -Xp<path>
     // values
@@ -924,8 +925,8 @@ type
     procedure SaveToFile(Filename: string);
     procedure IncreaseChangeStamp;
     property ChangeStamp: integer read FChangeStamp;
-    function Find(CompilerFilename, CompilerOptions, TargetOS, TargetCPU: string;
-                  CreateIfNotExists: boolean): TPCTargetConfigCache;
+    function Find(CompilerFilename, CompilerOptions, TargetOS, TargetCPU, TargetProcessor: string;
+                  CreateIfNotExists: boolean): TPCTargetConfigCache; //Ultibo
     procedure GetDefaultCompilerTarget(const CompilerFilename,CompilerOptions: string;
                   out TargetOS, TargetCPU: string);
     function GetListing: string;
@@ -1004,6 +1005,7 @@ type
     FFPCSourceDirectory: string;
     FTargetCPU: string;
     FTargetOS: string;
+    FTargetProcessor: string; //Ultibo
     FConfigCache: TPCTargetConfigCache;
     fSourceCache: TFPCSourceCache;
     fSourceRules: TFPCSourceRules;
@@ -1019,6 +1021,7 @@ type
     procedure SetFPCSourceDirectory(const AValue: string);
     procedure SetTargetCPU(const AValue: string);
     procedure SetTargetOS(const AValue: string);
+    procedure SetTargetProcessor(const AValue: string); //Ultibo
     procedure ClearConfigCache;
     procedure ClearSourceCache;
   protected
@@ -1034,6 +1037,7 @@ type
     property CompilerOptions: string read FCompilerOptions write SetCompilerOptions;
     property TargetOS: string read FTargetOS write SetTargetOS; // case insensitive, will be passed lowercase
     property TargetCPU: string read FTargetCPU write SetTargetCPU; // case insensitive, will be passed lowercase
+    property TargetProcessor: string read FTargetProcessor write SetTargetProcessor; // case insensitive, will be passed lowercase //Ultibo
     property FPCSourceDirectory: string read FFPCSourceDirectory write SetFPCSourceDirectory;
     function GetConfigCache(AutoUpdate: boolean): TPCTargetConfigCache;
     function GetSourceCache(AutoUpdate: boolean): TFPCSourceCache;
@@ -1082,21 +1086,21 @@ type
     property ConfigCaches: TPCTargetConfigCaches read FConfigCaches write SetConfigCaches;
     property TestFilename: string read GetTestFilename write SetTestFilename; // an empty file to test the compiler, will be auto created
     property ExtraOptions: string read GetExtraOptions write SetExtraOptions; // additional compiler options not used as key, e.g. -Fr<language file>
-    function GetFPCVersion(const CompilerFilename, TargetOS, TargetCPU: string;
-                           UseCompiledVersionAsDefault: boolean): string; deprecated 'use GetPCVersion'; // 2.0.1
-    function GetPCVersion(const CompilerFilename, TargetOS, TargetCPU: string;
+    function GetFPCVersion(const CompilerFilename, TargetOS, TargetCPU, TargetProcessor: string;
+                           UseCompiledVersionAsDefault: boolean): string; deprecated 'use GetPCVersion'; // 2.0.1 //Ultibo
+    function GetPCVersion(const CompilerFilename, TargetOS, TargetCPU, TargetProcessor: string;
                           UseCompiledVersionAsDefault: boolean;
-                          out Kind: TPascalCompiler): string;
-    function FindUnitSet(const CompilerFilename, TargetOS, TargetCPU,
+                          out Kind: TPascalCompiler): string; //Ultibo
+    function FindUnitSet(const CompilerFilename, TargetOS, TargetCPU, TargetProcessor,
                          Options, FPCSrcDir: string;
-                         CreateIfNotExists: boolean): TFPCUnitSetCache;
+                         CreateIfNotExists: boolean): TFPCUnitSetCache; //Ultibo
     function FindUnitSetWithID(const UnitSetID: string; out Changed: boolean;
                                CreateIfNotExists: boolean): TFPCUnitSetCache;
-    function GetUnitSetID(CompilerFilename, TargetOS, TargetCPU, Options,
-                          FPCSrcDir: string; ChangeStamp: integer): string;
+    function GetUnitSetID(CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Options,
+                          FPCSrcDir: string; ChangeStamp: integer): string; //Ultibo
     procedure ParseUnitSetID(const ID: string; out CompilerFilename,
-                             TargetOS, TargetCPU, Options, FPCSrcDir: string;
-                             out ChangeStamp: integer);
+                             TargetOS, TargetCPU, TargetProcessor, Options, FPCSrcDir: string;
+                             out ChangeStamp: integer); //Ultibo
   end;
 
   TFPCDefinesCache = TCompilerDefinesCache deprecated 'use TCompilerDefinesCache'; // 1.9
@@ -1115,6 +1119,7 @@ function GetDefaultCompilerFilename(const TargetCPU: string = ''; Cross: boolean
 procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
 function GetFPCTargetOS(TargetOS: string): string; // normalize
 function GetFPCTargetCPU(TargetCPU: string): string; // normalize
+function GetFPCTargetProcessor(TargetProcessor: string): string; // normalize //Ultibo
 function IsPas2jsTargetOS(TargetOS: string): boolean;
 function IsPas2jsTargetCPU(TargetCPU: string): boolean;
 
@@ -3599,6 +3604,8 @@ begin
   if Result<>0 then exit;
   Result:=CompareStr(Item1.TargetCPU,Item2.TargetCPU);
   if Result<>0 then exit;
+  Result:=CompareStr(Item1.TargetProcessor,Item2.TargetProcessor); //Ultibo
+  if Result<>0 then exit; //Ultibo
   Result:=CompareFilenames(Item1.Compiler,Item2.Compiler);
   if Result<>0 then exit;
   Result:=CompareFilenames(Item1.CompilerOptions,Item2.CompilerOptions);
@@ -3952,6 +3959,11 @@ function GetFPCTargetCPU(TargetCPU: string): string;
 begin
   Result:=LowerCase(TargetCPU);
 end;
+
+function GetFPCTargetProcessor(TargetProcessor: string): string; //Ultibo
+begin
+  Result:=LowerCase(TargetProcessor);
+end; //Ultibo
 
 function IsPas2jsTargetOS(TargetOS: string): boolean;
 var
@@ -9742,6 +9754,7 @@ begin
   if CompareKey then begin
     if (TargetOS<>Item.TargetOS)
       or (TargetCPU<>Item.TargetCPU)
+      or (TargetProcessor<>Item.TargetProcessor) //Ultibo
       or (Compiler<>Item.Compiler)
       or (CompilerOptions<>Item.CompilerOptions)
     then
@@ -9837,6 +9850,7 @@ begin
     // keys
     TargetOS:=Item.TargetOS;
     TargetCPU:=Item.TargetCPU;
+    TargetProcessor:=Item.TargetProcessor; //Ultibo
     Compiler:=Item.Compiler;
     CompilerOptions:=Item.CompilerOptions;
     // values
@@ -9988,6 +10002,7 @@ begin
   Kind:=StrToPascalCompiler(XMLConfig.GetValue(Path+'Kind',PascalCompilerNames[pcFPC]));
   TargetOS:=XMLConfig.GetValue(Path+'TargetOS','');
   TargetCPU:=XMLConfig.GetValue(Path+'TargetCPU','');
+  TargetProcessor:=XMLConfig.GetValue(Path+'TargetProcessor',''); //Ultibo
   Compiler:=XMLConfig.GetValue(Path+'Compiler/File','');
   CompilerOptions:=XMLConfig.GetValue(Path+'Compiler/Options','');
   CompilerDate:=XMLConfig.GetValue(Path+'Compiler/Date',0);
@@ -10173,6 +10188,7 @@ begin
   XMLConfig.SetDeleteValue(Path+'Kind',PascalCompilerNames[Kind],PascalCompilerNames[pcFPC]);
   XMLConfig.SetDeleteValue(Path+'TargetOS',TargetOS,'');
   XMLConfig.SetDeleteValue(Path+'TargetCPU',TargetCPU,'');
+  XMLConfig.SetDeleteValue(Path+'TargetProcessor',TargetProcessor,''); //Ultibo
   XMLConfig.SetDeleteValue(Path+'Compiler/File',Compiler,'');
   XMLConfig.SetDeleteValue(Path+'Compiler/Options',CompilerOptions,'');
   XMLConfig.SetDeleteValue(Path+'Compiler/Date',CompilerDate,0);
@@ -10346,6 +10362,8 @@ begin
     Result:=Result+' -P'+LowerCase(TargetCPU);
   if TargetOS<>'' then
     Result:=Result+' -T'+LowerCase(TargetOS);
+  if TargetProcessor<>'' then //Ultibo
+    Result:=Result+' -Cp'+LowerCase(TargetProcessor); //Ultibo
   if ExtraOptions<>'' then
     Result:=Result+' '+ExtraOptions;
   Result:=Trim(Result);
@@ -10395,7 +10413,7 @@ begin
     CompilerDate:=-1;
     if FileExistsCached(Compiler) then begin
       CompilerDate:=FileAgeCached(Compiler);
-      ExtraOptions:=GetFPCInfoCmdLineOptions(ExtraOptions);// add -TTargetOS and -PTargetCPU
+      ExtraOptions:=GetFPCInfoCmdLineOptions(ExtraOptions);// add -TTargetOS and -PTargetCPU and -CpTargetProcessor //Ultibo
       BaseDir:='';
 
       // check if this is a FPC compatible compiler and get version, OS and CPU
@@ -10764,8 +10782,8 @@ begin
 end;
 
 function TPCTargetConfigCaches.Find(CompilerFilename, CompilerOptions,
-  TargetOS, TargetCPU: string; CreateIfNotExists: boolean
-  ): TPCTargetConfigCache;
+  TargetOS, TargetCPU, TargetProcessor: string; CreateIfNotExists: boolean
+  ): TPCTargetConfigCache; //Ultibo
 var
   Node: TAVLTreeNode;
   Cmp: TPCTargetConfigCache;
@@ -10776,6 +10794,7 @@ begin
     Cmp.CompilerOptions:=CompilerOptions;
     Cmp.TargetOS:=TargetOS;
     Cmp.TargetCPU:=TargetCPU;
+    Cmp.TargetProcessor:=TargetProcessor; //Ultibo
     Node:=fItems.Find(cmp);
     if Node<>nil then begin
       Result:=TPCTargetConfigCache(Node.Data);
@@ -10797,7 +10816,7 @@ procedure TPCTargetConfigCaches.GetDefaultCompilerTarget(
 var
   Cfg: TPCTargetConfigCache;
 begin
-  Cfg:=Find(CompilerFilename,CompilerOptions,'','',true);
+  Cfg:=Find(CompilerFilename,CompilerOptions,'','','',true); //Ultibo
   if Cfg=nil then begin
     TargetOS:='';
     TargetCPU:='';
@@ -10824,6 +10843,7 @@ begin
     Result+='  '+dbgs(i)+':'
            +' TargetOS="'+CfgCache.TargetOS+'"'
            +' TargetCPU="'+CfgCache.TargetCPU+'"'
+           +' TargetProcessor="'+CfgCache.TargetProcessor+'"' //Ultibo
            +' Compiler="'+CfgCache.Compiler+'"'
            +' CompilerOptions="'+CfgCache.CompilerOptions+'"'
            +LineEnding;
@@ -11396,17 +11416,17 @@ begin
 end;
 
 function TCompilerDefinesCache.GetFPCVersion(const CompilerFilename, TargetOS,
-  TargetCPU: string; UseCompiledVersionAsDefault: boolean): string;
+  TargetCPU, TargetProcessor: string; UseCompiledVersionAsDefault: boolean): string; //Ultibo
 var
   Kind: TPascalCompiler;
 begin
-  Result:=GetPCVersion(CompilerFilename,TargetOS,TargetCPU,UseCompiledVersionAsDefault,Kind);
+  Result:=GetPCVersion(CompilerFilename,TargetOS,TargetCPU,TargetProcessor,UseCompiledVersionAsDefault,Kind); //Ultibo
   if Kind=pcFPC then ;
 end;
 
 function TCompilerDefinesCache.GetPCVersion(const CompilerFilename, TargetOS,
-  TargetCPU: string; UseCompiledVersionAsDefault: boolean; out
-  Kind: TPascalCompiler): string;
+  TargetCPU, TargetProcessor: string; UseCompiledVersionAsDefault: boolean; out
+  Kind: TPascalCompiler): string; //Ultibo
 var
   CfgCache: TPCTargetConfigCache;
   ErrorMsg: string;
@@ -11418,7 +11438,7 @@ begin
     Result:='';
   if not IsCTExecutable(CompilerFilename,ErrorMsg) then
     exit;
-  CfgCache:=ConfigCaches.Find(CompilerFilename,ExtraOptions,TargetOS,TargetCPU,true);
+  CfgCache:=ConfigCaches.Find(CompilerFilename,ExtraOptions,TargetOS,TargetCPU,TargetProcessor,true); //Ultibo
   if CfgCache.NeedsUpdate
   and not CfgCache.Update(TestFilename,ExtraOptions) then
     exit;
@@ -11428,8 +11448,8 @@ begin
 end;
 
 function TCompilerDefinesCache.FindUnitSet(const CompilerFilename, TargetOS,
-  TargetCPU, Options, FPCSrcDir: string; CreateIfNotExists: boolean
-  ): TFPCUnitSetCache;
+  TargetCPU, TargetProcessor, Options, FPCSrcDir: string; CreateIfNotExists: boolean
+  ): TFPCUnitSetCache; //Ultibo
 var
   i: Integer;
 begin
@@ -11438,6 +11458,7 @@ begin
     if (CompareFilenames(Result.CompilerFilename,CompilerFilename)=0)
     and (SysUtils.CompareText(Result.TargetOS,TargetOS)=0)
     and (SysUtils.CompareText(Result.TargetCPU,TargetCPU)=0)
+    and (SysUtils.CompareText(Result.TargetProcessor,TargetProcessor)=0) //Ultibo
     and (CompareFilenames(Result.FPCSourceDirectory,FPCSrcDir)=0)
     and (Result.CompilerOptions=Options)
     then
@@ -11449,6 +11470,7 @@ begin
     Result.CompilerOptions:=Options;
     Result.TargetOS:=TargetOS;
     Result.TargetCPU:=TargetCPU;
+    Result.TargetProcessor:=TargetProcessor; //Ultibo
     Result.FPCSourceDirectory:=FPCSrcDir;
     fUnitToSrcCaches.Add(Result);
   end else
@@ -11458,38 +11480,39 @@ end;
 function TCompilerDefinesCache.FindUnitSetWithID(const UnitSetID: string; out
   Changed: boolean; CreateIfNotExists: boolean): TFPCUnitSetCache;
 var
-  CompilerFilename, TargetOS, TargetCPU, Options, FPCSrcDir: string;
+  CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Options, FPCSrcDir: string; //Ultibo
   ChangeStamp: integer;
 begin
-  ParseUnitSetID(UnitSetID,CompilerFilename, TargetOS, TargetCPU,
-                 Options, FPCSrcDir, ChangeStamp);
+  ParseUnitSetID(UnitSetID,CompilerFilename, TargetOS, TargetCPU, TargetProcessor,
+                 Options, FPCSrcDir, ChangeStamp); //Ultibo
   //debugln(['TCompilerDefinesCache.FindUnitToSrcCache UnitSetID="',dbgstr(UnitSetID),'" CompilerFilename="',CompilerFilename,'" TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" Options="',Options,'" FPCSrcDir="',FPCSrcDir,'" ChangeStamp=',ChangeStamp,' exists=',FindUnitToSrcCache(CompilerFilename, TargetOS, TargetCPU,Options, FPCSrcDir,false)<>nil]);
-  Result:=FindUnitSet(CompilerFilename, TargetOS, TargetCPU,
-                             Options, FPCSrcDir, false);
+  Result:=FindUnitSet(CompilerFilename, TargetOS, TargetCPU, TargetProcessor,
+                             Options, FPCSrcDir, false); //Ultibo
   if Result<>nil then begin
     Changed:=ChangeStamp<>Result.ChangeStamp;
   end else if CreateIfNotExists then begin
     Changed:=true;
-    Result:=FindUnitSet(CompilerFilename, TargetOS, TargetCPU,
-                               Options, FPCSrcDir, true);
+    Result:=FindUnitSet(CompilerFilename, TargetOS, TargetCPU, TargetProcessor,
+                               Options, FPCSrcDir, true); //Ultibo
   end else
     Changed:=false;
 end;
 
-function TCompilerDefinesCache.GetUnitSetID(CompilerFilename, TargetOS, TargetCPU,
-  Options, FPCSrcDir: string; ChangeStamp: integer): string;
+function TCompilerDefinesCache.GetUnitSetID(CompilerFilename, TargetOS, TargetCPU, TargetProcessor,
+  Options, FPCSrcDir: string; ChangeStamp: integer): string; //Ultibo
 begin
   Result:='CompilerFilename='+CompilerFilename+LineEnding
          +'TargetOS='+TargetOS+LineEnding
          +'TargetCPU='+TargetCPU+LineEnding
+         +'TargetProcessor='+TargetProcessor+LineEnding //Ultibo
          +'Options='+Options+LineEnding
          +'FPCSrcDir='+FPCSrcDir+LineEnding
          +'Stamp='+IntToStr(ChangeStamp);
 end;
 
 procedure TCompilerDefinesCache.ParseUnitSetID(const ID: string;
-  out CompilerFilename, TargetOS, TargetCPU, Options, FPCSrcDir: string;
-  out ChangeStamp: integer);
+  out CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Options, FPCSrcDir: string;
+  out ChangeStamp: integer); //Ultibo
 var
   NameStartPos: PChar;
 
@@ -11511,6 +11534,7 @@ var
   Value: String;
 begin
   CompilerFilename:='';
+  TargetProcessor:=''; //Ultibo
   TargetCPU:='';
   TargetOS:='';
   Options:='';
@@ -11546,7 +11570,9 @@ begin
       if NameFits('TargetOS') then
         TargetOS:=Value
       else if NameFits('TargetCPU') then
-        TargetCPU:=Value;
+        TargetCPU:=Value
+      else if NameFits('TargetProcessor') then //Ultibo
+        TargetProcessor:=Value; //Ultibo
     end;
     NameStartPos:=ValueEndPos;
   end;
@@ -11594,6 +11620,13 @@ begin
   FTargetOS:=AValue;
   ClearConfigCache;
 end;
+
+procedure TFPCUnitSetCache.SetTargetProcessor(const AValue: string); //Ultibo
+begin
+  if FTargetProcessor=AValue then exit;
+  FTargetProcessor:=AValue;
+  ClearConfigCache;
+end; //Ultibo
 
 procedure TFPCUnitSetCache.ClearConfigCache;
 begin
@@ -11660,7 +11693,7 @@ begin
     raise Exception.Create('TFPCUnitToSrcCache.GetConfigCache missing TestFilename');
   if FConfigCache=nil then begin
     FConfigCache:=Caches.ConfigCaches.Find(CompilerFilename,CompilerOptions,
-                                           TargetOS,TargetCPU,true);
+                                           TargetOS,TargetCPU,TargetProcessor,true); //Ultibo
     FConfigCache.FreeNotification(Self);
   end;
   //debugln(['TFPCUnitSetCache.GetConfigCache CompilerOptions="',CompilerOptions,'" FConfigCache.CompilerOptions="',FConfigCache.CompilerOptions,'"']);
@@ -11859,8 +11892,8 @@ end;
 
 function TFPCUnitSetCache.GetUnitSetID: string;
 begin
-  Result:=Caches.GetUnitSetID(CompilerFilename,TargetOS,TargetCPU,
-                              CompilerOptions,FPCSourceDirectory,ChangeStamp);
+  Result:=Caches.GetUnitSetID(CompilerFilename,TargetOS,TargetCPU,TargetProcessor,
+                              CompilerOptions,FPCSourceDirectory,ChangeStamp); //Ultibo
 end;
 
 function TFPCUnitSetCache.GetFirstFPCCfg: string;

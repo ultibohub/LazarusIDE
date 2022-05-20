@@ -1470,7 +1470,7 @@ begin
   and (not GetSkipCheck(skcFpcSrc))
   then begin
     CfgCache:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-      EnvironmentOptions.GetParsedCompilerFilename,'','','',true);
+      EnvironmentOptions.GetParsedCompilerFilename,'','','','',true); //Ultibo
     if CheckFPCSrcDirQuality(EnvironmentOptions.GetParsedFPCSourceDirectory,Note,
       CfgCache.GetFPCVer)=sddqInvalid
     then begin

@@ -512,7 +512,7 @@ begin
   if EnvironmentOptions.FPCSourceDirectory=FOldFPCSourceDir then exit(true);
   Result:=false;
   CfgCache:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-    EnvironmentOptions.GetParsedCompilerFilename,'','','',true);
+    EnvironmentOptions.GetParsedCompilerFilename,'','','','',true); //Ultibo
   FPCVer:=CfgCache.GetFPCVer;
   EnvironmentOptions.FPCSourceDirectory:=FPCSourceDirComboBox.Text;
   NewFPCSrcDir:=EnvironmentOptions.GetParsedFPCSourceDirectory;
