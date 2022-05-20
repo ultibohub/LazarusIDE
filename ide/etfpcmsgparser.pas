@@ -117,8 +117,8 @@ type
     procedure UnloadFile(var aFile: TFPCMsgFilePoolItem);
     procedure EnterCriticalsection;
     procedure LeaveCriticalSection;
-    procedure GetMsgFileNames(CompilerFilename, TargetOS, TargetCPU: string;
-      out anEnglishFile, aTranslationFile: string); virtual; // (main thread)
+    procedure GetMsgFileNames(CompilerFilename, TargetOS, TargetCPU, TargetProcessor: string;
+      out anEnglishFile, aTranslationFile: string); virtual; // (main thread) //Ultibo
     property DefaultEnglishFile: string read FDefaultEnglishFile write SetDefaultEnglishFile;
     property DefaulTranslationFile: string read FDefaultTranslationFile write SetDefaultTranslationFile;
     property OnLoadFile: TETLoadFileEvent read FOnLoadFile write FOnLoadFile; // (main or workerthread)
@@ -834,7 +834,7 @@ var
 begin
   Result:=nil;
   GetMsgFileNames(EnvironmentOptions.GetParsedCompilerFilename,'','',
-    anEnglishFile,aTranslationFile);
+    '',anEnglishFile,aTranslationFile); //Ultibo
   //writeln('TFPCMsgFilePool.LoadCurrentEnglishFile ',anEnglishFile);
   if not FilenameIsAbsolute(anEnglishFile) then exit;
   Result:=LoadFile(anEnglishFile,UpdateFromDisk,AThread);
@@ -1004,7 +1004,7 @@ begin
 end;
 
 procedure TFPCMsgFilePool.GetMsgFileNames(CompilerFilename, TargetOS,
-  TargetCPU: string; out anEnglishFile, aTranslationFile: string);
+  TargetCPU, TargetProcessor: string; out anEnglishFile, aTranslationFile: string); //Ultibo
 var
   FPCVer: String;
   FPCSrcDir: String;
@@ -1018,7 +1018,7 @@ begin
     // => use fpcsrcdir/compiler/msg/errore.msg
     // the fpcsrcdir might depend on the FPC version
     FPCVer:=CodeToolBoss.CompilerDefinesCache.GetPCVersion(
-              CompilerFilename,TargetOS,TargetCPU,false,CompilerKind);
+              CompilerFilename,TargetOS,TargetCPU,TargetProcessor,false,CompilerKind); //Ultibo
     if CompilerKind<>pcFPC then
       ;// ToDo
     FPCSrcDir:=EnvironmentOptions.GetParsedFPCSourceDirectory(FPCVer);
@@ -1115,6 +1115,7 @@ var
   p: PChar;
   aTargetOS: String;
   aTargetCPU: String;
+  aTargetProcessor: String; //Ultibo
   aProject: TLazProject;
   aProjFile: TLazProjectFile;
 begin
@@ -1125,6 +1126,7 @@ begin
   if MsgFilePool<>nil then begin
     aTargetOS:='';
     aTargetCPU:='';
+    aTargetProcessor:=''; //Ultibo
     for i:=0 to Tool.Process.Parameters.Count-1 do begin
       Param:=Tool.Process.Parameters[i];
       if Param='' then continue;
@@ -1133,10 +1135,12 @@ begin
       if p[1]='T' then
         aTargetOS:=copy(Param,3,255)
       else if p[1]='P' then
-        aTargetCPU:=copy(Param,3,255);
+        aTargetCPU:=copy(Param,3,255)
+      else if p[1]='Cp' then //Ultibo
+        aTargetProcessor:=copy(Param,4,255); //Ultibo
     end;
     MsgFilePool.GetMsgFileNames(Tool.Process.Executable,aTargetOS,aTargetCPU,
-      MsgFilename,TranslationFilename);
+      aTargetProcessor,MsgFilename,TranslationFilename); //Ultibo
   end;
 
   LoadMsgFile(MsgFilename,MsgFile);

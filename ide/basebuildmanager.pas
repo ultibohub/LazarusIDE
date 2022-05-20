@@ -56,6 +56,7 @@ type
     function GetBuildMacroOverrides: TStrings; virtual; abstract;
     function GetTargetOS: string; virtual; abstract;
     function GetTargetCPU: string; virtual; abstract;
+    function GetTargetProcessor: string; virtual; abstract; //Ultibo
     function GetLCLWidgetType: string; virtual; abstract;
     function GetRunCommandLine: string; virtual; abstract;
     procedure WriteDebug_RunCommandLine; virtual; abstract;
