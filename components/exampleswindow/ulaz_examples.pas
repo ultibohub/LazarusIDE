@@ -25,6 +25,7 @@ Notes -
     David Bannon, Feb 2022
 }
 {$mode objfpc}{$H+}
+{$define EXTESTMODE}
 
 {X$define ONLINE_EXAMPLES}
 
@@ -481,15 +482,13 @@ begin
     Ex.LoadExData(FromLazSrcTree);
     {$endif}
     if Ex.ErrorMsg <> '' then
-        Showmessage(Ex.ErrorMsg)
-    else begin
-        ex.getCategoryData(CheckGroupCategory.Items);       // This sets the name of all categories in the CheckGroup
-        for i := 0 to CheckGroupCategory.items.Count-1 do   // check all the categories we found.
-            CheckGroupCategory.Checked[i] := true;
-        ListView1.Clear;
-        PrimeCatFilter();
-        LoadUpListView();
-    end;
+        Showmessage(Ex.ErrorMsg);                       // Note : previously, we treated this as fatal ?
+    ex.getCategoryData(CheckGroupCategory.Items);       // This sets the name of all categories in the CheckGroup
+    for i := 0 to CheckGroupCategory.items.Count-1 do   // check all the categories we found.
+        CheckGroupCategory.Checked[i] := true;
+    ListView1.Clear;
+    PrimeCatFilter();
+    LoadUpListView();
     if EditSearch.Text <> rsExSearchPrompt then
         KeyWordSearch()
     else EditSearch.SetFocus;

@@ -597,12 +597,15 @@ type
   { TFpThreadWorkerComputeNameHashes }
 
   TFpThreadWorkerComputeNameHashes = class(TFpThreadWorkerItem)
-  protected
+  strict private
     FCU: TDwarfCompilationUnit;
+    FScanScopeList: TDwarfScopeList;
     FReadyToRun: Cardinal;
+  protected
     procedure DoExecute; override;
   public
     constructor Create(CU: TDwarfCompilationUnit);
+    procedure SetScopeList(const AScanScopeList: TDwarfScopeList); // will queue to run on the 2nd call
     procedure MarkReadyToRun; // will queue to run on the 2nd call
   end;
 
@@ -617,7 +620,8 @@ type
     procedure DoExecute; override;
   public
     constructor Create(CU: TDwarfCompilationUnit; ACompNameHashWorker: TFpThreadWorkerComputeNameHashes);
-    function FindCompileUnit: TDwarfScopeInfo; // To be called ONLY before the thread starts
+    function  FindCompileUnit(var AScopeList: TDwarfScopeList): TDwarfScopeInfo; // To be called ONLY before the thread starts
+    procedure UpdateScopeList(var AScopeList: TDwarfScopeList); // To be called ONLY before the thread starts
   end;
 
   { TDwarfCompilationUnit }
@@ -628,6 +632,9 @@ type
     FWaitForScopeScanSection: TWaitableSection;
     FWaitForComputeHashesSection: TWaitableSection;
     FBuildAddressMapSection: TWaitableSection;
+  private type
+    TWaitRequirement = (wrScan, wrAddrMap);
+    TWaitRequirements = set of TWaitRequirement;
   private
     FOwner: TFpDwarfInfo;
     FDebugFile: PDwarfDebugFile;
@@ -738,7 +745,7 @@ type
     // Get start/end addresses of proc
     function GetProcStartEnd(const AAddress: TDBGPtr; out AStartPC, AEndPC: TDBGPtr): boolean;
 
-    function HasAddress(AAddress: TDbgPtr; ABuildAddrMap: Boolean = False): Boolean; inline;
+    function HasAddress(AAddress: TDbgPtr; AWaitFor: TWaitRequirements = []): Boolean; inline;
     property Valid: Boolean read FValid;
     property FileName: String read FFileName;
     property UnitName: String read GetUnitName;
@@ -3749,7 +3756,7 @@ begin
   for n := 0 to FCompilationUnits.Count - 1 do
   begin
     CU := TDwarfCompilationUnit(FCompilationUnits[n]);
-    if not CU.HasAddress(AAddress, True) then
+    if not CU.HasAddress(AAddress, [wrAddrMap]) then
       Continue;
 
     Iter := TLockedMapIterator.Create(CU.FAddressMap);
@@ -3787,7 +3794,7 @@ begin
   for n := 0 to FCompilationUnits.Count - 1 do
   begin
     CU := TDwarfCompilationUnit(FCompilationUnits[n]);
-    if not CU.HasAddress(AAddress, True) then
+    if not CU.HasAddress(AAddress, [wrAddrMap]) then
       Continue;
 
     Result := CU.GetProcStartEnd(AAddress, AStartPC, AEndPC);
@@ -3807,7 +3814,7 @@ begin
   for n := 0 to FCompilationUnits.Count - 1 do
   begin
     CU := TDwarfCompilationUnit(FCompilationUnits[n]);
-    if not CU.HasAddress(AAddress, True) then
+    if not CU.HasAddress(AAddress, [wrAddrMap]) then
       Continue;
 
     Iter := TLockedMapIterator.Create(CU.FAddressMap);
@@ -3867,21 +3874,14 @@ function TFpDwarfInfo.FindDwarfUnitSymbol(AAddress: TDbgPtr
 var
   n: Integer;
   CU: TDwarfCompilationUnit;
-  MinMaxSet: boolean;
   InfoEntry: TDwarfInformationEntry;
 begin
   Result := nil;
   for n := 0 to FCompilationUnits.Count - 1 do
   begin
     CU := TDwarfCompilationUnit(FCompilationUnits[n]);
-    CU.WaitForScopeScan;
-    if not CU.Valid then Continue;
-    MinMaxSet := CU.FMinPC <> CU.FMaxPC;
-    if (not MinMaxSet) or ((AAddress < CU.FMinPC) or (AAddress > CU.FMaxPC))
-    then Continue;
-
-    if not CU.Valid then // implies FCompUnitScope is ok
-      break;
+    if not CU.HasAddress(AAddress, [wrScan]) then
+      continue;
 
     InfoEntry := TDwarfInformationEntry.Create(CU, CU.FCompUnitScope);
     Result := Cu.DwarfSymbolClassMap.CreateUnitSymbol(CU, InfoEntry, Self);
@@ -4392,12 +4392,7 @@ begin
   FScanScopeList.BuildList(FCU.FAbbrevList, FCU.FInfoData, FCU.FLength,
     FCU.FAddressSize, FCU.IsDwarf64, FCU.Version);
 
-  // The other thread does WaitForScopeScan (if all is correct)
-  // We must write them now, for the CompNameHashWorker
-  FCU.FScopeList := FScanScopeList;
-  FCU.FFirstScope.Init(@FCU.FScopeList);
-  FCU.FFirstScope.Index := 0;
-
+  FCompNameHashWorker.SetScopeList(FScanScopeList);
   FCompNameHashWorker.MarkReadyToRun;
 end;
 
@@ -4408,23 +4403,32 @@ begin
   FCompNameHashWorker := ACompNameHashWorker;
 end;
 
-function TFpThreadWorkerScanAll.FindCompileUnit: TDwarfScopeInfo;
+function TFpThreadWorkerScanAll.FindCompileUnit(var AScopeList: TDwarfScopeList
+  ): TDwarfScopeInfo;
 begin
   Result := FScanScopeList.BuildList(FCU.FAbbrevList, FCU.FInfoData, FCU.FLength,
     FCU.FAddressSize, FCU.IsDwarf64, FCU.Version, DW_TAG_compile_unit);
 
-  FCU.FScopeList := FScanScopeList;
-  Result.FScopeListPtr := @FCU.FScopeList;
+  AScopeList := FScanScopeList;
+  Result.FScopeListPtr := @AScopeList;
+end;
+
+procedure TFpThreadWorkerScanAll.UpdateScopeList(var AScopeList: TDwarfScopeList
+  );
+begin
+  AScopeList := FScanScopeList;
 end;
 
 { TFpThreadWorkerComputeNameHashes }
 
 procedure TFpThreadWorkerComputeNameHashes.DoExecute;
 var
+  Scope: TDwarfScopeInfo;
   InfoEntry: TDwarfInformationEntry;
 begin
-  InfoEntry := TDwarfInformationEntry.Create(FCU, nil);
-  InfoEntry.ScopeIndex := FCU.FirstScope.Index;
+  Scope.Init(@FScanScopeList);
+  Scope.Index := 0;
+  InfoEntry := TDwarfInformationEntry.Create(FCU, Scope);
   InfoEntry.ComputeKnownHashes(@FCU.FKnownNameHashes);
   InfoEntry.ReleaseReference;
 end;
@@ -4432,6 +4436,12 @@ end;
 constructor TFpThreadWorkerComputeNameHashes.Create(CU: TDwarfCompilationUnit);
 begin
   FCU := CU;
+end;
+
+procedure TFpThreadWorkerComputeNameHashes.SetScopeList(
+  const AScanScopeList: TDwarfScopeList);
+begin
+  FScanScopeList := AScanScopeList;
 end;
 
 procedure TFpThreadWorkerComputeNameHashes.MarkReadyToRun;
@@ -4554,6 +4564,11 @@ begin
   if FWaitForScopeScanSection.EnterOrWait(CachedRtlEvent) then begin
     if FScanAllWorker <> nil then begin
       FOwner.WorkQueue.WaitForItem(FScanAllWorker);
+
+      FScanAllWorker.UpdateScopeList(FScopeList);
+      FFirstScope.Init(@FScopeList);
+      FFirstScope.Index := 0;
+
       FScanAllWorker.DecRef;
       FScanAllWorker := nil;
     end;
@@ -4809,7 +4824,7 @@ begin
   FScanAllWorker := TFpThreadWorkerScanAll.Create(Self, FComputeNameHashesWorker);
   FScanAllWorker.AddRef;
 
-  Scope := FScanAllWorker.FindCompileUnit;
+  Scope := FScanAllWorker.FindCompileUnit(FScopeList);
   if not Scope.IsValid then begin
     DebugLn(FPDBG_DWARF_WARNINGS, ['WARNING compilation unit has no compile_unit tag']);
     Exit;
@@ -5165,7 +5180,7 @@ begin
 end;
 
 function TDwarfCompilationUnit.HasAddress(AAddress: TDbgPtr;
-  ABuildAddrMap: Boolean): Boolean;
+  AWaitFor: TWaitRequirements): Boolean;
 begin
   Result := Valid and
             ( (FMinPC = FMaxPC) or
@@ -5175,7 +5190,7 @@ begin
   if not Result then
     exit;
 
-  if not ABuildAddrMap then
+  if AWaitFor = [] then
     exit;
 
   WaitForScopeScan;
@@ -5183,7 +5198,8 @@ begin
   if not Result then
     exit;
 
-  BuildAddressMap;
+  if wrAddrMap in AWaitFor then
+    BuildAddressMap;
 end;
 
 function TDwarfCompilationUnit.ReadValue(AAttribute: Pointer; AForm: Cardinal; out AValue: Cardinal): Boolean;
