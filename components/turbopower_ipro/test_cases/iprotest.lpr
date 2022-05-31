@@ -10,8 +10,7 @@ uses
   athreads,
   {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, iprotest_unit, ipro_tests
-  { you can add units after this };
+  Forms, iprotest_unit, ipro_tests;
 
 {$R *.res}
 
@@ -19,7 +18,7 @@ begin
   RequireDerivedFormResource:=True;
   Application.Scaled:=True;
   Application.Initialize;
-  Application.CreateForm(TForm1, Form1);
+  Application.CreateForm(TTestForm, TestForm);
   Application.Run;
 end.
 

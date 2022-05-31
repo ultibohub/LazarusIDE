@@ -7,7 +7,7 @@ interface
 
 uses
   types, Classes, SysUtils, LCLPRoc, LCLIntf, Graphics,
-  IpUtils, IpHtml, iphtmlprop;
+  IpUtils, IpHtmlTypes, IpHtmlProp, IpHtmlUtils, IpHtml, IpHtmlNodes;
 
 type
 
@@ -396,6 +396,8 @@ var
   R : TRect;
   CurElem : PIpHtmlElement;
   CurWordInfo : PWordInfo;
+  isRTL: Boolean;
+  rtlNode: TIpHtmlNodeCORE;
 begin
   dx := CalcDelta;
   ph := FIpHtml.PageHeight;
@@ -445,6 +447,22 @@ begin
         Dec(WMod);
       end else
         OffsetRect(R, dx + WDelta, 0);
+      
+      { mirroring for RTL reading }
+      isRTL := (FOwner.Dir = hdRTL);
+      if (CurElem.Owner <> nil) and (CurElem.Owner.ParentNode <> nil) and 
+         (CurElem.Owner.ParentNode is TIpHTMLNodeCORE) then
+      begin
+        rtlNode := TIpHtmlNodeCORE(CurElem.Owner.ParentNode);
+        if isRTL and (rtlNode.Dir = hdLTR) then
+          isRTL := false
+        else
+        if not isRTL and (rtlNode.Dir = hdRTL) then
+          isRTL := true;
+      end;
+      if isRTL then
+        R.SetLocation(FPageRect.Right - R.Right + FPageRect.Left, R.Top);
+
       SetWordRect(CurElem, R);
     end else
       SetWordRect(CurElem, NullRect);
@@ -1242,11 +1260,14 @@ var
   P : TPoint;
   R : TRect;
   TextStyle: TTextStyle;
+  isRTL: Boolean;
+  rtlNode: TIpHtmlNodeCORE;
   OldBrushcolor: TColor;
   OldFontColor: TColor;
   OldFontStyle: TFontStyles;
   OldBrushStyle: TBrushStyle;
   OldFontQuality: TFontQuality;
+  OldTextStyle: TTextStyle;
   wordIsInTable: Boolean;
 
   procedure saveCanvasProperties;
@@ -1279,6 +1300,7 @@ begin
   //if (LastOwner <> aCurWord.Owner) then LastPoint := P;
   saveCanvasProperties;
   TextStyle := FCanvas.TextStyle;
+  TextStyle.Clipping := false;
   wordIsInTable := (aCurWord.Owner <> nil) and (aCurWord.Owner.ParentNode is TIpHtmlNodeTableHeaderOrCell);
   //debugln(['TIpHtmlNodeBlock.RenderQueue ',aCurWord.AnsiWord]);
   FIpHtml.PageRectToScreen(aCurWord.WordRect2, R);
@@ -1299,7 +1321,19 @@ begin
     TextStyle.Opaque := False;
     FCanvas.Brush.Style := bsClear;
   end;
-
+  
+  isRTL := (FOwner.Dir = hdRTL);
+  if (aCurWord.Owner.ParentNode <> nil) and (aCurWord.Owner.ParentNode is TIpHTMLNodeCORE) then
+  begin
+    rtlNode := TIpHtmlNodeCORE(aCurWord.Owner.ParentNode);
+    if isRTL and (rtlNode.Dir = hdLTR) then
+      isRTL := false
+    else
+    if not isRTL and (rtlNode.Dir = hdRTL) then
+      isRTL := true;
+  end;
+  TextStyle.RightToLeft := isRTL;
+  
   if aCurWord.Owner.ParentNode = aCurTabFocus then
     FCanvas.DrawFocusRect(R);
   if FCanvas.Font.Color = clNone then

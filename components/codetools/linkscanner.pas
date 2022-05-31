@@ -213,7 +213,6 @@ type
                                 ansistring; similarly, char becomes unicodechar rather than ansichar }
     cmsTypeHelpers,        { allows the declaration of "type helper" (non-Delphi) or "record helper"
                                   (Delphi) for primitive types }
-    cmsClosures,           { Anonymous methods } // not in tmodeswitch / globtype.pas !!!
     cmsCBlocks,            { support for http://en.wikipedia.org/wiki/Blocks_(C_language_extension) }
     cmsISOlike_IO,         { I/O as it required by an ISO compatible compiler }
     cmsISOLike_Program_Para, { program parameters as it required by an ISO compatible compiler }
@@ -224,6 +223,8 @@ type
     cmsPrefixedAttributes, { enable attributes that are defined before the type they belong to }
     cmsUnderscoreisSeparator, { _ can be used as separator to group digits in numbers }
     cmsImplicitFunctionSpecialization, { infer types on calls of generic functions }
+    cmsFunctionReferences, { allow "reference to" function types }
+    cmsAnonymousFunctions, { allow anonymous functions }
 
     // not yet in FPC, supported by pas2js:
     cmsExternalClass,      { pas2js: allow  class external [pkgname] name [symbol] }
@@ -244,14 +245,16 @@ const
      cmsPointer_2_procedure,cmsAutoderef,cmsTp_procvar,cmsInitfinal,cmsDefault_ansistring,
      cmsOut,cmsDefault_para,cmsDuplicate_names,cmsHintdirective,
      cmsProperty,cmsDefault_inline,cmsExcept,cmsAdvancedRecords,
-     cmsClosures,cmsPrefixedAttributes,cmsArrayOperators],
+     cmsPrefixedAttributes,cmsArrayOperators,cmsFunctionReferences,
+     cmsAnonymousFunctions],
     // cmDELPHIUNICODE
     [cmsClass,cmsObjpas,cmsResult,cmsString_pchar,
      cmsPointer_2_procedure,cmsAutoderef,cmsTp_procvar,cmsInitfinal,
      cmsOut,cmsDefault_para,cmsDuplicate_names,cmsHintdirective,
      cmsProperty,cmsDefault_inline,cmsExcept,cmsAdvancedRecords,
      cmsSystemcodepage,cmsDefault_unicodestring,
-     cmsClosures,cmsPrefixedAttributes,cmsArrayOperators],
+     cmsPrefixedAttributes,cmsArrayOperators,cmsFunctionReferences,
+     cmsAnonymousFunctions],
     // cmGPC
     [cmsTp_procvar],
     // cmTP
@@ -273,6 +276,8 @@ const
      cmsISOLike_Mod]
     );
   cmAllModesWithGeneric = [cmDELPHI,cmDELPHIUNICODE,cmOBJFPC];
+  Pas2jsFixedModeswitches = [cmsArray2dynarray,cmsArrayOperators,
+    cmsFunctionReferences,cmsAnonymousFunctions];
 
   // upper case (see fpc/compiler/globtype.pas  modeswitchstr )
   CompilerModeSwitchNames: array[TCompilerModeSwitch] of string=(
@@ -307,7 +312,6 @@ const
     'FINALFIELDS',
     'UNICODESTRINGS',
     'TYPEHELPERS',
-    'CLOSURES',  // not in tmodeswitch / globtype.pas
     'CBLOCKS',
     'ISOIO',
     'ISOPROGRAMPARAS',
@@ -318,6 +322,8 @@ const
     'PREFIXEDATTRIBUTES',
     'UNDERSCOREISSEPARATOR',
     'IMPLICITFUNCTIONSPECIALIZATION',
+    'FUNCTIONREFERENCES',
+    'ANONYMOUSFUNCTIONS',
     // not yet in FPC, supported by pas2js:
     'EXTERNALCLASS',
     'IGNOREATTRIBUTES',
@@ -3584,7 +3590,7 @@ begin
       exit;
     end;
   end;
-  RaiseExceptionFmt(20170422130125,ctsInvalidModeSwitch,[GetIdentifier(ValStart)]);
+  // no error on unknown modeswitch
 end;
 
 function TLinkScanner.ThreadingDirective: boolean;
@@ -4662,6 +4668,8 @@ begin
   FCompilerMode:=AValue;
   OldModeSwitches:=FCompilerModeSwitches;
   FCompilerModeSwitches:=DefaultCompilerModeSwitches[CompilerMode];
+  if FPascalCompiler=pcPas2js then
+    FCompilerModeSwitches:=FCompilerModeSwitches+Pas2jsFixedModeswitches;
   FNestedComments:=cmsNested_comment in CompilerModeSwitches;
   Values.Variables[CompilerModeVars[FCompilerMode]]:='1';
 
