@@ -480,6 +480,7 @@ type
     FHideIDEOnRun: boolean;
     FAutoAdjustIDEHeight: boolean;
     FAutoAdjustIDEHeightFullCompPal: boolean;
+    FProjectInspectorShowProps: boolean;
     // window menu
     FIDENameForDesignedFormList: boolean;
     // CompletionWindow
@@ -535,6 +536,8 @@ type
     property EditorToolBarOptions: TEditorToolBarOptions read FEditorToolBarOptions;
     property ComponentPaletteOptions: TCompPaletteOptions read FComponentPaletteOptions;
     property ObjectInspectorOptions: TDesktopOIOptions read FObjectInspectorOptions;
+    property ProjectInspectorShowProps: boolean read FProjectInspectorShowProps
+                                                    write FProjectInspectorShowProps;
   end;
 
   { TUnsupportedDesktopOpt }
@@ -2045,6 +2048,8 @@ begin
   FComponentPaletteOptions:=TCompPaletteOptions.Create;
   // object inspector
   FObjectInspectorOptions:=TDesktopOIOptions.Create;
+  // project inspector
+  FProjectInspectorShowProps := true;
   // Windows layout
   InitLayoutList;
 
@@ -2110,6 +2115,8 @@ begin
   FComponentPaletteOptions.Assign(Source.FComponentPaletteOptions);
   // object inspector
   FObjectInspectorOptions.Assign(Source.FObjectInspectorOptions);
+  // project inspector
+  FProjectInspectorShowProps := Source.FProjectInspectorShowProps;
 
   if IsCompatible and Assigned(FDockedOpt) then
     FDockedOpt.Assign(Source.FDockedOpt);
@@ -2136,6 +2143,8 @@ begin
   // CompletionWindow
   FCompletionWindowWidth:=FXMLCfg.GetValue(Path+'CompletionWindowOptions/Width/Value', FCompletionWindowWidth);
   FCompletionWindowHeight:=FXMLCfg.GetValue(Path+'CompletionWindowOptions/Height/Value', 6);
+  // Project Inspector
+  FProjectInspectorShowProps := FXMLCfg.GetValue(Path+'ProjectInspectorShowProps/Value', true);
 
   if not FXMLCfg.HasPath(Path+'IDECoolBarOptions/', True) then
     Path := '';             // Toolbars and palette were at the top level in XML.
@@ -2198,6 +2207,8 @@ begin
   // CompletionWindow
   FXMLCfg.SetValue(Path+'CompletionWindowOptions/Width/Value',FCompletionWindowWidth);
   FXMLCfg.SetDeleteValue(Path+'CompletionWindowOptions/Height/Value',FCompletionWindowHeight, 6);
+  // Project Inspector
+  FXMLCfg.SetDeleteValue(Path+'ProjectInspectorShowProps/Value', FProjectInspectorShowProps, true);
   // IDE Coolbar
   FIDECoolBarOptions.Save(FXMLCfg, Path);
   // Editor Toolbar

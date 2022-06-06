@@ -502,6 +502,49 @@ const
     '</body>' + LE +
     '</html>';
     
+  ColWidth_fixed_inline_title =
+    'Column widths specified by inline style, total width automatic';
+  ColWidth_fixed_inline_descr =
+    'The 1st column should be 150 pixels, the 2nd column 300 pixels wide.';
+  ColWidth_fixed_inline_html =
+    '<html>' + LE +
+    '<body>' + LE +
+    '<table border="1">' + LE +
+    '  <tr>' + LE +
+    '    <th style="width:150">Column A</th>' + LE +
+    '    <th style="width:300">Column B</th>' + LE +
+    '  </tr>' + LE +
+    '  <tr>' + LE +
+    '    <td>Cell 1</td>' + LE +
+    '    <td>Cell 2</td>' + LE +
+    '  </tr>' + LE +
+    '</table>' + LE +
+    '</body>' + LE +
+    '</html>';
+
+  ColWidth_fixed_style_title =
+    'Column widths specified by <style> tag, total width automatic';
+  ColWidth_fixed_style_descr =
+    'Both columns should be 75 pixels wide.';
+  ColWidth_fixed_style_html =
+    '<html>' + LE +
+    '  <style type="text/css">' + LE +
+    '    th,td { width:75 }' + LE +
+    '  </style>' + LE +
+    '<body>' + LE +
+    '<table border="1">' + LE +
+    '  <tr>' + LE +
+    '    <th>Column A</th>' + LE +
+    '    <th>Column B</th>' + LE +
+    '  </tr>' + LE +
+    '  <tr>' + LE +
+    '    <td>Cell 1</td>' + LE +
+    '    <td>Cell 2</td>' + LE +
+    '  </tr>' + LE +
+    '</table>' + LE +
+    '</body>' + LE +
+    '</html>';
+
   ColWidth_100perc_title =
     'Table width 100%';
   ColWidth_100perc_descr =
@@ -557,6 +600,48 @@ const
     '  <tr>' + LE +
     '    <td>Cell 1</td>' + LE +
     '    <td>Cell 2</td>' + LE +
+    '  </tr>' + LE +
+    '</table>' + LE +
+    '</body>' + LE +
+    '</html>';
+
+  ColWidth_colspan200px_title =
+    'Three columns, two merged.';
+  ColWidth_colspan200px_descr =
+    'Two columns merged, 200px in total; 3rd column 200px';
+  ColWidth_colspan200px_html =
+    '<html>' + LE +
+    '<body>' + LE +
+    '<table border="1">' + LE +
+    '  <tr>' + LE +
+    '    <th width="200" colspan="2">Columns A and B</th>' + LE +
+    '    <th width="200">Column B</th>' + LE +
+    '  </tr>' + LE +
+    '  <tr>' + LE +
+    '    <td>Cell 1</td>' + LE +
+    '    <td>Cell 2</td>' + LE +
+    '    <td>Cell 3</td>' + LE +
+    '  </tr>' + LE +
+    '</table>' + LE +
+    '</body>' + LE +
+    '</html>';
+
+  ColWidth_colspan200px_100perc_title =
+    'Three columns, two merged. Total 100%.';
+  ColWidth_colspan200px_100perc_descr =
+    'Two columns merged, 200px in total; 3rd column 200px. Total table width covers entire space. CONFLICTING PARAMETERS!';
+  ColWidth_colspan200px_100perc_html =
+    '<html>' + LE +
+    '<body>' + LE +
+    '<table border="1" width="100%">' + LE +
+    '  <tr>' + LE +
+    '    <th width="200" colspan="2">Columns A and B</th>' + LE +
+    '    <th width="200">Column B</th>' + LE +
+    '  </tr>' + LE +
+    '  <tr>' + LE +
+    '    <td>Cell 1</td>' + LE +
+    '    <td>Cell 2</td>' + LE +
+    '    <td>Cell 3</td>' + LE +
     '  </tr>' + LE +
     '</table>' + LE +
     '</body>' + LE +
@@ -1002,6 +1087,26 @@ const
     '</body>' + LE +
     '</html>';
 
+  Table_RTL_title =
+    'Column widths specified, total width automatic';
+  Table_RTL_descr =
+    'The table should be at the right.' + LE +'The narrow column (A) should be at the right.';
+  Table_RTL_html =
+    '<html>' + LE +
+    '<body dir="rtl">' + LE +
+    '<table border="1">' + LE +
+    '  <tr>' + LE +
+    '    <th width="80">Column A</th>' + LE +
+    '    <th width="160">Column B</th>' + LE +
+    '  </tr>' + LE +
+    '  <tr>' + LE +
+    '    <td>Cell 1</td>' + LE +
+    '    <td>Cell 2</td>' + LE +
+    '  </tr>' + LE +
+    '</table>' + LE +
+    '</body>' + LE +
+    '</html>';
+  
 
 implementation
 

@@ -40,6 +40,7 @@ type
 
   TWindowOptionsFrame = class(TAbstractIDEOptionsEditor)
     AutoAdjustIDEHeightFullCompPalCheckBox: TCheckBox;
+    ProjectInspectorShowPropsCheckBox: TCheckBox;
     lblShowingWindows: TDividerBevel;
     NameForDesignedFormList: TCheckBox;
     AutoAdjustIDEHeightCheckBox: TCheckBox;
@@ -89,6 +90,7 @@ begin
   AutoAdjustIDEHeightFullCompPalCheckBox.Hint:=lisAutoAdjustIDEHeightFullComponentPaletteHint;
   ProjectDirInIdeTitleCheckBox.Caption:=lisIDETitleShowsProjectDir;
   ProjectDirInIdeTitleCheckBox.Hint:=lisProjectDirectoryIsShowedInIdeTitleBar;
+  ProjectInspectorShowPropsCheckBox.Caption:=lisProjectInspectorShowProps;
 end;
 
 procedure TWindowOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);
@@ -104,6 +106,7 @@ begin
     AutoAdjustIDEHeightCheckBox.Checked:=AutoAdjustIDEHeight;
     AutoAdjustIDEHeightFullCompPalCheckBox.Checked:=AutoAdjustIDEHeightFullCompPal;
     ProjectDirInIdeTitleCheckBox.Checked:=IDEProjectDirectoryInIdeTitle;
+    ProjectInspectorShowPropsCheckBox.Checked:=ProjectInspectorShowProps;
   end;
 end;
 
@@ -120,6 +123,7 @@ begin
     AutoAdjustIDEHeight := AutoAdjustIDEHeightCheckBox.Checked;
     AutoAdjustIDEHeightFullCompPal := AutoAdjustIDEHeightFullCompPalCheckBox.Checked;
     IDEProjectDirectoryInIdeTitle:=ProjectDirInIdeTitleCheckBox.Checked;
+    ProjectInspectorShowProps:=ProjectInspectorShowPropsCheckBox.Checked;
   end;
 end;
 

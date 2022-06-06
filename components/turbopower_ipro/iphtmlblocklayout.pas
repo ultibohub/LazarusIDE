@@ -461,7 +461,7 @@ begin
           isRTL := true;
       end;
       if isRTL then
-        R.SetLocation(FPageRect.Right - R.Right + FPageRect.Left, R.Top);
+        R.SetLocation(FPageRect.Right - R.Right + FPageRect.Left - 1, R.Top);
 
       SetWordRect(CurElem, R);
     end else
@@ -536,15 +536,8 @@ begin
     lAlign := FAl;
     node := aCurElem.Owner.ParentNode;
     while Assigned(node) do begin
-      if (node is TIpHtmlNodeCore) then
+      if (node is TIpHtmlNodeP) or (node is TIpHtmlNodeDIV) or (node is TIpHtmlNodeTableHeaderOrCell) then
         lAlign := TIpHtmlNodeCore(node).Align
-      {
-      if (node is TIpHtmlNodeP) then
-        lAlign := TIpHtmlNodeP(node).Align
-      else
-      if (node is TIpHtmlNodeDIV) then
-        lAlign := TIpHtmlNodeDIV(node).Align
-        }
       else
         break;
       if lAlign = haDefault then

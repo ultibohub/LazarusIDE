@@ -1433,6 +1433,7 @@ resourcestring
   lisAutoAdjustIDEHeightFullComponentPalette = 'Show complete component palette';
   lisAutoAdjustIDEHeightFullComponentPaletteHint =
     'If component palette spans over more lines, show them all and not only one.';
+  lisProjectInspectorShowProps = 'Show properties pane in Project Inspector';
   lisWindowMenuWithNameForDesignedForm = 'Window menu shows designed form''s name instead of caption';
   lisWindowMenuWithNameForDesignedFormHint = 'Useful especially if the caption is left empty.';
   lisTitleInTaskbarShowsForExampleProject1LpiLazarus = 'Title in taskbar '
