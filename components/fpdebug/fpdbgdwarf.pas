@@ -724,6 +724,7 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
 
   TFpSymbolDwarfTypeModifier = class(TFpSymbolDwarfTypeModifierBase)
   protected
+    function GetInternalTypeInfo: TFpSymbol; override;
     procedure TypeInfoNeeded; override;
     procedure ForwardToSymbolNeeded; override;
     function DoReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize): Boolean; override;
@@ -3645,6 +3646,7 @@ function TFpSymbolDwarf.ReadMemberVisibility(out
 var
   Val: Integer;
 begin
+  AMemberVisibility := svUnknown;
   Result := InformationEntry.ReadValue(DW_AT_external, Val);
   if Result and (Val <> 0) then begin
     AMemberVisibility := svPublic;
@@ -4603,6 +4605,13 @@ begin
 end;
 
 { TFpSymbolDwarfTypeModifier }
+
+function TFpSymbolDwarfTypeModifier.GetInternalTypeInfo: TFpSymbol;
+begin
+  Result := NestedTypeInfo.InternalTypeInfo;
+  if Result = nil then
+    Result := inherited GetInternalTypeInfo;
+end;
 
 procedure TFpSymbolDwarfTypeModifier.TypeInfoNeeded;
 var

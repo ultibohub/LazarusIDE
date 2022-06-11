@@ -952,6 +952,7 @@ var
   ResValue: TFpValue;
   CastName, ResText2: String;
   WatchResConv: TFpWatchResultConvertor;
+  ResData: TLzDbgWatchDataIntf;
 begin
   Result := False;
   AResText := '';
@@ -1020,12 +1021,24 @@ begin
       exit;
     end;
 
-    if (FWatchValue <> nil) and
-       (ResValue <> nil) and (not IsError(ResValue.LastError)) and
-       (ADispFormat <> wdfMemDump) and (FWatchValue.RepeatCount <= 0)  // TODO
+    if (FWatchValue <> nil) and (ResValue <> nil) and
+       (ADispFormat <> wdfMemDump)   // TODO
     then begin
       WatchResConv := TFpWatchResultConvertor.Create(FExpressionScope.LocationContext);
-      Result := WatchResConv.WriteWatchResultData(ResValue, FWatchValue.ResData);
+      ResData := FWatchValue.ResData;
+      Result := WatchResConv.WriteWatchResultData(ResValue, ResData, FWatchValue.RepeatCount);
+
+      if Result and APasExpr.HasPCharIndexAccess and not IsError(ResValue.LastError) then begin
+      // TODO: Only dwarf 2
+        ResData := ResData.SetPCharShouldBeStringValue;
+        if ResData <> nil then begin
+          APasExpr.FixPCharIndexAccess := True;
+          APasExpr.ResetEvaluation;
+          ResValue := APasExpr.ResultValue;
+          WatchResConv.WriteWatchResultData(ResValue, ResData, FWatchValue.RepeatCount);
+        end;
+      end;
+
       WatchResConv.Free;
       if Result then
         exit;

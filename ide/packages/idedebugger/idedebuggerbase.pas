@@ -81,7 +81,7 @@ type
     constructor Create(AOwnerWatch: TWatch);
     destructor Destroy; override;
     procedure Add(AnEntry: TWatchValue);
-    procedure Clear;
+    procedure Clear; virtual;
     function Count: Integer;
     property EntriesByIdx[AnIndex: integer]: TWatchValue read GetEntryByIdx;
     property Entries[const AThreadId: Integer; const AStackFrame: Integer]: TWatchValue
@@ -253,6 +253,7 @@ end;
 
 function TWatchValue.GetExpression: String;
 begin
+  Result := '';
   if FWatch <> nil then
     Result := FWatch.Expression;
 end;
