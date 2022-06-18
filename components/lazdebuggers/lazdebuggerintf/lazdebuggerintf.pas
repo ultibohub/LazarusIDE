@@ -82,11 +82,13 @@ type
     );
 
   TWatcheEvaluateFlag =
-    (defNoTypeInfo,        // No Typeinfo object will be returned // for structures that means a printed value will be returned
-     defSimpleTypeInfo,    // Returns: Kind (skSimple, skClass, ..); TypeName (but does make no attempt to avoid an alias)
-     defFullTypeInfo,      // Get all typeinfo, resolve all anchestors
-     defClassAutoCast,     // Find real class of instance, and use, instead of declared class of variable
-     defAllowFunctionCall//,
+    ( defClassAutoCast,     // Find real class of instance, and use, instead of declared class of variable
+      defAllowFunctionCall, //
+      defExtraDepth,        // Evaluate 1 extra level of sub-elements => i.e., evaluate each nested sub-item
+      // deprecated
+      defNoTypeInfo,        // No Typeinfo object will be returned // for structures that means a printed value will be returned
+      defSimpleTypeInfo,    // Returns: Kind (skSimple, skClass, ..); TypeName (but does make no attempt to avoid an alias)
+      defFullTypeInfo      // Get all typeinfo, resolve all anchestors
 //     defRawMemory,         // returns Array of bytes for hex dump
 //     defNoValue            // Skip the value, if returning raw mem
     );
@@ -148,14 +150,15 @@ type
 //    // CreateSetValue: "ASetVal" only has "length(ANames)" entries. Any higher value will be ignored / should be zero
 //    procedure CreateSetValue(const ASetVal: TLzDbgSetData; const ANames: TStringDynArray); //; const AOrdValues: array of Integer);
 
+    //temporary
+    function CreateProcedure(AVal: TDBGPtr; AnIsFunction: Boolean; ALoc, ADesc: String): TLzDbgWatchDataIntf;
+    function CreateProcedureRef(AVal: TDBGPtr; AnIsFunction: Boolean; ALoc, ADesc: String): TLzDbgWatchDataIntf;
+
     // Returns Intf for setting element-type => for empty array
     function CreateArrayValue(AnArrayType: TLzDbgArrayType;
                               ATotalCount: Integer = 0;
                               ALowIdx: Integer = 0
                              ): TLzDbgWatchDataIntf;
-    //procedure CreateDynArrayValue(ATotalCount: Integer = 0);
-    //procedure CreateStatArrayValue(ATotalCount: Integer = 0);
-    // low/high
 
     procedure CreateStructure(AStructType: TLzDbgStructType;
                               ADataAddress: TDBGPtr = 0
@@ -235,6 +238,7 @@ type
     function GetDisplayFormat: TWatchDisplayFormat;
     function GetEvaluateFlags: TWatcheEvaluateFlags;
     function GetExpression: String;
+    function GetFirstIndexOffs: Int64;
     function GetRepeatCount: Integer;
     function GetStackFrame: Integer;
     function GetThreadId: Integer;
@@ -246,6 +250,7 @@ type
 
     property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat;
     property EvaluateFlags: TWatcheEvaluateFlags read GetEvaluateFlags;
+    property FirstIndexOffs: Int64 read GetFirstIndexOffs;
     property RepeatCount: Integer read GetRepeatCount;
     property ThreadId: Integer read GetThreadId;
     property StackFrame: Integer read GetStackFrame;

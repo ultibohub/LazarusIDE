@@ -22,23 +22,32 @@ object WatchesDlg: TWatchesDlg
     Width = 295
     Align = alClient
     DefaultText = 'Node'
+    DragMode = dmAutomatic
+    DragType = dtVCL
     Header.AutoSizeIndex = 0
     Header.Columns = <    
       item
         Position = 0
       end    
       item
+        Position = 2
+      end    
+      item
+        MaxWidth = 300
+        Options = [coAllowClick, coDraggable, coEnabled, coParentBidiMode, coParentColor, coResizable, coShowDropMark, coAllowFocus, coEditable]
         Position = 1
       end>
     Header.Options = [hoColumnResize, hoDrag, hoShowSortGlyphs, hoVisible]
     PopupMenu = mnuPopup
     TabOrder = 0
-    TreeOptions.MiscOptions = [toAcceptOLEDrop, toFullRepaintOnResize, toInitOnSave, toWheelPanning]
+    TreeOptions.AutoOptions = [toAutoScrollOnExpand, toAutoSort, toAutoTristateTracking, toAutoDeleteMovedNodes, toAutoChangeScale]
+    TreeOptions.MiscOptions = [toFullRepaintOnResize, toInitOnSave, toWheelPanning]
     TreeOptions.PaintOptions = [toShowButtons, toShowDropmark, toShowRoot, toShowTreeLines, toThemeAware, toUseBlendedImages, toUseExplorerTheme]
     TreeOptions.SelectionOptions = [toFullRowSelect, toMultiSelect, toRightClickSelect]
     OnChange = tvWatchesChange
     OnDragOver = tvWatchesDragOver
     OnDragDrop = tvWatchesDragDrop
+    OnExpanded = tvWatchesExpanded
     OnFocusChanged = tvWatchesFocusChanged
     OnInitChildren = tvWatchesInitChildren
     OnNodeDblClick = tvWatchesNodeDblClick
@@ -126,6 +135,20 @@ object WatchesDlg: TWatchesDlg
       Action = actToggleInspectSite
       Style = tbsCheck
     end
+    object ToolButton1: TToolButton
+      Left = 246
+      Height = 22
+      Top = 2
+      ShowCaption = False
+      Style = tbsDivider
+    end
+    object btnShowDataAddr: TToolButton
+      Left = 251
+      Top = 2
+      Caption = '$^'
+      OnClick = btnShowDataAddrClick
+      Style = tbsCheck
+    end
   end
   object InspectSplitter: TSplitter
     Left = 295
@@ -164,13 +187,14 @@ object WatchesDlg: TWatchesDlg
         Width = 200
         Align = alTop
         Caption = '...'
+        Color = clDefault
         ParentColor = False
       end
     end
   end
   object mnuPopup: TPopupMenu
-    left = 100
-    top = 96
+    Left = 100
+    Top = 96
     object popAdd: TMenuItem
       Action = actAddWatch
     end

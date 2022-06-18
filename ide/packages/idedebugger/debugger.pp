@@ -581,22 +581,23 @@ type
   TIdeWatch = class(TWatch)
   private
     FChildWatches: TIdeWatches;
+    FDisplayName: String;
     FParentWatch: TIdeWatch;
 
+    function GetChildrenByNameAsArrayEntry(AName: Int64): TIdeWatch;
+    function GetChildrenByNameAsField(AName, AClassName: String): TIdeWatch;
     function GetTopParentWatch: TIdeWatch;
     function GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
-    function GetAnyValidParentWatchValue(AThreadId: Integer; AStackFrame: Integer): TIdeWatchValue;
+    function GetWatchDisplayName: String;
   protected
     procedure InitChildWatches;
     function CreateChildWatches: TIdeWatches; virtual;
-    function GetChildrenByName(AName: String): TIdeWatch; virtual;
     procedure SetParentWatch(AValue: TIdeWatch); virtual;
 
     function CreateValueList: TWatchValueList; override;
     procedure DoEnableChange; override;
     procedure DoExpressionChange; override;
     procedure DoDisplayFormatChanged; override;
-    function  GetFullExpression(AThreadId: Integer; AStackFrame: Integer): String;
   protected
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
                                 const APath: string);
@@ -609,10 +610,12 @@ type
 
     procedure BeginChildUpdate;
     procedure EndChildUpdate;
-    property ChildrenByName[AName: String]: TIdeWatch read GetChildrenByName;
-    function HasAllValidParents(AThreadId: Integer; AStackFrame: Integer): boolean;
+    procedure LimitChildWatchCount(AMaxCnt: Integer; AKeepIndexEntriesBelow: Int64 = low(Int64));
+    property ChildrenByNameAsField[AName, AClassName: String]: TIdeWatch read GetChildrenByNameAsField;
+    property ChildrenByNameAsArrayEntry[AName: Int64]: TIdeWatch read GetChildrenByNameAsArrayEntry;
     property ParentWatch: TIdeWatch read FParentWatch;
     property TopParentWatch: TIdeWatch read GetTopParentWatch;
+    property DisplayName: String read GetWatchDisplayName write FDisplayName;
   public
     property Values[const AThreadId: Integer; const AStackFrame: Integer]: TIdeWatchValue
              read GetValue;
@@ -694,6 +697,8 @@ type
     procedure CreateNumValue(ANumValue: QWord; ASigned: Boolean; AByteSize: Integer = 0); virtual;
     procedure CreatePointerValue(AnAddrValue: TDbgPtr); virtual;
     procedure CreateFloatValue(AFloatValue: Extended; APrecission: TLzDbgFloatPrecission); virtual;
+    function  CreateProcedure(AVal: TDBGPtr; AnIsFunction: Boolean; ALoc, ADesc: String): TLzDbgWatchDataIntf;
+    function  CreateProcedureRef(AVal: TDBGPtr; AnIsFunction: Boolean; ALoc, ADesc: String): TLzDbgWatchDataIntf;
     function  CreateArrayValue(AnArrayType: TLzDbgArrayType;
                                ATotalCount: Integer = 0;
                                ALowIdx: Integer = 0
@@ -838,6 +843,7 @@ type
     FWatches: TWatches;
     FSnapshots: TDebuggerDataSnapShotList;
     FOnModified: TNotifyEvent;
+    FOnWatchesInvalidated: TNotifyEvent;
     FIgnoreModified: Integer;
     FNotificationList: TWatchesNotificationList;
     function GetCurrentWatches: TCurrentWatches;
@@ -846,7 +852,6 @@ type
     procedure DoStateEnterPause; override;
     procedure DoStateLeavePause; override;
     procedure DoStateLeavePauseClean; override;
-    procedure DoModified; override;
     procedure InvalidateWatchValues; override;
     //procedure NotifyChange
     procedure NotifyAdd(const AWatches: TCurrentWatches; const AWatch: TCurrentWatch);
@@ -867,6 +872,7 @@ type
     property Snapshots[AnID: Pointer]: TIdeWatches read GetSnapshot;
   public
     procedure Clear;
+    procedure DoModified; override;
     procedure LoadFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
     procedure SaveToXMLConfig(const AConfig: TXMLConfig; const APath: string;
       const ALegacyList: Boolean);
@@ -874,6 +880,7 @@ type
     procedure BeginIgnoreModified;
     procedure EndIgnoreModified;
     property OnModified: TNotifyEvent read FOnModified write FOnModified;       // user-modified / xml-storable data modified
+    property OnWatchesInvalidated: TNotifyEvent read FOnWatchesInvalidated write FOnWatchesInvalidated;       // user-modified / xml-storable data modified
   end;
 
   {%endregion   ^^^^^  Watches  ^^^^^   }
@@ -3592,6 +3599,53 @@ begin
   AfterDataCreated;
 end;
 
+function TCurrentResData.CreateProcedure(AVal: TDBGPtr; AnIsFunction: Boolean;
+  ALoc, ADesc: String): TLzDbgWatchDataIntf;
+begin
+  BeforeCreateValue;
+  if AnIsFunction then begin
+    assert((FNewResultData=nil) or (FNewResultData.ValueKind = rdkFunction), 'TCurrentResData.CreateProcedure: (FNewResultData=nil) or (FNewResultData.ValueKind = rdkFunction]');
+    if FNewResultData = nil then
+      FNewResultData := TWatchResultDataFunc.Create(AVal, ALoc, ADesc)
+    else
+      TWatchResultDataFunc(FNewResultData).Create(AVal, ALoc, ADesc);
+  end
+  else begin
+    assert((FNewResultData=nil) or (FNewResultData.ValueKind = rdkProcedure), 'TCurrentResData.CreateProcedure: (FNewResultData=nil) or (FNewResultData.ValueKind = rdkProcedure]');
+    if FNewResultData = nil then
+      FNewResultData := TWatchResultDataProc.Create(AVal, ALoc, ADesc)
+    else
+      TWatchResultDataProc(FNewResultData).Create(AVal, ALoc, ADesc);
+  end;
+  AfterDataCreated;
+
+  Result := nil;
+end;
+
+function TCurrentResData.CreateProcedureRef(AVal: TDBGPtr;
+  AnIsFunction: Boolean; ALoc, ADesc: String): TLzDbgWatchDataIntf;
+begin
+  BeforeCreateValue;
+  if AnIsFunction then begin
+    assert((FNewResultData=nil) or (FNewResultData.ValueKind = rdkFunctionRef), 'TCurrentResData.CreateProcedureRef: (FNewResultData=nil) or (FNewResultData.ValueKind = rdkFunctionRef]');
+    if FNewResultData = nil then
+      FNewResultData := TWatchResultDataFuncRef.Create(AVal, ALoc, ADesc)
+    else
+      TWatchResultDataFuncRef(FNewResultData).Create(AVal, ALoc, ADesc);
+  end
+  else begin
+    assert((FNewResultData=nil) or (FNewResultData.ValueKind = rdkProcedureRef), 'TCurrentResData.CreateProcedureRef: (FNewResultData=nil) or (FNewResultData.ValueKind = rdkProcedureRef]');
+    if FNewResultData = nil then
+      FNewResultData := TWatchResultDataProcRef.Create(AVal, ALoc, ADesc)
+    else
+      TWatchResultDataProcRef(FNewResultData).Create(AVal, ALoc, ADesc);
+  end;
+  AfterDataCreated;
+
+
+  Result := nil;
+end;
+
 procedure TCurrentResData.CreateBoolValue(AnOrdBoolValue: QWord;
   AByteSize: Integer);
 begin
@@ -4087,7 +4141,7 @@ end;
 
 function TIdeWatchValue.GetExpression: String;
 begin
-  Result := Watch.GetFullExpression(FThreadId, FStackFrame);
+  Result := Watch.Expression;
 end;
 
 function TIdeWatchValue.GetWatch: TIdeWatch;
@@ -4172,6 +4226,7 @@ begin
   FDisplayFormat := Watch.DisplayFormat;
   FEvaluateFlags := Watch.EvaluateFlags;
   FRepeatCount   := Watch.RepeatCount;
+  FFirstIndexOffs    := Watch.FirstIndexOffs;
 end;
 
 constructor TIdeWatchValue.Create(AOwnerWatch: TIdeWatch; const AThreadId: Integer;
@@ -4237,6 +4292,8 @@ begin
   inherited InvalidateWatchValues;
   if Watches <> nil then
     Watches.ClearValues;
+  if FOnWatchesInvalidated <> nil then
+    FOnWatchesInvalidated(Self);
 end;
 
 procedure TIdeWatchesMonitor.NotifyAdd(const AWatches: TCurrentWatches; const AWatch: TCurrentWatch);
@@ -6176,15 +6233,21 @@ begin
     FChildWatches.EndUpdate;
 end;
 
-function TIdeWatch.HasAllValidParents(AThreadId: Integer; AStackFrame: Integer
-  ): boolean;
+procedure TIdeWatch.LimitChildWatchCount(AMaxCnt: Integer;
+  AKeepIndexEntriesBelow: Int64);
+var
+  w: TIdeWatch;
+  x: int64;
+  i: Integer;
 begin
-  Result := FParentWatch = nil;
-  if Result then
-    exit;
-
-  Result := (GetAnyValidParentWatchValue(AThreadId, AStackFrame) <> nil) and
-            FParentWatch.HasAllValidParents(AThreadId, AStackFrame);
+  i := 0;
+  while (FChildWatches.Count > AMaxCnt) and (i < FChildWatches.Count) do begin
+    w := FChildWatches[i];
+    if TryStrToInt64(w.Expression, x) and (x < AKeepIndexEntriesBelow) then
+      inc(i)
+    else
+      FChildWatches.Delete(0);
+  end;
 end;
 
 procedure TIdeWatch.DoEnableChange;
@@ -6205,52 +6268,17 @@ begin
   DoModified;
 end;
 
-function TIdeWatch.GetFullExpression(AThreadId: Integer; AStackFrame: Integer
-  ): String;
-var
-  wv: TIdeWatchValue;
-begin
-  Result := Expression;
-  if FParentWatch <> nil then begin
-    Result := '(' + FParentWatch.GetFullExpression(AThreadId, AStackFrame) + ').' + Result;
-    if (defClassAutoCast in FParentWatch.FEvaluateFlags) then begin
-      wv := GetAnyValidParentWatchValue(AThreadId, AStackFrame);
-      if wv.ResultData <> nil then
-        Result := wv.ResultData.TypeName + Result
-      else
-      if wv <> nil then
-        Result := wv.TypeInfo.TypeName + Result;
-    end;
-  end;
-end;
-
 function TIdeWatch.GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
 begin
   Result := TIdeWatchValue(inherited Values[AThreadId, AStackFrame]);
 end;
 
-function TIdeWatch.GetAnyValidParentWatchValue(AThreadId: Integer;
-  AStackFrame: Integer): TIdeWatchValue;
-var
-  i: Integer;
-  vl: TWatchValueList;
+function TIdeWatch.GetWatchDisplayName: String;
 begin
-  Result := nil;
-  if FParentWatch = nil then
-    exit;
-  vl := FParentWatch.FValueList;
-  i := vl.Count - 1;
-  while (i >= 0) and (
-    (vl.EntriesByIdx[i].Validity <> ddsValid) or
-    (vl.EntriesByIdx[i].ThreadId <> AThreadId) or
-    (vl.EntriesByIdx[i].StackFrame <> AStackFrame) or
-    ( (vl.EntriesByIdx[i].TypeInfo = nil) and
-      (vl.EntriesByIdx[i].ResultData = nil)
-    )
-  ) do
-    dec(i);
-  if i >= 0 then
-    Result := TIdeWatchValue(vl.EntriesByIdx[i]);
+  if FDisplayName <> '' then
+    Result := FDisplayName
+  else
+    Result := FExpression;
 end;
 
 procedure TIdeWatch.SetParentWatch(AValue: TIdeWatch);
@@ -6275,19 +6303,48 @@ begin
     Result := Result.FParentWatch;
 end;
 
-function TIdeWatch.GetChildrenByName(AName: String): TIdeWatch;
+function TIdeWatch.GetChildrenByNameAsArrayEntry(AName: Int64): TIdeWatch;
+var
+  Expr: String;
 begin
+  Expr := Expression + '[' + IntToStr(AName) + ']';
   if FChildWatches <> nil then begin
-    Result := FChildWatches.Find(AName);
+    Result := FChildWatches.Find(Expr);
     if Result <> nil then
       exit;
   end;
 
   BeginChildUpdate;
-  Result := FChildWatches.Add(AName);
+  Result := FChildWatches.Add(Expr);
   Result.SetParentWatch(Self);
   Result.Enabled       := Enabled;
   Result.DisplayFormat := DisplayFormat;
+  Result.FDisplayName := IntToStr(AName);
+  EndChildUpdate;
+end;
+
+function TIdeWatch.GetChildrenByNameAsField(AName, AClassName: String
+  ): TIdeWatch;
+var
+  Expr: String;
+begin
+  Expr := Expression;
+  if AClassName <> '' then
+    Expr := AClassName + '(' + Expr + ')';
+  Expr := Expr + '.' + AName;
+
+  if FChildWatches <> nil then begin
+    Result := FChildWatches.Find(Expr);
+    if Result <> nil then
+      exit;
+  end;
+
+  BeginChildUpdate;
+  Result := FChildWatches.Add(Expr);
+  Result.SetParentWatch(Self);
+  Result.Enabled       := Enabled;
+  Result.DisplayFormat := DisplayFormat;
+  Result.FDisplayName := AName;
   EndChildUpdate;
 end;
 
@@ -6409,7 +6466,14 @@ end;
 destructor TCurrentWatch.Destroy;
 var
   w: TCurrentWatches;
+  s: TIdeWatch;
 begin
+  if FSnapShot <> nil then begin
+    s := FSnapShot;
+    SnapShot := Nil;
+    FreeAndNil(s);
+  end;
+
   if (TCurrentWatches(Collection) <> nil)
   then begin
     TCurrentWatches(Collection).NotifyRemove(Self);

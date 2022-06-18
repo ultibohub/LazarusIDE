@@ -19,6 +19,7 @@ type
     function PrintNumber(ANumValue: TWatchResultData; AnIsPointer: Boolean; ADispFormat: TWatchDisplayFormat): String;
     function PrintArray(AResValue: TWatchResultData; ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): String;
     function PrintStruct(AResValue: TWatchResultData; ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): String;
+    function PrintProc(AResValue: TWatchResultData; ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): String;
 
     function PrintWatchValueEx(AResValue: TWatchResultData; ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): String;
   public
@@ -148,7 +149,8 @@ begin
       exit;
     end;
 
-    if (ADispFormat = wdfPointer) then begin
+    if (ADispFormat = wdfPointer) or (AResValue.FieldCount = 0)
+    then begin
       Result := '$'+IntToHex(AResValue.DataAddress, HexDigicCount(AResValue.DataAddress, 4, True));
 
       if tn <> '' then
@@ -172,7 +174,9 @@ begin
       FldOwner := FldInfo.Owner;
       vis := '';
 
-      if (ADispFormat = wdfStructure) and (FldOwner <> nil) and (FldOwner.DirectFieldCount > 0) then begin
+      if (ADispFormat = wdfStructure) and (FldOwner <> nil) and (FldOwner.DirectFieldCount > 0) and
+         (AResValue.StructType in [dstClass, dstInterface, dstObject]) // record has no inheritance
+      then begin
         if (Length(Result) > 0) then
           Result := Result + sep;
         Result := Result + indent + '{' + FldOwner.TypeName + '}';
@@ -202,6 +206,43 @@ begin
     //Delete(Result, Length(Result), 1)
     //Result := Result + sep + ')';
   end;
+
+  tn := AResValue.TypeName;
+  if (tn <> '') and (ANestLvl=0) and
+     ( (ADispFormat = wdfStructure) or
+       (AResValue.StructType in [dstClass, dstInterface])
+     )
+  then
+    Result := tn + Result;
+end;
+
+function TWatchResultPrinter.PrintProc(AResValue: TWatchResultData;
+  ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): String;
+var
+  s: String;
+begin
+  if AResValue.AsQWord = 0 then
+    Result := 'nil'
+  else
+    Result := PrintNumber(AResValue, True, wdfHex);
+
+  if AResValue.AsString <> '' then
+    Result := Result + ' = ' + AResValue.AsString;
+
+  if ANestLvl > 0 then begin
+    s := AResValue.TypeName;
+  end
+  else begin
+    s := AResValue.AsDesc;
+    if s = '' then
+      s := AResValue.TypeName;
+  end;
+
+  if s <> '' then
+    if AResValue.ValueKind in [rdkFunctionRef, rdkProcedureRef] then
+      Result := Result + ': '+s
+    else
+      Result := s + ' AT ' +Result;
 end;
 
 function TWatchResultPrinter.PrintWatchValueEx(AResValue: TWatchResultData;
@@ -274,7 +315,6 @@ var
   PointerValue: TWatchResultDataPointer absolute AResValue;
   ResTypeName: String;
   PtrDeref: TWatchResultData;
-  i: Integer;
 begin
   inc(ANestLvl);
   if ANestLvl > MAX_ALLOWED_NEST_LVL then
@@ -312,11 +352,18 @@ begin
       end;
     end;
     rdkPointerVal: begin
+      PtrDeref :=  PointerValue.DerefData;
       ResTypeName := '';
       if (ADispFormat = wdfStructure) or
          ((ADispFormat = wdfDefault) and (PointerValue.DerefData = nil))
-      then
+      then begin
         ResTypeName := AResValue.TypeName;
+        if (ResTypeName = '') and (PtrDeref <> nil) then begin
+          ResTypeName := PtrDeref.TypeName;
+          if ResTypeName <> '' then
+            ResTypeName := '^'+ResTypeName;
+        end;
+      end;
 
       if (ADispFormat in [wdfDefault, wdfStructure, wdfPointer]) and (AResValue.AsQWord = 0)
       then begin
@@ -333,7 +380,6 @@ begin
       if ResTypeName <> '' then
         Result := ResTypeName + '(' + Result + ')';
 
-      PtrDeref :=  PointerValue.DerefData;
       if PtrDeref <> nil then begin
         while (PtrDeref.ValueKind = rdkPointerVal) and (PtrDeref.DerefData <> nil) do begin
           Result := Result + '^';
@@ -365,6 +411,10 @@ begin
     end;
     rdkArray:  Result := PrintArray(AResValue, ADispFormat, ANestLvl);
     rdkStruct: Result := PrintStruct(AResValue, ADispFormat, ANestLvl);
+    rdkFunction,
+    rdkProcedure,
+    rdkFunctionRef,
+    rdkProcedureRef: Result := PrintProc(AResValue, ADispFormat, ANestLvl);
   end;
 end;
 

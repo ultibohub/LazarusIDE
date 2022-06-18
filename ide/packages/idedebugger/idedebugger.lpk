@@ -54,10 +54,26 @@
       </Item>
       <Item>
         <Filename Value="idedebuggerwatchresprinter.pas"/>
-        <UnitName Value="idedebuggerwatchresprinter"/>
+        <UnitName Value="IdeDebuggerWatchResPrinter"/>
+      </Item>
+      <Item>
+        <Filename Value="idedebuggerwatchresutils.pas"/>
+        <UnitName Value="IdeDebuggerWatchResUtils"/>
+      </Item>
+      <Item>
+        <Filename Value="arraynavigationframe.pas"/>
+        <UnitName Value="ArrayNavigationFrame"/>
+        <ResourceBaseClass Value="Frame"/>
+      </Item>
+      <Item>
+        <Filename Value="idedebuggerstringconstants.pas"/>
+        <UnitName Value="IdeDebuggerStringConstants"/>
       </Item>
     </Files>
     <RequiredPkgs>
+      <Item>
+        <PackageName Value="LazControlDsgn"/>
+      </Item>
       <Item>
         <PackageName Value="laz.virtualtreeview_package"/>
       </Item>

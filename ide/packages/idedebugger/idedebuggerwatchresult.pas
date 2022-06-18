@@ -19,7 +19,9 @@ type
     rdkBool, rdkEnum, rdkEnumVal, rdkSet,
     rdkPCharOrString,
     rdkArray,
-    rdkStruct
+    rdkStruct,
+    rdkFunction, rdkProcedure,
+    rdkFunctionRef, rdkProcedureRef
   );
   TWatchResultData = class;
   TWatchResultDataError = class;
@@ -454,6 +456,40 @@ type
   end;
 
 
+  { TWatchResultTypeProc }
+
+  TWatchResultTypeProc = object(TWatchResultValue)
+  private
+    FText: String;
+    FLoc: String;
+  protected
+    property GetAsString: String read FText;
+    procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig; const APath: string;
+                                    const AnEntryTemplate: TWatchResultData;
+                                    var AnOverrideTemplate: TOverrideTemplateData;
+                                    AnAsProto: Boolean);
+    procedure SaveDataToXMLConfig(const AConfig: TXMLConfig; const APath: string; AnAsProto: Boolean);
+  end;
+
+  TWatchResultValueFunc = object(TWatchResultValueOrdNumBase)
+  protected const
+    VKind = rdkFunction;
+  end;
+
+  TWatchResultValueProc = object(TWatchResultValueOrdNumBase)
+  protected const
+    VKind = rdkProcedure;
+  end;
+
+  TWatchResultValueFuncRef = object(TWatchResultValueOrdNumBase)
+  protected const
+    VKind = rdkFunctionRef;
+  end;
+
+  TWatchResultValueProcRef = object(TWatchResultValueOrdNumBase)
+  protected const
+    VKind = rdkProcedureRef;
+  end;
 
 
 
@@ -555,6 +591,10 @@ type
     wdStatA,     // TWatchResultDataStatArray
     wdStruct,    // TWatchResultDataStruct
     wdStructRef, // TWatchResultDataRefStruct
+    wdFunc,      // TWatchResultDataFunc,
+    wdProc,      // TWatchResultDataProc,
+    wdFuncRef,   // TWatchResultDataFuncRef,
+    wdProcRef,   // TWatchResultDataProcRef,
     wdErr        // TWatchResultDataError
   );
 
@@ -584,7 +624,8 @@ type
     function MaybeUpdateProto(var AProtoData: TWatchResultData;
                               var AnOverrideTemplate: TOverrideTemplateData;
                               AStorage: PWatchResultStorage;
-                              ARecurse: boolean = False
+                              ARecurse: boolean = False;
+                              ASkipStorage: boolean = False
                              ): boolean; virtual; abstract;
 
     procedure AfterSaveToIndex(AStorage: TWatchResultStorage; AnIndex: Integer;
@@ -599,6 +640,7 @@ type
   protected
     function GetValueKind: TWatchResultDataKind; virtual; //abstract;
     function GetAsString: String; virtual; abstract;
+    function GetAsDesc: String; virtual; abstract;
     function GetAsWideString: WideString; virtual; abstract;
     function GetAsQWord: QWord; virtual; abstract;
     function GetAsInt64: Int64; virtual; abstract;
@@ -646,6 +688,7 @@ type
     property TypeName: String read FTypeName;
 
     property AsString: String read GetAsString;
+    property AsDesc: String read GetAsDesc;
     property AsWideString: WideString read GetAsWideString;
     property AsQWord: QWord read GetAsQWord;
     property AsInt64: Int64 read GetAsInt64;
@@ -818,12 +861,14 @@ type
     function MaybeUpdateProto(var AProtoData: TWatchResultData;
                               var AnOverrideTemplate: TOverrideTemplateData;
                               AStorage: PWatchResultStorage;
-                              ARecurse: boolean = False
+                              ARecurse: boolean = False;
+                              ASkipStorage: boolean = False
                              ): boolean; override;
     procedure ClearData; override;
   protected
     function GetValueKind: TWatchResultDataKind; override;
     function GetAsString: String; override;
+    function GetAsDesc: String; override;
     function GetAsWideString: WideString; override;
     function GetAsQWord: QWord; override;
     function GetAsInt64: Int64; override;
@@ -965,7 +1010,8 @@ type
     function CreateStorage: TWatchResultStorage; override;
     function MaybeUpdateProto(var AProtoData: TWatchResultData;
       var AnOverrideTemplate: TOverrideTemplateData;
-      AStorage: PWatchResultStorage; ARecurse: boolean = False): boolean;
+      AStorage: PWatchResultStorage; ARecurse: boolean = False;
+      ASkipStorage: boolean = False): boolean;
       override;
     procedure AfterSaveToIndex(AStorage: TWatchResultStorage; AnIndex: Integer;
                                var AnEntryTemplate: TWatchResultData;
@@ -1041,7 +1087,8 @@ type
 
     function MaybeUpdateProto(var AProtoData: TWatchResultData;
       var AnOverrideTemplate: TOverrideTemplateData;
-      AStorage: PWatchResultStorage; ARecurse: boolean = False): boolean;
+      AStorage: PWatchResultStorage; ARecurse: boolean = False;
+      ASkipStorage: boolean = False): boolean;
       override;
     procedure AfterSaveToIndex(AStorage: TWatchResultStorage; AnIndex: Integer;
       var AnEntryTemplate: TWatchResultData;
@@ -1153,7 +1200,8 @@ type
     function CreateStorage: TWatchResultStorage; override;
     function MaybeUpdateProto(var AProtoData: TWatchResultData;
       var AnOverrideTemplate: TOverrideTemplateData;
-      AStorage: PWatchResultStorage; ARecurse: boolean = False): boolean;
+      AStorage: PWatchResultStorage; ARecurse: boolean = False;
+      ASkipStorage: boolean = False): boolean;
       override;
     procedure AfterSaveToIndex(AStorage: TWatchResultStorage; AnIndex: Integer;
       var AnEntryTemplate: TWatchResultData;
@@ -1203,6 +1251,48 @@ type
     constructor Create(AStructType: TLzDbgStructType;
                        ADataAddress: TDBGPtr
                       );
+  end;
+
+
+
+
+
+  { TGenericWatchResultDataProc }
+
+  generic TGenericWatchResultDataProc<_DATA> = class(specialize TGenericWatchResultDataWithType<_DATA, TWatchResultTypeProc>)
+  protected
+    function GetAsString: String; override; // TODO
+    function GetAsDesc: String; override;
+  public
+    constructor Create(AnAddr: QWord; ALoc, ADesc: String);
+  end;
+
+  { TWatchResultDataFunc }
+
+  TWatchResultDataFunc = class(specialize TGenericWatchResultDataProc<TWatchResultValueProc>)
+  private
+    function GetClassID: TWatchResultDataClassID; override;
+  end;
+
+  { TWatchResultDataProc }
+
+  TWatchResultDataProc = class(specialize TGenericWatchResultDataProc<TWatchResultValueProc>)
+  private
+    function GetClassID: TWatchResultDataClassID; override;
+  end;
+
+  { TWatchResultDataFuncRef }
+
+  TWatchResultDataFuncRef = class(specialize TGenericWatchResultDataProc<TWatchResultValueProcRef>)
+  private
+    function GetClassID: TWatchResultDataClassID; override;
+  end;
+
+  { TWatchResultDataProcRef }
+
+  TWatchResultDataProcRef = class(specialize TGenericWatchResultDataProc<TWatchResultValueProcRef>)
+  private
+    function GetClassID: TWatchResultDataClassID; override;
   end;
 
 
@@ -1260,6 +1350,10 @@ const
     TWatchResultDataStatArray,     // wdStatA,
     TWatchResultDataStruct,        // wdStruct
     TWatchResultDataRefStruct,     // wdStructRef
+    TWatchResultDataFunc,          // wdFunc
+    TWatchResultDataProc,          // wdProc
+    TWatchResultDataFuncRef,       // wdFuncRef
+    TWatchResultDataProcRef,       // wdProcRef
     TWatchResultDataError          // wdErr
   );
 
@@ -1905,6 +1999,24 @@ begin
   FAnchestor.Free;
 end;
 
+{ TWatchResultTypeProc }
+
+procedure TWatchResultTypeProc.LoadDataFromXMLConfig(const AConfig: TXMLConfig;
+  const APath: string; const AnEntryTemplate: TWatchResultData;
+  var AnOverrideTemplate: TOverrideTemplateData; AnAsProto: Boolean);
+begin
+  inherited LoadDataFromXMLConfig(AConfig, APath, AnEntryTemplate, AnOverrideTemplate, AnAsProto);
+  FText := AConfig.GetValue(APath + 'Desc', '');
+
+end;
+
+procedure TWatchResultTypeProc.SaveDataToXMLConfig(const AConfig: TXMLConfig;
+  const APath: string; AnAsProto: Boolean);
+begin
+  inherited SaveDataToXMLConfig(AConfig, APath, AnAsProto);
+  AConfig.SetValue(APath + 'Desc', FText);
+end;
+
 { TWatchResultStorageOverrides }
 
 procedure TWatchResultStorageOverrides.Assign(
@@ -2376,7 +2488,7 @@ end;
 procedure TGenericWatchResultData.TGenericWatchResultStorage.SetCount( AValue: integer);
 begin
   if AValue < Count then
-    FErrorStore.Clear(FDataArray, AValue-1);
+    FErrorStore.Clear(FDataArray, AValue);
   inherited SetCount(AValue);
   FErrorStore.AfterLastAdd; // TODO: TRIM, once only finished // TODO maybe only explicit
 end;
@@ -2453,9 +2565,13 @@ var
   i: Integer;
   e: _ERROR_DATA;
   PathNst, p: String;
+  AllErr: Boolean;
 begin
   PathNst := '';
   if ANestLvl > 0 then PathNst := 'N'+IntToStr(ANestLvl);
+
+  AllErr := (AConfig.GetValue(APath+TWatchResultStorage.TAG_ALL_ERR, -1) = 0) and
+            (AnEntryTemplate.ValueKind <> rdkError);
 
   l := AConfig.GetValue(APath+TAG_CNT+PathNst, 0);
   SetLength(FDataArray, l);
@@ -2464,7 +2580,7 @@ begin
   for i := 0 to Length(FDataArray) - 1 do begin
     p := APath+'E'+IntToStr(i)+'/'+PathNst;
 
-    if AConfig.GetValue(p+TAG_ERR, 0) = 1 then begin
+    if AllErr or (AConfig.GetValue(p+TAG_ERR, 0) = 1) then begin
       e := Default(_ERROR_DATA);
       e.LoadDataFromXMLConfig(AConfig, p, AnEntryTemplate, AnOverrideTemplate, False);
       FErrorStore.Add(i, FDataArray[i], e);
@@ -2638,7 +2754,7 @@ end;
 function TGenericWatchResultData.MaybeUpdateProto(
   var AProtoData: TWatchResultData;
   var AnOverrideTemplate: TOverrideTemplateData; AStorage: PWatchResultStorage;
-  ARecurse: boolean): boolean;
+  ARecurse: boolean; ASkipStorage: boolean): boolean;
 begin
   Result := (Self <> nil) and
             ( (AProtoData = nil) or
@@ -2652,7 +2768,7 @@ begin
     end;
     AProtoData := Self.CreateCopy(True);
 
-    if (AStorage <> nil) and (AStorage^ <> nil) then
+    if not ASkipStorage and (AStorage <> nil) and (AStorage^ <> nil) then
       UpdateStorage(AStorage, Self, AnOverrideTemplate);
   end;
 end;
@@ -2670,6 +2786,11 @@ end;
 function TGenericWatchResultData.GetAsString: String;
 begin
   Result := FData.GetAsString;
+end;
+
+function TGenericWatchResultData.GetAsDesc: String;
+begin
+  Result := '';
 end;
 
 function TGenericWatchResultData.GetAsWideString: WideString;
@@ -3096,12 +3217,12 @@ end;
 function TWatchResultDataPointer.MaybeUpdateProto(
   var AProtoData: TWatchResultData;
   var AnOverrideTemplate: TOverrideTemplateData; AStorage: PWatchResultStorage;
-  ARecurse: boolean): boolean;
+  ARecurse: boolean; ASkipStorage: boolean): boolean;
 var
   APtrProtoData: TWatchResultDataPointer absolute AProtoData;
   Store: PWatchResultStorage;
 begin
-  Result := inherited MaybeUpdateProto(AProtoData, AnOverrideTemplate, AStorage, ARecurse);
+  Result := inherited MaybeUpdateProto(AProtoData, AnOverrideTemplate, AStorage, ARecurse, ASkipStorage);
   if (not Result) and (AProtoData is TWatchResultDataPointer) and
      ARecurse and (FType.FDerefData <> nil)
   then begin
@@ -3109,7 +3230,7 @@ begin
     if (Store <> nil) and (Store^ <> nil) then
       Store := Store^.NestedStoragePtr;
     Result := FType.FDerefData.MaybeUpdateProto(APtrProtoData.FType.FDerefData, AnOverrideTemplate,
-      Store, ARecurse);
+      Store, ARecurse, ASkipStorage);
   end;
 end;
 
@@ -3312,13 +3433,13 @@ end;
 function TWatchResultDataArrayBase.MaybeUpdateProto(
   var AProtoData: TWatchResultData;
   var AnOverrideTemplate: TOverrideTemplateData; AStorage: PWatchResultStorage;
-  ARecurse: boolean): boolean;
+  ARecurse: boolean; ASkipStorage: boolean): boolean;
 var
   AnArrayProtoData: TWatchResultDataArrayBase absolute AProtoData;
   Store: PWatchResultStorage;
 begin
   Result := inherited MaybeUpdateProto(AProtoData, AnOverrideTemplate,
-    AStorage, ARecurse);
+    AStorage, ARecurse, ASkipStorage);
   if (not Result) and (AProtoData is TWatchResultDataArrayBase) and
      ARecurse and (FType.FEntryTemplate <> nil)
   then begin
@@ -3326,7 +3447,7 @@ begin
     if (Store <> nil) and (Store^ <> nil) then
       Store := Store^.NestedStoragePtr;
     Result := FType.FEntryTemplate.MaybeUpdateProto(AnArrayProtoData.FType.FEntryTemplate, AnOverrideTemplate,
-      Store, ARecurse);
+      Store, ARecurse, ASkipStorage);
   end;
 end;
 
@@ -3349,7 +3470,8 @@ begin
     FType.FEntryTemplate.MaybeUpdateProto(
       AnArrayEntryTemplate.FType.FEntryTemplate,
       AnOverrideTemplate,
-      nil,
+      @FData.FEntries,
+      True,
       True
     );
   end;
@@ -3685,32 +3807,46 @@ end;
 function TGenericWatchResultDataStruct.MaybeUpdateProto(
   var AProtoData: TWatchResultData;
   var AnOverrideTemplate: TOverrideTemplateData; AStorage: PWatchResultStorage;
-  ARecurse: boolean): boolean;
+  ARecurse: boolean; ASkipStorage: boolean): boolean;
 var
   AStructProtoData: TGenericWatchResultDataStruct absolute AProtoData;
-  Store: PWatchResultStorage;
-  FieldStore: PNestedFieldsWatchResultStorage absolute Store;
+  FieldStore: PNestedFieldsWatchResultStorage absolute AStorage;
+  dummy: TOverrideTemplateData;
   i: Integer;
 begin
-  Result := inherited MaybeUpdateProto(AProtoData, AnOverrideTemplate, AStorage, ARecurse);
+  Result := inherited MaybeUpdateProto(AProtoData, AnOverrideTemplate, AStorage, ARecurse, ASkipStorage);
   if Result or not ARecurse then
     exit;
 
   assert((AStorage=nil) or (AStorage^=nil) or (AStorage^ is TNestedFieldsWatchResultStorage), 'TGenericWatchResultDataStruct.MaybeUpdateProto: (AStorage=nil) or (AStorage^=nil) or (AStorage^ is TNestedFieldsWatchResultStorage)');
+  if (AStorage = nil) or (AStorage^ = nil)
+  then begin
+    if (ARecurse) then begin  // or "if not ASkipStorage and " ??
+      dummy := nil;
+      for i := 0 to Length(FType.FFieldData) - 1 do begin
+        FType.FFieldData[i].Field.MaybeUpdateProto(AStructProtoData.FType.FFieldData[i].Field,
+          dummy, nil, ARecurse, ASkipStorage);
+        assert(dummy = nil, 'TGenericWatchResultDataStruct.MaybeUpdateProto: dummy = nil');
+      end;
+
+      if FType.FAnchestor <> nil then begin
+        FType.FAnchestor.MaybeUpdateProto(AStructProtoData.FType.FAnchestor, dummy,
+          nil, ARecurse, ASkipStorage);
+        assert(dummy = nil, 'TGenericWatchResultDataStruct.MaybeUpdateProto: dummy = nil');
+      end;
+    end;
+
+    exit;
+  end;
+
   for i := 0 to Length(FType.FFieldData) - 1 do begin
-    Store := AStorage;
-    if (Store <> nil) and (Store^ <> nil) then
-      Store := FieldStore^.NestedStoragePtr[i];
     FType.FFieldData[i].Field.MaybeUpdateProto(AStructProtoData.FType.FFieldData[i].Field,
-      FieldStore^.FOverrideTempl[i], Store, ARecurse);
+      FieldStore^.FOverrideTempl[i], FieldStore^.NestedStoragePtr[i], ARecurse, ASkipStorage);
   end;
 
   if FType.FAnchestor <> nil then begin
-    Store := AStorage;
-    if (Store <> nil) and (Store^ <> nil) then
-      Store := FieldStore^.NestedStoragePtr[-1];
     FType.FAnchestor.MaybeUpdateProto(AStructProtoData.FType.FAnchestor, AnOverrideTemplate,
-      Store, ARecurse);
+      FieldStore^.NestedStoragePtr[-1], ARecurse, ASkipStorage);
   end;
 end;
 
@@ -3723,8 +3859,7 @@ var
   AStore: TNestedFieldsWatchResultStorage absolute AStorage;
   i: Integer;
 begin
-  inherited AfterSaveToIndex(AStorage, AnIndex, AnEntryTemplate,
-    AnOverrideTemplate);
+  inherited AfterSaveToIndex(AStorage, AnIndex, AnEntryTemplate, AnOverrideTemplate);
 
   if (FType.FAnchestor <> nil) then begin
     assert(AnEntryTemplate is TGenericWatchResultDataStruct, 'TGenericWatchResultDataStruct.AfterSaveToIndex: AnEntryTemplate is TGenericWatchResultDataStruct');
@@ -3893,6 +4028,55 @@ constructor TWatchResultDataRefStruct.Create(AStructType: TLzDbgStructType;
 begin
   FData.FDataAddress := ADataAddress;
   inherited Create(AStructType);
+end;
+
+{ TGenericWatchResultDataProc }
+
+function TGenericWatchResultDataProc.GetAsString: String;
+begin
+  Result := FType.FLoc;
+end;
+
+function TGenericWatchResultDataProc.GetAsDesc: String;
+begin
+  Result := FType.FText;
+end;
+
+constructor TGenericWatchResultDataProc.Create(AnAddr: QWord; ALoc,
+  ADesc: String);
+begin
+  FType.FText := ADesc;
+  FType.FLoc := ALoc;
+  FData.FNumValue := AnAddr;
+  inherited Create();
+end;
+
+{ TWatchResultDataFunc }
+
+function TWatchResultDataFunc.GetClassID: TWatchResultDataClassID;
+begin
+  Result := wdFunc;
+end;
+
+{ TWatchResultDataProc }
+
+function TWatchResultDataProc.GetClassID: TWatchResultDataClassID;
+begin
+  Result := wdProc;
+end;
+
+{ TWatchResultDataFuncRef }
+
+function TWatchResultDataFuncRef.GetClassID: TWatchResultDataClassID;
+begin
+  Result := wdFuncRef;
+end;
+
+{ TWatchResultDataProcRef }
+
+function TWatchResultDataProcRef.GetClassID: TWatchResultDataClassID;
+begin
+  Result := wdProcRef;
 end;
 
 { TWatchResultDataError.TErrorDataStorage }

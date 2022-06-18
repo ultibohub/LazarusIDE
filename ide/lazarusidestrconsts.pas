@@ -1565,6 +1565,7 @@ resourcestring
   dlgHighlightColor = 'Highlight Color';
   dlgHighlightFontColor = 'Highlight Font Color';
   dlgValueColor = 'Value';
+  dlgValueDataAddr = 'Data-Address';
   dlgDefValueColor = 'Default Value';
   dlgDifferentValueBackgroundColor = 'Different values background';
   dlgPropNameColor = 'Property Name';

@@ -41,11 +41,12 @@ uses
   Classes, Forms, Controls, math, sysutils, LazLoggerBase, LazUTF8, Clipbrd,
   {$ifdef Windows} ActiveX, {$else} laz.FakeActiveX, {$endif}
   IDEWindowIntf, Menus, ComCtrls, ActnList, ExtCtrls, StdCtrls, LCLType,
-  IDEImagesIntf, LazarusIDEStrConsts, DebuggerStrConst, Debugger,
+  LMessages, IDEImagesIntf, LazarusIDEStrConsts, DebuggerStrConst, Debugger,
   DebuggerTreeView, IdeDebuggerBase, DebuggerDlg, DbgIntfBaseTypes,
-  DbgIntfDebuggerBase, DbgIntfMiscClasses, SynEdit, laz.VirtualTrees,
+  DbgIntfDebuggerBase, DbgIntfMiscClasses, SynEdit, laz.VirtualTrees, SpinEx,
   LazDebuggerIntf, LazDebuggerIntfBaseTypes, BaseDebugManager, EnvironmentOpts,
-  StrUtils, IdeDebuggerWatchResult, IdeDebuggerWatchResPrinter;
+  IdeDebuggerWatchResult, IdeDebuggerWatchResPrinter,
+  ArrayNavigationFrame, IdeDebuggerUtils;
 
 type
 
@@ -77,6 +78,8 @@ type
     ActionList1: TActionList;
     actProperties: TAction;
     InspectLabel: TLabel;
+    ToolButton1: TToolButton;
+    btnShowDataAddr: TToolButton;
     tvWatches: TDbgTreeView;
     InspectMemo: TMemo;
     MenuItem1: TMenuItem;
@@ -122,6 +125,7 @@ type
     procedure actInspectExecute(Sender: TObject);
     procedure actPowerExecute(Sender: TObject);
     procedure actToggleInspectSiteExecute(Sender: TObject);
+    procedure btnShowDataAddrClick(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormShow(Sender: TObject);
@@ -132,6 +136,7 @@ type
     procedure tvWatchesDragOver(Sender: TBaseVirtualTree; Source: TObject;
       Shift: TShiftState; State: TDragState; const Pt: TPoint; Mode: TDropMode;
       var Effect: LongWord; var Accept: Boolean);
+    procedure tvWatchesExpanded(Sender: TBaseVirtualTree; Node: PVirtualNode);
     procedure tvWatchesFocusChanged(Sender: TBaseVirtualTree;
       Node: PVirtualNode; Column: TColumnIndex);
     procedure tvWatchesInitChildren(Sender: TBaseVirtualTree;
@@ -151,6 +156,7 @@ type
     function GetWatches: TIdeWatches;
     procedure ContextChanged(Sender: TObject);
     procedure SnapshotChanged(Sender: TObject);
+    procedure WatchNavChanged(Sender: TArrayNavigationBar; AValue: Int64);
   private
     FWatchPrinter: TWatchResultPrinter;
     FWatchesInView: TIdeWatches;
@@ -168,6 +174,8 @@ type
 
     procedure UpdateInspectPane;
     procedure UpdateItem(const VNode: PVirtualNode; const AWatch: TIdeWatch);
+    procedure UpdateArraySubItems(const VNode: PVirtualNode;
+      const AWatchValue: TIdeWatchValue; out ChildCount: LongWord);
     procedure UpdateSubItems(const VNode: PVirtualNode;
       const AWatchValue: TIdeWatchValue; out ChildCount: LongWord);
     procedure UpdateAll;
@@ -183,6 +191,7 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function IsShortcut(var Message: TLMKey): Boolean; override;
     property WatchesMonitor;
     property ThreadsMonitor;
     property CallStackMonitor;
@@ -201,8 +210,9 @@ var
 const
   COL_WATCH_EXPR  = 1;
   COL_WATCH_VALUE = 2;
+  COL_WATCH_DATAADDR = 4;
   COL_SPLITTER_INSPECT = 3;
-  COL_WIDTHS: Array[0..2] of integer = ( 100,  200, 200);
+  COL_WIDTHS: Array[1..4] of integer = ( 100,  200, 300, 150);
 
 function WatchesDlgColSizeGetter(AForm: TCustomForm; AColId: Integer; var ASize: Integer): Boolean;
 begin
@@ -287,12 +297,16 @@ begin
   actInspect.Caption := lisInspect;
   actEvaluate.Caption := lisEvaluateModify;
 
+  btnShowDataAddr.ImageIndex := IDEImages.LoadImage('ce_implementation');
+
   Caption:=liswlWatchList;
 
   tvWatches.Header.Columns[0].Text := liswlExpression;
   tvWatches.Header.Columns[1].Text := dlgValueColor;
+  tvWatches.Header.Columns[2].Text := dlgValueDataAddr;
   tvWatches.Header.Columns[0].Width := COL_WIDTHS[COL_WATCH_EXPR];
   tvWatches.Header.Columns[1].Width := COL_WIDTHS[COL_WATCH_VALUE];
+  tvWatches.Header.Columns[2].Width := COL_WIDTHS[COL_WATCH_DATAADDR];
 end;
 
 destructor TWatchesDlg.Destroy;
@@ -301,8 +315,9 @@ begin
   if FQueuedUnLockCommandProcessing then
     DebugBoss.UnLockCommandProcessing;
   FQueuedUnLockCommandProcessing := False;
-  FreeAndNil(FWatchPrinter);
 
+  FreeAndNil(FWatchPrinter);
+  tvWatches.Clear; // Must clear all nodes before any owned "Nav := TArrayNavigationBar" are freed;
   inherited Destroy;
 end;
 
@@ -452,7 +467,103 @@ procedure TWatchesDlg.tvWatchesDragDrop(Sender: TBaseVirtualTree;
 var
   s: String;
   NewWatch: TCurrentWatch;
+  Nodes: TNodeArray;
+  Target, N, NTarget, NewNode: PVirtualNode;
+  AWatch, ASourceWatch, ATargetWatch: TIdeWatch;
+  NewIdx: Integer;
 begin
+  if Source = tvWatches then begin
+    if (not (FWatchesInView is TCurrentWatches)) or (GetSelectedSnapshot <> nil) then
+      exit;
+
+    Nodes := tvWatches.GetSortedSelection(True);
+    Target := tvWatches.GetNodeAt(Pt);
+    if (Target = nil) then
+      exit;
+
+    if Mode = dmAbove then begin
+      // Insert above
+      if tvWatches.Selected[Target] then begin
+        NTarget := tvWatches.GetPreviousSiblingNoInit(Target);
+        while (NTarget <> nil) and tvWatches.Selected[NTarget] do begin
+          Target := NTarget;
+          NTarget := tvWatches.GetPreviousSiblingNoInit(Target);
+        end;
+      end;
+      if Target <> nil then
+        Target := tvWatches.GetPreviousSiblingNoInit(Target);
+    end
+    else
+    if tvWatches.Selected[Target] then begin
+      // Insert below
+      NTarget := tvWatches.GetNextSiblingNoInit(Target);
+      while (NTarget <> nil) and tvWatches.Selected[NTarget] do begin
+        Target := NTarget;
+        NTarget := tvWatches.GetNextSiblingNoInit(Target);
+      end;
+    end;
+    if Target = nil then
+      NTarget := tvWatches.GetFirstChildNoInit(nil)
+    else
+      NTarget := tvWatches.GetNextSiblingNoInit(Target);
+
+    BeginUpdate;
+    try
+
+    for N in Nodes do begin
+      if tvWatches.NodeParent[N] = nil then begin
+        // Move top/outer node
+        if (N = Target) or (N = NTarget) then
+          continue; // already in place
+
+        AWatch := TIdeWatch(tvWatches.NodeItem[N]);
+        NewNode := N;
+      end
+      else begin
+        // Copy child node
+        ASourceWatch := TIdeWatch(tvWatches.NodeItem[N]);
+        assert(ASourceWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: ASourceWatch <> nil');
+        if ASourceWatch = nil then
+          Continue;
+
+        AWatch := FWatchesInView.Add(ASourceWatch.Expression);
+        AWatch.Assign(ASourceWatch);
+
+        NewNode := tvWatches.FindNodeForItem(AWatch);
+      end;
+
+      if Target = nil then
+        tvWatches.MoveTo(NewNode, Target, amAddChildFirst, False)
+      else
+        tvWatches.MoveTo(NewNode, Target, amInsertAfter, False);
+
+      assert(AWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: AWatch <> nil');
+      if AWatch = nil then
+        Continue;
+      NewIdx := 0;
+      if Target <> nil then begin
+        ATargetWatch := TIdeWatch(tvWatches.NodeItem[Target]);
+        assert(ATargetWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: ATargetWatch <> nil');
+        if ATargetWatch <> nil then begin
+          NewIdx := ATargetWatch.Index;
+          if NewIdx < AWatch.Index then
+            inc(NewIdx);
+        end;
+      end;
+      AWatch.Index := NewIdx;
+
+      Target := NewNode;
+      NTarget := tvWatches.GetNextSiblingNoInit(Target);
+    end;
+
+    DebugBoss.Watches.DoModified;
+    finally
+      EndUpdate;
+    end;
+
+    exit;
+  end;
+
   s := '';
   if (Source is TSynEdit) then s := TSynEdit(Source).SelText;
   if (Source is TCustomEdit) then s := TCustomEdit(Source).SelText;
@@ -474,9 +585,50 @@ end;
 procedure TWatchesDlg.tvWatchesDragOver(Sender: TBaseVirtualTree;
   Source: TObject; Shift: TShiftState; State: TDragState; const Pt: TPoint;
   Mode: TDropMode; var Effect: LongWord; var Accept: Boolean);
+var
+  N, Target: PVirtualNode;
 begin
   Accept := ( (Source is TSynEdit) and (TSynEdit(Source).SelAvail) ) or
-            ( (Source is TCustomEdit) and (TCustomEdit(Source).SelText <> '') );
+            ( (Source is TCustomEdit) and (TCustomEdit(Source).SelText <> '') ) or
+            ( (Source = tvWatches) and (tvWatches.SelectedCount > 0) and
+              (GetSelectedSnapshot = nil)
+            )
+            ;
+
+  if Accept and (Source = tvWatches) then begin
+    Target := tvWatches.GetNodeAt(Pt);
+    Accept := (Target <> nil) and (tvWatches.NodeParent[Target] = nil);
+    if Accept then
+      case Mode of
+        dmAbove: ;
+        dmBelow: Accept := not tvWatches.Expanded[Target];
+        else     Accept := false;
+      end;
+    if not Accept then
+      exit;
+
+
+    for N in tvWatches.SelectedNodes(True) do begin
+      if tvWatches.NodeItem[N] = nil then begin
+        Accept := False;
+        exit;
+      end;
+    end;
+  end;
+end;
+
+procedure TWatchesDlg.tvWatchesExpanded(Sender: TBaseVirtualTree;
+  Node: PVirtualNode);
+var
+  AWatch: TIdeWatch;
+begin
+  Node := tvWatches.GetFirstChildNoInit(Node);
+  while Node <> nil do begin
+    AWatch := TIdeWatch(tvWatches.NodeItem[Node]);
+    if AWatch <> nil then
+      UpdateItem(Node, AWatch);
+    Node := tvWatches.GetNextSiblingNoInit(Node);
+  end;
 end;
 
 procedure TWatchesDlg.tvWatchesFocusChanged(Sender: TBaseVirtualTree;
@@ -495,6 +647,12 @@ var
   s: String;
   NewWatch: TCurrentWatch;
 begin
+  if (ActiveControl <> nil) and (
+       (ActiveControl is TCustomEdit) or (ActiveControl is TCustomSpinEditEx)
+     )
+  then
+    exit;
+
   if (Shift * [ssShift, ssAlt, ssAltGr, ssCtrl] = [ssCtrl]) and (Key = VK_V)
   then begin
     Key := 0;
@@ -544,6 +702,14 @@ begin
   InspectSplitter.Left :=  nbInspect.Left - 1;
   if ToolButtonInspectView.Down then
     UpdateInspectPane;
+end;
+
+procedure TWatchesDlg.btnShowDataAddrClick(Sender: TObject);
+begin
+  if btnShowDataAddr.Down then
+    tvWatches.Header.Columns[2].Options := tvWatches.Header.Columns[2].Options + [coVisible]
+  else
+    tvWatches.Header.Columns[2].Options := tvWatches.Header.Columns[2].Options - [coVisible];
 end;
 
 procedure TWatchesDlg.ContextChanged(Sender: TObject);
@@ -624,12 +790,17 @@ end;
 procedure TWatchesDlg.actCopyNameExecute(Sender: TObject);
 var
   Node: PVirtualNode;
+  AWatch: TIdeWatch;
 begin
   Node := tvWatches.GetFocusedNode;
   if Node = nil then
     exit;
   Clipboard.Open;
-  Clipboard.AsText := tvWatches.NodeText[Node, COL_WATCH_EXPR-1];
+  AWatch := TIdeWatch(tvWatches.NodeItem[Node]);
+  if AWatch <> nil then
+    Clipboard.AsText := AWatch.Expression
+  else
+    Clipboard.AsText := tvWatches.NodeText[Node, COL_WATCH_EXPR-1];
   Clipboard.Close;
 end;
 
@@ -699,6 +870,28 @@ begin
   end;
 end;
 
+procedure TWatchesDlg.WatchNavChanged(Sender: TArrayNavigationBar; AValue: Int64
+  );
+var
+  VNode: PVirtualNode;
+  AWatch: TIdeWatch;
+  WatchValue: TIdeWatchValue;
+  c: LongWord;
+begin
+  if Sender.OwnerData = nil then
+    exit;
+
+  AWatch := TIdeWatch(Sender.OwnerData);
+  if AWatch.Enabled then begin
+    VNode := tvWatches.FindNodeForItem(AWatch);
+    if VNode = nil then
+      exit;
+
+    WatchValue := AWatch.Values[GetThreadId, GetStackframe];
+    UpdateSubItems(VNode, WatchValue, c);
+  end;
+end;
+
 function TWatchesDlg.GetWatches: TIdeWatches;
 var
   Snap: TSnapshot;
@@ -762,12 +955,17 @@ function TWatchesDlg.ColSizeGetter(AColId: Integer; var ASize: Integer): Boolean
 begin
   if AColId = COL_SPLITTER_INSPECT then begin
     ASize := nbInspect.Width;
-    Result := ASize <> COL_WIDTHS[AColId - 1];
+    Result := ASize <> COL_WIDTHS[AColId];
   end
   else
-  if (AColId - 1 >= 0) and (AColId - 1 < tvWatches.Header.Columns.Count) then begin
+  if (AColId = COL_WATCH_DATAADDR) then begin
+    ASize := tvWatches.Header.Columns[2].Width;
+    Result := ASize <> COL_WIDTHS[AColId];
+  end
+  else
+  if (AColId >= 1) and (AColId <= tvWatches.Header.Columns.Count) then begin
     ASize := tvWatches.Header.Columns[AColId - 1].Width;
-    Result := ASize <> COL_WIDTHS[AColId - 1];
+    Result := ASize <> COL_WIDTHS[AColId];
   end
   else
     Result := False;
@@ -778,6 +976,7 @@ begin
   case AColId of
     COL_WATCH_EXPR:  tvWatches.Header.Columns[0].Width := ASize;
     COL_WATCH_VALUE: tvWatches.Header.Columns[1].Width := ASize;
+    COL_WATCH_DATAADDR: tvWatches.Header.Columns[2].Width := ASize;
     COL_SPLITTER_INSPECT: nbInspect.Width := ASize;
   end;
 end;
@@ -899,7 +1098,7 @@ begin
     exit;
   InspectLabel.Caption := Watch.Expression;
 
-  if not(Watch.Enabled and Watch.HasAllValidParents(GetThreadId, GetStackframe)) then begin
+  if not(Watch.Enabled) then begin
     InspectMemo.WordWrap := True;
     InspectMemo.Text := '<evaluating>';
     exit;
@@ -1009,6 +1208,7 @@ var
   TypInfo: TDBGType;
   HasChildren, IsOuterUpdate: Boolean;
   c: LongWord;
+  da: TDBGPtr;
 begin
   if (not ToolButtonPower.Down) or (not Visible) then exit;
   if (ThreadsMonitor = nil) or (CallStackMonitor = nil) then exit;
@@ -1028,8 +1228,9 @@ begin
     FWatchInUpDateItem := AWatch.TopParentWatch;
   FCurrentWatchInUpDateItem := AWatch;
   try
-    tvWatches.NodeText[VNode, COL_WATCH_EXPR-1]:= AWatch.Expression;
-    if AWatch.Enabled and AWatch.HasAllValidParents(GetThreadId, GetStackframe) then begin
+    tvWatches.NodeText[VNode, COL_WATCH_EXPR-1]:= AWatch.DisplayName;
+    tvWatches.NodeText[VNode, 2] := '';
+    if AWatch.Enabled then begin
       WatchValue := AWatch.Values[GetThreadId, GetStackframe];
       if (WatchValue <> nil) and
          ( (GetSelectedSnapshot = nil) or not(WatchValue.Validity in [ddsUnknown, ddsEvaluating, ddsRequested]) )
@@ -1037,14 +1238,26 @@ begin
         if (WatchValue.Validity = ddsValid) and (WatchValue.ResultData <> nil) then begin
           WatchValueStr := FWatchPrinter.PrintWatchValue(WatchValue.ResultData, WatchValue.DisplayFormat);
           WatchValueStr := ClearMultiline(DebugBoss.FormatValue(WatchValue.TypeInfo, WatchValueStr));
+          if (WatchValue.ResultData.ValueKind = rdkArray) and (WatchValue.ResultData.ArrayLength > 0)
+          then tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := Format(drsLen, [WatchValue.ResultData.ArrayLength]) + WatchValueStr
+          else tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := WatchValueStr;
+          if (WatchValue.ResultData.ValueKind  in [rdkPointerVal]) or
+             (WatchValue.ResultData.StructType in [dstClass, dstInterface]) or
+             (WatchValue.ResultData.ArrayType  in [datDynArray])
+          then begin
+            da := WatchValue.ResultData.DataAddress;
+            if da = 0
+            then tvWatches.NodeText[VNode, 2] := 'nil'
+            else tvWatches.NodeText[VNode, 2] := '$' + IntToHex(da, HexDigicCount(da, 4, True));
+          end
+        end
+        else begin
           if (WatchValue.TypeInfo <> nil) and
              (WatchValue.TypeInfo.Attributes * [saArray, saDynArray] <> []) and
              (WatchValue.TypeInfo.Len >= 0)
-          then tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := Format(drsLen, [WatchValue.TypeInfo.Len]) + WatchValueStr
-          else tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := WatchValueStr;
-        end
-        else
-          tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := WatchValue.Value;
+          then tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := Format(drsLen, [WatchValue.TypeInfo.Len]) + WatchValue.Value
+          else tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := WatchValue.Value;
+        end;
       end
       else
         tvWatches.NodeText[VNode, COL_WATCH_VALUE-1]:= '<not evaluated>';
@@ -1058,8 +1271,11 @@ begin
         if DoDelayedDelete then
           exit;
 
-        HasChildren := ((TypInfo <> nil) and (TypInfo.Fields <> nil) and (TypInfo.Fields.Count > 0)) or
-                       ((WatchValue.ResultData <> nil) and (WatchValue.ResultData.FieldCount > 0));
+        HasChildren := ( (TypInfo <> nil) and (TypInfo.Fields <> nil) and (TypInfo.Fields.Count > 0) ) or
+                       ( (WatchValue.ResultData <> nil) and
+                         ( (WatchValue.ResultData.FieldCount > 0) or
+                           ( (WatchValue.ResultData.ValueKind = rdkArray) and (WatchValue.ResultData.ArrayLength > 0) )
+                       ) );
         tvWatches.HasChildren[VNode] := HasChildren;
         if HasChildren and (WatchValue.Validity = ddsValid) and tvWatches.Expanded[VNode] then begin
           (* The current "AWatch" should be done. Allow UpdateItem for nested entries *)
@@ -1095,6 +1311,92 @@ begin
   end;
 end;
 
+procedure TWatchesDlg.UpdateArraySubItems(const VNode: PVirtualNode;
+  const AWatchValue: TIdeWatchValue; out ChildCount: LongWord);
+var
+  NewWatch, AWatch: TIdeWatch;
+  i, TotalCount: Integer;
+  ResData: TWatchResultData;
+  ExistingNode, nd: PVirtualNode;
+  Nav: TArrayNavigationBar;
+  Offs, KeepCnt, KeepBelow: Int64;
+begin
+  ChildCount := 0;
+  ResData := AWatchValue.ResultData;
+  if (ResData = nil) then
+    exit;
+
+  TotalCount := ResData.ArrayLength;
+  if (ResData.ValueKind <> rdkArray) or (TotalCount = 0) then
+    TotalCount := ResData.Count;
+
+  AWatch := AWatchValue.Watch;
+  ExistingNode := tvWatches.GetFirstChildNoInit(VNode);
+  if ExistingNode = nil then
+    ExistingNode := tvWatches.AddChild(VNode, nil)
+  else
+    tvWatches.NodeItem[ExistingNode] := nil;
+
+  Nav := TArrayNavigationBar(tvWatches.NodeControl[ExistingNode]);
+  if Nav = nil then begin
+    Nav := TArrayNavigationBar.Create(Self);
+    Nav.ParentColor := False;
+    Nav.ParentBackground := False;
+    Nav.Color := tvWatches.Colors.BackGroundColor;
+    Nav.LowBound := ResData.LowBound;
+    Nav.HighBound := ResData.LowBound + TotalCount - 1;
+    Nav.ShowBoundInfo := True;
+    Nav.Index := ResData.LowBound;
+    Nav.PageSize := 10;
+    Nav.OwnerData := AWatch;
+    Nav.OnIndexChanged := @WatchNavChanged;
+    Nav.OnPageSize := @WatchNavChanged;
+    tvWatches.NodeControl[ExistingNode] := Nav;
+    tvWatches.NodeText[ExistingNode, 0] := ' ';
+    tvWatches.NodeText[ExistingNode, 1] := ' ';
+  end;
+  ChildCount := Nav.LimitedPageSize;
+
+  ExistingNode := tvWatches.GetNextSiblingNoInit(ExistingNode);
+
+  Offs := Nav.Index;
+  for i := 0 to ChildCount - 1 do begin
+    NewWatch := AWatch.ChildrenByNameAsArrayEntry[Offs +  i];
+    if NewWatch = nil then begin
+      dec(ChildCount);
+      continue;
+    end;
+
+    if AWatch is TCurrentWatch then begin
+      NewWatch.DisplayFormat := wdfDefault;
+      NewWatch.Enabled       := AWatch.Enabled;
+      if (defClassAutoCast in AWatch.EvaluateFlags) then
+        NewWatch.EvaluateFlags := NewWatch.EvaluateFlags + [defClassAutoCast];
+    end;
+
+    if ExistingNode <> nil then begin
+      tvWatches.NodeItem[ExistingNode] := NewWatch;
+      nd := ExistingNode;
+      ExistingNode := tvWatches.GetNextSiblingNoInit(ExistingNode);
+    end
+    else begin
+      nd := tvWatches.AddChild(VNode, NewWatch);
+    end;
+    UpdateItem(nd, NewWatch);
+  end;
+
+  inc(ChildCount); // for the nav row
+
+  if AWatch is TCurrentWatch then begin
+    KeepCnt := Nav.PageSize;
+    KeepBelow := KeepCnt;
+    KeepCnt := Max(Max(50, KeepCnt+10),
+             Min(KeepCnt*10, 500) );
+    KeepBelow := Min(KeepBelow, KeepCnt - Nav.PageSize);
+    AWatch.LimitChildWatchCount(KeepCnt, ResData.LowBound + KeepBelow);
+  end;
+end;
+
 procedure TWatchesDlg.UpdateSubItems(const VNode: PVirtualNode;
   const AWatchValue: TIdeWatchValue; out ChildCount: LongWord);
 var
@@ -1104,6 +1406,7 @@ var
   ResData: TWatchResultData;
   ExistingNode, nd: PVirtualNode;
   ChildInfo: TWatchResultDataFieldInfo;
+  AnchClass: String;
 begin
   ChildCount := 0;
 
@@ -1112,11 +1415,13 @@ begin
     ChildCount := ResData.FieldCount;
     AWatch := AWatchValue.Watch;
     ExistingNode := tvWatches.GetFirstChildNoInit(VNode);
+    if ExistingNode <> nil then
+      tvWatches.NodeControl[ExistingNode].Free;
 
+    AnchClass := ResData.TypeName;
     for i := 0 to ResData.FieldCount-1 do begin
       ChildInfo := ResData.Fields[i];
-
-      NewWatch := AWatch.ChildrenByName[ChildInfo.FieldName];
+      NewWatch := AWatch.ChildrenByNameAsField[ChildInfo.FieldName, AnchClass];
       if NewWatch = nil then begin
         dec(ChildCount);
         continue;
@@ -1141,6 +1446,13 @@ begin
     end;
 
   end
+  else
+  if (AWatchValue.ResultData <> nil) and
+  (AWatchValue.ResultData.ValueKind = rdkArray) and
+  (AWatchValue.ResultData.ArrayLength > 0)
+  then begin
+    UpdateArraySubItems(VNode, AWatchValue, ChildCount);
+  end
   else begin
     // Old Interface
     TypInfo := AWatchValue.TypeInfo;
@@ -1150,8 +1462,9 @@ begin
       ChildCount := TypInfo.Fields.Count;
       ExistingNode := tvWatches.GetFirstChildNoInit(VNode);
 
+      AnchClass := TypInfo.TypeName;
       for i := 0 to TypInfo.Fields.Count-1 do begin
-        NewWatch := AWatch.ChildrenByName[TypInfo.Fields[i].Name];
+        NewWatch := AWatch.ChildrenByNameAsField[TypInfo.Fields[i].Name, AnchClass];
         if NewWatch = nil then begin
           dec(ChildCount);
           continue;
@@ -1258,6 +1571,17 @@ begin
   then Result := SnapshotManager.SelectedEntry;
 end;
 
+function TWatchesDlg.IsShortcut(var Message: TLMKey): Boolean;
+begin
+  Result := false;
+  if (ActiveControl <> nil) and (
+       (ActiveControl is TCustomEdit) or (ActiveControl is TCustomSpinEditEx)
+     )
+  then
+    exit;
+  Result := inherited IsShortcut(Message);
+end;
+
 procedure TWatchesDlg.WatchAdd(const ASender: TIdeWatches; const AWatch: TIdeWatch);
 var
   VNode: PVirtualNode;
@@ -1322,6 +1646,7 @@ initialization
   WatchWindowCreator.OnGetDividerSize := @WatchesDlgColSizeGetter;
   WatchWindowCreator.DividerTemplate.Add('ColumnWatchExpr',  COL_WATCH_EXPR,  @drsColWidthExpression);
   WatchWindowCreator.DividerTemplate.Add('ColumnWatchValue', COL_WATCH_VALUE, @drsColWidthValue);
+  WatchWindowCreator.DividerTemplate.Add('ColumnWatchDataAddr', COL_WATCH_DATAADDR, @drsColWidthValue);
   WatchWindowCreator.DividerTemplate.Add('SplitterWatchInspect', COL_SPLITTER_INSPECT, @drsWatchSplitterInspect);
   WatchWindowCreator.CreateSimpleLayout;
 

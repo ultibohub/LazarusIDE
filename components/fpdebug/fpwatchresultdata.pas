@@ -6,20 +6,31 @@ interface
 
 uses
   FpDbgInfo, FpPascalBuilder, FpdMemoryTools, FpErrorMessages, FpDbgDwarf,
-  DbgIntfBaseTypes, fgl, SysUtils, LazDebuggerIntf;
+  FpDbgDwarfDataClasses, DbgIntfBaseTypes, LazClasses, fgl, Math, SysUtils,
+  LazDebuggerIntf;
 
 type
+
+  TDbgPtrList = specialize TFPGList<TDBGPtr>;
 
   { TFpWatchResultConvertor }
 
   TFpWatchResultConvertor = class
   private const
-    MAX_RECURSE_LVL = 32;
-    NEST_PTR_RECURSE_LVL = 6; // must be less-or-equal than MAX_RECURSE_LVL
+    MAX_RECURSE_LVL = 10;
+    MAX_RECURSE_LVL_ARRAY = 5;
+    MAX_RECURSE_LVL_PTR = 8; // max depth for a chain of pointers starting at the initial value
   private
     FContext: TFpDbgLocationContext;
-    FRecurseCnt, FRecurseInstanceCnt: integer;
-    FOuterArrayIdx: integer;
+    FExtraDepth: Boolean;
+    FFirstIndexOffs: Integer;
+    FRecurseCnt, FRecurseCntLow,
+    FRecursePointerCnt,
+    FRecurseInstanceCnt, FRecurseDynArray: integer;
+    FRecurseAddrList: TDbgPtrList;
+    FLastValueKind: TDbgSymbolKind;
+    FHasEmbeddedPointer: Boolean;
+    FOuterArrayIdx, FTotalArrayCnt: integer;
     FRepeatCount: Integer;
   protected
     function CheckError(AnFpValue: TFpValue; AnResData: TLzDbgWatchDataIntf): boolean;
@@ -43,11 +54,18 @@ type
 
     function StructToResData(AnFpValue: TFpValue; AnResData: TLzDbgWatchDataIntf): Boolean;
 
+    function ProcToResData(AnFpValue: TFpValue; AnResData: TLzDbgWatchDataIntf): Boolean;
+
     function DoWriteWatchResultData(AnFpValue: TFpValue;
                                   AnResData: TLzDbgWatchDataIntf
                                  ): Boolean;
+    function DoWritePointerWatchResultData(AnFpValue: TFpValue;
+                                  AnResData: TLzDbgWatchDataIntf;
+                                  AnAddr: TDbgPtr
+                                 ): Boolean;
   public
     constructor Create(AContext: TFpDbgLocationContext);
+    destructor Destroy; override;
 
     function WriteWatchResultData(AnFpValue: TFpValue;
                                   AnResData: TLzDbgWatchDataIntf;
@@ -55,6 +73,9 @@ type
                                  ): Boolean;
 
     property Context: TFpDbgLocationContext read FContext write FContext;
+    property ExtraDepth: Boolean read FExtraDepth write FExtraDepth;
+    property FirstIndexOffs: Integer read FFirstIndexOffs write FFirstIndexOffs;
+    //property RepeatCount: Integer read FRepeatCount write SetRepeatCount;
   end;
 
 
@@ -66,6 +87,9 @@ implementation
 function TFpWatchResultConvertor.CheckError(AnFpValue: TFpValue;
   AnResData: TLzDbgWatchDataIntf): boolean;
 begin
+  Result := AnFpValue = nil;
+  if Result then
+    exit;
   Result := IsError(AnFpValue.LastError);
   if Result then begin
     if AnResData <> nil then
@@ -95,12 +119,17 @@ function TFpWatchResultConvertor.PointerToResData(AnFpValue: TFpValue;
 var
   DerefRes: TLzDbgWatchDataIntf;
   DerefVal: TFpValue;
+  addr: QWord;
 begin
   Result := True;
-  AnResData.CreatePointerValue(AnFpValue.AsCardinal);
+  addr := AnFpValue.AsCardinal;
+  AnResData.CreatePointerValue(addr);
   AddTypeNameToResData(AnFpValue, AnResData);
 
   if CheckError(AnFpValue, AnResData) then
+    exit;
+
+  if addr = 0 then
     exit;
 
   if svfString in AnFpValue.FieldFlags then begin
@@ -137,21 +166,18 @@ begin
            - Pascal-String type
            - Any basic type (any type that has no reference or internal pointer)
              (skChar should not happen: Should be PChar above)
-           * NO pointer => pointer must check NEST_PTR_RECURSE_LVL
-                        => pointer is NOT ALLOWED to ignore MAX_RECURSE_LVL
-           * NO struct, array, variant... => May include pointers or internal refs
+           - Any other
         *)
         DerefRes := AnResData.SetDerefData;
         if DerefRes <> nil then begin
           // In case of nested pointer MAX_RECURSE_LVL may already be reached. Make an exception here, to allow one more.
           dec(FRecurseCnt);
-          DoWriteWatchResultData(DerefVal, DerefRes);
+          DoWritePointerWatchResultData(DerefVal, DerefRes, addr);
           inc(FRecurseCnt);
         end;
       end
       else
       if (DerefVal.Kind =skPointer) and (svfString in DerefVal.FieldFlags) then begin
-        // PPChar / Pointer to PChar: Ignore NEST_PTR_RECURSE_LVL
         DerefRes := AnResData.SetDerefData;
         if DerefRes <> nil then begin
           DerefRes.CreateString(DerefVal.AsString);
@@ -160,22 +186,17 @@ begin
       end
       else
       if (DerefVal.Kind =skPointer) and (svfWideString in DerefVal.FieldFlags) then begin
-        // PPWideChar / Pointer to PWideChar: Ignore NEST_PTR_RECURSE_LVL
         DerefRes := AnResData.SetDerefData;
         if DerefRes <> nil then begin
           DerefRes.CreateWideString(DerefVal.AsString);
           AddTypeNameToResData(DerefVal, DerefRes, True);
         end;
       end
-      else
-      if (DerefVal.Kind =skPointer) and (FRecurseCnt <= NEST_PTR_RECURSE_LVL) then begin
-        // Nested Pointer
+      else begin
         DerefRes := AnResData.SetDerefData;
-        if DerefRes <> nil then begin
-          DoWriteWatchResultData(DerefVal, DerefRes);
-        end;
+        if DerefRes <> nil then
+          DoWritePointerWatchResultData(DerefVal, DerefRes, addr);
       end;
-      // Currently do NOT deref for struct, array, ...
 
       CheckError(DerefVal, DerefRes);
       DerefVal.ReleaseReference;
@@ -288,25 +309,27 @@ end;
 
 function TFpWatchResultConvertor.ArrayToResData(AnFpValue: TFpValue;
   AnResData: TLzDbgWatchDataIntf): Boolean;
+const
+  MAX_TOTAL_ARRAY_CNT = 5000;
+  MAX_TOTAL_ARRAY_CNT_EXTRA_DEPTH = 3500; // reset
 var
-  Cnt, i, RecurseInst, OuterIdx: Integer;
-  LowBnd: Int64;
+  Cnt, i, CurRecurseDynArray, OuterIdx: Integer;
+  LowBnd, StartIdx: Int64;
   Addr: TDBGPtr;
   ti: TFpSymbol;
   EntryRes: TLzDbgWatchDataIntf;
   MemberValue: TFpValue;
 begin
   Result := True;
-  if FRecurseCnt > NEST_PTR_RECURSE_LVL then
-    exit;
 
   Cnt := AnFpValue.MemberCount;
-  RecurseInst := FRecurseInstanceCnt;
+  CurRecurseDynArray := FRecurseDynArray;
   OuterIdx := FOuterArrayIdx;
 
   if (AnFpValue.IndexTypeCount = 0) or (not AnFpValue.IndexType[0].GetValueLowBound(AnFpValue, LowBnd)) then
     LowBnd := 0;
 
+  Addr := 0;
   ti := AnFpValue.TypeInfo;
   if (ti = nil) or (ti.Flags * [sfDynArray, sfStatArray] = []) then begin
     EntryRes := AnResData.CreateArrayValue(datUnknown, Cnt, LowBnd);
@@ -314,7 +337,6 @@ begin
   else
   if (sfDynArray in ti.Flags) or (LowBnd = 0) then begin // LowBnd = 0 => there is some bug, reporting some dyn arrays as stat.
     EntryRes := AnResData.CreateArrayValue(datDynArray, Cnt, 0);
-    Addr := 0;
     if AnFpValue.FieldFlags * [svfInteger, svfCardinal] <> [] then
       Addr := AnFpValue.AsCardinal
     else
@@ -322,7 +344,8 @@ begin
       Addr := AnFpValue.DataAddress.Address;
     AnResData.SetDataAddress(Addr);
 
-    inc(FRecurseInstanceCnt);
+    if FRecurseCnt >= 0 then
+      inc(FRecurseDynArray);
   end
   else begin
     EntryRes := AnResData.CreateArrayValue(datStatArray, Cnt, LowBnd);
@@ -331,25 +354,36 @@ begin
   AddTypeNameToResData(AnFpValue, AnResData);
 
   try
-    if Cnt <= 0 then
+    if (Cnt <= 0) or
+       (FHasEmbeddedPointer) or
+       (FRecurseCnt > MAX_RECURSE_LVL_ARRAY) or
+       ( (FRecurseCnt > 0) and (FTotalArrayCnt > MAX_TOTAL_ARRAY_CNT) )
+    then
       exit;
+
+    StartIdx := 0;
+    If (FOuterArrayIdx < 0) and (FRecurseCnt = FRecurseCntLow) then
+      StartIdx := FFirstIndexOffs;
+    Cnt := max(1, Cnt - StartIdx);
 
     if (Context.MemManager.MemLimits.MaxArrayLen > 0) and (Cnt > Context.MemManager.MemLimits.MaxArrayLen) then
       Cnt := Context.MemManager.MemLimits.MaxArrayLen;
 
-    If (FOuterArrayIdx < 0) and (FRepeatCount > 0) then Cnt := FRepeatCount
-    else if (FRecurseCnt > 1) and (FOuterArrayIdx <   5) and (Cnt >    5) then Cnt := 5
-    else if (FRecurseCnt > 1)                            and (Cnt >    3) then Cnt := 3
-    else if (FRecurseCnt > 0) and (FOuterArrayIdx <  25) and (Cnt >   50) then Cnt := 50
-    else if (FRecurseCnt > 0) and (FOuterArrayIdx < 100) and (Cnt >   10) then Cnt := 10
-    else if (FRecurseCnt > 0)                            and (Cnt >    5) then Cnt := 5
+    If (FOuterArrayIdx < 0) and (FRecurseCnt = FRecurseCntLow) and (FRepeatCount > 0) then Cnt := FRepeatCount
+    else if (FRecurseCnt > 1) and (FOuterArrayIdx >  10) and (Cnt >   10) then Cnt := 10
+    else if (FRecurseCnt > 1) and (FOuterArrayIdx >   1) and (Cnt >   20) then Cnt := 20
+    else if (FRecurseCnt > 0) and (FOuterArrayIdx > 100) and (Cnt >   10) then Cnt := 10
+    else if (FRecurseCnt > 0) and (FOuterArrayIdx >   1) and (Cnt >   50) then Cnt := 50
     else if (Cnt > 1000) then Cnt := 1000;
 
     /////////////////////
     // add mem read cache ??
     // Bound types
 
-    for i := 0 to Cnt - 1 do begin
+    inc(FTotalArrayCnt, Cnt);
+    for i := StartIdx to StartIdx + Cnt - 1 do begin
+      if (FRecurseCnt < 0) and (FTotalArrayCnt > MAX_TOTAL_ARRAY_CNT_EXTRA_DEPTH) then
+        FTotalArrayCnt := MAX_TOTAL_ARRAY_CNT_EXTRA_DEPTH;
       if i > FOuterArrayIdx then
         FOuterArrayIdx := i;
       MemberValue := AnFpValue.Member[i+LowBnd];
@@ -357,12 +391,12 @@ begin
       if MemberValue = nil then
         EntryRes.CreateError('Error: Could not get member')
       else
-        DoWriteWatchResultData(MemberValue, EntryRes);
+        DoWritePointerWatchResultData(MemberValue, EntryRes, Addr);
       MemberValue.ReleaseReference;
     end;
 
   finally
-    FRecurseInstanceCnt := RecurseInst;
+    FRecurseDynArray := CurRecurseDynArray;
     FOuterArrayIdx := OuterIdx;
   end
 end;
@@ -375,7 +409,7 @@ var
   vt: TLzDbgStructType;
   Cache: TFpDbgMemCacheBase;
   AnchestorMap: TAnchestorMap;
-  i, j: Integer;
+  i, j, WasRecurseInstanceCnt: Integer;
   MemberValue: TFpValue;
   ti, sym: TFpSymbol;
   ResAnch, ResField, TopAnch, UnkAnch: TLzDbgWatchDataIntf;
@@ -410,7 +444,13 @@ begin
   AnResData.CreateStructure(vt, Addr);
   AddTypeNameToResData(AnFpValue, AnResData);
 
-  if (AnFpValue.Kind in [skClass, skInterface]) and (Addr = 0) then
+  if (AnFpValue.Kind in [skClass, skInterface]) and
+     ( (Addr = 0) or
+       (FRecurseInstanceCnt >= 1) or (FRecurseDynArray >= 2)
+     )
+  then
+    exit;
+  if FHasEmbeddedPointer then
     exit;
 
   if Context.MemManager.CacheManager <> nil then
@@ -419,15 +459,10 @@ begin
     Cache := nil;
 
   AnchestorMap := TAnchestorMap.Create;
-  if (AnFpValue.Kind in [skClass, skInterface]) then
+  WasRecurseInstanceCnt := FRecurseInstanceCnt;
+  if (AnFpValue.Kind in [skClass, skInterface]) and (FRecurseCnt >= 0) then
     inc(FRecurseInstanceCnt);
   try
-    if (AnFpValue.Kind in [skClass, skObject]) and (FRecurseCnt > NEST_PTR_RECURSE_LVL) then
-      exit;
-    if (AnFpValue.Kind in [skClass, skInterface]) and (FRecurseInstanceCnt >= 2) then
-      exit;
-
-
     TopAnch := AnResData;
     UnkAnch := nil;
     ti := AnFpValue.TypeInfo;
@@ -493,18 +528,65 @@ begin
       end;
 
       ResField := ResAnch.AddField(MbName, MBVis, []);
-      if not DoWriteWatchResultData(MemberValue, ResField) then
+      if not DoWritePointerWatchResultData(MemberValue, ResField, Addr) then
         ResField.CreateError('Unknown');
 
       MemberValue.ReleaseReference;
     end;
   finally
-    if (AnFpValue.Kind in [skClass, skInterface]) then
-      dec(FRecurseInstanceCnt);
+    FRecurseInstanceCnt := WasRecurseInstanceCnt;
     AnchestorMap.Free;
     if Cache <> nil then
       Context.MemManager.CacheManager.RemoveCache(Cache)
   end;
+end;
+
+function TFpWatchResultConvertor.ProcToResData(AnFpValue: TFpValue;
+  AnResData: TLzDbgWatchDataIntf): Boolean;
+var
+  addr: TDBGPtr;
+  s, LocName, TpName: String;
+  t, sym: TFpSymbol;
+  proc: TFpSymbolDwarf;
+  par: TFpValueDwarf;
+begin
+  Result := True;
+  addr := AnFpValue.DataAddress.Address;
+
+  LocName := '';
+  if AnFpValue.Kind in [skFunctionRef, skProcedureRef] then begin
+    t := AnFpValue.TypeInfo;
+    sym := AnFpValue.DbgSymbol;
+    proc := nil;
+    if (sym <> nil) and (sym is TFpSymbolDwarfDataProc) then
+      proc := TFpSymbolDwarf(sym)
+    else
+    if t <> nil then
+      proc := TFpSymbolDwarf(TDbgDwarfSymbolBase(t).CompilationUnit.Owner.FindProcSymbol(addr));
+
+    if proc <> nil then begin
+      LocName := proc.Name;
+      if (proc is TFpSymbolDwarfDataProc) then begin
+        par := TFpSymbolDwarfDataProc(proc).GetSelfParameter; // Has no Context set, but we only need TypeInfo.Name
+        if (par <> nil) and (par.TypeInfo <> nil) then
+          LocName := par.TypeInfo.Name + '.' + LocName;
+        par.ReleaseReference;
+      end;
+      ReleaseRefAndNil(proc);
+    end;
+  end
+  else
+    t := AnFpValue.DbgSymbol;
+
+  GetTypeAsDeclaration(s, t);
+
+  case AnFpValue.Kind of
+    skProcedure:    AnResData.CreateProcedure(addr, False, LocName, s);
+    skFunction:     AnResData.CreateProcedure(addr, True, LocName, s);
+    skProcedureRef: AnResData.CreateProcedureRef(addr, False, LocName, s);
+    skFunctionRef:  AnResData.CreateProcedureRef(addr, True, LocName, s);
+  end;
+  AddTypeNameToResData(AnFpValue, AnResData);
 end;
 
 function TFpWatchResultConvertor.DoWriteWatchResultData(AnFpValue: TFpValue;
@@ -512,23 +594,34 @@ function TFpWatchResultConvertor.DoWriteWatchResultData(AnFpValue: TFpValue;
 var
   PrettyPrinter: TFpPascalPrettyPrinter;
   s: String;
+  DidHaveEmbeddedPointer: Boolean;
 begin
   // FRecurseCnt should be handled by the caller
-  Result := FRecurseCnt > MAX_RECURSE_LVL;
+  Result := (FRecurseCnt > MAX_RECURSE_LVL) or (AnFpValue = nil);
   if Result then
     exit;
 
-  Result := True;
-  if AnResData = nil then
-    exit;
+  Result := False;
 
-  if AnFpValue = nil then begin
-    AnResData.CreateError('No Data');
-    exit;
+  DidHaveEmbeddedPointer := FHasEmbeddedPointer;
+  if (FRecurseCnt <= 0) and
+     ( (FLastValueKind = skPointer) or (FRecurseCnt=-1) ) and
+     (AnFpValue.Kind = skPointer) and
+     (FRecursePointerCnt < MAX_RECURSE_LVL_PTR)
+  then begin
+    inc(FRecursePointerCnt);
+  end
+  else begin
+    inc(FRecurseCnt);
+    if (AnFpValue.Kind = skPointer) then
+      FHasEmbeddedPointer := True
+    else
+    if FHasEmbeddedPointer and (FLastValueKind <> skPointer) then
+      exit;
+      // Allow only one level, after an embedded pointer (pointer nested in other data-type)
   end;
 
-  Result := False;
-  inc(FRecurseCnt);
+  FLastValueKind := AnFpValue.Kind;
   try
     case AnFpValue.Kind of
       skPointer:  Result := PointerToResData(AnFpValue, AnResData);
@@ -550,10 +643,10 @@ begin
       skType: ;
       skInstance: ;
       skUnit: ;
-      skProcedure: ;
-      skFunction: ;
-      skProcedureRef: ;
-      skFunctionRef: ;
+      skProcedure,
+      skFunction,
+      skProcedureRef,
+      skFunctionRef: Result := ProcToResData(AnFpValue, AnResData);
       skSimple: ;
       skBoolean:   Result := BoolToResData(AnFpValue, AnResData);
       skCurrency: ;
@@ -577,26 +670,67 @@ begin
       Result := True;
     end;
   finally
-    dec(FRecurseCnt);
+    if FRecursePointerCnt > 0 then
+      dec(FRecursePointerCnt)
+    else
+      dec(FRecurseCnt);
+    FHasEmbeddedPointer := DidHaveEmbeddedPointer;
   end;
+end;
+
+function TFpWatchResultConvertor.DoWritePointerWatchResultData(
+  AnFpValue: TFpValue; AnResData: TLzDbgWatchDataIntf; AnAddr: TDbgPtr
+  ): Boolean;
+begin
+  if FRecurseAddrList.IndexOf(AnAddr) >= 0 then
+    exit;
+  if AnAddr <> 0 then
+    FRecurseAddrList.Add(AnAddr);
+  DoWriteWatchResultData(AnFpValue, AnResData);
+  if AnAddr <> 0 then
+    FRecurseAddrList.Remove(AnAddr);
 end;
 
 constructor TFpWatchResultConvertor.Create(AContext: TFpDbgLocationContext);
 begin
   inherited Create;
+  FRecurseAddrList := TDbgPtrList.Create;
   FContext := AContext;
+end;
+
+destructor TFpWatchResultConvertor.Destroy;
+begin
+  inherited Destroy;
+  FRecurseAddrList.Free;
 end;
 
 function TFpWatchResultConvertor.WriteWatchResultData(AnFpValue: TFpValue;
   AnResData: TLzDbgWatchDataIntf; ARepeatCount: Integer): Boolean;
 begin
+  Result := False;
+  if AnResData = nil then
+    exit;
+  if AnFpValue = nil then begin
+    AnResData.CreateError('No Data');
+    exit;
+  end;
   if CheckError(AnFpValue, AnResData) then
     exit;
 
+  FRecurseAddrList.Clear;
   FRepeatCount := ARepeatCount;
-  FRecurseCnt := -1;
-  FRecurseInstanceCnt := 0;
+  FRecurseCnt         := -1;
+  if FExtraDepth then
+    FRecurseCnt         := -2;
+  FRecurseInstanceCnt :=  0;
+  FRecurseDynArray    :=  0;
+  FRecursePointerCnt := 0;
+  FRecurseCntLow := FRecurseCnt+1;
   FOuterArrayIdx := -1;
+  FTotalArrayCnt :=  0;
+
+  FLastValueKind := AnFpValue.Kind;
+  FHasEmbeddedPointer := False;
   Result := DoWriteWatchResultData(AnFpValue, AnResData);
 end;
 

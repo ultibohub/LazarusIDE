@@ -79,7 +79,6 @@ resourcestring
   synfNewValueIsEmpty = '"New value" is empty.';
   synfTheDebuggerWasNotAbleToModifyTheValue = 'The debugger was not able to modify the value.';
 
-
 implementation
 
 end.
