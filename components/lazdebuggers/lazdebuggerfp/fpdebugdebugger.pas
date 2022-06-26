@@ -778,7 +778,7 @@ begin
   FCallstack := ACallstack;
   FCallstack.AddFreeNotification(@DoCallstackFreed_DecRef);
   if not ADebugger.FDbgController.CurrentProcess.GetThread(FCallstack.ThreadId, AThread) then
-    ARequiredMinCount := -1;  // error
+    ARequiredMinCount := -2;  // error
   inherited Create(ADebugger, ARequiredMinCount, AThread);
 end;
 
@@ -835,15 +835,14 @@ begin
     FCallstackEntry.RemoveFreeNotification(@DoCallstackEntryFreed_DecRef);
 
     if FCallstackEntry.Validity = ddsRequested then begin
-      if FDbgCallStack = nil then
+      if not FValid then
         FCallstackEntry.Validity := ddsInvalid
       else begin
-        c := FDbgCallStack.SrcClassName;
+        c := FSrcClassName;
         if c <> '' then
           c := c + '.';
-        FCallstackEntry.Init(FDbgCallStack.AnAddress, nil,
-          c + FDbgCallStack.FunctionName + FParamAsString,
-          FDbgCallStack.SourceFile, '', FDbgCallStack.Line, ddsValid);
+        FCallstackEntry.Init(FAnAddress, nil, c + FFunctionName + FParamAsString,
+          FSourceFile, '', FLine, ddsValid);
       end;
     end;
 

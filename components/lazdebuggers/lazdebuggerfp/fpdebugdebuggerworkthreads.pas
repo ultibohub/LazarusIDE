@@ -175,7 +175,10 @@ type
   TFpThreadWorkerCallEntry = class(TFpThreadWorkerPrepareCallStackEntryList)
   protected
     FCallstackIndex: Integer;
-    FDbgCallStack: TDbgCallstackEntry;
+    FValid: Boolean;
+    FSrcClassName, FFunctionName, FSourceFile: String;
+    FAnAddress: TDBGPtr;
+    FLine: Integer;
     FParamAsString: String;
     procedure UpdateCallstackEntry_DecRef(Data: PtrInt = 0); virtual; abstract;
     procedure DoExecute; override;
@@ -562,7 +565,7 @@ procedure TFpThreadWorkerPrepareCallStackEntryList.DoExecute;
 var
   t: TDbgThread;
 begin
-  if FRequiredMinCount < 0 then
+  if FRequiredMinCount < -1 then
     exit;
   if FThread = nil then begin
     for t in FDebugger.FDbgController.CurrentProcess.ThreadMap do begin
@@ -605,11 +608,13 @@ procedure TFpThreadWorkerCallEntry.DoExecute;
 var
   PrettyPrinter: TFpPascalPrettyPrinter;
   Prop: TFpDebugDebuggerProperties;
+  DbgCallStack: TDbgCallstackEntry;
 begin
   inherited DoExecute;
 
-  FDbgCallStack := FThread.CallStackEntryList[FCallstackIndex];
-  if (FDbgCallStack <> nil) and (not StopRequested) then begin
+  DbgCallStack := FThread.CallStackEntryList[FCallstackIndex];
+  FValid := (DbgCallStack <> nil) and (not StopRequested);
+  if FValid then begin
     Prop := TFpDebugDebuggerProperties(FDebugger.GetProperties);
     PrettyPrinter := TFpPascalPrettyPrinter.Create(DBGPTRSIZE[FDebugger.FDbgController.CurrentProcess.Mode]);
     PrettyPrinter.Context := FDebugger.FDbgController.DefaultContext;
@@ -618,7 +623,13 @@ begin
     FDebugger.FMemManager.MemLimits.MaxStringLen           := Prop.MemLimits.MaxStackStringLen;
     FDebugger.FMemManager.MemLimits.MaxNullStringSearchLen := Prop.MemLimits.MaxStackNullStringSearchLen;
 
-    FParamAsString := FDbgCallStack.GetParamsAsString(PrettyPrinter);
+    FSrcClassName := DbgCallStack.SrcClassName;
+    FAnAddress := DbgCallStack.AnAddress;
+    FFunctionName := DbgCallStack.FunctionName;
+    FSourceFile := DbgCallStack.SourceFile;
+    FLine := DbgCallStack.Line;
+
+    FParamAsString := DbgCallStack.GetParamsAsString(PrettyPrinter);
     PrettyPrinter.Free;
 
     FDebugger.FMemManager.MemLimits.MaxArrayLen            := Prop.MemLimits.MaxArrayLen;
