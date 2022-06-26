@@ -36,7 +36,7 @@ unit FpDbgDwarf;
 
 {$mode objfpc}{$H+}
 {$TYPEDADDRESS on}
-{off $INLINE OFF}
+{$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 
 (* Notes:
 
@@ -204,7 +204,7 @@ type
     // Address of the data (followed type deref, location, ...)
     function OrdOrDataAddr: TFpDbgMemLocation;
     function GetDataAddress: TFpDbgMemLocation; override;
-    function GetDwarfDataAddress(out AnAddress: TFpDbgMemLocation; ATargetType: TFpSymbolDwarfType = nil): Boolean;
+    function GetDwarfDataAddress(out AnAddress: TFpDbgMemLocation; ATargetType: TFpSymbolDwarfType = nil): Boolean; virtual;
     function GetStructureDwarfDataAddress(out AnAddress: TFpDbgMemLocation;
                                           ATargetType: TFpSymbolDwarfType = nil): Boolean;
 
@@ -594,14 +594,6 @@ type
     function GetValueObject: TFpValue; override;
     function InitLocationParser(const ALocationParser: TDwarfLocationExpression;
                                 AnInitLocParserData: PInitLocParserData): Boolean; override;
-  end;
-
-  { TFpSymbolDwarfFunctionResult }
-
-  TFpSymbolDwarfFunctionResult = class(TFpSymbolDwarfDataWithLocation)
-  protected
-    function GetValueAddress(AValueObj: TFpValueDwarf; out AnAddress: TFpDbgMemLocation): Boolean; override;
-    procedure Init; override;
   end;
 
   TFpSymbolDwarfThirdPartyExtension = class(TFpSymbolDwarf)
@@ -1067,20 +1059,6 @@ begin
   inherited Destroy;
   if FLocContext <> nil then
     FLocContext.ReleaseReference;
-end;
-
-{ TFpSymbolDwarfFunctionResult }
-
-function TFpSymbolDwarfFunctionResult.GetValueAddress(AValueObj: TFpValueDwarf; out AnAddress: TFpDbgMemLocation): Boolean;
-begin
-  AnAddress := Address;
-  Result := IsInitializedLoc(AnAddress);
-end;
-
-procedure TFpSymbolDwarfFunctionResult.Init;
-begin
-  inherited Init;
-  EvaluatedFields := EvaluatedFields + [sfiAddress];
 end;
 
 { TFpValueDwarfSubroutine }

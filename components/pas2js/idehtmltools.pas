@@ -55,6 +55,7 @@ Type
   Public
     class function GetDefaultHTMLDesignFile(aFile: TLazProjectFile): String;
     class function GetDefaultHTML2ClassFile(aFile: TLazProjectFile): String;
+    class function HTMLBaseDir: String;
   Public
     Constructor Create;
     Class Constructor Init;
@@ -223,12 +224,13 @@ end;
 function TIDEHTMLTools.GetTagIDs(const aFileName: string; aOptions : TExtractOptions = []): TStringArray;
 
 Var
-  aList : TStrings;
+  aList : TStringList;
 
 begin
   aList:=TStringList.Create;
   try
     GetTagIDS(aFileName,aList,aOptions);
+    aList.Sort;
     Result:=aList.ToStringArray;
   finally
     aList.Free;
@@ -352,8 +354,18 @@ begin
   FTagCache.Clear;
 end;
 
+class function TIDEHTMLTools.HTMLBaseDir: String;
+begin
+  Result:=LazarusIDE.ActiveProject.CustomData.Values[PJSProjectHTMLBaseDir];
+  if Result='' then
+    Result:=ExtractFilePath(LazarusIDE.ActiveProject.ProjectInfoFile);
+end;
+
+
 Initialization
   HTMLTools:=TIDEHTMLTools.Create;
+
+
 
 Finalization
   HTMLtools.Free;

@@ -6,8 +6,9 @@ interface
 
 uses
   Classes, SysUtils, LazClasses, LazLoggerBase, IdeDebuggerWatchResult,
-  DbgIntfDebuggerBase, DbgIntfMiscClasses,
-  LazDebuggerIntf, LazDebuggerTemplate, LazDebuggerIntfBaseTypes;
+  IdeDebuggerFpDbgValueConv, DbgIntfDebuggerBase, DbgIntfMiscClasses,
+  LazDebuggerIntf, LazDebuggerTemplate, LazDebuggerIntfBaseTypes,
+  FpDebugValueConvertors;
 
 type
 
@@ -51,7 +52,7 @@ type
     function GetTypeInfo: TDBGType; virtual;
     function GetValue: String; virtual;
   public
-    constructor Create(AOwnerWatch: TWatch);
+    constructor Create(AOwnerWatch: TWatch); virtual;
     destructor Destroy; override;
     procedure Assign(AnOther: TWatchValue); virtual;
     property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat;
@@ -68,6 +69,7 @@ type
     property TypeInfo: TDBGType read GetTypeInfo write SetTypeInfo;
     property ResultData: TWatchResultData read GetResultData;
   end;
+  TWatchValueClass = class of TWatchValue;
 
   { TWatchValueList }
 
@@ -79,7 +81,7 @@ type
     function GetEntryByIdx(AnIndex: integer): TWatchValue;
   protected
     function CreateEntry(const {%H-}AThreadId: Integer; const {%H-}AStackFrame: Integer): TWatchValue; virtual;
-    function CopyEntry(AnEntry: TWatchValue): TWatchValue; virtual;
+    function CopyEntry(AnEntry: TWatchValue): TWatchValue;
   public
     procedure Assign(AnOther: TWatchValueList);
     constructor Create(AOwnerWatch: TWatch);
@@ -101,12 +103,15 @@ type
   TWatch = class(TDelayedUdateItem)
   private
     FFirstIndexOffs: Int64;
+    FFpDbgConverter: TIdeFpDbgConverterConfig;
 
+    procedure FFpDbgConverterFreed(Sender: TObject);
     procedure SetDisplayFormat(AValue: TWatchDisplayFormat);
     procedure SetEnabled(AValue: Boolean);
     procedure SetEvaluateFlags(AValue: TWatcheEvaluateFlags);
     procedure SetExpression(AValue: String);
     procedure SetFirstIndexOffs(AValue: Int64);
+    procedure SetFpDbgConverter(AValue: TIdeFpDbgConverterConfig);
     procedure SetRepeatCount(AValue: Integer);
     function GetValue(const AThreadId: Integer; const AStackFrame: Integer): TWatchValue;
   protected
@@ -134,6 +139,7 @@ type
     property EvaluateFlags: TWatcheEvaluateFlags read FEvaluateFlags write SetEvaluateFlags;
     property FirstIndexOffs: Int64 read FFirstIndexOffs write SetFirstIndexOffs;
     property RepeatCount: Integer read FRepeatCount write SetRepeatCount;
+    property FpDbgConverter: TIdeFpDbgConverterConfig read FFpDbgConverter write SetFpDbgConverter;
     property Values[const AThreadId: Integer; const AStackFrame: Integer]: TWatchValue
              read GetValue;
     property ValueList: TWatchValueList read FValueList;
@@ -326,6 +332,14 @@ begin
   DoDisplayFormatChanged;
 end;
 
+procedure TWatch.FFpDbgConverterFreed(Sender: TObject);
+begin
+  FFpDbgConverter := nil;
+
+  Changed;
+  DoModified;
+end;
+
 procedure TWatch.SetEnabled(AValue: Boolean);
 begin
   if FEnabled <> AValue
@@ -362,11 +376,28 @@ begin
   DoModified;
 end;
 
+procedure TWatch.SetFpDbgConverter(AValue: TIdeFpDbgConverterConfig);
+begin
+  if FFpDbgConverter = AValue then Exit;
+  FValueList.Clear;
+
+  if FFpDbgConverter <> nil then
+    FFpDbgConverter.RemoveFreeNotification(@FFpDbgConverterFreed);
+
+  FFpDbgConverter := AValue;
+
+  if FFpDbgConverter <> nil then
+    FFpDbgConverter.AddFreeNotification(@FFpDbgConverterFreed);
+
+  Changed;
+  DoModified;
+end;
+
 procedure TWatch.SetRepeatCount(AValue: Integer);
 begin
   if FRepeatCount = AValue then Exit;
   FRepeatCount := AValue;
-  //FValueList.Clear;
+
   Changed;
   DoModified;
 end;
@@ -426,6 +457,9 @@ end;
 
 destructor TWatch.Destroy;
 begin
+  if FFpDbgConverter <> nil then
+    FFpDbgConverter.RemoveFreeNotification(@FFpDbgConverterFreed);
+
   FValueList.Clear;
   inherited Destroy;
   FreeAndNil(FValueList);
@@ -557,7 +591,7 @@ end;
 
 function TWatchValueList.CopyEntry(AnEntry: TWatchValue): TWatchValue;
 begin
-  Result := TWatchValue.Create(FWatch);
+  Result := TWatchValueClass(AnEntry.ClassType).Create(FWatch);
   Result.Assign(AnEntry);
 end;
 

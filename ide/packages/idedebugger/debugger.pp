@@ -45,7 +45,7 @@ uses
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase, Contnrs,
   LazDebuggerIntf, LazDebuggerIntfBaseTypes, IdeDebuggerBase,
-  IdeDebuggerWatchResult;
+  IdeDebuggerWatchResult, IdeDebuggerOpts, IdeDebuggerFpDbgValueConv;
 
 const
   XMLBreakPointsNode = 'BreakPoints';
@@ -545,7 +545,7 @@ type
     procedure SaveDataToXMLConfig(const AConfig: TXMLConfig;
                               const APath: string);
   public
-    constructor Create(AOwnerWatch: TIdeWatch);
+    constructor Create(AOwnerWatch: TWatch); override;
     constructor Create(AOwnerWatch: TIdeWatch;
                        const AThreadId: Integer;
                        const AStackFrame: Integer
@@ -563,7 +563,6 @@ type
     function GetEntryByIdx(AnIndex: integer): TIdeWatchValue;
     function GetWatch: TIdeWatch;
   protected
-    function CopyEntry(AnEntry: TWatchValue): TWatchValue; override;
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
                                 APath: string);
     procedure SaveDataToXMLConfig(const AConfig: TXMLConfig;
@@ -588,11 +587,13 @@ type
     function GetChildrenByNameAsField(AName, AClassName: String): TIdeWatch;
     function GetTopParentWatch: TIdeWatch;
     function GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
+    function GetAnyValidParentWatchValue(AThreadId: Integer; AStackFrame: Integer): TIdeWatchValue;
     function GetWatchDisplayName: String;
   protected
     procedure InitChildWatches;
     function CreateChildWatches: TIdeWatches; virtual;
     procedure SetParentWatch(AValue: TIdeWatch); virtual;
+    procedure AssignTo(Dest: TPersistent); override;
 
     function CreateValueList: TWatchValueList; override;
     procedure DoEnableChange; override;
@@ -613,6 +614,7 @@ type
     procedure LimitChildWatchCount(AMaxCnt: Integer; AKeepIndexEntriesBelow: Int64 = low(Int64));
     property ChildrenByNameAsField[AName, AClassName: String]: TIdeWatch read GetChildrenByNameAsField;
     property ChildrenByNameAsArrayEntry[AName: Int64]: TIdeWatch read GetChildrenByNameAsArrayEntry;
+    function HasAllValidParents(AThreadId: Integer; AStackFrame: Integer): boolean;
     property ParentWatch: TIdeWatch read FParentWatch;
     property TopParentWatch: TIdeWatch read GetTopParentWatch;
     property DisplayName: String read GetWatchDisplayName write FDisplayName;
@@ -740,6 +742,7 @@ type
     FCurrentExpression: String;
     FUpdateCount: Integer;
     FEvents: array [TWatcheEvaluateEvent] of TMethodList;
+    FFpDbgConverter: TIdeFpDbgConverterConfig;
 
   (* TWatchValueIntf *)
     procedure BeginUpdate;
@@ -747,6 +750,7 @@ type
     procedure AddNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
     procedure RemoveNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
     function ResData: TLzDbgWatchDataIntf;
+    function GetFpDbgConverter: TObject;
   private
     FSnapShot: TIdeWatchValue;
     procedure SetSnapShot(const AValue: TIdeWatchValue);
@@ -3931,6 +3935,11 @@ begin
   Result := FCurrentResData;
 end;
 
+function TCurrentWatchValue.GetFpDbgConverter: TObject;
+begin
+  Result := FFpDbgConverter;
+end;
+
 procedure TCurrentWatchValue.SetSnapShot(const AValue: TIdeWatchValue);
 begin
   assert((FSnapShot=nil) or (AValue=nil), 'TCurrentWatchValue already have snapshot');
@@ -3971,6 +3980,9 @@ end;
 
 procedure TCurrentWatchValue.RequestData;
 begin
+  FFpDbgConverter.Free;
+  if Watch.FpDbgConverter <> nil then
+    FFpDbgConverter := TIdeFpDbgConverterConfig(Watch.FpDbgConverter.CreateCopy);
   TCurrentWatch(Watch).RequestData(self);
 end;
 
@@ -4002,6 +4014,7 @@ begin
   FCurrentResData.Free;
   for e in FEvents do
     e.Free;
+  FFpDbgConverter.Free;
   inherited Destroy;
 end;
 
@@ -4071,12 +4084,6 @@ end;
 function TIdeWatchValueList.GetWatch: TIdeWatch;
 begin
   Result := TIdeWatch(inherited Watch);
-end;
-
-function TIdeWatchValueList.CopyEntry(AnEntry: TWatchValue): TWatchValue;
-begin
-  Result := TIdeWatchValue.Create(Watch);
-  Result.Assign(AnEntry);
 end;
 
 procedure TIdeWatchValueList.LoadDataFromXMLConfig(const AConfig: TXMLConfig;
@@ -4219,7 +4226,7 @@ begin
   end;
 end;
 
-constructor TIdeWatchValue.Create(AOwnerWatch: TIdeWatch);
+constructor TIdeWatchValue.Create(AOwnerWatch: TWatch);
 begin
   inherited Create(AOwnerWatch);
   Validity := ddsUnknown;
@@ -6250,6 +6257,17 @@ begin
   end;
 end;
 
+function TIdeWatch.HasAllValidParents(AThreadId: Integer; AStackFrame: Integer
+  ): boolean;
+begin
+  Result := FParentWatch = nil;
+  if Result then
+    exit;
+
+  Result := (GetAnyValidParentWatchValue(AThreadId, AStackFrame) <> nil) and
+            FParentWatch.HasAllValidParents(AThreadId, AStackFrame);
+end;
+
 procedure TIdeWatch.DoEnableChange;
 begin
   Changed;
@@ -6273,6 +6291,26 @@ begin
   Result := TIdeWatchValue(inherited Values[AThreadId, AStackFrame]);
 end;
 
+function TIdeWatch.GetAnyValidParentWatchValue(AThreadId: Integer;
+  AStackFrame: Integer): TIdeWatchValue;
+var
+  i: Integer;
+  vl: TWatchValueList;
+begin
+  Result := nil;
+  if FParentWatch = nil then
+    exit;
+  vl := FParentWatch.FValueList;
+  i := vl.Count - 1;
+  while (i >= 0) and (
+    (vl.EntriesByIdx[i].Validity <> ddsValid) or
+    (vl.EntriesByIdx[i].ThreadId <> AThreadId) or
+    (vl.EntriesByIdx[i].StackFrame <> AStackFrame)
+  ) do
+    dec(i);
+  if i >= 0 then
+    Result := TIdeWatchValue(vl.EntriesByIdx[i]);
+end;
 function TIdeWatch.GetWatchDisplayName: String;
 begin
   if FDisplayName <> '' then
@@ -6285,6 +6323,13 @@ procedure TIdeWatch.SetParentWatch(AValue: TIdeWatch);
 begin
   if FParentWatch = AValue then Exit;
   FParentWatch := AValue;
+end;
+
+procedure TIdeWatch.AssignTo(Dest: TPersistent);
+begin
+  inherited AssignTo(Dest);
+  if Dest is TIdeWatch then
+    TIdeWatch(Dest).FDisplayName := FDisplayName;
 end;
 
 procedure TIdeWatch.InitChildWatches;
@@ -6354,6 +6399,8 @@ begin
 end;
 
 procedure TIdeWatch.LoadDataFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
+var
+  s: String;
 begin
   FEnabled    := AConfig.GetValue(APath + 'Enabled', True);
   FExpression := AConfig.GetValue(APath + 'Expression', '');
@@ -6366,6 +6413,14 @@ begin
   try    ReadStr(AConfig.GetValue(APath + 'DisplayFormat', 'wdfDefault'), FDisplayFormat);
   except FDisplayFormat := wdfDefault; end;
   FRepeatCount := AConfig.GetValue(APath + 'RepeatCount', 0);
+
+  if AConfig.GetValue(APath + 'SkipFpDbgConv', False)
+  then Include(FEvaluateFlags, defSkipValConv)
+  else Exclude(FEvaluateFlags, defSkipValConv);
+
+  s := AConfig.GetValue(APath + 'FpDbgConv', '');
+  if s <> '' then
+    FpDbgConverter := DebuggerOptions.FpDbgConverterConfig.IdeItemByName(s);
 
   TIdeWatchValueList(FValueList).LoadDataFromXMLConfig(AConfig, APath + 'ValueList/');
 end;
@@ -6381,6 +6436,10 @@ begin
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionCall', defAllowFunctionCall in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
+
+  AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
+  if FpDbgConverter <> nil then
+    AConfig.SetDeleteValue(APath + 'FpDbgConv', FpDbgConverter.Name, '');
 
   TIdeWatchValueList(FValueList).SaveDataToXMLConfig(AConfig, APath + 'ValueList/');
 end;
@@ -6488,6 +6547,7 @@ end;
 procedure TCurrentWatch.LoadFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
 var
   i: Integer;
+  s: String;
 begin
   Expression := AConfig.GetValue(APath + 'Expression/Value', '');
   Enabled := AConfig.GetValue(APath + 'Enabled/Value', true);
@@ -6504,6 +6564,14 @@ begin
   then DisplayFormat := TWatchDisplayFormat(i)
   else DisplayFormat := wdfDefault;
   FRepeatCount := AConfig.GetValue(APath + 'RepeatCount', 0);
+
+  if AConfig.GetValue(APath + 'SkipFpDbgConv', False)
+  then Include(FEvaluateFlags, defSkipValConv)
+  else Exclude(FEvaluateFlags, defSkipValConv);
+
+  s := AConfig.GetValue(APath + 'FpDbgConv', '');
+  if s <> '' then
+    FpDbgConverter := DebuggerOptions.FpDbgConverterConfig.IdeItemByName(s);
 end;
 
 procedure TCurrentWatch.SaveToXMLConfig(const AConfig: TXMLConfig; const APath: string);
@@ -6515,6 +6583,10 @@ begin
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionCall', defAllowFunctionCall in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
+
+  AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
+  if FpDbgConverter <> nil then
+    AConfig.SetDeleteValue(APath + 'FpDbgConv', FpDbgConverter.Name, '');
 end;
 
 { =========================================================================== }

@@ -8,6 +8,7 @@ Resourcestring
   rsActionListComponentEditor = 'HTM&L Element Actionlist Editor...';
   rsActionListCreateMissing = 'Create &actions for HTML tags...';
   rsErrNoHTMLFileNameForComponent = 'No HTML filename found for component %s';
+  rsAllTagsHaveAction = 'All HTML tags with IDs already have a corresponding Action component.';
   rsHTMLActionsCreated = '%d HTML Element Action components were created';
   rsHTMLFragment = 'Pas2JS HTML Fragment Module';
   rsHTMLFragmentDescr = 'A Pas2JS datamodule to load and show a HTML fragment in the browser.';
@@ -20,6 +21,9 @@ Resourcestring
   rsNoMetaDataResourceCannotCreateFieldDefs = 'No metadata resource present, cannot get fielddefs';
   rsNoResourceCannotCreateFieldDefs = 'No resource present, cannot get fielddefs';
   rsNoResourceCannotShowData = 'No resource present, cannot show data';
+  rsServerRequestFailedCannotCreateFieldDefs = 'Server request failed, cannot update fielddefs';
+  rsCreateFieldDefsCount = 'Added %d fielddefs';
+  rsCreateFieldDefsNoNew = 'Fielddefs are up-to-date, no new fielddefs were added';
 
   rsEditingHTMLProp = 'Editing HTML property: %s';
   rsEditTemplate = 'Edit Template';

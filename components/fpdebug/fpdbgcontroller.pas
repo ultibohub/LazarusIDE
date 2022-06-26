@@ -2,6 +2,7 @@ unit FPDbgController;
 
 {$mode objfpc}{$H+}
 {$TYPEDADDRESS on}
+{$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 
 interface
 
@@ -456,6 +457,8 @@ end;
 procedure TDbgControllerCallRoutineCmd.Init;
 begin
   inherited Init;
+
+  FCallContext.WriteStack;
 
   FStep := sSingleStep;
   StoreInstructionPointer;
@@ -1939,7 +1942,7 @@ function TDbgController.Call(const FunctionAddress: TFpDbgMemLocation;
 var
   Context: TFpDbgInfoCallContext;
 begin
-  Context := TFpDbgInfoCallContext.Create(ABaseContext, AMemReader, AMemConverter);
+  Context := TFpDbgInfoCallContext.Create(ABaseContext, AMemReader, AMemConverter, FCurrentProcess, FCurrentThread);
   Context.AddReference;
   InitializeCommand(TDbgControllerCallRoutineCmd.Create(self, FunctionAddress, Context));
   Result := Context;

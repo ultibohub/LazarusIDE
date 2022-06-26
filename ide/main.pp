@@ -100,9 +100,9 @@ uses
   // LRT stuff
   Translations,
   // debugger
-  LazDebuggerGdbmi, GDBMIDebugger,
-  RunParamsOpts, BaseDebugManager, DebugManager, debugger, DebuggerDlg,
-  DebugAttachDialog, DbgIntfBaseTypes, DbgIntfDebuggerBase, LazDebuggerIntf,
+  LazDebuggerGdbmi, GDBMIDebugger, RunParamsOpts, BaseDebugManager,
+  DebugManager, debugger, DebuggerDlg, DebugAttachDialog, DbgIntfBaseTypes,
+  DbgIntfDebuggerBase, LazDebuggerIntf, FpDebugValueConvertors,
   // packager
   PackageSystem, PkgManager, BasePkgManager, LPKCache,
   // source editing
@@ -129,6 +129,7 @@ uses
   debugger_language_exceptions_options, debugger_signals_options,
   codeexplorer_update_options, codeexplorer_categories_options,
   codeobserver_options, help_general_options, env_file_filters,
+  IdeDebugger_FpValConv_Options,
   // project option frames
   project_application_options, project_forms_options, project_lazdoc_options,
   project_save_options, project_versioninfo_options, project_i18n_options,
@@ -149,7 +150,7 @@ uses
   JumpHistoryView, DesktopManager, DiskDiffsDialog,
   BuildLazDialog, BuildProfileManager, BuildManager, CheckCompOptsForNewUnitDlg,
   MiscOptions, InputHistory, InputhistoryWithSearchOpt, UnitDependencies,
-  IDEFPCInfo, IDEInfoDlg, IDEInfoNeedBuild, ProcessList, InitialSetupDlgs,
+  IDEFPCInfo, IDEInfoDlg, IDEInfoNeedBuild, ProcessList, IdeDebuggerOpts, InitialSetupDlgs,
   InitialSetupProc, NewDialog, MakeResStrDlg, DialogProcs, FindReplaceDialog,
   FindInFilesDlg, CodeExplorer, BuildFileDlg, ProcedureList, ExtractProcDlg,
   FindRenameIdentifier, AbstractsMethodsDlg, EmptyMethodsDlg, UnusedUnitsDlg,
@@ -1419,6 +1420,15 @@ begin
   CodeExplorerOptions.Load;
 
   DebuggerOptions := TDebuggerOptions.Create;
+  DebuggerOptions.PrimaryConfigPath := GetPrimaryConfigPath;
+  DebuggerOptions.CreateConfig;
+  DebuggerOptions.Load;
+  ValueConverterConfigList.Lock;
+  try
+    DebuggerOptions.FpDbgConverterConfig.AssignEnabledTo(ValueConverterConfigList);
+  finally
+    ValueConverterConfigList.Unlock;
+  end;
 
   Assert(InputHistories = nil, 'TMainIDE.LoadGlobalOptions: InputHistories is already assigned.');
   InputHistoriesSO := TInputHistoriesWithSearchOpt.Create;
@@ -5427,6 +5437,7 @@ begin
     Exclude(FIdleIdeActions, iiaSaveEnvironment);
     SaveDesktopSettings(EnvironmentOptions);
     EnvironmentOptions.Save(false);
+    DebuggerOptions.Save;
     EditorMacroListViewer.SaveGlobalInfo;
     //debugln('TMainIDE.SaveEnvironment A ',dbgsName(ObjectInspector1.Favorites));
     if (ObjectInspector1<>nil) and (ObjectInspector1.Favorites<>nil) then

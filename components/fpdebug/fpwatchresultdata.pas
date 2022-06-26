@@ -1,6 +1,7 @@
 unit FpWatchResultData;
 
 {$mode objfpc}{$H+}
+{$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 
 interface
 
@@ -617,7 +618,7 @@ begin
       FHasEmbeddedPointer := True
     else
     if FHasEmbeddedPointer and (FLastValueKind <> skPointer) then
-      exit;
+      exit(True); // not an error
       // Allow only one level, after an embedded pointer (pointer nested in other data-type)
   end;
 
@@ -683,10 +684,10 @@ function TFpWatchResultConvertor.DoWritePointerWatchResultData(
   ): Boolean;
 begin
   if FRecurseAddrList.IndexOf(AnAddr) >= 0 then
-    exit;
+    exit(True);
   if AnAddr <> 0 then
     FRecurseAddrList.Add(AnAddr);
-  DoWriteWatchResultData(AnFpValue, AnResData);
+  Result := DoWriteWatchResultData(AnFpValue, AnResData);
   if AnAddr <> 0 then
     FRecurseAddrList.Remove(AnAddr);
 end;

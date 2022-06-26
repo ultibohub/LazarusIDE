@@ -882,7 +882,7 @@ begin
     exit;
 
   AWatch := TIdeWatch(Sender.OwnerData);
-  if AWatch.Enabled then begin
+  if AWatch.Enabled and AWatch.HasAllValidParents(GetThreadId, GetStackframe) then begin
     VNode := tvWatches.FindNodeForItem(AWatch);
     if VNode = nil then
       exit;
@@ -1098,7 +1098,7 @@ begin
     exit;
   InspectLabel.Caption := Watch.Expression;
 
-  if not(Watch.Enabled) then begin
+  if not(Watch.Enabled and Watch.HasAllValidParents(GetThreadId, GetStackframe)) then begin
     InspectMemo.WordWrap := True;
     InspectMemo.Text := '<evaluating>';
     exit;
@@ -1214,6 +1214,9 @@ begin
   if (ThreadsMonitor = nil) or (CallStackMonitor = nil) then exit;
   if GetStackframe < 0 then exit; // TODO need dedicated validity property
 
+  if not tvWatches.FullyVisible[VNode] then
+    exit;
+
   if wdsfUpdating in FStateFlags then begin
     if FCurrentWatchInUpDateItem <> AWatch then  // The watch got data while we requested it, that is fine
       FUpdateAllNeeded := True;
@@ -1230,7 +1233,7 @@ begin
   try
     tvWatches.NodeText[VNode, COL_WATCH_EXPR-1]:= AWatch.DisplayName;
     tvWatches.NodeText[VNode, 2] := '';
-    if AWatch.Enabled then begin
+    if AWatch.Enabled and AWatch.HasAllValidParents(GetThreadId, GetStackframe) then begin
       WatchValue := AWatch.Values[GetThreadId, GetStackframe];
       if (WatchValue <> nil) and
          ( (GetSelectedSnapshot = nil) or not(WatchValue.Validity in [ddsUnknown, ddsEvaluating, ddsRequested]) )

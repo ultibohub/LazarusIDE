@@ -5,11 +5,11 @@ unit TestWatches;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, TestBase, TestDbgControl,
-  TestDbgTestSuites, TestOutputLogger, TTestWatchUtilities, TestCommonSources,
-  TestDbgConfig, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
-  DbgIntfDebuggerBase, DbgIntfBaseTypes, Forms,
-  IdeDebuggerBase, IdeDebuggerWatchResult;
+  Classes, SysUtils, fpcunit, testregistry, TestBase, FpDebugValueConvertors,
+  TestDbgControl, TestDbgTestSuites, TestOutputLogger, TTestWatchUtilities,
+  TestCommonSources, TestDbgConfig, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
+  DbgIntfDebuggerBase, DbgIntfBaseTypes, Forms, IdeDebuggerBase,
+  IdeDebuggerWatchResult;
 
 type
 
@@ -25,6 +25,9 @@ type
     procedure TestWatchesScope;
     procedure TestWatchesValue;
     procedure TestWatchesFunctions;
+    procedure TestWatchesFunctionsWithString;
+    procedure TestWatchesFunctionsWithRecord;
+    procedure TestWatchesFunctionsSysVarToLStr;
     procedure TestWatchesAddressOf;
     procedure TestWatchesTypeCast;
     procedure TestWatchesExpression;
@@ -36,6 +39,7 @@ implementation
 
 var
   ControlTestWatch, ControlTestWatchScope, ControlTestWatchValue, ControlTestWatchFunct,
+  ControlTestWatchFunctStr, ControlTestWatchFunctRec, ControlTestWatchFunctVariant,
   ControlTestWatchAddressOf, ControlTestWatchTypeCast, ControlTestModify,
   ControlTestExpression, ControlTestErrors: Pointer;
 
@@ -1499,11 +1503,529 @@ begin
     t.Add('MyClass1.SomeFuncIntResAdd(3)',     weInteger(80)).AddEvalFlag([defAllowFunctionCall]);
     t.Add('MyClass1.SomeFuncIntRes()',     weInteger(80+999)).AddEvalFlag([defAllowFunctionCall]);
 
+    // Error wrong param count
+    t.Add('SomeFuncIntRes(1)',     weInteger(0)).AddEvalFlag([defAllowFunctionCall]).ExpectError;
+    t.Add('SomeFuncIntRes(1,2)',     weInteger(0)).AddEvalFlag([defAllowFunctionCall]).ExpectError;
+    t.Add('FuncIntAdd()',     weInteger(0)).AddEvalFlag([defAllowFunctionCall]).ExpectError;
+    t.Add('FuncIntAdd(1)',     weInteger(0)).AddEvalFlag([defAllowFunctionCall]).ExpectError;
+    t.Add('FuncIntAdd(1,2,3)',     weInteger(0)).AddEvalFlag([defAllowFunctionCall]).ExpectError;
+
     t.EvaluateWatches;
     t.CheckResults;
 
 
   finally
+    Debugger.RunToNextPause(dcStop);
+    t.Free;
+    Debugger.ClearDebuggerMonitors;
+    Debugger.FreeDebugger;
+
+    AssertTestErrors;
+  end;
+end;
+
+procedure TTestWatches.TestWatchesFunctionsWithString;
+var
+  MemUsed, PrevMemUsed: Int64;
+  t2: TWatchExpectationList;
+
+  procedure UpdateMemUsed;
+  var
+    Thread: Integer;
+    WtchVal: TWatchValue;
+  begin
+    PrevMemUsed := MemUsed;
+    MemUsed := -1;
+    t2.Clear;
+    t2.AddWithoutExpect('', 'CurMemUsed');
+    t2.EvaluateWatches;
+    Thread := Debugger.Threads.Threads.CurrentThreadId;
+    WtchVal := t2.Tests[0]^.TstWatch.Values[Thread, 0];
+    if (WtchVal <> nil) and (WtchVal.ResultData <> nil) then
+      MemUsed := WtchVal.ResultData.AsInt64;
+    TestTrue('MemUsed <> 0', MemUsed > 0);
+  end;
+  procedure CheckMemUsed;
+  begin
+    Debugger.RunToNextPause(dcStepOver);
+    UpdateMemUsed;
+    TestEquals('MemUsed not changed', PrevMemUsed, MemUsed);
+  end;
+var
+  ExeName, tbn: String;
+  t: TWatchExpectationList;
+  Src: TCommonSource;
+  BrkPrg: TDBGBreakPoint;
+  i: Integer;
+begin
+  if SkipTest then exit;
+  if not TestControlCanTest(ControlTestWatchFunctStr) then exit;
+  if not (Compiler.SymbolType in [stDwarf3, stDwarf4]) then exit;
+  if Compiler.HasFlag('SkipStringFunc') then exit;
+  tbn := TestBaseName;
+
+  try
+  for i := 0 to 2 do begin
+    TestBaseName := tbn;
+    TestBaseName := TestBaseName + ' -O'+IntToStr(i);
+
+    Src := GetCommonSourceFor(AppDir + 'WatchesFuncStringPrg.pas');
+    case i of
+      0: TestCompile(Src, ExeName, '_O0', '-O-');
+      1: TestCompile(Src, ExeName, '_O1', '-O-1');
+      2: TestCompile(Src, ExeName, '_O2', '-O-2');
+    end;
+
+    t := nil;
+    t2 := nil;
+
+    AssertTrue('Start debugger', Debugger.StartDebugger(AppDir, ExeName));
+
+    try
+      t := TWatchExpectationList.Create(Self);
+      t2 := TWatchExpectationList.Create(Self);
+      t.AcceptSkSimple := [skInteger, skCardinal, skBoolean, skChar, skFloat,
+        skString, skAnsiString, skCurrency, skVariant, skWideString,
+        skInterface, skEnumValue];
+      t.AddTypeNameAlias('integer', 'integer|longint');
+
+
+      BrkPrg         := Debugger.SetBreakPoint(Src, 'main');
+      AssertDebuggerNotInErrorState;
+
+      (* ************ Nested Functions ************* *)
+
+      RunToPause(BrkPrg);
+
+      UpdateMemUsed;
+
+      t.Clear;
+      t.Add('TestStrRes()',     weAnsiStr('#0')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestStrRes()',     weAnsiStr('#1')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestIntToStrRes(33)',     weAnsiStr('$00000021')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestIntToStrRes(SomeInt)',     weAnsiStr('$0000007E')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestIntSumToStrRes(10,20)',     weAnsiStr('$0000001E')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestIntSumToStrRes(SomeInt,3)',     weAnsiStr('$00000081')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+
+
+      t.Clear;
+      t.Add('TestStrToIntRes(s1)',     weInteger(0)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('s1',     weAnsiStr('')).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestStrToIntRes(s2)',     weInteger(4)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('s2',     weAnsiStr('A')).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestStrToIntRes(s3)',     weInteger(3)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('s3',     weAnsiStr('abc')).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+
+      t.Clear;
+      t.Add('TestStrToStrRes(s1)',     weAnsiStr('"0"')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('s1',     weAnsiStr('')).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestStrToStrRes(s2)',     weAnsiStr('"4"')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('s2',     weAnsiStr('A')).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('TestStrToStrRes(s3)',     weAnsiStr('"3"')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('s3',     weAnsiStr('abc')).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+
+      t.Clear;
+      t.Add('conc(s1, s2)',     weAnsiStr('A')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+      t.Clear;
+      t.Add('conc(s3, s4)',     weAnsiStr('abcdef')).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.EvalAndCheck;
+      CheckMemUsed;
+
+
+    finally
+      Debugger.RunToNextPause(dcStop);
+      FreeAndNil(t);
+      FreeAndNil(t2);
+      Debugger.ClearDebuggerMonitors;
+      Debugger.FreeDebugger;
+    end;
+
+  end;
+  finally
+    AssertTestErrors;
+  end;
+
+end;
+
+procedure TTestWatches.TestWatchesFunctionsWithRecord;
+var
+  ExeName, tbn: String;
+  t: TWatchExpectationList;
+  Src: TCommonSource;
+  BrkPrg: TDBGBreakPoint;
+  i, p: Integer;
+begin
+  if SkipTest then exit;
+  if not TestControlCanTest(ControlTestWatchFunctRec) then exit;
+  //if not (Compiler.SymbolType in [stDwarf3, stDwarf4]) then exit;
+  //if Compiler.HasFlag('SkipStringFunc') then exit;
+  tbn := TestBaseName;
+
+  try
+  for p := 0 to 3 do
+  for i := 0 to 2 do begin
+    TestBaseName := tbn;
+    TestBaseName := TestBaseName + ' -O'+IntToStr(i) + ' (def: ' + IntToStr(p) + ')';
+
+    Src := GetCommonSourceFor(AppDir + 'WatchesFuncRecordPrg.pas');
+    case p of
+      0: case i of
+           0: TestCompile(Src, ExeName, '_O0', '-O-');
+           1: TestCompile(Src, ExeName, '_O1', '-O-1');
+           2: TestCompile(Src, ExeName, '_O2', '-O-2');
+         end;
+      1: case i of
+           0: TestCompile(Src, ExeName, '_O0_pack', '-dPCKREC -O-');
+           1: TestCompile(Src, ExeName, '_O1_pack', '-dPCKREC -O-1');
+           2: TestCompile(Src, ExeName, '_O2_pack', '-dPCKREC -O-2');
+         end;
+      2: case i of
+           0: TestCompile(Src, ExeName, '_O0_pack_padbyte', '-dPCKREC -dRECPAD1 -O-');
+           1: TestCompile(Src, ExeName, '_O1_pack_padbyte', '-dPCKREC -dRECPAD1 -O-1');
+           2: TestCompile(Src, ExeName, '_O2_pack_padbyte', '-dPCKREC -dRECPAD1 -O-2');
+         end;
+      3: case i of
+           0: TestCompile(Src, ExeName, '_O0_pack_padword', '-dPCKREC -dRECPAD1 -dRECPAD2 -O-');
+           1: TestCompile(Src, ExeName, '_O1_pack_padword', '-dPCKREC -dRECPAD1 -dRECPAD2 -O-1');
+           2: TestCompile(Src, ExeName, '_O2_pack_padword', '-dPCKREC -dRECPAD1 -dRECPAD2 -O-2');
+         end;
+    end;
+
+    t := nil;
+
+    AssertTrue('Start debugger', Debugger.StartDebugger(AppDir, ExeName));
+
+    try
+      t := TWatchExpectationList.Create(Self);
+      t.AcceptSkSimple := [skInteger, skCardinal, skBoolean, skChar, skFloat,
+        skString, skAnsiString, skCurrency, skVariant, skWideString,
+        skInterface, skEnumValue];
+      t.AddTypeNameAlias('integer', 'integer|longint');
+
+
+      BrkPrg         := Debugger.SetBreakPoint(Src, 'main');
+      AssertDebuggerNotInErrorState;
+
+      (* ************ Nested Functions ************* *)
+
+      RunToPause(BrkPrg);
+
+
+      t.Clear;
+
+      t.Add('TestRecN2_a(aRecN2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecN2_b(aRecN2)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('TestRecB2_a(aRecB2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2_b(aRecB2)', weCardinal(21)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2_a(bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2_b(bRecB2)', weCardinal(61)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecB2.a', weCardinal(11, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecB2.a', weCardinal(51, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.Add('TestRecW2_a(aRecW2)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecW2_b(aRecW2)', weCardinal(22)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecW2_a(bRecW2)', weCardinal(52)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecW2_b(bRecW2)', weCardinal(62)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecW2.a', weCardinal(12, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecW2.a', weCardinal(52, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.Add('TestRecC2_a(aRecC2)', weCardinal(13)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecC2_b(aRecC2)', weCardinal(23)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecC2_a(bRecC2)', weCardinal(53)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecC2_b(bRecC2)', weCardinal(63)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecC2.a', weCardinal(13, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecC2.a', weCardinal(53, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.Add('TestRecQ2_a(aRecQ2)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2_b(aRecQ2)', weCardinal(24)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2_a(bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2_b(bRecQ2)', weCardinal(64)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecQ2.a', weCardinal(14, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecQ2.a', weCardinal(54, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+
+      t.Add('TestRecB3_a(aRecB3)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB3_c(aRecB3)', weCardinal(35)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecB3.a', weCardinal(15, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.Add('TestRecW3_a(aRecW3)', weCardinal(16)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecW3_c(aRecW3)', weCardinal(36)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecW3.a', weCardinal(16, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.Add('TestRecC3_a(aRecC3)', weCardinal(17)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecC3_c(aRecC3)', weCardinal(37)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecC3.a', weCardinal(17, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.Add('TestRecQ3_a(aRecQ3)', weCardinal(18)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ3_c(aRecQ3)', weCardinal(38)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('aRecQ3.a', weCardinal(18, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+
+      t.Add('Test1RecB2(aRecB2, 0)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB2(aRecB2, 1)', weCardinal(21)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test1RecW2(aRecW2, 0)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecW2(aRecW2, 1)', weCardinal(22)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test1RecC2(aRecC2, 0)', weCardinal(13)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecC2(aRecC2, 1)', weCardinal(23)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test1RecQ2(aRecQ2, 0)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2(aRecQ2, 1)', weCardinal(24)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+
+      t.Add('Test2RecB2(0, aRecB2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB2(1, aRecB2)', weCardinal(21)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecW2(0, aRecW2)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecW2(1, aRecW2)', weCardinal(22)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecC2(0, aRecC2)', weCardinal(13)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecC2(1, aRecC2)', weCardinal(23)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecQ2(0, aRecQ2)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2(1, aRecQ2)', weCardinal(24)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('aRecB2.a', weCardinal(11, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecW2.a', weCardinal(12, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecC2.a', weCardinal(13, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecQ2.a', weCardinal(14, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+
+      t.Add('TestRecN2N2_1(aRecN2, bRecN2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecN2N2_2(aRecN2, bRecN2)', weCardinal(8)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('TestRecB2B2_1(aRecB2, bRecB2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2B2_2(aRecB2, bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecW2W2_1(aRecW2, bRecW2)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecW2W2_2(aRecW2, bRecW2)', weCardinal(52)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecC2C2_1(aRecC2, bRecC2)', weCardinal(13)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecC2C2_2(aRecC2, bRecC2)', weCardinal(53)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2Q2_1(aRecQ2, bRecQ2)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2Q2_2(aRecQ2, bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test1RecB2B2(aRecB2, bRecB2, 0)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB2B2(aRecB2, bRecB2, 1)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecW2W2(aRecW2, bRecW2, 0)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecW2W2(aRecW2, bRecW2, 1)', weCardinal(52)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecC2C2(aRecC2, bRecC2, 0)', weCardinal(13)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecC2C2(aRecC2, bRecC2, 1)', weCardinal(53)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2Q2(aRecQ2, bRecQ2, 0)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2Q2(aRecQ2, bRecQ2, 1)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecB2B2(0, aRecB2, bRecB2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB2B2(1, aRecB2, bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecW2W2(0, aRecW2, bRecW2)', weCardinal(12)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecW2W2(1, aRecW2, bRecW2)', weCardinal(52)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecC2C2(0, aRecC2, bRecC2)', weCardinal(13)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecC2C2(1, aRecC2, bRecC2)', weCardinal(53)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2Q2(0, aRecQ2, bRecQ2)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2Q2(1, aRecQ2, bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('aRecB2.a', weCardinal(11, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecW2.a', weCardinal(12, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecC2.a', weCardinal(13, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecQ2.a', weCardinal(14, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecB2.a', weCardinal(51, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecW2.a', weCardinal(52, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecC2.a', weCardinal(53, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecQ2.a', weCardinal(54, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+
+      t.Add('TestRecB2B3_1(aRecB2, bRecB3)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2Q2_1(aRecB2, bRecQ2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB3B2_1(aRecB3, bRecB2)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB3Q2_1(aRecB3, bRecQ2)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2B2_1(aRecQ2, bRecB2)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2B3_1(aRecQ2, bRecB3)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2B3_2(aRecB2, bRecB3)', weCardinal(55)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB2Q2_2(aRecB2, bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB3B2_2(aRecB3, bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecB3Q2_2(aRecB3, bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2B2_2(aRecQ2, bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('TestRecQ2B3_2(aRecQ2, bRecB3)', weCardinal(55)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+
+      t.Add('Test1RecB2B3(aRecB2, bRecB3, 0)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB2Q2(aRecB2, bRecQ2, 0)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB3B2(aRecB3, bRecB2, 0)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB3Q2(aRecB3, bRecQ2, 0)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2B2(aRecQ2, bRecB2, 0)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2B3(aRecQ2, bRecB3, 0)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB2B3(aRecB2, bRecB3, 1)', weCardinal(55)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB2Q2(aRecB2, bRecQ2, 1)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB3B2(aRecB3, bRecB2, 1)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecB3Q2(aRecB3, bRecQ2, 1)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2B2(aRecQ2, bRecB2, 1)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test1RecQ2B3(aRecQ2, bRecB3, 1)', weCardinal(55)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+
+      t.Add('Test2RecB2B3(0, aRecB2, bRecB3)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB2Q2(0, aRecB2, bRecQ2)', weCardinal(11)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB3B2(0, aRecB3, bRecB2)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB3Q2(0, aRecB3, bRecQ2)', weCardinal(15)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2B2(0, aRecQ2, bRecB2)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2B3(0, aRecQ2, bRecB3)', weCardinal(14)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB2B3(1, aRecB2, bRecB3)', weCardinal(55)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB2Q2(1, aRecB2, bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB3B2(1, aRecB3, bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecB3Q2(1, aRecB3, bRecQ2)', weCardinal(54)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2B2(1, aRecQ2, bRecB2)', weCardinal(51)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ2B3(1, aRecQ2, bRecB3)', weCardinal(55)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecQ3Q3(0, aRecQ3, bRecQ3)', weCardinal(18)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ3Q3(1, aRecQ3, bRecQ3)', weCardinal(38)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ3Q3(2, aRecQ3, bRecQ3)', weCardinal(58)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ3Q3(3, aRecQ3, bRecQ3)', weCardinal(78)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecQ4Q4(0, aRecQ4, bRecQ4)', weCardinal(58)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ4Q4(1, aRecQ4, bRecQ4)', weCardinal( 2)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ4Q4(2, aRecQ4, bRecQ4)', weCardinal(59)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ4Q4(3, aRecQ4, bRecQ4)', weCardinal(92)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecQ5Q5(0, aRecQ5, bRecQ5)', weCardinal(58)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ5Q5(1, aRecQ5, bRecQ5)', weCardinal( 3)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ5Q5(2, aRecQ5, bRecQ5)', weCardinal(59)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ5Q5(3, aRecQ5, bRecQ5)', weCardinal(93)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecQ6Q6(0, aRecQ6, bRecQ6)', weCardinal(58)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ6Q6(1, aRecQ6, bRecQ6)', weCardinal( 4)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ6Q6(2, aRecQ6, bRecQ6)', weCardinal(59)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ6Q6(3, aRecQ6, bRecQ6)', weCardinal(94)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('Test2RecQ7Q7(0, aRecQ7, bRecQ7)', weCardinal(58)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ7Q7(1, aRecQ7, bRecQ7)', weCardinal( 5)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ7Q7(2, aRecQ7, bRecQ7)', weCardinal(59)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+      t.Add('Test2RecQ7Q7(3, aRecQ7, bRecQ7)', weCardinal(95)).AddEvalFlag([defAllowFunctionCall]).IgnTypeName.SkipEval;
+
+      t.Add('aRecB2.a', weCardinal(11, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecW2.a', weCardinal(12, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecC2.a', weCardinal(13, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('aRecQ2.a', weCardinal(14, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecB2.a', weCardinal(51, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecW2.a', weCardinal(52, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecC2.a', weCardinal(53, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+      t.Add('bRecQ2.a', weCardinal(54, #1, -1)).IgnTypeName.SkipEval.IgnKind;
+
+      t.EvalAndCheck;
+
+
+    finally
+      Debugger.RunToNextPause(dcStop);
+      FreeAndNil(t);
+      Debugger.ClearDebuggerMonitors;
+      Debugger.FreeDebugger;
+    end;
+
+  end;
+  finally
+    AssertTestErrors;
+  end;
+end;
+
+procedure TTestWatches.TestWatchesFunctionsSysVarToLStr;
+var
+  ExeName: String;
+  t: TWatchExpectationList;
+  Src: TCommonSource;
+  BrkPrg: TDBGBreakPoint;
+  obj: TFpDbgConverterConfig;
+begin
+  if SkipTest then exit;
+  if not TestControlCanTest(ControlTestWatchFunctVariant) then exit;
+  t := nil;
+
+  Src := GetCommonSourceFor('WatchesValuePrg.pas');
+  TestCompile(Src, ExeName);
+
+  AssertTrue('Start debugger', Debugger.StartDebugger(AppDir, ExeName));
+
+  try
+    t := TWatchExpectationList.Create(Self);
+    t.AcceptSkSimple := [skInteger, skCardinal, skBoolean, skChar, skFloat,
+      skString, skAnsiString, skCurrency, skVariant, skWideString,
+      skInterface, skEnumValue];
+    t.AddTypeNameAlias('integer', 'integer|longint');
+    t.AddTypeNameAlias('ShortStr255', 'ShortStr255|ShortString');
+    t.AddTypeNameAlias('TEnumSub', 'TEnum|TEnumSub');
+
+
+    BrkPrg         := Debugger.SetBreakPoint(Src, 'Prg');
+
+    AssertDebuggerNotInErrorState;
+
+    (* ************ Nested Functions ************* *)
+
+    RunToPause(BrkPrg);
+
+    obj := TFpDbgConverterConfig.Create(TFpDbgValueConverterVariantToLStr.Create);
+    obj.MatchKinds := [skRecord];
+    obj.MatchTypeNames.Add('variant');
+    ValueConverterConfigList.Add(obj);
+
+    t.Clear;
+    t.Add('variant to lstr', 'variant1',    weAnsiStr('102'))
+      .IgnTypeName
+      .IgnData([], Compiler.Version < 029999);
+    t.EvaluateWatches;
+    t.CheckResults;
+
+
+
+
+  finally
+    ValueConverterConfigList.Clear;
+
     Debugger.RunToNextPause(dcStop);
     t.Free;
     Debugger.ClearDebuggerMonitors;
@@ -3061,6 +3583,9 @@ initialization
   ControlTestWatchScope     := TestControlRegisterTest('Scope', ControlTestWatch);
   ControlTestWatchValue     := TestControlRegisterTest('Value', ControlTestWatch);
   ControlTestWatchFunct     := TestControlRegisterTest('Function', ControlTestWatch);
+  ControlTestWatchFunctStr  := TestControlRegisterTest('FunctionString', ControlTestWatch);
+  ControlTestWatchFunctRec  := TestControlRegisterTest('FunctionRecord', ControlTestWatch);
+  ControlTestWatchFunctVariant:= TestControlRegisterTest('FunctionSysVarToLstr', ControlTestWatch);
   ControlTestWatchAddressOf := TestControlRegisterTest('AddressOf', ControlTestWatch);
   ControlTestWatchTypeCast  := TestControlRegisterTest('TypeCast', ControlTestWatch);
   ControlTestModify         := TestControlRegisterTest('Modify', ControlTestWatch);

@@ -90,6 +90,7 @@ type
     procedure RemoveNotification(AnEventType: TWatcheEvaluateEvent;
       AnEvent: TNotifyEvent);
     function ResData: TLzDbgWatchDataIntf;
+    function GetFpDbgConverter: TObject;
   protected
     procedure RequestData;
     function GetTypeInfo: TDBGType; override;
@@ -101,14 +102,13 @@ type
                        const AThreadId: Integer;
                        const AStackFrame: Integer
                       );
-    constructor Create(AOwnerWatch: TWatch);
+    constructor Create(AOwnerWatch: TWatch); override;
   end;
 
   { TTestWatchValueList }
 
   TTestWatchValueList = class(TWatchValueList)
   protected
-    function CopyEntry(AnEntry: TWatchValue): TWatchValue; override;
     function CreateEntry(const {%H-}AThreadId: Integer; const {%H-}AStackFrame: Integer): TWatchValue; override;
   end;
 
@@ -428,6 +428,11 @@ begin
   Result := FCurrentResData;
 end;
 
+function TTestWatchValue.GetFpDbgConverter: TObject;
+begin
+  Result := nil;
+end;
+
 procedure TTestWatchValue.RequestData;
 begin
   TTestWatch(Watch).RequestData(self);
@@ -516,12 +521,6 @@ begin
 end;
 
 { TTestWatchValueList }
-
-function TTestWatchValueList.CopyEntry(AnEntry: TWatchValue): TWatchValue;
-begin
-  Result := TTestWatchValue.Create(Watch);
-  Result.Assign(AnEntry);
-end;
 
 function TTestWatchValueList.CreateEntry(const AThreadId: Integer;
   const AStackFrame: Integer): TWatchValue;

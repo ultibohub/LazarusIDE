@@ -20,12 +20,13 @@ Type
   Protected
     Procedure DoLog(Const Msg : String); overload;
     Procedure DoLog(Const Fmt : String; Const Args : Array of const); overload;
-    Procedure LoadDataset(aDataset : TBufDataset; const aURL : String; const aUserName,aPassword : string);
-    procedure LoadDataset(aDataset: TBufDataset; aConnection: TSQLDBRestConnection; aResource: string);
+    function LoadDataset(aDataset : TBufDataset; const aURL : String; const aUserName,aPassword : string) : Boolean;
+    function LoadDataset(aDataset: TBufDataset; aConnection: TSQLDBRestConnection; aResource: string) : Boolean;
   Public
     Procedure GetResourceList(aConnection : TSQLDBRestConnection; aList : TStrings; {%H-}aScheme : String = '');
     Procedure GetConnectionList(aConnection : TSQLDBRestConnection; aList : TStrings; {%H-}aScheme : String = '');
-    Procedure UpdateFieldDefs(aConnection : TSQLDBRestConnection; aResource : String; aFieldDefs : TFieldDefs);
+    function UpdateFieldDefs(aConnection: TSQLDBRestConnection; aResource: String;
+      aFieldDefs: TFieldDefs): Integer;
     Procedure GetDatasetData(aDataset : TSQLDBRestDataset; aBuf : TBufDataset);
     Function GetFullResourceName(aDataset : TSQLDBRestDataset) : String;
     Property OnLog : TLogEvent read FOnLog write FOnLog;
@@ -71,8 +72,8 @@ begin
   DoLog(Format(Fmt,Args));
 end;
 
-procedure TPas2JSRestUtils.LoadDataset(aDataset: TBufDataset;
-  const aURL: String; const aUserName, aPassword: string);
+function TPas2JSRestUtils.LoadDataset(aDataset: TBufDataset;
+  const aURL: String; const aUserName, aPassword: string) : Boolean;
 
 Var
   C : TFPHTTPClient;
@@ -80,6 +81,7 @@ Var
   U : String;
 
 begin
+  Result:=False;
   DoLog('Loading data from URL %s (user: %s, password: %s)',[aURL,aUserName,StringOfChar('*',Length(aPAssword))]);
   U:=aURL;
   S:=Nil;
@@ -99,7 +101,7 @@ begin
       On E : Exception do
         begin
         DoLog('Exception %s when getting data from url "%s": %s',[E.ClassName,U,E.Message]);
-        Raise;
+        Exit;
         end;
     end;
     if FShowRaw then
@@ -111,13 +113,14 @@ begin
       end;
     S.Position:=0;
     aDataset.LoadFromStream(S,dfXML);
+    Result:=True;
   finally
     S.Free;
     C.Free;
   end;
 end;
 
-procedure TPas2JSRestUtils.LoadDataset(aDataset : TBufDataset; aConnection: TSQLDBRestConnection; aResource : string);
+function TPas2JSRestUtils.LoadDataset(aDataset : TBufDataset; aConnection: TSQLDBRestConnection; aResource : string) : Boolean;
 
 Var
   aURL : String;
@@ -125,7 +128,7 @@ Var
 begin
   aURL:=aConnection.BaseURL;
   aURL:=aURL+aResource;
-  LoadDataset(aDataset,aURL,aConnection.UserName,aConnection.Password);
+  Result:=LoadDataset(aDataset,aURL,aConnection.UserName,aConnection.Password);
 end;
 
 procedure TPas2JSRestUtils.GetResourceList(aConnection: TSQLDBRestConnection;
@@ -137,7 +140,8 @@ Var
 begin
   Buf:=TLocalBufDataset.Create(Self);
   try
-    LoadDataset(Buf,AConnection,aConnection.MetaDataResourceName);
+    if not LoadDataset(Buf,AConnection,aConnection.MetaDataResourceName) then
+      exit;
     if (aConnection.CustomViewResourceName<>'') then
       aList.Add(aConnection.CustomViewResourceName);
     if (aConnection.MetaDataResourceName<>'') then
@@ -178,17 +182,21 @@ function TPas2JSRestUtils.GetFieldType(aType: String): TFieldType;
 begin
   Case lowerCase(aType) of
     'text' : Result:=ftString;
-    'date' : Result:=ftDateTime;
+    'datetime' : result:=ftDateTime;
+    'date' : Result:=ftDate;
+    'time' : Result:=ftTime;
     'float' : Result:=ftFloat;
     'bigint' : Result:=ftLargeInt;
     'int' : Result:=ftInteger;
+    'blob' : Result:=ftBlob;
+    'bool' : Result:=ftBoolean;
   else
     Result:=ftString;
   end;
 end;
 
-procedure TPas2JSRestUtils.UpdateFieldDefs(aConnection: TSQLDBRestConnection;
-  aResource: String; aFieldDefs: TFieldDefs);
+Function TPas2JSRestUtils.UpdateFieldDefs(aConnection: TSQLDBRestConnection;
+  aResource: String; aFieldDefs: TFieldDefs) : Integer;
 Var
   Buf : TBufDataset;
   aName : TField;
@@ -197,9 +205,11 @@ Var
   aRequired : TField;
 
 begin
+  Result:=0;
   Buf:=TLocalBufDataset.Create(Self);
   try
-    LoadDataset(Buf,AConnection,aConnection.MetaDataResourceName+'/'+aResource);
+    if not LoadDataset(Buf,AConnection,aConnection.MetaDataResourceName+'/'+aResource) then
+       Exit(-1);
     Buf.Open;
     aName:=Buf.FieldByName('name');
     aType:=Buf.FieldByName('type');
@@ -208,7 +218,11 @@ begin
     aFieldDefs.BeginUpdate;
     While not Buf.EOF do
       begin
-      aFieldDefs.Add(aName.AsString,GetFieldType(aType.AsString),aMaxLen.asInteger,aRequired.AsBoolean);
+      if aFieldDefs.Find(aName.AsString)=nil then
+        begin
+        aFieldDefs.Add(aName.AsString,GetFieldType(aType.AsString),aMaxLen.asInteger,aRequired.AsBoolean);
+        Inc(Result);
+        end;
       Buf.Next;
       end;
   finally

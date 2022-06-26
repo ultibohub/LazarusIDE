@@ -148,6 +148,8 @@ basecomponents:
 	$(MAKE) -C components/lazcontrols/design
 	$(MAKE) -C components/lclextensions
 	$(MAKE) -C components/virtualtreeview
+	$(MAKE) -C components/fpdebug
+	$(MAKE) -C components/lazdebuggers/lazdebuggerfp
 	$(MAKE) -C ide/packages/idedebugger
 	$(MAKE) -C components/anchordocking
 	$(MAKE) -C components/anchordocking/design
