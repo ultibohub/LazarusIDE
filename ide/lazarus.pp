@@ -71,6 +71,7 @@ uses
   anchordockingdsgn, //Ultibo
   jcfidelazarus, //Ultibo
   laz.virtualtreeview_package, //Ultibo
+  lazdebuggerfp, //Ultibo
   allsyneditdsgn, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
@@ -87,7 +88,7 @@ uses
     //laz.virtualtreeview_package, //Ultibo
     OnlinePackageManager,
     SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn,
-    LazDebuggerFpLldb, LazDebuggerFp,
+    LazDebuggerFpLldb, //LazDebuggerFp, //Ultibo
   {$ENDIF}
   MainBase;
 
