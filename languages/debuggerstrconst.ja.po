@@ -9,6 +9,10 @@ msgstr ""
 msgid "- Disabled -"
 msgstr ""
 
+#: debuggerstrconst.dlgfpconvoptfpconverter
+msgid "Converter"
+msgstr ""
+
 #: debuggerstrconst.dlgfpconvoptfpdebugconverter
 msgid "FpDebug Converter:"
 msgstr ""
@@ -147,6 +151,10 @@ msgstr "履歴の底に添える"
 #: debuggerstrconst.dsrevalhistoryup
 msgid "Insert result at top of history"
 msgstr "履歴の冒頭に挿入する"
+
+#: debuggerstrconst.dsrevalusefpdebugconverter
+msgid "Use FpDebug Converter"
+msgstr ""
 
 #: debuggerstrconst.synfnewvalueisempty
 msgid "\"New value\" is empty."

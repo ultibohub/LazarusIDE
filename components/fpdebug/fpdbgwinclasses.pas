@@ -127,14 +127,18 @@ type
   TFpWinCtxFlags = (cfSkip, cfControl, cfFull);
   TFpContextChangeFlag = (ccfControl, ccfInteger);
   TFpContextChangeFlags = set of TFpContextChangeFlag;
+  PPWSTR = ^PWSTR;
 
   { TDbgWinThread }
 
   TDbgWinThread = class(TDbgThread)
   private
+    FHasExceptionCleared: boolean;
     FIsSuspended: Boolean;
     FIsSkippingBreakPoint: Boolean;
     FIsSkippingBreakPointAddress: TDBGPtr;
+    FDoNotPollName: Boolean;
+    FName: String;
   protected
     FThreadContextChanged: boolean;
     FThreadContextChangeFlags: TFpContextChangeFlags;
@@ -144,6 +148,7 @@ type
     procedure LoadRegisterValues; override;
     function GetFpThreadContext(var AStorage: TFpContext; out ACtxPtr: PFpContext; ACtxFlags: TFpWinCtxFlags): Boolean;
     function SetFpThreadContext(ACtxPtr: PFpContext; ACtxFlags: TFpWinCtxFlags = cfSkip): Boolean;
+    function GetName: String; override;
   public
     procedure Suspend;
     procedure SuspendForStepOverBreakPoint;
@@ -156,6 +161,8 @@ type
     procedure BeforeContinue; override;
     function ResetInstructionPointerAfterBreakpoint: boolean; override;
     function ReadThreadState: boolean;
+    procedure ClearExceptionSignal; override;
+    property HasExceptionCleared: boolean read FHasExceptionCleared;
 
     procedure SetRegisterValue(AName: string; AValue: QWord); override;
     procedure StoreRegisters; override;
@@ -178,7 +185,7 @@ type
     function GetFullProcessImageName(AProcessHandle: THandle): string;
     function GetModuleFileName(AModuleHandle: THandle): string;
     function GetProcFilename(AProcess: TDbgProcess; lpImageName: LPVOID; fUnicode: word; hFile: handle): string;
-    procedure LogLastError;
+    procedure LogLastError(AMsg: String = '');
   protected
     procedure AfterChangingInstructionCode(const ALocation: TDBGPtr; ACount: Integer); override;
     function GetHandle: THandle; override;
@@ -312,7 +319,9 @@ var
   _IsWow64Process: function (hProcess:HANDLE; WoW64Process: PBOOL):BOOL; stdcall = nil;
   _Wow64GetThreadContext: function (hThread: THandle; var   lpContext: WOW64_CONTEXT): BOOL; stdcall = nil;
   _Wow64SetThreadContext: function (hThread: THandle; const lpContext: WOW64_CONTEXT): BOOL; stdcall = nil;
+  _Wow64SuspendThread: function (hThread:HANDLE):DWORD; stdcall = nil;
   _DebugBreakProcess: function(Process:HANDLE): WINBOOL; stdcall = nil;
+  _GetThreadDescription: function(hThread: THandle; ppszThreadDescription: PPWSTR): HResult; stdcall = nil;
 
 procedure LoadKernelEntryPoints;
 var
@@ -330,10 +339,12 @@ begin
   Pointer(_DebugActiveProcess) := GetProcAddress(hMod, 'DebugActiveProcess');
   Pointer(_GetFinalPathNameByHandle) := GetProcAddress(hMod, 'GetFinalPathNameByHandleW');
   Pointer(_DebugBreakProcess) := GetProcAddress(hMod, 'DebugBreakProcess');
+  Pointer(_GetThreadDescription) := GetProcAddress(hMod, 'GetThreadDescription');
   {$ifdef cpux86_64}
   Pointer(_IsWow64Process) := GetProcAddress(hMod, 'IsWow64Process');
   Pointer(_Wow64GetThreadContext) := GetProcAddress(hMod, 'Wow64GetThreadContext');
   Pointer(_Wow64SetThreadContext) := GetProcAddress(hMod, 'Wow64SetThreadContext');
+  Pointer(_Wow64SuspendThread) := GetProcAddress(hMod, 'Wow64SuspendThread');
   {$endif}
 
   DebugLn(DBG_WARNINGS and (DebugBreakAddr = nil), ['WARNING: Failed to get DebugBreakAddr']);
@@ -343,17 +354,19 @@ begin
   DebugLn(DBG_WARNINGS and (_DebugActiveProcess = nil), ['WARNING: Failed to get DebugActiveProcess']);
   DebugLn(DBG_WARNINGS and (_GetFinalPathNameByHandle = nil), ['WARNING: Failed to get GetFinalPathNameByHandle']);
   DebugLn(DBG_WARNINGS and (_DebugBreakProcess = nil), ['WARNING: Failed to get DebugBreakProcess']);
+  DebugLn(DBG_WARNINGS and (_GetThreadDescription = nil), ['WARNING: Failed to get GetThreadDescription']);
   {$ifdef cpux86_64}
   DebugLn(DBG_WARNINGS and (_IsWow64Process = nil), ['WARNING: Failed to get IsWow64Process']);
   DebugLn(DBG_WARNINGS and (_Wow64GetThreadContext = nil), ['WARNING: Failed to get Wow64GetThreadContext']);
   DebugLn(DBG_WARNINGS and (_Wow64SetThreadContext = nil), ['WARNING: Failed to get Wow64SetThreadContext']);
+  DebugLn(DBG_WARNINGS and (_Wow64SuspendThread = nil), ['WARNING: Failed to get _Wow64SuspendThread']);
   {$endif}
 end;
 
-procedure TDbgWinProcess.LogLastError;
+procedure TDbgWinProcess.LogLastError(AMsg: String);
 begin
   if not GotExitProcess then
-    DebugLn(DBG_WARNINGS, 'FpDbg-ERROR: %s', [GetLastErrorText]);
+    DebugLn(DBG_WARNINGS, 'FpDbg-ERROR: %s -> %s', [AMsg, GetLastErrorText]);
 end;
 
 procedure TDbgWinProcess.AfterChangingInstructionCode(const ALocation: TDBGPtr;
@@ -361,6 +374,7 @@ procedure TDbgWinProcess.AfterChangingInstructionCode(const ALocation: TDBGPtr;
 begin
   inherited AfterChangingInstructionCode(ALocation, ACount);
   FlushInstructionCache(Handle, Pointer(PtrUInt(ALocation)), 1);
+  //FlushInstructionCache(Handle, nil, 0);
 end;
 
 function TDbgWinProcess.GetFullProcessImageName(AProcessHandle: THandle): string;
@@ -558,7 +572,7 @@ begin
   if Result then
     MaskBreakpointsInReadData(AAdress, ASize, AData)
   else
-    LogLastError;
+    LogLastError('ReadData '+dbghex(int64(AAdress))+' / '+dbgs(ASize) + '(done: '+dbgs(BytesRead)+' )');
 end;
 
 function TDbgWinProcess.WriteData(const AAdress: TDbgPtr; const ASize: Cardinal; const AData): Boolean;
@@ -569,7 +583,8 @@ begin
   assert(MDebugEvent.dwProcessId <> 0, 'TDbgWinProcess.WriteData: MDebugEvent.dwProcessId <> 0');
   Result := WriteProcessMemory(Handle, Pointer(PtrUInt(AAdress)), @AData, ASize, BytesWritten) and (BytesWritten = ASize);
 
-  if not Result then LogLastError;
+  if not Result then
+    LogLastError('WriteData '+dbghex(int64(AAdress))+' / '+dbgs(ASize) + '(done: '+dbgs(BytesWritten)+' )');
 end;
 
 function TDbgWinProcess.ReadString(const AAdress: TDbgPtr; const AMaxSize: Cardinal; out AData: String): Boolean;
@@ -783,8 +798,11 @@ function TDbgWinProcess.Continue(AProcess: TDbgProcess; AThread: TDbgThread;
 
 var
   EventThread, t: TDbgThread;
+  HasExceptionCleared: Boolean;
 begin
 debugln(FPDBG_WINDOWS, ['TDbgWinProcess.Continue ',SingleStep]);
+  HasExceptionCleared := (AThread <> nil) and TDbgWinThread(AThread).FHasExceptionCleared;
+
   if assigned(AThread) and not FThreadMap.HasId(AThread.ID) then begin
     AThread := nil;
   end;
@@ -851,6 +869,9 @@ debugln(FPDBG_WINDOWS and DBG_VERBOSE, ['## skip brkpoint (others only) ']);
   AProcess.ThreadsBeforeContinue;
 if AThread<>nil then debugln(FPDBG_WINDOWS, ['## ath.iss ',AThread.NextIsSingleStep]);
 
+  if HasExceptionCleared then
+    result := Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_CONTINUE)
+  else
   if MDebugEvent.dwDebugEventCode = EXCEPTION_DEBUG_EVENT then
     case MDebugEvent.Exception.ExceptionRecord.ExceptionCode of
      EXCEPTION_BREAKPOINT, STATUS_WX86_BREAKPOINT,
@@ -933,7 +954,7 @@ begin
        and (MDebugEvent.dwDebugEventCode <> EXIT_THREAD_DEBUG_EVENT)
     then begin
       // Wait for the terminate event // Do not report any queued breakpoints
-      DebugLn(FPDBG_WINDOWS, ['Terimating... Skipping event: ', dbgs(MDebugEvent)]);
+      DebugLn(FPDBG_WINDOWS, ['Terminating... Skipping event: ', dbgs(MDebugEvent)]);
       for TDbgThread(t) in FThreadMap do
         t.Suspend;
       Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_CONTINUE);
@@ -1248,8 +1269,11 @@ function TDbgWinProcess.AnalyseDebugEvent(AThread: TDbgThread): TFPDEvent;
       OnDebugOutputEvent(Self, AEvent.dwProcessId, AEvent.dwThreadId, S);
   end;
 
+const
+   EXCEPTION_SET_THREADNAME = $406D1388;
 var
   InterceptAtFirst: Boolean;
+  threadname: String;
 begin
   if AThread <> nil then
     TDbgWinThread(AThread).EndSingleStepOverBreakPoint;
@@ -1276,6 +1300,17 @@ begin
           end;
           EXCEPTION_SINGLE_STEP, STATUS_WX86_SINGLE_STEP: begin
             result := deBreakpoint;
+          end;
+          EXCEPTION_SET_THREADNAME: begin
+            if AThread <> nil then begin
+              if not ReadString(TDbgPtr(MDebugEvent.Exception.ExceptionRecord.ExceptionInformation[1]), 200, threadname) then
+                threadname := 'error getting threadname';
+              with TDbgWinThread(AThread) do begin
+                FName := threadname;
+                FDoNotPollName := True;
+              end;
+            end;
+            result := deInternalContinue;
           end
         else begin
           HandleException(MDebugEvent, InterceptAtFirst);
@@ -1596,12 +1631,35 @@ begin
   DebugLn(DBG_WARNINGS and (not Result), ['Unable to set Context for ', ID, ': ', GetLastErrorText]);
 end;
 
+function TDbgWinThread.GetName: String;
+var
+  n: PWSTR;
+begin
+  Result := '';
+  if FDoNotPollName then begin
+    Result := FName;
+  end else begin
+    if _GetThreadDescription <> nil then
+      if Succeeded(_GetThreadDescription(Handle, @n)) then begin
+        Result := WideCharToString(n);
+        LocalFree(HLOCAL(n));
+      end;
+  end;
+  if Result = '' then
+    Result := inherited GetName;
+end;
+
 procedure TDbgWinThread.Suspend;
 var
   r: DWORD;
 begin
   if FIsSuspended then
     exit;
+  {$ifdef cpux86_64}
+  if (Process.Mode = dm32) and (_Wow64SuspendThread <> nil) then
+    r := _Wow64SuspendThread(Handle)
+  else
+  {$endif}
   r := SuspendThread(Handle);
   FIsSuspended := r <> DWORD(-1);
   debugln(DBG_WARNINGS and (r = DWORD(-1)), 'Failed to suspend Thread %d (handle: %d). Error: %s', [Id, Handle, GetLastErrorText]);
@@ -1721,6 +1779,7 @@ procedure TDbgWinThread.BeforeContinue;
 begin
   inherited;
   if ID = MDebugEvent.dwThreadId then begin
+    FHasExceptionCleared := False;
 
     {$ifdef cpux86_64}
     if (TDbgWinProcess(Process).FBitness = b32) then begin
@@ -1796,9 +1855,16 @@ begin
     exit;
 
   Result := GetFpThreadContext(_UnAligendContext, FCurrentContext, cfFull);
+  DebugLn((DBG_WARNINGS or DBG_VERBOSE) and (not Result), ['Failed to read thread-state for ', ID]);
   //FThreadContextChanged := False; TODO: why was that not here?
   FThreadContextChangeFlags := [];
   FRegisterValueListValid:=False;
+end;
+
+procedure TDbgWinThread.ClearExceptionSignal;
+begin
+  inherited ClearExceptionSignal;
+  FHasExceptionCleared := True;
 end;
 
 procedure TDbgWinThread.SetRegisterValue(AName: string; AValue: QWord);
@@ -1810,21 +1876,23 @@ begin
     exit;
 
   {$ifdef cpui386}
+    assert((AValue and QWord($ffffffff00000000) = 0) or (AValue and QWord($ffffffff00000000) = QWord($ffffffff00000000)), 'TDbgWinThread.SetRegisterValue: ((AValue and QWord($ffffffff00000000) = 0) or ((AValue and QWord($ffffffff00000000) = QWord($ffffffff00000000)');
     case AName of
-      'eip': FCurrentContext^.def.Eip := AValue;
-      'eax': FCurrentContext^.def.Eax := AValue;
-      'ecx': FCurrentContext^.def.Ecx := AValue;
-      'edx': FCurrentContext^.def.Edx := AValue;
+      'eip': FCurrentContext^.def.Eip := DWORD(AValue);
+      'eax': FCurrentContext^.def.Eax := DWORD(AValue);
+      'ecx': FCurrentContext^.def.Ecx := DWORD(AValue);
+      'edx': FCurrentContext^.def.Edx := DWORD(AValue);
     else
       raise Exception.CreateFmt('Setting the [%s] register is not supported', [AName]);
     end;
   {$else}
   if (TDbgWinProcess(Process).FBitness = b32) then begin
+    assert((AValue and QWord($ffffffff00000000) = 0) or (AValue and QWord($ffffffff00000000) = QWord($ffffffff00000000)), 'TDbgWinThread.SetRegisterValue: ((AValue and QWord($ffffffff00000000) = 0) or ((AValue and QWord($ffffffff00000000) = QWord($ffffffff00000000)');
     case AName of
-      'eip': FCurrentContext^.WOW.Eip := AValue;
-      'eax': FCurrentContext^.WOW.Eax := AValue;
-      'ecx': FCurrentContext^.WOW.Ecx := AValue;
-      'edx': FCurrentContext^.WOW.Edx := AValue;
+      'eip': FCurrentContext^.WOW.Eip := DWORD(AValue);
+      'eax': FCurrentContext^.WOW.Eax := DWORD(AValue);
+      'ecx': FCurrentContext^.WOW.Ecx := DWORD(AValue);
+      'edx': FCurrentContext^.WOW.Edx := DWORD(AValue);
     else
       raise Exception.CreateFmt('Setting the [%s] register is not supported', [AName]);
     end;

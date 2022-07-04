@@ -47,9 +47,10 @@ interface
 uses
   FpDebugDebuggerUtils, FpDebugValueConvertors, DbgIntfDebuggerBase,
   DbgIntfBaseTypes, FpDbgClasses, FpDbgUtil, FPDbgController, FpPascalBuilder,
-  FpdMemoryTools, FpDbgInfo, FpPascalParser, FpErrorMessages, FpDebugDebuggerBase,
-  FpDbgCallContextInfo, FpDbgDwarf, FpDbgDwarfDataClasses, FpWatchResultData,
-  LazDebuggerIntf, Forms, fgl, math, Classes, sysutils, LazClasses,
+  FpdMemoryTools, FpDbgInfo, FpPascalParser, FpErrorMessages,
+  FpDebugDebuggerBase, FpDebuggerResultData, FpDbgCallContextInfo, FpDbgDwarf,
+  FpDbgDwarfDataClasses, FpWatchResultData, LazDebuggerIntf, Forms, fgl, math,
+  Classes, sysutils, LazClasses,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif};
 
 type
@@ -485,6 +486,7 @@ end;
 
 procedure TFpThreadWorkerRunLoop.DoExecute;
 begin
+  FDebugger.ClearCachedData;
   FDebugger.DbgController.ProcessLoop;
   Queue(@LoopFinished_DecRef);
 end;
@@ -622,7 +624,7 @@ begin
     FSourceFile := DbgCallStack.SourceFile;
     FLine := DbgCallStack.Line;
 
-    FParamAsString := DbgCallStack.GetParamsAsString(PrettyPrinter);
+    FParamAsString := GetParamsAsString(FThread, DbgCallStack, FDebugger.MemManager, FDebugger.TargetWidth, PrettyPrinter);
     PrettyPrinter.Free;
 
     FDebugger.MemManager.MemLimits.MaxArrayLen            := Prop.MemLimits.MaxArrayLen;
@@ -782,7 +784,7 @@ function TFpThreadWorkerEvaluate.DoWatchFunctionCall(
   AResult: TFpValue; var AnError: TFpError): boolean;
 var
   FunctionSymbolData, FunctionSymbolType, FunctionResultSymbolType,
-  TempSymbol, StringDecRefSymbol, StringSymbol: TFpSymbol;
+  TempSymbol, StringSymbol: TFpSymbol;
   ExprParamVal: TFpValue;
   ProcAddress: TFpDbgMemLocation;
   FunctionResultDataSize: TFpDbgValueSize;
@@ -790,7 +792,7 @@ var
   CallContext: TFpDbgInfoCallContext;
   PCnt, i, FoundIdx, ItemsOffs: Integer;
   rk: TDbgSymbolKind;
-  StringAddr: TDBGPtr;
+  StringAddr, StringDecRefAddress: TDBGPtr;
 begin
   Result := False;
   if FExpressionScope = nil then
@@ -828,16 +830,19 @@ begin
 
   try
     ParameterSymbolArr := nil;
-    StringDecRefSymbol := nil;
+    StringDecRefAddress := 0;
     StringAddr := 0;
 
     if (FunctionResultSymbolType.Kind in [skString, skAnsiString, skWideString])
     then begin
+ // FCached_FPC_ANSISTR_DECR_REF  TFpThreadWorkerRunLoop.DoExecute
+
       if (FunctionResultSymbolType.Kind = skWideString) then
-        StringDecRefSymbol := FDebugger.DbgController.CurrentProcess.FindProcSymbol('FPC_WIDESTR_DECR_REF')
+        StringDecRefAddress := FDebugger.GetCached_FPC_WIDESTR_DECR_REF
       else
-        StringDecRefSymbol := FDebugger.DbgController.CurrentProcess.FindProcSymbol('FPC_ANSISTR_DECR_REF');
-      if (StringDecRefSymbol = nil) or (not IsTargetNotNil(StringDecRefSymbol.Address)) then begin
+        StringDecRefAddress := FDebugger.GetCached_FPC_ANSISTR_DECR_REF;
+
+      if (StringDecRefAddress = 0) then begin
         DebugLn(['Error result kind  ', dbgs(FunctionSymbolType.Kind)]);
         AnError := CreateError(fpErrAnyError, ['Result type of function not supported']);
         exit;
@@ -939,7 +944,7 @@ begin
       FDebugger.MemReader, FDebugger.MemConverter);
 
     try
-      if (ASelfValue = nil) and (StringDecRefSymbol <> nil) then begin
+      if (ASelfValue = nil) and (StringDecRefAddress <> 0) then begin
         if not CallContext.AddStringResult then begin
           DebugLn('Internal error for string result');
           AnError := CallContext.LastError;
@@ -962,7 +967,7 @@ begin
           exit;
         end;
 
-        if (ASelfValue <> nil) and (StringDecRefSymbol <> nil) and (i = 0) then begin
+        if (ASelfValue <> nil) and (StringDecRefAddress <> 0) and (i = 0) then begin
           if not CallContext.AddStringResult then begin
             DebugLn('Internal error for string result');
             AnError := CallContext.LastError;
@@ -981,6 +986,12 @@ begin
       if not CallContext.IsValid then begin
         DebugLn(['Error in call ',CallContext.Message]);
         //ReturnMessage := CallContext.Message;
+        AnError := CallContext.LastError;
+        if not IsError(AnError) then
+          if CallContext.Message <> '' then
+            AnError := CreateError(fpErrAnyError, [CallContext.Message])
+          else
+            AnError := CreateError(fpErrAnyError, ['Error in function execution']);
         exit;
       end;
 
@@ -1010,7 +1021,7 @@ begin
     end;
 
     if (FunctionResultSymbolType.Kind in [skString, skAnsiString, skWideString]) and (StringAddr <> 0) then begin
-      CallContext := FDebugger.DbgController.Call(StringDecRefSymbol.Address, FExpressionScope.LocationContext,
+      CallContext := FDebugger.DbgController.Call(TargetLoc(StringDecRefAddress), FExpressionScope.LocationContext,
         FDebugger.MemReader, FDebugger.MemConverter);
       try
         CallContext.AddOrdinalViaRefAsParam(StringAddr);
@@ -1027,7 +1038,6 @@ begin
     for i := 0 to High(ParameterSymbolArr) do
       if ParameterSymbolArr[i] <> nil then
         ParameterSymbolArr[i].ReleaseReference;
-    ReleaseRefAndNil(StringDecRefSymbol);
   end;
 
 end;
@@ -1039,20 +1049,16 @@ function TFpThreadWorkerEvaluate.EvaluateExpression(const AnExpression: String;
 var
   APasExpr, PasExpr2: TFpPascalExpression;
   PrettyPrinter: TFpPascalPrettyPrinter;
-  ResValue, NewRes: TFpValue;
+  ResValue: TFpValue;
   CastName, ResText2: String;
-  WatchResConv: TFpWatchResultConvertor;
+  WatchResConv: TFpLazDbgWatchResultConvertor;
   ResData: TLzDbgWatchDataIntf;
-  ValConvList: TFpDbgConverterConfigList;
-  ValConv: TFpDbgValueConverter;
   i: Integer;
   ValConfig: TFpDbgConverterConfig;
 begin
   Result := False;
   AResText := '';
   ATypeInfo := nil;
-  NewRes := nil;
-  ValConv := nil;
 
   FExpressionScope := FDebugger.DbgController.CurrentProcess.FindSymbolScope(AThreadId, AStackFrame);
   if FExpressionScope = nil then begin
@@ -1117,45 +1123,23 @@ begin
       exit;
     end;
 
-    if (FWatchValue <> nil) and (ADispFormat <> wdfMemDump) and
-       (not (defSkipValConv in AnEvalFlags)) and
-       (ResValue <> nil) and (ResValue.TypeInfo <> nil)
-    then begin
-      ValConfig := TFpDbgConverterConfig(FWatchValue.GetFpDbgConverter);
-      if (ValConfig <> nil) and (ValConfig.CheckMatch(ResValue)) then begin
-        ValConv := ValConfig.Converter;
-        ValConv.AddReference;
-      end;
-
-      if (ValConv = nil) and (ValConfig = nil) then begin
-        ValConvList := ValueConverterConfigList;
-        ValConvList.Lock;
-        try
-          i := ValConvList.Count - 1;
-          while (i >= 0) and (not ValConvList[i].CheckMatch(ResValue)) do
-            dec(i);
-          if i >= 0 then begin
-            ValConv := ValConvList[i].Converter;
-            ValConv.AddReference;
-          end;
-        finally
-          ValConvList.Unlock;
-        end;
-      end;
-
-      if ValConv <> nil then begin
-        NewRes := ValConv.ConvertValue(ResValue, FDebugger, FExpressionScope);
-        if NewRes <> nil then
-          ResValue := NewRes;
-      end;
-    end;
-
     if (FWatchValue <> nil) and (ResValue <> nil) and
        (ADispFormat <> wdfMemDump)   // TODO
     then begin
-      WatchResConv := TFpWatchResultConvertor.Create(FExpressionScope.LocationContext);
+      WatchResConv := TFpLazDbgWatchResultConvertor.Create(FExpressionScope.LocationContext);
+      WatchResConv.MaxArrayConv := TFpDebugDebuggerProperties(FDebugger.GetProperties).MemLimits.MaxArrayConversionCnt;
+      WatchResConv.MaxTotalConv := TFpDebugDebuggerProperties(FDebugger.GetProperties).MemLimits.MaxTotalConversionCnt;
       WatchResConv.ExtraDepth := defExtraDepth in FWatchValue.EvaluateFlags;
       WatchResConv.FirstIndexOffs := FWatchValue.FirstIndexOffs;
+      if not (defSkipValConv in AnEvalFlags) then begin
+        ValConfig := TFpDbgConverterConfig(FWatchValue.GetFpDbgConverter);
+        if ValConfig <> nil then
+          WatchResConv.ValConfig := ValConfig
+        else
+          WatchResConv.ValConvList := ValueConverterConfigList;
+        WatchResConv.Debugger := FDebugger;
+      end;
+      WatchResConv.ExpressionScope := FExpressionScope;
       ResData := FWatchValue.ResData;
       Result := WatchResConv.WriteWatchResultData(ResValue, ResData, FWatchValue.RepeatCount);
 
@@ -1209,9 +1193,7 @@ begin
   finally
     PrettyPrinter.Free;
     APasExpr.Free;
-    NewRes.ReleaseReference;
     FExpressionScope.ReleaseReference;
-    ValConv.ReleaseReference;
   end;
 end;
 

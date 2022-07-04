@@ -19,6 +19,10 @@ msgstr "- По умолчанию -"
 msgid "- Disabled -"
 msgstr "- Отключено -"
 
+#: debuggerstrconst.dlgfpconvoptfpconverter
+msgid "Converter"
+msgstr "Преобразование"
+
 #: debuggerstrconst.dlgfpconvoptfpdebugconverter
 msgid "FpDebug Converter:"
 msgstr "Преобразование FpDebug:"
@@ -157,6 +161,10 @@ msgstr "Добавлять результат в историю снизу"
 #: debuggerstrconst.dsrevalhistoryup
 msgid "Insert result at top of history"
 msgstr "Добавлять результат в историю сверху"
+
+#: debuggerstrconst.dsrevalusefpdebugconverter
+msgid "Use FpDebug Converter"
+msgstr "Использовать преобразование FpDebug"
 
 #: debuggerstrconst.synfnewvalueisempty
 msgid "\"New value\" is empty."

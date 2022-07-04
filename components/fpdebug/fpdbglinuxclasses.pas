@@ -277,6 +277,7 @@ type
     function GetDebugRegOffset(ind: byte): pointer;
     function ReadDebugReg(ind: byte; out AVal: PtrUInt): boolean;
     function WriteDebugReg(ind: byte; AVal: PtrUInt): boolean;
+    function GetName: String; override;
   protected
     function ReadThreadState: boolean;
 
@@ -539,6 +540,28 @@ begin
     result := true;
 end;
 
+function TDbgLinuxThread.GetName: String;
+var
+  fh: THandle;
+  n: array[0..30] of AnsiChar;
+  c: LongInt;
+begin
+  Result := '';
+  fh := FileOpen('/proc/' + IntToStr(Handle) + '/comm', fmOpenRead or fmShareDenyNone);
+  if fh <> THandle(-1) then begin
+    try
+      c := FileRead(fh, n, 30);
+      if c > 0 then begin
+        n[c] := #0;
+        Result := TrimRightSet(n, [' ', #10]);
+      end;
+    finally
+      FileClose(fh);
+    end;
+  end;
+  if Result = '' then
+    Result := inherited GetName;
+end;
 
 function TDbgLinuxThread.ReadThreadState: boolean;
 var
@@ -835,11 +858,12 @@ procedure TDbgLinuxThread.SetRegisterValue(AName: string; AValue: QWord);
 begin
   if Process.Mode=dm32 then
   begin
+    assert((AValue and QWord($ffffffff00000000) = 0) or (AValue and QWord($ffffffff00000000) = QWord($ffffffff00000000)), 'TDbgLinuxThread.SetRegisterValue: (AValue and QWord($ffffffff00000000) = 0) or (AValue and QWord($ffffffff00000000) = QWord($ffffffff00000000))');
     case AName of
-      'eip': FUserRegs.regs32[eip] := AValue;
-      'eax': FUserRegs.regs32[eax] := AValue;
-      'ecx': FUserRegs.regs32[ecx] := AValue;
-      'edx': FUserRegs.regs32[edx] := AValue;
+      'eip': FUserRegs.regs32[eip] := cuint32(AValue);
+      'eax': FUserRegs.regs32[eax] := cuint32(AValue);
+      'ecx': FUserRegs.regs32[ecx] := cuint32(AValue);
+      'edx': FUserRegs.regs32[edx] := cuint32(AValue);
     else
       raise Exception.CreateFmt('Setting the [%s] register is not supported', [AName]);
     end;
@@ -1001,7 +1025,7 @@ begin
         if not (FLibMap.HasId(ProcMap.AddressFrom)) then
           begin
           // Add the library and trigger a deLoadLibrary event
-          AddLib(tDbgLinuxLibrary.Create(Self, ProcMap.FileName, ProcMap.Inode, ProcMap.AddressFrom));
+          AddLib(tDbgLinuxLibrary.Create(Self, ProcMap.FileName, THandle(ProcMap.Inode), TDBGPtr(ProcMap.AddressFrom)));
           Result := deLoadLibrary;
           end
         end;
@@ -1023,8 +1047,8 @@ function TDbgLinuxProcess.ObtainProcMaps: TDbgLinuxMemoryMappingList;
     try
       Parts := Line.Split([' '], TStringSplitOptions.ExcludeEmpty);
       Addresses := Parts[0].Split(['-']);
-      Mapping.AddressFrom:=Hex2Dec64(Addresses[0]);
-      Mapping.AddressTill:=Hex2Dec64(Addresses[1]);
+      Mapping.AddressFrom:=PtrInt(Hex2Dec64(Addresses[0]));
+      Mapping.AddressTill:=PtrInt(Hex2Dec64(Addresses[1]));
 
       Mapping.Rights:=Parts[1];
       Mapping.Offset:=Hex2Dec64(Parts[2]);

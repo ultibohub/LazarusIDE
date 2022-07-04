@@ -39,10 +39,10 @@ unit FpDbgClasses;
 interface
 
 uses
-  Classes, SysUtils, Maps, FpDbgDwarf, FpDbgUtil, FpDbgLoader, FpDbgInfo,
+  Classes, SysUtils, Maps, FpDbgUtil, FpDbgLoader, FpDbgInfo,
   FpdMemoryTools, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazClasses, LazFileUtils, DbgIntfBaseTypes,
-  fgl, DbgIntfDebuggerBase, FpPascalBuilder, fpDbgSymTableContext,
-  FpDbgDwarfDataClasses, FpDbgCommon, FpErrorMessages, LazDebuggerIntf;
+  fgl, DbgIntfDebuggerBase, fpDbgSymTableContext,
+  FpDbgCommon, FpErrorMessages, LazDebuggerIntf;
 
 type
   TFPDEvent = (
@@ -50,7 +50,8 @@ type
     deLoadLibrary, deUnloadLibrary,
     deFinishedStep, deBreakpoint, deHardCodedBreakpoint,
     deException,
-    deInternalContinue);
+    deInternalContinue,
+    deFailed);
   TFPDCompareStepInfo = (dcsiNewLine, dcsiSameLine, dcsiNoLineInfo, dcsiZeroLine);
 
   { TDbgRegisterValue }
@@ -118,7 +119,6 @@ type
   public
     constructor create(AThread: TDbgThread; AnIndex: integer; AFrameAddress, AnAddress: TDBGPtr);
     destructor Destroy; override;
-    function GetParamsAsString(APrettyPrinter: TFpPascalPrettyPrinter): string;
     property AnAddress: TDBGPtr read FAnAddress;
     property FrameAdress: TDBGPtr read FFrameAdress;
     property SourceFile: string read GetSourceFile;
@@ -218,6 +218,7 @@ type
     function ResetInstructionPointerAfterBreakpoint: boolean; virtual; abstract;
     procedure DoBeforeBreakLocationMapChange; // A new location added / or a location removed => memory will change
     procedure ValidateRemovedBreakPointInfo;
+    function GetName: String; virtual;
   public
     constructor Create(const AProcess: TDbgProcess; const AID: Integer; const AHandle: THandle); virtual;
     procedure DoBeforeProcessLoop;
@@ -266,6 +267,7 @@ type
     procedure StoreStepInfo(AnAddr: TDBGPtr = 0);
     property ID: Integer read FID;
     property Handle: THandle read FHandle;
+    property Name: String read GetName;
     property NextIsSingleStep: boolean read FNextIsSingleStep write FNextIsSingleStep;
     property RegisterValueList: TDbgRegisterValueList read GetRegisterValueList;
     property CallStackEntryList: TDbgCallstackEntryList read FCallStackEntryList;
@@ -797,7 +799,8 @@ const
     'deLoadLibrary', 'deUnloadLibrary',
     'deFinishedStep', 'deBreakpoint', 'deHardCodedBreakpoint',
     'deException',
-    'deInternalContinue'
+    'deInternalContinue',
+    'deFailed'
   );
 
 function GetDbgProcessClass(ATargetInfo: TTargetDescriptor): TOSDbgClasses;
@@ -805,6 +808,11 @@ function GetDbgProcessClass(ATargetInfo: TTargetDescriptor): TOSDbgClasses;
 procedure RegisterDbgOsClasses(ADbgOsClasses: TOSDbgClasses);
 
 implementation
+
+uses
+  FpDbgDwarfDataClasses,
+  FpDbgDwarfCFI,
+  FpDbgDwarf;
 
 type
   TOSDbgClassesList = class(specialize TFPGObjectList<TOSDbgClasses>)
@@ -1261,45 +1269,6 @@ begin
   end
   else
     result := '';
-end;
-
-function TDbgCallstackEntry.GetParamsAsString(
-  APrettyPrinter: TFpPascalPrettyPrinter): string;
-var
-  ProcVal: TFpValue;
-  AContext: TFpDbgLocationContext;
-  m: TFpValue;
-  v: String;
-  i: Integer;
-begin
-  result := '';
-  if assigned(ProcSymbol) then begin
-    ProcVal := ProcSymbol.Value;
-    if (ProcVal <> nil) then begin
-      AContext := TFpDbgSimpleLocationContext.Create(FThread.Process.MemManager,
-        LocToAddrOrNil(ProcSymbol.Address), DBGPTRSIZE[FThread.Process.Mode], FThread.ID, Index);
-
-      if AContext <> nil then begin
-        TFpValueDwarf(ProcVal).Context := AContext;
-        APrettyPrinter.Context := AContext;
-        APrettyPrinter.AddressSize := AContext.SizeOfAddress;
-        for i := 0 to ProcVal.MemberCount - 1 do begin
-          m := ProcVal.Member[i];
-          if (m <> nil) and (sfParameter in m.DbgSymbol.Flags) then begin
-            APrettyPrinter.PrintValue(v, m, wdfDefault, -1, [ppoStackParam]);
-            if result <> '' then result := result + ', ';
-            result := result + v;
-          end;
-          m.ReleaseReference;
-        end;
-        TFpValueDwarf(ProcVal).Context := nil;
-        AContext.ReleaseReference;
-      end;
-      ProcVal.ReleaseReference;
-    end;
-    if result <> '' then
-      result := '(' + result + ')';
-  end;
 end;
 
 function TDbgCallstackEntry.GetLine: integer;
@@ -1784,6 +1753,7 @@ begin
     FSymbolTableInfo := TFpSymbolInfo.Create(FLoaderList, MemManager)
   else
     FSymbolTableInfo := TFpSymbolInfo.Create(FLoaderList, MemManager, ExtractFileNameOnly(FFileName));
+  TFpDwarfInfo(FDbgInfo).LoadCallFrameInstructions;
 end;
 
 procedure TDbgInstance.SetFileName(const AValue: String);
@@ -2916,6 +2886,11 @@ begin
     FPausedAtRemovedBreakPointState := rbUnknown;
 end;
 
+function TDbgThread.GetName: String;
+begin
+  Result := 'Thread ' + IntToStr(FID);
+end;
+
 constructor TDbgThread.Create(const AProcess: TDbgProcess; const AID: Integer; const AHandle: THandle);
 begin
   FID := AID;
@@ -3011,13 +2986,15 @@ const
   MAX_FRAMES = 50000; // safety net
 var
   Address, FrameBase, LastFrameBase, Dummy: QWord;
-  Size, CountNeeded, IP, BP, CodeReadErrCnt, SP: integer;
-  AnEntry: TDbgCallstackEntry;
+  Size, CountNeeded, IP, BP, CodeReadErrCnt, SP, i: integer;
+  AnEntry, NewEntry: TDbgCallstackEntry;
   R: TDbgRegisterValue;
   nIP, nBP, nSP: String;
   NextIdx: LongInt;
   OutSideFrame: Boolean;
   StackPtr: TDBGPtr;
+  Row: TDwarfCallFrameInformationRow;
+  CIE: TDwarfCIE;
 begin
   // TODO: use AFrameRequired // check if already partly done
   if FCallStackEntryList = nil then
@@ -3057,12 +3034,8 @@ begin
 
   if FCallStackEntryList.Count > 0 then begin
     AnEntry := FCallStackEntryList[FCallStackEntryList.Count - 1];
-    R := AnEntry.RegisterValueList.FindRegisterByDwarfIndex(IP);
-    if R = nil then exit;
-    Address := R.NumValue;
-    R := AnEntry.RegisterValueList.FindRegisterByDwarfIndex(BP);
-    if R = nil then exit;
-    FrameBase := R.NumValue;
+    Address:=AnEntry.AnAddress;
+    FrameBase:=AnEntry.FrameAdress;
     R := AnEntry.RegisterValueList.FindRegisterByDwarfIndex(SP);
     if R = nil then exit;
     StackPtr := R.NumValue;
@@ -3072,10 +3045,18 @@ begin
     FrameBase := GetStackBasePointerRegisterValue;
     StackPtr := GetStackPointerRegisterValue;
     AnEntry := TDbgCallstackEntry.create(Self, 0, FrameBase, Address);
-    // Top level could be without entry in registerlist / same as GetRegisterValueList / but some code tries to find it here ....
-    AnEntry.RegisterValueList.DbgRegisterAutoCreate[nIP].SetValue(Address, IntToStr(Address),Size, IP);
-    AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(FrameBase, IntToStr(FrameBase),Size, BP);
-    AnEntry.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPtr, IntToStr(StackPtr),Size, SP);
+
+    // Initialize register values
+    // Top level could do without entry in registerlist, but this way the
+    // same code can handle both cases.
+    i := 0;
+    R := RegisterValueList.FindRegisterByDwarfIndex(i);
+    while Assigned(R) do
+      begin
+      AnEntry.RegisterValueList.DbgRegisterAutoCreate[R.Name].SetValue(R.NumValue, R.StrValue, R.Size, R.DwarfIdx);
+      inc(i);
+      R := RegisterValueList.FindRegisterByDwarfIndex(i);
+      end;
     FCallStackEntryList.Add(AnEntry);
   end;
 
@@ -3085,55 +3066,76 @@ begin
   CountNeeded := AFrameRequired - FCallStackEntryList.Count;
   LastFrameBase := 0;
   CodeReadErrCnt := 0;
-  while (CountNeeded > 0) and (FrameBase <> 0) and (FrameBase > LastFrameBase) do
+  while (CountNeeded > 0) do
   begin
-      OutSideFrame := False;
-    if not Process.Disassembler.GetFunctionFrameInfo(Address, OutSideFrame) then begin
-      if Process.Disassembler.LastErrorWasMemReadErr then begin
-        inc(CodeReadErrCnt);
-        if CodeReadErrCnt > 5 then break; // If the code cannot be read the stack pointer is wrong.
-        if NextIdx <= 1 then
-          OutSideFrame := True; // Maybe after "TProc(nil)();" call, then no frame could have been set up
-      end;
-    end;
-    LastFrameBase := FrameBase;
-
-    if (not OutSideFrame) and (NextIdx = 1) and (AnEntry.ProcSymbol <> nil) then begin
-      OutSideFrame := Address = LocToAddrOrNil(AnEntry.ProcSymbol.Address); // the top frame must be outside frame, if it is at entrypoint / needed for exceptions
-    end;
-
-    if OutSideFrame then begin
-      if not Process.ReadData(StackPtr, Size, Address) or (Address = 0) then Break;
-
-      if (not Process.ReadData(Address, 1, Dummy) or (Address = 0)) then begin
-        OutSideFrame := False;
+    if (Process.DbgInfo as TFpDwarfInfo).FindCallFrameInfo(Address, CIE, Row) and
+       TDwarfCallFrameInformation.TryObtainNextCallFrame(AnEntry, CIE, Size, NextIdx, Self, Row, Process, NewEntry) then
+      begin
+      if not Assigned(NewEntry) then
+        // Done.
+        Break;
+      FCallStackEntryList.Add(NewEntry);
+      Address := NewEntry.AnAddress;
+      AnEntry := NewEntry;
+      Dec(CountNeeded);
+      inc(NextIdx);
+      If (NextIdx > MAX_FRAMES) then
+        Break;
       end
-      else begin
-        {$PUSH}{$R-}{$Q-}
-        StackPtr := StackPtr + 1 * Size; // After popping return-addr from "StackPtr"
-        LastFrameBase := LastFrameBase - 1; // Make the loop think thas LastFrameBase was smaller
-        {$POP}
-        // last stack has no frame
-        //AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(0, '0',Size, BP);
+    else if (FrameBase <> 0) and (FrameBase > LastFrameBase) then
+      begin
+      // CFI not available or contains unsupported structures. Fallback to
+      // old fashioned stack-tracing.
+      OutSideFrame := False;
+      if not Process.Disassembler.GetFunctionFrameInfo(Address, OutSideFrame) then begin
+        if Process.Disassembler.LastErrorWasMemReadErr then begin
+          inc(CodeReadErrCnt);
+          if CodeReadErrCnt > 5 then break; // If the code cannot be read the stack pointer is wrong.
+          if NextIdx <= 1 then
+            OutSideFrame := True; // Maybe after "TProc(nil)();" call, then no frame could have been set up
+        end;
       end;
-    end;
-    if not OutSideFrame then begin
-      {$PUSH}{$R-}{$Q-}
-      StackPtr := FrameBase + 2 * Size; // After popping return-addr from "FrameBase + Size"
-      if not Process.ReadData(FrameBase + Size, Size, Address) or (Address = 0) then Break;
-      if not Process.ReadData(FrameBase, Size, FrameBase) then Break;
-      {$POP}
-    end;
-    AnEntry := TDbgCallstackEntry.create(Self, NextIdx, FrameBase, Address);
-    AnEntry.RegisterValueList.DbgRegisterAutoCreate[nIP].SetValue(Address, IntToStr(Address),Size, IP);
-    AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(FrameBase, IntToStr(FrameBase),Size, BP);
-    AnEntry.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPtr, IntToStr(StackPtr),Size, SP);
-    FCallStackEntryList.Add(AnEntry);
-    Dec(CountNeeded);
-    inc(NextIdx);
-    CodeReadErrCnt := 0;
-    If (NextIdx > MAX_FRAMES) then
-      break;
+      LastFrameBase := FrameBase;
+
+      if (not OutSideFrame) and (NextIdx = 1) and (AnEntry.ProcSymbol <> nil) then begin
+        OutSideFrame := Address = LocToAddrOrNil(AnEntry.ProcSymbol.Address); // the top frame must be outside frame, if it is at entrypoint / needed for exceptions
+      end;
+
+      if OutSideFrame then begin
+        if not Process.ReadData(StackPtr, Size, Address) or (Address = 0) then Break;
+
+        if (not Process.ReadData(Address, 1, Dummy) or (Address = 0)) then begin
+          OutSideFrame := False;
+        end
+        else begin
+          {$PUSH}{$R-}{$Q-}
+          StackPtr := StackPtr + 1 * Size; // After popping return-addr from "StackPtr"
+          LastFrameBase := LastFrameBase - 1; // Make the loop think thas LastFrameBase was smaller
+          {$POP}
+          // last stack has no frame
+          //AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(0, '0',Size, BP);
+        end;
+      end;
+      if not OutSideFrame then begin
+        {$PUSH}{$R-}{$Q-}
+        StackPtr := FrameBase + 2 * Size; // After popping return-addr from "FrameBase + Size"
+        {$POP}
+        if not Process.ReadData(FrameBase + Size, Size, Address) or (Address = 0) then Break;
+        if not Process.ReadData(FrameBase, Size, FrameBase) then Break;
+      end;
+      AnEntry := TDbgCallstackEntry.create(Self, NextIdx, FrameBase, Address);
+      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nIP].SetValue(Address, IntToStr(Address),Size, IP);
+      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(FrameBase, IntToStr(FrameBase),Size, BP);
+      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPtr, IntToStr(StackPtr),Size, SP);
+      FCallStackEntryList.Add(AnEntry);
+      Dec(CountNeeded);
+      inc(NextIdx);
+      CodeReadErrCnt := 0;
+      If (NextIdx > MAX_FRAMES) then
+        break;
+      end
+    else
+      Break;
   end;
   if CountNeeded > 0 then // there was an error / not possible to read more frames
     FCallStackEntryList.SetHasReadAllAvailableFrames;

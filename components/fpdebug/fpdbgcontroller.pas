@@ -52,7 +52,7 @@ type
     constructor Create(AController: TDbgController); virtual;
     destructor Destroy; override;
     procedure DoBeforeLoopStart;
-    procedure DoContinue(AProcess: TDbgProcess; AThread: TDbgThread); virtual; abstract;
+    function DoContinue(AProcess: TDbgProcess; AThread: TDbgThread): boolean; virtual; abstract;
     procedure ResolveEvent(var AnEvent: TFPDEvent; AnEventThread: TDbgThread; out Finished: boolean);
     function NextInstruction: TDbgAsmInstruction; inline;
     property Thread: TDbgThread read FThread write SetThread;
@@ -65,7 +65,7 @@ type
   protected
     procedure DoResolveEvent(var AnEvent: TFPDEvent; AnEventThread: TDbgThread; out Finished: boolean); override;
   public
-    procedure DoContinue(AProcess: TDbgProcess; AThread: TDbgThread); override;
+    function DoContinue(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
   end;
 
   { TDbgControllerStepIntoInstructionCmd }
@@ -74,7 +74,7 @@ type
   protected
     procedure DoResolveEvent(var AnEvent: TFPDEvent; AnEventThread: TDbgThread; out Finished: boolean); override;
   public
-    procedure DoContinue(AProcess: TDbgProcess; AThread: TDbgThread); override;
+    function DoContinue(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
   end;
 
   { TDbgControllerHiddenBreakStepBaseCmd }
@@ -100,7 +100,7 @@ type
     procedure InternalContinue(AProcess: TDbgProcess; AThread: TDbgThread); virtual; abstract;
   public
     destructor Destroy; override;
-    procedure DoContinue(AProcess: TDbgProcess; AThread: TDbgThread); override;
+    function DoContinue(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
 
     property StoredStackFrameInfo: TDbgStackFrameInfo read FStackFrameInfo;
     property IsSteppedOut: Boolean read GetIsSteppedOut;
@@ -134,7 +134,7 @@ type
 
   public
     constructor Create(AController: TDbgController; AStoreStepInfoAtInit: Boolean = False);
-    procedure DoContinue(AProcess: TDbgProcess; AThread: TDbgThread); override;
+    function DoContinue(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
 
     property StartedInFuncName: String read FStartedInFuncName;
   end;
@@ -187,6 +187,8 @@ type
     FStep: TStep;
     FHiddenBreakpoint: TFpInternalBreakpoint;
     FCallContext: TFpDbgInfoCallContext;
+    FHasOrigCodeRead, FHasInstPtr: Boolean;
+    FInitError: Boolean;
     procedure Init; override;
 
     procedure InsertCallInstructionCode;
@@ -199,10 +201,13 @@ type
     procedure StoreRoutineResult;
     procedure StoreRegisters;
     procedure RestoreRegisters;
+
+    procedure HandleUnrecoverable;
+    procedure RestoreState;
   public
     constructor Create(AController: TDbgController; const ARoutineAddress: TFpDbgMemLocation; ACallContext:TFpDbgInfoCallContext);
     destructor Destroy; override;
-    procedure DoContinue(AProcess: TDbgProcess; AThread: TDbgThread); override;
+    function DoContinue(AProcess: TDbgProcess; AThread: TDbgThread): boolean; override;
   end;
 
 
@@ -421,7 +426,7 @@ uses
   FpImgReaderBase, FpDbgCommon;
 
 var
-  DBG_VERBOSE, DBG_WARNINGS, FPDBG_COMMANDS: PLazLoggerLogGroup;
+  DBG_VERBOSE, DBG_WARNINGS, FPDBG_COMMANDS, FPDBG_FUNCCALL: PLazLoggerLogGroup;
 
 { TDbgControllerCallRoutineCmd }
 
@@ -435,11 +440,6 @@ begin
   {$IFNDEF Windows}
   raise Exception.Create('Calling functions is only supported on Linux');
   {$ENDIF}
-  {$ENDIF}
-
-  {$IFDEF Linux}
-  if FController.CurrentProcess.Mode <> dm64 then
-    raise Exception.Create('Calling functions is only supported on 64-bits (x86_64)');
   {$ENDIF}
 
   FRoutineAddress := LocToAddr(ARoutineAddress);
@@ -456,12 +456,17 @@ end;
 
 procedure TDbgControllerCallRoutineCmd.Init;
 begin
+  debugln(FPDBG_FUNCCALL, ['CallRoutine INIT - Cmd.Init - ProcessLoop starts']);
   inherited Init;
-
-  FCallContext.WriteStack;
 
   FStep := sSingleStep;
   StoreInstructionPointer;
+
+  if not FCallContext.WriteStack then begin
+    FInitError := True;
+    exit;
+  end;
+
   InsertCallInstructionCode;
 end;
 
@@ -477,13 +482,20 @@ begin
 
   // Store the original code of the current instruction
   SetLength(FOriginalCode, 5);
-  if not FProcess.ReadData(CurrentIP, 5, FOriginalCode[0]) then
-  raise Exception.Create('Failed to read the original code at the instruction pointer');
+  if not FProcess.ReadData(CurrentIP, 5, FOriginalCode[0]) then begin
+    FCallContext.SetError('Failed to read code from mem');
+    FInitError := True;
+    exit;
+  end;
+  FHasOrigCodeRead := True;
 
   // Calculate the relative offset between the address of the current instruction
   // and the address of the function we want to call.
-  if Abs(Int64(FRoutineAddress)-Int64(CurrentIP))>=MaxSIntValue then
-    raise Exception.Create('Calling this function is not supported. Offset to the function that is to be called is too high.');
+  if Abs(Int64(FRoutineAddress)-Int64(CurrentIP))>=MaxSIntValue then begin
+    FCallContext.SetError('Calling this function is not supported. Offset to the function that is to be called is too high.');
+    FInitError := True;
+    exit;
+  end;
   RelAddr := Int32(FRoutineAddress) - (Int32(CurrentIP) + 5); // 5 is the size of the instruction we are about to add.
 
   // Construct the code to call the function.
@@ -493,15 +505,27 @@ begin
   DW^ := RelAddr;
 
   // Overwrite the current code with the new code to call the function
-  FProcess.WriteInstructionCode(CurrentIP, 5, Buf[0]);
+  if not FProcess.WriteInstructionCode(CurrentIP, 5, Buf[0]) then begin
+    FCallContext.SetError('Failed to write code to mem');
+    FInitError := True;
+    exit;
+  end;
 
   // Store the address where the debugee should return at after the function
   // finished. It is used to determine if the call has been completed succesfully.
   FReturnAdress := CurrentIP + 5;
 end;
 
-procedure TDbgControllerCallRoutineCmd.DoContinue(AProcess: TDbgProcess; AThread: TDbgThread);
+function TDbgControllerCallRoutineCmd.DoContinue(AProcess: TDbgProcess;
+  AThread: TDbgThread): boolean;
 begin
+  Result := not FInitError;
+  if not Result then begin
+    // Code and InstrPtr should not be modified yet.
+    RestoreState;
+    exit;
+  end;
+
   case FStep of
     sSingleStep: AProcess.Continue(AProcess, AThread, True);  // Single step into the function
     sRunRoutine: AProcess.Continue(AProcess, AThread, False); // Continue running the function
@@ -512,6 +536,15 @@ procedure TDbgControllerCallRoutineCmd.DoResolveEvent(var AnEvent: TFPDEvent; An
 var
   CurrentIP: TDBGPtr;
 begin
+  if FInitError then begin
+    assert(False, 'TDbgControllerCallRoutineCmd.DoResolveEvent: False / should never be here');
+    if not IsError(FCallContext.LastError) then
+      FCallContext.SetError('Failed to setup call');
+    FThread.ClearExceptionSignal;
+    RestoreState;
+    Finished := True;
+  end;
+
   case FStep of
     sSingleStep: begin
       // The debugee is in the routine now. Restore the original code.
@@ -524,16 +557,33 @@ begin
         AnEvent := deInternalContinue;
         Finished := false;
         FStep := sRunRoutine;
-      end else
-        raise Exception.Create('Fatal debugger-result during function-call.');
+      end else begin
+        assert(False, 'TDbgControllerCallRoutineCmd.DoResolveEvent: False / failed single step, should never happen');
+        FCallContext.SetError('Failed to make call');
+        FThread.ClearExceptionSignal;
+        RestoreState;
+        Finished := True;
+      end;
     end;
     sRunRoutine: begin
       // Now the debugee has stopped while running the routine.
 
-      if not (AnEvent in [deException, deBreakpoint]) then
+      if AnEvent in [deInternalContinue, deLoadLibrary, deUnloadLibrary] then begin
+        AnEvent := deInternalContinue;
+        Finished := false;
+        exit;
+      end;
+
+
+      if not (AnEvent in [deException, deBreakpoint, deHardCodedBreakpoint, deExitProcess]) then begin
+        //deCreateProcess, deFinishedStep
         // Bail out. It can be anything, even deExitProcess. Maybe that handling
         // some events can be implemented somewhere in the future.
-        raise Exception.Create('Fatal debugger-result during function-call.');
+        FCallContext.SetError('Internal error');
+        HandleUnrecoverable;
+        Finished := True;
+        Exit;
+      end;
 
       CurrentIP := FController.CurrentThread.GetInstructionPointerRegisterValue;
       if CurrentIP<>FReturnAdress then
@@ -541,7 +591,7 @@ begin
         // If we are not at the return-adres, the debugee has stopped due to some
         // unforeseen reason. Skip setting up the call-context, but assign an
         // error instead.
-        if (AnEvent = deBreakpoint) then
+        if (AnEvent in [deBreakpoint, deHardCodedBreakpoint, deExitProcess]) then
           // Note that deBreakpoint does not necessarily mean that it it stopped
           // at an actual breakpoint.
           FCallContext.SetError('The function stopped unexpectedly. (Breakpoint, Exception, etc)')
@@ -563,19 +613,27 @@ begin
       RemoveHiddenBreakpointAtReturnAddress;
 
       // Restore the debugee in the original state. So debugging can continue...
-      RestoreInstructionPointer();
-      RestoreRegisters();
+      RestoreState;
       Finished := true;
     end
-  else
-    Finished := True;
+  else begin
+      RestoreState;
+      Finished := True;
+    end
   end;
 end;
 
 procedure TDbgControllerCallRoutineCmd.RestoreOriginalCode;
 begin
-  if not FProcess.WriteInstructionCode(FOriginalInstructionPointer, Length(FOriginalCode), FOriginalCode[0]) then
-    raise Exception.Create('Failed to restore the original code at the instruction-pointer');
+  debugln(FPDBG_FUNCCALL, ['CallRoutine -- << Restore orig Code']);
+  if not FHasOrigCodeRead then
+    exit;
+  FHasOrigCodeRead := False;
+  if not FProcess.WriteInstructionCode(FOriginalInstructionPointer, Length(FOriginalCode), FOriginalCode[0]) then begin
+    // There is no recovery from here. Attempt to exti somewhat graceful
+    HandleUnrecoverable;
+    FCallContext.SetError('Failed to restore target app after call. Terminating');
+  end;
 end;
 
 procedure TDbgControllerCallRoutineCmd.SetHiddenBreakpointAtReturnAddress(AnAddress: TDBGPtr);
@@ -587,11 +645,16 @@ end;
 
 procedure TDbgControllerCallRoutineCmd.StoreInstructionPointer;
 begin
+  debugln(FPDBG_FUNCCALL, ['CallRoutine -- >> Store IP']);
   FOriginalInstructionPointer := FController.CurrentThread.GetInstructionPointerRegisterValue;
+  FHasInstPtr := True;
 end;
 
 procedure TDbgControllerCallRoutineCmd.RestoreInstructionPointer;
 begin
+  if not FHasInstPtr then
+    exit;
+  debugln(FPDBG_FUNCCALL, ['CallRoutine -- << Restore IP']);
   {$ifdef cpui386}
   FController.CurrentThread.SetRegisterValue('eip', FOriginalInstructionPointer);
   {$else}
@@ -609,7 +672,26 @@ end;
 
 procedure TDbgControllerCallRoutineCmd.RestoreRegisters;
 begin
+  debugln(FPDBG_FUNCCALL, ['CallRoutine -- << RestoreRegisters']);
   FController.CurrentThread.RestoreRegisters;
+end;
+
+procedure TDbgControllerCallRoutineCmd.HandleUnrecoverable;
+begin
+  // There is no recovery from here. Attempt to exti somewhat graceful
+  FController.Stop;
+  FProcess.TerminateProcess;
+end;
+
+procedure TDbgControllerCallRoutineCmd.RestoreState;
+begin
+  try
+    RestoreOriginalCode;
+    RestoreInstructionPointer();
+    RestoreRegisters();
+  except
+    HandleUnrecoverable;
+  end;
 end;
 
 procedure TDbgControllerCallRoutineCmd.RemoveHiddenBreakpointAtReturnAddress();
@@ -619,6 +701,7 @@ end;
 
 procedure TDbgControllerCallRoutineCmd.StoreRegisters;
 begin
+  debugln(FPDBG_FUNCCALL, ['CallRoutine -- >> StoreRegisters']);
   FController.CurrentThread.StoreRegisters;
 end;
 
@@ -693,10 +776,12 @@ end;
 
 { TDbgControllerContinueCmd }
 
-procedure TDbgControllerContinueCmd.DoContinue(AProcess: TDbgProcess; AThread: TDbgThread);
+function TDbgControllerContinueCmd.DoContinue(AProcess: TDbgProcess;
+  AThread: TDbgThread): boolean;
 begin
   assert(FProcess=AProcess, 'TDbgControllerContinueCmd.DoContinue: FProcess=AProcess');
   AProcess.Continue(AProcess, AThread, False);
+  Result := True;
 end;
 
 procedure TDbgControllerContinueCmd.DoResolveEvent(var AnEvent: TFPDEvent;
@@ -707,11 +792,12 @@ end;
 
 { TDbgControllerStepIntoInstructionCmd }
 
-procedure TDbgControllerStepIntoInstructionCmd.DoContinue(
-  AProcess: TDbgProcess; AThread: TDbgThread);
+function TDbgControllerStepIntoInstructionCmd.DoContinue(AProcess: TDbgProcess;
+  AThread: TDbgThread): boolean;
 begin
   assert(FProcess=AProcess, 'TDbgControllerStepIntoInstructionCmd.DoContinue: FProcess=AProcess');
   FProcess.Continue(FProcess, FThread, True);
+  Result := True;
 end;
 
 procedure TDbgControllerStepIntoInstructionCmd.DoResolveEvent(
@@ -810,9 +896,10 @@ begin
   inherited Destroy;
 end;
 
-procedure TDbgControllerHiddenBreakStepBaseCmd.DoContinue(AProcess: TDbgProcess;
-  AThread: TDbgThread);
+function TDbgControllerHiddenBreakStepBaseCmd.DoContinue(AProcess: TDbgProcess;
+  AThread: TDbgThread): boolean;
 begin
+  Result := True;
   if (AThread <> FThread) then begin
     FProcess.Continue(FProcess, AThread, False);
     exit;
@@ -948,9 +1035,10 @@ begin
   inherited Create(AController);
 end;
 
-procedure TDbgControllerLineStepBaseCmd.DoContinue(AProcess: TDbgProcess;
-  AThread: TDbgThread);
+function TDbgControllerLineStepBaseCmd.DoContinue(AProcess: TDbgProcess;
+  AThread: TDbgThread): boolean;
 begin
+  Result := True;
   if AThread = FThread then
     FWasAtJumpInstruction := False;
   inherited DoContinue(AProcess, AThread);
@@ -1590,7 +1678,7 @@ var
   AProcessIdentifier: THandle;
   AThreadIdentifier: THandle;
   AExit: boolean;
-  IsFinished, b: boolean;
+  IsFinished, b, DidContinue: boolean;
   EventProcess: TDbgProcess;
   DummyThread: TDbgThread;
   CurCmd: TDbgControllerCmd;
@@ -1618,6 +1706,7 @@ begin
 
   repeat
     ReleaseRefAndNil(FDefaultContext);
+    DidContinue := True;
     if assigned(FCurrentProcess) and not assigned(FMainProcess) then begin
       // IF there is a pause-request, we will hit a deCreateProcess.
       // No need to indicate FRunning
@@ -1643,7 +1732,7 @@ begin
         else
           begin
           DebugLnEnter(FPDBG_COMMANDS, 'Continue process with command '+FCommand.ClassName);
-          FCommand.DoContinue(FCurrentProcess, FCurrentThread);
+          DidContinue := FCommand.DoContinue(FCurrentProcess, FCurrentThread);
           end;
 
         // TODO: replace the dangling pointer with the next best value....
@@ -1656,6 +1745,11 @@ begin
         DebugLnExit(FPDBG_COMMANDS);
       end;
     end;
+    if not DidContinue then begin
+      FPDEvent := deFailed;
+      break;
+    end;
+
     if not FCurrentProcess.WaitForDebugEvent(AProcessIdentifier, AThreadIdentifier) then
       Continue;
     InterLockedExchange(FRunning, 0);
@@ -1942,6 +2036,7 @@ function TDbgController.Call(const FunctionAddress: TFpDbgMemLocation;
 var
   Context: TFpDbgInfoCallContext;
 begin
+  debugln(FPDBG_FUNCCALL, ['CallRoutine BEGIN']);
   Context := TFpDbgInfoCallContext.Create(ABaseContext, AMemReader, AMemConverter, FCurrentProcess, FCurrentThread);
   Context.AddReference;
   InitializeCommand(TDbgControllerCallRoutineCmd.Create(self, FunctionAddress, Context));
@@ -1952,6 +2047,7 @@ initialization
   DBG_VERBOSE := DebugLogger.FindOrRegisterLogGroup('DBG_VERBOSE' {$IFDEF DBG_VERBOSE} , True {$ENDIF} );
   DBG_WARNINGS := DebugLogger.FindOrRegisterLogGroup('DBG_WARNINGS' {$IFDEF DBG_WARNINGS} , True {$ENDIF} );
   FPDBG_COMMANDS := DebugLogger.FindOrRegisterLogGroup('FPDBG_COMMANDS' {$IFDEF FPDBG_COMMANDS} , True {$ENDIF} );
+  FPDBG_FUNCCALL := DebugLogger.FindOrRegisterLogGroup('FPDBG_FUNCCALL' {$IFDEF FPDBG_FUNCCALL} , True {$ENDIF} );
 
 end.
 

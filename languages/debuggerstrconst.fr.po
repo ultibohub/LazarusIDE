@@ -21,6 +21,10 @@ msgstr ""
 msgid "- Disabled -"
 msgstr ""
 
+#: debuggerstrconst.dlgfpconvoptfpconverter
+msgid "Converter"
+msgstr ""
+
 #: debuggerstrconst.dlgfpconvoptfpdebugconverter
 msgid "FpDebug Converter:"
 msgstr ""
@@ -159,6 +163,10 @@ msgstr "Ajouter le résultat en fin d'historique"
 #: debuggerstrconst.dsrevalhistoryup
 msgid "Insert result at top of history"
 msgstr "Insérer le résultat en début d'historique"
+
+#: debuggerstrconst.dsrevalusefpdebugconverter
+msgid "Use FpDebug Converter"
+msgstr ""
 
 #: debuggerstrconst.synfnewvalueisempty
 msgid "\"New value\" is empty."

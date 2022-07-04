@@ -1100,6 +1100,7 @@ type
     function  SourceWindowWithID(const AnID: Integer): TSourceNotebook;
     // Editors
     function  SourceEditorCount: integer; override;
+    function  FirstIndexOfSourceEditor(AnSrcEditor: TSourceEditor): Integer;
     function  GetActiveSE: TSourceEditor;                                       { $note deprecate and use ActiveEditor}
     property  ActiveEditor: TSourceEditor read GetActiveSrcEditor  write SetActiveSrcEditor; // reintroduced
     property SourceEditors[Index: integer]: TSourceEditor read GetSrcEditors;   // reintroduced
@@ -2479,7 +2480,9 @@ Begin
       // ' TextSelectedColor=',DbgS(TextSelectedColor),
       // '');
     end;
+    {$IFDEF VerboseIDECompletionBox}
     debugln(['TSourceEditCompletion.ccExecute ',DbgSName(SourceEditorManager.ActiveCompletionPlugin)]);
+    {$ENDIF}
     if (CurrentCompletionType=ctIdentCompletion)
     and (SourceEditorManager.ActiveCompletionPlugin=nil)
     then
@@ -10355,6 +10358,24 @@ begin
   Result := 0;
   for i := 0 to SourceWindowCount - 1 do
     Result := Result + SourceWindows[i].Count;
+end;
+
+function TSourceEditorManager.FirstIndexOfSourceEditor(
+  AnSrcEditor: TSourceEditor): Integer;
+var
+  i, c: Integer;
+begin
+  i := 0;
+  c := 0;
+  while (i < SourceWindowCount) do begin
+    Result := SourceWindows[i].IndexOfEditor(AnSrcEditor);
+    if Result >= 0 then begin
+      Result := Result + c;
+      exit;
+    end;
+    c := c + SourceWindows[i].Count;
+    inc(i);
+  end;
 end;
 
 function TSourceEditorManager.GetActiveSE: TSourceEditor;

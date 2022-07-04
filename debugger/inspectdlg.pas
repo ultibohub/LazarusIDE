@@ -54,6 +54,7 @@ type
 
   TIDEInspectDlg = class(TDebuggerDlg)
     ArrayNavigationBar1: TArrayNavigationBar;
+    btnUseConverter: TToolButton;
     EdInspect: TComboBox;
     ErrorLabel: TLabel;
     menuCopyValue: TMenuItem;
@@ -84,6 +85,7 @@ type
     procedure btnColClassClick(Sender: TObject);
     procedure btnForwardClick(Sender: TObject);
     procedure btnPowerClick(Sender: TObject);
+    procedure btnUseConverterClick(Sender: TObject);
     procedure btnUseInstanceClick(Sender: TObject);
     procedure EdInspectEditingDone(Sender: TObject);
     procedure EdInspectKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
@@ -109,6 +111,7 @@ type
     FWatchPrinter: TWatchResultPrinter;
     FInspectWatches: TCurrentWatches;
     FCurrentWatchValue: TIdeWatchValue;
+    FCurrentResData: TWatchResultData;
     FHumanReadable: ansistring;
     FGridData: TStringGrid;
     FGridMethods: TStringGrid;
@@ -231,7 +234,7 @@ var
   Res: TWatchResultData;
   v: String;
 begin
-  Res := FCurrentWatchValue.ResultData;
+  Res := FCurrentResData;
 
   DataPage.TabVisible:=true;
   PropertiesPage.TabVisible:=false;
@@ -259,7 +262,7 @@ var
   Res: TWatchResultData;
   v: String;
 begin
-  Res := FCurrentWatchValue.ResultData;
+  Res := FCurrentResData;
   DataPage.TabVisible:=true;
   PropertiesPage.TabVisible:=false;
   MethodsPage.TabVisible:=false;
@@ -295,7 +298,7 @@ var
   Res: TWatchResultData;
   v: String;
 begin
-  Res := FCurrentWatchValue.ResultData;
+  Res := FCurrentResData;
 
   DataPage.TabVisible:=true;
   PropertiesPage.TabVisible:=false;
@@ -345,7 +348,12 @@ begin
   btnColType.Enabled := True;
   btnColVisibility.Enabled := False;
 
-  Res := FCurrentWatchValue.ResultData;
+  Res := FCurrentResData;
+  if Res = nil then begin
+    TimerClearData.Enabled := True;
+    exit;
+  end;
+
   StatusBar1.SimpleText:=ShortenedExpression+': '+Res.TypeName + '  Len: ' + IntToStr(Res.ArrayLength);
 
   LowBnd := Res.LowBound;
@@ -403,7 +411,7 @@ var
   FldInfo: TWatchResultDataFieldInfo;
   AnchType: String;
 begin
-  Res := FCurrentWatchValue.ResultData;
+  Res := FCurrentResData;
 
   FGridData.Columns[0].Visible := (Res.StructType in [dstClass, dstObject]) and btnColClass.Down; // anchestor
   FGridData.Columns[2].Visible := btnColType.Down; // typename
@@ -540,6 +548,7 @@ end;
 procedure TIDEInspectDlg.FormShow(Sender: TObject);
 begin
   ReleaseRefAndNil(FCurrentWatchValue);
+  FCurrentResData := nil;
   FInspectWatches.Clear;
   UpdateData;
 end;
@@ -567,6 +576,8 @@ end;
 
 procedure TIDEInspectDlg.TimerClearDataTimer(Sender: TObject);
 begin
+  if not TimerClearData.Enabled then
+    exit;
   TimerClearData.Enabled := False;
   Clear;
 end;
@@ -618,8 +629,8 @@ begin
 
   end
   else
-  if FCurrentWatchValue.ResultData <> nil then begin
-    case FCurrentWatchValue.ResultData.ValueKind of
+  if FCurrentResData <> nil then begin
+    case FCurrentResData.ValueKind of
       rdkPointerVal: begin
           i := FGridData.Row;
           if (i < 1) or (i >= FGridData.RowCount) then exit;
@@ -640,7 +651,7 @@ begin
           if (i < 1) or (i >= FGridData.RowCount) then exit;
           s := FGridData.Cells[1, i];
 
-          if btnUseInstance.Down and (FCurrentWatchValue.ResultData.StructType in [dstClass, dstObject]) then
+          if btnUseInstance.Down and (FCurrentResData.StructType in [dstClass, dstObject]) then
             Execute(FGridData.Cells[0, i] + '(' + FExpression + ').' + s)
           else
             Execute(FExpression + '.' + s);
@@ -657,7 +668,7 @@ begin
   if ( (FCurrentWatchValue.TypeInfo <> nil) and
        (FCurrentWatchValue.TypeInfo.Kind = skClass)
      ) or
-     ( FCurrentWatchValue.ResultData.StructType in [dstClass, dstObject] )
+     ( FCurrentResData.StructType in [dstClass, dstObject] )
   then begin
     FGridData.Columns[0].Visible := btnColClass.Down;
     FGridData.Columns[4].Visible := btnColVisibility.Down;
@@ -677,12 +688,18 @@ begin
   then begin
     btnPower.ImageIndex := FPowerImgIdx;
     ReleaseRefAndNil(FCurrentWatchValue);
+    FCurrentResData := nil;
     FInspectWatches.Clear;
     UpdateData;
   end
   else begin
     btnPower.ImageIndex := FPowerImgIdxGrey;
   end;
+end;
+
+procedure TIDEInspectDlg.btnUseConverterClick(Sender: TObject);
+begin
+  UpdateData;
 end;
 
 procedure TIDEInspectDlg.btnBackwardClick(Sender: TObject);
@@ -707,6 +724,8 @@ begin
          btnUseInstance.Down
       then
         w.EvaluateFlags := w.EvaluateFlags + [defClassAutoCast];
+      if not btnUseConverter.Down then
+        w.EvaluateFlags := w.EvaluateFlags + [defSkipValConv];
       DebugBoss.ViewDebugDialog(ddtWatches, False);
     end;
   finally
@@ -730,6 +749,8 @@ begin
 
   btnUseInstance.Caption := lisInspectUseInstance;
   btnUseInstance.Hint    := lisInspectUseInstanceHint;
+  btnUseConverter.Caption := dlgFpConvOptFpConverter;
+  btnUseConverter.Hint    := dsrEvalUseFpDebugConverter;
   btnColClass.Hint       := lisInspectShowColClass;
   btnColType.Hint        := lisInspectShowColType;
   btnColVisibility.Hint  := lisInspectShowColVisibility;
@@ -1261,6 +1282,7 @@ begin
   DebugBoss.UnregisterStateChangeHandler(@DoDebuggerState);
   DebugBoss.UnregisterWatchesInvalidatedHandler(@DoWatchesInvalidated);
   ReleaseRefAndNil(FCurrentWatchValue);
+  FCurrentResData := nil;
   FreeAndNil(FHistory);
   FreeAndNil(FWatchPrinter);
   //FreeAndNil(FDataGridHook);
@@ -1349,11 +1371,12 @@ begin
 
   FAlternateExpression := '';
   FExpressionWasEvaluated := True;
-  FHumanReadable := FWatchPrinter.PrintWatchValue(FCurrentWatchValue.ResultData, wdfStructure);
+  FCurrentResData := FCurrentWatchValue.ResultData;
+  FHumanReadable := FWatchPrinter.PrintWatchValue(FCurrentResData, wdfStructure);
 
   if FCurrentWatchValue.Validity = ddsValid then begin
-      ArrayNavigationBar1.Visible := False;
     if FCurrentWatchValue.TypeInfo <> nil then begin
+      ArrayNavigationBar1.Visible := False;
       case FCurrentWatchValue.TypeInfo.Kind of
         skClass, skObject, skInterface: InspectClass();
         skRecord: InspectRecord();
@@ -1379,8 +1402,25 @@ begin
     end
     else begin
     // resultdata
-      ArrayNavigationBar1.Visible := FCurrentWatchValue.ResultData.ValueKind = rdkArray;
-      case FCurrentWatchValue.ResultData.ValueKind of
+
+      if (FCurrentResData.ValueKind = rdkStruct) and
+         (FCurrentResData.StructType = dstInternal)
+      then begin
+        if (FCurrentResData.FieldCount > 0) then
+        //if (FCurrentResData.FieldCount = 1) then
+          FCurrentResData := FCurrentResData.Fields[0].Field;
+
+        if (FCurrentResData.FieldCount > 1) and
+           ( (FCurrentResData.Fields[0].Field = nil) or
+             (FCurrentResData.Fields[0].Field.ValueKind = rdkError)
+           )
+        then
+          FCurrentResData := FCurrentResData.Fields[1].Field;
+      end;
+
+
+      ArrayNavigationBar1.Visible := FCurrentResData.ValueKind = rdkArray;
+      case FCurrentResData.ValueKind of
         //rdkError: ;
         rdkPrePrinted,
         rdkString,
@@ -1425,6 +1465,7 @@ begin
   if (not btnPower.Down) or (not Visible) then exit;
   if (ADebugger.State = dsPause) and (AnOldState <> dsPause) then begin
     ReleaseRefAndNil(FCurrentWatchValue);
+    FCurrentResData := nil;
     FInspectWatches.Clear;
     UpdateData;
   end;
@@ -1433,6 +1474,8 @@ end;
 procedure TIDEInspectDlg.ArrayNavChanged(Sender: TArrayNavigationBar;
   AValue: Int64);
 begin
+  if (FCurrentResData = nil) or (FCurrentResData.ValueKind <> rdkArray) then
+    exit;
   InspectResDataArray;
 end;
 
@@ -1440,6 +1483,7 @@ procedure TIDEInspectDlg.DoWatchesInvalidated(Sender: TObject);
 begin
   if (not btnPower.Down) or (not Visible) then exit;
   ReleaseRefAndNil(FCurrentWatchValue);
+  FCurrentResData := nil;
   FInspectWatches.Clear;
   UpdateData;
 end;
@@ -1459,6 +1503,7 @@ begin
   expr := trim(FExpression);
   if expr = '' then begin
     ReleaseRefAndNil(FCurrentWatchValue);
+    FCurrentResData := nil;
     Clear;
     StatusBar1.SimpleText := '';
     exit;
@@ -1483,6 +1528,8 @@ begin
   Opts := [defExtraDepth, defFullTypeInfo];
   if btnUseInstance.Down then
     include(Opts, defClassAutoCast);
+  if not btnUseConverter.Down then
+    include(Opts, defSkipValConv);
 
   if (FCurrentWatchValue <> nil) and
      (FCurrentWatchValue.Expression = expr) and
@@ -1496,6 +1543,7 @@ begin
   end;
 
   ReleaseRefAndNil(FCurrentWatchValue);
+  FCurrentResData := nil;
 
   FInspectWatches.BeginUpdate;
   AWatch := FInspectWatches.Find(expr);
@@ -1510,9 +1558,11 @@ begin
   FInspectWatches.EndUpdate;
   FCurrentWatchValue := AWatch.Values[tid, idx];
   if FCurrentWatchValue <> nil then begin
+    FCurrentResData := FCurrentWatchValue.ResultData;
     FCurrentWatchValue.AddReference;
     FCurrentWatchValue.Value;
   end;
+  DoWatchUpdated(FInspectWatches, AWatch);
 end;
 
 initialization
