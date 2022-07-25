@@ -102,56 +102,56 @@
       </element>
 
       <element name="mtWarning">
-        <short>Alias to the TMsgDlgType enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mtError">
-        <short>Alias to the TMsgDlgType enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mtInformation">
-        <short>Alias to the TMsgDlgType enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mtConfirmation">
-        <short>Alias to the TMsgDlgType enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mtCustom">
-        <short>Alias to the TMsgDlgType enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.</short>
       </element>
 
       <element name="mbYes">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbNo">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbOK">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbCancel">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbAbort">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbRetry">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbIgnore">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbAll">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbNoToAll">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbYesToAll">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbHelp">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
       <element name="mbClose">
-        <short>Alias to the TMsgDlgBtn enumeration value in uitypes.</short>
+        <short>Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.</short>
       </element>
 
       <element name="mbYesNoCancel">
@@ -1404,7 +1404,7 @@ ADialog.CustomColors.Values['ColorA'] := 'FFFF00';
         <seealso/>
       </element>
       <element name="TColorButton.IsButtonColorAutoSizeStored.Result">
-        <short><b>True</b> when ButtonColorAutoSize is set to False.</short>
+        <short><b>True</b> when ButtonColorAutoSize is set to <b>False</b>.</short>
       </element>
 
       <element name="TColorButton.SetBorderWidth">
@@ -1516,7 +1516,7 @@ ADialog.CustomColors.Values['ColorA'] := 'FFFF00';
         <short>Gets a bitmap with the disabled pattern for the control.</short>
         <descr>
           <p>
-            GetDisabledPattern is a TBitmap function used to get the bitmap with the disabled pattern drawn on the control. It is used when the Enabled property (in the control or one of its parents) is set to False.
+            GetDisabledPattern is a TBitmap function used to get the bitmap with the disabled pattern drawn on the control. It is used when the Enabled property (in the control or one of its parents) is set to <b>False</b>.
           </p>
           <p>
             GetDisabledPattern ensures that a TBitmap instance has been created and assigned to an internal member for the class instance. The bitmap contains a pattern with dotted lines that indicate the control cannot accept input values. The allocated bitmap is freed (when assigned) in the destructor for the class instance.
@@ -1540,10 +1540,10 @@ ADialog.CustomColors.Values['ColorA'] := 'FFFF00';
             <var>GetGlyphSize</var> is an overridden <var>TSize</var> function used to get the dimensions for the glyph (color block / swatch) displayed on the button control. Values in ButtonColorAutoSize and ButtonColorSize determine the height and width used for the color block displayed on the control.
           </p>
           <p>
-            When ButtonColorAutoSize is set to True, the color block is auto-sized to fill the unused client area for the control specified in the PaintRect argument. Space is reserved for the Caption (color name), Spacing, BorderWidth, and Margin properties assigned to the control.
+            When ButtonColorAutoSize is set to <b>True</b>, the color block is auto-sized to fill the unused client area for the control specified in the PaintRect argument. Space is reserved for the Caption (color name), Spacing, BorderWidth, and Margin properties assigned to the control.
           </p>
           <p>
-            When ButtonColorAutoSize is False, ButtonColorSize is used as both the width and height for the color block.
+            When ButtonColorAutoSize is <b>False</b>, ButtonColorSize is used as both the width and height for the color block.
           </p>
           <p>
             The return value is a TSize instance where the width and height for the color block are stored in the CX and CY members (respectively). Layout determines whether spacing is reserved in the horizontal (blGlyphLeft, blGlyphRight) or vertical (blGlyphTop, blGlyphBottom) dimensions.
@@ -1677,10 +1677,10 @@ ADialog.CustomColors.Values['ColorA'] := 'FFFF00';
             When set to <b>True</b>, the client area is examined to determine the dimensions for the color block. Space is reserved using the Caption, BorderWidth, Spacing, and Margin properties defined for the control. The unused area in the client rectangle is drawn using a frame filled with the selected ButtonColor for the control.
           </p>
           <p>
-            When set to False, the value in ButtonColorSize is used as both the height and width for the color block or swatch.
+            When set to <b>False</b>, the value in ButtonColorSize is used as both the height and width for the color block or swatch.
           </p>
           <p>
-            The default value for the property is <b>True</b> as assigned in the constructor for the class instance. Setting a new value for the property causes the control to be redrawn. When ButtonColorAutoSize is True, setting a new value for BorderWidth also causes the control to be redrawn.
+            The default value for the property is <b>True</b> as assigned in the constructor for the class instance. Setting a new value for the property causes the control to be redrawn. When ButtonColorAutoSize is <b>True</b>, setting a new value for BorderWidth also causes the control to be redrawn.
           </p>
           <p>
             ButtonColorAutoSize and ButtonColorSize are used in the GetGlyphSize method.
@@ -1780,7 +1780,7 @@ ADialog.CustomColors.Values['ColorA'] := 'FFFF00';
             The Layout property determines the order of the Caption and color block values on the button surface. Layout refers to the alignment for the glyph (color block).
           </p>
           <p>
-            Set ButtonColorAutoSize to <b>True</b> to allow the color block to fill the unused client area for the control. Use ButtonColorSize to set the dimensions for the color block when ButtonColorAutoSize is False.
+            Set ButtonColorAutoSize to <b>True</b> to allow the color block to fill the unused client area for the control. Use ButtonColorSize to set the dimensions for the color block when ButtonColorAutoSize is <b>False</b>.
           </p>
         </descr>
         <seealso>
@@ -2091,7 +2091,7 @@ ADialog.CustomColors.Values['ColorA'] := 'FFFF00';
             <var>OnApplyClicked</var> is a <var>TNotifyEvent</var> property with the event handler signalled when the Apply button is clicked in the font dialog. The Apply button must be enabled in the Options property to receive the event notification.
           </p>
           <p>
-            OnApplyClicked allows the application to perform actions needed when a Font has been applied. This can include assigning the value in Font to another control. Similar actions need to be performed when the Execute method returns True, indicating that the OK button was clicked.
+            OnApplyClicked allows the application to perform actions needed when a Font has been applied. This can include assigning the value in Font to another control. Similar actions need to be performed when the Execute method returns <b>True</b>, indicating that the OK button was clicked.
           </p>
           <p>
             OnApplyClicked is signalled from the ApplyClicked method, and triggered directly from methods in widgetset classes.
@@ -3242,7 +3242,7 @@ TCustomForm.Close ->
       </element>
 
       <element name="TCustomPrintDialog.PrintToFile">
-        <short>When True, printing is spooled to a file instead of the printer.</short>
+        <short>When <b>True</b>, printing is spooled to a file instead of the printer.</short>
         <descr/>
         <seealso/>
       </element>
@@ -4763,7 +4763,7 @@ end;
               UseDefaultPos
             </dt>
             <dd>
-              Indicates if the dialog is displayed using the default position for the dialog form. When set to True, the value poDesigned is used in the Position property for the dialog form. When set to False, the values in the X and Y parameters are used in the Left and Top properties for the dialog form.
+              Indicates if the dialog is displayed using the default position for the dialog form. When set to <b>True</b>, the value poDesigned is used in the Position property for the dialog form. When set to <b>False</b>, the values in the X and Y parameters are used in the Left and Top properties for the dialog form.
             </dd>
           </dl>
           <p>
@@ -4837,39 +4837,77 @@ end;
 
       <element name="QuestionDlg">
         <short>
-          Shows a question to the user and gets a response. Similar to MessageDlg, but allows to use custom button captions and any response values.
+          Shows a question to the user and gets a response. Similar to MessageDlg, but allows to use custom button captions and user-specified response values.
         </short>
         <descr>
           <p>
-            <var>QuestionDlg</var> has the same functionality as MessageDlg except for the <var>Buttons</var> parameter which is of a different type. You can define your own captions and return values for this function.
+            <var>QuestionDlg</var> has the same functionality as MessageDlg except for the <var>Buttons</var> parameter which is of a different type. You can define your own captions,  return values, and optional flags in Buttons using this function.
           </p>
           <p>
-            <var>Buttons</var> contains an array of integer identifiers and optional strings. For each number a button is created. Usually the identifiers are selected as the <var>TModalResult</var> constants <var>[mrNone..mrYesLast]</var> in <link id="Controls"/>); the corresponding buttons will be decorated by an associated icon. Any other integers can be used as well, but their buttons will have no icon. The identifier number of the clicked button is returned by the <var>QuestionDlg()</var> function. The order of the buttons on the dialog form will be the same as the order of the array elements.
+            <var>ACaption</var> contains the text displayed as the title for the dialog form.
           </p>
           <p>
-            Each string following the button identifier in the <var>Buttons</var> array denotes the caption of the button. When the button identifier is one of the default <var>TModalResult</var> values defined in controls.pp (<var>mrNone..mrLast</var>) the caption can be omitted, and the default caption will be used. For non-<var>TModalResult</var> identifiers, the caption MUST be specified. Empty strings are not allowed as captions, they will create a run-time error.
+            <var>AMsg</var> contains the text displayed within the content area for the dialog form. It represents the question to be answered using the dialog.
           </p>
           <p>
-            You can mark one default button by adding the 'IsDefault' option after the caption string. When the user presses 'Return' this button is triggered.
+            <var>DlgType</var> contains a value from the TMsgDlgType enumeration, and determines the icon displayed on the dialog form. See <link id="TMsgDlgType">TMsgDlgType</link> for the values in the enumeration and their meanings.
           </p>
           <p>
-            Some widgetsets provide an Escape key and/or a close button. This results in <var>mrCancel</var> even if it is not in the given button list. Use the 'IsCancel' option after the caption string to redirect it to a button of your choice. You can combine 'IsDefault' and 'IsCancel'.
+            <var>Buttons</var> is defined as an array of const values, and contains the numeric identifiers and optional captions and flags for the buttons displayed on the dialog. QuestionDlg examines the values in Buttons, and creates a button instance for each numeric identifier in the array. Usually, the button identifiers are specified using <var>TModalResult</var> constants like mrOk or mrCancel (defined in <link id="Controls"/>); these buttons will be decorated with an icon associated with the modal result value. Other integer values can be used as well, but their buttons will not have an icon. The order of the buttons on the dialog form will be the same as the order of the numeric values in the array elements.
           </p>
           <p>
-            <b>Example</b>
+            Each string following a numeric button identifier denotes the caption for the button. When the button identifier is one of the default <var>TModalResult</var> values defined in controls.pp (<var>mrNone..mrLast</var>), the caption can be omitted and the default caption will be used. For non-<var>TModalResult</var> identifiers, the caption <b>MUST</b> be specified. An empty string is not allowed as a caption; it will raise a run-time error.
+          </p>
+          <p>
+            You can mark one button as the default button by adding the 'IsDefault' option after the caption string. When the user presses the Return key, this button is triggered. An exception is raised if more than one button has the 'IsDefault' designation.
+          </p>
+          <p>
+            Some widgetsets provide an Escape key and/or a close button for the dialog. This results in <var>mrCancel</var> in the return value, even if it is not in the given button list. Use the 'IsCancel' option after the caption string to cause the button to close the dialog. An exception is raised if more than one button has the 'IsCancel' designation.
+          </p>
+          <p>
+            You can use both 'IsDefault' and 'IsCancel' flags values for a given button by including both strings as arguments following the caption value. Values in button flags are case-insensitive; 'IsDefault' is considered the same as 'isdefault'.
+          </p>
+          <p>
+            The numeric identifier for the button clicked on the dialog is returned by the <var>QuestionDlg()</var> function.
+          </p>
+          <p>
+            The overloaded routines allow a help topic to be displayed when the F1 key is pressed. <var>HelpCtx</var> is the numeric identifier for the help topic passed as an argument to the AskUser routine in the widgetset. <var>HelpKeyword</var> is a string value that identifies the help topic. Please note that HelpKeyword is not implemented in the current LCL version; the numeric help context 0 is always used in the overloaded routine.
+          </p>
+          <p>
+            <b>Examples:</b>
           </p>
 <code>
 var
   res: TModalResult;
-...
-  res := case QuestionDlg('COPYING', 'Abort?', mtConfirmation, [mrNo,'&amp;No','IsDefault', mrYes,'&amp;Yes'], 0)
-  case res of
-    mrYes : ShowMessage('You clicked Yes');
-    mrNo : ShowMessage('You clicked No');
-  else
-    // mrCancel
-    ShowMessage('You cancelled the dialog.');
-  end;
+//...
+
+// OK, Cancel dialog using default button captions
+res := QuestionDlg('Confirm', 'Delete all files and directories?', mtConfirmation,
+  [mrOK, mrCancel], 0);
+//...
+
+
+// OK, Cancel dialog with custom button captions and accelerator keys
+res := QuestionDlg('Confirm', 'Delete all files and directories?', mtConfirmation,
+  [mrOK, '&amp;Do it!', mrCancel, '&amp;Nope'], 0);
+//...
+
+// custom modal result values and captions
+res := QuestionDlg('Question', 'Is it Okay?', mtConfirmation,
+ [400, 'Yes!!!', 401, 'Not cool', 402, 'My mistake'], 0);  
+//...
+
+// Yes, No, Cancel with custom captions and button flags
+res := QuestionDlg('COPYING', 'Abort?', mtConfirmation,
+  [mrNo,'&amp;No', mrYes,'&amp;Yes', mrCancel, '&amp;Cancel', 'IsDefault', 'IsCancel'], 0);
+
+case res of
+  mrYes: ShowMessage('You clicked Yes');
+  mrNo: ShowMessage('You clicked No');
+else
+  // mrCancel
+  ShowMessage('You cancelled the dialog.');
+end;
 </code>
         </descr>
         <seealso>
@@ -4880,41 +4918,30 @@ var
       </element>
       <element name="QuestionDlg.Result">
         <short>
-          The result of this function is the identifier number of the button that the user had pressed to close the dialog.
+          The result of this function is the identifier number for the button that the user pressed to close the dialog.
         </short>
       </element>
       <element name="QuestionDlg.aCaption">
-        <short>Used to set the caption of the question dialog.</short>
-        <descr>Set the caption of the question dialog shown by this function.</descr>
+        <short>Caption displayed as the title for the question dialog.</short>
       </element>
       <element name="QuestionDlg.aMsg">
-        <short>The question to be shown.</short>
-        <descr>The question the user has to answer.</descr>
+        <short>Contains the question the user has to answer using the dialog.</short>
       </element>
       <element name="QuestionDlg.DlgType">
-        <short>The type of dialog, it determines which icon will be shown.</short>
+        <short>The type of dialog. It determines which icon is displayed on the dialog.</short>
       </element>
       <element name="QuestionDlg.Buttons">
         <short>
-          An array of return values and captions for the buttons on the question dialog.
+          An array of return values, captions and optional flags for the buttons on the question dialog.
         </short>
-        <descr>
-          <p>
-            <var>Buttons</var> is defined as a array of const. This means you can define any number of buttons to be shown. If your array consists only of predefined return values like <var>mrOK</var> and <var>mrCancel</var>, the standard OK and Cancel buttons will be shown. The strength of this function, however, is that you can fill the array with arbitrary button identifiers and captions:
-          </p>
-          <code>[400, 'Yes!!!', 401, 'Are you mad?', 402, 'My mistake']</code>
-          <p>
-            This will create a dialog with three buttons; the captions for the buttons will be the strings values given in the array after the numeric return values. The return value of the function will be 400, 401 or 402, depending on whether the user clicked the 'Yes!!!', the 'Are you mad?' or the 'My mistake' button.
-          </p>
-        </descr>
       </element>
       <element name="QuestionDlg.HelpCtx">
-        <short>HelpCtx specifies the help topic that should be shown when F1 is pressed.</short>
-        <descr>HelpCtx specifies the help topic that should be shown when F1 is pressed.</descr>
+        <short>HelpCtx specifies the numeric identifier for the help topic shown when F1 is pressed.</short>
       </element>
       <element name="QuestionDlg.HelpKeyword">
-        <short>HelpKeyword specifies the help topic that should be shown when F1 is pressed.</short>
-        <descr>HelpKeyword specifies the help topic that should be shown when F1 is pressed.</descr>
+        <short>
+          HelpKeyword specifies the help topic shown when F1 is pressed. The string argument is not used in the current LCL version, and the numeric HelpContext is always 0.
+        </short>
       </element>
 
       <element name="DefaultQuestionDialog">
@@ -5014,7 +5041,6 @@ var
       </element>
       <element name="DefaultQuestionDialog.HelpCtx">
         <short>HelpCtx specifies the help topic that should be shown when F1 is pressed.</short>
-        <descr>HelpCtx specifies the help topic that should be shown when F1 is pressed.</descr>
       </element>
 
       <element name="ShowMessage">
@@ -5132,7 +5158,7 @@ var
             PasswordBox is a specialized form of InputQuery. The editbox on the dialog box will mask the input. The only parameters are aCaption and aPrompt.
           </p>
           <p>
-            Behaves very similarly to the InputQuery function with MaskInput set to TRUE; the difference is that the password that was typed in is returned as the result of the function (like InputBox).
+            Behaves very similarly to the InputQuery function with MaskInput set to <b>True</b>; the difference is that the password that was typed in is returned as the result of the function (like InputBox).
           </p>
         </descr>
         <seealso>
@@ -5162,7 +5188,7 @@ var
             Argument values are assigned to the corresponding properties in the dialog class. The Execute method in the dialog class is called to perform file selection or creation as needed, and its return value is used as the return value for the routine. The return value is <b>True</b> when the Execute method for the dialog class returns <b>True</b>.
           </p>
           <p>
-            <var>AFilename</var> contains the initially selected file name in the dialog, and is updated with the value selected using the dialog. A default value is not provided for the argument. If the dialog returns True, the FileName property in the dialog class is assigned to the AFileName argument.
+            <var>AFilename</var> contains the initially selected file name in the dialog, and is updated with the value selected using the dialog. A default value is not provided for the argument. If the dialog returns <b>True</b>, the FileName property in the dialog class is assigned to the AFileName argument.
           </p>
           <p>
             <var>AFilter</var> contains file masks that can be selected in the dialog. The default value is an empty string ('') and causes the all files mask ('*.*' or '*') to be used. See TFileDialog.Filter for more information about the notation allowed in the argument.
