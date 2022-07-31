@@ -14,16 +14,17 @@ uses
 
 type
 
-  { TFpValueCallParamStringByRef }
+  { TFpSymbolCallParamOrdinalOrPointer }
 
-  TFpValueCallParamStringByRef = class(TFpValueDwarfPointer)
-    function GetDwarfDataAddress(out AnAddress: TFpDbgMemLocation;
-      ATargetType: TFpSymbolDwarfType = nil): Boolean; override;
-  end;
+  TFpSymbolCallParamOrdinalOrPointer = class(TFpSymbolDwarfTypeBasic) // act as pointer
+  private type
+    { TFpValueCallParamStringByRef }
 
-  { TFpSymbolCallParamStringByRef }
+    TFpValueCallParamStringByRef = class(TFpValueDwarfPointer)
+      function GetDwarfDataAddress(out AnAddress: TFpDbgMemLocation;
+        ATargetType: TFpSymbolDwarfType = nil): Boolean; override;
+    end;
 
-  TFpSymbolCallParamStringByRef = class(TFpSymbolDwarfTypeBasic) // act as pointer
   protected
     procedure KindNeeded; override;
     procedure Init; override;
@@ -75,12 +76,17 @@ type
 
     function AddParam(AParamSymbolType: TFpSymbol; AValue: TFpValue): Boolean;
     function AddOrdinalParam(AParamSymbolType: TFpSymbol; AValue: QWord): Boolean;
+    function AddOrdinalParam(AValue: QWord): Boolean; inline;
+    (* AddOrdinalViaRefAsParam
+       TODO: need size of the ordinal -- currently using SizeOfAddr in target
+    *)
+    function AddOrdinalViaRefAsParam(AValue: QWord): Boolean; inline;  // For string dec-ref
+    function AddOrdinalViaRefAsParam(AValue: QWord; out ATargetParamAddr: TDBGPtr): Boolean;
     (* AddStringResult:
        Must be called before any AddParam.
        Except for "Self": In case of a method, AddParm(self) must be set before the StringResult
      *)
     function AddStringResult: Boolean;
-    function AddOrdinalViaRefAsParam(AValue: QWord): Boolean;  // For string dec-ref
     function FinalizeParams: Boolean;
 
     // The caller must take care to call DecRef for the result
@@ -96,35 +102,35 @@ implementation
 var
   FPDBG_FUNCCALL: PLazLoggerLogGroup;
 
-{ TFpValueCallParamStringByRef }
+{ TFpSymbolCallParamOrdinalOrPointer.TFpValueCallParamStringByRef }
 
-function TFpValueCallParamStringByRef.GetDwarfDataAddress(out
-  AnAddress: TFpDbgMemLocation; ATargetType: TFpSymbolDwarfType): Boolean;
+function TFpSymbolCallParamOrdinalOrPointer.TFpValueCallParamStringByRef.GetDwarfDataAddress
+  (out AnAddress: TFpDbgMemLocation; ATargetType: TFpSymbolDwarfType): Boolean;
 begin
   AnAddress := Address;
   Result := IsReadableLoc(AnAddress);
 end;
 
-{ TFpSymbolCallParamStringByRef }
+{ TFpSymbolCallParamOrdinalOrPointer }
 
-procedure TFpSymbolCallParamStringByRef.KindNeeded;
+procedure TFpSymbolCallParamOrdinalOrPointer.KindNeeded;
 begin
   SetKind(skPointer);
 end;
 
-procedure TFpSymbolCallParamStringByRef.Init;
+procedure TFpSymbolCallParamOrdinalOrPointer.Init;
 begin
   inherited Init;
   EvaluatedFields := EvaluatedFields + [sfiAddress];
 end;
 
-function TFpSymbolCallParamStringByRef.GetTypedValueObject(ATypeCast: Boolean;
+function TFpSymbolCallParamOrdinalOrPointer.GetTypedValueObject(ATypeCast: Boolean;
   AnOuterType: TFpSymbolDwarfType): TFpValueDwarf;
 begin
   Result := TFpValueCallParamStringByRef.Create(AnOuterType);
 end;
 
-constructor TFpSymbolCallParamStringByRef.Create(AName: String;
+constructor TFpSymbolCallParamOrdinalOrPointer.Create(AName: String;
   AStringVarAddress: TDBGPtr);
 begin
   inherited Create(AName, skPointer, TargetLoc(AStringVarAddress));
@@ -345,9 +351,9 @@ end;
 function TFpDbgInfoCallContext.InternalAddStringResult: Boolean;
 var
   ParamSymbol: TFpValue;
-  RefSym: TFpSymbolCallParamStringByRef;
+  RefSym: TFpSymbolCallParamOrdinalOrPointer;
 begin
-  RefSym := TFpSymbolCallParamStringByRef.Create('', 0);
+  RefSym := TFpSymbolCallParamOrdinalOrPointer.Create('', 0);
   ParamSymbol := InternalCreateParamSymbol(FNextParamRegister, RefSym, '');
   try
     Result := ParamSymbol <> nil;
@@ -434,7 +440,7 @@ var
 begin
   Result := False;
   if AParamSymbolType = nil then
-    AParamSymbolType := TFpSymbolCallParamStringByRef.Create('', 0)
+    AParamSymbolType := TFpSymbolCallParamOrdinalOrPointer.Create('', 0)
   else
     AParamSymbolType.AddReference;
   ParamSymbol := InternalCreateParamSymbol(FNextParamRegister, AParamSymbolType, '');
@@ -450,6 +456,11 @@ begin
     ParamSymbol.ReleaseReference;
   end;
   inc(FNextParamRegister);
+end;
+
+function TFpDbgInfoCallContext.AddOrdinalParam(AValue: QWord): Boolean;
+begin
+  AddOrdinalParam(nil, AValue);
 end;
 
 function TFpDbgInfoCallContext.AddStringResult: Boolean;
@@ -472,18 +483,32 @@ end;
 
 function TFpDbgInfoCallContext.AddOrdinalViaRefAsParam(AValue: QWord): Boolean;
 var
-  ParamSymbol: TFpValue;
   m: TDBGPtr;
-  RefSym: TFpSymbolCallParamStringByRef;
 begin
-  m := AllocStack(32);
-  RefSym := TFpSymbolCallParamStringByRef.Create('', m);
+  AddOrdinalViaRefAsParam(AValue, m);
+end;
+
+function TFpDbgInfoCallContext.AddOrdinalViaRefAsParam(AValue: QWord; out
+  ATargetParamAddr: TDBGPtr): Boolean;
+var
+  ParamSymbol: TFpValue;
+  RefSym: TFpSymbolCallParamOrdinalOrPointer;
+begin
+  ATargetParamAddr := AllocStack(32);
+  // TODO: need size of the ordinal
+  Result := FDbgProcess.WriteData(ATargetParamAddr, FDbgProcess.PointerSize, AValue);
+  if not Result then begin
+    FLastError := CreateError(fpErrAnyError, ['Error writing param param to stack memory']);
+    exit;
+  end;
+
+  RefSym := TFpSymbolCallParamOrdinalOrPointer.Create('', ATargetParamAddr);
   ParamSymbol := InternalCreateParamSymbol(FNextParamRegister, RefSym, '');
   try
     Result := ParamSymbol <> nil;
     if not Result then
       exit;
-    ParamSymbol.AsCardinal := m;
+    ParamSymbol.AsCardinal := ATargetParamAddr;
     Result := not IsError(ParamSymbol.LastError);
     FLastError := ParamSymbol.LastError;
   finally

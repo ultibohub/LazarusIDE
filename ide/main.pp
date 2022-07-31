@@ -130,7 +130,6 @@ uses
   debugger_language_exceptions_options, debugger_signals_options,
   codeexplorer_update_options, codeexplorer_categories_options,
   codeobserver_options, help_general_options, env_file_filters,
-  IdeDebugger_FpValConv_Options,
   // project option frames
   project_application_options, project_forms_options, project_lazdoc_options,
   project_save_options, project_versioninfo_options, project_i18n_options,
@@ -4580,7 +4579,7 @@ begin
       // check .lrj file
       LRJFilename:=ChangeFileExt(CurFilename,'.lrj');
       if FileExistsCached(LRJFilename) then
-        Files[LRJFilename]:=nil;
+        Files[LRJFilename]:=nil; // add
       // check .rst/.rsj file
       RSTFilename:=ChangeFileExt(CurFilename,'.rst');
       RSJFilename:=ChangeFileExt(CurFilename,'.rsj');
@@ -4596,9 +4595,9 @@ begin
       end;
       //DebugLn(['TMainIDE.UpdateProjectPOFile Looking for .rst file ="',RSTFilename,'"']);
       if FileExistsCached(RSTFilename) then
-        Files[RSTFilename]:=nil;
+        Files[RSTFilename]:=nil; // add
       if FileExistsCached(RSJFilename) then
-        Files[RSJFilename]:=nil;
+        Files[RSJFilename]:=nil; // add
     end;
 
     // update po files

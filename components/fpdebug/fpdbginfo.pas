@@ -221,9 +221,21 @@ type
     procedure ResetError;
   end;
 
+  { TFpValueConstWithType }
+
+  TFpValueConstWithType = class(TFpValue)
+  private
+    FType: TFpSymbol;
+  protected
+    function GetTypeInfo: TFpSymbol; override;
+  public
+    destructor Destroy; override;
+    procedure SetTypeName(AName: String);
+  end;
+
   { TFpValueConstNumber }
 
-  TFpValueConstNumber = class(TFpValue)
+  TFpValueConstNumber = class(TFpValueConstWithType)
   private
     FValue: QWord;
     FSigned: Boolean;
@@ -240,7 +252,7 @@ type
 
   { TFpValueConstChar }
 
-  TFpValueConstChar = class(TFpValue) // skChar / Not for strings
+  TFpValueConstChar = class(TFpValueConstWithType) // skChar / Not for strings
   private
     FValue: String;
   protected
@@ -248,6 +260,7 @@ type
     function GetKind: TDbgSymbolKind; override;
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetAsString: AnsiString; override;
+    function GetAsWideString: WideString; override;
     function GetAsCardinal: QWord; override;
     function DoGetSize(out ASize: TFpDbgValueSize): Boolean; override;
   public
@@ -256,7 +269,7 @@ type
 
   { TFpValueConstWideChar }
 
-  TFpValueConstWideChar = class(TFpValue) // skChar / Not for strings
+  TFpValueConstWideChar = class(TFpValueConstWithType) // skChar / Not for strings
   private
     FValue: WideChar;
     function GetValue: String;
@@ -275,7 +288,7 @@ type
 
   { TFpValueConstString }
 
-  TFpValueConstString = class(TFpValue) // skString
+  TFpValueConstString = class(TFpValueConstWithType) // skString
   private
     FValue: String;
   protected
@@ -283,13 +296,14 @@ type
     function GetKind: TDbgSymbolKind; override;
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetAsString: AnsiString; override;
+    function GetAsWideString: WideString; override;
   public
     constructor Create(const AValue: AnsiString);
   end;
 
   { TFpValueConstFloat }
 
-  TFpValueConstFloat = class(TFpValue)
+  TFpValueConstFloat = class(TFpValueConstWithType)
   private
     FValue: Extended;
   protected
@@ -303,7 +317,7 @@ type
 
   { TFpValueConstBool}
 
-  TFpValueConstBool = class(TFpValue)
+  TFpValueConstBool = class(TFpValueConstWithType)
   private
     FValue: Boolean;
   protected
@@ -318,7 +332,7 @@ type
 
   { TFpValueConstAddress }
 
-  TFpValueConstAddress = class(TFpValue)
+  TFpValueConstAddress = class(TFpValueConstWithType)
   private
     FAddress: TFpDbgMemLocation;
   protected
@@ -776,6 +790,11 @@ begin
   Result := Value;
 end;
 
+function TFpValueConstString.GetAsWideString: WideString;
+begin
+  Result := GetAsString;
+end;
+
 constructor TFpValueConstString.Create(const AValue: AnsiString);
 begin
   inherited Create;
@@ -799,6 +818,11 @@ end;
 function TFpValueConstChar.GetAsString: AnsiString;
 begin
   Result := Value;
+end;
+
+function TFpValueConstChar.GetAsWideString: WideString;
+begin
+  Result := GetAsString;
 end;
 
 function TFpValueConstChar.GetAsCardinal: QWord;
@@ -1097,6 +1121,27 @@ end;
 procedure TFpValue.SetAsString(AValue: AnsiString);
 begin
   SetLastError(CreateError(fpErrChangeVariableNotSupported));
+end;
+
+{ TFpValueConstWithType }
+
+function TFpValueConstWithType.GetTypeInfo: TFpSymbol;
+begin
+  Result := FType;
+end;
+
+destructor TFpValueConstWithType.Destroy;
+begin
+  inherited Destroy;
+  FType.ReleaseReference;
+end;
+
+procedure TFpValueConstWithType.SetTypeName(AName: String);
+begin
+  if FType = nil then
+    FType := TFpSymbol.Create(AName)
+  else
+    FType.SetName(AName);
 end;
 
 { TPasParserConstNumberSymbolValue }
