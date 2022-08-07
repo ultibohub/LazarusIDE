@@ -5,21 +5,27 @@ unit IdeDebuggerWatchResultJSon;
 interface
 
 uses
-  Classes, SysUtils, IdeDebuggerWatchResult, fpjson, jsonparser, jsonscanner;
+  Classes, SysUtils, IdeDebuggerWatchResult, DbgIntfBaseTypes, fpjson,
+  jsonparser, jsonscanner;
 
 type
 
   { TWatchResultDataJSonBase }
 
-  TWatchResultDataJSonBase = class(TWatchResultDataPrePrinted)
+  TWatchResultDataJSonBase = class(TWatchResultDataString)
   private
     FInternalJSon: TJSONData;
     FIndex: Integer;
     FCurData: TWatchResultDataJSonBase;
+    FJsonAddressKey: String;
+    FJsonTypenameKey: String;
 
     function JSon: TJSONData; inline;
   protected
     function GetAsString: String; override;
+    function GetDataAddress: TDBGPtr; override;
+    function GetHasDataAddress: Boolean; override;
+    function GetTypeName: String; override;
 
     // arary
     function  GetCount: Integer; override;
@@ -36,6 +42,9 @@ type
     procedure SetSelectedIndex(AnIndex: Integer); override;
 
     function HandleExpressionSuffix(ASuffix: String): TWatchResultData; override;
+
+    property JsonAddressKey: String read FJsonAddressKey write FJsonAddressKey;
+    property JsonTypenameKey: String read FJsonTypenameKey write FJsonTypenameKey;
   end;
 
   { TWatchResultDataJSon }
@@ -75,8 +84,7 @@ begin
     exit;
 
   FIndex := TWatchResultDataJSonBase(ASource).FIndex;
-  if FInternalJSon <> nil then
-    Self.Create(FInternalJSon.AsJSON);
+  Self.Create(AsString);
 end;
 
 function TWatchResultDataJSonBase.GetAsString: String;
@@ -84,6 +92,86 @@ begin
   Result := inherited GetAsString;
   if (Result = '') and (FInternalJSon <> nil) then
     Result := FInternalJSon.AsJSON;
+end;
+
+function TWatchResultDataJSonBase.GetDataAddress: TDBGPtr;
+var
+  j: TJSONData;
+begin
+  j := JSon;
+  if (FJsonAddressKey = '') or (j = nil) or not(j is TJSONObject)
+  then
+    exit(inherited GetDataAddress);
+
+  try
+    j := TJSONObject(j).Elements[FJsonAddressKey];
+  except
+    j := nil;
+  end;
+
+  if j = nil then
+    exit(inherited GetDataAddress);
+
+  if j is TJSONString then begin
+    if not TryStrToQWord(j.AsString, Result) then
+      Result := inherited GetDataAddress;
+    exit;
+  end;
+
+  if ((j is TJSONFloatNumber)) or not(j is TJSONNumber) then
+    exit(inherited GetDataAddress);
+
+  if j is TJSONInt64Number then
+    Result := TDBGPtr(j.AsInt64)
+  else
+    Result := j.AsQWord;
+end;
+
+function TWatchResultDataJSonBase.GetHasDataAddress: Boolean;
+var
+  j: TJSONData;
+  d: QWord;
+begin
+  Result := inherited GetHasDataAddress;
+  if Result then
+    exit;
+
+  j := JSon;
+  Result := (FJsonAddressKey <> '') and (j <> nil) and (j is TJSONObject);
+  if not Result then
+    exit;
+
+  try
+    j := TJSONObject(j).Elements[FJsonAddressKey];
+  except
+    j := nil;
+  end;
+  if j = nil then
+    exit(False);
+
+  Result := ((j is TJSONNumber) and not (j is TJSONFloatNumber)) or
+            ((j is TJSONString) and (TryStrToQWord(j.AsString, d)));
+end;
+
+function TWatchResultDataJSonBase.GetTypeName: String;
+var
+  j: TJSONData;
+begin
+  Result := '';
+  j := JSon;
+  if (FJsonTypenameKey = '') or (j = nil) or not(j is TJSONObject) then
+    exit(inherited GetTypeName);
+
+  try
+    j := TJSONObject(j).Elements[FJsonTypenameKey];
+  except
+    j := nil;
+  end;
+
+  if (j = nil) or not(j is TJSONString) then
+    exit(inherited GetTypeName);
+
+  Result := j.AsString;
 end;
 
 function TWatchResultDataJSonBase.GetCount: Integer;
@@ -117,6 +205,10 @@ begin
     FCurData := TWatchResultDataJSonBase.Create('');
   if JSon <> nil then
     FCurData.FInternalJSon := JSon.Items[FIndex];
+
+  TWatchResultDataJSon(FCurData).FJsonAddressKey := FJsonAddressKey;
+  TWatchResultDataJSon(FCurData).FJsonTypenameKey := FJsonTypenameKey;
+
   Result := FCurData;
 end;
 
@@ -145,6 +237,10 @@ begin
     FCurData.FInternalJSon := JSon.Items[AnIndex];
     Result.FieldName := TJSONObject(JSon).Names[AnIndex];
   end;
+
+  TWatchResultDataJSon(FCurData).FJsonAddressKey := FJsonAddressKey;
+  TWatchResultDataJSon(FCurData).FJsonTypenameKey := FJsonTypenameKey;
+
   Result.Field := FCurData;
   Result.Owner := Self;
 end;
@@ -165,6 +261,8 @@ var
   js: TJSONData;
 begin
   Result := Self;
+  if ASuffix = '' then
+    exit;
 
   NeedComma := False;
   InBracket := False;
@@ -270,8 +368,10 @@ begin
     end;
   end;
 
-  if (Idx > SfxLen) and (js <> nil) then begin
+  if (Idx > SfxLen) and (js <> nil) and (js <> JSon) then begin
     Result := TWatchResultDataJSon.Create(js.AsJSON);
+    TWatchResultDataJSon(Result).FJsonAddressKey := FJsonAddressKey;
+    TWatchResultDataJSon(Result).FJsonTypenameKey := FJsonTypenameKey;
     exit;
   end;
 

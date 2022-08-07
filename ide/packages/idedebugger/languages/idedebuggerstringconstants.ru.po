@@ -11,6 +11,50 @@ msgstr ""
 "Language: ru\n"
 "X-Generator: Poedit 2.4.3\n"
 
+#: idedebuggerstringconstants.dbgdispformatbinary
+msgid "Binary"
+msgstr "Двоичное"
+
+#: idedebuggerstringconstants.dbgdispformatcharacter
+msgid "Character"
+msgstr "Символ"
+
+#: idedebuggerstringconstants.dbgdispformatdecimal
+msgid "Decimal"
+msgstr "Десятичное"
+
+#: idedebuggerstringconstants.dbgdispformatdefault
+msgid "Default"
+msgstr "По умолчанию"
+
+#: idedebuggerstringconstants.dbgdispformatfloatingpoin
+msgid "Floating Point"
+msgstr "С плавающей точкой"
+
+#: idedebuggerstringconstants.dbgdispformathexadecimal
+msgid "Hexadecimal"
+msgstr "Шестнадцатеричное"
+
+#: idedebuggerstringconstants.dbgdispformatmemorydump
+msgid "Memory Dump"
+msgstr "Дамп памяти"
+
+#: idedebuggerstringconstants.dbgdispformatpointer
+msgid "Pointer"
+msgstr "Указатель"
+
+#: idedebuggerstringconstants.dbgdispformatrecordstruct
+msgid "Record/Structure"
+msgstr "Запись/Структура"
+
+#: idedebuggerstringconstants.dbgdispformatstring
+msgid "String"
+msgstr "Строка"
+
+#: idedebuggerstringconstants.dbgdispformatunsigned
+msgid "Unsigned"
+msgstr "Беззнаковое"
+
 #: idedebuggerstringconstants.dlgfpconvoptaction
 msgid "Action"
 msgstr "Действие"
@@ -59,4 +103,84 @@ msgstr "Границы: %d .. %d"
 #: idedebuggerstringconstants.dlginspectindexoffirstitemtoshow
 msgid "Index of first item to show"
 msgstr "Индекс первого показываемого элемента"
+
+#: idedebuggerstringconstants.drsaddwatch
+msgid "Add watch"
+msgstr "Добавить наблюдение"
+
+#: idedebuggerstringconstants.drsappendresultatbottomofhis
+msgid "Append result at bottom of history"
+msgstr "Добавлять результат в историю снизу"
+
+#: idedebuggerstringconstants.drsdebugconverter
+msgid "Converter"
+msgstr "Преобразование"
+
+#: idedebuggerstringconstants.drsdisableenableupdatesforth
+msgid "Disable/Enable updates for the entire window"
+msgstr "Отключить/включить обновления для всего окна"
+
+#: idedebuggerstringconstants.drsenterexpression
+msgid "Enter Expression"
+msgstr "Введите выражение"
+
+#: idedebuggerstringconstants.drsevaluate
+msgid "Evaluate"
+msgstr "Вычислить"
+
+#: idedebuggerstringconstants.drshistory
+msgid "History"
+msgstr "История"
+
+#: idedebuggerstringconstants.drsinsertresultattopofhistor
+msgid "Insert result at top of history"
+msgstr "Добавлять результат в историю сверху"
+
+#: idedebuggerstringconstants.drsinspect
+msgid "Inspect"
+msgstr "Просмотреть"
+
+#: idedebuggerstringconstants.drsnewvalue
+msgid "New Value"
+msgstr "Новое значение"
+
+#: idedebuggerstringconstants.drsnewvaluetoassigntothevari
+msgid "New value to assign to the variable in the debugged process (use Shift-Enter to confirm)"
+msgstr "Новое значение переменной отлаживаемого процесса для присвоения (нажмите Shift-Enter для подтверждения)"
+
+#: idedebuggerstringconstants.drsnodebugconverter
+msgid "No Converter"
+msgstr "Без преобразования"
+
+#: idedebuggerstringconstants.drsnohistorykept
+msgid "No history kept"
+msgstr "Не сохранять историю"
+
+#: idedebuggerstringconstants.drsusefunctioncalls
+msgid "Function"
+msgstr "Функция"
+
+#: idedebuggerstringconstants.drsusefunctioncallshint
+msgid "Allow function calls"
+msgstr "Разрешить вызовы функций"
+
+#: idedebuggerstringconstants.drsuseinstanceclass
+msgid "Instance"
+msgstr "Экземпляр"
+
+#: idedebuggerstringconstants.drsuseinstanceclasshint
+msgid "Use Instance class type"
+msgstr "Использовать тип экземпляра класса"
+
+#: idedebuggerstringconstants.lisinspectshowcolclass
+msgid "Show class column"
+msgstr "Показывать столбец класса"
+
+#: idedebuggerstringconstants.lisinspectshowcoltype
+msgid "Show type column"
+msgstr "Показывать столбец типа"
+
+#: idedebuggerstringconstants.lisinspectshowcolvisibility
+msgid "Show visibility column"
+msgstr "Показывать столбец видимости"
 

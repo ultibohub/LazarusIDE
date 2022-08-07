@@ -43,7 +43,7 @@ type
 
     function GetInstanceClassNameFromPVmt(APVmt: TDbgPtr;
       AContext: TFpDbgLocationContext; ASizeOfAddr: Integer;
-      out AClassName: String; out AnError: TFpError): boolean;
+      AClassName, AUnitName: PString; out AnError: TFpError): boolean;
   end;
 
   { TFpDwarfFreePascalSymbolClassMapDwarf2 }
@@ -157,10 +157,13 @@ type
     //function GetInstanceClass(AValueObj: TFpValueDwarf): TFpSymbolDwarf; override;
     class function GetInstanceClassNameFromPVmt(APVmt: TDbgPtr;
       AContext: TFpDbgLocationContext; ASizeOfAddr: Integer;
-      out AClassName: String; out AnError: TFpError): boolean;
+      AClassName, AUnitName: PString; out AnError: TFpError;
+      AParentClassIndex: integer = 0;
+      ACompilerVersion: Cardinal = 0): boolean;
   public
-    function GetInstanceClassName(AValueObj: TFpValue; out
-      AClassName: String): boolean; override;
+    function GetInstanceClassName(AValueObj: TFpValue;
+      AClassName, AUnitName: PString;
+      AParentClassIndex: integer = 0): boolean; override;
   end;
 
   (* *** Record vs ShortString *** *)
@@ -409,11 +412,11 @@ begin
 end;
 
 function TFpDwarfFreePascalSymbolClassMap.GetInstanceClassNameFromPVmt(
-  APVmt: TDbgPtr; AContext: TFpDbgLocationContext; ASizeOfAddr: Integer; out
-  AClassName: String; out AnError: TFpError): boolean;
+  APVmt: TDbgPtr; AContext: TFpDbgLocationContext; ASizeOfAddr: Integer;
+  AClassName, AUnitName: PString; out AnError: TFpError): boolean;
 begin
   Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceClassNameFromPVmt(APVmt,
-    AContext, ASizeOfAddr, AClassName, AnError);
+    AContext, ASizeOfAddr, AClassName, AUnitName, AnError);
 end;
 
 { TFpDwarfFreePascalSymbolClassMapDwarf2 }
@@ -965,7 +968,8 @@ begin
 end;
 
 function TFpSymbolDwarfFreePascalTypeStructure.GetInstanceClassName(
-  AValueObj: TFpValue; out AClassName: String): boolean;
+  AValueObj: TFpValue; AClassName, AUnitName: PString;
+  AParentClassIndex: integer): boolean;
 var
   AnErr: TFpError;
 begin
@@ -973,58 +977,162 @@ begin
   if not Result then
     exit;
   Result := GetInstanceClassNameFromPVmt(LocToAddrOrNil(AValueObj.DataAddress),
-    TFpValueDwarf(AValueObj).Context, TFpValueDwarf(AValueObj).Context.SizeOfAddress, AClassName, AnErr);
+    TFpValueDwarf(AValueObj).Context, TFpValueDwarf(AValueObj).Context.SizeOfAddress,
+    AClassName, AUnitName, AnErr, AParentClassIndex,
+    TFpDwarfFreePascalSymbolClassMap(CompilationUnit.DwarfSymbolClassMap).FCompilerVersion
+  );
+
   if not Result then
     SetLastError(AValueObj, AnErr);
 end;
 
 class function TFpSymbolDwarfFreePascalTypeStructure.GetInstanceClassNameFromPVmt
-  (APVmt: TDbgPtr; AContext: TFpDbgLocationContext; ASizeOfAddr: Integer; out
-  AClassName: String; out AnError: TFpError): boolean;
+  (APVmt: TDbgPtr; AContext: TFpDbgLocationContext; ASizeOfAddr: Integer;
+  AClassName, AUnitName: PString; out AnError: TFpError;
+  AParentClassIndex: integer; ACompilerVersion: Cardinal): boolean;
+
+  function CheckIsReadableMem(AMem: TFpDbgMemLocation): Boolean;
+  begin
+    Result := IsReadableMem(AMem);
+    if not Result then
+      AnError := CreateError(fpErrCanNotReadMemAtAddr, [AMem.Address]);
+  end;
+
 var
-  VmtAddr, ClassNameAddr: TFpDbgMemLocation;
+  VmtAddr, ClassNameAddr, A: TFpDbgMemLocation;
   NameLen: QWord;
 begin
   Result := False;
   AnError := NoError;
-  AClassName := '';
+  if AClassName <> nil then AClassName^ := '';
+  if AUnitName  <> nil then AUnitName^ := '';
+
   if not AContext.ReadAddress(TargetLoc(APVmt), SizeVal(ASizeOfAddr), VmtAddr) then begin
     AnError := AContext.LastMemError;
+    AContext.ClearLastMemError;
     exit;
   end;
-  if not IsReadableMem(VmtAddr) then begin
-    AnError := CreateError(fpErrCanNotReadMemAtAddr, [VmtAddr.Address]);
+  if not CheckIsReadableMem(VmtAddr) then
     exit;
+
+  while AParentClassIndex > 0 do begin
+    {$PUSH}{$Q-}
+    VmtAddr.Address := VmtAddr.Address + TDBGPtr(2 * ASizeOfAddr);
+    {$POP}
+    A := VmtAddr;
+    if not AContext.ReadAddress(A, SizeVal(ASizeOfAddr), VmtAddr) then begin
+      AnError := AContext.LastMemError;
+    AContext.ClearLastMemError;
+      exit;
+    end;
+    if IsTargetNil(VmtAddr) then
+      exit; // no error / top parent reached
+    if not CheckIsReadableMem(VmtAddr) then
+      exit;
+
+    if (ACompilerVersion >= $030200)
+    then begin
+      A := VmtAddr;
+      if not AContext.ReadAddress(A, SizeVal(ASizeOfAddr), VmtAddr) then begin
+        AnError := AContext.LastMemError;
+        AContext.ClearLastMemError;
+        exit;
+      end;
+      if not CheckIsReadableMem(VmtAddr) then
+        exit;
+    end;
+
+    dec(AParentClassIndex);
   end;
+
   {$PUSH}{$Q-}
   VmtAddr.Address := VmtAddr.Address + TDBGPtr(3 * ASizeOfAddr);
   {$POP}
 
-  if not AContext.ReadAddress(VmtAddr, SizeVal(ASizeOfAddr), ClassNameAddr) then begin
-    AnError := AContext.LastMemError;
-    exit;
-  end;
-  if not IsReadableMem(ClassNameAddr) then begin
-    AnError := CreateError(fpErrCanNotReadMemAtAddr, [ClassNameAddr.Address]);
-    exit;
-  end;
-  if not AContext.ReadUnsignedInt(ClassNameAddr, SizeVal(1), NameLen) then begin
-    AnError := AContext.LastMemError;
-    exit;
-  end;
-  if NameLen = 0 then begin
-    AnError := CreateError(fpErrAnyError, ['No name found']);
-    exit;
-  end;
-  if not AContext.MemManager.SetLength(AClassName, NameLen) then begin
-    AnError := AContext.LastMemError;
-    exit;
+  if AClassName <> nil then begin
+    if not AContext.ReadAddress(VmtAddr, SizeVal(ASizeOfAddr), ClassNameAddr) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+    if not CheckIsReadableMem(ClassNameAddr) then
+      exit;
+
+    if not AContext.ReadUnsignedInt(ClassNameAddr, SizeVal(1), NameLen) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+    if NameLen = 0 then begin
+      AnError := CreateError(fpErrAnyError, ['No name found']);
+      exit;
+    end;
+    if not AContext.MemManager.SetLength(AClassName^, NameLen) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+
+    ClassNameAddr.Address := ClassNameAddr.Address + 1;
+    Result := AContext.ReadMemory(ClassNameAddr, SizeVal(NameLen), @AClassName^[1]);
+    if not Result then
+      AnError := AContext.LastMemError;
+    AContext.ClearLastMemError;
   end;
 
-  ClassNameAddr.Address := ClassNameAddr.Address + 1;
-  Result := AContext.ReadMemory(ClassNameAddr, SizeVal(NameLen), @AClassName[1]);
-  if not Result then
-    AnError := AContext.LastMemError;
+  if AUnitName <> nil then begin
+    // get vTypeInfo
+    {$PUSH}{$Q-}
+    VmtAddr.Address := VmtAddr.Address + TDBGPtr(4 * ASizeOfAddr);
+    {$POP}
+
+    if not AContext.ReadAddress(VmtAddr, SizeVal(ASizeOfAddr), ClassNameAddr) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+    if not CheckIsReadableMem(ClassNameAddr) then
+      exit;
+
+    //inc(Pointer(classtypeinfo), PByte(Pointer(classtypeinfo)+1)^ + 2);
+    A := ClassNameAddr;
+    {$PUSH}{$Q-}
+    A.Address := A.Address + 1;
+    {$POP}
+    if not AContext.ReadUnsignedInt(A, SizeVal(1), NameLen) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+    {$PUSH}{$Q-}
+    ClassNameAddr.Address := ClassNameAddr.Address + TDBGPtr(NameLen + 2) + TDBGPtr(2 * ASizeOfAddr + 2);
+    if (ACompilerVersion >= $030300) then
+      ClassNameAddr.Address := ClassNameAddr.Address + TDBGPtr(ASizeOfAddr);
+    {$POP}
+    // Maybe align to next qword
+
+
+    if not AContext.ReadUnsignedInt(ClassNameAddr, SizeVal(1), NameLen) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+    if NameLen = 0 then begin
+      AnError := CreateError(fpErrAnyError, ['No name found']);
+      exit;
+    end;
+    if not AContext.MemManager.SetLength(AUnitName^, NameLen) then begin
+      AnError := AContext.LastMemError;
+      AContext.ClearLastMemError;
+      exit;
+    end;
+
+    ClassNameAddr.Address := ClassNameAddr.Address + 1;
+    Result := AContext.ReadMemory(ClassNameAddr, SizeVal(NameLen), @AUnitName^[1]);
+    if not Result then
+      AnError := AContext.LastMemError;
+    AContext.ClearLastMemError;
+  end;
 end;
 
 { TFpValueDwarfV2FreePascalShortString }

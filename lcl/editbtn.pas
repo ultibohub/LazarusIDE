@@ -36,7 +36,11 @@ uses
   Menus, StrUtils, DateUtils, TimePopup, CalcForm, ImgList, Math;
 
 const
-  NullDate: TDateTime = 0;
+  NullDate: TDateTime = 29584650.5 {appr 10 x MaxDateTime};
+  //Note: if you change this value to be in the range of allowed dates
+  //you will be unable to select that date from the calendar, so better not do that
+  //In hindside this vale should have been declared as a non-writeable constant
+  NullTime: TDateTime = 0;
 
 type
 
@@ -602,6 +606,7 @@ type
     procedure CalendarPopupShowHide(Sender: TObject);
     procedure SetDateOrder(const AValue: TDateOrder);
     function DateToText(Value: TDateTime): String;
+    function IsNullDate(ADate: TDateTime): Boolean;
   protected
     class procedure WSRegisterClass; override;
     function GetDefaultGlyphName: string; override;
@@ -920,6 +925,9 @@ procedure Register;
 implementation
 
 {$R lcl_edbtnimg.res}
+
+const
+  DTEpsilon = Double(1.0)/(24*3600*1000*10); //0.1 millisec (0.000000001157407407);
 
 { TEditSpeedButton }
 
@@ -1608,11 +1616,12 @@ begin
 
   PopupOrigin := ControlToScreen(Point(0, Height));
   ADate := GetDate;
-  if ADate = NullDate then
+  if IsNullDate(ADate) then
     ADate := SysUtils.Date;
-
   if IsLimited then
-    CheckRange(ADate, FMinDate, FMaxDate);
+    CheckRange(ADate, FMinDate, FMaxDate)
+  else
+    CheckRange(ADate, MinDateTime, MaxDateTime);
   ShowCalendarPopup(PopupOrigin, ADate, CalendarDisplaySettings,
                     FMinDate, FMaxDate,
                     @CalendarPopupReturnDate, @CalendarPopupShowHide, self);
@@ -1649,7 +1658,7 @@ begin
   //Synchronize FDate
   FDate := TextToDate(Text, NullDate);
   //Force a valid date in the control, but not if Text was empty in designmode
-  if not ((csDesigning in ComponentState) and FDefaultToday and (FDate = NullDate)) then
+  if not ((csDesigning in ComponentState) and FDefaultToday and (IsNullDate(FDate))) then
     SetDate(FDate);
 end;
 
@@ -1958,7 +1967,7 @@ begin
     if not TryStrToDate(AText, Result, FS) then
     begin
       Result := ParseDateNoPredefinedOrder(AText, FS);
-      if (Result = NullDate) then Result := ADefault;
+      if IsNullDate(Result) then Result := ADefault;
     end;
   end
   else
@@ -1973,7 +1982,6 @@ begin
     raise EInvalidDate.CreateFmt(rsDateTooSmall, [DateToStr(SysUtils.MinDateTime)]);
   if (ADate > SysUtils.MaxDateTime) then
     raise EInvalidDate.CreateFmt(rsDateTooLarge, [DateToStr(SysUtils.MaxDateTime)]);
-
   if (ADate < AMinDate) or (ADate > AMaxDate) then
   raise EInvalidDate.CreateFmt(rsInvalidDateRangeHint, [DateToStr(ADate),
       DateToStr(AMinDate), DateToStr(AMaxDate)]);
@@ -1999,6 +2007,8 @@ begin
   CheckRange(AValue, MinDateTime, MaxDateTime);
   if FMaxDate = AValue then Exit;
   FMaxDate := AValue;
+  if IsLimited and not IsNullDate(FDate) and (FDate > FMaxDate) then
+    SetDate(FMaxDate);
 end;
 
 procedure TDateEdit.SetMinDate(AValue: TDateTime);
@@ -2006,21 +2016,23 @@ begin
   CheckRange(AValue, MinDateTime, MaxDateTime);
   if FMinDate = AValue then Exit;
   FMinDate := AValue;
+  if IsLimited and not IsNullDate(FDate) and (FDate < FMinDate) then
+    SetDate(FMinDate);
 end;
 
 function TDateEdit.IsLimited: Boolean;
 begin
-  Result := (CompareValue(FMinDate, FMaxDate, 1E-9) = LessThanValue);
+  Result := (Trunc(FMaxDate)-Trunc(FMinDate) > 0);
 end;
 
 function TDateEdit.GetMaxDateStored: Boolean;
 begin
-  Result := not SameValue(FMaxDate, Double(0.0), 1E-9);
+  Result := not SameValue(FMaxDate, Double(0.0), DTEpsilon);
 end;
 
 function TDateEdit.GetMinDateStored: Boolean;
 begin
-  Result := not SameValue(FMinDate, Double(0.0), 1E-9);
+  Result := not SameValue(FMinDate, Double(0.0), DTEpsilon);
 end;
 
 function TDateEdit.GetDate: TDateTime;
@@ -2029,7 +2041,7 @@ var
   Def: TDateTime;
 begin
   //debugln(['TDateEdit.GetDate: FDate = ',DateToStr(FDate)]);
-  if (FDate = NullDate) and FDefaultToday then
+  if IsNullDate(FDate) and FDefaultToday then
     Def := SysUtils.Date
   else
     Def := FDate;
@@ -2058,15 +2070,20 @@ procedure TDateEdit.SetDate(Value: TDateTime);
 begin
   FUpdatingDate := True;
   try
-    if {not IsValidDate(Value) or }(Value = NullDate) then
+    if IsNullDate(Value) then
     begin
       if DefaultToday then
         Value := SysUtils.Date
-      else
-        Value := NullDate;
+      //else
+      //  Value := NullDate;
     end;
-    if IsLimited then
-      CheckRange(Value, FMinDate, FMaxDate);
+    if not IsNullDate(Value) then
+    begin
+      if IsLimited  then
+        CheckRange(Value, FMinDate, FMaxDate)
+      else
+        CheckRange(Value, MinDateTime, MaxDateTime);
+    end;
     FDate := Value;
     Text := DateToText(FDate);
   finally
@@ -2109,7 +2126,7 @@ function TDateEdit.DateToText(Value: TDateTime): String;
 var
   FS: TFormatSettings;
 begin
-  if Value = NullDate then
+  if IsNullDate(Value) then
     Result := ''
   else
   begin
@@ -2123,6 +2140,11 @@ begin
     else
       Result := FormatDateTime(FFixedDateFormat, Value)
   end;
+end;
+
+function TDateEdit.IsNullDate(ADate: TDateTime): Boolean;
+begin
+  Result := (Trunc(ADate) = Trunc(NullDate));
 end;
 
 class procedure TDateEdit.WSRegisterClass;
@@ -2173,7 +2195,7 @@ end;
 procedure TTimeEdit.SetEmptyTime;
 begin
   Text := EmptyStr;
-  FTime := NullDate;
+  FTime := NullTime;
   IsEmptyTime := True;
 end;
 
@@ -2208,7 +2230,7 @@ begin
   ParseInput;
   PopupOrigin := ControlToScreen(Point(0, Height));
   ATime := GetTime;
-  if ATime = NullDate then
+  if ATime = NullTime then
     ATime := SysUtils.Time;
   ShowTimePopup(PopupOrigin, ATime, Self.DoubleBuffered,
     @TimePopupReturnTime, @TimePopupShowHide, FSimpleLayout, self);

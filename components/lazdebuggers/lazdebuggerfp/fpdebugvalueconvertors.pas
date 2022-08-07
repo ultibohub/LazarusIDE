@@ -7,8 +7,8 @@ interface
 uses
   Classes, SysUtils, fgl, FpDbgInfo, FpdMemoryTools, FpDbgCallContextInfo,
   FpPascalBuilder, FpErrorMessages, FpDbgClasses, FpDbgUtil, DbgIntfBaseTypes,
-  lazCollections, LazClasses, LCLProc, FpDebugDebuggerBase,
-  LazDebuggerIntfBaseTypes;
+  lazCollections, LazClasses, LCLProc, StrUtils, FpDebugDebuggerBase, FpDebugStringConstants,
+  LazDebuggerValueConverter, LazDebuggerIntfBaseTypes;
 
 type
   TDbgSymbolKinds = set of TDbgSymbolKind;
@@ -20,13 +20,18 @@ type
      - Any setting that the IDE may need to store, should be published
   *)
 
-  TFpDbgValueConverter = class(TRefCountedObject)
+  TFpDbgValueConverter = class(TRefCountedObject, TLazDbgValueConverterIntf)
   private
     FLastErrror: TFpError;
+  protected
+    function GetObject: TObject;
+    function GetSettingsFrame: TLazDbgValueConverterSettingsFrameIntf; virtual;
+    procedure Init; virtual;
   public
     class function GetName: String; virtual; abstract;
     class function GetSupportedKinds: TDbgSymbolKinds; virtual;
-    procedure Assign(ASource: TFpDbgValueConverter);
+    constructor Create; virtual;
+    procedure Assign(ASource: TFpDbgValueConverter); virtual;
     function CreateCopy: TFpDbgValueConverter; virtual;
     function ConvertValue(ASourceValue: TFpValue;
                           AnFpDebugger: TFpDebugDebuggerBase;
@@ -46,12 +51,15 @@ type
 
   { TFpDbgConverterConfig }
 
-  TFpDbgConverterConfig = class(TFreeNotifyingObject)
+  TFpDbgConverterConfig = class(TFreeNotifyingObject, TLazDbgValueConvertSelectorIntf)
   private
     FConverter: TFpDbgValueConverter;
     FMatchKinds: TDbgSymbolKinds;
     FMatchTypeNames: TStrings;
     procedure SetConverter(AValue: TFpDbgValueConverter);
+  protected
+    function GetBackendSpecificObject: TObject; deprecated;
+    function GetConverter: TLazDbgValueConverterIntf;
   public
     constructor Create(AConverter: TFpDbgValueConverter);
     destructor Destroy; override;
@@ -59,6 +67,7 @@ type
     procedure Assign(ASource: TFpDbgConverterConfig); virtual;
 
     function CheckMatch(AValue: TFpValue): Boolean;
+    function CheckTypeMatch(AValue: TFpValue): Boolean;
     property Converter: TFpDbgValueConverter read FConverter write SetConverter;
 
     property MatchKinds: TDbgSymbolKinds read FMatchKinds write FMatchKinds;
@@ -92,21 +101,6 @@ type
                           AnExpressionScope: TFpDbgSymbolScope
                          ): TFpValue; override;
   end;
-
-  { TFpDbgValueConverterJsonForDebug }
-
-  TFpDbgValueConverterJsonForDebug = class(TFpDbgValueConverter)
-  private
-    function GetProcAddr(AnFpDebugger: TFpDebugDebuggerBase; AnExpressionScope: TFpDbgSymbolScope): TDBGPtr;
-  public
-    class function GetName: String; override;
-    class function GetSupportedKinds: TDbgSymbolKinds; override;
-    function ConvertValue(ASourceValue: TFpValue;
-                          AnFpDebugger: TFpDebugDebuggerBase;
-                          AnExpressionScope: TFpDbgSymbolScope
-                         ): TFpValue; override;
-  end;
-
 
 function ValueConverterClassList: TFpDbgValueConverterClassList;
 function ValueConverterConfigList: TFpDbgConverterConfigList;
@@ -157,9 +151,30 @@ begin
   FLastErrror := AnError;
 end;
 
+function TFpDbgValueConverter.GetObject: TObject;
+begin
+  Result := Self;
+end;
+
+function TFpDbgValueConverter.GetSettingsFrame: TLazDbgValueConverterSettingsFrameIntf;
+begin
+  Result := nil;
+end;
+
+procedure TFpDbgValueConverter.Init;
+begin
+  //
+end;
+
 class function TFpDbgValueConverter.GetSupportedKinds: TDbgSymbolKinds;
 begin
   Result := [low(TDbgSymbolKinds)..high(TDbgSymbolKinds)];
+end;
+
+constructor TFpDbgValueConverter.Create;
+begin
+  inherited Create;
+  Init;
 end;
 
 procedure TFpDbgValueConverter.Assign(ASource: TFpDbgValueConverter);
@@ -176,6 +191,16 @@ begin
   FConverter := AValue;
   if FConverter <> nil then
     FConverter.AddReference;
+end;
+
+function TFpDbgConverterConfig.GetBackendSpecificObject: TObject;
+begin
+  Result := Self;
+end;
+
+function TFpDbgConverterConfig.GetConverter: TLazDbgValueConverterIntf;
+begin
+  Result := FConverter;
 end;
 
 function TFpDbgConverterConfig.CreateCopy: TFpDbgConverterConfig;
@@ -208,15 +233,128 @@ begin
 end;
 
 function TFpDbgConverterConfig.CheckMatch(AValue: TFpValue): Boolean;
+begin
+  Result := (AValue.Kind in (FMatchKinds * Converter.GetSupportedKinds)) and
+            CheckTypeMatch(AValue);
+end;
+
+function TFpDbgConverterConfig.CheckTypeMatch(AValue: TFpValue): Boolean;
+  function MatchPattern(const AName, APattern: String): Boolean;
+  var
+    NamePos, PatternPos, p: Integer;
+  begin
+    Result := False;
+    if APattern = '' then
+      exit;
+
+    NamePos := 1;
+    PatternPos := 1;
+
+    while PatternPos <= Length(APattern) do begin
+      if APattern[PatternPos] = '*' then begin
+        inc(PatternPos);
+      end
+      else begin
+        p := PatternPos;
+        PatternPos := PosEx('*', APattern, p);
+        if PatternPos < 1 then
+          PatternPos := Length(APattern)+1;
+        if PatternPos-p > Length(AName)+1 - NamePos then
+          break;
+
+        NamePos := PosEx(Copy(APattern, p, PatternPos-p), AName, NamePos);
+        if (NamePos < 1) or
+           ( (p = 1) and (NamePos <> 1) ) // APattern does not start with *
+        then
+          break;
+
+        inc(NamePos, PatternPos-p);
+      end;
+    end;
+
+    Result := (PatternPos = Length(APattern)+1) and
+              ( (NamePos = Length(AName)+1) or
+                ( (APattern[Length(APattern)] = '*') and
+                  (NamePos <= Length(AName)+1)
+                )
+              );
+  end;
 var
+  i, CnIdx: Integer;
+  TpName, Pattern, ValClassName, ValUnitName: String;
   t: TFpSymbol;
-  TpName: String;
+  HasMaybeUnitDot: Boolean;
 begin
   t := AValue.TypeInfo;
-  Result := (AValue.Kind in (FMatchKinds * Converter.GetSupportedKinds)) and
-            (t <> nil) and
-            GetTypeName(TpName, t, [tnfNoSubstitute]) and
-            (FMatchTypeNames.IndexOf(TpName) >= 0);
+  Result := (t <> nil) and GetTypeName(TpName, t, [tnfNoSubstitute]);
+  if not Result then
+    exit;
+
+  TpName := LowerCase(TpName);
+  i := FMatchTypeNames.Count;
+  while i > 0 do begin
+    dec(i);
+    Pattern := LowerCase(trim(FMatchTypeNames[i]));
+
+    HasMaybeUnitDot := (pos('.', Pattern) > 1) and
+                       (AValue.Kind in [skClass]); // only class supports unitnames (via rtti)
+
+    if AnsiStrLIComp('is:', @Pattern[1], 3) = 0 then begin
+      Delete(Pattern, 1, 3);
+      Pattern := trim(Pattern);
+
+      if  (AValue.Kind in [skRecord, skClass, skObject, skInterface]) then begin
+        ValClassName := TpName;
+        while t <> nil do begin
+          Result := MatchPattern(ValClassName, Pattern);
+          if Result then
+            exit;
+          t := t.TypeInfo;
+          if (t = nil) or not GetTypeName(ValClassName, t, [tnfNoSubstitute]) then
+            break;
+          ValClassName := LowerCase(ValClassName);
+        end;
+
+        CnIdx := 0;
+        while AValue.GetInstanceClassName(@ValClassName, @ValUnitName, CnIdx) and
+              (ValClassName <> '')
+        do begin
+          ValClassName := LowerCase(ValClassName);
+          if (ValClassName = TpName) and (not HasMaybeUnitDot) then
+            Break;
+          Result := MatchPattern(ValClassName, Pattern);
+          if Result then
+            exit;
+
+          if HasMaybeUnitDot and (ValUnitName <> '') then begin
+            ValUnitName := LowerCase(ValUnitName);
+            Result := MatchPattern(ValUnitName+'.'+ValClassName, Pattern);
+            if Result then
+              exit;
+          end;
+
+          inc(CnIdx);
+        end;
+        AValue.ResetError;
+
+        Continue;
+      end;
+    end;
+
+    Result := MatchPattern(TpName, Pattern);
+    if Result then
+      exit;
+    if HasMaybeUnitDot then begin
+      if AValue.GetInstanceClassName(@ValClassName, @ValUnitName) and
+         (ValUnitName <> '') and (ValClassName <> '')
+      then begin
+        Result := MatchPattern(ValUnitName+'.'+ValClassName, Pattern);
+        if Result then
+          exit;
+      end;
+      AValue.ResetError;
+    end;
+  end;
 end;
 
 { TFpDbgConverterConfigList }
@@ -304,7 +442,7 @@ end;
 
 class function TFpDbgValueConverterVariantToLStr.GetName: String;
 begin
-  Result := 'Call SysVarToLStr';
+  Result := drsCallSysVarToLStr;
 end;
 
 class function TFpDbgValueConverterVariantToLStr.GetSupportedKinds: TDbgSymbolKinds;
@@ -432,181 +570,8 @@ begin
   end;
 end;
 
-{ TFpDbgValueConverterJsonForDebug }
-
-function TFpDbgValueConverterJsonForDebug.GetProcAddr(
-  AnFpDebugger: TFpDebugDebuggerBase; AnExpressionScope: TFpDbgSymbolScope
-  ): TDBGPtr;
-var
-  CurProc: TDbgProcess;
-  ProcSymVal: TFpValue;
-  ProcSym: TFpSymbol;
-begin
-  Result := AnFpDebugger.GetCachedData(pointer(TFpDbgValueConverterJsonForDebug));
-  if Result <> 0 then
-    exit;
-
-  CurProc := AnFpDebugger.DbgController.CurrentProcess;
-  if CurProc = nil then
-    exit;
-
-  ProcSymVal := AnExpressionScope.FindSymbol('JsonForDebug');
-  if ProcSymVal <> nil then begin
-    if (ProcSymVal.Kind = skProcedure) and IsTargetAddr(ProcSymVal.DataAddress) then begin
-      Result := ProcSymVal.DataAddress.Address;
-      AnFpDebugger.SetCachedData(pointer(TFpDbgValueConverterJsonForDebug), Result);
-      ProcSymVal.ReleaseReference;
-      exit;
-    end;
-    Result := 0;
-    Result := ProcSymVal.DataAddress.Address;
-  end;
-
-  ProcSym := CurProc.FindProcSymbol('JsonForDebug');
-  if (ProcSym <> nil) and (ProcSym.Kind = skProcedure) and
-     (IsTargetAddr(ProcSym.Address))
-  then begin
-    Result := ProcSym.Address.Address;
-    AnFpDebugger.SetCachedData(pointer(TFpDbgValueConverterJsonForDebug), Result);
-  end;
-  ProcSym.ReleaseReference;
-end;
-
-class function TFpDbgValueConverterJsonForDebug.GetName: String;
-begin
-  Result := 'Call JsonForDebug';
-end;
-
-class function TFpDbgValueConverterJsonForDebug.GetSupportedKinds: TDbgSymbolKinds;
-begin
-  Result := [low(Result)..high(Result)];
-end;
-
-function TFpDbgValueConverterJsonForDebug.ConvertValue(ASourceValue: TFpValue;
-  AnFpDebugger: TFpDebugDebuggerBase; AnExpressionScope: TFpDbgSymbolScope
-  ): TFpValue;
-var
-  CurProccess: TDbgProcess;
-  TpName, JsonText: String;
-  ProcAddr, SetLenProc, DecRefProc,
-  TpNameAddr, TpNewNameAddr, TpNameRefAddr, TextAddr, TextRefAddr: TDbgPtr;
-  CallContext: TFpDbgInfoCallContext;
-  r: Boolean;
-  AddrSize: Integer;
-begin
-  Result := nil;
-
-  if (not (svfAddress in ASourceValue.FieldFlags)) or
-     (not IsTargetAddr(ASourceValue.Address))
-  then begin
-    SetError(CreateError(fpErrAnyError, ['Value not in memory']));
-    exit;
-  end;
-
-  TpName := '';
-  if ASourceValue.TypeInfo <> nil then
-    TpName := ASourceValue.TypeInfo.Name;
-
-  if TpName = '' then begin
-    SetError(CreateError(fpErrAnyError, ['no typename']));
-    exit;
-  end;
-
-  ProcAddr := GetProcAddr(AnFpDebugger, AnExpressionScope);
-  if ProcAddr = 0 then begin
-    SetError(CreateError(fpErrAnyError, ['JsonForDebug not found']));
-    exit;
-  end;
-
-  CurProccess := AnFpDebugger.DbgController.CurrentProcess;
-  SetLenProc := AnFpDebugger.GetCached_FPC_ANSISTR_SETLENGTH;
-  DecRefProc := AnFpDebugger.GetCached_FPC_ANSISTR_DECR_REF;
-  if (SetLenProc = 0) or (DecRefProc = 0) or (CurProccess = nil)
-  then begin
-    SetError(CreateError(fpErrAnyError, ['internal error']));
-    exit;
-  end;
-
-
-  TpNameAddr := 0;
-  TpNewNameAddr := 0;
-  TpNameRefAddr := 0;
-  TextAddr := 0;
-  TextRefAddr := 0;
-  try
-    if (not AnFpDebugger.CreateAnsiStringInTarget(SetLenProc, TpNameAddr, TpName, AnExpressionScope.LocationContext)) or
-       (TpNameAddr = 0)
-    then begin
-      TpNameAddr := 0;
-      SetError(CreateError(fpErrAnyError, ['failed to set param']));
-      exit;
-    end;
-
-
-    CallContext := AnFpDebugger.DbgController.Call(TargetLoc(ProcAddr), AnExpressionScope.LocationContext,
-      AnFpDebugger.MemReader, AnFpDebugger.MemConverter);
-
-    if (not CallContext.AddOrdinalParam(ASourceValue.Address.Address)) or
-       (not CallContext.AddOrdinalViaRefAsParam(TpNameAddr, TpNameRefAddr)) or
-       (not CallContext.AddOrdinalViaRefAsParam(0, TextRefAddr))
-    then begin
-      SetError(CreateError(fpErrAnyError, ['failed to set param']));
-      exit;
-    end;
-
-    CallContext.FinalizeParams; // force the string as first param (32bit) // TODO
-
-    AnFpDebugger.DbgController.ProcessLoop;
-
-    if not CallContext.IsValid then begin
-      if (IsError(CallContext.LastError)) then
-        SetError(CallContext.LastError)
-      else
-      if (CallContext.Message <> '') then
-        SetError(CreateError(fpErrAnyError, [CallContext.Message]));
-      exit;
-    end;
-
-    r := True;
-    if not CurProccess.ReadAddress(TpNameRefAddr, TpNewNameAddr) then begin
-      r := False;
-      TpNewNameAddr := 0;
-    end;
-    if not CurProccess.ReadAddress(TextRefAddr, TextAddr) then begin
-      r := False;
-      TextAddr:= 0;
-    end;
-
-    if not AnFpDebugger.ReadAnsiStringFromTarget(TpNewNameAddr, TpName) then
-      r := False;
-    if not AnFpDebugger.ReadAnsiStringFromTarget(TextAddr, JsonText) then
-      r := False;
-
-    if not r then begin
-      SetError(CreateError(fpErrAnyError, ['failed to get result']));
-      exit;
-    end;
-
-
-    AnFpDebugger.DbgController.AbortCurrentCommand;
-    CallContext.ReleaseReference;
-
-    Result := TFpValueConstString.Create(JsonText);
-    TFpValueConstString(Result).SetTypeName(TpName);
-
-  finally
-    if TpNewNameAddr <> 0 then
-      TpNameAddr := TpNewNameAddr;
-    if TpNameAddr <> 0 then
-      AnFpDebugger.CallTargetFuncStringDecRef(DecRefProc, TpNameAddr, AnExpressionScope.LocationContext);
-    if TextAddr <> 0 then
-      AnFpDebugger.CallTargetFuncStringDecRef(DecRefProc, TextAddr, AnExpressionScope.LocationContext);
-  end;
-end;
-
 initialization
   ValueConverterClassList.Add(TFpDbgValueConverterVariantToLStr);
-  ValueConverterClassList.Add(TFpDbgValueConverterJsonForDebug);
 
 finalization;
   FreeAndNil(TheValueConverterClassList);

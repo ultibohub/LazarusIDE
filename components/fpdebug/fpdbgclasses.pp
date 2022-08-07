@@ -232,6 +232,7 @@ type
          detect the int3 (false positive)
     *)
     procedure CheckAndResetInstructionPointerAfterBreakpoint;
+    function CheckForHardcodeBreakPoint(AnAddr: TDBGPtr): boolean;
     procedure BeforeContinue; virtual;
     procedure ApplyWatchPoints(AWatchPointData: TFpWatchPointData); virtual;
     function DetectHardwareWatchpoint: Pointer; virtual;
@@ -458,6 +459,7 @@ type
     constructor Create(const AProcess: TDbgProcess; const ALocation: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind;
                       AScope: TDBGWatchPointScope); virtual;
     destructor Destroy; override;
+    function BelongsToInstance(const AnInstance: TDbgInstance): Boolean; override;
 
     procedure SetBreak; override;
     procedure ResetBreak; override;
@@ -2942,6 +2944,18 @@ begin
   end;
 end;
 
+function TDbgThread.CheckForHardcodeBreakPoint(AnAddr: TDBGPtr): boolean;
+var
+  OVal: Byte;
+begin
+  Result := False;
+  if AnAddr = 0 then
+    exit;
+  if FProcess.ReadData(AnAddr, 1, OVal) then
+    FPausedAtHardcodeBreakPoint := OVal = TDbgProcess.Int3;
+  Result := FPausedAtHardcodeBreakPoint;
+end;
+
 procedure TDbgThread.BeforeContinue;
 begin
   // On Windows this is only called, if this was the signalled thread
@@ -3528,6 +3542,12 @@ begin
     FProcess.FWatchPointList.Remove(Self);
   ResetBreak;
   inherited Destroy;
+end;
+
+function TFpInternalWatchpoint.BelongsToInstance(const AnInstance: TDbgInstance
+  ): Boolean;
+begin
+  Result := False;
 end;
 
 procedure TFpInternalWatchpoint.SetBreak;

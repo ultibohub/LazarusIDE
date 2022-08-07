@@ -41,7 +41,9 @@ uses
   {$IFDEF FPDEBUG_THREAD_CHECK} FpDbgCommon, {$ENDIF}
   FpDbgClasses, FpDbgInfo, FpErrorMessages, FpPascalBuilder, FpdMemoryTools,
   FpPascalParser, FPDbgController, FpDbgDwarfDataClasses, FpDbgDwarfFreePascal,
-  FpDbgDwarf, FpDbgUtil;
+  FpDbgDwarf, FpDbgUtil,
+  // use converters
+  FpDebugValueConvertors, FpDebugConvDebugForJson;
 
 type
 
@@ -3290,7 +3292,7 @@ begin
   if (FDbgController.CurrentProcess <> nil) then
     TFpDwarfFreePascalSymbolClassMap.GetInstanceForDbgInfo(FDbgController.CurrentProcess.DbgInfo)
     .GetInstanceClassNameFromPVmt
-      (AnAddr, FDbgController.DefaultContext, DBGPTRSIZE[FDbgController.CurrentProcess.Mode], Result, AnErr);
+      (AnAddr, FDbgController.DefaultContext, DBGPTRSIZE[FDbgController.CurrentProcess.Mode], @Result, nil, AnErr);
 end;
 
 procedure TFpDebugDebugger.DoThreadDebugOutput(Sender: TObject; ProcessId,

@@ -64,7 +64,8 @@ begin
       Result := ValConfig.Converter;
     if Result <> nil then
       Result.AddReference;
-  end;
+  end
+  else
   if (ValConvList <> nil) then begin
     ValConvList.Lock;
     try
@@ -136,32 +137,36 @@ begin
         if FExtraDephtLevelItemConv = nil then
           FExtraDephtLevelItemConv := GetValConv(AnFpValue);
         CurConv := FExtraDephtLevelItemConv;
+        if CurConv <> nil then
+          CurConv.AddReference;
       end
       else
       if (RecurseCnt = 1) and (FLevelZeroKind = skArray) then begin
         if FLevelZeroArrayConv = nil then
           FLevelZeroArrayConv := GetValConv(AnFpValue);
         CurConv := FLevelZeroArrayConv;
+        if CurConv <> nil then
+          CurConv.AddReference;
       end
       else begin
         CurConv := GetValConv(AnFpValue);
       end;
 
       if (CurConv <> nil) then begin
+        AnResFld := AnResData.CreateValueHandlerResult(CurConv);
+
         if (FMaxTotalConv <= 0) then
-          CurConv := nil
+          ReleaseRefAndNil(CurConv)
         else
           dec(FMaxTotalConv);
 
         if FInArray then begin
           if (FCurMaxArrayConv <= 0) then
-            CurConv := nil
+            ReleaseRefAndNil(CurConv)
           else
             dec(FCurMaxArrayConv);
         end;
 
-        AnResData.CreateStructure(dstInternal);
-        AnResFld := AnResData.AddField('', dfvUnknown, []);
         if (CurConv <> nil) then begin
           FInNonConvert := True;
 
@@ -180,13 +185,10 @@ begin
         else
           AnResFld.CreateError('');
 
-        AnResData := AnResData.AddField('', dfvUnknown, []);
+        AnResData := AnResData.SetDerefData;
       end;
     finally
-      if (CurConv <> FExtraDephtLevelItemConv) and
-         (CurConv <> FLevelZeroArrayConv)
-      then
-        CurConv.ReleaseReference;
+      CurConv.ReleaseReference;
       NewFpVal.ReleaseReference;
     end;
   end;

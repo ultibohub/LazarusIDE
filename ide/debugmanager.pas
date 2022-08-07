@@ -58,9 +58,9 @@ uses
   BreakPointsdlg, BreakPropertyDlg, LocalsDlg, WatchPropertyDlg, CallStackDlg,
   EvaluateDlg, RegistersDlg, AssemblerDlg, DebugOutputForm, ExceptionDlg,
   InspectDlg, DebugEventsForm, PseudoTerminalDlg, FeedbackDlg, ThreadDlg,
-  HistoryDlg, ProcessDebugger, DbgIntfBaseTypes, DbgIntfDebuggerBase,
-  DbgIntfMiscClasses, DbgIntfPseudoTerminal, LazDebuggerIntf,
-  LazDebuggerIntfBaseTypes, BaseDebugManager;
+  HistoryDlg, ProcessDebugger, IdeDebuggerBase, DbgIntfBaseTypes,
+  DbgIntfDebuggerBase, DbgIntfMiscClasses, DbgIntfPseudoTerminal,
+  LazDebuggerIntf, LazDebuggerIntfBaseTypes, BaseDebugManager;
 
 
 type
@@ -253,8 +253,8 @@ type
                       EvalFlags: TWatcheEvaluateFlags = []): Boolean; override;
     function Modify(const AExpression, ANewValue: String): Boolean; override;
 
-    procedure EvaluateModify(const AExpression: String); override;
-    procedure Inspect(const AExpression: String); override;
+    procedure EvaluateModify(const AExpression: String; AWatch: TWatch = nil); override;
+    procedure Inspect(const AExpression: String; AWatch: TWatch = nil); override;
 
     function GetFullFilename(const AUnitinfo: TDebuggerUnitInfo; out Filename: string;
                              AskUserIfNotFound: Boolean): Boolean; override;
@@ -282,7 +282,12 @@ type
     // Dialog routines
     procedure CreateDebugDialog(Sender: TObject; aFormName: string;
                           var AForm: TCustomForm; DoDisableAutoSizing: boolean); override;
-    procedure ViewDebugDialog(const ADialogType: TDebugDialogType; BringToFront: Boolean = true; Show: Boolean = true; DoDisableAutoSizing: boolean = false); override;
+    procedure ViewDebugDialog(const ADialogType: TDebugDialogType;
+                              BringToFront: Boolean = true;
+                              Show: Boolean = true;
+                              DoDisableAutoSizing: boolean = false;
+                              InitFromSourceEdit: boolean = True
+                              ); override;
     procedure ViewDisassembler(AnAddr: TDBGPtr;
                               BringToFront: Boolean = True; Show: Boolean = true;
                               DoDisableAutoSizing: boolean = false); override;
@@ -1434,15 +1439,6 @@ begin
       FBreakPoints[i].SetLocation(FBreakPoints[i].Source, FBreakPoints[i].Line);
   end;
 
-  // update inspect
-  // TODO: Move here from DebuggerCurrentLine / Only currently State change locks execution of gdb
-  //if ( ((FDebugger.State in [dsPause]) and (OldState = dsRun)) or
-  //     (OldState in [dsPause]) ) and
-  if (OldState in [dsPause]) and (FDialogs[ddtInspect] <> nil)
-  then TIDEInspectDlg(FDialogs[ddtInspect]).UpdateData;
-  if (OldState in [dsPause]) and (FDialogs[ddtEvaluate] <> nil)
-  then TEvaluateDlg(FDialogs[ddtEvaluate]).UpdateData;
-
   case FDebugger.State of
     dsError: begin
     {$ifdef VerboseDebugger}
@@ -1570,10 +1566,6 @@ begin
   // Must be after stack frame selection (for inspect)
   if FDialogs[ddtAssembler] <> nil
   then TAssemblerDlg(FDialogs[ddtAssembler]).SetLocation(FDebugger, Alocation.Address);
-  if (FDialogs[ddtInspect] <> nil)
-  then TIDEInspectDlg(FDialogs[ddtInspect]).UpdateData;
-  if (FDialogs[ddtEvaluate] <> nil)
-  then TEvaluateDlg(FDialogs[ddtEvaluate]).UpdateData;
 
   if (SrcLine > 0) and (CurrentSourceUnitInfo <> nil) and
      GetFullFilename(CurrentSourceUnitInfo, SrcFullName, True)
@@ -1671,7 +1663,8 @@ begin
 end;
 
 procedure TDebugManager.ViewDebugDialog(const ADialogType: TDebugDialogType;
-  BringToFront: Boolean; Show: Boolean; DoDisableAutoSizing: boolean);
+  BringToFront: Boolean; Show: Boolean; DoDisableAutoSizing: boolean;
+  InitFromSourceEdit: boolean);
 const
   DEBUGDIALOGCLASS: array[TDebugDialogType] of TDebuggerDlgClass = (
     TDbgOutputForm, TDbgEventsForm, TBreakPointsDlg, TWatchesDlg, TLocalsDlg,
@@ -1724,19 +1717,21 @@ begin
     then begin
       TAssemblerDlg(CurDialog).SetLocation(FDebugger, FCurrentLocation.Address);
     end;
-    if (CurDialog is TIDEInspectDlg) and (SourceEditorManager.GetActiveSE <> nil)
-    then begin
-      if SourceEditorManager.GetActiveSE.SelectionAvailable then
-        TIDEInspectDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.Selection)
-      else
-        TIDEInspectDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret);
-    end;
-    if (CurDialog is TEvaluateDlg) and (SourceEditorManager.GetActiveSE <> nil)
-    then begin
-      if SourceEditorManager.GetActiveSE.SelectionAvailable then
-        TEvaluateDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.Selection)
-      else
-        TEvaluateDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret);
+    if InitFromSourceEdit then begin
+      if (CurDialog is TIDEInspectDlg) and (SourceEditorManager.GetActiveSE <> nil)
+      then begin
+        if SourceEditorManager.GetActiveSE.SelectionAvailable then
+          TIDEInspectDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.Selection)
+        else
+          TIDEInspectDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret);
+      end;
+      if (CurDialog is TEvaluateDlg) and (SourceEditorManager.GetActiveSE <> nil)
+      then begin
+        if SourceEditorManager.GetActiveSE.SelectionAvailable then
+          TEvaluateDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.Selection)
+        else
+          TEvaluateDlg(CurDialog).Execute(SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret);
+      end;
     end;
   end;
   if not DoDisableAutoSizing then
@@ -1921,9 +1916,9 @@ begin
     exit;
   if SourceEditorManager.GetActiveSE.SelectionAvailable
   then
-    TheDialog.FindText := SourceEditorManager.GetActiveSE.Selection
+    TheDialog.EvalExpression := SourceEditorManager.GetActiveSE.Selection
   else
-    TheDialog.FindText := SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret;
+    TheDialog.EvalExpression := SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret;
 end;
 
 constructor TDebugManager.Create(TheOwner: TComponent);
@@ -3027,21 +3022,22 @@ begin
         and FDebugger.Modify(AExpression, ANewValue);
 end;
 
-procedure TDebugManager.EvaluateModify(const AExpression: String);
+procedure TDebugManager.EvaluateModify(const AExpression: String; AWatch: TWatch
+  );
 begin
   if Destroying then Exit;
-  ViewDebugDialog(ddtEvaluate);
+  ViewDebugDialog(ddtEvaluate, True, True, False, False);
   if FDialogs[ddtEvaluate] <> nil then
-    TEvaluateDlg(FDialogs[ddtEvaluate]).FindText := AExpression;
+    TEvaluateDlg(FDialogs[ddtEvaluate]).Execute(AExpression, AWatch);
 end;
 
-procedure TDebugManager.Inspect(const AExpression: String);
+procedure TDebugManager.Inspect(const AExpression: String; AWatch: TWatch);
 begin
   if Destroying then Exit;
-  ViewDebugDialog(ddtInspect); // TODO: If not yet open, this will get Expression from SourceEdit, and trigger uneeded eval.
+  ViewDebugDialog(ddtInspect, True, True, False, False);
   if FDialogs[ddtInspect] <> nil then
   begin
-    TIDEInspectDlg(FDialogs[ddtInspect]).Execute(AExpression);
+    TIDEInspectDlg(FDialogs[ddtInspect]).Execute(AExpression, AWatch);
   end;
 end;
 

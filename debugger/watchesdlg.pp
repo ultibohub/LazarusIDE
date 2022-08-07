@@ -556,6 +556,7 @@ begin
         end;
       end;
       AWatch.Index := NewIdx;
+      AWatch.DisplayName := '';
 
       Target := NewNode;
       NTarget := tvWatches.GetNextSiblingNoInit(Target);
@@ -749,7 +750,7 @@ var
 begin
   CurWatch := GetSelected;
   if CurWatch <> nil then
-    DebugBoss.EvaluateModify(CurWatch.Expression);
+    DebugBoss.EvaluateModify(CurWatch.Expression, CurWatch);
 end;
 
 procedure TWatchesDlg.actInspectExecute(Sender: TObject);
@@ -758,7 +759,7 @@ var
 begin
   CurWatch := GetSelected;
   if CurWatch <> nil then
-    DebugBoss.Inspect(CurWatch.Expression);
+    DebugBoss.Inspect(CurWatch.Expression, CurWatch);
 end;
 
 procedure TWatchesDlg.actDisableSelectedExecute(Sender: TObject);
@@ -1260,10 +1261,7 @@ begin
           if (WatchValue.ResultData.ValueKind = rdkArray) and (WatchValue.ResultData.ArrayLength > 0)
           then tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := Format(drsLen, [WatchValue.ResultData.ArrayLength]) + WatchValueStr
           else tvWatches.NodeText[VNode, COL_WATCH_VALUE-1] := WatchValueStr;
-          if (WatchValue.ResultData.ValueKind  in [rdkPointerVal]) or
-             (WatchValue.ResultData.StructType in [dstClass, dstInterface]) or
-             (WatchValue.ResultData.ArrayType  in [datDynArray])
-          then begin
+          if WatchValue.ResultData.HasDataAddress then begin
             da := WatchValue.ResultData.DataAddress;
             if da = 0
             then tvWatches.NodeText[VNode, 2] := 'nil'
@@ -1292,7 +1290,7 @@ begin
 
         HasChildren := ( (TypInfo <> nil) and (TypInfo.Fields <> nil) and (TypInfo.Fields.Count > 0) ) or
                        ( (WatchValue.ResultData <> nil) and
-                         ( ( (WatchValue.ResultData.FieldCount > 0) and (WatchValue.ResultData.StructType <> dstInternal) )
+                         ( ( (WatchValue.ResultData.FieldCount > 0) and (WatchValue.ResultData.ValueKind <> rdkConvertRes) )
                            or
                            //( (WatchValue.ResultData.ValueKind = rdkArray) and (WatchValue.ResultData.ArrayLength > 0) )
                            (WatchValue.ResultData.ArrayLength > 0)
@@ -1438,7 +1436,7 @@ begin
   ChildCount := 0;
 
   if (AWatchValue.ResultData <> nil) and (AWatchValue.ResultData.FieldCount > 0) and
-     (AWatchValue.ResultData.StructType <> dstInternal)
+     (AWatchValue.ResultData.ValueKind <> rdkConvertRes)
   then begin
     ResData := AWatchValue.ResultData;
     AWatch := AWatchValue.Watch;
