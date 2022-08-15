@@ -3836,7 +3836,8 @@ begin
   L := OrdValue;
   TypeData := GetTypeData(GetPropType);
   with TypeData^ do
-    if (L < MinValue) or (L > MaxValue) then L := MaxValue;
+    if (L < MinValue) or (L > MaxValue) then
+      L := MaxValue;
   Result := GetEnumName(GetPropType, L);
 end;
 
@@ -3852,11 +3853,11 @@ procedure TEnumPropertyEditor.GetValues(Proc: TGetStrProc);
 var
   I: Integer;
   EnumType: PTypeInfo;
-  s: ShortString;
+  s: String;
 begin
   EnumType := GetPropType;
   with GetTypeData(EnumType)^ do
-    for I := MinValue to MaxValue do begin
+    for I := MinValue to MinValue+GetEnumNameCount(EnumType)-1 do begin
       s := GetEnumName(EnumType, I);
       Proc(s);
     end;
