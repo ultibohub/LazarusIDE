@@ -15,7 +15,7 @@ interface
 uses
   Math, Types, SysUtils, Classes,
   // LCL
-  LCLType, LMessages, Controls, ExtCtrls, StdCtrls, Buttons, Forms, Graphics, Themes,
+  LCLType, LMessages, Controls, ExtCtrls, StdCtrls, Buttons, Forms, Graphics, Themes, Menus,
   // LazUtils
   GraphType;
 
@@ -61,7 +61,6 @@ type
     FShowButtons: TPanelButtons;
     FShowGlyphs: TPanelButtons;
     FBevel: TBevel;
-    FGlyphs: array[TPanelButton] of TBitmap;
     FButtons: array[TPanelButton] of TPanelBitBtn;
     FButtonsWidth: Integer;
     FButtonsHeight: Integer;
@@ -92,14 +91,12 @@ type
       AlignInfo: TAlignInfo); override;
     procedure CalculatePreferredSize(var PreferredWidth,
       PreferredHeight: integer; WithThemeSpace: Boolean); override;
-    procedure Loaded; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure SetAlign(Value: TAlign); override;
     procedure CMAppShowBtnGlyphChanged(var Message: TLMessage); message CM_APPSHOWBTNGLYPHCHANGED;
     procedure CMShowingChanged(var Message: TLMessage); message CM_SHOWINGCHANGED;
   public
     constructor Create(AOwner: TComponent); override;
-    destructor Destroy; override;
 
     property Align default alBottom;
     property AutoSize default True;
@@ -236,13 +233,10 @@ begin
   begin
     if FButtons[btn] = nil then Continue;
 
-    if btn in FShowGlyphs
-    then begin
-      FButtons[btn].Glyph.Assign(FGlyphs[btn]);
-    end
-    else begin
-      FButtons[btn].Glyph.Assign(nil);
-    end;
+    if btn in FShowGlyphs then 
+      FButtons[btn].GlyphShowMode := gsmApplication
+    else
+      FButtons[btn].GlyphShowMode := gsmNever;
   end;
   EnableAutoSizing{$IFDEF DebugDisableAutoSizing}('TCustomButtonPanel.DoShowGlyphs'){$ENDIF};
 end;
@@ -486,12 +480,6 @@ begin
   end;
 end;
 
-procedure TCustomButtonPanel.Loaded;
-begin
-  inherited;
-  DoShowGlyphs;
-end;
-
 procedure TCustomButtonPanel.Notification(AComponent: TComponent;
   Operation: TOperation);
 var
@@ -555,16 +543,10 @@ begin
     AutoSize := true;
     TabOrder := Ord(AButton); //initial order
     Align    := alCustom;
-    if FGlyphs[AButton] = nil
-    then begin
-      // first time
-      FGlyphs[AButton] := TBitmap.Create;
-      FGlyphs[AButton].Assign(Glyph);
-    end;
-    // (re)set the glyph if needed
-    if (AButton in FShowGlyphs)
-    then Glyph.Assign(FGlyphs[AButton])
-    else Glyph.Assign(nil);
+    if AButton in FShowGlyphs then
+      GlyphShowMode := gsmApplication
+    else
+      GlyphShowMode := gsmNever;
     // set default
     Default  := AButton = FDefaultButton;
 
@@ -695,15 +677,6 @@ begin
   PreferredWidth:=MinWidth;
   PreferredHeight:=MinHeight;
   //debugln(['TCustomButtonPanel.CalculatePreferredSize ',DbgSName(Self),' ',PreferredWidth,'x',PreferredHeight]);
-end;
-
-destructor TCustomButtonPanel.Destroy;
-var
-  btn: TPanelButton;
-begin
-  for btn := Low(btn) to High(btn) do
-    FreeAndNil(FGlyphs[btn]);
-  inherited Destroy;
 end;
 
 end.
