@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FpWatchResultData, FpDbgInfo, FpdMemoryTools,
   FpErrorMessages, DbgIntfBaseTypes, LazClasses, FpDebugValueConvertors,
-  FpDebugDebuggerBase, LazDebuggerIntf;
+  FpDebugDebuggerBase, LazDebuggerIntf, LazDebuggerValueConverter;
 
 type
 
@@ -17,8 +17,8 @@ type
   private
     FDebugger: TFpDebugDebuggerBase;
     FExpressionScope: TFpDbgSymbolScope;
-    FValConvList: TFpDbgConverterConfigList;
-    FValConfig: TFpDbgConverterConfig;
+    FValConvList: TLazDbgValueConvertSelectorListIntf;
+    FValConfig: TLazDbgValueConvertSelectorIntf;
 
     FExtraDephtLevelIsArray: Boolean; // defExtraDepth / RecurseCnt=-1
     FExtraDephtLevelItemConv: TFpDbgValueConverter;
@@ -28,7 +28,7 @@ type
     FMaxTotalConv, FMaxArrayConv, FCurMaxArrayConv: Integer;
     FNoConvert: Boolean;
 
-    function GetValConv(AnFpValue: TFpValue): TFpDbgValueConverter; inline;
+    function GetValConv(AnFpValue: TFpValue; IgnoreInstanceClass: boolean = False): TFpDbgValueConverter; inline;
     procedure SetMaxArrayConv(AValue: Integer);
     procedure SetMaxTotalConv(AValue: Integer);
   public
@@ -36,8 +36,8 @@ type
 
     function DoValueToResData(AnFpValue: TFpValue;
       AnResData: TLzDbgWatchDataIntf): Boolean; override;
-    property ValConvList: TFpDbgConverterConfigList read FValConvList write FValConvList;
-    property ValConfig: TFpDbgConverterConfig read FValConfig write FValConfig;
+    property ValConvList: TLazDbgValueConvertSelectorListIntf read FValConvList write FValConvList;
+    property ValConfig: TLazDbgValueConvertSelectorIntf read FValConfig write FValConfig;
     property Debugger: TFpDebugDebuggerBase read FDebugger write FDebugger;
     property ExpressionScope: TFpDbgSymbolScope read FExpressionScope write FExpressionScope;
     property MaxArrayConv: Integer read FMaxArrayConv write SetMaxArrayConv;
@@ -48,8 +48,8 @@ implementation
 
 { TFpLazDbgWatchResultConvertor }
 
-function TFpLazDbgWatchResultConvertor.GetValConv(AnFpValue: TFpValue
-  ): TFpDbgValueConverter;
+function TFpLazDbgWatchResultConvertor.GetValConv(AnFpValue: TFpValue;
+  IgnoreInstanceClass: boolean): TFpDbgValueConverter;
 var
   i: Integer;
 begin
@@ -60,8 +60,8 @@ begin
     exit;
 
   if (ValConfig <> nil) then begin
-    if ValConfig.CheckMatch(AnFpValue) then
-      Result := ValConfig.Converter;
+    if ValConfig.CheckMatch(AnFpValue, IgnoreInstanceClass) then
+      Result := ValConfig.GetConverter.GetObject as TFpDbgValueConverter;
     if Result <> nil then
       Result.AddReference;
   end
@@ -70,10 +70,10 @@ begin
     ValConvList.Lock;
     try
       i := ValConvList.Count - 1;
-      while (i >= 0) and (not ValConvList[i].CheckMatch(AnFpValue)) do
+      while (i >= 0) and (not ValConvList[i].CheckMatch(AnFpValue, IgnoreInstanceClass)) do
         dec(i);
       if i >= 0 then
-        Result := ValConvList[i].Converter;
+        Result := ValConvList[i].GetConverter.GetObject as TFpDbgValueConverter;
       if Result <> nil then
         Result.AddReference;
     finally
@@ -135,7 +135,7 @@ begin
     try
       if (RecurseCnt = 0) and (FExtraDephtLevelIsArray) then begin
         if FExtraDephtLevelItemConv = nil then
-          FExtraDephtLevelItemConv := GetValConv(AnFpValue);
+          FExtraDephtLevelItemConv := GetValConv(AnFpValue, RecurseCnt <> RecurseCntLow);
         CurConv := FExtraDephtLevelItemConv;
         if CurConv <> nil then
           CurConv.AddReference;
@@ -143,13 +143,13 @@ begin
       else
       if (RecurseCnt = 1) and (FLevelZeroKind = skArray) then begin
         if FLevelZeroArrayConv = nil then
-          FLevelZeroArrayConv := GetValConv(AnFpValue);
+          FLevelZeroArrayConv := GetValConv(AnFpValue, RecurseCnt <> RecurseCntLow);
         CurConv := FLevelZeroArrayConv;
         if CurConv <> nil then
           CurConv.AddReference;
       end
       else begin
-        CurConv := GetValConv(AnFpValue);
+        CurConv := GetValConv(AnFpValue, RecurseCnt <> RecurseCntLow);
       end;
 
       if (CurConv <> nil) then begin

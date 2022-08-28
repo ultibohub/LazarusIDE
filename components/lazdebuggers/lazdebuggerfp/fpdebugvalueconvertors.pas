@@ -1,21 +1,20 @@
 unit FpDebugValueConvertors;
 
 {$mode objfpc}{$H+}
+{$ModeSwitch typehelpers}
 
 interface
 
 uses
-  Classes, SysUtils, fgl, FpDbgInfo, FpdMemoryTools, FpDbgCallContextInfo,
+  Classes, SysUtils, FpDbgInfo, FpdMemoryTools, FpDbgCallContextInfo,
   FpPascalBuilder, FpErrorMessages, FpDbgClasses, FpDbgUtil, DbgIntfBaseTypes,
-  lazCollections, LazClasses, LCLProc, StrUtils, FpDebugDebuggerBase, FpDebugStringConstants,
+  LazClasses, LCLProc, StrUtils, FpDebugDebuggerBase, FpDebugStringConstants,
   LazDebuggerValueConverter, LazDebuggerIntfBaseTypes;
 
 type
-  TDbgSymbolKinds = set of TDbgSymbolKind;
-
   (* TFpDbgValueConverter and descendants
      - A TFpDbgValueConverter should be immutable, once in the list.
-       To change settings a new instance can be set to TFpDbgConverterConfig
+       To change settings a new instance can be set to TDbgBackendConverterConfig
        This allows for TFpDbgValueConverter to be used outside the lock (reduces lock time)
      - Any setting that the IDE may need to store, should be published
   *)
@@ -29,10 +28,10 @@ type
     procedure Init; virtual;
   public
     class function GetName: String; virtual; abstract;
-    class function GetSupportedKinds: TDbgSymbolKinds; virtual;
+    function GetRegistryEntry: TLazDbgValueConvertRegistryEntryClass; virtual;
     constructor Create; virtual;
     procedure Assign(ASource: TFpDbgValueConverter); virtual;
-    function CreateCopy: TFpDbgValueConverter; virtual;
+    function CreateCopy: TLazDbgValueConverterIntf; virtual;
     function ConvertValue(ASourceValue: TFpValue;
                           AnFpDebugger: TFpDebugDebuggerBase;
                           AnExpressionScope: TFpDbgSymbolScope
@@ -42,51 +41,23 @@ type
   end;
   TFpDbgValueConverterClass = class of TFpDbgValueConverter;
 
-  { TFpDbgValueConverterClassList }
 
-  TFpDbgValueConverterClassList = class(specialize TFPGList<TFpDbgValueConverterClass>)
-    function FindByClassName(AName: String): TFpDbgValueConverterClass;
+  { TFpDbgValueConvertSelectorIntfHelper }
+
+  TFpDbgValueConvertSelectorIntfHelper = type helper for TLazDbgValueConvertSelectorIntf
+    function CheckMatch(AValue: TFpValue; IgnoreInstanceClass: boolean = False): Boolean;
+    function CheckTypeMatch(AValue: TFpValue; IgnoreInstanceClass: boolean = False): Boolean;
   end;
 
+  { TFpDbgValueConverterRegistryEntry }
 
-  { TFpDbgConverterConfig }
-
-  TFpDbgConverterConfig = class(TFreeNotifyingObject, TLazDbgValueConvertSelectorIntf)
-  private
-    FConverter: TFpDbgValueConverter;
-    FMatchKinds: TDbgSymbolKinds;
-    FMatchTypeNames: TStrings;
-    procedure SetConverter(AValue: TFpDbgValueConverter);
-  protected
-    function GetBackendSpecificObject: TObject; deprecated;
-    function GetConverter: TLazDbgValueConverterIntf;
+  TFpDbgValueConverterRegistryEntry = class(TLazDbgValueConvertRegistryEntry)
   public
-    constructor Create(AConverter: TFpDbgValueConverter);
-    destructor Destroy; override;
-    function CreateCopy: TFpDbgConverterConfig; virtual;
-    procedure Assign(ASource: TFpDbgConverterConfig); virtual;
-
-    function CheckMatch(AValue: TFpValue): Boolean;
-    function CheckTypeMatch(AValue: TFpValue): Boolean;
-    property Converter: TFpDbgValueConverter read FConverter write SetConverter;
-
-    property MatchKinds: TDbgSymbolKinds read FMatchKinds write FMatchKinds;
-    property MatchTypeNames: TStrings read FMatchTypeNames;
+    class function CreateValueConvertorIntf: TLazDbgValueConverterIntf; override;
+    class function GetName: String; override;
+    class function GetDebuggerClass: TClass; override;
   end;
-  TFpDbgConverterConfigClass = class of TFpDbgConverterConfig;
 
-  { TFpDbgConverterConfigList }
-
-  TFpDbgConverterConfigList = class(specialize TFPGObjectList<TFpDbgConverterConfig>)
-  private
-    FLock: TLazMonitor;
-  public
-    constructor Create;
-    destructor Destroy; override;
-    procedure Assign(ASource: TFpDbgConverterConfigList);
-    procedure Lock;
-    procedure Unlock;
-  end;
 
   { TFpDbgValueConverterVariantToLStr }
 
@@ -95,55 +66,31 @@ type
     function GetProcAddrFromMgr(AnFpDebugger: TFpDebugDebuggerBase; AnExpressionScope: TFpDbgSymbolScope): TDbgPtr;
   public
     class function GetName: String; override;
-    class function GetSupportedKinds: TDbgSymbolKinds; override;
+    function GetRegistryEntry: TLazDbgValueConvertRegistryEntryClass; override;
     function ConvertValue(ASourceValue: TFpValue;
                           AnFpDebugger: TFpDebugDebuggerBase;
                           AnExpressionScope: TFpDbgSymbolScope
                          ): TFpValue; override;
   end;
 
-function ValueConverterClassList: TFpDbgValueConverterClassList;
-function ValueConverterConfigList: TFpDbgConverterConfigList;
+  { TFpDbgValueConverterVariantToLStrRegistryEntry }
+
+  TFpDbgValueConverterVariantToLStrRegistryEntry = class(TFpDbgValueConverterRegistryEntry)
+  public
+    class function GetConvertorClass: TClass; override;
+  end;
 
 implementation
-var
-  TheValueConverterClassList: TFpDbgValueConverterClassList = nil;
-  TheValueConverterList: TFpDbgConverterConfigList = nil;
-
-
-function ValueConverterClassList: TFpDbgValueConverterClassList;
-begin
-  if TheValueConverterClassList = nil then
-    TheValueConverterClassList := TFpDbgValueConverterClassList.Create;
-  Result := TheValueConverterClassList;
-end;
-
-function ValueConverterConfigList: TFpDbgConverterConfigList;
-begin
-  if TheValueConverterList = nil then
-    TheValueConverterList := TFpDbgConverterConfigList.Create;
-  Result := TheValueConverterList;
-end;
-
-{ TFpDbgValueConverterClassList }
-
-function TFpDbgValueConverterClassList.FindByClassName(AName: String
-  ): TFpDbgValueConverterClass;
-var
-  i: Integer;
-begin
-  Result := nil;
-  for i := 0 to Count -1 do
-    if Items[i].ClassName = AName then
-      exit(Items[i]);
-end;
 
 { TFpDbgValueConverter }
 
-function TFpDbgValueConverter.CreateCopy: TFpDbgValueConverter;
+function TFpDbgValueConverter.CreateCopy: TLazDbgValueConverterIntf;
+var
+  c: TFpDbgValueConverter;
 begin
-  Result := TFpDbgValueConverterClass(ClassType).Create;
-  Result.Assign(Self);
+  c := TFpDbgValueConverterClass(ClassType).Create;
+  c.Assign(Self);
+  Result := c;
 end;
 
 procedure TFpDbgValueConverter.SetError(AnError: TFpError);
@@ -166,9 +113,9 @@ begin
   //
 end;
 
-class function TFpDbgValueConverter.GetSupportedKinds: TDbgSymbolKinds;
+function TFpDbgValueConverter.GetRegistryEntry: TLazDbgValueConvertRegistryEntryClass;
 begin
-  Result := [low(TDbgSymbolKinds)..high(TDbgSymbolKinds)];
+  Result := nil;
 end;
 
 constructor TFpDbgValueConverter.Create;
@@ -182,63 +129,17 @@ begin
   //
 end;
 
-{ TFpDbgConverterConfig }
+{ TFpDbgValueConvertSelectorIntfHelper }
 
-procedure TFpDbgConverterConfig.SetConverter(AValue: TFpDbgValueConverter);
+function TFpDbgValueConvertSelectorIntfHelper.CheckMatch(AValue: TFpValue;
+  IgnoreInstanceClass: boolean): Boolean;
 begin
-  if FConverter = AValue then Exit;
-  FConverter.ReleaseReference;
-  FConverter := AValue;
-  if FConverter <> nil then
-    FConverter.AddReference;
+  Result := //(AValue.Kind in (MatchKinds * GetConverter.GetSupportedKinds)) and
+            CheckTypeMatch(AValue, IgnoreInstanceClass);
 end;
 
-function TFpDbgConverterConfig.GetBackendSpecificObject: TObject;
-begin
-  Result := Self;
-end;
-
-function TFpDbgConverterConfig.GetConverter: TLazDbgValueConverterIntf;
-begin
-  Result := FConverter;
-end;
-
-function TFpDbgConverterConfig.CreateCopy: TFpDbgConverterConfig;
-begin
-  Result := TFpDbgConverterConfigClass(ClassType).Create(nil);
-  Result.Assign(Self);
-end;
-
-constructor TFpDbgConverterConfig.Create(AConverter: TFpDbgValueConverter);
-begin
-  inherited Create;
-  Converter := AConverter;
-  FMatchTypeNames := TStringList.Create;
-  TStringList(FMatchTypeNames).CaseSensitive := False;
-  TStringList(FMatchTypeNames).Sorted := True;
-end;
-
-destructor TFpDbgConverterConfig.Destroy;
-begin
-  inherited Destroy;
-  FMatchTypeNames.Free;
-  FConverter.ReleaseReference;
-end;
-
-procedure TFpDbgConverterConfig.Assign(ASource: TFpDbgConverterConfig);
-begin
-  FMatchKinds := ASource.FMatchKinds;
-  FMatchTypeNames.Assign(ASource.FMatchTypeNames);
-  Converter := ASource.FConverter.CreateCopy;
-end;
-
-function TFpDbgConverterConfig.CheckMatch(AValue: TFpValue): Boolean;
-begin
-  Result := (AValue.Kind in (FMatchKinds * Converter.GetSupportedKinds)) and
-            CheckTypeMatch(AValue);
-end;
-
-function TFpDbgConverterConfig.CheckTypeMatch(AValue: TFpValue): Boolean;
+function TFpDbgValueConvertSelectorIntfHelper.CheckTypeMatch(AValue: TFpValue;
+  IgnoreInstanceClass: boolean): Boolean;
   function MatchPattern(const AName, APattern: String): Boolean;
   var
     NamePos, PatternPos, p: Integer;
@@ -284,6 +185,7 @@ var
   TpName, Pattern, ValClassName, ValUnitName: String;
   t: TFpSymbol;
   HasMaybeUnitDot: Boolean;
+  MatchTypeNames: TStrings;
 begin
   t := AValue.TypeInfo;
   Result := (t <> nil) and GetTypeName(TpName, t, [tnfNoSubstitute]);
@@ -291,10 +193,11 @@ begin
     exit;
 
   TpName := LowerCase(TpName);
-  i := FMatchTypeNames.Count;
+  MatchTypeNames := AllowedTypeNames;
+  i := MatchTypeNames.Count;
   while i > 0 do begin
     dec(i);
-    Pattern := LowerCase(trim(FMatchTypeNames[i]));
+    Pattern := LowerCase(trim(MatchTypeNames[i]));
 
     HasMaybeUnitDot := (pos('.', Pattern) > 1) and
                        (AValue.Kind in [skClass]); // only class supports unitnames (via rtti)
@@ -315,25 +218,27 @@ begin
           ValClassName := LowerCase(ValClassName);
         end;
 
-        CnIdx := 0;
-        while AValue.GetInstanceClassName(@ValClassName, @ValUnitName, CnIdx) and
-              (ValClassName <> '')
-        do begin
-          ValClassName := LowerCase(ValClassName);
-          if (ValClassName = TpName) and (not HasMaybeUnitDot) then
-            Break;
-          Result := MatchPattern(ValClassName, Pattern);
-          if Result then
-            exit;
-
-          if HasMaybeUnitDot and (ValUnitName <> '') then begin
-            ValUnitName := LowerCase(ValUnitName);
-            Result := MatchPattern(ValUnitName+'.'+ValClassName, Pattern);
+        if not IgnoreInstanceClass then begin
+          CnIdx := 0;
+          while AValue.GetInstanceClassName(@ValClassName, @ValUnitName, CnIdx) and
+                (ValClassName <> '')
+          do begin
+            ValClassName := LowerCase(ValClassName);
+            if (ValClassName = TpName) and (not HasMaybeUnitDot) then
+              Break;
+            Result := MatchPattern(ValClassName, Pattern);
             if Result then
               exit;
-          end;
 
-          inc(CnIdx);
+            if HasMaybeUnitDot and (ValUnitName <> '') then begin
+              ValUnitName := LowerCase(ValUnitName);
+              Result := MatchPattern(ValUnitName+'.'+ValClassName, Pattern);
+              if Result then
+                exit;
+            end;
+
+            inc(CnIdx);
+          end;
         end;
         AValue.ResetError;
 
@@ -357,38 +262,21 @@ begin
   end;
 end;
 
-{ TFpDbgConverterConfigList }
+{ TFpDbgValueConverterRegistryEntry }
 
-constructor TFpDbgConverterConfigList.Create;
+class function TFpDbgValueConverterRegistryEntry.CreateValueConvertorIntf: TLazDbgValueConverterIntf;
 begin
-  inherited Create(True);
-  FLock := TLazMonitor.create;
+  Result := TFpDbgValueConverterClass(GetConvertorClass).Create;
 end;
 
-destructor TFpDbgConverterConfigList.Destroy;
+class function TFpDbgValueConverterRegistryEntry.GetName: String;
 begin
-  inherited Destroy;
-  FLock.Free;
+  Result := TFpDbgValueConverterClass(GetConvertorClass).GetName;
 end;
 
-procedure TFpDbgConverterConfigList.Assign(ASource: TFpDbgConverterConfigList);
-var
-  i: Integer;
+class function TFpDbgValueConverterRegistryEntry.GetDebuggerClass: TClass;
 begin
-  Clear;
-  Count := ASource.Count;
-  for i := 0 to Count - 1 do
-    Items[i] := ASource[i].CreateCopy;
-end;
-
-procedure TFpDbgConverterConfigList.Lock;
-begin
-  FLock.Acquire;
-end;
-
-procedure TFpDbgConverterConfigList.Unlock;
-begin
-  FLock.Leave;
+  Result := TFpDebugDebuggerBase;
 end;
 
 { TFpDbgValueConverterVariantToLStr }
@@ -445,9 +333,9 @@ begin
   Result := drsCallSysVarToLStr;
 end;
 
-class function TFpDbgValueConverterVariantToLStr.GetSupportedKinds: TDbgSymbolKinds;
+function TFpDbgValueConverterVariantToLStr.GetRegistryEntry: TLazDbgValueConvertRegistryEntryClass;
 begin
-  Result := [skRecord];
+  Result := TFpDbgValueConverterVariantToLStrRegistryEntry;
 end;
 
 function TFpDbgValueConverterVariantToLStr.ConvertValue(ASourceValue: TFpValue;
@@ -570,12 +458,15 @@ begin
   end;
 end;
 
-initialization
-  ValueConverterClassList.Add(TFpDbgValueConverterVariantToLStr);
+{ TFpDbgValueConverterVariantToLStrRegistryEntry }
 
-finalization;
-  FreeAndNil(TheValueConverterClassList);
-  FreeAndNil(TheValueConverterList);
+class function TFpDbgValueConverterVariantToLStrRegistryEntry.GetConvertorClass: TClass;
+begin
+  Result := TFpDbgValueConverterVariantToLStr;
+end;
+
+initialization
+  ValueConverterRegistry.Add(TFpDbgValueConverterVariantToLStrRegistryEntry);
 
 end.
 

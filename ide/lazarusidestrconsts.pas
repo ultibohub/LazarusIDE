@@ -6670,6 +6670,7 @@ resourcestring
   lisDebugOptionsFrmBackend = 'Debugger backend';
   dlgPODebugger = 'Debugger';
   lisDebugOptionsFrmDebuggerBackend = 'Debugger Backend:';
+  lisDebugOptionsFrmUseProjectDebugger = '-- Use project Debugger --';
   lisDebugOptionsFrmUseIDEDebugger = '-- Use IDE default Debugger --';
   lisDebugOptionsFrmUnknownDebuggerBacke = 'Unknown Debugger backend "%s"';
   lisDynPkgAutoScrollOnDeletePa = 'Auto Scroll on delete past left border';
@@ -6679,6 +6680,18 @@ resourcestring
   lisDynPkgAmountToScrollIn = 'Amount to scroll in';
   lisDynPkgAmountToScrollIn2 = 'Amount to scroll in (%)';
   lisDynPkgAmountToScrollInMax = 'Amount to scroll in (Max)';
+  drsUsingIDEDefaultDebuggerSe = 'Using IDE default debugger settings';
+  drsUsingSelectedIDEDebuggerS = 'Using selected IDE debugger settings';
+  drsIgnoringProjectDebuggerSettings = ' (Ignoring project settings below)';
+  drsStoreProjectDebuggerConfi = 'Store project debugger configs in session';
+  drsTheDebuggerBackendSelecti = 'The "Debugger Backend" selection from the '
+    +'dropdown (list of IDE debugger backends) is always stored in the session'
+    +'. The project specific backends (below) are by default stored in the LPI.';
+  drsStoreConverterConfigInSes = 'Store converter config in session';
+  drsThisOnlyAffectsTheListOfC = 'This only affects the list of converters '
+    +'below. The options which list to use are always stored in the session';
+  drsUseTheIDEGlobalListOfConv = 'Use the IDE-Global list of converters';
+  drsUseTheProjectListOfConver = 'Use the project list of converters';
 
 implementation
 

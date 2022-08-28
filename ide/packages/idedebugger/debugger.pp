@@ -45,7 +45,7 @@ uses
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase, LazDebuggerIntf,
   LazDebuggerIntfBaseTypes, LazDebuggerValueConverter, IdeDebuggerBase,
-  IdeDebuggerWatchResult, IdeDebuggerOpts, IdeDebuggerFpDbgValueConv;
+  IdeDebuggerWatchResult, IdeDebuggerOpts, IdeDebuggerBackendValueConv;
 
 const
   XMLBreakPointsNode = 'BreakPoints';
@@ -754,7 +754,7 @@ type
     FCurrentBackEndExpression: String;
     FUpdateCount: Integer;
     FEvents: array [TWatcheEvaluateEvent] of TMethodList;
-    FFpDbgConverter: TIdeFpDbgConverterConfig;
+    FDbgBackendConverter: TIdeDbgValueConvertSelector;
 
   (* TWatchValueIntf *)
     procedure BeginUpdate;
@@ -762,7 +762,7 @@ type
     procedure AddNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
     procedure RemoveNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
     function ResData: TLzDbgWatchDataIntf;
-    function GetFpDbgConverter: TLazDbgValueConvertSelectorIntf;
+    function GetDbgValConverter: TLazDbgValueConvertSelectorIntf;
   private
     FOnValidityChanged: TNotifyEvent;
     FSnapShot: TIdeWatchValue;
@@ -3997,9 +3997,9 @@ begin
   Result := FCurrentResData;
 end;
 
-function TCurrentWatchValue.GetFpDbgConverter: TLazDbgValueConvertSelectorIntf;
+function TCurrentWatchValue.GetDbgValConverter: TLazDbgValueConvertSelectorIntf;
 begin
-  Result := FFpDbgConverter;
+  Result := FDbgBackendConverter;
 end;
 
 procedure TCurrentWatchValue.SetSnapShot(const AValue: TIdeWatchValue);
@@ -4042,11 +4042,11 @@ end;
 
 procedure TCurrentWatchValue.RequestData;
 begin
-  FreeAndNil(FFpDbgConverter);
-  if Watch.FpDbgConverter <> nil then
-    FFpDbgConverter := TIdeFpDbgConverterConfig(Watch.FpDbgConverter.CreateCopy);
+  FreeAndNil(FDbgBackendConverter);
+  if Watch.DbgBackendConverter <> nil then
+    FDbgBackendConverter := TIdeDbgValueConvertSelector(Watch.DbgBackendConverter.CreateCopy);
 
-  if (Watch.ParentWatch <> nil) and (Watch.ParentWatch.FpDbgConverter = Watch.FpDbgConverter) then
+  if (Watch.ParentWatch <> nil) and (Watch.ParentWatch.DbgBackendConverter = Watch.DbgBackendConverter) then
     if MaybeCopyResult(Watch.ParentWatch) then
       exit;
 
@@ -4084,7 +4084,7 @@ begin
   FCurrentResData.Free;
   for e in FEvents do
     e.Free;
-  FFpDbgConverter.Free;
+  FDbgBackendConverter.Free;
   inherited Destroy;
 end;
 
@@ -6508,7 +6508,7 @@ begin
   Result.SetParentWatch(Self);
   Result.Enabled       := Enabled;
   Result.DisplayFormat := DisplayFormat;
-  Result.FpDbgConverter := FpDbgConverter;
+  Result.DbgBackendConverter := DbgBackendConverter;
   Result.FDisplayName := ADispName;
   EndChildUpdate;
 end;
@@ -6557,7 +6557,7 @@ begin
 
   s := AConfig.GetValue(APath + 'FpDbgConv', '');
   if s <> '' then
-    FpDbgConverter := DebuggerOptions.FpDbgConverterConfig.IdeItemByName(s);
+    DbgBackendConverter := DebuggerOptions.BackendConverterConfig.IdeItemByName(s);
 
   TIdeWatchValueList(FValueList).LoadDataFromXMLConfig(AConfig, APath + 'ValueList/');
 end;
@@ -6575,8 +6575,8 @@ begin
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
 
   AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
-  if FpDbgConverter <> nil then
-    AConfig.SetDeleteValue(APath + 'FpDbgConv', FpDbgConverter.Name, '');
+  if DbgBackendConverter <> nil then
+    AConfig.SetDeleteValue(APath + 'FpDbgConv', DbgBackendConverter.Name, '');
 
   TIdeWatchValueList(FValueList).SaveDataToXMLConfig(AConfig, APath + 'ValueList/');
 end;
@@ -6708,7 +6708,7 @@ begin
 
   s := AConfig.GetValue(APath + 'FpDbgConv', '');
   if s <> '' then
-    FpDbgConverter := DebuggerOptions.FpDbgConverterConfig.IdeItemByName(s);
+    DbgBackendConverter := DebuggerOptions.BackendConverterConfig.IdeItemByName(s);
 end;
 
 procedure TCurrentWatch.SaveToXMLConfig(const AConfig: TXMLConfig; const APath: string);
@@ -6722,8 +6722,8 @@ begin
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
 
   AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
-  if FpDbgConverter <> nil then
-    AConfig.SetDeleteValue(APath + 'FpDbgConv', FpDbgConverter.Name, '');
+  if DbgBackendConverter <> nil then
+    AConfig.SetDeleteValue(APath + 'FpDbgConv', DbgBackendConverter.Name, '');
 end;
 
 { =========================================================================== }

@@ -60,7 +60,10 @@ uses
   PropEdits, UnitResources, EditorSyntaxHighlighterDef,
   CompOptsIntf, ProjectIntf, MacroIntf, MacroDefIntf, SrcEditorIntf,
   IDEOptionsIntf, IDEOptEditorIntf, IDEDialogs, LazIDEIntf, PackageIntf,
+  // DebuggerIntf
+  DbgIntfDebuggerBase, IdeDebuggerOpts, IdeDebuggerBackendValueConv,
   // IDE
+  EnvironmentOpts,
   CompOptsModes, ProjectResources, LazConf, ProjectIcon,
   IDECmdLine, IDEProcs, CompilerOptions, RunParamsOpts, ModeMatrixOpts,
   TransferMacros, ProjectDefs, EditDefineTree,
@@ -721,11 +724,17 @@ type
     FAutoCreateForms: boolean;
     FChangeStampSaved: integer;
     FDebuggerBackend: String;
+    FDebuggerProperties: TDebuggerPropertiesConfigList; // named entries
     FEnableI18NForLFM: boolean;
     FHistoryLists: THistoryLists;
     FLastCompileComplete: boolean;
     FMacroEngine: TTransferMacroList;
     FOnLoadSafeCustomData: TLazLoadSaveCustomDataEvent;
+    FStoreBackendConverterConfigInSession: boolean;
+    FBackendConverterConfigWasFromSession, FBackendConverterConfigWasFromLPI: boolean;
+    FBackendConverterConfig: TIdeDbgValueConvertSelectorList;
+    FStoreDebuggerClassConfInSession: boolean;
+    FDebuggerClassConfWasFromSession, FDebuggerClassConfWasFromLPI: boolean;
     FTmpAutoCreatedForms: TStrings; // temporary, used to apply auto create forms changes
     FAutoOpenDesignerFormsDisabled: boolean;
     FBookmarks: TProjectBookmarkList;
@@ -777,8 +786,10 @@ type
     FOtherDefines: TStrings; // list of user selectable defines for custom options
     FUpdateLock: integer;
     FUseAsDefault: Boolean;
+    FUseBackendConverterFromIDE: boolean;
+    FUseBackendConverterFromProject: boolean;
     // Variables used by ReadProject / WriteProject
-    FXMLConfig: TXMLConfig;
+    FXMLConfig: TRttiXMLConfig;
     FLoadAllOptions: Boolean; // All options / just options used as default for new projects
     FFileVersion: Integer;
     FNewMainUnitID: LongInt;
@@ -808,6 +819,11 @@ type
     procedure EmbeddedObjectModified(Sender: TObject);
     function FileBackupHandler(const Filename: string): TModalResult;
     procedure LoadSaveFilenameHandler(var AFilename: string; Load: boolean);
+    procedure OnBackendConverterConfigChanged(Sender: TObject);
+    procedure SetStoreBackendConverterConfigInSession(AValue: boolean);
+    procedure SetStoreDebuggerClassConfInSession(AValue: boolean);
+    procedure SetUseBackendConverterFromIDE(AValue: boolean);
+    procedure SetUseBackendConverterFromProject(AValue: boolean);
     procedure UnitNameChangeHandler(AnUnitInfo: TUnitInfo;
                                const OldUnitName, NewUnitName: string;
                                CheckIfAllowed: boolean; var Allowed: boolean);
@@ -1137,6 +1153,20 @@ type
     property UseAsDefault: Boolean read FUseAsDefault write FUseAsDefault; // for dialog only (used to store options once)
 
     property DebuggerBackend: String read FDebuggerBackend write SetDebuggerBackend;
+
+    // Debugger
+    function DebuggerPropertiesConfigList: TDebuggerPropertiesConfigList;
+    function CurrentDebuggerClass: TDebuggerClass;
+    function DebuggerFilename: string;
+    function GetParsedDebuggerFilename: string;
+    function CurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig;
+    procedure MarkDebuggerClassConfAsModified;
+    property StoreDebuggerClassConfInSession: boolean read FStoreDebuggerClassConfInSession write SetStoreDebuggerClassConfInSession;
+
+    property BackendConverterConfig: TIdeDbgValueConvertSelectorList read FBackendConverterConfig write FBackendConverterConfig;
+    property StoreBackendConverterConfigInSession: boolean read FStoreBackendConverterConfigInSession write SetStoreBackendConverterConfigInSession;
+    property UseBackendConverterFromIDE: boolean read FUseBackendConverterFromIDE write SetUseBackendConverterFromIDE;
+    property UseBackendConverterFromProject: boolean read FUseBackendConverterFromProject write SetUseBackendConverterFromProject;
   end;
 
 
@@ -2801,6 +2831,15 @@ begin
   ProjResources.OnModified := @EmbeddedObjectModified;
 
   FHistoryLists := THistoryLists.Create;
+
+  FDebuggerProperties := TDebuggerPropertiesConfigList.Create;
+  FBackendConverterConfig := TIdeDbgValueConvertSelectorList.Create;
+  FBackendConverterConfig.OnChanged := @OnBackendConverterConfigChanged;
+  FUseBackendConverterFromIDE := True;
+  FUseBackendConverterFromProject := True;
+
+  if DebugBossManager <> nil then
+    DebugBossManager.DoBackendConverterChanged;
 end;
 
 {------------------------------------------------------------------------------
@@ -2830,6 +2869,9 @@ begin
   FreeThenNil(FRunParameters);
   FreeThenNil(FDefineTemplates);
   FreeThenNil(FHistoryLists);
+  FDebuggerProperties.ClearAll;
+  FreeAndNil(FDebuggerProperties);
+  FreeAndNil(FBackendConverterConfig);
 
   inherited Destroy;
 end;
@@ -3042,6 +3084,18 @@ begin
   // load session info
   LoadSessionInfo(Path,false);
 
+  FStoreDebuggerClassConfInSession := FXMLConfig.GetValue(Path+'Debugger/StoreDebuggerClassConfInSession/Value', False);
+  if not FStoreDebuggerClassConfInSession then begin
+    FDebuggerProperties.LoadFromXml(FXMLConfig, Path+'Debugger/ClassConfig/');
+    FDebuggerClassConfWasFromLPI := True;
+  end;
+
+  FStoreBackendConverterConfigInSession := FXMLConfig.GetValue(Path+'Debugger/StoreBackendConverterConfigInSession/Value', False);
+  if not FStoreBackendConverterConfigInSession then begin
+    FBackendConverterConfig.LoadDataFromXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/');
+    FBackendConverterConfigWasFromLPI := True;
+  end;
+
   // This is for backward compatibility (only trunk 2.1 did use this / Can be removed in some time after 2.2 / but needs LoadFromSession to change default to '')
   FDebuggerBackend := FXMLConfig.GetValue(Path+'Debugger/Backend/Value', '');
 
@@ -3079,6 +3133,18 @@ begin
 
   // Load from LPI will have been called first => so if session has no value, we keep the LPI value (as for some time, the data was stored in the LPI)
   FDebuggerBackend := FXMLConfig.GetValue(Path+'Debugger/Backend/Value', FDebuggerBackend);
+  if FStoreDebuggerClassConfInSession then begin
+    FDebuggerProperties.LoadFromXml(FXMLConfig, Path+'Debugger/ClassConfig/');
+    FDebuggerClassConfWasFromSession := True;
+  end;
+
+  FUseBackendConverterFromIDE :=     FXMLConfig.GetValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromIDE', True);
+  FUseBackendConverterFromProject := FXMLConfig.GetValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromProject', True);
+
+  if FStoreBackendConverterConfigInSession then begin
+    FBackendConverterConfig.LoadDataFromXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/');
+    FBackendConverterConfigWasFromSession := True;
+  end;
 
   // call hooks to read their info (e.g. DebugBoss)
   if Assigned(OnLoadProjectInfo) then
@@ -3222,6 +3288,8 @@ begin
   Result := mrCancel;
   BeginUpdate(true);
   try
+    FDebuggerClassConfWasFromSession := False;
+    FDebuggerClassConfWasFromLPI := False;
     BuildModes.FGlobalMatrixOptions := GlobalMatrixOptions;
     FLoadAllOptions := LoadAllOptions;
 
@@ -3247,6 +3315,10 @@ begin
     FAllEditorsInfoList.SortByPageIndex;
   end;
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TProject.ReadProject END');{$ENDIF}
+
+  if DebugBossManager <> nil then
+    DebugBossManager.DoBackendConverterChanged;
+
   Result := mrOk;
 end;
 
@@ -3393,7 +3465,25 @@ begin
   // save units
   SaveUnits(Path,FSaveSessionInLPI);
 
-  FXMLConfig.DeletePath(Path+'Debugger'); // remove old value from trunk 2.1
+  FXMLConfig.DeletePath(Path+'Debugger/Backend'); // remove old value from trunk 2.1
+
+  FXMLConfig.SetDeleteValue(Path+'Debugger/StoreDebuggerClassConfInSession/Value', FStoreDebuggerClassConfInSession, False);
+  if not FStoreDebuggerClassConfInSession then
+    FDebuggerProperties.SaveToXml(FXMLConfig, Path+'Debugger/ClassConfig/')
+  else
+  if FDebuggerClassConfWasFromLPI then
+    FXMLConfig.DeletePath(Path+'Debugger/ClassConfig');
+  FDebuggerClassConfWasFromSession := False;
+  FDebuggerClassConfWasFromLPI := False;
+
+  FXMLConfig.SetDeleteValue(Path+'Debugger/StoreBackendConverterConfigInSession/Value', FStoreBackendConverterConfigInSession, False);
+  if not FStoreBackendConverterConfigInSession then
+    FBackendConverterConfig.SaveDataToXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/')
+  else
+  if FBackendConverterConfigWasFromLPI then
+    FXMLConfig.DeletePath(Path+'Debugger/BackendConv');
+  FBackendConverterConfigWasFromSession := False;
+  FBackendConverterConfigWasFromLPI := False;
 
   if FSaveSessionInLPI then begin
     // save defines used for custom options
@@ -3450,6 +3540,26 @@ begin
   SaveUnits(Path,true);
 
   FXMLConfig.SetDeleteValue(Path+'Debugger/Backend/Value', DebuggerBackend, '');
+
+  if FStoreDebuggerClassConfInSession then
+    FDebuggerProperties.SaveToXml(FXMLConfig, Path+'Debugger/ClassConfig/')
+  else
+  if FDebuggerClassConfWasFromSession then
+    FXMLConfig.DeletePath(Path+'Debugger/ClassConfig');
+  FDebuggerClassConfWasFromSession := False;
+  FDebuggerClassConfWasFromLPI := False;
+
+  FXMLConfig.SetDeleteValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromIDE', FUseBackendConverterFromIDE, True);
+  FXMLConfig.SetDeleteValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromProject', FUseBackendConverterFromProject, True);
+
+  if FStoreBackendConverterConfigInSession then
+    FBackendConverterConfig.SaveDataToXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/')
+  else
+  if FBackendConverterConfigWasFromSession then
+    FXMLConfig.DeletePath(Path+'Debugger/BackendConv');
+  FBackendConverterConfigWasFromSession := False;
+  FBackendConverterConfigWasFromLPI := False;
+
   // save defines used for custom options
   SaveOtherDefines(Path);
   // save session info
@@ -3623,7 +3733,7 @@ begin
   else if SysUtils.CompareText(SourceType,'Package')=0 then
     ExecutableType:=petPackage
   else
-    ExecutableType:=petNone;
+    ExecutableType:=ProjectIntf.petNone;
 end;
 
 procedure TProject.BackupSession;
@@ -3880,6 +3990,8 @@ begin
   UpdateProjectDirectory;
   FPublishOptions.Clear;
   Title := '';
+  FUseBackendConverterFromIDE := True;
+  FUseBackendConverterFromProject := True;
 
   Modified := false;
   SessionModified := false;
@@ -4563,6 +4675,44 @@ begin
     AFilename:=SwitchPathDelims(AFileName,fCurStorePathDelim);
   end;
   //debugln('TProject.OnLoadSaveFilename END "',AFilename,'" FileWasAbsolute=',dbgs(FileWasAbsolute));
+end;
+
+procedure TProject.OnBackendConverterConfigChanged(Sender: TObject);
+begin
+  if FStoreBackendConverterConfigInSession then
+    SessionModified := True
+  else
+    Modified := True;
+end;
+
+procedure TProject.SetStoreBackendConverterConfigInSession(AValue: boolean);
+begin
+  if FStoreBackendConverterConfigInSession = AValue then Exit;
+  FStoreBackendConverterConfigInSession := AValue;
+  Modified := True;
+  SessionModified := True;
+end;
+
+procedure TProject.SetStoreDebuggerClassConfInSession(AValue: boolean);
+begin
+  if FStoreDebuggerClassConfInSession = AValue then Exit;
+  FStoreDebuggerClassConfInSession := AValue;
+  Modified := True;
+  SessionModified := True;
+end;
+
+procedure TProject.SetUseBackendConverterFromIDE(AValue: boolean);
+begin
+  if FUseBackendConverterFromIDE = AValue then Exit;
+  FUseBackendConverterFromIDE := AValue;
+  SessionModified := True;
+end;
+
+procedure TProject.SetUseBackendConverterFromProject(AValue: boolean);
+begin
+  if FUseBackendConverterFromProject = AValue then Exit;
+  FUseBackendConverterFromProject := AValue;
+  SessionModified := True;
 end;
 
 function TProject.RemoveProjectPathFromFilename(const AFilename: string): string;
@@ -5358,6 +5508,64 @@ begin
   if i < 0 then exit;
   Bookmarks.Delete(i);
   SessionModified := true;
+end;
+
+function TProject.DebuggerPropertiesConfigList: TDebuggerPropertiesConfigList;
+begin
+  Result := FDebuggerProperties;
+end;
+
+function TProject.CurrentDebuggerClass: TDebuggerClass;
+var
+  DbgCfg: TDebuggerPropertiesConfig;
+begin
+  Result := nil;
+  DbgCfg := CurrentDebuggerPropertiesConfig;
+  if  DbgCfg<> nil then
+    Result := DbgCfg.DebuggerClass;
+end;
+
+function TProject.DebuggerFilename: string;
+var
+  DbgCfg: TDebuggerPropertiesConfig;
+begin
+  Result := '';
+  DbgCfg := CurrentDebuggerPropertiesConfig;
+  if DbgCfg <> nil then
+    Result := DbgCfg.DebuggerFilename;
+end;
+
+function TProject.GetParsedDebuggerFilename: string;
+begin
+  Result := EnvironmentOptions.GetParsedDebuggerFilename(DebuggerFilename);
+end;
+
+function TProject.CurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig;
+begin
+  if Self = nil then
+    exit(EnvironmentOptions.CurrentDebuggerPropertiesConfig);
+
+  Result := nil;
+  if (CurrentDebuggerBackend <> '') then
+    if (CurrentDebuggerBackend = 'IDE') then
+      Result := EnvironmentOptions.CurrentDebuggerPropertiesConfig
+    else
+      Result := EnvironmentOptions.CurrentDebuggerPropertiesConfigEx(CurrentDebuggerBackend);
+
+  if Result = nil then
+    Result := FDebuggerProperties.CurrentDebuggerPropertiesConfig;
+
+  // No project config?
+  if Result = nil then
+      Result := EnvironmentOptions.CurrentDebuggerPropertiesConfig;
+end;
+
+procedure TProject.MarkDebuggerClassConfAsModified;
+begin
+  if FStoreDebuggerClassConfInSession then
+    SessionModified := True
+  else
+    Modified := True;
 end;
 
 procedure TProject.UnitNameChangeHandler(AnUnitInfo: TUnitInfo;

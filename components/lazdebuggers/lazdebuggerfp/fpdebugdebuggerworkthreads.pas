@@ -49,8 +49,8 @@ uses
   DbgIntfBaseTypes, FpDbgClasses, FpDbgUtil, FPDbgController, FpPascalBuilder,
   FpdMemoryTools, FpDbgInfo, FpPascalParser, FpErrorMessages,
   FpDebugDebuggerBase, FpDebuggerResultData, FpDbgCallContextInfo, FpDbgDwarf,
-  FpDbgDwarfDataClasses, FpWatchResultData, LazDebuggerIntf, Forms, fgl, math,
-  Classes, sysutils, LazClasses,
+  FpDbgDwarfDataClasses, FpWatchResultData, LazDebuggerIntf,
+  LazDebuggerValueConverter, Forms, fgl, math, Classes, sysutils, LazClasses,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif};
 
 type
@@ -1178,10 +1178,10 @@ begin
       WatchResConv.ExtraDepth := defExtraDepth in FWatchValue.EvaluateFlags;
       WatchResConv.FirstIndexOffs := FWatchValue.FirstIndexOffs;
       if not (defSkipValConv in AnEvalFlags) then begin
-        if (FWatchValue.GetFpDbgConverter <> nil) and
-           (FWatchValue.GetFpDbgConverter.GetBackendSpecificObject is TFpDbgConverterConfig)
+        if (FWatchValue.GetDbgValConverter <> nil) and
+           (FWatchValue.GetDbgValConverter.GetConverter.GetObject is TFpDbgValueConverter)
         then
-          WatchResConv.ValConfig := TFpDbgConverterConfig(FWatchValue.GetFpDbgConverter.GetBackendSpecificObject)
+          WatchResConv.ValConfig := FWatchValue.GetDbgValConverter
         else
           WatchResConv.ValConvList := ValueConverterConfigList;
         WatchResConv.Debugger := FDebugger;

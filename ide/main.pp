@@ -103,7 +103,7 @@ uses
   LazDebuggerGdbmi, GDBMIDebugger, RunParamsOpts, BaseDebugManager,
   DebugManager, debugger, DebuggerDlg, DebugAttachDialog, DebuggerStrConst,
   DbgIntfDebuggerBase, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
-  idedebuggerpackage, FpDebugValueConvertors,
+  idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBackendValueConv,
   // packager
   PackageSystem, PkgManager, BasePkgManager, LPKCache,
   // source editing
@@ -134,6 +134,7 @@ uses
   project_application_options, project_forms_options, project_lazdoc_options,
   project_save_options, project_versioninfo_options, project_i18n_options,
   project_misc_options, project_resources_options, project_debug_options,
+  project_valconv_options,
   // project compiler option frames
   compiler_path_options, compiler_config_target, compiler_parsing_options,
   compiler_codegen_options, compiler_debugging_options, compiler_verbosity_options,
@@ -1430,12 +1431,8 @@ begin
   DebuggerOptions.PrimaryConfigPath := GetPrimaryConfigPath;
   DebuggerOptions.CreateConfig;
   DebuggerOptions.Load;
-  ValueConverterConfigList.Lock;
-  try
-    DebuggerOptions.FpDbgConverterConfig.AssignEnabledTo(ValueConverterConfigList);
-  finally
-    ValueConverterConfigList.Unlock;
-  end;
+  if DebugBoss <> nil then
+    DebugBoss.DoBackendConverterChanged;
 
   Assert(InputHistories = nil, 'TMainIDE.LoadGlobalOptions: InputHistories is already assigned.');
   InputHistoriesSO := TInputHistoriesWithSearchOpt.Create;
@@ -11913,7 +11910,7 @@ begin
       Opts := [];
       if EditorOpts.DbgHintAutoTypeCastClass
       then Opts := [defClassAutoCast];
-      if not EditorOpts.DbgHintUseFpDebugConverter
+      if not EditorOpts.DbgHintUseBackendDebugConverter
       then Opts := [defSkipValConv];
 
       DebugBoss.CurrentWatches.BeginUpdate;
