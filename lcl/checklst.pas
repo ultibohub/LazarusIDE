@@ -36,6 +36,8 @@ type
   TCustomCheckListBox = class(TCustomListBox)
   private
     FAllowGrayed: Boolean;
+    FHeaderBackgroundColor: TColor;
+    FHeaderColor: TColor;
     FItemDataOffset: Integer;
     FOnClickCheck : TNotifyEvent;
     FOnItemClick: TCheckListClicked;
@@ -49,13 +51,14 @@ type
     procedure SendItemHeader(const AIndex: Integer; const AHeader: Boolean);
     procedure DoChange(var Msg: TLMessage); message LM_CHANGED;
     procedure SetHeader(AIndex: Integer; const AValue: Boolean);
+    procedure SetHeaderBackgroundColor(AValue: TColor);
+    procedure SetHeaderColor(AValue: TColor);
     procedure SetItemEnabled(AIndex: Integer; const AValue: Boolean);
     procedure SetState(AIndex: Integer; const AValue: TCheckBoxState);
   protected
     class procedure WSRegisterClass; override;
     procedure AssignItemDataToCache(const AIndex: Integer; const AData: Pointer); override;
     procedure AssignCacheToItemData(const AIndex: Integer; const AData: Pointer); override;
-    procedure CreateParams(var Params: TCreateParams); override;
     procedure DrawItem(AIndex: Integer; ARect: TRect; State: TOwnerDrawState); override;
     function  GetCachedDataSize: Integer; override;
     function  GetCheckWidth: Integer;
@@ -68,7 +71,7 @@ type
     procedure FontChanged(Sender: TObject); override;
   public
     constructor Create(AOwner: TComponent); override;
-    procedure MeasureItem(Index: Integer; var TheHeight: Integer); override;
+    function CalculateStandardItemHeight: Integer; override;
     procedure Toggle(AIndex: Integer);
     procedure CheckAll(AState: TCheckBoxState; aAllowGrayed: Boolean = True; aAllowDisabled: Boolean = True);
     procedure Exchange(AIndex1, AIndex2: Integer);
@@ -76,6 +79,8 @@ type
     property AllowGrayed: Boolean read FAllowGrayed write FAllowGrayed default False;
     property Checked[AIndex: Integer]: Boolean read GetChecked write SetChecked;
     property Header[AIndex: Integer]: Boolean read GetHeader write SetHeader;
+    property HeaderBackgroundColor: TColor read FHeaderBackgroundColor write SetHeaderBackgroundColor default clInfoBk;
+    property HeaderColor: TColor read FHeaderColor write SetHeaderColor default clInfoText;
     property ItemEnabled[AIndex: Integer]: Boolean read GetItemEnabled write SetItemEnabled;
     property State[AIndex: Integer]: TCheckBoxState read GetState write SetState;
     property OnClickCheck: TNotifyEvent read FOnClickCheck write FOnClickCheck;
@@ -101,6 +106,8 @@ type
     property ExtendedSelect;
     property Enabled;
     property Font;
+    property HeaderBackgroundColor;
+    property HeaderColor;
     property IntegralHeight;
     property Items;
     property ItemHeight;
@@ -121,6 +128,7 @@ type
     property OnKeyPress;
     property OnKeyDown;
     property OnKeyUp;
+    property OnMeasureItem;
     property OnMouseDown;
     property OnMouseEnter;
     property OnMouseLeave;
@@ -183,12 +191,6 @@ begin
   SendItemHeader(AIndex, PCachedItemData(AData + FItemDataOffset)^.Header);
 end;
 
-procedure TCustomCheckListBox.CreateParams(var Params: TCreateParams);
-begin
-  inherited CreateParams(Params);
-  Params.Style := (Params.Style and not LBS_OWNERDRAWVARIABLE) or LBS_OWNERDRAWFIXED;
-end;
-
 procedure TCustomCheckListBox.DrawItem(AIndex: Integer; ARect: TRect; State: TOwnerDrawState);
 begin
   if not Header[AIndex] then begin
@@ -214,14 +216,16 @@ begin
   inherited Create(AOwner);
   FCompStyle := csCheckListBox;
   FItemDataOffset := inherited GetCachedDataSize;
+  FHeaderBackgroundColor := clInfoBk;
+  FHeaderColor := clInfoText;
 end;
 
-procedure TCustomCheckListBox.MeasureItem(Index: Integer; var TheHeight: Integer);
+function TCustomCheckListBox.CalculateStandardItemHeight: Integer;
 begin
-  if (Style = lbStandard) then
-    TheHeight := Max(CalculateStandardItemHeight, GetSystemMetrics(SM_CYMENUCHECK) + 2)
-  else
-    inherited MeasureItem(Index, TheHeight);
+  Result:=inherited CalculateStandardItemHeight;
+  // for Win32WS, ensure item height for internally owner-drawn checkmarks
+  if Style <> lbOwnerDrawVariable then
+    Result:= Max(Result, GetSystemMetrics(SM_CYMENUCHECK) + 2);
 end;
 
 procedure TCustomCheckListBox.Toggle(AIndex: Integer);
@@ -371,6 +375,20 @@ begin
     SendItemHeader(AIndex, AValue)
   else
     PCachedItemData(GetCachedData(AIndex) + FItemDataOffset)^.Header := AValue;
+end;
+
+procedure TCustomCheckListBox.SetHeaderBackgroundColor(AValue: TColor);
+begin
+  if FHeaderBackgroundColor = AValue then Exit;
+  FHeaderBackgroundColor := AValue;
+  Invalidate;
+end;
+
+procedure TCustomCheckListBox.SetHeaderColor(AValue: TColor);
+begin
+  if FHeaderColor = AValue then Exit;
+  FHeaderColor := AValue;
+  Invalidate;
 end;
 
 class procedure TCustomCheckListBox.WSRegisterClass;

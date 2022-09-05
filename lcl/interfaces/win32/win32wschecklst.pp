@@ -51,6 +51,10 @@ type
       const AIndex: integer; const AEnabled: Boolean); override;
     class procedure SetState(const ACheckListBox: TCustomCheckListBox;
       const AIndex: integer; const AState: TCheckBoxState); override;
+    class function GetHeader(const ACheckListBox: TCustomCheckListBox;
+      const AIndex: Integer): Boolean; override;
+    class procedure SetHeader(const ACheckListBox: TCustomCheckListBox;
+      const AIndex: Integer; const AHeader: Boolean); override;
   end;
 
 
@@ -159,6 +163,9 @@ begin
     pClassName := ListBoxClsName;
     pSubClassName := LCLCheckListboxClsName;
     SubClassWndProc := @CheckListBoxWndProc;
+    // require always owner-drawn, add flags if not already set due to Style
+    if (Flags and (LBS_OWNERDRAWFIXED or LBS_OWNERDRAWVARIABLE)) = 0 then
+      Flags:= Flags or LBS_OWNERDRAWFIXED;
   end;
   // create window
   FinishCreateWindow(AWinControl, Params, False, True);
@@ -177,7 +184,7 @@ class procedure TWin32WSCustomCheckListBox.DefaultWndHandler(
      {cbGrayed   } (tbCheckBoxMixedDisabled, tbCheckBoxMixedNormal)
     );
   var
-    Enabled, Selected: Boolean;
+    Enabled, Selected, Header: Boolean;
     ARect, TextRect: Windows.Rect;
     Details: TThemedElementDetails;
     TextFlags: DWord;
@@ -185,19 +192,41 @@ class procedure TWin32WSCustomCheckListBox.DefaultWndHandler(
     OldBkMode: Integer;
     sz: TSize;
     WideBuffer: widestring;
+    HdrBg, HdrTxt: TColor;
+    BgBrush: Windows.HBRUSH;
   begin
     Selected := (Data^.itemState and ODS_SELECTED) > 0;
     Enabled := CheckListBox.Enabled and CheckListBox.ItemEnabled[Data^.itemID];
+    Header := CheckListBox.Header[Data^.itemID];
+
+    if Header then
+    begin
+      HdrBg := CheckListBox.HeaderBackgroundColor;
+      if HdrBg = clDefault then HdrBg := clInfoBk;
+      HdrTxt := CheckListBox.HeaderColor;
+      if HdrTxt = clDefault then HdrTxt := clInfoText;
+    end;
 
     ARect := Data^.rcItem;
     TextRect := ARect;
-    if CheckListBox.UseRightToLeftAlignment then
-      TextRect.Right := TextRect.Right - TextRect.Bottom + TextRect.Top - 4
-    else
-      TextRect.Left := TextRect.Left + TextRect.Bottom - TextRect.Top + 4;
+
+    // adjust text rectangle for check box and padding
+    if not Header then
+    begin
+      if CheckListBox.UseRightToLeftAlignment then
+        TextRect.Right := TextRect.Right - TextRect.Bottom + TextRect.Top - 4
+      else
+        TextRect.Left := TextRect.Left + TextRect.Bottom - TextRect.Top + 4;
+    end;
 
     // fill the background
-    if Selected then
+    if Header then
+    begin
+      BgBrush := Windows.CreateSolidBrush(ColorToRGB(HdrBg));
+      Windows.FillRect(Data^._HDC, ARect, BgBrush);
+      Windows.DeleteObject(BgBrush);
+    end
+    else if Selected then
     begin
       Windows.FillRect(Data^._HDC, Rect(ARect.Left, ARect.Top, TextRect.Left, ARect.Bottom), CheckListBox.Brush.Reference.Handle);
       Windows.FillRect(Data^._HDC, TextRect, GetSysColorBrush(COLOR_HIGHLIGHT));
@@ -206,34 +235,39 @@ class procedure TWin32WSCustomCheckListBox.DefaultWndHandler(
       Windows.FillRect(Data^._HDC, ARect, CheckListBox.Brush.Reference.Handle);
 
     // draw checkbox
-    if CheckListBox.UseRightToLeftAlignment then
-      ARect.Left := ARect.Right - ARect.Bottom + ARect.Top
-    else
-      ARect.Right := ARect.Left + ARect.Bottom - ARect.Top;
+    if not Header then
+    begin
+      if CheckListBox.UseRightToLeftAlignment then
+        ARect.Left := ARect.Right - ARect.Bottom + ARect.Top
+      else
+        ARect.Right := ARect.Left + ARect.Bottom - ARect.Top;
 
-    Details := ThemeServices.GetElementDetails(ThemeStateMap[CheckListBox.State[Data^.ItemID], Enabled]);
-    sz := ThemeServices.GetDetailSize(Details);
-    sz.cx := MulDiv(sz.cx, CheckListBox.Font.PixelsPerInch, ScreenInfo.PixelsPerInchX);
-    sz.cy := MulDiv(sz.cy, CheckListBox.Font.PixelsPerInch, ScreenInfo.PixelsPerInchY);
-    ARect := Bounds((ARect.Left + ARect.Right - sz.cx) div 2, (ARect.Top + ARect.Bottom - sz.cy) div 2,
-      sz.cx, sz.cy);
-    OffsetRect(ARect, 1, 1);
-    ThemeServices.DrawElement(Data^._HDC, Details, ARect);
+      Details := ThemeServices.GetElementDetails(ThemeStateMap[CheckListBox.State[Data^.ItemID], Enabled]);
+      sz := ThemeServices.GetDetailSize(Details);
+      sz.cx := MulDiv(sz.cx, CheckListBox.Font.PixelsPerInch, ScreenInfo.PixelsPerInchX);
+      sz.cy := MulDiv(sz.cy, CheckListBox.Font.PixelsPerInch, ScreenInfo.PixelsPerInchY);
+      ARect := Bounds((ARect.Left + ARect.Right - sz.cx) div 2, (ARect.Top + ARect.Bottom - sz.cy) div 2,
+        sz.cx, sz.cy);
+      OffsetRect(ARect, 1, 1);
+      ThemeServices.DrawElement(Data^._HDC, Details, ARect);
+    end;
 
     // draw text
     if CheckListBox.UseRightToLeftAlignment then begin
       TextRect.Right := TextRect.Right - 2;
       TextFlags := DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX or DT_RIGHT or DT_RTLREADING;
     end
-    else begin
+    else
+    begin
       TextRect.Left := TextRect.Left + 2;
       TextFlags := DT_SINGLELINE or DT_VCENTER or DT_NOPREFIX;
     end;
     OldBkMode := Windows.SetBkMode(Data^._HDC, TRANSPARENT);
     if not Enabled then
       OldColor := Windows.SetTextColor(Data^._HDC, Windows.GetSysColor(COLOR_GRAYTEXT))
-    else
-    if Selected then
+    else if Header then
+      OldColor := Windows.SetTextColor(Data^._HDC, ColorToRGB(HdrTxt))
+    else if Selected then
       OldColor := Windows.SetTextColor(Data^._HDC, Windows.GetSysColor(COLOR_HIGHLIGHTTEXT))
     else
     begin
@@ -262,6 +296,10 @@ begin
   case TLMessage(AMessage).Msg of
     LM_DRAWITEM:
     begin
+      { If the user set one of the OwnerDraw Styles, the widgetset will have translated the draw messages to LM_DRAWLISTITEM
+        instead (in TWindowProcHelper.DoMsgDrawItem). This means we don't get to draw the checkmark and the CLB looks like a
+        regular list.
+      }
       with TLMDrawItems(AMessage) do
       begin
         // ItemID not UINT(-1)
@@ -270,15 +308,10 @@ begin
       end;
     end;
 
-    LM_MEASUREITEM:
-    begin
-      with TLMMeasureItem(AMessage).MeasureItemStruct^ do
-      begin
-        itemHeight := TCustomListBox(AWinControl).ItemHeight;
-        if TCustomListBox(AWinControl).Style = lbOwnerDrawVariable then
-          TCustomListBox(AWinControl).MeasureItem(Integer(itemID), integer(itemHeight));
-      end;
-    end;
+    { LM_MEASUREITEM:
+      TCustomListBox has a message handler, so DefaultWndHandler is never called.
+      We handle CLB specialcasing via a CalculateStandardItemHeight override
+    }
   end;
 
   inherited DefaultWndHandler(AWinControl, AMessage);
@@ -291,6 +324,12 @@ begin
   Handle := ACustomListBox.Handle;
   Result := TWin32CheckListBoxStrings.Create(Handle, ACustomListBox);
   GetWin32WindowInfo(Handle)^.List := Result;
+end;
+
+class function TWin32WSCustomCheckListBox.GetHeader(const ACheckListBox: TCustomCheckListBox;
+  const AIndex: integer): Boolean;
+begin
+  Result := TWin32CheckListBoxStrings(ACheckListBox.Items).Header[AIndex];
 end;
 
 class function TWin32WSCustomCheckListBox.GetItemEnabled(
@@ -314,6 +353,20 @@ var
   Handle: HWND;
 begin
   TWin32CheckListBoxStrings(ACheckListBox.Items).Enabled[AIndex] := AEnabled;
+
+  // redraw control
+  Handle := ACheckListBox.Handle;
+  Windows.SendMessage(Handle, LB_GETITEMRECT, AIndex, LPARAM(@SizeRect));
+  Windows.InvalidateRect(Handle, @SizeRect, False);
+end;
+
+class procedure TWin32WSCustomCheckListBox.SetHeader(const ACheckListBox: TCustomCheckListBox;
+  const AIndex: integer; const AHeader: Boolean);
+var
+  SizeRect: Windows.RECT;
+  Handle: HWND;
+begin
+  TWin32CheckListBoxStrings(ACheckListBox.Items).Header[AIndex] := AHeader;
 
   // redraw control
   Handle := ACheckListBox.Handle;
