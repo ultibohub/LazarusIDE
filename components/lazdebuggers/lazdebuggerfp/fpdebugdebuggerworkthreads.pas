@@ -229,7 +229,7 @@ type
 
   TFpThreadWorkerEvaluate = class(TFpDbgDebggerThreadWorkerLinkedItem)
   private
-    FAllowFunctions: Boolean;
+    FAllowFunctions, FAllowFunctionsAllThread: Boolean;
     FExpressionScope: TFpDbgSymbolScope;
 
     function DoWatchFunctionCall(AnExpressionPart: TFpPascalExpressionPart;
@@ -548,7 +548,8 @@ begin
   FDebugger.LockList.GetLockFor(ThreadCallStack);
   try
     CurCnt := ThreadCallStack.Count;
-    while (not StopRequested) and (FRequiredMinCount > CurCnt) and
+    while (not StopRequested) and
+          ( (FRequiredMinCount > CurCnt) or (FRequiredMinCount < 0) ) and
           (not ThreadCallStack.HasReadAllAvailableFrames)
     do begin
       ReqCnt := Min(CurCnt + 5, FRequiredMinCount);
@@ -733,7 +734,9 @@ begin
   if ExpressionScope = nil then
     exit;
 
-  APasExpr := TFpPascalExpression.Create(FExpression, ExpressionScope);
+  APasExpr := TFpPascalExpression.Create(FExpression, ExpressionScope, True);
+  APasExpr.IntrinsicPrefix := TFpDebugDebuggerProperties(FDebugger.GetProperties).IntrinsicPrefix;
+  APasExpr.Parse;
   try
     APasExpr.ResultValue; // trigger full validation
     if not APasExpr.Valid then
@@ -1036,7 +1039,8 @@ begin
         exit;
       end;
 
-      FDebugger.DbgController.ProcessLoop;
+      FDebugger.BeforeWatchEval(CallContext);
+      FDebugger.RunProcessLoop(not FAllowFunctionsAllThread);
 
       if not CallContext.IsValid then begin
         DebugLn(['Error in call ',CallContext.Message]);
@@ -1120,7 +1124,9 @@ begin
   end;
 
   PrettyPrinter := nil;
-  APasExpr := TFpPascalExpression.Create(AnExpression, FExpressionScope);
+  APasExpr := TFpPascalExpression.Create(AnExpression, FExpressionScope, True);
+  APasExpr.IntrinsicPrefix := TFpDebugDebuggerProperties(FDebugger.GetProperties).IntrinsicPrefix;
+  APasExpr.Parse;
   try
     if FAllowFunctions and (dfEvalFunctionCalls in FDebugger.EnabledFeatures) then
       APasExpr.OnFunctionCall  := @DoWatchFunctionCall;
@@ -1153,7 +1159,9 @@ begin
        (not IsError(ResValue.LastError)) and (defClassAutoCast in AnEvalFlags)
     then begin
       if ResValue.GetInstanceClassName(CastName) then begin
-        PasExpr2 := TFpPascalExpression.Create(CastName+'('+AnExpression+')', FExpressionScope);
+        PasExpr2 := TFpPascalExpression.Create(CastName+'('+AnExpression+')', FExpressionScope, True);
+        PasExpr2.IntrinsicPrefix := TFpDebugDebuggerProperties(FDebugger.GetProperties).IntrinsicPrefix;
+        PasExpr2.Parse;
         PasExpr2.ResultValue;
         if PasExpr2.Valid then begin
           APasExpr.Free;
@@ -1270,8 +1278,8 @@ begin
   FDispFormat := ADispFormat;
   FRepeatCnt := ARepeatCnt;
   FEvalFlags := AnEvalFlags;
-  if (defAllowFunctionCall in AnEvalFlags) then
-    FAllowFunctions := True;
+  FAllowFunctions := defAllowFunctionCall in AnEvalFlags;
+  FAllowFunctionsAllThread := defFunctionCallRunAllThreads in AnEvalFlags;
   FRes := False;
 end;
 
@@ -1388,7 +1396,9 @@ begin
     bpkData: begin
       CurContext := FDebugger.DbgController.CurrentProcess.FindSymbolScope(FThreadId, FStackFrame);
       if CurContext <> nil then begin
-        WatchPasExpr := TFpPascalExpression.Create(FWatchData, CurContext);
+        WatchPasExpr := TFpPascalExpression.Create(FWatchData, CurContext, True);
+        WatchPasExpr.IntrinsicPrefix := TFpDebugDebuggerProperties(FDebugger.GetProperties).IntrinsicPrefix;
+        WatchPasExpr.Parse;
         R := WatchPasExpr.ResultValue; // Address and Size
         // TODO: Cache current value
         if WatchPasExpr.Valid and IsTargetNotNil(R.Address) and R.GetSize(s) then begin

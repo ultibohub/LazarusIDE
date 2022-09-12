@@ -5,9 +5,9 @@ unit ThreadDlg;
 interface
 
 uses
-  Classes, SysUtils, ComCtrls, LCLProc, LazLoggerBase,
-  Debugger, DebuggerDlg, Forms, LazarusIDEStrConsts, IDEWindowIntf, DebuggerStrConst,
-  BaseDebugManager, IDEImagesIntf;
+  Classes, SysUtils, ComCtrls, LCLProc, LazLoggerBase, Debugger, DebuggerDlg,
+  Forms, LazarusIDEStrConsts, IDEWindowIntf, DebuggerStrConst, BaseDebugManager,
+  IDEImagesIntf, DbgIntfDebuggerBase, LazDebuggerIntfBaseTypes;
 
 type
 
@@ -18,8 +18,13 @@ type
     ToolBar1: TToolBar;
     tbCurrent: TToolButton;
     tbGoto: TToolButton;
+    tbSuspend: TToolButton;
+    procedure lvThreadsClick(Sender: TObject);
     procedure lvThreadsDblClick(Sender: TObject);
+    procedure lvThreadsSelectItem(Sender: TObject; Item: TListItem;
+      Selected: Boolean);
     procedure tbCurrentClick(Sender: TObject);
+    procedure tbSuspendClick(Sender: TObject);
   private
     imgCurrentLine: Integer;
     FUpdateFlags: set of (ufThreadChanged);
@@ -55,6 +60,10 @@ const
   COL_THREAD_LINE     = 6;
   COL_THREAD_FUNC     = 7;
   COL_WIDTHS: Array[0..6] of integer = ( 20, 50, 100, 50,  150, 50, 300);
+
+const THREAD_STATE_NAMES: array [TDbgThreadState] of string = (
+  '', 'running', 'paused', 'suspended'
+);
 
 function ThreadsDlgColSizeGetter(AForm: TCustomForm; AColId: Integer; var ASize: Integer): Boolean;
 begin
@@ -137,7 +146,7 @@ begin
       else lvThreads.Items[i].ImageIndex := -1;
       lvThreads.Items[i].SubItems[0] := IntToStr(Threads[i].ThreadId);
       lvThreads.Items[i].SubItems[1] := Threads[i].ThreadName;
-      lvThreads.Items[i].SubItems[2] := Threads[i].ThreadState;
+      lvThreads.Items[i].SubItems[2] := THREAD_STATE_NAMES[Threads[i].ThreadState];
       s := Threads[i].TopFrame.Source;
       if s = '' then s := ':' + IntToHex(Threads[i].TopFrame.Address, 8);
       lvThreads.Items[i].SubItems[3] := s;
@@ -148,6 +157,8 @@ begin
   finally
     lvThreads.EndUpdate;
     EndUpdate;
+
+    lvThreadsClick(nil);
   end;
   finally DebugLnExit(DBG_DATA_MONITORS, ['DebugDataMonitor: <<EXIT: TThreadsDlg.ThreadsChanged']); end;
 end;
@@ -195,9 +206,53 @@ begin
   end;
 end;
 
+procedure TThreadsDlg.tbSuspendClick(Sender: TObject);
+var
+  Entry: TIdeThreadEntry;
+  Item: TListItem;
+begin
+  Item := lvThreads.Selected;
+  if Item = nil then exit;
+  Entry := TIdeThreadEntry(Item.Data);
+  if Entry = nil then Exit;
+
+  DebugBoss.Threads.SetSuspended(Entry, Entry.ThreadState <> dtsSuspended);
+end;
+
 procedure TThreadsDlg.lvThreadsDblClick(Sender: TObject);
 begin
   JumpToSource;
+end;
+
+procedure TThreadsDlg.lvThreadsSelectItem(Sender: TObject; Item: TListItem;
+  Selected: Boolean);
+begin
+  lvThreadsClick(nil);
+end;
+
+procedure TThreadsDlg.lvThreadsClick(Sender: TObject);
+var
+  Entry: TIdeThreadEntry;
+  Item: TListItem;
+begin
+  if (DebugBoss = nil) or (DebugBoss.DebuggerClass = nil) then begin
+    tbSuspend.Visible := False;
+    exit;
+  end;
+
+  tbSuspend.Visible := dfThreadSuspension in DebugBoss.DebuggerClass.SupportedFeatures;
+  tbSuspend.Caption := drsSuspend;
+  tbSuspend.Enabled := False;
+
+  Item := lvThreads.Selected;
+  if Item = nil then exit;
+  Entry := TIdeThreadEntry(Item.Data);
+  if Entry = nil then Exit;
+
+  tbSuspend.Enabled := True;
+  if Entry.ThreadState = dtsSuspended then
+    tbSuspend.Caption := lisDebugOptionsFrmResume
+   else
 end;
 
 procedure TThreadsDlg.JumpToSource;

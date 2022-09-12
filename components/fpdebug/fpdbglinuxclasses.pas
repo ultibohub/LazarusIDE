@@ -297,6 +297,7 @@ type
 
     function GetInstructionPointerRegisterValue: TDbgPtr; override;
     function GetStackBasePointerRegisterValue: TDbgPtr; override;
+    procedure SetInstructionPointerRegisterValue(AValue: TDbgPtr); override;
     procedure SetStackPointerRegisterValue(AValue: TDbgPtr); override;
     function GetStackPointerRegisterValue: TDbgPtr; override;
   end;
@@ -830,6 +831,16 @@ begin
     result := FUserRegs.regs64[rbp];
 end;
 
+procedure TDbgLinuxThread.SetInstructionPointerRegisterValue(AValue: TDbgPtr);
+begin
+  if not FHasThreadState then
+    exit;
+  if Process.Mode=dm32 then
+    FUserRegs.regs32[eip] := AValue
+  else
+    FUserRegs.regs64[rip] := AValue;
+end;
+
 procedure TDbgLinuxThread.SetStackPointerRegisterValue(AValue: TDbgPtr);
 begin
   if not FHasThreadState then
@@ -905,6 +916,7 @@ procedure TDbgLinuxThread.RestoreRegisters;
 begin
   FUserRegs:=FStoredUserRegs;
   FUserRegsChanged := true;
+  FRegisterValueListValid := False;
 end;
 
 procedure TDbgLinuxThread.StoreRegisters;
@@ -1537,7 +1549,9 @@ begin
 
   // check other threads if they need a singlestep
   for TDbgThread(ThreadToContinue) in FThreadMap do
-    if (ThreadToContinue <> AThread) and ThreadToContinue.FIsPaused then begin
+    if (ThreadToContinue <> AThread) and ThreadToContinue.FIsPaused and
+       (ThreadToContinue.SuspendCount <= 0)
+    then begin
       IP := ThreadToContinue.GetInstructionPointerRegisterValue;
       if HasInsertedBreakInstructionAtLocation(IP) or ThreadToContinue.NextIsSingleStep then begin
         TempRemoveBreakInstructionCode(IP);
@@ -1602,7 +1616,9 @@ begin
 
   // start all other threads
   for TDbgThread(ThreadToContinue) in FThreadMap do begin
-    if (ThreadToContinue <> AThread) and (ThreadToContinue.FIsPaused) then begin
+    if (ThreadToContinue <> AThread) and (ThreadToContinue.FIsPaused) and
+       (ThreadToContinue.SuspendCount <= 0)
+    then begin
       fpseterrno(0);
       {$IFDEF DebuglnLinuxDebugEvents}
       Debugln(FPDBG_LINUX, ['RUN other TID: ', ThreadToContinue.ID]);

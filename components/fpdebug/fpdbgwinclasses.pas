@@ -169,6 +169,7 @@ type
     procedure RestoreRegisters; override;
     function GetInstructionPointerRegisterValue: TDbgPtr; override;
     function GetStackBasePointerRegisterValue: TDbgPtr; override;
+    procedure SetInstructionPointerRegisterValue(AValue: TDbgPtr); override;
     procedure SetStackPointerRegisterValue(AValue: TDbgPtr); override;
     function GetStackPointerRegisterValue: TDbgPtr; override;
     property Process;
@@ -868,6 +869,9 @@ debugln(FPDBG_WINDOWS, ['TDbgWinProcess.Continue ',SingleStep, ' # ', ' # ',DbgS
       TDbgWinThread(t).SuspendForStepOverBreakPoint;
   end;
 
+  for t in FThreadMap do
+    if (t <> AThread) and (t.SuspendCount > 0) then
+      TDbgWinThread(t).Suspend;
 
   AProcess.ThreadsBeforeContinue;
   if AThread<>nil then debugln(FPDBG_WINDOWS, ['## ath.iss ',AThread.NextIsSingleStep]);
@@ -1936,6 +1940,8 @@ end;
 procedure TDbgWinThread.RestoreRegisters;
 begin
   _UnAligendContext := _StoredContext;
+  FThreadContextChanged := True;
+  FRegisterValueListValid := False;
 end;
 
 function TDbgWinThread.GetInstructionPointerRegisterValue: TDbgPtr;
@@ -1974,6 +1980,21 @@ begin
   else
     Result := FCurrentContext^.def.Rbp;
 {$endif}
+end;
+
+procedure TDbgWinThread.SetInstructionPointerRegisterValue(AValue: TDbgPtr);
+begin
+  if FCurrentContext = nil then
+    exit;
+{$ifdef cpui386}
+  FCurrentContext^.def.Eip := AValue;
+{$else}
+  if (TDbgWinProcess(Process).FBitness = b32) then
+    FCurrentContext^.WOW.Eip := AValue
+  else
+    FCurrentContext^.def.Rip := AValue;
+{$endif}
+  FThreadContextChanged:=True;
 end;
 
 procedure TDbgWinThread.SetStackPointerRegisterValue(AValue: TDbgPtr);

@@ -79,6 +79,8 @@ resourcestring
   dlgBackendConvOptDebugConverter = 'Backend Converter:';
   dlgBackendConvOptDefault = '- Default -';
   dlgBackendConvOptDisabled = '- Disabled -';
+  drsSuspend = 'Suspend';
+  drsRunAllThreadsWhileEvaluat = 'Run all threads while evaluating';
 
 implementation
 

@@ -1241,6 +1241,7 @@ type
     function GetNewCurrentIndex: Integer; override;
 
     procedure Clear; virtual;
+    function GetCountValidity: TDebuggerDataState; virtual;
     function  GetCount: Integer; override;
     procedure SetCount({%H-}ACount: Integer); override;
     function  GetEntry(AIndex: Integer): TIdeCallStackEntry; virtual;
@@ -1271,6 +1272,7 @@ type
     function HasAtLeastCount(ARequiredMinCount: Integer): TNullableBool; virtual; // Can be faster than getting the full count
     function CountLimited(ALimit: Integer): Integer; override;
     property Entries[AIndex: Integer]: TIdeCallStackEntry read GetEntry;
+    property CountValidity: TDebuggerDataState read GetCountValidity;
   end;
 
   { TCallStackList }
@@ -1313,6 +1315,7 @@ type
 
     procedure Clear; override;
     function  GetCount: Integer; override;
+    function GetCountValidity: TDebuggerDataState; override;
     procedure SetCount(ACount: Integer); override;
     function GetEntry(AIndex: Integer): TIdeCallStackEntry; override;
     procedure AddEntry(AnEntry: TIdeCallStackEntry); override;
@@ -1473,7 +1476,7 @@ type
   protected
     function CreateStackEntry: TCallStackEntry; override;
     function GetUnitInfoProvider: TDebuggerUnitInfoProvider;
-    procedure SetThreadState(AValue: String); override;
+    procedure SetThreadState(AValue: TDbgThreadState); override;
 
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
                                     const APath: string;
@@ -1484,6 +1487,7 @@ type
                                   AUnitInvoPrv: TDebuggerUnitInfoProvider = nil
                                  ); reintroduce;
   public
+    procedure SetThreadStateOnly(AValue: TDbgThreadState); override;
     function CreateCopy: TThreadEntry; override;
     property TopFrame: TIdeThreadFrameEntry read GetTopFrame;
   end;
@@ -1509,7 +1513,7 @@ type
                        const FileName, FullName: String;
                        const ALine: Integer;
                        const AThreadId: Integer; const AThreadName: String;
-                       const AThreadState: String;
+                       const AThreadState: TDbgThreadState;
                        AState: TDebuggerDataState = ddsValid): TThreadEntry; override;
     procedure SetValidity({%H-}AValidity: TDebuggerDataState); override;
     property Entries[const AnIndex: Integer]: TIdeThreadEntry read GetEntry; default;
@@ -1537,7 +1541,7 @@ type
                        const FileName, FullName: String;
                        const ALine: Integer;
                        const AThreadId: Integer; const AThreadName: String;
-                       const AThreadState: String;
+                       const AThreadState: TDbgThreadState;
                        AState: TDebuggerDataState = ddsValid): TThreadEntry; override;
     procedure SetValidity(AValidity: TDebuggerDataState); override;
   end;
@@ -4662,6 +4666,7 @@ begin
   if AnOther is TCurrentCallStack then begin
     FCount := TCurrentCallStack(AnOther).FCount;
     FCountValidity := TCurrentCallStack(AnOther).FCountValidity;
+    FAtLeastCountValidity := TCurrentCallStack(AnOther).FAtLeastCountValidity;
     FAtLeastCount := TCurrentCallStack(AnOther).FAtLeastCount;
     FAtLeastCountOld := TCurrentCallStack(AnOther).FAtLeastCountOld;
   end
@@ -4681,6 +4686,11 @@ begin
   then FSnapShot.Assign(Self);
 
   FSnapShot := AValue;
+end;
+
+function TCurrentCallStack.GetCountValidity: TDebuggerDataState;
+begin
+  Result := FCountValidity;
 end;
 
 function TCurrentCallStack.GetCount: Integer;
@@ -4876,7 +4886,10 @@ end;
 procedure TCurrentCallStack.SetHasAtLeastCountInfo(AValidity: TDebuggerDataState;
   AMinCount: Integer);
 begin
-  if (FAtLeastCountValidity = AValidity) then exit;
+  if (FAtLeastCountValidity = AValidity) and
+     ( (AValidity <> ddsValid) or (FAtLeastCount >= AMinCount) )
+  then
+    exit;
   DebugLn(DBG_DATA_MONITORS, ['DebugDataMonitor: TCurrentCallStack.SetCountMinValidity: FThreadId=', FThreadId, ' AValidity=',dbgs(AValidity)]);
   FAtLeastCountOld := -1;
   FAtLeastCountValidity := AValidity;
@@ -5053,9 +5066,10 @@ begin
   inherited Clear;
 end;
 
-function TCurrentThreads.CreateEntry(const AnAdress: TDbgPtr; const AnArguments: TStrings;
-  const AFunctionName: String; const FileName, FullName: String; const ALine: Integer;
-  const AThreadId: Integer; const AThreadName: String; const AThreadState: String;
+function TCurrentThreads.CreateEntry(const AnAdress: TDbgPtr;
+  const AnArguments: TStrings; const AFunctionName: String; const FileName,
+  FullName: String; const ALine: Integer; const AThreadId: Integer;
+  const AThreadName: String; const AThreadState: TDbgThreadState;
   AState: TDebuggerDataState): TThreadEntry;
 begin
   Result := inherited CreateEntry(AnAdress, AnArguments, AFunctionName, FileName,
@@ -5288,11 +5302,16 @@ begin
     Result := (FThreadOwner as TCurrentThreads).FMonitor.UnitInfoProvider;
 end;
 
-procedure TIdeThreadEntry.SetThreadState(AValue: String);
+procedure TIdeThreadEntry.SetThreadState(AValue: TDbgThreadState);
 begin
   if ThreadState = AValue then Exit;
   inherited SetThreadState(AValue);
   TopFrame.ClearLocation;
+end;
+
+procedure TIdeThreadEntry.SetThreadStateOnly(AValue: TDbgThreadState);
+begin
+  inherited SetThreadState(AValue);
 end;
 
 procedure TIdeThreadEntry.LoadDataFromXMLConfig(const AConfig: TXMLConfig; const APath: string;
@@ -5301,7 +5320,7 @@ begin
   TIdeCallStackEntry(TopFrame).LoadDataFromXMLConfig(AConfig, APath, AUnitInvoPrv);
   FThreadId    := AConfig.GetValue(APath + 'ThreadId', -1);
   FThreadName  := AConfig.GetValue(APath + 'ThreadName', '');
-  FThreadState := AConfig.GetValue(APath + 'ThreadState', '');
+  AConfig.GetValue(APath + 'ThreadState', FThreadState, TypeInfo(TDbgThreadState));
 end;
 
 procedure TIdeThreadEntry.SaveDataToXMLConfig(const AConfig: TXMLConfig; const APath: string;
@@ -5310,7 +5329,7 @@ begin
   TIdeCallStackEntry(TopFrame).SaveDataToXMLConfig(AConfig, APath, AUnitInvoPrv);
   AConfig.SetValue(APath + 'ThreadId', ThreadId);
   AConfig.SetValue(APath + 'ThreadName', ThreadName);
-  AConfig.SetValue(APath + 'ThreadState', ThreadState);
+  AConfig.SetValue(APath + 'ThreadState', ThreadState, TypeInfo(TDbgThreadState));
 end;
 
 function TIdeThreadEntry.CreateCopy: TThreadEntry;
@@ -5362,9 +5381,10 @@ begin
     Entries[i].SaveDataToXMLConfig(AConfig, APath + IntToStr(i) + '/', AUnitInvoPrv);
 end;
 
-function TIdeThreads.CreateEntry(const AnAdress: TDbgPtr; const AnArguments: TStrings;
-  const AFunctionName: String; const FileName, FullName: String; const ALine: Integer;
-  const AThreadId: Integer; const AThreadName: String; const AThreadState: String;
+function TIdeThreads.CreateEntry(const AnAdress: TDbgPtr;
+  const AnArguments: TStrings; const AFunctionName: String; const FileName,
+  FullName: String; const ALine: Integer; const AThreadId: Integer;
+  const AThreadName: String; const AThreadState: TDbgThreadState;
   AState: TDebuggerDataState): TThreadEntry;
 begin
   Result := TIdeThreadEntry.Create(AnAdress, AnArguments, AFunctionName, FileName,
@@ -6548,6 +6568,9 @@ begin
   if AConfig.GetValue(APath + 'AllowFunctionCall', False)
   then Include(FEvaluateFlags, defAllowFunctionCall)
   else Exclude(FEvaluateFlags, defAllowFunctionCall);
+  if AConfig.GetValue(APath + 'AllowFunctionThreads', False)
+  then Include(FEvaluateFlags, defFunctionCallRunAllThreads)
+  else Exclude(FEvaluateFlags, defFunctionCallRunAllThreads);
   try    ReadStr(AConfig.GetValue(APath + 'DisplayFormat', 'wdfDefault'), FDisplayFormat);
   except FDisplayFormat := wdfDefault; end;
   FRepeatCount := AConfig.GetValue(APath + 'RepeatCount', 0);
@@ -6573,6 +6596,7 @@ begin
   AConfig.SetDeleteValue(APath + 'DisplayFormat', s, 'wdfDefault');
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionCall', defAllowFunctionCall in FEvaluateFlags, False);
+  AConfig.SetDeleteValue(APath + 'AllowFunctionThreads', defFunctionCallRunAllThreads in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
 
   AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
@@ -6695,6 +6719,9 @@ begin
   if AConfig.GetValue(APath + 'AllowFunctionCall', False)
   then Include(FEvaluateFlags, defAllowFunctionCall)
   else Exclude(FEvaluateFlags, defAllowFunctionCall);
+  if AConfig.GetValue(APath + 'AllowFunctionThreads', False)
+  then Include(FEvaluateFlags, defFunctionCallRunAllThreads)
+  else Exclude(FEvaluateFlags, defFunctionCallRunAllThreads);
   i := StringCase
     (AConfig.GetValue(APath + 'DisplayStyle/Value', TWatchDisplayFormatNames[wdfDefault]),
     TWatchDisplayFormatNames);
@@ -6720,6 +6747,7 @@ begin
     TWatchDisplayFormatNames[DisplayFormat], TWatchDisplayFormatNames[wdfDefault]);
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionCall', defAllowFunctionCall in FEvaluateFlags, False);
+  AConfig.SetDeleteValue(APath + 'AllowFunctionThreads', defFunctionCallRunAllThreads in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
 
   AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
@@ -7544,6 +7572,11 @@ begin
   assert(False, 'TCallStack.SetCurrentValidity');
 end;
 
+function TIdeCallStack.GetCountValidity: TDebuggerDataState;
+begin
+  Result := ddsValid;
+end;
+
 function TIdeCallStack.IndexError(AIndex: Integer): TIdeCallStackEntry;
 begin
   Result:=nil;
@@ -7575,9 +7608,9 @@ end;
 function TIdeCallStack.CountLimited(ALimit: Integer): Integer;
 begin
   case HasAtLeastCount(ALimit) of
-    nbUnknown: Result := 0;
     nbTrue:    Result := ALimit;
     nbFalse:   Result := Count;
+    else       Result := 0;
   end;
 end;
 

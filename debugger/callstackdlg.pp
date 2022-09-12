@@ -36,10 +36,11 @@ unit CallStackDlg;
 interface
 
 uses
-  SysUtils, Classes, Controls, Forms, LCLProc, LazLoggerBase, IDEWindowIntf,
-  DebuggerStrConst, ComCtrls, Debugger, DebuggerDlg, Menus, ClipBrd, ExtCtrls,
-  StdCtrls, ActnList, IDEImagesIntf, IDECommands, DbgIntfDebuggerBase,
-  LazDebuggerIntf, EnvironmentOpts;
+  SysUtils, Classes, Math, Controls, Forms, LCLProc, LazLoggerBase,
+  IDEWindowIntf, DebuggerStrConst, ComCtrls, Debugger, DebuggerDlg, Menus,
+  ClipBrd, ExtCtrls, StdCtrls, ActnList, IDEImagesIntf, IDECommands,
+  DbgIntfDebuggerBase, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
+  EnvironmentOpts;
 
 type
 
@@ -104,7 +105,7 @@ type
   private
     FViewCount: Integer;
     FViewLimit: Integer;
-    FViewStart: Integer;
+    FViewStart, FWantedViewStart: Integer;
     FPowerImgIdx, FPowerImgIdxGrey: Integer;
     FInUpdateView: Boolean;
     FUpdateFlags: set of (ufNeedUpdating);
@@ -129,12 +130,15 @@ type
     function  GetSelectedCallstack: TIdeCallStack;
     procedure DoBreakPointsChanged; override;
     procedure BreakPointChanged(const ASender: TIDEBreakPoints; const {%H-}ABreakpoint: TIDEBreakPoint);
+    procedure DoDebuggerState(ADebugger: TDebuggerIntf; AnOldState: TDBGState);
     procedure CallStackChanged(Sender: TObject);
+    procedure CallStackCtxChanged(Sender: TObject);
     procedure CallStackCurrent(Sender: TObject);
     function  ColSizeGetter(AColId: Integer; var ASize: Integer): Boolean;
     procedure ColSizeSetter(AColId: Integer; ASize: Integer);
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     property BreakPoints;
     property CallStackMonitor;
     property ThreadsMonitor;
@@ -190,8 +194,11 @@ begin
   BreakpointsNotification.OnAdd    := @BreakPointChanged;
   BreakpointsNotification.OnUpdate := @BreakPointChanged;
   BreakpointsNotification.OnRemove := @BreakPointChanged;
-  ThreadsNotification.OnCurrent    := @CallStackChanged;
-  SnapshotNotification.OnCurrent   := @CallStackChanged;
+  ThreadsNotification.OnCurrent    := @CallStackCtxChanged;
+  SnapshotNotification.OnCurrent   := @CallStackCtxChanged;
+
+  DebugBoss.RegisterStateChangeHandler(@DoDebuggerState);
+
 
   actToggleBreakPoint.ShortCut := IDECommandList.FindIDECommand(ecToggleBreakPoint).AsShortCut;
 
@@ -202,10 +209,31 @@ begin
       lvCallStack.Column[i].AutoSize := True;
 end;
 
+destructor TCallStackDlg.Destroy;
+begin
+  DebugBoss.UnregisterStateChangeHandler(@DoDebuggerState);
+  inherited Destroy;
+end;
+
+procedure TCallStackDlg.DoDebuggerState(ADebugger: TDebuggerIntf;
+  AnOldState: TDBGState);
+begin
+  CallStackCtxChanged(nil);
+end;
+
 procedure TCallStackDlg.CallStackChanged(Sender: TObject);
 begin
   DebugLn(DBG_DATA_MONITORS, ['DebugDataWindow: TCallStackDlg.CallStackChanged from ',  DbgSName(Sender), ' Upd:', IsUpdating]);
   if (not ToolButtonPower.Down) or FInUpdateView then exit;
+  UpdateView;
+  SetViewMax;
+end;
+
+procedure TCallStackDlg.CallStackCtxChanged(Sender: TObject);
+begin
+  DebugLn(DBG_DATA_MONITORS, ['DebugDataWindow: TCallStackDlg.CallStackCtxChanged from ',  DbgSName(Sender), ' Upd:', IsUpdating]);
+  if (not ToolButtonPower.Down) or FInUpdateView then exit;
+  FWantedViewStart := 0;
   if FViewStart = 0
   then UpdateView
   else SetViewStart(0);
@@ -299,7 +327,7 @@ begin
 
     FInUpdateView := True; // ignore change triggered by count, if there is a change event, then Count will be updated already
     CStack := GetSelectedCallstack;
-    MaxCnt := FViewStart + FViewLimit + 1;
+    MaxCnt := FViewStart + FViewLimit;
     if CStack <> nil then CStack.CountLimited(MaxCnt); // trigger the update-notification, if executed immediately
     FInUpdateView := False;
     // TODO: must make CStack ref-counted
@@ -320,6 +348,19 @@ begin
       txtGoto.Text:= '0';
       lvCallStack.Items.Clear;
       exit;
+    end;
+
+    if (FWantedViewStart <> 0) then begin
+      if FWantedViewStart = MaxInt then
+        Count := CStack.Count
+      else
+        Count := CStack.CountLimited(FWantedViewStart);
+
+      if (Count > 0) or (CStack.CountValidity = ddsValid) then begin
+        FViewStart := Min(FWantedViewStart, Count - FViewLimit);
+        FWantedViewStart := 0;
+        MaxCnt := FViewStart + FViewLimit;
+      end;
     end;
 
     if Snap <> nil then begin
@@ -643,9 +684,11 @@ procedure TCallStackDlg.actViewBottomExecute(Sender: TObject);
 begin
   try
     DisableAllActions;
-    if GetSelectedCallstack <> nil
-    then SetViewStart(GetSelectedCallstack.Count - FViewLimit)
-    else SetViewStart(0);
+
+    if GetSelectedCallstack = nil then
+      SetViewStart(0)
+    else
+      SetViewStart(MaxInt);
   finally
     EnableAllActions;
   end;
@@ -823,19 +866,42 @@ begin
 end;
 
 procedure TCallStackDlg.SetViewStart(AStart: Integer);
+var
+  CStack: TIdeCallStack;
+  CntLim: Integer;
 begin
+  FWantedViewStart := 0;
   if GetSelectedCallstack = nil then Exit;
   ToolButtonPower.Down := True;
   ToolButtonPowerClick(nil);
 
-  if (AStart > GetSelectedCallstack.CountLimited(AStart+FViewLimit+1) - FViewLimit)
-  then AStart := GetSelectedCallstack.Count - FViewLimit;
-  if AStart < 0 then AStart := 0;
-  if FViewStart = AStart then Exit;
-  
-  FViewStart:= AStart;
-  txtGoto.Text:= IntToStr(AStart);
-  UpdateView;
+  CStack := GetSelectedCallstack;
+  if AStart = MaxInt then begin
+    CntLim := CStack.Count;
+    if (CStack.CountValidity = ddsValid) then
+      AStart := CntLim - FViewLimit
+    else
+      CntLim := 0;
+  end
+  else
+    CntLim := CStack.CountLimited(AStart+FViewLimit);
+
+  if (CntLim = 0) and (CStack.CountValidity <> ddsValid) and (DebugBoss.State = dsPause) then begin
+    FWantedViewStart := AStart;
+  end
+  else begin
+    if (AStart > CntLim - FViewLimit) then
+      AStart := CStack.Count - FViewLimit;
+    if AStart < 0 then
+      AStart := 0;
+
+    if FViewStart = AStart then
+      Exit;
+
+    FViewStart:= AStart;
+    txtGoto.Text:= IntToStr(AStart);
+    UpdateView;
+  end;
 end;
 
 procedure TCallStackDlg.SetViewMax;
@@ -855,6 +921,7 @@ begin
   and (AValue > FViewLimit)
   then begin
     FViewStart := GetSelectedCallstack.Count - AValue;
+    // TODO: check count validity
     if FViewStart < 0 then FViewStart := 0;
   end;
   FViewLimit := AValue;

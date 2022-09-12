@@ -41,7 +41,7 @@ uses
   {$IFDEF FPDEBUG_THREAD_CHECK} FpDbgCommon, {$ENDIF}
   FpDbgClasses, FpDbgInfo, FpErrorMessages, FpPascalBuilder, FpdMemoryTools,
   FpPascalParser, FPDbgController, FpDbgDwarfDataClasses, FpDbgDwarfFreePascal,
-  FpDbgDwarf, FpDbgUtil,
+  FpDbgDwarf, FpDbgUtil, FpDbgCallContextInfo,
   // use converters
   FpDebugValueConvertors, FpDebugConvDebugForJson;
 
@@ -315,6 +315,8 @@ type
 //    procedure ClearState;
   end;
 
+  TThreadIdList = specialize TFPGList<Integer>;
+
   { TFpDebugDebugger }
 
   TFpDebugDebugger = class(TFpDebugDebuggerBase)
@@ -405,6 +407,7 @@ type
 
   protected
     // Helper vars to run in debug-thread
+    FSuspendedThreads: TThreadIdList;
     FCallStackEntryListThread: TDbgThread;
     FCallStackEntryListFrameRequired: Integer;
     procedure DoAddBreakFuncLib;
@@ -434,6 +437,11 @@ type
     procedure UnLockCommandProcessing; override;
     function GetLocationRec(AnAddress: TDBGPtr=0; AnAddrOffset: Integer = 0): TDBGLocationRec;
     function GetLocation: TDBGLocationRec; override;
+
+    procedure ThreadHandleBreakPointInCallRoutine(AnAddress: TDBGPtr; out ACanContinue: Boolean);
+    procedure BeforeWatchEval(ACallContext: TFpDbgInfoCallContext); override;
+    procedure RunProcessLoop(OnlyCurrentThread: Boolean); override;
+
     class function Caption: String; override;
     class function NeedsExePath: boolean; override;
     class function RequiredCompilerOpts({%H-}ATargetCPU, {%H-}ATargetOS: String): TDebugCompilerRequirements; override;
@@ -538,6 +546,7 @@ type
     destructor Destroy; override;
     procedure RequestMasterData; override;
     procedure ChangeCurrentThread(ANewId: Integer); override;
+    procedure SetSuspended(AThread: TThreadEntry; ASuspended: Boolean); override;
   end;
 
   { TFPDBGDisassembler }
@@ -730,7 +739,8 @@ begin
       CList := FThread.CallStackEntryList;
 
     if CList <> nil then begin
-      if CList.HasReadAllAvailableFrames then begin
+      DebugLn((DBG_VERBOSE or DBG_WARNINGS) and (FRequiredMinCount < 0) and not CList.HasReadAllAvailableFrames, ['UpdateCallstack_DecRef: ERROR needed full count, but CList is not marked as AllAvail']);
+      if (CList.HasReadAllAvailableFrames) or (FRequiredMinCount = -1) then begin
         FCallstack.Count := CList.Count;
         FCallstack.SetCountValidity(ddsValid);
       end
@@ -909,6 +919,7 @@ var
   FpThr: TDbgThread;
   c: TDbgCallstackEntry;
   dbg: TFpDebugDebuggerBase;
+  ThrState: TDbgThreadState;
 begin
   Threads := FDebugger.Threads;
 
@@ -916,26 +927,30 @@ begin
     ThreadArray := FpDebugger.FDbgController.CurrentProcess.GetThreadArray;
     for i := 0 to high(ThreadArray) do begin
       FpThr := ThreadArray[i];
+      ThrState := dtsPaused;
+      if FpDebugger.FSuspendedThreads.IndexOf(FpThr.ID) >= 0 then
+        ThrState := dtsSuspended;
+
       CallStack := FpThr.CallStackEntryList;
       t := Threads.CurrentThreads.EntryById[FpThr.ID];
       if Assigned(CallStack) and (CallStack.Count > 0) then begin
         c := CallStack.Items[0];
         if t = nil then begin
-          n := Threads.CurrentThreads.CreateEntry(c.AnAddress, nil, c.FunctionName, c.SourceFile, '', c.Line, FpThr.ID, FpThr.Name, 'paused');
+          n := Threads.CurrentThreads.CreateEntry(c.AnAddress, nil, c.FunctionName, c.SourceFile, '', c.Line, FpThr.ID, FpThr.Name, ThrState);
           Threads.CurrentThreads.Add(n);
           n.Free;
         end
         else
-          t.Init(c.AnAddress, nil, c.FunctionName, c.SourceFile, '', c.Line, FpThr.ID, FpThr.Name, 'paused');
+          t.Init(c.AnAddress, nil, c.FunctionName, c.SourceFile, '', c.Line, FpThr.ID, FpThr.Name, ThrState);
       end
       else begin
         if t = nil then begin
-          n := Threads.CurrentThreads.CreateEntry(0, nil, '', '', '', 0, FpThr.ID, FpThr.Name, 'paused');
+          n := Threads.CurrentThreads.CreateEntry(0, nil, '', '', '', 0, FpThr.ID, FpThr.Name, ThrState);
           Threads.CurrentThreads.Add(n);
           n.Free;
         end
         else
-          t.Init(0, nil, '', '', '', 0, FpThr.ID, FpThr.Name, 'paused');
+          t.Init(0, nil, '', '', '', 0, FpThr.ID, FpThr.Name, ThrState);
       end;
     end;
 
@@ -1421,7 +1436,10 @@ begin
   ThreadArray := TFpDebugDebugger(Debugger).FDbgController.CurrentProcess.GetThreadArray;
   for i := 0 to high(ThreadArray) do begin
     // TODO: Maybe get the address. If FpDebug has already read the ThreadState.
-    ThreadEntry := CurrentThreads.CreateEntry(0, nil, '', '', '', 0, ThreadArray[i].ID, 'Thread ' + IntToStr(ThreadArray[i].ID), 'paused');
+    if TFpDebugDebugger(Debugger).FSuspendedThreads.IndexOf(ThreadArray[i].ID) < 0 then
+      ThreadEntry := CurrentThreads.CreateEntry(0, nil, '', '', '', 0, ThreadArray[i].ID, 'Thread ' + IntToStr(ThreadArray[i].ID), dtsPaused)
+    else
+      ThreadEntry := CurrentThreads.CreateEntry(0, nil, '', '', '', 0, ThreadArray[i].ID, 'Thread ' + IntToStr(ThreadArray[i].ID), dtsSuspended);
     try
       CurrentThreads.Add(ThreadEntry);
     finally
@@ -1467,6 +1485,37 @@ begin
   TFpDebugDebugger(Debugger).FDbgController.CurrentThreadId := ANewId;
   if CurrentThreads <> nil then
     CurrentThreads.CurrentThreadId := ANewId;
+  Changed;
+end;
+
+procedure TFPThreads.SetSuspended(AThread: TThreadEntry; ASuspended: Boolean);
+var
+  FpThread: TDbgThread;
+begin
+  //inherited SetSuspended(AThreadId, ASuspended);
+  if (AThread = nil) or (TFpDebugDebugger(Debugger).State <> dsPause) then
+    exit;
+
+  if (not TFpDebugDebugger(Debugger).FDbgController.CurrentProcess.GetThread(AThread.ThreadId, FpThread)) or
+     (FpThread = nil)
+  then
+    exit;
+
+  if ASuspended then begin
+    if TFpDebugDebugger(Debugger).FSuspendedThreads.IndexOf(AThread.ThreadId) < 0 then begin
+      TFpDebugDebugger(Debugger).FSuspendedThreads.Add(AThread.ThreadId);
+      FpThread.IncSuspendCount;
+      AThread.SetThreadStateOnly(dtsSuspended);
+    end;
+  end
+  else begin
+    if TFpDebugDebugger(Debugger).FSuspendedThreads.IndexOf(AThread.ThreadId) >= 0 then begin
+      TFpDebugDebugger(Debugger).FSuspendedThreads.Remove(AThread.ThreadId);
+      FpThread.DecSuspendCount;
+      AThread.SetThreadStateOnly(dtsPaused);
+    end;
+  end;
+
   Changed;
 end;
 
@@ -1529,7 +1578,7 @@ var
   Process: TDbgProcess;
 begin
   Process := GetDbgProcess;
-  if not Process.GetThread(AContext.ThreadId, Result) then
+  if (AContext = nil) or not Process.GetThread(AContext.ThreadId, Result) then
     Result := FFpDebugDebugger.FDbgController.CurrentThread;
 end;
 
@@ -1685,7 +1734,9 @@ begin
         e.Validity := ddsInvalid
       else
       begin
-        if IT.EOM or ((i and 7) = 0) then
+        if IT.EOM or ((i and 7) = 0) or
+           (e.Index = ACallstack.HighestUnknown)
+        then
           WorkItem := TFpThreadWorkerCallEntryUpdate.Create(FpDebugger, t, e, ACallstack)
         else
           WorkItem := TFpThreadWorkerCallEntryUpdate.Create(FpDebugger, t, e);
@@ -2658,14 +2709,10 @@ begin
     end;
   end;
 
-  if (CurrentThread <> nil) then
-    FDebugger.FDbgController.DefaultContext; // Make sure it is avail and cached / so it can be called outside the thread
-
-  // Needs to be correct thread, do not interfer with other threads
-  if (CurrentThread = nil) or
-     (CurrentCommand = nil) or (CurrentCommand.Thread <> CurrentThread)
-  then
+  if (CurrentThread = nil) then
     exit;
+
+  FDebugger.FDbgController.DefaultContext; // Make sure it is avail and cached / so it can be called outside the thread
 
   PC := CurrentThread.GetInstructionPointerRegisterValue;
   {$IFDEF WIN64}
@@ -2679,6 +2726,37 @@ begin
     end;
   end;
   {$ENDIF}
+
+  if (CurrentCommand = nil) then
+    exit;
+
+  // Needs to be correct thread, ignore events in other threads
+  if (CurrentCommand.Thread <> CurrentThread)
+  then begin
+    if (assigned(FBreakPoints[bplPopExcept])    and FBreakPoints[bplPopExcept].HasLocation(PC))
+    or (assigned(FBreakPoints[bplCatches])      and FBreakPoints[bplCatches].HasLocation(PC))
+    or (assigned(FBreakPoints[bplStepOut])      and FBreakPoints[bplStepOut].HasLocation(PC))
+    or (assigned(FBreakPoints[bplReRaise])      and FBreakPoints[bplReRaise].HasLocation(PC))
+       {$IFDEF MSWINDOWS}
+    or (assigned(FBreakPoints[bplSehW32Except])      and FBreakPoints[bplSehW32Except].HasLocation(PC))
+    or (assigned(FBreakPoints[bplSehW32Finally])     and FBreakPoints[bplSehW32Finally].HasLocation(PC))
+    or (assigned(FBreakPoints[bplFpcExceptHandler])  and FBreakPoints[bplFpcExceptHandler].HasLocation(PC))
+    or (assigned(FBreakPoints[bplFpcFinallyHandler]) and FBreakPoints[bplFpcFinallyHandler].HasLocation(PC))
+    or (assigned(FBreakPoints[bplFpcLeaveHandler])   and FBreakPoints[bplFpcLeaveHandler].HasLocation(PC))
+       {$ENDIF}
+       {$IFDEF WIN64}
+    or (assigned(FBreakPoints[bplFpcSpecific])       and FBreakPoints[bplFpcSpecific].HasLocation(PC))
+    or (assigned(FBreakPoints[bplRtlRestoreContext]) and FBreakPoints[bplRtlRestoreContext].HasLocation(PC))
+    or (assigned(FBreakPoints[bplRtlUnwind])         and FBreakPoints[bplRtlUnwind].HasLocation(PC))
+    or (assigned(FBreakPoints[bplSehW64Except])      and FBreakPoints[bplSehW64Except].HasLocation(PC))
+    or (assigned(FBreakPoints[bplSehW64Finally])     and FBreakPoints[bplSehW64Finally].HasLocation(PC))
+       {$ENDIF}
+    then begin
+      AFinishLoopAndSendEvents := False;
+    end;
+    exit;
+  end;
+
 
   if (FState = esSteppingFpcSpecialHandler) and
      (ACurCommand is TDbgControllerStepThroughFpcSpecialHandler) and
@@ -3481,7 +3559,9 @@ begin
         if Context <> nil then begin
           PasExpr := nil;
           try
-            PasExpr := TFpPascalExpression.Create(ABreakPoint.Expression, Context);
+            PasExpr := TFpPascalExpression.Create(ABreakPoint.Expression, Context, True);
+            PasExpr.IntrinsicPrefix := TFpDebugDebuggerProperties(GetProperties).IntrinsicPrefix;
+            PasExpr.Parse;
             PasExpr.ResultValue; // trigger full validation
             if PasExpr.Valid and (svfBoolean in PasExpr.ResultValue.FieldFlags) and
                (not PasExpr.ResultValue.AsBool) // false => do not pause
@@ -4212,6 +4292,7 @@ constructor TFpDebugDebugger.Create(const AExternalDebugger: String);
 begin
   ProcessMessagesProc := @DoProcessMessages;
   inherited Create(AExternalDebugger);
+  FSuspendedThreads := TThreadIdList.Create;
   FLockList := TFpDbgLockList.Create;
   FWorkQueue := TFpThreadPriorityWorkerQueue.Create(100);
   FWorkQueue.OnQueueIdle := @CheckAndRunIdle;
@@ -4267,6 +4348,7 @@ begin
   inherited Destroy;
   FreeAndNil(FWorkQueue);
   FreeAndNil(FLockList);
+  FreeAndNil(FSuspendedThreads);
 end;
 
 function TFpDebugDebugger.GetLocationRec(AnAddress: TDBGPtr;
@@ -4310,6 +4392,53 @@ end;
 function TFpDebugDebugger.GetLocation: TDBGLocationRec;
 begin
   Result:=GetLocationRec;
+end;
+
+procedure TFpDebugDebugger.ThreadHandleBreakPointInCallRoutine(
+  AnAddress: TDBGPtr; out ACanContinue: Boolean);
+begin
+  with FExceptionStepper do
+    ACanContinue := not(
+      ( (FBreakPoints[bplRaise]      <> nil) and FBreakPoints[bplRaise].HasLocation(AnAddress) ) or
+      ( (FBreakPoints[bplReRaise]    <> nil) and FBreakPoints[bplReRaise].HasLocation(AnAddress) ) or
+      ( (FBreakPoints[bplBreakError] <> nil) and FBreakPoints[bplBreakError].HasLocation(AnAddress) ) or
+      ( (FBreakPoints[bplRunError]   <> nil) and FBreakPoints[bplRunError].HasLocation(AnAddress) )
+    );
+end;
+
+procedure TFpDebugDebugger.BeforeWatchEval(ACallContext: TFpDbgInfoCallContext);
+begin
+  ACallContext.OnCallRoutineHitBreapoint := @ThreadHandleBreakPointInCallRoutine;
+
+  FExceptionStepper.DisableBreaks([bplPopExcept, bplCatches, //bplReRaise,
+    {$IFDEF MSWINDOWS}
+    {$IFDEF WIN64}
+    bplFpcSpecific, bplRtlRestoreContext, bplRtlUnwind,
+    bplSehW64Finally, bplSehW64Except, bplSehW64Unwound,
+    {$ENDIF}
+    bplFpcExceptHandler ,bplFpcFinallyHandler, bplFpcLeaveHandler,
+    bplSehW32Except, bplSehW32Finally,
+    {$ENDIF}
+    bplStepOut]);
+end;
+
+procedure TFpDebugDebugger.RunProcessLoop(OnlyCurrentThread: Boolean);
+var
+  ct, t: TDbgThread;
+begin
+  ct := FDbgController.CurrentThread;
+
+  if OnlyCurrentThread then
+    for t in FDbgController.CurrentProcess.ThreadMap do
+      if t <> ct then
+        t.IncSuspendCount;
+
+  FDbgController.ProcessLoop;
+
+  if OnlyCurrentThread then
+    for t in FDbgController.CurrentProcess.ThreadMap do
+      if (t <> ct) and (t.SuspendCount > 0) then // new threads will have count=0
+        t.DecSuspendCount;
 end;
 
 class function TFpDebugDebugger.Caption: String;
@@ -4384,7 +4513,7 @@ end;
 
 class function TFpDebugDebugger.SupportedFeatures: TDBGFeatures;
 begin
-  Result := [dfEvalFunctionCalls];
+  Result := [dfEvalFunctionCalls, dfThreadSuspension];
 end;
 
 initialization

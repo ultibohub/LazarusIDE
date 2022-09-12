@@ -84,13 +84,14 @@ type
   private
     FPreviousRegisterValueList: TDbgRegisterValueList;
 
-    function GetDbgRegister(const AName: string): TDbgRegisterValue;
+    function GetDbgRegister(AName: string): TDbgRegisterValue;
     function GetDbgRegisterAutoCreate(const AName: string): TDbgRegisterValue;
     function GetIsModified(AReg: TDbgRegisterValue): boolean;
   public
     procedure Assign(ASource: TDbgRegisterValueList);
     property DbgRegisterAutoCreate[AName: string]: TDbgRegisterValue read GetDbgRegisterAutoCreate;
     function FindRegisterByDwarfIndex(AnIdx: cardinal): TDbgRegisterValue;
+    function FindRegisterByName(AnName: String): TDbgRegisterValue;
     property IsModified[AReg: TDbgRegisterValue]: boolean read GetIsModified;
   end;
 
@@ -158,6 +159,7 @@ type
     function WriteMemory(AnAddress: TDbgPtr; ASize: Cardinal; ASource: Pointer): Boolean; override; overload;
     function ReadRegister(ARegNum: Cardinal; out AValue: TDbgPtr; AContext: TFpDbgLocationContext): Boolean; override;
     function RegisterSize(ARegNum: Cardinal): Integer; override;
+    function RegisterNumber(ARegName: String; out ARegNum: Cardinal): Boolean; override;
 
     function WriteRegister(ARegNum: Cardinal; const AValue: TDbgPtr; AContext: TFpDbgLocationContext): Boolean; override;
   end;
@@ -201,6 +203,7 @@ type
     FPausedAtRemovedBreakPointState: (rbUnknown, rbNone, rbFound{, rbFoundAndDec});
     FPausedAtHardcodeBreakPoint: Boolean;
     FPausedAtRemovedBreakPointAddress: TDBGPtr;
+    FSuspendCount: Integer;
 
     function GetRegisterValueList: TDbgRegisterValueList;
   protected
@@ -219,6 +222,7 @@ type
     procedure DoBeforeBreakLocationMapChange; // A new location added / or a location removed => memory will change
     procedure ValidateRemovedBreakPointInfo;
     function GetName: String; virtual;
+
   public
     constructor Create(const AProcess: TDbgProcess; const AID: Integer; const AHandle: THandle); virtual;
     procedure DoBeforeProcessLoop;
@@ -243,6 +247,7 @@ type
     function GetStackBasePointerRegisterValue: TDbgPtr; virtual; abstract;
     function GetStackPointerRegisterValue: TDbgPtr; virtual; abstract;
     procedure SetStackPointerRegisterValue(AValue: TDbgPtr); virtual; abstract;
+    procedure SetInstructionPointerRegisterValue(AValue: TDbgPtr); virtual; abstract;
     function GetCurrentStackFrameInfo: TDbgStackFrameInfo;
 
     function AllocStackMem(ASize: Integer): TDbgPtr; virtual;
@@ -261,6 +266,10 @@ type
     // signal is stored to be send to the debuggee again upon continuation.
     // Use ClearExceptionSignal to remove/eat this signal.
     procedure ClearExceptionSignal; virtual;
+
+    procedure IncSuspendCount;
+    procedure DecSuspendCount;
+    property  SuspendCount: Integer read FSuspendCount;
 
     destructor Destroy; override;
     function CompareStepInfo(AnAddr: TDBGPtr = 0; ASubLine: Boolean = False): TFPDCompareStepInfo;
@@ -1240,7 +1249,7 @@ end;
 function TDbgCallstackEntry.GetProcSymbol: TFpSymbol;
 begin
   if not FIsSymbolResolved then begin
-    if FIndex > 0 then
+    if (FIndex > 0) and (FAnAddress <> 0) then
       FSymbol := FThread.Process.FindProcSymbol(FAnAddress - 1) // -1 => inside the call instruction
     else
       FSymbol := FThread.Process.FindProcSymbol(FAnAddress);
@@ -1440,15 +1449,33 @@ begin
     result := sizeof(pointer);
 end;
 
+function TDbgMemReader.RegisterNumber(ARegName: String; out ARegNum: Cardinal
+  ): Boolean;
+var
+  ARegister: TDbgRegisterValue;
+  CtxThread: TDbgThread;
+begin
+  Result := False;
+  CtxThread := GetDbgThread(nil);
+  if CtxThread = nil then
+    exit;
+
+  ARegister:=CtxThread.RegisterValueList.FindRegisterByName(ARegName);
+  Result := ARegister <> nil;
+  if Result then
+    ARegNum := ARegister.DwarfIdx;
+end;
+
 { TDbgRegisterValueList }
 
-function TDbgRegisterValueList.GetDbgRegister(const AName: string
+function TDbgRegisterValueList.GetDbgRegister(AName: string
   ): TDbgRegisterValue;
 var
   i: integer;
 begin
+  AName := UpperCase(AName);
   for i := 0 to Count -1 do
-    if Items[i].Name=AName then
+    if UpperCase(Items[i].Name)=AName then
       begin
       result := items[i];
       exit;
@@ -1507,6 +1534,12 @@ begin
       exit;
     end;
   result := nil;
+end;
+
+function TDbgRegisterValueList.FindRegisterByName(AnName: String
+  ): TDbgRegisterValue;
+begin
+  Result := GetDbgRegister(AnName);
 end;
 
 { TDbgRegisterValue }
@@ -3002,7 +3035,7 @@ var
   Address, FrameBase, LastFrameBase, Dummy: QWord;
   Size, CountNeeded, IP, BP, CodeReadErrCnt, SP, i: integer;
   AnEntry, NewEntry: TDbgCallstackEntry;
-  R: TDbgRegisterValue;
+  R, StackReg, FrameReg: TDbgRegisterValue;
   nIP, nBP, nSP: String;
   NextIdx: LongInt;
   OutSideFrame: Boolean;
@@ -3090,6 +3123,13 @@ begin
         Break;
       FCallStackEntryList.Add(NewEntry);
       Address := NewEntry.AnAddress;
+      StackReg := NewEntry.RegisterValueList.FindRegisterByDwarfIndex(SP);
+      FrameReg := NewEntry.RegisterValueList.FindRegisterByDwarfIndex(BP);
+      StackPtr := 0;
+      if (StackReg <> nil) and (FrameReg <> nil) then begin
+        StackPtr := StackReg.FNumValue;
+        FrameBase := FrameReg.FNumValue;
+      end;
       AnEntry := NewEntry;
       Dec(CountNeeded);
       inc(NextIdx);
@@ -3098,6 +3138,8 @@ begin
       end
     else if (FrameBase <> 0) and (FrameBase > LastFrameBase) then
       begin
+      if StackPtr = 0 then
+        break;
       // CFI not available or contains unsupported structures. Fallback to
       // old fashioned stack-tracing.
       OutSideFrame := False;
@@ -3250,6 +3292,17 @@ end;
 procedure TDbgThread.ClearExceptionSignal;
 begin
   // To be implemented in sub-classes
+end;
+
+procedure TDbgThread.IncSuspendCount;
+begin
+  inc(FSuspendCount);
+end;
+
+procedure TDbgThread.DecSuspendCount;
+begin
+  dec(FSuspendCount);
+  DebugLn((DBG_VERBOSE or DBG_WARNINGS) and (FSuspendCount < 0), ['DecSuspendCount went negative: ', FSuspendCount])
 end;
 
 { TFpWatchPointData }

@@ -62,7 +62,8 @@ type
   EDBGExceptions = class(EDebuggerException);
 
   TDBGFeature = (
-    dfEvalFunctionCalls   // The debugger supports calling functions in watches/expressions. defAllowFunctionCall in TWatcheEvaluateFlags
+    dfEvalFunctionCalls,   // The debugger supports calling functions in watches/expressions. defAllowFunctionCall in TWatcheEvaluateFlags
+    dfThreadSuspension
   );
   TDBGFeatures = set of TDBGFeature;
 
@@ -1270,8 +1271,8 @@ type
   protected
     FThreadId: Integer;
     FThreadName: String;
-    FThreadState: String;
-    procedure SetThreadState(AValue: String); virtual;
+    FThreadState: TDbgThreadState;
+    procedure SetThreadState(AValue: TDbgThreadState); virtual;
     function CreateStackEntry: TCallStackEntry; virtual;
   public
     constructor Create;
@@ -1280,22 +1281,23 @@ type
                        const FileName, FullName: String;
                        const ALine: Integer;
                        const AThreadId: Integer; const AThreadName: String;
-                       const AThreadState: String;
+                       const AThreadState: TDbgThreadState;
                        AState: TDebuggerDataState = ddsValid);
     procedure Init(const AnAdress: TDbgPtr;
                        const AnArguments: TStrings; const AFunctionName: String;
                        const FileName, FullName: String;
                        const ALine: Integer;
                        const AThreadId: Integer; const AThreadName: String;
-                       const AThreadState: String;
+                       const AThreadState: TDbgThreadState;
                        AState: TDebuggerDataState = ddsValid);
+    procedure SetThreadStateOnly(AValue: TDbgThreadState); virtual;
     function CreateCopy: TThreadEntry; virtual;
     destructor Destroy; override;
     procedure Assign(AnOther: TThreadEntry); virtual;
   published
     property ThreadId: Integer read FThreadId;
     property ThreadName: String read FThreadName;
-    property ThreadState: String read FThreadState write SetThreadState;
+    property ThreadState: TDbgThreadState read FThreadState write SetThreadState;
     property TopFrame: TCallStackEntry read FTopFrame;
  end;
 
@@ -1323,7 +1325,7 @@ type
                        const FileName, FullName: String;
                        const ALine: Integer;
                        const AThreadId: Integer; const AThreadName: String;
-                       const AThreadState: String;
+                       const AThreadState: TDbgThreadState;
                        AState: TDebuggerDataState = ddsValid): TThreadEntry; virtual;
     procedure SetValidity({%H-}AValidity: TDebuggerDataState); virtual;
     property Entries[const AnIndex: Integer]: TThreadEntry read GetEntry; default;
@@ -1345,6 +1347,7 @@ type
     procedure DoCleanAfterPause; virtual;
   public
     procedure RequestMasterData; virtual;
+    procedure SetSuspended(AThread: TThreadEntry; ASuspended: Boolean); virtual;
     procedure ChangeCurrentThread({%H-}ANewId: Integer); virtual;
     procedure Changed; // TODO: needed because entries can not notify the monitor
     property  CurrentThreads: TThreads read GetCurrentThreads;
@@ -1362,6 +1365,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure SetSuspended(AThread: TThreadEntry; ASuspended: Boolean);
     property Threads: TThreads read FThreads;
     property Supplier: TThreadsSupplier read GetSupplier write SetSupplier;
   end;
@@ -2294,10 +2298,15 @@ end;
 
 { TThreadEntry }
 
-procedure TThreadEntry.SetThreadState(AValue: String);
+procedure TThreadEntry.SetThreadState(AValue: TDbgThreadState);
 begin
   if FThreadState = AValue then Exit;
   FThreadState := AValue;
+end;
+
+procedure TThreadEntry.SetThreadStateOnly(AValue: TDbgThreadState);
+begin
+  SetThreadState(AValue);
 end;
 
 function TThreadEntry.CreateStackEntry: TCallStackEntry;
@@ -2311,9 +2320,10 @@ begin
   inherited Create;
 end;
 
-constructor TThreadEntry.Create(const AnAdress: TDbgPtr; const AnArguments: TStrings;
-  const AFunctionName: String; const FileName, FullName: String; const ALine: Integer;
-  const AThreadId: Integer; const AThreadName: String; const AThreadState: String;
+constructor TThreadEntry.Create(const AnAdress: TDbgPtr;
+  const AnArguments: TStrings; const AFunctionName: String; const FileName,
+  FullName: String; const ALine: Integer; const AThreadId: Integer;
+  const AThreadName: String; const AThreadState: TDbgThreadState;
   AState: TDebuggerDataState);
 begin
   Create;
@@ -2326,7 +2336,7 @@ end;
 procedure TThreadEntry.Init(const AnAdress: TDbgPtr;
   const AnArguments: TStrings; const AFunctionName: String; const FileName,
   FullName: String; const ALine: Integer; const AThreadId: Integer;
-  const AThreadName: String; const AThreadState: String;
+  const AThreadName: String; const AThreadState: TDbgThreadState;
   AState: TDebuggerDataState);
 begin
   TopFrame.Init(AnAdress, AnArguments, AFunctionName, FileName, FullName, ALine, AState);
@@ -2439,9 +2449,10 @@ begin
   AThread.Free;
 end;
 
-function TThreads.CreateEntry(const AnAdress: TDbgPtr; const AnArguments: TStrings;
-  const AFunctionName: String; const FileName, FullName: String; const ALine: Integer;
-  const AThreadId: Integer; const AThreadName: String; const AThreadState: String;
+function TThreads.CreateEntry(const AnAdress: TDbgPtr;
+  const AnArguments: TStrings; const AFunctionName: String; const FileName,
+  FullName: String; const ALine: Integer; const AThreadId: Integer;
+  const AThreadName: String; const AThreadState: TDbgThreadState;
   AState: TDebuggerDataState): TThreadEntry;
 begin
   Result := TThreadEntry.Create(AnAdress, AnArguments, AFunctionName, FileName,
@@ -2480,6 +2491,13 @@ destructor TThreadsMonitor.Destroy;
 begin
   inherited Destroy;
   FreeAndNil(FThreads);
+end;
+
+procedure TThreadsMonitor.SetSuspended(AThread: TThreadEntry;
+  ASuspended: Boolean);
+begin
+  if GetSupplier <> nil then
+    GetSupplier.SetSuspended(AThread, ASuspended);
 end;
 
 { TRegistersMonitor }
@@ -4393,6 +4411,12 @@ begin
 end;
 
 procedure TThreadsSupplier.RequestMasterData;
+begin
+  //
+end;
+
+procedure TThreadsSupplier.SetSuspended(AThread: TThreadEntry;
+  ASuspended: Boolean);
 begin
   //
 end;
