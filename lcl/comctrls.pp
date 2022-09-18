@@ -2114,6 +2114,8 @@ type
     cDefSeparatorWidth = 8;
     cDefDividerWidth = 5;
     cDefButtonDropDecArrowWidth = 2;
+    cHorIconTextDist = 5;
+    cVertIconTextDist = 2;
   protected
     FToolBar: TToolBar;
     class procedure WSRegisterClass; override;

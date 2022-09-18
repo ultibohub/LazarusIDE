@@ -1706,10 +1706,12 @@ end;
 
 procedure TDateEdit.Loaded;
 begin
-  inherited Loaded;
   //Forces a valid Text in the control
   if not (csDesigning in ComponentState) then
     SetDate(FDate);
+  //avoid OnChange (regression introduced by #8ce29506c500e46d65b9a067bf446fd91224e6c0, happens when DirectInput=True and DefaultToday=True)
+  //the FEdit's OnChange is only forwarded once the whole component has been loaded, so call inherited after setting the text, not before
+  inherited Loaded;
 end;
 
 Function ParseDate(S : String; Order : TDateOrder; Def: TDateTime) : TDateTime;
