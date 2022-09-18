@@ -66,6 +66,7 @@ type
     fcTokenList: TSourceTokenList;
 
     fiTokenCount: integer;
+    function IsEndOfTypeSection: Boolean;
     procedure RecogniseTypeHelper;
     procedure SplitGreaterThanOrEqual;
     procedure SplitShr_gg;
@@ -1115,6 +1116,13 @@ begin
   PopNode;
 end;
 
+function TBuildParseTree.IsEndOfTypeSection: Boolean;
+begin
+  Result := (fcTokenList.FirstSolidTokenType in (ClassVisibility +
+              [ttStrict,ttClass,ttVar,ttThreadVar,ttConst,ttFunction,ttProcedure,
+               ttOperator,ttConstructor,ttDestructor,ttProperty,ttCase]));
+end;
+
 procedure TBuildParseTree.RecogniseTypeSection(const pbNestedInCLass: Boolean);
 var
   lc: TSourceToken;
@@ -1129,18 +1137,28 @@ begin
   lc := fcTokenList.FirstSolidToken;
   while (lc <> nil) and ((lc.WordType in IdentifierTypes) or TypePastAttribute) do
   begin
+    { Can be an empty nested type section
+     TFoo=class
+     public
+       type          // empty nested type section
+       public
+       procedure Bar;
+     end;
+    }
+    if pbNestedInClass and IsEndOfTypeSection then
+      break;
+
     RecogniseTypeDecl;
 
     if pbNestedInClass then
     begin
-      if fcTokenList.FirstSolidTokenType in (ClassVisibility + [ttStrict]) then
-        break;
-      if fcTokenList.FirstSolidTokenType in [ttClass,ttVar,ttThreadVar, ttConst,ttFunction,ttProcedure,ttOperator,ttConstructor,ttDestructor,ttProperty,ttCase] then
+      if IsEndOfTypeSection then
         break;
     end
     else
     begin
-      if (fcTokenList.FirstSolidTokenType = ttGeneric) and (fcTokenList.SolidTokenType(2) in [ttFunction,ttProcedure,ttOperator]) then
+      if (fcTokenList.FirstSolidTokenType = ttGeneric)
+      and (fcTokenList.SolidTokenType(2) in [ttFunction,ttProcedure,ttOperator]) then
         break;
     end;
     lc := fcTokenList.FirstSolidToken;
@@ -2599,6 +2617,8 @@ begin
 end;
 
 procedure TBuildParseTree.RecogniseVarDecl;
+const
+  VariableModifiers: TTokenTypeSet = [ttExternal, ttExport, ttPublic];
 var
   lc: TSourceToken;
 begin
@@ -2637,6 +2657,28 @@ begin
   else
   begin
     RecogniseHintDirectives;
+
+    if (fcTokenList.FirstSolidTokenType in VariableModifiers) or
+      ((fcTokenList.FirstSolidTokenType=ttSemicolon) and
+       (fcTokenList.SolidTokenType(2) in VariableModifiers)) then
+    begin
+      // optional SemiColon
+      if  fcTokenList.FirstSolidTokenType=ttSemicolon then
+        Recognise(ttSemiColon);
+      if fcTokenList.FirstSolidTokenType = ttExternal then
+      begin
+        Recognise(fcTokenList.FirstSolidTokenType);
+        if fcTokenList.FirstSolidTokenType in [ttIdentifier,ttQuotedLiteralString] then
+          RecogniseConstantExpression;  //can be a literal string or constant.
+      end
+      else
+        Recognise(fcTokenList.FirstSolidTokenType);
+      if fcTokenList.FirstSolidTokenType=ttName then
+      begin
+        Recognise(ttName);
+        RecogniseConstantExpression;
+      end;
+    end;
 
     if fcTokenList.FirstSolidTokenType = ttEquals then
     begin

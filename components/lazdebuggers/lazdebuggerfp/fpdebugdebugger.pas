@@ -333,7 +333,7 @@ type
     *)
     FWorkerThreadId: TThreadID;
     FEvalWorkItem: TFpThreadWorkerCmdEval;
-    FQuickPause, FPauseForEvent, FSendingEvents: boolean;
+    FQuickPause, FPauseForEvent, FInternalPauseForEvent, FSendingEvents: boolean;
     FExceptionStepper: TFpDebugExceptionStepping;
     FConsoleOutputThread: TThread;
     // Helper vars to run in debug-thread
@@ -567,9 +567,16 @@ type
     FResetBreakFlag: boolean;
     FInternalBreakpoint: FpDbgClasses.TFpDbgBreakpoint;
     FIsSet: boolean;
+    FBrkLogStackLimit: Integer;
+    FBrkLogStackResult: array of String;
+    FBrkLogExpr, FBrkLogResult: String;
     procedure SetBreak;
     procedure ResetBreak;
+    procedure ThreadLogExpression;
+    procedure ThreadLogCallStack;
   protected
+    procedure DoLogExpression(const AnExpression: String); override;
+    procedure DoLogCallStack(const Limit: Integer); override;
     procedure DoStateChange(const AOldState: TDBGState); override;
     procedure DoEnableChange; override;
     procedure DoChanged; override;
@@ -1873,6 +1880,92 @@ begin
     FInternalBreakpoint := nil;
     debuglnExit(DBG_BREAKPOINTS, ['<< TFPBreakpoint.ResetBreak ' ]);
     end;
+end;
+
+procedure TFPBreakpoint.ThreadLogExpression;
+var
+  dbg: TFpDebugDebugger;
+  Context: TFpDbgSymbolScope;
+  PasExpr: TFpPascalExpression;
+  PrettyPrinter: TFpPascalPrettyPrinter;
+  s: String;
+begin
+  dbg := TFpDebugDebugger(Debugger);
+  Context := dbg.GetContextForEvaluate(dbg.FDbgController.CurrentThreadId, 0);
+  if Context <> nil then begin
+    PrettyPrinter := nil;
+    PasExpr := TFpPascalExpression.Create(FBrkLogExpr, Context, True);
+    try
+      PasExpr.IntrinsicPrefix := TFpDebugDebuggerProperties(dbg.GetProperties).IntrinsicPrefix;
+      PasExpr.Parse;
+      PasExpr.ResultValue; // trigger full validation
+      if PasExpr.Valid then begin
+        PrettyPrinter := TFpPascalPrettyPrinter.Create(Context.SizeOfAddress);
+        PrettyPrinter.Context := Context.LocationContext;
+        if PrettyPrinter.PrintValue(s, PasExpr.ResultValue) then begin
+          FBrkLogResult := s;
+          FBrkLogExpr := '';
+        end;
+      end;
+    finally
+      PasExpr.Free;
+      Context.ReleaseReference;
+    end;
+  end;
+end;
+
+procedure TFPBreakpoint.ThreadLogCallStack;
+var
+  dbg: TFpDebugDebugger;
+  thr: TDbgThread;
+  CStack: TDbgCallstackEntryList;
+  s: String;
+  e: TDbgCallstackEntry;
+  i, c: Integer;
+begin
+  dbg := TFpDebugDebugger(Debugger);
+  thr := dbg.DbgController.CurrentThread;
+  if thr = nil then
+    exit;
+
+  thr.PrepareCallStackEntryList(FBrkLogStackLimit);
+  CStack := thr.CallStackEntryList;
+
+  c := min(FBrkLogStackLimit, CStack.Count);
+  SetLength(FBrkLogStackResult, c);
+  for i := 0 to c - 1 do begin
+    e := CStack[i];
+
+    s := e.SourceFile;
+    if s <> '' then
+      s := s + ':' + IntToStr(e.Line)
+    else
+      s := IntToHex(e.AnAddress, 8);
+
+    FBrkLogStackResult[i] := s + ' ' + e.FunctionName + LineEnding;
+  end;
+end;
+
+procedure TFPBreakpoint.DoLogExpression(const AnExpression: String);
+begin
+  FBrkLogExpr := AnExpression;
+  FBrkLogResult := '';
+  TFpDebugDebugger(Debugger).ExecuteInDebugThread(@ThreadLogExpression);
+  if FBrkLogExpr = '' then
+    TFpDebugDebugger(Debugger).DoDbgEvent(ecBreakpoint, etBreakpointEvaluation, FBrkLogResult);
+end;
+
+procedure TFPBreakpoint.DoLogCallStack(const Limit: Integer);
+var
+  i: Integer;
+begin
+  if Limit <= 0 then
+    exit;
+  FBrkLogStackLimit := Limit;
+  FBrkLogResult := '';
+  TFpDebugDebugger(Debugger).ExecuteInDebugThread(@ThreadLogCallStack);
+  for i := 0 to Length(FBrkLogStackResult) - 1 do
+    TFpDebugDebugger(Debugger).DoDbgEvent(ecBreakpoint, etBreakpointStackDump, FBrkLogStackResult[i]);
 end;
 
 destructor TFPBreakpoint.Destroy;
@@ -3543,8 +3636,10 @@ var
   Context: TFpDbgSymbolScope;
   PasExpr: TFpPascalExpression;
   Opts: TFpInt3DebugBreakOptions;
+  NeedInternalPause: Boolean;
 begin
   // If a user single steps to an excepiton handler, do not open the dialog (there is no continue possible)
+  NeedInternalPause := False;
   if AnEventType = deBreakpoint then
     if FExceptionStepper.BreakpointHit(&continue, Breakpoint) then
       exit;
@@ -3582,7 +3677,7 @@ begin
         EventLogHandler.LogEventBreakPointHit(ABreakpoint, ALocationAddr);
 
       if assigned(ABreakPoint) then
-        ABreakPoint.Hit(&continue);
+        ABreakPoint.Hit(&continue, NeedInternalPause);
 
       if (not &continue) and (ABreakPoint.Kind = bpkData) and (OnFeedback <> nil) then begin
         // For message use location(Address - 1)
@@ -3621,8 +3716,11 @@ begin
   if not continue then
     FPauseForEvent := True;
 
-  if not AMoreHitEventsPending then begin
+  FInternalPauseForEvent := FInternalPauseForEvent or NeedInternalPause;
+
+  if (not AMoreHitEventsPending) and (FPauseForEvent or FInternalPauseForEvent) then begin
     FQuickPause := False; // Ok, because we will SetState => RunQuickPauseTasks is not needed
+
     if FPauseForEvent then
       &continue := False; // Only continue, if ALL events did say to continue
 
@@ -3944,6 +4042,7 @@ begin
       Threads.CurrentThreads.CurrentThreadId := FDbgController.CurrentThreadId;
 
     FPauseForEvent := False;
+    FInternalPauseForEvent := False;
     FSendingEvents := True;
     try
       FDbgController.SendEvents(Cont); // This may free the TFpDebugDebugger (self)
@@ -4239,6 +4338,9 @@ end;
 
 function TFpDebugDebugger.FindSymbolScope(AThreadId, AStackFrame: Integer): TFpDbgSymbolScope;
 begin
+  if ThreadID = FWorkerThreadId then
+    exit(FDbgController.CurrentProcess.FindSymbolScope(AThreadId, AStackFrame));
+
   assert(GetCurrentThreadId=MainThreadID, 'TFpDebugDebugger.FindSymbolScope: GetCurrentThreadId=MainThreadID');
   FCacheThreadId := AThreadId;
   FCacheStackFrame := AStackFrame;

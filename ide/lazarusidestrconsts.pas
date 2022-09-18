@@ -2439,9 +2439,9 @@ resourcestring
   dlgCOSymbolType = 'Type of debug info';
   dlgCOSymbolTypeAuto = 'Automatic';
   dlgCOSymbolTypeStabs = 'Stabs';
-  dlgCOSymbolTypeDwarf2 = 'Dwarf2';
-  dlgCOSymbolTypeDwarf2Set = 'Dwarf with sets';
-  dlgCOSymbolTypeDwarf3 = 'Dwarf3 (beta)';
+  dlgCOSymbolTypeDwarf2 = 'Dwarf 2';
+  dlgCOSymbolTypeDwarf2Set = 'Dwarf 2 with sets';
+  dlgCOSymbolTypeDwarf3 = 'Dwarf 3 (beta)';
   dlgLNumsBct = 'Display line numbers in run-time error backtraces';
   dlgCOHeaptrc = 'Use Heaptrc unit (check for mem-leaks)';
   dlgCOTrashVariables = 'Trash variables';
