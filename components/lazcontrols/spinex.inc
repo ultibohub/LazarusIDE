@@ -213,12 +213,12 @@ end;
 
 function TSpinEditExBase.MaxValueStored: Boolean;
 begin
-  Result := not SameValue(FMaxValue, T(DefMaxValue)); //use typecast to force use of correct overload. Issue #39792
+  Result := not SameValue(FMaxValue, DefMaxValue);
 end;
 
 function TSpinEditExBase.MinValueStored: Boolean;
 begin
-  Result := not SameValue(FMinValue, T(DefMinValue)); //use typecast to force use of correct overload. Issue #39792
+  Result := not SameValue(FMinValue, DefMinValue);
 end;
 
 procedure TSpinEditExBase.EditMouseWheelUp(Shift: TShiftState;
@@ -524,13 +524,10 @@ begin
     Result := AValue - FIncrement;
 end;
 
-// Workaround for https://gitlab.com/freepascal.org/lazarus/lazarus/-/issues/39490
-{$ifdef fpc_math_samevalue_bug}
 function TCustomFloatSpinEditEx.SameValue(AValue1, AValue2: Double): Boolean;
 begin
   Result := Math.SameValue(AValue1, AValue2);
 end;
-{$endif}
 
 procedure TCustomFloatSpinEditEx.SetDecimals(ADecimals: Integer);
 begin
@@ -671,13 +668,10 @@ begin
     Result := AValue - FIncrement;
 end;
 
-// Workaround for https://gitlab.com/freepascal.org/lazarus/lazarus/-/issues/39490
-{$ifdef fpc_math_samevalue_bug}
 function TCustomSpinEditEx.SameValue(AValue1, AValue2: Int64): Boolean;
 begin
   Result := (AValue1 = AValue2);
 end;
-{$endif}
 
 function TCustomSpinEditEx.TextIsNumber(const S: String; out ANumber: Int64
   ): Boolean;

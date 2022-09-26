@@ -189,6 +189,7 @@ type
 
     function GetInstanceClassName(out AClassName; AParentClassIndex: integer = 0): boolean; virtual;
     function GetInstanceClassName(AClassName: PString; AUnitName: PString = nil; AParentClassIndex: integer = 0): boolean; virtual;
+    function GetFpcRefCount(out ARefCount: Int64): Boolean; virtual;
 
 // base class? Or Member includes member from base
     (* Member:
@@ -227,11 +228,15 @@ type
   TFpValueConstWithType = class(TFpValue)
   private
     FType: TFpSymbol;
+    FValAddress: TFpDbgMemLocation;
   protected
     function GetTypeInfo: TFpSymbol; override;
+    function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetAddress: TFpDbgMemLocation; override;
   public
     destructor Destroy; override;
     procedure SetTypeName(AName: String);
+    procedure SetAddress(AnAddress: TFpDbgMemLocation);
   end;
 
   { TFpValueConstNumber }
@@ -784,7 +789,7 @@ end;
 
 function TFpValueConstString.GetFieldFlags: TFpValueFieldFlags;
 begin
-  Result := [svfString]
+  Result := [svfString] + inherited GetFieldFlags;
 end;
 
 function TFpValueConstString.GetAsString: AnsiString;
@@ -817,7 +822,7 @@ end;
 
 function TFpValueConstChar.GetFieldFlags: TFpValueFieldFlags;
 begin
-  Result := [svfString, svfSize];
+  Result := [svfString, svfSize] + inherited GetFieldFlags;
   if Length(FValue) = 1 then
     Result := Result + [svfOrdinal];
 end;
@@ -878,6 +883,7 @@ end;
 function TFpValueConstWideChar.GetFieldFlags: TFpValueFieldFlags;
 begin
   Result := [svfWideString, svfSize, svfOrdinal];
+  Result := Result + inherited GetFieldFlags;
 end;
 
 function TFpValueConstWideChar.GetAsString: AnsiString;
@@ -942,7 +948,7 @@ begin
   Result := GetInstanceClassName(@AClassName, nil);
 end;
 
-function TFpValue.GetInstanceClassName(AClassName, AUnitName: PString;
+function TFpValue.GetInstanceClassName(AClassName: PString; AUnitName: PString;
   AParentClassIndex: integer): boolean;
 var
   ti: TFpSymbol;
@@ -951,6 +957,11 @@ begin
   Result := ti <> nil;
   if Result then
     Result := ti.GetInstanceClassName(Self, AClassName, AUnitName, AParentClassIndex);
+end;
+
+function TFpValue.GetFpcRefCount(out ARefCount: Int64): Boolean;
+begin
+  Result := False;
 end;
 
 procedure TFpValue.ResetError;
@@ -1144,6 +1155,20 @@ begin
   Result := FType;
 end;
 
+function TFpValueConstWithType.GetFieldFlags: TFpValueFieldFlags;
+begin
+  Result := [];
+  if IsValidLoc(FValAddress) then
+    Result := [svfAddress];
+end;
+
+function TFpValueConstWithType.GetAddress: TFpDbgMemLocation;
+begin
+  Result := InvalidLoc;
+  if IsInitializedLoc(FValAddress) then
+    Result := FValAddress;
+end;
+
 destructor TFpValueConstWithType.Destroy;
 begin
   inherited Destroy;
@@ -1156,6 +1181,11 @@ begin
     FType := TFpSymbol.Create(AName)
   else
     FType.SetName(AName);
+end;
+
+procedure TFpValueConstWithType.SetAddress(AnAddress: TFpDbgMemLocation);
+begin
+  FValAddress := AnAddress;
 end;
 
 { TPasParserConstNumberSymbolValue }
@@ -1174,6 +1204,7 @@ begin
     Result := [svfOrdinal, svfInteger]
   else
     Result := [svfOrdinal, svfCardinal];
+  Result := Result + inherited GetFieldFlags;
 end;
 
 function TFpValueConstNumber.GetAsCardinal: QWord;
@@ -1203,6 +1234,7 @@ end;
 function TFpValueConstFloat.GetFieldFlags: TFpValueFieldFlags;
 begin
   Result := [svfFloat];
+  Result := Result + inherited GetFieldFlags;
 end;
 
 function TFpValueConstFloat.GetAsFloat: Extended;
@@ -1226,6 +1258,7 @@ end;
 function TFpValueConstBool.GetFieldFlags: TFpValueFieldFlags;
 begin
   Result := [svfOrdinal, svfBoolean];
+  Result := Result + inherited GetFieldFlags;
 end;
 
 function TFpValueConstBool.GetAsBool: Boolean;

@@ -4209,13 +4209,18 @@ resourcestring
     +'the debug symbols into the executable rather than to an external file. '
     + 'The "%s" supports only symbols in an external file.';
   lisEnableOptionXg2 = 'Enable option -Xg';
-  lisEnableOptionDwarf = 'Enable Dwarf 2 (-gw)?';
-  lisTheProjectDoesNotUseDwarf = 'The project does not '
-    +'write debug info in Dwarf format.'
-    +' The "%s" supports only Dwarf.';
   lisEnableOptionDwarf2 = 'Enable Dwarf 2 (-gw)';
   lisEnableOptionDwarf2Sets = 'Enable Dwarf 2 with sets';
   lisEnableOptionDwarf3 = 'Enable Dwarf 3 (-gw3)';
+
+  lisTheProjectDoesNotUseDwarf_TaskDlg_Caption = 'Running your application with debugger';
+  lisTheProjectDoesNotUseDwarf_TaskDlg_Title = 'Choose Debug Information format';
+  lisTheProjectDoesNotUseDwarf_TaskDlg_TextExplain = '"%s" can only run your application'
+      + ' when it was compiled with a suitable Debug Information enabled.';
+  lisTheProjectDoesNotUseDwarf_TaskDlg_NoDebugBtn_Caption = 'Run with no debugger';
+  lisTheProjectDoesNotUseDwarf_TaskDlg_Footer = 'This choice can be later changed'
+       + ' in Project -> Project Options -> Compiler Options -> Debugging.';
+
   lisCleanUpUnitPath = 'Clean up unit path?';
   lisTheDirectoryIsNoLongerNeededInTheUnitPathRemoveIt =
     'The directory "%s" is no longer needed in the unit path.%sRemove it?';
