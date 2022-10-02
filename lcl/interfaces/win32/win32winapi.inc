@@ -2406,13 +2406,8 @@ end;
  ------------------------------------------------------------------------------}
 function TWin32WidgetSet.GetWindowSize(Handle : hwnd;
   var Width, Height: integer): boolean;
-var
-  WP: WINDOWPLACEMENT;
-  R: TRect;
-  WindowInfo: PWin32WindowInfo;
-  Info: tagWINDOWINFO;
 
-  procedure AdjustUpDownSize;
+  procedure AdjustUpDownSize(WindowInfo: PWin32WindowInfo; WP: WINDOWPLACEMENT);
   var
     UpDownWP: WINDOWPLACEMENT;
   begin
@@ -2421,13 +2416,28 @@ var
       Width := Max(Width, UpDownWP.rcNormalPosition.Right - WP.rcNormalPosition.Left);
   end;
 
-  procedure ExcludeCaption; inline;
+  procedure ExcludeBorder(dwStyle, dwExStyle: DWORD);
   begin
-    if (Info.dwStyle and (WS_CHILD or WS_CAPTION)) = WS_CAPTION then
-      if (Info.dwExStyle and WS_EX_TOOLWINDOW) <> 0 then
-        Dec(Height, Windows.GetSystemMetrics(SM_CYSMCAPTION))
+    {$IFNDEF LCLRealFormBounds}
+    if (dwStyle and WS_THICKFRAME) = WS_THICKFRAME then
+      Dec(Width, 2*(GetSystemMetricsForDpi(SM_CXSIZEFRAME, GetDpiForWindow(Handle))+GetSystemMetricsForDpi(SM_CXPADDEDBORDER, GetDpiForWindow(Handle))))
+    else
+    if (dwStyle and WS_BORDER) = WS_BORDER then
+      Dec(Width, 2*(GetSystemMetricsForDpi(SM_CXFIXEDFRAME, GetDpiForWindow(Handle))));
+    if (dwStyle and WS_THICKFRAME) = WS_THICKFRAME then
+      Dec(Height, 2*(GetSystemMetricsForDpi(SM_CYSIZEFRAME, GetDpiForWindow(Handle))+GetSystemMetricsForDpi(SM_CXPADDEDBORDER, GetDpiForWindow(Handle))))
+    else
+    if (dwStyle and WS_BORDER) = WS_BORDER then
+      Dec(Height, 2*(GetSystemMetricsForDpi(SM_CYFIXEDFRAME, GetDpiForWindow(Handle))));
+
+    if (dwStyle and (WS_CHILD or WS_CAPTION)) = WS_CAPTION then
+    begin
+      if (dwExStyle and WS_EX_TOOLWINDOW) <> 0 then
+        Dec(Height, GetSystemMetricsForDpi(SM_CYSMCAPTION, GetDpiForWindow(Handle)))
       else
-        Dec(Height, Windows.GetSystemMetrics(SM_CYCAPTION));
+        Dec(Height, GetSystemMetricsForDpi(SM_CYCAPTION, GetDpiForWindow(Handle)));
+    end;
+    {$ENDIF}
   end;
 
   procedure SetWidthHeightFromRect(const R: TRect); inline;
@@ -2436,6 +2446,11 @@ var
      Height := R.Bottom - R.Top;
   end;
 
+var
+  WP: WINDOWPLACEMENT;
+  R: TRect;
+  Info: tagWINDOWINFO;
+  WindowInfo: PWin32WindowInfo;
 begin
   WP.length := SizeOf(WP);
   Result := Boolean(Windows.GetWindowPlacement(Handle, WP));
@@ -2457,11 +2472,7 @@ begin
         SetWidthHeightFromRect(WP.rcNormalPosition)
       else
         SetWidthHeightFromRect(Info.rcWindow);
-      {$IFNDEF LCLRealFormBounds}
-      Width := Width - 2 * Integer(Info.cxWindowBorders);
-      Height := Height - 2 * Integer(Info.cyWindowBorders);
-      ExcludeCaption;
-      {$ENDIF}
+      ExcludeBorder(Info.dwStyle, Info.dwExStyle);
       //WriteLn('W = ', Width, ' H = ', Height);
       Exit;
     end;
@@ -2482,29 +2493,14 @@ begin
       SetWidthHeightFromRect(WP.rcNormalPosition);
   end;
 
-  WindowInfo := GetWin32WindowInfo(Handle);
-
+  {$IFNDEF LCLRealFormBounds}
   // convert top level lcl window coordinaties to win32 coord
-  Info.dwStyle := DWORD(GetWindowLong(Handle, GWL_STYLE));
-  Info.dwExStyle := DWORD(GetWindowLong(Handle, GWL_EXSTYLE));
-  if (Info.dwStyle and (WS_CHILD or WS_THICKFRAME)) = WS_THICKFRAME then
-  begin
-    // thick, sizing border
-    // add twice, top+bottom border
-    Dec(Width, 2*Windows.GetSystemMetrics(SM_CXSIZEFRAME));
-    Dec(Height, 2*Windows.GetSystemMetrics(SM_CYSIZEFRAME));
-  end else
-  if (Info.dwStyle and (WS_CHILD or WS_BORDER)) = WS_BORDER then
-  begin
-    // thin, non-sizing border
-    Dec(Width, 2*Windows.GetSystemMetrics(SM_CXFIXEDFRAME));
-    Dec(Height, 2*Windows.GetSystemMetrics(SM_CYFIXEDFRAME));
-  end;
+  ExcludeBorder(DWORD(GetWindowLong(Handle, GWL_STYLE)), DWORD(GetWindowLong(Handle, GWL_EXSTYLE)));
+  {$ENDIF}
 
-  ExcludeCaption;
-
+  WindowInfo := GetWin32WindowInfo(Handle);
   if WindowInfo^.UpDown <> 0 then
-    AdjustUpDownSize;
+    AdjustUpDownSize(WindowInfo, WP);
 end;
 
 function TWin32WidgetSet.GradientFill(DC: HDC; Vertices: PTriVertex;

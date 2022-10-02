@@ -30,7 +30,7 @@ interface
 }
 uses
   Windows, // keep as first
-  Classes, SysUtils, RtlConsts, ActiveX, MultiMon, CommCtrl,
+  Classes, SysUtils, RtlConsts, ActiveX, MultiMon, CommCtrl, ctypes,
   {$IF FPC_FULLVERSION>=30000}
   character,
   {$ENDIF}
@@ -258,6 +258,14 @@ function DestroyWindowProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
     LParam: Windows.LParam): LResult; stdcall;
 {$endif}
 
+// Multi Dpi support (not yet in FCL); ToDo: move to FCL
+
+function GetSystemMetricsForDpi(nIndex: Integer; dpi: UINT): Integer;
+function GetDpiForWindow(hwnd: HWND): UINT;
+function AdjustWindowRectExForDpi(const lpRect: LPRECT; dwStyle: DWORD; bMenu: BOOL; dwExStyle: DWORD; dpi: UINT): BOOL;
+function GetDpiForMonitor(hmonitor: HMONITOR; dpiType: TMonitorDpiType; out dpiX: UINT; out dpiY: UINT): HRESULT;
+function LoadIconWithScaleDown(hinst:HINST; pszName:LPCWStr;cx:cint;cy:cint;var phico: HICON ):HRESULT;
+
 implementation
 
 uses
@@ -301,38 +309,93 @@ var
 // Multi Dpi support (not yet in FCL); ToDo: move to FCL
 type
   TGetDpiForMonitor = function(hmonitor: HMONITOR; dpiType: TMonitorDpiType; out dpiX: UINT; out dpiY: UINT): HRESULT; stdcall;
-var
-  GetDpiForMonitor: TGetDpiForMonitor;
-  g_pfnGetDpiForMonitor: TGetDpiForMonitor = nil;
-  g_fShellScalingInitDone: Boolean = False;
+  TGetDpiForWindow = function(hwnd: HWND): UINT; stdcall;
+  TAdjustWindowRectExForDpi = function(const lpRect: LPRECT; dwStyle: DWORD; bMenu: BOOL; dwExStyle: DWORD; dpi: UINT): BOOL; stdcall;
+  TGetSystemMetricsForDpi = function (nIndex: Integer; dpi: UINT): Integer; stdcall;
+  TLoadIconWithScaleDown = function ( hinst:HINST; pszName:LPCWStr;cx:cint;cy:cint;var phico: HICON ):HRESULT; stdcall;
 
-function InitShellScalingStubs: Boolean;
 var
-  hShcore: Windows.HMODULE;
+  g_GetDpiForMonitor: TGetDpiForMonitor = nil;
+  g_GetDpiForWindow: TGetDpiForWindow = nil;
+  g_AdjustWindowRectExForDpi: TAdjustWindowRectExForDpi = nil;
+  g_GetSystemMetricsForDpi: TGetSystemMetricsForDpi = nil;
+  g_LoadIconWithScaleDown: TLoadIconWithScaleDown = nil;
+  g_HighDPIAPIDone: Boolean = False;
+
+procedure InitHighDPIAPI;
+var
+  lib: Windows.HMODULE;
 begin
-  if not g_fShellScalingInitDone then
-  begin
-    hShcore := GetModuleHandle('Shcore');
-    if hShcore<>0 then
-      Pointer(g_pfnGetDpiForMonitor) := GetProcAddress(hShcore, 'GetDpiForMonitor')
-    else
-      Pointer(g_pfnGetDpiForMonitor) := nil;
+  if g_HighDPIAPIDone then
+    Exit;
 
-    g_fShellScalingInitDone := True;
+  lib := LoadLibrary('Shcore.dll');
+  if lib<>0 then
+    Pointer(g_GetDpiForMonitor) := GetProcAddress(lib, 'GetDpiForMonitor');
+
+  lib := LoadLibrary(user32);
+  if lib<>0 then
+  begin
+    Pointer(g_AdjustWindowRectExForDpi) := GetProcAddress(lib, 'AdjustWindowRectExForDpi');
+    Pointer(g_GetDpiForWindow) := GetProcAddress(lib, 'GetDpiForWindow');
+    Pointer(g_GetSystemMetricsForDpi) := GetProcAddress(lib, 'GetSystemMetricsForDpi');
   end;
 
-  Result := (Pointer(g_pfnGetDpiForMonitor)<>nil) and (@g_pfnGetDpiForMonitor <> nil);
+  lib := LoadLibrary(comctl32);
+  if lib<>0 then
+    Pointer(g_LoadIconWithScaleDown) := GetProcAddress(lib, 'LoadIconWithScaleDown');
+
+  g_HighDPIAPIDone := True;
 end;
 
-function xGetDpiForMonitor(hmonitor: HMONITOR; dpiType: TMonitorDpiType;
-  out dpiX: UINT; out dpiY: UINT): HRESULT; stdcall;
+function GetSystemMetricsForDpi(nIndex: Integer; dpi: UINT): Integer;
 begin
-  if InitShellScalingStubs then
-    Exit(g_pfnGetDpiForMonitor(hmonitor, dpiType, dpiX, dpiY));
+  InitHighDPIAPI;
+  if Assigned(g_GetSystemMetricsForDpi) then
+    Result := g_GetSystemMetricsForDpi(nIndex, dpi)
+  else
+    Result := Windows.GetSystemMetrics(nIndex);
+end;
 
-  dpiX := 0;
-  dpiY := 0;
-  Result := S_FALSE;
+function GetDpiForWindow(hwnd: HWND): UINT;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_GetDpiForWindow) then
+    Result := g_GetDpiForWindow(hwnd)
+  else
+    Result := ScreenInfo.PixelsPerInchX;
+end;
+
+function AdjustWindowRectExForDpi(const lpRect: LPRECT; dwStyle: DWORD; bMenu: BOOL; dwExStyle: DWORD; dpi: UINT): BOOL;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_AdjustWindowRectExForDpi) then
+    Result := g_AdjustWindowRectExForDpi(lpRect, dwStyle, bMenu, dwExStyle, dpi)
+  else
+    Result := Windows.AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle);
+end;
+
+function GetDpiForMonitor(hmonitor: HMONITOR; dpiType: TMonitorDpiType;
+  out dpiX: UINT; out dpiY: UINT): HRESULT;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_GetDpiForMonitor) then
+    Result := g_GetDpiForMonitor(hmonitor, dpiType, dpiX, dpiY)
+  else
+  begin
+    dpiX := 0;
+    dpiY := 0;
+    Result := S_FALSE;
+  end;
+end;
+
+function LoadIconWithScaleDown(hinst:HINST; pszName:LPCWStr;cx:cint;cy:cint;var phico: HICON ):HRESULT;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_LoadIconWithScaleDown) then
+    Result := g_LoadIconWithScaleDown(hinst, pszName, cx, cy, phico)
+  else
+    Result := S_FALSE;
 end;
 
 {$I win32listsl.inc}
@@ -346,8 +409,6 @@ var
   L, L1 : integer;
 
 initialization
-  Pointer(GetDpiForMonitor) := @xGetDpiForMonitor;
-
   SystemCharSetIsUTF8:=true;
 
   MMenuItemInfoSize := sizeof(MENUITEMINFO);

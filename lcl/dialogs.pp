@@ -26,7 +26,7 @@ uses
   // LCL
   LMessages, LResources, LCLIntf, InterfaceBase, LCLStrConsts, LCLType,
   Forms, Controls, Themes, Graphics, Buttons, ButtonPanel, StdCtrls,
-  ExtCtrls, LCLClasses, ClipBrd, Menus, LCLTaskDialog,
+  ExtCtrls, LCLClasses, ClipBrd, Menus, LCLTaskDialog, DialogRes,
   // LazUtils
   GraphType, UITypes, FileUtil, LazFileUtils, LazStringUtils, LazLoggerBase;
 
@@ -541,7 +541,8 @@ type
     tfVerificationFlagChecked, tfShowProgressBar,
     tfShowMarqueeProgressBar, tfCallbackTimer,
     tfPositionRelativeToWindow, tfRtlLayout,
-    tfNoDefaultRadioButton, tfCanBeMinimized);
+    tfNoDefaultRadioButton, tfCanBeMinimized,
+    tfForceNonNative);
   TTaskDialogFlags = set of TTaskDialogFlag;
 
   TTaskDialogCommonButton = (tcbOk, tcbYes, tcbNo, tcbCancel, tcbRetry, tcbClose);
@@ -780,7 +781,7 @@ function ExtractColorIndexAndColor(const AColorList: TStrings; const AIndex: Int
 
 // helper functions (search LCLType for idDiag)
 function GetDialogCaption(idDiag: Integer): string;
-function GetDialogIcon(idDiag: Integer): TCustomBitmap;
+function GetDialogIcon(idDiag: Integer): TCustomBitmap; deprecated 'Use DialogRes.DialogGlyphs';
 
 function dbgs(Option: TOpenOption): string; overload;
 function dbgs(Options: TOpenOptions): string; overload;
@@ -788,10 +789,6 @@ function dbgs(Options: TOpenOptions): string; overload;
 procedure Register;
 
 implementation
-
-{$R dialog_icons.res}
-{ $R forms/finddlgunit.lfm}
-{ $R forms/replacedlgunit.lfm}
 
 uses 
   Math, WSDialogs;

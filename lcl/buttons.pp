@@ -56,6 +56,8 @@ type
     bsHot       // button is under mouse
   );
 
+  TButtonImage = idButtonOk..idButtonNoToAll;
+
   {
    TNumGlyphs holds the number of glyphs in an image.
    If we change this the code in SetNumGlyphs for @link(TCustomSpeedButton)
@@ -207,7 +209,8 @@ type
     procedure Click; override;
     procedure LoadGlyphFromResourceName(Instance: THandle; const AName: String);
     procedure LoadGlyphFromLazarusResource(const AName: String);
-    procedure LoadGlyphFromStock(idButton: Integer);
+    procedure LoadGlyphFromStock(idButton: Integer); // not DPI-aware, uses widgetset themed icons if available
+    procedure LoadGlyphFromResource(idButton: TButtonImage); // DPI-aware
     function CanShowGlyph(const AWithShowMode: Boolean = False): Boolean;
   public
     property Caption stored IsCaptionStored;
@@ -518,11 +521,13 @@ function GetLCLDefaultBtnGlyph(Kind: TBitBtnKind): TGraphic;
 procedure LoadGlyphFromResourceName(AGlyph: TButtonGlyph; Instance: THandle; const AName: String);
 procedure LoadGlyphFromLazarusResource(AGlyph: TButtonGlyph; const AName: String);
 procedure LoadGlyphFromStock(AGlyph: TButtonGlyph; idButton: Integer);
+procedure LoadGlyphFromResource(AGlyph: TButtonGlyph; idButton: Integer); // DPI-aware
 
 // helper functions (search LCLType for idButton)
 function GetButtonCaption(idButton: Integer): String;
 function GetDefaultButtonIcon(idButton: Integer; ScalePercent: Integer = 100): TCustomBitmap;
 function GetButtonIcon(idButton: Integer): TCustomBitmap;
+function GetButtonImageIndex(idButton: TButtonImage): Integer; // DPI-aware: image index for the LCLGlyphs image list
 function BidiAdjustButtonLayout(IsRightToLeft: Boolean; Layout: TButtonLayout): TButtonLayout;
 
 function dbgs(Kind: TBitBtnKind): string; overload;
@@ -540,7 +545,7 @@ const
     idButtonNo, idButtonClose, idButtonAbort, idButtonRetry, idButtonIgnore,
     idButtonAll, idButtonNoToAll, idButtonYesToAll);
 
-  BitBtnResNames: array[idButtonOk..idButtonNoToAll] of String =
+  BitBtnResNames: array[TButtonImage] of String =
   (
 {idButtonOk      } 'btn_ok',
 {idButtonCancel  } 'btn_cancel',
@@ -625,6 +630,15 @@ begin
   end;
 end;
 
+procedure LoadGlyphFromResource(AGlyph: TButtonGlyph; idButton: Integer);
+var
+  I: Integer;
+begin
+  if not((Low(TButtonImage)<=idButton) and (idButton<=High(TButtonImage))) then
+    Exit;
+  AGlyph.LCLGlyphName := BitBtnResNames[idButton];
+end;
+
 function GetButtonCaption(idButton: Integer): String;
 begin
   case idButton of
@@ -661,6 +675,11 @@ begin
   end
   else
     Result := GetDefaultButtonIcon(idButton);
+end;
+
+function GetButtonImageIndex(idButton: TButtonImage): Integer;
+begin
+  Result := LCLGlyphs.GetImageIndex(BitBtnResNames[idButton]);
 end;
 
 const

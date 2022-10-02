@@ -30,7 +30,7 @@ uses
   Forms, Controls, LCLType, Classes,
 ////////////////////////////////////////////////////
   WSForms, WSProc, WSLCLClasses, Windows, SysUtils, Win32Extra,
-  InterfaceBase, Win32Int, Win32Proc, Win32WSControls;
+  InterfaceBase, Graphics, Win32Int, Win32Proc, Win32WSControls;
 
 type
 
@@ -304,15 +304,18 @@ begin
   FlagsEx := FlagsEx or CalcBorderIconsFlagsEx(AForm);
 end;
 
-procedure AdjustFormBounds(const AForm: TCustomForm; out SizeRect: TRect);
+procedure AdjustFormBounds(const AForm: TCustomForm; var ioSizeRect: TRect);
+var
+  dpi: LCLType.UINT;
 begin
-  SizeRect := AForm.BoundsRect;
-  {$IFNDEF LCLRealFormBounds}
   // the LCL defines the size of a form without border, win32 with.
   // -> adjust size according to BorderStyle
-  Windows.AdjustWindowRectEx(@SizeRect, CalcBorderStyleFlags(AForm) or CalcBorderIconsFlags(AForm),
-    False, CalcBorderStyleFlagsEx(AForm) or CalcBorderIconsFlagsEx(AForm));
-  {$ENDIF}
+  if AForm.HandleAllocated then
+    dpi := GetDpiForWindow(AForm.Handle)
+  else
+    dpi := ScreenInfo.PixelsPerInchX;
+  AdjustWindowRectExForDpi(@ioSizeRect, CalcBorderStyleFlags(AForm) or CalcBorderIconsFlags(AForm),
+    False, CalcBorderStyleFlagsEx(AForm) or CalcBorderIconsFlagsEx(AForm), dpi);
 end;
 
 function CustomFormWndProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam; LParam: Windows.LParam): LResult; stdcall;
@@ -322,8 +325,7 @@ function CustomFormWndProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam; LPar
     SizeRect: Windows.RECT;
   begin
     SizeRect := Classes.Rect(0, 0, AWidth, AHeight);
-    Windows.AdjustWindowRectEx(@SizeRect, CalcBorderStyleFlags(AForm) or CalcBorderIconsFlags(AForm),
-      False, CalcBorderStyleFlagsEx(AForm) or CalcBorderIconsFlagsEx(AForm));
+    AdjustFormBounds(AForm, SizeRect);
     AWidth := SizeRect.Right - SizeRect.Left;
     AHeight := SizeRect.Bottom - SizeRect.Top;
   end;
@@ -470,7 +472,10 @@ begin
     CalcFormWindowFlags(lForm, Flags, FlagsEx);
     pClassName := @ClsName[0];
     WindowTitle := StrCaption;
+    Bounds := lForm.BoundsRect;
+    {$IFNDEF LCLRealFormBounds}
     AdjustFormBounds(lForm, Bounds);
+    {$ENDIF}
     if (lForm.Position in [poDefault, poDefaultPosOnly]) and not (csDesigning in lForm.ComponentState) then
     begin
       Left := CW_USEDEFAULT;
@@ -650,8 +655,7 @@ begin
   SizeRect := Bounds(ALeft, ATop, AWidth, AHeight);
 
   {$IFNDEF LCLRealFormBounds}
-  Windows.AdjustWindowRectEx(@SizeRect, CalcBorderStyleFlags(AForm) or CalcBorderIconsFlags(AForm),
-    False, CalcBorderStyleFlagsEx(AForm) or CalcBorderIconsFlagsEx(AForm));
+  AdjustFormBounds(AForm, SizeRect);
   {$ENDIF}
   L := ALeft;
   T := ATop;

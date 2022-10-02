@@ -127,12 +127,12 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows,
+  Windows, ctypes,
   {$ENDIF}
   Classes, SysUtils,
   LazUTF8,
-  LCLType, LCLStrConsts, LCLIntf, InterfaceBase,
-  LResources, Menus, Graphics, Forms, Controls, StdCtrls, ExtCtrls, Buttons;
+  LCLType, LCLStrConsts, LCLIntf, InterfaceBase, ImgList,
+  LResources, Menus, Graphics, Forms, Controls, StdCtrls, ExtCtrls, Buttons, DialogRes;
 
 {$IFDEF MSWINDOWS}
 var
@@ -454,7 +454,6 @@ begin
     cbCancel: result := @rsMbCancel;
     cbRetry:  result := @rsMbRetry;
     cbClose:  result := @rsMbClose;
-        else  result := nil;
   end;
 end;
 
@@ -491,37 +490,16 @@ end;
 
 
 const
-  LAZ_ICONS: array[TTaskDialogIcon] of string = (
-    '', 'dialog_warning', 'dialog_confirmation', 'dialog_error', 'dialog_information', '', 'dialog_shield');
-  LAZ_FOOTERICONS: array[TTaskDialogFooterIcon] of string = (
-    '', 'dialog_warning', 'dialog_confirmation', 'dialog_error', 'dialog_information', 'dialog_shield');
+  LCL_IMAGES: array[TTaskDialogIcon] of Integer = (
+    0, idDialogWarning, idDialogConfirm, idDialogError, idDialogInfo, 0, idDialogShield);
+  LCL_FOOTERIMAGES: array[TTaskDialogFooterIcon] of Integer = (
+    0, idDialogWarning, idDialogConfirm, idDialogError, idDialogInfo, idDialogShield);
 {$IFDEF MSWINDOWS}
 const
-  {$EXTERNALSYM IDI_HAND}
-  IDI_HAND = MakeIntResource(32513);
-  {$EXTERNALSYM IDI_QUESTION}
-  IDI_QUESTION = MakeIntResource(32514);
-  {$EXTERNALSYM IDI_EXCLAMATION}
-  IDI_EXCLAMATION = MakeIntResource(32515);
-  {$EXTERNALSYM IDI_ASTERISK}
-  IDI_ASTERISK = MakeIntResource(32516);
-  {$EXTERNALSYM IDI_WINLOGO}
-  IDI_WINLOGO = MakeIntResource(32517);
-  {$EXTERNALSYM IDI_WARNING}
-  IDI_WARNING = IDI_EXCLAMATION;
-  {$EXTERNALSYM IDI_ERROR}
-  IDI_ERROR = IDI_HAND;
-  {$EXTERNALSYM IDI_INFORMATION}
-  IDI_INFORMATION = IDI_ASTERISK;
-
   TD_ICONS: array[TTaskDialogIcon] of integer = (
     0, 84, 99, 98, 81, 0, 78);
   TD_FOOTERICONS: array[TTaskDialogFooterIcon] of integer = (
     0, 84, 99, 98, 65533, 65532);
-  WIN_ICONS: array[TTaskDialogIcon] of PChar = (
-    nil, IDI_WARNING, IDI_QUESTION, IDI_ERROR, IDI_INFORMATION, nil, nil);
-  WIN_FOOTERICONS: array[TTaskDialogFooterIcon] of PChar = (
-    nil, IDI_WARNING, IDI_QUESTION, IDI_ERROR, IDI_INFORMATION, nil);
 {$ENDIF MSWINDOWS}
 
 function IconMessage(Icon: TTaskDialogIcon): string;
@@ -631,151 +609,159 @@ function TTaskDialog.Execute(aCommonButtons: TCommonButtons;
   aDialogIcon: TTaskDialogIcon; aFooterIcon: TTaskDialogFooterIcon;
   aRadioDef, aWidth: integer; aParent: HWND; aNonNative: boolean;
   aEmulateClassicStyle: boolean; aOnButtonClicked: TTaskDialogButtonClickedEvent): integer;
-function GetNextStringLineToWS(var P: PChar): WS;
-var S: PChar;
-    tmp: string;
-begin
-  if P=nil then
-    result := '' else begin
-    S := P;
-    while S[0]>=' ' do
-      inc(S);
-    SetString(tmp,P,S-P);
-    result := _WS(CR(tmp));
-    while (S^<>#0) and (S^<' ') do inc(S); // ignore e.g. #13 or #10
-    if S^<>#0 then
-      P := S else
-      P := nil;
+
+  function GetNextStringLineToWS(var P: PChar): WS;
+  var S: PChar;
+      tmp: string;
+  begin
+    if P=nil then
+      result := '' else begin
+      S := P;
+      while S[0]>=' ' do
+        inc(S);
+      SetString(tmp,P,S-P);
+      result := _WS(CR(tmp));
+      while (S^<>#0) and (S^<' ') do inc(S); // ignore e.g. #13 or #10
+      if S^<>#0 then
+        P := S else
+        P := nil;
+    end;
   end;
-end;
-var aHint: string;
-function NoCR(const aText: string): string;
-var i: integer;
-begin
-  result := aText;
-  aHint := '';
-  i := pos('\n',result);
-  if i>0 then begin
-    aHint := CR(copy(result,i+2,maxInt));
-    SetLength(result,i-1);
+
+var
+  aHint: string;
+
+  function NoCR(const aText: string): string;
+  var i: integer;
+  begin
+    result := aText;
+    aHint := '';
+    i := pos('\n',result);
+    if i>0 then begin
+      aHint := CR(copy(result,i+2,maxInt));
+      SetLength(result,i-1);
+    end;
   end;
-end;
 
 {$IFDEF MSWINDOWS}
 var RU: array of Ws;
     RUCount: integer;
     But: array of TTASKDIALOG_BUTTON;
-procedure AddRU(Text: string; var n: integer; firstID: integer);
-var P: PChar;
-begin
-  if Text='' then
-    exit;
-  Text := SysUtils.trim(Text);
-  P := @Text[1]; // '\n' handling in GetNextStringLineToWS(P) will change P^
-  while P<>nil do begin
-    if length(RU)<=RUCount then begin
-      SetLength(RU,RUCount+16);
-      SetLength(But,RUCount+16);
+  procedure AddRU(Text: string; var n: integer; firstID: integer);
+  var
+    P: PChar;
+  begin
+    if Text='' then
+      exit;
+    Text := SysUtils.trim(Text);
+    P := @Text[1]; // '\n' handling in GetNextStringLineToWS(P) will change P^
+    while P<>nil do begin
+      if length(RU)<=RUCount then begin
+        SetLength(RU,RUCount+16);
+        SetLength(But,RUCount+16);
+      end;
+      RU[RUCount] := GetNextStringLineToWS(P);
+      with But[RUCount] do begin
+        nButtonID := n+firstID;
+        pszButtonText := PWideChar(RU[RUCount]);
+      end;
+      inc(n);
+      inc(RUCount);
     end;
-    RU[RUCount] := GetNextStringLineToWS(P);
-    with But[RUCount] do begin
-      nButtonID := n+firstID;
-      pszButtonText := PWideChar(RU[RUCount]);
-    end;
-    inc(n);
-    inc(RUCount);
   end;
-end;
 {$ENDIF}
-var
-    {$IFDEF MSWINDOWS}
-    Config: TTASKDIALOGCONFIG;
-    {$ENDIF}
-    Pic: TPortableNetworkGraphic;
-    Ico: TIcon;
-    Bmp: TBitmap;
-    i, X, Y, XB, IconBorder, FontHeight: integer;
-    Par: TWinControl;
-    Panel: TPanel;
-    CurrTabOrder: TTabOrder;
-    Image: TImage;
-    List: TStrings;
-    B: TCommonButton;
-    CommandLink: TBitBtn;
-    Rad: array of TRadioButton;
-function AddLabel(Text: string; BigFont: boolean): TLabel;
-var R: TRect;
-    W: integer;
-begin
-  result := TLabel.Create(Dialog.Form);
-  result.Parent := Par;
-  result.WordWrap := true;
-  if BigFont then begin
-    if aEmulateClassicStyle then begin
-      result.Font.Height := FontHeight-2;
-      result.Font.Style := [fsBold]
-    end else begin
-      result.Font.Height := FontHeight-4;
-      result.Font.Color := clHighlight;
-    end;
-  end else
-    result.Font.Height := FontHeight;
-  result.AutoSize := false;
-  R.Left := 0;
-  R.Top := 0;
-  W := aWidth-X-8;
-  R.Right := W;
-  R.Bottom := result.Height;
-  LCLIntf.DrawText(result.Canvas.Handle,PChar(Text),Length(Text),R,DT_CALCRECT or DT_WORDBREAK);//lazarus does not return box height on OSX (Lazarus bug), the height is stored in the rect in all cases, so we don't need to use the result
 
-  result.SetBounds(X,Y,W,R.Bottom);
-  result.Caption := Text;
-  inc(Y,R.Bottom+16);
-end;
-procedure AddBevel;
-var BX: integer;
-begin
-  with TBevel.Create(Dialog.Form) do begin
-    Parent := Par;
-    if (Image<>nil) and (Y<Image.Top+Image.Height) then
-      BX := X else
-      BX := 2;
-    SetBounds(BX,Y,aWidth-BX-2,2);
-  end;
-  inc(Y,16);
-end;
-function AddButton(const s: string; ModalResult: integer): TButton;
-var WB: integer;
-begin
-  WB := Dialog.Form.Canvas.TextWidth(s)+52;
-  dec(XB,WB);
-  if XB<X shr 1 then begin
-    XB := aWidth-WB;
-    inc(Y,32);
-  end;
-  result := TButton.Create(Dialog.Form);
-  result.Parent := Par;
-    if aEmulateClassicStyle then
-      result.SetBounds(XB,Y,WB-10,22) else
-      result.SetBounds(XB,Y,WB-12,28);
-  result.Caption := s;
-  result.ModalResult := ModalResult;
-  result.TabOrder := CurrTabOrder;
-  result.OnClick := Dialog.Form.HandleEmulatedButtonClicked;
-  case ModalResult of
-    mrOk: begin
-      result.Default := true;
-      if aCommonButtons=[cbOk] then
-        result.Cancel := true;
-    end;
-    mrCancel: result.Cancel := true;
-  end;
-  if ModalResult=aButtonDef then
-    Dialog.Form.ActiveControl := result;
-end;
 var
-  PngImg: TPortableNetworkGraphic;
-  IconHandle: HICON;
+  {$IFDEF MSWINDOWS}
+  Config: TTASKDIALOGCONFIG;
+  {$ENDIF}
+  i, X, Y, XB, IconBorder, FontHeight: integer;
+  Par: TWinControl;
+  Panel: TPanel;
+  CurrTabOrder: TTabOrder;
+  Image: TImage;
+  List: TStrings;
+  B: TCommonButton;
+  CommandLink: TBitBtn;
+  Rad: array of TRadioButton = nil;
+
+  function AddLabel(Text: string; BigFont: boolean): TLabel;
+  var R: TRect;
+      W: integer;
+  begin
+    result := TLabel.Create(Dialog.Form);
+    result.Parent := Par;
+    result.WordWrap := true;
+    if BigFont then begin
+      if aEmulateClassicStyle then begin
+        result.Font.Height := FontHeight-2;
+        result.Font.Style := [fsBold]
+      end else begin
+        result.Font.Height := FontHeight-4;
+        result.Font.Color := clHighlight;
+      end;
+    end else
+      result.Font.Height := FontHeight;
+    result.AutoSize := false;
+    R.Left := 0;
+    R.Top := 0;
+    W := aWidth-X-8;
+    R.Right := W;
+    R.Bottom := result.Height;
+    LCLIntf.DrawText(result.Canvas.Handle,PChar(Text),Length(Text),R,DT_CALCRECT or DT_WORDBREAK);//lazarus does not return box height on OSX (Lazarus bug), the height is stored in the rect in all cases, so we don't need to use the result
+
+    result.SetBounds(X,Y,W,R.Bottom);
+    result.Caption := Text;
+    inc(Y,R.Bottom+16);
+  end;
+
+  procedure AddBevel;
+  var
+    BX: integer;
+  begin
+    with TBevel.Create(Dialog.Form) do begin
+      Parent := Par;
+      if (Image<>nil) and (Y<Image.Top+Image.Height) then
+        BX := X else
+        BX := 2;
+      SetBounds(BX,Y,aWidth-BX-2,2);
+    end;
+    inc(Y,16);
+  end;
+
+  function AddButton(const s: string; ModalResult: integer): TButton;
+  var
+    WB: integer;
+  begin
+    WB := Dialog.Form.Canvas.TextWidth(s)+52;
+    dec(XB,WB);
+    if XB<X shr 1 then begin
+      XB := aWidth-WB;
+      inc(Y,32);
+    end;
+    result := TButton.Create(Dialog.Form);
+    result.Parent := Par;
+      if aEmulateClassicStyle then
+        result.SetBounds(XB,Y,WB-10,22)
+      else
+        result.SetBounds(XB,Y,WB-12,28);
+    result.Caption := s;
+    result.ModalResult := ModalResult;
+    result.TabOrder := CurrTabOrder;
+    result.OnClick := Dialog.Form.HandleEmulatedButtonClicked;
+    case ModalResult of
+      mrOk: begin
+        result.Default := true;
+        if aCommonButtons=[cbOk] then
+          result.Cancel := true;
+      end;
+      mrCancel: result.Cancel := true;
+    end;
+    if ModalResult=aButtonDef then
+      Dialog.Form.ActiveControl := result;
+  end;
+
+var
   ARadioOffset: integer;
 begin
   if (byte(aCommonButtons)=0) and (Buttons='') then begin
@@ -827,7 +813,7 @@ begin
     Config.hMainIcon := TD_ICONS[aDialogIcon];
     Config.hFooterIcon := TD_FOOTERICONS[aFooterIcon];
     Config.nDefaultButton := aButtonDef;
-    Config.nDefaultRadioButton := aRadioDef;
+    Config.nDefaultRadioButton := aRadioDef+200;
     Config.cxWidth := aWidth;
     Config.pfCallback := @TaskDialogCallbackProc;
     Config.lpCallbackData := @self;
@@ -835,12 +821,16 @@ begin
       exit; // error (mostly invalid argument) -> execute the VCL emulation
   end;
   {$endif MSWINDOWS}
+
   // use our native (naive?) Delphi implementation
   Dialog.Emulated := true;
   Dialog.Form := TEmulatedTaskDialog.CreateNew(Application);
   try
     Dialog.Form.Owner := @Self;
+
     // initialize form properties
+    Dialog.Form.PixelsPerInch := 96; // we are using 96 PPI in the code, scale it automatically at ShowModal
+    Dialog.Form.Font.PixelsPerInch := 96;
     Dialog.Form.BorderStyle := bsDialog;
     if tdfAllowDialogCancellation in aFlags then
       Dialog.Form.BorderIcons := [biSystemMenu]
@@ -875,38 +865,24 @@ begin
       Panel.Color := clWindow;
     end;
     Par := Panel;
+
     // handle main dialog icon
     if aEmulateClassicStyle then
-      IconBorder := 10 else
+      IconBorder := 10
+    else
       IconBorder := 24;
 
-     if (LAZ_ICONS[aDialogIcon]<>'') {$IFDEF MSWINDOWS}or
-      ((WidgetSet.GetLCLCapability(lcNativeTaskDialog) = LCL_CAPABILITY_YES) and (WIN_ICONS[aDialogIcon]<>nil)){$ENDIF} then
-     begin
+    if (LCL_IMAGES[aDialogIcon]<>0) then
+    begin
       Image := TImage.Create(Dialog.Form);
       Image.Parent := Par;
-      {$IFDEF MSWINDOWS}
-      if (WidgetSet.GetLCLCapability(lcNativeTaskDialog) = LCL_CAPABILITY_YES) and
-        (WIN_ICONS[aDialogIcon]<>nil) then
-          IconHandle := LoadIcon(0,WIN_ICONS[aDialogIcon])
-      else
-        IconHandle := 0;
-      {$ELSE}
-      IconHandle := 0;
-      {$ENDIF}
-      if IconHandle<>0 then
-        Image.Picture.Icon.Handle := IconHandle
-      else if LAZ_ICONS[aDialogIcon]<>'' then
-      begin
-        Pic := TPortableNetworkGraphic.Create;
-        try
-          Pic.LoadFromResourceName(HINSTANCE, LAZ_ICONS[aDialogIcon]);
-          Image.Picture.Assign(Pic);
-        finally
-          Pic.Free;
-        end;
-      end;
-      Image.SetBounds(IconBorder,IconBorder,Image.Picture.Icon.Width,Image.Picture.Icon.Height);
+      Image.Images := DialogGlyphs;
+      Image.ImageIndex := DialogGlyphs.DialogIcon[LCL_IMAGES[aDialogIcon]];
+      Image.SetBounds(IconBorder,IconBorder, 32, 32);
+      Image.Stretch := True;
+      Image.StretchOutEnabled := False;
+      Image.Proportional := True;
+      Image.Center := True;
       X := Image.Width+IconBorder*2;
       Y := Image.Top;
       if aEmulateClassicStyle then
@@ -919,6 +895,7 @@ begin
       X := IconBorder;
       Y := IconBorder;
     end;
+
     // add main texts (Instruction, Content, Information)
     Dialog.Form.Element[tdeMainInstruction] := AddLabel(Inst, true);
     Dialog.Form.Element[tdeContent] := AddLabel(Content, false);
@@ -945,6 +922,7 @@ begin
           Rad[i] := TRadioButton.Create(Dialog.Form);
           with Rad[i] do begin
             Parent := Par;
+            AutoSize := False;
             SetBounds(X+16,Y,aWidth-32-X, (6-FontHeight) + ARadioOffset);
             Caption := NoCR(Strings[i]);
             if aHint<>'' then begin
@@ -952,7 +930,7 @@ begin
               Hint := aHint; // note shown as Hint
             end;
             inc(Y,Height + ARadioOffset);
-            if (i=0) or (i+200=aRadioDef) then
+            if (i=0) or (i=aRadioDef) then
               Checked := true;
           end;
         end;
@@ -999,16 +977,11 @@ begin
             end;
             if not (tdfUseCommandLinksNoIcon in aFlags) then
             begin
-              PngImg := TPortableNetworkGraphic.Create;
-              try
-                PngImg.LoadFromResourceName(HINSTANCE, 'btn_arrowright');
-                Glyph.Assign(PngImg);
-              finally
-                PngImg.Free;
+              Images := LCLGlyphs;
+              ImageIndex := LCLGlyphs.GetImageIndex('btn_arrowright');
               end;
             end;
           end;
-        end;
         inc(Y,24);
       finally
         Free;
@@ -1051,9 +1024,11 @@ begin
           Dialog.Form.ActiveControl := Dialog.Form.Edit;
         inc(Y,42);
       end;
+
     // from now we won't add components to the white panel, but to the form
     Panel.Height := Y;
     Par := Dialog.Form;
+
     // add buttons and verification checkbox
     if (byte(aCommonButtons)<>0) or (Verify<>'') or
        ((Buttons<>'') and not (tdfUseCommandLinks in aFlags)) then begin
@@ -1088,65 +1063,26 @@ begin
       inc(Y,36);
     end else
       XB := 0;
+
     // add footer text with optional icon
     if Footer<>'' then begin
       if XB<>0 then
-        AddBevel else
+        AddBevel
+      else
         inc(Y,16);
-      if (LAZ_FOOTERICONS[aFooterIcon]<>'') {$IFDEF MSWINDOWS}or ((WidgetSet.GetLCLCapability(lcNativeTaskDialog) = LCL_CAPABILITY_YES) and (WIN_FOOTERICONS[aFooterIcon]<>nil)){$ENDIF} then
+      if (LCL_FOOTERIMAGES[aFooterIcon]<>0) then
       begin
         Image := TImage.Create(Dialog.Form);
         Image.Parent := Par;
-        Pic := nil;
-        Ico := nil;
-        Bmp := TBitmap.Create;
-        try
-          Bmp.Transparent := true;
-          {$IFDEF MSWINDOWS}
-          if (WIN_FOOTERICONS[aFooterIcon]<>nil) and (WidgetSet.GetLCLCapability(lcNativeTaskDialog) = LCL_CAPABILITY_YES) then
-          begin
-            IconHandle := LoadIcon(0,WIN_FOOTERICONS[aFooterIcon]);
-            if IconHandle<>0 then
-            begin
-              Ico := TIcon.Create;
-              Ico.Handle := IconHandle;
-              Bmp.Width := Ico.Width shr 1;
-              Bmp.Height := Ico.Height shr 1;
-            end;
-          end;
-          {$ENDIF}
-          if (Ico=nil) and (LAZ_FOOTERICONS[aFooterIcon]<>'') then
-          begin
-            Pic := TPortableNetworkGraphic.Create;
-            Pic.LoadFromResourceName(HINSTANCE, LAZ_FOOTERICONS[aFooterIcon]);
-            Bmp.Width := Pic.Width shr 1;
-            Bmp.Height := Pic.Height shr 1;
-          end;
-          if (Ico<>nil) or (Pic<>nil) then
-          begin
-            Bmp.Canvas.Brush.Color := Dialog.Form.Color;
-            if Bmp.Canvas.Brush.Color = clDefault then
-              Bmp.Canvas.Brush.Color := clBtnFace;
-            Bmp.Canvas.FillRect(Rect(0, 0, Bmp.Width, Bmp.Height));
-            if Pic<>nil then
-              Bmp.Canvas.StretchDraw(Rect(0, 0, Bmp.Width, Bmp.Height), Pic)
-            else
-            begin
-              {$IFDEF MSWINDOWS}
-              if (WidgetSet.GetLCLCapability(lcNativeTaskDialog) = LCL_CAPABILITY_YES) then
-                DrawIconEx(Bmp.Canvas.Handle,0,0,Ico.Handle,Bmp.Width,Bmp.Height,0,
-                  Bmp.Canvas.Brush.{%H-}Handle,DI_NORMAL);
-              {$ENDIF}
-            end;
-            Image.Picture.Bitmap := Bmp;
-            Image.SetBounds(24,Y,Bmp.Width,Bmp.Height);
-            X := 40+Bmp.Width;
-          end;
-        finally
-          Bmp.Free;
-          Pic.Free;
-          Ico.Free;
-        end;
+        Image.Images := DialogGlyphs;
+        Image.ImageWidth := 16;
+        Image.ImageIndex := DialogGlyphs.DialogIcon[LCL_FOOTERIMAGES[aFooterIcon]];
+        Image.Stretch := True;
+        Image.StretchOutEnabled := False;
+        Image.Proportional := True;
+        Image.Center := True;
+        Image.SetBounds(24,Y,16,16);
+        X := 40+Image.Width;
       end else
       begin
         X := 24;
@@ -1169,7 +1105,7 @@ begin
     if Assigned(Dialog.Form.PopupParent) then
       Dialog.Form.PopupMode := pmExplicit;
 
-    // retrieve the results
+    // show the dialog - it will scale automatically in ShowModal
     result := Dialog.Form.ShowModal;
     if Dialog.Form.Combo<>nil then begin
       SelectionRes := Dialog.Form.Combo.ItemIndex;
