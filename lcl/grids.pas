@@ -44,7 +44,7 @@ uses
 {$ifdef WINDOWS}
   ,messages, imm
 {$endif}
-  ;
+  ,extctrls;
 
 const
   //GRIDFILEVERSION = 1; // Original
@@ -718,6 +718,22 @@ type
 
     TGridCursorState = (gcsDefault, gcsColWidthChanging, gcsRowHeightChanging, gcsDragging);
 
+    TGridScrollerDoScroll = procedure (Dir: TPoint) of object;
+
+    { TGridScroller }
+
+    TGridScroller = class
+    private
+      Dir: TPoint;
+      Timer: TTimer;
+      Callback: TGridScrollerDoScroll;
+      procedure TimerTick(Sender: TObject);
+    public
+      constructor Create(DoScroll: TGridScrollerDoScroll);
+      destructor Destroy; override;
+      procedure Start(ADir: TPoint);
+    end;
+
 type
 
   { TCustomGrid }
@@ -827,6 +843,7 @@ type
     FSavedHint: String;
     FCellHintPriority: TCellHintPriority;
     FOnGetCellHint: TGetCellHintEvent;
+    FScroller: TGridScroller;
     procedure AdjustCount(IsColumn:Boolean; OldValue, NewValue:Integer);
     procedure CacheVisibleGrid;
     procedure CancelSelection;
@@ -848,6 +865,8 @@ type
     procedure SetAltColorStartNormal(const AValue: boolean);
     procedure SetFlat(const AValue: Boolean);
     procedure SetFocusRectVisible(const AValue: Boolean);
+    procedure ScrollerDoScroll(Dir: TPoint);
+    procedure SetScroller(Dir: TPoint);
     procedure SetTitleImageList(const AValue: TImageList);
     procedure SetTitleImageListWidth(const aTitleImageListWidth: Integer);
     procedure SetTitleFont(const AValue: TFont);
@@ -1009,9 +1028,9 @@ type
     procedure DoExit; override;
     procedure DoEnter; override;
     procedure DoLoadColumn(Sender: TCustomGrid; aColumn: TGridColumn; aColIndex: Integer;
-                            aCfg: TXMLConfig; aVersion: Integer; aPath: string); virtual;
+                            aCfg: TXMLConfig; aVersion: Integer; const aPath: string); virtual;
     procedure DoSaveColumn(Sender: TCustomGrid; aColumn: TGridColumn; aColIndex: Integer;
-                            aCfg: TXMLConfig; aVersion: Integer; aPath: string); virtual;
+                            aCfg: TXMLConfig; aVersion: Integer; const aPath: string); virtual;
     function  DoMouseWheel(Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint): Boolean; override;
     function  DoMouseWheelDown(Shift: TShiftState; MousePos: TPoint): Boolean; override;
     function  DoMouseWheelUp(Shift: TShiftState; MousePos: TPoint): Boolean; override;
@@ -1036,7 +1055,7 @@ type
     procedure DrawCellGrid(aCol,aRow: Integer; aRect: TRect; aState: TGridDrawState); virtual;
     procedure DrawTextInCell(aCol,aRow: Integer; aRect: TRect; aState: TGridDrawState); virtual;
     procedure DrawThemedCell(aCol,aRow: Integer; aRect: TRect; aState: TGridDrawState);
-    procedure DrawCellText(aCol,aRow: Integer; aRect: TRect; aState: TGridDrawState; aText: String); virtual;
+    procedure DrawCellText(aCol,aRow: Integer; aRect: TRect; aState: TGridDrawState; const aText: String); virtual;
     procedure DrawGridCheckboxBitmaps(const aCol,aRow: Integer; const aRect: TRect;
                                         const aState: TCheckboxState); virtual;
     procedure DrawButtonCell(const aCol,aRow: Integer; aRect: TRect; const aState:TGridDrawState);
@@ -1339,14 +1358,14 @@ type
     procedure InvalidateRow(ARow: Integer);
     function  IsCellVisible(aCol, aRow: Integer): Boolean;
     function  IsFixedCellVisible(aCol, aRow: Integer): boolean;
-    procedure LoadFromFile(FileName: string); virtual;
+    procedure LoadFromFile(const FileName: string); virtual;
     procedure LoadFromStream(AStream: TStream); virtual;
     function  MouseCoord(X,Y: Integer): TGridCoord;
     function  MouseToCell(const Mouse: TPoint): TPoint; overload;
     procedure MouseToCell(X,Y: Integer; out ACol,ARow: Longint); overload;
     function  MouseToLogcell(Mouse: TPoint): TPoint;
     function  MouseToGridZone(X,Y: Integer): TGridZone;
-    procedure SaveToFile(FileName: string); virtual;
+    procedure SaveToFile(const FileName: string); virtual;
     procedure SaveToStream(AStream: TStream); virtual;
     procedure ScaleFontsPPI(const AToPPI: Integer; const AProportion: Double); override;
     procedure SetFocus; override;
@@ -1766,8 +1785,8 @@ type
     procedure SaveContent(cfg: TXMLConfig); override;
     //procedure DrawInteriorCells; override;
     //procedure SelectEditor; override;
-    procedure SelectionSetText(TheText: String);
-    procedure SelectionSetHTML(TheHTML, TheText: String);
+    procedure SelectionSetText(const TheText: String);
+    procedure SelectionSetHTML(const TheHTML: String; TheText: String);
     procedure SetCells(ACol, ARow: Integer; const AValue: string); virtual;
     procedure SetCheckboxState(const aCol, aRow:Integer; const aState: TCheckboxState); override;
     procedure SetEditText(aCol, aRow: Longint; const aValue: string); override;
@@ -1788,11 +1807,11 @@ type
     procedure InsertRowWithValues(Index: Integer; Values: array of String);
     procedure LoadFromCSVStream(AStream: TStream; ADelimiter: Char=',';
       UseTitles: boolean=true; FromLine: Integer=0; SkipEmptyLines: Boolean=true); virtual;
-    procedure LoadFromCSVFile(AFilename: string; ADelimiter: Char=',';
+    procedure LoadFromCSVFile(const AFilename: string; ADelimiter: Char=',';
       UseTitles: boolean=true; FromLine: Integer=0; SkipEmptyLines: Boolean=true);
     procedure SaveToCSVStream(AStream: TStream; ADelimiter: Char=',';
       WriteTitles: boolean=true; VisibleColumnsOnly: boolean=false);
-    procedure SaveToCSVFile(AFileName: string; ADelimiter: Char=',';
+    procedure SaveToCSVFile(const AFileName: string; ADelimiter: Char=',';
       WriteTitles: boolean=true; VisibleColumnsOnly: boolean=false);
 
     property Cells[ACol, ARow: Integer]: string read GetCells write SetCells;
@@ -2190,6 +2209,34 @@ begin
     result := InRange(AValue, AMin, AMax)
   else
     result := InRange(AValue, AMax, AMin);
+end;
+
+{ TGridScroller }
+
+constructor TGridScroller.Create(DoScroll: TGridScrollerDoScroll);
+begin
+  Callback := DoScroll;
+  Timer := TTimer.Create(nil);
+  Timer.OnTimer := @TimerTick;
+  Timer.Interval := 200;
+end;
+
+destructor TGridScroller.Destroy;
+begin
+  FreeAndNil(Timer);
+  inherited Destroy;
+end;
+
+procedure TGridScroller.TimerTick(Sender: TObject);
+begin
+  if Assigned(Callback) then
+    Callback(Dir);
+end;
+
+procedure TGridScroller.Start(ADir: TPoint);
+begin
+  Dir := ADir;
+  Timer.Enabled := True;
 end;
 
 { TCustomGrid }
@@ -4686,7 +4733,7 @@ begin
 end;
 
 procedure TCustomGrid.DrawCellText(aCol, aRow: Integer; aRect: TRect;
-  aState: TGridDrawState; aText: String);
+  aState: TGridDrawState; const aText: String);
 var
   Rtxt, Rrot, R: TRect;
   angle: Double;
@@ -5021,6 +5068,8 @@ begin
     {$ENDIF}
   end;
   inherited WndProc(TheMessage);
+  if not (FGridState in [gsColMoving, gsRowMoving]) then //For sure if MouseUp event is lost
+    FreeAndNil(FScroller);
 end;
 
 procedure TCustomGrid.CreateWnd;
@@ -6186,6 +6235,32 @@ begin
     RestoreCursor;
 end;
 
+procedure TCustomGrid.ScrollerDoScroll(Dir: TPoint);
+var
+  OldTopLeft: TPoint;
+begin
+  OldTopLeft := FTopLeft;
+  if ((Dir.X < 0) and (FTopLeft.X > FFixedCols)) or ((Dir.X > 0) and (FGCache.FullVisibleGrid.Right + FixedCols < ColCount)) then
+    Inc(FTopLeft.X, Dir.X);
+  if ((Dir.Y < 0) and (FTopLeft.Y > FFixedRows)) or ((Dir.Y > 0) and (FGCache.FullVisibleGrid.Bottom + FixedRows < RowCount)) then
+    Inc(FTopLeft.Y, Dir.Y);
+  if FTopleft <> OldTopLeft then begin
+    FMoveLast := Point(-1, -1);
+    doTopleftChange(False);
+  end;
+end;
+
+procedure TCustomGrid.SetScroller(Dir: TPoint);
+begin
+  if (Dir.X = 0) and (Dir.Y = 0) then begin
+    FreeAndNil(FScroller);
+  end else begin
+    if not Assigned(FScroller) then
+      FScroller := TGridScroller.Create(@ScrollerDoScroll);
+    FScroller.Start(Dir);
+  end;
+end;
+
 procedure TCustomGrid.doColMoving(X, Y: Integer);
 var
   CurCell: TPoint;
@@ -6220,6 +6295,13 @@ begin
       {$endif}
     end;
   end;
+
+  if (X > FGCache.MaxClientXY.X) or (X > FGCache.ClientWidth  + GetBorderWidth) then
+    SetScroller(Point(1, 0))
+  else if X < FGCache.FixedWidth then
+    SetScroller(Point(-1, 0))
+  else
+    SetScroller(Point(0, 0));
 end;
 
 procedure TCustomGrid.doRowMoving(X, Y: Integer);
@@ -6251,6 +6333,13 @@ begin
       Invalidate;
     end;
   end;
+
+  if (Y > FGCache.MaxClientXY.Y) or (Y > FGCache.ClientHeight  + GetBorderWidth) then
+    SetScroller(Point(0, 1))
+  else if Y < FGCache.FixedHeight then
+    SetScroller(Point(0, -1))
+  else
+    SetScroller(Point(0, 0));
 end;
 
 
@@ -7025,6 +7114,7 @@ begin
       begin
         //DebugLn('Move Col From ',Fsplitter.x,' to ', FMoveLast.x);
         RestoreCursor;
+        FreeAndNil(FScroller);
 
         if FMoveLast.X>=0 then
           DoOPMoveColRow(True, FGCache.ClickCell.X, FMoveLast.X)
@@ -7477,14 +7567,14 @@ begin
 end;
 
 procedure TCustomGrid.DoLoadColumn(Sender: TCustomGrid; aColumn: TGridColumn;
-  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; aPath: string);
+  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; const aPath: string);
 begin
   if Assigned(FOnLoadColumn) then
     FOnLoadColumn(Self, aColumn, aColIndex, aCfg, aVersion, aPath);
 end;
 
 procedure TCustomGrid.DoSaveColumn(Sender: TCustomGrid; aColumn: TGridColumn;
-  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; aPath: string);
+  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; const aPath: string);
 begin
   if Assigned(FOnSaveColumn) then
     FOnSaveColumn(Self, aColumn, aColIndex, aCfg, aVersion, aPath);
@@ -9982,6 +10072,7 @@ begin
   FreeThenNil(FRows);
   FreeThenNil(FTitleFont);
   FEditor := nil;
+  FreeAndNil(FScroller);
   inherited Destroy;
 end;
 
@@ -9999,7 +10090,7 @@ begin
   end;
 end;
 
-procedure TCustomGrid.LoadFromFile(FileName: string);
+procedure TCustomGrid.LoadFromFile(const FileName: string);
 var
   Cfg: TXMLConfig;
 begin
@@ -10027,7 +10118,7 @@ begin
   end;
 end;
 
-procedure TCustomGrid.SaveToFile(FileName: string);
+procedure TCustomGrid.SaveToFile(const FileName: string);
 var
   Cfg: TXMLConfig;
 begin
@@ -11736,7 +11827,7 @@ begin
    end;
 end;
 
-procedure TCustomStringGrid.SelectionSetText(TheText: String);
+procedure TCustomStringGrid.SelectionSetText(const TheText: String);
 var
   StartCol,StartRow: Integer;
   Stream: TStringStream;
@@ -11776,7 +11867,7 @@ begin
 end;
 
 
-procedure TCustomStringGrid.SelectionSetHTML(TheHTML, TheText: String);
+procedure TCustomStringGrid.SelectionSetHTML(const TheHTML: String; TheText: String);
 var
   bStartCol, bStartRow, bCol, bRow: Integer;
   bCellStr: string;
@@ -12154,7 +12245,7 @@ begin
   end;
 end;
 
-procedure TCustomStringGrid.LoadFromCSVFile(AFilename: string;
+procedure TCustomStringGrid.LoadFromCSVFile(const AFilename: string;
   ADelimiter: Char=','; UseTitles: boolean=true; FromLine: Integer=0;
   SkipEmptyLines: Boolean=true);
 var
@@ -12240,7 +12331,7 @@ begin
   end;
 end;
 
-procedure TCustomStringGrid.SaveToCSVFile(AFileName: string; ADelimiter: Char;
+procedure TCustomStringGrid.SaveToCSVFile(const AFileName: string; ADelimiter: Char;
   WriteTitles: boolean=true; VisibleColumnsOnly: boolean=false);
 var
   TheStream: TFileStream;

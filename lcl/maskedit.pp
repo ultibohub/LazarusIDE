@@ -1811,31 +1811,36 @@ begin
   end//FMaskSave = True
   else
   begin//FMaskSave = False
-    if FTrimType = metTrimRight then
+    //while GetCodePoint does not crash on an empty string (and it does not return a #32), it sort of worked by accident in that scenario
+    //and it crashed in similar function in MaskUtils because of that, see: https://forum.lazarus.freepascal.org/index.php/topic,60803.0.html
+    if (Value <> '') then
     begin
-      //fill text from left to rigth, skipping MaskLiterals
-      j := 1;
-      for i := 1 to FMaskLength do
+      if FTrimType = metTrimRight then
       begin
-        if not IsLiteral(i) then
+        //fill text from left to rigth, skipping MaskLiterals
+        j := 1;
+        for i := 1 to FMaskLength do
         begin
-          if (GetCodePoint(Value,j) = #32) then SetCodePoint(S,i,FSpaceChar) else SetCodePoint(S,i, GetCodePoint(Value,j));
-          Inc(j);
-          if j > Utf8Length(Value) then Break;
+          if not IsLiteral(i) then
+          begin
+            if (GetCodePoint(Value,j) = #32) then SetCodePoint(S,i,FSpaceChar) else SetCodePoint(S,i, GetCodePoint(Value,j));
+            Inc(j);
+            if j > Utf8Length(Value) then Break;
+          end;
         end;
-      end;
-    end
-    else
-    begin
-      //fill text from right to left, skipping MaskLiterals
-      j := Utf8Length(Value);
-      for i := FMaskLength downto 1 do
+      end
+      else
       begin
-        if not IsLiteral(i) then
+        //fill text from right to left, skipping MaskLiterals
+        j := Utf8Length(Value);
+        for i := FMaskLength downto 1 do
         begin
-          if (GetCodePoint(Value,j) = #32) then SetCodePoint(S,i,FSpaceChar) else SetCodePoint(S,i, GetCodePoint(Value,j));
-          Dec(j);
-          if j < 1 then Break;
+          if not IsLiteral(i) then
+          begin
+            if (GetCodePoint(Value,j) = #32) then SetCodePoint(S,i,FSpaceChar) else SetCodePoint(S,i, GetCodePoint(Value,j));
+            Dec(j);
+            if j < 1 then Break;
+          end;
         end;
       end;
     end;

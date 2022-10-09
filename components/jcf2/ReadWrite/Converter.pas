@@ -38,6 +38,8 @@ interface
 
 uses
   SysUtils, strutils,
+  // LazUtils
+  LazFileUtils,
   // LCL
   Controls, Forms,
   // local
@@ -67,7 +69,7 @@ type
       This could be in  batch file on a server }
     fbGuiMessages: Boolean;
     fbShowParseTree: Boolean;
-    {$IFNDEF COMMAND_LINE}
+    {$IFnDEF LCLNOGUI}
     leOldCursor: TCursor;
     {$ENDIF}
 
@@ -156,7 +158,7 @@ var
   lcTokenList: TSourceTokenList;
 begin
   fbConvertError := False;
-  {$IFNDEF COMMAND_LINE}
+  {$IFnDEF LCLNOGUI}
   leOldCursor := Screen.Cursor;
   try { finally normal cursor }
     // this can take a long time for large files
@@ -178,6 +180,7 @@ begin
 
         // make a parse tree from it
         fcBuildParseTree.TokenList := lcTokenList;
+        fcBuildParseTree.IsIncFile := FilenameExtIs(FileName, 'inc');
         fcBuildParseTree.BuildParseTree;
         if fbShowParseTree then
            ShowParseTree;
@@ -230,7 +233,7 @@ begin
       end;
     end;
 
-  {$IFNDEF COMMAND_LINE}
+  {$IFnDEF LCLNOGUI}
   finally
     Screen.Cursor := leOldCursor;
   end;
@@ -354,7 +357,7 @@ end;
 
 procedure TConverter.ShowParseTree;
 begin
-  {$IFNDEF COMMAND_LINE}
+  {$IFnDEF LCLNOGUI}
   // This is always called from a Cursor:=crHourGlass block. Restore old cursor.
   Screen.Cursor := leOldCursor;
   {$ENDIF}
@@ -451,21 +454,21 @@ var
 
   procedure AddFakeInterface;
   begin
-    sourceCode := sourceCode + 'interface' + #10;
+    sourceCode := sourceCode + 'interface{:*_*:}' + #10;
     sourceCode := sourceCode + 'type' + #10;        // if there is only a class selected this is required
     sourceCode := sourceCode + 'faketjcfifc=' + END_MARK_INTERFACE + #10;
   end;
 
   procedure AddFakeImplementation;
   begin
-    sourceCode := sourceCode + 'implementation' + #10;
+    sourceCode := sourceCode + 'implementation{:*_*:}' + #10;
     sourceCode := sourceCode + 'type' + #10;
     sourceCode := sourceCode + 'faketjcfimpl=' + END_MARK_IMPLEMENTATION + #10;
   end;
 
   procedure AddFakeEnd;
   begin
-    sourceCode := sourceCode + #10 + 'end.' + #10;
+    sourceCode := sourceCode + #10 + 'end{:*_*:}.' + #10;
   end;
 
 begin
@@ -500,11 +503,24 @@ begin
       else
         lcStartIndex := Pos(END_MARK_IMPLEMENTATION, sourceCodeLowerCase) + length(END_MARK_IMPLEMENTATION);
     end;
-    lcStartIndex := SkipToNextLine(sourceCodeLowerCase, lcStartIndex);
+    //lcStartIndex := SkipToNextLine(sourceCodeLowerCase, lcStartIndex-1);
+    //formated code:    tfaketjcf_implm_end_mark;#10#13#10     on windows
+    if sourceCodeLowerCase[lcStartIndex]=#10 then
+    begin
+      Inc(lcStartIndex);
+      if sourceCodeLowerCase[lcStartIndex]=#13 then
+      begin
+        Inc(lcStartIndex);
+        if sourceCodeLowerCase[lcStartIndex]=#10 then
+          Inc(lcStartIndex);
+      end
+      else if sourceCodeLowerCase[lcStartIndex]=#10 then
+        Inc(lcStartIndex);
+    end;
     if hasInterface and not hasImplementation then
-      lcEndIndex := RPos('implementation', sourceCodeLowerCase)
+      lcEndIndex := RPos('implementation{:*_*:}', sourceCodeLowerCase)
     else
-      lcEndIndex := RPos('end', sourceCodeLowerCase);
+      lcEndIndex := RPos('end{:*_*:}', sourceCodeLowerCase);
     lcEndIndex := SkipLeftSpaces(sourceCodeLowerCase, lcEndIndex);
     fsOutputCode:=Copy(OutputCode, lcStartIndex, lcEndIndex - lcStartIndex);
   end;
