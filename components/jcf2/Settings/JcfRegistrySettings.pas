@@ -41,7 +41,6 @@ interface
 
 uses
   Registry, Classes, SysUtils,
-  Dialogs,
   { local }
   ConvertTypes;
 
@@ -191,7 +190,11 @@ implementation
 
 uses
   { jcf }
-  JcfStringUtils, JcfSystemUtils, JcfMiscFunctions;
+  JcfStringUtils, JcfMiscFunctions, JcfUiTools
+  {$ifndef COMMAND_LINE}
+   ,lclintf  //< OpenDocument
+  {$endif}
+  ;
 
 const
   REG_GENERAL_SECTION = 'General';
@@ -502,7 +505,7 @@ function TJCFRegistrySettings.LogDirectory: string;
 begin
   case feLogPlace of
     eLogTempDir:
-      Result := GetWindowsTempFolder;
+      Result := GetTempDir;
     eLogAppDir:
       Result := ExtractFileDir(ParamStr(0));
     eLogSpecifiedDir:
@@ -521,14 +524,17 @@ procedure TJCFRegistrySettings.ViewLog;
 var
   lsFile: string;
 begin
+  {$ifndef COMMAND_LINE}
   lsFile := LogFileName;
 
   if FileExists(lsFile) then
   begin
-    ShellExecEx('notepad.exe ', lsFile);
+    //ShellExecEx('notepad.exe ', lsFile);
+    OpenDocument(lsFile);
   end
   else
-    ShowMessage('No log file found at ' + lsFile);
+    ShowErrorMessageUI('No log file found at ' + lsFile);
+  {$endif}
 end;
 
 function TJCFRegistrySettings.DirIsExcluded(const psDir: string): boolean;

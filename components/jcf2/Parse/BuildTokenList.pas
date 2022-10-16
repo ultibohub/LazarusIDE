@@ -39,9 +39,8 @@ interface
 
 uses
   SysUtils, StrUtils,
-  Forms,
   { local }
-  Tokens, SourceToken, SourceTokenList;
+  Tokens, SourceToken, SourceTokenList, JcfUiTools;
 
 type
 
@@ -111,8 +110,7 @@ implementation
 
 uses
   { local }
-  JcfStringUtils, JcfSystemUtils,
-  JcfRegistrySettings, ParseError;
+  JcfStringUtils, JcfRegistrySettings, ParseError;
 
 const
   CurlyLeft =  '{'; //widechar(123);
@@ -121,8 +119,8 @@ const
 function CheckMultiByte(const pcChar: char): boolean;
 begin
   Result := False;
-  if GetRegSettings.CheckMultiByteChars then
-    Result := IsMultiByte(pcChar);
+//  if GetRegSettings.CheckMultiByteChars then
+//    Result := IsMultiByte(pcChar);  //IsMultiByte(pcChar)-->Result := IsDBCSLeadByte(Byte(pcChar));
 end;
 
 function CharIsOctDigit(const c: Char): Boolean;
@@ -963,27 +961,18 @@ const
 var
   lcList:    TSourceTokenList;
   lcNew:     TSourceToken;
-  {$IFnDEF LCLNOGUI}
   liCounter: integer;
-  {$ENDIF}
 begin
   Assert(SourceCode <> '');
-
-  {$IFnDEF LCLNOGUI}
   liCounter := 0;
-  {$ENDIF}
   lcList    := TSourceTokenList.Create;
 
   while not EndOfFile do
   begin
     lcNew := GetNextToken;
     lcList.Add(lcNew);
-
-    {$IFnDEF LCLNOGUI}
     Inc(liCounter);
-    if (liCounter mod UPDATE_INTERVAL) = 0 then
-       Application.ProcessMessages;
-    {$ENDIF}
+    UpdateGUI(liCounter, UPDATE_INTERVAL);
   end;
 
   Result := lcList;

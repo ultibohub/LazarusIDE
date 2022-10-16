@@ -413,8 +413,16 @@ begin
     liIndentCount := pt.Nestings.GetLevel(nlBlock);
     if liIndentCount > 0 then
     begin
+      if pt.HasParentNode(nAnonymousMethod)  and not (pt.TokenType in ProcedureWords) then
+        Dec(liIndentCount);
+
+      //Delphi inline vars and consts
+      if (pt.TokenType in [ttVar,ttConst]) and (pt.HasParentNode(nStatement)) then
+      begin
+        // don't unindent
+      end
       // outdent keywords that start and end the block
-      if pt.TokenType in BlockOutdentWords then
+      else if pt.TokenType in BlockOutdentWords then
       begin
         Dec(liIndentCount);
 

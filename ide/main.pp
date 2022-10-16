@@ -1532,6 +1532,7 @@ begin
   //if (not ShowSetupDialog) //Ultibo
   //and (not SkipAllTests) //Ultibo
   //and (not GetSkipCheck(skcFppkg)) //Ultibo
+  //and EnvironmentOptions.FppkgCheck //Ultibo
   //and (CheckFppkgConfiguration(ConfigFile, Note)<>sddqCompatible) //Ultibo
   //then begin //Ultibo
   //  debugln('Warning: (lazarus) fppkg not properly configured.'); //Ultibo

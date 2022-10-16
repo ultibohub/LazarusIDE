@@ -20,7 +20,8 @@
         </SyntaxOptions>
       </Parsing>
       <Other>
-        <CustomOptions Value="$(IDEBuildOptions)"/>
+        <CustomOptions Value="$(IDEBuildOptions)
+-dLAZARUS_PLUGIN"/>
       </Other>
     </CompilerOptions>
     <Description Value="JEDI Code Format IDE Plugin for Lazarus"/>
@@ -491,10 +492,6 @@
         <UnitName Value="IntList"/>
       </Item>
       <Item>
-        <Filename Value="..\..\Utils\JcfFontSetFunctions.pas"/>
-        <UnitName Value="JcfFontSetFunctions"/>
-      </Item>
-      <Item>
         <Filename Value="..\..\Utils\JcfHelp.pas"/>
         <UnitName Value="JcfHelp"/>
       </Item>
@@ -727,12 +724,12 @@
         <UnitName Value="JcfStringUtils"/>
       </Item>
       <Item>
-        <Filename Value="..\..\Utils\JcfSystemUtils.pas"/>
-        <UnitName Value="JcfSystemUtils"/>
-      </Item>
-      <Item>
         <Filename Value="..\..\Utils\JcfUnicodeFiles.pas"/>
         <UnitName Value="JcfUnicodeFiles"/>
+      </Item>
+      <Item>
+        <Filename Value="..\..\Ui\jcfuitools.pas"/>
+        <UnitName Value="JcfUiTools"/>
       </Item>
     </Files>
     <i18n>
