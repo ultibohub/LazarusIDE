@@ -38,6 +38,7 @@ optional Lazarus components like FPReport, SynEdit, and TAChart.
 <!-- unresolved type references Visibility: default -->
 <element name="Types"/>
 <element name="Math"/>
+<element name="SysUtils"/>
 <element name="Graphics"/>
 <element name="LCLType"/>
 <element name="LCLIntf"/>
@@ -444,6 +445,86 @@ Draws a gradient from top to bottom with parabolic color variation.
 <short>Height for the resized image.</short>
 </element>
 
+<element name="BitmapGrayscale">
+<short>
+Converts a bitmap to grayscale taking filtering parameters into account.
+</short>
+<descr>
+<p>
+<var>BitmapGrayscale</var> is a procedure used to convert the specified 
+bitmap image to a grayscale image. It calculates the weighted average of the 
+RGB (Red, Green, Blue) color components of each pixel in the bitmap and 
+assigns it to each color component. Weighting is done by multiplication of 
+the RGB values with the corresponding filter factors in the RedFilter, 
+GreenFilter and BlueFilter arguments. The end result is an image where the 
+original colors are converted to various shades of gray.
+</p>
+<p>
+<var>ABitmap</var> is the <var>TCustomBitmap</var> instance with the original 
+image data.
+</p>
+<p>
+<var>RedFilter</var>, <var>GreenFilter</var> and <var>BlueFilter</var> are 
+multipliers (data type: single) for the red, green, blue color components of 
+each pixel when the average value of the three color components is 
+calculated. Usually these factors are between 0.0 and 1.0 and are selected to 
+suppress or enhance the contribution of the corresponding color channel to 
+the overall grayscale value. The combination 0.30, 0.59, 0.11 for the red, 
+green and blue components, respectively, is often chosen because it matches 
+the sensitivity of the human eye and thus results in a visual brightness 
+impression like in the original color image.
+</p>
+<p>
+<b>Example Usage:</b>
+</p>
+<code>
+BitmapGrayscale(Image1.Picture.Bitmap, 0.30, 0.59, 0.11); // Neutral filter
+BitmapGrayscale(Image1.Picture.Bitmap, 1.00, 0.00, 0.00); // Red filter
+BitmapGrayscale(Image1.Picture.Bitmap, 0.00, 1.00, 0.00); // Green filter
+BitmapGrayscale(Image1.Picture.Bitmap, 0.00, 0.00, 1.00); // Blue filter
+BitmapGrayscale(Image1.Picture.Bitmap, 0.00, 0.50, 0.50); // Cyan filter
+BitmapGrayscale(Image1.Picture.Bitmap, 0.50, 0.00, 0.50); // Magenta filter
+BitmapGrayscale(Image1.Picture.Bitmap, 0.50, 0.50, 0.00); // Yellow filter
+</code>
+</descr>
+<seealso>
+<link id="#lcl.graphics.TCustomBitmap">TCustomBitmap</link>
+</seealso>
+</element>
+<element name="BitmapGrayscale.ABitmap">
+<short>
+Bitmap with the image data converted to grayscale in the routine.
+</short>
+</element>
+<element name="BitmapGrayscale.RedFilter">
+<short>
+Weighting factor for the contribution of the Red color component to the final 
+grayscale image. It multiplies to the value of the Red component of each 
+pixel and thus controls the contribution of the Red color channel to the 
+resulting image. Having RedFilter = 0, for example, results in grayscale 
+shades in which all parts with Red color components are rendered darker.
+</short>
+</element>
+<element name="BitmapGrayscale.GreenFilter">
+<short>
+Weighting factor for the contribution of the Green color component to the 
+final grayscale image. It multiplies to the value of the Green component of 
+each pixel and thus controls the contribution of the Green color channel to 
+the resulting image. Having GreenFilter = 0, for example, results in 
+grayscale shades in which all parts with Green color components are rendered 
+darker.
+</short>
+</element>
+<element name="BitmapGrayscale.BlueFilter">
+<short>
+Weighting factor for the contribution of the Blue color component to the 
+final grayscale image. It multiplies to the value of the Blue component of 
+each pixel and thus controls the contribution of the Blue color channel to 
+the resulting image. Having BlueFilter = 0, for example, results in grayscale 
+shades in which all parts with Blue color components are rendered darker.
+</short>
+</element>
+
 <element name="TScrollDirection">
 <short>
 Enumerated type that indicates the direction for scrollbar arrows.
@@ -485,45 +566,93 @@ Enumerated type that indicates the direction for scrollbar arrows.
 </element>
 
 <element name="DrawArrow">
-<short>Draws an arrow at the specified location on a canvas.</short>
+<short>
+Draws a line with an arrow at the specified location on a canvas.
+</short>
 <descr>
 <p>
-<var>DrawArrow</var> is an overloaded procedure used to draw an arrow on a 
-canvas at the specified location. Overloaded variants of the routine allow 
-the type of arrow, length, angle, and drawing style to be specified as 
-arguments.
+<var>DrawArrow</var> is an overloaded procedure used to draw a line between 
+the specified points with an arrow at the ending point. 
+</p>
+<p>
+Overloaded variants of the routine allow the arguments to be specified using 
+various types. The variant with Direction, Location, Size, and ArrowType 
+arguments can draw a line with an arrow head in horizontal or vertical 
+directions only. The variant with the ArrowAngleRad argument allows the slope 
+for sides on the arrow head to be specified as a number of radians.
+</p>
+<p>
+<var>Direction</var> is a <var>TScrollDirection</var> enumeration value, and 
+indicates the direction for the line and the arrow head. Allowed values 
+include: sdLeft, sdRight, sdUp, or sdDown.
+</p>
+<p>
+<var>Location</var> is a <var>TPoint</var> instance which contains the 
+coordinates for the line starting point. This is the same as the 
+<var>p1</var> argument in an overloaded variant. <var>p2</var> is the ending 
+point for the line and the position where the tip of the arrow head is drawn.
+</p>
+<p>
+<var>Size</var> contains the length of the line in pixels. It is used to 
+calculate both the ending point for the line starting at Location, and the 
+position where the tip of the arrow head is drawn.
+</p>
+<p>
+<var>ArrowType</var> is a <var>TArrowType</var> enumeration value, and 
+indicates the drawing style used for the arrow head. atSolid causes the arrow 
+head to be drawn as a filled triangular polygon. atArrows causes two inclined 
+lines to be draw at the tip of the arrow head using the slope angle specified 
+in ArrowAngleRad.
+</p>
+<p>
+<var>ArrowAngleRad</var> is a floating point value with the number of radians 
+for the slope on the sides of the arrow head. The default value for the 
+argument is defined in the NiceArrowAngle constant, and causes a 45 degree 
+angle to be used to draw the inclined sides on arrow head. Use 
+<b>&lt;angle&gt;*pi/180</b> to convert an angle in degrees to radians.
 </p>
 </descr>
-<seealso></seealso>
+<seealso/>
 </element>
 <element name="DrawArrow.Canvas">
-<short>Canvas where the arrow is drawn.</short>
+<short>Canvas where the line and arrow are drawn.</short>
 </element>
 <element name="DrawArrow.Direction">
-<short>Direction for the arrow.</short>
+<short>Direction for arrow head. Left, Right, Up, or Down.</short>
 </element>
 <element name="DrawArrow.Location">
 <short>
-Point that indicates the canvas coordinates where the arrow is drawn.
+TPoint instance with the canvas coordinates for the line starting point.
 </short>
 </element>
 <element name="DrawArrow.Size">
-<short></short>
+<short>
+Length of the line in pixels. Determines the ending point for the line and 
+the position where the tip of the arrow head is drawn.
+</short>
 </element>
 <element name="DrawArrow.ArrowType">
 <short>Drawing style for the arrow.</short>
 </element>
 <element name="DrawArrow.p1">
-<short></short>
+<short>
+TPoint instance with the starting point for the line drawn in the routine.
+</short>
 </element>
 <element name="DrawArrow.p2">
-<short></short>
+<short>
+TPoint instance with the ending point for the line drawn in the routine. It is also the position where the tip of the arrow head is drawn.
+</short>
 </element>
 <element name="DrawArrow.ArrowLen">
-<short></short>
+<short>
+Length in pixels for the arrow head. It is used as an offset from the ending point in the opposite direction used for the line.
+</short>
 </element>
 <element name="DrawArrow.ArrowAngleRad">
-<short></short>
+<short>
+Angle specified in radians used to draw the sloped sides on the arrow head.
+</short>
 </element>
 
 <element name="FloodFill">

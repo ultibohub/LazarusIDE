@@ -76,7 +76,7 @@ procedure PaintCross(Canvas: TCanvas; XLeft,YUp,XRight,YLow,
 procedure PaintHalfEllipse(Canvas: TCanvas; Const PaintRect: TRect;
   AHalfEllipseDirection: TShapeDirection);
 procedure PaintFivePointLineStar(Canvas: TCanvas; const PaintRect: TRect);
-procedure PaintStarN(Canvas: TCanvas;cx,cy,r,n,a:Integer);
+procedure PaintStarN(Canvas: TCanvas;cx,cy,r,n:Integer; a: Extended);
 
 
 procedure InitPolygon(Canvas: TCanvas;PaintRect: TRect;RadAngle: Extended;
@@ -158,13 +158,15 @@ procedure PolycRotate
   (var Pts:array of TPoint; CountPts:Integer; cntPoint:TPoint; fii:Extended);
 var i,dx,dy:Integer;
     x,y:Extended;
+    sinFii,cosFii: Extended;
 begin
+  SinCos(fii, sinFii, cosFii);
   for i:=0 to CountPts-1 do
     begin
       dx:=Pts[i].x-cntPoint.x;
       dy:=Pts[i].y-cntPoint.y;
-      x:=dx*cos(fii)+dy*sin(fii);
-      y:=dy*cos(fii)-dx*sin(fii);
+      x:=dx*cosFii+dy*sinFii;
+      y:=dy*cosFii-dx*sinFii;
       Pts[i].x:=cntPoint.x+Round(x);
       Pts[i].y:=cntPoint.y+Round(y);
     end;
@@ -219,11 +221,13 @@ end;
 procedure PolycSetHalfWidthAndHeight
   (const PR:TRect;var hv,wv:Integer;fii:Extended);
 var h,w:Integer;
+    sinFii, cosFii: Extended;
 begin
   h:=PR.Bottom-PR.Top;
   w:=PR.Right-PR.Left;
-  hv:=Round(h*abs(cos(fii))+w*abs(sin(fii))) div 2;
-  wv:=Round(h*abs(sin(fii))+w*abs(cos(fii))) div 2;
+  SinCos(fii, sinFii, cosFii);
+  hv:=Round(h*abs(cosFii)+w*abs(sinFii)) div 2;
+  wv:=Round(h*abs(sinFii)+w*abs(cosFii)) div 2;
 end;
 
 procedure PolycScale(var P:array of TPoint; CountPts:Integer;
@@ -791,10 +795,10 @@ begin
   Canvas.Line(P[2].x,P[2].y,P[4].x,P[4].y);
 end;
 
-procedure PaintStarN(Canvas: TCanvas;cx,cy,r,n,a:Integer);
+procedure PaintStarN(Canvas: TCanvas;cx,cy,r,n:Integer; a: Extended);
 const MaxStarPoint=36;
 var
-  r1,r0,alpha:double;
+  r1,r0,alpha,sinAlpha,cosAlpha:double;
   P:array[0..MaxStarPoint*2-1] of TPoint;
   i,cs:Integer;
 begin
@@ -803,9 +807,10 @@ begin
     do begin
        if (i mod 2)=0 then r0:=r else r0:=r1;
        alpha:=a+(0.5+i/n)*Pi;
-       cs:=RoundToInt(r0*cos(alpha));
+       SinCos(alpha, sinAlpha, cosAlpha);
+       cs:=RoundToInt(r0*cosAlpha);
        P[i].x:=cx+cs;
-       P[i].y:=cy-Round(r0*sin(alpha));
+       P[i].y:=cy-Round(r0*sinAlpha);
     end;
   for i:=2*n to MaxStarPoint*2-1
     do begin
