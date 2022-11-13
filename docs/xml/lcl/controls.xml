@@ -758,16 +758,24 @@ Contains information representing a CM_CANCELMODE control message.
 <notes><note>Used in the jvcllaz package.</note></notes>
 </element>
 <element name="TCMCancelMode.Msg">
-<short/>
+<short>
+Message constant.
+</short>
 </element>
 <element name="TCMCancelMode.Unused">
-<short/>
+<short>
+Padding for alignment.
+</short>
 </element>
 <element name="TCMCancelMode.Sender">
-<short/>
+<short>
+Control which generated the message.
+</short>
 </element>
 <element name="TCMCancelMode.Result">
-<short/>
+<short>
+0 if the message has not been handled.
+</short>
 </element>
 
 <element name="TCMChildKey">
@@ -775,13 +783,10 @@ Contains information representing a CM_CANCELMODE control message.
 <descr/>
 <seealso/>
 </element>
-<element name="TCMChildKey.Msg">
-<short/>
-</element>
+<element name="TCMChildKey.Msg"/>
+<element name="TCMChildKey.UnusedMsg"/>
 <element name="TCMChildKey.Unused"/>
-<element name="TCMChildKey.CharCode">
-<short>VK_XXX constants for TLMKeyDown/Up, ASCII for TLMChar.</short>
-</element>
+<element name="TCMChildKey.CharCode"/>
 <element name="TCMChildKey.Sender"/>
 <element name="TCMChildKey.Result"/>
 
@@ -1833,12 +1838,12 @@ Indicates if the Control has called but not completed its Paint method.
 <var>ControlIsPainting</var> is a <var>Boolean</var> function which indicates 
 if the <var>Control</var> has called but not completed its <var>Paint</var> 
 method. ControlIsPainting returns <b>True</b> when the Control has been 
-assigned (contains a non-Nil value) and its <var>IsProcessingPaintMsg</var> 
-method returns <b>True</b>.
+assigned (contains a non-<b>Nil</b> value) and its 
+<var>IsProcessingPaintMsg</var> method returns <b>True</b>.
 </p>
 <p>
-ControlIsPainting is used in the implementation of the 
-<var>CreateHandle</var> method.
+ControlIsPainting is used in the implementation of the <var>CreateHandle</var> 
+method.
 </p>
 </descr>
 <seealso>
@@ -2925,15 +2930,27 @@ notification.
 </element>
 
 <element name="TDragKind">
-<short>Indicates whether the control performs drag-drop or drag-dock.</short>
-<descr/>
-<seealso/>
+<short>
+Indicates whether the control performs drag-drop or drag-dock operation.
+</short>
+<descr>
+<p>
+<var>TDragKind</var> is an enumeration type with values that indicate the 
+action performed when the mouse is used to start a drag operation.
+</p>
+<p>
+TDragKind is the type used to implement the Dragkind property in TControl.
+</p>
+</descr>
+<seealso>
+<link id="TControl.DragKind"/>
+</seealso>
 </element>
 <element name="TDragKind.dkDrag">
-<short>Control is dragged for dropping.</short>
+<short>Drag operation is for drag-and-drop.</short>
 </element>
 <element name="TDragKind.dkDock">
-<short>Control is dragged for docking.</short>
+<short>Drag operation is for drag-and-dock.</short>
 </element>
 
 <element name="TDragMode">
@@ -3441,18 +3458,36 @@ and <var>DragImages</var>.
 
 <element name="TDragControlObject.GetDragCursor">
 <short>Asks the Control to provide a drag cursor.</short>
+<descr>
+<p>
+Called when a TDragPerformer repositions the the mouse pointer during an 
+active drag operation.
+</p>
+</descr>
+<seealso>
+<link id="TCursor"/>
+</seealso>
 </element>
 <element name="TDragControlObject.GetDragCursor.Result">
-<short/>
+<short>
+TCursor shape used as the drag cursor. crDrag when Accepted. crNoDrop when 
+not Accepted.
+</short>
 </element>
 <element name="TDragControlObject.GetDragCursor.Accepted">
-<short/>
+<short>
+<b>True</b> when the dragged object can be dropped at the specified position.
+</short>
 </element>
 <element name="TDragControlObject.GetDragCursor.X">
-<short/>
+<short>
+Horizontal coordinate for the mouse pointer.
+</short>
 </element>
 <element name="TDragControlObject.GetDragCursor.Y">
-<short/>
+<short>
+Vertical coordinate for the mouse pointer.
+</short>
 </element>
 
 <element name="TDragControlObject.GetDragImages">
@@ -3643,16 +3678,24 @@ event handler used to draw the docking image for TDragDockObject instances.
 </seealso>
 </element>
 <element name="TDrawDockImageEvent.Sender">
-<short/>
+<short>
+Object (TDragDockObject) for the event notification.
+</short>
 </element>
 <element name="TDrawDockImageEvent.AOldRect">
-<short/>
+<short>
+Rectangle with area cleared in the handler routine.
+</short>
 </element>
 <element name="TDrawDockImageEvent.ANewRect">
-<short/>
+<short>
+Rectangle with area drawn in the handler routine.
+</short>
 </element>
 <element name="TDrawDockImageEvent.AOperation">
-<short/>
+<short>
+Operation performed for the notification. Valid values are: disShow, disMove, disHide.
+</short>
 </element>
 
 <element name="OnDrawDockImage">
@@ -3731,16 +3774,25 @@ by every target site's DockManager later.
 </seealso>
 </element>
 <element name="TDragDockObject.GetDragCursor.Result">
-<short/>
+<short>
+TCursor shape used as the drag cursor. crDrag when Accepted. crNoDrop when 
+not Accepted.
+</short>
 </element>
 <element name="TDragDockObject.GetDragCursor.Accepted">
-<short/>
+<short>
+<b>True</b> when the dragged object can be docked at the specified position.
+</short>
 </element>
 <element name="TDragDockObject.GetDragCursor.X">
-<short/>
+<short>
+Horizontal coordinate for the mouse pointer.
+</short>
 </element>
 <element name="TDragDockObject.GetDragCursor.Y">
-<short/>
+<short>
+Vertical coordinate for the mouse pointer.
+</short>
 </element>
 
 <element name="TDragDockObject.EndDrag">
@@ -3754,10 +3806,14 @@ by every target site's DockManager later.
 <short>The target docksite, or <b>Nil</b> to make the Control float.</short>
 </element>
 <element name="TDragDockObject.EndDrag.X">
-<short/>
+<short>
+Horizontal coordinate for the mouse pointer.
+</short>
 </element>
 <element name="TDragDockObject.EndDrag.Y">
-<short/>
+<short>
+Vertical coordinate for the mouse pointer.
+</short>
 </element>
 
 <element name="TDragDockObject.InitDock">
@@ -4019,11 +4075,30 @@ Shift, Ctrl, or Alt modifier for the key up event.
 <short>
 Aborts the dragging operation when the capture control has changed.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>CaptureChanged</var> is an abstract virtual method in 
+<var>TDragManager</var>, and must be implemented in a descendent class. In the 
+default drag manager implementation, the DragMode and DragKind properties for 
+child controls are checked to determine if one of them has the mouse capture. 
+If none of them are active, the Parent control calls DragStop.
+</p>
+<p>
+CaptureChanged is called from the CaptureChanged method in TControl when 
+the LM_CaptureChanged message is received by the control and the drag manager 
+is active.
+</p>
+</descr>
+<seealso>
+<link id="TDragManager.IsDragging"/>
+<link id="TControl.CaptureChanged"/>
+<link id="TControl.LMCaptureChanged"/>
+</seealso>
 </element>
 <element name="TDragManager.CaptureChanged.OldCaptureControl">
-<short/>
+<short>
+Control which has the mouse capture change message is handled for the control.
+</short>
 </element>
 
 <element name="TDragManager.MouseMove">
@@ -4034,13 +4109,19 @@ Generates visual feedback for mouse movement in a drag operation.
 <seealso/>
 </element>
 <element name="TDragManager.MouseMove.Shift">
-<short/>
+<short>
+Ctrl, Alt, Shift modifier for the mouse movement.
+</short>
 </element>
 <element name="TDragManager.MouseMove.X">
-<short/>
+<short>
+Horizontal coordinate for the mouse pointer.
+</short>
 </element>
 <element name="TDragManager.MouseMove.Y">
-<short/>
+<short>
+Horizontal coordinate for the mouse pointer.
+</short>
 </element>
 
 <element name="TDragManager.MouseUp">
@@ -4078,21 +4159,47 @@ Vertical pointer position when the mouse event was detected.
 </element>
 
 <element name="TDragManager.MouseDown">
-<short>NOP.</short>
-<descr/>
+<short>
+Performs actions when the drag manager needs to respond to a mouse button 
+down event.
+</short>
+<descr>
+<p>
+<var>MouseDown</var> is an abstract virtual method in 
+<var>TDragManager</var>. It must be overridden in a descendent class to 
+perform actions need for the drag manager implementation.
+</p>
+<p>
+In the LCL, the drag managers are implementation classes like 
+TDragManagerDefault. This derived classes ignores the button down event in 
+the drag manager to prevent a premature end to a drag operation. The button 
+down event has already been initiated in the message processing loop in 
+TControl. MouseUp handles ending the drag operation.
+</p>
+</descr>
 <seealso/>
 </element>
 <element name="TDragManager.MouseDown.Button">
-<short/>
+<short>
+Mouse button for the mouse button down event.
+</short>
 </element>
 <element name="TDragManager.MouseDown.Shift">
-<short/>
+<short>
+Shift, Ctrl, or Alt modifier for the mouse button down event.
+</short>
 </element>
 <element name="TDragManager.MouseDown.X">
-<short/>
+<short>
+Horizontal coordinate for the mouse pointer when the button down event 
+occurred.
+</short>
 </element>
 <element name="TDragManager.MouseDown.Y">
-<short/>
+<short>
+Vertical coordinate for the mouse pointer when the button down event 
+occurred.
+</short>
 </element>
 
 <element name="TDragManager.Create">
@@ -4109,7 +4216,9 @@ A docking operation never should start immediately.
 </descr>
 </element>
 <element name="TDragManager.Create.TheOwner">
-<short/>
+<short>
+Owner of the class instance.
+</short>
 </element>
 
 <element name="TDragManager.IsDragging">
@@ -4123,10 +4232,23 @@ A docking operation never should start immediately.
 
 <element name="TDragManager.Dragging">
 <short>
-Indicates whether the specified control is being dragged.
+Indicates whether the specified control is the active drag object in the drag 
+manager.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>Dragging</var> is an abstract virtual method in <var>TDragmanager</var>. 
+It must be implemented in a descendent class to perform actions needed in 
+the method.
+</p>
+<p>
+Use IsDragging to determine whether a drag performer is active in the drag 
+manager for a(ny) control.
+</p>
+</descr>
+<seealso>
+<link id="TDragManager.IsDragging"/>
+</seealso>
 </element>
 <element name="TDragManager.Dragging.Result">
 <short>
@@ -4134,7 +4256,9 @@ Indicates whether the specified control is being dragged.
 </short>
 </element>
 <element name="TDragManager.Dragging.AControl">
-<short/>
+<short>
+Control compared to the drag object to get the return value.
+</short>
 </element>
 
 <element name="TDragManager.RegisterDockSite">
@@ -4212,12 +4336,12 @@ specified control.
 <var>CanStartDragging</var> is an abstract virtual <var>Boolean</var> 
 function used to determine if the mouse has been moved beyond the threshold 
 that initiates a drag operation. The result is <b>True</b> when the mouse 
-coordinates in X and Y are located within the client rectangle and threshold 
-for the specified control in <var>Site</var>.
+coordinates in X and Y are located within the client rectangle and within the 
+threshold for the specified control in <var>Site</var>.
 </p>
 <p>
-CanStartDragging must be implemented in a descendent class, like 
-<var>TDragManagerDefault</var>.
+CanStartDragging must be implemented in a descendent class, like the 
+<var>TDragManagerDefault</var> class in the implementation for the unit.
 </p>
 </descr>
 <seealso>
@@ -4357,8 +4481,8 @@ InsertControl determines the placement of the just docked control, forcing a
 repaint of the container control if necessary.
 </p>
 <remark>
-When SetReplacingControl has been called with a non-Nil Control before, the 
-dropped control only should replace that control.
+When SetReplacingControl has been called with a non-<b>Nil</b> Control before, 
+the dropped control only should replace that control.
 </remark>
 <p>
 An overloaded version passes the DragDockObject to the dockmanager, allowing 
@@ -4949,35 +5073,48 @@ size constraints.
 <p>
 <var>TConstrainedResizeEvent</var> is an object procedure type that specifies 
 an event handler signalled to resize a control to the specified size 
-constraints. Used to implement the <var>OnConstrainedResize</var> event in 
-<var>TControl</var>.
+constraints. The handler routine can update the values in the MinWidth, 
+MinHeight, MaxWidth, and MaxHeight arguments if needed.
+</p>
+<p>
+TConstrainedResizeEvent is the type used to implement the 
+<var>OnConstrainedResize</var> event in <var>TControl</var>.
 </p>
 </descr>
 <seealso>
 <link id="TControl.OnConstrainedResize"/>
+<link id="TControl.ConstrainedResize"/>
 </seealso>
 </element>
 <element name="TConstrainedResizeEvent.Sender">
 <short>TObject for the event notification.</short>
 </element>
 <element name="TConstrainedResizeEvent.MinWidth">
-<short/>
+<short>
+Variable argument with the minimum width for the resize event.
+</short>
 </element>
 <element name="TConstrainedResizeEvent.MinHeight">
-<short/>
+<short>
+Variable argument with the minimum hright for the resize event.
+</short>
 </element>
 <element name="TConstrainedResizeEvent.MaxWidth">
-<short/>
+<short>
+Variable argument with the maximum width for the resize event.
+</short>
 </element>
 <element name="TConstrainedResizeEvent.MaxHeight">
-<short/>
+<short>
+Variable argument with the maximum height for the resize event.
+</short>
 </element>
 
 <element name="TSpacingSize">
 <short>Alias to the Integer type.</short>
 <descr>
 <p>
-<var>TSpacingSize</var> is an alias to the <var>Integer</var> type. 
+<var>TSpacingSize</var> is an alias for the <var>Integer</var> type. 
 TSpacingSize is used for values that represent spacing around or between 
 controls. TSpacingSize is the type used to implement properties in 
 <var>TControlBorderSpacingDefault</var> and <var>TControlBorderSpacing</var>.
@@ -5186,14 +5323,24 @@ Used, for example, when the Parents.ChildSizing.Layout defines a table layout.
 </element>
 
 <element name="TControlBorderSpacing.IsAroundStored">
-<short>Implements the storage specifier for the Around property.</short>
+<short>
+Implements the storage specifier for the Around property.
+</short>
 <descr/>
 <seealso>
 <link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.AroundLeft"/>
+<link id="TControlBorderSpacing.AroundRight"/>
+<link id="TControlBorderSpacing.AroundTop"/>
+<link id="TControlBorderSpacing.AroundBottom"/>
 </seealso>
 </element>
 <element name="TControlBorderSpacing.IsAroundStored.Result">
-<short/>
+<short>
+Returns <b>True</b> if border spacing value in Around has been assigned 
+and contains a non-zero value, or when the value is different than the 
+default value passes to the constructor.
+</short>
 </element>
 
 <element name="TControlBorderSpacing.IsBottomStored">
@@ -5203,9 +5350,7 @@ Used, for example, when the Parents.ChildSizing.Layout defines a table layout.
 <link id="TControlBorderSpacing.Bottom"/>
 </seealso>
 </element>
-<element name="TControlBorderSpacing.IsBottomStored.Result">
-<short/>
-</element>
+<element name="TControlBorderSpacing.IsBottomStored.Result"/>
 
 <element name="TControlBorderSpacing.IsInnerBorderStored">
 <short>Implements the storage specifier for the InnerBorder property.</short>
@@ -5214,9 +5359,7 @@ Used, for example, when the Parents.ChildSizing.Layout defines a table layout.
 <link id="TControlBorderSpacing.InnerBorder"/>
 </seealso>
 </element>
-<element name="TControlBorderSpacing.IsInnerBorderStored.Result">
-<short/>
-</element>
+<element name="TControlBorderSpacing.IsInnerBorderStored.Result"/>
 
 <element name="TControlBorderSpacing.IsLeftStored">
 <short>Implements the storage specifier for the Left property.</short>
@@ -5225,9 +5368,7 @@ Used, for example, when the Parents.ChildSizing.Layout defines a table layout.
 <link id="TControlBorderSpacing.Left"/>
 </seealso>
 </element>
-<element name="TControlBorderSpacing.IsLeftStored.Result">
-<short/>
-</element>
+<element name="TControlBorderSpacing.IsLeftStored.Result"/>
 
 <element name="TControlBorderSpacing.IsRightStored">
 <short>Implements the storage specifier for the Right property.</short>
@@ -5236,9 +5377,7 @@ Used, for example, when the Parents.ChildSizing.Layout defines a table layout.
 <link id="TControlBorderSpacing.Right"/>
 </seealso>
 </element>
-<element name="TControlBorderSpacing.IsRightStored.Result">
-<short/>
-</element>
+<element name="TControlBorderSpacing.IsRightStored.Result"/>
 
 <element name="TControlBorderSpacing.IsTopStored">
 <short>Implements the storage specifier for the Top property.</short>
@@ -5247,9 +5386,7 @@ Used, for example, when the Parents.ChildSizing.Layout defines a table layout.
 <link id="TControlBorderSpacing.Top"/>
 </seealso>
 </element>
-<element name="TControlBorderSpacing.IsTopStored.Result">
-<short/>
-</element>
+<element name="TControlBorderSpacing.IsTopStored.Result"/>
 
 <element name="TControlBorderSpacing.SetAround">
 <short>Sets the value for the Around property.</short>
@@ -5406,16 +5543,23 @@ object.
 
 <element name="TControlBorderSpacing.IsEqual">
 <short>
-<b>True</b> when the specified spacing is the same as the current settings.
+<b>True</b> when the specified spacing is the same as the current settings in 
+the class instance.
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TControlBorderSpacing.IsEqual.Result">
-<short/>
+<short>
+<b>True</b> when the specified spacing is the same as the current settings in 
+the class instance.
+</short>
 </element>
 <element name="TControlBorderSpacing.IsEqual.Spacing">
-<short/>
+<short>
+TControlBorderSpacing instance with values compared to the current class 
+instance.
+</short>
 </element>
 
 <element name="TControlBorderSpacing.GetSpaceAround">
@@ -5424,11 +5568,15 @@ object.
 <seealso/>
 </element>
 <element name="TControlBorderSpacing.GetSpaceAround.SpaceAround">
-<short>Out parameter, initial contents are ignored!</short>
+<short>
+Output parameter; the initial contents are ignored.
+</short>
 </element>
 
 <element name="TControlBorderSpacing.GetSideSpace">
-<short>The space on a control side, including Around space.</short>
+<short>
+The space on a control side including Around space.
+</short>
 <descr/>
 <seealso>
 <link id="TControlBorderSpacing.Space"/>
@@ -5513,17 +5661,25 @@ value(s) in <var>InnerBorder</var> have been altered.
 </element>
 
 <element name="TControlBorderSpacing.Space">
-<short>Kind of array access to the space at every side.</short>
-<descr/>
+<short>
+Provides indexed access to the border spacing value for a given anchor side.
+</short>
+<descr>
+<p>
+<var>Space</var> is an indexed <var>Integer</var> property which provides 
+access to the border spacing used for a specified TAnchorKind value. For example:
+</p>
+<code>AControl.BorderSpacing.Space[akTop] := 6;</code>
+</descr>
 <seealso/>
 </element>
 <element name="TControlBorderSpacing.Space.Kind">
-<short>The side for which the space is requested.</short>
+<short>The side with border spacing accessed in the property.</short>
 </element>
 
 <element name="TControlBorderSpacing.AroundLeft">
 <short>
-Spacing used around and on the left-hand side of the control.
+Spacing reserved on the left-hand side of the control.
 </short>
 <descr>
 <p>
@@ -5546,7 +5702,7 @@ Left properties.
 
 <element name="TControlBorderSpacing.AroundTop">
 <short>
-Space reserved around and on the top edge of the control.
+Space reserved on the top edge of the control.
 </short>
 <descr/>
 <seealso/>
@@ -5554,7 +5710,7 @@ Space reserved around and on the top edge of the control.
 
 <element name="TControlBorderSpacing.AroundRight">
 <short>
-Space reserved around and on the right-hand side of the control.
+Space reserved on the right-hand side of the control.
 </short>
 <descr/>
 <seealso/>
@@ -5562,7 +5718,7 @@ Space reserved around and on the right-hand side of the control.
 
 <element name="TControlBorderSpacing.AroundBottom">
 <short>
-Space reserved around and on the bottom edge of the control.
+Space reserved on the bottom edge of the control.
 </short>
 <descr/>
 <seealso/>
@@ -6082,32 +6238,48 @@ the ActionLink <link id="TControl.ActionChange"/>.
 </element>
 
 <element name="TControlActionLink.SetCaption">
-<short>Sets the client's Caption, if the old values match.</short>
+<short>
+Sets the client Caption when it is linked to the Action for the control.
+</short>
 <descr/>
 <seealso>
 <link id="#lcl.actnlist.TActionLink.SetCaption">TActionLink.SetCaption</link>
 </seealso>
 </element>
 <element name="TControlActionLink.SetCaption.Value">
-<short/>
+<short>
+New value for the Caption property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetEnabled">
-<short>Sets the client's Enabled property, if the old values match.</short>
+<short>
+Sets the client Enabled property when it is linked to the action.
+</short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="#lcl.actnlist.TActionLink.SetEnabled">TActionLink.SetEnabled</link>
+</seealso>
 </element>
 <element name="TControlActionLink.SetEnabled.Value">
-<short/>
+<short>
+New value for the Enabled property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetHint">
-<short>Sets client's Hint, if the old values match.</short>
+<short>
+Sets client Hint when it is linked to the action.
+</short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="#lcl.actnlist.TActionLink.SetHint">TActionLink.SetHint</link>
+</seealso>
 </element>
 <element name="TControlActionLink.SetHint.Value">
-<short/>
+<short>
+New value for the Hint property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetHelpContext">
@@ -6118,7 +6290,9 @@ Sets the HelpContext, if the old Help properties match (IsHelpLinked).
 <seealso/>
 </element>
 <element name="TControlActionLink.SetHelpContext.Value">
-<short/>
+<short>
+New value for the HelpContext property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetHelpKeyword">
@@ -6129,7 +6303,9 @@ Sets the HelpKeyword, if the old Help properties match (IsHelpLinked).
 <seealso/>
 </element>
 <element name="TControlActionLink.SetHelpKeyword.Value">
-<short/>
+<short>
+New value for the HelpKeyword property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetHelpType">
@@ -6140,7 +6316,9 @@ Sets the HelpType, if the old Help properties match (IsHelpLinked).
 <seealso/>
 </element>
 <element name="TControlActionLink.SetHelpType.Value">
-<short/>
+<short>
+New value for the HelpType property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetVisible">
@@ -6151,33 +6329,79 @@ Sets the Visible property in the client, if the old values match.
 <seealso/>
 </element>
 <element name="TControlActionLink.SetVisible.Value">
-<short/>
+<short>
+New value for the Visible property in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.SetOnExecute">
 <short>Set OnClick handler for the client, if the old values match.</short>
-<descr/>
+<descr>
+<p>
+Formerly, this method changed the OnClick event handler for the client 
+control. That action no longer need because TControl.Click now calls the 
+OnExecute handler in the action.
+</p>
+<p>
+In the current LCL version, this method is a NOP.
+</p>
+</descr>
 <seealso/>
 </element>
 <element name="TControlActionLink.SetOnExecute.Value">
-<short/>
+<short>
+New value for the OnClick event handler in the client control.
+</short>
 </element>
 
 <element name="TControlActionLink.IsOnExecuteLinked">
 <short>
-<b>True</b> if the client's OnClick is the action's OnExecute handler.
+<b>True</b> if the OnClick handler in the client is the same routine assigned 
+to the OnExecute handler in the action.
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TControlActionLink.IsOnExecuteLinked.Result">
-<short/>
+<short>
+<b>True</b> if the OnClick handler in the client is the same routine assigned 
+to the OnExecute handler in the action.
+</short>
 </element>
 
 <element name="TControlActionLink.DoShowHint">
-<short>Compose the hint string, depending on HintShortCuts.</short>
+<short>
+Formats the hint string for the client control when it includes a ShortCut or accelerator key.
+</short>
 <descr/>
+<p>
+<var>DoShowHint</var> is a <var>Boolean</var> function used to build a hint 
+string for the client control when it includes a shortcut or accelerator key. 
+In short, a HintStr like:
+</p>
+<code>'&amp;Save your work.'</code>
+<p>
+Is formatted as:
+</p>
+<code>'Save your work. (Ctrl+S)'</code>
+<p>
+No actions are performed in the method if the Action is not derived from 
+TCustomAction, HintShortCuts has not been enabled in the Application, or the 
+action has the value scNone in its ShortCut property.
+</p>
+<p>
+DoShowHint signals the OnHint event handler in the action (when assigned) to 
+get custom hint text. HintStr is replaced with the combined value for the 
+hint text and the ShortCut for the Action. ShortCutToText is called to 
+convert the TShortCut value to its string representation like 'Ctrl+S'.
+</p>
+<p>
+The return value is always <b>True</b>.
+</p>
 <seealso>
+<link id="#lcl.actnlist.TCustomAction.DoHint">TCustomAction.DoHint</link>
+<link id="#lcl.actnlist.TCustomAction.OnHint">TCustomAction.OnHint</link>
+<link id="#lcl.actnlist.TCustomAction.ShortCut">TCustomAction.ShortCut</link>
 <link id="#lcl.forms.TApplication.HintShortCuts">TApplication.HintShortCuts</link>
 </seealso>
 </element>
@@ -6185,13 +6409,13 @@ Sets the Visible property in the client, if the old values match.
 <short>Always <b>True</b>.</short>
 </element>
 <element name="TControlActionLink.DoShowHint.HintStr">
-<short>The hint to show.</short>
+<short>The hint text for the client control.</short>
 </element>
 
-<element link="#lcl.actnlist.TActionLink.IsCaptionLinked" name="TControlActionLink.IsCaptionLinked"/>
+<element name="TControlActionLink.IsCaptionLinked" link="#lcl.actnlist.TActionLink.IsCaptionLinked"/>
 <element name="TControlActionLink.IsCaptionLinked.Result"/>
 
-<element link="#lcl.actnlist.TActionLink.IsEnabledLinked" name="TControlActionLink.IsEnabledLinked"/>
+<element name="TControlActionLink.IsEnabledLinked" link="#lcl.actnlist.TActionLink.IsEnabledLinked"/>
 <element name="TControlActionLink.IsEnabledLinked.Result"/>
 
 <element name="TControlActionLink.IsHelpLinked">
@@ -6209,14 +6433,16 @@ Help properties are assumed linked only when all these properties match.
 </short>
 </element>
 
-<element link="#lcl.actnlist.TActionLink.IsHintLinked" name="TControlActionLink.IsHintLinked"/>
+<element name="TControlActionLink.IsHintLinked" link="#lcl.actnlist.TActionLink.IsHintLinked"/>
 <element name="TControlActionLink.IsHintLinked.Result"/>
 
-<element link="#lcl.actnlist.TActionLink.IsVisibleLinked" name="TControlActionLink.IsVisibleLinked"/>
+<element name="TControlActionLink.IsVisibleLinked" link="#lcl.actnlist.TActionLink.IsVisibleLinked"/>
 <element name="TControlActionLink.IsVisibleLinked.Result"/>
 
 <element name="TControlActionLinkClass">
-<short>Class of <link id="TControlActionLink"/></short>
+<short>
+Class type used to create new instances of TControlActionLink.
+</short>
 <descr/>
 <seealso>
 <link id="TControlActionLink"/>
@@ -7141,7 +7367,9 @@ Implements the storage specifier for the CaptureMouseButtons property.
 <seealso/>
 </element>
 <element name="TControl.CaptureMouseButtonsIsStored.Result">
-<short/>
+<short>
+<b>True</b> if CaptureMouseButtons has a value other than [mbLeft].
+</short>
 </element>
 
 <element name="TControl.DoActionChange">
@@ -7344,7 +7572,10 @@ Uses RealGetText (which reads the Caption member), instead of GetTextBuf
 </seealso>
 </element>
 <element name="TControl.IsAnchorsStored.Result">
-<short/>
+<short>
+<b>True</b> when Anchors has value different than the value in AnchorAlign 
+for the current setting in Align.
+</short>
 </element>
 
 <element name="TControl.IsBiDiModeStored">
@@ -7355,7 +7586,9 @@ Uses RealGetText (which reads the Caption member), instead of GetTextBuf
 </seealso>
 </element>
 <element name="TControl.IsBiDiModeStored.Result">
-<short/>
+<short>
+<b>True</b> when ParentBidiMode has not been enabled.
+</short>
 </element>
 
 <element name="TControl.IsEnabledStored">
@@ -7366,7 +7599,10 @@ Uses RealGetText (which reads the Caption member), instead of GetTextBuf
 </seealso>
 </element>
 <element name="TControl.IsEnabledStored.Result">
-<short/>
+<short>
+<b>True</b> when ActionLink has not been assigned or its Enabled property is 
+not linked to the control.
+</short>
 </element>
 
 <element name="TControl.IsFontStored">
@@ -7377,7 +7613,9 @@ Uses RealGetText (which reads the Caption member), instead of GetTextBuf
 </seealso>
 </element>
 <element name="TControl.IsFontStored.Result">
-<short/>
+<short>
+<b>True</b> when ParentFont has not been enabled.
+</short>
 </element>
 
 <element name="TControl.IsHintStored">
@@ -7419,25 +7657,19 @@ is set to <b>False</b>.
 </element>
 
 <element name="TControl.DoConstrainedResize">
-<short>Adjust the intended (given) Bounds, according to Constraints.</short>
+<short>
+Adjusts the control Bounds using its sizing Constraints.
+</short>
 <descr/>
 <seealso>
 <link id="TControl.Constraints"/>
 <link id="TControl.ConstrainedResize"/>
 </seealso>
 </element>
-<element name="TControl.DoConstrainedResize.NewLeft">
-<short/>
-</element>
-<element name="TControl.DoConstrainedResize.NewTop">
-<short/>
-</element>
-<element name="TControl.DoConstrainedResize.NewWidth">
-<short/>
-</element>
-<element name="TControl.DoConstrainedResize.NewHeight">
-<short/>
-</element>
+<element name="TControl.DoConstrainedResize.NewLeft"/>
+<element name="TControl.DoConstrainedResize.NewTop"/>
+<element name="TControl.DoConstrainedResize.NewWidth"/>
+<element name="TControl.DoConstrainedResize.NewHeight"/>
 
 <element name="TControl.SetAccessibleDescription">
 <short>Sets the value for the AccessibleDescription property.</short>
@@ -7712,10 +7944,14 @@ another control to this one.
 <seealso/>
 </element>
 <element name="TControl.ForeignAnchorSideChanged.TheAnchorSide">
-<short/>
+<short>
+Anchor side with the control added, removed, or moved in the notification.
+</short>
 </element>
 <element name="TControl.ForeignAnchorSideChanged.Operation">
-<short/>
+<short>
+Operation for the notification.
+</short>
 </element>
 
 <element name="TControl.SetAlign">
@@ -7814,13 +8050,20 @@ event handler in the constraints class instance.
 </element>
 
 <element name="TControl.DoBorderSpacingChange">
-<short>Reacts on a change in the control's border spacing.</short>
+<short>
+Performs actions needed when border spacing for the control is changed.
+</short>
 </element>
 <element name="TControl.DoBorderSpacingChange.Sender">
-<short/>
+<short>
+Object for the notification. Not used in the method.
+</short>
 </element>
 <element name="TControl.DoBorderSpacingChange.InnerSpaceChanged">
-<short/>
+<short>
+<b>True</b> if the inner border spacing has been changed for the control. Not 
+used in the method.
+</short>
 </element>
 
 <element name="TControl.IsBorderSpacingInnerBorderStored">
@@ -7864,12 +8107,23 @@ Overridden in TWinControl; in TControl it's a NOP. This method simulates the
 VCL behavior and has no real effect.
 </p>
 </descr>
+<seealso>
+<link id="TControl.ChangeBounds"/>
+<link id="TControl.Left"/>
+<link id="TControl.Top"/>
+<link id="TControl.Width"/>
+<link id="TControl.Height"/>
+</seealso>
 </element>
 <element name="TControl.SendMoveSizeMessages.SizeChanged">
-<short/>
+<short>
+<b>True</b> if a TLMSize message is constructed and dispatched in the method.
+</short>
 </element>
 <element name="TControl.SendMoveSizeMessages.PosChanged">
-<short/>
+<short>
+<b>True</b> if a TLMMove message is constructed and dispatched in the method.
+</short>
 </element>
 
 <element name="TControl.ConstrainedResize">
@@ -9021,7 +9275,9 @@ No actions are performed in the method when DesktopFont is set to
 </seealso>
 </element>
 <element name="TControl.CMSysFontChanged.Message">
-<short/>
+<short>
+Control message which triggered the method. Not used in the method.
+</short>
 </element>
 
 <element name="TControl.CMEnabledChanged">
@@ -9379,21 +9635,29 @@ The dock site, can be <b>Nil</b> for a TWinControl that can float by itself.
 
 <element name="TControl.GetDockEdge">
 <short>
-Determine the side to which the dragged control shall be docked.
+Determines the side to which the dragged control shall be docked.
 </short>
 </element>
 <element name="TControl.GetDockEdge.Result">
-<short/>
+<short>
+Alignment edge for the docked control. Default value is alNone.
+</short>
 </element>
 <element name="TControl.GetDockEdge.MousePos">
-<short>Mouse position in client coordinates.</short>
+<short>
+Mouse position relative to the Left, Top properties in the control.
+</short>
 </element>
 
 <element name="TControl.GetDragImages">
-<short>Get the list of images usable during dragging.</short>
+<short>
+Get the list of images used when a drag operation is active.
+</short>
 </element>
 <element name="TControl.GetDragImages.Result">
-<short/>
+<short>
+Always returns <b>Nil</b> in TControl.
+</short>
 </element>
 
 <element name="TControl.GetFloating">
@@ -9401,12 +9665,14 @@ Determine the side to which the dragged control shall be docked.
 <descr>
 <p>
 Floating state is assumed when the control has a HostDockSite using the 
-FloatingDockSiteClass type, and is the only docked client.
+FloatingDockSiteClass type, and 0 or 1 docked clients.
 </p>
 </descr>
 </element>
 <element name="TControl.GetFloating.Result">
-<short/>
+<short>
+True if HostDockSite is a floating dock site with 0 0r 1 docked clients.
+</short>
 </element>
 
 <element name="TControl.GetFloatingDockSiteClass">
@@ -9490,10 +9756,10 @@ The dragged DockObject, containing the DockRect to adjust.
 </short>
 </element>
 <element name="TControl.DockTrackNoTarget.X">
-<short>The mouse position, in screen coordinates.</short>
+<short>The horizontal mouse position in screen coordinates.</short>
 </element>
 <element name="TControl.DockTrackNoTarget.Y">
-<short/>
+<short>The vertical mouse position in screen coordinates.</short>
 </element>
 
 <element name="TControl.DoDock">
@@ -9663,7 +9929,7 @@ DoEndDrag is called from the EndDrag method in TDragObject.
 </element>
 <element name="TControl.DoEndDrag.Target">
 <short>
-Object instance with the target control or dock site site.
+Object instance with the target control or dock site.
 </short>
 </element>
 <element name="TControl.DoEndDrag.X">
@@ -9684,10 +9950,13 @@ Signals the OnStartDock event handler.
 <descr/>
 <seealso>
 <link id="TControl.OnStartDock"/>
+<link id="TDragObject"/>
 </seealso>
 </element>
 <element name="TControl.DoStartDock.DragObject">
-<short/>
+<short>
+Object instance (TDragObject) for the event notification.
+</short>
 </element>
 
 <element name="TControl.DoStartDrag">
@@ -9697,17 +9966,24 @@ Signals the OnStartDrag event handler.
 <descr/>
 <seealso>
 <link id="TControl.OnStartDrag"/>
+<link id="TDragObject"/>
 </seealso>
 </element>
 <element name="TControl.DoStartDrag.DragObject">
-<short/>
+<short>
+Object instance (TDragObject) for the event notification.
+</short>
 </element>
 
 <element name="TControl.DragCanceled">
 <short>
 Notifies the control of a cancelled drag operation.
 </short>
-<descr/>
+<descr>
+<p>
+DragCanceled has an empty implementation in TControl.
+</p>
+</descr>
 <seealso/>
 </element>
 
@@ -9738,10 +10014,14 @@ Source can be either a TDragObject, or the dragged control.
 <short>The dragged object, a control or a DragObject.</short>
 </element>
 <element name="TControl.DragOver.X">
-<short>The mouse position in client coordinates.</short>
+<short>
+The horizontal mouse position in client coordinates.
+</short>
 </element>
 <element name="TControl.DragOver.Y">
-<short/>
+<short>
+The vertical mouse position in client coordinates.
+</short>
 </element>
 <element name="TControl.DragOver.State">
 <short>State change flag (dsDragEnter, dsDragMove, dsDragLeave).</short>
@@ -9765,7 +10045,10 @@ DockRect into account.
 </seealso>
 </element>
 <element name="TControl.PositionDockRect.DragDockObject">
-<short/>
+<short>
+Object instance (TDragDockObject) with the control positioned and aligned in 
+the method.
+</short>
 </element>
 
 <element name="TControl.SetDragMode">
@@ -9787,7 +10070,9 @@ Returns the string for the dock caption, by default the control's Name.
 <seealso/>
 </element>
 <element name="TControl.GetDefaultDockCaption.Result">
-<short/>
+<short>
+Default value for the dock caption. Defaults to the control name.
+</short>
 </element>
 
 <element name="TControl.Click">
@@ -10368,7 +10653,9 @@ Defines which non-published properties should be streamed (none here).
 <seealso/>
 </element>
 <element name="TControl.DefineProperties.Filer">
-<short/>
+<short>
+Object used to read or write values using the LCL resource stream.
+</short>
 </element>
 
 <element name="TControl.AssignTo">
@@ -10934,10 +11221,20 @@ Signals the OnMouseWheelDown handler.
 </short>
 </element>
 <element name="TControl.DoMouseWheelDown.Result">
-<short><b>True</b> if handled.</short>
+<short>
+<b>True</b> if the mouse wheel message is handled.
+</short>
 </element>
-<element link="#lcl.controls.TMouseWheelEvent.Shift" name="TControl.DoMouseWheelDown.Shift"/>
-<element link="#lcl.controls.TMouseWheelEvent.MousePos" name="TControl.DoMouseWheelDown.MousePos"/>
+<element name="TControl.DoMouseWheelDown.Shift">
+<short>
+Shift, Ctrl or Alt modifier for the mouse wheel event notification.
+</short>
+</element>
+<element name="TControl.DoMouseWheelDown.MousePos">
+<short>
+Location for the mouse pointer when the wheel event was generated.
+</short>
+</element>
 
 <element name="TControl.DoMouseWheelUp">
 <short>
@@ -10947,8 +11244,8 @@ Signals the OnMouseWheelUp handler.
 <element name="TControl.DoMouseWheelUp.Result">
 <short><b>True</b> if handled.</short>
 </element>
-<element link="#lcl.controls.TMouseWheelEvent.Shift" name="TControl.DoMouseWheelUp.Shift"/>
-<element link="#lcl.controls.TMouseWheelEvent.MousePos" name="TControl.DoMouseWheelUp.MousePos"/>
+<element name="TControl.DoMouseWheelUp.Shift" link="#lcl.controls.TMouseWheelEvent.Shift"/>
+<element name="TControl.DoMouseWheelUp.MousePos" link="#lcl.controls.TMouseWheelEvent.MousePos"/>
 
 <element name="TControl.DoMouseWheelHorz">
 <short>
@@ -11697,10 +11994,14 @@ Adjusts the height for a given Font to the specified pixels per inch (PPI).
 <element name="TControl.GetActionLinkClass">
 <short>The default ActionLink class (TControlActionLink).</short>
 <descr>Used when the control is linked to an Action.</descr>
-<seealso/>
+<seealso>
+<link id="TControlActionLink"/>
+</seealso>
 </element>
 <element name="TControl.GetActionLinkClass.Result">
-<short/>
+<short>
+Returns the TControlActionLink type.
+</short>
 </element>
 
 <element name="TControl.ActionChange">
@@ -11750,7 +12051,7 @@ explicit TFont value is assigned to the Font property.
 </element>
 
 <element name="TControl.DragCursor">
-<short>The cursor shape shown while the control is dragged.</short>
+<short>The cursor shape shown during a drag operation.</short>
 <descr>
 <p>
 The default value is crDrag. If the control cannot be dropped on a target, 
@@ -11760,32 +12061,46 @@ the cursor changes temporarily to crNoDrop.
 </element>
 
 <element name="TControl.DragKind">
-<short>The operation when the control is dragged - Drag or Dock.</short>
+<short>
+Indicates the action performed for a drag operation: drag-and-drop or drag-and-dock.
+</short>
 <descr>
 <p>
 Set to dkDrag for a drag-drop operation, or to dkDock for a drag-dock 
 operation.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TDragKind"/>
+</seealso>
 </element>
 
 <element name="TControl.DragMode">
-<short>Allows the user to drag the control.</short>
+<short>
+Determines how a drag operation is started for the control.
+</short>
 <descr>
 <p>
-The default value is dmManual, and indicates that dragging must be started in 
-code.
+<var>DragMode</var> is a <var>TDragMode</var> property which determines how a 
+drag operation is started for the control.
 </p>
 <p>
-Set to dmAutomatic to allow the user to drag this control. In this mode 
-dragging can start immediately (on left mouse button press) or delayed, after 
-the mouse has been moved away by a number of pixels (Threshold).
+dmManual is the default value, and indicates that drag operation must be 
+started in code by calling the BeginDrag method.
+</p>
+<p>
+dmAutomatic allows a drag operation to start when the mouse pointer is 
+dragged over the control.
+</p>
+<p>
+Use DragKind to specify whether the drag operation is a drag-and-drop or a 
+drag-and-dock operation.
 </p>
 </descr>
 <seealso>
+<link id="TControl.BeginDrag"/>
 <link id="TControl.DragKind"/>
-<link id="TDragManager.DragImmediate"/>
+<link id="TDragManager"/>
 </seealso>
 </element>
 
@@ -12083,47 +12398,121 @@ single, double, or triple mouse click occurs in the control.
 
 <element name="TControl.OnDragDrop">
 <short>
-Event handler used to determine the action when another control is dropped 
-onto this control, in a drag-drop operation.
+Event handler signalled when an object is dropped onto the control.
 </short>
 <descr>
 <p>
-Unlike for a drag-dock operation, no default action is associated with an 
-drag-drop; the OnDragDrop handler is the only way to do something meaningful 
-on an drag-drop.
+<var>OnDragDrop</var> is a <var>TDragDropEvent</var> property with the event 
+handler signalled when another control is dropped onto the control instance. 
+Unlike with drag-dock, a default action is not associated with the drag-drop 
+operation. The OnDragDrop handler is the only way to do something meaningful 
+for the drag-drop operation.
+</p>
+<p>
+The <var>Sender</var> argument contains the current control instance (Self)
+for for the event.
+</p>
+<p>
+The <var>Source</var> argument is the object (TControl) which is droppped 
+onto the current control instance.
+</p>
+<p>
+<var>X</var> and <var>Y</var> contains the control-relative coordinates for 
+the mouse pointer when the event occurred.
+</p>
+<p>
+OnDragDrop is signalled from the DragDrop method, and occurs when dmDragDrop 
+messages (TDragMessage) are handled for the control.
 </p>
 </descr>
 <seealso>
-<link id="TDragDropEvent"/>
 <link id="TControl.DragDrop"/>
+<link id="TDragDropEvent"/>
+<link id="TDragMessage"/>
 </seealso>
 </element>
 
 <element name="TControl.OnDragOver">
 <short>
-Event handler for a control being dragged over this control.
+Event handler signalled when a control is dragged over the control instance.
 </short>
 <descr>
-The handler can reject a drop by setting Accept to <b>False</b>.
+<p>
+<var>OnDragOver</var> is a <var>TDragOverEvent</var> property with the event 
+handler signalled when another control is dragged over the current control. 
+It is signalled from the DragOver method, and occurs when drag messages are 
+handled for the control.
+</p>
+<p>
+The <var>Sender</var> argument is the current TControl instance.
+</p>
+<p>
+The <var>Source</var> argument contains the control instance which is being 
+dragged over the control.
+</p>
+<p>
+The X and Y arguments contain the control-relative coordinates for the mouse 
+pointer when the event was triggered.
+</p>
+<p>
+<var>State</var> indicates whether the event has occurred when the mouse 
+pointer entered the control, was repositioned, or exited the control.
+</p>
+<p>
+The <var>Accept</var> argument indicates whether the drag operation is 
+handled in the routine or rejected. Set Accept to <b>False</b> to reject a 
+drop on the control.
+</p>
 </descr>
 <seealso>
+<link id="TControl.DragOver"/>
 <link id="TDragOverEvent"/>
 </seealso>
 </element>
 
 <element name="TControl.OnEndDock">
-<short>Notification handler for the end of a docking operation.</short>
-<descr/>
+<short>
+Event handler signalled for the end of a drag-dock operation.
+</short>
+<descr>
+<p>
+<var>OnEndDock</var> is a <var>TEndDragEvent</var> property with the event 
+handler signalled when a drag-dock operation is ended. It occurs when the 
+EndDrag method is called for the active drag object in the DragManager.
+</p>
+<p>
+Use OnEndDrag to perform actions needed when a drag-drop operation is ended.
+</p>
+</descr>
 <seealso>
+<link id="TControl.OnEndDrag"/>
 <link id="TEndDragEvent"/>
+<link id="TDragDockObject.EndDrag"/>
+<link id="TDragManager"/>
+<link id="DragManager"/>
 </seealso>
 </element>
 
 <element name="TControl.OnEndDrag">
-<short>Notification handler for the end of a drag operation.</short>
-<descr/>
+<short>
+Event handler signalled for the end of a drag-drop operation.
+</short>
+<descr>
+<p>
+<var>OnEndDrag</var> is a <var>TEndDragEvent</var> property with the event 
+handler signalled when a drag-drop operation is ended. It occurs when the 
+EndDrag method is called for the active drag object in the DragManager.
+</p>
+<p>
+Use OnEndDrag to perform actions needed when a drag-drop operation is ended.
+</p>
+</descr>
 <seealso>
+<link id="TControl.OnEndDock"/>
 <link id="TEndDragEvent"/>
+<link id="TDragObject.EndDrag"/>
+<link id="TDragManager"/>
+<link id="DragManager"/>
 </seealso>
 </element>
 
@@ -12666,13 +13055,25 @@ Event handler signalled for the start of a dragging operation.
 </short>
 <descr>
 <p>
-The handler routine can provide a special DragControl object. Otherwise, a 
-default object is created.
+<var>OnStartDrag</var> is a <var>TStartDragEvent</var> property with the 
+event handler signalled when a drag operation is started for the control. Use 
+the event handler to perform actions needed when the drag operation is 
+started, such customizing the drag cursor or initializing related drag event 
+handlers.
+</p>
+<p>
+The <var>Sender</var> argument is the TControl instance for the event 
+notification.
+</p>
+<p>
+The <var>DragObject</var> argument returns the TDragControlObject allocated 
+by the drag manager when the drag operation was started.
 </p>
 </descr>
 <seealso>
 <link id="TControl.OnStartDock"/>
-<link id="TDragObject"/>
+<link id="TDragControlObject"/>
+<link id="TStartDragEvent"/>
 </seealso>
 </element>
 
@@ -12793,7 +13194,8 @@ The site into which the control is docked; <b>Nil</b> to make it float.
 </short>
 </element>
 <element name="TControl.ManualDock.ControlSide">
-<short>The side or edge of the DropControl to which the control is docked.
+<short>
+The side or edge of the DropControl to which the control is docked.
 </short>
 </element>
 <element name="TControl.ManualDock.KeepDockSiteSize">
@@ -12801,11 +13203,34 @@ The site into which the control is docked; <b>Nil</b> to make it float.
 </element>
 
 <element name="TControl.ManualFloat">
-<short>Undocks the control into the floating state.</short>
+<short>Undocks the control into a floating dock site.</short>
 <descr>
-TWinControls float for themselves, for TControls a floating host dock site is 
-created, and the control is docked into it.
+<p>
+<var>ManualFloat</var> is a <var>Boolean</var> function used to undock the 
+control. It undocks the control from the HostDockSite (when assigned) found 
+in the control or in its Parent.
+</p>
+<p>
+For TControl, which does not have a handle, a floating host dock site where 
+the control can be docked is created. TWinControl has a handle and can float 
+without any assistance.
+</p>
+<p>
+The Dock method is called to dock the control to the new floating dock site.
+</p>
+<p>
+The return value is <var>True</var> if the control was successfully undocked 
+and re-docked to a floating dock site.
+</p>
 </descr>
+<seealso>
+<link id="TControl.Parent"/>
+<link id="TControl.HostDockSite"/>
+<link id="TControl.CreateFloatingDockSite"/>
+<link id="TControl.Dock"/>
+<link id="TWinControl.DoUndock"/>
+<link id="TWinControl.DoUndockClientMsg"/>
+</seealso>
 </element>
 <element name="TControl.ManualFloat.Result">
 <short><b>True</b> if successfully floated.</short>
@@ -12817,7 +13242,10 @@ floating host site.
 </short>
 </element>
 <element name="TControl.ManualFloat.KeepDockSiteSize">
-<short/>
+<short>
+<b>True</b> if the undocked control keeps its docked dimensions. The default 
+value is <b>True</b>.
+</short>
 </element>
 
 <element name="TControl.ReplaceDockedControl">
@@ -12878,7 +13306,9 @@ Parent has a parent form with a value different than the one in Parent.
 </seealso>
 </element>
 <element name="TControl.Docked.Result">
-<short/>
+<short>
+True if the Parent control is also the HostDockSite for the control.
+</short>
 </element>
 
 <element name="TControl.Dragging">
@@ -13206,7 +13636,10 @@ Returns a string with a debugging message for delayed auto-size requests.
 <seealso/>
 </element>
 <element name="TControl.AutoSizeDelayedReport.Result">
-<short/>
+<short>
+Formatted message with flag, counter, or property values related to delayed 
+auto-sizing in the control.
+</short>
 </element>
 
 <element name="TControl.AutoSizeDelayedHandle">
@@ -13222,7 +13655,9 @@ A TControl instance does not have a handle, so it needs a parent control.
 <seealso/>
 </element>
 <element name="TControl.AutoSizeDelayedHandle.Result">
-<short/>
+<short>
+<b>True</b> if AutoSize should be skipped or delayed because of its handle.
+</short>
 </element>
 
 <element name="TControl.AnchorToNeighbour">
@@ -13315,15 +13750,27 @@ row height (or column width) from <var>Sibling</var>.
 </element>
 
 <element name="TControl.AnchorAsAlign">
-<short>Anchor to Parent, following same rules as for Align.</short>
-<descr/>
+<short>
+Anchor to the Parent using the Align value for the control.
+</short>
+<descr>
+<p>
+The anchor control used in the TAnchorSide instances is always the Parent 
+control.
+</p>
+</descr>
 <seealso/>
 </element>
 <element name="TControl.AnchorAsAlign.TheAlign">
-<short/>
+<short>
+Indicates the position in AnchorAlign with the anchored edges for the 
+alignment value.
+</short>
 </element>
 <element name="TControl.AnchorAsAlign.Space">
-<short/>
+<short>
+Border spacing between the control and its anchored edges.
+</short>
 </element>
 
 <element name="TControl.AnchorClient">
@@ -13339,14 +13786,29 @@ row height (or column width) from <var>Sibling</var>.
 <short>The number of controls anchored to the current control.</short>
 </element>
 <element name="TControl.AnchoredControlCount.Result">
-<short/>
+<short>
+Number of controls anchored to the current control.
+</short>
 </element>
 
 <element name="TControl.AnchoredControls">
-<short>The list of controls which anchored to the current control.</short>
+<short>
+Provides indexed access to controls which are anchored to the current control 
+by their ordinal position.
+</short>
+<descr>
+<p>
+<var>AnchoredControls</var> is a read-only indexed <var>TControl</var> 
+property which allows access to controls which which are anchored to the 
+control instance. Anchored controls are indexed by their ordinal position in 
+the list used to store the values.
+</p>
+</descr>
 </element>
 <element name="TControl.AnchoredControls.Index">
-<short/>
+<short>
+Ordinal position for the anchored control in the property value.
+</short>
 </element>
 
 <element name="TControl.SetBounds">
@@ -13490,10 +13952,14 @@ more information.
 </descr>
 </element>
 <element name="TControl.GetPreferredSize.PreferredWidth">
-<short/>
+<short>
+Default width for a new instance of the control.
+</short>
 </element>
 <element name="TControl.GetPreferredSize.PreferredHeight">
-<short/>
+<short>
+Default height for a new instance of the control.
+</short>
 </element>
 <element name="TControl.GetPreferredSize.Raw">
 <short>
@@ -13542,7 +14008,10 @@ Width and GetPreferredSize.
 </descr>
 </element>
 <element name="TControl.GetDefaultWidth.Result">
-<short/>
+<short>
+Default width for the control when preferred size is not defined and it is 
+anchored or auto-sized.
+</short>
 </element>
 
 <element name="TControl.GetDefaultHeight">
@@ -13554,8 +14023,10 @@ Height and GetPreferredSize.
 </descr>
 </element>
 <element name="TControl.GetDefaultHeight.Result">
-<short/>
-</element>
+<short>
+Default width for the control when preferred size is not defined and it is 
+anchored or auto-sized.
+</short></element>
 
 <element name="TControl.GetDefaultColor">
 <short>Gets the default color for the control.</short>
@@ -13754,18 +14225,28 @@ developers.
 
 <element name="TControl.UpdateBaseBounds">
 <short>
-Update the base boundaries for the control; essential if there has been a lot 
-of re-sizing.
+Updates the base bounds for the control; essential if there has been a lot of 
+resizing.
 </short>
 </element>
 <element name="TControl.UpdateBaseBounds.StoreBounds">
-<short/>
+<short>
+<b>True</b> if the BoundsRect is retrieved and used as the value in 
+BaseBounds. <b>False</b> if the existing value in BaseBounds is used.
+</short>
 </element>
 <element name="TControl.UpdateBaseBounds.StoreParentClientSize">
-<short/>
+<short>
+<b>True</b> if the ClientWidth and ClientHeight in the Parent control is 
+retrieved and used. <b>False</b> if the existing value in BaseParentClientSize 
+is used.
+</short>
 </element>
 <element name="TControl.UpdateBaseBounds.UseLoadedValues">
-<short/>
+<short>
+<b>True</b> if the client size retrieved during LCL component streaming is 
+used in the BaseParentClientSize. <b>False</b> if the calculated value is used.
+</short>
 </element>
 
 <element name="TControl.BaseBounds">
@@ -13833,7 +14314,9 @@ debugger.
 </descr>
 </element>
 <element name="TControl.WriteLayoutDebugReport.Prefix">
-<short/>
+<short>
+Prefix value inserted at the start of the first line in the debug report.
+</short>
 </element>
 
 <element name="TControl.AutoAdjustLayout">
@@ -13842,12 +14325,12 @@ Applies an automatic adjustment layout policy to the control.
 </short>
 <descr>
 <p>
-AutoAdjustLayout can be used to alter PPI settings, scale the control, or 
-apply changes to height or width without scaling.
+<var>AutoAdjustLayout</var> can be used to alter PPI settings, scale the 
+control, or apply changes to height or width without scaling.
 </p>
 <p>
-AMode indicates the layout policy applied in the method, and the actions 
-performed to achieve the task.
+<var>AMode</var> indicates the layout policy applied in the method, and the 
+actions performed to achieve the task.
 </p>
 <p>
 Scaling factors are calculated (when needed) for both horizontal (X-axis) and 
@@ -13862,19 +14345,34 @@ DoAutoAdjustLayout to apply the scaling factors or size changes.
 <seealso/>
 </element>
 <element name="TControl.AutoAdjustLayout.AMode">
-<short/>
+<short>
+Layout policy applied in the method. Controls the actions performed to scale 
+and / or position the control.
+</short>
 </element>
 <element name="TControl.AutoAdjustLayout.AFromPPI">
-<short/>
+<short>
+Design-time Pixels per Inch setting. Used to derive scaling factors applied in 
+the method.
+</short>
 </element>
 <element name="TControl.AutoAdjustLayout.AToPPI">
-<short/>
+<short>
+Run-time Pixels per Inch setting for the current monitor. Used to derive 
+scaling factors applied in the method.
+</short>
 </element>
 <element name="TControl.AutoAdjustLayout.AOldFormWidth">
-<short/>
+<short>
+Form width prior to applying the auto-adjustment policy. Used to calculate an 
+x-axis scaling factor applied in the method.
+</short>
 </element>
 <element name="TControl.AutoAdjustLayout.ANewFormWidth">
-<short/>
+<short>
+Form width after the auto-adjustment policy is applied. Used to calculate an 
+x-axis scaling factor applied in the method.
+</short>
 </element>
 
 <element name="TControl.ShouldAutoAdjust">
@@ -13900,7 +14398,9 @@ property has not been enabled.
 </element>
 
 <element name="TControl.FixDesignFontsPPI">
-<short>Corrects the font size for High-DPI-aware applications.</short>
+<short>
+Corrects the font size for High-DPI-aware applications.
+</short>
 <descr>
 <p>
 FixDesignFontsPPI is a method used to adjust the font size when the 
@@ -14124,7 +14624,10 @@ Ends a drag operation by notifying the drag manager.
 <seealso/>
 </element>
 <element name="TControl.EndDrag.Drop">
-<short/>
+<short>
+<b>True</b> when a drag and drop operation is being completed. <b>False</b> 
+if a drag and dock operation is ending.
+</short>
 </element>
 
 <element name="TControl.BringToFront">
@@ -14824,16 +15327,26 @@ Converts absolute screen coordinates to control-relative coordinates.
 </seealso>
 </element>
 <element name="TControl.ScreenToControl.Result">
-<short/>
+<short>
+TPoint instance with the client coordinates relative to its Parent control.
+</short>
 </element>
 <element name="TControl.ScreenToControl.APoint">
-<short/>
+<short>
+Screen coordinates converted to client coordinates in the method.
+</short>
 </element>
 
 <element name="TControl.ControlToScreen">
 <short>
 Converts control-relative coordinates to absolute screen coordinates.
 </short>
+<descr>
+<p>
+Screen coordinates in the return value are determined by adding the values in 
+APoint and the ClientOrigin for the control.
+</p>
+</descr>
 <seealso>
 <link id="TControl.ControlOrigin"/>
 <link id="TControl.ScreenToControl"/>
@@ -14842,10 +15355,15 @@ Converts control-relative coordinates to absolute screen coordinates.
 </seealso>
 </element>
 <element name="TControl.ControlToScreen.Result">
-<short/>
+<short>
+TPoint instance with the Screen coordinates for the specified control coordinates.
+</short>
 </element>
 <element name="TControl.ControlToScreen.APoint">
-<short/>
+<short>
+TPoint instance with the control-relative coordinates converted in the 
+method.
+</short>
 </element>
 
 <element name="TControl.ClientToParent">
@@ -15026,22 +15544,30 @@ should be ignored.
 </descr>
 <seealso>
 <link id="TControl.IsVisible"/>
+<link id="TControl.ControlState"/>
+<link id="TControl.Parent"/>
+<link id="#rtl.classes.TComponent.ComponentState">TComponent.ComponentState</link>
 </seealso>
 </element>
 <element name="TControl.HandleObjectShouldBeVisible.Result">
-<short/>
+<short>
+<b>True</b> if the control is visible and needs a handle object.
+</short>
 </element>
 
 <element name="TControl.ParentDestroyingHandle">
 <short>
-Returns <b>True</b> if any parent is destroying its Handle (or handles for 
-its children).
+Returns <b>True</b> if any parent control is destroying its Handle (or handles 
+for its children).
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TControl.ParentDestroyingHandle.Result">
-<short/>
+<short>
+Returns <b>True</b> if any parent control is destroying its Handle (or handles 
+for its children).
+</short>
 </element>
 
 <element name="TControl.ParentHandlesAllocated">
@@ -15053,7 +15579,10 @@ destroyed.
 <seealso/>
 </element>
 <element name="TControl.ParentHandlesAllocated.Result">
-<short/>
+<short>
+Returns <b>True</b> if all Parents have allocated handles, and are not being 
+destroyed.
+</short>
 </element>
 
 <element name="TControl.InitiateAction">
@@ -15174,7 +15703,9 @@ functionality needed for derived controls.
 </seealso>
 </element>
 <element name="TControl.RemoveAllHandlersOfObject.AnObject">
-<short/>
+<short>
+Object (TControl) associated with the handler routine removed in the method.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnResize">
@@ -15249,10 +15780,16 @@ Adds or inserts the specified <var>OnVisibleChanging</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnVisibleChanging.OnVisibleChangingEvent">
-<short/>
+<short>
+TNotifyEvent handler routine added in the method.
+</short>
 </element>
 <element name="TControl.AddHandlerOnVisibleChanging.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers for the chtOnVisibleChanging type. <b>False</b> if the routine is 
+appended to the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnVisibleChanging">
@@ -15263,7 +15800,10 @@ Removes the specified <var>OnVisibleChanging</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnVisibleChanging.OnVisibleChangingEvent">
-<short/>
+<short>
+TNotifyEvent handler routine removed from the chtOnVisibleChanging handler 
+type.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnVisibleChanged">
@@ -15274,10 +15814,16 @@ Adds or inserts the specified <var>OnVisibleChanged</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnVisibleChanged.OnVisibleChangedEvent">
-<short/>
+<short>
+TNotifyEvent handler routine added in the method.
+</short>
 </element>
 <element name="TControl.AddHandlerOnVisibleChanged.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers for the chtOnVisibleChanged type. <b>False</b> if the routine is 
+appended to the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnVisibleChanged">
@@ -15288,7 +15834,10 @@ Removes the specified <var>OnVisibleChanged</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnVisibleChanged.OnVisibleChangedEvent">
-<short/>
+<short>
+TNotifyEvent handler routine removed from the chtOnVisibleChanged handler 
+type.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnEnabledChanging">
@@ -15299,10 +15848,16 @@ Adds the specified OnEnabledChanging handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnEnabledChanging.OnEnabledChangingEvent">
-<short/>
+<short>
+TNotifyEvent handler routine added in the method.
+</short>
 </element>
 <element name="TControl.AddHandlerOnEnabledChanging.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers for the chtOnVisibleChanging type. <b>False</b> if the routine is 
+appended to the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnEnabledChanging">
@@ -15313,7 +15868,10 @@ Removes the specified OnEnabledChanging event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnEnabledChanging.OnEnabledChangingEvent">
-<short/>
+<short>
+TNotifyEvent handler routine removed from the chtOnEnabledChanging handler 
+type.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnEnabledChanged">
@@ -15322,10 +15880,16 @@ Removes the specified OnEnabledChanging event handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnEnabledChanged.OnEnabledChangedEvent">
-<short/>
+<short>
+TNotifyEvent handler routine added in the method.
+</short>
 </element>
 <element name="TControl.AddHandlerOnEnabledChanged.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers for the chtOnEnabledChanged type. <b>False</b> if the routine is 
+appended to the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnEnabledChanged">
@@ -15336,7 +15900,10 @@ Removes the specified <var>OnEnabledChanged</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnEnabledChanged.OnEnabledChangedEvent">
-<short/>
+<short>
+TNotifyEvent handler routine removed from the chtOnEnabledChanged handler 
+type.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnKeyDown">
@@ -15345,10 +15912,16 @@ Removes the specified <var>OnEnabledChanged</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnKeyDown.OnKeyDownEvent">
-<short/>
+<short>
+TKeyEvent handler routine added to the chtOnKeyDown handler type.
+</short>
 </element>
 <element name="TControl.AddHandlerOnKeyDown.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers for the chtOnKeyDown type. <b>False</b> if the routine is appended to 
+the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnKeyDown">
@@ -15357,7 +15930,10 @@ Removes the specified <var>OnEnabledChanged</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnKeyDown.OnKeyDownEvent">
-<short/>
+<short>
+TKeyEvent handler routine removed from the list of handlers for the 
+chtOnKeyDown handler type.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnBeforeDestruction">
@@ -15368,10 +15944,16 @@ Adds or inserts the specified <var>OnBeforeDestruction</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnBeforeDestruction.OnBeforeDestructionEvent">
-<short/>
+<short>
+TNotifyEvent handler routine added to the list of handlers for the 
+chtOnBeforeDestruction handler type.
+</short>
 </element>
 <element name="TControl.AddHandlerOnBeforeDestruction.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers. <b>False</b> if the routine is appended to the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnBeforeDestruction">
@@ -15382,7 +15964,10 @@ Removes the specified <var>OnBeforeDestruction</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnBeforeDestruction.OnBeforeDestructionEvent">
-<short/>
+<short>
+TNotifyEvent handler routine removed from the list for the 
+chtOnBeforeDestruction handler type.
+</short>
 </element>
 
 <element name="TControl.AddHandlerOnMouseWheel">
@@ -15393,10 +15978,16 @@ Adds or inserts the specified <var>OnMouseWheel</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.AddHandlerOnMouseWheel.OnMouseWheelEvent">
-<short/>
+<short>
+TMouseWheelEvent handler routine added to the list for the chtOnMouseWheel 
+handler type.
+</short>
 </element>
 <element name="TControl.AddHandlerOnMouseWheel.AsFirst">
-<short/>
+<short>
+<b>True</b> if the routine is inserted as the first handler in the list of 
+handlers. <b>False</b> if the routine is appended to the list.
+</short>
 </element>
 
 <element name="TControl.RemoveHandlerOnMouseWheel">
@@ -15405,11 +15996,17 @@ Adds or inserts the specified <var>OnMouseWheel</var> event handler.
 <seealso/>
 </element>
 <element name="TControl.RemoveHandlerOnMouseWheel.OnMouseWheelEvent">
-<short/>
+<short>
+TMouseWheelEvent handler routine removed from the list for the chtOnMouseWheel 
+handler type.
+</short>
 </element>
 
 <element name="TControl.AccessibleName">
-<short>Contains the accessible name for the control.</short>
+<short>
+Contains the accessible name for the control, like the value for its Caption 
+or Name property.
+</short>
 <descr/>
 <seealso/>
 </element>
@@ -15983,10 +16580,34 @@ preferred size is changed, and during scaling operations.
 </element>
 
 <element name="TControl.ControlOrigin">
-<short>The top, left pixel of the control in screen coordinates.</short>
-<descr/>
+<short>
+The top, left pixel for the control in screen coordinates.
+</short>
+<descr>
+<p>
+<var>ControlOrigin</var> is a read-only <var>TPoint</var> property with the 
+screen-relative coordinates where the control is located.
+</p>
+<p>
+The X and Y members in the property represent the Left and Top coordinates for 
+the control after they are converted to screen coordinates. The values are 
+derived by adding the TPoint values for the Left and Top coordinates to the 
+ClientOrigin property for the Parent control. The return value contains the 
+unmodified values in Left and Top when a Parent control has not been assigned.
+</p>
+<p>
+ControlOrigin is used to implement the ScreenToControl and ControlToScreen 
+methods.
+</p>
+</descr>
 <seealso>
+<link id="TControl.Left"/>
+<link id="TControl.Top"/>
+<link id="TControl.Parent"/>
 <link id="TControl.ClientOrigin"/>
+<link id="TControl.ControlToScreen"/>
+<link id="TControl.ScreenToControl"/>
+<link id="TControl.ScreenToClient"/>
 <link id="TControl.BoundsRect"/>
 </seealso>
 </element>
@@ -16477,7 +17098,7 @@ not docked.
 
 <element name="TControl.LRDockWidth">
 <short>
-The Width when last docked, with siblings to the left or right.
+The Width when last docked with siblings to the left or right.
 </short>
 <descr/>
 <seealso/>
@@ -16485,7 +17106,7 @@ The Width when last docked, with siblings to the left or right.
 
 <element name="TControl.TBDockHeight">
 <short>
-The Height when last docked, with siblings above or below.
+The Height when last docked with siblings above or below.
 </short>
 <descr/>
 <seealso/>
@@ -16509,7 +17130,7 @@ The Height when last docked, with siblings above or below.
 <seealso/>
 </element>
 <element name="TControl.UseRightToLeftAlignment.Result">
-<short/>
+<short><b>True</b> when BiDiMode is bdRightToLeft.</short>
 </element>
 
 <element name="TControl.UseRightToLeftReading">
@@ -16518,7 +17139,7 @@ The Height when last docked, with siblings above or below.
 <seealso/>
 </element>
 <element name="TControl.UseRightToLeftReading.Result">
-<short/>
+<short><b>True</b> when BiDiMode is not bdLeftToRight.</short>
 </element>
 
 <element name="TControl.UseRightToLeftScrollBar">
@@ -16529,7 +17150,9 @@ The Height when last docked, with siblings above or below.
 <seealso/>
 </element>
 <element name="TControl.UseRightToLeftScrollBar.Result">
-<short/>
+<short>
+<b>True</b> when BiDiMode indicates right-to-left reading is in use.
+</short>
 </element>
 
 <element name="TControl.IsRightToLeft">
@@ -16538,7 +17161,7 @@ The Height when last docked, with siblings above or below.
 <seealso/>
 </element>
 <element name="TControl.IsRightToLeft.Result">
-<short/>
+<short><b>True</b> when BiDiMode is not bdLeftToRight.</short>
 </element>
 
 <element name="TControl.BiDiMode">
@@ -16699,7 +17322,7 @@ value for the property is crDefault.
 </p>
 <p>
 Changing the value for the property causes a CM_CURSORCHANGED message to be 
-performed to update the control. The value is applied ar run-time when the 
+performed to update the control. The value is applied at run-time when the 
 CMCursorChanged method handles the control message.
 </p>
 <p>
@@ -17159,7 +17782,7 @@ Arranges controls in columns, from top to bottom and then left to right.
 <p>
 <var>TControlChildSizing</var> is a <var>TPersistent</var> descendant which 
 provides properties and methods used to layout, align, and resize child 
-controls relative to their parent. Properties are provide which define the 
+controls relative to their parent. Properties are provided which define the 
 horizontal and vertical spacing between controls, the preferred direction 
 controls are aligned, and whether controls are scaled to fit in the parent 
 control.
@@ -17188,56 +17811,26 @@ in the properties.
 <element name="TControlChildSizing.FShrinkVertical"/>
 <element name="TControlChildSizing.FTopBottomSpacing"/>
 <element name="TControlChildSizing.FVerticalSpacing"/>
-
-<element link="#lcl.controls.TControlChildSizing.ControlsPerLine" name="TControlChildSizing.SetControlsPerLine"/>
-<element name="TControlChildSizing.SetControlsPerLine.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.EnlargeHorizontal" name="TControlChildSizing.SetEnlargeHorizontal"/>
-<element name="TControlChildSizing.SetEnlargeHorizontal.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.EnlargeVertical" name="TControlChildSizing.SetEnlargeVertical"/>
-<element name="TControlChildSizing.SetEnlargeVertical.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.HorizontalSpacing" name="TControlChildSizing.SetHorizontalSpacing"/>
-<element name="TControlChildSizing.SetHorizontalSpacing.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.Layout" name="TControlChildSizing.SetLayout"/>
-<element name="TControlChildSizing.SetLayout.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.LeftRightSpacing" name="TControlChildSizing.SetLeftRightSpacing"/>
-<element name="TControlChildSizing.SetLeftRightSpacing.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.ShrinkHorizontal" name="TControlChildSizing.SetShrinkHorizontal"/>
-<element name="TControlChildSizing.SetShrinkHorizontal.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.ShrinkVertical" name="TControlChildSizing.SetShrinkVertical"/>
-<element name="TControlChildSizing.SetShrinkVertical.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.TopBottomSpacing" name="TControlChildSizing.SetTopBottomSpacing"/>
-<element name="TControlChildSizing.SetTopBottomSpacing.AValue">
-<short/>
-</element>
-
-<element link="#lcl.controls.TControlChildSizing.VerticalSpacing" name="TControlChildSizing.SetVerticalSpacing"/>
-<element name="TControlChildSizing.SetVerticalSpacing.AValue">
-<short/>
-</element>
+<element name="TControlChildSizing.SetControlsPerLine" link="#lcl.controls.TControlChildSizing.ControlsPerLine"/>
+<element name="TControlChildSizing.SetControlsPerLine.AValue"/>
+<element name="TControlChildSizing.SetEnlargeHorizontal" link="#lcl.controls.TControlChildSizing.EnlargeHorizontal"/>
+<element name="TControlChildSizing.SetEnlargeHorizontal.AValue"/>
+<element name="TControlChildSizing.SetEnlargeVertical" link="#lcl.controls.TControlChildSizing.EnlargeVertical"/>
+<element name="TControlChildSizing.SetEnlargeVertical.AValue"/>
+<element name="TControlChildSizing.SetHorizontalSpacing" link="#lcl.controls.TControlChildSizing.HorizontalSpacing"/>
+<element name="TControlChildSizing.SetHorizontalSpacing.AValue"/>
+<element name="TControlChildSizing.SetLayout" link="#lcl.controls.TControlChildSizing.Layout"/>
+<element name="TControlChildSizing.SetLayout.AValue"/>
+<element name="TControlChildSizing.SetLeftRightSpacing" link="#lcl.controls.TControlChildSizing.LeftRightSpacing"/>
+<element name="TControlChildSizing.SetLeftRightSpacing.AValue"/>
+<element name="TControlChildSizing.SetShrinkHorizontal" link="#lcl.controls.TControlChildSizing.ShrinkHorizontal"/>
+<element name="TControlChildSizing.SetShrinkHorizontal.AValue"/>
+<element name="TControlChildSizing.SetShrinkVertical" link="#lcl.controls.TControlChildSizing.ShrinkVertical"/>
+<element name="TControlChildSizing.SetShrinkVertical.AValue"/>
+<element name="TControlChildSizing.SetTopBottomSpacing" link="#lcl.controls.TControlChildSizing.TopBottomSpacing"/>
+<element name="TControlChildSizing.SetTopBottomSpacing.AValue"/>
+<element name="TControlChildSizing.SetVerticalSpacing" link="#lcl.controls.TControlChildSizing.VerticalSpacing"/>
+<element name="TControlChildSizing.SetVerticalSpacing.AValue"/>
 
 <element name="TControlChildSizing.Change">
 <short>
@@ -17342,48 +17935,134 @@ class instance.
 </element>
 
 <element name="TControlChildSizing.SetGridSpacing">
-<short>Set all spacing to the same value.</short>
+<short>
+Sets all spacing in the class instance to the specified value.
+</short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="TControlChildSizing.LeftRightSpacing"/>
+<link id="TControlChildSizing.TopBottomSpacing"/>
+<link id="TControlChildSizing.HorizontalSpacing"/>
+<link id="TControlChildSizing.VerticalSpacing"/>
+</seealso>
 </element>
 <element name="TControlChildSizing.SetGridSpacing.Spacing">
-<short/>
-
+<short>
+Integer value applied to each of the spacing properties.
+</short>
 </element>
+
 <element name="TControlChildSizing.Control">
-<short>The <var>Control</var> to which childsizing applies.</short>
-<descr/>
-<seealso/>
+<short>
+The <var>Control</var> where the class instance is used.
+</short>
+<descr>
+<p>
+The value for the property is passed as an argument to the Create constructor.
+</p>
+</descr>
+<seealso>
+<link id="TControlChildSizing.Create"/>
+</seealso>
 </element>
 
 <element name="TControlChildSizing.ControlsPerLine">
-<short>Number of controls per line.</short>
+<short>The number of controls per line.</short>
 <descr/>
 <seealso/>
 </element>
 
 <element name="TControlChildSizing.EnlargeHorizontal">
-<short>Various ways to fit controls into the available Width.</short>
-<descr/>
-<seealso/>
+<short>
+Indicates how child controls are expanded or aligned horizontally in the 
+parent Control.
+</short>
+<descr>
+<p>
+<var>EnlargeHorizontal</var> is a <var>TChildControlResizeStyle</var> property 
+which indicates how child controls are expanded or aligned horizontally in the 
+parent Control.
+</p>
+<p>
+The default value for the property is crsAnchorAligning, and indicates that 
+Anchors and Align work like Delphi.
+</p>
+<p>
+For example: when the Anchors property of the control is [akLeft] it means 
+fixed distance between left border of parent's client area. [akRight] means 
+fixed distance between right border of the control and the right border of the 
+parent's client area. When the parent is resized the child is moved to keep 
+the distance. [akLeft,akRight] means fixed distance to left border and fixed 
+distance to right border. When the parent is resized, the controls width is 
+changed (resized) to keep the left and right distance.
+</p>
+<p>
+See <link id="TChildControlResizeStyle"/> for more information about the 
+values for the property and their meanings.
+</p>
+</descr>
+<seealso>
+<link id="TControlChildSizing.Control"/>
+<link id="TControlChildSizing.EnlargeVertical"/>
+<link id="TChildControlResizeStyle"/>
+</seealso>
 </element>
 
 <element name="TControlChildSizing.EnlargeVertical">
-<short>Various ways to fit controls into the available Height.</short>
+<short>
+Indicates how child controls are expanded or aligned vertically in the parent 
+Control.
+</short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="TChildControlResizeStyle"/>
+</seealso>
 </element>
 
 <element name="TControlChildSizing.HorizontalSpacing">
-<short>Minimum space between children.</short>
+<short>
+Minimum space between children.
+</short>
 <descr/>
 <seealso/>
 </element>
 
 <element name="TControlChildSizing.Layout">
-<short>Allows to also arrange the child controls in rows or columns.</short>
-<descr/>
-<seealso/>
+<short>
+Indicates the layout direction when child controls are arranged into rows and 
+/ or columns.
+</short>
+<descr>
+<p>
+<var>Layout</var> is a <var>TControlChildrenLayout</var> property which 
+indicates the layout behavior for adjacent controls in the parent Control. 
+Layout is used when methods in TControl (and descendent classes) need to 
+arrange their child controls into columns or rows.
+</p>
+<p>
+The default value for the property is cclNone, and indicates that a layout 
+direction has not been specified. This causes the design-time positioning for 
+the child controls to be used. Use cclLeftToRightThenTopToBottom or 
+cclTopToBottomThenLeftToRight to layout child control in column / row order 
+using the BiDiMode settings for the Control.
+</p>
+<p>
+Changing the value for the property causes the Change method to be called to 
+realign child controls and signal the OnChange event handler (when assigned).
+</p>
+<p>
+Layout is used in TControl methods like WidthIsAnchored and HeightIsAnchored, and in the AlignControls method in TWinControl.
+</p>
+</descr>
+<seealso>
+<link id="TControlChildSizing.Change"/>
+<link id="TControlChildSizing.Control"/>
+<link id="TControlChildSizing.OnChange"/>
+<link id="TControl.HeightIsAnchored"/>
+<link id="TControl.WidthIsAnchored"/>
+<link id="TWinControl.AlignControls"/>
+<link id="TControlChildrenLayout"/>
+</seealso>
 </element>
 
 <element name="TControlChildSizing.LeftRightSpacing">
@@ -17737,12 +18416,16 @@ functions in <var>TWinControl</var>.
 </element>
 
 <element name="TWinControlEnumerator.GetEnumerator">
-<short>Gets the enumerator for the class.</short>
+<short>
+Returns the enumerator in the class instance (Self).
+</short>
 <descr/>
 <seealso/>
 </element>
 <element name="TWinControlEnumerator.GetEnumerator.Result">
-<short/>
+<short>
+Returns the enumerator in the class instance (Self).
+</short>
 </element>
 
 <element name="TWinControlEnumerator.MoveNext">
@@ -17757,9 +18440,25 @@ Moves to the next value using the ordering in effect for the enumerator.
 </element>
 
 <element name="TWinControlEnumerator.Current">
-<short>Gets the current value for the enumerator.</short>
-<descr/>
-<seealso/>
+<short>
+Contains the TControl instance which is the current value in the enumerator.
+</short>
+<descr>
+<p>
+<var>Current</var> is a read-only <var>TControl</var> property with the 
+current value in the enumerator. It represents one of the child controls in 
+the TWinControl instance passed as an argument to the Create constructor.
+</p>
+<p>
+Use MoveNext to move the enumerator to the next control in the order used for 
+the enumerator.
+</p>
+</descr>
+<seealso>
+<link id="TWinControlEnumerator.GetCurrent"/>
+<link id="TWinControlEnumerator.MoveNext"/>
+<link id="TWinControlEnumerator.Create"/>
+</seealso>
 </element>
 
 <element name="TWinControl">
@@ -17896,30 +18595,34 @@ Control which provides the relative position for the control and its children.
 Implements the storage specifier for the DoubleBuffered property.
 </short>
 <descr>
-<p>Contains <b>True</b> when a parent control has not enabled its 
-DoubleBuffered property.</p>
+<p>Contains <b>True</b> when the Parent control has not enabled its 
+DoubleBuffered property.
+</p>
 </descr>
 <seealso/>
 </element>
 <element name="TWinControl.DoubleBufferedIsStored.Result">
-<short/>
+<short>
+<b>True</b> when the Parent control has not enabled its DoubleBuffered 
+property.
+</short>
 </element>
 
-<element link="#lcl.controls.TWinControl.Brush" name="TWinControl.GetBrush"/>
+<element name="TWinControl.GetBrush" link="#lcl.controls.TWinControl.Brush"/>
 <element name="TWinControl.GetBrush.Result"/>
-<element link="#lcl.controls.TWinControl.Controls" name="TWinControl.GetControl"/>
+<element name="TWinControl.GetControl" link="#lcl.controls.TWinControl.Controls"/>
 <element name="TWinControl.GetControl.Result"/>
 <element name="TWinControl.GetControl.Index"/>
-<element link="#lcl.controls.TWinControl.ControlCount" name="TWinControl.GetControlCount"/>
+<element name="TWinControl.GetControlCount" link="#lcl.controls.TWinControl.ControlCount"/>
 <element name="TWinControl.GetControlCount.Result"/>
-<element link="#lcl.controls.TWinControl.DockClientCount" name="TWinControl.GetDockClientCount"/>
+<element name="TWinControl.GetDockClientCount" link="#lcl.controls.TWinControl.DockClientCount"/>
 <element name="TWinControl.GetDockClientCount.Result"/>
-<element link="#lcl.controls.TWinControl.DockClients" name="TWinControl.GetDockClients"/>
+<element name="TWinControl.GetDockClients" link="#lcl.controls.TWinControl.DockClients"/>
 <element name="TWinControl.GetDockClients.Result"/>
 <element name="TWinControl.GetDockClients.Index"/>
-<element link="#lcl.controls.TWinControl.Handle" name="TWinControl.GetHandle"/>
+<element name="TWinControl.GetHandle" link="#lcl.controls.TWinControl.Handle" />
 <element name="TWinControl.GetHandle.Result"/>
-<element link="#lcl.controls.TWinControl.IsResizing" name="TWinControl.GetIsResizing"/>
+<element name="TWinControl.GetIsResizing" link="#lcl.controls.TWinControl.IsResizing"/>
 <element name="TWinControl.GetIsResizing.Result"/>
 
 <element name="TWinControl.GetIsSpecialSubControl">
@@ -17933,11 +18636,11 @@ DoubleBuffered property.</p>
 <short>Value for the property.</short>
 </element>
 
-<element link="#lcl.controls.TWinControl.TabOrder" name="TWinControl.GetTabOrder"/>
+<element name="TWinControl.GetTabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
 <element name="TWinControl.GetTabOrder.Result"/>
 <element name="TWinControl.GetVisibleDockClientCount"/>
 <element name="TWinControl.GetVisibleDockClientCount.Result"/>
-<element link="#lcl.controls.TWinControl.ChildSizing" name="TWinControl.SetChildSizing"/>
+<element name="TWinControl.SetChildSizing" link="#lcl.controls.TWinControl.ChildSizing"/>
 <element name="TWinControl.SetChildSizing.AValue"/>
 
 <element name="TWinControl.SetDesignerDeleting">
@@ -17951,21 +18654,17 @@ DoubleBuffered property.</p>
 <short>New value for the DesignerDeleting property.</short>
 </element>
 
-<element link="#lcl.controls.TWinControl.DockSite" name="TWinControl.SetDockSite"/>
-<element name="TWinControl.SetDockSite.NewDockSite">
-<short/>
-</element>
-
-<element link="#lcl.controls.TWinControl.Handle" name="TWinControl.SetHandle"/>
+<element name="TWinControl.SetDockSite" link="#lcl.controls.TWinControl.DockSite"/>
+<element name="TWinControl.SetDockSite.NewDockSite"/>
+<element name="TWinControl.SetHandle" link="#lcl.controls.TWinControl.Handle"/>
 <element name="TWinControl.SetHandle.NewHandle"/>
-
-<element link="#lcl.controls.TWinControl.BorderWidth" name="TWinControl.SetBorderWidth"/>
+<element name="TWinControl.SetBorderWidth" link="#lcl.controls.TWinControl.BorderWidth"/>
 <element name="TWinControl.SetBorderWidth.Value"/>
 <element name="TWinControl.SetParentDoubleBuffered"/>
 <element name="TWinControl.SetParentDoubleBuffered.Value"/>
-<element link="#lcl.controls.TWinControl.ParentWindow" name="TWinControl.SetParentWindow"/>
+<element name="TWinControl.SetParentWindow" link="#lcl.controls.TWinControl.ParentWindow"/>
 <element name="TWinControl.SetParentWindow.AValue"/>
-<element link="#lcl.controls.TWinControl.TabOrder" name="TWinControl.SetTabOrder"/>
+<element name="TWinControl.SetTabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
 <element name="TWinControl.SetTabOrder.NewTabOrder"/>
 <element name="TWinControl.SetTabStop"/>
 <element name="TWinControl.SetTabStop.NewTabStop"/>
@@ -17984,7 +18683,7 @@ controls in Parent to be re-sequenced as needed.
 </p>
 <p>
 No actions are performed in the method when Parent is unassigned (contains 
-Nil).
+<b>Nil</b>).
 </p>
 </descr>
 <seealso/>
@@ -18123,10 +18822,14 @@ alignment and are visible.
 <short>List all controls with this alignment.</short>
 </element>
 <element name="TWinControl.CreateControlAlignList.AlignList">
-<short/>
+<short>
+TFPList instance populated in the method.
+</short>
 </element>
 <element name="TWinControl.CreateControlAlignList.StartControl">
-<short/>
+<short>
+TControl instance that is added as the first control in the align list.
+</short>
 </element>
 
 <element name="TWinControl.UpdateAlignIndex"/>
@@ -18209,10 +18912,24 @@ client rectangle for subsequent access.
 Returns the adjusted logical ClientRect, using the cached value when 
 available.
 </short>
-<descr/>
+<descr>
+<p>
+<var>GetAdjustedLogicalClientRect</var> is a method used to get the client 
+rectangle for the control, and adjust the values for any additional space 
+needed for the control. It calls the AdjustClientRectangle method to apply any 
+additional spacing required for borders, bevels, edges, indentation, etc. In 
+TWinControl, no additional space is required. Descendent classes may have 
+different requirements.
+</p>
+<p>
+GetAdjustedLogicalClientRect is used to implement the CheckSidePosition method 
+in TAnchorSide.
+</p>
+</descr>
 <seealso>
 <link id="TControl.ClientRect"/>
 <link id="TWinControl.AdjustClientRect"/>
+<link id="TAnchorSide.CheckSidePosition"/>
 <link id="TWinControlFlag"/>
 </seealso>
 </element>
@@ -18403,7 +19120,9 @@ parent form.
 </seealso>
 </element>
 <element name="TWinControl.CanTab.Result">
-<short/>
+<short>
+<b>True</b> if the control is eligible to receive input focus.
+</short>
 </element>
 
 <element name="TWinControl.IsClientHeightStored">
@@ -18524,7 +19243,7 @@ An empty implementation in the current LCL version.
 <short>Class name for the control added as a subclass.</short>
 </element>
 
-<element link="" name="TWinControl.DoConstraintsChange">
+<element name="TWinControl.DoConstraintsChange">
 <short>
 Notifies the widgetset class instance when Constraints are changed.
 </short>
@@ -18554,8 +19273,14 @@ Updates the size and extent of the control as well as its ClientRect.
 </short>
 <descr>
 <p>
-Changing the ClientRect here, to the most probable size, reduces unnecessary 
-resize messages.
+<var>DoSetBounds</var> is an overridden method in <var>TWinControl</var>. It 
+keeps a copy of the current Width and Height prior to calling the inherited 
+method to apply the argument values to the Left, Top, Width and Height 
+properties.
+</p>
+<p>
+It performs actions to adjust the CachedClientWidth and CachedClientHeight if the control flags do not indicate they are being loading or have already been 
+loaded for the control. Changing the ClientRect here, to the most probable size, reduces unnecessary resize messages.
 </p>
 <p>
 Normally, the ClientWidth / ClientHeight are adjusted automatically by the 
@@ -18568,19 +19293,31 @@ resize messages.
 </descr>
 <seealso>
 <link id="TControl.DoSetBounds"/>
+<link id="TControl.Left"/>
+<link id="TControl.Top"/>
+<link id="TControl.Width"/>
+<link id="TControl.Height"/>
 </seealso>
 </element>
 <element name="TWinControl.DoSetBounds.ALeft">
-<short/>
+<short>
+New value for the Left property in the control.
+</short>
 </element>
 <element name="TWinControl.DoSetBounds.ATop">
-<short/>
+<short>
+New value for the Top property in the control.
+</short>
 </element>
 <element name="TWinControl.DoSetBounds.AWidth">
-<short/>
+<short>
+New value for the Width property in the control.
+</short>
 </element>
 <element name="TWinControl.DoSetBounds.AHeight">
-<short/>
+<short>
+New value for the Height property in the control.
+</short>
 </element>
 
 <element name="TWinControl.DoAutoSize">
@@ -18710,11 +19447,14 @@ is theme- dependent, so it is passed as a parameter to the widgetset.
 </seealso>
 </element>
 <element name="TWinControl.CalculatePreferredSize.PreferredWidth">
-<short/>
+<short>
+Width used for new instances of the control.
+</short>
 </element>
 <element name="TWinControl.CalculatePreferredSize.PreferredHeight">
-<short/>
-</element>
+<short>
+Height used for new instances of the control.
+</short></element>
 <element name="TWinControl.CalculatePreferredSize.WithThemeSpace">
 <short>Indicates if additional space is reserved for theme services.</short>
 </element>
@@ -19138,7 +19878,9 @@ notifies the widgetset.
 <seealso/>
 </element>
 <element name="TWinControl.CMShowingChanged.Message">
-<short/>
+<short>
+Control message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.CMShowHintChanged">
@@ -19150,7 +19892,9 @@ notifies all child controls.
 <seealso/>
 </element>
 <element name="TWinControl.CMShowHintChanged.Message">
-<short/>
+<short>
+Control message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.CMVisibleChanged">
@@ -19163,7 +19907,9 @@ Handler for changed <link id="TControl.Visible">Visible</link> message.
 <seealso/>
 </element>
 <element name="TWinControl.CMVisibleChanged.Message">
-<short/>
+<short>
+Control message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.CMEnter">
@@ -19183,7 +19929,9 @@ Calls DoEnter to signal the OnEnter event handler (when assigned).
 </seealso>
 </element>
 <element name="TWinControl.CMEnter.Message">
-<short>Message handled in the method.</short>
+<short>
+Control message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.CMExit">
@@ -19203,7 +19951,9 @@ Calls DoExit to signal the OnExit event handler (when assigned).
 </seealso>
 </element>
 <element name="TWinControl.CMExit.Message">
-<short/>
+<short>
+Control message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMContextMenu">
@@ -19216,7 +19966,9 @@ eventually delegates handling to the affected child control.
 <seealso/>
 </element>
 <element name="TWinControl.WMContextMenu.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMEraseBkgnd">
@@ -19229,7 +19981,9 @@ Erases the background, when required.
 </seealso>
 </element>
 <element name="TWinControl.WMEraseBkgnd.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMNotify">
@@ -19238,7 +19992,9 @@ Erases the background, when required.
 <seealso/>
 </element>
 <element name="TWinControl.WMNotify.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMSetFocus">
@@ -19247,7 +20003,9 @@ Erases the background, when required.
 <seealso/>
 </element>
 <element name="TWinControl.WMSetFocus.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMKillFocus">
@@ -19270,7 +20028,7 @@ being freed.
 </seealso>
 </element>
 <element name="TWinControl.WMKillFocus.Message">
-<short>Message examined in the method.</short>
+<short>Window message examined in the method.</short>
 </element>
 
 <element name="TWinControl.WMShowWindow">
@@ -19279,7 +20037,9 @@ being freed.
 <seealso/>
 </element>
 <element name="TWinControl.WMShowWindow.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMEnter">
@@ -19288,7 +20048,9 @@ being freed.
 <seealso/>
 </element>
 <element name="TWinControl.WMEnter.Message">
-<short>Message handled in the method.</short>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMExit">
@@ -19297,31 +20059,37 @@ being freed.
 <seealso/>
 </element>
 <element name="TWinControl.WMExit.Message">
-<short>Message handled in the method.</short>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMKeyDown">
 <short>
 Event handler for a key press not handled by the widget; Tries <link 
-id="TWinControl.DoRemainingKeyDown"/>
+id="TWinControl.DoRemainingKeyDown"/>.
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TWinControl.WMKeyDown.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMSysKeyDown">
 <short>
 Event handler for system key presses not handled by the widget; tries <link 
-id="TWinControl.DoRemainingKeyDown"/>
+id="TWinControl.DoRemainingKeyDown"/>.
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TWinControl.WMSysKeyDown.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMKeyUp">
@@ -19333,7 +20101,9 @@ id="TWinControl.DoRemainingKeyUp"/>.
 <seealso/>
 </element>
 <element name="TWinControl.WMKeyUp.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMSysKeyUp">
@@ -19345,7 +20115,9 @@ id="TWinControl.DoRemainingKeyUp"/>
 <seealso/>
 </element>
 <element name="TWinControl.WMSysKeyUp.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMChar">
@@ -19357,7 +20129,9 @@ itself.
 <seealso/>
 </element>
 <element name="TWinControl.WMChar.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMSysChar">
@@ -19369,7 +20143,9 @@ itself.
 <seealso/>
 </element>
 <element name="TWinControl.WMSysChar.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMPaint">
@@ -19380,7 +20156,10 @@ Manages paint requests, and handles double buffering.
 <notes>
 <note>
 This topic needs more detail.
-Which platforms define BUFFERED_WMPAINT?
+BUFFERED_WMPAINT is defined for the Windows platform only.
+Ensures that a valid device context is selected before calling the Windows API 
+routines like: CreateCompatibleBitmap and BitBlt. Ensures the device context 
+is freed after use.
 </note>
 </notes>
 <seealso/>
@@ -19417,7 +20196,9 @@ Handler for widget moved message; updates the Bounds.
 <seealso/>
 </element>
 <element name="TWinControl.WMMove.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMSize">
@@ -19435,7 +20216,9 @@ BoundsRealized member to avoid sending a size message back to the interface.
 <seealso/>
 </element>
 <element name="TWinControl.WMSize.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WMWindowPosChanged">
@@ -19456,7 +20239,9 @@ interface.
 <seealso/>
 </element>
 <element name="TWinControl.WMWindowPosChanged.Message">
-<short/>
+<short>
+Window message handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.CNKeyDown">
@@ -19468,7 +20253,7 @@ DoKeyDownBeforeInterface by default.
 <seealso/>
 </element>
 <element name="TWinControl.CNKeyDown.Message">
-<short/>
+<short>Message handled in the method.</short>
 </element>
 
 <element name="TWinControl.CNSysKeyDown">
@@ -19480,7 +20265,7 @@ DoKeyDownBeforeInterface by default.
 <seealso/>
 </element>
 <element name="TWinControl.CNSysKeyDown.Message">
-<short/>
+<short>Message handled in the method.</short>
 </element>
 
 <element name="TWinControl.CNKeyUp">
@@ -19492,7 +20277,7 @@ DoKeyUpBeforeInterface by default.
 <seealso/>
 </element>
 <element name="TWinControl.CNKeyUp.Message">
-<short/>
+<short>Message handled in the method.</short>
 </element>
 
 <element name="TWinControl.CNSysKeyUp">
@@ -19504,7 +20289,7 @@ DoKeyUpBeforeInterface by default.
 <seealso/>
 </element>
 <element name="TWinControl.CNSysKeyUp.Message">
-<short/>
+<short>Message handled in the method.</short>
 </element>
 
 <element name="TWinControl.CNChar">
@@ -19516,7 +20301,7 @@ it has handled the key press itself.
 <seealso/>
 </element>
 <element name="TWinControl.CNChar.Message">
-<short/>
+<short>Message handled in the method.</short>
 </element>
 
 <element name="TWinControl.DoDragMsg">
@@ -20146,7 +20931,7 @@ accelerator key to be defined using the Caption or Shortcut properties. Some
 examples include:
 </p>
 <ul>
-<li>TCustomGrid  / TGrid</li>
+<li>TCustomGrid / TGrid</li>
 <li>TCustomButton / TButton</li>
 <li>TCustomLabel / TLabel</li>
 <li>TCustomStaticText / TStaticText</li>
@@ -20366,10 +21151,8 @@ When <b>True</b> only a control with Parent set to Self is found.
 <seealso/>
 </element>
 
-<element link="#lcl.controls.TControl.RealGetText" name="TWinControl.RealGetText"/>
-<element name="TWinControl.RealGetText.Result">
-<short/>
-</element>
+<element name="TWinControl.RealGetText" link="#lcl.controls.TControl.RealGetText"/>
+<element name="TWinControl.RealGetText.Result"/>
 
 <element name="TWinControl.GetBorderStyle">
 <short>Gets the value for the BorderStyle property.</short>
@@ -20919,7 +21702,9 @@ message to the child controls.
 </seealso>
 </element>
 <element name="TWinControl.SetColor.Value">
-<short/>
+<short>
+New value for the Color property.
+</short>
 </element>
 
 <element name="TWinControl.SetChildZPosition">
@@ -21046,7 +21831,9 @@ Handles the following messages:
 </seealso>
 </element>
 <element name="TWinControl.WndProc.Message">
-<short/>
+<short>
+Message examined and handled in the method.
+</short>
 </element>
 
 <element name="TWinControl.WSSetText">
@@ -21085,10 +21872,10 @@ Indicates the border style displayed around the control.
 </short>
 <descr>
 <p>
-BorderStyle is a TBorderStyle property which indicates whether borders are 
-drawn for the control. bsSingle indicates that borders are drawn for the 
-control. The default value for the property is bsNone, and indicates that 
-borders are not drawn for the control.
+<var>BorderStyle</var> is a <var>TBorderStyle</var> property which indicates 
+the borders drawn for the control. bsSingle indicates that borders are drawn 
+for the control. The default value for the property is bsNone, and indicates 
+that borders are not drawn for the control.
 </p>
 <p>
 Changing the value for the property causes the widgetset class to be updated 
@@ -22209,10 +22996,8 @@ Scrolls the control (and all child controls) by the specified amounts.
 <short>Increment for Top.</short>
 </element>
 
-<element link="#lcl.controls.TControl.WriteLayoutDebugReport" name="TWinControl.WriteLayoutDebugReport"/>
-<element name="TWinControl.WriteLayoutDebugReport.Prefix">
-<short/>
-</element>
+<element name="TWinControl.WriteLayoutDebugReport" link="#lcl.controls.TControl.WriteLayoutDebugReport"/>
+<element name="TWinControl.WriteLayoutDebugReport.Prefix"/>
 
 <element name="TWinControl.AutoAdjustLayout">
 <short>
@@ -22471,13 +23256,9 @@ AControl is stored, or -1 when not found or Controls has not been assigned.
 <short>The child control to locate in the method.</short>
 </element>
 
-<element link="#lcl.controls.TWinControl.SetChildZPosition" name="TWinControl.SetControlIndex"/>
-<element name="TWinControl.SetControlIndex.AControl">
-<short/>
-</element>
-<element name="TWinControl.SetControlIndex.NewIndex">
-<short/>
-</element>
+<element name="TWinControl.SetControlIndex" link="#lcl.controls.TWinControl.SetChildZPosition"/>
+<element name="TWinControl.SetControlIndex.AControl"/>
+<element name="TWinControl.SetControlIndex.NewIndex"/>
 
 <element name="TWinControl.Focused">
 <short>Checks whether the control has focus.</short>
@@ -22552,10 +23333,8 @@ When <b>True</b>, only select a control that can receive the focus.
 </short>
 </element>
 
-<element link="#lcl.controls.TControl.SetTempCursor" name="TWinControl.SetTempCursor"/>
-<element name="TWinControl.SetTempCursor.Value">
-<short/>
-</element>
+<element name="TWinControl.SetTempCursor" link="#lcl.controls.TControl.SetTempCursor"/>
+<element name="TWinControl.SetTempCursor.Value"/>
 
 <element name="TWinControl.BroadCast">
 <short>
@@ -22625,10 +23404,8 @@ been handled.
 <short>The message to process.</short>
 </element>
 
-<element link="#lcl.controls.TControl.GetTextLen" name="TWinControl.GetTextLen"/>
-<element name="TWinControl.GetTextLen.Result">
-<short/>
-</element>
+<element name="TWinControl.GetTextLen" link="#lcl.controls.TControl.GetTextLen"/>
+<element name="TWinControl.GetTextLen.Result"/>
 
 <element name="TWinControl.Invalidate">
 <short>Schedules a repaint request.</short>
@@ -22696,8 +23473,8 @@ Tells the widgetset to add a Handle object representing the current control.
 <short>The TWinControlEnumerator instance.</short>
 </element>
 
-<element link="#lcl.controls.TControl.Repaint" name="TWinControl.Repaint"/>
-<element link="#lcl.controls.TControl.Update" name="TWinControl.Update"/>
+<element name="TWinControl.Repaint" link="#lcl.controls.TControl.Repaint"/>
+<element name="TWinControl.Update" link="#lcl.controls.TControl.Update"/>
 
 <element name="TWinControl.SetFocus">
 <short>
@@ -23267,7 +24044,7 @@ actual drawing operations for the control.
 <element name="TCustomControl.FCanvas"/>
 <element name="TCustomControl.FOnPaint"/>
 
-<element link="#lcl.lclclasses.TLCLComponent.WSRegisterClass" name="TCustomControl.WSRegisterClass"/>
+<element name="TCustomControl.WSRegisterClass" link="#lcl.lclclasses.TLCLComponent.WSRegisterClass"/>
 
 <element name="TCustomControl.WMPaint">
 <short>Handles LM_PAINT messages for the control.</short>
@@ -23545,18 +24322,18 @@ class.
 </seealso>
 </element>
 
-<element link="#lcl.imglist.TCustomImageList.AllocBy" name="TImageList.AllocBy"/>
-<element link="#lcl.imglist.TCustomImageList.BlendColor" name="TImageList.BlendColor"/>
-<element link="#lcl.imglist.TCustomImageList.BkColor" name="TImageList.BkColor"/>
-<element link="#lcl.imglist.TCustomImageList.DrawingStyle" name="TImageList.DrawingStyle"/>
-<element link="#lcl.imglist.TCustomImageList.Height" name="TImageList.Height"/>
-<element link="#lcl.imglist.TCustomImageList.ImageType" name="TImageList.ImageType"/>
-<element link="#lcl.imglist.TCustomImageList.Masked" name="TImageList.Masked"/>
-<element link="#lcl.imglist.TCustomImageList.Scaled" name="TImageList.Scaled"/>
-<element link="#lcl.imglist.TCustomImageList.ShareImages" name="TImageList.ShareImages"/>
-<element link="#lcl.imglist.TCustomImageList.Width" name="TImageList.Width"/>
-<element link="#lcl.imglist.TCustomImageList.OnChange" name="TImageList.OnChange"/>
-<element link="#lcl.imglist.TCustomImageList.OnGetWidthForPPI" name="TImageList.OnGetWidthForPPI"/>
+<element name="TImageList.AllocBy" link="#lcl.imglist.TCustomImageList.AllocBy"/>
+<element name="TImageList.BlendColor" link="#lcl.imglist.TCustomImageList.BlendColor"/>
+<element name="TImageList.BkColor" link="#lcl.imglist.TCustomImageList.BkColor"/>
+<element name="TImageList.DrawingStyle" link="#lcl.imglist.TCustomImageList.DrawingStyle"/>
+<element name="TImageList.Height" link="#lcl.imglist.TCustomImageList.Height"/>
+<element name="TImageList.ImageType" link="#lcl.imglist.TCustomImageList.ImageType"/>
+<element name="TImageList.Masked" link="#lcl.imglist.TCustomImageList.Masked"/>
+<element name="TImageList.Scaled" link="#lcl.imglist.TCustomImageList.Scaled"/>
+<element name="TImageList.ShareImages" link="#lcl.imglist.TCustomImageList.ShareImages"/>
+<element name="TImageList.Width" link="#lcl.imglist.TCustomImageList.Width"/>
+<element name="TImageList.OnChange" link="#lcl.imglist.TCustomImageList.OnChange"/>
+<element name="TImageList.OnGetWidthForPPI" link="#lcl.imglist.TCustomImageList.OnGetWidthForPPI"/>
 
 <element name="TControlPropertyStorage">
 <short>
@@ -23750,7 +24527,7 @@ DockManager can (and should) use its own class instead.
 <short>New value for the Top property.</short>
 </element>
 
-<element link="#lcl.controls.TDockZone.Width" name="TDockZone.SetWidth">
+<element name="TDockZone.SetWidth">
 <short>Sets the value for the Width property.</short>
 <descr/>
 <seealso>
@@ -24203,10 +24980,10 @@ would be docked via InsertControl.
 <seealso/>
 </element>
 
-<element link="#lcl.controls.TDockTree.DockSite" name="TDockTree.FDockSite"/>
-<element link="#lcl.controls.TDockTree.DockZoneClass" name="TDockTree.FDockZoneClass"/>
+<element name="TDockTree.FDockSite" link="#lcl.controls.TDockTree.DockSite"/>
+<element name="TDockTree.FDockZoneClass" link="#lcl.controls.TDockTree.DockZoneClass"/>
 <element name="TDockTree.FFlags"/>
-<element link="#lcl.controls.TDockTree.BeginUpdate" name="TDockTree.FUpdateCount"/>
+<element name="TDockTree.FUpdateCount" link="#lcl.controls.TDockTree.BeginUpdate"/>
 
 <element name="TDockTree.DeleteZone">
 <short>Destroys the zone and its child zones.</short>
@@ -24217,12 +24994,10 @@ would be docked via InsertControl.
 <short/>
 </element>
 
-<element link="#lcl.controls.TDockTree.DockSite" name="TDockTree.SetDockSite"/>
-<element name="TDockTree.SetDockSite.AValue">
-<short/>
-</element>
+<element name="TDockTree.SetDockSite" link="#lcl.controls.TDockTree.DockSite"/>
+<element name="TDockTree.SetDockSite.AValue"/>
 
-<element link="#lcl.controls.TDockTree.RootZone" name="TDockTree.FRootZone"/>
+<element name="TDockTree.FRootZone" link="#lcl.controls.TDockTree.RootZone"/>
 
 <element name="TDockTree.HitTest">
 <short>
@@ -24283,10 +25058,8 @@ UpdateAll is called from the <var>EndUpdate</var> method.
 </seealso>
 </element>
 
-<element link="#lcl.controls.TDockTree.DockZoneClass" name="TDockTree.SetDockZoneClass"/>
-<element name="TDockTree.SetDockZoneClass.AValue">
-<short/>
-</element>
+<element name="TDockTree.SetDockZoneClass" link="#lcl.controls.TDockTree.DockZoneClass"/>
+<element name="TDockTree.SetDockZoneClass.AValue"/>
 
 <element name="TDockTree.Create">
 <short>Constructor for the class instance.</short>
@@ -24380,13 +25153,9 @@ and its properties immediately.
 <short/>
 </element>
 
-<element link="#lcl.controls.TDockManager.GetControlBounds" name="TDockTree.GetControlBounds"/>
-<element name="TDockTree.GetControlBounds.AControl">
-<short/>
-</element>
-<element name="TDockTree.GetControlBounds.ControlBounds">
-<short/>
-</element>
+<element name="TDockTree.GetControlBounds" link="#lcl.controls.TDockManager.GetControlBounds"/>
+<element name="TDockTree.GetControlBounds.AControl"/>
+<element name="TDockTree.GetControlBounds.ControlBounds"/>
 
 <element name="TDockTree.InsertControl">
 <short>
@@ -24399,8 +25168,8 @@ specified by <var>InsertAt</var>.
 docked control, forcing a repaint of the container control if necessary.
 </p>
 <p>
-When <var>SetReplacingControl</var> has been called with a non-Nil Control 
-before, the dropped control only should replace that control.
+When <var>SetReplacingControl</var> has been called with a non-<b>Nil</b> 
+Control before, the dropped control only should replace that control.
 </p>
 <p>
 A tree docking manager organizes the docksite into layers of horizontal or 
@@ -24472,30 +25241,20 @@ the host docksite is not involved.
 <short/>
 </element>
 
-<element link="#lcl.controls.TDockManager.RemoveControl" name="TDockTree.RemoveControl"/>
-<element name="TDockTree.RemoveControl.AControl">
-<short/>
-</element>
+<element name="TDockTree.RemoveControl" link="#lcl.controls.TDockManager.RemoveControl"/>
+<element name="TDockTree.RemoveControl.AControl"/>
 
-<element link="#lcl.controls.TDockManager.SaveToStream" name="TDockTree.SaveToStream"/>
-<element name="TDockTree.SaveToStream.DestStream">
-<short/>
-</element>
+<element name="TDockTree.SaveToStream" link="#lcl.controls.TDockManager.SaveToStream"/>
+<element name="TDockTree.SaveToStream.DestStream"/>
 
-<element link="#lcl.controls.TDockManager.SetReplacingControl" name="TDockTree.SetReplacingControl"/>
-<element name="TDockTree.SetReplacingControl.AControl">
-<short/>
-</element>
+<element name="TDockTree.SetReplacingControl" link="#lcl.controls.TDockManager.SetReplacingControl"/>
+<element name="TDockTree.SetReplacingControl.AControl"/>
 
-<element link="#lcl.controls.TDockManager.ResetBounds" name="TDockTree.ResetBounds"/>
-<element name="TDockTree.ResetBounds.Force">
-<short/>
-</element>
+<element name="TDockTree.ResetBounds" link="#lcl.controls.TDockManager.ResetBounds"/>
+<element name="TDockTree.ResetBounds.Force"/>
 
-<element link="#lcl.controls.TDockManager.PaintSite" name="TDockTree.PaintSite"/>
-<element name="TDockTree.PaintSite.DC">
-<short/>
-</element>
+<element name="TDockTree.PaintSite" link="#lcl.controls.TDockManager.PaintSite"/>
+<element name="TDockTree.PaintSite.DC"/>
 
 <element name="TDockTree.DumpLayout">
 <short>Stores the layout in an file.</short>
@@ -24553,35 +25312,25 @@ Mouse global unit variable.
 </element>
 
 <element name="TMouse.FWheelScrollLines"/>
-
-<element link="#lcl.controls.TMouse.Capture" name="TMouse.SetCapture"/>
+<element name="TMouse.SetCapture" link="#lcl.controls.TMouse.Capture"/>
 <element name="TMouse.SetCapture.Value"/>
-
-<element link="#lcl.controls.TMouse.Capture" name="TMouse.GetCapture"/>
+<element name="TMouse.GetCapture" link="#lcl.controls.TMouse.Capture"/>
 <element name="TMouse.GetCapture.Result"/>
-
-<element link="#lcl.controls.TMouse.CursorPos" name="TMouse.GetCursorPos"/>
+<element name="TMouse.GetCursorPos" link="#lcl.controls.TMouse.CursorPos"/>
 <element name="TMouse.GetCursorPos.Result"/>
-
-<element link="#lcl.controls.TMouse.IsDragging" name="TMouse.GetIsDragging"/>
+<element name="TMouse.GetIsDragging" link="#lcl.controls.TMouse.IsDragging"/>
 <element name="TMouse.GetIsDragging.Result"/>
-
-<element link="#lcl.controls.TMouse.CursorPos" name="TMouse.SetCursorPos"/>
+<element name="TMouse.SetCursorPos" link="#lcl.controls.TMouse.CursorPos"/>
 <element name="TMouse.SetCursorPos.AValue"/>
-
-<element link="#lcl.controls.TMouse.WheelScrollLines" name="TMouse.GetWheelScrollLines"/>
+<element name="TMouse.GetWheelScrollLines" link="#lcl.controls.TMouse.WheelScrollLines"/>
 <element name="TMouse.GetWheelScrollLines.Result"/>
-
-<element link="#lcl.controls.TMouse.DragImmediate" name="TMouse.GetDragImmediate"/>
+<element name="TMouse.GetDragImmediate" link="#lcl.controls.TMouse.DragImmediate"/>
 <element name="TMouse.GetDragImmediate.Result"/>
-
-<element link="#lcl.controls.TMouse.DragImmediate" name="TMouse.SetDragImmediate"/>
+<element name="TMouse.SetDragImmediate" link="#lcl.controls.TMouse.DragImmediate"/>
 <element name="TMouse.SetDragImmediate.AValue"/>
-
-<element link="#lcl.controls.TMouse.DragThreshold" name="TMouse.GetDragThreshold"/>
+<element name="TMouse.GetDragThreshold" link="#lcl.controls.TMouse.DragThreshold"/>
 <element name="TMouse.GetDragThreshold.Result"/>
-
-<element link="#lcl.controls.TMouse.DragThreshold" name="TMouse.SetDragThreshold"/>
+<element name="TMouse.SetDragThreshold" link="#lcl.controls.TMouse.DragThreshold"/>
 <element name="TMouse.SetDragThreshold.AValue"/>
 
 <element name="TMouse.Capture">
@@ -24610,7 +25359,7 @@ The number of lines to scroll with every notch or unit on the mouse wheel
 
 <element name="TMouse.DragImmediate">
 <short>
-Does dragging start immediately (True), or only after a mouse move?
+Does dragging start immediately (<b>True</b>), or only after a mouse move?
 </short>
 <descr/>
 </element>
@@ -24634,7 +25383,10 @@ The default value is 5 (pixels).
 <var>AnchorAlign</var> is an array constant that contains elements with 
 <var>TAnchors</var> set values. Values in AnchorAlign are indexed by 
 <var>TAlign</var> enumeration values. This allows the TAlign value to 
-retrieve the set of Anchors used for the specified align option. For example:
+retrieve the set of Anchors used for the specified align option.
+</p>
+<p>
+For example:
 </p>
 <code>
 AControl.Align := AnchorAlign[alRight]; // contains [akRight, akTop, akBottom]
@@ -24687,7 +25439,7 @@ Not used in the current LCL version.
 <seealso/>
 </element>
 
-<element link="FindControlAtPosition" name="FindDragTarget">
+<element name="FindDragTarget">
 <short>Gets the drag target at the specified screen position.</short>
 <descr>
 <p>
@@ -24695,7 +25447,9 @@ Disabled controls <b>should</b> be excluded, but are not due to an bug in
 <var>FindControlAtPosition</var>.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="FindControlAtPosition"/>
+</seealso>
 </element>
 <element name="FindDragTarget.Result">
 <short>The control at Position; <b>Nil</b> if none.</short>
@@ -24777,7 +25531,7 @@ when a window is not found.
 <descr>
 <p>
 The result is very interface specific; use FindOwnerControl when Handle may 
-be a non-TWinControl handle
+be a non-TWinControl handle.
 </p>
 </descr>
 <seealso>
@@ -24817,18 +25571,27 @@ the implementation (meaning) of a parent handle.
 
 <element name="FindLCLControl">
 <short>
-Returns the TControl that currently is visible at a screen position.
+Returns the TControl currently visible at the specified screen position.
 </short>
 <descr>
+<p>
 The result is not reliable during resizing.
+</p>
 </descr>
 <seealso/>
 </element>
 <element name="FindLCLControl.Result">
-<short/>
+<short>
+Control visible at the specified screen coordinates. The active windowed 
+control (or form) is returned if a control is not found at the specified 
+position.
+</short>
 </element>
 <element name="FindLCLControl.ScreenPos">
-<short/>
+<short>
+TPoint instance with the screen coordinates for the control located in the 
+method.
+</short>
 </element>
 
 <element name="SendAppMessage" link="#LCL.LCLProc.SendApplicationMessage"/>
@@ -24960,7 +25723,8 @@ capture.
 </element>
 <element name="SetCaptureControl.Control">
 <short>
-TControl instance (or <b>Nil</b>) representing the control for the mouse capture.
+TControl instance (or <b>Nil</b>) representing the control for the mouse 
+capture.
 </short>
 </element>
 <element name="SetCaptureControl.AWinControl">
@@ -25934,7 +26698,7 @@ A.AnchorSide[akTop].Side:=asrCenter;
 A.AnchorSide[akTop].Control:=B;
 </code>
 <p>
-Or use this, it's equivalent:
+Or use this equivalent:
 </p>
 <code>
 A.AnchorSide[akBottom].Side:=asrCenter;

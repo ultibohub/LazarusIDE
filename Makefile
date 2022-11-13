@@ -3834,6 +3834,7 @@ cleanlaz: cleanide
 	$(MAKE) -C packager/registration clean
 	$(MAKE) -C lcl cleanall
 	$(MAKE) -C components clean
+	$(MAKE) -C ide/packages/idedebugger clean
 clean: cleanlaz
 	$(MAKE) -C . cleanlaz LCL_PLATFORM=nogui
 	$(MAKE) -C tools clean
@@ -3844,6 +3845,7 @@ purge:
 	$(MAKE) -C packager/registration distclean
 	$(MAKE) -C lcl distclean
 	$(MAKE) -C components distclean
+	$(MAKE) -C ide/packages/idedebugger distclean
 	$(MAKE) -C tools distclean
 	$(MAKE) -C components/chmhelp/lhelp distclean
 cleanall: purge
@@ -3885,6 +3887,7 @@ else
 	$(MKDIR) $(LAZARUS_INSTALL_DIR)/units/$(FULL_TARGET)/gtk2
 	$(MKDIR) $(LAZARUS_INSTALL_DIR)/units/$(FULL_TARGET)/qt
 	$(MKDIR) $(LAZARUS_INSTALL_DIR)/units/$(FULL_TARGET)/qt5
+	$(MKDIR) $(LAZARUS_INSTALL_DIR)/units/$(FULL_TARGET)/qt6
 	$(MKDIR) $(LAZARUS_INSTALL_DIR)/components/synedit/design/languages
 endif
 ifndef BUILDDIR

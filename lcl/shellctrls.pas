@@ -638,6 +638,12 @@ begin
   inherited Create(AOwner);
   FInitialRoot := '';
   FUseBuiltinIcons := true;
+  PathDelimiter := SysUtils.PathDelim;
+  {$IFDEF CaseInsensitiveFilenames}
+  FFindOptions := [foFindExpands, foFindIgnoresCase];
+  {$ELSE}
+  FFindOptions := [foFindExpands];
+  {$ENDIF}
 
   // Initial property values
   FObjectTypes:= [otFolders];

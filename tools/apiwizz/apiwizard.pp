@@ -80,6 +80,8 @@ type
     awMUI,
     awNoGui,
     awQt,
+    awQt5,
+    awQt6,
     awWin32,
     awWinCE);
   TApiWidgetsets = set of TApiWidgetset;
@@ -112,6 +114,8 @@ const
     'mui',
     'nogui',
     'qt',
+    'qt5',
+    'qt6',
     'win32',
     'wince'
   );

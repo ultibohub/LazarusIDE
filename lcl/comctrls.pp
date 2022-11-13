@@ -3418,6 +3418,7 @@ type
     FOnNodeChanged: TTVNodeChangedEvent;
     FOnSelectionChanged: TNotifyEvent;
     FOptions: TTreeViewOptions;
+    FPathDelimiter: String;
     FRClickNode: TTreeNode;
     FSaveItems: TStringList;
     FScrollBars: TScrollStyle;
@@ -3528,8 +3529,13 @@ type
     procedure SetExpandSignSize(const AExpandSignSize: integer);
     procedure SetExpandSignWidth(const AValue: integer);
   protected
+    type
+      TFindOption = (foFindIgnoresCase, foFindExpands);
+      TFindOptions = set of TFindOption;
+  protected
     FChangeTimer: TTimer;
     FEditor: TEdit;
+    FFindOptions: TFindOptions;
     class procedure WSRegisterClass; override;
     class function GetControlClassDefaultSize: TSize; override;
     procedure Added(Node: TTreeNode); virtual;
@@ -3667,6 +3673,7 @@ type
     property OnNodeChanged: TTVNodeChangedEvent read FOnNodeChanged write FOnNodeChanged;
     property OnSelectionChanged: TNotifyEvent
       read FOnSelectionChanged write FOnSelectionChanged;
+    property PathDelimiter: String read FPathDelimiter write FPathDelimiter;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly default False;
     property RightClickSelect: Boolean
       read GetRightClickSelect write SetRightClickSelect default False;
