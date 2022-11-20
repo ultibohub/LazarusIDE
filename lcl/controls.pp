@@ -624,6 +624,7 @@ type
     procedure SetReplacingControl(Control: TControl); virtual;
     function AutoFreeByControl: Boolean; virtual;
     function IsEnabledControl(Control: TControl):Boolean; virtual;
+    function CanBeDoubleDocked:Boolean; virtual;
   end;
 
   TDockManagerClass = class of TDockManager;
@@ -2191,7 +2192,7 @@ type
     procedure DoExit; virtual;
     function  DoKeyDownBeforeInterface(var Message: TLMKey; IsRecurseCall: Boolean): Boolean;
     function  DoRemainingKeyDown(var Message: TLMKeyDown): Boolean;
-    function  DoRemainingKeyUp(var Message: TLMKeyDown): Boolean;
+    function  DoRemainingKeyUp(var Message: TLMKeyUp): Boolean;
     function  DoKeyPress(var Message: TLMKey): Boolean;
     function  DoUTF8KeyPress(var UTF8Key: TUTF8Char): Boolean; virtual;
     function  DoKeyUpBeforeInterface(var Message: TLMKey): Boolean;
@@ -4636,6 +4637,11 @@ end;
 procedure TDockManager.MessageHandler(Sender: TControl; var Message: TLMessage);
 begin
 
+end;
+
+function TDockManager.CanBeDoubleDocked:Boolean;
+begin
+  result:=true;
 end;
 
 function TDockManager.IsEnabledControl(Control: TControl):Boolean;

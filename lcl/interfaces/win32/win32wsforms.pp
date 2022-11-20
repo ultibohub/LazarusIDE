@@ -122,6 +122,7 @@ type
   published
   end;
 
+procedure AdjustFormClientToWindowSize(const AForm: TCustomForm; var ioSize: TSize); overload;
 
 implementation
 
@@ -304,30 +305,29 @@ begin
   FlagsEx := FlagsEx or CalcBorderIconsFlagsEx(AForm);
 end;
 
-procedure AdjustFormBounds(const AForm: TCustomForm; var ioSizeRect: TRect);
+procedure AdjustFormClientToWindowSize(const AForm: TCustomForm; var ioSize: TSize);
 var
-  dpi: LCLType.UINT;
+  xNonClientDPI: LCLType.UINT;
 begin
-  // the LCL defines the size of a form without border, win32 with.
-  // -> adjust size according to BorderStyle
   if AForm.HandleAllocated then
-    dpi := GetDpiForWindow(AForm.Handle)
-  else
-    dpi := ScreenInfo.PixelsPerInchX;
-  AdjustWindowRectExForDpi(@ioSizeRect, CalcBorderStyleFlags(AForm) or CalcBorderIconsFlags(AForm),
-    False, CalcBorderStyleFlagsEx(AForm) or CalcBorderIconsFlagsEx(AForm), dpi);
+    AdjustFormClientToWindowSize(AForm.Handle, ioSize)
+  else // default handling
+    AdjustFormClientToWindowSize(AForm.Menu<>nil,
+      CalcBorderStyleFlags(AForm) or CalcBorderIconsFlags(AForm),
+      CalcBorderStyleFlagsEx(AForm) or CalcBorderIconsFlagsEx(AForm),
+      ScreenInfo.PixelsPerInchX, ioSize);
 end;
 
 function CustomFormWndProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam; LParam: Windows.LParam): LResult; stdcall;
 
   procedure LCLFormSizeToWin32Size(AForm: TCustomForm; var AWidth, AHeight: Integer);
   var
-    SizeRect: Windows.RECT;
+    Size: TSize;
   begin
-    SizeRect := Classes.Rect(0, 0, AWidth, AHeight);
-    AdjustFormBounds(AForm, SizeRect);
-    AWidth := SizeRect.Right - SizeRect.Left;
-    AHeight := SizeRect.Bottom - SizeRect.Top;
+    Size := TSize.Create(AWidth, AHeight);
+    AdjustFormClientToWindowSize(AForm, Size);
+    AWidth := Size.Width;
+    AHeight := Size.Height;
   end;
 
   procedure SetMinMaxInfo(WinControl: TWinControl; var MinMaxInfo: TMINMAXINFO);
@@ -340,9 +340,7 @@ function CustomFormWndProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam; LPar
 
       IntfWidth := AWidth;
       IntfHeight := AHeight;
-      {$IFNDEF LCLRealFormBounds}
       LCLFormSizeToWin32Size(TCustomForm(WinControl), IntfWidth, IntfHeight);
-      {$ENDIF}
 
       if AWidth > 0 then
         pt.X := IntfWidth;
@@ -422,6 +420,7 @@ var
   Bounds: TRect;
   SystemMenu: HMenu;
   MaximizeForm: Boolean = False;
+  lSize: TSize;
 begin
   // general initialization of Params
   PrepareCreateWindow(AWinControl, AParams, Params);
@@ -473,9 +472,9 @@ begin
     pClassName := @ClsName[0];
     WindowTitle := StrCaption;
     Bounds := lForm.BoundsRect;
-    {$IFNDEF LCLRealFormBounds}
-    AdjustFormBounds(lForm, Bounds);
-    {$ENDIF}
+    lSize := Bounds.Size;
+    AdjustFormClientToWindowSize(lForm, lSize);
+    Bounds.Size := lSize;
     if (lForm.Position in [poDefault, poDefaultPosOnly]) and not (csDesigning in lForm.ComponentState) then
     begin
       Left := CW_USEDEFAULT;
@@ -647,43 +646,57 @@ class procedure TWin32WSCustomForm.SetBounds(const AWinControl: TWinControl;
 var
   AForm: TCustomForm absolute AWinControl;
   CurRect: Windows.RECT = (Left: 0; Top: 0; Right: 0; Bottom: 0);
-  SizeRect: Windows.RECT;
+  lSize: Windows.SIZE;
   L, T, W, H: Integer;
+  Attempt: 0..1; // 2 attempts
 begin
-  // the LCL defines the size of a form without border, win32 with.
-  // -> adjust size according to BorderStyle
-  SizeRect := Bounds(ALeft, ATop, AWidth, AHeight);
-
-  {$IFNDEF LCLRealFormBounds}
-  AdjustFormBounds(AForm, SizeRect);
-  {$ENDIF}
-  L := ALeft;
-  T := ATop;
-  W := SizeRect.Right - SizeRect.Left;
-  H := SizeRect.Bottom - SizeRect.Top;
-
-  // we are calling setbounds in TWinControl.Initialize
-  // if position is default it will be changed to designed. We do not want this.
-  if wcfInitializing in TWinControlAccess(AWinControl).FWinControlFlags then
+  // Problem:
+  //   When setting the ClientRect, the main menu may change height (the menu lines may change).
+  //   After the first attempt to set bounds, they can be wrong because the number of the lines changed and
+  //     it is not possible to determine the menu line count for the target rectangle.
+  //   Also, when handling the WM_DPICHANGED message, Windows don't update the menu bar height, therefore
+  //     wrong menu bar height is used for the calculation. The menu bar height gets updated during the first
+  //     TWin32WSWinControl.SetBounds() call.
+  //   -> Therefore a second attempt is needed to get the correct height.
+  for Attempt := Low(Attempt) to High(Attempt) do
   begin
-    if GetWindowRect(AForm.Handle, CurRect) then
-    begin
-      if AForm.Position in [poDefault, poDefaultPosOnly] then
-      begin
-        L := CurRect.Left;
-        T := CurRect.Top;
-      end;
+    // the LCL defines the size of a form without border, win32 with.
+    // -> adjust size according to BorderStyle
+    lSize := TSize.Create(AWidth, AHeight);
 
-      if AForm.Position in [poDefault, poDefaultSizeOnly] then
+    AdjustFormClientToWindowSize(AForm, lSize);
+    L := ALeft;
+    T := ATop;
+    W := lSize.Width;
+    H := lSize.Height;
+
+    // we are calling setbounds in TWinControl.Initialize
+    // if position is default it will be changed to designed. We do not want this.
+    if wcfInitializing in TWinControlAccess(AWinControl).FWinControlFlags then
+    begin
+      if GetWindowRect(AForm.Handle, CurRect) then
       begin
-        W := CurRect.Right - CurRect.Left;
-        H := CurRect.Bottom - CurRect.Top;
+        if AForm.Position in [poDefault, poDefaultPosOnly] then
+        begin
+          L := CurRect.Left;
+          T := CurRect.Top;
+        end;
+
+        if AForm.Position in [poDefault, poDefaultSizeOnly] then
+        begin
+          W := CurRect.Right - CurRect.Left;
+          H := CurRect.Bottom - CurRect.Top;
+        end;
       end;
     end;
+
+    // rect adjusted, pass to inherited to do real work
+    TWin32WSWinControl.SetBounds(AWinControl, L, T, W, H);
+    if (Attempt=High(Attempt)) // last one, no need to call GetClientRect
+    or not GetClientRect(AWinControl, CurRect) // not available
+    or ((CurRect.Width=AWidth) and (CurRect.Height=AHeight)) then // or correct size -> break
+      break;
   end;
-      
-  // rect adjusted, pass to inherited to do real work
-  TWin32WSWinControl.SetBounds(AWinControl, L, T, W, H);
 end;
 
 class procedure TWin32WSCustomForm.SetIcon(const AForm: TCustomForm; const Small, Big: HICON);

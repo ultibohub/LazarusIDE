@@ -30,6 +30,9 @@ begin
     App := QApplicationH(QCoreApplication_instance())
   else
   begin
+    {$IFDEF HASX11}
+    FX11Display := nil;
+    {$ENDIF}
     {$IFDEF MSWINDOWS}
     //add directory plugins to the Qt paths if Qt is distributed with application under mswindows.
     WStr := 'plugins';
@@ -40,6 +43,7 @@ begin
     App := QApplication_Create(@argc, argv);
   end;
   QCoreApplication_setAttribute(QtAA_DontUseNativeDialogs, False);
+  QGuiApplication_setHighDpiScaleFactorRoundingPolicy(QtHighDpiScaleFactorRoundingPolicy_Round);
   //QCoreApplication_setAttribute(QtAA_DontCreateNativeWidgetSiblings, True);
 
   {$IFDEF QtUseNativeEventLoop}
@@ -285,10 +289,15 @@ begin
   begin
     FMainTimerID := -1;
     ATimer := QTimer_Create(QCoreApplication_instance());
-    if (StyleName = 'gtk') or (StyleName = 'gtk+') then
-      QTimer_setInterval(ATimer, 1) {issue #31191}
+    QTimer_setTimerType(ATimer, QtPreciseTimer);
+    {$IFDEF HASX11}
+    if (StyleName = 'gtk2') or (StyleName = 'gtk') then
+      QTimer_setInterval(ATimer, 1)
     else
-      QTimer_setInterval(ATimer, {$IFDEF QtCocoa}5{$ELSE} 0 {$ENDIF});
+      QTimer_setInterval(ATimer, 0);
+    {$ELSE}
+    QTimer_setInterval(ATimer, {$IFDEF QtCocoa}5{$ELSE}1{$ENDIF});
+    {$ENDIF}
     QTimer_start(ATimer);
     FMainTimerID := QTimer_timerId(ATimer);
     QApplication_exec();
@@ -532,6 +541,13 @@ end;
 function TQtWidgetSet.GetDummyWidgetFrame: TRect;
 begin
   Result := FWSFrameRect;
+end;
+
+function TQtWidgetSet.x11Display: PDisplay;
+begin
+  if FX11Display = nil then
+    FX11Display := XOpenDisplay(nil);
+  Result := FX11Display;
 end;
 {$ENDIF}
 

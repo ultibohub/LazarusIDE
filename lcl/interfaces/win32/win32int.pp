@@ -30,7 +30,7 @@ interface
 }
 uses
   Windows, // keep as first
-  Classes, SysUtils, RtlConsts, ActiveX, MultiMon, CommCtrl, ctypes,
+  Classes, SysUtils, RtlConsts, ActiveX, MultiMon, CommCtrl, UxTheme, ctypes,
   {$IF FPC_FULLVERSION>=30000}
   character,
   {$ENDIF}
@@ -92,6 +92,17 @@ const
 
   //flag used to avoid propagating LM_CHANGE for TCustomCheckBox
   SKIP_LMCHANGE = 1000;
+
+type
+  DPI_AWARENESS_CONTEXT = HANDLE;
+
+const
+  // GetThreadDpiAwarenessContext results
+  DPI_AWARENESS_CONTEXT_UNAWARE              = DPI_AWARENESS_CONTEXT(-1);
+  DPI_AWARENESS_CONTEXT_SYSTEM_AWARE         = DPI_AWARENESS_CONTEXT(-2);
+  DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    = DPI_AWARENESS_CONTEXT(-3);
+  DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = DPI_AWARENESS_CONTEXT(-4);
+  DPI_AWARENESS_CONTEXT_UNAWARE_GDISCALED    = DPI_AWARENESS_CONTEXT(-5);
 
 type
   PPPipeEventInfo = ^PPipeEventInfo;
@@ -261,11 +272,17 @@ function DestroyWindowProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
 
 // Multi Dpi support (not yet in FCL); ToDo: move to FCL
 
+function GetThreadDpiAwarenessContext: DPI_AWARENESS_CONTEXT;
+function AreDpiAwarenessContextsEqual(dpiContextA, dpiContextB: DPI_AWARENESS_CONTEXT): BOOL;
 function GetSystemMetricsForDpi(nIndex: Integer; dpi: UINT): Integer;
 function GetDpiForWindow(hwnd: HWND): UINT;
 function AdjustWindowRectExForDpi(const lpRect: LPRECT; dwStyle: DWORD; bMenu: BOOL; dwExStyle: DWORD; dpi: UINT): BOOL;
 function GetDpiForMonitor(hmonitor: HMONITOR; dpiType: TMonitorDpiType; out dpiX: UINT; out dpiY: UINT): HRESULT;
 function LoadIconWithScaleDown(hinst:HINST; pszName:LPCWStr;cx:cint;cy:cint;var phico: HICON ):HRESULT;
+function OpenThemeDataForDpi(hwnd: HWND; pszClassList: LPCWSTR; dpi: UINT): HTHEME;
+
+procedure AdjustFormClientToWindowSize(const AHandle: HANDLE; var ioSize: TSize); overload;
+procedure AdjustFormClientToWindowSize(aHasMenu: Boolean; dwStyle, dwExStyle: DWORD; dpi: UINT; var ioSize: TSize); overload;
 
 implementation
 
@@ -314,6 +331,9 @@ type
   TAdjustWindowRectExForDpi = function(const lpRect: LPRECT; dwStyle: DWORD; bMenu: BOOL; dwExStyle: DWORD; dpi: UINT): BOOL; stdcall;
   TGetSystemMetricsForDpi = function (nIndex: Integer; dpi: UINT): Integer; stdcall;
   TLoadIconWithScaleDown = function ( hinst:HINST; pszName:LPCWStr;cx:cint;cy:cint;var phico: HICON ):HRESULT; stdcall;
+  TOpenThemeDataForDpi = function (hwnd: HWND; pszClassList: LPCWSTR; dpi: UINT): HTHEME; stdcall;
+  TGetThreadDpiAwarenessContext = function (): DPI_AWARENESS_CONTEXT; stdcall;
+  TAreDpiAwarenessContextsEqual = function (dpiContextA, dpiContextB: DPI_AWARENESS_CONTEXT): BOOL; stdcall;
 
 var
   g_GetDpiForMonitor: TGetDpiForMonitor = nil;
@@ -321,6 +341,9 @@ var
   g_AdjustWindowRectExForDpi: TAdjustWindowRectExForDpi = nil;
   g_GetSystemMetricsForDpi: TGetSystemMetricsForDpi = nil;
   g_LoadIconWithScaleDown: TLoadIconWithScaleDown = nil;
+  g_OpenThemeDataForDpi: TOpenThemeDataForDpi = nil;
+  g_GetThreadDpiAwarenessContext: TGetThreadDpiAwarenessContext = nil;
+  g_AreDpiAwarenessContextsEqual: TAreDpiAwarenessContextsEqual = nil;
   g_HighDPIAPIDone: Boolean = False;
 
 procedure InitHighDPIAPI;
@@ -340,13 +363,37 @@ begin
     Pointer(g_AdjustWindowRectExForDpi) := GetProcAddress(lib, 'AdjustWindowRectExForDpi');
     Pointer(g_GetDpiForWindow) := GetProcAddress(lib, 'GetDpiForWindow');
     Pointer(g_GetSystemMetricsForDpi) := GetProcAddress(lib, 'GetSystemMetricsForDpi');
+    Pointer(g_GetThreadDpiAwarenessContext) := GetProcAddress(lib, 'GetThreadDpiAwarenessContext');
+    Pointer(g_AreDpiAwarenessContextsEqual) := GetProcAddress(lib, 'AreDpiAwarenessContextsEqual');
   end;
 
   lib := LoadLibrary(comctl32);
   if lib<>0 then
     Pointer(g_LoadIconWithScaleDown) := GetProcAddress(lib, 'LoadIconWithScaleDown');
 
+  lib := LoadLibrary('uxtheme.dll');
+  if lib<>0 then
+    Pointer(g_OpenThemeDataForDpi) := GetProcAddress(lib, 'OpenThemeDataForDpi');
+
   g_HighDPIAPIDone := True;
+end;
+
+function GetThreadDpiAwarenessContext: DPI_AWARENESS_CONTEXT;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_GetThreadDpiAwarenessContext) then
+    Result := g_GetThreadDpiAwarenessContext()
+  else
+    Result := DPI_AWARENESS_CONTEXT_UNAWARE;
+end;
+
+function AreDpiAwarenessContextsEqual(dpiContextA, dpiContextB: DPI_AWARENESS_CONTEXT): BOOL;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_AreDpiAwarenessContextsEqual) then
+    Result := g_AreDpiAwarenessContextsEqual(dpiContextA, dpiContextB)
+  else
+    Result := dpiContextA=dpiContextB;
 end;
 
 function GetSystemMetricsForDpi(nIndex: Integer; dpi: UINT): Integer;
@@ -397,6 +444,80 @@ begin
     Result := g_LoadIconWithScaleDown(hinst, pszName, cx, cy, phico)
   else
     Result := S_FALSE;
+end;
+
+function OpenThemeDataForDpi(hwnd: HWND; pszClassList: LPCWSTR; dpi: UINT): HTHEME;
+begin
+  InitHighDPIAPI;
+  if Assigned(g_OpenThemeDataForDpi) then
+    Result := g_OpenThemeDataForDpi(hwnd, pszClassList, dpi)
+  else
+    Result := OpenThemeData(hwnd, pszClassList);
+end;
+
+procedure AdjustFormClientToWindowSize(const AHandle: HANDLE; var ioSize: TSize);
+{$IFNDEF LCLRealFormBounds}
+var
+  xClientRect, xWindowRect, xSR: TRect;
+  xNonClientDPI: UINT;
+  xInfo: tagWINDOWINFO;
+  xTopLeft: TPoint;
+  xHasMenu: Boolean;
+  xReplaceTop: LongInt;
+{$ENDIF}
+begin
+  {$IFNDEF LCLRealFormBounds}
+  // convert form client size to window size
+  //  the difference between Windows.GetClientRect(AHandle, xClientRect) and Windows.GetWindowRect(AHandle, xWindowRect)
+  //  must not be used because it fails when the form has visible scrollbars (and can be scrolled)
+
+  if AreDpiAwarenessContextsEqual(GetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) then
+    xNonClientDPI := GetDpiForWindow(AHandle)
+  else
+    xNonClientDPI := ScreenInfo.PixelsPerInchX;
+
+  xInfo := Default(tagWINDOWINFO);
+  xInfo.cbSize := SizeOf(xInfo);
+  if GetWindowInfo(AHandle, @xInfo) then
+  begin
+    xHasMenu := GetMenu(AHandle)<>0;
+    xTopLeft := Point(0, 0);
+    xClientRect := Default(TRect);
+    xWindowRect := Default(TRect);
+
+    // AdjustWindowRectExForDpi calculates only 1 menu line but on Win32 the menu can have multiple lines
+    //  therefore get the top coordinate from ClientToScreen difference if possible (that is correct also when scrollbars are shown)
+    if xHasMenu
+    and Windows.GetClientRect(AHandle, xClientRect) and not xClientRect.IsEmpty // just to check that there is some client rect and ClientToScreen will return some sane results
+    and Windows.GetWindowRect(AHandle, xWindowRect) and not xWindowRect.IsEmpty
+    and Windows.ClientToScreen(AHandle, xTopLeft) then
+    begin
+      xReplaceTop := xTopLeft.Y-xWindowRect.Top;
+      xHasMenu := False;
+    end else
+      xReplaceTop := 0;
+
+    xSR := Rect(0, 0, 0, 0);
+    AdjustWindowRectExForDpi(@xSR, xInfo.dwStyle, xHasMenu, xInfo.dwExStyle, xNonClientDPI);
+    if xReplaceTop>0 then
+      xSR.Top := -xReplaceTop;
+    Inc(ioSize.cx, xSR.Width);
+    Inc(ioSize.cy, xSR.Height);
+  end;
+  {$ENDIF}
+end;
+
+procedure AdjustFormClientToWindowSize(aHasMenu: Boolean; dwStyle, dwExStyle: DWORD; dpi: UINT; var ioSize: TSize);
+var
+  SizeRect: TRect;
+begin
+  {$IFNDEF LCLRealFormBounds}
+  // no known handle -> default (1 menu line)
+  SizeRect := Rect(0, 0, ioSize.Width, ioSize.Height);
+  AdjustWindowRectExForDpi(@SizeRect, dwStyle, aHasMenu, dwExStyle, dpi);
+  ioSize.Width := SizeRect.Width;
+  ioSize.Height := SizeRect.Height;
+  {$ENDIF}
 end;
 
 {$I win32listsl.inc}

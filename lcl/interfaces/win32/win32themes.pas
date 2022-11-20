@@ -1,6 +1,7 @@
 unit Win32Themes;
 
 {$mode objfpc}{$H+}
+{$ModeSwitch arrayoperators}
 {$I win32defines.inc}
 
 interface
@@ -16,13 +17,22 @@ uses
 type
 
   TThemeData = array[TThemedElement] of HTHEME;
+  TThemePPIDataEntry = record
+    PPI: Integer;
+    Data: TThemeData;
+  end;
+  PThemePPIDataEntry = ^TThemePPIDataEntry;
+  TThemePPIData = array of TThemePPIDataEntry;
+
   { TWin32ThemeServices }
 
   TWin32ThemeServices = class(TThemeServices)
   private
     FThemeData: TThemeData;            // Holds a list of theme data handles.
+    FThemePPIData: TThemePPIData;
   protected
-    function GetTheme(Element: TThemedElement): HTHEME;
+    function GetTheme(Element: TThemedElement): HTHEME; deprecated 'use GetThemeForPPI';
+    function GetThemeForPPI(Element: TThemedElement; PPI: Integer): HTHEME;
     function InitThemes: Boolean; override;
     procedure UnloadThemeData; override;
     function UseThemes: Boolean; override;
@@ -35,7 +45,8 @@ type
   public
     destructor Destroy; override;
 
-    function GetDetailSize(Details: TThemedElementDetails): TSize; override;
+    function GetDetailSizeForWindow(Details: TThemedElementDetails; const AWindow: HWND): TSize; override;
+    function GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize; override;
     function GetDetailRegion(DC: HDC; Details: TThemedElementDetails; const R: TRect): HRGN; override;
     function GetStockImage(StockID: LongInt; out Image, Mask: HBitmap): Boolean; override;
     function GetStockImage(StockID: LongInt; const AWidth, AHeight: Integer; out Image, Mask: HBitmap): Boolean; override;
@@ -61,6 +72,7 @@ type
     function HasTransparentParts(Details: TThemedElementDetails): Boolean; override;
     procedure PaintBorder(Control: TObject; EraseLRCorner: Boolean); override;
     property Theme[Element: TThemedElement]: HTHEME read GetTheme;
+    property ThemeForPPI[Element: TThemedElement; PPI: Integer]: HTHEME read GetThemeForPPI;
   end;
 
 implementation
@@ -141,15 +153,24 @@ const
 { TWin32ThemeServices }
 
 procedure TWin32ThemeServices.UnloadThemeData;
+  procedure _Unload(_Theme: TThemeData);
+  var
+    Entry: TThemedElement;
+  begin
+    for Entry := Low(TThemeData) to High(TThemeData) do
+      if _Theme[Entry] <> 0 then
+      begin
+        CloseThemeData(_Theme[Entry]);
+        _Theme[Entry] := 0;
+      end;
+  end;
 var
-  Entry: TThemedElement;
+  E: TThemePPIDataEntry;
 begin
-  for Entry := Low(TThemeData) to High(TThemeData) do
-    if FThemeData[Entry] <> 0 then
-    begin
-      CloseThemeData(FThemeData[Entry]);
-      FThemeData[Entry] := 0;
-    end;
+  _Unload(FThemeData);
+  for E in FThemePPIData do
+    _Unload(E.Data);
+  FThemePPIData := nil;
 end;
 
 function TWin32ThemeServices.InitThemes: Boolean;
@@ -164,7 +185,7 @@ begin
   FreeThemeLibrary;
 end;
 
-function TWin32ThemeServices.GetDetailSize(Details: TThemedElementDetails): TSize;
+function TWin32ThemeServices.GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize;
 var
   R: TRect;
 begin
@@ -180,13 +201,26 @@ begin
        (Details.Element = teTrackBar) or (Details.Element = teHeader) then
     begin
       R := Rect(0, 0, 800, 800);
-      GetThemePartSize(GetTheme(Details.Element), 0, Details.Part, Details.State, @R, TS_TRUE, Result);
+      GetThemePartSize(GetThemeForPPI(Details.Element, PPI), 0, Details.Part, Details.State, @R, TS_TRUE, Result);
     end
     else
-      Result := inherited GetDetailSize(Details);
+      Result := inherited GetDetailSizeForPPI(Details, PPI);
   end
   else
-    Result := inherited GetDetailSize(Details);
+    Result := inherited GetDetailSizeForPPI(Details, PPI);
+end;
+
+function TWin32ThemeServices.GetDetailSizeForWindow(Details: TThemedElementDetails; const AWindow: HWND): TSize;
+var
+  PPI: UINT;
+begin
+  if (AWindow<>0) and AreDpiAwarenessContextsEqual(GetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2) then
+    PPI := GetDpiForWindow(AWindow)
+  else
+    PPI := 0;
+  if PPI=0 then
+    PPI := ScreenInfo.PixelsPerInchX;
+  Result := GetDetailSizeForPPI(Details, PPI);
 end;
 
 function TWin32ThemeServices.GetImageAndMaskFromIcon(const Icon: HICON; out Image, Mask: HBITMAP): Boolean;
@@ -357,6 +391,33 @@ begin
       FThemeData[Element] := OpenThemeData(0, ThemeDataNames[Element]);
   end;
   Result := FThemeData[Element];
+end;
+
+function TWin32ThemeServices.GetThemeForPPI(Element: TThemedElement; PPI: Integer): HTHEME;
+var
+  I: Integer;
+  E: PThemePPIDataEntry;
+begin
+  if (WindowsVersion < wv10) or (PPI=0) or (PPI=ScreenInfo.PixelsPerInchX) then
+    Exit(GetTheme(Element));
+
+  E := nil;
+  for I := 0 to High(FThemePPIData) do
+    if FThemePPIData[I].PPI=PPI then
+    begin
+      E := @FThemePPIData[I];
+      break;
+    end;
+  if not Assigned(E) then
+  begin
+    FThemePPIData := FThemePPIData + [Default(TThemePPIDataEntry)];
+    E := @FThemePPIData[High(FThemePPIData)];
+    E^.PPI := PPI;
+  end;
+
+  if (E^.Data[Element] = 0) then
+    E^.Data[Element] := OpenThemeDataForDpi(0, ThemeDataNamesVista[Element], PPI);
+  Result := E^.Data[Element];
 end;
 
 function TWin32ThemeServices.InternalColorToRGB(Details: TThemedElementDetails; Color: TColor): COLORREF;

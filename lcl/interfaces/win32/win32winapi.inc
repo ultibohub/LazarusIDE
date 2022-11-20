@@ -2417,27 +2417,16 @@ function TWin32WidgetSet.GetWindowSize(Handle : hwnd;
   end;
 
   procedure ExcludeBorder(dwStyle, dwExStyle: DWORD);
+  var
+    xSize: Windows.SIZE;
   begin
-    {$IFNDEF LCLRealFormBounds}
-    if (dwStyle and WS_THICKFRAME) = WS_THICKFRAME then
-      Dec(Width, 2*(GetSystemMetricsForDpi(SM_CXSIZEFRAME, GetDpiForWindow(Handle))+GetSystemMetricsForDpi(SM_CXPADDEDBORDER, GetDpiForWindow(Handle))))
-    else
-    if (dwStyle and WS_BORDER) = WS_BORDER then
-      Dec(Width, 2*(GetSystemMetricsForDpi(SM_CXFIXEDFRAME, GetDpiForWindow(Handle))));
-    if (dwStyle and WS_THICKFRAME) = WS_THICKFRAME then
-      Dec(Height, 2*(GetSystemMetricsForDpi(SM_CYSIZEFRAME, GetDpiForWindow(Handle))+GetSystemMetricsForDpi(SM_CXPADDEDBORDER, GetDpiForWindow(Handle))))
-    else
-    if (dwStyle and WS_BORDER) = WS_BORDER then
-      Dec(Height, 2*(GetSystemMetricsForDpi(SM_CYFIXEDFRAME, GetDpiForWindow(Handle))));
-
-    if (dwStyle and (WS_CHILD or WS_CAPTION)) = WS_CAPTION then
+    if (Height<>0) and (Width<>0) then
     begin
-      if (dwExStyle and WS_EX_TOOLWINDOW) <> 0 then
-        Dec(Height, GetSystemMetricsForDpi(SM_CYSMCAPTION, GetDpiForWindow(Handle)))
-      else
-        Dec(Height, GetSystemMetricsForDpi(SM_CYCAPTION, GetDpiForWindow(Handle)));
+      xSize := TSize.Create(0, 0);
+      AdjustFormClientToWindowSize(Handle, xSize);
+      Dec(Height, xSize.Height);
+      Dec(Width, xSize.Width);
     end;
-    {$ENDIF}
   end;
 
   procedure SetWidthHeightFromRect(const R: TRect); inline;
@@ -2468,10 +2457,11 @@ begin
     if Result then
     begin
       // for minimized window use normal position, in other case use rcWindow of WindowInfo
-      if (WP.showCmd = SW_MINIMIZE) or (WP.showCmd = SW_SHOWMINIMIZED) then
-        SetWidthHeightFromRect(WP.rcNormalPosition)
+      //  DO NOT USE rcClient here because it is wrong if the form has scrollbars
+      if (WP.showCmd<>SW_MINIMIZE) and (WP.showCmd<>SW_SHOWMINIMIZED) then
+        SetWidthHeightFromRect(Info.rcWindow)
       else
-        SetWidthHeightFromRect(Info.rcWindow);
+        SetWidthHeightFromRect(WP.rcNormalPosition);
       ExcludeBorder(Info.dwStyle, Info.dwExStyle);
       //WriteLn('W = ', Width, ' H = ', Height);
       Exit;
@@ -2492,11 +2482,6 @@ begin
     end else
       SetWidthHeightFromRect(WP.rcNormalPosition);
   end;
-
-  {$IFNDEF LCLRealFormBounds}
-  // convert top level lcl window coordinaties to win32 coord
-  ExcludeBorder(DWORD(GetWindowLong(Handle, GWL_STYLE)), DWORD(GetWindowLong(Handle, GWL_EXSTYLE)));
-  {$ENDIF}
 
   WindowInfo := GetWin32WindowInfo(Handle);
   if WindowInfo^.UpDown <> 0 then

@@ -185,6 +185,7 @@ type
     function getUnderline: Boolean;
     function getStrikeOut: Boolean;
     function getFamily: WideString;
+    function getHintingPreference: QFontHintingPreference;
     function getStyleStategy: QFontStyleStrategy;
 
     procedure setPointSize(p1: Integer);
@@ -196,6 +197,7 @@ type
     procedure setStrikeOut(p1: Boolean);
     procedure setRawName(p1: string);
     procedure setFamily(p1: string);
+    procedure setHintingPreference(pref: QFontHintingPreference);
     procedure setStyleStrategy(s: QFontStyleStrategy);
     procedure family(retval: PWideString);
     function fixedPitch: Boolean;
@@ -1671,6 +1673,11 @@ begin
     QFont_family(FHandle, @Result);
 end;
 
+function TQtFont.getHintingPreference: QFontHintingPreference;
+begin
+  Result := QFont_hintingPreference(FHandle);
+end;
+
 function TQtFont.getStyleStategy: QFontStyleStrategy;
 begin
   if FHandle = nil then
@@ -1720,6 +1727,11 @@ begin
   Str := GetUtf8String(p1);
 
   QFont_setFamily(FHandle, @Str);
+end;
+
+procedure TQtFont.setHintingPreference(pref: QFontHintingPreference);
+begin
+  QFont_setHintingPreference(FHandle, pref);
 end;
 
 procedure TQtFont.setStyleStrategy(s: QFontStyleStrategy);
@@ -4516,8 +4528,7 @@ end;
 
 function TQtPrinter.getDoubleSidedPrinting: Boolean;
 begin
-  {$warning fixme Qt6}
-  Result := False; // QPrinter_doubleSidedPrinting(Handle);
+  Result := QPrinter_duplex(Handle) = QPrinterDuplexAuto;
 end;
 
 function TQtPrinter.getFontEmbedding: Boolean;
@@ -4583,8 +4594,10 @@ end;
 
 procedure TQtPrinter.setDoubleSidedPrinting(const AValue: Boolean);
 begin
-  {$warning fixme qt6}
-  // QPrinter_setDoubleSidedPrinting(Handle, AValue);
+  if AValue then
+    QPrinter_setDuplex(Handle, QPrinterDuplexAuto)
+  else
+    QPrinter_setDuplex(Handle, QPrinterDuplexNone);
 end;
 
 
@@ -4640,23 +4653,19 @@ procedure TQtPrinter.setPageSize(const AValue: QPageSizeId);
 var
   APageSize: QPageSizeH;
 begin
-  {$warning fixme Qt6}
   APageSize := QPageSize_Create3(AValue);
   QPrinter_setPageSize(Handle, APageSize);
   QPageSize_destroy(APageSize);
-  // QPrinter_setPaperSize(Handle, AValue);
 end;
 
 function TQtPrinter.getPageSize: QPageSizeId;
 var
   APageSize: QPageSizeH;
 begin
-  {$warning fixme Qt6}
   APageSize := QPageSize_Create();
   QPrinter_pageSize(Handle, APageSize);
   Result := QPageSize_id(APageSize);
   QPageSize_Destroy(APageSize);
-  // Result := QPrinter_paperSize(Handle);
 end;
 
 procedure TQtPrinter.setPageOrder(const AValue: QPrinterPageOrder);
@@ -4670,11 +4679,8 @@ begin
 end;
 
 procedure TQtPrinter.setPrintProgram(const AValue: WideString);
-var
-  Str: WideString;
 begin
-  Str := AValue; // GetUtf8String(AValue);
-  QPrinter_setPrintProgram(Handle, @Str);
+  QPrinter_setPrintProgram(Handle, @AValue);
 end;
 
 procedure TQtPrinter.setPrintRange(const AValue: QPrinterPrintRange);
@@ -4739,23 +4745,20 @@ end;
 
 function TQtPrinter.PageRect: TRect;
 begin
-  {$warning fixme Qt6}
-   QPrinter_pageRect(Handle, @Result);
+  QPrinter_pageRect(Handle, QPrinterUnit.QPrinterDevicePixel, @Result);
 end;
 
 function TQtPrinter.PaperRect: TRect;
 begin
-  {$warning fixme Qt6}
-  QPrinter_paperRect(Handle, @Result);
+  QPrinter_paperRect(Handle, QPrinterUnit.QPrinterDevicePixel, @Result);
 end;
 
 function TQtPrinter.PageRect(AUnits: QPrinterUnit): TRect;
 var
   ARect: QRectFH;
 begin
-  {$warning fixme Qt6}
   ARect := QRectF_create();
-  QPrinter_pageRect(Handle, ARect, AUnits);
+  QPrinter_pageRect(Handle, AUnits, ARect);
   QRectF_toRect(ARect, @Result);
   QRectF_destroy(ARect);
 end;
@@ -4765,8 +4768,7 @@ var
   R: QRectFH;
 begin
   R := QRectF_create();
-  {$warning fixme Qt6}
-  QPrinter_paperRect(Handle, R, AUnits);
+  QPrinter_paperRect(Handle, AUnits, R);
   QRectF_toRect(R, @Result);
   QRectF_destroy(R);
 end;
@@ -4778,34 +4780,35 @@ end;
 
 function TQtPrinter.GetPaperSize(AUnits: QPrinterUnit): TSize;
 var
-  //SizeF: QSizeFH;
   R: QRectFH;
   R1: TRect;
 begin
   Result := Default(TSize);
-  //SizeF := QSizeF_create(0, 0);
   R := QRectF_Create;
-  {$warning fixme Qt6}
-  QPrinter_paperRect(Handle, R, AUnits);
-  // QPrinter_paperSize(Handle, SizeF, AUnits);
+  QPrinter_paperRect(Handle, AUnits, R);
   QRectF_toRect(R, @R1);
   Result.cx := R1.Width;
   Result.cy := R1.Height;
-  //QSizeF_destroy(SizeF);
   QRectF_Destroy(R);
 end;
 
 procedure TQtPrinter.SetPaperSize(ASize: TSize; AUnits: QPrinterUnit);
 var
-  SizeF: QSizeFH;
+  ASizeF: QSizeFH;
+  APageSize: QPageSizeH;
+  AName: WideString;
 begin
-  SizeF := QSizeF_create(@ASize);
+  ASizeF := QSizeF_create(@ASize);
   try
-    {$warning fixme Qt6}
+    {$warning fixme Qt6 - try to get paperName from size, otherwise set Custom}
+    AName := '';
+    APageSize := QPageSize_Create4(ASizeF, QPageSizeUnit(Ord(AUnits)), @AName);
+    QPrinter_setPageSize(Handle, APageSize);
     // QPrinter_setPageSize();
-    // QPrinter_setPaperSize(Handle, SizeF, AUnits);
+    // QPrinter_setPaperSize(Handle, ASizeF, AUnits);
+    QPageSize_destroy(APageSize);
   finally
-    QSizeF_destroy(SizeF);
+    QSizeF_destroy(ASizeF);
   end;
 end;
 
