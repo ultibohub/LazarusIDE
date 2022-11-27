@@ -4644,6 +4644,7 @@ begin
   Info := nil;
   NextInfo := nil;
 
+  LineMap:=nil;
   while FLineInfo.StateMachine.NextLine do
   begin
     Line := FLineInfo.StateMachine.Line;
@@ -4665,6 +4666,7 @@ begin
     addr := FLineInfo.StateMachine.Address;
     if (not FLineInfo.StateMachine.EndSequence) and (FLineInfo.StateMachine.IsStmt)
     and (Line > 0)
+    and (LineMap<>nil)
     then
       LineMap^.SetAddressForLine(Line, addr);
 

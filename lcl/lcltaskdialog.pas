@@ -669,6 +669,14 @@ var RU: array of Ws;
       inc(RUCount);
     end;
   end;
+
+  function DialogBaseUnits: Integer;
+  //https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdialogbaseunits
+  type
+    TLongRec = record L, H: Word; end;
+  begin
+    Result := TLongRec(GetDialogBaseUnits).L;
+  end;
 {$ENDIF}
 
 var
@@ -689,6 +697,9 @@ var
   var R: TRect;
       W: integer;
   begin
+    if Text = '' then
+      exit(nil);
+
     result := TLabel.Create(Dialog.Form);
     result.Parent := Par;
     result.WordWrap := true;
@@ -783,7 +794,8 @@ begin
   {$ifdef MSWINDOWS}
   if (WidgetSet.GetLCLCapability(lcNativeTaskDialog) = LCL_CAPABILITY_YES) and
     Assigned(TaskDialogIndirect) and not aNonNative and
-     not (tdfQuery in aFlags) and (Selection='') then begin
+     not (tdfQuery in aFlags) and (Selection='') then
+  begin
     Dialog.Emulated := False;
     // use Vista/Seven TaskDialog implementation (not tdfQuery nor Selection)
     FillChar(Config{%H-},sizeof(Config),0);
@@ -814,7 +826,7 @@ begin
     Config.hFooterIcon := TD_FOOTERICONS[aFooterIcon];
     Config.nDefaultButton := aButtonDef;
     Config.nDefaultRadioButton := aRadioDef+200;
-    Config.cxWidth := aWidth;
+    Config.cxWidth := MulDiv(aWidth, 4, DialogBaseUnits);  // cxWidth needed in "dialog units"
     Config.pfCallback := @TaskDialogCallbackProc;
     Config.lpCallbackData := @self;
     if TaskDialogIndirect(@Config,@result,@RadioRes,@VerifyChecked)=S_OK then
@@ -845,13 +857,14 @@ begin
     FontHeight := Dialog.Form.Font.Height;
     if FontHeight = 0 then
       FontHeight := Screen.SystemFont.Height;
-    if aWidth=0 then begin
+    if aWidth<=0 then begin
       aWidth := Dialog.Form.Canvas.TextWidth(Inst);
       if (aWidth>300) or (Dialog.Form.Canvas.TextWidth(Content)>300) or
          (length(Buttons)>40) then
         aWidth := 480 else
         aWidth := 420;
-    end;
+    end else
+      if aWidth<120 then aWidth := 120;
     Dialog.Form.ClientWidth := aWidth;
     Dialog.Form.Height := 200;
     Dialog.Form.Caption := Title;
@@ -890,7 +903,7 @@ begin
     end else
     begin
       Image := nil;
-      if not aEmulateClassicStyle then
+      if (not aEmulateClassicStyle) and (Inst <> '') then
         IconBorder := IconBorder*2;
       X := IconBorder;
       Y := IconBorder;
@@ -1133,7 +1146,10 @@ begin
   case element of
   tdeContent..tdeMainInstruction:
     if Dialog.Emulated then
-      Dialog.Form.Element[element].Caption := Text
+    begin
+      if Dialog.Form.Element[element] <> nil then
+        Dialog.Form.Element[element].Caption := Text
+    end
     {$IFDEF MSWINDOWS}
     else
     begin

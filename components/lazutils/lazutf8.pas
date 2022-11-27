@@ -3576,7 +3576,8 @@ begin
     end;
   end;
   if Count > 0 then
-    Result := Byte(Chr1)-Byte(Chr2)
+    //Both Chr1 and Ch2 are lower ASCII if we arrive here, so this is safe
+    Result := AnsiCompareText(Chr1, Chr2)
   else
     Result := Count1-Count2;
 end;
@@ -4159,7 +4160,10 @@ end;
 
 function TStringListUTF8Fast.DoCompareText(const s1, s2: string): PtrInt;
 begin
-  Result:=UTF8CompareLatinTextFast(s1, s2);
+  if CaseSensitive then
+    Result := Utf8CompareStr(s1, s2)
+  else
+    Result:=UTF8CompareLatinTextFast(s1, s2);
 end;
 
 

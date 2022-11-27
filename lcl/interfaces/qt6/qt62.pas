@@ -7879,8 +7879,6 @@ const
   QPageSizeId_LastPageSize = QPageSizeId_EnvelopeYou4;
 
 function QPagedPaintDevice_newPage(handle: QPagedPaintDeviceH): Boolean; cdecl; external Qt6PasLib name 'QPagedPaintDevice_newPage';
-procedure QPagedPaintDevice_setPageSize(handle: QPagedPaintDeviceH; size: QPageSizeH); cdecl; external Qt6PasLib name 'QPagedPaintDevice_setPageSize';
-
 procedure QPagedPaintDevice_pageLayout(handle: QPagedPaintDeviceH; retval: QPageLayoutH); cdecl; external Qt6PasLib name 'QPagedPaintDevice_pageLayout';
 procedure QPagedPaintDevice_pageRanges(handle: QPagedPaintDeviceH; retval: QPageRangesH); cdecl; external Qt6PasLib name 'QPagedPaintDevice_pageRanges';
 function QPagedPaintDevice_setPageLayout(handle: QPagedPaintDeviceH; layout: QPageLayoutH): boolean; cdecl; external Qt6PasLib name 'QPagedPaintDevice_setPageLayout';
@@ -12571,7 +12569,7 @@ type
     QFileDialogDetail, QFileDialogList );
 
   QFileDialogFileMode = ( // QFileDialog::FileMode (1)
-    QFileDialogAnyFile, QFileDialogExistingFile, QFileDialogDirectory, QFileDialogExistingFiles, QFileDialogDirectoryOnly );
+    QFileDialogAnyFile, QFileDialogExistingFile, QFileDialogDirectory, QFileDialogExistingFiles);
 
   QFileDialogAcceptMode = ( // QFileDialog::AcceptMode (1)
     QFileDialogAcceptOpen, QFileDialogAcceptSave );

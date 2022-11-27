@@ -1598,6 +1598,7 @@ type
     procedure SetWordWrap(Value: Boolean);
     procedure Loaded; override;
     procedure UpdateSize;
+    procedure SetVisible(Value: Boolean); override;
 
     property Alignment: TAlignment read FAlignment write SetAlignment default taLeftJustify;
     property FocusControl: TWinControl read FFocusControl write SetFocusControl;
@@ -1615,7 +1616,7 @@ type
     procedure Paint; override;
     procedure SetBounds(aLeft, aTop, aWidth, aHeight: integer); override;
     property AutoSize default True;
-    property Color nodefault;
+    property Color;
   end;
 
 
