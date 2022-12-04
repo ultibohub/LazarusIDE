@@ -37,20 +37,40 @@ uses
 
 type
 
-  { TObjectTypes }
-
   TObjectType = (otFolders, otNonFolders, otHidden);
 
   TObjectTypes = set of TObjectType;
 
-  TFileSortType = (fstNone, fstAlphabet, fstFoldersFirst);
+  TFileSortType = (fstNone, fstAlphabet, fstFoldersFirst, fstCustom);
 
   TMaskCaseSensitivity = (mcsPlatformDefault, mcsCaseInsensitive, mcsCaseSensitive);
+
+  TExpandCollapseMode = (
+    ecmRefreshedExpanding,  // Clear already existing children before expanding
+    ecmKeepChildren,        // Do not clear children of already-expanded, but collapsed nodes
+    ecmCollapseAndClear     // Clear children when a node is collapsed
+  );
 
   { Forward declaration of the classes }
 
   TCustomShellTreeView = class;
   TCustomShellListView = class;
+
+  { TFileItem }
+
+  TFileItem = class(TObject)
+  private
+    FFileInfo: TSearchRec;
+    FBasePath: String;
+  public
+    //more data to sort by size, date... etc
+    isFolder: Boolean;
+    constructor Create(const DirInfo: TSearchRec; ABasePath: String);
+    property BasePath: String read FBasePath;
+    property FileInfo: TSearchRec read FFileInfo write FFileInfo;
+  end;
+
+  TFileItemCompareEvent = function(Item1, Item2: TFileItem): integer of object;
 
   { TCustomShellTreeView }
 
@@ -62,14 +82,17 @@ type
     FObjectTypes: TObjectTypes;
     FRoot: string;
     FShellListView: TCustomShellListView;
+    FExpandCollapseMode: TExpandCollapseMode;
     FFileSortType: TFileSortType;
     FInitialRoot: String;
     FUseBuiltinIcons: Boolean;
     FOnAddItem: TAddItemEvent;
+    FOnSortCompare: TFileItemCompareEvent;
     { Setters and getters }
     function GetPath: string;
     procedure SetFileSortType(const AValue: TFileSortType);
     procedure SetObjectTypes(AValue: TObjectTypes);
+    procedure SetOnSortCompare(AValue: TFileItemCompareEvent);
     procedure SetPath(AValue: string);
     procedure SetRoot(const AValue: string);
     procedure SetShellListView(const Value: TCustomShellListView);
@@ -85,9 +108,11 @@ type
     procedure DoSelectionChanged; override;
     procedure DoAddItem(const ABasePath: String; const AFileInfo: TSearchRec; var CanAdd: Boolean);
     function CanExpand(Node: TTreeNode): Boolean; override;
+    procedure Collapse(Node: TTreeNode); override;
     function DrawBuiltInIcon(ANode: TTreeNode; ARect: TRect): TSize; override;
     function GetBuiltinIconSize: TSize; override;
     function NodeHasChildren(Node: TTreeNode): Boolean; override;
+    property ExpandCollapseMode: TExpandCollapseMode read FExpandCollapseMode write FExpandCollapseMode default ecmRefreshedExpanding;
   public
     { Basic methods }
     constructor Create(AOwner: TComponent); override;
@@ -109,6 +134,7 @@ type
     property Root: string read FRoot write SetRoot;
     property Path: string read GetPath write SetPath;
     property OnAddItem: TAddItemEvent read FOnAddItem write FOnAddItem;
+    property OnSortCompare: TFileItemCompareEvent read FOnSortCompare write SetOnSortCompare;
     { Protected properties which users may want to access, see bug 15374 }
     property Items;
   end;
@@ -129,6 +155,7 @@ type
     property Color;
     property Constraints;
     property Enabled;
+    property ExpandCollapseMode;
     property ExpandSignType;
     property Font;
     property FileSortType;
@@ -194,6 +221,7 @@ type
     property OnMouseWheelRight;
     property OnSelectionChanged;
     property OnShowHint;
+    property OnSortCompare;
     property OnUTF8KeyPress;
     property Options;
     property TreeLineColor;
@@ -408,20 +436,12 @@ begin
   Result := MaskCaseSensitivityStrings[CS];
 end;
 
-{ TFileItem : internal helper class used for temporarily storing info in an internal TStrings component}
-type
-  { TFileItem }
-  TFileItem = class(TObject)
-  private
-    FFileInfo: TSearchRec;
-    FBasePath: String;
-  public
-    //more data to sort by size, date... etc
-    isFolder: Boolean;
-    constructor Create(const DirInfo: TSearchRec; ABasePath: String);
-    property FileInfo: TSearchRec read FFileInfo write FFileInfo;
-  end;
+operator = (const A, B: TMethod): Boolean;
+begin
+  Result := (A.Code = B.Code) and (A.Data = B.Data);
+end;
 
+{ TFileItem : internal helper class used for temporarily storing info in an internal TStrings component}
 
 constructor TFileItem.Create(const DirInfo:TSearchRec; ABasePath: String);
 begin
@@ -430,6 +450,32 @@ begin
   isFolder:=DirInfo.Attr and FaDirectory > 0;
 end;
 
+
+{ TFileItemAVLTree
+
+  Specialized TAVLTree descendant for sorting the TFileItems found by the
+  helper function GetFilesInDir such that a user-friendly compare function
+  can be applied. }
+
+type
+  TFileItemAVLTree = class(TAVLTree)
+  private
+    FFileItemCompare: TFileItemCompareEvent;
+    function InternalFileItemCompare(ATree: TAvlTree; Item1, Item2: Pointer): Integer;
+  public
+    constructor CreateFileItemCompare(ACompare: TFileItemCompareEvent);
+  end;
+
+constructor TFileItemAVLTree.CreateFileItemCompare(ACompare: TFileItemCompareEvent);
+begin
+  FFileItemCompare := ACompare;
+  inherited CreateObjectCompare(@InternalFileItemCompare);
+end;
+
+function TFileItemAVLTree.InternalFileItemCompare(ATree: TAvlTree; Item1, Item2: Pointer): Integer;
+begin
+  Result := FFileItemCompare(TFileItem(Item1), TFileItem(Item2));
+end;
 
 { TShellTreeNode }
 
@@ -605,10 +651,46 @@ begin
     BeginUpdate;
     Refresh(nil);
     try
-       SetPath(CurrPath);
+      SetPath(CurrPath);
     except
       // CurrPath may have been removed in the mean time by another process, just ignore
       on E: EInvalidPath do ;//
+    end;
+  finally
+    EndUpdate;
+  end;
+end;
+
+procedure TCustomShellTreeView.SetOnSortCompare(AValue: TFileItemCompareEvent);
+var
+  RootNode: TTreeNode;
+  CurrPath: String;
+begin
+  if TMethod(AValue) = TMethod(FOnSortCompare) then
+    Exit;
+
+  FOnSortCompare := AValue;
+
+  if (([csLoading,csDesigning] * ComponentState) <> []) or (FFileSortType <> fstCustom) then
+    Exit;
+
+  CurrPath := GetPath;
+  try
+    BeginUpdate;
+    Items.Clear;
+    if FRoot = '' then
+      PopulateWithBaseFiles()
+    else
+    begin
+      RootNode := Items.AddChild(nil, FRoot);
+      RootNode.HasChildren := True;
+      RootNode.Expand(False);
+      try
+       SetPath(CurrPath);
+      except
+        // CurrPath may have been removed in the mean time by another process, just ignore
+        on E: EInvalidPath do ;//
+      end;
     end;
   finally
     EndUpdate;
@@ -625,12 +707,44 @@ begin
   AutoExpand:=False;
   BeginUpdate;
   try
-    Node.DeleteChildren;
-    Result := PopulateTreeNodeWithFiles(Node, GetPathFromNode(Node));
+    case FExpandCollapseMode of
+      ecmRefreshedExpanding:
+        begin
+          Node.DeleteChildren;
+          Result := PopulateTreeNodeWithFiles(Node, GetPathFromNode(Node));
+        end;
+      ecmKeepChildren:
+        if Node.Count = 0 then
+          Result := PopulateTreeNodeWithFiles(Node, GetPathFromNode(Node))
+        else
+          Result := true;
+      ecmCollapseAndClear:
+        Result := PopulateTreeNodeWithFiles(Node, GetPathFromNode(Node));
+    end;
     AutoExpand:=OldAutoExpand;
   finally
     EndUpdate;
   end;
+end;
+
+procedure TCustomShellTreeView.Collapse(Node: TTreeNode);
+var
+  hadChildren: Boolean;
+begin
+  if csDestroying in ComponentState then
+    exit;
+  if ExpandCollapseMode = ecmCollapseAndClear then
+  begin
+    BeginUpdate;
+    try
+      hadChildren := Node.HasChildren;
+      Node.DeleteChildren;
+      Node.HasChildren := hadChildren;
+    finally
+      EndUpdate;
+    end;
+  end;
+  inherited;
 end;
 
 constructor TCustomShellTreeView.Create(AOwner: TComponent);
@@ -678,7 +792,6 @@ begin
     if f1.isFolder then Result:=-1
     else Result:=1;
   end;
-
 end;
 
 { Helper routine.
@@ -691,15 +804,17 @@ end;
 }
 procedure GetFilesInDir(const ABaseDir: string; AMask: string;
   AObjectTypes: TObjectTypes; AResult: TStrings; AFileSortType: TFileSortType;
-  ACaseSensitivity: TMaskCaseSensitivity = mcsPlatformDefault);
+  ACaseSensitivity: TMaskCaseSensitivity = mcsPlatformDefault;
+  ASortCompare: TFileItemCompareEvent = nil);
 var
   DirInfo: TSearchRec;
   FindResult, i: Integer;
   IsDirectory, IsValidDirectory, IsHidden, AddFile, UseMaskList, CaseSens: Boolean;
   SearchStr, ShortFilename: string;
   MaskList: TMaskList = nil;
-  Files: TList;
+  Files: TFileItemAVLTree;
   FileItem: TFileItem;
+  avlNode: TAVLTreeNode;
   {$if defined(windows) and not defined(wince)}
   ErrMode : LongWord;
   {$endif}
@@ -715,7 +830,7 @@ begin
       Delete(AMask, Length(AMask), 1);
     if Trim(AMask) = '' then
       AMask := AllFilesMask;
-    //Use a TMaksList if more than 1 mask is specified or if MaskCaseSensitivity differs from the platform default behaviour
+    //Use a TMaskList if more than 1 mask is specified or if MaskCaseSensitivity differs from the platform default behaviour
     UseMaskList := (Pos(';', AMask) > 0) or
                    {$ifdef NotLiteralFilenames}
                    (ACaseSensitivity = mcsCaseSensitive)
@@ -738,10 +853,16 @@ begin
     end;
 
     try
-      if AFileSortType = fstNone then
-        Files:=nil
-      else
-        Files := TList.Create;
+      Files := nil;
+      case AFileSortType of
+        fstAlphabet:
+          Files := TFileItemAVLTree.Create(@FilesSortAlphabet);
+        fstFoldersFirst:
+          Files := TFileItemAVLTree.Create(@FilesSortFoldersFirst);
+        fstCustom:
+          if ASortCompare <> nil then
+            Files := TFileItemAVLTree.CreateFileItemCompare(ASortCompare);
+      end;
 
       i := 0;
       if UseMaskList then
@@ -797,16 +918,14 @@ begin
 
     if Assigned(Files) then
     begin
-      case AFileSortType of
-        fstAlphabet:     Files.Sort(@FilesSortAlphabet);
-        fstFoldersFirst: Files.Sort(@FilesSortFoldersFirst);
+      avlNode := Files.FindLowest;
+      while Assigned(avlNode) do
+      begin
+        FileItem := TFileItem(avlNode.Data);
+        AResult.AddObject(FileItem.FileInfo.Name, FileItem);
+        avlNode := Files.FindSuccessor(avlNode);
       end;
 
-      for i:=0 to Files.Count-1 do
-      begin
-        FileItem:=TFileItem(Files[i]);
-        AResult.AddObject(FileItem.FileInfo.Name, FileItem);
-      end;
       //don't free the TFileItems here, they will freed by the calling routine
       Files.Free;
     end;
@@ -909,7 +1028,7 @@ begin
   Items.BeginUpdate;
   try
     Files.OwnsObjects := True;
-    GetFilesInDir(ANodePath, AllFilesMask, FObjectTypes, Files, FFileSortType);
+    GetFilesInDir(ANodePath, AllFilesMask, FObjectTypes, Files, FFileSortType, mcsPlatformDefault, FOnSortCompare);
     Result := Files.Count > 0;
 
     for i := 0 to Files.Count - 1 do
