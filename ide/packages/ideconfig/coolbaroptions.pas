@@ -206,6 +206,8 @@ begin
     Add('Step over');
     Add('Step into');
     Add('Step out');
+    Add('Compile project/program'); //Ultibo
+    Add('Build project/program'); //Ultibo
   end;
   FToolBars.Add(ToolBarOpts);
 end;
@@ -221,7 +223,7 @@ begin
   if ToolBarCount = 0 then  // Old format
     ToolbarCount := XMLConfig.GetValue(Path + 'ToolBarCount/Value', 0);
   FVisible := XMLConfig.GetValue(Path + 'Visible/Value', True);
-  FWidth := XMLConfig.GetValue(Path + 'Width/Value', 230);
+  FWidth := XMLConfig.GetValue(Path + 'Width/Value', 290); //230 //Ultibo
   FGrabStyle := XMLConfig.GetValue(Path + 'GrabStyle/Value', 1);
   FGrabWidth := XMLConfig.GetValue(Path + 'GrabWidth/Value', 5);
   FBorderStyle := XMLConfig.GetValue(Path + 'BorderStyle/Value', 1);
