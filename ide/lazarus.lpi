@@ -654,10 +654,6 @@
         <UnitName Value="CleanPkgDeps"/>
       </Unit>
       <Unit>
-        <Filename Value="modematrixopts.pas"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
         <Filename Value="frames/compiler_modematrix.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="CompOptModeMatrixFrame"/>
@@ -753,18 +749,9 @@
         <HasResources Value="True"/>
       </Unit>
       <Unit>
-        <Filename Value="version.inc"/>
-        <IsPartOfProject Value="True"/>
-      </Unit>
-      <Unit>
         <Filename Value="idecmdline.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="IDECmdLine"/>
-      </Unit>
-      <Unit>
-        <Filename Value="lazconf.pp"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="LazConf"/>
       </Unit>
       <Unit>
         <Filename Value="initialsetupdlgs.pas"/>
@@ -832,11 +819,6 @@
         <Filename Value="ideprocs.pp"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="IDEProcs"/>
-      </Unit>
-      <Unit>
-        <Filename Value="environmentopts.pp"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="EnvironmentOpts"/>
       </Unit>
       <Unit>
         <Filename Value="lazarusidestrconsts.pas"/>
@@ -1238,11 +1220,6 @@
         <HasResources Value="True"/>
       </Unit>
       <Unit>
-        <Filename Value="ideoptiondefs.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="IDEOptionDefs"/>
-      </Unit>
-      <Unit>
         <Filename Value="sourceeditprocs.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="SourceEditProcs"/>
@@ -1465,6 +1442,11 @@
         <Filename Value="findinfileswnd.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="FindInFilesWnd"/>
+      </Unit>
+      <Unit>
+        <Filename Value="idetransfermacros.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="IdeTransferMacros"/>
       </Unit>
     </Units>
   </ProjectOptions>

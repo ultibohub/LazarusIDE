@@ -79,7 +79,7 @@ uses
   EncloseSelectionDlg, EncloseIfDef, InvertAssignTool, SourceEditProcs,
   SourceMarks, CharacterMapDlg, SearchFrm, MultiPasteDlg, EditorMacroListViewer,
   EditorToolbarStatic, editortoolbar_options, InputhistoryWithSearchOpt,
-  FPDocHints, MainIntf, GotoFrm, BaseDebugManager, Debugger;
+  FPDocHints, MainIntf, GotoFrm, BaseDebugManager, Debugger, TransferMacrosIntf;
 
 type
   TSourceNotebook = class;
@@ -1177,7 +1177,7 @@ type
     function MacroFuncSaveAll(const {%H-}s:string; const {%H-}Data: PtrInt;
                               var Abort: boolean): string;
   public
-    procedure InitMacros(AMacroList: TTransferMacroList);
+    procedure InitMacros(AMacroList: TTransferMacroListIntf);
     procedure SetupShortCuts;
 
     function FindUniquePageName(FileName:string; IgnoreEditor: TSourceEditor):string;
@@ -1687,8 +1687,8 @@ begin
     SrcEditMenuCut:=RegisterIDEMenuCommand(AParent,'Cut',lisCut, nil, nil, nil, 'laz_cut');
     SrcEditMenuCopy:=RegisterIDEMenuCommand(AParent,'Copy',lisCopy, nil, nil, nil, 'laz_copy');
     SrcEditMenuPaste:=RegisterIDEMenuCommand(AParent,'Paste',lisPaste, nil, nil, nil, 'laz_paste');
-    SrcEditMenuMultiPaste:=RegisterIDEMenuCommand(AParent,'MultiPaste',lisMenuMultiPaste);
-    SrcEditMenuSelectAll:=RegisterIDEMenuCommand(AParent,'SelectAll',lisMenuSelectAll);
+    SrcEditMenuMultiPaste:=RegisterIDEMenuCommand(AParent,'MultiPaste',lisMenuMultiPaste, nil, nil, nil, 'laz_multipaste');
+    SrcEditMenuSelectAll:=RegisterIDEMenuCommand(AParent,'SelectAll',lisMenuSelectAll, nil, nil, nil, 'menu_edit_select_all');
     SrcEditMenuCopyFilename:=RegisterIDEMenuCommand(AParent,'Copy filename', uemCopyFilename);
   {%endregion}
 
@@ -1803,9 +1803,9 @@ begin
         'Source', uemSource, nil, nil, 'item_unit');
     AParent:=SrcEditSubMenuSource;
     SrcEditMenuEncloseSelection := RegisterIDEMenuCommand(AParent,
-        'EncloseSelection', lisMenuEncloseSelection);
+        'EncloseSelection', lisMenuEncloseSelection, nil, nil, nil, 'menu_source_encloseselection');
     SrcEditMenuEncloseInIFDEF := RegisterIDEMenuCommand(AParent,
-        'itmSourceEncloseInIFDEF', lisMenuEncloseInIFDEF);
+        'itmSourceEncloseInIFDEF', lisMenuEncloseInIFDEF, nil, nil, nil, 'menu_source_encloseinifdef');
     SrcEditMenuCompleteCode := RegisterIDEMenuCommand(AParent,
         'CompleteCode', lisMenuCompleteCode, nil, @ExecuteIdeMenuClick);
     SrcEditMenuInvertAssignment := RegisterIDEMenuCommand(AParent,
@@ -1836,7 +1836,8 @@ begin
     SrcEditMenuFindOverloads.Visible := false;
     {$ENDIF}
     SrcEditMenuMakeResourceString := RegisterIDEMenuCommand(AParent,
-        'MakeResourceString', lisMenuMakeResourceString, nil, @ExecuteIdeMenuClick);
+        'MakeResourceString', lisMenuMakeResourceString, nil, @ExecuteIdeMenuClick,
+          nil, 'menu_source_makeresourcestring');
   {%endregion}
 
   SrcEditMenuEditorProperties:=RegisterIDEMenuCommand(SourceEditorMenuRoot,
@@ -10858,7 +10859,7 @@ begin
   Abort:=LazarusIDE.DoSaveAll([sfCheckAmbiguousFiles])<>mrOk;
 end;
 
-procedure TSourceEditorManager.InitMacros(AMacroList: TTransferMacroList);
+procedure TSourceEditorManager.InitMacros(AMacroList: TTransferMacroListIntf);
 begin
   AMacroList.Add(TTransferMacro.Create('Col','',
                  lisCursorColumnInCurrentEditor,@MacroFuncCol,[]));

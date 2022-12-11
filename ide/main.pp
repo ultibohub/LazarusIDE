@@ -113,6 +113,8 @@ uses
   etQuickFixes, etMessageFrame, etMessagesWnd,
   // converter
   ChgEncodingDlg, ConvertDelphi, MissingPropertiesDlg, LazXMLForms,
+  // IdeConfig
+  IdeConfig,
   // environment option frames
   editor_general_options, componentpalette_options, formed_options, OI_options,
   MsgWnd_Options, Files_Options, Desktop_Options, window_options, IdeStartup_Options,
@@ -144,6 +146,7 @@ uses
   package_usage_options, package_description_options, package_integration_options,
   package_provides_options, package_i18n_options,
   // rest of the ide
+  TransferMacrosIntf,
   Splash, IDEDefs, LazarusIDEStrConsts, LazConf, SearchResultView,
   CodeTemplatesDlg, CodeBrowser, FindUnitDlg, InspectChksumChangedDlg,
   IdeOptionsDlg, EditDefineTree, EnvironmentOpts, TransferMacros, KeyMapping,
@@ -162,7 +165,7 @@ uses
   SourceFileManager, EditorToolbarStatic, IDEInstances, NotifyProcessEnd,
   WordCompletion,
   // main ide
-  MainBar, MainIntf, MainBase;
+  MainBar, MainIntf, MainBase, SearchPathProcs;
 
 type
   { TMainIDE }
@@ -1516,11 +1519,11 @@ begin
     // Todo: add LldbFpDebugger for Mac
     // If the default debugger is of a class that is not yet Registered, then the dialog is not shown
     Note:='';
-    if ( (EnvironmentOptions.CurrentDebuggerPropertiesConfig = nil) and  // no debugger at all
-         (not EnvironmentOptions.HasActiveDebuggerEntry) )               // not even with unknown class
-    or ( (EnvironmentOptions.CurrentDebuggerClass <> nil)                       // Debugger with known class
-         and (EnvironmentOptions.CurrentDebuggerPropertiesConfig.NeedsExePath)  // Which does need an exe
-         and (CheckDebuggerQuality(EnvironmentOptions.GetParsedDebuggerFilename, Note)<>sddqCompatible)
+    if ( (DebuggerOptions.CurrentDebuggerPropertiesConfig = nil) and  // no debugger at all
+         (not DebuggerOptions.HasActiveDebuggerEntry) )               // not even with unknown class
+    or ( (DebuggerOptions.CurrentDebuggerClass <> nil)                       // Debugger with known class
+         and (DebuggerOptions.CurrentDebuggerPropertiesConfig.NeedsExePath)  // Which does need an exe
+         and (CheckDebuggerQuality(DebuggerOptions.GetParsedDebuggerFilename, Note)<>sddqCompatible)
        )
     then begin
       debugln(['Warning: (lazarus) missing GDB exe ',EnvironmentOptions.GetParsedLazarusDirectory,' ',Note]);
@@ -1803,7 +1806,7 @@ begin
   FreeThenNil(TheCompiler);
   FreeThenNil(HiddenWindowsOnRun);
   FreeThenNil(FLastActivatedWindows);
-  FreeThenNil(GlobalMacroList);
+  FreeThenNil(TransferMacrosIntf.GlobalMacroList);
   FreeThenNil(IDEMacros);
   FreeThenNil(IDECodeMacros);
   FreeThenNil(LazProjectFileDescriptors);
@@ -2327,7 +2330,7 @@ begin
   MainIDEBar.itmFindDeclaration.OnClick:=@mnuSearchFindDeclaration;
   MainIDEBar.itmOpenFileAtCursor.OnClick:=@mnuOpenFileAtCursorClicked;
 
-  SourceEditorManager.InitMacros(GlobalMacroList);
+  SourceEditorManager.InitMacros(TransferMacrosIntf.GlobalMacroList);
   EditorMacroListViewer.OnKeyMapReloaded := @SourceEditorManager.ReloadEditorOptions;
 end;
 
@@ -7579,7 +7582,7 @@ begin
     Result := mrAbort;
     Exit;
   end;
-  debugln('Hint: (lazarus) [TMainIDE.DoRunProject] Debugger=',DbgSName(EnvironmentOptions.CurrentDebuggerClass));
+  debugln('Hint: (lazarus) [TMainIDE.DoRunProject] Debugger=',DbgSName(DebuggerOptions.CurrentDebuggerClass));
 
   try
     Result:=mrCancel;
@@ -14418,5 +14421,6 @@ initialization
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('main.pp: initialization');{$ENDIF}
   ShowSplashScreen:=true;
   DebugLogger.ParamForEnabledLogGroups := '--debug-enable=';
+  EnvironmentOpts.GroupEnvironmentI18NCaption := @dlgGroupEnvironment;
 end.
 

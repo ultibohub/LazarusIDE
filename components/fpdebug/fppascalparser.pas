@@ -601,8 +601,10 @@ type
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetTypeInfo: TFpSymbol; override;
     function GetAsCardinal: QWord; override;
+    function GetAsString: AnsiString; override;
+    function GetAsWideString: WideString; override;
     function GetAddress: TFpDbgMemLocation; override;
-    function GetDataAddress: TFpDbgMemLocation; override;
+    function GetDerefAddress: TFpDbgMemLocation; override;
     function GetMember(AIndex: Int64): TFpValue; override;
   public
     constructor Create(AValue: TFpValue; ATypeInfo: TFpSymbol; AContext: TFpDbgLocationContext);
@@ -665,7 +667,7 @@ type
     function GetAsInteger: Int64; override;
     function GetAsCardinal: QWord; override;
     function GetTypeInfo: TFpSymbol; override;
-    function GetDataAddress: TFpDbgMemLocation; override;
+    function GetDerefAddress: TFpDbgMemLocation; override;
     function GetMember(AIndex: Int64): TFpValue; override;
     function GetAsString: AnsiString; override;
     function GetAsWideString: WideString; override;
@@ -741,10 +743,28 @@ begin
 end;
 
 function TFpPasParserValueCastToPointer.GetFieldFlags: TFpValueFieldFlags;
+var
+  t: TFpSymbol;
+  Size: TFpDbgValueSize;
 begin
   if (FValue.FieldFlags * [svfAddress, svfOrdinal] <> [])
-  then
-    Result := [svfOrdinal, svfCardinal, svfSizeOfPointer, svfDataAddress]
+  then begin
+    Result := [svfOrdinal, svfCardinal, svfSizeOfPointer, svfDataAddress];
+
+    t := TypeInfo;
+    if (t <> nil) then t := t.TypeInfo;
+    if (t <> nil) and (t.Kind = skChar) and
+       //(IsNilLoc(OrdOrDataAddr) or
+       IsValidLoc(GetDerefAddress) //)  // always true
+    then begin // pchar
+      if not t.ReadSize(nil, Size) then
+        Size := ZeroSize;
+      case Size.Size of
+        1: Result := Result + [svfString];
+        2: Result := Result + [svfWideString];
+      end;
+    end;
+  end
   else
     Result := [];
 end;
@@ -774,12 +794,90 @@ begin
   end;
 end;
 
+function TFpPasParserValueCastToPointer.GetAsString: AnsiString;
+var
+  t: TFpSymbol;
+  i: Cardinal;
+  Size: TFpDbgValueSize;
+  a: TFpDbgMemLocation;
+begin
+  Result := '';
+  if (FValue = nil) or (Context.MemManager = nil) then
+    exit;
+
+  t := TypeInfo;
+  if t <> nil then
+    t := t.TypeInfo;
+  if (t = nil) or (t.Kind <> skChar) then
+    exit;
+
+  a := GetDerefAddress;
+  if not IsReadableMem(a) then
+    exit;
+
+  // Only test for hardcoded size. TODO: dwarf 3 could have variable size, but for char that is not expected
+  if not t.ReadSize(nil, Size) then
+    exit;
+
+  if Size = 2 then
+    Result := GetAsWideString
+  else
+  if Size = 1 then begin // pchar
+    if not Context.MemManager.ReadPChar(a, 0, Result) then begin
+      Result := '';
+      SetLastError(Context.LastMemError);
+      exit;
+    end;
+  end
+  else
+    Result := inherited GetAsString;
+end;
+
+function TFpPasParserValueCastToPointer.GetAsWideString: WideString;
+var
+  t: TFpSymbol;
+  i: Cardinal;
+  Size: TFpDbgValueSize;
+  a: TFpDbgMemLocation;
+begin
+  Result := '';
+  if (FValue = nil) or (Context.MemManager = nil) then
+    exit;
+
+  t := TypeInfo;
+  if t <> nil then
+    t := t.TypeInfo;
+  if (t = nil) or (t.Kind <> skChar) then
+    exit;
+
+  a := GetDerefAddress;
+  if not IsReadableMem(a) then
+    exit;
+
+  // Only test for hardcoded size. TODO: dwarf 3 could have variable size, but for char that is not expected
+  if not t.ReadSize(nil, Size) then
+    exit;
+
+  if Size = 1 then
+    Result := GetAsString
+  else
+  if Size = 2 then begin // pchar
+    if not Context.MemManager.ReadPWChar(a, 0, Result) then begin
+      Result := '';
+      SetLastError(Context.LastMemError);
+      exit;
+    end;
+  end
+  else
+    Result := inherited GetAsWideString;
+end;
+
 function TFpPasParserValueCastToPointer.GetAddress: TFpDbgMemLocation;
 begin
   Result := FValue.Address;
 end;
 
-function TFpPasParserValueCastToPointer.GetDataAddress: TFpDbgMemLocation;
+function TFpPasParserValueCastToPointer.GetDerefAddress: TFpDbgMemLocation;
 begin
   Result := TargetLoc(TDbgPtr(AsCardinal));
 end;
@@ -794,7 +892,7 @@ begin
   Result := nil;
 
   ti := FTypeSymbol.TypeInfo;
-  addr := DataAddress;
+  addr := DerefAddress;
   if not IsTargetAddr(addr) then begin
     //LastError := CreateError(fpErrAnyError, ['Internal dereference error']);
     exit;
@@ -916,8 +1014,7 @@ end;
 
 function TFpPasParserValueDerefPointer.GetAddress: TFpDbgMemLocation;
 begin
-  Result := FValue.DataAddress;
-  Result := Context.ReadAddress(Result, SizeVal(Context.SizeOfAddress));
+  Result := FValue.DerefAddress;
   if IsValidLoc(Result) then begin
     SetLastError(Context.LastMemError);
     exit;
@@ -1053,7 +1150,7 @@ begin
   Result := FTypeInfo;
 end;
 
-function TFpPasParserValueAddressOf.GetDataAddress: TFpDbgMemLocation;
+function TFpPasParserValueAddressOf.GetDerefAddress: TFpDbgMemLocation;
 begin
   Result := FValue.Address;
 end;
@@ -1349,6 +1446,8 @@ begin
           end;
 
           TmpVal2 := TFpValueConstChar.Create(v[Offs]);
+          if TmpVal.TypeInfo <> nil then
+            TFpValueConstChar(TmpVal2).SetType(TmpVal.TypeInfo.TypeInfo);
           a := TmpVal.DataAddress;
           if IsTargetAddr(a) and IsReadableMem(a) then
             TFpValueConstChar(TmpVal2).SetAddress(a + Offs-1);
@@ -3299,7 +3398,7 @@ begin
   end
   else
   if tmp.Kind = skPointer then begin
-    if (svfDataAddress in tmp.FieldFlags) and (IsReadableLoc(tmp.DataAddress)) and // TODO, what if Not readable addr
+    if (svfDataAddress in tmp.FieldFlags) and (IsReadableLoc(tmp.DerefAddress)) and // TODO, what if Not readable addr
        (tmp.TypeInfo <> nil) //and (tmp.TypeInfo.TypeInfo <> nil)
     then begin
       Result := tmp.Member[0];
@@ -3424,7 +3523,7 @@ function TFpPascalExpressionPartOperatorPlusMinus.DoGetResultValue: TFpValue;
              (s1 = s2)
           then begin
             TmpVal := APointerVal.Member[1];
-            if s1 <> (TmpVal.DataAddress.Address - APointerVal.DataAddress.Address) then begin
+            if (TmpVal = nil) or (s1 <> (TmpVal.Address.Address - APointerVal.DerefAddress.Address)) then begin
               TmpVal.ReleaseReference;
               debugln(DBG_WARNINGS, 'Size mismatch for pointer math');
               exit;
@@ -4117,7 +4216,7 @@ begin
   // Copy from TFpPascalExpressionPartOperatorDeRef.DoGetResultValue
   tmp2 := nil;
   if tmp.Kind = skPointer then begin
-    if (svfDataAddress in tmp.FieldFlags) and (IsReadableLoc(tmp.DataAddress)) and // TODO, what if Not readable addr
+    if (svfDataAddress in tmp.FieldFlags) and (IsReadableLoc(tmp.DerefAddress)) and // TODO, what if Not readable addr
        (tmp.TypeInfo <> nil) //and (tmp.TypeInfo.TypeInfo <> nil)
     then begin
       tmp := tmp.Member[0];

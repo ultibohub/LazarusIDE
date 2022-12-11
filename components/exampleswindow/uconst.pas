@@ -57,7 +57,9 @@ resourcestring
     rsExampleView = 'View in Browser';                      //  "
 
     // Settings Frame
+    rsGeneral = 'General';
     rsDirWhereExamplesGo = 'Directory where Examples go';
+    rsDefault = 'Default';
 
     // ------- rsExampleData
     // Most literals in uExampleData are for debugging only and very unlikely to be

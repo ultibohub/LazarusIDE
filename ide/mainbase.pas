@@ -978,6 +978,9 @@ begin
   end;
 end;
 
+{ Note: Icons are specified as last argument in the CreateMenuItem call. If these
+  icons do not show up in the IDE there may be another registration place somewhere
+  else, usually in RegisterStandardSourceEditorMenuItems (sourceeditor unit). }
 procedure TMainIDEBase.SetupEditMenu;
 var
   ParentMI: TIDEMenuSection;
@@ -993,17 +996,17 @@ begin
     CreateMenuItem(ParentMI,itmEditCut,'itmEditCut',lisCut,'laz_cut');
     CreateMenuItem(ParentMI,itmEditCopy,'itmEditCopy',lisCopy,'laz_copy');
     CreateMenuItem(ParentMI,itmEditPaste,'itmEditPaste',lisPaste,'laz_paste');
-    CreateMenuItem(ParentMI,itmEditMultiPaste,'itmEditMultiPaste',lisMenuMultiPaste);
+    CreateMenuItem(ParentMI,itmEditMultiPaste,'itmEditMultiPaste',lisMenuMultiPaste, 'laz_multipaste');
 
     // "Select" menu items
     CreateMenuSeparatorSection(mnuEdit,itmEditSelect,'itmEditSelect');
     ParentMI:=itmEditSelect;
-    CreateMenuItem(ParentMI,itmEditSelectAll,'itmEditSelectAll',lisMenuSelectAll, 'menu_select_all');
-    CreateMenuItem(ParentMI,itmEditSelectToBrace,'itmEditSelectToBrace',lisMenuSelectToBrace);
-    CreateMenuItem(ParentMI,itmEditSelectCodeBlock,'itmEditSelectCodeBlock',lisMenuSelectCodeBlock);
-    CreateMenuItem(ParentMI,itmEditSelectWord,'itmEditSelectWord',lisMenuSelectWord);
-    CreateMenuItem(ParentMI,itmEditSelectLine,'itmEditSelectLine',lisMenuSelectLine);
-    CreateMenuItem(ParentMI,itmEditSelectParagraph,'itmEditSelectParagraph',lisMenuSelectParagraph);
+    CreateMenuItem(ParentMI,itmEditSelectAll,'itmEditSelectAll',lisMenuSelectAll, 'menu_edit_select_all');
+    CreateMenuItem(ParentMI,itmEditSelectToBrace,'itmEditSelectToBrace',lisMenuSelectToBrace, 'menu_edit_select_tobrace');
+    CreateMenuItem(ParentMI,itmEditSelectCodeBlock,'itmEditSelectCodeBlock',lisMenuSelectCodeBlock, 'menu_edit_select_codeblock');
+    CreateMenuItem(ParentMI,itmEditSelectWord,'itmEditSelectWord',lisMenuSelectWord, 'menu_edit_select_word');
+    CreateMenuItem(ParentMI,itmEditSelectLine,'itmEditSelectLine',lisMenuSelectLine, 'menu_edit_select_line');
+    CreateMenuItem(ParentMI,itmEditSelectParagraph,'itmEditSelectParagraph',lisMenuSelectParagraph, 'menu_edit_select_paragraph');
 
     // "Char Conversion" menu items
     CreateMenuSeparatorSection(mnuEdit,itmEditBlockActions,'itmEditBlockActions');
@@ -1012,18 +1015,21 @@ begin
     CreateMenuItem(ParentMI,itmEditUnindentBlock,'itmEditUnindentBlock',lisMenuUnindentSelection,'menu_unindent');
     CreateMenuItem(ParentMI,itmEditUpperCaseBlock,'itmEditUpperCaseBlock',lisMenuUpperCaseSelection, 'menu_edit_uppercase');
     CreateMenuItem(ParentMI,itmEditLowerCaseBlock,'itmEditLowerCaseBlock',lisMenuLowerCaseSelection, 'menu_edit_lowercase');
-    CreateMenuItem(ParentMI,itmEditSwapCaseBlock,'itmEditSwapCaseBlock',lisMenuSwapCaseSelection, 'menu_edit_uppercase');
+    CreateMenuItem(ParentMI,itmEditSwapCaseBlock,'itmEditSwapCaseBlock',lisMenuSwapCaseSelection, 'menu_edit_swapcase');
     CreateMenuItem(ParentMI,itmEditSortBlock,'itmEditSortBlock',lisMenuSortSelection, 'menu_edit_sort');
-    CreateMenuItem(ParentMI,itmEditTabsToSpacesBlock,'itmEditTabsToSpacesBlock',lisMenuTabsToSpacesSelection);
-    CreateMenuItem(ParentMI,itmEditSelectionBreakLines,'itmEditSelectionBreakLines',lisMenuBeakLinesInSelection);
+    CreateMenuItem(ParentMI,itmEditTabsToSpacesBlock,'itmEditTabsToSpacesBlock',lisMenuTabsToSpacesSelection, 'menu_edit_tabstospaces');
+    CreateMenuItem(ParentMI,itmEditSelectionBreakLines,'itmEditSelectionBreakLines',lisMenuBeakLinesInSelection, 'menu_edit_breaklines');
 
     // *** insert text ***:
     CreateMenuSeparatorSection(mnuEdit,itmEditInsertions,'itmEditInsertions');
     ParentMI:=itmEditInsertions;
-    CreateMenuItem(ParentMI,itmEditInsertCharacter,'itmEditInsertCharacter',lisMenuInsertCharacter);
+    CreateMenuItem(ParentMI,itmEditInsertCharacter,'itmEditInsertCharacter',lisMenuInsertCharacter, 'menu_edit_insertcharacter');
   end;
 end;
 
+{ Note: Icons are specified as last argument in the CreateMenuItem call. If these
+  icons do not show up in the IDE there may be another registration place somewhere
+  else, usually in RegisterStandardSourceEditorMenuItems (sourceeditor unit). }
 procedure TMainIDEBase.SetupSearchMenu;
 var
   ParentMI: TIDEMenuSection;
@@ -1123,7 +1129,7 @@ begin
       CreateMenuItem(itmViewDebugWindows,itmViewRegisters,'itmViewRegisters',lisMenuViewRegisters);
       CreateMenuItem(itmViewDebugWindows,itmViewCallStack,'itmViewCallStack',lisMenuViewCallStack,'debugger_call_stack');
       CreateMenuItem(itmViewDebugWindows,itmViewThreads,'itmViewThreads',lisMenuViewThreads);
-      CreateMenuItem(itmViewDebugWindows,itmViewAssembler,'itmViewAssembler',lisMenuViewAssembler);
+      CreateMenuItem(itmViewDebugWindows,itmViewAssembler,'itmViewAssembler',lisMenuViewAssembler, 'debugger_assembler');
       CreateMenuItem(itmViewDebugWindows,itmViewDebugEvents,'itmViewDebugEvents',lisMenuViewDebugEvents,'debugger_event_log');
       CreateMenuItem(itmViewDebugWindows,itmViewDbgHistory,'itmViewDbgHistory',lisMenuViewHistory);
     end;
@@ -1140,6 +1146,9 @@ begin
   end;
 end;
 
+{ Note: Icons are specified as last argument in the CreateMenuItem call. If these
+  icons do not show up in the IDE there may be another registration place somewhere
+  else, usually in RegisterStandardSourceEditorMenuItems (sourceeditor unit). }
 procedure TMainIDEBase.SetupSourceMenu;
 var
   ParentMI, SubParentMI: TIDEMenuSection;
@@ -1149,10 +1158,10 @@ begin
     ParentMI:=itmSourceBlockActions;
     CreateMenuItem(ParentMI,itmSourceCommentBlock,'itmSourceCommentBlock',lisMenuCommentSelection, 'menu_comment');
     CreateMenuItem(ParentMI,itmSourceUncommentBlock,'itmSourceUncommentBlock',lisMenuUncommentSelection, 'menu_uncomment');
-    CreateMenuItem(ParentMI,itmSourceToggleComment,'itmSourceToggleComment',lisMenuToggleComment, 'menu_comment');
-    CreateMenuItem(ParentMI,itmSourceEncloseBlock,'itmSourceEncloseBlock',lisMenuEncloseSelection);
-    CreateMenuItem(ParentMI,itmSourceEncloseInIFDEF,'itmSourceEncloseInIFDEF',lisMenuEncloseInIFDEF);
-    CreateMenuItem(ParentMI,itmSourceCompleteCodeInteractive,'itmSourceCompleteCodeInteractive',lisMenuCompleteCodeInteractive);
+    CreateMenuItem(ParentMI,itmSourceToggleComment,'itmSourceToggleComment',lisMenuToggleComment, 'menu_togglecomment');
+    CreateMenuItem(ParentMI,itmSourceEncloseBlock,'itmSourceEncloseBlock',lisMenuEncloseSelection, 'menu_source_encloseselection');
+    CreateMenuItem(ParentMI,itmSourceEncloseInIFDEF,'itmSourceEncloseInIFDEF',lisMenuEncloseInIFDEF, 'menu_source_encloseinifdef');
+    CreateMenuItem(ParentMI,itmSourceCompleteCodeInteractive,'itmSourceCompleteCodeInteractive',lisMenuCompleteCodeInteractive, 'menu_source_completecode');
     CreateMenuItem(ParentMI,itmRefactorInvertAssignment,'itmInvertAssignment',uemInvertAssignment);
     CreateMenuItem(ParentMI,itmSourceUseUnit,'itmSourceUseUnit',lisMenuUseUnit);
     // Refactor
@@ -1176,7 +1185,7 @@ begin
       CreateMenuSeparatorSection(SubParentMI,itmRefactorTools,'itmRefactorTools');
       ParentMI:=itmRefactorTools;
       CreateMenuItem(ParentMI,itmRefactorMakeResourceString,'itmRefactorMakeResourceString',
-                     lisMenuMakeResourceString,'menu_tool_make_resourcestring');
+                     lisMenuMakeResourceString,'menu_source_makeresourcestring');
     // CodeToolChecks
     CreateMenuSeparatorSection(mnuSource,itmSourceCodeToolChecks,'itmSourceCodeToolChecks');
     ParentMI:=itmSourceCodeToolChecks;
@@ -1325,18 +1334,18 @@ begin
     CreateMenuItem(ParentMI,itmPkgNewPackage,'itmPkgNewPackage',lisMenuNewPackage, 'pkg_add');
     CreateMenuItem(ParentMI,itmPkgOpenLoadedPackage,'itmPkgOpenPackage',lisMenuOpenPackage,'pkg_installed');
     CreateMenuItem(ParentMI,itmPkgOpenPackageFile,'itmPkgOpenPackageFile',lisMenuOpenPackageFile,'pkg_open');
-    CreateMenuItem(ParentMI,itmPkgOpenPackageOfCurUnit,'itmPkgOpenPackageOfCurUnit',lisMenuOpenPackageOfCurUnit);
+    CreateMenuItem(ParentMI,itmPkgOpenPackageOfCurUnit,'itmPkgOpenPackageOfCurUnit',lisMenuOpenPackageOfCurUnit,'pkg_open_packageofcurunit');
     CreateMenuSubSection(ParentMI,itmPkgOpenRecent,'itmPkgOpenRecent',lisMenuOpenRecentPkg, 'pkg_open_recent');
 
     CreateMenuSeparatorSection(mnuComponent,itmPkgUnits,'itmPkgUnits');
     ParentMI:=itmPkgUnits;
-    CreateMenuItem(ParentMI,itmPkgAddCurFileToPkg,'itmPkgAddCurFileToPkg',lisMenuAddCurFileToPkg,'pkg_add');
+    CreateMenuItem(ParentMI,itmPkgAddCurFileToPkg,'itmPkgAddCurFileToPkg',lisMenuAddCurFileToPkg,'pkg_new');
     CreateMenuItem(ParentMI, itmPkgAddNewComponentToPkg, 'itmPkgAddNewComponentToPkg', lisMenuNewComponent+' ...', 'pkg_comp_new');
 
     CreateMenuSeparatorSection(mnuComponent,itmPkgGraphSection,'itmPkgGraphSection');
     ParentMI:=itmPkgGraphSection;
     CreateMenuItem(ParentMI,itmPkgPkgGraph,'itmPkgPkgGraph',lisMenuPackageGraph+' ...','pkg_graph');
-    CreateMenuItem(ParentMI,itmPkgPackageLinks,'itmPkgPackageLinks',lisMenuPackageLinks);
+    CreateMenuItem(ParentMI,itmPkgPackageLinks,'itmPkgPackageLinks',lisMenuPackageLinks, 'pkg_links');
     CreateMenuItem(ParentMI,itmPkgEditInstallPkgs,'itmPkgEditInstallPkgs',lisMenuEditInstallPkgs,'pkg_properties');
   end;
 end;
@@ -1477,7 +1486,7 @@ begin
 
   with MainIDEBar do
   case AForm.ClassName of
-    'TCharacterMapDialog':     Exit(-1);                      // for future icon
+    'TCharacterMapDialog':     Exit(itmEditInsertCharacter.ImageIndex);
     'TObjectInspectorDlg':     Exit(itmViewInspector.ImageIndex);
     'TSourceNotebook':         Exit(itmViewSourceEditor.ImageIndex);
     'TMessagesView':           Exit(itmViewMessage.ImageIndex);
@@ -1497,7 +1506,7 @@ begin
     'TRegistersDlg':           Exit(-1);                      // for future icon
     'TCallStackDlg':           Exit(itmViewCallStack.ImageIndex);
     'TThreadsDlg':             Exit(-1);                      // for future icon
-    'TAssemblerDlg':           Exit(-1);                      // for future icon
+    'TAssemblerDlg':           Exit(itmViewAssembler.ImageIndex);
     'TDbgEventsForm':          Exit(-1);                      // for future icon
     'THistoryDialog':          Exit(-1);                      // for future icon
     'TDbgOutputForm':          Exit(itmViewDebugOutput.ImageIndex);

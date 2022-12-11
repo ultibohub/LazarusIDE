@@ -47,13 +47,13 @@ uses
   FileProcs, SourceChanger, CodeCompletionTool,
   // IDEIntf
   ProjectIntf, ObjectInspector, IDEWindowIntf, IDEOptionsIntf, IDEOptEditorIntf,
-  ComponentReg, IDEExternToolIntf, MacroDefIntf, SrcEditorIntf,
+  ComponentReg, IDEExternToolIntf, SrcEditorIntf,
   // DebuggerIntf
   DbgIntfDebuggerBase,
-  // IDE
-  IDEProcs, DialogProcs, LazarusIDEStrConsts, IDETranslations, LazConf,
-  IDEOptionDefs, TransferMacros, ModeMatrixOpts,
-  IdeCoolbarData, EditorToolbarStatic, IdeDebuggerOpts;
+  // IdeOptions
+  RecentListProcs, SearchPathProcs, LazConf,
+  IDEOptionDefs, TransferMacrosIntf, ModeMatrixOpts,
+  CoolBarOptions, EditorToolBarOptions;
 
 const
   EnvOptsVersion: integer = 110;
@@ -89,6 +89,14 @@ const
 
   //----------------------------------------------------------------------------
   
+type
+  TParseString = record
+    UnparsedValue: string;
+    ParsedValue: string;
+    ParseStamp: integer;
+    Parsing: boolean;
+  end;
+
   { Backup }
 type
   TBackupType = (
@@ -538,7 +546,6 @@ type
     FDebuggerAutoSetInstanceFromClass: boolean;
     FDebuggerShowExitCodeMessage: boolean;
     FFppkgCheck: boolean;
-    FHasActiveDebuggerEntry: Boolean;
     fRegisteredSubConfig: TObjectList;
     FDebuggerAutoCloseAsm: boolean;
     // config file
@@ -651,7 +658,6 @@ type
     FDebuggerResetAfterRun: boolean;
     FDebuggerConfig: TDebuggerConfigStore;
     FDebuggerFileHistory: TStringList; // per debugger class
-    FDebuggerProperties: TDebuggerPropertiesConfigList; // named entries
     FDebuggerShowStopMessage: Boolean;
     FDebuggerEventLogClearOnRun: Boolean;
     FDebuggerEventLogCheckLineLimit: Boolean;
@@ -724,7 +730,6 @@ type
 	function CheckActiveDesktop(const APath: string; ACount: Integer): TDesktopOpt; //Ultibo
     function GetCompilerFilename: string;
     function GetCompilerMessagesFilename: string;
-    function GetCurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig;
     function GetDebugDesktop: TDesktopOpt;
     function GetDebuggerEventLogColors(AIndex: TDBGEventType): TDebuggerEventLogColor;
     function GetDebuggerSearchPath: string;
@@ -742,7 +747,6 @@ type
     procedure SaveNonDesktop(Path: String);
     procedure SetCompilerFilename(const AValue: string);
     procedure SetCompilerMessagesFilename(AValue: string);
-    procedure SetCurrentDebuggerPropertiesOpt(AValue: TDebuggerPropertiesConfig);
     procedure SetDebuggerEventLogColors(AIndex: TDBGEventType;
       const AValue: TDebuggerEventLogColor);
     procedure SetDebuggerSearchPath(const AValue: string);
@@ -760,7 +764,6 @@ type
     procedure InitXMLCfg(CleanConfig: boolean);
     procedure FileUpdated;
     procedure SetTestBuildDirectory(const AValue: string);
-    procedure LoadDebuggerProperties;
   public
     class function GetGroupCaption:string; override;
     class function GetInstance: TAbstractIDEOptions; override;
@@ -787,27 +790,10 @@ type
     function GetParsedMakeFilename: string;
     function GetParsedCompilerMessagesFilename: string;
     function GetParsedFPDocPaths: string;
-    function GetParsedDebuggerFilename(AProjectDbgFileName: String = ''): string;
+    function GetParsedDebuggerFilename(AProjectDbgFileName: String): string;
     function GetParsedDebuggerSearchPath: string;
     function GetParsedFppkgConfig: string; override;
     function GetParsedValue(o: TEnvOptParseType; AUnparsedValue: String = ''): string;
-
-    // macros
-    procedure InitMacros(AMacroList: TTransferMacroList);
-    function MacroFuncFPCSrcDir(const {%H-}s:string; const {%H-}Data: PtrInt;
-                                var {%H-}Abort: boolean): string;
-    function MacroFuncLazarusDir(const {%H-}s:string; const {%H-}Data: PtrInt;
-                                 var {%H-}Abort: boolean): string;
-    function MacroFuncExeExt(const {%H-}s:string; const {%H-}Data: PtrInt;
-                                 var {%H-}Abort: boolean): string;
-    function MacroFuncLanguageID(const {%H-}s:string; const {%H-}Data: PtrInt;
-                                 var {%H-}Abort: boolean): string;
-    function MacroFuncLanguageName(const {%H-}s:string; const {%H-}Data: PtrInt;
-                                   var {%H-}Abort: boolean): string;
-    function MacroFuncTestDir(const {%H-}s:string; const {%H-}Data: PtrInt;
-                              var {%H-}Abort: boolean): string;
-    function MacroFuncConfDir(const {%H-}s:string; const {%H-}Data: PtrInt;
-                              var {%H-}Abort: boolean): string;
 
     procedure UseDesktop(ADesktop: TDesktopOpt);
     procedure EnableDebugDesktop;
@@ -895,7 +881,6 @@ type
     property FPCSourceDirHistory: TStringList read FFPCSourceDirHistory;
     property MakeFilename: string read GetMakeFilename write SetMakeFilename;
     property MakeFileHistory: TStringList read FMakeFileHistory;
-    function DebuggerFilename: string;
     property DebuggerFileHistory[AnIndex: String]: TStringList read GetNamedDebuggerFileHistory;
     property DebuggerSearchPath: string read GetDebuggerSearchPath write SetDebuggerSearchPath;
     property DebuggerShowStopMessage: boolean read FDebuggerShowStopMessage write FDebuggerShowStopMessage;
@@ -932,12 +917,8 @@ type
     property CleanBuildPkgSrc: Boolean read FCleanBuildPkgSrc write FCleanBuildPkgSrc;
 
     // Debugger
-    procedure SaveDebuggerPropertiesList;
-    function  DebuggerPropertiesConfigList: TDebuggerPropertiesConfigList;
-    function  CurrentDebuggerClass: TDebuggerClass;
-    function  CurrentDebuggerPropertiesConfigEx(AnUID: String = ''): TDebuggerPropertiesConfig;
-    property  CurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig read GetCurrentDebuggerPropertiesConfig write SetCurrentDebuggerPropertiesOpt;
-    property  HasActiveDebuggerEntry: Boolean read FHasActiveDebuggerEntry write FHasActiveDebuggerEntry; // for the initial setup dialog / entry may be of unknown class
+    // for the debugger config
+    property XMLCfg: TRttiXMLConfig read FXMLCfg;
     property  DebuggerConfig: TDebuggerConfigStore read FDebuggerConfig;
 
     // Debugger event log
@@ -1062,6 +1043,7 @@ type
 
 var
   OverrideFPCVer: string = '';
+  GroupEnvironmentI18NCaption: PAnsiString = nil;
   EnvironmentOptions: TEnvironmentOptions = nil;
 
 function PascalExtToType(const Ext: string): TPascalExtType;
@@ -1072,9 +1054,6 @@ function StrToMsgWndFilenameStyle(const s: string): TMsgWndFileNameStyle;
 function StrToIDEMultipleInstancesOption(const s: string): TIDEMultipleInstancesOption;
 function BackupTypeToName(b: TBackupType): string;
 function NameToBackupType(const s: string): TBackupType;
-
-function SimpleDirectoryCheck(const OldDir, NewDir,
-  NotFoundErrMsg: string; out StopChecking: boolean): boolean;
 
 const
   DefaultMsgViewFocus = {$IFDEF Windows}true{$ELSE}false{$ENDIF};
@@ -1162,30 +1141,6 @@ begin
   for b in TBackupType do
     if CompareText(s,BackupTypeToName(b))=0 then exit(b);
   Result:=bakNone;
-end;
-
-function SimpleDirectoryCheck(const OldDir, NewDir,
-  NotFoundErrMsg: string; out StopChecking: boolean): boolean;
-var
-  SubResult: TModalResult;
-begin
-  StopChecking:=true;
-  if OldDir=NewDir then begin
-    Result:=true;
-    exit;
-  end;
-  SubResult:=CheckDirPathExists(NewDir,lisEnvOptDlgDirectoryNotFound,
-                                NotFoundErrMsg);
-  if SubResult=mrIgnore then begin
-    Result:=true;
-    exit;
-  end;
-  if SubResult=mrCancel then begin
-    Result:=false;
-    exit;
-  end;
-  StopChecking:=false;
-  Result:=true;
 end;
 
 function dbgs(o: TEnvOptParseType): string;
@@ -1944,7 +1899,6 @@ begin
   FMakeFileHistory:=TStringList.Create;
   FDebuggerFileHistory:=TStringList.Create;
   FDebuggerFileHistory.OwnsObjects := True;
-  FDebuggerProperties := TDebuggerPropertiesConfigList.Create;
   FDebuggerEventLogColors:=DebuggerDefaultColors;
   FppkgCheck:=false;
   FppkgConfigFile:='';
@@ -2027,8 +1981,6 @@ begin
   FreeAndNil(FCompilerFileHistory);
   FreeAndNil(FFPCSourceDirHistory);
   FreeAndNil(FMakeFileHistory);
-  FDebuggerProperties.ClearAll;
-  FreeAndNil(FDebuggerProperties);
   FreeAndNil(FDebuggerFileHistory);
   FreeAndNil(FManyBuildModesSelection);
   FreeAndNil(FTestBuildDirHistory);
@@ -2061,7 +2013,9 @@ end;
 
 class function TEnvironmentOptions.GetGroupCaption: string;
 begin
-  Result := dlgGroupEnvironment;
+  Result := '';
+  if GroupEnvironmentI18NCaption <> nil then
+    Result := GroupEnvironmentI18NCaption^;
 end;
 
 class function TEnvironmentOptions.GetInstance: TAbstractIDEOptions;
@@ -2588,7 +2542,7 @@ var
 begin
   // files
   CurLazDir:=ChompPathDelim(LazarusDirectory);
-  if not TTransferMacroList.StrHasMacros(CurLazDir) then begin
+  if not GlobalMacroListClass.StrHasMacros(CurLazDir) then begin
     BaseDir:=ExtractFilePath(ChompPathDelim(GetPrimaryConfigPath));
     if PathIsInPath(CurLazDir,BaseDir) then begin
       // the pcp directory is in the lazarus directory
@@ -2636,7 +2590,6 @@ begin
 
   // debugger
   FDebuggerConfig.Save;
-  SaveDebuggerPropertiesList;
   FXMLCfg.SetDeleteValue(Path+'DebuggerOptions/ShowStopMessage/Value',
       FDebuggerShowStopMessage, True);
   FXMLCfg.SetDeleteValue(Path+'DebuggerOptions/DebuggerShowExitCodeMessage/Value',
@@ -3034,9 +2987,6 @@ end;
 function TEnvironmentOptions.GetParsedDebuggerFilename(
   AProjectDbgFileName: String): string;
 begin
-  if AProjectDbgFileName = '' then
-    AProjectDbgFileName := DebuggerFilename;
-
   if FParseValues[eopDebuggerFilename].UnparsedValue <> AProjectDbgFileName then
     SetParseValue(eopDebuggerFilename,UTF8Trim(AProjectDbgFileName));
 
@@ -3176,121 +3126,6 @@ end;
 function TEnvironmentOptions.GetParsedCompilerFilename: string;
 begin
   Result:=GetParsedValue(eopCompilerFilename);
-end;
-
-procedure TEnvironmentOptions.InitMacros(AMacroList: TTransferMacroList);
-begin
-  AMacroList.Add(TTransferMacro.Create('FPCSrcDir','',
-                 lisFreePascalSourceDirectory,@MacroFuncFPCSrcDir,[]));
-  AMacroList.Add(TTransferMacro.Create('LazarusDir','',
-                 lisLazarusDirectory,@MacroFuncLazarusDir,[]));
-  AMacroList.Add(TTransferMacro.Create('ExeExt','',
-                 lisFileExtensionOfPrograms, @MacroFuncExeExt, []));
-  AMacroList.Add(TTransferMacro.Create('LanguageID','',
-                 lisLazarusLanguageID,@MacroFuncLanguageID,[]));
-  AMacroList.Add(TTransferMacro.Create('LanguageName','',
-                 lisLazarusLanguageName,@MacroFuncLanguageName,[]));
-  AMacroList.Add(TTransferMacro.Create('TestDir','',
-                 lisTestDirectory,@MacroFuncTestDir,[]));
-  AMacroList.Add(TTransferMacro.Create('ConfDir','',
-                 lisConfigDirectory,@MacroFuncConfDir,[]));
-  AMacroList.Add(TTransferMacro.Create('Home',GetUserDir,
-                 lisUserSHomeDirectory, nil, []));
-end;
-
-function TEnvironmentOptions.MacroFuncFPCSrcDir(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=GetParsedFPCSourceDirectory;
-end;
-
-function TEnvironmentOptions.MacroFuncLazarusDir(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=GetParsedLazarusDirectory;
-end;
-
-function TEnvironmentOptions.MacroFuncExeExt(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=GetExecutableExt;
-end;
-
-function TEnvironmentOptions.MacroFuncLanguageID(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=LanguageID;
-end;
-
-function TEnvironmentOptions.MacroFuncLanguageName(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=GetLazarusLanguageLocalizedName(LanguageID);
-end;
-
-function TEnvironmentOptions.MacroFuncTestDir(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=GetParsedTestBuildDirectory;
-end;
-
-function TEnvironmentOptions.MacroFuncConfDir(const s: string;
-  const Data: PtrInt; var Abort: boolean): string;
-begin
-  Result:=GetPrimaryConfigPath;
-end;
-
-procedure TEnvironmentOptions.SaveDebuggerPropertiesList;
-begin
-  FDebuggerProperties.SaveToXml(FXMLCfg, 'EnvironmentOptions/Debugger/', 'EnvironmentOptions/DebuggerFilename/Value');
-end;
-
-procedure TEnvironmentOptions.LoadDebuggerProperties;
-begin
-  FDebuggerProperties.LoadFromXml(FXMLCfg, 'EnvironmentOptions/Debugger/', 'EnvironmentOptions/DebuggerFilename/Value');
-  HasActiveDebuggerEntry := FDebuggerProperties.HasActiveDebuggerEntry;
-end;
-
-function TEnvironmentOptions.CurrentDebuggerClass: TDebuggerClass;
-var
-  Cfg: TDebuggerPropertiesConfig;
-begin
-  LoadDebuggerProperties;
-
-  Result := nil;
-  Cfg := CurrentDebuggerPropertiesConfig;
-  if  Cfg<> nil then
-    Result := Cfg.DebuggerClass;
-end;
-
-function TEnvironmentOptions.GetCurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig;
-begin
-  LoadDebuggerProperties;
-  Result := FDebuggerProperties.CurrentDebuggerPropertiesConfig;
-end;
-
-procedure TEnvironmentOptions.SetCurrentDebuggerPropertiesOpt(
-  AValue: TDebuggerPropertiesConfig);
-begin
-  LoadDebuggerProperties;
-  FDebuggerProperties.CurrentDebuggerPropertiesConfig := AValue;
-end;
-
-function TEnvironmentOptions.DebuggerPropertiesConfigList: TDebuggerPropertiesConfigList;
-begin
-  LoadDebuggerProperties;
-
-  Result := FDebuggerProperties;
-end;
-
-function TEnvironmentOptions.CurrentDebuggerPropertiesConfigEx(AnUID: String): TDebuggerPropertiesConfig;
-begin
-  Result := nil;
-  if AnUID <> '' then
-    Result := FDebuggerProperties.EntryByUid(AnUID);
-
-  if Result = nil then
-    Result := CurrentDebuggerPropertiesConfig;
 end;
 
 function TEnvironmentOptions.FileHasChangedOnDisk: boolean;
@@ -3522,16 +3357,6 @@ end;
 function TEnvironmentOptions.GetDebuggerEventLogColors(AIndex: TDBGEventType): TDebuggerEventLogColor;
 begin
   Result := FDebuggerEventLogColors[AIndex];
-end;
-
-function TEnvironmentOptions.DebuggerFilename: string;
-var
-  DbgCfg: TDebuggerPropertiesConfig;
-begin
-  Result := '';
-  DbgCfg := CurrentDebuggerPropertiesConfig;
-  if DbgCfg <> nil then
-    Result := DbgCfg.DebuggerFilename;
 end;
 
 function TEnvironmentOptions.GetDebuggerSearchPath: string;

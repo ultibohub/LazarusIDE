@@ -42,7 +42,7 @@ uses
   CompOptsIntf, IDEOptionsIntf, PackageDependencyIntf,
   // IDE
   InitialSetupProc, ExtToolsConsole, CompilerOptions,
-  ApplicationBundle, TransferMacros, EnvironmentOpts, IDETranslations,
+  ApplicationBundle, TransferMacrosIntf, TransferMacros, EnvironmentOpts, IDETranslations,
   LazarusIDEStrConsts, IDECmdLine, MiscOptions, Project, LazConf, PackageDefs,
   PackageLinks, PackageSystem, InterPkgConflictFiles, BuildLazDialog,
   BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts;
@@ -190,7 +190,7 @@ const
   ErrorLoadPackageFailed = 3;
   ErrorPackageNameInvalid = 4;
   ErrorLoadProjectFailed = 5;
-  VersionStr = {$I version.inc};
+  VersionStr = {$I packages/ideconfig/version.inc};
 
 procedure FilterConfigFileContent;
 var
@@ -1460,7 +1460,7 @@ begin
   FreeThenNil(LazPackageLinks);
   FreeThenNil(TheCompiler);
   FreeAndNil(ExtToolConsole);
-  FreeThenNil(GlobalMacroList);
+  FreeThenNil(TransferMacrosIntf.GlobalMacroList);
   FreeThenNil(IDEMacros);
   FreeThenNil(MiscellaneousOptions);
   FreeThenNil(EnvironmentOptions);

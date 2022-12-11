@@ -8432,7 +8432,7 @@ msgid "Debugger"
 msgstr "Зневаджувач"
 
 #: lazarusidestrconsts.lisdebuggererrorooopsthedebuggerenteredtheerrorstate
-#, object-pascal-format, fuzzy
+#, object-pascal-format, fuzzy, badformat
 #| msgid "Debugger error%sOoops, the debugger entered the error state%sSave your work now !%sHit Stop, and hope the best, we're pulling the plug."
 msgid "The debugger encountered an internal error.%0:s%0:sSave your work.%0:sYou may then hit \"Stop\", or \"Reset debugger\" to terminate the debug session."
 msgstr "Помилка зневаджувача%sОпа! Зневаджувач знаходиться в неробочому стані%sЗбережіть роботу!%sНатисніть Стоп і сподівайтесь на краще!"
@@ -12187,6 +12187,11 @@ msgstr "Типове для Lazarus"
 #: lazarusidestrconsts.lislazarusdirectory
 msgid "Lazarus directory"
 msgstr "Тека Lazarus"
+
+#: lazarusidestrconsts.lislazarusdirhint
+#, object-pascal-format
+msgid "Lazarus sources. This path is relative to primary config directory (%s)."
+msgstr ""
 
 #: lazarusidestrconsts.lislazarusdiroverride
 msgid "directory to be used as a basedirectory"
@@ -18977,7 +18982,7 @@ msgid "The key %s is already assigned to %s%s.%s%sRemove the old assignment and 
 msgstr "Клавішу %s вже призначено для %s%s.%s%sВидалити старе призначення і призначити клавішу для нової функції %s?"
 
 #: lazarusidestrconsts.listhelaunchingapplicationbundledoesnotexists
-#, object-pascal-format
+#, object-pascal-format, fuzzy, badformat
 msgid "The Application Bundle %s%sneeded for execution does not exist or is not executable.%sDo you want to create one?%sSee Project -> Project Options -> Application for settings."
 msgstr "Необхідний для виконання пакет програм %s%sне існує або не є виконуваним файлом.%sВи хочете створити такий?%s%Для налаштування дивіться Проєкт -> Параметри проєкту -> Застосунок."
 

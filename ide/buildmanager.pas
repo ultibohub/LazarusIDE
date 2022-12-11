@@ -49,13 +49,15 @@ uses
   IDEExternToolIntf, CompOptsIntf, MacroDefIntf,
   // IDEIntf
   IDEDialogs, LazIDEIntf, IDEMsgIntf, SrcEditorIntf,
+  // IdeOptions
+  TransferMacrosIntf,
   // IDE
-  IDECmdLine, LazarusIDEStrConsts, DialogProcs, IDEProcs,
-  InputHistory, EditDefineTree, ProjectResources, MiscOptions, LazConf,
-  EnvironmentOpts, TransferMacros, CompilerOptions,
-  ExtTools, etMakeMsgParser, etFPCMsgParser, etPas2jsMsgParser,
-  Compiler, FPCSrcScan, PackageDefs, PackageSystem, Project, ProjectIcon,
-  ModeMatrixOpts, BaseBuildManager, ApplicationBundle, RunParamsOpts;
+  IDECmdLine, LazarusIDEStrConsts, DialogProcs, IDEProcs, InputHistory,
+  EditDefineTree, ProjectResources, MiscOptions, LazConf, EnvironmentOpts,
+  TransferMacros, CompilerOptions, ExtTools, etMakeMsgParser, etFPCMsgParser,
+  etPas2jsMsgParser, Compiler, FPCSrcScan, PackageDefs, PackageSystem, Project,
+  ProjectIcon, ModeMatrixOpts, BaseBuildManager, ApplicationBundle,
+  RunParamsOpts, IdeTransferMacros, SearchPathProcs;
   
 const
   cInvalidCompiler = 'InvalidCompiler';
@@ -420,13 +422,12 @@ end;
 procedure TBuildManager.SetupTransferMacros;
 begin
   LazConfMacroFunc:=@BMLazConfMacroFunction;
-  GlobalMacroList:=TTransferMacroList.Create;
+  TransferMacrosIntf.GlobalMacroList:=TTransferMacroList.Create;
   GlobalMacroList.OnSubstitution:=@OnMacroSubstitution;
   IDEMacros:=TLazIDEMacros.Create;
   CompilerOptions.OnParseString:=@OnSubstituteCompilerOption;
 
-  // environment
-  EnvironmentOptions.InitMacros(GlobalMacroList);
+  TIdeTransferMarcros.InitMacros(GlobalMacroList);
 
   // project
   GlobalMacroList.Add(TTransferMacro.Create('Project','',
@@ -3088,6 +3089,9 @@ begin
       and (NewLCLWidgetSet<>lpNoGUI);
       // Note: no need to check if CompilerFilename is the default
 end;
+
+initialization
+  EnvironmentOpts.GroupEnvironmentI18NCaption := @dlgGroupEnvironment;
 
 end.
 

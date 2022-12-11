@@ -6735,6 +6735,7 @@ begin
       d(LazarusSrcDir+'/ide;'
        +LazarusSrcDir+'/ide/frames;'
        +LazarusSrcDir+'/designer;'
+       +LazarusSrcDir+'/ide/packages/ideconfig;'
        +LazarusSrcDir+'/ide/packages/idedebugger;'
        +LazarusSrcDir+'/ide/packages/idedebugger/frames;'
        +LazarusSrcDir+'/debugger;'
@@ -6761,11 +6762,9 @@ begin
     ,da_DefineRecurse));
   // include path addition
   DirTempl.AddChild(TDefineTemplate.Create('includepath addition',
-    Format(ctsSetsIncPathTo,['include, include/TargetOS, include/SrcOS']),
+    Format(ctsSetsIncPathTo,['include, include/packages/ideconfig/TargetOS, include/packages/ideconfig/SrcOS']),
     IncludePathMacroName,
-    d(LazarusSrcDir+'/ide/include;'
-      +LazarusSrcDir+'/ide/include/'+TargetOS+';'
-      +LazarusSrcDir+'/ide/include/'+SrcOS),
+    d(LazarusSrcDir+'/ide/include;'),
     da_DefineRecurse));
   MainDir.AddChild(DirTempl);
 
@@ -6796,7 +6795,7 @@ begin
   DirTempl.AddChild(TDefineTemplate.Create('includepath addition',
     Format(ctsIncludeDirectoriesPlusDirs,['include']),
     IncludePathMacroName,
-    d('../ide/include;../ide/include/'+TargetOS),
+    d('../ide/include;../ide/packages/ideconfig/include/'+TargetOS),
     da_Define));
   // <LazarusSrcDir>/designer/units
   MainDir.AddChild(DirTempl);
