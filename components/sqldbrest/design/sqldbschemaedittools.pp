@@ -201,6 +201,7 @@ begin
     Result.UniDirectional:=True;
     Result.Open;
   except
+    Result.SQLTransaction.RollBack;
     Result.Free;
     Raise;
   end;
