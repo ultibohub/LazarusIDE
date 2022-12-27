@@ -1,6 +1,6 @@
 variables:
   FPC_OLDSTABLE_VER: 3.2.0
-  FPC_STABLE_VER: 3.2.2
+  FPC_STABLE_VER: 3.2.2     # make sure to properly adjust FOOTER variable value in docs-fpdoc-stable job on version bump (needed only once)
   FPC_FIXES_VER: 3.2.3
   FPC_MAIN_VER: 3.3.1
 
@@ -257,4 +257,46 @@ x86_64-win64-stable:
     - make bigide FPC=/usr/lib/fpc/$FPC_STABLE_VER/ppcx64 OS_TARGET=win64 CPU_TARGET=x86_64 LCL_PLATFORM=win32
   rules:
     - !reference [.runscheduled, rules]
+    - !reference [.manualjob, rules]
+
+
+.docs-build:
+  stage: build
+  script:
+    - make lazbuild FPC=/usr/lib/fpc/$FPC_STABLE_VER/ppcx64
+    - cd docs/html
+    - unzip -j /doc-chm.zip -d ../chm
+    - $CI_PROJECT_DIR/lazbuild --compiler=/usr/lib/fpc/$FPC_STABLE_VER/ppcx64 --lazarusdir=$CI_PROJECT_DIR build_lcl_docs.lpi
+    - ./build_lcl_docs --fpdoc /usr/bin/fpdoc-$FPDOC_VER --fpcdocs=../chm --outfmt chm --footer $FOOTER
+    - ./build_lcl_docs --fpdoc /usr/bin/fpdoc-$FPDOC_VER --fpcdocs=../chm --outfmt html --footer $FOOTER
+  artifacts:
+    name: "$CI_JOB_NAME-$CI_COMMIT_REF_SLUG"
+    paths:
+      - docs/chm/
+      - docs/html/lcl/lcl/
+      - docs/html/lazutils/lazutils/
+    expire_in: 1 week  
+
+docs-fpdoc-main:
+  extends: .docs-build
+  variables:
+    FPDOC_VER: $FPC_MAIN_VER
+    FOOTER: "@locallclfooter.xml"
+  rules:
+    - !reference [.manualjob, rules]
+
+docs-fpdoc-fixes:
+  extends: .docs-build
+  variables:
+    FPDOC_VER: $FPC_FIXES_VER
+    FOOTER: "@locallclfooter.xml"
+  rules:
+    - !reference [.manualjob, rules]
+
+docs-fpdoc-stable:
+  extends: .docs-build
+  variables:
+    FPDOC_VER: $FPC_STABLE_VER
+    FOOTER: "locallclfooter.xml"
+  rules:
     - !reference [.manualjob, rules]

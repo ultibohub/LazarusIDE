@@ -1200,7 +1200,6 @@ begin
   FShowDirectoryHierarchy:=AValue;
   DirectoryHierarchyButton.Down:=FShowDirectoryHierarchy;
   FilterEdit.ShowDirHierarchy:=FShowDirectoryHierarchy;
-  FilterEdit.InvalidateFilter;
   EnvironmentOptions.ProjInspShowDirHierarchy := ShowDirectoryHierarchy;
 end;
 
@@ -1210,7 +1209,6 @@ begin
   FSortAlphabetically:=AValue;
   SortAlphabeticallyButton.Down:=FSortAlphabetically;
   FilterEdit.SortData:=FSortAlphabetically;
-  FilterEdit.InvalidateFilter;
   EnvironmentOptions.ProjInspSortAlphabetically := SortAlphabetically;
 end;
 
