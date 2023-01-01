@@ -81,6 +81,9 @@ type
                                     ): TAvlTreeNode;
     procedure FrameCompGetCreationClass(Sender: TObject;
       var NewComponentClass: TComponentClass);
+    function OnCompTree_ParentAcceptsChild(aParent, aChild,
+      aLookupRoot: TPersistent): boolean;
+    procedure OnCompTree_SetParent(aChild, aParent, aLookupRoot: TPersistent);
     procedure OnPasWriterFindAncestor(Writer: TCompWriterPas;
       aComponent: TComponent; const aName: string; var anAncestor,
       aRootAncestor: TComponent);
@@ -231,6 +234,9 @@ type
     procedure CreateChildComponentsFromStream(BinStream: TStream;
                        ComponentClass: TComponentClass; Root: TComponent;
                        ParentControl: TWinControl; NewComponents: TFPList); override;
+    function ParentAcceptsChild(Parent, Child, aLookupRoot: TComponent): boolean; override;
+    function ParentAcceptsChildClass(Parent: TComponent;
+             ChildClass: TComponentClass; aLookupRoot: TComponent): boolean; override;
     function FixupReferences(AComponent: TComponent): TModalResult;
     procedure WriterFindAncestor({%H-}Writer: TWriter; Component: TComponent;
                                  const {%H-}Name: string;
@@ -1290,15 +1296,30 @@ var
   end;
 
   procedure CreateMediator;
+  var
+    NewSize: TPoint;
   begin
-    if Mediator<>nil then exit;
-    MediatorClass:=GetDesignerMediatorClass(TComponentClass(NewComponent.ClassType));
-    if MediatorClass<>nil then begin
-      Mediator:=MediatorClass.CreateMediator(nil,NewComponent);
-      FreeMediator:=Mediator<>nil;
+    if Mediator=nil then
+    begin
+      MediatorClass:=GetDesignerMediatorClass(TComponentClass(NewComponent.ClassType));
+      if MediatorClass<>nil then
+      begin
+        Mediator:=MediatorClass.CreateMediator(nil,NewComponent);
+        FreeMediator:=true;
+      end;
     end;
-    //DebugLn(['TCustomFormEditor.CreateComponent ',DbgSName(NewComponent),' ',dbgs(Bounds(CompLeft,CompTop,CompWidth,CompHeight)),' ',Mediator<>nil]);
+    if Mediator<>nil then
+    begin
+      NewSize:=Mediator.GetDefaultSize;
+      NewWidth:=NewSize.X;
+      NewHeight:=NewSize.Y;
+    end;
+  end;
+
+  procedure MediatorInitComponent;
+  begin
     if Mediator<>nil then begin
+      //DebugLn(['TCustomFormEditor.CreateComponent ',DbgSName(NewComponent),' ',dbgs(Bounds(CompLeft,CompTop,CompWidth,CompHeight)),' ',Mediator<>nil]);
       Mediator.InitComponent(NewComponent,ParentComponent,
         Bounds(CompLeft,CompTop,CompWidth,CompHeight));
     end;
@@ -1412,6 +1433,8 @@ begin
     end;
 
     try
+      CreateMediator;
+
       // set bounds
       CompLeft:=NewLeft;
       CompTop:=NewTop;
@@ -1480,7 +1503,6 @@ begin
           AControl.DesignInfo := LeftTopToDesignInfo(CompLeft, CompTop);
           //DebugLn(['TCustomFormEditor.CreateComponent ',dbgsName(AControl),' ',LazLongRec(AControl.DesignInfo).Lo,',',LazLongRec(AControl.DesignInfo).Hi]);
         end;
-        CreateMediator;
       end
       else
       if (NewComponent is TDataModule) then
@@ -1509,15 +1531,16 @@ begin
 
         CompLeft := Max(Low(SmallInt), Min(High(SmallInt), CompLeft));
         CompTop := Max(Low(SmallInt), Min(High(SmallInt), CompTop));
+        if Mediator=nil then
+          SetComponentLeftTopOrDesignInfo(NewComponent,CompLeft,CompTop);
 
-        SetComponentLeftTopOrDesignInfo(NewComponent,CompLeft,CompTop);
         if ParentComponent <> nil then
         begin
           DesignForm := GetDesignerForm(ParentComponent);
           if DesignForm <> nil then DesignForm.Invalidate;
         end;
-        CreateMediator;
       end;
+      MediatorInitComponent;
     except
       on e: Exception do begin
         DebugLn(e.Message);
@@ -1618,6 +1641,81 @@ begin
 
   JITList.AddJITChildComponentsFromStream(
                      Root,BinStream,ComponentClass,ParentControl,NewComponents);
+end;
+
+function TCustomFormEditor.ParentAcceptsChild(Parent, Child,
+  aLookupRoot: TComponent): boolean;
+var
+  Mediator: TDesignerMediator;
+  AControl: TControl;
+  aComp: TComponent;
+begin
+  Result:=false;
+  if (Parent=nil) or (Child=nil) or (aLookupRoot=nil) then
+    exit;
+
+  // don't allow to move ancestor components
+  if csAncestor in Child.ComponentState then
+    exit;
+
+  // check if one of the parents of the Parent is the Child itself
+  aComp:=Parent;
+  repeat
+    if aComp=Child then exit;
+    aComp:=aComp.GetParentComponent;
+  until aComp=nil;
+
+  // check mediator
+  Mediator:=GetDesignerMediatorByComponent(aLookupRoot);
+  if Mediator<>nil then
+  begin
+    if not Mediator.ParentAcceptsChildComponent(Parent,Child) then
+      exit;
+  end;
+
+  // check LCL rules
+  if Parent is TWinControl then
+  begin
+    if (not (csAcceptsControls in TWinControl(Parent).ControlStyle)) then
+      exit;
+    if not TWinControl(Parent).CheckChildClassAllowed(TComponentClass(Child.ClassType), False) then
+      exit;
+  end
+  else if Parent is TControl then begin
+    exit;
+  end;
+
+  if Child is TControl then
+  begin
+    // do not move children of a restricted parent to another parent
+    // e.g. TPage of TPageControl
+    AControl:=TControl(Child);
+    if (AControl.Parent <> nil) and (AControl.Parent <> Parent) and
+        (not (csAcceptsControls in AControl.Parent.ControlStyle)) then
+      exit;
+  end;
+  Result:=true;
+end;
+
+function TCustomFormEditor.ParentAcceptsChildClass(Parent: TComponent;
+  ChildClass: TComponentClass; aLookupRoot: TComponent): boolean;
+var
+  Mediator: TDesignerMediator;
+begin
+  Result:=false;
+  if (Parent=nil) or (ChildClass=nil) or (aLookupRoot=nil) then
+    exit;
+  Mediator:=GetDesignerMediatorByComponent(aLookupRoot);
+  if Mediator<>nil then
+    Result:=Mediator.ParentAcceptsChild(Parent,ChildClass)
+  else if Parent is TWinControl then
+  begin
+    if not TWinControl(Parent).CheckChildClassAllowed(ChildClass, False) then
+      exit;
+  end else if Parent is TControl then begin
+    exit;
+  end;
+  Result:=true;
 end;
 
 function TCustomFormEditor.FixupReferences(AComponent: TComponent): TModalResult;
@@ -2318,6 +2416,35 @@ begin
     OnSelectFrame(Sender,NewComponentClass);
 end;
 
+function TCustomFormEditor.OnCompTree_ParentAcceptsChild(aParent, aChild,
+  aLookupRoot: TPersistent): boolean;
+begin
+  Result:=(aParent is TComponent)
+      and (aChild is TComponent)
+      and (aLookupRoot is TComponent)
+      and ParentAcceptsChild(TComponent(aParent),TComponent(aChild),TComponent(aLookupRoot));
+end;
+
+procedure TCustomFormEditor.OnCompTree_SetParent(aChild, aParent,
+  aLookupRoot: TPersistent);
+var
+  Mediator: TDesignerMediator;
+  ChildComp, OldParent: TComponent;
+begin
+  if not (aChild is TComponent) then exit;
+  if not (aParent is TComponent) then exit;
+  if not (aLookupRoot is TComponent) then exit;
+  Mediator:=GetDesignerMediatorByComponent(TComponent(aLookupRoot));
+  if Mediator<>nil then
+  begin
+    ChildComp:=TComponent(aChild);
+    OldParent:=ChildComp.GetParentComponent;
+    Mediator.ChangeParent(ChildComp,TComponent(aParent));
+    if ChildComp.GetParentComponent<>OldParent then
+      OnObjectInspectorModified(Self);
+  end;
+end;
+
 procedure TCustomFormEditor.OnPasWriterFindAncestor(Writer: TCompWriterPas;
   aComponent: TComponent; const aName: string; var anAncestor,
   aRootAncestor: TComponent);
@@ -2581,6 +2708,7 @@ begin
   if FObj_Inspector<>nil then begin
     FObj_Inspector.OnModified:=nil;
     FObj_inspector.OnNodeGetImageIndex:= nil;
+    FObj_inspector.ComponentTree.OnParentAcceptsChild:=nil;
   end;
 
   FObj_Inspector:=AnObjectInspector;
@@ -2588,9 +2716,10 @@ begin
   if FObj_Inspector<>nil then begin
     FObj_Inspector.OnModified:=@OnObjectInspectorModified;
     FObj_inspector.OnNodeGetImageIndex:= @DoOnNodeGetImageIndex;
+    FObj_inspector.ComponentTree.OnParentAcceptsChild:=@OnCompTree_ParentAcceptsChild;
+    FObj_inspector.ComponentTree.OnSetParent:=@OnCompTree_SetParent;
   end;
 end;
-
 
 procedure TCustomFormEditor.DoOnNodeGetImageIndex(APersistent: TPersistent;
   var AImageIndex: integer);

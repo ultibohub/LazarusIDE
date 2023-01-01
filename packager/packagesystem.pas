@@ -4262,6 +4262,13 @@ begin
         end;
       end;
 
+      if Assigned(LazarusIDE) then
+      begin
+        Result := LazarusIDE.DoCallPackageBuildingHandler(APackage);
+        if Result<>mrOK then
+          Exit;
+      end;
+
       // create external tool to run the compiler
       //DebugLn('TLazPackageGraph.CompilePackage WorkingDir="',APackage.Directory,'"');
 

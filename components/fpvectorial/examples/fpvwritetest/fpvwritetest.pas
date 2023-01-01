@@ -10,7 +10,7 @@ polyline_2       One line from (10, 10) to (20, 30) to (30, 20) to (40, 40)
 bezier_1         One path starting in (0, 0) lining to (10, 10) then bezier to (20, 10) and then line to (30, 0)
 bezier_2         One curve from (10, 10) to (20, 20)
 text_ascii       One text written at (10, 10)
-text_europen     One text testing european languages at (20, 20)
+text_european    One text testing european languages at (20, 20)
 text_asian       One text testing asian languages at (30, 30)
 
 Author: Felipe Monteiro de Carvalho
@@ -34,7 +34,7 @@ begin
   Vec := TvVectorialDocument.Create;
   try
     // All documents are 10cm x 10cm
-    Vec.Width := 100;
+    Vec.Width := 200;
     Vec.Height := 100;
     Page := Vec.AddPage();
 
@@ -106,7 +106,7 @@ begin
     // text_europen     One text testing european languages at (20, 20)
     Page.Clear;
     Page.AddText(20, 20, 0, '20, 20 Mówić, cześć, Włosku, Parabéns, Assunção, Correções.');
-    Vec.WriteToFile('text_europen' + cExtension, cFormat);
+    Vec.WriteToFile('text_european' + cExtension, cFormat);
 
     // text_asian       One text testing asian languages at (30, 30)
     Page.Clear;
@@ -129,7 +129,7 @@ begin
     Page.AddBezierToPath(10, 20, 20, 20, 20, 10);
     Page.AddLineToPath(30, 0);
     Page.EndPath();
-    Page.AddText(10, 10, 0, '10,10 Some text in english.');
+    Page.AddText(10, 10, 0, '10, 10 Some text in english.');
     Page.AddText(20, 20, 0, '20, 20 Mówić, cześć, Włosku, Parabéns.');
     Page.AddText(30, 30, 0, '30, 30 森林，是一个高密');
     Vec.WriteToFile('multi_test_1' + cExtension, cFormat);

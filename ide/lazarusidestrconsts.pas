@@ -5507,6 +5507,8 @@ resourcestring
   lisPVUEditVirtualUnit = 'Edit virtual unit';
   lisExportAllItemsToFile = 'Export All Items to File';
   lisImportFromFile = 'Import from File';
+  lisIncludeRecursive = 'Include, recursive';
+  lisExclude = 'Exclude';
 
   // version info tab
   VersionInfoTitle = 'Version Info';
