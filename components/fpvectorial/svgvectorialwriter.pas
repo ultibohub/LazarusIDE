@@ -15,7 +15,7 @@ unit svgvectorialwriter;
 interface
 
 uses
-  Classes, SysUtils, math, fpvectorial, fpvutils, fpcanvas;
+  Classes, SysUtils, math, fpvectorial, fpvutils, fpimage, fpcanvas;
 
 type
   { TvSVGVectorialWriter }
@@ -99,7 +99,8 @@ procedure TvSVGVectorialWriter.ConvertFPVCoordinatesToSVGCoordinates(
 begin
   ADestX := ASrcX * FLOAT_PIXELS_PER_MILLIMETER;
   if APage.UseTopLeftCoordinates then
-    ADestY := ASrcY * FLOAT_PIXELS_PER_MILLIMETER else
+    ADestY := ASrcY * FLOAT_PIXELS_PER_MILLIMETER
+  else
     ADestY := (APage.Height - ASrcY) * FLOAT_PIXELS_PER_MILLIMETER;
 end;
 
@@ -116,26 +117,25 @@ begin
 end;
 
 function TvSVGVectorialWriter.GetBrushAsXMLStyle(ABrush: TvBrush): String;
-var
-  fillStr: String;
 begin
   if ABrush.Kind = bkSimpleBrush then begin
     if ABrush.Style = bsClear then
-      fillStr := 'none'
-    else
-      fillStr := '#' + FPColorToRGBHexString(ABrush.Color)
+      Result := 'fill:none;'
+    else begin
+      Result := Format('fill:#%s;', [FPColorToRGBHexString(ABrush.Color)]);
+      if ABrush.Color.Alpha <> alphaOpaque then
+        Result := Format('%s fill-opacity:%f', [Result, ABrush.Color.Alpha / alphaOpaque], FPointSeparator);
+    end;
   end else begin
     inc(FGradientIndex);
-    fillStr := Format('url(#gradient%d)', [FGradientIndex]);
+    Result := Format('fill:url(#gradient%d);', [FGradientIndex]);
   end;
-
-  Result := Format('fill:%s;', [fillStr]);
 end;
 
 function TvSVGVectorialWriter.GetGradientBrushAsXML(ABrush: TvBrush): String;
 var
   gradientCol: TvGradientColor;
-  colorStr, gradientColors, gradientParams: String;
+  colorStr, opacityStr, gradientColors, gradientParams: String;
   x1Str, y1Str, x2Str, y2Str: String;
   cxstr, cystr, rstr, fxstr, fystr: String;
   gradientTag: String;
@@ -143,35 +143,44 @@ begin
   if ABrush.Kind = bkRadialGradient then begin
     gradientTag := 'radialGradient';
     if ABrush.Gradient_cx_Unit = vcuPercentage then
-      cxstr := Format('%f%%', [ABrush.Gradient_cx*100], FPointSeparator) else
+      cxstr := Format('%f%%', [ABrush.Gradient_cx*100], FPointSeparator)
+    else
       cxstr := FloatToSVGStr(ABrush.Gradient_cx);
     if ABrush.Gradient_cy_Unit = vcuPercentage then
-      cystr := Format('%f%%', [ABrush.Gradient_cy*100], FPointSeparator) else
+      cystr := Format('%f%%', [ABrush.Gradient_cy*100], FPointSeparator)
+    else
       cystr := FloatToSVGStr(ABrush.Gradient_cy);
     if ABrush.Gradient_r_Unit = vcuPercentage then
-      rstr := Format('%f%%', [ABrush.Gradient_r*100], FPointSeparator) else
+      rstr := Format('%f%%', [ABrush.Gradient_r*100], FPointSeparator)
+    else
       rstr := FloatToSVGStr(ABrush.Gradient_r);
     if ABrush.Gradient_fx_Unit = vcuPercentage then
-      fxstr := Format('%f%%', [ABrush.Gradient_fx*100], FPointSeparator) else
+      fxstr := Format('%f%%', [ABrush.Gradient_fx*100], FPointSeparator)
+    else
       fxstr := FloatToSVGStr(ABrush.Gradient_fx);
     if ABrush.Gradient_fy_Unit = vcuPercentage then
-      fystr := Format('%f%%', [ABrush.Gradient_fy*100], FPointSeparator) else
+      fystr := Format('%f%%', [ABrush.Gradient_fy*100], FPointSeparator)
+    else
       fystr := FloatToSVGStr(ABrush.Gradient_fy);
     gradientParams := Format('cx="%s" cy="%s" r="%s" fx="%s" fy="%s"',
       [cxstr, cystr, rstr, fxstr, fystr]);
   end else begin
     gradientTag := 'linearGradient';
     if gfRelStartX in ABrush.Gradient_flags then
-      x1Str := Format('%f%%', [ABrush.Gradient_start.X*100], FPointSeparator) else
+      x1Str := Format('%f%%', [ABrush.Gradient_start.X*100], FPointSeparator)
+    else
       x1Str := FloatToSVGStr(ABrush.Gradient_start.X);
     if gfRelEndX in ABrush.Gradient_flags then
-      x2Str := Format('%f%%', [ABrush.Gradient_end.X*100], FPointSeparator) else
+      x2Str := Format('%f%%', [ABrush.Gradient_end.X*100], FPointSeparator)
+    else
       x2Str := FloatToSVGStr(ABrush.Gradient_end.X);
     if gfRelStartY in ABrush.Gradient_flags then
-      y1Str := Format('%f%%', [ABrush.Gradient_start.Y*100], FPointSeparator) else
+      y1Str := Format('%f%%', [ABrush.Gradient_start.Y*100], FPointSeparator)
+    else
       y1Str := FloatToSVGStr(ABrush.Gradient_start.Y);
     if gfRelEndY in ABrush.Gradient_flags then
-      y2Str := Format('%f%%', [ABrush.Gradient_end.Y*100], FPointSeparator) else
+      y2Str := Format('%f%%', [ABrush.Gradient_end.Y*100], FPointSeparator)
+    else
       y2Str := FloatToSVGStr(ABrush.Gradient_end.Y);
     gradientParams := Format('x1="%s" y1="%s" x2="%s" y2="%s"',
       [x1Str, y1Str, x2Str, y2Str]);
@@ -180,8 +189,12 @@ begin
   gradientColors := '';
   for gradientCol in ABrush.Gradient_colors do begin
     colorStr := '#' + FPColorToRGBHexString(gradientCol.Color);
-    gradientColors := gradientColors + Format('<stop offset="%f%%" stop-color="%s" />', [
-      gradientCol.Position*100, colorStr], FPointSeparator);
+    if gradientCol.Color.Alpha <> alphaOpaque then
+      opacityStr := Format('stop-opacity="%f" ', [gradientCol.Color.Alpha/alphaOpaque], FPointSeparator)
+    else
+      opacityStr := '';
+    gradientColors := gradientColors + Format('<stop offset="%f%%" stop-color="%s" %s/>', [
+      gradientCol.Position*100, colorStr, opacityStr], FPointSeparator);
   end;
 
   Result := Format(
@@ -192,11 +205,18 @@ end;
 function TvSVGVectorialWriter.GetPenAsXMLStyle(APen: TvPen): String;
 var
   colorStr: String;
+  opacity: Double;
   penWidth: Integer;
 begin
   if APen.Style = psClear then
-    colorStr := 'none' else
+  begin
+    colorStr := 'none';
+    opacity := 1.0;
+  end else
+  begin
     colorStr := '#' + FPColorToRGBHexString(APen.Color);
+    opacity := APen.Color.Alpha / alphaOpaque;
+  end;
 
   if APen.Width >= 1 then
     penWidth := APen.Width
@@ -204,9 +224,9 @@ begin
     penWidth := 1;
 
   Result := Format(
-    'stroke:%s; stroke-width:%dpx; stroke-linecap:butt; stroke-linejoin:miter; stroke-opacity:1;', [
-    colorStr, penwidth
-  ]);
+    'stroke:%s; stroke-width:%dpx; stroke-linecap:butt; stroke-linejoin:miter; stroke-opacity:%f;', [
+    colorStr, penwidth, opacity
+  ], FPointSeparator);
 
   case APen.Style of
     psDash       : Result := Result + 'stroke-dasharray: 9, 5;';

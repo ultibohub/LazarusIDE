@@ -49,6 +49,7 @@ function CanvasCoordsToFPVectorial(AY: Integer; AHeight: Integer): Integer; inli
 function CanvasTextPosToFPVectorial(AY: Integer; ACanvasHeight, ATextHeight: Integer): Integer;
 function CoordToCanvasX(ACoord: Double; ADestX: Integer; AMulX: Double): Integer; inline;
 function CoordToCanvasY(ACoord: Double; ADestY: Integer; AMulY: Double): Integer; inline;
+function FPVSizeToCanvas(ASize, AMul: Double): Integer;
 // Other routines
 function SeparateString(AString: string; ASeparator: char): T10Strings;
 procedure SeparateStringInTwo(AString: string; ASeparator: char; out AStart, AEnd: string);
@@ -182,8 +183,8 @@ function AlphaBlendColor(AColorBase, AColor: TFPColor): TFPColor;
 var
   f1, f2: Double;
 begin
-  f1 := 1 - f2;
   f2 := AColor.Alpha / alphaOpaque;
+  f1 := 1 - f2;
   Result.Alpha := Round(AColorBase.Alpha * f1 + AColor.Alpha * f2);
   Result.Red := Round(AColorBase.Red * f1 + AColor.Red * f2);
   Result.Green := Round(AColorBase.Green * f1 + AColor.Green * f2);
@@ -225,6 +226,11 @@ begin
   Result := Round(ADestY + AmulY * ACoord);
 end;
 
+function FPVSizeToCanvas(ASize, AMul: Double): Integer;
+begin
+  Result := Round(ASize * abs(AMul));
+end;
+
 {@@
   Reads a string and separates it in substring
   using ASeparator to delimite them.
@@ -244,7 +250,7 @@ begin
   for i := 0 to 9 do
     Result[i] := '';
 
-  { Iterates througth the string, filling strings }
+  { Iterates through the string, filling strings }
   for i := 1 to Length(AString) do
   begin
     if Copy(AString, i, 1) = ASeparator then

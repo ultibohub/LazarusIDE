@@ -150,7 +150,7 @@ Var
 
 begin
   Result:=mrOK;
-  aTreeID:=aProject.CustomData[SInstantSearchID];
+  aTreeID:=aProject.CustomSessionData[SInstantSearchID];
   if (aTreeID='') then
     begin
     if IDEInstantSearchManager.IndexProjectStrategy=ipsAll then
@@ -161,11 +161,8 @@ begin
         IDEInstantSearchManager.StartMarkProjectTimer(aProject);
       end;
     end;
-  if aTreeID<>'' then
-    begin
-    IDEInstantSearchManager.ProjectTreeName:=aTreeID;
-    IDEInstantSearchManager.SearchProject:=True;
-    end;
+  IDEInstantSearchManager.ProjectTreeName:=aTreeID;
+  IDEInstantSearchManager.SearchProject:=(aTreeID<>'');
   if Assigned(InstantSearchForm) then
     InstantSearchForm.ActiveProjectChanged;
 end;
@@ -194,7 +191,7 @@ var
   hasID : Boolean;
 
 begin
-  HasID:=LazarusIDE.ActiveProject.CustomData[SInstantSearchID] <>'';
+  HasID:=LazarusIDE.ActiveProject.CustomSessionData[SInstantSearchID] <>'';
   PopupMenuCmdMarkIndexable.Visible:=Not HasID;
   PopupMenuCmdIndex.Visible:=HasID;
 end;
@@ -204,7 +201,7 @@ var
   hasID : Boolean;
 
 begin
-  HasID:=LazarusIDE.ActiveProject.CustomData[SInstantSearchID] <>'';
+  HasID:=LazarusIDE.ActiveProject.CustomSessionData[SInstantSearchID] <>'';
   MainMenuCmdMarkIndexable.Visible:=Not HasID;
   MainMenuCmdIndex.Visible:=HasID;
 end;

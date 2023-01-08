@@ -166,7 +166,10 @@ type
     Gradient_start: T2DPoint; // Start/end point of gradient, in pixels by default,
     Gradient_end: T2DPoint;   // but if gfRel* in flags relative to entity boundary or user space
     Gradient_flags: TvGradientFlags;
-    Gradient_cx, Gradient_cy, Gradient_r, Gradient_fx, Gradient_fy: Double;
+    // Radial gradients
+    Gradient_cx, Gradient_cy: Double;  // center of outer-most circle
+    Gradient_r: Double;                // radius of outer-most circle
+    Gradient_fx, Gradient_fy: Double;  // focal point (center of inner-most circle)
     Gradient_cx_Unit, Gradient_cy_Unit, Gradient_r_Unit, Gradient_fx_Unit, Gradient_fy_Unit: TvCoordinateUnit;
     Gradient_colors: TvGradientColors;
   end;
@@ -260,6 +263,7 @@ type
                     vnfLowerRoman,   // i, ii, iii, iv....
                     vnfUpperLetter,  // A, B, C, D...
                     vnfUpperRoman);  // I, II, III, IV....
+
   { TvListLevelStyle }
 
   TvListLevelStyle = Class
@@ -1359,7 +1363,7 @@ type
     FWidth, FHeight: Double;
   public
     Document: TvVectorialDocument;
-    constructor create(APage : TvPage); override;
+    constructor Create(APage : TvPage); override;
     destructor destroy; override;
     procedure UpdateDocumentSize();
     function GetWidth: Double;
@@ -1371,7 +1375,7 @@ type
     function GenerateDebugTree(ADestRoutine: TvDebugAddItemProc; APageItem: Pointer): Pointer; override;
   end;
 
-  TvVectorialReaderFlag = (vrfSVG_UseBottomLeftCoords, vrfWMF_UseBottomLeftCoords);
+  TvVectorialReaderFlag = (vrf_UseBottomLeftCoords);
   TvVectorialReaderFlags = set of TvVectorialReaderFlag;
 
   TvVectorialReaderSettings = record
@@ -3568,8 +3572,8 @@ procedure TvEntity.CalculateBoundingBox(constref ARenderInfo: TvRenderInfo;
 begin
   ALeft := X;
   ATop := Y;
-  ARight := X+1;
-  ABottom := Y+1;
+  ARight := X; //+1;
+  ABottom := Y; //+1;
 end;
 
 // returns false if the element is invisible
@@ -3621,10 +3625,19 @@ var
   lLeft, lTop, lRight, lBottom: Double;
 begin
   CalculateBoundingBox(ARenderInfo, lLeft, lTop, lRight, lBottom);
-  if lLeft < ALeft then ALeft := lLeft;
-  if lTop < ATop then ATop := lTop;
-  if lRight > ARight then ARight := lRight;
-  if lBottom > ABottom then ABottom := lBottom;
+  if lLeft < ALeft then
+    ALeft := lLeft;
+  if lRight > ARight then
+    ARight := lRight;
+  if ARenderInfo.Page.UseTopLeftCoordinates then
+  begin
+    if lTop < ATop then ATop := lTop;
+    if lBottom > ABottom then ABottom := lBottom;
+  end else
+  begin
+    if lTop > ATop then ATop := lTop;
+    if lBottom < ABottom then ABottom := lBottom;
+  end;
 end;
 
 class procedure TvEntity.CalcEntityCanvasMinMaxXY(
@@ -3632,16 +3645,23 @@ class procedure TvEntity.CalcEntityCanvasMinMaxXY(
 begin
   if ARenderInfo.EntityCanvasMinXY.X = INVALID_RENDERINFO_CANVAS_XY then
     ARenderInfo.EntityCanvasMinXY.X := APointX
-  else ARenderInfo.EntityCanvasMinXY.X := Min(ARenderInfo.EntityCanvasMinXY.X, APointX);
+  else
+    ARenderInfo.EntityCanvasMinXY.X := Min(ARenderInfo.EntityCanvasMinXY.X, APointX);
+
   if ARenderInfo.EntityCanvasMinXY.Y = INVALID_RENDERINFO_CANVAS_XY then
     ARenderInfo.EntityCanvasMinXY.Y := APointY
-  else ARenderInfo.EntityCanvasMinXY.Y := Min(ARenderInfo.EntityCanvasMinXY.Y, APointY);
+  else
+    ARenderInfo.EntityCanvasMinXY.Y := Min(ARenderInfo.EntityCanvasMinXY.Y, APointY);
+
   if ARenderInfo.EntityCanvasMaxXY.X = INVALID_RENDERINFO_CANVAS_XY then
     ARenderInfo.EntityCanvasMaxXY.X := APointX
-  else ARenderInfo.EntityCanvasMaxXY.X := Max(ARenderInfo.EntityCanvasMaxXY.X, APointX);
+  else
+    ARenderInfo.EntityCanvasMaxXY.X := Max(ARenderInfo.EntityCanvasMaxXY.X, APointX);
+
   if ARenderInfo.EntityCanvasMaxXY.Y = INVALID_RENDERINFO_CANVAS_XY then
     ARenderInfo.EntityCanvasMaxXY.Y := APointY
-  else ARenderInfo.EntityCanvasMaxXY.Y := Max(ARenderInfo.EntityCanvasMaxXY.Y, APointY);
+  else
+    ARenderInfo.EntityCanvasMaxXY.Y := Max(ARenderInfo.EntityCanvasMaxXY.Y, APointY);
 end;
 
 class procedure TvEntity.CalcEntityCanvasMinMaxXY_With2Points(
@@ -3907,11 +3927,13 @@ end;
 procedure TvEntityWithPen.ApplyPenToCanvas(constref ARenderInfo: TvRenderInfo; APen: TvPen);
 var
   ADest: TFPCustomCanvas absolute ARenderInfo.Canvas;
+  AMulX: Double absolute ARenderInfo.MulX;
+  AMulY: Double absolute ARenderInfo.MulY;
 begin
   if ADest = nil then
     exit;
   ADest.Pen.FPColor := AdjustColorToBackground(APen.Color, ARenderInfo);
-  ADest.Pen.Width := Max(1, APen.Width);   // wp: why was here "1;//APen.Width;" ???
+  ADest.Pen.Width := Max(1, FPVSizeToCanvas(APen.Width, Max(AMulX, abs(AMulY))));
   ADest.Pen.Style := APen.Style;
   {$ifdef USE_LCL_CANVAS}
   if (APen.Style = psPattern) then
@@ -4273,31 +4295,41 @@ var
   //
   i, j: Integer;
   lx, ly: Integer;
+  lGradient_cx_px, lGradient_cy_px, lGradient_r_px{, lGradient_fx_px, lGradient_fy_px}: Integer;
+  lWidth, lHeight: Integer;
+  lAspectRatio: Double;
   lDist: Double;
-  lGradient_cx_px, lGradient_cy_px, lGradient_r_px, lGradient_fx_px, lGradient_fy_px: Double;
-  lWidth, lHeight, lBiggestHalfSide: Integer;
-  lBiggestSizeIsY: Boolean;
   lColor: TFPColor;
 
-  function Gradient_value_to_px(AValue: Double; AUnit: TvCoordinateUnit; AIsY: Boolean): Integer;
+  function GradientValue_to_px(AValue: Double; AUnit: TvCoordinateUnit; AIsY: Boolean): Integer;
   var
     lSideLen: Integer;
   begin
     Result := 0;
-    if AIsY then lSideLen := (ARect.Bottom-ARect.Top)
-    else lSideLen := (ARect.Right-ARect.Left);
+
+    if AIsY then
+      lSideLen := (ARect.Bottom-ARect.Top)
+    else
+      lSideLen := (ARect.Right-ARect.Left);
+
     case AUnit of
-    //vcuDocumentUnit: Result := ;
-    vcuPercentage:   Result := Round(lSideLen * AValue);
+      vcuDocumentUnit:
+        if AIsY then
+          Result := CoordToCanvasY(AValue, ARenderInfo.DestY, ARenderInfo.MulY)
+        else
+          Result := CoordToCanvasX(AValue, ARenderInfo.DestX, ARenderInfo.MulX);
+      vcuPercentage:
+        Result := Round(lSideLen * AValue);
     end;
   end;
 
-  function Distance_To_RadialGradient_Color(ADist: Double): TFPColor;
+  function Distance_To_RadialGradientColor(ADist: Double): TFPColor;
   var
-    k: Integer;
+    k, kmax: Integer;
   begin
     Result := colTransparent;
-    for k := 0 to Length(Brush.Gradient_colors)-1 do
+    kmax := Length(Brush.Gradient_colors) - 1;
+    for k := 0 to kmax do
     begin
       if k = 0 then
       begin
@@ -4313,22 +4345,26 @@ var
           Brush.Gradient_colors[k].Position - Brush.Gradient_colors[k-1].Position);
         Exit;
       end;
+
+      if (k = kmax) and (ADist >= Brush.Gradient_colors[k].Position) then
+        Result := Brush.Gradient_Colors[k].Color;
     end;
   end;
 
 begin
   lWidth := (ARect.Right-ARect.Left);
   lHeight := (ARect.Bottom-ARect.Top);
-  lBiggestSizeIsY := lHeight > lWidth;
-  if lBiggestSizeIsY then lBiggestHalfSide := Round(lHeight / 2)
-  else lBiggestHalfSide := Round(lWidth / 2);
+  lAspectRatio := lHeight/lWidth;
 
-  // Calculate Gradient_X_px
-  lGradient_cx_px := Gradient_value_to_px(Brush.Gradient_cx, Brush.Gradient_cx_Unit, False);
-  lGradient_cy_px := Gradient_value_to_px(Brush.Gradient_cy, Brush.Gradient_cy_Unit, True);
-  lGradient_r_px := Gradient_value_to_px(Brush.Gradient_r, Brush.Gradient_r_Unit, lBiggestSizeIsY);
-  lGradient_fx_px := Gradient_value_to_px(Brush.Gradient_fx, Brush.Gradient_fx_Unit, False);
-  lGradient_fy_px := Gradient_value_to_px(Brush.Gradient_fy, Brush.Gradient_fy_Unit, True);
+  // Calculate center of outer-most gradient circle
+  lGradient_cx_px := GradientValue_to_px(Brush.Gradient_cx, Brush.Gradient_cx_Unit, False);
+  lGradient_cy_px := GradientValue_to_px(Brush.Gradient_cy, Brush.Gradient_cy_Unit, True);
+  // Calculate radius of outer-most gradient circle, relative the width
+  lGradient_r_px := GradientValue_to_px(Brush.Gradient_r, Brush.Gradient_r_Unit, False);
+  { -- not implemented, yet
+  lGradient_fx_px := GradientValue_to_px(Brush.Gradient_fx, Brush.Gradient_fx_Unit, False);
+  lGradient_fy_px := GradientValue_to_px(Brush.Gradient_fy, Brush.Gradient_fy_Unit, True);
+  }
 
   // pixel-by-pixel version
   for i := 0 to lWidth-1 do
@@ -4339,10 +4375,13 @@ begin
       ly := ARect.Top + j;
       if not IsPointInPolygon(lx, ly, APoints) then Continue;
 
-      lDist := sqrt(sqr(i-lGradient_cx_px)+sqr(j-lGradient_cy_px));
-      lDist := lDist / lBiggestHalfSide;
+      // distance of current point (i, j) to gradient center, corrected for aspect ratio
+      lDist := sqrt(sqr(i - lGradient_cx_px) + sqr((j - lGradient_cy_px)/lAspectRatio));
+      lDist := lDist / lGradient_r_px;
       lDist := Min(Max(0, lDist), 1);
-      lColor := Distance_To_RadialGradient_Color(lDist);
+
+      // Color for point (lx, ly)
+      lColor := Distance_To_RadialGradientColor(lDist);
       ADest.Colors[lx, ly] := AlphaBlendColor(ADest.Colors[lx, ly], lColor);
     end;
   end;
@@ -4364,11 +4403,18 @@ var
     lSideLen: Integer;
   begin
     Result := 0;
-    if AIsY then lSideLen := (ARect.Bottom-ARect.Top)
-    else lSideLen := (ARect.Right-ARect.Left);
+    if AIsY then
+      lSideLen := (ARect.Bottom-ARect.Top)
+    else
+      lSideLen := (ARect.Right-ARect.Left);
     case AUnit of
-    vcuDocumentUnit: Result := Round(AValue);
-    vcuPercentage:   Result := Round(lSideLen * AValue);
+      vcuDocumentUnit:
+        if AIsY then
+          Result := CoordToCanvasY(AValue, ARenderInfo.DestY, ARenderInfo.MulY)
+        else
+          Result := CoordToCanvasX(AValue, ARenderInfo.DestX, ARenderInfo.MulX);
+      vcuPercentage:
+        Result := Round(lSideLen * AValue);
     end;
   end;
 
@@ -4837,9 +4883,16 @@ begin
       else
       begin
         if l2DSegment.X < ALeft then ALeft := l2DSegment.X;
-        if l2DSegment.Y < ATop then ATop := l2DSegment.Y;
         if l2DSegment.X > ARight then ARight := l2DSegment.X;
-        if l2DSegment.Y > ABottom then ABottom := l2DSegment.Y;
+        if ARenderInfo.Page.UseTopLeftCoordinates then
+        begin
+          if l2DSegment.Y < ATop then ATop := l2DSegment.Y;
+          if l2DSegment.Y > ABottom then ABottom := l2DSegment.Y;
+        end else
+        begin
+          if l2DSegment.Y > ATop then ATop := l2DSegment.Y;
+          if l2DSegment.Y < ABottom then ABottom := l2DSegment.Y;
+        end;
       end;
     end;
 
@@ -5001,6 +5054,8 @@ begin
   Result := Len;
 end;
 
+{ Rotates all points of the path by the given angle (in radians) around the
+  point ABase. }
 procedure TPath.Rotate(AAngle: Double; ABase: T3DPoint);
 var
   i: Integer;
@@ -6181,14 +6236,15 @@ begin
     ARight := X + Round(tmp);
     t := arctan(VertHalfAxis*cot(Angle) / HorzHalfAxis);
     tmp := abs(VertHalfAxis*sin(t)*cos(Angle) + HorzHalfAxis*cos(t)*sin(Angle));
-    ATop := Y + Round(tmp);
-    ABottom := Y - Round(tmp);
+    tmp := tmp * ARenderInfo.Page.GetTopLeftCoords_Adjustment;
+    ATop := Y - Round(tmp);
+    ABottom := Y + Round(tmp);
   end else
   begin
     ALeft := X - HorzHalfAxis;
     ARight := X + HorzHalfAxis;
-    ATop := Y + VertHalfAxis;       // wp: changed from - to +
-    ABottom := Y - VertHalfAxis;    // ... and this from + to -
+    ATop := Y - VertHalfAxis * ARenderInfo.Page.GetTopLeftCoords_Adjustment;
+    ABottom := Y + VertHalfAxis * ARenderInfo.Page.GetTopLeftCoords_Adjustment;
   end;
 end;
 
@@ -6317,6 +6373,7 @@ procedure TvRectangle.CalculateBoundingBox(constref ARenderInfo: TvRenderInfo;
   out ALeft, ATop, ARight, ABottom: Double);
 var
   pts: Array[0..3] of T3DPoint;
+  mx, mn: Double;
   j: Integer;
 begin
   if Angle <> 0 then
@@ -6330,21 +6387,30 @@ begin
       // Use inverted angle due to sign convention in Rotate3DPointInXY
     ALeft := pts[0].x;
     ARight := Pts[0].x;
-    ATop := pts[0].y;
-    ABottom := pts[0].y;
+    mx := pts[0].y;
+    mn := pts[0].y;
     for j:=1 to High(pts) do
     begin
       ALeft := Min(ALeft, pts[j].x);
       ARight := Max(ARight, pts[j].x);
-      ATop := Max(ATop, pts[j].y);
-      ABottom := Min(ABottom, pts[j].y);
+      mx := Max(mx, pts[j].y);
+      mn := Min(mx, pts[j].y);
+    end;
+    if ARenderInfo.Page.UseTopLeftCoordinates then
+    begin
+      ATop := mn;
+      ABottom := mx;
+    end else
+    begin
+      ATop := mx;
+      ABottom := mn;
     end;
   end else
   begin
     ALeft := X;
     ATop := Y;
     ARight := X + CX;
-    ABottom := IfThen(FPage.FUseTopLeftCoordinates, Y + CY, Y - CY);
+    ABottom := Y + CY * ARenderInfo.Page.GetTopLeftCoords_Adjustment;
   end;
 end;
 
@@ -6418,7 +6484,7 @@ var
   AMulY: Double absolute ARenderInfo.MulY;
   //
   x1, y1, x2, y2: Integer;
-  fx1, fy1, fx2, fy2: Double;
+  fx1, fy1, fx2, fy2: Double;   // left, top, right, bottom
 begin
   inherited Render(ARenderInfo, ADoDraw);
 
@@ -6516,9 +6582,16 @@ begin
   for i := 0 to Length(Points)-1 do
   begin
     ALeft := Min(ALeft, Points[i].X);
-    ATop := Min(ATop, Points[i].Y);
     ARight := Max(ARight, Points[i].X);
-    ABottom := Max(ABottom, Points[i].Y);
+    if ARenderInfo.Page.UseTopLeftCoordinates then
+    begin
+      ATop := Min(ATop, Points[i].Y);
+      ABottom := Max(ABottom, Points[i].Y);
+    end else
+    begin
+      ATop := Max(ATop, Points[i].Y);
+      ABottom := Min(ABottom, Points[i].Y);
+    end;
   end;
 end;
 
@@ -6530,17 +6603,17 @@ var
   AMulX: Double absolute ARenderInfo.MulX;
   AMulY: Double absolute ARenderInfo.MulY;
   //
-  lPoints: array of TPoint;
+  lPoints: array of TPoint = nil;
   i: Integer;
   x1, x2, y1, y2: Integer;
-  polystarts: TIntegerDynArray;
+  polystarts: TIntegerDynArray = nil;
   lRect: TRect;
   gv1, gv2: T2DPoint;
 begin
   inherited Render(ARenderInfo, ADoDraw);
 
   x1 := MaxInt;
-  y1 := maxInt;
+  y1 := MaxInt;
   x2 := -MaxInt;
   y2 := -MaxInt;
   SetLength(lPoints, Length(Points));
@@ -6581,6 +6654,8 @@ begin
           end;
         bkRadialGradient:
           begin
+            // Boundary rect of shape to be filled by a gradient
+            lRect := Rect(x1, y1, x2, y2);
             // Border will be drawn later (gradient painting needs its own pen)
             ADest.Pen.Style := psClear;
             // Draw the gradient
@@ -8931,13 +9006,20 @@ begin
     lRenderInfo.Canvas := lBmp.Canvas;
     lCurEntity.CalculateBoundingBox(lRenderInfo, lLeft, lTop, lRight, lBottom);
     MinX := Min(MinX, lLeft);
-    MinY := Min(MinY, lTop);
     MaxX := Max(MaxX, lRight);
-    MaxY := Max(MaxY, lBottom);
+    if UseTopLeftCoordinates then
+    begin
+      MinY := Min(MinY, lTop);
+      MaxY := Max(MaxY, lBottom);
+    end else
+    begin
+      MinY := Min(MinY, lBottom);
+      MaxY := Max(MaxY, lTop);
+    end;
   end;
   lBmp.Free;
-  Width := MaxX - MinX;
-  Height := MaxY - MinY;
+  Width := abs(MaxX - MinX);
+  Height := abs(MaxY - MinY);
 end;
 
 procedure TvPage.AutoFit(ADest: TFPCustomCanvas; AWidth, AHeight, ARenderHeight: Integer;
@@ -8969,9 +9051,16 @@ var
         if lCurEntity.CalculateSizeInCanvas(lRenderInfo, ARenderHeight, AZoom, lLeft, lTop, lWidth, lHeight) then
         begin
           lMinX := Min(lMinX, lLeft);
-          lMinY := Min(lMinY, lTop);
           lMaxX := Max(lMaxX, lLeft + lWidth);
-          lMaxY := Max(lMaxY, lTop  + lHeight);
+          if UseTopLeftCoordinates then
+          begin
+            lMinY := Min(lMinY, lTop);
+            lMaxY := Max(lMaxY, lTop + lHeight);
+          end else
+          begin
+            lMaxY := Max(lMaxY, lTop);
+            lMinY := Min(lMinY, lTop - lHeight);
+          end;
         end;
         {$ifdef FPVECTORIAL_AUTOFIT_DEBUG}
         AutoFitDebug.Add(Format('[%s] MinX=%d MinY=%d MaxX=%d MaxY=%D', [lCurEntity.ClassName, lMinX, lMinY, lMaxX, lMaxY]));
@@ -8979,9 +9068,16 @@ var
       end;
 
       lMinX := Min(lMinX, lLeft);
-      lMinY := Min(lMinY, lTop);
       lMaxX := Max(lMaxX, lLeft + lWidth);
-      lMaxY := Max(lMaxY, lTop  + lHeight);
+      if UseTopLeftCoordinates then
+      begin
+        lMinY := Min(lMinY, lTop);
+        lMaxY := Max(lMaxY, lTop + lHeight);
+      end else
+      begin
+        lMaxY := Max(lMaxY, lTop);
+        lMinY := Min(lMinY, lTop + lHeight);
+      end;
     end
     else
     begin
@@ -8993,8 +9089,9 @@ var
     end;
 
     if (lMinX = High(Integer)) or (lMinY = High(Integer)) or
-       (lMaxX = Low(Integer)) or(lMaxY = Low(Integer)) then
-       Exit(False);
+       (lMaxX = Low(Integer)) or(lMaxY = Low(Integer))
+    then
+      Exit(False);
 
     lWidth := lMaxX - lMinX;
     lHeight := lMaxY - lMinY;
@@ -9778,7 +9875,9 @@ begin
   InitializeRenderInfo(RenderInfo, ADest, nil);
   InitializeRenderInfo(rInfo, ADest, nil);
   TvEntity.CopyAndInitDocumentRenderInfo(rInfo, RenderInfo, False, False);
-  if Assigned(FOwner.FRenderer) then FOwner.FRenderer.BeginRender(RenderInfo, ADoDraw);
+
+  if Assigned(FOwner.FRenderer) then
+    FOwner.FRenderer.BeginRender(RenderInfo, ADoDraw);
 
   for i := 0 to GetEntitiesCount - 1 do
   begin
@@ -9808,7 +9907,9 @@ begin
     end;
   end;
 
-  if Assigned(FOwner.FRenderer) then FOwner.FRenderer.EndRender(RenderInfo, ADoDraw);
+  if Assigned(FOwner.FRenderer) then
+    FOwner.FRenderer.EndRender(RenderInfo, ADoDraw);
+
   TvEntity.CopyAndInitDocumentRenderInfo(RenderInfo, rInfo, True, False);
 
   {$ifdef FPVECTORIAL_RENDERINFO_VISUALDEBUG}
@@ -9894,16 +9995,15 @@ begin
   Result := MainText.GetEntityIndex(AEntity);
 end;
 
-function TvTextPageSequence.FindAndSelectEntity(Pos: TPoint
-  ): TvFindEntityResult;
+function TvTextPageSequence.FindAndSelectEntity(Pos: TPoint): TvFindEntityResult;
 begin
-
+  //
 end;
 
 function TvTextPageSequence.FindEntityWithNameAndType(AName: string;
   AType: TvEntityClass; ARecursively: Boolean): TvEntity;
 begin
-
+  //
 end;
 
 procedure TvTextPageSequence.Clear;
@@ -9951,13 +10051,13 @@ end;
 
 procedure TvTextPageSequence.DrawBackground(ADest: TFPCustomCanvas);
 begin
-
+  //
 end;
 
 procedure TvTextPageSequence.RenderPageBorder(ADest: TFPCustomCanvas;
   ADestX: Integer; ADestY: Integer; AMulX: Double; AMulY: Double);
 begin
-
+  //
 end;
 
 procedure TvTextPageSequence.Render(ADest: TFPCustomCanvas; ADestX: Integer;
@@ -10153,7 +10253,6 @@ var
   AWriter: TvCustomVectorialWriter;
 begin
   AWriter := CreateVectorialWriter(AFormat);
-
   try
     AWriter.WriteToFile(AFileName, Self);
   finally
@@ -10177,7 +10276,6 @@ var
   AWriter: TvCustomVectorialWriter;
 begin
   AWriter := CreateVectorialWriter(AFormat);
-
   try
     AWriter.WriteToStream(AStream, Self);
   finally
@@ -10191,7 +10289,6 @@ var
   AWriter: TvCustomVectorialWriter;
 begin
   AWriter := CreateVectorialWriter(AFormat);
-
   try
     AWriter.WriteToStrings(AStrings, Self);
   finally
@@ -10311,7 +10408,7 @@ end;
 
 function  TvVectorialDocument.GetDetailedFileFormat(): string;
 begin
-
+  //
 end;
 
 procedure TvVectorialDocument.GuessDocumentSize();
@@ -10322,6 +10419,8 @@ var
   CurPage: TvPage;
   lRenderInfo: TvRenderInfo;
 begin
+  lRenderInfo := Default(TvRenderInfo);
+
   lLeft := 0;
   lTop := 0;
   lRight := 0;
@@ -10344,7 +10443,7 @@ end;
 
 procedure TvVectorialDocument.GuessGoodZoomLevel(AScreenSize: Integer);
 begin
-  If Height<>0 Then
+  If Height <> 0 Then
     ZoomLevel := AScreenSize / Height;
 end;
 
@@ -10872,8 +10971,8 @@ end;
   Opens the file and calls WriteToStream
 
   @param  AFileName The output file name.
-                   If the file already exists it will be replaced.
-  @param  AData     The Workbook to be saved.
+                    If the file already exists it will be replaced.
+  @param  AData     The document to be saved.
 
   @see    TsWorkbook
 }
