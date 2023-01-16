@@ -9275,8 +9275,8 @@ begin
       Lines.Add('anchordockpkg,');
       Lines.Add('anchordockingdsgn,');
       Lines.Add('jcfidelazarus,');
-      Lines.Add('laz.virtualtreeview_package,');
-      Lines.Add('lazdebuggerfp,');
+      //Lines.Add('laz.virtualtreeview_package,');
+      //Lines.Add('lazdebuggerfp,');
       Lines.Add('allsyneditdsgn,');
 
       Lines.SaveToFile(Path + 'staticpackages.inc');
@@ -9311,16 +9311,16 @@ begin
     MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('jcfidelazarus');
     Update := True;
   end;
-  if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('laz.virtualtreeview_package') < 0 then
-  begin
-    MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('laz.virtualtreeview_package');
-    Update := True;
-  end;
-  if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('lazdebuggerfp') < 0 then
-  begin
-    MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('lazdebuggerfp');
-    Update := True;
-  end;
+  //if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('laz.virtualtreeview_package') < 0 then
+  //begin
+  //  MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('laz.virtualtreeview_package');
+  //  Update := True;
+  //end;
+  //if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('lazdebuggerfp') < 0 then
+  //begin
+  //  MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('lazdebuggerfp');
+  //  Update := True;
+  //end;
 
   if Update then
   begin
