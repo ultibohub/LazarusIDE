@@ -11,12 +11,12 @@ uses
   // LazUtils
   LazUTF8,
   // IdeIntf
-  IDEHelpIntf,
+  LazarusCommonStrConst, IDEHelpIntf,
   // DebuggerIntf
   DbgIntfDebuggerBase,
   // IDE
   BreakPropertyDlgGroups, DebuggerDlg, Debugger, BaseDebugManager,
-  LazarusIDEStrConsts, InputHistory, IDEProcs, EnvironmentOpts, RecentListProcs;
+  IdeDebuggerStringConstants, InputHistory, IDEProcs, EnvironmentOpts, RecentListProcs;
 
 type
 
@@ -450,7 +450,7 @@ begin
   FBreakpointsNotification.OnRemove := @BreakPointRemove;
   UpdateInfo;
 
-  ButtonPanel.OKButton.Caption:=lisMenuOk;
+  ButtonPanel.OKButton.Caption:=lisBtnOk;
   ButtonPanel.HelpButton.Caption:=lisMenuHelp;
   ButtonPanel.CancelButton.Caption:=lisCancel;
 end;

@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: lazaruscommonstrconst.lisabort
+msgid "Abort"
+msgstr "Nutraukti"
+
+#: lazaruscommonstrconst.lisadd
+msgid "Add"
+msgstr "Pridėti"
+
+#: lazaruscommonstrconst.lisalways
+msgid "Always"
+msgstr "Visada"
+
+#: lazaruscommonstrconst.lisbtnadd
+msgid "&Add"
+msgstr "Pri&dėti"
+
+#: lazaruscommonstrconst.lisbtncontinue
+msgid "&Continue"
+msgstr "&Tęsti"
+
+#: lazaruscommonstrconst.lisbtndelete
+msgid "&Delete"
+msgstr "&Pašalinti"
+
+#: lazaruscommonstrconst.lisbtndlgadd
+msgid "&Add ..."
+msgstr "&Pridėti…"
+
+#: lazaruscommonstrconst.lisbtnenabled
+msgid "&Enabled"
+msgstr "Į&galintas"
+
+#: lazaruscommonstrconst.lisbtnok
+msgid "&OK"
+msgstr "&Tinka"
+
+#: lazaruscommonstrconst.liscancel
+msgid "Cancel"
+msgstr "Atsisakyti"
+
+#: lazaruscommonstrconst.liscontinue
+msgid "Continue"
+msgstr "Tęsti"
+
+#: lazaruscommonstrconst.lisdelete
+msgid "Delete"
+msgstr "Pašalinti"
+
+#: lazaruscommonstrconst.lisdisabled
+msgid "Disabled"
+msgstr "Pasyvus"
+
+#: lazaruscommonstrconst.lisdlgadd
+msgid "Add ..."
+msgstr "Pridėti…"
+
+#: lazaruscommonstrconst.lisenabled
+msgid "Enabled"
+msgstr "Veiksnus"
+
+#: lazaruscommonstrconst.lishelp
+msgid "Help"
+msgstr "Žinynas"
+
+#: lazaruscommonstrconst.lisignore
+msgid "Ignore"
+msgstr "Ignoruoti"
+
+#: lazaruscommonstrconst.lislazarus
+msgid "Lazarus"
+msgstr "Lazarus"
+
+#: lazaruscommonstrconst.lisnever
+msgid "Never"
+msgstr "Niekada"
+
+#: lazaruscommonstrconst.lisno
+msgid "No"
+msgstr "Ne"
+
+#: lazaruscommonstrconst.lisok
+msgid "OK"
+msgstr "gerai"
+
+#: lazaruscommonstrconst.lisyes
+msgid "Yes"
+msgstr "Taip"
+

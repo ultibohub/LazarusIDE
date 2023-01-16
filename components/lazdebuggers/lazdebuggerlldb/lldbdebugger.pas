@@ -370,6 +370,7 @@ type
               const ACallback: TMethod): Boolean; override;
   public
     class function CreateProperties: TDebuggerProperties; override; // Creates debuggerproperties
+    class function ExeBaseName: String; override;
     class function Caption: String; override;
     class function ExePaths: String; override;
     class function ExePathsMruGroup: TDebuggerClass; override;
@@ -3045,6 +3046,11 @@ begin
   Result := TLldbDebuggerProperties.Create;
 end;
 
+class function TLldbDebugger.ExeBaseName: String;
+begin
+  Result := 'lldb';
+end;
+
 class function TLldbDebugger.Caption: String;
 begin
   Result := 'LLDB Debugger (Alpha)';
@@ -3154,10 +3160,12 @@ end;
 
 procedure Register;
 begin
-  RegisterDebugger(TLldbDebugger);
+  //RegisterDebugger(TLldbDebugger);
 end;
 
 initialization
+  RegisterDebugger(TLldbDebugger);
+
   DBG_VERBOSE       := DebugLogger.FindOrRegisterLogGroup('DBG_VERBOSE' {$IFDEF DBG_VERBOSE} , True {$ENDIF} );
 
 end.

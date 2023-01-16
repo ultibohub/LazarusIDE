@@ -42,7 +42,7 @@ uses
   // IdeIntf
   IDEImagesIntf, IDEHelpIntf, IDEDialogs,
   // IDE
-  LazarusIDEStrConsts, IDEProcs, TransferMacros, EnvironmentOpts,
+  LazarusIDEStrConsts, LazarusCommonStrConst, IDEProcs, TransferMacros, EnvironmentOpts,
   IdeXmlConfigProcs;
 
 type
@@ -533,7 +533,7 @@ begin
   MoveUpButton.Caption:=lisUp;
   MoveDownButton.Caption:=lisDown;
 
-  ButtonPanel.OKButton.Caption:=lisMenuOk;
+  ButtonPanel.OKButton.Caption:=lisBtnOk;
   ButtonPanel.HelpButton.Caption:=lisMenuHelp;
   ButtonPanel.CancelButton.Caption:=lisCancel;
 

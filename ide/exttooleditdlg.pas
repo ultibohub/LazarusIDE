@@ -49,7 +49,7 @@ uses
   // Codetools
   FileProcs,
   // IdeIntf
-  IDEExternToolIntf, IDEHelpIntf, PropEdits, IDEDialogs, IDECommands, IDEUtils,
+  LazarusCommonStrConst, IDEExternToolIntf, IDEHelpIntf, PropEdits, IDEDialogs, IDECommands, IDEUtils,
   // IDE
   TransferMacros, LazarusIDEStrConsts, EnvironmentOpts, KeyMapping;
 
@@ -776,7 +776,7 @@ begin
   with MacrosInsertButton do
     Caption:=lisAdd;
     
-  ButtonPanel.OKButton.Caption:=lisMenuOk;
+  ButtonPanel.OKButton.Caption:=lisBtnOk;
   ButtonPanel.HelpButton.Caption:=lisMenuHelp;
   ButtonPanel.CancelButton.Caption:=lisCancel;
 

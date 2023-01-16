@@ -12,7 +12,7 @@ uses
   // LazUtils
   FileUtil,
   // IDE, converter
-  LazarusIDEStrConsts, ConverterTypes;
+  LazarusCommonStrConst, LazarusIDEStrConsts, ConverterTypes;
 
 type
 
@@ -412,7 +412,7 @@ end;
 procedure TReplaceFuncsForm.FormCreate(Sender: TObject);
 begin
   Caption:=lisReplacementFuncs;
-  ButtonPanel.OKButton.Caption := lisMenuOk;
+  ButtonPanel.OKButton.Caption := lisBtnOk;
   ButtonPanel.HelpButton.Caption := lisMenuHelp;
   ButtonPanel.CancelButton.Caption := lisCancel;
 end;

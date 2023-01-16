@@ -42,16 +42,9 @@ uses
 resourcestring
   // *** Common single word resources that can be safely shared around Lazarus ***
 
-  lisLazarus = 'Lazarus';
-  lisAdd  = 'Add';
-  lisBtnAdd = '&Add';
-  lisDlgAdd = 'Add ...';
-  lisBtnDlgAdd = '&Add ...';
   lisApply = 'Apply';
   lisInsert = 'Insert';
   lisChange  = 'Change';
-  lisDelete  = 'Delete';
-  lisBtnDelete = '&Delete';
   lisRemove = 'Remove';
   lisBtnRemove = '&Remove';
   lisRename = 'Rename';
@@ -73,26 +66,12 @@ resourcestring
   lisNew = 'New';
   lisClose = 'Close';
   lisBtnClose = '&Close';
-  lisOk = 'OK';
-  lisMenuOk = '&OK';
-  lisCancel = 'Cancel';
-  lisNo = 'No';
-  lisYes = 'Yes';
-  lisAbort = 'Abort';
-  lisIgnore = 'Ignore';
-  lisNever = 'Never';
-  lisAlways = 'Always';
-  lisContinue = 'Continue';
-  lisMenuContinue = '&Continue';
   lisBreak = 'Break';
   lisMenuBreak = '&Break';
   lisExit = 'Exit';
   lisQuit = 'Quit';
   lisBtnQuit = '&Quit';
   lisRestart = 'Restart';
-  lisHelp = 'Help';
-  lisEnabled = 'Enabled';
-  lisBtnEnabled = '&Enabled';
   lisUndo = 'Undo';
   lisRedo = 'Redo';
   lisCut = 'Cut';
@@ -465,7 +444,6 @@ resourcestring
   lisMenuViewLocalVariables = 'Local Variables';
   lisMenuViewPseudoTerminal = 'Console In/Output';
   lisMenuViewRegisters = 'Registers';
-  lisMenuViewCallStack = 'Call Stack';
   lisMenuViewThreads = 'Threads';
   lisMenuViewHistory = 'History';
   lisMenuViewAssembler = 'Assembler';
@@ -549,21 +527,6 @@ resourcestring
   lisMenuEvaluate = 'E&valuate/Modify ...';
   lisMenuAddWatch = 'Add &Watch ...';
   lisMenuAddBreakpoint = 'Add &Breakpoint';
-
-  lisInspectDialog = 'Debug Inspector';
-  lisInspectData = 'Data';
-  lisInspectProperties = 'Properties';
-  lisInspectMethods = 'Methods';
-  lisInspectUseInstance = 'Instance';
-  lisInspectUseInstanceHint = 'Use instance class';
-  lisInspectClassInherit = '%s: class %s inherits from %s';
-  lisInspectUnavailableError = '%s: unavailable (error: %s)';
-  lisInspectPointerTo = 'Pointer to %s';
-  lisInspectAddWatch = 'Add watch';
-  lisColClass = 'Class';
-  lisColVisibility = 'Visibility';
-  lisColReturns = 'Returns';
-  lisColAddress = 'Address';
 
   lisMenuNewPackage = 'New Package ...';
   lisMenuOpenPackage = 'Open Loaded Package ...';
@@ -1568,17 +1531,10 @@ resourcestring
   dlgHighlightColor = 'Highlight Color';
   dlgHighlightFontColor = 'Highlight Font Color';
   dlgValueColor = 'Value';
-  dlgValueDataAddr = 'Data-Address';
   dlgDefValueColor = 'Default Value';
   dlgDifferentValueBackgroundColor = 'Different values background';
   dlgPropNameColor = 'Property Name';
   dlgGutterEdgeColor = 'Gutter Edge Color';
-
-  liswlProperties = '&Properties';
-  liswlDIsableAll = 'D&isable All';
-  liswlENableAll = 'E&nable All';
-  liswlDeLeteAll = 'De&lete All';
-  liswlInspectPane = 'Inspect pane';
 
   dlgOIMiscellaneous = 'Miscellaneous';
   dlgOISpeedSettings = 'Speed settings';
@@ -4257,11 +4213,6 @@ resourcestring
     +'directory "%s" does not exist.%sPlease check the working directory in '
     +'Menu > Run > Run parameters.';
   lisPleaseOpenAUnitBeforeRun = 'Please open a unit before run.';
-  lisHitCount = 'Hitcount';
-  lisDisableBreakPoint = 'Disable Breakpoint';
-  lisEnableBreakPoint = 'Enable Breakpoint';
-  lisDeleteBreakPoint = 'Delete Breakpoint';
-  lisViewBreakPointProperties = 'Breakpoint Properties ...';
 
   lisDBGENDefaultColor = 'Default Color';
   lisDBGENBreakpointEvaluation = 'Breakpoint Evaluation';
@@ -5167,11 +5118,6 @@ resourcestring
   lisAboutOfficial = 'Official:';
   lisAboutDocumentation = 'Documentation:';
 
-  // character map
-  lisCharacterMap = 'Character Map';
-  lisRange = 'Range';
-  lisSortUnicodeRangeListAlphabetically = 'Sort Unicode range list alphabetically';
-
   // codetools defines value dialog
   lisCTDefChooseDirectory = 'Choose Directory';
   lisCTDefCodeToolsDirectoryValues = 'CodeTools Directory Values';
@@ -5479,11 +5425,8 @@ resourcestring
   lisDebugOptionsFrmOSExceptions = 'OS Exceptions';
   lisDebugOptionsFrmSignals = 'Signals';
   lisDebugOptionsFrmHandledBy = 'Handled by';
-  lisDebugOptionsFrmResume = 'Resume';
   lisDebugOptionsFrmHandledByProgram = 'Handled by Program';
   lisDebugOptionsFrmHandledByDebugger = 'Handled by Debugger';
-  lisDebugOptionsFrmResumeHandled = 'Resume Handled';
-  lisDebugOptionsFrmResumeUnhandled = 'Resume Unhandled';
   lisDebugOptionsFrmAddException = 'Add Exception';
   lisDebugOptionsFrmEnterExceptionName = 'Enter the name of the exception';
   lisDebugOptionsFrmDuplicateExceptionName = 'Duplicate Exception name';
@@ -5498,8 +5441,6 @@ resourcestring
   lisShowMultipleLines = 'Show multiple lines';
   lisShowRelativePaths = 'Show relative paths';
   lisCommandLineParameters = 'Command line parameters';
-  liswlWatchList = 'Watches';
-  liswlExpression = 'Expression';
   lisKMChooseKeymappingScheme = 'Choose Keymapping scheme';
   lisKMNoteAllKeysWillBeSetToTheValuesOfTheChosenScheme = 'Note: All keys '
     +'will be set to the values of the chosen scheme.';
@@ -5577,173 +5518,14 @@ resourcestring
   lisMovePage = 'Move Page';
   lisFileSettings = 'File Settings';
 
-  // Debugger Dialogs
-  lisDbgWinPower = 'On/Off';
-  lisDbgWinPowerHint = 'Disable/Enable updates for the entire window';
-
-  lisDbgItemEnable          = 'Enable';
-  lisDbgItemEnableHint      = 'Enable';
-  lisDbgItemDisable         = 'Disable';
-  lisDbgItemDisableHint     = 'Disable';
-  lisDbgItemDeleteHint      = 'Delete';
-  lisDbgAllItemEnable       = 'Enable all';
-  lisDbgAllItemEnableHint   = 'Enable all';
-  lisDbgAllItemDisable      = 'Disable all';
-  lisDbgAllItemDisableHint  = 'Disable all';
-  lisDbgAllItemDelete       = 'Delete all';
-  lisDbgAllItemDeleteHint   = 'Delete all';
-  lisDbgBreakpointPropertiesHint = 'Breakpoint Properties ...';
-
-  // Call Stack Dialog
-  lisCurrent = 'Current';
-  lisViewSource = 'View Source';
-  lisViewSourceDisass = 'View Assembler';
-  lisMaxS = 'Max %d';
-  lisGotoSelected = 'Goto selected';
-  lisCopyAll = 'Copy All';
-  lisIndex = 'Index';
   lisFunction = 'Function';
-  lisCSTop = 'Top';
-  lisCSBottom = 'Bottom';
-
-  // Break Points Dialog
-  lisFilenameAddress = 'Filename/Address';
-  lisLineLength = 'Line/Length';
   lisCondition = 'Condition';
-  lisPassCount = 'Pass Count';
   lisGroup = 'Group';
-  lisSourceBreakpoint = '&Source Breakpoint ...';
-  lisAddressBreakpoint = '&Address Breakpoint ...';
-  lisWatchPoint = '&Data/Watch Breakpoint ...';
-  lisWatchPointBreakpoint = '&Data/watch Breakpoint ...';
-  lisEnableAll = '&Enable All';
   lisDeleteAll = '&Delete All';
-  lisDisableAllInSameSource = 'Disable All in same source';
-  lisEnableAllInSameSource = 'Enable All in same source';
-  lisDeleteAllInSameSource = 'Delete All in same source';
-  lisDeleteAllSelectedBreakpoints = 'Delete all selected breakpoints?';
-  lisDeleteBreakpointAtLine = 'Delete breakpoint at%s"%s" line %d?';
-  lisDeleteBreakpointForAddress = 'Delete breakpoint for address %s?';
-  lisDeleteBreakpointForWatch = 'Delete watchpoint for "%s"?';
-  lisDeleteAllBreakpoints = 'Delete all breakpoints?';
-  lisDeleteAllBreakpoints2 = 'Delete all breakpoints in file "%s"?';
-  lisGroupNameInput = 'Group name:';
-  lisGroupNameInvalid = 'BreakpointGroup name must be a valid Pascal identifier name.';
-  lisGroupNameEmptyClearInstead = 'The group name cannot be empty. Clear breakpoints'' group(s)?';
-  lisGroupAssignExisting = 'Assign to existing "%s" group?';
-  lisGroupSetNew = 'Set new group ...';
-  lisGroupSetNone = 'Clear group(s)';
-  lisGroupEmptyDelete = 'No more breakpoints are assigned to group "%s", delete it?';
-  lisGroupEmptyDeleteMore = '%sThere are %d more empty groups, delete all?';
-  lisEnableGroups = 'Enable Groups';
-  lisDisableGroups = 'Disable Groups';
-  lisLogMessage = 'Log Message';
-  lisLogEvalExpression = 'Eval expression';
-  lisLogCallStack = 'Log Call Stack';
-  lisLogCallStackLimit = '(frames limit. 0 - no limits)';
-  lisDisabled = 'Disabled';
-  lisBPSEnabled = 'Enabled';
-  lisBPSDisabled = 'Disabled';
-  lisInvalidOff = 'Invalid (Off)';
-  lisInvalidOn = 'Invalid (On)';
-  lisPendingOn = 'Pending (On)';
-  lisOff = '? (Off)';
-  lisOn = '? (On)';
-  lisTakeSnapshot = 'Take a Snapshot';
-
-  lisWatch = '&Watch';
-  lisInspect = '&Inspect';
-  // Breakpoint Properties Dialog
-  lisBreakPointProperties = 'Breakpoint Properties';
-  lisLine = 'Line:';
-  lisAddress = 'Address:';
-  lisWatchData = 'Watch:';
-  lisWatchScope = 'Watch scope';
-  lisWatchScopeGlobal = 'Global';
-  lisWatchScopeLocal = 'Declaration';
-  lisWatchKind = 'Watch action';
-  lisWatchKindRead = 'Read';
-  lisWatchKindWrite = 'Write';
-  lisWatchKindReadWrite = 'Read/Write';
-  lisAutoContinueAfter = 'Auto continue after:';
-  lisMS = '(ms)';
-  lisActions = 'Actions:';
-  lisEvalExpression = 'Eval expression';
-
-  // Debug Output Dialog
-  lisCopyAllOutputClipboard = 'Copy all output to clipboard';
 
   // Designer Size Components Dialog
   lisShrinkToSmal = 'Shrink to smallest';
   lisGrowToLarges = 'Grow to Largest';
-
-  // Watch Dialog
-  lisWatchToWatchPoint = 'Create &Data/Watch Breakpoint ...';
-
-  // Watch Property Dialog
-  lisWatchPropert = 'Watch Properties';
-  lisExpression = 'Expression:';
-  lisRepeatCount = 'Repeat Count:';
-  lisDigits = 'Digits:';
-  lisAllowFunctio = 'Allow Function Calls';
-  lisStyle = 'Style';
-  lisCharacter = 'Character';
-  lisString = 'String';
-  lisDecimal = 'Decimal';
-  lisUnsigned = 'Unsigned';
-  lisHexadecimal = 'Hexadecimal';
-  lisFloatingPoin = 'Floating Point';
-  lisPointer = 'Pointer';
-  lisRecordStruct = 'Record/Structure';
-  lisMemoryDump = 'Memory Dump';
-  lisBinary = 'Binary';
-
-  // Terminal Output
-  lisDbgTerminal = 'Console In/Output';
-
-  // Callstack
-  lisCallStackNotEvaluated = 'Stack not evaluated';
-
-  // Locals Dialog
-  lisLocals = 'Local Variables';
-  lisLocalsNotEvaluated = 'Locals not evaluated';
-  lisEvaluateModify = '&Evaluate/Modify';
-  lisEvaluateAll = 'Evaluate all';
-  lisLocalsDlgCopyName = '&Copy Name';
-  lisLocalsDlgCopyValue = 'C&opy Value';
-  lisLocalsDlgCopyNameValue = 'Co&py Name and Value';
-  lisLocalsDlgCopyAll = 'Copy &all';
-  lisLocalsDlgCopyRAWValue = 'Copy &RAW Value';
-
-  // Registers Dialog
-  lisRegisters = 'Registers';
-
-  // ThreadDlg
-  lisThreads = 'Threads';
-  lisThreadsState = 'State';
-  lisThreadsSrc  = 'Source';
-  lisThreadsLine = 'Line';
-  lisThreadsFunc = 'Function';
-  lisThreadsCurrent = 'Current';
-  lisThreadsGoto = 'Goto';
-  lisThreadsNotEvaluated = 'Threads not evaluated';
-
-  // HistoryDlg
-  histdlgFormName   = 'History';
-  histdlgColumnCur  = '';
-  histdlgColumnTime = 'Time';
-  histdlgColumnLoc  = 'Location';
-  histdlgBtnPowerHint = 'Switch on/off automatic snapshots';
-  histdlgBtnEnableHint = 'Toggle view snapshot or current';
-  histdlgBtnClearHint = 'Clear all snapshots';
-  histdlgBtnShowHistHint = 'View history';
-  histdlgBtnShowSnapHint = 'View Snapshots';
-  histdlgBtnMakeSnapHint = 'Take Snapshot';
-  histdlgBtnRemoveHint   = 'Remove selected entry';
-
-  // Exception Dialog
-  lisExceptionDialog = 'Debugger Exception Notification';
-  lisIgnoreExceptionType = 'Ignore this exception type';
 
   // ProjectWizard Dialog
   lisProjectWizard = 'Project Wizard';
@@ -6310,11 +6092,6 @@ resourcestring
     +'target specific compiler like "%s". Please give the full file path.';
   lisTheMakeExecutableTypicallyHasTheName = 'The "make" executable typically '
     +'has the name "%s". It is needed for building the IDE. Please give the full file path.';
-  lisTheDebuggerExecutableTypicallyHasTheNamePleaseGive = 'The debugger '
-    +'executable typically has the name "%s". Please give the full file path.';
-  lisAUsefulSettingOnWindowsSystemsIsLazarusDirMingwBin = 'A useful setting on'
-    +' Windows systems is: $(LazarusDir)\mingw\$(TargetCPU)-$(TargetOS)\bin\'
-    +'gdb.exe';
   lisFoundVersionExpected = 'Found version %s, expected %s';
   lisInvalidVersionIn = 'invalid version in %s';
   lisWrongVersionIn = 'wrong version in %s: %s';
@@ -6338,29 +6115,7 @@ resourcestring
   lisFileNotFound4 = 'file not found';
   lisPpuNotFoundCheckYourFpcCfg = '%s.ppu not found. Check your fpc.cfg.';
   lisISDDirectoryNotFound = 'directory not found';
-  lisDebuggerFeedbackInformation = 'Debugger Information';
-  lisDebuggerFeedbackWarning = 'Debugger Warning';
-  lisDebuggerFeedbackError = 'Debugger Error';
 
-  // breakpointgroups
-  dbgBreakGroupDlgCaption = 'Select Groups';
-  dbgBreakGroupDlgHeaderEnable = 'Select groups to enable when breakpoint is hit';
-  dbgBreakGroupDlgHeaderDisable = 'Select groups to disable when breakpoint is hit';
-
-  //Registers dialog
-  regdlgDisplayTypeForSelectedRegisters = 'Display type for selected Registers';
-  regdlgFormat = 'Format';
-  regdlgHex = 'Hex';
-  regdlgDecimal = 'Decimal';
-  regdlgOctal = 'Octal';
-  regdlgBinary = 'Binary';
-  regdlgRaw = 'Raw';
-  // Event log dialog
-  lisEventLogOptions = 'Event Log Options ...';
-  lisEventLogClear = 'Clear Events';
-  lisEventLogSaveToFile = 'Save Events to File';
-  lisEventsLogAddComment = 'Add Comment ...';
-  lisEventsLogAddComment2 = 'Add Comment';
   lisCleanUpAndBuildProject = 'Clean up and build project';
   // Many Build Modes
   lisCompileFollowingModes = 'Compile the following modes';
@@ -6384,8 +6139,6 @@ resourcestring
   lisDiscardChangesCreateNewProject = 'Discard changes, create new project';
   lisDoYouStillWantToQuit = 'Do you still want to quit?';
   lisDiscardChangesAndQuit = 'Discard changes and quit';
-  dbgBreakPropertyGroupNotFound = 'Some groups in the Enable/Disable list do not exist.%0:s'
-    +'Create them?%0:s%0:s%1:s';
   lisFileIsDirectory = 'File is directory';
   lisPathIsNoDirectory = 'is not a directory';
   lisUnableToCreateNewFileBecauseThereIsAlreadyADirecto = 'Unable to create '
@@ -6439,8 +6192,6 @@ resourcestring
   lisAMacroWithThisNameAlreadyExists = 'A macro with this name already exists.';
   lisNewMacroname2 = 'New Macroname';
   lisEnterNewNameForMacroS = 'Enter new name for Macro "%s"';
-  rsAttachTo = 'Attach to';
-  rsEnterPID = 'Enter PID';
   lisFreePascalCompilerMessages = 'Free Pascal Compiler messages';
   lisRunAndDesignTimePackagesHaveNoLimitations = '"Run and Design time" '
     +'packages have no limitations.';
@@ -6562,11 +6313,6 @@ resourcestring
     ;
   lisUpdateInfo = 'Update info';
 
-  //Debugger Attaching dialog
-  lisDADRunningProcesses = 'Running Processes';
-  lisDADImageName = 'Image Name';
-  lisDADPID = 'PID';
-  lisDADAttach = 'Attach';
   lisExitCode = 'Exit code %s';
   lisCanTFindAValidPpu = 'Can''t find a valid %s.ppu';
   lisCannotFind = 'Cannot find %s';
@@ -6708,6 +6454,69 @@ resourcestring
     +'below. The options setting which list to use are always stored in the session.';
   drsUseTheIDEGlobalListOfConv = 'Use the IDE-Global list of converters';
   drsUseTheProjectListOfConver = 'Use the project list of converters';
+
+  InitDlgDebugPopupInformation = 'A backend provides OS and architecture '
+    +'specific implementations for the debugger.%0:s'
+    +'Default for your OS/Arch is: "%1:s".%0:s%0:s'
+    +'Other backends are provided for special tasks (e.g. '
+    +'cross debugging on some platforms) or as generic alternatives.%0:sThe '
+    +'debugger can have different features, depending on the backend.%0:s%0:s'
+    +'Some backends require an external exe (such as gdb or lldb). This exe '
+    +'may be part of your OS (Linux/Mac), or be provided by the Lazarus '
+    +'installer (Windows).%0:s%0:s'
+    +'If you have just upgraded your installation,'
+    +' you may have to rebuild the IDE before your previously configured '
+    +'backend can be used (if you used a 3rd-party or optional backend). In '
+    +'that case you may choose "Ignore".';
+
+  InitDlgDebugExternalExePathDisplay = 'The selected backend uses the external'
+    +' executable:';
+  InitDlgDebugExternalExePathPrompt = 'The selected backend requires an '
+    +'external executable: "%s"';
+  InitDlgDebugClassNoteErrorNotSupported = 'Error: Your current config uses a '
+    +'backend that is not supported on your OS/Arch.';
+  InitDlgDebugClassNoteErrorNotConfigured = 'Error: The backend is not configured.';
+  InitDlgDebugClassNoteErrorNotConfiguredMissingPackage = '(The configured '
+    +'backend''s package is not installed.)';
+  InitDlgDebugClassNoteHintNotRecommended = 'Hint: The backend type is OK, but'
+    +' not the recommended type.';
+  InitDlgDebugPathNoteErrorNoDefaultFound = 'Error: No default for external '
+    +'executable found.';
+  InitDlgDebugPathNoteErrorNoExeSpecified = 'Error: No external executable specified.';
+  InitDlgDebugPathNoteErrorExeNotFound = 'Error: External executable not found.';
+  InitDlgDebugPathNoteErrorExeIsDirectory = 'Error: External executable is a '
+    +'directory, not a file.';
+  InitDlgDebugPathNoteErrorExeNotRunnable = 'Error: External file is not '
+    +'executable.';
+  InitDlgDebugHeaderDefaultForYourOSArchIsS = 'Default for your OS/Arch is: "%'
+    +'s".';
+  InitDlgDebugKeepBackend = 'Keep backend';
+  InitDlgDebugChangePath = 'Change path';
+  InitDlgDebugCreateANewRecommendedBack = 'Create a new recommended backend';
+  InitDlgDebugSelectAnExistingBackend = 'Select an existing backend';
+  InitDlgDebugIgnore = 'Ignore';
+  InitDlgDebugStateMissingPackages = 'There may be packages (LPK) missing '
+    +'from your IDE installation. You may need to rebuild the IDE and install '
+    +'them, before making changes to the setup.';
+  InitDlgDebugStateUpdateBackend = 'You are using an older backend. This may'
+    +' give you not the best debugging experience. Consider upgrading to '
+    +'the recommended backend.';
+  InitDlgDebugStateRecommendedNotInList = 'There is no backend of '
+    +'recommended type in the list of existing debuggers. Consider creating a '
+    +'new backend.';
+  InitDlgDebugStateRecommendedFoundInList = 'There is a backend of '
+    +'recommended type in the list of existing debuggers. You may pick this '
+    +'instead of creating a new backend.';
+  InitDlgDebugStateSetupOk = 'Setup is OK.';
+  InitDlgDebugStateMissingPackageRebuild = 'If you decide to rebuild the IDE'
+    +' first and install missing packages, then select "Ignore" for now.%0:s'
+    +'After the rebuild, the debugger backend can be changed in the menu: '
+    +'Tools -> Options.';
+  InitDlgDebugStateMissingPackageFooter = 'Note: There are more backend '
+    +'configurations available, but their packages (LPK) are not installed. '
+    +'You may want to rebuild the IDE with the packages installed. After the '
+    +'rebuild, the debugger backend can be changed in the menu: Tools -> '
+    +'Options.';
 
 implementation
 

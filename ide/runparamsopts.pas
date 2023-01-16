@@ -51,7 +51,7 @@ uses
   // LCL
   Controls, Forms, Buttons, StdCtrls, ComCtrls, Dialogs, ButtonPanel, ExtCtrls,
   // IdeIntf
-  BaseIDEIntf, IDEHelpIntf, ProjectIntf, IDEDialogs, IDEImagesIntf, MacroIntf,
+  LazarusCommonStrConst, BaseIDEIntf, IDEHelpIntf, ProjectIntf, IDEDialogs, IDEImagesIntf, MacroIntf,
   // LazUtils
   LazFileUtils, LazFileCache, LazUTF8, Laz2_XMLCfg,
   // IDE
@@ -688,7 +688,7 @@ begin
   NewModeButton.ImageIndex := IDEImages.LoadImage('laz_add');
   DeleteModeButton.ImageIndex := IDEImages.LoadImage('laz_delete');
   ToolBar1.Images := IDEImages.Images_16;
-  ButtonPanel.OKButton.Caption:=lisMenuOk;
+  ButtonPanel.OKButton.Caption:=lisBtnOk;
   ButtonPanel.HelpButton.Caption:=lisMenuHelp;
   ButtonPanel.CancelButton.Caption:=lisCancel;
   SaveInComboBox.Items[0] := lisProjectSession+' (.lps)';

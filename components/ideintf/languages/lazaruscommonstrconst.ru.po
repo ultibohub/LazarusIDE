@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: lazaruscommonstrconst.lisabort
+msgid "Abort"
+msgstr "Прервать"
+
+#: lazaruscommonstrconst.lisadd
+msgid "Add"
+msgstr "Добавить"
+
+#: lazaruscommonstrconst.lisalways
+msgid "Always"
+msgstr "Всегда"
+
+#: lazaruscommonstrconst.lisbtnadd
+msgid "&Add"
+msgstr "&Добавить"
+
+#: lazaruscommonstrconst.lisbtncontinue
+msgid "&Continue"
+msgstr "&Продолжить"
+
+#: lazaruscommonstrconst.lisbtndelete
+msgid "&Delete"
+msgstr "&Удалить"
+
+#: lazaruscommonstrconst.lisbtndlgadd
+msgid "&Add ..."
+msgstr "&Добавить ..."
+
+#: lazaruscommonstrconst.lisbtnenabled
+msgid "&Enabled"
+msgstr "&Включить"
+
+#: lazaruscommonstrconst.lisbtnok
+msgid "&OK"
+msgstr "&ОК"
+
+#: lazaruscommonstrconst.liscancel
+msgid "Cancel"
+msgstr "Отмена"
+
+#: lazaruscommonstrconst.liscontinue
+msgid "Continue"
+msgstr "Продолжить"
+
+#: lazaruscommonstrconst.lisdelete
+msgid "Delete"
+msgstr "Удалить"
+
+#: lazaruscommonstrconst.lisdisabled
+msgid "Disabled"
+msgstr "Отключить"
+
+#: lazaruscommonstrconst.lisdlgadd
+msgid "Add ..."
+msgstr "Добавить ..."
+
+#: lazaruscommonstrconst.lisenabled
+msgid "Enabled"
+msgstr "Включить"
+
+#: lazaruscommonstrconst.lishelp
+msgid "Help"
+msgstr "Справка"
+
+#: lazaruscommonstrconst.lisignore
+msgid "Ignore"
+msgstr "Пропустить"
+
+#: lazaruscommonstrconst.lislazarus
+msgid "Lazarus"
+msgstr "Lazarus"
+
+#: lazaruscommonstrconst.lisnever
+msgid "Never"
+msgstr "Никогда"
+
+#: lazaruscommonstrconst.lisno
+msgid "No"
+msgstr "Нет"
+
+#: lazaruscommonstrconst.lisok
+msgid "OK"
+msgstr "ОК"
+
+#: lazaruscommonstrconst.lisyes
+msgid "Yes"
+msgstr "Да"
+

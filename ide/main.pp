@@ -82,7 +82,7 @@ uses
   IDEIntf, ObjectInspector, PropEdits, PropEditUtils, EditorSyntaxHighlighterDef,
   IDECommands, IDEWindowIntf, ComponentReg, IDEDialogs, SrcEditorIntf, IDEMsgIntf,
   MenuIntf, LazIDEIntf, IDEOptEditorIntf, IDEImagesIntf, ComponentEditors,
-  ToolBarIntf, SelEdits,
+  LazarusCommonStrConst, ToolBarIntf, SelEdits,
   // protocol
   IDEProtocol,
   // compile
@@ -101,7 +101,7 @@ uses
   Translations,
   // debugger
   LazDebuggerGdbmi, GDBMIDebugger, RunParamsOpts, BaseDebugManager,
-  DebugManager, debugger, DebuggerDlg, DebugAttachDialog, DebuggerStrConst,
+  DebugManager, debugger, DebuggerDlg, DebugAttachDialog,
   DbgIntfDebuggerBase, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
   idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBackendValueConv,
   // packager
@@ -146,7 +146,7 @@ uses
   package_usage_options, package_description_options, package_integration_options,
   package_provides_options, package_i18n_options,
   // rest of the ide
-  TransferMacrosIntf,
+  TransferMacrosIntf, IdeDebuggerStringConstants,
   Splash, IDEDefs, LazarusIDEStrConsts, LazConf, SearchResultView,
   CodeTemplatesDlg, CodeBrowser, FindUnitDlg, InspectChksumChangedDlg,
   IdeOptionsDlg, EditDefineTree, EnvironmentOpts, TransferMacros, KeyMapping,
@@ -1038,6 +1038,12 @@ end;
 
 { TMainIDE }
 
+function DoTranslateKey(Key: word; Shift: TShiftState;
+  IDEWindowClass: TCustomFormClass; UseLastKey: boolean = true): word;
+begin
+  Result := EditorOpts.KeyMap.TranslateKey(Key, Shift, IDEWindowClass, UseLastKey);
+end;
+
 {-------------------------------------------------------------------------------
   procedure TMainIDE.ParseCmdLineOptions;
 
@@ -1511,22 +1517,19 @@ begin
 
   // check debugger
   // PackageBoss is not yet loaded...
-  RegisterDebugger(TGDBMIDebugger); // make sure we can read the config
+  //RegisterDebugger(TGDBMIDebugger); // make sure we can read the config
   if (not ShowSetupDialog)
   and (not SkipAllTests)
   and (not GetSkipCheck(skcDebugger))
   then begin
-    // Todo: add LldbFpDebugger for Mac
-    // If the default debugger is of a class that is not yet Registered, then the dialog is not shown
     Note:='';
-    if ( (DebuggerOptions.CurrentDebuggerPropertiesConfig = nil) and  // no debugger at all
-         (not DebuggerOptions.HasActiveDebuggerEntry) )               // not even with unknown class
-    or ( (DebuggerOptions.CurrentDebuggerClass <> nil)                       // Debugger with known class
-         and (DebuggerOptions.CurrentDebuggerPropertiesConfig.NeedsExePath)  // Which does need an exe
-         and (CheckDebuggerQuality(DebuggerOptions.GetParsedDebuggerFilename, Note)<>sddqCompatible)
+    if (CheckCurrentDebuggerSetup <> cdsOk) or
+       ( (DebuggerOptions.CurrentDebuggerPropertiesConfig<> nil) and         // should be true for cdsOk
+         (DebuggerOptions.CurrentDebuggerPropertiesConfig.NeedsExePath) and  // Which does need an exe
+         (CheckDebuggerQuality(DebuggerOptions.GetParsedDebuggerFilename)<>sdfOk)
        )
     then begin
-      debugln(['Warning: (lazarus) missing GDB exe ',EnvironmentOptions.GetParsedLazarusDirectory,' ',Note]);
+      debugln(['Warning: (lazarus) may be missing GDB/LLDB exe ',EnvironmentOptions.GetParsedLazarusDirectory,' ',Note]);
       ShowSetupDialog:=true;
     end;
   end;
@@ -1550,6 +1553,7 @@ begin
       Application.Terminate;
       exit;
     end;
+    DebuggerOptions.Save; // before environment
     EnvironmentOptions.Save(true);
     if OldLazDir<>EnvironmentOptions.LazarusDirectory then begin
       // fetch new translations
@@ -1661,6 +1665,7 @@ begin
   DebugBossManager:=DebugBoss;
   DebugBoss.ConnectMainBarEvents;
   DebuggerDlg.OnProcessCommand := @ProcessIDECommand;
+  DebuggerDlg.OnTranslateKey:= @DoTranslateKey;
 
   PkgMngr:=TPkgManager.Create(nil);
   PkgBoss:=PkgMngr;
@@ -2753,7 +2758,6 @@ begin
     itmEditSortBlock.OnClick:=@mnuEditSortBlockClicked;
     itmEditTabsToSpacesBlock.OnClick:=@mnuEditTabsToSpacesBlockClicked;
     itmEditSelectionBreakLines.OnClick:=@mnuEditSelectionBreakLinesClicked;
-    itmEditInsertCharacter.OnClick:=@mnuEditInsertCharacterClicked;
   end;
 end;
 
@@ -2996,8 +3000,6 @@ begin
     itmEditSortBlock.Command:=GetIdeCmdRegToolBtn(ecSelectionSort);
     itmEditTabsToSpacesBlock.Command:=GetIdeCmdRegToolBtn(ecSelectionTabs2Spaces);
     itmEditSelectionBreakLines.Command:=GetIdeCmdRegToolBtn(ecSelectionBreakLines);
-
-    itmEditInsertCharacter.Command:=GetIdeCmdRegToolBtn(ecInsertCharacter);
 
     // search menu
     itmSearchFind.Command:=GetIdeCmdRegToolBtn(ecFind);
@@ -5446,8 +5448,8 @@ begin
   begin
     Exclude(FIdleIdeActions, iiaSaveEnvironment);
     SaveDesktopSettings(EnvironmentOptions);
+    DebuggerOptions.Save; // before environment
     EnvironmentOptions.Save(false);
-    DebuggerOptions.Save;
     EditorMacroListViewer.SaveGlobalInfo;
     //debugln('TMainIDE.SaveEnvironment A ',dbgsName(ObjectInspector1.Favorites));
     if (ObjectInspector1<>nil) and (ObjectInspector1.Favorites<>nil) then
@@ -5837,7 +5839,7 @@ procedure TMainIDE.OnLoadProjectInfoFromXMLConfig(TheProject: TProject;
   XMLConfig: TXMLConfig; Merge: boolean);
 begin
   if TheProject=Project1 then
-    DebugBoss.LoadProjectSpecificInfo(XMLConfig,Merge);
+    DebugBossMgr.LoadProjectSpecificInfo(XMLConfig,Merge);
 
   if (TheProject=Project1) then
     EditorMacroListViewer.LoadProjectSpecificInfo(XMLConfig);
@@ -5860,7 +5862,7 @@ procedure TMainIDE.OnSaveProjectInfoToXMLConfig(TheProject: TProject;
   XMLConfig: TXMLConfig; WriteFlags: TProjectWriteFlags);
 begin
   if (TheProject=Project1) and (not (pwfSkipDebuggerSettings in WriteFlags)) then
-    DebugBoss.SaveProjectSpecificInfo(XMLConfig,WriteFlags);
+    DebugBossMgr.SaveProjectSpecificInfo(XMLConfig,WriteFlags);
 
   if (TheProject=Project1) then
     EditorMacroListViewer.SaveProjectSpecificInfo(XMLConfig, WriteFlags);
@@ -9918,6 +9920,7 @@ begin
       LRSObjectTextToBinary(TxtCompStream,BinCompStream);
       // always append an "object list end"
       c:=#0;
+      if c=#0 then ; // see fpc bug 38572
       BinCompStream.Write(c,1);
     except
       on E: Exception do begin

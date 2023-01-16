@@ -42,7 +42,7 @@ uses
   // BuildIntf
   ProjectIntf,
   // IdeIntf
-  LazIDEIntf, IDEImagesIntf, IDEWindowIntf,
+  LazarusCommonStrConst, LazIDEIntf, IDEImagesIntf, IDEWindowIntf,
   // IDE
   LazarusIDEStrConsts, SourceEditor, Project, EnvironmentOpts, MainIntf;
 
@@ -200,7 +200,7 @@ begin
   SectionRadioGroup.Items.Clear;
   SectionRadioGroup.Items.Add(dlgInsertInterface);
   SectionRadioGroup.Items.Add(dlgInsertImplementation);
-  ButtonPanel1.OKButton.Caption:=lisMenuOk;
+  ButtonPanel1.OKButton.Caption:=lisBtnOk;
   ButtonPanel1.CancelButton.Caption:=lisCancel;
   UnitImgInd := IDEImages.LoadImage('item_unit');
   FProjUnits:=TStringListUTF8Fast.Create;

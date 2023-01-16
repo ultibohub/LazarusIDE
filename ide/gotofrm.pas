@@ -26,7 +26,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, Buttons, LazarusIDEStrConsts, LCLType, ButtonPanel;
+  StdCtrls, ExtCtrls, Buttons, LazarusCommonStrConst, LazarusIDEStrConsts, LCLType, ButtonPanel;
 
 type
 
@@ -68,7 +68,7 @@ begin
 
   Caption := lisGotoLine;
   Label1.Caption := lisUEGotoLine;
-  ButtonPanel1.OKButton.Caption:=lisMenuOk;
+  ButtonPanel1.OKButton.Caption:=lisBtnOk;
   ButtonPanel1.CancelButton.Caption:=lisCancel;
   Edit1.Caption := '';
   Edit1.MaxLength := 10;  //enough for MaxLongInt

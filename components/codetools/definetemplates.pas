@@ -6754,6 +6754,7 @@ begin
        +LazarusSrcDir+'/components/debuggerintf;'
        +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerintf;'
        +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerfp;'
+       +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerfplldb;'
        +LazarusSrcDir+'/lcl;'
        +LazarusSrcDir+'/lcl/interfaces;'
        +LazarusSrcDir+'/lcl/interfaces/'+WidgetType+';'
@@ -6821,6 +6822,9 @@ begin
        +LazarusSrcDir+'/components/codetools;'
        +LazarusSrcDir+'/components/lazdebuggergdbmi;'
        +LazarusSrcDir+'/components/debuggerintf;'
+       +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerintf;'
+       +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerfp;'
+       +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerfplldb;'
        +LazarusSrcDir+'/lcl;'
        +LazarusSrcDir+'/lcl/interfaces;'
        +LazarusSrcDir+'/lcl/interfaces/'+WidgetType+';')

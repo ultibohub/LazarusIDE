@@ -709,21 +709,17 @@ forces the next mask character to be treated as a literal and not a wildcard.
 </short>
 </element>
 
-<element name="TMaskBase.Compile">
+<element name="TMaskBase.PrepareCompile">
 <short>
-Examines and converts mask expression characters into a list of op codes.
+Resets values in internal members used in the implementation.
 </short>
 <descr>
 <p>
-In TMaskBase, Compile simply sets values for members in the class instance. 
-Descendent classes implement additional functionality needed for a specific 
-platform.
+Used to implement the Compile method in descendent classes.
 </p>
 </descr>
 <seealso>
-<link id="TMaskBase.MaskOpCodes"/>
 <link id="TMaskUTF8.Compile"/>
-<link id="TWindowsMaskUTF8.Compile"/>
 </seealso>
 </element>
 
@@ -836,7 +832,7 @@ expression is handled in Compile.
 </p>
 </descr>
 <seealso>
-<link id="TMaskBase.Compile"/>
+<link id="TMaskUTF8.Compile"/>
 </seealso>
 </element>
 
@@ -1187,7 +1183,7 @@ includes a TMaskOpCodes parameter.
 <short>Examines the mask expression and creates a list of op codes.</short>
 <descr>
 <p>
-Compile is an overridden method used to examine and convert values from the 
+Compile is a virtual method used to examine and convert values from the 
 Mask property into TMaskParsedCode values for the positions in the mask 
 expression.
 </p>
@@ -1212,7 +1208,7 @@ already been compiled.
 <seealso>
 <link id="TMaskUTF8.Matches"/>
 <link id="TMaskUTF8.Mask"/>
-<link id="TMaskBase.Compile"/>
+<link id="TMaskUTF8.Compile"/>
 <link id="TMaskBase.CaseSensitive"/>
 <link id="TMaskBase.AutoReverseRange"/>
 <link id="TMaskBase.EscapeChar"/>
@@ -1830,8 +1826,8 @@ Set of Mask op codes allowed for the class instances added to the list.
 
 <element name="TMaskList.Create">
 <short>
-Creates a new list for mask instances using the specified delimiters and 
-options.
+Creates a new list with mask instances for the specified mask values, 
+delimiter and options.
 </short>
 <descr>
 <p>
@@ -1897,10 +1893,10 @@ specified file name matches one of the file masks in the list.
 <var>AFileName</var> contains the file name examined in the method.
 </p>
 <p>
-Matches uses the <var>TMask</var> instances in <var>Items</var> to perform 
-the file name comparison. Each TMask instance in Items is used to call its 
-<var>Matches</var> method until a match is found, or until all of the masks 
-have been visited.
+Matches uses the <var>TMask</var> or <var>TWindowsMask</var> instances in 
+<var>Items</var> to perform the file name comparison. Each mask in Items is 
+used to call its <var>Matches</var> method until a match is found, or until 
+all of the masks have been visited.
 </p>
 <p>
 The return value is <b>True</b> when a mask is found that matches the file 
@@ -1910,6 +1906,9 @@ name.
 <seealso>
 <link id="TMaskList.Items"/>
 <link id="TMaskList.Count"/>
+<link id="TMaskList.GetMaskClass"/>
+<link id="TMask"/>
+<link id="TWindowsMask"/>
 </seealso>
 </element>
 <element name="TMaskList.Matches.Result">
@@ -1926,12 +1925,49 @@ system masks.
 </short>
 <descr>
 <p>
-Tests whether the file name matches at least one of the mask items in the 
-list. Implements some special rules for a Windows© file system comparison.
+<var>MatchesWindowsMask</var> is a Boolean function used to determined whether 
+the specified file name matches a Windows-specific file mask found in the 
+list. 
 </p>
+<p>
+MatchesWindowsMask creates a temporary TWindowsMaskList instance using the 
+values in Mask, CaseSensitive, and MaskOpCodes. The value in 
+DefaultWindowsQuirks is used to specify which Windows-specific file masks are 
+enabled in the class instance. Its Matches method is called to compare the 
+value in AFileName to the Windows-specific file masks.
+</p>
+<p>
+The return value is <b>True</b> if the file name matches one of the Windows© 
+file masks in the comparison.
+</p>
+<p>
+MatchesWindowsMask is available, but should not be called, in the 
+TWindowsMaskList descendant. This would result in an unnecessary allocation of 
+a TWindowsMaskList instance. Use TWindowsMaskList and call its Matches method 
+instead.
+</p>
+<p>
+Use the Matches method to compare a file name using the mask semantics for the 
+file system represented by the TMask or TWindowsMask used in the 
+implementation.
+</p>
+<remark>
+MatchesWindowsMask is deprecated in LazUtils version 2.3, and will be removed 
+in LazUtils version 2.5. Use the TWindowsMaskList class and call its Matches 
+method instead.
+</remark>
 </descr>
 <errors/>
-<seealso/>
+<seealso>
+<link id="TMaskList.CaseSensitive"/>
+<link id="TMaskList.Mask"/>
+<link id="TMaskList.MaskOpCodes"/>
+<link id="TMaskList.Matches"/>
+<link id="TMaskList.GetMaskClass"/>
+<link id="TWindowsMaskList.Matches"/>
+<link id="TMask"/>
+<link id="TWindowsMask"/>
+</seealso>
 </element>
 <element name="TMaskList.MatchesWindowsMask.Result">
 <short><b>True</b> if the file name matches one the masks in the list.</short>
@@ -1995,7 +2031,7 @@ separator character passed as an argument to the Create constructor. The
 default separator character is ';' (Semicolon).
 </p>
 <p>
-Setting a new value for the Mask property causes the internal list of TMask 
+Setting a new value for the Mask property causes the internal list of mask 
 instances to be cleared and recreated using the values in the CaseSensitive 
 and MaskOpCodes properties.
 </p>
@@ -2158,10 +2194,11 @@ Set of Mask op codes allowed for the class instances added to the list.
 <short>Constructor for the class instance.</short>
 <descr>
 <p>
-Create is the overloaded constructor for the class instance. Create ensures 
-that arguments passed to the constructor are stored in internal members for 
-use in the class instance. An alternate constructor allows configuration 
-settings to be derived from a set of TMaskOption values.
+<var>Create</var> is the overloaded constructor for the class instance. Create 
+ensures that arguments passed to the constructor are stored in internal 
+members for use in the class instance. The overloaded variants allow 
+configuration settings to include a set of TMaskOption values or a set of 
+Windows "quirks" supported for the masks in the list.
 </p>
 <remark>
 The variant with a TMaskOptions parameter has been deprecated in version 2.3, 
@@ -2176,7 +2213,7 @@ and will be removed in version 2.5.
 <element name="TWindowsMaskList.Create.ASeparator">
 <short>Delimiter used between mask expressions in AValue.</short>
 </element>
-<element name="TWindowsMaskList.Create.CaseSensitive">
+<element name="TWindowsMaskList.Create.ACaseSensitive">
 <short><b>True</b> if the mask expression(s) are case sensitive.</short>
 </element>
 <element name="TWindowsMaskList.Create.AOpcodesAllowed">
@@ -2187,25 +2224,6 @@ and will be removed in version 2.5.
 </element>
 <element name="TWindowsMaskList.Create.AOptions">
 <short>Set of TMaskOption values enabled for the class instance.</short>
-</element>
-
-<element name="TWindowsMaskList.MatchesWindowsMask">
-<short>Same as calling the Matches method.</short>
-<descr>
-<p>
-MatchesWindowsMask is deprecated in version 2.3, and will be removed in 
-version 2.5. Use the Matches method instead.
-</p>
-</descr>
-<seealso/>
-</element>
-<element name="TWindowsMaskList.MatchesWindowsMask.Result">
-<short>
-<b>True</b> if the specified file name matches one of the mask in the list.
-</short>
-</element>
-<element name="TWindowsMaskList.MatchesWindowsMask.AFileName">
-<short>File name compared to the mask instances in the list.</short>
 </element>
 
 <element name="TWindowsMaskList.Quirks">
@@ -2226,6 +2244,19 @@ TWindowsMask instances in the Items property.
 </p>
 </descr>
 <seealso/>
+</element>
+
+<element name="TMaskListClass">
+<short>
+Not used in the current LazUtils implementation.
+</short>
+<descr/>
+<version>
+Added (but not currently used) in LazUtils 2.4.0.
+</version>
+<seealso>
+<link id="TMaskList"/>
+</seealso>
 </element>
 
 <element name="MatchesMask">

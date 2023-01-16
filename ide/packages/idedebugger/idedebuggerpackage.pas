@@ -11,9 +11,12 @@ uses
   IdeDebuggerBase, Debugger, ProcessDebugger, ProcessList, DebuggerTreeView, 
   IdeDebuggerUtils, IdeDebuggerWatchResult, IdeDebuggerWatchResPrinter, 
   IdeDebuggerWatchResUtils, ArrayNavigationFrame, IdeDebuggerStringConstants, 
-  IdeDebuggerBackendValueConv, IdeDbgValueConverterSettingsFrame,
+  IdeDebuggerBackendValueConv, IdeDbgValueConverterSettingsFrame, 
   IdeDebugger_ValConv_Options, IdeDebuggerOpts, IdeDebuggerWatchResultJSon, 
-  WatchInspectToolbar, LazarusPackageIntf;
+  WatchInspectToolbar, BaseDebugManager, WatchPropertyDlg, DebuggerDlg, 
+  WatchesDlg, CallStackDlg, LocalsDlg, ThreadDlg, BreakPropertyDlgGroups, 
+  HistoryDlg, PseudoTerminalDlg, RegistersDlg, DebugOutputForm, ExceptionDlg, 
+  FeedbackDlg, DebugAttachDialog, LazarusPackageIntf;
 
 implementation
 

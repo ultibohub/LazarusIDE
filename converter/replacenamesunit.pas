@@ -11,7 +11,7 @@ uses
   // LazUtils
   AvgLvlTree,
   // IDE, converter
-  LazarusIDEStrConsts, ConverterTypes;
+  LazarusCommonStrConst, LazarusIDEStrConsts, ConverterTypes;
 
 type
 
@@ -292,7 +292,7 @@ end;
 procedure TReplaceForm.FormCreate(Sender: TObject);
 begin
   Caption:=lisReplacements;
-  ButtonPanel.OKButton.Caption := lisMenuOk;
+  ButtonPanel.OKButton.Caption := lisBtnOk;
   ButtonPanel.HelpButton.Caption := lisMenuHelp;
   ButtonPanel.CancelButton.Caption := lisCancel;
 end;

@@ -45,7 +45,7 @@ uses
   // IDEIntf
   PropEdits, ObjectInspector, TextTools, IDEDialogs, LazHelpIntf, MacroIntf,
   IDEWindowIntf, IDEMsgIntf, PackageIntf, LazIDEIntf, HelpFPDoc, IDEHelpIntf,
-  IDEExternToolIntf, IDEImagesIntf,
+  LazarusCommonStrConst, IDEExternToolIntf, IDEImagesIntf,
   // IDE
   LazarusIDEStrConsts, DialogProcs, ObjInspExt, EnvironmentOpts, AboutFrm,
   Project, MainBar, IDEFPDocFileSearch, PackageDefs, PackageSystem, HelpOptions,
@@ -975,7 +975,7 @@ begin
 
   Caption := lisHelpSelectorDialog;
   NodesGroupBox.Caption:=lisSelectAHelpItem;
-  BtnPanel.OKButton.Caption:=lisMenuOk;
+  BtnPanel.OKButton.Caption:=lisBtnOk;
 
   NodesTreeView.Images:=IDEImages.Images_16;
   FImgIndexDB:=IDEImages.LoadImage('item_package');

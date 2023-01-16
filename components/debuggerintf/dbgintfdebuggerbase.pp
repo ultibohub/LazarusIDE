@@ -62,7 +62,13 @@ type
 
   TDBGFeature = (
     dfEvalFunctionCalls,   // The debugger supports calling functions in watches/expressions. defAllowFunctionCall in TWatcheEvaluateFlags
-    dfThreadSuspension
+    dfThreadSuspension,
+
+    (* dfNotSuitableForOsArch:
+       If this is set, then this debugger can not be used on the current
+       architecture and/or OS
+    *)
+    dfNotSuitableForOsArch
   );
   TDBGFeatures = set of TDBGFeature;
 
@@ -1735,6 +1741,7 @@ type
   public
     class function Caption: String; virtual;         // The name of the debugger as shown in the debuggeroptions
     class function ExePaths: String; virtual;        // The default locations of the exe
+    class function ExeBaseName: String; virtual;        // The default locations of the exe
     class function ExePathsMruGroup: TDebuggerClass; virtual;        // The default locations of the exe
     class function HasExePath: boolean; virtual; deprecated; // use NeedsExePath instead
     class function NeedsExePath: boolean; virtual;        // If the debugger needs to have an exe path
@@ -1875,6 +1882,10 @@ type
     procedure DoBackendConverterChanged; virtual; abstract;
   end;
 
+(* RegisterDebugger
+   Should be run in the initialization section of one of the units of the package.
+   The PackageManager's call to "Register()" (as part of RegisterPackage / RegisterUnit is to late.
+*)
 procedure RegisterDebugger(const ADebuggerClass: TDebuggerClass);
 function MinDbgPtr(a, b: TDBGPtr): TDBGPtr;inline; overload;
 
@@ -5755,6 +5766,11 @@ begin
 end;
 
 class function TDebuggerIntf.ExePaths: String;
+begin
+  Result := '';
+end;
+
+class function TDebuggerIntf.ExeBaseName: String;
 begin
   Result := '';
 end;

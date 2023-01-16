@@ -69,6 +69,8 @@ uses
   IDEImagesIntf, SrcEditorIntf, LazIDEIntf, MenuIntf, NewItemIntf, PackageIntf,
   IDECommands, IDEWindowIntf, ProjectIntf, ToolBarIntf, ObjectInspector,
   PropEdits, IDEDialogs, IDEUtils, EditorSyntaxHighlighterDef,
+  // IDEDebugger
+  IdeDebuggerStringConstants,
   // IDE
   LazConf, LazarusIDEStrConsts, Project, EnvironmentOpts,
   EditorOptions, CompilerOptions, SourceEditor, SourceSynEditor, FindInFilesDlg,
@@ -1022,8 +1024,6 @@ begin
 
     // *** insert text ***:
     CreateMenuSeparatorSection(mnuEdit,itmEditInsertions,'itmEditInsertions');
-    ParentMI:=itmEditInsertions;
-    CreateMenuItem(ParentMI,itmEditInsertCharacter,'itmEditInsertCharacter',lisMenuInsertCharacter, 'menu_edit_insertcharacter');
   end;
 end;
 
@@ -1484,7 +1484,6 @@ begin
 
   with MainIDEBar do
   case AForm.ClassName of
-    'TCharacterMapDialog':     Exit(itmEditInsertCharacter.ImageIndex);
     'TObjectInspectorDlg':     Exit(itmViewInspector.ImageIndex);
     'TSourceNotebook':         Exit(itmViewSourceEditor.ImageIndex);
     'TMessagesView':           Exit(itmViewMessage.ImageIndex);

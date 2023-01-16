@@ -14,24 +14,6 @@ msgstr ""
 "X-Generator: Lokalize 19.12.3\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
-#: lazarusidestrconsts.dbgbreakgroupdlgcaption
-msgctxt "lazarusidestrconsts.dbgbreakgroupdlgcaption"
-msgid "Select Groups"
-msgstr "Виберіть групи"
-
-#: lazarusidestrconsts.dbgbreakgroupdlgheaderdisable
-msgid "Select groups to disable when breakpoint is hit"
-msgstr "Виберіть групи для вимкнення при задіянні точки зупинки"
-
-#: lazarusidestrconsts.dbgbreakgroupdlgheaderenable
-msgid "Select groups to enable when breakpoint is hit"
-msgstr "Виберіть групи для ввімкнення при задіянні точки зупинки"
-
-#: lazarusidestrconsts.dbgbreakpropertygroupnotfound
-#, object-pascal-format
-msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
-msgstr "Деякі групи в списку ввімкнення/вимкнення не існують.%0:sСтворити їх?%0:s%0:s%1:s"
-
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -4132,10 +4114,6 @@ msgctxt "lazarusidestrconsts.dlgvaluecolor"
 msgid "Value"
 msgstr "Значення"
 
-#: lazarusidestrconsts.dlgvaluedataaddr
-msgid "Data-Address"
-msgstr ""
-
 #: lazarusidestrconsts.dlgverbosity
 msgid "Verbosity during compilation:"
 msgstr "Подробиці при компіляції:"
@@ -4300,47 +4278,111 @@ msgstr "Z-порядок"
 msgid "On Both Sides"
 msgstr "На обох сторонах"
 
-#: lazarusidestrconsts.histdlgbtnclearhint
-msgid "Clear all snapshots"
-msgstr "Очистити всі знімки"
+#: lazarusidestrconsts.initdlgdebugchangepath
+msgid "Change path"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnenablehint
-msgid "Toggle view snapshot or current"
-msgstr "Перемкнути перегляд між знімком та поточним"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotconfigured
+msgid "Error: The backend is not configured."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnmakesnaphint
-msgid "Take Snapshot"
-msgstr "Зробити знімок"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotconfiguredmissingpackage
+msgid "(The configured backend's package is not installed.)"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnpowerhint
-msgid "Switch on/off automatic snapshots"
-msgstr "Ввімкнути/Вимкнути автоматичні знімки"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotsupported
+msgid "Error: Your current config uses a backend that is not supported on your OS/Arch."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnremovehint
-msgid "Remove selected entry"
-msgstr "Видалити вибраний елемент"
+#: lazarusidestrconsts.initdlgdebugclassnotehintnotrecommended
+msgid "Hint: The backend type is OK, but not the recommended type."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnshowhisthint
-msgid "View history"
-msgstr "Переглянути історію"
+#: lazarusidestrconsts.initdlgdebugcreateanewrecommendedback
+msgid "Create a new recommended backend"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnshowsnaphint
-msgid "View Snapshots"
-msgstr "Переглянути знімки"
+#: lazarusidestrconsts.initdlgdebugexternalexepathdisplay
+msgid "The selected backend uses the external executable:"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgcolumnloc
-msgctxt "lazarusidestrconsts.histdlgcolumnloc"
-msgid "Location"
-msgstr "Розміщення"
+#: lazarusidestrconsts.initdlgdebugexternalexepathprompt
+#, object-pascal-format
+msgid "The selected backend requires an external executable: \"%s\""
+msgstr ""
 
-#: lazarusidestrconsts.histdlgcolumntime
-msgid "Time"
-msgstr "Час"
+#: lazarusidestrconsts.initdlgdebugheaderdefaultforyourosarchiss
+#, object-pascal-format
+msgid "Default for your OS/Arch is: \"%s\"."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgformname
-msgctxt "lazarusidestrconsts.histdlgformname"
-msgid "History"
-msgstr "Історія"
+#: lazarusidestrconsts.initdlgdebugignore
+#, fuzzy
+msgctxt "lazarusidestrconsts.initdlgdebugignore"
+msgid "Ignore"
+msgstr "Знехтувати"
+
+#: lazarusidestrconsts.initdlgdebugkeepbackend
+msgid "Keep backend"
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexeisdirectory
+msgid "Error: External executable is a directory, not a file."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexenotfound
+msgid "Error: External executable not found."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexenotrunnable
+msgid "Error: External file is not executable."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrornodefaultfound
+msgid "Error: No default for external executable found."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrornoexespecified
+msgid "Error: No external executable specified."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpopupinformation
+#, object-pascal-format
+msgid "A backend provides OS and architecture specific implementations for the debugger.%0:sDefault for your OS/Arch is: \"%1:s\".%0:s%0:sOther backends are provided for special tasks (e.g. cross debugging on some platforms) or as generic alternatives.%0:sThe debugger can have different features, depending on the backend.%0:s%0:sSome backends require an external exe (such as gdb or lldb). This exe may be part of your OS (Linux/Mac), or be provided by the Lazarus installer (Windows).%0:s%0:sIf you have just upgraded your installation, you may have to rebuild the IDE before your previously configured backend can be used (if you used a 3rd-party or optional backend). In that case you may choose \"Ignore\"."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugselectanexistingbackend
+msgid "Select an existing backend"
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackagefooter
+msgid "Note: There are more backend configurations available, but their packages (LPK) are not installed. You may want to rebuild the IDE with the packages installed. After the rebuild, the debugger backend can be changed in the menu: Tools -> Options."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackagerebuild
+#, object-pascal-format
+msgid "If you decide to rebuild the IDE first and install missing packages, then select \"Ignore\" for now.%0:sAfter the rebuild, the debugger backend can be changed in the menu: Tools -> Options."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackages
+msgid "There may be packages (LPK) missing from your IDE installation. You may need to rebuild the IDE and install them, before making changes to the setup."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstaterecommendedfoundinlist
+msgid "There is a backend of recommended type in the list of existing debuggers. You may pick this instead of creating a new backend."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstaterecommendednotinlist
+msgid "There is no backend of recommended type in the list of existing debuggers. Consider creating a new backend."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatesetupok
+msgid "Setup is OK."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstateupdatebackend
+msgid "You are using an older backend. This may give you not the best debugging experience. Consider upgrading to the recommended backend."
+msgstr ""
 
 #: lazarusidestrconsts.lis0no1drawdividerlinesonlyfortoplevel2drawlinesforfi
 msgid "0 = no, 1 = draw divider lines only for top level, 2 = draw lines for first two levels, ..."
@@ -4603,11 +4645,6 @@ msgstr "Назва модуля вже існує"
 msgid "Abandon changes?"
 msgstr "Скасувати зміни?"
 
-#: lazarusidestrconsts.lisabort
-msgctxt "lazarusidestrconsts.lisabort"
-msgid "Abort"
-msgstr "Перервати"
-
 #: lazarusidestrconsts.lisabortall
 msgid "Abort all"
 msgstr "Перервати все"
@@ -4676,10 +4713,6 @@ msgstr "Подяки"
 msgid "Action:"
 msgstr "Дія:"
 
-#: lazarusidestrconsts.lisactions
-msgid "Actions:"
-msgstr "Дії:"
-
 #: lazarusidestrconsts.lisactivate
 msgid "Activate"
 msgstr "Активувати"
@@ -4699,11 +4732,6 @@ msgstr "Активний"
 #: lazarusidestrconsts.lisactivefilter
 msgid "Active Filter"
 msgstr "Активний фільтр"
-
-#: lazarusidestrconsts.lisadd
-msgctxt "lazarusidestrconsts.lisadd"
-msgid "Add"
-msgstr "Додати"
 
 #: lazarusidestrconsts.lisaddanewseparatoraboveselecteditem
 msgid "Add a new separator above selected item"
@@ -4799,15 +4827,6 @@ msgstr "Додати пакунок до проєкту"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "Додати параметричні дужки"
-
-#: lazarusidestrconsts.lisaddress
-msgid "Address:"
-msgstr "Адреса:"
-
-#: lazarusidestrconsts.lisaddressbreakpoint
-msgctxt "lazarusidestrconsts.lisaddressbreakpoint"
-msgid "&Address Breakpoint ..."
-msgstr "&Точка зупинки за адресою ..."
 
 #: lazarusidestrconsts.lisaddtoincludesearchpath
 msgid "Add to include search path?"
@@ -4913,10 +4932,6 @@ msgstr "Всі успадковані параметри"
 msgid "All Options"
 msgstr "Всі параметри"
 
-#: lazarusidestrconsts.lisallowfunctio
-msgid "Allow Function Calls"
-msgstr "Дозволити виклики функцій"
-
 #: lazarusidestrconsts.lisallowsearchingformultiplelines
 msgid "Allow searching for multiple lines"
 msgstr "Дозволити пошук для декількох рядків"
@@ -4941,10 +4956,6 @@ msgstr "Альтернативна кнопка"
 #: lazarusidestrconsts.lisalternativekeyor2keysequence
 msgid "Alternative key (or 2 key sequence)"
 msgstr "Альтернативна клавіша (або двоклавішна комбінація)"
-
-#: lazarusidestrconsts.lisalways
-msgid "Always"
-msgstr "Завжди"
 
 #: lazarusidestrconsts.lisalwaysconvertsuggesteddefaultfilenametolowercase
 msgid "Always convert suggested default file name to lowercase"
@@ -5091,10 +5102,6 @@ msgstr "Питати назву файлу для нового файлу"
 msgid "Ask name on create"
 msgstr "Спитати назву при створенні"
 
-#: lazarusidestrconsts.lisausefulsettingonwindowssystemsislazarusdirmingwbin
-msgid "A useful setting on Windows systems is: $(LazarusDir)\\mingw\\$(TargetCPU)-$(TargetOS)\\bin\\gdb.exe"
-msgstr "Для систем Windows зручно встановити: $(LazarusDir)\\mingw\\$(TargetCPU)-$(TargetOS)\\bin\\gdb.exe"
-
 #: lazarusidestrconsts.lisautoadjustideheight
 msgid "Automatically adjust IDE main window height"
 msgstr "Автоматично коригувати висоту головного вікна ІСР"
@@ -5114,10 +5121,6 @@ msgstr "Автозавершення: вимкн."
 #: lazarusidestrconsts.lisautocompletionon
 msgid "Auto completion: on"
 msgstr "Автозавершення: увімкн."
-
-#: lazarusidestrconsts.lisautocontinueafter
-msgid "Auto continue after:"
-msgstr "Автопродовження після:"
 
 #: lazarusidestrconsts.lisautomarkup
 msgid "Markup and Matches"
@@ -5265,11 +5268,6 @@ msgstr "Коли цей файл активний в редакторі коду
 msgid "Working directory (leave empty for file path)"
 msgstr "Робоча тека (залишити порожньою для файлового шляху)"
 
-#: lazarusidestrconsts.lisbinary
-msgctxt "lazarusidestrconsts.lisbinary"
-msgid "Binary"
-msgstr "Двійковий"
-
 #: lazarusidestrconsts.lisboldnondefaultobjectinspector
 msgid "Bold non default values"
 msgstr "Нестандартні значення жирним"
@@ -5303,57 +5301,24 @@ msgstr "Це елемент керування одного рівня, за я�
 msgid "Bottom space equally"
 msgstr "Рівномірно нижні краї"
 
-#: lazarusidestrconsts.lisbpsdisabled
-msgctxt "lazarusidestrconsts.lisbpsdisabled"
-msgid "Disabled"
-msgstr "Вимкнено"
-
-#: lazarusidestrconsts.lisbpsenabled
-msgctxt "lazarusidestrconsts.lisbpsenabled"
-msgid "Enabled"
-msgstr "Увімкнено"
-
 #: lazarusidestrconsts.lisbreak
 msgctxt "lazarusidestrconsts.lisbreak"
 msgid "Break"
 msgstr "Перервати"
 
-#: lazarusidestrconsts.lisbreakpointproperties
-msgid "Breakpoint Properties"
-msgstr "Властивості точки зупинки"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Відшукайте і виберітиь компілятор (наприклад, ppcx64)"
-
-#: lazarusidestrconsts.lisbtnadd
-msgctxt "lazarusidestrconsts.lisbtnadd"
-msgid "&Add"
-msgstr "&Додати"
 
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
 msgstr "&Закрити"
 
-#: lazarusidestrconsts.lisbtndelete
-msgctxt "lazarusidestrconsts.lisbtndelete"
-msgid "&Delete"
-msgstr "&Видалити"
-
-#: lazarusidestrconsts.lisbtndlgadd
-msgid "&Add ..."
-msgstr "&Додати ..."
-
 #: lazarusidestrconsts.lisbtndlgreplace
 msgctxt "lazarusidestrconsts.lisbtndlgreplace"
 msgid "&Replace ..."
 msgstr "За&мінити ..."
-
-#: lazarusidestrconsts.lisbtnenabled
-msgctxt "lazarusidestrconsts.lisbtnenabled"
-msgid "&Enabled"
-msgstr "&Доступний"
 
 #: lazarusidestrconsts.lisbtnfind
 msgid "&Find"
@@ -5458,15 +5423,6 @@ msgstr "%s байт"
 #, object-pascal-format
 msgid "Calling %s to create Makefile from %s failed."
 msgstr "Виклик %s для створення Makefile з %s не вдався."
-
-#: lazarusidestrconsts.liscallstacknotevaluated
-msgid "Stack not evaluated"
-msgstr "Стек не обчислений"
-
-#: lazarusidestrconsts.liscancel
-msgctxt "lazarusidestrconsts.liscancel"
-msgid "Cancel"
-msgstr "Скасувати"
 
 #: lazarusidestrconsts.liscancelloadingthiscomponent
 msgid "Cancel loading this component"
@@ -6091,10 +6047,6 @@ msgstr "Змінити на Unix /"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Змінити на Windows \\"
-
-#: lazarusidestrconsts.lischaracter
-msgid "Character"
-msgstr "Символ"
 
 #: lazarusidestrconsts.lischaractermap
 msgid "Character Map"
@@ -7087,14 +7039,6 @@ msgstr "Виконати після"
 msgid "Execute before"
 msgstr "Виконати перед"
 
-#: lazarusidestrconsts.liscoladdress
-msgid "Address"
-msgstr "Адреса"
-
-#: lazarusidestrconsts.liscolclass
-msgid "Class"
-msgstr "Клас"
-
 #: lazarusidestrconsts.liscollapseall
 msgid "Collapse All (/)"
 msgstr "Згорнути все (/)"
@@ -7110,14 +7054,6 @@ msgstr "Згорнути всі пакунки"
 #: lazarusidestrconsts.liscollapseallunits
 msgid "Collapse all units"
 msgstr "Колапс всіх модулів"
-
-#: lazarusidestrconsts.liscolreturns
-msgid "Returns"
-msgstr "Повертає"
-
-#: lazarusidestrconsts.liscolvisibility
-msgid "Visibility"
-msgstr "Видимість"
 
 #: lazarusidestrconsts.liscomboboxes
 msgid "Combo Boxes"
@@ -7377,11 +7313,6 @@ msgstr "Зміст"
 #: lazarusidestrconsts.liscontextsensitive
 msgid "Context sensitive"
 msgstr "З врахуванням контексту"
-
-#: lazarusidestrconsts.liscontinue
-msgctxt "lazarusidestrconsts.liscontinue"
-msgid "Continue"
-msgstr "Продовжити"
 
 #: lazarusidestrconsts.liscontinueanddonotaskagain
 msgid "Continue and do not ask again"
@@ -7928,10 +7859,6 @@ msgctxt "lazarusidestrconsts.liscopy"
 msgid "Copy"
 msgstr "Копіювати"
 
-#: lazarusidestrconsts.liscopyall
-msgid "Copy All"
-msgstr "Копіювати все"
-
 #: lazarusidestrconsts.liscopyallitemstoclipboard
 msgid "Copy All Items to Clipboard"
 msgstr "Копіювати всі елементи в буфер"
@@ -7939,10 +7866,6 @@ msgstr "Копіювати всі елементи в буфер"
 #: lazarusidestrconsts.liscopyalloriginalmessagestoclipboard
 msgid "Copy All/Original Messages to Clipboard"
 msgstr "Копіювати всі/початкові повідомлення до буфера обміну"
-
-#: lazarusidestrconsts.liscopyalloutputclipboard
-msgid "Copy all output to clipboard"
-msgstr "Копіювати весь вивід у буфер"
 
 #: lazarusidestrconsts.liscopyallshownmessagestoclipboard
 msgid "Copy All Shown Messages to Clipboard"
@@ -8129,16 +8052,6 @@ msgstr "Створити/оновити .po файл при збереженні
 msgid "Creating file index of FPC sources %s ..."
 msgstr "Створення файлового індексу джерел FPC %s ..."
 
-#: lazarusidestrconsts.liscsbottom
-msgctxt "lazarusidestrconsts.liscsbottom"
-msgid "Bottom"
-msgstr "Нижній"
-
-#: lazarusidestrconsts.liscstop
-msgctxt "lazarusidestrconsts.liscstop"
-msgid "Top"
-msgstr "Верхній"
-
 #: lazarusidestrconsts.lisctdefchoosedirectory
 msgid "Choose Directory"
 msgstr "Виберіть теку"
@@ -8192,11 +8105,6 @@ msgstr "виберіть будь-ласка макрос"
 msgid "Select Code Macro"
 msgstr "Вибрати макрос коду"
 
-#: lazarusidestrconsts.liscurrent
-msgctxt "lazarusidestrconsts.liscurrent"
-msgid "Current"
-msgstr "Поточний"
-
 #: lazarusidestrconsts.liscurrentlclwidgetset
 #, object-pascal-format
 msgid "Current LCL widgetset: \"%s\""
@@ -8243,22 +8151,6 @@ msgctxt "lazarusidestrconsts.liscut"
 msgid "Cut"
 msgstr "Вирізати"
 
-#: lazarusidestrconsts.lisdadattach
-msgid "Attach"
-msgstr "Приєднати"
-
-#: lazarusidestrconsts.lisdadimagename
-msgid "Image Name"
-msgstr "Назва зображення"
-
-#: lazarusidestrconsts.lisdadpid
-msgid "PID"
-msgstr "Ідентифікатор процесу"
-
-#: lazarusidestrconsts.lisdadrunningprocesses
-msgid "Running Processes"
-msgstr "Запущені процеси"
-
 #: lazarusidestrconsts.lisdatamodule
 msgid "Data Module"
 msgstr "Модуль даних"
@@ -8267,36 +8159,6 @@ msgstr "Модуль даних"
 msgid "Date"
 msgstr "Дата"
 
-#: lazarusidestrconsts.lisdbgallitemdelete
-msgctxt "lazarusidestrconsts.lisdbgallitemdelete"
-msgid "Delete all"
-msgstr "Видалити все"
-
-#: lazarusidestrconsts.lisdbgallitemdeletehint
-msgctxt "lazarusidestrconsts.lisdbgallitemdeletehint"
-msgid "Delete all"
-msgstr "Видалити все"
-
-#: lazarusidestrconsts.lisdbgallitemdisable
-msgctxt "lazarusidestrconsts.lisdbgallitemdisable"
-msgid "Disable all"
-msgstr "Вимкнути все"
-
-#: lazarusidestrconsts.lisdbgallitemdisablehint
-msgctxt "lazarusidestrconsts.lisdbgallitemdisablehint"
-msgid "Disable all"
-msgstr "Вимкнути все"
-
-#: lazarusidestrconsts.lisdbgallitemenable
-msgctxt "lazarusidestrconsts.lisdbgallitemenable"
-msgid "Enable all"
-msgstr "Ввімкнути все"
-
-#: lazarusidestrconsts.lisdbgallitemenablehint
-msgctxt "lazarusidestrconsts.lisdbgallitemenablehint"
-msgid "Enable all"
-msgstr "Ввімкнути все"
-
 #: lazarusidestrconsts.lisdbgasmcopyaddresstoclipboard
 msgid "Copy address to Clipboard"
 msgstr ""
@@ -8304,11 +8166,6 @@ msgstr ""
 #: lazarusidestrconsts.lisdbgasmcopytoclipboard
 msgid "Copy to Clipboard"
 msgstr "Копіювати в буфер"
-
-#: lazarusidestrconsts.lisdbgbreakpointpropertieshint
-msgctxt "lazarusidestrconsts.lisdbgbreakpointpropertieshint"
-msgid "Breakpoint Properties ..."
-msgstr "Властивості точки зупинки ..."
 
 #: lazarusidestrconsts.lisdbgenbreakpointevaluation
 msgid "Breakpoint Evaluation"
@@ -8370,31 +8227,6 @@ msgstr "Віконне повідомлення додано"
 msgid "Windows Message Sent"
 msgstr "Віконне повідомлення надіслано"
 
-#: lazarusidestrconsts.lisdbgitemdeletehint
-msgctxt "lazarusidestrconsts.lisdbgitemdeletehint"
-msgid "Delete"
-msgstr "Вилучити"
-
-#: lazarusidestrconsts.lisdbgitemdisable
-msgctxt "lazarusidestrconsts.lisdbgitemdisable"
-msgid "Disable"
-msgstr "Вимкнути"
-
-#: lazarusidestrconsts.lisdbgitemdisablehint
-msgctxt "lazarusidestrconsts.lisdbgitemdisablehint"
-msgid "Disable"
-msgstr "Вимкнути"
-
-#: lazarusidestrconsts.lisdbgitemenable
-msgctxt "lazarusidestrconsts.lisdbgitemenable"
-msgid "Enable"
-msgstr "Ввімкнути"
-
-#: lazarusidestrconsts.lisdbgitemenablehint
-msgctxt "lazarusidestrconsts.lisdbgitemenablehint"
-msgid "Enable"
-msgstr "Ввімкнути"
-
 #: lazarusidestrconsts.lisdbgmangnodebuggerspecified
 msgid "No debugger specified"
 msgstr "Зневаджувач не визначений"
@@ -8407,19 +8239,6 @@ msgstr "Встановити точку зупину за будь-яких об
 #, object-pascal-format
 msgid "There is no debugger specified.%sSetting breakpoints have no effect until you set up a Debugger in the debugger options dialog in the menu."
 msgstr "Не вказаний зневаджувач.%sВстановлені точки зупинки не діятимуть до тих пір, поки не буде встановлено Зневаджувач у діалозі параметрів зневаджувача у меню."
-
-#: lazarusidestrconsts.lisdbgterminal
-msgctxt "lazarusidestrconsts.lisdbgterminal"
-msgid "Console In/Output"
-msgstr "Консольний ввід/вивід"
-
-#: lazarusidestrconsts.lisdbgwinpower
-msgid "On/Off"
-msgstr "Увімк/Вимк"
-
-#: lazarusidestrconsts.lisdbgwinpowerhint
-msgid "Disable/Enable updates for the entire window"
-msgstr "Вимкнення/Ввімкнення оновлень всього вікна"
 
 #: lazarusidestrconsts.lisdebug
 msgctxt "lazarusidestrconsts.lisdebug"
@@ -8436,18 +8255,6 @@ msgstr "Зневаджувач"
 #| msgid "Debugger error%sOoops, the debugger entered the error state%sSave your work now !%sHit Stop, and hope the best, we're pulling the plug."
 msgid "The debugger encountered an internal error.%0:s%0:sSave your work.%0:sYou may then hit \"Stop\", or \"Reset debugger\" to terminate the debug session."
 msgstr "Помилка зневаджувача%sОпа! Зневаджувач знаходиться в неробочому стані%sЗбережіть роботу!%sНатисніть Стоп і сподівайтесь на краще!"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackerror
-msgid "Debugger Error"
-msgstr "Помилка зневаджувача"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackinformation
-msgid "Debugger Information"
-msgstr "Інформація зневаджувача"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackwarning
-msgid "Debugger Warning"
-msgstr "Попередження зневаджувача"
 
 #: lazarusidestrconsts.lisdebuggerinvalid
 msgid "Debugger invalid"
@@ -8586,18 +8393,6 @@ msgstr "Процес"
 msgid "Reset Debugger after each run"
 msgstr "Скидати зневаджувач після кожного запуску"
 
-#: lazarusidestrconsts.lisdebugoptionsfrmresume
-msgid "Resume"
-msgstr "Відновити"
-
-#: lazarusidestrconsts.lisdebugoptionsfrmresumehandled
-msgid "Resume Handled"
-msgstr "Відновити оброблені"
-
-#: lazarusidestrconsts.lisdebugoptionsfrmresumeunhandled
-msgid "Resume Unhandled"
-msgstr "Відновити необроблені"
-
 #: lazarusidestrconsts.lisdebugoptionsfrmshowexitcodeonstop
 msgid "Show message on stop with Error (Exit-code <> 0)"
 msgstr "Показувати при зупинці повідомлення про помилку (Exit-code <> 0)"
@@ -8644,11 +8439,6 @@ msgstr "Неможливо завантажити файл"
 msgid "Unable to load file \"%s\"."
 msgstr "Неможливо завантажити файл \"%s\"."
 
-#: lazarusidestrconsts.lisdecimal
-msgctxt "lazarusidestrconsts.lisdecimal"
-msgid "Decimal"
-msgstr "Десяткове"
-
 #: lazarusidestrconsts.lisdefault
 msgctxt "lazarusidestrconsts.lisdefault"
 msgid "Default"
@@ -8682,11 +8472,6 @@ msgstr "Затримка виведення довгих підказок у в�
 msgid "Delay for hints"
 msgstr "Затримка для підказок"
 
-#: lazarusidestrconsts.lisdelete
-msgctxt "lazarusidestrconsts.lisdelete"
-msgid "Delete"
-msgstr "Вилучити"
-
 #: lazarusidestrconsts.lisdelete2
 msgid "Delete?"
 msgstr "Видалити?"
@@ -8700,23 +8485,6 @@ msgstr "Видалити додаток \"%s\"?"
 msgid "&Delete All"
 msgstr "&Видалити всі"
 
-#: lazarusidestrconsts.lisdeleteallbreakpoints
-msgid "Delete all breakpoints?"
-msgstr "Видалити всі точки зупинки?"
-
-#: lazarusidestrconsts.lisdeleteallbreakpoints2
-#, object-pascal-format
-msgid "Delete all breakpoints in file \"%s\"?"
-msgstr "Видалити всі точки зупинки з файлу \"%s\"?"
-
-#: lazarusidestrconsts.lisdeleteallinsamesource
-msgid "Delete All in same source"
-msgstr "Видалити всі в тому ж файлі сирцевого коду"
-
-#: lazarusidestrconsts.lisdeleteallselectedbreakpoints
-msgid "Delete all selected breakpoints?"
-msgstr "Видалити всі вибрані точки зупинки?"
-
 #: lazarusidestrconsts.lisdeleteallthesefiles
 msgid "Delete all these files?"
 msgstr "Видалити всі ці файли?"
@@ -8724,25 +8492,6 @@ msgstr "Видалити всі ці файли?"
 #: lazarusidestrconsts.lisdeleteambiguousfile
 msgid "Delete ambiguous file?"
 msgstr "Видалити файл з неоднозначною назвою?"
-
-#: lazarusidestrconsts.lisdeletebreakpoint
-msgid "Delete Breakpoint"
-msgstr "Видалити точку зупинки"
-
-#: lazarusidestrconsts.lisdeletebreakpointatline
-#, object-pascal-format
-msgid "Delete breakpoint at%s\"%s\" line %d?"
-msgstr "Видалити точку зупинки в%s\"%s\" рядок %d?"
-
-#: lazarusidestrconsts.lisdeletebreakpointforaddress
-#, object-pascal-format
-msgid "Delete breakpoint for address %s?"
-msgstr "Видалити точку зупинки для адреси %s?"
-
-#: lazarusidestrconsts.lisdeletebreakpointforwatch
-#, object-pascal-format
-msgid "Delete watchpoint for \"%s\"?"
-msgstr "Видалити точку спостереження для \"%s\"?"
 
 #: lazarusidestrconsts.lisdeletefilefailed
 msgid "Delete file failed"
@@ -8863,10 +8612,6 @@ msgstr "Відкрити відмінності у редакторі"
 msgid "different unit %s found at new position \"%s\""
 msgstr "знайдено інший модуль %s у новому місці \"%s\""
 
-#: lazarusidestrconsts.lisdigits
-msgid "Digits:"
-msgstr "Розряди:"
-
 #: lazarusidestrconsts.lisdirectives
 msgid "Directives"
 msgstr "Директиви"
@@ -8900,23 +8645,6 @@ msgstr "Тека не доступна для запису"
 #: lazarusidestrconsts.lisdirectorywheretheideputsthepofiles
 msgid "Directory where the IDE puts the .po files"
 msgstr "Тека, в якій ІСР розміщує .po файли"
-
-#: lazarusidestrconsts.lisdisableallinsamesource
-msgid "Disable All in same source"
-msgstr "Вимкнути всі у тому ж сирцевому файлі"
-
-#: lazarusidestrconsts.lisdisablebreakpoint
-msgid "Disable Breakpoint"
-msgstr "Вимкнути точку зупинки"
-
-#: lazarusidestrconsts.lisdisabled
-msgctxt "lazarusidestrconsts.lisdisabled"
-msgid "Disabled"
-msgstr "Вимкнено"
-
-#: lazarusidestrconsts.lisdisablegroups
-msgid "Disable Groups"
-msgstr "Вимкнути групи"
 
 #: lazarusidestrconsts.lisdisablei18nforlfm
 msgid "Disable I18N for LFM"
@@ -9007,11 +8735,6 @@ msgstr "Деякі файли мають локальні зміни. Локал
 #: lazarusidestrconsts.lisdistinguishbigandsmalllettersegaanda
 msgid "Distinguish big and small letters e.g. A and a"
 msgstr "Розрізняти регістр букв, наприклад, А і а"
-
-#: lazarusidestrconsts.lisdlgadd
-msgctxt "lazarusidestrconsts.lisdlgadd"
-msgid "Add ..."
-msgstr "Додати..."
 
 #: lazarusidestrconsts.lisdlgalloptions
 msgid "All options ..."
@@ -9463,23 +9186,6 @@ msgstr "Порожньо"
 msgid "Destination directory for publishing is either a relative path or empty."
 msgstr "Цільова тека для опублікування не вказана або задано відносний шлях."
 
-#: lazarusidestrconsts.lisenableall
-msgid "&Enable All"
-msgstr "&Увімкнути все"
-
-#: lazarusidestrconsts.lisenableallinsamesource
-msgid "Enable All in same source"
-msgstr "Ввімкнути Всі в тому ж джерелі"
-
-#: lazarusidestrconsts.lisenablebreakpoint
-msgid "Enable Breakpoint"
-msgstr "Увімкнути точку зупинки"
-
-#: lazarusidestrconsts.lisenabled
-msgctxt "lazarusidestrconsts.lisenabled"
-msgid "Enabled"
-msgstr "Доступний"
-
 #: lazarusidestrconsts.lisenabledonlyforpackages
 msgid "Enabled only for packages."
 msgstr "Доступно лише для пакунків."
@@ -9488,10 +9194,6 @@ msgstr "Доступно лише для пакунків."
 #, object-pascal-format
 msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
 msgstr ". Встановіть прапорець \"Використовувати модуль\" для модуля %s у пакунку %s"
-
-#: lazarusidestrconsts.lisenablegroups
-msgid "Enable Groups"
-msgstr "Ввімкнути групи"
 
 #: lazarusidestrconsts.lisenablei18nforlfm
 msgid "Enable I18N for LFM"
@@ -9747,39 +9449,6 @@ msgstr "Помилка запису файлу \"%s\""
 msgid "Error writing package list to file%s%s%s%s"
 msgstr "Помилка запису списку пакунків у файл%s%s%s%s"
 
-#: lazarusidestrconsts.lisevalexpression
-msgctxt "lazarusidestrconsts.lisevalexpression"
-msgid "Eval expression"
-msgstr "Оцінити вираз"
-
-#: lazarusidestrconsts.lisevaluateall
-msgid "Evaluate all"
-msgstr "Обчислити всі"
-
-#: lazarusidestrconsts.lisevaluatemodify
-msgid "&Evaluate/Modify"
-msgstr "&Обчислити/Змінити"
-
-#: lazarusidestrconsts.liseventlogclear
-msgid "Clear Events"
-msgstr "Очистити події"
-
-#: lazarusidestrconsts.liseventlogoptions
-msgid "Event Log Options ..."
-msgstr "Параметри журналу подій ..."
-
-#: lazarusidestrconsts.liseventlogsavetofile
-msgid "Save Events to File"
-msgstr "Зберегти події у файл"
-
-#: lazarusidestrconsts.liseventslogaddcomment
-msgid "Add Comment ..."
-msgstr "Додати коментар ..."
-
-#: lazarusidestrconsts.liseventslogaddcomment2
-msgid "Add Comment"
-msgstr "Додати коментар"
-
 #: lazarusidestrconsts.liseverynthlinenumber
 msgid "Every n-th line number"
 msgstr "Кожен n-ний номер рядка"
@@ -9800,10 +9469,6 @@ msgstr "Приклади:%sІдентифікатор%sTMyEnum.Enum%sНазва�
 #: lazarusidestrconsts.lisexamplesopenfirstselected
 msgid "Open first selected"
 msgstr "Відкрити перший вибраний"
-
-#: lazarusidestrconsts.lisexceptiondialog
-msgid "Debugger Exception Notification"
-msgstr "Повідомлення про виняток зневаджувача"
 
 #: lazarusidestrconsts.lisexclude
 msgid "Exclude"
@@ -9912,10 +9577,6 @@ msgstr "Експортувати вибране"
 #: lazarusidestrconsts.lisexportsub
 msgid "Export >>"
 msgstr "Експортувати >>"
-
-#: lazarusidestrconsts.lisexpression
-msgid "Expression:"
-msgstr "Вираз:"
 
 #: lazarusidestrconsts.lisextendincludefilesearchpathofpackagewith
 #, object-pascal-format
@@ -10086,10 +9747,6 @@ msgstr "Файл \"%s\" є віртуальним."
 #: lazarusidestrconsts.lisfilelinkerror
 msgid "File link error"
 msgstr "Помилкове посилання на файл"
-
-#: lazarusidestrconsts.lisfilenameaddress
-msgid "Filename/Address"
-msgstr "Назва файлу/адреса"
 
 #: lazarusidestrconsts.lisfilenamestyle
 msgid "Filename Style"
@@ -10302,10 +9959,6 @@ msgstr "&Перший тест"
 #: lazarusidestrconsts.lisfixlfmfile
 msgid "Fix LFM file"
 msgstr "Виправити файл LFM"
-
-#: lazarusidestrconsts.lisfloatingpoin
-msgid "Floating Point"
-msgstr "Рухома кома"
 
 #: lazarusidestrconsts.lisfocushint
 msgid "Focus hint"
@@ -10636,10 +10289,6 @@ msgstr "Глобальні параметри"
 msgid "Goto Line"
 msgstr "Перейти до рядка"
 
-#: lazarusidestrconsts.lisgotoselected
-msgid "Goto selected"
-msgstr "Перейти до вибраного"
-
 #: lazarusidestrconsts.lisgplnotice
 msgid ""
 "<description>\n"
@@ -10666,44 +10315,9 @@ msgstr ""
 msgid "Group"
 msgstr "Група"
 
-#: lazarusidestrconsts.lisgroupassignexisting
-#, object-pascal-format
-msgid "Assign to existing \"%s\" group?"
-msgstr "Присвоїти до наявної \"%s\" групи?"
-
-#: lazarusidestrconsts.lisgroupemptydelete
-#, object-pascal-format
-msgid "No more breakpoints are assigned to group \"%s\", delete it?"
-msgstr "До групи \"%s\" більше не призначено точок зупинки, видалити її?"
-
-#: lazarusidestrconsts.lisgroupemptydeletemore
-#, object-pascal-format
-msgid "%sThere are %d more empty groups, delete all?"
-msgstr "%sЄ ще %d порожніх груп, видалити всі?"
-
 #: lazarusidestrconsts.lisgrouplocalvariables
 msgid "Group automatically defined local variables"
 msgstr "Групувати автоматично визначені локальні змінні"
-
-#: lazarusidestrconsts.lisgroupnameemptyclearinstead
-msgid "The group name cannot be empty. Clear breakpoints' group(s)?"
-msgstr "Назва групи не може бути порожня. Очистити груп(и) точок зупинки?"
-
-#: lazarusidestrconsts.lisgroupnameinput
-msgid "Group name:"
-msgstr "Назва групи:"
-
-#: lazarusidestrconsts.lisgroupnameinvalid
-msgid "BreakpointGroup name must be a valid Pascal identifier name."
-msgstr "Назва ГрупиТочокЗупинки має бути дійсною назвою ідентифікатора."
-
-#: lazarusidestrconsts.lisgroupsetnew
-msgid "Set new group ..."
-msgstr "Задати нову групу ..."
-
-#: lazarusidestrconsts.lisgroupsetnone
-msgid "Clear group(s)"
-msgstr "Очистити груп(и)"
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
 msgid "Enable or Disable groups of debug output. Valid Options are:"
@@ -10725,11 +10339,6 @@ msgstr "Кольори заголовка"
 msgid "Header comment for class"
 msgstr "Коментар заголовка для класу"
 
-#: lazarusidestrconsts.lishelp
-msgctxt "lazarusidestrconsts.lishelp"
-msgid "Help"
-msgstr "Довідка"
-
 #: lazarusidestrconsts.lishelpentries
 msgid "Help entries"
 msgstr "Розділи довідки"
@@ -10737,10 +10346,6 @@ msgstr "Розділи довідки"
 #: lazarusidestrconsts.lishelpselectordialog
 msgid "Help selector"
 msgstr "Селектор довідки"
-
-#: lazarusidestrconsts.lishexadecimal
-msgid "Hexadecimal"
-msgstr "Шістнадцяткове"
 
 #: lazarusidestrconsts.lishfmhelpforfreepascalcompilermessage
 msgid "Help for Free Pascal Compiler message"
@@ -10840,10 +10445,6 @@ msgstr "Показувати форми"
 #: lazarusidestrconsts.lishintviewunits
 msgid "View Units"
 msgstr "Показувати модулі"
-
-#: lazarusidestrconsts.lishitcount
-msgid "Hitcount"
-msgstr "К-сть влучень"
 
 #: lazarusidestrconsts.lishlpoptsdatabases
 msgid "Databases"
@@ -11030,11 +10631,6 @@ msgstr "Якщо змінилась лише інформація про сеа�
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Якщо ви хочете використовувати дві різні версії Lazarus ви повинні запустити інший Lazarus з параметром командного рядка primary-config-path чи pcp.%sНаприклад:"
 
-#: lazarusidestrconsts.lisignore
-msgctxt "lazarusidestrconsts.lisignore"
-msgid "Ignore"
-msgstr "Знехтувати"
-
 #: lazarusidestrconsts.lisignoreall
 msgid "Ignore all"
 msgstr "Знехтувати все"
@@ -11042,10 +10638,6 @@ msgstr "Знехтувати все"
 #: lazarusidestrconsts.lisignoreandcontinue
 msgid "Ignore and continue"
 msgstr "Знехтувати і продовжити"
-
-#: lazarusidestrconsts.lisignoreexceptiontype
-msgid "Ignore this exception type"
-msgstr "Нехтувати цей тип винятків"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -11150,10 +10742,6 @@ msgstr "виникла проблема з конфігурацією Fppkg. (%s
 #: lazarusidestrconsts.lisindentationforpascalsources
 msgid "Indentation for Pascal sources"
 msgstr "Відступи для сирців Pascal"
-
-#: lazarusidestrconsts.lisindex
-msgid "Index"
-msgstr "Індекс"
 
 #: lazarusidestrconsts.lisinformation
 msgid "Information"
@@ -11330,55 +10918,6 @@ msgstr "Вставити тег url"
 msgid "In session"
 msgstr "В сесії"
 
-#: lazarusidestrconsts.lisinspect
-msgid "&Inspect"
-msgstr "&Перевірити"
-
-#: lazarusidestrconsts.lisinspectaddwatch
-msgctxt "lazarusidestrconsts.lisinspectaddwatch"
-msgid "Add watch"
-msgstr "Додати спостереження"
-
-#: lazarusidestrconsts.lisinspectclassinherit
-#, object-pascal-format
-msgid "%s: class %s inherits from %s"
-msgstr "%s : клас %s успадковує від %s"
-
-#: lazarusidestrconsts.lisinspectdata
-msgid "Data"
-msgstr "Дані"
-
-#: lazarusidestrconsts.lisinspectdialog
-msgid "Debug Inspector"
-msgstr "Інспектор зневадження"
-
-#: lazarusidestrconsts.lisinspectmethods
-msgid "Methods"
-msgstr "Методи"
-
-#: lazarusidestrconsts.lisinspectpointerto
-#, object-pascal-format
-msgid "Pointer to %s"
-msgstr "Вказівник на %s"
-
-#: lazarusidestrconsts.lisinspectproperties
-msgctxt "lazarusidestrconsts.lisinspectproperties"
-msgid "Properties"
-msgstr "Властивості"
-
-#: lazarusidestrconsts.lisinspectunavailableerror
-#, object-pascal-format
-msgid "%s: unavailable (error: %s)"
-msgstr "%s: недоступно (помилка: %s)"
-
-#: lazarusidestrconsts.lisinspectuseinstance
-msgid "Instance"
-msgstr "Примірник"
-
-#: lazarusidestrconsts.lisinspectuseinstancehint
-msgid "Use instance class"
-msgstr "Використати клас примірника"
-
 #: lazarusidestrconsts.lisinstallationfailed
 msgid "Installation failed"
 msgstr "Встановлення не вдалося"
@@ -11489,14 +11028,6 @@ msgstr "Неправильний режим %s"
 #: lazarusidestrconsts.lisinvalidmultiselection
 msgid "Invalid multiselection"
 msgstr "Неправильний множинний вибір"
-
-#: lazarusidestrconsts.lisinvalidoff
-msgid "Invalid (Off)"
-msgstr "Неправильний (Вимк)"
-
-#: lazarusidestrconsts.lisinvalidon
-msgid "Invalid (On)"
-msgstr "Неправильний (Увімк)"
 
 #: lazarusidestrconsts.lisinvalidpascalidentifiercap
 msgid "Invalid Pascal Identifier"
@@ -12183,11 +11714,6 @@ msgstr "Виконуваний застосунок є неправильним"
 msgid "Launching target command line"
 msgstr "Командний рядок виконуваної програми"
 
-#: lazarusidestrconsts.lislazarus
-msgctxt "lazarusidestrconsts.lislazarus"
-msgid "Lazarus"
-msgstr "Lazarus"
-
 #: lazarusidestrconsts.lislazarusdefault
 msgid "Lazarus Default"
 msgstr "Типове для Lazarus"
@@ -12504,14 +12030,6 @@ msgstr "шлях до бібліотек"
 msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under macOS)."
 msgstr "Спільна бібліотека Free Pascal (.dll під Windows, .so під Linux, .dylib під MacOS X)."
 
-#: lazarusidestrconsts.lisline
-msgid "Line:"
-msgstr "Рядок:"
-
-#: lazarusidestrconsts.lislinelength
-msgid "Line/Length"
-msgstr "Рядок/Довжина"
-
 #: lazarusidestrconsts.lislink
 msgid "Link:"
 msgstr "Посилання:"
@@ -12540,52 +12058,6 @@ msgstr "Завантажити макрос з"
 #: lazarusidestrconsts.lislocal
 msgid "&Local"
 msgstr "&Локальна"
-
-#: lazarusidestrconsts.lislocals
-msgctxt "lazarusidestrconsts.lislocals"
-msgid "Local Variables"
-msgstr "Локальні змінні"
-
-#: lazarusidestrconsts.lislocalsdlgcopyall
-msgid "Copy &all"
-msgstr "Копіювати &всі"
-
-#: lazarusidestrconsts.lislocalsdlgcopyname
-msgid "&Copy Name"
-msgstr "&Копіювати назву"
-
-#: lazarusidestrconsts.lislocalsdlgcopynamevalue
-msgid "Co&py Name and Value"
-msgstr "Ко&піювати назву і значення"
-
-#: lazarusidestrconsts.lislocalsdlgcopyrawvalue
-msgid "Copy &RAW Value"
-msgstr "Копіювати &сирі значення"
-
-#: lazarusidestrconsts.lislocalsdlgcopyvalue
-msgid "C&opy Value"
-msgstr "Ко&піювати значення"
-
-#: lazarusidestrconsts.lislocalsnotevaluated
-msgid "Locals not evaluated"
-msgstr "Локальні не обчислені"
-
-#: lazarusidestrconsts.lislogcallstack
-msgid "Log Call Stack"
-msgstr "Стек викликів журналу"
-
-#: lazarusidestrconsts.lislogcallstacklimit
-msgid "(frames limit. 0 - no limits)"
-msgstr "(межа фреймів. 0 - необмежено)"
-
-#: lazarusidestrconsts.lislogevalexpression
-msgctxt "lazarusidestrconsts.lislogevalexpression"
-msgid "Eval expression"
-msgstr "Оцінити вираз"
-
-#: lazarusidestrconsts.lislogmessage
-msgid "Log Message"
-msgstr "Повідомлення журналу"
 
 #: lazarusidestrconsts.lislowercasestring
 msgid "lowercase string"
@@ -12753,11 +12225,6 @@ msgstr "Найбільше число потоків для паралельно
 msgid "Maximum parallel processes, 0 means default (%s)"
 msgstr "Найбільше число паралельних процесів, 0 - типове значення (%s)"
 
-#: lazarusidestrconsts.lismaxs
-#, object-pascal-format
-msgid "Max %d"
-msgstr "Макс %d"
-
 #: lazarusidestrconsts.lismaybeyouhavetorecompilethepackage
 #, object-pascal-format
 msgid "%s Maybe you have to recompile the package."
@@ -12772,10 +12239,6 @@ msgstr "%s МБ"
 msgctxt "lazarusidestrconsts.lismeaction"
 msgid "Action"
 msgstr "Дія"
-
-#: lazarusidestrconsts.lismemorydump
-msgid "Memory Dump"
-msgstr "Дамп пам'яті"
 
 #: lazarusidestrconsts.lismenuabortbuild
 msgid "Abort Build"
@@ -12894,10 +12357,6 @@ msgstr "Налаштувати \"Збирання Lazarus\" ..."
 #: lazarusidestrconsts.lismenucontexthelp
 msgid "Context sensitive Help"
 msgstr "Контекстна довідка"
-
-#: lazarusidestrconsts.lismenucontinue
-msgid "&Continue"
-msgstr "&Продовжити"
 
 #: lazarusidestrconsts.lismenuconvertdelphipackage
 msgid "Convert Delphi Package to Lazarus Package ..."
@@ -13802,11 +13261,6 @@ msgctxt "lazarusidestrconsts.lismenunewunit"
 msgid "New Unit"
 msgstr "Новий модуль"
 
-#: lazarusidestrconsts.lismenuok
-msgctxt "lazarusidestrconsts.lismenuok"
-msgid "&OK"
-msgstr "&Гаразд"
-
 #: lazarusidestrconsts.lismenuonlinehelp
 msgid "Online Help"
 msgstr "Мережева довідка"
@@ -14136,10 +13590,6 @@ msgstr "Асемблер"
 #: lazarusidestrconsts.lismenuviewbreakpoints
 msgid "BreakPoints"
 msgstr "Точки зупину"
-
-#: lazarusidestrconsts.lismenuviewcallstack
-msgid "Call Stack"
-msgstr "Стек викликів"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"
@@ -14685,10 +14135,6 @@ msgstr "Текст п&еред кожним рядком"
 msgid "&Trim clipboard contents"
 msgstr "&Обрізати вміст буфера"
 
-#: lazarusidestrconsts.lisms
-msgid "(ms)"
-msgstr "(мс)"
-
 #: lazarusidestrconsts.lismsgcolors
 msgid "Message colors"
 msgstr "Кольори повідомлення"
@@ -14721,11 +14167,6 @@ msgstr "Назва активного режиму збирання"
 #: lazarusidestrconsts.lisnameofnewprocedure
 msgid "Name of new procedure"
 msgstr "Назва нової процедури"
-
-#: lazarusidestrconsts.lisnever
-msgctxt "lazarusidestrconsts.lisnever"
-msgid "Never"
-msgstr "Ніколи"
 
 #: lazarusidestrconsts.lisnew
 msgctxt "lazarusidestrconsts.lisnew"
@@ -14819,10 +14260,6 @@ msgstr "Новий записаний макрос. Не збережений"
 #: lazarusidestrconsts.lisnewunitsareaddedtousessections
 msgid "New units are added to uses sections"
 msgstr "Нові модулі додаються в секцію uses"
-
-#: lazarusidestrconsts.lisno
-msgid "No"
-msgstr "Ні"
 
 #: lazarusidestrconsts.lisnoautosaveactivedesktop
 msgid "'Auto save active desktop' option is turned off, you will need to save current desktop manually."
@@ -15027,10 +14464,6 @@ msgstr "шлях до об'єкта"
 msgid "Switch to Object Inspector Favorites tab"
 msgstr "Перейти на вкладку Обрані Інспектора об'єктів"
 
-#: lazarusidestrconsts.lisoff
-msgid "? (Off)"
-msgstr "? (Викл)"
-
 #: lazarusidestrconsts.lisofpackage
 #, object-pascal-format
 msgid " of package %s"
@@ -15127,18 +14560,9 @@ msgstr "Стан"
 msgid "%sThis package is installed but the lpk file was not found"
 msgstr "%sЦей пакунок вже встановлений, але файлу lpk не знайдено"
 
-#: lazarusidestrconsts.lisok
-msgctxt "lazarusidestrconsts.lisok"
-msgid "OK"
-msgstr "Гаразд"
-
 #: lazarusidestrconsts.lisoldclass
 msgid "Old Class"
 msgstr "Старий клас"
-
-#: lazarusidestrconsts.lison
-msgid "? (On)"
-msgstr "? (Вкл)"
 
 #: lazarusidestrconsts.lisonbreaklineiereturnorenterkey
 msgid "On break line (i.e. return or enter key)"
@@ -15468,10 +14892,6 @@ msgstr "аналізатор \"%s\": %s"
 #: lazarusidestrconsts.lisparsers
 msgid "Parsers:"
 msgstr "Аналізатори:"
-
-#: lazarusidestrconsts.lispasscount
-msgid "Pass Count"
-msgstr "Кількість Проходів"
 
 #: lazarusidestrconsts.lispassingcompilerdefinetwicewithdifferentvalues
 #, object-pascal-format
@@ -16030,10 +15450,6 @@ msgstr "Неправильна назва модуля"
 #, object-pascal-format
 msgid "Missing files of package %s"
 msgstr "Загублені файли пакунка %s"
-
-#: lazarusidestrconsts.lispendingon
-msgid "Pending (On)"
-msgstr "Очікування (Увімкн.)"
 
 #: lazarusidestrconsts.lispenewfilenotinincludepath
 msgid "New file not in include path"
@@ -16904,10 +16320,6 @@ msgstr "Виберіть теку з файлом .po"
 msgid "Do not save any session info"
 msgstr "Не зберігати ніякої сесії"
 
-#: lazarusidestrconsts.lispointer
-msgid "Pointer"
-msgstr "Вказівник"
-
 #: lazarusidestrconsts.lisposaveinideconfigdirectory
 msgid "Save in .lps file in IDE config directory"
 msgstr "Зберегти у файлі .lps у теці конфігурації ІСР"
@@ -17475,19 +16887,10 @@ msgstr "Запис"
 msgid "Recorded"
 msgstr "Записано"
 
-#: lazarusidestrconsts.lisrecordstruct
-msgid "Record/Structure"
-msgstr "Запис/Структура"
-
 #: lazarusidestrconsts.lisredo
 msgctxt "lazarusidestrconsts.lisredo"
 msgid "Redo"
 msgstr "Повернути"
-
-#: lazarusidestrconsts.lisregisters
-msgctxt "lazarusidestrconsts.lisregisters"
-msgid "Registers"
-msgstr "Регістри"
 
 #: lazarusidestrconsts.lisregularexpression
 msgid "Regular expression"
@@ -17634,10 +17037,6 @@ msgstr "Перевідкрити з іншим кодуванням"
 msgctxt "lazarusidestrconsts.lisrepeat"
 msgid "Repeat"
 msgstr "Повторити"
-
-#: lazarusidestrconsts.lisrepeatcount
-msgid "Repeat Count:"
-msgstr "Повторень:"
 
 #: lazarusidestrconsts.lisreplace
 msgctxt "lazarusidestrconsts.lisreplace"
@@ -18492,10 +17891,6 @@ msgstr "Початкова \"%s\"%sі цільова \"%s\"%sтеки збіга
 msgid "Source and Destination are the same:%s%s"
 msgstr "Код і призначення однакові:%s%s"
 
-#: lazarusidestrconsts.lissourcebreakpoint
-msgid "&Source Breakpoint ..."
-msgstr "Точка зупинки &джерела ..."
-
 #: lazarusidestrconsts.lissourcedirectorydoesnotexist
 #, object-pascal-format
 msgid "Source directory \"%s\" does not exist."
@@ -18591,15 +17986,6 @@ msgstr "Дивний lpi файл"
 #: lazarusidestrconsts.lisstreamingerror
 msgid "Streaming error"
 msgstr "Помилка потоків"
-
-#: lazarusidestrconsts.lisstring
-msgid "String"
-msgstr "Рядок"
-
-#: lazarusidestrconsts.lisstyle
-msgctxt "lazarusidestrconsts.lisstyle"
-msgid "Style"
-msgstr "Стиль"
 
 #: lazarusidestrconsts.lissubprocedure
 msgid "Sub Procedure"
@@ -18722,10 +18108,6 @@ msgstr "Змістити вибраний елемент вгору в Таб-п
 #, object-pascal-format
 msgid "Tabs for %s"
 msgstr "Вкладки для %s"
-
-#: lazarusidestrconsts.listakesnapshot
-msgid "Take a Snapshot"
-msgstr "Зробити знімок"
 
 #: lazarusidestrconsts.listarget
 msgid "Target:"
@@ -18857,11 +18239,6 @@ msgstr "Поточний FPC не має файлу налаштувань. Йм
 #, object-pascal-format
 msgid "The debugger \"%s\"%sdoes not exist or is not executable.%sSee Tools -> Options -> Debugger options"
 msgstr "Зневаджувач \"%s\"%sвідсутній або не є виконуваним.%sДив. Інструменти -> Параметри -> Параметри зневаджувача"
-
-#: lazarusidestrconsts.listhedebuggerexecutabletypicallyhasthenamepleasegive
-#, object-pascal-format
-msgid "The debugger executable typically has the name \"%s\". Please give the full file path."
-msgstr "Виконуваний файл зневаджувача здебільшого має назву \"%s\". Вкажіть повний шлях до файлу."
 
 #: lazarusidestrconsts.listhedefaultmodemustbestoredinproject
 msgid "The default mode must be stored in project, not in session."
@@ -19453,44 +18830,6 @@ msgstr "Це створить кругову залежність."
 #, object-pascal-format
 msgid "This will put a lot of text (%s) on the clipboard.%sProceed?"
 msgstr "До буфера обміну буде вміщено багато тексту (%s).%sПродовжити?"
-
-#: lazarusidestrconsts.listhreads
-msgctxt "lazarusidestrconsts.listhreads"
-msgid "Threads"
-msgstr "Нитки"
-
-#: lazarusidestrconsts.listhreadscurrent
-msgctxt "lazarusidestrconsts.listhreadscurrent"
-msgid "Current"
-msgstr "Поточний"
-
-#: lazarusidestrconsts.listhreadsfunc
-msgctxt "lazarusidestrconsts.listhreadsfunc"
-msgid "Function"
-msgstr "Функція"
-
-#: lazarusidestrconsts.listhreadsgoto
-msgid "Goto"
-msgstr "ЙтиДо"
-
-#: lazarusidestrconsts.listhreadsline
-msgctxt "lazarusidestrconsts.listhreadsline"
-msgid "Line"
-msgstr "Рядок"
-
-#: lazarusidestrconsts.listhreadsnotevaluated
-msgid "Threads not evaluated"
-msgstr "Нитки не визначені"
-
-#: lazarusidestrconsts.listhreadssrc
-msgctxt "lazarusidestrconsts.listhreadssrc"
-msgid "Source"
-msgstr "Джерело"
-
-#: lazarusidestrconsts.listhreadsstate
-msgctxt "lazarusidestrconsts.listhreadsstate"
-msgid "State"
-msgstr "Стан"
 
 #: lazarusidestrconsts.listitle
 msgid "&Title"
@@ -20337,10 +19676,6 @@ msgstr "модуль %s потребує пакунка %s"
 msgid "Units not found in project %s"
 msgstr "Модулі не знайдено в проєкті %s"
 
-#: lazarusidestrconsts.lisunsigned
-msgid "Unsigned"
-msgstr "Непідписаний"
-
 #: lazarusidestrconsts.lisunusedunitsof
 #, object-pascal-format
 msgid "Unused units of %s"
@@ -20572,20 +19907,6 @@ msgstr "Копіювати дані про версію в буфер"
 msgid "Very Verbose"
 msgstr "Дуже детально"
 
-#: lazarusidestrconsts.lisviewbreakpointproperties
-msgctxt "lazarusidestrconsts.lisviewbreakpointproperties"
-msgid "Breakpoint Properties ..."
-msgstr "Властивості точки зупинки ..."
-
-#: lazarusidestrconsts.lisviewsource
-msgid "View Source"
-msgstr "Дивитись джерело"
-
-#: lazarusidestrconsts.lisviewsourcedisass
-msgctxt "lazarusidestrconsts.lisviewsourcedisass"
-msgid "View Assembler"
-msgstr "Перемкнути вигляд Асемблер"
-
 #: lazarusidestrconsts.lisviewsourcelfm
 msgid "View Source (.lfm)"
 msgstr "Переглянути код (.lfm)"
@@ -20608,59 +19929,6 @@ msgstr ", попереджень: %s"
 #, object-pascal-format
 msgid "%sWarning: This is the main unit. The new main unit will be %s.pas."
 msgstr "%sУвага: Це головний модуль. Новий головний модуль буде %s.pas."
-
-#: lazarusidestrconsts.liswatch
-msgid "&Watch"
-msgstr "&Спостерігати"
-
-#: lazarusidestrconsts.liswatchdata
-msgid "Watch:"
-msgstr "Огляд:"
-
-#: lazarusidestrconsts.liswatchkind
-msgid "Watch action"
-msgstr "Дія огляду"
-
-#: lazarusidestrconsts.liswatchkindread
-msgid "Read"
-msgstr "Читання"
-
-#: lazarusidestrconsts.liswatchkindreadwrite
-msgid "Read/Write"
-msgstr "Читання/Запис"
-
-#: lazarusidestrconsts.liswatchkindwrite
-msgid "Write"
-msgstr "Запис"
-
-#: lazarusidestrconsts.liswatchpoint
-msgid "&Data/Watch Breakpoint ..."
-msgstr "Точка зупинки &даних/огляду ..."
-
-#: lazarusidestrconsts.liswatchpointbreakpoint
-msgid "&Data/watch Breakpoint ..."
-msgstr "Точка зупинки &даних/огляду ..."
-
-#: lazarusidestrconsts.liswatchpropert
-msgid "Watch Properties"
-msgstr "Властивості Спостерігання"
-
-#: lazarusidestrconsts.liswatchscope
-msgid "Watch scope"
-msgstr "Межі огляду"
-
-#: lazarusidestrconsts.liswatchscopeglobal
-msgctxt "lazarusidestrconsts.liswatchscopeglobal"
-msgid "Global"
-msgstr "Глобально"
-
-#: lazarusidestrconsts.liswatchscopelocal
-msgid "Declaration"
-msgstr "Оголошення"
-
-#: lazarusidestrconsts.liswatchtowatchpoint
-msgid "Create &Data/Watch Breakpoint ..."
-msgstr "Створити точку зупинки &даних/огляду ..."
 
 #: lazarusidestrconsts.liswelcometolazaruside
 #, object-pascal-format
@@ -20732,35 +20000,6 @@ msgstr "Без належних сирців FPC перегляд і завер�
 msgid "With required packages"
 msgstr "З необхідними пакунками"
 
-#: lazarusidestrconsts.liswldeleteall
-msgid "De&lete All"
-msgstr "Ви&далити всі"
-
-#: lazarusidestrconsts.liswldisableall
-msgid "D&isable All"
-msgstr "Н&едоступні Всі"
-
-#: lazarusidestrconsts.liswlenableall
-msgid "E&nable All"
-msgstr "В&вімкнути все"
-
-#: lazarusidestrconsts.liswlexpression
-msgid "Expression"
-msgstr "Вираз"
-
-#: lazarusidestrconsts.liswlinspectpane
-msgid "Inspect pane"
-msgstr "Панель перегляду"
-
-#: lazarusidestrconsts.liswlproperties
-msgid "&Properties"
-msgstr "&Властивості"
-
-#: lazarusidestrconsts.liswlwatchlist
-msgctxt "lazarusidestrconsts.liswlwatchlist"
-msgid "Watches"
-msgstr "Спостереження"
-
 #: lazarusidestrconsts.liswordatcursorincurrenteditor
 msgid "Word at cursor in current editor"
 msgstr "Слово під курсором в цьому редакторі"
@@ -20803,10 +20042,6 @@ msgstr "Помилка XML"
 #, object-pascal-format
 msgid "XML parser error in file %s%sError: %s"
 msgstr "Помилка розбору XML у файлі %s%sПомилка: %s"
-
-#: lazarusidestrconsts.lisyes
-msgid "Yes"
-msgstr "Так"
 
 #: lazarusidestrconsts.lisyoucandisablethisforindividualformsviathepackageed
 msgid "You can disable this for individual forms via the package editor"
@@ -20988,36 +20223,6 @@ msgstr "Вирівняти діаграму"
 msgid "Add package unit to uses section"
 msgstr "Додати модуль пакунка у секцію uses"
 
-#: lazarusidestrconsts.regdlgbinary
-msgctxt "lazarusidestrconsts.regdlgbinary"
-msgid "Binary"
-msgstr "Двійковий"
-
-#: lazarusidestrconsts.regdlgdecimal
-msgctxt "lazarusidestrconsts.regdlgdecimal"
-msgid "Decimal"
-msgstr "Десятковий"
-
-#: lazarusidestrconsts.regdlgdisplaytypeforselectedregisters
-msgid "Display type for selected Registers"
-msgstr "Показувати тип вибраних регістрів"
-
-#: lazarusidestrconsts.regdlgformat
-msgid "Format"
-msgstr "Формат"
-
-#: lazarusidestrconsts.regdlghex
-msgid "Hex"
-msgstr "Шістнадцятковий"
-
-#: lazarusidestrconsts.regdlgoctal
-msgid "Octal"
-msgstr "Вісімковий"
-
-#: lazarusidestrconsts.regdlgraw
-msgid "Raw"
-msgstr "Сирі дані"
-
 #: lazarusidestrconsts.rsaddinverse
 msgid "Add Inverse"
 msgstr "Додати зворотне"
@@ -21025,10 +20230,6 @@ msgstr "Додати зворотне"
 #: lazarusidestrconsts.rsaddnewterm
 msgid "Add new term"
 msgstr "Додати новий терм"
-
-#: lazarusidestrconsts.rsattachto
-msgid "Attach to"
-msgstr "Приєднати до"
 
 #: lazarusidestrconsts.rsattributes
 msgid "Attributes"
@@ -21081,10 +20282,6 @@ msgstr "Створити нове визначення"
 #: lazarusidestrconsts.rsenablei18n
 msgid "Enable i18n"
 msgstr "Ввімкнути i18n"
-
-#: lazarusidestrconsts.rsenterpid
-msgid "Enter PID"
-msgstr "Введіть ідентифікатор процесу"
 
 #: lazarusidestrconsts.rsfilterthelistwithstring
 msgid "Filter the lines in list with a string"

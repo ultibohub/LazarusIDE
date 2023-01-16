@@ -391,6 +391,8 @@ DEFAULT_IDE_OPTIONS= $(LAZARUS_LIBPATHS) \
   -Fu../components/virtualtreeview/lib/$(CPU_TARGET)-$(OS_TARGET)-$(LCL_PLATFORM) \
   -Fu../components/fpdebug/lib/$(CPU_TARGET)-$(OS_TARGET) \
   -Fu../components/lazdebuggers/lazdebuggerfp/lib/$(CPU_TARGET)-$(OS_TARGET) \
+  -Fu../components/lazdebuggers/lazdebuggerlldb/lib/$(CPU_TARGET)-$(OS_TARGET) \
+  -Fu../components/lazdebuggers/lazdebuggerfplldb/lib/$(CPU_TARGET)-$(OS_TARGET) \
   -Fu../components/anchordocking/units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/anchordocking/design/units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/jcf2/IdePlugin/lazarus/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
@@ -410,8 +412,6 @@ BIG_IDE_OPTIONS=-dBigIDE $(DEFAULT_IDE_OPTIONS) \
   -Fu../components/projecttemplates/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/sqldb/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/sdf/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
-  -Fu../components/lazdebuggers/lazdebuggerlldb/lib/$(CPU_TARGET)-$(OS_TARGET) \
-  -Fu../components/lazdebuggers/lazdebuggerfplldb/lib/$(CPU_TARGET)-$(OS_TARGET) \
   -Fu../components/leakview/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/memds/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/tachart/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
@@ -429,6 +429,8 @@ BIG_IDE_OPTIONS=-dBigIDE $(DEFAULT_IDE_OPTIONS) \
   -Fu../components/projectgroups/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/pas2js/units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/exampleswindow/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/charactermap/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/charactermap/design/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fupackages/ideconfig/lib/$(CPU_TARGET)-$(OS_TARGET) \
   -Fupackages/idedebugger/lib/$(CPU_TARGET)-$(OS_TARGET)
 LAZBUILD_OPT=$(LAZARUS_LIBPATHS)

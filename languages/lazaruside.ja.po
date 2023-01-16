@@ -9,24 +9,6 @@ msgstr ""
 "Language-Team: Japanese Lazarus ML\n"
 "Language: ja\n"
 
-#: lazarusidestrconsts.dbgbreakgroupdlgcaption
-msgctxt "lazarusidestrconsts.dbgbreakgroupdlgcaption"
-msgid "Select Groups"
-msgstr "グループの選択"
-
-#: lazarusidestrconsts.dbgbreakgroupdlgheaderdisable
-msgid "Select groups to disable when breakpoint is hit"
-msgstr "ブレークポイントのヒットを無効にするグループを選択してください"
-
-#: lazarusidestrconsts.dbgbreakgroupdlgheaderenable
-msgid "Select groups to enable when breakpoint is hit"
-msgstr "ブレークポイントのヒットを有効にするグループを選択してください"
-
-#: lazarusidestrconsts.dbgbreakpropertygroupnotfound
-#, object-pascal-format
-msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
-msgstr "有効/無効リストのグループのいくつかが存在しません。%0:s作成しますか？%0:s%0:s%1:s"
-
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -4233,10 +4215,6 @@ msgctxt "lazarusidestrconsts.dlgvaluecolor"
 msgid "Value"
 msgstr "値"
 
-#: lazarusidestrconsts.dlgvaluedataaddr
-msgid "Data-Address"
-msgstr ""
-
 #: lazarusidestrconsts.dlgverbosity
 msgid "Verbosity during compilation:"
 msgstr "コンパイル中に状況を表示する："
@@ -4401,47 +4379,111 @@ msgstr "Z 順序"
 msgid "On Both Sides"
 msgstr "両側に"
 
-#: lazarusidestrconsts.histdlgbtnclearhint
-msgid "Clear all snapshots"
-msgstr "すべてのスナップショットをクリア"
+#: lazarusidestrconsts.initdlgdebugchangepath
+msgid "Change path"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnenablehint
-msgid "Toggle view snapshot or current"
-msgstr "スナップショットもしくはカレントビューの切り替え"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotconfigured
+msgid "Error: The backend is not configured."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnmakesnaphint
-msgid "Take Snapshot"
-msgstr "スナップショットを取る"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotconfiguredmissingpackage
+msgid "(The configured backend's package is not installed.)"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnpowerhint
-msgid "Switch on/off automatic snapshots"
-msgstr "自動スナップショットを作動/停止"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotsupported
+msgid "Error: Your current config uses a backend that is not supported on your OS/Arch."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnremovehint
-msgid "Remove selected entry"
-msgstr "選択されたエントリを削除"
+#: lazarusidestrconsts.initdlgdebugclassnotehintnotrecommended
+msgid "Hint: The backend type is OK, but not the recommended type."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnshowhisthint
-msgid "View history"
-msgstr "履歴を見る"
+#: lazarusidestrconsts.initdlgdebugcreateanewrecommendedback
+msgid "Create a new recommended backend"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnshowsnaphint
-msgid "View Snapshots"
-msgstr "スナップショットを見る"
+#: lazarusidestrconsts.initdlgdebugexternalexepathdisplay
+msgid "The selected backend uses the external executable:"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgcolumnloc
-msgctxt "lazarusidestrconsts.histdlgcolumnloc"
-msgid "Location"
-msgstr "位置"
+#: lazarusidestrconsts.initdlgdebugexternalexepathprompt
+#, object-pascal-format
+msgid "The selected backend requires an external executable: \"%s\""
+msgstr ""
 
-#: lazarusidestrconsts.histdlgcolumntime
-msgid "Time"
-msgstr "時刻"
+#: lazarusidestrconsts.initdlgdebugheaderdefaultforyourosarchiss
+#, object-pascal-format
+msgid "Default for your OS/Arch is: \"%s\"."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgformname
-msgctxt "lazarusidestrconsts.histdlgformname"
-msgid "History"
-msgstr "履歴"
+#: lazarusidestrconsts.initdlgdebugignore
+#, fuzzy
+msgctxt "lazarusidestrconsts.initdlgdebugignore"
+msgid "Ignore"
+msgstr "無視"
+
+#: lazarusidestrconsts.initdlgdebugkeepbackend
+msgid "Keep backend"
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexeisdirectory
+msgid "Error: External executable is a directory, not a file."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexenotfound
+msgid "Error: External executable not found."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexenotrunnable
+msgid "Error: External file is not executable."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrornodefaultfound
+msgid "Error: No default for external executable found."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrornoexespecified
+msgid "Error: No external executable specified."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpopupinformation
+#, object-pascal-format
+msgid "A backend provides OS and architecture specific implementations for the debugger.%0:sDefault for your OS/Arch is: \"%1:s\".%0:s%0:sOther backends are provided for special tasks (e.g. cross debugging on some platforms) or as generic alternatives.%0:sThe debugger can have different features, depending on the backend.%0:s%0:sSome backends require an external exe (such as gdb or lldb). This exe may be part of your OS (Linux/Mac), or be provided by the Lazarus installer (Windows).%0:s%0:sIf you have just upgraded your installation, you may have to rebuild the IDE before your previously configured backend can be used (if you used a 3rd-party or optional backend). In that case you may choose \"Ignore\"."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugselectanexistingbackend
+msgid "Select an existing backend"
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackagefooter
+msgid "Note: There are more backend configurations available, but their packages (LPK) are not installed. You may want to rebuild the IDE with the packages installed. After the rebuild, the debugger backend can be changed in the menu: Tools -> Options."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackagerebuild
+#, object-pascal-format
+msgid "If you decide to rebuild the IDE first and install missing packages, then select \"Ignore\" for now.%0:sAfter the rebuild, the debugger backend can be changed in the menu: Tools -> Options."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackages
+msgid "There may be packages (LPK) missing from your IDE installation. You may need to rebuild the IDE and install them, before making changes to the setup."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstaterecommendedfoundinlist
+msgid "There is a backend of recommended type in the list of existing debuggers. You may pick this instead of creating a new backend."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstaterecommendednotinlist
+msgid "There is no backend of recommended type in the list of existing debuggers. Consider creating a new backend."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatesetupok
+msgid "Setup is OK."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstateupdatebackend
+msgid "You are using an older backend. This may give you not the best debugging experience. Consider upgrading to the recommended backend."
+msgstr ""
 
 #: lazarusidestrconsts.lis0no1drawdividerlinesonlyfortoplevel2drawlinesforfi
 msgid "0 = no, 1 = draw divider lines only for top level, 2 = draw lines for first two levels, ..."
@@ -4713,11 +4755,6 @@ msgstr "ユニット名がすでに存在します"
 msgid "Abandon changes?"
 msgstr "変更を破棄しますか？"
 
-#: lazarusidestrconsts.lisabort
-msgctxt "lazarusidestrconsts.lisabort"
-msgid "Abort"
-msgstr "中止"
-
 #: lazarusidestrconsts.lisabortall
 msgid "Abort all"
 msgstr "全て中止"
@@ -4788,10 +4825,6 @@ msgstr "謝辞"
 msgid "Action:"
 msgstr "動作："
 
-#: lazarusidestrconsts.lisactions
-msgid "Actions:"
-msgstr "動作："
-
 #: lazarusidestrconsts.lisactivate
 msgid "Activate"
 msgstr "活性化"
@@ -4811,11 +4844,6 @@ msgstr "アクティブ"
 #: lazarusidestrconsts.lisactivefilter
 msgid "Active Filter"
 msgstr "アクティブフィルタ"
-
-#: lazarusidestrconsts.lisadd
-msgctxt "lazarusidestrconsts.lisadd"
-msgid "Add"
-msgstr "追加"
 
 #: lazarusidestrconsts.lisaddanewseparatoraboveselecteditem
 msgid "Add a new separator above selected item"
@@ -4911,15 +4939,6 @@ msgstr "パッケージをプロジェクトに追加"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "引数の括弧を追加"
-
-#: lazarusidestrconsts.lisaddress
-msgid "Address:"
-msgstr "アドレス："
-
-#: lazarusidestrconsts.lisaddressbreakpoint
-msgctxt "lazarusidestrconsts.lisaddressbreakpoint"
-msgid "&Address Breakpoint ..."
-msgstr "アドレスブレークポイント(&A) ..."
 
 #: lazarusidestrconsts.lisaddtoincludesearchpath
 msgid "Add to include search path?"
@@ -5025,10 +5044,6 @@ msgstr "すべての継承されたオプション"
 msgid "All Options"
 msgstr "すべてのオプション"
 
-#: lazarusidestrconsts.lisallowfunctio
-msgid "Allow Function Calls"
-msgstr "関数呼び出しを許可する"
-
 #: lazarusidestrconsts.lisallowsearchingformultiplelines
 msgid "Allow searching for multiple lines"
 msgstr "複数行の検索を許可する"
@@ -5053,10 +5068,6 @@ msgstr "代替キー "
 #: lazarusidestrconsts.lisalternativekeyor2keysequence
 msgid "Alternative key (or 2 key sequence)"
 msgstr "代替キー （あるいは２つのキー配列）"
-
-#: lazarusidestrconsts.lisalways
-msgid "Always"
-msgstr "常に"
 
 #: lazarusidestrconsts.lisalwaysconvertsuggesteddefaultfilenametolowercase
 msgid "Always convert suggested default file name to lowercase"
@@ -5203,10 +5214,6 @@ msgstr "新しいファイルのファイル名を尋ねます"
 msgid "Ask name on create"
 msgstr "作成時に名前を尋ねる"
 
-#: lazarusidestrconsts.lisausefulsettingonwindowssystemsislazarusdirmingwbin
-msgid "A useful setting on Windows systems is: $(LazarusDir)\\mingw\\$(TargetCPU)-$(TargetOS)\\bin\\gdb.exe"
-msgstr "Windowsシステムに対する便利な設定は：$(LazarusDir)\\mingw\\$(TargetCPU)-$(TargetOS)\\bin\\gdb.exe"
-
 #: lazarusidestrconsts.lisautoadjustideheight
 msgid "Automatically adjust IDE main window height"
 msgstr "IDEを自動的にウィンドウの高さに合わせる"
@@ -5226,10 +5233,6 @@ msgstr "自動補完:off"
 #: lazarusidestrconsts.lisautocompletionon
 msgid "Auto completion: on"
 msgstr "自動補完:on"
-
-#: lazarusidestrconsts.lisautocontinueafter
-msgid "Auto continue after:"
-msgstr "次の後に自動継続："
 
 #: lazarusidestrconsts.lisautomarkup
 msgid "Markup and Matches"
@@ -5377,12 +5380,6 @@ msgstr "このファイルがソースエディタでアクティブなとき"
 msgid "Working directory (leave empty for file path)"
 msgstr "作業ディレクトリ （ファイルパスは空欄にしておいてください）"
 
-#: lazarusidestrconsts.lisbinary
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisbinary"
-msgid "Binary"
-msgstr "バイナリ"
-
 #: lazarusidestrconsts.lisboldnondefaultobjectinspector
 msgid "Bold non default values"
 msgstr "デフォルトでない値を太字に"
@@ -5417,59 +5414,24 @@ msgstr "これは下側がアンカーされる兄弟のコントロールです
 msgid "Bottom space equally"
 msgstr "下部間隔を均等に"
 
-#: lazarusidestrconsts.lisbpsdisabled
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisbpsdisabled"
-msgid "Disabled"
-msgstr "無効化"
-
-#: lazarusidestrconsts.lisbpsenabled
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisbpsenabled"
-msgid "Enabled"
-msgstr "有効"
-
 #: lazarusidestrconsts.lisbreak
 msgctxt "lazarusidestrconsts.lisbreak"
 msgid "Break"
 msgstr "ブレーク"
 
-#: lazarusidestrconsts.lisbreakpointproperties
-msgid "Breakpoint Properties"
-msgstr "ブレークポイントプロパティ"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
-
-#: lazarusidestrconsts.lisbtnadd
-msgctxt "lazarusidestrconsts.lisbtnadd"
-msgid "&Add"
-msgstr "追加(&A)"
 
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
 msgstr "閉じる(&C)"
 
-#: lazarusidestrconsts.lisbtndelete
-msgctxt "lazarusidestrconsts.lisbtndelete"
-msgid "&Delete"
-msgstr "削除(&D)"
-
-#: lazarusidestrconsts.lisbtndlgadd
-msgid "&Add ..."
-msgstr "追加(&A) ..."
-
 #: lazarusidestrconsts.lisbtndlgreplace
 msgctxt "lazarusidestrconsts.lisbtndlgreplace"
 msgid "&Replace ..."
 msgstr "置換(&R) ..."
-
-#: lazarusidestrconsts.lisbtnenabled
-msgctxt "lazarusidestrconsts.lisbtnenabled"
-msgid "&Enabled"
-msgstr "有効にする(&E)"
 
 #: lazarusidestrconsts.lisbtnfind
 msgid "&Find"
@@ -5574,15 +5536,6 @@ msgstr "%s バイト"
 #, object-pascal-format
 msgid "Calling %s to create Makefile from %s failed."
 msgstr "%sの呼び出し(%sからMakefileを作成するための)に失敗しました。"
-
-#: lazarusidestrconsts.liscallstacknotevaluated
-msgid "Stack not evaluated"
-msgstr "評価されていないスタック"
-
-#: lazarusidestrconsts.liscancel
-msgctxt "lazarusidestrconsts.liscancel"
-msgid "Cancel"
-msgstr "キャンセル"
 
 #: lazarusidestrconsts.liscancelloadingthiscomponent
 msgid "Cancel loading this component"
@@ -6207,10 +6160,6 @@ msgstr "Unix / に変換"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Windows \\ に変換"
-
-#: lazarusidestrconsts.lischaracter
-msgid "Character"
-msgstr "文字"
 
 #: lazarusidestrconsts.lischaractermap
 msgid "Character Map"
@@ -7204,14 +7153,6 @@ msgstr "次の後に実行："
 msgid "Execute before"
 msgstr "次の前に実行："
 
-#: lazarusidestrconsts.liscoladdress
-msgid "Address"
-msgstr "アドレス"
-
-#: lazarusidestrconsts.liscolclass
-msgid "Class"
-msgstr "クラス"
-
 #: lazarusidestrconsts.liscollapseall
 msgid "Collapse All (/)"
 msgstr "すべてを折り畳み (/)"
@@ -7227,14 +7168,6 @@ msgstr "すべてのパッケージを折り畳み"
 #: lazarusidestrconsts.liscollapseallunits
 msgid "Collapse all units"
 msgstr "すべてのユニットを折り畳み"
-
-#: lazarusidestrconsts.liscolreturns
-msgid "Returns"
-msgstr "リターン"
-
-#: lazarusidestrconsts.liscolvisibility
-msgid "Visibility"
-msgstr "可視性"
 
 #: lazarusidestrconsts.liscomboboxes
 msgid "Combo Boxes"
@@ -7495,11 +7428,6 @@ msgstr "目次"
 #: lazarusidestrconsts.liscontextsensitive
 msgid "Context sensitive"
 msgstr "状況感知"
-
-#: lazarusidestrconsts.liscontinue
-msgctxt "lazarusidestrconsts.liscontinue"
-msgid "Continue"
-msgstr "継続"
 
 #: lazarusidestrconsts.liscontinueanddonotaskagain
 msgid "Continue and do not ask again"
@@ -8046,10 +7974,6 @@ msgctxt "lazarusidestrconsts.liscopy"
 msgid "Copy"
 msgstr "コピー"
 
-#: lazarusidestrconsts.liscopyall
-msgid "Copy All"
-msgstr "すべてコピー"
-
 #: lazarusidestrconsts.liscopyallitemstoclipboard
 msgid "Copy All Items to Clipboard"
 msgstr "すべての項目をクリップボードにコピー"
@@ -8057,10 +7981,6 @@ msgstr "すべての項目をクリップボードにコピー"
 #: lazarusidestrconsts.liscopyalloriginalmessagestoclipboard
 msgid "Copy All/Original Messages to Clipboard"
 msgstr "すべて/元のメッセージをクリップボードにコピー"
-
-#: lazarusidestrconsts.liscopyalloutputclipboard
-msgid "Copy all output to clipboard"
-msgstr "すべての出力をクリップボードにコピー"
 
 #: lazarusidestrconsts.liscopyallshownmessagestoclipboard
 msgid "Copy All Shown Messages to Clipboard"
@@ -8247,16 +8167,6 @@ msgstr "lfm ファイルを保存する際に .po ファイルを作成もしく
 msgid "Creating file index of FPC sources %s ..."
 msgstr "FPCソース %s のファイル索引を作成 ..."
 
-#: lazarusidestrconsts.liscsbottom
-msgctxt "lazarusidestrconsts.liscsbottom"
-msgid "Bottom"
-msgstr "底"
-
-#: lazarusidestrconsts.liscstop
-msgctxt "lazarusidestrconsts.liscstop"
-msgid "Top"
-msgstr "上端"
-
 #: lazarusidestrconsts.lisctdefchoosedirectory
 msgid "Choose Directory"
 msgstr "ディレクトリ選択してください"
@@ -8310,11 +8220,6 @@ msgstr "マクロを選択してください。"
 msgid "Select Code Macro"
 msgstr "コードマクロを選択"
 
-#: lazarusidestrconsts.liscurrent
-msgctxt "lazarusidestrconsts.liscurrent"
-msgid "Current"
-msgstr "現在"
-
 #: lazarusidestrconsts.liscurrentlclwidgetset
 #, object-pascal-format
 msgid "Current LCL widgetset: \"%s\""
@@ -8361,22 +8266,6 @@ msgctxt "lazarusidestrconsts.liscut"
 msgid "Cut"
 msgstr "切り取り"
 
-#: lazarusidestrconsts.lisdadattach
-msgid "Attach"
-msgstr "添付"
-
-#: lazarusidestrconsts.lisdadimagename
-msgid "Image Name"
-msgstr "画像名"
-
-#: lazarusidestrconsts.lisdadpid
-msgid "PID"
-msgstr "PID"
-
-#: lazarusidestrconsts.lisdadrunningprocesses
-msgid "Running Processes"
-msgstr "プロセスを実行中"
-
 #: lazarusidestrconsts.lisdatamodule
 msgid "Data Module"
 msgstr "データモジュール"
@@ -8385,36 +8274,6 @@ msgstr "データモジュール"
 msgid "Date"
 msgstr "日付"
 
-#: lazarusidestrconsts.lisdbgallitemdelete
-msgctxt "lazarusidestrconsts.lisdbgallitemdelete"
-msgid "Delete all"
-msgstr "すべて削除"
-
-#: lazarusidestrconsts.lisdbgallitemdeletehint
-msgctxt "lazarusidestrconsts.lisdbgallitemdeletehint"
-msgid "Delete all"
-msgstr "すべて削除"
-
-#: lazarusidestrconsts.lisdbgallitemdisable
-msgctxt "lazarusidestrconsts.lisdbgallitemdisable"
-msgid "Disable all"
-msgstr "すべて無効に"
-
-#: lazarusidestrconsts.lisdbgallitemdisablehint
-msgctxt "lazarusidestrconsts.lisdbgallitemdisablehint"
-msgid "Disable all"
-msgstr "すべて無効にする"
-
-#: lazarusidestrconsts.lisdbgallitemenable
-msgctxt "lazarusidestrconsts.lisdbgallitemenable"
-msgid "Enable all"
-msgstr "すべて有効に"
-
-#: lazarusidestrconsts.lisdbgallitemenablehint
-msgctxt "lazarusidestrconsts.lisdbgallitemenablehint"
-msgid "Enable all"
-msgstr "すべて有効にする"
-
 #: lazarusidestrconsts.lisdbgasmcopyaddresstoclipboard
 msgid "Copy address to Clipboard"
 msgstr ""
@@ -8422,11 +8281,6 @@ msgstr ""
 #: lazarusidestrconsts.lisdbgasmcopytoclipboard
 msgid "Copy to Clipboard"
 msgstr "クリップボードにコピー"
-
-#: lazarusidestrconsts.lisdbgbreakpointpropertieshint
-msgctxt "lazarusidestrconsts.lisdbgbreakpointpropertieshint"
-msgid "Breakpoint Properties ..."
-msgstr "ブレークポイントプロパティ ..."
 
 #: lazarusidestrconsts.lisdbgenbreakpointevaluation
 msgid "Breakpoint Evaluation"
@@ -8488,31 +8342,6 @@ msgstr "Windowsメッセージが投函されました"
 msgid "Windows Message Sent"
 msgstr "Windowsメッセージが送られました"
 
-#: lazarusidestrconsts.lisdbgitemdeletehint
-msgctxt "lazarusidestrconsts.lisdbgitemdeletehint"
-msgid "Delete"
-msgstr "削除"
-
-#: lazarusidestrconsts.lisdbgitemdisable
-msgctxt "lazarusidestrconsts.lisdbgitemdisable"
-msgid "Disable"
-msgstr "無効に"
-
-#: lazarusidestrconsts.lisdbgitemdisablehint
-msgctxt "lazarusidestrconsts.lisdbgitemdisablehint"
-msgid "Disable"
-msgstr "無効にする"
-
-#: lazarusidestrconsts.lisdbgitemenable
-msgctxt "lazarusidestrconsts.lisdbgitemenable"
-msgid "Enable"
-msgstr "有効に"
-
-#: lazarusidestrconsts.lisdbgitemenablehint
-msgctxt "lazarusidestrconsts.lisdbgitemenablehint"
-msgid "Enable"
-msgstr "有効にする"
-
 #: lazarusidestrconsts.lisdbgmangnodebuggerspecified
 msgid "No debugger specified"
 msgstr "デバッガが指定されていません。"
@@ -8525,19 +8354,6 @@ msgstr "とにかくブレークポイントを作成する"
 #, object-pascal-format
 msgid "There is no debugger specified.%sSetting breakpoints have no effect until you set up a Debugger in the debugger options dialog in the menu."
 msgstr "指定されたデバッガがありません。%sブレークポイントの設置は、メニューのデバッガオプションダイアログでデバッガを設定するまで効力を持ちません。"
-
-#: lazarusidestrconsts.lisdbgterminal
-msgctxt "lazarusidestrconsts.lisdbgterminal"
-msgid "Console In/Output"
-msgstr ""
-
-#: lazarusidestrconsts.lisdbgwinpower
-msgid "On/Off"
-msgstr "On/Off"
-
-#: lazarusidestrconsts.lisdbgwinpowerhint
-msgid "Disable/Enable updates for the entire window"
-msgstr "ウィンドウ全体への更新を無効／有効"
 
 #: lazarusidestrconsts.lisdebug
 msgctxt "lazarusidestrconsts.lisdebug"
@@ -8554,18 +8370,6 @@ msgstr "デバッガ"
 #| msgid "Debugger error%sOoops, the debugger entered the error state%sSave your work now !%sHit Stop, and hope the best, we're pulling the plug."
 msgid "The debugger encountered an internal error.%0:s%0:sSave your work.%0:sYou may then hit \"Stop\", or \"Reset debugger\" to terminate the debug session."
 msgstr "デバッガエラー%sおっと、デバッガがエラー状態になりました。%sすぐに作業内容を保存してください！%sStopキーを押してください。うまくいけば停止します。"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackerror
-msgid "Debugger Error"
-msgstr "デバッガエラー"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackinformation
-msgid "Debugger Information"
-msgstr "デバッガ情報"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackwarning
-msgid "Debugger Warning"
-msgstr "デバッガ警告"
 
 #: lazarusidestrconsts.lisdebuggerinvalid
 msgid "Debugger invalid"
@@ -8707,18 +8511,6 @@ msgstr "プロセス"
 msgid "Reset Debugger after each run"
 msgstr "実行毎にデバッガをリセット"
 
-#: lazarusidestrconsts.lisdebugoptionsfrmresume
-msgid "Resume"
-msgstr "再開"
-
-#: lazarusidestrconsts.lisdebugoptionsfrmresumehandled
-msgid "Resume Handled"
-msgstr "扱われたものを再開"
-
-#: lazarusidestrconsts.lisdebugoptionsfrmresumeunhandled
-msgid "Resume Unhandled"
-msgstr "扱われていないものを再開"
-
 #: lazarusidestrconsts.lisdebugoptionsfrmshowexitcodeonstop
 msgid "Show message on stop with Error (Exit-code <> 0)"
 msgstr ""
@@ -8765,11 +8557,6 @@ msgstr "ファイルを読み込めません。"
 msgid "Unable to load file \"%s\"."
 msgstr "ファイル\"%s\"を読み込めません。"
 
-#: lazarusidestrconsts.lisdecimal
-msgctxt "lazarusidestrconsts.lisdecimal"
-msgid "Decimal"
-msgstr "小数"
-
 #: lazarusidestrconsts.lisdefault
 msgctxt "lazarusidestrconsts.lisdefault"
 msgid "Default"
@@ -8803,11 +8590,6 @@ msgstr "補完ボックスの長いヒントを遅らせる"
 msgid "Delay for hints"
 msgstr ""
 
-#: lazarusidestrconsts.lisdelete
-msgctxt "lazarusidestrconsts.lisdelete"
-msgid "Delete"
-msgstr "削除"
-
 #: lazarusidestrconsts.lisdelete2
 msgid "Delete?"
 msgstr "削除？"
@@ -8821,23 +8603,6 @@ msgstr "追加項目\"%s\"を削除しますか？"
 msgid "&Delete All"
 msgstr "すべて削除(&D)"
 
-#: lazarusidestrconsts.lisdeleteallbreakpoints
-msgid "Delete all breakpoints?"
-msgstr "すべてのブレークポイントを削除しますか？"
-
-#: lazarusidestrconsts.lisdeleteallbreakpoints2
-#, object-pascal-format
-msgid "Delete all breakpoints in file \"%s\"?"
-msgstr "ファイル\"%s\"のすべてのブレークポイントを削除しますか？"
-
-#: lazarusidestrconsts.lisdeleteallinsamesource
-msgid "Delete All in same source"
-msgstr "同じソース内のすべてを削除する"
-
-#: lazarusidestrconsts.lisdeleteallselectedbreakpoints
-msgid "Delete all selected breakpoints?"
-msgstr "選択されたすべてのブレークポイントを削除しますか？"
-
 #: lazarusidestrconsts.lisdeleteallthesefiles
 msgid "Delete all these files?"
 msgstr "これらすべてのファイルを削除しますか？"
@@ -8845,25 +8610,6 @@ msgstr "これらすべてのファイルを削除しますか？"
 #: lazarusidestrconsts.lisdeleteambiguousfile
 msgid "Delete ambiguous file?"
 msgstr "曖昧なファイルを削除しますか？"
-
-#: lazarusidestrconsts.lisdeletebreakpoint
-msgid "Delete Breakpoint"
-msgstr "ブレークポイントを削除"
-
-#: lazarusidestrconsts.lisdeletebreakpointatline
-#, object-pascal-format
-msgid "Delete breakpoint at%s\"%s\" line %d?"
-msgstr "ブレークポイントを削除しますか？%s\"%s\" 行 %d"
-
-#: lazarusidestrconsts.lisdeletebreakpointforaddress
-#, object-pascal-format
-msgid "Delete breakpoint for address %s?"
-msgstr "アドレス%sのブレークポイントを削除しますか？"
-
-#: lazarusidestrconsts.lisdeletebreakpointforwatch
-#, object-pascal-format
-msgid "Delete watchpoint for \"%s\"?"
-msgstr "監視ポイント\"%s\"を削除しますか？"
 
 #: lazarusidestrconsts.lisdeletefilefailed
 msgid "Delete file failed"
@@ -8986,10 +8732,6 @@ msgstr "エディタの差分を開く"
 msgid "different unit %s found at new position \"%s\""
 msgstr "異なるユニット%sが新しい場所\"%s\"に見つかりました"
 
-#: lazarusidestrconsts.lisdigits
-msgid "Digits:"
-msgstr "桁"
-
 #: lazarusidestrconsts.lisdirectives
 msgid "Directives"
 msgstr "指令"
@@ -9023,23 +8765,6 @@ msgstr "フォルダは書き込み可能ではありません。"
 #: lazarusidestrconsts.lisdirectorywheretheideputsthepofiles
 msgid "Directory where the IDE puts the .po files"
 msgstr "IDEがpoファイルを置いたディレクトリ"
-
-#: lazarusidestrconsts.lisdisableallinsamesource
-msgid "Disable All in same source"
-msgstr "同じソース内のすべてを無効にする"
-
-#: lazarusidestrconsts.lisdisablebreakpoint
-msgid "Disable Breakpoint"
-msgstr "ブレークポイントを無効化"
-
-#: lazarusidestrconsts.lisdisabled
-msgctxt "lazarusidestrconsts.lisdisabled"
-msgid "Disabled"
-msgstr "無効化"
-
-#: lazarusidestrconsts.lisdisablegroups
-msgid "Disable Groups"
-msgstr "グループを無効に"
 
 #: lazarusidestrconsts.lisdisablei18nforlfm
 msgid "Disable I18N for LFM"
@@ -9130,11 +8855,6 @@ msgstr ""
 #: lazarusidestrconsts.lisdistinguishbigandsmalllettersegaanda
 msgid "Distinguish big and small letters e.g. A and a"
 msgstr "大文字と小文字（例:Aとa）を区別する"
-
-#: lazarusidestrconsts.lisdlgadd
-msgctxt "lazarusidestrconsts.lisdlgadd"
-msgid "Add ..."
-msgstr "追加 ..."
 
 #: lazarusidestrconsts.lisdlgalloptions
 msgid "All options ..."
@@ -9588,23 +9308,6 @@ msgstr "空"
 msgid "Destination directory for publishing is either a relative path or empty."
 msgstr ""
 
-#: lazarusidestrconsts.lisenableall
-msgid "&Enable All"
-msgstr "すべて有効にする(&E)"
-
-#: lazarusidestrconsts.lisenableallinsamesource
-msgid "Enable All in same source"
-msgstr "同じソース内のすべてを有効にする"
-
-#: lazarusidestrconsts.lisenablebreakpoint
-msgid "Enable Breakpoint"
-msgstr "ブレークポイントを有効に"
-
-#: lazarusidestrconsts.lisenabled
-msgctxt "lazarusidestrconsts.lisenabled"
-msgid "Enabled"
-msgstr "有効"
-
 #: lazarusidestrconsts.lisenabledonlyforpackages
 msgid "Enabled only for packages."
 msgstr "パッケージのためにのみ有効"
@@ -9613,10 +9316,6 @@ msgstr "パッケージのためにのみ有効"
 #, object-pascal-format
 msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
 msgstr "ユニット%s（パッケージ%sの）\"Use Unit\"フラグを有効に"
-
-#: lazarusidestrconsts.lisenablegroups
-msgid "Enable Groups"
-msgstr "グループを有効に"
 
 #: lazarusidestrconsts.lisenablei18nforlfm
 msgid "Enable I18N for LFM"
@@ -9872,39 +9571,6 @@ msgstr "ファイル\"%s\"への書き込み中にエラー"
 msgid "Error writing package list to file%s%s%s%s"
 msgstr "パッケージリストをファイル %s%s%s%s に書き込み中にエラー"
 
-#: lazarusidestrconsts.lisevalexpression
-msgctxt "lazarusidestrconsts.lisevalexpression"
-msgid "Eval expression"
-msgstr "式を評価"
-
-#: lazarusidestrconsts.lisevaluateall
-msgid "Evaluate all"
-msgstr ""
-
-#: lazarusidestrconsts.lisevaluatemodify
-msgid "&Evaluate/Modify"
-msgstr "評価/修正(&E)"
-
-#: lazarusidestrconsts.liseventlogclear
-msgid "Clear Events"
-msgstr "イベントをクリア"
-
-#: lazarusidestrconsts.liseventlogoptions
-msgid "Event Log Options ..."
-msgstr "イベントログオプション ..."
-
-#: lazarusidestrconsts.liseventlogsavetofile
-msgid "Save Events to File"
-msgstr "イベントをファイルに保存"
-
-#: lazarusidestrconsts.liseventslogaddcomment
-msgid "Add Comment ..."
-msgstr "コメントを追加 ..."
-
-#: lazarusidestrconsts.liseventslogaddcomment2
-msgid "Add Comment"
-msgstr "コメントを追加"
-
 #: lazarusidestrconsts.liseverynthlinenumber
 msgid "Every n-th line number"
 msgstr "すべてのn番目の行番号"
@@ -9925,10 +9591,6 @@ msgstr "例：%s識別子%sTMyEnum.Enum%sUnitname.Identifier%s#PackageName.UnitN
 #: lazarusidestrconsts.lisexamplesopenfirstselected
 msgid "Open first selected"
 msgstr "初めに選択されたものを開く"
-
-#: lazarusidestrconsts.lisexceptiondialog
-msgid "Debugger Exception Notification"
-msgstr "デバッガ例外通知"
 
 #: lazarusidestrconsts.lisexclude
 msgid "Exclude"
@@ -10037,10 +9699,6 @@ msgstr "選択対象をエクスポート"
 #: lazarusidestrconsts.lisexportsub
 msgid "Export >>"
 msgstr "エクスポート >>"
-
-#: lazarusidestrconsts.lisexpression
-msgid "Expression:"
-msgstr "評価"
 
 #: lazarusidestrconsts.lisextendincludefilesearchpathofpackagewith
 #, object-pascal-format
@@ -10211,10 +9869,6 @@ msgstr "ファイル \"%s\" は仮想ファイルです"
 #: lazarusidestrconsts.lisfilelinkerror
 msgid "File link error"
 msgstr "ファイルリンクエラー"
-
-#: lazarusidestrconsts.lisfilenameaddress
-msgid "Filename/Address"
-msgstr "ファイル名/アドレス"
 
 #: lazarusidestrconsts.lisfilenamestyle
 msgid "Filename Style"
@@ -10430,10 +10084,6 @@ msgstr "最初のテスト(&F)"
 #: lazarusidestrconsts.lisfixlfmfile
 msgid "Fix LFM file"
 msgstr "LFMファイルを修復"
-
-#: lazarusidestrconsts.lisfloatingpoin
-msgid "Floating Point"
-msgstr "浮動小数点"
 
 #: lazarusidestrconsts.lisfocushint
 msgid "Focus hint"
@@ -10764,10 +10414,6 @@ msgstr "グローバル設定"
 msgid "Goto Line"
 msgstr "行に移動"
 
-#: lazarusidestrconsts.lisgotoselected
-msgid "Goto selected"
-msgstr "選択行に移動"
-
 #: lazarusidestrconsts.lisgplnotice
 #, fuzzy
 #| msgid ""
@@ -10805,44 +10451,9 @@ msgstr ""
 msgid "Group"
 msgstr "グループ"
 
-#: lazarusidestrconsts.lisgroupassignexisting
-#, object-pascal-format
-msgid "Assign to existing \"%s\" group?"
-msgstr "既存の\"%s\"グループに割り当てますか？"
-
-#: lazarusidestrconsts.lisgroupemptydelete
-#, object-pascal-format
-msgid "No more breakpoints are assigned to group \"%s\", delete it?"
-msgstr "これ以上のブレークポイントをグループ\"%s\"に割り当てできません。削除しますか？"
-
-#: lazarusidestrconsts.lisgroupemptydeletemore
-#, object-pascal-format
-msgid "%sThere are %d more empty groups, delete all?"
-msgstr "%s　%d の空のグループがあります。全て削除しますか？"
-
 #: lazarusidestrconsts.lisgrouplocalvariables
 msgid "Group automatically defined local variables"
 msgstr "グループがローカル変数を自動的に拒否"
-
-#: lazarusidestrconsts.lisgroupnameemptyclearinstead
-msgid "The group name cannot be empty. Clear breakpoints' group(s)?"
-msgstr "グループ名は空であってはなりません。ブレークポイントのグループを消去しますか？"
-
-#: lazarusidestrconsts.lisgroupnameinput
-msgid "Group name:"
-msgstr "グループ名"
-
-#: lazarusidestrconsts.lisgroupnameinvalid
-msgid "BreakpointGroup name must be a valid Pascal identifier name."
-msgstr "ブレークポイントグループはpascalの有効な識別子名でなければなりません。"
-
-#: lazarusidestrconsts.lisgroupsetnew
-msgid "Set new group ..."
-msgstr "新しいグループを設定 ..."
-
-#: lazarusidestrconsts.lisgroupsetnone
-msgid "Clear group(s)"
-msgstr "グループを消去"
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
 msgid "Enable or Disable groups of debug output. Valid Options are:"
@@ -10864,11 +10475,6 @@ msgstr "ヘッダ色"
 msgid "Header comment for class"
 msgstr "クラスのためのヘッダコメント"
 
-#: lazarusidestrconsts.lishelp
-msgctxt "lazarusidestrconsts.lishelp"
-msgid "Help"
-msgstr "ヘルプ"
-
 #: lazarusidestrconsts.lishelpentries
 msgid "Help entries"
 msgstr "ヘルプエントリ"
@@ -10876,10 +10482,6 @@ msgstr "ヘルプエントリ"
 #: lazarusidestrconsts.lishelpselectordialog
 msgid "Help selector"
 msgstr "ヘルプ選択"
-
-#: lazarusidestrconsts.lishexadecimal
-msgid "Hexadecimal"
-msgstr "16進法"
 
 #: lazarusidestrconsts.lishfmhelpforfreepascalcompilermessage
 msgid "Help for Free Pascal Compiler message"
@@ -10980,10 +10582,6 @@ msgstr "フォームを表示"
 #: lazarusidestrconsts.lishintviewunits
 msgid "View Units"
 msgstr "ユニットを表示"
-
-#: lazarusidestrconsts.lishitcount
-msgid "Hitcount"
-msgstr "ヒット数"
 
 #: lazarusidestrconsts.lishlpoptsdatabases
 msgid "Databases"
@@ -11171,11 +10769,6 @@ msgstr "セッション情報が変更された場合にのみそれを保存す
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Lazarus の異なる 2 つのバージョンを共に使用されたいのであれば、2 つ目の Lazarus を primary-config-path あるいは pcp のコマンドライン引数で開始しなければなりません。%s例："
 
-#: lazarusidestrconsts.lisignore
-msgctxt "lazarusidestrconsts.lisignore"
-msgid "Ignore"
-msgstr "無視"
-
 #: lazarusidestrconsts.lisignoreall
 msgid "Ignore all"
 msgstr "すべて無視"
@@ -11183,10 +10776,6 @@ msgstr "すべて無視"
 #: lazarusidestrconsts.lisignoreandcontinue
 msgid "Ignore and continue"
 msgstr "無視して継続"
-
-#: lazarusidestrconsts.lisignoreexceptiontype
-msgid "Ignore this exception type"
-msgstr "この例外型を無視"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -11291,10 +10880,6 @@ msgstr ""
 #: lazarusidestrconsts.lisindentationforpascalsources
 msgid "Indentation for Pascal sources"
 msgstr "Pascal ソースのインデント付け"
-
-#: lazarusidestrconsts.lisindex
-msgid "Index"
-msgstr "索引"
 
 #: lazarusidestrconsts.lisinformation
 msgid "Information"
@@ -11446,57 +11031,6 @@ msgstr "url タグを挿入"
 msgid "In session"
 msgstr "セッション内"
 
-#: lazarusidestrconsts.lisinspect
-msgid "&Inspect"
-msgstr "検査(&I)"
-
-#: lazarusidestrconsts.lisinspectaddwatch
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisinspectaddwatch"
-msgid "Add watch"
-msgstr "監視追加"
-
-#: lazarusidestrconsts.lisinspectclassinherit
-#, object-pascal-format, fuzzy
-#| msgid "%s : Class %s inherits from %s"
-msgid "%s: class %s inherits from %s"
-msgstr "%s :クラス%sは%sから継承"
-
-#: lazarusidestrconsts.lisinspectdata
-msgid "Data"
-msgstr "データ"
-
-#: lazarusidestrconsts.lisinspectdialog
-msgid "Debug Inspector"
-msgstr "デバッグインスペクタ"
-
-#: lazarusidestrconsts.lisinspectmethods
-msgid "Methods"
-msgstr "メソッド"
-
-#: lazarusidestrconsts.lisinspectpointerto
-#, object-pascal-format
-msgid "Pointer to %s"
-msgstr "%sへのポインタ"
-
-#: lazarusidestrconsts.lisinspectproperties
-msgctxt "lazarusidestrconsts.lisinspectproperties"
-msgid "Properties"
-msgstr "プロパティ"
-
-#: lazarusidestrconsts.lisinspectunavailableerror
-#, object-pascal-format
-msgid "%s: unavailable (error: %s)"
-msgstr ""
-
-#: lazarusidestrconsts.lisinspectuseinstance
-msgid "Instance"
-msgstr "インスタンス"
-
-#: lazarusidestrconsts.lisinspectuseinstancehint
-msgid "Use instance class"
-msgstr "インスタンスクラスを使用"
-
 #: lazarusidestrconsts.lisinstallationfailed
 msgid "Installation failed"
 msgstr "インストールに失敗"
@@ -11605,14 +11139,6 @@ msgstr "無効なモード %s"
 #: lazarusidestrconsts.lisinvalidmultiselection
 msgid "Invalid multiselection"
 msgstr "無効な複数選択"
-
-#: lazarusidestrconsts.lisinvalidoff
-msgid "Invalid (Off)"
-msgstr "無効 (Off)"
-
-#: lazarusidestrconsts.lisinvalidon
-msgid "Invalid (On)"
-msgstr "無効 (On)"
 
 #: lazarusidestrconsts.lisinvalidpascalidentifiercap
 msgid "Invalid Pascal Identifier"
@@ -12309,11 +11835,6 @@ msgstr "アプリケーションの実行が無効です"
 msgid "Launching target command line"
 msgstr "対象となるコマンドラインを実行"
 
-#: lazarusidestrconsts.lislazarus
-msgctxt "lazarusidestrconsts.lislazarus"
-msgid "Lazarus"
-msgstr "Lazarus"
-
 #: lazarusidestrconsts.lislazarusdefault
 msgid "Lazarus Default"
 msgstr "Lazarus既定値"
@@ -12643,14 +12164,6 @@ msgstr "ライブラリパス"
 msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under macOS)."
 msgstr "Free Pascal共有ライブラリ（Windowsでは.dll, Linuxでは.so, MacOS Xでは.dylib）"
 
-#: lazarusidestrconsts.lisline
-msgid "Line:"
-msgstr "行："
-
-#: lazarusidestrconsts.lislinelength
-msgid "Line/Length"
-msgstr "行/長さ"
-
 #: lazarusidestrconsts.lislink
 msgid "Link:"
 msgstr "リンク"
@@ -12679,54 +12192,6 @@ msgstr "マクロを以下から読み込む"
 #: lazarusidestrconsts.lislocal
 msgid "&Local"
 msgstr "ローカル(&L)"
-
-#: lazarusidestrconsts.lislocals
-#, fuzzy
-#| msgid "Locals"
-msgctxt "lazarusidestrconsts.lislocals"
-msgid "Local Variables"
-msgstr "ローカル"
-
-#: lazarusidestrconsts.lislocalsdlgcopyall
-msgid "Copy &all"
-msgstr ""
-
-#: lazarusidestrconsts.lislocalsdlgcopyname
-msgid "&Copy Name"
-msgstr "名前をコピー(&C)"
-
-#: lazarusidestrconsts.lislocalsdlgcopynamevalue
-msgid "Co&py Name and Value"
-msgstr ""
-
-#: lazarusidestrconsts.lislocalsdlgcopyrawvalue
-msgid "Copy &RAW Value"
-msgstr "生の値をコピー(&R)"
-
-#: lazarusidestrconsts.lislocalsdlgcopyvalue
-msgid "C&opy Value"
-msgstr "値をコピー(&o)"
-
-#: lazarusidestrconsts.lislocalsnotevaluated
-msgid "Locals not evaluated"
-msgstr "ローカル変数が評価されていません"
-
-#: lazarusidestrconsts.lislogcallstack
-msgid "Log Call Stack"
-msgstr "コールスタックを記録"
-
-#: lazarusidestrconsts.lislogcallstacklimit
-msgid "(frames limit. 0 - no limits)"
-msgstr "フレーム制限. 0 - 制限なし"
-
-#: lazarusidestrconsts.lislogevalexpression
-msgctxt "lazarusidestrconsts.lislogevalexpression"
-msgid "Eval expression"
-msgstr "式を評価"
-
-#: lazarusidestrconsts.lislogmessage
-msgid "Log Message"
-msgstr "ログメッセージ"
 
 #: lazarusidestrconsts.lislowercasestring
 msgid "lowercase string"
@@ -12897,11 +12362,6 @@ msgstr "並行してコンパイルするためのスレッドの最大値。デ
 msgid "Maximum parallel processes, 0 means default (%s)"
 msgstr "同時並行のプロセスの最大。0が既定値 (%s)"
 
-#: lazarusidestrconsts.lismaxs
-#, object-pascal-format
-msgid "Max %d"
-msgstr "最大 %d"
-
 #: lazarusidestrconsts.lismaybeyouhavetorecompilethepackage
 #, object-pascal-format
 msgid "%s Maybe you have to recompile the package."
@@ -12916,10 +12376,6 @@ msgstr "%s MB"
 msgctxt "lazarusidestrconsts.lismeaction"
 msgid "Action"
 msgstr "アクション"
-
-#: lazarusidestrconsts.lismemorydump
-msgid "Memory Dump"
-msgstr "メモリダンプ"
 
 #: lazarusidestrconsts.lismenuabortbuild
 msgid "Abort Build"
@@ -13038,10 +12494,6 @@ msgstr "\"Lazarus 構築\" を設定 ..."
 #: lazarusidestrconsts.lismenucontexthelp
 msgid "Context sensitive Help"
 msgstr "状況感知ヘルプ"
-
-#: lazarusidestrconsts.lismenucontinue
-msgid "&Continue"
-msgstr "続ける(&C)"
 
 #: lazarusidestrconsts.lismenuconvertdelphipackage
 msgid "Convert Delphi Package to Lazarus Package ..."
@@ -13957,11 +13409,6 @@ msgctxt "lazarusidestrconsts.lismenunewunit"
 msgid "New Unit"
 msgstr "新規ユニット"
 
-#: lazarusidestrconsts.lismenuok
-msgctxt "lazarusidestrconsts.lismenuok"
-msgid "&OK"
-msgstr "OK(&O)"
-
 #: lazarusidestrconsts.lismenuonlinehelp
 msgid "Online Help"
 msgstr "オンラインヘルプ"
@@ -14293,10 +13740,6 @@ msgstr "アセンブラ"
 #: lazarusidestrconsts.lismenuviewbreakpoints
 msgid "BreakPoints"
 msgstr "ブレークポイント"
-
-#: lazarusidestrconsts.lismenuviewcallstack
-msgid "Call Stack"
-msgstr "呼び出しスタック"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"
@@ -14863,10 +14306,6 @@ msgstr "それぞれの行の前のテキスト(&b)"
 msgid "&Trim clipboard contents"
 msgstr "クリップボードの中身を切り揃え(&T)"
 
-#: lazarusidestrconsts.lisms
-msgid "(ms)"
-msgstr "(ms)"
-
 #: lazarusidestrconsts.lismsgcolors
 msgid "Message colors"
 msgstr "メッセージ色"
@@ -14899,11 +14338,6 @@ msgstr "アクティブ構築モードの名前"
 #: lazarusidestrconsts.lisnameofnewprocedure
 msgid "Name of new procedure"
 msgstr "新しい手続きの名前"
-
-#: lazarusidestrconsts.lisnever
-msgctxt "lazarusidestrconsts.lisnever"
-msgid "Never"
-msgstr "しない(ない)"
 
 #: lazarusidestrconsts.lisnew
 msgctxt "lazarusidestrconsts.lisnew"
@@ -14997,10 +14431,6 @@ msgstr "新しく記録されたマクロ。保存されていません"
 #: lazarusidestrconsts.lisnewunitsareaddedtousessections
 msgid "New units are added to uses sections"
 msgstr "新しいユニットが uses 節に加えられます"
-
-#: lazarusidestrconsts.lisno
-msgid "No"
-msgstr "いいえ"
 
 #: lazarusidestrconsts.lisnoautosaveactivedesktop
 msgid "'Auto save active desktop' option is turned off, you will need to save current desktop manually."
@@ -15205,10 +14635,6 @@ msgstr "オブジェクトパス"
 msgid "Switch to Object Inspector Favorites tab"
 msgstr "オブジェクトインスペクタのお気に入りのタブに切り替え"
 
-#: lazarusidestrconsts.lisoff
-msgid "? (Off)"
-msgstr "? (Off)"
-
 #: lazarusidestrconsts.lisofpackage
 #, object-pascal-format
 msgid " of package %s"
@@ -15306,18 +14732,9 @@ msgstr "状態"
 msgid "%sThis package is installed but the lpk file was not found"
 msgstr "%sこのパッケージはインストールされましたが、lpkファイルが見つかりませんでした"
 
-#: lazarusidestrconsts.lisok
-msgctxt "lazarusidestrconsts.lisok"
-msgid "OK"
-msgstr "OK"
-
 #: lazarusidestrconsts.lisoldclass
 msgid "Old Class"
 msgstr "古いクラス"
-
-#: lazarusidestrconsts.lison
-msgid "? (On)"
-msgstr "? (On)"
 
 #: lazarusidestrconsts.lisonbreaklineiereturnorenterkey
 msgid "On break line (i.e. return or enter key)"
@@ -15649,10 +15066,6 @@ msgstr "パーサ \"%s\": %s"
 #: lazarusidestrconsts.lisparsers
 msgid "Parsers:"
 msgstr ""
-
-#: lazarusidestrconsts.lispasscount
-msgid "Pass Count"
-msgstr "通過カウント"
 
 #: lazarusidestrconsts.lispassingcompilerdefinetwicewithdifferentvalues
 #, object-pascal-format
@@ -16211,10 +15624,6 @@ msgstr "無効なユニット名"
 #, object-pascal-format
 msgid "Missing files of package %s"
 msgstr "パッケージの見つからないファイル %s"
-
-#: lazarusidestrconsts.lispendingon
-msgid "Pending (On)"
-msgstr ""
 
 #: lazarusidestrconsts.lispenewfilenotinincludepath
 msgid "New file not in include path"
@@ -17100,10 +16509,6 @@ msgstr ".poファイルディレクトリを選択してください"
 msgid "Do not save any session info"
 msgstr "セッション情報を保存しない"
 
-#: lazarusidestrconsts.lispointer
-msgid "Pointer"
-msgstr "ポインタ"
-
 #: lazarusidestrconsts.lisposaveinideconfigdirectory
 msgid "Save in .lps file in IDE config directory"
 msgstr "IDE設定ディレクトリの.lpsファイルに保存"
@@ -17675,19 +17080,10 @@ msgstr "記録"
 msgid "Recorded"
 msgstr "記録済み"
 
-#: lazarusidestrconsts.lisrecordstruct
-msgid "Record/Structure"
-msgstr "構造体"
-
 #: lazarusidestrconsts.lisredo
 msgctxt "lazarusidestrconsts.lisredo"
 msgid "Redo"
 msgstr "やり直し"
-
-#: lazarusidestrconsts.lisregisters
-msgctxt "lazarusidestrconsts.lisregisters"
-msgid "Registers"
-msgstr "レジスタ"
 
 #: lazarusidestrconsts.lisregularexpression
 msgid "Regular expression"
@@ -17834,10 +17230,6 @@ msgstr "他のエンコーディングで開き直す"
 msgctxt "lazarusidestrconsts.lisrepeat"
 msgid "Repeat"
 msgstr "繰り返す"
-
-#: lazarusidestrconsts.lisrepeatcount
-msgid "Repeat Count:"
-msgstr "反復回数："
 
 #: lazarusidestrconsts.lisreplace
 msgctxt "lazarusidestrconsts.lisreplace"
@@ -18717,10 +18109,6 @@ msgstr ""
 msgid "Source and Destination are the same:%s%s"
 msgstr "出所(Source)と行き先が同じです:%s%s"
 
-#: lazarusidestrconsts.lissourcebreakpoint
-msgid "&Source Breakpoint ..."
-msgstr "ソースのブレークポイント(&S) ..."
-
 #: lazarusidestrconsts.lissourcedirectorydoesnotexist
 #, object-pascal-format
 msgid "Source directory \"%s\" does not exist."
@@ -18816,15 +18204,6 @@ msgstr "奇妙なlpiファイル"
 #: lazarusidestrconsts.lisstreamingerror
 msgid "Streaming error"
 msgstr "ストリーミングエラー"
-
-#: lazarusidestrconsts.lisstring
-msgid "String"
-msgstr "文字列"
-
-#: lazarusidestrconsts.lisstyle
-msgctxt "lazarusidestrconsts.lisstyle"
-msgid "Style"
-msgstr "スタイル"
 
 #: lazarusidestrconsts.lissubprocedure
 msgid "Sub Procedure"
@@ -18947,10 +18326,6 @@ msgstr "選択したコントロールのタブ順序を上へ移動"
 #, object-pascal-format
 msgid "Tabs for %s"
 msgstr "%sへのタブ"
-
-#: lazarusidestrconsts.listakesnapshot
-msgid "Take a Snapshot"
-msgstr "スナップショットを撮る"
 
 #: lazarusidestrconsts.listarget
 msgid "Target:"
@@ -19083,11 +18458,6 @@ msgstr "現在のFPCには設定ファイルがありません。いくつかの
 #, object-pascal-format
 msgid "The debugger \"%s\"%sdoes not exist or is not executable.%sSee Tools -> Options -> Debugger options"
 msgstr "デバッガ \"%s\"%s は存在しないか、実行ファイルではありません。%sツール→オプション→デバッガオプションを参照のこと"
-
-#: lazarusidestrconsts.listhedebuggerexecutabletypicallyhasthenamepleasegive
-#, object-pascal-format
-msgid "The debugger executable typically has the name \"%s\". Please give the full file path."
-msgstr "デバッガ実行ファイルは通常\"%s\"という名前を持っています。完全なファイルパスを与えて下さい。"
 
 #: lazarusidestrconsts.listhedefaultmodemustbestoredinproject
 msgid "The default mode must be stored in project, not in session."
@@ -19686,44 +19056,6 @@ msgstr "これは循環参照を招くでしょう。"
 #, object-pascal-format
 msgid "This will put a lot of text (%s) on the clipboard.%sProceed?"
 msgstr "これは多くのテキスト(%s)をクリップボードに置きます。%s進みますか？"
-
-#: lazarusidestrconsts.listhreads
-msgctxt "lazarusidestrconsts.listhreads"
-msgid "Threads"
-msgstr "スレッド"
-
-#: lazarusidestrconsts.listhreadscurrent
-msgctxt "lazarusidestrconsts.listhreadscurrent"
-msgid "Current"
-msgstr "現在"
-
-#: lazarusidestrconsts.listhreadsfunc
-msgctxt "lazarusidestrconsts.listhreadsfunc"
-msgid "Function"
-msgstr "関数"
-
-#: lazarusidestrconsts.listhreadsgoto
-msgid "Goto"
-msgstr "Goto"
-
-#: lazarusidestrconsts.listhreadsline
-msgctxt "lazarusidestrconsts.listhreadsline"
-msgid "Line"
-msgstr "行"
-
-#: lazarusidestrconsts.listhreadsnotevaluated
-msgid "Threads not evaluated"
-msgstr "スレッドは評価されていません"
-
-#: lazarusidestrconsts.listhreadssrc
-msgctxt "lazarusidestrconsts.listhreadssrc"
-msgid "Source"
-msgstr "ソース"
-
-#: lazarusidestrconsts.listhreadsstate
-msgctxt "lazarusidestrconsts.listhreadsstate"
-msgid "State"
-msgstr "状態"
 
 #: lazarusidestrconsts.listitle
 msgid "&Title"
@@ -20581,10 +19913,6 @@ msgstr "ユニット%sはパッケージ%sを必要とします"
 msgid "Units not found in project %s"
 msgstr "プロジェクト %sのユニットが見つかりません"
 
-#: lazarusidestrconsts.lisunsigned
-msgid "Unsigned"
-msgstr "未署名"
-
 #: lazarusidestrconsts.lisunusedunitsof
 #, object-pascal-format
 msgid "Unused units of %s"
@@ -20816,20 +20144,6 @@ msgstr "バージョン情報をクリップボードにコピー"
 msgid "Very Verbose"
 msgstr "きわめて詳細"
 
-#: lazarusidestrconsts.lisviewbreakpointproperties
-msgctxt "lazarusidestrconsts.lisviewbreakpointproperties"
-msgid "Breakpoint Properties ..."
-msgstr "ブレークポイントプロパティ ..."
-
-#: lazarusidestrconsts.lisviewsource
-msgid "View Source"
-msgstr "ソースを見る"
-
-#: lazarusidestrconsts.lisviewsourcedisass
-msgctxt "lazarusidestrconsts.lisviewsourcedisass"
-msgid "View Assembler"
-msgstr "アセンブラを見る"
-
 #: lazarusidestrconsts.lisviewsourcelfm
 msgid "View Source (.lfm)"
 msgstr "ソース(.lfm)を表示"
@@ -20852,59 +20166,6 @@ msgstr "、警告：%s"
 #, object-pascal-format
 msgid "%sWarning: This is the main unit. The new main unit will be %s.pas."
 msgstr "%s警告：これはメインユニットです。新しいメインユニットは%s.pasになります。"
-
-#: lazarusidestrconsts.liswatch
-msgid "&Watch"
-msgstr "監視(&W)"
-
-#: lazarusidestrconsts.liswatchdata
-msgid "Watch:"
-msgstr "監視："
-
-#: lazarusidestrconsts.liswatchkind
-msgid "Watch action"
-msgstr "アクションを監視："
-
-#: lazarusidestrconsts.liswatchkindread
-msgid "Read"
-msgstr "読む"
-
-#: lazarusidestrconsts.liswatchkindreadwrite
-msgid "Read/Write"
-msgstr "読み/書き"
-
-#: lazarusidestrconsts.liswatchkindwrite
-msgid "Write"
-msgstr "書き込み"
-
-#: lazarusidestrconsts.liswatchpoint
-msgid "&Data/Watch Breakpoint ..."
-msgstr "データ/監視ブレークポイント (&D) ..."
-
-#: lazarusidestrconsts.liswatchpointbreakpoint
-msgid "&Data/watch Breakpoint ..."
-msgstr "データ/監視ブレークポイント (&D) ..."
-
-#: lazarusidestrconsts.liswatchpropert
-msgid "Watch Properties"
-msgstr "プロパティの監視"
-
-#: lazarusidestrconsts.liswatchscope
-msgid "Watch scope"
-msgstr "監視のスコープ"
-
-#: lazarusidestrconsts.liswatchscopeglobal
-msgctxt "lazarusidestrconsts.liswatchscopeglobal"
-msgid "Global"
-msgstr "グローバル"
-
-#: lazarusidestrconsts.liswatchscopelocal
-msgid "Declaration"
-msgstr "宣言"
-
-#: lazarusidestrconsts.liswatchtowatchpoint
-msgid "Create &Data/Watch Breakpoint ..."
-msgstr "データ/監視ブレークポイントを作成 (&D)"
 
 #: lazarusidestrconsts.liswelcometolazaruside
 #, object-pascal-format
@@ -20978,37 +20239,6 @@ msgstr "適切なFPCソースがないと、コード閲覧と補完はとても
 msgid "With required packages"
 msgstr "要求されるパッケージ付き"
 
-#: lazarusidestrconsts.liswldeleteall
-msgid "De&lete All"
-msgstr "すべて削除(&l)"
-
-#: lazarusidestrconsts.liswldisableall
-msgid "D&isable All"
-msgstr "すべて無効にする(&i)"
-
-#: lazarusidestrconsts.liswlenableall
-msgid "E&nable All"
-msgstr "すべてを有効にする(&n)"
-
-#: lazarusidestrconsts.liswlexpression
-msgid "Expression"
-msgstr "式"
-
-#: lazarusidestrconsts.liswlinspectpane
-msgid "Inspect pane"
-msgstr "インスペクトペイン"
-
-#: lazarusidestrconsts.liswlproperties
-msgid "&Properties"
-msgstr "プロパティ(&P)"
-
-#: lazarusidestrconsts.liswlwatchlist
-#, fuzzy
-#| msgid "Watch List"
-msgctxt "lazarusidestrconsts.liswlwatchlist"
-msgid "Watches"
-msgstr "監視リスト"
-
 #: lazarusidestrconsts.liswordatcursorincurrenteditor
 msgid "Word at cursor in current editor"
 msgstr "現在のエディタ内のカーソル位置の単語"
@@ -21052,10 +20282,6 @@ msgstr "XMLエラー"
 #, object-pascal-format
 msgid "XML parser error in file %s%sError: %s"
 msgstr "ファイル%s%sでXMLパーサエラー: %s"
-
-#: lazarusidestrconsts.lisyes
-msgid "Yes"
-msgstr "はい"
 
 #: lazarusidestrconsts.lisyoucandisablethisforindividualformsviathepackageed
 msgid "You can disable this for individual forms via the package editor"
@@ -21240,36 +20466,6 @@ msgstr ""
 msgid "Add package unit to uses section"
 msgstr "uses 節にパッケージユニットを追加"
 
-#: lazarusidestrconsts.regdlgbinary
-msgctxt "lazarusidestrconsts.regdlgbinary"
-msgid "Binary"
-msgstr "バイナリ"
-
-#: lazarusidestrconsts.regdlgdecimal
-msgctxt "lazarusidestrconsts.regdlgdecimal"
-msgid "Decimal"
-msgstr "小数"
-
-#: lazarusidestrconsts.regdlgdisplaytypeforselectedregisters
-msgid "Display type for selected Registers"
-msgstr "選択されたレジスタについての型を表示"
-
-#: lazarusidestrconsts.regdlgformat
-msgid "Format"
-msgstr "フォーマット"
-
-#: lazarusidestrconsts.regdlghex
-msgid "Hex"
-msgstr "16進法"
-
-#: lazarusidestrconsts.regdlgoctal
-msgid "Octal"
-msgstr "8進法"
-
-#: lazarusidestrconsts.regdlgraw
-msgid "Raw"
-msgstr "生"
-
 #: lazarusidestrconsts.rsaddinverse
 msgid "Add Inverse"
 msgstr "否定を追加"
@@ -21277,10 +20473,6 @@ msgstr "否定を追加"
 #: lazarusidestrconsts.rsaddnewterm
 msgid "Add new term"
 msgstr ""
-
-#: lazarusidestrconsts.rsattachto
-msgid "Attach to"
-msgstr "次に添付"
 
 #: lazarusidestrconsts.rsattributes
 msgid "Attributes"
@@ -21333,10 +20525,6 @@ msgstr "新しい定義を作成"
 #: lazarusidestrconsts.rsenablei18n
 msgid "Enable i18n"
 msgstr "国際化を有効にする"
-
-#: lazarusidestrconsts.rsenterpid
-msgid "Enter PID"
-msgstr "PIDに入る"
 
 #: lazarusidestrconsts.rsfilterthelistwithstring
 msgid "Filter the lines in list with a string"

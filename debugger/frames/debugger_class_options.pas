@@ -34,7 +34,7 @@ uses
   DbgIntfDebuggerBase,
   // IdeIntf
   PropEdits, ObjectInspector, IDEOptionsIntf, IDEOptEditorIntf, IDEUtils,
-  GDBMIDebugger,
+  LazarusCommonStrConst, GDBMIDebugger,
   // IDE
   TransferMacros, LazarusIDEStrConsts, PathEditorDlg, IDEProcs, DialogProcs,
   InputHistory, EnvironmentOpts, BaseDebugManager, Project, Debugger,
@@ -244,7 +244,7 @@ begin
   UpdateDebuggerClass;
   cmbDebuggerPathEditingDone(nil);
 
-  FSelectedDbgPropertiesConfig := TDebuggerPropertiesConfig.CreateForDebuggerClass(TGDBMIDebugger);
+  FSelectedDbgPropertiesConfig := TDebuggerPropertiesConfig.CreateForDebuggerClass(TGDBMIDebugger, True);
   FSelectedDbgPropertiesConfig.ConfigName := GetUniqueName(lisNew);
   FCopiedDbgPropertiesConfigList.AddObject(FSelectedDbgPropertiesConfig.ConfigName, FSelectedDbgPropertiesConfig);
 
@@ -297,9 +297,9 @@ begin
     exit;
 
   i := FCopiedDbgPropertiesConfigList.IndexOfObject(FSelectedDbgPropertiesConfig);
-  FSelectedDbgPropertiesConfig.MarkAsDeleted;
+  if i >= 0 then
+    FCopiedDbgPropertiesConfigList.Delete(i);
   FSelectedDbgPropertiesConfig := nil;
-  FCopiedDbgPropertiesConfigList[i] := ''; // remove from named part of list
 
   FillNameDropDown;
   UpdateDebuggerClassDropDown;
@@ -332,6 +332,11 @@ begin
   List := TStringListUTF8Fast.Create;
   for i := 0 to TBaseDebugManagerIntf.DebuggerCount - 1 do begin
     d := TBaseDebugManagerIntf.Debuggers[i];
+    if (dfNotSuitableForOsArch in d.SupportedFeatures) and
+       ( (DebuggerOptions.DebuggerPropertiesConfigList.ForcedUnsuitableClass = nil) or
+         ( d <> DebuggerOptions.DebuggerPropertiesConfigList.ForcedUnsuitableClass) )
+    then
+      continue;
     List.AddObject(d.Caption, TObject(d));
   end;
   List.Sorted := True;
@@ -522,7 +527,6 @@ begin
     while i >= 0 do
       if (FCopiedDbgPropertiesConfigList[i] <> '') or
          (FCopiedDbgPropertiesConfigList.Opt[i].DebuggerClass <> SelectedDebuggerClass) or
-         (FCopiedDbgPropertiesConfigList.Opt[i].IsDeleted) or
          (FCopiedDbgPropertiesConfigList.Opt[i] = FSelectedDbgPropertiesConfig)
       then
         dec(i)
@@ -553,7 +557,7 @@ end;
 procedure TDebuggerClassOptionsFrame.ClearDbgProperties;
 begin
   PropertyGrid.Selection.Clear;
-  FCopiedDbgPropertiesConfigList.ClearAll;
+  FCopiedDbgPropertiesConfigList.Clear;
   DoModifiedDbgPropertiesCountChanged;
 end;
 
@@ -568,17 +572,14 @@ begin
   tbSelect.DropdownMenu := tbDropMenu;
   {$ENDIF}
   tbDropMenu.Items.Clear;
-  for i := 0 to FCopiedDbgPropertiesConfigList.Count - 1 do
-    if (not FCopiedDbgPropertiesConfigList.Opt[i].IsDeleted) and
-       (FCopiedDbgPropertiesConfigList.Opt[i].IsLoaded)
-    then begin
-      m := TMenuItem.Create(tbDropMenu);
-      m.Caption := FCopiedDbgPropertiesConfigList.Opt[i].DisplayName;
-      m.Tag := i;
-      m.OnClick := @DoNameSelected;
-      m.Checked := FCopiedDbgPropertiesConfigList.Opt[i] = FSelectedDbgPropertiesConfig;
-      tbDropMenu.Items.Add(m);
-    end;
+  for i := 0 to FCopiedDbgPropertiesConfigList.Count - 1 do begin
+    m := TMenuItem.Create(tbDropMenu);
+    m.Caption := FCopiedDbgPropertiesConfigList.Opt[i].DisplayName;
+    m.Tag := i;
+    m.OnClick := @DoNameSelected;
+    m.Checked := FCopiedDbgPropertiesConfigList.Opt[i] = FSelectedDbgPropertiesConfig;
+    tbDropMenu.Items.Add(m);
+  end;
   if FSelectedDbgPropertiesConfig <> nil then
     tbSelect.Caption := FSelectedDbgPropertiesConfig.DisplayName
   else
@@ -592,7 +593,7 @@ begin
     lblWarningProject.Visible := not (
       (Project1.DebuggerBackend = FSelectedDbgPropertiesConfig.UID) or
       (Project1.DebuggerBackend = 'IDE') or
-      ( (Project1.DebuggerBackend = '') and (Project1.DebuggerPropertiesConfigList.CountWithoutDeleted = 0) )
+      ( (Project1.DebuggerBackend = '') and (Project1.DebuggerPropertiesConfigList.Count = 0) )
     );
 end;
 
@@ -694,7 +695,7 @@ begin
 
   ClearDbgProperties;
   FDebuggerFileHistory.Clear;
-  FCopiedDbgPropertiesConfigList.ClearAll;
+  FCopiedDbgPropertiesConfigList.Clear;
   for i := 0 to ADbgConf.Count - 1 do
     FCopiedDbgPropertiesConfigList.AddObject(ADbgConf[i],
       TDebuggerPropertiesConfig.CreateCopy(ADbgConf.Opt[i], True, True) );
@@ -728,7 +729,7 @@ begin
 
 //    DebuggerSearchPath := TrimSearchPath(txtAdditionalPath.Text,'');
 
-  ADbgConf.ClearAll;
+  ADbgConf.Clear;
   for i := 0 to FCopiedDbgPropertiesConfigList.Count - 1 do
     ADbgConf.AddObject(FCopiedDbgPropertiesConfigList[i],
       TDebuggerPropertiesConfig.CreateCopy(FCopiedDbgPropertiesConfigList.Opt[i], True, True) );

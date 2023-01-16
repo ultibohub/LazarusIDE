@@ -39,7 +39,7 @@ uses
   LazControlDsgn, // move this to lazarus.lpr
   // IdeIntf
   IDEWindowIntf, IDEOptionsIntf, IDEOptEditorIntf, IDECommands, IDEHelpIntf,
-  ProjectIntf, IDEImagesIntf,
+  LazarusCommonStrConst, ProjectIntf, IDEImagesIntf,
   // IDE
   EnvironmentOpts, EditorOptions, BuildModesManager, Compiler_ModeMatrix,
   Project, LazarusIDEStrConsts,
@@ -143,7 +143,7 @@ begin
   SetBuildModeVisibility(False);
   Caption := dlgIDEOptions;
   BuildModesLabel.Caption := lisBuildModes;
-  ButtonPanel.OKButton.Caption := lisMenuOk;
+  ButtonPanel.OKButton.Caption := lisBtnOk;
   ButtonPanel.OKButton.OnClick := @OKButtonClick;
   ButtonPanel.OKButton.ModalResult := mrNone;
   ButtonPanel.CancelButton.Caption := lisCancel;

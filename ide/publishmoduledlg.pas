@@ -40,7 +40,7 @@ uses
   // BuildIntf
   ProjPackIntf, CompOptsIntf, PublishModuleIntf,
   // IdeIntf
-  IDEWindowIntf, IDEHelpIntf, IDEDialogs, IDEImagesIntf, LazIDEIntf,
+  LazarusCommonStrConst, IDEWindowIntf, IDEHelpIntf, IDEDialogs, IDEImagesIntf, LazIDEIntf,
   // IDE
   ProjectDefs, Project, PackageDefs, IDEOptionDefs, InputHistory,
   LazarusIDEStrConsts, IDEProcs, EnvironmentOpts, CompilerOptions,
@@ -549,7 +549,7 @@ begin
   OpenInFileManCheckbox.Caption:=lisOpenInFileMan;
   OpenInFileManCheckbox.Hint:=lisOpenInFileManHint;
 
-  ButtonPanel1.OkButton.Caption:=lisMenuOk;
+  ButtonPanel1.OkButton.Caption:=lisBtnOk;
   ButtonPanel1.OKButton.OnClick:=@OkButtonCLICK;
   ButtonPanel1.CloseButton.Caption:=lisSaveSettings;
   ButtonPanel1.CloseButton.ModalResult:=mrNone;

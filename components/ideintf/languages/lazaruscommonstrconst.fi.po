@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: lazaruscommonstrconst.lisabort
+msgid "Abort"
+msgstr "Keskeytä"
+
+#: lazaruscommonstrconst.lisadd
+msgid "Add"
+msgstr "Lisää"
+
+#: lazaruscommonstrconst.lisalways
+msgid "Always"
+msgstr "Aina"
+
+#: lazaruscommonstrconst.lisbtnadd
+msgid "&Add"
+msgstr "&Lisää"
+
+#: lazaruscommonstrconst.lisbtncontinue
+msgid "&Continue"
+msgstr "&Jatka"
+
+#: lazaruscommonstrconst.lisbtndelete
+msgid "&Delete"
+msgstr "&Poista"
+
+#: lazaruscommonstrconst.lisbtndlgadd
+msgid "&Add ..."
+msgstr "&Lisää ..."
+
+#: lazaruscommonstrconst.lisbtnenabled
+msgid "&Enabled"
+msgstr "&Sallittu"
+
+#: lazaruscommonstrconst.lisbtnok
+msgid "&OK"
+msgstr ""
+
+#: lazaruscommonstrconst.liscancel
+msgid "Cancel"
+msgstr "Peru"
+
+#: lazaruscommonstrconst.liscontinue
+msgid "Continue"
+msgstr "Jatka"
+
+#: lazaruscommonstrconst.lisdelete
+msgid "Delete"
+msgstr "Poista"
+
+#: lazaruscommonstrconst.lisdisabled
+msgid "Disabled"
+msgstr "Estetty"
+
+#: lazaruscommonstrconst.lisdlgadd
+msgid "Add ..."
+msgstr "Lisää ..."
+
+#: lazaruscommonstrconst.lisenabled
+msgid "Enabled"
+msgstr "Sallittu"
+
+#: lazaruscommonstrconst.lishelp
+msgid "Help"
+msgstr "Ohje"
+
+#: lazaruscommonstrconst.lisignore
+msgid "Ignore"
+msgstr "Ohita"
+
+#: lazaruscommonstrconst.lislazarus
+msgid "Lazarus"
+msgstr ""
+
+#: lazaruscommonstrconst.lisnever
+msgid "Never"
+msgstr "Ei koskaan"
+
+#: lazaruscommonstrconst.lisno
+msgid "No"
+msgstr "Ei"
+
+#: lazaruscommonstrconst.lisok
+msgid "OK"
+msgstr ""
+
+#: lazaruscommonstrconst.lisyes
+msgid "Yes"
+msgstr "Kyllä"
+

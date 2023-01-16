@@ -1076,6 +1076,7 @@ type
     class function CreateProperties: TDebuggerProperties; override; // Creates debuggerproperties
     class function Caption: String; override;
     class function ExePaths: String; override;
+    class function ExeBaseName: String; override;
     class function ExePathsMruGroup: TDebuggerClass; override;
 
     constructor Create(const AExternalDebugger: String); override;
@@ -9448,6 +9449,11 @@ begin
   {$ENDIF}
 end;
 
+class function TGDBMIDebuggerBase.ExeBaseName: String;
+begin
+  Result := 'gdb';
+end;
+
 class function TGDBMIDebuggerBase.ExePathsMruGroup: TDebuggerClass;
 begin
   Result := TGDBMIDebugger;
@@ -14827,10 +14833,12 @@ end;
 
 procedure Register;
 begin
-  RegisterDebugger(TGDBMIDebugger);
+  //RegisterDebugger(TGDBMIDebugger);
 end;
 
 initialization
+  RegisterDebugger(TGDBMIDebugger);
+
   DBGMI_QUEUE_DEBUG := DebugLogger.RegisterLogGroup('DBGMI_QUEUE_DEBUG' {$IFDEF DBGMI_QUEUE_DEBUG} , True {$ENDIF} );
   DBGMI_STRUCT_PARSER := DebugLogger.RegisterLogGroup('DBGMI_STRUCT_PARSER' {$IFDEF DBGMI_STRUCT_PARSER} , True {$ENDIF} );
   DBG_VERBOSE := DebugLogger.FindOrRegisterLogGroup('DBG_VERBOSE' {$IFDEF DBG_VERBOSE} , True {$ENDIF} );

@@ -1904,6 +1904,8 @@ bigide:
 	$(MAKE) -C projectgroups
 	$(MAKE) -C pas2js
 	$(MAKE) -C exampleswindow
+	$(MAKE) -C charactermap
+	$(MAKE) -C charactermap/design
 all: base
 clean:
 	$(MAKE) -C lazutils clean
@@ -1952,6 +1954,8 @@ clean:
 	$(MAKE) -C projectgroups clean
 	$(MAKE) -C pas2js clean
 	$(MAKE) -C exampleswindow clean
+	$(MAKE) -C charactermap clean
+	$(MAKE) -C charactermap/design clean
 cleanall: clean
 distclean:
 	$(MAKE) -C lazutils distclean
@@ -2003,3 +2007,5 @@ distclean:
 	$(MAKE) -C anchordocking/design distclean
 	$(MAKE) -C anchordocking distclean
 	$(MAKE) -C exampleswindow distclean
+	$(MAKE) -C charactermap distclean
+	$(MAKE) -C charactermap/design distclean

@@ -62,6 +62,7 @@ uses
   Splash,
   Main,
   AboutFrm,
+  LazDebuggerFpLldb, LazDebuggerFp, laz.virtualtreeview_package,
   // use the custom IDE static packages AFTER 'main'
   {$IFDEF AddStaticPkgs}
   {$I staticpackages.inc}
@@ -70,8 +71,6 @@ uses
   anchordockpkg, //Ultibo
   anchordockingdsgn, //Ultibo
   jcfidelazarus, //Ultibo
-  laz.virtualtreeview_package, //Ultibo
-  lazdebuggerfp, //Ultibo
   allsyneditdsgn, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
@@ -85,10 +84,8 @@ uses
     FPCUnitTestRunner, FPCUnitIDE, ProjTemplates, TAChartLazarusPkg,
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
     EditorMacroScript, ExampleProjects,
-    //laz.virtualtreeview_package, //Ultibo
     OnlinePackageManager,
-    SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn,
-    LazDebuggerFpLldb, //LazDebuggerFp, //Ultibo
+    SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn, charactermap_ide_pkg,
   {$ENDIF}
   MainBase;
 

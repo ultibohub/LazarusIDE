@@ -27,7 +27,7 @@ uses
   // LazUtils
   LazFileUtils, LazFileCache,
   // IdeIntf
-  IDEDialogs,
+  LazarusCommonStrConst, IDEDialogs,
   // IDE
   LazarusIDEStrConsts, TransferMacros, InputHistory;
 
@@ -563,7 +563,7 @@ begin
   with OkButton do begin
     Name:='OkButton';
     Parent:=Self;
-    Caption:=lisMenuOk;
+    Caption:=lisBtnOk;
     OnClick:=@OkButtonClick;
     Visible:=true;
   end;

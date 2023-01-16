@@ -1,0 +1,95 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: lazaruscommonstrconst.lisabort
+msgid "Abort"
+msgstr "Přerušit"
+
+#: lazaruscommonstrconst.lisadd
+msgid "Add"
+msgstr "Přidat"
+
+#: lazaruscommonstrconst.lisalways
+msgid "Always"
+msgstr "Vždy"
+
+#: lazaruscommonstrconst.lisbtnadd
+msgid "&Add"
+msgstr "&Přidat"
+
+#: lazaruscommonstrconst.lisbtncontinue
+msgid "&Continue"
+msgstr "&Pokračovat"
+
+#: lazaruscommonstrconst.lisbtndelete
+msgid "&Delete"
+msgstr "&Smazat"
+
+#: lazaruscommonstrconst.lisbtndlgadd
+msgid "&Add ..."
+msgstr "Přid&at ..."
+
+#: lazaruscommonstrconst.lisbtnenabled
+msgid "&Enabled"
+msgstr "&Povolený"
+
+#: lazaruscommonstrconst.lisbtnok
+msgid "&OK"
+msgstr "&OK"
+
+#: lazaruscommonstrconst.liscancel
+msgid "Cancel"
+msgstr "Zrušit"
+
+#: lazaruscommonstrconst.liscontinue
+msgid "Continue"
+msgstr "Pokračovat"
+
+#: lazaruscommonstrconst.lisdelete
+msgid "Delete"
+msgstr "Odstranit"
+
+#: lazaruscommonstrconst.lisdisabled
+msgid "Disabled"
+msgstr "Zakázáno"
+
+#: lazaruscommonstrconst.lisdlgadd
+msgid "Add ..."
+msgstr "Přidat ..."
+
+#: lazaruscommonstrconst.lisenabled
+msgid "Enabled"
+msgstr "Povoleno"
+
+#: lazaruscommonstrconst.lishelp
+msgid "Help"
+msgstr "Nápověda"
+
+#: lazaruscommonstrconst.lisignore
+msgid "Ignore"
+msgstr "Ignorovat"
+
+#: lazaruscommonstrconst.lislazarus
+msgid "Lazarus"
+msgstr "Lazarus"
+
+#: lazaruscommonstrconst.lisnever
+msgid "Never"
+msgstr "Nikdy"
+
+#: lazaruscommonstrconst.lisno
+msgid "No"
+msgstr "Ne"
+
+#: lazaruscommonstrconst.lisok
+msgid "OK"
+msgstr "OK"
+
+#: lazaruscommonstrconst.lisyes
+msgid "Yes"
+msgstr "Ano"
+

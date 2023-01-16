@@ -1,0 +1,98 @@
+msgid ""
+msgstr ""
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Poedit-SourceCharset: utf-8\n"
+
+#: lazaruscommonstrconst.lisabort
+msgid "Abort"
+msgstr ""
+
+#: lazaruscommonstrconst.lisadd
+msgid "Add"
+msgstr "Voeg by"
+
+#: lazaruscommonstrconst.lisalways
+msgid "Always"
+msgstr ""
+
+#: lazaruscommonstrconst.lisbtnadd
+msgid "&Add"
+msgstr "Voeg by"
+
+#: lazaruscommonstrconst.lisbtncontinue
+msgid "&Continue"
+msgstr ""
+
+#: lazaruscommonstrconst.lisbtndelete
+msgid "&Delete"
+msgstr "&Skrap"
+
+#: lazaruscommonstrconst.lisbtndlgadd
+msgid "&Add ..."
+msgstr ""
+
+#: lazaruscommonstrconst.lisbtnenabled
+msgid "&Enabled"
+msgstr ""
+
+#: lazaruscommonstrconst.lisbtnok
+#, fuzzy
+#| msgid "&Ok"
+msgid "&OK"
+msgstr "&Goed"
+
+#: lazaruscommonstrconst.liscancel
+msgid "Cancel"
+msgstr "Kanselleer"
+
+#: lazaruscommonstrconst.liscontinue
+msgid "Continue"
+msgstr "Gaan aan"
+
+#: lazaruscommonstrconst.lisdelete
+msgid "Delete"
+msgstr ""
+
+#: lazaruscommonstrconst.lisdisabled
+msgid "Disabled"
+msgstr ""
+
+#: lazaruscommonstrconst.lisdlgadd
+msgid "Add ..."
+msgstr ""
+
+#: lazaruscommonstrconst.lisenabled
+msgid "Enabled"
+msgstr ""
+
+#: lazaruscommonstrconst.lishelp
+msgid "Help"
+msgstr "Help"
+
+#: lazaruscommonstrconst.lisignore
+#, fuzzy
+msgid "Ignore"
+msgstr "Verwerp"
+
+#: lazaruscommonstrconst.lislazarus
+msgid "Lazarus"
+msgstr "Lazarus"
+
+#: lazaruscommonstrconst.lisnever
+msgid "Never"
+msgstr ""
+
+#: lazaruscommonstrconst.lisno
+msgid "No"
+msgstr ""
+
+#: lazaruscommonstrconst.lisok
+msgid "OK"
+msgstr ""
+
+#: lazaruscommonstrconst.lisyes
+msgid "Yes"
+msgstr ""
+

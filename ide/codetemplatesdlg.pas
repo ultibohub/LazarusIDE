@@ -44,7 +44,7 @@ uses
   // IDEIntf
   SrcEditorIntf, MenuIntf, IDEWindowIntf, LazIDEIntf, IDEHelpIntf, IDEDialogs,
   // IDE
-  LazarusIDEStrConsts, EditorOptions, CodeMacroSelect, CodeMacroPrompt;
+  LazarusCommonStrConst, LazarusIDEStrConsts, EditorOptions, CodeMacroSelect, CodeMacroPrompt;
 
 type
   TAutoCompleteOption = (
@@ -836,7 +836,7 @@ begin
   DeleteButton.Caption:=lisDelete;
   TemplatesGroupBox.Caption:=lisCTDTemplates;
 
-  ButtonPanel.OKButton.Caption:=lisMenuOk;
+  ButtonPanel.OKButton.Caption:=lisBtnOk;
   ButtonPanel.HelpButton.Caption:=lisMenuHelp;
   ButtonPanel.CancelButton.Caption:=lisCancel;
 

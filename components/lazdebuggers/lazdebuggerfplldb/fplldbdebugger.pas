@@ -173,6 +173,7 @@ type
     property CommandQueue;
   public
     class function Caption: String; override;
+    class function ExeBaseName: String; override;
     class function RequiredCompilerOpts(ATargetCPU, ATargetOS: String): TDebugCompilerRequirements; override;
   public
     constructor Create(const AExternalDebugger: String); override;
@@ -1703,6 +1704,11 @@ begin
   Result := 'LLDB debugger (with fpdebug) (Beta)';
 end;
 
+class function TFpLldbDebugger.ExeBaseName: String;
+begin
+  Result := 'lldb';
+end;
+
 class function TFpLldbDebugger.RequiredCompilerOpts(ATargetCPU, ATargetOS: String): TDebugCompilerRequirements;
 begin
   {$ifdef CD_Cocoa}
@@ -1734,10 +1740,12 @@ end;
 
 procedure Register;
 begin
-  RegisterDebugger(TFpLldbDebugger);
+  //RegisterDebugger(TFpLldbDebugger);
 end;
 
 initialization
+  RegisterDebugger(TFpLldbDebugger);
+
   DBG_VERBOSE       := DebugLogger.FindOrRegisterLogGroup('DBG_VERBOSE' {$IFDEF DBG_VERBOSE} , True {$ENDIF} );
   DBG_ERRORS         := DebugLogger.FindOrRegisterLogGroup('DBG_ERRORS' {$IFDEF DBG_ERRORS} , True {$ENDIF} );
 end.

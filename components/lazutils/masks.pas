@@ -194,7 +194,7 @@ type
     fMaskOpcodesAllowed: TMaskOpCodes;
     // EscapeChar forces next char to be a literal one, not a wildcard.
     fMaskEscapeChar: Char;
-    procedure Compile; virtual;
+    procedure PrepareCompile;
     class procedure Exception_InvalidCharMask(const aMaskChar: string; aOffset: integer=-1); static;
     class procedure Exception_MissingCloseChar(const aMaskChar: string; aOffset: integer=-1); static;
     class procedure Exception_IncompleteMask(); static;
@@ -250,7 +250,7 @@ type
     constructor Create(const aMask: String; aOptions: TMaskOptions); overload;
         deprecated 'Use Create with TMaskOpCodes params.'; // in Lazarus 2.3, remove in 2.5.
 
-    procedure Compile; override;
+    procedure Compile; virtual;
     function Matches(const aStringToMatch: String): Boolean; virtual;
     function MatchesWindowsMask(const AFileName: String): Boolean;
         deprecated 'Create with TMaskWindows.Create, then call Matches.'; // in Lazarus 2.3, remove in 2.5.
@@ -319,7 +319,7 @@ type
       aOpcodesAllowed: TMaskOpCodes); virtual;
   public
     constructor Create(const aValue: String; aSeparator: Char=';'; CaseSensitive: Boolean=False;
-      aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes);
+      aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes); virtual;
 
     //Remove in 2.5
     constructor Create(const aValue: String; aSeparator: Char; aOptions: TMaskOptions); virtual;
@@ -354,20 +354,21 @@ type
       aOpcodesAllowed: TMaskOpCodes); override;
   public
     constructor Create(const aValue: String; aSeparator: Char=';'; aCaseSensitive: Boolean=False;
-      aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes;
-      aWindowsQuirksAllowed: TWindowsQuirks=DefaultWindowsQuirks); reintroduce;
+      aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes); override;
+
+    constructor Create(const aValue: String; aSeparator: Char{=';'}; aCaseSensitive: Boolean{=False};
+    aOpcodesAllowed: TMaskOpCodes{=DefaultMaskOpCodes};
+    aWindowsQuirksAllowed: TWindowsQuirks{=DefaultWindowsQuirks}); overload; //reintroduce;
 
     //Remove in 2.5
     constructor Create(const aValue: String; aSeparator: Char; aOptions: TMaskOptions); override;
       deprecated 'Use Create with TMaskOpcodes paramater';
 
-    //Remove in 2.5
-    function MatchesWindowsMask(const AFileName: String): Boolean; reintroduce;
-      deprecated 'Use a Matches instead.';
-
-
     property Quirks: TWindowsQuirks read fWindowsQuirks write SetQuirks;
   end;
+
+  TMaskListClass = class of TMaskList;
+
 
 function MatchesMask(const FileName, Mask: String; CaseSensitive: Boolean=False;
   aOpcodesAllowed: TMaskOpCodes=DefaultMaskOpCodes): Boolean;
@@ -563,6 +564,12 @@ begin
 end;
 
 constructor TWindowsMaskList.Create(const aValue: String; aSeparator: Char;
+  aCaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes);
+begin
+  Create(aValue, aSeparator, aCaseSensitive, aOpcodesAllowed, DefaultWindowsQuirks);
+end;
+
+constructor TWindowsMaskList.Create(const aValue: String; aSeparator: Char;
   aCaseSensitive: Boolean; aOpcodesAllowed: TMaskOpCodes;
   aWindowsQuirksAllowed: TWindowsQuirks);
 begin
@@ -578,10 +585,6 @@ begin
   Create(aValue, aSeparator, (moCaseSensitive in aOptions), DefaultMaskOpCodes, DefaultWindowsQuirks);
 end;
 
-function TWindowsMaskList.MatchesWindowsMask(const AFileName: String): Boolean;
-begin
-  Result := Matches(AFilename);
-end;
 
 { EMaskError }
 
@@ -669,12 +672,12 @@ begin
   Add(P^+aValue);
 end;
 
-procedure TMaskBase.Compile;
+procedure TMaskBase.PrepareCompile;
 begin
   fMaskCompiled := nil;
   fMaskCompiledAllocated := 0;
   fMaskCompiledIndex := 0;
-  fMaskIsCompiled:=true;
+  fMaskIsCompiled:=False;
 end;
 
 class procedure TMaskBase.Exception_InvalidCharMask(const aMaskChar: string;
@@ -1037,10 +1040,7 @@ end;
 
 procedure TMaskUTF8.Compile;
 begin
-  inherited Compile;
-  //if Compile fails and a new call to Matches is made and Mask is unchanged
-  //then Matches simply returns False, when raising the exception again would be more appropriate IMO (BB)
-  fMaskIsCompiled:=False;
+  PrepareCompile;
   if fCaseSensitive then
     fMask:=fOriginalMask
   else
@@ -1072,6 +1072,11 @@ begin
 
   SetLength(fMaskCompiled,fMaskCompiledIndex);
   fMaskCompiledLimit:=fMaskCompiledIndex-1;
+  {
+   fMaskIsCompiled Indicates that Compile was succesfull
+   If you override this method make sure that it is only set to True if
+   the overridden method also succeeds!
+  }
   fMaskIsCompiled:=True;
 
   //writeln('Compile end.');

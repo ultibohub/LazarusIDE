@@ -69,7 +69,7 @@ uses
   ProjectIntf, PackageIntf, PackageLinkIntf, PackageDependencyIntf,
   // IDEIntf
   IDEHelpIntf, IDECommands, IDEDialogs, IDEImagesIntf, LazIDEIntf, ToolBarIntf,
-  MenuIntf,
+  LazarusCommonStrConst, MenuIntf,
   // IDE
   LazarusIDEStrConsts, MainBase, MainBar, IDEProcs, DialogProcs, IDEOptionDefs, Project,
   InputHistory, TransferMacros, EnvironmentOpts, BuildManager, BasePkgManager,
@@ -1701,11 +1701,14 @@ begin
     begin
       IconStream := LazProject.ProjResources.ProjectIcon.GetStream;
       if IconStream<>nil then
+      begin
         try
           Icon.LoadFromStream(IconStream);
-        finally
-          IconStream.Free;
+        except
+          Icon.Clear; // ignore exceptions for invalid icons
         end;
+        IconStream.Free;
+      end;
     end;
   end;
 end;

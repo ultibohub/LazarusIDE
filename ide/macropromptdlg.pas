@@ -39,7 +39,7 @@ uses
   MemCheck,
   {$ENDIF}
   Classes, SysUtils, LCLType, Controls, Forms, Buttons, StdCtrls,
-  Dialogs, LResources, LazarusIDEStrConsts;
+  Dialogs, LResources, LazarusCommonStrConst, LazarusIDEStrConsts;
 
 
 type
@@ -119,7 +119,7 @@ begin
       Name:='OkButton';
       Parent:=Self;
       SetBounds(Self.ClientWidth-200,Self.ClientHeight-40,80,25);
-      Caption:=lisMenuOk;
+      Caption:=lisBtnOk;
       OnClick:=@OkButtonClick;
       Visible:=true;
     end;

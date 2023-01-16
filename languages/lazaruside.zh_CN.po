@@ -12,24 +12,6 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Language: zh_CN\n"
 
-#: lazarusidestrconsts.dbgbreakgroupdlgcaption
-msgctxt "lazarusidestrconsts.dbgbreakgroupdlgcaption"
-msgid "Select Groups"
-msgstr "选择组"
-
-#: lazarusidestrconsts.dbgbreakgroupdlgheaderdisable
-msgid "Select groups to disable when breakpoint is hit"
-msgstr "选择组来禁用 当断点被命中时"
-
-#: lazarusidestrconsts.dbgbreakgroupdlgheaderenable
-msgid "Select groups to enable when breakpoint is hit"
-msgstr "选择组来启用 当断点被命中时"
-
-#: lazarusidestrconsts.dbgbreakpropertygroupnotfound
-#, object-pascal-format
-msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
-msgstr "一些组在启用/禁用列表中不存在.%0:s创建它们?%0:s%0:s%1:s"
-
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -4151,10 +4133,6 @@ msgctxt "lazarusidestrconsts.dlgvaluecolor"
 msgid "Value"
 msgstr "值"
 
-#: lazarusidestrconsts.dlgvaluedataaddr
-msgid "Data-Address"
-msgstr ""
-
 #: lazarusidestrconsts.dlgverbosity
 msgid "Verbosity during compilation:"
 msgstr "在编译中的冗余:"
@@ -4319,47 +4297,111 @@ msgstr "Z-顺序"
 msgid "On Both Sides"
 msgstr "关于两侧"
 
-#: lazarusidestrconsts.histdlgbtnclearhint
-msgid "Clear all snapshots"
-msgstr "清除所有快照"
+#: lazarusidestrconsts.initdlgdebugchangepath
+msgid "Change path"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnenablehint
-msgid "Toggle view snapshot or current"
-msgstr "切换查看快照或当前"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotconfigured
+msgid "Error: The backend is not configured."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnmakesnaphint
-msgid "Take Snapshot"
-msgstr "获取快照"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotconfiguredmissingpackage
+msgid "(The configured backend's package is not installed.)"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnpowerhint
-msgid "Switch on/off automatic snapshots"
-msgstr "开/关自动快照"
+#: lazarusidestrconsts.initdlgdebugclassnoteerrornotsupported
+msgid "Error: Your current config uses a backend that is not supported on your OS/Arch."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnremovehint
-msgid "Remove selected entry"
-msgstr "移除选择入口"
+#: lazarusidestrconsts.initdlgdebugclassnotehintnotrecommended
+msgid "Hint: The backend type is OK, but not the recommended type."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnshowhisthint
-msgid "View history"
-msgstr "查看历史"
+#: lazarusidestrconsts.initdlgdebugcreateanewrecommendedback
+msgid "Create a new recommended backend"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgbtnshowsnaphint
-msgid "View Snapshots"
-msgstr "查看快照"
+#: lazarusidestrconsts.initdlgdebugexternalexepathdisplay
+msgid "The selected backend uses the external executable:"
+msgstr ""
 
-#: lazarusidestrconsts.histdlgcolumnloc
-msgctxt "lazarusidestrconsts.histdlgcolumnloc"
-msgid "Location"
-msgstr "位置"
+#: lazarusidestrconsts.initdlgdebugexternalexepathprompt
+#, object-pascal-format
+msgid "The selected backend requires an external executable: \"%s\""
+msgstr ""
 
-#: lazarusidestrconsts.histdlgcolumntime
-msgid "Time"
-msgstr "时间"
+#: lazarusidestrconsts.initdlgdebugheaderdefaultforyourosarchiss
+#, object-pascal-format
+msgid "Default for your OS/Arch is: \"%s\"."
+msgstr ""
 
-#: lazarusidestrconsts.histdlgformname
-msgctxt "lazarusidestrconsts.histdlgformname"
-msgid "History"
-msgstr "历史"
+#: lazarusidestrconsts.initdlgdebugignore
+#, fuzzy
+msgctxt "lazarusidestrconsts.initdlgdebugignore"
+msgid "Ignore"
+msgstr "忽略"
+
+#: lazarusidestrconsts.initdlgdebugkeepbackend
+msgid "Keep backend"
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexeisdirectory
+msgid "Error: External executable is a directory, not a file."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexenotfound
+msgid "Error: External executable not found."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrorexenotrunnable
+msgid "Error: External file is not executable."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrornodefaultfound
+msgid "Error: No default for external executable found."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpathnoteerrornoexespecified
+msgid "Error: No external executable specified."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugpopupinformation
+#, object-pascal-format
+msgid "A backend provides OS and architecture specific implementations for the debugger.%0:sDefault for your OS/Arch is: \"%1:s\".%0:s%0:sOther backends are provided for special tasks (e.g. cross debugging on some platforms) or as generic alternatives.%0:sThe debugger can have different features, depending on the backend.%0:s%0:sSome backends require an external exe (such as gdb or lldb). This exe may be part of your OS (Linux/Mac), or be provided by the Lazarus installer (Windows).%0:s%0:sIf you have just upgraded your installation, you may have to rebuild the IDE before your previously configured backend can be used (if you used a 3rd-party or optional backend). In that case you may choose \"Ignore\"."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugselectanexistingbackend
+msgid "Select an existing backend"
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackagefooter
+msgid "Note: There are more backend configurations available, but their packages (LPK) are not installed. You may want to rebuild the IDE with the packages installed. After the rebuild, the debugger backend can be changed in the menu: Tools -> Options."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackagerebuild
+#, object-pascal-format
+msgid "If you decide to rebuild the IDE first and install missing packages, then select \"Ignore\" for now.%0:sAfter the rebuild, the debugger backend can be changed in the menu: Tools -> Options."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatemissingpackages
+msgid "There may be packages (LPK) missing from your IDE installation. You may need to rebuild the IDE and install them, before making changes to the setup."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstaterecommendedfoundinlist
+msgid "There is a backend of recommended type in the list of existing debuggers. You may pick this instead of creating a new backend."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstaterecommendednotinlist
+msgid "There is no backend of recommended type in the list of existing debuggers. Consider creating a new backend."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstatesetupok
+msgid "Setup is OK."
+msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugstateupdatebackend
+msgid "You are using an older backend. This may give you not the best debugging experience. Consider upgrading to the recommended backend."
+msgstr ""
 
 #: lazarusidestrconsts.lis0no1drawdividerlinesonlyfortoplevel2drawlinesforfi
 msgid "0 = no, 1 = draw divider lines only for top level, 2 = draw lines for first two levels, ..."
@@ -4622,11 +4664,6 @@ msgstr "单元名已经存在"
 msgid "Abandon changes?"
 msgstr "丢弃更改？"
 
-#: lazarusidestrconsts.lisabort
-msgctxt "lazarusidestrconsts.lisabort"
-msgid "Abort"
-msgstr "取消"
-
 #: lazarusidestrconsts.lisabortall
 msgid "Abort all"
 msgstr "放弃所有"
@@ -4695,10 +4732,6 @@ msgstr "致谢"
 msgid "Action:"
 msgstr "动作:"
 
-#: lazarusidestrconsts.lisactions
-msgid "Actions:"
-msgstr "动作:"
-
 #: lazarusidestrconsts.lisactivate
 msgid "Activate"
 msgstr "激活"
@@ -4718,11 +4751,6 @@ msgstr "激活"
 #: lazarusidestrconsts.lisactivefilter
 msgid "Active Filter"
 msgstr "激活过滤器"
-
-#: lazarusidestrconsts.lisadd
-msgctxt "lazarusidestrconsts.lisadd"
-msgid "Add"
-msgstr "添加"
 
 #: lazarusidestrconsts.lisaddanewseparatoraboveselecteditem
 msgid "Add a new separator above selected item"
@@ -4818,15 +4846,6 @@ msgstr "添加包到工程"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "添加参数括号"
-
-#: lazarusidestrconsts.lisaddress
-msgid "Address:"
-msgstr "地址:"
-
-#: lazarusidestrconsts.lisaddressbreakpoint
-msgctxt "lazarusidestrconsts.lisaddressbreakpoint"
-msgid "&Address Breakpoint ..."
-msgstr "地址断点...(&A)"
 
 #: lazarusidestrconsts.lisaddtoincludesearchpath
 msgid "Add to include search path?"
@@ -4932,10 +4951,6 @@ msgstr "所有继承的(inherited)选项"
 msgid "All Options"
 msgstr "所有选项"
 
-#: lazarusidestrconsts.lisallowfunctio
-msgid "Allow Function Calls"
-msgstr "允许函数调用"
-
 #: lazarusidestrconsts.lisallowsearchingformultiplelines
 msgid "Allow searching for multiple lines"
 msgstr "允许多行搜索"
@@ -4960,10 +4975,6 @@ msgstr "替代键(Alternative key)"
 #: lazarusidestrconsts.lisalternativekeyor2keysequence
 msgid "Alternative key (or 2 key sequence)"
 msgstr "可替换按键(或第2按键顺序)"
-
-#: lazarusidestrconsts.lisalways
-msgid "Always"
-msgstr "总是"
 
 #: lazarusidestrconsts.lisalwaysconvertsuggesteddefaultfilenametolowercase
 msgid "Always convert suggested default file name to lowercase"
@@ -5110,10 +5121,6 @@ msgstr "询问文件名称在新建文件之时"
 msgid "Ask name on create"
 msgstr "询问名称在创建之时"
 
-#: lazarusidestrconsts.lisausefulsettingonwindowssystemsislazarusdirmingwbin
-msgid "A useful setting on Windows systems is: $(LazarusDir)\\mingw\\$(TargetCPU)-$(TargetOS)\\bin\\gdb.exe"
-msgstr "一个有用的设置对于Windows系统是s:$(LazarusDir)\\mingw\\$(TargetCPU)-$(TargetOS)\\bin\\gdb.exe"
-
 #: lazarusidestrconsts.lisautoadjustideheight
 msgid "Automatically adjust IDE main window height"
 msgstr "自动调整IDE主窗口高度"
@@ -5133,10 +5140,6 @@ msgstr "自动完成:关"
 #: lazarusidestrconsts.lisautocompletionon
 msgid "Auto completion: on"
 msgstr "自动完成:开"
-
-#: lazarusidestrconsts.lisautocontinueafter
-msgid "Auto continue after:"
-msgstr "自动继续在...后(after):"
 
 #: lazarusidestrconsts.lisautomarkup
 msgid "Markup and Matches"
@@ -5284,11 +5287,6 @@ msgstr "当这个文件在源文件编辑器中处于活动状态时"
 msgid "Working directory (leave empty for file path)"
 msgstr "工作目录(对文件路径留空)"
 
-#: lazarusidestrconsts.lisbinary
-msgctxt "lazarusidestrconsts.lisbinary"
-msgid "Binary"
-msgstr "二进制"
-
 #: lazarusidestrconsts.lisboldnondefaultobjectinspector
 msgid "Bold non default values"
 msgstr "加粗非默认值"
@@ -5322,57 +5320,24 @@ msgstr "这是锚底部的同级控件.在Delphi样式中保空以锚定到父�
 msgid "Bottom space equally"
 msgstr "底部空间相等"
 
-#: lazarusidestrconsts.lisbpsdisabled
-msgctxt "lazarusidestrconsts.lisbpsdisabled"
-msgid "Disabled"
-msgstr "禁用"
-
-#: lazarusidestrconsts.lisbpsenabled
-msgctxt "lazarusidestrconsts.lisbpsenabled"
-msgid "Enabled"
-msgstr "允许"
-
 #: lazarusidestrconsts.lisbreak
 msgctxt "lazarusidestrconsts.lisbreak"
 msgid "Break"
 msgstr "中断"
 
-#: lazarusidestrconsts.lisbreakpointproperties
-msgid "Breakpoint Properties"
-msgstr "断点属性"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "浏览和选择一个编译器(例如.ppcx64"
-
-#: lazarusidestrconsts.lisbtnadd
-msgctxt "lazarusidestrconsts.lisbtnadd"
-msgid "&Add"
-msgstr "添加(&A)"
 
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
 msgstr "关闭(&C)"
 
-#: lazarusidestrconsts.lisbtndelete
-msgctxt "lazarusidestrconsts.lisbtndelete"
-msgid "&Delete"
-msgstr "删除(&D)"
-
-#: lazarusidestrconsts.lisbtndlgadd
-msgid "&Add ..."
-msgstr "添加...(&A)"
-
 #: lazarusidestrconsts.lisbtndlgreplace
 msgctxt "lazarusidestrconsts.lisbtndlgreplace"
 msgid "&Replace ..."
 msgstr "替换(&R) ..."
-
-#: lazarusidestrconsts.lisbtnenabled
-msgctxt "lazarusidestrconsts.lisbtnenabled"
-msgid "&Enabled"
-msgstr "激活(&E)"
 
 #: lazarusidestrconsts.lisbtnfind
 msgid "&Find"
@@ -5477,15 +5442,6 @@ msgstr "%s字节"
 #, object-pascal-format
 msgid "Calling %s to create Makefile from %s failed."
 msgstr "调用%s来从%s创建Makefile失败."
-
-#: lazarusidestrconsts.liscallstacknotevaluated
-msgid "Stack not evaluated"
-msgstr "栈(Stack)未评估(evaluated)"
-
-#: lazarusidestrconsts.liscancel
-msgctxt "lazarusidestrconsts.liscancel"
-msgid "Cancel"
-msgstr "取消"
 
 #: lazarusidestrconsts.liscancelloadingthiscomponent
 msgid "Cancel loading this component"
@@ -6110,10 +6066,6 @@ msgstr "更改为Unix /"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "更改为Windows \\"
-
-#: lazarusidestrconsts.lischaracter
-msgid "Character"
-msgstr "字符"
 
 #: lazarusidestrconsts.lischaractermap
 msgid "Character Map"
@@ -7094,14 +7046,6 @@ msgstr "执行后"
 msgid "Execute before"
 msgstr "执行前"
 
-#: lazarusidestrconsts.liscoladdress
-msgid "Address"
-msgstr "地址"
-
-#: lazarusidestrconsts.liscolclass
-msgid "Class"
-msgstr "类"
-
 #: lazarusidestrconsts.liscollapseall
 msgid "Collapse All (/)"
 msgstr "折叠所有(/)"
@@ -7117,14 +7061,6 @@ msgstr "折叠所有软件包"
 #: lazarusidestrconsts.liscollapseallunits
 msgid "Collapse all units"
 msgstr "折叠所有单元"
-
-#: lazarusidestrconsts.liscolreturns
-msgid "Returns"
-msgstr "返回(Returns)"
-
-#: lazarusidestrconsts.liscolvisibility
-msgid "Visibility"
-msgstr "可视性(Visibility)"
 
 #: lazarusidestrconsts.liscomboboxes
 msgid "Combo Boxes"
@@ -7384,11 +7320,6 @@ msgstr "目录"
 #: lazarusidestrconsts.liscontextsensitive
 msgid "Context sensitive"
 msgstr "上下文有关"
-
-#: lazarusidestrconsts.liscontinue
-msgctxt "lazarusidestrconsts.liscontinue"
-msgid "Continue"
-msgstr "继续"
 
 #: lazarusidestrconsts.liscontinueanddonotaskagain
 msgid "Continue and do not ask again"
@@ -7935,10 +7866,6 @@ msgctxt "lazarusidestrconsts.liscopy"
 msgid "Copy"
 msgstr "复制"
 
-#: lazarusidestrconsts.liscopyall
-msgid "Copy All"
-msgstr "复制所有"
-
 #: lazarusidestrconsts.liscopyallitemstoclipboard
 msgid "Copy All Items to Clipboard"
 msgstr "复制所有项目到剪贴板"
@@ -7946,10 +7873,6 @@ msgstr "复制所有项目到剪贴板"
 #: lazarusidestrconsts.liscopyalloriginalmessagestoclipboard
 msgid "Copy All/Original Messages to Clipboard"
 msgstr "复制所有/原始信息到剪贴板"
-
-#: lazarusidestrconsts.liscopyalloutputclipboard
-msgid "Copy all output to clipboard"
-msgstr "复制所有输出到剪贴板"
 
 #: lazarusidestrconsts.liscopyallshownmessagestoclipboard
 msgid "Copy All Shown Messages to Clipboard"
@@ -8136,16 +8059,6 @@ msgstr "创建/更新.po文件 当保存lfm文件"
 msgid "Creating file index of FPC sources %s ..."
 msgstr "创建文件索引对于FPC源代码%s..."
 
-#: lazarusidestrconsts.liscsbottom
-msgctxt "lazarusidestrconsts.liscsbottom"
-msgid "Bottom"
-msgstr "底部"
-
-#: lazarusidestrconsts.liscstop
-msgctxt "lazarusidestrconsts.liscstop"
-msgid "Top"
-msgstr "上部"
-
 #: lazarusidestrconsts.lisctdefchoosedirectory
 msgid "Choose Directory"
 msgstr "选取目录"
@@ -8199,11 +8112,6 @@ msgstr "请选择一个宏命令"
 msgid "Select Code Macro"
 msgstr "选择代码宏命令"
 
-#: lazarusidestrconsts.liscurrent
-msgctxt "lazarusidestrconsts.liscurrent"
-msgid "Current"
-msgstr "当前"
-
 #: lazarusidestrconsts.liscurrentlclwidgetset
 #, object-pascal-format
 msgid "Current LCL widgetset: \"%s\""
@@ -8250,22 +8158,6 @@ msgctxt "lazarusidestrconsts.liscut"
 msgid "Cut"
 msgstr "剪切"
 
-#: lazarusidestrconsts.lisdadattach
-msgid "Attach"
-msgstr "附加(Attach)"
-
-#: lazarusidestrconsts.lisdadimagename
-msgid "Image Name"
-msgstr "图片名称"
-
-#: lazarusidestrconsts.lisdadpid
-msgid "PID"
-msgstr "PID"
-
-#: lazarusidestrconsts.lisdadrunningprocesses
-msgid "Running Processes"
-msgstr "运行进程(Processes)"
-
 #: lazarusidestrconsts.lisdatamodule
 msgid "Data Module"
 msgstr "Data模块"
@@ -8274,36 +8166,6 @@ msgstr "Data模块"
 msgid "Date"
 msgstr "日期"
 
-#: lazarusidestrconsts.lisdbgallitemdelete
-msgctxt "lazarusidestrconsts.lisdbgallitemdelete"
-msgid "Delete all"
-msgstr "删除所有"
-
-#: lazarusidestrconsts.lisdbgallitemdeletehint
-msgctxt "lazarusidestrconsts.lisdbgallitemdeletehint"
-msgid "Delete all"
-msgstr "删除所有"
-
-#: lazarusidestrconsts.lisdbgallitemdisable
-msgctxt "lazarusidestrconsts.lisdbgallitemdisable"
-msgid "Disable all"
-msgstr "禁用所有"
-
-#: lazarusidestrconsts.lisdbgallitemdisablehint
-msgctxt "lazarusidestrconsts.lisdbgallitemdisablehint"
-msgid "Disable all"
-msgstr "禁用所有"
-
-#: lazarusidestrconsts.lisdbgallitemenable
-msgctxt "lazarusidestrconsts.lisdbgallitemenable"
-msgid "Enable all"
-msgstr "激活所有"
-
-#: lazarusidestrconsts.lisdbgallitemenablehint
-msgctxt "lazarusidestrconsts.lisdbgallitemenablehint"
-msgid "Enable all"
-msgstr "激活所有"
-
 #: lazarusidestrconsts.lisdbgasmcopyaddresstoclipboard
 msgid "Copy address to Clipboard"
 msgstr ""
@@ -8311,11 +8173,6 @@ msgstr ""
 #: lazarusidestrconsts.lisdbgasmcopytoclipboard
 msgid "Copy to Clipboard"
 msgstr "复制到剪贴板"
-
-#: lazarusidestrconsts.lisdbgbreakpointpropertieshint
-msgctxt "lazarusidestrconsts.lisdbgbreakpointpropertieshint"
-msgid "Breakpoint Properties ..."
-msgstr "断点属性..."
 
 #: lazarusidestrconsts.lisdbgenbreakpointevaluation
 msgid "Breakpoint Evaluation"
@@ -8377,31 +8234,6 @@ msgstr "Windows信息提交"
 msgid "Windows Message Sent"
 msgstr "Windows信息发送"
 
-#: lazarusidestrconsts.lisdbgitemdeletehint
-msgctxt "lazarusidestrconsts.lisdbgitemdeletehint"
-msgid "Delete"
-msgstr "删除"
-
-#: lazarusidestrconsts.lisdbgitemdisable
-msgctxt "lazarusidestrconsts.lisdbgitemdisable"
-msgid "Disable"
-msgstr "禁用"
-
-#: lazarusidestrconsts.lisdbgitemdisablehint
-msgctxt "lazarusidestrconsts.lisdbgitemdisablehint"
-msgid "Disable"
-msgstr "禁用"
-
-#: lazarusidestrconsts.lisdbgitemenable
-msgctxt "lazarusidestrconsts.lisdbgitemenable"
-msgid "Enable"
-msgstr "激活"
-
-#: lazarusidestrconsts.lisdbgitemenablehint
-msgctxt "lazarusidestrconsts.lisdbgitemenablehint"
-msgid "Enable"
-msgstr "激活"
-
 #: lazarusidestrconsts.lisdbgmangnodebuggerspecified
 msgid "No debugger specified"
 msgstr "没有指定调试器"
@@ -8414,19 +8246,6 @@ msgstr "无论如何设置该断点"
 #, object-pascal-format
 msgid "There is no debugger specified.%sSetting breakpoints have no effect until you set up a Debugger in the debugger options dialog in the menu."
 msgstr ""
-
-#: lazarusidestrconsts.lisdbgterminal
-msgctxt "lazarusidestrconsts.lisdbgterminal"
-msgid "Console In/Output"
-msgstr "控制台输入/输出"
-
-#: lazarusidestrconsts.lisdbgwinpower
-msgid "On/Off"
-msgstr "开/关"
-
-#: lazarusidestrconsts.lisdbgwinpowerhint
-msgid "Disable/Enable updates for the entire window"
-msgstr "禁用/启用整个窗口的更新"
 
 #: lazarusidestrconsts.lisdebug
 msgctxt "lazarusidestrconsts.lisdebug"
@@ -8443,18 +8262,6 @@ msgstr "调试器"
 #| msgid "Debugger error%sOoops, the debugger entered the error state%sSave your work now !%sHit Stop, and hope the best, we're pulling the plug."
 msgid "The debugger encountered an internal error.%0:s%0:sSave your work.%0:sYou may then hit \"Stop\", or \"Reset debugger\" to terminate the debug session."
 msgstr "调试器错误%s哎呀, 调试器进入错误状态%s现在保存你的工作!%s点击停止,相信(hope)最好的 , 我们将终止(pulling the plug)."
-
-#: lazarusidestrconsts.lisdebuggerfeedbackerror
-msgid "Debugger Error"
-msgstr "调试器错误"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackinformation
-msgid "Debugger Information"
-msgstr "调试器信息"
-
-#: lazarusidestrconsts.lisdebuggerfeedbackwarning
-msgid "Debugger Warning"
-msgstr "调试器警告"
 
 #: lazarusidestrconsts.lisdebuggerinvalid
 msgid "Debugger invalid"
@@ -8594,18 +8401,6 @@ msgstr "进程(Process)"
 msgid "Reset Debugger after each run"
 msgstr "重置调试器在每次运行后"
 
-#: lazarusidestrconsts.lisdebugoptionsfrmresume
-msgid "Resume"
-msgstr "恢复(Resume)"
-
-#: lazarusidestrconsts.lisdebugoptionsfrmresumehandled
-msgid "Resume Handled"
-msgstr "恢复(Resume)已处理"
-
-#: lazarusidestrconsts.lisdebugoptionsfrmresumeunhandled
-msgid "Resume Unhandled"
-msgstr "恢复(Resume)未处理"
-
 #: lazarusidestrconsts.lisdebugoptionsfrmshowexitcodeonstop
 msgid "Show message on stop with Error (Exit-code <> 0)"
 msgstr ""
@@ -8652,11 +8447,6 @@ msgstr "不能加载文件"
 msgid "Unable to load file \"%s\"."
 msgstr "不能加载文件\"%s\"."
 
-#: lazarusidestrconsts.lisdecimal
-msgctxt "lazarusidestrconsts.lisdecimal"
-msgid "Decimal"
-msgstr "小数"
-
 #: lazarusidestrconsts.lisdefault
 msgctxt "lazarusidestrconsts.lisdefault"
 msgid "Default"
@@ -8690,11 +8480,6 @@ msgstr "在补全框中延迟长行提示"
 msgid "Delay for hints"
 msgstr "延迟提示"
 
-#: lazarusidestrconsts.lisdelete
-msgctxt "lazarusidestrconsts.lisdelete"
-msgid "Delete"
-msgstr "删除"
-
 #: lazarusidestrconsts.lisdelete2
 msgid "Delete?"
 msgstr "删除?"
@@ -8708,23 +8493,6 @@ msgstr "删除附加\"%s\"?"
 msgid "&Delete All"
 msgstr "删除所有(&D)"
 
-#: lazarusidestrconsts.lisdeleteallbreakpoints
-msgid "Delete all breakpoints?"
-msgstr "删除所有断点？"
-
-#: lazarusidestrconsts.lisdeleteallbreakpoints2
-#, object-pascal-format
-msgid "Delete all breakpoints in file \"%s\"?"
-msgstr "删除所有断点在文件\"%s\"?"
-
-#: lazarusidestrconsts.lisdeleteallinsamesource
-msgid "Delete All in same source"
-msgstr "在相同的代码中删除所有"
-
-#: lazarusidestrconsts.lisdeleteallselectedbreakpoints
-msgid "Delete all selected breakpoints?"
-msgstr "删除所有选择断点?"
-
 #: lazarusidestrconsts.lisdeleteallthesefiles
 msgid "Delete all these files?"
 msgstr "删除所有这些文件？"
@@ -8732,25 +8500,6 @@ msgstr "删除所有这些文件？"
 #: lazarusidestrconsts.lisdeleteambiguousfile
 msgid "Delete ambiguous file?"
 msgstr "删除多义文件？"
-
-#: lazarusidestrconsts.lisdeletebreakpoint
-msgid "Delete Breakpoint"
-msgstr "删除断点"
-
-#: lazarusidestrconsts.lisdeletebreakpointatline
-#, object-pascal-format
-msgid "Delete breakpoint at%s\"%s\" line %d?"
-msgstr "删除断点在%s\"%s\"行%d?"
-
-#: lazarusidestrconsts.lisdeletebreakpointforaddress
-#, object-pascal-format
-msgid "Delete breakpoint for address %s?"
-msgstr "删除断点对于地址%s?"
-
-#: lazarusidestrconsts.lisdeletebreakpointforwatch
-#, object-pascal-format
-msgid "Delete watchpoint for \"%s\"?"
-msgstr "对\"%s\"删除监视点(watchpoint)?"
 
 #: lazarusidestrconsts.lisdeletefilefailed
 msgid "Delete file failed"
@@ -8871,10 +8620,6 @@ msgstr "在编辑器中打开不同的"
 msgid "different unit %s found at new position \"%s\""
 msgstr "不同的单元%s被找到 在新位置\"%s\""
 
-#: lazarusidestrconsts.lisdigits
-msgid "Digits:"
-msgstr "数字:"
-
 #: lazarusidestrconsts.lisdirectives
 msgid "Directives"
 msgstr "指令"
@@ -8908,23 +8653,6 @@ msgstr "目录不可写"
 #: lazarusidestrconsts.lisdirectorywheretheideputsthepofiles
 msgid "Directory where the IDE puts the .po files"
 msgstr "IDE放置.po文件的目录"
-
-#: lazarusidestrconsts.lisdisableallinsamesource
-msgid "Disable All in same source"
-msgstr "在相同的源文件中禁用所有"
-
-#: lazarusidestrconsts.lisdisablebreakpoint
-msgid "Disable Breakpoint"
-msgstr "禁用断点"
-
-#: lazarusidestrconsts.lisdisabled
-msgctxt "lazarusidestrconsts.lisdisabled"
-msgid "Disabled"
-msgstr "禁用"
-
-#: lazarusidestrconsts.lisdisablegroups
-msgid "Disable Groups"
-msgstr "禁用组"
 
 #: lazarusidestrconsts.lisdisablei18nforlfm
 msgid "Disable I18N for LFM"
@@ -9016,11 +8744,6 @@ msgstr ""
 #: lazarusidestrconsts.lisdistinguishbigandsmalllettersegaanda
 msgid "Distinguish big and small letters e.g. A and a"
 msgstr "区分大小写字母,例如:A和a"
-
-#: lazarusidestrconsts.lisdlgadd
-msgctxt "lazarusidestrconsts.lisdlgadd"
-msgid "Add ..."
-msgstr "添加..."
 
 #: lazarusidestrconsts.lisdlgalloptions
 msgid "All options ..."
@@ -9476,23 +9199,6 @@ msgstr "空"
 msgid "Destination directory for publishing is either a relative path or empty."
 msgstr ""
 
-#: lazarusidestrconsts.lisenableall
-msgid "&Enable All"
-msgstr "启用所有(&E)"
-
-#: lazarusidestrconsts.lisenableallinsamesource
-msgid "Enable All in same source"
-msgstr "在相同的代码中启用所有"
-
-#: lazarusidestrconsts.lisenablebreakpoint
-msgid "Enable Breakpoint"
-msgstr "激活断点"
-
-#: lazarusidestrconsts.lisenabled
-msgctxt "lazarusidestrconsts.lisenabled"
-msgid "Enabled"
-msgstr "允许"
-
 #: lazarusidestrconsts.lisenabledonlyforpackages
 msgid "Enabled only for packages."
 msgstr "仅对软件包启用."
@@ -9501,10 +9207,6 @@ msgstr "仅对软件包启用."
 #, object-pascal-format
 msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
 msgstr ""
-
-#: lazarusidestrconsts.lisenablegroups
-msgid "Enable Groups"
-msgstr "激活组"
 
 #: lazarusidestrconsts.lisenablei18nforlfm
 msgid "Enable I18N for LFM"
@@ -9765,40 +9467,6 @@ msgstr "写入文件\"%s\"错误"
 msgid "Error writing package list to file%s%s%s%s"
 msgstr "写入软件包列表到文件 %s%s%s%s错误"
 
-#: lazarusidestrconsts.lisevalexpression
-msgctxt "lazarusidestrconsts.lisevalexpression"
-msgid "Eval expression"
-msgstr "求值(Eval)表达式"
-
-#: lazarusidestrconsts.lisevaluateall
-#, fuzzy
-msgid "Evaluate all"
-msgstr "评估/修改"
-
-#: lazarusidestrconsts.lisevaluatemodify
-msgid "&Evaluate/Modify"
-msgstr "诊断/评估/修改(&E)"
-
-#: lazarusidestrconsts.liseventlogclear
-msgid "Clear Events"
-msgstr "清除事件"
-
-#: lazarusidestrconsts.liseventlogoptions
-msgid "Event Log Options ..."
-msgstr "事件日志选项..."
-
-#: lazarusidestrconsts.liseventlogsavetofile
-msgid "Save Events to File"
-msgstr "保存事件到文件"
-
-#: lazarusidestrconsts.liseventslogaddcomment
-msgid "Add Comment ..."
-msgstr "添加注释..."
-
-#: lazarusidestrconsts.liseventslogaddcomment2
-msgid "Add Comment"
-msgstr "添加注释"
-
 #: lazarusidestrconsts.liseverynthlinenumber
 msgid "Every n-th line number"
 msgstr "每第几个行号"
@@ -9819,10 +9487,6 @@ msgstr "示例:%sIdentifier%sTMyEnum.Enum%sUnitname.Identifier%s#PackageName.Uni
 #: lazarusidestrconsts.lisexamplesopenfirstselected
 msgid "Open first selected"
 msgstr "打开第一个选择"
-
-#: lazarusidestrconsts.lisexceptiondialog
-msgid "Debugger Exception Notification"
-msgstr "调试器异常通知"
 
 #: lazarusidestrconsts.lisexclude
 msgid "Exclude"
@@ -9931,10 +9595,6 @@ msgstr "导出选择"
 #: lazarusidestrconsts.lisexportsub
 msgid "Export >>"
 msgstr "导出>>"
-
-#: lazarusidestrconsts.lisexpression
-msgid "Expression:"
-msgstr "表达式:"
 
 #: lazarusidestrconsts.lisextendincludefilesearchpathofpackagewith
 #, object-pascal-format, fuzzy, badformat
@@ -10107,10 +9767,6 @@ msgstr "文件\"%s\"是虚拟的."
 #: lazarusidestrconsts.lisfilelinkerror
 msgid "File link error"
 msgstr "文件链接错误"
-
-#: lazarusidestrconsts.lisfilenameaddress
-msgid "Filename/Address"
-msgstr "文件名/地址"
 
 #: lazarusidestrconsts.lisfilenamestyle
 msgid "Filename Style"
@@ -10331,10 +9987,6 @@ msgstr "首先测试(&F)"
 #: lazarusidestrconsts.lisfixlfmfile
 msgid "Fix LFM file"
 msgstr "修复LFM文件"
-
-#: lazarusidestrconsts.lisfloatingpoin
-msgid "Floating Point"
-msgstr "浮点"
 
 #: lazarusidestrconsts.lisfocushint
 msgid "Focus hint"
@@ -10668,10 +10320,6 @@ msgstr "全局设置"
 msgid "Goto Line"
 msgstr "转到行"
 
-#: lazarusidestrconsts.lisgotoselected
-msgid "Goto selected"
-msgstr "转到选择"
-
 #: lazarusidestrconsts.lisgplnotice
 #, fuzzy
 msgid ""
@@ -10700,44 +10348,9 @@ msgstr ""
 msgid "Group"
 msgstr "组"
 
-#: lazarusidestrconsts.lisgroupassignexisting
-#, object-pascal-format
-msgid "Assign to existing \"%s\" group?"
-msgstr "分配到已存在的\"%s\"组?"
-
-#: lazarusidestrconsts.lisgroupemptydelete
-#, object-pascal-format
-msgid "No more breakpoints are assigned to group \"%s\", delete it?"
-msgstr "没有更多断点被分配到组(group)\"%s\",删除它?"
-
-#: lazarusidestrconsts.lisgroupemptydeletemore
-#, object-pascal-format
-msgid "%sThere are %d more empty groups, delete all?"
-msgstr "%s这里有%d更多的空组(groups),删除所有?"
-
 #: lazarusidestrconsts.lisgrouplocalvariables
 msgid "Group automatically defined local variables"
 msgstr "组自动地定义局部变量"
-
-#: lazarusidestrconsts.lisgroupnameemptyclearinstead
-msgid "The group name cannot be empty. Clear breakpoints' group(s)?"
-msgstr "组名称不能是空的.清理断点的组?"
-
-#: lazarusidestrconsts.lisgroupnameinput
-msgid "Group name:"
-msgstr "组名:"
-
-#: lazarusidestrconsts.lisgroupnameinvalid
-msgid "BreakpointGroup name must be a valid Pascal identifier name."
-msgstr "BreakpointGroup名称必需是一个有效的pascal标识符."
-
-#: lazarusidestrconsts.lisgroupsetnew
-msgid "Set new group ..."
-msgstr "设置新组..."
-
-#: lazarusidestrconsts.lisgroupsetnone
-msgid "Clear group(s)"
-msgstr "清除组"
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
 msgid "Enable or Disable groups of debug output. Valid Options are:"
@@ -10759,11 +10372,6 @@ msgstr "标头颜色"
 msgid "Header comment for class"
 msgstr "Header注释对于类"
 
-#: lazarusidestrconsts.lishelp
-msgctxt "lazarusidestrconsts.lishelp"
-msgid "Help"
-msgstr "帮助"
-
 #: lazarusidestrconsts.lishelpentries
 msgid "Help entries"
 msgstr "帮助条目(entries)"
@@ -10771,10 +10379,6 @@ msgstr "帮助条目(entries)"
 #: lazarusidestrconsts.lishelpselectordialog
 msgid "Help selector"
 msgstr "帮助选择器"
-
-#: lazarusidestrconsts.lishexadecimal
-msgid "Hexadecimal"
-msgstr "十六进制"
 
 #: lazarusidestrconsts.lishfmhelpforfreepascalcompilermessage
 msgid "Help for Free Pascal Compiler message"
@@ -10874,10 +10478,6 @@ msgstr "查看窗体"
 #: lazarusidestrconsts.lishintviewunits
 msgid "View Units"
 msgstr "查看单元"
-
-#: lazarusidestrconsts.lishitcount
-msgid "Hitcount"
-msgstr "命中计数(Hitcount)"
 
 #: lazarusidestrconsts.lishlpoptsdatabases
 msgid "Databases"
@@ -11064,11 +10664,6 @@ msgstr "如果仅仅会话信息更改,询问是否保存它."
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "如果你想使用两个不同版本的Lazarus版本,你必需使用命令行参数primary-config-path 或 pcp.%s来启动第二个Lazarus,例如:(翻译可能有问题）"
 
-#: lazarusidestrconsts.lisignore
-msgctxt "lazarusidestrconsts.lisignore"
-msgid "Ignore"
-msgstr "忽略"
-
 #: lazarusidestrconsts.lisignoreall
 msgid "Ignore all"
 msgstr "忽略所有"
@@ -11076,10 +10671,6 @@ msgstr "忽略所有"
 #: lazarusidestrconsts.lisignoreandcontinue
 msgid "Ignore and continue"
 msgstr "忽略并继续"
-
-#: lazarusidestrconsts.lisignoreexceptiontype
-msgid "Ignore this exception type"
-msgstr "忽略这个异常类型"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -11185,10 +10776,6 @@ msgstr "涉及Fppkg配置问题"
 #: lazarusidestrconsts.lisindentationforpascalsources
 msgid "Indentation for Pascal sources"
 msgstr "Pascal源代码缩进"
-
-#: lazarusidestrconsts.lisindex
-msgid "Index"
-msgstr "索引"
 
 #: lazarusidestrconsts.lisinformation
 msgid "Information"
@@ -11341,55 +10928,6 @@ msgstr "插入url标记"
 msgid "In session"
 msgstr "在会话"
 
-#: lazarusidestrconsts.lisinspect
-msgid "&Inspect"
-msgstr "查看(&I)"
-
-#: lazarusidestrconsts.lisinspectaddwatch
-msgctxt "lazarusidestrconsts.lisinspectaddwatch"
-msgid "Add watch"
-msgstr "增加观察点"
-
-#: lazarusidestrconsts.lisinspectclassinherit
-#, object-pascal-format, fuzzy
-msgid "%s: class %s inherits from %s"
-msgstr "%s :类%s继承自%s"
-
-#: lazarusidestrconsts.lisinspectdata
-msgid "Data"
-msgstr "数据"
-
-#: lazarusidestrconsts.lisinspectdialog
-msgid "Debug Inspector"
-msgstr "调试查看器"
-
-#: lazarusidestrconsts.lisinspectmethods
-msgid "Methods"
-msgstr "方法"
-
-#: lazarusidestrconsts.lisinspectpointerto
-#, object-pascal-format
-msgid "Pointer to %s"
-msgstr "指针到 %s"
-
-#: lazarusidestrconsts.lisinspectproperties
-msgctxt "lazarusidestrconsts.lisinspectproperties"
-msgid "Properties"
-msgstr "属性"
-
-#: lazarusidestrconsts.lisinspectunavailableerror
-#, object-pascal-format, fuzzy, badformat
-msgid "%s: unavailable (error: %s)"
-msgstr "%s:不可用"
-
-#: lazarusidestrconsts.lisinspectuseinstance
-msgid "Instance"
-msgstr "实例"
-
-#: lazarusidestrconsts.lisinspectuseinstancehint
-msgid "Use instance class"
-msgstr "使用实例类"
-
 #: lazarusidestrconsts.lisinstallationfailed
 msgid "Installation failed"
 msgstr "安装失败"
@@ -11500,14 +11038,6 @@ msgstr "无效模式%s"
 #: lazarusidestrconsts.lisinvalidmultiselection
 msgid "Invalid multiselection"
 msgstr "无效的多选"
-
-#: lazarusidestrconsts.lisinvalidoff
-msgid "Invalid (Off)"
-msgstr "无效 (Off)"
-
-#: lazarusidestrconsts.lisinvalidon
-msgid "Invalid (On)"
-msgstr "无效 (On)"
 
 #: lazarusidestrconsts.lisinvalidpascalidentifiercap
 msgid "Invalid Pascal Identifier"
@@ -12194,11 +11724,6 @@ msgstr "开始(launching)应用程序失败"
 msgid "Launching target command line"
 msgstr "启动目标(target)命令行"
 
-#: lazarusidestrconsts.lislazarus
-msgctxt "lazarusidestrconsts.lislazarus"
-msgid "Lazarus"
-msgstr "Lazarus"
-
 #: lazarusidestrconsts.lislazarusdefault
 msgid "Lazarus Default"
 msgstr "Lazarus默认"
@@ -12515,14 +12040,6 @@ msgstr "库路径"
 msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under macOS)."
 msgstr "一个Free Pascal共享库(在Windows下.dll,在Linux下.so,在MacOS X下.dylib)."
 
-#: lazarusidestrconsts.lisline
-msgid "Line:"
-msgstr "行:"
-
-#: lazarusidestrconsts.lislinelength
-msgid "Line/Length"
-msgstr "行/长度"
-
 #: lazarusidestrconsts.lislink
 msgid "Link:"
 msgstr "链接:"
@@ -12551,54 +12068,6 @@ msgstr "加载宏命令从"
 #: lazarusidestrconsts.lislocal
 msgid "&Local"
 msgstr "局部(&L)"
-
-#: lazarusidestrconsts.lislocals
-msgctxt "lazarusidestrconsts.lislocals"
-msgid "Local Variables"
-msgstr "局部变量"
-
-#: lazarusidestrconsts.lislocalsdlgcopyall
-msgid "Copy &all"
-msgstr "复制所有(&a)"
-
-#: lazarusidestrconsts.lislocalsdlgcopyname
-msgid "&Copy Name"
-msgstr "复制名称(&C)"
-
-#: lazarusidestrconsts.lislocalsdlgcopynamevalue
-msgid "Co&py Name and Value"
-msgstr "复制名称和值(&p)"
-
-#: lazarusidestrconsts.lislocalsdlgcopyrawvalue
-msgid "Copy &RAW Value"
-msgstr "复制原始数据(Raw)值(&R)"
-
-#: lazarusidestrconsts.lislocalsdlgcopyvalue
-msgid "C&opy Value"
-msgstr "复制值(&o)"
-
-#: lazarusidestrconsts.lislocalsnotevaluated
-#, fuzzy
-msgid "Locals not evaluated"
-msgstr "线程未评估(evaluated)"
-
-#: lazarusidestrconsts.lislogcallstack
-#, fuzzy
-msgid "Log Call Stack"
-msgstr "调用栈"
-
-#: lazarusidestrconsts.lislogcallstacklimit
-msgid "(frames limit. 0 - no limits)"
-msgstr "(帧(frames)限制. 0 - 无限制)"
-
-#: lazarusidestrconsts.lislogevalexpression
-msgctxt "lazarusidestrconsts.lislogevalexpression"
-msgid "Eval expression"
-msgstr "求值(Eval)表达式"
-
-#: lazarusidestrconsts.lislogmessage
-msgid "Log Message"
-msgstr "日志信息"
 
 #: lazarusidestrconsts.lislowercasestring
 msgid "lowercase string"
@@ -12767,11 +12236,6 @@ msgstr ""
 msgid "Maximum parallel processes, 0 means default (%s)"
 msgstr "最大并行(parallel)进程,0意味着默认(%s)"
 
-#: lazarusidestrconsts.lismaxs
-#, object-pascal-format
-msgid "Max %d"
-msgstr "最大%d"
-
 #: lazarusidestrconsts.lismaybeyouhavetorecompilethepackage
 #, object-pascal-format
 msgid "%s Maybe you have to recompile the package."
@@ -12786,10 +12250,6 @@ msgstr "%s MB"
 msgctxt "lazarusidestrconsts.lismeaction"
 msgid "Action"
 msgstr "动作"
-
-#: lazarusidestrconsts.lismemorydump
-msgid "Memory Dump"
-msgstr "内存转储"
 
 #: lazarusidestrconsts.lismenuabortbuild
 msgid "Abort Build"
@@ -12908,10 +12368,6 @@ msgstr "配置\"构建Lazarus\"..."
 #: lazarusidestrconsts.lismenucontexthelp
 msgid "Context sensitive Help"
 msgstr "上下文有关帮助"
-
-#: lazarusidestrconsts.lismenucontinue
-msgid "&Continue"
-msgstr "继续(&C)"
 
 #: lazarusidestrconsts.lismenuconvertdelphipackage
 msgid "Convert Delphi Package to Lazarus Package ..."
@@ -13816,11 +13272,6 @@ msgctxt "lazarusidestrconsts.lismenunewunit"
 msgid "New Unit"
 msgstr "新建单元"
 
-#: lazarusidestrconsts.lismenuok
-msgctxt "lazarusidestrconsts.lismenuok"
-msgid "&OK"
-msgstr "确定(&O)"
-
 #: lazarusidestrconsts.lismenuonlinehelp
 msgid "Online Help"
 msgstr "在线帮助"
@@ -14151,10 +13602,6 @@ msgstr "汇编"
 #: lazarusidestrconsts.lismenuviewbreakpoints
 msgid "BreakPoints"
 msgstr "断点"
-
-#: lazarusidestrconsts.lismenuviewcallstack
-msgid "Call Stack"
-msgstr "调用栈"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"
@@ -14693,10 +14140,6 @@ msgstr "在每行前的文本(&b)"
 msgid "&Trim clipboard contents"
 msgstr "修剪剪贴板内容(&T)"
 
-#: lazarusidestrconsts.lisms
-msgid "(ms)"
-msgstr "(ms)"
-
 #: lazarusidestrconsts.lismsgcolors
 msgid "Message colors"
 msgstr "信息颜色"
@@ -14729,11 +14172,6 @@ msgstr "活动构建模式的名称"
 #: lazarusidestrconsts.lisnameofnewprocedure
 msgid "Name of new procedure"
 msgstr "新过程名称"
-
-#: lazarusidestrconsts.lisnever
-msgctxt "lazarusidestrconsts.lisnever"
-msgid "Never"
-msgstr "从不"
 
 #: lazarusidestrconsts.lisnew
 msgctxt "lazarusidestrconsts.lisnew"
@@ -14827,10 +14265,6 @@ msgstr "新记录的宏.无法保存"
 #: lazarusidestrconsts.lisnewunitsareaddedtousessections
 msgid "New units are added to uses sections"
 msgstr "新的单元被添加到uses分句"
-
-#: lazarusidestrconsts.lisno
-msgid "No"
-msgstr ""
 
 #: lazarusidestrconsts.lisnoautosaveactivedesktop
 msgid "'Auto save active desktop' option is turned off, you will need to save current desktop manually."
@@ -15036,10 +14470,6 @@ msgstr "对象路径"
 msgid "Switch to Object Inspector Favorites tab"
 msgstr "切换到 对象查看器 的收藏夹标签页"
 
-#: lazarusidestrconsts.lisoff
-msgid "? (Off)"
-msgstr "?(关闭)"
-
 #: lazarusidestrconsts.lisofpackage
 #, object-pascal-format
 msgid " of package %s"
@@ -15136,18 +14566,9 @@ msgstr "状态"
 msgid "%sThis package is installed but the lpk file was not found"
 msgstr "%s这个软件包已经安装, 但是lpk文件未找到"
 
-#: lazarusidestrconsts.lisok
-msgctxt "lazarusidestrconsts.lisok"
-msgid "OK"
-msgstr "确定"
-
 #: lazarusidestrconsts.lisoldclass
 msgid "Old Class"
 msgstr "旧的类"
-
-#: lazarusidestrconsts.lison
-msgid "? (On)"
-msgstr ""
 
 #: lazarusidestrconsts.lisonbreaklineiereturnorenterkey
 msgid "On break line (i.e. return or enter key)"
@@ -15478,10 +14899,6 @@ msgstr "解析\"%s\": %s"
 #: lazarusidestrconsts.lisparsers
 msgid "Parsers:"
 msgstr "语法解析器:"
-
-#: lazarusidestrconsts.lispasscount
-msgid "Pass Count"
-msgstr "通过统计"
 
 #: lazarusidestrconsts.lispassingcompilerdefinetwicewithdifferentvalues
 #, object-pascal-format
@@ -16043,10 +15460,6 @@ msgstr "无效的单元名"
 #, object-pascal-format
 msgid "Missing files of package %s"
 msgstr "软件包%s缺少文件"
-
-#: lazarusidestrconsts.lispendingon
-msgid "Pending (On)"
-msgstr "待定(打开)"
 
 #: lazarusidestrconsts.lispenewfilenotinincludepath
 msgid "New file not in include path"
@@ -16921,10 +16334,6 @@ msgstr "选择.po文件目录"
 msgid "Do not save any session info"
 msgstr "不保存任何会话信息"
 
-#: lazarusidestrconsts.lispointer
-msgid "Pointer"
-msgstr "指针"
-
 #: lazarusidestrconsts.lisposaveinideconfigdirectory
 msgid "Save in .lps file in IDE config directory"
 msgstr "保存在.lps文件在 IDE配置目录"
@@ -17493,19 +16902,10 @@ msgstr "记录"
 msgid "Recorded"
 msgstr "记录"
 
-#: lazarusidestrconsts.lisrecordstruct
-msgid "Record/Structure"
-msgstr "记录/结构"
-
 #: lazarusidestrconsts.lisredo
 msgctxt "lazarusidestrconsts.lisredo"
 msgid "Redo"
 msgstr "重做"
-
-#: lazarusidestrconsts.lisregisters
-msgctxt "lazarusidestrconsts.lisregisters"
-msgid "Registers"
-msgstr "寄存器"
 
 #: lazarusidestrconsts.lisregularexpression
 msgid "Regular expression"
@@ -17652,10 +17052,6 @@ msgstr "使用另一个编码重新打开"
 msgctxt "lazarusidestrconsts.lisrepeat"
 msgid "Repeat"
 msgstr "重复(Repeat)"
-
-#: lazarusidestrconsts.lisrepeatcount
-msgid "Repeat Count:"
-msgstr "重复(Repeat)计数(Count):"
 
 #: lazarusidestrconsts.lisreplace
 msgctxt "lazarusidestrconsts.lisreplace"
@@ -18500,10 +17896,6 @@ msgstr ""
 msgid "Source and Destination are the same:%s%s"
 msgstr "源文件和目标是相同的:%s%s"
 
-#: lazarusidestrconsts.lissourcebreakpoint
-msgid "&Source Breakpoint ..."
-msgstr "源码断点...(&S)"
-
 #: lazarusidestrconsts.lissourcedirectorydoesnotexist
 #, object-pascal-format
 msgid "Source directory \"%s\" does not exist."
@@ -18599,15 +17991,6 @@ msgstr "奇怪的.lpi文件"
 #: lazarusidestrconsts.lisstreamingerror
 msgid "Streaming error"
 msgstr "流错误"
-
-#: lazarusidestrconsts.lisstring
-msgid "String"
-msgstr "字符串"
-
-#: lazarusidestrconsts.lisstyle
-msgctxt "lazarusidestrconsts.lisstyle"
-msgid "Style"
-msgstr "样式"
 
 #: lazarusidestrconsts.lissubprocedure
 msgid "Sub Procedure"
@@ -18730,10 +18113,6 @@ msgstr "上移在Tab顺序中选择的控件"
 #, object-pascal-format
 msgid "Tabs for %s"
 msgstr "Tabs对于%s"
-
-#: lazarusidestrconsts.listakesnapshot
-msgid "Take a Snapshot"
-msgstr "获取快照"
 
 #: lazarusidestrconsts.listarget
 msgid "Target:"
@@ -18865,11 +18244,6 @@ msgstr "当前FPC没有配置文件.它将很可能缺少一些单元.检测你�
 #, object-pascal-format
 msgid "The debugger \"%s\"%sdoes not exist or is not executable.%sSee Tools -> Options -> Debugger options"
 msgstr "该调试器\"%s\"%s不存在或者不是可执行的.%s查看 工具->选项->调试器选项"
-
-#: lazarusidestrconsts.listhedebuggerexecutabletypicallyhasthenamepleasegive
-#, object-pascal-format
-msgid "The debugger executable typically has the name \"%s\". Please give the full file path."
-msgstr "调试器可执行文件代表性地有名称\"%s\".请给予完整的文件路径."
 
 #: lazarusidestrconsts.listhedefaultmodemustbestoredinproject
 msgid "The default mode must be stored in project, not in session."
@@ -19463,44 +18837,6 @@ msgstr "这将创建一个循环依赖项."
 #, object-pascal-format
 msgid "This will put a lot of text (%s) on the clipboard.%sProceed?"
 msgstr ""
-
-#: lazarusidestrconsts.listhreads
-msgctxt "lazarusidestrconsts.listhreads"
-msgid "Threads"
-msgstr "线程"
-
-#: lazarusidestrconsts.listhreadscurrent
-msgctxt "lazarusidestrconsts.listhreadscurrent"
-msgid "Current"
-msgstr "当前"
-
-#: lazarusidestrconsts.listhreadsfunc
-msgctxt "lazarusidestrconsts.listhreadsfunc"
-msgid "Function"
-msgstr "函数"
-
-#: lazarusidestrconsts.listhreadsgoto
-msgid "Goto"
-msgstr "转到"
-
-#: lazarusidestrconsts.listhreadsline
-msgctxt "lazarusidestrconsts.listhreadsline"
-msgid "Line"
-msgstr "行"
-
-#: lazarusidestrconsts.listhreadsnotevaluated
-msgid "Threads not evaluated"
-msgstr "线程未评估(evaluated)"
-
-#: lazarusidestrconsts.listhreadssrc
-msgctxt "lazarusidestrconsts.listhreadssrc"
-msgid "Source"
-msgstr "源代码"
-
-#: lazarusidestrconsts.listhreadsstate
-msgctxt "lazarusidestrconsts.listhreadsstate"
-msgid "State"
-msgstr "状态(State)"
 
 #: lazarusidestrconsts.listitle
 msgid "&Title"
@@ -20353,10 +19689,6 @@ msgstr "单元%s需要软件包%s"
 msgid "Units not found in project %s"
 msgstr "单元未找到在工程%s"
 
-#: lazarusidestrconsts.lisunsigned
-msgid "Unsigned"
-msgstr "Unsigned(无符号整型)"
-
 #: lazarusidestrconsts.lisunusedunitsof
 #, object-pascal-format
 msgid "Unused units of %s"
@@ -20589,20 +19921,6 @@ msgstr "复制版本信息到剪贴板"
 msgid "Very Verbose"
 msgstr "非常冗长的(Verbose)"
 
-#: lazarusidestrconsts.lisviewbreakpointproperties
-msgctxt "lazarusidestrconsts.lisviewbreakpointproperties"
-msgid "Breakpoint Properties ..."
-msgstr "断点属性..."
-
-#: lazarusidestrconsts.lisviewsource
-msgid "View Source"
-msgstr "查看源代码"
-
-#: lazarusidestrconsts.lisviewsourcedisass
-msgctxt "lazarusidestrconsts.lisviewsourcedisass"
-msgid "View Assembler"
-msgstr "查看汇编"
-
 #: lazarusidestrconsts.lisviewsourcelfm
 msgid "View Source (.lfm)"
 msgstr "查看源代码(.lfm)"
@@ -20625,59 +19943,6 @@ msgstr ",警告:%s"
 #, object-pascal-format
 msgid "%sWarning: This is the main unit. The new main unit will be %s.pas."
 msgstr "%s警告:这是主单元.新的主单元将是%s.pas."
-
-#: lazarusidestrconsts.liswatch
-msgid "&Watch"
-msgstr "监视点(&W)"
-
-#: lazarusidestrconsts.liswatchdata
-msgid "Watch:"
-msgstr "监视点:"
-
-#: lazarusidestrconsts.liswatchkind
-msgid "Watch action"
-msgstr "监视点动作"
-
-#: lazarusidestrconsts.liswatchkindread
-msgid "Read"
-msgstr "读"
-
-#: lazarusidestrconsts.liswatchkindreadwrite
-msgid "Read/Write"
-msgstr "读/写"
-
-#: lazarusidestrconsts.liswatchkindwrite
-msgid "Write"
-msgstr "写"
-
-#: lazarusidestrconsts.liswatchpoint
-msgid "&Data/Watch Breakpoint ..."
-msgstr "数据/监视点(Watch)断点...(&D)"
-
-#: lazarusidestrconsts.liswatchpointbreakpoint
-msgid "&Data/watch Breakpoint ..."
-msgstr "数据/监视点(Watch)断点...(&D)"
-
-#: lazarusidestrconsts.liswatchpropert
-msgid "Watch Properties"
-msgstr "查看属性(Watch Properties)"
-
-#: lazarusidestrconsts.liswatchscope
-msgid "Watch scope"
-msgstr "监视点范围"
-
-#: lazarusidestrconsts.liswatchscopeglobal
-msgctxt "lazarusidestrconsts.liswatchscopeglobal"
-msgid "Global"
-msgstr "全局"
-
-#: lazarusidestrconsts.liswatchscopelocal
-msgid "Declaration"
-msgstr "声明(Declaration)"
-
-#: lazarusidestrconsts.liswatchtowatchpoint
-msgid "Create &Data/Watch Breakpoint ..."
-msgstr "创建数据/监视点(Watch)断点...(&D)"
 
 #: lazarusidestrconsts.liswelcometolazaruside
 #, object-pascal-format
@@ -20750,35 +20015,6 @@ msgstr "缺少适当的FPC源文件代码浏览和完成将是非常有限的."
 msgid "With required packages"
 msgstr "带有需要的软件包"
 
-#: lazarusidestrconsts.liswldeleteall
-msgid "De&lete All"
-msgstr "删除所有(&l)"
-
-#: lazarusidestrconsts.liswldisableall
-msgid "D&isable All"
-msgstr "禁用所有(&i)"
-
-#: lazarusidestrconsts.liswlenableall
-msgid "E&nable All"
-msgstr "启用所有(&n)"
-
-#: lazarusidestrconsts.liswlexpression
-msgid "Expression"
-msgstr "表达式"
-
-#: lazarusidestrconsts.liswlinspectpane
-msgid "Inspect pane"
-msgstr "查看窗格"
-
-#: lazarusidestrconsts.liswlproperties
-msgid "&Properties"
-msgstr "属性(&P)"
-
-#: lazarusidestrconsts.liswlwatchlist
-msgctxt "lazarusidestrconsts.liswlwatchlist"
-msgid "Watches"
-msgstr "查看"
-
 #: lazarusidestrconsts.liswordatcursorincurrenteditor
 msgid "Word at cursor in current editor"
 msgstr "在当前编辑器中光标位置处的单词"
@@ -20822,10 +20058,6 @@ msgstr "XML错误"
 #, object-pascal-format
 msgid "XML parser error in file %s%sError: %s"
 msgstr "XML语法f分析器错误在文件%s%s错误: %s"
-
-#: lazarusidestrconsts.lisyes
-msgid "Yes"
-msgstr "是"
 
 #: lazarusidestrconsts.lisyoucandisablethisforindividualformsviathepackageed
 msgid "You can disable this for individual forms via the package editor"
@@ -21022,36 +20254,6 @@ msgstr "软件包图表"
 msgid "Add package unit to uses section"
 msgstr "添加软件包单元到uses分句"
 
-#: lazarusidestrconsts.regdlgbinary
-msgctxt "lazarusidestrconsts.regdlgbinary"
-msgid "Binary"
-msgstr "二进制"
-
-#: lazarusidestrconsts.regdlgdecimal
-msgctxt "lazarusidestrconsts.regdlgdecimal"
-msgid "Decimal"
-msgstr "小数"
-
-#: lazarusidestrconsts.regdlgdisplaytypeforselectedregisters
-msgid "Display type for selected Registers"
-msgstr "显示选择寄存器(Registers)的类型"
-
-#: lazarusidestrconsts.regdlgformat
-msgid "Format"
-msgstr "格式"
-
-#: lazarusidestrconsts.regdlghex
-msgid "Hex"
-msgstr "十六进制"
-
-#: lazarusidestrconsts.regdlgoctal
-msgid "Octal"
-msgstr "八进制"
-
-#: lazarusidestrconsts.regdlgraw
-msgid "Raw"
-msgstr "未加工的;Raw)"
-
 #: lazarusidestrconsts.rsaddinverse
 msgid "Add Inverse"
 msgstr "添加相反的事物(Inverse)"
@@ -21059,10 +20261,6 @@ msgstr "添加相反的事物(Inverse)"
 #: lazarusidestrconsts.rsaddnewterm
 msgid "Add new term"
 msgstr "添加新的术语"
-
-#: lazarusidestrconsts.rsattachto
-msgid "Attach to"
-msgstr "附加到"
 
 #: lazarusidestrconsts.rsattributes
 msgid "Attributes"
@@ -21117,10 +20315,6 @@ msgstr "创建新的定义"
 #: lazarusidestrconsts.rsenablei18n
 msgid "Enable i18n"
 msgstr "启用i18n(国际化)"
-
-#: lazarusidestrconsts.rsenterpid
-msgid "Enter PID"
-msgstr "进入PID"
 
 #: lazarusidestrconsts.rsfilterthelistwithstring
 #, fuzzy

@@ -29,9 +29,9 @@ uses
   // LCL
   Forms, StdCtrls, Menus, ComCtrls, Buttons,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, IDEImagesIntf,
+  LazarusCommonStrConst, IDEOptionsIntf, IDEOptEditorIntf, IDEImagesIntf,
   // IDE
-  LazarusIDEStrConsts, Debugger, IdeDebuggerOpts, BaseDebugManager;
+  LazarusIDEStrConsts, IdeDebuggerStringConstants, Debugger, IdeDebuggerOpts, BaseDebugManager;
 type
 
   { TDebuggerSignalsOptions }

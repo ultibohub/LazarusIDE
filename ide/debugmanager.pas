@@ -50,7 +50,9 @@ uses
   CodeCache, CodeToolManager, PascalParserTool, CodeTree,
   // IDEIntf
   IDEWindowIntf, SrcEditorIntf, MenuIntf, IDECommands, LazIDEIntf, ProjectIntf,
-  CompOptsIntf, IDEDialogs, ToolBarIntf,
+  LazarusCommonStrConst, CompOptsIntf, IDEDialogs, ToolBarIntf,
+  // IDEDebugger
+  IdeDebuggerStringConstants,
   // IDE
   CompilerOptions, EnvironmentOpts, SourceEditor, ProjectDefs, Project,
   InputHistory, Debugger, LazarusIDEStrConsts, TransferMacros, MainBar,
@@ -210,10 +212,10 @@ type
     procedure EnvironmentOptsChanged; override;
 
     procedure LoadProjectSpecificInfo(XMLConfig: TXMLConfig;
-                                      Merge: boolean); override;
+                                      Merge: boolean);
     procedure SaveProjectSpecificInfo(XMLConfig: TXMLConfig;
-                                      Flags: TProjectWriteFlags); override;
-    procedure DoRestoreDebuggerMarks(AnUnitInfo: TUnitInfo); override;
+                                      Flags: TProjectWriteFlags);
+    procedure DoRestoreDebuggerMarks(AnUnitInfo: TUnitInfo);
     procedure ClearDebugOutputLog;
     procedure ClearDebugEventsLog;
     procedure DoBackendConverterChanged; override;
@@ -261,6 +263,7 @@ type
     function GetFullFilename(const AUnitinfo: TDebuggerUnitInfo; out Filename: string;
                              AskUserIfNotFound: Boolean): Boolean; override;
     function GetFullFilename(var Filename: string; AskUserIfNotFound: Boolean): Boolean; override;
+    procedure JumpToUnitSource(AnUnitInfo: TDebuggerUnitInfo; ALine: Integer); override;
 
     function DoCreateBreakPoint(const AFilename: string; ALine: integer;
                                 WarnIfNoDebugger: boolean): TModalResult; override;
@@ -275,8 +278,7 @@ type
 
     function DoDeleteBreakPoint(const AFilename: string;
                                 ALine: integer): TModalResult; override;
-    function DoDeleteBreakPointAtMark(
-                        const ASourceMark: TSourceMark): TModalResult; override;
+    function DoDeleteBreakPointAtMark(const ASourceMarkObj: TObject): TModalResult; override;
 
     function ShowBreakPointProperties(const ABreakpoint: TIDEBreakPoint): TModalresult; override;
     function ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String = ''): TModalresult; override;
@@ -300,12 +302,21 @@ type
     procedure UnregisterWatchesInvalidatedHandler(AHandler: TNotifyEvent); override;
   end;
 
+function GetDebugManager: TDebugManager;
+
+property DebugBossMgr: TDebugManager read GetDebugManager;
+
 function DBGDateTimeFormatter(const aValue: string): string;
 
 implementation
 
 var
   DBG_LOCATION_INFO: PLazLoggerLogGroup;
+
+function GetDebugManager: TDebugManager;
+begin
+  Result := TDebugManager(DebugBoss);
+end;
 
 function DBGDateTimeFormatter(const aValue: string): string;
 var
@@ -963,6 +974,39 @@ begin
   end;
 end;
 
+procedure TDebugManager.JumpToUnitSource(AnUnitInfo: TDebuggerUnitInfo;
+  ALine: Integer);
+const
+  JmpFlags: TJumpToCodePosFlags =
+    [jfAddJumpPoint, jfFocusEditor, jfMarkLine, jfMapLineFromDebug, jfSearchVirtualFullPath];
+var
+  Filename: String;
+  ok: Boolean;
+begin
+  if AnUnitInfo = nil then exit;
+  debugln(DBG_LOCATION_INFO, ['JumpToUnitSource AnUnitInfo=', AnUnitInfo.DebugText ]);
+  // avoid any process-messages, so this proc can not be re-entered (avoid opening one files many times)
+  LockCommandProcessing;
+  try
+  (* Maybe trim the filename here and use jfDoNotExpandFilename
+     ExpandFilename works with the current IDE path, and may be wrong
+  *)
+  // TODO: better detection of unsaved project files
+    if GetFullFilename(AnUnitInfo, Filename, False) then
+    begin
+      ok := false;
+      if ALine <= 0 then
+        ALine := AnUnitInfo.SrcLine;
+      if FilenameIsAbsolute(Filename) then
+        ok := MainIDEInterface.DoJumpToSourcePosition(Filename, 0, ALine, 0, JmpFlags) = mrOK;
+      if not ok then
+        MainIDEInterface.DoJumpToSourcePosition(Filename, 0, ALine, 0, JmpFlags+[jfDoNotExpandFilename]);
+    end;
+  finally
+    UnLockCommandProcessing;
+  end;
+end;
+
 procedure TDebugManager.DebuggerConsoleOutput(Sender: TObject;
   const AText: String);
 begin
@@ -1467,7 +1511,7 @@ begin
             {$PUSH}{$R-}
             MsgResult:=IDEQuestionDialog(lisExecutionStopped,
                 Format(lisExecutionStoppedExitCode, [LineEnding+'', FDebugger.ExitCode, IntToHex(FDebugger.ExitCode, i)]),
-                mtInformation, [mrOK, lisMenuOk,
+                mtInformation, [mrOK, lisBtnOk,
                                 mrYesToAll, lisDoNotShowThisMessageAgain], '');
             {$POP}
             if MsgResult=mrYesToAll then
@@ -1477,7 +1521,7 @@ begin
           if EnvironmentOptions.DebuggerShowStopMessage
           then begin
             MsgResult:=IDEQuestionDialog(lisExecutionStopped, lisExecutionStopped,
-                mtInformation, [mrOK, lisMenuOk,
+                mtInformation, [mrOK, lisBtnOk,
                                 mrYesToAll, lisDoNotShowThisMessageAgain], '');
             if MsgResult=mrYesToAll then
               EnvironmentOptions.DebuggerShowStopMessage:=false;
@@ -3108,15 +3152,17 @@ begin
   end;
 end;
 
-function TDebugManager.DoDeleteBreakPointAtMark(const ASourceMark: TSourceMark
+function TDebugManager.DoDeleteBreakPointAtMark(const ASourceMarkObj: TObject
   ): TModalResult;
 var
   OldBreakPoint: TIDEBreakPoint;
+  ASourceMark: TSourceMark absolute ASourceMarkObj;
 begin
   LockCommandProcessing;
   try
     // consistency check
-    if (ASourceMark=nil) or (not ASourceMark.IsBreakPoint)
+    if (ASourceMarkObj=nil) or (not (ASourceMarkObj is TSourceMark))
+    or (not ASourceMark.IsBreakPoint)
     or (ASourceMark.Data=nil) or (not (ASourceMark.Data is TIDEBreakPoint)) then
       RaiseGDBException('TDebugManager.DoDeleteBreakPointAtMark');
 
