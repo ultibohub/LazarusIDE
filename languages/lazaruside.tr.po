@@ -5259,6 +5259,10 @@ msgstr "Kırılma"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Bir derleyiciye göz atın ve seçin (örneğin, ppcx64)"
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -5996,10 +6000,6 @@ msgstr "Unix e göre değiştir /"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Windows a göre değiştir \\"
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "Karakter haritası"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -16750,11 +16750,6 @@ msgstr "Çıkış"
 msgid "&Quit Lazarus"
 msgstr "&Lazarus'tan Çık"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "Aralık"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Okuma hatası"
@@ -17753,10 +17748,6 @@ msgstr "Sıralama seçimi"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "Kelimeler"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr "Unicode aralık listesini alfabetik olarak sırala"
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format

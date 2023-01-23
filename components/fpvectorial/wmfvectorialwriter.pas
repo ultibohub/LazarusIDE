@@ -26,7 +26,7 @@ unit wmfvectorialwriter;
 
 interface
 
-uses
+uses         lazlogger,
   Classes, SysUtils,
   FPImage, FPCanvas,
   fpvectorial, fpvWMF;
@@ -53,8 +53,10 @@ type
     FObjList: TWMFObjList;
     //
     FBBox: TRect;  // in metafile units as specified by UnitsPerInch. NOTE: "logical" units can be different!
-    FLogicalMaxX: Word;        // Max x coordinate used for scaling
-    FLogicalMaxY: Word;        // Max y coordinate used for scaling
+    FLogicalMaxX: Word;        // Max x coordinate used for scaling, in logical units
+    FLogicalMaxY: Word;        // Max y coordinate used for scaling, in logical units
+//    FLogicalOffsetX: Word;     // Position of zero in the range [0..LogicalMaxX]
+//    FLogicalOffsetY: Word;
     FLogicalBounds: TRect;     // Enclosing boundary rectangle in logical units
     FScalingFactor: Double;    // Conversion fpvectorial units to logical units
     FMaxRecordSize: Int64;
@@ -64,8 +66,8 @@ type
     FCurrTextColor: TFPColor;
     FCurrTextAnchor: TvTextAnchor;
     FCurrBkMode: Word;
-    FCurrPolyFillMode: Word;
-    FUseTopLeftCoordinates: Boolean;
+    {%H-}FCurrPolyFillMode: Word;
+    FUseTopLeftCoordinates: Boolean;  // If true, input coordinates are given in top/left coordinate system.
     FErrMsg: TStrings;
 
     function CalcChecksum: Word;
@@ -102,12 +104,12 @@ type
     procedure WriteWindowOrg(AStream: TStream);
 
     procedure WriteEntity(AStream: TStream; AEntity: TvEntity);
-    procedure WriteWMFRecord(AStream: TStream; AFunc: word; ASize: Int64); overload;
-    procedure WriteWMFRecord(AStream: TStream; AFunc: Word; const AParams; ASize: Int64);
-    procedure WriteWMFParams(AStream: TStream; const AParams; ASize: Int64);
+    procedure WriteWMFRecord(AStream: TStream; AFunc: word; ASize: Integer); overload;
+    procedure WriteWMFRecord(AStream: TStream; AFunc: Word; const AParams; ASize: Integer);
+    procedure WriteWMFParams(AStream: TStream; const AParams; ASize: Integer);
 
   protected
-    procedure WritePage(AStream: TStream; AData: TvVectorialDocument;
+    procedure WritePage(AStream: TStream; {%H-}AData: TvVectorialDocument;
       APage: TvVectorialPage);
 
     procedure LogError(AMsg: String);
@@ -131,7 +133,6 @@ uses
 
 const
   ONE_INCH = 25.4;     // 1 inch = 25.4 mm
-  DEFAULT_SIZE = 100;  // size of image if scaling info is not available
   SIZE_OF_WORD = 2;
 
 type
@@ -147,11 +148,11 @@ type
     Pen: TvPen;
   end;
 
-  TWMFPalette = class
+  TWMFPalette = {%H-}class
     // not used, just needed as a filler in the ObjList
   end;
 
-  TWMFRegion = class
+  TWMFRegion = {%H-}class
     // not used, just needed as a filler in the ObjList
   end;
 
@@ -270,12 +271,12 @@ begin
   FCurrTextColor := colBlack;
   FCurrTextAnchor := vtaStart;
   with FCurrPen do begin
-    Style := TFPPenStyle(-1);
+    Style := psClear;
     Color := colBlack;
     Width := -1;
   end;
   with FCurrBrush do begin
-    Style := TFPBrushStyle(-1);
+    Style := bsClear;
     Color := colBlack;
   end;
   with FCurrFont do begin
@@ -339,24 +340,37 @@ end;
 
 procedure TvWMFVectorialWriter.PrepareScaling(APage: TvVectorialPage);
 const
-  MAXINT16 = 32767;
+  MAXINT16 = 30000;   // should be 32767, but avoid overflows...
 var
   maxx, maxy: Double;
+  w, h: Double;
 begin
+  APage.CalculateDocumentSize;
+  w := Max(APage.Width, APage.RealWidth);
+  h := Max(APage.Height, APage.RealHeight);
+
   FScalingFactor := round(ONE_INCH * 100);   // 1 logical unit is 1/100 mm = 10 µm
-  maxx := APage.Width * FScalingFactor;
-  maxy := APage.Height * FScalingFactor;
+  maxx := w * FScalingFactor;
+  maxy := h * FScalingFactor;
   // wmf is 16 bit only! --> reduce magnification if numbers get too big
   if Max(maxx, maxy) > MAXINT16 then
   begin
-    FScalingFactor := trunc(MAXINT16 / Max(APage.Width, APage.Height));
-    FLogicalMaxX := word(trunc(APage.Width * FScalingFactor));
-    FLogicalMaxY := word(trunc(APage.Height * FScalingFactor));
-  end else
-  begin
-    FLogicalMaxX := trunc(maxx);
-    FLogicalMaxY := trunc(maxy);
+    FScalingFactor := trunc(MAXINT16 / Max(w, h));
+    maxx := APage.Width * FScalingFactor;
+    maxy := APage.Height * FScalingFactor;
   end;
+  FLogicalMaxX := trunc(maxx);
+  FLogicalMaxY := trunc(maxy);
+  (*
+  FLogicalOffsetX := 0;
+  FLogicalOffsetY := 0;
+  // Since the wmf coordinates are stored as word we must offset them in case
+  // of negative values.
+  if APage.MinX < 0 then
+    FLogicalOffsetX := word((trunc(-APage.MinX * FScalingFactor)));
+  if (APage.MinY < 0) then
+    FlogicalOffsetY := word((trunc(-APage.MinY * FScalingFactor)));
+    *)
 end;
 
 function TvWMFVectorialWriter.ScaleSizeX(x: Double): Integer;
@@ -377,7 +391,8 @@ end;
 function TvWMFVectorialWriter.ScaleY(y: Double): Integer;
 begin
   if FUseTopLeftCoordinates then
-    Result := ScaleSizeY(y) else
+    Result := ScaleSizeY(y)
+  else
     Result := FLogicalMaxY - ScaleSizeY(y);
 end;
 
@@ -477,10 +492,12 @@ begin
   end else
   begin
     rec.Top := c.y + r.y;
-    reC.Bottom := c.y - r.y;
+    rec.Bottom := c.y - r.y;
   end;
   UpdateBounds(rec.Left, rec.Top);
   UpdateBounds(rec.Right, rec.Bottom);
+
+  DebugLn(['c.x=', c.x, ' cy=', c.y, ' r.x=', r.x, ' r.y=', r.y, ' rec.Left=', rec.Left, 'rec.Top=', rec.Top, ' c.x-r.x=', c.x-r.x, ' cy-r.y=', c.y - r.y]);
 
   // WMF record header + parameters
   WriteWMFRecord(AStream, META_ELLIPSE, rec, SizeOf(TWMFRectRecord));
@@ -530,9 +547,7 @@ procedure TvWMFVectorialWriter.WriteExtText(AStream: TStream; AText: TvText);
 var
   s: String;
   rec: TWMFExtTextRecord;
-  i, n, strLen, corrLen: Integer;
-  P: TPoint;
-  offs: TPoint;
+  n, strLen, corrLen: Integer;
   brush: TvBrush;
   opts: Word;
 begin
@@ -583,7 +598,7 @@ var
   idx: Word;
   wmfFont: TWMFFont;
   fntName: String;
-  i, n: Integer;
+  n: Integer;
 begin
   if (AFont.Color.Red <> FCurrTextColor.Red) or
      (AFont.Color.Green <> FCurrTextColor.Green) or
@@ -684,12 +699,12 @@ end;
 
 procedure TvWMFVectorialWriter.WritePath(AStream: TStream; APath: TPath);
 var
-  points: TPointsArray;     // array of TPoint
-  pts: array of TWMFPointXYRecord;
-  polystarts: TIntegerDynArray;
+  points: TPointsArray = nil;     // array of TPoint
+  pts: array of TWMFPointXYRecord = nil;
+  polystarts: TIntegerDynArray = nil;
   allclosed: boolean;
   isClosed: Boolean;
-  i, len: Word;
+  i, len: word;
   first, last: Integer;
   p, npoly, npts: Integer;
 begin
@@ -811,7 +826,7 @@ end;
 procedure TvWMFVectorialWriter.WritePolygon(AStream: TStream;
   APolygon: TvPolygon);
 var
-  pts: array of TWMFPointXYRecord;
+  pts: array of TWMFPointXYRecord = nil;
   i: Integer;
   w: Word;
 begin
@@ -1030,7 +1045,7 @@ end;
 
 { ASize is in bytes }
 procedure TvWMFVectorialWriter.WriteWMFRecord(AStream: TStream;
-  AFunc: Word; ASize: Int64);
+  AFunc: Word; ASize: Integer);
 var
   rec: TWMFRecord;
 begin
@@ -1042,7 +1057,7 @@ end;
 
 { ASize is the size of the parameter part, in bytes }
 procedure TvWMFVectorialWriter.WriteWMFRecord(AStream: TStream;
-  AFunc: Word; const AParams; ASize: Int64);
+  AFunc: Word; const AParams; ASize: Integer);
 var
   rec: TWMFRecord;
 begin
@@ -1054,7 +1069,7 @@ end;
 
 { ASize is in bytes }
 procedure TvWMFVectorialWriter.WriteWMFParams(AStream: TStream;
-  const AParams; ASize: Int64);
+  const AParams; ASize: Integer);
 begin
   AStream.WriteBuffer(AParams, ASize);
 end;

@@ -5428,6 +5428,10 @@ msgstr "Stabdyti"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6165,10 +6169,6 @@ msgstr "Keisti į Unix naudojamą „/“"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Keisti į Windows naudojamą „\\“"
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "Simbolių lentelė"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -17089,11 +17089,6 @@ msgstr "Baigti darbą"
 msgid "&Quit Lazarus"
 msgstr "&Baigti Lazarus darbą"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "Rėžį"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Skaitymo klaida"
@@ -18133,10 +18128,6 @@ msgstr "Rūšiuoti pažymėtą"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "Žodžiai"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr "Unikodo rėžio sąrašą rikiuoti pagal abėcėlę"
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format

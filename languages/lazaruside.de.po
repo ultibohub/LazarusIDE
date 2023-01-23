@@ -5380,6 +5380,10 @@ msgstr "Halt"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6117,10 +6121,6 @@ msgstr "zu Unix / geändert"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "zu Windows \\ geändert"
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "Zeichentabelle"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -16966,11 +16966,6 @@ msgstr "Schliessen"
 msgid "&Quit Lazarus"
 msgstr "Lazarus beenden"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "Bereich"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Lesefehler"
@@ -17984,10 +17979,6 @@ msgstr "Auswahl sortieren"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "Worte"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr "Unicode-Liste alphabetisch sortieren"
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format

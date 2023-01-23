@@ -5298,6 +5298,10 @@ msgstr ""
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6037,10 +6041,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
-msgstr ""
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
 msgstr ""
 
 #: lazarusidestrconsts.lischeckall
@@ -16855,11 +16855,6 @@ msgstr ""
 msgid "&Quit Lazarus"
 msgstr "Verlaat Lazarus"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr ""
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Lees Fout"
@@ -17860,10 +17855,6 @@ msgstr ""
 #: lazarusidestrconsts.lissortselwords
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
-msgstr ""
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
 msgstr ""
 
 #: lazarusidestrconsts.lissourceanddestinationaresame

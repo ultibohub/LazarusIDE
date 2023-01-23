@@ -5,7 +5,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2023-01-09 04:48+0300\n"
+"PO-Revision-Date: 2023-01-22 03:15+0300\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
@@ -5295,6 +5295,10 @@ msgstr "Останов"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Просмотреть и выбрать компилятор (например, ppcx64"
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr "&Применить"
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6032,10 +6036,6 @@ msgstr "Заменять на / Unix"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Заменять на \\ Windows"
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "Таблица символов"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -16825,11 +16825,6 @@ msgstr "Выход"
 msgid "&Quit Lazarus"
 msgstr "В&ыход из Lazarus"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "Диапазон"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Ошибка чтения"
@@ -17840,10 +17835,6 @@ msgstr "Сортировать выделенное"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "Слова"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr "Сортировать список диапазонов Unicode по алфавиту"
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format

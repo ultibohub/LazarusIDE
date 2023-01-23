@@ -5622,6 +5622,10 @@ msgstr "שבור"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6389,10 +6393,6 @@ msgstr ""
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr ""
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "מפת תווים"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -17830,12 +17830,6 @@ msgstr "יציאה"
 msgid "&Quit Lazarus"
 msgstr "צא מלזרוס"
 
-#: lazarusidestrconsts.lisrange
-#, fuzzy
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "טווח"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "שגיאת קריאה"
@@ -18869,10 +18863,6 @@ msgstr "סדר את הבחירה"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "מילים"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr ""
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format

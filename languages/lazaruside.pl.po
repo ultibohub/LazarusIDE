@@ -5433,6 +5433,10 @@ msgstr "Przerwij"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6175,10 +6179,6 @@ msgstr "Konwertuj do formatu Unix /"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Konwertuj do formatu Windows \\"
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "Tablica znaków"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -17056,11 +17056,6 @@ msgstr "Wyjdź"
 msgid "&Quit Lazarus"
 msgstr "&Wyjdź z Lazarusa"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "Zakres"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Błąd odczytu"
@@ -18073,10 +18068,6 @@ msgstr "Wybierz sortowanie"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "Wielkość liter"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr ""
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format

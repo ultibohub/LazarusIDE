@@ -5310,6 +5310,10 @@ msgstr "Перервати"
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Відшукайте і виберітиь компілятор (наприклад, ppcx64)"
 
+#: lazarusidestrconsts.lisbtnapply
+msgid "&Apply"
+msgstr ""
+
 #: lazarusidestrconsts.lisbtnclose
 msgctxt "lazarusidestrconsts.lisbtnclose"
 msgid "&Close"
@@ -6047,10 +6051,6 @@ msgstr "Змінити на Unix /"
 #: lazarusidestrconsts.lischangetowindows
 msgid "Change to Windows \\"
 msgstr "Змінити на Windows \\"
-
-#: lazarusidestrconsts.lischaractermap
-msgid "Character Map"
-msgstr "Таблиця символів"
 
 #: lazarusidestrconsts.lischeckall
 msgid "Check All"
@@ -16861,11 +16861,6 @@ msgstr "Вийти"
 msgid "&Quit Lazarus"
 msgstr "&Вийти з Lazarus"
 
-#: lazarusidestrconsts.lisrange
-msgctxt "lazarusidestrconsts.lisrange"
-msgid "Range"
-msgstr "Діапазон"
-
 #: lazarusidestrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Помилка читання"
@@ -17876,10 +17871,6 @@ msgstr "Сортування вибраного"
 msgctxt "lazarusidestrconsts.lissortselwords"
 msgid "Words"
 msgstr "Слова"
-
-#: lazarusidestrconsts.lissortunicoderangelistalphabetically
-msgid "Sort Unicode range list alphabetically"
-msgstr "Упорядкувати список діапазонів Unicode за алфавітом"
 
 #: lazarusidestrconsts.lissourceanddestinationaresame
 #, object-pascal-format
