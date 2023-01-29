@@ -5473,11 +5473,6 @@ msgstr ""
 msgid "Bottom space equally"
 msgstr "Iguala els espais inferiors"
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr ""
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
@@ -12478,10 +12473,6 @@ msgstr "Afegeix control ..."
 msgid "Break Lines in Selection"
 msgstr ""
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr ""
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "Munta el fitxer"
@@ -13934,10 +13925,6 @@ msgstr "Mostra l'editor de les àncores"
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
 msgstr ""
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
-msgstr "Punts de ruptura"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"

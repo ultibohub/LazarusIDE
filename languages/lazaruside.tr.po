@@ -5250,11 +5250,6 @@ msgstr "Bu, alt tarafın tutturulduğu kardeş kontrolüdür. Ankraj için Delph
 msgid "Bottom space equally"
 msgstr "Alt boşluk eşit"
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr "Kırılma"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Bir derleyiciye göz atın ve seçin (örneğin, ppcx64)"
@@ -12199,10 +12194,6 @@ msgstr "&İzleme Ekle ..."
 msgid "Break Lines in Selection"
 msgstr "Seçimde Kesme Hatları"
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr "Kırılmalar"
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "Dosya Oluştur"
@@ -13498,10 +13489,6 @@ msgstr "Çapa Editör"
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
 msgstr "Assembler"
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
-msgstr "Kırılma noktaları"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"

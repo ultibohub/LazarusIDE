@@ -15,10 +15,12 @@ unit fpvectorial;
 {$endif}
 
 {$define USE_LCL_CANVAS}
+
 {$ifdef USE_LCL_CANVAS}
   {$define USE_CANVAS_CLIP_REGION}
   {.$define DEBUG_CANVAS_CLIP_REGION}
 {$endif}
+
 {.$define FPVECTORIAL_DEBUG_DIMENSIONS}
 {.$define FPVECTORIAL_TOCANVAS_DEBUG}
 {.$define FPVECTORIAL_DEBUG_BLOCKS}
@@ -553,8 +555,6 @@ type
   { TvEntityWithPen }
 
   TvEntityWithPen = class(TvNamedEntity)
-  protected
-    function CreatePath: TPath; virtual;
   public
     {@@ The global Pen for the entire entity. In the case of paths, individual
         elements might be able to override this setting. }
@@ -563,6 +563,7 @@ type
     procedure ApplyPenToCanvas(constref ARenderInfo: TvRenderInfo); overload;
     procedure ApplyPenToCanvas(constref ARenderInfo: TvRenderInfo; APen: TvPen); overload;
     procedure AssignPen(APen: TvPen);
+    function CreatePath: TPath; virtual;
     procedure Render(var ARenderInfo: TvRenderInfo; ADoDraw: Boolean = True); override;
   end;
 
@@ -732,11 +733,10 @@ type
   { TvCircle }
 
   TvCircle = class(TvEntityWithPenAndBrush)
-  protected
-    function CreatePath: TPath; override;
   public
     Radius: Double;
     procedure CalculateBoundingBox(constref ARenderInfo: TvRenderInfo; out ALeft, ATop, ARight, ABottom: Double); override;
+    function CreatePath: TPath; override;
     procedure Render(var ARenderInfo: TvRenderInfo; ADoDraw: Boolean = True); override;
     procedure Rotate(AAngle: Double; ABase: T3DPoint); override; // Angle in radians, >0 counter-clockwise
   end;
@@ -760,8 +760,6 @@ type
   { TvEllipse }
 
   TvEllipse = class(TvEntityWithPenAndBrush)
-  protected
-    function CreatePath: TPath; override;
   public
     // Mandatory fields
     HorzHalfAxis: Double; // This half-axis is the horizontal one when Angle=0
@@ -769,6 +767,7 @@ type
     {@@ The Angle is measured in radians in relation to the positive X axis and
         counter-clockwise direction. }
     Angle: Double;
+    function CreatePath: TPath; override;
     function GetLineIntersectionPoints(ACoord: Double; ACoordIsX: Boolean): TDoubleDynArray; override;
     function TryToSelect(APos: TPoint; var ASubpart: Cardinal; ASnapFlexibility: Integer = 5): TvFindEntityResult; override;
     procedure CalculateBoundingBox(constref ARenderInfo: TvRenderInfo; out ALeft, ATop, ARight, ABottom: Double); override;
@@ -780,8 +779,6 @@ type
   { The point (X,Y) refers to the left/top corner of the rectangle! }
 
   TvRectangle = class(TvEntityWithPenBrushAndFont)
-  protected
-    function CreatePath: TPath; override;
   public
     // A text displayed in the center of the square, usually empty
     Text: string;
@@ -793,6 +790,7 @@ type
     // Center of rotation is (X,Y).
     Angle: Double;
     procedure CalculateBoundingBox(constref ARenderInfo: TvRenderInfo; out ALeft, ATop, ARight, ABottom: Double); override;
+    function CreatePath: TPath; override;
     procedure Render(var ARenderInfo: TvRenderInfo; ADoDraw: Boolean = True); override;
     procedure Rotate(AAngle: Double; ABase: T3DPoint); override;
     function GenerateDebugTree(ADestRoutine: TvDebugAddItemProc; APageItem: Pointer): Pointer; override;
@@ -4519,10 +4517,11 @@ begin
     exit;
   try
     ConvertPathToPolygons(tmpPath, ADestX, ADestY, AMulX, AMulY, polypoints, polystarts);
-    if (ADest is TCanvas) then
-      TCanvas(ADest).Polygon(polypoints) //, WindingRule = vcmNonZeroWindingRule)
-    else
-      ADest.Polygon(polypoints);
+    {$IFDEF USE_LCL_CANVAS}
+    TCanvas(ADest).Polygon(polypoints, WindingRule = vcmNonZeroWindingRule);
+    {$ELSE}
+    ADest.Polygon(polypoints);
+    {$ENDIF}
   finally
     tmpPath.Free;
   end;
@@ -5610,7 +5609,7 @@ begin
   {$ELSE}
   lFontSizePx := Font.Size;        // is without multiplier!
   if lFontSizePx = 0 then lFontSizePx := 10;
-  lTextSize := ADest.TextExtent(Str_Line_Height_Tester);
+  lTextSize := ARenderInfo.Canvas.TextExtent(Str_Line_Height_Tester);
   Result := Round((lTextSize.CY*1.0 - lFontSizePx) * 0.5);  // rough estimate only
   {$ENDIF}
 end;
@@ -5648,11 +5647,9 @@ var
   lWidth, lHeight: Integer;
   lRenderInfo: TvRenderInfo;
   lText: String;
-  {$ifdef USE_LCL_CANVAS}
-  ACanvas: TCanvas absolute ARenderInfo.Canvas;
-  {$endif}
 begin
   //lText := Value.Text; // For debugging
+  lRenderInfo := Default(TvRenderInfo);
   InitializeRenderInfo(lRenderInfo, Self);
   lRenderInfo.Canvas := ARenderInfo.Canvas;
   lRenderInfo.DestX := ARenderInfo.DestX;
@@ -5667,14 +5664,15 @@ begin
   lHeight := 0;
   ARight := ALeft;
   ABottom := ATop;
-  if (ARenderInfo.Canvas = nil) or (not (ARenderInfo.Canvas is TCanvas)) then Exit;
+  if (ARenderInfo.Canvas = nil) then
+    Exit;
 
   for i := 0 to Value.Count-1 do
   begin
     lText := Value.Strings[i];
-    lSize := ACanvas.TextExtent(lText);
+    lSize := lRenderInfo.Canvas.TextExtent(lText);
     lWidth := Max(lWidth, lSize.cx);
-    lSize := ACanvas.TextExtent(Str_Line_Height_Tester);
+    lSize := lRenderInfo.Canvas.TextExtent(Str_Line_Height_Tester);
     lHeight := lHeight + lSize.cy + 2;
   end;
 
@@ -5708,13 +5706,9 @@ var
   lText: string;
   lDescender: Integer;
   phi: Double;
-  {$ifdef USE_LCL_CANVAS}
-  ACanvas: TCanvas absolute ARenderInfo.Canvas;
   lTextSize: TSize;
   lTextWidth: Integer;
-  {$endif}
 begin
-  lText := Value.Text + Format(' F=%d', [ACanvas.Font.Size]); // for debugging
   inherited Render(ARenderInfo, ADoDraw);
 
   InitializeRenderInfo(ARenderInfo, Self);
@@ -5747,7 +5741,7 @@ begin
     lLongestLine := 0;
     for i := 0 to Value.Count - 1 do
     begin
-      lLineWidth := ACanvas.TextWidth(Value.Strings[i]);   // contains multiplier
+      lLineWidth := ARenderInfo.Canvas.TextWidth(Value.Strings[i]);   // contains multiplier
       if lLineWidth > lLongestLine then
         lLongestLine := lLineWidth;
     end;
@@ -5784,11 +5778,11 @@ begin
 
     // Calc text boundaries respecting text rotation.
     CalcEntityCanvasMinMaxXY(ARenderInfo, pt.x, pt.y);
-    lTextSize := ACanvas.TextExtent(lText);
+    lTextSize := ARenderInfo.Canvas.TextExtent(lText);
     lTextWidth := lTextSize.cx;
     // Reserve vertical space for </br> and similar line ending constructs
     if (lText = '') then
-      lTextSize.cy := ACanvas.TextHeight(STR_FPVECTORIAL_TEXT_HEIGHT_SAMPLE);
+      lTextSize.cy := ARenderInfo.Canvas.TextHeight(STR_FPVECTORIAL_TEXT_HEIGHT_SAMPLE);
     // other end of the text
     pt := Point(round(Render_NextText_X) + lTextWidth, round(curDimY) + lTextSize.cy );
     pt := Rotate2dPoint(pt, refPt, -Phi);
@@ -6348,7 +6342,11 @@ end;
 function TvRectangle.CreatePath: TPath;
 var
   pts: T3dPointsArray = nil;
+  cc: T3dPointsArray = nil;
   ctr: T3dPoint;
+  refPt: T3dPoint;
+  refPtRot: T3dPoint;
+  shift: T3dPoint;
   j: Integer;
   phi, lYAdj: Double;
 begin
@@ -6357,45 +6355,73 @@ begin
   if (RX > 0) and (RY > 0) then
   begin
     SetLength(pts, 9);
-    pts[0] := Make3dPoint(X, Y+lYAdj*RY);           {    1              2    }
-    pts[1] := Make3dPoint(X+RX, Y);                 {  0,8                3  }
-    pts[2] := Make3dPoint(X+CX-RX, Y);              {                        }
-    pts[3] := Make3dPoint(X+CX, Y+lYAdj*RY);        {                        }
-    pts[4] := Make3dPoint(X+CX, Y+lYAdj*(CY-RY));   {  7                  4  }
-    pts[5] := Make3dPoint(X+CX-RX, Y+lYAdj*CY);     {    6              5    }
-    pts[6] := Make3dPoint(X+RX, Y+lYAdj*CY);
-    pts[7] := Make3dPoint(X, Y+lYAdj*(CY-RY));
-    pts[8] := Make3dPoint(X, Y+lYAdj*RY);
+    pts[0] := Make3dPoint(X,       Y+lYAdj*RY);        {    1              2    }
+    pts[1] := Make3dPoint(X+RX,    Y);                 {  0,8                3  }
+    pts[2] := Make3dPoint(X+CX-RX, Y);                 {                        }
+    pts[3] := Make3dPoint(X+CX,    Y+lYAdj*RY);        {                        }
+    pts[4] := Make3dPoint(X+CX,    Y+lYAdj*(CY-RY));   {  7                  4  }
+    pts[5] := Make3dPoint(X+CX-RX, Y+lYAdj*CY);        {    6              5    }
+    pts[6] := Make3dPoint(X+RX,    Y+lYAdj*CY);
+    pts[7] := Make3dPoint(X,       Y+lYAdj*(CY-RY));
+    pts[8] := Make3dPoint(X,       Y+lYAdj*RY);
+    SetLength(cc, 4);  // centers of the corner circles
+    cc[0] := Make3dPoint(pts[1].x, pts[0].y);
+    cc[1] := Make3dPoint(pts[2].x, pts[3].y);
+    cc[2] := Make3dPoint(pts[5].x, pts[4].y);
+    cc[3] := Make3dPoint(pts[6].x, pts[7].y);
   end
   else
   begin
     SetLength(pts, 5);                              {    0,4            1   }
-    pts[0] := Make3dPoint(X, Y);                    {                       }
+    pts[0] := Make3dPoint(X,    Y);                 {                       }
     pts[1] := Make3dPoint(X+CX, Y);                 {                       }
     pts[2] := Make3dPoint(X+CX, Y+lYAdj*CY);        {                       }
-    pts[3] := Make3dPoint(X, Y+lYAdj*CY);           {                       }
-    pts[4] := Make3dPoint(X, Y);                    {   3               2   }
+    pts[3] := Make3dPoint(X,    Y+lYAdj*CY);        {                       }
+    pts[4] := Make3dPoint(X,    Y);                 {   3               2   }
   end;
-  ctr := Make3DPoint(X, Y);  // Rotation center
-  phi := -Angle;             // Angle must be inverted due to sign convention in Rotate3DPointInXY
+
+  // We first rotate around the center of the rectangle and then move the
+  // rectangle points by the difference vector between the new and old top/left
+  // corner point.
+
+  refPt := Make3dPoint(X, Y);            // Top/left point
+  ctr := Make3DPoint(X+CX/2, Y+CY/2*lYAdj);  // Rotation center = center of rect
+  phi := -Angle;    // Angle must be inverted due to sign convention in Rotate3DPointInXY
+
+  // Perform the rotation
   for j:=0 to High(pts) do
     pts[j] := Rotate3DPointInXY(pts[j], ctr, phi);
+  for j := 0 to High(cc) do
+    cc[j] := Rotate3DPointInXY(cc[j], ctr, phi);
+  refPtRot := Rotate3DPointInXY(refPt, ctr, phi);  // refPt after rotation
 
+  // Perform the translation so that the refPt is back at its original position.
+  shift := Make3dPoint(refPt.x - refPtRot.x, refPt.y - refPtRot.y);
+  for j := 0 to High(pts) do
+    pts[j] := Offset3dPoint(pts[j], shift);
+  for j := 0 to High(cc) do
+    cc[j] := Offset3dPoint(cc[j], shift);
+
+  // Now create the path from the rotated points
   Result := TPath.Create(FPage);
   if (RX > 0) and (RY > 0) then
   begin
     Result.AppendMoveToSegment(pts[0].x, pts[0].y);
     Result.AppendEllipticalArcWithCenter(RX, RY, phi, pts[1].x, pts[1].y,
-      pts[1].x, pts[0].y, true);
+      cc[0].x, cc[0].y, true);
+  //    pts[1].x, pts[0].y, true);
     Result.AppendLineToSegment(pts[2].x, pts[2].y);
     Result.AppendEllipticalArcWithCenter(RX, RY, phi, pts[3].x, pts[3].y,
-      pts[2].x, pts[3].y, true);
+      cc[1].x, cc[1].y, true);
+//    pts[2].x, pts[3].y, true);
     Result.AppendLineToSegment(pts[4].x, pts[4].y);
     Result.AppendEllipticalArcWithCenter(RX, RY, phi, pts[5].x, pts[5].y,
-      pts[5].x, pts[4].y, true);
+      cc[2].x, cc[2].y, true);
+    //pts[5].x, pts[4].y, true);
     Result.AppendLineToSegment(pts[6].x, pts[6].y);
     Result.AppendEllipticalArcWithCenter(RX, RY, phi, pts[7].x, pts[7].y,
-      pts[6].x, pts[7].y, true);
+      cc[3].x, cc[3].y, true);
+//    pts[6].x, pts[7].y, true);
     Result.AppendLineToSegment(pts[8].x, pts[8].y);
   end else
   begin
@@ -6565,10 +6591,11 @@ begin
       case Brush.Kind of
         bkSimpleBrush:
           // Fills the polygon and paints the border
-          if (ADest is TCanvas) then   // Respects winding rule
-            TCanvas(ADest).Polygon(lPoints, WindingRule = vcmNonZeroWindingRule)
-          else
-            ADest.Polygon(lPoints);    // Winding rule not supported
+          {$IFDEF USE_LCL_CANVAS} // Respects winding rule
+          TCanvas(ADest).Polygon(lPoints, WindingRule = vcmNonZeroWindingRule);
+          {$ELSE}
+          ADest.Polygon(lPoints);    // Winding rule not supported
+          {$ENDIF}
 
         bkHorizontalGradient,
         bkVerticalGradient,
@@ -6639,9 +6666,6 @@ var
 var
   Points: array of TPoint;
   UpperDim, LowerDim: T3DPoint;
-  {$ifdef USE_LCL_CANVAS}
-  ALCLDest: TCanvas absolute ADest;
-  {$endif}
   txt: String;
 begin
   ADest.Pen.FPColor := AdjustColorToBackground(colBlack, ARenderInfo);
@@ -6791,9 +6815,6 @@ var
 var
   Points: array of TPoint;
   lAngle, lRadius: Double;
-  {$ifdef USE_LCL_CANVAS}
-  ALCLDest: TCanvas absolute ADest;
-  {$endif}
 begin
   ADest.Pen.FPColor := AdjustColorToBackground(colBlack, ARenderInfo);
   ADest.Pen.Width := 1;
@@ -6907,11 +6928,8 @@ var
   end;
 
 var
-  Points: array of TPoint;
+  Points: array of TPoint = nil;
   lTriangleCenter, lTriangleCorner: T3DPoint;
-  {$ifdef USE_LCL_CANVAS}
-  ALCLDest: TCanvas absolute ADest;
-  {$endif}
   txt: String;
 begin
   ADest.Pen.FPColor := colYellow;//AdjustColorToBackground(colBlack, ARenderInfo);
@@ -6924,7 +6942,7 @@ begin
 
   // Now the arc
   if ADoDraw then
-    ALCLDest.Arc(
+    ARenderInfo.Canvas.Arc(
       CoordToCanvasX(BaseLeft.X - ArcRadius), CoordToCanvasY(BaseLeft.Y - ArcRadius),
       CoordToCanvasX(BaseLeft.X + ArcRadius), CoordToCanvasY(BaseLeft.Y + ArcRadius),
       CoordToCanvasX(DimensionRight.X), CoordToCanvasY(DimensionRight.Y),
@@ -7324,7 +7342,7 @@ var
   lLineHeight: Integer;
 begin
   if ADest <> nil then
-    lLineHeight := TCanvas(ADest).TextHeight(STR_FPVECTORIAL_TEXT_HEIGHT_SAMPLE) + 2
+    lLineHeight := ADest.TextHeight(STR_FPVECTORIAL_TEXT_HEIGHT_SAMPLE) + 2
   else
     lLineHeight := 15;
 
@@ -7363,7 +7381,7 @@ begin
   if lText <> '' then
   begin
     if ADest = nil then Result := 10 * UTF8Length(lText)
-    else Result := TCanvas(ADest).TextWidth(lText);
+    else Result := ADest.TextWidth(lText);
   end;
 
   case Kind of
@@ -7923,7 +7941,7 @@ var
   lElement: TvFormulaElement;
 begin
   if ADest <> nil then
-    Result := TCanvas(ADest).TextHeight(STR_FPVECTORIAL_TEXT_HEIGHT_SAMPLE) + 2
+    Result := ADest.TextHeight(STR_FPVECTORIAL_TEXT_HEIGHT_SAMPLE) + 2
   else
     Result := 15;
 
@@ -8009,8 +8027,10 @@ begin
   ALeft := X;
   ATop := Y;
   ARight := CalculateWidth(ADest);
-  if ADest = nil then ABottom := CalculateHeight(ADest) * 15
-  else ABottom := CalculateHeight(ADest) * TCanvas(ADest).TextHeight('Źç');
+  if ADest = nil then
+    ABottom := CalculateHeight(ADest) * 15
+  else
+    ABottom := CalculateHeight(ADest) * ADest.TextHeight('Źç');
   ARight := X + ARight;
   ABottom := Y + ABottom;
 end;
@@ -8934,6 +8954,7 @@ begin
 end;
 
 procedure TvPage.CalculateDocumentSize;
+{$IFDEF USE_LCL_CANVAS}
 var
   i: Integer;
   lCurEntity: TvEntity;
@@ -8970,6 +8991,10 @@ begin
   //Width := abs(MaxX - MinX);
   //Height := abs(MaxY - MinY);
 end;
+{$ELSE}
+begin
+end;
+{$ENDIF}
 
 function TvPage.RealWidth: Double;
 begin

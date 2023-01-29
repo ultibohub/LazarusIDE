@@ -27,6 +27,7 @@ type
     RenderState: array[0..1] of TRenderState;  // 0 = svg, 1 = wmf
     constructor Create(ARenderEvent: TRenderEvent; ARefFilename: String;
       AIntParam: Integer = MaxInt);
+    destructor Destroy; override;
   end;
 
   TRenderCoords  = (rcBottomLeftCoords, rcTopLeftCoords);
@@ -80,6 +81,7 @@ type
     procedure BtnSaveAsRefClick(Sender: TObject);
     procedure BtnViewImageClick(Sender: TObject);
     procedure CbFileFormatChange(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure PaintBoxPaint(Sender: TObject);
@@ -87,6 +89,7 @@ type
     procedure rgTestResultsSelectionChanged(Sender: TObject);
     procedure TreeCustomDrawItem(Sender: TCustomTreeView; Node: TTreeNode;
       State: TCustomDrawState; var DefaultDraw: Boolean);
+    procedure TreeDeletion(Sender: TObject; Node: TTreeNode);
     procedure TreeGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure TreeGetSelectedIndex(Sender: TObject; Node: TTreeNode);
     procedure TreeSelectionChanged(Sender: TObject);
@@ -97,8 +100,10 @@ type
     FDocFromWMF: array[TRenderCoords] of TvVectorialDocument;
     FDocFromSVG: array[TRenderCoords] of TvVectorialDocument;
     FLockResults: Integer;
+
     function GetFileFormat: TvVectorialFormat;
     function GetFileFormatExt: String;
+    function GetImagesFolder(AFileType: String = ''): String;
     procedure Populate;
     procedure PrepareDoc(var ADoc: TvVectorialDocument; var APage: TvVectorialPage;
       AUseTopLeftCoords: boolean);
@@ -153,8 +158,8 @@ uses
   fpvutils, vtprimitives;
 
 const
-  IMG_FOLDER = 'images' + PathDelim;
-  REFIMG_FOLDER = IMG_FOLDER + 'ref' + PathDelim;
+  IMG_FOLDER = 'images';
+  REF_FOLDER = 'ref';
   NOT_SAVED = '(not saved)';
   FORMAT_SEPARATOR = ';';
 
@@ -193,6 +198,11 @@ begin
   IntParam := AIntParam;
 end;
 
+destructor TRenderParams.Destroy;
+begin
+  RefFile := '';
+  inherited;
+end;
 
 { TMainForm }
 
@@ -204,12 +214,12 @@ var
   renderParams: TRenderParams;
   page: TvVectorialPage;
 begin
-  renderParams := TRenderParams(Tree.Selected.Data);
-  if RenderParams = nil then
+  if (Tree.Selected = nil) or (Tree.Selected.Data = nil) then
     exit;
   if FDoc[rcBottomLeftCoords] = nil then
     exit;
 
+  renderParams := TRenderParams(Tree.Selected.Data);
   page := FDoc[rcBottomLeftCoords].GetPageAsVectorial(0);
 
   bmp := TBitmap.Create;
@@ -222,9 +232,9 @@ begin
     png := TPortableNetworkGraphic.Create;
     try
       png.Assign(bmp);
-     // renderParams := TRenderParams(Tree.Selected.Data);
-      ForceDirectory(REFIMG_FOLDER);
-      fn := REFIMG_FOLDER + renderParams.RefFile;
+      fn := GetImagesFolder(REF_FOLDER);
+      ForceDirectory(fn);
+      fn := fn + renderParams.RefFile;
       png.SaveToFile(fn);
     finally
       png.Free;
@@ -244,13 +254,14 @@ var
   fmt: TvVectorialFormat;
   ext: String;
 begin
-  renderParams := TRenderParams(Tree.Selected.Data);
-  if RenderParams = nil then
+  if (Tree.Selected = nil) or (Tree.Selected.Data = nil) then
     exit;
+
+  renderParams := TRenderParams(Tree.Selected.Data);
 
   fmt := GetFileFormat;
   ext := GetFileFormatExt;
-  folder := IMG_FOLDER + ext + PathDelim;
+  folder := GetImagesFolder(ext);
   ForceDirectory(folder);
 
   if FDoc[rcBottomLeftCoords] <> nil then begin
@@ -277,12 +288,12 @@ var
 begin
   BtnSaveToFilesClick(nil);
 
-  renderParams := TRenderParams(Tree.Selected.Data);
-  if renderParams = nil then
+  if (Tree.Selected = nil) or (Tree.Selected.Data = nil) then
     exit;
 
+  renderParams := TRenderParams(Tree.Selected.Data);
   ext := GetFileFormatExt;
-  folder := IMG_FOLDER + ext + PathDelim;
+  folder := GetImagesFolder(ext);
 
   if Sender = BtnViewBottomLeft then
     fn := folder + 'bl_' + ChangeFileExt(renderParams.RefFile, '.' + ext)
@@ -301,6 +312,11 @@ begin
   UpdateCmdStates;
   UpdateResultStates;
   UpdateTestResults;
+end;
+
+procedure TMainForm.FormActivate(Sender: TObject);
+begin
+  Scrollbox1.ClientWidth := AllTestsPanel.Width + 2*AllTestsPanel.BorderSpacing.Around;
 end;
 
 procedure TMainForm.PrepareDoc(var ADoc: TvVectorialDocument;
@@ -345,25 +361,13 @@ end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 var
-  parentnode, node: TTreeNode;
   rc: TRenderCoords;
 begin
-  parentnode := Tree.Items.GetFirstNode;
-  while parentnode <> nil do begin
-    node := parentnode.GetFirstChild;
-    while node <> nil do begin
-      TObject(node.Data).Free;
-      node := node.GetNextSibling;
-    end;
-    parentnode := parentnode.GetNextSibling;
-  end;
-
   for rc in TRenderCoords do begin
     FreeAndNil(FDoc[rc]);
     FreeAndNil(FDocFromSVG[rc]);
     FreeAndNil(FDocFromWMF[rc]);
   end;
-
   WriteIni;
 end;
 
@@ -383,6 +387,13 @@ begin
     1: Result := 'wmf';
     else raise Exception.Create('Format not supported');
   end;
+end;
+
+function TMainForm.GetImagesFolder(AFileType: String = ''): String;
+begin
+  Result := IncludeTrailingPathDelimiter(Application.Location + IMG_FOLDER);
+  if AFileType <> '' then
+    Result := IncludeTrailingPathDelimiter(Result + AFileType);
 end;
 
 procedure TMainForm.PaintBoxPaint(Sender: TObject);
@@ -459,16 +470,11 @@ begin
 end;
 
 procedure TMainForm.rgTestResultsSelectionChanged(Sender: TObject);
-var
-  renderParams: TRenderParams;
 begin
   if FLockResults > 0 then
     exit;
   if (Tree.Selected <> nil) and (Tree.Selected.Data <> nil) then
   begin
-    renderParams := TRenderParams(Tree.Selected.Data);
-
-    //renderParams.RenderState[CbFileFormat.ItemIndex] := TRenderState(rgTestResults.ItemIndex);
     TreeGetImageIndex(nil, Tree.Selected);
     Tree.Invalidate;
   end;
@@ -1085,7 +1091,7 @@ begin
     exit;
   end;
 
-  fn := IncludeTrailingPathDelimiter(REFIMG_FOLDER) + renderParams.RefFile;
+  fn := GetImagesFolder(REF_FOLDER) + renderParams.RefFile;
   if FileExists(fn) then begin
     RefImage.Picture.LoadFromFile(fn);
     RefImage.Hint := fn;
@@ -1100,16 +1106,16 @@ var
   renderParams: TRenderParams;
   page: TvVectorialPage = nil;
 begin
-  if Tree.Selected = nil then
-    exit;
-
-  renderParams := TRenderParams(Tree.Selected.Data);
-  if renderParams = nil then
+  if (Tree.Selected = nil) or (Tree.Selected.Data = nil) then
   begin
+    FreeAndNil(FDoc[rcBottomLeftCoords]);
+    FreeAndNil(FDoc[rcTopLeftCoords]);
     BottomLeftPaintbox.Invalidate;
     TopLeftPaintbox.Invalidate;
     exit;
   end;
+
+  renderParams := TRenderParams(Tree.Selected.Data);
 
   // Render document with bottom/left origin
   PrepareDoc(FDoc[rcBottomLeftCoords], page, false);
@@ -1147,7 +1153,7 @@ begin
   end;
 
   ext := GetFileFormatExt;
-  folder := IMG_FOLDER + ext + PathDelim;
+  folder := GetImagesFolder(ext);
 
   fn := folder + 'bl_' + ChangeFileExt(renderParams.RefFile, '.' + ext);
   ShowFileImage(fn, false, WRBottomLeftPaintbox);
@@ -1164,6 +1170,15 @@ begin
   else
     Sender.Canvas.Font.Style := [];
   DefaultDraw := true;
+end;
+
+procedure TMainForm.TreeDeletion(Sender: TObject; Node: TTreeNode);
+begin
+  if (TObject(Node.Data) is TRenderParams) then
+  begin
+    TRenderParams(Node.Data).Free;
+    Node.Data := nil;
+  end;
 end;
 
 procedure TMainForm.TreeGetImageIndex(Sender: TObject; Node: TTreeNode);
@@ -1208,17 +1223,21 @@ var
   ext: String;
   rc: TRenderCoords;
   rcOK: array[TRenderCoords] of boolean = (false, false);
+  OK: Boolean;
 begin
-  BtnSaveAsRef.Enabled := Tree.Selected <> nil;
-  BtnSaveToFiles.Enabled := Tree.Selected <> nil;
-  BtnViewBottomLeft.Enabled := Tree.Selected <> nil;
-  BtnViewTopLeft.Enabled := Tree.Selected <> nil;
+  OK := (Tree.Selected <> nil) and (Tree.Selected.Data <> nil);
 
-  if Tree.Selected <> nil then begin
+  BtnSaveAsRef.Enabled := OK;
+  BtnSaveToFiles.Enabled := OK;
+  BtnViewBottomLeft.Enabled := OK;
+  BtnViewTopLeft.Enabled := OK;
+  gbResults.Enabled := OK;
+
+  if OK then begin
     renderParams := TRenderParams(Tree.Selected.Data);
     if renderParams <> nil then begin
       ext := GetFileFormatExt;
-      folder := IMG_FOLDER + ext + PathDelim;
+      folder := GetImagesFolder(ext);
       fn := folder + 'bl_' + ChangeFileExt(renderParams.RefFile, '.' + ext);
       rcOK[rcBottomLeftCoords] := FileExists(fn);
       fn := folder + 'tl_' + ChangeFileExt(renderParams.RefFile, '.' + ext);

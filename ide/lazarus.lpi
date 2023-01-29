@@ -798,11 +798,6 @@
         <UnitName Value="SynColorAttribEditor"/>
       </Unit>
       <Unit>
-        <Filename Value="inputhistory.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="InputHistory"/>
-      </Unit>
-      <Unit>
         <Filename Value="makeresstrdlg.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
@@ -1039,10 +1034,6 @@
         <Filename Value="unitinfodlg.pp"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-      </Unit>
-      <Unit>
-        <Filename Value="diffpatch.pas"/>
-        <IsPartOfProject Value="True"/>
       </Unit>
       <Unit>
         <Filename Value="lazarusmanager.pas"/>
@@ -1440,12 +1431,6 @@
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
         <UnitName Value="AssemblerDlg"/>
-      </Unit>
-      <Unit>
-        <Filename Value="../debugger/breakpointsdlg.pp"/>
-        <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="BreakPointsDlg"/>
       </Unit>
     </Units>
   </ProjectOptions>

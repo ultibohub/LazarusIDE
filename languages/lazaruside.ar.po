@@ -5295,11 +5295,6 @@ msgstr ""
 msgid "Bottom space equally"
 msgstr ""
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr ""
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
@@ -12221,10 +12216,6 @@ msgstr ""
 msgid "Break Lines in Selection"
 msgstr ""
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr ""
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "ترجم الجذاذة"
@@ -13534,10 +13525,6 @@ msgstr ""
 #: lazarusidestrconsts.lismenuviewassembler
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
-msgstr ""
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
 msgstr ""
 
 #: lazarusidestrconsts.lismenuviewcodebrowser

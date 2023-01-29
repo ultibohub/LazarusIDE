@@ -5613,11 +5613,6 @@ msgstr "זהו פקד \"אח\" אליו מוצמד הצד התחתון. השאר
 msgid "Bottom space equally"
 msgstr "רווח שווה בתחתית"
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr "שבור"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
@@ -12900,10 +12895,6 @@ msgstr "הוסף משגיח ..."
 msgid "Break Lines in Selection"
 msgstr "חתוך את השורה במקום שנבחר"
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr ""
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "בנה קובץ"
@@ -14391,10 +14382,6 @@ msgstr "עורך המעגנים"
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
 msgstr "Assembler"
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
-msgstr "נקודות עצירה"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 #, fuzzy

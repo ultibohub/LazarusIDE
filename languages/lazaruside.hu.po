@@ -5301,11 +5301,6 @@ msgstr "Ez az a társvezérlő, amelyikhez az alsó oldal horgonyzása történi
 msgid "Bottom space equally"
 msgstr "Alsó oldali távolságok egyenlően"
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr "Megszakítás"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Böngészés és fordító kiválasztása (pl. ppcx64"
@@ -12272,10 +12267,6 @@ msgstr "Figyelő hozzáadása ..."
 msgid "Break Lines in Selection"
 msgstr "Sorok tördelése a kijelölésben"
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr "Megszakítás"
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "Fájl építése"
@@ -13588,10 +13579,6 @@ msgstr "Horgonyszerkesztő"
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
 msgstr "Assembler"
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
-msgstr "Töréspontok"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"

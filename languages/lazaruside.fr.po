@@ -5300,11 +5300,6 @@ msgstr "Il s'agit du contrôle frère auquel le côté inférieur est ancré. Le
 msgid "Bottom space equally"
 msgstr "Espacement égal en bas"
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr "Pause"
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr "Chercher et choisir un compilateur (ex. ppcx64"
@@ -12261,10 +12256,6 @@ msgstr "Ajouter un &suivi..."
 msgid "Break Lines in Selection"
 msgstr "Couper les lignes dans la sélection"
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr "&Arrêt"
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "Créer le fichier"
@@ -13575,10 +13566,6 @@ msgstr "Éditeur d'ancres"
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
 msgstr "Assembleur"
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
-msgstr "Points d'arrêt"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 msgctxt "lazarusidestrconsts.lismenuviewcodebrowser"

@@ -5509,11 +5509,6 @@ msgstr "Ini adalah kontrol terdekat dimana sisi bawah dianchor. Biarkan kosong u
 msgid "Bottom space equally"
 msgstr "Bawah spasi secara sama"
 
-#: lazarusidestrconsts.lisbreak
-msgctxt "lazarusidestrconsts.lisbreak"
-msgid "Break"
-msgstr ""
-
 #: lazarusidestrconsts.lisbrowseandselectacompiler
 msgid "Browse and select a compiler (e.g. ppcx64"
 msgstr ""
@@ -12655,10 +12650,6 @@ msgstr "Tambah pengawasan ..."
 msgid "Break Lines in Selection"
 msgstr ""
 
-#: lazarusidestrconsts.lismenubreak
-msgid "&Break"
-msgstr ""
-
 #: lazarusidestrconsts.lismenubuildfile
 msgid "Build File"
 msgstr "Bangun File"
@@ -14113,10 +14104,6 @@ msgstr "Lihat Editor Jangkar"
 msgctxt "lazarusidestrconsts.lismenuviewassembler"
 msgid "Assembler"
 msgstr ""
-
-#: lazarusidestrconsts.lismenuviewbreakpoints
-msgid "BreakPoints"
-msgstr "BreakPoints"
 
 #: lazarusidestrconsts.lismenuviewcodebrowser
 #, fuzzy

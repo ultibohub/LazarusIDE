@@ -137,7 +137,7 @@ type
 
   { TvSVGPathList }
 
-  TvSVGPathList = class(TFPObjectList)
+  TvSVGPathList = class(TFPList)
   public
     // parsing temporary info
     IsFirstPathMove: Boolean;
@@ -2349,7 +2349,7 @@ var
   lNodeName, lDStr: String;
   i, j: Integer;
   lCurPath: TPath;
-  lPaths: TvSVGPathList;
+  lPaths: TvSVGPathList = nil;
 begin
   Result := nil;
   for i := 0 to ANode.Attributes.Length - 1 do
@@ -2421,6 +2421,7 @@ begin
         TvEntityWithSubEntities(Result).Name := ANode.Attributes.Item[i].NodeValue;
     end;
   end;
+  lPaths.Free;
 end;
 
 // Documentation: http://www.w3.org/TR/SVG/paths.html
@@ -2977,8 +2978,6 @@ begin
   ConvertSVGCoordinatesToFPVCoordinates(AData, lx, ly, lRect.X, lRect.Y);
   ConvertSVGSizeToFPVSize(AData, cx, cy, lRect.CX, lRect.CY);
   ConvertSVGSizeToFPVSize(AData, lrx, lry, lRect.RX, lRect.RY);
-  lRect.RX := Abs(lRect.RX) * 2;
-  lRect.RY := Abs(lRect.RY) * 2;
 
   // Make sure that transformations are read after geometry and position
   // of rectangle is known.
