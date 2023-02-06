@@ -211,6 +211,7 @@ type
     function GetTargetProcessor: string; override; //Ultibo
     function GetLCLWidgetType: string; override;
     function GetRunCommandLine: string; override;
+    function GetRunWorkingDir: string; override;
     procedure WriteDebug_RunCommandLine; override;
 
     function GetCompilerFilename: string; override;
@@ -690,6 +691,31 @@ begin
       Result:='';
   end else begin
     if not GlobalMacroList.SubstituteStr(Result) then Result:='';
+  end;
+end;
+
+function TBuildManager.GetRunWorkingDir: string;
+var
+  AMode: TRunParamsOptionsMode;
+begin
+  Result := '';
+  if Project1=nil then exit;
+
+  AMode := Project1.RunParameterOptions.GetActiveMode;
+  if AMode<>nil then
+    Result := AMode.WorkingDirectory;
+  if not GlobalMacroList.SubstituteStr(Result) then
+    Result := '';
+  if (Result <> '') and not FilenameIsAbsolute(Result) then
+    Result := CreateAbsolutePath(Result, Project1.Directory);
+
+  if (Result='') and (not Project1.IsVirtual) then
+    Result := ChompPathDelim(Project1.Directory);
+
+  if Result='' then begin
+    Result := ExtractFilePath(BuildBoss.GetProjectTargetFilename(Project1));
+    if (Result <> '') and not FilenameIsAbsolute(Result) then
+      Result := CreateAbsolutePath(Result, Project1.Directory);
   end;
 end;
 
@@ -2405,9 +2431,9 @@ begin
     if (Project1.RunParameterOptions.GetActiveMode<>nil) then
       Result:=Project1.RunParameterOptions.GetActiveMode.CmdLineParams;
     if Result='' then
-      Result:=GetProjectTargetFilename(Project1)
+      Result:='"'+GetProjectTargetFilename(Project1)+'"'
     else
-      Result:=GetProjectTargetFilename(Project1)+' '+Result;
+      Result:='"'+GetProjectTargetFilename(Project1)+'" '+Result;
   end;
 end;
 

@@ -1881,20 +1881,13 @@ end;
 { TToolButton_GotoBookmarks }
 
 procedure TToolButton_GotoBookmarks.RefreshMenu;
-var
-  cmd: TIDEMenuCommand;
 begin
-  for cmd in SrcEditMenuGotoBookmark do
-    if cmd <> nil then begin
-      cmd.CreateNewMenuItem;
-      DropdownMenu.Items.Add(cmd.MenuItem);
-    end;
+  MainIDEInterface.UpdateBookmarkCommands(nil);
+  AddMenuItems(SrcEditMenuGotoBookmark);
   DropdownMenu.Items.AddSeparator;
-  SrcEditMenuPrevBookmark.CreateNewMenuItem;
-  SrcEditMenuNextBookmark.CreateNewMenuItem;
-  DropdownMenu.Items.Add([
-    SrcEditMenuPrevBookmark.MenuItem,
-    SrcEditMenuNextBookmark.MenuItem]);
+  AddMenuItems([
+    SrcEditMenuPrevBookmark,
+    SrcEditMenuNextBookmark]);
 end;
 
 class procedure TToolButton_GotoBookmarks.ShowAloneMenu(Sender: TObject);  // on shortcuts only
@@ -1911,23 +1904,15 @@ end;
 { TToolButton_ToggleBookmarks }
 
 procedure TToolButton_ToggleBookmarks.RefreshMenu;
-var
-  cmd: TIDEMenuCommand;
 begin
-  for cmd in SrcEditMenuToggleBookmark do
-    if cmd <> nil then begin
-      cmd.CreateNewMenuItem;
-      DropdownMenu.Items.Add(cmd.MenuItem);
-    end;
+  MainIDEInterface.UpdateBookmarkCommands(nil);
+  AddMenuItems(SrcEditMenuToggleBookmark);
   DropdownMenu.Items.AddSeparator;
-  SrcEditMenuSetFreeBookmark.CreateNewMenuItem;
-  DropdownMenu.Items.Add(SrcEditMenuSetFreeBookmark.MenuItem);
+  AddMenuItem(SrcEditMenuSetFreeBookmark);
   DropdownMenu.Items.AddSeparator;
-  SrcEditMenuClearFileBookmark.CreateNewMenuItem;
-  SrcEditMenuClearAllBookmark.CreateNewMenuItem;
-  DropdownMenu.Items.Add([
-    SrcEditMenuClearFileBookmark.MenuItem,
-    SrcEditMenuClearAllBookmark.MenuItem]);
+  AddMenuItems([
+    SrcEditMenuClearFileBookmark,
+    SrcEditMenuClearAllBookmark]);
 end;
 
 class procedure TToolButton_ToggleBookmarks.ShowAloneMenu(Sender: TObject);  // on shortcuts only
@@ -7765,11 +7750,16 @@ begin
           FPageIndex := APageIndex + 1
         else
           FPageIndex := APageIndex - 1;
-      if FUpdateLock = 0 then
-        ApplyPageIndex
-      else
+      if FUpdateLock = 0 then begin
+        ApplyPageIndex;
+      end
+      else begin
+        FNotebook.PageIndex := FPageIndex; // Avoid the WS doing this, when the page is deleted.
         Include(FUpdateFlags,ufPageIndexChanged);
+      end;
     end;
+    if FPageIndex > APageIndex then
+      dec(FPageIndex);
     NotebookPages.Delete(APageIndex);
   end else begin
     FPageIndex := -1;

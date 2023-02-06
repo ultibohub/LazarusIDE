@@ -59,6 +59,7 @@ type
     function GetTargetProcessor: string; virtual; abstract; //Ultibo
     function GetLCLWidgetType: string; virtual; abstract;
     function GetRunCommandLine: string; virtual; abstract;
+    function GetRunWorkingDir: string; virtual; abstract;
     procedure WriteDebug_RunCommandLine; virtual; abstract;
 
     function GetCompilerFilename: string; virtual; abstract;

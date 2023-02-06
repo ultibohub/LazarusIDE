@@ -152,7 +152,6 @@ begin
   if Assigned(QtFrame.ScrollArea) then
     QtFrame.ScrollArea.AttachEvents;
   {$ENDIF}
-  QtFrame.MenuBar.AttachEvents;
   Result := TLCLIntfHandle(QtFrame);
 end;
 
@@ -255,8 +254,7 @@ begin
   if Assigned(QtMainWindow.ScrollArea) then
     QtMainWindow.ScrollArea.AttachEvents;
   {$ENDIF}
-  QtMainWindow.MenuBar.AttachEvents;
-  
+
   if not IsFormDesign(AForm) and
     (AForm.FormStyle in [fsMDIChild]) and
     (Application.MainForm.FormStyle = fsMdiForm) then
@@ -1035,21 +1033,18 @@ begin
       if Assigned(TCustomForm(AWinControl).Menu) then
       begin
         AWin := TQtMainWindow(AWinControl.Handle);
-        if Assigned(AWin.MenuBar) then
-        begin
-          AWin.MenuBar.sizeHint(@ASize);
-          // geometry isn't updated yet
-          if ASize.cy < 10 then
-            ASize.cy := 0;
-          // we must use real geometry, and then exclude menubar height.
-          aClientRect := AWin.getGeometry;
-          OffsetRect(aClientRect, -aClientRect.Left, -aClientRect.Top);
-          dec(AClientRect.Bottom, ASize.cy);
-          {$IFDEF VerboseQtResize}
-          DebugLn('TQtWSCustomForm.getDefaultClientRect ',dbgsName(AWinControl),' ',dbgs(AWin.getClientBounds),' mnuBarHeight ',dbgs(AWin.MenuBar.getHeight),' ASize=',dbgs(ASize),' FINAL=',dbgs(AClientRect));
-          {$ENDIF}
-          Result := True;
-        end;
+        AWin.MenuBar.sizeHint(@ASize);
+        // geometry isn't updated yet
+        if ASize.cy < 10 then
+          ASize.cy := 0;
+        // we must use real geometry, and then exclude menubar height.
+        aClientRect := AWin.getGeometry;
+        OffsetRect(aClientRect, -aClientRect.Left, -aClientRect.Top);
+        dec(AClientRect.Bottom, ASize.cy);
+        {$IFDEF VerboseQtResize}
+        DebugLn('TQtWSCustomForm.getDefaultClientRect ',dbgsName(AWinControl),' ',dbgs(AWin.getClientBounds),' mnuBarHeight ',dbgs(AWin.MenuBar.getHeight),' ASize=',dbgs(ASize),' FINAL=',dbgs(AClientRect));
+        {$ENDIF}
+        Result := True;
       end;
     end;
   end;

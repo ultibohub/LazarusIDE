@@ -326,6 +326,8 @@ type
     property Widget: QWidgetH read GetWidget write SetWidget;
     property WidgetColorRole: QPaletteColorRole read FWidgetColorRole write FWidgetColorRole;
     property WidgetState: TQtWidgetStates read FWidgetState write FWidgetState;
+  public
+    class procedure ConstraintsChange(const AWinControl: TWinControl);
   end;
 
   { TQtAbstractSlider , inherited by TQtScrollBar, TQtTrackBar }
@@ -636,6 +638,7 @@ type
 
   TQtMainWindow = class(TQtWidget)
   private
+    FMenuBar: TQtMenuBar;
     FBlocked: Boolean;
     FFirstPaintEvent: boolean;
     FIsFrameWindow: Boolean;
@@ -654,7 +657,6 @@ type
     IsMainForm: Boolean;
     MDIAreaHandle: TQtMDIArea; // valid only if we are fsMDIForm
     MDIChildArea: TQtMDIArea; // valid only if we are fsMDIChild
-    MenuBar: TQtMenuBar;
     ToolBar: TQtToolBar;
     {$IFDEF QTSCROLLABLEFORMS}
     ScrollArea: TQtWindowArea;
@@ -666,6 +668,7 @@ type
 
     procedure Activate; override;
     function CanAdjustClientRectOnResize: Boolean; override;
+    function MenuBarNeeded: TQtMenuBar;
     function getAcceptDropFiles: Boolean; override;
     function GetContainerWidget: QWidgetH; override;
     procedure grabMouse; override;
@@ -681,6 +684,7 @@ type
     procedure UpdateRegion(ARgn: QRegionH); override;
     procedure Repaint(ARect: PRect = nil); override;
 
+    function GetClientRectFix(): TSize;
     procedure Resize(ANewWidth, ANewHeight: Integer); override;
     procedure setText(const W: WideString); override;
     procedure setMenuBar(AMenuBar: QMenuBarH);
@@ -701,6 +705,7 @@ type
     property IsFrameWindow: Boolean read FIsFrameWindow write FIsFrameWindow; {check if our LCLObject is TCustomFrame}
     property FirstPaintEvent: boolean read FFirstPaintEvent write FFirstPaintEvent; {only for x11 - if firstpaintevent arrived we are 100% sure that frame is 100% accurate}
     property ShowOnTaskBar: Boolean read FShowOnTaskBar;
+    property MenuBar: TQtMenuBar read FMenuBar;
   public
     function WinIDNeeded: boolean; override;
     procedure AttachEvents; override;
@@ -4317,6 +4322,7 @@ var
   {$ENDIF}
   B: Boolean;
   AQtClientRect: TRect;
+  mainWin: TQtMainWindow;
 begin
   {$ifdef VerboseQt}
     WriteLn('TQtWidget.SlotResize');
@@ -4379,6 +4385,16 @@ begin
           exit;
         end;
       end;
+    end;
+
+    // when resizing a form, need to adjust the height that will be sent to LCL
+    if (ClassType = TQtMainWindow) {$IFDEF QTSCROLLABLEFORMS} or (ClassType = TQtWindowArea){$ENDIF} then
+    begin
+      if ClassType = TQtMainWindow then
+        mainWin:= TQtMainWindow(self)
+      else
+        mainWin:= TQtMainWindow(LCLObject.Handle);
+      dec(NewSize.cy, mainWin.GetClientRectFix.cy);
     end;
 
     {keep LCL value while designing pageControl}
@@ -6791,10 +6807,10 @@ begin
       ARet.Y := 0;
       AParam.X := APt.X;
       AParam.Y := APt.Y;
-      if Assigned(TQtMainWindow(FOwner).MenuBar) and TQtMainWindow(FOwner).MenuBar.getVisible then
+      if Assigned(TQtMainWindow(FOwner).FMenuBar) and TQtMainWindow(FOwner).FMenuBar.getVisible then
       begin
-        QWidget_mapToGlobal(TQtMainWindow(FOwner).MenuBar.Widget, @ARet, @AParam);
-        inc(ARet.Y, QWidget_height(TQtMainWindow(FOwner).MenuBar.Widget));
+        QWidget_mapToGlobal(TQtMainWindow(FOwner).FMenuBar.Widget, @ARet, @AParam);
+        inc(ARet.Y, QWidget_height(TQtMainWindow(FOwner).FMenuBar.Widget));
         Result.X := ARet.X;
         Result.Y := ARet.Y;
       end else
@@ -7019,15 +7035,6 @@ begin
 
     Result := QMainWindow_create(nil, QtWindow);
 
-    MenuBar := TQtMenuBar.Create({$IFDEF DARWIN}nil{$ELSE}Result{$ENDIF});
-
-    if not (csDesigning in LCLObject.ComponentState) then
-      MenuBar.FIsApplicationMainMenu := True
-    else
-      {$IFNDEF DARWIN}
-      MenuBar.setProperty(MenuBar.Widget,'lcldesignmenubar',1)
-      {$ENDIF}
-      ;
 
     if (Application.MainForm <> nil) and
        (Application.MainForm.FormStyle = fsMDIForm) and
@@ -7096,10 +7103,6 @@ begin
       QWidget_setMouseTracking(Result, True);
     end;
 
-    MenuBar := TQtMenuBar.Create(Result);
-    if (csDesigning in LCLObject.ComponentState) then
-      MenuBar.setProperty(MenuBar.Widget,'lcldesignmenubar',1);
-
     {$IFDEF QTSCROLLABLEFORMS}
     if QWidget_windowType(Result) = QtSplashScreen then
       FCentralWidget := QWidget_create(Result)
@@ -7156,20 +7159,20 @@ end;
  ------------------------------------------------------------------------------}
 destructor TQtMainWindow.Destroy;
 begin
-  // The main window takes care of the menubar handle
+  // The main window takes care of the FMenuBar handle
   {handle validator is added since we added events to
-   menubar in r33309 (because of font changes).
+   FMenuBar in r33309 (because of font changes).
    Events are attached in TQtWSCustomForm.CreateHandle
    Sometimes in various combinations we can
-   crash here because MenuBar <> nil but not valid handle.
+   crash here because FMenuBar <> nil but not valid handle.
    Now it's totally safe.}
-  if QtWidgetSet.IsValidHandle(HWND(MenuBar)) then
+  if QtWidgetSet.IsValidHandle(HWND(FMenuBar)) then
   begin
-    MenuBar.DetachEvents;
-    if FOwnWidget and (MenuBar.Widget <> nil) then
-      QObject_deleteLater(MenuBar.Widget);
-    MenuBar.Widget := nil;
-    FreeThenNil(MenuBar);
+    FMenuBar.DetachEvents;
+    if FOwnWidget and (FMenuBar.Widget <> nil) then
+      QObject_deleteLater(FMenuBar.Widget);
+    FMenuBar.Widget := nil;
+    FreeThenNil(FMenuBar);
   end;
 
   if MDIAreaHandle <> nil then
@@ -7247,6 +7250,38 @@ begin
   {$ENDIF}
 end;
 
+function TQtMainWindow.MenuBarNeeded: TQtMenuBar;
+var
+  AParent: QWidgetH;
+begin
+  if not Assigned(FMenuBar) then
+  begin
+    {$IFDEF DARWIN}
+    if IsMainForm then
+      AParent := nil
+    else
+      AParent := Widget;
+    {$ELSE}
+    AParent := Widget;
+    {$ENDIF}
+    FMenuBar := TQtMenuBar.Create(AParent);
+    if not (csDesigning in LCLObject.ComponentState) then
+      FMenuBar.FIsApplicationMainMenu := {$IFDEF DARWIN}False{$ELSE}IsMainForm{$ENDIF}
+    else
+      {$IFNDEF DARWIN}
+      FMenuBar.setProperty(FMenuBar.Widget,'lcldesignmenubar',1)
+      {$ENDIF}
+      ;
+
+    {$IFDEF DARWIN}
+    if (csDesigning in LCLObject.ComponentState) or not IsMainForm then
+      QMenuBar_setNativeMenuBar(QMenuBarH(FMenuBar.Widget), False);
+    {$ENDIF}
+    FMenuBar.AttachEvents;
+  end;
+  Result := FMenuBar;
+end;
+
 function TQtMainWindow.getAcceptDropFiles: Boolean;
 begin
   Result := QWidget_acceptDrops(Widget);
@@ -7302,9 +7337,9 @@ begin
     Result := ScrollArea.getClientOffset
   else
     Result := inherited getClientOffset;
-  if Assigned(ScrollArea) and Assigned(MenuBar) and
-    (MenuBar.getVisible) then
-      inc(Result.Y, MenuBar.getHeight);
+  if Assigned(ScrollArea) and Assigned(FMenuBar) and
+    (FMenuBar.getVisible) then
+      inc(Result.Y, FMenuBar.getHeight);
   {$ELSE}
   Result:=inherited getClientOffset;
   {$ENDIF}
@@ -7393,8 +7428,21 @@ begin
     inherited Repaint(ARect);
 end;
 
+// currently only handles the adjustments that MainMenu needs to make
+function TQtMainWindow.GetClientRectFix(): TSize;
+begin
+  if Assigned(FMenuBar) and (not IsMdiChild) then
+  begin
+    FMenuBar.sizeHint(@Result);
+    if Result.Height<10 then Result.Height:=0;
+  end else
+    Result:= TSize.Create(0,0);
+end;
+
 procedure TQtMainWindow.Resize(ANewWidth, ANewHeight: Integer);
 begin
+  inc( ANewHeight, GetClientRectFix.cy );
+
   if not IsMDIChild and not IsFrameWindow and
     (TCustomForm(LCLObject).BorderStyle in [bsDialog, bsNone, bsSingle]) and
      not (csDesigning in LCLObject.ComponentState) then
@@ -7408,12 +7456,55 @@ begin
   setWindowTitle(@W);
 end;
 
+// move from qtwscontrls.pp
+// to avoid unit circular references
+class procedure TQtWidget.ConstraintsChange(const AWinControl: TWinControl);
+const
+  QtMaxContraint = $FFFFFF;
+var
+  AWidget: TQtWidget;
+  MW, MH: Integer;
+  cy: Integer;
+begin
+  if (AWinControl is TCustomForm) then
+    cy:= TQtMainWindow(AWinControl.Handle).GetClientRectFix.cy
+  else
+    cy:= 0;
+
+  AWidget := TQtWidget(AWinControl.Handle);
+  with AWinControl do
+  begin
+    MW := Constraints.MinWidth;
+    MH := Constraints.MinHeight;
+
+    if MW <= QtMinimumWidgetSize then
+      MW := 0;
+    if MH <= QtMinimumWidgetSize then
+      MH := 0
+    else
+      inc(MH, cy);
+    AWidget.setMinimumSize(MW, MH);
+
+    MW := Constraints.MaxWidth;
+    MH := Constraints.MaxHeight;
+
+    if MW = 0 then
+      MW := QtMaxContraint;
+    if MH = 0 then
+      MH := QtMaxContraint
+    else
+      inc(MH, cy);
+    AWidget.setMaximumSize(MW, MH);
+  end;
+end;
+
 procedure TQtMainWindow.setMenuBar(AMenuBar: QMenuBarH);
 begin
   if IsMainForm then
     QMainWindow_setMenuBar(QMainWindowH(Widget), AMenuBar)
   else
     QLayout_setMenuBar(LayoutWidget, AMenuBar);
+  TQtWidget.ConstraintsChange(LCLObject);
 end;
 
 {------------------------------------------------------------------------------
@@ -7914,6 +8005,7 @@ begin
     Msg.Width := Word(getWidth);
     Msg.Height := Word(getHeight);
   end;
+  dec( Msg.Height, GetClientRectFix.cy );
   DeliverMessage(Msg);
 end;
 
@@ -16100,6 +16192,10 @@ begin
 end;
 
 function TQtMenu.actionHandle: QActionH;
+{$IFDEF DARWIN}
+var
+  S: string;
+{$ENDIF}
 begin
   if FActionHandle = nil then
   begin
@@ -16109,6 +16205,13 @@ begin
       FActionEventFilter := nil;
     end;
     FActionHandle := QMenu_menuAction(QMenuH(Widget));
+    {$IFDEF DARWIN}
+    S := FMenuItem.Caption;
+    {$warning must find better way to map about role}
+    if S.StartsWith('about',True) then
+      QAction_setMenuRole(FActionHandle, QActionAboutRole);
+    {$ENDIF}
+
     FActionEventFilter := QObject_hook_create(FActionHandle);
     QObject_hook_hook_events(FActionEventFilter, @ActionEventFilter);
   end;
@@ -16264,6 +16367,9 @@ var
   Shift: TShiftState;
   QtK1, QtK2: integer;
   KeySequence: QKeySequenceH;
+  {$IFDEF DARWIN}
+  APrefs, AQuit: QKeySequenceH;
+  {$ENDIF}
 begin
   QtK1 := 0;
   QtK2 := 0;
@@ -16280,6 +16386,22 @@ begin
   // there is no need in destroying QKeySequnce
   KeySequence := QKeySequence_create(QtK1, QtK2);
   QAction_setShortcut(ActionHandle, KeySequence);
+
+  {$IFDEF DARWIN}
+  APrefs := QKeySequence_Create(QKeySequencePreferences);
+  AQuit := QKeySequence_Create(QKeySequenceQuit);
+  if QKeySequence_matches(KeySequence, APrefs) = QKeySequenceExactMatch then
+    QAction_setMenuRole(FActionHandle, QActionPreferencesRole)
+  else
+  if QKeySequence_matches(KeySequence, AQuit) = QKeySequenceExactMatch then
+    QAction_setMenuRole(FActionHandle, QActionQuitRole)
+  else
+    if QAction_menuRole(FActionHandle) = QActionTextHeuristicRole then
+      QAction_setMenuRole(FActionHandle, QActionNoRole);
+  QKeySequence_Destroy(APrefs);
+  QKeySequence_Destroy(AQuit);
+  {$ENDIF}
+
   QKeySequence_destroy(KeySequence);
 end;
 
@@ -18250,7 +18372,7 @@ begin
     Parent := nil;
   Result := QWidget_create(Parent, QtToolTip);
   FDeleteLater := True;
-  MenuBar := nil;
+  FMenuBar := nil;
   {$IFDEF QTSCROLLABLEFORMS}
   ScrollArea := nil;
   {$ENDIF}
@@ -19713,17 +19835,17 @@ begin
           WidgetToNotify := QApplication_widgetAt(@p);
           if (WidgetToNotify <> nil) then
           begin
-            if TQtMainWindow(Self).MenuBar.Widget <> nil then
+            if Assigned(TQtMainWindow(Self).FMenuBar) and (TQtMainWindow(Self).FMenuBar.Widget <> nil) then
             begin
               QMouseEvent_Pos(QMouseEventH(Event), @p);
-              QWidget_geometry(TQtMainWindow(Self).MenuBar.Widget, @R);
+              QWidget_geometry(TQtMainWindow(Self).FMenuBar.Widget, @R);
               pt := Point(P.X, P.Y);
               if LCLIntf.PtInRect(R, pt) then
               begin
-                Action := QMenuBar_actionAt(QMenuBarH(TQtMainWindow(Self).MenuBar.Widget), @p);
+                Action := QMenuBar_actionAt(QMenuBarH(TQtMainWindow(Self).FMenuBar.Widget), @p);
                 if Action <> nil then
                 begin
-                  QCoreApplication_notify(QCoreApplication_instance(), TQtMainWindow(Self).MenuBar.Widget, Event);
+                  QCoreApplication_notify(QCoreApplication_instance(), TQtMainWindow(Self).FMenuBar.Widget, Event);
                   QEvent_accept(Event);
                   Result := True;
                 end;

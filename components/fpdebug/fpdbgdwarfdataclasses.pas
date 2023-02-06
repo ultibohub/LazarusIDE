@@ -368,7 +368,7 @@ type
 
     function GoNamedChild(const AName: String): Boolean;
     // find in enum too // TODO: control search with a flags param, if needed
-    function GoNamedChildEx(const ANameInfo: TNameSearchInfo): Boolean;
+    function GoNamedChildEx(const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean = False): Boolean;
     // GoNamedChildMatchCaseEx will use
     // - UpperName for Hash
     // - LowerName for compare
@@ -2659,8 +2659,7 @@ begin
   AbbrList := FCompUnit.FAbbrevList;
 
   // PrepareAbbrev;
-  if not(dieAbbrevValid in FFlags) then
-    FInformationData := AbbrList.FindLe128bFromPointer(FInformationEntry, FAbbrev);
+  FInformationData := AbbrList.FindLe128bFromPointer(FInformationEntry, FAbbrev);
   Result := FInformationData <> nil;
 
   if Result
@@ -2793,6 +2792,8 @@ begin
     inc(FScope.FIndex);
     ScopeChanged;
     PrepareAbbrev;
+    if FAbbrev = nil then
+      continue;
 
     if not (dafHasName in FAbbrev^.flags) then begin
       if FScope.Index >= NextTopLevel then
@@ -2852,7 +2853,7 @@ begin
   s2 := UTF8LowerCase(AName);
   while HasValidScope do begin
     PrepareAbbrev;
-    if not (dafHasName in FAbbrev^.flags) then begin
+    if (FAbbrev = nil) or not (dafHasName in FAbbrev^.flags) then begin
       GoNext;
       Continue;
     end;
@@ -2872,8 +2873,10 @@ begin
   end;
 end;
 
-function TDwarfInformationEntry.GoNamedChildEx(const ANameInfo: TNameSearchInfo): Boolean;
+function TDwarfInformationEntry.GoNamedChildEx(
+  const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean): Boolean;
 var
+  Val: Integer;
   EntryName: PChar;
   InEnum: Boolean;
   ParentScopIdx: Integer;
@@ -2895,11 +2898,19 @@ begin
       end;
 
       PrepareAbbrev;
-      if not (dafHasName in FAbbrev^.flags) then begin
+      if (FAbbrev = nil) or not (dafHasName in FAbbrev^.flags) then begin
         assert(false);
         GoNext;
         Continue;
       end;
+
+      if ASkipArtificial then begin
+        if ReadValue(DW_AT_artificial, Val) and (Val <> 0) then begin
+          GoNext;
+          Continue;
+        end;
+      end;
+
 
       if (sc^.NameHash = ANameInfo.NameHash) then begin
         if not ReadValue(DW_AT_name, EntryName) then begin
@@ -2957,7 +2968,7 @@ begin
     end;
 
     PrepareAbbrev;
-    if not (dafHasName in FAbbrev^.flags) then begin
+    if (FAbbrev = nil) or not (dafHasName in FAbbrev^.flags) then begin
       Assert(false);
       GoNext;
       Continue;
@@ -2997,6 +3008,10 @@ begin
   FCompUnit := ACompUnit;
   FInformationEntry := AnInformationEntry;
   FScope.Init(@FCompUnit.FScopeList);
+  if (FInformationEntry <> nil) and not SearchScope then begin
+    DebugLn(FPDBG_DWARF_ERRORS or FPDBG_DWARF_ERRORS, 'Error: Invalid pointer to InformationEntry');
+    FInformationEntry := nil;
+  end;
 end;
 
 constructor TDwarfInformationEntry.Create(ACompUnit: TDwarfCompilationUnit;
@@ -3214,7 +3229,7 @@ begin
          this field will always be an offset from start of the debug_info section
   }
   Result := False;
-  if InfoIdx < 0 then
+  if (InfoIdx < 0) or (FAbbrevData = nil) then
     exit;
 
   Form := FAbbrevData[InfoIdx].Form;
@@ -3337,6 +3352,8 @@ var
   AttrData: TDwarfAttribData;
 begin
   PrepareAbbrev;
+  if FAbbrev = nil then
+    exit(False);
   if dafHasName in FAbbrev^.flags then begin
     Result := GetAttribData(DW_AT_name, AttrData);
     assert(Result and (AttrData.InformationEntry = Self), 'TDwarfInformationEntry.ReadName');
@@ -3354,6 +3371,8 @@ var
   AttrData: TDwarfAttribData;
 begin
   PrepareAbbrev;
+  if FAbbrev = nil then
+    exit(False);
   if dafHasName in FAbbrev^.flags then begin
     Result := GetAttribData(DW_AT_name, AttrData);
     assert(Result and (AttrData.InformationEntry = Self), 'TDwarfInformationEntry.ReadName');
@@ -3371,6 +3390,8 @@ var
   AttrData: TDwarfAttribData;
 begin
   PrepareAbbrev;
+  if FAbbrev = nil then
+    exit(False);
   if dafHasStartScope in FAbbrev^.flags then begin
     Result := GetAttribData(DW_AT_start_scope, AttrData);
     assert(Result and (AttrData.InformationEntry = Self), 'TDwarfInformationEntry.ReadName');

@@ -1,0 +1,322 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fpdoc-descriptions>
+<package name="datetimectrls">
+<!--
+====================================================================
+DBDateTimePicker
+====================================================================
+-->
+<module name="DBDateTimePicker">
+<short>
+Implements a database-aware version of the date/time picker control.
+</short>
+<descr>
+<p>
+<file>DBDateTimePicker.pas</file> contains an implementation of the
+database-aware date/time picker control. It contains the 
+<var>TDBDateTimePicker</var> type, descended from 
+<var>TCustomDateTimePicker</var>, which adds properties and methods 
+needed to read and write the date/time value for the control using a 
+DataSource, DataField, and an internal TFieldDataLink class instance.
+</p>
+<p>
+<file>dbdatetimepicker.pas</file> is part of DateTimeCtrls package for Lazarus.
+</p>
+<p>
+<b>Original Author:</b>
+</p>
+<p>
+Zoran Vučenović, January and February 2010.
+Зоран Вученовић, јануар и фебруар 2010.
+</p>
+<p>
+<b>LICENSE</b>
+</p>
+<p>
+Modified LGPL -- see the file COPYING.modifiedLGPL.
+</p>
+<p>
+<b>NO WARRANTY</b>
+</p>
+<p>
+There is no warranty whatsoever.
+</p>
+<p>
+Original documentation is located on the Lazarus Wiki at:
+</p>
+<p>
+<url href="https://wiki.freepascal.org/DateTimeCtrls_Package">
+DateTimeCtrls Package
+(https://wiki.freepascal.org/DateTimeCtrls_Package)
+</url>
+</p>
+</descr>
+
+<!-- used units -->
+<element name="Classes"/>
+<element name="SysUtils"/>
+<element name="DateTimePicker"/>
+<element name="db"/>
+<element name="DBCtrls"/>
+<element name="LMessages"/>
+
+<element name="TDBDateTimePicker">
+<short>
+Implements a database-aware version of the TDateTimePicker control.
+</short>
+<descr>
+<p>
+<var>TDBDateTimePicker</var> is a <var>TCustomDateTimePicker</var> descendant 
+which implements a database-aware date/time picker control. 
+</p>
+<!-- TODO: Merge content from TCustomDateTimePicker. -->
+<p>
+It adds properties and methods needed to read and write the date/time value 
+for the control using a DataSource, DataField, and an internal TFieldDataLink 
+class instance. It provides support for displaying and storing a value in a 
+database field which has a null value.
+</p>
+<p>
+TDBDateTimePicker sets the visibility for properties and events introduced in 
+ancestor classes.
+</p>
+</descr>
+<seealso>
+<link id="#datetimectrls.datetimepicker.TCustomDateTimePicker">TCustomDateTimePicker</link>
+</seealso>
+</element>
+
+<!-- private -->
+<element name="TDBDateTimePicker.FDataLink"/>
+<element name="TDBDateTimePicker.FReadOnly"/>
+<element name="TDBDateTimePicker.FDataChangeCount"/>
+<element name="TDBDateTimePicker.FChangingCount"/>
+
+<element name="TDBDateTimePicker.GetDataField"/>
+<element name="TDBDateTimePicker.GetDataField.Result"/>
+<element name="TDBDateTimePicker.GetDataSource"/>
+<element name="TDBDateTimePicker.GetDataSource.Result"/>
+<element name="TDBDateTimePicker.SetDataField"/>
+<element name="TDBDateTimePicker.SetDataField.AValue"/>
+<element name="TDBDateTimePicker.SetDataSource"/>
+<element name="TDBDateTimePicker.SetDataSource.AValue"/>
+<element name="TDBDateTimePicker.DataChange"/>
+<element name="TDBDateTimePicker.DataChange.Sender"/>
+<element name="TDBDateTimePicker.SetReadOnly"/>
+<element name="TDBDateTimePicker.SetReadOnly.AValue"/>
+<element name="TDBDateTimePicker.UpdateData"/>
+<element name="TDBDateTimePicker.UpdateData.Sender"/>
+<element name="TDBDateTimePicker.ActiveChange"/>
+<element name="TDBDateTimePicker.ActiveChange.Sender"/>
+<element name="TDBDateTimePicker.GetField"/>
+<element name="TDBDateTimePicker.GetField.Result"/>
+<element name="TDBDateTimePicker.CheckField"/>
+<element name="TDBDateTimePicker.CMGetDataLink"/>
+<element name="TDBDateTimePicker.CMGetDataLink.Message"/>
+
+<!-- protected -->
+<element name="TDBDateTimePicker.Change">
+<short>
+Performs actions needed when the value for the control has been changed.
+</short>
+<descr>
+<p>
+<var>Change</var> is an overridden method in TDBDateTimePicker. It ensures 
+that the field data link is assigned and changes have occurred in the date/
+time value before it is stored to the linked dataset. No actions are performed 
+in the method if  either conditions is not met.
+</p>
+<p>
+Change calls the Edit method in the field link to ensure that the field can be 
+modified in the linked dataset. If Edit returns <b>True</b>, the field is in 
+an edit state and ready for the modification. The inherited Change method is 
+called to signal the OnChange event handlers assigned for the control. If Edit 
+returns <b>False</b>, the Reset method in the data link is called to revert 
+the field to its previous state.
+</p>
+</descr>
+<seealso>
+<link id="#datetimectrls.datetimepicker.TCustomDateTimePicker.Change">TCustomDateTimePicker.Change</link>
+<link id="#lcl.dbctrls.TFieldDataLink">TFieldDataLink</link>
+</seealso>
+</element>
+
+<element name="TDBDateTimePicker.ConfirmChanges">
+<short>
+Validates and applies a user-specified date/time value for the control.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TDBDateTimePicker.UndoChanges">
+<short>
+Reverts changes to the date/time value in the control and its linked dataset.
+</short>
+<descr/>
+<seealso>
+</seealso>
+</element>
+
+<!-- public -->
+<element name="TDBDateTimePicker.Create">
+<short>
+Constructor for the class instance.
+</short>
+<descr>
+<p>
+<var>Create</var> is the overridden constructor for the class instance, and 
+calls the inherited constructor on entry. It allocates resources for the 
+internal TFieldDataLink in the class instance, and assigns private methods in 
+the class which implement handler routines to the event handlers in the field 
+link.
+</p>
+</descr>
+<seealso>
+<link id="#datetimectrls.datetimepicker.TCustomDateTimePicker.Create">TCustomDateTimePicker.Create</link>
+</seealso>
+</element>
+<element name="TDBDateTimePicker.Create.AOwner">
+<short>
+Owner of the class instance.
+</short>
+</element>
+
+<element name="TDBDateTimePicker.Destroy">
+<short>
+Destructor for the class instance.
+</short>
+<descr>
+<p>
+<var>Destroy</var> is the overridden destructor for the class instance. It 
+clears the event handlers and frees the internal field link used in the class 
+instance. It calls the inherited method prior to exit to free the class 
+instance.
+</p>
+</descr>
+<seealso/>
+</element>
+
+<element name="TDBDateTimePicker.Field">
+<short>
+Provides access to the TField instance for the date/time value in the linked 
+dataset.
+</short>
+<descr>
+<p>
+<var>Field</var> is a read-only TField property which provides access to the 
+field where the date/time value is stored in the linked dataset. The value for 
+the property is read from the Field property in the internal TFieldDataLink 
+instance used in the class.
+</p>
+</descr>
+<seealso/>
+</element>
+
+<element name="TDBDateTimePicker.CalendarWrapperClass" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.CalendarWrapperClass"/>
+<element name="TDBDateTimePicker.DroppedDown" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.DroppedDown"/>
+
+<!-- published -->
+<element name="TDBDateTimePicker.DataField">
+<short>
+Name for the field where the date/time value is stored in the linked dataset.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TDBDateTimePicker.DataSource">
+<short>
+Provides access to the dataset for the date/time value.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TDBDateTimePicker.ReadOnly">
+<short>
+Indicates whether the data/time value can be modified using the control.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TDBDateTimePicker.ArrowShape" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.ArrowShape"/>
+<element name="TDBDateTimePicker.ShowCheckBox" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.ShowChechBox"/>
+<element name="TDBDateTimePicker.Checked" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.Checked"/>
+<element name="TDBDateTimePicker.CenturyFrom" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.CenturyFrom"/>
+<element name="TDBDateTimePicker.DateDisplayOrder" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.DateDisplayOrder"/>
+<element name="TDBDateTimePicker.MaxDate" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.MaxDate"/>
+<element name="TDBDateTimePicker.MinDate" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.MinDate"/>
+<element name="TDBDateTimePicker.AutoSize" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.AutoSize"/>
+<element name="TDBDateTimePicker.Font" link="#lcl.controls.TControl.Font"/>
+<element name="TDBDateTimePicker.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TDBDateTimePicker.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TDBDateTimePicker.TabStop" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.TabStop"/>
+<element name="TDBDateTimePicker.BorderStyle" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.BorderStyle"/>
+<element name="TDBDateTimePicker.BorderSpacing" link="#lcl.controls.TControl.BorderSpacing"/>
+<element name="TDBDateTimePicker.Enabled" link="#lcl.controls.TControl.Enabled"/>
+<element name="TDBDateTimePicker.Color" link="#lcl.controls.TControl.Color"/>
+<element name="TDBDateTimePicker.ParentColor" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.ParentColor"/>
+<element name="TDBDateTimePicker.DateSeparator" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.DateSeparator"/>
+<element name="TDBDateTimePicker.TrailingSeparator" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.TrailingSeparator"/>
+<element name="TDBDateTimePicker.TextForNullDate" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.TextForNullDate"/>
+<element name="TDBDateTimePicker.LeadingZeros" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.LeadingZeros"/>
+<element name="TDBDateTimePicker.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TDBDateTimePicker.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TDBDateTimePicker.Align" link="#lcl.controls.TControl.Align"/>
+<element name="TDBDateTimePicker.Alignment" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.Alignment"/>
+<element name="TDBDateTimePicker.Anchors" link="#lcl.controls.TControl.Anchors"/>
+<element name="TDBDateTimePicker.Constraints" link="#lcl.controls.TControl.Constraints"/>
+<element name="TDBDateTimePicker.Cursor" link="#lcl.controls.TControl.Cursor"/>
+<element name="TDBDateTimePicker.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TDBDateTimePicker.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TDBDateTimePicker.NullInputAllowed" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.NullInputAllowed"/>
+<element name="TDBDateTimePicker.Kind" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.Kind"/>
+<element name="TDBDateTimePicker.TimeSeparator" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.TimeSeparator"/>
+<element name="TDBDateTimePicker.DecimalSeparator" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.DecimalSeparator"/>
+<element name="TDBDateTimePicker.TimeFormat" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.TimeFormat"/>
+<element name="TDBDateTimePicker.TimeDisplay" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.TimeDisplay"/>
+<element name="TDBDateTimePicker.DateMode" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.DateMode"/>
+<element name="TDBDateTimePicker.UseDefaultSeparators" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.UseDefaultSeparators"/>
+<element name="TDBDateTimePicker.Cascade" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.Cascade"/>
+<element name="TDBDateTimePicker.AutoButtonSize" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.AutoButtonSize"/>
+<element name="TDBDateTimePicker.AutoAdvance" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.AutoAdvance"/>
+<element name="TDBDateTimePicker.HideDateTimeParts" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.HideDateTimeParts"/>
+<element name="TDBDateTimePicker.BiDiMode" link="#lcl.controls.TControl.BiDiMode"/>
+<element name="TDBDateTimePicker.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TDBDateTimePicker.MonthNames" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.MonthNames"/>
+<element name="TDBDateTimePicker.ShowMonthNames" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.ShowMonthNames"/>
+<element name="TDBDateTimePicker.CalAlignment" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.CalAlignment"/>
+
+<!-- events -->
+<element name="TDBDateTimePicker.OnChange" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.OnChange"/>
+<element name="TDBDateTimePicker.OnCheckBoxChange" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.OnCheckBoxChange"/>
+<element name="TDBDateTimePicker.OnDropDown" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.OnDropDown"/>
+<element name="TDBDateTimePicker.OnCloseUp" link="#datetimectrls.datetimepicker.TCustomDateTimePicker.OnCloseUp"/>
+<element name="TDBDateTimePicker.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
+<element name="TDBDateTimePicker.OnClick" link="#lcl.controls.TControl.OnClick"/>
+<element name="TDBDateTimePicker.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
+<element name="TDBDateTimePicker.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
+<element name="TDBDateTimePicker.OnEditingDone" link="#lcl.controls.TControl.OnEditingDone"/>
+<element name="TDBDateTimePicker.OnEnter" link="#lcl.controls.TWinControl.OnEnter"/>
+<element name="TDBDateTimePicker.OnExit" link="#lcl.controls.TWinControl.OnExit"/>
+<element name="TDBDateTimePicker.OnKeyDown" link="#lcl.controls.TWinControl.OnKeyDown"/>
+<element name="TDBDateTimePicker.OnKeyPress" link="#lcl.controls.TWinControl.OnKeyPress"/>
+<element name="TDBDateTimePicker.OnKeyUp" link="#lcl.controls.TWinControl.OnKeyUp"/>
+<element name="TDBDateTimePicker.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
+<element name="TDBDateTimePicker.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
+<element name="TDBDateTimePicker.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
+<element name="TDBDateTimePicker.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
+<element name="TDBDateTimePicker.OnMouseUp" link="#lcl.controls.TControl.OnMouselUp"/>
+<element name="TDBDateTimePicker.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
+<element name="TDBDateTimePicker.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
+<element name="TDBDateTimePicker.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
+<element name="TDBDateTimePicker.OnResize" link="#lcl.controls.TControl.OnResize"/>
+<element name="TDBDateTimePicker.OnShowHint" link="#lcl.controls.TControl.OnShowHint"/>
+<element name="TDBDateTimePicker.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
+
+</module>
+<!-- DBDateTimePicker -->
+</package>
+</fpdoc-descriptions>

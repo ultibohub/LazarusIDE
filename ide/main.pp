@@ -403,7 +403,6 @@ type
     procedure UpdateMainIDECommands(Sender: TObject);
     procedure UpdateFileCommands(Sender: TObject);
     procedure UpdateEditorCommands(Sender: TObject);
-    procedure UpdateBookmarkCommands(Sender: TObject);
     procedure UpdateEditorTabCommands(Sender: TObject);
     procedure UpdateProjectCommands(Sender: TObject);
     procedure UpdatePackageCommands(Sender: TObject);
@@ -430,6 +429,7 @@ type
     procedure LayoutChangeHandler(Sender: TObject);
     procedure ToolBarOptionsClick(Sender: TObject);
   public
+    procedure UpdateBookmarkCommands(Sender: TObject); override;
     // Environment options dialog event handlers
     function DoOpenIDEOptions(AEditor: TAbstractIDEOptionsEditorClass;
       ACaption: String; AOptionsFilter: array of TAbstractIDEOptionsClass;
@@ -7540,7 +7540,7 @@ begin
   if ConsoleVerbosity>0 then
     DebugLn(['Hint: (lazarus) [TMainIDE.DoInitProjectRun] ProgramFilename=',ProgramFilename]);
   if ((DebugClass = nil) or DebugClass.RequiresLocalExecutable)
-     and not FileExistsUTF8(ProgramFilename)
+     and not FileExistsUTF8(ResolveLocationForLaunchApplication(ProgramFilename))
   then begin
     debugln(['Info: (lazarus) [TMainIDE.DoInitProjectRun] File TargetFile found: "',ProgramFilename,'"']);
     IDEMessageDialog(lisFileNotFound,
@@ -7634,15 +7634,16 @@ begin
     Exit(mrNone);
   end;
 
-  ARunMode := Project1.RunParameterOptions.GetActiveMode;
-  if ARunMode<>nil then
-    RunWorkingDirectory := ARunMode.WorkingDirectory
-  else
-    RunWorkingDirectory := '';
-  if not GlobalMacroList.SubstituteStr(RunWorkingDirectory) then
-    RunWorkingDirectory := '';
-  if (RunWorkingDirectory='') and (not Project1.IsVirtual) then
-    RunWorkingDirectory := ChompPathDelim(Project1.Directory);
+  RunWorkingDirectory := MainBuildBoss.GetRunWorkingDir;
+  if not DirectoryExists(RunWorkingDirectory) then
+  begin
+    MainBuildBoss.WriteDebug_RunCommandLine;
+    IDEMessageDialog(lisUnableToRun,
+      Format(lisTheWorkingDirectoryDoesNotExistPleaseCheckTheWorki,
+             [RunWorkingDirectory, LineEnding]),
+      mtError,[mbCancel]);
+    Exit(mrNone);
+  end;
 
   Params := TStringList.Create;
   Process := TProcessUTF8.Create(nil);
@@ -7657,15 +7658,7 @@ begin
     ExeFile := Params[0];
     Params.Delete(0);
     //debugln('TMainIDE.DoRunProjectWithoutDebug ExeFile=',ExeFile);
-    if not FilenameIsAbsolute(ExeFile) then
-    begin
-      aFilename:=FindDefaultExecutablePath(ExeFile);
-      if aFilename<>'' then
-        ExeFile:=aFilename;
-    end;
-
-    if RunWorkingDirectory = '' then
-      RunWorkingDirectory := ExtractFilePath(ExeFile);
+    ExeFile := ResolveLocationForLaunchApplication(ExeFile);
 
     Process.Executable := ExeFile;
     Process.Parameters.Assign(Params);
@@ -7683,6 +7676,7 @@ begin
     else if not FileIsExecutable(ExeFile) then
     begin
       MainBuildBoss.WriteDebug_RunCommandLine;
+      ARunMode := Project1.RunParameterOptions.GetActiveMode;
       if (ARunMode<>nil) and ARunMode.UseLaunchingApplication then
         IDEMessageDialog(lisLaunchingApplicationInvalid,
           Format(lisTheLaunchingApplicationDoesNotExistsOrIsNotExecuta,
@@ -7692,16 +7686,6 @@ begin
         IDEMessageDialog(lisUnableToRun, Format(lisUnableToRun2, [ExeFile]),
           mtError, [mbOK]);
       Exit(mrCancel);
-    end;
-
-    if not DirectoryExists(Process.CurrentDirectory) then
-    begin
-      MainBuildBoss.WriteDebug_RunCommandLine;
-      IDEMessageDialog(lisUnableToRun,
-        Format(lisTheWorkingDirectoryDoesNotExistPleaseCheckTheWorki,
-               [Process.CurrentDirectory, LineEnding]),
-        mtError,[mbCancel]);
-      Exit(mrNone);
     end;
 
     AddHandlerOnRunFinished(@RunFinished);

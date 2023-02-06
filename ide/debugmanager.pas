@@ -55,7 +55,7 @@ uses
   IdeDebuggerStringConstants,
   // IDE
   CompilerOptions, EnvironmentOpts, SourceEditor, ProjectDefs, Project,
-  InputHistory, Debugger, LazarusIDEStrConsts, TransferMacros, MainBar,
+  InputHistory, LazConf, Debugger, LazarusIDEStrConsts, TransferMacros, MainBar,
   MainIntf, MainBase, BaseBuildManager, SourceMarks, DebuggerDlg, Watchesdlg,
   BreakPointsdlg, BreakPropertyDlg, LocalsDlg, WatchPropertyDlg, CallStackDlg,
   EvaluateDlg, RegistersDlg, AssemblerDlg, DebugOutputForm, ExceptionDlg,
@@ -308,6 +308,7 @@ function GetDebugManager: TDebugManager;
 property DebugBossMgr: TDebugManager read GetDebugManager;
 
 function DBGDateTimeFormatter(const aValue: string): string;
+function ResolveLocationForLaunchApplication(ALaunchApp: String): String;
 
 implementation
 
@@ -338,6 +339,25 @@ begin
       Result := DateTimeToStr(MyDate);
   end else
     Result := aValue;
+end;
+
+function ResolveLocationForLaunchApplication(ALaunchApp: String): String;
+var
+  tmp: String;
+begin
+  Result := ALaunchApp;
+  if not FilenameIsAbsolute(ALaunchApp) then begin
+    tmp := CreateAbsolutePath(ALaunchApp, Project1.Directory);
+    if FileIsExecutable(tmp) then begin
+      Result := tmp;
+    end
+    else
+    if ExtractFilePath(ALaunchApp) = '' then begin
+      tmp := FindDefaultExecutablePath(ALaunchApp);
+      if tmp <> '' then
+        Result := tmp;
+    end;
+  end;
 end;
 
 type
@@ -2517,6 +2537,9 @@ begin
   LaunchingCmdLine := BuildBoss.GetRunCommandLine;
   SplitCmdLine(LaunchingCmdLine, LaunchingApplication, LaunchingParams);
 
+  if NewDebuggerClass.RequiresLocalExecutable then
+    LaunchingApplication := ResolveLocationForLaunchApplication(LaunchingApplication);
+
   (* TODO: workaround for http://bugs.freepascal.org/view.php?id=21834
      Se Debugger.RequiresLocalExecutable
   *)
@@ -2684,11 +2707,7 @@ begin
 
     if not(difInitForAttach in AFlags) then begin
       Project1.RunParameterOptions.AssignEnvironmentTo(FDebugger.Environment);
-      if Project1.RunParameterOptions.GetActiveMode<>nil then
-        NewWorkingDir:=Project1.RunParameterOptions.GetActiveMode.WorkingDirectory
-      else
-        NewWorkingDir:='';
-      GlobalMacroList.SubstituteStr(NewWorkingDir);
+      NewWorkingDir := BuildBoss.GetRunWorkingDir;
       if NewDebuggerClass.RequiresLocalExecutable  and     (* TODO: workaround for http://bugs.freepascal.org/view.php?id=21834   *)
          (NewWorkingDir<>'') and (not DirectoryExistsUTF8(NewWorkingDir))
       then begin
@@ -2698,25 +2717,16 @@ begin
           mtError,[mbCancel]);
         exit;
       end;
-      if NewWorkingDir='' then begin
-        NewWorkingDir:=ExtractFilePath(BuildBoss.GetProjectTargetFilename(Project1));
-        if NewDebuggerClass.RequiresLocalExecutable  and     (* TODO: workaround for http://bugs.freepascal.org/view.php?id=21834   *)
-           (NewWorkingDir<>'') and (not DirectoryExistsUTF8(NewWorkingDir))
-        then begin
-          IDEMessageDialog(lisUnableToRun,
-            Format(lisTheDestinationDirectoryDoesNotExistPleaseCheckTheP,
-                   [NewWorkingDir, LineEnding]),
-            mtError,[mbCancel]);
-          exit;
-        end;
-      end;
 
       // The following commands may call ProcessMessages, and FDebugger can be nil after each
 
-      if (FDebugger <> nil) and not NewDebuggerClass.RequiresLocalExecutable
-      then FDebugger.WorkingDir:=NewWorkingDir;
-      if (FDebugger <> nil) and NewDebuggerClass.RequiresLocalExecutable
-      then FDebugger.WorkingDir:=CleanAndExpandDirectory(NewWorkingDir);
+      if (FDebugger <> nil) then begin
+        if NewDebuggerClass.RequiresLocalExecutable then
+          FDebugger.WorkingDir:=AppendPathDelim(NewWorkingDir)
+        else
+        if Project1.RunParameterOptions.GetActiveMode <> nil then
+          FDebugger.WorkingDir:=Project1.RunParameterOptions.GetActiveMode.WorkingDirectory;
+      end;
       // set filename after workingdir
       if FDebugger <> nil
       then FDebugger.FileName := LaunchingApplication;
