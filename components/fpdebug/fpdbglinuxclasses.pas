@@ -1127,13 +1127,8 @@ begin
 end;
 
 procedure TDbgLinuxProcess.AddLib(const ALibrary: tDbgLinuxLibrary);
-var
-  ID: TDbgPtr;
 begin
-  ID := ALibrary.FLoadedTargetImageAddr;
-  FLibMap.Add(ID, ALibrary);
-  if (ALibrary.DbgInfo.HasInfo) or (ALibrary.SymbolTableInfo.HasInfo) then
-    FSymInstances.Add(ALibrary);
+  AddLibrary(ALibrary, ALibrary.FLoadedTargetImageAddr);
 end;
 
 constructor TDbgLinuxProcess.Create(const AFileName: string;
@@ -1150,6 +1145,7 @@ destructor TDbgLinuxProcess.Destroy;
 begin
   FProcProcess.Free;
   FPostponedSignals.Free;
+  FreeAndNil(FSOLibEventBreakpoint);
   inherited Destroy;
 end;
 
@@ -1500,7 +1496,7 @@ begin
           // Set a breakpoint at _dl_debug_state. This procedure is called after
           // one or more libraries have been loaded. This breakpoint is used to
           // detect the (un)loading of libraries.
-          FSOLibEventBreakpoint := ALib.AddBreak('_dl_debug_state');
+          FSOLibEventBreakpoint := AddBreak('_dl_debug_state', False, ALib);
           end
         end;
       end;
@@ -1524,6 +1520,8 @@ var
   PID: THandle;
   IP: TDBGPtr;
 begin
+  if (FSOLibEventBreakpoint <> nil) and not FSOLibEventBreakpoint.Enabled then
+    FSOLibEventBreakpoint.Enabled:=True;
   {$IFDEF DebuglnLinuxDebugEvents}
   debuglnEnter(['>>>>> TDbgLinuxProcess.Continue TID:', AThread.ID, ' SingleStep:', SingleStep ]); try
   {$ENDIF}

@@ -292,12 +292,12 @@ type
 var
   SimpleWebServerController: TSimpleWebServerController; // created by Register
 
-function CheckCompileServerExeQuality(var ServerExe: string; const BaseDir: string;
+function CheckWebServerExeQuality(var ServerExe: string; const BaseDir: string;
   aSubtituteMacros: boolean): string; // on fail returns errormessage
 
 implementation
 
-function CheckCompileServerExeQuality(var ServerExe: string;
+function CheckWebServerExeQuality(var ServerExe: string;
   const BaseDir: string; aSubtituteMacros: boolean): string;
 var
   OutStr, ExpBaseDir: string;
@@ -332,7 +332,7 @@ begin
     exit('file is not executable');
 
   if not RunCommand(ServerExe,['--version'],OutStr) then
-    exit('compileserver does not support --version, maybe this is an old version?');
+    exit('simpleserver does not support --version, maybe this is an old version?');
 
   Result:='';
 end;
@@ -1159,7 +1159,7 @@ end;
 
 function TSimpleWebServerController.GetMainServerExeHint: string;
 begin
-  Result:='see Tools / Options / Environment / Simple Web Server / Compileserver';
+  Result:='see Tools / Options / Environment / Simple Web Server / Simpleserver';
 end;
 
 constructor TSimpleWebServerController.Create(AOwner: TComponent);
@@ -1181,7 +1181,7 @@ begin
   FInstances.Add(FMainSrvInstance);
   FMainSrvInstance.Controller:=Self;
   FMainSrvInstance.Port:=SWSDefaultServerPort;
-  FMainSrvInstance.Exe:='compileserver'+GetExeExt;
+  FMainSrvInstance.Exe:='simpleserver'+GetExeExt;
 
   for h in TSWSCHandler do
     fHandlers[h]:=TMethodList.Create;
@@ -1270,7 +1270,7 @@ begin
   FMainSrvInstance.Path:=PathUsed;
 
   ExeUsed:=Options.ServerExe;
-  ErrMsg:=CheckCompileServerExeQuality(ExeUsed,'',false);
+  ErrMsg:=CheckWebServerExeQuality(ExeUsed,'',false);
   FMainSrvInstance.Exe:=ExeUsed;
   if ErrMsg<>'' then
   begin
@@ -1872,16 +1872,24 @@ end;
 function TSimpleWebServerController.GetURLWithServer(aServer: TSWSInstance;
   HTMLFilename: string): string;
 begin
-  Result:=CreateRelativePath(HTMLFilename,aServer.Path);
-  Result:=FilenameToURLPath(Result);
+  if HTMLFilename<>'' then
+  begin
+    Result:=CreateRelativePath(HTMLFilename,aServer.Path);
+    Result:=FilenameToURLPath(Result);
+  end else
+    Result:='';
   Result:='http://'+MainSrvAddr+':'+IntToStr(aServer.Port)+'/'+Result;
 end;
 
 function TSimpleWebServerController.GetURLWithLocation(aLocation: TSWSLocation;
   HTMLFilename: string): string;
 begin
-  Result:=CreateRelativePath(HTMLFilename,aLocation.Path);
-  Result:=FilenameToURLPath(Result);
+  if HTMLFilename<>'' then
+  begin
+    Result:=CreateRelativePath(HTMLFilename,aLocation.Path);
+    Result:=FilenameToURLPath(Result);
+  end else
+    Result:='';
   Result:='http://'+MainSrvAddr+':'+IntToStr(MainSrvPort)+'/'+aLocation.Location+'/'+Result;
 end;
 
