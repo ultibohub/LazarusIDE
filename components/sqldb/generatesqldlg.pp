@@ -73,12 +73,14 @@ type
     procedure BGenerateClick(Sender: TObject);
     procedure CBSystemTablesChange(Sender: TObject);
     procedure CBTablesChange(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure TSResize(Sender: TObject);
   private
     FConnection : TSQLConnection;
     FDataset: TSQLQuery;
     QuoteChar : Char;
+    FActivateCalled: Boolean;
     Function IndentString : string;
     Function SQLKeyWord(aKeyWord : TSQLKeyWord) : String;
     procedure GenDeleteSQL(const TableName : string; KeyFields, SQL: TStrings);
@@ -124,7 +126,7 @@ begin
     try
       Dataset:=Q;
       Connection:=Q.SQLConnection;
-      SelectSQL.Text:=Q.SQL.text;
+      SelectSQL.Text:=Q.SQL.Text;
       UpdateSQL.Text:=Q.UpdateSQL.Text;
       DeleteSQL.Text:=Q.DeleteSQL.Text;
       InsertSQL.Text:=Q.insertSQL.Text;
@@ -132,7 +134,7 @@ begin
       Result:=ShowModal=mrOK;
       if Result then
         begin
-        Q.SQL.text        := SelectSQL.Text;
+        Q.SQL.Text        := SelectSQL.Text;
         Q.UpdateSQL.Text  := UpdateSQL.Text;
         Q.DeleteSQL.Text  := DeleteSQL.Text;
         Q.insertSQL.Text  := InsertSQL.Text;
@@ -164,7 +166,7 @@ begin
     L:=L+' '+Format('(%s = :%s%s)', [FieldName,ParamPrefix,KeyFields[I]]);
     if I<KeyFields.Count - 1 then
       L:=L+' '+SQLKeyWord(skAnd);
-    if CBOneFieldPerLine.Checked or ((Length(L)>MaxLen) and IsNotLast) then
+    if CBOneFieldPerLine.Checked or (Length(L)>MaxLen) or (not IsNotLast) then
       begin
       SQL.Add(L);
       L:=IndentString;
@@ -213,7 +215,7 @@ procedure TGenerateSQLForm.GenInsertSQL(const TableName: string; UpdateFields, S
       L:=L+FN;
       if IsNotLast then
         L:=L+', ';
-      if CBOneFieldPerLine.Checked or ((Length(L)>MaxLen) and IsNotLast) then
+      if CBOneFieldPerLine.Checked or (Length(L)>MaxLen) or (not IsNotLast) then
         begin
         SQL.Add(L);
         L:=IndentString;
@@ -251,7 +253,7 @@ begin
    L:=L+FN;
    if IsNotLast then
      L:=L+', ';
-   if CBOneFieldPerLine.Checked or ((Length(L)>MaxLen) and IsNotLast) then
+   if CBOneFieldPerLine.Checked or (Length(L)>MaxLen) or (not IsNotLast) then
      begin
      SQL.Add(L);
      L:=IndentString;
@@ -299,7 +301,7 @@ begin
    L:=L+FN;
    if IsNotLast then
      L:=L+', ';
-   if CBOneFieldPerLine.Checked or ((Length(L)>MaxLen) and IsNotLast) then
+   if CBOneFieldPerLine.Checked or (Length(L)>MaxLen) or (not IsNotLast) then
      begin
      SQL.Add(L);
      L:=IndentString;
@@ -372,9 +374,9 @@ Var
   W : Integer;
   
 begin
-  W:=TSFields.CLientWidth div 3;
-  POPtions.Width:=W;
-  PSelectFIelds.Width:=W;
+  W:=TSFields.ClientWidth div 3;
+  POptions.Width:=W;
+  PSelectFields.Width:= (TSFields.ClientWidth - POptions.Width) div 2;
 end;
 
 function TGenerateSQLForm.IndentString: string;
@@ -527,11 +529,36 @@ begin
   ClearSQL;
 end;
 
+procedure TGenerateSQLForm.FormActivate(Sender: TObject);
+begin
+  if FActivateCalled then
+    exit;
+  FActivateCalled := true;
+  Constraints.MinHeight := PCSQL.Height - PCSQL.ClientHeight +
+    seLineLength.Top + seLineLength.Height +
+    bGenerate.Height + bGenerate.BorderSpacing.Top + bGenerate.BorderSpacing.Bottom +
+    BPGenSQL.Height + BPGenSQL.BorderSpacing.Around*2;
+  Constraints.MinWidth := 3 * (PCSQL.Width - PCSQL.ClientWidth +
+    CBQuoteFields.Left + CBQuoteFields.Width +
+    lblQuoteChar.BorderSpacing.Left + lblQuoteChar.Width + lblQuoteChar.BorderSpacing.Right +
+    edtQuoteChar.Width + CBTables.BorderSpacing.Right);
+end;
+
 procedure TGenerateSQLForm.FormCreate(Sender: TObject);
 
 begin
   Caption:= lrsGeneratesqlstatements;
   EdtQuoteChar.Text:='"';
+  MSelect.Font.Height := SynDefaultFontHeight;
+  MSelect.Font.Name := SynDefaultFontName;
+  MInsert.Font.Height := SynDefaultFontHeight;
+  MInsert.Font.Name := SynDefaultFontName;
+  MUpdate.Font.Height := SynDefaultFontHeight;
+  MUpdate.Font.Name := SynDefaultFontName;
+  MDelete.Font.Height := SynDefaultFontHeight;
+  MDelete.Font.Name := SynDefaultFontName;
+  MRefresh.Font.Height := SynDefaultFontHeight;
+  MRefresh.Font.Name := SynDefaultFontName;
 end;
 
 procedure TGenerateSQLForm.BGenerateClick(Sender: TObject);
