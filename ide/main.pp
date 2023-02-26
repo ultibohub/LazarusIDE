@@ -7605,7 +7605,7 @@ end;
 function TMainIDE.DoRunProjectWithoutDebug: TModalResult;
 var
   Process: TProcessUTF8;
-  RunCmdLine, RunWorkingDirectory, ExeFile, aFilename: string;
+  RunCmdLine, RunWorkingDirectory, ExeFile: string;
   Params: TStringList;
   Handled: Boolean;
   ARunMode: TRunParamsOptionsMode;
