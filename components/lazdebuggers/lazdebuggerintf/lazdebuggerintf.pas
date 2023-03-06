@@ -32,18 +32,11 @@ type
   TInternalDbgSupplierIntfType = interface end;
 
   generic TInternalDbgMonitorIntf<_SUPPLIER_INTF> = interface(TInternalDbgMonitorIntfType)
-    function GetSupplier: _SUPPLIER_INTF;
-    procedure SetSupplier(ASupplier: _SUPPLIER_INTF);
-
-    procedure DoStateChange(const AOldState, ANewState: TDBGState);
-
-    property Supplier: _SUPPLIER_INTF read GetSupplier write SetSupplier;
+    procedure RemoveSupplier(ASupplier: _SUPPLIER_INTF);
   end;
 
   generic TInternalDbgSupplierIntf<_MONITOR_INTF> = interface(TInternalDbgSupplierIntfType)
     procedure SetMonitor(AMonitor: _MONITOR_INTF);
-
-    procedure DoStateChange(const AOldState: TDBGState);
   end;
 
   {$ENDREGION}
@@ -57,9 +50,50 @@ type
                         ddsError                       // Error, but got some Value to display (e.g. error msg)
                        );
 
+  TDbgDataRequestIntf = interface;
+
+  TDbgDataRequestEventType = (
+    weeCancel
+  );
+  TDbgDataRequestEventData = record
+    case TDbgDataRequestEventType of
+      weeCancel: ();
+  end;
+  TDbgDataRequestEvent = procedure(Sender: TDbgDataRequestIntf; Data: TDbgDataRequestEventData) of object;
+
   TDbgDataRequestIntf = interface
     procedure AddFreeNotification(ANotification: TNotifyEvent);
     procedure RemoveFreeNotification(ANotification: TNotifyEvent);
+
+    procedure AddNotification(AnEventType: TDbgDataRequestEventType; AnEvent: TDbgDataRequestEvent);
+    procedure RemoveNotification(AnEventType: TDbgDataRequestEventType; AnEvent: TDbgDataRequestEvent);
+
+    (* Begin/EndUdate
+       - shall indicate that the newly set values are now valid. Ready for display.
+         (Indicated by EndUpdate)
+       - shall protect the object from destruction.
+         A debugger backend may access the object during this time, without further checks.
+       - shall ensure changes outside the backend, will not affect calls by the
+         backend to any method setting/adding/modifing requested data.
+         ~ I.e. if the backend adds values to an array or structure, further calls
+           by the backend to add more data must be accepted without failure.
+         ~ However, further data may be discarded internally, if possible without
+           causing later failures (e.g. if the requested data is no longer needed)
+   (!) - does NOT affect, if read-only properties/functions can change their value.
+         E.g., if the requested value is no longer needed, then "Expression" and
+         other "passed in/provided values" may change (reset to default/empty)
+     * When used in the IDE (Begin/EndUpdate themself shall only be valid in the main thread),
+       shall
+       - allow the backend to read "passed in/provided values" from another thread
+       - allow the backend to set new values from another thread
+         (I.e., if the IDE (or any non-backend code) makes changes, they must
+          consider thread safety)
+       // Any "frontend" outside the IDE (commandline / dbg-server) doens not
+          need to consider thread safety, as long as it knows that this in not
+          required by any of the backends it uses.
+    *)
+    procedure BeginUpdate;
+    procedure EndUpdate;
   end;
 
 
@@ -95,10 +129,6 @@ type
 //     defNoValue            // Skip the value, if returning raw mem
     );
   TWatcheEvaluateFlags = set of TWatcheEvaluateFlag;
-
-  TWatcheEvaluateEvent = (
-    weeCancel
-  );
 
   TDBGTypeBase = class(TObject)
   end;
@@ -208,35 +238,6 @@ type
   { TWatchValueIntf }
 
   TWatchValueIntf = interface(TDbgDataRequestIntf)
-    (* Begin/EndUdate
-       - shall indicate that the newly set values are now valid. Ready for display.
-         (Indicated by EndUpdate)
-       - shall protect the object from destruction.
-         A debugger backend may access the object during this time, without further checks.
-       - shall ensure changes outside the backend, will not affect calls by the
-         backend to any method setting/adding/modifing requested data.
-         ~ I.e. if the backend adds values to an array or structure, further calls
-           by the backend to add more data must be accepted without failure.
-         ~ However, further data may be discarded internally, if possible without
-           causing later failures (e.g. if the requested data is no longer needed)
-   (!) - does NOT affect, if read-only properties/functions can change their value.
-         E.g., if the requested value is no longer needed, then "Expression" and
-         other "passed in/provided values" may change (reset to default/empty)
-     * When used in the IDE (Begin/EndUpdate themself shall only be valid in the main thread),
-       shall
-       - allow the backend to read "passed in/provided values" from another thread
-       - allow the backend to set new values from another thread
-         (I.e., if the IDE (or any non-backend code) makes changes, they must
-          consider thread safety)
-       // Any "frontend" outside the IDE (commandline / dbg-server) doens not
-          need to consider thread safety, as long as it knows that this in not
-          required by any of the backends it uses.
-    *)
-    procedure BeginUpdate;
-    procedure EndUpdate;
-    procedure AddNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
-    procedure RemoveNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
-
     function ResData: TLzDbgWatchDataIntf;
 
     (* ***** Methods for the front-end to provide the request  ***** *)
@@ -255,7 +256,7 @@ type
     procedure SetValidity(AValue: TDebuggerDataState);
     procedure SetValue(AValue: String);
 
-    property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat;
+    property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat; // deprecated
     property EvaluateFlags: TWatcheEvaluateFlags read GetEvaluateFlags;
     property FirstIndexOffs: Int64 read GetFirstIndexOffs;
     property RepeatCount: Integer read GetRepeatCount;
@@ -274,15 +275,43 @@ type
 
   TWatchesMonitorIntf  = interface(specialize TInternalDbgMonitorIntf<TWatchesSupplierIntf>)
     procedure InvalidateWatchValues;
+    procedure DoStateChange(const AOldState, ANewState: TDBGState); //deprecated;
   end;
 
   TWatchesSupplierIntf = interface(specialize TInternalDbgSupplierIntf<TWatchesMonitorIntf>)
     procedure RequestData(AWatchValue: TWatchValueIntf);
-    procedure TriggerInvalidateWatchValues;
   end;
 
 {%endregion   ^^^^^  Watches  ^^^^^   }
 
+
+{%region   ^^^^^  Locals  ^^^^^   }
+
+  TLocalsListIntf = interface(TDbgDataRequestIntf)
+    function Add(AName: String): TLzDbgWatchDataIntf;
+
+    function GetStackFrame: Integer;
+    function GetThreadId: Integer;
+    procedure SetValidity(AValue: TDebuggerDataState);
+
+    property ThreadId: Integer read GetThreadId;
+    property StackFrame: Integer read GetStackFrame;
+    property Validity: TDebuggerDataState {read GetValidity} write SetValidity;
+  end;
+
+
+  TLocalsSupplierIntf = interface;
+
+  TLocalsMonitorIntf  = interface(specialize TInternalDbgMonitorIntf<TLocalsSupplierIntf>)
+    procedure InvalidateLocalValues;
+    procedure DoStateChange(const AOldState, ANewState: TDBGState); //deprecated;
+  end;
+
+  TLocalsSupplierIntf = interface(specialize TInternalDbgSupplierIntf<TLocalsMonitorIntf>)
+    procedure RequestData(ALocalsList: TLocalsListIntf);
+  end;
+
+{%endregion   ^^^^^  Locals  ^^^^^   }
 
 
 implementation

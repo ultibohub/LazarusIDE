@@ -257,6 +257,7 @@ type
     function SkipTypeReference(ExceptionOnError: boolean): boolean;
     function SkipSpecializeParams(ExceptionOnError: boolean): boolean;
     function WordIsPropertyEnd: boolean;
+    function WordIsStatemendEnd: boolean;
     function AllowAttributes: boolean; inline;
     function AllowAnonymousFunctions: boolean; inline;
   public
@@ -3249,6 +3250,26 @@ begin
   until false;
 end;
 
+function TPascalParserTool.WordIsStatemendEnd: boolean;
+var
+  p: PChar;
+begin
+  p:=@Src[CurPos.StartPos];
+  case UpChars[p^] of
+  'E':
+    case UpChars[p[1]] of
+     'L': if UpAtomIs('ELSE') then exit(true);
+     'N': if UpAtomIs('END') then exit(true);
+     'X': if UpAtomIs('EXCEPT') then exit(true);
+    end;
+  'F': if UpAtomIs('FINALLY') then exit(true);
+  'O': if UpAtomIs('OTHERWISE') then exit(true);
+  'U': if UpAtomIs('UNTIL') then exit(true);
+  end;
+  Result:=false;
+end;
+
+
 function TPascalParserTool.ReadTilStatementEnd(ExceptionOnError,
   CreateNodes: boolean): boolean;
 // after reading the current atom will be on the last atom of the statement
@@ -3272,10 +3293,17 @@ begin
           exit;
         end;
       cafSemicolon: exit;
-      else
-        if CurPos.StartPos>SrcLen then exit;
-        ReadNextAtom;
+      cafWord:
+        begin
+          if WordIsStatemendEnd then
+          begin
+            UndoReadNextAtom;
+            exit;
+          end;
+        end;
       end;
+      if CurPos.StartPos>SrcLen then exit;
+      ReadNextAtom;
     end;
   end;
 end;
@@ -5192,6 +5220,8 @@ begin
 end;
 
 function TPascalParserTool.KeyWordFuncTypeRecordCase: boolean;
+var
+  IsProcedure:boolean;
 { after parsing CurPos is on the 'end' or the ')'
 
   record
@@ -5213,6 +5243,19 @@ function TPascalParserTool.KeyWordFuncTypeRecordCase: boolean;
                   three:(Z:PChar);
                );
        end;
+  end;
+  record
+    field1:string;
+    field2:integer;
+    case integer of
+      1:(pp1:procedure());
+      2:(fp1:function(a:integer;b:boolean):boolean);
+      3:(pp2:procedure(aa:integer;bb:boolean);cdecl;deprecated;);
+      4:(pp3:procedure deprecated; bb1:boolean);
+      5:(fp2:function(a:integer;b:boolean):boolean; bbb:integer);
+      6:(fp3:function(a:integer;b:boolean):boolean of object);
+      7:(pp4:procedure (a:integer);cdecl deprecated;);
+      8:(pp5:procedure;cdecl;);
   end;
 }
 {off $DEFINE VerboseRecordCase}
@@ -5353,6 +5396,7 @@ begin
           ReadNextAtom; // read next variable name
         until false;
         ReadNextAtom; // read type
+        IsProcedure:=(CurPos.Flag=cafWord) and UpAtomIs('PROCEDURE');
         Result:=ParseType(CurPos.StartPos);
         if not Result then begin
           {$IFDEF VerboseRecordCase}
@@ -5363,10 +5407,14 @@ begin
         {$IFDEF VerboseRecordCase}
         debugln(['TPascalParserTool.KeyWordFuncTypeRecordCase Hint modifier: "',GetAtom,'"']);
         {$ENDIF}
+        if (CurPos.Flag=cafRoundBracketClose) and IsProcedure then //skip ')' closing parameters list in procedures.
+           ReadNextAtom;
         if CurPos.Flag=cafWord then
           ReadHintModifiers(false);
         CurNode.EndPos:=CurPos.EndPos;
         EndChildNode; // close variable definition
+        if CurPos.Flag=cafWord then   //skip return type of function or last modifier.
+          ReadNextAtom;
       end;
       {$IFDEF VerboseRecordCase}
       debugln(['TPascalParserTool.KeyWordFuncTypeRecordCase variable end="',GetAtom,'"']);

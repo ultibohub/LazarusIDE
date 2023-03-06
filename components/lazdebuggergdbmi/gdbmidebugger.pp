@@ -894,7 +894,7 @@ type
     procedure Changed;
     constructor Create(const ADebugger: TDebuggerIntf);
     destructor Destroy; override;
-    procedure RequestData(ALocals: TLocals); override;
+    procedure RequestData(ALocals: TLocalsListIntf); override;
   end;
 
   { TGDBMIDebuggerBase }
@@ -1224,7 +1224,7 @@ type
 
   TGDBMIDebuggerCommandLocals = class(TGDBMIDebuggerCommand)
   private
-    FLocals: TLocals;
+    FLocals: TLocalsListIntf;
   protected
     procedure DoLockQueueExecute; override;
     procedure DoUnLockQueueExecute; override;
@@ -1232,7 +1232,7 @@ type
     procedure DoUnLockQueueExecuteForInstr; override;
     function DoExecute: Boolean; override;
   public
-    constructor Create(AOwner: TGDBMIDebuggerBase; ALocals: TLocals);
+    constructor Create(AOwner: TGDBMIDebuggerBase; ALocals: TLocalsListIntf);
     destructor Destroy; override;
     function DebugText: String; override;
   end;
@@ -4066,7 +4066,7 @@ begin
     else
     begin
       // unknown
-      debugln(['WARNING: TGDBMIDisassembleResultList.Parse: unknown disass entry',
+      debugln(DBG_VERBOSE or DBG_WARNINGS, ['WARNING: TGDBMIDisassembleResultList.Parse: unknown disass entry',
               DbgsPCLen(Itm^.Name),': ',DbgsPCLen(Itm^.Value)]);
     end;
   end;
@@ -5042,7 +5042,7 @@ function TGDBMIDebuggerCommandDisassemble.DoExecute: Boolean;
 
       if DisAssList.Count < 2
       then begin
-        debugln('Error failed to get enough data for dsassemble');
+        debugln(DBG_WARNINGS, 'Error failed to get enough data for dsassemble');
         // create a dummy range, so we will not retry
         NewRange.Capacity := 1;
         NewRange.RangeStartAddr   := AFirstAddr.Value;
@@ -5737,7 +5737,7 @@ begin
       exit;
     end;
 
-    DebugLn(['TGDBMIDebuggerBase.StartDebugging WorkingDir="', FTheDebugger.WorkingDir,'"']);
+    DebugLn(DBG_VERBOSE, ['TGDBMIDebuggerBase.StartDebugging WorkingDir="', FTheDebugger.WorkingDir,'"']);
     if FTheDebugger.WorkingDir <> ''
     then begin
       // to workaround a possible bug in gdb, first set the workingdir to .
@@ -6594,7 +6594,7 @@ function TGDBMIDebuggerCommandExecute.ProcessStopped(const AParams: String;
 
     if (DebuggerState = dsRun)
     then begin
-      debugln(['********** WARNING: breakpoint hit, but nothing known about it ABreakId=', ABreakID, ' brbtno=', List.Values['bkptno'] ]);
+      debugln(DBG_VERBOSE or DBG_WARNINGS, ['********** WARNING: breakpoint hit, but nothing known about it ABreakId=', ABreakID, ' brbtno=', List.Values['bkptno'] ]);
       {$IFDEF DBG_VERBOSE_BRKPOINT}
       debugln(['-*- List of breakpoints Cnt=', FTheDebugger.Breakpoints.Count]);
       for ABreakID := 0 to FTheDebugger.Breakpoints.Count - 1 do
@@ -7444,7 +7444,7 @@ var
           end;
           if i < 0
           then begin
-            DebugLn(['CommandExecute: exStepOver, frame not found: ', i]);
+            DebugLn(DBG_VERBOSE or DBG_WARNINGS, ['CommandExecute: exStepOver, frame not found: ', i]);
             DoEndStepping; // TODO: User-error feedback
           end;
         end;
@@ -7732,8 +7732,8 @@ begin
     then begin
       // Handle the unforeseen
       if (StoppedParams <> '')
-      then debugln(['ERROR: Got stop params, but did not change FTheDebugger.state: ', StoppedParams])
-      else debugln(['ERROR: Got NO stop params at all, but was running']);
+      then debugln(DBG_VERBOSE or DBG_WARNINGS, ['ERROR: Got stop params, but did not change FTheDebugger.state: ', StoppedParams])
+      else debugln(DBG_VERBOSE or DBG_WARNINGS, ['ERROR: Got NO stop params at all, but was running']);
       SetDebuggerState(dsPause);
     end;
   end;
@@ -8873,7 +8873,7 @@ var
   Report, Report2: string;
 begin
   try
-    debugln(['ERROR: Exception occurred in ',Sender.ClassName+': ',
+    debugln(DBG_VERBOSE or DBG_WARNINGS, ['ERROR: Exception occurred in ',Sender.ClassName+': ',
               AnException.ClassName, ' Msg="', AnException.Message, '" Addr=', dbgs(ExceptAddr),
               ' Dbg.State=', dbgs(State)]);
     Report :=  BackTraceStrFunc(ExceptAddr);
@@ -8886,7 +8886,7 @@ begin
     end;
   except
   end;
-  debugln(Report);
+  debugln(DBG_VERBOSE or DBG_WARNINGS, [Report]);
 
   if MessageDlg(gdbmiTheDebuggerExperiencedAnUnknownCondition,
     Format(gdbmiPressIgnoreToContinueDebuggingThisMayNOTBeSafePres,
@@ -9258,7 +9258,7 @@ begin
   except
     On E: Exception do DoUnknownException(Self, E);
     else
-      debugln(['ERROR: Exception occurred in ',ClassName+': ',
+      debugln(DBG_VERBOSE or DBG_WARNINGS, ['ERROR: Exception occurred in ',ClassName+': ',
                 '" Addr=', dbgs(ExceptAddr), ' Dbg.State=', dbgs(State)]);
   end;
 
@@ -11077,6 +11077,7 @@ function TGDBMIDebuggerCommandLocals.DoExecute: Boolean;
     LocList, List: TGDBMINameValueList;
     Item: PGDBMINameValue;
     Name, Value: String;
+    r: TLzDbgWatchDataIntf;
   begin
     LocList := TGDBMINameValueList.Create(AParams);
     List := TGDBMINameValueList.Create('');
@@ -11129,7 +11130,8 @@ function TGDBMIDebuggerCommandLocals.DoExecute: Boolean;
       else
         Value := ProcessGDBResultStruct(Value, [prNoLeadingTab, prMakePrintAble, prStripAddressFromString]);
 
-      FLocals.Add(Name, Value);
+      r := FLocals.Add(Name);
+      r.CreatePrePrinted(Value);
     end;
     FreeAndNil(List);
     FreeAndNil(LocList);
@@ -11146,7 +11148,6 @@ begin
   FContext.StackContext := ccUseLocal;
   FContext.StackFrame := FLocals.StackFrame;
 
-  FLocals.Clear;
   // args
   ExecuteCommand('-stack-list-arguments 1 %0:d %0:d',
     [FTheDebugger.FCurrentStackFrame], R, [cfNoStackContext]);
@@ -11165,19 +11166,20 @@ begin
     AddLocals(List.Values['locals']);
     FreeAndNil(List);
   end;
-  FLocals.SetDataValidity(ddsValid);
+  FLocals.Validity := ddsValid;
 end;
 
-constructor TGDBMIDebuggerCommandLocals.Create(AOwner: TGDBMIDebuggerBase; ALocals: TLocals);
+constructor TGDBMIDebuggerCommandLocals.Create(AOwner: TGDBMIDebuggerBase;
+  ALocals: TLocalsListIntf);
 begin
   inherited Create(AOwner);
   FLocals := ALocals;
-  FLocals.AddReference;
+  FLocals.BeginUpdate;
 end;
 
 destructor TGDBMIDebuggerCommandLocals.Destroy;
 begin
-  ReleaseRefAndNil(FLocals);
+  FLocals.EndUpdate;
   inherited Destroy;
 end;
 
@@ -11192,7 +11194,7 @@ end;
 
 procedure TGDBMILocals.Changed;
 begin
-  TriggerInvalidateLocals;
+  TriggerInvalidateLocalsValues;
 end;
 
 constructor TGDBMILocals.Create(const ADebugger: TDebuggerIntf);
@@ -11229,7 +11231,7 @@ begin
             and (Debugger.State <> dsInternalPause);
 end;
 
-procedure TGDBMILocals.RequestData(ALocals: TLocals);
+procedure TGDBMILocals.RequestData(ALocals: TLocalsListIntf);
 var
   EvaluationCmdObj: TGDBMIDebuggerCommandLocals;
 begin
@@ -12819,7 +12821,7 @@ begin
 
     On E: Exception do FTheDebugger.DoUnknownException(Self, E)
     else
-      debugln(['ERROR: Exception occurred in ',ClassName+'.DoExecute ',
+      debugln(DBG_VERBOSE or DBG_WARNINGS, ['ERROR: Exception occurred in ',ClassName+'.DoExecute ',
                 '" Addr=', dbgs(ExceptAddr), ' Dbg.State=', dbgs(FTheDebugger.State)]);
   end;
   // No re-raise in the except block. So no try-finally required

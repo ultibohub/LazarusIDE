@@ -44,8 +44,9 @@ uses
   LazClasses, Maps, LazMethodList,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase, LazDebuggerIntf,
-  LazDebuggerIntfBaseTypes, LazDebuggerValueConverter, IdeDebuggerBase,
-  IdeDebuggerWatchResult, IdeDebuggerOpts, IdeDebuggerBackendValueConv;
+  LazDebuggerIntfBaseTypes, LazDebuggerValueConverter, LazDebuggerTemplate,
+  IdeDebuggerBase, IdeDebuggerWatchResult, IdeDebuggerOpts,
+  IdeDebuggerBackendValueConv;
 
 const
   XMLBreakPointsNode = 'BreakPoints';
@@ -748,19 +749,17 @@ type
 
   { TCurrentWatchValue }
 
-  TCurrentWatchValue = class(TIdeWatchValue, TWatchValueIntf)
+  TCurrentWatchValue = class(specialize TDbgDataRequestTemplateBase<TIdeWatchValue, TWatchValueIntf>, TWatchValueIntf)
   private
     FCurrentResData: TCurrentResData;
     FCurrentBackEndExpression: String;
-    FUpdateCount: Integer;
-    FEvents: array [TWatcheEvaluateEvent] of TMethodList;
+//    FUpdateCount: Integer;
     FDbgBackendConverter: TIdeDbgValueConvertSelector;
 
+  protected
   (* TWatchValueIntf *)
-    procedure BeginUpdate;
-    procedure EndUpdate;
-    procedure AddNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
-    procedure RemoveNotification(AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
+    procedure DoBeginUpdating; override;
+    procedure DoEndUpdating; override;
     function ResData: TLzDbgWatchDataIntf;
     function GetDbgValConverter: TLazDbgValueConvertSelectorIntf;
   private
@@ -932,16 +931,30 @@ type
 
   { TCurrentLocals }
 
-  TCurrentLocals = class(TIDELocals)
+  TCurrentLocals = class(specialize TDbgDataRequestTemplateBase<TIDELocals, TLocalsListIntf>, TLocalsListIntf)
   private
     FMonitor: TIdeLocalsMonitor;
     FSnapShot: TIDELocals;
     FDataValidity: TDebuggerDataState;
     procedure SetSnapShot(const AValue: TIDELocals);
+  private
+  (* TLocalsListIntf *)
+    FCurrentResName: String;
+    FCurrentResData: TCurrentResData;
+    FCurrentResList: TRefCntObjList;
+    FCurrentValidity: TDebuggerDataState;
+    function GetStackFrame: Integer;
+    function GetThreadId: Integer;
+    procedure DoBeginUpdating; override;
+    procedure DoEndUpdating; override;
+    procedure SetValidity(AValue: TDebuggerDataState);
+    function Add(AName: String): TLzDbgWatchDataIntf; overload;
+    procedure FinishCurrentRes;
   protected
     property SnapShot: TIDELocals read FSnapShot write SetSnapShot;
   public
     constructor Create(AMonitor: TIdeLocalsMonitor; AThreadId, AStackFrame: Integer);
+    destructor Destroy; override;
     function Count: Integer; override;
     procedure SetDataValidity(AValidity: TDebuggerDataState); override;
   end;
@@ -998,7 +1011,7 @@ type
     procedure DoStateEnterPause; override;
     procedure DoStateLeavePause; override;
     procedure DoStateLeavePauseClean; override;
-    procedure InvalidateLocals; override;
+    procedure InvalidateLocalValues; override;
     procedure NotifyChange(ALocals: TCurrentLocals);
     procedure DoNewSupplier; override;
     procedure RequestData(ALocals: TCurrentLocals);
@@ -1901,7 +1914,7 @@ function HasConsoleSupport: Boolean;
 implementation
 
 var
-  DBG_DATA_MONITORS, DBG_LOCATION_INFO: PLazLoggerLogGroup;
+  DBG_VERBOSE, DBG_BREAKPOINT, DBG_DATA_MONITORS, DBG_LOCATION_INFO: PLazLoggerLogGroup;
 
 function dbgs(AFlag: TDebuggerLocationFlag): String;
 begin
@@ -2583,7 +2596,7 @@ begin
     NewSnap.LoadDataFromXMLConfig(AConfig, APath + 'SnapEntry' + IntToStr(i) + '/', UIProv);
     if not(NewSnap.IsHistory or NewSnap.IsSnapshot) then begin
       RemoveHistoryEntryFromMonitors(NewSnap); // TODO: add user feedback / warning
-      debugln(['************** Snapshot loaded, but not kept']);
+      debugln(DBG_VERBOSE, ['************** Snapshot loaded, but not kept']);
     end;
     NewSnap.ReleaseReference;
   end;
@@ -2598,7 +2611,7 @@ begin
     NewSnap.LoadDataFromXMLConfig(AConfig, APath + 'HistEntry' + IntToStr(i) + '/', UIProv);
     if not(NewSnap.IsHistory or NewSnap.IsSnapshot) then begin
       RemoveHistoryEntryFromMonitors(NewSnap); // TODO: add user feedback / warning
-      debugln(['************** Snapshot loaded, but not kept']);
+      debugln(DBG_VERBOSE, ['************** Snapshot loaded, but not kept']);
     end;
     NewSnap.ReleaseReference;
   end;
@@ -3151,9 +3164,9 @@ begin
   Clear;
 end;
 
-procedure TIdeLocalsMonitor.InvalidateLocals;
+procedure TIdeLocalsMonitor.InvalidateLocalValues;
 begin
-  inherited InvalidateLocals;
+  inherited InvalidateLocalValues;
   if FLocalsList <> nil then
     FLocalsList.Clear;
 end;
@@ -3940,63 +3953,44 @@ end;
 
 { TCurrentWatchValue }
 
-procedure TCurrentWatchValue.BeginUpdate;
+procedure TCurrentWatchValue.DoBeginUpdating;
 begin
   AddReference;
-  if FUpdateCount = 0 then
-    FCurrentBackEndExpression := GetBackendExpression;
-  inc(FUpdateCount);
+  FCurrentBackEndExpression := inherited GetBackendExpression;
 end;
 
-procedure TCurrentWatchValue.EndUpdate;
+procedure TCurrentWatchValue.DoEndUpdating;
 var
   NewValid: TDebuggerDataState;
 begin
   //assert(Validity = ddsRequested, 'TCurrentWatchValue.EndUpdate: Validity = ddsRequested');
-  dec(FUpdateCount);
-  if (FUpdateCount = 0) then begin
-    NewValid := ddsValid;
+  NewValid := ddsValid;
 
-    FCurrentResData := FCurrentResData.RootResultData;
-    if (FCurrentResData <> nil) and (FCurrentResData.FNewResultData <> nil) then begin
-      FCurrentResData.Done;
-      SetResultData(FCurrentResData.FNewResultData);
+  FCurrentResData := FCurrentResData.RootResultData;
+  if (FCurrentResData <> nil) and (FCurrentResData.FNewResultData <> nil) then begin
+    FCurrentResData.Done;
+    SetResultData(FCurrentResData.FNewResultData);
+    FCurrentResData.FNewResultData := nil;
 
-      if ResultData.ValueKind = rdkError then
-        NewValid := ddsError;
+    if ResultData.ValueKind = rdkError then
+      NewValid := ddsError;
 
-      FreeAndNil(FCurrentResData);
-    end
-    else
-      NewValid := ddsInvalid;
+    FreeAndNil(FCurrentResData);
+  end
+  else
+    NewValid := ddsInvalid;
 
-    if Validity = ddsRequested then
-      SetValidity(NewValid)
-    else
-      DoDataValidityChanged(ddsRequested);
-  end;
+  if Validity = ddsRequested then
+    SetValidity(NewValid)
+  else
+    DoDataValidityChanged(ddsRequested);
+
   ReleaseReference; // Last statemnet, may call Destroy
-end;
-
-procedure TCurrentWatchValue.AddNotification(AnEventType: TWatcheEvaluateEvent;
-  AnEvent: TNotifyEvent);
-begin
-  if FEvents[AnEventType] = nil then
-    FEvents[AnEventType] := TMethodList.Create;
-  FEvents[AnEventType].Add(TMethod(AnEvent));
-end;
-
-procedure TCurrentWatchValue.RemoveNotification(
-  AnEventType: TWatcheEvaluateEvent; AnEvent: TNotifyEvent);
-begin
-  if FEvents[AnEventType] = nil then
-    exit;
-  FEvents[AnEventType].Remove(TMethod(AnEvent));
 end;
 
 function TCurrentWatchValue.ResData: TLzDbgWatchDataIntf;
 begin
-  assert(FUpdateCount > 0, 'TCurrentWatchValue.ResData: FUpdateCount > 0');
+  assert(UpdateCount > 0, 'TCurrentWatchValue.ResData: FUpdateCount > 0');
   if FCurrentResData = nil then
     FCurrentResData := TCurrentResData.Create;
   Result := FCurrentResData;
@@ -4031,7 +4025,7 @@ end;
 
 function TCurrentWatchValue.GetBackendExpression: String;
 begin
-  if FUpdateCount > 0 then
+  if UpdateCount > 0 then
     Result := FCurrentBackEndExpression
   else
     Result := inherited GetBackendExpression;
@@ -4039,7 +4033,7 @@ end;
 
 function TCurrentWatchValue.GetValidity: TDebuggerDataState;
 begin
-  if FUpdateCount > 0 then
+  if UpdateCount > 0 then
     Result := ddsRequested  // prevent reading FValue
   else
     Result := inherited GetValidity;
@@ -4060,13 +4054,12 @@ end;
 
 procedure TCurrentWatchValue.CancelRequestData;
 begin
-  if FEvents[weeCancel] <> nil then
-    FEvents[weeCancel].CallNotifyEvents(Self);
+  CallNotifications(weeCancel, default(TDbgDataRequestEventData));
 end;
 
 procedure TCurrentWatchValue.DoDataValidityChanged(AnOldValidity: TDebuggerDataState);
 begin
-  if FUpdateCount > 0 then
+  if UpdateCount > 0 then
     exit;
   if Validity = ddsRequested then exit;
   if Watch <> nil then
@@ -4082,13 +4075,12 @@ destructor TCurrentWatchValue.Destroy;
 var
   e: TMethodList;
 begin
-  assert(FUpdateCount=0, 'TCurrentWatchValue.Destroy: FUpdateCount=0');
+  assert(UpdateCount=0, 'TCurrentWatchValue.Destroy: FUpdateCount=0');
   FCurrentResData := FCurrentResData.RootResultData;
   if (FCurrentResData <> nil) and (FResultData = nil) then
     FCurrentResData.FreeResultAndSubData;
   FCurrentResData.Free;
-  for e in FEvents do
-    e.Free;
+  DoDestroy;
   FDbgBackendConverter.Free;
   inherited Destroy;
 end;
@@ -5621,9 +5613,9 @@ procedure TIDEBreakPoint.DisableGroups;
 var
   n: Integer;
 begin
-  {$IFDEF DBG_BREAKPOINT}
-  DebugLn(['DisableGroups: ', DebugText, ' Cnt=',  FDisableGroupList.Count]);
-  {$ENDIF}
+{$IFDEF DBG_BREAKPOINT}
+  DebugLn(DBG_BREAKPOINT, ['DisableGroups: ', DebugText, ' Cnt=',  FDisableGroupList.Count]);
+{$ENDIF}
   for n := 0 to FDisableGroupList.Count - 1 do
     FDisableGroupList[n].Enabled := False;
 end;
@@ -5658,9 +5650,9 @@ procedure TIDEBreakPoint.EnableGroups;
 var
   n: Integer;
 begin
-  {$IFDEF DBG_BREAKPOINT}
-  DebugLn(['EnableGroups: ', DebugText, ' Cnt=',  FEnableGroupList.Count]);
-  {$ENDIF}
+{$IFDEF DBG_BREAKPOINT}
+  DebugLn(DBG_BREAKPOINT, ['EnableGroups: ', DebugText, ' Cnt=',  FEnableGroupList.Count]);
+{$ENDIF}
 
   for n := 0 to FEnableGroupList.Count - 1 do
     FEnableGroupList[n].Enabled := True;
@@ -7061,11 +7053,106 @@ begin
   then FSnapShot.Assign(Self);
 end;
 
+function TCurrentLocals.GetStackFrame: Integer;
+begin
+  Result := StackFrame;
+end;
+
+function TCurrentLocals.GetThreadId: Integer;
+begin
+  Result := ThreadId;
+end;
+
+procedure TCurrentLocals.DoBeginUpdating;
+begin
+  AddReference;
+  Clear;
+  if (FCurrentResList = nil) then
+    FCurrentResList := TRefCntObjList.Create
+  else
+    FCurrentResList.Clear;
+  FCurrentValidity := ddsValid;
+end;
+
+procedure TCurrentLocals.DoEndUpdating;
+var
+  i: Integer;
+begin
+  FinishCurrentRes;
+
+  for i := 0 to FCurrentResList.Count - 1 do
+    Add(TLocalsValue(FCurrentResList[i]));
+  FCurrentResList.Clear;
+
+  SetDataValidity(FCurrentValidity);
+  ReleaseReference;
+end;
+
+procedure TCurrentLocals.SetValidity(AValue: TDebuggerDataState);
+begin
+  if UpdateCount > 0 then begin
+    FCurrentValidity := AValue;
+  end
+  else begin
+    if AValue <> ddsValid then
+      Clear
+    else
+    if FCurrentResData <> nil then
+      FinishCurrentRes;
+    SetDataValidity(AValue);
+  end;
+end;
+
+function TCurrentLocals.Add(AName: String): TLzDbgWatchDataIntf;
+begin
+  FinishCurrentRes;
+  FCurrentResName := AName;
+  FCurrentResData := TCurrentResData.Create;
+  Result := FCurrentResData;
+end;
+
+procedure TCurrentLocals.FinishCurrentRes;
+var
+  v: TLocalsValue;
+begin
+  FCurrentResData := FCurrentResData.RootResultData;
+  // TODO: maybe create an error entry, if only FNewResultData is missing
+  if (FCurrentResData = nil) or (FCurrentResData.FNewResultData = nil) then
+    exit;
+
+  FCurrentResData.Done;
+
+  v := TLocalsValue(CreateEntry);
+  v.Init(FCurrentResName, FCurrentResData.FNewResultData);
+  FCurrentResData.FNewResultData := nil;
+
+  if IsUpdating then
+    FCurrentResList.Add(v)
+  else
+    Add(v);
+
+  FreeAndNil(FCurrentResData);
+end;
+
 constructor TCurrentLocals.Create(AMonitor: TIdeLocalsMonitor; AThreadId, AStackFrame: Integer);
 begin
   FMonitor := AMonitor;
   FDataValidity := ddsUnknown;
   inherited Create(AThreadId, AStackFrame);
+end;
+
+destructor TCurrentLocals.Destroy;
+begin
+  inherited Destroy;
+
+  FCurrentResData := FCurrentResData.RootResultData;
+  if (FCurrentResData <> nil) {and (FResultData = nil)} then
+    FCurrentResData.FreeResultAndSubData;
+  FCurrentResData.Free;
+
+  FCurrentResList.Free;
+
+  DoDestroy;
 end;
 
 function TCurrentLocals.Count: Integer;
@@ -8259,6 +8346,8 @@ begin
 end;
 
 initialization
+  DBG_VERBOSE       := DebugLogger.FindOrRegisterLogGroup('DBG_VERBOSE' {$IFDEF DBG_VERBOSE} , True {$ENDIF} );
+  DBG_BREAKPOINT    := DebugLogger.FindOrRegisterLogGroup('DBG_BREAKPOINT' {$IFDEF DBG_BREAKPOINT} , True {$ENDIF} );
   DBG_DATA_MONITORS := DebugLogger.FindOrRegisterLogGroup('DBG_DATA_MONITORS' {$IFDEF DBG_DATA_MONITORS} , True {$ENDIF} );
   DBG_LOCATION_INFO := DebugLogger.FindOrRegisterLogGroup('DBG_LOCATION_INFO' {$IFDEF DBG_LOCATION_INFO} , True {$ENDIF} );
 

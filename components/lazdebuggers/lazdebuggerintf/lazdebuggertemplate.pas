@@ -25,6 +25,47 @@ uses
 
 type
 
+
+  { TDbgDataRequestTemplateBase }
+
+  generic TDbgDataRequestTemplateBase<_BASE: TObject; _SENDER_INTF: TDbgDataRequestIntf> = class(_BASE)
+  private type
+    TDbgDataRequestEventList = specialize TFPGList<TDbgDataRequestEvent>;
+  strict private
+    FEventLists: array [TDbgDataRequestEventType] of TDbgDataRequestEventList;
+    FUpdateCount: Integer;
+    function GetIsUpdating: boolean; inline;
+  protected
+    procedure AddNotification(AnEventType: TDbgDataRequestEventType; AnEvent: TDbgDataRequestEvent);
+    procedure RemoveNotification(AnEventType: TDbgDataRequestEventType; AnEvent: TDbgDataRequestEvent);
+    procedure CallNotifications(AnEventType: TDbgDataRequestEventType; AnEventData: TDbgDataRequestEventData);
+
+    procedure BeginUpdate;
+    procedure EndUpdate;
+    procedure DoBeginUpdating; virtual;
+    procedure DoEndUpdating; virtual;
+    property UpdateCount: Integer read FUpdateCount;
+    property IsUpdating: boolean read GetIsUpdating;
+
+    procedure DoDestroy; // FPC can not compile "destructor Destroy; override;"
+  end;
+
+  { TDbgDataRequestTemplate }
+
+  generic TDbgDataRequestTemplate<_BASE: TObject; _SENDER_INTF: TDbgDataRequestIntf>
+    = class(specialize TDbgDataRequestTemplateBase<_BASE, _SENDER_INTF>, TDbgDataRequestIntf)
+  private type
+    TNotifyEventList = specialize TFPGList<TNotifyEvent>;
+  strict private
+    FFreeNotifyList: TNotifyEventList;
+  protected
+    procedure AddFreeNotification(ANotification: TNotifyEvent);
+    procedure RemoveFreeNotification(ANotification: TNotifyEvent);
+    procedure CallFreeNotifications;
+
+    procedure DoDestroy; // FPC can not compile "destructor Destroy; override;"
+  end;
+
   { TInternalDbgMonitorBase }
 
   generic TInternalDbgMonitorBase<
@@ -36,23 +77,22 @@ type
   strict private
     FSupplier: _SUPPLIER_INTF;
   private
-    function GetSupplier: _SUPPLIER_INTF;
     procedure SetSupplier(ASupplier: _SUPPLIER_INTF);
-
+    procedure RemoveSupplier(ASupplier: _SUPPLIER_INTF);
   protected
     procedure DoNewSupplier; virtual;
-    procedure DoStateChange(const AOldState, ANewState: TDBGState); virtual;
 
     procedure DoDestroy; // FPC can not compile "destructor Destroy; override;"
   public
-    property Supplier: _SUPPLIER_INTF read GetSupplier write SetSupplier;
+    property Supplier: _SUPPLIER_INTF read FSupplier write SetSupplier;
   end;
 
   { TInternalDbgSupplierBase }
 
   generic TInternalDbgSupplierBase<
     _BASE: TObject;
-    _MONITOR_INTF//: TInternalDbgMonitorIntfType
+    _SUPPLIER_INTF: TInternalDbgSupplierIntfType;
+    _MONITOR_INTF //: TInternalDbgMonitorIntfType
     >
     = class(_BASE)
   strict private
@@ -61,7 +101,6 @@ type
     procedure SetMonitor(AMonitor: _MONITOR_INTF);
   protected
     procedure DoNewMonitor; virtual;
-    procedure DoStateChange(const AOldState: TDBGState); virtual;
 
     procedure DoDestroy; // FPC can not compile "destructor Destroy; override;"
 
@@ -79,12 +118,13 @@ type
   )
   protected
     procedure InvalidateWatchValues; virtual;
+    procedure DoStateChange(const AOldState, ANewState: TDBGState); virtual; // deprecated;
   end;
 
   { TWatchesSupplierClassTemplate }
 
   generic TWatchesSupplierClassTemplate<_BASE: TObject> = class(
-    specialize TInternalDbgSupplierBase<_BASE, TWatchesMonitorIntf>,
+    specialize TInternalDbgSupplierBase<_BASE, TWatchesSupplierIntf, TWatchesMonitorIntf>,
     TWatchesSupplierIntf
   )
   protected
@@ -93,14 +133,138 @@ type
     procedure TriggerInvalidateWatchValues; virtual;
   end;
 
+  { TLocalsMonitorClassTemplate }
+
+  generic TLocalsMonitorClassTemplate<_BASE: TObject> = class(
+    specialize TInternalDbgMonitorBase<_BASE, TLocalsMonitorIntf, TLocalsSupplierIntf>,
+    TLocalsMonitorIntf
+  )
+  protected
+    procedure InvalidateLocalValues; virtual;
+    procedure DoStateChange(const AOldState, ANewState: TDBGState); virtual; // deprecated;
+  end;
+
+  { TLocalsSupplierClassTemplate }
+
+  generic TLocalsSupplierClassTemplate<_BASE: TObject> = class(
+    specialize TInternalDbgSupplierBase<_BASE, TLocalsSupplierIntf, TLocalsMonitorIntf>,
+    TLocalsSupplierIntf
+  )
+  protected
+  public
+    procedure RequestData(ALocalsList: TLocalsListIntf); virtual;
+    procedure TriggerInvalidateLocalsValues; virtual;
+  end;
+
 implementation
 
-{ TInternalDbgMonitorBase }
+{ TDbgDataRequestTemplateBase }
 
-function TInternalDbgMonitorBase.GetSupplier: _SUPPLIER_INTF;
+function TDbgDataRequestTemplateBase.GetIsUpdating: boolean;
 begin
-  Result := FSupplier;
+  Result := FUpdateCount > 0;
 end;
+
+procedure TDbgDataRequestTemplateBase.AddNotification(
+  AnEventType: TDbgDataRequestEventType; AnEvent: TDbgDataRequestEvent);
+begin
+  if FEventLists[AnEventType] = nil then
+    FEventLists[AnEventType] := TDbgDataRequestEventList.Create;
+
+  FEventLists[AnEventType].Add(AnEvent);
+end;
+
+procedure TDbgDataRequestTemplateBase.RemoveNotification(
+  AnEventType: TDbgDataRequestEventType; AnEvent: TDbgDataRequestEvent);
+begin
+  if FEventLists[AnEventType] = nil then
+    exit;
+
+  FEventLists[AnEventType].Remove(AnEvent);
+end;
+
+procedure TDbgDataRequestTemplateBase.CallNotifications(
+  AnEventType: TDbgDataRequestEventType; AnEventData: TDbgDataRequestEventData);
+var
+  i: integer;
+begin
+  if FEventLists[AnEventType] = nil then
+    exit;
+
+  for i := FEventLists[AnEventType].Count - 1 downto 0 do
+    FEventLists[AnEventType][i](Self as _SENDER_INTF, AnEventData)
+end;
+
+procedure TDbgDataRequestTemplateBase.BeginUpdate;
+begin
+  inc(FUpdateCount);
+  if FUpdateCount = 1 then
+    DoBeginUpdating;
+end;
+
+procedure TDbgDataRequestTemplateBase.EndUpdate;
+begin
+  dec(FUpdateCount);
+  if FUpdateCount = 0 then
+    DoEndUpdating;
+end;
+
+procedure TDbgDataRequestTemplateBase.DoBeginUpdating;
+begin
+  //
+end;
+
+procedure TDbgDataRequestTemplateBase.DoEndUpdating;
+begin
+  //
+end;
+
+procedure TDbgDataRequestTemplateBase.DoDestroy;
+var
+  i: TDbgDataRequestEventType;
+begin
+  for i := low(TDbgDataRequestEventType) to high(TDbgDataRequestEventType) do
+    FEventLists[i].Free;
+end;
+
+{ TDbgDataRequestTemplate }
+
+procedure TDbgDataRequestTemplate.AddFreeNotification(
+  ANotification: TNotifyEvent);
+begin
+  if FFreeNotifyList = nil then
+    FFreeNotifyList := TNotifyEventList.Create;
+
+  FFreeNotifyList.Add(ANotification);
+end;
+
+procedure TDbgDataRequestTemplate.RemoveFreeNotification(
+  ANotification: TNotifyEvent);
+begin
+  if FFreeNotifyList = nil then
+    exit;
+
+  FFreeNotifyList.Remove(ANotification);
+end;
+
+procedure TDbgDataRequestTemplate.CallFreeNotifications;
+var
+  i: integer;
+begin
+  if FFreeNotifyList = nil then
+    exit;
+
+  for i := FFreeNotifyList.Count - 1 downto 0 do
+    FFreeNotifyList[i](nil)
+end;
+
+procedure TDbgDataRequestTemplate.DoDestroy;
+begin
+  FFreeNotifyList.Free;
+  inherited DoDestroy;
+end;
+
+{ TInternalDbgMonitorBase }
 
 procedure TInternalDbgMonitorBase.SetSupplier(ASupplier: _SUPPLIER_INTF);
 begin
@@ -114,13 +278,13 @@ begin
   DoNewSupplier;
 end;
 
-procedure TInternalDbgMonitorBase.DoNewSupplier;
+procedure TInternalDbgMonitorBase.RemoveSupplier(ASupplier: _SUPPLIER_INTF);
 begin
-  //
+  if Supplier = ASupplier then
+    Supplier := nil;
 end;
 
-procedure TInternalDbgMonitorBase.DoStateChange(const AOldState,
-  ANewState: TDBGState);
+procedure TInternalDbgMonitorBase.DoNewSupplier;
 begin
   //
 end;
@@ -146,20 +310,21 @@ begin
   //
 end;
 
-procedure TInternalDbgSupplierBase.DoStateChange(const AOldState: TDBGState);
-begin
-  //
-end;
-
 procedure TInternalDbgSupplierBase.DoDestroy;
 begin
   if FMonitor <> nil then
-    FMonitor.Supplier := nil;
+    FMonitor.RemoveSupplier(Self as _SUPPLIER_INTF);
 end;
 
 { TWatchesMonitorClassTemplate }
 
 procedure TWatchesMonitorClassTemplate.InvalidateWatchValues;
+begin
+  //
+end;
+
+procedure TWatchesMonitorClassTemplate.DoStateChange(const AOldState,
+  ANewState: TDBGState);
 begin
   //
 end;
@@ -173,8 +338,35 @@ end;
 
 procedure TWatchesSupplierClassTemplate.TriggerInvalidateWatchValues;
 begin
-  if Monitor <> nil then
+  if (Self <> nil) and (Monitor <> nil) then
     Monitor.InvalidateWatchValues;
+end;
+
+{ TLocalsMonitorClassTemplate }
+
+procedure TLocalsMonitorClassTemplate.InvalidateLocalValues;
+begin
+  //
+end;
+
+procedure TLocalsMonitorClassTemplate.DoStateChange(const AOldState,
+  ANewState: TDBGState);
+begin
+  //
+end;
+
+{ TLocalsSupplierClassTemplate }
+
+procedure TLocalsSupplierClassTemplate.RequestData(ALocalsList: TLocalsListIntf
+  );
+begin
+  ALocalsList.Validity := ddsError;
+end;
+
+procedure TLocalsSupplierClassTemplate.TriggerInvalidateLocalsValues;
+begin
+  if (Self <> nil) and (Monitor <> nil) then
+    Monitor.InvalidateLocalValues;
 end;
 
 

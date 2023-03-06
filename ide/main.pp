@@ -5451,6 +5451,7 @@ begin
     DebuggerOptions.Save; // before environment
     EnvironmentOptions.Save(false);
     EditorMacroListViewer.SaveGlobalInfo;
+    (IDEMacros as TLazIDEMacros).SaveLazbuildMacros;
     //debugln('TMainIDE.SaveEnvironment A ',dbgsName(ObjectInspector1.Favorites));
     if (ObjectInspector1<>nil) and (ObjectInspector1.Favorites<>nil) then
       SaveOIFavoriteProperties(ObjectInspector1.Favorites);
@@ -12283,7 +12284,7 @@ begin
   and (FRenamingComponents.IndexOf(AComponent)>=0) then
     exit; // already validated
 
-  if SysUtils.CompareText(AComponent.Name,'Owner')=0 then
+  if SysUtils.CompareText(NewName,'Owner')=0 then
     // 'Owner' is used by TReader/TWriter
     raise EComponentError.Create(lisOwnerIsAlreadyUsedByTReaderTWriterPleaseChooseAnot);
 

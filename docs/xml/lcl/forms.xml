@@ -85,10 +85,15 @@ Used to define members in control classes.
 </element>
 
 <element name="TProcedureOfObject">
-<short>Type used for an object procedure that takes no arguments.</short>
+<short>
+Type used for an object procedure that takes no arguments.
+</short>
 <descr>
 <p>
-Used to define members in control classes.
+<var>TProcedureOfObject</var> is a type which represents a parameter-less 
+object procedure. It is used in control classes to represent an event handler 
+which when signalled expects no arguments - not even a Sender object instance. 
+For example: TCustomUpDown uses it for its internal mouse timer event.
 </p>
 </descr>
 <seealso/>
@@ -203,7 +208,6 @@ option.
 </element>
 
 <!-- Modified in 43d7f203. -->
-
 <element name="TCloseAction">
 <short>
 Represents actions that can occur when a form is closed.
@@ -235,7 +239,6 @@ Uncomment when the topic exists in RTL documentation.
 </element>
 
 <!-- Added in 43d7f203. -->
-
 <element name="caNone">
 <short>
 Represents the caNone enumeration value in TCloseAction.
@@ -311,11 +314,7 @@ enabled.
 </seealso>
 </element>
 
-<element name="TCustomHintAction.Hint" link="#lcl.actnlist.TCustomAction.Hint">
-<short>The text used for the Hint.</short>
-<descr/>
-<seealso/>
-</element>
+<element name="TCustomHintAction.Hint" link="#lcl.actnlist.TCustomAction.Hint"/>
 
 <element name="TScrollBarKind">
 <short>The orientation of a scroll bar.</short>
@@ -2456,10 +2455,77 @@ added using the TFrame component on the Standard tab in the Lazarus IDE; you
 will be prompted for the TFrame class to use for the component.
 </p>
 <p>
-Frames can also be created entirely in code at run-time. They do not have to 
-be installed in the Lazarus IDE. One drawback is that complex inheritance 
-hierarchies for <var>TFrame</var> classes can be problematic; they do not 
-propagate changes to all derived frames in a multi-level inheritance tree.
+Frames can also be created in code at run-time. They do not have to be 
+installed in the Lazarus IDE. For example:
+</p>
+<code>
+unit Unit1;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls;
+
+type
+
+  { TForm1 }
+
+  TForm1 = class(TForm)
+    Button1: TButton;
+    GroupBox1: TGroupBox;
+    procedure Button1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    { private declarations }
+    Frame: TFrame;
+  public
+    { public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+uses
+  Unit2{TFrame1}, Unit3{TFrame2}, Unit4{TFrame3};
+
+{$R *.lfm}
+
+{ TForm1 }
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Frame := TFrame1.Create(GroupBox1);
+  Frame.Parent := GroupBox1;
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  if not Assigned(Frame) then
+  begin
+    Frame := TFrame1.Create(GroupBox1);
+    Frame.Parent := GroupBox1;
+  end else if Frame is TFrame1 then begin
+    Frame.Free;
+    Frame := TFrame2.Create(GroupBox1);
+    Frame.Parent := GroupBox1;
+  end else if Frame is TFrame2 then begin
+    Frame.Free;
+    Frame := TFrame3.Create(GroupBox1);
+    Frame.Parent := GroupBox1;
+  end else begin
+    FreeAndNil(Frame);
+  end;
+end;
+
+end.
+</code>
+<p>
+One drawback is that complex inheritance hierarchies for <var>TFrame</var> 
+classes can be problematic; they do not propagate changes to all derived 
+frames in a multi-level inheritance tree.
 </p>
 </descr>
 <seealso>
@@ -2863,21 +2929,94 @@ added using the TFrame component on the Standard tab in the Lazarus IDE; you
 will be prompted for the TFrame class to use for the component.
 </p>
 <p>
-Frames can also be created entirely in code at run-time. They do not have to 
-be installed in the Lazarus IDE. One drawback is that complex inheritance 
-hierarchies for <var>TFrame</var> classes can be problematic; they do not 
-propagate changes to all derived frames in the entire inheritance tree.
+Frames can be created and designed in the Lazarus IDE by creating a new Frame 
+module, and using the unit in your application. An existing frame can be 
+added using the TFrame component on the Standard tab in the Lazarus IDE; you 
+will be prompted for the TFrame class to use for the component.
+</p>
+<p>
+Frames can also be created in code at run-time. They do not have to be 
+installed in the Lazarus IDE. For example:
+</p>
+<code>
+unit Unit1;
+
+{$mode objfpc}{$H+}
+
+interface
+
+uses
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls;
+
+type
+
+  { TForm1 }
+
+  TForm1 = class(TForm)
+    Button1: TButton;
+    GroupBox1: TGroupBox;
+    procedure Button1Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+  private
+    { private declarations }
+    Frame: TFrame;
+  public
+    { public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+uses
+  Unit2{TFrame1}, Unit3{TFrame2}, Unit4{TFrame3};
+
+{$R *.lfm}
+
+{ TForm1 }
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  Frame := TFrame1.Create(GroupBox1);
+  Frame.Parent := GroupBox1;
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+begin
+  if not Assigned(Frame) then
+  begin
+    Frame := TFrame1.Create(GroupBox1);
+    Frame.Parent := GroupBox1;
+  end else if Frame is TFrame1 then begin
+    Frame.Free;
+    Frame := TFrame2.Create(GroupBox1);
+    Frame.Parent := GroupBox1;
+  end else if Frame is TFrame2 then begin
+    Frame.Free;
+    Frame := TFrame3.Create(GroupBox1);
+    Frame.Parent := GroupBox1;
+  end else begin
+    FreeAndNil(Frame);
+  end;
+end;
+
+end.
+</code>
+<p>
+One drawback is that complex inheritance hierarchies for <var>TFrame</var> 
+classes can be problematic; they do not propagate changes to all derived 
+frames in a multi-level inheritance tree.
 </p>
 <p>
 TFrame contains a new property which indicates the LCL (Lazarus Component 
 Library) version number used in the container. An overridden constructor is 
 also introduced to initialize the value in the LCLVersion property. TFrame 
-sets the visibility for properties defines in ancestor classes.
+sets the visibility for properties defined in ancestor classes.
 </p>
 </descr>
 <seealso/>
 </element>
-<element name="TFrame.FLCLVersion" link="#lcl.forms.TFrame.LCLVersion"/>
+<element name="TFrame.FLCLVersion"/>
 <element name="TFrame.LCLVersionIsStored" link="#lcl.forms.TFrame.LCLVersion"/>
 <element name="TFrame.LCLVersionIsStored.Result"/>
 
@@ -4919,7 +5058,7 @@ Performs a delayed bounds change using the DelayedEvent for the control.
 <var>TCustomForm</var>. It re-implements the method from the ancestor class, 
 and does not call the inherited method.
 </p>
-<p> 
+<p>
 DoOnChangeBounds sets an internal flag to indicate that a delayed bounds 
 change event has been requested. It increments an internal counter to track 
 the number of pending delayed events.
@@ -16786,7 +16925,7 @@ HintPause is an Integer property with the number of milliseconds to wait
 before a Hint window is displayed for a form or control.
 </p>
 <p>
-The default value is defines in the DefHintPause constant and assigned to the 
+The default value is defined in the DefHintPause constant and assigned to the 
 property in the constructor for the application instance.
 </p>
 <p>
@@ -18413,7 +18552,7 @@ singleton to be updated.
 <descr>
 <p>
 <var>TIDesigner</var> is a <var>TObject</var> descendant which specifies the 
-interface used for visual Form designers . TIDesigner is the type used for 
+interface used for visual Form designers. TIDesigner is the type used for 
 the <var>TCustomForm.Designer</var> property.
 </p>
 <p>
@@ -18906,21 +19045,39 @@ TWindowState value for the specified string, or wsNormal by default.
 </element>
 
 <element name="dbgs">
-<short>Formats various typed values into readable text.</short>
-<descr/>
+<short>
+Formats debugger messages for various types by converting their values into 
+readable text.
+</short>
+<descr>
+<p>
+<var>dbgs</var> is overloaded in <file>forms.pp</file>. The overloads handle 
+creating textual information for the TWindowState, TCloseAction, and 
+TScrollBarKind types. The text is used in DebugLn and WriteLn messages in the 
+Lazarus debugger.
+</p>
+</descr>
 <seealso/>
 </element>
 <element name="dbgs.Result">
-<short>The formatted value.</short>
+<short>
+The formatted text with values for the specified argument.
+</short>
 </element>
 <element name="dbgs.State">
-<short/>
+<short>
+TWindowState instance with values included in the text.
+</short>
 </element>
 <element name="dbgs.Action">
-<short/>
+<short>
+TCloseAction instance with values included in the text.
+</short>
 </element>
 <element name="dbgs.Kind">
-<short/>
+<short>
+TScrollBar instance with values included in the text.
+</short>
 </element>
 
 <element name="TFocusState">
@@ -19017,7 +19174,9 @@ object.
 </short>
 </element>
 <element name="TGetDesignerFormEvent.APersistent">
-<short/>
+<short>
+TPersistent instance for the event notification.
+</short>
 </element>
 
 <element name="TIsFormDesignFunction">

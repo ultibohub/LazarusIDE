@@ -118,6 +118,55 @@ const
   MAX_CTX_CACHE = 30;
 
 type
+
+  { TFpLldbDebugDebuggerPropertiesMemLimits }
+
+  TFpLldbDebugDebuggerPropertiesMemLimits = class(TPersistent)
+  private
+  const
+    DEF_MaxMemReadSize              = 512*1024;
+    DEF_MaxStringLen                = 10000;
+    DEF_MaxArrayLen                 =   400;
+    DEF_MaxNullStringSearchLen      =  4000;
+  private
+    FMaxMemReadSize: QWord;
+    FMaxStringLen: QWord;
+    FMaxArrayLen: QWord;
+    FMaxNullStringSearchLen: QWord;
+
+    function MaxMemReadSizeIsStored: Boolean;
+    function MaxStringLenIsStored: Boolean;
+    function MaxArrayLenIsStored: Boolean;
+    function MaxNullStringSearchLenIsStored: Boolean;
+    procedure SetMaxMemReadSize(AValue: QWord);
+    procedure SetMaxStringLen(AValue: QWord);
+    procedure SetMaxArrayLen(AValue: QWord);
+    procedure SetMaxNullStringSearchLen(AValue: QWord);
+  public
+    constructor Create;
+    procedure Assign(Source: TPersistent); override;
+  published
+    property MaxMemReadSize: QWord read FMaxMemReadSize write SetMaxMemReadSize stored MaxMemReadSizeIsStored default DEF_MaxMemReadSize;
+
+    property MaxStringLen:           QWord read FMaxStringLen write SetMaxStringLen stored MaxStringLenIsStored default DEF_MaxStringLen;
+    property MaxArrayLen:            QWord read FMaxArrayLen write SetMaxArrayLen  stored MaxArrayLenIsStored default DEF_MaxArrayLen;
+    property MaxNullStringSearchLen: QWord read FMaxNullStringSearchLen write SetMaxNullStringSearchLen stored MaxNullStringSearchLenIsStored default DEF_MaxNullStringSearchLen;
+  end;
+
+  { TFpLldbDebuggerProperties }
+
+  TFpLldbDebuggerProperties = class(TLldbDebuggerProperties)
+  private
+    FMemLimits: TFpLldbDebugDebuggerPropertiesMemLimits;
+    procedure SetMemLimits(AValue: TFpLldbDebugDebuggerPropertiesMemLimits);
+  public
+    constructor Create; override;
+    destructor Destroy; override;
+    procedure Assign(Source: TPersistent); override;
+  published
+    property MemLimits: TFpLldbDebugDebuggerPropertiesMemLimits read FMemLimits write SetMemLimits;
+  end;
+
   { TFpLldbDebugger }
 
   TFpLldbDebugger = class(TLldbDebugger)
@@ -172,6 +221,7 @@ type
     property CurrentStackFrame;
     property CommandQueue;
   public
+    class function CreateProperties: TDebuggerProperties; override;
     class function Caption: String; override;
     class function ExeBaseName: String; override;
     class function RequiredCompilerOpts(ATargetCPU, ATargetOS: String): TDebugCompilerRequirements; override;
@@ -226,13 +276,13 @@ type
   TFpLldbDebuggerCommandLocals = class(TLldbDebuggerCommand)
   private
     FOwner: TFPLldbLocals;
-    FLocals: TLocals;
+    FLocals: TLocalsListIntf;
     procedure DoLocalsFreed(Sender: TObject);
   protected
     procedure DoExecute; override;
     procedure DoCancel; override;
   public
-    constructor Create(AOwner: TFPLldbLocals; ALocals: TLocals);
+    constructor Create(AOwner: TFPLldbLocals; ALocals: TLocalsListIntf);
   end;
 
   { TFPLldbLocals }
@@ -240,12 +290,12 @@ type
   TFPLldbLocals = class(TLocalsSupplier)
   private
     FLocalsEvalCancel: Boolean;
-    procedure ProcessLocals(ALocals: TLocals);
+    procedure ProcessLocals(ALocals: TLocalsListIntf);
   protected
     function  FpDebugger: TFpLldbDebugger;
     procedure DoStateChange(const AOldState: TDBGState); override;
   public
-    procedure RequestData(ALocals: TLocals); override;
+    procedure RequestData(ALocals: TLocalsListIntf); override;
   end;
 
   { TFpLldbLineInfo }
@@ -298,6 +348,117 @@ type
     procedure EntriesFinished;
     property EntryRanges;
   end;
+
+{ TFpLldbDebugDebuggerPropertiesMemLimits }
+
+function TFpLldbDebugDebuggerPropertiesMemLimits.MaxMemReadSizeIsStored: Boolean;
+begin
+  Result := FMaxMemReadSize <> DEF_MaxMemReadSize;
+end;
+
+function TFpLldbDebugDebuggerPropertiesMemLimits.MaxStringLenIsStored: Boolean;
+begin
+  Result := FMaxStringLen <> DEF_MaxStringLen;
+end;
+
+function TFpLldbDebugDebuggerPropertiesMemLimits.MaxArrayLenIsStored: Boolean;
+begin
+  Result := FMaxArrayLen <> DEF_MaxArrayLen;
+end;
+
+function TFpLldbDebugDebuggerPropertiesMemLimits.MaxNullStringSearchLenIsStored: Boolean;
+begin
+  Result := FMaxNullStringSearchLen <> DEF_MaxNullStringSearchLen;
+end;
+
+procedure TFpLldbDebugDebuggerPropertiesMemLimits.SetMaxMemReadSize(
+  AValue: QWord);
+begin
+  if (AValue <> 0) and (AValue < MINIMUM_MEMREAD_LIMIT) then
+    AValue := MINIMUM_MEMREAD_LIMIT;
+  if FMaxMemReadSize = AValue then Exit;
+  FMaxMemReadSize := AValue;
+
+  MaxStringLen                := MaxStringLen;
+  MaxArrayLen                 := MaxArrayLen;
+  MaxNullStringSearchLen      := MaxNullStringSearchLen;
+end;
+
+procedure TFpLldbDebugDebuggerPropertiesMemLimits.SetMaxStringLen(AValue: QWord
+  );
+begin
+  if (AValue > FMaxMemReadSize) then
+    AValue := FMaxMemReadSize;
+  if FMaxStringLen = AValue then Exit;
+  FMaxStringLen := AValue;
+  MaxNullStringSearchLen      := MaxNullStringSearchLen;
+end;
+
+procedure TFpLldbDebugDebuggerPropertiesMemLimits.SetMaxArrayLen(AValue: QWord);
+begin
+  if (AValue > FMaxMemReadSize) then
+    AValue := FMaxMemReadSize;
+  if FMaxArrayLen = AValue then Exit;
+  FMaxArrayLen := AValue;
+end;
+
+procedure TFpLldbDebugDebuggerPropertiesMemLimits.SetMaxNullStringSearchLen(
+  AValue: QWord);
+begin
+  if (AValue > FMaxStringLen) then
+    AValue := FMaxStringLen;
+  if (AValue > FMaxMemReadSize) then
+    AValue := FMaxMemReadSize;
+  if FMaxNullStringSearchLen = AValue then Exit;
+  FMaxNullStringSearchLen := AValue;
+end;
+
+constructor TFpLldbDebugDebuggerPropertiesMemLimits.Create;
+begin
+  inherited Create;
+  FMaxMemReadSize             := DEF_MaxMemReadSize;
+  FMaxStringLen               := DEF_MaxStringLen;
+  FMaxArrayLen                := DEF_MaxArrayLen;
+  FMaxNullStringSearchLen     := DEF_MaxNullStringSearchLen ;
+end;
+
+procedure TFpLldbDebugDebuggerPropertiesMemLimits.Assign(Source: TPersistent);
+begin
+  if Source is TFpLldbDebugDebuggerPropertiesMemLimits then begin
+    FMaxMemReadSize             := TFpLldbDebugDebuggerPropertiesMemLimits(Source).FMaxMemReadSize;
+    FMaxStringLen               := TFpLldbDebugDebuggerPropertiesMemLimits(Source).FMaxStringLen;
+    FMaxArrayLen                := TFpLldbDebugDebuggerPropertiesMemLimits(Source).FMaxArrayLen;
+    FMaxNullStringSearchLen     := TFpLldbDebugDebuggerPropertiesMemLimits(Source).FMaxNullStringSearchLen;
+  end;
+end;
+
+{ TFpLldbDebuggerProperties }
+
+procedure TFpLldbDebuggerProperties.SetMemLimits(
+  AValue: TFpLldbDebugDebuggerPropertiesMemLimits);
+begin
+  FMemLimits.Assign(AValue);
+end;
+
+constructor TFpLldbDebuggerProperties.Create;
+begin
+  inherited Create;
+  FMemLimits := TFpLldbDebugDebuggerPropertiesMemLimits.Create;
+end;
+
+destructor TFpLldbDebuggerProperties.Destroy;
+begin
+  inherited Destroy;
+  FMemLimits.Free;
+end;
+
+procedure TFpLldbDebuggerProperties.Assign(Source: TPersistent);
+begin
+  inherited Assign(Source);
+  if Source is TFpLldbDebuggerProperties then begin
+    FMemLimits.Assign(TFpLldbDebuggerProperties(Source).MemLimits);
+  end;
+end;
 
 { TDwarfLoaderThread }
 
@@ -392,7 +553,8 @@ begin
     TFpLldbDebugger(Debugger).MemReader.Enabled := False;
 end;
 
-constructor TFpLldbDebuggerCommandLocals.Create(AOwner: TFPLldbLocals; ALocals: TLocals);
+constructor TFpLldbDebuggerCommandLocals.Create(AOwner: TFPLldbLocals;
+  ALocals: TLocalsListIntf);
 begin
   inherited Create(AOwner.FpDebugger);
   FOwner := AOwner;
@@ -404,16 +566,17 @@ end;
 
 { TFPLldbLocals }
 
-procedure TFPLldbLocals.ProcessLocals(ALocals: TLocals);
+procedure TFPLldbLocals.ProcessLocals(ALocals: TLocalsListIntf);
 var
   Ctx: TFpDbgSymbolScope;
   ProcVal: TFpValue;
   i: Integer;
   m: TFpValue;
   n, v: String;
+  r: TLzDbgWatchDataIntf;
 begin
   if FLocalsEvalCancel then begin
-    ALocals.SetDataValidity(ddsInvalid);
+    ALocals.Validity := ddsInvalid;
     exit;
   end;
 
@@ -422,23 +585,24 @@ begin
   ProcVal := nil;
   try
     if (Ctx = nil) or (Ctx.SymbolAtAddress = nil) then begin
-      ALocals.SetDataValidity(ddsInvalid);
+      ALocals.Validity := ddsInvalid;
       exit;
     end;
 
     ProcVal := Ctx.ProcedureAtAddress;
 
     if (ProcVal = nil) then begin
-      ALocals.SetDataValidity(ddsInvalid);
+      ALocals.Validity := ddsInvalid;
       exit;
     end;
     FpDebugger.FPrettyPrinter.AddressSize := ctx.SizeOfAddress;
     FpDebugger.FPrettyPrinter.Context := ctx.LocationContext;
 
-    ALocals.Clear;
+    ALocals.BeginUpdate;
     for i := 0 to ProcVal.MemberCount - 1 do begin
       if FLocalsEvalCancel then begin
-        ALocals.SetDataValidity(ddsInvalid);
+        ALocals.Validity := ddsInvalid;
+        ALocals.EndUpdate;
         exit;
       end;
       m := ProcVal.Member[i];
@@ -449,10 +613,12 @@ begin
           n := '';
         FpDebugger.FPrettyPrinter.PrintValue(v, m);
         m.ReleaseReference;
-        ALocals.Add(n, v);
+        r := ALocals.Add(n);
+        r.CreatePrePrinted(v);
       end;
     end;
-    ALocals.SetDataValidity(ddsValid);
+    ALocals.Validity := ddsValid;
+    ALocals.EndUpdate;
   finally
     Ctx.ReleaseReference;
     ProcVal.ReleaseReference;
@@ -471,7 +637,7 @@ begin
   FLocalsEvalCancel := False;
 end;
 
-procedure TFPLldbLocals.RequestData(ALocals: TLocals);
+procedure TFPLldbLocals.RequestData(ALocals: TLocalsListIntf);
 var
   LocalsCmdObj: TFpLldbDebuggerCommandLocals;
 begin
@@ -608,7 +774,7 @@ begin
       sleep(30);
     end;
 
-    debugln(['TFpLldbDbgMemReader.ReadMemory  got mem ', AnAddress, ' ', ASize, ' ', Length(InStr.Res)]);
+    debugln(DBG_VERBOSE, ['TFpLldbDbgMemReader.ReadMemory  got mem ', AnAddress, ' ', ASize, ' ', Length(InStr.Res)]);
 
     if Length(InStr.Res) <> ASize then
       exit;
@@ -818,7 +984,7 @@ begin
   if (FpDebugger.FWatchEvalList.Count = 0) or (FWatchEvalLock > 0) or FWatchEvalCancel then
     exit;
 
-debugln(['ProcessEvalList ']);
+  debugln(DBG_VERBOSE, ['ProcessEvalList ']);
   inc(FWatchEvalLock);
   FpDebugger.LockUnLoadDwarf;
   try // TODO: if the stack/thread is changed, registers will be wrong
@@ -836,7 +1002,7 @@ debugln(['ProcessEvalList ']);
         ResTypeInfo := nil;
         if not FpDebugger.EvaluateExpression(WatchValue, WatchValue.Expression, ResText, ResTypeInfo)
         then begin
-          if IsWatchValueAlive then    debugln(['TFPLldbWatches.InternalRequestData FAILED ', WatchValue.Expression]);
+          if IsWatchValueAlive then    debugln(DBG_VERBOSE or DBG_ERRORS, ['TFPLldbWatches.InternalRequestData FAILED ', WatchValue.Expression]);
           if IsWatchValueAlive then
             inherited InternalRequestData(WatchValue);
         end;
@@ -1212,6 +1378,11 @@ begin
   {$ENDIF}
     FMemManager := TFpDbgMemManager.Create(FMemReader, TFpDbgMemConvertorLittleEndian.Create);
     FMemManager.SetCacheManager(TFpLldbDbgMemCacheManagerSimple.Create);
+
+    FMemManager.MemLimits.MaxMemReadSize := TFpLldbDebuggerProperties(GetProperties).MemLimits.MaxMemReadSize;
+    FMemManager.MemLimits.MaxArrayLen := TFpLldbDebuggerProperties(GetProperties).MemLimits.MaxArrayLen;
+    FMemManager.MemLimits.MaxStringLen := TFpLldbDebuggerProperties(GetProperties).MemLimits.MaxStringLen;
+    FMemManager.MemLimits.MaxNullStringSearchLen := TFpLldbDebuggerProperties(GetProperties).MemLimits.MaxNullStringSearchLen;
 
     FDwarfInfo := TFpDwarfInfo.Create(FImageLoaderList, FMemManager);
     FDwarfInfo.LoadCompilationUnits;
@@ -1648,6 +1819,11 @@ DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
     Ctx.ReleaseReference;
     UnLockUnLoadDwarf;
   end;
+end;
+
+class function TFpLldbDebugger.CreateProperties: TDebuggerProperties;
+begin
+  Result := TFpLldbDebuggerProperties.Create;
 end;
 
 procedure TFpLldbDebugger.DoBeginReceivingLines(Sender: TObject);

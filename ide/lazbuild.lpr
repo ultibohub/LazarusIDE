@@ -1235,6 +1235,8 @@ end;
 procedure TLazBuildApplication.SetupMacros;
 begin
   MainBuildBoss.SetupTransferMacros;
+
+  (IDEMacros as TLazIDEMacros).LoadLazbuildMacros;
 end;
 
 procedure TLazBuildApplication.SetupCodetools;
