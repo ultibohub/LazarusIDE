@@ -46,7 +46,7 @@ uses
   DbgIntfBaseTypes, DbgIntfMiscClasses, DbgIntfDebuggerBase, LazDebuggerIntf,
   LazDebuggerIntfBaseTypes, LazDebuggerValueConverter, LazDebuggerTemplate,
   IdeDebuggerBase, IdeDebuggerWatchResult, IdeDebuggerOpts,
-  IdeDebuggerBackendValueConv;
+  IdeDebuggerBackendValueConv, IdeDebuggerUtils;
 
 const
   XMLBreakPointsNode = 'BreakPoints';
@@ -3845,6 +3845,8 @@ begin
     FNewResultData := TWatchResultDataError.Create(AVal)
   else
     TWatchResultDataError(FNewResultData).Create(AVal);
+  if FStoredResultData <> nil then
+    FNewResultData.SetTypeName(FStoredResultData.TypeName);
   AfterDataCreated;
 end;
 
@@ -6531,7 +6533,9 @@ end;
 
 function TIdeWatch.GetChildrenByNameAsArrayEntry(AName: Int64): TIdeWatch;
 begin
-  Result := GetChildWatch(IntToStr(AName), Expression + '[' + IntToStr(AName) + ']');
+  Result := GetChildWatch(IntToStr(AName),
+    GetExpressionForArrayElement(Expression, AName)
+  );
 end;
 
 function TIdeWatch.GetChildrenByNameAsField(AName, AClassName: String

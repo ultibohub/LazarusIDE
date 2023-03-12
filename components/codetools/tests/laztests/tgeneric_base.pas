@@ -579,8 +579,8 @@ end;
 
 procedure GEN_TField1.FieldGenProc;
 begin
-  FField1.MyBaseOnlyProc{ TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField1.MyBaseAndMyClassProc1{ TODO declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField1.MyBaseOnlyProc{declaration:TMyClassBase.MyBaseOnlyProc};
+  FField1.MyBaseAndMyClassProc1{declaration:TMyClass.MyBaseAndMyClassProc1};
   {$IFDEF WRONG}
   FField1.MyClassSubProc{declaration:};
   {$ENDIF}
@@ -682,11 +682,11 @@ begin
   FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   FField1.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField3.FField1.MyBaseOnlyProc        { TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField3.FField1.MyClassSubProc        { TODO declaration:TMyClassSub.MyClassSubProc};
-  FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField3.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField3.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
+  FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField3.FField1.MyClassSubProc        {declaration:TMyClassSub.MyClassSubProc};
+  FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField3.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
   FField5.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
   FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -706,11 +706,11 @@ begin
   FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   FField1.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField3.FField1.MyBaseOnlyProc        { TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField3.FField1.MyClassSubProc        { TODO declaration:TMyClassSub.MyClassSubProc};
-  FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField3.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField3.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
+  FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField3.FField1.MyClassSubProc        {declaration:TMyClassSub.MyClassSubProc};
+  FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField3.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
   FField5.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
   FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -743,9 +743,9 @@ begin
   FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   FField1.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField3.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField3.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
   FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
@@ -758,9 +758,9 @@ begin
   FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   FField1.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField3.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField3.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
   FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
@@ -783,17 +783,17 @@ begin
   FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   FField2.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField3.FField1.MyBaseOnlyProc        { TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField3.FField1.MyClassSubProc        { TODO declaration:TMyClassSub.MyClassSubProc};
-  FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField3.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField3.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
+  FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField3.FField1.MyClassSubProc        {declaration:TMyClassSub.MyClassSubProc};
+  FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField3.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField4.FField1.MyBaseOnlyProc        { TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField4.FField1.MyClassSubProc        { TODO declaration:TMyClassSub.MyClassSubProc};
-  FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField4.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField4.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
+  FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField4.FField1.MyClassSubProc        {declaration:TMyClassSub.MyClassSubProc};
+  FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField4.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
   FField5.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
   FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -825,17 +825,17 @@ begin
   FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   FField2.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField3.FField1.MyBaseOnlyProc        { TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField3.FField1.MyClassSubProc        { TODO declaration:TMyClassSub.MyClassSubProc};
-  FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField3.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField3.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
+  FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField3.FField1.MyClassSubProc        {declaration:TMyClassSub.MyClassSubProc};
+  FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField3.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
-  FField4.FField1.MyBaseOnlyProc        { TODO declaration:TMyClassBase.MyBaseOnlyProc};
-  FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  FField4.FField1.MyClassSubProc        { TODO declaration:TMyClassSub.MyClassSubProc};
-  FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  FField4.FField1.FMySub                { TODO declaration:TMyClassSub.FMySub} := 1;
+  FField4.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
+  FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  FField4.FField1.MyClassSubProc        {declaration:TMyClassSub.MyClassSubProc};
+  FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  FField4.FField1.FMySub                {declaration:TMyClassSub.FMySub} := 1;
 
   FField5.FField1.MyBaseOnlyProc        {declaration:TMyClassBase.MyBaseOnlyProc};
   FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -925,10 +925,10 @@ begin
   Var1Test_Forw_Field1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var1Test_Forw_Field1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   //Var1Test_Forw_Field1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1Test_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1Test_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  //Var1Test_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  //Var1Test_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1Test_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1Test_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  //Var1Test_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  //Var1Test_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1Test_Forw_Field1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1Test_Forw_Field1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var1Test_Forw_Field1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -938,10 +938,10 @@ begin
   Var1TestInherit_Forw_Field1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var1TestInherit_Forw_Field1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   //Var1TestInherit_Forw_Field1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInherit_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInherit_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  //Var1TestInherit_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  //Var1TestInherit_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInherit_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInherit_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  //Var1TestInherit_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  //Var1TestInherit_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInherit_Forw_Field1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInherit_Forw_Field1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var1TestInherit_Forw_Field1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -951,10 +951,10 @@ begin
   Var1TestInline_Forw_Field1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var1TestInline_Forw_Field1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   //Var1TestInline_Forw_Field1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInline_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInline_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  //Var1TestInline_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  //Var1TestInline_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInline_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInline_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  //Var1TestInline_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  //Var1TestInline_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInline_Forw_Field1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInline_Forw_Field1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var1TestInline_Forw_Field1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -971,22 +971,22 @@ begin
 
   Var1Test_Forw_Field3.FField1.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1Test_Forw_Field3.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1Test_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1Test_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1Test_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1Test_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1Test_Forw_Field3.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1Test_Forw_Field3.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
 
   Var1TestInherit_Forw_Field3.FField1.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInherit_Forw_Field3.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInherit_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInherit_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInherit_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInherit_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInherit_Forw_Field3.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInherit_Forw_Field3.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
 
   Var1TestInline_Forw_Field3.FField1.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInline_Forw_Field3.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInline_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInline_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInline_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInline_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInline_Forw_Field3.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInline_Forw_Field3.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
 
@@ -994,10 +994,10 @@ begin
   Var1Test_Forw_TField1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1Test_Forw_TField1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1Test_Forw_TField1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1Test_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1Test_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1Test_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1Test_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1Test_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1Test_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1Test_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1Test_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1Test_Forw_TField1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1Test_Forw_TField1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1Test_Forw_TField1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -1007,10 +1007,10 @@ begin
   Var1TestInherit_Forw_TField1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInherit_Forw_TField1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInherit_Forw_TField1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInherit_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInherit_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInherit_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInherit_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInherit_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInherit_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInherit_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInherit_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInherit_Forw_TField1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInherit_Forw_TField1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInherit_Forw_TField1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -1020,10 +1020,10 @@ begin
   Var1TestInline_Forw_TField1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInline_Forw_TField1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInline_Forw_TField1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInline_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInline_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var1TestInline_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var1TestInline_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInline_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInline_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var1TestInline_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var1TestInline_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInline_Forw_TField1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var1TestInline_Forw_TField1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var1TestInline_Forw_TField1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -1083,10 +1083,10 @@ begin
   Var2Test_Forw_Field1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var2Test_Forw_Field1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   //Var2Test_Forw_Field1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var2Test_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var2Test_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  //Var2Test_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  //Var2Test_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var2Test_Forw_Field1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var2Test_Forw_Field1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  //Var2Test_Forw_Field1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  //Var2Test_Forw_Field1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var2Test_Forw_Field1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var2Test_Forw_Field1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   //Var2Test_Forw_Field1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -1096,10 +1096,10 @@ begin
   Var2Test_Forw_TField1.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var2Test_Forw_TField1.FField2.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var2Test_Forw_TField1.FField2.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var2Test_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var2Test_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var2Test_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var2Test_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var2Test_Forw_TField1.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var2Test_Forw_TField1.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var2Test_Forw_TField1.FField4.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var2Test_Forw_TField1.FField4.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var2Test_Forw_TField1.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var2Test_Forw_TField1.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var2Test_Forw_TField1.FField6.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
@@ -1116,8 +1116,8 @@ begin
 
   Var2Test_Forw_Field3.FField1.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var2Test_Forw_Field3.FField1.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
-  Var2Test_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 { TODO declaration:TMyClass.MyBaseAndMyClassProc1};
-  Var2Test_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   { TODO declaration:TMyClassSub.MyBaseAndMySubProc1};
+  Var2Test_Forw_Field3.FField3.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
+  Var2Test_Forw_Field3.FField3.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
   Var2Test_Forw_Field3.FField5.FField1.MyBaseAndMyClassProc1 {declaration:TMyClass.MyBaseAndMyClassProc1};
   Var2Test_Forw_Field3.FField5.FField1.MyBaseAndMySubProc1   {declaration:TMyClassSub.MyBaseAndMySubProc1};
 
@@ -1264,8 +1264,43 @@ begin
   {completion:MyBaseOnlyProc;MyBaseAndMyClassProc1;MyBaseAndMySubProc1;MyEveryProc1}
 end;
 
-
 begin
-
+  a1{guesstype:TTest_Field1}                  := TTest_Field1.Create;
+  a1{guesstype:TTestInherit_Field1}           := TTestInherit_Field1.Create;
+  a1{guesstype:TTestInline_Field1}            := TTestInline_Field1.Create;
+  a1{guesstype:TTestInline_Field1_Wrong}      := TTestInline_Field1_Wrong.Create;
+  a1{guesstype:TTestInline_Field1_Rec}        := TTestInline_Field1_Rec.Create;
+  a1{guesstype:TTest_TField1}                 := TTest_TField1.Create;
+  a1{guesstype:TTestInherit_TField1}          := TTestInherit_TField1.Create;
+  a1{guesstype:TTestInline_TField1}           := TTestInline_TField1.Create;
+  a1{guesstype:TTest_Forw_Field1}             := TTest_Forw_Field1.Create;
+  a1{guesstype:TTestInherit_Forw_Field1}      := TTestInherit_Forw_Field1.Create;
+  a1{guesstype:TTestInline_Forw_Field1}       := TTestInline_Forw_Field1.Create;
+  a1{guesstype:TTest_Forw_Field2}             := TTest_Forw_Field2.Create;
+  a1{guesstype:TTestInherit_Forw_Field2}      := TTestInherit_Forw_Field2.Create;
+  a1{guesstype:TTestInline_Forw_Field2}       := TTestInline_Forw_Field2.Create;
+  a1{guesstype:TTest_Forw_Field3}             := TTest_Forw_Field3.Create;
+  a1{guesstype:TTestInherit_Forw_Field3}      := TTestInherit_Forw_Field3.Create;
+  a1{guesstype:TTestInline_Forw_Field3}       := TTestInline_Forw_Field3.Create;
+  a1{guesstype:TTest_Forw_TField1}            := TTest_Forw_TField1.Create;
+  a1{guesstype:TTestInherit_Forw_TField1}     := TTestInherit_Forw_TField1.Create;
+  a1{guesstype:TTestInline_Forw_TField1}      := TTestInline_Forw_TField1.Create;
+  a1{guesstype:TTest_ForwBase_Field1}         := TTest_ForwBase_Field1.Create;
+  a1{guesstype:TTestInherit_ForwBase_Field1}  := TTestInherit_ForwBase_Field1.Create;
+  a1{guesstype:TTestInline_ForwBase_Field1}   := TTestInline_ForwBase_Field1.Create;
+  a1{guesstype:TTest_ForwBase_TField1}        := TTest_ForwBase_TField1.Create;
+  a1{guesstype:TTestInherit_ForwBase_TField1} := TTestInherit_ForwBase_TField1.Create;
+  a1{guesstype:TTestInline_ForwBase_TField1}  := TTestInline_ForwBase_TField1.Create;
+  a1{guesstype:TTest_Base1}                   := TTest_Base1.Create;
+  a1{guesstype:TTestInherhit_Base1}           := TTestInherhit_Base1.Create;
+  a1{guesstype:TTestInline_Base1}             := TTestInline_Base1.Create;
+  a1{guesstype:TTestInline_Base1Sub}          := TTestInline_Base1Sub.Create;
+  a1{guesstype:TTest_TBase1}                  := TTest_TBase1.Create;
+  a1{guesstype:TTestInherhit_TBase1}          := TTestInherhit_TBase1.Create;
+  a1{guesstype:TTestInline_TBase1}            := TTestInline_TBase1.Create;
+  a1{guesstype:TTestInline_TBase1Sub}         := TTestInline_TBase1Sub.Create;
+  a1{guesstype:TTest_ForwBase_Base1}          := TTest_ForwBase_Base1.Create;
+  a1{guesstype:TTest_ForwBaseInherhit_Base1}  := TTest_ForwBaseInherhit_Base1.Create;
+  a1{guesstype:TTest_ForwBaseInline_Base1}    := TTest_ForwBaseInline_Base1.Create;
 end.
 

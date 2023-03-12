@@ -111,6 +111,7 @@ type
     FEvalFlags: set of (efSizeDone, efSizeUnavail);
     FLastError: TFpError;
     FSize: TFpDbgValueSize;
+    procedure SetAsString(AStartIndex, ALen: Int64; AValue: AnsiString);
   protected
     procedure Reset; virtual; // keeps lastmember and structureninfo
     procedure SetLastError(ALastError: TFpError);
@@ -159,6 +160,17 @@ type
     property RefCount;
 
     function GetSize(out ASize: TFpDbgValueSize): Boolean; inline;
+
+    (* AsString[AStartIndex, ALen: Int64]
+       - AStartIndex is 1-based
+       - AIgnoreBounds may not be supported by all data types
+       - If AStartIndex/ALen are out of bounds then
+         - Result will be false / LastError will NOT be set
+         - SubStr will contain any part that was in bounds
+       - If Result is false, AND LastError is set: no data was retrieved
+    *)
+    function GetSubString(AStartIndex, ALen: Int64; out ASubStr: AnsiString; AIgnoreBounds: Boolean = False): Boolean; virtual;
+    function GetSubWideString(AStartIndex, ALen: Int64; out ASubStr: WideString; AIgnoreBounds: Boolean = False): Boolean; virtual;
 
     // Kind: determines which types of value are available
     property Kind: TDbgSymbolKind read GetKind;
@@ -366,6 +378,34 @@ type
     function GetDbgSymbol: TFpSymbol; override;
   public
     constructor Create(ASymbol: TFpSymbol); // Only for stType
+    destructor Destroy; override;
+  end;
+
+  { TFpValueConstEnumValue }
+
+  TFpValueConstEnumValue = class(TFpValueConstWithType)
+  private
+    FName: String;
+  protected
+    function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetKind: TDbgSymbolKind; override;
+    function GetAsString: AnsiString; override;
+  public
+    constructor Create(AName: String);
+  end;
+
+  { TFpValueConstSet }
+
+  TFpValueConstSet = class(TFpValueConstWithType)
+  private
+    FNames: TStrings;
+  protected
+    function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetKind: TDbgSymbolKind; override;
+    function GetMember(AIndex: Int64): TFpValue; override;
+    function GetMemberCount: Integer; override;
+  public
+    constructor Create(ANames: TStrings);
     destructor Destroy; override;
   end;
 
@@ -1044,6 +1084,59 @@ begin
   Result := InvalidLoc;
 end;
 
+function TFpValue.GetSubString(AStartIndex, ALen: Int64; out
+  ASubStr: AnsiString; AIgnoreBounds: Boolean): Boolean;
+begin
+  Result := AIgnoreBounds;
+  ASubStr := '';
+  If (ALen < 1) or (AStartIndex < 1) then
+    exit;
+
+  ASubStr := AsString;
+  If ALen = 1 then begin
+    Result := AStartIndex <= Length(ASubStr);
+    if Result then
+      ASubStr := ASubStr[AStartIndex]
+    else
+      ASubStr := '';
+  end
+  else begin
+    Result := AStartIndex + ALen <= Length(ASubStr);
+    ASubStr := Copy(ASubStr, AStartIndex, ALen);
+  end;
+  if AIgnoreBounds then
+    Result := True;
+end;
+
+function TFpValue.GetSubWideString(AStartIndex, ALen: Int64; out
+  ASubStr: WideString; AIgnoreBounds: Boolean): Boolean;
+begin
+  Result := AIgnoreBounds;
+  ASubStr := '';
+  If (ALen < 1) or (AStartIndex < 1) then
+    exit;
+
+  ASubStr := AsWideString;
+  If ALen = 1 then begin
+    Result := AStartIndex <= Length(ASubStr);
+    if Result then
+      ASubStr := ASubStr[AStartIndex]
+    else
+      ASubStr := '';
+  end
+  else begin
+    Result := AStartIndex + ALen <= Length(ASubStr);
+    ASubStr := Copy(ASubStr, AStartIndex, ALen);
+  end;
+  if AIgnoreBounds then
+    Result := True;
+end;
+
+procedure TFpValue.SetAsString(AStartIndex, ALen: Int64; AValue: AnsiString);
+begin
+
+end;
+
 procedure TFpValue.Reset;
 begin
   FEvalFlags := [];
@@ -1351,6 +1444,65 @@ destructor TFpValueTypeDefinition.Destroy;
 begin
   inherited Destroy;
   FSymbol.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FSymbol, 'TFpValueTypeDeclaration'){$ENDIF};
+end;
+
+{ TFpValueConstEnumValue }
+
+function TFpValueConstEnumValue.GetFieldFlags: TFpValueFieldFlags;
+begin
+  Result := inherited GetFieldFlags;
+  Result := Result + [{svfOrdinal,} svfIdentifier];
+end;
+
+function TFpValueConstEnumValue.GetKind: TDbgSymbolKind;
+begin
+  Result := skEnumValue;
+end;
+
+function TFpValueConstEnumValue.GetAsString: AnsiString;
+begin
+  Result := FName;
+end;
+
+constructor TFpValueConstEnumValue.Create(AName: String);
+begin
+  inherited Create;
+  FName := AName;
+end;
+
+{ TFpValueConstSet }
+
+function TFpValueConstSet.GetFieldFlags: TFpValueFieldFlags;
+begin
+  Result := inherited GetFieldFlags;
+  Result := Result + [svfMembers];
+end;
+
+function TFpValueConstSet.GetKind: TDbgSymbolKind;
+begin
+  Result := skSet;
+end;
+
+function TFpValueConstSet.GetMember(AIndex: Int64): TFpValue;
+begin
+  Result := TFpValueConstEnumValue.Create(FNames[AIndex]);
+end;
+
+function TFpValueConstSet.GetMemberCount: Integer;
+begin
+  Result := FNames.Count;
+end;
+
+constructor TFpValueConstSet.Create(ANames: TStrings);
+begin
+  inherited Create;
+  FNames := ANames;
+end;
+
+destructor TFpValueConstSet.Destroy;
+begin
+  inherited Destroy;
+  FNames.Free;
 end;
 
 { TDbgInfoAddressContext }

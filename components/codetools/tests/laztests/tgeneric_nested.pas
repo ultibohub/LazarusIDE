@@ -47,12 +47,12 @@ type
       procedure Foo;
     end;
     TFld1 = class(specialize GEN_Field<TRec1>)
-      fx: _REC { TODO,WRONG: declaration:GEN_1._REC};
+      fx: _REC {declaration:GEN_1._REC};
       fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFld2 = class(specialize GEN_Field<TRec2>)  // Global TRec2
-      fx: _REC { TODO,WRONG: declaration:GEN_1._REC};
+      fx: _REC {declaration:GEN_1._REC};
       fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
@@ -70,18 +70,18 @@ type
   generic GENB_1<_B1: TObject; _REC> = class(_B1)
   public type
     TFldB0 = class(specialize GEN_Field<_REC>)
-      fx: _REC { TODO: declaration:GENB_1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldB1 = class(specialize GEN_Field<TRec1>)  // Global (can be specialized to TClass2.TRec1)
-      fx: _REC { TODO: declaration:GENB_1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldB2 = class(specialize GEN_Field<TRec2>)  // Global TRec2 (can be specialized to TClass1.TRec2)
-      fx: _REC { TODO: declaration:GENB_1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     //TFldB3 = class(specialize GEN_Field<TRec3>)  // not yet known
@@ -99,23 +99,23 @@ type
   generic GENB_2<_B2: TClass1; _REC> = class(_B2)
   public type
     TFldB0 = class(specialize GEN_Field<_REC>)
-      fx: _REC { TODO: declaration:GENB_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldB1 = class(specialize GEN_Field<TRec1>)  // Global (can be specialized to TClass2.TRec1)
-      fx: _REC { TODO: declaration:GENB_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldB2 = class(specialize GEN_Field<TRec2>)  // TClass1.TRec2
-      fx: _REC { TODO: declaration:GENB_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldB3 = class(specialize GEN_Field<TRec3>)  // TClass1.TRec3
-      fx: _REC { TODO: declaration:GENB_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENB_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
   public class var
@@ -132,18 +132,18 @@ type
   generic GENI_1<_IB1: TObject; _REC> = class(specialize GENB_1<_IB1, _REC>)
   public type
     TFldI0 = class(specialize GEN_Field<_REC>)
-      fx: _REC { TODO: declaration:GENI_1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI1 = class(specialize GEN_Field<TRec1>)  // Global (can be specialized to TClass2.TRec1)
-      fx: _REC { TODO: declaration:GENI_1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI2 = class(specialize GEN_Field<TRec2>)  // Global TRec2
-      fx: _REC { TODO: declaration:GENI_1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     //TFldX3 = class(specialize GEN_Field<TRec3>)  // not yet known
@@ -161,23 +161,23 @@ type
   generic GENI_2B1<_IB2: TClass1; _REC> = class(specialize GENB_1<_IB2, _REC>)
   public type
     TFldI0 = class(specialize GEN_Field<_REC>)
-      fx: _REC { TODO: declaration:GENI_2B1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2B1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI1 = class(specialize GEN_Field<TRec1>)  // Global (can be specialized to TClass2.TRec1)
-      fx: _REC { TODO: declaration:GENI_2B1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2B1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI2 = class(specialize GEN_Field<TRec2>)  // TClass1.TRec2
-      fx: _REC { TODO: declaration:GENI_2B1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2B1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI3 = class(specialize GEN_Field<TRec3>)  // TClass1.TRec3
-      fx: _REC { TODO: declaration:GENI_2B1._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2B1._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
   public class var
@@ -192,23 +192,23 @@ type
   generic GENI_2<_IB2: TClass1; _REC> = class(specialize GENB_2<_IB2, _REC>)
   public type
     TFldI0 = class(specialize GEN_Field<_REC>)
-      fx: _REC { TODO: declaration:GENI_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI1 = class(specialize GEN_Field<TRec1>)  // Global (can be specialized to TClass2.TRec1)
-      fx: _REC { TODO: declaration:GENI_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI2 = class(specialize GEN_Field<TRec2>)  // TClass1.TRec2
-      fx: _REC { TODO: declaration:GENI_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
     TFldI3 = class(specialize GEN_Field<TRec3>)  // TClass1.TRec3
-      fx: _REC { TODO: declaration:GENI_2._REC};
-      fy: T_F1 { TODO: declaration:GEN_Field.T_F1};
+      fx: _REC {declaration:GENI_2._REC};
+      fy: T_F1 {declaration:GEN_Field.T_F1};
       procedure Foo;
     end;
   public class var
@@ -335,12 +335,12 @@ var
   a1: TFld1 {declaration:GEN_1.TFld1};
   a2: TFld2 {declaration:GEN_1.TFld2};
 begin
-  fv{declaration:GEN_1.fv} := default(_REC { TODO: declaration:GEN_1._REC} );
+  fv{declaration:GEN_1.fv} := default(_REC {declaration:GEN_1._REC} );
 
-  fy{declaration:GEN_1.TFld0.fy} := default(_REC { TODO: declaration:GEN_1._REC} );
-  FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GEN_1._REC} );
+  fy{declaration:GEN_1.TFld0.fy} := default(_REC {declaration:GEN_1._REC} );
+  FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GEN_1._REC} );
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GEN_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GEN_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1} := default(TRec1 {declaration:TRec1} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
@@ -350,17 +350,17 @@ end;
 
 procedure GEN_1.TFld1.Foo;
 var
-  a: _REC { TODO,WRONG: declaration:GEN_1._REC}; // TODO: the test finds it and yet we can not jump there
+  a: _REC {declaration:GEN_1._REC}; //the test finds it and yet we can not jump there
   a0: TFld0 {declaration:GEN_1.TFld0};
   a1: TFld1 {declaration:GEN_1.TFld1};
   a2: TFld2 {declaration:GEN_1.TFld2};
 begin
-  fv{declaration:GEN_1.fv} := default(_REC { TODO: declaration:GEN_1._REC} );
+  fv{declaration:GEN_1.fv} := default(_REC {declaration:GEN_1._REC} );
 
-  fy{declaration:GEN_1.TFld1.fy}.r1a{ TODO: declaration:TRec1.r1a} := 1;
+  fy{declaration:GEN_1.TFld1.fy}.r1a{declaration:TRec1.r1a} := 1;
   FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GEN_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GEN_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -369,17 +369,17 @@ end;
 
 procedure GEN_1.TFld2.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GEN_1._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GEN_1._REC};
   a0: TFld0 {declaration:GEN_1.TFld0};
   a1: TFld1 {declaration:GEN_1.TFld1};
   a2: TFld2 {declaration:GEN_1.TFld2};
 begin
-  fv{declaration:GEN_1.fv} := default(_REC { TODO: declaration:GEN_1._REC} );
+  fv{declaration:GEN_1.fv} := default(_REC {declaration:GEN_1._REC} );
 
-  fy{declaration:GEN_1.TFld2.fy}.r2a{ TODO: declaration:TRec2.r2a} := 1;
+  fy{declaration:GEN_1.TFld2.fy}.r2a{declaration:TRec2.r2a} := 1;
   FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GEN_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GEN_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -388,15 +388,15 @@ end;
 
 procedure GEN_1.Bar;
 var
-  a: _REC { TODO: declaration:GEN_1._REC}; // TODO: cache??
+  a: _REC {declaration:GEN_1._REC};
   a0: TFld0 {declaration:GEN_1.TFld0};
   a1: TFld1 {declaration:GEN_1.TFld1};
   a2: TFld2 {declaration:GEN_1.TFld2};
 begin
-  fv{declaration:GEN_1.fv} := default(_REC { TODO: declaration:GEN_1._REC} );
-  fx{declaration:GEN_1.fx} := default(_REC { TODO: declaration:GEN_1._REC} );
+  fv{declaration:GEN_1.fv} := default(_REC {declaration:GEN_1._REC} );
+  fx{declaration:GEN_1.fx} := default(_REC {declaration:GEN_1._REC} );
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GEN_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GEN_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -405,17 +405,17 @@ end;
 
 procedure GENB_1.TFldB0.Foo;
 var
-  a: _REC { TODO declaration:GENB_1._REC};
-  a0: TFldB0 { TODO declaration:GENB_1.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_1.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_1.TFldB2};
+  a: _REC {declaration:GENB_1._REC};
+  a0: TFldB0 {declaration:GENB_1.TFldB0};
+  a1: TFldB1 {declaration:GENB_1.TFldB1};
+  a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{ TODO declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENB_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENB_1._REC} );
 
-  fy{ TODO declaration:GENB_1.TFldB0.fy} := default(_REC { TODO: declaration:GENB_1._REC} );
-  FField1{ TODO declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_1._REC} );
+  fy{declaration:GENB_1.TFldB0.fy} := default(_REC {declaration:GENB_1._REC} );
+  FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_1._REC} );
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -424,17 +424,17 @@ end;
 
 procedure GENB_1.TFldB1.Foo;
 var
-  a: _REC { TODO,WRONG: declaration:GENB_1._REC}; // TODO: the test finds it and yet we can not jump there
-  a0: TFldB0 { TODO declaration:GENB_1.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_1.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_1.TFldB2};
+  a: _REC {declaration:GENB_1._REC};
+  a0: TFldB0 {declaration:GENB_1.TFldB0};
+  a1: TFldB1 {declaration:GENB_1.TFldB1};
+  a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENB_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENB_1._REC} );
 
-  fy{declaration:GENB_1.TFldB1.fy}.r1a{ TODO: declaration:TRec1.r1a} := 1;
+  fy{declaration:GENB_1.TFldB1.fy}.r1a{declaration:TRec1.r1a} := 1;
   FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -443,17 +443,17 @@ end;
 
 procedure GENB_1.TFldB2.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENB_1._REC}; // TODO: the test finds something and yet we can not jump there
-  a0: TFldB0 { TODO declaration:GENB_1.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_1.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_1.TFldB2};
+  a: _REC {declaration:GENB_1._REC};
+  a0: TFldB0 {declaration:GENB_1.TFldB0};
+  a1: TFldB1 {declaration:GENB_1.TFldB1};
+  a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENB_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENB_1._REC} );
 
-  fy{declaration:GENB_1.TFldB2.fy}.r2a{ TODO: declaration:TRec2.r2a} := 1;
+  fy{declaration:GENB_1.TFldB2.fy}.r2a{declaration:TRec2.r2a} := 1;
   FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -467,10 +467,10 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENB_1._REC} );
-  fx{declaration:GENB_1.fx} := default(_REC { TODO: declaration:GENB_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENB_1._REC} );
+  fx{declaration:GENB_1.fx} := default(_REC {declaration:GENB_1._REC} );
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -479,17 +479,17 @@ end;
 
 procedure GENB_2.TFldB0.Foo;
 var
-  a: _REC { TODO declaration:GENB_2._REC};
-  a0: TFldB0 { TODO declaration:GENB_2.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_2.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_2.TFldB2};
+  a: _REC {declaration:GENB_2._REC};
+  a0: TFldB0 {declaration:GENB_2.TFldB0};
+  a1: TFldB1 {declaration:GENB_2.TFldB1};
+  a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENB_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENB_2._REC} );
 
-  fy{ TODO declaration:GENB_2.TFldB0.fy} := default(_REC { TODO: declaration:GENB_1._REC} );
-  FField1{ TODO declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_2._REC} );
+  fy{declaration:GENB_2.TFldB0.fy} := default(_REC {declaration:GENB_2._REC} );
+  FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_2._REC} );
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_2._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
@@ -498,17 +498,17 @@ end;
 
 procedure GENB_2.TFldB1.Foo;
 var
-  a: _REC { TODO,WRONG: declaration:GENB_2._REC}; // TODO: the test finds it and yet we can not jump there
+  a: _REC {declaration:GENB_2._REC};
   a0: TFldB0 {declaration:GENB_2.TFldB0};
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENB_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENB_2._REC} );
 
-  fy{declaration:GENB_2.TFldB1.fy}.r1a{ TODO: declaration:TRec1.r1a} := 1;
+  fy{declaration:GENB_2.TFldB1.fy}.r1a{declaration:TRec1.r1a} := 1;
   FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_2._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
@@ -517,17 +517,17 @@ end;
 
 procedure GENB_2.TFldB2.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENB_2._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENB_2._REC};
   a0: TFldB0 {declaration:GENB_2.TFldB0};
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENB_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENB_2._REC} );
 
-  fy{declaration:GENB_2.TFldB2.fy}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
+  fy{declaration:GENB_2.TFldB2.fy}.r2a{declaration:TClass1.TRec2.r2a} := 1;
   FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_2._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
@@ -536,17 +536,17 @@ end;
 
 procedure GENB_2.TFldB3.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENB_2._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENB_2._REC};
   a0: TFldB0 {declaration:GENB_2.TFldB0};
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENB_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENB_2._REC} );
 
-  fy{declaration:GENB_2.TFldB3.fy}.r3a{ TODO: declaration:TClass1.TRec3.r3a} := 1;
+  fy{declaration:GENB_2.TFldB3.fy}.r3a{declaration:TClass1.TRec3.r3a} := 1;
   FField1{declaration:GEN_Field.FField1}.r3a{declaration:TClass1.TRec3.r3a} := 1;
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_2._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
@@ -560,10 +560,10 @@ var
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENB_2._REC} );
-  fx{declaration:GENB_2.fx} := default(_REC { TODO: declaration:GENB_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENB_2._REC} );
+  fx{declaration:GENB_2.fx} := default(_REC {declaration:GENB_2._REC} );
 
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENB_2._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENB_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
@@ -572,24 +572,24 @@ end;
 
 procedure GENI_1.TFldI0.Foo;
 var
-  a: _REC { TODO declaration:GENI_1._REC};
-  b0: TFldI0 { TODO declaration:GENI_1.TFldI0};
-  b1: TFldI1 { TODO declaration:GENI_1.TFldI1};
-  b2: TFldI2 { TODO declaration:GENI_1.TFldI2};
-  a0: TFldB0 { TODO declaration:GENB_1.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_1.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_1.TFldB2};
+  a: _REC {declaration:GENI_1._REC};
+  b0: TFldI0 {declaration:GENI_1.TFldI0};
+  b1: TFldI1 {declaration:GENI_1.TFldI1};
+  b2: TFldI2 {declaration:GENI_1.TFldI2};
+  a0: TFldB0 {declaration:GENB_1.TFldB0};
+  a1: TFldB1 {declaration:GENB_1.TFldB1};
+  a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{ TODO declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
-  fIv{ TODO declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_1._REC} );
+  fIv{declaration:GENI_1.fIv} := default(_REC {declaration:GENI_1._REC} );
 
-  fy{ TODO declaration:GENB_1.TFldB0.fy} := default(_REC { TODO: declaration:GENI_1._REC} );
-  FField1{ TODO declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  fy{declaration:GENI_1.TFldI0.fy} := default(_REC {declaration:GENI_1._REC} );
+  FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -598,7 +598,7 @@ end;
 
 procedure GENI_1.TFldI1.Foo;
 var
-  a: _REC { TODO,WRONG: declaration:GENI_1._REC}; // TODO: the test finds it and yet we can not jump there
+  a: _REC {declaration:GENI_1._REC};
   b0: TFldI0 {declaration:GENI_1.TFldI0};
   b1: TFldI1 {declaration:GENI_1.TFldI1};
   b2: TFldI2 {declaration:GENI_1.TFldI2};
@@ -606,16 +606,16 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
-  fIv{ TODO: declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_1._REC} );
+  fIv{declaration:GENI_1.fIv} := default(_REC {declaration:GENI_1._REC} );
 
-  fy{ TODO: declaration:GENB_1.TFldB1.fy}.r1a{ TODO: declaration:TRec1.r1a} := 1;
+  fy{declaration:GENI_1.TFldI1.fy}.r1a{declaration:TRec1.r1a} := 1;
   FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -624,7 +624,7 @@ end;
 
 procedure GENI_1.TFldI2.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENI_1._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENI_1._REC};
   b0: TFldI0 {declaration:GENI_1.TFldI0};
   b1: TFldI1 {declaration:GENI_1.TFldI1};
   b2: TFldI2 {declaration:GENI_1.TFldI2};
@@ -632,16 +632,16 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
-  fIv{ TODO: declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_1._REC} );
+  fIv{declaration:GENI_1.fIv} := default(_REC {declaration:GENI_1._REC} );
 
-  fy{ TODO declaration:GENB_1.TFldB2.fy}.r2a{ TODO: declaration:TRec2.r2a} := 1;
+  fy{declaration:GENI_1.TFldI2.fy}.r2a{declaration:TRec2.r2a} := 1;
   FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -658,15 +658,15 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
-  fIv{ TODO declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_1._REC} );
-  fx{declaration:GENB_1.fx} := default(_REC { TODO: declaration:GENI_1._REC} );
-  fIx{ TODO declaration:GENB_1.fx} := default(_REC { TODO: declaration:GENI_1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_1._REC} );
+  fIv{declaration:GENI_1.fIv} := default(_REC {declaration:GENI_1._REC} );
+  fx{declaration:GENB_1.fx} := default(_REC {declaration:GENI_1._REC} );
+  fIx{declaration:GENI_1.fIx} := default(_REC {declaration:GENI_1._REC} );
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_1._REC} );
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
   a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TRec2.r2a} := 1;
 end;
@@ -675,32 +675,32 @@ end;
 
 procedure GENI_2B1.TFldI0.Foo;
 var
-  a: _REC { TODO declaration:GENI_2B1._REC};
-  b0: TFldI0 { TODO declaration:GENI_2B1.TFldI0};
-  b1: TFldI1 { TODO declaration:GENI_2B1.TFldI1};
-  b2: TFldI2 { TODO declaration:GENI_2B1.TFldI2};
-  a0: TFldB0 { TODO declaration:GENB_2.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_2.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_2.TFldB2};
+  a: _REC {declaration:GENI_2B1._REC};
+  b0: TFldI0 {declaration:GENI_2B1.TFldI0};
+  b1: TFldI1 {declaration:GENI_2B1.TFldI1};
+  b2: TFldI2 {declaration:GENI_2B1.TFldI2};
+  a0: TFldB0 {declaration:GENB_1.TFldB0};
+  a1: TFldB1 {declaration:GENB_1.TFldB1};
+  a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_2B1._REC} );
 
-  fy{ TODO declaration:GENB_2.TFldB0.fy} := default(_REC { TODO: declaration:GENI_2B1._REC} );
-  FField1{ TODO declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  fy{declaration:GENI_2B1.TFldI0.fy} := default(_REC {declaration:GENI_2B1._REC} );
+  FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2B1.TFldI1 }
 
 procedure GENI_2B1.TFldI1.Foo;
 var
-  a: _REC { TODO,WRONG: declaration:GENI_2B1._REC}; // TODO: the test finds it and yet we can not jump there
+  a: _REC {declaration:GENI_2B1._REC};
   b0: TFldI0 {declaration:GENI_2B1.TFldI0};
   b1: TFldI1 {declaration:GENI_2B1.TFldI1};
   b2: TFldI2 {declaration:GENI_2B1.TFldI2};
@@ -708,25 +708,25 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
-  fIv{ TODO declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_2B1._REC} );
+  fIv{declaration:GENI_2B1.fIv} := default(_REC {declaration:GENI_2B1._REC} );
 
-  fy{ TODO declaration:GENB_1.TFldB1.fy}.r1a{ TODO: declaration:TRec1.r1a} := 1;
+  fy{declaration:GENI_2B1.TFldI1.fy}.r1a{declaration:TRec1.r1a} := 1;
   FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2B1.TFldI2 }
 
 procedure GENI_2B1.TFldI2.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENI_2B1._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENI_2B1._REC};
   b0: TFldI0 {declaration:GENI_2B1.TFldI0};
   b1: TFldI1 {declaration:GENI_2B1.TFldI1};
   b2: TFldI2 {declaration:GENI_2B1.TFldI2};
@@ -734,24 +734,24 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_2B1._REC} );
 
-  fy{ TODO declaration:GENB_1.TFldB2.fy}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
-  FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  fy{declaration:GENI_2B1.TFldI2.fy}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2B1.TFldI3 }
 
 procedure GENI_2B1.TFldI3.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENI_2B1._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENI_2B1._REC};
   b0: TFldI0 {declaration:GENI_2B1.TFldI0};
   b1: TFldI1 {declaration:GENI_2B1.TFldI1};
   b2: TFldI2 {declaration:GENI_2B1.TFldI2};
@@ -759,17 +759,17 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_2B1._REC} );
 
-  fy{ TODO declaration:GENB_1.TFldB3.fy}.r3a{ TODO: declaration:TClass1.TRec3.r3a} := 1;
+  fy{declaration:GENI_2B1.TFldI3.fy}.r3a{declaration:TClass1.TRec3.r3a} := 1;
   FField1{declaration:GEN_Field.FField1}.r3a{declaration:TClass1.TRec3.r3a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2B1 }
@@ -784,50 +784,50 @@ var
   a1: TFldB1 {declaration:GENB_1.TFldB1};
   a2: TFldB2 {declaration:GENB_1.TFldB2};
 begin
-  fv{declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
-  fIv{ TODO: declaration:GENB_1.fv} := default(_REC { TODO: declaration:GENI_2B1._REC} );
-  fx{declaration:GENB_1.fx} := default(_REC { TODO: declaration:GENI_2B1._REC} );
-  fIx{ TODO: declaration:GENB_1.fx} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  fv{declaration:GENB_1.fv} := default(_REC {declaration:GENI_2B1._REC} );
+  fIv{declaration:GENI_2B1.fIv} := default(_REC {declaration:GENI_2B1._REC} );
+  fx{declaration:GENB_1.fx} := default(_REC {declaration:GENI_2B1._REC} );
+  fIx{declaration:GENI_2B1.fIx} := default(_REC {declaration:GENI_2B1._REC} );
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2B1._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2B1._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2.TFldI0 }
 
 procedure GENI_2.TFldI0.Foo;
 var
-  a: _REC { TODO declaration:GENI_2._REC};
-  b0: TFldI0 { TODO declaration:GENI_2.TFldI0};
-  b1: TFldI1 { TODO declaration:GENI_2.TFldI1};
-  b2: TFldI2 { TODO declaration:GENI_2.TFldI2};
-  a0: TFldB0 { TODO declaration:GENB_2.TFldB0};
-  a1: TFldB1 { TODO declaration:GENB_2.TFldB1};
-  a2: TFldB2 { TODO declaration:GENB_2.TFldB2};
+  a: _REC {declaration:GENI_2._REC};
+  b0: TFldI0 {declaration:GENI_2.TFldI0};
+  b1: TFldI1 {declaration:GENI_2.TFldI1};
+  b2: TFldI2 {declaration:GENI_2.TFldI2};
+  a0: TFldB0 {declaration:GENB_2.TFldB0};
+  a1: TFldB1 {declaration:GENB_2.TFldB1};
+  a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
-  fIv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENI_2._REC} );
+  fIv{declaration:GENI_2.fIv} := default(_REC {declaration:GENI_2._REC} );
 
-  fy{ TODO declaration:GENB_2.TFldB0.fy} := default(_REC { TODO: declaration:GENI_2._REC} );
-  FField1{ TODO declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  fy{declaration:GENI_2.TFldI0.fy} := default(_REC {declaration:GENI_2._REC} );
+  FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2.TFldI1 }
 
 procedure GENI_2.TFldI1.Foo;
 var
-  a: _REC { TODO,WRONG: declaration:GENI_2._REC}; // TODO: the test finds it and yet we can not jump there
+  a: _REC {declaration:GENI_2._REC};
   b0: TFldI0 {declaration:GENI_2.TFldI0};
   b1: TFldI1 {declaration:GENI_2.TFldI1};
   b2: TFldI2 {declaration:GENI_2.TFldI2};
@@ -835,25 +835,25 @@ var
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
-  fIv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENI_2._REC} );
+  fIv{declaration:GENI_2.fIv} := default(_REC {declaration:GENI_2._REC} );
 
-  fy{ TODO declaration:GENB_2.TFldB1.fy}.r1a{ TODO: declaration:TRec1.r1a} := 1;
+  fy{declaration:GENI_2.TFldI1.fy}.r1a{declaration:TRec1.r1a} := 1;
   FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2.TFldI2 }
 
 procedure GENI_2.TFldI2.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENI_2._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENI_2._REC};
   b0: TFldI0 {declaration:GENI_2.TFldI0};
   b1: TFldI1 {declaration:GENI_2.TFldI1};
   b2: TFldI2 {declaration:GENI_2.TFldI2};
@@ -861,25 +861,25 @@ var
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
-  fIv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENI_2._REC} );
+  fIv{declaration:GENI_2.fIv} := default(_REC {declaration:GENI_2._REC} );
 
-  fy{ TODO declaration:GENB_2.TFldB2.fy}.r2a{ TODO: declaration:TClass1.TRec2.r2a} := 1;
+  fy{declaration:GENI_2.TFldI2.fy}.r2a{declaration:TClass1.TRec2.r2a} := 1;
   FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2.TFldI3 }
 
 procedure GENI_2.TFldI3.Foo;
 var
-  a: _REC { TODO,WRONG declaration:GENI_2._REC}; // TODO: the test finds something and yet we can not jump there
+  a: _REC {declaration:GENI_2._REC};
   b0: TFldI0 {declaration:GENI_2.TFldI0};
   b1: TFldI1 {declaration:GENI_2.TFldI1};
   b2: TFldI2 {declaration:GENI_2.TFldI2};
@@ -887,17 +887,17 @@ var
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENI_2._REC} );
 
-  fy{ TODO declaration:GENB_2.TFldB3.fy}.r3a{ TODO: declaration:TClass1.TRec3.r3a} := 1;
+  fy{declaration:GENI_2.TFldI3.fy}.r3a{declaration:TClass1.TRec3.r3a} := 1;
   FField1{declaration:GEN_Field.FField1}.r3a{declaration:TClass1.TRec3.r3a} := 1;
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 { GENI_2 }
@@ -912,17 +912,17 @@ var
   a1: TFldB1 {declaration:GENB_2.TFldB1};
   a2: TFldB2 {declaration:GENB_2.TFldB2};
 begin
-  fv{declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
-  fIv{ TODO declaration:GENB_2.fv} := default(_REC { TODO: declaration:GENI_2._REC} );
-  fx{declaration:GENB_2.fx} := default(_REC { TODO: declaration:GENI_2._REC} );
-  fIx{ TODO declaration:GENB_2.fx} := default(_REC { TODO: declaration:GENI_2._REC} );
+  fv{declaration:GENB_2.fv} := default(_REC {declaration:GENI_2._REC} );
+  fIv{declaration:GENI_2.fIv} := default(_REC {declaration:GENI_2._REC} );
+  fx{declaration:GENB_2.fx} := default(_REC {declaration:GENI_2._REC} );
+  fIx{declaration:GENI_2.fIx} := default(_REC {declaration:GENI_2._REC} );
 
-  b0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   b1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  b2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
-  a0.FField1{declaration:GEN_Field.FField1} := default(_REC { TODO: declaration:GENI_2._REC} );
+  b2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
+  a0.FField1{declaration:GEN_Field.FField1} := default(_REC {declaration:GENI_2._REC} );
   a1.FField1{declaration:GEN_Field.FField1}.r1a{declaration:TRec1.r1a} := 1;
-  a2.FField1{declaration:GEN_Field.FField1}.r2a{ TODO declaration:TClass1.TRec2.r2a} := 1;
+  a2.FField1{declaration:GEN_Field.FField1}.r2a{declaration:TClass1.TRec2.r2a} := 1;
 end;
 
 

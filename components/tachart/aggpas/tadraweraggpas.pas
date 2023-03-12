@@ -210,8 +210,11 @@ procedure TAggPasDrawer.Polygon(
 begin
   if ANumPts <= 0 then exit;
   FCanvas.Polygon(APoints, false, AStartIndex, ANumPts);
-  FCanvas.Polyline(APoints, AStartIndex, ANumPts);
-  FCanvas.Line(APoints[ANumPts - 1], APoints[0])
+  if FCanvas.Pen.Style <> psClear then
+  begin
+    FCanvas.Polyline(APoints, AStartIndex, ANumPts);
+    FCanvas.Line(APoints[ANumPts - 1], APoints[0])
+  end;
 end;
 
 procedure TAggPasDrawer.Polyline(
@@ -223,7 +226,7 @@ end;
 procedure TAggPasDrawer.PrepareSimplePen(AColor: TChartColor);
 begin
   with FCanvas.Pen do begin
-    FPColor := ApplyTransparency(ChartColorToFPColor(ColorOrMono(AColor)));
+    FPColor := ApplyTransparency(FChartColorToFPColorFunc(ColorOrMono(AColor)));
     Style := psSolid;
     Mode := pmCopy;
     Width := 1;
@@ -277,7 +280,7 @@ end;
 procedure TAggPasDrawer.SetBrushColor(AColor: TChartColor);
 begin
   FCanvas.Brush.FPColor :=
-    ApplyTransparency(ChartColorToFPColor(ColorOrMono(AColor)));
+    ApplyTransparency(FChartColorToFPColorFunc(ColorOrMono(AColor)));
 end;
 
 procedure TAggPasDrawer.SetBrushParams(
@@ -318,7 +321,7 @@ end;
 
 procedure TAggPasDrawer.SetPenColor(AColor: TChartColor);
 begin
-  FCanvas.Pen.FPColor := ApplyTransparency(ChartColorToFPColor(ColorOrMono(AColor)));
+  FCanvas.Pen.FPColor := ApplyTransparency(FChartColorToFPColorFunc(ColorOrMono(AColor)));
 end;
 
 procedure TAggPasDrawer.SetPenParams(AStyle: TFPPenStyle; AColor: TChartColor;
@@ -326,7 +329,7 @@ procedure TAggPasDrawer.SetPenParams(AStyle: TFPPenStyle; AColor: TChartColor;
 begin
   FCanvas.Pen.Style := AStyle;
   FCanvas.Pen.Width := AWidth;
-  FCanvas.Pen.FPColor := ApplyTransparency(ChartColorToFPColor(ColorOrMono(AColor)));
+  FCanvas.Pen.FPColor := ApplyTransparency(FChartColorToFPColorFunc(ColorOrMono(AColor)));
 end;
 
 procedure TAggpasDrawer.SetPenWidth(AWidth: Integer);

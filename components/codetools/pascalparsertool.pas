@@ -541,7 +541,9 @@ begin
          then exit(KeyWordFuncClassFinal);
     end;
   'G':
-    if CompareSrcIdentifiers(p,'GENERIC') and (Scanner.CompilerMode in [cmDELPHI,cmOBJFPC]) then
+    if CompareSrcIdentifiers(p,'GENERIC') and (Scanner.CompilerMode in [cmDELPHI,cmOBJFPC])
+    and (CurNode.Desc <> ctnTypeSection)
+    then
       exit(KeyWordFuncClassMethod);
   'P':
     case UpChars[p[1]] of
@@ -1722,7 +1724,7 @@ begin
       end;
     end;
     if NeedIdentifier and UpAtomIs('SPECIALIZE') then begin
-      ReadSpecialize(phpCreateNodes in Attr,Extract,Copying,Attr);
+      ReadTypeReference(phpCreateNodes in Attr,Extract,Copying,Attr);
       NeedIdentifier:=false;
     end;
     if NeedIdentifier then begin
@@ -4458,6 +4460,12 @@ var
 begin
   if (Scanner.CompilerMode=cmOBJFPC) and UpAtomIs('SPECIALIZE') then begin
     ReadSpecialize(CreateNodes,Extract,Copying,Attr);
+    while CurPos.Flag=cafPoint do begin
+      // e.g. atype<params>.subtype
+      Next;
+      AtomIsIdentifierSaveE(20180411194209);
+      Next;
+    end;
     exit;
   end;
   if CreateNodes then begin
@@ -4957,8 +4965,13 @@ begin
   if IsFunction then begin
     if (CurPos.Flag=cafColon) then begin
       ReadNextAtom;
-      AtomIsIdentifierSaveE(20180411194218);
-      ReadNextAtom;
+      if UpAtomIs('SPECIALIZE') then begin
+        ReadSpecialize(true);
+      end
+      else begin
+        AtomIsIdentifierSaveE(20180411194218);
+        ReadNextAtom;
+      end;
       if CurPos.Flag=cafPoint then begin
         ReadNextAtom;
         AtomIsIdentifierSaveE(20180411194221);

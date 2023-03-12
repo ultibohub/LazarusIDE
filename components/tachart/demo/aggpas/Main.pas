@@ -4,11 +4,24 @@
   Note that the AggPas version coming with Lazarus is unmaintained at the moment 
   and rather buggy. Font support works fine only on Windows. On Linux, you must 
   specify the directory with your fonts in the constant FONT_DIR defined below. 
-  On macOS (cocoa), text output is not supported at all. }
+  On macOS (cocoa), text output is not supported at all.
+
+  By default, system colors are not supported and usually rendered as black.
+  Therefore, use clWhite instead of clWindow for Chart.BackColor etc.
+  If you absolute need system color support assign the function
+  ChartColorSysToFPColor (in unit TADrawerCanvas) to property DoChartColorToFPColor
+  of the chart's drawer:
+
+    Chart.Drawer.DoChartColorToFPColor := @ChartColorSysToFPColor.
+
+  Note, however, that this pulls in the LCL.
+  }
 
 unit Main;
 
 {$mode objfpc}{$H+}
+
+{.$DEFINE USE_SYSTEM_COLORS}
 
 interface
 
@@ -53,16 +66,22 @@ implementation
 uses
   TAChartUtils, TADrawerCanvas;
 
+{$IF DEFINED(LCLGtk2) or DEFINED(LCLGtk3) or DEFINED(LCLQt) or DEFINED(LCLQt5)}
 const
   FONT_DIR = '/usr/share/fonts/truetype/';
+{$ENDIF}
 
 { TMainForm }
 
 procedure TMainForm.cbAggPasClick(Sender: TObject);
 begin
   if cbAggPas.Checked then
-    Chart.GUIConnector := ChartGUIConnectorAggPas
-  else
+  begin
+    Chart.GUIConnector := ChartGUIConnectorAggPas;
+    {$IFDEF USE_SYSTEM_COLORS}
+    Chart.Drawer.DoChartColorToFPColor := @ChartColorSysToFPColor;
+    {$ENDIF}
+  end else
     Chart.GUIConnector := nil;
 end;
 
@@ -84,6 +103,13 @@ begin
   {$IF DEFINED(LCLGtk2) or DEFINED(LCLGtk3) or DEFINED(LCLQt) or DEFINED(LCLQt5)}
   ChartGUIConnectorAggPas.FontDir := FONT_DIR;
   {$ENDIF}
+
+  {$IFDEF USE_SYSTEM_COLORS}
+  Chart.Color := clForm;
+  Chart.BackColor := clWindow;
+  Chart.Legend.BackgroundBrush.Color := clDefault;
+  Chart.Frame.Color := clBtnShadow;
+  {$ENDIF}
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
@@ -103,6 +129,10 @@ begin
   Chart.Title.Text.Text := 'AggPas';
   d := TAggPasDrawer.Create(FAggCanvas);
   d.DoGetFontOrientation := @CanvasGetFontOrientationFunc;
+  // The next instruction is required if system colors are used
+  {$IFDEF USE_SYSTEM_COLORS}
+  d.DoChartColorToFPColor := @ChartColorSysToFPColor;
+  {$ENDIF}
   {$IF DEFINED(LCLGtk2) or DEFINED(LCLGtk3) or DEFINED(LCLQt) or DEFINED(LCLQt5)}
   (d as TAggPasDrawer).FontDir := FONT_DIR;
   {$ENDIF}

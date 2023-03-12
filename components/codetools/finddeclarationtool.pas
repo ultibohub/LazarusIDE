@@ -554,8 +554,14 @@ type
   { TGenericParams }
 
   TGenericParams = record
+    // values given in "specialize" statement
     ParamValuesTool: TFindDeclarationTool;
     SpecializeParamsNode: TCodeTreeNode;
+    // "generic" definition to which those values can be applied
+    GenericTool: TFindDeclarationTool;
+    GenericNode: TCodeTreeNode;
+    // *chain* of earlier params, in case of nested generic
+    // there will always be 0 or 1 entry. This acts like a pointer, only with automatic FreeMem
     OuterGenParam: array of TGenericParams;
   end;
 
@@ -607,7 +613,9 @@ type
                               ParamCompatibilityList: TTypeCompatibilityList);
   private
     procedure SetGenericParamValues(SpecializeParamsTool: TFindDeclarationTool;
-                SpecializeNode: TCodeTreeNode);
+                SpecializeNode: TCodeTreeNode;
+                GenericTool: TFindDeclarationTool; GenericNode: TCodeTreeNode);
+    procedure AppendGenericParamValues(AGenParams: TGenericParams);
     function FindGenericParamType: Boolean;
     procedure AddOperandPart(aPart: string);
     property ExtractedOperand: string read FExtractedOperand;
@@ -4295,6 +4303,8 @@ var
         {$ENDIF}
         // identifier found
         Params.SetResult(Self,Node);
+        Include(Params.Flags, fdfDoNotCache);
+        Include(Params.NewFlags, fodDoNotCache);
         Result:=CheckResult(true,true);
         if not (fdfCollect in Flags) then
           exit;
@@ -4865,6 +4875,13 @@ var
             end;
           end;
 
+        ctnGenericType:
+          begin
+            Include(Params.Flags, fdfDoNotCache);
+            Include(Params.NewFlags, fodDoNotCache);
+          // do not search again in this node, go on ...
+          end;
+
         else
           break;
         end;
@@ -5091,7 +5108,9 @@ begin
   end;}
   // if we are here, the identifier was not found and there was no error
   if (FirstSearchedNode<>nil) and (Params.FoundProc=nil)
-  and ([fdfCollect,fdfExtractOperand]*Flags=[]) then begin
+  and ([fdfCollect,fdfExtractOperand,fdfDoNotCache]*Flags=[])
+  and ([fdfDoNotCache]*Params.Flags=[])
+  and ([fodDoNotCache]*Params.NewFlags=[]) then begin
     // add result to cache
     Params.NewNode:=nil;
     Params.NewCodeTool:=nil;
@@ -5292,6 +5311,12 @@ var
         end else begin
           IsPredefined:=true;
         end;
+        if  (fodDoNotCache in SubParams.NewFlags) then begin
+          Include(Params.Flags, fdfDoNotCache);
+          Include(Params.NewFlags, fodDoNotCache);
+        end;
+        SubParams.AppendGenericParamValues(Params.GenParams);
+        Params.GenParams:=SubParams.GenParams;
         exit;
       end;
 
@@ -5309,7 +5334,10 @@ var
         // only types allowed here
         TestContext.Tool:=SubParams.NewCodeTool;
         TestContext.Node:=SubParams.NewNode;
-        if not (TestContext.Node.Desc in [ctnTypeDefinition,ctnGenericType,ctnGenericParameter]) then
+        if (not (TestContext.Node.Desc in [ctnTypeDefinition,ctnGenericType,ctnGenericParameter,ctnSpecializeParam]))
+        // TODO: the parser marks ctnSpecializeParam as ctnIdentifier (at least for types like "string"
+        and not ((TestContext.Node.Desc=ctnIdentifier) and (TestContext.Node.Parent<>nil) and (TestContext.Node.Parent.Desc=ctnSpecializeParams))
+        then
         begin
           // not a type
           {$IFDEF ShowTriedBaseContexts}
@@ -5321,6 +5349,12 @@ var
                             [ctsTypeIdentifier,GetAtom]);
         end;
         Context:=TestContext;
+        if  (fodDoNotCache in SubParams.NewFlags) then begin
+          Include(Params.Flags, fdfDoNotCache);
+          Include(Params.NewFlags, fodDoNotCache);
+        end;
+        SubParams.AppendGenericParamValues(Params.GenParams);
+        Params.GenParams:=SubParams.GenParams;
         {$IFDEF ShowTriedBaseContexts}
         debugln(['TFindDeclarationTool.FindBaseTypeOfNode.SearchIdentifier found ',GetIdentifier(@Src[IdentStart]),' Node=',Context.Node.DescAsString,' ',Context.Tool.CleanPosToStr(Context.Node.StartPos,true)]);
         {$ENDIF}
@@ -5334,35 +5368,37 @@ var
     end;
   end;
 
+  var NewAliasNode: TCodeTreeNode;
+
   procedure CheckResult(var Context: TFindContext);
   var
     ResultNode: TCodeTreeNode;
     OldFlags: TFindDeclarationFlags;
     AliasContext: TFindContext;
-    Cache: TBaseTypeCache;
   begin
-    if (NodeStack<>nil) and (NodeStack<>@MyNodeStack) then exit; // will be handled by caller
-
-    if (Context.Node<>nil) and (Context.Node.Desc in [ctnProcedure,ctnProcedureHead])
-    and (fdfFunctionResult in Params.Flags) then begin
-      // Note: do not resolve a constructor here
-      //       because TMyClass.Create should return TMyClass
-      //       and not TObject, where the Create is defined
-      // a proc -> if this is a function then return the Context type
-      //debugln(['TFindDeclarationTool.FindBaseTypeOfNode checking function Context: ',Context.Tool.ExtractNode(Context.Node,[])]);
-      Context.Tool.BuildSubTreeForProcHead(Context.Node,ResultNode);
-      if (ResultNode<>nil) then begin
-        // a function or an overloaded operator
-        // search further for the base type of the function Context type
-        OldFlags:=Params.Flags;
-        Exclude(Params.Flags,fdfFunctionResult);
-        //debugln(['TFindDeclarationTool.FindBaseTypeOfNode searching for function Context type: ',Context.Tool.ExtractNode(DummyNode,[])]);
-        Context:=Context.Tool.FindBaseTypeOfNode(Params,ResultNode,AliasType);
-        AliasType:=nil;  // aliasing has been done
-        Params.Flags:=OldFlags;
-        exit;
+    if not( (NodeStack<>nil) and (NodeStack<>@MyNodeStack) )then begin // will be handled by caller
+      if (Context.Node<>nil) and (Context.Node.Desc in [ctnProcedure,ctnProcedureHead])
+      and (fdfFunctionResult in Params.Flags) then begin
+        // Note: do not resolve a constructor here
+        //       because TMyClass.Create should return TMyClass
+        //       and not TObject, where the Create is defined
+        // a proc -> if this is a function then return the Context type
+        //debugln(['TFindDeclarationTool.FindBaseTypeOfNode checking function Context: ',Context.Tool.ExtractNode(Context.Node,[])]);
+        Context.Tool.BuildSubTreeForProcHead(Context.Node,ResultNode);
+        if (ResultNode<>nil) then begin
+          // a function or an overloaded operator
+          // search further for the base type of the function Context type
+          OldFlags:=Params.Flags;
+          Exclude(Params.Flags,fdfFunctionResult);
+          //debugln(['TFindDeclarationTool.FindBaseTypeOfNode searching for function Context type: ',Context.Tool.ExtractNode(DummyNode,[])]);
+          Context:=Context.Tool.FindBaseTypeOfNode(Params,ResultNode,AliasType);
+          AliasType:=nil;  // aliasing has been done
+          Params.Flags:=OldFlags;
+          exit;
+        end;
       end;
     end;
+
     if (Context.Node=nil) and (fdfExceptionOnNotFound in Params.Flags) then begin
       if (Context.Tool<>nil) and (Params.Identifier<>nil) then begin
 
@@ -5374,27 +5410,11 @@ var
       end;
       RaiseBaseTypeOfNotFound;
     end;
-    if AliasType<>nil then begin
-      // follow the base type chain to the first type
-      // for example: var d: TDateTime;  use TDateTime, instead of Double.
-      AliasContext.Node:=Node;
+
+    if (AliasType<>nil) and (NewAliasNode <> nil) then begin
+      AliasContext.Node:=NewAliasNode;
       AliasContext.Tool:=Self;
-      while AliasContext.Node<>nil do begin
-        if AliasContext.Node.Desc in [ctnTypeDefinition,ctnGenericType] then begin
-          {$IF defined(ShowExprEval) or defined(ShowTriedBaseContexts)}
-          debugln(['TFindDeclarationTool.FindBaseTypeOfNode.CheckResult using alias ',AliasContext.Tool.ExtractDefinitionName(AliasContext.Node),' instead of base type ',Context.Node.DescAsString]);
-          {$ENDIF}
-          AliasType^:=AliasContext;
-          exit;
-        end;
-        if AliasContext.Node.Cache is TBaseTypeCache then begin
-          Cache:=TBaseTypeCache(AliasContext.Node.Cache);
-          if AliasContext.Node=Cache.NextNode then break;
-          AliasContext.Node:=Cache.NextNode;
-          AliasContext.Tool:=TFindDeclarationTool(Cache.NextTool);
-        end else
-          break;
-      end;
+      AliasType^ := AliasContext;
     end;
   end;
 
@@ -5402,17 +5422,24 @@ var
   OldInput: TFindDeclarationInput;
   ClassIdentNode: TCodeTreeNode;
   TestContext: TFindContext;
-  OldPos: integer;
+  OldPos, i: integer;
   SpecializeNode: TCodeTreeNode;
   NameNode: TCodeTreeNode;
   IsPredefined: boolean;
   OldStartFlags: TFindDeclarationFlags;
+  NodeStackEntry: PCodeTreeNodeStackEntry;
+  Cache: TObject;
 begin
+  NewAliasNode := nil;
   {$IFDEF CheckNodeTool}CheckNodeTool(Node);{$ENDIF}
   //debugln(['TFindDeclarationTool.FindBaseTypeOfNode Flags=[',dbgs(Params.Flags),'] CacheValid=',Node.Cache is TBaseTypeCache]);
   if (Node<>nil) and (Node.Cache is TBaseTypeCache) then begin
     // base type already cached
     Result:=CreateFindContext(TBaseTypeCache(Node.Cache));
+    if AliasType <> nil then begin
+      AliasType^.Tool := TFindDeclarationTool(TBaseTypeCache(Node.Cache).AliasTool);
+      AliasType^.Node := TBaseTypeCache(Node.Cache).AliasNode;
+    end;
     CheckResult(Result);
     exit;
   end;
@@ -5428,10 +5455,16 @@ begin
   try
     while (Result.Node<>nil) do begin
       if (Result.Node.Cache is TBaseTypeCache) then begin
+        Cache := Result.Node.Cache;
         // base type already cached
         if NodeStack^.StackPtr>=0 then
           AddNodeToStack(NodeStack,Result.Tool,Result.Node);
         Result:=CreateFindContext(TBaseTypeCache(Result.Node.Cache));
+        // May be replaced with NewAliasNode
+        if AliasType <> nil then begin
+          AliasType^.Tool := TFindDeclarationTool(TBaseTypeCache(Cache).AliasTool);
+          AliasType^.Node := TBaseTypeCache(Cache).AliasNode;
+        end;
         break;
       end;
       {$IFDEF ShowTriedBaseContexts}
@@ -5453,6 +5486,21 @@ begin
       end;
 
       AddNodeToStack(NodeStack,Result.Tool,Result.Node);
+
+      if Result.Node.Desc in [ctnTypeDefinition,ctnGenericType] then begin
+        if NewAliasNode = nil then  NewAliasNode := Result.Node;
+
+        i := NodeStack^.StackPtr-1;
+        while i >= 0 do begin
+          NodeStackEntry := GetNodeStackEntry(NodeStack, i);
+          if (NodeStackEntry^.AliasTool <> nil)
+          or (NodeStackEntry^.Node.Desc in [ctnTypeDefinition,ctnGenericType]) then
+            break;
+          NodeStackEntry^.AliasTool := Self;
+          NodeStackEntry^.AliasNode := Result.Node;
+          dec(i);
+        end;
+      end;
 
       if (Result.Node.Desc in (AllSimpleIdentifierDefinitions+[ctnGenericType]))
       then begin
@@ -5555,7 +5603,7 @@ begin
           Result.Node:=Result.Node.Parent;
         break;
       end else
-      if (Result.Node.Desc in [ctnIdentifier,ctnOnIdentifier])
+      if (Result.Node.Desc in [ctnIdentifier,ctnOnIdentifier,ctnSpecializeParam])
       then begin
         // this type is just an alias for another type
         // -> search the basic type
@@ -5620,7 +5668,6 @@ begin
         NameNode:=SpecializeNode.FirstChild;
         Result.Node:=NameNode;
         if Result.Node=nil then break;
-        Params.SetGenericParamValues(Self, SpecializeNode);
         SearchIdentifier(SpecializeNode,NameNode.StartPos,IsPredefined,Result);
         if (Result.Node=nil) or (Result.Node.Desc<>ctnGenericType) then begin
           // not a generic
@@ -5629,6 +5676,7 @@ begin
           RaiseExceptionFmt(20170421200156,ctsStrExpectedButAtomFound,
                             [ctsGenericIdentifier,GetAtom]);
         end;
+        Params.SetGenericParamValues(Self, SpecializeNode, Result.Tool, Result.Node);
       end else
         break;
     end;
@@ -5638,7 +5686,10 @@ begin
     if NodeStack=@MyNodeStack then begin
       // cache the result in all nodes
       // do not cache the result of generic type
-      if not Assigned(Params.GenParams.ParamValuesTool) then
+      if (not Assigned(Params.GenParams.ParamValuesTool))
+      and (not (fdfDoNotCache in Params.Flags))
+      and (not (fodDoNotCache in Params.NewFlags))
+      then
         CreateBaseTypeCaches(NodeStack,Result);
       // free node stack
       FinalizeNodeStack(NodeStack);
@@ -7515,6 +7566,10 @@ begin
       CurIdentifier:=GetProcNameIdentifier(Node);
       if CompareIdentifierPtrs(CurIdentifier,Identifier)=0 then
         exit(Node);
+    end else if Node.Desc=ctnGenericType then begin
+      if (Node.FirstChild<>nil)
+      and (CompareIdentifierPtrs(@Src[Node.FirstChild.StartPos],Identifier)=0) then
+        exit(Node);
     end;
     // next
     if Node.PriorBrother<>nil then
@@ -7667,8 +7722,10 @@ begin
       Params:=TFindDeclarationParams.Create;
       Params.GenParams := ResultParams.GenParams;
       if IdentifierNode.Desc=ctnSpecialize then begin
-         SpecializeNode:=IdentifierNode;
-         Params.SetGenericParamValues(Self, SpecializeNode);
+        if AncestorContext.Node.Desc <> ctnGenericType then
+          RaiseExpected('generic type');
+        SpecializeNode:=IdentifierNode;
+        Params.SetGenericParamValues(Self, SpecializeNode, AncestorContext.Tool, AncestorContext.Node);
       end;
       try
         Params.Flags:=fdfDefaultForExpressions+[fdfFindChildren];
@@ -8897,6 +8954,8 @@ var
   ExprType: TExpressionType;
   FirstParamStartPos: Integer;
   FirstParamProcContext: TFindContext;
+  MyContextAliasType: TFindContext;
+  ContextAliasType: PFindContext;
 
   procedure RaiseIdentExpected(const Id: int64);
   begin
@@ -9126,7 +9185,7 @@ var
       ResolveTypeLessProperty;
     end;
 
-    CurAliasType:=nil;
+    CurAliasType:=ContextAliasType;
     if AtEnd then CurAliasType:=AliasType;
 
     // find base type
@@ -9607,7 +9666,10 @@ var
                 //   TMyClass.Create.
                 //   :=TMyClass.Create;
                 // use this class (the constructor can be defined in the ancestor)
-                ExprType.Context:=Context;
+                if MyContextAliasType.Tool<> nil then
+                  ExprType.Context:=MyContextAliasType
+                else
+                  ExprType.Context:=Context;
                 Params.Load(OldInput,true);
                 exit;
               end;
@@ -10220,6 +10282,8 @@ var
   end;
   
 begin
+  MyContextAliasType := CleanFindContext;
+  ContextAliasType:=@MyContextAliasType;
   Result:=CleanExpressionType;
   FirstParamStartPos := -1;
   FirstParamProcContext := CleanFindContext;
@@ -12505,6 +12569,13 @@ var Node: TCodeTreeNode;
 begin
   {$IFDEF CheckNodeTool}CheckNodeTool(StartNode);{$ENDIF}
   if StartNode=nil then exit;
+  //Node:=StartNode;
+  //while Node<>nil do begin
+  //  if Node.Desc=ctnGenericType then
+  //    exit;
+  //  Node:=Node.Parent;
+  //end;
+
   if EndNode=nil then EndNode:=StartNode;
 
   if Params.NewNode<>nil then begin
@@ -12643,7 +12714,6 @@ procedure TFindDeclarationTool.CreateBaseTypeCaches(
 var i: integer;
   Entry: PCodeTreeNodeStackEntry;
   BaseTypeCache: TBaseTypeCache;
-  NextEntry: PCodeTreeNodeStackEntry;
 begin
   {$IFDEF ShowBaseTypeCache}
   DbgOut('[TFindDeclarationTool.CreateBaseTypeCaches] ',
@@ -12664,19 +12734,14 @@ begin
       {$IFDEF ShowBaseTypeCache}
       DebugLn('  i=',DbgS(i),' Node=',Entry^.Node.DescAsString,' "',copy(Entry^.Tool.Src,Entry^.Node.StartPos,15),'"');
       {$ENDIF}
+      if Entry^.AliasNode = nil then continue;
       BaseTypeCache:=
         CreateNewBaseTypeCache(TFindDeclarationTool(Entry^.Tool),Entry^.Node);
       if BaseTypeCache<>nil then begin
         BaseTypeCache.BaseNode:=Result.Node;
         BaseTypeCache.BaseTool:=Result.Tool;
-        if i<NodeStack^.StackPtr then begin
-          NextEntry:=GetNodeStackEntry(NodeStack,i+1);
-          BaseTypeCache.NextNode:=NextEntry^.Node;
-          BaseTypeCache.NextTool:=NextEntry^.Tool;
-        end else begin
-          BaseTypeCache.NextNode:=Result.Node;
-          BaseTypeCache.NextTool:=Result.Tool;
-        end;
+        BaseTypeCache.AliasNode:=Entry^.AliasNode;
+        BaseTypeCache.AliasTool:=Entry^.AliasTool;
       end;
     end;
   end;
@@ -13786,7 +13851,7 @@ begin
   if FFoundProcStackFirst=aFoundProc then
     FFoundProcStackFirst:=aFoundProc^.Next;
   if FFoundProcStackLast=aFoundProc then
-    FFoundProcStackLast:=aFoundProc^.Next;
+    FFoundProcStackLast:=aFoundProc^.Prior;
   with aFoundProc^ do begin
     if Next<>nil then
       Next^.Prior:=Prior;
@@ -14038,8 +14103,8 @@ begin
 end;
 
 procedure TFindDeclarationParams.SetGenericParamValues(
-  SpecializeParamsTool: TFindDeclarationTool;
-  SpecializeNode: TCodeTreeNode);
+  SpecializeParamsTool: TFindDeclarationTool; SpecializeNode: TCodeTreeNode;
+  GenericTool: TFindDeclarationTool; GenericNode: TCodeTreeNode);
 var
   GenP: TGenericParams;
 begin
@@ -14054,9 +14119,57 @@ begin
 
   GenParams.ParamValuesTool := SpecializeParamsTool;
   GenParams.SpecializeParamsNode := SpecializeNode.FirstChild.NextBrother;
+  GenParams.GenericTool := GenericTool;
+  GenParams.GenericNode := GenericNode;
+end;
+
+procedure TFindDeclarationParams.AppendGenericParamValues(
+  AGenParams: TGenericParams);
+var
+  p: TGenericParams;
+begin
+  if GenParams.ParamValuesTool = nil then begin
+    GenParams := AGenParams;
+    exit;
+  end;
+
+  p:=GenParams;
+  while Length(p.OuterGenParam)>0 do
+    p:=p.OuterGenParam[0];
+  SetLength(p.OuterGenParam, 1);
+  p.OuterGenParam[0]:=AGenParams;
 end;
 
 function TFindDeclarationParams.FindGenericParamType: Boolean;
+
+  function DoFindIdentifierInContext(Tool: TFindDeclarationTool): boolean;
+  var
+    SubParams: TFindDeclarationParams;
+  begin
+    SubParams:=TFindDeclarationParams.Create(Self);
+    try
+      SubParams.GenParams:=GenParams;
+      SubParams.ContextNode:=ContextNode;
+      SubParams.Flags:=Flags;
+      SubParams.SetIdentifier(IdentifierTool, Identifier, nil);
+
+      Result:=Tool.FindIdentifierInContext(SubParams);
+
+      if Result then begin
+        NewNode:=SubParams.NewNode;
+        NewCodeTool:=SubParams.NewCodeTool;
+        if  (fodDoNotCache in SubParams.NewFlags) then begin
+          Include(Flags, fdfDoNotCache);
+          Include(NewFlags, fodDoNotCache);
+        end;
+        //SubParams.AppendGenericParamValues(GenParams);
+        //GenParams:=SubParams.GenParams;
+      end;
+    finally
+      SubParams.Free;
+    end;
+  end;
+
   function SearchInGenericRestrictions: boolean;
   begin
     Result := False;
@@ -14064,14 +14177,16 @@ function TFindDeclarationParams.FindGenericParamType: Boolean;
     or (NewNode.FirstChild.Desc <> ctnGenericConstraint) then exit;
 
     Identifier:=@NewCodeTool.Src[NewNode.FirstChild.StartPos];
-    Result:=NewCodeTool.FindIdentifierInContext(Self);
+    Result := DoFindIdentifierInContext(NewCodeTool);
   end;
 var
   i, n: integer;
   GenParamType: TCodeTreeNode;
   OldGenParam: TGenericParams;
+  ContextTool: TFindDeclarationTool;
 begin
   Include(Flags, fdfDoNotCache);
+  Include(NewFlags, fodDoNotCache);
   // NewCodeTool, NewNode=GenericParamType
   if not Assigned(NewCodeTool) or not Assigned(NewNode) then exit(false);
   if not Assigned(GenParams.ParamValuesTool)
@@ -14080,12 +14195,37 @@ begin
     Result :=  SearchInGenericRestrictions;
     exit;
   end;
+
+  // n := Find the index of the param in the generic list
   n:=0;
   GenParamType:=NewNode;
   while GenParamType<>nil do begin
     GenParamType:=GenParamType.PriorBrother;
     inc(n);
   end;
+
+  OldGenParam := GenParams;
+  while (GenParams.ParamValuesTool <> nil) and
+    ( (NewNode.StartPos < GenParams.GenericNode.StartPos) or
+      (NewNode.EndPos > GenParams.GenericNode.EndPos) or
+      (NewCodeTool <> GenParams.GenericTool)
+    )
+  do begin
+    if Length(GenParams.OuterGenParam) > 0 then
+      GenParams := GenParams.OuterGenParam[0]
+    else begin
+      GenParams.ParamValuesTool:=nil;
+      GenParams.SpecializeParamsNode:=nil;
+    end;
+  end;
+
+  if (GenParams.ParamValuesTool = nil) then begin
+    GenParams := OldGenParam;
+    Result :=  SearchInGenericRestrictions;
+    exit;
+  end;
+
+
   with GenParams.ParamValuesTool do begin
     MoveCursorToNodeStart(GenParams.SpecializeParamsNode);
     ReadNextAtom;
@@ -14105,17 +14245,31 @@ begin
       if CurPos.Flag<>cafWord then
         RaiseExceptionFmt(20170421200710,ctsIdentExpectedButAtomFound,[GetAtom]);
     end;
+
     Identifier:=@Src[CurPos.StartPos];
     IdentifierTool:=GenParams.ParamValuesTool;
     ContextNode:=GenParams.SpecializeParamsNode;
-    OldGenParam := GenParams;
+    ContextTool:=GenParams.ParamValuesTool;
     if Length(GenParams.OuterGenParam) > 0 then
       GenParams := GenParams.OuterGenParam[0]
     else begin
       GenParams.ParamValuesTool:=nil;
       GenParams.SpecializeParamsNode:=nil;
     end;
-    Result:=FindIdentifierInContext(Self);
+    Result:=DoFindIdentifierInContext(ContextTool);
+
+    if not Result then begin
+      GenParamType := ContextNode.FirstChild;
+      for i := 2 to n do if GenParamType <> nil then GenParamType := GenParamType.NextBrother;
+      if GenParamType <> nil then begin
+        NewNode:=GenParamType;
+        NewCodeTool:=ContextTool;
+        Include(Flags, fdfDoNotCache);
+        Include(NewFlags, fodDoNotCache);
+        Result := True;
+      end;
+    end;
+
     GenParams := OldGenParam;
   end;
 end;

@@ -38,11 +38,11 @@ uses
   DbgIntfDebuggerBase, DbgIntfBaseTypes, LazClasses, SpinEx, LazDebuggerIntf,
   LazDebuggerIntfBaseTypes,
   // IDE
-  BaseDebugManager, InputHistory, Debugger,
-  IdeDebuggerWatchResPrinter, IdeDebuggerWatchResult, IdeDebuggerWatchResUtils,
-  IdeDebuggerBase, ArrayNavigationFrame, IdeDebuggerOpts,
-  IdeDebuggerBackendValueConv, WatchInspectToolbar, DebuggerDlg,
-  EnvironmentOpts, RecentListProcs, IdeDebuggerStringConstants;
+  BaseDebugManager, InputHistory, Debugger, IdeDebuggerWatchResPrinter,
+  IdeDebuggerWatchResult, IdeDebuggerWatchResUtils, IdeDebuggerBase,
+  ArrayNavigationFrame, IdeDebuggerOpts, IdeDebuggerBackendValueConv,
+  WatchInspectToolbar, DebuggerDlg, EnvironmentOpts, RecentListProcs,
+  IdeDebuggerStringConstants, IdeDebuggerUtils;
 
 type
 
@@ -85,6 +85,7 @@ type
     FUpdatedData: Boolean;
     FWatchPrinter: TWatchResultPrinter;
     FCurrentResData: TWatchResultData;
+    FCurrentTypePrefix: AnsiString;
     FHumanReadable: ansistring;
     FGridData: TStringGrid;
     FGridMethods: TStringGrid;
@@ -198,12 +199,12 @@ begin
   WatchInspectNav1.ColTypeEnabled := True;
   WatchInspectNav1.ColVisibilityEnabled := False;
 
-  v := FWatchPrinter.PrintWatchValue(Res, wdfDefault);
-  StatusBar1.SimpleText:=ShortenedExpression+' : '+Res.TypeName + ' = ' + v;
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+  StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + v;
 
   GridDataSetup;
   FGridData.Cells[1,1]:=WatchInspectNav1.Expression;
-  FGridData.Cells[2,1]:=Res.TypeName;
+  FGridData.Cells[2,1]:=FCurrentTypePrefix+Res.TypeName;
   FGridData.Cells[3,1]:=v;
 end;
 
@@ -224,13 +225,13 @@ begin
   WatchInspectNav1.ColTypeEnabled := True;
   WatchInspectNav1.ColVisibilityEnabled := False;
 
-  v := FWatchPrinter.PrintWatchValue(Res, wdfDefault);
-  StatusBar1.SimpleText:=ShortenedExpression+' : '+Res.TypeName + ' = ' + v;
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+  StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + v;
 
   GridDataSetup;
-  v := FWatchPrinter.PrintWatchValue(Res, wdfPointer);
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfPointer));
   FGridData.Cells[1,1]:=WatchInspectNav1.Expression;
-  FGridData.Cells[2,1]:=Res.TypeName;
+  FGridData.Cells[2,1]:=FCurrentTypePrefix+Res.TypeName;
   FGridData.Cells[3,1]:=v;
 
   Res := Res.DerefData;
@@ -238,7 +239,7 @@ begin
     FGridData.RowCount := 3;
     FGridData.Cells[1,2]:=Format(lisInspectPointerTo, ['']);
     FGridData.Cells[2,2]:=Res.TypeName;
-    FGridData.Cells[3,2]:=FWatchPrinter.PrintWatchValue(Res, wdfDefault);
+    FGridData.Cells[3,2]:=ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
   end;
 end;
 
@@ -260,12 +261,12 @@ begin
   WatchInspectNav1.ColTypeEnabled := True;
   WatchInspectNav1.ColVisibilityEnabled := False;
 
-  v := FWatchPrinter.PrintWatchValue(Res, wdfDefault);
-  StatusBar1.SimpleText:=ShortenedExpression+' : '+Res.TypeName + ' = ' + v;
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+  StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + v;
 
   GridDataSetup;
   FGridData.Cells[1,1]:=WatchInspectNav1.Expression;
-  FGridData.Cells[2,1]:=Res.TypeName;
+  FGridData.Cells[2,1]:=FCurrentTypePrefix+Res.TypeName;
   // TODO: show declaration (all elements)
   FGridData.Cells[3,1]:=v;
 end;
@@ -301,7 +302,7 @@ begin
     exit;
   end;
 
-  StatusBar1.SimpleText:=ShortenedExpression+': '+Res.TypeName + '  Len: ' + IntToStr(Res.ArrayLength);
+  StatusBar1.SimpleText:=ShortenedExpression+': '+FCurrentTypePrefix+Res.TypeName + '  Len: ' + IntToStr(Res.ArrayLength);
 
   LowBnd := Res.LowBound;
   if FUpdatedData then begin
@@ -341,9 +342,10 @@ begin
     for i := SubStart to SubStart+CurPageCount-1 do begin
       Res.SetSelectedIndex(i);
       Entry := Res.SelectedEntry;
+      Entry := Entry.ConvertedRes;
       FGridData.Cells[1,i+1-SubStart] := IntToStr(LowBnd + ResIdxOffs + i);
       FGridData.Cells[2,i+1-SubStart] := Entry.TypeName;
-      FGridData.Cells[3,i+1-SubStart] := FWatchPrinter.PrintWatchValue(Entry, wdfDefault);
+      FGridData.Cells[3,i+1-SubStart] := ClearMultiline(FWatchPrinter.PrintWatchValue(Entry, wdfDefault));
     end;
   end;
 end;
@@ -371,9 +373,9 @@ begin
   if Res.Anchestor <> nil then
     AnchType := Res.Anchestor.TypeName;
   if (Res.ValueKind = rdkStruct) and (AnchType <> '') then
-    StatusBar1.SimpleText:=Format(lisInspectClassInherit, [ShortenedExpression, Res.TypeName, AnchType])
+    StatusBar1.SimpleText:=Format(lisInspectClassInherit, [ShortenedExpression, FCurrentTypePrefix+Res.TypeName, AnchType])
   else
-    StatusBar1.SimpleText:=ShortenedExpression+' : '+Res.TypeName + ' = ' + FHumanReadable;
+    StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + FHumanReadable;
 
   GridDataSetup;
   FldCnt := 0;
@@ -407,6 +409,7 @@ begin
   m := 1;
   for FldInfo in res do begin
     Fld := FldInfo.Field;
+    Fld := Fld.ConvertedRes;
     Fld2 := ExtractProcResFromMethod(Fld);
     if (MethCnt > 0) and
        (Fld <> nil) and
@@ -457,7 +460,7 @@ begin
       else FGridData.Cells[2,f] := '';
 
       if Fld <> nil
-      then FGridData.Cells[3,f] := FWatchPrinter.PrintWatchValue(Fld, wdfDefault)
+      then FGridData.Cells[3,f] := ClearMultiline(FWatchPrinter.PrintWatchValue(Fld, wdfDefault))
       else FGridData.Cells[3,f] := '<error>';
 
       FGridData.Cells[4,f] := FieldLocationNames[FldInfo.FieldVisibility];
@@ -590,7 +593,7 @@ begin
           i := FGridData.Row;
           if (i < 1) or (i >= FGridData.RowCount) then exit;
           s := FGridData.Cells[1, i];
-          Execute(WatchInspectNav1.Expression + '[' + s + ']');
+          Execute(GetExpressionForArrayElement(WatchInspectNav1.Expression, s));
         end;
       rdkStruct: begin
           i := FGridData.Row;
@@ -1198,6 +1201,7 @@ begin
   FAlternateExpression := '';
   FExpressionWasEvaluated := True;
   FCurrentResData := WatchInspectNav1.CurrentWatchValue.ResultData;
+  FCurrentTypePrefix := '';
   FHumanReadable := FWatchPrinter.PrintWatchValue(FCurrentResData, wdfStructure);
 
   if WatchInspectNav1.CurrentWatchValue.Validity = ddsValid then begin
@@ -1220,7 +1224,7 @@ begin
       //  skDecomposable: ;
         else begin
             Clear;
-            StatusBar1.SimpleText:=Format(lisInspectUnavailableError, [ShortenedExpression, FHumanReadable]);
+            StatusBar1.SimpleText:=Format(lisInspectUnavailableError, [ShortenedExpression, ClearMultiline(FHumanReadable)]);
             ErrorLabel.Caption :=Format(lisInspectUnavailableError, [ShortenedExpression, FHumanReadable]);
             PageControl.ActivePage := ErrorPage;
           end;
@@ -1229,18 +1233,15 @@ begin
     else begin
     // resultdata
 
-      if (FCurrentResData.ValueKind = rdkConvertRes)
-      then begin
-        if (FCurrentResData.FieldCount > 0) then
-        //if (FCurrentResData.FieldCount = 1) then
-          FCurrentResData := FCurrentResData.Fields[0].Field;
+      while (FCurrentResData.ValueKind = rdkConvertRes) or (FCurrentResData.ValueKind = rdkVariant) do
+      begin
+        FCurrentResData := FCurrentResData.ConvertedRes;
 
-        if (FCurrentResData.FieldCount > 1) and
-           ( (FCurrentResData.Fields[0].Field = nil) or
-             (FCurrentResData.Fields[0].Field.ValueKind = rdkError)
-           )
-        then
-          FCurrentResData := FCurrentResData.Fields[1].Field;
+        if FCurrentResData.ValueKind = rdkVariant then begin
+          if FCurrentResData.TypeName <> '' then
+            FCurrentTypePrefix := FCurrentResData.TypeName+ ': ';
+          FCurrentResData := FCurrentResData.DerefData;
+        end;
       end;
 
 
@@ -1280,7 +1281,7 @@ begin
 //        rdkConvertRes:    InspectResDataStruct;
         else begin
             Clear;
-            StatusBar1.SimpleText:=Format(lisInspectUnavailableError, [ShortenedExpression, FHumanReadable]);
+            StatusBar1.SimpleText:=Format(lisInspectUnavailableError, [ShortenedExpression, ClearMultiline(FHumanReadable)]);
             ErrorLabel.Caption :=Format(lisInspectUnavailableError, [ShortenedExpression, FHumanReadable]);
             PageControl.ActivePage := ErrorPage;
           end;
@@ -1291,7 +1292,7 @@ begin
   end;
 
   Clear;
-  StatusBar1.SimpleText:=Format(lisInspectUnavailableError, [ShortenedExpression, FHumanReadable]);
+  StatusBar1.SimpleText:=Format(lisInspectUnavailableError, [ShortenedExpression, ClearMultiline(FHumanReadable)]);
   ErrorLabel.Caption :=Format(lisInspectUnavailableError, [ShortenedExpression, FHumanReadable]);
   PageControl.ActivePage := ErrorPage;
 end;

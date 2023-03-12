@@ -581,6 +581,7 @@ begin
   end;
   if pw > 0 then begin
     ADrawer.Pen := FFramePen;
+    ADrawer.SetPenColor(FFramePen.Color);
     ADrawer.SetBrushParams(bsClear, clTAColor);
     ADrawer.Rectangle(ARect);
   end;
@@ -640,6 +641,10 @@ begin
 
   ADrawer.SetBrushParams(bsClear, clTAColor);
   ADrawer.Pen := Pen;
+  if Pen.Color = clDefault then
+    ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+  else
+    ADrawer.SetPenColor(Pen.Color);
   with TDrawFuncHelper.Create(Self, DomainExclusions, @DoCalculate, Step) do
     try
       DrawFunction(ADrawer);
@@ -749,6 +754,10 @@ begin
     end;
     ADrawer.SetBrushParams(bsClear, clTAColor);
     ADrawer.Pen := Pen;
+    if Pen.Color = clDefault then
+      ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+    else
+      ADrawer.SetPenColor(Pen.Color);
     ADrawer.Line(R.Left, R.Bottom, R.Right, R.Top);
     exit;
   end;
@@ -833,6 +842,10 @@ begin
 
   ADrawer.SetBrushParams(bsClear, clTAColor);
   ADrawer.Pen := Pen;
+  if Pen.Color = clDefault then
+    ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+  else
+    ADrawer.SetPenColor(Pen.Color);
 
   if csDesigning in ComponentState then begin
     with ParentChart do begin
@@ -1116,6 +1129,10 @@ var
   begin
     ADrawer.SetBrushParams(bsClear, clTAColor);
     ADrawer.Pen := Pen;
+    if Pen.Color = clDefault then
+      ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+    else
+      ADrawer.SetPenColor(Pen.Color);
     if Styles <> nil then
       Styles.Apply(ADrawer, AStyleIndex, true);
       // "true" avoids painting the gaps of non-solid lines in brush color
@@ -1415,10 +1432,18 @@ procedure TCubicSplineSeries.Draw(ADrawer: IChartDrawer);
     if ASpline.FIsUnorderedX then begin
       if not {%H-}IsUnorderedVisible then exit;
       ADrawer.Pen := BadDataPen;
+      if BadDataPen.Color = clDefault then
+        ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+      else
+        ADrawer.SetPenColor(BadDataPen.Color);
     end
     else begin
       if not Pen.EffVisible then exit;
       ADrawer.Pen := Pen;
+      if Pen.Color = clDefault then
+        ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+      else
+        ADrawer.SetPenColor(Pen.Color);
     end;
     with TPointsDrawFuncHelper.Create(Self, xmin, xmax, ASpline.FSourceStartIndex, @ASpline.Calculate, Step) do
       try
@@ -1441,7 +1466,6 @@ begin
   for s in FSplines do
     if not s.IsFewPoints then
       DrawSpline(s);
-
   DrawErrorBars(ADrawer);
   DrawLabels(ADrawer, 0);
   DrawPointers(ADrawer, 0, true);
@@ -1554,6 +1578,11 @@ var
   ext: TDoubleRect;
 begin
   ext := FChart.CurrentExtent;
+  if IsRotated then
+  begin
+    Exchange(ext.a.x, ext.a.y);
+    Exchange(ext.b.x, ext.b.y);
+  end;
 
   if (csoExtrapolateLeft in FOptions) and (ASpline = FSplines[0]) then
     AXmin := ext.a.x
@@ -1781,6 +1810,10 @@ begin
   if FAutoFit then ExecFit;
   ADrawer.SetBrushParams(bsClear, clTAColor);
   ADrawer.Pen := Pen;
+  if Pen.Color = clDefault then
+    ADrawer.SetPenColor(FChart.GetDefaultColor(dctFont))
+  else
+    ADrawer.SetPenColor(Pen.Color);
   de := PrepareIntervals;
   try
     PrepareGraphPoints(FChart.CurrentExtent, true);

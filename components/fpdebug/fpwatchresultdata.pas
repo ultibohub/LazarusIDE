@@ -27,12 +27,14 @@ type
     FFirstIndexOffs: Integer;
     FRecurseCnt, FRecurseCntLow,
     FRecursePointerCnt,
-    FRecurseInstanceCnt, FRecurseDynArray: integer;
+    FRecurseInstanceCnt, FRecurseDynArray, FRecurseArray: integer;
     FRecurseAddrList: TDbgPtrList;
     FLastValueKind: TDbgSymbolKind;
     FHasEmbeddedPointer: Boolean;
     FOuterArrayIdx, FTotalArrayCnt: integer;
     FRepeatCount: Integer;
+    FArrayTypeDone: Boolean;
+    FEncounteredError: Boolean;
   protected
     function CheckError(AnFpValue: TFpValue; AnResData: TLzDbgWatchDataIntf): boolean;
 
@@ -99,6 +101,7 @@ begin
     exit;
   Result := IsError(AnFpValue.LastError);
   if Result then begin
+    FEncounteredError := True;
     if AnResData <> nil then
       AnResData.CreateError(ErrorHandler.ErrorAsString(AnFpValue.LastError));
     AnFpValue.ResetError;
@@ -111,6 +114,8 @@ var
   t: TFpSymbol;
   TpName: String;
 begin
+  if FArrayTypeDone then
+    exit;
   t := AnFpValue.TypeInfo;
   if ADeref and (t <> nil) then
     t := t.TypeInfo;
@@ -327,12 +332,16 @@ var
   EntryRes: TLzDbgWatchDataIntf;
   MemberValue, TmpVal: TFpValue;
   Cache: TFpDbgMemCacheBase;
+  Dummy: QWord;
+  MLoc: TFpDbgMemLocation;
 begin
   Result := True;
 
   Cnt := AnFpValue.MemberCount;
-  if CheckError(AnFpValue, AnResData) then
+  if CheckError(AnFpValue, AnResData) then begin
+    AddTypeNameToResData(AnFpValue, AnResData);
     exit;
+  end;
   CurRecurseDynArray := FRecurseDynArray;
   OuterIdx := FOuterArrayIdx;
 
@@ -363,6 +372,7 @@ begin
 
   AddTypeNameToResData(AnFpValue, AnResData);
 
+  inc(FRecurseArray);
   Cache := nil;
   try
     if (Cnt <= 0) or
@@ -401,7 +411,7 @@ begin
     else begin
       repeat
         TmpVal := AnFpValue.Member[StartIdx + Min(CacheCnt, Cnt) + LowBnd]; // // TODO : CheckError // ClearError for AnFpValue
-        if IsTargetNotNil(TmpVal.Address) then begin
+        if (TmpVal <> nil) and IsTargetNotNil(TmpVal.Address) then begin
           {$PUSH}{$R-}{$Q-}
           CacheSize := TmpVal.Address.Address - MemberValue.Address.Address;
           TmpVal.ReleaseReference;
@@ -454,14 +464,36 @@ begin
         EntryRes.CreateError('Error: Could not get member')
       else
         DoWritePointerWatchResultData(MemberValue, EntryRes, Addr);
+
+      if (i = StartIdx) and (MemberValue <> nil) and FEncounteredError then begin
+        MLoc := MemberValue.Address;
+        if IsValidLoc(MLoc) then
+          Context.ReadMemory(MLoc, SizeVal(1), @Dummy);
+        if ( IsError(Context.LastMemError) or (not IsValidLoc(MLoc)) ) and
+           (MLoc <> AnFpValue.DataAddress) and (IsValidLoc(AnFpValue.DataAddress))
+        then
+          Context.ReadMemory(AnFpValue.DataAddress, SizeVal(1), @Dummy);
+        if IsError(Context.LastMemError) then begin
+          // array is in unreadable memory
+          AnResData.CreateError(ErrorHandler.ErrorAsString(Context.LastMemError));
+          MemberValue.ReleaseReference;
+          exit;
+        end;
+      end;
+
       MemberValue.ReleaseReference;
+      if FRecurseArray = 1 then
+        FArrayTypeDone := True;
     end;
     DebugLn(IsError(AnFpValue.LastError), ['!!! ArrayToResData() unexpected error in array value', ErrorHandler.ErrorAsString(AnFpValue.LastError)]);
     AnFpValue.ResetError;
 
   finally
+    if FRecurseArray = 1 then
+      FArrayTypeDone := False;
     FRecurseDynArray := CurRecurseDynArray;
     FOuterArrayIdx := OuterIdx;
+    dec(FRecurseArray);
     if Cache <> nil then
       Context.MemManager.CacheManager.RemoveCache(Cache);
   end
@@ -473,16 +505,22 @@ function TFpWatchResultConvertor.StructToResData(AnFpValue: TFpValue;
   procedure AddVariantMembers(VariantPart: TFpValue; ResAnch: TLzDbgWatchDataIntf);
   var
     VariantContainer, VMember: TFpValue;
-    i, j: Integer;
+    i, j, CurRecurseArray: Integer;
     ResField, ResList: TLzDbgWatchDataIntf;
     discr: QWord;
-    hasDiscr, FoundDiscr, UseDefault: Boolean;
+    hasDiscr, FoundDiscr, UseDefault, CurArrayTypeDone: Boolean;
     MBVis: TLzDbgFieldVisibility;
     n: String;
   begin
     VariantContainer := VariantPart.Member[-1];
     if VariantContainer = nil then
       exit;
+
+    CurRecurseArray := FRecurseArray;
+    CurArrayTypeDone := FArrayTypeDone;
+    FArrayTypeDone := False;
+    FRecurseArray := 0; // Allow an inside array to optimize
+    try
 
     ResList := ResAnch.AddField('', dfvUnknown, [dffVariant]);
     ResList.CreateArrayValue(datUnknown);
@@ -556,6 +594,10 @@ function TFpWatchResultConvertor.StructToResData(AnFpValue: TFpValue;
       if FoundDiscr then
         break;
     end;
+    finally
+      FRecurseArray := CurRecurseArray;
+      FArrayTypeDone := CurArrayTypeDone;
+    end;
   end;
 
 type
@@ -571,6 +613,8 @@ var
   MbName: String;
   MBVis: TLzDbgFieldVisibility;
   Addr: TDBGPtr;
+  Dummy: QWord;
+  MLoc: TFpDbgMemLocation;
 begin
   Result := True;
 
@@ -692,6 +736,22 @@ begin
       if not DoWritePointerWatchResultData(MemberValue, ResField, Addr) then
         ResField.CreateError('Unknown');
 
+      if (i = 0) and (MemberValue <> nil) and FEncounteredError then begin
+        MLoc := MemberValue.Address;
+        if IsValidLoc(MLoc) then
+          Context.ReadMemory(MemberValue.Address, SizeVal(1), @Dummy);
+        if ( IsError(Context.LastMemError) or (not IsValidLoc(MLoc)) ) and
+           (MLoc <> AnFpValue.DataAddress) and (IsValidLoc(AnFpValue.DataAddress))
+        then
+          Context.ReadMemory(AnFpValue.DataAddress, SizeVal(1), @Dummy);
+        if IsError(Context.LastMemError) then begin
+          // struct is in unreadable memory
+          AnResData.CreateError(ErrorHandler.ErrorAsString(Context.LastMemError));
+          MemberValue.ReleaseReference;
+          exit;
+        end;
+      end;
+
       MemberValue.ReleaseReference;
     end;
   finally
@@ -706,7 +766,7 @@ function TFpWatchResultConvertor.ProcToResData(AnFpValue: TFpValue;
   AnResData: TLzDbgWatchDataIntf): Boolean;
 var
   addr: TDBGPtr;
-  s, LocName, TpName: String;
+  s, LocName: String;
   t, sym: TFpSymbol;
   proc: TFpSymbolDwarf;
   par: TFpValueDwarf;
@@ -757,6 +817,7 @@ var
   s: String;
 begin
   Result := False;
+  FEncounteredError := False;
   case AnFpValue.Kind of
     skPointer:  Result := PointerToResData(AnFpValue, AnResData);
     skInteger,
@@ -893,10 +954,12 @@ begin
     FRecurseCnt         := -2;
   FRecurseInstanceCnt :=  0;
   FRecurseDynArray    :=  0;
+  FRecurseArray       := 0;
   FRecursePointerCnt := 0;
   FRecurseCntLow := FRecurseCnt+1;
   FOuterArrayIdx := -1;
   FTotalArrayCnt :=  0;
+  FArrayTypeDone := False;
 
   FLastValueKind := AnFpValue.Kind;
   FHasEmbeddedPointer := False;
