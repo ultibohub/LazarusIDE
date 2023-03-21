@@ -1,11 +1,12 @@
 unit AssemblerDlg;
 
 {$mode objfpc}{$H+}
+{$ModeSwitch advancedrecords}
 
 interface
 
 uses
-  Classes, SysUtils, Math, types,
+  Classes, SysUtils, Math, types, fgl,
   // LCL
   Forms, Controls, Graphics, ComCtrls, StdCtrls, ExtCtrls, Menus, ActnList,
   Clipbrd, LclType, LCLIntf,
@@ -14,14 +15,13 @@ uses
   // Codetools
   CodeToolManager, CodeCache,
   // IdeIntf
-  IDEWindowIntf, IDECommands, IDEImagesIntf,
+  IDEWindowIntf, IDECommands, IDEImagesIntf, SrcEditorIntf, IDEOptEditorIntf,
+  IdeIntfStrConsts,
   // DebuggerIntf
-  DbgIntfDebuggerBase,
+  DbgIntfDebuggerBase, SynEdit,
   LazDebuggerIntfBaseTypes,
   // IDEDebugger
-  DebuggerDlg, Debugger, BaseDebugManager,
-  // IDE
-  LazarusIDEStrConsts, EditorOptions, SourceEditor;
+  DebuggerDlg, Debugger, BaseDebugManager, IdeDebuggerStringConstants;
 
 type
 
@@ -45,9 +45,22 @@ type
     FileName, FullFileName: String;
     SourceLine: Integer;
     ImageIndex: Integer;
+    TargetAddr: TDbgPtr;             // Absolute Addr for relative jump/call
   end;
   TAsmDlgLineEntries = Array of TAsmDlgLineEntry;
 
+  { THistoryEntry }
+
+  THistoryEntry = record
+    Addr, DispAddr: TDBGPtr;
+    class operator = (a,b: THistoryEntry): boolean;
+  end;
+  TDBGPtrList = specialize TFPGList<THistoryEntry>;
+
+  const
+    MAX_ASM_HIST = 32;
+
+  type
 
   TAssemblerDlg = class(TDebuggerDlg)
     actCurrentInstr: TAction;
@@ -68,6 +81,8 @@ type
     Timer1: TTimer;
     ToolBar1: TToolBar;
     ToolButton1: TToolButton;
+    tbJumpBack: TToolButton;
+    tbJumpForward: TToolButton;
     ToolButtonCopy: TToolButton;
     ToolButtonGoto: TToolButton;
     ToolButtonGotoCurrent: TToolButton;
@@ -96,6 +111,8 @@ type
     procedure sbHorizontalChange(Sender: TObject);
     procedure sbVerticalChange(Sender: TObject);
     procedure sbVerticalScroll(Sender: TObject; ScrollCode: TScrollCode; var ScrollPos: Integer);
+    procedure tbJumpBackClick(Sender: TObject);
+    procedure tbJumpForwardClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure ToolButtonPowerClick(Sender: TObject);
   private
@@ -107,8 +124,12 @@ type
     FCurrentLocation: TDBGPtr; // current view location (lines are relative to this location)
     FLocation: TDBGPtr;  // the actual PC, green "=>" execution mark
     FMouseIsDown: Boolean;
+    FLinkLine, FTargetLine: integer;
     FIsVScrollTrack: Boolean;
     FVScrollCounter, FVScrollPos: Integer;
+    FHistory: TDBGPtrList;
+    FHistoryIdx: Integer;
+    FHistoryLock: boolean;
 
     FTopLine: Integer;
     FLastTopLine: Integer;
@@ -131,7 +152,9 @@ type
     FCurLineImgIdx: Integer;
     FImgSourceLine: Integer;
     FImgNoSourceLine: Integer;
+    FImageTarget: Integer;
 
+    function LineForAddr(AnAddr: TDBGPtr):Integer;
     procedure BreakPointChanged(const {%H-}ASender: TIDEBreakPoints;
       const {%H-}ABreakpoint: TIDEBreakPoint);
     function  GetBreakpointFor(AnAsmDlgLineEntry: TAsmDlgLineEntry): TIDEBreakPoint;
@@ -158,7 +181,7 @@ type
     procedure SetTopLine(ALine: Integer);
     function IndexOfAddr(const AnAddr: TDBGPtr): Integer;
     procedure UpdateLocation(const AAddr: TDBGPtr);
-    procedure DoEditorOptsChanged(Sender: TObject; Restore: boolean);
+    procedure DoEditorOptsChanged(Sender: TObject);
   protected
     function GetSourceCodeLine(SrcFileName: string; SrcLineNumber: Integer): string;
     procedure DoBeginUpdate; override;
@@ -181,6 +204,13 @@ implementation
 
 var
   AsmWindowCreator: TIDEWindowCreator;
+
+{ THistoryEntry }
+
+class operator THistoryEntry. = (a, b: THistoryEntry): boolean;
+begin
+  Result := (a.Addr = b.Addr) and (a.DispAddr = b.DispAddr);
+end;
 
 { TAssemblerDlg }
 
@@ -265,13 +295,15 @@ begin
   BreakpointsNotification.OnRemove  := @BreakPointChanged;
   FIsVScrollTrack := False;
   FVScrollCounter := 0;
+  FHistory := TDBGPtrList.Create;
+  FLinkLine := -1;
 
   inherited Create(AOwner);
 //  DoubleBuffered := True;
 
   Caption := lisDisAssAssembler;
 
-  EditorOpts.AddHandlerAfterWrite(@DoEditorOptsChanged);
+  SourceEditorManagerIntf.RegisterChangeEvent(semEditorOptsChanged, @DoEditorOptsChanged);
   Caption := lisMenuViewAssembler;
   CopyToClipboard.Caption := lisDbgAsmCopyToClipboard;
   popCopyAddr.Caption := lisDbgAsmCopyAddressToClipboard;
@@ -306,20 +338,31 @@ begin
   FPowerImgIdxGrey := IDEImages.LoadImage('debugger_power_grey');
   ToolButtonPower.ImageIndex := FPowerImgIdx;
 
+  tbJumpBack.Enabled := False;
+  tbJumpBack.Caption := '';
+  tbJumpBack.ImageIndex := IDEImages.LoadImage('menu_search_jumpback');
+
+  tbJumpForward.Enabled := False;
+  tbJumpForward.Caption := '';
+  tbJumpForward.ImageIndex := IDEImages.LoadImage('menu_search_jumpforward');
+
   FCurLineImgIdx := IDEImages.LoadImage('debugger_current_line');
   //
 
   FImgSourceLine := IDEImages.LoadImage('debugger_source_line');
   FImgNoSourceLine := IDEImages.LoadImage('debugger_nosource_line');
+  FImageTarget := IDEImages.LoadImage('menu_run');
 end;
 
 destructor TAssemblerDlg.Destroy;
 begin
-  EditorOpts.RemoveHandlerAfterWrite(@DoEditorOptsChanged);
+  if SourceEditorManagerIntf <> nil then
+    SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorOptsChanged, @DoEditorOptsChanged);
   SetDisassembler(nil);
   SetDebugger(nil);
   FDisassemblerNotification.OnChange := nil;
   FDisassemblerNotification.ReleaseReference;
+  FHistory.Free;
   inherited Destroy;
 end;
 
@@ -564,7 +607,7 @@ procedure TAssemblerDlg.DoEndUpdate;
 begin
   inherited DoEndUpdate;
   if FVisibleChanged then begin
-    DoEditorOptsChanged(nil, False);
+    DoEditorOptsChanged(nil);
     if FCurrentLocation <> 0 then
       UpdateLocation(FCurrentLocation);
   end;
@@ -578,7 +621,7 @@ begin
     if IsUpdating then begin
       FVisibleChanged := True
     end else begin
-      DoEditorOptsChanged(nil, False);
+      DoEditorOptsChanged(nil);
       if FCurrentLocation <> 0 then
         UpdateLocation(FCurrentLocation);
     end;
@@ -600,23 +643,76 @@ end;
 
 procedure TAssemblerDlg.pbAsmMouseDown(Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
 begin
-  if Button <> mbLeft then exit;
-
-  SetSelection(FTopLine + Y div FLineHeight, False, ssShift in Shift);
-  FMouseIsDown := True;
+  y := y div FLineHeight;
+  case Button of
+    mbLeft: begin
+      FMouseIsDown := True;
+      if FLinkLine >= 0 then
+        Invalidate;
+      FTargetLine := -1;
+      FLinkLine := -1;
+      if not(ssCtrl in Shift) then begin
+        SetSelection(FTopLine + Y, False, ssShift in Shift);
+      end
+      else
+      if (y >= 0) and (y <= FLineCount) and
+         (FLineMap[y].TargetAddr <> 0) and (FDebugger <> nil)
+      then begin
+        FLinkLine := y;
+        FTargetLine := LineForAddr(FLineMap[y].TargetAddr);
+        Invalidate;
+      end;
+    end;
+    mbRight: ;
+    mbMiddle: ;
+    mbExtra1: tbJumpBackClick(nil);
+    mbExtra2: tbJumpForwardClick(nil);
+  end;
 end;
 
 procedure TAssemblerDlg.pbAsmMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 begin
   y := Y div FLineHeight;
-  if FMouseIsDown and (y >= 0) and (y < FLineCount)
-  then SetSelection(FTopLine + Y, False, True);
+  case FMouseIsDown of
+    True: begin
+      if (FLinkLine < 0) and (y >= 0) and (y < FLineCount)
+      then SetSelection(FTopLine + Y, False, True);
+    end;
+    False: begin
+      if (ssCtrl in Shift) and
+         (Y >= 0) and (y <= FLineCount) and
+         (FLineMap[y].TargetAddr <> 0) and (FDebugger <> nil)
+      then begin
+        if (FLinkLine <> y) then
+          Invalidate;
+        FLinkLine := y;
+        FTargetLine := LineForAddr(FLineMap[y].TargetAddr);
+      end
+      else begin
+        if FLinkLine >= 0 then
+          Invalidate;
+        FLinkLine := -1;
+        FTargetLine := -1;
+      end;
+    end;
+  end;
+
 end;
 
 procedure TAssemblerDlg.pbAsmMouseUp(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 begin
   FMouseIsDown := False;
+
+  if (ssCtrl in Shift) and (FLinkLine = y div FLineHeight) and
+     (FLinkLine >= 0) and (FLinkLine <= FLineCount) and
+     (FLineMap[FLinkLine].TargetAddr <> 0) and (FDebugger <> nil)
+  then begin
+    SetLocation(FDebugger, FLineMap[FLinkLine].TargetAddr);
+  end;
+  if FLinkLine >= 0 then
+    Invalidate;
+  FLinkLine := -1;
 end;
 
 procedure TAssemblerDlg.pbAsmMouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
@@ -625,6 +721,7 @@ var
 begin
   if not ToolButtonPower.Down then exit;
   Handled := True;
+  FLinkLine := -1;
 
   FWheelAccu := FWheelAccu + WheelDelta;
   j := FWheelAccu div 120;
@@ -690,11 +787,21 @@ begin
       pbAsm.Canvas.Brush.Color := pbAsm.Color;
       pbAsm.Canvas.Font.Color := pbAsm.Font.Color;
     end;
-    pbAsm.Canvas.Font.Bold := (FLineMap[n].State in [lmsSource, lmsFuncName]);
 
-    CheckImageIndexFor(FLineMap[n]);
-    if (FLineMap[n].ImageIndex >= 0)
-    then IDEImages.Images_16.Draw(pbAsm.Canvas, FGutterWidth - 16, Y, FLineMap[n].ImageIndex, True);
+    pbAsm.Canvas.Font.Bold := (FLineMap[n].State in [lmsSource, lmsFuncName]);
+    pbAsm.Canvas.Font.Underline := FLinkLine = n;
+
+    if (FLinkLine >=0) and (n = FTargetLine)
+    then begin
+      if (FImageTarget >= 0)
+      then IDEImages.Images_16.Draw(pbAsm.Canvas, FGutterWidth - 16, Y, FImageTarget, True);
+      pbAsm.Canvas.Font.Color := clHotLight;
+    end
+    else begin
+      CheckImageIndexFor(FLineMap[n]);
+      if (FLineMap[n].ImageIndex >= 0)
+      then IDEImages.Images_16.Draw(pbAsm.Canvas, FGutterWidth - 16, Y, FLineMap[n].ImageIndex, True);
+    end;
 
     S := FormatLine(FLineMap[n], W);
     pbAsm.Canvas.TextRect(R, X, Y, S);
@@ -812,6 +919,32 @@ begin
   Timer1.Enabled := True;
 end;
 
+procedure TAssemblerDlg.tbJumpBackClick(Sender: TObject);
+begin
+  if (FHistoryIdx <= 0) or (FDebugger = nil) then
+    exit;
+  dec(FHistoryIdx);
+
+  FHistoryLock := True;
+  if FHistoryIdx < FHistory.Count then
+    SetLocation(FDebugger, FHistory[FHistoryIdx].Addr, FHistory[FHistoryIdx].DispAddr);
+  FHistoryLock := False;
+end;
+
+procedure TAssemblerDlg.tbJumpForwardClick(Sender: TObject);
+begin
+  if (FHistoryIdx < 0) then
+    FHistoryIdx := -1;
+  if (FHistoryIdx >= FHistory.Count - 1) or (FDebugger = nil) then
+    exit;
+  inc(FHistoryIdx);
+
+  FHistoryLock := True;
+  if FHistoryIdx < FHistory.Count then
+    SetLocation(FDebugger, FHistory[FHistoryIdx].Addr, FHistory[FHistoryIdx].DispAddr);
+  FHistoryLock := False;
+end;
+
 procedure TAssemblerDlg.Timer1Timer(Sender: TObject);
 var
   i: Integer;
@@ -846,6 +979,13 @@ begin
     UpdateView;
   end
   else ToolButtonPower.ImageIndex := FPowerImgIdxGrey;
+end;
+
+function TAssemblerDlg.LineForAddr(AnAddr: TDBGPtr): Integer;
+begin
+  Result := FLineCount;
+  while (Result >= 0) and (FLineMap[Result].Addr <> AnAddr) do
+    dec(Result);
 end;
 
 procedure TAssemblerDlg.DoDebuggerDestroyed(Sender: TObject);
@@ -888,33 +1028,49 @@ begin
   UpdateView;
 end;
 
-procedure TAssemblerDlg.DoEditorOptsChanged(Sender: TObject; Restore: boolean);
+procedure TAssemblerDlg.DoEditorOptsChanged(Sender: TObject);
 var
   TM: TTextMetric;
+  Syn: TSynEdit;
 begin
-  if Restore then exit;
-  pbAsm.Font.Size := EditorOpts.EditorFontSize;
-  pbAsm.Font.Name := EditorOpts.EditorFont;
-  if EditorOpts.DisableAntialiasing then
-    pbAsm.Font.Quality := fqNonAntialiased
-  else
-    pbAsm.Font.Quality := fqDefault;
+  Syn := TSynEdit.Create(nil);
+  IDEEditorOptions.GetSynEditorSettings(Syn);
 
-  if GetTextMetrics(pbAsm.Canvas.Handle, TM{%H-}) then
+  Font := Syn.Font;
+  if HandleAllocated and GetTextMetrics(pbAsm.Canvas.Handle, TM{%H-}) then
   begin
     FCharWidth := TM.tmMaxCharWidth; // EditorOpts.ExtraCharSpacing +
     sbHorizontal.SmallChange := FCharWidth;
-    FLineHeight := Max(6,EditorOpts.ExtraLineSpacing + TM.tmHeight);
+    FLineHeight := Max(6, Syn.ExtraLineSpacing + TM.tmHeight);
     SetLineCount(pbAsm.Height div FLineHeight);
   end;
+
+  Syn.Free;
 end;
 
 procedure TAssemblerDlg.SetLocation(ADebugger: TDebuggerIntf; const AAddr: TDBGPtr;
   const ADispAddr: TDBGPtr);
 var
   i: Integer;
+  HistEntry: THistoryEntry;
 begin
   SetDebugger(ADebugger);
+
+  if (not FHistoryLock) and (ADebugger<>nil) and (AAddr<>0) then begin
+    if FHistoryIdx >= 0 then
+      while  FHistory.Count > FHistoryIdx + 1 do
+        FHistory.Delete(FHistoryIdx + 1);
+
+    HistEntry.Addr := AAddr;
+    HistEntry.DispAddr := ADispAddr;
+    FHistoryIdx := FHistory.Add(HistEntry);
+
+    while FHistory.Count > MAX_ASM_HIST do
+      FHistory.Delete(0);
+
+  end;
+  tbJumpBack.Enabled := FHistoryIdx > 0;
+  tbJumpForward.Enabled := FHistoryIdx < FHistory.Count - 1;
 
   if ADispAddr <> 0
   then FCurrentLocation := ADispAddr
@@ -1010,7 +1166,7 @@ end;
 function TAssemblerDlg.GetSourceCodeLine(SrcFileName: string; SrcLineNumber: Integer): string;
 var
   PasSource: TCodeBuffer;
-  Editor: TSourceEditor;
+  Editor: TSourceEditorInterface;
 begin
   Result := '';
   if SrcLineNumber < 1 then exit;
@@ -1020,7 +1176,7 @@ begin
   if PasSource = nil
   then exit;
 
-  Editor := SourceEditorManager.SourceEditorIntfWithFilename(SrcFileName);
+  Editor := SourceEditorManagerIntf.SourceEditorIntfWithFilename(SrcFileName);
   if Editor <> nil then
     SrcLineNumber := Editor.DebugToSourceLine(SrcLineNumber);
 
@@ -1070,7 +1226,7 @@ var
   DoneLocation: TDBGPtr;
   DoneTopLine, DoneLineCount: Integer;
   DoneCountBefore, DoneCountAfter: Integer;
-  Line, Idx: Integer;
+  Line, Idx, W: Integer;
   Itm, NextItm, PrevItm: PDisassemblerEntry;
   LineIsSrc, HasLineOutOfRange: Boolean;
   s: String;
@@ -1092,6 +1248,11 @@ begin
     Exit;
   end;
   FUpdating := True;
+
+  if FDebugger = nil
+  then W := 16
+  else W := FDebugger.TargetWidth div 4;
+
 
   try
     FUpdateNeeded := False;
@@ -1262,6 +1423,23 @@ begin
       ALineMap[Line].Statement  := Itm^.Statement;
       ALineMap[Line].SourceLine := Itm^.SrcFileLine;
       ALineMap[Line].ImageIndex := -1;
+      ALineMap[Line].TargetAddr := Itm^.TargetAddr;
+
+      s := StringOfChar(' ', min(4, 40 - Length(ALineMap[Line].Statement))) + '#';
+      if Itm^.TargetAddr <> 0 then begin
+        ALineMap[Line].Statement := ALineMap[Line].Statement + s + ' $' + IntToHex(Itm^.TargetAddr, W);
+        s := '';
+      end;
+      if Itm^.TargetName <> '' then begin
+        ALineMap[Line].Statement := ALineMap[Line].Statement + s + ' ' + Itm^.TargetName;
+        s := '';
+      end;
+      if Itm^.TargetFile <> '' then begin
+        ALineMap[Line].Statement := ALineMap[Line].Statement + s + ' ' + ExtractFileName(Itm^.TargetFile);
+        if Itm^.TargetLine <> 0 then
+          ALineMap[Line].Statement := ALineMap[Line].Statement + ':' + IntToStr(Itm^.TargetLine);
+        s := '';
+      end;
 
       inc(Line);
       inc(idx);

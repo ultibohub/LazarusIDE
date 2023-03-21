@@ -115,9 +115,6 @@ type
   { TFpThreadWorkerLocalsUpdate }
 
   TFpThreadWorkerLocalsUpdate = class(TFpThreadWorkerLocals)
-  private
-    FLocals: TLocalsListIntf;
-    procedure DoLocalsFreed_DecRef(Sender: TObject);
   protected
     procedure UpdateLocals_DecRef(Data: PtrInt = 0); override;
     procedure DoRemovedFromLinkedList; override; // _DecRef
@@ -985,41 +982,15 @@ end;
 
 { TFpThreadWorkerLocalsUpdate }
 
-procedure TFpThreadWorkerLocalsUpdate.DoLocalsFreed_DecRef(Sender: TObject);
-begin
-  assert(system.ThreadID = classes.MainThreadID, 'TFpThreadWorkerLocals.DoLocalsFreed_DecRef: system.ThreadID = classes.MainThreadID');
-  FLocals := nil;
-  RequestStop;
-  UnQueue_DecRef;
-end;
-
 procedure TFpThreadWorkerLocalsUpdate.UpdateLocals_DecRef(Data: PtrInt);
 var
-  i: Integer;
-  r: TResultEntry;
   dbg: TFpDebugDebugger;
-  rv: TLzDbgWatchDataIntf;
 begin
   assert(system.ThreadID = classes.MainThreadID, 'TFpThreadWorkerLocals.UpdateLocals_DecRef: system.ThreadID = classes.MainThreadID');
 
   if FLocals <> nil then begin
-    FLocals.RemoveFreeNotification(@DoLocalsFreed_DecRef);
-    if FResults = nil then begin
-      FLocals.Validity := ddsInvalid;
-      FLocals := nil;
-      UnQueue_DecRef;
-      exit;
-    end;
-
-    FLocals.BeginUpdate;
-    for i := 0 to FResults.Count - 1 do begin
-      r := FResults[i];
-      rv := FLocals.Add(r.Name);
-      rv.CreatePrePrinted(r.Value);
-    end;
     FLocals.Validity := ddsValid;
     FLocals.EndUpdate;
-
     FLocals := nil;
   end;
 
@@ -1036,8 +1007,8 @@ begin
       exit;
     end
     else begin
-      FLocals.RemoveFreeNotification(@DoLocalsFreed_DecRef);
       FLocals.Validity := ddsInvalid;
+      FLocals.EndUpdate;
     end;
     FLocals := nil;
   end;
@@ -1050,7 +1021,7 @@ begin
   // Runs in IDE thread (TThread.Queue)
   assert(system.ThreadID = classes.MainThreadID, 'TFpThreadWorkerLocals.Create: system.ThreadID = classes.MainThreadID');
   FLocals := ALocals;
-  FLocals.AddFreeNotification(@DoLocalsFreed_DecRef);
+  FLocals.BeginUpdate;
   FThreadId := ALocals.ThreadId;
   FStackFrame := ALocals.StackFrame;
   inherited Create(ADebugger, twpLocal);
@@ -2136,6 +2107,7 @@ var
   ADisassembler: TDbgAsmDecoder;
   AOffset: longint;
   RealReadLen: Cardinal;
+  AnInfo: TDbgInstInfo;
 
   procedure AddInfoToRange(ALineAddr: TDBGPtr; ATargetRange: TDBGDisassemblerEntryRange);
   var
@@ -2176,6 +2148,27 @@ var
     AnEntry.FuncName := AFuncName;
     AnEntry.SrcStatementIndex:=StatIndex;
     AnEntry.Offset := AOffset;
+    AnEntry.TargetAddr := 0;
+    AnEntry.TargetName := '';
+    AnEntry.TargetFile := '';
+    AnEntry.TargetLine := 0;
+    if AnInfo.InstrType = itJump then begin
+      {$PUSH}{$R-}{$Q-}
+      AnEntry.TargetAddr := ALineAddr + AnInfo.InstrTargetOffs;
+      {$POP}
+      Sym := TFpDebugDebugger(Debugger).FDbgController.CurrentProcess.FindProcSymbol(AnEntry.TargetAddr);
+      if Sym <> nil then begin
+        AnEntry.TargetName := Sym.Name;
+        AnEntry.TargetFile := Sym.FileName;
+        AnEntry.TargetLine := Sym.Line;
+        {$PUSH}{$R-}{$Q-}
+        AOffset := int32(int64(AnEntry.TargetAddr) - int64(Sym.Address.Address));
+        {$POP}
+        if AOffset <> 0 then
+          AnEntry.TargetName := AnEntry.TargetName + '+' + IntToStr(AOffset);
+        Sym.ReleaseReference;
+      end;
+    end;
     ATargetRange.Append(@AnEntry);
     inc(StatIndex);
   end;
@@ -2284,7 +2277,7 @@ begin
         else begin
           while tmpAddr < AnAddr do begin
             p := @CodeBin[bytesDisassembled];
-            ADisassembler.Disassemble(p, ADump, AStatement);
+            ADisassembler.Disassemble(p, ADump, AStatement, AnInfo);
 
             prevInstructionSize := p - @CodeBin[bytesDisassembled];
             if prevInstructionSize = 0 then
@@ -2308,6 +2301,10 @@ begin
             AnEntry.FuncName := '';
             AnEntry.SrcStatementIndex:=StatIndex;
             AnEntry.Offset := -1;
+            AnEntry.TargetAddr := 0;
+            AnEntry.TargetName := '';
+            AnEntry.TargetFile := '';
+            AnEntry.TargetLine := 0;
             ARange.Append(@AnEntry);
             inc(StatIndex);
           end;
@@ -2332,7 +2329,7 @@ begin
       for i := 0 to ALinesAfter-1 do
         begin
         p := @CodeBin[bytesDisassembled];
-        ADisassembler.Disassemble(p, ADump, AStatement);
+        ADisassembler.Disassemble(p, ADump, AStatement, AnInfo);
 
         prevInstructionSize := p - @CodeBin[bytesDisassembled];
         bytesDisassembled := bytesDisassembled + prevInstructionSize;
@@ -4658,6 +4655,9 @@ begin
     for t in FDbgController.CurrentProcess.ThreadMap do
       if (t <> ct) and (t.SuspendCount > 0) then // new threads will have count=0
         t.DecSuspendCount;
+
+  if FDbgController.Event = deExitProcess then
+    Application.QueueAsyncCall(@DebugLoopFinished, 0);
 end;
 
 class function TFpDebugDebugger.Caption: String;

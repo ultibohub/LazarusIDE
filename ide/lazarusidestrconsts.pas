@@ -73,9 +73,6 @@ resourcestring
   lisRestart = 'Restart';
   lisUndo = 'Undo';
   lisRedo = 'Redo';
-  lisCut = 'Cut';
-  lisCopy = 'Copy';
-  lisPaste = 'Paste';
   lisDown = 'Down';
   lisUp   = 'Up';
   lisRight = 'Right';
@@ -444,9 +441,6 @@ resourcestring
   lisMenuViewRegisters = 'Registers';
   lisMenuViewThreads = 'Threads';
   lisMenuViewHistory = 'History';
-  lisMenuViewAssembler = 'Assembler';
-  lisDbgAsmCopyToClipboard = 'Copy to Clipboard';
-  lisDbgAsmCopyAddressToClipboard = 'Copy address to Clipboard';
   lisMenuViewDebugOutput = 'Debug Output';
   lisMenuViewDebugEvents = 'Event Log';
   lisMenuIDEInternals = 'IDE Internals';
@@ -483,24 +477,9 @@ resourcestring
   lisMenuAbortBuild = 'Abort Build';
   lisMenuProjectRun = '&Run';
   lisBFAlwaysBuildBeforeRun = 'Always build before run';
-  lisDisAssGotoCurrentAddress = 'Goto Current Address';
-  lisDisAssGotoCurrentAddressHint = 'Goto Current Address';
-  lisDisAssGotoAddress = 'Goto Address';
-  lisDisAssGotoAddressHint = 'Goto Address';
-  lisDisAssGotoAddrEditTextHint = '($address)';
 
   lisBFRunCommand = 'Run Command';
   lisMenuShowExecutionPoint = 'S&how Execution Point';
-  lisMenuStepInto = 'Step In&to';
-  lisMenuStepOver = '&Step Over';
-  lisMenuStepIntoInstr = 'Step Into Instruction';
-  lisMenuStepIntoInstrHint = 'Step Into Instruction';
-  lisMenuStepOverInstr = 'Step Over Instruction';
-  lisMenuStepOverInstrHint = 'Step Over Instruction';
-  lisMenuStepIntoContext = 'Step Into (Context)';
-  lisMenuStepOverContext = 'Step Over (Context)';
-  lisMenuStepOut = 'Step O&ut';
-  lisMenuStepToCursor = 'Step over to &Cursor';
   lisMenuRunToCursor = 'Run to Cursor';
   lisKMStopProgram = 'Stop Program';
   lisContinueAndDoNotAskAgain = 'Continue and do not ask again';
@@ -626,15 +605,15 @@ resourcestring
   lisMissingUnitsComment = 'Comment Out';
   lisMissingUnitsForDelphi = 'For Delphi only';
   lisMissingUnitsSearch = 'Search Unit Path';
-  lisMissingUnitsSkip = 'Skip this Unit';
+  lisMissingUnitsSkip = 'Skip';
   lisTheseUnitsWereNotFound = 'These units were not found:';
   lisMissingUnitsChoices = 'Your choices are:';
   lisMissingUnitsInfo1 = '1) Comment out the selected units.';
   lisMissingUnitsInfo1b = '1) Use the units only for Delphi.';
   lisMissingUnitsInfo2 = '2) Search for units. Found paths are added to project settings.';
-  lisMissingUnitsInfo3 = '3) Abort now, install packages or fix paths and try again.';
-  lisUnitNotFoundInProject = 'A unit not found in project %s';
-  lisUnitsNotFoundInProject = 'Units not found in project %s';
+  lisMissingUnitsInfo3 = '3) Leave these units in uses sections as they are.';
+  lisUnitNotFoundInFile = 'A unit not found in file %s';
+  lisUnitsNotFoundInFile = 'Units not found in file %s';
   lisProjectPathHint = 'Directory where project''s main file must be';
   lisAddDelphiDefine = 'Add defines simulating Delphi7';
   lisAddDelphiDefineHint = 'Useful when the code has checks for supported compiler versions';
@@ -5972,8 +5951,6 @@ resourcestring
   //IDE info dialog
   lisIDEInfoInformationAboutTheIDE = 'Information about the IDE';
 
-  //Disassembler dialog
-  lisDisAssAssembler = 'Assembler';
   lisKeepRelativeIndentationOfMultiLineTemplate = 'Keep relative indentation '
     +'of multi line template';
   lisTheCurrentFPCHasNoConfigFileItWillProbablyMissSome = 'The current FPC '

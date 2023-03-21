@@ -609,6 +609,7 @@
       <Unit>
         <Filename Value="../packager/lpkcache.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="LPKCache"/>
       </Unit>
       <Unit>
         <Filename Value="frames/editor_general_options.pas"/>
@@ -1429,10 +1430,9 @@
         <UnitName Value="IdeTransferMacros"/>
       </Unit>
       <Unit>
-        <Filename Value="../debugger/assemblerdlg.pp"/>
+        <Filename Value="../packager/pkgsysbasepkgs.pas"/>
         <IsPartOfProject Value="True"/>
-        <HasResources Value="True"/>
-        <UnitName Value="AssemblerDlg"/>
+        <UnitName Value="PkgSysBasePkgs"/>
       </Unit>
     </Units>
   </ProjectOptions>

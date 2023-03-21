@@ -10,9 +10,19 @@ uses
 
 type
 
+  TWatchResultPrinterFormatFlag = (
+    rpfIndent,           // use Indent. Only when MultiLine
+    rpfMultiLine,
+    rpfClearMultiLine    // clean up pre-printed data
+  );
+  TWatchResultPrinterFormatFlags = set of TWatchResultPrinterFormatFlag;
+
   { TWatchResultPrinter }
 
   TWatchResultPrinter = class
+  private
+    FFormatFlags: TWatchResultPrinterFormatFlags;
+    FLineSeparator: String;
   protected const
     MAX_ALLOWED_NEST_LVL = 100;
   protected
@@ -24,7 +34,10 @@ type
 
     function PrintWatchValueEx(AResValue: TWatchResultData; ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): String;
   public
+    constructor Create;
     function PrintWatchValue(AResValue: TWatchResultData; ADispFormat: TWatchDisplayFormat): String;
+
+    property FormatFlags: TWatchResultPrinterFormatFlags read FFormatFlags write FFormatFlags;
   end;
 
 implementation
@@ -109,7 +122,7 @@ begin
   end;
 
   if ANestLvl = 0 then
-    sep := ',' + LineEnding
+    sep := ',' + FLineSeparator
   else
     sep := ', ';
 
@@ -164,9 +177,12 @@ begin
     end;
   end;
 
-  indent := StringOfChar(' ', (ANestLvl+1)*2); // TODO: first line should only be indented, if it starts on new line...
+  if FFormatFlags * [rpfIndent, rpfMultiLine] = [rpfIndent, rpfMultiLine] then
+    indent := StringOfChar(' ', (ANestLvl+1)*2) // TODO: first line should only be indented, if it starts on new line...
+  else
+    indent := '';
   if ANestLvl < 2 then
-    sep := LineEnding
+    sep := FLineSeparator
   else
     sep := ' ';
 
@@ -209,10 +225,16 @@ begin
   if Result = '' then
     Result := '()'
   else begin
-    Result[ANestLvl*2+1] := '(';
-    Result[Length(Result)] := ')';
-    //Delete(Result, Length(Result), 1)
-    //Result := Result + sep + ')';
+    if indent = '' then
+      Result := '(' + Result + ')'
+    else
+    begin
+      UniqueString(Result);
+      Result[ANestLvl*2+1] := '(';
+      Result[Length(Result)] := ')';
+      //Delete(Result, Length(Result), 1)
+      //Result := Result + sep + ')';
+    end;
   end;
 
   tn := AResValue.TypeName;
@@ -368,6 +390,8 @@ begin
       Result := 'Error: Unknown';
     rdkPrePrinted: begin
       Result := AResValue.AsString;
+      if rpfClearMultiLine in FFormatFlags then
+        Result := ClearMultiline(Result);
     end;
     rdkSignedNumVal,
     rdkUnsignedNumVal: begin
@@ -444,7 +468,7 @@ begin
       AResValue.SetSelectedIndex(0); // pchar res
       Result := 'PChar: ' + PrintWatchValueEx(AResValue.SelectedEntry, ADispFormat, ANestLvl);
       AResValue.SetSelectedIndex(1); // string res
-      Result := Result + LineEnding
+      Result := Result + FLineSeparator
               + 'String: ' + PrintWatchValueEx(AResValue.SelectedEntry, ADispFormat, ANestLvl);
     end;
     rdkArray:  Result := PrintArray(AResValue, ADispFormat, ANestLvl);
@@ -458,9 +482,19 @@ begin
   end;
 end;
 
+constructor TWatchResultPrinter.Create;
+begin
+  FFormatFlags := [rpfMultiLine, rpfIndent];
+end;
+
 function TWatchResultPrinter.PrintWatchValue(AResValue: TWatchResultData;
   ADispFormat: TWatchDisplayFormat): String;
 begin
+  if rpfMultiLine in FFormatFlags then
+    FLineSeparator := LineEnding
+  else
+    FLineSeparator := ' ';
+
   Result := PrintWatchValueEx(AResValue, ADispFormat, -1);
 end;
 

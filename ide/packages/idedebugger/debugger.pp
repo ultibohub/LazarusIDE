@@ -532,14 +532,17 @@ type
 
   { TIdeWatchValue }
 
-  TIdeWatchValue = class(TWatchValue)
+  TIdeWatchValue = class(TWatchValue, TWatchAbleResultIntf)
   private
-    function GetChildrenByNameAsArrayEntry(AName: Int64): TIdeWatch;
-    function GetChildrenByNameAsField(AName, AClassName: String): TIdeWatch;
+    function GetChildrenByNameAsArrayEntry(AName: Int64): TObject; // TIdeWatch;
+    function GetChildrenByNameAsField(AName, AClassName: String): TObject; // TIdeWatch;
     function GetWatch: TIdeWatch;
+    function GetEnabled: Boolean;
   protected
     function GetTypeInfo: TDBGType; override;
     function GetValue: String; override;
+    function GetResultData: TWatchResultData; override;
+    function GetValidity: TDebuggerDataState; override;
 
     procedure RequestData; virtual;
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
@@ -561,8 +564,8 @@ type
 
     function MaybeCopyResult(ASourceWatch: TIdeWatch): boolean;
 
-    property ChildrenByNameAsField[AName, AClassName: String]: TIdeWatch read GetChildrenByNameAsField;
-    property ChildrenByNameAsArrayEntry[AName: Int64]: TIdeWatch read GetChildrenByNameAsArrayEntry;
+    property ChildrenByNameAsField[AName, AClassName: String]: TObject read GetChildrenByNameAsField;
+    property ChildrenByNameAsArrayEntry[AName: Int64]: TObject read GetChildrenByNameAsArrayEntry;
   end;
 
   { TIdeWatchValueList }
@@ -587,7 +590,7 @@ type
 
   { TIdeWatch }
 
-  TIdeWatch = class(TWatch)
+  TIdeWatch = class(TWatch, TWatchAbleDataIntf, TFreeNotifyingIntf)
   private
     FChildWatches: TIdeWatches;
     FDisplayName: String;
@@ -600,6 +603,9 @@ type
     function GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
     function GetAnyValidParentWatchValue(AThreadId: Integer; AStackFrame: Integer): TIdeWatchValue;
     function GetWatchDisplayName: String;
+    procedure SetDisplayName(AValue: String); reintroduce;
+    function GetEnabled: Boolean;
+    function GetExpression: String;
   protected
     procedure InitChildWatches;
     function CreateChildWatches: TIdeWatches; virtual;
@@ -628,7 +634,7 @@ type
     function HasAllValidParents(AThreadId: Integer; AStackFrame: Integer): boolean;
     property ParentWatch: TIdeWatch read FParentWatch;
     property TopParentWatch: TIdeWatch read GetTopParentWatch;
-    property DisplayName: String read GetWatchDisplayName write FDisplayName;
+    property DisplayName: String read GetWatchDisplayName write SetDisplayName;
   public
     property Values[const AThreadId: Integer; const AStackFrame: Integer]: TIdeWatchValue
              read GetValue;
@@ -916,6 +922,40 @@ type
     property OnChange;
   end;
 
+  TSubLocals = class;
+
+  { TIdeLocalsValue }
+
+  TIdeLocalsValue = class(TLocalsValue, TWatchAbleResultIntf, TWatchAbleDataIntf, TFreeNotifyingIntf)
+  private
+    FSubLocals: TSubLocals;
+    FDisplayName: String;
+  private
+    // TWatchAble
+    procedure LimitChildWatchCount(AMaxCnt: Integer; AKeepIndexEntriesBelow: Int64 = low(Int64)); virtual;
+    procedure ClearDisplayData;  // Clear any cached display-data / keep only what's needed for the snapshot
+
+    function GetDisplayName: String;
+    function GetExpression: String;
+    function GetEnabled: Boolean;
+    function GetValidity: TDebuggerDataState; virtual;
+    function GetDisplayFormat: TWatchDisplayFormat;
+    function GetTypeInfo: TDBGType; deprecated;
+
+    function GetChildrenByNameAsArrayEntry(AName: Int64): TObject;
+    function GetChildrenByNameAsField(AName, AClassName: String): TObject;
+
+  private
+    procedure CreateSubLocals; virtual;
+    function GetSubLocal(ADispName, AnExpr: String): TIdeLocalsValue;
+  protected
+    procedure SetDisplayName(AValue: String); virtual;
+    procedure DoAssign(AnOther: TDbgEntityValue); override;
+  public
+    destructor Destroy; override;
+    property DisplayName: String read GetDisplayName write SetDisplayName;
+  end;
+
   { TIDELocals }
 
   TIDELocals = class(TLocals)
@@ -924,19 +964,84 @@ type
                                 APath: string);
     procedure SaveDataToXMLConfig(const AConfig: TXMLConfig;
                               APath: string);
+    function CreateEntry: TDbgEntityValue; override;
   public
     constructor CreateFromXMLConfig(const AConfig: TXMLConfig; APath: string);
     procedure SetDataValidity({%H-}AValidity: TDebuggerDataState); override;
   end;
 
+  { THistoryLocalValue }
+
+  THistoryLocalValue = class(TIdeLocalsValue)
+  protected
+    FSnapShot: TIdeLocalsValue;
+    procedure SetSnapShot(const AValue: TIdeLocalsValue); virtual;
+    procedure CreateSubLocals; override;
+    procedure SetDisplayName(AValue: String); override;
+  end;
+
+  { THistoryLocals }
+
+  THistoryLocals = class(TIDELocals)
+  protected
+    FSnapShot: TIDELocals;
+    procedure SetSnapShot(const AValue: TIDELocals); virtual;
+  end;
+
+  { TSubLocalsValue }
+
+  TSubLocalsValue = class(specialize TDbgDataRequestTemplateBase<THistoryLocalValue, TWatchValueIntf>, TWatchValueIntf)
+  private
+    FValidity: TDebuggerDataState;
+    FCurrentResData: TCurrentResData;
+  private
+    FOnChange: TNotifyEvent;
+    // TWatchValueIntf
+    function GetEvaluateFlags: TWatcheEvaluateFlags;
+    function GetDbgValConverter: TLazDbgValueConvertSelectorIntf;
+    function GetFirstIndexOffs: Int64;
+    function GetRepeatCount: Integer;
+    function GetValidity: TDebuggerDataState; override;
+    procedure SetTypeInfo(AValue: TDBGTypeBase);
+    procedure SetValidity(AValue: TDebuggerDataState);
+    procedure SetValue(AValue: String);
+
+    function ResData: TLzDbgWatchDataIntf; // new ResData for debugger to fill in
+    procedure DoBeginUpdating; override;
+    procedure DoEndUpdating; override;
+    procedure RequestData;
+
+  protected
+    function GetResultData: TWatchResultData; override;
+    function GetValue: String; override;
+  public
+    destructor Destroy; override;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
+  end;
+
+  { TSubLocals }
+
+  TSubLocals = class(THistoryLocals)
+  private
+    FOwnerLocals: TIDELocals;
+  protected
+    function CreateEntry: TDbgEntityValue; override;
+    function Add(const AName: String): TIdeLocalsValue; overload;
+    procedure SetSnapShot(const AValue: TIDELocals); override;
+    function TopOwner: TIDELocals;
+  public
+    constructor Create(AThreadId, AStackFrame: Integer; AOwnerLocals: TIDELocals);
+  end;
+
+  TCurrentLocalValue = class(THistoryLocalValue)
+  end;
+
   { TCurrentLocals }
 
-  TCurrentLocals = class(specialize TDbgDataRequestTemplateBase<TIDELocals, TLocalsListIntf>, TLocalsListIntf)
+  TCurrentLocals = class(specialize TDbgDataRequestTemplateBase<THistoryLocals, TLocalsListIntf>, TLocalsListIntf)
   private
     FMonitor: TIdeLocalsMonitor;
-    FSnapShot: TIDELocals;
     FDataValidity: TDebuggerDataState;
-    procedure SetSnapShot(const AValue: TIDELocals);
   private
   (* TLocalsListIntf *)
     FCurrentResName: String;
@@ -949,14 +1054,19 @@ type
     procedure DoEndUpdating; override;
     procedure SetValidity(AValue: TDebuggerDataState);
     function Add(AName: String): TLzDbgWatchDataIntf; overload;
-    procedure FinishCurrentRes;
   protected
+    procedure FinishCurrentRes(AnInUpdate: Boolean = False);
+    function CreateEntry: TDbgEntityValue; override;
+    procedure SetSnapShot(const AValue: TIDELocals); override;
     property SnapShot: TIDELocals read FSnapShot write SetSnapShot;
   public
     constructor Create(AMonitor: TIdeLocalsMonitor; AThreadId, AStackFrame: Integer);
     destructor Destroy; override;
     function Count: Integer; override;
+    procedure Add(AnEntry: TDbgEntityValue); override;
+    function Add(const AName: String; AValue: TWatchResultData): TLocalsValue; override; overload;
     procedure SetDataValidity(AValidity: TDebuggerDataState); override;
+    property Validity: TDebuggerDataState read FDataValidity;
   end;
 
   { TLocalsList }
@@ -2671,6 +2781,7 @@ var
 begin
   XmlConf := TXMLConfig.CreateClean('');
   XmlConf.Clear;
+  XmlConf.WriteFlags := [];
   SaveDataToXMLConfig(XmlConf, 'History/');
   s := TStringStream.Create('');
   XmlConf.WriteToStream(s);
@@ -3972,7 +4083,6 @@ begin
   if (FCurrentResData <> nil) and (FCurrentResData.FNewResultData <> nil) then begin
     FCurrentResData.Done;
     SetResultData(FCurrentResData.FNewResultData);
-    FCurrentResData.FNewResultData := nil;
 
     if ResultData.ValueKind = rdkError then
       NewValid := ddsError;
@@ -4214,10 +4324,34 @@ begin
     ddsInvalid:                  Result := '<invalid>';
     ddsError:                    Result := '<Error: '+ (inherited GetValue) +'>';
   end;
-
 end;
 
-function TIdeWatchValue.GetChildrenByNameAsArrayEntry(AName: Int64): TIdeWatch;
+function TIdeWatchValue.GetResultData: TWatchResultData;
+var
+  i: Integer;
+begin
+  Result := inherited GetResultData;
+  if (Watch = nil) or (not Watch.Enabled) then
+    exit;
+  i := DbgStateChangeCounter;  // workaround for state changes during TWatchValue.GetResultData
+  if Validity = ddsUnknown then begin
+    Validity := ddsRequested;
+    RequestData;
+    if i <> DbgStateChangeCounter then exit; // in case the debugger did run.
+    // TODO: The watch can also be deleted by the user
+    Result := inherited GetResultData;
+  end;
+end;
+
+function TIdeWatchValue.GetValidity: TDebuggerDataState;
+begin
+  if (Watch = nil) or (Watch.HasAllValidParents(ThreadId, StackFrame)) then
+    Result := inherited GetValidity
+  else
+    Result := ddsEvaluating; // ddsWaitForParent;
+end;
+
+function TIdeWatchValue.GetChildrenByNameAsArrayEntry(AName: Int64): TObject;
 begin
   Result := nil;
   if FWatch = nil then
@@ -4232,7 +4366,7 @@ begin
 end;
 
 function TIdeWatchValue.GetChildrenByNameAsField(AName, AClassName: String
-  ): TIdeWatch;
+  ): TObject;
 begin
   Result := nil;
   if FWatch = nil then
@@ -4249,6 +4383,13 @@ end;
 function TIdeWatchValue.GetWatch: TIdeWatch;
 begin
   Result := TIdeWatch(inherited Watch);
+end;
+
+function TIdeWatchValue.GetEnabled: Boolean;
+begin
+  Result := Watch <> nil;
+  if Result then
+    Result := Watch.Enabled;
 end;
 
 function TIdeWatchValue.GetTypeInfo: TDBGType;
@@ -6484,6 +6625,23 @@ begin
     Result := FExpression;
 end;
 
+procedure TIdeWatch.SetDisplayName(AValue: String);
+begin
+  FDisplayName := AValue;
+  Changed;
+  DoModified;
+end;
+
+function TIdeWatch.GetEnabled: Boolean;
+begin
+  Result := inherited Enabled;
+end;
+
+function TIdeWatch.GetExpression: String;
+begin
+  Result := inherited Expression;
+end;
+
 procedure TIdeWatch.SetParentWatch(AValue: TIdeWatch);
 begin
   if FParentWatch = AValue then Exit;
@@ -6528,6 +6686,9 @@ begin
   Result.DisplayFormat := DisplayFormat;
   Result.DbgBackendConverter := DbgBackendConverter;
   Result.FDisplayName := ADispName;
+  if (defClassAutoCast in EvaluateFlags) then
+    Result.EvaluateFlags := Result.EvaluateFlags + [defClassAutoCast];
+
   EndChildUpdate;
 end;
 
@@ -6999,6 +7160,115 @@ end;
 (******************************************************************************)
 (******************************************************************************)
 
+{ TIdeLocalsValue }
+
+procedure TIdeLocalsValue.LimitChildWatchCount(AMaxCnt: Integer;
+  AKeepIndexEntriesBelow: Int64);
+begin
+  //
+end;
+
+procedure TIdeLocalsValue.ClearDisplayData;
+begin
+  //
+end;
+
+function TIdeLocalsValue.GetDisplayName: String;
+begin
+  Result := FDisplayName;
+  if Result = '' then
+    Result := Name;
+end;
+
+function TIdeLocalsValue.GetExpression: String;
+begin
+  Result := Name;
+end;
+
+function TIdeLocalsValue.GetEnabled: Boolean;
+begin
+  Result := True;
+end;
+
+function TIdeLocalsValue.GetValidity: TDebuggerDataState;
+begin
+  if ResultData <> nil then
+    Result := ddsValid
+  else
+    Result := ddsRequested;
+end;
+
+function TIdeLocalsValue.GetDisplayFormat: TWatchDisplayFormat;
+begin
+  Result := wdfDefault;
+end;
+
+function TIdeLocalsValue.GetTypeInfo: TDBGType;
+begin
+  Result := nil;
+end;
+
+function TIdeLocalsValue.GetChildrenByNameAsArrayEntry(AName: Int64): TObject;
+begin
+  Result := GetSubLocal(IntToStr(AName),
+    GetExpressionForArrayElement(Name, AName)
+  );
+end;
+
+function TIdeLocalsValue.GetChildrenByNameAsField(AName, AClassName: String
+  ): TObject;
+var
+  Expr: String;
+begin
+  Expr := Name;
+  if AClassName <> '' then
+    Expr := AClassName + '(' + Expr + ')';
+  Expr := Expr + '.' + AName;
+  Result := GetSubLocal(AName, Expr);
+end;
+
+procedure TIdeLocalsValue.CreateSubLocals;
+begin
+  if FSubLocals = nil then
+    FSubLocals := TSubLocals.Create(ThreadId, StackFrame, TIDELocals(Owner));
+end;
+
+function TIdeLocalsValue.GetSubLocal(ADispName, AnExpr: String
+  ): TIdeLocalsValue;
+begin
+  if FSubLocals = nil then begin
+    CreateSubLocals;
+  end
+  else begin
+    Result := TIdeLocalsValue(FSubLocals.Find(AnExpr));
+    if Result <> nil then
+      exit;
+  end;
+
+  Result := FSubLocals.Add(AnExpr);
+  Result.DisplayName := ADispName;
+end;
+
+procedure TIdeLocalsValue.SetDisplayName(AValue: String);
+begin
+  FDisplayName := AValue;
+end;
+
+procedure TIdeLocalsValue.DoAssign(AnOther: TDbgEntityValue);
+begin
+  inherited DoAssign(AnOther);
+  if AnOther is TIdeLocalsValue then begin
+    FDisplayName := TIdeLocalsValue(AnOther).FDisplayName;
+    // skip SubLocals
+  end;
+end;
+
+destructor TIdeLocalsValue.Destroy;
+begin
+  inherited Destroy;
+  FSubLocals.Free;
+end;
+
 { =========================================================================== }
 { TLocals }
 { =========================================================================== }
@@ -7016,7 +7286,9 @@ begin
   APath := APath + 'Entry';
   for i := 0 to c - 1 do begin
     Add(AConfig.GetValue(APath + IntToStr(i) + '/Expression', ''),
-        AConfig.GetValue(APath + IntToStr(i) + '/Value', ''));
+        TWatchResultData.CreateFromXMLConfig(AConfig, APath + IntToStr(i) + '/')
+       );
+
   end;
 end;
 
@@ -7030,8 +7302,13 @@ begin
   APath := APath + 'Entry';
   for i := 0 to Count - 1 do begin
     AConfig.SetValue(APath + IntToStr(i) + '/Expression', Names[i]);
-    AConfig.SetValue(APath + IntToStr(i) + '/Value', Values[i]);
+    Values[i].SaveDataToXMLConfig(AConfig, APath + IntToStr(i) + '/');
   end;
+end;
+
+function TIDELocals.CreateEntry: TDbgEntityValue;
+begin
+  Result := TIdeLocalsValue.Create;
 end;
 
 constructor TIDELocals.CreateFromXMLConfig(const AConfig: TXMLConfig; APath: string);
@@ -7044,17 +7321,247 @@ begin
   LoadDataFromXMLConfig(AConfig, APath);
 end;
 
+{ THistoryLocalValue }
+
+procedure THistoryLocalValue.SetSnapShot(const AValue: TIdeLocalsValue);
+begin
+  FSnapShot := AValue;
+  FSnapShot.Assign(Self);
+
+  if FSubLocals <> nil then begin
+    FSnapShot.CreateSubLocals;
+    FSubLocals.SetSnapShot(FSnapShot.FSubLocals);
+  end;
+end;
+
+procedure THistoryLocalValue.CreateSubLocals;
+begin
+  inherited CreateSubLocals;
+  if FSnapShot <> nil then begin
+    FSnapShot.CreateSubLocals;
+    FSubLocals.SetSnapShot(FSnapShot.FSubLocals);
+  end;
+end;
+
+procedure THistoryLocalValue.SetDisplayName(AValue: String);
+begin
+  inherited SetDisplayName(AValue);
+  if FSnapShot <> nil then
+    FSnapShot.DisplayName := AValue;
+end;
+
+{ THistoryLocals }
+
+procedure THistoryLocals.SetSnapShot(const AValue: TIDELocals);
+begin
+  FSnapShot := AValue;
+end;
+
+{ TSubLocalsValue }
+
+function TSubLocalsValue.ResData: TLzDbgWatchDataIntf;
+begin
+  if FCurrentResData = nil then
+    FCurrentResData := TCurrentResData.Create;
+  Result := FCurrentResData;
+end;
+
+procedure TSubLocalsValue.DoBeginUpdating;
+begin
+  AddReference;
+  FValidity := ddsEvaluating;
+end;
+
+procedure TSubLocalsValue.DoEndUpdating;
+begin
+  FCurrentResData := FCurrentResData.RootResultData;
+  // TODO: maybe create an error entry, if only FNewResultData is missing
+  if (FCurrentResData <> nil) then begin
+    if (FCurrentResData.FNewResultData = nil) then begin
+      FreeAndNil(FCurrentResData);
+      FValidity := ddsInvalid;
+      ReleaseReference;
+      exit;
+    end;
+
+    FCurrentResData.Done;
+    FValue := FCurrentResData.FNewResultData;
+    FreeAndNil(FCurrentResData);
+
+    if FValidity = ddsEvaluating then
+      FValidity := ddsValid;
+  end
+  else
+    FValidity := ddsInvalid;
+
+  if FSnapShot <> nil then begin
+    TSubLocalsValue(FSnapShot).FValidity := FValidity;
+    TSubLocalsValue(FSnapShot).FValue := FValue.CreateCopy;
+  end;
+
+  if FOnChange <> nil then
+    FOnChange(Self);
+
+  ReleaseReference;
+end;
+
+procedure TSubLocalsValue.RequestData;
+begin
+  if(DebugBossManager <> nil) and
+     (FValidity = ddsUnknown) and
+     (TSubLocals(Owner).TopOwner is TCurrentLocals) and
+     (inherited GetResultData = nil)
+  then begin
+    FValidity := ddsRequested;
+    DebugBossManager.RequestWatchData(Self);
+  end;
+end;
+
+function TSubLocalsValue.GetResultData: TWatchResultData;
+begin
+  RequestData;
+  Result := inherited GetResultData;
+end;
+
+function TSubLocalsValue.GetValue: String;
+begin
+  RequestData;
+  case FValidity of
+    ddsRequested, ddsEvaluating: Result := '<evaluating>';
+    ddsValid:                    Result := inherited GetValue;
+    ddsInvalid:                  Result := '<invalid>';
+    ddsError:                    Result := '<Error: '+ (inherited GetValue) +'>';
+    else Result := '<not evaluated>';
+  end;
+end;
+
+destructor TSubLocalsValue.Destroy;
+begin
+  inherited Destroy;
+  DoDestroy;
+end;
+
+function TSubLocalsValue.GetEvaluateFlags: TWatcheEvaluateFlags;
+begin
+  Result := [];
+end;
+
+function TSubLocalsValue.GetDbgValConverter: TLazDbgValueConvertSelectorIntf;
+begin
+  Result := nil;
+end;
+
+function TSubLocalsValue.GetFirstIndexOffs: Int64;
+begin
+  Result := 0;
+end;
+
+function TSubLocalsValue.GetRepeatCount: Integer;
+begin
+  Result := 0;
+end;
+
+function TSubLocalsValue.GetValidity: TDebuggerDataState;
+begin
+  RequestData;
+  Result := FValidity;
+end;
+
+procedure TSubLocalsValue.SetTypeInfo(AValue: TDBGTypeBase);
+begin
+  //assert(False, 'TSubLocalsValue.SetTypeInfo: False');
+end;
+
+procedure TSubLocalsValue.SetValidity(AValue: TDebuggerDataState);
+begin
+  FValidity := AValue;
+  if not IsUpdating then begin
+    AddReference;
+    DoEndUpdating;
+  end;
+end;
+
+procedure TSubLocalsValue.SetValue(AValue: String);
+begin
+  FValue.Free;
+  FValue := TWatchResultDataPrePrinted.Create(AValue);
+end;
+
+{ TSubLocals }
+
+function TSubLocals.CreateEntry: TDbgEntityValue;
+begin
+  Result := TSubLocalsValue.Create;
+end;
+
+function TSubLocals.Add(const AName: String): TIdeLocalsValue;
+var
+  V: TSubLocalsValue;
+begin
+  Result := TIdeLocalsValue(CreateEntry);
+  Result.FName := AName;
+  Add(Result);
+
+  if FSnapShot <> nil then begin
+    V := TSubLocalsValue(FSnapShot.Add('', nil));
+    assert(V is TSubLocalsValue, 'TSubLocals.Add: V is TSubLocalsValue');
+    assert(Result is TSubLocalsValue, 'TSubLocals.Add: Result is TSubLocalsValue');
+    TSubLocalsValue(Result).SetSnapShot(V);
+  end;
+end;
+
+procedure TSubLocals.SetSnapShot(const AValue: TIDELocals);
+var
+  V: TSubLocalsValue;
+  i: Integer;
+begin
+  assert((FSnapShot=nil) or (AValue=nil), 'TSubLocals.SetSnapShot: (FSnapShot=nil) or (AValue=nil)');
+  inherited SetSnapShot(AValue);
+
+  if FSnapShot <> nil then begin
+    assert(FSnapShot is TSubLocals, 'TSubLocals.SetSnapShot: FSnapShot is TSubLocals');
+    FSnapShot.Clear;
+    for i := 0 to Count - 1 do begin
+      V := TSubLocalsValue(FSnapShot.Add('', nil));
+      TSubLocalsValue(Entries[i]).SetSnapShot(V);
+    end;
+  end;
+end;
+
+function TSubLocals.TopOwner: TIDELocals;
+begin
+  Result := FOwnerLocals;
+  while (Result <> nil) and (Result is TSubLocals) do
+    Result := TSubLocals(Result).FOwnerLocals;
+end;
+
+constructor TSubLocals.Create(AThreadId, AStackFrame: Integer;
+  AOwnerLocals: TIDELocals);
+begin
+  inherited Create(AThreadId, AStackFrame);
+  FOwnerLocals := AOwnerLocals;
+end;
+
 { =========================================================================== }
 { TCurrentLocals }
 { =========================================================================== }
 
 procedure TCurrentLocals.SetSnapShot(const AValue: TIDELocals);
+var
+  V: TIdeLocalsValue;
+  i: Integer;
 begin
   assert((FSnapShot=nil) or (AValue=nil), 'TCurrentLocals already have snapshot');
   if FSnapShot = AValue then exit;
-  FSnapShot := AValue;
-  if FSnapShot <> nil
-  then FSnapShot.Assign(Self);
+  inherited SetSnapShot(AValue);
+
+  if FSnapShot <> nil then begin
+    FSnapShot.Clear;
+    for i := 0 to Count - 1 do begin
+      V := TIdeLocalsValue(FSnapShot.Add('', nil));
+      TCurrentLocalValue(Entries[i]).SetSnapShot(V);
+    end;
+  end;
 end;
 
 function TCurrentLocals.GetStackFrame: Integer;
@@ -7082,7 +7589,7 @@ procedure TCurrentLocals.DoEndUpdating;
 var
   i: Integer;
 begin
-  FinishCurrentRes;
+  FinishCurrentRes(True);
 
   for i := 0 to FCurrentResList.Count - 1 do
     Add(TLocalsValue(FCurrentResList[i]));
@@ -7115,27 +7622,35 @@ begin
   Result := FCurrentResData;
 end;
 
-procedure TCurrentLocals.FinishCurrentRes;
+procedure TCurrentLocals.FinishCurrentRes(AnInUpdate: Boolean);
 var
   v: TLocalsValue;
 begin
   FCurrentResData := FCurrentResData.RootResultData;
   // TODO: maybe create an error entry, if only FNewResultData is missing
-  if (FCurrentResData = nil) or (FCurrentResData.FNewResultData = nil) then
+  if (FCurrentResData = nil) then
     exit;
+  if (FCurrentResData.FNewResultData = nil) then begin
+    FreeAndNil(FCurrentResData);
+    exit;
+  end;
 
   FCurrentResData.Done;
 
   v := TLocalsValue(CreateEntry);
   v.Init(FCurrentResName, FCurrentResData.FNewResultData);
-  FCurrentResData.FNewResultData := nil;
 
-  if IsUpdating then
+  if IsUpdating or AnInUpdate then
     FCurrentResList.Add(v)
   else
     Add(v);
 
   FreeAndNil(FCurrentResData);
+end;
+
+function TCurrentLocals.CreateEntry: TDbgEntityValue;
+begin
+  Result := TCurrentLocalValue.Create;
 end;
 
 constructor TCurrentLocals.Create(AMonitor: TIdeLocalsMonitor; AThreadId, AStackFrame: Integer);
@@ -7148,6 +7663,7 @@ end;
 destructor TCurrentLocals.Destroy;
 begin
   inherited Destroy;
+  DoDestroy;
 
   FCurrentResData := FCurrentResData.RootResultData;
   if (FCurrentResData <> nil) {and (FResultData = nil)} then
@@ -7176,6 +7692,30 @@ begin
     ddsRequested, ddsEvaluating: Result := 0;
     ddsValid:                    Result := inherited Count;
     ddsInvalid, ddsError:        Result := 0;
+  end;
+end;
+
+procedure TCurrentLocals.Add(AnEntry: TDbgEntityValue);
+var
+  V: TIdeLocalsValue;
+begin
+  inherited Add(AnEntry);
+  assert(AnEntry is TCurrentLocalValue, 'TCurrentLocals.Add: AnEntry is TCurrentLocalValue');
+  if FSnapShot <> nil then begin
+    V := TIdeLocalsValue(FSnapShot.Add('', nil));
+    TCurrentLocalValue(AnEntry).SetSnapShot(V);
+  end;
+end;
+
+function TCurrentLocals.Add(const AName: String; AValue: TWatchResultData
+  ): TLocalsValue;
+var
+  V: TIdeLocalsValue;
+begin
+  Result := inherited Add(AName, AValue);
+  if FSnapShot <> nil then begin
+    V := TIdeLocalsValue(FSnapShot.Add('', nil));
+    TCurrentLocalValue(Result).SetSnapShot(V);
   end;
 end;
 

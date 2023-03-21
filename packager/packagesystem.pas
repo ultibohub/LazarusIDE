@@ -64,7 +64,8 @@ uses
   // IDE
   LazarusIDEStrConsts, IDECmdLine, EnvironmentOpts, IDEProcs, LazConf,
   TransferMacros, DialogProcs, IDETranslations, CompilerOptions,
-  SearchPathProcs, PackageLinks, PackageDefs, ComponentReg, FppkgHelper;
+  SearchPathProcs, PackageLinks, PackageDefs, ComponentReg, FppkgHelper,
+  PkgSysBasePkgs;
 
 const
   MakefileCompileVersion = 2;
@@ -87,60 +88,6 @@ const
     [fpfSearchInInstalledPckgs,fpfSearchInAutoInstallPckgs,
      fpfSearchInPckgsWithEditor,fpfSearchInPkgLinks,fpfSearchInLoadedPkgs];
   fpfSearchAllExisting = fpfSearchEverywhere+[fpfPkgLinkMustExist];
-
-type
-  // the base packages needed by the minimal IDE
-  TLazarusIDEBasePkg = (
-    libpFCL,
-    libpLazUtils,
-    libpFreeTypeLaz,
-    libpLCLBase,
-    libpLCL,
-    libpSynEdit,
-    libpBuildIntf,
-    libpLazDebuggerIntf,
-    libpIDEIntf,
-    libpDebuggerIntf,
-    libpCmdLineDebuggerBase,
-    libpfpdebug,
-    libpLazDebuggerGdbmi,
-    libpLazDebuggerFp,
-    libpLazDebuggerLldb,
-    libpLazDebuggerFpLldb,
-    libpCodeTools,
-    libpLazControls,
-    libpLazControlDsgn,
-    libpIdeConfig,
-    libpLCLExtensions_package,
-    libpLazVirtualtreeview_package,
-    libpIdeDebugger
-    );
-const
-  LazarusIDEBasePkgNames: array[TLazarusIDEBasePkg] of string = (
-    'FCL',
-    'LazUtils',
-    'freetypelaz',
-    'LCLBase',
-    'LCL',
-    'SynEdit',
-    'BuildIntf',
-    'LazDebuggerIntf',
-    'IDEIntf',
-    'DebuggerIntf',
-    'CmdLineDebuggerBase',
-    'fpdebug',
-    'LazDebuggerGdbmi',
-    'LazDebuggerFp',
-    'LazDebuggerLldb',
-    'LazDebuggerFpLldb',
-    'CodeTools',
-    'LazControls',
-    'LazControlDsgn',
-    'IdeConfig',
-    'lclextensions_package',
-    'laz.virtualtreeview_package',
-    'IdeDebugger'
-    );
 
 type
   TPkgUninstallFlag = (
@@ -267,6 +214,9 @@ type
     FRegistrationFile: TPkgFile;
     FRegistrationPackage: TLazPackage;
     FRegistrationUnitName: string;
+    FSrcBasePackages: TStringListUTF8Fast;
+    FSrcBasePackagesFilename: string;
+    FSrcBasePackagesFileChangeStep: integer;
     FSynEditPackage: TLazPackage;
     FLazControlsPackage: TLazPackage;
     FTree: TAVLTree; // sorted tree of TLazPackage
@@ -480,13 +430,15 @@ type
   public
     // installed packages
     FirstAutoInstallDependency: TPkgDependency;
+    function ParseBasePackages(Verbose: boolean): boolean; // read list from current sources
+    function SrcBasePackagesNeedLazbuild: string; // check if compiled-in and source base pkg list differ that a built using make is needed
     procedure LoadStaticBasePackages;
     procedure LoadAutoInstallPackages(PkgList: TStringList);
     procedure SortAutoInstallDependencies;
     function GetIDEInstallPackageOptions(
                  var InheritedOptionStrings: TInheritedCompOptsStrings): string;
     function SaveAutoInstallConfig: TModalResult;// for the uses section
-    function IsStaticBasePackage(PackageName: string): boolean;
+    function IsCompiledInBasePackage(PackageName: string): boolean;
     procedure FreeAutoInstallDependencies;
   public
     // registration
@@ -525,6 +477,7 @@ type
     property Verbosity: TPkgVerbosityFlags read FVerbosity write FVerbosity;
 
     // base packages
+    property SrcBasePackages: TStringListUTF8Fast read FSrcBasePackages;
     property FCLPackage: TLazPackage read FFCLPackage;
     property LCLBasePackage: TLazPackage read FLCLBasePackage;
     property LCLPackage: TLazPackage read FLCLPackage;
@@ -1136,6 +1089,7 @@ begin
   FTree:=TAVLTree.Create(@CompareLazPackageID);
   FItems:=TFPList.Create;
   FLazarusBasePackages:=TFPList.Create;
+  FSrcBasePackages:=TStringListUTF8Fast.Create;
   if GlobalMacroList<>nil then begin
     GlobalMacroList.Add(TTransferMacro.Create('PkgDir','',
       lisPkgMacroPackageDirectoryParameterIsPackageID, @MacroFunctionPkgDir, []));
@@ -1169,6 +1123,7 @@ begin
     OnGetAllRequiredPackages:=nil;
   Clear;
   FreeAndNil(FLazarusBasePackages);
+  FreeAndNil(FSrcBasePackages);
   FreeAndNil(FItems);
   FreeAndNil(FTree);
   FreeAndNil(FFindFileCache);
@@ -2170,7 +2125,7 @@ begin
   FTree.Add(APackage);
   FItems.Add(APackage);
 
-  if IsStaticBasePackage(APackage.Name) then begin
+  if IsCompiledInBasePackage(APackage.Name) then begin
     APackage.Installed:=pitStatic;
     APackage.AutoInstall:=pitStatic;
     if SysUtils.CompareText(APackage.Name,'FCL')=0 then begin
@@ -2416,15 +2371,22 @@ begin
   PkgList:=nil;
   try
     GetAllRequiredPackages(nil,FirstAutoInstallDependency,PkgList,[pirCompileOrder]);
-    StaticPackagesInc:='';
+    StaticPackagesInc:='// In case of duplicate identifier errors, see lazarus.pp'+LineEnding;
     if PkgList<>nil then begin
       for i:=0 to PkgList.Count-1 do begin
         APackage:=TLazPackage(PkgList[i]);
         if (APackage=nil)
         or APackage.Missing
-        or IsStaticBasePackage(APackage.Name)
+        or IsCompiledInBasePackage(APackage.Name)
         or (APackage.PackageType in [lptRunTime,lptRunTimeOnly])
         then continue;
+
+        if FSrcBasePackages.IndexOf(APackage.Name)>0 then
+        begin
+          debugln(['Note: (lazarus) TLazPackageGraph.SaveAutoInstallConfig: omitting base package "',APackage.Name,'"']);
+          continue;
+        end;
+
         StaticPackagesInc:=StaticPackagesInc
             +ExtractFileNameOnly(APackage.GetCompileSourceFilename)
             +','+LineEnding;
@@ -2438,7 +2400,7 @@ begin
                            lisPkgMangstaticPackagesConfigFile);
 end;
 
-function TLazPackageGraph.IsStaticBasePackage(PackageName: string): boolean;
+function TLazPackageGraph.IsCompiledInBasePackage(PackageName: string): boolean;
 var
   bp: TLazarusIDEBasePkg;
 begin
@@ -5159,6 +5121,106 @@ begin
   Result:=mrOk;
 end;
 
+function TLazPackageGraph.ParseBasePackages(Verbose: boolean): boolean;
+var
+  LazDir, SrcFilename, Atom, PkgName: String;
+  Code: TCodeBuffer;
+  p, AtomStart: integer;
+begin
+  Result:=false;
+  LazDir:=EnvironmentOptions.GetParsedLazarusDirectory;
+  if (LazDir='') or not FilenameIsAbsolute(LazDir) then
+  begin
+    if Verbose then
+      debugln(['Error: (lazarus) TLazPackageGraph.ParseBasePackages missing LazarusDir "',LazDir,'"']);
+    exit;
+  end;
+  SrcFilename:=AppendPathDelim(LazDir)+'packager'+PathDelim+'pkgsysbasepkgs.pas';
+  if not FileExistsCached(SrcFilename) then
+  begin
+    if Verbose then
+      debugln(['Error: (lazarus) TLazPackageGraph.ParseBasePackages file not found: "',SrcFilename,'"']);
+    exit;
+  end;
+  Code:=CodeToolBoss.LoadFile(SrcFilename,true,false);
+  if Code=nil then
+  begin
+    if Verbose then
+      debugln(['Error: (lazarus) TLazPackageGraph.ParseBasePackages failed to load "',SrcFilename,'"']);
+    exit;
+  end;
+  if (FSrcBasePackagesFilename=SrcFilename)
+      and (FSrcBasePackagesFileChangeStep=Code.FileChangeStep) then
+    exit(true); // cache valid
+
+  FSrcBasePackagesFilename:=SrcFilename;
+  FSrcBasePackagesFileChangeStep:=Code.FileChangeStep;
+  FSrcBasePackages.Clear;
+
+  if SearchCodeInSource(Code.Source,'LazarusIDEBasePkgNames:',1,p,false)<1 then
+  begin
+    if Verbose then
+      debugln(['Error: (lazarus) TLazPackageGraph.ParseBasePackages failed to find LazarusIDEBasePkgNames in "',SrcFilename,'"']);
+    exit;
+  end;
+  AtomStart:=p;
+  repeat
+    Atom:=ReadNextPascalAtom(Code.Source,p,AtomStart);
+    if (Atom='') or (Atom=')') then break;
+    if Atom[1]='''' then
+    begin
+      PkgName:=copy(Atom,2,length(Atom)-2);
+      if IsValidPkgName(PkgName) then
+        FSrcBasePackages.Add(PkgName);
+    end;
+  until false;
+  Result:=true;
+end;
+
+function TLazPackageGraph.SrcBasePackagesNeedLazbuild: string;
+var
+  i: Integer;
+  PkgName, aFilename: String;
+  bp: TLazarusIDEBasePkg;
+  Pkg: TLazPackage;
+begin
+  Result:='';
+  if not ParseBasePackages(true) then
+    exit('Unable to parse base package list.');
+
+  // check if all source base packages will be installed
+  for i:=0 to FSrcBasePackages.Count-1 do
+  begin
+    PkgName:=FSrcBasePackages[i];
+    if IsCompiledInBasePackage(PkgName) then
+      continue;
+    // new base package
+    if FindDependencyByNameInList(FirstAutoInstallDependency,pddRequires,PkgName)<>nil
+    then
+      exit; // it will be installed anyway -> ok
+    // the sources need a base package, that this IDE will not install
+    // -> better use lazbuild for building
+    exit('Sources need a new base package "'+PkgName+'"');
+  end;
+
+  // check if all compiled-in base packages are also source base packages
+  for bp in TLazarusIDEBasePkg do
+  begin
+    PkgName:=LazarusIDEBasePkgNames[bp];
+    if FSrcBasePackages.IndexOf(PkgName)>=0 then continue;
+    // sources do not listen this as base package
+    Pkg:=FindPackageWithName(PkgName,nil);
+    if Pkg=nil then continue;
+    if Pkg.IsVirtual then
+      exit('Sources do not use "'+PkgName+'" as base package.'); // avoid IDE package check errors and use lazbuild
+    aFilename:=Pkg.GetResolvedFilename(true);
+    if aFilename='' then
+      exit('Sources do not use "'+PkgName+'" as base package.'); // avoid IDE package check errors and use lazbuild
+    if not FileExistsCached(aFilename) then
+      exit('Sources do not use "'+PkgName+'" as base package.'); // avoid IDE package check errors and use lazbuild
+  end;
+end;
+
 function TLazPackageGraph.PreparePackageOutputDirectory(APackage: TLazPackage;
   CleanUp: boolean): TModalResult;
 var
@@ -5997,7 +6059,7 @@ begin
         // -> unable to load this dependency due to conflict
         debugln('Error: (lazarus) Open dependency found incompatible package: searched for '
                 +Dependency.AsString(true,false)+', but found '+APackage.IDAsString);
-        if IsStaticBasePackage(APackage.Name) then
+        if IsCompiledInBasePackage(APackage.Name) then
         begin
           //debugln(['Note: (lazarus) LazarusDir="',EnvironmentOptions.GetParsedLazarusDirectory,'"']);
           // wrong base package
@@ -6149,7 +6211,7 @@ begin
   OpenDependency(Dependency,false);
   if Dependency.LoadPackageResult<>lprSuccess then begin
     // a valid lpk file of the installed package can not be found
-    IsBasePkg:=IsStaticBasePackage(Dependency.PackageName);
+    IsBasePkg:=IsCompiledInBasePackage(Dependency.PackageName);
     // -> create a broken package
     BrokenPackage:=TLazPackage.CreateAndClear;
     with BrokenPackage do begin

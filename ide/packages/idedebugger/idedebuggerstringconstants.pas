@@ -32,6 +32,16 @@ resourcestring
   lisMVSaveMessagesToFileTxt = 'Save messages to file (*.txt)';
   uemToggleBreakpoint = 'Toggle &Breakpoint';
 
+  lisMenuStepInto = 'Step In&to';
+  lisMenuStepOver = '&Step Over';
+  lisMenuStepIntoInstr = 'Step Into Instruction';
+  lisMenuStepIntoInstrHint = 'Step Into Instruction';
+  lisMenuStepOverInstr = 'Step Over Instruction';
+  lisMenuStepOverInstrHint = 'Step Over Instruction';
+  lisMenuStepIntoContext = 'Step Into (Context)';
+  lisMenuStepOverContext = 'Step Over (Context)';
+  lisMenuStepOut = 'Step O&ut';
+  lisMenuStepToCursor = 'Step over to &Cursor';
 
   //
   lisMenuViewCallStack = 'Call Stack';
@@ -306,6 +316,17 @@ resourcestring
   rsEnterPID = 'Enter PID';
   dlgUnitDepRefresh      = 'Refresh';
 
+  //Disassembler dialog
+  lisDisAssAssembler = 'Assembler';
+  lisMenuViewAssembler = 'Assembler';
+  lisDbgAsmCopyToClipboard = 'Copy to Clipboard';
+  lisDbgAsmCopyAddressToClipboard = 'Copy address to Clipboard';
+  lisDisAssGotoCurrentAddress = 'Goto Current Address';
+  lisDisAssGotoCurrentAddressHint = 'Goto Current Address';
+  lisDisAssGotoAddress = 'Goto Address';
+  lisDisAssGotoAddressHint = 'Goto Address';
+  lisDisAssGotoAddrEditTextHint = '($address)';
+
   // Feedback
   lisDebuggerFeedbackInformation = 'Debugger Information';
   lisDebuggerFeedbackWarning = 'Debugger Warning';
@@ -330,6 +351,7 @@ resourcestring
   drsColWidthName        = 'Name column';
   drsColWidthExpression  = 'Expression column';
   drsColWidthValue       = 'Value column';
+  drsColWidthAddr        = 'Address column';
   drsColWidthState       = 'State column';
   drsColWidthIndex       = 'Index column';
   drsColWidthSource      = 'Source column';

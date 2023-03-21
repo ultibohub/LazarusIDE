@@ -632,6 +632,11 @@ type
     function InstructionLength: Integer; virtual;
   end;
 
+  TDbgInstInfo = record
+    InstrType: (itAny, itJump);
+    InstrTargetOffs: Int64; // offset from the START address of instruction
+  end;
+
   { TDbgAsmDecoder }
 
   TDbgAsmDecoder = class
@@ -643,7 +648,8 @@ type
   public
     constructor Create(AProcess: TDbgProcess); virtual; abstract;
 
-    procedure Disassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String); virtual; abstract;
+    procedure Disassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String; out AnInfo: TDbgInstInfo); virtual; overload;
+    procedure Disassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String); virtual; abstract; overload;
     procedure ReverseDisassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String); virtual;
 
     function GetInstructionInfo(AnAddress: TDBGPtr): TDbgAsmInstruction; virtual; abstract;
@@ -788,6 +794,7 @@ type
     procedure RestoreTempBreakInstructionCodes;
     function HasInsertedBreakInstructionAtLocation(const ALocation: TDBGPtr): Boolean; // returns Int3, if there is no break at this location
 
+    function CanContinueForWatchEval(ACurrentThread: TDbgThread): boolean; virtual;
     function Continue(AProcess: TDbgProcess; AThread: TDbgThread; SingleStep: boolean): boolean; virtual;
     function WaitForDebugEvent(out ProcessIdentifier, ThreadIdentifier: THandle): boolean; virtual; abstract;
     function ResolveDebugEvent(AThread: TDbgThread): TFPDEvent; virtual;
@@ -1827,6 +1834,13 @@ end;
 function TDbgAsmDecoder.GetCanReverseDisassemble: boolean;
 begin
   Result := false;
+end;
+
+procedure TDbgAsmDecoder.Disassemble(var AAddress: Pointer; out
+  ACodeBytes: String; out ACode: String; out AnInfo: TDbgInstInfo);
+begin
+  AnInfo := Default(TDbgInstInfo);
+  Disassemble(AAddress, ACodeBytes, ACode);
 end;
 
 // Naive backwards scanner, decode MaxInstructionSize
@@ -2874,6 +2888,12 @@ function TDbgProcess.HasInsertedBreakInstructionAtLocation(
   const ALocation: TDBGPtr): Boolean;
 begin
   Result := FBreakMap.HasInsertedBreakInstructionAtLocation(ALocation);
+end;
+
+function TDbgProcess.CanContinueForWatchEval(ACurrentThread: TDbgThread
+  ): boolean;
+begin
+  Result := True;
 end;
 
 procedure TDbgProcess.MaskBreakpointsInReadData(const AAdress: TDbgPtr; const ASize: Cardinal; var AData);
