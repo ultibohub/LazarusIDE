@@ -1643,6 +1643,7 @@ begin
   { Linking }
   p:=Path+'Linking/';
   GenerateDebugInfo := aXMLConfig.GetValue(p+'Debugging/GenerateDebugInfo/Value', False); //FileVersion >= 11 // Default = True, since version 11 (was False before) //Ultibo
+  RunWithoutDebug := aXMLConfig.GetValue(p+'Debugging/RunWithoutDebug/Value', False);
   UseLineInfoUnit := aXMLConfig.GetValue(p+'Debugging/UseLineInfoUnit/Value', False); //true //Ultibo
   UseHeaptrc := aXMLConfig.GetValue(p+'Debugging/UseHeaptrc/Value', false);
   TrashVariables := aXMLConfig.GetValue(p+'Debugging/TrashVariables/Value', false);
@@ -1853,6 +1854,7 @@ begin
   { Linking }
   p:=Path+'Linking/';
   aXMLConfig.SetDeleteValue(p+'Debugging/GenerateDebugInfo/Value', GenerateDebugInfo, False); //True // Default = True, since version 11 (was False before) //Ultibo
+  aXMLConfig.SetDeleteValue(p+'Debugging/RunWithoutDebug/Value', RunWithoutDebug, False);
   s:='';
   WriteStr(s, DebugInfoType);
   aXMLConfig.SetDeleteValue(p+'Debugging/DebugInfoType/Value', s, 'dsAuto');
@@ -3421,6 +3423,7 @@ begin
   fCustomConfigFile := false;
   fConfigFilePath := 'extrafpc.cfg';
   CustomOptions := '';
+  fRunWithoutDebug := False;
 
   // inherited
   ClearInheritedOptions;
@@ -3535,6 +3538,7 @@ begin
   fConfigFilePath := CompOpts.fConfigFilePath;
   fStopAfterErrCount := CompOpts.fStopAfterErrCount;
   CustomOptions := CompOpts.CustomOptions;
+  fRunWithoutDebug := CompOpts.fRunWithoutDebug;
 
   // Inherited and parser options
   FDefaultMakeOptionsFlags := CompOpts.FDefaultMakeOptionsFlags;
@@ -3689,6 +3693,7 @@ begin
   if Done(Tool.AddDiff('StopAfterErrCount',fStopAfterErrCount,CompOpts.fStopAfterErrCount)) then exit;
   if Done(Tool.AddDiff('CustomOptions',CustomOptions,CompOpts.CustomOptions)) then exit;
   if Done(Tool.AddDiff('OtherDefines',OtherDefines.Text,CompOpts.OtherDefines.Text)) then exit;
+  if Done(Tool.AddDiff('RunWithoutDebug',fRunWithoutDebug,CompOpts.fRunWithoutDebug)) then exit;
 
   // compilation
   if Tool<>nil then Tool.Path:='Compilation';

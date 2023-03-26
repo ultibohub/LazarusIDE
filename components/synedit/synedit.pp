@@ -210,7 +210,9 @@ type
     // Mouse-states
     sfLeftGutterClick, sfRightGutterClick,
     sfInClick, sfDblClicked, sfTripleClicked, sfQuadClicked,
-    sfWaitForDragging, sfWaitForDraggingNoCaret, sfIsDragging, sfWaitForMouseSelecting, sfMouseSelecting, sfMouseDoneSelecting,
+    sfWaitForDragging, sfWaitForDraggingNoCaret, sfIsDragging, // SynEdit is drag-source
+    sfDraggingOver, // SynEdit is drag target
+    sfWaitForMouseSelecting, sfMouseSelecting, sfMouseDoneSelecting,
     sfIgnoreUpClick,
     sfSelChanged
     );                                           //mh 2000-10-30
@@ -772,6 +774,7 @@ type
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
       override;
+    procedure DragTimerHandler;
     procedure ScrollTimerHandler(Sender: TObject);
     procedure DoContextPopup(MousePos: TPoint; var Handled: Boolean); override;
     procedure FindAndHandleMouseAction(AButton: TSynMouseButton; AShift: TShiftState;
@@ -820,6 +823,8 @@ type
     procedure SetHighlighter(const Value: TSynCustomHighlighter); virtual;
     procedure UpdateShowing; override;
     procedure SetColor(Value: TColor); override;
+    (* Fractions go +/- 1..256 // Fraction bigger 256 mean on opposite side outside hot zone *)
+    function  GetDragHotZoneInfo(x,y: Integer; out HorizFraction, VertFraction: Integer): boolean;
     procedure DragOver(Source: TObject; X, Y: Integer;
       State: TDragState; var Accept: Boolean); override;
     procedure DoOnResize; override;
@@ -3666,6 +3671,36 @@ begin
   FPaintArea.BackgroundColor := Color;
 end;
 
+function TCustomSynEdit.GetDragHotZoneInfo(x, y: Integer; out HorizFraction,
+  VertFraction: Integer): boolean;
+var
+  b: TRect;
+  HotWidth, HotHeight: Integer;
+begin
+  HorizFraction := 0;
+  VertFraction := 0;
+
+  b := FTextArea.Bounds;
+  HotWidth  := Min(LineHeight * 11 div 4, (b.Right - b.Left) div 4);
+  HotHeight := Min(LineHeight *  9 div 4, (b.Bottom - b.Top) div 4);
+
+  if x < b.Left + HotWidth then
+    HorizFraction := (x - (b.Left + HotWidth)) * 256 div HotWidth
+  else
+  if x >= b.Right - HotWidth then
+    HorizFraction := (x - (b.Right - 1 - HotWidth)) * 256 div HotWidth;
+
+  if y < b.Top + HotWidth then
+    VertFraction := (y - (b.Top + HotWidth)) * 256 div HotWidth
+  else
+  if y >= b.Bottom - HotWidth then
+    VertFraction := (y - (b.Bottom - 1 - HotWidth)) * 256 div HotWidth;
+
+  Result := ( (HorizFraction <> 0) or (VertFraction <> 0) ) and
+            (abs(HorizFraction) <= 256) and
+            (abs(VertFraction) <= 256);
+end;
+
 procedure TCustomSynEdit.FindAndHandleMouseAction(AButton: TSynMouseButton;
   AShift: TShiftState; X, Y: Integer; ACCount: TSynMAClickCount; ADir: TSynMAClickDir; out
   AnActionResult: TSynEditMouseActionResult; AWheelDelta: Integer);
@@ -3850,63 +3885,63 @@ begin
     end;
   end
   else
-  if (fStateFlags * [sfMouseSelecting, sfIsDragging] <> []) and MouseCapture
+  if (fStateFlags * [sfMouseSelecting, sfIsDragging] = [sfMouseSelecting]) and MouseCapture
   then begin
     //DebugLn(' TCustomSynEdit.MouseMove CAPTURE Mouse=',dbgs(X),',',dbgs(Y),' Caret=',dbgs(CaretXY),', BlockBegin=',dbgs(BlockBegin),' BlockEnd=',dbgs(BlockEnd));
-    if sfIsDragging in fStateFlags then
-      FBlockSelection.IncPersistentLock;
-    FInternalCaret.AssignFrom(FCaret);
-    FInternalCaret.LineCharPos := PixelsToRowColumn(Point(X,Y));
-
-    if (fStateFlags * [sfMouseSelecting, sfIsDragging] = [sfMouseSelecting]) and
-       (FMouseSelectionCmd in [emcStartSelectTokens, emcStartSelectWords, emcStartSelectLines])
-    then begin
-      FInternalCaret.LineCharPos := PixelsToRowColumn(Point(X,Y), [scmForceLeftSidePos]);
-      forw := ComparePoints(FInternalCaret.LineBytePos, FBlockSelection.StartLineBytePos) >= 0;
-      s := FInternalCaret.LineText;
-      i := length(s) + 1;
-      p1 := FInternalCaret.LineBytePos;
-      case FMouseSelectionCmd of
-        emcStartSelectTokens: begin
-            if forw then
-              p1.X := FWordBreaker.NextBoundary(s, p1.X)
-            else
-              p1.X := Max(1, FWordBreaker.PrevBoundary(s, p1.X, True));
-          end;
-        emcStartSelectWords: begin
-            if forw then begin
-              j := FWordBreaker.NextWordStart(s, p1.X);
-              if j < 1 then j := i;
-              p1.X := FWordBreaker.NextWordEnd(s, p1.X);
-              if p1.X < 1 then p1.X := i;
-              p1.X := Min(p1.X, j);
-            end
-            else
-              p1.X := Max(1, Max(FWordBreaker.PrevWordEnd(s, p1.X, True),
-                                 FWordBreaker.PrevWordStart(s, p1.X, True)));
-          end;
-        emcStartSelectLines: begin
-            if forw then
-              p1.X := i
-            else
-              p1.X := 1;
-          end;
-        end;
-        if p1.X < 1 then p1.X := i;
-        FInternalCaret.LineBytePos := p1;
-    end;
 
     // compare to Bounds => Padding area does not scroll
-    if ( (X >= FTextArea.Bounds.Left)   or (LeftChar <= 1) ) and
-       ( (X <  FTextArea.Bounds.Right)  or (LeftChar >= CurrentMaxLeftChar) ) and
-       ( (Y >= FTextArea.Bounds.Top)    or (TopView <= 1) ) and
-       ( (Y <  FTextArea.Bounds.Bottom) or (TopView >= CurrentMaxTopView) )
+    if (X >= FTextArea.Bounds.Left)   and
+       (X <  FTextArea.Bounds.Right)  and
+       (Y >= FTextArea.Bounds.Top)    and
+       (Y <  FTextArea.Bounds.Bottom)
     then begin
+      FInternalCaret.AssignFrom(FCaret);
+      FInternalCaret.LineCharPos := PixelsToRowColumn(Point(X,Y));
+
+      if (FMouseSelectionCmd in [emcStartSelectTokens, emcStartSelectWords, emcStartSelectLines])
+      then begin
+        FInternalCaret.LineCharPos := PixelsToRowColumn(Point(X,Y), [scmForceLeftSidePos]);
+        forw := ComparePoints(FInternalCaret.LineBytePos, FBlockSelection.StartLineBytePos) >= 0;
+        s := FInternalCaret.LineText;
+        i := length(s) + 1;
+        p1 := FInternalCaret.LineBytePos;
+        case FMouseSelectionCmd of
+          emcStartSelectTokens: begin
+              if forw then
+                p1.X := FWordBreaker.NextBoundary(s, p1.X)
+              else
+                p1.X := Max(1, FWordBreaker.PrevBoundary(s, p1.X, True));
+            end;
+          emcStartSelectWords: begin
+              if forw then begin
+                j := FWordBreaker.NextWordStart(s, p1.X);
+                if j < 1 then j := i;
+                p1.X := FWordBreaker.NextWordEnd(s, p1.X);
+                if p1.X < 1 then p1.X := i;
+                p1.X := Min(p1.X, j);
+              end
+              else
+                p1.X := Max(1, Max(FWordBreaker.PrevWordEnd(s, p1.X, True),
+                                   FWordBreaker.PrevWordStart(s, p1.X, True)));
+            end;
+          emcStartSelectLines: begin
+              if forw then
+                p1.X := i
+              else
+                p1.X := 1;
+            end;
+          end;
+          if p1.X < 1 then p1.X := i;
+          FInternalCaret.LineBytePos := p1;
+      end;
+
       if (sfMouseSelecting in fStateFlags) and not FInternalCaret.IsAtPos(FCaret) then
         Include(fStateFlags, sfMouseDoneSelecting);
       FBlockSelection.StickyAutoExtend := False;
       FBlockSelection.AutoExtend := sfMouseSelecting in fStateFlags;
+      Include(fStateFlags, sfPreventScrollAfterSelect); // not PaintLocked => setting caret will directly call EnsureCursorPos
       FCaret.LineBytePos := FInternalCaret.LineBytePos;
+      exclude(fStateFlags, sfPreventScrollAfterSelect);
       FBlockSelection.AutoExtend := False;
     end
     else begin
@@ -3925,6 +3960,7 @@ begin
       else
         FScrollDeltaY := 0;
 
+      fScrollTimer.Interval := 100;
       fScrollTimer.Enabled := (fScrollDeltaX <> 0) or (fScrollDeltaY <> 0);
       if (sfMouseSelecting in fStateFlags) and ((fScrollDeltaX <> 0) or (fScrollDeltaY <> 0)) then
         Include(fStateFlags, sfMouseDoneSelecting);
@@ -3932,8 +3968,6 @@ begin
     if sfMouseDoneSelecting in fStateFlags then begin
       FBlockSelection.ActiveSelectionMode := FMouseSelectionMode;
     end;
-    if sfIsDragging in fStateFlags then
-      FBlockSelection.DecPersistentLock;
   end
   else
   if MouseCapture and (fStateFlags * [sfIsDragging, sfWaitForMouseSelecting] = [])
@@ -3949,9 +3983,14 @@ var
   CurMousePos: TPoint;
   X, Y: Integer;
 begin
+  fScrollTimer.Interval := 100;
+
+  if sfDraggingOver in fStateFlags then begin
+    DragTimerHandler;
+    exit;
+  end;
+
   // changes to line / column in one go
-  if sfIsDragging in fStateFlags then
-    FBlockSelection.IncPersistentLock;
   DoIncPaintLock(Self); // No editing is taking place
   try
     CurMousePos:=Point(0,0);
@@ -4002,9 +4041,9 @@ begin
         SetBlockEnd(LogicalCaretXY);
     end;
   finally
+    if sfEnsureCursorPos in fStateFlags then
+      Include(fStateFlags, sfPreventScrollAfterSelect);
     DoDecPaintLock(Self);
-    if sfIsDragging in fStateFlags then
-      FBlockSelection.DecPersistentLock;
   end;
 end;
 
@@ -4084,6 +4123,43 @@ begin
 
   SelAvailChange(nil);
   //DebugLn('TCustomSynEdit.MouseUp END Mouse=',X,',',Y,' Caret=',CaretX,',',CaretY,', BlockBegin=',BlockBegin.X,',',BlockBegin.Y,' BlockEnd=',BlockEnd.X,',',BlockEnd.Y);
+end;
+
+procedure TCustomSynEdit.DragTimerHandler;
+var
+  hf, vf: Integer;
+  CurMousePos: TPoint;
+begin
+  CurMousePos:=Point(0,0);
+  GetCursorPos(CurMousePos);
+  CurMousePos:=ScreenToClient(CurMousePos);
+
+  GetDragHotZoneInfo(CurMousePos.x, CurMousePos.y, hf, vf);
+  if ( (hf = 0) and (vf = 0) ) or (abs(hf) >= 384) or (abs(vf) >= 384) then begin
+    fScrollTimer.Enabled := False;
+    Exclude(fStateFlags, sfDraggingOver);
+    exit;
+  end;
+
+  if sfIsDragging in fStateFlags then
+    FBlockSelection.IncPersistentLock;
+  DoIncPaintLock(Self);
+  try
+    if hf <> 0 then
+      LeftChar := LeftChar + hf div 32;
+    if vf <> 0 then
+      TopView := TopView + vf div 32;
+
+    FCaret.ViewedLineCharPos := PixelsToRowColumn(CurMousePos);
+
+  finally
+    if sfEnsureCursorPos in fStateFlags then
+      Include(fStateFlags, sfPreventScrollAfterSelect);
+
+    DoDecPaintLock(Self);
+    if sfIsDragging in fStateFlags then
+      FBlockSelection.DecPersistentLock;
+  end;
 end;
 
 procedure TCustomSynEdit.Paint;
@@ -6331,31 +6407,60 @@ end;
 procedure TCustomSynEdit.DragOver(Source: TObject; X, Y: Integer;
   State: TDragState; var Accept: Boolean);
 var
-  DropMove: boolean;
+  DropMove, InHotZone: boolean;
+  hf, vf: Integer;
 begin
   inherited;
   LastMouseCaret:=Point(-1,-1);
-  if (eoAcceptDragDropEditing in FOptions2) and (Source is TCustomSynEdit) then begin
-    Accept := False;
-    if (not ReadOnly) and TCustomSynEdit(Source).SelAvail then
-    begin
-      FBlockSelection.IncPersistentLock;
-      try
-        //if State = dsDragLeave then //restore prev caret position
-        //  ComputeCaret(FMouseDownX, FMouseDownY)
-        //else //position caret under the mouse cursor
-        ComputeCaret(X, Y);
+  Exclude(fStateFlags, sfDraggingOver);
 
-        Accept := CheckDragDropAccecpt(LogicalCaretXY, Source, DropMove);
+  if (eoAcceptDragDropEditing in FOptions2) and (Source is TCustomSynEdit) then begin
+    Accept := (X >= FTextArea.Bounds.Left)   and
+              (X <  FTextArea.Bounds.Right)  and
+              (Y >= FTextArea.Bounds.Top)    and
+              (Y <  FTextArea.Bounds.Bottom);
+
+    InHotZone := GetDragHotZoneInfo(x, y, hf, vf);
+    if InHotZone then begin
+      if not (sfDraggingOver in fStateFlags) then begin
+        fScrollTimer.Interval := 500;
+      end;
+      fScrollTimer.Enabled := True;
+      Include(fStateFlags, sfDraggingOver);
+    end
+    else
+    if ( (hf <> 0) or (vf <> 0) ) and (abs(hf) < 384) and (abs(vf) < 384) then
+      Include(fStateFlags, sfDraggingOver); // keep scrolling
+
+    if Accept and (not ReadOnly) and TCustomSynEdit(Source).SelAvail then
+    begin
+      //if State = dsDragLeave then //restore prev caret position
+      //  ComputeCaret(FMouseDownX, FMouseDownY)
+      //else //position caret under the mouse cursor
+      FInternalCaret.AssignFrom(FCaret);
+      FInternalCaret.LineCharPos := PixelsToRowColumn(Point(X,Y));
+      Accept := CheckDragDropAccecpt(FInternalCaret.LineBytePos, Source, DropMove);
+
+      if Accept then begin
+        FBlockSelection.IncPersistentLock;
+        Include(fStateFlags, sfPreventScrollAfterSelect); // not PaintLocked => setting caret will directly call EnsureCursorPos
+        try
+          FCaret.LineCharPos := FInternalCaret.LineCharPos;
+        finally
+          FBlockSelection.DecPersistentLock;
+          exclude(fStateFlags, sfPreventScrollAfterSelect);
+        end;
+
         if DropMove then
           DragCursor := crDrag
         else
           DragCursor := crMultiDrag;
-      finally
-        FBlockSelection.DecPersistentLock;
       end;
     end;
   end;
+
+  if not (sfDraggingOver in fStateFlags) then
+    fScrollTimer.Enabled := False;
 end;
 
 procedure TCustomSynEdit.DragDrop(Source: TObject; X, Y: Integer);

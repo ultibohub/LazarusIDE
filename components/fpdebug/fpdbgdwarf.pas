@@ -97,6 +97,9 @@ type
     destructor Destroy; override;
   end;
 
+  TFindExportedSymbolsFlag = (fsfIgnoreEnumVals);
+  TFindExportedSymbolsFlags = set of TFindExportedSymbolsFlag;
+
   { TFpDwarfInfoSymbolScope }
 
   TFpDwarfInfoSymbolScope = class(TFpDbgSymbolScope)
@@ -119,9 +122,9 @@ type
     function GetSelfParameter: TFpValueDwarf;
 
     function FindExportedSymbolInUnit(CU: TDwarfCompilationUnit; const ANameInfo: TNameSearchInfo;
-      out AnInfoEntry: TDwarfInformationEntry; out AnIsExternal: Boolean): Boolean; inline;
+      out AnInfoEntry: TDwarfInformationEntry; out AnIsExternal: Boolean; AFindFlags: TFindExportedSymbolsFlags = []): Boolean; virtual;
     function FindExportedSymbolInUnits(const AName: String; const ANameInfo: TNameSearchInfo;
-      SkipCompUnit: TDwarfCompilationUnit; out ADbgValue: TFpValue; const OnlyUnitNameLower: String = ''): Boolean;
+      SkipCompUnit: TDwarfCompilationUnit; out ADbgValue: TFpValue; const OnlyUnitNameLower: String = ''): Boolean; virtual;
     function FindSymbolInStructure(const AName: String; const ANameInfo: TNameSearchInfo;
       InfoEntry: TDwarfInformationEntry; out ADbgValue: TFpValue): Boolean; virtual;
     function FindSymbolInStructureRecursive(const AName: String; const ANameInfo: TNameSearchInfo;
@@ -1400,7 +1403,8 @@ end;
 
 function TFpDwarfInfoSymbolScope.FindExportedSymbolInUnit(
   CU: TDwarfCompilationUnit; const ANameInfo: TNameSearchInfo; out
-  AnInfoEntry: TDwarfInformationEntry; out AnIsExternal: Boolean): Boolean;
+  AnInfoEntry: TDwarfInformationEntry; out AnIsExternal: Boolean;
+  AFindFlags: TFindExportedSymbolsFlags): Boolean;
 var
   ExtVal: Integer;
   InfoEntry: TDwarfInformationEntry;
@@ -1430,7 +1434,7 @@ begin
   end
 
   else
-  if InfoEntry.GoNamedChildEx(ANameInfo) then begin
+  if InfoEntry.GoNamedChildEx(ANameInfo, False, fsfIgnoreEnumVals in AFindFlags) then begin
     if InfoEntry.IsAddressInStartScope(FAddress) then begin
       // only variables are marked "external", but types not / so we may need all top level
       Result := True;
@@ -6668,7 +6672,7 @@ begin
 end;
 
 var
-  ThisNameInfo, SelfNameInfo: TNameSearchInfo;
+  ThisNameInfo, SelfDollarNameInfo, SelfNameInfo: TNameSearchInfo;
 function TFpSymbolDwarfDataProc.GetSelfParameter(AnAddress: TDbgPtr): TFpValueDwarf;
 var
   InfoEntry: TDwarfInformationEntry;
@@ -6677,6 +6681,7 @@ var
 begin
   // special: search "self"
   // Todo nested procs
+  // TODO: move to FreePascal unit
   Result := nil;
   InfoEntry := InformationEntry.Clone;
   //StartScopeIdx := InfoEntry.ScopeIndex;
@@ -6687,6 +6692,12 @@ begin
     found := InfoEntry.GoNamedChildEx(ThisNameInfo);
     if found then
       found := InfoEntry.IsArtificial;
+    if not found then begin
+      InfoEntry.ScopeIndex := InformationEntry.ScopeIndex;
+      found := InfoEntry.GoNamedChildEx(SelfDollarNameInfo);
+      if found then
+        found := InfoEntry.IsArtificial;
+    end;
     if not found then begin
       InfoEntry.ScopeIndex := InformationEntry.ScopeIndex;
       found := InfoEntry.GoNamedChildEx(SelfNameInfo);
@@ -6926,7 +6937,8 @@ initialization
   FPDBG_DWARF_DATA_WARNINGS := DebugLogger.FindOrRegisterLogGroup('FPDBG_DWARF_DATA_WARNINGS' {$IFDEF FPDBG_DWARF_DATA_WARNINGS} , True {$ENDIF} );
 
   ThisNameInfo := NameInfoForSearch('THIS');
-  SelfNameInfo := NameInfoForSearch('$SELF');
+  SelfNameInfo := NameInfoForSearch('SELF');
+  SelfDollarNameInfo := NameInfoForSearch('$SELF');
 
 end.
 

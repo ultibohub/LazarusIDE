@@ -491,6 +491,7 @@ resourcestring
   lisMenuRunParameters = 'Run &Parameters ...';
   lisMenuBuildFile = 'Build File';
   lisMenuRunWithoutDebugging = 'Run without Debugging';
+  lisMenuRunWithDebugging = 'Run with Debugging';
   lisMenuRunFile = 'Run File';
   lisKMConfigBuildFile = 'Config "Build File"';
   lisKMInspect = 'Inspect';
@@ -2374,6 +2375,7 @@ resourcestring
   dlgCOInfoForGDB = 'Debugger info';
   dlgCOOtherDebuggingInfo = 'Other debugging info';
   dlgCOGDB = 'Generate info for the debugger (slower / increases exe-size)';
+  dlgRunWithDebug = 'Run uses the debugger (disable for release-mode)';
   dlgCOSymbolType = 'Type of debug info';
   dlgCOSymbolTypeAuto = 'Automatic';
   dlgCOSymbolTypeStabs = 'Stabs';
@@ -3369,6 +3371,7 @@ resourcestring
   srkmecBuildManyModes            = 'build many modes';
   srkmecAbortBuild                = 'abort build';
   srkmecRunWithoutDebugging       = 'run without debugging';
+  srkmecRunWithDebugging          = 'run with debugging';
   srkmecRun                       = 'run program';
   srkmecPause                     = 'pause program';
   srkmecShowExecutionPoint        = 'show execution point';

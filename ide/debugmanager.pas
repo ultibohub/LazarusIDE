@@ -2260,7 +2260,11 @@ begin
     AllowDebug := MainIDE.AllowDebugControls; //Ultibo
     CanRun := CanRun and AllowDebug; //Ultibo
     // Run
-    itmRunMenuRun.Enabled          := CanRun and (dcRun in AvailCommands);
+    itmRunMenuRun.Enabled                 := (CanRun and (dcRun in AvailCommands)) or
+                                             ((Project1<>nil) and Project1.CompilerOptions.RunWithoutDebug);
+    itmRunMenuRunWithDebugging.Enabled    := CanRun and (dcRun in AvailCommands);
+    itmRunMenuRunWithDebugging.Visible    := (Project1<>nil) and Project1.CompilerOptions.RunWithoutDebug;
+    itmRunMenuRunWithoutDebugging.Visible := (Project1<>nil) and (not Project1.CompilerOptions.RunWithoutDebug);
     // Pause
     itmRunMenuPause.Enabled        := CanRun and ((dcPause in AvailCommands) or FAutoContinueTimer.Enabled);
     // Show execution point

@@ -146,6 +146,7 @@ type
   TDwarfAbbrevFlag = (
     dafHasChildren,
     dafHasName,
+    dafHasArtifical,
     dafHasLowAddr,
     dafHasStartScope,
     dafHasAbstractOrigin
@@ -368,7 +369,7 @@ type
 
     function GoNamedChild(const AName: String): Boolean;
     // find in enum too // TODO: control search with a flags param, if needed
-    function GoNamedChildEx(const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean = False): Boolean;
+    function GoNamedChildEx(const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean = False; ASkipEnumMembers: Boolean = False): Boolean;
     // GoNamedChildMatchCaseEx will use
     // - UpperName for Hash
     // - LowerName for compare
@@ -1599,6 +1600,9 @@ begin
       attrib := ULEB128toOrdinal(pbyte(AnAbbrevDataPtr));
       if attrib = DW_AT_name then
         Include(f, dafHasName)
+      else
+      if attrib = DW_AT_artificial then
+        Include(f, dafHasArtifical)
       else
       if attrib = DW_AT_low_pc then
         Include(f, dafHasLowAddr)
@@ -2874,7 +2878,8 @@ begin
 end;
 
 function TDwarfInformationEntry.GoNamedChildEx(
-  const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean): Boolean;
+  const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean;
+  ASkipEnumMembers: Boolean): Boolean;
 var
   Val: Integer;
   EntryName: PChar;
@@ -2904,7 +2909,14 @@ begin
         Continue;
       end;
 
-      if ASkipArtificial then begin
+      if (sc^.NameHash <> ANameInfo.NameHash) and
+         ( ASkipEnumMembers or (FAbbrev^.tag <> DW_TAG_enumeration_type) )
+      then begin
+        GoNext;
+        Continue;
+      end;
+
+      if ASkipArtificial and (dafHasArtifical in FAbbrev^.flags) then begin
         if ReadValue(DW_AT_artificial, Val) and (Val <> 0) then begin
           GoNext;
           Continue;
@@ -2926,7 +2938,7 @@ begin
         end;
       end;
 
-      if FAbbrev^.tag = DW_TAG_enumeration_type then begin
+      if (not ASkipEnumMembers) and (FAbbrev^.tag = DW_TAG_enumeration_type) then begin
         assert(not InEnum, 'nested enum');
         InEnum := True;
         ParentScopIdx := ScopeIndex;
@@ -3417,7 +3429,8 @@ function TDwarfInformationEntry.IsArtificial: Boolean;
 var
   Val: Integer;
 begin
-  Result := ReadValue(DW_AT_artificial, Val);
+  Result := dafHasArtifical in FAbbrev^.flags;
+  if Result then Result := ReadValue(DW_AT_artificial, Val);
   if Result then Result := Val <> 0;
 end;
 

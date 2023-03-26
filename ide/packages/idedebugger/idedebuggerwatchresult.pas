@@ -116,6 +116,7 @@ type
     VKind = rdkWideString;
   private
     FWideText: WideString;
+    FAddress: TDBGPtr;
   protected
     property GetAsWideString: WideString read FWideText;
     function GetAsString: String; inline;
@@ -124,6 +125,7 @@ type
                                     var AnOverrideTemplate: TOverrideTemplateData;
                                     AnAsProto: Boolean);
     procedure SaveDataToXMLConfig(const AConfig: TXMLConfig; const APath: string; AnAsProto: Boolean);
+    property GetDataAddress: TDBGPtr read FAddress;
   end;
 
   { TWatchResultValueOrdNumBase }
@@ -513,7 +515,7 @@ type
 
   TWatchResultTypeConverted = object(TWatchResultTypeStructBase)
   private
-    FHandler: TLazDbgValueConverterIntf;
+    FHandler: ILazDbgValueConverterIntf;
   public
     procedure AfterAssign(ATypeOnly: Boolean = False);
     procedure DoFree;
@@ -698,7 +700,7 @@ type
 //    FDataFlags: TWatchResultDataFlags;
   //  Addr: TDbgPtr;
   // MemDump
-    function GetBackendValueHandler: TLazDbgValueConverterIntf; virtual;
+    function GetBackendValueHandler: ILazDbgValueConverterIntf; virtual;
     function GetClassID: TWatchResultDataClassID; virtual; //abstract;
   protected
     class function GetStorageClass: TWatchResultStorageClass; virtual; abstract;
@@ -793,7 +795,7 @@ type
     property NestedType: TWatchResultData read GetNestedType; // NESTED TYPE FOR NESTED STORAGE
 
     property ElementName[AnIndex: Integer]: String read GetElementName;
-    property BackendValueHandler: TLazDbgValueConverterIntf read GetBackendValueHandler;
+    property BackendValueHandler: ILazDbgValueConverterIntf read GetBackendValueHandler;
 
     // Array
     property ArrayType: TLzDbgArrayType read GetArrayType;
@@ -1062,6 +1064,10 @@ type
   TWatchResultDataWideString = class(specialize TGenericWatchResultData<TWatchResultValueWideString>)
   private
     function GetClassID: TWatchResultDataClassID; override;
+  protected
+    function GetHasDataAddress: Boolean; override;
+    function GetDataAddress: TDBGPtr; override;
+    procedure SetDataAddress(AnAddr: TDbgPtr); override;
   public
     constructor Create(AStringVal: WideString);
   end;
@@ -1449,10 +1455,10 @@ type
   private
     function GetClassID: TWatchResultDataClassID; override;
   protected
-    function GetBackendValueHandler: TLazDbgValueConverterIntf; override;
+    function GetBackendValueHandler: ILazDbgValueConverterIntf; override;
     function GetConvertedRes: TWatchResultData; override;
   public
-    constructor Create(AHandler: TLazDbgValueConverterIntf);
+    constructor Create(AHandler: ILazDbgValueConverterIntf);
   end;
 
   { TGenericWatchResultDataProc }
@@ -1733,6 +1739,7 @@ procedure TWatchResultValueWideString.LoadDataFromXMLConfig(
 begin
   inherited LoadDataFromXMLConfig(AConfig, APath, AnEntryTemplate, AnOverrideTemplate, AnAsProto);
   FWideText := AConfig.GetValue(APath + 'Value', '');
+  FAddress := TDBGPtr(AConfig.GetValue(APath + 'Addr', 0));
 end;
 
 procedure TWatchResultValueWideString.SaveDataToXMLConfig(
@@ -1740,6 +1747,7 @@ procedure TWatchResultValueWideString.SaveDataToXMLConfig(
 begin
   inherited SaveDataToXMLConfig(AConfig, APath, AnAsProto);
   AConfig.SetValue(APath + 'Value', FWideText);
+  AConfig.SetDeleteValue(APath + 'Addr', Int64(FAddress), 0);
 end;
 
 { TWatchResultValueOrdNumBase }
@@ -2600,7 +2608,7 @@ begin
   Result := FTypeName;
 end;
 
-function TWatchResultData.GetBackendValueHandler: TLazDbgValueConverterIntf;
+function TWatchResultData.GetBackendValueHandler: ILazDbgValueConverterIntf;
 begin
   Result := nil;
 end;
@@ -3496,6 +3504,21 @@ end;
 function TWatchResultDataWideString.GetClassID: TWatchResultDataClassID;
 begin
   Result := wdWString;
+end;
+
+function TWatchResultDataWideString.GetHasDataAddress: Boolean;
+begin
+  Result := True;
+end;
+
+function TWatchResultDataWideString.GetDataAddress: TDBGPtr;
+begin
+  Result := FData.FAddress;
+end;
+
+procedure TWatchResultDataWideString.SetDataAddress(AnAddr: TDbgPtr);
+begin
+  FData.FAddress := AnAddr;
 end;
 
 constructor TWatchResultDataWideString.Create(AStringVal: WideString);
@@ -4707,7 +4730,7 @@ begin
   Result := wdConverted;
 end;
 
-function TWatchResultDataConverted.GetBackendValueHandler: TLazDbgValueConverterIntf;
+function TWatchResultDataConverted.GetBackendValueHandler: ILazDbgValueConverterIntf;
 begin
   Result := FType.FHandler;
 end;
@@ -4726,7 +4749,7 @@ begin
 end;
 
 constructor TWatchResultDataConverted.Create(
-  AHandler: TLazDbgValueConverterIntf);
+  AHandler: ILazDbgValueConverterIntf);
 begin
   assert((FType.FHandler=nil) or (FType.FHandler=AHandler) or (AHandler=nil), 'TWatchResultDataConverted.Create: (FType.FHandler=nil) or (FType.FHandler=AHandler) or (AHandler=nil)');
   if (AHandler <> FType.FHandler) and (AHandler <> nil) then begin
