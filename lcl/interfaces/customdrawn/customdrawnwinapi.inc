@@ -528,6 +528,7 @@ begin
   );*)
 
   lFont.Size := Abs(LogFont.lfHeight);
+  lFont.ftFont.SizeInPoints := lFont.Size;
 
 (*  // Some values at available on Qt documentation at a table
   // Others are guesses. The best would be to test different values for those
@@ -2111,7 +2112,7 @@ begin
     lFontSize := Round(ftFont.TextHeight(Str) * 0.75);// ToDo: Find out why this 75% factor works
     RealX := X + lDestCanvas.WindowOrg.X + lDestCanvas.BaseWindowOrg.X;
     RealY := Y + lDestCanvas.WindowOrg.Y + lDestCanvas.BaseWindowOrg.Y + lFontSize;
-    FTDrawer.DrawText(Str, ftFont, RealX, RealY, colBlack, 255);
+    FTDrawer.DrawText(Str, ftFont, RealX, RealY, lDestCanvas.Font.FPColor, 255);
   finally
     if FreeFTFont then ftFont.Free;
     FTDrawer.Free;

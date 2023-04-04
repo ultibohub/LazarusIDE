@@ -201,7 +201,6 @@ type
   protected
     function IsValidTypeCast: Boolean; override;
     function GetInternMemberByName(const AIndex: String): TFpValue;
-    procedure Reset; override;
     function GetMemberCount: Integer; override;
   private
     FValue: String;
@@ -210,6 +209,8 @@ type
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetAsString: AnsiString; override;
     function GetAsWideString: WideString; override;
+  public
+    procedure Reset; override;
   end;
 
   (* *** "Open Array" in params *** *)
@@ -266,7 +267,6 @@ type
     function CheckTypeAndGetAddr(out AnAddr: TFpDbgMemLocation): boolean;
   protected
     function IsValidTypeCast: Boolean; override;
-    procedure Reset; override;
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetAsString: AnsiString; override;
     function GetAsWideString: WideString; override;
@@ -274,6 +274,7 @@ type
     function GetAsCardinal: QWord; override;
     function GetMemberCount: Integer; override;
   public
+    procedure Reset; override;
     function GetSubString(AStartIndex, ALen: Int64; out ASubStr: AnsiString;
       AIgnoreBounds: Boolean = False): Boolean; override;
     function GetSubWideString(AStartIndex, ALen: Int64; out
@@ -1112,7 +1113,7 @@ begin
     exit;
 
   while AParentClassIndex > 0 do begin
-    {$PUSH}{$Q-}
+    {$PUSH}{$Q-}{$R-}
     VmtAddr.Address := VmtAddr.Address + TDBGPtr(2 * ASizeOfAddr);
     {$POP}
     A := VmtAddr;
@@ -1141,7 +1142,7 @@ begin
     dec(AParentClassIndex);
   end;
 
-  {$PUSH}{$Q-}
+  {$PUSH}{$Q-}{$R-}
   VmtAddr.Address := VmtAddr.Address + TDBGPtr(3 * ASizeOfAddr);
   {$POP}
 
@@ -1178,7 +1179,7 @@ begin
 
   if AUnitName <> nil then begin
     // get vTypeInfo
-    {$PUSH}{$Q-}
+    {$PUSH}{$Q-}{$R-}
     VmtAddr.Address := VmtAddr.Address + TDBGPtr(4 * ASizeOfAddr);
     {$POP}
 
@@ -1192,7 +1193,7 @@ begin
 
     //inc(Pointer(classtypeinfo), PByte(Pointer(classtypeinfo)+1)^ + 2);
     A := ClassNameAddr;
-    {$PUSH}{$Q-}
+    {$PUSH}{$Q-}{$R-}
     A.Address := A.Address + 1;
     {$POP}
     if not AContext.ReadUnsignedInt(A, SizeVal(1), NameLen) then begin
@@ -1200,7 +1201,7 @@ begin
       AContext.ClearLastMemError;
       exit;
     end;
-    {$PUSH}{$Q-}
+    {$PUSH}{$Q-}{$R-}
     ClassNameAddr.Address := ClassNameAddr.Address + TDBGPtr(NameLen + 2) + TDBGPtr(2 * ASizeOfAddr + 2);
     if (ACompilerVersion >= $030300) then
       ClassNameAddr.Address := ClassNameAddr.Address + TDBGPtr(ASizeOfAddr);
@@ -1673,7 +1674,7 @@ begin
   CalcBounds;
   if FHighBound < FLowBound then
     exit; // empty string
-  {$PUSH}{$Q-}
+  {$PUSH}{$Q-}{$R-}
   FullLen := FHighBound-FLowBound+1;
   {$POP}
 
@@ -1704,10 +1705,12 @@ begin
   then
     ALen := MemManager.MemLimits.MaxStringLen;
 
+  if ALen <= 0 then
+    exit;
 
   t := TypeInfo;
   if t.Kind = skWideString then begin
-    {$PUSH}{$Q-}
+    {$PUSH}{$Q-}{$R-}
     Addr.Address := Addr.Address + (AStartIndex - 1) * 2;
     {$POP}
     if not ( (MemManager.SetLength(WResult, ALen)) and
@@ -1719,7 +1722,7 @@ begin
   end else
   if Addr.Address = Address.Address + 1 then begin
     // shortstring
-    {$PUSH}{$Q-}
+    {$PUSH}{$Q-}{$R-}
     Addr.Address := Addr.Address + AStartIndex - 1;
     {$POP}
     if not ( (MemManager.SetLength(ASubStr, ALen)) and
@@ -1730,8 +1733,8 @@ begin
     end;
   end
   else begin
-    {$PUSH}{$Q-}
-    Addr.Address := Addr.Address + AStartIndex - 1;
+    {$PUSH}{$Q-}{$R-}
+    Addr.Address := Addr.Address + QWord(AStartIndex - 1);
     {$POP}
     if not ( (MemManager.SetLength(RResult, ALen)) and
              (Context.ReadMemory(Addr, SizeVal(ALen), @RResult[1])) )
@@ -1781,7 +1784,7 @@ begin
   CalcBounds;
   if FHighBound < FLowBound then
     exit; // empty string
-  {$PUSH}{$Q-}
+  {$PUSH}{$Q-}{$R-}
   Len := FHighBound-FLowBound+1;
   {$POP}
 

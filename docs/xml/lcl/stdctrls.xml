@@ -1426,17 +1426,17 @@ enumeration.
 For example:
 </p>
 <code>
-   // does the style include an edit box?
-   if AComboBox.Style.HasEditBox then DoSomething;
+// does the style include an edit box?
+if AComboBox.Style.HasEditBox then DoSomething;
 
-   // does the style use owner-draw?
-   if AComboBox.Style.IsOwnerDrawn then DoSomething;
+// does the style use owner-draw?
+if AComboBox.Style.IsOwnerDrawn then DoSomething;
 
-   // does the style use variable height items?
-   if AComboBox.Style.IsVariable then DoSomething;
+// does the style use variable height items?
+if AComboBox.Style.IsVariable then DoSomething;
 
-   // toggle the edit box visibility and use in the current style
-   AComboBox.Style := AComboBox.Style.SetEditBox(False);
+// toggle the edit box visibility and use in the current style
+AComboBox.Style := AComboBox.Style.SetEditBox(False);
 </code>
 </descr>
 <seealso>
@@ -8356,11 +8356,19 @@ keys. The default value for the property is <b>True</b> in
 <p>
 <var>Text</var> is a <var>TCaption</var> property which contains the 
 UTF-8-encoded characters maintained as the value for the edit control. The 
-value in Text is read and written using the <var>RealGetText</var> and 
+property value can be assigned at design-time using the Object Inspector in 
+the Lazarus IDE, or at run-time in program code. For example:
+</p>
+<code>
+Edit1.Text := 'Volts DC';
+ShowMessage('Unit Measure = ' + Edit1.Text);
+</code>
+<p>
+The value in Text is read and written using the <var>RealGetText</var> and
 <var>RealSetText</var> methods. Not only do they provide code compatibility 
 with the Delphi VCL, they support use of emulated <var>TextHint</var> 
-displays. The value in TextHint is assigned to Text when the inline hint text 
-is displayed for the control.
+displays. The value in TextHint is temporarily assigned to Text when an 
+inline hint is displayed for the control.
 </p>
 <p>
 The value in Text may be altered in the <var>TextChanged</var> method when 
@@ -8369,11 +8377,11 @@ the control.
 </p>
 </descr>
 <seealso>
-<link id="TCustomEdit.RealGetText"/>
-<link id="TCustomEdit.RealSetText"/>
 <link id="TCustomEdit.TextChanged"/>
 <link id="TCustomEdit.CharCase"/>
 <link id="TCustomEdit.TextHint"/>
+<link id="TCustomEdit.RealGetText"/>
+<link id="TCustomEdit.RealSetText"/>
 <link id="#lcl.controls.TControl.Text">TControl.Text</link>
 </seealso>
 </element>
@@ -8485,8 +8493,8 @@ The textual values in the multi-line control can be accessed using the
 ordinal position in the list of values. For example:
 </p>
 <code>
-    // var sContent: String; ...
-    sContent := AMemo.Lines[2];
+// var sContent: String;
+sContent := AMemo.Lines[2];
 </code>
 <p>
 This provides access to the third value in List (index positions are 
@@ -8499,8 +8507,8 @@ Each line of text is separated by the <var>LineEnding</var> character
 sequence for the host platform or operating system. For example:
 </p>
 <code>
-    // var sContent: String; ...
-    sContent := AMemo.Lines.Text;
+// var sContent: String; ...
+sContent := AMemo.Lines.Text;
 </code>
 <p>
 Please note: There is a difference in TCustomMemo / TMemo between the 
@@ -8535,9 +8543,9 @@ end;
 procedure TForm1.Memo1Change(Sender: TObject);
 begin
   if not TCustomMemo(Sender).Modified then
-     StaticText1.Caption := 'Memo changed in code'
+    StaticText1.Caption := 'Memo changed in code'
   else
-     StaticText1.Caption := 'Memo changed by user';
+    StaticText1.Caption := 'Memo changed by user';
 end;
 </code>
 <p>
@@ -9033,10 +9041,10 @@ It is a convenience method, and calls the <var>Add</var> method in the Lines
 member.
 </p>
 <code>
-            // var sLine: String;
-            // the following are equivalent
-            AMemo.Append(sLine);
-            AMemo.Lines.Add(sLine);
+// var sLine: String;
+// the following are equivalent
+AMemo.Append(sLine);
+AMemo.Lines.Add(sLine);
 </code>
 </descr>
 <seealso/>
@@ -9092,10 +9100,10 @@ defined in TStrings. The Strings property in Lines allows an individual line
 of text to be accessed by its ordinal position. For example:
 </p>
 <code>
-            // var sContent: String;
-            sContent := AMemo.Lines.Strings[2];
-            // equivalent to preceding since Strings is the default property
-            sContent := AMemo.Lines[2];
+// var sContent: String;
+sContent := AMemo.Lines.Strings[2];
+// equivalent to preceding since Strings is the default property
+sContent := AMemo.Lines[2];
 </code>
 <p>
 The Text property in Lines allows access to all of the values stored in 
@@ -9103,8 +9111,8 @@ Lines. Text lines are separated by the <var>LineEnding</var> character
 sequence defined for the host platform or operating system. For example:
 </p>
 <code>
-            // var sContent: String;
-            sContent := AMemo.Lines.Text;
+// var sContent: String;
+sContent := AMemo.Lines.Text;
 </code>
 <p>
 Changing the values in Lines causes the Modified property to be set to 
@@ -9350,8 +9358,8 @@ The textual values in the multi-line control can be accessed using the
 ordinal position in the list of values. For example:
 </p>
 <code>
-    // var sContent: String; ...
-    sContent := AMemo.Lines[2];
+// var sContent: String; ...
+sContent := AMemo.Lines[2];
 </code>
 <p>
 This provides access to the third value in List (index positions are 
@@ -9364,8 +9372,8 @@ Each line of text is separated by the <var>LineEnding</var> character
 sequence for the host platform or operating system. For example:
 </p>
 <code>
-    // var sContent: String; ...
-    sContent := AMemo.Lines.Text;
+// var sContent: String;
+sContent := AMemo.Lines.Text;
 </code>
 <p>
 Please note: There is a difference in TCustomMemo / TMemo between the 
@@ -13853,7 +13861,9 @@ form will reflect the changes as well.
 You can also explicitly change the properties of the object in code by typing 
 (in the appropriate Implementation section of the Source editor), for example
 </p>
-<code>Form1.Button1.Height := 48;</code>
+<code>
+Form1.Button1.Height := 48;
+</code>
 <p>
 In summary, there are usually about three different ways to determine each 
 property of a component:
