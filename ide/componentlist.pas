@@ -37,13 +37,28 @@ uses
   LCLType, Forms, Controls, Graphics, StdCtrls, ExtCtrls, ComCtrls, Menus, Buttons,
   Dialogs, ImgList,
   // LazUtils
-  LazLoggerBase, LazUTF8,
+  LazLoggerBase, LazUTF8, LazFileCache, AvgLvlTree,
   // LazControls
   TreeFilterEdit,
   // IdeIntf
-  FormEditingIntf, IDEImagesIntf, PropEdits, ComponentReg,
+  FormEditingIntf, IDEImagesIntf, PropEdits, MenuIntf, ComponentReg, LazIDEIntf,
   // IDE
   LazarusIDEStrConsts, PackageDefs, IDEOptionDefs, EnvironmentOpts, Designer;
+
+const
+  ComponentListMenuRootName = 'ComponentList';
+var
+  // menu section CompListMenuSectionOpen
+  CompListMenuOpenUnit: TIDEMenuCommand;
+  CompListMenuOpenPackage: TIDEMenuCommand;
+
+  // menu section CompListMenuSectionExpand
+  CompListMenuExpand: TIDEMenuCommand;
+  CompListMenuExpandAll: TIDEMenuCommand;
+
+  // menu section CompListMenuSectionCollapse
+  CompListMenuCollapse: TIDEMenuCommand;
+  CompListMenuCollapseAll: TIDEMenuCommand;
 
 type
 
@@ -52,10 +67,6 @@ type
   TComponentListForm = class(TForm)
     chbKeepOpen: TCheckBox;
     ButtonPanel: TPanel;
-    miCollapse: TMenuItem;
-    miCollapseAll: TMenuItem;
-    miExpand: TMenuItem;
-    miExpandAll: TMenuItem;
     OKButton: TButton;
     LabelSearch: TLabel;
     PageControl: TPageControl;
@@ -66,7 +77,7 @@ type
     pnPaletteTree: TPanel;
     Panel6: TPanel;
     Panel7: TPanel;
-    pmCollapseExpand: TPopupMenu;
+    CompListPopupMenu: TPopupMenu;
     TabSheetPaletteTree: TTabSheet;
     TabSheetInheritance: TTabSheet;
     TabSheetList: TTabSheet;
@@ -83,7 +94,7 @@ type
     procedure OKButtonClick(Sender: TObject);
     procedure ComponentsDblClick(Sender: TObject);    
     procedure FormClose(Sender: TObject; var {%H-}CloseAction: TCloseAction);    
-    procedure pmCollapseExpandPopup(Sender: TObject);
+    procedure CompListPopupMenuPopup(Sender: TObject);
     procedure tmDeselectTimer(Sender: TObject);
     procedure TreeFilterEdAfterFilter(Sender: TObject);
     procedure PageControlChange(Sender: TObject);
@@ -91,9 +102,9 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
     procedure SelectionToolButtonClick(Sender: TObject);
   private
+    FOnOpenPackage: TNotifyEvent;
+    FOnOpenUnit: TNotifyEvent;
     PrevChangeStamp: Integer;
-    // List for Component inheritence view
-    FClassList: TStringListUTF8Fast;
     FInitialized: Boolean;
     FIgnoreSelection: Boolean;
     FPageControlChange: Boolean;
@@ -103,24 +114,59 @@ type
     procedure ClearSelection;
     procedure ComponentWasAdded({%H-}ALookupRoot, {%H-}AComponent: TComponent;
                                 {%H-}ARegisteredComponent: TRegisteredComponent);
+    function GetSelectedTreeComp(aTree: TTreeView): TRegisteredComponent;
+    procedure miOpenPackage(Sender: TObject);
+    procedure miOpenUnit(Sender: TObject);
     procedure SelectionWasChanged;
-    procedure DoComponentInheritence(Comp: TRegisteredComponent);
+    procedure AddComponentInheritanceNodes(ClassToNodeTree: TPointerToPointerTree; Comp: TRegisteredComponent);
+    procedure SelectTreeComp(aTree: TTreeView);
     procedure UpdateComponents;
     procedure UpdateButtonState;
     function IsDocked: Boolean;
     procedure AddSelectedComponent;
+    function GetRegCompClassname(RegComp: TRegisteredComponent): string;
   protected
     procedure UpdateShowing; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function GetSelectedComponent: TRegisteredComponent;
+    function GetSelectedPkgComp: TPkgComponent;
+    property OnOpenPackage: TNotifyEvent read FOnOpenPackage write FOnOpenPackage;
+    property OnOpenUnit: TNotifyEvent read FOnOpenUnit write FOnOpenUnit;
   end;
   
 var
   ComponentListForm: TComponentListForm;
 
+procedure RegisterStandardComponentListMenuItems;
+
 implementation
+
+procedure RegisterStandardComponentListMenuItems;
+var
+  AParent: TIDEMenuSection;
+begin
+  ComponentListMenuRoot := RegisterIDEMenuRoot(ComponentListMenuRootName);
+
+  // register the section for open
+  CompListMenuSectionOpen:=RegisterIDEMenuSection(ComponentListMenuRoot,'Open');
+  AParent:=CompListMenuSectionOpen;
+  CompListMenuOpenUnit:=RegisterIDEMenuCommand(AParent,'Open Unit','Open Unit');// resourcestring is set later
+  CompListMenuOpenPackage:=RegisterIDEMenuCommand(AParent,'Open Package','Open Package'); // resourcestring is set later
+
+  // register the section for expand
+  CompListMenuSectionExpand:=RegisterIDEMenuSection(ComponentListMenuRoot,'Expand');
+  AParent:=CompListMenuSectionExpand;
+  CompListMenuExpand:=RegisterIDEMenuCommand(AParent, 'Expand', lisExpand);
+  CompListMenuExpandAll:=RegisterIDEMenuCommand(AParent, 'Expand All', lisExpandAll2);
+
+  // register the section for collapse
+  CompListMenuSectionCollapse:=RegisterIDEMenuSection(ComponentListMenuRoot,'Collapse');
+  AParent:=CompListMenuSectionCollapse;
+  CompListMenuCollapse:=RegisterIDEMenuCommand(AParent, 'Collapse', lisCollapse);
+  CompListMenuCollapseAll:=RegisterIDEMenuCommand(AParent, 'Collapse All',lisCollapseAll2);
+end;
 
 {$R *.lfm}
 
@@ -220,6 +266,14 @@ begin
   CurDesigner.AddComponent(AComponent, AComponent.ComponentClass, NewParent, FAddCompNewLeft, FAddCompNewTop, 0, 0);
 end;
 
+function TComponentListForm.GetRegCompClassname(RegComp: TRegisteredComponent
+  ): string;
+begin
+  Result:=RegComp.ComponentClass.ClassName;
+  if RegComp.HasAmbiguousClassName then
+    Result:=Result+'('+RegComp.ComponentClass.UnitName+')';
+end;
+
 procedure TComponentListForm.chbKeepOpenChange(Sender: TObject);
 begin
   EnvironmentOptions.ComponentListKeepOpen := chbKeepOpen.Checked;
@@ -248,13 +302,13 @@ begin
   InheritanceTree.Selected := Nil;
 end;
 
-procedure SelectTreeComp(aTree: TTreeView);
+procedure TComponentListForm.SelectTreeComp(aTree: TTreeView);
 var
   Node: TTreeNode;
 begin
   with IDEComponentPalette do
     if Assigned(Selected) then
-      Node := aTree.Items.FindNodeWithText(Selected.ComponentClass.ClassName)
+      Node := aTree.Items.FindNodeWithText(GetRegCompClassname(Selected))
     else
       Node := Nil;
   aTree.Selected := Node;
@@ -262,7 +316,7 @@ begin
     aTree.Selected.MakeVisible;
 end;
 
-function GetSelectedTreeComp(aTree: TTreeView): TRegisteredComponent;
+function TComponentListForm.GetSelectedTreeComp(aTree: TTreeView): TRegisteredComponent;
 begin
   if Assigned(aTree.Selected) then
     Result := TRegisteredComponent(aTree.Selected.Data)
@@ -281,6 +335,11 @@ begin
     Result := GetSelectedTreeComp(InheritanceTree)
 end;
 
+function TComponentListForm.GetSelectedPkgComp: TPkgComponent;
+begin
+  Result:=GetSelectedComponent as TPkgComponent;
+end;
+
 function TComponentListForm.IsDocked: Boolean;
 begin
   Result := (HostDockSite<>Nil) and (HostDockSite.Parent<>Nil);
@@ -293,10 +352,31 @@ begin
   UpdateButtonState;
 end;
 
+procedure TComponentListForm.miOpenPackage(Sender: TObject);
+var
+  PkgComponent: TPkgComponent;
+begin
+  PkgComponent:=GetSelectedPkgComp;
+  if (PkgComponent=nil) or (PkgComponent.PkgFile=nil)
+      or (PkgComponent.PkgFile.LazPackage=nil) then exit;
+  if Assigned(OnOpenPackage) then
+    OnOpenPackage(PkgComponent.PkgFile.LazPackage);
+end;
+
+procedure TComponentListForm.miOpenUnit(Sender: TObject);
+var
+  PkgComponent: TPkgComponent;
+begin
+  PkgComponent:=GetSelectedPkgComp;
+  if (PkgComponent=nil) or (PkgComponent.PkgFile=nil)
+      or (PkgComponent.PkgFile.LazPackage=nil) then exit;
+  if Assigned(OnOpenUnit) then
+    OnOpenUnit(PkgComponent);
+end;
+
 procedure TComponentListForm.SelectionWasChanged;
 begin
   SelectionToolButton.Down := (IDEComponentPalette.Selected = nil);
-  // ToDo: Select the component in active treeview.
   if FIgnoreSelection then
     Exit;
   if ListTree.IsVisible then
@@ -319,59 +399,61 @@ begin
   inherited UpdateShowing;
 end;
 
-procedure TComponentListForm.DoComponentInheritence(Comp: TRegisteredComponent);
+procedure TComponentListForm.AddComponentInheritanceNodes(
+  ClassToNodeTree: TPointerToPointerTree; Comp: TRegisteredComponent);
 // Walk down to parent, stop on TComponent,
 //  since components are at least TComponent descendants.
 var
-  PalList: TStringList;
-  AClass: TClass;
-  Node: TTreeNode;
-  ClssName: string;
-  i, Ind: Integer;
+  InheritanceList: TFPList;
+  aClass: TClass;
+  Node, ParentNode: TTreeNode;
+  aClassName: string;
+  i: Integer;
   II: TImageIndex;
+  CurRegComp: TRegisteredComponent;
 begin
-  PalList := TStringList.Create;
+  InheritanceList := TFPList.Create;
   try
-    AClass := Comp.ComponentClass;
-    while (AClass.ClassInfo <> nil) and (AClass.ClassType <> TComponent.ClassType) do
+    aClass := Comp.ComponentClass;
+    while (aClass.ClassInfo <> nil) and (aClass.ClassType <> TComponent.ClassType) do
     begin
-      PalList.AddObject(AClass.ClassName, TObject(AClass));
-      AClass := AClass.ClassParent;
+      InheritanceList.Add(TObject(aClass));
+      aClass := aClass.ClassParent;
     end;
     // Build the tree
-    for i := PalList.Count - 1 downto 0 do
+    ParentNode:=nil;
+    for i := InheritanceList.Count - 1 downto 0 do
     begin
-      AClass := TClass(PalList.Objects[i]);
-      ClssName := PalList[i];
-      if not FClassList.Find(ClssName, Ind) then
+      aClass := TClass(InheritanceList[i]);
+      Node:=TTreeNode(ClassToNodeTree[aClass]);
+      if Node=nil then
       begin
-        // Find out parent position
-        if Assigned(AClass.ClassParent)
-        and FClassList.Find(AClass.ClassParent.ClassName, Ind) then
-          Node := TTreeNode(FClassList.Objects[Ind])
+        if aClass=Comp.ComponentClass then
+          CurRegComp:=Comp
         else
-          Node := nil;
-        // Add the item
-        if ClssName <> Comp.ComponentClass.ClassName then
-          Node := InheritanceTree.Items.AddChild(Node, ClssName)
+          CurRegComp:=IDEComponentPalette.FindRegComponent(aClass);
+        if CurRegComp<>nil then
+          aClassName:=GetRegCompClassname(CurRegComp)
         else
+          aClassName:=aClass.ClassName;
+
+        // Add the node
+        Node := InheritanceTree.Items.AddChildObject(ParentNode, aClassName, CurRegComp);
+        ClassToNodeTree[aClass]:=Node;
+        if CurRegComp is TPkgComponent then
+          II := TPkgComponent(CurRegComp).ImageIndex
+        else
+          II := -1;
+        if II>=0 then
         begin
-          Node := InheritanceTree.Items.AddChildObject(Node, ClssName, Comp);
-          if Comp is TPkgComponent then
-            II := TPkgComponent(Comp).ImageIndex
-          else
-            II := -1;
-          if II>=0 then
-          begin
-            Node.ImageIndex := II;
-            Node.SelectedIndex := Node.ImageIndex;
-          end;
+          Node.ImageIndex := II;
+          Node.SelectedIndex := II;
         end;
-        FClassList.AddObject(ClssName, Node);
       end;
+      ParentNode:=Node;
     end;
   finally
-    PalList.Free;
+    InheritanceList.Free;
   end;
 end;
 
@@ -386,19 +468,19 @@ var
   APaletteNode: TTreeNode;
   i, j: Integer;
   CurIcon: TImageIndex;
+  aClassName: String;
+  aClassToTreeNode: TPointerToPointerTree;
 begin
   if [csDestroying,csLoading]*ComponentState<>[] then exit;
   Screen.BeginWaitCursor;
   ListTree.BeginUpdate;
   PalletteTree.BeginUpdate;
   InheritanceTree.Items.BeginUpdate;
-  FClassList := TStringListUTF8Fast.Create;
+  aClassToTreeNode := TPointerToPointerTree.Create;
   try
     ListTree.Items.Clear;
     PalletteTree.Items.Clear;
     InheritanceTree.Items.Clear;
-    FClassList.Sorted := true;
-    FClassList.Duplicates := dupIgnore;
  //   ParentInheritence := InheritanceTree.Items.Add(nil, 'TComponent');
 //    FClassList.AddObject('TComponent', ParentInheritence);
     // Iterate all pages
@@ -413,10 +495,11 @@ begin
       for j := 0 to Comps.Count-1 do begin
         Comp := Comps[j];
         if not Comp.Visible then Continue;
+        aClassName := GetRegCompClassname(Comp);
         // Flat list item
-        AListNode := ListTree.Items.AddChildObject(Nil, Comp.ComponentClass.ClassName, Comp);
+        AListNode := ListTree.Items.AddChildObject(Nil, aClassName, Comp);
         // Palette layout item
-        APaletteNode := PalletteTree.Items.AddChildObject(ParentNode, Comp.ComponentClass.ClassName, Comp);
+        APaletteNode := PalletteTree.Items.AddChildObject(ParentNode, aClassName, Comp);
         if Comp is TPkgComponent then
           CurIcon := TPkgComponent(Comp).ImageIndex
         else
@@ -429,7 +512,7 @@ begin
           APaletteNode.SelectedIndex := AListNode.ImageIndex;
         end;
         // Component inheritence item
-        DoComponentInheritence(Comp);
+        AddComponentInheritanceNodes(aClassToTreeNode,Comp);
       end;
     end;
     InheritanceTree.AlphaSort;
@@ -439,7 +522,7 @@ begin
     {$ENDIF}
     PrevChangeStamp := IDEComponentPalette.ChangeStamp;
   finally
-    FClassList.Free;
+    aClassToTreeNode.Free;
     InheritanceTree.Items.EndUpdate;
     PalletteTree.EndUpdate;
     ListTree.EndUpdate;
@@ -598,20 +681,74 @@ begin
   Node.Expand(True);
 end;
 
-procedure TComponentListForm.pmCollapseExpandPopup(Sender: TObject);
+procedure TComponentListForm.CompListPopupMenuPopup(Sender: TObject);
 var
   Node: TTreeNode;
+  PkgComponent: TPkgComponent;
+  APackage: TLazPackage;
+  PkgFile: TPkgFile;
+  ShownFilename, UnitFilename: String;
 begin
-  Node := TreeFilterEd.FilteredTreeview.Selected;
-  if Node = nil then
+  //debugln(['TComponentListForm.CompListPopupMenuPopup ']);
+  ComponentListMenuRoot.MenuItem:=CompListPopupMenu.Items;
+
+  // expand/collapse
+  if (PageControl.ActivePage=TabSheetPaletteTree)
+      or (PageControl.ActivePage=TabSheetInheritance) then
   begin
-    miExpand.Enabled := False;
-    miCollapse.Enabled := False;
-  end
-  else
+    Node := TreeFilterEd.FilteredTreeview.Selected;
+    if Node = nil then
+    begin
+      CompListMenuExpand.Enabled := False;
+      CompListMenuCollapse.Enabled := False;
+    end
+    else
+    begin
+      CompListMenuExpand.Enabled := (Node.HasChildren) and (not Node.Expanded);
+      CompListMenuCollapse.Enabled := (Node.HasChildren) and (Node.Expanded);
+    end;
+    CompListMenuExpand.Visible := true;
+    CompListMenuExpandAll.Visible := true;
+    CompListMenuCollapse.Visible := true;
+    CompListMenuCollapseAll.Visible := true;
+    CompListMenuExpand.OnClick:=@miExpandClick;
+    CompListMenuExpandAll.OnClick:=@miExpandAllClick;
+    CompListMenuCollapse.OnClick:=@miCollapseClick;
+    CompListMenuCollapseAll.OnClick:=@miCollapseAllClick;
+  end else begin
+    CompListMenuExpand.Visible := false;
+    CompListMenuExpandAll.Visible := false;
+    CompListMenuCollapse.Visible := false;
+    CompListMenuCollapseAll.Visible := false;
+  end;
+
+  // open unit/package
+  PkgComponent:=GetSelectedPkgComp;
+  if (PkgComponent=nil) or (PkgComponent.PkgFile=nil) then
   begin
-    miExpand.Enabled := (Node.HasChildren) and (not Node.Expanded);
-    miCollapse.Enabled := (Node.HasChildren) and (Node.Expanded);
+    CompListMenuOpenUnit.Caption:=lisOpenUnit;
+    CompListMenuOpenUnit.Visible:=false;
+    CompListMenuOpenPackage.Caption:=lisOpenPackage3;
+    CompListMenuOpenPackage.Visible:=false;
+  end else begin
+    PkgFile:=PkgComponent.PkgFile;
+    APackage:=PkgFile.LazPackage;
+    CompListMenuOpenPackage.Caption:=Format(lisCPOpenPackage, [APackage.IDAsString]);
+    CompListMenuOpenPackage.Visible:=true;
+    CompListMenuOpenPackage.OnClick:=@miOpenPackage;
+
+    ShownFilename:=PkgFile.Filename;
+    UnitFilename:=PkgFile.GetFullFilename;
+    if not FileExistsCached(UnitFilename) then begin
+      UnitFilename:=LazarusIDE.FindSourceFile(ExtractFilename(UnitFilename),
+                                              APackage.Directory,[]);
+      if FileExists(UnitFilename) then
+        UnitFilename:=ShownFilename;
+    end;
+    CompListMenuOpenUnit.Caption:=Format(lisCPOpenUnit, [ShownFilename]);
+    CompListMenuOpenUnit.Enabled:=FileExistsCached(UnitFilename);
+    CompListMenuOpenUnit.Visible:=true;
+    CompListMenuOpenUnit.OnClick:=@miOpenUnit;
   end;
 end;
 
