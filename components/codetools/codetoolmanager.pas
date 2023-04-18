@@ -772,6 +772,7 @@ type
     function CheckLFM(UnitCode, LFMBuf: TCodeBuffer; out LFMTree: TLFMTree;
           RootMustBeClassInUnit, RootMustBeClassInIntf,
           ObjectsMustExist: boolean): boolean;
+    function ParseLFM(LFMBuf: TCodeBuffer; out LFMTree: TLFMTree): boolean;
     function FindNextResourceFile(Code: TCodeBuffer;
           var LinkIndex: integer): TCodeBuffer;
     function AddLazarusResourceHeaderComment(Code: TCodeBuffer;
@@ -834,13 +835,14 @@ type
       out AncestorClassName: string; DirtySearch: boolean): boolean;
 
     // form components
-    function AddPublishedVariables(Code: TCodeBuffer;
-          AComponent, AncestorComponent: TComponent): boolean;
     function CompleteComponent(Code: TCodeBuffer;
-          AComponent, AncestorComponent: TComponent): boolean; deprecated 'use AddPublishedVariables';
+          AComponent, AncestorComponent: TComponent; CheckUnits: boolean): boolean;
     function PublishedVariableExists(Code: TCodeBuffer;
           const AClassName, AVarName: string;
           ErrorOnClassNotFound: boolean): boolean;
+    function GatherPublishedVarTypes(Code: TCodeBuffer; const AClassName: string;
+          out VarNameToType: TStringToStringTree // VarName to NS.UnitName/ClassType
+          ): boolean;
     function AddPublishedVariable(Code: TCodeBuffer;
           const AClassName,VarName, VarType: string): boolean;
     function RemovePublishedVariable(Code: TCodeBuffer;
@@ -5442,6 +5444,23 @@ begin
   end;
 end;
 
+function TCodeToolManager.ParseLFM(LFMBuf: TCodeBuffer; out LFMTree: TLFMTree
+  ): boolean;
+begin
+  Result:=false;
+  LFMTree:=nil;
+  if LFMBuf=nil then begin
+     SetError(20230418220529,nil,1,1,'TCodeToolManager.ParseLFM LFMBuf=nil');
+    exit;
+  end;
+  LFMTree:=DefaultLFMTrees.GetLFMTree(LFMBuf,true);
+  try
+    Result:=LFMTree.ParseIfNeeded;
+  except
+    on e: Exception do HandleException(e);
+  end;
+end;
+
 function TCodeToolManager.FindNextResourceFile(Code: TCodeBuffer;
   var LinkIndex: integer): TCodeBuffer;
 begin
@@ -5795,8 +5814,8 @@ begin
   end;
 end;
 
-function TCodeToolManager.AddPublishedVariables(Code: TCodeBuffer; AComponent,
-  AncestorComponent: TComponent): boolean;
+function TCodeToolManager.CompleteComponent(Code: TCodeBuffer; AComponent,
+  AncestorComponent: TComponent; CheckUnits: boolean): boolean;
 begin
   Result:=false;
   {$IFDEF CTDEBUG}
@@ -5804,17 +5823,11 @@ begin
   {$ENDIF}
   if not InitCurCodeTool(Code) then exit;
   try
-    Result:=FCurCodeTool.AddPublishedVariables(AComponent,AncestorComponent,
-                                           SourceChangeCache);
+    Result:=FCurCodeTool.CompleteComponent(AComponent,AncestorComponent,
+                                           SourceChangeCache,CheckUnits);
   except
     on e: Exception do Result:=HandleException(e);
   end;
-end;
-
-function TCodeToolManager.CompleteComponent(Code: TCodeBuffer; AComponent,
-  AncestorComponent: TComponent): boolean;
-begin
-  Result:=AddPublishedVariables(Code,AComponent,AncestorComponent);
 end;
 
 function TCodeToolManager.PublishedVariableExists(Code: TCodeBuffer;
@@ -5828,6 +5841,21 @@ begin
   try
     Result:=FCurCodeTool.FindPublishedVariable(AClassName,
                  AVarName,ErrorOnClassNotFound)<>nil;
+  except
+    on e: Exception do Result:=HandleException(e);
+  end;
+end;
+
+function TCodeToolManager.GatherPublishedVarTypes(Code: TCodeBuffer;
+  const AClassName: string; out VarNameToType: TStringToStringTree): boolean;
+begin
+  Result:=false;
+  {$IFDEF CTDEBUG}
+  DebugLn('TCodeToolManager.GatherPublishedVarTypes A ',Code.Filename,' ',AClassName);
+  {$ENDIF}
+  if not InitCurCodeTool(Code) then exit;
+  try
+    Result:=FCurCodeTool.GatherPublishedVarTypes(AClassName,VarNameToType);
   except
     on e: Exception do Result:=HandleException(e);
   end;

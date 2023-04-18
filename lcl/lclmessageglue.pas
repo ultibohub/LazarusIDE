@@ -66,7 +66,7 @@ function LCLSendEraseBackgroundMsg(const Target: TWinControl;const  DC: HDC): Pt
 function LCLSendKeyDownEvent(const Target: TControl; var CharCode: Word; KeyData: PtrInt; BeforeEvent, IsSysKey: Boolean): PtrInt;
 function LCLSendKeyUpEvent(const Target: TControl; var CharCode: Word; KeyData: PtrInt; BeforeEvent, IsSysKey: Boolean): PtrInt;
 function LCLSendCharEvent(const Target: TControl; var CharCode: Word; KeyData: PtrInt; BeforeEvent, IsSysKey, ANotifyUserInput: Boolean): PtrInt;
-function LCLSendUTF8KeyPress(const Target: TWinControl; AUTF8Char: TUTF8Char; IsSysKey: Boolean): PtrInt;
+function LCLSendUTF8KeyPress(const Target: TWinControl; var AUTF8Char: TUTF8Char; IsSysKey: Boolean): PtrInt;
 function LCLSendTimerMsg(const Target: TControl; TimerID: WParam; TimerProc: LParam): PtrInt;
 function LCLSendExitMsg(const Target: TControl): PtrInt;
 function LCLSendCloseQueryMsg(const Target: TControl): PtrInt;
@@ -222,11 +222,12 @@ end;
 function LCLSendShowWindowMsg(const Target: TControl; Show: Boolean;
   Status: LPARAM = 0): PtrInt;
 var
-   Mess : TLMShowWindow;
+  Mess : TLMShowWindow;
 begin
   FillChar(Mess,SizeOf(Mess),0);
   Mess.Msg := LM_SHOWWINDOW;
-  Mess.Show := True;
+  Mess.Show := Show;
+  Mess.Status := Status;
 
   Result := DeliverMessage(Target, Mess);
 end;
@@ -899,7 +900,7 @@ begin
   if ANotifyUserInput then NotifyApplicationUserInput(Target, Mess.Msg);
 end;
 
-function LCLSendUTF8KeyPress(const Target: TWinControl; AUTF8Char: TUTF8Char;
+function LCLSendUTF8KeyPress(const Target: TWinControl; var AUTF8Char: TUTF8Char;
   IsSysKey: Boolean): PtrInt;
 begin
   {if not IsControlKey then}

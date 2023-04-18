@@ -2096,7 +2096,7 @@ type
     FWrap: Boolean;
     FLastDropDownTick: QWord;
     FLastDown: Boolean;
-    procedure GetGroupBounds(var StartIndex, EndIndex: integer);
+    function GetGroupBounds(out StartIndex, EndIndex: integer): boolean;
     function GetIndex: Integer;
     function GetTextSize: TSize;
     function IsCheckedStored: Boolean;
@@ -2292,7 +2292,6 @@ type
     procedure SetShowCaptions(const AValue: Boolean);
     procedure SetTransparent(const AValue: Boolean);
     procedure SetWrapable(const AValue: Boolean);
-    procedure ToolButtonDown(AButton: TToolButton; NewDown: Boolean);
     procedure ImageListChange(Sender: TObject);
     procedure DisabledImageListChange(Sender: TObject);
     procedure HotImageListChange(Sender: TObject);

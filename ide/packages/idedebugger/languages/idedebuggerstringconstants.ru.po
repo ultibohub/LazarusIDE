@@ -980,9 +980,17 @@ msgctxt "lazarusidestrconsts.lislocals"
 msgid "Local Variables"
 msgstr "Локальные переменные"
 
+#: idedebuggerstringconstants.lislocalsdlgcopyaddr
+msgid "Copy &Data-Address"
+msgstr "Копировать адрес &данных"
+
 #: idedebuggerstringconstants.lislocalsdlgcopyall
-msgid "Copy &all"
-msgstr "Копировать &всё"
+msgid "Copy &all entries"
+msgstr "Копировать &все элементы списка"
+
+#: idedebuggerstringconstants.lislocalsdlgcopyentry
+msgid "Copy entire entry"
+msgstr "Копировать элемент списка целиком"
 
 #: idedebuggerstringconstants.lislocalsdlgcopyname
 msgid "&Copy Name"
@@ -997,8 +1005,8 @@ msgid "Copy &RAW Value"
 msgstr "Копировать &необработанное значение"
 
 #: idedebuggerstringconstants.lislocalsdlgcopyvalue
-msgid "C&opy Value"
-msgstr "Копировать &значение"
+msgid "C&opy Value (quoted)"
+msgstr "Копировать &значение (обработанное)"
 
 #: idedebuggerstringconstants.lislocalsnotevaluated
 msgid "Locals not evaluated"

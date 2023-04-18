@@ -246,6 +246,13 @@ function LoadLFM(AnUnitInfo: TUnitInfo; OpenFlags: TOpenFlags;
 function LoadLFM(AnUnitInfo: TUnitInfo; LFMBuf: TCodeBuffer;
                    OpenFlags: TOpenFlags;
                    CloseFlags: TCloseFlags): TModalResult;
+function ResolveAmbiguousLFMClasses(AnUnitInfo: TUnitInfo;
+  const LFMClassName: string;
+  AmbiguousClasses: TFPList; // list of TPkgComponent
+  OpenFlags: TOpenFlags;
+  out ResolvedClasses: TStringToPointerTree; // ClassName to TComponentClass
+  out ResolvedVars: TStringToPointerTree // VarName to TComponentClass
+  ): TModalResult;
 function OpenComponent(const UnitFilename: string; OpenFlags: TOpenFlags;
     CloseFlags: TCloseFlags; out Component: TComponent): TModalResult;
 function CloseUnitComponent(AnUnitInfo: TUnitInfo; Flags: TCloseFlags): TModalResult;
@@ -253,6 +260,8 @@ function CloseDependingUnitComponents(AnUnitInfo: TUnitInfo;
                                       Flags: TCloseFlags): TModalResult;
 function UnitComponentIsUsed(AnUnitInfo: TUnitInfo;
                              CheckHasDesigner: boolean): boolean;
+procedure CompleteUnitComponent(AnUnitInfo: TUnitInfo;
+  AComponent, AncestorComponent: TComponent);
 function RemoveFilesFromProject(UnitInfos: TFPList): TModalResult;
 function AskSaveProject(const ContinueText, ContinueBtn: string): TModalResult;
 function SaveEditorChangesToCodeCache(AEditor: TSourceEditorInterface): boolean;
@@ -5978,19 +5987,24 @@ var
   PreventAutoSize: Boolean;
   NewControl: TControl;
   ARestoreVisible: Boolean;
-  AncestorClass: TComponentClass;
+  NestedAncestorClass: TComponentClass;
   DsgControl: TCustomDesignControl;
   {$IF (FPC_FULLVERSION >= 30003)}
   DsgDataModule: TDataModule;
   {$ENDIF}
+  AmbiguousClasses: TFPList;
+  ResolvedClasses, ResolvedVars: TStringToPointerTree;
 begin
   {$IFDEF IDE_DEBUG}
   debugln('LoadLFM A ',AnUnitInfo.Filename,' IsPartOfProject=',dbgs(AnUnitInfo.IsPartOfProject),' ');
   {$ENDIF}
 
   ReferencesLocked:=false;
-  MissingClasses:=nil;
   NewComponent:=nil;
+  AmbiguousClasses:=nil;
+  MissingClasses:=nil;
+  ResolvedClasses:=nil;
+  ResolvedVars:=nil;
   try
     if (ofRevert in OpenFlags) and (AnUnitInfo.Component<>nil) then begin
       // the component must be destroyed and recreated => store references
@@ -6031,13 +6045,21 @@ begin
     // find the classname of the LFM, and check for inherited form
     AnUnitInfo.UnitResourceFileformat.QuickCheckResourceBuffer(
       AnUnitInfo.Source,LFMBuf,LFMType,LFMComponentName,
-      NewClassName,LCLVersion,MissingClasses);
+      NewClassName,LCLVersion,MissingClasses,AmbiguousClasses);
+    i:=Pos('/',NewClassName);
+    if i>0 then
+      System.Delete(NewClassName,1,i); // cut unitname
 
     {$IFDEF VerboseLFMSearch}
     debugln('LoadLFM LFM="',LFMBuf.Source,'"');
     {$ENDIF}
     if AnUnitInfo.Component=nil then begin
       // load/create new instance
+
+      if AnUnitInfo.ComponentTypesToClasses<>nil then
+        AnUnitInfo.ComponentTypesToClasses.Clear;
+      if AnUnitInfo.ComponentVarsToClasses<>nil then
+        AnUnitInfo.ComponentVarsToClasses.Clear;
 
       if (NewClassName='') or (LFMType='') then begin
         DebugLn(['LoadLFM LFM file corrupt']);
@@ -6059,6 +6081,8 @@ begin
         {$IFDEF VerboseLFMSearch}
         DebugLn(['LoadLFM has nested: ',AnUnitInfo.Filename]);
         {$ENDIF}
+        if AnUnitInfo.ComponentTypesToClasses=nil then
+          AnUnitInfo.ComponentTypesToClasses:=TStringToPointerTree.Create(false);
         for i:=MissingClasses.Count-1 downto 0 do begin
           NestedClassName:=MissingClasses[i];
           {$IFDEF VerboseLFMSearch}
@@ -6074,24 +6098,38 @@ begin
             Result:=LoadComponentDependencyHidden(AnUnitInfo,NestedClassName,
                       OpenFlags,
               {$IFDEF EnableNestedComponentsWithoutLFM}false,{$ELSE}true,{$ENDIF}
-                      NestedClass,NestedUnitInfo,AncestorClass);
+                      NestedClass,NestedUnitInfo,NestedAncestorClass);
             if Result<>mrOk then begin
               DebugLn(['LoadLFM DoLoadComponentDependencyHidden NestedClassName=',NestedClassName,' failed for ',AnUnitInfo.Filename]);
               exit;
             end;
             if NestedClass<>nil then
-              MissingClasses.Objects[i]:=TObject(Pointer(NestedClass))
-            else if AncestorClass<>nil then
-              MissingClasses.Objects[i]:=TObject(Pointer(AncestorClass));
+              AnUnitInfo.ComponentTypesToClasses[NestedClassName]:=NestedClass
+            else if NestedAncestorClass<>nil then
+              AnUnitInfo.ComponentTypesToClasses[NestedClassName]:=NestedAncestorClass;
           end;
         end;
         //DebugLn(['LoadLFM had nested: ',AnUnitInfo.Filename]);
-        if AnUnitInfo.ComponentFallbackClasses<>nil then begin
-          AnUnitInfo.ComponentFallbackClasses.Free;
-          AnUnitInfo.ComponentFallbackClasses:=nil;
+      end;
+
+      if (AmbiguousClasses<>nil) and (AmbiguousClasses.Count>0) then
+      begin
+        if ResolveAmbiguousLFMClasses(AnUnitInfo,NewClassName,AmbiguousClasses,
+          OpenFlags,ResolvedClasses,ResolvedVars)<>mrOk
+        then
+          exit;
+        if ResolvedClasses<>nil then
+        begin
+          if AnUnitInfo.ComponentTypesToClasses=nil then
+            AnUnitInfo.ComponentTypesToClasses:=TStringToPointerTree.Create(false);
+          AnUnitInfo.ComponentTypesToClasses.AddTree(ResolvedClasses);
         end;
-        AnUnitInfo.ComponentFallbackClasses:=MissingClasses;
-        MissingClasses:=nil;
+        if ResolvedVars<>nil then
+        begin
+          if AnUnitInfo.ComponentVarsToClasses=nil then
+            AnUnitInfo.ComponentVarsToClasses:=TStringToPointerTree.Create(false);
+          AnUnitInfo.ComponentVarsToClasses.AddTree(ResolvedVars);
+        end;
       end;
 
       BinStream:=nil;
@@ -6241,7 +6279,18 @@ begin
       DebugLn(['LoadLFM Creating designer for hidden component of ',AnUnitInfo.Filename]);
     end;
   finally
+    AmbiguousClasses.Free;
     MissingClasses.Free;
+    ResolvedVars.Free;
+    ResolvedClasses.Free;
+    if AnUnitInfo.ComponentTypesToClasses<>nil then begin
+      AnUnitInfo.ComponentTypesToClasses.Free;
+      AnUnitInfo.ComponentTypesToClasses:=nil;
+    end;
+    if AnUnitInfo.ComponentVarsToClasses<>nil then begin
+      AnUnitInfo.ComponentVarsToClasses.Free;
+      AnUnitInfo.ComponentVarsToClasses:=nil;
+    end;
     if ReferencesLocked then begin
       if Project1<>nil then
         Project1.UnlockUnitComponentDependencies;
@@ -6298,6 +6347,245 @@ begin
   debugln('[LoadLFM] LFM end');
   {$ENDIF}
   Result:=mrOk;
+end;
+
+function ResolveAmbiguousLFMClasses(AnUnitInfo: TUnitInfo;
+  const LFMClassName: string; AmbiguousClasses: TFPList; OpenFlags: TOpenFlags;
+  out ResolvedClasses: TStringToPointerTree; out
+  ResolvedVars: TStringToPointerTree): TModalResult;
+// Some registered component classes have ambiguous names, e.g. two TButton
+// The correct classtype of each variable is defined in the Pascal unit.
+// But at designtime, sources can be messy, contain temporary errors
+// or codetools can be fooled.
+var
+  Code: TCodeBuffer;
+  Tool: TCodeTool;
+  UsesNode, ClassNode, UseUnitNode: TCodeTreeNode;
+  AnUnitName, InFilename, aFilename, s, VarName, aClassName: String;
+  Candidates: TFPList;
+  UnitsLCInUnitPath: TStringToStringTree; // lowercase unitnames to 'found' or 'missing'
+  UsedUnits: TStringToStringTree; // lowercase unitnames to 'used'
+  VarNameToType: TStringToStringTree; // 'VarName' to 'ns.unitname/classtype'
+  i: Integer;
+  RegComp: TRegisteredComponent;
+  AVLNode: TAVLTreeNode;
+  Item: PStringToStringItem;
+begin
+  {$IFDEF VerboseIDEAmbiguousClasses}
+  debugln(['ResolveAmbiguousLFMClasses AnUnitInfo="',ExtractFilename(AnUnitInfo.Filename),'" LFMClassName="',LFMClassName,'" AmbiguousClasses.Count=',AmbiguousClasses.Count]);
+  {$ENDIF}
+  Code:=AnUnitInfo.Source;
+  if Code=nil then begin
+    debugln(['Error: (lazarus) [ResolveAmbiguousLFMClasses] AnUnitInfo.Source=nil of "'+AnUnitInfo.Filename,'"']);
+    if not (ofQuiet in OpenFlags) then
+      IDEMessageDialog('Error','[ResolveAmbiguousLFMClasses] AnUnitInfo.Source=nil of "'+AnUnitInfo.Filename+'"',
+        mtError,[mbOk]);
+    exit(mrCancel);
+  end;
+  ResolvedClasses:=nil;
+  ResolvedVars:=nil;
+
+  CodeToolBoss.Explore(Code,Tool,false,true);
+  if Tool=nil then begin
+    debugln(['Error: (lazarus) [ResolveAmbiguousLFMClasses] CodeToolBoss.Explore failed for "',AnUnitInfo.Filename,'"']);
+    if not (ofQuiet in OpenFlags) then
+      MainIDE.DoJumpToCompilerMessage(true);
+    exit(mrCancel);
+  end;
+
+  Candidates:=TFPList.Create;
+  UnitsLCInUnitPath:=TStringToStringTree.Create(true);
+  UsedUnits:=TStringToStringTree.Create(true);
+  VarNameToType:=nil;
+  try
+    // quick check, what classes are in the unitpath
+    {$IFDEF VerboseIDEAmbiguousClasses}
+    debugln(['ResolveAmbiguousLFMClasses Checking UnitPaths... AmbiguousClasses=',AmbiguousClasses.Count]);
+    {$ENDIF}
+    for i:=AmbiguousClasses.Count-1 downto 0 do
+    begin
+      Candidates.Clear;
+      RegComp:=TRegisteredComponent(AmbiguousClasses[i]);
+      while RegComp.PrevSameName<>nil do
+        RegComp:=RegComp.PrevSameName;
+      {$IFDEF VerboseIDEAmbiguousClasses}
+      debugln(['ResolveAmbiguousLFMClasses Checking Unitpath: ',i,'/',AmbiguousClasses.Count,' RegComp=',RegComp.GetUnitName+'/'+RegComp.ComponentClass.ClassName]);
+      {$ENDIF}
+      while RegComp<>nil do
+      begin
+        AnUnitName:=RegComp.GetUnitName;
+        s:=UnitsLCInUnitPath[lowercase(AnUnitName)];
+        if s='' then
+        begin
+          InFilename:='';
+          aFilename:=Tool.FindUnitCaseInsensitive(AnUnitName,InFilename);
+          {$IFDEF VerboseIDEAmbiguousClasses}
+          debugln(['ResolveAmbiguousLFMClasses RegComp=',RegComp.GetUnitName+'/'+RegComp.ComponentClass.ClassName,' Found in UnitPath="',aFilename,'"']);
+          {$ENDIF}
+          if aFilename<>'' then
+            s:='found'
+          else
+            s:='missing';
+          UnitsLCInUnitPath[lowercase(AnUnitName)]:=s;
+        end;
+        if s='found' then
+          Candidates.Add(RegComp);
+
+        RegComp:=RegComp.NextSameName;
+      end;
+
+      if Candidates.Count=1 then
+      begin
+        RegComp:=TRegisteredComponent(Candidates[0]);
+        {$IFDEF VerboseIDEAmbiguousClasses}
+        debugln(['ResolveAmbiguousLFMClasses Resolved by UnitPaths ',i,'/',AmbiguousClasses.Count,' RegComp=',RegComp.GetUnitName+'/'+RegComp.ComponentClass.ClassName]);
+        {$ENDIF}
+        if ResolvedClasses=nil then
+          ResolvedClasses:=TStringToPointerTree.Create(false);
+        ResolvedClasses[RegComp.ComponentClass.ClassName]:=RegComp.ComponentClass;
+        AmbiguousClasses.Delete(i);
+      end;
+    end;
+    {$IFDEF VerboseIDEAmbiguousClasses}
+    debugln(['ResolveAmbiguousLFMClasses Checked UnitPaths AmbiguousClasses=',AmbiguousClasses.Count]);
+    {$ENDIF}
+    if AmbiguousClasses.Count=0 then
+      exit(mrOk);
+
+    // quick check, what classes available via the uses clause
+
+    // parse the unit ignoring errors, it is enough if codetools can parse til the form class
+    ClassNode:=Tool.FindClassNodeInUnit(LFMClassName,true,false,true,false);
+    if ClassNode=nil then
+    begin
+      debugln(['Error: (lazarus) [ResolveAmbiguousLFMClasses] class "',LFMClassName,'" not found in "'+AnUnitInfo.Filename,'"']);
+      if not (ofQuiet in OpenFlags) then
+      begin
+        CodeToolBoss.GatherPublishedVarTypes(Code,LFMClassName,VarNameToType);
+        MainIDE.DoJumpToCompilerMessage(true);
+      end;
+      exit(mrCancel);
+    end;
+    UsesNode:=Tool.FindMainUsesNode;
+    {$IFDEF VerboseIDEAmbiguousClasses}
+    debugln(['ResolveAmbiguousLFMClasses searching UsesClause... UsesNode=',UsesNode<>nil]);
+    {$ENDIF}
+    if UsesNode<>nil then
+    begin
+      // find all used units
+      UseUnitNode:=UsesNode.LastChild;
+      while UseUnitNode<>nil do begin
+        AnUnitName:=Tool.ExtractUsedUnitName(UseUnitNode,@InFilename);
+        UseUnitNode:=UseUnitNode.PriorBrother;
+        if AnUnitName='' then continue;
+        // due to namespaces, search the unit to find the full unitname
+        aFilename:=Tool.FindUnitCaseInsensitive(AnUnitName,InFilename);
+        {$IFDEF VerboseIDEAmbiguousClasses}
+        debugln(['ResolveAmbiguousLFMClasses Uses ',AnUnitName,' File=',ExtractFileNameOnly(aFilename)]);
+        {$ENDIF}
+        if aFilename<>'' then
+          AnUnitName:=ExtractFileNameOnly(aFilename);
+        UsedUnits[lowercase(AnUnitName)]:='used';
+      end;
+
+      for i:=AmbiguousClasses.Count-1 downto 0 do
+      begin
+        Candidates.Clear;
+        RegComp:=TRegisteredComponent(AmbiguousClasses[i]);
+        while RegComp.PrevSameName<>nil do
+          RegComp:=RegComp.PrevSameName;
+        while RegComp<>nil do
+        begin
+          AnUnitName:=RegComp.GetUnitName;
+          s:=UsedUnits[lowercase(AnUnitName)];
+          {$IFDEF VerboseIDEAmbiguousClasses}
+          debugln(['ResolveAmbiguousLFMClasses ',i,'/',AmbiguousClasses.Count,' RegComp=',AnUnitName+'/'+RegComp.ComponentClass.ClassName,' in Uses="',s,'"']);
+          {$ENDIF}
+          if s='used' then
+            Candidates.Add(RegComp);
+          RegComp:=RegComp.NextSameName;
+        end;
+
+        if Candidates.Count=1 then
+        begin
+          RegComp:=TRegisteredComponent(Candidates[0]);
+          {$IFDEF VerboseIDEAmbiguousClasses}
+          debugln(['ResolveAmbiguousLFMClasses Resolved via Uses: ',RegComp.GetUnitName,'/',RegComp.ComponentClass.ClassName]);
+          {$ENDIF}
+          if ResolvedClasses=nil then
+            ResolvedClasses:=TStringToPointerTree.Create(false);
+          ResolvedClasses[RegComp.ComponentClass.ClassName]:=RegComp.ComponentClass;
+          AmbiguousClasses.Delete(i);
+        end;
+      end;
+      {$IFDEF VerboseIDEAmbiguousClasses}
+      debugln(['ResolveAmbiguousLFMClasses Checked Uses AmbiguousClasses=',AmbiguousClasses.Count]);
+      {$ENDIF}
+      if AmbiguousClasses.Count=0 then
+        exit(mrOk);
+    end;
+
+    // finally parse and resolve each variable
+    {$IFDEF VerboseIDEAmbiguousClasses}
+    debugln(['ResolveAmbiguousLFMClasses GatherPublishedVarTypes AmbiguousClasses=',AmbiguousClasses.Count]);
+    {$ENDIF}
+    if not CodeToolBoss.GatherPublishedVarTypes(Code,LFMClassName,VarNameToType)
+    then begin
+      debugln(['Error: (lazarus) [ResolveAmbiguousLFMClasses] CodeToolBoss.GatherPublishedVarTypes failed']);
+      if not (ofQuiet in OpenFlags) then
+        MainIDE.DoJumpToCompilerMessage(true);
+      exit(mrCancel);
+    end;
+
+    if VarNameToType<>nil then
+    begin
+      AVLNode:=VarNameToType.Tree.FindLowest;
+      while AVLNode<>nil do
+      begin
+        Item:=PStringToStringItem(AVLNode.Data);
+        VarName:=Item^.Name;
+        aClassName:=Item^.Value; // 'ns.unitname/classname'
+        RegComp:=IDEComponentPalette.FindRegComponent(aClassName);
+        {$IFDEF VerboseIDEAmbiguousClasses}
+        if RegComp<>nil then
+          debugln(['ResolveAmbiguousLFMClasses VarName="',VarName,'": "',aClassName,'" Found RegComp=',RegComp.ComponentClass.UnitName,'/',RegComp.ComponentClass.ClassName]);
+        {$ENDIF}
+        if RegComp=nil then
+        begin
+          // this classtype is not registered, e.g. a TFrame or something was renamed
+          i:=Pos('/',aClassName);
+          aClassName:=copy(aClassName,i+1,length(aClassName));
+          RegComp:=IDEComponentPalette.FindRegComponent(aClassName);
+          if RegComp.HasAmbiguousClassName then
+          begin
+            debugln(['Info: (lazarus) [ResolveAmbiguousLFMClasses] class=',Item^.Value,' is not registered and there are ambiguous classes']);
+            // this will be handled by the IDE streaming
+            RegComp:=nil;
+          end;
+        end;
+        if RegComp<>nil then
+        begin
+          if ResolvedVars=nil then
+            ResolvedVars:=TStringToPointerTree.Create(false);
+          ResolvedVars[VarName]:=RegComp.ComponentClass;
+        end;
+        AVLNode:=VarNameToType.Tree.FindSuccessor(AVLNode);
+      end;
+    end;
+
+    AmbiguousClasses.Clear;
+
+  finally
+    VarNameToType.Free;
+    UsedUnits.Free;
+    UnitsLCInUnitPath.Free;
+    Candidates.Free;
+  end;
+  {$IFDEF VerboseIDEAmbiguousClasses}
+  debugln(['ResolveAmbiguousLFMClasses END']);
+  {$ENDIF}
+
+  Result:=mrOK;
 end;
 
 function OpenComponent(const UnitFilename: string;
@@ -7329,6 +7617,94 @@ begin
   if Project1.UnitComponentIsUsed(AnUnitInfo,CheckHasDesigner) then
     exit(true);
   //DebugLn(['UnitComponentIsUsed ',AnUnitInfo.Filename,' ',dbgs(AnUnitInfo.Flags)]);
+end;
+
+procedure CompleteUnitComponent(AnUnitInfo: TUnitInfo; AComponent,
+  AncestorComponent: TComponent);
+var
+  CheckUnits: Boolean;
+  i: Integer;
+  aComp: TComponent;
+  aCompClass: TComponentClass;
+  CheckedClasses: TAvgLvlTree;
+  RegComp: TRegisteredComponent;
+  UnitsLCInUnitPath: TStringToStringTree;
+  AnUnitName, s, InFilename, aFilename: String;
+  Tool: TCodeTool;
+begin
+  CheckUnits:=false;
+  Tool:=nil;
+  CheckedClasses:=nil;
+  UnitsLCInUnitPath:=nil;
+  try
+    for i:=0 to AComponent.ComponentCount-1 do
+    begin
+      aComp:=AComponent.Components[i];
+      if (AncestorComponent<>nil) and (AncestorComponent.FindComponent(aComp.Name)<>nil) then
+        continue;
+      aCompClass:=TComponentClass(aComp.ClassType);
+      if CheckedClasses=nil then
+        CheckedClasses:=TAvgLvlTree.Create;
+      if CheckedClasses.Find(aCompClass)<>nil then
+        continue;
+      CheckedClasses.Add(aCompClass);
+
+      RegComp:=IDEComponentPalette.FindRegComponent(aCompClass);
+      if RegComp=nil then
+        continue; // e.g. a nested frame
+      if not RegComp.HasAmbiguousClassName then
+        continue;
+
+      // ambiguous componentclass -> check if there are multiple in the unitpath
+      while RegComp.PrevSameName<>nil do
+        RegComp:=RegComp.PrevSameName;
+      while RegComp<>nil do
+      begin
+        if RegComp.ComponentClass<>aCompClass then
+        begin
+          if Tool=nil then
+          begin
+            CodeToolBoss.Explore(AnUnitInfo.Source,Tool,false,true);
+            if Tool=nil then
+            begin
+              MainIDE.DoJumpToCompilerMessage(true);
+              exit;
+            end;
+          end;
+          AnUnitName:=RegComp.GetUnitName;
+          if UnitsLCInUnitPath=nil then
+            UnitsLCInUnitPath:=TStringToStringTree.Create(true);
+          s:=UnitsLCInUnitPath[lowercase(AnUnitName)];
+          if s='' then
+          begin
+            InFilename:='';
+            aFilename:=Tool.FindUnitCaseInsensitive(AnUnitName,InFilename);
+            {$IFDEF VerboseIDEAmbiguousClasses}
+            debugln(['CompleteUnitComponent RegComp=',RegComp.GetUnitName+'/'+RegComp.ComponentClass.ClassName,' Found in UnitPath="',aFilename,'"']);
+            {$ENDIF}
+            if aFilename<>'' then
+              s:='found'
+            else
+              s:='missing';
+            UnitsLCInUnitPath[lowercase(AnUnitName)]:=s;
+          end;
+          if s='found' then
+          begin
+            CheckUnits:=true; // another componentclass with same classname is available in unitpath
+            break;
+          end;
+        end;
+        RegComp:=RegComp.NextSameName;
+      end;
+      if CheckUnits then break;;
+    end;
+
+    CodeToolBoss.CompleteComponent(AnUnitInfo.Source,
+                      AComponent, AncestorComponent, CheckUnits);
+  finally
+    UnitsLCInUnitPath.Free;
+    CheckedClasses.Free;
+  end;
 end;
 
 function RemoveFilesFromProject(UnitInfos: TFPList): TModalResult;

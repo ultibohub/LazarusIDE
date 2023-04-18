@@ -3901,7 +3901,6 @@ end;  *)
  ------------------------------------------------------------------------------}
 function TCDWidgetSet.GetTextColor(DC: HDC) : TColorRef;
 var
-  lFont: TFPCustomFont;
   LazDC: TLazCanvas;
 begin
   {$ifdef VerboseCDDrawing}
@@ -5033,10 +5032,13 @@ begin
   {$ifdef VerboseQTWinAPI}
   WriteLn('Trace:> [WinAPI RestoreDC] DC=', dbghex(DC),' SavedDC=',SavedDC);
   {$Endif}
-  Result := False;
-  if not IsValidDC(DC) then Exit;
+  if (SavedDC=0) or (not IsValidDC(DC)) then Exit(False);
 
-  LazDC.RestoreState(SavedDC);
+  if SavedDC>0 then
+    LazDC.RestoreState(SavedDC-1)
+  else
+    LazDC.RestoreState(SavedDC);
+
   Result := True;
   {$ifdef VerboseQTWinAPI}
   WriteLn('Trace:< [WinAPI RestoreDC]');
@@ -5079,7 +5081,7 @@ begin
     exit;
   end;
 
-  Result := LazDC.SaveState();
+  Result := LazDC.SaveState()+1;
 
   {$ifdef VerboseQTWinAPI}
   WriteLn('Trace:< [WinAPI SaveDC] result=', Result);
@@ -5818,24 +5820,26 @@ end;*)
 
 {------------------------------------------------------------------------------
   Method:  SetTextColor
-  Params:  Handle -
-  Returns:
+  Params:  DC    - Identifies the device context.
+           Color - Specifies the color of the text.
+  Returns: The previous color if succesful, CLR_INVALID otherwise
  ------------------------------------------------------------------------------}
 function TCDWidgetSet.SetTextColor(DC: HDC; Color: TColorRef): TColorRef;
 var
-  lFont: TFPCustomFont;
-  LazDC: TLazCanvas;
+  LazDC: TLazCanvas absolute DC;
 begin
   {$ifdef VerboseCDDrawing}
     DebugLn(Format('[TCDWidgetSet.SetTextColor]  DC: %x Color: %8x', [DC, Color]));
   {$endif}
 
   Result := CLR_INVALID;
-  if not IsValidDC(DC) then Exit;
-  LazDC := TLazCanvas(DC);
+  if not IsValidDC(DC) then exit;
 
   if LazDC.Font <> nil then
+  begin
+    Result := FPColorToTColorRef(LazDC.Font.FPColor);
     LazDC.Font.FPColor := TColorToFPColor(Color);
+  end;
 end;
 
 (*{------------------------------------------------------------------------------

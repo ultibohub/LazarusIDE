@@ -62,7 +62,7 @@ uses
   IDEOptionsIntf, IDEOptEditorIntf, IDEDialogs, LazIDEIntf, PackageIntf,
   // DebuggerIntf
   DbgIntfDebuggerBase,
-  {$IFnDEF LCLNOGUI} IdeDebuggerOpts, IdeDebuggerBackendValueConv,{$EndIf}
+  {$IFnDEF LCLNOGUI} IdeDebuggerOpts, IdeDebuggerBackendValueConv, Debugger,{$EndIf}
   // IDE
   EnvironmentOpts, CompOptsModes, ProjectResources, LazConf, ProjectIcon,
   IDECmdLine, IDEProcs, CompilerOptions, RunParamsOpts, ModeMatrixOpts,
@@ -256,7 +256,8 @@ type
 
   TUnitInfo = class(TLazProjectFile)
   private
-    FComponentFallbackClasses: TStrings;
+    FComponentTypesToClasses: TStringToPointerTree;
+    FComponentVarsToClasses: TStringToPointerTree;
     FCustomDefaultHighlighter: boolean;
     FDefaultSyntaxHighlighter: TLazSyntaxHighlighter;
     FDisableI18NForLFM: boolean;
@@ -443,8 +444,10 @@ type
     property ComponentName: string read fComponentName write fComponentName;
     property ComponentResourceName: string read fComponentResourceName
                                            write fComponentResourceName;
-    property ComponentFallbackClasses: TStrings read FComponentFallbackClasses
-      write FComponentFallbackClasses; // classname to componentclass, for not registered classes in lfm
+    property ComponentTypesToClasses: TStringToPointerTree read FComponentTypesToClasses
+      write FComponentTypesToClasses; // classname to TComponentClass, for not registered and ambiguous classes in lfm
+    property ComponentVarsToClasses: TStringToPointerTree read FComponentVarsToClasses
+      write FComponentVarsToClasses; // variablename to TComponentClass, for ambiguous classes in lfm
     property ComponentState: TWindowState read FComponentState write FComponentState;
     property ResourceBaseClass: TPFComponentBaseClass read FResourceBaseClass
                                                       write FResourceBaseClass;
@@ -1609,7 +1612,8 @@ begin
   FreeAndNil(FBookmarks);
   Project:=nil;
   FreeAndNil(FEditorInfoList);
-  FreeAndNil(FComponentFallbackClasses);
+  FreeAndNil(FComponentTypesToClasses);
+  FreeAndNil(FComponentVarsToClasses);
   inherited Destroy;
 end;
 
@@ -3108,6 +3112,7 @@ begin
   if not FStoreBackendConverterConfigInSession then begin
     {$IFnDEF LCLNOGUI}
     FBackendConverterConfig.LoadDataFromXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/');
+    ProjectValueConverterSelectorList := FBackendConverterConfig;
     {$EndIf}
     FBackendConverterConfigWasFromLPI := True;
   end;
@@ -3162,6 +3167,7 @@ begin
   if FStoreBackendConverterConfigInSession then begin
     {$IFnDEF LCLNOGUI}
     FBackendConverterConfig.LoadDataFromXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/');
+    ProjectValueConverterSelectorList := FBackendConverterConfig;
     {$EndIf}
     FBackendConverterConfigWasFromSession := True;
   end;
