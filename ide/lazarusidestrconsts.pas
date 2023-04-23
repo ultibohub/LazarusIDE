@@ -3563,7 +3563,6 @@ resourcestring
   lisCleanUp = 'Clean up';
   lisLazBuildBuildMany = 'Build Many';
   lisAutomatically = 'Automatically';
-  lisCleanCommonFiles = 'Clean common files';
   lisCleanAll = 'Clean all';
   lisCleanOnlyOnce = 'Switch after building to automatically';
   lisAfterCleaningUpSwitchToAutomaticClean = 'After cleaning up (clean all or clean common files), switch to '

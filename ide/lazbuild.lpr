@@ -80,10 +80,13 @@ type
     FSkipDependencies: boolean;
     fWidgetsetOverride: String;
 
+    function HasLongOptIgnoreCase(const S: String; out aValue: String): Boolean;
+    function HasShortOrLongOpt(const C: Char; const S: String): Boolean;
+
     // codetools
-    procedure OnCodeBufferDecodeLoaded({%H-}Code: TCodeBuffer;
+    procedure CodeBufferDecodeLoaded({%H-}Code: TCodeBuffer;
          const {%H-}Filename: string; var Source, DiskEncoding, MemEncoding: string);
-    procedure OnCodeBufferEncodeSaving(Code: TCodeBuffer;
+    procedure CodeBufferEncodeSaving(Code: TCodeBuffer;
                                     const {%H-}Filename: string; var Source: string);
 
     // global package functions
@@ -97,15 +100,15 @@ type
                           PkgList: TFPList; out FilesChanged: boolean): boolean;
 
     // project
-    procedure OnProjectChangeInfoFile(TheProject: TProject);
+    procedure ProjectInfoFileChanged(TheProject: TProject);
 
     // dialogs
-    function OnIDEMessageDialog(const aCaption, aMsg: string;
-                                {%H-}DlgType: TMsgDlgType; {%H-}Buttons: TMsgDlgButtons;
-                                const {%H-}HelpKeyword: string): Integer;
-    function OnIDEQuestionDialog(const aCaption, aMsg: string;
-                                 {%H-}DlgType: TMsgDlgType; {%H-}Buttons: array of const;
-                                 const {%H-}HelpKeyword: string): Integer;
+    function IDEMessageDialogHandler(const aCaption, aMsg: string;
+                         {%H-}DlgType: TMsgDlgType; {%H-}Buttons: TMsgDlgButtons;
+                         const {%H-}HelpKeyword: string): Integer;
+    function IDEQuestionDialogHandler(const aCaption, aMsg: string;
+                         {%H-}DlgType: TMsgDlgType; {%H-}Buttons: array of const;
+                         const {%H-}HelpKeyword: string): Integer;
   protected
     function GetParams(Index: Integer): String; override;
     function GetParamCount: Integer; override;
@@ -168,8 +171,7 @@ type
     property BuildIDE: boolean read FBuildIDE write FBuildIDE; // build IDE (as opposed to a project/package etc)
     property BuildIDEOptions: string read FBuildIDEOptions write FBuildIDEOptions;
     property CreateMakefile: boolean read FCreateMakefile write FCreateMakefile;
-    property WidgetSetOverride: String read fWidgetsetOverride
-                                            write fWidgetsetOverride;
+    property WidgetSetOverride: String read FWidgetsetOverride write FWidgetsetOverride;
     property OSOverride: String read fOSOverride write fOSOverride;
     property CPUOverride: String read fCPUOverride write fCPUOverride;
     property ProcessorOverride: String read fProcessorOverride write fProcessorOverride; //Ultibo
@@ -270,7 +272,7 @@ end;
 
 { TLazBuildApplication }
 
-procedure TLazBuildApplication.OnCodeBufferEncodeSaving(Code: TCodeBuffer;
+procedure TLazBuildApplication.CodeBufferEncodeSaving(Code: TCodeBuffer;
   const Filename: string; var Source: string);
 begin
   if (Code.DiskEncoding<>'') and (Code.MemEncoding<>'')
@@ -285,7 +287,7 @@ begin
   end;
 end;
 
-procedure TLazBuildApplication.OnCodeBufferDecodeLoaded(Code: TCodeBuffer;
+procedure TLazBuildApplication.CodeBufferDecodeLoaded(Code: TCodeBuffer;
   const Filename: string; var Source, DiskEncoding, MemEncoding: string);
 begin
   //DebugLn(['TLazBuildApplication.OnCodeBufferDecodeLoaded Filename=',Filename,' Encoding=',GuessEncoding(Source)]);
@@ -325,7 +327,7 @@ begin
   Result:=CheckInterPkgFiles(IDEObject,PkgList,FilesChanged);
 end;
 
-procedure TLazBuildApplication.OnProjectChangeInfoFile(TheProject: TProject);
+procedure TLazBuildApplication.ProjectInfoFileChanged(TheProject: TProject);
 begin
   if TheProject<>Project1 then exit;
   if TheProject.IsVirtual then
@@ -334,9 +336,8 @@ begin
     CodeToolBoss.SetGlobalValue(ExternalMacroStart+'ProjPath',Project1.Directory)
 end;
 
-function TLazBuildApplication.OnIDEMessageDialog(const aCaption, aMsg: string;
-  DlgType: TMsgDlgType; Buttons: TMsgDlgButtons; const HelpKeyword: string
-  ): Integer;
+function TLazBuildApplication.IDEMessageDialogHandler(const aCaption, aMsg: string;
+  DlgType: TMsgDlgType; Buttons: TMsgDlgButtons; const HelpKeyword: string): Integer;
 begin
   DumpStack;
   Error(ErrorBuildFailed, Format(lisLazbuildIsNonInteractiveAbortingNow, [
@@ -344,9 +345,8 @@ begin
   Result:=mrCancel;
 end;
 
-function TLazBuildApplication.OnIDEQuestionDialog(const aCaption, aMsg: string;
-  DlgType: TMsgDlgType; Buttons: array of const; const HelpKeyword: string
-  ): Integer;
+function TLazBuildApplication.IDEQuestionDialogHandler(const aCaption, aMsg: string;
+  DlgType: TMsgDlgType; Buttons: array of const; const HelpKeyword: string): Integer;
 begin
   DumpStack;
   Error(ErrorBuildFailed, Format(lisLazbuildIsNonInteractiveAbortingNow, [
@@ -1017,7 +1017,7 @@ begin
 
     Result.MainProject:=true;
     Result.OnFileBackup:=@BuildBoss.BackupFileForWrite;
-    Result.OnChangeProjectInfoFile:=@OnProjectChangeInfoFile;
+    Result.OnChangeProjectInfoFile:=@ProjectInfoFileChanged;
 
   finally
     ProjectDesc.Free;
@@ -1245,8 +1245,8 @@ procedure TLazBuildApplication.SetupCodetools;
 begin
   // create a test unit needed to get from the compiler all macros and search paths
   CodeToolBoss.CompilerDefinesCache.TestFilename:=CreateCompilerTestPascalFilename;
-  CodeToolBoss.SourceCache.OnEncodeSaving:=@OnCodeBufferEncodeSaving;
-  CodeToolBoss.SourceCache.OnDecodeLoaded:=@OnCodeBufferDecodeLoaded;
+  CodeToolBoss.SourceCache.OnEncodeSaving:=@CodeBufferEncodeSaving;
+  CodeToolBoss.SourceCache.OnDecodeLoaded:=@CodeBufferDecodeLoaded;
   CodeToolBoss.SourceCache.DefaultEncoding:=EncodingUTF8;
 
   MainBuildBoss.LoadCompilerDefinesCaches;
@@ -1273,8 +1273,8 @@ end;
 
 procedure TLazBuildApplication.SetupDialogs;
 begin
-  LazMessageWorker:=@OnIDEMessageDialog;
-  LazQuestionWorker:=@OnIDEQuestionDialog;
+  LazMessageWorker:=@IDEMessageDialogHandler;
+  LazQuestionWorker:=@IDEQuestionDialogHandler;
 end;
 
 procedure TLazBuildApplication.StoreBaseSettings;
@@ -1318,32 +1318,21 @@ end;
 function TLazBuildApplication.RepairedCheckOptions(const ShortOptions: String;
   const Longopts: TStrings; Opts, NonOpts: TStrings): String;
 
+  Function FindLongOpt(S : String) : boolean;
+  Var
+    I : integer;
+  begin
+    I:=LongOpts.Count-1;
+    While (I>=0) and (LongOpts[I]<>S) do
+      Dec(I);
+    Result:=(I<>-1);
+  end;
+
 Var
   I,J,L,P : Integer;
   O,OV : String;
   HaveArg : Boolean;
   NeedArg: Boolean;
-
-  Function FindLongOpt(S : String) : boolean;
-  Var
-    I : integer;
-  begin
-    If CaseSensitiveOptions then
-      begin
-      I:=LongOpts.Count-1;
-      While (I>=0) and (LongOpts[i]<>S) do
-        Dec(i);
-      end
-    else
-      begin
-      S:=UpperCase(S);
-      I:=LongOpts.Count-1;
-      While (I>=0) and (UpperCase(LongOpts[i])<>S) do
-        Dec(i);
-      end;
-    Result:=(I<>-1);
-  end;
-
 begin
   Result:='';
   I:=1;
@@ -1375,6 +1364,7 @@ begin
             Delete(OV,1,J);
             O:=Copy(O,1,J-1);
             end;
+          O:=LowerCase(O); // Long options are case-insensitive.
           // Switch Option
           If FindLongopt(O) then
             begin
@@ -1401,8 +1391,6 @@ begin
                    and (ToolParamStr(I+1)[i]<>OptionChar);
           If HaveArg then
             OV:=ToolParamStr(I+1);
-          If Not CaseSensitiveOptions then
-            O:=LowerCase(O);
           L:=Length(O);
           J:=2;
           NeedArg:=false;
@@ -1446,7 +1434,6 @@ end;
 constructor TLazBuildApplication.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
-  CaseSensitiveOptions:=False;
   SetupDialogs;
   Files:=TStringList.Create;
   fMaxProcessCount:=-1;
@@ -1518,17 +1505,37 @@ begin
   end;
 end;
 
+Function TLazBuildApplication.HasLongOptIgnoreCase(const S: String; out aValue: String): Boolean;
+// Check existence of a long option case-insensitively.
+begin
+  CaseSensitiveOptions:=False;
+  Result:=HasOption(S);
+  if Result then
+    aValue:=GetOptionValue(S)
+  else
+    aValue:='';
+  CaseSensitiveOptions:=True;
+end;
+
+Function TLazBuildApplication.HasShortOrLongOpt(const C: Char; const S: String): Boolean;
+// Check existence of a short option casesensitively and long option case-insensitively.
+begin
+  Result:=HasOption(C);
+  CaseSensitiveOptions:=False;
+  Result:=Result or HasOption(S);
+  CaseSensitiveOptions:=True;
+end;
+
 function TLazBuildApplication.ParseParameters: boolean;
 var
   Options: TStringList;
   NonOptions: TStringList;
-  ErrorMsg: String;
   LongOptions: TStringList;
   i: Integer;
-  p: String;
+  p, ErrorMsg: String;
   FilesNeeded: Boolean;
 begin
-  Result:=false;
+  Result:=False;
   if (ToolParamCount<=0)
    or (CompareText(ToolParamStr(1),'--help')=0)
    or (CompareText(ToolParamStr(1),'-help')=0)
@@ -1538,11 +1545,11 @@ begin
     WriteUsage;
     exit;
   end;
-  if HasOption('h','help') or HasOption('?') then begin
+  if HasShortOrLongOpt('h','help') or HasOption('?') then begin
     WriteUsage;
     exit;
   end;
-  if HasOption('v','version') then begin
+  if HasShortOrLongOpt('v','version') then begin
     writeln(VersionStr);
     exit;
   end;
@@ -1597,11 +1604,11 @@ begin
 
     FilesNeeded:=true;
 
-    if HasOption('verbose-pkgsearch') then
+    if HasLongOptIgnoreCase('verbose-pkgsearch',p) then
       Include(fPkgGraphVerbosity,pvPkgSearch);
 
     // PackageAction: register lpk files
-    if HasOption('add-package-link') then begin
+    if HasLongOptIgnoreCase('add-package-link',p) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: add-package-link');
       if PackageAction<>lpaBuild then begin
@@ -1614,7 +1621,7 @@ begin
     end;
 
     // PackageAction: install lpk files
-    if HasOption('add-package') then begin
+    if HasLongOptIgnoreCase('add-package',p) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: add-package');
       if PackageAction<>lpaBuild then begin
@@ -1627,9 +1634,8 @@ begin
     end;
 
     // building IDE
-    if HasOption('build-ide') then begin
+    if HasLongOptIgnoreCase('build-ide', FBuildIDEOptions) then begin
       BuildIDE:=true;
-      BuildIDEOptions:=GetOptionValue('build-ide');
       FilesNeeded:=false;
       if ConsoleVerbosity>=0 then
         writeln('Parameter: build-ide=',BuildIDEOptions);
@@ -1644,40 +1650,40 @@ begin
     end;
 
     // primary config path
-    if HasOption('primary-config-path') then begin
-      SetPrimaryConfigPath(GetOptionValue('primary-config-path'));
+    if HasLongOptIgnoreCase('primary-config-path',p) then begin
+      SetPrimaryConfigPath(p);
       if ConsoleVerbosity>=0 then
         writeln('Parameter: primary-config-path=',GetPrimaryConfigPath);
-    end else if HasOption('pcp') then begin
-      SetPrimaryConfigPath(GetOptionValue('pcp'));
+    end else if HasLongOptIgnoreCase('pcp',p) then begin
+      SetPrimaryConfigPath(p);
       if ConsoleVerbosity>=0 then
         writeln('Parameter: pcp=',GetPrimaryConfigPath);
     end;
 
     // secondary config path
-    if HasOption('secondary-config-path') then begin
-      SetPrimaryConfigPath(GetOptionValue('secondary-config-path'));
+    if HasLongOptIgnoreCase('secondary-config-path',p) then begin
+      SetPrimaryConfigPath(p);
       if ConsoleVerbosity>=0 then
         writeln('Parameter: secondary-config-path=',GetSecondaryConfigPath);
-    end else if HasOption('scp') then begin
-      SetSecondaryConfigPath(GetOptionValue('scp'));
+    end else if HasLongOptIgnoreCase('scp',p) then begin
+      SetSecondaryConfigPath(p);
       if ConsoleVerbosity>=0 then
         writeln('Parameter: scp=',GetSecondaryConfigPath);
     end;
 
     // build all
-    if HasOption('B','build-all') then begin
+    if HasShortOrLongOpt('B','build-all') then begin
       BuildAll:=true;
       if ConsoleVerbosity>=0 then
         writeln('Parameter: build-all');
     end;
-    if HasOption('r','recursive') then begin
+    if HasShortOrLongOpt('r','recursive') then begin
       BuildAll:=true;
       BuildRecursive:=true;
       if ConsoleVerbosity>=0 then
         writeln('Parameter: recursive');
     end;
-    if HasOption('d','skip-dependencies') then begin
+    if HasShortOrLongOpt('d','skip-dependencies') then begin
       SkipDependencies:=true;
       if ConsoleVerbosity>=0 then
         writeln('Parameter: skip-dependencies');
@@ -1690,30 +1696,25 @@ begin
 
     // overides
     // widgetset
-    if HasOption('ws') then begin
-      WidgetSetOverride := GetOptionValue('ws');
+    if HasLongOptIgnoreCase('ws',FWidgetSetOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: ws=',WidgetSetOverride);
-    end else if HasOption('widgetset') then begin
-      WidgetSetOverride := GetOptionValue('widgetset');
+    end else if HasLongOptIgnoreCase('widgetset',FWidgetSetOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: widgetset=',WidgetSetOverride);
     end;
 
     // operating system
-    if HasOption('os') then begin
-      OSOverride := GetOptionValue('os');
+    if HasLongOptIgnoreCase('os',FOSOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: os=',OSOverride);
-    end else if HasOption('operating-system') then begin
-      OSOverride := GetOptionValue('operating-system');
+    end else if HasLongOptIgnoreCase('operating-system',FOSOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: operating-system=',OSOverride);
     end;
 
     // cpu
-    if HasOption('cpu') then begin
-      CPUOverride := GetOptionValue('cpu');
+    if HasLongOptIgnoreCase('cpu',FCPUOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: cpu=',CPUOverride);
     end;
@@ -1726,45 +1727,41 @@ begin
     end; //Ultibo
 
     // build mode
-    if HasOption('bm') then begin
-      BuildModeOverride := GetOptionValue('bm');
+    if HasLongOptIgnoreCase('bm',FBuildModeOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: bm=',BuildModeOverride);
-    end else if HasOption('build-mode') then begin
-      BuildModeOverride := GetOptionValue('build-mode');
+    end else if HasLongOptIgnoreCase('build-mode',FBuildModeOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: build-mode=',BuildModeOverride);
     end;
 
     // compiler
-    if HasOption('compiler') then begin
-      CompilerOverride := GetOptionValue('compiler');
+    if HasLongOptIgnoreCase('compiler',FCompilerOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: compiler=',CompilerOverride);
     end;
 
     // lazarusdir
-    if HasOption('lazarusdir') then begin
-      LazarusDirOverride := GetOptionValue('lazarusdir');
+    if HasLongOptIgnoreCase('lazarusdir',FLazarusDirOverride) then begin
       if ConsoleVerbosity>=0 then
         writeln('Parameter: lazarusdir=',LazarusDirOverride);
     end;
 
     // max-process-count
-    if HasOption('max-process-count') then begin
-      MaxProcessCount:=StrToInt(GetOptionValue('max-process-count'));
+    if HasLongOptIgnoreCase('max-process-count',p) then begin
+      MaxProcessCount:=StrToInt(p);
       if ConsoleVerbosity>=0 then
         writeln('Parameter: max-process-count=',MaxProcessCount);
     end;
 
-    if HasOption('no-write-project') then
+    if HasLongOptIgnoreCase('no-write-project',p) then
     begin
       NoWriteProject := true;
       if ConsoleVerbosity>=0 then
         writeln('Parameter: no-write-project');
     end;
 
-    if HasOption('create-makefile') then
+    if HasLongOptIgnoreCase('create-makefile',p) then
     begin
       CreateMakefile := true;
       if ConsoleVerbosity>=0 then
