@@ -71,6 +71,7 @@ type
     procedure resetCursorRects; override;
     // key
     procedure textDidChange(notification: NSNotification); override;
+    function textView_shouldChangeTextInRange_replacementString (textView: NSTextView; affectedCharRange: NSRange; replacementString: NSString): ObjCBOOL; message 'textView:shouldChangeTextInRange:replacementString:';
     // mouse
     procedure mouseDown(event: NSEvent); override;
     procedure mouseUp(event: NSEvent); override;
@@ -985,6 +986,24 @@ begin
     callback.SendOnTextChanged;
 end;
 
+// detect and remove line-break when entering text
+// TextField (TEdit) should be single line
+function TCocoaTextField.textView_shouldChangeTextInRange_replacementString (textView: NSTextView; affectedCharRange: NSRange; replacementString: NSString): ObjCBOOL;
+var
+  newString: NSString;   // need not release
+begin
+  Result:= true;
+  newString:= NSStringRemoveLineBreak( replacementString );
+  if newString.length <> replacementString.length then
+  begin
+    // only handled if there is line-break in replacementString
+    // use insertText() for undo/redo support
+    // textDidChange will be called in insertText()
+    if newString.length>0 then currentEditor.insertText( newString );
+    Result:= false;
+  end;
+end;
+
 procedure TCocoaTextField.mouseDown(event: NSEvent);
 begin
   if Assigned(callback) and not callback.MouseUpDownEvent(event) then
@@ -1432,6 +1451,7 @@ end;
 
 procedure TCocoaComboBox.dealloc;
 begin
+  FreeAndNil( list );
   if Assigned(resultNS) then resultNS.release;
   inherited dealloc;
 end;

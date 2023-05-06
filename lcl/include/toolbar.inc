@@ -89,6 +89,7 @@ begin
     csDoubleClicks, csMenuEvents, csSetCaption, csParentBackground, csOpaque];
   FFlat := True;
   Height := 32;
+  // ToDo: Test the scaling code. Widths are scaled in many places.
   Details := ThemeServices.GetElementDetails(ttbSplitButtonDropDownNormal);
   FThemeDropDownWidth := ThemeServices.GetDetailSize(Details).cx;
   Details := ThemeServices.GetElementDetails(ttbDropDownButtonNormal);

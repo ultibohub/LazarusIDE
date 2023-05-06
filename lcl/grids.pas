@@ -4353,7 +4353,7 @@ begin
         soAscending: Details := ThemeServices.GetElementDetails(thHeaderSortArrowSortedUp);
         soDescending: Details := ThemeServices.GetElementDetails(thHeaderSortArrowSortedDown);
       end;
-
+      // Maybe: s := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
       s := ThemeServices.GetDetailSize(Details);
     end else
       s := Size(-1, -1);
@@ -4839,6 +4839,7 @@ begin
   end else
   begin
     Details := ThemeServices.GetElementDetails(arrtb[AState]);
+    // Maybe: CSize := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
     CSize := ThemeServices.GetDetailSize(Details);
     CSize.cx := MulDiv(CSize.cx, Font.PixelsPerInch, Screen.PixelsPerInch);
     CSize.cy := MulDiv(CSize.cy, Font.PixelsPerInch, Screen.PixelsPerInch);

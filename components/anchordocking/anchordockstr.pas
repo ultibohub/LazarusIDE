@@ -17,7 +17,6 @@ resourcestring
   adrsHeaderPosition = 'Header position';
   adrsEnlargeSide = 'Enlarge %s side';
   adrsMerge = 'Merge';
-  adrsEnlarge = 'Enlarge';
   adrsAutomatically = 'Automatically';
   adrsLeft = 'left';
   adrsTop = 'top';
@@ -88,6 +87,8 @@ resourcestring
   adrsMultiLinePagesHint = 'Tabs of pages can be shown in multiple lines';
   adrsFloatingWindowsOnTop = 'Floating windows on top';
   adrsFloatingWindowsOnTopHint = 'Show floating windows on top of main form';
+  adrsFlatHeadersButtons = 'Flat header buttons';
+  adrsFlatHeadersButtonsHint = 'Flat buttons in headers of docked controls';
 
 implementation
 

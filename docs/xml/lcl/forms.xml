@@ -202,7 +202,7 @@ but usually the window appear occupying all of the work area of a monitor.
 The window appears in full screen mode, when allowed by the platform. It 
 will, for example, attempt to appear on the top of task bars and other static 
 platform user interface elements. wsFullScreen is converted to wsMaximized 
-for use on the the Windows platform; the API does not provide a full screen 
+for use on the Windows platform; the API does not provide a full screen 
 option.
 </short>
 </element>
@@ -643,7 +643,7 @@ No actions are performed in the method if Message has any other value in its
 ScrollCode member. No actions are performed in the method at design-time.
 </p>
 <p>
-ScrollHandler ensures the the new value for the Position property is in the 
+ScrollHandler ensures the new value for the Position property is in the 
 range <b>0..<var>Range</var></b>. Calls <var>InvalidateScrollInfo</var> to 
 force scroll bar information to be re-initialized. Calls 
 <var>SetPosition</var> to apply the new value for the Position property and 
@@ -2318,7 +2318,7 @@ and <var>lapAutoAdjustForDPI</var> enumeration values.
 <p>
 <var>Create</var> is the overridden constructor for the class instance. 
 Create calls the inherited method using the value in <var>TheOwner</var> as 
-the the owner of the class instance. Create sets the default values for the 
+the owner of the class instance. Create sets the default values for the 
 following properties:
 </p>
 <ul>
@@ -3117,6 +3117,430 @@ been assigned to the Parent for the control.
 <element name="TFrame.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
 <element name="TFrame.Visible" link="#lcl.controls.TControl.Visible"/>
 
+<element name="TWindowMagnetOptions">
+<short>
+Implements options which control magnetic window behavior in form instances.
+</short>
+<descr>
+<p>
+<var>TWindowMagnetOptions</var> is a class which implements options needed to 
+control magnetic window behavior when a form is snapped to another form or to 
+an edge on the screen. It introduces properties with default values which 
+enable or disable the snapping behaviors for forms or the screen. It also 
+includes a property to set the proximity or threshold where snapping behavior 
+is engaged.
+</p>
+<p>
+TWindowMagnetOptions is the type used to implement the SnapOptions property in 
+TCustomForm and descendent classes. It is also passed as an argument to the 
+SnapToMonitor and SnapToForms methods in TWindowMagnetManager.
+</p>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.SnapOptions"/>
+<link id="TWindowMagnetManager.SnapToMonitor"/>
+<link id="TWindowMagnetManager.SnapToForms"/>
+</seealso>
+</element>
+
+<!-- private -->
+<element name="TWindowMagnetOptions.FSnapMonitor"/>
+<element name="TWindowMagnetOptions.FSnapForms"/>
+<element name="TWindowMagnetOptions.FSnapFormTarget"/>
+<element name="TWindowMagnetOptions.FDistance"/>
+
+<!-- public -->
+<element name="TWindowMagnetOptions.Create">
+<short>
+Constructor for the class instance.
+</short>
+<descr>
+<p>
+Create sets the default values for properties in the class instance, including:
+</p>
+<ul>
+<li>SnapToMonitor (False)</li>
+<li>SnapToForms (False)</li>
+<li>SnapFormTarget (True)</li>
+<li>Distance (10 pixels)</li>
+</ul>
+</descr>
+<seealso>
+<link id="TWindowMagnetOptions.SnapToMonitor"/>
+<link id="TWindowMagnetOptions.SnapToForms"/>
+<link id="TWindowMagnetOptions.SnapFormTarget"/>
+<link id="TWindowMagnetOptions.Distance"/>
+</seealso>
+</element>
+
+<element name="TWindowMagnetOptions.AssignTo">
+<short>
+Implements object persistence for TWindowMagnetOptions instances.
+</short>
+<descr>
+<p>
+<var>AssignTo</var> is an overridden method in 
+<var>TWindowMagnetOptions</var>. It reimplements the AssignTo method 
+introduced in the TPersistent ancestor to support the TWindowMagnetOptions 
+type.
+</p>
+<p>
+If Dest is a TWindowMagnetOptions instance, properties from the current class 
+are copied to Dest. The properties include:
+</p>
+<ul>
+<li>Distance</li>
+<li>SnapToMonitor</li>
+<li>SnapToForms</li>
+<li>SnapFormTarget</li>
+</ul>
+<p>
+No actions are performed in the method if Dest is not derived from 
+TWindowMagnetOptions. AssignTo does not call the inherited method which raises 
+an EConvertError exception.
+</p>
+</descr>
+<seealso>
+<link id="#rtl.classes.TPersistent.Assign">TPersistent.Assign</link>
+</seealso>
+</element>
+<element name="TWindowMagnetOptions.AssignTo.Dest">
+<short>
+TWindowMagnetOptions instance where properties from the current instance are 
+stored.
+</short>
+</element>
+
+<!-- published -->
+<element name="TWindowMagnetOptions.SnapToMonitor">
+<short>
+Enables or disables snapping a form to one of the edges on the monitor.
+</short>
+<descr>
+<p>
+<var>SnapToMonitor</var> is a <var>Boolean</var> property which determines 
+whether magnetic window snapping to an edge on the monitor is enabled. The 
+default value for the property is <b>False</b> and disables snapping a form to 
+an edge on the monitor. When set to <b>True</b>, the magnetic window manager 
+will snap the form to the monitor edge when the snapping threshold is reached.
+</p>
+<p>
+Use Distance to specify the proximity or threshold (in pixels) where the 
+snapping behavior is automatically engaged.
+</p>
+<p>
+Use SnapToForms to control whether a form instance can be snapped to an edge 
+on other forms in the application.
+</p>
+<p>
+Use SnapFormTarget to indicate whether a form can be a snap target for other 
+forms in an application.
+</p>
+</descr>
+<seealso/>
+</element>
+
+<element name="TWindowMagnetOptions.SnapToForms">
+<short>
+Enables or disables snapping the current form to other forms in the 
+application.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWindowMagnetOptions.SnapFormTarget">
+<short>
+Enables or disables snapping another form in the application to the form 
+instance.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWindowMagnetOptions.Distance">
+<short>
+Distance from (or proximity to) a snap target where the snapping behavior is 
+automatically engaged.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWindowMagnetManager">
+<short>
+Implements a manager for form and screen snapping behavior in an application.
+</short>
+<descr>
+<p>
+<var>TWindowMagnetManager</var> is a class used to manage magnetic window 
+snapping behavior for windows in an application. TWindowMagnetManager is the 
+type used to implement the MagnetManager property in TScreen. It provides 
+properties, methods, and members needed to:
+</p>
+<ul>
+<li>
+Track the position for a window on the screen.
+</li>
+<li>
+Adjust the window position when it reaches the snapping threshold for an edge 
+on another form or the screen.
+</li>
+<li>
+Snap a specific form to an adjusted window position.
+</li>
+</ul>
+<p>
+The Enabled property determines whether the magnetic window manager is enabled 
+or disabled in the global Screen instance.
+</p>
+<remark>
+Use  of TWindowMagnetManager depends on the LM_WINDOWPOSCHANGING message 
+dispatched when the position for a form (window) is changed. In the current 
+LCL release, the LM_WINDOWPOSCHANGING message is dispatched for the Windows 
+platform only. None of the other widgetsets checked for or apply the message.
+</remark>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso/>
+</element>
+
+<!-- private -->
+<element name="TWindowMagnetManager.FEnabled"/>
+<element name="TWindowMagnetManager.FActiveForm"/>
+<element name="TWindowMagnetManager.FPreviousSource"/>
+<element name="TWindowMagnetManager.FPreviousReturn"/>
+<element name="TWindowMagnetManager.FCompositorBorders"/>
+
+<element name="TWindowMagnetManager.SnapToSides">
+<short>
+Performs actions needed to resize or reposition a form to another form or an 
+edge on the screen.
+</short>
+<descr>
+<p>
+Parameters passed to the method are variable arguments, and may be updated in 
+the method to reflect the new position or size for the window when snapping 
+behavior is applied.
+</p>
+<p>
+On the Windows platform the Desktop Window Manager API is called to adjust the 
+dimensions for the form instance using the shadow offsets returned by the 
+Compositor. For other platforms (which do not lie about the size of the form  
+instance), this step is not needed.
+</p>
+<p>
+SnapToSides is used to implement the SnapToMonitor and SnapToForms methods in 
+the class.
+</p>
+</descr>
+<seealso/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.Result">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.x">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.cx">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.px">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.pcx">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.pxout">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.dist">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.leftsides">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToSides.rightsides">
+<short/>
+</element>
+
+<element name="TWindowMagnetManager.SnapToMonitor">
+<short>
+Snaps a window to an edge on the monitor.
+</short>
+<descr>
+<p>
+<var>SnapToMonitor</var> converts the window position information in WindowPos 
+to a TRect instance used to locate the monitor and position on its work area. 
+The SnapToSides method is called to adjust the window position when snapping 
+behavior is applied for the window.
+</p>
+<p>
+The return value is <b>True</b> if the window was successfully snapped to an 
+edge on a monitor, and value(s) in WindowPos were changed.
+</p>
+<p>
+No actions are performed in the method if SnapToMonitor is not enabled in the 
+Opts argument. In this case, the return value is <b>False</b>.
+</p>
+</descr>  
+<seealso/>
+</element>
+<element name="TWindowMagnetManager.SnapToMonitor.Result">
+<short>
+Returns <b>True</b> if the form was successfully snapped to a monitor edge in 
+the method. Returns <b>False</b> if SnapToMonitor is not enabled in the Opts 
+parameter.
+</short>
+</element>
+<element name="TWindowMagnetManager.SnapToMonitor.Opts">
+<short>
+Snapping options used in the method.
+</short>
+</element>
+<element name="TWindowMagnetManager.SnapToMonitor.WindowPos">
+<short>
+Structure with the window handle, position, and flags for the form affected in 
+the method. The variable parameter can be updated in the method.
+</short>
+</element>
+
+<element name="TWindowMagnetManager.SnapToForms">
+<short>
+Snaps a form to an edge on another form in the application which is a valid 
+snap target.
+</short>
+<descr/>
+<seealso/>
+</element>
+<element name="TWindowMagnetManager.SnapToForms.Result">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToForms.Opts">
+<short/>
+</element>
+<element name="TWindowMagnetManager.SnapToForms.WindowPos">
+<short/>
+</element>
+
+<!-- public -->
+<element name="TWindowMagnetManager.Create">
+<short>
+Constructor for the class instance.
+</short>
+<descr>
+<p>
+<var>Create</var> is an override method which implements the virtual 
+constructor for the class instance. Create initializes internal members in the 
+class instance to their default values.
+</p>
+</descr>
+<seealso/>
+</element>
+
+<element name="TWindowMagnetManager.Enabled">
+<short>
+Enables or disables form and/or screen snapping behavior using the manager 
+class.
+</short>
+<descr>
+<p>
+<var>Enabled</var> is a <var>Boolean</var> property which indicates whether 
+the magnetic window snapping behavior is enabled in the class.
+</p>
+<p>
+When set to <b>True</b>, the following behaviors are enabled using the class:
+</p>
+<ul>
+<li>
+A dragged form can be snapped to an edge of another form.
+</li>
+<li>
+A dragged form can be snapped to an edge on the monitor.
+</li>
+</ul>
+<p>
+When set to <b>False</b>, these behaviors are disabled.
+</p>
+<p>
+The default value for the property is <b>True</b> and enables the snapping 
+behavior in the global Screen variable.
+</p>
+<p>
+Use the SnapOptions property in each TForm instance to define whether the form 
+can be snapped to another form or an edge on the screen, or allows other forms 
+to be snapped to its edges. It also controls the distance at which the 
+snapping behavior is automatically engaged.
+</p>
+</descr>
+<seealso>
+<link id="TCustomForm.SnapOptions"/>
+<link id="TCustomForm.WMWindowPosChanging"/>
+<link id="TScreen.MagnetManager"/>
+<link id="Screen"/>
+<link id="TWindowMagnetOptions"/>
+</seealso>
+</element>
+
+<element name="TWindowMagnetManager.SnapForm">
+<short>
+Snaps the specified form to the nearest snap target.
+</short>
+<descr>
+<p>
+No actions are performed in the method when the Enabled property is set to 
+<b>False</b>, when the window flags indicate that the window is being shown or 
+hidden, or at design-time.
+</p>
+<p>
+SnapForm calls the GetCompositorExtendedBorder routine to determine if the 
+size for the window is inaccurate for borders or shadows added by the 
+compositor for the desktop window manager. Both the SnapToMonitor and 
+SnapToForms methods are called to determine the return value for the method.
+</p>
+<p>
+The return value is <b>True</b> if the window position was snapped to either 
+an edge on the monitor or another form instance in the application.
+</p>
+<p>
+SnapForm is called from the WMWindowPosChanging method when a 
+LM_WINDOWPOSCHANGING message is received and handled for a form instance.
+</p>
+<remark>
+In the current LCL release, the LM_WINDOWPOSCHANGING message is dispatched for 
+the Windows platform only. None of the other widgetsets checked for or apply 
+the message.
+</remark>
+</descr>
+<seealso>
+<link id="TWindowMagnetManager.Enabled"/>
+<link id="TWindowMagnetManager.SnapToMonitor"/>
+<link id="TWindowMagnetManager.SnapToForms"/>
+</seealso>
+</element>
+<element name="TWindowMagnetManager.SnapForm.Result">
+<short>
+Returns <b>True</b> if the specified form was repositioned (or resized) due to 
+snapping behavior for the form or application.
+</short>
+</element>
+<element name="TWindowMagnetManager.SnapForm.Form">
+<short>
+Form instance examined and updated in the method.
+</short>
+</element>
+<element name="TWindowMagnetManager.SnapForm.WindowPos">
+<short>
+Structure with the window handle and position examined and updated in the 
+method.
+</short>
+</element>
+
 <element name="TBorderIcon">
 <short>
 Represents a visual element in a window title bar; depends on window manager 
@@ -3653,7 +4077,8 @@ or platform, and provide a common API for form-related operations.
 <element name="TCustomForm.FDelayedOnChangeBounds"/>
 <element name="TCustomForm.FDelayedOnResize"/>
 <element name="TCustomForm.FIsFirstOnShow"/>
-<element name="TCustomForm.FIsFirstOnActivate"/>
+<element name="TCustomForm.FSnapOptions"/>
+
 <element name="TCustomForm.GetClientHandle" link="#lcl.forms.TCustomForm.ClientHandle"/>
 <element name="TCustomForm.GetClientHandle.Result"/>
 
@@ -4081,6 +4506,95 @@ The form has not been made visible (Showing is <b>False</b>).
 <seealso/>
 </element>
 
+<element name="TCustomForm.GetScreenSnap">
+<short>
+Gets the value for the ScreenSnap property.
+</short>
+<descr/>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.ScreenSnap"/>
+</seealso>
+</element>
+<element name="TCustomForm.GetScreenSnap.Result">
+<short>
+Value for the ScreenSnap property.
+</short>
+</element>
+
+<element name="TCustomForm.SetScreenSnap">
+<short>
+Sets the value for the ScreenSnap property.
+</short>
+<descr/>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.ScreenSnap"/>
+</seealso>
+</element>
+<element name="TCustomForm.SetScreenSnap.AValue">
+<short>
+New value for the ScreenSnap property.
+</short>
+</element>
+
+<element name="TCustomForm.GetSnapBuffer">
+<short>
+Gets the value for the SnapBuffer property.
+</short>
+<descr/>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.SnapBuffer"/>
+</seealso>
+</element>
+<element name="TCustomForm.GetSnapBuffer.Result">
+<short>
+Value for the SnapBuffer property.
+</short>
+</element>
+
+<element name="TCustomForm.SetSnapBuffer">
+<short>
+Sets the value for the SnapBuffer property.
+</short>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.SnapBuffer"/>
+</seealso>
+</element>
+<element name="TCustomForm.SetSnapBuffer.AValue">
+<short>
+New value for the SnapBuffer property.
+</short>
+</element>
+
+<element name="TCustomForm.SetSnapOptions">
+<short>
+Sets the value for the SnapOptions property.
+</short>
+<descr/>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.SnapOptions"/>
+</seealso>
+</element>
+<element name="TCustomForm.SetSnapOptions.AValue">
+<short>
+New value for the SnapOptions property.
+</short>
+</element>
+
 <element name="TCustomForm.WMActivate">
 <short>
 Handles the LM_ACTIVATE message which activates or deactivates the form.
@@ -4185,6 +4699,49 @@ values in <var>Message</var>.
 </element>
 <element name="TCustomForm.WMSize.message">
 <short>Message examined in the method.</short>
+</element>
+
+
+<element name="TCustomForm.WMWindowPosChanging">
+<short>
+Notifies the magnetic window manager when the position for a form is being 
+updated.
+</short>
+<descr>
+<p>
+<var>WMWindowPosChanging</var> is a method used to notify the MagnetManager in 
+TScreen when the position for the window in Message is being updated. The 
+SnapForm method in the TWindowMagnetManager instance is called to update the 
+Form instance with the window position in Message. The SnapForm method may 
+update the window position if it is within the distance where snapping 
+behavior is engaged for the form.
+</p>
+<p>
+Use the SnapOptions property to specify which snapping behaviors are enabled 
+for the form, and the distance at which the snapping behavior is engaged. You 
+can also use the SnapBuffer and ScreenSnap properties to maintain Delphi VCL 
+code compatibility.
+</p>
+<remark>
+In the current LCL release, the LM_WINDOWPOSCHANGING message is dispatched for 
+the Windows platform only. None of the other widgetsets checked for or apply 
+the message.
+</remark>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TCustomForm.SnapOptions"/>
+<link id="TCustomForm.SnapBuffer"/>
+<link id="TCustomForm.ScreenSnap"/>
+<link id="TWindowMagnetManager.SnapForm"/>
+<link id="TScreen.MagnetManager"/>
+<link id="Screen"/>
+</seealso>
+</element>
+<element name="TCustomForm.WMWindowPosChanging.Message">
+<short/>
 </element>
 
 <element name="TCustomForm.WMWindowPosChanged">
@@ -5343,7 +5900,7 @@ visible in the task bar when one of its forms is visible.
 </element>
 
 <element name="TCustomForm.AllAutoSized">
-<short>If the the form is about to show, calculate its metrics.</short>
+<short>If the form is about to show, calculate its metrics.</short>
 <descr>
 <p>
 <var>AllAutoSized</var> is an overridden method used to apply the position 
@@ -5880,11 +6437,18 @@ properties for the form instance, including:
 <li>Sets the default bounds for the form instance.</li>
 <li>Sets Visible to <b>False</b>.</li>
 <li>Sets WindowState to wsNormal.</li>
-<li>Allocates resources for the Icon property but does not assign a 
-bitmap.</li>
+<li>
+Allocates resources for the Icon property but does not assign a 
+bitmap.
+</li>
 <li>Sets the default value for Color.</li>
-<li>Calls Screen.AddForm to register the form instance on the current 
-screen.</li>
+<li>
+Calls Screen.AddForm to register the form instance on the current 
+screen.
+</li>
+<li>
+Allocates resources for the SnapOptions property.  
+</li>
 </ul>
 </descr>
 <seealso/>
@@ -5910,8 +6474,8 @@ screen.</li>
 <var>Destroy</var> disables auto-sizing to prevent resize messages while the 
 form is being freed. Destroy frees resources allocated for the form instance, 
 including its Icon and any allocated icon handles. The form instance is 
-removed from Screen, and its ActionLists are freed. Destroy frees all form 
-handlers added to the class instance.
+removed from Screen, and its ActionLists and SnapOptions are freed. Destroy 
+frees all form handlers added to the class instance.
 </p>
 <p>
 Destroy calls the inherited destructor prior to exiting from the method.
@@ -7664,6 +8228,90 @@ design-time.
 </seealso>
 </element>
 
+<element name="TCustomForm.SnapOptions">
+<short>
+Contains the form and screen snapping options for the form instance.
+</short>
+<descr>
+<p>
+<var>SnapOptions</var> is a <var>TWindowMagnetOptions</var> property which 
+contains the magnetic window management option settings for the form instance. 
+SnapOptions contains settings which allow the form instance to be snapped to 
+edges either on a monitor or other form instances.
+</p>
+<p>
+Each form has a SnapOptions property with settings specific to the form 
+instance. SnapOptions is passed as an argument to methods in 
+TWindowMagnetManager which handle snapping the form to another form or an edge 
+on the monitor. Each TScreen instance in the application has a magnetic window 
+manager to respond to snap requests using the option values.
+</p>
+<p>
+Values in SnapOptions are read and written when properties like SnapBuffer and 
+ScreenSnap are accessed or modified.
+</p>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomForm.ScreenSnap">
+<short>
+Indicates whether the form instance can be snapped to an edge on the monitor.
+</short>
+<descr>
+<p>
+<var>ScreenSnap</var> is a <var>Boolean</var> property which indicates whether 
+the form instance can be snapped to an edge on the monitor. When enabled, an 
+edge on the form will automatically snap to the nearest screen edge when it is 
+within the distance where the snapping behavior is engaged.
+</p>
+<p>
+Use SnapBuffer (or the Distance property in SnapOptions) to define the 
+distance from (or proximity to) an edge where the snapping behavior is engaged.
+</p>
+<p>
+Use the SnapOptions.SnapToForms to enable or disable snapping the form 
+instance to an edge for another form in the application.
+</p>
+<p>
+Use the SnapOptions.SnapFormTarget property to control whether the form allows 
+other forms to be snapped to its edges.
+</p>
+<remark>
+Screen snapping depends on the LM_WINDOWPOSCHANGING message dispatched 
+when the position for a form (window) is changed. In the current LCL release, 
+the LM_WINDOWPOSCHANGING message is dispatched for the Windows platform only. 
+None of the other widgetsets checked for or apply the message.
+</remark>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomForm.SnapBuffer">
+<short>
+Distance from (or proximity to) an edge on a snap target where the snapping 
+behavior is automatically engaged.
+</short>
+<descr>
+<remark>
+Screen snapping depends on the LM_WINDOWPOSCHANGING message dispatched 
+when the position for a form (window) is changed. In the current LCL release, 
+the LM_WINDOWPOSCHANGING message is dispatched for the Windows platform only. 
+None of the other widgetsets checked for or apply the message.
+</remark>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso/>
+</element>
+
 <element name="TCustomForm.OnActivate">
 <short>Handler called when the form receives focus.</short>
 <descr>
@@ -8561,8 +9209,14 @@ published.
 </seealso>
 </element>
 
+<element name="TForm.ScreenSnap" link="#lcl.forms.TCustomForm.ScreenSnap"/>
+
 <element name="TForm.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
 <element name="TForm.ShowInTaskBar" link="#lcl.forms.TCustomForm.ShowInTaskBar"/>
+
+<element name="TForm.SnapBuffer" link="#lcl.forms.TCustomForm.SnapBuffer"/>
+<element name="TForm.SnapOptions" link="#lcl.forms.TCustomForm.SnapOptions"/>
+
 <element name="TForm.UseDockManager" link="#lcl.controls.TWinControl.UseDockManager"/>
 
 <element name="TForm.LCLVersion">
@@ -10042,6 +10696,8 @@ application.
 <element name="TScreen.FSaveFocusedList"/>
 <element name="TScreen.FSystemFont" link="#lcl.forms.TScreen.SystemFont"/>
 
+<element name="TScreen.FMagnetManager"/>
+
 <!-- private -->
 <element name="TScreen.DeleteCursor">
 <short>Removes the specified cursor from the Cursors property.</short>
@@ -10783,6 +11439,39 @@ UseCLDefault define for the platform).
 <short>Value for the property.</short>
 </element>
 
+<element name="TScreen.MagnetManager">
+<short>
+Manages screen / form snapping behavior for the screen.
+</short>
+<descr>
+<p>
+<var>MagnetManager</var> is a read-only <var>TWindowMagnetManager</var> 
+property with the class used to manage magnetic window snapping behavior in an 
+application. It is initialized in the Create constructor, and is enabled in 
+the application by default.
+</p>
+<p>
+MagnetManager is used when a TForm instance receives and handles a 
+TLMWindowPosChanging (WMWindowPosChanging) message. Its SnapForm method is 
+called to adjust the window position when the form instance is close enough to 
+an edge that the snapping behavior is engaged.
+</p>
+<remark>
+In the current LCL release, the LM_WINDOWPOSCHANGING message is dispatched for 
+the Windows platform only. None of the other widgetsets checked for or apply 
+the message.
+</remark>
+</descr>
+<version>
+Added in LCL version 2.4.
+</version>
+<seealso>
+<link id="TWindowMagnetManager"/>
+<link id="TCustomForm.WMWindowPosChanging"/>
+<link id="#lcl.lmessages.TLMWindowPosChanging">TLMWindowPosChanging</link>
+</seealso>
+</element>
+
 <element name="TScreen.Create">
 <short>Constructor for the class instance.</short>
 <descr>
@@ -10791,14 +11480,13 @@ UseCLDefault define for the platform).
 calls the inherited method on entry.
 </p>
 <p>
-Create allocates resources needed for properties, including: 
-<var>Fonts</var>, <var>Monitors</var>, <var>CustomForms</var>, 
-<var>CustomFormsZOrdered</var>, and <var>DataModules</var>. Resources for 
-internal members are also allocated.
+Create allocates resources needed for properties, including: Fonts, Monitors, 
+CustomForms, CustomFormsZOrdered, MagnetManager, and DataModules. Resources 
+for internal members are also allocated.
 </p>
 <p>
-Create gets the default value used for the <var>PixelsPerInch</var> property 
-from the <var>ScreenInfo</var> variable in the LCL interface.
+Create gets the default value used for the PixelsPerInch property from the 
+ScreenInfo variable in the LCL interface.
 </p>
 <p>
 Create assigns methods in the class instance as the routines used by the 
@@ -15170,7 +15858,7 @@ Called when the Hint timer has expired to stop showing the Hint.
 </element>
 
 <element name="TApplication.HintMouseMessage">
-<short>Called when the the mouse is over a control with a Hint.</short>
+<short>Called when the mouse is over a control with a Hint.</short>
 <descr>
 <p>
 Does nothing in the current LCL version.

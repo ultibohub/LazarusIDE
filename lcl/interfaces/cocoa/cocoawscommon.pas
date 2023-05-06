@@ -47,6 +47,7 @@ type
     _IsSysKey  : Boolean;
     _IsKeyDown : Boolean;
     _KeyHandled: Boolean;
+    _isCocoaOnlyState: Boolean;
     _UTF8Character : array [0..7] of TUTF8Char;
     _UTF8Charcount : Integer;
     procedure OffsetMousePos(LocInWin: NSPoint; out PtInBounds, PtInClient, PtForChildCtrls: TPoint );
@@ -55,7 +56,7 @@ type
     procedure KeyEvBeforeUp;
     procedure KeyEvAfterUp;
     procedure KeyEvFlagsChanged(Event: NSEvent);
-    procedure KeyEvPrepare(Event: NSEvent);
+    procedure KeyEvPrepare(Event: NSEvent); virtual;
   public
     Owner: NSObject;
     HandleFrame: NSView; // HWND and "frame" (rectangle) of the a control
@@ -86,6 +87,9 @@ type
     procedure SetTabSuppress(ASuppress: Boolean);
     function CanFocus: Boolean; virtual;
 
+    function IsCocoaOnlyState: Boolean;
+    procedure SetCocoaOnlyState(state: Boolean);
+
     procedure MouseClick; virtual;
     function MouseMove(Event: NSEvent): Boolean; virtual;
     function scrollWheel(Event: NSEvent): Boolean; virtual;
@@ -114,6 +118,14 @@ type
   end;
 
   TLCLCommonCallBackClass = class of TLCLCommonCallBack;
+
+  { TLCLFullControlEditCallBack }
+
+  // CallBack for LCL Full Control Edit (such as SynEdit/ATSynEdit)
+  TLCLFullControlEditCallBack = class(TLCLCommonCallBack)
+  protected
+    procedure KeyEvPrepare(Event: NSEvent); override;
+  end;
 
   { TCocoaWSWinControl }
 
@@ -901,6 +913,16 @@ begin
   _KeyHandled := True;
 end;
 
+function TLCLCommonCallback.IsCocoaOnlyState: Boolean;
+begin
+  Result := _isCocoaOnlyState;
+end;
+
+procedure TLCLCommonCallback.SetCocoaOnlyState( state:Boolean );
+begin
+  _isCocoaOnlyState := state;
+end;
+
 procedure TLCLCommonCallback.SetTabSuppress(ASuppress: Boolean);
 begin
   SuppressTabDown := ASuppress;
@@ -1544,7 +1566,7 @@ begin
   while (i<=length(utf8)) do
   begin
     c := Utf8CodePointLen(@utf8[i], length(utf8)-i+1, false);
-    ch := Copy(utf8, 1, c);
+    ch := Copy(utf8, i, c);
     FTarget.IntfUTF8KeyPress(ch, 1, false);
     inc(i, c);
   end;
@@ -1564,6 +1586,22 @@ end;
 function TLCLCommonCallback.GetShouldBeEnabled: Boolean;
 begin
   Result := Assigned(FTarget) and FTarget.Enabled;
+end;
+
+{ TLCLFullControlEditCallBack }
+
+{
+  Key Step for IME (such as Chinese/Japanese/Korean and DeadKeys)
+  1. set _sendChar:=false to avoid KeyDown Event being eaten
+     in IntfUTF8KeyPress() or CN_CHAR message.
+  2. KeyDown Event will be handled in TCocoaFullControlEdit.keyDown(),
+     and NSInputContext.sendEvent() will be called in it,
+     and function in NSTextInputClient will be called.
+}
+procedure TLCLFullControlEditCallback.KeyEvPrepare(Event: NSEvent);
+begin
+  inherited;
+  _sendChar := false;
 end;
 
 { TCocoaWSControl }
@@ -1937,6 +1975,15 @@ end;
 
 { TCocoaWSCustomControl }
 
+// get IMEHandler by LM_IM_COMPOSITION message
+function getControlIMEHandler(const control: TWinControl): ICocoaIMEControl;
+var
+  handle : PtrInt;
+begin
+  handle := SendSimpleMessage(control, LM_IM_COMPOSITION);
+  Result := TObject(handle) as ICocoaIMEControl
+end;
+
 class function TCocoaWSCustomControl.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): TLCLIntfHandle;
 var
@@ -1944,10 +1991,25 @@ var
   sl   : TCocoaManualScrollView;
   hs   : TCocoaManualScrollHost;
   lcl  : TLCLCommonCallback;
-
+  imeHandler : ICocoaIMEControl;
 begin
-  ctrl := TCocoaCustomControl(TCocoaCustomControl.alloc.lclInitWithCreateParams(AParams));
-  lcl := TLCLCommonCallback.Create(ctrl, AWinControl);
+  imeHandler := getControlIMEHandler(AWinControl);
+  if Assigned(imeHandler) then
+  begin
+    // AWinControl implements ICocoaIMEControl
+    // AWinControl is a Full Control Edit (such as SynEdit/ATSynEdit)
+    ctrl := TCocoaFullControlEdit.alloc.lclInitWithCreateParams(AParams);
+    lcl := TLCLFullControlEditCallback.Create(ctrl, AWinControl);
+    TCocoaFullControlEdit(ctrl).imeHandler := imeHandler;
+    ctrl.unmarkText;
+  end
+  else
+  begin
+    // AWinControl not implements ICocoaIMEControl
+    // AWinControl is a normal Custom Control
+    ctrl := TCocoaCustomControl.alloc.lclInitWithCreateParams(AParams);
+    lcl := TLCLCommonCallback.Create(ctrl, AWinControl);
+  end;
   lcl.BlockCocoaUpDown := true;
   lcl.BlockCocoaKeyBeep := true; // prevent "dings" on keyDown for custom controls (i.e. SynEdit)
   ctrl.callback := lcl;

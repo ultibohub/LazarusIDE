@@ -32,19 +32,19 @@ interface
 uses
   Classes, SysUtils,
   // LCL
-  LCLProc, LCLType, Controls, Forms, ComCtrls, Buttons, ButtonPanel,
-  ExtCtrls, StdCtrls, Dialogs,
+  LCLType, Controls, Forms, ComCtrls, Buttons, ButtonPanel, ExtCtrls, StdCtrls, Dialogs,
   // LazControls
   TreeFilterEdit,
-  LazControlDsgn, // move this to lazarus.lpr
+  // LazUtils
+  LazLoggerBase,
   // IdeIntf
   IDEWindowIntf, IDEOptionsIntf, IDEOptEditorIntf, IDECommands, IDEHelpIntf,
-  IdeIntfStrConsts, ProjectIntf, IDEImagesIntf,
+  IdeIntfStrConsts, ProjectIntf,
   // IDE
-  EnvironmentOpts, EditorOptions, BuildModesManager, Compiler_ModeMatrix,
+  EnvironmentOpts, EditorOptions, BuildModesManager, BuildManager, Compiler_ModeMatrix,
   Project, LazarusIDEStrConsts,
   // Packager
-  PackageDefs, PackageSystem;
+  PackageDefs;
 
 type
   TIDEOptsDlgAction = (
@@ -69,6 +69,8 @@ type
     FilterEdit: TTreeFilterEdit;
     BuildModesLabel: TLabel;
     SettingsPanel: TPanel;
+    btnApply: TBitBtn;
+    procedure ApplyButtonClick(Sender: TObject);
     procedure BuildModeComboBoxSelect(Sender: TObject);
     procedure BuildModeManageButtonClick(Sender: TObject);
     procedure CategoryTreeChange(Sender: TObject; Node: TTreeNode);
@@ -76,6 +78,7 @@ type
     procedure CategoryTreeExpanded(Sender: TObject; Node: TTreeNode);
     procedure CategoryTreeKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     function FilterEditFilterItem(ItemData: Pointer; out Done: Boolean): Boolean;
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormShow(Sender: TObject);
     procedure HelpButtonClick(Sender: TObject);
     procedure OkButtonClick(Sender: TObject);
@@ -141,17 +144,32 @@ begin
   FEditorsCreated := False;
   FEditorToOpen := nil;
   SetBuildModeVisibility(False);
+
+  btnApply := AddButton;
+  btnApply.LoadGlyphFromResource(idButtonRetry); // not the best glyph for this button
+  btnApply.OnClick := @ApplyButtonClick;
+  ButtonPanel.OKButton.OnClick := @OKButtonClick;
+  ButtonPanel.OKButton.ModalResult := mrNone;
+  ButtonPanel.CancelButton.OnClick := @CancelButtonClick;
+  ButtonPanel.HelpButton.OnClick := @HelpButtonClick;
+
+  // caption
   Caption := dlgIDEOptions;
   BuildModesLabel.Caption := lisBuildModes;
   ButtonPanel.OKButton.Caption := lisBtnOk;
-  ButtonPanel.OKButton.OnClick := @OKButtonClick;
-  ButtonPanel.OKButton.ModalResult := mrNone;
   ButtonPanel.CancelButton.Caption := lisCancel;
-  ButtonPanel.CancelButton.OnClick := @CancelButtonClick;
   ButtonPanel.HelpButton.Caption:= lisMenuHelp;
-  ButtonPanel.HelpButton.OnClick := @HelpButtonClick;
-  IDEDialogLayoutList.ApplyLayout(Self);
+  btnApply.Caption := lisApply;
+
+  // hint
+  ButtonPanel.HelpButton.Hint := '[F1]';
+  ButtonPanel.CancelButton.Hint := '[Esc]';
+  ButtonPanel.OKButton.Hint := '[Ctrl+Enter]';
+  btnApply.Hint := '[Shift+Enter]';
+  ButtonPanel.ShowHint := true;
+
   BuildModeComboBox.DropDownCount := EnvironmentOptions.DropDownCount;
+  IDEDialogLayoutList.ApplyLayout(Self);
 end;
 
 procedure TIDEOptionsDialog.FormShow(Sender: TObject);
@@ -196,7 +214,11 @@ begin
     GroupClass := FindGroupClass(Node);
   end;
   // Show the Build Mode panel for project compiler options
-  SetBuildModeVisibility((GroupClass <> nil) and (GroupClass.InheritsFrom(TProjectCompilerOptions)));
+  SetBuildModeVisibility((GroupClass <> nil)
+                     and (GroupClass.InheritsFrom(TProjectCompilerOptions)));
+  // Show the Apply button only for global options (not project or package options).
+  btnApply.Visible := (GroupClass <> nil)
+                  and (GroupClass.InheritsFrom(TAbstractIDEEnvironmentOptions));
   // Hide the old and show the new editor frame
   if Assigned(AEditor) then
     FNewLastSelected := AEditor.Rec;
@@ -273,11 +295,48 @@ begin
   Result:=OptEditor.ContainsTextInCaption(FilterEdit.Filter);
 end;
 
+procedure TIDEOptionsDialog.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if (Key = VK_ESCAPE) and (Shift = []) then
+  begin
+    CancelButtonClick(Sender);
+    Key := 0;
+    exit;
+  end;
+  if (Key = VK_RETURN) and (Shift = [ssCtrl]) then
+  begin
+    OkButtonClick(Sender);
+    Key := 0;
+    exit;
+  end;
+  if (Key = VK_RETURN) and (Shift = [ssShift]) then
+  begin
+    ApplyButtonClick(Sender);
+    Key := 0;
+    exit;
+  end;
+end;
+
+procedure TIDEOptionsDialog.ApplyButtonClick(Sender: TObject);
+begin
+  if not CheckValues then
+    Exit;
+  WriteAll(false);  // write new values
+  DebugLn(['TIDEOptionsDialog.ApplyButtonClick: Options saved, updating TaskBar.']);
+  // update TaskBarBehavior immediately
+  if EnvironmentOptions.Desktop.SingleTaskBarButton
+    then Application.TaskBarBehavior := tbSingleButton
+    else Application.TaskBarBehavior := tbDefault;
+end;
+
 procedure TIDEOptionsDialog.OkButtonClick(Sender: TObject);
 begin
   IDEEditorGroups.LastSelected := FNewLastSelected;
-  if not CheckValues then
-    Exit;
+  if btnApply.Visible then  // visible only for global options
+    ApplyButtonClick(Sender)
+  else if CheckValues then
+    WriteAll(false);  // write new values
+  // close
   if WindowState <> wsMaximized then
     IDEDialogLayoutList.SaveLayout(Self);
   ModalResult := mrOk;
@@ -285,6 +344,11 @@ end;
 
 procedure TIDEOptionsDialog.CancelButtonClick(Sender: TObject);
 begin
+  // cancel
+  WriteAll(true); // restore old values
+  // ToDo: Set build target only for project options.
+  MainBuildBoss.SetBuildTargetProject1;
+  // close
   if WindowState <> wsMaximized then
     IDEDialogLayoutList.SaveLayout(Self);
   ModalResult := mrCancel;

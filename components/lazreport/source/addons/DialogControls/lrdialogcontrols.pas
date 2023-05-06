@@ -519,6 +519,7 @@ begin
 
   Details := ThemeServices.GetElementDetails(tbRadioButtonUncheckedNormal);
   details_chek:=ThemeServices.GetElementDetails(tbRadioButtonCheckedNormal);
+  // Maybe: CSize := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
   CSize := ThemeServices.GetDetailSize(Details);
 
 
@@ -627,6 +628,7 @@ begin
   i:=0;
 
   Details := ThemeServices.GetElementDetails(tbCheckBoxUncheckedNormal);
+  // Maybe: CSize := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
   CSize := ThemeServices.GetDetailSize(Details);
 
   aH:=Max(Canvas.TextHeight(Text) div 2, CSize.cy);
@@ -1210,6 +1212,7 @@ var
   details: TThemedElementDetails;
 begin
   Details := ThemeServices.GetElementDetails(GetCheckStyle(Checked));
+  // Maybe: CSize := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
   CSize := ThemeServices.GetDetailSize(Details);
   PaintRect.Left := DRect.Left;
   PaintRect.Top  := (DRect.Top + DRect.Bottom - CSize.cy) div 2;

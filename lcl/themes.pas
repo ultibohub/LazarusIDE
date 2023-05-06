@@ -477,7 +477,7 @@ type
     function GetElementDetails(Detail: TThemedTreeview): TThemedElementDetails; overload;
     function GetElementDetails(Detail: TThemedWindow): TThemedElementDetails; overload;
     
-    function GetDetailSize(Details: TThemedElementDetails): TSize; virtual;
+    function GetDetailSize(Details: TThemedElementDetails): TSize; virtual; deprecated 'use GetDetailSizeForPPI';
     function GetDetailSizeForWindow(Details: TThemedElementDetails; const AWindow: HWND): TSize; virtual;
     function GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize; virtual;
     function GetDetailRegion(DC: HDC; Details: TThemedElementDetails; const R: TRect): HRGN; virtual;
@@ -2115,16 +2115,13 @@ begin
     teButton:
       begin
         ADrawFlags := DFCS_BUTTONPUSH;
-        if Details.Element = teButton then
-        begin
-          case Details.Part of
-            BP_RADIOBUTTON: ADrawFlags := DFCS_BUTTONRADIO;
-            BP_CHECKBOX:
-              if IsMixed(Details) then
-                ADrawFlags := DFCS_BUTTON3STATE
-              else
-                ADrawFlags := DFCS_BUTTONCHECK;
-          end;
+        case Details.Part of
+          BP_RADIOBUTTON: ADrawFlags := DFCS_BUTTONRADIO;
+          BP_CHECKBOX:
+            if IsMixed(Details) then
+              ADrawFlags := DFCS_BUTTON3STATE
+            else
+              ADrawFlags := DFCS_BUTTONCHECK;
         end;
 
         if IsDisabled(Details) then
@@ -2135,7 +2132,6 @@ begin
           ADrawFlags := ADrawFlags or DFCS_HOT;
         if IsChecked(Details) or IsMixed(Details) then
           ADrawFlags := ADrawFlags or DFCS_CHECKED;
-
         WidgetSet.DrawFrameControl(DC, ARect, DFC_BUTTON, ADrawFlags);
       end;
     teHeader:

@@ -5122,19 +5122,6 @@ begin
     IDEOptionsDialog.OnSaveIDEOptionsHook:=@IDEOptionsSaver;
     IDEOptionsDialog.ReadAll;
     Result := IDEOptionsDialog.ShowModal = mrOk;
-    IDEOptionsDialog.WriteAll(not Result);    // Restore if user cancelled.
-    if Result then
-    begin
-      if ConsoleVerbosity>0 then
-        DebugLn(['Hint: (lazarus) TMainIDE.DoOpenIDEOptions: Options saved, updating TaskBar.']);
-      // Update TaskBarBehavior immediately.
-      if EnvironmentOptions.Desktop.SingleTaskBarButton then
-        Application.TaskBarBehavior := tbSingleButton
-      else
-        Application.TaskBarBehavior := tbDefault;
-    end else begin
-      MainBuildBoss.SetBuildTargetProject1;
-    end;
   finally
     IDEOptionsDialog.Free;
   end;

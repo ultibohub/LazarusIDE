@@ -2036,17 +2036,13 @@ begin
   inherited FontChanged(Sender);
 end;
 
-function TCustomDateTimePicker.GetCheckBoxRect(
-  IgnoreRightToLeft: Boolean): TRect;
+function TCustomDateTimePicker.GetCheckBoxRect(IgnoreRightToLeft: Boolean): TRect;
 var
   Details: TThemedElementDetails;
   CSize: TSize;
-
 begin
   Details := ThemeServices.GetElementDetails(tbCheckBoxCheckedNormal);
-  CSize := ThemeServices.GetDetailSize(Details);
-  CSize.cx := ScaleScreenToFont(CSize.cx);
-  CSize.cy := ScaleScreenToFont(CSize.cy);
+  CSize := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
 
   if IsRightToLeft and not IgnoreRightToLeft then begin
     Result.Right := ClientWidth - (BorderSpacing.InnerBorder + BorderWidth);
@@ -2063,10 +2059,8 @@ end;
  ---------------
   Returns upper left corner of the rectangle where the text is written.
   Also used in calculating our preferred size. }
-function TCustomDateTimePicker.GetTextOrigin(IgnoreRightToLeft: Boolean
-  ): TPoint;
-
-var   
+function TCustomDateTimePicker.GetTextOrigin(IgnoreRightToLeft: Boolean): TPoint;
+var
   Re: TRect;
   B: Integer;
   XL, XR: Integer;
@@ -3106,6 +3100,7 @@ var
   S: String;
 
 const
+  // Enabled, Checked, Mouse hover
   CheckStates: array[Boolean, Boolean, Boolean] of TThemedButton = (
     ((tbCheckBoxUncheckedDisabled, tbCheckBoxUncheckedDisabled),
      (tbCheckBoxCheckedDisabled, tbCheckBoxCheckedDisabled)),
@@ -3869,7 +3864,7 @@ procedure TDTSpeedButton.Paint;
     else
       ArrowState := ttbSplitButtonDropDownDisabled;
     Details := ThemeServices.GetElementDetails(ArrowState);
-    ASize := ThemeServices.GetDetailSize(Details);
+    ASize := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
     ARect := Rect(0, 0, Width, Height);
     InflateRect(ARect, -(ARect.Right - ARect.Left - ASize.cx) div 2, 0);
     ThemeServices.DrawElement(Canvas.Handle, Details, ARect);

@@ -93,6 +93,7 @@ type
     class procedure SetDropDownCount(const ACustomComboBox: TCustomComboBox; NewCount: Integer); override;
 
     class function  GetItems(const ACustomComboBox: TCustomComboBox): TStrings; override;
+    class procedure FreeItems(var AItems: TStrings); override;
     {class procedure Sort(const ACustomComboBox: TCustomComboBox; AList: TStrings; IsSorted: boolean); override;}
 
     class function GetItemHeight(const ACustomComboBox: TCustomComboBox): Integer; override;
@@ -990,7 +991,6 @@ begin
     cell := NSTextFieldCell(field.cell);
     cell.setWraps(false);
     cell.setScrollable(true);
-    cell.setUsesSingleLineMode(true);
   end;
   TextFieldSetAllignment(field, TCustomEdit(AWinControl).Alignment);
   TextFieldSetBorderStyle(field, TCustomEdit(AWinControl).BorderStyle);
@@ -1213,16 +1213,18 @@ end;
 class procedure TCocoaWSCustomEdit.SetText(const AWinControl: TWinControl;
   const AText: String);
 var
-  txt : string;
-  mxl : Integer;
+  txt : NSString;              // NSString for AText
+  txtWithLineBreak: NSString;  // need not release
+  field: TCocoaTextField;
 begin
   if (AWinControl.HandleAllocated) then
   begin
-    txt := AText;
-    mxl := TCustomEdit(AWinControl).MaxLength;
-    if (mxl > 0) and (UTF8Length(txt) > mxl) then
-      txt := UTF8Copy(txt, 1, mxl);
-    ControlSetTextWithChangeEvent(NSControl(AWinControl.Handle), txt);
+    field:= TCocoaTextField(AWinControl.Handle);
+    txt:= NSStringUtf8(AText);
+    txtWithLineBreak := NSStringRemoveLineBreak(txt);
+    field.setStringValue(txtWithLineBreak);
+    field.textDidChange(nil); // check maxLength and calls controls callback (if any)
+    txt.release;
   end;
 end;
 
@@ -1971,6 +1973,15 @@ begin
     Result:=TCocoaReadOnlyComboBox(ACustomComboBox.Handle).list
   else
     Result:=TCocoaComboBox(ACustomComboBox.Handle).list;
+end;
+
+class procedure TCocoaWSCustomComboBox.FreeItems(var AItems: TStrings);
+begin
+  // in Cocoa, TCocoaComboBox.list should be released in TCocoaComboBox.dealloc(),
+  // to avoid invalid TCocoaComboBox.list in TCocoaComboBox.comboBox_indexOfItemWithStringValue().
+  // which will be called even in TCocoaWSWinControl.DestoryWnd(),
+  // when TCocoaComboBox hasMarkedText (in IME state).
+  // after all, it is more appropriate to release with other resources in dealloc().
 end;
 
 class function TCocoaWSCustomComboBox.GetItemHeight(const ACustomComboBox:

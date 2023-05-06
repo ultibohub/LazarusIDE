@@ -1025,7 +1025,7 @@ begin
   FSplitterX:=100;
   FPreferredSplitterX:=FSplitterX;
   Details := ThemeServices.GetElementDetails(ttGlyphOpened);
-  FIndent := ThemeServices.GetDetailSize(Details).cx;
+  FIndent := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch).cx;
 
   FBackgroundColor:=DefBackgroundColor;
   FReferencesColor:=DefReferencesColor;
@@ -2398,10 +2398,10 @@ begin
               ExpandRow(Index);
           end;
         end;
-        // WasValueClick param is only for Boolean checkboxes, toggled if user
-        //  clicks the square. It has no effect for Boolean ComboBox editor.
+        // WasValueClick param for SetItemIndexAndFocus is only for Boolean checkboxes,
+        // toggled if user clicks the square. It has no effect for Boolean ComboBox editor.
         Details := ThemeServices.GetElementDetails(tbCheckBoxCheckedNormal);
-        Sz := ThemeServices.GetDetailSize(Details);
+        Sz := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
         SetItemIndexAndFocus(Index, (X>SplitterX) and (X<=SplitterX+Sz.cx));
         SetCaptureControl(Self);
         Column := oipgcValue;
@@ -2976,7 +2976,7 @@ var
       Details := ThemeServices.GetElementDetails(ttGlyphClosed);
     if CanExpandRow(CurRow) then
     begin
-      sz := ThemeServices.GetDetailSize(Details);
+      sz := ThemeServices.GetDetailSizeForPPI(Details, Font.PixelsPerInch);
       IconY:=((NameRect.Bottom - NameRect.Top - sz.cy) div 2) + NameRect.Top;
       ThemeServices.DrawElement(Canvas.Handle, Details,
                                 Rect(IconX, IconY, IconX + sz.cx, IconY + sz.cy), nil)
