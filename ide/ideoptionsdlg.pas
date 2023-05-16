@@ -93,6 +93,7 @@ type
     FPrevEditor: TAbstractIDEOptionsEditor;
     FSelectNode: TTreeNode;
     FSettings: TIDEOptionsEditorSettings;
+    function Apply: Boolean;
     function FindGroupClass(Node: TTreeNode): TAbstractIDEOptionsClass;
     procedure TraverseSettings(AOptions: TAbstractIDEOptions; anAction: TIDEOptsDlgAction);
     function CheckValues: boolean;
@@ -135,6 +136,22 @@ implementation
 
 {$R *.lfm}
 
+procedure SetDropDownCount(AWinControl: TWinControl);
+// Set global DropDownCount to all TCustomComboBox descendants under AWinControl.
+var
+  i: integer;
+begin
+  for i := 0 to AWinControl.ControlCount - 1 do
+  begin
+    if AWinControl.Controls[i] is TCustomComboBox then
+      TCustomComboBox(AWinControl.Controls[i]).DropDownCount :=
+                            EnvironmentOptions.DropDownCount;
+    // recursive call
+    if AWinControl.Controls[i] is TWinControl then
+      SetDropDownCount(TWinControl(AWinControl.Controls[i]));
+  end;
+end;
+
 { TIDEOptionsDialog }
 
 constructor TIDEOptionsDialog.Create(AOwner: TComponent);
@@ -148,6 +165,7 @@ begin
   btnApply := AddButton;
   btnApply.LoadGlyphFromResource(idButtonRetry); // not the best glyph for this button
   btnApply.OnClick := @ApplyButtonClick;
+  btnApply.Constraints.MinWidth := 75;
   ButtonPanel.OKButton.OnClick := @OKButtonClick;
   ButtonPanel.OKButton.ModalResult := mrNone;
   ButtonPanel.CancelButton.OnClick := @CancelButtonClick;
@@ -228,6 +246,7 @@ begin
     if Assigned(AEditor) then begin
       AEditor.Align := alClient;
       AEditor.BorderSpacing.Around := 6;
+      SetDropDownCount(AEditor); ///TEST
       AEditor.Visible := True;
     end;
     FPrevEditor := AEditor;
@@ -317,25 +336,35 @@ begin
   end;
 end;
 
-procedure TIDEOptionsDialog.ApplyButtonClick(Sender: TObject);
+function TIDEOptionsDialog.Apply: Boolean;
 begin
-  if not CheckValues then
+  Result := CheckValues;
+  if not Result then
+  begin
+    DebugLn(['TIDEOptionsDialog.Apply: CheckValues failed!']);
     Exit;
+  end;
+  IDEEditorGroups.LastSelected := FNewLastSelected;
   WriteAll(false);  // write new values
-  DebugLn(['TIDEOptionsDialog.ApplyButtonClick: Options saved, updating TaskBar.']);
+end;
+
+procedure TIDEOptionsDialog.ApplyButtonClick(Sender: TObject);
+// This is called only for global options, ApplyButton is hidden otherwise.
+begin
+  if not Apply then
+    Exit;
   // update TaskBarBehavior immediately
   if EnvironmentOptions.Desktop.SingleTaskBarButton
     then Application.TaskBarBehavior := tbSingleButton
     else Application.TaskBarBehavior := tbDefault;
+  // update DropDownCount property immediately
+  SetDropDownCount(EditorsPanel);
 end;
 
 procedure TIDEOptionsDialog.OkButtonClick(Sender: TObject);
 begin
-  IDEEditorGroups.LastSelected := FNewLastSelected;
-  if btnApply.Visible then  // visible only for global options
-    ApplyButtonClick(Sender)
-  else if CheckValues then
-    WriteAll(false);  // write new values
+  if not Apply then
+    Exit;
   // close
   if WindowState <> wsMaximized then
     IDEDialogLayoutList.SaveLayout(Self);

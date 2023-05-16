@@ -3378,6 +3378,10 @@ msgctxt "lazarusidestrconsts.dlgpoicondescnone"
 msgid "(none)"
 msgstr "(nenhum)"
 
+#: lazarusidestrconsts.dlgpointertypecheck
+msgid "@<pointer> returns a typed pointer"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpoloadicon
 msgid "&Load Icon"
 msgstr "&Carregar ícone"
@@ -3899,10 +3903,6 @@ msgstr "Origem"
 #: lazarusidestrconsts.dlgstacksize
 msgid "Stack size"
 msgstr "Tamanho da pilha"
-
-#: lazarusidestrconsts.dlgstatickeyword
-msgid "Static keyword in objects"
-msgstr "Palavra-chave estática nos objetos"
 
 #: lazarusidestrconsts.dlgstopafternrerr
 msgid "Stop after number of errors:"
@@ -8839,6 +8839,10 @@ msgstr "Desenhar a seleção focada, mesmo se a janela Mensagens não estiver em
 #: lazarusidestrconsts.lisdropdowncount
 msgid "Drop Down Count"
 msgstr "Contagem Lista Suspensa"
+
+#: lazarusidestrconsts.lisdropdowncounthint
+msgid "Used for all ComboBoxes in IDE dialogs"
+msgstr ""
 
 #: lazarusidestrconsts.lisdsgcopycomponents
 msgid "Copy selected components to clipboard"

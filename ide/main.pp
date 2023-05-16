@@ -5098,6 +5098,7 @@ var
   OptionsFilter: TIDEOptionsEditorFilter;
   i: Integer;
 begin
+  Result := false;
   IDEOptionsDialog := TIDEOptionsDialog.Create(nil);
   try
     if ACaption <> '' then

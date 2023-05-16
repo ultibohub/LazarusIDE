@@ -1327,6 +1327,7 @@ resourcestring
   lisImportEnvironmentOptions = 'Import environment options';
   lisComboBoxes = 'Combo Boxes';
   lisDropDownCount = 'Drop Down Count';
+  lisDropDownCountHint = 'Used for all ComboBoxes in IDE dialogs';
 
   // Desktop options
   dlgManageDesktops = 'Manage desktops';
@@ -2352,7 +2353,7 @@ resourcestring
   dlgCppInline = 'C++ styled INLINE';
   dlgCMacro = 'C style macros (global)';
   dlgInitDoneOnly = 'Constructor name must be ''' + 'init' + ''' (destructor must be ''' + 'done' + ''')';
-  dlgStaticKeyword = 'Static keyword in objects';
+  dlgPointerTypeCheck = '@<pointer> returns a typed pointer';
   dlgCOAnsiStr = 'Use Ansistrings';
   dlgCOUnitStyle = 'Unit style';
   dlgCOSmartLinkable = 'Smart linkable';

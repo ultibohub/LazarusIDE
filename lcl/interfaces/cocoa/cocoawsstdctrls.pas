@@ -74,18 +74,20 @@ type
   { TCocoaWSCustomComboBox }
 
   TCocoaWSCustomComboBox = class(TWSCustomComboBox)
+  public
+    class function getNSText(const ACustomComboBox: TCustomComboBox): NSText;
   published
     class function  CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
     class procedure SetBorderStyle(const AWinControl: TWinControl; const ABorderStyle: TBorderStyle); override;
 
     class function GetDroppedDown(const ACustomComboBox: TCustomComboBox): Boolean; override;
-    {class function  GetSelStart(const ACustomComboBox: TCustomComboBox): integer; override;
-    class function  GetSelLength(const ACustomComboBox: TCustomComboBox): integer; override;}
-    class function  GetItemIndex(const ACustomComboBox: TCustomComboBox): integer; override;
-    {class function  GetMaxLength(const ACustomComboBox: TCustomComboBox): integer; override;
+    class function GetSelStart(const ACustomComboBox: TCustomComboBox): integer; override;
+    class function GetSelLength(const ACustomComboBox: TCustomComboBox): integer; override;
+    class function GetItemIndex(const ACustomComboBox: TCustomComboBox): integer; override;
+    {class function  GetMaxLength(const ACustomComboBox: TCustomComboBox): integer; override;}
 
     class procedure SetSelStart(const ACustomComboBox: TCustomComboBox; NewStart: integer); override;
-    class procedure SetSelLength(const ACustomComboBox: TCustomComboBox; NewLength: integer); override;}
+    class procedure SetSelLength(const ACustomComboBox: TCustomComboBox; NewLength: integer); override;
     class procedure SetItemIndex(const ACustomComboBox: TCustomComboBox; NewIndex: integer); override;
     {class procedure SetMaxLength(const ACustomComboBox: TCustomComboBox; NewLength: integer); override;}
     class procedure SetStyle(const ACustomComboBox: TCustomComboBox; NewStyle: TComboBoxStyle); override;
@@ -1213,18 +1215,26 @@ end;
 class procedure TCocoaWSCustomEdit.SetText(const AWinControl: TWinControl;
   const AText: String);
 var
-  txt : NSString;              // NSString for AText
-  txtWithLineBreak: NSString;  // need not release
-  field: TCocoaTextField;
+  txt : NSString;                 // NSString for AText
+  txtWithoutLineBreak: NSString;  // need not release
+  field: NSTextField;
 begin
-  if (AWinControl.HandleAllocated) then
+  if not AWinControl.HandleAllocated then exit;
+
+  field:= NSTextField(AWinControl.Handle);
+  if TCustomEdit(AWinControl).PasswordChar=#0 then
   begin
-    field:= TCocoaTextField(AWinControl.Handle);
+    // TCocoaTextField
     txt:= NSStringUtf8(AText);
-    txtWithLineBreak := NSStringRemoveLineBreak(txt);
-    field.setStringValue(txtWithLineBreak);
+    txtWithoutLineBreak:= NSStringRemoveLineBreak(txt);
+    field.setStringValue(txtWithoutLineBreak);
     field.textDidChange(nil); // check maxLength and calls controls callback (if any)
     txt.release;
+  end
+  else
+  begin
+    // TCocoaSecureTextField
+    ControlSetTextWithChangeEvent(field, AText);
   end;
 end;
 
@@ -1805,6 +1815,18 @@ type
   TCustomComboBoxAccess = class(TCustomComboBox)
   end;
 
+
+class function TCocoaWSCustomComboBox.getNSText(const ACustomComboBox: TCustomComboBox): NSText;
+var
+  control: NSControl;
+begin
+  Result:= nil;
+  if not Assigned(ACustomComboBox) or (not ACustomComboBox.HandleAllocated) or (ACustomComboBox.Handle=0) then
+    exit;
+  control:= NSControl( ACustomComboBox.Handle );
+  Result:= control.currentEditor;
+end;
+
 class function TCocoaWSCustomComboBox.CreateHandle(const AWinControl:TWinControl;
   const AParams:TCreateParams):TLCLIntfHandle;
 var
@@ -1885,6 +1907,56 @@ begin
       Result := TLCLComboboxCallback(obj).isShowPopup;
   end;
 
+end;
+
+class function TCocoaWSCustomComboBox.GetSelStart(
+  const ACustomComboBox: TCustomComboBox): integer;
+var
+  txt: NSText;
+begin
+  Result:= 0;
+  txt:= getNSText( ACustomComboBox );
+  if Assigned(txt) then
+    Result:= txt.selectedRange.location;
+end;
+
+class function TCocoaWSCustomComboBox.GetSelLength(
+  const ACustomComboBox: TCustomComboBox): integer;
+var
+  txt: NSText;
+begin
+  Result:= 0;
+  txt:= getNSText( ACustomComboBox );
+  if Assigned(txt) then
+    Result:= txt.selectedRange.length;
+end;
+
+class procedure TCocoaWSCustomComboBox.SetSelStart(
+  const ACustomComboBox: TCustomComboBox; NewStart: integer);
+var
+  txt: NSText;
+  range: NSRange;
+begin
+  txt:= getNSText( ACustomComboBox );
+  if not Assigned(txt) then
+    exit;
+  range:= txt.selectedRange;
+  range.location:= NewStart;
+  txt.setSelectedRange( range );
+end;
+
+class procedure TCocoaWSCustomComboBox.SetSelLength(
+ const ACustomComboBox: TCustomComboBox; NewLength: integer);
+var
+  txt: NSText;
+  range: NSRange;
+begin
+  txt:= getNSText( ACustomComboBox );
+  if not Assigned(txt) then
+    exit;
+  range:= txt.selectedRange;
+  range.length:= NewLength;
+  txt.setSelectedRange( range );
 end;
 
 class function TCocoaWSCustomComboBox.GetItemIndex(const ACustomComboBox:

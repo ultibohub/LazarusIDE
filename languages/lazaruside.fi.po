@@ -3368,6 +3368,10 @@ msgctxt "lazarusidestrconsts.dlgpoicondescnone"
 msgid "(none)"
 msgstr "(ei mitään)"
 
+#: lazarusidestrconsts.dlgpointertypecheck
+msgid "@<pointer> returns a typed pointer"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpoloadicon
 msgid "&Load Icon"
 msgstr "&Lataa kuvake"
@@ -3897,10 +3901,6 @@ msgstr "Lähtöpiste"
 #: lazarusidestrconsts.dlgstacksize
 msgid "Stack size"
 msgstr "Pinon koko"
-
-#: lazarusidestrconsts.dlgstatickeyword
-msgid "Static keyword in objects"
-msgstr "Static avainsana objekteissa"
 
 #: lazarusidestrconsts.dlgstopafternrerr
 msgid "Stop after number of errors:"
@@ -8800,6 +8800,10 @@ msgstr "Piirrä valinta aina fokusoituna vaikkei viesti-ikkunalla olisi fokusta.
 
 #: lazarusidestrconsts.lisdropdowncount
 msgid "Drop Down Count"
+msgstr ""
+
+#: lazarusidestrconsts.lisdropdowncounthint
+msgid "Used for all ComboBoxes in IDE dialogs"
 msgstr ""
 
 #: lazarusidestrconsts.lisdsgcopycomponents

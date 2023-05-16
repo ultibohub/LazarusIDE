@@ -26,6 +26,7 @@ uses
   cthreads,
   {$ENDIF}{$ENDIF}
   Classes, SysUtils,CommandLineOptions, DOM, XMLRead, girNameSpaces, girFiles,
+  process,
   girpascalwriter, girErrors, girCTypesMapping, girTokens, girObjects,
   girPascalClassWriter, girpascalwritertypes{$IFDEF UNIX}, baseunix, termio{$ENDIF};
 
@@ -58,6 +59,7 @@ type
     procedure WriteFile(Sender: TObject;  AName: String; AStream: TStringStream);
     procedure Terminate;
   protected
+    function LoadFile(const FileName: String): TXMLDocument;
     procedure DoRun; //override;
   public
     constructor Create;
@@ -70,32 +72,63 @@ type
 { TGirConsoleConverter }
 
 procedure TGirConsoleConverter.AddDefaultPaths;
+const
+{$ifdef Linux}
+{$ifdef CpuArmHF}
+  TargetArchLibC = '-gnueabihf';
+{$endif CpuArmHF}
+{$ifdef CpuArmEL}
+  TargetArchLibC = '-gnueabi';
+{$endif CpuArmEL}
+{$ifndef CpuArm}
+  TargetArchLibC = '-gnu';
+{$endif CpuArm}
+  TargetOs = 'linux'; {FpcTargetOs returns Linux instead of linux}
+{$else Linux}
+  TargetArchLibC = '';
+  TargetOs = {$Include %FpcTargetOs%};
+{$endif Linux}
+  TargetCpu = {$Include %FpcTargetCpu%};
+  TargetSystem = TargetOs + TargetArchLibC;
+  TargetMultiarch = TargetCpu + '-' + TargetSystem;
+
+var
+  DefaultSystemPaths: String;
+
 begin
-  FPaths.Add('/usr/share/gir-1.0/');
+  DefaultSystemPaths := '/usr/lib/' + TargetMultiarch + '/girepository-1.0' +
+     FPaths.Delimiter + '/usr/share/girepository-1.0' +
+     FPaths.Delimiter + '/usr/share/gir-1.0';
+  AddPaths(DefaultSystemPaths);
 end;
 
 procedure TGirConsoleConverter.AddPaths(APaths: String);
 var
   Strs: TStringList;
   Str: String;
+  Path: String;
 begin
   Strs := TStringList.Create;
-  Strs.Delimiter:=':';
+  Strs.Delimiter := FPaths.Delimiter;
   Strs.StrictDelimiter:=True;
   Strs.DelimitedText:=APaths;
 
   // so we can add the delimiter
-  for Str in Strs do
-    FPaths.Add(IncludeTrailingPathDelimiter(Str));
+  for Str in Strs do begin
+    Path := IncludeTrailingPathDelimiter(Str);
+    if FPaths.IndexOf(Path) < 0 then begin
+      FPaths.Add(Path);
+    end;
+  end;
 
   Strs.Free;
 end;
 
 procedure TGirConsoleConverter.VerifyOptions;
 begin
-  if not DirectoryExists(FOutPutDirectory) then
+  if not ForceDirectories(FOutPutDirectory) then
   begin
-    WriteLn(Format('Output directory "%s" does not exist!', [FOutPutDirectory]));
+    WriteLn(Format('Could not create output directory "%s"!', [FOutPutDirectory]));
     Terminate;
   end;
   if FFileToConvert = '' then
@@ -113,21 +146,26 @@ begin
 end;
 
 function TGirConsoleConverter.NeedGirFile(AGirFile: TObject; NamespaceName: String): TXMLDocument;
+const
+  ext: Array of String = ('.gir', '.typelib');
 var
-  Sr: TSearchRec;
   Path: String;
+  fn: String;
+  n: Integer;
 begin
   WriteLn('Looking for gir file: ', NamespaceName);
   Result := nil;
   for Path in FPaths do
   begin
     WriteLn('Looking in path: ', Path);
-    if FindFirst(Path+NamespaceName+'.gir', faAnyFile, Sr) = 0 then
-    begin
-      ReadXMLFile(Result, Path+Sr.Name);
-      Exit;
+    for n := Low(ext) to High(ext) do begin
+      fn := Path + NamespaceName + ext[n];
+      WriteLn('Searching for: ', fn);
+      if FileExists(fn) then
+      begin
+        Exit(LoadFile(fn));
+      end;
     end;
-    FindClose(Sr);
   end;
   if Result = nil then
     WriteLn('Fatal: Unable to find gir file: ',NamespaceName);
@@ -172,7 +210,7 @@ var
   StartTime, EndTime:TDateTime;
 begin
   StartTime := Now;
-  ReadXMLFile(Doc, FFileToConvert);
+  Doc := LoadFile(FFileToConvert);
 
   girFile := TgirFile.Create(Self, FCmdOptions);
   girFile.OnNeedGirFile:=@NeedGirFile;
@@ -251,6 +289,12 @@ begin
     Halt;
   end;
 
+  FFileToConvert:=FCmdOptions.OptionValue('input');
+    AddPaths(ExtractFilePath(FFileToConvert));
+
+  if FCmdOptions.HasOption('paths') then
+    AddPaths(FCmdOptions.OptionValue('paths'));
+
   if not FCmdOptions.HasOption('no-default') then
     AddDefaultPaths;
 
@@ -259,14 +303,8 @@ begin
   else
     FOutPutDirectory:=IncludeTrailingPathDelimiter(GetCurrentDir);
 
-  FFileToConvert:=FCmdOptions.OptionValue('input');
-    AddPaths(ExtractFilePath(FFileToConvert));
-
   if FCmdOptions.HasOption('unit-prefix') then
     FUnitPrefix := FCmdOptions.OptionValue('unit-prefix');
-
-  if FCmdOptions.HasOption('paths') then
-    AddPaths(FCmdOptions.OptionValue('paths'));
 
   if FCmdOptions.HasOption('overwrite-files') then
     FOverWriteFiles:=True;
@@ -312,11 +350,43 @@ begin
   Terminate;
 end;
 
+function TGirConsoleConverter.LoadFile(const FileName: String): TXMLDocument;
+var
+  p: TProcess;
+  S: String = '';
+  n: Integer;
+begin
+  if FileName.EndsWith('.gir') then begin
+    ReadXMLFile(Result, FileName);
+  end else begin
+    p := TProcess.Create(nil);
+    p.Executable := 'g-ir-generate';
+    p.Parameters.add(FileName);
+    p.Options := [poUsePipes];
+    p.Execute;
+    try
+      ReadXMLFile(Result, p.Output);
+    except
+        WriteLn('############################################################');
+        n := p.Stderr.NumBytesAvailable;
+        SetLength(S, n + 1);
+        p.Stderr.Read(S[1], n);
+        S[n] := #0;
+        WriteLn('ExitCode = ', p.ExitCode);
+        WriteLn(S);
+        WriteLn('############################################################');
+        Result := nil;
+    end;
+    p.Free;
+  end;
+end;
+
 constructor TGirConsoleConverter.Create;
 begin
   //inherited Create(TheOwner);
   FCmdOptions := TCommandLineOptions.Create;
   FPaths := TStringList.Create;
+  FPaths.Delimiter := PathSep;
 end;
 
 destructor TGirConsoleConverter.Destroy;

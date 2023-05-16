@@ -209,31 +209,24 @@ var
 
 procedure MenuTrackStarted(mn: NSMenu);
 begin
-  if menuTrack = nil then menuTrack := NSMutableArray.alloc.init;
+  if not Assigned(menuTrack) then menuTrack := NSMutableArray.alloc.init;
   menuTrack.addObject(mn);
 end;
 
 procedure MenuTrackEnded(mn: NSMenu);
-var
-  i : integer;
 begin
-  if menuTrack = nil then
-    // it's possible if popup menu was used, without mainmenu in the app
-    Exit;
-
-  i := menuTrack.indexOfObject(mn);
-  if i >= 0 then
-    menuTrack.removeObjectAtIndex(i);
+  if Assigned(menuTrack) then
+    menuTrack.removeObject(mn);
 end;
 
 procedure MenuTrackCancelAll;
 var
-  i  : integer;
   mn : NSMenu;
 begin
-  if menuTrack = nil then Exit;
-  for i:=menuTrack.count - 1 downto 0 do begin
-    mn := NSMenu(menuTrack.objectAtIndex(i));
+  if not Assigned(menuTrack) then Exit;
+  if menuTrack.count = 0 then Exit;
+  for mn in menuTrack do
+  begin
     if Assigned(mn) then
       mn.cancelTracking;
   end;
