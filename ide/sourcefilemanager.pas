@@ -4062,7 +4062,7 @@ begin
       if AnUnitInfo.IsVirtual then begin
         if (sfSaveToTestDir in Flags) then
           Include(SaveFileFlags,sfSaveToTestDir)
-        else
+        else if not (sfSaveNonProjectFiles in Flags) then
           continue;
       end;
     end;
@@ -4267,7 +4267,7 @@ begin
         mrYes: SaveEditorFile(Ed, [sfCheckAmbiguousFiles]);
         mrNo: ; // don't save
         mrAll: begin
-            MainIDE.DoSaveAll([]);
+            MainIDE.DoSaveAll([sfSaveNonProjectFiles]);
             break;
           end;
         mrIgnore: break; // don't save anymore

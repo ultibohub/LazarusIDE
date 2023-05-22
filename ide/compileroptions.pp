@@ -1609,7 +1609,7 @@ begin
   CPPInline := aXMLConfig.GetValue(p+'CPPInline/Value', true);
   CStyleMacros := aXMLConfig.GetValue(p+'CStyleMacros/Value', false);
   InitConstructor := aXMLConfig.GetValue(p+'InitConstructor/Value', false);
-  PointerTypeCheck := aXMLConfig.GetValue(p+'PointerTypeCheck/Value', false);
+  TypedAddress := aXMLConfig.GetValue(p+'TypedAddress/Value', false);
 
   { CodeGeneration }
   p:=Path+'CodeGeneration/';
@@ -1828,7 +1828,7 @@ begin
   aXMLConfig.SetDeleteValue(p+'CPPInline/Value', CPPInline,true);
   aXMLConfig.SetDeleteValue(p+'CStyleMacros/Value', CStyleMacros,false);
   aXMLConfig.SetDeleteValue(p+'InitConstructor/Value', InitConstructor,false);
-  aXMLConfig.SetDeleteValue(p+'PointerTypeCheck/Value', PointerTypeCheck,false);
+  aXMLConfig.SetDeleteValue(p+'TypedAddress/Value', TypedAddress,false);
 
   { CodeGeneration }
   p:=Path+'CodeGeneration/';
@@ -3306,7 +3306,7 @@ begin
       tempsw := tempsw + 'm';
     if (InitConstructor) then
       tempsw := tempsw + 's';
-    if (PointerTypeCheck) then
+    if (TypedAddress) then
       tempsw := tempsw + 'y';
   end;
 
@@ -3365,7 +3365,7 @@ begin
   fCPPInline := true;
   fCMacros := false;
   fInitConst := false;
-  fPointerTypeCheck := false;
+  fTypedAddress := false;
 
   // code generation
   fSmartLinkUnit := false;
@@ -3474,7 +3474,7 @@ begin
   fCPPInline := CompOpts.fCPPInline;
   fCMacros := CompOpts.fCMacros;
   fInitConst := CompOpts.fInitConst;
-  fPointerTypeCheck := CompOpts.fPointerTypeCheck;
+  fTypedAddress := CompOpts.fTypedAddress;
 
   // Code Generation
   fSmartLinkUnit := CompOpts.SmartLinkUnit;
@@ -3624,7 +3624,7 @@ begin
   if Done(Tool.AddDiff('CPPInline',fCPPInline,CompOpts.fCPPInline)) then exit;
   if Done(Tool.AddDiff('CMacros',fCMacros,CompOpts.fCMacros)) then exit;
   if Done(Tool.AddDiff('InitConst',fInitConst,CompOpts.fInitConst)) then exit;
-  if Done(Tool.AddDiff('PointerTypeCheck',fPointerTypeCheck,CompOpts.fPointerTypeCheck)) then exit;
+  if Done(Tool.AddDiff('TypedAddress',fTypedAddress,CompOpts.fTypedAddress)) then exit;
 
   // code generation
   if Tool<>nil then Tool.Path:='Code';

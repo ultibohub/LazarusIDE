@@ -8,9 +8,12 @@ uses
   Classes, SysUtils, girNameSpaces, girObjects, girTokens, contnrs, StrUtils;
 
 type
-  TgirOption = (goWantTest, goLinkDynamic, goSeperateConsts, goClasses, goObjects, goIncludeDeprecated, goNoWrappers);
+  TgirOption = (goWantTest, goLinkDynamic, goSeperateConsts, goClasses, goObjects, goIncludeDeprecated, goNoWrappers,
+                goEnumAsIntConst, goEnumAsTypedIntConst, goEnumAsIntAliasConst, goEnumAsEnum, goEnumAsSet
+               );
   TgirOptions = set of TgirOption;
   TgirWriteEvent = procedure (Sender: TObject; AUnitName: AnsiString; AStream: TStringStream) of object;
+  TgirEnumImpl = goEnumAsIntConst..goEnumAsSet;
 
   TPDeclaration = class
     function AsString: String; virtual; abstract;
@@ -34,6 +37,12 @@ type
   { TPDeclarationConst }
 
   TPDeclarationConst = class(TPDeclarationWithLines)
+    function AsString: String; override;
+  end;
+
+  { TPDeclarationEnumTypes }
+
+  TPDeclarationEnumTypes = class(TPDeclarationWithLines)
     function AsString: String; override;
   end;
 
@@ -108,6 +117,7 @@ type
   TPInterface = class(TPCommonSections)
   private
     FConstSection: TPDeclarationConst;
+    FEnumTypesSection: TPDeclarationEnumTypes;
     FFunctionSection: TPDeclarationFunctions;
     FUsesSection: TPUses;
   public
@@ -116,6 +126,7 @@ type
     function AsString: String; override;
     property UsesSection: TPUses read FUsesSection;
     property ConstSection: TPDeclarationConst read FConstSection;
+    property EnumTypesSection: TPDeclarationEnumTypes read FEnumTypesSection;
     property FunctionSection: TPDeclarationFunctions read FFunctionSection;
   end;
 
@@ -190,9 +201,12 @@ type
     function GetUnitPostfix: String;
     function UnitPrefix: String;
 
+    function cExternal(const cName: String = ''): String;
+
     // functions to ensure the type is being written in the correct declaration
     function WantTypeSection: TPDeclarationType;
     function WantConstSection: TPDeclarationConst;
+    function WantEnumTypesSection: TPDeclarationEnumTypes;
     function WantFunctionSection: TPDeclarationFunctions;
     // function WantVarSection: TPDeclarationVar;
 
@@ -200,7 +214,7 @@ type
     procedure HandleNativeType(AItem: TgirNativeTypeDef);
     procedure HandleAlias(AItem: TgirAlias);
     procedure HandleCallback(AItem: TgirCallback);
-    procedure HandleEnum(AItem: TgirEnumeration; ADeclareType: Boolean = True);
+    procedure HandleEnum(AItem: TgirEnumeration);
     procedure HandleBitfield(AItem: TgirBitField);
     procedure HandleRecord(AItem: TgirRecord);
     procedure HandleOpaqueType(AItem: TgirFuzzyType);
@@ -311,6 +325,17 @@ begin
   Version := StringReplace(AVersion,'.','_',[rfReplaceAll]);
   Version := StringReplace(Version,'_0','',[rfReplaceAll]);
   Result := ANameSpace+Version;
+end;
+
+{ TPDeclarationEnumTypes }
+
+function TPDeclarationEnumTypes.AsString: String;
+begin
+  if Lines.Count > 0 then begin
+    Result := IndentText('type') + Lines.Text;
+  end else begin
+    Result := '';
+  end;
 end;
 
 { TPascalUnitGroup }
@@ -545,6 +570,7 @@ begin
   FUsesSection := AUses;
   FUsesSection.Units.Add('CTypes');
   FConstSection := TPDeclarationConst.Create;
+  FEnumTypesSection := TPDeclarationEnumTypes.Create;
   FFunctionSection := TPDeclarationFunctions.Create(ADynamicFunctions);
 end;
 
@@ -562,6 +588,7 @@ begin
   Result := IndentText('interface')+
       FUsesSection.AsString+
       FConstSection.AsString+
+      FEnumTypesSection.AsString +
       FDeclarations.AsString+
       FFunctionSection.AsString;
 end;
@@ -840,6 +867,15 @@ begin
   Result := FUnitPrefix;
 end;
 
+function TPascalUnit.cExternal(const cName: String = ''): String;
+begin
+  Result := ' external {$ifdef MsWindows} ' + UnitName + '_library';
+  if cName <> '' then begin
+    Result += ' name ''' + cName + '''';
+  end;
+  Result += ' {$endif};';
+end;
+
 function TPascalUnit.WantTypeSection: TPDeclarationType;
 begin
   if (InterfaceSection.Declarations.Count = 0)
@@ -858,6 +894,11 @@ begin
   Result := InterfaceSection.ConstSection;
 end;
 
+function TPascalUnit.WantEnumTypesSection: TPDeclarationEnumTypes;
+begin
+  Result := InterfaceSection.EnumTypesSection;
+end;
+
 function TPascalUnit.WantFunctionSection: TPDeclarationFunctions;
 begin
   Result := InterfaceSection.FunctionSection;
@@ -873,6 +914,8 @@ begin
     //WriteLn('Warning: Forwards definitions already written for : ', Aitem.TranslatedName);
   AItem.ForwardDefinitionWritten := True;
   PTypes := MakePointerTypesForType(ATypeName, APointerLevel);
+  ALines.Add('');
+  Alines.Add(IndentText('{ ' + ATypeName + ' }', 2, 0));
   PTypes.Insert(0, ATypeName);
   for i := PTypes.Count-1 downto 1 do
     ALines.Add(IndentText(PTypes[i]+ ' = ^'+PTypes[i-1]+';',2,0));
@@ -898,7 +941,7 @@ begin
 
   TypeSect := WantTypeSection;
   AItem.TranslatedName:=AItem.CType;
-  //WritePointerTypesForType(Aitem, AItem.CType, AItem.ImpliedPointerLevel, TypeSect.Lines);
+  WritePointerTypesForType(Aitem, AItem.CType, AItem.ImpliedPointerLevel, TypeSect.Lines);
   if AItem.Name <> 'file' then
     TypeSect.Lines.Add(IndentText(SanitizeName(AItem.CType)+ ' = '+ AItem.PascalName+';', 2,0));
 end;
@@ -906,7 +949,6 @@ end;
 procedure TPascalUnit.HandleAlias(AItem: TgirAlias);
 var
   ResolvedForName: String;
-  CType: TGirBaseType = nil;
   ProperUnit: TPascalUnit;
   TargetType: TGirBaseType = nil;
 begin
@@ -970,55 +1012,101 @@ begin
     TypeSect.Lines.Add(IndentText(CB,2,0))
 end;
 
-procedure TPascalUnit.HandleEnum(AItem: TgirEnumeration; ADeclareType: Boolean = True);
+function CompareEnumValues(v1, v2: Pointer): Integer;
+begin
+  Result := StrToInt(PgirEnumMember(v1)^.Value) - StrToInt(PgirEnumMember(v2)^.Value);
+end;
+
+procedure TPascalUnit.HandleEnum(AItem: TgirEnumeration);
 var
   ConstSection: TPDeclarationConst;
+  Section: TPDeclarationWithLines;
   Entry: String;
   i: Integer;
   CName: String;
   TypeName: String;
   ProperUnit: TPascalUnit;
   IntType: String;
+  Value: String;
 begin
   ProperUnit := FGroup.GetUnitForType(utTypes);
   if ProperUnit <> Self then begin
-    ProperUnit.HandleEnum(AItem, ADeclareType);
+    ProperUnit.HandleEnum(AItem);
     Exit;
   end;
   ResolveTypeTranslation(AItem);
 
   ConstSection := WantConstSection;
-  ConstSection.Lines.Add('');
-                //ATK_HYPERLINK_IS_INLINE_
-  if ADeclareType then
-  begin
+  if goEnumAsSet in FOptions then begin
+    raise Exception.Create('Not yet supported!');
+  end else if goEnumAsEnum in FOptions then begin
+    // forces forward declarations to be written
+    ProcessType(AItem);
+    TypeName := AItem.TranslatedName;
+    Section := WantEnumTypesSection;
+    Section.Lines.Add(IndentText(TypeName + ' = (', 2, 0));
+    Section.Lines.Add(IndentText(TypeName + 'MinValue = -$7FFFFFFF,', 4, 0));
+    AItem.Members.Sort(@CompareEnumValues)
+  end else if goEnumAsIntAliasConst in FOptions then begin
+    // forces forward declarations to be written
+    ProcessType(AItem);
+    TypeName := AItem.TranslatedName;
+    Section := WantConstSection;
+    Section.Lines.Add('');
+    Section.Lines.Add('type');
+    if AItem.NeedsSignedType then
+      IntType := 'Integer'
+    else
+      IntType := 'DWord';
+    // yes we cheat a little here using the const section to write type info
+    Section.Lines.Add(IndentText(TypeName + ' = type ' + IntType + ';', 2, 0));
+    Section.Lines.Add('const');
+    Section.Lines.Add(IndentText('{ '+ AItem.CType + ' }', 2, 0));
+  end else if goEnumAsTypedIntConst in FOptions then begin
     // forces forward declarations to be written
     ProcessType(AItem);
 
-    TypeName := ': '+AItem.TranslatedName;
-
+    TypeName := AItem.TranslatedName;
     if AItem.NeedsSignedType then
       IntType := 'Integer'
     else
       IntType := 'DWord';
 
     // yes we cheat a little here using the const section to write type info
+    ConstSection.Lines.Add('');
     ConstSection.Lines.Add('type');
     ConstSection.Lines.Add(IndentText(AItem.TranslatedName+' = '+IntType+';', 2,0));
     ConstSection.Lines.Add('const');
-  end
-  else
+    ConstSection.Lines.Add(IndentText('{ '+ AItem.CType + ' }', 2, 0));
+    Section := ConstSection;
+  end else begin
     TypeName:='';
-  ConstSection.Lines.Add(IndentText('{ '+ AItem.CType + ' }',2,0));
+    ConstSection.Lines.Add(IndentText('{ '+ AItem.CType + ' }', 2, 0));
+    Section := ConstSection;
+  end;
 
   for i := 0 to AItem.Members.Count-1 do
     begin
       CName := AItem.Members.Member[i]^.CIdentifier;
       if CName = 'ATK_HYPERLINK_IS_INLINE' then
         CName :='ATK_HYPERLINK_IS_INLINE_';
-      Entry := CName + TypeName+ ' = ' + AItem.Members.Member[i]^.Value+';';
-      ConstSection.Lines.Add(IndentText(Entry,2,0));
+      Value := AItem.Members.Member[i]^.Value;
+      if goEnumAsSet in FOptions then begin
+      end else if goEnumAsEnum in FOptions then begin
+        Entry := IndentText(CName + ' = ' + Value + ',', 4, 0);
+      end else if goEnumAsIntAliasConst in FOptions then begin
+        Entry := IndentText(CName + ' = ' + TypeName + '(' + Value + ');', 2, 0);
+      end else if goEnumAsTypedIntConst in FOptions then begin
+        Entry := IndentText(CName + ': ' + TypeName + ' = ' + Value + ';', 2, 0);
+      end else begin
+        Entry := IndentText(CName + ' = ' + Value + ';', 2, 0);
+      end;
+      Section.Lines.Add(Entry);
     end;
+  if goEnumAsEnum in FOptions then begin
+    Section.Lines.Add(IndentText(TypeName + 'MaxValue = $7FFFFFFF', 4, 0));
+    Section.Lines.Add(IndentText(');', 2, 0));
+  end;
   AItem.Writing:=msWritten;
 end;
 
@@ -1039,7 +1127,7 @@ var
   VarType: String;
  }
 begin
-  HandleEnum(AItem, True);
+  HandleEnum(AItem);
 (*
   Intf := WantTypeSection;
   CodeText := TPCodeText.Create;
@@ -1059,7 +1147,7 @@ begin
     Halt;
   end;
   }
-  HandleEnum(AItem, False);
+  HandleEnum(AItem);
 
   VarType:='DWord';
 
@@ -1179,7 +1267,7 @@ begin
 
   WriteFunctionTypeAndReturnType(AItem, RoutineType, Returns);
   Params := WriteFunctionParams(AItem.Params);
-  Postfix := ' external' +' {$ifdef Mswindows}'+UnitName+'_library '+' name ''' + aitem.CIdentifier+ '''{$endif};';
+  Postfix := cExternal(AItem.CIdentifier);
   FuncSect := WantFunctionSection;
   if not (goLinkDynamic in FOptions) then
     FuncSect.Lines.Add(RoutineType +' '+ AItem.CIdentifier+ParenParams(Params)+Returns+Postfix)
@@ -1242,7 +1330,7 @@ begin
   if Pos('array of const', Params) + Pos('va_list', Params) > 0 then
     Prefix:='//';
   if not (goLinkDynamic in FOptions) then
-    Postfix := ' external' +' {$ifdef Mswindows}'+UnitName+'_library '+' name ''' + AFunction.CIdentifier+ '''{$endif};'+DeprecatedS
+    Postfix := cExternal(AFunction.CIdentifier) + DeprecatedS
   else
     PostFix := ''+DeprecatedS;
 
@@ -1511,7 +1599,7 @@ var
   end;
   procedure AddGetTypeProc(AObj: TgirGType);
   const
-    GetTypeTemplate = 'function %s: %s; cdecl; external {$ifdef MSWindows} %s_library name ''%s'' {$endif};';
+    GetTypeTemplate = 'function %s: %s; cdecl;';
     GetTypeTemplateDyn = '%s: function:%s; cdecl;';
   var
     AType: String;
@@ -1526,7 +1614,7 @@ var
     if not (goLinkDynamic in FOptions) then
       begin
         AName:=AObj.GetTypeFunction;
-        UnitFuncs.Add(Format(GetTypeTemplate, [AName, AType,unitname,AName]))
+        UnitFuncs.Add(Format(GetTypeTemplate, [AName, AType]) + cExternal(AName));
       end
     else
     begin

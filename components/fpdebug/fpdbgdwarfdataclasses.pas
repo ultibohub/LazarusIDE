@@ -4062,13 +4062,19 @@ begin
         if CIE64^.CIEId = QWord($ffffffffffffffff) then
           begin
           // It is a CIE
-          CIE := LoadCiE(CIE64^.Version, @CIE64^.Augmentation[0], @CIE64^.CIEId+CIE64^.Length-@CIE64^.Augmentation[0]);
+          {$PUSH} {$T-}  // Would require 2 Pointer() typecasts.
+          CIE := LoadCiE(CIE64^.Version, @CIE64^.Augmentation[0],
+                         @CIE64^.CIEId+CIE64^.Length-@CIE64^.Augmentation[0]);
+          {$POP}
           CFI.AddCIE(p-inf.RawData, CIE);
           end
         else
           begin
           // It is a FDE
-          FDE := LoadFDE(CFI, FDE64^.CIEPointer, @FDE64^.InitialLocation, @FDE64^.CIEPointer+FDE64^.Length-@FDE64^.InitialLocation);
+          {$PUSH} {$T-}
+          FDE := LoadFDE(CFI, FDE64^.CIEPointer, @FDE64^.InitialLocation,
+                         @FDE64^.CIEPointer+FDE64^.Length-@FDE64^.InitialLocation);
+          {$POP}
           if Assigned(FDE) then
             CFI.AddFDE(FDE);
           end;
@@ -4081,7 +4087,10 @@ begin
         if CIE32^.CIEId = $ffffffff then
           begin
           // It is a CIE
-          CIE := LoadCiE(CIE32^.Version, @CIE32^.Augmentation[0], @CIE32^.CIEId+CIE32^.Length-@CIE32^.Augmentation[0]);
+          {$PUSH} {$T-}
+          CIE := LoadCiE(CIE32^.Version, @CIE32^.Augmentation[0],
+                         @CIE32^.CIEId+CIE32^.Length-@CIE32^.Augmentation[0]);
+          {$POP}
           CFI.AddCIE(p-inf.RawData, CIE);
           end
         else
@@ -4089,7 +4098,8 @@ begin
           // It is a FDE
           if FDE32^.Length > 0 then
             begin
-            FDE := LoadFDE(CFI, FDE32^.CIEPointer, @FDE32^.InitialLocation, @FDE32^.CIEPointer+FDE32^.Length-@FDE32^.InitialLocation);
+            FDE := LoadFDE(CFI, FDE32^.CIEPointer, @FDE32^.InitialLocation,
+                           @FDE32^.CIEPointer+FDE32^.Length-@FDE32^.InitialLocation);
             if Assigned(FDE) then
               CFI.AddFDE(FDE);
             end
@@ -4937,7 +4947,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     // directories & filenames
     FLineInfo.Directories := TStringList.Create;
     FLineInfo.Directories.Add(''); // current dir
-    Name := @Info^.StandardOpcodeLengths;
+    Name := PChar(@Info^.StandardOpcodeLengths);
     Inc(Name, Info^.OpcodeBase-1);
     // directories
     while Name^ <> #0 do
