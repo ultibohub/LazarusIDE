@@ -273,13 +273,13 @@ begin
     (* The debugger will encounter a thread create event, during the stepping
        This will mean the main-loop's FCurrentThread is the new thread
     *)
-    RunToNextPauseNoLoopBreak('', dcRun, 25000);
+    RunToNextPauseNoLoopBreak('', dcRun, 45000);
     AssertDebuggerState(dsPause);
     TestLocation('At BrkThreadCreateInStep', 'BrkThreadCreateInStep', -1);
 
     // This test can take longer, as the new thread gets very little scheduler time
     // during the single stepping of the main thread.
-    RunToNextPauseNoLoopBreak('', dcStepOver, 35000);
+    RunToNextPauseNoLoopBreak('', dcStepOver, 55000);
     AssertDebuggerState(dsPause);
     TestLocation('At AfterThreadCreateInStep', 'AfterThreadCreateInStep', -1);
     TestEquals('ThreadId AfterThreadCreateInStep', ThreadIdMain, dbg.Threads.CurrentThreads.CurrentThreadId);
@@ -1162,7 +1162,7 @@ begin
   if AnExpAtBrkName <> '' then
     AName := AName + ' (TO: '+AnExpAtBrkName+')';
   THookedFpDebugDebugger(dbg).LockRelCount := 0;
-  Result := RunToNextPauseNoInternal(AName, ACmd);
+  Result := RunToNextPauseNoInternal(AName, ACmd, ATimeOut);
 
   // LockRelease called in 2 * DoState / 1 * DebugLoopFinished
   if not TestEquals(AName + ' ' + dbgs(ACmd)+' - lock cnt', 3, THookedFpDebugDebugger(dbg).LockRelCount)

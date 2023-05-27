@@ -1523,6 +1523,7 @@ var
   var
     SetFound: Boolean;
     PropType: String;
+    FieldName: String;
   begin
 
     if not MeetsVersionConstraints(Field) then
@@ -1572,7 +1573,11 @@ var
               Field.CType := AItem.CType+'_union_'+Field.Name;
               ResolveTypeTranslation(Field);
               HandleUnion(TgirUnion(Field));
-              TypeDecl.Add(IndentText(SanitizeName(Field.Name, UsedNames)+': '+ Field.TranslatedName+'; //union extracted from object and named '''+Field.TranslatedName+'''',4,0));
+              FieldName := Field.Name;
+              if FieldName = '' then begin
+                FieldName := '__unnamed_field__' + Field.CType;
+              end;
+              TypeDecl.Add(IndentText(SanitizeName(FieldName, UsedNames)+': '+ Field.TranslatedName+'; //union extracted from object and named '''+Field.TranslatedName+'''',4,0));
             end
        end;
     end;
@@ -2618,7 +2623,7 @@ begin
   if FinalizeSection.Declarations.Count > 0 then
      Str.WriteString(FinalizeSection.AsString);
 
-  Str.WriteString('end.');
+  Str.WriteString('end.' + LineEnding);
 
   Result.Position:=0;
 end;
@@ -2628,7 +2633,7 @@ begin
   if (goWantTest in FOptions) then
   begin
     FTestPascalFile.WriteString(FTestPascalBody.Text);
-    FTestPascalFile.WriteString('end.');
+    FTestPascalFile.WriteString('end.' + LineEnding);
     //FTestCFile.Position:=0;
     FTestPascalFile.Position:=0;
   end;
