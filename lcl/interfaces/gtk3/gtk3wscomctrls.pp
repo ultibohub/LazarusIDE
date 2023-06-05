@@ -386,8 +386,8 @@ class procedure TGtk3WSCustomListView.SetPropertyInternal(
   const AIsSet: Boolean);
 const
   BoolToSelectionMode: array[Boolean] of TGtkSelectionMode = (
-    1 {GTK_SELECTION_SINGLE},
-    3 {GTK_SELECTION_MULTIPLE}
+    GTK_SELECTION_SINGLE {1} ,
+    GTK_SELECTION_MULTIPLE {3}
   );
 begin
   case AProp of
@@ -966,14 +966,14 @@ end;
 class procedure TGtk3WSCustomListView.SetScrollBars(const ALV: TCustomListView;
   const AValue: TScrollStyle);
 var
-  SS: TPoint;
+  SS: TGtkScrollStyle;
 begin
   if not WSCheckHandleAllocated(ALV, 'SetScrollBars') then
     Exit;
   // DebugLn('TGtk3WSCustomListView.SetScrollbars ');
   // inherited SetScrollBars(ALV, AValue);
   SS := Gtk3TranslateScrollStyle(AValue);
-  TGtk3ListView(ALV.Handle).GetScrolledWindow^.set_policy(SS.X, SS.Y);
+  TGtk3ListView(ALV.Handle).GetScrolledWindow^.set_policy(SS.Horizontal, SS.Vertical);
 end;
 
 class procedure TGtk3WSCustomListView.SetSort(const ALV: TCustomListView;

@@ -2862,18 +2862,53 @@ appends the country code to the value in Lang.
 </element>
 
 <element name="LazGetShortLanguageID">
-<short>Removes country information from a language ID.</short>
+<short>
+Returns the current short language ID (without the country code).
+</short>
 <descr>
 <p>
 <var>LazGetShortLanguageID</var> strips country information from the language 
 ID, making it simpler to use. Ideally the resulting ID should conform to ISO 
-639-1, or ISO 639-2 when the language code is not in ISO 639-1.
+639-1 (2-digit code like 'ru' or 'en'), or ISO 639-2 (3-digit code like 'rus' 
+or 'eng') when the language code is not in ISO 639-1.
+</p>
+<p>
+Calls LazGetLanguageIDs to lookup the language identifiers. It uses the 
+fallback language ID as the value for the Lang argument.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="LazGetLanguageIDs"/>
+</seealso>
 </element>
 <element name="LazGetShortLanguageID.Lang">
 <short>Language ID examined in the routine.</short>
+</element>
+
+<element name="LazTrimLanguageID">
+<short>
+Returns the language identifier with an encoding suffix removed from the 
+specified value.
+</short>
+<descr>
+<p>
+The <var>Lang</var> argument can sometimes be in the form 'ru_RU.utf8', 
+which will prevent loading a file with a language identifier in the form 
+'project1.ru_RU.po'. This procedure trims the encoding value from the argument.
+</p>
+</descr>
+<version>
+Added in LazUtils version 2.4.0.
+</version>
+<seealso>
+<link id="#lcl.lcltranslator.TranslateUnitResourceStringsEx">TranslateUnitResourceStringsEx</link>
+</seealso>
+</element>
+<element name="LazTrimLanguageID.Lang">
+<short>
+Variable parameter with the language identifier examined and modified in the 
+routine.
+</short>
 </element>
 
 <element name="FPUpChars">

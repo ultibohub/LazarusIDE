@@ -794,7 +794,7 @@ type
     function GetScrolledWindow: PGtkScrolledWindow; override;
     function ShowState(nstate:integer):boolean; // winapi ShowWindow
     procedure UpdateWindowState; // LCL WindowState
-    class function decoration_flags(Aform: TCustomForm): longint;
+    class function decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
   public
     procedure SetBounds(ALeft,ATop,AWidth,AHeight:integer);override;
     destructor Destroy; override;
@@ -828,7 +828,7 @@ type
     class function ResponseCB(response_id:gint; dlg: TGtk3Dialog): GBoolean; cdecl;
     class function RealizeCB(dlg:TGtk3Dialog): GBoolean; cdecl;
   protected
-    function response_handler(response_id:gint):boolean;virtual;
+    function response_handler(response_id:TGtkResponseType):boolean;virtual;
     function close_handler():boolean;virtual;
     procedure SetCallbacks;virtual;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
@@ -852,7 +852,7 @@ type
 
   TGtk3FontSelectionDialog = class(TGtk3Dialog)
   protected
-    function response_handler(resp_id:gint):boolean; override;
+    function response_handler(resp_id:TGtkResponseType):boolean; override;
   public
     procedure InitializeWidget; override;
     constructor Create(const ACommonDialog: TCommonDialog); virtual; overload;
@@ -870,7 +870,7 @@ type
 
   TGtk3newColorSelectionDialog = class(TGtk3Dialog)
   protected
-    function response_handler(resp_id:gint):boolean;override;
+    function response_handler(resp_id:TGtkResponseType):boolean;override;
   public
     constructor Create(const ACommonDialog: TCommonDialog); virtual; overload;
     procedure InitializeWidget;override;
@@ -896,30 +896,31 @@ implementation
 uses gtk3int,imglist,lclproc;
 
 const
-  GDK_DEFAULT_EVENTS_MASK: TGdkEventMask =
-    2 +        //GDK_EXPOSURE_MASK
-    4 +        //GDK_POINTER_MOTION_MASK
-    8 +        //GDK_POINTER_MOTION_HINT_MASK
-    16 +       //GDK_BUTTON_MOTION_MASK
-    32 +       //GDK_BUTTON1_MOTION_MASK
-    64 +       //GDK_BUTTON2_MOTION_MASK
-    128 +      //GDK_BUTTON3_MOTION_MASK
-    256 +      //GDK_BUTTON_PRESS_MASK
-    512 +      //GDK_BUTTON_RELEASE_MASK
-    1024 +     //GDK_KEY_PRESS_MASK
-    2048 +     //GDK_KEY_RELEASE_MASK
-    4096 +     //GDK_ENTER_NOTIFY_MASK
-    8192 +     //GDK_LEAVE_NOTIFY_MASK
-    16384 +    //GDK_FOCUS_CHANGE_MASK
-    32768 +    //GDK_STRUCTURE_MASK
-    65536 +    //GDK_PROPERTY_CHANGE_MASK
-    131072 +   //GDK_VISIBILITY_NOTIFY_MASK
-    262144 +   //GDK_PROXIMITY_IN_MASK
-    524288 +   //GDK_PROXIMITY_OUT_MASK
-    1048576 +  //GDK_SUBSTRUCTURE_MASK
-    2097152 +  //GDK_SCROLL_MASK
-    4194304;   //GDK_TOUCH_MASK
- // 8388608    //GDK_SMOOTH_SCROLL_MASK: there is a bug in GTK3, see https://stackoverflow.com/questions/11775161/gtk3-get-mouse-scroll-direction
+  GDK_DEFAULT_EVENTS_MASK = [
+    GDK_EXPOSURE_MASK, {2}
+    GDK_POINTER_MOTION_MASK, {4}
+    GDK_POINTER_MOTION_HINT_MASK, {8}
+    GDK_BUTTON_MOTION_MASK, {16}
+    GDK_BUTTON1_MOTION_MASK, {32}
+    GDK_BUTTON2_MOTION_MASK, {64}
+    GDK_BUTTON3_MOTION_MASK, {128}
+    GDK_BUTTON_PRESS_MASK, {256}
+    GDK_BUTTON_RELEASE_MASK, {512}
+    GDK_KEY_PRESS_MASK, {1024}
+    GDK_KEY_RELEASE_MASK, {2048}
+    GDK_ENTER_NOTIFY_MASK, {4096}
+    GDK_LEAVE_NOTIFY_MASK, {8192}
+    GDK_FOCUS_CHANGE_MASK, {16384}
+    GDK_STRUCTURE_MASK, {32768}
+    GDK_PROPERTY_CHANGE_MASK, {65536}
+    GDK_VISIBILITY_NOTIFY_MASK, {131072}
+    GDK_PROXIMITY_IN_MASK, {262144}
+    GDK_PROXIMITY_OUT_MASK, {524288}
+    GDK_SUBSTRUCTURE_MASK, {1048576}
+    GDK_SCROLL_MASK, {2097152}
+    GDK_TOUCH_MASK {4194304}
+ // GDK_SMOOTH_SCROLL_MASK {8388608} //there is a bug in GTK3, see https://stackoverflow.com/questions/11775161/gtk3-get-mouse-scroll-direction
+  ];
 
 function Gtk3EventToStr(AEvent: TGdkEventType): String;
 begin
@@ -1434,7 +1435,7 @@ var
   Msg: TLMSize;
   NewSize: TSize;
   ACtl: TGtk3Widget;
-  AState:integer;
+  AState: TGdkWindowState;
 begin
   if AWidget=nil then ;
   //TODO: Move to TGtk3Widget.GtkResizeEvent
@@ -1476,14 +1477,14 @@ begin
 
   if ACtl is TGtk3Window then
   begin
-    AState:=TGtk3Window(ACtl).getWindowState;
-    if AState and GDK_WINDOW_STATE_ICONIFIED<>0 then
+    AState := TGtk3Window(ACtl).getWindowState;
+    if GDK_WINDOW_STATE_ICONIFIED in AState  then
       Msg.SizeType := SIZE_MINIMIZED
     else
-    if AState and GDK_WINDOW_STATE_MAXIMIZED<>0 then
+    if GDK_WINDOW_STATE_MAXIMIZED in AState  then
       Msg.SizeType := SIZE_MAXIMIZED
     else
-    if AState and GDK_WINDOW_STATE_FULLSCREEN<>0 then
+    if GDK_WINDOW_STATE_FULLSCREEN in AState  then
       Msg.SizeType := SIZE_FULLSCREEN;
 
   end;
@@ -1579,11 +1580,11 @@ function GtkModifierStateToShiftState(AState: TGdkModifierType;
     AIsKeyEvent: Boolean): Cardinal;
 begin
   Result := 0;
-  if AState and GDK_SHIFT_MASK <> 0 then
+  if GDK_SHIFT_MASK in AState  then
     Result := Result or MK_SHIFT;
-  if AState and GDK_CONTROL_MASK <> 0 then
+  if GDK_CONTROL_MASK in AState  then
     Result := Result or MK_CONTROL;
-  if AState and GDK_MOD1_MASK <> 0 then
+  if GDK_MOD1_MASK in AState  then
   begin
     if AIsKeyEvent then
       Result := Result or KF_ALTDOWN
@@ -1615,10 +1616,10 @@ begin
   {$ENDIF}
   Result := False;
   case AEvent^.scroll.direction of
-    0, 1{GDK_SCROLL_UP,
-    GDK_SCROLL_DOWN}: Msg.Msg := LM_VSCROLL;
-    2, 3{GDK_SCROLL_LEFT,
-    GDK_SCROLL_RIGHT}: Msg.Msg := LM_HSCROLL;
+    GDK_SCROLL_UP, {0}
+    GDK_SCROLL_DOWN {1}: Msg.Msg := LM_VSCROLL;
+    GDK_SCROLL_LEFT, {2}
+    GDK_SCROLL_RIGHT {3}: Msg.Msg := LM_HSCROLL;
     else
       begin
         if AEvent^.scroll.direction = GDK_SCROLL_SMOOTH then
@@ -1696,8 +1697,8 @@ begin
   FillChar(MessE{%H-},SizeOf(MessE),0);
   MessE.Msg := LM_MOUSEWHEEL;
   case AEvent^.scroll.direction of
-    0 {GDK_SCROLL_UP}: MessE.WheelDelta := 120;
-    1 {GDK_SCROLL_DOWN}: MessE.WheelDelta := -120;
+    GDK_SCROLL_UP {0}: MessE.WheelDelta := 120;
+    GDK_SCROLL_DOWN {1}: MessE.WheelDelta := -120;
   else
     exit;
   end;
@@ -1962,7 +1963,7 @@ begin
   if IsWidgetOk then
   begin
     if FWidget^.get_window <> nil then
-      Result := gdk_window_get_state(FWidget^.get_window) and GDK_WINDOW_STATE_ICONIFIED <> 0;
+      Result := GDK_WINDOW_STATE_ICONIFIED in gdk_window_get_state(FWidget^.get_window);
   end;
 end;
 
@@ -2363,13 +2364,13 @@ begin
       with FWidget^ do
       begin
         for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
-          override_color(i, @AColor);
+          override_color(TGtkStateFlags(1 shl (i - 1)), @AColor);
       end;
     end;
     with GetContainerWidget^ do
     begin
       for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
-        override_color(i, @AColor);
+        override_color(TGtkStateFlags(1 shl (i - 1)), @AColor);
     end;
   end;
 end;
@@ -2419,7 +2420,7 @@ begin
             ARgba.blue := FWidgetRGBA[i].B;
             ARgba.alpha := FWidgetRGBA[i].Alpha;
           end;
-          FWidget^.override_background_color(i, @ARgba);
+          FWidget^.override_background_color(TGtkStateFlags(1 shl (i - 1)), @ARgba);
         end;
       end;
     end;
@@ -2436,7 +2437,7 @@ begin
           ARgba.blue := FCentralWidgetRGBA[i].B;
           ARgba.alpha := FCentralWidgetRGBA[i].Alpha;
         end;
-        GetContainerWidget^.override_background_color(i, @ARgba);
+        GetContainerWidget^.override_background_color(TGtkStateFlags(1 shl (i - 1)), @ARgba);
       end;
     end;
   end;
@@ -2450,9 +2451,9 @@ begin
       begin
         for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
           if AValue = clDefault then
-            override_background_color(i, nil)
+            override_background_color(TGtkStateFlags(1 shl (i - 1)), nil)
           else
-            override_background_color(i, @AColor);
+            override_background_color(TGtkStateFlags(1 shl (i - 1)), @AColor);
       end;
     end;
     with GetContainerWidget^ do
@@ -2460,9 +2461,9 @@ begin
       for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
       begin
         if AValue = clDefault then
-          override_background_color(i, nil)
+          override_background_color(TGtkStateFlags(1 shl (i - 1)), nil)
         else
-          override_background_color(i, @AColor);
+          override_background_color(TGtkStateFlags(1 shl (i - 1)), @AColor);
       end;
     end;
   end;
@@ -2513,7 +2514,7 @@ begin
   if IsWidgetOK then
   begin
     AStyle := GetStyleContext;
-    AStyle^.get_background_color(GTK_STATE_NORMAL, @AGdkRGBA);
+    AStyle^.get_background_color(GTK_STATE_FLAG_NORMAL, @AGdkRGBA);
     Result := TGdkRGBAToTColor(AGdkRGBA);
   end;
 end;
@@ -2527,7 +2528,7 @@ begin
   if IsWidgetOK then
   begin
     AStyle := GetStyleContext;
-    AStyle^.get_background_color(GTK_STATE_NORMAL, @AColor);
+    AStyle^.get_background_color(GTK_STATE_FLAG_NORMAL, @AColor);
     Result := TGdkRGBAToTColor(AColor);
   end;
 end;
@@ -2685,12 +2686,12 @@ begin
   // move signal connections into attach events
   if not gtk_widget_get_realized(FWidget) then
     FWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
-  g_signal_connect_data(FWidget, 'destroy', TGCallback(@TGtk3Widget.destroy_event), Self, nil, 0);
-  g_signal_connect_data(FWidget, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, 0);
+  g_signal_connect_data(FWidget, 'destroy', TGCallback(@TGtk3Widget.destroy_event), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
 
   for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
   begin
-    FWidget^.get_style_context^.get_background_color(i, @ARgba);
+    FWidget^.get_style_context^.get_background_color(TGtkStateFlags(1 shl (i - 1)), @ARgba);
     with FWidgetRGBA[i] do
     begin
       R := ARgba.red;
@@ -2703,10 +2704,10 @@ begin
   if FCentralWidget <> nil then
   begin
     FCentralWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
-    g_signal_connect_data(FCentralWidget, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, 0);
+    g_signal_connect_data(FCentralWidget, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
     for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
     begin
-      FCentralWidget^.get_style_context^.get_background_color(i, @ARgba);
+      FCentralWidget^.get_style_context^.get_background_color(TGtkStateFlags(1 shl (i - 1)), @ARgba);
       with FCentralWidgetRGBA[i] do
       begin
         R := ARgba.red;
@@ -2720,16 +2721,16 @@ begin
     for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
       FCentralWidgetRGBA[i] := FWidgetRGBA[i];
   end;
-  g_signal_connect_data(GetContainerWidget,'draw', TGCallback(@Gtk3DrawWidget), Self, nil, 0);
-  g_signal_connect_data(GetContainerWidget,'scroll-event', TGCallback(@Gtk3ScrollEvent), Self, nil, 0);
+  g_signal_connect_data(GetContainerWidget,'draw', TGCallback(@Gtk3DrawWidget), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(GetContainerWidget,'scroll-event', TGCallback(@Gtk3ScrollEvent), Self, nil, G_CONNECT_DEFAULT);
 
   // must hide all by default ???
   //FWidget^.hide;
 
-  g_signal_connect_data(FWidget,'hide', TGCallback(@Gtk3WidgetHide), Self, nil, 0);
-  g_signal_connect_data(FWidget,'show', TGCallback(@Gtk3WidgetShow), Self, nil, 0);
-  g_signal_connect_data(FWidget,'map', TGCallback(@Gtk3MapWidget), Self, nil, 0);
-  g_signal_connect_data(FWidget,'size-allocate',TGCallback(@Gtk3SizeAllocate), Self, nil, 0);
+  g_signal_connect_data(FWidget,'hide', TGCallback(@Gtk3WidgetHide), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget,'show', TGCallback(@Gtk3WidgetShow), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget,'map', TGCallback(@Gtk3MapWidget), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget,'size-allocate',TGCallback(@Gtk3SizeAllocate), Self, nil, G_CONNECT_DEFAULT);
   // g_signal_connect_data(FWidget, 'motion_notify_event', TGCallback(@Gtk3MotionNotifyEvent), LCLObject, nil, 0);
 end;
 
@@ -3671,8 +3672,8 @@ begin
   Self.SetTextHint(TCustomEdit(Self.LCLObject).TextHint);
   Self.SetNumbersOnly(TCustomEdit(Self.LCLObject).NumbersOnly);
 
-  g_signal_connect_data(FWidget, 'changed', TGCallback(@Gtk3EntryChanged), Self, nil, 0);
-  g_signal_connect_data(FWidget, 'insert-text', TGCallback(@TGtk3Entry.InsertText), Self, nil, 0);
+  g_signal_connect_data(FWidget, 'changed', TGCallback(@Gtk3EntryChanged), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget, 'insert-text', TGCallback(@TGtk3Entry.InsertText), Self, nil, G_CONNECT_DEFAULT);
 
   //g_signal_connect_data(PGtkEntry(FWidget)^.get_buffer, 'deleted-text', TGCallback(@Gtk3EntryDeletedText), Self, nil, 0);
   //g_signal_connect_data(PGtkEntry(FWidget)^.get_buffer, 'inserted-text', TGCallback(@Gtk3EntryInsertedText), Self, nil, 0);
@@ -3917,7 +3918,7 @@ end;
 procedure TGtk3Range.InitializeWidget;
 begin
   inherited InitializeWidget;
-  g_signal_connect_data(GetContainerWidget, 'value-changed', TGCallback(@Gtk3RangeChanged), Self, nil, 0);
+  g_signal_connect_data(GetContainerWidget, 'value-changed', TGCallback(@Gtk3RangeChanged), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 procedure TGtk3Range.SetStep(AStep: Integer; APageSize: Integer);
@@ -3952,7 +3953,7 @@ begin
   fCentralWidget:=PGtkWidget(TGtkScale.new(Ord(ATrack.Orientation), nil));
   PgtkBox(Result)^.add(fCentralWidget);}
 
-  Result :=PGtkWidget(TGtkScale.new(Ord(ATrack.Orientation), nil));
+  Result :=PGtkWidget(TGtkScale.new(TGtkOrientation(ATrack.Orientation), nil));
 
   FOrientation := ATrack.Orientation;
   if ATrack.Reversed then
@@ -4039,7 +4040,7 @@ var
 begin
   AScrollBar := TCustomScrollBar(LCLObject);
   FWidgetType := FWidgetType + [wtScrollBar];
-  Result := TGtkScrollbar.new(Ord(AScrollBar.Kind), nil);
+  Result := TGtkScrollbar.new(TGtkOrientation(AScrollBar.Kind), nil);
   ARange := PGtkRange(Result);
   // ARange^.set_can_focus(True);
   with AScrollBar do
@@ -4048,7 +4049,7 @@ begin
       SmallChange, LargeChange, PageSize);
     ARange^.adjustment^.set_value(Position);
     g_signal_connect_data(ARange^.adjustment,
-         'value-changed', TGCallback(@TGtk3ScrollBar.value_changed), Self, nil, 0);
+         'value-changed', TGCallback(@TGtk3ScrollBar.value_changed), Self, nil, G_CONNECT_DEFAULT);
   end;
 end;
 
@@ -4482,7 +4483,7 @@ begin
 
       if not (btn.Style in [tbsSeparator,tbsDivider]) then
       g_signal_connect_data(gtb,'clicked',
-        TGCallback(@TGtk3Toolbar.ButtonClicked), btn, nil, 0);
+        TGCallback(@TGtk3Toolbar.ButtonClicked), btn, nil, G_CONNECT_DEFAULT);
     end;
   end;
 
@@ -4700,9 +4701,9 @@ begin
     PGtkNoteBook(FCentralWidget)^.popup_disable;
   PGtkNoteBook(FCentralWidget)^.show;
 
-  g_signal_connect_data(FCentralWidget,'switch-page', TGCallback(@GtkNotebookSwitchPage), Self, nil, 0);
+  g_signal_connect_data(FCentralWidget,'switch-page', TGCallback(@GtkNotebookSwitchPage), Self, nil, G_CONNECT_DEFAULT);
   // this one triggers after above switch-page
-  g_signal_connect_data(FCentralWidget,'switch-page', TGCallback(@GtkNotebookAfterSwitchPage), Self, nil, 0);
+  g_signal_connect_data(FCentralWidget,'switch-page', TGCallback(@GtkNotebookAfterSwitchPage), Self, nil, G_CONNECT_DEFAULT);
 
   // those signals doesn't trigger with gtk3-3.6
   // g_signal_connect_data(FCentralWidget,'change-current-page', TGCallback(@GtkNotebookAfterSwitchPage), Self, nil, 0);
@@ -5043,8 +5044,8 @@ begin
 
   // move signal connections into attach events
   FWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
-  g_signal_connect_data(FWidget, 'event', TGCallback(@Gtk3MenuItemEvent), Self, nil, 0);
-  g_signal_connect_data(FWidget,'activate',TGCallBack(@Gtk3MenuItemActivated), Self, nil, 0);
+  g_signal_connect_data(FWidget, 'event', TGCallback(@Gtk3MenuItemEvent), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget,'activate',TGCallBack(@Gtk3MenuItemActivated), Self, nil, G_CONNECT_DEFAULT);
   // must hide all by default
   // FWidget^.hide;
 end;
@@ -5162,7 +5163,7 @@ begin
 
   if Msg.Scrollcode = SB_THUMBTRACK then
   begin
-    if Widget^.get_state_flags = GTK_STATE_NORMAL then
+    if Widget^.get_state_flags = GTK_STATE_FLAG_NORMAL then
     begin
       Msg.ScrollCode := SB_THUMBPOSITION;
       DeliverMessage(AData.LCLObject, Msg);
@@ -5182,9 +5183,9 @@ begin
   {TODO: create real instances for scrollbars via TGtk3Widget.CreateFrom() ?}
   FBorderStyle := bsNone;
   g_signal_connect_data(getHorizontalScrollbar, 'change-value',
-    TGCallback(@Gtk3RangeScrollCB), Self, nil, 0);
+    TGCallback(@Gtk3RangeScrollCB), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(getVerticalScrollbar, 'change-value',
-    TGCallback(@Gtk3RangeScrollCB), Self, nil, 0);
+    TGCallback(@Gtk3RangeScrollCB), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 function TGtk3ScrollableWin.getClientBounds: TRect;
@@ -5206,7 +5207,7 @@ function TGtk3Memo.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   AMemo: TCustomMemo;
   ABuffer: PGtkTextBuffer;
-  AScrollStyle: TPoint;
+  AScrollStyle: TGtkScrollStyle;
 begin
   FScrollX := 0;
   FScrollY := 0;
@@ -5247,14 +5248,14 @@ begin
 
   if (gtk_get_major_version = 3) and (gtk_get_minor_version <= 8) then
   begin
-    if AScrollStyle.X = GTK_POLICY_NEVER then
-      AScrollStyle.X := GTK_POLICY_AUTOMATIC;
-    if AScrollStyle.Y = GTK_POLICY_NEVER then
-      AScrollStyle.Y := GTK_POLICY_AUTOMATIC;
+    if AScrollStyle.Horizontal = GTK_POLICY_NEVER then
+      AScrollStyle.Horizontal := GTK_POLICY_AUTOMATIC;
+    if AScrollStyle.Vertical = GTK_POLICY_NEVER then
+      AScrollStyle.Vertical := GTK_POLICY_AUTOMATIC;
   end;
 
 
-  PGtkScrolledWindow(Result)^.set_policy(AScrollStyle.X, AScrollStyle.Y);
+  PGtkScrolledWindow(Result)^.set_policy(AScrollStyle.Horizontal, AScrollStyle.Vertical);
 
   PGtkScrolledWindow(Result)^.set_shadow_type(BorderStyleShadowMap[AMemo.BorderStyle]);
   PGtkScrolledWindow(Result)^.get_vscrollbar^.set_can_focus(False);
@@ -5475,7 +5476,7 @@ end;
 procedure TGtk3ListBox.InitializeWidget;
 begin
   inherited InitializeWidget;
-  g_signal_connect_data(GetSelection, 'changed', TGCallback(@Gtk3ListBoxSelectionChanged), Self, nil, 0);
+  g_signal_connect_data(GetSelection, 'changed', TGCallback(@Gtk3ListBoxSelectionChanged), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 function TGtk3ListBox.getHorizontalScrollbar: PGtkScrollbar;
@@ -5786,7 +5787,7 @@ begin
   PGtkTreeView(FCentralWidget)^.append_column(AColumn);
   AColumn^.set_clickable(True);
 
-  g_signal_connect_data(Toggle, 'toggled', TGCallback(@Gtk3WS_CheckListBoxToggle), Self, nil, 0);
+  g_signal_connect_data(Toggle, 'toggled', TGCallback(@Gtk3WS_CheckListBoxToggle), Self, nil, G_CONNECT_DEFAULT);
 
   Renderer := LCLIntfCellRenderer_New(); // gtk_cell_renderer_text_new;
 
@@ -5910,7 +5911,7 @@ end;
 function TGtk3ListView.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   AListView: TCustomListView;
-  AScrollStyle: TPoint;
+  AScrollStyle: TGtkScrollStyle;
   PtrType: GType;
   TreeModel: PGtkTreeModel;
   iter:TGtkTreeIter;
@@ -5957,7 +5958,7 @@ begin
 
   AScrollStyle := Gtk3TranslateScrollStyle(TListView(AListView).ScrollBars);
   // gtk3 scrolled window hates GTK_POLICY_NONE
-  PGtkScrolledWindow(Result)^.set_policy(AScrollStyle.X, AScrollStyle.Y);
+  PGtkScrolledWindow(Result)^.set_policy(AScrollStyle.Horizontal, AScrollStyle.Vertical);
   PGtkScrolledWindow(Result)^.set_shadow_type(BorderStyleShadowMap[AListView.BorderStyle]);
   PGtkScrolledWindow(Result)^.get_vscrollbar^.set_can_focus(False);
   PGtkScrolledWindow(Result)^.get_hscrollbar^.set_can_focus(False);
@@ -5968,11 +5969,11 @@ begin
   begin
     gtk_tree_selection_set_select_function(PGtkTreeView(FCentralWidget)^.get_selection, TGtkTreeSelectionFunc(@Gtk3WS_ListViewItemPreSelected),
       Self, nil);
-    g_signal_connect_data(PGtkTreeView(FCentralWidget)^.get_selection, 'changed', TGCallback(@Gtk3WS_ListViewItemSelected), Self, nil, 0);
+    g_signal_connect_data(PGtkTreeView(FCentralWidget)^.get_selection, 'changed', TGCallback(@Gtk3WS_ListViewItemSelected), Self, nil, G_CONNECT_DEFAULT);
   end else
   begin
     g_signal_connect_data (PGtkIconView(FCentralWidget), 'selection-changed',
-                        TGCallback(@Tgtk3ListView.selection_changed), Self, nil, 0);
+                        TGCallback(@Tgtk3ListView.selection_changed), Self, nil, G_CONNECT_DEFAULT);
   end;
   // if FIsTreeView then
   //  PGtkTreeView(FCentralWidget)^.set_search_column(0);
@@ -6195,7 +6196,7 @@ begin
   //store the TColumn in the column data for callbacks
   g_object_set_data(AGtkColumn, PgChar('TListColumn'), gpointer(AColumn));
 
-  g_signal_connect_data(AGtkColumn,'clicked', TGCallback(@Gtk3WS_ListViewColumnClicked), Self, nil, 0);
+  g_signal_connect_data(AGtkColumn,'clicked', TGCallback(@Gtk3WS_ListViewColumnClicked), Self, nil, G_CONNECT_DEFAULT);
   PGtkTreeView(GetContainerWidget)^.insert_column(AGtkColumn, AIndex);
   AGtkColumn^.set_clickable(True);
 
@@ -6240,8 +6241,8 @@ procedure TGtk3ListView.SetColumnAutoSize(AIndex: Integer;
   AColumn: TListColumn; AAutoSize: Boolean);
 const
   SizingMap: array[Boolean] of TGtkTreeViewColumnSizing = (
-    2 {GTK_TREE_VIEW_COLUMN_FIXED},
-    1 {GTK_TREE_VIEW_COLUMN_AUTOSIZE}
+    GTK_TREE_VIEW_COLUMN_FIXED {2},
+    GTK_TREE_VIEW_COLUMN_AUTOSIZE {1}
   );
 var
   AGtkColumn: PGtkTreeViewColumn;
@@ -6331,7 +6332,7 @@ end;
 procedure TGtk3ListView.ColumnSetSortIndicator(const AIndex: Integer;
   const AColumn: TListColumn; const ASortIndicator: TSortIndicator);
 const
-  GtkOrder : array [ TSortIndicator] of TGtkSortType = (0, {GTK_SORT_ASCENDING}0, {GTK_SORT_DESCENDING}1);
+  GtkOrder : array [ TSortIndicator] of TGtkSortType = (GTK_SORT_ASCENDING {0}, GTK_SORT_ASCENDING {0}, GTK_SORT_DESCENDING {1});
 var
   AGtkColumn: PGtkTreeViewColumn;
 begin
@@ -6895,32 +6896,32 @@ begin
   inherited InitializeWidget;
   // appears-as-list make it appear as list ... no way, its read only property.
   //OnChange
-  g_signal_connect_data(GetContainerWidget, 'changed', TGCallback(@Gtk3ComboBoxChanged), Self, nil, 0);
+  g_signal_connect_data(GetContainerWidget, 'changed', TGCallback(@Gtk3ComboBoxChanged), Self, nil, G_CONNECT_DEFAULT);
   //OnCloseUp
-  g_signal_connect_data(GetContainerWidget, 'notify', TGCallback(@GtkNotifyCombo), Self, nil, 0);
+  g_signal_connect_data(GetContainerWidget, 'notify', TGCallback(@GtkNotifyCombo), Self, nil, G_CONNECT_DEFAULT);
 
   //TODO: if we have an entry then use CreateFrom() to create TGtk3Entry
   if Gtk3IsEntry(PGtkComboBox(FWidget)^.get_child) then
   begin
     g_object_set_data(PGtkComboBox(FWidget)^.get_child, 'lclwidget', Self);
-    g_signal_connect_data(PGtkComboBox(FWidget)^.get_child, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, 0);
+    g_signal_connect_data(PGtkComboBox(FWidget)^.get_child, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
   end;
   if GetCellView <> nil then
   begin
     gtk_widget_set_events(FCellView, GDK_DEFAULT_EVENTS_MASK);
     g_object_set_data(FCellView, 'lclwidget', Self);
-    g_signal_connect_data(FCellView, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, 0);
+    g_signal_connect_data(FCellView, 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
   end;
   // set to all combo widgets lclwidget data, so we will easy find TGtk3ComboBox in events.
   if PGtkComboBox(GetContainerWidget)^.priv3^.button <> nil then
   begin
     g_object_set_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.button), 'lclwidget', Self);
-    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.button), 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, 0);
+    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.button), 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
   end;
   if PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget <> nil then
   begin
     g_object_set_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget), 'lclwidget', Self);
-    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget), 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, 0);
+    g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget), 'event', TGCallback(@Gtk3WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
     PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget^.set_has_window(True);
     PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget^.set_can_focus(True);
     // g_signal_connect_data(PGObject(PGtkComboBox(GetContainerWidget)^.priv3^.popup_widget), 'map', TGCallback(@Gtk3ComboMenuRealized), Self, nil, 0);
@@ -7049,7 +7050,7 @@ begin
   btn^.set_use_underline(true);
 
   g_signal_connect_data(btn,'clicked',
-        TGCallback(@TGtk3Button.ButtonClicked), LCLObject, nil, 0);
+        TGCallback(@TGtk3Button.ButtonClicked), LCLObject, nil, G_CONNECT_DEFAULT);
 
   LCLObject.ControlStyle:=LCLObject.ControlStyle+[csClickEvents];
 
@@ -7089,7 +7090,7 @@ end;
 procedure TGtk3ToggleButton.InitializeWidget;
 begin
   inherited InitializeWidget;
-  g_signal_connect_data(FWidget, 'toggled', TGCallback(@Gtk3Toggled), Self, nil, 0);
+  g_signal_connect_data(FWidget, 'toggled', TGCallback(@Gtk3Toggled), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 function TGtk3ToggleButton.CreateWidget(const Params: TCreateParams): PGtkWidget;
@@ -7259,7 +7260,7 @@ procedure TGtk3CustomControl.InitializeWidget;
 begin
   inherited InitializeWidget;
   SetScrollBarsSignalHandlers;
-  g_signal_connect_data(GetScrolledWindow,'scroll-event', TGCallback(@Gtk3ScrolledWindowScrollEvent), Self, nil, 0);
+  g_signal_connect_data(GetScrolledWindow,'scroll-event', TGCallback(@Gtk3ScrolledWindowScrollEvent), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 function TGtk3CustomControl.getClientRect: TRect;
@@ -7411,7 +7412,7 @@ var
   Msg: TLMSize;
   AState: TGdkWindowState;
   //AScreen: PGdkScreen;
-  msk:integer;
+  msk: TGdkWindowState;
 begin
   Result := False;
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
@@ -7435,39 +7436,39 @@ begin
   msk:=AEvent^.window_state.changed_mask;
   AState:=AEvent^.window_state.new_window_state;
 
-  if msk and GDK_WINDOW_STATE_ICONIFIED<>0 then
+  if GDK_WINDOW_STATE_ICONIFIED in msk then
   begin
-    if AState and GDK_WINDOW_STATE_ICONIFIED<>0 then
+    if GDK_WINDOW_STATE_ICONIFIED in AState then
       Msg.SizeType := SIZE_MINIMIZED
   end else
-  if msk and GDK_WINDOW_STATE_MAXIMIZED<>0 then
+  if GDK_WINDOW_STATE_MAXIMIZED in msk then
   begin
-    if AState and GDK_WINDOW_STATE_MAXIMIZED<>0 then
+    if GDK_WINDOW_STATE_MAXIMIZED in AState then
       Msg.SizeType := SIZE_MAXIMIZED
   end else
-  if msk and GDK_WINDOW_STATE_FULLSCREEN<>0 then
+  if GDK_WINDOW_STATE_FULLSCREEN in msk then
   begin
-    if AState and GDK_WINDOW_STATE_FULLSCREEN<>0 then
+    if GDK_WINDOW_STATE_FULLSCREEN in AState then
       Msg.SizeType := SIZE_FULLSCREEN
   end else
-  if msk and GDK_WINDOW_STATE_FOCUSED<>0 then
+  if GDK_WINDOW_STATE_FOCUSED in msk then
   begin
-    if AState and GDK_WINDOW_STATE_FOCUSED<>0 then
+    if GDK_WINDOW_STATE_FOCUSED in AState then
       DebugLn('Focused')
     else
       DebugLn('Defocused');
     exit;
   end else
-  if msk and GDK_WINDOW_STATE_WITHDRAWN<>0 then
+  if GDK_WINDOW_STATE_WITHDRAWN in msk then
   begin
-    if AState and GDK_WINDOW_STATE_WITHDRAWN<>0 then
+    if GDK_WINDOW_STATE_WITHDRAWN in AState then
       DebugLn('Shown')
     else
       DebugLn('Hidden');
     exit;
   end else
   begin
-    DebugLn(format('other changes state=%.08x mask=%.08x',[AState,msk]));
+    //DebugLn(format('other changes state=%.08x mask=%.08x',[AState,msk]));
     exit;
   end;
 
@@ -7480,52 +7481,52 @@ begin
   // DeliverMessage(Msg);
 end;
 
-class function TGtk3Window.decoration_flags(Aform:TCustomForm):longint;
+class function TGtk3Window.decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
 var
   icns:TBorderIcons;
   bs:TFormBorderStyle;
 begin
-  result:=0;
+  Result := [];
   icns:=AForm.BorderIcons;
   bs:=AForm.BorderStyle;
 
   case bs of
-  bsSingle: result:=result or GDK_DECOR_TITLE{GDK_DECOR_BORDER};
+  bsSingle: Include(Result, GDK_DECOR_TITLE{GDK_DECOR_BORDER});
   bsDialog:
-      result:=result or GDK_DECOR_BORDER or GDK_DECOR_TITLE;
+      Result += [GDK_DECOR_BORDER, GDK_DECOR_TITLE];
   bsSizeable:
     begin
       if biMaximize in icns then
-        result:=result or GDK_DECOR_MAXIMIZE;
+        Include(Result, GDK_DECOR_MAXIMIZE);
       if biMinimize in icns then
-        result:=result or GDK_DECOR_MINIMIZE;
-      Result:=result or GDK_DECOR_BORDER or GDK_DECOR_RESIZEH or GDK_DECOR_TITLE;
+        Include(Result, GDK_DECOR_MINIMIZE);
+      Result += [GDK_DECOR_BORDER, GDK_DECOR_RESIZEH, GDK_DECOR_TITLE];
     end;
   bsSizeToolWin:
-    Result:=result or GDK_DECOR_BORDER or GDK_DECOR_RESIZEH or GDK_DECOR_TITLE;
+    Result += [GDK_DECOR_BORDER, GDK_DECOR_RESIZEH, GDK_DECOR_TITLE];
   bsToolWindow:
-    Result:=result or GDK_DECOR_BORDER;
-  bsNone: result:=0;
+    Include(Result, GDK_DECOR_BORDER);
+  bsNone: Result := [];
   end;
 
-  if result and GDK_DECOR_TITLE <> 0 then
+  if GDK_DECOR_TITLE in Result then
   if biSystemMenu in icns then
-     result:=result or GDK_DECOR_MENU;
+     Include(Result, GDK_DECOR_MENU);
 end;
 
 function TGtk3Window.ShowState(nstate:integer):boolean; // winapi ShowWindow
 var
-  AState:integer;
+  AState: TGdkWindowState;
 begin
   case nstate of
   SW_SHOWNORMAL:
     begin
       AState:=fWidget^.window^.get_state;
-      if AState and GDK_WINDOW_STATE_ICONIFIED<>0 then
+      if GDK_WINDOW_STATE_ICONIFIED in AState then
         PgtkWindow(fWidget)^.deiconify
-      else if AState and GDK_WINDOW_STATE_MAXIMIZED<>0 then
+      else if GDK_WINDOW_STATE_MAXIMIZED in AState then
         PgtkWindow(fWidget)^.unmaximize
-      else if AState and GDK_WINDOW_STATE_FULLSCREEN<>0 then
+      else if GDK_WINDOW_STATE_FULLSCREEN in AState then
         PgtkWindow(fWidget)^.unfullscreen
       else
         PgtkWindow(fWidget)^.show;
@@ -7550,7 +7551,7 @@ end;
 function TGtk3Window.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   AForm: TCustomForm;
-  decor:longint;
+  decor: TGdkWMDecoration;
 begin
   FIcon := nil;
   FScrollX := 0;
@@ -7567,7 +7568,7 @@ begin
     gtk_widget_realize(Result);
     decor:=decoration_flags(AForm);
     gdk_window_set_decorations(Result^.window, decor);
-    gtk_window_set_decorated(PGtkWindow(Result),(decor<>0));
+    gtk_window_set_decorated(PGtkWindow(Result),(decor <> []));
     if AForm.AlphaBlend then
       gtk_widget_set_opacity(Result, TForm(LCLObject).AlphaBlendValue/255);
 
@@ -7614,7 +7615,7 @@ begin
   FScrollWin^.get_hscrollbar^.set_can_focus(False);
   FScrollWin^.set_policy(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
   PGtkContainer(Result)^.add(FBox);
-  g_signal_connect_data(Result,'window-state-event', TGCallback(@Gtk3WindowState), Self, nil, 0);
+  g_signal_connect_data(Result,'window-state-event', TGCallback(@Gtk3WindowState), Self, nil, G_CONNECT_DEFAULT);
 
 
   if not (csDesigning in AForm.ComponentState) then
@@ -7727,16 +7728,16 @@ begin
 
       if AFixedWidthHeight then
         PGtkWindow(Widget)^.set_geometry_hints(nil, @Geometry,
-          GDK_HINT_POS or GDK_HINT_MIN_SIZE or GDK_HINT_MAX_SIZE)
+          [GDK_HINT_POS, GDK_HINT_MIN_SIZE, GDK_HINT_MAX_SIZE])
       else
       begin
         if AForm.BorderStyle <> bsNone then
         begin
-          AHints := GDK_HINT_POS or GDK_HINT_BASE_SIZE;
+          AHints := [GDK_HINT_POS, GDK_HINT_BASE_SIZE];
           if (AForm.Constraints.MinHeight > 0) or (AForm.Constraints.MinWidth > 0) then
-            AHints := AHints or GDK_HINT_MIN_SIZE;
+            Include(AHints, GDK_HINT_MIN_SIZE);
           if (AForm.Constraints.MaxHeight > 0) or (AForm.Constraints.MaxWidth > 0) then
-            AHints := AHints or GDK_HINT_MAX_SIZE;
+            Include(AHints, GDK_HINT_MAX_SIZE);
 
           PGtkWindow(Widget)^.set_geometry_hints(nil, @Geometry, AHints);
         end;
@@ -7863,7 +7864,7 @@ end;
 
 function TGtk3Window.GetWindowState: TGdkWindowState;
 begin
-  Result := 0;
+  Result := [];
   if IsWidgetOK and (FWidget^.get_realized) then
     Result := FWidget^.window^.get_state;
 end;
@@ -7901,15 +7902,15 @@ procedure TGtk3Dialog.SetCallbacks;
 begin
   // common callbacks for all kind of dialogs
   g_signal_connect_data(fWidget,
-    'destroy', TGCallback(@TGtk3Dialog.DestroyCB), Self, nil, 0);
+    'destroy', TGCallback(@TGtk3Dialog.DestroyCB), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(fWidget,
-    'delete-event', TGCallback(@TGtk3Dialog.CloseQueryCB), Self, nil, 0);
+    'delete-event', TGCallback(@TGtk3Dialog.CloseQueryCB), Self, nil, G_CONNECT_DEFAULT);
 
   g_signal_connect_data(fWidget,
-    'response', TGCallback(@Tgtk3DIalog.ResponseCB), Self, nil, 0);
+    'response', TGCallback(@Tgtk3DIalog.ResponseCB), Self, nil, G_CONNECT_DEFAULT);
 
   g_signal_connect_data(fWidget,
-    'close', TGCallback(@Tgtk3DIalog.CloseCB), Self, nil, 0);
+    'close', TGCallback(@Tgtk3DIalog.CloseCB), Self, nil, G_CONNECT_DEFAULT);
 
 
 (*  g_signal_connect_data(fWidget,
@@ -7918,7 +7919,7 @@ begin
     'key-release-event', TGCallback(@GTKDialogKeyUpDownCB), Self, nil, 0);*)
 
   g_signal_connect_data(fWidget,
-    'realize', TGCallback(@Tgtk3Dialog.RealizeCB), Self, nil, 0);
+    'realize', TGCallback(@Tgtk3Dialog.RealizeCB), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 class function Tgtk3Dialog.RealizeCB(dlg: TGtk3Dialog): GBoolean; cdecl;
@@ -7954,12 +7955,12 @@ end;
 class function TGtk3Dialog.ResponseCB(response_id:gint; dlg: TGtk3Dialog): GBoolean; cdecl;
 begin
   if Assigned(dlg) then
-    Result:=dlg.response_handler(response_id)
+    Result:=dlg.response_handler(TGtkResponseType(response_id))
   else
     Result:= false;
 end;
 
-function TGtk3Dialog.response_handler(response_id:gint):boolean;
+function TGtk3Dialog.response_handler(response_id:TGtkResponseType):boolean;
 begin
  (* case response_id of
   GTK_RESPONSE_NONE:;
@@ -8132,7 +8133,7 @@ begin
   inherited InitializeWidget;
 end;
 
-function TGtk3FontSelectionDialog.response_handler(resp_id: gint): boolean;
+function TGtk3FontSelectionDialog.response_handler(resp_id: TGtkResponseType): boolean;
 var
   fnt:TFont;
   pch:PgtkFontChooser;
@@ -8243,7 +8244,7 @@ begin
   inherited;
 end;
 
-function TGtk3newColorSelectionDialog.response_handler(resp_id: gint): boolean;
+function TGtk3newColorSelectionDialog.response_handler(resp_id: TGtkResponseType): boolean;
 var
   clr:TColor;
   rgba:TGdkRGBA;

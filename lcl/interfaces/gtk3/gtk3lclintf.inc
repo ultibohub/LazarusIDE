@@ -32,8 +32,8 @@ begin
 
   gtk_widget_realize(Widget);
 
-  gdk_window_set_decorations(Widget^.window, 0);
-  gdk_window_set_functions(Widget^.window, GDK_FUNC_RESIZE or GDK_FUNC_CLOSE);
+  gdk_window_set_decorations(Widget^.window, []);
+  gdk_window_set_functions(Widget^.window, [GDK_FUNC_RESIZE, GDK_FUNC_CLOSE]);
   gtk_widget_set_opacity(Widget, 0.25);
 
   gtk_widget_show(Widget);
@@ -307,7 +307,7 @@ function TGtk3WidgetSet.RawImage_DescriptionFromBitmap(ABitmap: HBITMAP; out ADe
 // var
 //  GDIObject: PGDIObject absolute ABitmap;
 const
-  CairoImageFormatToDepth: array[cairo_format_t] of integer =
+  CairoImageFormatToDepth: array[CAIRO_FORMAT_INVALID..CAIRO_FORMAT_RGB30] of integer =
   (
     {CAIRO_FORMAT_INVALID}   -1,
     {CAIRO_FORMAT_ARGB32}    32,
@@ -598,12 +598,12 @@ begin
   end else
   begin
     case Visual^.get_visual_type of
-      0 {GDK_VISUAL_STATIC_GRAY}:  ADesc.Format:=ricfGray;
-      1 {GDK_VISUAL_GRAYSCALE}:    ADesc.Format:=ricfGray;
-      2 {GDK_VISUAL_STATIC_COLOR}: ADesc.Format:=ricfGray; // this is not really gray, but an index in a color map, but colormaps are not supported yet, so use gray
-      3 {GDK_VISUAL_PSEUDO_COLOR}: ADesc.Format:=ricfGray;
-      4 {GDK_VISUAL_TRUE_COLOR}:   ADesc.Format:=ricfRGBA;
-      5 {GDK_VISUAL_DIRECT_COLOR}: ADesc.Format:=ricfRGBA;
+      GDK_VISUAL_STATIC_GRAY {0} :  ADesc.Format:=ricfGray;
+      GDK_VISUAL_GRAYSCALE {1} :    ADesc.Format:=ricfGray;
+      GDK_VISUAL_STATIC_COLOR {2} : ADesc.Format:=ricfGray; // this is not really gray, but an index in a color map, but colormaps are not supported yet, so use gray
+      GDK_VISUAL_PSEUDO_COLOR {3} : ADesc.Format:=ricfGray;
+      GDK_VISUAL_TRUE_COLOR {4} :   ADesc.Format:=ricfRGBA;
+      GDK_VISUAL_DIRECT_COLOR {5} : ADesc.Format:=ricfRGBA;
     else
       DebugLn('TGtk3WidgetSet.GetWindowRawImageDescription unknown Visual type ',
               dbgs(Integer(Visual^.get_visual_type)));

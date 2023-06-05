@@ -910,6 +910,10 @@ msgstr "Kolor (NotXor)"
 msgid "Caret (Text Cursor)"
 msgstr "Kursor (tekstowy)"
 
+#: lazarusidestrconsts.dlgcaretscrollgroupoptions
+msgid "Caret (Text Cursor) past end of line"
+msgstr ""
+
 #: lazarusidestrconsts.dlgcasesensitive
 msgctxt "lazarusidestrconsts.dlgcasesensitive"
 msgid "&Case sensitive"
@@ -3764,6 +3768,18 @@ msgstr "Tylko pliki należące do tego projektu."
 msgid "Save in"
 msgstr "Zapisz w"
 
+#: lazarusidestrconsts.dlgscrollbarpasteolfixed
+msgid "Force 1024 columns minimum for horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolnone
+msgid "Do not add any permanent space to horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolpage
+msgid "Always add one page to horizontal scroll range"
+msgstr ""
+
 #: lazarusidestrconsts.dlgscrollbyoneless
 msgid "Scroll by one less"
 msgstr "Przewiń o jeden mniej"
@@ -3782,7 +3798,9 @@ msgid "Scroll past end of file"
 msgstr "Przewijaj poza końcem pliku"
 
 #: lazarusidestrconsts.dlgscrollpastendline
-msgid "Allow caret to move past end of line"
+#, fuzzy
+#| msgid "Allow caret to move past end of line"
+msgid "Allow Caret to move past the end of line"
 msgstr "Dopuszczaj kursor poza końcem wiersza"
 
 #: lazarusidestrconsts.dlgseachdirectorynotfound
@@ -20603,6 +20621,10 @@ msgstr "&Rewizja:"
 #, fuzzy
 msgid "Select an inherited entry"
 msgstr "Inherited"
+
+#: lazarusidestrconsts.rsshowpath
+msgid "Show path"
+msgstr ""
 
 #: lazarusidestrconsts.rsversionnumbering
 msgid "Version numbering"

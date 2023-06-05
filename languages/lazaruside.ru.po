@@ -5,12 +5,12 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2023-05-15 17:27+0300\n"
+"PO-Revision-Date: 2023-06-02 01:47+0300\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
 "Language: ru\n"
-"X-Generator: Poedit 2.2.4\n"
+"X-Generator: Poedit 2.4.3\n"
 
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
@@ -881,6 +881,10 @@ msgstr "Главный или первичный курсор"
 #: lazarusidestrconsts.dlgcaretgroupoptions
 msgid "Caret (Text Cursor)"
 msgstr "Курсор (в тексте)"
+
+#: lazarusidestrconsts.dlgcaretscrollgroupoptions
+msgid "Caret (Text Cursor) past end of line"
+msgstr "Перемещение курсора (в тексте) за конец строки"
 
 #: lazarusidestrconsts.dlgcasesensitive
 msgctxt "lazarusidestrconsts.dlgcasesensitive"
@@ -3646,6 +3650,18 @@ msgstr "Только файлы, принадлежащие проекту"
 msgid "Save in"
 msgstr "Сохранить в"
 
+#: lazarusidestrconsts.dlgscrollbarpasteolfixed
+msgid "Force 1024 columns minimum for horizontal scroll range"
+msgstr "Задать минимум пространства по горизонтали в 1024 столбца"
+
+#: lazarusidestrconsts.dlgscrollbarpasteolnone
+msgid "Do not add any permanent space to horizontal scroll range"
+msgstr "Не добавлять пространства по горизонтали"
+
+#: lazarusidestrconsts.dlgscrollbarpasteolpage
+msgid "Always add one page to horizontal scroll range"
+msgstr "Всегда добавлять одну страницу к пространству по горизонтали"
+
 #: lazarusidestrconsts.dlgscrollbyoneless
 msgid "Scroll by one less"
 msgstr "Прокручивать на строку меньше"
@@ -3664,8 +3680,8 @@ msgid "Scroll past end of file"
 msgstr "Прокручивать за конец файла"
 
 #: lazarusidestrconsts.dlgscrollpastendline
-msgid "Allow caret to move past end of line"
-msgstr "Разрешать перемещение курсора за конец строки"
+msgid "Allow Caret to move past the end of line"
+msgstr "Разрешать выход курсора за конец строки"
 
 #: lazarusidestrconsts.dlgseachdirectorynotfound
 #, object-pascal-format
@@ -20348,6 +20364,10 @@ msgstr "&Ревизия:"
 #: lazarusidestrconsts.rsselectaninheritedentry
 msgid "Select an inherited entry"
 msgstr "Выбрать унаследованный элемент"
+
+#: lazarusidestrconsts.rsshowpath
+msgid "Show path"
+msgstr "Показывать путь"
 
 #: lazarusidestrconsts.rsversionnumbering
 msgid "Version numbering"

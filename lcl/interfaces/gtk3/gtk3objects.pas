@@ -463,7 +463,7 @@ end;
 { TGtk3Cursor }
 
 constructor TGtk3Cursor.Create(ACur:integer);
-var gdk_cur:integer;
+var gdk_cur: TGdkCursorType;
 begin
   case ACur of
   crArrow: gdk_cur:=GDK_ARROW;
@@ -680,21 +680,21 @@ begin
   if not Assigned(fHandle) then exit;
   fillchar(fLogFont,sizeof(fLogFont),0);
   members:=fHandle^.get_set_fields;
-  if (PANGO_FONT_MASK_FAMILY and members<>0) then
+  if PANGO_FONT_MASK_FAMILY in members then
   begin
     fLogFont.lfFaceName:=PChar(fHandle^.get_family);
   end;
-  if (PANGO_FONT_MASK_STYLE and members<>0) then
+  if PANGO_FONT_MASK_STYLE in members then
   begin
     AStyle := fHandle^.get_style;
     if AStyle = PANGO_STYLE_ITALIC then
       fLogFont.lfItalic:=1;
   end;
-  if (PANGO_FONT_MASK_WEIGHT and members<>0) then
+  if PANGO_FONT_MASK_WEIGHT in members then
   begin
-    fLogFont.lfWeight:=fHandle^.get_weight();
+    fLogFont.lfWeight := Integer(fHandle^.get_weight());
   end;
-  if (PANGO_FONT_MASK_GRAVITY and members<>0) then
+  if PANGO_FONT_MASK_GRAVITY in members then
   begin
     AGravity := fHandle^.get_gravity;
     if AGravity = PANGO_GRAVITY_SOUTH then
@@ -709,7 +709,7 @@ begin
     if AGravity = PANGO_GRAVITY_WEST then
       fLogFont.lfOrientation := 2700;
   end;
-  if (PANGO_FONT_MASK_SIZE and members<>0) then
+  if PANGO_FONT_MASK_SIZE in members then
   begin
     sz:=fHandle^.get_size;
     if fHandle^.get_size_is_absolute then
@@ -785,7 +785,7 @@ begin
     FHandle^.set_absolute_size(Abs(ALogFont.lfHeight) * PANGO_SCALE);
   if ALogFont.lfItalic > 0 then
     FHandle^.set_style(PANGO_STYLE_ITALIC);
-  FHandle^.set_weight(ALogFont.lfWeight);
+  FHandle^.set_weight(TPangoWeight(ALogFont.lfWeight));
   FLayout := pango_layout_new(AContext);
   FLayout^.set_font_description(FHandle);
 
@@ -2138,7 +2138,7 @@ begin
   Context:=w^.get_style_context;
   path:=w^.get_path;
   gtk_style_context_set_path (context, path);
-  gtk_style_context_set_state (context,(* gtk_widget_path_iter_get_state (path, -1)*) -1);
+  gtk_style_context_set_state (context,(* gtk_widget_path_iter_get_state (path, -1)*) TGtkStateFlags(-1));
 
   {GTK_STATE_FLAG_NORMAL: TGtkStateFlags = 0;
   GTK_STATE_FLAG_ACTIVE: TGtkStateFlags = 1;
@@ -2151,7 +2151,7 @@ begin
   GTK_STATE_FLAG_DIR_LTR: TGtkStateFlags = 128;
   GTK_STATE_FLAG_DIR_RTL: TGtkStateFlags = 256;
   }
-  gtk_style_context_set_state (context, GTK_STATE_FLAG_FOCUSED or GTK_STATE_FLAG_PRELIGHT);
+  gtk_style_context_set_state (context, TGtkStateFlags(Integer(GTK_STATE_FLAG_FOCUSED) or Integer(GTK_STATE_FLAG_PRELIGHT)));
 
   pw:=w;
   while Assigned(pw) do

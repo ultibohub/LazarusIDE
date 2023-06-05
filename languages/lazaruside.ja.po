@@ -895,6 +895,10 @@ msgstr ""
 msgid "Caret (Text Cursor)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgcaretscrollgroupoptions
+msgid "Caret (Text Cursor) past end of line"
+msgstr ""
+
 #: lazarusidestrconsts.dlgcasesensitive
 msgctxt "lazarusidestrconsts.dlgcasesensitive"
 msgid "&Case sensitive"
@@ -3751,6 +3755,18 @@ msgstr "このプロジェクトのに属するファイルのみ"
 msgid "Save in"
 msgstr ""
 
+#: lazarusidestrconsts.dlgscrollbarpasteolfixed
+msgid "Force 1024 columns minimum for horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolnone
+msgid "Do not add any permanent space to horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolpage
+msgid "Always add one page to horizontal scroll range"
+msgstr ""
+
 #: lazarusidestrconsts.dlgscrollbyoneless
 msgid "Scroll by one less"
 msgstr "一つ少なくスクロール"
@@ -3771,7 +3787,7 @@ msgstr "ファイル末までスクロール"
 #: lazarusidestrconsts.dlgscrollpastendline
 #, fuzzy
 #| msgid "Caret past end of line"
-msgid "Allow caret to move past end of line"
+msgid "Allow Caret to move past the end of line"
 msgstr "行末までスクロール"
 
 #: lazarusidestrconsts.dlgseachdirectorynotfound
@@ -20634,6 +20650,10 @@ msgstr "改訂(&R)"
 #: lazarusidestrconsts.rsselectaninheritedentry
 msgid "Select an inherited entry"
 msgstr "継承されたエントリを選択"
+
+#: lazarusidestrconsts.rsshowpath
+msgid "Show path"
+msgstr ""
 
 #: lazarusidestrconsts.rsversionnumbering
 msgid "Version numbering"

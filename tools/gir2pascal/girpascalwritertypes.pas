@@ -1028,6 +1028,8 @@ var
   ProperUnit: TPascalUnit;
   IntType: String;
   Value: String;
+  UIntValue: QWord;
+  MSB: Integer;
 begin
   ProperUnit := FGroup.GetUnitForType(utTypes);
   if ProperUnit <> Self then begin
@@ -1037,8 +1039,14 @@ begin
   ResolveTypeTranslation(AItem);
 
   ConstSection := WantConstSection;
-  if goEnumAsSet in FOptions then begin
-    raise Exception.Create('Not yet supported!');
+  if (goEnumAsSet in FOptions) and (AItem is TgirBitField) then begin
+    // forces forward declarations to be written
+    ProcessType(AItem);
+    TypeName := AItem.TranslatedName + 'Idx';
+    Section := WantEnumTypesSection;
+    Section.Lines.Add(IndentText(TypeName + ' = (', 2, 0));
+    Section.Lines.Add(IndentText(TypeName + 'MinValue = 0,', 4, 0));
+    AItem.Members.Sort(@CompareEnumValues)
   end else if goEnumAsEnum in FOptions then begin
     // forces forward declarations to be written
     ProcessType(AItem);
@@ -1091,7 +1099,15 @@ begin
       if CName = 'ATK_HYPERLINK_IS_INLINE' then
         CName :='ATK_HYPERLINK_IS_INLINE_';
       Value := AItem.Members.Member[i]^.Value;
-      if goEnumAsSet in FOptions then begin
+      if (goEnumAsSet in FOptions) and (AItem is TgirBitField) then begin
+        UIntValue := UInt64(StrToInt(Value));
+        if UIntValue = 0 then
+          Continue;
+        MSB := BsrQWord(UIntValue);
+        if UIntValue > 1 shl MSB then
+          Continue;
+        Value := IntToStr(MSB);
+        Entry := IndentText(CName + ' = ' + Value + ',', 4, 0);;
       end else if goEnumAsEnum in FOptions then begin
         Entry := IndentText(CName + ' = ' + Value + ',', 4, 0);
       end else if goEnumAsIntAliasConst in FOptions then begin
@@ -1103,67 +1119,85 @@ begin
       end;
       Section.Lines.Add(Entry);
     end;
+  if (goEnumAsSet in FOptions) and (AItem is TgirBitField) then begin
+    Value := '31';
+  end else begin
+    Value := '$7FFFFFFF';
+  end;
   if goEnumAsEnum in FOptions then begin
-    Section.Lines.Add(IndentText(TypeName + 'MaxValue = $7FFFFFFF', 4, 0));
+    Section.Lines.Add(IndentText(TypeName + 'MaxValue = ' + Value, 4, 0));
     Section.Lines.Add(IndentText(');', 2, 0));
   end;
   AItem.Writing:=msWritten;
 end;
 
 procedure TPascalUnit.HandleBitfield(AItem: TgirBitField);
-{
-const
-  TemplateLongWord =
-     '%s = packed object(TBitObject32)'+LineEnding+
-     '%s'+LineEnding+
-     'end';
-var
-  Intf: TPDeclarationType;
-  CodeText: TPCodeText;
-  Code: TStringList;
-  PName: String;
-  Entry: String;
-  i: Integer;
-  VarType: String;
- }
-begin
-  HandleEnum(AItem);
-(*
-  Intf := WantTypeSection;
-  CodeText := TPCodeText.Create;
-  ImplementationSection.Declarations.Add(CodeText);
-  Code := TStringList.Create;
-
-  PName:=MakePascalTypeFromCType(AItem.CType);
-
-  {case AItem.Bits of
-     //1..8:   VarType:='Byte';
-     //9..16:  VarType:='Word';
-     //0:;
-     //17..32: VarType:='LongWord';
-     //33..64: VarType:='QWord';
-  else
-    WriteLn('Bitfield <> 16bits');
-    Halt;
-  end;
-  }
-  HandleEnum(AItem);
-
-  VarType:='DWord';
-
-  Intf.Lines.Add(IndentText(PName+ ' = packed object(TBitObject32)',2,0));
-  Intf.Lines.Add(IndentText('public',2,0));
-  for i := 0 to AItem.Members.Count-1 do
-    begin
-       Entry := 'property '+ SanitizeName(AItem.Members.Member[i]^.Name) +': '+VarType+' index '+AItem.Members.Member[i]^.Value+' read GetBit write SetBit;';
-       Intf.Lines.Add(IndentText(Entry, 4,0));
+  function WriteSet(Name, TypeName: String; Value: Integer): String;
+  var
+   Comma: String[2];
+   n: Integer;
+   i: Integer;
+   StrValue: String;
+  begin
+    WriteLn(Name, ' = ', Value);
+    if Value = 0 then begin
+      Exit(IndentText(Name + ' = []; {0 = $00000000}', 2));
     end;
-  Intf.Lines.Add(IndentText('end;',2,0));
-  Intf.Lines.Add('');
-
-  CodeText.Content:=Code.Text;
-  Code.Free;
- *)
+    Result := IndentText(Name + ' = [', 2, 0);
+    Comma := LineEnding;
+    for n := BsfDWord(Value) to BsrDword(Value) do begin
+      if Value and (1 << n) <> 0 then begin
+        StrValue := IntToStr(1 << n);
+        Name := TypeName + 'Idx(' + IntToStr(n) + ')';
+        for i := 0 to AItem.Members.Count - 1 do begin
+          if StrValue = AItem.Members.Member[i]^.Value then begin
+            Name := AItem.Members.Member[i]^.CIdentifier;
+            Break;
+          end;
+        end;
+        Result += Comma + IndentText(Name, 4, 0);
+        Comma := ',' + LineEnding;
+      end;
+    end;
+    Result += LineEnding;
+    Result += IndentText(']; {' + IntToStr(Value) + ' = $' + IntToHex(Value) + '}', 2);
+  end;
+var
+  Section: TPDeclarationWithLines;
+  TypeName: String;
+  Name: String;
+  Value: String;
+  UIntValue: Integer;
+  MSB: Integer;
+  i: Integer;
+  AddedConst: Boolean;
+begin
+  if goEnumAsSet in FOptions then begin
+    Include(FOptions, goEnumAsEnum);
+  end;
+  HandleEnum(AItem);
+  if goEnumAsSet in FOptions then begin
+    Section := WantEnumTypesSection;
+    TypeName := AItem.TranslatedName;
+    Section.Lines.Add(IndentText(TypeName + ' = Set of ' + TypeName + 'Idx;', 2, 0));
+    AddedConst := False;
+    for i := 0 to AItem.Members.Count-1 do begin
+      Name := AItem.Members.Member[i]^.CIdentifier;
+      Value := AItem.Members.Member[i]^.Value;
+      UIntValue := UInt64(StrToInt(Value));
+      MSB := BsrQWord(UIntValue);
+      if UIntValue > 1 shl MSB then begin
+        if not AddedConst then begin
+          Section.Lines.Add('const');
+          AddedConst := True;
+        end;
+        Section.Lines.Add(WriteSet(Name, TypeName, UIntValue));
+      end;
+    end;
+    if AddedConst then begin
+      Section.Lines.Add('type');
+    end;
+  end;
 end;
 
 procedure TPascalUnit.HandleRecord(AItem: TgirRecord);

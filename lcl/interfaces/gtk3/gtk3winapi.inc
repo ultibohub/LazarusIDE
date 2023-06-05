@@ -1231,13 +1231,13 @@ var
     ALogFontA.lfItalic := Byte(FontStyle = PANGO_STYLE_ITALIC);
 
     // keep newer pango compat to LCL
-    if FontWeight = 380 {PANGO_WEIGHT_BOOK as of pango 1.24} then
+    if FontWeight = PANGO_WEIGHT_BOOK {380 as of pango 1.24} then
       FontWeight := PANGO_WEIGHT_NORMAL
     else
-    if FontWeight = 1000 {PANGO_WEIGHT_ULTRAHEAVY as of pango 1.24} then
+    if FontWeight = PANGO_WEIGHT_ULTRAHEAVY {1000 as of pango 1.24} then
       FontWeight := PANGO_WEIGHT_HEAVY;
 
-    ALogFontA.lfWeight := FontWeight;
+    ALogFontA.lfWeight := Integer(FontWeight);
 
     ALogFontA.lfHeight := pango_font_description_get_size(Font);
     if not pango_font_description_get_size_is_absolute(Font) then
@@ -2114,7 +2114,7 @@ const
   StateDown    = SmallInt($FF80);
 var
   AKeyMap: PGdkKeymap;
-  AModifiers: guint;
+  AModifiers: TGdkModifierType;
 begin
   Result := 0;
 
@@ -2167,31 +2167,31 @@ begin
   AModifiers := gdk_keymap_get_modifier_state(AKeyMap);
   case nVirtKey of
     VK_LBUTTON:
-      if AModifiers and GDK_BUTTON1_MASK <> 0 then
+      if GDK_BUTTON1_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_RBUTTON:
-      if AModifiers and GDK_BUTTON2_MASK <> 0 then
+      if GDK_BUTTON2_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_MBUTTON:
-      if AModifiers and GDK_BUTTON3_MASK <> 0 then
+      if GDK_BUTTON3_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_XBUTTON1:
-      if AModifiers and GDK_BUTTON4_MASK <> 0 then
+      if GDK_BUTTON4_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_XBUTTON2:
-      if AModifiers and GDK_BUTTON5_MASK <> 0 then
+      if GDK_BUTTON5_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_MENU:
-      if AModifiers and GDK_MOD1_MASK <> 0 then
+      if GDK_MOD1_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_SHIFT:
-      if AModifiers and GDK_SHIFT_MASK <> 0 then
+      if GDK_SHIFT_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_CONTROL:
-      if AModifiers and GDK_CONTROL_MASK <> 0 then
+      if GDK_CONTROL_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_LWIN, VK_RWIN:
-      if AModifiers and GDK_META_MASK <> 0 then
+      if GDK_META_MASK in AModifiers  then
         Result := Result or StateDown;
    {$ifdef VerboseGtk3WinAPI}
     else
@@ -2670,7 +2670,7 @@ begin
     if APangoWeight > PANGO_WEIGHT_HEAVY then
       APangoWeight := PANGO_WEIGHT_HEAVY;
 
-    TM.tmWeight := APangoWeight;
+    TM.tmWeight := Integer(APangoWeight);
 
     TM.tmFirstChar := 'a';
     TM.tmLastChar := 'z';
@@ -3565,7 +3565,7 @@ function TGtk3WidgetSet.SetScrollInfo(Handle: HWND; SBStyle: Integer;
   *)
 
 const
-  POLICY: array[BOOLEAN] of TGTKPolicyType = (2, 0); // GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
+  POLICY: array[BOOLEAN] of TGTKPolicyType = (GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
 
 var
   Adjustment,hadj,vadj: PGtkAdjustment;

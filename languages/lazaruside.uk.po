@@ -892,6 +892,10 @@ msgstr "Колір (NotXor)"
 msgid "Caret (Text Cursor)"
 msgstr "Каретка (текстовий курсор)"
 
+#: lazarusidestrconsts.dlgcaretscrollgroupoptions
+msgid "Caret (Text Cursor) past end of line"
+msgstr ""
+
 #: lazarusidestrconsts.dlgcasesensitive
 msgctxt "lazarusidestrconsts.dlgcasesensitive"
 msgid "&Case sensitive"
@@ -3664,6 +3668,18 @@ msgstr "Лише файли, що належать до цього проєкт�
 msgid "Save in"
 msgstr "Зберегти в"
 
+#: lazarusidestrconsts.dlgscrollbarpasteolfixed
+msgid "Force 1024 columns minimum for horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolnone
+msgid "Do not add any permanent space to horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolpage
+msgid "Always add one page to horizontal scroll range"
+msgstr ""
+
 #: lazarusidestrconsts.dlgscrollbyoneless
 msgid "Scroll by one less"
 msgstr "Прокрутити на один вниз"
@@ -3682,7 +3698,9 @@ msgid "Scroll past end of file"
 msgstr "Прокрутити до кінця файлу"
 
 #: lazarusidestrconsts.dlgscrollpastendline
-msgid "Allow caret to move past end of line"
+#, fuzzy
+#| msgid "Allow caret to move past end of line"
+msgid "Allow Caret to move past the end of line"
 msgstr "Дозволити курсору рухатися після кінця рядка"
 
 #: lazarusidestrconsts.dlgseachdirectorynotfound
@@ -20392,6 +20410,10 @@ msgstr "&Ревізія:"
 #: lazarusidestrconsts.rsselectaninheritedentry
 msgid "Select an inherited entry"
 msgstr "Виберіть успадкований елемент"
+
+#: lazarusidestrconsts.rsshowpath
+msgid "Show path"
+msgstr ""
 
 #: lazarusidestrconsts.rsversionnumbering
 msgid "Version numbering"

@@ -893,6 +893,10 @@ msgstr "颜色"
 msgid "Caret (Text Cursor)"
 msgstr "插入符光标(文本光标)"
 
+#: lazarusidestrconsts.dlgcaretscrollgroupoptions
+msgid "Caret (Text Cursor) past end of line"
+msgstr ""
+
 #: lazarusidestrconsts.dlgcasesensitive
 msgctxt "lazarusidestrconsts.dlgcasesensitive"
 msgid "&Case sensitive"
@@ -3681,6 +3685,18 @@ msgstr "仅文件属于这个工程."
 msgid "Save in"
 msgstr "保存到"
 
+#: lazarusidestrconsts.dlgscrollbarpasteolfixed
+msgid "Force 1024 columns minimum for horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolnone
+msgid "Do not add any permanent space to horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolpage
+msgid "Always add one page to horizontal scroll range"
+msgstr ""
+
 #: lazarusidestrconsts.dlgscrollbyoneless
 msgid "Scroll by one less"
 msgstr "滚动较少一次"
@@ -3700,7 +3716,8 @@ msgstr "滚动到文件的结尾"
 
 #: lazarusidestrconsts.dlgscrollpastendline
 #, fuzzy
-msgid "Allow caret to move past end of line"
+#| msgid "Allow caret to move past end of line"
+msgid "Allow Caret to move past the end of line"
 msgstr "光标符号超过行的结尾"
 
 #: lazarusidestrconsts.dlgseachdirectorynotfound
@@ -20428,6 +20445,10 @@ msgstr "修订版本:(&R)"
 #: lazarusidestrconsts.rsselectaninheritedentry
 msgid "Select an inherited entry"
 msgstr "选择一个继承的项目"
+
+#: lazarusidestrconsts.rsshowpath
+msgid "Show path"
+msgstr ""
 
 #: lazarusidestrconsts.rsversionnumbering
 msgid "Version numbering"

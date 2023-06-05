@@ -87,6 +87,11 @@ type
     FrameBorders: TRect;
   end;
 
+  TGtkScrollStyle = record
+    Horizontal,
+	Vertical: TGtkPolicyType;
+  end;
+
 const
   SysColorMap: array [0..MAX_SYS_COLORS] of DWORD = (
     $C0C0C0,     {COLOR_SCROLLBAR}
@@ -193,9 +198,9 @@ const
 
   AGtkJustification: array[TAlignment] of TGTKJustification =
   (
-    0, {GTK_JUSTIFY_LEFT  taLeftJustify}
-    1, {GTK_JUSTIFY_RIGHT taRightJustify}
-    2 {GTK_JUSTIFY_CENTER taCenter}
+    GTK_JUSTIFY_LEFT, {0  taLeftJustify}
+    GTK_JUSTIFY_RIGHT, {1 taRightJustify}
+    GTK_JUSTIFY_CENTER {2 taCenter}
   );
 
   AGtkJustificationF: array[TAlignment] of gfloat =
@@ -207,15 +212,15 @@ const
 
   BorderStyleShadowMap: array[TBorderStyle] of TGtkShadowType =
   (
-   0, {GTK_SHADOW_NONE, bsNone   }
-   3 {GTK_SHADOW_ETCHED_IN bsSingle }
+   GTK_SHADOW_NONE, {0 bsNone   }
+   GTK_SHADOW_ETCHED_IN {3 bsSingle }
   );
 
   StaticBorderShadowMap: array[TStaticBorderStyle] of TGtkShadowType =
   (
-    0, {GTK_SHADOW_NONE, sbsNone   }
-    3, {GTK_SHADOW_ETCHED_IN sbsSingle }
-    1  {GTK_SHADOW_IN sbsSunken}
+    GTK_SHADOW_NONE, {0 sbsNone   }
+    GTK_SHADOW_ETCHED_IN, {3 sbsSingle }
+    GTK_SHADOW_IN {1 sbsSunken}
   );
 
   MenuDirection : array[Boolean] of TGtkPackDirection = (
@@ -276,7 +281,7 @@ function Gtk3IsGdkVisual(AVisual: PGObject): GBoolean;
 function Gtk3IsPangoContext(APangoContext: PGObject): GBoolean;
 function Gtk3IsPangoFontMetrics(APangoFontMetrics: PGObject): GBoolean;
 
-function Gtk3TranslateScrollStyle(const SS: TScrollStyle): TPoint;
+function Gtk3TranslateScrollStyle(const SS: TScrollStyle): TGtkScrollStyle;
 function Gtk3ScrollTypeToScrollCode(ScrollType: TGtkScrollType): LongWord;
 
 function TGDKColorToTColor(const value : TGDKColor) : TColor;
@@ -555,16 +560,23 @@ begin
   Result := (APangoFontMetrics <> nil);//  and  g_type_check_instance_is_a(PGTypeInstance(APangoFontMetrics), pango_font_metrics_get_type);
 end;
 
-function Gtk3TranslateScrollStyle(const SS: TScrollStyle): TPoint;
+function Gtk3TranslateScrollStyle(const SS: TScrollStyle): TGtkScrollStyle;
+  function return(Horiz, Vert: TGtkPolicyType): TGtkScrollStyle;
+  begin
+    with Result do begin
+	  Horizontal := Horiz;
+	  Vertical := Vert;
+	end;
+  end;
 begin
   case SS of
-    ssAutoBoth: Result:=Point(GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-    ssAutoHorizontal: Result:=Point(GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
-    ssAutoVertical: Result:=Point(GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-    ssBoth: Result:=Point(GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
-    ssHorizontal: Result:=Point(GTK_POLICY_ALWAYS, GTK_POLICY_NEVER);
-    ssNone: Result:=Point(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
-    ssVertical: Result:=Point(GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
+    ssAutoBoth: return(GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    ssAutoHorizontal: return(GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
+    ssAutoVertical: return(GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    ssBoth: return(GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
+    ssHorizontal: return(GTK_POLICY_ALWAYS, GTK_POLICY_NEVER);
+    ssNone: return(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+    ssVertical: return(GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
   end;
 end;
 
@@ -589,22 +601,22 @@ begin
   GTK_SCROLL_END: TGtkScrollType = 15;
   *)
   case ScrollType of
-    0{GTK_SCROLL_NONE}          : Result := SB_ENDSCROLL;
-    1{GTK_SCROLL_JUMP}          : Result := SB_THUMBTRACK;
-    2{GTK_SCROLL_STEP_BACKWARD} : Result := SB_LINELEFT;
-    3{GTK_SCROLL_STEP_FORWARD}  : Result := SB_LINERIGHT;
-    4{GTK_SCROLL_PAGE_BACKWARD} : Result := SB_PAGELEFT;
-    5{GTK_SCROLL_PAGE_FORWARD}  : Result := SB_PAGERIGHT;
-    6{GTK_SCROLL_STEP_UP}       : Result := SB_LINEUP;
-    7{GTK_SCROLL_STEP_DOWN}     : Result := SB_LINEDOWN;
-    8{GTK_SCROLL_PAGE_UP}       : Result := SB_PAGEUP;
-    9{GTK_SCROLL_PAGE_DOWN}     : Result := SB_PAGEDOWN;
-    10{GTK_SCROLL_STEP_LEFT}     : Result := SB_LINELEFT;
-    11{GTK_SCROLL_STEP_RIGHT}    : Result := SB_LINERIGHT;
-    12{GTK_SCROLL_PAGE_LEFT}     : Result := SB_PAGELEFT;
-    13{GTK_SCROLL_PAGE_RIGHT}    : Result := SB_PAGERIGHT;
-    14{GTK_SCROLL_START}         : Result := SB_TOP;
-    15{GTK_SCROLL_END}           : Result := SB_BOTTOM;
+    GTK_SCROLL_NONE {0}           : Result := SB_ENDSCROLL;
+    GTK_SCROLL_JUMP {1}           : Result := SB_THUMBTRACK;
+    GTK_SCROLL_STEP_BACKWARD {2}  : Result := SB_LINELEFT;
+    GTK_SCROLL_STEP_FORWARD {3}   : Result := SB_LINERIGHT;
+    GTK_SCROLL_PAGE_BACKWARD {4}  : Result := SB_PAGELEFT;
+    GTK_SCROLL_PAGE_FORWARD {5}   : Result := SB_PAGERIGHT;
+    GTK_SCROLL_STEP_UP {6}        : Result := SB_LINEUP;
+    GTK_SCROLL_STEP_DOWN {7}      : Result := SB_LINEDOWN;
+    GTK_SCROLL_PAGE_UP {8}        : Result := SB_PAGEUP;
+    GTK_SCROLL_PAGE_DOWN {9}      : Result := SB_PAGEDOWN;
+    GTK_SCROLL_STEP_LEFT {10}      : Result := SB_LINELEFT;
+    GTK_SCROLL_STEP_RIGHT {11}     : Result := SB_LINERIGHT;
+    GTK_SCROLL_PAGE_LEFT {12}      : Result := SB_PAGELEFT;
+    GTK_SCROLL_PAGE_RIGHT {13}     : Result := SB_PAGERIGHT;
+    GTK_SCROLL_START {14}          : Result := SB_TOP;
+    GTK_SCROLL_END {15}            : Result := SB_BOTTOM;
   end;
 end;
 
@@ -664,53 +676,53 @@ end;
 function GdkModifierStateToLCL(AState: TGdkModifierType; const AIsKeyEvent: Boolean): PtrInt;
 begin
   Result := 0;
-  if AState and GDK_BUTTON1_MASK <> 0 then
+  if GDK_BUTTON1_MASK in AState  then
     Result := Result or MK_LBUTTON;
 
-  if AState and GDK_BUTTON2_MASK <> 0 then
+  if GDK_BUTTON2_MASK in AState  then
     Result := Result or MK_MBUTTON;
 
-  if AState and GDK_BUTTON3_MASK <> 0 then
+  if GDK_BUTTON3_MASK in AState  then
     Result := Result or MK_RBUTTON;
 
-  if AState and GDK_BUTTON4_MASK <> 0 then
+  if GDK_BUTTON4_MASK in AState  then
     Result := Result or MK_XBUTTON1;
 
-  if AState and GDK_BUTTON5_MASK <> 0 then
+  if GDK_BUTTON5_MASK in AState  then
     Result := Result or MK_XBUTTON2;
 
-  if AState and GDK_SHIFT_MASK <> 0 then
+  if GDK_SHIFT_MASK in AState  then
     Result := Result or MK_SHIFT;
 
-  if AState and GDK_CONTROL_MASK <> 0 then
+  if GDK_CONTROL_MASK in AState  then
     Result := Result or MK_CONTROL;
 end;
 
 function GdkModifierStateToShiftState(AState: TGdkModifierType): TShiftState;
 begin
   Result := [];
-  if AState and GDK_BUTTON1_MASK <> 0 then
+  if GDK_BUTTON1_MASK in AState  then
     Include(Result, ssLeft);
 
-  if AState and GDK_BUTTON2_MASK <> 0 then
+  if GDK_BUTTON2_MASK in AState  then
     Include(Result, ssRight);
 
-  if AState and GDK_BUTTON3_MASK <> 0 then
+  if GDK_BUTTON3_MASK in AState  then
     Include(Result, ssMiddle);
 
-  if AState and GDK_BUTTON4_MASK <> 0 then
+  if GDK_BUTTON4_MASK in AState  then
     Include(Result, ssExtra1);
 
-  if AState and GDK_BUTTON5_MASK <> 0 then
+  if GDK_BUTTON5_MASK in AState  then
     Include(Result, ssExtra2);
 
-  if AState and GDK_SHIFT_MASK <> 0 then
+  if GDK_SHIFT_MASK in AState  then
     Include(Result, ssShift);
 
-  if AState and GDK_CONTROL_MASK <> 0 then
+  if GDK_CONTROL_MASK in AState  then
     Include(Result, ssCtrl);
 
-  if AState and GDK_META_MASK <> 0 then
+  if GDK_META_MASK in AState  then
     Include(Result, ssAlt);
 end;
 
@@ -1192,7 +1204,7 @@ begin
       g_object_set_data(PGObject(AWindow), 'havesavedcursor', gpointer(1));
       g_object_set_data(PGObject(AWindow), 'savedcursor', gpointer(OldCursor));
     end;
-    gdk_pointer_grab(AWindow, False, 0, AWindow, Cursor, 1);
+    gdk_pointer_grab(AWindow, False, [], AWindow, Cursor, 1);
     try
       gdk_window_set_cursor(AWindow, Cursor);
     finally

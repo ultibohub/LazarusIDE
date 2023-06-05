@@ -1633,6 +1633,7 @@ resourcestring
   dlgIndentsIndentGroupOptions = 'Indent';
   dlgCommentIndentGroupOptions = 'Comments and Strings';
   dlgCaretGroupOptions = 'Caret (Text Cursor)';
+  dlgCaretScrollGroupOptions = 'Caret (Text Cursor) past end of line';
   dlgMultiCaretGroupOptions = 'Multi-caret';
   dlgBlockGroupOptions = 'Selection';
   dlgAlwaysVisibleCursor = 'Always keep caret in visible area of editor';
@@ -1651,7 +1652,10 @@ resourcestring
   dlgCursorSkipsTab = 'Caret skips tabs';
   dlgScrollByOneLess = 'Scroll by one less';
   dlgScrollPastEndFile = 'Scroll past end of file';
-  dlgScrollPastEndLine = 'Allow caret to move past end of line';
+  dlgScrollPastEndLine = 'Allow Caret to move past the end of line';
+  dlgScrollBarPastEOLNone = 'Do not add any permanent space to horizontal scroll range';
+  dlgScrollBarPastEOLPage = 'Always add one page to horizontal scroll range';
+  dlgScrollBarPastEOLFixed = 'Force 1024 columns minimum for horizontal scroll range';
   dlgScrollHint = 'Show scroll hint';
   lisShowSpecialCharacters = 'Show special characters';
   dlgCloseButtonsNotebook = 'Show close buttons in notebook';
@@ -5473,6 +5477,7 @@ resourcestring
   rsFoundButNotListedHere = 'Found but not listed here: ';
   rsRefreshTheSearch = 'Refresh the search';
   rsNewSearchWithSameCriteria = 'New search with same criteria';
+  rsShowPath = 'Show path';
   rsCloseCurrentPage = 'Close current page';
   rsFilterTheListWithString = 'Filter the lines in list with a string';
   rsCloseLeft = 'Close page(s) on the left';

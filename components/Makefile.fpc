@@ -58,6 +58,7 @@ bigide:
 	$(MAKE) -C todolist
 	$(MAKE) -C datetimectrls
 	$(MAKE) -C datetimectrls/design
+	$(MAKE) -C jcf2
 	$(MAKE) -C jcf2/IdePlugin/lazarus
 	$(MAKE) -C mouseandkeyinput
 	$(MAKE) -C chmhelp/packages/help
@@ -110,6 +111,7 @@ clean:
 	$(MAKE) -C todolist clean
 	$(MAKE) -C datetimectrls clean
 	$(MAKE) -C datetimectrls/design clean
+	$(MAKE) -C jcf2 clean
 	$(MAKE) -C jcf2/IdePlugin/lazarus clean
 	$(MAKE) -C mouseandkeyinput clean
 	$(MAKE) -C chmhelp/packages/help clean
@@ -163,6 +165,7 @@ distclean:
 	$(MAKE) -C todolist distclean
 	$(MAKE) -C datetimectrls distclean
 	$(MAKE) -C datetimectrls/design distclean
+	$(MAKE) -C jcf2	distclean
 	$(MAKE) -C jcf2/IdePlugin/lazarus distclean
 	$(MAKE) -C mouseandkeyinput distclean
 	$(MAKE) -C chmhelp/packages/help distclean

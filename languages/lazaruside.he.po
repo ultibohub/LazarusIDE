@@ -909,6 +909,10 @@ msgstr ""
 msgid "Caret (Text Cursor)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgcaretscrollgroupoptions
+msgid "Caret (Text Cursor) past end of line"
+msgstr ""
+
 #: lazarusidestrconsts.dlgcasesensitive
 #, fuzzy
 #| msgid "&Case Sensitive"
@@ -3861,6 +3865,18 @@ msgstr ""
 msgid "Save in"
 msgstr ""
 
+#: lazarusidestrconsts.dlgscrollbarpasteolfixed
+msgid "Force 1024 columns minimum for horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolnone
+msgid "Do not add any permanent space to horizontal scroll range"
+msgstr ""
+
+#: lazarusidestrconsts.dlgscrollbarpasteolpage
+msgid "Always add one page to horizontal scroll range"
+msgstr ""
+
 #: lazarusidestrconsts.dlgscrollbyoneless
 msgid "Scroll by one less"
 msgstr "גלול אחד פחות"
@@ -3883,7 +3899,7 @@ msgstr "גלול עד לסוף הקובץ"
 #: lazarusidestrconsts.dlgscrollpastendline
 #, fuzzy
 #| msgid "Caret past end of line"
-msgid "Allow caret to move past end of line"
+msgid "Allow Caret to move past the end of line"
 msgstr "סמן אחרי סוף השורה"
 
 #: lazarusidestrconsts.dlgseachdirectorynotfound
@@ -21472,6 +21488,10 @@ msgstr "עידכון:"
 #: lazarusidestrconsts.rsselectaninheritedentry
 msgid "Select an inherited entry"
 msgstr "בחר ערך מורש"
+
+#: lazarusidestrconsts.rsshowpath
+msgid "Show path"
+msgstr ""
 
 #: lazarusidestrconsts.rsversionnumbering
 msgid "Version numbering"
