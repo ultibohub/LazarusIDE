@@ -295,6 +295,7 @@ type
     procedure SetMsgViewColors(c: TMsgWndColor; AValue: TColor);
 
     function GetActiveDesktop: TDesktopOpt;
+    function CheckActiveDesktop(const APath: string; ACount: Integer): TDesktopOpt; //Ultibo
     function GetDebugDesktop: TDesktopOpt;
   public
     constructor Create;
@@ -420,7 +421,7 @@ end;
 
 constructor TCustomDesktopOpt.Create(const aName: String);
 begin
-  Create(aName, Assigned(IDEDockMaster));
+  Create(aName, Assigned(IDEDockMaster) and not(IDEDockDisabled)); //Ultibo
 end;
 
 constructor TCustomDesktopOpt.Create(const aName: String; const aIsDocked: Boolean);
@@ -548,7 +549,7 @@ end;
 
 constructor TDesktopOpt.Create(const aName: String; const aIsDocked: Boolean);
 begin
-  if aIsDocked and not Assigned(IDEDockMaster) then
+  if aIsDocked and not Assigned(IDEDockMaster) then //Do not check IDEDockDisabled //Ultibo
     raise Exception.Create('Internal error: TEnvironmentOptions.CreateDesktop cannot create docked desktop in undocked environment.');
 
   inherited;
@@ -604,7 +605,7 @@ end;
 
 function TDesktopOpt.GetCompatible: Boolean;
 begin
-  Result := (IsDocked = Assigned(IDEDockMaster));
+  Result := (IsDocked = (Assigned(IDEDockMaster) and not(IDEDockDisabled))); //Ultibo
 end;
 
 procedure TDesktopOpt.Assign(Source: TDesktopOpt; const AssignName: Boolean;
@@ -1094,6 +1095,8 @@ begin
     j := XMLCfg.GetValue(CurPath+'Count', 1);
     for i := 1 to j do
       FDesktops.AddFromCfg(CurPath+'Desktop'+IntToStr(i)+'/');
+
+    CheckActiveDesktop(CurPath,j + 1); //Ultibo
   end;
   if Version<=109 then begin
     XMLCfg.DeletePath('Desktop');
@@ -1313,7 +1316,7 @@ end;
 class function TEnvGuiOptions.DesktopCanBeLoaded(const aDockMaster: string): Boolean;
 begin
   Result := (aDockMaster = '') or (
-    Assigned(IDEDockMaster) and (IDEDockMaster.ClassName = aDockMaster));
+    Assigned(IDEDockMaster) and (IDEDockMaster.ClassName = aDockMaster)); //Do not check IDEDockDisabled //Ultibo
 end;
 
 function TEnvGuiOptions.GetMsgColors(u: TMessageLineUrgency): TColor;
@@ -1341,7 +1344,7 @@ function TEnvGuiOptions.GetActiveDesktop: TDesktopOpt;
   procedure ChooseDefault;
   begin
     //use default desktop name
-    if Assigned(IDEDockMaster) then
+    if (Assigned(IDEDockMaster) and not(IDEDockDisabled)) then //Ultibo
       FActiveDesktopName := 'default docked'//name for desktop with AnchorDocking
     else
       FActiveDesktopName := 'default';
@@ -1377,7 +1380,7 @@ begin
   Result := TDesktopOpt.Create(FActiveDesktopName);
   FDesktops.Add(Result);
   Result.Assign(FDesktop);
-  if Assigned(IDEDockMaster) then
+  if Assigned(IDEDockMaster) and not(IDEDockDisabled) then //Ultibo
     Result.FDockedOpt.LoadDefaults;
   OldActiveDesktop := FDesktops.Find(OldActiveDesktopName);
   if not (OldActiveDesktop is TDesktopOpt) then
@@ -1391,6 +1394,49 @@ begin
   if Assigned(OldActiveDesktop) then
     Result.Assign(TDesktopOpt(OldActiveDesktop), False, False);
 end;
+
+function TEnvGuiOptions.CheckActiveDesktop(const APath: string; ACount: Integer): TDesktopOpt; //Ultibo
+
+  procedure ChooseDefault;
+  begin
+    //use default desktop name
+    if (Assigned(IDEDockMaster) and not(IDEDockDisabled)) then //Ultibo
+      FActiveDesktopName := 'default docked'//name for desktop with AnchorDocking
+    else
+      FActiveDesktopName := 'default';
+  end;
+
+var
+  lDskTpOpt: TCustomDesktopOpt;
+begin
+  Result := nil;
+  if FActiveDesktopName <> '' then
+  begin
+    lDskTpOpt := FDesktops.Find(FActiveDesktopName);
+    if Assigned(lDskTpOpt) and lDskTpOpt.InheritsFrom(TDesktopOpt) and lDskTpOpt.Compatible then
+      Exit(TDesktopOpt(lDskTpOpt));
+  end;
+
+  //the selected desktop is unsupported (docked/undocked)
+  // -> use default
+  ChooseDefault;
+  lDskTpOpt := FDesktops.Find(FActiveDesktopName);
+  if Assigned(lDskTpOpt) and lDskTpOpt.InheritsFrom(TDesktopOpt) then
+    if lDskTpOpt.Compatible then
+      Exit(TDesktopOpt(lDskTpOpt))
+    else
+      Result := TDesktopOpt(lDskTpOpt);
+
+  //remove current desktop if incompatible
+  if Assigned(Result) then
+    FDesktops.Remove(Result);
+
+  //recreate desktop with ActiveDesktopName
+  Result := TDesktopOpt.Create(FActiveDesktopName);
+  Result.SetConfig(XMLCfg, FConfigStorage);
+  Result.Load(APath+'Desktop'+IntToStr(ACount)+'/');
+  FDesktops.Add(Result);
+end; //Ultibo
 
 function TEnvGuiOptions.GetDebugDesktop: TDesktopOpt;
 var

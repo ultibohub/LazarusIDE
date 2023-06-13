@@ -597,12 +597,12 @@ var
   i: Integer;
 begin
   {$IFDEF MSWindows}
-  Result := SearchFileInPath(GetDefaultCompilerFilename,
-             format('%sfpc\%s\bin\%s',
-               [AppendPathDelim(ProgramDirectory), DefaultFPCVersion, DefaultFPCTarget]),
-             GetEnvironmentVariableUTF8('PATH'),';',
-             []);
-  if Result <> '' then exit;
+  //Result := SearchFileInPath(GetDefaultCompilerFilename,
+  //           format('%sfpc\%s\bin\%s',
+  //             [AppendPathDelim(ProgramDirectory), DefaultFPCVersion, DefaultFPCTarget]),
+  //           GetEnvironmentVariableUTF8('PATH'),';',
+  //           []); //Ultibo
+  //if Result <> '' then exit; //Ultibo
   Result := DefaultDrive + AppendPathDelim(ProgramDirectory) +
     format('fpc\%s\bin\%s\%s',
     [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename]);
@@ -627,14 +627,15 @@ end;
 procedure GetDefaultCompilerFilenames(List: TStrings);
 begin
   {$IFDEF MSWindows}
-  List.Add(DefaultDrive + format('\fpc\%s\bin\%s\%s',
-    [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename]));
+  //List.Add(DefaultDrive + format('\fpc\%s\bin\%s\%s',
+  //  [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename])); //Ultibo
   List.Add(AppendPathDelim(ProgramDirectory) + format('fpc\%s\bin\%s\%s',
     [DefaultFPCVersion, DefaultFPCTarget, GetDefaultCompilerFilename]));
   {$ELSE}
-  AddFilenameToList(List,'/usr/local/bin/'+GetDefaultCompilerFilename);
-  AddFilenameToList(List,'/usr/bin/'+GetDefaultCompilerFilename);
-  AddFilenameToList(List,'/opt/fpc/'+GetDefaultCompilerFilename);
+  //AddFilenameToList(List,'/usr/local/bin/'+GetDefaultCompilerFilename); //Ultibo
+  //AddFilenameToList(List,'/usr/bin/'+GetDefaultCompilerFilename); //Ultibo
+  //AddFilenameToList(List,'/opt/fpc/'+GetDefaultCompilerFilename); //Ultibo
+  AddFilenameToList(List,AppendPathDelim(ProgramDirectory)+'fpc/bin/'+GetDefaultCompilerFilename); //Ultibo
   {$ENDIF}
 end;
 
