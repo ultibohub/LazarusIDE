@@ -33,18 +33,20 @@ interface
 
 uses
   Classes, SysUtils, StrUtils, Zipper,
+  {$IF FPC_FULLVERSION >= 30200}System.{$ENDIF}UITypes,
   // LCL
   LCLType, Forms, StdCtrls, Dialogs, Buttons, ButtonPanel, LCLIntf,
   // LazUtils
-  FileUtil, LazFileUtils, LazStringUtils, LazLoggerBase, UITypes, LazUTF8,
+  FileUtil, LazFileUtils, LazStringUtils, LazLoggerBase, LazUTF8,
   // BuildIntf
   ProjPackIntf, CompOptsIntf, PublishModuleIntf,
   // IdeIntf
-  IdeIntfStrConsts, IDEWindowIntf, IDEHelpIntf, IDEDialogs, IDEImagesIntf, LazIDEIntf,
+  IdeIntfStrConsts, IDEWindowIntf, IDEHelpIntf, IDEDialogs, IDEImagesIntf,
+  LazIDEIntf, InputHistory,
+  // IdeConfig
+  EnvironmentOpts, IDEOptionDefs, RecentListProcs,
   // IDE
-  ProjectDefs, Project, PackageDefs, IDEOptionDefs, InputHistory,
-  LazarusIDEStrConsts, IDEProcs, EnvironmentOpts, CompilerOptions,
-  RecentListProcs;
+  ProjectDefs, Project, PackageDefs, LazarusIDEStrConsts, CompilerOptions;
 
 type
   { TPublishModuleDialog }

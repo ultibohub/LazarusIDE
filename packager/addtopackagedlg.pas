@@ -32,16 +32,17 @@ interface
 uses
   Classes, SysUtils, Laz_AVL_Tree,
   // LCL
-  LCLProc, LCLType, Forms, Controls, Buttons, ExtDlgs, StdCtrls, ExtCtrls,
+  LCLType, Forms, Controls, Buttons, ExtDlgs, StdCtrls, ExtCtrls,
   Dialogs, ComCtrls, ButtonPanel,
   // LazUtils
-  FileUtil, LazFileUtils, LazUTF8,
+  FileUtil, LazFileUtils, LazUtilities, LazUTF8,
   // IDEIntf
   NewItemIntf, PackageIntf, FormEditingIntf, IDEWindowIntf, ComponentReg,
-  IDEDialogs,
+  IDEDialogs, InputHistory,
+  // IdeConfig
+  EnvironmentOpts,
   // IDE
-  LazarusIDEStrConsts, InputHistory, EnvironmentOpts,
-  PackageSystem, PackageDefs, ProjPackChecks;
+  LazarusIDEStrConsts, PackageSystem, PackageDefs, ProjPackChecks;
   
 type
 

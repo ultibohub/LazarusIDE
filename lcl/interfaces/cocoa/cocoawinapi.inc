@@ -1183,7 +1183,7 @@ begin
   if Result then
   begin
     ARect := NSObject(handle).lclClientFrame;
-    OffsetRect(ARect, -ARect.Left, -ARect.Top);
+    Types.OffsetRect(ARect, -ARect.Left, -ARect.Top);
   end;
 end;
 
@@ -2519,8 +2519,9 @@ end;
 
 function TCocoaWidgetSet.SetCursor(ACursor: HCURSOR): HCURSOR;
 begin
-  if ACursor = 0 then Result := 0 else
-  Result := HCURSOR(TCocoaCursor(ACursor).Install);
+  if ACursor = 0 then ACursor:= Screen.Cursors[crDefault];
+  TCocoaCursor(ACursor).SetCursor;
+  Result := 0;
 end;
 
 function TCocoaWidgetSet.SetCursorPos(X, Y: Integer): Boolean;

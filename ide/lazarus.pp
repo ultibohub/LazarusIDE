@@ -56,8 +56,8 @@ uses
   SysUtils,
   Interfaces,
   IDEInstances,//keep IDEInstances up so that it will be initialized soon
-  Forms, LCLProc,
-  IDEOptionsIntf,
+  Forms, LazUtilities, LazLoggerBase,
+  IDEOptEditorIntf, IDEOptionsIntf,
   LazConf, IDEGuiCmdLine,
   Splash,
   Main,

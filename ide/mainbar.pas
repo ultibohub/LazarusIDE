@@ -45,8 +45,10 @@ uses
   LazFileCache,
   // IDEIntf
   MenuIntf, LazIDEIntf, IDEWindowIntf, IDEImagesIntf, ComponentReg,
+  // IdeConfig
+  CoolBarOptions,
   // IDE
-  EnvironmentOpts, LazarusIDEStrConsts, IdeCoolbarData, CoolBarOptions;
+  LazarusIDEStrConsts, IdeCoolbarData, EnvGuiOptions;
 
 type
   { TMainIDEBar }
@@ -187,6 +189,7 @@ type
           itmViewWatches: TIDEMenuCommand;
           itmViewBreakpoints: TIDEMenuCommand;
           itmViewLocals: TIDEMenuCommand;
+          itmRunMenuInspect: TIDEMenuCommand;
           itmViewRegisters: TIDEMenuCommand;
           itmViewCallStack: TIDEMenuCommand;
           itmViewThreads: TIDEMenuCommand;
@@ -313,7 +316,6 @@ type
         itmRunMenuRunFile: TIDEMenuCommand;
         itmRunMenuConfigBuildFile: TIDEMenuCommand;
       //itmRunDebugging: TIDEMenuSection;
-        itmRunMenuInspect: TIDEMenuCommand;
         itmRunMenuEvaluate: TIDEMenuCommand;
         itmRunMenuAddWatch: TIDEMenuCommand;
         //itmRunMenuAddBreakpoint: TIDEMenuSection;
@@ -434,7 +436,7 @@ begin
   try
     if Assigned(IDEDockMaster) and not(IDEDockDisabled) then //Ultibo
     begin
-      if EnvironmentOptions.Desktop.AutoAdjustIDEHeight then
+      if EnvironmentGuiOpts.Desktop.AutoAdjustIDEHeight then
       begin
         if ANewHeight <= 0 then
           ANewHeight := CalcMainIDEHeight;
@@ -444,7 +446,7 @@ begin
         IDEDockMaster.AdjustMainIDEWindowHeight(Self, False, 0);
     end else
     begin
-      if (AIDEIsMaximized or EnvironmentOptions.Desktop.AutoAdjustIDEHeight) then
+      if (AIDEIsMaximized or EnvironmentGuiOpts.Desktop.AutoAdjustIDEHeight) then
       begin
         if ANewHeight <= 0 then
           ANewHeight := CalcMainIDEHeight;
@@ -476,11 +478,11 @@ var
   SBControl: TControl;
 begin
   Result := 0;
-  if (EnvironmentOptions=Nil) or (CoolBar=Nil) or (ComponentPageControl=Nil) then
+  if (EnvironmentGuiOpts=Nil) or (CoolBar=Nil) or (ComponentPageControl=Nil) then
     Exit;
 
   // IDE Coolbar height
-  if EnvironmentOptions.Desktop.IDECoolBarOptions.Visible then
+  if EnvironmentGuiOpts.Desktop.IDECoolBarOptions.Visible then
   begin
     for I := 0 to CoolBar.Bands.Count-1 do
     begin
@@ -493,7 +495,7 @@ begin
   end;
 
   // Component palette height
-  if EnvironmentOptions.Desktop.ComponentPaletteOptions.Visible
+  if EnvironmentGuiOpts.Desktop.ComponentPaletteOptions.Visible
   and Assigned(ComponentPageControl.ActivePage) then
   begin
     CompScrollBox := FindCompScrollBox;
@@ -511,14 +513,14 @@ begin
          ComponentPageControl.Height, CompScrollBox.ClientHeight]) );
       Result := Max(Result, NewHeight);
 
-      if not EnvironmentOptions.Desktop.AutoAdjustIDEHeightFullCompPal then
+      if not EnvironmentGuiOpts.Desktop.AutoAdjustIDEHeightFullCompPal then
         Break;  //we need only one button (we calculate one line only)
     end;
   end;
 end;
 
 function TMainIDEBar.CalcNonClientHeight: Integer;
-{$IF DEFINED(LCLGtk) OR DEFINED(LCLQt) OR DEFINED(LCLQt6)}
+{$IF DEFINED(LCLGtk) OR DEFINED(LCLQt)}
 var
   WindowRect, WindowClientRect: TRect;
 {$ENDIF}
@@ -539,7 +541,7 @@ begin
   if not Showing then
     Exit(0);
 
-  {$IF DEFINED(LCLGtk) OR DEFINED(LCLQt) OR DEFINED(LCLQt6)}
+  {$IF DEFINED(LCLGtk) OR DEFINED(LCLQt)}
   //Gtk + Qt
   //retrieve real main menu height because
   // - Gtk, Qt:  SM_CYMENU does not work
@@ -558,6 +560,7 @@ begin
   //Win32 tested - behaves correctly
   //Gtk2 tested - behaves correctly
   //Qt5 tested - behaves correctly
+  //Qt6 tested - behaves correctly
   Result := 0;
   {$ENDIF}
 end;
@@ -582,7 +585,7 @@ var
   i, FormCount: integer;
   AForm: TCustomForm;
 begin
-  if EnvironmentOptions.Desktop.SingleTaskBarButton and not ApplicationIsActivate
+  if EnvironmentGuiOpts.Desktop.SingleTaskBarButton and not ApplicationIsActivate
   and (WindowState=wsNormal) then
   begin
     ApplicationIsActivate:=true;
@@ -675,17 +678,17 @@ begin
   // IDE Coolbar
   CoolBar := TCoolBar.Create(TheOwner);
   CoolBar.Parent := Self;
-  if EnvironmentOptions.Desktop.ComponentPaletteOptions.Visible then
+  if EnvironmentGuiOpts.Desktop.ComponentPaletteOptions.Visible then
   begin
     CoolBar.Align := alLeft;
-    CoolBar.Width := Scale96ToForm(EnvironmentOptions.Desktop.IDECoolBarOptions.Width);
+    CoolBar.Width := Scale96ToForm(EnvironmentGuiOpts.Desktop.IDECoolBarOptions.Width);
   end
   else
     CoolBar.Align := alClient;
 
   // IDE Coolbar object wraps the actual CoolBar.
   IDECoolBar := TIDECoolBar.Create(CoolBar);
-  IDECoolBar.IsVisible := EnvironmentOptions.Desktop.IDECoolBarOptions.Visible;
+  IDECoolBar.IsVisible := EnvironmentGuiOpts.Desktop.IDECoolBarOptions.Visible;
   CoolBar.OnChange := @CoolBarOnChange;
   CreatePopupMenus(TheOwner);
   CoolBar.PopupMenu := OptionsPopupMenu;
@@ -694,7 +697,7 @@ begin
   ComponentPageControl := TPageControl.Create(TheOwner);
   ComponentPageControl.Name := 'ComponentPageControl';
   ComponentPageControl.Align := alClient;
-  ComponentPageControl.Visible := EnvironmentOptions.Desktop.ComponentPaletteOptions.Visible;
+  ComponentPageControl.Visible := EnvironmentGuiOpts.Desktop.ComponentPaletteOptions.Visible;
   ComponentPageControl.Parent := Self;
 end;
 
@@ -704,9 +707,9 @@ var
   AControl: TControl;
   i, j: integer;
 begin
-  if EnvironmentOptions=nil then exit;
+  if EnvironmentGuiOpts=nil then exit;
   // update all hints in the component palette
-  CurShowHint:=EnvironmentOptions.ShowHintsForComponentPalette;
+  CurShowHint:=EnvironmentGuiOpts.ShowHintsForComponentPalette;
   for i:=0 to ComponentPageControl.PageCount-1 do begin
     for j:=0 to ComponentPageControl.Page[i].ControlCount-1 do begin
       AControl:=ComponentPageControl.Page[i].Controls[j];
@@ -714,7 +717,7 @@ begin
     end;
   end;
   // update all hints in main ide toolbars
-  //??? CurShowHint:=EnvironmentOptions.ShowHintsForMainSpeedButtons;
+  //??? CurShowHint:=EnvironmentGuiOpts.ShowHintsForMainSpeedButtons;
 end;
 
 procedure TMainIDEBar.UpdateIDEComponentPalette(IfFormChanged: boolean);
@@ -755,7 +758,7 @@ var
   CoolBarOpts: TIDECoolBarOptions;
   CurToolBar: TIDEToolBar;
 begin
-  CoolBarOpts := EnvironmentOptions.Desktop.IDECoolBarOptions;
+  CoolBarOpts := EnvironmentGuiOpts.Desktop.IDECoolBarOptions;
   //read general settings
   if not (CoolBarOpts.GrabStyle in [0..5]) then
     CoolBarOpts.GrabStyle := 4;
@@ -808,14 +811,14 @@ end;
 
 procedure TMainIDEBar.MainSplitterMoved(Sender: TObject);
 begin
-  EnvironmentOptions.Desktop.IDECoolBarOptions.Width := ScaleFormTo96(CoolBar.Width);
+  EnvironmentGuiOpts.Desktop.IDECoolBarOptions.Width := ScaleFormTo96(CoolBar.Width);
   SetMainIDEHeight;
 end;
 
 procedure TMainIDEBar.CoolBarOnChange(Sender: TObject);
 begin
   IDECoolBar.CopyFromRealCoolbar(Coolbar);
-  IDECoolBar.CopyToOptions(EnvironmentOptions.Desktop.IDECoolBarOptions);
+  IDECoolBar.CopyToOptions(EnvironmentGuiOpts.Desktop.IDECoolBarOptions);
   SetMainIDEHeight;
 end;
 
@@ -828,13 +831,13 @@ procedure TMainIDEBar.DoSetViewComponentPalette(aVisible: Boolean);
 begin
   if aVisible = ComponentPageControl.Visible then Exit;
   ComponentPageControl.Visible := aVisible;
-  EnvironmentOptions.Desktop.ComponentPaletteOptions.Visible := aVisible;
+  EnvironmentGuiOpts.Desktop.ComponentPaletteOptions.Visible := aVisible;
   if aVisible then
   begin
     if CoolBar.Align = alClient then
     begin
       CoolBar.Width := 230;
-      EnvironmentOptions.Desktop.IDECoolBarOptions.Width := 230;
+      EnvironmentGuiOpts.Desktop.IDECoolBarOptions.Width := 230;
     end;
     CoolBar.Align := alLeft;
     CoolBar.Vertical := False;

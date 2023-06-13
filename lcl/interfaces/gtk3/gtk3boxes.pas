@@ -13,8 +13,7 @@ unit Gtk3Boxes;
 interface
 
 uses
-  // LazUtils
-  UITypes,
+  {$IF FPC_FULLVERSION >= 30200}System.{$ENDIF}UITypes,
   // LCL
   LCLType, LCLStrConsts,LCLProc, InterfaceBase,
   LazGtk3, LazGLib2, LazGObject2, LazGdk3, gtk3objects;
@@ -280,7 +279,7 @@ begin
       DialogResult := Buttons[i].ModalResult;
   end;
 
-  Dialog := gtk_message_dialog_new(nil, GTK_DIALOG_MODAL, GtkDialogType, Btns, nil , []);
+  Dialog := gtk_message_dialog_new(nil, [GTK_DIALOG_MODAL], GtkDialogType, Btns, nil , []);
 
   set_message_text(DialogMessage);
 
@@ -466,7 +465,7 @@ begin
       DefaultID := Buttons[X];
   end;
 
-  Dialog := gtk_message_dialog_new(nil, GTK_DIALOG_MODAL, GtkDialogType, Btns, nil , []);
+  Dialog := gtk_message_dialog_new(nil, [GTK_DIALOG_MODAL], GtkDialogType, Btns, nil , []);
 
   set_message_text(DialogMessage);
 

@@ -37,15 +37,15 @@ interface
 { $DEFINE VerboseDesigner}
 
 uses
-  Classes, SysUtils, Math, types,
+  Types, Classes, SysUtils, Math, FPCanvas,
   // LCL
   LCLIntf, LCLType, LCLProc, Controls, Forms, Graphics, Menus, ComCtrls,
   // LazUtils
-  GraphType,
+  GraphType, GraphMath,
   // IDEIntf
   PropEditUtils, ComponentEditors, FormEditingIntf,
   // IDE
-  EnvironmentOpts, DesignerProcs;
+  EnvGuiOptions, DesignerProcs;
 
 type
   TArrSize = array of array [0 .. 3] of integer;
@@ -344,7 +344,6 @@ type
     function GetVisible: boolean;
     procedure DoChangeProperties;
     procedure GrabberMove({%H-}Grabber: TGrabber; const OldRect, NewRect: TRect);
-    procedure SetActiveGrabber(AGrabber: TGrabber);
     procedure SetCacheGuideLines(const AValue: boolean);
     procedure SetCustomForm;
     procedure SetGrabbers(AGrabIndex: TGrabIndex; const AGrabber: TGrabber);
@@ -479,7 +478,7 @@ type
     procedure DrawMarkerAt(DC: TDesignerDeviceContext;
       ALeft, ATop, AWidth, AHeight: integer);
     procedure DrawMarkers(DC: TDesignerDeviceContext);
-    property ActiveGrabber: TGrabber read FActiveGrabber write SetActiveGrabber;
+    property ActiveGrabber: TGrabber read FActiveGrabber write FActiveGrabber;
     procedure InvalidateMarkers;
     procedure InvalidateMarkersForComponent(AComponent: TComponent);
 
@@ -513,11 +512,11 @@ type
     procedure DrawRubberband(DC: TDesignerDeviceContext);
 
     procedure SelectAll(ALookupRoot: TComponent);
-    procedure SelectWithRubberBand(ALookupRoot: TComponent;
-                                   AMediator: TDesignerMediator;
-                                   ClearBefore, ExclusiveOr: boolean;
-                                   var SelectionChanged: boolean;
-                                   MaxParentComponent: TComponent);
+    function SelectWithRubberBand(ALookupRoot: TComponent;
+                                  AMediator: TDesignerMediator;
+                                  ClearBefore, ExclusiveOr: boolean;
+                                  MaxParentComponent: TComponent
+                                  ): boolean; // return true if the selection has changed
 
     property Visible:boolean read GetVisible write SetVisible;
 
@@ -1112,12 +1111,12 @@ end;
 
 function TControlSelection.GetRubberbandCreationColor: TColor;
 begin
-  Result:=EnvironmentOptions.RubberbandCreationColor;
+  Result:=EnvironmentGuiOpts.RubberbandCreationColor;
 end;
 
 function TControlSelection.GetRubberbandSelectionColor: TColor;
 begin
-  Result:=EnvironmentOptions.RubberbandSelectionColor;
+  Result:=EnvironmentGuiOpts.RubberbandSelectionColor;
 end;
 
 procedure TControlSelection.GrabberMove(Grabber: TGrabber; const OldRect,
@@ -1143,12 +1142,12 @@ end;
 
 function TControlSelection.GetGrabberColor: TColor;
 begin
-  Result:=EnvironmentOptions.GrabberColor;
+  Result:=EnvironmentGuiOpts.GrabberColor;
 end;
 
 function TControlSelection.GetMarkerColor: TColor;
 begin
-  Result:=EnvironmentOptions.MarkerColor;
+  Result:=EnvironmentGuiOpts.MarkerColor;
 end;
 
 procedure TControlSelection.SetCustomForm;
@@ -1459,13 +1458,13 @@ end;
 
 function TControlSelection.CleanGridSizeX: integer;
 begin
-  Result:=EnvironmentOptions.GridSizeX;
+  Result:=EnvironmentGuiOpts.GridSizeX;
   if Result<1 then Result:=1;
 end;
 
 function TControlSelection.CleanGridSizeY: integer;
 begin
-  Result:=EnvironmentOptions.GridSizeY;
+  Result:=EnvironmentGuiOpts.GridSizeY;
   if Result<1 then Result:=1;
 end;
 
@@ -1623,7 +1622,7 @@ var
   i, CurLeft, MaxDist, CurDist: integer;
   AComponent: TComponent;
 begin
-  if (not EnvironmentOptions.SnapToGuideLines) or (FLookupRoot=nil) then exit;
+  if (not EnvironmentGuiOpts.SnapToGuideLines) or (FLookupRoot=nil) then exit;
   // search in all not selected components
   MaxDist:=(CleanGridSizeX+1) div 2;
   for i:=0 to FLookupRoot.ComponentCount-1 do begin
@@ -1646,7 +1645,7 @@ var i, CurRight, MaxDist, CurDist: integer;
   R : TRect;
   AComponent: TComponent;
 begin
-  if (not EnvironmentOptions.SnapToGuideLines) or (FLookupRoot=nil) then exit;
+  if (not EnvironmentGuiOpts.SnapToGuideLines) or (FLookupRoot=nil) then exit;
   // search in all not selected components
   MaxDist:=(CleanGridSizeX+1) div 2;
   for i:=0 to FLookupRoot.ComponentCount-1 do begin
@@ -1671,7 +1670,7 @@ procedure TControlSelection.FindNearestTopGuideLine(var NearestInt: TNearestInt)
 var i, CurTop, MaxDist, CurDist: integer;
   AComponent: TComponent;
 begin
-  if (not EnvironmentOptions.SnapToGuideLines) or (FLookupRoot=nil) then exit;
+  if (not EnvironmentGuiOpts.SnapToGuideLines) or (FLookupRoot=nil) then exit;
   // search in all not selected components
   MaxDist:=(CleanGridSizeY+1) div 2;
   for i:=0 to FLookupRoot.ComponentCount-1 do begin
@@ -1694,7 +1693,7 @@ var i, CurBottom, MaxDist, CurDist: integer;
   R: TRect;
   AComponent: TComponent;
 begin
-  if (not EnvironmentOptions.SnapToGuideLines) or (FLookupRoot=nil) then exit;
+  if (not EnvironmentGuiOpts.SnapToGuideLines) or (FLookupRoot=nil) then exit;
   // search in all not selected components
   MaxDist:=(CleanGridSizeY+1) div 2;
   for i:=0 to FLookupRoot.ComponentCount-1 do begin
@@ -1844,7 +1843,7 @@ end;
 function TControlSelection.SnapGrabberMousePos(const CurMousePos: TPoint): TPoint;
 begin
   Result := CurMousePos;
-  if (not EnvironmentOptions.SnapToGrid) or (ActiveGrabber = nil) then exit;
+  if (not EnvironmentGuiOpts.SnapToGrid) or (ActiveGrabber = nil) then exit;
   if gpLeft in ActiveGrabber.Positions then
     Result.X := FindNearestSnapLeft(Result.X)
   else
@@ -2060,7 +2059,7 @@ var
   GridSizeX, NearestGridX: integer;
   GridRect: TRect;
 begin
-  if not EnvironmentOptions.SnapToGrid then exit;
+  if not EnvironmentGuiOpts.SnapToGrid then exit;
   GridRect:=GetFirstGridRect;
   GridSizeX:=CleanGridSizeX;
   NearestGridX := RoundToGrid(NearestInt.OldValue,GridRect.Left,GridSizeX);
@@ -2072,7 +2071,7 @@ var
   GridSizeY, NearestGridY: integer;
   GridRect: TRect;
 begin
-  if not EnvironmentOptions.SnapToGrid then exit;
+  if not EnvironmentGuiOpts.SnapToGrid then exit;
   GridRect:=GetFirstGridRect;
   GridSizeY:=CleanGridSizeY;
   NearestGridY := RoundToGrid(NearestInt.OldValue,GridRect.Top,GridSizeY);
@@ -2215,11 +2214,6 @@ end;
 function TControlSelection.IsResizing: boolean;
 begin
   Result:=FResizeLockCount>0;
-end;
-
-procedure TControlSelection.SetActiveGrabber(AGrabber:TGrabber);
-begin
-  FActiveGrabber:=AGrabber;
 end;
 
 function TControlSelection.Count:integer;
@@ -2579,36 +2573,31 @@ begin
 end;
 
 procedure TControlSelection.DrawMarkerAt(DC: TDesignerDeviceContext;
-  ALeft, ATop, AWidth, AHeight: integer);
+  aLeft, aTop, aWidth, aHeight: integer);
 var
-  OldBrushColor: TColor;
-  RestoreBrush: boolean;
+  lOldBrushColor: TColor;
+  lRight, lBottom: integer;
 
-  procedure FillRect(RLeft, RTop, RRight, RBottom: integer);
+  procedure FillRect(x, y: integer);
   begin
-    if not DC.RectVisible(RLeft, RTop, RRight, RBottom) then exit;
-    if not RestoreBrush then
-    begin
-      DC.BeginPainting;
-      OldBrushColor:=DC.Canvas.Brush.Color;
-      DC.Canvas.Brush.Color:=MarkerColor;
-      RestoreBrush := True;
-    end;
-    DC.Canvas.FillRect(Rect(RLeft,RTop,RRight,RBottom));
+    DC.Canvas.FillRect(x, y, x + MarkerSize, y + MarkerSize);
   end;
 
 begin
-  RestoreBrush:=false;
-  FillRect(ALeft,ATop,ALeft+MarkerSize,ATop+MarkerSize);
-  FillRect(ALeft,ATop+AHeight-MarkerSize,ALeft+MarkerSize,ATop+AHeight);
-  FillRect(ALeft+AWidth-MarkerSize,ATop,ALeft+AWidth,ATop+MarkerSize);
-  FillRect(ALeft+AWidth-MarkerSize,ATop+AHeight-MarkerSize
-               ,ALeft+AWidth,ATop+AHeight);
-  if RestoreBrush then
-  begin
-    DC.Canvas.Brush.Color:=OldBrushColor;
-    DC.EndPainting;
-  end;
+  DC.BeginPainting;
+  lOldBrushColor := DC.Canvas.Brush.Color;
+  DC.Canvas.Brush.Color := MarkerColor;
+
+  lRight := aLeft + aWidth - MarkerSize;
+  lBottom := aTop + aHeight - MarkerSize;
+
+  FillRect(aLeft , aTop   );
+  FillRect(aLeft , lBottom);
+  FillRect(lRight, aTop   );
+  FillRect(lRight, lBottom);
+
+  DC.Canvas.Brush.Color := lOldBrushColor;
+  DC.EndPainting;
 end;
 
 procedure TControlSelection.DrawMarkers(DC: TDesignerDeviceContext);
@@ -2689,72 +2678,45 @@ end;
 
 procedure TControlSelection.DrawRubberband(DC: TDesignerDeviceContext);
 var
-  Diff: TPoint;
-
-  procedure DrawInvertFrameRect(x1,y1,x2,y2:integer);
-  var i:integer;
-  var
-    OldPenColor: TColor;
-    RestorePen: boolean;
-
-    procedure InvertPixel(x,y:integer);
-    //var c:TColor;
-    begin
-      //c:=DC.Canvas.Pixels[x,y];
-      //c:=c xor $ffffff;
-      //DC.Canvas.Pixels[x,y]:=c;
-      DC.Canvas.MoveTo(x,y);
-      DC.Canvas.LineTo(x+1,y);
-    end;
-
-    procedure DrawRubberLine(StartX, StartY, EndX, EndY: integer);
-    begin
-      if not DC.RectVisible(StartX, StartY, EndX, EndY) then exit;
-      if not RestorePen then begin
-        DC.BeginPainting;
-        with DC.Canvas do begin
-          OldPenColor:=Pen.Color;
-          if RubberbandType=rbtSelection then
-            Pen.Color:=RubberbandSelectionColor
-          else
-            Pen.Color:=RubberbandCreationColor;
-        end;
-        RestorePen:=true;
-      end;
-      if StartX<EndX then begin
-        while StartX<EndX do begin
-          InvertPixel(StartX,StartY);
-          inc(StartX,3);
-        end;
-      end else begin
-        while StartY<EndY do begin
-          InvertPixel(StartX,StartY);
-          inc(StartY,3);
-        end;
-      end;
-    end;
-
-  begin
-    RestorePen:=false;
-    if x1>x2 then begin i:=x1; x1:=x2; x2:=i; end;
-    if y1>y2 then begin i:=y1; y1:=y2; y2:=i; end;
-    DrawRubberLine(x1,y1,x2,y1);
-    DrawRubberLine(x1,y2,x2,y2);
-    DrawRubberLine(x1,y1,x1,y2);
-    DrawRubberLine(x2,y1,x2,y2);
-    if RestorePen then
-    begin
-      DC.Canvas.Pen.Color:=OldPenColor;
-      DC.EndPainting;
-      Include(FStates,cssRubberbandPainted);
-    end;
-  end;
-
-// DrawRubberband
+  lRect: TRect;
+  lOldBrushStyle: TBrushStyle;
+  lOldPenStyle: TPenStyle;
+  lOldPenMode: TFPPenMode;
+  lOldPenColor: TColor;
 begin
-  Diff:=DC.FormOrigin;
-  with FRubberBandBounds do
-    DrawInvertFrameRect(Left-Diff.X,Top-Diff.Y,Right-Diff.X,Bottom-Diff.Y);
+  // coord
+  lRect := FRubberBandBounds;
+  lRect.Offset(TPoint.Zero - DC.FormOrigin);
+
+  DC.BeginPainting;
+  with DC.Canvas do
+  begin
+    // store
+    lOldBrushStyle := Brush.Style;
+    lOldPenColor   := Pen.Color;
+    lOldPenStyle   := Pen.Style;
+    lOldPenMode    := Pen.Mode;
+
+    // init
+    Brush.Style := bsClear;
+    Pen.Style   := psSolid; // psDot
+    Pen.Mode    := pmNotXor;
+    if RubberbandType = rbtSelection
+      then Pen.Color := RubberbandSelectionColor
+      else Pen.Color := RubberbandCreationColor;
+
+    // draw
+    Rectangle(lRect);
+
+    // restore
+    Brush.Style := lOldBrushStyle;
+    Pen.Style   := lOldPenStyle;
+    Pen.Mode    := lOldPenMode;
+    Pen.Color   := lOldPenColor;
+  end;
+  DC.EndPainting;
+
+  Include(FStates, cssRubberbandPainted);
 end;
 
 procedure TControlSelection.SelectAll(ALookupRoot: TComponent);
@@ -2770,9 +2732,9 @@ begin
   end;
 end;
 
-procedure TControlSelection.SelectWithRubberBand(ALookupRoot: TComponent;
+function TControlSelection.SelectWithRubberBand(ALookupRoot: TComponent;
   AMediator: TDesignerMediator; ClearBefore, ExclusiveOr: boolean;
-  var SelectionChanged: boolean; MaxParentComponent: TComponent);
+  MaxParentComponent: TComponent): boolean;
 var
   i: integer;
   AComponent: TComponent;
@@ -2792,7 +2754,7 @@ var
       if MaxParentComponent<>nil then begin
         // check if component is a grand child
         CurParent:=AComponent.GetParentComponent;
-        if (not EnvironmentOptions.RubberbandSelectsGrandChilds)
+        if (not EnvironmentGuiOpts.RubberbandSelectsGrandChilds)
         and (CurParent<>MaxParentComponent) then exit;
         // check if component is a child (direct or grand)
         while (CurParent<>nil) and (CurParent<>MaxParentComponent) do
@@ -2816,7 +2778,7 @@ var
           // select only controls, that are children of MaxParentComponent
           if (not TWinControl(MaxParentComponent).IsParentOf(AControl)) then exit;
           // check if control is a grand child
-          if (not EnvironmentOptions.RubberbandSelectsGrandChilds)
+          if (not EnvironmentGuiOpts.RubberbandSelectsGrandChilds)
           and (AControl.Parent<>MaxParentComponent) then exit;
         end;
       end;
@@ -2842,18 +2804,18 @@ var
 
 // SelectWithRubberBand
 begin
-  SelectionChanged:=false;
+  result:=false;
   if ClearBefore then begin
     if IsSelected(ALookupRoot) then begin
       Remove(ALookupRoot);
-      SelectionChanged:=true;
+      result:=true;
     end;
     for i:=0 to ALookupRoot.ComponentCount-1 do begin
       AComponent:=ALookupRoot.Components[i];
       if not ComponentInRubberBand(AComponent) then begin
         if IsSelected(AComponent) then begin
           Remove(AComponent);
-          SelectionChanged:=true;
+          result:=true;
         end;
       end;
     end;
@@ -2864,11 +2826,11 @@ begin
       if IsSelected(AComponent) then begin
         if ExclusiveOr then begin
           Remove(AComponent);
-          SelectionChanged:=true;
+          result:=true;
         end;
       end else begin
         Add(AComponent);
-        SelectionChanged:=true;
+        result:=true;
       end;
     end;
   end;
@@ -2879,37 +2841,25 @@ var
   i :integer;
   InvFrame: TRect;
 begin
-  if (FForm=nil) or (not FForm.HandleAllocated) then exit;
-  with ARect do begin
-    if Right<Left then begin
-      i:=Left;
-      Left:=Right;
-      Right:=i;
+  if FForm = nil then exit;
+  if not FForm.HandleAllocated then exit;
+
+  MakeMinMax(ARect.Left, ARect.Right);
+  MakeMinMax(ARect.Top, ARect.Bottom);
+
+  if not CompareRect(@FRubberBandBounds, @ARect) then
+  begin
+    if (FForm <> nil) and (cssRubberbandPainted in FStates) then
+    begin
+      InvFrame := FRubberBandBounds;
+      InvalidateFrame(FForm.Handle, @InvFrame, false, 1);
+      Exclude(FStates, cssRubberbandPainted);
     end;
-    if Bottom<Top then begin
-      i:=Top;
-      Top:=Bottom;
-      Bottom:=i;
-    end;
-  end;
-  if (FRubberBandBounds.Left<>ARect.Left)
-  or (FRubberBandBounds.Top<>ARect.Top)
-  or (FRubberBandBounds.Right<>ARect.Right)
-  or (FRubberBandBounds.Bottom<>ARect.Bottom)
-  then begin
-    if (FForm<>nil) and (cssRubberbandPainted in FStates) then begin
-      InvFrame:=FRubberBandBounds;
-      inc(InvFrame.Right);
-      inc(InvFrame.Bottom);
-      InvalidateFrame(FForm.Handle,@InvFrame,false,1);
-      Exclude(FStates,cssRubberbandPainted);
-    end;
-    FRubberBandBounds:=ARect;
-    if (FForm<>nil) and RubberbandActive then begin
-      InvFrame:=FRubberBandBounds;
-      inc(InvFrame.Right);
-      inc(InvFrame.Bottom);
-      InvalidateFrame(FForm.Handle,@InvFrame,false,1);
+    FRubberBandBounds := ARect;
+    if (FForm <> nil) and RubberbandActive then
+    begin
+      InvFrame := FRubberBandBounds;
+      InvalidateFrame(FForm.Handle, @InvFrame, false, 1);
     end;
   end;
 end;
@@ -3407,16 +3357,16 @@ begin
   OldPenColor:=DC.Canvas.Pen.Color;
   // draw bottom guideline
   if LineExists[glBottom] then
-    DrawLine(Line[glBottom],EnvironmentOptions.GuideLineColorRightBottom);
+    DrawLine(Line[glBottom],EnvironmentGuiOpts.GuideLineColorRightBottom);
   // draw top guideline
   if LineExists[glTop] then
-    DrawLine(Line[glTop],EnvironmentOptions.GuideLineColorLeftTop);
+    DrawLine(Line[glTop],EnvironmentGuiOpts.GuideLineColorLeftTop);
   // draw right guideline
   if LineExists[glRight] then
-    DrawLine(Line[glRight],EnvironmentOptions.GuideLineColorRightBottom);
+    DrawLine(Line[glRight],EnvironmentGuiOpts.GuideLineColorRightBottom);
   // draw left guideline
   if LineExists[glLeft] then
-    DrawLine(Line[glLeft],EnvironmentOptions.GuideLineColorLeftTop);
+    DrawLine(Line[glLeft],EnvironmentGuiOpts.GuideLineColorLeftTop);
 
   for g:=Low(TGuideLineType) to High(TGuideLineType) do begin
     FGuideLinesCache[g].PaintedLineValid:=LineExists[g];

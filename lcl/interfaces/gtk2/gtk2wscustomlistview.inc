@@ -243,6 +243,33 @@ begin
   end;
 end;
 
+procedure ChangeItemCache(const AWidgets: PTVWidgets; const AItem: Integer; const AState: TTVItemState);
+begin
+  if Length(AWidgets^.ItemCache) <= AItem then
+    SetLength(AWidgets^.ItemCache, AItem + TVItemCachePart);
+  if AWidgets^.ItemCacheCount <= AItem then
+    AWidgets^.ItemCacheCount := AItem + 1;
+  AWidgets^.ItemCache[AItem] := AState;
+end;
+
+procedure BroadcastItemCache(const AWidgets: PTVWidgets; const AWidgetInfo: PWidgetInfo);
+var
+  i: Integer;
+begin
+  for i := 0 to AWidgets^.ItemCacheCount -1 do
+    if AWidgets^.ItemCache[i] = tvisSelected then
+      BroadcastListSelection(AWidgetInfo^.LCLObject, {%H-}PtrUInt(AWidgets^.MainView),
+        i, True);
+  for i := 0 to AWidgets^.ItemCacheCount -1 do
+    if AWidgets^.ItemCache[i] = tvisUnselected then
+      BroadcastListSelection(AWidgetInfo^.LCLObject, {%H-}PtrUInt(AWidgets^.MainView),
+        i, False);
+  if Length(AWidgets^.ItemCache) > TVItemCachePart then
+    SetLength(AWidgets^.ItemCache, TVItemCachePart);
+  FillByte(AWidgets^.ItemCache[0], Length(AWidgets^.ItemCache), Ord(tvisUndefined));
+  AWidgets^.ItemCacheCount := 0;
+end;
+
 procedure Gtk2_ItemSelectionChanged(selection: PGtkTreeSelection; WidgetInfo: PWidgetInfo); cdecl;
 var
   Widgets: PTVWidgets;
@@ -256,11 +283,16 @@ begin
   // DebugLn('Gtk2_ItemSelectionChanged');
   Widgets := PTVWidgets(WidgetInfo^.UserData);
 
-  if (widgets = nil) or (Widgets^.ItemCache = nil) or
-    (Widgets^.ItemCache.Count=0) then
+  if Widgets = nil then
+    Exit;
+
+  if wwiInvalidEvent in Widgets^.WidgetInfo^.Flags then
+    exit;
+
+  if Length(Widgets^.ItemCache)=0 then
   begin
     // debugln(' Gtk2_ItemSelectionChanged  ItemCache=nil ',tComponent(widgetInfo^.lclObject).name);
-    if IsOldGtk2 and (Widgets <> nil) and (Widgets^.ItemCache <> nil) then
+    if IsOldGtk2 and (Widgets <> nil) then
     begin
       // debugLn('ItemsCache is valid ! count ',dbgs(Widgets^.ItemCache.Count));
       List := gtk_tree_selection_get_selected_rows(Selection, nil);
@@ -275,11 +307,7 @@ begin
             if Path <> nil then
             begin
               Indices := gtk_tree_path_get_indices(Path)^;
-              ListIndex := Widgets^.ItemCache.IndexOf(IntToStr(Indices));
-              if ListIndex = -1 then
-                Widgets^.ItemCache.AddObject(IntToStr(Indices), TObject(1))
-              else
-                Widgets^.ItemCache.Objects[ListIndex] := TObject(1);
+              ChangeItemCache(Widgets, Indices, tvisSelected);
             end;
           end;
           g_list_free(Widgets^.OldTreeSelection);
@@ -295,11 +323,7 @@ begin
           if Path <> nil then
           begin
             Indices := gtk_tree_path_get_indices(Path)^;
-            ListIndex := Widgets^.ItemCache.IndexOf(IntToStr(Indices));
-            if ListIndex = -1 then
-              Widgets^.ItemCache.AddObject(IntToStr(Indices), TObject(0))
-            else
-              Widgets^.ItemCache.Objects[ListIndex] := TObject(0);
+            ChangeItemCache(Widgets, Indices, tvisUnselected);
           end;
         end;
         g_list_free(List);
@@ -314,11 +338,7 @@ begin
             if Path <> nil then
             begin
               Indices := gtk_tree_path_get_indices(Path)^;
-              ListIndex := Widgets^.ItemCache.IndexOf(IntToStr(Indices));
-              if ListIndex = -1 then
-                Widgets^.ItemCache.AddObject(IntToStr(Indices), TObject(1))
-              else
-                Widgets^.ItemCache.Objects[ListIndex] := TObject(1);
+              ChangeItemCache(Widgets, Indices, tvisSelected);
             end;
           end;
           g_list_free(Widgets^.OldTreeSelection);
@@ -331,16 +351,8 @@ begin
 
   // DebugLn('Gtk2_ItemSelectionChanged Trigger OnSelectItem ? ', dbgs(not (wwiInvalidEvent in Widgets^.WidgetInfo^.Flags)));
   // LCL sent selection !
-  if wwiInvalidEvent in Widgets^.WidgetInfo^.Flags then
-    exit;
 
-  for i := 0 to Widgets^.ItemCache.Count -1 do
-  begin
-    AIndex := Widgets^.ItemCache.Strings[i];
-    BroadcastListSelection(WidgetInfo^.LCLObject, {%H-}PtrUInt(Widgets^.MainView),
-      StrToInt(AIndex), Widgets^.ItemCache.Objects[i] <> nil);
-  end;
-  Widgets^.ItemCache.Clear;
+  BroadcastItemCache(Widgets,WidgetInfo);
 end;
 
 procedure Gtk2_IconViewSelectionChanged(AIconView: PGtkIconView; WidgetInfo: PWidgetInfo); cdecl;
@@ -351,59 +363,52 @@ var
   List: PGList;
   Path: PGtkTreePath;
   pstr: PChar;
+  Indices: integer;
 begin
   Widgets := PTVWidgets(WidgetInfo^.UserData);
 
-  if (Widgets=nil) or (Widgets^.ItemCache=nil) or (Widgets^.ItemCache.Count=0) then
+  if Length(Widgets^.ItemCache)=0 then
   begin
-    if (Widgets^.ItemCache <> nil) and (Widgets^.ItemCache.Count = 0) then
+    List := gtk_icon_view_get_selected_items(AIconView);
+    if (List <> nil) then
     begin
-      List := gtk_icon_view_get_selected_items(AIconView);
-      if (List <> nil) then
-      begin
-        Path := PGtkTreePath(g_list_first(List)^.data);
-        pstr := gtk_tree_path_to_string(path);
-        Widgets^.ItemCache.Add(pstr);
-        g_free(pstr);
-        g_list_free(List);
-      end else
-        exit;
+      Path := PGtkTreePath(g_list_first(List)^.data);
+      Indices := gtk_tree_path_get_indices(path)^;
+      ChangeItemCache(Widgets, Indices, tvisUnselected);
+      g_list_free(List);
     end else
-      Exit;
-  end;
+      exit;
+  end else
+    Exit;
 
   // LCL already sent selection !
   if wwiInvalidEvent in Widgets^.WidgetInfo^.Flags then
     exit;
 
-  for i := 0 to Widgets^.ItemCache.Count -1 do
-  begin
-    AIndex := Widgets^.ItemCache.Strings[i];
-    BroadcastListSelection(WidgetInfo^.LCLObject, {%H-}PtrUInt(Widgets^.MainView),
-      StrToInt(AIndex), Widgets^.ItemCache.Objects[i] <> nil);
-  end;
-  Widgets^.ItemCache.Clear;
+  BroadcastItemCache(Widgets,WidgetInfo);
 end;
 
 function Gtk2WSLV_ItemSelected({%H-}selection: PGtkTreeSelection; {%H-}model: PGtkTreeModel;
            path: PGtkTreePath; path_is_currently_selected: GBoolean; WidgetInfo: PWidgetInfo): GBoolean; cdecl;
 var
   Widgets: PTVWidgets;
-  i: Integer;
-  Item: integer;
+  Indices: integer;
 begin
   // DebugLn('Gtk2_ItemSelected ');
   // this function is called *before* the item is selected
   // The result should be True to allow the Item to change selection
   Result := True;
-
   Widgets := PTVWidgets(WidgetInfo^.UserData);
-  Item := gtk_tree_path_get_indices(path)^;
-  i := Widgets^.ItemCache.IndexOf(IntToStr(Item));
-  if i = -1 Then
-    Widgets^.ItemCache.AddObject(IntToStr(Item), TObject(PtrInt(Ord(path_is_currently_selected))))
-  else
-    Widgets^.ItemCache.Objects[i] := TObject(PtrInt(Ord(path_is_currently_selected)));
+  if wwiInvalidEvent in Widgets^.WidgetInfo^.Flags then
+    exit;
+  if Widgets <> nil then
+  begin
+    Indices := gtk_tree_path_get_indices(path)^;
+    if path_is_currently_selected then
+      ChangeItemCache(Widgets, Indices, tvisSelected)
+    else
+      ChangeItemCache(Widgets, Indices, tvisUnselected);
+  end;
 end;
 
 procedure Gtk2WSLV_ListViewGetCheckedDataFunc({%H-}tree_column: PGtkTreeViewColumn;
@@ -1745,7 +1750,6 @@ begin
   New(Widgets);
   with Widgets^ do
   begin
-    ItemCache := TStringList.Create;
     Images := nil;
     OldTreeSelection := nil;
 
@@ -1784,7 +1788,8 @@ begin
     // Replace the ScrollingInfo with our info
     WidgetInfo := GetWidgetInfo(ScrollWidget);
     OrigScrollingData := WidgetInfo^.UserData;
-    Widgets^.ScrollingData := OrigScrollingData^;
+    ScrollingData := OrigScrollingData^;
+    ItemCacheCount := 0;
 
     WidgetInfo^.UserData := Widgets;
   
@@ -1794,7 +1799,7 @@ begin
     gtk_widget_show_all(PGtkWidget(MainView));
     if not AWinControl.HandleObjectShouldBeVisible and not (csDesigning in AWinControl.ComponentState) then
       gtk_widget_hide(PGtkWidget(ScrollWidget));
-    SetListCallbacks(PGtkWidget(ScrollWidget), Widgets, Widgets^.WidgetInfo);
+    SetListCallbacks(PGtkWidget(ScrollWidget), Widgets, WidgetInfo);
   end;
 end;
 
@@ -1806,9 +1811,8 @@ begin
   GetCommonTreeViewWidgets({%H-}PGtkWidget(AWinControl.Handle), Widgets);
   // on widget destroy we have no ItemDeleted notification and we must destroy ItemCache ourself
   // if things will change please remove this destroy
-  if Widgets^.ItemCache <> nil then
-    Widgets^.ItemCache.Free;
-  Widgets^.ItemCache := nil;
+  Widgets^.ItemCacheCount := 0;
+  SetLength(Widgets^.ItemCache, 0);
   if Widgets^.OldTreeSelection <> nil then
   begin
     g_list_free(Widgets^.OldTreeSelection);

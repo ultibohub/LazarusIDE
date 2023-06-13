@@ -430,8 +430,8 @@ resourcestring
   lisCopyItemToClipboard = 'Copy Item to Clipboard';
   lisCopySelectedItemToClipboard = 'Copy Selected Items to Clipboard';
   lisCopyAllItemsToClipboard = 'Copy All Items to Clipboard';
-  lisExpandAll = 'Expand All (*)';
-  lisCollapseAll = 'Collapse All (/)';
+  lisExpandAll = 'Expand All [Ctrl+Plus]';
+  lisCollapseAll = 'Collapse All [Ctrl+Minus]';
   lisEditHelp = 'Edit help';
   lisMenuViewSearchResults = 'Search Results';
   lisMenuViewAnchorEditor = 'Anchor Editor';
@@ -3924,15 +3924,6 @@ resourcestring
   lisUEGotoLine = 'Goto line:';
   lisGotoLine = 'Goto Line';
   
-  // Transfer Macros
-  lisTMFunctionExtractFileExtension = 'Function: extract file extension';
-  lisTMFunctionExtractFilePath = 'Function: extract file path';
-  lisTMFunctionExtractFileNameExtension = 'Function: extract file name+extension';
-  lisTMFunctionExtractFileNameOnly = 'Function: extract file name only';
-  lisTMFunctionAppendPathDelimiter = 'Function: append path delimiter';
-  lisTMFunctionChompPathDelimiter = 'Function: remove trailing path delimiter';
-  lisTMunknownMacro = '(unknown macro: %s)';
-  
   // System Variables Override Dialog
   lisSVUOInvalidVariableName = 'Invalid variable name';
   lisSVUOisNotAValidIdentifier = '"%s" is not a valid identifier.';
@@ -5477,9 +5468,12 @@ resourcestring
   rsFoundButNotListedHere = 'Found but not listed here: ';
   rsRefreshTheSearch = 'Refresh the search';
   rsNewSearchWithSameCriteria = 'New search with same criteria';
-  rsShowPath = 'Show path';
-  rsCloseCurrentPage = 'Close current page';
+  rsShowPathMode = 'Path display mode';
+  rsShowAbsPath = 'Absolute path';
+  rsShowRelPath = 'Relative path';
+  rsShowFileName = 'File name';
   rsFilterTheListWithString = 'Filter the lines in list with a string';
+  rsCloseCurrentPage = 'Close current page';
   rsCloseLeft = 'Close page(s) on the left';
   rsCloseRight = 'Close page(s) on the right';
   rsCloseOthers = 'Close other page(s)';

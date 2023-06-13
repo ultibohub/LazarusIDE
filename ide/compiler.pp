@@ -40,15 +40,17 @@ interface
 uses
   Classes, SysUtils, contnrs, strutils,
   // LazUtils
-  LazUTF8, LazFileUtils, LazUtilities, LazLoggerBase,
-  // LCL
-  Forms, Controls,
+  FPCAdds, LazUTF8, LazFileUtils, LazUtilities, LazLoggerBase,
   // Codetools
   DefineTemplates, LinkScanner, CodeToolManager, TransferMacros,
+  // LCL
+  Forms, Controls,
+  // BuildIntf
+  IDEExternToolIntf,
   // IdeIntf
-  IDEExternToolIntf, IDEMsgIntf, LazIDEIntf,
+  IDEMsgIntf, LazIDEIntf,
   // IDE
-  IDECmdLine, LazarusIDEStrConsts, CompilerOptions, Project, EnvironmentOpts;
+  IDECmdLine, LazarusIDEStrConsts, CompilerOptions, Project, EnvGuiOptions;
 
 type
   TOnCmdLineCreate = procedure(var CmdLine: string; var Abort:boolean) of object;
@@ -322,10 +324,10 @@ begin
   if AProject.BuildModes.Count>1 then
     Title+=Format(lisMode, [AProject.ActiveBuildMode.Identifier]);
   TargetOS:=AProject.CompilerOptions.GetEffectiveTargetOS;
-  if TargetOS<>GetCompiledTargetOS then
+  if TargetOS<>FPCAdds.GetCompiledTargetOS then
     Title+=Format(lisOS, [TargetOS]);
   TargetCPU:=AProject.CompilerOptions.GetEffectiveTargetCPU;
-  if TargetCPU<>GetCompiledTargetCPU then
+  if TargetCPU<>FPCAdds.GetCompiledTargetCPU then
     Title+=Format(lisCPU, [TargetCPU]);
   TargetFilename:=AProject.CompilerOptions.CreateTargetFilename;
   if TargetFilename<>'' then
@@ -346,7 +348,7 @@ begin
     if CompilerKind=pcPas2js then
       SubTool:=SubToolPas2js;
     FPCParser:=TFPCParser(Tool.AddParsers(SubTool));
-    FPCParser.ShowLinesCompiled:=EnvironmentOptions.MsgViewShowFPCMsgLinesCompiled;
+    FPCParser.ShowLinesCompiled:=EnvironmentGuiOpts.MsgViewShowFPCMsgLinesCompiled;
     FPCParser.HideHintsSenderNotUsed:=not AProject.CompilerOptions.ShowHintsForSenderNotUsed;
     FPCParser.HideHintsUnitNotUsedInMainSource:=not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc;
     if (not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc)

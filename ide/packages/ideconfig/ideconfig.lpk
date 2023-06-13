@@ -44,10 +44,6 @@ Files in this package are for the main configuration of the IDE."/>
         <Type Value="Include"/>
       </Item>
       <Item>
-        <Filename Value="transfermacrosintf.pas"/>
-        <UnitName Value="TransferMacrosIntf"/>
-      </Item>
-      <Item>
         <Filename Value="ideoptiondefs.pas"/>
         <UnitName Value="IDEOptionDefs"/>
       </Item>
@@ -76,13 +72,17 @@ Files in this package are for the main configuration of the IDE."/>
         <UnitName Value="DiffPatch"/>
       </Item>
       <Item>
-        <Filename Value="inputhistory.pas"/>
-        <UnitName Value="InputHistory"/>
+        <Filename Value="transfermacros.pp"/>
+        <UnitName Value="TransferMacros"/>
+      </Item>
+      <Item>
+        <Filename Value="ideconfstrconsts.pas"/>
+        <UnitName Value="IdeConfStrConsts"/>
       </Item>
     </Files>
     <RequiredPkgs>
       <Item>
-        <PackageName Value="IDEIntf"/>
+        <PackageName Value="CodeTools"/>
       </Item>
       <Item>
         <PackageName Value="DebuggerIntf"/>
@@ -91,13 +91,7 @@ Files in this package are for the main configuration of the IDE."/>
         <PackageName Value="BuildIntf"/>
       </Item>
       <Item>
-        <PackageName Value="LCLBase"/>
-      </Item>
-      <Item>
         <PackageName Value="LazUtils"/>
-      </Item>
-      <Item>
-        <PackageName Value="CodeTools"/>
       </Item>
       <Item>
         <PackageName Value="FCL"/>

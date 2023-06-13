@@ -12,11 +12,23 @@ uses
   CGGeometry, CocoaAll, cocoa_extra,
   Classes, Controls, SysUtils,
   //
-  WSControls, LCLType, LMessages, LCLProc, Graphics, Forms,
+  WSControls, LCLType, LMessages, LCLProc, LCLIntf, Graphics, Forms,
   CocoaPrivate, CocoaGDIObjects, CocoaCaret, CocoaUtils, LCLMessageGlue,
   CocoaScrollers;
 
 type
+  { TCursorHelper }
+
+  TCursorHelper = class
+  private
+    procedure DoSetCursorOnActive( data:IntPtr );
+  public
+    class procedure SetCursorOnActive;
+    class procedure SetCurrentControlCursor;
+    class procedure SetScreenCursor;
+    class procedure SetScreenCursorWhenNotDefault;
+  end;
+
   { TLCLCommonCallback }
 
   TLCLCommonCallback = class(TObject, ICommonCallBack)
@@ -107,7 +119,6 @@ type
     procedure Draw(ControlContext: NSGraphicsContext; const bounds, dirty: NSRect); virtual;
     procedure DrawBackground(ctx: NSGraphicsContext; const bounds, dirtyRect: NSRect); virtual;
     procedure DrawOverlay(ControlContext: NSGraphicsContext; const bounds, dirty: NSRect); virtual;
-    function ResetCursorRects: Boolean; virtual;
     procedure RemoveTarget; virtual;
 
     procedure InputClientInsertText(const utf8: string);
@@ -190,6 +201,9 @@ function CocoaModifiersToShiftState(AModifiers: NSUInteger; AMouseButtons: NSUIn
 function NSObjectDebugStr(obj: NSObject): string;
 function CallbackDebugStr(cb: ICommonCallback): string;
 procedure DebugDumpParents(fromView: NSView);
+
+var
+  CursorHelper: TCursorHelper;
 
 implementation
 
@@ -290,6 +304,7 @@ begin
   end;
   r := AView.lclFrame;
   p := AView.superview;
+  p.setAutoresizingMask( NSViewWidthSizable or NSViewHeightSizable);
   Result := TCocoaManualScrollView.alloc.initWithFrame(NSNullRect);
   if Assigned(p) then p.addSubView(Result);
   Result.lclSetFrame(r);
@@ -340,6 +355,44 @@ begin
   AView.setHidden(false);
   {$endif}
   SetViewDefaults(Result);
+end;
+
+
+{ TCursorHelper }
+
+procedure TCursorHelper.DoSetCursorOnActive( data:IntPtr );
+begin
+  if Screen.Cursor<>crDefault then
+    SetScreenCursor
+  else
+    SetCurrentControlCursor;
+end;
+
+class procedure TCursorHelper.SetCursorOnActive;
+begin
+  Application.QueueAsyncCall( @CursorHelper.DoSetCursorOnActive, 0 );
+end;
+
+class procedure TCursorHelper.SetCurrentControlCursor;
+var
+  P: TPoint;
+  control: TControl;
+begin
+  GetCursorPos(P);
+  control:= FindControlAtPosition(P, true);;
+  if Assigned(control) then
+    TCocoaCursor(Screen.Cursors[control.Cursor]).SetCursor;
+end;
+
+class procedure TCursorHelper.SetScreenCursor;
+begin
+  TCocoaCursor(Screen.Cursors[Screen.Cursor]).SetCursor;
+end;
+
+class procedure TCursorHelper.SetScreenCursorWhenNotDefault;
+begin
+  if Screen.Cursor<>crDefault then
+    SetScreenCursor;
 end;
 
 { TLCLCommonCallback }
@@ -1203,6 +1256,10 @@ begin
   NotifyApplicationUserInput(Target, Msg.Msg);
   Result := DeliverMessage(Msg) <> 0;
   if BlockCocoaMouseMove then Result := true;
+
+  // if Screen.Cursor set, LCL won't call TCocoaWSWinControl.SetCursor().
+  // we need to set the cursor ourselves
+  CursorHelper.SetScreenCursorWhenNotDefault;
 end;
 
 function TLCLCommonCallback.scrollWheel(Event: NSEvent): Boolean;
@@ -1522,34 +1579,6 @@ begin
   end;
 end;
 
-function TLCLCommonCallback.ResetCursorRects: Boolean;
-var
-  ACursor: TCursor;
-  View: NSView;
-  cr:TCocoaCursor;
-begin
-  Result := False;
-  View := HandleFrame.lclContentView;
-  if View = nil then Exit;
-  if not Assigned(Target) then Exit;
-  if not (csDesigning in Target.ComponentState) then
-  begin
-    ACursor := Screen.RealCursor;
-    if ACursor = crDefault then
-    begin
-      // traverse visible child controls
-      ACursor := Target.Cursor;
-    end;
-    Result := ACursor <> crDefault;
-    if Result then
-    begin
-      cr:=TCocoaCursor(Screen.Cursors[ACursor]);
-      if assigned(cr) then
-      View.addCursorRect_cursor(View.visibleRect, cr.Cursor);
-    end;
-  end;
-end;
-
 procedure TLCLCommonCallback.RemoveTarget;
 begin
   FTarget := nil;
@@ -1797,17 +1826,24 @@ end;
 
 class procedure TCocoaWSWinControl.SetCursor(const AWinControl: TWinControl;
   const ACursor: HCursor);
+var
+  control: TControl;
 begin
   //debugln('SetCursor '+AWinControl.name+' '+dbgs(ACursor));
-  if CocoaWidgetSet.CurrentCursor<>ACursor then
-  begin
-    CocoaWidgetSet.CurrentCursor:= ACursor;
 
-    if ACursor<>0 then
-      TCocoaCursor(ACursor).SetCursor
-    else
-      TCocoaCursor.SetDefaultCursor;
-  end;
+  // screen cursor has higher priority than control cursor.
+  if Screen.Cursor<>crDefault
+    then exit;
+
+  // control cursor only need be set when mouse in AWinControl.
+  // suppose there is a Button, which is to set a Cursor of a ListBox.
+  // without the code here, it will be set to the Cursor of the ListBox
+  // after clicking the Button.
+  control:= Application.GetControlAtMouse;
+  if control<>AWinControl then
+    exit;
+
+  TCocoaCursor(ACursor).SetCursor;
 end;
 
 type
@@ -1981,7 +2017,7 @@ var
   handle : PtrInt;
 begin
   handle := SendSimpleMessage(control, LM_IM_COMPOSITION);
-  Result := TObject(handle) as ICocoaIMEControl
+  Result := TObject(handle) as ICocoaIMEControl;
 end;
 
 class function TCocoaWSCustomControl.CreateHandle(const AWinControl: TWinControl;
@@ -2076,6 +2112,12 @@ begin
     fromView := fromView.superView;
   end;
 end;
+
+initialization
+  CursorHelper:= TCursorHelper.Create;
+
+finalization
+  FreeAndNil(CursorHelper);
 
 end.
 

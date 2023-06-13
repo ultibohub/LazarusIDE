@@ -42,22 +42,21 @@ uses
   ExprEval, BasicCodeTools, CodeToolManager, DefineTemplates, CodeCache,
   FileProcs, CodeToolsCfgScript, LinkScanner,
   // LazUtils
-  LConvEncoding, FileUtil, LazFileUtils, LazFileCache, LazUTF8, Laz2_XMLCfg,
-  LazUtilities, LazStringUtils, LazMethodList,
+  FPCAdds, LConvEncoding, FileUtil, LazFileUtils, LazFileCache, LazUTF8,
+  Laz2_XMLCfg, LazUtilities, LazStringUtils, LazMethodList,
   // BuildIntf
   BaseIDEIntf, IDEOptionsIntf, ProjectIntf, MacroIntf, PublishModuleIntf,
   IDEExternToolIntf, CompOptsIntf, MacroDefIntf,
   // IDEIntf
-  IDEDialogs, LazIDEIntf, IDEMsgIntf, SrcEditorIntf,
-  // IdeOptions
-  TransferMacrosIntf,
+  IDEDialogs, LazIDEIntf, IDEMsgIntf, SrcEditorIntf, InputHistory,
+  // IdeConfig
+  LazConf, EnvironmentOpts, ModeMatrixOpts, TransferMacros, IdeConfStrConsts,
   // IDE
-  IDECmdLine, LazarusIDEStrConsts, DialogProcs, IDEProcs, InputHistory,
-  EditDefineTree, ProjectResources, MiscOptions, LazConf, EnvironmentOpts,
-  TransferMacros, CompilerOptions, ExtTools, etMakeMsgParser, etFPCMsgParser,
-  etPas2jsMsgParser, Compiler, FPCSrcScan, PackageDefs, PackageSystem, Project,
-  ProjectIcon, ModeMatrixOpts, BaseBuildManager, ApplicationBundle,
-  RunParamsOpts, IdeTransferMacros, SearchPathProcs;
+  IDECmdLine, LazarusIDEStrConsts, DialogProcs, IDEProcs,
+  EditDefineTree, ProjectResources, MiscOptions, CompilerOptions,
+  ExtTools, etMakeMsgParser, etFPCMsgParser, etPas2jsMsgParser, Compiler,
+  FPCSrcScan, PackageDefs, PackageSystem, Project, ProjectIcon, BaseBuildManager,
+  ApplicationBundle, RunParamsOpts, IdeTransferMacros, SearchPathProcs;
   
 const
   cInvalidCompiler = 'InvalidCompiler';
@@ -296,6 +295,11 @@ begin
   Result:=CompareIdentifierPtrs(Pointer(UnitName),Pointer(UnitFile^.FileUnitName));
 end;
 
+procedure OnCompilerParseStampIncreased;
+begin
+  CodeToolBoss.DefineTree.ClearCache;
+end;
+
 { TBuildManager }
 
 procedure TBuildManager.OnProjectDestroy(Sender: TObject);
@@ -375,9 +379,10 @@ end;
 
 constructor TBuildManager.Create(AOwner: TComponent);
 begin
-  EnvironmentOptions := TEnvironmentOptions.Create;
+  EnvironmentOptions := TEnvironmentOptions.Create(Application.ExeName);
   IDEEnvironmentOptions := EnvironmentOptions;
   EnvironmentOptions.IsGlobalMode:=@EnvironmentOptionsIsGlobalMode;
+
   DefaultCfgVars:=TCTCfgScriptVariables.Create;
   DefaultCfgVarsBuildMacroStamp:=CTInvalidChangeStamp;
   FFPCVerChangeStamp:=CTInvalidChangeStamp;
@@ -407,10 +412,10 @@ begin
   OnBackupFileInteractive:=nil;
 
   FreeAndNil(FFPCSrcScans);
-
   LazConfMacroFunc:=nil;
   FreeAndNil(InputHistories);
   FreeAndNil(DefaultCfgVars);
+  FreeAndNil(EnvironmentOptions);
 
   if SameMethod(TMethod(CodeToolBoss.OnRescanFPCDirectoryCache),
                 TMethod(@DoOnRescanFPCDirectoryCache)) then
@@ -423,7 +428,7 @@ end;
 procedure TBuildManager.SetupTransferMacros;
 begin
   LazConfMacroFunc:=@BMLazConfMacroFunction;
-  TransferMacrosIntf.GlobalMacroList:=TTransferMacroList.Create;
+  GlobalMacroList:=TTransferMacroList.Create;
   GlobalMacroList.OnSubstitution:=@OnMacroSubstitution;
   IDEMacros:=TLazIDEMacros.Create;
   CompilerOptions.OnParseString:=@OnSubstituteCompilerOption;

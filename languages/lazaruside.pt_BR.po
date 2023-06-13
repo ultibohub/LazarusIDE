@@ -7075,7 +7075,9 @@ msgid "Collapse"
 msgstr ""
 
 #: lazarusidestrconsts.liscollapseall
-msgid "Collapse All (/)"
+#, fuzzy
+#| msgid "Collapse All (/)"
+msgid "Collapse All [Ctrl+Minus]"
 msgstr "Retrair tudo (/)"
 
 #: lazarusidestrconsts.liscollapseall2
@@ -9519,7 +9521,9 @@ msgid "Expand"
 msgstr ""
 
 #: lazarusidestrconsts.lisexpandall
-msgid "Expand All (*)"
+#, fuzzy
+#| msgid "Expand All (*)"
+msgid "Expand All [Ctrl+Plus]"
 msgstr "Expandir Tudo (*)"
 
 #: lazarusidestrconsts.lisexpandall2
@@ -20418,6 +20422,7 @@ msgid "Delete all resources?"
 msgstr "Excluir todos os recursos?"
 
 #: lazarusidestrconsts.rsresourcefilename
+msgctxt "lazarusidestrconsts.rsresourcefilename"
 msgid "File name"
 msgstr "Nome de arquivo"
 
@@ -20434,8 +20439,22 @@ msgstr "&Revisão:"
 msgid "Select an inherited entry"
 msgstr "Selecionar uma entrada herdada"
 
-#: lazarusidestrconsts.rsshowpath
-msgid "Show path"
+#: lazarusidestrconsts.rsshowabspath
+msgid "Absolute path"
+msgstr ""
+
+#: lazarusidestrconsts.rsshowfilename
+#, fuzzy
+msgctxt "lazarusidestrconsts.rsshowfilename"
+msgid "File name"
+msgstr "Nome de arquivo"
+
+#: lazarusidestrconsts.rsshowpathmode
+msgid "Path display mode"
+msgstr ""
+
+#: lazarusidestrconsts.rsshowrelpath
+msgid "Relative path"
 msgstr ""
 
 #: lazarusidestrconsts.rsversionnumbering

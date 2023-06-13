@@ -52,7 +52,7 @@ uses
   PPUCodeTools, LFMTrees, DirectivesTree, CodeCompletionTemplater,
   PascalParserTool, CodeToolsConfig, CustomCodeTool, FindDeclarationTool,
   IdentCompletionTool, StdCodeTools, ResourceCodeTool, CodeToolsStructs,
-  CTUnitGraph, ExtractProcTool;
+  CTUnitGraph, ExtractProcTool, SourceLog;
 
 type
   TCodeToolManager = class;
@@ -151,8 +151,10 @@ type
     procedure DoOnGatherUserIdentifiers(Sender: TIdentCompletionTool;
       const ContextFlags: TIdentifierListContextFlags);
     procedure DoOnRescanFPCDirectoryCache(Sender: TObject);
+    function DoOnScannerFindIncFileInFPCSrcDir(Sender: TLinkScanner;
+      const IncName: string; out ExpFilename: string): boolean;
     function GetBeautifier: TBeautifyCodeOptions; inline;
-    function DoOnScannerGetInitValues(Scanner: TLinkScanner; Code: Pointer;
+    function DoOnScannerGetInitValues(Scanner: TLinkScanner; Code: TSourceLog;
       out AChangeStep: integer): TExpressionEvaluator;
     procedure DoOnDefineTreeReadValue(Sender: TObject; const VariableName: string;
                                     var Value: string; var Handled: boolean);
@@ -1220,7 +1222,9 @@ begin
     // To not parse the FPC sources every time, the options are saved to a file.
     DebugLn(['TCodeToolManager.SimpleInit Config=',ConfigFilename]);
     if FileExistsUTF8(ConfigFilename) then
-      Options.LoadFromFile(ConfigFilename);
+      Options.LoadFromFile(ConfigFilename)
+    else
+      debugln('Scanning FPC sources may take a while ...');
     // use environment variables
     Options.InitWithEnvironmentVariables;
     // apply defaults
@@ -1230,8 +1234,6 @@ begin
       Options.LazarusSrcDir:=ExpandFileNameUTF8('~/pascal/lazarus');
     DebugLn(['TCodeToolManager.SimpleInit PP=',Options.FPCPath,' FPCDIR=',Options.FPCSrcDir,' LAZARUSDIR=',Options.LazarusSrcDir,' FPCTARGET=',Options.TargetOS]);
     // init the codetools
-    if not Options.UnitLinkListValid then
-      debugln('Scanning FPC sources may take a while ...');
     Init(Options);
 
     // save the options and the FPC unit links results.
@@ -1463,14 +1465,19 @@ begin
 end;
 
 procedure TCodeToolManager.CreateScanner(Code: TCodeBuffer);
+var
+  Scanner: TLinkScanner;
 begin
   if FilenameHasSourceExt(Code.Filename) and (Code.Scanner=nil) then begin
     // create a scanner for the unit/program
-    Code.Scanner:=TLinkScanner.Create;
-    Code.Scanner.OnGetInitValues:=@DoOnScannerGetInitValues;
-    Code.Scanner.OnSetGlobalWriteLock:=@DoOnToolSetWriteLock;
-    Code.Scanner.OnGetGlobalChangeSteps:=@DoOnToolGetChangeSteps;
-    Code.Scanner.OnProgress:=@DoOnScannerProgress;
+    Scanner:=TLinkScanner.Create;
+    Code.Scanner:=Scanner;
+    Scanner.OnGetInitValues:=@DoOnScannerGetInitValues;
+    Scanner.OnSetGlobalWriteLock:=@DoOnToolSetWriteLock;
+    Scanner.OnGetGlobalChangeSteps:=@DoOnToolGetChangeSteps;
+    Scanner.OnProgress:=@DoOnScannerProgress;
+    Scanner.OnFindIncFileInFPCSrcDir:=@DoOnScannerFindIncFileInFPCSrcDir;
+    Scanner.DirectoryCachePool:=DirectoryCachePool;
   end;
 end;
 
@@ -6044,6 +6051,26 @@ begin
     FOnRescanFPCDirectoryCache(Sender);
 end;
 
+function TCodeToolManager.DoOnScannerFindIncFileInFPCSrcDir(
+  Sender: TLinkScanner; const IncName: string; out ExpFilename: string
+  ): boolean;
+var
+  CfgCache: TPCTargetConfigCache;
+  UnitSet: TFPCUnitSetCache;
+  Dir: String;
+begin
+  Dir:=ExtractFilePath(Sender.MainFilename);
+  // search the include file in directories defines in fpc.cfg (by -Fi option)
+  UnitSet:=CodeToolBoss.GetUnitSetForDirectory(Dir);
+  if UnitSet<>nil then begin
+    CfgCache:=UnitSet.GetConfigCache(false);
+    Result:=Assigned(CfgCache) and Assigned(CfgCache.Includes)
+      and CfgCache.Includes.GetString(IncName,ExpFilename);
+  end
+  else
+    Result:=False;
+end;
+
 procedure TCodeToolManager.DoOnToolTreeChange(Tool: TCustomCodeTool;
   NodesDeleting: boolean);
 var
@@ -6089,7 +6116,7 @@ begin
 end;
 
 function TCodeToolManager.DoOnScannerGetInitValues(Scanner: TLinkScanner;
-  Code: Pointer; out AChangeStep: integer): TExpressionEvaluator;
+  Code: TSourceLog; out AChangeStep: integer): TExpressionEvaluator;
 begin
   Result:=nil;
   AChangeStep:=DefineTree.ChangeStep;
@@ -6758,26 +6785,9 @@ end;
 
 //-----------------------------------------------------------------------------
 
-function FindIncFileInCfgCache(const Name: string; out ExpFilename: string): boolean;
-var
-  CfgCache: TPCTargetConfigCache;
-  UnitSet: TFPCUnitSetCache;
-begin
-  // search the include file in directories defines in fpc.cfg (by -Fi option)
-  UnitSet:=CodeToolBoss.GetUnitSetForDirectory('');
-  if UnitSet<>nil then begin
-    CfgCache:=UnitSet.GetConfigCache(false);
-    Result:=Assigned(CfgCache) and Assigned(CfgCache.Includes)
-      and CfgCache.Includes.GetString(Name,ExpFilename);
-  end
-  else
-    Result:=False;
-end;
-
 initialization
   CodeToolBoss:=TCodeToolManager.Create;
   OnFindOwnerOfCodeTreeNode:=@GetOwnerForCodeTreeNode;
-  BasicCodeTools.FindIncFileInCfgCache:=@FindIncFileInCfgCache;
 
 
 finalization

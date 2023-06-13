@@ -49,7 +49,7 @@ uses
   IDEImagesIntf, FormEditingIntf, ComponentReg, IDECommands, LazIDEIntf,
   ProjectIntf, ObjectInspector, IdeIntfStrConsts,
   // IDE
-  LazarusIDEStrConsts, EnvironmentOpts, EditorOptions, SourceEditor,
+  LazarusIDEStrConsts, EnvGuiOptions, EditorOptions, SourceEditor,
   // Designer
   AlignCompsDlg, SizeCompsDlg, ScaleCompsDlg, DesignerProcs, CustomFormEditor,
   AskCompNameDlg, ControlSelection, ChangeClassDialog, ImgList;
@@ -758,7 +758,7 @@ begin
   if Assigned(FOnSetDesigning) then
     FOnSetDesigning(Self,NewComponent,True);
 
-  if EnvironmentOptions.CreateComponentFocusNameProperty then
+  if EnvironmentGuiOpts.CreateComponentFocusNameProperty then
     ShowComponentNameDialog(LookupRoot,NewComponent);  // ask user for name
 
   // tell IDE about the new component (e.g. add it to the source)
@@ -1056,8 +1056,7 @@ begin
   begin
     Selection.RestoreBounds;
     Selection.ActiveGrabber := nil;
-    if Selection.RubberbandActive then
-      Selection.RubberbandActive := False;
+    Selection.RubberbandActive := False;
     LastMouseMovePos.X := -1;
     Exclude(FFlags, dfHasSized);
     MouseDownComponent := nil;
@@ -1077,10 +1076,14 @@ begin
   // if not component moving then select parent
   i := Selection.Count - 1;
   while (i >= 0) and
-        (Selection[i].ParentInSelection or
-         not Selection[i].IsTComponent or
-         (ParentComponent(TComponent(Selection[i].Persistent)) = nil)) do
+    (
+      Selection[i].ParentInSelection or
+      not Selection[i].IsTComponent or
+      (ParentComponent(TComponent(Selection[i].Persistent)) = nil)
+    )
+  do
     Dec(i);
+
   if i >= 0 then
     SelectOnlyThisComponent(ParentComponent(TComponent(Selection[i].Persistent)));
 end;
@@ -1944,14 +1947,14 @@ end;
 procedure TDesigner.SetGridColor(const AValue: TColor);
 begin
   if GridColor=AValue then exit;
-  EnvironmentOptions.GridColor:=AValue;
+  EnvironmentGuiOpts.GridColor:=AValue;
   Form.Invalidate;
 end;
 
 procedure TDesigner.SetShowBorderSpacing(const AValue: boolean);
 begin
   if ShowBorderSpacing=AValue then exit;
-  EnvironmentOptions.ShowBorderSpacing:=AValue;
+  EnvironmentGuiOpts.ShowBorderSpacing:=AValue;
   Form.Invalidate;
 end;
 
@@ -2040,7 +2043,7 @@ end;
 
 procedure TDesigner.HandlePopupMenu(Sender: TControl; var Message: TLMContextMenu);
 var
-  PopupPos: TPoint;
+  lPos: TPoint;
 begin
   //debugln(['TDesigner.HandlePopupMenu ',DbgSName(Sender),' ',Message.XPos,',',Message.YPos]);
   {$IFDEF EnableDesignerPopupRightClick}
@@ -2049,16 +2052,10 @@ begin
   begin
     PopupMenuComponentEditor := GetComponentEditorForSelection;
     BuildPopupMenu;
-    if Message.XPos >=0 then
-    begin
-      PopupPos := Point(Message.XPos,Message.YPos);
-      FDesignerPopupMenu.Popup(PopupPos.X, PopupPos.Y);
-    end else begin
-      with Selection do
-        PopupPos := Point(Left + Width, Top);
-      with Form.ClientToScreen(PopupPos) do
-        FDesignerPopupMenu.Popup(X, Y);
-    end;
+    if Message.XPos >= 0
+      then lPos := Point(Message.XPos,Message.YPos)
+      else lPos := Form.ClientToScreen(Point(Selection.Left + Selection.Width, Selection.Top));
+    FDesignerPopupMenu.Popup(lPos.X, lPos.Y);
   end;
   Message.Result := 1;
 end;
@@ -2301,6 +2298,7 @@ begin
           end else begin
             // remove from multiselection
             Selection.Delete(CompIndex);
+            Form.Invalidate; // redraw markers
           end;
         end else begin
           // no shift key (single selection or keeping multiselection)
@@ -2326,7 +2324,7 @@ begin
   end else begin
     // not left button
     Selection.ActiveGrabber := nil;
-    if (Button = mbRight) and EnvironmentOptions.RightClickSelects and
+    if (Button = mbRight) and EnvironmentGuiOpts.RightClickSelects and
        (Selection.SelectionForm <> Form) then
       Selection.AssignPersistent(MouseDownComponent);
   end;
@@ -2399,7 +2397,7 @@ var
   procedure RubberbandSelect;
   var
     MaxParentComponent: TComponent;
-    SelectionChanged, NewRubberSelection: boolean;
+    NewRubberSelection: boolean;
   begin
     if (ssShift in Shift)
     and (Selection.SelectionForm<>nil)
@@ -2424,13 +2422,11 @@ var
         MaxParentComponent:=MouseDownComponent;
     end else
       MaxParentComponent:=FLookupRoot;
-    SelectionChanged:=false;
-    Selection.SelectWithRubberBand(
-      FLookupRoot,Mediator,NewRubberSelection,ssShift in Shift,
-      SelectionChanged,MaxParentComponent);
+
+    Selection.SelectWithRubberBand(FLookupRoot, Mediator, NewRubberSelection,
+      ssShift in Shift, MaxParentComponent);
     if Selection.Count=0 then begin
       Selection.Add(FLookupRoot);
-      SelectionChanged:=true;
     end;
     Selection.RubberbandActive:=false;
     {$IFDEF VerboseDesigner}
@@ -2579,9 +2575,9 @@ begin
     // right click -> popup menu
     Selection.RubberbandActive := False;
     Selection.EndUpdate;
-    if EnvironmentOptions.RightClickSelects
+    if EnvironmentGuiOpts.RightClickSelects
     and (not Selection.IsSelected(MouseDownComponent))
-    and (Shift - [ssRight] = []) then begin
+    and (Shift = [ssRight]) then begin
       // select only the mouse down component
       Selection.AssignPersistent(MouseDownComponent);
     end;
@@ -3250,7 +3246,7 @@ begin
     
     if ShowBorderSpacing then
     begin
-      aDDC.Canvas.Brush.Color := EnvironmentOptions.BorderSpacingColor;
+      aDDC.Canvas.Brush.Color := EnvironmentGuiOpts.BorderSpacingColor;
       for i := 0 to Count - 1 do
       begin
         CurControl := AWinControl.Controls[i];
@@ -3358,7 +3354,7 @@ end;
 
 procedure TDesigner.OnSnapToGridOptionMenuClick(Sender: TObject);
 begin
-  EnvironmentOptions.SnapToGrid := not EnvironmentOptions.SnapToGrid;
+  EnvironmentGuiOpts.SnapToGrid := not EnvironmentGuiOpts.SnapToGrid;
 end;
 
 procedure TDesigner.OnShowOptionsMenuItemClick(Sender: TObject);
@@ -3368,7 +3364,7 @@ end;
 
 procedure TDesigner.OnSnapToGuideLinesOptionMenuClick(Sender: TObject);
 begin
-  EnvironmentOptions.SnapToGuideLines := not EnvironmentOptions.SnapToGuideLines;
+  EnvironmentGuiOpts.SnapToGuideLines := not EnvironmentGuiOpts.SnapToGuideLines;
 end;
 
 procedure TDesigner.OnViewLFMMenuClick(Sender: TObject);
@@ -3421,12 +3417,12 @@ end;
 
 function TDesigner.GetGridColor: TColor;
 begin
-  Result:=EnvironmentOptions.GridColor;
+  Result:=EnvironmentGuiOpts.GridColor;
 end;
 
 function TDesigner.GetShowBorderSpacing: boolean;
 begin
-  Result:=EnvironmentOptions.ShowBorderSpacing;
+  Result:=EnvironmentGuiOpts.ShowBorderSpacing;
 end;
 
 function TDesigner.GetShowComponentCaptions: boolean;
@@ -3436,7 +3432,7 @@ end;
 
 function TDesigner.GetShowGrid: boolean;
 begin
-  Result:=EnvironmentOptions.ShowGrid;
+  Result:=EnvironmentGuiOpts.ShowGrid;
 end;
 
 function TDesigner.GetShowNonVisualComponents: boolean;
@@ -3446,13 +3442,13 @@ end;
 
 function TDesigner.GetGridSizeX: integer;
 begin
-  Result:=EnvironmentOptions.GridSizeX;
+  Result:=EnvironmentGuiOpts.GridSizeX;
   if Result<2 then Result:=2;
 end;
 
 function TDesigner.GetGridSizeY: integer;
 begin
-  Result:=EnvironmentOptions.GridSizeY;
+  Result:=EnvironmentGuiOpts.GridSizeY;
   if Result<2 then Result:=2;
 end;
 
@@ -3468,13 +3464,13 @@ end;
 
 function TDesigner.GetSnapToGrid: boolean;
 begin
-  Result := EnvironmentOptions.SnapToGrid;
+  Result := EnvironmentGuiOpts.SnapToGrid;
 end;
 
 procedure TDesigner.SetShowGrid(const AValue: boolean);
 begin
   if ShowGrid=AValue then exit;
-  EnvironmentOptions.ShowGrid:=AValue;
+  EnvironmentGuiOpts.ShowGrid:=AValue;
   Form.Invalidate;
 end;
 
@@ -3504,13 +3500,13 @@ end;
 procedure TDesigner.SetGridSizeX(const AValue: integer);
 begin
   if GridSizeX=AValue then exit;
-  EnvironmentOptions.GridSizeX:=AValue;
+  EnvironmentGuiOpts.GridSizeX:=AValue;
 end;
 
 procedure TDesigner.SetGridSizeY(const AValue: integer);
 begin
   if GridSizeY=AValue then exit;
-  EnvironmentOptions.GridSizeY:=AValue;
+  EnvironmentGuiOpts.GridSizeY:=AValue;
 end;
 
 procedure TDesigner.SetMediator(const AValue: TDesignerMediator);
@@ -3750,7 +3746,7 @@ begin
   // guidelines and grabbers
   if (Selection.SelectionForm=Form) then
   begin
-    if EnvironmentOptions.ShowGuideLines then
+    if EnvironmentGuiOpts.ShowGuideLines then
       Selection.DrawGuideLines(DDC);
     Selection.DrawGrabbers(DDC);
   end;
@@ -4080,9 +4076,9 @@ begin
   // Disable ViewLFM menu item for virtual units. There is no form file yet.
   DesignerMenuViewLFM.Enabled := not UnitIsVirtual;
   DesignerMenuChangeParent.Enabled := HasChangeParentCandidates;
-  DesignerMenuSnapToGridOption.Checked := EnvironmentOptions.SnapToGrid;
+  DesignerMenuSnapToGridOption.Checked := EnvironmentGuiOpts.SnapToGrid;
   DesignerMenuShowNonVisualComponents.Checked := ShowNonVisualComponents;
-  DesignerMenuSnapToGuideLinesOption.Checked := EnvironmentOptions.SnapToGuideLines;
+  DesignerMenuSnapToGuideLinesOption.Checked := EnvironmentGuiOpts.SnapToGuideLines;
 end;
 
 procedure TDesigner.OnAlignPopupMenuClick(Sender: TObject);
@@ -4386,7 +4382,7 @@ end;
 procedure TDesigner.SetSnapToGrid(const AValue: boolean);
 begin
   if SnapToGrid=AValue then exit;
-  EnvironmentOptions.SnapToGrid:=AValue;
+  EnvironmentGuiOpts.SnapToGrid:=AValue;
 end;
 
 procedure TDesigner.DoOnForwardKeyToObjectInspector(Sender: TObject;

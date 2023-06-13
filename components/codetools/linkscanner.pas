@@ -50,7 +50,7 @@ uses
   Classes, SysUtils, math, Laz_AVL_Tree,
   // CodeTools
   CodeToolsStrConsts, CodeToolMemManager, FileProcs, ExprEval, SourceLog,
-  KeywordFuncLists, BasicCodeTools,
+  KeywordFuncLists, BasicCodeTools, DirectoryCacher,
   // LazUtils
   LazFileUtils, LazUtilities, LazDbgLog;
 
@@ -76,19 +76,21 @@ type
   TOnGetSource = function(Sender: TObject; Code: Pointer): TSourceLog
                  of object;
   TOnLoadSource = function(Sender: TObject; const AFilename: string;
-                       OnlyIfExists: boolean): pointer of object;
-  TOnGetSourceStatus = procedure(Sender: TObject; Code: Pointer;
+                       OnlyIfExists: boolean): TSourceLog of object;
+  TOnGetSourceStatus = procedure(Sender: TObject; Code: TSourceLog;
                  var ReadOnly: boolean) of object;
-  TOnDeleteSource = procedure(Sender: TObject; Code: Pointer; Pos, Len: integer)
+  TOnDeleteSource = procedure(Sender: TObject; Code: TSourceLog; Pos, Len: integer)
                     of object;
-  TOnGetFileName = function(Sender: TObject; Code: Pointer): string of object;
-  TOnCheckFileOnDisk = function(Code: Pointer): boolean of object;
-  TOnGetInitValues = function(Scanner: TLinkScanner; Code: Pointer;
+  TOnGetFileName = function(Sender: TObject; Code: TSourceLog): string of object;
+  TOnCheckFileOnDisk = function(Code: TSourceLog): boolean of object;
+  TOnGetInitValues = function(Scanner: TLinkScanner; Code: TSourceLog;
                        out ChangeStep: integer): TExpressionEvaluator of object;
-  TOnIncludeCode = procedure(ParentCode, IncludeCode: Pointer) of object;
+  TOnIncludeCode = procedure(ParentCode, IncludeCode: TSourceLog) of object;
   TOnSetWriteLock = procedure(Lock: boolean) of object;
   TLSOnGetGlobalChangeSteps = procedure(out SourcesChangeStep, FilesChangeStep: int64;
                                    out InitValuesChangeStep: integer) of object;
+  TLinkScannerProgress = function(Sender: TLinkScanner): boolean of object;
+  TOnFindIncFileInFPCSrc = function(Sender: TLinkScanner; const IncName: string; out ExpFilename: string): boolean of object;
 
   { TSourceLink is used to map between the codefiles and the cleaned source }
   TSourceLinkKind = (
@@ -103,14 +105,14 @@ type
   TSourceLink = record
     CleanedPos: integer;
     SrcPos: integer;
-    Code: Pointer;
+    Code: TSourceLog;
     Kind: TSourceLinkKind;
     Next: PSourceLink;
   end;
 
   TSourceLinkMacro = record
     Name: PChar;
-    Code: Pointer;
+    Code: TSourceLog;
     Src: string;
     SrcFilename: string;
     StartPos, EndPos: integer;
@@ -121,7 +123,7 @@ type
     A ChangeStep is switching to or from an include file }
   PSourceChangeStep = ^TSourceChangeStep;
   TSourceChangeStep = record
-    Code: Pointer;
+    Code: TSourceLog;
     ChangeStep: integer;
     Next: PSourceChangeStep;
   end;
@@ -526,8 +528,6 @@ type
   
   ELinkScannerErrors = class of ELinkScannerError;
   
-  TLinkScannerProgress = function(Sender: TLinkScanner): boolean of object;
-  
   ELinkScannerAbort = class(ELinkScannerError);
   ELinkScannerConsistency = class(ELinkScannerError);
 
@@ -557,7 +557,6 @@ type
     FLinkCapacity: integer;
     FCleanedSrc: string;
     FLastCleanedSrcLen: integer;
-    FOnGetSource: TOnGetSource;
     FOnGetFileName: TOnGetFileName;
     FOnGetSourceStatus: TOnGetSourceStatus;
     FOnLoadSource: TOnLoadSource;
@@ -566,14 +565,14 @@ type
     FOnGetInitValues: TOnGetInitValues;
     FOnIncludeCode: TOnIncludeCode;
     FOnProgress: TLinkScannerProgress;
-    FIgnoreErrorAfterCode: Pointer;
+    FIgnoreErrorAfterCode: TSourceLog;
     FIgnoreErrorAfterCursorPos: integer;
     FInitValues: TExpressionEvaluator;
     FInitValuesChangeStep: integer;
     FSourceChangeSteps: TFPList; // list of PSourceChangeStep sorted with Code
     FChangeStep: integer;
     FMainSourceFilename: string;
-    FMainCode: pointer;
+    FMainCode: TSourceLog;
     FScanTill: TLinkScannerRange;
     FNestedComments: boolean; // for speed reasons keep this flag redundant with the CompilerModeSwitches
     FStates: TLinkScannerStates;
@@ -586,12 +585,12 @@ type
     function GetLinks(Index: integer): TSourceLink; inline;
     function GetLinkP(Index: integer): PSourceLink; inline;
     procedure SetLinks(Index: integer; const Value: TSourceLink);
-    procedure SetSource(ACode: Pointer); // set current source
-    procedure AddSourceChangeStep(ACode: pointer; AChangeStep: integer);
-    procedure AddLink(ASrcPos: integer; ACode: Pointer;
+    procedure SetSource(ACode: TSourceLog); // set current source
+    procedure AddSourceChangeStep(ACode: TSourceLog; AChangeStep: integer);
+    procedure AddLink(ASrcPos: integer; ACode: TSourceLog;
                       AKind: TSourceLinkKind = slkCode);
     procedure IncreaseChangeStep; inline;
-    procedure SetMainCode(const Value: pointer);
+    procedure SetMainCode(const Value: TSourceLog);
     procedure SetScanTill(const Value: TLinkScannerRange);
     function GetIgnoreMissingIncludeFiles: boolean;
     procedure SetIgnoreMissingIncludeFiles(const Value: boolean);
@@ -640,9 +639,11 @@ type
     FDirectiveName: string;
     FDirectiveCleanPos: integer;
     FDirectivesStored: boolean;
+    FDirectoryCachePool: TCTDirectoryCachePool;
     FMacrosOn: boolean;
     FMissingIncludeFiles: TMissingIncludeFiles;
     FIncludeStack: TFPList; // list of TSourceLink
+    FOnFindIncFileInFPCSrcDir: TOnFindIncFileInFPCSrc;
     FOnGetGlobalChangeSteps: TLSOnGetGlobalChangeSteps;
     FSkippingDirectives: TLSSkippingDirective;
     FSkipIfLevel: integer;
@@ -693,7 +694,7 @@ type
     function DoDirective(StartPos, DirLen: integer): boolean;
     
     function IncludeFile(const AFilename: string): boolean;
-    procedure PushIncludeLink(ACleanedPos, ASrcPos: integer; ACode: Pointer);
+    procedure PushIncludeLink(ACleanedPos, ASrcPos: integer; ACode: TSourceLog);
     function PopIncludeLink: TSourceLink;
     function GetIncludeFileIsMissing: boolean;
     function MissingIncludeFilesNeedsUpdate: boolean;
@@ -708,7 +709,7 @@ type
     // error: the error is in range Succ(ScannedRange)
     LastErrorMessage: string;
     LastErrorSrcPos: integer;
-    LastErrorCode: pointer;
+    LastErrorCode: TSourceLog;
     LastErrorIsValid: boolean;
     LastErrorBehindIgnorePosition: boolean;
     LastErrorCheckedForIgnored: boolean;
@@ -732,7 +733,7 @@ type
     TokenStart: integer; // start position of current token
     TokenType: TLSTokenType;
     SrcLen: integer; // length of current source
-    Code: pointer;   // current code object (TCodeBuffer)
+    Code: TSourceLog;   // current code object (TCodeBuffer)
     Values: TExpressionEvaluator;
     SrcFilename: string;// current parsed filename (= TCodeBuffer(Code).Filename)
     IsUnit: boolean;
@@ -748,7 +749,7 @@ type
     property LinkP[Index: integer]: PSourceLink read GetLinkP;
     property LinkCount: integer read FLinkCount;
     function LinkIndexAtCleanPos(ACleanPos: integer): integer;
-    function LinkIndexAtCursorPos(ACursorPos: integer; ACode: Pointer): integer;
+    function LinkIndexAtCursorPos(ACursorPos: integer; ACode: TSourceLog): integer;
     function LinkSize(Index: integer): integer;
     function LinkSize_Inline(Index: integer): integer; inline;
     function LinkCleanedEndPos(Index: integer): integer;
@@ -756,7 +757,7 @@ type
     function LinkSourceLog(Index: integer): TSourceLog;
     function FindFirstSiblingLink(LinkIndex: integer): integer;
     function FindParentLink(LinkIndex: integer): integer;
-    function LinkIndexNearCursorPos(ACursorPos: integer; ACode: Pointer;
+    function LinkIndexNearCursorPos(ACursorPos: integer; ACode: TSourceLog;
                                     var CursorInLink: boolean): integer;
     function CreateTreeOfSourceCodes: TAVLTree;
 
@@ -777,7 +778,7 @@ type
 
     // source mapping (Cleaned <-> Original)
     function CleanedSrc: string;
-    function CursorToCleanPos(ACursorPos: integer; ACode: pointer;
+    function CursorToCleanPos(ACursorPos: integer; ACode: TSourceLog;
                     out ACleanPos: integer): integer; // 0=valid CleanPos
                           //-1=CursorPos was skipped, CleanPos between two links
                           // 1=CursorPos beyond scanned code
@@ -798,16 +799,17 @@ type
     procedure Scan(Range: TLinkScannerRange; CheckFilesOnDisk: boolean);
     function UpdateNeeded(Range: TLinkScannerRange;
                           CheckFilesOnDisk: boolean): boolean;
-    procedure SetIgnoreErrorAfter(ACursorPos: integer; ACode: Pointer);
+    procedure SetIgnoreErrorAfter(ACursorPos: integer; ACode: TSourceLog);
     procedure ClearIgnoreErrorAfter;
     function IgnoreErrAfterPositionIsInFrontOfLastErrMessage: boolean;
     function IgnoreErrorAfterCleanedPos: integer;// before using this, check if valid!
     function IgnoreErrorAfterValid: boolean;
     function CleanPosIsAfterIgnorePos(CleanPos: integer): boolean;
-    function LoadSourceCaseLoUp(const AFilename: string; AllowVirtual: boolean = false): pointer;
+    function LoadSourceCaseLoUp(const AFilename: string; AllowVirtual: boolean = false): TSourceLog;
+    function LoadIncludeFile(const AFilename: string; AllowVirtual: boolean = false): TSourceLog;
     class function GetPascalCompiler(Evals: TExpressionEvaluator): TPascalCompiler;
 
-    function SearchIncludeFile(AFilename: string; out NewCode: Pointer;
+    function SearchIncludeFile(AFilename: string; out NewCode: TSourceLog;
                          var MissingIncludeFile: TMissingIncludeFile): boolean;
     {$IFDEF GuessMisplacedIfdef}
     function GuessMisplacedIfdefEndif(StartCursorPos: integer;
@@ -816,6 +818,7 @@ type
                                       out EndCode: Pointer): boolean;
     {$ENDIF}
     function GetHiddenUsedUnits: string; // comma separated
+    property DirectoryCachePool: TCTDirectoryCachePool read FDirectoryCachePool write FDirectoryCachePool;
 
     // global write lock
     procedure ActivateGlobalWriteLock;
@@ -826,7 +829,6 @@ type
                          read FOnSetGlobalWriteLock write FOnSetGlobalWriteLock;
 
     // properties
-    property OnGetSource: TOnGetSource read FOnGetSource write FOnGetSource;
     property OnLoadSource: TOnLoadSource read FOnLoadSource write FOnLoadSource;
     property OnDeleteSource: TOnDeleteSource read FOnDeleteSource write FOnDeleteSource;
     property OnGetSourceStatus: TOnGetSourceStatus
@@ -838,10 +840,11 @@ type
                                    read FOnGetInitValues write FOnGetInitValues;
     property OnIncludeCode: TOnIncludeCode read FOnIncludeCode write FOnIncludeCode;
     property OnProgress: TLinkScannerProgress read FOnProgress write FOnProgress;
+    property OnFindIncFileInFPCSrcDir: TOnFindIncFileInFPCSrc read FOnFindIncFileInFPCSrcDir write FOnFindIncFileInFPCSrcDir;
     property IgnoreMissingIncludeFiles: boolean read GetIgnoreMissingIncludeFiles
                                              write SetIgnoreMissingIncludeFiles;
     property InitialValues: TExpressionEvaluator read FInitValues write FInitValues;
-    property MainCode: pointer read FMainCode write SetMainCode;
+    property MainCode: TSourceLog read FMainCode write SetMainCode;
     property IncludeFileIsMissing: boolean read GetIncludeFileIsMissing;
     property NestedComments: boolean read FNestedComments;
     property CompilerMode: TCompilerMode read FCompilerMode write SetCompilerMode;
@@ -1411,7 +1414,7 @@ begin
                    @CompareLSDirectiveCodeSrcPosCleanPos);
 end;
 
-procedure TLinkScanner.AddLink(ASrcPos: integer; ACode: Pointer;
+procedure TLinkScanner.AddLink(ASrcPos: integer; ACode: TSourceLog;
   AKind: TSourceLinkKind);
 var
   NewCapacity: Integer;
@@ -1528,10 +1531,7 @@ end;
 
 function TLinkScanner.LinkSourceLog(Index: integer): TSourceLog;
 begin
-  if Assigned(OnGetSource) then
-    Result:=OnGetSource(Self,FLinks[Index].Code)
-  else
-    Result:=nil;
+  Result:=FLinks[Index].Code;
 end;
 
 function TLinkScanner.FindFirstSiblingLink(LinkIndex: integer): integer;
@@ -1575,7 +1575,7 @@ begin
 end;
 
 function TLinkScanner.LinkIndexNearCursorPos(ACursorPos: integer;
-  ACode: Pointer; var CursorInLink: boolean): integer;
+  ACode: TSourceLog; var CursorInLink: boolean): integer;
 // returns the nearest link at cursorpos
 // (either covering the cursorpos or in front)
 var
@@ -1742,8 +1742,8 @@ begin
   ConsistencyError1;
 end;
 
-function TLinkScanner.LinkIndexAtCursorPos(ACursorPos: integer; ACode: Pointer
-  ): integer;
+function TLinkScanner.LinkIndexAtCursorPos(ACursorPos: integer;
+  ACode: TSourceLog): integer;
 var
   CurLinkSize: integer;
 begin
@@ -1760,31 +1760,17 @@ begin
   Result:=-1;
 end;
 
-procedure TLinkScanner.SetSource(ACode: Pointer);
-
-  procedure RaiseUnableToGetCode;
-  begin
-    RaiseConsistencyException(20170422125957,'unable to get source with Code='+DbgS(Code));
-  end;
-
-var SrcLog: TSourceLog;
+procedure TLinkScanner.SetSource(ACode: TSourceLog);
 begin
-  if Assigned(FOnGetSource) then begin
-    SrcLog:=FOnGetSource(Self,ACode);
-    if SrcLog=nil then
-      RaiseUnableToGetCode;
-    SrcFilename:=FOnGetFileName(Self,ACode);
-    AddSourceChangeStep(ACode,SrcLog.ChangeStep);
-    Src:=SrcLog.Source;
-    Code:=ACode;
-    SrcPos:=1;
-    TokenStart:=1;
-    TokenType:=lsttNone;
-    SrcLen:=length(Src);
-    CopiedSrcPos:=0;
-  end else begin
-    RaiseUnableToGetCode;
-  end;
+  SrcFilename:=FOnGetFileName(Self,ACode);
+  AddSourceChangeStep(ACode,ACode.ChangeStep);
+  Src:=ACode.Source;
+  Code:=ACode;
+  SrcPos:=1;
+  TokenStart:=1;
+  TokenType:=lsttNone;
+  SrcLen:=length(Src);
+  CopiedSrcPos:=0;
 end;
 
 procedure TLinkScanner.HandleDirective;
@@ -2383,16 +2369,17 @@ begin
   CopiedSrcPos:=NewCopiedSrcPos;
 end;
 
-procedure TLinkScanner.AddSourceChangeStep(ACode: pointer; AChangeStep: integer);
+procedure TLinkScanner.AddSourceChangeStep(ACode: TSourceLog;
+  AChangeStep: integer);
 
   procedure RaiseCodeNil;
   begin
     RaiseConsistencyException(20170422130109,'TLinkScanner.AddSourceChangeStep ACode=nil');
   end;
 
-var l,r,m: integer;
+var l,r,m, cmp: integer;
   NewSrcChangeStep: PSourceChangeStep;
-  c: pointer;
+  c: TSourceLog;
 begin
   //DebugLn('[TLinkScanner.AddSourceChangeStep] ',DbgS(ACode));
   if ACode=nil then
@@ -2404,14 +2391,16 @@ begin
   while (l<=r) do begin
     m:=(l+r) shr 1;
     c:=PSourceChangeStep(FSourceChangeSteps[m])^.Code;
-    if c<ACode then l:=m+1
-    else if c>ACode then r:=m-1
+    cmp:=ComparePointers(c,ACode);
+    if cmp<0 then l:=m+1
+    else if cmp>0 then r:=m-1
     else exit;
   end;
   NewSrcChangeStep:=PSourceChangeStepMemManager.NewPSourceChangeStep;
   NewSrcChangeStep^.Code:=ACode;
   NewSrcChangeStep^.ChangeStep:=AChangeStep;
-  if (FSourceChangeSteps.Count>0) and (c<ACode) then inc(m);
+  if (c<>nil) and (ComparePointers(c,ACode)<0) then
+    inc(m);
   FSourceChangeSteps.Insert(m,NewSrcChangeStep);
   //DebugLn('   ADDING ',DbgS(ACode),',',FSourceChangeSteps.Count);
 end;
@@ -2609,18 +2598,16 @@ begin
   // check all used codebuffers
   if FGlobalSourcesChangeStep<>CurSourcesChangeStep then begin
     FGlobalSourcesChangeStep:=CurSourcesChangeStep;
-    if Assigned(FOnGetSource) then begin
-      for i:=0 to FSourceChangeSteps.Count-1 do begin
-        SrcChange:=PSourceChangeStep(FSourceChangeSteps[i]);
-        SrcLog:=FOnGetSource(Self,SrcChange^.Code);
-        //debugln(['TLinkScanner.UpdateNeeded ',ExtractFilename(MainFilename),' i=',i,' File=',FOnGetFileName(Self,SrcLog),' Last=',SrcChange^.ChangeStep,' Now=',SrcLog.ChangeStep]);
-        if SrcChange^.ChangeStep<>SrcLog.ChangeStep then begin
-          {$IFDEF VerboseUpdateNeeded}
-          DebugLn(['TLinkScanner.UpdateNeeded because source buffer changed: ',OnGetFileName(Self,SrcLog),' MainFilename=',MainFilename]);
-          {$ENDIF}
-          Include(FStates,lssSourcesChanged);
-          exit;
-        end;
+    for i:=0 to FSourceChangeSteps.Count-1 do begin
+      SrcChange:=PSourceChangeStep(FSourceChangeSteps[i]);
+      SrcLog:=SrcChange^.Code;
+      //debugln(['TLinkScanner.UpdateNeeded ',ExtractFilename(MainFilename),' i=',i,' File=',FOnGetFileName(Self,SrcLog),' Last=',SrcChange^.ChangeStep,' Now=',SrcLog.ChangeStep]);
+      if SrcChange^.ChangeStep<>SrcLog.ChangeStep then begin
+        {$IFDEF VerboseUpdateNeeded}
+        DebugLn(['TLinkScanner.UpdateNeeded because source buffer changed: ',OnGetFileName(Self,SrcLog),' MainFilename=',MainFilename]);
+        {$ENDIF}
+        Include(FStates,lssSourcesChanged);
+        exit;
       end;
     end;
   end;
@@ -2629,18 +2616,16 @@ begin
   if CheckFilesOnDisk then begin
     if FGlobalFilesChangeStep<>CurFilesChangeStep then begin
       FGlobalFilesChangeStep:=CurFilesChangeStep;
-      if Assigned(FOnGetSource) then begin
-        // if files changed on disk, reload them
-        for i:=0 to FSourceChangeSteps.Count-1 do begin
-          SrcChange:=PSourceChangeStep(FSourceChangeSteps[i]);
-          SrcLog:=FOnGetSource(Self,SrcChange^.Code);
-          if FOnCheckFileOnDisk(SrcLog) then begin
-            {$IFDEF VerboseUpdateNeeded}
-            DebugLn(['TLinkScanner.UpdateNeeded because file on disk changed: ',OnGetFileName(Self,SrcLog),' MainFilename=',MainFilename]);
-            {$ENDIF}
-            Include(FStates,lssFilesChanged);
-            exit;
-          end;
+      // if files changed on disk, reload them
+      for i:=0 to FSourceChangeSteps.Count-1 do begin
+        SrcChange:=PSourceChangeStep(FSourceChangeSteps[i]);
+        SrcLog:=SrcChange^.Code;
+        if FOnCheckFileOnDisk(SrcLog) then begin
+          {$IFDEF VerboseUpdateNeeded}
+          DebugLn(['TLinkScanner.UpdateNeeded because file on disk changed: ',OnGetFileName(Self,SrcLog),' MainFilename=',MainFilename]);
+          {$ENDIF}
+          Include(FStates,lssFilesChanged);
+          exit;
         end;
       end;
     end;
@@ -2660,7 +2645,8 @@ begin
   Result:=false;
 end;
 
-procedure TLinkScanner.SetIgnoreErrorAfter(ACursorPos: integer; ACode: Pointer);
+procedure TLinkScanner.SetIgnoreErrorAfter(ACursorPos: integer;
+  ACode: TSourceLog);
 begin
   if (FIgnoreErrorAfterCode=ACode)
   and (FIgnoreErrorAfterCursorPos=ACursorPos) then exit;
@@ -3256,7 +3242,7 @@ begin
   Result:=FHiddenUsedUnits;
 end;
 
-procedure TLinkScanner.SetMainCode(const Value: pointer);
+procedure TLinkScanner.SetMainCode(const Value: TSourceLog);
 begin
   if FMainCode=Value then exit;
   FMainCode:=Value;
@@ -4026,7 +4012,7 @@ begin
 end;
 
 function TLinkScanner.LoadSourceCaseLoUp(const AFilename: string;
-  AllowVirtual: boolean): pointer;
+  AllowVirtual: boolean): TSourceLog;
 var
   Path, FileNameOnly: string;
   SecondaryFileNameOnly: String;
@@ -4036,7 +4022,7 @@ begin
   {$ENDIF}
   Result:=nil;
   Path:=ResolveDots(ExtractFilePath(AFilename));
-  if (not AllowVirtual) and (Path<>'') and (not FilenameIsAbsolute(Path)) then
+  if (not AllowVirtual) and not FilenameIsAbsolute(Path) then
     exit;
   FileNameOnly:=ExtractFilename(AFilename);
   Result:=FOnLoadSource(Self,Path+FileNameOnly,true);
@@ -4051,6 +4037,51 @@ begin
     Result:=FOnLoadSource(Self,Path+SecondaryFileNameOnly,true);
     if (Result<>nil) then exit;
   end;
+end;
+
+function TLinkScanner.LoadIncludeFile(const AFilename: string;
+  AllowVirtual: boolean): TSourceLog;
+var
+  Path, FileNameOnly: string;
+  SecondaryFileName: String;
+
+  function Search(const ShortFilename: string; var r: TSourceLog): boolean;
+  begin
+    Result:=false;
+
+    r:=FOnLoadSource(Self,Path+ShortFilename,true);
+    if (r<>nil) then exit(true);
+    SecondaryFileName:=LowerCase(ShortFileName);
+    if (SecondaryFileName<>ShortFileName) then begin
+      r:=FOnLoadSource(Self,Path+SecondaryFileName,true);
+      if (r<>nil) then exit(true);
+    end;
+    SecondaryFileName:=UpperCaseStr(ShortFileName);
+    if (SecondaryFileName<>ShortFileName) then begin
+      r:=FOnLoadSource(Self,Path+SecondaryFileName,true);
+      if (r<>nil) then exit(true);
+    end;
+  end;
+
+begin
+  {$IFDEF VerboseIncludeSearch}
+  debugln(['TLinkScanner.LoadIncludeFile AFilename="',AFilename,'" AllowVirtual=',AllowVirtual]);
+  {$ENDIF}
+  Path:=ResolveDots(ExtractFilePath(AFilename));
+  if (not AllowVirtual) and not FilenameIsAbsolute(Path) then
+    exit(nil);
+  FileNameOnly:=ExtractFilename(AFilename);
+
+  if Search(FileNameOnly,Result) then exit;
+
+  if ExtractFileExt(FileNameOnly)='' then begin
+    // search with the default file extensions
+    if Search(FileNameOnly+'.inc',Result) then exit;
+    if Search(FileNameOnly+'.pp',Result) then exit;
+    if Search(FileNameOnly+'.pas',Result) then exit;
+  end;
+
+  Result:=nil;
 end;
 
 class function TLinkScanner.GetPascalCompiler(Evals: TExpressionEvaluator
@@ -4073,13 +4104,20 @@ begin
     Result:=pcFPC;
 end;
 
-function TLinkScanner.SearchIncludeFile(AFilename: string;
-  out NewCode: Pointer; var MissingIncludeFile: TMissingIncludeFile): boolean;
+function TLinkScanner.SearchIncludeFile(AFilename: string; out
+  NewCode: TSourceLog; var MissingIncludeFile: TMissingIncludeFile): boolean;
 var
   PathStart, PathEnd: integer;
   IncludePath, CurPath: string;
   ExpFilename: string;
   HasPathDelims: Boolean;
+
+  procedure SetMissingIncludeFile;
+  begin
+    if MissingIncludeFile=nil then
+      MissingIncludeFile:=TMissingIncludeFile.Create(AFilename,'');
+    MissingIncludeFile.IncludePath:=Values.Variables[ExternalMacroStart+'INCPATH'];
+  end;
 
   function SearchPath(const APath, RelFilename: string): boolean;
   begin
@@ -4091,79 +4129,62 @@ var
     ExpFilename:=AppendPathDelim(APath)+RelFilename;
     if not FilenameIsAbsolute(ExpFilename) then
       ExpFilename:=ExtractFilePath(FMainSourceFilename)+ExpFilename;
-    NewCode:=LoadSourceCaseLoUp(ExpFilename);
+    NewCode:=LoadIncludeFile(ExpFilename);
     Result:=NewCode<>nil;
   end;
-  
-  procedure SetMissingIncludeFile;
-  begin
-    if MissingIncludeFile=nil then
-      MissingIncludeFile:=TMissingIncludeFile.Create(AFilename,'');
-    MissingIncludeFile.IncludePath:=IncludePath;
-  end;
 
-  function SearchCasedInIncPath(const RelFilename: string): boolean;
+  function Search(const RelFilename: string): boolean;
+  var
+    IsVirtualUnit, AnyCase: Boolean;
+    Dir, IncFile: String;
   begin
-    if FilenameIsAbsolute(FMainSourceFilename) then begin
-      // main source has absolute filename
-      // search in directory of unit
-      ExpFilename:=ExtractFilePath(FMainSourceFilename)+RelFilename;
-      NewCode:=LoadSourceCaseLoUp(ExpFilename);
-      Result:=(NewCode<>nil);
-      if Result then exit;
-      // search in directory of source of include directive
-      if FilenameIsAbsolute(SrcFilename)
-      and (CompareFilenames(SrcFilename,FMainSourceFilename)<>0) then begin
-        ExpFilename:=ExtractFilePath(SrcFilename)+RelFilename;
-        NewCode:=LoadSourceCaseLoUp(ExpFilename);
-        Result:=(NewCode<>nil);
-        if Result then exit;
-      end;
-    end else begin
+    Dir:=ExtractFilePath(FMainSourceFilename);
+    IsVirtualUnit:=not FilenameIsAbsolute(Dir);
+    if IsVirtualUnit then begin
       // main source is virtual -> allow virtual include file
-      NewCode:=LoadSourceCaseLoUp(RelFilename,true);
+      NewCode:=LoadIncludeFile(RelFilename,true);
+      Result:=(NewCode<>nil);
+      if Result then exit;
+    end else begin
+      // main source has absolute filename
+      // -> search in directory of unit
+      ExpFilename:=Dir+RelFilename;
+      NewCode:=LoadIncludeFile(ExpFilename);
       Result:=(NewCode<>nil);
       if Result then exit;
     end;
 
-    // then search the include file in directories defines in fpc.cfg (by -Fi option)
-    if FindIncFileInCfgCache(AFilename,ExpFilename) then
-    begin
-      NewCode:=LoadSourceCaseLoUp(ExpFilename);
-      Result:=(NewCode<>nil);
-      if Result then exit;
-    end;
-
-    // then search the include file in the include path
     if not HasPathDelims then begin
-      if MissingIncludeFile=nil then
-        IncludePath:=Values.Variables[ExternalMacroStart+'INCPATH']
-      else
-        IncludePath:=MissingIncludeFile.IncludePath;
+      // file without path -> search in inc paths
 
-      {$IFDEF VerboseIncludeSearch}
-      DebugLn('TLinkScanner.SearchIncludeFile IncPath="',IncludePath,'"');
-      {$ENDIF}
-      PathStart:=1;
-      PathEnd:=PathStart;
-      while PathEnd<=length(IncludePath) do begin
-        if IncludePath[PathEnd]=';' then begin
-          if PathEnd>PathStart then begin
-            CurPath:=TrimFilename(copy(IncludePath,PathStart,PathEnd-PathStart));
-            Result:=SearchPath(CurPath,RelFilename);
-            if Result then exit;
-          end;
-          PathStart:=PathEnd+1;
-          PathEnd:=PathStart;
-        end else
-          inc(PathEnd);
+      AnyCase:=Values.IsDefined('PAS2JS');
+
+      IncFile:=DirectoryCachePool.FindIncludeFileInDirectory(Dir,AFilename,AnyCase);
+      if IncFile<>'' then begin
+        NewCode:=FOnLoadSource(Self,ExpFilename,true);
+        Result:=(NewCode<>nil);
+        exit;
       end;
-      if PathEnd>PathStart then begin
-        CurPath:=TrimFilename(copy(IncludePath,PathStart,PathEnd-PathStart));
-        Result:=SearchPath(CurPath,RelFilename);
-        if Result then exit;
+
+      // then search the include file in directories defines in fpc.cfg (by -Fi option)
+      if (not IsVirtualUnit) and OnFindIncFileInFPCSrcDir(Self,AFilename,ExpFilename) then
+      begin
+        NewCode:=FOnLoadSource(Self,ExpFilename,true);
+        Result:=(NewCode<>nil);
+        exit;
       end;
     end;
+
+    // search in directory of source of include directive
+    // Note: fpc 3.2.2 does not do that
+    if FilenameIsAbsolute(SrcFilename)
+    and (CompareFilenames(SrcFilename,FMainSourceFilename)<>0) then begin
+      ExpFilename:=ExtractFilePath(SrcFilename)+RelFilename;
+      NewCode:=LoadIncludeFile(ExpFilename);
+      Result:=(NewCode<>nil);
+      if Result then exit;
+    end;
+
     Result:=false;
   end;
 
@@ -4187,26 +4208,11 @@ begin
     exit;
   end;
 
-  // if include filename is absolute then load it directly
-  if FilenameIsAbsolute(AFilename) then begin
-    NewCode:=LoadSourceCaseLoUp(AFilename);
-    Result:=(NewCode<>nil);
-    if not Result then SetMissingIncludeFile;
-    exit;
-  end;
-
   // first search without touching the extension
   {$IFDEF VerboseIncludeSearch}
   debugln(['TLinkScanner.SearchIncludeFile FMainSourceFilename="',FMainSourceFilename,'" SrcFile="',SrcFilename,'" AFilename="',AFilename,'"']);
   {$ENDIF}
-  if SearchCasedInIncPath(AFilename) then exit(true);
-
-  if ExtractFileExt(AFilename)='' then begin
-    // search with the default file extensions
-    if SearchCasedInIncPath(AFilename+'.inc') then exit(true);
-    if SearchCasedInIncPath(AFilename+'.pp') then exit(true);
-    if SearchCasedInIncPath(AFilename+'.pas') then exit(true);
-  end;
+  if Search(AFilename) then exit(true);
 
   SetMissingIncludeFile;
   Result:=false;
@@ -4214,7 +4220,7 @@ end;
 
 function TLinkScanner.IncludeFile(const AFilename: string): boolean;
 var
-  NewCode: Pointer;
+  NewCode: TSourceLog;
   MissingIncludeFile: TMissingIncludeFile;
 begin
   MissingIncludeFile:=nil;
@@ -4290,7 +4296,7 @@ begin
 end;
 
 procedure TLinkScanner.PushIncludeLink(ACleanedPos, ASrcPos: integer;
-  ACode: Pointer);
+  ACode: TSourceLog);
   
   procedure RaiseIncludeCircleDetected;
   begin
@@ -4330,7 +4336,7 @@ function TLinkScanner.MissingIncludeFilesNeedsUpdate: boolean;
 var
   i: integer;
   MissingIncludeFile: TMissingIncludeFile;
-  NewCode: Pointer;
+  NewCode: TSourceLog;
 begin
   Result:=false;
   if (not IncludeFileIsMissing) or IgnoreMissingIncludeFiles then exit;
@@ -4429,7 +4435,7 @@ end;
 procedure TLinkScanner.AddMacroSource(MacroID: integer);
 var
   Macro: PSourceLinkMacro;
-  OldCode: Pointer;
+  OldCode: TSourceLog;
   OldSrc: String;
   OldSrcFilename: String;
 begin
@@ -4776,7 +4782,7 @@ begin
   FSkipIfLevel:=-1;
 end;
 
-function TLinkScanner.CursorToCleanPos(ACursorPos: integer; ACode: pointer;
+function TLinkScanner.CursorToCleanPos(ACursorPos: integer; ACode: TSourceLog;
   out ACleanPos: integer): integer;
 // 0=valid CleanPos
 //-1=CursorPos was skipped, CleanPos is between two links
@@ -4938,7 +4944,7 @@ function TLinkScanner.WholeRangeIsWritable(CleanStartPos, CleanEndPos: integer;
   end;
   
 var
-  ACode: Pointer;
+  ACode: TSourceLog;
   LinkIndex: integer;
   CodeIsReadOnly: boolean;
 begin
@@ -4982,7 +4988,8 @@ end;
 
 procedure TLinkScanner.FindCodeInRange(CleanStartPos, CleanEndPos: integer;
   UniqueSortedCodeList: TFPList);
-var ACode: Pointer;
+var
+  ACode: TSourceLog;
   LinkIndex: integer;
   Link: PSourceLink;
 begin
@@ -5020,7 +5027,7 @@ procedure TLinkScanner.DeleteRange(CleanStartPos,CleanEndPos: integer);
 }
 var
   LinkIndex, StartPos, Len, aLinkSize: integer;
-  ACode: Pointer;
+  ACode: TSourceLog;
 begin
   if CleanStartPos<1 then CleanStartPos:=1;
   if CleanEndPos>CleanedLen then CleanEndPos:=CleanedLen+1;

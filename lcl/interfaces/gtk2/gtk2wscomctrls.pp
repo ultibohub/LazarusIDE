@@ -22,7 +22,7 @@ interface
 
 uses
   // RTL, FCL, libs
-  Math, Sysutils, Classes, GLib2, Gtk2, Gdk2, Gdk2pixbuf,
+  Types, Classes, Sysutils, Math, GLib2, Gtk2, Gdk2, Gdk2pixbuf,
   // LazUtils
   LazTracer,
   // LCL
@@ -34,10 +34,17 @@ uses
   Gtk2Def, Gtk2Globals, Gtk2Proc,
   // Gtk2Widgetset
   Gtk2WSControls, Gtk2Int;
-  
+
+const
+  TVItemCachePart = 1000;
+
 type
   // For simplified manipulation
   // Use GetCommonTreeViewWidgets(PGtkTreeView, var TTVWidgets)
+
+  TTVItemState = (tvisUndefined, tvisUnselected, tvisSelected);
+  TTVItemStateDynArray = array of TTVItemState;
+
   PTVWidgets = ^TTVWidgets;
   TTVWidgets = record
     ScrollingData: TBaseScrollingWinControlData;
@@ -47,7 +54,8 @@ type
     WidgetInfo: PWidgetInfo;
     //this is created and destroyed as needed
     //it only holds items which are about to be changed the list is emptied in Gtk2_ItemSelectionChanged
-    ItemCache: TStringList;
+    ItemCache: TTVItemStateDynArray;
+    ItemCacheCount: Integer;
     OldTreeSelection: PGList; // needed only by gtk < 2.10 ! issue #19820
     Images: TList;
   end;

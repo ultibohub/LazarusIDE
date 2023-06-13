@@ -70,17 +70,20 @@ uses
   EditorSyntaxHighlighterDef, IdeIntfStrConsts,
   // DebuggerIntf
   DbgIntfDebuggerBase, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
+  // IdeDebugger
+  BaseDebugManager, Debugger, IdeDebuggerStringConstants,
+  // IdeConfig
+  EnvironmentOpts, IDEOptionDefs, TransferMacros,
   // IDE units
-  IDECmdLine, LazarusIDEStrConsts, EditorOptions,
-  EnvironmentOpts, WordCompletion, FindReplaceDialog, IDEProcs, IDEOptionDefs,
-  IDEHelpManager, MacroPromptDlg, TransferMacros, CodeContextForm,
+  IDECmdLine, LazarusIDEStrConsts, EditorOptions, EnvGuiOptions,
+  WordCompletion, FindReplaceDialog, IDEProcs,
+  IDEHelpManager, MacroPromptDlg, CodeContextForm,
   SrcEditHintFrm, etMessagesWnd, etSrcEditMarks, CodeMacroPrompt,
   CodeTemplatesDlg, CodeToolsOptions, editor_general_options, SortSelectionDlg,
   EncloseSelectionDlg, EncloseIfDef, InvertAssignTool, SourceEditProcs,
   SourceMarks, SearchFrm, MultiPasteDlg, EditorMacroListViewer,
   EditorToolbarStatic, editortoolbar_options, InputhistoryWithSearchOpt,
-  FPDocHints, MainIntf, GotoFrm, BaseDebugManager, Debugger,
-  IdeDebuggerStringConstants, TransferMacrosIntf;
+  FPDocHints, MainIntf, GotoFrm;
 
 type
   TSourceNotebook = class;
@@ -1178,7 +1181,7 @@ type
     function MacroFuncSaveAll(const {%H-}s:string; const {%H-}Data: PtrInt;
                               var Abort: boolean): string;
   public
-    procedure InitMacros(AMacroList: TTransferMacroListIntf);
+    procedure InitMacros(AMacroList: TTransferMacroList);
     procedure SetupShortCuts;
 
     function FindUniquePageName(FileName:string; IgnoreEditor: TSourceEditor):string;
@@ -1788,7 +1791,6 @@ begin
           'Add Watch at Cursor', uemAddWatchPointAtCursor);
       SrcEditMenuInspect:=RegisterIDEMenuCommand(AParent,
           'Inspect...', uemInspect, nil, nil, nil, 'debugger_inspect');
-      SrcEditMenuInspect.Enabled:=False;
       SrcEditMenuStepToCursor:=RegisterIDEMenuCommand(AParent,
           'Run to cursor', lisMenuStepToCursor, nil, nil, nil, 'menu_step_cursor');
       SrcEditMenuRunToCursor:=RegisterIDEMenuCommand(AParent,
@@ -2350,8 +2352,8 @@ end;
 
 procedure TSourceEditCompletion.CompletionFormResized(Sender: TObject);
 begin
-  EnvironmentOptions.Desktop.CompletionWindowWidth  := TheForm.Width;
-  EnvironmentOptions.Desktop.CompletionWindowHeight := TheForm.NbLinesInWindow;
+  EnvironmentGuiOpts.Desktop.CompletionWindowWidth  := TheForm.Width;
+  EnvironmentGuiOpts.Desktop.CompletionWindowHeight := TheForm.NbLinesInWindow;
 end;
 
 function TSourceEditCompletion.GetCompletionFormClass: TSynBaseCompletionFormClass;
@@ -3001,8 +3003,8 @@ begin
   OnPositionChanged:=@OnSynCompletionPositionChanged;
   ShortCut:=Menus.ShortCut(VK_UNKNOWN,[]);
   TheForm.ShowSizeDrag := True;
-  TheForm.Width := Max(50, EnvironmentOptions.Desktop.CompletionWindowWidth);
-  TheForm.NbLinesInWindow := Max(3, EnvironmentOptions.Desktop.CompletionWindowHeight);
+  TheForm.Width := Max(50, EnvironmentGuiOpts.Desktop.CompletionWindowWidth);
+  TheForm.NbLinesInWindow := Max(3, EnvironmentGuiOpts.Desktop.CompletionWindowHeight);
   TheForm.OnDragResized  := @CompletionFormResized;
 end;
 
@@ -10851,7 +10853,7 @@ begin
   Abort:=LazarusIDE.DoSaveAll([sfCheckAmbiguousFiles,sfSaveNonProjectFiles])<>mrOk;
 end;
 
-procedure TSourceEditorManager.InitMacros(AMacroList: TTransferMacroListIntf);
+procedure TSourceEditorManager.InitMacros(AMacroList: TTransferMacroList);
 begin
   AMacroList.Add(TTransferMacro.Create('Col','',
                  lisCursorColumnInCurrentEditor,@MacroFuncCol,[]));

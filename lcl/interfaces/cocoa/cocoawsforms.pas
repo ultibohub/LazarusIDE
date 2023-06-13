@@ -185,6 +185,7 @@ var
 implementation
 
 uses
+  GraphMath,
   CocoaInt;
 
 const
@@ -265,7 +266,6 @@ begin
   {$else}
   win := TCocoaPanel(win.initWithContentRect_styleMask_backing_defer(R, WinMask, NSBackingStoreBuffered, False));
   {$endif}
-  win.enableCursorRects;
   win.setLevel(HintWindowLevel);
   win.setDelegate(win);
   {$ifdef BOOLFIX}
@@ -766,7 +766,6 @@ begin
     // see issue http://bugs.freepascal.org/view.php?id=28473
     if not (csDesigning in AWinControl.ComponentState) then
       WindowSetFormStyle(win, Form.FormStyle);
-    win.enableCursorRects;
 
     TCocoaWindow(win).callback := cb;
     cb.window := win;
@@ -808,6 +807,7 @@ begin
   begin
     if AParams.WndParent <> 0 then
     begin
+      cnt.isembedded:= true;
       lDestView := NSObject(AParams.WndParent).lclContentView;
       lDestView.addSubView(cnt);
       //cnt.setAutoresizingMask(NSViewMaxXMargin or NSViewMinYMargin);

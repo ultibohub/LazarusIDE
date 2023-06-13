@@ -29,19 +29,21 @@ unit Files_Options;
 interface
 
 uses
-  SysUtils,
+  Classes, SysUtils,
   // LCL
   StdCtrls, Dialogs, Controls, Spin,
   // LazUtils
   FileUtil, LazFileUtils,
-  // IDE
-  EnvironmentOpts,
   // CodeTools
   CodeToolManager, DefineTemplates,
+  // BuildIntf
+  IDEOptionsIntf,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, IDEDialogs, IDEUtils,
+  IDEOptEditorIntf, IDEDialogs, IDEUtils, InputHistory,
+  // IdeConfig
+  EnvironmentOpts, LazConf,
   // IDE
-  LazarusIDEStrConsts, InputHistory, LazConf, DialogProcs, InitialSetupProc, Classes;
+  LazarusIDEStrConsts, DialogProcs, InitialSetupProc, EnvGuiOptions;
 
 type
 
@@ -96,8 +98,6 @@ type
     fOldFppkcConfigurationFilename: string;
     FOldMaxRecentOpenFiles: integer;
     FOldMaxRecentProjectFiles: integer;
-    fOldShowCompileDialog: boolean;
-    fOldAutoCloseCompileDialog: boolean;
     function CheckLazarusDir(Buttons: TMsgDlgButtons): boolean;
     function CheckCompiler(Buttons: TMsgDlgButtons): boolean;
     function CheckFPCSourceDir(Buttons: TMsgDlgButtons): boolean;
@@ -360,6 +360,8 @@ begin
 end;
 
 procedure TFilesOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);
+var
+  CompFiles: TStringList;
 begin
   with AOptions as TEnvironmentOptions do
   begin
@@ -373,15 +375,25 @@ begin
     // compiler filename
     FOldCompilerFilename:=CompilerFilename;
     FOldRealCompilerFilename:=GetParsedCompilerFilename;
-    with CompilerPathComboBox do
-    begin
-      Items.BeginUpdate;
-      Items.Assign(CompilerFileHistory);
-      AddFilenameToList(Items,FindDefaultCompilerPath);
-      AddFilenameToList(Items,FindDefaultExecutablePath('fpc'+GetExecutableExt));
-      Items.EndUpdate;
+
+    CompFiles:=TStringList.Create;
+    try
+      CompFiles.Assign(CompilerFileHistory);
+      if CompFiles.Count=0 then
+        GetDefaultCompilerFilenames(CompFiles);
+
+      with CompilerPathComboBox do
+      begin
+        Items.BeginUpdate;
+        Items.Assign(CompFiles);
+        AddFilenameToList(Items,FindDefaultCompilerPath);
+        AddFilenameToList(Items,FindDefaultExecutablePath('fpc'+GetExecutableExt));
+        Items.EndUpdate;
+      end;
+      SetComboBoxText(CompilerPathComboBox,CompilerFilename,cstFilename,MaxComboBoxCount);
+    finally
+      CompFiles.Free;
     end;
-    SetComboBoxText(CompilerPathComboBox,CompilerFilename,cstFilename,MaxComboBoxCount);
 
     // FPC src dir
     FOldFPCSourceDir:=FPCSourceDirectory;
@@ -423,13 +435,6 @@ begin
     MaxRecentOpenFilesSpin.Value := MaxRecentOpenFiles;
     FOldMaxRecentProjectFiles := MaxRecentProjectFiles;
     MaxRecentProjectFilesSpin.Value := MaxRecentProjectFiles;
-
-    // compile dialog
-    fOldShowCompileDialog:=ShowCompileDialog;
-    ShowCompileDialogCheckBox.Checked:=ShowCompileDialog;
-    fOldAutoCloseCompileDialog:=AutoCloseCompileDialog;
-    AutoCloseCompileDialogCheckBox.Checked:=AutoCloseCompileDialog;
-    AutoCloseCompileDialogCheckBox.Enabled:=ShowCompileDialogCheckBox.Checked;
   end;
 end;
 
@@ -455,8 +460,6 @@ begin
     // recent files and directories
     MaxRecentOpenFiles := MaxRecentOpenFilesSpin.Value;
     MaxRecentProjectFiles := MaxRecentProjectFilesSpin.Value;
-    ShowCompileDialog := ShowCompileDialogCheckBox.Checked;
-    AutoCloseCompileDialog := AutoCloseCompileDialogCheckBox.Checked;
   end;
 end;
 
@@ -476,8 +479,6 @@ begin
     // recent files and directories
     MaxRecentOpenFiles := FOldMaxRecentOpenFiles;
     MaxRecentProjectFiles := FOldMaxRecentProjectFiles;
-    ShowCompileDialog := fOldShowCompileDialog;
-    AutoCloseCompileDialog := fOldAutoCloseCompileDialog;
   end;
 end;
 

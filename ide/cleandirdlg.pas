@@ -36,10 +36,11 @@ uses
   // LazUtils
   FileUtil, LazFileUtils, Laz2_XMLCfg, LazStringUtils,
   // IdeIntf
-  IdeIntfStrConsts, IDEWindowIntf, IDEHelpIntf, IDEDialogs,
+  IdeIntfStrConsts, IDEWindowIntf, IDEHelpIntf, IDEDialogs, InputHistory,
+  // IdeConfig
+  RecentListProcs, LazConf, EnvironmentOpts,
   // IDE
-  IDEProcs, LazarusIDEStrConsts, LazConf, TransferMacros, InputHistory,
-  ShowDeletingFilesDlg, EnvironmentOpts, RecentListProcs;
+  LazarusIDEStrConsts, TransferMacros, ShowDeletingFilesDlg;
 
 type
 
@@ -99,6 +100,25 @@ begin
   CleanDirectoryDialog.DirComboBox.Text:=DefaultDirectory;
   Result:=CleanDirectoryDialog.ShowModal;
   CleanDirectoryDialog.Free;
+end;
+
+function AddComboTextToRecentList(cb: TCombobox; aMax: integer;
+  ListType: TRecentListType): boolean;
+var
+  List: TStringList;
+begin
+  List:=TStringList.Create;
+  try
+    List.Assign(cb.Items);
+    Result:=AddToRecentList(cb.Text,List,aMax,ListType);
+    if Result then
+    begin
+      cb.Items.Assign(List);
+      cb.ItemIndex:=0;
+    end;
+  finally
+    List.Free;
+  end;
 end;
 
 { TCleanDirectoryDialog }

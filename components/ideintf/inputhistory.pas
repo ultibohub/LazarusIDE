@@ -41,13 +41,12 @@ uses
   // LCL
   Dialogs,
   // LazUtils
-  LazFileCache, LazFileUtils, LazUTF8, AvgLvlTree, Laz2_XMLCfg,
-  // Codetools
-  FileProcs,
+  LazFileCache, LazFileUtils, LazLoggerBase, LazUTF8, AvgLvlTree, Laz2_XMLCfg,
+  LazConfigStorage,
+  // IdeConfig
+  DiffPatch, LazConf, RecentListProcs, IdeXmlConfigProcs,
   // IdeIntf
-  ProjectIntf, IDEDialogs,
-  // IDE
-  DiffPatch, LazConf, RecentListProcs, IdeXmlConfigProcs;
+  ProjectIntf, IDEDialogs;
 
 {$ifdef Windows}
 {$define CaseInsensitiveFilenames}

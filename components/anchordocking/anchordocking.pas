@@ -106,10 +106,13 @@ unit AnchorDocking;
 interface
 
 uses
-  Math, Classes, SysUtils, types, fgl,
-  LCLType, LCLIntf, LCLProc,
+  Types, Classes, SysUtils, Math, fgl,
+  // LCL
+  LCLType, LCLIntf,
   Controls, Forms, ExtCtrls, ComCtrls, Graphics, Themes, Menus, Buttons,
-  LazConfigStorage, Laz2_XMLCfg, LazFileCache, LazUTF8,
+  // LazUtils
+  LazLoggerBase, LazTracer, LazConfigStorage, Laz2_XMLCfg, LazFileCache, LazUTF8,
+  // AnchorDocking
   AnchorDockStr, AnchorDockStorage, AnchorDockPanel;
 
 {$IFDEF DebugDisableAutoSizing}
@@ -2465,19 +2468,6 @@ function TAnchorDockMaster.RestoreLayout(Tree: TAnchorDockLayoutTree;
           AControl.Align:=alClient;
           for Side:=Low(TAnchorKind) to high(TAnchorKind) do
             AControl.AnchorSide[Side].Control:=nil;
-          {$IFDEF LCLCOCOA}
-          // trigger page to be ready, mainly for embedded Forms.
-          // eg. BreakPoints, Search Results, will be empty without trigger.
-          // for the embedding Form in TPageControl, the embedding Form cannot
-          // be self activated in Cocoa Interface.
-          // after long research, here is the least invasive.
-          // see also: https://gitlab.com/freepascal.org/lazarus/lazarus/-/issues/39763#note_1408260128
-          if AControl is TWinControl then
-          begin
-            TWinControl(AControl).HandleNeeded;
-            Site.Pages.PageIndex:= i;
-          end;
-          {$ENDIF}
         end;
         Site.Pages.PageIndex:=ANode.PageIndex;
       finally

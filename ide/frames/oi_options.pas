@@ -35,8 +35,10 @@ uses
   LazUtilities,
   // IdeIntf
   ObjectInspector, IDEOptionsIntf, IDEOptEditorIntf, IDEImagesIntf,
+  // IdeConfig
+  EnvironmentOpts,
   // IDE
-  LazarusIDEStrConsts, EnvironmentOpts, Project; //Ultibo
+  LazarusIDEStrConsts, EnvGuiOptions, Project; //Ultibo
 
 type
   TOIColor = (
@@ -315,9 +317,13 @@ end;
 procedure TOIOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);
 var
   ASettings: TSpeedOISettings;
+  EnvOpt: TEnvironmentOptions;
+  EnvGui: TIDESubOptions;
   o: TOIOptions;
 begin
-  o:=(AOptions as TEnvironmentOptions).ObjectInspectorOptions;
+  EnvOpt := AOptions as TEnvironmentOptions;
+  EnvGui := EnvOpt.GetSubConfigObj(TEnvGuiOptions);
+  o:=TEnvGuiOptions(EnvGui).ObjectInspectorOptions;
   ASettings.Colors[ocBackground] := o.GridBackgroundColor;
   ASettings.Colors[ocGutter] := o.GutterColor;
   ASettings.Colors[ocGutterEdge] := o.GutterEdgeColor;
@@ -348,9 +354,13 @@ end;
 
 procedure TOIOptionsFrame.WriteSettings(AOptions: TAbstractIDEOptions);
 var
+  EnvOpt: TEnvironmentOptions;
+  EnvGui: TIDESubOptions;
   o: TOIOptions;
 begin
-  o:=(AOptions as TEnvironmentOptions).ObjectInspectorOptions;
+  EnvOpt := AOptions as TEnvironmentOptions;
+  EnvGui := EnvOpt.GetSubConfigObj(TEnvGuiOptions);
+  o:=TEnvGuiOptions(EnvGui).ObjectInspectorOptions;
   o.GridBackgroundColor := ColorsListBox.Colors[Ord(ocBackground)];
   o.GutterColor := ColorsListBox.Colors[Ord(ocGutter)];
   o.GutterEdgeColor := ColorsListBox.Colors[Ord(ocGutterEdge)];

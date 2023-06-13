@@ -87,7 +87,6 @@ type
     FFPCOptions: string;
     FFPCPath: string;
     FFPCSrcDir: string;
-    FFPCUnitPath: string;
     FLazarusSrcDir: string;
     FLazarusSrcOptions: string;
     FLCLWidgetType: string;
@@ -99,12 +98,9 @@ type
     FTargetCPU: string; //Ultibo
     FTargetProcessor: string; //Ultibo
     FTestPascalFile: string;
-    FUnitLinkList: string;
-    FUnitLinkListValid: boolean;
     procedure SetFPCOptions(const AValue: string);
     procedure SetFPCPath(const AValue: string);
     procedure SetFPCSrcDir(const AValue: string);
-    procedure SetFPCUnitPath(const AValue: string);
     procedure SetLazarusSrcDir(const AValue: string);
     procedure SetLCLWidgetType(const AValue: string);
     procedure SetLazarusSrcOptions(const AValue: string);
@@ -115,8 +111,6 @@ type
     procedure SetTargetCPU(const AValue: string); //Ultibo
     procedure SetTargetProcessor(const AValue: string); //Ultibo
     procedure SetTestPascalFile(const AValue: string);
-    procedure SetUnitLinkList(const AValue: string);
-    procedure SetUnitLinkListValid(const AValue: boolean);
   public
     constructor Create;
     destructor Destroy; override;
@@ -138,12 +132,9 @@ type
     property TargetCPU: string read FTargetCPU write SetTargetCPU; //Ultibo
     property TargetProcessor: string read FTargetProcessor write SetTargetProcessor; //Ultibo
     property TestPascalFile: string read FTestPascalFile write SetTestPascalFile; // points to an empty unit
-    property FPCUnitPath: string read FFPCUnitPath write SetFPCUnitPath;
     property PPUExt: string read FPPUExt write SetPPUExt;
     property SourceCaches: TFPCSourceCaches read FSourceCaches;
     property ConfigCaches: TPCTargetConfigCaches read FConfigCaches;
-    property UnitLinkListValid: boolean read FUnitLinkListValid write SetUnitLinkListValid;
-    property UnitLinkList: string read FUnitLinkList write SetUnitLinkList;
 
     // Project
     property ProjectDir: string read FProjectDir write SetProjectDir;
@@ -172,7 +163,6 @@ begin
   NewValue:=TrimAndExpandFilename(AValue);
   if FFPCPath=NewValue then exit;
   FFPCPath:=NewValue;
-  FUnitLinkListValid:=false;
   Modified:=true;
 end;
 
@@ -183,15 +173,6 @@ begin
   NewValue:=TrimAndExpandFilename(AValue);
   if FFPCSrcDir=NewValue then exit;
   FFPCSrcDir:=NewValue;
-  FUnitLinkListValid:=false;
-  Modified:=true;
-end;
-
-procedure TCodeToolsOptions.SetFPCUnitPath(const AValue: string);
-begin
-  if FFPCUnitPath=AValue then exit;
-  FFPCUnitPath:=AValue;
-  FUnitLinkListValid:=false;
   Modified:=true;
 end;
 
@@ -243,7 +224,6 @@ procedure TCodeToolsOptions.SetTargetOS(const AValue: string);
 begin
   if FTargetOS=AValue then exit;
   FTargetOS:=AValue;
-  FUnitLinkListValid:=false;
   Modified:=true;
 end;
 
@@ -251,7 +231,6 @@ procedure TCodeToolsOptions.SetTargetCPU(const AValue: string); //Ultibo
 begin
   if FTargetCPU=AValue then exit; //Ultibo
   FTargetCPU:=AValue; //Ultibo
-  FUnitLinkListValid:=false;
   Modified:=true;
 end;
 
@@ -259,7 +238,6 @@ procedure TCodeToolsOptions.SetTargetProcessor(const AValue: string); //Ultibo
 begin
   if FTargetProcessor=AValue then exit;
   FTargetProcessor:=AValue;
-  FUnitLinkListValid:=false;
   Modified:=true;
 end; //Ultibo
 
@@ -267,20 +245,6 @@ procedure TCodeToolsOptions.SetTestPascalFile(const AValue: string);
 begin
   if FTestPascalFile=AValue then exit;
   FTestPascalFile:=AValue;
-  Modified:=true;
-end;
-
-procedure TCodeToolsOptions.SetUnitLinkList(const AValue: string);
-begin
-  if FUnitLinkList=AValue then exit;
-  FUnitLinkList:=AValue;
-  Modified:=true;
-end;
-
-procedure TCodeToolsOptions.SetUnitLinkListValid(const AValue: boolean);
-begin
-  if FUnitLinkListValid=AValue then exit;
-  FUnitLinkListValid:=AValue;
   Modified:=true;
 end;
 
@@ -336,14 +300,11 @@ begin
   XMLConfig.SetDeleteValue(Path+'FPC/Options/Value',FPCOptions,'');
   XMLConfig.SetDeleteValue(Path+'FPC/CompilerPath/Value',FPCPath,'');
   XMLConfig.SetDeleteValue(Path+'FPC/SrcDir/Value',FPCSrcDir,'');
-  XMLConfig.SetDeleteValue(Path+'FPC/UnitPath/Value',FPCUnitPath,'');
   XMLConfig.SetDeleteValue(Path+'FPC/TargetOS/Value',TargetOS,'');
   XMLConfig.SetDeleteValue(Path+'FPC/TargetCPU/Value',TargetCPU,''); //Ultibo
   XMLConfig.SetDeleteValue(Path+'FPC/TargetProcessor/Value',TargetProcessor,''); //Ultibo
   XMLConfig.SetDeleteValue(Path+'FPC/PPUExt/Value',PPUExt,'.ppu');
   XMLConfig.SetDeleteValue(Path+'FPC/TestPascalFile/Value',TestPascalFile,'');
-  XMLConfig.SetDeleteValue(Path+'FPC/UnitLinkList/Value',UnitLinkList,'');
-  XMLConfig.SetDeleteValue(Path+'FPC/UnitLinkList/Valid',UnitLinkListValid,false);
   XMLConfig.SetDeleteValue(Path+'Lazarus/SrcDir/Value',LazarusSrcDir,'');
   XMLConfig.SetDeleteValue(Path+'Lazarus/SrcDirOptions/Value',LazarusSrcOptions,'');
   XMLConfig.SetDeleteValue(Path+'Lazarus/LCLWidgetType/Value',LCLWidgetType,'');
@@ -355,26 +316,15 @@ end;
 
 procedure TCodeToolsOptions.LoadFromXMLConfig(XMLConfig: TXMLConfig;
   const Path: string);
-var
-  i: Integer;
-  UnitPath: string;
 begin
   FPCOptions:=XMLConfig.GetValue(Path+'FPC/Options/Value','');
   FPCPath:=XMLConfig.GetValue(Path+'FPC/CompilerPath/Value','');
   FPCSrcDir:=XMLConfig.GetValue(Path+'FPC/SrcDir/Value','');
-  UnitPath:=XMLConfig.GetValue(Path+'FPC/UnitPath/Value','');
-  for i:=1 to length(UnitPath) do
-    if (UnitPath[i] in [#0..#8,#10..#31]) then
-      UnitPath[i]:=';';
-  FPCUnitPath:=UnitPath;
   TargetOS:=XMLConfig.GetValue(Path+'FPC/TargetOS/Value','');
   TargetCPU:=XMLConfig.GetValue(Path+'FPC/TargetCPU/Value',''); //Ultibo
   TargetProcessor:=XMLConfig.GetValue(Path+'FPC/TargetProcessor/Value',''); //Ultibo
   PPUExt:=XMLConfig.GetValue(Path+'FPC/PPUExt/Value','.ppu');
   TestPascalFile:=XMLConfig.GetValue(Path+'FPC/TestPascalFile/Value','');
-  UnitLinkList:=XMLConfig.GetValue(Path+'FPC/UnitLinkList/Value','');
-  // UnitLinkListValid must be set as last
-  UnitLinkListValid:=XMLConfig.GetValue(Path+'FPC/UnitLinkList/Valid',false);
   FConfigCaches.LoadFromXMLConfig(XMLConfig,Path+'FPCConfigCaches/');
   FSourceCaches.LoadFromXMLConfig(XMLConfig,Path+'FPCSrcDirCaches/');
 

@@ -58,9 +58,9 @@ uses
   // RTL + FCL
   Classes, SysUtils, Types, Math,
   // LCL
-  LCLProc, Buttons, Menus, ComCtrls, Controls, Graphics, Dialogs, Forms, ImgList,
+  Buttons, Menus, ComCtrls, Controls, Graphics, Dialogs, Forms, ImgList,
   // LazUtils
-  LazFileUtils, LazUTF8,
+  LazUtilities, LazFileUtils, LazLoggerBase, LazTracer, LazUTF8,
   // Codetools
   CodeToolManager,
   // SynEdit
@@ -69,11 +69,14 @@ uses
   IDEImagesIntf, SrcEditorIntf, LazIDEIntf, MenuIntf, NewItemIntf, PackageIntf,
   IDECommands, IDEWindowIntf, ProjectIntf, ToolBarIntf, ObjectInspector,
   PropEdits, IDEDialogs, IDEUtils, EditorSyntaxHighlighterDef, IdeIntfStrConsts,
+  InputHistory,
   // IDEDebugger
   IdeDebuggerStringConstants,
+  // IdeConfig
+  LazConf, EnvironmentOpts,
   // IDE
-  LazConf, LazarusIDEStrConsts, Project, EnvironmentOpts, InputHistory,
-  EditorOptions, CompilerOptions, SourceEditor, SourceSynEditor, FindInFilesDlg,
+  LazarusIDEStrConsts, EditorOptions, CompilerOptions, EnvGuiOptions,
+  Project, SourceEditor, SourceSynEditor, FindInFilesDlg,
   Splash, MainBar, MainIntf, Designer, Debugger, RunParamsOpts, FindInFilesWnd;
 
 type
@@ -203,9 +206,9 @@ type
     procedure UpdateHighlighters(Immediately: boolean = false); override;
     procedure UpdateDefineTemplates;
 
-    procedure FindInFilesPerDialog(AProject: TProject); override;
-    procedure FindInFiles(AProject: TProject; const FindText: string); override;
-    procedure FindInFiles(AProject: TProject; const FindText: string; AOptions: TLazFindInFileSearchOptions; AFileMask, ADir: string); override;
+    procedure FindInFiles(AProject: TProject); override;
+    procedure FindInFiles(aProject: TProject; const aFindText: string; aDialog: boolean = true; aResultsPage: integer = -1); override;
+    procedure FindInFiles(aProject: TProject; const aFindText: string; aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string; aDialog: boolean = true; aResultsPage: integer = -1); override;
 
     procedure SelComponentPageButtonMouseDown(Sender: TObject;
       Button: TMouseButton; Shift: TShiftState; X, Y: Integer); virtual; abstract;
@@ -550,7 +553,7 @@ var
 
 function FormMatchesCmd(aForm: TCustomForm; aCmd: TIDEMenuCommand): Boolean;
 begin
-  if EnvironmentOptions.Desktop.IDENameForDesignedFormList and IsFormDesign(aForm) then
+  if EnvironmentGuiOpts.Desktop.IDENameForDesignedFormList and IsFormDesign(aForm) then
     Result := aForm.Name = aCmd.Caption
   else
     Result := aForm.Caption = aCmd.Caption;
@@ -1121,6 +1124,7 @@ begin
       CreateMenuItem(itmViewDebugWindows,itmViewWatches,'itmViewWatches',lisMenuViewWatches,'debugger_watches');
       CreateMenuItem(itmViewDebugWindows,itmViewBreakPoints,'itmViewBreakPoints',lisMenuViewBreakPoints,'debugger_breakpoints');
       CreateMenuItem(itmViewDebugWindows,itmViewLocals,'itmViewLocals',lisMenuViewLocalVariables);
+      CreateMenuItem(itmViewDebugWindows,itmRunMenuInspect,'itmRunMenuInspect',lisMenuInspect, 'debugger_inspect');
       if HasConsoleSupport then
         CreateMenuItem(itmViewDebugWindows,itmViewPseudoTerminal,'itmViewPseudoTerminal',lisMenuViewPseudoTerminal)
       else
@@ -1314,7 +1318,6 @@ begin
 
     CreateMenuSeparatorSection(mnuRun,itmRunDebugging,'itmRunDebugging');
     ParentMI:=itmRunDebugging;
-    CreateMenuItem(ParentMI,itmRunMenuInspect,'itmRunMenuInspect',lisMenuInspect, 'debugger_inspect', False);
     CreateMenuItem(ParentMI,itmRunMenuEvaluate,'itmRunMenuEvaluate',lisMenuEvaluate, 'debugger_modify', False);
     CreateMenuItem(ParentMI,itmRunMenuAddWatch,'itmRunMenuAddWatch',lisMenuAddWatch, '', False);
     CreateMenuSubSection(ParentMI,itmRunMenuAddBreakpoint,'itmRunMenuAddBreakpoint',lisMenuAddBreakpoint, '');
@@ -1544,7 +1547,7 @@ begin
       'TNonControlProxyDesignerForm':    // datamodule
           AMenuItem.Caption := AForm.Caption;
     else                                 // form
-      if EnvironmentOptions.Desktop.IDENameForDesignedFormList then
+      if EnvironmentGuiOpts.Desktop.IDENameForDesignedFormList then
         AMenuItem.Caption := AForm.Name+' - Designer'
       else
         AMenuItem.Caption := AForm.Caption+' - Designer';
@@ -1791,19 +1794,19 @@ begin
   Include(FIdleIdeActions, iiaUpdateDefineTemplates);
 end;
 
-procedure TMainIDEBase.FindInFilesPerDialog(AProject: TProject);
+procedure TMainIDEBase.FindInFiles(aProject: TProject);
 begin
-  FindInFilesDialog.FindInFilesPerDialog(AProject);
+  FindInFilesDialog.FindInFiles(aProject);
 end;
 
-procedure TMainIDEBase.FindInFiles(AProject: TProject; const FindText: string);
+procedure TMainIDEBase.FindInFiles(aProject: TProject; const aFindText: string; aDialog: boolean = true; aResultsPage: integer = -1);
 begin
-  FindInFilesDialog.FindInFiles(AProject, FindText);
+  FindInFilesDialog.FindInFiles(aProject, aFindText, aDialog, aResultsPage);
 end;
 
-procedure TMainIDEBase.FindInFiles(AProject: TProject; const FindText: string; AOptions: TLazFindInFileSearchOptions; AFileMask, ADir: string);
+procedure TMainIDEBase.FindInFiles(aProject: TProject; const aFindText: string; aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string; aDialog: boolean = true; aResultsPage: integer = -1);
 begin
-  FindInFilesDialog.FindInFiles(AProject, FindText, AOptions, AFileMask, ADir);
+  FindInFilesDialog.FindInFiles(aProject, aFindText, aOptions, aFileMask, aDir, aDialog, aResultsPage);
 end;
 
 { TRunToolButton }

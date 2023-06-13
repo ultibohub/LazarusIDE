@@ -66,12 +66,15 @@ uses
   CodeCache,
   // LazUtils
   LazMethodList,
+  // BuildIntf
+  ProjectIntf, CompOptsIntf,
   // IDEIntf
-  PropEdits, ObjectInspector, MenuIntf, SrcEditorIntf, ProjectIntf,
-  CompOptsIntf, LazIDEIntf, IDEWindowIntf,
+  PropEdits, ObjectInspector, MenuIntf, SrcEditorIntf, LazIDEIntf, IDEWindowIntf,
+  InputHistory,
+  // IdeConfig
+  LazConf,
   // IDE
-  LazConf, LazarusIDEStrConsts, Project, BuildLazDialog,
-  ProgressDlg, EnvironmentOpts, InputHistory, IDEDefs, PackageDefs;
+  LazarusIDEStrConsts, Project, BuildLazDialog, ProgressDlg, IDEDefs, PackageDefs;
 
 type
   // The IDE is at anytime in a specific state:
@@ -203,9 +206,11 @@ type
                         BlockTopLine, BlockBottomLine: integer;
                         Flags: TJumpToCodePosFlags = [jfFocusEditor]): TModalResult; virtual; abstract; overload;
 
-    procedure FindInFilesPerDialog(AProject: TProject); virtual; abstract;
-    procedure FindInFiles(AProject: TProject; const FindText: string); virtual; abstract;
-    procedure FindInFiles(AProject: TProject; const FindText: string; AOptions: TLazFindInFileSearchOptions; AFileMask, ADir: string); virtual; abstract;
+    procedure FindInFiles(aProject: TProject); virtual; abstract;
+    procedure FindInFiles(aProject: TProject; const aFindText: string;
+                          aDialog: boolean = true; aResultsPage: integer = -1); virtual; abstract;
+    procedure FindInFiles(aProject: TProject; const aFindText: string; aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string;
+                          aDialog: boolean = true; aResultsPage: integer = -1); virtual; abstract;
 
     class function GetPrimaryConfigPath: String; override;
     class function GetSecondaryConfigPath: String; override;
