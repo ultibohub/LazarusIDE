@@ -37,7 +37,8 @@ uses
   // CodeTools
   DefineTemplates, CodeToolManager, FileProcs,
   // LazUtils
-  LazFileCache, LazUTF8, LazFileUtils, FileUtil, LazLoggerBase, Laz2_XMLCfg,
+  FPCAdds, LazFileCache, LazUTF8, LazFileUtils, FileUtil, LazLoggerBase,
+  Laz2_XMLCfg,
   // IDEIntf
   IdeIntfStrConsts,
   // IDE
@@ -137,6 +138,13 @@ function GetValueFromSecondaryConfig(OptionFilename, Path: string): string;
 function GetValueFromIDEConfig(OptionFilename, Path: string): string;
 
 implementation
+
+{$IFDEF MSWindows}
+var
+  DefaultFPCVersion: string;
+  DefaultFPCTarget: string;
+  DefaultDrive: string;
+{$ENDIF}
 
 function CheckLazarusDirectoryQuality(ADirectory: string;
   out Note: string): TSDFilenameQuality;
@@ -1146,6 +1154,13 @@ begin
   else
     Result:=Nil;
 end;
+
+initialization
+{$IFDEF MSWindows}
+  DefaultFPCTarget:= GetCompiledTargetCPU + '-' + GetCompiledTargetOS;
+  DefaultFPCVersion:= {$I %FPCVERSION%};
+  DefaultDrive := ExtractFileDrive(ProgramDirectory);
+{$ENDIF}
 
 end.
 

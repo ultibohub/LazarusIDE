@@ -24,23 +24,21 @@
     end;
 
 
-  Example 2: Load the current language file using the GetLanguageIDs function
-    of the gettext unit in the project lpr file:
+  Example 2: Load the current language file using the GetLanguageID function:
 
     uses
       ...
-      Translations, LCLProc;
+      Translations;
 
     procedure TranslateLCL;
     var
-      PODirectory, Lang, FallbackLang: String;
+      PODirectory: String;
+      LangID: TLanguageID;
     begin
       PODirectory:='/path/to/lazarus/lcl/languages/';
-      Lang:='';
-      FallbackLang:='';
-      LCLGetLanguageIDs(Lang,FallbackLang); // in unit LCLProc
+      LangID := GetLanguageID;
       Translations.TranslateUnitResourceStrings('LCLStrConsts',
-                                PODirectory+'lclstrconsts.%s.po',Lang,FallbackLang);
+                                PODirectory+'lclstrconsts.%s.po',LangID.LanguageID,LangID.LanguageCode);
     end;
 
     begin
@@ -49,11 +47,6 @@
       Application.CreateForm(TForm1, Form1);
       Application.Run;
     end.
-
-    Note for Mac OS X:
-      The supported language IDs should be added into the application
-      bundle property list to CFBundleLocalizations key, see
-      lazarus.app/Contents/Info.plist for example.
 }
 unit Translations;
 
@@ -69,6 +62,12 @@ uses
   AvgLvlTree, StringHashList;
 
 type
+  TLanguageID = record
+    LanguageID: string;   //Language ID is combined of LanguageCode and CountryCode (example: 'en_US')
+    LanguageCode: string; //ISO 639-1 or 639-2 language code (example: 'en' or 'eng')
+    CountryCode: string;  //ISO 3166 country code (example: 'US' or 'USA')
+  end;
+
   TStringsType = (
     stLrj, // Lazarus resource string table in JSON format
     stRst, // FPC resource string table (before FPC 2.7.1)
@@ -189,6 +188,9 @@ var
     // if you don't use UTF-8, install a proper widestring manager and set this
     // to false.
 
+function GetLanguageIDFromLocaleName(LocaleName: string): TLanguageID;
+function GetLanguageID: TLanguageID;
+
 function GetPOFilenameParts(const Filename: string; out AUnitName, Language: string): boolean;
 function FindAllTranslatedPoFiles(const Filename: string): TStringList;
 
@@ -217,6 +219,11 @@ const
 
 
 implementation
+
+{$IFDEF Windows}
+uses
+  Windows;
+{$ENDIF}
 
 function IsKey(Txt, Key: PChar): boolean;
 begin
@@ -432,6 +439,118 @@ begin
         Result := UTF8CompareLatinTextFast(Extr1, Extr2) = 0;
     end;
   end;
+end;
+
+procedure NormalizeLanguageID(var LangID: TLanguageID);
+begin
+  // Normalization rules:
+  // 1. LanguageCode cannot be empty. In this case fill ID with default value (en_US).
+  // 2. CountryCode can be empty if LanguageCode is not empty.
+  // 3. LangID is a combination of LanguageCode and non-empty CountryCode.
+  if LangID.LanguageCode = '' then
+  begin
+    LangID.LanguageCode := 'en';
+    LangID.CountryCode := 'US';
+  end;
+  LangID.LanguageID := LangID.LanguageCode;
+  if LangID.CountryCode <> '' then
+    LangID.LanguageID := LangID.LanguageID + '_' + LangID.CountryCode;
+end;
+
+function GetLanguageIDFromLocaleName(LocaleName: string): TLanguageID;
+var
+  i, CurItemStart, CurItemLength: SizeInt;
+  FinishedParsing, IsDelimiter: boolean;
+  CurItemType: string;
+begin
+  //Parse locale identifier. For reference its full syntax:
+  //Current:            `language[_territory[.codeset]][@modifier]`
+  //Possible in future: `language[_territory][.codeset][@modifier]`
+  Result := Default(TLanguageID);
+  i := 1;
+  CurItemStart := 1;
+  CurItemType := 'L';  // Language is the first item in locale identifier
+  FinishedParsing := false;
+  while (i <= Length(LocaleName)) and (not FinishedParsing) do
+  begin
+    IsDelimiter := LocaleName[i] in ['_', '.', '@'];
+    if IsDelimiter or (i = Length(LocaleName)) then
+    begin
+      CurItemLength := i - CurItemStart;
+      // If the last string char is not delimiter, it belongs to current item, so adjust its length
+      if not IsDelimiter then
+        inc(CurItemLength);
+      case CurItemType of
+        'L': Result.LanguageCode := Copy(LocaleName, CurItemStart, CurItemLength);
+        '_': Result.CountryCode := Copy(LocaleName, CurItemStart, CurItemLength);
+        '.': ; // We don't need codeset currently
+      end;
+      CurItemType := LocaleName[i];
+      // We don't use modifier currently, but know that it is the last in locale identifier
+      if CurItemType = '@' then
+        FinishedParsing := true;
+      CurItemStart := i + 1;
+    end;
+    inc(i);
+  end;
+  NormalizeLanguageID(Result);
+end;
+
+function GetLanguageID: TLanguageID;
+  {$IFDEF Windows}
+  procedure GetLanguage;
+  {$IFDEF Wince}
+  const
+    LOCALE_SISO639LANGNAME = $59;
+    LOCALE_SISO3166CTRYNAME = $5A;
+  {$ENDIF}
+  var
+    UserLCID: LCID;
+
+    function RetrieveLocaleInfo(InfoType: LCTYPE; var Info: string): longint;
+    var
+      Buffer: {$IFDEF Wince}WideString{$ELSE}AnsiString{$ENDIF};
+    begin
+      Info := '';
+      Result := GetLocaleInfo(UserLCID, InfoType, nil, 0);
+      if Result <> 0 then
+      begin
+        Buffer := '';
+        SetLength(Buffer, Result);
+        Result := GetLocaleInfo(UserLCID, InfoType, @Buffer[1], Result);
+        if Result <> 0 then
+          Info := Copy(Buffer, 1, Length(Buffer) - 1); //the last char is #0, omit it
+      end;
+    end;
+
+  begin
+    UserLCID := GetUserDefaultLCID;
+
+    RetrieveLocaleInfo(LOCALE_SISO639LANGNAME, Result.LanguageCode);
+    RetrieveLocaleInfo(LOCALE_SISO3166CTRYNAME, Result.CountryCode);
+
+    NormalizeLanguageID(Result);
+  end;
+  {$ELSE}
+  procedure GetLanguage;
+  var
+    EnvVarContents: string;
+  begin
+    EnvVarContents := GetEnvironmentVariable('LC_ALL');
+    if Length(EnvVarContents) = 0 then
+    begin
+      EnvVarContents := GetEnvironmentVariable('LC_MESSAGES');
+      if Length(EnvVarContents) = 0 then
+        EnvVarContents := GetEnvironmentVariable('LANG');
+    end;
+    // Even empty EnvVarContents is processed in order to return normalized ID
+    Result := GetLanguageIDFromLocaleName(EnvVarContents);
+  end;
+  {$ENDIF}
+
+begin
+  Result := Default(TLanguageID);
+  GetLanguage;
 end;
 
 function GetPOFilenameParts(const Filename: string; out AUnitName, Language: string): boolean;

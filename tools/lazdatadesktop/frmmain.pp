@@ -1867,7 +1867,8 @@ procedure TranslateStrs;
 const
   ext      = '.%s.po';
 var
-  LangID1, LangID2, basedir, olddir: String;
+  LangID1, basedir, olddir: String;
+  LangID: TLanguageID;
 begin
   olddir := GetCurrentDir;
   //
@@ -1875,17 +1876,21 @@ begin
   basedir := AppendPathDelim('..') + AppendPathDelim('..');
   //
   LangID1 := Application.GetOptionValue('language');
-  LangID2 := '';
   if Trim(LangId1) = '' then
-    LazGetLanguageIDs(LangID1,LangID2);
+  begin
+    LangID := GetLanguageID;
+    LangID1 := LangID.LanguageID;
+  end
+  else
+    LangID := GetLanguageIDFromLocaleName(LangID1);
   TranslateUnitResourceStrings('sdb_consts',basedir+
-               'components/dbexport/languages/sdb_consts'+ext, LangID1,LangID2);
+               'components/dbexport/languages/sdb_consts'+ext, LangID1,LangID.LanguageCode);
   TranslateUnitResourceStrings('ldd_consts',basedir+
-               'components/datadict/languages/ldd_consts'+ext, LangID1,LangID2);
+               'components/datadict/languages/ldd_consts'+ext, LangID1,LangID.LanguageCode);
   TranslateUnitResourceStrings('lclstrconsts',basedir+
-               'lcl/languages/lclstrconsts'+ext, LangID1,LangID2);
+               'lcl/languages/lclstrconsts'+ext, LangID1,LangID.LanguageCode);
   TranslateUnitResourceStrings('lazdatadeskstr',basedir+
-               'tools/lazdatadesktop/languages/lazdatadesktop'+ext, LangID1,LangID2);
+               'tools/lazdatadesktop/languages/lazdatadesktop'+ext, LangID1,LangID.LanguageCode);
   //
   SetCurrentDir(olddir);
 end;
