@@ -47,7 +47,8 @@ uses
   ApplicationBundle, TransferMacros, EnvironmentOpts, IDETranslations,
   LazarusIDEStrConsts, IDECmdLine, MiscOptions, Project, LazConf, PackageDefs,
   PackageLinks, PackageSystem, InterPkgConflictFiles, BuildLazDialog,
-  BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts;
+  BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts,
+  EnvGuiOptions; //Ultibo
 
 type
   TPkgAction = (
@@ -1170,6 +1171,8 @@ begin
 
   MainBuildBoss:=TBuildManager.Create(nil);
   SetupMacros;
+  EnvironmentGuiOpts := TEnvGuiOptions.Create; //Ultibo
+  EnvironmentOptions.RegisterSubConfig(EnvironmentGuiOpts, '/'); //Ultibo
   LoadEnvironmentOptions;
   if Terminated then exit(false);
   LoadMiscellaneousOptions;
