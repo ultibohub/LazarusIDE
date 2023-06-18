@@ -38,19 +38,20 @@ unit Compiler;
 interface
 
 uses
-  Classes, SysUtils, contnrs, strutils,
+  Classes, SysUtils, Contnrs, StrUtils,
+  {$IF FPC_FULLVERSION >= 30200}System.{$ENDIF}UITypes,
   // LazUtils
   FPCAdds, LazUTF8, LazFileUtils, LazUtilities, LazLoggerBase,
   // Codetools
-  DefineTemplates, LinkScanner, CodeToolManager, TransferMacros,
-  // LCL
-  Forms, Controls,
+  DefineTemplates, LinkScanner, CodeToolManager,
   // BuildIntf
   IDEExternToolIntf,
   // IdeIntf
   IDEMsgIntf, LazIDEIntf,
+  // IdeConfig
+  TransferMacros,
   // IDE
-  IDECmdLine, LazarusIDEStrConsts, CompilerOptions, Project, EnvGuiOptions;
+  IDECmdLine, LazarusIDEStrConsts, CompilerOptions, Project;
 
 type
   TOnCmdLineCreate = procedure(var CmdLine: string; var Abort:boolean) of object;
@@ -348,7 +349,6 @@ begin
     if CompilerKind=pcPas2js then
       SubTool:=SubToolPas2js;
     FPCParser:=TFPCParser(Tool.AddParsers(SubTool));
-    FPCParser.ShowLinesCompiled:=EnvironmentGuiOpts.MsgViewShowFPCMsgLinesCompiled;
     FPCParser.HideHintsSenderNotUsed:=not AProject.CompilerOptions.ShowHintsForSenderNotUsed;
     FPCParser.HideHintsUnitNotUsedInMainSource:=not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc;
     if (not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc)

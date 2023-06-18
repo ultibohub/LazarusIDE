@@ -76,6 +76,8 @@ type
   TCocoaWSCustomComboBox = class(TWSCustomComboBox)
   public
     class function getNSText(const ACustomComboBox: TCustomComboBox): NSText;
+    class function GetObjectItemIndex(const AObject: TObject): integer;
+    class function GetObjectAutoComplete(const AObject: TObject): boolean;
   published
     class function  CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
     class procedure SetBorderStyle(const AWinControl: TWinControl; const ABorderStyle: TBorderStyle); override;
@@ -93,6 +95,7 @@ type
     class procedure SetStyle(const ACustomComboBox: TCustomComboBox; NewStyle: TComboBoxStyle); override;
     class procedure SetReadOnly(const ACustomComboBox: TCustomComboBox; NewReadOnly: boolean); override;
     class procedure SetDropDownCount(const ACustomComboBox: TCustomComboBox; NewCount: Integer); override;
+    class procedure SetDroppedDown(const ACustomComboBox: TCustomComboBox; ADroppedDown: Boolean); override;
 
     class function  GetItems(const ACustomComboBox: TCustomComboBox): TStrings; override;
     class procedure FreeItems(var AItems: TStrings); override;
@@ -1892,22 +1895,26 @@ end;
 class function TCocoaWSCustomComboBox.GetDroppedDown(
   const ACustomComboBox: TCustomComboBox): Boolean;
 var
-  cb  : ICommonCallback;
-  obj : TObject;
+  comboBox: TCocoaComboBox;
 begin
   Result:=false;
   if (not Assigned(ACustomComboBox)) or (not ACustomComboBox.HandleAllocated) then
     Exit;
-
-  cb := NSView(ACustomComboBox.Handle).lclGetCallback;
-  if Assigned(cb) then
-  begin
-    obj := cb.GetCallbackObject;
-    if (obj is TLCLComboboxCallback) then
-      Result := TLCLComboboxCallback(obj).isShowPopup;
-  end;
-
+  comboBox:= TCocoaComboBox(ACustomComboBox.Handle);
+  Result:= comboBox.isDown;
 end;
+
+class procedure TCocoaWSCustomComboBox.SetDroppedDown(const ACustomComboBox: TCustomComboBox; ADroppedDown: Boolean);
+var
+  comboBox: TCocoaComboBox;
+begin
+  if (not Assigned(ACustomComboBox)) or (not ACustomComboBox.HandleAllocated) then
+    Exit;
+  if not ADroppedDown then exit;
+  comboBox:= TCocoaComboBox(ACustomComboBox.Handle);
+  comboBox.cell.performSelector_withObject_afterDelay( ObjCSelector('moveDown:'), nil, 0 );
+end;
+
 
 class function TCocoaWSCustomComboBox.GetSelStart(
   const ACustomComboBox: TCustomComboBox): integer;
@@ -1929,6 +1936,22 @@ begin
   txt:= getNSText( ACustomComboBox );
   if Assigned(txt) then
     Result:= txt.selectedRange.length;
+end;
+
+class function TCocoaWSCustomComboBox.GetObjectItemIndex(const AObject: TObject): integer;
+begin
+  if AObject is TCustomComboBox then
+    Result:= GetItemIndex( TCustomComboBox(AObject) )
+  else
+    Result:= -1;
+end;
+
+class function TCocoaWSCustomComboBox.GetObjectAutoComplete(const AObject: TObject): boolean;
+begin
+  if AObject is TCustomComboBox then
+    Result:= TCustomComboBox(AObject).AutoComplete
+  else
+    Result:= false;
 end;
 
 class procedure TCocoaWSCustomComboBox.SetSelStart(
@@ -1973,7 +1996,7 @@ begin
   if ComboBoxStyleIsReadOnly(ACustomComboBox.Style) then
     idx := TCocoaReadOnlyComboBox(ACustomComboBox.Handle).indexOfSelectedItem
   else
-    idx := TCocoaComboBox(ACustomComboBox.Handle).indexOfSelectedItem;
+    idx := ACustomComboBox.MatchListItem(ACustomComboBox.Text);
   if idx = NSNotFound then
     Result := -1
   else
@@ -2094,9 +2117,15 @@ end;
 
 class procedure TCocoaWSCustomComboBox.SetText(const AWinControl: TWinControl;
   const AText: String);
+var
+  cmb: NSControl;
 begin
   if (AWinControl.HandleAllocated) then
-    ControlSetTextWithChangeEvent(NSControl(AWinControl.Handle), AText);
+  begin
+    cmb:= NSControl(AWinControl.Handle);
+    cmb.setStringValue(NSString.string_);
+    ControlSetTextWithChangeEvent(cmb, AText);
+  end;
 end;
 
 class procedure TCocoaWSCustomComboBox.SetTextHint(

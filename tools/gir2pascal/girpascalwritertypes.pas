@@ -806,7 +806,11 @@ begin
       BaseType := TGirBaseType(NameSpace.Types.Items[i]);
       if BaseType.InheritsFrom(TgirFuzzyType) and (FuzzyType.ResolvedType = nil) then
       begin
-        CTypesType := LookupGTypeToCType(FuzzyType.CType);
+        if FuzzyType.CType = '' then begin
+          CTypesType := LookupGTypeToCType(FuzzyType.Name);
+        end else begin
+          CTypesType := LookupGTypeToCType(FuzzyType.CType);
+        end;
         if CTypesType <> '' then
         begin
           FuzzyType.TranslatedName:= CTypesType;
@@ -869,11 +873,11 @@ end;
 
 function TPascalUnit.cExternal(const cName: String = ''): String;
 begin
-  Result := ' external {$ifdef MsWindows} ' + UnitName + '_library';
+  Result := ' external ' + UnitName + '_library';
   if cName <> '' then begin
     Result += ' name ''' + cName + '''';
   end;
-  Result += ' {$endif};';
+  Result += ';';
 end;
 
 function TPascalUnit.WantTypeSection: TPDeclarationType;
@@ -1172,9 +1176,6 @@ var
   i: Integer;
   AddedConst: Boolean;
 begin
-  if goEnumAsSet in FOptions then begin
-    Include(FOptions, goEnumAsEnum);
-  end;
   HandleEnum(AItem);
   if goEnumAsSet in FOptions then begin
     Section := WantEnumTypesSection;

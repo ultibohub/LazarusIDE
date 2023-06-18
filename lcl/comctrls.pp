@@ -29,13 +29,13 @@ unit ComCtrls;
 interface
 
 uses
-  SysUtils, Types, Classes, Math, Laz_AVL_Tree, IntegerList,
+  SysUtils, Types, Classes, Math, Laz_AVL_Tree,
   // LCL
   LCLStrConsts, LResources, LCLIntf, LCLType, LCLProc, LMessages, WSLCLClasses,
   WSReferences, Graphics, ImgList, ActnList, Themes, Menus,
   Controls, Forms, StdCtrls, ExtCtrls, ToolWin, Buttons,
   // LazUtils
-  GraphType, LazUTF8, LazLoggerBase, LazUtilities;
+  GraphType, LazUTF8, LazLoggerBase, LazUtilities, IntegerList;
 
 type
   THitTest = (htAbove, htBelow, htNowhere, htOnItem, htOnButton, htOnIcon,
@@ -3734,6 +3734,10 @@ type
     procedure MoveToPrevNode(ASelect: Boolean = False);
     procedure MovePageDown(ASelect: Boolean = False);
     procedure MovePageUp(ASelect: Boolean = False);
+    procedure MoveLeft(ASelect: Boolean = False);
+    procedure MoveRight(ASelect: Boolean = False);
+    procedure MoveExpand(ASelect: Boolean = False);
+    procedure MoveCollapse(ASelect: Boolean = False);
     procedure MoveHome(ASelect: Boolean = False);
     procedure MoveEnd(ASelect: Boolean = False);
   public

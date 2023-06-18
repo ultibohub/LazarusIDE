@@ -308,7 +308,6 @@ type
     procedure ConsistencyCheck; virtual;
     class function GetParserName: string; virtual;
     class function GetLocalizedParserName: string; virtual;
-    class function IsSubTool(const SubTool: string): boolean; deprecated 'use CanParseSubTool';
     class function CanParseSubTool(const SubTool: string): boolean; virtual;
     class function GetMsgPattern({%H-}SubTool: string; {%H-}MsgID: integer;
       out Urgency: TMessageLineUrgency): string; virtual;
@@ -325,7 +324,6 @@ type
   private
     FHideHintsSenderNotUsed: boolean;
     FHideHintsUnitNotUsedInMainSource: boolean;
-    FShowLinesCompiled: boolean;
     FUseTranslationUrgency: boolean;
   protected
     FFilesToIgnoreUnitNotUsed: TStrings;
@@ -339,8 +337,6 @@ type
     class function GetFPCMsgValues(Msg: TMessageLine; out Value1, Value2: string): boolean; virtual; abstract;
     property FilesToIgnoreUnitNotUsed: TStrings read FFilesToIgnoreUnitNotUsed
                                                 write FFilesToIgnoreUnitNotUsed;
-    property ShowLinesCompiled: boolean read FShowLinesCompiled
-                                     write FShowLinesCompiled default false;
     property HideHintsSenderNotUsed: boolean read FHideHintsSenderNotUsed
                                      write FHideHintsSenderNotUsed default true;
     property HideHintsUnitNotUsedInMainSource: boolean
@@ -710,7 +706,6 @@ type
     property Title: string read fTitle write fTitle;
     property Hint: string read FHint write FHint;
     property Executable: string read FExecutable write FExecutable;
-    property Filename: string read FExecutable write FExecutable; deprecated; // use Executable instead
     property CmdLineParams: string read fCmdLineParams write fCmdLineParams;
     property WorkingDirectory: string read fWorkingDirectory write fWorkingDirectory;
     property EnvironmentOverrides: TStringList read FEnvironmentOverrides write SetEnvironmentOverrides;
@@ -1553,11 +1548,6 @@ end;
 class function TExtToolParser.GetLocalizedParserName: string;
 begin
   Result:=DefaultSubTool;
-end;
-
-class function TExtToolParser.IsSubTool(const SubTool: string): boolean;
-begin
-  Result:=CanParseSubTool(SubTool);
 end;
 
 class function TExtToolParser.CanParseSubTool(const SubTool: string): boolean;

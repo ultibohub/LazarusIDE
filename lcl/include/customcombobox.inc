@@ -33,6 +33,8 @@ begin
   if (FItems<>NewStrings) and (FItems<>nil) then
   begin
     NewStrings.Assign(FItems);
+    if NewStrings is TStringList then
+      TStringList(NewStrings).Sorted:= self.Sorted;
     FItems.Free;
   end;
   // and use the interface based list
@@ -454,10 +456,54 @@ begin
   I := ItemIndex;
   if (I < 0) or (I >= FItems.Count) or (FItems[I] <> AValue) then
     if not (csLoading in ComponentState) then
-      ItemIndex := FItems.IndexOf(AValue);
+      ItemIndex := MatchListItem(AValue);
   if AValue<>'' then
     HideEmulatedTextHint;
   inherited;
+end;
+
+function TCustomComboBox.MatchListItem(const AValue: TCaption): Integer;
+var
+  matchText: String;
+  caseSensitive: Boolean;
+  i: Integer;
+
+  function match( itemText:String): Boolean;
+  begin
+    if not caseSensitive then
+      itemText := UTF8UpperCase(itemText);
+    Result:= (matchText=itemText);
+  end;
+begin
+  Result:= -1;
+  if AValue='' then Exit;
+  if FItems.Count=0 then Exit;
+  caseSensitive:= cbactSearchCaseSensitive in FAutoCompleteText;
+  if caseSensitive then
+    matchText:= AValue
+  else
+    matchText := UTF8UpperCase(AValue);
+  if cbactSearchAscending in FAutoCompleteText then
+  begin
+    for i := 0 to FItems.Count - 1 do
+    begin
+      if match(FItems[i]) then
+      begin
+        Result:= i;
+        break;
+      end;
+    end;
+  end else
+  begin
+    for i := FItems.Count - 1 downto 0 do
+    begin
+      if match(FItems[i]) then
+      begin
+        Result:= i;
+        break;
+      end;
+    end;
+  end;
 end;
 
 procedure TCustomComboBox.SetArrowKeysTraverseList(Value : Boolean);
@@ -598,7 +644,7 @@ begin
   //SelectAll when hitting return key for AutoSelect feature
   if (Key = VK_RETURN) then
   begin
-    if ((cbactEnabled in FAutoCompleteText) and Style.HasEditBox) then
+    if AutoComplete and Style.HasEditBox then
     begin
       // Only happens with alpha-numeric keys and return key and editable Style
       SelectAll;
@@ -610,7 +656,7 @@ begin
     end;
   end
   else
-  if ((cbactEnabled in FAutoCompleteText) and Style.HasEditBox) then
+  if AutoComplete and Style.HasEditBox then
   begin
     //Only happens with alpha-numeric keys and return key and editable Style
     //DebugLn(['TCustomComboBox.KeyUp ',Key,' ',IsEditableTextKey(Key)]);
@@ -796,7 +842,7 @@ end;
 
 procedure TCustomComboBox.SetAutoComplete(const AValue: boolean);
 begin
-  if (cbactEnabled in FAutoCompleteText)=AValue then exit;
+  if AutoComplete=AValue then exit;
   if AValue then
     AutoCompleteText := AutoCompleteText + [cbactEnabled]
   else

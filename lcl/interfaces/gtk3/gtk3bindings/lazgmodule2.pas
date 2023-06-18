@@ -21,19 +21,19 @@ const
   {$endif}
 
 type
-  TGModuleFlags = (
-    TGModuleFlagsMinValue = -$7FFFFFFF,
-    G_MODULE_BIND_LAZY = 1,
-    G_MODULE_BIND_LOCAL = 2,
-    G_MODULE_BIND_MASK = 3,
-    TGModuleFlagsMaxValue = $7FFFFFFF
+  TGModuleFlagsIdx = (
+    TGModuleFlagsIdxMinValue = 0,
+    G_MODULE_BIND_LAZY = 0,
+    G_MODULE_BIND_LOCAL = 1,
+    TGModuleFlagsIdxMaxValue = 31
   );
-  TGModuleError = (
-    TGModuleErrorMinValue = -$7FFFFFFF,
-    G_MODULE_ERROR_FAILED = 0,
-    G_MODULE_ERROR_CHECK_FAILED = 1,
-    TGModuleErrorMaxValue = $7FFFFFFF
-  );
+  TGModuleFlags = Set of TGModuleFlagsIdx;
+const
+  G_MODULE_BIND_MASK = [
+    G_MODULE_BIND_LAZY,
+    G_MODULE_BIND_LOCAL
+  ]; {3 = $00000003}
+
 type
 
 
@@ -50,25 +50,22 @@ type
     procedure make_resident; cdecl; inline;
     function name: Pgchar; cdecl; inline;
     function symbol(symbol_name: Pgchar; symbol: Pgpointer): gboolean; cdecl; inline;
+    function build_path(directory: Pgchar; module_name: Pgchar): Pgchar; cdecl; inline; static;
     function error: Pgchar; cdecl; inline; static;
     function open(file_name: Pgchar; flags: TGModuleFlags): PGModule; cdecl; inline; static;
     function supported: gboolean; cdecl; inline; static;
   end;
   TGModuleCheckInit = function(module: PGModule): Pgchar; cdecl;
-
-
-  { TGModuleError }
-  PPGModuleError = ^PGModuleError;
-  PGModuleError = ^TGModuleError;
   TGModuleUnload = procedure(module: PGModule); cdecl;
 
-function g_module_close(module: PGModule): gboolean; cdecl; external;
-function g_module_error: Pgchar; cdecl; external;
-function g_module_name(module: PGModule): Pgchar; cdecl; external;
-function g_module_open(file_name: Pgchar; flags: TGModuleFlags): PGModule; cdecl; external;
-function g_module_supported: gboolean; cdecl; external;
-function g_module_symbol(module: PGModule; symbol_name: Pgchar; symbol: Pgpointer): gboolean; cdecl; external;
-procedure g_module_make_resident(module: PGModule); cdecl; external;
+function g_module_build_path(directory: Pgchar; module_name: Pgchar): Pgchar; cdecl; external LazGModule2_library name 'g_module_build_path';
+function g_module_close(module: PGModule): gboolean; cdecl; external LazGModule2_library name 'g_module_close';
+function g_module_error: Pgchar; cdecl; external LazGModule2_library name 'g_module_error';
+function g_module_name(module: PGModule): Pgchar; cdecl; external LazGModule2_library name 'g_module_name';
+function g_module_open(file_name: Pgchar; flags: TGModuleFlags): PGModule; cdecl; external LazGModule2_library name 'g_module_open';
+function g_module_supported: gboolean; cdecl; external LazGModule2_library name 'g_module_supported';
+function g_module_symbol(module: PGModule; symbol_name: Pgchar; symbol: Pgpointer): gboolean; cdecl; external LazGModule2_library name 'g_module_symbol';
+procedure g_module_make_resident(module: PGModule); cdecl; external LazGModule2_library name 'g_module_make_resident';
 implementation
 function TGModule.close: gboolean; cdecl;
 begin
@@ -88,6 +85,11 @@ end;
 function TGModule.symbol(symbol_name: Pgchar; symbol: Pgpointer): gboolean; cdecl;
 begin
   Result := LazGModule2.g_module_symbol(@self, symbol_name, symbol);
+end;
+
+function TGModule.build_path(directory: Pgchar; module_name: Pgchar): Pgchar; cdecl;
+begin
+  Result := LazGModule2.g_module_build_path(directory, module_name);
 end;
 
 function TGModule.error: Pgchar; cdecl;

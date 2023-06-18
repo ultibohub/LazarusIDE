@@ -4895,6 +4895,11 @@ begin
     Html.ExportAsText := True;
     Html.Highlighter := FEditor.Highlighter;
     Html.Title := PageName;
+    Html.UseBackground := EditorOpts.ExportHtmlWithBackground;
+    if EditorOpts.ExportHtmlWithBackground then begin
+      Html.Color := FEditor.Color;
+      Html.Font.Assign(FEditor.Font);
+    end;
     Html.ExportAll(FEditor.Lines);
     Html.SaveToFile(AFileName);
   finally
@@ -6678,10 +6683,14 @@ end;
 
 destructor TSourceEditorStatusPanel.Destroy;
 begin
-  if (FSrcNotebook <> nil) and (FSrcNotebook.FStatusPanels <> nil) then
-    FSrcNotebook.FStatusPanels.Remove(Self);
   if OnDestroy <> nil then
     OnDestroy(Self);
+  if (FSrcNotebook <> nil) and (FSrcNotebook.FStatusPanels <> nil) then begin
+    FSrcNotebook.FStatusPanels.FreeObjects := False;
+    FSrcNotebook.FStatusPanels.Remove(Self);
+    FSrcNotebook.FStatusPanels.FreeObjects := True;
+    FreeAndNil(FPanel);
+  end;
   inherited Destroy;
 end;
 

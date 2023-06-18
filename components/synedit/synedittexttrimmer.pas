@@ -27,9 +27,8 @@ unit SynEditTextTrimmer;
 interface
 
 uses
-LCLProc,
   Classes, SysUtils, LazSynEditText, SynEditTextBase, SynEditTypes, SynEditHighlighter,
-  SynEditPointClasses, SynEditMiscProcs;
+  SynEditPointClasses, SynEditMiscProcs, LazLoggerBase;
 
 type
 
@@ -365,7 +364,7 @@ constructor TSynEditUndoTrimMoveTo.Create(APosY, ALen: Integer);
 begin
   FPosY := APosY;
   FLen :=  ALen;
-  {$IFDEF SynTrimUndoDebug}debugln(['--- Trimmer Undo Insert ',DbgSName(self), ' ', dbgs(Self), ' - ', DebugString]);{$ENDIF}
+  {$IFDEF SynTrimUndoDebug}DebugLn(['--- Trimmer Undo Insert ',DbgSName(self), ' ', dbgs(Self), ' - ', DebugString]);{$ENDIF}
 end;
 
 function TSynEditUndoTrimMoveTo.PerformUndo(Caller: TObject): Boolean;

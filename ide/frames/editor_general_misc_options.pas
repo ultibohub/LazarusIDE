@@ -32,9 +32,9 @@ interface
 
 uses
   // LCL
-  LCLProc, StdCtrls, ExtCtrls, Spin,
+  StdCtrls, ExtCtrls, Spin,
   // SynEdit
-  SynEdit, SynEditTextTrimmer, SynEditTypes,
+  SynEditTextTrimmer, SynEditTypes,
   // IdeIntf
   IDEOptionsIntf, IDEOptEditorIntf, DividerBevel,
   // IDE
@@ -114,15 +114,17 @@ begin
   begin
     // visual effects
     //Items.Add(dlgShowGutterHints);  // unimplemented
-    Items.Add(lisShowSpecialCharacters);
+    Items.Add(lisShowSpecialCharacters);      // 0
     // spaces
-    Items.Add(dlgTrimTrailingSpaces);
+    Items.Add(dlgTrimTrailingSpaces);         // 1
     // copying
-    Items.Add(dlgFindTextatCursor);
-    Items.Add(dlgCopyWordAtCursorOnCopyNone);
-    Items.Add(dlgCopyPasteKeepFolds);
-    {$IFDEF WinIME}
-    Items.Add(dlgUseMinimumIme);
+    Items.Add(dlgFindTextatCursor);           // 2
+    Items.Add(dlgCopyWordAtCursorOnCopyNone); // 3
+    Items.Add(dlgCopyPasteKeepFolds);         // 4
+    Items.Add(dlgEditExportBackColor);        // 5
+
+    {$IFDEF WinIME} // Keep last, or all subsequnt indexes will depend on it
+    Items.Add(dlgUseMinimumIme);              // 6
     {$ENDIF}
   end;
   EditorTrimSpaceTypeComboBox.Items.Add(dlgTrimSpaceTypeLeaveLine);
@@ -157,8 +159,9 @@ begin
       Checked[2] := FindTextAtCursor;
       Checked[3] := CopyWordAtCursorOnCopyNone;
       Checked[4] := eoFoldedCopyPaste in SynEditOptions2;
+      Checked[5] := ExportHtmlWithBackground;
       {$IFDEF WinIME}
-      Checked[5] := UseMinimumIme;
+      Checked[6] := UseMinimumIme;
       {$ENDIF}
 
       with ScrollOnEditLeftOptions do begin
@@ -203,8 +206,9 @@ begin
     else
       SynEditOptions2 := SynEditOptions2 - [eoFoldedCopyPaste];
     TrimSpaceType := TSynEditStringTrimmingType(EditorTrimSpaceTypeComboBox.ItemIndex);
+    ExportHtmlWithBackground := EditorOptionsGroupBox.Checked[5];
     {$IFDEF WinIME}
-    UseMinimumIme := EditorOptionsGroupBox.Checked[5];
+    UseMinimumIme := EditorOptionsGroupBox.Checked[6];
     {$ENDIF}
 
       with ScrollOnEditLeftOptions do begin

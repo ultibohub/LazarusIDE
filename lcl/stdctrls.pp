@@ -297,7 +297,6 @@ type
     FCharCase: TEditCharCase;
     FDropDownCount: Integer;
     FDroppedDown: boolean;
-    FDroppingDown: Boolean;
     FEditingDone: Boolean;
     FEmulatedTextHintStatus: TEmulatedTextHintStatus;
     FItemHeight: integer;
@@ -409,6 +408,7 @@ type
     destructor Destroy; override;
     procedure IntfGetItems;
     procedure AddItem(const Item: String; AnObject: TObject); virtual;
+    function  MatchListItem(const AValue: TCaption): Integer;
     procedure AddHistoryItem(const Item: string; MaxHistoryCount: integer;
                              SetAsText, CaseSensitive: boolean);
     procedure AddHistoryItem(const Item: string; AnObject: TObject;
@@ -417,7 +417,6 @@ type
     procedure ClearSelection; //override;
     property CharCase: TEditCharCase read FCharCase write SetCharCase default ecNormal;
     property DroppedDown: Boolean read GetDroppedDown write SetDroppedDown;
-    property DroppingDown: Boolean read FDroppingDown write FDroppingDown; deprecated 'Will be removed in 2.2';
     procedure SelectAll;
     property AutoComplete: boolean read GetAutoComplete write SetAutoComplete default False;
     property AutoCompleteText: TComboBoxAutoCompleteText

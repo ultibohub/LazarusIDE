@@ -42,9 +42,9 @@ uses
   // RTL, FCL
   Classes, SysUtils, typinfo, resource,
   // LCL
-  Graphics, LCLProc, LResources, Forms, Dialogs, ComCtrls, LCLType, Controls,
+  Graphics, LResources, Forms, Dialogs, ComCtrls, LCLType, Controls,
   // LazUtils
-  FileUtil, LazFileUtils, LazUTF8, LazClasses, Laz2_XMLCfg, LazStringUtils,
+  FileUtil, LazFileUtils, LazUTF8, LazClasses, Laz2_XMLCfg, LazStringUtils, LazLoggerBase,
   // Synedit
   SynEdit, SynEditAutoComplete, SynEditKeyCmds, SynEditTypes,
   SynEditMiscClasses, SynBeautifier, SynEditTextTrimmer, SynEditMouseCmds,
@@ -399,6 +399,28 @@ type
     property  ColorSchemeGroupAtPos[Index: Integer]: TColorScheme read GetColorSchemeGroupAtPos;
   end;
 
+  { TIDESynTextSyn }
+
+  TIDESynTextSyn = class(TSynCustomHighlighter)
+  private
+    FLineText: String;
+//    fTextAttri: TSynHighlighterAttributes;
+    FPos: Integer;
+  protected
+    procedure SetLine(const NewValue: String; LineNumber: Integer); override;
+    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;      override;
+  public
+    class function GetLanguageName: string; override;
+
+    constructor Create(AOwner: TComponent); override;
+    function GetEol: Boolean; override;
+    function GetToken: string; override;
+    procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); override;
+    function GetTokenAttribute: TSynHighlighterAttributes; override;
+    function GetTokenPos: Integer; override;
+    procedure Next; override;
+  end;
+
 type
 
   TEditorOptionsDividerInfo = record
@@ -695,7 +717,7 @@ const
 
   LazSyntaxHighlighterClasses: array[TLazSyntaxHighlighter] of
     TCustomSynClass =
-    (nil, nil, TIDESynFreePasSyn, TIDESynPasSyn, TSynLFMSyn, TSynXMLSyn,
+    (nil, TIDESynTextSyn, TIDESynFreePasSyn, TIDESynPasSyn, TSynLFMSyn, TSynXMLSyn,
     TSynHTMLSyn, TSynCPPSyn, TSynPerlSyn, TSynJavaSyn, TSynUNIXShellScriptSyn,
     TSynPythonSyn, TSynPHPSyn, TSynSQLSyn,TSynCssSyn, TSynJScriptSyn, TSynDiffSyn,
     TSynBatSyn, TSynIniSyn, TSynPoSyn, TSynPikeSyn);
@@ -1406,6 +1428,7 @@ type
     {$IFDEF WinIME}
     FUseMinimumIme: Boolean;
     {$ENDIF}
+    fExportHtmlWithBackground: Boolean;
     // General options
     fMultiLineTab: Boolean;
     fTabPosition: TTabPosition;
@@ -1423,6 +1446,7 @@ type
     fMultiCaretDefaultMode: TSynPluginMultiCaretDefaultMode;
     fMultiCaretDeleteSkipLineBreak: Boolean;
     fMultiCaretDefaultColumnSelectMode: TSynPluginMultiCaretDefaultMode;
+
     // Highlighter Pas
     fPasExtendedKeywordsMode: Boolean;
     fPasStringKeywordMode: TSynPasStringMode;
@@ -1480,6 +1504,8 @@ type
     {$IFDEF WinIME}
     property UseMinimumIme: Boolean read FUseMinimumIme write FUseMinimumIme default False;
     {$ENDIF}
+    property ExportHtmlWithBackground: Boolean
+      read fExportHtmlWithBackground write fExportHtmlWithBackground default False;
     // Display
     property ShowOverviewGutter: boolean
       read fShowOverviewGutter write fShowOverviewGutter default True;
@@ -3401,6 +3427,23 @@ begin
   end;
   Add(NewInfo);
 
+  // create info for text
+  NewInfo := TEditOptLanguageInfo.Create;
+  NewInfo.TheType := lshText;
+  NewInfo.DefaultCommentType := DefaultCommentTypes[NewInfo.TheType];
+  NewInfo.SynClass := LazSyntaxHighlighterClasses[NewInfo.TheType];
+  NewInfo.SetBothFilextensions('txt');
+  NewInfo.SampleSource := 'Text in the source editor.'+#13#10+
+                          'Example line 2'+#13#10+
+                          'Example line 3'+#13#10+
+                          'Example line 4'+#13#10;
+  with NewInfo do
+  begin
+    AddAttrSampleLines[ahaTextBlock] := 12;
+    MappedAttributes := TStringList.Create;
+    CaretXY := Point(1,1);
+  end;
+  Add(NewInfo);
 end;
 
 destructor TEditOptLangList.Destroy;
@@ -4716,6 +4759,7 @@ begin
   fMultiCaretDefaultMode := mcmMoveAllCarets;
   fMultiCaretDefaultColumnSelectMode := mcmCancelOnCaretMove;
   fMultiCaretDeleteSkipLineBreak := False;
+  fExportHtmlWithBackground := False;
   // Display options
   fShowOverviewGutter := True;
   fTopInfoView := True;
@@ -5799,11 +5843,20 @@ end;
 procedure TEditorOptions.SetMarkupColors(aSynEd: TSynEdit);
 var
   Scheme: TColorSchemeLanguage;
+  TmpHl: TIDESynTextSyn;
 begin
   // Find current color scheme for default colors
   if (aSynEd.Highlighter = nil) then begin
-    aSynEd.Color := clWhite;
-    aSynEd.Font.Color := clBlack;
+    TmpHl := TIDESynTextSyn.Create(nil);
+    Scheme := GetColorSchemeLanguage(TmpHl);
+    if Assigned(Scheme) then begin
+      Scheme.ApplyTo(aSynEd);
+    end
+    else begin
+      aSynEd.Color := clWhite;
+      aSynEd.Font.Color := clBlack;
+    end;
+    TmpHl.Free;
     exit;
   end;
   // get current colorscheme:
@@ -6108,7 +6161,9 @@ end;
 
 function TEditorOptions.CreateSyn(LazSynHilighter: TLazSyntaxHighlighter): TSrcIDEHighlighter;
 begin
-  if LazSyntaxHighlighterClasses[LazSynHilighter] <> Nil then
+  if (LazSyntaxHighlighterClasses[LazSynHilighter] <> Nil) and
+     not (LazSyntaxHighlighterClasses[LazSynHilighter] = TIDESynTextSyn)
+  then
   begin
     Result := LazSyntaxHighlighterClasses[LazSynHilighter].Create(Nil);
     GetHighlighterSettings(Result);
@@ -6569,9 +6624,15 @@ begin
   else
     FormatVersion := 6;
   FFormatVersion := FormatVersion;
-  TmpPath := TmpPath + 'Scheme' + StrToValidXMLName(Name) + '/';
 
-  if (aOldPath <> '') and (FormatVersion > 1) then begin
+  TmpPath := TmpPath + 'Scheme' + StrToValidXMLName(Name) + '/';
+  if not aXMLConfig.HasChildPaths(TmpPath) then begin
+    // nothing to be loaded // FormatVersion is wrong
+    FormatVersion := 6;
+  end;
+
+  if (aOldPath <> '') and (FormatVersion > 1) and aXMLConfig.HasChildPaths(TmpPath)
+  then begin
     // convert some old data (loading user settings only):
     // aOldPath should be 'EditorOptions/Display/'
     if aXMLConfig.GetValue(aOldPath + 'RightMarginColor', '') <> '' then
@@ -7179,6 +7240,64 @@ begin
   finally
     AList.EndUpdate;
   end;
+end;
+
+{ TIDESynTextSyn }
+
+procedure TIDESynTextSyn.SetLine(const NewValue: String; LineNumber: Integer);
+begin
+  inherited SetLine(NewValue, LineNumber);
+  FLineText := NewValue;
+  FPos := 0;
+end;
+
+function TIDESynTextSyn.GetDefaultAttribute(Index: integer
+  ): TSynHighlighterAttributes;
+begin
+  Result := nil;
+end;
+
+class function TIDESynTextSyn.GetLanguageName: string;
+begin
+  Result := 'Plain Text';
+end;
+
+constructor TIDESynTextSyn.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  fDefaultFilter := '';
+end;
+
+function TIDESynTextSyn.GetEol: Boolean;
+begin
+  Result := FPos > 0;
+end;
+
+function TIDESynTextSyn.GetToken: string;
+begin
+  Result := FLineText;
+end;
+
+procedure TIDESynTextSyn.GetTokenEx(out TokenStart: PChar; out
+  TokenLength: integer);
+begin
+  TokenStart := PChar(FLineText);
+  TokenLength := Length(FLineText);
+end;
+
+function TIDESynTextSyn.GetTokenAttribute: TSynHighlighterAttributes;
+begin
+  Result := nil;
+end;
+
+function TIDESynTextSyn.GetTokenPos: Integer;
+begin
+  Result := 0;
+end;
+
+procedure TIDESynTextSyn.Next;
+begin
+  inc(FPos);
 end;
 
 { TQuickStringlist }

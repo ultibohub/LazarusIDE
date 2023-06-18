@@ -447,6 +447,8 @@ function GetFieldEditor(afield: NSTextField): TCocoaFieldEditor;
 
 implementation
 
+uses CocoaWSStdCtrls;
+
 function GetFieldEditor(afield: NSTextField): TCocoaFieldEditor;
 var
   lFieldEditor: TCocoaFieldEditor;
@@ -1407,8 +1409,7 @@ begin
     Result:=idx
   else
   begin
-    // todo: consider a faster search?
-    idx := list.IndexOf(string_.UTF8String);
+    idx := TCocoaWSCustomComboBox.GetObjectItemIndex(aComboBox.lclGetTarget);
     if idx<0 then
       Result := NSNotFound
     else
@@ -1441,12 +1442,14 @@ end;
 
 procedure TCocoaComboBox.comboBoxWillPopUp(notification: NSNotification);
 begin
+  self.setCompletes( TCocoaWSCustomComboBox.GetObjectAutoComplete(lclGetTarget) );
   callback.ComboBoxWillPopUp;
   isDown:=true;
 end;
 
 procedure TCocoaComboBox.comboBoxWillDismiss(notification: NSNotification);
 begin
+  self.setCompletes(false);
   callback.ComboBoxWillDismiss;
   isDown:=false;
 end;

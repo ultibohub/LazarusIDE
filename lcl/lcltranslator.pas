@@ -81,16 +81,11 @@ type
 function TranslateLCLResourceStrings(Lang, Dir: string): string;
 function TranslateUnitResourceStringsEx(Lang, Dir, LocaleFileName: string; LocaleUnitName: string = ''): string;
 function SetDefaultLang(Lang: string; Dir: string = ''; LocaleFileName: string = ''; ForceUpdate: boolean = true): string;
-function GetDefaultLang: String; deprecated 'Use SetDefaultLang function result instead'; // Lazarus 2.1.0
 
 implementation
 
-
 type
   TPersistentAccess = class(TPersistent);
-
-var
-  DefaultLang: String = '';
 
 function FindLang(var Lang: string): TLanguageID;
 var
@@ -593,8 +588,6 @@ begin
     lcfn := '';
   end;
 
-  DefaultLang := Result;
-
   if lcfn<>'' then
     TranslateLCLResourceStrings(Lang, lcfn);
 
@@ -614,12 +607,6 @@ begin
         LocalTranslator.UpdateTranslation(Screen.DataModules[i]);
     end;
   end;
-end;
-
-function GetDefaultLang: String;
-begin
-  if DefaultLang = '' then SetDefaultLang('');
-  GetDefaultLang := DefaultLang;
 end;
 
 finalization
