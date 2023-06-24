@@ -5467,14 +5467,14 @@ resourcestring
 
   // View Search Results dialog
   rsFoundButNotListedHere = 'Found but not listed here: ';
-  rsRefreshTheSearch = 'Refresh the search';
-  rsNewSearchWithSameCriteria = 'New search with same criteria';
-  rsShowPathMode = 'Path display mode';
+  rsRefreshTheSearch = 'Refresh the search (F5)';
+  rsNewSearchWithSameCriteria = 'New search with same criteria (Ctrl+N)';
+  rsShowPathMode = 'Path display mode (Ctrl+P)';
   rsShowAbsPath = 'Absolute path';
   rsShowRelPath = 'Relative path';
   rsShowFileName = 'File name';
-  rsFilterTheListWithString = 'Filter the lines in list with a string';
-  rsCloseCurrentPage = 'Close current page';
+  rsFilterTheListWithString = 'Filter the lines in list with a string (Ctrl+F)';
+  rsCloseCurrentPage = 'Close current page (Ctrl+F4)∥(Ctrl+W)';
   rsCloseLeft = 'Close page(s) on the left';
   rsCloseRight = 'Close page(s) on the right';
   rsCloseOthers = 'Close other page(s)';
@@ -5803,10 +5803,13 @@ resourcestring
   lisBestViewedByInstallingAHTMLControlLikeTurbopowerip = 'Best viewed by '
     +'installing a HTML control like turbopoweriprodsgn';
   lisShowRecentlyUsedIdentifiersAtTop = 'Show recently used identifiers at top';
-  lisSortForScope = 'Sort for scope';
-  lisForExampleShowAtTopTheLocalVariablesThenTheMembers = 'For example show at'
-    +' top the local variables, then the members of current class, then of the'
+  lisForExampleShowAtTopTheLocalVariablesThenTheMembers = '"Scoped" sorting will show'
+    +' local variables on top, then the members of current class, then of the'
     +' ancestors, then the current unit, then of used units';
+  lisSortOrderTitle = 'Order by';
+  lisSortOrderDefinition = 'Definition (Scoped)';
+  lisSortOrderScopedAlphabetic = 'Alphabetic (Scoped)';
+  lisSortOrderAlphabetic = 'Alphabetic';
   lisShowEmptyUnitsPackages = 'Show empty units/packages';
   lisUsePackageInProject = 'Use package %s in project';
   lisUsePackageInProject2 = 'Use package in project';
@@ -6476,11 +6479,14 @@ resourcestring
   InitDlgDebugCreateANewRecommendedBack = 'Create a new recommended backend';
   InitDlgDebugSelectAnExistingBackend = 'Select an existing backend';
   InitDlgDebugIgnore = 'Ignore';
+  InitDlgDebugCurrent = 'Current';
+  InitDlgDebugNew = 'New';
+
   InitDlgDebugStateMissingPackages = 'There may be packages (LPK) missing '
     +'from your IDE installation. You may need to rebuild the IDE and install '
     +'them, before making changes to the setup.';
   InitDlgDebugStateUpdateBackend = 'You are using an older backend. This may'
-    +' give you not the best debugging experience. Consider upgrading to '
+    +' not give you the best debugging experience. Consider upgrading to '
     +'the recommended backend.';
   InitDlgDebugStateRecommendedNotInList = 'There is no backend of '
     +'recommended type in the list of existing debuggers. Consider creating a '

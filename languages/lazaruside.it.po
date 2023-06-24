@@ -4447,6 +4447,11 @@ msgstr ""
 msgid "Create a new recommended backend"
 msgstr ""
 
+#: lazarusidestrconsts.initdlgdebugcurrent
+msgctxt "lazarusidestrconsts.initdlgdebugcurrent"
+msgid "Current"
+msgstr ""
+
 #: lazarusidestrconsts.initdlgdebugexternalexepathdisplay
 msgid "The selected backend uses the external executable:"
 msgstr ""
@@ -4469,6 +4474,12 @@ msgstr ""
 #: lazarusidestrconsts.initdlgdebugkeepbackend
 msgid "Keep backend"
 msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugnew
+#, fuzzy
+msgctxt "lazarusidestrconsts.initdlgdebugnew"
+msgid "New"
+msgstr "Nuovo"
 
 #: lazarusidestrconsts.initdlgdebugpathnoteerrorexeisdirectory
 msgid "Error: External executable is a directory, not a file."
@@ -4525,7 +4536,7 @@ msgid "Setup is OK."
 msgstr ""
 
 #: lazarusidestrconsts.initdlgdebugstateupdatebackend
-msgid "You are using an older backend. This may give you not the best debugging experience. Consider upgrading to the recommended backend."
+msgid "You are using an older backend. This may not give you the best debugging experience. Consider upgrading to the recommended backend."
 msgstr ""
 
 #: lazarusidestrconsts.lis0no1drawdividerlinesonlyfortoplevel2drawlinesforfi
@@ -10128,7 +10139,9 @@ msgid "Force renaming"
 msgstr "Forza rinomina"
 
 #: lazarusidestrconsts.lisforexampleshowattopthelocalvariablesthenthemembers
-msgid "For example show at top the local variables, then the members of current class, then of the ancestors, then the current unit, then of used units"
+#, fuzzy
+#| msgid "For example show at top the local variables, then the members of current class, then of the ancestors, then the current unit, then of used units"
+msgid "\"Scoped\" sorting will show local variables on top, then the members of current class, then of the ancestors, then the current unit, then of used units"
 msgstr "Per esempio mostrare in cima le variabili locali, poi i membri della classe corrente, poi gli antenati, poi l'unità corrente poi le unità usate"
 
 #: lazarusidestrconsts.lisform
@@ -18065,12 +18078,25 @@ msgstr "Corrispondenze"
 msgid "Sorry, this type is not yet implemented"
 msgstr "Spiacente, questo tipo non è ancora implementato"
 
-#: lazarusidestrconsts.lissortforscope
-msgid "Sort for scope"
-msgstr "Ordina per visibilità"
-
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"
+msgstr ""
+
+#: lazarusidestrconsts.lissortorderalphabetic
+msgid "Alphabetic"
+msgstr ""
+
+#: lazarusidestrconsts.lissortorderdefinition
+msgid "Definition (Scoped)"
+msgstr ""
+
+#: lazarusidestrconsts.lissortorderscopedalphabetic
+msgctxt "lazarusidestrconsts.lissortorderscopedalphabetic"
+msgid "Alphabetic (Scoped)"
+msgstr ""
+
+#: lazarusidestrconsts.lissortordertitle
+msgid "Order by"
 msgstr ""
 
 #: lazarusidestrconsts.lissortselascending
@@ -20496,7 +20522,9 @@ msgid "Close all pages"
 msgstr ""
 
 #: lazarusidestrconsts.rsclosecurrentpage
-msgid "Close current page"
+#, fuzzy
+#| msgid "Close current page"
+msgid "Close current page (Ctrl+F4)∥(Ctrl+W)"
 msgstr "Chiudere la pagina corrente"
 
 #: lazarusidestrconsts.rscloseleft
@@ -20524,7 +20552,9 @@ msgid "Enable i18n"
 msgstr "Abilita i18n"
 
 #: lazarusidestrconsts.rsfilterthelistwithstring
-msgid "Filter the lines in list with a string"
+#, fuzzy
+#| msgid "Filter the lines in list with a string"
+msgid "Filter the lines in list with a string (Ctrl+F)"
 msgstr "Filtrare le righe nella lista con una stringa"
 
 #: lazarusidestrconsts.rsfoundbutnotlistedhere
@@ -20683,7 +20713,7 @@ msgid "Mi&nor version:"
 msgstr "Versione mi&nore:"
 
 #: lazarusidestrconsts.rsnewsearchwithsamecriteria
-msgid "New search with same criteria"
+msgid "New search with same criteria (Ctrl+N)"
 msgstr ""
 
 #: lazarusidestrconsts.rsotherinfo
@@ -20695,7 +20725,7 @@ msgid "PO Output Directory:"
 msgstr "Cartella di output dei file PO:"
 
 #: lazarusidestrconsts.rsrefreshthesearch
-msgid "Refresh the search"
+msgid "Refresh the search (F5)"
 msgstr ""
 
 #: lazarusidestrconsts.rsresource
@@ -20735,7 +20765,7 @@ msgid "File name"
 msgstr "Nome file"
 
 #: lazarusidestrconsts.rsshowpathmode
-msgid "Path display mode"
+msgid "Path display mode (Ctrl+P)"
 msgstr ""
 
 #: lazarusidestrconsts.rsshowrelpath

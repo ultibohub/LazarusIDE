@@ -40,7 +40,7 @@ uses
   Classes, SysUtils, Math, StrUtils, Laz_AVL_Tree,
   // LCL
   LCLProc, LCLType, Forms, Controls, Graphics, ComCtrls, Menus, Clipbrd,
-  ActnList, ExtCtrls, StdCtrls, Dialogs,
+  ActnList, ExtCtrls, StdCtrls, Dialogs, LCLIntf,
   // LazControls
   TreeFilterEdit, ExtendedNotebook,
   // LazUtils
@@ -87,6 +87,7 @@ type
     fSearchOptions: TLazFindInFileSearchOptions;
     fSearchDirectories: string;
     fSearchMask: string;
+    ftabEllipsed: boolean;
   public
     property SearchString: string read fSearchString write fSearchString;
     property ReplaceText: string read FReplaceText write FReplaceText;
@@ -95,6 +96,7 @@ type
     property SearchDirectories: string read fSearchDirectories
                                      write fSearchDirectories;
     property SearchMask: string read fSearchMask write fSearchMask;
+    property TabEllipsed: boolean read ftabEllipsed write ftabEllipsed;
   end;
 
   { TLazSearchResultTV }
@@ -176,6 +178,8 @@ type
     ToolButton3: TToolButton;
     tbbCloseAll: TToolButton;
     procedure RefreshButtonClick(Sender: TObject);
+    procedure ResultsNoteBookMouseMove(Sender: TObject; {%H-}Shift: TShiftState; X,
+      Y: Integer);
     procedure SearchAgainButtonClick(Sender: TObject);
     procedure ClosePageButtonClick(Sender: TObject);
     procedure ResultsNoteBookResize(Sender: TObject);
@@ -215,12 +219,12 @@ type
     FMaxItems: integer;
     FFocusTreeViewInOnChange: Boolean;
     FFocusTreeViewInEndUpdate: Boolean;
-    FWorkedSearchText: string;
     FOnSelectionChanged: TNotifyEvent;
     FMouseOverIndex: integer;
     FClosingTabs: boolean;
+    FNoteBookTab: integer;
     function IsBackup(const aFullFilePath: string): boolean;
-    function BeautifyPageName(const APageName: string): string;
+    function BeautifyPageName(const APageName: string; out aoTabEllipsed : boolean): string;
     function GetPageIndex(const APageName: string): integer;
     function GetTreeView(APageIndex: integer): TLazSearchResultTV;
     function GetCurrentTree: TLazSearchResultTV;
@@ -233,15 +237,15 @@ type
     procedure ClosePageOnSides(aOnSide : TOnSide);
     procedure ClosePageBegin;
     procedure ClosePageEnd;
-    procedure DoAsyncUpdateCloseButtons(Data: PtrInt);
+    procedure DoAsyncUpdateCloseButtons({%H-}Data: PtrInt);
+    procedure NoteBookShowHint(Sender: TObject; {%H-}HintInfo: PHintInfo);
   protected
     procedure Loaded; override;
     procedure ActivateControl(aWinControl: TWinControl);
     procedure UpdateShowing; override;
     property AsyncUpdateCloseButtons: TSVCloseButtonsState read FAsyncUpdateCloseButtons write SetAsyncUpdateCloseButtons;
   public
-    function AddSearch(const aResultsName: string;
-                       const aSearchText: string;
+    function AddSearch(const aSearchText: string;
                        const aReplaceText: string;
                        const aDirectories: string;
                        const aFileMask: string;
@@ -250,17 +254,17 @@ type
     function GetSourceFileName: string;
     function GetSelectedText: string;
     function GetSelectedMatchPos: TLazSearchMatchPos;
+    function SelectNextMatchPos(DirectionDown: boolean): boolean;
     procedure AddMatch(const APageIndex: integer;
                        const Filename: string; const StartPos, EndPos: TPoint;
                        const TheText: string;
                        const MatchStart: integer; const MatchLen: integer);
     procedure BeginUpdate(APageIndex: integer);
-    procedure EndUpdate(APageIndex: integer);
+    procedure EndUpdate(APageIndex: integer; APageName: string = '');
     procedure Parse_Search_Phrases(var slPhrases: TStrings);
     procedure ClosePage(PageIndex: integer);
 
     property MaxItems: integer read FMaxItems write SetMaxItems;
-    property WorkedSearchText: string read FWorkedSearchText;
     property OnSelectionChanged: TNotifyEvent read fOnSelectionChanged
                                               write fOnSelectionChanged;
     property Items[Index: integer]: TStrings read GetItems write SetItems;
@@ -357,6 +361,11 @@ begin
   // hints
   ShowHint:= True;
 
+  // Notebook
+  FNoteBookTab := -1;
+  ResultsNoteBook.OnMouseMove := @ResultsNoteBookMouseMove;
+  ResultsNoteBook.OnShowHint := @NoteBookShowHint;
+
   RefreshButton    .Hint := rsRefreshTheSearch;
   SearchAgainButton.Hint := rsNewSearchWithSameCriteria;
   ClosePageButton  .Hint := rsCloseCurrentPage;
@@ -394,7 +403,6 @@ begin
   actCloseOthers   .ImageIndex := IDEImages.LoadImage('tab_close_LR');
   actCloseRight    .ImageIndex := IDEImages.LoadImage('tab_close_R');
   actCloseAll      .ImageIndex := IDEImages.LoadImage('tab_close_All');
-
 end;
 
 procedure TSearchResultsView.FormKeyDown(Sender: TObject; var Key: Word;
@@ -408,53 +416,53 @@ begin
     Key := 0;
     if assigned(FOnSelectionChanged) then
       FOnSelectionChanged(self);
-  end else
+  end
 
   // close
-  if (Key = VK_ESCAPE) and (Shift = []) then
+  else if (Key = VK_ESCAPE) and (Shift = []) then
   begin
     Key := 0;
     Close;
-  end else
+  end
 
   // line scroll
-  if (Key = VK_DOWN) and (Shift = [ssCtrl]) then
+  else if (Key = VK_DOWN) and (Shift = [ssCtrl]) then
   begin
     Key := 0;
     lTree := GetCurrentTree;
     if lTree <> nil then
       lTree.ScrolledTop := lTree.ScrolledTop + lTree.DefaultItemHeight;
-  end else
-  if (Key = VK_UP) and (Shift = [ssCtrl]) then
+  end
+  else if (Key = VK_UP) and (Shift = [ssCtrl]) then
   begin
     Key := 0;
     lTree := GetCurrentTree;
     if lTree <> nil then
       lTree.ScrolledTop := lTree.ScrolledTop - lTree.DefaultItemHeight;
-  end else
+  end
 
   // full expand/collapse
-  if (Key = VK_LCL_MINUS) and (Shift = [ssCtrl]) then
+  else if (Key = VK_LEFT) and (Shift = [ssAlt, ssShift]) then
   begin
     Key := 0;
     mniCollapseAllClick(Sender);
-  end else
-  if (Key = VK_LCL_EQUAL) and (Shift = [ssCtrl]) then
+  end
+  else if (Key = VK_RIGHT) and (Shift = [ssAlt, ssShift]) then
   begin
     Key := 0;
     mniExpandAllClick(Sender);
-  end else
+  end
 
   // set focus in filter
-  if (Key = VK_F) and (Shift = [ssCtrl]) then
+  else if (Key = VK_F) and (Shift = [ssCtrl]) then
   begin
     Key := 0;
     if SearchInListEdit.CanSetFocus then
       SearchInListEdit.SetFocus;
-  end else
+  end
 
   // toggle path display mode
-  if (Key = VK_P) and (Shift = [ssCtrl]) then
+  else if (Key = VK_P) and (Shift = [ssCtrl]) then
   begin
     Key := 0;
 
@@ -466,29 +474,29 @@ begin
       mniPathAbsolute.Checked := true;
 
     mniShowPathClick(Sender);
-  end else
+  end
 
   // new search
-  if (Key = VK_N) and (Shift = [ssCtrl]) then
+  else if (Key = VK_N) and (Shift = [ssCtrl]) then
   begin
     Key := 0;
     SearchAgainButtonClick(Sender);
-  end else
+  end
 
   // refresh
-  if (Key = VK_F5) and (Shift = []) then
+  else if (Key = VK_F5) and (Shift = []) then
   begin
     Key := 0;
     RefreshButtonClick(Sender);
-  end else
+  end
 
   // next tab
-  if (Key = VK_TAB) and (Shift = [ssCtrl]) then
+  else if (Key = VK_TAB) and (Shift = [ssCtrl]) then
   begin
     Key := 0;
     ResultsNoteBook.SelectNextPage(true);
-  end else
-  if (Key = VK_TAB) and (Shift = [ssShift, ssCtrl]) then
+  end
+  else if (Key = VK_TAB) and (Shift = [ssShift, ssCtrl]) then
   begin
     Key := 0;
     ResultsNoteBook.SelectNextPage(false);
@@ -527,27 +535,35 @@ end;
 procedure TSearchResultsView.mniExpandAllClick(Sender: TObject);
 var
   lTree: TLazSearchResultTV;
+  lOldCursor : TCursor;
 begin
   lTree := GetCurrentTree;
   if lTree = nil then exit;
   // expand
+  lOldCursor := Screen.Cursor;
+  Screen.Cursor := crHourGlass;
   lTree.FullExpand;
+  Screen.Cursor := lOldCursor;
 end;
 
 procedure TSearchResultsView.mniCollapseAllClick(Sender: TObject);
 var
   lTree: TLazSearchResultTV;
   lNode: TTreeNode;
+  lOldCursor : TCursor;
 begin
   lTree := GetCurrentTree;
   if lTree = nil then exit;
   // collapse
+  lOldCursor := Screen.Cursor;
+  Screen.Cursor := crHourGlass;
   lTree.FullCollapse;
   // selection
   lTree.ClearSelection;
   lNode := lTree.Items.GetFirstVisibleNode;
   if lNode <> nil then
     lNode.Selected := true;
+  Screen.Cursor := lOldCursor;
 end;
 
 procedure TSearchResultsView.ResultsNoteBookMouseDown(
@@ -578,12 +594,16 @@ begin
   TCustomTreeView(lTree).BeginUpdate; // TCustomTreeView, but not TLazSearchResultTV!
   try
     lNode := lTree.Selected;
-    lNodeText := lNode.Text;
-    lOldScroll.X := lTree.ScrolledLeft;
-    lOldScroll.Y := lTree.ScrolledTop;
-    lTree.MoveEnd;
-    lNode.MakeVisible;
-    lDeltaScrollY := lTree.ScrolledTop - lOldScroll.Y;
+    lNodeText := '';
+    if lNode <> nil then
+    begin
+      lNodeText := lNode.Text;
+      lOldScroll.X := lTree.ScrolledLeft;
+      lOldScroll.Y := lTree.ScrolledTop;
+      lTree.MoveEnd;
+      lNode.MakeVisible;
+      lDeltaScrollY := lTree.ScrolledTop - lOldScroll.Y;
+    end;
   finally
     lTree.ScrolledTop := lOldScroll.Y; // go back while searching
     TCustomTreeView(lTree).EndUpdate;
@@ -615,6 +635,22 @@ begin
   end;
 end;
 
+procedure TSearchResultsView.ResultsNoteBookMouseMove(Sender: TObject;
+  Shift: TShiftState; X, Y: Integer);
+var
+  lPageIx: integer;
+begin
+  if Sender = ResultsNoteBook then begin
+    with ResultsNoteBook do begin
+      lPageIx := IndexOfTabAt(Point(x, y));
+      if lPageIx <> FNoteBookTab then begin
+        FNoteBookTab := lPageIx;
+        Application.CancelHint;
+      end;
+    end;
+  end;
+end;
+
 procedure TSearchResultsView.SearchAgainButtonClick(Sender: TObject);
 var
   lTree: TLazSearchResultTV;
@@ -635,9 +671,10 @@ end;
 
 procedure TSearchResultsView.ResultsNoteBookResize(Sender: TObject);
 begin
-  if ResultsNoteBook.PageCount > 0
-    then AsyncUpdateCloseButtons := svcbEnable
-    else AsyncUpdateCloseButtons := svcbDisable;
+  if ResultsNoteBook.PageCount > 0 then
+    AsyncUpdateCloseButtons := svcbEnable
+  else
+    AsyncUpdateCloseButtons := svcbDisable;
 end;
 
 procedure TSearchResultsView.mniShowPathClick(Sender: TObject);
@@ -724,7 +761,7 @@ begin
   end;
 end;
 
-{Keeps track of the Index of the Item the mouse is over, Sets ShowHint to true
+{Keeps track of the Index of the Item the mouse is over, Sets Show to true
 if the Item length is longer than the TreeView client width.}
 procedure TSearchResultsView.LazTVMousemove(Sender: TObject; Shift: TShiftState;
                                             X, Y: Integer);
@@ -737,13 +774,10 @@ begin
       Node := GetNodeAt(X, Y);
       if Assigned(Node) then
         fMouseOverIndex:=Node.Index
-      else
+      else begin
         fMouseOverIndex:=-1;
-      if (fMouseOverIndex > -1) and (fMouseOverIndex < Items.Count)
-      and (Canvas.TextWidth(Items[fMouseOverIndex].Text) > Width) then
-        ShowHint:= True
-      else
-        ShowHint:= False;
+        Application.CancelHint;
+      end;
     end;//with
 end;
 
@@ -810,13 +844,17 @@ begin
   result := 0 = CompareText('backup', ExtractFileName(ExtractFileDir(aFullFilePath)));
 end;
 
-function TSearchResultsView.BeautifyPageName(const APageName: string): string;
+function TSearchResultsView.BeautifyPageName(const APageName: string; out
+  aoTabEllipsed: boolean): string;
 const
   MaxPageName = 25;
 begin
+  aoTabEllipsed:= False;
   Result:=Utf8EscapeControlChars(APageName, emHexPascal);
-  if UTF8Length(Result)>MaxPageName then
+  if UTF8Length(Result)>MaxPageName then begin
     Result:=UTF8Copy(Result,1,MaxPageName-5)+'...';
+    aoTabEllipsed:= True;
+  end;
 end;
 
 procedure TSearchResultsView.AddMatch(const APageIndex: integer;
@@ -886,10 +924,12 @@ begin
   UpdateToolbar;
 end;
 
-procedure TSearchResultsView.EndUpdate(APageIndex: integer);
+procedure TSearchResultsView.EndUpdate(APageIndex: integer; APageName: string = '');
 var
   lTree: TLazSearchResultTV;
   lNode: TTreeNode;
+  lPage: TTabSheet;
+  lEllipsed: boolean;
 begin
   lTree := GetTreeView(APageIndex);
   if assigned(lTree) then
@@ -909,6 +949,17 @@ begin
     if lNode <> nil then
       lNode.Selected := true;
   end;
+
+  // Page name
+  lPage := GetResultsPage(APageIndex); // this also check APageIndex range
+  if (lPage <> nil) and (APageName <> '') then
+  begin
+    lPage.Caption := BeautifyPageName(APageName, lEllipsed);
+  end;
+
+  // Count
+  lPage.Caption := lPage.Caption + ' (' + inttostr(lTree.Items.Count - lTree.Items.TopLvlCount) + ')';
+
   UpdateToolbar;
   if FFocusTreeViewInEndUpdate and assigned(lTree) then
     ActivateControl(lTree)
@@ -970,9 +1021,10 @@ end;
 
 function TSearchResultsView.GetResultsPage(aIndex: integer): TTabSheet;
 begin
-  if InRange(aIndex, 0, ResultsNoteBook.PageCount - 1)
-    then result := ResultsNoteBook.Pages[aIndex]
-    else result := nil;
+  if InRange(aIndex, 0, ResultsNoteBook.PageCount - 1) then
+    Result := ResultsNoteBook.Pages[aIndex]
+  else
+    Result := nil;
 end;
 
 {Sets the Items from the treeview on the currently selected page in the TNoteBook}
@@ -1114,6 +1166,78 @@ begin
   lPageList.Free;
 end;
 
+procedure TSearchResultsView.NoteBookShowHint(Sender: TObject; HintInfo: PHintInfo);
+
+  function GetHintString: string;
+  var
+    lThisTV: TLazSearchResultTV = nil;
+    function SearchOption: string;
+    const
+      cFifPlacesNoDir =
+        [fifSearchProject, fifSearchProjectGroup, fifSearchOpen, fifSearchActive];
+    begin
+      Result := '';
+      with lThisTV.SearchObject do begin
+        if fifSearchProject in SearchOptions then
+          Result := lisFindFilesearchAllFilesInProject
+        else if fifSearchProjectGroup in SearchOptions then
+          Result := lisFindFilesSearchInProjectGroup
+        else if fifSearchOpen in SearchOptions then
+          Result := lisFindFilesearchAllOpenFiles
+        else if fifSearchActive in SearchOptions then
+          Result := lisFindFilesearchInActiveFile
+        else if fifSearchDirectories in SearchOptions then
+          Result := ' ' + SearchDirectories + ' '
+        else
+          Result := '!!! ERROR !!!';
+        if (SearchOptions * cFifPlacesNoDir) <> [] then begin
+          Result := '* ' + Result + ' *';
+          Result := StringReplace(Result,'&','',[rfReplaceAll, rfIgnoreCase]);
+        end;
+      end;
+    end;
+
+  const
+    cFifReplaces = [fifReplace, fifReplaceAll];
+  var
+    lReplaces: boolean;
+  begin
+    lThisTV := GetTreeView(FNoteBookTab);
+    with lThisTV.SearchObject do begin
+      Result := '';
+      lReplaces := (SearchOptions * cFifReplaces) <> [];
+      if TabEllipsed or lReplaces then begin
+        Result := SearchString + EndOfLine;
+        if lReplaces then
+          Result := Result + '-> ' + EndOfLine + ReplaceText + EndOfLine;
+        Result := Result + EndOfLine;
+      end;
+      Result := Result + SearchOption;
+    end;
+  end;
+
+var
+  p: TPoint;
+  r: TRect;
+  h: integer;
+begin
+  if Sender = ResultsNoteBook then
+    with ResultsNoteBook do begin
+      p := HintInfo^.CursorPos;
+      FNoteBookTab := IndexOfTabAt(p.X, p.Y);
+      if FNoteBookTab >= 0 then begin
+        r := ResultsNoteBook.TabRect(FNoteBookTab);
+        h := SearchInListEdit.Height; // Pick DPI independent value
+        if p.X > r.Right - 2 * h then
+          p.X := r.Right - 2 * h;
+        HintInfo^.HintStr := GetHintString;
+        HintInfo^.HintPos := ClientToScreen(Point(p.x, r.Bottom - (h div 10)));
+      end
+      else
+        Application.CancelHint;
+    end;
+end;
+
 procedure TSearchResultsView.ResultsNoteBookCloseTabClick(Sender: TObject);
 begin
   if Sender is TTabSheet then
@@ -1123,7 +1247,6 @@ end;
 { Add Result will create a tab in the Results view window with an new
   treeview or focus an existing TreeView and update it's searchoptions.}
 function TSearchResultsView.AddSearch(
-  const aResultsName: string;
   const aSearchText: string;
   const aReplaceText: string;
   const aDirectories: string;
@@ -1132,16 +1255,17 @@ function TSearchResultsView.AddSearch(
   ): TTabSheet;
 var
   lNewTree: TLazSearchResultTV;
+  lTabEllipsed: boolean;
+  lTabCaption: String;
 begin
   result := nil;
   if ResultsNoteBook = nil then
     exit;
-
   with ResultsNoteBook do
   begin
     FFocusTreeViewInEndUpdate := (ActivePage = nil) and SearchInListEdit.IsParentOf(ActivePage);
-    FWorkedSearchText := BeautifyPageName(aResultsName);
-    PageIndex := TCustomTabControl(ResultsNoteBook).Pages.Add(FWorkedSearchText);
+    lTabCaption := BeautifyPageName(aSearchText, lTabEllipsed); // default page name
+    PageIndex := TCustomTabControl(ResultsNoteBook).Pages.Add(lTabCaption);
 
     lNewTree := TLazSearchResultTV.Create(Page[PageIndex]);
     with lNewTree do
@@ -1149,7 +1273,7 @@ begin
       Parent := Page[PageIndex];
       BorderSpacing.Around := 0;
       Align := alClient;
-      ShowHint := true;
+      ShowHint := False; // true; ~bk apparently OnShowHint messes up with ShowHint True
       RowSelect := true;
       ShowLines := false;
       Options := Options + [tvoAllowMultiselect] - [tvoThemedDraw];
@@ -1170,6 +1294,7 @@ begin
       lNewTree.SearchObject.SearchDirectories := aDirectories;
       lNewTree.SearchObject.SearchMask := aFileMask;
       lNewTree.SearchObject.SearchOptions := aOptions;
+      lNewTree.SearchObject.TabEllipsed := lTabEllipsed;
     end;
     lNewTree.Skipped := 0;
 
@@ -1182,27 +1307,31 @@ end;
 procedure TSearchResultsView.LazTVShowHint(Sender: TObject; HintInfo: PHintInfo);
 var
   MatchPos: TLazSearchMatchPos;
-  HintStr: string;
+  lThisTV: TLazSearchResultTV;
 begin
   if Sender is TLazSearchResultTV then
   begin
-    With Sender as TLazSearchResultTV do
+    lThisTV := Sender as TLazSearchResultTV;
+    With lThisTV do
     begin
-      if (fMouseOverIndex >= 0) and (fMouseOverIndex < Items.Count) then
-      begin
+      { (Canvas.TextWidth(Items[fMouseOverIndex].Text) > Width) then}
+      if (fMouseOverIndex >= 0) and (fMouseOverIndex < Items.Count)
+        and (Canvas.TextWidth(Items[fMouseOverIndex].Text) > Width)
+      then begin
         if Assigned(Items[fMouseOverIndex].Data) then
           MatchPos:= TLazSearchMatchPos(Items[fMouseOverIndex].Data)
         else
           MatchPos:= nil;
         if MatchPos<>nil then
-          HintStr:=MatchPos.Filename
+          HintInfo^.HintStr := MatchPos.Filename
                    +' ('+IntToStr(MatchPos.FileStartPos.Y)
                    +','+IntToStr(MatchPos.FileStartPos.X)+')'
                    +' '+MatchPos.TheText
         else
-          HintStr:=Items[fMouseOverIndex].Text;
-        Hint:= HintStr;
-      end;//if
+          HintInfo^.HintStr := Items[fMouseOverIndex].Text;
+      end //if
+      else
+        Application.CancelHint;
     end;//with
   end;//if
 end;
@@ -1265,17 +1394,21 @@ var
     lTree.Canvas.Font.Style := [];
     lTree.Canvas.Brush.Style := bsSolid;
   end;
-
+var
+  lOldBkMode : integer;
 begin
   if Stage <> cdPostPaint then exit;
 
-  if Sender is TLazSearchResultTV // it also check nil
-    then lTree := TLazSearchResultTV(Sender)
-    else exit;
+  if Sender is TLazSearchResultTV then // it also check nil
+    lTree := TLazSearchResultTV(Sender)
+  else
+    exit;
 
   // clear
   lRect := Node.DisplayRect(true);
   lTree.Canvas.FillRect(lRect);
+  // transparent paint for very near bold text
+  lOldBkMode := SetBkMode(lTree.Canvas.Handle, TRANSPARENT);
 
   if TObject(Node.Data) is TLazSearchMatchPos then
   begin { search results }
@@ -1290,9 +1423,10 @@ begin
     lPart := inttostr(lMatch.FileStartPos.Y) + ':';
     lTextX := lRect.Left + 6 * lDigitWidth - lTree.Canvas.GetTextWidth(lPart);
     // draw line number ("99999: ")
-    if [cdsSelected, cdsMarked] * State <> []
-      then DrawNextText(lPart)
-      else DrawNextText(lPart, clGrayText);
+    if [cdsSelected, cdsMarked] * State <> [] then
+      DrawNextText(lPart)
+    else
+      DrawNextText(lPart, clGrayText);
 
     lTextX := lRect.Left + 7 * lDigitWidth;
     lDrawnLength := 0;
@@ -1311,9 +1445,10 @@ begin
       lDrawnLength := lDrawnLength + lMatch.MatchLen;
 
       // draw found text
-      if [cdsSelected,cdsMarked] * State <> []
-        then DrawNextText(lPart, clHighlightText, [fsBold])
-        else DrawNextText(lPart, clHighlight, [fsBold]);
+      if [cdsSelected, cdsMarked] * State <> [] then
+        DrawNextText(lPart, clHighlightText, [fsBold])
+      else
+        DrawNextText(lPart, clHighlight, [fsBold]);
 
       // remaining normal text
       if lMatch.NextInThisLine = nil then
@@ -1357,6 +1492,7 @@ begin
       DrawNextText(' [BACKUP]', clRed);
 
   end;
+  SetBkMode(lTree.Canvas.Handle, lOldBkMode); // restore
 end;
 
 {Returns the Position within the source file from a properly formated search result}
@@ -1420,6 +1556,68 @@ begin
     Result := TLazSearchMatchPos(lTree.Selected.Data);
 end;
 
+function TSearchResultsView.SelectNextMatchPos(DirectionDown: boolean): boolean;
+var
+  lPage: TTabSheet;
+  lTree: TLazSearchResultTV;
+  i: integer;
+  lSelNode, lNextNode: TTreeNode;
+begin
+  result:= false;
+  i := ResultsNoteBook.PageIndex;
+  if i < 0 then exit;
+
+  lPage := ResultsNoteBook.Pages[i];
+  if not Assigned(lPage) then exit;
+
+  lTree := GetTreeView(lPage.PageIndex);
+  lSelNode := lTree.Selected;
+  if not Assigned(lSelNode) then Exit;
+
+  if Assigned(lSelNode.Data) then begin
+    // file pos node
+    if DirectionDown then
+      lNextNode := lSelNode.GetNextSibling
+    else
+      lNextNode := lSelNode.GetPrevSibling;
+
+    if not Assigned(lNextNode) then begin
+      // if no more siblings, find first/last child of parent's sibling
+      if DirectionDown then begin
+        lNextNode := lSelNode.Parent;
+        if Assigned(lNextNode) then begin
+          lNextNode := lNextNode.GetNextSibling;
+          if Assigned(lNextNode) then
+            lNextNode := lNextNode.GetFirstChild;
+        end;
+      end
+      else begin
+        lNextNode := lSelNode.Parent;
+        if Assigned(lNextNode) then begin
+          lNextNode := lNextNode.GetPrevSibling;
+          if Assigned(lNextNode) then
+            lNextNode := lNextNode.GetLastChild;
+        end;
+      end;
+    end;
+  end
+  else begin
+    // file node - need to use first child or last child of prev sibling
+    if DirectionDown then
+      lNextNode := lSelNode.GetFirstChild
+    else begin
+      lNextNode := lSelNode.GetPrevSibling;
+      if Assigned(lNextNode) then
+        lNextNode := lNextNode.GetLastChild;
+    end;
+  end;
+
+  if Assigned(lNextNode) then begin
+    lTree.Select(lNextNode);
+    result := true;
+  end;
+end;
+
 function TSearchResultsView.GetPageIndex(const APageName: string): integer;
 var
   Paren, i: integer;
@@ -1445,9 +1643,7 @@ var
   lPage: TTabSheet;
 begin
   result := nil;
-  if not InRange(APageIndex, 0, ResultsNoteBook.PageCount - 1) then exit;
-
-  lPage := ResultsNoteBook.Pages[APageIndex];
+  lPage := GetResultsPage(APageIndex); // this also check APageIndex range
   if not assigned(lPage) then exit;
 
   for i:= 0 to lPage.ComponentCount - 1 do
@@ -1457,9 +1653,10 @@ end;
 
 function TSearchResultsView.GetCurrentTree: TLazSearchResultTV;
 begin
-  if ResultsNoteBook.PageIndex < 0
-    then result := nil
-    else result := GetTreeView(ResultsNoteBook.PageIndex);
+  if ResultsNoteBook.PageIndex < 0 then
+    Result := nil
+  else
+    Result := GetTreeView(ResultsNoteBook.PageIndex);
 end;
 
 procedure TSearchResultsView.SetAsyncUpdateCloseButtons(const AValue: TSVCloseButtonsState);
@@ -1613,9 +1810,10 @@ begin
   if fUpdateCount > 0 then exit;
 
   FreeSrcList := not fUpdating;
-  if fUpdating
-    then SrcList := fUpdateStrings
-    else SrcList := ItemsAsStrings;
+  if fUpdating then
+    SrcList := fUpdateStrings
+  else
+    SrcList := ItemsAsStrings;
 
   try
     // find shared path (the path of all filenames, that is the same)

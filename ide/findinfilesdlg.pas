@@ -86,7 +86,8 @@ type
     procedure InitFindText;
     procedure FindInFiles(aProject: TProject; const aFindText: string;
       aDialog: boolean = true; aResultsPage: integer = -1);
-    procedure FindInFiles(aProject: TProject; const aFindText: string; aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string;
+    procedure FindInFiles(aProject: TProject; const aFindText: string;
+      aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string;
       aDialog: boolean = true; aResultsPage: integer = -1);
     function GetResolvedDirectories: string;
     property LazProject: TProject read FProject write FProject;
@@ -159,6 +160,7 @@ begin
   else
     SelectDirectoryDialog.InitialDir := GetBaseDirectory;
 
+  SelectDirectoryDialog.FileName:='';
   if SelectDirectoryDialog.Execute then
     DirectoriesComboBox.Text := AppendPathDelim(TrimFilename(SelectDirectoryDialog.FileName));
   StoreIDEFileDialog(SelectDirectoryDialog);
@@ -484,7 +486,9 @@ begin
   FindText:=NewFindText;
 end;
 
-procedure TLazFindInFilesDialog.FindInFiles(aProject: TProject; const aFindText: string; aDialog: boolean = true; aResultsPage: integer = -1);
+procedure TLazFindInFilesDialog.FindInFiles(
+  aProject: TProject; const aFindText: string;
+  aDialog: boolean = true; aResultsPage: integer = -1);
 begin
   LazProject := aProject;
   LoadHistory;
@@ -505,7 +509,10 @@ begin
   Execute(aResultsPage);
 end;
 
-procedure TLazFindInFilesDialog.FindInFiles(aProject: TProject; const aFindText: string; aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string; aDialog: boolean = true; aResultsPage: integer = -1);
+procedure TLazFindInFilesDialog.FindInFiles(
+  aProject: TProject; const aFindText: string;
+  aOptions: TLazFindInFileSearchOptions; aFileMask, aDir: string;
+  aDialog: boolean = true; aResultsPage: integer = -1);
 begin
   LazProject := aProject;
   LoadHistory;
@@ -542,7 +549,9 @@ var
   SearchForm: TSearchProgressForm;
   Where: Integer;
 begin
-  SaveHistory;
+  { Only then in manual dialog data entry }
+  if aResultsPage < 0 then
+    SaveHistory;
 
   SearchForm := TSearchProgressForm.Create(SearchResultsView);
   with SearchForm do begin

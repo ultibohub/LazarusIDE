@@ -713,8 +713,10 @@ begin
       Param:=TFPCParamValue(ParsedParams[i]);
       if fpfValueChanged in Param.Flags then begin
         Msg:='';
-        if Param.Kind in [fpkBoolean,fpkValue] then
-          Msg:=Format(lisPassingCompilerOptionTwiceWithDifferentValues, [Param.Name])
+        if Param.Kind in [fpkBoolean,fpkValue] then begin
+          if Param.Name<>'M' then  // Many -M options are allowed.
+            Msg:=Format(lisPassingCompilerOptionTwiceWithDifferentValues, [Param.Name]);
+        end
         else if Param.Kind=fpkDefine then
           Msg:=Format(lisPassingCompilerDefineTwiceWithDifferentValues, [Param.Name]);
         if Msg='' then continue;
@@ -1051,27 +1053,38 @@ end;
 
 function TLazPackageGraph.OutputDirectoryIsWritable(APackage: TLazPackage;
   Directory: string; Verbose: boolean): boolean;
+var
+  CurDir: String;
 begin
   Result:=false;
   //debugln(['TLazPackageGraph.OutputDirectoryIsWritable ',Directory]);
   if not FilenameIsAbsolute(Directory) then
     exit;
   Directory:=ChompPathDelim(Directory);
-  if not DirPathExistsCached(Directory) then begin
-    // the directory does not exist => try creating it
-    if not ForceDirectoriesUTF8(Directory) then begin
-      if Verbose then begin
-        IDEMessageDialog(lisPkgMangUnableToCreateDirectory,
-          Format(lisPkgMangUnableToCreateOutputDirectoryForPackage,
-                 [Directory, LineEnding, APackage.IDAsString]),
-          mtError,[mbCancel]);
-      end;
-      debugln(['Error: (lazarus) unable to create package output directory "',Directory,'" of package "',APackage.IDAsString,'"']);
-      exit;
-    end;
-    Result:=true;
-  end else
+  if DirPathExistsCached(Directory) then begin
+    // the directory exist => check writable
     Result:=DirectoryIsWritableCached(Directory);
+    exit;
+  end;
+  // the directory does not exist => check parent directory for writable
+  CurDir:=Directory;
+  repeat
+    CurDir:=ChompPathDelim(ExtractFilePath(CurDir));
+  until (CurDir='') or (CurDir=Directory) or DirPathExistsCached(CurDir);
+  if not DirectoryIsWritableCached(CurDir) then
+    exit(false);
+  // the directory does not exist, and its parent is writable => try creating it
+  if not ForceDirectoriesUTF8(Directory) then begin
+    if Verbose then begin
+      IDEMessageDialog(lisPkgMangUnableToCreateDirectory,
+        Format(lisPkgMangUnableToCreateOutputDirectoryForPackage,
+               [Directory, LineEnding, APackage.IDAsString]),
+        mtError,[mbCancel]);
+    end;
+    debugln(['Error: (lazarus) unable to create package output directory "',Directory,'" of package "',APackage.IDAsString,'"']);
+    exit;
+  end;
+  Result:=true;
 end;
 
 function TLazPackageGraph.GetPackageCompilerParams(APackage: TLazPackage

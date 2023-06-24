@@ -4445,6 +4445,12 @@ msgstr ""
 msgid "Create a new recommended backend"
 msgstr ""
 
+#: lazarusidestrconsts.initdlgdebugcurrent
+#, fuzzy
+msgctxt "lazarusidestrconsts.initdlgdebugcurrent"
+msgid "Current"
+msgstr "Bieżący"
+
 #: lazarusidestrconsts.initdlgdebugexternalexepathdisplay
 msgid "The selected backend uses the external executable:"
 msgstr ""
@@ -4468,6 +4474,12 @@ msgstr "Ignoruj"
 #: lazarusidestrconsts.initdlgdebugkeepbackend
 msgid "Keep backend"
 msgstr ""
+
+#: lazarusidestrconsts.initdlgdebugnew
+#, fuzzy
+msgctxt "lazarusidestrconsts.initdlgdebugnew"
+msgid "New"
+msgstr "Nowy"
 
 #: lazarusidestrconsts.initdlgdebugpathnoteerrorexeisdirectory
 msgid "Error: External executable is a directory, not a file."
@@ -4524,7 +4536,7 @@ msgid "Setup is OK."
 msgstr ""
 
 #: lazarusidestrconsts.initdlgdebugstateupdatebackend
-msgid "You are using an older backend. This may give you not the best debugging experience. Consider upgrading to the recommended backend."
+msgid "You are using an older backend. This may not give you the best debugging experience. Consider upgrading to the recommended backend."
 msgstr ""
 
 #: lazarusidestrconsts.lis0no1drawdividerlinesonlyfortoplevel2drawlinesforfi
@@ -10121,7 +10133,7 @@ msgid "Force renaming"
 msgstr "Wymuś zmianę nazwy"
 
 #: lazarusidestrconsts.lisforexampleshowattopthelocalvariablesthenthemembers
-msgid "For example show at top the local variables, then the members of current class, then of the ancestors, then the current unit, then of used units"
+msgid "\"Scoped\" sorting will show local variables on top, then the members of current class, then of the ancestors, then the current unit, then of used units"
 msgstr ""
 
 #: lazarusidestrconsts.lisform
@@ -17954,13 +17966,26 @@ msgstr "Odpowiedniki"
 msgid "Sorry, this type is not yet implemented"
 msgstr "Przykro mi, ten typ jeszcze nie jest obsługiwany"
 
-#: lazarusidestrconsts.lissortforscope
-msgid "Sort for scope"
-msgstr "Sortuj odpowiednio do rodzaju"
-
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"
 msgstr "Sortowanie"
+
+#: lazarusidestrconsts.lissortorderalphabetic
+msgid "Alphabetic"
+msgstr ""
+
+#: lazarusidestrconsts.lissortorderdefinition
+msgid "Definition (Scoped)"
+msgstr ""
+
+#: lazarusidestrconsts.lissortorderscopedalphabetic
+msgctxt "lazarusidestrconsts.lissortorderscopedalphabetic"
+msgid "Alphabetic (Scoped)"
+msgstr ""
+
+#: lazarusidestrconsts.lissortordertitle
+msgid "Order by"
+msgstr ""
 
 #: lazarusidestrconsts.lissortselascending
 msgid "Ascending"
@@ -20376,7 +20401,9 @@ msgid "Close all pages"
 msgstr ""
 
 #: lazarusidestrconsts.rsclosecurrentpage
-msgid "Close current page"
+#, fuzzy
+#| msgid "Close current page"
+msgid "Close current page (Ctrl+F4)∥(Ctrl+W)"
 msgstr "Zamknij bieżącą stronę"
 
 #: lazarusidestrconsts.rscloseleft
@@ -20404,7 +20431,7 @@ msgid "Enable i18n"
 msgstr "Włącz i18n"
 
 #: lazarusidestrconsts.rsfilterthelistwithstring
-msgid "Filter the lines in list with a string"
+msgid "Filter the lines in list with a string (Ctrl+F)"
 msgstr ""
 
 #: lazarusidestrconsts.rsfoundbutnotlistedhere
@@ -20560,7 +20587,7 @@ msgid "Mi&nor version:"
 msgstr "Podwersja:"
 
 #: lazarusidestrconsts.rsnewsearchwithsamecriteria
-msgid "New search with same criteria"
+msgid "New search with same criteria (Ctrl+N)"
 msgstr ""
 
 #: lazarusidestrconsts.rsotherinfo
@@ -20572,7 +20599,7 @@ msgid "PO Output Directory:"
 msgstr "Katalog wyjściowy PO:"
 
 #: lazarusidestrconsts.rsrefreshthesearch
-msgid "Refresh the search"
+msgid "Refresh the search (F5)"
 msgstr ""
 
 #: lazarusidestrconsts.rsresource
@@ -20613,7 +20640,7 @@ msgid "File name"
 msgstr "Nazwa pliku"
 
 #: lazarusidestrconsts.rsshowpathmode
-msgid "Path display mode"
+msgid "Path display mode (Ctrl+P)"
 msgstr ""
 
 #: lazarusidestrconsts.rsshowrelpath

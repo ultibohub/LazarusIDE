@@ -983,6 +983,7 @@ type
     // search results
     function DoJumpToSearchResult(FocusEditor: boolean): boolean;
     procedure DoShowSearchResultsView(State: TIWGetFormState = iwgfShowOnTop); override;
+    procedure DoJumpToNextSearchResult(DirectionDown: boolean); override;
 
     // form editor and designer
     procedure DoShowDesignerFormOfCurrentSrc(AComponentPaletteClassSelected: Boolean); override;
@@ -1267,8 +1268,9 @@ begin
     CreateConfig;
     Load(false);
   end;
+  AddDefaultRecentProjects;            // Add some initial recent projects.
 
-  // read language and lazarusdir paramters, needed for translation
+  // read language and lazarusdir parameters, needed for translation
   if Application.HasOption('language') then
   begin
     debugln('Hint: (lazarus) [TMainIDE.LoadGlobalOptions] overriding language with command line: ',
@@ -9875,6 +9877,13 @@ begin
     IDEWindowCreators.ShowForm(SearchresultsView,State=iwgfShowOnTop);
 end;
 
+procedure TMainIDE.DoJumpToNextSearchResult(DirectionDown: boolean);
+begin
+  if SearchresultsView=Nil then Exit;
+  if SearchresultsView.SelectNextMatchPos(DirectionDown) then
+    DoJumpToSearchResult(true);
+end;
+
 function TMainIDE.GetTestBuildDirectory: string;
 begin
   Result:=MainBuildBoss.GetTestBuildDirectory;
@@ -10978,7 +10987,6 @@ begin
     // create a search result page
     //debugln(['ShowIdentifierReferences ',DbgSName(SearchResultsView)]);
     SearchPageIndex:=SearchResultsView.AddSearch(
-      'Ref: '+ExtractFileName(UsedUnitFilename),
       UsedUnitFilename,
       '',
       ExtractFilePath(UsedUnitFilename),
@@ -11008,7 +11016,7 @@ begin
 
     OldSearchPageIndex:=SearchPageIndex;
     SearchPageIndex:=nil;
-    SearchResultsView.EndUpdate(OldSearchPageIndex.PageIndex);
+    SearchResultsView.EndUpdate(OldSearchPageIndex.PageIndex, 'Ref: '+ExtractFileName(UsedUnitFilename));
     IDEWindowCreators.ShowForm(SearchResultsView,true);
 
   finally

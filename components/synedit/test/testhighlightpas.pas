@@ -113,6 +113,7 @@ procedure TTestBaseHighlighterPas.EnableFolds(AEnbledTypes: TPascalCodeFoldBlock
 var
   i: TPascalCodeFoldBlockType;
 begin
+  PasHighLighter.BeginUpdate;
   for i := low(TPascalCodeFoldBlockType) to high(TPascalCodeFoldBlockType) do begin
     PasHighLighter.FoldConfig[ord(i)].Enabled := i in AEnbledTypes;
     if (i in ANoFoldTypes) then
@@ -125,6 +126,7 @@ begin
     PasHighLighter.FoldConfig[ord(i)].Modes := PasHighLighter.FoldConfig[ord(i)].Modes +
       PasHighLighter.FoldConfig[ord(i)].SupportedModes * [fmMarkup];
   end;
+  PasHighLighter.EndUpdate;
 end;
 
 procedure TTestBaseHighlighterPas.DebugFoldInfo(ALineIdx: Integer;
@@ -360,6 +362,45 @@ begin
   CheckFoldInfoCounts('', [sfaOpenFold, sfaOneLineOpen, sfaFold, sfaFoldHide],
                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]);
   {%endregion}
+
+  {%region}
+  SetLines(TestTextFoldInfo1);
+  EnableFolds([cfbtBeginEnd..cfbtNone]-[cfbtBeginEnd]);
+  PopPushBaseName('Text 1 all folds, except cfbtBeginEnd');
+
+  AssertEquals('Len Prog',  10, PasHighLighter.FoldLineLength(0,0));
+  AssertEquals('Len Proc',   7, PasHighLighter.FoldLineLength(1,0));
+  AssertEquals('Len IF A',   2, PasHighLighter.FoldLineLength(2,0));
+  AssertEquals('Len Begin',  5, PasHighLighter.FoldLineLength(3,0));
+  AssertEquals('Len if beg (not avail)', -1, PasHighLighter.FoldLineLength(5,0));
+  //AssertEquals('Len PrgBeg', 1, PasHighLighter.FoldLineLength(9,0));
+
+  AssertEquals('Len invalid', -1, PasHighLighter.FoldLineLength(4,0)); // endif
+  AssertEquals('Len // (no hide)', -1, PasHighLighter.FoldLineLength(11,0));
+
+  //                       Pg pc $I bg $E be w  e  e be  e  //
+  CheckFoldOpenCounts('', [1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
+  {%endregion}
+
+  {%region}
+  SetLines(TestTextFoldInfo1);
+  EnableFolds([cfbtBeginEnd..cfbtNone]-[cfbtBeginEnd,cfbtTopBeginEnd]);
+  PopPushBaseName('Text 1 all folds, except cfbtBeginEnd,cfbtTopBeginEnd');
+
+  AssertEquals('Len Prog',  10, PasHighLighter.FoldLineLength(0,0));
+  AssertEquals('Len Proc',   7, PasHighLighter.FoldLineLength(1,0));
+  AssertEquals('Len IF A',   2, PasHighLighter.FoldLineLength(2,0));
+  AssertEquals('Len Begin (not avail)',  -1, PasHighLighter.FoldLineLength(3,0));
+  AssertEquals('Len if beg (not avail)', -1, PasHighLighter.FoldLineLength(5,0));
+  //AssertEquals('Len PrgBeg', 1, PasHighLighter.FoldLineLength(9,0));
+
+  AssertEquals('Len // (no hide)', -1, PasHighLighter.FoldLineLength(11,0));
+
+  //                       Pg pc $I bg $E be w  e  e be  e  //
+  CheckFoldOpenCounts('', [1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+  {%endregion}
+
+
 
   {%region}
   SetLines(TestTextFoldInfo2);
