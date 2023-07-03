@@ -16,7 +16,7 @@
       </CodeGeneration>
       <Other>
         <CompilerMessages>
-          <IgnoredMessages idx5024="True" idx4055="True"/>
+          <IgnoredMessages idx6058="True" idx5024="True" idx4055="True"/>
         </CompilerMessages>
         <CustomOptions Value="$(IDEBuildOptions) -CR -dgc"/>
       </Other>
@@ -406,6 +406,10 @@ If you wish to allow use of your version of these files only under the terms of 
       <Item>
         <Filename Value="synpopupmenu.pas"/>
         <UnitName Value="SynPopupMenu"/>
+      </Item>
+      <Item>
+        <Filename Value="synedittextdyntabexpander.pas"/>
+        <UnitName Value="SynEditTextDynTabExpander"/>
       </Item>
     </Files>
     <LazDoc Paths="docs\xml"/>

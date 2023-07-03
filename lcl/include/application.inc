@@ -193,6 +193,8 @@ begin
       HideHint;
       FHintControl := Info.Control;
       FHintRect := FHintControl.BoundsRect;
+    end else begin
+      Exit;
     end;
     case FHintTimerType of
       ahttNone, ahttHideHint:
@@ -848,7 +850,7 @@ begin
         Visible := False;
         Caption := '';
         AutoHide := False;
-        HintData := Pointer((FHintControl as TWinControl).Handle);
+        HintControl := FHintControl;
       end;
     end;
 

@@ -81,14 +81,11 @@ else
   LazSrcDir=$(pwd | sed -e 's#/tools/install.*$##')
   # old-svn: Revision=$(svnversion $LazSrcDir) - comment this out as svn no longer works
   Revision=$(git -C $LazSrcDir describe --always --first-parent)
-  cd $TmpDir
   #  old-svn: cp -a $LazSrcDir $TmpLazDir
   mkdir $TmpLazDir
   cd $TmpLazDir
-  #cp -a $LazSrcDir/.git $TmpLazDir/
-  #git -C $TmpLazDir checkout .
-  #rm -rf $TmpLazDir/.git
-  git -C $LazSrcDir --work-tree=$TmpLazDir restore .
+  # older git only knows checkout, not restore
+  git -C $LazSrcDir --work-tree=$TmpLazDir checkout .
   cd -
   if [ "$UseCHMHelp" = "1" ]; then
     echo
