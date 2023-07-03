@@ -32,7 +32,7 @@ type
     mwfsRelative, // = CreateRelativePath
     mwfsFull
     );
-  TMsgWndFileNameStyles = set of TMsgWndFileNameStyle;
+  //TMsgWndFileNameStyles = set of TMsgWndFileNameStyle;
 const
   MsgWndFileNameStyleNames: array[TMsgWndFileNameStyle] of string = (
     'Short',    // mwfsShort
@@ -268,6 +268,8 @@ type
     // component list
     FComponentListKeepOpen: Boolean;
     FComponentListPageIndex: Integer;
+    // search result view
+    FSearchResultViewPathStyle: TMsgWndFileNameStyle;
     // object inspector
     FObjectInspectorOptions: TOIOptions;
     // messages
@@ -362,6 +364,8 @@ type
     // component list
     property ComponentListKeepOpen: Boolean read FComponentListKeepOpen write FComponentListKeepOpen;
     property ComponentListPageIndex: Integer read FComponentListPageIndex write FComponentListPageIndex;
+    // search result view
+    property SearchResultViewPathStyle: TMsgWndFileNameStyle read FSearchResultViewPathStyle write FSearchResultViewPathStyle;
     // object inspector
     property ObjectInspectorOptions: TOIOptions read FObjectInspectorOptions;
     // messages view
@@ -1035,6 +1039,9 @@ begin
   // component list
   FComponentListKeepOpen:=XMLCfg.GetValue(Path+'ComponentList/KeepOpen',false);
   FComponentListPageIndex:=XMLCfg.GetValue(Path+'ComponentList/PageIndex',0);
+  // search result view
+  FSearchResultViewPathStyle:=StrToMsgWndFilenameStyle(XMLCfg.GetValue(
+    Path+'SearchResultView/PathStyle',MsgWndFileNameStyleNames[mwfsRelative]));
   // object inspector
   FObjectInspectorOptions.Load;
   FObjectInspectorOptions.SaveBounds:=false;
@@ -1157,6 +1164,10 @@ begin
   // component list
   XMLCfg.SetDeleteValue(Path+'ComponentList/KeepOpen',FComponentListKeepOpen,false);
   XMLCfg.SetDeleteValue(Path+'ComponentList/PageIndex',FComponentListPageIndex,0);
+  // search result view
+  XMLCfg.SetDeleteValue(Path+'SearchResultView/PathStyle',
+    MsgWndFileNameStyleNames[FSearchResultViewPathStyle],
+    MsgWndFileNameStyleNames[mwfsRelative]);
   // object inspector
   FObjectInspectorOptions.SaveBounds:=false;
   FObjectInspectorOptions.Save;

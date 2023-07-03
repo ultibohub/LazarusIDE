@@ -1618,6 +1618,9 @@ resourcestring
   dlgDelTemplate = 'Delete template ';
   dlgChsCodeTempl = 'Choose code template file (*.dci)';
   lisPkgMgrNew = 'new';
+  lisUninstallFail = 'Uninstall failed';
+  lisThePackageIsUsedBy = 'The package "%s" is used by';
+  lisUninstallThemToo = 'Uninstall them too';
   lisPkgMgrRemove = 'remove';
   lisPkgMgrKeep = 'keep';
   lisConfirmNewPackageSetForTheIDE = 'Confirm new package set for the IDE';
@@ -2778,7 +2781,7 @@ resourcestring
   dlgIncludeSystemVariables = 'Include system variables';
   lisRunParamsFileNotExecutable = 'File not executable';
   lisRunParamsTheHostApplicationIsNotExecutable = 'The host application "%s" is not executable.';
-  dlgTextToFind = '&Text to find';
+  dlgTextToFind = 'Search s&tring';
   dlgReplaceWith = 'Replace wit&h';
   lisBFWhenThisFileIsActiveInSourceEditor = 'When this file is active in source editor';
   lisBFOnBuildProjectExecuteTheBuildFileCommandInstead = 'On build project '
@@ -4270,12 +4273,12 @@ resourcestring
     
   // find in files dialog
   lisFindFileMultiLinePattern = '&Multiline pattern';
-  lisFindFileWhere = 'Where';
-  lisFindFilesearchAllFilesInProject = 'search all files in &project';
-  lisFindFilesearchAllOpenFiles = 'search all &open files';
-  lisFindFilesSearchInProjectGroup = 'search in project &group';
-  lisFindFilesearchInActiveFile = 'search in &active file';
-  lisFindFilesearchInDirectories = 'search in &directories';
+  lisFindFileWhere = 'Search location';
+  lisFindFilesearchAllFilesInProject = 'all files in &project';
+  lisFindFilesearchAllOpenFiles = 'all &open files';
+  lisFindFilesSearchInProjectGroup = 'project &group';
+  lisFindFilesearchInActiveFile = '&active file';
+  lisFindFilesearchInDirectories = '&directories';
   lisFindFileDirectories = 'D&irectories';
   lisMultipleDirectoriesAreSeparatedWithSemicolons = 'Multiple directories are'
     +' separated with semicolons';
