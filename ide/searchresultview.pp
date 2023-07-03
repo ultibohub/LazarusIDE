@@ -405,11 +405,11 @@ begin
   actCloseAll      .ImageIndex := IDEImages.LoadImage('tab_close_All');
 
   // load path style
-  mniPathRelative.Checked := true; // default
+  //mniPathRelative.Checked := true; // default
   case EnvironmentGuiOpts.SearchResultViewPathStyle of
-    mwfsShort   : mniPathAbsolute.Checked := true;
+    mwfsShort   : mniPathFileName.Checked := true;
     mwfsRelative: mniPathRelative.Checked := true;
-    mwfsFull    : mniPathFileName.Checked := true;
+    mwfsFull    : mniPathAbsolute.Checked := true;
   end;
   mniShowPathClick(Sender);
 end;
@@ -475,22 +475,13 @@ begin
   begin
     Key := 0;
 
-    // change path style and store in config
+    // change path style
     if mniPathAbsolute.Checked then
-    begin
-      mniPathRelative.Checked := true;
-      EnvironmentGuiOpts.SearchResultViewPathStyle := mwfsRelative;
-    end
+      mniPathRelative.Checked := true
     else if mniPathRelative.Checked then
-    begin
-      mniPathFileName.Checked := true;
-      EnvironmentGuiOpts.SearchResultViewPathStyle := mwfsShort;
-    end
+      mniPathFileName.Checked := true
     else
-    begin
       mniPathAbsolute.Checked := true;
-      EnvironmentGuiOpts.SearchResultViewPathStyle := mwfsFull;
-    end;
     mniShowPathClick(Sender);
   end
 
@@ -701,6 +692,13 @@ procedure TSearchResultsView.mniShowPathClick(Sender: TObject);
 var
   lTree: TLazSearchResultTV;
 begin
+  // store in config
+  if mniPathFileName.Checked then
+    EnvironmentGuiOpts.SearchResultViewPathStyle := mwfsShort
+  else if mniPathRelative.Checked then
+    EnvironmentGuiOpts.SearchResultViewPathStyle := mwfsRelative
+  else  // mniPathAbsolute.Checked
+    EnvironmentGuiOpts.SearchResultViewPathStyle := mwfsFull;
   lTree := GetCurrentTree;
   if lTree = nil then exit;
   lTree.Invalidate;

@@ -104,7 +104,7 @@ type
     // Routines broken/unimplemented/incompatible in FPC
     procedure DoRectangle (const Bounds:TRect); override;
     procedure DoRectangleFill (const Bounds:TRect); override;
-    {$if FPC_FullVersion < 30301}
+    {$if FPC_FullVersion < 30203}
     procedure DoPolygonFill (const points:array of TPoint); override;
     {$endif}
     // Routines which don't work with out extended clipping in TFPImageCanvas
@@ -339,7 +339,7 @@ begin
   end;
 end;
 
-{$IF FPC_FullVersion < 30301}
+{$IF FPC_FullVersion < 30203}
 // unimplemented in FPC
 // algorithm explained here: http://alienryderflex.com/polygon_fill/
 procedure TLazCanvas.DoPolygonFill(const points: array of TPoint);
@@ -860,9 +860,7 @@ end;
 
 procedure TLazCanvas.Polygon(const Points: array of TPoint; Winding: Boolean);
 begin
-  {$if FPC_FullVersion < 30203}
   PolygonNonZeroWindingRule := Winding;
-  {$ENDIF}
   inherited Polygon(Points);
 end;
 

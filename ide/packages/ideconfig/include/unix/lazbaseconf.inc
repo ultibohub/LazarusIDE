@@ -27,6 +27,7 @@ const
   DefaultFPCSrcDirs: array[1..1] of string = ( //Ultibo
     // search first for sources with right version
     //'/usr/share/fpcsrc/$(FPCVer)', //Ultibo
+    //'/usr/local/share/fpcsrc/$(FPCVer)', //Ultibo
     // then search for global paths
     //'/usr/share/fpcsrc', //Ultibo
     //'/usr/local/share/fpcsrc', //Ultibo

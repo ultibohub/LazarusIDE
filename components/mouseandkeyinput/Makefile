@@ -349,7 +349,7 @@ FPCFPMAKE=$(FPC)
 endif
 endif
 override PACKAGE_NAME=lazmouseandkeyinput
-override PACKAGE_VERSION=0.1
+override PACKAGE_VERSION=0.9
 ifndef LCL_PLATFORM
 ifeq ($(OS_TARGET),win32)
 LCL_PLATFORM=win32
@@ -3843,7 +3843,7 @@ endif
 cleartarget:
 	-$(DEL) $(COMPILER_UNITTARGETDIR)/lazmouseandkeyinput$(PPUEXT)
 compiled:
-	$(CPPROG) -f Makefile.compiled $(COMPILER_UNITTARGETDIR)/LazMouseAndKeyInput.compiled
+	$(CPPROG) -f Makefile.compiled $(COMPILER_UNITTARGETDIR)/lazmouseandkeyinput.compiled
 all: cleartarget $(COMPILER_UNITTARGETDIR) lazmouseandkeyinput$(PPUEXT) compiled
 distclean: clean
 	${DELTREE} lib/*
