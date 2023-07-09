@@ -207,6 +207,11 @@ type
   );
   TSynEditTextFlags = set of TSynEditTextFlag;
 
+  TSynEditHasTextFlag = (
+    shtIncludeVirtual // trailing spaces
+  );
+  TSynEditHasTextFlags = set of TSynEditHasTextFlag;
+
   TSynStateFlag = (sfCaretChanged, sfHideCursor,
     sfEnsureCursorPos, sfEnsureCursorPosAtResize, sfEnsureCursorPosForEditRight, sfEnsureCursorPosForEditLeft,
     sfExplicitTopLine, sfExplicitLeftChar,  // when doing EnsureCursorPos keep top/Left, if they where set explicitly after the caret (only applies before handle creation)
@@ -945,6 +950,7 @@ type
     // Text Raw (not undo-able)
     procedure Clear;
     procedure Append(const Value: String);
+    function HasText(AFlags: TSynEditHasTextFlags = []): Boolean;
     property LineText: string read GetLineText write SetLineText;               // textline at CaretY
     property Text: string read SynGetText write SynSetText;                     // No uncommited (trailing/trimmable) spaces
 
@@ -4715,6 +4721,16 @@ begin
   FTheLinesView.Append(Value);
 end;
 
+function TCustomSynEdit.HasText(AFlags: TSynEditHasTextFlags): Boolean;
+begin
+  if shtIncludeVirtual in AFlags then
+    Result := (FTheLinesView.Count > 1) or
+              ( (FTheLinesView.Count = 1) and ((FTheLinesView[0] <> '')) )
+  else
+    Result := (FLines.Count > 1) or
+              ( (FLines.Count = 1) and ((FLines[0] <> '')) );
+end;
+
 procedure TCustomSynEdit.DoBlockSelectionChanged(Sender : TObject);
 begin
   StatusChanged([scSelection]);
@@ -5406,7 +5422,7 @@ begin
           pt := ClientToScreen(Point(ClientWidth-ScrollBarWidth - rc.Right - 4, 10));
           if eoScrollHintFollows in fOptions then
             pt.y := Mouse.CursorPos.y - (rc.Bottom div 2);
-          OffsetRect(rc, pt.x, pt.y);
+          Types.OffsetRect(rc, pt.x, pt.y);
           ScrollHint.ActivateWithBounds(rc, s);
           ScrollHint.Invalidate;
           ScrollHint.Update;
