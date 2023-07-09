@@ -814,6 +814,9 @@ type
   end;
 
   // This data object is used in two different places. One is for clipboard operations and the other while dragging.
+
+  { TVTDataObject }
+
   TVTDataObject = class(TInterfacedObject, IDataObject)
   private
     FOwner: TBaseVirtualTree;          // The tree which provides clipboard or drag data.
@@ -826,7 +829,7 @@ type
     function EqualFormatEtc(FormatEtc1, FormatEtc2: TFormatEtc): Boolean;
     function FindFormatEtc(TestFormatEtc: TFormatEtc; const FormatEtcArray: TFormatEtcArray): integer;
     function FindInternalStgMedium(Format: TClipFormat): PStgMedium;
-    function HGlobalClone(HGlobal: THandle): THandle;
+    function HGlobalClone(HGlobal: TLCLHandle): TLCLHandle;
     function RenderInternalOLEData(const FormatEtcIn: TFormatEtc; var Medium: TStgMedium; var OLEResult: HResult): Boolean;
     function StgMediumIncRef(const InStgMedium: TStgMedium; var OutStgMedium: TStgMedium;
       CopyInMedium: Boolean; DataObject: IDataObject): HRESULT;
@@ -848,8 +851,7 @@ type
     function GetData(const FormatEtcIn: TFormatEtc; out Medium: TStgMedium): HResult; virtual; stdcall;
     function GetDataHere(const {%H-}FormatEtc: TFormatEtc; out {%H-}Medium: TStgMedium): HResult; virtual; stdcall;
     function QueryGetData(const FormatEtc: TFormatEtc): HResult; virtual; stdcall;
-    function SetData(const FormatEtc: TFormatEtc;
-      {$IF FPC_FullVersion >= 30200}var{$ELSE}const{$IFEND} Medium: TStgMedium;
+    function SetData(const FormatEtc: TFormatEtc; var Medium: TStgMedium;
       DoRelease: BOOL): HResult; virtual; stdcall;
   end;
 
@@ -5494,7 +5496,7 @@ procedure InitializeGlobalStructures;
 // initialization of stuff global to the unit
 
 var
-  TheInstance: THandle;
+  TheInstance: TLCLHandle;
 
 begin
   Initialized := True;
@@ -14168,7 +14170,7 @@ end;
 procedure TBaseVirtualTree.LoadPanningCursors;
 
 var
-  TheInstance: THandle;
+  TheInstance: TLCLHandle;
 
 begin
   TheInstance := HINSTANCE;
@@ -14275,12 +14277,7 @@ asm
         PUSH    EBX
         PUSH    EDI
         PUSH    ESI
-        {$if FPC_FULLVERSION >= 30100}
         MOV     ESI, EDX
-        {$else}
-        MOV     ECX, EDX               //fpc < 3.1: count is in EDX. Move to ECX
-        MOV     ESI, [EBP+8]           //fpc < 3.1: TheArray is in EBP+8
-        {$endif}
         MOV     EDX, -1
         JCXZ    @@Finish               // Empty list?
         INC     EDX                    // init remaining entries counter
@@ -20840,7 +20837,7 @@ function TBaseVirtualTree.DoSetOffsetXY(Value: TPoint; Options: TScrollUpdateOpt
 var
   DeltaX: Integer;
   DeltaY: Integer;
-  DWPStructure: THandle;//HDWP;
+  DWPStructure: TLCLHandle;//HDWP;
   I: Integer;
   P: TPoint;
   R: TRect;
@@ -33295,7 +33292,7 @@ procedure TVTEdit.AutoAdjustSize;
 var
   DC: HDC;
   Size: TSize;
-  LastFont: THandle;
+  LastFont: TLCLHandle;
 
 begin
   if not (vsMultiline in FLink.FNode.States) and not (toGridExtensions in FLink.FTree.FOptions.FMiscOptions{see issue #252}) then

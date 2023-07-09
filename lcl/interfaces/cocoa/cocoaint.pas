@@ -27,7 +27,7 @@ interface
 
 uses
   // rtl+ftl
-  Types, Classes, SysUtils, Math, contnrs, GraphMath,
+  Types, Classes, SysUtils, Math, GraphMath,
   // carbon bindings
   MacOSAll,
   // interfacebase
@@ -37,7 +37,7 @@ uses
   cocoa_extra, CocoaWSMenus, CocoaWSForms, CocoaWindows, CocoaScrollers,
   CocoaWSClipboard, CocoaTextEdits, CocoaWSCommon,
   // LCL
-  LCLStrConsts, LMessages, LCLMessageGlue, LCLProc, LCLIntf, LCLType,
+  LMessages, LCLProc, LCLIntf, LCLType,
   Controls, Forms, Themes, Menus,
   IntfGraphics, Graphics, CocoaWSFactory;
 
@@ -84,8 +84,6 @@ type
     aloop : TApplicationMainLoop;
     isrun : Boolean;
     modals : NSMutableDictionary;
-    inputclient : TCocoaInputClient;
-    inputctx    : NSTextInputContext;
     {$ifdef COCOAPPRUNNING_OVERRIDEPROPERTY}
     Stopped : Boolean;
     {$endif}
@@ -100,7 +98,7 @@ type
     function runModalForWindow(theWindow: NSWindow): NSInteger; override;
     procedure lclSyncCheck(arg: id); message 'lclSyncCheck:';
     {$ifdef COCOAPPRUNNING_OVERRIDEPROPERTY}
-    function isRunning: {$if FPC_FULLVERSION >= 30200}objc.ObjCBOOL{$else}Boolean{$endif}; override;
+    function isRunning: objc.ObjCBOOL; override;
     procedure stop(sender: id); override;
     {$endif}
   end;
@@ -167,7 +165,7 @@ type
       EscapeResult: Longint): Longint; override;
     function MessageBox(HWnd: HWND; lpText, lpCaption: PChar;
       uType: Cardinal): Integer; override;
-    function GetAppHandle: THandle; override;
+    function GetAppHandle: TLCLHandle; override;
     function CreateThemeServices: TThemeServices; override;
 
     procedure SendCheckSynchronizeMessage;
@@ -206,8 +204,8 @@ type
 
     function  GetLCLCapability(ACapability: TLCLCapability): PtrUInt; override;
 
-    function CreateTimer(Interval: integer; TimerFunc: TWSTimerProc): THandle; override;
-    function DestroyTimer(TimerHandle: THandle): boolean; override;
+    function CreateTimer(Interval: integer; TimerFunc: TWSTimerProc): TLCLHandle; override;
+    function DestroyTimer(TimerHandle: TLCLHandle): boolean; override;
 
     procedure InitStockItems;
     procedure FreeStockItems;
@@ -473,7 +471,6 @@ end;
 procedure TCocoaApplication.dealloc;
 begin
   if Assigned(modals) then modals.release;
-  if Assigned(inputclient) then inputclient.release;
   inherited dealloc;
 end;
 
@@ -585,29 +582,24 @@ begin
           else
             wnd := nil;
 
-          {$ifndef CPUPOWERPC}
-          if (theEvent.type_ = NSKeyDown)
-            and not (win.firstResponder.conformsToProtocol(objcprotocol(NSTextInputClientProtocol))) then
-          begin
-            if not Assigned(inputctx) then
-            begin
-              inputclient := TCocoaInputClient.alloc.init;
-              inputctx := NSTextInputContext.alloc.initWithClient(inputclient);
-            end;
-            inputctx.handleEvent(theEvent);
-          end;
-          {$endif}
-
           if cb.IsCocoaOnlyState then
           begin
+            // in IME state
             inherited sendEvent(theEvent);
           end
           else
           begin
+            // not in IME state
             cb.KeyEvBefore(theEvent, allowcocoa);
+            // may be triggered into IME state
             if allowcocoa then
               inherited sendEvent(theEvent);
-            cb.KeyEvAfter;
+            // retest IME state
+            if responder.conformsToProtocol(objcprotocol(NSTextInputClientProtocol)) then
+              cb.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText;
+            // if in IME state, pass KeyEvAfter
+            if not cb.CocoaOnlyState then
+              cb.KeyEvAfter;
           end;
         finally
           if Assigned(wnd) then
@@ -740,7 +732,7 @@ begin
 end;
 
 {$ifdef COCOAPPRUNNING_OVERRIDEPROPERTY}
-function TCocoaApplication.isRunning: {$if FPC_FULLVERSION >= 30200}objc.ObjCBOOL{$else}Boolean{$endif};
+function TCocoaApplication.isRunning: objc.ObjCBOOL;
 begin
   Result:=not Stopped;
 end;

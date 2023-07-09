@@ -39,10 +39,6 @@ interface
   {$ASSERTIONS ON}
 {$endif}
 
-{$if FPC_FULLVERSION >= 30203}
-{$define UseSystemUITypes}
-{$endif}
-
 uses
 {$IFDEF USE_UTF8BIDI_LCL}
   UTF8BIDI,
@@ -50,10 +46,9 @@ uses
 {$ifdef WINDOWS}
   windows,
 {$endif WINDOWS}
-{$ifdef UseSystemUITypes}
   System.UITypes,
-{$endif}
-  Classes, SysUtils;
+  Classes, SysUtils,
+  WSReferences;
 
 {$ifdef WinCE}
   {$define extdecl := cdecl}
@@ -93,29 +88,28 @@ type
 
   {$ifndef WINDOWS}
   PInt = ^integer;
-  THandle = type PtrUInt; // define our own, because the SysUtils.THandle = System.THandle is a longint
-  HANDLE = THandle;
-  PHandle = ^THandle;
+  // Deprecated in Lazarus 3.99 July 2023.
+  THandle = type PtrUInt deprecated 'Use TLCLHandle instead of this redefined THandle';
 
   { Provided for compatibility with Windows registry ONLY }
   HKEY  = Integer;
-  HDC   = type THandle;
-  HHOOK = type THandle;
-  HFONT = type THandle;
-  HGDIOBJ = type THandle;
-  HPEN  = type THandle;
-  HRGN  = type THandle;
-  HINST = type THandle;
-  HICON = type THandle;
-  HIMAGELIST = type THandle;
+  HDC   = type TLCLHandle;
+  HHOOK = type TLCLHandle;
+  HFONT = type TLCLHandle;
+  HGDIOBJ = type TLCLHandle;
+  HPEN  = type TLCLHandle;
+  HRGN  = type TLCLHandle;
+  HINST = type TLCLHandle;
+  HICON = type TLCLHandle;
+  HIMAGELIST = type TLCLHandle;
   HCURSOR = HICON;
-  HGLOBAL = type THandle;
-  HWND    = type THandle;
-  HMENU   = type THandle;
-  HBITMAP = type THandle;
-  HPALETTE = type THandle;
-  HBRUSH = type THandle;
-  HMONITOR = type THandle;
+  HGLOBAL = type TLCLHandle;
+  HWND    = type TLCLHandle;
+  HMENU   = type TLCLHandle;
+  HBITMAP = type TLCLHandle;
+  HPALETTE = type TLCLHandle;
+  HBRUSH = type TLCLHandle;
+  HMONITOR = type TLCLHandle;
 
   Bool    = LongBool;
   Short   = SmallInt;
@@ -155,13 +149,12 @@ type
 
 {$endif}
 
-  TLCLIntfHandle = type THandle;
+  TLCLIntfHandle = WSReferences.TLCLHandle deprecated 'Use TLCLHandle instead';
+  TLCLHandle = WSReferences.TLCLHandle;
 
   PHKEY = ^HKEY;
 
 const
-  INVALID_HANDLE_VALUE  = HANDLE(-1); // prior to 1.1 it was 0, see for example FileOpen
-
   MAXBYTE  = Byte($FF);
   MAXWORD  = Word($FFFF);
   MAXDWORD = DWord($FFFFFFFF);
@@ -1380,7 +1373,7 @@ type
     dsBm: TagBitmap;
     dsBmih: tagBITMAPINFOHEADER;
     dsBitfields: array[0..2] of DWORD;
-    dshSection: THandle;
+    dshSection: TLCLHandle;
     dsOffset: DWORD;
   end;
   TDIBSection = tagDIBSECTION;
@@ -1390,7 +1383,7 @@ type
     cbSize: DWORD;
     iContextType: Integer;
     iCtrlId: Integer;
-    hItemHandle: THandle;
+    hItemHandle: TLCLHandle;
     dwContextId: DWORD;
     MousePos: TPOINT;
   end;
@@ -1669,7 +1662,7 @@ const
 //==============================================
 
 type
-  COLORREF = {$ifdef UseSystemUITypes}System.UITypes.TColorRef{$else}Cardinal{$endif};
+  COLORREF = System.UITypes.TColorRef;
   TColorRef = COLORREF;
 
 const

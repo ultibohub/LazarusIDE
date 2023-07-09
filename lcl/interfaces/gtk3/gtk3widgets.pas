@@ -1850,7 +1850,7 @@ begin
   end;
 
   FCairoContext := AContext;
-  Msg.DC := BeginPaint(THandle(Self), AStruct);
+  Msg.DC := BeginPaint(HWND(Self), AStruct);
   FContext := Msg.DC;
 
   Msg.PaintStruct^.rcPaint := PaintData.ClipRect^;
@@ -1866,7 +1866,7 @@ begin
       //Dispose(PaintData.ClipRect);
       Fillchar(FPaintData, SizeOf(FPaintData), 0);
       FContext := 0;
-      EndPaint(THandle(Self), AStruct);
+      EndPaint(HWND(Self), AStruct);
       //Dispose(AStruct);
     end;
   except
@@ -4728,7 +4728,7 @@ begin
   begin
     GetContainerWidget^.get_allocation(@AAlloc);
     Result := RectFromGtkAllocation(AAlloc);
-    OffsetRect(Result, -Result.Left, -Result.Top);
+    Types.OffsetRect(Result, -Result.Left, -Result.Top);
   end else
   begin
     ACurrentPage := PGtkNoteBook(GetContainerWidget)^.get_current_page;
@@ -4740,7 +4740,7 @@ begin
       else
         GetContainerWidget^.get_allocation(@AAlloc);
       Result := RectFromGtkAllocation(AAlloc);
-      OffsetRect(Result, -Result.Left, -Result.Top);
+      Types.OffsetRect(Result, -Result.Left, -Result.Top);
     end;
   end;
   // DebugLn('TGtk3NoteBook.getClientRect Result ',dbgs(Result));

@@ -43,7 +43,7 @@ uses
   {$IFDEF MEM_CHECK}
   MemCheck,
   {$ENDIF}
-  Classes, SysUtils, TypInfo, Laz_AVL_Tree,
+  Classes, SysUtils, TypInfo, AVL_Tree,
   // LazUtils
   LazFileUtils,
   // Codetools
@@ -199,7 +199,7 @@ begin
     ParamString:='';
     for i:=0 to ParamCount-1 do begin
       // read ParamFlags
-      Len:={$IF FPC_FULLVERSION>=30000}SizeOf(TParamFlags){$ELSE}1{$ENDIF};
+      Len:=SizeOf(TParamFlags);
       ParamType.Flags:=[];
       Move(TypeData^.ParamList[Offset],ParamType.Flags,Len);
       inc(Offset,Len);

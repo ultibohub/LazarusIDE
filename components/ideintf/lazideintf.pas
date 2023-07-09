@@ -17,9 +17,8 @@ interface
 
 uses
   Classes, SysUtils,
-  {$IF FPC_FULLVERSION >= 30200}System.{$ENDIF}UITypes,
   // LCL
-  Forms, Controls, LazHelpHTML,
+  Forms, Controls,
   // LazUtils
   LazMethodList, AvgLvlTree,
   // BuildIntf

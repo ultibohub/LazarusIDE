@@ -36,10 +36,6 @@ uses
   LCLIntf, LCLType, LMessages, LResources, Controls, StdCtrls, Graphics, Grids,
   Dialogs, Themes, Variants, Clipbrd, ImgList, Laz2_XMLCfg;
 
-{$if FPC_FULLVERSION<20701}
-  {$DEFINE noautomatedbookmark}
-{$endif}
-
 const
   DEFINDICATORCOLWIDTH = 12;
 
@@ -439,9 +435,9 @@ type
     procedure DoOnChangeBounds; override;
     procedure DoPrepareCanvas(aCol,aRow:Integer; aState: TGridDrawState); override;
     procedure DoLoadColumn(sender: TCustomGrid; aColumn: TGridColumn; aColIndex: Integer;
-                            aCfg: TXMLConfig; aVersion: Integer; const aPath: string); override;
+                            aCfg: TXMLConfig; aVersion: Integer; aPath: string); override;
     procedure DoSaveColumn(sender: TCustomGrid; aColumn: TGridColumn; aColIndex: Integer;
-                            aCfg: TXMLConfig; aVersion: Integer; const aPath: string); override;
+                            aCfg: TXMLConfig; aVersion: Integer; aPath: string); override;
     procedure DrawAllRows; override;
     procedure DrawFocusRect(aCol,aRow:Integer; ARect:TRect); override;
     procedure DrawRow(ARow: Integer); override;
@@ -552,9 +548,9 @@ type
     function ExecuteAction(AAction: TBasicAction): Boolean; override;
     function UpdateAction(AAction: TBasicAction): Boolean; override;
 
-    procedure SaveToFile(const FileName: string); override;
+    procedure SaveToFile(FileName: string); override;
     procedure SaveToStream(AStream: TStream); override;
-    procedure LoadFromFile(const FileName: string); override;
+    procedure LoadFromFile(FileName: string); override;
     procedure LoadFromStream(AStream: TStream); override;
 
     property AllowOutboundEvents;
@@ -2302,7 +2298,7 @@ begin
 end;
 
 procedure TCustomDBGrid.DoLoadColumn(sender: TCustomGrid; aColumn: TGridColumn;
-  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; const aPath: string);
+  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; aPath: string);
 var
   c: TColumn;
   s: string;
@@ -2318,7 +2314,7 @@ begin
 end;
 
 procedure TCustomDBGrid.DoSaveColumn(sender: TCustomGrid; aColumn: TGridColumn;
-  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; const aPath: string);
+  aColIndex: Integer; aCfg: TXMLConfig; aVersion: Integer; aPath: string);
 var
   c: TColumn;
 begin
@@ -3952,7 +3948,7 @@ begin
             and DataLink.UpdateAction(AAction);
 end;
 
-procedure TCustomDBGrid.SaveToFile(const FileName: string);
+procedure TCustomDBGrid.SaveToFile(FileName: string);
 begin
   SaveOptions:=[ soDesign ];
   inherited SaveToFile(Filename);
@@ -3964,7 +3960,7 @@ begin
   inherited SaveToStream(AStream);
 end;
 
-procedure TCustomDBGrid.LoadFromFile(const FileName: string);
+procedure TCustomDBGrid.LoadFromFile(FileName: string);
 begin
   SaveOptions:=[ soDesign ];
   Include(FGridStatus, gsLoadingGrid);
@@ -4614,15 +4610,11 @@ begin
 
   if Find(Bookmark, Index) then begin
     FDataset.FreeBookmark(Bookmark);
-    {$ifndef noautomatedbookmark}
     SetLength(TBookmark(Bookmark),0); // decrease reference count
-    {$endif noautomatedbookmark}
     if not AValue then begin
       FDataset.FreeBookmark(Pointer(Items[Index]));
-      {$ifndef noautomatedbookmark}
       Bookmark := FList[Index];
       SetLength(TBookmark(Bookmark),0); // decrease reference count
-      {$endif noautomatedbookmark}
       FList.Delete(Index);
       FGrid.Invalidate;
     end;
@@ -4635,9 +4627,7 @@ begin
     end else
     begin
       FDataset.FreeBookmark(Bookmark);
-      {$ifndef noautomatedbookmark}
       SetLength(TBookmark(Bookmark),0);   // decrease reference count
-      {$endif}
     end;
   end;
 end;
@@ -4704,9 +4694,7 @@ end;
 procedure TBookmarkList.Clear;
 var
   i: Integer;
-  {$ifndef noautomatedbookmark}
   Bookmark: Pointer;
-  {$endif}
 begin
   for i:=0 to FList.Count-1 do
   begin
@@ -4714,10 +4702,8 @@ begin
     DebugLn('%s.Clear', [ClassName]);
     {$endif}
     FDataset.FreeBookmark(Items[i]);
-    {$ifndef noautomatedbookmark}
     Bookmark := FList[i];
     SetLength(TBookmark(Bookmark),0); // decrease reference count
-    {$endif noautomatedbookmark}
   end;
   FList.Clear;
   FGrid.Invalidate;
@@ -4726,21 +4712,15 @@ end;
 procedure TBookmarkList.Delete;
 var
   i: Integer;
-  {$ifndef noautomatedbookmark}
   Bookmark: Pointer;
-  {$endif}
 begin
   {$ifdef dbgDBGrid}
   DebugLn('%s.Delete', [ClassName]);
   {$endif}
   for i := FList.Count-1 downto 0 do begin
     FDataset.GotoBookmark(Items[i]);
-    {$ifndef noautomatedbookmark}
     Bookmark := FList[i];
     SetLength(TBookmark(Bookmark),0); // decrease reference count
-    {$else}
-    FDataset.FreeBookmark(Items[i]);
-    {$endif noautomatedbookmark}
     FDataset.Delete;
     FList.Delete(i);
   end;
@@ -4819,9 +4799,7 @@ end;
 function TBookmarkList.Refresh: boolean;
 var
   i: LongInt;
-  {$ifndef noautomatedbookmark}
   Bookmark: Pointer;
-  {$endif}
 begin
   {$ifdef dbgDBGrid}
   DebugLn('%s.Refresh', [ClassName]);
@@ -4831,10 +4809,8 @@ begin
     if not FDataset.BookmarkValid(TBookMark(Items[i])) then begin
       Result := True;
       FDataset.FreeBookmark(Items[i]);
-      {$ifndef noautomatedbookmark}
       Bookmark := FList[i];
       SetLength(TBookmark(Bookmark),0); // decrease reference count
-      {$endif noautomatedbookmark}
       Flist.Delete(i);
     end;
   if Result then

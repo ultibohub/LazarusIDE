@@ -1,10 +1,5 @@
 {%MainUnit customdrawnwsforms.pp}
 
-// redefines:
-// The version from FreePascal crash except in FPC 2.7.1+ from 10 Dec 2011 +
-function XmbLookupString(p1: PXIC; ev: PXKeyPressedEvent; str: PChar; len: longword; ks: PKeySym; stat: PStatus): longint; cdecl; external;
-function Xutf8LookupString(p1: PXIC; ev: PXKeyPressedEvent; str: PChar; len: longword; ks: PKeySym; stat: PStatus): longint; cdecl; external;
-
 { TCDWSCustomForm }
 
 class procedure TCDWSCustomForm.UpdateMotifWMHints(const AWinControl: TWinControl; CanMaximize: Boolean);
@@ -2522,7 +2517,7 @@ begin
 end;
 
 class function TCDWSCustomForm.DoCreateHandle(const AWinControl: TWinControl;
-  const AParams: TCreateParams): TLCLIntfHandle;
+  const AParams: TCreateParams): TLCLHandle;
 begin
 end;
 
@@ -2538,7 +2533,7 @@ end;
   Creates a Windows CE Form, initializes it according to it´s properties and shows it
  ------------------------------------------------------------------------------}
 class function TCDWSCustomForm.CreateHandle(const AWinControl: TWinControl;
-  const AParams: TCreateParams): TLCLIntfHandle;
+  const AParams: TCreateParams): TLCLHandle;
 const
   WindowHints: TXWMHints = (
     flags: InputHint or StateHint or WindowGroupHint;
@@ -2669,7 +2664,7 @@ begin
   lWindowInfo.Colormap := XDefaultColormap(CDWidgetSet.FDisplay, XDefaultScreen(CDWidgetSet.FDisplay));
   lWindowInfo.ColorDepth := lWindowInfo.Attr.depth;
   CreateX11Canvas(lWindowInfo);
-  Result := TLCLIntfHandle(lWindowInfo);
+  Result := TLCLHandle(lWindowInfo);
 
   {$ifdef CD_X11_NewNativePaint}
   CDWidgetSet.XWindowList.AddObject('New',TObject(lWindowInfo));

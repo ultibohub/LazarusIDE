@@ -249,7 +249,7 @@ type
     procedure FlushStackToStream;
     procedure WriteToStream(const Buffer; Count: Longint);
   protected
-    procedure FlushBuffer; {$IF FPC_FULLVERSION >= 30200}override;{$ENDIF}
+    procedure FlushBuffer; override;
     procedure WriteValue(Value: TValueType);
     procedure WriteStr(const Value: String);
     procedure WriteIntegerContent(i: integer);
@@ -800,8 +800,6 @@ end;
 
 function FindResourceLFM(ResName: string): HRSRC;
 {$if defined(WinCE)}
-//function FindResourceLFM(ResName: string): HRSRC;
-//{$if (FPC_FULLVERSION>=20605) and defined(WinCE)}
 var
   u: UnicodeString;
 begin

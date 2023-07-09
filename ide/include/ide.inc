@@ -48,19 +48,11 @@
   {$ENDIF}
 {$ENDIF}
 
-{$IF FPC_FULLVERSION<20700}
-// fpc 2.6.2 and 2.6.3 have a bug with -O2 and for..in
-// see http://bugs.freepascal.org/view.php?id=25588
-  {$OPTIMIZATION NOSTACKFRAME}
-{$ENDIF}
-
-{$IF defined(Windows) and defined(HEAPTRC_WINDOW) and (FPC_FULLVERSION>=20701)}
+{$IF defined(Windows) and defined(HEAPTRC_WINDOW)}
   {$DEFINE EnableRedirectStdErr}
 {$ENDIF}
 
-{$IF FPC_FULLVERSION>30100}
-  {$warn 6058 off} // cannot inline
-{$ENDIF}
+{$warn 6058 off} // cannot inline
 
 // end.
 

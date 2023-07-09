@@ -46,7 +46,7 @@ interface
 
 uses
   // RTL + FCL
-  Types, math, SysUtils, Classes, RtlConsts, Contnrs, zstream, Laz_AVL_Tree,
+  Types, Math, SysUtils, Classes, RtlConsts, Contnrs, ZStream, AVL_Tree,
   FPReadBMP, FPimage, FPImgCanv, FPCanvas,
   // LCL
   LCLStrConsts, LCLIntf, LResources, LCLType, LCLProc, LCLClasses,
@@ -142,7 +142,7 @@ type
     procedure WriteData(AStream: TStream; const ACompress: Boolean);
     procedure ReadData(AStream: TStream);
   protected
-    function  GetReferenceHandle: THandle; override;
+    function  GetReferenceHandle: TLCLHandle; override;
     function  WSCreateReference(AParams: TCreateParams): PWSReference; override;
     class procedure WSRegisterClass; override;
     procedure ReferenceDestroying; override;
@@ -334,8 +334,7 @@ type
     procedure ReadData(AStream: TStream); virtual;
     procedure WriteAdvData(AStream: TStream); virtual;
     procedure ReadAdvData(AStream: TStream); virtual;
-    function Equals(Obj: TObject): boolean;
-      {$IF FPC_FULLVERSION>=20402}override;{$ENDIF}
+    function Equals(Obj: TObject): boolean; override;
     procedure BeginUpdate;
     procedure EndUpdate;
 
@@ -349,7 +348,7 @@ type
     procedure AddImages(AValue: TCustomImageList);
     function AddMasked(Image: TBitmap; MaskColor: TColor): Integer;
     function AddLazarusResource(const ResourceName: string; MaskColor: TColor = clNone): integer;
-    function AddResourceName(Instance: THandle; const ResourceName: string; MaskColor: TColor = clNone): integer;
+    function AddResourceName(Instance: TLCLHandle; const ResourceName: string; MaskColor: TColor = clNone): integer;
     procedure Change;
     procedure Clear;
     procedure Delete(AIndex: Integer);

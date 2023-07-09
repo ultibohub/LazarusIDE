@@ -8,7 +8,9 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  fpreportlclexport, ExtCtrls, ComCtrls, fpreport;
+  fpreportlclexport, ExtCtrls, ComCtrls, fpreport,
+  fpreportpreview // this unit is needed for a nicer preview
+  ;
 
 const
   TESTIMAGE = 'powered_by.png';

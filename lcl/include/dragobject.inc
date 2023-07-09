@@ -127,7 +127,7 @@ end;
 procedure TDragDockObject.AdjustDockRect(ARect: TRect);
 begin
   with DockOffset do
-    OffsetRect(FDockRect, -X, -Y);
+    Types.OffsetRect(FDockRect, -X, -Y);
 end;
 
 function TDragDockObject.GetDragCursor(Accepted: Boolean; X, Y: Integer): TCursor;
@@ -189,7 +189,7 @@ end;
 procedure TDragDockObject.MoveDockImage;
 begin
   //Draw the form outlines when the position has changed
-  if not CompareRect(@DockRect, @EraseDockRect) then
+  if not SameRect(@DockRect, @EraseDockRect) then
   begin
     if HasOnDrawImage then
       OnDrawDockImage(Self, EraseDockRect, DockRect, disMove)

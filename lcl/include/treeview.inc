@@ -361,7 +361,7 @@ begin
   inherited Destroy;
 end;
 
-function TTreeNode.GetHandle: THandle;
+function TTreeNode.GetHandle: TLCLHandle;
 begin
   if TreeView<>nil then
     Result := TreeView.Handle
@@ -2012,7 +2012,7 @@ begin
   SelectedIndex := Info^.SelectedIndex;
   StateIndex := Info^.StateIndex;
   OverlayIndex := Info^.OverlayIndex;
-  Data := {%H-}Pointer(Info^.Data);
+  Data := Pointer(PtrUInt(Info^.Data));
   if Owner<>nil then begin
     ItemCount := Info^.Count;
     for I := 0 to ItemCount - 1 do
@@ -2069,7 +2069,7 @@ begin
   Info^.SelectedIndex := SelectedIndex;
   Info^.OverlayIndex := OverlayIndex;
   Info^.StateIndex := StateIndex;
-  Info^.Data := {%H-}Cardinal(Data);
+  Info^.Data := {%H-}Cardinal(PtrUInt(Data));
   ItemCount := Count;
   Info^.Count := ItemCount;
   Stream.WriteBuffer(Size, SizeOf(Size));
@@ -2202,7 +2202,7 @@ begin
   Result := FOwner;
 end;
 
-function TTreeNodes.GetHandle: THandle;
+function TTreeNodes.GetHandle: TLCLHandle;
 begin
   if Owner<>nil then
     Result:=Owner.Handle
@@ -4598,7 +4598,7 @@ begin
   end;
 
   TextRect := Rect(Node.DisplayTextLeft, Node.Top, Node.DisplayTextRight, Node.Top + Node.Height);
-  OffsetRect(TextRect, 0, -ScrolledTop);
+  Types.OffsetRect(TextRect, 0, -ScrolledTop);
   if not PtInRect(TextRect, Point(X, Y))
   or (IntersectRect(IntRect, TextRect, ClientRect) and EqualRect(IntRect, TextRect)) then
   begin
@@ -4632,7 +4632,7 @@ begin
         PHint.X := PLeft.X - R.Right;
     end;
   end;
-  OffsetRect(R, PHint.X, PHint.Y);
+  Types.OffsetRect(R, PHint.X, PHint.Y);
   FHintWnd.ActivateHint(R, Node.Text)
 end;
 

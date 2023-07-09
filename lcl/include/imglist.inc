@@ -609,7 +609,7 @@ begin
   Result := FReference;
 end;
 
-function TCustomImageListResolution.GetReferenceHandle: THandle;
+function TCustomImageListResolution.GetReferenceHandle: TLCLHandle;
 begin
   Result := FReference.Handle;
 end;
@@ -1388,7 +1388,8 @@ begin
   Bmp.Free;
 end;
 
-function TCustomImageList.AddResourceName(Instance: THandle; const ResourceName: string; MaskColor: TColor): integer;
+function TCustomImageList.AddResourceName(Instance: TLCLHandle; const ResourceName: string;
+  MaskColor: TColor): integer;
 var
   Grp: TGraphic;
   Bmp: TCustomBitmap absolute Grp;
@@ -1431,7 +1432,7 @@ var
   ImageRect: TRect;
 begin
   ImageRect := Rect(0, 0, Width, Height);
-  OffsetRect(ImageRect, (Image.Width-Width) div 2, (Image.Height-Height) div 2);
+  Types.OffsetRect(ImageRect, (Image.Width-Width) div 2, (Image.Height-Height) div 2);
   Result := AddSlice(Image, ImageRect);
 end;
 
@@ -2391,11 +2392,7 @@ begin
       CurStream.Free;
     end;
   end else
-    {$IF FPC_FULLVERSION>20402}
     Result:=inherited Equals(Obj);
-    {$ELSE}
-    Result:=false;
-    {$ENDIF}
 end;
 
 function TCustomImageList.FindResolution(AImageWidth: Integer; out
@@ -2619,7 +2616,7 @@ var
 begin
   if not FindResolution(AImageWidth, R) then Exit;
   ImageRect := Rect(0, 0, R.Width, R.Height);
-  OffsetRect(ImageRect, (Image.Width-R.Width) div 2, (Image.Height-R.Height) div 2);
+  Types.OffsetRect(ImageRect, (Image.Width-R.Width) div 2, (Image.Height-R.Height) div 2);
   ReplaceSlice(AIndex, Image, ImageRect, AllResolutions);
 end;
 
@@ -2794,7 +2791,7 @@ function TLCLGlyphs.GetImageIndex(const AResourceName: string): Integer;
       Exit(-1);
     try
       ImageRect := Rect(0, 0, Resolution.Width, GetHeightForWidth(Resolution.Width));
-      OffsetRect(ImageRect, (G.Width-ImageRect.Right) div 2, (G.Height-ImageRect.Bottom) div 2);
+      Types.OffsetRect(ImageRect, (G.Width-ImageRect.Right) div 2, (G.Height-ImageRect.Bottom) div 2);
       Result := AddSlice(G, ImageRect);
     finally
       G.Free;

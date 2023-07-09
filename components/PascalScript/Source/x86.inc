@@ -389,14 +389,9 @@ var
               TempStr := StringOfChar(AnsiChar(#0),4);
               Pointer((@TempStr[1])^) := Pointer(fvar.Dta^);
             {$IFDEF FPC}
-            {$IF FPC_FULLVERSION < 30101}
-              // pass dyn. array on stack
-            UseReg := false;
-            {$ELSE}
               // pass dyn. arrays in registers when i386 register calling conventions are used
               // more details -> FPC r30870
               UseReg := CallingConv = cdRegister;
-            {$ENDIF}
             {$ENDIF ~FPC}
             {$ELSE}
               Exit;
@@ -667,7 +662,7 @@ begin
               {$IFNDEF PS_NOINT64}bts64:
                 begin
                   EAX := RealCall_Other(Address, @Stack[Length(Stack)-3], Length(Stack) div 4, 4, @EDX);
-                  tbts64(res^.dta^) := Int64(EAX) shl 32 or EDX;
+                  tbts64(res^.dta^) := Int64(Cardinal(EDX)) shl 32 or Cardinal(EAX);
                 end;
               {$ENDIF}
               btVariant,
@@ -726,7 +721,7 @@ begin
               {$IFNDEF PS_NOINT64}bts64:
                 begin
                   EAX := RealCall_CDecl(Address, @Stack[Length(Stack)-3], Length(Stack) div 4, 4, @EDX);
-                  tbts64(res^.Dta^) := Int64(EAX) shl 32 or EDX;
+                  tbts64(res^.Dta^) := Int64(Cardinal(EDX)) shl 32 or Cardinal(EAX);
                 end;
               {$ENDIF}
               btVariant, {$IFNDEF PS_NOWIDESTRING}btUnicodeString, btWideString, {$ENDIF}
@@ -761,7 +756,7 @@ begin
               {$IFNDEF PS_NOINT64}bts64:
                 begin
                   EAX := RealCall_Other(Address, @Stack[Length(Stack)-3], Length(Stack) div 4, 4, @EDX);
-                  tbts64(res^.dta^) := Int64(EAX) shl 32 or EDX;
+                  tbts64(res^.dta^) := Int64(Cardinal(EDX)) shl 32 or Cardinal(EAX);
                 end;
               {$ENDIF}
               btVariant, {$IFNDEF PS_NOWIDESTRING}btUnicodeString, btWideString, {$ENDIF}

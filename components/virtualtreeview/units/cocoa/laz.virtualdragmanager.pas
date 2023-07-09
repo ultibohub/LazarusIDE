@@ -6,7 +6,8 @@ unit laz.VirtualDragManager;
 interface
 
 uses
-  Classes, SysUtils, Types;
+  Classes, SysUtils, Types,
+  LCLType;
 
 const
   // Drag image helpers for Windows 2000 and up.
@@ -68,15 +69,7 @@ type
   _ULARGE_INTEGER = ULARGE_INTEGER;
      
   
-  HANDLE = System.THandle;
-  HWND = HANDLE;
-  //HRESULT = System.HResult;
-  
-  HBITMAP = HANDLE;
-  HENHMETAFILE = HANDLE;
-  
   //activex types
-  
 
   IMoniker            = Interface;
    
@@ -272,8 +265,7 @@ type
    Function GetDataHere(CONST pformatetc : FormatETC; Out medium : STGMEDIUM):HRESULT; STDCALL;
    Function QueryGetData(const pformatetc : FORMATETC):HRESULT; STDCALL;
    Function GetCanonicalFormatTEtc(const pformatetcIn : FORMATETC;Out pformatetcOut : FORMATETC):HResult; STDCALl;
-   Function SetData (Const pformatetc : FORMATETC;
-     {$IF FPC_FullVersion >= 30200}var{$ELSE}const{$IFEND} medium:STGMEDIUM;
+   Function SetData (Const pformatetc : FORMATETC; var medium:STGMEDIUM;
      FRelease : BOOL):HRESULT; StdCall;
    Function EnumFormatEtc(dwDirection : DWord; OUT enumformatetcpara : IENUMFORMATETC):HRESULT; StdCall;
    Function DAdvise(const formatetc : FORMATETC;advf :DWORD; CONST AdvSink : IAdviseSink;OUT dwConnection:DWORD):HRESULT;StdCall;
@@ -385,7 +377,7 @@ type
     function EqualFormatEtc(FormatEtc1, FormatEtc2: TFormatEtc): Boolean;
     function FindFormatEtc(TestFormatEtc: TFormatEtc; const FormatEtcArray: TFormatEtcArray): integer;
     function FindInternalStgMedium(Format: TClipFormat): PStgMedium;
-    function HGlobalClone(HGlobal: THandle): THandle;
+    function HGlobalClone(HGlobal: TLCLHandle): TLCLHandle;
     function RenderInternalOLEData(const FormatEtcIn: TFormatEtc; var Medium: TStgMedium; var OLEResult: HResult): Boolean;
     function StgMediumIncRef(const InStgMedium: TStgMedium; var OutStgMedium: TStgMedium;
       CopyInMedium: Boolean; DataObject: IDataObject): HRESULT;
@@ -407,8 +399,7 @@ type
     function GetData(const FormatEtcIn: TFormatEtc; out Medium: TStgMedium): HResult; virtual; stdcall;
     function GetDataHere(const FormatEtc: TFormatEtc; out Medium: TStgMedium): HResult; virtual; stdcall;
     function QueryGetData(const FormatEtc: TFormatEtc): HResult; virtual; stdcall;
-    function SetData(const FormatEtc: TFormatEtc;
-      {$IF FPC_FullVersion >= 30200}var{$ELSE}const{$IFEND} Medium: TStgMedium;
+    function SetData(const FormatEtc: TFormatEtc; var Medium: TStgMedium;
       DoRelease: BOOL): HResult; virtual; stdcall;
   end;
 
@@ -1010,7 +1001,7 @@ end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
-function TVTDataObject.HGlobalClone(HGlobal: THandle): THandle;
+function TVTDataObject.HGlobalClone(HGlobal: TLCLHandle): TLCLHandle;
 
 // Returns a global memory block that is a copy of the passed memory block.
 

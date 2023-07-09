@@ -33,20 +33,14 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, Types, TypInfo, Math, CustApp,
+  Classes, SysUtils, Types, TypInfo, Math, CustApp, System.UITypes,
   // LCL
   LCLStrConsts, LCLType, LCLProc, LCLIntf, LCLVersion, LCLClasses, InterfaceBase,
   LResources, Graphics, Menus, LMessages, CustomTimer, ActnList,
   ClipBrd, HelpIntfs, Controls, ImgList, Themes,
   // LazUtils
   LazFileUtils, LazUTF8, Maps, IntegerList, LazMethodList, LazLoggerBase,
-  LazUtilities, GraphType,
-  {$IF FPC_FULLVERSION >= 30200}
-  System.UITypes
-  {$ELSE}
-  UITypes
-  {$ENDIF}
-  ;
+  LazUtilities, GraphType;
 
 type
   TProcedure = procedure;
@@ -482,13 +476,8 @@ type
     );
   TFormState = set of TFormStateType;
 
-  {$IF FPC_FULLVERSION >= 30200}
   TModalResult = System.UITypes.TModalResult;
   PModalResult = ^System.UITypes.TModalResult;
-  {$ELSE}
-  TModalResult = UITypes.TModalResult;
-  PModalResult = ^UITypes.TModalResult;
-  {$ENDIF}
 
   TFormHandlerType = (
     fhtFirstShow,
@@ -1210,6 +1199,8 @@ type
     function GetIconFont: TFont; virtual;
     function GetMenuFont: TFont; virtual;
     function GetSystemFont: TFont; virtual;
+    procedure Notification(AComponent: TComponent; Operation: TOperation);
+      override;
     property MagnetManager: TWindowMagnetManager read FMagnetManager;
   public
     constructor Create(AOwner : TComponent); override;
@@ -1254,7 +1245,7 @@ type
       MonitorDefault: TMonitorDefaultTo = mdNearest): TMonitor;
     function MonitorFromRect(const Rect: TRect;
       MonitorDefault: TMonitorDefaultTo = mdNearest): TMonitor;
-    function MonitorFromWindow(const Handle: THandle;
+    function MonitorFromWindow(const Handle: TLCLHandle;
       MonitorDefault: TMonitorDefaultTo = mdNearest): TMonitor;
 
     procedure BeginTempCursor(const aCursor: TCursor);
@@ -1528,7 +1519,7 @@ type
     function GetActive: Boolean;
     function GetCurrentHelpFile: string;
     function GetExename: string;
-    function GetHandle: THandle;
+    function GetHandle: TLCLHandle;
     function GetMainFormHandle: HWND;
     function GetTitle: string;
     procedure FreeIconHandles;
@@ -1543,7 +1534,7 @@ type
     procedure UpdateMouseControl(NewMouseControl: TControl);
     procedure UpdateMouseHint(CurrentControl: TControl);
     procedure SetCaptureExceptions(const AValue: Boolean);
-    procedure SetHandle(const AHandle: THandle);
+    procedure SetHandle(const AHandle: TLCLHandle);
     procedure SetHint(const AValue: string);
     procedure SetHintColor(const AValue: TColor);
     procedure SetIcon(AValue: TIcon);
@@ -1713,7 +1704,7 @@ type
                                                write FFindGlobalComponentEnabled;
     property Flags: TApplicationFlags read FFlags write SetFlags;
     //property HelpSystem : IHelpSystem read FHelpSystem;
-    property Handle: THandle read GetHandle write SetHandle; platform;
+    property Handle: TLCLHandle read GetHandle write SetHandle; platform;
     property Hint: string read FHint write SetHint;
     property HintColor: TColor read FHintColor write SetHintColor;
     property HintHidePause: Integer read FHintHidePause write FHintHidePause;

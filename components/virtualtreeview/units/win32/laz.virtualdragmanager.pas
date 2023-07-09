@@ -5,7 +5,8 @@ unit laz.VirtualDragManager;
 interface
 
 uses
-  Windows, ActiveX, Classes, SysUtils;
+  Windows, ActiveX, Classes, SysUtils,
+  LCLType;
 
 const
   // Drag image helpers for Windows 2000 and up.
@@ -122,7 +123,7 @@ type
     function EqualFormatEtc(FormatEtc1, FormatEtc2: TFormatEtc): Boolean;
     function FindFormatEtc(TestFormatEtc: TFormatEtc; const FormatEtcArray: TFormatEtcArray): integer;
     function FindInternalStgMedium(Format: TClipFormat): PStgMedium;
-    function HGlobalClone(HGlobal: THandle): THandle;
+    function HGlobalClone(HGlobal: TLCLHandle): TLCLHandle;
     function RenderInternalOLEData(const FormatEtcIn: TFormatEtc; var Medium: TStgMedium; var OLEResult: HResult): Boolean;
     function StgMediumIncRef(const InStgMedium: TStgMedium; var OutStgMedium: TStgMedium;
       CopyInMedium: Boolean; DataObject: IDataObject): HRESULT;
@@ -144,8 +145,7 @@ type
     function GetData(const FormatEtcIn: TFormatEtc; out Medium: TStgMedium): HResult; virtual; stdcall;
     function GetDataHere(const FormatEtc: TFormatEtc; out Medium: TStgMedium): HResult; virtual; stdcall;
     function QueryGetData(const FormatEtc: TFormatEtc): HResult; virtual; stdcall;
-    function SetData(const FormatEtc: TFormatEtc;
-      {$IF FPC_FullVersion >= 30200}var{$ELSE}const{$IFEND} Medium: TStgMedium;
+    function SetData(const FormatEtc: TFormatEtc; var Medium: TStgMedium;
       DoRelease: BOOL): HResult; virtual; stdcall;
   end;
 
@@ -608,7 +608,7 @@ end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
-function TVTDataObject.HGlobalClone(HGlobal: THandle): THandle;
+function TVTDataObject.HGlobalClone(HGlobal: TLCLHandle): TLCLHandle;
 
 // Returns a global memory block that is a copy of the passed memory block.
 
@@ -896,8 +896,7 @@ end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
-function TVTDataObject.SetData(const FormatEtc: TFormatEtc;
-  {$IF FPC_FullVersion >= 30200}var{$ELSE}const{$IFEND} Medium: TStgMedium;
+function TVTDataObject.SetData(const FormatEtc: TFormatEtc; var Medium: TStgMedium;
   DoRelease: BOOL): HResult;
 
 // Allows dynamic adding to the IDataObject during its existance. Most noteably it is used to implement

@@ -126,7 +126,7 @@ end;
 
 function TWidgetSet.CreateDIBSection(DC: HDC;
   const BitmapInfo: tagBitmapInfo; Usage: UINT;
-  var Bits: Pointer; SectionHandle: THandle; Offset: DWORD): HBITMAP;
+  var Bits: Pointer; SectionHandle: TLCLHandle; Offset: DWORD): HBITMAP;
 begin
   Result := 0;
 end;
@@ -612,9 +612,9 @@ var
     If not CalcRect then
       Case LeftOffset of
         DT_CENTER :
-          OffsetRect(theRect, (Rect.Right - theRect.Right) div 2, 0);
+          Types.OffsetRect(theRect, (Rect.Right - theRect.Right) div 2, 0);
         DT_Right :
-          OffsetRect(theRect, Rect.Right - theRect.Right, 0);
+          Types.OffsetRect(theRect, Rect.Right - theRect.Right, 0);
       end;
 
     theRect.Bottom := theRect.Top + hT;
@@ -624,9 +624,9 @@ var
       If SingleLine then
         Case TopOffset of
           DT_VCENTER :
-            OffsetRect(theRect, 0, (Rect.Bottom - theRect.Bottom) div 2);
+            Types.OffsetRect(theRect, 0, (Rect.Bottom - theRect.Bottom) div 2);
           DT_Bottom :
-            OffsetRect(theRect, 0, Rect.Bottom - theRect.Bottom);
+            Types.OffsetRect(theRect, 0, Rect.Bottom - theRect.Bottom);
         end;
   end;
 var
@@ -1084,7 +1084,7 @@ begin
   Result := False;
 end;
 
-function TWidgetSet.GetStockObject(Value: Integer): THandle;
+function TWidgetSet.GetStockObject(Value: Integer): TLCLHandle;
 begin
   Result := 0;
 end;
@@ -1670,17 +1670,17 @@ begin
   Result := False;
 end;
 
-function TWidgetSet.LoadBitmap(hInstance: THandle; lpBitmapName: PChar): HBitmap;
+function TWidgetSet.LoadBitmap(hInstance: TLCLHandle; lpBitmapName: PChar): HBitmap;
 begin
   Result := LoadBitmapFunction(hInstance, lpBitmapName);
 end;
 
-function TWidgetSet.LoadCursor(hInstance: THandle; lpCursorName: PChar): HCursor;
+function TWidgetSet.LoadCursor(hInstance: TLCLHandle; lpCursorName: PChar): HCursor;
 begin
   Result := LoadCursorFunction(hInstance, lpCursorName);
 end;
 
-function TWidgetSet.LoadIcon(hInstance: THandle; lpIconName: PChar): HIcon;
+function TWidgetSet.LoadIcon(hInstance: TLCLHandle; lpIconName: PChar): HIcon;
 begin
   Result := LoadIconFunction(hInstance, lpIconName);
 end;
@@ -1883,7 +1883,7 @@ begin
   Result := 0;
 end;
 
-function TWidgetSet.RemoveProp(Handle: hwnd; Str: PChar): THandle;
+function TWidgetSet.RemoveProp(Handle: HWND; Str: PChar): TLCLHandle;
 begin
   Result := 0;
 end;

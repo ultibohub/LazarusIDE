@@ -2494,11 +2494,7 @@ end;
 constructor TlrDetailReport.Create;
 begin
   inherited Create;
-  {$IF FPC_FULLVERSION >= 30101}
   FReportBody:=TStringStream.CreateRaw('');
-  {$ELSE}
-  FReportBody:=TStringStream.Create('');
-  {$ENDIF}
 end;
 
 destructor TlrDetailReport.Destroy;
@@ -5799,7 +5795,7 @@ begin
           w1 := r.Right - r.Left;
           h1 := r.Bottom - r.Top;
           if (Flags and flPictCenter) <> 0 then
-            OffsetRect(r, (w - w1) div 2, (h - h1) div 2);
+            Types.OffsetRect(r, (w - w1) div 2, (h - h1) div 2);
         end;
         {$IFDEF LCLNOGUI}
         bmp := TLazreportBitmap.create;
@@ -5815,7 +5811,7 @@ begin
         PictureWidth := Round(Picture.Width * ScaleX);
         PictureHeight := Round(Picture.Height * ScaleY);
         if (Flags and flPictCenter) <> 0 then
-          OffsetRect(r, (w - PictureWidth) div 2, (h - PictureHeight) div 2);
+          Types.OffsetRect(r, (w - PictureWidth) div 2, (h - PictureHeight) div 2);
         {$IFDEF LCLNOGUI}
         bmp := TLazreportBitmap.create;
         bmp.LoadFromGraphic(Picture.Graphic);
@@ -9242,7 +9238,7 @@ var
   i: Integer;
   sx, sy: Double;
   v, IsPrinting: Boolean;
-  h: THandle;
+  h: TLCLHandle;
   oldRgn, pageRgn: HRGN;
 begin
   IsPrinting := Printer.Printing and (Canvas is TPrinterCanvas);
@@ -10205,11 +10201,7 @@ procedure TfrReport.WriteReportXML(Writer: TWriter);
 var
   st: TStringStream;
 begin
-  {$IF FPC_FULLVERSION >= 30101}
   st := TStringStream.CreateRaw('');
-  {$ELSE}
-  st := TStringStream.Create('');
-  {$ENDIF}
   SaveToXMLStream(st);
   Writer.WriteString(st.DataString);
   st.free;
@@ -12070,11 +12062,7 @@ begin
   inherited Loaded;
   if FXMLReport<>'' then
   begin
-    {$IF FPC_FULLVERSION >= 30101}
     st := TStringStream.CreateRaw(FXMLReport);
-    {$ELSE}
-    st := TStringStream.Create(FXMLReport);
-    {$ENDIF}
     LoadFromXMLStream(st);
     st.free;
     FXMLReport := '';

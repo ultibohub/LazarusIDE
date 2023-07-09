@@ -162,13 +162,13 @@ end;
 
   Creates a new timer and sets the callback event.
  ------------------------------------------------------------------------------}
-function TQtWidgetSet.CreateTimer(Interval: integer; TimerFunc: TWSTimerProc): THandle;
+function TQtWidgetSet.CreateTimer(Interval: integer; TimerFunc: TWSTimerProc): TLCLHandle;
 var
   QtTimer: TQtTimer;
 begin
   QtTimer := TQtTimer.CreateTimer(Interval, TimerFunc, App);
   
-  Result := THandle(QtTimer);
+  Result := TLCLHandle(QtTimer);
 end;
 
 {------------------------------------------------------------------------------
@@ -178,7 +178,7 @@ end;
 
   Destroys a timer.
  ------------------------------------------------------------------------------}
-function TQtWidgetSet.DestroyTimer(TimerHandle: THandle): boolean;
+function TQtWidgetSet.DestroyTimer(TimerHandle: TLCLHandle): boolean;
 begin
   TQtTimer(TimerHandle).Free;
   
@@ -320,7 +320,6 @@ begin
   if not QCoreApplication_hasPendingEvents() then
   {$ENDIF}
   QAbstractEventDispatcher_processEvents(QThread_eventDispatcher(QThread_currentThread()), QEventLoopWaitForMoreEvents);
-  //  QCoreApplication_processEvents(QEventLoopWaitForMoreEvents);
 end;
 
 {------------------------------------------------------------------------------
@@ -333,7 +332,6 @@ end;
 procedure TQtWidgetSet.AppProcessMessages;
 begin
   QAbstractEventDispatcher_processEvents(QThread_eventDispatcher(QThread_currentThread()), QEventLoopAllEvents);
-  // QCoreApplication_processEvents(QEventLoopAllEvents);
 end;
 
 {------------------------------------------------------------------------------

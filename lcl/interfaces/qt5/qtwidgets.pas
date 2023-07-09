@@ -27,8 +27,10 @@ uses
   qtobjects, qtint,
   // Free Pascal
   Classes, SysUtils, Types,
+  // LazUtils
+  LazLoggerBase, LazUTF16,
   // LCL
-  LCLType, LCLProc, LazUTF8, LazStringUtils, LCLIntf, LMessages, Graphics, Forms, Controls,
+  LCLType, LazUTF8, LazStringUtils, LCLIntf, LMessages, Graphics, Forms, Controls,
   ComCtrls, ExtCtrls, StdCtrls, Menus, Dialogs, ImgList;
 
 type
@@ -3717,7 +3719,7 @@ begin
       ((MButton and QtMidButton) = 0))
   then
     Msg.Keys := Msg.Keys or QtButtonsToLCLButtons(MButton);
-  Msg.Msg := CheckMouseButtonDownUp(TLCLIntfHandle(Self), LCLObject, LastMouse, LazPos, LazButton,
+  Msg.Msg := CheckMouseButtonDownUp(TLCLHandle(Self), LCLObject, LastMouse, LazPos, LazButton,
     QEvent_type(Event) in [QEventMouseButtonPress, QEventMouseButtonDblClick]);
   case LastMouse.ClickCount of
     2: Msg.Keys := Msg.Keys or MK_DOUBLECLICK;
@@ -4041,7 +4043,7 @@ begin
     Msg.State := [ssAlt] + Msg.State;
 
   LastMouse.WinControl := LCLObject;
-  LastMouse.WinHandle := TLCLIntfHandle(Self);
+  LastMouse.WinHandle := TLCLHandle(Self);
   LastMouse.MousePos := Point(MousePos.X, MousePos.Y);
 
   Msg.X := SmallInt(MousePos.X);
@@ -4260,7 +4262,7 @@ begin
       QPaintEvent_Rect(QPaintEventH(Event), ClipRect);
     end;
 
-    Msg.DC := BeginPaint(THandle(Self), AStruct^);
+    Msg.DC := BeginPaint(HWND(Self), AStruct^);
     FContext := Msg.DC;
     
     Msg.PaintStruct^.rcPaint := PaintData.ClipRect^;
@@ -4292,7 +4294,7 @@ begin
         Dispose(PaintData.ClipRect);
         Fillchar(FPaintData, SizeOf(FPaintData), 0);
         FContext := 0;
-        EndPaint(THandle(Self), AStruct^);
+        EndPaint(HWND(Self), AStruct^);
         Dispose(AStruct);
       end;
     except
@@ -4529,7 +4531,7 @@ begin
   Data.cbSize := SizeOf(Data);
   Data.iContextType := HELPINFO_WINDOW;
   Data.iCtrlId := 0;
-  Data.hItemHandle := THandle(Sender);
+  Data.hItemHandle := TLCLHandle(Sender);
   Data.dwContextId := 0;
   with QHelpEvent_globalPos(QHelpEventH(Event))^ do
     Data.MousePos := Point(X, Y);
@@ -7381,7 +7383,7 @@ begin
     begin
       R1 := ARect^;
       QWidget_geometry(MDIAreaHandle.Widget, @R);
-      OffsetRect(R1, -R.Left, -R.Top);
+      Types.OffsetRect(R1, -R.Left, -R.Top);
       QWidget_update(MDIAreaHandle.viewportWidget, @R1);
     end;
   end else
@@ -7401,7 +7403,7 @@ begin
     begin
       QRegion_boundingRect(ARgn, @R1);
       QWidget_geometry(MDIAreaHandle.Widget, @R);
-      OffsetRect(R1, -R.Left, -R.Top);
+      Types.OffsetRect(R1, -R.Left, -R.Top);
       ANewRgn := QRegion_create(PRect(@R1));
       QWidget_update(MDIAreaHandle.viewportWidget, ANewRgn);
       QRegion_destroy(ANewRgn);
@@ -7422,7 +7424,7 @@ begin
     begin
       R1 := ARect^;
       QWidget_geometry(MDIAreaHandle.Widget, @R);
-      OffsetRect(R1, -R.Left, -R.Top);
+      Types.OffsetRect(R1, -R.Left, -R.Top);
       QWidget_repaint(MDIAreaHandle.viewportWidget, @R1);
     end;
   end else
@@ -8524,7 +8526,7 @@ begin
   else
     R1 := Rect(0, 0, 0, 0);
   Result := R;
-  OffsetRect(Result, -Result.Left, -Result.Top);
+  Types.OffsetRect(Result, -Result.Left, -Result.Top);
   {$IFNDEF HASX11}
   if testAttribute(QtWA_Mapped) and QWidget_testAttribute(FCentralWidget, QtWA_Mapped) then
     QWidget_rect(FCentralWidget, @Result)
@@ -8614,7 +8616,7 @@ begin
     begin
       P := getClientOffset;
       R := ARect^;
-      OffsetRect(R, -P.X, -P.Y);
+      Types.OffsetRect(R, -P.X, -P.Y);
       QWidget_update(FCentralWidget, @R);
     end else
       QWidget_update(FCentralWidget);
@@ -8650,7 +8652,7 @@ begin
     begin
       P := getClientOffset;
       R := ARect^;
-      OffsetRect(R, -P.X, -P.Y);
+      Types.OffsetRect(R, -P.X, -P.Y);
       QWidget_repaint(FCentralWidget, @R);
     end else
       QWidget_repaint(FCentralWidget);
@@ -10361,7 +10363,7 @@ begin
   if Assigned(FOwner) then
   begin
     Pt := TabBarOffset;
-    OffsetRect(Result, Pt.X, Pt.Y);
+    Types.OffsetRect(Result, Pt.X, Pt.Y);
   end;
 end;
 
@@ -11464,7 +11466,7 @@ begin
     QPaintEvent_Rect(QPaintEventH(Event), ClipRect);
   end;
 
-  Msg.DC := BeginPaint(THandle(Self), AStruct^);
+  Msg.DC := BeginPaint(HWND(Self), AStruct^);
   FContext := Msg.DC;
 
   Msg.PaintStruct^.rcPaint := PaintData.ClipRect^;
@@ -11533,7 +11535,7 @@ begin
     Dispose(PaintData.ClipRect);
     Fillchar(FPaintData, SizeOf(FPaintData), 0);
     FContext := 0;
-    EndPaint(THandle(Self), AStruct^);
+    EndPaint(HWND(Self), AStruct^);
     Dispose(AStruct);
   end;
 end;
@@ -11656,7 +11658,7 @@ begin
           end else
           begin
             ButtonRect := R;
-            OffsetRect(ButtonRect, -R.Left, -R.Top);
+            Types.OffsetRect(ButtonRect, -R.Left, -R.Top);
           end;
 
           if PtInRect(ButtonRect, Pt) then
@@ -16908,7 +16910,7 @@ begin
     end;
 
     ItemStruct^.itemID := UINT(ID);
-    ItemStruct^._hDC := BeginPaint(THandle(Self), AStruct);
+    ItemStruct^._hDC := BeginPaint(HWND(Self), AStruct);
     FContext := ItemStruct^._hDC;
     ItemStruct^.rcItem := PaintData.ClipRect^;
     ItemStruct^.hwndItem := HWND(Self);
@@ -16928,7 +16930,7 @@ begin
         Dispose(PaintData.ClipRect);
         Fillchar(FPaintData, SizeOf(FPaintData), 0);
         FContext := 0;
-        EndPaint(THandle(Self), AStruct);
+        EndPaint(HWND(Self), AStruct);
         Dispose(ItemStruct);
       end;
     except
@@ -17355,7 +17357,7 @@ begin
       if HaveBar and (horizontalScrollBar.getVisibleTo(Widget)) then
         dec(Result.Bottom, horizontalScrollBar.getHeight);
     end;
-    OffsetRect(Result, -Result.Left, -Result.Top);
+    Types.OffsetRect(Result, -Result.Left, -Result.Top);
     {$IF DEFINED(VerboseQtResize) OR DEFINED(VerboseQScrollBarShowHide)}
     DebugLn('TQtAbstractScrollArea.GetClientBounds(not mapped): ',dbgsName(LCLObject),':',dbgsName(Self),' ',dbgs(Result),' ChildComplex=',dbgs(Ord(ChildOfComplexWidget)));
     {$ENDIF}
@@ -17581,7 +17583,7 @@ begin
   if ARect <> nil then
   begin
     P := getClientOffset;
-    OffsetRect(ARect^, -P.X , -P.Y);
+    Types.OffsetRect(ARect^, -P.X , -P.Y);
     QWidget_update(viewportWidget, ARect);
   end else
     QWidget_update(viewportWidget);
@@ -17602,7 +17604,7 @@ begin
   if ARect <> nil then
   begin
     P := getClientOffset;
-    OffsetRect(ARect^, -P.X , -P.Y);
+    Types.OffsetRect(ARect^, -P.X , -P.Y);
     QWidget_repaint(viewportWidget, ARect);
   end else
     QWidget_repaint(viewportWidget);
@@ -18486,13 +18488,13 @@ begin
     if R.Bottom-R.Top > D.Bottom-D.Top then // check height
       R.Bottom := R.Top + D.Bottom-D.Top;
     if R.Left < D.Left then
-      OffsetRect(R, D.Left-R.Left, 0);
+      Types.OffsetRect(R, D.Left-R.Left, 0);
     if R.Top < D.Top then
-      OffsetRect(R, 0, D.Top-R.Top);
+      Types.OffsetRect(R, 0, D.Top-R.Top);
     if (R.Right > D.Right) then
-      OffsetRect(R, D.Right-R.Right, 0);
+      Types.OffsetRect(R, D.Right-R.Right, 0);
     if (R.Bottom > D.Bottom) then
-      OffsetRect(R, 0, D.Bottom-R.Bottom);
+      Types.OffsetRect(R, 0, D.Bottom-R.Bottom);
 
     move(R.Left, R.Top);
   end;
@@ -19720,7 +19722,7 @@ begin
       QPaintEvent_Rect(QPaintEventH(Event), ClipRect);
     end;
 
-    Msg.DC := BeginPaint(THandle(Self), AStruct^);
+    Msg.DC := BeginPaint(HWND(Self), AStruct^);
     FDesignContext := Msg.DC;
 
     Msg.PaintStruct^.rcPaint := PaintData.ClipRect^;
@@ -19740,7 +19742,7 @@ begin
         Dispose(PaintData.ClipRect);
         Fillchar(FPaintData, SizeOf(FPaintData), 0);
         FDesignContext := 0;
-        EndPaint(THandle(Self), AStruct^);
+        EndPaint(HWND(Self), AStruct^);
         Dispose(AStruct);
       end;
     except

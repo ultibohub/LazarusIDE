@@ -121,7 +121,7 @@ begin
             meCopy:      Items[i].Enabled := SelAvail;
             mePaste:     Items[i].Enabled := CanPaste;
             meDelete:    Items[i].Enabled := SelAvail and not ReadOnly;
-            meSelectAll: Items[i].Enabled := Trim(Lines.Text) <> '';
+            meSelectAll: Items[i].Enabled := HasText([shtIncludeVirtual]);
           end;
   end;
   inherited;

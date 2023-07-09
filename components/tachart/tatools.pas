@@ -22,7 +22,7 @@ uses
   // RTL, FCL
   Classes, SysUtils, Types, Math, FPCanvas,
   // LCL
-  Controls, CustomTimer, {GraphMath,} Forms, LCLPlatformDef, InterfaceBase,
+  Controls, CustomTimer, Forms, LCLPlatformDef, InterfaceBase,
   // TAChart
   TAChartUtils, TADrawUtils, TAChartAxis, TALegend, TACustomSeries, TAGraph,
   TATypes, TATextElements;
@@ -2277,7 +2277,6 @@ end;
 
 procedure TDataPointCrosshairTool.MouseDown(APoint: TPoint);
 begin
-  FCurrentDrawer := nil;
   MouseMove(APoint);
 end;
 
@@ -2288,7 +2287,9 @@ var
   lastIndex: Integer;
   xorMode: Boolean;
 begin
+  FCurrentDrawer := nil;
   id := GetCurrentDrawer;
+
   lastSeries := FSeries;
   lastIndex := FPointIndex;
   xorMode := EffectiveDrawingMode = tdmXOR;

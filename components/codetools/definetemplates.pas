@@ -54,7 +54,7 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, contnrs, process, Laz_AVL_Tree,
+  Classes, SysUtils, Contnrs, process, AVL_Tree,
   // CodeTools
   CodeToolsStrConsts, ExprEval, DirectoryCacher, BasicCodeTools,
   CodeToolsStructs, KeywordFuncLists, LinkScanner, FileProcs,
@@ -66,6 +66,7 @@ const
   ExternalMacroStart = ExprEval.ExternalMacroStart;
 
   // Standard Template Names (do not translate them)
+  StdDefTemplGlobal         = 'Global';
   StdDefTemplFPC            = 'Free Pascal Compiler';
   StdDefTemplFPCSrc         = 'Free Pascal sources';
   StdDefTemplLazarusSources = 'Lazarus sources';
@@ -664,6 +665,7 @@ type
     procedure Move(SrcIndex, DestIndex: integer);
     property EnglishErrorMsgFilename: string
         read FEnglishErrorMsgFilename write SetEnglishErrorMsgFilename;
+
     // FPC templates
     function CreateFPCTemplate(const CompilerPath, CompilerOptions,
                                TestPascalFile: string;
@@ -6261,9 +6263,12 @@ begin
 end;
 
 procedure TDefinePool.Delete(Index: integer);
+var
+  Def: TDefineTemplate;
 begin
-  Items[Index].Clear(true);
-  Items[Index].Free;
+  Def:=Items[Index];
+  Def.Clear(true);
+  Def.Free;
   FItems.Delete(Index);
 end;
 

@@ -1313,13 +1313,13 @@ begin
   begin
     DrawText(DC, pChar(Text), Length(Text), fRect, DT_CALCRECT or Options);
     case Style.Alignment of
-      taRightJustify : OffsetRect(fRect, ARect.Right - fRect.Right, 0);
-      taCenter : OffsetRect(fRect, (ARect.Right - fRect.Right) div 2, 0);
+      taRightJustify : Types.OffsetRect(fRect, ARect.Right - fRect.Right, 0);
+      taCenter : Types.OffsetRect(fRect, (ARect.Right - fRect.Right) div 2, 0);
     end;
     case Style.Layout of
-      tlCenter : OffsetRect(fRect, 0,
+      tlCenter : Types.OffsetRect(fRect, 0,
                ((ARect.Bottom - ARect.Top) - (fRect.Bottom - fRect.Top)) div 2);
-      tlBottom : OffsetRect(fRect, 0, ARect.Bottom - fRect.Bottom);
+      tlBottom : Types.OffsetRect(fRect, 0, ARect.Bottom - fRect.Bottom);
     end;
   end;
 
@@ -1583,9 +1583,7 @@ destructor TCanvas.Destroy;
 begin
 //DebugLn('[TCanvas.Destroy] ',ClassName,'  Self=',DbgS(Self));
   Handle := 0;
-  {$IF FPC_FULLVERSION>=20602}
   FreeThenNil(FClipRegion); {issue #24980 looks like TFPCustomCanvas bug}
-  {$ENDIF}
   FreeThenNil(FRegion);
   FreeThenNil(FSavedHandleStates);
   if FLock <> 0 then
