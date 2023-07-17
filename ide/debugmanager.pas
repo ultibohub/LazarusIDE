@@ -285,6 +285,7 @@ type
 
     function DoDeleteBreakPoint(const AFilename: string;
                                 ALine: integer): TModalResult; override;
+    function DoDeleteBreakPoint(ABrkPoint: TIDEBreakPoint): TModalResult;
     function DoDeleteBreakPointAtMark(const ASourceMarkObj: TObject): TModalResult; override;
 
     function ShowBreakPointProperties(const ABreakpoint: TIDEBreakPoint): TModalresult; override;
@@ -3166,7 +3167,12 @@ begin
   if WarnIfNoDebugger and not DoSetBreakkPointWarnIfNoDebugger then
     exit(mrCancel);
 
-  ABrkPoint := FBreakPoints.Add(AFilename, ALine, AnUpdating);
+  LockCommandProcessing;
+  try
+    ABrkPoint := FBreakPoints.Add(AFilename, ALine, AnUpdating);
+  finally
+    UnLockCommandProcessing;
+  end;
   Result := mrOK;
 end;
 
@@ -3178,8 +3184,12 @@ begin
   if WarnIfNoDebugger and not DoSetBreakkPointWarnIfNoDebugger then
     exit(mrCancel);
 
-  ABrkPoint := FBreakPoints.Add(AnAddr, AnUpdating);
-  Result := mrOK;
+  LockCommandProcessing;
+  try
+    ABrkPoint := FBreakPoints.Add(AnAddr, AnUpdating);
+  finally
+    UnLockCommandProcessing;
+  end;  Result := mrOK;
 end;
 
 function TDebugManager.DoDeleteBreakPoint(const AFilename: string;
@@ -3192,6 +3202,19 @@ begin
     OldBreakPoint:=FBreakPoints.Find(AFilename,ALine);
     if OldBreakPoint=nil then exit(mrOk);
     ReleaseRefAndNil(OldBreakPoint);
+    Project1.Modified:=true;
+    Result := mrOK;
+  finally
+    UnLockCommandProcessing;
+  end;
+end;
+
+function TDebugManager.DoDeleteBreakPoint(ABrkPoint: TIDEBreakPoint
+  ): TModalResult;
+begin
+  LockCommandProcessing;
+  try
+    ABrkPoint.ReleaseReference;
     Project1.Modified:=true;
     Result := mrOK;
   finally
@@ -3222,9 +3245,7 @@ begin
     DebugLn('TDebugManager.DoDeleteBreakPointAtMark B ',OldBreakPoint.ClassName,
       ' ',OldBreakPoint.Source,' ',IntToStr(OldBreakPoint.Line));
   {$endif}
-    ReleaseRefAndNil(OldBreakPoint);
-    Project1.Modified:=true;
-    Result := mrOK;
+    Result := DoDeleteBreakPoint(OldBreakPoint);
   finally
     UnLockCommandProcessing;
   end;

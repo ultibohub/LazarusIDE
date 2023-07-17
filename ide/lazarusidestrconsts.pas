@@ -2096,6 +2096,7 @@ resourcestring
   dlgFoldPasWhileDo         = 'While/Do';
   dlgFoldPasWithDo          = 'With/Do';
   dlgFoldPasProcedure       = 'Procedure';
+  dlgFoldPasAnonProcedure   = 'Anonymous Procedure';
   dlgFoldPasUses            = 'Uses';
   dlgFoldPasVarType         = 'Var/Type (global)';
   dlgFoldLocalPasVarType    = 'Var/Type (local)';
@@ -3395,6 +3396,7 @@ resourcestring
   srkmecResetDebugger             = 'reset debugger';
   srkmecToggleBreakPoint          = 'toggle breakpoint';
   srkmecToggleBreakPointEnabled   = 'enable/disable breakpoint';
+  srkmecBreakPointProperties      = 'show breakpoint properties';
   srkmecRemoveBreakPoint          = 'remove breakpoint';
   srkmecAttach                    = 'Attach to program';
   srkmecDetach                    = 'Detach from program';
@@ -6038,9 +6040,6 @@ resourcestring
   lisCFEErrorDestroyingComponentOfTypeOfUnit = 'Error destroying component of '
     +'type %s of unit %s:%s%s';
   lisCFEErrorDestroyingComponent = 'Error destroying component';
-  lisCFEContinueLoading = 'Continue loading';
-  lisCFECancelLoadingThisResource = 'Cancel loading this resource';
-  lisCFEStopAllLoading = 'Stop all loading';
   lisCFEErrorReading = 'Error reading %s';
   lisCFEComponent = '%s%sComponent: %s:%s';
   lisCFEComponentClass = '%s%sComponent Class: %s';
@@ -6150,6 +6149,9 @@ resourcestring
   lisFileFiltersSetDefaults = 'Set defaults';
   lisMenuPkgNewPackageComponent = 'New package component';
   lisSaveChangedFiles = 'Save changed files?';
+
+  lisExcludesForStars =
+    'Excludes for * and ** in unit and include search paths';
 
   lisUIClearIncludedByReference = 'Clear include cache';
   lisChangeParent = 'Change Parent';

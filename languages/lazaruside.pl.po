@@ -1982,6 +1982,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "Var/Type (lokalne)"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "Komentarz (* *)"
@@ -6060,10 +6064,6 @@ msgstr "Błędne wcięcia"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "Wystąpił wyjątek podczas kasowania %s\"%s:%s\"%s%s"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "Zrezygnuj z wczytywania tego zasobu"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -6078,10 +6078,6 @@ msgstr "%s nie istnieje: %s"
 #, object-pascal-format, fuzzy, badformat
 msgid "%s%sComponent Class: %s"
 msgstr "błędna nazwa klasy=\"%s\""
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "Kontynuuj wczytywanie"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6141,10 +6137,6 @@ msgstr "Nieprawidłowy właściciel komponentu"
 #, object-pascal-format, fuzzy, badformat
 msgid "%sRoot=%s:%s"
 msgstr "%s nie istnieje: %s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "Przerwij wczytywanie wszystkiego"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format, fuzzy
@@ -9636,6 +9628,10 @@ msgstr ""
 #, object-pascal-format
 msgid "%s excluded at run time"
 msgstr "%s wykluczony podczas wykonywania"
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
+msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
 #, object-pascal-format, fuzzy
@@ -20880,6 +20876,10 @@ msgstr "Przełącz blok"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Zmniejsz wcięcie bloku"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

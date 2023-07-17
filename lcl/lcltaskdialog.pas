@@ -127,7 +127,7 @@ interface
 
 uses
   {$IFDEF MSWINDOWS}
-  Windows, ctypes,
+  Windows, CommCtrl,
   {$ENDIF}
   Classes, SysUtils,
   LazUTF8,
@@ -172,7 +172,9 @@ type
     tdfExpandFooterArea, tdfExpandByDefault, tdfVerificationFlagChecked,
     tdfShowProgressBar, tdfShowMarqueeProgressBar, tdfCallbackTimer,
     tdfPositionRelativeToWindow, tdfRtlLayout, tdfNoDefaultRadioButton,
-    tdfCanBeMinimized, tdfQuery, tdfQueryMasked, tdfQueryFieldFocused);
+    tdfCanBeMinimized, tdfNoSetForeGround {added in Windows 8}, tdfSizeToContent,
+    //custom LCL flags
+    tdfQuery, tdfQueryMasked, tdfQueryFieldFocused);
 
   /// set of available configuration flags for the Task Dialog
   TTaskDialogFlags = set of TTaskDialogFlag;
@@ -771,9 +773,35 @@ var
     if ModalResult=aButtonDef then
       Dialog.Form.ActiveControl := result;
   end;
+  {$IFDEF MSWINDOwS}
+  function TaskDialogFlagsToInteger(aFlags: TTaskDialogFlags): Integer;
+  const
+    //missing from CommCtrls in fpc < 3.3.1
+    TDF_NO_SET_FOREGROUND = $10000;
+    TDF_SIZE_TO_CONTENT   = $1000000;
+    FlagValues: Array[TTaskDialogFlag] of Integer = (
+      TDF_ENABLE_HYPERLINKS, TDF_USE_HICON_MAIN, TDF_USE_HICON_FOOTER,
+      TDF_ALLOW_DIALOG_CANCELLATION, TDF_USE_COMMAND_LINKS, TDF_USE_COMMAND_LINKS_NO_ICON,
+      TDF_EXPAND_FOOTER_AREA, TDF_EXPANDED_BY_DEFAULT, TDF_VERIFICATION_FLAG_CHECKED,
+      TDF_SHOW_PROGRESS_BAR, TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_CALLBACK_TIMER,
+      TDF_POSITION_RELATIVE_TO_WINDOW, TDF_RTL_LAYOUT, TDF_NO_DEFAULT_RADIO_BUTTON,
+      TDF_CAN_BE_MINIMIZED, TDF_NO_SET_FOREGROUND {added in Windows 8}, TDF_SIZE_TO_CONTENT,
+      //custom LCL flags
+      0 {tdfQuery}, 0 {tdfQueryMasked}, 0 {tdfQueryFieldFocused});
+  var
+    aFlag: TTaskDialogFlag;
+  begin
+    Result := 0;
+    for aFlag := Low(TTaskDialogFlags) to High(TTaskDialogFlags) do
+      if (aFlag in aFlags) then Result := Result or FlagValues[aFlag];
+  end;
+  {$ENDIF MSWINWOS}
 
 var
   ARadioOffset: integer;
+const
+  FirstButtonIndex = 100;
+  FirstRadioButtonIndex = 200;
 begin
   if (byte(aCommonButtons)=0) and (Buttons='') then begin
     aCommonButtons := [cbOk];
@@ -805,8 +833,8 @@ begin
     Config.pszMainInstruction := PWideChar(_WS(Inst));
     Config.pszContent := PWideChar(_WS(Content));
     RUCount := 0;
-    AddRU(Buttons,Config.cButtons,100);
-    AddRU(Radios,Config.cRadioButtons,200);
+    AddRU(Buttons,Config.cButtons,FirstButtonIndex);
+    AddRU(Radios,Config.cRadioButtons,FirstRadioButtonIndex);
     if Config.cButtons>0 then
       Config.pButtons := @But[0];
     if Config.cRadioButtons>0 then
@@ -821,7 +849,7 @@ begin
       include(aFlags,tdfVerificationFlagChecked);
     if (Config.cButtons=0) and (aCommonButtons=[cbOk]) then
       Include(aFlags,tdfAllowDialogCancellation); // just OK -> Esc/Alt+F4 close
-    Config.dwFlags := integer(aFlags);
+    Config.dwFlags := TaskDialogFlagsToInteger(aFlags);
     Config.hMainIcon := TD_ICONS[aDialogIcon];
     Config.hFooterIcon := TD_FOOTERICONS[aFooterIcon];
     Config.nDefaultButton := aButtonDef;
@@ -832,7 +860,7 @@ begin
       works correctly if nDefaultRadioButton does NOT point to a radiobutton in the pRadioButtons array.
     }
     if not (tdfNoDefaultRadioButton in AFlags) then
-      Config.nDefaultRadioButton := aRadioDef+200;
+      Config.nDefaultRadioButton := aRadioDef+FirstRadioButtonIndex;
     Config.cxWidth := MulDiv(aWidth, 4, DialogBaseUnits);  // cxWidth needed in "dialog units"
     Config.pfCallback := @TaskDialogCallbackProc;
     Config.lpCallbackData := @self;
@@ -873,7 +901,7 @@ begin
     end else
       if aWidth<120 then aWidth := 120;
     Dialog.Form.ClientWidth := aWidth;
-    Dialog.Form.Height := 200;
+    Dialog.Form.Height := FirstRadioButtonIndex;
     Dialog.Form.Caption := Title;
     // create a white panel for the main dialog part
     Panel := TPanel.Create(Dialog.Form);
@@ -980,7 +1008,7 @@ begin
               Hint := aHint; // note shown as Hint
             end;
             inc(Y,Height+2);
-            ModalResult := i+100;
+            ModalResult := i+FirstButtonIndex;
             OnClick := Dialog.Form.HandleEmulatedButtonClicked;
             if ModalResult=aButtonDef then
               Dialog.Form.ActiveControl := CommandLink;
@@ -1060,7 +1088,7 @@ begin
         try
           Text := SysUtils.trim(Buttons);
           for i := Count-1 downto 0 do
-            AddButton(Strings[i],i+100);
+            AddButton(Strings[i],i+FirstButtonIndex);
         finally
           Free;
         end;
@@ -1138,7 +1166,7 @@ begin
     RadioRes := 0;
     for i := 0 to high(Rad) do
       if Rad[i].Checked then
-        RadioRes := i+200;
+        RadioRes := i+FirstRadioButtonIndex;
   finally
     FreeAndNil(Dialog.Form);
   end;

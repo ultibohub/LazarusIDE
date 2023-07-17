@@ -1920,6 +1920,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "Var/Type (paikallinen)"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "Kommentti (* *)"
@@ -5929,10 +5933,6 @@ msgstr "Väärä sisennys"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "Keskeytys tapahtui poistettaessa%s\"%s:%s\"%s%s"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "Peruuta tämän resurssin lataaminen"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -5947,10 +5947,6 @@ msgstr "%s%sKomponentti: %s:%s"
 #, object-pascal-format
 msgid "%s%sComponent Class: %s"
 msgstr "%s%sKomponenttiluokka: %s"
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "Jatka lataamista"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6009,10 +6005,6 @@ msgstr "Kelvoton komponentin omistaja"
 #, object-pascal-format
 msgid "%sRoot=%s:%s"
 msgstr "%sJuuri=%s:%s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "Lopeta kaikki lataaminen"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format
@@ -9463,6 +9455,10 @@ msgstr ""
 #, object-pascal-format
 msgid "%s excluded at run time"
 msgstr "%s sivuutetaan ajon akana"
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
+msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
 #, object-pascal-format
@@ -20549,6 +20545,10 @@ msgstr "Vaihda lohko"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Poista lohkon sisennys"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

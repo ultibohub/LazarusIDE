@@ -1947,6 +1947,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "Var/Type (helyi)"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "Megjegyzés (* *)"
@@ -5935,10 +5939,6 @@ msgstr "Hibás behúzás"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "Kivétel keletkezett a következő törlése közben:%s\"%s:%s\"%s%s"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "Ezt az erőforrást ne töltse be"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -5953,10 +5953,6 @@ msgstr "%s%sKomponens: %s:%s"
 #, object-pascal-format
 msgid "%s%sComponent Class: %s"
 msgstr "%s%sKomponens osztály: %s"
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "Betöltés folytatása"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6015,10 +6011,6 @@ msgstr "Érvénytelen komponens tulajdonos"
 #, object-pascal-format
 msgid "%sRoot=%s:%s"
 msgstr "%sRoot=%s:%s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "Minden betöltés megszakítása"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format
@@ -9491,6 +9483,10 @@ msgstr ""
 #, object-pascal-format
 msgid "%s excluded at run time"
 msgstr "%s kihagyva futásidőben"
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
+msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
 #, object-pascal-format
@@ -20671,6 +20667,10 @@ msgstr "Blokk átkapcsolása"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Blokk behúzás csökkentése"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

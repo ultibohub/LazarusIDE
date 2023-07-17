@@ -304,6 +304,7 @@ const
   ecToggleBreakPoint        = ecFirstLazarus + 470;
   ecRemoveBreakPoint        = ecFirstLazarus + 471;
   ecToggleBreakPointEnabled = ecFirstLazarus + 472;
+  ecBreakPointProperties    = ecFirstLazarus + 473;
 
 
   // project menu
@@ -466,6 +467,19 @@ const
   // TSynPluginSyncroEdit - selecting
   ecIdePSyncroEdSelStart              = ecFirstPlugin +  90;
 
+const
+  // Mouse command offsets
+  emcOffsetToggleBreakPoint        = 0;
+  emcOffsetToggleBreakPointEnabled = 1;
+  emcOffsetBreakPointProperties    = 2;
+
+var
+  emcToggleBreakPoint,
+  emcToggleBreakPointEnabled,
+  emcBreakPointProperties : integer;
+
+const
+  emcIdeMouseCommandsCount = 3;
 
 type
   TIDECommand = class;
@@ -861,6 +875,14 @@ function IdentToIDECommand(const Ident: string; var Cmd: longint): boolean;
 function IDECommandToIdent(Cmd: longint; var Ident: string): boolean;
 function IDECommandToIdent(Cmd: longint): string;
 procedure GetIDEEditorCommandValues(Proc: TGetStrProc);
+
+procedure SetIdeMouseCommandOffset(AStartNum: Integer);
+function  GetIdeMouseCommandOffset: Integer;
+function  IdentToIDEMouseCommand(const Ident: string; var Cmd: longint): boolean;
+function  IDEMouseCommandToIdent(Cmd: longint; var Ident: string): boolean;
+procedure GetIdeMouseCommandValues(Proc: TGetStrProc);
+
+property  emcIdeMouseCommandOffset: integer read GetIdeMouseCommandOffset write SetIdeMouseCommandOffset;
 
 implementation
 
@@ -1952,7 +1974,7 @@ begin
 end;
 
 const
-  IDEEditorCommandStrs: array[0..327] of TIdentMapEntry = (         // DRB reduced elements from 323 //Ultibo
+  IDEEditorCommandStrs: array[0..328] of TIdentMapEntry = (         // DRB reduced elements from 323 //Ultibo
   // search
     (Value: ecFind;                                   Name: 'ecFind'),
     (Value: ecFindAgain;                              Name: 'ecFindAgain'),
@@ -2114,6 +2136,7 @@ const
     (Value: ecMoveEditorRight;                        Name: 'ecMoveEditorRight'),
     (Value: ecToggleBreakPoint;                       Name: 'ecToggleBreakPoint'),
     (Value: ecToggleBreakPointEnabled;                Name: 'ecToggleBreakPointEnabled'),
+    (Value: ecBreakPointProperties;                   Name: 'ecBreakPointProperties'),
 
     (Value: ecRemoveBreakPoint;                       Name: 'ecRemoveBreakPoint'),
     (Value: ecMoveEditorLeftmost;                     Name: 'ecMoveEditorLeftmost'),
@@ -2363,6 +2386,47 @@ var
 begin
   for i := Low(IDEEditorCommandStrs) to High(IDEEditorCommandStrs) do
     Proc(IDEEditorCommandStrs[I].Name);
+end;
+
+var
+  TheEmcIdeMouseCommandOffset: Integer;
+  IDEEditorMouseCommandStrs: array[0..emcIdeMouseCommandsCount-1] of TIdentMapEntry = (
+    // Initialize with Value = 0 .. emcIdeMouseCommandsCount
+    (Value: emcOffsetToggleBreakPoint;                   Name: 'emcToggleBreakPoint'),
+    (Value: emcOffsetToggleBreakPointEnabled;            Name: 'emcToggleBreakPointEnabled'),
+    (Value: emcOffsetBreakPointProperties;               Name: 'emcBreakPointProperties')
+  );
+
+procedure SetIdeMouseCommandOffset(AStartNum: Integer);
+begin
+  TheEmcIdeMouseCommandOffset := AStartNum;
+  emcToggleBreakPoint        := AStartNum + emcOffsetToggleBreakPoint;  // update last
+  emcToggleBreakPointEnabled := AStartNum + emcOffsetToggleBreakPointEnabled;
+  emcBreakPointProperties    := AStartNum + emcOffsetBreakPointProperties;
+end;
+
+function GetIdeMouseCommandOffset: Integer;
+begin
+  Result := TheEmcIdeMouseCommandOffset;
+end;
+
+function IdentToIDEMouseCommand(const Ident: string; var Cmd: longint): boolean;
+begin
+  Result := IdentToInt(Ident, Cmd, IDEEditorMouseCommandStrs);
+  Cmd := Cmd + emcIdeMouseCommandOffset;
+end;
+
+function IDEMouseCommandToIdent(Cmd: longint; var Ident: string): boolean;
+begin
+  Result := IntToIdent(Cmd - emcIdeMouseCommandOffset, Ident, IDEEditorMouseCommandStrs);
+end;
+
+procedure GetIdeMouseCommandValues(Proc: TGetStrProc);
+var
+  i: Integer;
+begin
+  for i := Low(IDEEditorMouseCommandStrs) to High(IDEEditorMouseCommandStrs) do
+    Proc(IDEEditorMouseCommandStrs[I].Name);
 end;
 
 end.

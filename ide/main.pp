@@ -3708,6 +3708,9 @@ begin
   ecToggleBreakPointEnabled:
     if Assigned(SourceEditorManager.ActiveSourceWindow) then
       SourceEditorManager.ActiveSourceWindow.ToggleBreakpointEnabledClicked(Self);
+  ecBreakPointProperties:
+    if Assigned(SourceEditorManager.ActiveSourceWindow) then
+      SourceEditorManager.ActiveSourceWindow.ShowBreakpointPropsClicked(Self);
   ecRemoveBreakPoint:
     if Assigned(SourceEditorManager.ActiveSourceWindow) then
       SourceEditorManager.ActiveSourceWindow.DeleteBreakpointClicked(Self);
@@ -8637,6 +8640,9 @@ begin
 end;
 
 function TMainIDE.PrepareForCompile: TModalResult;
+var
+  AnUnitInfo: TUnitInfo;
+  i: Integer;
 begin
   Result:=mrOk;
   if ToolStatus=itDebugger then begin
@@ -8654,6 +8660,15 @@ begin
 
   if MainBuildBoss.CompilerOnDiskChanged then
     MainBuildBoss.RescanCompilerDefines(false,false,false,false);
+
+  // Let a user fix any invalid LFM files before compiling
+  for i:=0 to Project1.AllEditorsInfoCount-1 do begin
+    AnUnitInfo:=Project1.AllEditorsInfo[i].UnitInfo;
+    if AnUnitInfo.HasErrorInLFM then begin
+      Result:=LoadLFM(AnUnitInfo, [ofOnlyIfExists], []);
+      if Result<>mrOk then exit;
+    end;
+  end;
 
   if (IDEMessagesWindow<>nil) and (ExternalToolsRef.RunningCount=0) then
     IDEMessagesWindow.Clear;

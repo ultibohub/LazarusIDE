@@ -1997,6 +1997,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr ""
@@ -6129,10 +6133,6 @@ msgstr ""
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr ""
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr ""
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -6146,10 +6146,6 @@ msgstr ""
 #: lazarusidestrconsts.liscfecomponentclass
 #, object-pascal-format
 msgid "%s%sComponent Class: %s"
-msgstr ""
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
 msgstr ""
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
@@ -6208,10 +6204,6 @@ msgstr ""
 #: lazarusidestrconsts.liscferoot
 #, object-pascal-format
 msgid "%sRoot=%s:%s"
-msgstr ""
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
 msgstr ""
 
 #: lazarusidestrconsts.liscfestream
@@ -9734,6 +9726,10 @@ msgstr ""
 #: lazarusidestrconsts.lisexcludedatruntime
 #, object-pascal-format
 msgid "%s excluded at run time"
+msgstr ""
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
 msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
@@ -21268,6 +21264,10 @@ msgstr ""
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Unindent Blok"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

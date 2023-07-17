@@ -1995,6 +1995,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "Var/Type (vietinis)"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "Komentaras (* *)"
@@ -6050,10 +6054,6 @@ msgstr "Bloga įtrauka"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "Įvyko išimtinė situacija trinant%s„%s:%s“%s%s"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "Nutraukti šio ištekliaus įkėlimą"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -6068,10 +6068,6 @@ msgstr "%s%sKomponentė: %s:%s"
 #, object-pascal-format
 msgid "%s%sComponent Class: %s"
 msgstr "%s%sKomponentės klasė: %s"
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "Tęsti įkėlimą"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6130,10 +6126,6 @@ msgstr "Klaidingas komponentės šeimininkas"
 #, object-pascal-format
 msgid "%sRoot=%s:%s"
 msgstr "%sŠaknis = %s:%s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "Nutraukti visus įkėlimus"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format
@@ -9614,6 +9606,10 @@ msgstr ""
 #, object-pascal-format
 msgid "%s excluded at run time"
 msgstr "„%s“ išbrauktas vykdymo metu"
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
+msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
 #, object-pascal-format
@@ -20947,6 +20943,10 @@ msgstr "Įjungti ar išjungti bloką"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Naikinti bloko įtrauką"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

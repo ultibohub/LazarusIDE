@@ -512,10 +512,12 @@ type
 const
 
   (* When adding new entries, ensure that resourcestrings are re-assigned in InitLocale *)
-  EditorOptionsFoldInfoPas: Array [0..26] of TEditorOptionsFoldInfo
+  EditorOptionsFoldInfoPas: Array [0..27] of TEditorOptionsFoldInfo
   = (
       (Name:  dlgFoldPasProcedure;     Xml:     'Procedure';
        Index: ord(cfbtProcedure);    Enabled: True),
+      (Name:  dlgFoldPasAnonProcedure; Xml:     'AnonymousProcedure';
+       Index: ord(cfbtAnonynmousProcedure);    Enabled: True),
       (Name:  dlgFoldLocalPasVarType;  Xml:     'LocalVarType';
        Index: ord(cfbtLocalVarType); Enabled: True),
       (Name:  dlgFoldPasProcBeginEnd;  Xml:     'ProcBeginEnd';
@@ -666,8 +668,8 @@ const
   EditorOptionsFoldDefaults: array[TLazSyntaxHighlighter] of TEditorOptionsFoldRecord =
     ( (Count:  0; HasMarkup: False; Info: nil), // none
       (Count:  0; HasMarkup: False; Info: nil), // text
-      (Count: 27; HasMarkup: True; Info: @EditorOptionsFoldInfoPas[0]), // Freepas
-      (Count: 27; HasMarkup: True; Info: @EditorOptionsFoldInfoPas[0]), // pas
+      (Count: 28; HasMarkup: True; Info: @EditorOptionsFoldInfoPas[0]), // Freepas
+      (Count: 28; HasMarkup: True; Info: @EditorOptionsFoldInfoPas[0]), // pas
       (Count:  3; HasMarkup: True; Info: @EditorOptionsFoldInfoLFM[0]), // lfm
       (Count:  5; HasMarkup: True; Info: @EditorOptionsFoldInfoXML[0]), // xml
       (Count:  3; HasMarkup: True; Info: @EditorOptionsFoldInfoHTML[0]), // html
@@ -982,6 +984,7 @@ type
     procedure Assign(Src: TEditorMouseOptions); reintroduce;
     function  IsPresetEqualToMouseActions: Boolean;
     function  CalcCustomSavedActions: Boolean;
+    Procedure LoadFromXmlMouseAct(aXMLConfig: TRttiXMLConfig; Path: String; MActions: TSynEditMouseActions; AShowError: Boolean = False);
     procedure LoadFromXml(aXMLConfig: TRttiXMLConfig; aPath: String; aOldPath: String; FileVersion: Integer);
     procedure SaveToXml(aXMLConfig: TRttiXMLConfig; aPath: String);
     procedure ImportFromXml(aXMLConfig: TRttiXMLConfig; aPath: String);
@@ -2623,28 +2626,29 @@ begin
 
   // update translation
   EditorOptionsFoldInfoPas[ 0].Name := dlgFoldPasProcedure;
-  EditorOptionsFoldInfoPas[ 1].Name := dlgFoldLocalPasVarType;
-  EditorOptionsFoldInfoPas[ 2].Name := dlgFoldPasProcBeginEnd;
-  EditorOptionsFoldInfoPas[ 3].Name := dlgFoldPasBeginEnd;
-  EditorOptionsFoldInfoPas[ 4].Name := dlgFoldPasRepeat;
-  EditorOptionsFoldInfoPas[ 5].Name := dlgFoldPasCase;
-  EditorOptionsFoldInfoPas[ 6].Name := dlgFoldPasTry;
-  EditorOptionsFoldInfoPas[ 7].Name := dlgFoldPasExcept;
-  EditorOptionsFoldInfoPas[ 8].Name := dlgFoldPasAsm;
-  EditorOptionsFoldInfoPas[ 9].Name := dlgFoldPasProgram;
-  EditorOptionsFoldInfoPas[10].Name := dlgFoldPasUnit;
-  EditorOptionsFoldInfoPas[11].Name := dlgFoldPasUnitSection;
-  EditorOptionsFoldInfoPas[12].Name := dlgFoldPasUses;
-  EditorOptionsFoldInfoPas[13].Name := dlgFoldPasVarType;
-  EditorOptionsFoldInfoPas[14].Name := dlgFoldPasClass;
-  EditorOptionsFoldInfoPas[15].Name := dlgFoldPasClassSection;
-  EditorOptionsFoldInfoPas[16].Name := dlgFoldPasRecord;
-  EditorOptionsFoldInfoPas[17].Name := dlgFoldPasIfDef;
-  EditorOptionsFoldInfoPas[18].Name := dlgFoldPasUserRegion;
-  EditorOptionsFoldInfoPas[19].Name := dlgFoldPasAnsiComment;
-  EditorOptionsFoldInfoPas[20].Name := dlgFoldPasBorComment;
-  EditorOptionsFoldInfoPas[21].Name := dlgFoldPasSlashComment;
-  EditorOptionsFoldInfoPas[22].Name := dlgFoldPasNestedComment;
+  EditorOptionsFoldInfoPas[ 1].Name := dlgFoldPasAnonProcedure;
+  EditorOptionsFoldInfoPas[ 2].Name := dlgFoldLocalPasVarType;
+  EditorOptionsFoldInfoPas[ 3].Name := dlgFoldPasProcBeginEnd;
+  EditorOptionsFoldInfoPas[ 4].Name := dlgFoldPasBeginEnd;
+  EditorOptionsFoldInfoPas[ 5].Name := dlgFoldPasRepeat;
+  EditorOptionsFoldInfoPas[ 6].Name := dlgFoldPasCase;
+  EditorOptionsFoldInfoPas[ 7].Name := dlgFoldPasTry;
+  EditorOptionsFoldInfoPas[ 8].Name := dlgFoldPasExcept;
+  EditorOptionsFoldInfoPas[ 9].Name := dlgFoldPasAsm;
+  EditorOptionsFoldInfoPas[10].Name := dlgFoldPasProgram;
+  EditorOptionsFoldInfoPas[11].Name := dlgFoldPasUnit;
+  EditorOptionsFoldInfoPas[12].Name := dlgFoldPasUnitSection;
+  EditorOptionsFoldInfoPas[13].Name := dlgFoldPasUses;
+  EditorOptionsFoldInfoPas[14].Name := dlgFoldPasVarType;
+  EditorOptionsFoldInfoPas[15].Name := dlgFoldPasClass;
+  EditorOptionsFoldInfoPas[16].Name := dlgFoldPasClassSection;
+  EditorOptionsFoldInfoPas[17].Name := dlgFoldPasRecord;
+  EditorOptionsFoldInfoPas[18].Name := dlgFoldPasIfDef;
+  EditorOptionsFoldInfoPas[19].Name := dlgFoldPasUserRegion;
+  EditorOptionsFoldInfoPas[20].Name := dlgFoldPasAnsiComment;
+  EditorOptionsFoldInfoPas[21].Name := dlgFoldPasBorComment;
+  EditorOptionsFoldInfoPas[22].Name := dlgFoldPasSlashComment;
+  EditorOptionsFoldInfoPas[23].Name := dlgFoldPasNestedComment;
 
   EditorOptionsFoldInfoHTML[0].Name := dlgFoldHtmlNode;
   EditorOptionsFoldInfoHTML[1].Name := dlgFoldHtmlComment;
@@ -3698,7 +3702,9 @@ begin
   end;
 
   with FGutterActions do begin
-    AddCommand(emcOnMainGutterClick,   False, mbXLeft,   ccAny,    CDir, R, [], []);  // breakpoint
+    AddCommand(emcToggleBreakPoint,          False, mbXLeft,   ccSingle,    CDir, R, [],                      [ssAlt, SYNEDIT_LINK_MODIFIER]);
+    AddCommand(emcToggleBreakPointEnabled,   False, mbXLeft,   ccSingle,    CDir, R, [SYNEDIT_LINK_MODIFIER], [ssAlt, SYNEDIT_LINK_MODIFIER]);
+    AddCommand(emcBreakPointProperties,      False, mbXLeft,   ccSingle,    CDir, R, [ssAlt], [ssAlt]);
   end;
 
 
@@ -4234,42 +4240,50 @@ begin
   FCustomSavedActions := Result;
 end;
 
+procedure TEditorMouseOptions.LoadFromXmlMouseAct(aXMLConfig: TRttiXMLConfig;
+  Path: String; MActions: TSynEditMouseActions; AShowError: Boolean);
+var
+  i, c: Integer;
+  MAct: TSynEditMouseActionKeyCmdHelper;
+begin
+  MActions.Clear;
+  MAct := TSynEditMouseActionKeyCmdHelper.Create(nil);
+  c := aXMLConfig.GetValue(Path + 'Count', 0);
+  for i := 0 to c - 1 do begin
+    try
+      MActions.IncAssertLock;
+      try
+        Mact.Clear;
+        aXMLConfig.ReadObject(Path + 'M' + IntToStr(i) + '/', MAct);
+        if MAct.Command = emcOnMainGutterClick then begin
+          MAct.ShiftMask := MAct.ShiftMask + [SYNEDIT_LINK_MODIFIER];
+          MAct.Shift     := MAct.Shift + [SYNEDIT_LINK_MODIFIER];
+          MAct.Command := emcToggleBreakPointEnabled;
+          MActions.Add.Assign(MAct);
+
+          MAct.Shift     := MAct.Shift - [SYNEDIT_LINK_MODIFIER];
+          MAct.Command := emcToggleBreakPoint;
+        end;
+
+        MActions.Add.Assign(MAct);
+      finally
+        MActions.DecAssertLock;
+      end;
+      MActions.AssertNoConflict(MAct);
+    except
+      MActions.Delete(MActions.Count-1);
+      if AShowError then
+        IDEMessageDialog(dlgMouseOptErrorDup, dlgMouseOptErrorDupText + LineEnding
+                 + Path + 'M' + IntToStr(i) + LineEnding + MAct.DisplayName,
+                 mtError, [mbOk]);
+    end;
+  end;
+  Mact.Free;
+
+end;
+
 procedure TEditorMouseOptions.LoadFromXml(aXMLConfig: TRttiXMLConfig; aPath: String;
   aOldPath: String; FileVersion: Integer);
-
-  Procedure LoadMouseAct(Path: String; MActions: TSynEditMouseActions);
-  var
-    c, i: Integer;
-    MAct: TSynEditMouseActionKeyCmdHelper;
-    //ErrShown: Boolean;
-  begin
-    //ErrShown := False;
-    MActions.Clear;
-    MAct := TSynEditMouseActionKeyCmdHelper.Create(nil);
-
-    c := aXMLConfig.GetValue(Path + 'Count', 0);
-    for i := 0 to c - 1 do begin
-      try
-        MActions.IncAssertLock;
-        try
-          // If the object would ever be extended, old configs will not have all properties.
-          Mact.Clear;
-          aXMLConfig.ReadObject(Path + 'M' + IntToStr(i) + '/', MAct);
-          MActions.Add.Assign(MAct);
-        finally
-          MActions.DecAssertLock;
-        end;
-        MActions.AssertNoConflict(MAct);
-      except
-        MActions.Delete(MActions.Count-1);
-        //if not ErrShown then
-        //  IDEMessageDialog(dlgMouseOptErrorDup, dlgMouseOptErrorDupText, mtError, [mbOk]);
-        //ErrShown := True;
-      end;
-    end;
-    MAct.Free;
-  end;
-
 var
   AltColumnMode: Boolean;
   TextDoubleSelLine: Boolean;
@@ -4321,17 +4335,17 @@ begin
 
   if CustomSavedActions then begin
     // Load
-    LoadMouseAct(aPath + 'Main/',          MainActions);
-    LoadMouseAct(aPath + 'MainText/',      TextActions);
-    LoadMouseAct(aPath + 'MainSelection/', SelActions);
-    LoadMouseAct(aPath + 'Gutter/',        GutterActions);
-    LoadMouseAct(aPath + 'GutterFold/',    GutterActionsFold);
-    LoadMouseAct(aPath + 'GutterFoldExp/', GutterActionsFoldExp);
-    LoadMouseAct(aPath + 'GutterFoldCol/', GutterActionsFoldCol);
-    LoadMouseAct(aPath + 'GutterLineNum/', GutterActionsLines);
-    LoadMouseAct(aPath + 'GutterLineChange/', GutterActionsChanges);
-    LoadMouseAct(aPath + 'GutterOverView/',   GutterActionsOverView);
-    LoadMouseAct(aPath + 'GutterOverViewMarks/',   GutterActionsOverViewMarks);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'Main/',          MainActions);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'MainText/',      TextActions);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'MainSelection/', SelActions);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'Gutter/',        GutterActions);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterFold/',    GutterActionsFold);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterFoldExp/', GutterActionsFoldExp);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterFoldCol/', GutterActionsFoldCol);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterLineNum/', GutterActionsLines);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterLineChange/', GutterActionsChanges);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverView/',   GutterActionsOverView);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverViewMarks/',   GutterActionsOverViewMarks);
 
     if Version < 1 then begin
       try
@@ -4408,48 +4422,18 @@ begin
 end;
 
 procedure TEditorMouseOptions.ImportFromXml(aXMLConfig: TRttiXMLConfig; aPath: String);
-
-  Procedure LoadMouseAct(Path: String; MActions: TSynEditMouseActions);
-  var
-    i, c: Integer;
-    MAct: TSynEditMouseActionKeyCmdHelper;
-  begin
-    MActions.Clear;
-    MAct := TSynEditMouseActionKeyCmdHelper.Create(nil);
-    c := aXMLConfig.GetValue(Path + 'Count', 0);
-    for i := 0 to c - 1 do begin
-      try
-        MActions.IncAssertLock;
-        try
-          Mact.Clear;
-          aXMLConfig.ReadObject(Path + 'M' + IntToStr(i) + '/', MAct);
-          MActions.Add.Assign(MAct);
-        finally
-          MActions.DecAssertLock;
-        end;
-        MActions.AssertNoConflict(MAct);
-      except
-        MActions.Delete(MActions.Count-1);
-        IDEMessageDialog(dlgMouseOptErrorDup, dlgMouseOptErrorDupText + LineEnding
-                   + Path + 'M' + IntToStr(i) + LineEnding + MAct.DisplayName,
-                   mtError, [mbOk]);
-      end;
-    end;
-    Mact.Free;
-  end;
-
 begin
-  LoadMouseAct(aPath + 'Main/',          MainActions);
-  LoadMouseAct(aPath + 'MainText/',      TextActions);
-  LoadMouseAct(aPath + 'MainSel/',       SelActions);
-  LoadMouseAct(aPath + 'Gutter/',        GutterActions);
-  LoadMouseAct(aPath + 'GutterFold/',    GutterActionsFold);
-  LoadMouseAct(aPath + 'GutterFoldExp/', GutterActionsFoldExp);
-  LoadMouseAct(aPath + 'GutterFoldCol/', GutterActionsFoldCol);
-  LoadMouseAct(aPath + 'GutterLineNum/', GutterActionsLines);
-  LoadMouseAct(aPath + 'GutterLineChange/', GutterActionsChanges);
-  LoadMouseAct(aPath + 'GutterOverView/',   GutterActionsOverView);
-  LoadMouseAct(aPath + 'GutterOverViewMarks/',GutterActionsOverViewMarks);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'Main/',          MainActions,                     True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'MainText/',      TextActions,                     True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'MainSel/',       SelActions,                      True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'Gutter/',        GutterActions,                   True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterFold/',    GutterActionsFold,               True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterFoldExp/', GutterActionsFoldExp,            True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterFoldCol/', GutterActionsFoldCol,            True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterLineNum/', GutterActionsLines,              True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterLineChange/', GutterActionsChanges,         True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverView/',   GutterActionsOverView,        True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverViewMarks/',GutterActionsOverViewMarks, True);
 end;
 
 procedure TEditorMouseOptions.ExportToXml(aXMLConfig: TRttiXMLConfig; aPath: String);

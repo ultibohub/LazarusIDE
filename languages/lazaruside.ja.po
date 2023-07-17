@@ -1993,6 +1993,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "Var/Type (ローカル)"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "コメント　(* *)"
@@ -6045,10 +6049,6 @@ msgstr "間違ったインデント"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "削除中に例外が発生しました %s\"%s:%s\"%s%s"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "このソースの読み込みを中止"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -6063,10 +6063,6 @@ msgstr "%s%sコンポーネント: %s:%s"
 #, object-pascal-format
 msgid "%s%sComponent Class: %s"
 msgstr "%s%sコンポーネントクラス: %s"
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "読み込みを続ける"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6125,10 +6121,6 @@ msgstr "無効なコンポーネントのオーナー"
 #, object-pascal-format
 msgid "%sRoot=%s:%s"
 msgstr "%sRoot=%s:%s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "すべての読み込みを中止"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format
@@ -9610,6 +9602,10 @@ msgstr ""
 #, object-pascal-format
 msgid "%s excluded at run time"
 msgstr "%s 実行時に除外"
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
+msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
 #, object-pascal-format
@@ -20909,6 +20905,10 @@ msgstr "ブロックをトグル"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "ブロックのインデントを戻す"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

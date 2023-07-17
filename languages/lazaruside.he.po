@@ -2050,6 +2050,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "משתנה/סוג (מקומי)"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "הערה  (* *)"
@@ -6265,10 +6269,6 @@ msgstr "הזחה שגויה"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "קרתה חריגה בזמן הסרת %s\"%s:%s\"%s%s"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "בטל טעינת משאב זה"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format, fuzzy, badformat
 msgid "%s%sClass \"%s\" not found."
@@ -6283,10 +6283,6 @@ msgstr "רכיב: %s:%s"
 #, object-pascal-format, fuzzy, badformat
 msgid "%s%sComponent Class: %s"
 msgstr "מחלקת רכיבים: %s"
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "ממשיך בטעינה"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6346,10 +6342,6 @@ msgstr "הבעלים של הרכיב אינו חוקי"
 #, object-pascal-format, fuzzy, badformat
 msgid "%sRoot=%s:%s"
 msgstr "רוט= %s:%s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "עצור את כל הטעינות"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format, fuzzy, badformat
@@ -9924,6 +9916,10 @@ msgstr ""
 #: lazarusidestrconsts.lisexcludedatruntime
 #, object-pascal-format
 msgid "%s excluded at run time"
+msgstr ""
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
 msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
@@ -21738,6 +21734,10 @@ msgstr "החלף בלוק"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "בטל זיהוי בלוק"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"

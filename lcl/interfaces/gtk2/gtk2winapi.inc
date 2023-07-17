@@ -1294,46 +1294,28 @@ end;
 
 {
   Gtk2 has no function to build an elliptical region so we approximate it to a
-  polygon. Our Ellipse is axis-aligned, so it's parametrization is:
-
-  X(t) = Xc + a * cos(t)
-  Y(t) = Yc + b * sin(t)
-
-  (Xc,Yc) is the center of the ellipse
+  polygon.
 }
 function TGtk2WidgetSet.CreateEllipticRgn(X1, Y1, X2, Y2: Integer): HRGN;
 var
-  points: array of TGdkPoint;
-  n_points: Integer;
-  i, Xc, Yc, a, b: Integer;
-  t: Double;
+  Points: TPointArray;
+  gPoints: array of TGdkPoint;
+  i: Integer;
   GObject: PGdiObject;
   RegionObj: PGdkRegion;
 begin
-  a := (X2 - X1) div 2;
-  b := (Y2 - Y1) div 2;
-  Xc := X1 + a;
-  Yc := Y1 + b;
-
-  // Choose a large enough amount of points
-  n_points := Max(X2-X1,Y2-Y1) * 4;
-  SetLength(points{%H-}, n_points);
-  // And fill them iterating through the ellipse
-  for i := 0 to n_points - 1 do
-  begin
-    t := (i / n_points) * 2 * Pi;
-    points[i].X := Round(Xc + a * cos(t));
-    points[i].Y := Round(Yc + b * sin(t));
+  Points:=EllipsePolygon(Rect(X1,Y1,X2,Y2));
+  SetLength(gPoints,length(Points));
+  for i:=0 to length(Points)-1 do begin
+    gPoints[i].x:=Points[i].x;
+    gPoints[i].y:=Points[i].y;
   end;
 
   GObject := NewGDIObject(gdiRegion);
-  RegionObj := gdk2.gdk_region_polygon(@points[0], n_points, GDK_WINDING_RULE);
+  RegionObj := gdk2.gdk_region_polygon(@gPoints[0], length(gPoints), GDK_WINDING_RULE);
   GObject^.GDIRegionObject := RegionObj;
 
   Result := HRGN({%H-}PtrUInt(GObject));
-
-  // Free the allocated array
-  SetLength(points, 0);
   //DebugLn('TGtk2WidgetSet.CreateRectRgn A ',GDKRegionAsString(RegionObj));
 end;
 

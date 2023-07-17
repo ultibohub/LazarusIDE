@@ -1957,6 +1957,10 @@ msgctxt "lazarusidestrconsts.dlgfoldlocalpasvartype"
 msgid "Var/Type (local)"
 msgstr "值/类型(局部)(Var/Type (local))"
 
+#: lazarusidestrconsts.dlgfoldpasanonprocedure
+msgid "Anonymous Procedure"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasansicomment
 msgid "Comment (* *)"
 msgstr "注释(**)"
@@ -5955,10 +5959,6 @@ msgstr "错误缩进"
 msgid "An exception occurred during deletion of%s\"%s:%s\"%s%s"
 msgstr "一个异常发生 在%s\"%s:%s\"%s%s删除的期间"
 
-#: lazarusidestrconsts.liscfecancelloadingthisresource
-msgid "Cancel loading this resource"
-msgstr "取消加载这个资源"
-
 #: lazarusidestrconsts.liscfeclassnotfound
 #, object-pascal-format
 msgid "%s%sClass \"%s\" not found."
@@ -5973,10 +5973,6 @@ msgstr "%s%s组件:%s:%s"
 #, object-pascal-format
 msgid "%s%sComponent Class: %s"
 msgstr "%s%s组件类:%s"
-
-#: lazarusidestrconsts.liscfecontinueloading
-msgid "Continue loading"
-msgstr "继续加载"
 
 #: lazarusidestrconsts.liscfedonotknowhowtocopythisformeditingselection
 msgid "Do not know how to copy this form editing selection"
@@ -6035,10 +6031,6 @@ msgstr "无效的组件拥有者"
 #, object-pascal-format
 msgid "%sRoot=%s:%s"
 msgstr "%sRoot(根)=%s:%s"
-
-#: lazarusidestrconsts.liscfestopallloading
-msgid "Stop all loading"
-msgstr "停止所有加载"
 
 #: lazarusidestrconsts.liscfestream
 #, object-pascal-format
@@ -9509,6 +9501,10 @@ msgstr ""
 #, object-pascal-format
 msgid "%s excluded at run time"
 msgstr "在运行时%s被排除"
+
+#: lazarusidestrconsts.lisexcludesforstars
+msgid "Excludes for * and ** in unit and include search paths"
+msgstr ""
 
 #: lazarusidestrconsts.lisexecutableisadirectory
 #, object-pascal-format
@@ -20707,6 +20703,10 @@ msgstr "切换语句块"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "不缩进语句块"
+
+#: lazarusidestrconsts.srkmecbreakpointproperties
+msgid "show breakpoint properties"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbuild
 msgid "build program/project"
