@@ -5,14 +5,11 @@ unit FppkgHelper;
 interface
 
 uses
-  Classes,
-  SysUtils,
-  pkgFppkg,
-  fpmkunit,
-  fprepos,
-  LazarusIDEStrConsts,
+  Classes, SysUtils, pkgFppkg, fpmkunit, fprepos,
   // LazUtils
-  LazLogger, LazFileCache, FileUtil, LazFileUtils;
+  LazLogger, LazFileCache, FileUtil, LazFileUtils,
+  // IDE
+  LazarusIDEStrConsts;
 
 type
 
@@ -89,12 +86,13 @@ end;
 
 constructor TFppkgHelper.Create;
 begin
+  inherited Create;
   InitializeFppkg;
 end;
 
 destructor TFppkgHelper.Destroy;
 begin
-  FFPpkg.Free;
+  FreeAndNil(FFPpkg);
   inherited Destroy;
 end;
 
@@ -480,4 +478,5 @@ end;
 
 finalization
   GFppkgHelper.Free;
+  GFppkgHelper:=nil;
 end.

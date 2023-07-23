@@ -603,7 +603,7 @@ end;
 
 function getNSStringObject( const aString: id ) : NSString;
 begin
-  if aString.isKindOfClass( NSAttributedString.classClass ) then
+  if aString.isKindOfClass( NSAttributedString ) then
     Result:= NSAttributedString( aString ).string_
   else
     Result:= NSString( aString );
@@ -651,7 +651,7 @@ var
   textView: NSView;
   isFirst: Boolean;
 begin
-  if (not _inIME) and (theEvent.keyCode in [kVK_Return,kVK_Escape]) then
+  if (not _inIME) and (theEvent.keyCode in [kVK_Return, kVK_ANSI_KeypadEnter, kVK_Escape]) then
   begin
     inherited;
     exit;

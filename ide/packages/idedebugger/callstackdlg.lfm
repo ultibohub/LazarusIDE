@@ -8,7 +8,7 @@ object CallStackDlg: TCallStackDlg
   ClientHeight = 246
   ClientWidth = 562
   OnCreate = FormCreate
-  LCLVersion = '1.9.0.0'
+  LCLVersion = '3.99.0.0'
   Visible = True
   object lvCallStack: TListView
     Left = 0
@@ -23,7 +23,7 @@ object CallStackDlg: TCallStackDlg
       item
         AutoSize = True
         Caption = 'Index'
-        Width = 100
+        Width = 44
       end    
       item
         Caption = 'Source'
@@ -193,6 +193,12 @@ object CallStackDlg: TCallStackDlg
       Action = actSetCurrent
       OnClick = actSetAsCurrentClick
     end
+    object Separator1: TMenuItem
+      Caption = '-'
+    end
+    object popCopyLine: TMenuItem
+      Action = actCopyLine
+    end
     object popCopyAll: TMenuItem
       Action = actCopyAll
       OnClick = actCopyAllClick
@@ -208,14 +214,6 @@ object CallStackDlg: TCallStackDlg
         'enter'
       )
       ShortCut = 16470
-    end
-    object actSetCurrent: TAction
-      Caption = 'Current'
-      OnExecute = actSetAsCurrentClick
-    end
-    object actCopyAll: TAction
-      Caption = 'Copy All'
-      OnExecute = actCopyAllClick
     end
     object actViewMore: TAction
       Category = 'View'
@@ -241,6 +239,19 @@ object CallStackDlg: TCallStackDlg
       Category = 'View'
       Caption = 'Bottom'
       OnExecute = actViewBottomExecute
+    end
+    object actSetCurrent: TAction
+      Caption = 'Current'
+      OnExecute = actSetAsCurrentClick
+    end
+    object actCopyLine: TAction
+      Caption = 'Copy line'
+      OnExecute = actCopyLineClick
+      ShortCut = 16451
+    end
+    object actCopyAll: TAction
+      Caption = 'Copy All'
+      OnExecute = actCopyAllClick
     end
     object actToggleBreakPoint: TAction
       Caption = 'Toggle Breakpoint'

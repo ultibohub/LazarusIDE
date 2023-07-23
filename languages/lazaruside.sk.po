@@ -608,6 +608,10 @@ msgstr ""
 msgid "Level  9"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrrecentlyused
+msgid "Recently used item"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrsyncroeditarea
 msgid "Selected Area"
 msgstr ""
@@ -7259,22 +7263,11 @@ msgstr "Nikdy"
 msgid "Extend right only"
 msgstr ""
 
-#: lazarusidestrconsts.liscomponentnameisapascalkeyword
-#, object-pascal-format
-msgid "Component name \"%s\" is a Pascal keyword."
-msgstr ""
-
 #: lazarusidestrconsts.liscomponentnameiskeyword
 #, object-pascal-format, fuzzy, badformat
 #| msgid "Component name %s%s%s is keyword"
 msgid "Component name \"%s\" is keyword"
 msgstr "Meno komponentu %s%s%s je kľúčové slovo"
-
-#: lazarusidestrconsts.liscomponentnameisnotavalididentifier
-#, object-pascal-format, fuzzy, badformat
-#| msgid "Component name %s%s%s is not a valid identifier"
-msgid "Component name \"%s\" is not a valid identifier"
-msgstr "Názov komponentu %s%s%s nie je platný identifikátor"
 
 #: lazarusidestrconsts.liscomppalcomponentlist
 msgid "View All"
@@ -17947,6 +17940,10 @@ msgstr "Vhovujúce"
 #: lazarusidestrconsts.lissorrythistypeisnotyetimplemented
 msgid "Sorry, this type is not yet implemented"
 msgstr "Prepáčte, tento typ zatiaľ nie je implementovaný"
+
+#: lazarusidestrconsts.lissorthistorylimit
+msgid "History items limit"
+msgstr ""
 
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"

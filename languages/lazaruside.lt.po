@@ -610,6 +610,10 @@ msgstr ""
 msgid "Level  9"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrrecentlyused
+msgid "Recently used item"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrsyncroeditarea
 msgid "Selected Area"
 msgstr "Pažymėta sritis"
@@ -7331,20 +7335,10 @@ msgstr "Niekada"
 msgid "Extend right only"
 msgstr "Išplėsti tik dešinėn"
 
-#: lazarusidestrconsts.liscomponentnameisapascalkeyword
-#, object-pascal-format
-msgid "Component name \"%s\" is a Pascal keyword."
-msgstr "Komponentės pavadinimas „%s“ sutampa su Paskalio raktažodžiu."
-
 #: lazarusidestrconsts.liscomponentnameiskeyword
 #, object-pascal-format
 msgid "Component name \"%s\" is keyword"
 msgstr "Komponentės pavadinimas „%s“ kaip ir bazinio žodžio"
-
-#: lazarusidestrconsts.liscomponentnameisnotavalididentifier
-#, object-pascal-format
-msgid "Component name \"%s\" is not a valid identifier"
-msgstr "Komponento pavadinimas „%s“ nėra tinkamas identifikatorius"
 
 #: lazarusidestrconsts.liscomppalcomponentlist
 msgid "View All"
@@ -18046,6 +18040,10 @@ msgstr "Atitikmenys"
 #: lazarusidestrconsts.lissorrythistypeisnotyetimplemented
 msgid "Sorry, this type is not yet implemented"
 msgstr "Deja, šis tipas dar neįgyvendintas"
+
+#: lazarusidestrconsts.lissorthistorylimit
+msgid "History items limit"
+msgstr ""
 
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"

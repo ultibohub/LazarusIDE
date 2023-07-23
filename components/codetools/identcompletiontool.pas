@@ -105,7 +105,8 @@ type
     iliIsLibrary,
     iliAtCursor, // the item is the identifier at the completion
     iliNeedsAmpersand, //the item has to be prefixed with '&'
-    iliHasLowerVisibility
+    iliHasLowerVisibility,
+    iliIsRecentItem // the item was sorted to the front as it was recently used
     );
   TIdentListItemFlags = set of TIdentListItemFlag;
   
@@ -226,6 +227,11 @@ type
 
   TIdentComplSortMethod = (icsScopedAlphabetic, icsAlphabetic, icsScopedDeclaration);
 
+const
+  IdentComplSortMethodUsingCompatibility = [icsScopedAlphabetic, icsScopedDeclaration];
+
+type
+
   TOnGatherUserIdentifiersToFilteredList = procedure(Sender: TIdentifierList;
     FilteredList: TFPList; PriorityCount: Integer) of object;
   
@@ -237,6 +243,7 @@ type
     FContextFlags: TIdentifierListContextFlags;
     FOnGatherUserIdentifiersToFilteredList: TOnGatherUserIdentifiersToFilteredList;
     FSortForHistory: boolean;
+    FSortForHistoryLimit:integer;
     FSortMethodForCompletion: TIdentComplSortMethod;
     FStartAtom: TAtomPosition;
     FStartAtomBehind: TAtomPosition;
@@ -247,6 +254,7 @@ type
     FFilteredList: TFPList; // list of TIdentifierListItem
     FFlags: TIdentifierListFlags;
     FHistory: TIdentifierHistoryList;
+    FFoundHistoryItems: array of TIdentifierListItem; // Items that have a HistoryIndex / list may have gaps
     FItems: TAvlTree;     // tree of TIdentifierListItem (completely sorted)
     FIdentView: TAVLTree; // tree of TIdentifierListItem sorted for identifiers
     FUsedTools: TAVLTree; // tree of TFindDeclarationTool
@@ -257,6 +265,7 @@ type
     function CompareIdentListItems({%H-}Tree: TAvlTree; Data1, Data2: Pointer): integer;
     procedure SetHistory(const AValue: TIdentifierHistoryList);
     procedure SetSortForHistory(AValue: boolean);
+    procedure SetSortForHistoryLimit(AValue: integer);
     procedure SetSortMethodForCompletion(AValue: TIdentComplSortMethod);
     procedure UpdateFilteredList;
     function GetFilteredItems(Index: integer): TIdentifierListItem;
@@ -288,6 +297,8 @@ type
     property History: TIdentifierHistoryList read FHistory write SetHistory;
     property Prefix: string read FPrefix write SetPrefix;
     property SortForHistory: boolean read FSortForHistory write SetSortForHistory;
+    property SortForHistoryLimit: integer read FSortForHistoryLimit
+                     write SetSortForHistoryLimit;
     property SortMethodForCompletion: TIdentComplSortMethod read FSortMethodForCompletion
                                              write SetSortMethodForCompletion;
 
@@ -523,8 +534,7 @@ begin
   if Result<>0 then exit;
 
   //debugln('CompareIdentHistListItem ',Item2.Identifier,'=',Item1.Identifier);
-  Result:=CompareIdentifiers(PChar(Pointer(Item2.ParamList)),
-                             PChar(Pointer(Item1.ParamList)));
+  Result:=CompareTextIgnoringSpace(Item2.ParamList,Item1.ParamList,false);
 end;
 
 function CompareIdentItemWithHistListItem(Data1, Data2: Pointer): integer;
@@ -587,23 +597,12 @@ var
   Item2: TIdentifierListItem absolute Data2;
 begin
 
-  if SortMethodForCompletion in [icsScopedAlphabetic, icsScopedDeclaration] then begin
+  if SortMethodForCompletion in IdentComplSortMethodUsingCompatibility then begin
     // first sort for Compatibility  (lower is better)
     if ord(Item1.Compatibility)<ord(Item2.Compatibility) then begin
       Result:=-1;
       exit;
     end else if ord(Item1.Compatibility)>ord(Item2.Compatibility) then begin
-      Result:=1;
-      exit;
-    end;
-  end;
-
-  if SortForHistory then begin
-    // then sort for History (lower is better)
-    if Item1.HistoryIndex<Item2.HistoryIndex then begin
-      Result:=-1;
-      exit;
-    end else if Item1.HistoryIndex>Item2.HistoryIndex then begin
       Result:=1;
       exit;
     end;
@@ -669,9 +668,58 @@ end;
 procedure TIdentifierList.UpdateFilteredList;
 var
   AnAVLNode: TAvlTreeNode;
-  CurItem: TIdentifierListItem;
-  cPriorityCount: Integer;
+  CurItem, CurItem2: TIdentifierListItem;
+  cPriorityCount, TotalHistLimit, j: Integer;
   i: PtrInt;
+  HistoryLimits: array [TIdentifierCompatibility] of integer;
+  HasCompSort: Boolean;
+  HistComp, CurItmComp: TIdentifierCompatibility;
+
+  procedure InsertCurItem; inline;
+  begin
+    if (length(Prefix)=length(CurItem.Identifier))
+    and (not (iliAtCursor in CurItem.Flags)) then
+      // put exact matches at the beginning
+      FFilteredList.Insert(0,CurItem)
+    else
+      FFilteredList.Insert(cPriorityCount, CurItem);
+    Inc(cPriorityCount);
+  end;
+
+  function FilterCurItem: Integer; inline;
+  begin
+    if FContainsFilter then
+      Result:=IdentifierPos(PChar(Pointer(Prefix)),PChar(Pointer(CurItem.Identifier)))
+    else if ComparePrefixIdent(PChar(Pointer(Prefix)),PChar(Pointer(CurItem.Identifier))) then
+      Result:=0
+    else
+      Result:=-1;
+  end;
+
+  procedure AddHistoryCurItem(ForceComp: Boolean);
+  var
+    CurItmComp: TIdentifierCompatibility;
+    j: integer;
+  begin
+    for j := 0 to length(FFoundHistoryItems) - 1 do begin
+      CurItem := FFoundHistoryItems[j];
+      if (CurItem = nil) then
+        continue;
+      if ForceComp then
+        CurItmComp := low(TIdentifierCompatibility)
+      else
+        CurItmComp := CurItem.Compatibility;
+      if (CurItmComp <> HistComp) then
+        Continue;
+      if (CurItem.HistoryIndex > HistoryLimits[CurItmComp]) then
+        break;
+      if (CurItem.Identifier<>'') and (FilterCurItem >= 0) then begin
+        CurItem.Flags := CurItem.Flags + [iliIsRecentItem];
+        InsertCurItem;
+      end;
+    end;
+  end;
+
 begin
   if not (ilfFilteredListNeedsUpdate in FFlags) then exit;
   if FFilteredList=nil then FFilteredList:=TFPList.Create;
@@ -680,39 +728,84 @@ begin
   {$IFDEF CTDEBUG}
   DebugLn(['TIdentifierList.UpdateFilteredList Prefix="',Prefix,'"']);
   {$ENDIF}
-  AnAVLNode:=FItems.FindLowest;
+
+  // Update HistoryLimits
+  TotalHistLimit := 0;
+  HasCompSort := SortMethodForCompletion in IdentComplSortMethodUsingCompatibility;
+  if FSortForHistory then
+    TotalHistLimit := FSortForHistoryLimit;
+  for HistComp in TIdentifierCompatibility do begin
+    HistoryLimits[HistComp] := -1;
+  end;
+  for HistComp in TIdentifierCompatibility do begin
+    for j := 0 to length(FFoundHistoryItems) - 1 do begin
+      if TotalHistLimit <= 0 then
+        break;
+      if (FFoundHistoryItems[j] <> nil) and
+         ( (FFoundHistoryItems[j].Compatibility = HistComp) or (not HasCompSort) ) and
+         (FFoundHistoryItems[j].Identifier <> '')
+      then begin
+        CurItem := FFoundHistoryItems[j];
+        if (FilterCurItem >= 0) then begin
+          HistoryLimits[HistComp] := FFoundHistoryItems[j].HistoryIndex;
+          dec(TotalHistLimit);
+        end;
+      end;
+    end;
+    if not HasCompSort then
+      break;
+  end;
+
   cPriorityCount := 0;
+  HistComp := Low(TIdentifierCompatibility);
+  AddHistoryCurItem(not HasCompSort);
+
+  AnAVLNode:=FItems.FindLowest;
   while AnAVLNode<>nil do begin
-    CurItem:=TIdentifierListItem(AnAVLNode.Data);
+    CurItem2:=TIdentifierListItem(AnAVLNode.Data);
+    // history for each compatibility
+    if HasCompSort then begin
+      while HistComp < CurItem2.Compatibility do begin
+        inc(HistComp);
+        AddHistoryCurItem(False);
+      end;
+    end;
+
+    CurItem := CurItem2;
     if CurItem.Identifier<>'' then
     begin
-      if FContainsFilter then
-        i:=IdentifierPos(PChar(Pointer(Prefix)),PChar(Pointer(CurItem.Identifier)))
-      else if ComparePrefixIdent(PChar(Pointer(Prefix)),PChar(Pointer(CurItem.Identifier))) then
-        i:=0
+      i := FilterCurItem;
+      if HasCompSort then
+        CurItmComp := CurItem.Compatibility
       else
-        i:=-1;
+        CurItmComp := low(TIdentifierCompatibility);
       if i=0 then begin
         {$IFDEF ShowFilteredIdents}
         DebugLn(['::: FILTERED ITEM ',FFilteredList.Count,' ',CurItem.Identifier]);
         {$ENDIF}
-        if (length(Prefix)=length(CurItem.Identifier))
-        and (not (iliAtCursor in CurItem.Flags)) then
-          // put exact matches at the beginning
-          FFilteredList.Insert(0,CurItem)
-        else
-          FFilteredList.Insert(cPriorityCount, CurItem);
-        Inc(cPriorityCount);
+        if CurItem.HistoryIndex > HistoryLimits[CurItmComp] then begin
+          CurItem.Flags := CurItem.Flags - [iliIsRecentItem];
+          InsertCurItem;
+        end;
       end
       else if i>0 then begin
         {$IFDEF ShowFilteredIdents}
         DebugLn(['::: FILTERED ITEM ',FFilteredList.Count,' ',CurItem.Identifier]);
         {$ENDIF}
-        FFilteredList.Add(CurItem);
+        if CurItem.HistoryIndex > HistoryLimits[CurItmComp] then
+          FFilteredList.Add(CurItem);
       end;
     end;
     AnAVLNode:=FItems.FindSuccessor(AnAVLNode);
   end;
+
+  if HasCompSort then begin
+    while HistComp < high(TIdentifierCompatibility) do begin
+      inc(HistComp);
+      AddHistoryCurItem(False);
+    end;
+  end;
+
   if Assigned(FOnGatherUserIdentifiersToFilteredList) then
     FOnGatherUserIdentifiersToFilteredList(Self, FFilteredList, cPriorityCount);
   {$IFDEF CTDEBUG}
@@ -734,6 +827,13 @@ begin
   Clear;
 end;
 
+procedure TIdentifierList.SetSortForHistoryLimit(AValue: integer);
+begin
+  if FSortForHistoryLimit=AValue then Exit;
+  FSortForHistoryLimit:=AValue;
+  Clear;
+end;
+
 function TIdentifierList.GetFilteredItems(Index: integer): TIdentifierListItem;
 begin
   UpdateFilteredList;
@@ -751,6 +851,7 @@ begin
   FIdentSearchItem:=TIdentifierListSearchItem.Create;
   FCreatedIdentifiers:=TFPList.Create;
   FSortForHistory:=true;
+  FSortForHistoryLimit:=5;
   FSortMethodForCompletion:=icsScopedAlphabetic;
 end;
 
@@ -784,6 +885,9 @@ begin
     FreeMem(p);
   end;
   FCreatedIdentifiers.Clear;
+  FFoundHistoryItems := nil;
+  if FHistory <> nil then
+    SetLength(FFoundHistoryItems, FHistory.Capacity);
   FItems.FreeAndClear;
   FIdentView.Clear;
   if FUsedTools<>nil then
@@ -807,6 +911,12 @@ begin
   if AnAVLNode=nil then begin
     if History<>nil then
       NewItem.HistoryIndex:=History.GetHistoryIndex(NewItem);
+    if (NewItem.HistoryIndex >= 0) and
+       (NewItem.HistoryIndex < Length(FFoundHistoryItems))
+    then begin
+      assert(FFoundHistoryItems[NewItem.HistoryIndex]=nil, 'TIdentifierList.Add: FFoundHistoryItems[NewItem.HistoryIndex]=nil');
+      FFoundHistoryItems[NewItem.HistoryIndex] := NewItem;
+    end;
     FItems.Add(NewItem);
     FIdentView.Add(NewItem);
     FFlags:=FFlags+[ilfFilteredListNeedsUpdate,ilfUsedToolsNeedsUpdate];
@@ -4500,12 +4610,23 @@ end;
 { TIdentifierHistoryList }
 
 procedure TIdentifierHistoryList.SetCapacity(const AValue: integer);
+var
+  AnAVLNode, AnAVLNode2: TAVLTreeNode;
 begin
   if FCapacity=AValue then exit;
   FCapacity:=AValue;
   if FCapacity<1 then FCapacity:=1;
-  while (FItems.Count>0) and (FItems.Count>=FCapacity) do
-    FItems.FreeAndDelete(FItems.FindHighest);
+  if (FItems.Count>=FCapacity) then begin
+    AnAVLNode:=Fitems.FindLowest;
+    while (AnAVLNode<>nil) do begin
+      AnAVLNode2:=FItems.FindSuccessor(AnAVLNode);
+      if TIdentHistListItem(AnAVLNode.Data).HistoryIndex > FCapacity then
+        FItems.FreeAndDelete(AnAVLNode);
+      AnAVLNode:=AnAVLNode2;
+    end;
+    if (FItems.Count>=FCapacity) then // data corrupted?
+      FItems.Clear;
+  end;
 end;
 
 function TIdentifierHistoryList.FindItem(NewItem: TIdentifierListItem
@@ -4539,7 +4660,7 @@ procedure TIdentifierHistoryList.Add(NewItem: TIdentifierListItem);
 var
   OldAVLNode: TAVLTreeNode;
   NewHistItem: TIdentHistListItem;
-  AnAVLNode: TAVLTreeNode;
+  AnAVLNode, HighestAVLNode: TAVLTreeNode;
   AdjustIndex: Integer;
   AnHistItem: TIdentHistListItem;
 begin
@@ -4573,8 +4694,20 @@ begin
       inc(AnHistItem.HistoryIndex);
     AnAVLNode:=FItems.FindSuccessor(AnAVLNode);
   end;
-  if (FItems.Count>0) and (FItems.Count>=FCapacity) then
-    FItems.FreeAndDelete(FItems.FindHighest);
+
+  if (FItems.Count>0) and (FItems.Count>=FCapacity) then begin
+    HighestAVLNode:=Fitems.FindLowest;
+    AnHistItem:=TIdentHistListItem(HighestAVLNode.Data);
+    AnAVLNode:=FItems.FindSuccessor(HighestAVLNode);
+    while (AnAVLNode<>nil) do begin
+      if TIdentHistListItem(AnAVLNode.Data).HistoryIndex > AnHistItem.HistoryIndex then begin
+        HighestAVLNode:=AnAVLNode;
+        AnHistItem:=TIdentHistListItem(HighestAVLNode.Data);
+      end;
+      AnAVLNode:=FItems.FindSuccessor(AnAVLNode);
+    end;
+    FItems.FreeAndDelete(HighestAVLNode);
+    end;
   FItems.Add(NewHistItem);
   {$IFDEF ShowHistory}
   DebugLn(['TIdentifierHistoryList.Added Count=',Count]);

@@ -604,6 +604,10 @@ msgstr ""
 msgid "Level  9"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrrecentlyused
+msgid "Recently used item"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrsyncroeditarea
 msgid "Selected Area"
 msgstr ""
@@ -7395,22 +7399,11 @@ msgstr ""
 msgid "Extend right only"
 msgstr ""
 
-#: lazarusidestrconsts.liscomponentnameisapascalkeyword
-#, object-pascal-format
-msgid "Component name \"%s\" is a Pascal keyword."
-msgstr ""
-
 #: lazarusidestrconsts.liscomponentnameiskeyword
 #, object-pascal-format, fuzzy, badformat
 #| msgid "Component name %s%s%s is keyword"
 msgid "Component name \"%s\" is keyword"
 msgstr "El nom de component %s%s%s és paraula clau"
-
-#: lazarusidestrconsts.liscomponentnameisnotavalididentifier
-#, object-pascal-format, fuzzy, badformat
-#| msgid "Component name %s%s%s is not a valid identifier"
-msgid "Component name \"%s\" is not a valid identifier"
-msgstr "El nom de component %s%s%s no és un identificador vàlid"
 
 #: lazarusidestrconsts.liscomppalcomponentlist
 msgid "View All"
@@ -18211,6 +18204,10 @@ msgstr ""
 #: lazarusidestrconsts.lissorrythistypeisnotyetimplemented
 msgid "Sorry, this type is not yet implemented"
 msgstr "Ho sento, aquest tipus encara no està implementat"
+
+#: lazarusidestrconsts.lissorthistorylimit
+msgid "History items limit"
+msgstr ""
 
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"

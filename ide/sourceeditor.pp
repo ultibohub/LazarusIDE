@@ -69,15 +69,14 @@ uses
   IDEWindowIntf, ProjectIntf, MacroDefIntf, ToolBarIntf, IDEDialogs, IDECommands,
   EditorSyntaxHighlighterDef, IdeIntfStrConsts,
   // DebuggerIntf
-  DbgIntfDebuggerBase, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
+  DbgIntfDebuggerBase, LazDebuggerIntfBaseTypes,
   // IdeDebugger
   BaseDebugManager, Debugger, IdeDebuggerStringConstants,
   // IdeConfig
-  EnvironmentOpts, IDEOptionDefs, TransferMacros,
+  EnvironmentOpts, IDEOptionDefs, TransferMacros, IDECmdLine, IDEProcs,
   // IDE units
-  IDECmdLine, LazarusIDEStrConsts, EditorOptions, EnvGuiOptions,
-  WordCompletion, FindReplaceDialog, IDEProcs,
-  IDEHelpManager, MacroPromptDlg, CodeContextForm,
+  LazarusIDEStrConsts, EditorOptions, EnvGuiOptions,
+  WordCompletion, FindReplaceDialog, IDEHelpManager, MacroPromptDlg, CodeContextForm,
   SrcEditHintFrm, etMessagesWnd, etSrcEditMarks, CodeMacroPrompt,
   CodeTemplatesDlg, CodeToolsOptions, editor_general_options, SortSelectionDlg,
   EncloseSelectionDlg, EncloseIfDef, InvertAssignTool, SourceEditProcs,
@@ -135,6 +134,7 @@ type
     FActiveEditBackgroundSelectedColor: TColor;
     FActiveEditBorderColor: TColor;
     FActiveEditTextColor: TColor;
+    FActiveHistoryTextColor: TColor;
     FActiveEditTextSelectedColor: TColor;
     FActiveEditTextHighLightColor: TColor;
 
@@ -2427,6 +2427,7 @@ Begin
   {$ENDIF}
   TheForm.Font := Editor.Font;
 
+  FActiveHistoryTextColor := clNone;
   FActiveEditTextColor := Editor.Font.Color;
   FActiveEditBorderColor := RGBToColor(200, 200, 200);
   FActiveEditBackgroundColor := Editor.Color;
@@ -2462,6 +2463,8 @@ Begin
       FActiveEditBackgroundSelectedColor := SynEditor.MarkupIdentComplWindow.BackgroundSelectedColor;
     if SynEditor.MarkupIdentComplWindow.HighlightColor<>clNone then
       FActiveEditTextHighLightColor := SynEditor.MarkupIdentComplWindow.HighlightColor;
+    if SynEditor.MarkupIdentComplWindow.HistoryTextColor<>clNone then
+      FActiveHistoryTextColor:=SynEditor.MarkupIdentComplWindow.HistoryTextColor;
   end;
 
   SL := TStringList.Create;
@@ -2721,9 +2724,18 @@ begin
       end;
       Font.Style:=[];
     end;
+
+    if CodeToolBoss.IdentifierList.SortForHistory and
+      (iliIsRecentItem in CodeToolBoss.IdentifierList.FilteredItems[Index].Flags) and
+      (FActiveHistoryTextColor <> clNone)
+    then  begin
+      Colors.TextColor := FActiveHistoryTextColor; // - to display history items
+    end else begin
+      Colors.TextColor := FActiveEditTextColor;
+    end;
+
     Colors.BackgroundColor := FActiveEditBackgroundColor;
     Colors.BackgroundSelectedColor := FActiveEditBackgroundSelectedColor;
-    Colors.TextColor := FActiveEditTextColor;
     Colors.TextSelectedColor := FActiveEditTextSelectedColor;
     Colors.TextHilightColor := FActiveEditTextHighLightColor;
     MaxX:=TheForm.ClientWidth;

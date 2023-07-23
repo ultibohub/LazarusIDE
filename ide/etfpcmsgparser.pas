@@ -45,9 +45,9 @@ uses
   // IDEIntf
   LazIDEIntf, IDEUtils,
   // IdeConfig
-  EnvironmentOpts, LazConf, TransferMacros,
+  EnvironmentOpts, LazConf, TransferMacros, IDECmdLine,
   // IDE
-  IDECmdLine, LazarusIDEStrConsts, etMakeMsgParser, EnvGuiOptions;
+  LazarusIDEStrConsts, etMakeMsgParser, EnvGuiOptions;
 
 const
   FPCMsgIDCompiling = 3104;
@@ -1445,7 +1445,7 @@ begin
   Result:=true;
   MsgLine:=CreateMsgLine;
   MsgLine.SubTool:=DefaultSubTool;
-  if EnvironmentGuiOpts.MsgViewShowFPCMsgLinesCompiled then
+  if EnvironmentOptions.MsgViewShowFPCMsgLinesCompiled then
     MsgLine.Urgency:=mluImportant
   else
     MsgLine.Urgency:=mluVerbose;
@@ -2748,7 +2748,7 @@ begin
   FPCMsgIDThereWereErrorsCompiling: // There were $1 errors compiling module, stopping
     MsgUrgency:=mluVerbose;
   FPCMsgIDLinesCompiled: // n lines compiled, m sec
-    if EnvironmentGuiOpts.MsgViewShowFPCMsgLinesCompiled then
+    if EnvironmentOptions.MsgViewShowFPCMsgLinesCompiled then
       MsgUrgency:=mluImportant;
   end;
   MsgLine:=CreateMsgLine;

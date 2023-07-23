@@ -65,9 +65,9 @@ uses
   {$IFnDEF LCLNOGUI} IdeDebuggerOpts, IdeDebuggerBackendValueConv, Debugger,{$EndIf}
   // IdeConfig
   EnvironmentOpts, LazConf, TransferMacros, SearchPathProcs, IdeXmlConfigProcs,
+  IDECmdLine, IDEProcs, CompOptsModes, ModeMatrixOpts,
   // IDE
-  CompOptsModes, ProjectResources, ProjectIcon,
-  IDECmdLine, IDEProcs, CompilerOptions, RunParamsOpts, ModeMatrixOpts,
+  ProjectResources, ProjectIcon, CompilerOptions, RunParamsOpts,
   ProjectDefs, EditDefineTree, LazarusIDEStrConsts,
   ProjPackCommon, PackageDefs, PackageSystem;
 
@@ -2243,11 +2243,9 @@ end;
 
 function TUnitInfo.NeedsSaveToDisk(CheckLFM: boolean): boolean;
 begin
-  Result:=IsVirtual or Modified or IsChangedOnDisk(CheckLFM);
-  //DebugLn(['TUnitInfo.NeedsSaveToDisk ',filename,' Result=',Result,' Modified=',Modified]);
-  if Result then Exit;
-  if Source<>nil then
-    Result:=Source.ChangeStep<>fSourceChangeStep;
+  // Modified has a test for Source.ChangeStep<>fSourceChangeStep.
+  Result:=IsVirtual or Modified or IsChangedOnDisk(CheckLFM and FilenameIsPascalSource(Filename));
+  //DebugLn(['TUnitInfo.NeedsSaveToDisk ',Filename,' Result=',Result,' Modified=',Modified]);
 end;
 
 procedure TUnitInfo.UpdateUsageCount(Min, IfBelowThis, IncIfBelow: extended);

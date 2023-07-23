@@ -935,8 +935,6 @@ resourcestring
   lisNoResourceStringSectionFound = 'No ResourceString Section found';
   lisUnableToFindAResourceStringSectionInThisOrAnyOfThe = 'Unable to find a '
     +'ResourceString section in this or any of the used units.';
-  lisComponentNameIsNotAValidIdentifier = 'Component name "%s" is not a valid identifier';
-  lisComponentNameIsAPascalKeyword = 'Component name "%s" is a Pascal keyword.';
   lisOwnerIsAlreadyUsedByTReaderTWriterPleaseChooseAnot = '''Owner'' is '
     +'already used by TReader/TWriter. Please choose another name.';
   lisDuplicateNameAComponentNamedAlreadyExistsInTheInhe = 'Duplicate name: A '
@@ -2164,6 +2162,7 @@ resourcestring
   dlgAddHiAttrSyncroEditArea      = 'Selected Area';
   dlgAddHiAttrGutterSeparator     = 'Gutter Separator';
   dlgAddHiAttrDefaultWindow       = 'Default Text / Window';
+  dlgAddHiAttrRecentlyUsed        = 'Recently used item';
   dlgAddHiAttrWindowBorder        = 'Window border';
   dlgAddHiAttrHighlightPrefix     = 'Highlight prefix';
   dlgAddHiAttrOutlineLevel1Color  = 'Level  1';
@@ -5813,6 +5812,7 @@ resourcestring
   lisForExampleShowAtTopTheLocalVariablesThenTheMembers = '"Scoped" sorting will show'
     +' local variables on top, then the members of current class, then of the'
     +' ancestors, then the current unit, then of used units';
+  lisSortHistoryLimit = 'History items limit';
   lisSortOrderTitle = 'Order by';
   lisSortOrderDefinition = 'Definition (Scoped)';
   lisSortOrderScopedAlphabetic = 'Alphabetic (Scoped)';

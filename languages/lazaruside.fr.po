@@ -608,6 +608,10 @@ msgstr "Niveau  8"
 msgid "Level  9"
 msgstr "Niveau  9"
 
+#: lazarusidestrconsts.dlgaddhiattrrecentlyused
+msgid "Recently used item"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrsyncroeditarea
 msgid "Selected Area"
 msgstr "Aire sélectionnée"
@@ -7205,20 +7209,10 @@ msgstr "Jamais"
 msgid "Extend right only"
 msgstr "Étendre à droite seulement"
 
-#: lazarusidestrconsts.liscomponentnameisapascalkeyword
-#, object-pascal-format
-msgid "Component name \"%s\" is a Pascal keyword."
-msgstr "Le nom de composant \"%s\" est un mot-clé en Pascal."
-
 #: lazarusidestrconsts.liscomponentnameiskeyword
 #, object-pascal-format
 msgid "Component name \"%s\" is keyword"
 msgstr "Le nom du composant \"%s\" est un mot-clé"
-
-#: lazarusidestrconsts.liscomponentnameisnotavalididentifier
-#, object-pascal-format
-msgid "Component name \"%s\" is not a valid identifier"
-msgstr "Le nom du composant \"%s\" n'est pas un identificateur correct"
 
 #: lazarusidestrconsts.liscomppalcomponentlist
 msgid "View All"
@@ -17788,6 +17782,10 @@ msgstr "Correspondances"
 #: lazarusidestrconsts.lissorrythistypeisnotyetimplemented
 msgid "Sorry, this type is not yet implemented"
 msgstr "Désolé, ce type n'est pas encore implémenté"
+
+#: lazarusidestrconsts.lissorthistorylimit
+msgid "History items limit"
+msgstr ""
 
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"

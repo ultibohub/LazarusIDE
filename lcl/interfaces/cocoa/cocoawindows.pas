@@ -763,8 +763,8 @@ end;
 
 procedure TCocoaWindow.DoWindowDidBecomeKey();
 begin
-  if Assigned(CocoaWidgetSet.CurModalForm) then
-    CocoaWidgetSet.CurModalForm.orderFront(nil);
+  if CocoaWidgetSet.isModalSession then
+    self.orderFront(nil);
   CursorHelper.SetCursorOnActive();
 end;
 
@@ -784,13 +784,6 @@ begin
 
   if Assigned(callback) then
     callback.Activate;
-
-  // LCL didn't change focus. TCocoaWindow should not keep the focus for itself
-  // and it should pass it to it's content view
-  if (firstResponder = self)
-    and Assigned(contentView)
-    and (contentView.isKindOfClass(TCocoaWindowContent)) then
-    self.makeFirstResponder( TCocoaWindowContent(contentView).documentView );
 
   performSelector_withObject_afterDelay( ObjCSelector('DoWindowDidBecomeKey'), nil, 0.1 );
 end;
@@ -1042,6 +1035,11 @@ begin
       newResponder := NSResponder(dl);
   end
   else
+  if newResponder.isKindOfClass(NSWindow) or newResponder.isKindOfClass(TCocoaWindowContentDocument) then
+  begin
+    newResponder := nil;
+  end
+  else
   begin
     newResponder := newResponder.lclContentView;
   end;
@@ -1061,7 +1059,6 @@ end;
 // between LCL and COCOA, see also:
 // https://wiki.lazarus.freepascal.org/Cocoa_Internals/Application#Focus_Change
 // 4. makeFirstResponder() is Reentrant and Thread-safe
-//
 function TCocoaWindow.makeFirstResponder( aResponder : NSResponder ): ObjCBOOL;
 var
   lastResponder : NSResponder;

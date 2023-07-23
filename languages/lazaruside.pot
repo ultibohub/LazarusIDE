@@ -599,6 +599,10 @@ msgstr ""
 msgid "Level  9"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrrecentlyused
+msgid "Recently used item"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrsyncroeditarea
 msgid "Selected Area"
 msgstr ""
@@ -7161,19 +7165,9 @@ msgstr ""
 msgid "Extend right only"
 msgstr ""
 
-#: lazarusidestrconsts.liscomponentnameisapascalkeyword
-#, object-pascal-format
-msgid "Component name \"%s\" is a Pascal keyword."
-msgstr ""
-
 #: lazarusidestrconsts.liscomponentnameiskeyword
 #, object-pascal-format
 msgid "Component name \"%s\" is keyword"
-msgstr ""
-
-#: lazarusidestrconsts.liscomponentnameisnotavalididentifier
-#, object-pascal-format
-msgid "Component name \"%s\" is not a valid identifier"
 msgstr ""
 
 #: lazarusidestrconsts.liscomppalcomponentlist
@@ -17620,6 +17614,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lissorrythistypeisnotyetimplemented
 msgid "Sorry, this type is not yet implemented"
+msgstr ""
+
+#: lazarusidestrconsts.lissorthistorylimit
+msgid "History items limit"
 msgstr ""
 
 #: lazarusidestrconsts.lissorting

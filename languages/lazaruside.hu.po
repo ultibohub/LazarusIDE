@@ -606,6 +606,10 @@ msgstr "8. szint"
 msgid "Level  9"
 msgstr "9. szint"
 
+#: lazarusidestrconsts.dlgaddhiattrrecentlyused
+msgid "Recently used item"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrsyncroeditarea
 msgid "Selected Area"
 msgstr "Kijelölt terület"
@@ -7216,20 +7220,10 @@ msgstr "Soha"
 msgid "Extend right only"
 msgstr "Meghosszabbítás csak jobbra"
 
-#: lazarusidestrconsts.liscomponentnameisapascalkeyword
-#, object-pascal-format
-msgid "Component name \"%s\" is a Pascal keyword."
-msgstr "A(z) \"%s\" komponens neve egy pascal kulcsszó"
-
 #: lazarusidestrconsts.liscomponentnameiskeyword
 #, object-pascal-format
 msgid "Component name \"%s\" is keyword"
 msgstr "A(z) \"%s\" komponens név egy kulcsszó"
-
-#: lazarusidestrconsts.liscomponentnameisnotavalididentifier
-#, object-pascal-format
-msgid "Component name \"%s\" is not a valid identifier"
-msgstr "A(z) \"%s\" komponens azonosító érvénytelen"
 
 #: lazarusidestrconsts.liscomppalcomponentlist
 msgid "View All"
@@ -17795,6 +17789,10 @@ msgstr "Találatok"
 #: lazarusidestrconsts.lissorrythistypeisnotyetimplemented
 msgid "Sorry, this type is not yet implemented"
 msgstr "Sajnáljuk, ez a típus egyelőre nincs megvalósítva"
+
+#: lazarusidestrconsts.lissorthistorylimit
+msgid "History items limit"
+msgstr ""
 
 #: lazarusidestrconsts.lissorting
 msgid "Sorting"

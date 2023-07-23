@@ -52,9 +52,9 @@ uses
   IdeIntfStrConsts, ObjectInspector, SrcEditorIntf, EditorSyntaxHighlighterDef,
   UnitResources, ComponentReg, InputHistory,
   // IdeConfig
-  EnvironmentOpts, SearchPathProcs, TransferMacros, RecentListProcs,
+  EnvironmentOpts, SearchPathProcs, TransferMacros, RecentListProcs, IDEProcs,
   // IDE
-  IDEProcs, DialogProcs, IDEProtocol, LazarusIDEStrConsts, NewDialog,
+  DialogProcs, IDEProtocol, LazarusIDEStrConsts, NewDialog,
   NewProjectDlg, MainBase, MainBar, MainIntf, Project, ProjectDefs,
   ProjectInspector, CompilerOptions, SourceSynEditor, SourceEditor,
   EditorOptions, CustomFormEditor, ControlSelection,
@@ -4606,6 +4606,7 @@ begin
     Project1.AddCreateFormToProjectFile(NewComponent.ClassName,
                                         NewComponent.Name);
   end;
+  Screen.NewFormWasCreated(TCustomForm(NewComponent));
   Result:=mrOk;
 end;
 
@@ -5903,11 +5904,11 @@ begin
     LFMChecker.RootMustBeClassInIntf:=true;
     LFMChecker.ObjectsMustExist:=true;
     if LFMChecker.Repair=mrOk then begin
-      if not Quiet then begin
+      LFMUnitInfo.Modified:=True;
+      if not Quiet then
         IDEMessageDialog(lisLFMIsOk,
           lisClassesAndPropertiesExistValuesWereNotChecked,
           mtInformation,[mbOk],'');
-      end;
     end else begin
       MainIDE.DoJumpToCompilerMessage(true);
       Result:=mrAbort;
@@ -6299,8 +6300,10 @@ begin
           end;
           LFMUnitInfo:=Project1.UnitWithEditorComponent(SourceEditorManager.ActiveEditor);
           Result:=CheckLFMInEditor(LFMUnitInfo, true);
-          if Result=mrOk then
+          if Result=mrOk then begin
             AnUnitInfo.HasErrorInLFM:=False;
+            Result:=mrCancel;
+          end;
           exit;
         end;
       finally
@@ -7402,6 +7405,9 @@ begin
       mtError, [mrCancel, lisCancelLoadingThisComponent], HideAbort);
     exit;
   end;
+
+  // For example .lfm file open in editor
+  if not FilenameIsPascalUnit(AnUnitInfo.Filename) then exit;
 
   AnUnitInfo.LoadingComponent:=true;
   try
