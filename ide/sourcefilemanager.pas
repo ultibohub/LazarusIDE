@@ -1185,7 +1185,8 @@ var
 begin
   {$IFDEF IDE_VERBOSE}
   DebugLn('');
-  DebugLn(['*** TFileOpener.OpenEditorFile START "',AFilename,'" ',OpenFlagsToString(Flags),' Window=',WindowIndex,' Page=',PageIndex]);
+  DebugLn(['*** TFileOpener.OpenEditorFile START "',FFilename,'" ',OpenFlagsToString(AFlags),
+           ' Page=',APageIndex,' Window=',AWindowIndex]);
   {$ENDIF}
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TFileOpener.OpenEditorFile START');{$ENDIF}
   FPageIndex := APageIndex;
@@ -4605,6 +4606,7 @@ begin
     Project1.AddCreateFormToProjectFile(NewComponent.ClassName,
                                         NewComponent.Name);
   end;
+  Screen.NewFormWasCreated(TCustomForm(NewComponent));
   Result:=mrOk;
 end;
 
@@ -5902,11 +5904,11 @@ begin
     LFMChecker.RootMustBeClassInIntf:=true;
     LFMChecker.ObjectsMustExist:=true;
     if LFMChecker.Repair=mrOk then begin
-      if not Quiet then begin
+      LFMUnitInfo.Modified:=True;
+      if not Quiet then
         IDEMessageDialog(lisLFMIsOk,
           lisClassesAndPropertiesExistValuesWereNotChecked,
           mtInformation,[mbOk],'');
-      end;
     end else begin
       MainIDE.DoJumpToCompilerMessage(true);
       Result:=mrAbort;
@@ -6081,7 +6083,7 @@ begin
       NewClassName,LCLVersion,MissingClasses,AmbiguousClasses);
     i:=Pos('/',NewClassName);
     if i>0 then
-      System.Delete(NewClassName,1,i); // cut unitname
+      Delete(NewClassName,1,i); // cut unitname
 
     {$IFDEF VerboseLFMSearch}
     debugln('LoadLFM LFM="',LFMBuf.Source,'"');
@@ -6278,9 +6280,15 @@ begin
             DebugLn(['LoadLFM DoFixupComponentReferences failed']);
             exit;
           end;
-        end else begin
-          // error streaming component -> examine lfm file
-          DebugLn('ERROR: streaming failed lfm="',LFMBuf.Filename,'"');
+        end
+        else begin
+          // Error streaming component -> examine lfm file
+          // but not when opening a project. It would open many lfm file copies.
+          DebugLn('LoadLFM ERROR: streaming failed. Unit="', AnUnitInfo.Filename, '", lfm="', LFMBuf.Filename,'"');
+          if ofProjectLoading in OpenFlags then begin
+            AnUnitInfo.HasErrorInLFM:=True;
+            exit;
+          end;
           // open lfm file in editor
           if AnUnitInfo.OpenEditorInfoCount > 0 then
             Result:=OpenEditorFile(LFMBuf.Filename,
@@ -6296,13 +6304,16 @@ begin
           end;
           LFMUnitInfo:=Project1.UnitWithEditorComponent(SourceEditorManager.ActiveEditor);
           Result:=CheckLFMInEditor(LFMUnitInfo, true);
-          if Result=mrOk then Result:=mrCancel;
+          if Result=mrOk then begin
+            AnUnitInfo.HasErrorInLFM:=False;
+            Result:=mrCancel;
+          end;
           exit;
         end;
       finally
         BinStream.Free;
       end;
-    end else if SysUtils.CompareText(AnUnitInfo.Component.ClassName,NewClassName)<>0
+    end else if CompareText(AnUnitInfo.Component.ClassName,NewClassName)<>0
     then begin
       // lfm and current designer are about different classes
       debugln(['LoadLFM unit="',AnUnitInfo.Filename,'": loaded component has class "',AnUnitInfo.Component.ClassName,'", lfm has class "',NewClassName,'"']);

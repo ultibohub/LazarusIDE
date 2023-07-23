@@ -22,6 +22,8 @@ uses
   Classes, SysUtils, fgl,
   // LCL
   LMessages, Forms, LCLType, LCLIntf, Controls,
+  // LazUtils
+  LazLoggerBase,
   // IDEIntf
   SrcEditorIntf,
   // DockedFormEditor
@@ -32,19 +34,24 @@ const
   WM_BOUNDTODESIGNTABSHEET = WM_USER + 1;
 
 type
+  TDesignForms = class;
+
   { TDesignForm }
 
   TDesignForm = class(TDesignFormIDE)
   private
+    FContainer: TDesignForms;
     FHiding: Boolean;
     FOnAdjustPageNeeded: TNotifyEvent;
     FWndMethod: TWndMethod;
+    class var FNewForm: TCustomForm;
     procedure FixF12_ActiveEditor;
     procedure FormChangeBounds(Sender: TObject);
     procedure WndMethod(var Msg: TLMessage);
   public
     constructor Create(AForm: TCustomForm); override;
     destructor Destroy; override;
+    class procedure Screen_NewFormCreated(Sender: TObject; AForm: TCustomForm);
   public
     property Hiding: Boolean read FHiding write FHiding;
     property OnAdjustPageNeeded: TNotifyEvent read FOnAdjustPageNeeded write FOnAdjustPageNeeded;
@@ -55,6 +62,7 @@ type
   TDesignForms = class(specialize TFPGList<TDesignForm>)
   public
     destructor Destroy; override;
+    function Add(const Item: TDesignForm): Integer;
     procedure DeleteDesignForm(AIndex: Integer);
     function Find(AForm: TCustomForm): TDesignForm; overload;
     function Find(ADesigner: TIDesigner): TDesignForm; overload;
@@ -70,15 +78,24 @@ implementation
 
 { TDesignForm }
 
+class procedure TDesignForm.Screen_NewFormCreated(Sender: TObject; AForm: TCustomForm);
+begin
+  FNewForm := AForm;
+  //DebugLn(['TDesignForm.Screen_NewFormCreated! Self=', Self,
+  //  ', FNewForm=', FNewForm.Name,':',FNewForm.ClassName]);
+end;
+
 procedure TDesignForm.FixF12_ActiveEditor;
 var
   i: Integer;
 begin
-  // Without this, button F12 don't work. (after creating new for editor is inactive)
-  // Just do it for new created forms or the last loaded form becomes the active
-  // source editor after reopening a project.
-  if Designer <> SourceEditorManagerIntf.ActiveEditor.GetDesigner(True) then Exit;
+  //DebugLn(['TDesignForm.FixF12_ActiveEditor: Self=', Self, ', FNewForm=', FNewForm, ', Form=', Form]);
+  if FNewForm = Nil then exit;
+  FNewForm := Nil;
+  //DebugLn([' TDesignForm.FixF12_ActiveEditor: Passed']);
 
+  // Without this, button F12 don't work after creating a new form.
+  if Designer <> SourceEditorManagerIntf.ActiveEditor.GetDesigner(True) then Exit;
   SourceEditorManagerIntf.ActiveEditor := nil;
   for i := 0 to SourceEditorManagerIntf.UniqueSourceEditorCount - 1 do
     if Designer = SourceEditorManagerIntf.UniqueSourceEditors[i].GetDesigner(True) then
@@ -168,6 +185,12 @@ begin
   inherited Destroy;
 end;
 
+function TDesignForms.Add(const Item: TDesignForm): Integer;
+begin
+  Item.FContainer := Self;
+  Result := inherited Add(Item);
+end;
+
 procedure TDesignForms.DeleteDesignForm(AIndex: Integer);
 var
   LDesignForm: TDesignForm;
@@ -234,12 +257,6 @@ begin
     LDesignForm.AnchorDesigner := nil;
   end;
 end;
-
-initialization
-  DesignForms := TDesignForms.Create;
-
-finalization
-  FreeAndNil(DesignForms);
 
 end.
 
