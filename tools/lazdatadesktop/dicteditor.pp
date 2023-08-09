@@ -49,7 +49,6 @@ Type
   TDataDictEditor = Class(TTabSheet)
   private
     FDD: TFPDataDictionary;
-    FIMgList : TImageList;
     FImageOffset: Integer;
     FModified: Boolean;
     FTV : TTreeView;
@@ -152,31 +151,27 @@ Type
   
 
 Const
-  // Image Index for nodes. Relative to ImageOffset;
-  // Must match the TObjectType
-  iiDataDict     = 0;
+  // Image index, referring to ImgDatamodule.AppImages in unit dmImages;
+//  iiDataDict     = 32;  // listed in unit dmImages
   iiTables       = 1;
   iiTable        = 2;
   iiFields       = 3;
   iiField        = 4;
-  iiConnection   = 5;
-  iiTableData    = 6;
-  iiIndexes      = 7;
-  iiIndex        = 8;
-  iiSequences    = 9;
-  iiSequence     = 10;
-  iiForeignkeys  = 11;
-  iiForeignKey   = 12;
-  iiDomains      = 13;
-  iiDomain       = 14;
-  IIMaxObject    = IIDomain; // Should be last
-  iiDelete       = iiMaxObject+1;
+  iiConnection   = 0;
+  iiTableData    = 7;
+  iiIndexes      = 5;
+  iiIndex        = 27;
+  iiSequences    = 6;
+  iiSequence     = 23;
+  iiForeignkeys  = 46;
+  iiForeignKey   = 25;
+  iiDomains      = 47;
+  iiDomain       = 21;
+  iiDelete       = 16;
 
 implementation
 
-{$R dicteditor.res}
-
-uses DB, MemDS, fpcodegenerator, TypInfo, lazdatadeskstr;
+uses DB, MemDS, fpcodegenerator, TypInfo, dmImages, lazdatadeskstr;
 
 Function ObjectTypeName(ObjectType : TEditObjectType) : String;
 
@@ -191,6 +186,25 @@ begin
     eotSequence   : S:=SSequence;
     eotForeignKey : S:=SForeignKey;
     eotDomain     : S:=SDomain
+  else
+    Raise EDataDict.CreateFmt(SErrUnknownType,[Ord(ObjectType)]);
+  end;
+  Result:=S;
+end;
+
+Function NewObjectTypeName(ObjectType : TEditObjectType) : String;
+
+Var
+  S : String;
+
+begin
+  Case ObjectType of
+    eotTable      : S:=SNewTableDE;
+    eotField      : S:=SNewFieldDE;
+    eotIndex      : S:=SNewIndexDE;
+    eotSequence   : S:=SNewSequenceDE;
+    eotForeignKey : S:=SNewForeignKeyDE;
+    eotDomain     : S:=SNewDomainDE;
   else
     Raise EDataDict.CreateFmt(SErrUnknownType,[Ord(ObjectType)]);
   end;
@@ -220,8 +234,6 @@ begin
   end;
   Result:=MDS;
 end;
-
-
 
 
 { TDataDictEditor }
@@ -332,15 +344,11 @@ end;
 
 Function TDataDictEditor.AddNewItemPopup(ObjectType : TEditObjectType; AImageIndex : Integer) : TMenuItem;
 
-Var
-  S: String;
-
 begin
   Result:=TMenuItem.Create(Self);
   Result.Name:='NewItem'+GetEnumName(TypeInfo(TEditObjectType),Ord(ObjectType));
   Result.Tag:=Ord(ObjectType);
-  S:=ObjectTypeName(ObjectType);
-  Result.Caption:=Format(SNew,[S]);
+  Result.Caption:=NewObjectTypeName(ObjectType);
   Result.OnClick:=@DoNewObject;
   Result.ImageIndex:=AImageIndex;
   FMenu.Items.Add(Result);
@@ -356,16 +364,6 @@ begin
 end;
 
 Procedure TDataDictEditor.CreateGUI;
-
-Const
-  ImageNames : Array[0..IIMaxObject+1] of string =
-        ('dddatadict','ddtables','ddtable','ddfields','ddfield',
-         'ddtables','ddtabledata','ddindexes','ddindex',
-         'ddsequences','ddsequence',
-         'ddforeignkeys','ddforeignkey',
-         'dddomains','dddomain','dddeleteobject');
-
-
 Var
   P : TPortableNetworkGraphic;
   I : Integer;
@@ -394,25 +392,15 @@ begin
   FMINewSequence:=AddNewItemPopup(eotSequence,iiSequence);
   FMINewForeignKey:=AddNewItemPopup(eotForeignKey,iiForeignKey);
   FMINewDomain:=AddNewItemPopup(eotDomain,iiDomain);
+  FMenu.Items.Add(NewLine);
   FMIDeleteObject:=TMenuItem.Create(Self);
   FMIDeleteObject.Caption:=Format(SDeleteObject,[SObject]);
   FMIDeleteObject.OnClick:=@DoDeleteObject;
   FMIDeleteObject.ImageIndex:=IIDelete;
   FMenu.Items.Add(FMIDeleteObject);
   FTV.PopupMenu:=FMenu;
-  FIMgList:=TImageList.Create(Self);
-  For I:=0 to IIMaxObject+1 do
-    begin
-    P:=TPortableNetworkGraphic.Create;
-    try
-      P.LoadFromResourceName(HInstance, ImageNames[i]);
-      FImgList.Add(P,Nil);
-    finally
-      P.Free;
-    end;
-    end;
-  FTV.Images:=FImgList;
-  FMenu.Images:=FImgList;
+  FTV.Images:=ImgDatamodule.AppImages;
+  FMenu.Images:=ImgDatamodule.AppImages;
 end;
 
 procedure TDataDictEditor.CreateHandle;
@@ -541,7 +529,6 @@ end;
 
 procedure TDataDictEditor.NewField(AFieldName: String; TD: TDDTableDef);
 
-
 begin
   NewTableObject(AFieldName,TD,eotField);
 end;
@@ -553,7 +540,6 @@ begin
 end;
 
 procedure TDataDictEditor.NewForeignKey(AKeyName: String; TD: TDDTableDef);
-
 
 begin
   NewTableObject(AKeyName,TD,eotForeignKey);
@@ -648,6 +634,7 @@ begin
   TV.ShowLines:=True;
   TV.Parent:=FEdit;
   TV.Align:=alClient;
+  TV.Images := ImgDataModule.AppImages;
   ShowGlobalObjectList(TV,Nil,AObjectType,False);
   TV.OnDblClick:=@DoDoubleClick;
   FAllowDoubleClick:=AObjectType;
@@ -664,6 +651,7 @@ begin
   TV.ShowLines:=True;
   TV.Parent:=FEdit;
   TV.Align:=alClient;
+  TV.Images := ImgDatamodule.AppImages;
   ShowTableObjectList(TV,Nil,ATableDef,AObjectType);
   TV.OnDblClick:=@DoDoubleClick;
   FAllowDoubleClick:=AObjectType;

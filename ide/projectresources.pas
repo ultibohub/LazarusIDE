@@ -41,7 +41,7 @@ uses
   // LCL
   Controls, LResources,
   // LazUtils
-  LazFileUtils, Laz2_XMLCfg, LazLoggerBase,
+  LazFileUtils, Laz2_XMLCfg, LazLoggerBase, LazFileCache,
   // Codetools
   KeywordFuncLists, BasicCodeTools, CodeToolManager, CodeCache,
   // IdeIntf
@@ -823,15 +823,30 @@ function TProjectResources.UpdateResCodeBuffer: Boolean;
 // Generate .res resource and return True if it differs from the last saved one.
 var
   CodeBuf: TCodeBuffer;
-  ResStream: TStream;
+  ResStream: TMemoryStream;
   Writer: TAbstractResourceWriter;
 begin
   Result := False;
   if not HasSystemResources then Exit;
-  CodeBuf := CodeToolBoss.CreateFile(resFileName);
   ResStream := TMemoryStream.Create;
   Writer := TResResourceWriter.Create;
   try
+    CodeBuf := CodeToolBoss.FindFile(resFileName);
+    if (CodeBuf=nil) or CodeBuf.FileOnDiskHasChanged then
+    begin
+      CodeBuf := CodeToolBoss.CreateFile(resFileName);
+      if (not CodeBuf.IsVirtual) and FileExists(resFileName) then
+      begin
+        // load old res file, for checking if something has changed
+        try
+          ResStream.LoadFromFile(resFileName);
+        except
+          // load error -> no problem, writing is imprtant
+        end;
+        CodeBuf.LoadFromStream(ResStream);
+        ResStream.Clear;
+      end;
+    end;
     try
       FSystemResources.WriteToStream(ResStream, Writer);
     except
@@ -843,7 +858,7 @@ begin
     end;
     ResStream.Position := 0;
     CodeBuf.LoadFromStream(ResStream);
-    Result := CodeBuf.Source <> LastSavedRes;
+    Result := CodeBuf.FileNeedsUpdate;
   finally
     Writer.Free;
     ResStream.Free;

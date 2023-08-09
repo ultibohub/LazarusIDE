@@ -6,7 +6,8 @@ interface
 
 uses
   fpdatadict, fraquery, Classes, SysUtils, FileUtil, LResources, Graphics, DB,
-  Forms, Controls, ComCtrls, ExtCtrls;
+  Forms, Controls, ComCtrls, ExtCtrls,
+  dmImages;
 
 type
 
@@ -14,7 +15,6 @@ type
 
   TConnectionFrame = class(TFrame)
     FTV: TTreeView;
-    FImgList: TImageList;
     FSplit: TSplitter;
     FPC: TPageControl;
     FTSQuery: TTabSheet;
@@ -29,7 +29,8 @@ type
     procedure AddPair(LV: TListView; Const AName, AValue: String);
     procedure ClearDisplay;
     function GetCurrentObjectType: TObjectType;
-    function NewNode(TV: TTreeView; ParentNode: TTreeNode; ACaption: String;       AImageIndex: Integer): TTreeNode;
+    function NewNode(TV: TTreeView; ParentNode: TTreeNode; ACaption: String;
+      AImageIndex: Integer): TTreeNode;
     procedure SelectConnection;
     procedure SelectField(TableName, FieldName: String);
     procedure SelectFields(TableName: String);
@@ -71,19 +72,6 @@ type
     Property Frame : TConnectionFrame Read FFrame;
   end;
 
-Const
-  // Image Index for nodes. Relative to ImageOffset;
-  iiConnection   = 0;
-  iiTables       = 1;
-  iiTable        = 2;
-  iiFields       = 3;
-  iiField        = 4;
-  iiIndexes      = 5;
-  iiIndex        = 6;
-  iiTableData    = 7;
-  iiIndexFields  = 8;
-  iiIndexOptions = 9;
-  FimageOffset = 0;
 
 implementation
 
@@ -136,6 +124,7 @@ begin
   FQueryPanel.Name:='FQueryPanel';
   FQueryPanel.Parent:=FTSQuery;
   FQueryPanel.Align:=alClient;
+  FTV.Images := ImgDatamodule.AppImages;
 end;
 
 destructor TConnectionFrame.Destroy;
@@ -251,13 +240,13 @@ begin
     end;
 end;
 
-function TConnectionFrame.NewNode(TV : TTreeView;ParentNode: TTreeNode; ACaption: String; AImageIndex : Integer
-  ): TTreeNode;
+function TConnectionFrame.NewNode(TV : TTreeView;ParentNode: TTreeNode;
+  ACaption: String; AImageIndex : Integer): TTreeNode;
 begin
   Result:=TV.Items.AddChild(ParentNode,ACaption);
   If AImageIndex>=0 then
     begin
-    Result.ImageIndex:=FImageOffset+AImageIndex;
+    Result.ImageIndex:=AImageIndex;
     Result.SelectedIndex:=Result.ImageIndex;
     end;
 end;
@@ -464,6 +453,7 @@ begin
   TV:=TTreeView.Create(Self);
   TV.Parent:=FDisplay;
   TV.Align:=alClient;
+  TV.Images := ImgDataModule.AppImages;
   ShowTables(TV,Nil);
 end;
 
@@ -486,6 +476,7 @@ begin
   TV:=TTreeView.Create(Self);
   TV.Parent:=FDisplay;
   TV.Align:=alClient;
+  TV.Images := ImgDatamodule.AppImages;
   TN:=NewNode(TV,Nil,TableName,iiTable);
   N:=NewNode(TV,TN,SNodeFields,iiFields);
   ShowFields(TableName,TV,N);
@@ -513,7 +504,7 @@ begin
   LC.Width:=80;
   LC:=LV.Columns.Add;
   LC.Caption:=SColOptions;
-  LC.Width:=30;
+  LC.Width:=160;
   LV.Parent:=FDisplay;
   LV.Align:=alClient;
   LV.BeginUpdate;
@@ -705,7 +696,7 @@ begin
   N:=FTV.Selected;
   If N=Nil then
     exit;
-  Case N.ImageIndex-FImageOffset of
+  Case N.ImageIndex of
     iiConnection : Result:=otConnection;
     iiTables     : Result:=otTables;
     iiTable      : Result:=otTable;

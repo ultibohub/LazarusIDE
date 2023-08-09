@@ -34,7 +34,7 @@ uses
   // LazUtils
   FileUtil, LazFileUtils, LazUTF8, Translations,
   // LazDataDesktop
-  dicteditor, fraconnection, ddfiles, lazdatadeskstr;
+  dmImages, dicteditor, fraconnection, ddfiles, lazdatadeskstr;
 
 type
   TEngineMenuItem = Class(TMenuItem)
@@ -79,7 +79,6 @@ type
     ACopy: TEditCopy;
     ACut: TEditCut;
     APaste: TEditPaste;
-    ILMain: TImageList;
     LVConnections: TListView;
     LVDicts: TListView;
     MenuItem10: TMenuItem;
@@ -142,6 +141,8 @@ type
     PCRecent: TPageControl;
     SDDD: TSaveDialog;
     SRecent: TSplitter;
+    ToolButton10: TToolButton;
+    ToolButton9: TToolButton;
     TSAll: TTabSheet;
     TBAddIndex: TToolButton;
     TBCreateCode: TToolButton;
@@ -390,6 +391,7 @@ begin
   AAddSequence.Hint:= sld_ActionaddsequenceH;
   //
   ANewConnection.Caption:= sld_Actionnewconnection;
+  ANewConnection.Hint := sld_startnewconnection;
   ADeleteConnection.Caption:= sld_Actiondeleteconnection;
   ACopyConnection.Caption:= sld_Actioncopyconnection;
   AOpenConnection.Caption:= sld_Actionopenconnection;
@@ -431,9 +433,11 @@ begin
     PCRecent.Width:=PSMain.ReadInteger('TreeWidth',PCRecent.Width);
 // We need these 2 in all cases
   FNRecentConnections:=TVAll.Items.AddChild(Nil,sld_Connections);
-  FNRecentConnections.ImageIndex:=16;
+  FNRecentConnections.ImageIndex:=iiConnections;
+  FNRecentConnections.SelectedIndex:=iiConnections;
   FNRecentDictionaries:=TVAll.Items.AddChild(Nil,sld_Dictionaries);
-  FNRecentDictionaries.ImageIndex:=19;
+  FNRecentDictionaries.ImageIndex:=iiDataDict;
+  FNRecentDictionaries.SelectedIndex:=iiDataDict;
   SetupIntf;
   FRecentDicts.LoadFromFile(UTF8ToSys(FN),'RecentDicts');
   FRecentConnections.LoadFromFile(UTF8ToSys(FN),'RecentConnections');
@@ -1399,7 +1403,7 @@ begin
   Result:=TDataDictEditor.Create(Self);
   Result.PageControl:=PCDD;
   Result.Parent:=PCDD;
-  Result.ImageIndex:=15;
+  Result.ImageIndex:=iiConnection;
   PCDD.ActivePage:=Result;
   Result.DataDictionary.OnProgress:=@DoDDEprogress;
 end;
@@ -1706,8 +1710,8 @@ begin
   TVAll.Items.AddChild(TN,sld_Recentlv2+': '+DF.Filename);
   TVAll.Items.AddChild(TN,sld_Recentlv3+': '+DateTimeToStr(DF.LastUse));
   TN.Data:=DF;
-  TN.ImageIndex:=15;
-  TN.SelectedIndex:=15;
+  TN.ImageIndex:=iiDataDict;
+  TN.SelectedIndex:=iiDataDict;
 end;
 
 
@@ -1756,8 +1760,8 @@ begin
   TVAll.Items.AddChild(TN,sld_Connectionlv3+': '+DateTimeToStr(RC.LastUse));
   TVAll.Items.AddChild(TN,sld_Connectionlv2+': '+RC.ConnectionString);
   TN.Data:=RC;
-  TN.ImageIndex:=18;
-  TN.SelectedIndex:=18;
+  TN.ImageIndex:=iiConnection;
+  TN.SelectedIndex:=iiConnection;
 end;
 
 function TMainForm.GetConnectionName(out AName: String): Boolean;
@@ -1835,7 +1839,7 @@ begin
   Result.PageControl:=PCDD;
   Result.Parent:=PCDD;
   Result.Frame.Description:=AName;
-  Result.ImageIndex:=18;
+  Result.ImageIndex:=iiConnection;
   Result.Caption:=aName;
   PCDD.ActivePage:=Result;
 end;

@@ -1544,9 +1544,9 @@ begin
       if tmpFieldN = 'Name' then
       begin
         if IsActUndo then
-          CompN := FUndoList[FUndoCurr].newVal
+          CompN := String(FUndoList[FUndoCurr].newVal)
         else
-          CompN := FUndoList[FUndoCurr].oldVal;
+          CompN := String(FUndoList[FUndoCurr].oldVal);
       end
       else
         CompN := FUndoList[FUndoCurr].compName;
@@ -2642,8 +2642,6 @@ begin
 
   OldMouseMovePos := LastMouseMovePos;
   LastMouseMovePos := GetFormRelativeMousePosition(Form);
-  if (OldMouseMovePos.X = LastMouseMovePos.X) and (OldMouseMovePos.Y = LastMouseMovePos.Y) then
-    Exit;
 
   MouseMoveComponent := MouseDownComponent;
   if MouseMoveComponent = nil then
@@ -2679,13 +2677,13 @@ begin
     else
       ACursor := Grabber.Cursor;
 
-    if ACursor <> LastFormCursor then
-    begin
-      LastFormCursor := ACursor;
-      SetTempCursor(Form, ACursor);
-    end;
+    LastFormCursor := ACursor;
+    SetTempCursor(Form, ACursor);
     Exit;
   end;
+
+  if (OldMouseMovePos.X = LastMouseMovePos.X) and (OldMouseMovePos.Y = LastMouseMovePos.Y) then
+    Exit;
 
   if (Selection.SelectionForm = nil) or (Selection.SelectionForm = Form) then
   begin

@@ -380,16 +380,24 @@ var
   resp : NSResponder;
   wn   : NSWindow;
   ch   : System.WideChar;
+  flags: NSEventModifierFlags;
+const
+  NSModsMask = NSControlKeyMask
+            or NSAlternateKeyMask
+            or NSCommandKeyMask;
 begin
   Result := false;
 
   // If the form has a default or cancel button, capture Return and Escape to
   // prevent further processing.  Actually clicking the buttons is handled in
   // the LCL in response to the keyUp
-  if Assigned(wincallback) and (event.modifierFlags_ = 0) then
+  // add NumericPadEnter supported.
+  flags:= event.modifierFlags and NSModsMask;
+  if Assigned(wincallback) and (flags=0) then
   begin
     ch := NSEventRawKeyChar(event);
-    if (((ch = System.WideChar(NSCarriageReturnCharacter)) and wincallback.HasDefaultControl)
+    if  (((ch = System.WideChar(NSCarriageReturnCharacter)) and wincallback.HasDefaultControl)
+      or ((ch = System.WideChar(NSEnterCharacter)) and wincallback.HasDefaultControl)
       or ((ch = #27{Escape}) and wincallback.HasCancelControl)) then
     begin
       Result := true;
@@ -1013,7 +1021,11 @@ end;
 // return proper focused responder by kind of class of NSResponder
 function getProperFocusedResponder( const aResponder : NSResponder ): NSResponder;
 begin
-  Result := aResponder;
+  if aResponder<>nil then
+    Result := aResponder
+  else
+    Result:= NSApp.keyWindow;
+
   if Result.isKindOfClass(NSWindow) then
     Result:= TCocoaWindowContent(NSWindow(Result).contentView).documentView;
 end;
