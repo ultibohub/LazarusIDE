@@ -108,9 +108,7 @@ end;
 procedure TIDEFPCInfoDialog.UpdateValuesMemo;
 var
   sl: TStringList;
-  TargetOS: String;
-  TargetCPU: String;
-  TargetProcessor: String; //Ultibo
+  TargetOS, TargetCPU, TargetProcessor, Subtarget: String; //Ultibo
   CompilerFilename: String;
   FPCSrcDir: String;
   UnitSetCache: TFPCUnitSetCache;
@@ -126,10 +124,11 @@ begin
     TargetOS:=BuildBoss.GetTargetOS;
     TargetCPU:=BuildBoss.GetTargetCPU;
     TargetProcessor:=BuildBoss.GetTargetProcessor; //Ultibo
+    Subtarget:=BuildBoss.GetSubtarget;
     CompilerFilename:=LazarusIDE.GetCompilerFilename;
     FPCSrcDir:=EnvironmentOptions.GetParsedFPCSourceDirectory; // needs FPCVer macro
     UnitSetCache:=CodeToolBoss.CompilerDefinesCache.FindUnitSet(
-      CompilerFilename,TargetOS,TargetCPU,TargetProcessor,'',FPCSrcDir,true); //Ultibo
+      CompilerFilename,TargetOS,TargetCPU,TargetProcessor,Subtarget,'',FPCSrcDir,true); //Ultibo
     GatherFPCExecutable(UnitSetCache,sl);
 
     ValuesMemo.Lines.Assign(sl);
@@ -140,11 +139,7 @@ end;
 
 procedure TIDEFPCInfoDialog.UpdateCmdLinePage;
 var
-  TargetOS: String;
-  TargetCPU: String;
-  TargetProcessor: String; //Ultibo
-  CompilerFilename: String;
-  CompilerOptions: String;
+  TargetOS, TargetCPU, TargetProcessor, Subtarget, CompilerFilename, CompilerOptions: String; //Ultibo
   Cfg: TPCTargetConfigCache;
   Params: String;
   ExtraOptions: String;
@@ -195,8 +190,9 @@ begin
     TargetOS:=BuildBoss.GetTargetOS;
     TargetCPU:=BuildBoss.GetTargetCPU;
     TargetProcessor:=BuildBoss.GetTargetProcessor; //Ultibo
+    Subtarget:=BuildBoss.GetSubtarget;
     Cfg:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-                        CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,true); //Ultibo
+                        CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,Subtarget,true); //Ultibo
     TestFilename:=CodeToolBoss.CompilerDefinesCache.TestFilename;
     Filename:=ExtractFileName(TestFilename);
     WorkDir:=ExtractFilePath(TestFilename);
@@ -299,6 +295,7 @@ begin
   sl.Add('TargetOS='+BuildBoss.GetTargetOS);
   sl.Add('TargetCPU='+BuildBoss.GetTargetCPU);
   sl.Add('TargetProcessor='+BuildBoss.GetTargetProcessor); //Ultibo
+  sl.Add('Subtarget='+BuildBoss.GetSubtarget);
   sl.Add('');
 end;
 

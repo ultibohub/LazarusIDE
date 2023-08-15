@@ -889,7 +889,7 @@ begin
     else begin
       FNewUnitInfo:=Project1.Units[FUnitIndex];
     end;
-    FNewUnitInfo.Flags := FNewUnitInfo.Flags + [uifInternalFile];
+    FNewUnitInfo.InternalFile := True;
 
     if FNewUnitInfo.OpenEditorInfoCount > 0 then begin
       FNewEditorInfo := FNewUnitInfo.OpenEditorInfo[0];
@@ -1164,12 +1164,13 @@ begin
 
   SPath := CodeToolBoss.GetCompleteSrcPathForDirectory('');
   // Check if symlink is found in search path or in editor.
-  if (SearchDirectoryInSearchPath(SPath, ExtractFilePath(FFileName)) > 0)
+  if (SearchDirectoryInMaskedSearchPath(SPath, ExtractFilePath(FFileName)) > 0)
   or Assigned(SourceEditorManager.SourceEditorIntfWithFilename(FFileName))
   then
     Exit;       // Symlink found -> use it.
   // Check if "physical" target for a symlink is found in search path or in editor.
-  if (SearchDirectoryInSearchPath(SPath, ExtractFilePath(Target)) > 0)
+  if ((ExtractFilePath(FFileName)<>ExtractFilePath(Target))
+      and (SearchDirectoryInMaskedSearchPath(SPath, ExtractFilePath(Target)) > 0))
   or Assigned(SourceEditorManager.SourceEditorIntfWithFilename(Target))
   then          // Target found -> use Target name.
     FFileName := Target
@@ -2995,7 +2996,7 @@ var
     while PathPos<=length(UnitPath) do begin
       CurDir:=GetNextDirectoryInSearchPath(UnitPath,PathPos);
       // check if directory is already tested
-      if SearchDirectoryInSearchPath(AlreadySearchedUnitDirs,CurDir,1)>0 then
+      if SearchDirectoryInSearchPath(AlreadySearchedUnitDirs,CurDir)>0 then
         continue;
       AlreadySearchedUnitDirs:=MergeSearchPaths(AlreadySearchedUnitDirs,CurDir);
       // check if directory contains a compiled unit
@@ -3037,7 +3038,7 @@ var
 
     SearchFile:=AFilename;
     SearchPath:=AllIncPaths;
-    Result:=FileUtil.SearchFileInPath(SearchFile,BaseDir,SearchPath,';',[]);
+    Result:=SearchFileInSearchPath(SearchFile,BaseDir,SearchPath);
     {$IFDEF VerboseFindSourceFile}
     debugln(['SearchIndirectIncludeFile Result="',Result,'"']);
     {$ENDIF}
@@ -3052,7 +3053,7 @@ var
     Filename:='';
     SearchPath:=RemoveSearchPaths(TheSearchPath,AlreadySearchedPaths);
     if SearchPath<>'' then begin
-      Filename:=FileUtil.SearchFileInPath(SearchFile,BaseDir,SearchPath,';',[]);
+      Filename:=SearchFileInSearchPath(SearchFile,BaseDir,SearchPath);
       {$IFDEF VerboseFindSourceFile}
       debugln(['FindSourceFile trying "',SearchPath,'" Filename="',Filename,'"']);
       {$ENDIF}
@@ -3222,7 +3223,7 @@ var
     begin
       if FilenameIsAbsolute(aFilename) then
       begin
-        if SearchDirectoryInSearchPath(UnitPath,ExtractFilePath(aFilename))<0 then
+        if SearchDirectoryInMaskedSearchPath(UnitPath,ExtractFilePath(aFilename))<0 then
           exit; // not in exclusive unitpath
       end else begin
         if (not (TheOwner is TProject)) or (not TProject(TheOwner).IsVirtual) then
@@ -3502,7 +3503,7 @@ var
         exit; // virtual UnitToFilename can not be accessed from disk UnitToFilename
     end else begin
       //debugln(['AddUnit unitpath=',UnitPath]);
-      if SearchDirectoryInSearchPath(UnitPath,ExtractFilePath(AFilename))<1 then
+      if SearchDirectoryInMaskedSearchPath(UnitPath,ExtractFilePath(AFilename))<1 then
         exit; // not reachable
     end;
     if UnitToFilename.Contains(AnUnitName) then exit; // duplicate unit
@@ -3752,6 +3753,8 @@ begin
   EditorInfoIndex := 0;
   SourceEditorManager.IncUpdateLock;
   Project1.BeginUpdate(true);
+  if IDETabMaster <> nil then
+    IDETabMaster.BeginUpdate;
   try
     // call ProjectOpening handlers
     HandlerResult:=MainIDE.DoCallProjectChangedHandler(lihtProjectOpening, Project1);
@@ -3895,6 +3898,9 @@ begin
       HandlerResult:=mrCancel;
     if (Result=mrOk) then
       Result:=HandlerResult;
+
+    if IDETabMaster <> nil then
+      IDETabMaster.EndUpdate;
   end;
   if Result=mrAbort then exit;
   //debugln('InitOpenedProjectFile end  CodeToolBoss.ConsistencyCheck=',IntToStr(CodeToolBoss.ConsistencyCheck));
@@ -4128,10 +4134,8 @@ begin
       [Project1.GetTitleOrName]),
       mtconfirmation, [mbYes, mbNo, mbCancel])=mrYes then
     begin
-      if SaveProject([])=mrAbort then begin
-        Result:=mrAbort;
-        exit;
-      end;
+      if SaveProject([])=mrAbort then
+        exit(mrAbort);
     end;
   end;
   Result:=mrOk;
@@ -4155,7 +4159,7 @@ begin
   Result:=MainIDE.DoCallProjectChangedHandler(lihtProjectClose, Project1);
   if Result=mrAbort then exit;
 
-    // close all loaded files
+  // close all loaded files
   SourceEditorManager.IncUpdateLock;
   try
     while SourceEditorManager.SourceEditorCount > 0 do begin
@@ -5442,6 +5446,7 @@ var
   NewHighlighter: TLazSyntaxHighlighter;
   AmbiguousFiles: TStringList;
   i: Integer;
+  DirRelation: TSPFileMaskRelation;
   Owners: TFPList;
   OldFileExisted: Boolean;
   ConvTool: TConvDelphiCodeTool;
@@ -5512,7 +5517,7 @@ begin
     if AnUnitInfo.IsPartOfProject and FilenameHasPascalExt(NewFilename)
     and (CompareFilenames(NewFilePath,Project1.Directory)<>0) then begin
       OldUnitPath:=Project1.CompilerOptions.GetUnitPath(false);
-      if SearchDirectoryInSearchPath(OldUnitPath,NewFilePath,1)<1 then
+      if SearchDirectoryInMaskedSearchPath(OldUnitPath,NewFilePath)<1 then
         AddPathToBuildModes(NewFilePath, False);
     end;
 
@@ -5693,13 +5698,14 @@ begin
         Project1.SourceDirectories.CreateSearchPathFromAllFiles,OldFilePath,1)<1)
       then
         //DebugLn('RenameUnit OldFilePath="',OldFilePath,'" UnitPath="',Project1.CompilerOptions.GetUnitPath(false),'"');
-        if (SearchDirectoryInSearchPath(Project1.CompilerOptions.GetUnitPath(false),OldFilePath,1)<1)
+        if (SearchDirectoryInSearchPath(Project1.CompilerOptions.GetUnitPath(false),OldFilePath,DirRelation)>1)
+            and (DirRelation=TSPFileMaskRelation.Equal)
         then
           if IDEMessageDialog(lisCleanUpUnitPath,
               Format(lisTheDirectoryIsNoLongerNeededInTheUnitPathRemoveIt,[OldFilePath,LineEnding]),
               mtConfirmation,[mbYes,mbNo])=mrYes
           then
-            Project1.CompilerOptions.RemoveFromUnitPaths(OldUnitPath);
+            Project1.CompilerOptions.RemoveFromUnitPaths(OldFilePath);
     end;
 
     // delete old pas, .pp, .ppu

@@ -66,7 +66,7 @@ uses
   // IdeConfig
   LazConf,
   // IDE
-  CompilerOptions, SourceEditor, ProjectDefs, Project,
+  CompilerOptions, SourceEditor, ProjectDefs, Project, ProjectDebugLink,
   LazarusIDEStrConsts, MainBar, MainIntf, MainBase, BaseBuildManager, SourceMarks,
   DebugEventsForm, EnvGuiOptions;
 
@@ -108,7 +108,7 @@ type
   private
     FAsmWindowShouldAutoClose: Boolean;
     procedure BreakAutoContinueTimer(Sender: TObject);
-    procedure OnRunTimer(Sender: TObject);
+    procedure RunTimer(Sender: TObject);
     // Menu events
     procedure mnuViewDebugDialogClick(Sender: TObject);
     procedure mnuResetDebuggerClicked(Sender: TObject);
@@ -139,11 +139,12 @@ type
   private
     FDebugger: TDebuggerIntf;
     FEventLogManager: TDebugEventLogManager;
+    FProjectLink: TProjectDebugLink;
     FUnitInfoProvider: TDebuggerUnitInfoProvider;
     FDialogs: array[TDebugDialogType] of TDebuggerDlg;
     FInStateChange: Boolean;
     FPrevShownWindow: HWND;
-    FStepping: Boolean;
+    FStepping, FAsmStepping: Boolean;
     // keep track of the last reported location
     FCurrentLocation: TDBGLocationRec;
     // last hit breakpoint
@@ -169,7 +170,6 @@ type
                                             ASrcEdit: TSourceEditor);
     procedure GetSourceEditorForBreakPoint(const ABreakpoint: TIDEBreakPoint;
                                            var ASrcEdit: TSourceEditor);
-
     // Dialog routines
     procedure DestroyDebugDialog(const ADialogType: TDebugDialogType);
     procedure InitDebugOutputDlg;
@@ -308,6 +308,8 @@ type
     procedure UnregisterStateChangeHandler(AHandler: TDebuggerStateChangeNotification); override;
     procedure RegisterWatchesInvalidatedHandler(AHandler: TNotifyEvent); override;
     procedure UnregisterWatchesInvalidatedHandler(AHandler: TNotifyEvent); override;
+
+    property ProjectLink: TProjectDebugLink read FProjectLink;
   end;
 
 function GetDebugManager: TDebugManager;
@@ -758,6 +760,7 @@ begin
         Img := SourceEditorMarks.UnknownDisabledBreakPointImg;
   end;
   SourceMark.ImageIndex := Img;
+  SourceMark.Visible := True;
 end;
 
 procedure TManagedBreakPoint.UpdateSourceMarkLineColor;
@@ -1171,7 +1174,7 @@ begin
   FDebugger.Run;
 end;
 
-procedure TDebugManager.OnRunTimer(Sender: TObject);
+procedure TDebugManager.RunTimer(Sender: TObject);
 begin
   FRunTimer.Enabled:=false;
   if dmsWaitForRun in FManagerStates then
@@ -1701,6 +1704,7 @@ begin
     a := FAsmWindowShouldAutoClose or (FDialogs[ddtAssembler] = nil) or (not FDialogs[ddtAssembler].Visible);
     ViewDebugDialog(ddtAssembler);
     FAsmWindowShouldAutoClose := a and EnvironmentDebugOpts.DebuggerAutoCloseAsm;
+    FAsmStepping := False;
     exit;
   end;
   if (FDialogs[ddtAssembler] <> nil) and FAsmWindowShouldAutoClose then
@@ -1717,8 +1721,12 @@ begin
   i := SrcLine;
   if (Editor <> nil) then
     i := Editor.DebugToSourceLine(i);
-  if MainIDE.DoJumpToCodePosition(nil,nil,NewSource,1,i,-1,-1,-1,Flags)<>mrOk
-  then exit;
+  if not (FAsmStepping and (FDialogs[ddtAssembler] <> nil) and
+     FDialogs[ddtAssembler].IsVisible and FDialogs[ddtAssembler].Active )
+  then
+    if MainIDE.DoJumpToCodePosition(nil,nil,NewSource,1,i,-1,-1,-1,Flags)<>mrOk
+    then exit;
+  FAsmStepping := False;
 
   // mark execution line
   if (Editor = nil) and (SourceEditorManager <> nil) then
@@ -2059,7 +2067,7 @@ begin
   FAutoContinueTimer.OnTimer := @BreakAutoContinueTimer;
   FRunTimer := TTimer.Create(Self);
   FRunTimer.Interval := 1;
-  FRunTimer.OnTimer := @OnRunTimer;
+  FRunTimer.OnTimer := @RunTimer;
 
   FWatches.OnModified  := @DoProjectModified;
 
@@ -2079,6 +2087,7 @@ begin
   RegisterValueFormatter(skFloat, 'TDateTime', @DBGDateTimeFormatter);
 
   FEventLogManager := TDebugEventLogManager.Create;
+  FProjectLink := TProjectDebugLink.Create;
 end;
 
 destructor TDebugManager.Destroy;
@@ -2096,6 +2105,7 @@ begin
   SetDebugger(nil);
 
   FreeAndNil(FCurrentWatches);
+  FreeAndNil(FProjectLink);
   FreeAndNil(FEventLogManager);
   FreeAndNil(FSnapshots);
   FreeAndNil(FWatches);
@@ -2463,13 +2473,13 @@ begin
 
   try
     ValueConverterSelectorList.Clear;
-    if (Project1 <> nil) and (Project1.UseBackendConverterFromProject) then
-      Project1.BackendConverterConfig.AssignEnabledTo(ValueConverterSelectorList, True);
-    if (Project1 = nil) or (Project1.UseBackendConverterFromIDE) then
+    if {(Project1 <> nil) and} (FProjectLink.UseBackendConverterFromProject) then
+      FProjectLink.BackendConverterConfig.AssignEnabledTo(ValueConverterSelectorList, True);
+    if (Project1 = nil) or (FProjectLink.UseBackendConverterFromIDE) then
       DebuggerOptions.BackendConverterConfig.AssignEnabledTo(ValueConverterSelectorList, True);
 
     if (Project1 <> nil) then
-      ProjectValueConverterSelectorList := Project1.BackendConverterConfig;
+      ProjectValueConverterSelectorList := FProjectLink.BackendConverterConfig;
   finally
     ValueConverterSelectorList.Unlock;
   end;
@@ -2586,15 +2596,16 @@ begin
 
     // check if debugger needs an Exe and the exe is there
     if (NewDebuggerClass.NeedsExePath)
-    and not FileIsExecutable(Project1.GetParsedDebuggerFilename)
+    and not FileIsExecutable(FProjectLink.GetParsedDebuggerFilename)
     then begin
       if not PromptOnError then
         ClearPathAndExe
       else begin
-        debugln(['Info: (lazarus) [TDebugManager.GetLaunchPathAndExe] Project1.DebuggerFilename="',Project1.DebuggerFilename,'"']);
+        debugln(['Info: (lazarus) [TDebugManager.GetLaunchPathAndExe] Project1.DebuggerFilename="',
+                 FProjectLink.DebuggerFilename,'"']);
         IDEMessageDialog(lisDebuggerInvalid,
           Format(lisTheDebuggerDoesNotExistsOrIsNotExecutableSeeEnviro,
-            [Project1.DebuggerFilename, LineEnding, LineEnding+LineEnding]),
+            [FProjectLink.DebuggerFilename, LineEnding, LineEnding+LineEnding]),
           mtError,[mbOK]);
         Exit;
       end;
@@ -2644,7 +2655,7 @@ begin
     // check if debugger is already created with the right type
     if (FDebugger <> nil)
     and (not (FDebugger.ClassType = NewDebuggerClass) // exact class match
-          or (FDebugger.ExternalDebugger <> Project1.GetParsedDebuggerFilename)
+          or (FDebugger.ExternalDebugger <> FProjectLink.GetParsedDebuggerFilename)
           or (FDebugger.State in [dsError])
         )
     then begin
@@ -2655,7 +2666,7 @@ begin
 
     // create debugger object
     if FDebugger = nil
-    then SetDebugger(NewDebuggerClass.Create(Project1.GetParsedDebuggerFilename));
+    then SetDebugger(NewDebuggerClass.Create(FProjectLink.GetParsedDebuggerFilename));
 
     if FDebugger = nil
     then begin
@@ -2663,7 +2674,7 @@ begin
       Exit;
     end;
 
-  DbgCfg := Project1.CurrentDebuggerPropertiesConfig;
+  DbgCfg := FProjectLink.CurrentDebuggerPropertiesConfig;
 
     if (DbgCfg <> nil) and (DbgCfg.DebuggerProperties <> nil) then
       FDebugger.GetProperties.Assign(DbgCfg.DebuggerProperties);
@@ -2764,10 +2775,10 @@ function TDebugManager.DoSetBreakkPointWarnIfNoDebugger: boolean;
 var
   DbgClass: TDebuggerClass;
 begin
-  DbgClass := Project1.CurrentDebuggerClass;
+  DbgClass := FProjectLink.CurrentDebuggerClass;
   if (DbgClass=nil)
   or (DbgClass.NeedsExePath
-    and (not FileIsExecutableCached(Project1.GetParsedDebuggerFilename)))
+    and (not FileIsExecutableCached(FProjectLink.GetParsedDebuggerFilename)))
   then begin
     if IDEQuestionDialog(lisDbgMangNoDebuggerSpecified,
       Format(lisDbgMangThereIsNoDebuggerSpecifiedSettingBreakpointsHaveNo,[LineEnding]),
@@ -2815,6 +2826,7 @@ begin
   end;
 
   FStepping:=True;
+  FAsmStepping := False;
   FDebugger.StepInto;
   Result := mrOk;
 end;
@@ -2830,6 +2842,7 @@ begin
   end;
 
   FStepping:=True;
+  FAsmStepping := False;
   FDebugger.StepOver;
   Result := mrOk;
 end;
@@ -2845,6 +2858,7 @@ begin
   end;
 
   FStepping:=True;
+  FAsmStepping := True;
   FDebugger.StepIntoInstr;
   Result := mrOk;
   // Todo: move to DebuggerChangeState (requires the last run-command-type to be avail)
@@ -2862,6 +2876,7 @@ begin
   end;
 
   FStepping:=True;
+  FAsmStepping := True;
   FDebugger.StepOverInstr;
   Result := mrOk;
   // Todo: move to DebuggerChangeState (requires the last run-command-type to be avail)
@@ -2885,6 +2900,7 @@ begin
   end;
 
   FStepping:=True;
+  FAsmStepping := False;
   FDebugger.StepOut;
   Result := mrOk;
 end;
@@ -2896,6 +2912,7 @@ begin
   FRunTimer.Enabled:=false;
   Exclude(FManagerStates,dmsWaitForRun);
   Exclude(FManagerStates,dmsWaitForAttach);
+  FAsmStepping := False;
 
   SourceEditorManager.ClearExecutionLines;
   if (MainIDE.ToolStatus=itDebugger) and (FDebugger<>nil) and (not Destroying)
@@ -3050,6 +3067,7 @@ begin
     end;
     Include(FManagerStates,dmsRunning);
     FStepping:=False;
+    FAsmStepping := False;
     try
       FDebugger.Run;
     finally
@@ -3332,6 +3350,7 @@ begin
   else UnitFilename:=BuildBoss.GetTestUnitFilename(ActiveUnitInfo);
 
   FStepping:=True;
+  FAsmStepping := False;
   FDebugger.RunTo(ExtractFilename(UnitFilename),
                   TSourceEditor(ActiveSrcEdit).EditorComponent.CaretY);
 
@@ -3362,7 +3381,7 @@ end;
 
 function TDebugManager.GetDebuggerClass: TDebuggerClass;
 begin
-  Result := Project1.CurrentDebuggerClass;
+  Result := FProjectLink.CurrentDebuggerClass;
   if Result = nil then
     Result := TProcessDebugger;
 end;
@@ -3397,6 +3416,7 @@ begin
     end;
     Include(FManagerStates,dmsRunning);
     FStepping:=False;
+    FAsmStepping := False;
     try
       FDebugger.Attach(FAttachToID);
     finally

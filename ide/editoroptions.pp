@@ -65,11 +65,14 @@ uses
   SynBeautifierPascal, SynEditTextDynTabExpander, SynEditTextTabExpander,
   // codetools
   LinkScanner, CodeToolManager,
+  // BuildIntf
+  IDEOptionsIntf, MacroIntf,
   // IDEIntf
-  IDECommands, SrcEditorIntf, IDEOptionsIntf, IDEOptEditorIntf, IDEDialogs,
-  EditorSyntaxHighlighterDef, MacroIntf,
+  IDECommands, SrcEditorIntf, IDEOptEditorIntf, IDEDialogs, EditorSyntaxHighlighterDef,
+  // IdeConfig
+  LazConf,
   // IDE
-  SourceMarks, LazarusIDEStrConsts, KeyMapping, LazConf;
+  SourceMarks, LazarusIDEStrConsts, KeyMapping;
 
 const
   DefaultCompletionLongLineHintType = sclpExtendRightOnly;
@@ -519,7 +522,7 @@ const
       (Name:  dlgFoldPasProcedure;     Xml:     'Procedure';
        Index: ord(cfbtProcedure);    Enabled: True),
       (Name:  dlgFoldPasAnonProcedure; Xml:     'AnonymousProcedure';
-       Index: ord(cfbtAnonynmousProcedure);    Enabled: True),
+       Index: ord(cfbtAnonymousProcedure);    Enabled: True),
       (Name:  dlgFoldLocalPasVarType;  Xml:     'LocalVarType';
        Index: ord(cfbtLocalVarType); Enabled: True),
       (Name:  dlgFoldPasProcBeginEnd;  Xml:     'ProcBeginEnd';

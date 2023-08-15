@@ -192,7 +192,7 @@ type
     procedure LazInstancesStartNewInstance(const aFiles: TStrings;
       var Result: TStartNewInstanceResult; var outSourceWindowHandle: HWND);
     procedure LazInstancesGetOpenedProjectFileName(var outProjectFileName: string);
-    procedure OnHintWatchValidityChanged(Sender: TObject);
+    procedure HintWatchValidityChanged(Sender: TObject);
     procedure DlgDebugInfoHelpRequested(Sender: TObject; AModalResult: TModalResult; var ACanClose: Boolean);
 
   public
@@ -735,14 +735,14 @@ type
     procedure ReloadMenuShortCuts;
 
     // methods for creating a project
-    procedure OnLoadProjectInfoFromXMLConfig(TheProject: TProject;
-                                             XMLConfig: TXMLConfig; Merge: boolean);
-    procedure OnLoadSaveCustomData(Sender: TObject; Load: boolean;
+    procedure LoadProjectInfoFromXMLConfig(TheProject: TProject;
+                                           XMLConfig: TXMLConfig; Merge: boolean);
+    procedure LoadSaveCustomData(Sender: TObject; Load: boolean;
       Data: TStringToStringTree; PathDelimChanged: boolean);
-    procedure OnSaveProjectInfoToXMLConfig(TheProject: TProject;
+    procedure SaveProjectInfoToXMLConfig(TheProject: TProject;
                          XMLConfig: TXMLConfig; WriteFlags: TProjectWriteFlags);
-    procedure OnProjectChangeInfoFile(TheProject: TProject);
-    procedure OnSaveProjectUnitSessionInfo(AUnitInfo: TUnitInfo);
+    procedure ProjectChangeInfoFile(TheProject: TProject);
+    procedure SaveProjectUnitSessionInfo(AUnitInfo: TUnitInfo);
   public
     class procedure ParseCmdLineOptions;
 
@@ -2428,8 +2428,10 @@ begin
     ' SkipAutoLoadingLastProject=',SkipAutoLoadingLastProject,
     ' EnvironmentOptions.OpenLastProjectAtStart=',EnvironmentOptions.OpenLastProjectAtStart,
     ' LastProj="',LastProj,'"',
+    ' MultipleInstances=',IDEMultipleInstancesOptionNames[EnvironmentOptions.MultipleInstances],
     ' RestoreProjectClosed=',RestoreProjectClosed,
-    ' FileExistsCached(LastProj)=',FileExistsCached(LastProj)
+    ' FileExistsCached(LastProj)=',FileExistsCached(LastProj),
+    ' IDEProtocolOpts.LastProjectLoadingCrashed=',IDEProtocolOpts.LastProjectLoadingCrashed
     ]);}
   if (not ProjectLoaded)
   and (not SkipAutoLoadingLastProject)
@@ -5821,7 +5823,7 @@ begin
     MainIDEBar.itmFileSaveAll.Enabled := MainIDEBar.itmProjectSave.Enabled;
 end;
 
-procedure TMainIDE.OnSaveProjectUnitSessionInfo(AUnitInfo: TUnitInfo);
+procedure TMainIDE.SaveProjectUnitSessionInfo(AUnitInfo: TUnitInfo);
 
   function GetWindowState(ACustomForm: TCustomForm): TWindowState;
   begin
@@ -5844,7 +5846,7 @@ begin
   end;
 end;
 
-procedure TMainIDE.OnLoadProjectInfoFromXMLConfig(TheProject: TProject;
+procedure TMainIDE.LoadProjectInfoFromXMLConfig(TheProject: TProject;
   XMLConfig: TXMLConfig; Merge: boolean);
 begin
   if TheProject<>Project1 then exit;
@@ -5852,7 +5854,7 @@ begin
   EditorMacroListViewer.LoadProjectSpecificInfo(XMLConfig);
 end;
 
-procedure TMainIDE.OnLoadSaveCustomData(Sender: TObject; Load: boolean;
+procedure TMainIDE.LoadSaveCustomData(Sender: TObject; Load: boolean;
   Data: TStringToStringTree; PathDelimChanged: boolean);
 var
   Handler: TMethodList;
@@ -5864,7 +5866,7 @@ begin
     TLazLoadSaveCustomDataEvent(Handler[i])(Sender,Load,Data,PathDelimChanged);
 end;
 
-procedure TMainIDE.OnSaveProjectInfoToXMLConfig(TheProject: TProject;
+procedure TMainIDE.SaveProjectInfoToXMLConfig(TheProject: TProject;
   XMLConfig: TXMLConfig; WriteFlags: TProjectWriteFlags);
 begin
   if TheProject<>Project1 then exit;
@@ -5873,7 +5875,7 @@ begin
   EditorMacroListViewer.SaveProjectSpecificInfo(XMLConfig, WriteFlags);
 end;
 
-procedure TMainIDE.OnProjectChangeInfoFile(TheProject: TProject);
+procedure TMainIDE.ProjectChangeInfoFile(TheProject: TProject);
 begin
   if (Project1=nil) or (TheProject<>Project1) then exit;
   if Project1.IsVirtual then
@@ -6521,13 +6523,15 @@ begin
     if (GetActiveMode=nil) and (Count>0) then
       ActiveModeName:=Modes[0].Name;
 
+  Assert(Assigned(DebugBossMgr.ProjectLink), 'CreateProjectObject: ProjectLink=Nil');
+  DebugBossMgr.ProjectLink.Project:=Result;
   Result.MainProject:=true;
   Result.OnFileBackup:=@MainBuildBoss.BackupFileForWrite;
-  Result.OnLoadProjectInfo:=@OnLoadProjectInfoFromXMLConfig;
-  Result.OnLoadSafeCustomData:=@OnLoadSaveCustomData;
-  Result.OnSaveProjectInfo:=@OnSaveProjectInfoToXMLConfig;
-  Result.OnSaveUnitSessionInfo:=@OnSaveProjectUnitSessionInfo;
-  Result.OnChangeProjectInfoFile:=@OnProjectChangeInfoFile;
+  Result.OnLoadProjectInfo:=@LoadProjectInfoFromXMLConfig;
+  Result.OnLoadSafeCustomData:=@LoadSaveCustomData;
+  Result.OnSaveProjectInfo:=@SaveProjectInfoToXMLConfig;
+  Result.OnSaveUnitSessionInfo:=@SaveProjectUnitSessionInfo;
+  Result.OnChangeProjectInfoFile:=@ProjectChangeInfoFile;
   Result.IDEOptions.OnBeforeRead:=@ProjectOptionsBeforeRead;
   Result.IDEOptions.OnAfterWrite:=@ProjectOptionsAfterWrite;
 end;
@@ -6968,18 +6972,20 @@ var
   PkgFlags: TPkgCompileFlags;
   CompilerFilename: String;
   WorkingDir: String;
-  CompilerParams: String;
+  CompilerParams: TStrings;
+  CmdLineParams: TStrings;
   NeedBuildAllFlag: Boolean;
   NoBuildNeeded: Boolean;
   UnitOutputDirectory: String;
   TargetExeName: String;
   TargetExeDirectory: String;
   CompilerVersion: integer;
-  aCompileHint, ShortFilename: String;
+  aCompileHint, ShortFilename, CfgFilename: String;
   OldToolStatus: TIDEToolStatus;
   IsComplete: Boolean;
   StartTime: TDateTime;
   CompilerKind: TPascalCompiler;
+  CfgCode: TCodeBuffer;
 begin
   if DoAbortBuild(true)<>mrOK then begin
     debugln(['Error: (lazarus) [TMainIDE.DoBuildProject] DoAbortBuild failed']);
@@ -7014,6 +7020,8 @@ begin
   Result:=PkgBoss.CheckUserSearchPaths(Project1.CompilerOptions);
   if Result<>mrOk then exit;
 
+  CompilerParams:=nil;
+  CmdLineParams:=nil;
   try
     Result:=DoSaveForBuild(AReason);
     if Result<>mrOk then begin
@@ -7231,11 +7239,26 @@ begin
         // compile
         CompilerFilename:=Project1.GetCompilerFilename;
         // Hint: use absolute paths, because some external tools resolve symlinked directories
-        CompilerParams :=
-          Project1.CompilerOptions.MakeOptionsString([ccloAbsolutePaths])
-                 + ' ' + PrepareCmdLineOption(SrcFilename);
+        CompilerParams := Project1.CompilerOptions.MakeCompilerParams([ccloAbsolutePaths]);
+        CompilerParams.Add(SrcFilename);
+        CmdLineParams := CompilerParams;
+
+        if Project1.CompilerOptions.WriteConfigFile then
+        begin
+          CfgFilename:=Project1.GetWriteConfigFilePath;
+          CfgCode:=WriteCompilerCfgFile(CfgFilename,CompilerParams,CmdLineParams);
+          if CfgCode=nil then begin
+            IDEMessageDialog(lisReadError,Format(lisUnableToReadFile2,
+                             [CfgFilename]),mtError,[mbOk]);
+            exit(mrCancel);
+          end;
+          if CfgCode.FileOnDiskNeedsUpdate and (SaveCodeBuffer(CfgCode)<>mrOk) then
+            exit(mrCancel);
+        end;
+
         // write state file, to avoid building clean every time
-        Result:=Project1.SaveStateFile(CompilerFilename,CompilerParams,false);
+        Result:=Project1.SaveStateFile(CompilerFilename,
+                                       CompilerParams,false);
         if Result<>mrOk then begin
           debugln(['Error: (lazarus) [TMainIDE.DoBuildProject] SaveStateFile before compile failed']);
           exit;
@@ -7245,7 +7268,7 @@ begin
 
         StartTime:=Now;
         Result:=TheCompiler.Compile(Project1,
-                                WorkingDir,CompilerFilename,CompilerParams,
+                                WorkingDir,CompilerFilename,CmdLineParams,
                                 (AReason = crBuild) or NeedBuildAllFlag,
                                 pbfSkipLinking in Flags,
                                 pbfSkipAssembler in Flags,Project1.IsVirtual,
@@ -7303,6 +7326,9 @@ begin
       DoCallBuildingFinishedHandler(lihtProjectBuildingFinished, Self, Result=mrOk);
     end;
   finally
+    if CmdLineParams<>CompilerParams then
+      CmdLineParams.Free;
+    CompilerParams.Free;
     // check sources
     DoCheckFilesOnDisk;
   end;
@@ -11931,7 +11957,7 @@ begin
     CodeExplorerView.CurrentCodeBufferChanged;
 end;
 
-procedure TMainIDE.OnHintWatchValidityChanged(Sender: TObject);
+procedure TMainIDE.HintWatchValidityChanged(Sender: TObject);
 var
   p: SizeInt;
   WatchPrinter: TWatchResultPrinter;
@@ -12093,9 +12119,9 @@ begin
       if CStack <> nil then
         st := CStack.CurrentIndex;
       FHintWatchData.WatchValue := aWatch.Values[tid, st] as TCurrentWatchValue;
-      FHintWatchData.WatchValue.OnValidityChanged := @OnHintWatchValidityChanged;
+      FHintWatchData.WatchValue.OnValidityChanged := @HintWatchValidityChanged;
       FHintWatchData.WatchValue.Value;
-      OnHintWatchValidityChanged(FHintWatchData.WatchValue);
+      HintWatchValidityChanged(FHintWatchData.WatchValue);
       exit;
     end;
   end;

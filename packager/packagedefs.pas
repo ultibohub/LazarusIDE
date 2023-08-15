@@ -38,8 +38,7 @@ interface
 
 uses
   // FCL
-  Classes, SysUtils, Contnrs, TypInfo, AVL_Tree,
-  System.UITypes,
+  Classes, SysUtils, Contnrs, TypInfo, AVL_Tree, System.UITypes,
   // LCL
   Forms, ImgList,
   // Codetools
@@ -206,7 +205,6 @@ type
     property Flags: TPkgFileFlags read FFlags write SetFlags;
     property HasRegisterProc: boolean read GetHasRegisterProc write SetHasRegisterProc;
     property LazPackage: TLazPackage read FPackage;
-    property SourceDirectoryReferenced: boolean read FSourceDirectoryReferenced;
   end;
   
   
@@ -354,6 +352,7 @@ type
     procedure GetInheritedCompilerOptions(var OptionsList: TFPList); override;
     function GetOwnerName: string; override;
     function GetDefaultMainSourceFileName: string; override;
+    function GetDefaultWriteConfigFilePath: string; override;
     function CreateTargetFilename: string; override;
     function HasCompilerCommand: boolean; override;
 
@@ -446,19 +445,24 @@ type
     podwWritable,
     podwNotWritable
     );
-  TPkgLastCompileStats = record
+
+  { TPkgLastCompileStats }
+
+  TPkgLastCompileStats = class
+  public
     StateFileLoaded: boolean;
     StateFileName: string; // the .compiled file
     StateFileDate: longint;
     CompilerFilename: string; // path to used compiler
     CompilerFileDate: integer;
-    Params: string;        // compiler parameters
+    Params: TStrings;        // compiler parameters
     Complete: boolean;     // compilation was successful
     MainPPUExists: boolean; // main ppu file was there after compile
     ViaMakefile: boolean;  // compiled via make
     DirectoryWritable: TPkgOutputDirWritable;
+    constructor Create;
+    destructor Destroy; override;
   end;
-  PPkgLastCompileStats = ^TPkgLastCompileStats;
   TPkgOutputDir = (
     podDefault,
     podFallback // used when podDefault is not writable
@@ -569,7 +573,7 @@ type
     procedure SetStorePathDelim(const AValue: TPathDelimSwitch);
     procedure SetUseLegacyLists(const AUseLegacyLists: Boolean);
     procedure SetUserReadOnly(const AValue: boolean);
-    procedure OnMacroListSubstitution({%H-}TheMacro: TTransferMacro;
+    procedure MacroListSubstitution({%H-}TheMacro: TTransferMacro;
       const MacroName: string; var s: string;
       const Data: PtrInt; var Handled, {%H-}Abort: boolean; {%H-}Depth: integer);
     procedure Clear;
@@ -629,12 +633,12 @@ type
     function GetSrcFilename: string;
     function GetSrcPPUFilename: string;
     function GetCompilerFilename: string;
+    function GetWriteConfigFilePath: string;
     function GetPOOutDirectory: string;
     function GetUnitPath(RelativeToBaseDir: boolean): string;
     function GetIncludePath(RelativeToBaseDir: boolean): string;
     function GetSrcPath(RelativeToBaseDir: boolean): string;
     function GetFPDocPackageName: string;
-    function GetLastCompilerParams(o: TPkgOutputDir): string;
     function NeedsDefineTemplates: boolean;
     function SubstitutePkgMacros(const s: string; PlatformIndependent: boolean): string;
     procedure WriteInheritedUnparsedOptions;
@@ -770,12 +774,12 @@ type
                                             write FUserIgnoreChangeStamp;
     property OnModifySilently: TNotifyEvent read FOnModifySilently write FOnModifySilently;
   end;
-  
+
   PLazPackage = ^TLazPackage;
-  
-  
+
+
   { TBasePackageEditor }
-  
+
   TBasePackageEditor = class(TForm)
   protected
     function GetLazPackage: TLazPackage; virtual;
@@ -884,7 +888,7 @@ begin
   pftText: Result:=lisPkgFileTypeText;
   pftBinary: Result:=lisPkgFileTypeBinary;
   else
-    Result:='Unknown';
+    Result:='Unknown'{%H-};
   end;
 end;
 
@@ -1574,12 +1578,12 @@ procedure TPkgFile.UpdateSourceDirectoryReference;
 begin
   if (not AutoReferenceSourceDir) or (FPackage=nil) then exit;
   if FSourceDirNeedReference then begin
-    if not SourceDirectoryReferenced then begin
+    if not FSourceDirectoryReferenced then begin
       LazPackage.SourceDirectories.AddFilename(FDirectory);
       FSourceDirectoryReferenced:=true;
     end;
   end else begin
-    if SourceDirectoryReferenced then begin
+    if FSourceDirectoryReferenced then begin
       LazPackage.SourceDirectories.RemoveFilename(FDirectory);
       FSourceDirectoryReferenced:=false;
     end;
@@ -2128,7 +2132,7 @@ end;
 
 { TLazPackage }
 
-procedure TLazPackage.OnMacroListSubstitution(TheMacro: TTransferMacro;
+procedure TLazPackage.MacroListSubstitution(TheMacro: TTransferMacro;
   const MacroName: string; var s: string; const Data: PtrInt;
   var Handled, Abort: boolean; Depth: integer);
 var
@@ -2618,6 +2622,8 @@ begin
 end;
 
 constructor TLazPackage.Create;
+var
+  pod: TPkgOutputDir;
 begin
   inherited Create;
   FComponents:=TFPList.Create;
@@ -2626,7 +2632,7 @@ begin
   FFiles:=TFPList.Create;
   FRemovedFiles:=TFPList.Create;
   FMacros:=TTransferMacroList.Create;
-  FMacros.OnSubstitution:=@OnMacroListSubstitution;
+  FMacros.OnSubstitution:=@MacroListSubstitution;
   FIDEOptions:=TPackageIDEOptions.Create(Self);
   FLazCompilerOptions:=TPkgCompilerOptions.Create(Self);
   CompilerOptions.ParsedOpts.InvalidateParseOnChange:=true;
@@ -2637,6 +2643,8 @@ begin
   FDefineTemplates:=TLazPackageDefineTemplates.Create(Self);
   fPublishOptions:=TPublishPackageOptions.Create(Self);
   FProvides:=TStringList.Create;
+  for pod in TPkgOutputDir do
+    LastCompile[pod]:=TPkgLastCompileStats.Create;
   FUsageOptions.ParsedOpts.InvalidateParseOnChange:=true;
 end;
 
@@ -2647,9 +2655,13 @@ begin
 end;
 
 destructor TLazPackage.Destroy;
+var
+  pod: TPkgOutputDir;
 begin
   Include(FFlags,lpfDestroying);
   Clear;
+  for pod in TPkgOutputDir do
+    FreeAndNil(LastCompile[pod]);
   FreeAndNil(FOptionsBackup);
   FreeAndNil(fPublishOptions);
   FreeAndNil(FProvides);
@@ -3898,6 +3910,11 @@ begin
   Result:=CompilerOptions.ParsedOpts.GetParsedValue(pcosCompilerPath);
 end;
 
+function TLazPackage.GetWriteConfigFilePath: string;
+begin
+  Result:=CompilerOptions.ParsedOpts.GetParsedValue(pcosWriteConfigFilePath);
+end;
+
 function TLazPackage.GetPOOutDirectory: string;
 begin
   Result:=TrimFilename(SubstitutePkgMacros(fPOOutputDirectory,false));
@@ -3924,17 +3941,6 @@ end;
 function TLazPackage.GetSrcPath(RelativeToBaseDir: boolean): string;
 begin
   Result:=CompilerOptions.GetSrcPath(RelativeToBaseDir);
-end;
-
-function TLazPackage.GetLastCompilerParams(o: TPkgOutputDir): string;
-begin
-  Result:=LastCompile[o].Params;
-  if LastCompile[o].ViaMakefile then begin
-    Result:=StringReplace(Result,'$(CPU_TARGET)','$(TargetCPU)',[rfReplaceAll]);
-    Result:=StringReplace(Result,'$(OS_TARGET)','$(TargetOS)',[rfReplaceAll]);
-    Result:=StringReplace(Result,'$(LCL_PLATFORM)','$(LCLWidgetType)',[rfReplaceAll]);
-    Result:=SubstitutePkgMacros(Result,false);
-  end;
 end;
 
 function TLazPackage.NeedsDefineTemplates: boolean;
@@ -4254,6 +4260,11 @@ begin
     Result:=inherited GetDefaultMainSourceFileName;
 end;
 
+function TPkgCompilerOptions.GetDefaultWriteConfigFilePath: string;
+begin
+  Result:='$(PkgOutDir)'+PathDelim+'fpclaz.cfg';
+end;
+
 function TPkgCompilerOptions.CreateTargetFilename: string;
 begin
   Result:='';
@@ -4564,7 +4575,7 @@ end;
 procedure TLazPackageDefineTemplates.UpdateDefinesForCustomDefines;
 var
   OptionsDefTempl: TDefineTemplate;
-  NewCustomOptions: String;
+  NewCustomOptions: string;
 begin
   if (not Owner.NeedsDefineTemplates) or (not Active) then exit;
 
@@ -4583,6 +4594,19 @@ begin
     UpdateSrcDirIfDef;
     FSrcDirIf.ReplaceChild(OptionsDefTempl);
   end;
+end;
+
+{ TPkgLastCompileStats }
+
+constructor TPkgLastCompileStats.Create;
+begin
+  Params:=TStringListUTF8Fast.Create;
+end;
+
+destructor TPkgLastCompileStats.Destroy;
+begin
+  FreeAndNil(Params);
+  inherited Destroy;
 end;
 
 { TBasePackageEditor }

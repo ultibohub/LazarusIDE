@@ -4862,6 +4862,14 @@ msgstr "Lisää määre \"reintroduce\""
 msgid "Add new build mode, copying settings from \"%s\""
 msgstr "Lisää uusi koontamoodi, kopioi asetukset täältä: \"%s\""
 
+#: lazarusidestrconsts.lisaddnewdiskfiles
+msgid "Add new disk files?"
+msgstr ""
+
+#: lazarusidestrconsts.lisaddnewfilesfromfilesystem
+msgid "Add New Files from File System"
+msgstr ""
+
 #: lazarusidestrconsts.lisaddnewmacro
 msgid "Add new macro"
 msgstr "Lisää uusi makro"
@@ -4885,6 +4893,10 @@ msgstr "Lisää paketti projektiin"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "Lisää parametrin sulkeet"
+
+#: lazarusidestrconsts.lisaddthefollowingfiles
+msgid "Add the following files:"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddtoincludesearchpath
 msgid "Add to include search path?"
@@ -4997,6 +5009,10 @@ msgstr "Salli etsintä monelta riviltä"
 #: lazarusidestrconsts.lisallparametersofthisfunctionarealreadysetatthiscall
 msgid "All parameters of this function are already set at this call. Nothing to add."
 msgstr "Kaikki tämän funktion parametrit on jo asetettu. Ei lisättävää."
+
+#: lazarusidestrconsts.lisallpaspppincinunitincludepatharealreadyinaprojectp
+msgid "All .pas, .pp, .p, .inc in unit/include path are already in a project/package."
+msgstr ""
 
 #: lazarusidestrconsts.lisallyourmodificationstowillbelostandthefilereopened
 #, object-pascal-format
@@ -14202,6 +14218,10 @@ msgstr "ei mikään, klikkaa valitaksesi joku"
 msgid "(None selected)"
 msgstr "(ei mitään valittuna)"
 
+#: lazarusidestrconsts.lisnonewfilefound
+msgid "No new file found"
+msgstr ""
+
 #: lazarusidestrconsts.lisnonodeselected
 msgid "no node selected"
 msgstr "ei solmua valittuna"
@@ -17859,6 +17879,10 @@ msgstr "Aliohjelman sisäinen aliohjelma"
 msgid "Sub Procedure on same level"
 msgstr "Aliohjelma samalla tasolla"
 
+#: lazarusidestrconsts.lissubtarget
+msgid "Subtarget"
+msgstr ""
+
 #: lazarusidestrconsts.lissuccess
 msgid "Success"
 msgstr "Onnistui"
@@ -19852,6 +19876,10 @@ msgstr "Työhakemisto kokoamista varten"
 #: lazarusidestrconsts.lisworkingdirectoryforrun
 msgid "Working directory for run"
 msgstr "Työhakemisto suoritusta varten"
+
+#: lazarusidestrconsts.liswriteconfiginsteadofcommandlineparameters
+msgid "Write config instead of command line parameters"
+msgstr ""
 
 #: lazarusidestrconsts.liswriteerror
 msgid "Write Error"

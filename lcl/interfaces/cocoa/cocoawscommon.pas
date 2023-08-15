@@ -22,13 +22,11 @@ type
   TCursorHelper = class
   private
     _lastCursor: NSCursor;
-  private
-    procedure DoSetCursorOnActive( data:IntPtr );
   public
     procedure SetNewCursor( newCursor:TCocoaCursor );
   public
     class procedure SetCursorOnActive;
-    class procedure SetCurrentControlCursor;
+    class procedure SetCursorAtMousePos;
     class procedure SetScreenCursor;
     class procedure SetScreenCursorWhenNotDefault;
   end;
@@ -370,14 +368,6 @@ end;
 
 { TCursorHelper }
 
-procedure TCursorHelper.DoSetCursorOnActive( data:IntPtr );
-begin
-  if Screen.Cursor<>crDefault then
-    SetScreenCursor
-  else
-    SetCurrentControlCursor;
-end;
-
 procedure TCursorHelper.SetNewCursor( newCursor:TCocoaCursor );
 var
   currentCursor: NSCursor;
@@ -393,18 +383,35 @@ end;
 class procedure TCursorHelper.SetCursorOnActive;
 begin
   CursorHelper._lastCursor:= nil;
-  Application.QueueAsyncCall( @CursorHelper.DoSetCursorOnActive, 0 );
+  if Screen.Cursor<>crDefault then
+    SetScreenCursor
+  else
+    SetCursorAtMousePos;
 end;
 
-class procedure TCursorHelper.SetCurrentControlCursor;
+class procedure TCursorHelper.SetCursorAtMousePos;
 var
   P: TPoint;
-  control: TControl;
+  rect: NSRect;
+  window: NSWindow;
+  event: NSEvent;
 begin
+  window:= NSAPP.keyWindow;
+  if not (Assigned(window) and Assigned(window.lclGetCallback)) then
+    exit;
+
   GetCursorPos(P);
-  control:= FindControlAtPosition(P, true);
-  if Assigned(control) then
-    TCocoaCursor(Screen.Cursors[control.Cursor]).SetCursor;
+
+  rect:= NSZeroRect;
+  rect.origin:= LCLToNSPoint(P, window.screen.frame.size.height);
+  rect:= window.convertRectFromScreen(rect);
+
+  event:= NSEvent.mouseEventWithType_location_modifierFlags_timestamp_windowNumber_context_eventNumber_clickCount_pressure(
+            NSMouseMoved,
+            rect.origin, 0, 0,
+            window.windowNumber, nil, 0, 0, 0);
+
+  window.lclGetCallback.MouseMove(event);
 end;
 
 class procedure TCursorHelper.SetScreenCursor;
@@ -484,7 +491,12 @@ begin
     cr := NSView(Owner).lclClientFrame;
     PtInClient.x := Round({PtInBounds.x - }pt.x - cr.Left);
     PtInClient.y := Round({PtInBounds.y - }pt.y - cr.Top);
+
+    // child ctrls need not LayoutDelta
+    cr := NSView(Owner).lclGetFrameToLayoutDelta;
     PtForChildCtrls := PtInClient;
+    PtForChildCtrls.x := PtForChildCtrls.x + cr.Left;
+    PtForChildCtrls.y := PtForChildCtrls.y + cr.Top;
 
     es := NSView(Owner).enclosingScrollView;
     if Assigned(es) and (es.documentView = NSView(Owner)) then begin
@@ -1019,7 +1031,7 @@ begin
       (Event.type_ = NSRightMouseDown)
       or(
         (Event.type_ = NSLeftMouseDown)
-        and (event.modifierFlags_ and NSControlKeyMask <> 0)
+        and (event.modifierFlags and NSControlKeyMask <> 0)
         and (event.clickCount = 1)
       )
     );
@@ -1169,6 +1181,13 @@ begin
     end;
 end;
 
+function isValidMouseControl( control:TWinControl ): Boolean;
+begin
+  if (control is TCustomForm) and (csDesigning in control.ComponentState) then
+    exit( True );
+  Result:= control.Visible and control.Enabled;
+end;
+
 function TLCLCommonCallback.MouseMove(Event: NSEvent): Boolean;
 var
   Msg: TLMMouseMove;
@@ -1232,7 +1251,7 @@ begin
         begin
           childControl:=TWinControl(Target.Controls[i]);
           rect:=childControl.BoundsRect;
-          if Types.PtInRect(rect, srchPt) and childControl.Visible and childControl.Enabled then
+          if Types.PtInRect(rect, srchPt) and isValidMouseControl(childControl) then
           begin
             targetControl:=childControl;
             break;
@@ -1845,6 +1864,22 @@ begin
   end;
 end;
 
+function getWinControlAtMouse(): TControl;
+begin
+  Result:= Application.GetControlAtMouse;
+  if not Assigned(Result) then
+    exit;
+
+  // find TWinControl (not TGraphicControl)
+  // see also TControl.SetTempCursor()
+  while not (Result is TWinControl) do
+  begin
+    Result:= Result.Parent;
+    if not Assigned(Result) then
+      exit;
+  end;
+end;
+
 class procedure TCocoaWSWinControl.SetCursor(const AWinControl: TWinControl;
   const ACursor: HCursor);
 var
@@ -1860,9 +1895,12 @@ begin
   // suppose there is a Button, which is to set a Cursor of a ListBox.
   // without the code here, it will be set to the Cursor of the ListBox
   // after clicking the Button.
-  control:= Application.GetControlAtMouse;
-  if control<>AWinControl then
-    exit;
+  if not ((AWinControl is TCustomForm) and (csDesigning in AWinControl.ComponentState)) then
+  begin
+    control:= getWinControlAtMouse;
+    if control<>AWinControl then
+      exit;
+  end;
 
   CursorHelper.SetNewCursor( TCocoaCursor(ACursor) );
 end;

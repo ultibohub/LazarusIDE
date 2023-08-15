@@ -136,7 +136,7 @@ object MainForm: TMainForm
     Left = 0
     Height = 434
     Top = 26
-    Width = 458
+    Width = 460
     ActivePage = TSAll
     Align = alClient
     Images = ImgDatamodule.AppImages
@@ -145,13 +145,13 @@ object MainForm: TMainForm
     object TSConnections: TTabSheet
       Caption = 'Connections'
       ClientHeight = 406
-      ClientWidth = 450
+      ClientWidth = 452
       ImageIndex = 38
       object LVConnections: TListView
         Left = 0
         Height = 406
         Top = 0
-        Width = 450
+        Width = 452
         Align = alClient
         Columns = <        
           item
@@ -183,13 +183,13 @@ object MainForm: TMainForm
     object TSRecent: TTabSheet
       Caption = 'Dictionaries'
       ClientHeight = 406
-      ClientWidth = 450
+      ClientWidth = 452
       ImageIndex = 32
       object LVDicts: TListView
         Left = 0
         Height = 406
         Top = 0
-        Width = 450
+        Width = 452
         Align = alClient
         Columns = <        
           item
@@ -218,13 +218,13 @@ object MainForm: TMainForm
     object TSAll: TTabSheet
       Caption = 'Connections/Dictionaries'
       ClientHeight = 406
-      ClientWidth = 450
+      ClientWidth = 452
       ImageIndex = 29
       object TVAll: TTreeView
         Left = 0
         Height = 406
         Top = 0
-        Width = 450
+        Width = 452
         Align = alClient
         Images = ImgDatamodule.AppImages
         PopupMenu = PMAll
@@ -277,10 +277,10 @@ object MainForm: TMainForm
     Options = [nboShowCloseButtons, nboKeyboardTabSwitch]
   end
   object SRecent: TSplitter
-    Left = 458
+    Left = 460
     Height = 434
     Top = 26
-    Width = 8
+    Width = 6
     Align = alRight
     ResizeAnchor = akRight
   end
@@ -523,6 +523,7 @@ object MainForm: TMainForm
     object ADeleteConnection: TAction
       Category = 'Connections'
       Caption = '&Delete connection'
+      ImageIndex = 48
       OnExecute = ADeleteConnectionExecute
       OnUpdate = HaveRecentConnection
       ShortCut = 49220
@@ -575,6 +576,7 @@ object MainForm: TMainForm
       Category = 'Connections'
       Caption = '&Open connection'
       Hint = 'Open selected recent connection'
+      ImageIndex = 45
       OnExecute = OpenRecentConnection
       OnUpdate = HaveRecentConnection
     end
@@ -616,11 +618,11 @@ object MainForm: TMainForm
     Images = ImgDatamodule.AppImages
     Left = 160
     Top = 200
-    object PMIOpenConnection: TMenuItem
-      Action = AOpenConnection
-    end
     object PMINewConnection: TMenuItem
       Action = ANewConnection
+    end
+    object PMIOpenConnection: TMenuItem
+      Action = AOpenConnection
     end
     object PMIDeleteConnection: TMenuItem
       Action = ADeleteConnection
@@ -630,13 +632,13 @@ object MainForm: TMainForm
     Images = ImgDatamodule.AppImages
     Left = 43
     Top = 200
-    object PMIOpenDataDict: TMenuItem
-      Action = AOpenRecentDatadict
-      OnClick = OpenRecentDatadict
-    end
     object PMINewDataDict: TMenuItem
       Action = ANew
       OnClick = ANewExecute
+    end
+    object PMIOpenDataDict: TMenuItem
+      Action = AOpenRecentDatadict
+      OnClick = OpenRecentDatadict
     end
     object MenuItem8: TMenuItem
       Action = ADeleteRecentDataDict

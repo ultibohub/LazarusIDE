@@ -10,7 +10,7 @@ uses
   // LCL
   Controls, ComCtrls, Calendar, StdCtrls, Spin,
   Dialogs, ExtCtrls, ExtDlgs, Buttons, CheckLst, Forms, Grids, Menus,
-  PairSplitter, WSLCLClasses;
+  PairSplitter, WSLCLClasses, WSDialogs;
 
 
 // imglist
@@ -44,6 +44,7 @@ function RegisterSelectDirectoryDialog: Boolean;
 function RegisterColorDialog: Boolean;
 function RegisterColorButton: Boolean;
 function RegisterFontDialog: Boolean;
+function RegisterTaskDialog: Boolean;
 // StdCtrls
 function RegisterCustomScrollBar: Boolean;
 function RegisterCustomGroupBox: Boolean;
@@ -290,6 +291,12 @@ function RegisterFontDialog: Boolean; alias : 'WSRegisterFontDialog';
 begin
   RegisterWSComponent(TFontDialog, TGtk2WSFontDialog);
   Result := True;
+end;
+
+function RegisterTaskDialog: Boolean; alias : 'WSRegisterTaskDialog';
+begin
+   RegisterWSComponent(TTaskDialog, TWSTaskDialog);
+   Result := True;
 end;
 
 // StdCtrls

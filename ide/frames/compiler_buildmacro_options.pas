@@ -192,7 +192,9 @@ begin
         or (SysUtils.CompareText('SrcOS',S)=0)
         or (SysUtils.CompareText('SrcOS2',S)=0)
         or (SysUtils.CompareText('TargetCPU',S)=0)
+        or (SysUtils.CompareText('Subtarget',S)=0)
         or (SysUtils.CompareText('LCLWidgetType',S)=0)
+        or (SysUtils.CompareText('Laz_FullVersion',S)=0)
         then begin
           IDEMessageDialog(lisCCOErrorCaption,
             Format(lisThereIsAlreadyAMacroWithTheName, [S]),

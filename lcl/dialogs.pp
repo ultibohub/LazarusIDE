@@ -26,7 +26,7 @@ uses
   // LCL
   LMessages, LResources, LCLIntf, InterfaceBase, LCLStrConsts, LCLType,
   Forms, Controls, Themes, Graphics, Buttons, ButtonPanel, StdCtrls,
-  ExtCtrls, LCLClasses, ClipBrd, Menus, LCLTaskDialog, DialogRes,
+  ExtCtrls, LCLClasses, ClipBrd, Menus, {LCLTaskDialog,} DialogRes,
   // LazUtils
   GraphType, FileUtil, LazFileUtils, LazStringUtils, LazLoggerBase;
 
@@ -544,22 +544,27 @@ type
     tfPositionRelativeToWindow, tfRtlLayout,
     tfNoDefaultRadioButton, tfCanBeMinimized,
     tfNoSetForeGround, tfSizeToContent,
-    tfForceNonNative, tfEmulateClassicStyle);
+    tfForceNonNative, tfEmulateClassicStyle,
+    tfQuery, tfSimpleQuery, tfQueryFixedChoices, tfQueryFocused);
   TTaskDialogFlags = set of TTaskDialogFlag;
 
   TTaskDialogCommonButton = (tcbOk, tcbYes, tcbNo, tcbCancel, tcbRetry, tcbClose);
   TTaskDialogCommonButtons = set of TTaskDialogCommonButton;
 
   TTaskDlgClickEvent = procedure(Sender: TObject; AModalResult: TModalResult; var ACanClose: Boolean) of object;
+  TTaskDlgTimerEvent = procedure(Sender: TObject; TickCount: Cardinal; var Reset: Boolean) of object;
 
   TTaskDialogIcon = (tdiNone, tdiWarning, tdiError, tdiInformation, tdiShield, tdiQuestion);
 
   TTaskDialogButtons = class;
 
+  { TTaskDialogBaseButtonItem }
+
   TTaskDialogBaseButtonItem = class(TCollectionItem)
   private
     FCaption: TTranslateString;
     FClient: TCustomTaskDialog;
+    FCommandLinkHint: TTranslateString;
     FModalResult: TModalResult;
     function GetDefault: Boolean;
     procedure SetCaption(const ACaption: TTranslateString);
@@ -571,6 +576,7 @@ type
   public
     constructor Create(ACollection: TCollection); override;
     property ModalResult: TModalResult read FModalResult write FModalResult;
+    property CommandLinkHint: TTranslateString read FCommandLinkHint write FCommandLinkHint;
   published
     property Caption: TTranslateString read FCaption write SetCaption;
     property Default: Boolean read GetDefault write SetDefault default False;
@@ -580,6 +586,7 @@ type
   public
     constructor Create(ACollection: TCollection); override;
   published
+    property CommandLinkHint;
     property ModalResult;
   end;
 
@@ -613,59 +620,113 @@ type
     property Items[Index: Integer]: TTaskDialogBaseButtonItem read GetItem write SetItem; default;
   end;
 
-  TCustomTaskDialog = class(TComponent)
+  { TCustomTaskDialog }
+
+  TCustomTaskDialog = class(TLCLComponent)
   private
     FButton: TTaskDialogButtonItem;
     FButtons: TTaskDialogButtons;
     FCaption: TTranslateString;
+    FCollapsButtonCaption: TTranslateString;
     FCommonButtons: TTaskDialogCommonButtons;
     FDefaultButton: TTaskDialogCommonButton;
     FExpandButtonCaption: TTranslateString;
+    FExpanded: Boolean;
     FExpandedText: TTranslateString;
     FFlags: TTaskDialogFlags;
     FFooterIcon: TTaskDialogIcon;
     FFooterText: TTranslateString;
     FMainIcon: TTaskDialogIcon;
     FModalResult: TModalResult;
+    FOnDialogConstructed: TNotifyEvent;
+    FOnDialogCreated: TNotifyEvent;
+    FOnDialogDestroyed: TNotifyEvent;
+    FOnExpanded: TNotifyEvent;
+    FOnHelp: TNotifyEvent;
+    FOnHyperlinkClicked: TNotifyEvent;
+    FOnNavigated: TNotifyEvent;
+    FOnRadioButtonClicked: TNotifyEvent;
+    FOnTimer: TTaskDlgTimerEvent;
+    FOnVerificationClicked: TNotifyEvent;
+    FQueryChoices: TStrings;
+    FQueryResult: String;
+    FQueryItemIndex: Integer;
     FRadioButton: TTaskDialogRadioButtonItem;
     FRadioButtons: TTaskDialogButtons;
+    FSimpleQuery: String;
+    FSimpleQueryPasswordChar: Char;
     FText: TTranslateString;
     FTitle: TTranslateString;
+    FURL: String;
     FVerificationText: TTranslateString;
     FWidth: Integer;
     FOnButtonClicked: TTaskDlgClickEvent;
-    procedure DoOnButtonClickedHandler(Sender: PTaskDialog; AButtonID: Integer;
-      var ACanClose: Boolean);
     procedure SetButtons(const Value: TTaskDialogButtons);
+    procedure SetFlags(AValue: TTaskDialogFlags);
+    procedure SetQueryChoices(AValue: TStrings);
     procedure SetRadioButtons(const Value: TTaskDialogButtons);
-    function ButtonIDToModalResult(const AButtonID: Integer): TModalResult;
   protected
+    class procedure WSRegisterClass; override;
     function DoExecute(ParentWnd: HWND): Boolean; dynamic;
     procedure DoOnButtonClicked(AModalResult: Integer; var ACanClose: Boolean); dynamic;
+    procedure DoOnRadioButtonClicked(ButtonID: Integer); dynamic;
+    procedure DoOnDialogConstructed; dynamic;
+    procedure DoOnDialogCreated; dynamic;
+    procedure DoOnDialogDestroyed; dynamic;
+    procedure DoOnExpandButtonClicked(Expanded: Boolean); dynamic;
+    procedure DoOnTimer(TickCount: Cardinal; var Reset: Boolean); dynamic;
+    procedure DoOnVerificationClicked(Checked: Boolean); dynamic;
+    procedure DoOnHelp; dynamic;
+    procedure DoOnHyperlinkClicked(const AURL: string); dynamic;
+
+    //requires that a TaskDialog has pages, (see: https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.taskdialogpage.navigate?view=windowsdesktop-7.0)
+    //which might be implemented in a derived class, but the event handler must be in base class for Delphi compatibility.
+    procedure DoOnNavigated; dynamic;
+
+    procedure SetRadioButtonFromRadioIndex(AIndex: Integer);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function ButtonIDToModalResult(const AButtonID: Integer): TModalResult;
     function Execute: Boolean; overload; dynamic;
     function Execute(ParentWnd: HWND): Boolean; overload; dynamic;
     property Button: TTaskDialogButtonItem read FButton write FButton;
     property Buttons: TTaskDialogButtons read FButtons write SetButtons;
     property Caption: TTranslateString read FCaption write FCaption;
     property CommonButtons: TTaskDialogCommonButtons read FCommonButtons write FCommonButtons default [tcbOk, tcbCancel];
+    property CollapsButtonCaption: TTranslateString read FCollapsButtonCaption write FCollapsButtonCaption;
     property DefaultButton: TTaskDialogCommonButton read FDefaultButton write FDefaultButton default tcbOk;
     property ExpandButtonCaption: TTranslateString read FExpandButtonCaption write FExpandButtonCaption;
     property ExpandedText: TTranslateString read FExpandedText write FExpandedText;
-    property Flags: TTaskDialogFlags read FFlags write FFlags default [tfAllowDialogCancellation];
+    property Flags: TTaskDialogFlags read FFlags write SetFlags default [tfAllowDialogCancellation];
     property FooterIcon: TTaskDialogIcon read FFooterIcon write FFooterIcon default tdiNone;
     property FooterText: TTranslateString read FFooterText write FFooterText;
     property MainIcon: TTaskDialogIcon read FMainIcon write FMainIcon default tdiInformation;
     property ModalResult: TModalResult read FModalResult write FModalResult;
+    property QueryChoices: TStrings read FQueryChoices write SetQueryChoices;
+    property QueryItemIndex: Integer read FQueryItemIndex write FQueryItemIndex;
+    property QueryResult: String read FQueryResult write FQueryResult;
     property RadioButton: TTaskDialogRadioButtonItem read FRadioButton;
     property RadioButtons: TTaskDialogButtons read FRadioButtons write SetRadioButtons;
+    property SimpleQuery: String read FSimpleQuery write FSimpleQuery;
+    property SimpleQueryPasswordChar: Char read FSimpleQueryPasswordChar write FSimpleQueryPasswordChar default #0;
     property Text: TTranslateString read FText write FText;
     property Title: TTranslateString read FTitle write FTitle;
     property VerificationText: TTranslateString read FVerificationText write FVerificationText;
     property Width: Integer read FWidth write FWidth default 0;
+    property URL: String read FURL;
+    property Expanded: Boolean read FExpanded;
     property OnButtonClicked: TTaskDlgClickEvent read FOnButtonClicked write FOnButtonClicked;
+    property OnDialogConstructed: TNotifyEvent read FOnDialogConstructed write FOnDialogConstructed;
+    property OnDialogCreated: TNotifyEvent read FOnDialogCreated write FOnDialogCreated;
+    property OnDialogDestroyed: TNotifyEvent read FOnDialogDestroyed write FOnDialogDestroyed;
+    property OnVerificationClicked: TNotifyEvent read FOnVerificationClicked write FOnVerificationClicked;
+    property OnExpanded: TNotifyEvent read FOnExpanded write FOnExpanded;
+    property OnTimer: TTaskDlgTimerEvent read FOnTimer write FOnTimer;
+    property OnRadioButtonClicked: TNotifyEvent read FOnRadioButtonClicked write FOnRadioButtonClicked;
+    property OnHyperlinkClicked: TNotifyEvent read FOnHyperlinkClicked write FOnHyperlinkClicked;
+    property OnNavigated: TNotifyEvent read FOnNavigated write FOnNavigated;
+    property OnHelp: TNotifyEvent read FOnHelp write FOnHelp;
   end;
 
   TTaskDialog = class(TCustomTaskDialog)
@@ -673,6 +734,7 @@ type
     property Buttons;
     property Caption;
     property CommonButtons;
+    property CollapsButtonCaption;
     property DefaultButton;
     property ExpandButtonCaption;
     property ExpandedText;
@@ -681,13 +743,28 @@ type
     property FooterText;
     property MainIcon;
     property RadioButtons;
+    property QueryChoices;
+    property QueryItemIndex;
+    property SimpleQuery;
+    property SimpleQueryPasswordChar;
     property Text;
     property Title;
     property VerificationText;
     property Width;
     property OnButtonClicked;
+    property OnDialogConstructed;
+    property OnDialogCreated;
+    property OnDialogDestroyed;
+    property OnVerificationClicked;
+    property OnExpanded;
+    property OnTimer;
+    property OnRadioButtonClicked;
+    property OnHyperlinkClicked;
   end;
 
+const
+  TaskDialogFirstButtonIndex = 100;
+  TaskDialogFirstRadioButtonIndex = 200;
 
 var
   MinimumDialogButtonWidth: Integer = 75;
@@ -790,6 +867,9 @@ function GetDialogIcon(idDiag: Integer): TCustomBitmap; deprecated 'Use DialogRe
 
 function dbgs(Option: TOpenOption): string; overload;
 function dbgs(Options: TOpenOptions): string; overload;
+function DbgS(aFlag: TTaskDialogFlag): String; overload;
+function DbgS(Flags: Dialogs.TTaskDialogFlags): String; overload;
+
 
 procedure Register;
 

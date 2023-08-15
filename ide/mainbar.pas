@@ -391,7 +391,7 @@ type
     procedure CoolBarOnChange(Sender: TObject);
     procedure MainSplitterMoved(Sender: TObject);
     procedure SetMainIDEHeightEvent(Sender: TObject);
-    procedure OnMainBarActive(Sender: TObject);
+    procedure MainBarActive(Sender: TObject);
     procedure Setup(TheOwner: TComponent);
     procedure SetupHints;
     procedure UpdateIDEComponentPalette(IfFormChanged: boolean);
@@ -583,7 +583,7 @@ begin
   SetMainIDEHeight;
 end;
 
-procedure TMainIDEBar.OnMainBarActive(Sender: TObject);
+procedure TMainIDEBar.MainBarActive(Sender: TObject);
 var
   i, FormCount: integer;
   AForm: TCustomForm;
@@ -670,7 +670,7 @@ end;
 procedure TMainIDEBar.Setup(TheOwner: TComponent);
 begin
   FMainOwningComponent := TheOwner;
-  OnActive:=@OnMainBarActive;
+  OnActive:=@MainBarActive;
 
   MainSplitter := TSplitter.Create(TheOwner);
   MainSplitter.Parent := Self;

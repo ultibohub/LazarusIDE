@@ -559,7 +559,12 @@ var
   P: TPoint;
 begin
   GetCursorPos(P);
-  //debugln(['TApplication.GetControlAtMouse p=',dbgs(p),' FLastMousePos=',dbgs(FLastMousePos)]);
+  Result:= GetControlAtPos(P);
+end;
+
+function TApplication.GetControlAtPos(P: TPoint): TControl;
+begin
+  //debugln(['TApplication.GetControlAtPos p=',dbgs(p),' FLastMousePos=',dbgs(FLastMousePos)]);
   if FLastMouseControlValid and (P.X = FLastMousePos.x) and (P.Y = FLastMousePos.Y) then
     Result := FLastMouseControl
   else
@@ -1535,6 +1540,14 @@ end;
 function TApplication.GetActive: boolean;
 begin
   Result := AppActive in Flags;
+end;
+
+function TApplication.GetActiveFormHandle: HWND;
+begin
+  if Assigned(Screen.ActiveCustomForm) then
+    Result := Screen.ActiveCustomForm.Handle
+  else
+    Result := TLCLHandle(-1);
 end;
 
 function TApplication.GetCurrentHelpFile: string;

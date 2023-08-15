@@ -6,7 +6,7 @@ interface
 uses
   Classes, Controls, ComCtrls, ImgList, Calendar, StdCtrls, Spin,
   Dialogs, ExtCtrls, ExtDlgs, Buttons, CheckLst, Forms, Grids, Menus, ShellCtrls,
-  WSLCLClasses;
+  WSLCLClasses, WSDialogs;
 
 // imglist
 function RegisterCustomImageListResolution: Boolean;
@@ -39,6 +39,7 @@ function RegisterSelectDirectoryDialog: Boolean;
 function RegisterColorDialog: Boolean;
 function RegisterColorButton: Boolean;
 function RegisterFontDialog: Boolean;
+function RegisterTaskDialog: Boolean;
 // StdCtrls
 function RegisterCustomScrollBar: Boolean;
 function RegisterCustomGroupBox: Boolean;
@@ -271,6 +272,12 @@ function RegisterFontDialog: Boolean; alias : 'WSRegisterFontDialog';
 begin
   RegisterWSComponent(TFontDialog, TWin32WSFontDialog);
   Result := True;
+end;
+
+function RegisterTaskDialog: Boolean; alias : 'WSRegisterTaskDialog';
+begin
+   RegisterWSComponent(TTaskDialog, TWin32WSTaskDialog);
+   Result := True;
 end;
 
 // StdCtrls

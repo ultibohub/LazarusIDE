@@ -157,6 +157,13 @@ type
     constructor Create(ADialog: TOpenDialog);
   end;
 
+  { TWin32WSTaskDialog }
+
+  TWin32WSTaskDialog = class(TWSTaskDialog)
+  published
+    class function Execute(const ADlg: TCustomTaskDialog; AParentWnd: HWND; out ARadioRes: Integer): Integer; override;
+  end;
+
 function OpenFileDialogCallBack(Wnd: HWND; uMsg: UINT; {%H-}wParam: WPARAM;
   lParam: LPARAM): UINT_PTR; stdcall;
 
@@ -172,6 +179,9 @@ var
 
 
 implementation
+
+uses
+  CommCtrl, TaskDlgEmulation;
 
 function SaveApplicationState: TApplicationState;
 begin
@@ -1565,9 +1575,432 @@ begin
   FDialog := ADialog;
 end;
 
+{ TWin32WSTaskDialog }
+
+var
+  //TaskDialogIndirect: function(AConfig: pointer; Res: PInteger;
+  //  ResRadio: PInteger; VerifyFlag: PBOOL): HRESULT; stdcall;
+  TaskDialogIndirectAvailable: Boolean = False;
+
+
+function TaskDialogFlagsToInteger(aFlags: TTaskDialogFlags): Integer;
+const
+  //missing from CommCtrls in fpc < 3.3.1
+  TDF_NO_SET_FOREGROUND = $10000;
+  TDF_SIZE_TO_CONTENT   = $1000000;
+
+{
+  tfEnableHyperlinks, tfUseHiconMain,
+  tfUseHiconFooter, tfAllowDialogCancellation,
+  tfUseCommandLinks, tfUseCommandLinksNoIcon,
+  tfExpandFooterArea, tfExpandedByDefault,
+  tfVerificationFlagChecked, tfShowProgressBar,
+  tfShowMarqueeProgressBar, tfCallbackTimer,
+  tfPositionRelativeToWindow, tfRtlLayout,
+  tfNoDefaultRadioButton, tfCanBeMinimized,
+  tfNoSetForeGround, tfSizeToContent,
+  tfForceNonNative, tfEmulateClassicStyle);
+
+}
+  FlagValues: Array[TTaskDialogFlag] of Integer = (
+    TDF_ENABLE_HYPERLINKS, TDF_USE_HICON_MAIN,
+    TDF_USE_HICON_FOOTER, TDF_ALLOW_DIALOG_CANCELLATION,
+    TDF_USE_COMMAND_LINKS, TDF_USE_COMMAND_LINKS_NO_ICON,
+    TDF_EXPAND_FOOTER_AREA, TDF_EXPANDED_BY_DEFAULT,
+    TDF_VERIFICATION_FLAG_CHECKED, TDF_SHOW_PROGRESS_BAR,
+    TDF_SHOW_MARQUEE_PROGRESS_BAR, TDF_CALLBACK_TIMER,
+    TDF_POSITION_RELATIVE_TO_WINDOW, TDF_RTL_LAYOUT,
+    TDF_NO_DEFAULT_RADIO_BUTTON, TDF_CAN_BE_MINIMIZED,
+    TDF_NO_SET_FOREGROUND {added in Windows 8}, TDF_SIZE_TO_CONTENT,
+    //custom LCL flags
+    0 {tfForceNonNative}, 0 {tfEmulateClassicStyle},
+    0,{tfQuery} 0 {tfSimpleQuery}, 0 {tfQueryFixedChoices}, 0 {tfQueryFocused});
+var
+  aFlag: TTaskDialogFlag;
+begin
+  Result := 0;
+  for aFlag := Low(TTaskDialogFlags) to High(TTaskDialogFlags) do
+    if (aFlag in aFlags) then
+      Result := Result or FlagValues[aFlag];
+end;
+
+function TaskDialogCommonButtonsToInteger(const Buttons: TTaskDialogCommonButtons): Integer;
+const
+  CommonButtonValues: Array[TTaskDialogCommonButton] of Integer = (
+    TDCBF_OK_BUTTON,// tcbOk
+    TDCBF_YES_BUTTON, //tcbYes
+    TDCBF_NO_BUTTON, //tcbNo
+    TDCBF_CANCEL_BUTTON, //tcbCancel
+    TDCBF_RETRY_BUTTON, //tcbRetry
+    TDCBF_CLOSE_BUTTON //tcbClose
+  );
+var
+  B: TTaskDialogCommonButton;
+begin
+  Result := 0;
+  for B in TTaskDialogCommonButton do
+  begin
+    if B in Buttons then
+      Result := Result or CommonButtonValues[B];
+  end;
+end;
+
+function DialogBaseUnits: Integer;
+//https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-getdialogbaseunits
+type
+  TLongRec = record L, H: Word; end;
+begin
+  Result := TLongRec(GetDialogBaseUnits).L;
+end;
+
+type
+  TTaskDialogAccess = class(TCustomTaskDialog)
+  end;
+
+function TaskDialogCallbackProc({%H-}hwnd: HWND; uNotification: UINT;
+  wParam: WPARAM; {%H-}lParam: LPARAM; dwRefData: Long_Ptr): HRESULT; stdcall;
+var
+  Dlg: TTaskDialog absolute dwRefData;
+  CanClose, ResetTimer: Boolean;
+  AUrl: String;
+begin
+  Result := S_OK;
+  case uNotification of
+    TDN_DIALOG_CONSTRUCTED:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnDialogConstructed;
+      {$POP}
+    end;
+    TDN_CREATED:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnDialogCreated;
+      {$POP}
+    end;
+    TDN_DESTROYED:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnDialogDestroyed;
+      {$POP}
+    end;
+    TDN_BUTTON_CLICKED:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      CanClose := True;
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnButtonClicked(Dlg.ButtonIDToModalResult(wParam), CanClose);
+      if not CanClose then
+        Result := S_FALSE;
+      {$POP}
+    end;
+    TDN_HYPERLINK_CLICKED:
+    begin
+      {
+      wParam: Must be zero.
+      lParam: Pointer to a wide-character string containing the URL of the hyperlink.
+      Return value: The return value is ignored.
+      }
+      AUrl := Utf16ToUtf8(PWideChar(lParam)); //  <== can this be done safely and passed to OnUrlClicked if AUrls is a local variable here??
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnHyperlinkClicked(AUrl);
+      {$POP}
+    end;
+    TDN_NAVIGATED:
+    begin
+      {
+      wParam: Must be zero.
+      lParam: Must be zero.
+      Return value: The return value is ignored.
+      }
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnNavigated;
+      {$POP}
+    end;
+    TDN_TIMER:
+    begin
+      {
+      wParam: A DWORD that specifies the number of milliseconds since the dialog was created or this notification code returned S_FALSE.
+      lParam: Must be zero.
+      Return value: To reset the tickcount, the application must return S_FALSE, otherwise the tickcount will continue to increment.
+      }
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      ResetTimer := False;
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnTimer(Cardinal(wParam), ResetTimer);
+      {$POP}
+      if ResetTimer then
+        Result := S_FALSE;
+    end;
+    TDN_VERIFICATION_CLICKED:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnverificationClicked(BOOL(wParam));
+      {$POP}
+    end;
+    TDN_EXPANDO_BUTTON_CLICKED:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnExpandButtonClicked(BOOL(wParam));
+      {$POP}
+    end;
+    TDN_RADIO_BUTTON_CLICKED:
+    begin
+      {
+      wParam: An int that specifies the ID corresponding to the radio button that was clicked.
+      lParam: Must be zero.
+      Return value: The return value is ignored.
+      }
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnRadioButtonClicked(wParam);
+      {$POP}
+    end;
+    TDN_HELP:
+    begin
+      Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
+      {$PUSH}
+      {$ObjectChecks OFF}
+      TTaskDialogAccess(Dlg).DoOnHelp;
+      {$POP}
+    end;
+  end;
+end;
+
+
+type
+  TWideStringArray = array of WideString;
+  TButtonArray = array of TTASKDIALOG_BUTTON;
+
+
+
+class function TWin32WSTaskDialog.Execute(const ADlg: TCustomTaskDialog; AParentWnd: HWND; out ARadioRes: Integer): Integer;
+var
+  Config: TTASKDIALOGCONFIG;
+  VerifyChecked: BOOL;
+  ButtonCaptions: TWideStringArray;
+  Buttons: TButtonArray;
+  WindowTitle, MainInstruction, Content, VerificationText,
+  ExpandedInformation, ExpandedControlText, CollapsedControlText,
+  Footer: WideString;
+  DefRB, DefBtn, RUCount: Integer;
+  CommonButtons: TTaskDialogCommonButtons;
+  Flags: TTaskDialogFlags;
+  Res: HRESULT;
+
+  procedure PrepareTaskDialogConfig;
+  const
+    TD_BTNMOD: array[TTaskDialogCommonButton] of Integer = (
+      mrOk, mrYes, mrNo, mrCancel, mrRetry, mrAbort);
+    TD_ICONS: array[TLCLTaskDialogIcon] of integer = (
+      0, 84, 99, 98, 81, 0, 78);
+    TD_FOOTERICONS: array[TLCLTaskDialogFooterIcon] of integer = (
+      0, 84, 99, 98, 65533, 65532);
+
+    procedure AddTaskDiakogButton(Btns: TTaskDialogButtons; var n: longword; firstID: integer);
+    var
+      i: Integer;
+    begin
+      if (Btns.Count = 0) then
+        Exit;
+      for i := 0 to Btns.Count - 1 do
+      begin
+        if Length(ButtonCaptions)<=RUCount then
+        begin
+          SetLength(ButtonCaptions,RUCount+16);
+          SetLength(Buttons,RUCount+16);
+        end;
+        //disable this for now: what if a caption were to be 'Save to "c:\new_folder\new.work"'' ??
+        //remove later
+        //ButtonCaptions[RUCount] := Utf8ToUtf16(StringReplace(Btns.Items[i].Caption,'\n',#10,[rfReplaceAll]));
+        ButtonCaptions[RUCount] := Utf8ToUtf16(Btns.Items[i].Caption);
+        if (Btns.Items[i] is TTaskDialogButtonItem) and (tfUseCommandLinks in ADlg.Flags) then
+        begin
+          ButtonCaptions[RUCount] := ButtonCaptions[RUCount] + Utf8ToUtf16(#10 + Btns.Items[i].CommandLinkHint);
+        end;
+        Buttons[RUCount].nButtonID := n+firstID;
+        Buttons[RUCount].pszButtonText := PWideChar(ButtonCaptions[RUCount]);
+        inc(n);
+        inc(RUCount);
+      end;
+    end;
+
+
+  begin
+    WindowTitle := Utf8ToUtf16(ADlg.Caption);
+    if (WindowTitle = '') then
+    begin
+      if (Application.MainForm = nil) then
+        WindowTitle := Utf8ToUtf16(Application.Title)
+      else
+        WindowTitle := Utf8ToUtf16(Application.MainForm.Caption);
+    end;
+    MainInstruction := Utf8ToUtf16(ADlg.Title);
+    if (MainInstruction = '') then
+      MainInstruction := Utf8ToUtf16(IconMessage(TF_DIALOGICON(ADlg.MainIcon)));
+    Content := Utf8ToUtf16(ADlg.Text);
+    VerificationText := Utf8ToUtf16(ADlg.VerificationText);
+    if (AParentWnd = 0) then
+    begin
+      if Assigned(Screen.ActiveCustomForm) then
+        AParentWnd := Screen.ActiveCustomForm.Handle
+      else
+        AParentWnd := 0;
+    end;
+    ExpandedInformation := Utf8ToUtf16(ADlg.ExpandedText);
+    CollapsedControlText := Utf8ToUtf16(ADlg.ExpandButtonCaption);
+    ExpandedControlText := Utf8ToUtf16(ADlg.CollapsButtonCaption);
+
+    Footer := Utf8ToUtf16(ADlg.FooterText);
+
+    if ADlg.RadioButtons.DefaultButton<> nil then
+      DefRB := ADlg.RadioButtons.DefaultButton.Index
+    else
+      DefRB := 0;
+    if ADlg.Buttons.DefaultButton<>nil then
+      DefBtn := ADlg.Buttons.DefaultButton.Index + TaskDialogFirstButtonIndex
+    else
+      DefBtn := TD_BTNMOD[ADlg.DefaultButton];
+
+    if (ADlg.CommonButtons = []) and (ADlg.Buttons.Count = 0) then
+    begin
+      CommonButtons := [tcbOk];
+      if (DefBtn = 0) then
+        DefBtn := mrOK;
+    end;
+
+    Config := Default(TTaskDialogConfig);
+    Config.cbSize := SizeOf(TTaskDialogConfig);
+    Config.hwndParent := AParentWnd;
+    Config.pszWindowTitle := PWideChar(WindowTitle);
+    Config.pszMainInstruction := PWideChar(MainInstruction);
+    Config.pszContent := PWideChar(Content);
+    Config.pszVerificationText := PWideChar(VerificationText);
+    Config.pszExpandedInformation := PWideChar(ExpandedInformation);
+    Config.pszCollapsedControlText := PWideChar(CollapsedControlText);
+    Config.pszExpandedControlText := PWideChar(ExpandedControlText);
+    Config.pszFooter := PWideChar(Footer);
+    Config.nDefaultButton := DefBtn;
+
+    RUCount := 0;
+    AddTaskDiakogButton(ADlg.Buttons,Config.cButtons,TaskDialogFirstButtonIndex);
+    AddTaskDiakogButton(ADlg.RadioButtons,Config.cRadioButtons,TaskDialogFirstRadioButtonIndex);
+    if (Config.cButtons > 0) then
+      Config.pButtons := @Buttons[0];
+    if (Config.cRadioButtons > 0) then
+      Config.pRadioButtons := @Buttons[Config.cButtons];
+    Config.dwCommonButtons := TaskDialogCommonButtonsToInteger(ADlg.CommonButtons);
+
+    Flags := ADlg.Flags;
+    if (VerificationText <> '') and (tfVerificationFlagChecked in ADlg.Flags) then
+      Include(Flags,tfVerificationFlagChecked)
+    else
+      Exclude(Flags,tfVerificationFlagChecked);
+    if (Config.cButtons=0) and (CommonButtons=[tcbOk]) then
+      Include(Flags,tfAllowDialogCancellation); // just OK -> Esc/Alt+F4 close
+    //while the MS docs say that this flag is ignored if Config.cButtons = 0,
+    //in practice it will make TaskDialogIndirect fail with E_INVALIDARG
+    if (ADlg.Buttons.Count = 0) then
+      Exclude(Flags, tfUseCommandLinks);
+    Config.dwFlags := TaskDialogFlagsToInteger(Flags);
+
+    Config.hMainIcon := TD_ICONS[TF_DIALOGICON(ADlg.MainIcon)];
+    Config.hFooterIcon := TD_FOOTERICONS[TF_FOOTERICON(ADlg.FooterIcon)];
+
+    {
+      Although the offcial MS docs (https://learn.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-taskdialogconfig)
+      states that setting the flag TDF_NO_DEFAULT_RADIO_BUTTON should cause that no radiobutton
+      is selected when the dialog displays, testing shows that (at least on Win10) this only
+      works correctly if nDefaultRadioButton does NOT point to a radiobutton in the pRadioButtons array.
+    }
+    if not (tfNoDefaultRadioButton in ADlg.Flags) then
+      Config.nDefaultRadioButton := DefRB + TaskDialogFirstRadioButtonIndex;
+
+    if not (tfSizeToContent in ADlg.Flags) then
+      Config.cxWidth := MulDiv(ADlg.Width, 4, DialogBaseUnits)  // cxWidth needed in "dialog units"
+    else
+      Config.cxWidth := 0; // see: https://learn.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-taskdialogconfig
+    Config.pfCallback := @TaskDialogCallbackProc;
+    Config.lpCallbackData := LONG_PTR(ADlg);
+  end;
+
+
+begin
+  //if IsConsole then writeln('TWin32WSTaskDialog.Execute A');
+  //if not Assigned(TaskDialogIndirect)  or
+  if not TaskDialogIndirectAvailable  or
+     (tfForceNonNative in ADlg.Flags) or
+     ((tfQuery in ADlg.Flags) and (ADlg.QueryChoices.Count > 0)) or
+     ((tfSimpleQuery in ADlg.Flags) and (ADlg.SimpleQuery <> ''))
+  then
+    Result := inherited Execute(ADlg, AParentWnd, ARadioRes)
+  else
+  begin
+    ARadioRes := 0;
+    PrepareTaskDialogConfig;//(TTaskDialog(ADlg), AParentWnd, Config, ButtonCaptions, Buttons);
+    Res := TaskDialogIndirect(@Config, @Result, @ARadioRes, @VerifyChecked);
+
+    if (Res = S_OK) then
+    begin
+      if VerifyChecked then
+        ADlg.Flags := ADlg.Flags + [tfVerificationFlagChecked]
+      else
+        ADlg.Flags := ADlg.Flags - [tfVerificationFlagChecked]
+    end
+    else
+    begin
+      if IsConsole then writeln('TWin32WSTaskDialog.Execute: Call to TaskDialogIndirect failed, result was: ',LongInt(Res).ToHexString);
+      Result := inherited Execute(ADlg, AParentWnd, ARadioRes);  //probably illegal parameters: fallback to emulated taskdialog
+    end;
+  end;
+end;
+
+procedure InitTaskDialogIndirect;
+var
+  OSVersionInfo: TOSVersionInfo;
+  Res: HRESULT;
+begin
+  //There is no need to get the address of TaskDialogIndirect.
+  //CommCtrl already has TaskDialogIndirect, which returns E_NOTIMPL if this function is not available in 'comctl32.dll'
+  //We could check that in order to initilaize our TaskDialogIndirect variable.
+  //We shouldn't however set CommCtrl.TaskDialogIndirect to nil, other (third party) code may rely on in not ever being nil.
+
+  Res := TaskDialogIndirect(nil,nil,nil,nil);
+  if IsConsole then
+  begin
+    write('InitTaskDialogIndirect: TaskDialogIndirect(nil,nil,nil,nil)=$',LongInt(Res).ToHexString);
+    if (Res = E_INVALIDARG) then writeln(' (=E_INVALIDARG)') else writeln;
+  end;
+  TaskDialogIndirectAvailable := (Res = E_INVALIDARG);//(Res <> E_NOTIMPL);
+  if IsConsole then writeln('InitTaskDialogIndirect: TaskDialogIndirectAvailable=',TaskDialogIndirectAvailable);
+
+  //OSVersionInfo.dwOSVersionInfoSize := sizeof(OSVersionInfo);
+  //GetVersionEx(OSVersionInfo);
+  //if OSVersionInfo.dwMajorVersion<6 then
+  //  TaskDialogIndirect := nil else
+  //  Pointer(TaskDialogIndirect) := GetProcAddress(GetModuleHandle(comctl32),'TaskDialogIndirect');
+end;
+
+
 initialization
   if (Win32MajorVersion = 4) then
     OpenFileNameSize := SizeOf(OPENFILENAME_NT4)
   else
     OpenFileNameSize := SizeOf(OPENFILENAME);
+  InitTaskDialogIndirect;
 end.

@@ -47,12 +47,12 @@ uses
   MemCheck,
   {$ENDIF}
   // RTL + FCL
-  Classes, SysUtils, TypInfo,
+  Classes, SysUtils, TypInfo, System.UITypes,
   // LCL
-  LCLProc, Forms, Controls, Dialogs,
+  LCLProc, Forms, Dialogs,
   // CodeTools
   CodeToolsConfig, ExprEval, DefineTemplates, BasicCodeTools, CodeToolsCfgScript,
-  LinkScanner, CodeToolManager, CodeCache, CodeTree, FileProcs, StdCodeTools,
+  LinkScanner, CodeToolManager, CodeCache, CodeTree, StdCodeTools,
   // LazUtils
   FPCAdds, LazUtilities, FileUtil, LazFileUtils, LazFileCache, LazMethodList,
   LazLoggerBase, FileReferenceList, LazUTF8, Laz2_XMLCfg, Maps, AvgLvlTree,
@@ -60,9 +60,6 @@ uses
   PropEdits, UnitResources, EditorSyntaxHighlighterDef, InputHistory,
   CompOptsIntf, ProjectIntf, MacroIntf, MacroDefIntf, SrcEditorIntf,
   IDEOptionsIntf, IDEOptEditorIntf, IDEDialogs, LazIDEIntf, PackageIntf,
-  // DebuggerIntf
-  DbgIntfDebuggerBase,
-  {$IFnDEF LCLNOGUI} IdeDebuggerOpts, IdeDebuggerBackendValueConv, Debugger,{$EndIf}
   // IdeConfig
   EnvironmentOpts, LazConf, TransferMacros, SearchPathProcs, IdeXmlConfigProcs,
   IDECmdLine, IDEProcs, CompOptsModes, ModeMatrixOpts,
@@ -166,10 +163,24 @@ type
   //---------------------------------------------------------------------------
 
   TUnitInfoFlag = (
+    uifAutoReferenceSourceDir,
+    uifBuildFileIfActive,
     uifComponentUsedByDesigner,
     uifComponentIndirectlyUsedByDesigner,
+    uifCustomDefaultHighlighter,
+    uifDisableI18NForLFM,
+    uifFileReadOnly,
+    uifHasErrorInLFM,
+    uifHasResources,   // source has resource file
+    uifInternalFile, // data from an internal source (e.g. an editor macro (pascal script) from memory)
+    uifLoaded,         // loaded in the source editor, needed to restore open files
+    uifLoadedDesigner, // has a visible designer, needed to restore open designers
+    uifLoadingComponent,
     uifMarked,
-    uifInternalFile    // data from an internal source (e.g. an editor macro (pascal script) from memory)
+    uifModified,
+    uifRunFileIfActive,
+    uifSessionModified,
+    uifUserReadOnly
     );
   TUnitInfoFlags = set of TUnitInfoFlag;
 
@@ -259,14 +270,10 @@ type
   private
     FComponentTypesToClasses: TStringToPointerTree;
     FComponentVarsToClasses: TStringToPointerTree;
-    FCustomDefaultHighlighter: boolean;
     FDefaultSyntaxHighlighter: TLazSyntaxHighlighter;
-    FDisableI18NForLFM: boolean;
     FEditorInfoList: TUnitEditorInfoList;
-    FAutoReferenceSourceDir: boolean;
     fAutoRevertLockCount: integer;// =0 means, codetools can auto update from disk
     fBookmarks: TFileBookmarks;
-    FBuildFileIfActive: boolean;
     fComponent: TComponent;
     FComponentState: TWindowState; // state of component when we save it
     FResourceBaseClass: TPFComponentBaseClass;
@@ -280,38 +287,37 @@ type
     FComponentLastLRSStreamSize: TStreamSeekType;
     FDirectives: TStrings;
     fFileName: string; // with path = saved, without path = not yet saved
-    fFileReadOnly: Boolean;
     FFirstRequiredComponent: TUnitComponentDependency;
     FFirstUsedByComponent: TUnitComponentDependency;
     FFlags: TUnitInfoFlags;
-    fHasResources: boolean; // source has resource file
-    fLoaded: Boolean; // loaded in the source editor, needed to restore open files
-    fLoadedDesigner: Boolean; // has a visible designer, needed to restore open designers
-    FLoadingComponent: boolean;
-    fHasErrorInLFM: boolean;
-    fModified: boolean;
     fNext, fPrev: array[TUnitInfoList] of TUnitInfo;
     fOnFileBackup: TOnFileBackup;
     fOnLoadSaveFilename: TOnLoadSaveFilename;
     FOnUnitNameChange: TOnUnitNameChange;
     FProject: TProject;
     FRevertLockCount: integer;// >0 means IDE is currently reverting this unit
-    FRunFileIfActive: boolean;
-    FSessionModified: boolean;
     fSource: TCodeBuffer;
     FSourceLFM: TCodeBuffer;
     fUsageCount: extended;
-    fUserReadOnly: Boolean;
     fSourceChangeStep: LongInt;
     FSourceDirectoryReferenced: boolean;
-    FSourceDirNeedReference: boolean;
     fLastDirectoryReferenced: string;
     FSetBookmarLock: Integer;
     FUnitResourceFileformat: TUnitResourcefileFormatClass;
 
     function ComponentLFMOnDiskHasChanged: boolean;
+    function GetAutoReferenceSourceDir: boolean;
+    function GetBuildFileIfActive: boolean;
+    function GetCustomDefaultHighlighter: boolean;
+    function GetDisableI18NForLFM: boolean;
     function GetEditorInfo(Index: Integer): TUnitEditorInfo;
+    function GetFileReadOnly: Boolean;
+    function GetHasErrorInLFM: boolean;
     function GetHasResources: boolean;
+    function GetInternalFile: boolean;
+    function GetLoaded: Boolean;
+    function GetLoadedDesigner: Boolean;
+    function GetLoadingComponent: boolean;
     function GetModified: boolean;
     function GetNextAutoRevertLockedUnit: TUnitInfo;
     function GetNextLoadedUnit: TUnitInfo;
@@ -324,17 +330,23 @@ type
     function GetPrevPartOfProject: TUnitInfo;
     function GetPrevUnitWithComponent: TUnitInfo;
     function GetPrevUnitWithEditorIndex: TUnitInfo;
+    function GetRunFileIfActive: boolean;
+    function GetSessionModified: boolean;
     function GetUnitResourceFileformat: TUnitResourcefileFormatClass;
+    function GetUserReadOnly: Boolean;
     procedure SetAutoReferenceSourceDir(const AValue: boolean);
     procedure SetBuildFileIfActive(const AValue: boolean);
+    procedure SetCustomDefaultHighlighter(AValue: boolean);
     procedure SetDefaultSyntaxHighlighter(const AValue: TLazSyntaxHighlighter);
-    procedure SetDirectives(const AValue: TStrings);
     procedure SetDisableI18NForLFM(const AValue: boolean);
     procedure SetFileReadOnly(const AValue: Boolean);
     procedure SetComponent(const AValue: TComponent);
     procedure SetHasErrorInLFM(AValue: boolean);
+    procedure SetHasResources(AValue: boolean);
+    procedure SetInternalFile(AValue: boolean);
     procedure SetLoaded(const AValue: Boolean);
     procedure SetLoadedDesigner(const AValue: Boolean);
+    procedure SetLoadingComponent(AValue: boolean);
     procedure SetModified(const AValue: boolean);
     procedure SetProject(const AValue: TProject);
     procedure SetRunFileIfActive(const AValue: boolean);
@@ -440,7 +452,7 @@ type
     property PrevPartOfProject: TUnitInfo read GetPrevPartOfProject;
   public
     property Bookmarks: TFileBookmarks read FBookmarks write FBookmarks;
-    property BuildFileIfActive: boolean read FBuildFileIfActive
+    property BuildFileIfActive: boolean read GetBuildFileIfActive
                                         write SetBuildFileIfActive;
     property Component: TComponent read fComponent write SetComponent;
     property ComponentName: string read fComponentName write fComponentName;
@@ -460,36 +472,34 @@ type
     property ComponentLastLFMStreamSize: TStreamSeekType
              read FComponentLastLFMStreamSize write FComponentLastLFMStreamSize;
     property CustomDefaultHighlighter: boolean
-                               read FCustomDefaultHighlighter write FCustomDefaultHighlighter;
-    property Directives: TStrings read FDirectives write SetDirectives;
-    property DisableI18NForLFM: boolean read FDisableI18NForLFM write SetDisableI18NForLFM;
-    property FileReadOnly: Boolean read fFileReadOnly write SetFileReadOnly;
-    property FirstRequiredComponent: TUnitComponentDependency
-                                                   read FFirstRequiredComponent;
-    property FirstUsedByComponent: TUnitComponentDependency
-                                                     read FFirstUsedByComponent;
-    property Flags: TUnitInfoFlags read FFlags write FFlags;
-    property HasResources: boolean read GetHasResources write fHasResources;
-    property Loaded: Boolean read fLoaded write SetLoaded;
-    property LoadedDesigner: Boolean read fLoadedDesigner write SetLoadedDesigner;
-    property LoadingComponent: boolean read FLoadingComponent write FLoadingComponent;
-    property HasErrorInLFM: boolean read fHasErrorInLFM write SetHasErrorInLFM;
+             read GetCustomDefaultHighlighter write SetCustomDefaultHighlighter;
+    property Directives: TStrings read FDirectives write FDirectives;
+    property DisableI18NForLFM: boolean read GetDisableI18NForLFM write SetDisableI18NForLFM;
+    property FileReadOnly: Boolean read GetFileReadOnly write SetFileReadOnly;
+    property FirstRequiredComponent: TUnitComponentDependency read FFirstRequiredComponent;
+    property FirstUsedByComponent: TUnitComponentDependency read FFirstUsedByComponent;
+    property Flags: TUnitInfoFlags read FFlags;
+    property HasErrorInLFM: boolean read GetHasErrorInLFM write SetHasErrorInLFM;
+    property HasResources: boolean read GetHasResources write SetHasResources;
+    property InternalFile: boolean read GetInternalFile write SetInternalFile;
+    property Loaded: Boolean read GetLoaded write SetLoaded;
+    property LoadedDesigner: Boolean read GetLoadedDesigner write SetLoadedDesigner;
+    property LoadingComponent: boolean read GetLoadingComponent write SetLoadingComponent;
     property Modified: boolean read GetModified write SetModified;// not Session data
-    property SessionModified: boolean read FSessionModified write SetSessionModified;
+    property SessionModified: boolean read GetSessionModified write SetSessionModified;
     property OnFileBackup: TOnFileBackup read fOnFileBackup write fOnFileBackup;
     property OnLoadSaveFilename: TOnLoadSaveFilename
                              read fOnLoadSaveFilename write fOnLoadSaveFilename;
     property OnUnitNameChange: TOnUnitNameChange
                                  read FOnUnitNameChange write FOnUnitNameChange;
     property Project: TProject read FProject write SetProject;
-    property RunFileIfActive: boolean read FRunFileIfActive write SetRunFileIfActive;
+    property RunFileIfActive: boolean read GetRunFileIfActive write SetRunFileIfActive;
     property Source: TCodeBuffer read fSource write SetSource;
     property SourceLFM: TCodeBuffer read FSourceLFM write SetSourceLFM;
     property DefaultSyntaxHighlighter: TLazSyntaxHighlighter
                                read FDefaultSyntaxHighlighter write SetDefaultSyntaxHighlighter;
-    property UserReadOnly: Boolean read fUserReadOnly write SetUserReadOnly;
-    property SourceDirectoryReferenced: boolean read FSourceDirectoryReferenced;
-    property AutoReferenceSourceDir: boolean read FAutoReferenceSourceDir
+    property UserReadOnly: Boolean read GetUserReadOnly write SetUserReadOnly;
+    property AutoReferenceSourceDir: boolean read GetAutoReferenceSourceDir
                                              write SetAutoReferenceSourceDir;
   end;
 
@@ -556,6 +566,7 @@ type
     function CanBeDefaulForProject: boolean; override;
     function GetOwnerName: string; override;
     function GetDefaultMainSourceFileName: string; override;
+    function GetDefaultWriteConfigFilePath: string; override;
     procedure GetInheritedCompilerOptions(var OptionsList: TFPList); override;
     procedure Assign(Source: TPersistent); override;
     function CreateDiff(CompOpts: TBaseCompilerOptions;
@@ -631,7 +642,7 @@ type
     FGlobalMatrixOptions: TBuildMatrixOptions;
     function GetItems(Index: integer): TProjectBuildMode;
     function GetModified: boolean;
-    procedure OnItemChanged(Sender: TObject);
+    procedure ItemChanged(Sender: TObject);
     procedure SetModified(const AValue: boolean);
     // Used by LoadFromXMLConfig
     procedure AddMatrixMacro(const MacroName, MacroValue, ModeIdentifier: string; InSession: boolean);
@@ -706,6 +717,21 @@ type
     property LclApp: Boolean read FLclApp;
   end;
 
+  TProjectDebugLinkBase = class
+  private
+  protected
+    procedure Clear; virtual; abstract;
+    procedure BeforeReadProject; virtual; abstract;
+    procedure AfterReadProject; virtual; abstract;
+    procedure LoadFromLPI(aXMLConfig: TRttiXMLConfig; Path: string); virtual; abstract;
+    procedure LoadFromSession(aXMLConfig: TRttiXMLConfig; Path: string); virtual; abstract;
+    procedure SaveToLPI(aXMLConfig: TRttiXMLConfig; Path: string); virtual; abstract;
+    procedure SaveToSession(aXMLConfig: TRttiXMLConfig; Path: string); virtual; abstract;
+  public
+    //constructor Create;
+    //destructor Destroy; override;
+  end;
+
   { TProject }
   
   TEndUpdateProjectEvent =
@@ -730,23 +756,13 @@ type
     FAllEditorsInfoList: TUnitEditorInfoList;
     FAllEditorsInfoMap: TMap;
     FAutoCreateForms: boolean;
+    FDebuggerLink: TProjectDebugLinkBase;
     FChangeStampSaved: integer;
-    FDebuggerBackend: String;
-    {$IFnDEF LCLNOGUI}
-    FDebuggerProperties: TDebuggerPropertiesConfigList; // named entries
-    {$EndIf}
     FEnableI18NForLFM: boolean;
     FHistoryLists: THistoryLists;
     FLastCompileComplete: boolean;
     FMacroEngine: TTransferMacroList;
     FOnLoadSafeCustomData: TLazLoadSaveCustomDataEvent;
-    FStoreBackendConverterConfigInSession: boolean;
-    FBackendConverterConfigWasFromSession, FBackendConverterConfigWasFromLPI: boolean;
-    {$IFnDEF LCLNOGUI}
-    FBackendConverterConfig: TIdeDbgValueConvertSelectorList;
-    {$EndIf}
-    FStoreDebuggerClassConfInSession: boolean;
-    FDebuggerClassConfWasFromSession, FDebuggerClassConfWasFromLPI: boolean;
     FTmpAutoCreatedForms: TStrings; // temporary, used to apply auto create forms changes
     FAutoOpenDesignerFormsDisabled: boolean;
     FBookmarks: TProjectBookmarkList;
@@ -764,7 +780,7 @@ type
     FJumpHistory: TProjectJumpHistory;
     FLastCompilerFileDate: integer;
     FLastCompilerFilename: string;
-    FLastCompilerParams: string;
+    FLastCompilerParams: TStrings;
     fLastReadLPIFileDate: TDateTime;
     fLastReadLPIFilename: string;
     FLockUnitComponentDependencies: integer;
@@ -798,8 +814,6 @@ type
     FOtherDefines: TStrings; // list of user selectable defines for custom options
     FUpdateLock: integer;
     FUseAsDefault: Boolean;
-    FUseBackendConverterFromIDE: boolean;
-    FUseBackendConverterFromProject: boolean;
     // Variables used by ReadProject / WriteProject
     FXMLConfig: TRttiXMLConfig;
     FLoadAllOptions: Boolean; // All options / just options used as default for new projects
@@ -831,20 +845,14 @@ type
     procedure EmbeddedObjectModified(Sender: TObject);
     function FileBackupHandler(const Filename: string): TModalResult;
     procedure LoadSaveFilenameHandler(var AFilename: string; Load: boolean);
-    procedure OnBackendConverterConfigChanged(Sender: TObject);
-    procedure SetStoreBackendConverterConfigInSession(AValue: boolean);
-    procedure SetStoreDebuggerClassConfInSession(AValue: boolean);
-    procedure SetUseBackendConverterFromIDE(AValue: boolean);
-    procedure SetUseBackendConverterFromProject(AValue: boolean);
     procedure UnitNameChangeHandler(AnUnitInfo: TUnitInfo;
                                const OldUnitName, NewUnitName: string;
                                CheckIfAllowed: boolean; var Allowed: boolean);
     procedure SetActiveBuildMode(const AValue: TProjectBuildMode);
     procedure SetAutoOpenDesignerFormsDisabled(const AValue: boolean);
-    procedure SetDebuggerBackend(AValue: String);
     procedure SetEnableI18N(const AValue: boolean);
     procedure SetEnableI18NForLFM(const AValue: boolean);
-    procedure SetLastCompilerParams(AValue: string);
+    procedure SetLastCompilerParams(AValue: TStrings);
     procedure SetMainProject(const AValue: boolean);
     procedure SetMainUnitID(const AValue: Integer);
     procedure SetPOOutputDirectory(const AValue: string);
@@ -864,7 +872,7 @@ type
     procedure LoadDefaultSession;
     procedure EditorInfoAdd(EdInfo: TUnitEditorInfo);
     procedure EditorInfoRemove(EdInfo: TUnitEditorInfo);
-    procedure OnMacroEngineSubstitution({%H-}TheMacro: TTransferMacro;
+    procedure MacroEngineSubstitution({%H-}TheMacro: TTransferMacro;
       const MacroName: string; var s: string;
       const Data: PtrInt; var Handled, Abort: boolean; Depth: integer);
     // Methods for ReadProject
@@ -909,7 +917,7 @@ type
     procedure SetSessionModified(const AValue: boolean); override;
     procedure SetSessionStorage(const AValue: TProjectSessionStorage); override;
     procedure SetUseManifest(AValue: boolean); override;
-    function GetCurrentDebuggerBackend: String; override;
+    //function GetCurrentDebuggerBackend: String; override;
   protected
     // special unit lists
     procedure AddToList(AnUnitInfo: TUnitInfo; ListType: TUnitInfoList);
@@ -1007,7 +1015,7 @@ type
     function UnitInfoWithLFMFilename(const AFilename: string): TUnitInfo; // only currently open lfm (SourceLFM<>nil)
     function AllEditorsInfoCount: Integer;
     property AllEditorsInfo[Index: Integer]: TUnitEditorInfo read GetAllEditorsInfo;
-    function EditorInfoWithEditorComponent(AEditor:TSourceEditorInterface): TUnitEditorInfo;
+    function EditorInfoWithEditorComponent({%H-}AEditor:TSourceEditorInterface): TUnitEditorInfo;
     function SearchFile(const ShortFilename: string;
                         SearchFlags: TSearchIDEFileFlags): TUnitInfo;
     function FindFile(const AFilename: string;
@@ -1074,15 +1082,16 @@ type
     function GetCompilerFilename: string;
     function GetStateFilename: string;
     function GetCompileSourceFilename: string;
+    function GetWriteConfigFilePath: string;
     procedure AutoAddOutputDirToIncPath;
     function ExtendUnitSearchPath(NewUnitPaths: string): boolean;
     function ExtendIncSearchPath(NewIncPaths: string): boolean;
 
     // compile state file
     function LoadStateFile(IgnoreErrors: boolean): TModalResult;
-    function SaveStateFile(const CompilerFilename, CompilerParams: string;
+    function SaveStateFile(const CompilerFilename: string; CompilerParams: TStrings;
                            Complete: boolean): TModalResult;
-                           
+
     // source editor
     procedure UpdateAllCustomHighlighter;
     procedure UpdateAllSyntaxHighlighter;
@@ -1106,6 +1115,7 @@ type
     property SkipCheckLCLInterfaces: boolean read FSkipCheckLCLInterfaces
                                              write SetSkipCheckLCLInterfaces;
     property CompilerOptions: TProjectCompilerOptions read GetCompilerOptions;
+    property DebuggerLink: TProjectDebugLinkBase read FDebuggerLink write FDebuggerLink;
     property DefineTemplates: TProjectDefineTemplates read FDefineTemplates;
     property Destroying: boolean read fDestroying;
     property EnableI18N: boolean read FEnableI18N write SetEnableI18N;
@@ -1129,7 +1139,7 @@ type
                                           write FLastCompilerFileDate;
     property LastCompilerFilename: string read FLastCompilerFilename
                                           write FLastCompilerFilename;
-    property LastCompilerParams: string read FLastCompilerParams
+    property LastCompilerParams: TStrings read FLastCompilerParams
                                         write SetLastCompilerParams;
     property LastCompileComplete: boolean read FLastCompileComplete write FLastCompileComplete;
     property MacroEngine: TTransferMacroList read FMacroEngine;
@@ -1165,26 +1175,6 @@ type
     property OtherDefines: TStrings read FOtherDefines;
     property UpdateLock: integer read FUpdateLock;
     property UseAsDefault: Boolean read FUseAsDefault write FUseAsDefault; // for dialog only (used to store options once)
-
-    property DebuggerBackend: String read FDebuggerBackend write SetDebuggerBackend;
-
-    // Debugger
-    {$IFnDEF LCLNOGUI}
-    function DebuggerPropertiesConfigList: TDebuggerPropertiesConfigList;
-    function CurrentDebuggerClass: TDebuggerClass;
-    function DebuggerFilename: string;
-    function GetParsedDebuggerFilename: string;
-    function CurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig;
-    {$EndIf}
-    procedure MarkDebuggerClassConfAsModified;
-    property StoreDebuggerClassConfInSession: boolean read FStoreDebuggerClassConfInSession write SetStoreDebuggerClassConfInSession;
-
-    {$IFnDEF LCLNOGUI}
-    property BackendConverterConfig: TIdeDbgValueConvertSelectorList read FBackendConverterConfig write FBackendConverterConfig;
-    {$EndIf}
-    property StoreBackendConverterConfigInSession: boolean read FStoreBackendConverterConfigInSession write SetStoreBackendConverterConfigInSession;
-    property UseBackendConverterFromIDE: boolean read FUseBackendConverterFromIDE write SetUseBackendConverterFromIDE;
-    property UseBackendConverterFromProject: boolean read FUseBackendConverterFromProject write SetUseBackendConverterFromProject;
   end;
 
 
@@ -1245,7 +1235,7 @@ begin
   ucdtOldProperty: Result:='OldProperty';
   ucdtInlineClass: Result:='InlineClass';
   else Result:='?'
-  end;
+  {%H-}end;
 end;
 
 function dbgs(Types: TUnitCompDependencyTypes): string;
@@ -1770,26 +1760,26 @@ procedure TUnitInfo.Clear;
 begin
   FBookmarks.Clear;
   FSetBookmarLock := 0;
-  FBuildFileIfActive:=false;
+  BuildFileIfActive:=false;
   fComponent := nil;
   fComponentName := '';
   fComponentResourceName := '';
   FComponentState := wsNormal;
   FDefaultSyntaxHighlighter := lshText;
-  FDisableI18NForLFM:=false;
-  FCustomDefaultHighlighter := False;
+  DisableI18NForLFM:=false;
+  CustomDefaultHighlighter := False;
   FEditorInfoList.ClearEachInfo;
   fFilename := '';
-  fFileReadOnly := false;
-  fHasResources := false;
-  fAutoReferenceSourceDir := true;
+  FileReadOnly := false;
+  HasResources := false;
+  AutoReferenceSourceDir := true;
   inherited SetIsPartOfProject(false);
   Modified := false;
   SessionModified := false;
-  FRunFileIfActive:=false;
+  RunFileIfActive:=false;
   FUnitName := '';
   fUsageCount:=-1;
-  fUserReadOnly := false;
+  UserReadOnly := false;
   if fSource<>nil then fSource.Clear;
   Loaded := false;
   LoadedDesigner := false;
@@ -1856,13 +1846,13 @@ begin
   if SaveSession and Assigned(Project.OnSaveUnitSessionInfo) then
     Project.OnSaveUnitSessionInfo(Self);
   if IsPartOfProject and SaveData then
-    XMLConfig.SetDeleteValue(Path+'DisableI18NForLFM/Value',FDisableI18NForLFM,false);
+    XMLConfig.SetDeleteValue(Path+'DisableI18NForLFM/Value',DisableI18NForLFM,false);
 
   // context data (project/session)
   if (IsPartOfProject and SaveData) or ((not IsPartOfProject) and SaveSession)
   then begin
     XMLConfig.SetDeleteValue(Path+'ComponentName/Value',fComponentName,'');
-    XMLConfig.SetDeleteValue(Path+'HasResources/Value',fHasResources,false);
+    XMLConfig.SetDeleteValue(Path+'HasResources/Value',uifHasResources in FFlags,false);
     XMLConfig.SetDeleteValue(Path+'ResourceBaseClass/Value',
                              PFComponentBaseClassNames[FResourceBaseClass],
                              PFComponentBaseClassNames[pfcbcNone]);
@@ -1898,13 +1888,13 @@ begin
           BM.CursorPos := Point(X, Y);
       end;
     FBookmarks.SaveToXMLConfig(XMLConfig,Path+'Bookmarks/');
-    XMLConfig.SetDeleteValue(Path+'Loaded/Value',fLoaded,false);
-    XMLConfig.SetDeleteValue(Path+'LoadedDesigner/Value',fLoadedDesigner,false);
-    XMLConfig.SetDeleteValue(Path+'ReadOnly/Value',fUserReadOnly,false);
+    XMLConfig.SetDeleteValue(Path+'Loaded/Value',Loaded,false);
+    XMLConfig.SetDeleteValue(Path+'LoadedDesigner/Value',LoadedDesigner,false);
+    XMLConfig.SetDeleteValue(Path+'ReadOnly/Value',UserReadOnly,false);
     XMLConfig.SetDeleteValue(Path+'BuildFileIfActive/Value',
-                             FBuildFileIfActive,false);
+                             BuildFileIfActive,false);
     XMLConfig.SetDeleteValue(Path+'RunFileIfActive/Value',
-                             FRunFileIfActive,false);
+                             RunFileIfActive,false);
     // save custom session data
     SaveStringToStringTree(XMLConfig,CustomSessionData,Path+'CustomSessionData/');
     XMLConfig.SetDeleteValue(Path+'DefaultSyntaxHighlighter/Value',
@@ -1935,7 +1925,7 @@ begin
     if fComponentName='' then
       fComponentName:=XMLConfig.GetValue(Path+'FormName/Value','');
     FComponentState := TWindowState(XMLConfig.GetValue(Path+'ComponentState/Value',0));
-    FDisableI18NForLFM:=XMLConfig.GetValue(Path+'DisableI18NForLFM/Value',false);
+    DisableI18NForLFM:=XMLConfig.GetValue(Path+'DisableI18NForLFM/Value',false);
     HasResources:=XMLConfig.GetValue(Path+'HasResources/Value',false);
     FResourceBaseClass:=StrToComponentBaseClass(
                          XMLConfig.GetValue(Path+'ResourceBaseClass/Value',''));
@@ -1976,9 +1966,9 @@ begin
     LoadedDesigner:=XMLConfig.GetValue(Path+'LoadedDesigner/Value',FileVersion<8)
   else
     LoadedDesigner:=false;
-  fUserReadOnly:=XMLConfig.GetValue(Path+'ReadOnly/Value',false);
-  FBuildFileIfActive:=XMLConfig.GetValue(Path+'BuildFileIfActive/Value',false);
-  FRunFileIfActive:=XMLConfig.GetValue(Path+'RunFileIfActive/Value',false);
+  UserReadOnly:=XMLConfig.GetValue(Path+'ReadOnly/Value',false);
+  BuildFileIfActive:=XMLConfig.GetValue(Path+'BuildFileIfActive/Value',false);
+  RunFileIfActive:=XMLConfig.GetValue(Path+'RunFileIfActive/Value',false);
   fUsageCount:=XMLConfig.GetValue(Path+'UsageCount/Value',-1);
   if fUsageCount<1 then begin
     UpdateUsageCount(uuIsLoaded,1);
@@ -2037,7 +2027,7 @@ begin
   //DebugLn('TUnitInfo.SetInternalFilename Old=',fFileName,' New=',NewFilename);
   
   // if directory changed then remove the old directory reference
-  if SourceDirectoryReferenced
+  if FSourceDirectoryReferenced
   and (Project<>nil)
   and (fLastDirectoryReferenced<>GetDirectory) then begin
     Project.SourceDirectories.RemoveFilename(fLastDirectoryReferenced);
@@ -2054,7 +2044,7 @@ procedure TUnitInfo.UpdateHasCustomHighlighter(aDefaultHighlighter: TLazSyntaxHi
 var
   i: Integer;
 begin
-  FCustomDefaultHighlighter := FDefaultSyntaxHighlighter <> aDefaultHighlighter;
+  CustomDefaultHighlighter := FDefaultSyntaxHighlighter <> aDefaultHighlighter;
   for i := 0 to FEditorInfoList.Count - 1 do
     FEditorInfoList[i].CustomHighlighter :=
       FEditorInfoList[i].SyntaxHighlighter <> aDefaultHighlighter;
@@ -2102,7 +2092,7 @@ var
   i: Integer;
 begin
   //debugln(['TUnitInfo.UpdateDefaultHighlighter ',Filename,' ',ord(aDefaultHighlighter)]);
-  if not FCustomDefaultHighlighter then
+  if not CustomDefaultHighlighter then
     DefaultSyntaxHighlighter := aDefaultHighlighter
   else
     for i := 0 to FEditorInfoList.Count - 1 do
@@ -2207,12 +2197,32 @@ begin
   if SourceLFM.FileOnDiskHasChanged then exit(true);
 end;
 
+function TUnitInfo.GetAutoReferenceSourceDir: boolean;
+begin
+  Result:=uifAutoReferenceSourceDir in FFlags;
+end;
+
+function TUnitInfo.GetBuildFileIfActive: boolean;
+begin
+  Result:=uifBuildFileIfActive in FFlags;
+end;
+
+function TUnitInfo.GetCustomDefaultHighlighter: boolean;
+begin
+  Result:=uifCustomDefaultHighlighter in FFlags;
+end;
+
+function TUnitInfo.GetDisableI18NForLFM: boolean;
+begin
+  Result:=uifDisableI18NForLFM in FFlags;
+end;
+
 procedure TUnitInfo.SetTimeStamps;
 begin
   if FSource<>nil then
     fSourceChangeStep:=FSource.ChangeStep  // Indicates any change is source
   else
-    fSourceChangeStep:=CTInvalidChangeStamp;
+    fSourceChangeStep:=LUInvalidChangeStamp;
 end;
 
 function TUnitInfo.IsChangedOnDisk(CheckLFM: boolean): boolean;
@@ -2266,17 +2276,16 @@ end;
 
 procedure TUnitInfo.UpdateSourceDirectoryReference;
 begin
-  FSourceDirNeedReference:=IsPartOfProject and (FilenameIsPascalSource(Filename));
   if (not AutoReferenceSourceDir) or (FProject=nil) then exit;
-  if FSourceDirNeedReference then begin
-    if not SourceDirectoryReferenced then begin
+  if IsPartOfProject and (FilenameIsPascalSource(Filename)) then begin
+    if not FSourceDirectoryReferenced then begin
       fLastDirectoryReferenced:=GetDirectory;
       //DebugLn('TUnitInfo.UpdateSourceDirectoryReference ADD File="',Filename,'" Project.SourceDirectories.TimeStamp=',dbgs(Project.SourceDirectories.TimeStamp));
       FSourceDirectoryReferenced:=true;
       Project.SourceDirectories.AddFilename(fLastDirectoryReferenced);
     end;
   end else begin
-    if SourceDirectoryReferenced then begin
+    if FSourceDirectoryReferenced then begin
       //DebugLn('TUnitInfo.UpdateSourceDirectoryReference REMOVE File="',Filename,'" Project.SourceDirectories.TimeStamp=',dbgs(Project.SourceDirectories.TimeStamp));
       FSourceDirectoryReferenced:=false;
       Project.SourceDirectories.RemoveFilename(fLastDirectoryReferenced);
@@ -2478,24 +2487,57 @@ end;
 
 procedure TUnitInfo.SetUserReadOnly(const NewValue: boolean);
 begin
-  fUserReadOnly:=NewValue;
+  if NewValue then
+    Include(FFlags, uifUserReadOnly)
+  else
+    Exclude(FFlags, uifUserReadOnly);
   if fSource<>nil then
     fSource.ReadOnly:=ReadOnly;
 end;
 
 function TUnitInfo.GetHasResources:boolean;
 begin
-  Result:=fHasResources or (ComponentName<>'');
+  Result:=(uifHasResources in FFlags) or (ComponentName<>'');
+end;
+
+function TUnitInfo.GetInternalFile: boolean;
+begin
+  Result:=uifInternalFile in FFlags;
+end;
+
+function TUnitInfo.GetLoaded: Boolean;
+begin
+  Result:=uifLoaded in FFlags;
+end;
+
+function TUnitInfo.GetLoadedDesigner: Boolean;
+begin
+  Result:=uifLoadedDesigner in FFlags;
+end;
+
+function TUnitInfo.GetLoadingComponent: boolean;
+begin
+  Result:=uifLoadingComponent in FFlags;
 end;
 
 function TUnitInfo.GetEditorInfo(Index: Integer): TUnitEditorInfo;
 begin
-  Result := FEditorInfoList[Index];
+  Result:=FEditorInfoList[Index];
+end;
+
+function TUnitInfo.GetFileReadOnly: Boolean;
+begin
+  Result:=uifFileReadOnly in FFlags;
+end;
+
+function TUnitInfo.GetHasErrorInLFM: boolean;
+begin
+  Result:=uifHasErrorInLFM in FFlags;
 end;
 
 function TUnitInfo.GetModified: boolean;
 begin
-  Result:=fModified
+  Result:=(uifModified in FFlags)
     or ((Source<>nil) and (Source.ChangeStep<>fSourceChangeStep));
 end;
 
@@ -2554,6 +2596,16 @@ begin
   Result:=fPrev[uilWithEditorIndex];
 end;
 
+function TUnitInfo.GetRunFileIfActive: boolean;
+begin
+  Result:=uifRunFileIfActive in FFlags;
+end;
+
+function TUnitInfo.GetSessionModified: boolean;
+begin
+  Result:=uifSessionModified in FFlags;
+end;
+
 function TUnitInfo.GetUnitResourceFileformat: TUnitResourcefileFormatClass;
 var
   ResourceFormats : TUnitResourcefileFormatArr;
@@ -2581,18 +2633,37 @@ begin
   Result := FUnitResourceFileformat;
 end;
 
+function TUnitInfo.GetUserReadOnly: Boolean;
+begin
+  Result:=uifUserReadOnly in FFlags;
+end;
+
 procedure TUnitInfo.SetAutoReferenceSourceDir(const AValue: boolean);
 begin
-  if FAutoReferenceSourceDir=AValue then exit;
-  FAutoReferenceSourceDir:=AValue;
+  if AutoReferenceSourceDir=AValue then exit;
+  if AValue then
+    Include(FFlags, uifAutoReferenceSourceDir)
+  else
+    Exclude(FFlags, uifAutoReferenceSourceDir);
   UpdateSourceDirectoryReference;
 end;
 
 procedure TUnitInfo.SetBuildFileIfActive(const AValue: boolean);
 begin
-  if FBuildFileIfActive=AValue then exit;
-  FBuildFileIfActive:=AValue;
+  if BuildFileIfActive=AValue then exit;
+  if AValue then
+    Include(FFlags, uifBuildFileIfActive)
+  else
+    Exclude(FFlags, uifBuildFileIfActive);
   SessionModified:=true;
+end;
+
+procedure TUnitInfo.SetCustomDefaultHighlighter(AValue: boolean);
+begin
+  if AValue then
+    Include(FFlags, uifCustomDefaultHighlighter)
+  else
+    Exclude(FFlags, uifCustomDefaultHighlighter);
 end;
 
 procedure TUnitInfo.SetDefaultSyntaxHighlighter(const AValue: TLazSyntaxHighlighter);
@@ -2606,23 +2677,23 @@ begin
       FEditorInfoList[i].SyntaxHighlighter := AValue;
 end;
 
-procedure TUnitInfo.SetDirectives(const AValue: TStrings);
-begin
-  if FDirectives=AValue then exit;
-  FDirectives:=AValue;
-end;
-
 procedure TUnitInfo.SetDisableI18NForLFM(const AValue: boolean);
 begin
-  if FDisableI18NForLFM=AValue then exit;
-  FDisableI18NForLFM:=AValue;
+  if DisableI18NForLFM=AValue then exit;
+  if AValue then
+    Include(FFlags, uifDisableI18NForLFM)
+  else
+    Exclude(FFlags, uifDisableI18NForLFM);
   Modified:=true;
 end;
 
 procedure TUnitInfo.SetFileReadOnly(const AValue: Boolean);
 begin
-  if fFileReadOnly=AValue then exit;
-  fFileReadOnly:=AValue;
+  if FileReadOnly=AValue then exit;
+  if AValue then
+    Include(FFlags, uifFileReadOnly)
+  else
+    Exclude(FFlags, uifFileReadOnly);
   if fSource<>nil then
     fSource.ReadOnly:=ReadOnly;
 end;
@@ -2640,9 +2711,28 @@ end;
 
 procedure TUnitInfo.SetHasErrorInLFM(AValue: boolean);
 begin
-  if fHasErrorInLFM=AValue then Exit;
-  fHasErrorInLFM:=AValue;
+  if HasErrorInLFM=AValue then Exit;
+  if AValue then
+    Include(FFlags, uifHasErrorInLFM)
+  else
+    Exclude(FFlags, uifHasErrorInLFM);
   Modified:=true;
+end;
+
+procedure TUnitInfo.SetHasResources(AValue: boolean);
+begin
+  if AValue then
+    Include(FFlags, uifHasResources)
+  else
+    Exclude(FFlags, uifHasResources);
+end;
+
+procedure TUnitInfo.SetInternalFile(AValue: boolean);
+begin
+  if AValue then
+    Include(FFlags, uifInternalFile)
+  else
+    Exclude(FFlags, uifInternalFile);
 end;
 
 procedure TUnitInfo.SetIsPartOfProject(const AValue: boolean);
@@ -2666,12 +2756,13 @@ end;
 -------------------------------------------------------------------------------}
 procedure TUnitInfo.SetLoaded(const AValue: Boolean);
 begin
-  if fLoaded=AValue then exit;
-  fLoaded:=AValue;
-  if fLoaded then begin
+  if Loaded=AValue then exit;
+  if AValue then begin
+    Include(FFlags, uifLoaded);
     IncreaseAutoRevertLock;
     UpdateUsageCount(uuIsLoaded,0);
   end else begin
+    Exclude(FFlags, uifLoaded);
     DecreaseAutoRevertLock;
   end;
 end;
@@ -2686,8 +2777,18 @@ end;
 -------------------------------------------------------------------------------}
 procedure TUnitInfo.SetLoadedDesigner(const AValue: Boolean);
 begin
-  if fLoadedDesigner=AValue then exit;
-  fLoadedDesigner:=AValue;
+  if AValue then
+    Include(FFlags, uifLoadedDesigner)
+  else
+    Exclude(FFlags, uifLoadedDesigner);
+end;
+
+procedure TUnitInfo.SetLoadingComponent(AValue: boolean);
+begin
+  if AValue then
+    Include(FFlags, uifLoadingComponent)
+  else
+    Exclude(FFlags, uifLoadingComponent);
 end;
 
 procedure TUnitInfo.SetModified(const AValue: boolean);
@@ -2696,8 +2797,11 @@ begin
   {$IFDEF VerboseIDEModified}
   debugln(['TUnitInfo.SetModified ',Filename,' new Modified=',AValue]);
   {$ENDIF}
-  fModified:=AValue;
-  if (not fModified) and Assigned(Source) then
+  if AValue then
+    Include(FFlags, uifModified)
+  else
+    Exclude(FFlags, uifModified);
+  if (not AValue) and Assigned(Source) then
     SetTimeStamps;
 end;
 
@@ -2732,18 +2836,24 @@ end;
 
 procedure TUnitInfo.SetRunFileIfActive(const AValue: boolean);
 begin
-  if FRunFileIfActive=AValue then exit;
-  FRunFileIfActive:=AValue;
+  if RunFileIfActive=AValue then exit;
+  if AValue then
+    Include(FFlags, uifRunFileIfActive)
+  else
+    Exclude(FFlags, uifRunFileIfActive);
   SessionModified:=true;
 end;
 
 procedure TUnitInfo.SetSessionModified(const AValue: boolean);
 begin
-  if FSessionModified=AValue then exit;
+  if SessionModified=AValue then exit;
   {$IFDEF VerboseIDEModified}
   debugln(['TUnitInfo.SetSessionModified ',Filename,' new Modified=',AValue]);
   {$ENDIF}
-  FSessionModified:=AValue;
+  if AValue then
+    Include(FFlags, uifSessionModified)
+  else
+    Exclude(FFlags, uifSessionModified);
 end;
 
 
@@ -2804,7 +2914,7 @@ begin
   FBookmarks := TProjectBookmarkList.Create;
 
   FMacroEngine:=TTransferMacroList.Create;
-  FMacroEngine.OnSubstitution:=@OnMacroEngineSubstitution;
+  FMacroEngine.OnSubstitution:=@MacroEngineSubstitution;
   FBuildModes:=TProjectBuildModes.Create(nil);
   FBuildModes.LazProject:=Self;
   FBuildModesBackup:=TProjectBuildModes.Create(nil);
@@ -2837,17 +2947,7 @@ begin
   ProjResources.OnModified := @EmbeddedObjectModified;
 
   FHistoryLists := THistoryLists.Create;
-
-  {$IFnDEF LCLNOGUI}
-  FDebuggerProperties := TDebuggerPropertiesConfigList.Create;
-  FBackendConverterConfig := TIdeDbgValueConvertSelectorList.Create;
-  FBackendConverterConfig.OnChanged := @OnBackendConverterConfigChanged;
-  {$EndIf}
-  FUseBackendConverterFromIDE := True;
-  FUseBackendConverterFromProject := True;
-
-  if DebugBossManager <> nil then
-    DebugBossManager.DoBackendConverterChanged;
+  FLastCompilerParams := TStringListUTF8Fast.Create;
 end;
 
 {------------------------------------------------------------------------------
@@ -2876,12 +2976,8 @@ begin
   FreeThenNil(FPublishOptions);
   FreeThenNil(FRunParameters);
   FreeThenNil(FDefineTemplates);
-  FreeThenNil(FHistoryLists);
-  {$IFnDEF LCLNOGUI}
-  FreeAndNil(FDebuggerProperties);
-  FreeAndNil(FBackendConverterConfig);
-  {$EndIf}
-
+  FreeAndNil(FHistoryLists);
+  FreeAndNil(FLastCompilerParams);
   inherited Destroy;
 end;
 
@@ -3093,26 +3189,8 @@ begin
   // load session info
   LoadSessionInfo(Path,false);
 
-  FStoreDebuggerClassConfInSession := FXMLConfig.GetValue(Path+'Debugger/StoreDebuggerClassConfInSession/Value', False);
-  if not FStoreDebuggerClassConfInSession then begin
-    {$IFnDEF LCLNOGUI}
-    FDebuggerProperties.LoadFromXml(FXMLConfig, Path+'Debugger/ClassConfig/');
-    {$EndIf}
-    FDebuggerClassConfWasFromLPI := True;
-  end;
-
-  FStoreBackendConverterConfigInSession := FXMLConfig.GetValue(Path+'Debugger/StoreBackendConverterConfigInSession/Value', False);
-  if not FStoreBackendConverterConfigInSession then begin
-    {$IFnDEF LCLNOGUI}
-    FBackendConverterConfig.LoadDataFromXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/');
-    ProjectValueConverterSelectorList := FBackendConverterConfig;
-    {$EndIf}
-    FBackendConverterConfigWasFromLPI := True;
-  end;
-
-  // This is for backward compatibility (only trunk 2.1 did use this / Can be removed in some time after 2.2 / but needs LoadFromSession to change default to '')
-  FDebuggerBackend := FXMLConfig.GetValue(Path+'Debugger/Backend/Value', '');
-
+  if Assigned(FDebuggerLink) then
+    FDebuggerLink.LoadFromLPI(FXMLConfig, Path);
   // call hooks to read their info (e.g. DebugBoss)
   if Assigned(OnLoadProjectInfo) then
     OnLoadProjectInfo(Self, FXMLConfig, false);
@@ -3145,26 +3223,8 @@ begin
   if FFileVersion>=12 then
     HistoryLists.LoadFromXMLConfig(FXMLConfig,Path+'HistoryLists/');
 
-  // Load from LPI will have been called first => so if session has no value, we keep the LPI value (as for some time, the data was stored in the LPI)
-  FDebuggerBackend := FXMLConfig.GetValue(Path+'Debugger/Backend/Value', FDebuggerBackend);
-  if FStoreDebuggerClassConfInSession then begin
-    {$IFnDEF LCLNOGUI}
-    FDebuggerProperties.LoadFromXml(FXMLConfig, Path+'Debugger/ClassConfig/');
-    {$EndIf}
-    FDebuggerClassConfWasFromSession := True;
-  end;
-
-  FUseBackendConverterFromIDE :=     FXMLConfig.GetValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromIDE', True);
-  FUseBackendConverterFromProject := FXMLConfig.GetValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromProject', True);
-
-  if FStoreBackendConverterConfigInSession then begin
-    {$IFnDEF LCLNOGUI}
-    FBackendConverterConfig.LoadDataFromXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/');
-    ProjectValueConverterSelectorList := FBackendConverterConfig;
-    {$EndIf}
-    FBackendConverterConfigWasFromSession := True;
-  end;
-
+  if Assigned(FDebuggerLink) then
+    FDebuggerLink.LoadFromSession(FXMLConfig, Path);
   // call hooks to read their info (e.g. DebugBoss)
   if Assigned(OnLoadProjectInfo) then
     OnLoadProjectInfo(Self,FXMLConfig,true);
@@ -3182,7 +3242,7 @@ begin
     ProjectInfoFile:=Filename;
     PIFile:=ProjectInfoFile;    // May be different from Filename, setter changed.
     fProjectInfoFileBuffer:=CodeToolBoss.LoadFile(PIFile,true,true);
-    fProjectInfoFileBufChangeStamp:=CTInvalidChangeStamp;
+    fProjectInfoFileBufChangeStamp:=LUInvalidChangeStamp;
     try
       fProjectInfoFileDate:=FileAgeCached(PIFile);
       {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TProject.ReadProject A reading lpi');{$ENDIF}
@@ -3307,8 +3367,8 @@ begin
   Result := mrCancel;
   BeginUpdate(true);
   try
-    FDebuggerClassConfWasFromSession := False;
-    FDebuggerClassConfWasFromLPI := False;
+    if Assigned(FDebuggerLink) then
+      FDebuggerLink.BeforeReadProject;
     BuildModes.FGlobalMatrixOptions := GlobalMatrixOptions;
     FLoadAllOptions := LoadAllOptions;
 
@@ -3334,10 +3394,8 @@ begin
     FAllEditorsInfoList.SortByPageIndex;
   end;
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TProject.ReadProject END');{$ENDIF}
-
-  if DebugBossManager <> nil then
-    DebugBossManager.DoBackendConverterChanged;
-
+  if Assigned(FDebuggerLink) then
+    FDebuggerLink.AfterReadProject;
   Result := mrOk;
 end;
 
@@ -3484,29 +3542,8 @@ begin
   // save units
   SaveUnits(Path,FSaveSessionInLPI);
 
-  FXMLConfig.DeletePath(Path+'Debugger/Backend'); // remove old value from trunk 2.1
-
-  FXMLConfig.SetDeleteValue(Path+'Debugger/StoreDebuggerClassConfInSession/Value', FStoreDebuggerClassConfInSession, False);
-  if not FStoreDebuggerClassConfInSession then
-    {$IFnDEF LCLNOGUI}
-    FDebuggerProperties.SaveToXml(FXMLConfig, Path+'Debugger/ClassConfig/')
-    {$EndIf}
-  else
-  if FDebuggerClassConfWasFromLPI then
-    FXMLConfig.DeletePath(Path+'Debugger/ClassConfig');
-  FDebuggerClassConfWasFromSession := False;
-  FDebuggerClassConfWasFromLPI := False;
-
-  FXMLConfig.SetDeleteValue(Path+'Debugger/StoreBackendConverterConfigInSession/Value', FStoreBackendConverterConfigInSession, False);
-  if not FStoreBackendConverterConfigInSession then
-    {$IFnDEF LCLNOGUI}
-    FBackendConverterConfig.SaveDataToXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/')
-    {$EndIf}
-  else
-  if FBackendConverterConfigWasFromLPI then
-    FXMLConfig.DeletePath(Path+'Debugger/BackendConv');
-  FBackendConverterConfigWasFromSession := False;
-  FBackendConverterConfigWasFromLPI := False;
+  if Assigned(FDebuggerLink) then
+    FDebuggerLink.SaveToLPI(FXMLConfig, Path);
 
   if FSaveSessionInLPI then begin
     // save defines used for custom options
@@ -3562,30 +3599,8 @@ begin
   // save all units
   SaveUnits(Path,true);
 
-  FXMLConfig.SetDeleteValue(Path+'Debugger/Backend/Value', DebuggerBackend, '');
-
-  if FStoreDebuggerClassConfInSession then
-    {$IFnDEF LCLNOGUI}
-    FDebuggerProperties.SaveToXml(FXMLConfig, Path+'Debugger/ClassConfig/')
-    {$EndIf}
-  else
-  if FDebuggerClassConfWasFromSession then
-    FXMLConfig.DeletePath(Path+'Debugger/ClassConfig');
-  FDebuggerClassConfWasFromSession := False;
-  FDebuggerClassConfWasFromLPI := False;
-
-  FXMLConfig.SetDeleteValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromIDE', FUseBackendConverterFromIDE, True);
-  FXMLConfig.SetDeleteValue(Path+'Debugger/BackendConvOpts/UseBackendConverterFromProject', FUseBackendConverterFromProject, True);
-
-  if FStoreBackendConverterConfigInSession then
-    {$IFnDEF LCLNOGUI}
-    FBackendConverterConfig.SaveDataToXMLConfig(FXMLConfig, Path+'Debugger/BackendConv/')
-    {$EndIf}
-  else
-  if FBackendConverterConfigWasFromSession then
-    FXMLConfig.DeletePath(Path+'Debugger/BackendConv');
-  FBackendConverterConfigWasFromSession := False;
-  FBackendConverterConfigWasFromLPI := False;
+  if Assigned(FDebuggerLink) then
+    FDebuggerLink.SaveToSession(FXMLConfig, Path);
 
   // save defines used for custom options
   SaveOtherDefines(Path);
@@ -4017,9 +4032,8 @@ begin
   UpdateProjectDirectory;
   FPublishOptions.Clear;
   Title := '';
-  FUseBackendConverterFromIDE := True;
-  FUseBackendConverterFromProject := True;
-
+  if Assigned(FDebuggerLink) then
+    FDebuggerLink.Clear;
   Modified := false;
   SessionModified := false;
   EndUpdate;
@@ -4179,11 +4193,6 @@ end;
 procedure TProject.SetUseManifest(AValue: boolean);
 begin
   ProjResources.XPManifest.UseManifest:=AValue;
-end;
-
-function TProject.GetCurrentDebuggerBackend: String;
-begin
-  Result := FDebuggerBackend;
 end;
 
 function TProject.UnitCount:integer;
@@ -4684,9 +4693,8 @@ begin
         AFilename:=TrimFilename(ProjectPath+AFilename);
     end else begin
       // try making filename relative to project file
-      if FileCanBeMadeRelative then begin
+      if FileCanBeMadeRelative then
         AFilename:=CreateRelativePath(AFilename,ProjectPath);
-      end;
     end;
   end;
 
@@ -4702,44 +4710,6 @@ begin
     AFilename:=SwitchPathDelims(AFileName,fCurStorePathDelim);
   end;
   //debugln('TProject.OnLoadSaveFilename END "',AFilename,'" FileWasAbsolute=',dbgs(FileWasAbsolute));
-end;
-
-procedure TProject.OnBackendConverterConfigChanged(Sender: TObject);
-begin
-  if FStoreBackendConverterConfigInSession then
-    SessionModified := True
-  else
-    Modified := True;
-end;
-
-procedure TProject.SetStoreBackendConverterConfigInSession(AValue: boolean);
-begin
-  if FStoreBackendConverterConfigInSession = AValue then Exit;
-  FStoreBackendConverterConfigInSession := AValue;
-  Modified := True;
-  SessionModified := True;
-end;
-
-procedure TProject.SetStoreDebuggerClassConfInSession(AValue: boolean);
-begin
-  if FStoreDebuggerClassConfInSession = AValue then Exit;
-  FStoreDebuggerClassConfInSession := AValue;
-  Modified := True;
-  SessionModified := True;
-end;
-
-procedure TProject.SetUseBackendConverterFromIDE(AValue: boolean);
-begin
-  if FUseBackendConverterFromIDE = AValue then Exit;
-  FUseBackendConverterFromIDE := AValue;
-  SessionModified := True;
-end;
-
-procedure TProject.SetUseBackendConverterFromProject(AValue: boolean);
-begin
-  if FUseBackendConverterFromProject = AValue then Exit;
-  FUseBackendConverterFromProject := AValue;
-  SessionModified := True;
 end;
 
 function TProject.RemoveProjectPathFromFilename(const AFilename: string): string;
@@ -5331,6 +5301,11 @@ begin
     Result:=ExtractFilename(MainUnitInfo.Filename);
 end;
 
+function TProject.GetWriteConfigFilePath: string;
+begin
+  Result:=CompilerOptions.ParsedOpts.GetParsedValue(pcosWriteConfigFilePath);
+end;
+
 procedure TProject.AutoAddOutputDirToIncPath;
 begin
   if pfLRSFilesInOutputDirectory in Flags then begin
@@ -5410,7 +5385,8 @@ begin
       try
         LastCompilerFilename:=XMLConfig.GetValue('Compiler/Value','');
         LastCompilerFileDate:=XMLConfig.GetValue('Compiler/Date',0);
-        LastCompilerParams:=XMLConfig.GetValue('Params/Value','');
+        LastCompilerParams.Clear;
+        SplitCmdLineParams(XMLConfig.GetValue('Params/Value',''),LastCompilerParams);
         LastCompileComplete:=XMLConfig.GetValue('Complete/Value',true);
       finally
         XMLConfig.Free;
@@ -5435,8 +5411,8 @@ begin
   Result:=mrOk;
 end;
 
-function TProject.SaveStateFile(const CompilerFilename, CompilerParams: string;
-  Complete: boolean): TModalResult;
+function TProject.SaveStateFile(const CompilerFilename: string;
+  CompilerParams: TStrings; Complete: boolean): TModalResult;
 var
   XMLConfig: TXMLConfig;
   StateFile: String;
@@ -5451,7 +5427,7 @@ begin
       // always write all values for easy use by other tools and other versions of IDE
       XMLConfig.SetValue('Compiler/Value',CompilerFilename);
       XMLConfig.SetValue('Compiler/Date',CompilerFileDate);
-      XMLConfig.SetValue('Params/Value',CompilerParams);
+      XMLConfig.SetValue('Params/Value',MergeCmdLineParams(CompilerParams));
       XMLConfig.SetDeleteValue('Complete/Value',Complete,true);
       InvalidateFileStateCache(StateFile);
       XMLConfig.Flush;
@@ -5469,7 +5445,7 @@ begin
       Result:=IDEMessageDialog(lisPkgMangErrorWritingFile,
         Format(lisProjMangUnableToWriteStateFileForProjectError,
                [IDAsString, LineEnding, E.Message]),
-        mtError,[mbAbort,mbCancel]);
+        mtError,[mbCancel]);
       exit;
     end;
   end;
@@ -5545,70 +5521,6 @@ begin
   SessionModified := true;
 end;
 
-{$IFnDEF LCLNOGUI}
-function TProject.DebuggerPropertiesConfigList: TDebuggerPropertiesConfigList;
-begin
-  Result := FDebuggerProperties;
-end;
-
-function TProject.CurrentDebuggerClass: TDebuggerClass;
-var
-  DbgCfg: TDebuggerPropertiesConfig;
-begin
-  Result := nil;
-  DbgCfg := CurrentDebuggerPropertiesConfig;
-  if  DbgCfg<> nil then
-    Result := DbgCfg.DebuggerClass;
-end;
-
-function TProject.DebuggerFilename: string;
-var
-  DbgCfg: TDebuggerPropertiesConfig;
-begin
-  Result := '';
-  DbgCfg := CurrentDebuggerPropertiesConfig;
-  if DbgCfg <> nil then
-    Result := DbgCfg.DebuggerFilename;
-end;
-
-function TProject.GetParsedDebuggerFilename: string;
-begin
-  Result := DebuggerOptions.GetParsedDebuggerFilename(DebuggerFilename);
-end;
-
-function TProject.CurrentDebuggerPropertiesConfig: TDebuggerPropertiesConfig;
-begin
-  {$IFnDEF LCLNOGUI}
-  if Self = nil then
-    exit(DebuggerOptions.CurrentDebuggerPropertiesConfig);
-
-  Result := nil;
-  if (CurrentDebuggerBackend <> '') then
-    if (CurrentDebuggerBackend = 'IDE') then
-      Result := DebuggerOptions.CurrentDebuggerPropertiesConfig
-    else
-      Result := DebuggerOptions.CurrentDebuggerPropertiesConfigEx(CurrentDebuggerBackend);
-
-  if Result = nil then
-    Result := FDebuggerProperties.CurrentDebuggerPropertiesConfig;
-
-  // No project config?
-  if Result = nil then
-      Result := DebuggerOptions.CurrentDebuggerPropertiesConfig;
-  {$Else}
-  Result := nil;
-  {$EndIf}
-end;
-{$EndIf}
-
-procedure TProject.MarkDebuggerClassConfAsModified;
-begin
-  if FStoreDebuggerClassConfInSession then
-    SessionModified := True
-  else
-    Modified := True;
-end;
-
 procedure TProject.UnitNameChangeHandler(AnUnitInfo: TUnitInfo;
   const OldUnitName, NewUnitName: string; CheckIfAllowed: boolean;
   var Allowed: boolean);
@@ -5681,13 +5593,6 @@ begin
   FAutoOpenDesignerFormsDisabled:=AValue;
 end;
 
-procedure TProject.SetDebuggerBackend(AValue: String);
-begin
-  if FDebuggerBackend = AValue then Exit;
-  FDebuggerBackend := AValue;
-  SessionModified := True;
-end;
-
 procedure TProject.SetEnableI18NForLFM(const AValue: boolean);
 begin
   if FEnableI18NForLFM=AValue then exit;
@@ -5698,12 +5603,12 @@ begin
   Modified:=true;
 end;
 
-procedure TProject.SetLastCompilerParams(AValue: string);
+procedure TProject.SetLastCompilerParams(AValue: TStrings);
 begin
   if FLastCompilerParams=AValue then Exit;
   //debugln(['TProject.SetLastCompilerParams Old="',FLastCompilerParams,'"']);
   //debugln(['TProject.SetLastCompilerParams New="',AValue,'"']);
-  FLastCompilerParams:=AValue;
+  FLastCompilerParams.Assign(AValue);
 end;
 
 procedure TProject.SetMainProject(const AValue: boolean);
@@ -6003,7 +5908,7 @@ begin
     FAllEditorsInfoMap.Delete(EdInfo.EditorComponent);
 end;
 
-procedure TProject.OnMacroEngineSubstitution(TheMacro: TTransferMacro;
+procedure TProject.MacroEngineSubstitution(TheMacro: TTransferMacro;
   const MacroName: string; var s: string; const Data: PtrInt; var Handled,
   Abort: boolean; Depth: integer);
 var
@@ -6229,7 +6134,7 @@ begin
   if fProjectInfoFileBuffer<>nil then
     fProjectInfoFileBufChangeStamp:=fProjectInfoFileBuffer.ChangeStep
   else
-    fProjectInfoFileBufChangeStamp:=CTInvalidChangeStamp;
+    fProjectInfoFileBufChangeStamp:=LUInvalidChangeStamp;
 end;
 
 procedure TProject.UpdateProjectDirectory;
@@ -6740,6 +6645,11 @@ begin
     Result:='';
   if Result='' then
     Result:=inherited GetDefaultMainSourceFileName;
+end;
+
+function TProjectCompilerOptions.GetDefaultWriteConfigFilePath: string;
+begin
+  Result:='$(ProjOutDir)'+PathDelim+'fpclaz.cfg';
 end;
 
 procedure TProjectCompilerOptions.GetInheritedCompilerOptions(
@@ -7327,7 +7237,7 @@ begin
   Result:=fSavedChangeStamp<>FChangeStamp;
 end;
 
-procedure TProjectBuildModes.OnItemChanged(Sender: TObject);
+procedure TProjectBuildModes.ItemChanged(Sender: TObject);
 begin
   {$IFDEF VerboseIDEModified}
   debugln(['TProjectBuildModes.OnItemChanged ',DbgSName(Sender)]);
@@ -7355,12 +7265,12 @@ begin
   inherited Create(AOwner);
   fChangedHandlers:=TMethodList.Create;
   fItems:=TFPList.Create;
-  FChangeStamp:=CTInvalidChangeStamp;
+  FChangeStamp:=LUInvalidChangeStamp;
   fSavedChangeStamp:=FChangeStamp;
   FSharedMatrixOptions:=TBuildMatrixOptions.Create;
-  FSharedMatrixOptions.OnChanged:=@OnItemChanged;
+  FSharedMatrixOptions.OnChanged:=@ItemChanged;
   FSessionMatrixOptions:=TBuildMatrixOptions.Create;
-  FSessionMatrixOptions.OnChanged:=@OnItemChanged;
+  FSessionMatrixOptions.OnChanged:=@ItemChanged;
   FManyBuildModes:=TStringList.Create;
 end;
 
@@ -7468,7 +7378,7 @@ begin
   Result.FIdentifier:=Identifier;
   if LazProject<>nil then
     Result.CompilerOptions.BaseDirectory:=LazProject.Directory;
-  Result.AddOnChangedHandler(@OnItemChanged);
+  Result.AddOnChangedHandler(@ItemChanged);
   fItems.Add(Result);
 end;
 
@@ -7484,7 +7394,7 @@ end;
 
 procedure TProjectBuildModes.IncreaseChangeStamp;
 begin
-  CTIncreaseChangeStamp(FChangeStamp);
+  LUIncreaseChangeStamp(FChangeStamp);
   if fChangedHandlers<>nil then fChangedHandlers.CallNotifyEvents(Self);
 end;
 

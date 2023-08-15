@@ -41,8 +41,10 @@ uses
   Laz2_XMLCfg,
   // IDEIntf
   IdeIntfStrConsts,
+  // IDEConfig
+  LazConf, EnvironmentOpts,
   // IDE
-  LazarusIDEStrConsts, LazConf, EnvironmentOpts, FppkgHelper;
+  LazarusIDEStrConsts, FppkgHelper;
 
 type
   TSDFilenameQuality = (
@@ -391,7 +393,7 @@ begin
   if TestSrcFilename<>'' then
   begin
     CfgCache:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-                                                       AFilename,'','','','',true); //Ultibo
+                                                       AFilename,true);
     if CfgCache.NeedsUpdate then
       CfgCache.Update(TestSrcFilename);
     i:=CfgCache.IndexOfUsedCfgFile;
@@ -699,7 +701,7 @@ begin
   if TestSrcFilename<>'' then
   begin
     CfgCache:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-                                                       AFilename,'','','','',true); //Ultibo
+                                                       AFilename,true);
     if CfgCache.NeedsUpdate then
       CfgCache.Update(TestSrcFilename);
     i:=CfgCache.IndexOfUsedCfgFile;

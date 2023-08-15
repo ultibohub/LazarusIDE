@@ -6,7 +6,7 @@ interface
 uses
   Classes, Controls, ComCtrls, StdCtrls, Spin, PairSplitter,
   Dialogs, ExtCtrls, Buttons, CheckLst, Forms, Menus, Calendar,
-  WSLCLClasses,
+  WSLCLClasses, WSDialogs,
 
   // Carbon units
   CarbonWSButtons, CarbonWSCheckLst, CarbonWSComCtrls, CarbonWSControls,
@@ -44,6 +44,7 @@ function RegisterSelectDirectoryDialog: Boolean;
 function RegisterColorDialog: Boolean;
 function RegisterColorButton: Boolean;
 function RegisterFontDialog: Boolean;
+function RegisterTaskDialog: Boolean;
 // StdCtrls
 function RegisterCustomScrollBar: Boolean;
 function RegisterCustomGroupBox: Boolean;
@@ -252,6 +253,12 @@ function RegisterFontDialog: Boolean; alias : 'WSRegisterFontDialog';
 begin
   RegisterWSComponent(TFontDialog, TCarbonWSFontDialog);
   Result := True;
+end;
+
+function RegisterTaskDialog: Boolean; alias : 'WSRegisterTaskDialog';
+begin
+   RegisterWSComponent(TTaskDialog, TWSTaskDialog);
+   Result := True;
 end;
 
 // StdCtrls

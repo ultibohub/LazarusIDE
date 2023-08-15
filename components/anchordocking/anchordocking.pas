@@ -1160,7 +1160,7 @@ begin
   or (StartControl=DestControl) then
     exit(false);
   Parent:=StartControl.Parent;
-  SetLength(Checked,Parent.ControlCount);
+  SetLength(Checked{%H-},Parent.ControlCount);
   for i:=0 to length(Checked)-1 do Checked[i]:=false;
   Result:=Check(Parent.GetControlIndex(StartControl));
 end;
@@ -7010,21 +7010,21 @@ begin
     Result := ThemeServices.GetElementDetails(WindowPart);
 end;
 
-procedure SizeCorrector(var current,recomend:integer);
+procedure SizeCorrector(var current, recommend: integer);
 begin
-  if recomend<0 then begin
+  if recommend<0 then begin
     if current>0 then
-      recomend:=current
+      recommend:=current
     else
       current:=HardcodedButtonSize;
   end else begin
-      if current>recomend then
-        current:=recomend
+      if current>recommend then
+        current:=recommend
       else begin
         if current>0 then
-         recomend:=current
+         recommend:=current
         else
-         current:=recomend;
+         current:=recommend;
       end;
   end;
 end;

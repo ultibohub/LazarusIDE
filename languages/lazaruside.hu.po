@@ -4866,6 +4866,14 @@ msgstr "Módosító hozzáadása: \"reintroduce\""
 msgid "Add new build mode, copying settings from \"%s\""
 msgstr "Új építési mód hozzáadása, átmásolva a beállításokat innen: \"%s\""
 
+#: lazarusidestrconsts.lisaddnewdiskfiles
+msgid "Add new disk files?"
+msgstr ""
+
+#: lazarusidestrconsts.lisaddnewfilesfromfilesystem
+msgid "Add New Files from File System"
+msgstr ""
+
 #: lazarusidestrconsts.lisaddnewmacro
 msgid "Add new macro"
 msgstr "Új makró hozzáadása"
@@ -4889,6 +4897,10 @@ msgstr "Csomag hozzáadása a projekthez"
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
 msgstr "Paraméter zárójelek hozzáadása"
+
+#: lazarusidestrconsts.lisaddthefollowingfiles
+msgid "Add the following files:"
+msgstr ""
 
 #: lazarusidestrconsts.lisaddtoincludesearchpath
 msgid "Add to include search path?"
@@ -5001,6 +5013,10 @@ msgstr "Többsoros keresés engedélyezése"
 #: lazarusidestrconsts.lisallparametersofthisfunctionarealreadysetatthiscall
 msgid "All parameters of this function are already set at this call. Nothing to add."
 msgstr "Ezen eljárás minden paramétere be lett már állítva e hívásban. Nincs mit hozzáadni."
+
+#: lazarusidestrconsts.lisallpaspppincinunitincludepatharealreadyinaprojectp
+msgid "All .pas, .pp, .p, .inc in unit/include path are already in a project/package."
+msgstr ""
 
 #: lazarusidestrconsts.lisallyourmodificationstowillbelostandthefilereopened
 #, object-pascal-format
@@ -14305,6 +14321,10 @@ msgstr "nincs, kattintson a választáshoz"
 msgid "(None selected)"
 msgstr "(Nincs kijelölve semmi)"
 
+#: lazarusidestrconsts.lisnonewfilefound
+msgid "No new file found"
+msgstr ""
+
 #: lazarusidestrconsts.lisnonodeselected
 msgid "no node selected"
 msgstr "nincs csomópont kiválasztva"
@@ -17981,6 +18001,10 @@ msgstr "Al-eljárás"
 msgid "Sub Procedure on same level"
 msgstr "Al-eljárás azonos szinten"
 
+#: lazarusidestrconsts.lissubtarget
+msgid "Subtarget"
+msgstr ""
+
 #: lazarusidestrconsts.lissuccess
 msgid "Success"
 msgstr "Sikerült"
@@ -19976,6 +20000,10 @@ msgstr "Munkakönyvtár az építéshez"
 #: lazarusidestrconsts.lisworkingdirectoryforrun
 msgid "Working directory for run"
 msgstr "Munkakönyvtár a futtatáshoz"
+
+#: lazarusidestrconsts.liswriteconfiginsteadofcommandlineparameters
+msgid "Write config instead of command line parameters"
+msgstr ""
 
 #: lazarusidestrconsts.liswriteerror
 msgid "Write Error"

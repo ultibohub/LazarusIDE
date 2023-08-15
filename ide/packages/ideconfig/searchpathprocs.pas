@@ -1,13 +1,65 @@
+{
+  Functions for search paths maintained by the IDE, e.g. UnitPaths, IncludePath.
+
+  The Lazarus IDE has some special rules for search paths:
+  - Search paths are separated by semicolon
+  - It uses TrimAndExpandFilename to trim leading and trailing spaces and expand ~ on Unix
+  - It uses ResolveDots to normalize e.g. /foo/../bar to /bar and merges // to /
+  - It normalizes AllowDirectorySeparators to PathDelim
+  - A $(macro) at start is treated as an absolute filename
+  - Star directories:
+    /path/* matches all direct sub directories  /path/* (similar to fpc)
+    /path/** matches all sub directories  /path/**
+}
 unit SearchPathProcs;
 
 {$mode objfpc}{$H+}
+{$ScopedEnums on}
+{$ModeSwitch advancedrecords}
+
+{$IF defined(Windows) or defined(darwin) or defined(HASAMIGA)}
+{$define CaseInsensitiveFilenames}
+{$IFDEF Windows}
+  {$define HasUNCPaths}
+{$ENDIF}
+{$ENDIF}
+{$IF defined(CaseInsensitiveFilenames)}
+  {$define NotLiteralFilenames} // e.g. HFS+ normalizes file names
+{$ENDIF}
 
 interface
 
 uses
   Classes, SysUtils,
   // LazUtils
-  LazFileUtils, LazFileCache, FileUtil;
+  LazFileUtils, LazFileCache, FileUtil, AvgLvlTree, CompOptsIntf,
+  CodeToolManager, DirectoryCacher, FileProcs;
+
+type
+  TSPMaskType = (
+    None,
+    Star, // matching all direct sub directories  /path/*, excluding /path itself
+    StarStar // matching . and all sub directories  /path/**, including /path itself
+    );
+
+  TSPFileMaskRelation = (
+    None,
+    Equal,
+    LeftMoreGeneral, // e.g. left is * and right is path
+    RightMoreGeneral // e.g. right is ** and left is *
+    );
+
+  { TSPMaskRecord }
+
+  TSPMaskRecord = record
+    Len: integer;
+    StartPos: PChar;
+    EndPos: PChar; // without trailing PathDelim
+    PathDelimCount: integer;
+    LastPathDelim: PChar; // nil if no pathdelim
+    MaskType: TSPMaskType;
+    function FindPathDelim(Index: integer{starting at 1}): PChar;
+  end;
 
 // search paths
 function TrimSearchPath(const SearchPath, BaseDirectory: string;
@@ -21,15 +73,52 @@ function RebaseSearchPath(const SearchPath,
                           SkipPathsStartingWithMacro: boolean): string;
 function ShortenSearchPath(const SearchPath, BaseDirectory,
                            ChompDirectory: string): string;
+function FormatSearchPath(const SearchPath: string;
+                MaxLen: integer = 0): string;
 function GetNextDirectoryInSearchPath(const SearchPath: string;
                                       var NextStartPos: integer): string;
 function GetNextUsedDirectoryInSearchPath(const SearchPath,
                           FilterDir: string; var NextStartPos: integer): string;
 function SearchPathToList(const SearchPath: string): TStringList;
 function SearchDirectoryInSearchPath(const SearchPath, Directory: string;
-                                     DirStartPos: integer = 1): integer;
+    out DirRelation: TSPFileMaskRelation; DirStartPos: integer = 1): integer; overload;
+function SearchDirectoryInSearchPath(const SearchPath, Directory: string;
+                                     DirStartPos: integer = 1): integer; overload;
 function SearchDirectoryInSearchPath(SearchPath: TStrings;
-                    const Directory: string; DirStartPos: integer = 0): integer;
+                    const Directory: string; DirStartPos: integer = 0): integer; overload;
+function SearchDirectoryInMaskedSearchPath(const SearchPath, Directory: string;
+                                   DirStartPos: integer = 1): integer; overload;
+
+type
+  TSPSearchFileFlag = (
+    DontSearchInBasePath, // do not search in BasePath, search only in SearchPath.
+    SearchLoUpCase,
+    Executable // file must be executable
+    );
+  TSPSearchFileFlags = set of TSPSearchFileFlag;
+
+function SearchFileInSearchPath(const Filename, BasePath: string;
+  SearchPath: string; Flags: TSPSearchFileFlags = []): string; overload;
+function SearchUnitInSearchPath(const AnUnitname, BasePath: string;
+  SearchPath: string; AnyCase: boolean): string; overload;
+procedure CollectFilesInSearchPath(const SearchPath: string;
+                   Files: TFilenameToStringTree; const Value: string = ''); overload;
+
+function FileIsInSPDirectory(const Filename: string; Directory{without **}: string;
+                             MaskType: TSPMaskType): boolean; overload; // both must be ResolveDots
+function FileIsInSPDirectory(const Filename: string; Directory{with **}: string): boolean; overload; // both must be ResolveDots
+
+function FilenamePIsAbsolute(TheFilename: PChar): boolean;
+function FilenamePIsUnixAbsolute(TheFilename: PChar): boolean;
+function FilenamePIsWinAbsolute(TheFilename: PChar): boolean;
+
+function RelateDirectoryMasks(const LeftDir: string; LeftStart: integer; const RightDir: string; RightStart: integer): TSPFileMaskRelation; overload;
+function RelateDirectoryMasks(const Left, Right: TSPMaskRecord): TSPFileMaskRelation; overload;
+function GetSPMaskRecord(const aDirectory: string; aStartPos: integer; out MaskRecord: TSPMaskRecord): boolean;
+function GetSPMaskType(const aFilename: string): TSPMaskType;
+
+function dbgs(t: TSPMaskType): string; overload;
+function dbgs(r: TSPFileMaskRelation): string; overload;
 
 implementation
 
@@ -47,14 +136,16 @@ var
   CurPath: String;
   EndPos: Integer;
   StartPos: Integer;
-  len: Integer;
+  len, OtherStartPos: Integer;
   BaseDir: String;
+  DirRelation: TSPFileMaskRelation;
 begin
   Result:='';
   EndPos:=1;
   len:=length(SearchPath);
   BaseDir:=AppendPathDelim(TrimFilename(BaseDirectory));
-  while EndPos<=len do begin
+  while EndPos<=len do
+  begin
     StartPos:=EndPos;
     // skip empty paths and space chars at start
     while (StartPos<=len) and (SearchPath[StartPos] in [';',#0..#32]) do
@@ -63,24 +154,31 @@ begin
     EndPos:=StartPos;
     while (EndPos<=len) and (SearchPath[EndPos]<>';') do inc(EndPos);
     CurPath:=copy(SearchPath,StartPos,EndPos-StartPos);
-    if CurPath<>'' then begin
+    if CurPath<>'' then
+    begin
       // non empty path => expand, trim and normalize
       if ExpandPaths then
         CurPath:=TrimAndExpandDirectory(CurPath,BaseDir)
       else if (BaseDir<>'') and (not FilenameIsAbsolute(CurPath)) then
         CurPath:=BaseDir+CurPath;
-      CurPath:=ChompPathDelim(TrimFilename(CurPath));
+      CurPath:=ChompPathDelim(ResolveDots(CurPath));
       if CurPath='' then CurPath:='.';
-      // check if path already exists
-      if (not DeleteDoubles) or (SearchDirectoryInSearchPath(Result,CurPath)<1)
-      then begin
-        if Result<>'' then
-          CurPath:=';'+CurPath;
-        if CurPath<>'' then
-          Result:=Result+CurPath
-        else
-          Result:=Result+'.';
+      if DeleteDoubles then
+      begin
+        // check if path already exists
+        OtherStartPos:=SearchDirectoryInSearchPath(Result,CurPath,DirRelation);
+        if OtherStartPos>0 then
+          case DirRelation of
+          TSPFileMaskRelation.Equal,
+          TSPFileMaskRelation.LeftMoreGeneral:
+            continue; // already exists -> skip
+          TSPFileMaskRelation.RightMoreGeneral:
+            ; // first search in a specific, then in all -> keep
+          end;
       end;
+      if Result<>'' then
+        CurPath:=';'+CurPath;
+      Result:=Result+CurPath;
     end;
   end;
 end;
@@ -215,6 +313,10 @@ begin
     if (CurPath<>'') and (not FilenameIsAbsolute(CurPath)) then
       CurPath:=AppendPathDelim(BaseDirectory)+CurPath;
 
+    case ExtractFilename(CurPath) of
+    '*','**': CurPath:=ExtractFilePath(CurPath);
+    end;
+
     if ((CurPath='') and (MacroStartPos<1))
     or (not DirPathExistsCached(CurPath)) then begin
       // path does not exist -> remove
@@ -324,6 +426,28 @@ begin
   end;
 end;
 
+function FormatSearchPath(const SearchPath: string; MaxLen: integer): string;
+var
+  p: Integer;
+begin
+  if MaxLen=0 then
+    MaxLen:=TLazCompilerOptions.ConsoleParamsMax;
+  p:=1;
+  repeat
+    while (p<=length(SearchPath)) and (SearchPath[p]<>';') do inc(p);
+    if p>MaxLen then
+    begin
+      if p<=length(SearchPath) then
+      begin
+        Result:=LeftStr(SearchPath,p-1)+'...';
+        exit;
+      end;
+    end;
+    inc(p);
+  until p>length(SearchPath);
+  Result:=SearchPath;
+end;
+
 function GetNextDirectoryInSearchPath(const SearchPath: string;
                                       var NextStartPos: integer): string;
 var
@@ -373,6 +497,39 @@ begin
     if CurDir='' then break;
     Result.Add(CurDir);
   until false;
+end;
+
+function SearchDirectoryInSearchPath(const SearchPath, Directory: string; out
+  DirRelation: TSPFileMaskRelation; DirStartPos: integer): integer;
+// -1 on not found
+var
+  Dir, Cur: TSPMaskRecord;
+  PathLen: SizeInt;
+  StartPos: Integer;
+begin
+  Result:=-1;
+  DirRelation:=TSPFileMaskRelation.None;
+
+  if not GetSPMaskRecord(Directory,DirStartPos,Dir) then exit;
+
+  PathLen:=length(SearchPath);
+  StartPos:=1;
+  while StartPos<=PathLen do begin
+    // skip spaces and empty paths
+    while (SearchPath[StartPos] in [';',#0..#32]) do begin
+      inc(StartPos);
+      if StartPos>PathLen then exit;
+    end;
+
+    // compare paths
+    if GetSPMaskRecord(SearchPath,StartPos,Cur) then begin
+      DirRelation:=RelateDirectoryMasks(Cur,Dir);
+      if DirRelation<>TSPFileMaskRelation.None then
+        exit(StartPos);
+    end;
+
+    while (StartPos<=PathLen) and (SearchPath[StartPos]<>';') do inc(StartPos);
+  end;
 end;
 
 function SearchDirectoryInSearchPath(const SearchPath, Directory: string;
@@ -483,6 +640,480 @@ begin
     end;
     dec(Result);
   end;
+end;
+
+function SearchDirectoryInMaskedSearchPath(const SearchPath, Directory: string;
+  DirStartPos: integer): integer;
+var
+  DirRelation: TSPFileMaskRelation;
+begin
+  Result:=SearchDirectoryInSearchPath(SearchPath,Directory,DirRelation,DirStartPos);
+end;
+
+function SearchFileInSearchPath(const Filename, BasePath: string;
+  SearchPath: string; Flags: TSPSearchFileFlags): string;
+
+  function Fits(const s: string): boolean;
+  begin
+    Result:=false;
+    if s='' then exit;
+    if (TSPSearchFileFlag.Executable in Flags) and not FileIsExecutableCached(s) then
+      exit;
+    SearchFileInSearchPath:=s;
+    Result:=true;
+  end;
+
+var
+  p: Integer;
+  CurPath, Base: String;
+  Cache: TCTDirectoryBaseCache;
+  FileCase: TCTSearchFileCase;
+begin
+  if Filename='' then
+    exit('');
+  // check if filename absolute
+  if FilenameIsAbsolute(Filename) then begin
+    Result:=ResolveDots(Filename);
+    if not FileExistsCached(Filename) then
+      Result:='';
+    exit;
+  end;
+  if ExtractFilePath(Filename)<>'' then
+    exit('');
+
+  if BasePath<>'' then
+    Base:=CleanAndExpandDirectory(BasePath)
+  else
+    Base:='';
+
+  // search in current directory
+  if (Base<>'') and not (TSPSearchFileFlag.DontSearchInBasePath in Flags) then
+  begin
+    Result:=Base+Filename;
+    if FileExistsCached(Result) {$IFDEF Unix}and not DirPathExistsCached(Result){$ENDIF} then
+      exit;
+  end;
+
+  if TSPSearchFileFlag.SearchLoUpCase in Flags then
+    FileCase:=ctsfcLoUpCase
+  else
+    FileCase:=ctsfcDefault;
+
+  p:=1;
+  repeat
+    CurPath:=GetNextDirectoryInSearchPath(SearchPath,p);
+    if CurPath='' then break;
+    CurPath:=TrimAndExpandDirectory(CurPath,Base);
+
+    Cache:=CodeToolBoss.DirectoryCachePool.GetBaseCache(CurPath);
+    if Cache=nil then continue;
+    Result:=Cache.FindFile(Filename,FileCase);
+    if Result<>'' then
+      if Fits(Cache.Directory+Result) then
+        exit;
+  until false;
+  Result:='';
+end;
+
+function SearchUnitInSearchPath(const AnUnitname, BasePath: string;
+  SearchPath: string; AnyCase: boolean): string;
+var
+  Base, CurPath: String;
+  p: Integer;
+  Cache: TCTDirectoryBaseCache;
+begin
+  Base:=AppendPathDelim(ExpandFileNameUTF8(BasePath));
+  if BasePath<>'' then
+  begin
+    // search in current directory
+    Result:=CodeToolBoss.DirectoryCachePool.FindUnitInDirectory(Base,AnUnitname,AnyCase);
+    if Result<>'' then exit;
+  end;
+  // search in search path
+  p:=1;
+  repeat
+    CurPath:=GetNextDirectoryInSearchPath(SearchPath,p);
+    if CurPath='' then break;
+    CurPath:=TrimAndExpandDirectory(CurPath,Base);
+
+    Cache:=CodeToolBoss.DirectoryCachePool.GetBaseCache(CurPath);
+    if Cache=nil then continue;
+    Result:=Cache.FindUnitSource(AnUnitname,AnyCase);
+    if Result<>'' then
+      exit(Cache.Directory+Result);
+  until false;
+  Result:='';
+end;
+
+procedure CollectFilesInSearchPath(const SearchPath: string;
+  Files: TFilenameToStringTree; const Value: string);
+
+  procedure CollectFile(const aFilename: string);
+  begin
+    if Files.Contains(aFilename) then exit;
+    Files.Add(aFilename,Value);
+  end;
+
+var
+  p, i: Integer;
+  Dir: String;
+  Cache: TCTDirectoryBaseCache;
+  StarCache: TCTStarDirectoryCache;
+  DirCache: TCTDirectoryCache;
+begin
+  p:=1;
+  repeat
+    Dir:=GetNextDirectoryInSearchPath(SearchPath,p);
+    if Dir='' then break;
+    Cache:=CodeToolBoss.DirectoryCachePool.GetBaseCache(Dir);
+    if Cache=nil then continue;
+    Cache.UpdateListing;
+    if Cache is TCTStarDirectoryCache then
+    begin
+      StarCache:=TCTStarDirectoryCache(Cache);
+      for i:=0 to StarCache.Listing.Count-1 do
+        CollectFile(StarCache.Listing.GetSubDirFilename(i));
+    end else if Cache is TCTDirectoryCache then begin
+      DirCache:=TCTDirectoryCache(Cache);
+      for i:=0 to DirCache.Listing.Count-1 do
+        CollectFile(DirCache.Directory+DirCache.Listing.GetFilename(i));
+    end;
+  until false;
+end;
+
+function FileIsInSPDirectory(const Filename: string; Directory: string;
+  MaskType: TSPMaskType): boolean;
+var
+  l: SizeInt;
+  p, PathDelimCount: Integer;
+begin
+  Result:=false;
+  if Filename='' then exit;
+  l:=length(Filename);
+  if (l>1) and (Filename[1]='.') and (Filename[2]='.') then
+  begin
+    if (l=2) or (Filename[3]=PathDelim) then
+      exit; // e.g. '../foo'
+  end;
+
+  Directory:=AppendPathDelim(Directory);
+
+  case MaskType of
+    TSPMaskType.None:
+      if Filename='.' then
+        exit(false)
+      else
+        Result:=CompareFilenames(ExtractFilePath(Filename),Directory)=0;
+    TSPMaskType.Star:
+      if Directory='' then
+      begin
+        // test if file is 'something/something'
+        p:=1;
+        while (p<=l) and (Filename[p]<>PathDelim) do inc(p);
+        if (p=1) or (p>l) then exit;
+        inc(p);
+        while (p<=l) and (Filename[p]<>PathDelim) do inc(p);
+        Result:=p>l;
+      end else begin
+        // test if file is 'directory/something/something'
+        p:=l;
+        while (p>0) and (Filename[p]<>PathDelim) do dec(p);
+        if p<=2 then exit;
+        dec(p);
+        while (p>0) and (Filename[p]<>PathDelim) do dec(p);
+        if p=0 then exit;
+        Result:=CompareFilenames(LeftStr(Filename,p),Directory)=0;
+      end;
+    TSPMaskType.StarStar:
+      if Directory='' then
+      begin
+        Result:=not FilenameIsAbsolute(Filename);
+      end else begin
+        p:=1;
+        PathDelimCount:=0;
+        while (p<=length(Directory)) do
+        begin
+          if Directory[p]=PathDelim then inc(PathDelimCount);
+          inc(p);
+        end;
+        p:=1;
+        while (p<=l) do
+        begin
+          if Filename[p]=PathDelim then
+          begin
+            dec(PathDelimCount);
+            if PathDelimCount=0 then
+            begin
+              Result:=CompareFilenames(LeftStr(Filename,p),Directory)=0;
+              exit;
+            end;
+          end;
+          inc(p);
+        end;
+      end;
+  end;
+end;
+
+function FileIsInSPDirectory(const Filename: string; Directory: string
+  ): boolean;
+var
+  MaskType: TSPMaskType;
+begin
+  Directory:=ChompPathDelim(Directory);
+  MaskType:=GetSPMaskType(Directory);
+  if MaskType=TSPMaskType.None then
+    Result:=FileIsInSPDirectory(Filename,Directory,MaskType)
+  else
+    Result:=FileIsInSPDirectory(Filename,ExtractFilePath(Directory),MaskType);
+end;
+
+function FilenamePIsAbsolute(TheFilename: PChar): boolean;
+begin
+  {$IFDEF Unix}
+  Result:=FilenamePIsUnixAbsolute(TheFilename);
+  {$ELSE}
+  Result:=FilenamePIsWinAbsolute(TheFilename);
+  {$ENDIF}
+end;
+
+function FilenamePIsUnixAbsolute(TheFilename: PChar): boolean;
+begin
+  Result:=(TheFilename<>nil) and (TheFilename^='/');
+end;
+
+function FilenamePIsWinAbsolute(TheFilename: PChar): boolean;
+begin
+  if TheFilename=nil then exit(false);
+  {$ifdef wince}
+  Result := TheFilename^ in AllowDirectorySeparators;
+  {$else wince}
+  Result:=(TheFilename^ in ['A'..'Z','a'..'z']) and (TheFilename[1]=':')
+           and (TheFilename[2] in AllowDirectorySeparators)
+      or ((TheFilename^ in AllowDirectorySeparators) and (TheFilename^=TheFilename[1]));
+  {$endif wince}
+end;
+
+function RelateDirectoryMasks(const LeftDir: string; LeftStart: integer;
+  const RightDir: string; RightStart: integer): TSPFileMaskRelation;
+var
+  Left, Right: TSPMaskRecord;
+begin
+  Result:=TSPFileMaskRelation.None;
+
+  if not GetSPMaskRecord(LeftDir,LeftStart,Left) then exit;
+  if not GetSPMaskRecord(RightDir,RightStart,Right) then exit;
+
+  Result:=RelateDirectoryMasks(Left,Right);
+end;
+
+function RelateDirectoryMasks(const Left, Right: TSPMaskRecord
+  ): TSPFileMaskRelation;
+
+  function StarStarFits(const StarDir, OtherDir: TSPMaskRecord): boolean;
+  begin
+    // Note: StarDir and OtherDir are both absolute or both relative
+    Result:=false;
+
+    if (StarDir.PathDelimCount=0) then
+    begin
+      // StarDir is '**', matches any except '..' and '../foo'
+      // Note: it matches '.'
+      if (OtherDir.StartPos^='.') and (OtherDir.StartPos[1]='.')
+          and ((OtherDir.Len=2) or (OtherDir.StartPos[2]=PathDelim)) then
+        exit;
+      Result:=true;
+    end else if (StarDir.PathDelimCount<=OtherDir.PathDelimCount) then
+    begin
+      // StarDir is '/foo/**', matches '/foo/bar...'
+      Result:=(CompareFilenames(StarDir.StartPos,StarDir.LastPathDelim-1-StarDir.StartPos,
+                OtherDir.StartPos,OtherDir.FindPathDelim(StarDir.PathDelimCount)-1-OtherDir.StartPos)=0);
+    end else if (StarDir.PathDelimCount=OtherDir.PathDelimCount+1)
+        and (OtherDir.MaskType=TSPMaskType.None) then begin
+      // check special case StarDir is /foo/** and OtherDir is /foo
+      Result:=(CompareFilenames(StarDir.StartPos,StarDir.LastPathDelim-1-StarDir.StartPos,
+               OtherDir.StartPos,OtherDir.Len)=0);
+    end;
+  end;
+
+  function StarFits(const StarDir, OtherDir: TSPMaskRecord): boolean;
+  begin
+    // Note: StarDir and OtherDir are both absolute or both relative
+    Result:=false;
+
+    if (StarDir.PathDelimCount<>OtherDir.PathDelimCount) then
+      exit;
+    if (StarDir.PathDelimCount=0) then
+    begin
+      // StarDir is '*', matches any OtherDir without pathdelim except '.' and '..'
+      if (OtherDir.StartPos^='.')
+          and ( (OtherDir.Len=1)
+            or ((OtherDir.Len=2) and (OtherDir.StartPos[1]='.')) ) then
+        exit;
+      Result:=true;
+    end else begin
+      // e.g. '/foo/*' matches '/foo/a'
+      // Note: the directories are resolved, so OtherDir cannot be '/foo/..'
+      Result:=(CompareFilenames(StarDir.StartPos,StarDir.LastPathDelim-1-StarDir.StartPos,
+                      OtherDir.StartPos,OtherDir.LastPathDelim-1-OtherDir.StartPos)=0);
+    end;
+  end;
+
+begin
+  Result:=TSPFileMaskRelation.None;
+
+  if FilenamePIsAbsolute(Left.StartPos)<>FilenamePIsAbsolute(Right.StartPos) then
+    exit; // absolute and relative path don't match
+
+  if Left.MaskType=Right.MaskType then
+  begin
+    // same mask type -> simple compare
+    if CompareFilenames(Left.StartPos,Left.Len,Right.StartPos,Right.Len)=0 then
+      Result:=TSPFileMaskRelation.Equal;
+    exit;
+  end;
+
+  // different mask types
+
+  // check TSPMaskType.StarStar **, matching all subs including directory itself
+  if Left.MaskType=TSPMaskType.StarStar then
+  begin
+    if StarStarFits(Left,Right) then
+      Result:=TSPFileMaskRelation.LeftMoreGeneral;
+    exit;
+  end;
+  if Right.MaskType=TSPMaskType.StarStar then
+  begin
+    if StarStarFits(Right,Left) then
+      Result:=TSPFileMaskRelation.RightMoreGeneral;
+    exit;
+  end;
+
+  // check TSPMaskType.Star *, matching all direct sub directories, excluding the directory itself
+  if Left.MaskType=TSPMaskType.Star then
+  begin
+    if StarFits(Left,Right) then
+      Result:=TSPFileMaskRelation.LeftMoreGeneral;
+    exit;
+  end;
+  if Right.MaskType=TSPMaskType.Star then
+  begin
+    if StarFits(Right,Left) then
+      Result:=TSPFileMaskRelation.RightMoreGeneral;
+    exit;
+  end;
+end;
+
+function GetSPMaskRecord(const aDirectory: string; aStartPos: integer; out
+  MaskRecord: TSPMaskRecord): boolean;
+begin
+  Result:=false;
+  MaskRecord:=Default(TSPMaskRecord);
+  with MaskRecord do begin
+    if aStartPos>length(aDirectory) then
+      exit;
+    StartPos:=@aDirectory[aStartPos];
+    EndPos:=StartPos;
+
+    repeat
+      case EndPos^ of
+      #0,';': break;
+      PathDelim:
+        begin
+          inc(PathDelimCount);
+          LastPathDelim:=EndPos;
+        end;
+      end;
+      inc(EndPos);
+    until false;
+    Len:=EndPos-StartPos;
+    if Len=0 then exit;
+
+    // ignore trailing pathdelim
+    if EndPos[-1]=PathDelim then
+    begin
+      dec(EndPos);
+      dec(PathDelimCount);
+      if PathDelimCount=0 then
+        LastPathDelim:=nil
+      else begin
+        dec(LastPathDelim);
+        while LastPathDelim^<>PathDelim do dec(LastPathDelim);
+      end;
+      dec(Len);
+      if Len=0 then exit;
+    end;
+
+    if EndPos[-1]='*' then
+    begin
+      if (LastPathDelim=nil) then
+      begin
+        if Len=1 then
+          MaskType:=TSPMaskType.Star
+        else if (Len=2) and (StartPos^='*') then
+          MaskType:=TSPMaskType.StarStar;
+      end else begin
+        if EndPos-2=LastPathDelim then
+          MaskType:=TSPMaskType.Star
+        else if (EndPos-3=LastPathDelim) and (LastPathDelim[1]='*') then
+          MaskType:=TSPMaskType.StarStar;
+      end;
+    end;
+  end;
+  Result:=true;
+end;
+
+function GetSPMaskType(const aFilename: string): TSPMaskType;
+var
+  l: SizeInt;
+begin
+  Result:=TSPMaskType.None;
+  if aFilename='' then exit;
+  l:=length(aFilename);
+  if aFilename[l]<>'*' then exit;
+  if (l=1) or (aFilename[l-1]=PathDelim) then
+    exit(TSPMaskType.Star);
+  if (aFilename[l-1]='*') and ((l=2) or (aFilename[l-2]=PathDelim)) then
+    exit(TSPMaskType.StarStar);
+end;
+
+function dbgs(t: TSPMaskType): string;
+begin
+  case t of
+    TSPMaskType.None: Result:='None';
+    TSPMaskType.Star: Result:='Star';
+    TSPMaskType.StarStar: Result:='StarStar';
+  end;
+end;
+
+function dbgs(r: TSPFileMaskRelation): string;
+begin
+  case r of
+    TSPFileMaskRelation.None: Result:='None';
+    TSPFileMaskRelation.Equal: Result:='Equal';
+    TSPFileMaskRelation.LeftMoreGeneral: Result:='LeftMoreGeneral';
+    TSPFileMaskRelation.RightMoreGeneral: Result:='RightMoreGeneral';
+  else
+    Result:='?'{%H-};
+  end;
+end;
+
+{ TSPMaskRecord }
+
+function TSPMaskRecord.FindPathDelim(Index: integer): PChar;
+begin
+  Result:=StartPos;
+  if (Result=nil) or (Index<1) then exit;
+  while Result<EndPos do
+  begin
+    if Result^=PathDelim then
+    begin
+      if Index=1 then
+        exit;
+      dec(Index);
+    end;
+    inc(Result);
+  end;
+  Result:=nil;
 end;
 
 end.

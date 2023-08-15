@@ -41,7 +41,7 @@ uses
   // LCL
   Controls, LResources,
   // LazUtils
-  LazFileUtils, Laz2_XMLCfg, LazLoggerBase,
+  LazFileUtils, Laz2_XMLCfg, LazLoggerBase, LazFileCache,
   // Codetools
   KeywordFuncLists, BasicCodeTools, CodeToolManager, CodeCache,
   // IdeIntf
@@ -84,7 +84,7 @@ type
     procedure UpdateLrsCodeBuffer;
     procedure DeleteLastCodeBuffers;
 
-    procedure OnResourceModified(Sender: TObject);
+    procedure ResourceModified(Sender: TObject);
   protected
     procedure SetResourceType(const AValue: TResourceType); override;
     function GetProjectResource(AIndex: TAbstractProjectResourceClass): TAbstractProjectResource; override;
@@ -400,15 +400,16 @@ begin
   begin
     Result := FResources[i].UpdateResources(Self, resFileName);
     if not Result then begin
-      debugln(['TProjectResources.Update UpdateResources of ',DbgSName(FResources[i]),' failed']);
+      debugln(['Error: (lazarus) [TProjectResources.Update] UpdateResources of ',DbgSName(FResources[i]),' failed']);
       Exit;
     end;
   end;
 end;
 
-procedure TProjectResources.OnResourceModified(Sender: TObject);
+procedure TProjectResources.ResourceModified(Sender: TObject);
 begin
-  Modified := Modified or TAbstractProjectResource(Sender).Modified;
+  if TAbstractProjectResource(Sender).Modified then
+    Modified := true;
 end;
 
 constructor TProjectResources.Create(AProject: TLazProject);
@@ -432,7 +433,7 @@ begin
   begin
     R := TAbstractProjectResourceClass(L[i]).Create;
     R.Modified := False;
-    R.OnModified := @OnResourceModified;
+    R.OnModified := @ResourceModified;
     FResources.Add(R);
   end;
 end;
@@ -522,7 +523,7 @@ begin
   try
     // update resources (FLazarusResources, FSystemResources, ...)
     if not Update then begin
-      debugln(['TProjectResources.Regenerate Update failed']);
+      debugln(['Error: (lazarus) [TProjectResources.Regenerate] Update failed']);
       Exit;
     end;
     if LastSavedRes='' then begin
@@ -537,12 +538,12 @@ begin
     UpdateLrsCodeBuffer;
     // update .lpr file (old and new include files exist, so parsing should work without errors)
     if UpdateSource and not UpdateMainSourceFile(MainFileName) then begin
-      debugln(['TProjectResources.Regenerate UpdateMainSourceFile failed']);
+      debugln(['Error: (lazarus) [TProjectResources.Regenerate UpdateMainSourceFile] failed']);
       exit;
     end;
 
     if PerformSave and not Save(SaveToTestDir) then begin
-      debugln(['TProjectResources.Regenerate Save failed']);
+      debugln(['Error: (lazarus) [TProjectResources.Regenerate] Save failed']);
       Exit;
     end;
   finally
@@ -600,26 +601,14 @@ begin
     //debugln(['TProjectResources.UpdateMainSourceFile HasSystemResources=',HasSystemResources,' Filename=',Filename,' HasLazarusResources=',HasLazarusResources]);
 
     // update LResources uses
-    if CodeToolBoss.FindUnitInAllUsesSections(CodeBuf, LazResourcesUnit, NamePos, InPos) then
-    begin
-      if not (FLrsIncludeAllowed and HasLazarusResources) then
-      begin
-        if not CodeToolBoss.RemoveUnitFromAllUsesSections(CodeBuf, LazResourcesUnit) then
-        begin
-          Result := False;
-          Messages.Add(Format(lisCouldNotRemoveFromMainSource, [LazResourcesUnit]));
-          debugln(['TProjectResources.UpdateMainSourceFile removing LResources from all uses sections failed']);
-        end;
-      end;
-    end
-    else
     if FLrsIncludeAllowed and HasLazarusResources then
     begin
-      if not CodeToolBoss.AddUnitToMainUsesSection(CodeBuf, LazResourcesUnit,'') then
+      if CodeToolBoss.FindUnitInAllUsesSections(CodeBuf, LazResourcesUnit, NamePos, InPos)
+          and not CodeToolBoss.AddUnitToMainUsesSection(CodeBuf, LazResourcesUnit,'') then
       begin
         Result := False;
         Messages.Add(Format(lisCouldNotAddToMainSource, [LazResourcesUnit]));
-        debugln(['TProjectResources.UpdateMainSourceFile adding LResources to main source failed']);
+        debugln(['Error: (lazarus) [TProjectResources.UpdateMainSourceFile] adding LResources to main source failed']);
       end;
     end;
 
@@ -635,7 +624,7 @@ begin
         begin
           Result := False;
           Messages.Add(Format(lisCouldNotRemoveRFromMainSource, [Filename]));
-          debugln(['TProjectResources.UpdateMainSourceFile failed: removing resource directive']);
+          debugln(['Error: (lazarus) [TProjectResources.UpdateMainSourceFile] failed: removing resource directive']);
         end;
       end;
     end
@@ -647,7 +636,7 @@ begin
       begin
         Result := False;
         Messages.Add(Format(lisCouldNotAddRToMainSource, [Filename]));
-        debugln(['TProjectResources.UpdateMainSourceFile failed: adding resource directive']);
+        debugln(['Error: (lazarus) [TProjectResources.UpdateMainSourceFile] failed: adding resource directive']);
       end;
     end;
 
@@ -665,7 +654,7 @@ begin
         begin
           Result := False;
           Messages.Add(Format(lisCouldNotRemoveIFromMainSource, [Filename]));
-          debugln(['TProjectResources.UpdateMainSourceFile removing include directive from main source failed']);
+          debugln(['Error: (lazarus) [TProjectResources.UpdateMainSourceFile] removing include directive from main source failed']);
           Exit;
         end;
       end;
@@ -678,7 +667,7 @@ begin
       begin
         Result := False;
         Messages.Add(Format(lisCouldNotAddIToMainSource, [Filename]));
-        debugln(['TProjectResources.UpdateMainSourceFile adding include directive to main source failed']);
+        debugln(['Error: (lazarus) [TProjectResources.UpdateMainSourceFile] adding include directive to main source failed']);
         Exit;
       end;
     end;
@@ -698,14 +687,9 @@ begin
 
   // Check that .lpr contains Forms and Interfaces in the uses section. If it does not
   // we cannot add LResources (it is not a lazarus application)
-  CodeToolBoss.ActivateWriteLock;
-  try
-    FLrsIncludeAllowed :=
-      CodeToolBoss.FindUnitInAllUsesSections(CodeBuf, 'Forms', NamePos, InPos, True) and
-      CodeToolBoss.FindUnitInAllUsesSections(CodeBuf, 'Interfaces', NamePos, InPos, True);
-  finally
-    CodeToolBoss.DeactivateWriteLock;
-  end;
+  FLrsIncludeAllowed :=
+    CodeToolBoss.FindUnitInAllUsesSections(CodeBuf, 'Forms', NamePos, InPos, True) and
+    CodeToolBoss.FindUnitInAllUsesSections(CodeBuf, 'Interfaces', NamePos, InPos, True);
 end;
 
 function TProjectResources.RenameDirectives(const CurFileName, NewFileName: String): Boolean;
@@ -823,27 +807,42 @@ function TProjectResources.UpdateResCodeBuffer: Boolean;
 // Generate .res resource and return True if it differs from the last saved one.
 var
   CodeBuf: TCodeBuffer;
-  ResStream: TStream;
+  ResStream: TMemoryStream;
   Writer: TAbstractResourceWriter;
 begin
   Result := False;
   if not HasSystemResources then Exit;
-  CodeBuf := CodeToolBoss.CreateFile(resFileName);
   ResStream := TMemoryStream.Create;
   Writer := TResResourceWriter.Create;
   try
+    CodeBuf := CodeToolBoss.FindFile(resFileName);
+    if (CodeBuf=nil) or CodeBuf.FileOnDiskHasChanged then
+    begin
+      CodeBuf := CodeToolBoss.CreateFile(resFileName);
+      if (not CodeBuf.IsVirtual) and FileExists(resFileName) then
+      begin
+        // load old res file, for checking if something has changed
+        try
+          ResStream.LoadFromFile(resFileName);
+        except
+          // load error -> no problem, writing is imprtant
+        end;
+        CodeBuf.LoadFromStream(ResStream);
+        ResStream.Clear;
+      end;
+    end;
     try
       FSystemResources.WriteToStream(ResStream, Writer);
     except
       on E: Exception do
       begin
-        debugln('TProjectResources.UpdateResCodeBuffer exception %s: %s', [E.ClassName, E.Message]);
+        debugln('Error: (lazarus) [TProjectResources.UpdateResCodeBuffer] exception %s: %s', [E.ClassName, E.Message]);
         ResStream.Size := 0;
       end;
     end;
     ResStream.Position := 0;
     CodeBuf.LoadFromStream(ResStream);
-    Result := CodeBuf.Source <> LastSavedRes;
+    Result := CodeBuf.FileNeedsUpdate;
   finally
     Writer.Free;
     ResStream.Free;

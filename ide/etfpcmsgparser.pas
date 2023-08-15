@@ -45,9 +45,9 @@ uses
   // IDEIntf
   LazIDEIntf, IDEUtils,
   // IdeConfig
-  EnvironmentOpts, LazConf, TransferMacros, IDECmdLine,
+  EnvironmentOpts, LazConf, TransferMacros, IDECmdLine, SearchPathProcs,
   // IDE
-  LazarusIDEStrConsts, etMakeMsgParser, EnvGuiOptions;
+  LazarusIDEStrConsts, etMakeMsgParser;
 
 const
   FPCMsgIDCompiling = 3104;
@@ -2574,7 +2574,7 @@ begin
     end;
     Dir:=ChompPathDelim(TrimFilename(ExtractFilePath(UnitSrcFilename)));
     IncPath:=CodeToolBoss.GetIncludePathForDirectory(Dir);
-    IncFilename:=SearchFileInPath(ShortFilename,Dir,IncPath,';',ctsfcDefault);
+    IncFilename:=SearchFileInSearchPath(ShortFilename,Dir,IncPath);
     //debugln(['TIDEFPCParser.FindSrcViaPPU Dir="',Dir,'" IncPath="',IncPath,'" ShortFilename="',ShortFilename,'" IncFilename="',IncFilename,'"']);
     if IncFilename<>'' then begin
       MsgLine.Filename:=IncFilename;
@@ -3213,7 +3213,7 @@ begin
         if (aPhase in [etpspAfterReadLine,etpspAfterSync])
         and (fIncludePathValidForWorkerDir=MsgWorkerDir) then begin
           // include path is valid and in worker thread
-          // -> search file
+          // -> search file (todo: needs a thread safe function for star directories)
           aFilename:=FileUtil.SearchFileInPath(aFilename,MsgWorkerDir,fIncludePath,';',
                                  [FileUtil.sffSearchLoUpCase,sffFile]);
           if aFilename<>'' then

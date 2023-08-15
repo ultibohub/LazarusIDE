@@ -1,0 +1,113 @@
+object BreakpointGroupFrame: TBreakpointGroupFrame
+  Left = 0
+  Height = 76
+  Top = 0
+  Width = 602
+  ClientHeight = 76
+  ClientWidth = 602
+  OnDragDrop = FrameDragDrop
+  OnDragOver = FrameDragOver
+  TabOrder = 0
+  DesignLeft = 200
+  DesignTop = 100
+  object ToolBar1: TToolBar
+    Left = 0
+    Height = 25
+    Top = 0
+    Width = 602
+    AutoSize = True
+    BorderWidth = 1
+    ButtonHeight = 21
+    ButtonWidth = 26
+    Caption = 'ToolBar1'
+    Color = clBtnFace
+    EdgeBorders = [ebLeft, ebTop, ebRight, ebBottom]
+    ParentColor = False
+    ParentFont = False
+    TabOrder = 0
+    OnDragDrop = FrameDragDrop
+    OnDragOver = FrameDragOver
+    OnEndDrag = ToolBar1EndDrag
+    OnStartDrag = ToolBar1StartDrag
+    object ToolButtonEnableAll: TToolButton
+      Left = 3
+      Top = 2
+      Caption = 'ToolButtonEnableAll'
+      OnClick = ToolButtonEnableAllClick
+    end
+    object ToolButtonDisableAll: TToolButton
+      Left = 29
+      Top = 2
+      Caption = 'ToolButtonDisableAll'
+      OnClick = ToolButtonDisableAllClick
+    end
+    object ToolButtonDivider1: TToolButton
+      Left = 55
+      Height = 21
+      Top = 2
+      Caption = 'ToolButtonDivider1'
+      Style = tbsDivider
+    end
+    object StaticText1: TStaticText
+      Left = 65
+      Height = 16
+      Top = 2
+      Width = 57
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Right = 5
+      Caption = 'StaticText1'
+      OnDragDrop = FrameDragDrop
+      OnDragOver = FrameDragOver
+      OnMouseDown = StaticText1MouseDown
+      TabOrder = 0
+    end
+    object StaticText2: TStaticText
+      Left = 122
+      Height = 16
+      Top = 2
+      Width = 57
+      AutoSize = True
+      BorderSpacing.Left = 5
+      BorderSpacing.Right = 5
+      Caption = 'StaticText2'
+      OnDragDrop = FrameDragDrop
+      OnDragOver = FrameDragOver
+      OnMouseDown = StaticText1MouseDown
+      TabOrder = 1
+    end
+  end
+  object Panel1: TPanel
+    AnchorSideTop.Control = ToolBar1
+    AnchorSideRight.Control = ToolBar1
+    AnchorSideRight.Side = asrBottom
+    AnchorSideBottom.Control = ToolBar1
+    AnchorSideBottom.Side = asrBottom
+    Left = 577
+    Height = 22
+    Top = 1
+    Width = 23
+    Anchors = [akTop, akRight, akBottom]
+    AutoSize = True
+    BorderSpacing.Top = 1
+    BorderSpacing.Right = 2
+    BorderSpacing.Bottom = 2
+    BevelOuter = bvNone
+    ClientHeight = 22
+    ClientWidth = 23
+    ParentBackground = False
+    ParentColor = False
+    TabOrder = 1
+    object BtnDelete: TSpeedButton
+      AnchorSideTop.Control = Panel1
+      AnchorSideBottom.Control = Panel1
+      AnchorSideBottom.Side = asrBottom
+      Left = 0
+      Height = 22
+      Top = 0
+      Width = 23
+      Anchors = [akTop, akLeft, akBottom]
+      OnClick = BtnDeleteClick
+    end
+  end
+end

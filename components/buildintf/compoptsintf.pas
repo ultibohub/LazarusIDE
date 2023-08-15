@@ -195,6 +195,7 @@ type
     procedure SetSmartLinkUnit(const AValue: Boolean);
     procedure SetStackChecks(const AValue: Boolean);
     procedure SetStackSize(const AValue: Integer);
+    procedure SetSubtarget(AValue: string);
     procedure SetTypedAddress(const AValue: Boolean);
     procedure SetStopAfterErrCount(const AValue: integer);
     procedure SetStripSymbols(const AValue: Boolean);
@@ -211,6 +212,7 @@ type
     procedure SetVarsInReg(const AValue: Boolean);
     procedure SetVerifyObjMethodCall(const AValue: boolean);
     procedure SetWin32GraphicApp(const AValue: boolean);
+    procedure SetWriteConfigFile(AValue: Boolean);
     procedure SetWriteFPCLogo(const AValue: Boolean);
   protected
     FChangeStamp: int64;
@@ -248,6 +250,7 @@ type
     fTargetCPU: string;
     fTargetProc: string;
 	fTargetController: string; //Ultibo
+    FSubtarget: string;
     fOptLevel: Integer;
     fVarsInReg: Boolean;
     fUncertainOpt: Boolean;
@@ -293,6 +296,8 @@ type
     fExecuteAfter: TLazCompilationToolOptions;
     // Other:
     fDontUseConfigFile: Boolean;
+    FWriteConfigFile: Boolean;
+    FWriteConfigFilePath: String;
     fCustomConfigFile: Boolean;
     fConfigFilePath: String;
     fUseCommentsInCustomOptions: Boolean;
@@ -309,6 +314,7 @@ type
     function GetSrcPath: string; virtual; abstract;
     function GetUnitOutputDir: string; virtual; abstract;
     function GetUnitPaths: String; virtual; abstract;
+    function GetWriteConfigFilePath: String; virtual; abstract;
     procedure SetCompilerPath(const AValue: String); virtual; abstract;
     procedure SetConditionals(AValue: string); virtual; abstract;
     procedure SetCustomOptions(const AValue: string); virtual; abstract;
@@ -328,6 +334,7 @@ type
 	procedure SetTargetController(const AValue: string); virtual; abstract; //Ultibo
     procedure SetUnitOutputDir(const AValue: string); virtual; abstract;
     procedure SetUnitPaths(const AValue: String); virtual; abstract;
+    procedure SetWriteConfigFilePath(AValue: String); virtual; abstract;
   public
     constructor Create(const TheOwner: TObject); virtual;
     destructor Destroy; override;
@@ -336,6 +343,7 @@ type
     function CreatePPUFilename(const SourceFileName: string): string; virtual; abstract;
     function CreateTargetFilename: string; virtual; abstract;
     function GetUnitOutputDirectory(RelativeToBaseDir: boolean): string; virtual; abstract;
+    const ConsoleParamsMax: integer = 1000; // max bytes when writing long compiler options to the console, 0=no limit
   public
     property Owner: TObject read fOwner write fOwner;
     property Modified: boolean read GetModified write SetModified;
@@ -418,6 +426,7 @@ type
     property TargetCPU: string read fTargetCPU write SetTargetCPU; // general type
     property TargetProcessor: String read fTargetProc write SetTargetProc; // specific
 	property TargetController: String read fTargetController write SetTargetController; //Ultibo
+    property Subtarget: string read FSubtarget write SetSubtarget;
     property OptimizationLevel: Integer read fOptLevel write SetOptLevel;
     property VariablesInRegisters: Boolean read fVarsInReg write SetVarsInReg;
     property UncertainOptimizations: Boolean read fUncertainOpt write SetUncertainOpt;
@@ -466,6 +475,8 @@ type
     property ExecuteAfter: TLazCompilationToolOptions read fExecuteAfter;
     // other
     property DontUseConfigFile: Boolean read fDontUseConfigFile write SetDontUseConfigFile;
+    property WriteConfigFile: Boolean read FWriteConfigFile write SetWriteConfigFile;
+    property WriteConfigFilePath: String read GetWriteConfigFilePath write SetWriteConfigFilePath;
     property CustomConfigFile: Boolean read fCustomConfigFile write SetCustomConfigFile;
     property ConfigFilePath: String read fConfigFilePath write SetConfigFilePath;
     property CustomOptions: string read GetCustomOptions write SetCustomOptions;
@@ -826,6 +837,13 @@ begin
   IncreaseChangeStamp;
 end;
 
+procedure TLazCompilerOptions.SetSubtarget(AValue: string);
+begin
+  if FSubtarget=AValue then Exit;
+  FSubtarget:=AValue;
+  IncreaseChangeStamp;
+end;
+
 procedure TLazCompilerOptions.SetIncludeAssertionCode(const AValue: Boolean);
 begin
   if fIncludeAssertionCode=AValue then exit;
@@ -957,6 +975,13 @@ procedure TLazCompilerOptions.SetWin32GraphicApp(const AValue: boolean);
 begin
   if FWin32GraphicApp=AValue then exit;
   FWin32GraphicApp:=AValue;
+  IncreaseChangeStamp;
+end;
+
+procedure TLazCompilerOptions.SetWriteConfigFile(AValue: Boolean);
+begin
+  if FWriteConfigFile=AValue then Exit;
+  FWriteConfigFile:=AValue;
   IncreaseChangeStamp;
 end;
 

@@ -3819,10 +3819,31 @@ function TPkgManager.CheckUserSearchPaths(aCompilerOptions: TBaseCompilerOptions
 var
   aPackage: TLazPackage;
   CurUnitPath: String;
-  CurIncPath: String;
   CurSrcPath: String;
   CurOutPath: String;
   SrcDirToPkg: TFilenameToPointerTree;
+
+  function GetPkgOfSrcDirToPkg(Dir: string): TLazPackage;
+  var
+    MaskType: TSPMaskType;
+    Item: PStringToPointerTreeItem;
+    CurDir: String;
+  begin
+    MaskType:=GetSPMaskType(Dir);
+    if MaskType=TSPMaskType.None then
+    begin
+      Result:=TLazPackage(SrcDirToPkg[Dir]);
+      exit;
+    end;
+    Dir:=ExtractFilePath(Dir);
+    for Item in SrcDirToPkg do
+    begin
+      CurDir:=Item^.Name;
+      if FileIsInSPDirectory(AppendPathDelim(CurDir),Dir,MaskType) then
+        exit(TLazPackage(Item^.Value));
+    end;
+    Result:=nil;
+  end;
 
   function CheckPathContainsDirOfOtherPkg(Option: TParsedCompilerOptString
     ): TModalResult;
@@ -3836,11 +3857,6 @@ var
   begin
     Result:=mrOk;
     case Option of
-    pcosIncludePath:
-      begin
-        aType:='include files search path';
-        aSearchPath:=CurIncPath;
-      end;
     pcosUnitPath:
       begin
         aType:='other unit files search path (aka unit path)';
@@ -3860,7 +3876,7 @@ var
       if Dir='' then break;
       Dir:=ChompPathDelim(Dir);
       if not FilenameIsAbsolute(Dir) then continue;
-      OtherPackage:=TLazPackage(SrcDirToPkg[Dir]);
+      OtherPackage:=GetPkgOfSrcDirToPkg(Dir);
       if (OtherPackage<>nil) and (OtherPackage<>aPackage) then begin
         // search path contains source directory of another package
         if Option=pcosIncludePath then;
@@ -3926,7 +3942,7 @@ var
     repeat
       Dir:=GetNextDirectoryInSearchPath(UnparsedSrcPath,p);
       if Dir='' then exit;
-      if SearchDirectoryInSearchPath(UnparsedUnitPath,Dir)>0 then begin
+      if SearchDirectoryInMaskedSearchPath(UnparsedUnitPath,Dir)>0 then begin
         // Note: when changing this, update TQuickFixSrcPathOfPkgContains_OpenPkg
         s:=Format(lisOtherSourcesPathOfPackageContainsDirectoryWhichIsA, [
           aCompilerOptions.GetOwnerName, Dir]);
@@ -3951,7 +3967,6 @@ begin
   if (aPackage<>nil) and (aPackage.AutoUpdate=pupManually) then exit;
 
   CurUnitPath:=aCompilerOptions.ParsedOpts.GetParsedValue(pcosUnitPath);
-  CurIncPath:=aCompilerOptions.ParsedOpts.GetParsedValue(pcosIncludePath);
   CurSrcPath:=aCompilerOptions.ParsedOpts.GetParsedValue(pcosSrcPath);
   CurOutPath:=aCompilerOptions.ParsedOpts.GetParsedValue(pcosOutputDir);
   //debugln(['TPkgManager.CheckUserSearchPaths CompOpts=',aCompilerOptions.GetOwnerName,' UnitPath="',CurUnitPath,'" IncPath="',CurIncPath,'" SrcPath="',CurSrcPath,'" OutPath="',CurOutPath,'"']);
@@ -4264,7 +4279,7 @@ begin
     for i:=0 to PkgList.Count-1 do begin
       APackage:=TLazPackage(PkgList[i]);
       IncPath:=APackage.CompilerOptions.GetIncludePath(false);
-      Result:=SearchFileInPath(Filename,APackage.Directory,IncPath,';',ctsfcDefault);
+      Result:=SearchFileInSearchPath(Filename,APackage.Directory,IncPath);
       if Result<>'' then exit;
     end;
   finally
@@ -5841,14 +5856,13 @@ begin
         if s='' then continue;
         case IDEQuestionDialog(lisUninstallFail,
            Format(lisThePackageIsUsedBy, [APackage.IDAsString])+sLineBreak +s,
-           mtConfirmation, [mrYes, lisUninstallThemToo, mrIgnore, mrCancel]
+           mtConfirmation, [mrYes, lisUninstallThemToo, mrCancel]
            ) of
         mrYes:
           begin
             for j:=0 to Dependencies.Count-1 do
               DeleteDependency(TPkgDependency(Dependencies[j]));
           end;
-        mrIgnore: ;
         else
           exit(false);
         end;

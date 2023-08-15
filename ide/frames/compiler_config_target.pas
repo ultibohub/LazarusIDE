@@ -36,10 +36,10 @@ uses
   // CodeTools
   DefineTemplates,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, MacroIntf, IDEDialogs,
+  IDEOptionsIntf, IDEOptEditorIntf, MacroIntf, IDEDialogs, IDEUtils,
   // IDE
   CompilerOptions, LazarusIDEStrConsts, TransferMacros, PackageDefs, Project,
-  compiler_parsing_options;
+  RecentListProcs, InputHistory, compiler_parsing_options;
 
 type
 
@@ -48,8 +48,10 @@ type
   TCompilerConfigTargetFrame = class(TAbstractIDEOptionsEditor)
     chkConfigFile: TCheckBox;
     chkCustomConfigFile: TCheckBox;
+    chkWriteConfigFile: TCheckBox;
     chkWin32GraphicApp: TCheckBox;
-    edtConfigPath: TEdit;
+    edtCustomConfigPath: TEdit;
+    edtWriteConfigFilePath: TEdit;
     grbTargetOptions: TGroupBox;
     grbConfigFile: TGroupBox;
     grbTargetPlatform: TGroupBox;
@@ -58,12 +60,15 @@ type
     lblTargetOS: TLabel;
     lblTargetProc: TLabel;
 	lblTargetController: TLabel; //Ultibo
+    lblSubtarget: TLabel;
     LCLWidgetTypeLabel: TLabel;
     TargetCPUComboBox: TComboBox;
     TargetOSComboBox: TComboBox;
     TargetProcComboBox: TComboBox;
 	TargetControllerComboBox: TComboBox; //Ultibo
+    SubtargetComboBox: TComboBox;
     procedure chkCustomConfigFileClick(Sender: TObject);
+    procedure chkWriteConfigFileClick(Sender: TObject);
     procedure TargetOSComboBoxSelect(Sender: TObject);
     procedure TargetCPUComboBoxSelect(Sender: TObject);
 	procedure TargetControllerComboBoxSelect(Sender: TObject); //Ultibo
@@ -176,16 +181,14 @@ end;
 
 function TCompilerConfigTargetFrame.Check: Boolean;
 var
-  NewDontUseConfigFile: Boolean;
-  NewCustomConfigFile: Boolean;
-  NewConfigFilePath: String;
-  AdditionalConfig: String;
+  NewDontUseConfigFile, NewCustomConfigFile: Boolean;
+  NewConfigFilePath, AdditionalConfig: String;
 begin
   //debugln(['TCompilerConfigTargetFrame.ReadSettings ',dbgs(Pointer(FCompOptions)),' ',FCompOptions=Project1.CompilerOptions]);
 
   NewDontUseConfigFile := not chkConfigFile.Checked;
   NewCustomConfigFile := chkCustomConfigFile.Checked;
-  NewConfigFilePath := edtConfigPath.Text;
+  NewConfigFilePath := edtCustomConfigPath.Text;
 
   if ((NewDontUseConfigFile <> FCompOptions.DontUseConfigFile) or
     (NewCustomConfigFile <> FCompOptions.CustomConfigFile) or
@@ -194,9 +197,8 @@ begin
   begin
     // config file options changed
     // and both additional and standard config files are used
-    AdditionalConfig := ExtractFilename(edtConfigPath.Text);
-    if (CompareFileNames(AdditionalConfig, 'fpc.cfg') = 0) or
-      (CompareFileNames(AdditionalConfig, 'ppc386.cfg') = 0) then
+    AdditionalConfig := ExtractFilename(edtCustomConfigPath.Text);
+    if (CompareFileNames(AdditionalConfig, 'fpc.cfg') = 0) then
     begin
       if IDEMessageDialog(lisCOAmbiguousAdditionalCompilerConfigFile,
         Format(lisCOClickOKIfAreSureToDoThat,
@@ -405,8 +407,10 @@ begin
     // Config
     grbConfigFile.Caption := dlgConfigFiles;
     chkConfigFile.Caption := dlgUseFpcCfg + ' ('+lisIfNotChecked+' -n)';
+    chkWriteConfigFile.Caption := lisWriteConfigInsteadOfCommandLineParameters+' (@)';
+    edtWriteConfigFilePath.Text := '';
     chkCustomConfigFile.Caption := dlgUseCustomConfig + ' (@)';
-    edtConfigPath.Text := '';
+    edtCustomConfigPath.Text := '';
 
     // Target platform
     grbTargetPlatform.Caption := dlgTargetPlatform;
@@ -437,7 +441,7 @@ begin
       ItemIndex := 0;
     end;
 
-    // Target CPU
+    // Target processor
     lblTargetProc.Caption := dlgTargetProc+' (-Cp)';
 
     // Target Controller
@@ -457,6 +461,9 @@ begin
     chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG)';
     // WidgetSet
     LCLWidgetTypeLabel.Caption := lisSelectAnotherLCLWidgetSet;
+
+    // Subtarget
+    lblSubtarget.Caption := lisSubtarget+' (-t)';
   finally
     List.Free;
   end;
@@ -474,9 +481,12 @@ begin
   with FCompOptions do
   begin
     chkConfigFile.Checked := not DontUseConfigFile;
+    chkWriteConfigFile.Checked := WriteConfigFile;
+    edtWriteConfigFilePath.Enabled:= WriteConfigFile;
+    edtWriteConfigFilePath.Text := WriteConfigFilePath;
     chkCustomConfigFile.Checked := CustomConfigFile;
-    edtConfigPath.Enabled := chkCustomConfigFile.Checked;
-    edtConfigPath.Text := ConfigFilePath;
+    edtCustomConfigPath.Enabled := chkCustomConfigFile.Checked;
+    edtCustomConfigPath.Text := ConfigFilePath;
     if fIsPackage then begin
       grbTargetPlatform.Visible:=false;
       TargetOSComboBox.ItemIndex := 0;
@@ -485,6 +495,7 @@ begin
       TargetCPUComboBox.Text := 'default';
       TargetProcComboBox.Text := 'default';
 	  TargetControllerComboBox.Text := 'default'; //Ultibo
+      SubtargetComboBox.Text := 'default';
       CurrentWidgetTypeLabel.Visible:=false;
       LCLWidgetTypeLabel.Visible:=false;
     end else begin
@@ -505,6 +516,12 @@ begin
       TargetProcComboBox.Text := ProcessorToCaption(TargetProcessor);
       // Target Controller
       TargetControllerComboBox.Text := ControllerToCaption(TargetController); //Ultibo
+      with SubtargetComboBox do begin
+        Items.BeginUpdate;
+        Items.Assign(InputHistories.HistoryLists.GetList('Subtarget',true,rltCaseInsensitive));
+        SetComboBoxText(SubtargetComboBox,Subtarget,cstCaseInsensitive);
+        Items.EndUpdate;
+      end;
       PkgDep:=TProjectCompilerOptions(AOptions).LazProject.FindDependencyByName('LCL');
       CurrentWidgetTypeLabel.Visible:=Assigned(PkgDep);
       LCLWidgetTypeLabel.Visible:=Assigned(PkgDep);
@@ -527,8 +544,10 @@ begin
   with CurOptions do
   begin
     DontUseConfigFile := not chkConfigFile.Checked;
+    WriteConfigFile := chkWriteConfigFile.Checked;
+    WriteConfigFilePath := edtWriteConfigFilePath.Text;
     CustomConfigFile := chkCustomConfigFile.Checked;
-    ConfigFilePath := edtConfigPath.Text;
+    ConfigFilePath := edtCustomConfigPath.Text;
     if not fIsPackage then
     begin
       NewTargetOS := TargetOSComboBox.Text;
@@ -541,6 +560,7 @@ begin
       TargetCPU := CaptionToCPU(NewTargetCPU);
       TargetProcessor := CaptionToProcessor(TargetProcComboBox.Text);
 	  TargetController := CaptionToController(TargetControllerComboBox.Text); //Ultibo
+      Subtarget := lowercase(SubtargetComboBox.Text);
     end;
     Win32GraphicApp := chkWin32GraphicApp.Checked;
   end;
@@ -548,7 +568,12 @@ end;
 
 procedure TCompilerConfigTargetFrame.chkCustomConfigFileClick(Sender: TObject);
 begin
-  edtConfigPath.Enabled := chkCustomConfigFile.Checked;
+  edtCustomConfigPath.Enabled := chkCustomConfigFile.Checked;
+end;
+
+procedure TCompilerConfigTargetFrame.chkWriteConfigFileClick(Sender: TObject);
+begin
+  edtWriteConfigFilePath.Enabled := chkWriteConfigFile.Checked;
 end;
 
 procedure TCompilerConfigTargetFrame.TargetOSComboBoxSelect(Sender: TObject);

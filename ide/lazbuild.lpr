@@ -21,7 +21,6 @@
 }
 program lazbuild;
 
-
 {$mode objfpc}{$H+}
 
 uses
@@ -41,11 +40,10 @@ uses
   BaseIDEIntf, MacroIntf, PackageIntf, LazMsgWorker, ProjectIntf, IDEExternToolIntf,
   CompOptsIntf, IDEOptionsIntf, PackageDependencyIntf,
   // IdeConfig
-  LazConf, IDECmdLine,
+  LazConf, IDECmdLine, TransferMacros, EnvironmentOpts,
   // IDE
-  InitialSetupProc, ExtToolsConsole, CompilerOptions,
-  ApplicationBundle, TransferMacros, EnvironmentOpts, IDETranslations,
-  LazarusIDEStrConsts, MiscOptions, Project, PackageDefs,
+  InitialSetupProc, ExtToolsConsole, CompilerOptions, ApplicationBundle,
+  IDETranslations, LazarusIDEStrConsts, MiscOptions, Project, PackageDefs,
   PackageLinks, PackageSystem, InterPkgConflictFiles, BuildLazDialog,
   BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts;
 
@@ -80,6 +78,8 @@ type
     FPackageAction: TPkgAction;
     FPkgGraphVerbosity: TPkgVerbosityFlags;
     FSkipDependencies: boolean;
+    FSubtargetOverride: boolean;
+    FSubtargetOverrideValue: String;
     fWidgetsetOverride: String;
 
     function HasLongOptIgnoreCase(const S: String; out aValue: String): Boolean;
@@ -177,6 +177,8 @@ type
     property OSOverride: String read fOSOverride write fOSOverride;
     property CPUOverride: String read fCPUOverride write fCPUOverride;
     property ProcessorOverride: String read fProcessorOverride write fProcessorOverride; //Ultibo
+    property SubtargetOverride: boolean read FSubtargetOverride write FSubtargetOverride;
+    property SubtargetOverrideValue: String read FSubtargetOverrideValue write FSubtargetOverrideValue;
     property CompilerOverride: String read fCompilerOverride write fCompilerOverride;
     property LazarusDirOverride: String read fLazarusDirOverride write fLazarusDirOverride;
     property BuildModeOverride: String read FBuildModeOverride write FBuildModeOverride;
@@ -470,6 +472,8 @@ begin
     APackage.CompilerOptions.TargetCPU:=CPUOverride;
   if (Length(ProcessorOverride) <> 0) then //Ultibo
     APackage.CompilerOptions.TargetProcessor:=ProcessorOverride; //Ultibo
+  if SubtargetOverride then
+    APackage.CompilerOptions.Subtarget:=SubtargetOverrideValue;
 
   if CreateMakefile then
     DoCreateMakefile(APackage)
@@ -568,6 +572,8 @@ begin
     CurProf.TargetOS:=OSOverride;
   if (Length(CPUOverride) <> 0) then
     CurProf.TargetCPU:=CPUOverride;
+  if SubtargetOverride then
+    CurProf.Subtarget:=SubtargetOverrideValue;
 
   if WidgetSetOverride<>'' then
     CurProf.TargetPlatform:=DirNameToLCLPlatform(WidgetSetOverride)
@@ -767,7 +773,7 @@ var
   CompilerFilename: String;
   WorkingDir: String;
   SrcFilename: String;
-  CompilerParams: String;
+  CompilerParams, CmdLineParams: TStrings;
   ToolBefore: TProjectCompilationToolOptions;
   ToolAfter: TProjectCompilationToolOptions;
   UnitOutputDirectory: String;
@@ -783,6 +789,9 @@ var
   CurResult: Boolean;
 
   function StartBuilding : boolean;
+  var
+    CfgCode: TCodeBuffer;
+    CfgFilename: String;
   begin
     Result := false;
 
@@ -793,6 +802,8 @@ var
       Project1.CompilerOptions.TargetCPU:=CPUOverride;
     if (ProcessorOverride<>'') then //Ultibo
       Project1.CompilerOptions.TargetProcessor:=ProcessorOverride; //Ultibo
+    if SubtargetOverride then
+      Project1.CompilerOptions.Subtarget:=SubtargetOverrideValue;
     if (WidgetSetOverride<>'') then begin
       MatrixOption:=Project1.BuildModes.SessionMatrixOptions.Add(bmotIDEMacro);
       MatrixOption.Modes:=Project1.ActiveBuildMode.Identifier;
@@ -802,6 +813,8 @@ var
     // apply options
     MainBuildBoss.SetBuildTargetProject1(true,smsfsSkip);
 
+    CompilerParams:=nil;
+    CmdLineParams:=nil;
     try
       if not SkipDependencies then
       begin
@@ -880,16 +893,27 @@ var
 
       //DebugLn(['TLazBuildApplication.BuildProject CompilerFilename="',CompilerFilename,'" CompilerPath="',Project1.CompilerOptions.CompilerPath,'"']);
       // CompileHint: use absolute paths, same as TBuildManager.DoCheckIfProjectNeedsCompilation
-      CompilerParams:=Project1.CompilerOptions.MakeOptionsString([ccloAbsolutePaths])
-                                             +' '+PrepareCmdLineOption(SrcFilename);
+      CompilerParams:=Project1.CompilerOptions.MakeCompilerParams([ccloAbsolutePaths]);
+      CompilerParams.Add(SrcFilename);
+      CmdLineParams:=CompilerParams;
 
       if (CompReason in Project1.CompilerOptions.CompileReasons) then begin
         // compile
 
+        if Project1.CompilerOptions.WriteConfigFile then
+        begin
+          CfgFilename:=Project1.GetWriteConfigFilePath;
+          CfgCode:=WriteCompilerCfgFile(CfgFilename,CompilerParams,CmdLineParams);
+          if CfgCode=nil then
+            Error(ErrorBuildFailed,'unable to read "'+CfgFilename+'"');
+          if CfgCode.FileOnDiskNeedsUpdate and (not CfgCode.Save) then
+            Error(ErrorBuildFailed,'unable to write "'+CfgFilename+'"');
+        end;
+
         // write state file to avoid building clean every time
         if Project1.SaveStateFile(CompilerFilename,CompilerParams,false)<>mrOk then
           Error(ErrorBuildFailed,'failed saving statefile of project '+AFilename);
-        if TheCompiler.Compile(Project1,WorkingDir,CompilerFilename,CompilerParams,
+        if TheCompiler.Compile(Project1,WorkingDir,CompilerFilename,CmdLineParams,
                                BuildAll or NeedBuildAllFlag,false,false,false,
                                CompileHint)<>mrOk
         then
@@ -911,6 +935,9 @@ var
       // no need to check for mrOk, we are exit if it wasn't
       Result:=true;
     finally
+      if CmdLineParams<>CompilerParams then
+        CmdLineParams.Free;
+      CompilerParams.Free;
       if not SkipDependencies then
         PackageGraph.EndUpdate;
     end;
@@ -1183,7 +1210,8 @@ begin
   // load static base packages
   PackageGraph.LoadStaticBasePackages;
 
-  MainBuildBoss.SetBuildTarget(OSOverride,CPUOverride,ProcessorOverride,WidgetSetOverride,smsfsSkip,true); //Ultibo
+  MainBuildBoss.SetBuildTarget(OSOverride,CPUOverride,ProcessorOverride,SubtargetOverrideValue,
+                               WidgetSetOverride,smsfsSkip,true); //Ultibo
 
   fInitResult:=true;
   Result:=fInitResult;
@@ -1504,7 +1532,8 @@ begin
   end;
 end;
 
-Function TLazBuildApplication.HasLongOptIgnoreCase(const S: String; out aValue: String): Boolean;
+function TLazBuildApplication.HasLongOptIgnoreCase(const S: String; out
+  aValue: String): Boolean;
 // Check existence of a long option case-insensitively.
 begin
   CaseSensitiveOptions:=False;
@@ -1516,7 +1545,8 @@ begin
   CaseSensitiveOptions:=True;
 end;
 
-Function TLazBuildApplication.HasShortOrLongOpt(const C: Char; const S: String): Boolean;
+function TLazBuildApplication.HasShortOrLongOpt(const C: Char; const S: String
+  ): Boolean;
 // Check existence of a short option casesensitively and long option case-insensitively.
 begin
   Result:=HasOption(C);
@@ -1587,6 +1617,7 @@ begin
     LongOptions.Add('os:');
     LongOptions.Add('cpu:');
     LongOptions.Add('processor:'); //Ultibo
+    LongOptions.Add('subtarget:');
     LongOptions.Add('bm:');
     LongOptions.Add('build-mode:');
     LongOptions.Add('compiler:');
@@ -1719,11 +1750,17 @@ begin
     end;
 
     // processor //Ultibo
-    if HasOption('processor') then begin //Ultibo
-      ProcessorOverride := GetOptionValue('processor'); //Ultibo
+    if HasLongOptIgnoreCase('processor',FProcessorOverride) then begin //Ultibo
       if ConsoleVerbosity>=0 then //Ultibo
         writeln('Parameter: processor=',ProcessorOverride); //Ultibo
     end; //Ultibo
+
+    // subtarget
+    if HasLongOptIgnoreCase('subtarget',FSubtargetOverrideValue) then begin
+      FSubtargetOverride:=true;
+      if ConsoleVerbosity>=0 then
+        writeln('Parameter: subtarget=',FSubtargetOverrideValue);
+    end;
 
     // build mode
     if HasLongOptIgnoreCase('bm',FBuildModeOverride) then begin
@@ -1850,6 +1887,9 @@ begin
   writeln(LongToConsole(Format(
     lisOverrideTheProjectCpuEGI386X86_64PowerpcPowerpc_64, [space,
     GetCompiledTargetCPU])));
+  writeln('');
+  writeln('--subtarget=<subtarget>');
+  writeln(LongToConsole(space+'override the project subtarget'));
   writeln('');
   writeln('--build-mode=<project/ide build mode>');
   writeln('or --bm=<project/ide build mode>');

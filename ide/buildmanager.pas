@@ -43,7 +43,8 @@ uses
   FileProcs, CodeToolsCfgScript, LinkScanner,
   // LazUtils
   FPCAdds, LConvEncoding, FileUtil, LazFileUtils, LazFileCache, LazUTF8,
-  Laz2_XMLCfg, LazUtilities, LazStringUtils, LazMethodList,
+  Laz2_XMLCfg, LazUtilities, LazStringUtils, LazMethodList, LazVersion,
+  AvgLvlTree,
   // BuildIntf
   BaseIDEIntf, IDEOptionsIntf, ProjectIntf, MacroIntf, PublishModuleIntf,
   IDEExternToolIntf, CompOptsIntf, MacroDefIntf,
@@ -87,6 +88,7 @@ type
     fTargetOS: string;
     fTargetCPU: string;
     fTargetProcessor: string; //Ultibo
+    fSubtarget: string;
     fLCLWidgetType: string;
     // cache
     FFPCompilerFilename: string;
@@ -94,13 +96,13 @@ type
     fEnv: TStringDynArray;
     procedure DoOnRescanFPCDirectoryCache(Sender: TObject);
     function GetTargetFilename: String;
-    procedure OnMacroSubstitution(TheMacro: TTransferMacro;
-                               const MacroName: string; var s: string;
-                               const {%H-}Data: PtrInt; var Handled, {%H-}Abort: boolean;
-                               {%H-}Depth: integer);
-    function OnSubstituteCompilerOption({%H-}Options: TParsedCompilerOptions;
-                                        const UnparsedValue: string;
-                                        PlatformIndependent: boolean): string;
+    procedure MacroSubstitution(TheMacro: TTransferMacro;
+                                const MacroName: string; var s: string;
+                                const {%H-}Data: PtrInt; var Handled, {%H-}Abort: boolean;
+                                {%H-}Depth: integer);
+    function SubstituteCompilerOption({%H-}Options: TParsedCompilerOptions;
+                                      const UnparsedValue: string;
+                                      PlatformIndependent: boolean): string;
     function MacroFuncBuildMode(const {%H-}Param: string; const {%H-}Data: PtrInt;
                              var {%H-}Abort: boolean): string;
     function MacroFuncEnv(const Param: string; const {%H-}Data: PtrInt;
@@ -149,16 +151,18 @@ type
                                  var {%H-}Abort: boolean): string;
     function MacroFuncSrcOS(const {%H-}Param: string; const Data: PtrInt;
                             var {%H-}Abort: boolean): string;
+    function MacroFuncSubtarget(const {%H-}Param: string; const Data: PtrInt;
+                                var {%H-}Abort: boolean): string;
     function MacroFuncTargetCmdLine(const {%H-}Param: string; const {%H-}Data: PtrInt;
                                     var {%H-}Abort: boolean): string;
     function MacroFuncTargetCPU(const {%H-}Param: string; const Data: PtrInt;
                                 var {%H-}Abort: boolean): string;
     function MacroFuncTargetFile(const {%H-}Param: string; const {%H-}Data: PtrInt;
                                  var {%H-}Abort: boolean): string;
-    function MacroFuncOutputFile(const {%H-}Param: string; const {%H-}Data: PtrInt;
-                                 var {%H-}Abort: boolean): string;
     function MacroFuncTargetOS(const {%H-}Param: string; const Data: PtrInt;
                                var {%H-}Abort: boolean): string;
+    function MacroFuncOutputFile(const {%H-}Param: string; const {%H-}Data: PtrInt;
+                                 var {%H-}Abort: boolean): string;
     function MacroFuncIDEBuildOptions(const {%H-}Param: string; const Data: PtrInt;
                                var {%H-}Abort: boolean): string;
     function MacroFuncPrimaryConfigPath(const {%H-}Param: string; const {%H-}Data: PtrInt;
@@ -180,12 +184,13 @@ type
     OverrideTargetOS: string;
     OverrideTargetCPU: string;
     OverrideTargetProcessor: string; //Ultibo
+    OverrideSubtarget: string;
     OverrideLCLWidgetType: string;
     DefaultCfgVars: TCTCfgScriptVariables;
     DefaultCfgVarsBuildMacroStamp: integer;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
-    function OnGetBuildMacroValues(Options: TBaseCompilerOptions;
+    function GetBuildMacroValuesHandler(Options: TBaseCompilerOptions;
                                    IncludeSelf: boolean): TCTCfgScriptVariables;
     function GetActiveBuildModeName: string;
     procedure AppendMatrixCustomOption(Sender: TObject;
@@ -209,6 +214,7 @@ type
     function GetTargetOS: string; override;
     function GetTargetCPU: string; override;
     function GetTargetProcessor: string; override; //Ultibo
+    function GetSubtarget: string; override;
     function GetLCLWidgetType: string; override;
     function GetRunCommandLine: string; override;
     function GetRunWorkingDir: string; override;
@@ -253,7 +259,7 @@ type
     function UpdateProjectAutomaticFiles(TestDir: string): TModalResult; override;
 
     // methods for building IDE (will be changed when project groups are there)
-    procedure SetBuildTarget(const TargetOS, TargetCPU, TargetProcessor, LCLWidgetType: string;
+    procedure SetBuildTarget(const TargetOS, TargetCPU, TargetProcessor, Subtarget, LCLWidgetType: string;
                              ScanFPCSrc: TScanModeFPCSources; Quiet: boolean); //Ultibo
     procedure SetBuildTargetProject1; override; overload;
     procedure SetBuildTargetProject1(Quiet: boolean; ScanFPCSrc: TScanModeFPCSources = smsfsBackground); overload;
@@ -314,7 +320,7 @@ begin
     FBuildTarget:=nil;
 end;
 
-procedure TBuildManager.OnMacroSubstitution(TheMacro: TTransferMacro;
+procedure TBuildManager.MacroSubstitution(TheMacro: TTransferMacro;
   const MacroName: string; var s: string; const Data: PtrInt; var Handled,
   Abort: boolean; Depth: integer);
 var
@@ -361,7 +367,7 @@ begin
   end;
 end;
 
-function TBuildManager.OnSubstituteCompilerOption(
+function TBuildManager.SubstituteCompilerOption(
   Options: TParsedCompilerOptions; const UnparsedValue: string;
   PlatformIndependent: boolean): string;
 begin
@@ -397,7 +403,7 @@ begin
 
   OnBackupFileInteractive:=@BackupFileForWrite;
 
-  GetBuildMacroValues:=@OnGetBuildMacroValues;
+  GetBuildMacroValues:=@GetBuildMacroValuesHandler;
   OnAppendCustomOption:=@AppendMatrixCustomOption;
   OnGetOutputDirectoryOverride:=@GetMatrixOutputDirectoryOverride;
 
@@ -430,9 +436,9 @@ procedure TBuildManager.SetupTransferMacros;
 begin
   LazConfMacroFunc:=@BMLazConfMacroFunction;
   GlobalMacroList:=TTransferMacroList.Create;
-  GlobalMacroList.OnSubstitution:=@OnMacroSubstitution;
+  GlobalMacroList.OnSubstitution:=@MacroSubstitution;
   IDEMacros:=TLazIDEMacros.Create;
-  CompilerOptions.OnParseString:=@OnSubstituteCompilerOption;
+  CompilerOptions.OnParseString:=@SubstituteCompilerOption;
 
   TIdeTransferMarcros.InitMacros(GlobalMacroList);
 
@@ -447,6 +453,8 @@ begin
                       lisTargetCPU,@MacroFuncTargetCPU,[]));
   GlobalMacroList.Add(TTransferMacro.Create('TargetOS','',
                       lisTargetOS,@MacroFuncTargetOS,[]));
+  GlobalMacroList.Add(TTransferMacro.Create('Subtarget','',
+                      lisTargetCPU,@MacroFuncSubtarget,[]));
   GlobalMacroList.Add(TTransferMacro.Create('SrcOS','',
                       lisSrcOS,@MacroFuncSrcOS,[]));
   GlobalMacroList.Add(TTransferMacro.Create('CompPath','',
@@ -534,6 +542,7 @@ begin
   tr('LCLWidgetType',lisLCLWidgetType);
   tr('TargetCPU',lisTargetCPU);
   tr('TargetOS',lisTargetOS);
+  tr('Subtarget',lisSubtarget);
   tr('SrcOS',lisSrcOS);
   tr('FPCVer',lisFPCVersionEG222);
   tr('LAZVer',lisLAZVer);
@@ -622,6 +631,8 @@ begin
     Result:=OverrideTargetOS
   else if SysUtils.CompareText(MacroName,'TargetCPU')=0 then
     Result:=OverrideTargetCPU
+  else if SysUtils.CompareText(MacroName,'Subtarget')=0 then
+    Result:=OverrideSubtarget
   else if SysUtils.CompareText(MacroName,'LCLWidgetType')=0 then
     Result:=OverrideLCLWidgetType;
 end;
@@ -633,6 +644,8 @@ begin
     Result.Values['TargetOS']:=OverrideTargetOS;
   if OverrideTargetCPU<>'' then
     Result.Values['TargetCPU']:=OverrideTargetCPU;
+  if OverrideSubtarget<>'' then
+    Result.Values['Subtarget']:=OverrideSubtarget;
   if OverrideLCLWidgetType<>'' then
     Result.Values['LCLWidgetType']:=OverrideLCLWidgetType;
 end;
@@ -652,6 +665,11 @@ function TBuildManager.GetTargetProcessor: string; //Ultibo
 begin
   Result:=fTargetProcessor;
 end; //Ultibo
+
+function TBuildManager.GetSubtarget: string;
+begin
+  Result:=fSubtarget;
+end;
 
 function TBuildManager.GetLCLWidgetType: string;
 begin
@@ -996,7 +1014,7 @@ procedure TBuildManager.RescanCompilerDefines(ResetBuildTarget,
   end;
 
 var
-  TargetOS, TargetCPU, TargetProcessor, FPCOptions: string; //Ultibo
+  TargetOS, TargetCPU, TargetProcessor, Subtarget, FPCOptions: string; //Ultibo
   CompilerFilename: String;
   FPCSrcDir: string;
   ADefTempl: TDefineTemplate;
@@ -1020,7 +1038,7 @@ begin
     CodeToolBoss.CompilerDefinesCache.SourceCaches.Clear;
   end;
   if ResetBuildTarget then
-    SetBuildTarget('','','','',smsfsSkip,true); //Ultibo
+    SetBuildTarget('','','','','',smsfsSkip,true); //Ultibo
   
   // start the compiler and ask for his settings
   // provide an english message file
@@ -1030,6 +1048,7 @@ begin
   TargetOS:=GetTargetOS;
   TargetCPU:=GetTargetCPU;
   TargetProcessor:=GetTargetProcessor; //Ultibo
+  Subtarget:=GetSubtarget;
   {$IFDEF VerboseFPCSrcScan}
   debugln(['TBuildManager.RescanCompilerDefines GetParsedFPCSourceDirectory needs FPCVer...']);
   {$ENDIF}
@@ -1045,6 +1064,7 @@ begin
     ' TargetOS=',TargetOS,
     ' TargetCPU=',TargetCPU,
     ' TargetProcessor=',TargetProcessor, //Ultibo
+    ' Subtarget=',Subtarget,
     ' FPCOptions="',FPCOptions,'"',
     ' EnvFPCSrcDir=',EnvironmentOptions.FPCSourceDirectory,
     ' FPCSrcDir=',FPCSrcDir,
@@ -1062,7 +1082,7 @@ begin
     debugln(['TBuildManager.RescanCompilerDefines reading default compiler settings']);
     {$ENDIF}
     UnitSetCache:=CodeToolBoss.CompilerDefinesCache.FindUnitSet(
-      DefCompilerFilename,'','','','',FPCSrcDir,true); //Ultibo
+      DefCompilerFilename,'','','','','',FPCSrcDir,true); //Ultibo
     UnitSetCache.GetConfigCache(true);
   end;
 
@@ -1105,9 +1125,9 @@ begin
   {$IFDEF VerboseFPCSrcScan}
   debugln(['TBuildManager.RescanCompilerDefines reading active compiler settings']);
   {$ENDIF}
-  //debugln(['TBuildManager.RescanCompilerDefines ',CompilerFilename,' OS=',TargetOS,' CPU=',TargetCPU,' Options="',FPCOptions,'"']);
+  //debugln(['TBuildManager.RescanCompilerDefines ',CompilerFilename,' OS=',TargetOS,' CPU=',TargetCPU,' Subtarget=',Subtarget,' Options="',FPCOptions,'"']);
   UnitSetCache:=CodeToolBoss.CompilerDefinesCache.FindUnitSet(
-    CompilerFilename,TargetOS,TargetCPU,TargetProcessor,FPCOptions,FPCSrcDir,true); //Ultibo
+    CompilerFilename,TargetOS,TargetCPU,TargetProcessor,Subtarget,FPCOptions,FPCSrcDir,true); //Ultibo
 
   NeedUpdateFPCSrcCache:=false;
   //debugln(['TBuildManager.RescanCompilerDefines ',DirectoryExistsUTF8(FPCSrcDir),' ',(not WaitTillDone),' ',(not HasGUI)]);
@@ -1143,6 +1163,7 @@ begin
     ' TargetOS=',TargetOS,
     ' TargetCPU=',TargetCPU,
     ' TargetProcessor=',TargetProcessor, //Ultibo
+    ' Subtarget=',Subtarget,
     ' FPCOptions="',FPCOptions,'"',
     ' RealCompiler=',UnitSetCache.GetConfigCache(false).RealCompiler,
     ' EnvFPCSrcDir=',EnvironmentOptions.FPCSourceDirectory,
@@ -1222,6 +1243,8 @@ begin
       // check if at least one fpc config is there
       if (UnitSetCache.GetFirstFPCCfg='') then begin
         IgnorePath:='MissingFPCCfg_'+TargetOS+'-'+TargetCPU;
+        if Subtarget<>'' then
+          IgnorePath+='-'+Subtarget;
         if (InputHistories<>nil) and (InputHistories.Ignores.Find(IgnorePath)=nil)
         then begin
           MsgResult:=IDEMessageDialog(lisCCOWarningCaption,
@@ -1337,7 +1360,7 @@ var
     if StateFileAge>=FileAgeCached(AnUnitInfo.Filename) then exit;
     if FilenameHasPascalExt(AnUnitInfo.Filename) then
     begin
-      if (SearchDirectoryInSearchPath(AProject.CompilerOptions.GetUnitPath(false),
+      if (SearchDirectoryInMaskedSearchPath(AProject.CompilerOptions.GetUnitPath(false),
                                 ExtractFilePath(AnUnitInfo.Filename))>0)
       then begin
         Result:=true;
@@ -1350,7 +1373,7 @@ var
         exit(true);
       end;
     end;
-    if (SearchDirectoryInSearchPath(AProject.CompilerOptions.GetIncludePath(false),
+    if (SearchDirectoryInMaskedSearchPath(AProject.CompilerOptions.GetIncludePath(false),
                               ExtractFilePath(AnUnitInfo.Filename))>0)
     then begin
       Result:=true;
@@ -1365,11 +1388,10 @@ var
   end;
 
 var
-  CompilerFilename, CompilerParams, SrcFilename: string;
+  CompilerFilename, SrcFilename, LFMFilename, aTargetFilename: string;
   AnUnitInfo: TUnitInfo;
-  LFMFilename: String;
   IcoRes: TProjectIcon;
-  aTargetFilename: String;
+  CompilerParams: TStrings;
 begin
   NeedBuildAllFlag:=false;
   DbgCap:='Hint: (lazarus) Project needs building: ';
@@ -1386,189 +1408,194 @@ begin
   //DebugLn([DbgCap,'CompilerFilename="',CompilerFilename,'" CompilerPath="',AProject.CompilerOptions.CompilerPath,'"']);
   // Note: use absolute paths, because some external tools resolve symlinked directories
   CompilerParams :=
-    AProject.CompilerOptions.MakeOptionsString([ccloAbsolutePaths])
-           + ' ' + PrepareCmdLineOption(SrcFilename);
-  //DebugLn(DbgCap,'WorkingDir="',WorkingDir,'" SrcFilename="',SrcFilename,'" CompilerFilename="',CompilerFilename,'" CompilerParams="',CompilerParams,'"');
+    AProject.CompilerOptions.MakeCompilerParams([ccloAbsolutePaths]);
+  try
+    CompilerParams.Add(SrcFilename);
 
-  // check state file
-  StateFilename:=AProject.GetStateFilename;
-  Result:=AProject.LoadStateFile(false);
-  if Result<>mrOk then exit; // read error and user aborted
-  if not (lpsfStateFileLoaded in AProject.StateFlags) then begin
-    if ConsoleVerbosity>=0 then
-      DebugLn(DbgCap,'No state file for ',AProject.IDAsString);
-    Note+='State file "'+StateFilename+'" of '+AProject.IDAsString+' is missing.'+LineEnding;
-    NeedBuildAllFlag:=true;
-    exit(mrYes);
-  end;
+    //DebugLn(DbgCap,'WorkingDir="',WorkingDir,'" SrcFilename="',SrcFilename,'" CompilerFilename="',CompilerFilename,'" CompilerParams="',MergeCmdLineParams(CompilerParams,TLazCompilerOptions.ConsoleParamsMax),'"');
 
-  // check if build all (-B) is needed
-  if (AProject.LastCompilerFilename<>CompilerFilename)
-  or (ExtractFPCParamsForBuildAll(AProject.LastCompilerParams)
-     <>ExtractFPCParamsForBuildAll(CompilerParams))
-  or ((AProject.LastCompilerFileDate>0)
-      and FileExistsCached(CompilerFilename)
-      and (FileAgeCached(CompilerFilename)<>AProject.LastCompilerFileDate))
-  then
-    NeedBuildAllFlag:=true;
-
-  StateFileAge:=FileAgeCached(StateFilename);
-
-  // check main source file
-  AnUnitInfo:=AProject.MainUnitInfo;
-  if EditorUnitInfoModified(AnUnitInfo) then
-  begin
-    if ConsoleVerbosity>=0 then
-      DebugLn(DbgCap,'Main src modified in source editor ',AProject.IDAsString,' ',AnUnitInfo.Filename);
-    Note+='Main source "'+AnUnitInfo.Filename+'" has been modified in source editor.'+LineEnding;
-    exit(mrYes);
-  end;
-  if FileExistsCached(SrcFilename) and (StateFileAge<FileAgeCached(SrcFilename)) then
-  begin
-    if ConsoleVerbosity>=0 then
-      DebugLn(DbgCap,'SrcFile outdated ',AProject.IDAsString);
-    Note+='Source file "'+SrcFilename+'" of '+AProject.IDAsString+' outdated:'+LineEnding
-      +'  Source age='+FileAgeToStr(FileAgeCached(SrcFilename))+LineEnding
-      +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding
-      +'  State file='+StateFilename+LineEnding;
-    exit(mrYes);
-  end;
-
-  // check compiler and params
-  if CompilerFilename<>AProject.LastCompilerFilename then begin
-    if ConsoleVerbosity>=0 then begin
-      DebugLn(DbgCap,'Compiler filename changed for ',AProject.IDAsString);
-      DebugLn('  Old="',AProject.LastCompilerFilename,'"');
-      DebugLn('  Now="',CompilerFilename,'"');
+    // check state file
+    StateFilename:=AProject.GetStateFilename;
+    Result:=AProject.LoadStateFile(false);
+    if Result<>mrOk then exit; // read error and user aborted
+    if not (lpsfStateFileLoaded in AProject.StateFlags) then begin
+      if ConsoleVerbosity>=0 then
+        DebugLn(DbgCap,'No state file for ',AProject.IDAsString);
+      Note+='State file "'+StateFilename+'" of '+AProject.IDAsString+' is missing.'+LineEnding;
+      NeedBuildAllFlag:=true;
+      exit(mrYes);
     end;
-    Note+='Compiler filename changed for '+AProject.IDAsString+':'+LineEnding
-      +'  Old="'+AProject.LastCompilerFilename+'"'+LineEnding
-      +'  Now="'+CompilerFilename+'"'+LineEnding
-      +'  State file='+StateFilename+LineEnding;
-    exit(mrYes);
-  end;
-  if not FileExistsCached(CompilerFilename) then begin
-    if ConsoleVerbosity>=0 then begin
-      DebugLn(DbgCap,'Compiler file not found for ',AProject.IDAsString);
-      DebugLn('  File="',CompilerFilename,'"');
-    end;
-    Note+='Compiler file "'+CompilerFilename+'" not found for '+AProject.IDAsString+'.'+LineEnding;
-    exit(mrYes);
-  end;
-  if FileAgeCached(CompilerFilename)<>AProject.LastCompilerFileDate then begin
-    if ConsoleVerbosity>=0 then begin
-      DebugLn(DbgCap,'Compiler file changed for ',AProject.IDAsString);
-      DebugLn('  File="',CompilerFilename,'"');
-    end;
-    Note+='Compiler file "'+CompilerFilename+'" for '+AProject.IDAsString+' changed:'+LineEnding
-      +'  Old="'+FileAgeToStr(AProject.LastCompilerFileDate)+'"'+LineEnding
-      +'  Now="'+FileAgeToStr(FileAgeCached(CompilerFilename))+'"'+LineEnding
-      +'  State file='+StateFilename+LineEnding;
-    exit(mrYes);
-  end;
-  if CompilerParams<>AProject.LastCompilerParams then begin
-    if ConsoleVerbosity>=0 then begin
-      DebugLn(DbgCap,'Compiler params changed for ',AProject.IDAsString);
-      DebugLn('  Old="',AProject.LastCompilerParams,'"');
-      DebugLn('  Now="',CompilerParams,'"');
-    end;
-    Note+='Compiler params changed for '+AProject.IDAsString+':'+LineEnding
-      +'  Old="'+AProject.LastCompilerParams+'"'+LineEnding
-      +'  Now="'+CompilerParams+'"'+LineEnding
-      +'  State file='+StateFilename+LineEnding;
-    exit(mrYes);
-  end;
 
-  // compiler and parameters are the same
-  // => it is possible to quick compile without -B
-  NeedBuildAllFlag:=false;
+    // check if build all (-B) is needed
+    if (AProject.LastCompilerFilename<>CompilerFilename)
+    or FPCParamForBuildAllHasChanged(AProject.LastCompilerParams,CompilerParams)
+    or ((AProject.LastCompilerFileDate>0)
+        and FileExistsCached(CompilerFilename)
+        and (FileAgeCached(CompilerFilename)<>AProject.LastCompilerFileDate))
+    then
+      NeedBuildAllFlag:=true;
 
-  if not AProject.LastCompileComplete then begin
-    if ConsoleVerbosity>=0 then
-      DebugLn(DbgCap,'Compile was incomplete for ',AProject.IDAsString);
-    Note+='Last compile was incomplete.'+LineEnding
-      +'  State file='+StateFilename+LineEnding;
-    exit(mrYes);
-  end;
+    StateFileAge:=FileAgeCached(StateFilename);
 
-  // check all required packages
-  Result:=PackageGraph.CheckCompileNeedDueToDependencies(AProject,
-                                AProject.FirstRequiredDependency,
-                                not (pfUseDesignTimePackages in AProject.Flags),
-                                StateFileAge,Note);
-  if Result<>mrNo then exit;
-
-  // check project files
-  AnUnitInfo:=AProject.FirstPartOfProject;
-  while AnUnitInfo<>nil do begin
+    // check main source file
+    AnUnitInfo:=AProject.MainUnitInfo;
     if EditorUnitInfoModified(AnUnitInfo) then
     begin
       if ConsoleVerbosity>=0 then
-        DebugLn(DbgCap,'Project file modified in source editor ',AProject.IDAsString,' ',AnUnitInfo.Filename);
-      Note+='Project file "'+AnUnitInfo.Filename+'" has been modified in source editor.'+LineEnding;
+        DebugLn(DbgCap,'Main src modified in source editor ',AProject.IDAsString,' ',AnUnitInfo.Filename);
+      Note+='Main source "'+AnUnitInfo.Filename+'" has been modified in source editor.'+LineEnding;
       exit(mrYes);
     end;
-    if (not AnUnitInfo.IsVirtual) and FileExistsCached(AnUnitInfo.Filename) then
+    if FileExistsCached(SrcFilename) and (StateFileAge<FileAgeCached(SrcFilename)) then
     begin
-      if (StateFileAge<FileAgeCached(AnUnitInfo.Filename)) then begin
+      if ConsoleVerbosity>=0 then
+        DebugLn(DbgCap,'SrcFile outdated ',AProject.IDAsString);
+      Note+='Source file "'+SrcFilename+'" of '+AProject.IDAsString+' outdated:'+LineEnding
+        +'  Source age='+FileAgeToStr(FileAgeCached(SrcFilename))+LineEnding
+        +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding
+        +'  State file='+StateFilename+LineEnding;
+      exit(mrYes);
+    end;
+
+    // check compiler and params
+    if CompilerFilename<>AProject.LastCompilerFilename then begin
+      if ConsoleVerbosity>=0 then begin
+        DebugLn(DbgCap,'Compiler filename changed for ',AProject.IDAsString);
+        DebugLn('  Old="',AProject.LastCompilerFilename,'"');
+        DebugLn('  Now="',CompilerFilename,'"');
+      end;
+      Note+='Compiler filename changed for '+AProject.IDAsString+':'+LineEnding
+        +'  Old="'+AProject.LastCompilerFilename+'"'+LineEnding
+        +'  Now="'+CompilerFilename+'"'+LineEnding
+        +'  State file='+StateFilename+LineEnding;
+      exit(mrYes);
+    end;
+    if not FileExistsCached(CompilerFilename) then begin
+      if ConsoleVerbosity>=0 then begin
+        DebugLn(DbgCap,'Compiler file not found for ',AProject.IDAsString);
+        DebugLn('  File="',CompilerFilename,'"');
+      end;
+      Note+='Compiler file "'+CompilerFilename+'" not found for '+AProject.IDAsString+'.'+LineEnding;
+      exit(mrYes);
+    end;
+    if FileAgeCached(CompilerFilename)<>AProject.LastCompilerFileDate then begin
+      if ConsoleVerbosity>=0 then begin
+        DebugLn(DbgCap,'Compiler file changed for ',AProject.IDAsString);
+        DebugLn('  File="',CompilerFilename,'"');
+      end;
+      Note+='Compiler file "'+CompilerFilename+'" for '+AProject.IDAsString+' changed:'+LineEnding
+        +'  Old="'+FileAgeToStr(AProject.LastCompilerFileDate)+'"'+LineEnding
+        +'  Now="'+FileAgeToStr(FileAgeCached(CompilerFilename))+'"'+LineEnding
+        +'  State file='+StateFilename+LineEnding;
+      exit(mrYes);
+    end;
+    if not CompilerParams.Equals(AProject.LastCompilerParams) then begin
+      if ConsoleVerbosity>=0 then begin
+        DebugLn(DbgCap,'Compiler params changed for ',AProject.IDAsString);
+        DebugLn('  Old="',MergeCmdLineParams(AProject.LastCompilerParams,TLazCompilerOptions.ConsoleParamsMax),'"');
+        DebugLn('  Now="',MergeCmdLineParams(CompilerParams,TLazCompilerOptions.ConsoleParamsMax),'"');
+      end;
+      Note+='Compiler params changed for '+AProject.IDAsString+':'+LineEnding
+        +'  Old="'+MergeCmdLineParams(AProject.LastCompilerParams,TLazCompilerOptions.ConsoleParamsMax)+'"'+LineEnding
+        +'  Now="'+MergeCmdLineParams(CompilerParams,TLazCompilerOptions.ConsoleParamsMax)+'"'+LineEnding
+        +'  State file='+StateFilename+LineEnding;
+      exit(mrYes);
+    end;
+
+    // compiler and parameters are the same
+    // => it is possible to quick compile without -B
+    NeedBuildAllFlag:=false;
+
+    if not AProject.LastCompileComplete then begin
+      if ConsoleVerbosity>=0 then
+        DebugLn(DbgCap,'Compile was incomplete for ',AProject.IDAsString);
+      Note+='Last compile was incomplete.'+LineEnding
+        +'  State file='+StateFilename+LineEnding;
+      exit(mrYes);
+    end;
+
+    // check all required packages
+    Result:=PackageGraph.CheckCompileNeedDueToDependencies(AProject,
+                                  AProject.FirstRequiredDependency,
+                                  not (pfUseDesignTimePackages in AProject.Flags),
+                                  StateFileAge,Note);
+    if Result<>mrNo then exit;
+
+    // check project files
+    AnUnitInfo:=AProject.FirstPartOfProject;
+    while AnUnitInfo<>nil do begin
+      if EditorUnitInfoModified(AnUnitInfo) then
+      begin
         if ConsoleVerbosity>=0 then
-          DebugLn(DbgCap,'Src has changed ',AProject.IDAsString,' ',AnUnitInfo.Filename);
-        Note+='File "'+AnUnitInfo.Filename+'" of '+AProject.IDAsString+' is newer than state file:'+LineEnding
-          +'  File age="'+FileAgeToStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
-          +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
-          +'  State file='+StateFilename+LineEnding;
+          DebugLn(DbgCap,'Project file modified in source editor ',AProject.IDAsString,' ',AnUnitInfo.Filename);
+        Note+='Project file "'+AnUnitInfo.Filename+'" has been modified in source editor.'+LineEnding;
         exit(mrYes);
       end;
-      if AnUnitInfo.ComponentName<>'' then begin
-        LFMFilename:=ChangeFileExt(AnUnitInfo.Filename,'.lfm');
-        if FileExistsCached(LFMFilename)
-        and (StateFileAge<FileAgeCached(LFMFilename)) then begin
+      if (not AnUnitInfo.IsVirtual) and FileExistsCached(AnUnitInfo.Filename) then
+      begin
+        if (StateFileAge<FileAgeCached(AnUnitInfo.Filename)) then begin
           if ConsoleVerbosity>=0 then
-            DebugLn(DbgCap,'LFM has changed ',AProject.IDAsString,' ',LFMFilename);
-          Note+='File "'+LFMFilename+'" of '+AProject.IDAsString+' is newer than state file:'+LineEnding
-            +'  File age="'+FileAgeToStr(FileAgeCached(LFMFilename))+'"'+LineEnding
+            DebugLn(DbgCap,'Src has changed ',AProject.IDAsString,' ',AnUnitInfo.Filename);
+          Note+='File "'+AnUnitInfo.Filename+'" of '+AProject.IDAsString+' is newer than state file:'+LineEnding
+            +'  File age="'+FileAgeToStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
             +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
             +'  State file='+StateFilename+LineEnding;
           exit(mrYes);
         end;
+        if AnUnitInfo.ComponentName<>'' then begin
+          LFMFilename:=ChangeFileExt(AnUnitInfo.Filename,'.lfm');
+          if FileExistsCached(LFMFilename)
+          and (StateFileAge<FileAgeCached(LFMFilename)) then begin
+            if ConsoleVerbosity>=0 then
+              DebugLn(DbgCap,'LFM has changed ',AProject.IDAsString,' ',LFMFilename);
+            Note+='File "'+LFMFilename+'" of '+AProject.IDAsString+' is newer than state file:'+LineEnding
+              +'  File age="'+FileAgeToStr(FileAgeCached(LFMFilename))+'"'+LineEnding
+              +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+              +'  State file='+StateFilename+LineEnding;
+            exit(mrYes);
+          end;
+        end;
       end;
+      AnUnitInfo:=AnUnitInfo.NextPartOfProject;
     end;
-    AnUnitInfo:=AnUnitInfo.NextPartOfProject;
-  end;
 
-  // check all open editor files in unit/include path (maybe the user forgot
-  // to add them to the project)
-  AnUnitInfo:=AProject.FirstUnitWithEditorIndex;
-  while AnUnitInfo<>nil do begin
-    if CheckNonProjectEditorFile(AnUnitInfo) then
+    // check all open editor files in unit/include path (maybe the user forgot
+    // to add them to the project)
+    AnUnitInfo:=AProject.FirstUnitWithEditorIndex;
+    while AnUnitInfo<>nil do begin
+      if CheckNonProjectEditorFile(AnUnitInfo) then
+        exit(mrYes);
+      AnUnitInfo:=AnUnitInfo.NextUnitWithEditorIndex;
+    end;
+
+    // check project resources
+    IcoRes:=TProjectIcon(AProject.ProjResources[TProjectIcon]);
+    if (IcoRes<>nil) and (not IcoRes.IsEmpty)
+    and FilenameIsAbsolute(IcoRes.IcoFileName)
+    and FileExistsCached(IcoRes.IcoFileName)
+    and (StateFileAge<FileAgeCached(IcoRes.IcoFileName)) then begin
+      if ConsoleVerbosity>=0 then
+        debugln([DbgCap,'icon has changed ',
+          AProject.IDAsString,' "',IcoRes.IcoFileName,'"']);
+      Note+='Project''s ico file "'+IcoRes.IcoFileName+'" is newer than state file:'+LineEnding
+        +'  File age="'+FileAgeToStr(FileAgeCached(IcoRes.IcoFileName))+'"'+LineEnding
+        +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+        +'  State file='+StateFilename+LineEnding;
       exit(mrYes);
-    AnUnitInfo:=AnUnitInfo.NextUnitWithEditorIndex;
-  end;
+    end;
 
-  // check project resources
-  IcoRes:=TProjectIcon(AProject.ProjResources[TProjectIcon]);
-  if (IcoRes<>nil) and (not IcoRes.IsEmpty)
-  and FilenameIsAbsolute(IcoRes.IcoFileName)
-  and FileExistsCached(IcoRes.IcoFileName)
-  and (StateFileAge<FileAgeCached(IcoRes.IcoFileName)) then begin
-    if ConsoleVerbosity>=0 then
-      debugln([DbgCap,'icon has changed ',
-        AProject.IDAsString,' "',IcoRes.IcoFileName,'"']);
-    Note+='Project''s ico file "'+IcoRes.IcoFileName+'" is newer than state file:'+LineEnding
-      +'  File age="'+FileAgeToStr(FileAgeCached(IcoRes.IcoFileName))+'"'+LineEnding
-      +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
-      +'  State file='+StateFilename+LineEnding;
-    exit(mrYes);
-  end;
+    // check target file
+    aTargetFilename:=AProject.CompilerOptions.CreateTargetFilename;
+    //debugln(['TBuildManager.DoCheckIfProjectNeedsCompilation aTargetFilename=',aTargetFilename]);
+    if (aTargetFilename<>'') and not FileExistsCached(aTargetFilename) then begin
+      if ConsoleVerbosity>=0 then
+        debugln([DbgCap,'missing target file "',aTargetFilename,'"']);
+      Note+='Project''s target file "'+aTargetFilename+'" is missing.';
+      exit(mrYes);
+    end;
 
-  // check target file
-  aTargetFilename:=AProject.CompilerOptions.CreateTargetFilename;
-  //debugln(['TBuildManager.DoCheckIfProjectNeedsCompilation aTargetFilename=',aTargetFilename]);
-  if (aTargetFilename<>'') and not FileExistsCached(aTargetFilename) then begin
-    if ConsoleVerbosity>=0 then
-      debugln([DbgCap,'missing target file "',aTargetFilename,'"']);
-    Note+='Project''s target file "'+aTargetFilename+'" is missing.';
-    exit(mrYes);
+  finally
+    CompilerParams.Free;
   end;
 
   if not HasGUI then
@@ -1632,7 +1659,7 @@ function TBuildManager.CheckAmbiguousSources(const AFilename: string;
   begin
     Result:=mrOk;
     if CompareFilenames(AFilename,AmbiguousFilename)=0 then exit;
-    if not FileExistsUTF8(AmbiguousFilename) then exit;
+    if not FileExistsCached(AmbiguousFilename) then exit;
     if Compiling then begin
       Result:=AddCompileWarning(AmbiguousFilename);
       exit;
@@ -1775,93 +1802,73 @@ function TBuildManager.CheckUnitPathForAmbiguousPascalFiles(const BaseDir,
   end;
 
 var
-  EndPos: Integer;
-  StartPos: Integer;
-  CurDir: String;
-  FileInfo: TSearchRec;
   SourceUnitTree, CompiledUnitTree: TAVLTree;
   ANode: TAVLTreeNode;
   CurUnitName: String;
   CurFilename: String;
   AnUnitFile: PUnitFile;
   CurUnitTree: TAVLTree;
-  FileInfoNeedClose: Boolean;
   UnitPath: String;
   IgnoreAll: Boolean;
+  Files: TFilenameToStringTree;
+  Item: PStringToStringItem;
 begin
   Result:=mrOk;
   UnitPath:=TrimSearchPath(TheUnitPath,BaseDir,true);
 
   SourceUnitTree:=TAVLTree.Create(TListSortCompare(@CompareUnitFiles));
   CompiledUnitTree:=TAVLTree.Create(TListSortCompare(@CompareUnitFiles));
-  FileInfoNeedClose:=false;
+  Files:=TFilenameToStringTree.Create(true);
   try
     // collect all units (.pas, .pp, compiled units)
-    EndPos:=1;
-    while EndPos<=length(UnitPath) do begin
-      StartPos:=EndPos;
-      while (StartPos<=length(UnitPath)) and (UnitPath[StartPos]=';') do
-        inc(StartPos);
-      EndPos:=StartPos;
-      while (EndPos<=length(UnitPath)) and (UnitPath[EndPos]<>';') do
-        inc(EndPos);
-      if EndPos>StartPos then begin
-        CurDir:=AppendPathDelim(TrimFilename(copy(UnitPath,StartPos,EndPos-StartPos)));
-        FileInfoNeedClose:=true;
-        if FindFirstUTF8(CurDir+GetAllFilesMask,faAnyFile,FileInfo)=0 then begin
-          IgnoreAll:=false;
-          repeat
-            if (FileInfo.Name='.') or (FileInfo.Name='..') or (FileInfo.Name='')
-            or ((FileInfo.Attr and faDirectory)<>0) then continue;
-            if FilenameHasPascalExt(FileInfo.Name) then
-              CurUnitTree:=SourceUnitTree
-            else if FilenameExtIs(FileInfo.Name,CompiledExt,true) then
-              CurUnitTree:=CompiledUnitTree
-            else
-              continue;
-            CurUnitName:=ExtractFilenameOnly(FileInfo.Name);
-            if not LazIsValidIdent(CurUnitName) then
-              continue;
-            CurFilename:=CurDir+FileInfo.Name;
-            //DebugLn(['TBuildManager.CheckUnitPathForAmbiguousPascalFiles ',CurUnitName,' ',CurFilename]);
-            // check if unit already found
-            ANode:=CurUnitTree.FindKey(PChar(CurUnitName),
-                                 TListSortCompare(@CompareUnitNameAndUnitFile));
-            if (ANode<>nil) and (not IgnoreAll) then begin
-              if ConsoleVerbosity>=0 then
-                DebugLn(['Note: (lazarus) [TBuildManager.CheckUnitPathForAmbiguousPascalFiles] CurUnitName="',CurUnitName,'" CurFilename="',CurFilename,'" OtherUnitName="',PUnitFile(ANode.Data)^.FileUnitName,'" OtherFilename="',PUnitFile(ANode.Data)^.Filename,'"']);
-              // pascal unit exists twice
-              Result:=IDEQuestionDialog(lisAmbiguousUnitFound,
-                Format(lisTheUnitExistsTwiceInTheUnitPathOfThe,[CurUnitName,ContextDescription])
-                +LineEnding
-                +LineEnding
-                +'1. "'+PUnitFile(ANode.Data)^.Filename+'"'+LineEnding
-                +'2. "'+CurFilename+'"'+LineEnding
-                +LineEnding
-                +lisHintCheckIfTwoPackagesContainAUnitWithTheSameName,
-                mtWarning, [mrIgnore,
-                            mrYesToAll, lisIgnoreAll,
-                            mrAbort]);
-              case Result of
-              mrIgnore: ;
-              mrYesToAll: IgnoreAll:=true;
-              else exit;
-              end;
-            end;
-            // add unit to tree
-            New(AnUnitFile);
-            AnUnitFile^.FileUnitName:=CurUnitName;
-            AnUnitFile^.Filename:=CurFilename;
-            CurUnitTree.Add(AnUnitFile);
-          until FindNextUTF8(FileInfo)<>0;
+    CollectFilesInSearchPath(UnitPath,Files,'Unit');
+    IgnoreAll:=false;
+    for Item in Files do
+    begin
+      CurFilename:=Item^.Name;
+      if FilenameHasPascalExt(CurFilename) then
+        CurUnitTree:=SourceUnitTree
+      else if FilenameExtIs(CurFilename,CompiledExt,true) then
+        CurUnitTree:=CompiledUnitTree
+      else
+        continue;
+      CurUnitName:=ExtractFilenameOnly(CurFilename);
+      if not LazIsValidIdent(CurUnitName) then
+        continue;
+      //DebugLn(['TBuildManager.CheckUnitPathForAmbiguousPascalFiles ',CurUnitName,' ',CurFilename]);
+      // check if unit already found
+      ANode:=CurUnitTree.FindKey(PChar(CurUnitName),
+                           TListSortCompare(@CompareUnitNameAndUnitFile));
+      if (ANode<>nil) and (not IgnoreAll) then begin
+        if ConsoleVerbosity>=0 then
+          DebugLn(['Note: (lazarus) [TBuildManager.CheckUnitPathForAmbiguousPascalFiles] CurUnitName="',CurUnitName,'" CurFilename="',CurFilename,'" OtherUnitName="',PUnitFile(ANode.Data)^.FileUnitName,'" OtherFilename="',PUnitFile(ANode.Data)^.Filename,'"']);
+        // pascal unit exists twice
+        Result:=IDEQuestionDialog(lisAmbiguousUnitFound,
+          Format(lisTheUnitExistsTwiceInTheUnitPathOfThe,[CurUnitName,ContextDescription])
+          +LineEnding
+          +LineEnding
+          +'1. "'+PUnitFile(ANode.Data)^.Filename+'"'+LineEnding
+          +'2. "'+CurFilename+'"'+LineEnding
+          +LineEnding
+          +lisHintCheckIfTwoPackagesContainAUnitWithTheSameName,
+          mtWarning, [mrIgnore,
+                      mrYesToAll, lisIgnoreAll,
+                      mrAbort]);
+        case Result of
+        mrIgnore: ;
+        mrYesToAll: IgnoreAll:=true;
+        else exit;
         end;
-        FindCloseUTF8(FileInfo);
-        FileInfoNeedClose:=false;
       end;
+      // add unit to tree
+      New(AnUnitFile);
+      AnUnitFile^.FileUnitName:=CurUnitName;
+      AnUnitFile^.Filename:=CurFilename;
+      CurUnitTree.Add(AnUnitFile);
     end;
   finally
     // clean up
-    if FileInfoNeedClose then FindCloseUTF8(FileInfo);
+    Files.Free;
     FreeUnitTree(SourceUnitTree);
     FreeUnitTree(CompiledUnitTree);
   end;
@@ -1902,8 +1909,8 @@ begin
                   and (Project1.FindFile(Filename,[pfsfOnlyProjectFiles])<>nil);
   // check if file in source directory of project
   if (not IsPartOfProject) and (Project1<>nil)
-    and (SearchDirectoryInSearchPath(ExtractFilePath(Filename),
-         Project1.SourceDirectories.CreateSearchPathFromAllFiles)>0)
+    and (SearchDirectoryInMaskedSearchPath(Project1.SourceDirectories.CreateSearchPathFromAllFiles,
+      ExtractFilePath(Filename))>0)
   then
     IsPartOfProject:=true;
   // check options
@@ -2050,9 +2057,9 @@ begin
     Result:='';
   end else begin
     Result:=ExtractFileNameOnly(AnUnitInfo.Filename)+ResourceFileExt;
-    Result:=FileUtil.SearchFileInPath(Result,'',
+    Result:=SearchFileInSearchPath(Result,'',
         CodeToolBoss.GetIncludePathForDirectory(ExtractFilePath(AnUnitInfo.Filename)),
-        ';',[sffDontSearchInBasePath,sffSearchLoUpCase,sffFile]);
+        [TSPSearchFileFlag.SearchLoUpCase]);
   end;
   if (Result='') and UseDefaultIfNotFound then
     Result:=GetDefaultLRSFilename(AnUnitInfo);
@@ -2296,6 +2303,17 @@ begin
     Result:=GetDefaultSrcOSForTargetOS(Param)
   else
     Result:=GetDefaultSrcOSForTargetOS(GetTargetOS);
+end;
+
+function TBuildManager.MacroFuncSubtarget(const Param: string;
+  const Data: PtrInt; var Abort: boolean): string;
+begin
+  if Data=CompilerOptionMacroPlatformIndependent then
+    Result:='%(FPC_SUBTARGET)'
+  else if SysUtils.CompareText(Param,'IDE')=0 then
+    Result:=''
+  else
+    Result:=GetSubtarget;
 end;
 
 function TBuildManager.MacroFuncFPCVer(const Param: string; const Data: PtrInt;
@@ -2641,7 +2659,7 @@ begin
   end;
 end;
 
-function TBuildManager.OnGetBuildMacroValues(Options: TBaseCompilerOptions;
+function TBuildManager.GetBuildMacroValuesHandler(Options: TBaseCompilerOptions;
   IncludeSelf: boolean): TCTCfgScriptVariables;
 {off $DEFINE VerboseBuildMacros}
 
@@ -2667,7 +2685,7 @@ function TBuildManager.OnGetBuildMacroValues(Options: TBaseCompilerOptions;
         APackage:=TLazPackage(List[i]);
         OtherOpts:=APackage.CompilerOptions;
         if OtherOpts.BuildMacros=nil then continue;
-        Values:=OnGetBuildMacroValues(OtherOpts,true);
+        Values:=GetBuildMacroValuesHandler(OtherOpts,true);
         if Values=nil then continue;
         for j:=0 to OtherOpts.BuildMacros.Count-1 do begin
           Macro:=OtherOpts.BuildMacros[j];
@@ -2751,6 +2769,19 @@ function TBuildManager.OnGetBuildMacroValues(Options: TBaseCompilerOptions;
         s:=GetCompiledTargetCPU;
       end;
     end;
+    // Subtarget
+    if not Values.IsDefined('Subtarget') then begin
+      s:='';
+      if FBuildTarget<>nil then
+        s:=FBuildTarget.CompilerOptions.Subtarget;
+      if s='' then
+        s:=fSubtarget;
+      Values.Values['Subtarget']:=s;
+    end;
+    // Laz_FullVersion
+    if not Values.IsDefined('Laz_FullVersion') then begin
+      SetCTCSVariableAsNumber(Values.GetVariable('Laz_FullVersion',true),laz_fullversion);
+    end;
   end;
 
   procedure ApplyMacroOverrides(Vars: TCTCfgScriptVariables);
@@ -2799,7 +2830,7 @@ begin
       Result.Clear;
 
       // use inherited as default
-      Values:=OnGetBuildMacroValues(Options,false);
+      Values:=GetBuildMacroValuesHandler(Options,false);
 
       // add macro values of self
       if Values<>nil then
@@ -2932,7 +2963,7 @@ begin
   Result:=not Project1.BuildModes.IsSessionMode(Identifier);
 end;
 
-procedure TBuildManager.SetBuildTarget(const TargetOS, TargetCPU, TargetProcessor,
+procedure TBuildManager.SetBuildTarget(const TargetOS, TargetCPU, TargetProcessor, Subtarget,
   LCLWidgetType: string; ScanFPCSrc: TScanModeFPCSources; Quiet: boolean); //Ultibo
 
   function GetEffectiveLCLWidgetType: string;
@@ -2952,6 +2983,7 @@ var
   OldTargetOS: String;
   OldTargetCPU: String;
   OldTargetProcessor: String; //Ultibo
+  OldSubtarget: String;
   OldLCLWidgetType: String;
   PCTargetChanged: Boolean;
   LCLTargetChanged: Boolean;
@@ -2960,15 +2992,17 @@ var
   CompQueryOptions, CompilerFilename: String;
 begin
   {$IFDEF VerboseDefaultCompilerTarget}
-  debugln(['TBuildManager.SetBuildTarget TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" LCLWidgetType="',LCLWidgetType,'"']);
+  debugln(['TBuildManager.SetBuildTarget TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" Subtarget="',Subtarget,'" LCLWidgetType="',LCLWidgetType,'"']);
   {$ENDIF}
   OldTargetOS:=fTargetOS;
   OldTargetCPU:=fTargetCPU;
   OldTargetProcessor:=fTargetProcessor; //Ultibo
+  OldSubtarget:=fSubtarget;
   OldLCLWidgetType:=fLCLWidgetType;
   OverrideTargetOS:=GetFPCTargetOS(TargetOS);
   OverrideTargetCPU:=GetFPCTargetCPU(TargetCPU);
   OverrideTargetProcessor:=GetFPCTargetProcessor(TargetProcessor); //Ultibo
+  OverrideSubtarget:=GetFPCSubtarget(Subtarget);
   OverrideLCLWidgetType:=lowercase(LCLWidgetType);
 
   // compute new TargetOS
@@ -3000,6 +3034,16 @@ begin
     fTargetProcessor:=''; //Ultibo
   if SysUtils.CompareText(fTargetProcessor,'default')=0 then //Ultibo
     fTargetProcessor:=''; //Ultibo
+
+  // compute new Subtarget
+  if OverrideSubtarget<>'' then
+    fSubtarget:=OverrideSubtarget
+  else if FBuildTarget<>nil then
+    fSubtarget:=FBuildTarget.CompilerOptions.Subtarget
+  else
+    fSubtarget:='';
+  if SysUtils.CompareText(fSubtarget,'default')=0 then
+    fSubtarget:='';
 
   if (fTargetOS='') or (fTargetCPU='') then
   begin
@@ -3038,6 +3082,7 @@ begin
   PCTargetChanged:=(OldTargetOS<>fTargetOS)
                     or (OldTargetCPU<>fTargetCPU)
                     or (OldTargetProcessor<>fTargetProcessor) //Ultibo
+                    or (OldSubtarget<>fSubtarget)
                     or (CodeToolBoss.DefineTree.FindDefineTemplateByName(
                          StdDefTemplLazarusSources,true)=nil);
   if PCTargetChanged then
@@ -3052,9 +3097,10 @@ begin
 
   if PCTargetChanged or LCLTargetChanged then begin
     if ConsoleVerbosity>=0 then
-      DebugLn(['Hint: (lazarus) [TBuildManager.SetBuildTarget] Old=',OldTargetCPU,
-               '-',OldTargetOS,'-',OldLCLWidgetType,' New=',fTargetCPU,'-',fTargetOS,
-               '-',fLCLWidgetType,' Changed: OS/CPU=',PCTargetChanged,' LCL=',LCLTargetChanged]);
+      DebugLn(['Hint: (lazarus) [TBuildManager.SetBuildTarget]',
+          ' Old=',OldTargetCPU,'-',OldTargetOS,'-',OldSubtarget,'-',OldLCLWidgetType,
+          ' New=',fTargetCPU,'-',fTargetOS,'-',fSubtarget,'-',fLCLWidgetType,
+          ' Changed: OS/CPU=',PCTargetChanged,' LCL=',LCLTargetChanged]);
   end;
   if LCLTargetChanged then
     CodeToolBoss.SetGlobalValue(ExternalMacroStart+'LCLWidgetType',fLCLWidgetType);
@@ -3077,7 +3123,7 @@ begin
   FBuildTarget:=Project1;
   if FBuildTarget<>nil then
     FBuildTarget.IDEOptions.AddHandlerDestroy(@OnProjectDestroy);
-  SetBuildTarget('','','','',ScanFPCSrc,Quiet); //Ultibo
+  SetBuildTarget('','','','','',ScanFPCSrc,Quiet); //Ultibo
 end;
 
 procedure TBuildManager.SetBuildTargetIDE(aQuiet: boolean);
@@ -3085,7 +3131,7 @@ var
   NewTargetOS: String;
   NewTargetCPU: String;
   NewTargetProcessor: String; //Ultibo
-  NewLCLWidgetSet: String;
+  NewLCLWidgetSet, NewSubtarget: String;
 begin
   //debugln(['TBuildManager.SetBuildTargetIDE START']);
   FBuildTarget:=nil;
@@ -3093,11 +3139,12 @@ begin
     NewTargetOS:=BuildLazOpts.TargetOS;
     NewTargetCPU:=BuildLazOpts.TargetCPU;
     NewTargetProcessor:=''; //Ultibo
+    NewSubtarget:=BuildLazOpts.Subtarget;
     NewLCLWidgetSet:=LCLPlatformDirNames[BuildLazOpts.TargetPlatform];
   end;
   if ConsoleVerbosity>=1 then
-    debugln(['Hint: (lazarus) [TBuildManager.SetBuildTargetIDE] OS=',NewTargetOS,' CPU=',NewTargetCPU,' WS=',NewLCLWidgetSet]);
-  SetBuildTarget(NewTargetOS,NewTargetCPU,NewTargetProcessor,NewLCLWidgetSet,smsfsBackground,aQuiet); //Ultibo
+    debugln(['Hint: (lazarus) [TBuildManager.SetBuildTargetIDE] OS=',NewTargetOS,' CPU=',NewTargetCPU,' Subtarget=',NewSubtarget,' WS=',NewLCLWidgetSet]);
+  SetBuildTarget(NewTargetOS,NewTargetCPU,NewTargetProcessor,NewSubtarget,NewLCLWidgetSet,smsfsBackground,aQuiet); //Ultibo
 end;
 
 function TBuildManager.BuildTargetIDEIsDefault: boolean;

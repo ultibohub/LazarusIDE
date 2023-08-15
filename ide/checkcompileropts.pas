@@ -302,8 +302,8 @@ function TCheckCompilerOptsDlg.CheckCompileBogusFile(
   const CompilerFilename: string): TModalResult;
 var
   TestDir: String;
-  BogusFilename: String;
-  CmdLineParams, ErrMsg: String;
+  BogusFilename, ErrMsg: String;
+  CmdLineParams: TStrings;
   CompileTool: TAbstractExternalTool;
   Kind: TPascalCompiler;
 begin
@@ -329,11 +329,12 @@ begin
     Result:=mrCancel;
     exit;
   end;
+  CmdLineParams:=nil;
   try
     // create compiler command line options
-    CmdLineParams:=Options.MakeOptionsString(
-              [ccloAddVerboseAll,ccloDoNotAppendOutFileOption,ccloAbsolutePaths])
-              +' '+BogusFilename;
+    CmdLineParams:=Options.MakeCompilerParams(
+              [ccloAddVerboseAll,ccloDoNotAppendOutFileOption,ccloAbsolutePaths]);
+    CmdLineParams.Add(BogusFilename);
     CompileTool:=ExternalToolList.Add(dlgCCOTestToolCompilingEmptyFile);
     CompileTool.Reference(Self,ClassName);
     try
@@ -344,13 +345,14 @@ begin
       CompileTool.AddParsers(SubToolMake);
       CompileTool.Process.CurrentDirectory:=TestDir;
       CompileTool.Process.Executable:=CompilerFilename;
-      CompileTool.CmdLineParams:=CmdLineParams;
+      CompileTool.Process.Parameters.Assign(CmdLineParams);
       CompileTool.Execute;
       CompileTool.WaitForExit;
     finally
       CompileTool.Release(Self);
     end;
   finally
+    CmdLineParams.Free;
     DeleteFileUTF8(BogusFilename);
   end;
   
@@ -407,7 +409,7 @@ begin
       p:=1;
       repeat
         SrcDir:=GetNextDirectoryInSearchPath(UnitPath,p);
-        if SearchDirectoryInSearchPath(OtherSrcPath,SrcDir)>0 then
+        if SearchDirectoryInMaskedSearchPath(OtherSrcPath,SrcDir)>0 then
           AddWarning(Format(lisTheUnitSearchPathOfContainsTheSourceDirectoryOfPac,
                             [CurOptions.GetOwnerName, SrcDir, UsedPkg.Name]));
       until p>length(UnitPath);
@@ -460,29 +462,19 @@ end;
 
 function TCheckCompilerOptsDlg.FindAllPPUFiles(const AnUnitPath: string): TStrings;
 var
-  Directory: String;
-  p: Integer;
-  FileInfo: TSearchRec;
+  Files: TFilenameToStringTree;
+  Item: PStringToStringItem;
 begin
   Result:=TStringList.Create;
 
-  p:=1;
-  while p<=length(AnUnitPath) do begin
-    Directory:=TrimAndExpandDirectory(GetNextDirectoryInSearchPath(AnUnitPath,p));
-    if Directory<>'' then begin
-      if FindFirstUTF8(Directory+GetAllFilesMask,faAnyFile,FileInfo)=0
-      then begin
-        repeat
-          // check if special file
-          if (FileInfo.Name='.') or (FileInfo.Name='..') or (FileInfo.Name='') then
-            continue;
-          // check extension
-          if FilenameExtIs(FileInfo.Name,'ppu',true) then
-            Result.Add(Directory+FileInfo.Name);
-        until FindNextUTF8(FileInfo)<>0;
-      end;
-      FindCloseUTF8(FileInfo);
-    end;
+  Files:=TFilenameToStringTree.Create(false);
+  try
+    CollectFilesInSearchPath(AnUnitPath,Files);
+    for Item in Files do
+      if FilenameExtIs(Item^.Name,'ppu',true) then
+        Result.Add(Item^.Name);
+  finally
+    Files.Free;
   end;
 end;
 
@@ -687,7 +679,7 @@ end;
 function TCheckCompilerOptsDlg.CheckFPCUnitPathsContainSources(
   const FPCCfgUnitPath: string): TModalResult;
 // The FPC standard unit path does not include source directories.
-// If it contain source directories the user added these unit paths himself.
+// If it contains source directories the user added these unit paths himself.
 // This is probably a hack and has two disadvantages:
 // 1. The IDE ignores these paths
 // 2. The user risks to create various .ppu for these sources which leads to
@@ -747,28 +739,28 @@ begin
   end;
   // check unit search path
   SrcPath:=CurOptions.GetParsedPath(pcosUnitPath,icoNone,false);
-  if SearchDirectoryInSearchPath(SrcPath,OutputDir)>0 then begin
+  if SearchDirectoryInMaskedSearchPath(SrcPath,OutputDir)>0 then begin
     AddWarning(Format(lisTheOutputDirectoryOfIsListedInTheUnitSearchPathOf, [
       CurOptions.GetOwnerName, CurOptions.GetOwnerName])
       +lisTheOutputDirectoryShouldBeASeparateDirectoryAndNot);
   end;
   // check include search path
   SrcPath:=CurOptions.GetParsedPath(pcosIncludePath,icoNone,false);
-  if SearchDirectoryInSearchPath(SrcPath,OutputDir)>0 then begin
+  if SearchDirectoryInMaskedSearchPath(SrcPath,OutputDir)>0 then begin
     AddWarning(Format(lisTheOutputDirectoryOfIsListedInTheIncludeSearchPath, [
       CurOptions.GetOwnerName, CurOptions.GetOwnerName])
       +lisTheOutputDirectoryShouldBeASeparateDirectoryAndNot);
   end;
   // check inherited unit search path
   SrcPath:=CurOptions.GetParsedPath(pcosNone,icoUnitPath,false);
-  if SearchDirectoryInSearchPath(SrcPath,OutputDir)>0 then begin
+  if SearchDirectoryInMaskedSearchPath(SrcPath,OutputDir)>0 then begin
     AddWarning(Format(lisTheOutputDirectoryOfIsListedInTheInheritedUnitSear, [
       CurOptions.GetOwnerName, CurOptions.GetOwnerName])
       +lisTheOutputDirectoryShouldBeASeparateDirectoryAndNot);
   end;
   // check inherited include search path
   SrcPath:=CurOptions.GetParsedPath(pcosNone,icoIncludePath,false);
-  if SearchDirectoryInSearchPath(SrcPath,OutputDir)>0 then begin
+  if SearchDirectoryInMaskedSearchPath(SrcPath,OutputDir)>0 then begin
     AddWarning(Format(lisTheOutputDirectoryOfIsListedInTheInheritedIncludeS, [
       CurOptions.GetOwnerName, CurOptions.GetOwnerName])
       +lisTheOutputDirectoryShouldBeASeparateDirectoryAndNot);
@@ -819,10 +811,10 @@ begin
       PPUFilename:=PPUFiles[i];
       AUnitName:=ExtractFileNameOnly(PPUFilename);
       // search .pas/.pp/.p file
-      if SearchPascalUnitInPath(AUnitName,'',SrcPath,';',ctsfcAllCase)<>'' then
+      if SearchUnitInSearchPath(AUnitName,'',SrcPath,true)<>'' then
         PPUFiles.Delete(i)
-      // check for main source
       else if (Options.Owner is TLazProject) then begin
+        // check for main source
         CurProject:=TLazProject(Options.Owner);
         if (CurProject.MainFileID>=0) then begin
           ProjFile:=CurProject.MainFile;

@@ -1552,51 +1552,8 @@ begin
     Result := False;
 end;
 
-function ViewFromPoint(view: NSView;Point: TPoint): HWND;
-var rect: TRect;
-    p:TPoint;
-    cb: ICommonCallback;
-    cbo: TObject;
-  hv  : NSView;
-begin
-  Result:=0;
-  if not assigned(view) then
-     exit;
-  cb := view.lclGetCallback;
-  if Assigned(cb) then
-  begin
-    cbo := cb.GetCallbackObject;
-    if not (cbo is TLCLCommonCallback) then Exit;
-    p:=Point;
-    // The hit test is done by the out-side frame (Handle)
-    hv := TLCLCommonCallback(cbo).HandleFrame;
-    hv.lclScreenToLocal(p.X,p.Y);
-    rect:=hv.lclClientFrame;
-    if PtInRect(rect, p) then
-      //if hv.lclClassName;
-      Result := HWND(hv)
-  end
-end;
-
-function RecurseSubviews(view: NSView;Point: TPoint):HWND;
-var  sv:integer;
-begin
-  // first check views subview if there is a embedded view
-  Result:=0;
-  if not Assigned(view) or (view.isHidden) or (not view.lclIsEnabled) then Exit;
-  sv:=0;
-  while (Result=0) and (sv<view.subviews.count) do
-    begin
-    Result:=RecurseSubviews(view.subviews.objectAtIndex(sv),Point);
-    inc(sv)
-    end;
-  if Result=0 then
-     Result:=ViewFromPoint(view,Point);
-end;
-
 function TCocoaWidgetSet.WindowFromPoint(Point: TPoint): HWND;
 var 
-  winrect: TRect;
   windows: NSArray;
   win: integer;
   window, windowbelowpoint: NSWindow;
@@ -1607,21 +1564,19 @@ begin
   if not assigned(NSApp) then
     Exit;
 
+  p.x:=Point.X;
+  p.y:=NSScreenZeroHeight-Point.Y;
+  winnr:=NSWindow.windowNumberAtPoint_belowWindowWithWindowNumber(p,0);
+  windowbelowpoint:=NSWindow(NSApp.windowWithWindowNumber(winnr));
+
   windows := NSApp.windows;
   for win := 0 to windows.count - 1 do
   begin
     window:=windows.objectAtIndex(win);
-    p.x:=Point.X;
-    p.y:=NSScreenZeroHeight-Point.Y;
-    winnr:=NSWindow.windowNumberAtPoint_belowWindowWithWindowNumber(p,0);
-    windowbelowpoint:=NSWindow(NSApp.windowWithWindowNumber(winnr));
     if windowbelowpoint=window then
     begin
-      Result:=RecurseSubviews(window.contentView, Point);
-      if Result<>0 then
-      begin
-        exit;
-      end;
+      Result:= HWND(window.contentView);
+      exit;
     end;
   end;
 end;
@@ -2092,6 +2047,34 @@ begin
   end;
 end;
 
+{------------------------------------------------------------------------------
+Method:  PtInRegion
+Params:  RNG  - Handle to region
+         X, Y - Point
+Returns: If the specified point lies in the region
+------------------------------------------------------------------------------}
+function TCocoaWidgetSet.PtInRegion(RGN: HRGN; X, Y: Integer): Boolean;
+begin
+  Result := False;
+
+  {$IFDEF VerboseWinAPI}
+    DebugLn('TCocoaWidgetSet.PtInRegion RGN: ' + DbgS(RGN), ' X: ', DbgS(X),
+      ' Y: ', DbgS(Y));
+  {$ENDIF}
+
+  if not (TObject(RGN) is TCocoaRegion) then
+  begin
+    DebugLn('TCocoaWidgetSet.PtInRegion Error - invalid region ', DbgS(RGN), '!');
+    Exit;
+  end;
+
+  Result := TCocoaRegion(RGN).ContainsPoint(Classes.Point(X, Y));
+
+  {$IFDEF VerboseWinAPI}
+    DebugLn('TCocoaRegion.PtInRegion Result: ' + DbgS(Result));
+  {$ENDIF}
+end;
+
 function TCocoaWidgetSet.Rectangle(DC: HDC; X1, Y1, X2, Y2: Integer): Boolean;
 var
   ctx: TCocoaContext;
@@ -2304,6 +2287,17 @@ begin
     Result := 0;
 end;
 
+function GetCurrentEventKeyState(): NSUInteger;
+var
+  event: NSEvent;
+begin
+  event := NSApp.currentEvent;
+  if Assigned(event) then
+    Result := event.modifierFlags
+  else
+    Result := NSEvent.modifierFlags_;
+end;
+
 function TCocoaWidgetSet.GetKeyState(nVirtKey: Integer): Smallint;
 const
   StateDown    = SmallInt($FF80);
@@ -2315,7 +2309,7 @@ var
 begin
   // NSApp.currentEvent.modifierFlags doesn't work before events start coming,
   // see bug 29272 and http://lists.apple.com/archives/cocoa-dev/2010/Feb/msg00105.html
-  Modifiers := NSEvent.modifierFlags_();
+  Modifiers := GetCurrentEventKeyState();
   case nVirtKey of
     VK_MENU,
     VK_LMENU:

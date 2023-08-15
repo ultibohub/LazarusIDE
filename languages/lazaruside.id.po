@@ -5036,6 +5036,14 @@ msgstr ""
 msgid "Add new build mode, copying settings from \"%s\""
 msgstr ""
 
+#: lazarusidestrconsts.lisaddnewdiskfiles
+msgid "Add new disk files?"
+msgstr ""
+
+#: lazarusidestrconsts.lisaddnewfilesfromfilesystem
+msgid "Add New Files from File System"
+msgstr ""
+
 #: lazarusidestrconsts.lisaddnewmacro
 msgid "Add new macro"
 msgstr ""
@@ -5058,6 +5066,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lisaddparameterbrackets
 msgid "Add parameter brackets"
+msgstr ""
+
+#: lazarusidestrconsts.lisaddthefollowingfiles
+msgid "Add the following files:"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddtoincludesearchpath
@@ -5183,6 +5195,10 @@ msgstr "Ijinkan pencarian untuk multipel baris"
 
 #: lazarusidestrconsts.lisallparametersofthisfunctionarealreadysetatthiscall
 msgid "All parameters of this function are already set at this call. Nothing to add."
+msgstr ""
+
+#: lazarusidestrconsts.lisallpaspppincinunitincludepatharealreadyinaprojectp
+msgid "All .pas, .pp, .p, .inc in unit/include path are already in a project/package."
 msgstr ""
 
 #: lazarusidestrconsts.lisallyourmodificationstowillbelostandthefilereopened
@@ -14811,6 +14827,10 @@ msgstr ""
 msgid "(None selected)"
 msgstr ""
 
+#: lazarusidestrconsts.lisnonewfilefound
+msgid "No new file found"
+msgstr ""
+
 #: lazarusidestrconsts.lisnonodeselected
 msgid "no node selected"
 msgstr ""
@@ -18616,6 +18636,10 @@ msgstr "Sub Prosedur"
 msgid "Sub Procedure on same level"
 msgstr "Sub Prosedur pada tingkat yang sama"
 
+#: lazarusidestrconsts.lissubtarget
+msgid "Subtarget"
+msgstr ""
+
 #: lazarusidestrconsts.lissuccess
 msgid "Success"
 msgstr "Sukses"
@@ -20671,6 +20695,10 @@ msgstr "Direktori kerja untuk membangun"
 #: lazarusidestrconsts.lisworkingdirectoryforrun
 msgid "Working directory for run"
 msgstr "Direktori kerja untuk menjalankan"
+
+#: lazarusidestrconsts.liswriteconfiginsteadofcommandlineparameters
+msgid "Write config instead of command line parameters"
+msgstr ""
 
 #: lazarusidestrconsts.liswriteerror
 msgid "Write Error"

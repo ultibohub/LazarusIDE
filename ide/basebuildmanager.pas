@@ -57,6 +57,7 @@ type
     function GetTargetOS: string; virtual; abstract;
     function GetTargetCPU: string; virtual; abstract;
     function GetTargetProcessor: string; virtual; abstract; //Ultibo
+    function GetSubtarget: string; virtual; abstract;
     function GetLCLWidgetType: string; virtual; abstract;
     function GetRunCommandLine: string; virtual; abstract;
     function GetRunWorkingDir: string; virtual; abstract;
