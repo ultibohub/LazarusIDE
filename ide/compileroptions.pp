@@ -2073,13 +2073,13 @@ begin
     //debugln(['TBaseCompilerOptions.CreateTargetFilename ParsedOpts.OutputDirectoryOverride=',ParsedOpts.OutputDirectoryOverride]);
     if ParsedOpts.OutputDirectoryOverride<>'' then
     begin
-      // the program is put into the output directory
+      // the program/package is put into the output directory
       UnitOutDir:=GetUnitOutPath(false);
       if UnitOutDir='' then
         UnitOutDir:=BaseDirectory;
       Result:=AppendPathDelim(UnitOutDir)+ExtractFileName(Result);
     end else if BaseDirectory<>'' then begin
-      // the program is put relative to the base directory
+      // the program/package is put relative to the base directory
       Result:=CreateAbsolutePath(Result,BaseDirectory);
     end else begin
       // put into test directory
@@ -3752,10 +3752,10 @@ begin
   FOutputDirectoryOverride:=AValue;
   if InvalidateParseOnChange then
     IncreaseCompilerParseStamp;// the output dir is used by other packages
-  if FOutputDirectoryOverride<>'' then
-    DebugLn(['TParsedCompilerOptions.SetOutputDirectoryOverride New=',FOutputDirectoryOverride])
-  else
-    DebugLn(['TParsedCompilerOptions.SetOutputDirectoryOverride using default']);
+  //if FOutputDirectoryOverride<>'' then
+  //  DebugLn(['TParsedCompilerOptions.SetOutputDirectoryOverride New=',FOutputDirectoryOverride])
+  //else
+  //  DebugLn(['TParsedCompilerOptions.SetOutputDirectoryOverride using default']);
 end;
 
 constructor TParsedCompilerOptions.Create(TheOwner: TObject);

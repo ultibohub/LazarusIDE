@@ -535,17 +535,31 @@ type
 type
   TCustomTaskDialog = class;
 
-  TTaskDialogFlag = (tfEnableHyperlinks, tfUseHiconMain,
-    tfUseHiconFooter, tfAllowDialogCancellation,
-    tfUseCommandLinks, tfUseCommandLinksNoIcon,
-    tfExpandFooterArea, tfExpandedByDefault,
-    tfVerificationFlagChecked, tfShowProgressBar,
-    tfShowMarqueeProgressBar, tfCallbackTimer,
-    tfPositionRelativeToWindow, tfRtlLayout,
-    tfNoDefaultRadioButton, tfCanBeMinimized,
-    tfNoSetForeGround, tfSizeToContent,
-    tfForceNonNative, tfEmulateClassicStyle,
-    tfQuery, tfSimpleQuery, tfQueryFixedChoices, tfQueryFocused);
+  TTaskDialogFlag = (
+    tfEnableHyperlinks,       //Native Vista+ only
+    tfUseHiconMain,
+    tfUseHiconFooter,
+    tfAllowDialogCancellation,
+    tfUseCommandLinks,
+    tfUseCommandLinksNoIcon,
+    tfExpandFooterArea,
+    tfExpandedByDefault,
+    tfVerificationFlagChecked,
+    tfShowProgressBar,        //Native Vista+ only, not fully functional
+    tfShowMarqueeProgressBar, //Native Vista+ only, not fully functional
+    tfCallbackTimer,
+    tfPositionRelativeToWindow,
+    tfRtlLayout,              //Native Vista+ only
+    tfNoDefaultRadioButton,
+    tfCanBeMinimized,
+    tfNoSetForeGround,        //Native Vista+ only
+    tfSizeToContent,          //Native Vista+ only
+    tfForceNonNative,
+    tfEmulateClassicStyle,    //this and following flags: Emulated dialog only
+    tfQuery,
+    tfSimpleQuery,
+    tfQueryFixedChoices,
+    tfQueryFocused);
   TTaskDialogFlags = set of TTaskDialogFlag;
 
   TTaskDialogCommonButton = (tcbOk, tcbYes, tcbNo, tcbCancel, tcbRetry, tcbClose);
@@ -627,8 +641,10 @@ type
     FButton: TTaskDialogButtonItem;
     FButtons: TTaskDialogButtons;
     FCaption: TTranslateString;
-    FCollapsButtonCaption: TTranslateString;
+    FCollapseButtonCaption: TTranslateString;
     FCommonButtons: TTaskDialogCommonButtons;
+    FCustomFooterIcon: TIcon;
+    FCustomMainIcon: TIcon;
     FDefaultButton: TTaskDialogCommonButton;
     FExpandButtonCaption: TTranslateString;
     FExpanded: Boolean;
@@ -661,7 +677,11 @@ type
     FVerificationText: TTranslateString;
     FWidth: Integer;
     FOnButtonClicked: TTaskDlgClickEvent;
+    function IsCustomFooterIconStored: Boolean;
+    function IsCustomMainIconStored: Boolean;
     procedure SetButtons(const Value: TTaskDialogButtons);
+    procedure SetCustomFooterIcon(AValue: TIcon);
+    procedure SetCustomMainIcon(AValue: TIcon);
     procedure SetFlags(AValue: TTaskDialogFlags);
     procedure SetQueryChoices(AValue: TStrings);
     procedure SetRadioButtons(const Value: TTaskDialogButtons);
@@ -693,8 +713,10 @@ type
     property Button: TTaskDialogButtonItem read FButton write FButton;
     property Buttons: TTaskDialogButtons read FButtons write SetButtons;
     property Caption: TTranslateString read FCaption write FCaption;
+    property CustomFooterIcon: TIcon read FCustomFooterIcon write SetCustomFooterIcon stored IsCustomFooterIconStored;
+    property CustomMainIcon: TIcon read FCustomMainIcon write SetCustomMainIcon stored IsCustomMainIconStored;
     property CommonButtons: TTaskDialogCommonButtons read FCommonButtons write FCommonButtons default [tcbOk, tcbCancel];
-    property CollapsButtonCaption: TTranslateString read FCollapsButtonCaption write FCollapsButtonCaption;
+    property CollapseButtonCaption: TTranslateString read FCollapseButtonCaption write FCollapseButtonCaption;
     property DefaultButton: TTaskDialogCommonButton read FDefaultButton write FDefaultButton default tcbOk;
     property ExpandButtonCaption: TTranslateString read FExpandButtonCaption write FExpandButtonCaption;
     property ExpandedText: TTranslateString read FExpandedText write FExpandedText;
@@ -734,7 +756,9 @@ type
     property Buttons;
     property Caption;
     property CommonButtons;
-    property CollapsButtonCaption;
+    property CollapseButtonCaption;
+    property CustomFooterIcon;
+    property CustomMainIcon;
     property DefaultButton;
     property ExpandButtonCaption;
     property ExpandedText;

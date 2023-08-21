@@ -14045,7 +14045,7 @@ begin
   if APersistent=nil then exit;
   ADesigner:=TDesigner(FindRootDesigner(APersistent));
   if ADesigner=nil then exit;
-  ADesigner.RemovePersistentAndChilds(APersistent);
+  ADesigner.RemovePersistentAndChildren(APersistent);
   APersistent:=nil;
 end;
 

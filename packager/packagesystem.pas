@@ -245,6 +245,8 @@ type
                     CheckDependencies, SkipDesignTimePackages, GroupCompile: boolean;
                     out NeedBuildAllFlag, ConfigChanged, DependenciesChanged: boolean;
                     var Note: string): TModalResult;
+    function LoadPackageCompiledStateFile(APackage: TLazPackage; o: TPkgOutputDir;
+                    StateFile: string; IgnoreErrors, ShowAbort: boolean): TModalResult;
     procedure InvalidateStateFile(APackage: TLazPackage);
     procedure OnExtToolBuildStopped(Sender: TObject);
     procedure PkgModify(Sender: TObject);
@@ -3291,7 +3293,7 @@ var
   StateFile: String;
   CompilerFileDate: Integer;
   o: TPkgOutputDir;
-  stats: TPkgLastCompileStats;
+  Stats: TPkgLastCompileStats;
 begin
   Result:=mrCancel;
   StateFile:=APackage.GetStateFilename;
@@ -3299,15 +3301,17 @@ begin
     CompilerFileDate:=FileAgeCached(CompilerFilename);
 
     o:=APackage.GetOutputDirType;
-    stats:=APackage.LastCompile[o];
-    stats.CompilerFilename:=CompilerFilename;
-    stats.CompilerFileDate:=CompilerFileDate;
-    stats.Params.Assign(CompilerParams);
-    stats.Complete:=Complete;
-    stats.ViaMakefile:=false;
+    Stats:=APackage.LastCompile[o];
+    Stats.LazarusVersion:=LazarusVersionStr;
+    Stats.CompilerFilename:=CompilerFilename;
+    Stats.CompilerFileDate:=CompilerFileDate;
+    Stats.Params.Assign(CompilerParams);
+    Stats.Complete:=Complete;
+    Stats.ViaMakefile:=false;
 
     XMLConfig:=TXMLConfig.CreateClean(StateFile);
     try
+      XMLConfig.SetValue('Lazarus/Version',Stats.LazarusVersion);
       XMLConfig.SetValue('Compiler/Value',CompilerFilename);
       XMLConfig.SetValue('Compiler/Date',CompilerFileDate);
       XMLConfig.SetValue('Params/Value',MergeCmdLineParams(CompilerParams));
@@ -3318,9 +3322,9 @@ begin
     finally
       XMLConfig.Free;
     end;
-    stats.StateFileName:=StateFile;
-    stats.StateFileDate:=FileAgeCached(StateFile);
-    stats.StateFileLoaded:=true;
+    Stats.StateFileName:=StateFile;
+    Stats.StateFileDate:=FileAgeCached(StateFile);
+    Stats.StateFileLoaded:=true;
   except
     on E: Exception do begin
       Result:=IDEMessageDialogAb(lisPkgMangErrorWritingFile,
@@ -3337,89 +3341,12 @@ end;
 function TLazPackageGraph.LoadPackageCompiledState(APackage: TLazPackage;
   IgnoreErrors, ShowAbort: boolean): TModalResult;
 var
-  XMLConfig: TXMLConfig;
   StateFile: String;
-  StateFileAge: Integer;
-  stats: TPkgLastCompileStats;
   o: TPkgOutputDir;
-  MakefileValue, Params: String;
-  MakefileVersion: Integer;
 begin
-  o:=APackage.GetOutputDirType;
-  stats:=APackage.LastCompile[o];
   StateFile:=APackage.GetStateFilename;
-  if not FileExistsCached(StateFile) then begin
-    //DebugLn('TLazPackageGraph.LoadPackageCompiledState Statefile not found: ',StateFile);
-    stats.StateFileLoaded:=false;
-    Result:=mrOk;
-    exit;
-  end;
-
-  // read the state file
-  StateFileAge:=FileAgeCached(StateFile);
-  if (not stats.StateFileLoaded)
-  or (stats.StateFileDate<>StateFileAge)
-  or (stats.StateFileName<>StateFile) then begin
-    stats.StateFileLoaded:=false;
-    try
-      XMLConfig:=TXMLConfig.Create(StateFile);
-      try
-        stats.CompilerFilename:=XMLConfig.GetValue('Compiler/Value','');
-        stats.CompilerFileDate:=XMLConfig.GetValue('Compiler/Date',0);
-        stats.Complete:=XMLConfig.GetValue('Complete/Value',true);
-        stats.MainPPUExists:=XMLConfig.GetValue('Complete/MainPPUExists',true);
-        MakefileValue:=XMLConfig.GetValue('Makefile/Value','');
-        stats.Params.Clear;
-        Params:=XMLConfig.GetValue('Params/Value','');
-        if (MakefileValue='') then
-          stats.ViaMakefile:=false
-        else begin
-          stats.ViaMakefile:=true;
-          MakefileVersion:=StrToIntDef(MakefileValue,0);
-          if MakefileVersion<2 then begin
-            // old versions used %(
-            stats.CompilerFilename:=StringReplace(stats.CompilerFilename,'%(','$(',[rfReplaceAll]);
-            Params:=StringReplace(Params,'%(','$(',[rfReplaceAll]);
-          end;
-          ForcePathDelims(stats.CompilerFilename);
-          ForcePathDelims(Params);
-          Params:=StringReplace(Params,'$(CPU_TARGET)','$(TargetCPU)',[rfReplaceAll]);
-          Params:=StringReplace(Params,'$(OS_TARGET)','$(TargetOS)',[rfReplaceAll]);
-          Params:=StringReplace(Params,'$(LCL_PLATFORM)','$(LCLWidgetType)',[rfReplaceAll]);
-          Params:=APackage.SubstitutePkgMacros(Params,false);
-        end;
-        SplitCmdLineParams(Params,stats.Params);
-      finally
-        XMLConfig.Free;
-      end;
-      stats.StateFileName:=StateFile;
-      stats.StateFileDate:=StateFileAge;
-      stats.StateFileLoaded:=true;
-    except
-      on E: EXMLReadError do begin
-        // invalid XML
-        debugln(['Warning: (lazarus) package "',APackage.IDAsString,'": syntax error in ',StateFile,' => need clean build.']);
-        stats.Complete:=false;
-        stats.CompilerFilename:='';
-        stats.StateFileName:=StateFile;
-        stats.StateFileDate:=StateFileAge;
-        stats.StateFileLoaded:=true;
-      end;
-      on E: Exception do begin
-        if IgnoreErrors then begin
-          Result:=mrOk;
-        end else begin
-          Result:=IDEMessageDialogAb(lisPkgMangErrorReadingFile,
-            Format(lisPkgMangUnableToReadStateFileOfPackageError,
-              [StateFile, LineEnding, APackage.IDAsString, LineEnding, E.Message]),
-            mtError,[mbCancel],ShowAbort);
-        end;
-        exit;
-      end;
-    end;
-  end;
-
-  Result:=mrOk;
+  o:=APackage.GetOutputDirType;
+  Result:=LoadPackageCompiledStateFile(APackage,o,StateFile,IgnoreErrors,ShowAbort);
 end;
 
 function TLazPackageGraph.CheckCompileNeedDueToFPCUnits(TheOwner: TObject;
@@ -3537,58 +3464,58 @@ begin
       if Dependency.DependencyType=pdtFPMake
       then begin
         // skip
-      end else if SkipDesignTimePackages and (RequiredPackage.PackageType=lptDesignTime)
-      then begin
+      end else if SkipDesignTimePackages and (RequiredPackage.PackageType=lptDesignTime) then
         // skip
-      end else begin
+      else if RequiredPackage.IsVirtual then
+        // skip
+      else if RequiredPackage.Missing then
+        // skip
+      else begin
         // check compile state file of required package
-        if (not RequiredPackage.IsVirtual) and (not RequiredPackage.Missing)
-        then begin
-          Result:=LoadPackageCompiledState(RequiredPackage,false,true);
-          if Result<>mrOk then begin
-            // file broken, user was told that file is broken and user had a
-            // choice of cancel or cancel all (=mrAbort).
-            // File broken means that the pkgname.compiled file has an invalid
-            // format, syntax error. The user or some external tool has altered
-            // the file. Maybe on purpose.
-            // The IDE should not silently replace the file.
-            // => pass the mrcancel/mrabort to the caller
-            Note+='unable to load state file of '+RequiredPackage.IDAsString;
+        Result:=LoadPackageCompiledState(RequiredPackage,false,true);
+        if Result<>mrOk then begin
+          // file broken, user was told that file is broken and user had a
+          // choice of cancel or cancel all (=mrAbort).
+          // File broken means that the pkgname.compiled file has an invalid
+          // format, syntax error. The user or some external tool has altered
+          // the file. Maybe on purpose.
+          // The IDE should not silently replace the file.
+          // => pass the mrcancel/mrabort to the caller
+          Note+='unable to load state file of '+RequiredPackage.IDAsString;
+          exit;
+        end;
+        Result:=mrYes;
+        o:=RequiredPackage.GetOutputDirType;
+        if not RequiredPackage.LastCompile[o].StateFileLoaded then begin
+          DebugLn('Hint: (lazarus) Missing state file for ',RequiredPackage.IDAsString,': ',RequiredPackage.GetStateFilename);
+          Note+='Package '+RequiredPackage.IDAsString+' has no state file "'+RequiredPackage.GetStateFilename+'".'+LineEnding;
+          exit;
+        end;
+        if StateFileAge<RequiredPackage.LastCompile[o].StateFileDate then begin
+          DebugLn('Hint: (lazarus) State file of ',RequiredPackage.IDAsString,' is newer than state file of ',GetOwnerID);
+          Note+='State file of '+RequiredPackage.IDAsString+' is newer than state file of '+GetOwnerID+LineEnding
+            +'  '+RequiredPackage.IDAsString+'='+FileAgeToStr(RequiredPackage.LastCompile[o].StateFileDate)+LineEnding
+            +'  '+GetOwnerID+'='+FileAgeToStr(StateFileAge)+LineEnding;
+          exit;
+        end;
+        // check output state file of required package
+        if RequiredPackage.OutputStateFile<>'' then begin
+          OtherStateFile:=RequiredPackage.OutputStateFile;
+          GlobalMacroList.SubstituteStr(OtherStateFile);
+          if not FilenameIsAbsolute(OtherStateFile) then
+            OtherStateFile:=AppendPathDelim(RequiredPackage.Directory)+OtherStateFile;
+          if FilenameIsAbsolute(OtherStateFile)
+          and FileExistsCached(OtherStateFile)
+          and (FileAgeCached(OtherStateFile)>StateFileAge) then begin
+            DebugLn('Hint: (lazarus) State file of ',RequiredPackage.IDAsString,' "',OtherStateFile,'" (',
+                FileAgeToStr(FileAgeCached(OtherStateFile)),')'
+              ,' is newer than state file ',GetOwnerID,'(',FileAgeToStr(StateFileAge),')');
+            Note+='State file of used package is newer than state file:'+LineEnding
+              +'  Used package '+RequiredPackage.IDAsString+', file="'+OtherStateFile+'", '
+              +' age='+FileAgeToStr(FileAgeCached(OtherStateFile))+LineEnding
+              +'  package '+GetOwnerID+', age='+FileAgeToStr(StateFileAge)+LineEnding;
+            Result:=mrYes;
             exit;
-          end;
-          Result:=mrYes;
-          o:=RequiredPackage.GetOutputDirType;
-          if not RequiredPackage.LastCompile[o].StateFileLoaded then begin
-            DebugLn('Hint: (lazarus) Missing state file for ',RequiredPackage.IDAsString,': ',RequiredPackage.GetStateFilename);
-            Note+='Package '+RequiredPackage.IDAsString+' has no state file "'+RequiredPackage.GetStateFilename+'".'+LineEnding;
-            exit;
-          end;
-          if StateFileAge<RequiredPackage.LastCompile[o].StateFileDate then begin
-            DebugLn('Hint: (lazarus) State file of ',RequiredPackage.IDAsString,' is newer than state file of ',GetOwnerID);
-            Note+='State file of '+RequiredPackage.IDAsString+' is newer than state file of '+GetOwnerID+LineEnding
-              +'  '+RequiredPackage.IDAsString+'='+FileAgeToStr(RequiredPackage.LastCompile[o].StateFileDate)+LineEnding
-              +'  '+GetOwnerID+'='+FileAgeToStr(StateFileAge)+LineEnding;
-            exit;
-          end;
-          // check output state file of required package
-          if RequiredPackage.OutputStateFile<>'' then begin
-            OtherStateFile:=RequiredPackage.OutputStateFile;
-            GlobalMacroList.SubstituteStr(OtherStateFile);
-            if not FilenameIsAbsolute(OtherStateFile) then
-              OtherStateFile:=AppendPathDelim(RequiredPackage.Directory)+OtherStateFile;
-            if FilenameIsAbsolute(OtherStateFile)
-            and FileExistsCached(OtherStateFile)
-            and (FileAgeCached(OtherStateFile)>StateFileAge) then begin
-              DebugLn('Hint: (lazarus) State file of ',RequiredPackage.IDAsString,' "',OtherStateFile,'" (',
-                  FileAgeToStr(FileAgeCached(OtherStateFile)),')'
-                ,' is newer than state file ',GetOwnerID,'(',FileAgeToStr(StateFileAge),')');
-              Note+='State file of used package is newer than state file:'+LineEnding
-                +'  Used package '+RequiredPackage.IDAsString+', file="'+OtherStateFile+'", '
-                +' age='+FileAgeToStr(FileAgeCached(OtherStateFile))+LineEnding
-                +'  package '+GetOwnerID+', age='+FileAgeToStr(StateFileAge)+LineEnding;
-              Result:=mrYes;
-              exit;
-            end;
           end;
         end;
       end;
@@ -3607,7 +3534,7 @@ var
   ConfigChanged: boolean;
   DependenciesChanged: boolean;
   DefResult: TModalResult;
-  OldNeedBuildAllFlag: Boolean;
+  OldNeedBuildAllFlag, IsDefDirWritable: Boolean;
   OldOverride: String;
 begin
   Result:=mrYes;
@@ -3629,11 +3556,13 @@ begin
   end;
 
   // the current output directory needs compilation
+  OutputDir:=APackage.GetOutputDirectory(false);
+  IsDefDirWritable:=OutputDirectoryIsWritable(APackage,OutputDir,false);
+
   if APackage.CompilerOptions.ParsedOpts.OutputDirectoryOverride='' then
   begin
     // the last compile was put to the normal/default output directory
-    OutputDir:=APackage.GetOutputDirectory(false);
-    if OutputDirectoryIsWritable(APackage,OutputDir,false) then
+    if IsDefDirWritable then
     begin
       // the normal output directory is writable => keep using it
       exit;
@@ -3653,33 +3582,41 @@ begin
                NeedBuildAllFlag,ConfigChanged,DependenciesChanged,Note);
   end else begin
     // the last compile was put to the fallback output directory
-    if not ConfigChanged then begin
-      // some source files have changed, not the compiler parameters
-      // => keep using the fallback directory
-      exit;
+
+    if not IsDefDirWritable then begin
+      if not ConfigChanged then begin
+        // some source files have changed, not the compiler parameters
+        // => keep using the fallback directory
+        exit;
+      end;
+      if DependenciesChanged then begin
+        // dependencies have changed
+        // => switching to the not writable default output directory is not possible
+        // => keep using the fallback directory
+        exit;
+      end;
+      // maybe the user switched the settings back to default
+      // => try using the default output directory
     end;
-    if DependenciesChanged then begin
-      // dependencies have changed
-      // => switching to the not writable default output directory is not possible
-      // => keep using the fallback directory
-      exit;
-    end;
-    // maybe the user switched the settings back to default
-    // => try using the default output directory
+
     OldOverride:=APackage.CompilerOptions.ParsedOpts.OutputDirectoryOverride;
     APackage.CompilerOptions.ParsedOpts.OutputDirectoryOverride:='';
+    if ConsoleVerbosity>=0 then
+      debugln(['Hint: (lazarus) trying the default output directory of package ',APackage.IDAsString]);
     OldNeedBuildAllFlag:=NeedBuildAllFlag;
     DefResult:=CheckIfCurPkgOutDirNeedsCompile(APackage,
                true,SkipDesignTimePackages,GroupCompile,
                NeedBuildAllFlag,ConfigChanged,DependenciesChanged,Note);
-    if DefResult=mrNo then begin
-      // switching back to the not writable output directory requires no compile
+    if IsDefDirWritable or (DefResult=mrNo) then begin
+      // switching back to the default output directory
       debugln(['Hint: (lazarus) switching back to the normal output directory: "',APackage.GetOutputDirectory,'" Package ',APackage.IDAsString]);
-      Note+='Switching back to not writable output directory.'+LineEnding;
-      exit(mrNo);
+      Note+='Switching back to default output directory.'+LineEnding;
+      exit(DefResult);
     end;
     // neither the default nor the fallback is valid
     // => switch back to the fallback
+    if ConsoleVerbosity>=0 then
+      debugln(['Hint: (lazarus) switching back to fallback output directory package ',APackage.IDAsString]);
     APackage.CompilerOptions.ParsedOpts.OutputDirectoryOverride:=OldOverride;
     NeedBuildAllFlag:=OldNeedBuildAllFlag;
   end;
@@ -3740,6 +3677,16 @@ begin
       exit(mrYes);
     end;
 
+    if (o=podFallback) and (Stats.LazarusVersion<>LazarusVersionStr) then
+    begin
+      // package in fallback directory was compiled by another Lazarus -> rebuild
+      DebugLn('Hint: (lazarus) State file of ',APackage.IDAsString,' from Lazarus "',Stats.LazarusVersion,'" instead of "',LazarusVersionStr,'": ',StateFilename);
+      Note+='State file "'+StateFilename+'" from another Lazarus version "'+Stats.LazarusVersion+'".'+LineEnding;
+      NeedBuildAllFlag:=true;
+      ConfigChanged:=true;
+      exit(mrYes);
+    end;
+
     // check if build all (-B) is needed
     if (Stats.CompilerFilename<>CompilerFilename)
     or FPCParamForBuildAllHasChanged(Stats.Params,CompilerParams)
@@ -3753,7 +3700,7 @@ begin
 
     if GroupCompile and (lpfNeedGroupCompile in APackage.Flags) then begin
       //debugln(['TLazPackageGraph.CheckIfCurPkgOutDirNeedsCompile dependencies will be rebuilt']);
-      Note+='Dependencies will be rebuilt';
+      Note+='Dependencies will be rebuilt.'+LineEnding;
       DependenciesChanged:=true;
       exit(mrYes);
     end;
@@ -3845,6 +3792,8 @@ begin
         ReducedLastParams.Free;
       end;
     end;
+
+    // compiler
     if (not Stats.ViaMakefile)
     and (CompilerFilename<>Stats.CompilerFilename) then begin
       DebugLn('Hint: (lazarus) Compiler filename changed for ',APackage.IDAsString);
@@ -3908,7 +3857,6 @@ begin
         end;
       end;
     end;
-
 
     //debugln(['TLazPackageGraph.CheckIfCurPkgOutDirNeedsCompile ',APackage.Name,' Last="',APackage.LastCompilerParams,'" Now="',CompilerParams,'"']);
 
@@ -3985,6 +3933,90 @@ begin
   debugln('TLazPackageGraph.CheckIfCurPkgOutDirNeedsCompile END ',APackage.IDAsString);
   {$ENDIF}
   Result:=mrNo;
+end;
+
+function TLazPackageGraph.LoadPackageCompiledStateFile(APackage: TLazPackage;
+  o: TPkgOutputDir; StateFile: string; IgnoreErrors, ShowAbort: boolean
+  ): TModalResult;
+var
+  Stats: TPkgLastCompileStats;
+  StateFileAge, MakefileVersion: LongInt;
+  XMLConfig: TXMLConfig;
+  MakefileValue, Params: String;
+begin
+  Stats:=APackage.LastCompile[o];
+  if not FileExistsCached(StateFile) then begin
+    //DebugLn('TLazPackageGraph.LoadPackageCompiledStateFile file not found: ',StateFile);
+    Stats.StateFileLoaded:=false;
+    Result:=mrOk;
+    exit;
+  end;
+
+  // read the state file
+  StateFileAge:=FileAgeCached(StateFile);
+  if (not Stats.StateFileLoaded)
+  or (Stats.StateFileDate<>StateFileAge)
+  or (Stats.StateFileName<>StateFile) then begin
+    Stats.StateFileLoaded:=false;
+    Stats.LazarusVersion:='';
+    Stats.Complete:=false;
+    Stats.CompilerFilename:='';
+    Stats.StateFileName:=StateFile;
+    Stats.StateFileDate:=StateFileAge;
+    try
+      XMLConfig:=TXMLConfig.Create(StateFile);
+      try
+        Stats.LazarusVersion:=XMLConfig.GetValue('Lazarus/Version','');
+        Stats.CompilerFilename:=XMLConfig.GetValue('Compiler/Value','');
+        Stats.CompilerFileDate:=XMLConfig.GetValue('Compiler/Date',0);
+        Stats.Complete:=XMLConfig.GetValue('Complete/Value',true);
+        Stats.MainPPUExists:=XMLConfig.GetValue('Complete/MainPPUExists',true);
+        MakefileValue:=XMLConfig.GetValue('Makefile/Value','');
+        Stats.Params.Clear;
+        Params:=XMLConfig.GetValue('Params/Value','');
+        if (MakefileValue='') then
+          Stats.ViaMakefile:=false
+        else begin
+          Stats.ViaMakefile:=true;
+          MakefileVersion:=StrToIntDef(MakefileValue,0);
+          if MakefileVersion<2 then begin
+            // old versions used %(
+            Stats.CompilerFilename:=StringReplace(Stats.CompilerFilename,'%(','$(',[rfReplaceAll]);
+            Params:=StringReplace(Params,'%(','$(',[rfReplaceAll]);
+          end;
+          ForcePathDelims(Stats.CompilerFilename);
+          ForcePathDelims(Params);
+          Params:=StringReplace(Params,'$(CPU_TARGET)','$(TargetCPU)',[rfReplaceAll]);
+          Params:=StringReplace(Params,'$(OS_TARGET)','$(TargetOS)',[rfReplaceAll]);
+          Params:=StringReplace(Params,'$(LCL_PLATFORM)','$(LCLWidgetType)',[rfReplaceAll]);
+          Params:=APackage.SubstitutePkgMacros(Params,false);
+        end;
+        SplitCmdLineParams(Params,Stats.Params);
+      finally
+        XMLConfig.Free;
+      end;
+      Stats.StateFileLoaded:=true;
+    except
+      on E: EXMLReadError do begin
+        // invalid XML
+        debugln(['Warning: (lazarus) package "',APackage.IDAsString,'": syntax error in ',StateFile,' => need clean build.']);
+        Stats.StateFileLoaded:=true;
+      end;
+      on E: Exception do begin
+        if IgnoreErrors then begin
+          Result:=mrOk;
+        end else begin
+          Result:=IDEMessageDialogAb(lisPkgMangErrorReadingFile,
+            Format(lisPkgMangUnableToReadStateFileOfPackageError,
+              [StateFile, LineEnding, APackage.IDAsString, LineEnding, E.Message]),
+            mtError,[mbCancel],ShowAbort);
+        end;
+        exit;
+      end;
+    end;
+  end;
+
+  Result:=mrOk;
 end;
 
 procedure TLazPackageGraph.InvalidateStateFile(APackage: TLazPackage);
@@ -5352,13 +5384,12 @@ end;
 function TLazPackageGraph.PreparePackageOutputDirectory(APackage: TLazPackage;
   CleanUp: boolean): TModalResult;
 var
-  OutputDir: String;
+  OutputDir, NewOutputDir: String;
   StateFile: String;
   PkgSrcDir: String;
   i: Integer;
   CurFile: TPkgFile;
   OutputFileName: String;
-  NewOutputDir: String;
   DeleteAllFilesInOutputDir: Boolean;
   DirCache: TCTDirectoryCache;
   CleanFiles: TStrings;
@@ -5367,30 +5398,26 @@ begin
   OutputDir:=APackage.GetOutputDirectory;
   //debugln(['TLazPackageGraph.PreparePackageOutputDirectory OutputDir="',OutputDir,'"']);
 
+  // Note: The OutputDirectoryOverride is set prior in CheckIfPackageNeedsCompilation
+
   DeleteAllFilesInOutputDir:=false;
   if not OutputDirectoryIsWritable(APackage,OutputDir,false) then
   begin
-    // the normal output directory is not writable
-    // => use the fallback directory
-    NewOutputDir:=GetFallbackOutputDir(APackage);
-    if (NewOutputDir=OutputDir) or (NewOutputDir='') then begin
-      debugln(['Error: (lazarus) [TLazPackageGraph.PreparePackageOutputDirectory] failed to create writable directory: ',OutputDir]);
-      exit(mrCancel);
-    end;
-    APackage.CompilerOptions.ParsedOpts.OutputDirectoryOverride:=NewOutputDir;
-    OutputDir:=APackage.GetOutputDirectory;
-    if not OutputDirectoryIsWritable(APackage,OutputDir,true) then
-    begin
-      debugln(['Error: (lazarus) [TLazPackageGraph.PreparePackageOutputDirectory] failed to create writable directory: ',OutputDir]);
-      Result:=mrCancel;
-    end;
-    DeleteAllFilesInOutputDir:=true;
+    // the output directory is not writable
+    debugln(['Error: (lazarus) [TLazPackageGraph.PreparePackageOutputDirectory] failed to create writable directory (',APackage.IDAsString,'): ',OutputDir]);
+    Result:=mrCancel;
   end else if APackage.CompilerOptions.ParsedOpts.OutputDirectoryOverride<>''
   then
     // package is already using the fallback directory
     DeleteAllFilesInOutputDir:=true
   else if CleanUp then begin
     // package is not using the fallback directory
+
+    // delete fallback if it exists
+    NewOutputDir:=GetFallbackOutputDir(APackage);
+    if DirPathExistsCached(NewOutputDir) then
+      DeleteDirectory(NewOutputDir,false);
+
     // check if the output directory contains sources
     DeleteAllFilesInOutputDir:=APackage.HasSeparateOutputDirectory;
   end;

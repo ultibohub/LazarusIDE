@@ -528,12 +528,14 @@ begin
 end;
 
 function CompareIdentHistListItem(Data1, Data2: Pointer): integer;
+(* CompareIdentHistListItem and CompareIdentItemWithHistListItem must use
+   the same functions to compare each part of the data *)
 var
   Item1: TIdentHistListItem absolute Data1;
   Item2: TIdentHistListItem absolute Data2;
 begin
-  Result:=CompareIdentifiers(PChar(Pointer(Item2.Identifier)),
-                             PChar(Pointer(Item1.Identifier)));
+  Result:=CompareIdentifierPtrs(Pointer(Item2.Identifier),
+                                Pointer(Item1.Identifier));
   if Result<>0 then exit;
 
   //debugln('CompareIdentHistListItem ',Item2.Identifier,'=',Item1.Identifier);
@@ -541,6 +543,8 @@ begin
 end;
 
 function CompareIdentItemWithHistListItem(Data1, Data2: Pointer): integer;
+(* CompareIdentHistListItem and CompareIdentItemWithHistListItem must use
+   the same functions to compare each part of the data *)
 var
   IdentItem: TIdentifierListItem absolute Data1;
   HistItem: TIdentHistListItem absolute Data2;
@@ -550,7 +554,7 @@ begin
   if Result<>0 then exit;
 
   //debugln('CompareIdentItemWithHistListItem ',HistItem.Identifier,'=',GetIdentifier(IdentItem.Identifier));
-  Result:=SysUtils.CompareText(HistItem.ParamList,IdentItem.ParamTypeList);
+  Result:=CompareTextIgnoringSpace(HistItem.ParamList,IdentItem.ParamTypeList,false);
 end;
 
 function dbgs(Flag: TIdentifierListContextFlag): string;
@@ -677,20 +681,18 @@ type
   );
 var
   SecondaryList: TFPList;
-  RecentPos: array [Boolean, mtPriority..mtSecondary] of Integer;
   LastMatchPos: Integer;
 
-  // LowerRecent: mid-word matched in mtPriority
-  procedure InsertItem(Itm: TIdentifierListItem; Sect: TMatchSection; AsRecent, AsLowerRecent: boolean); inline;
+  procedure InsertItem(Itm: TIdentifierListItem; Sect: TMatchSection; InsertPosFromEnd: Integer); inline;
   var
     l: TFPList;
   begin
-    {$IFDEF ShowFilteredIdents}
-    DebugLn('::: FILTERED ITEM Prior %d/%d  Second %d/%d  "%s" (%d) AsRecent %s',
-      [RecentPos[False, mtPriority], FFilteredList.Count,
-       RecentPos[False, mtSecondary], SecondaryList.Count,
-       Itm.Identifier, ord(Sect), dbgs(AsRecent)]);
-    {$ENDIF}
+if ((FFilteredList.Count + SecondaryList.Count) < 15) or (InsertPosFromEnd > 0) then //////////////////////
+    { $IFDEF ShowFilteredIdents}
+    DebugLn('::: FILTERED ITEM Prior %d / Second %d  "%s" (%d) AsRecent -%d',
+      [ FFilteredList.Count, SecondaryList.Count,
+       Itm.Identifier, ord(Sect), InsertPosFromEnd]);
+    { $ENDIF}
 
     case Sect of
       mtNone: exit;
@@ -705,16 +707,11 @@ var
       l.Insert(0,Itm)
     end
     else
-    if AsRecent then begin
-      l.Insert(RecentPos[AsLowerRecent, Sect], Itm);
-      Inc(RecentPos[AsLowerRecent, Sect]);
-      if not AsLowerRecent then
-        Inc(RecentPos[True, Sect]);
-      Itm.Flags := Itm.Flags + [iliIsRecentItem];
+    if InsertPosFromEnd > 0 then begin
+      l.Insert(l.Count - InsertPosFromEnd, Itm);
     end
     else begin
       l.Add(Itm);
-      Itm.Flags := Itm.Flags - [iliIsRecentItem];
     end;
   end;
 
@@ -737,12 +734,86 @@ var
   end;
 
 var
+  MaxHistoryIndex: array [mtPriority..mtSecondary] of integer;
+  LowerRecentCount: Integer;
+
+  procedure HandleItem(CurItem: TIdentifierListItem; FilterRecenct: boolean);
+  var
+    MatchSection: TMatchSection;
+    IsRecent: Boolean;
+  begin
+    if CurItem.Identifier<>'' then
+    begin
+      MatchSection := WantedMatchSection(CurItem); // setl LastMatchPos;
+      if MatchSection = mtNone then
+        exit;
+
+      IsRecent := CurItem.HistoryIndex <= MaxHistoryIndex[MatchSection];
+      if (not IsRecent) and (LastMatchPos > 0) then
+        MatchSection := mtSecondary;
+
+      if IsRecent = FilterRecenct then begin
+        if LastMatchPos > 0
+        then CurItem.Flags := CurItem.Flags + [iliMatchedMidWord]
+        else CurItem.Flags := CurItem.Flags - [iliMatchedMidWord];
+        if IsRecent
+        then CurItem.Flags := CurItem.Flags + [iliIsRecentItem]
+        else CurItem.Flags := CurItem.Flags - [iliIsRecentItem];
+
+        if IsRecent and (MatchSection = mtPriority) then begin
+          if (LastMatchPos > 0) then begin
+            // Mid-Word matches in the priority section
+            // Keep count, so prefix matches can be inserted before
+            inc(LowerRecentCount);
+            InsertItem(CurItem, MatchSection, 0);
+          end
+          else
+            InsertItem(CurItem, MatchSection, LowerRecentCount);
+        end
+        else
+          InsertItem(CurItem, MatchSection, 0);
+      end;
+    end;
+  end;
+
+  procedure InsertHistoryForComp(ACompat: TIdentifierCompatibility);
+  var
+    j: Integer;
+    CurItem: TIdentifierListItem;
+  begin
+debugln(['>>> InsertHistoryForComp ', ord(ACompat)]);
+    LowerRecentCount := 0;
+    for j := 0 to length(FFoundHistoryItems) - 1 do begin
+      CurItem := FFoundHistoryItems[j];
+      if (CurItem <> nil) and (CurItem.Compatibility = ACompat) then
+        HandleItem(CurItem, True);
+    end;
+    LowerRecentCount := 0;
+debugln(['<<< InsertHistoryForComp ', ord(ACompat)]);
+  end;
+
+  procedure InsertHistoryForAllComp;
+  var
+    j: Integer;
+    CurItem: TIdentifierListItem;
+  begin
+debugln(['>>> InsertHistoryForAllComp ']);
+    LowerRecentCount := 0;
+    for j := 0 to length(FFoundHistoryItems) - 1 do begin
+      CurItem := FFoundHistoryItems[j];
+      if CurItem <> nil then
+        HandleItem(CurItem, True);
+    end;
+    LowerRecentCount := 0;
+debugln(['>>> InsertHistoryForAllComp ']);
+  end;
+
+var
   AnAVLNode: TAvlTreeNode;
   CurItem: TIdentifierListItem;
   TotalHistLimit, j: Integer;
-  MaxHistoryIndex: array [mtPriority..mtSecondary] of integer;
   MatchSection: TMatchSection;
-  IsRecent: Boolean;
+  HistoryCompatDone: TIdentifierCompatibility;
 
 begin
   if not (ilfFilteredListNeedsUpdate in FFlags) then exit;
@@ -757,11 +828,8 @@ begin
   TotalHistLimit := 0;
   if FSortForHistory then
     TotalHistLimit := FSortForHistoryLimit;
-  for MatchSection := mtPriority to mtSecondary do begin
-    RecentPos[False, MatchSection] := 0;
-    RecentPos[True, MatchSection]  := 0;
+  for MatchSection := mtPriority to mtSecondary do
     MaxHistoryIndex[MatchSection]  := -1;
-  end;
   for MatchSection := mtPriority to mtSecondary do begin
     for j := 0 to length(FFoundHistoryItems) - 1 do begin
       if TotalHistLimit <= 0 then
@@ -778,27 +846,30 @@ begin
   end;
 
 
+debugln;debugln(['=================================================================== ']);debugln;
   SecondaryList := TFPList.Create;
   AnAVLNode:=FItems.FindLowest;
+  if SortMethodForCompletion in IdentComplSortMethodUsingCompatibility then begin
+    HistoryCompatDone := low(TIdentifierCompatibility);
+    InsertHistoryForComp(HistoryCompatDone);
+  end
+  else begin
+    HistoryCompatDone := High(TIdentifierCompatibility);
+    InsertHistoryForAllComp;
+  end;
+
   while AnAVLNode<>nil do begin
     CurItem:=TIdentifierListItem(AnAVLNode.Data);
-    AnAVLNode:=FItems.FindSuccessor(AnAVLNode);
-    if CurItem.Identifier<>'' then
-    begin
-      MatchSection := WantedMatchSection(CurItem);
-      if MatchSection = mtNone then
-        Continue;
-
-      IsRecent := CurItem.HistoryIndex <= MaxHistoryIndex[MatchSection];
-      if (not IsRecent) and (LastMatchPos > 0) then
-        MatchSection := mtSecondary;
-
-      if LastMatchPos > 0
-      then CurItem.Flags := CurItem.Flags + [iliMatchedMidWord]
-      else CurItem.Flags := CurItem.Flags - [iliMatchedMidWord];
-
-      InsertItem(CurItem, MatchSection, IsRecent, LastMatchPos > 0);
+    while HistoryCompatDone < CurItem.Compatibility do begin
+      inc(HistoryCompatDone);
+      InsertHistoryForComp(HistoryCompatDone);
     end;
+    AnAVLNode:=FItems.FindSuccessor(AnAVLNode);
+    HandleItem(CurItem, False);
+  end;
+  while HistoryCompatDone < high(TIdentifierCompatibility) do begin
+    inc(HistoryCompatDone);
+    InsertHistoryForComp(HistoryCompatDone);
   end;
 
   j := FFilteredList.Count;

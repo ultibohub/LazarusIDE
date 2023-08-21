@@ -603,6 +603,13 @@ begin
   end;
 end;
 
+function GetDefaultExt(AOpenDialog: TOpenDialog): String;
+begin
+  Result := AOpenDialog.DefaultExt;
+  if (Result<>'') and (Result[1]='.') then
+    System.Delete(Result, 1, 1);
+end;
+
 function CreateFileDialogHandle(AOpenDialog: TOpenDialog): THandle;
 
   function GetFlagsFromOptions(Options: TOpenOptions): DWord;
@@ -640,13 +647,6 @@ function CreateFileDialogHandle(AOpenDialog: TOpenDialog): THandle;
     AFilter := AFilter + #0;
   end;
 
-  function GetDefaultExt: String;
-  begin
-    Result := AOpenDialog.DefaultExt;
-    if (Result<>'') and (Result[1]='.') then
-      System.Delete(Result, 1, 1);
-  end;
-
 const
   FileNameBufferLen = 1000;
 var
@@ -670,7 +670,7 @@ begin
     FileName := '';
   end;
 
-  DefaultExt := GetDefaultExt;
+  DefaultExt := GetDefaultExt(AOpenDialog);
 
   FileNameWideBuffer := AllocMem(FileNameBufferLen * 2 + 2);
   FileNameWide := UTF8ToUTF16(FileName);
@@ -762,14 +762,6 @@ end;
 
 
 class procedure TWin32WSOpenDialog.SetupVistaFileDialog(ADialog: IFileDialog; const AOpenDialog: TOpenDialog);
-
-  function GetDefaultExt: String;
-  begin
-    Result := AOpenDialog.DefaultExt;
-    if (Result<>'') and (Result[1]='.') then
-      System.Delete(Result, 1, 1);
-  end;
-
 var
   I: Integer;
   FileName, InitialDir: String;
@@ -788,7 +780,7 @@ begin
   end;
   ADialog.SetTitle(PWideChar(UTF8ToUTF16(AOpenDialog.Title)));
   ADialog.SetFileName(PWideChar(UTF8ToUTF16(FileName)));
-  ADialog.SetDefaultExtension(PWideChar(UTF8ToUTF16(GetDefaultExt)));
+  ADialog.SetDefaultExtension(PWideChar(UTF8ToUTF16(GetDefaultExt(AOpenDialog))));
 
   if InitialDir <> '' then
   begin
@@ -851,7 +843,7 @@ begin
   Result := 0;
   if ofAllowMultiSelect in Options then Result := Result or FOS_ALLOWMULTISELECT;
   if ofCreatePrompt in Options then Result := Result or FOS_CREATEPROMPT;
-  if ofExtensionDifferent in Options then Result := Result or FOS_STRICTFILETYPES;
+  if not (ofExtensionDifferent in Options) then Result := Result or FOS_STRICTFILETYPES;
   if ofFileMustExist in Options then Result := Result or FOS_FILEMUSTEXIST;
   if ofNoChangeDir in Options then Result := Result or FOS_NOCHANGEDIR;
   if ofNoDereferenceLinks in Options then Result := Result or FOS_NODEREFERENCELINKS;
@@ -1807,10 +1799,14 @@ var
   const
     TD_BTNMOD: array[TTaskDialogCommonButton] of Integer = (
       mrOk, mrYes, mrNo, mrCancel, mrRetry, mrAbort);
-    TD_ICONS: array[TLCLTaskDialogIcon] of integer = (
-      0, 84, 99, 98, 81, 0, 78);
-    TD_FOOTERICONS: array[TLCLTaskDialogFooterIcon] of integer = (
-      0, 84, 99, 98, 65533, 65532);
+    //TD_ICONS: array[TLCLTaskDialogIcon] of integer = (
+    //  0 {tiBlank}, 84 {tiWarning}, 99 {tiQuestion}, 98 {tiError}, 81 {tiInformation}, 0 {tiNotUsed}, 78 {tiShield});
+    //TD_FOOTERICONS: array[TLCLTaskDialogFooterIcon] of integer = (
+    //  0 {tfiBlank}, 84 {tfiWarning}, 99 {tfiQuestion}, 98 {tfiError}, 65533 {tfiInformation}, 65532 {tfiShield});
+
+    TD_ICONS: array[TTaskDialogIcon] of MAKEINTRESOURCEW = (
+      nil, TD_WARNING_ICON, TD_ERROR_ICON, TD_INFORMATION_ICON, TD_SHIELD_ICON, TD_QUESTION_ICON
+    );
 
     procedure AddTaskDiakogButton(Btns: TTaskDialogButtons; var n: longword; firstID: integer);
     var
@@ -1852,7 +1848,7 @@ var
     end;
     MainInstruction := Utf8ToUtf16(ADlg.Title);
     if (MainInstruction = '') then
-      MainInstruction := Utf8ToUtf16(IconMessage(TF_DIALOGICON(ADlg.MainIcon)));
+      MainInstruction := Utf8ToUtf16(IconMessage(ADlg.MainIcon));
     Content := Utf8ToUtf16(ADlg.Text);
     VerificationText := Utf8ToUtf16(ADlg.VerificationText);
     if (AParentWnd = 0) then
@@ -1864,7 +1860,7 @@ var
     end;
     ExpandedInformation := Utf8ToUtf16(ADlg.ExpandedText);
     CollapsedControlText := Utf8ToUtf16(ADlg.ExpandButtonCaption);
-    ExpandedControlText := Utf8ToUtf16(ADlg.CollapsButtonCaption);
+    ExpandedControlText := Utf8ToUtf16(ADlg.CollapseButtonCaption);
 
     Footer := Utf8ToUtf16(ADlg.FooterText);
 
@@ -1913,14 +1909,32 @@ var
       Exclude(Flags,tfVerificationFlagChecked);
     if (Config.cButtons=0) and (CommonButtons=[tcbOk]) then
       Include(Flags,tfAllowDialogCancellation); // just OK -> Esc/Alt+F4 close
+
     //while the MS docs say that this flag is ignored if Config.cButtons = 0,
     //in practice it will make TaskDialogIndirect fail with E_INVALIDARG
     if (ADlg.Buttons.Count = 0) then
       Exclude(Flags, tfUseCommandLinks);
     Config.dwFlags := TaskDialogFlagsToInteger(Flags);
 
-    Config.hMainIcon := TD_ICONS[TF_DIALOGICON(ADlg.MainIcon)];
-    Config.hFooterIcon := TD_FOOTERICONS[TF_FOOTERICON(ADlg.FooterIcon)];
+    if not (tfUseHIconMain in Flags) then
+      Config.pszMainIcon := TD_ICONS[ADlg.MainIcon]
+    else
+    begin
+      if Assigned(ADlg.CustomMainIcon) then
+        Config.hMainIcon := ADlg.CustomMainIcon.Handle
+      else
+        Config.hMainIcon := 0;
+    end;
+
+    if not (tfUseHIconFooter in Flags) then
+      Config.pszFooterIcon := TD_ICONS[ADlg.FooterIcon]
+    else
+    begin
+      if Assigned(ADlg.CustomFooterIcon) then
+        Config.hFooterIcon := ADlg.CustomFooterIcon.Handle
+      else
+        Config.hFooterIcon := 0;
+    end;
 
     {
       Although the offcial MS docs (https://learn.microsoft.com/en-us/windows/win32/api/commctrl/ns-commctrl-taskdialogconfig)
@@ -1964,7 +1978,7 @@ begin
     end
     else
     begin
-      if IsConsole then writeln('TWin32WSTaskDialog.Execute: Call to TaskDialogIndirect failed, result was: ',LongInt(Res).ToHexString);
+      if IsConsole then writeln('TWin32WSTaskDialog.Execute: Call to TaskDialogIndirect failed, result was: ',LongInt(Res).ToHexString,'  [',Res,']');
       Result := inherited Execute(ADlg, AParentWnd, ARadioRes);  //probably illegal parameters: fallback to emulated taskdialog
     end;
   end;

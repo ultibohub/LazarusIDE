@@ -1,4 +1,42 @@
+{
+ /***************************************************************************
+                            TaskDlgEmulation.pp
+                            -----------------
+
+ Implements TaskDialog Window on systems that do not support it natively
+ This unit was originally a part of the freeware Synopse mORMot framework,
+ licensed under a MPL/GPL/LGPL tri-license; version 1.19.
+ It has been relicensed with permission from Arnaud Bouchez, the original
+ author, and all contributors.
+
+ The original name is SynTaskDialog.pas
+
+ ***************************************************************************/
+
+ *****************************************************************************
+  This file is part of the Lazarus Component Library (LCL)
+
+  See the file COPYING.modifiedLGPL.txt, included in this distribution,
+  for details about the license.
+ *****************************************************************************
+}
+
 unit TaskDlgEmulation;
+
+{
+  This unit tries to emulate the functionality of Windows Vista and higher TaskDialogIndirect.
+  It also adds capabilities that TaskDialogIndirect does not have, currently:
+    * Query via combobox
+    * Query via single line edit, which supports masking the input for use eith e.g. passwords
+
+  The emulated dialog does not aim to be visually (near) exactly the same as the Vista+ native dialog.
+
+  This dialog is invoked by Dialogs.TTaskDialog.Execute on systems that do not support
+  the native Vista+ dialog, and it is also used as a fallback in case the native
+  Vista+ dialog fails (when passed invalid combination of arguments).
+  The dialog therefore uses the Flags property of Dialogs.TTaskDialog, but not
+  all of these flags are supported (yet) in the emulated dialog.
+}
 
 {$mode ObjFPC}{$H+}
 
@@ -22,23 +60,45 @@ type
 
   TLCLTaskDialog = class(TForm)
   private
+    const
+      RadioIndent = 16;
+      ComboBoxHeight = 22;
+      QueryEditHeight = 22;
+      LargeImageSize = 32;
+      SmallImageSize = 16;
+      CommandLinkButtonHeight = 40;
+      RadioVSpacing = 16;
+      LabelVSpacing = 16;
+      CommandLinkButtonVSpacing = 2;
+      BevelMargin = 2;
+      BevelHeight = 2;
+  private
     /// the Task Dialog structure which created the form
     FDlg: TTaskDialog;
     FVerifyChecked: Boolean;
     FExpanded: Boolean;
-    FCommandLinkButtonWidth: Integer;
+    CommandLinkButtonWidth: Integer;
+    CommandLinkButtonMargin: Integer;
+    CommandLinkButtonSpacing: Integer; //Height of TBitBtns
+    ButtonHeight: Integer;  //Height of TButtons
+    GlobalLeftMargin: Integer;
+    ExpandHeightRequired: Integer;
     Timer: TTimer;
     TimerStartTime: TTime;
     RadioButtonArray: array of TRadioButton;
 
     //CustomButtons, Radios: TStringList;
     DialogCaption, DlgTitle, DlgText,
-    ExpandButtonCaption, CollapsButtonCaption, ExpandedText, FooterText,
+    ExpandButtonCaption, CollapseButtonCaption, ExpandedText, FooterText,
     VerificationText: String;
     CommonButtons: TTaskDialogCommonButtons;
 
-    Panel: TPanel;
-    Image: TImage;
+    TopPanel: TPanel;
+    MidPanel: TPanel;
+    BottomPanel: TPanel;
+    MainImage: TImage;
+    FooterImage: TImage;
+    ExpandedTextBevel: TBevel;
     /// the labels corresponding to the Task Dialog main elements
     Element: array[tdeContent..tdeMainInstruction] of TLabel;
     /// the Task Dialog query selection list
@@ -47,25 +107,30 @@ type
     QueryEdit: TEdit;
     /// the Task Dialog optional checkbox
     VerifyCheckBox: TCheckBox;
-    /// the Expand/Collaps button
+    /// the Expand/Collapse button
     ExpandBtn: TButton;
 
-
-    procedure AddIcon(out IconBorder,X,Y: Integer; AParent: TWinControl);
-    procedure AddPanel;
-    procedure AddRadios(ARadioOffSet, AWidth, ARadioDef, AFontHeight: Integer; var X,Y: Integer; AParent: TWinControl);
-    procedure AddCommandLinkButtons(var X, Y: Integer; AWidth, AButtonDef, AFontHeight: Integer; AParent: TWinControl);
-    procedure AddButtons(var X,Y, XB: Integer; AWidth, AButtonDef: Integer; APArent: TWinControl);
-    procedure AddCheckBox(var X,Y, XB: Integer; AWidth, ALeftMargin: Integer; APArent: TWinControl);
-    procedure AddExpandButton(var X,Y, XB: Integer; AWidth, ALeftMargin: Integer; APArent: TWinControl);
-    procedure AddFooter(var X, Y, XB: Integer; AFontHeight, AWidth, AIconBorder: Integer; APArent: TWinControl);
-    function AddLabel(const AText: string; BigFont: boolean; var X, Y: Integer; AFontHeight, AWidth: Integer; APArent: TWinControl): TLabel;
-    procedure AddQueryCombo(var X,Y: Integer; AWidth: Integer; AParent: TWinControl);
+    procedure GetDefaultButtons(out aButtonDef, aRadioDef: TModalResult);
+    procedure InitCaptions;
+    procedure InitGlobalDimensionsAndStyle(ACustomButtonsTextLength: Integer; out aWidth, aFontHeight: Integer);
+    function GetGlobalLeftMargin: Integer;
+    procedure AddMainIcon(out ALeft,ATop: Integer; AGlobalLeftMargin: Integer; AParent: TWinControl);
+    procedure AddPanels;
+    procedure AddRadios(const ARadioOffSet, AWidth, ARadioDef, AFontHeight, ALeft: Integer; var ATop: Integer; AParent: TWinControl);
+    procedure AddCommandLinkButtons(const ALeft: Integer; var ATop: Integer; AWidth, AButtonDef, AFontHeight: Integer; AParent: TWinControl);
+    procedure AddButtons(const ALeft: Integer; var ATop, AButtonLeft: Integer; AWidth, AButtonDef: Integer; APArent: TWinControl);
+    procedure AddCheckBox(const ALeft: Integer; var ATop, XB: Integer; AWidth: Integer; APArent: TWinControl);
+    procedure AddExpandButton(const ALeft: Integer; var ATop, XB: Integer; AWidth: Integer; APArent: TWinControl);
+    function AddBevel(var ATop: Integer; aWidth: Integer; AParent: TWinControl; Hidden: Boolean = False): TBevel;
+    procedure AddFooter(var ALeft: Integer; var ATop: Integer; AFontHeight, AWidth: Integer; APArent: TWinControl);
+    function AddLabel(const AText: string; BigFont: Boolean; const ALeft: Integer; var ATop: Integer; AFontHeight,
+                      AWidth: Integer; APArent: TWinControl; Hidden: Boolean = False): TLabel;
+    procedure AddQueryCombo(const ALeft: Integer; var ATop: Integer; AWidth: Integer; AParent: TWinControl);
     procedure AddQueryEdit(var X,Y: Integer; AWidth: Integer; AParent: TWinControl);
     procedure SetupTimer;
     procedure ResetTimer;
     procedure ExpandDialog;
-    procedure CollapsDialog;
+    procedure CollapseDialog;
 
     procedure DoDialogConstructed;
     procedure DoDialogCreated;
@@ -92,11 +157,6 @@ type
   end;
 
 
-type
-  TTaskDialogTranslate = function(const aString: string): string;
-var
-  TaskDialog_Translate: TTaskDialogTranslate;
-
 
 function ExecuteLCLTaskDialog(const ADlg: TCustomTaskDialog; AParentWnd: HWND; out ARadioRes: Integer): Integer;
 
@@ -107,11 +167,7 @@ type
   TLCLTaskDialogFooterIcon = (
     tfiBlank, tfiWarning, tfiQuestion, tfiError, tfiInformation, tfiShield);
 
-function IconMessage(Icon: TLCLTaskDialogIcon): string;
-function TF_DIALOGICON(const aIcon: TTaskDialogIcon): TLCLTaskDialogIcon;
-function TF_FOOTERICON(const aIcon: TTaskDialogIcon): TLCLTaskDialogFooterIcon;
-
-
+function IconMessage(Icon: TTaskDialogIcon): string;
 
 implementation
 
@@ -147,10 +203,9 @@ end;
 
 
 const
-  LCL_IMAGES: array[TLCLTaskDialogIcon] of Integer = (
-    0, idDialogWarning, idDialogConfirm, idDialogError, idDialogInfo, 0, idDialogShield);
-  LCL_FOOTERIMAGES: array[TLCLTaskDialogFooterIcon] of Integer = (
-    0, idDialogWarning, idDialogConfirm, idDialogError, idDialogInfo, idDialogShield);
+  LCL_IMAGES: array[TTaskDialogIcon] of Integer = (
+    0 {tdiNone}, idDialogWarning {tdiWarning}, idDialogError {tdiError}, idDialogInfo {tdiInformation},
+    idDialogShield {tdiShield}, idDialogConfirm {tdiQuestion});
 
 const
   TD_BTNMOD: array[TTaskDialogCommonButton] of Integer = (
@@ -171,54 +226,15 @@ end;
 
 
 
-function TF_DIALOGICON(const aIcon: TTaskDialogIcon): TLCLTaskDialogIcon;
-begin
-  case aIcon of
-    tdiWarning: Result := tiWarning;
-    tdiError: Result := tiError;
-    tdiInformation: Result := tiInformation;
-    tdiShield: Result := tiShield;
-    tdiQuestion: Result := tiQuestion;
-  else
-    Result := tiBlank;
-  end;
-end;
-
-function TF_FOOTERICON(const aIcon: TTaskDialogIcon): TLCLTaskDialogFooterIcon;
-begin
-  case aIcon of
-    tdiWarning: Result := tfiWarning;
-    tdiError: Result := tfiError;
-    tdiInformation: Result := tfiInformation;
-    tdiShield: Result := tfiShield;
-    tdiQuestion: Result := tfiQuestion;
-  else
-    Result := tfiBlank;
-  end;
-end;
-
-
-//Note: do we really need this??
-//We already use resourcestrings that can be translated using
-//translations unit
-function TD_Trans(const aString: string): string;
-begin
-  if Assigned(TaskDialog_Translate) then
-    Result := TaskDialog_Translate(aString)
-  else
-    Result := aString;
-end;
-
-function IconMessage(Icon: TLCLTaskDialogIcon): string;
+function IconMessage(Icon: TTaskDialogIcon): string;
 begin
   case Icon of
-    tiWarning:   Result := rsMtWarning;
-    tiQuestion:  Result := rsMtConfirmation;
-    tiError:     Result := rsMtError;
-    tiInformation, tiShield: Result := rsMtInformation;
+    tdiWarning:   Result := rsMtWarning;
+    tdiQuestion:  Result := rsMtConfirmation;
+    tdiError:     Result := rsMtError;
+    tdiInformation, tdiShield: Result := rsMtInformation;
     else Result := '';
   end;
-  Result := TD_Trans(Result);
 end;
 
 
@@ -249,7 +265,7 @@ begin
   inherited CreateNew(AOwner, Num);
   RadioButtonArray := nil;
   FExpanded := False;
-  FCommandLinkButtonWidth := -1;
+  CommandLinkButtonWidth := -1;
   KeyPreview := True;
   DoDialogCreated;
 end;
@@ -315,57 +331,185 @@ begin
       ARadioRes := i+TaskDialogFirstRadioButtonIndex;
 end;
 
-
-
-
-procedure TLCLTaskDialog.AddIcon(out IconBorder,X,Y: Integer; AParent: TWinControl);
-var
-  aDialogIcon: TLCLTaskDialogIcon;
+procedure TLCLTaskDialog.GetDefaultButtons(out aButtonDef, aRadioDef: TModalResult);
 begin
-  if (tfEmulateClassicStyle in FDlg.Flags) then
-    IconBorder := 10
-  else
-    IconBorder := 24;
+  if FDlg.RadioButtons.DefaultButton<> nil then
+   aRadioDef := FDlg.RadioButtons.DefaultButton.Index
+ else
+   aRadioDef := 0;
+ if FDlg.Buttons.DefaultButton<>nil then
+   aButtonDef := FDlg.Buttons.DefaultButton.ModalResult
+ else
+   aButtonDef := TD_BTNMOD[FDlg.DefaultButton];
 
-  aDialogIcon := TF_DIALOGICON(FDlg.MainIcon);
-  if (LCL_IMAGES[aDialogIcon]<>0) then
+end;
+
+procedure TLCLTaskDialog.InitCaptions;
+begin
+  DialogCaption := FDlg.Caption;
+  DlgTitle := FDlg.Title;
+  DlgText := FDlg.Text;
+  ExpandButtonCaption := FDlg.ExpandButtonCaption;
+  CollapseButtonCaption := FDlg.CollapseButtonCaption;
+  ExpandedText := FDlg.ExpandedText;
+  FooterText := FDlg.FooterText;
+  VerificationText := FDlg.VerificationText;
+ if (DialogCaption = '') then
+   if (Application.MainForm = nil) then
+     DialogCaption := Application.Title
+   else
+     DialogCaption := Application.MainForm.Caption;
+ if (DlgTitle = '') then
+   DlgTitle := IconMessage(FDlg.MainIcon);
+end;
+
+procedure TLCLTaskDialog.InitGlobalDimensionsAndStyle(ACustomButtonsTextLength: Integer; out aWidth, aFontHeight: Integer);
+begin
+  PixelsPerInch := 96; // we are using 96 PPI in the code, scale it automatically at ShowModal
+  Font.PixelsPerInch := 96;
+  BorderStyle := bsDialog;
+  if (tfAllowDialogCancellation in FDlg.Flags) then
+    BorderIcons := [biSystemMenu]
+  else
+    BorderIcons := [];
+  if (tfPositionRelativeToWindow in FDlg.Flags) then
+    Position := poOwnerFormCenter
+  else
+    Position := poScreenCenter;
+
+  if not (tfEmulateClassicStyle in FDlg.Flags) then
+    Font := DefaultFont;
+
+  aFontHeight := Font.Height;
+  if (aFontHeight = 0) then
+    aFontHeight := Screen.SystemFont.Height;
+
+  aWidth := FDlg.Width;
+  if (aWidth <= 0) then
   begin
-    Image := TImage.Create(Self);
-    Image.Parent := AParent;
-    Image.Images := DialogGlyphs;
-    Image.ImageIndex := DialogGlyphs.DialogIcon[LCL_IMAGES[aDialogIcon]];
-    Image.SetBounds(IconBorder,IconBorder, 32, 32);
-    Image.Stretch := True;
-    Image.StretchOutEnabled := False;
-    Image.Proportional := True;
-    Image.Center := True;
-    X := Image.Width+IconBorder*2;
-    Y := Image.Top;
-    if (tfEmulateClassicStyle in FDlg.Flags) then
-      inc(Y, 8);
+    aWidth := Canvas.TextWidth(DlgTitle);
+    if (aWidth > 300) or (Canvas.TextWidth(DlgText) > 300) or
+       (ACustomButtonsTextLength > 40) then
+      aWidth := 480 else
+      aWidth := 420;
+  end
+  else
+    if (aWidth < 120) then aWidth := 120;
+  ClientWidth := aWidth;
+
+  if (tfEmulateClassicStyle in FDlg.Flags) then
+  begin
+    CommandLinkButtonMargin := 7;
+    CommandLinkButtonSpacing := 7;
+    ButtonHeight := 22;
   end
   else
   begin
-    Image := nil;
-    if (not (tfEmulateClassicStyle in FDlg.Flags)) and (DlgTitle <> '') then
-      IconBorder := IconBorder*2;
-    X := IconBorder;
-    Y := IconBorder;
+    CommandLinkButtonMargin := 24;
+    CommandLinkButtonSpacing := 10;
+    ButtonHeight := 28;
+  end;
+  Height := 200;
+  //debugln(['Font: Name=',Font.Name,', Size=',Font.Size,', Height=',Font.Height]);
+end;
+
+function TLCLTaskDialog.GetGlobalLeftMargin: Integer;
+begin
+  if (tfEmulateClassicStyle in FDlg.Flags) then
+    Result := 10
+  else
+    Result := 16;
+end;
+
+procedure TLCLTaskDialog.AddMainIcon(out ALeft,ATop: Integer; AGlobalLeftMargin: Integer; AParent: TWinControl);
+var
+  aDialogIcon: TTaskDialogIcon;
+begin
+  MainImage := nil;
+  if not (tfUseHIconMain in FDlg.Flags) then
+  begin
+    aDialogIcon := FDlg.MainIcon;
+    if (LCL_IMAGES[aDialogIcon]<>0) then
+    begin
+      MainImage := TImage.Create(Self);
+      MainImage.Parent := AParent;
+      MainImage.Images := DialogGlyphs;
+      MainImage.ImageIndex := DialogGlyphs.DialogIcon[LCL_IMAGES[aDialogIcon]];
+    end;
+  end
+  else
+  begin
+    if Assigned(FDlg.CustomMainIcon) and not (FDlg.CustomMainIcon.Empty) then
+    begin
+      MainImage := TImage.Create(Self);
+      MainImage.Parent := AParent;
+      MainImage.Picture.Assign(FDlg.CustomMainIcon);
+    end;
+  end;
+  if Assigned(MainImage) then
+  begin
+    MainImage.SetBounds(AGlobalLeftMargin, AGlobalLeftMargin, LargeImageSize, LargeImageSize);
+    MainImage.Stretch := True;
+    MainImage.StretchOutEnabled := False;
+    MainImage.Proportional := True;
+    MainImage.Center := True;
+    ALeft := MainImage.Width+AGlobalLeftMargin*2;
+    ATop := MainImage.Top;
+    if (tfEmulateClassicStyle in FDlg.Flags) then
+      inc(ATop, 8);
+  end
+  else
+  begin
+    ALeft := AGlobalLeftMargin;
+    ATop := AGlobalLeftMargin;
   end;
 end;
 
-procedure TLCLTaskDialog.AddPanel;
+procedure TLCLTaskDialog.AddPanels;
 begin
-  Panel := TPanel.Create(Self);
-  Panel.Parent := Self;
-  Panel.Align := alTop;
-  Panel.BorderStyle := bsNone;
-  Panel.BevelOuter := bvNone;
+  {
+    Create 3 different panels:
+    - the top panel holds main icon, title, text and expanded text
+    - the mid panel holds radiobuttons, commandlinkbuttons and query's
+      (basically everything that comes after ExpandedText and needs to be on a "colored" panel)
+    - the bottom panel has the rest of the controls
+    The top and mid panel have a distinct color (unless tfEmulateClassicStyle is set)
+    The reason for the 3 panel setup is that it makes it a lot easier to displace the controls
+    when Expand or Collapse is invoked: just move/resize the appropriate panels, no need to
+    iterate the individual controls on it.
+  }
+  TopPanel := TPanel.Create(Self);
+  TopPanel.Parent := Self;
+  TopPanel.Align := alTop;
+  TopPanel.BorderStyle := bsNone;
+  TopPanel.BevelOuter := bvNone;
   if not (tfEmulateClassicStyle in FDlg.Flags) then
-    Panel.Color := clWindow;
+    TopPanel.Color := clWindow;
+  TopPanel.Name := 'TopPanel'; //for debugging purposes
+  TopPanel.Caption := '';
+
+  MidPanel := TPanel.Create(Self);
+  MidPanel.Parent := Self;
+  MidPanel.Top := TopPanel.Top + TopPanel.Height + 1;
+  MidPanel.Align := alTop;
+  MidPanel.BorderStyle := bsNone;
+  MidPanel.BevelOuter := bvNone;
+  MidPanel.Color := TopPanel.Color;
+  MidPanel.Name := 'MidPanel'; //for debugging purposes
+  MidPanel.Caption := '';
+
+  BottomPanel := TPanel.Create(Self);
+  BottomPanel.Parent := Self;
+  BottomPanel.Top := MidPanel.Top + MidPanel.Height + 1;
+  BottomPanel.Align := alCLient;
+  BottomPanel.BorderStyle := bsNone;
+  BottomPanel.BevelOuter := bvNone;
+  BottomPanel.Name := 'BottomPanel'; //for debugging purposes
+  BottomPanel.Caption := '';
+
 end;
 
-procedure TLCLTaskDialog.AddRadios(ARadioOffSet, AWidth, ARadioDef, AFontHeight: Integer; var X,Y: Integer; AParent: TWinControl);
+procedure TLCLTaskDialog.AddRadios(const ARadioOffSet, AWidth, ARadioDef, AFontHeight, ALeft: Integer; var ATop: Integer; AParent: TWinControl);
 var
   i: Integer;
   aHint: String;
@@ -379,24 +523,24 @@ begin
       Parent := AParent;
       Tag := FDlg.RadioButtons[i].Index + TaskDialogFirstRadioButtonIndex;
       AutoSize := False;
-      SetBounds(X+16,Y,aWidth-32-X, (6-AFontHeight) + ARadioOffset);
-      Caption := FDlg.RadioButtons[i].Caption; //LCL RadioButton doesn't support multiline captions
-      inc(Y,Height + ARadioOffset);
+      SetBounds(ALeft+RadioIndent,ATop,aWidth-(2*RadioIndent)-ALeft, (6-AFontHeight) + ARadioOffset);
+      Caption := FDlg.RadioButtons[i].Caption;
+      inc(ATop,Height + ARadioOffset);
       if not (tfNoDefaultRadioButton in FDlg.Flags) and ((i=0) or (i=aRadioDef)) then
         Checked := True;
       OnClick := @OnRadioButtonClick;
     end;
   end;
-  inc(Y,24);
+  inc(ATop,24);
 end;
 
-procedure TLCLTaskDialog.AddCommandLinkButtons(var X, Y: Integer; AWidth, AButtonDef, AFontHeight: Integer; AParent: TWinControl);
+procedure TLCLTaskDialog.AddCommandLinkButtons(const ALeft: Integer; var ATop: Integer; AWidth, AButtonDef, AFontHeight: Integer; AParent: TWinControl);
 var
   i: Integer;
   CommandLink: TBitBtn;
   aHint: String;
 begin
-  inc(Y,8);
+  inc(ATop,8);
   for i := 0 to FDlg.Buttons.Count-1 do
   begin
     CommandLink := TBitBtn.Create(Self);
@@ -404,16 +548,13 @@ begin
     begin
       Parent := AParent;
       Font.Height := AFontHeight-3;
-      if (tfEmulateClassicStyle in FDlg.Flags) then
-        FCommandLinkButtonWidth := aWidth-10-X
-      else
-        FCommandLinkButtonWidth := aWidth-16-X;
-      SetBounds(X,Y,FCommandLinkButtonWidth,40);
+      CommandLinkButtonWidth := aWidth - ALeft - GlobalLeftMargin;
+      SetBounds(ALeft,ATop,CommandLinkButtonWidth,CommandLinkButtonHeight);
       Caption := FDlg.Buttons[i].Caption;
       Hint := FDlg.Buttons[i].CommandLinkHint;
       if (Hint <> '') then
         ShowHint := True;
-      inc(Y,Height+2);
+      inc(ATop,Height+CommandLinkButtonVSpacing);
       ModalResult := i+TaskDialogFirstButtonIndex;
       OnClick := @OnButtonClicked;
       if ModalResult=aButtonDef then
@@ -423,16 +564,8 @@ begin
         Font.Height := AFontHeight - 2;
         Font.Style := [fsBold]
       end;
-      if (tfEmulateClassicStyle in FDlg.Flags) then
-      begin
-        Margin := 7;
-        Spacing := 7;
-      end
-      else
-      begin
-        Margin := 24;
-        Spacing := 10;
-      end;
+      Margin := CommandLinkButtonMargin;
+      Spacing := CommandLinkButtonSpacing;
       if not (tfUseCommandLinksNoIcon in FDlg.Flags) then
       begin
         Images := LCLGlyphs;
@@ -440,10 +573,10 @@ begin
         end;
       end;
     end;
-  inc(Y,24);
+  inc(ATop,24);
 end;
 
-procedure TLCLTaskDialog.AddButtons(var X, Y, XB: Integer; AWidth, AButtonDef: Integer; APArent: TWinControl);
+procedure TLCLTaskDialog.AddButtons(const ALeft: Integer; var ATop, AButtonLeft: Integer; AWidth, AButtonDef: Integer; APArent: TWinControl);
 var
   CurrTabOrder, i: Integer;
   Btn: TTaskDialogCommonButton;
@@ -453,18 +586,15 @@ var
     WB: integer;
   begin
     WB := Canvas.TextWidth(s)+52;
-    dec(XB,WB);
-    if XB<X shr 1 then
+    dec(AButtonLeft,WB);
+    if AButtonLeft<ALeft {shr 1} then
     begin
-      XB := aWidth-WB;
-      inc(Y,32);
+      AButtonLeft := aWidth-WB;
+      inc(ATop,32);
     end;
     Result := TButton.Create(Self);
     Result.Parent := AParent;
-    if (tfEmulateClassicStyle in FDlg.Flags) then
-      Result.SetBounds(XB,Y,WB-10,22)
-    else
-      Result.SetBounds(XB,Y,WB-12,28);
+    Result.SetBounds(AButtonLeft,ATop,WB-10,ButtonHeight);
     Result.Caption := s;
     Result.ModalResult := AModalResult;
     Result.TabOrder := CurrTabOrder;
@@ -495,67 +625,66 @@ var
         ActiveControl := Result;
   end;
 begin
-  CurrTabOrder := Panel.TabOrder;
-  inc(Y, 16);
-  XB := aWidth;
+  //debugln(['TLCLTaskDialog.AddButtons: ALeft=',ALeft,', aWidth=',aWidth,', AParent=',DbgSName(AParent),', AParent.ClientWidth=',AParent.ClientWidth]);
+  if MidPanel.ControlCount > 0 then
+    CurrTabOrder := MidPanel.TabOrder
+  else
+    CurrTabOrder := TopPanel.TabOrder;
+  inc(ATop, 16);
+  AButtonLeft := aWidth;
   if not (tfUseCommandLinks in FDlg.Flags) then
     for i := FDlg.Buttons.Count-1 downto 0 do
       AddButton(FDlg.Buttons[i].Caption,i+TaskDialogFirstButtonIndex,i);
   for Btn := high(TTaskDialogCommonButton) downto low(TTaskDialogCommonButton) do
   begin
     if (Btn in CommonButtons) then
-      AddButton(TD_Trans(LoadResString(TD_BTNS(Btn))), TD_BTNMOD[Btn],-1);
+      AddButton(LoadResString(TD_BTNS(Btn)), TD_BTNMOD[Btn],-1);
   end;
 end;
 
-procedure TLCLTaskDialog.AddCheckBox(var X, Y, XB: Integer; AWidth, ALeftMargin: Integer; APArent: TWinControl);
+procedure TLCLTaskDialog.AddCheckBox(const ALeft: Integer; var ATop, XB: Integer; AWidth: Integer; APArent: TWinControl);
 begin
+  //debugln(['TLCLTaskDialog.AddCheckBox: ALeft=',ALeft]);
   VerifyCheckBox := TCheckBox.Create(Self);
   with VerifyCheckBox do
   begin
     Parent := AParent;
-    if (X > ALeftMargin) then
-      X := ALeftMargin;
-    if (X+16+Canvas.TextWidth(VerificationText) > XB) then begin
-      inc(Y,32);
+    if (ALeft+16+Canvas.TextWidth(VerificationText) > XB) then begin
+      inc(ATop,32);
       XB := aWidth;
     end;
-    SetBounds(X,Y,XB-X,24);
+    SetBounds(ALeft,ATop,XB-ALeft,24);
     Caption := VerificationText;
     Checked := FVerifyChecked;
     OnClick := @OnVerifyClicked;
   end;
 end;
 
-procedure TLCLTaskDialog.AddExpandButton(var X, Y, XB: Integer;
-  AWidth, ALeftMargin: Integer; APArent: TWinControl);
+procedure TLCLTaskDialog.AddExpandButton(const ALeft: Integer; var ATop, XB: Integer; AWidth: Integer; APArent: TWinControl);
 var
   CurrTabOrder: TTabOrder;
   WB, AHeight: Integer;
 begin
-  CurrTabOrder := Panel.TabOrder;
-  //inc(Y, 16);
-  X := ALeftMargin;
+  if MidPanel.ControlCount > 0 then
+    CurrTabOrder := MidPanel.TabOrder
+  else
+    CurrTabOrder := TopPanel.TabOrder;
   if (ExpandButtonCaption = '') then
   begin
-    if (CollapsButtonCaption = '') then
+    if (CollapseButtonCaption = '') then
     begin
-      ExpandButtonCaption := 'Show details';
-      CollapsButtonCaption := 'Hide details';
+      ExpandButtonCaption := rsShowDetails;
+      CollapseButtonCaption := rsHideDetails;
     end
     else
-      ExpandButtonCaption := CollapsButtonCaption;
+      ExpandButtonCaption := CollapseButtonCaption;
   end;
-  if (CollapsButtonCaption = '') then
-    CollapsButtonCaption := ExpandButtonCaption;
-  WB := Max(Canvas.TextWidth(ExpandButtonCaption), Canvas.TextWidth(CollapsButtonCaption)) +32;//52;
-  //debugln(['    X+WB=', X+WB]);
-  //debugln(['       XB=', XB]);
-  //debugln(['     diff=', X+WB-XB]);
-  if (X+WB > XB) then
+  if (CollapseButtonCaption = '') then
+    CollapseButtonCaption := ExpandButtonCaption;
+  WB := Max(Canvas.TextWidth(ExpandButtonCaption), Canvas.TextWidth(CollapseButtonCaption)) +32;//52;
+  if (ALeft+WB > XB) then
   begin
-    //debugln('TLCLTaskDialog.AddExpandButton: too wide');
-    inc(Y,32);
+    inc(ATop,32);
     XB := aWidth;
   end;
 
@@ -565,64 +694,85 @@ begin
     AHeight := 22
   else
     AHeight := 28;
-  ExpandBtn.SetBounds(X,Y,WB-12,AHeight);
+  ExpandBtn.SetBounds(ALeft,ATop,WB-12,AHeight);
   if not (tfExpandedByDefault in FDlg.Flags) then
     ExpandBtn.Caption := ExpandButtonCaption
   else
-    ExpandBtn.Caption := CollapsButtonCaption;
+    ExpandBtn.Caption := CollapseButtonCaption;
   ExpandBtn.ModalResult := mrNone;
   ExpandBtn.TabOrder := CurrTabOrder;
   ExpandBtn.OnClick := @OnExpandButtonClicked;
-  Inc(Y, AHeight+8);
+  Inc(ATop, AHeight+8);
 end;
 
-procedure TLCLTaskDialog.AddFooter(var X, Y, XB: Integer; AFontHeight, AWidth, AIconBorder: Integer; APArent: TWinControl);
-  procedure AddBevel;
-  var
-    BX: integer;
-  begin
-    with TBevel.Create(Self) do begin
-      Parent := AParent;
-      if (Image<>nil) and (Y<Image.Top+Image.Height) then
-        BX := X else
-        BX := 2;
-      SetBounds(BX,Y,aWidth-BX-2,2);
-    end;
-    inc(Y,16);
-  end;
-
+function TLCLTaskDialog.AddBevel(var ATop: Integer; aWidth: Integer; AParent: TWinControl; Hidden: Boolean): TBevel;
 begin
-  if XB<>0 then
-    AddBevel
-  else
-    inc(Y,16);
-  if (LCL_FOOTERIMAGES[TF_FOOTERICON(FDlg.FooterIcon)]<>0) then
+  Result := TBevel.Create(Self);
+  with Result do begin
+    Parent := AParent;
+    //if (FooterImage<>nil) and (ATop<FooterImage.Top+FooterImage.Height) then
+    //  BX := ALeft else
+    //  BX := BevelMargin;
+    SetBounds(BevelMargin,ATop,aWidth-2*BevelMargin,BevelHeight);
+    if Hidden then
+      Visible := False
+    else
+      Inc(ATop, BevelHeight);
+  end;
+end;
+
+procedure TLCLTaskDialog.AddFooter(var ALeft: Integer; var ATop: Integer; AFontHeight, AWidth: Integer; APArent: TWinControl);
+//ALeft must be adjusted by AddFooter if FooterIcon exists, so that we can left-align
+//ExpandedText in the Footer area with the FooterText (in case of tfExpandFooterArea)
+var
+  aFooterIcon: TTaskDialogIcon;
+begin
+  //debugln(['AddFooterText: XB=',XB]);
+  AddBevel(ATop, aWidth, AParent);
+  inc(ATop,LabelVSPacing div 2);
+  FooterImage := nil;
+  if not (tfUseHIconFooter in FDlg.Flags) then
   begin
-    Image := TImage.Create(Self);
-    Image.Parent := AParent;
-    Image.Images := DialogGlyphs;
-    Image.ImageWidth := 16;
-    Image.ImageIndex := DialogGlyphs.DialogIcon[LCL_FOOTERIMAGES[TF_FOOTERICON(FDlg.FooterIcon)]];
-    Image.Stretch := True;
-    Image.StretchOutEnabled := False;
-    Image.Proportional := True;
-    Image.Center := True;
-    Image.SetBounds(AIconBorder,Y,16,16);
-    X := 40+Image.Width;
+    aFooterIcon := FDlg.FooterIcon;
+    if (LCL_IMAGES[aFooterIcon]<>0) then
+    begin
+      FooterImage := TImage.Create(Self);
+      FooterImage.Parent := AParent;
+      FooterImage.Images := DialogGlyphs;
+      FooterImage.ImageWidth := SmallImageSize;
+      FooterImage.ImageIndex := DialogGlyphs.DialogIcon[LCL_IMAGES[aFooterIcon]];
+    end;
   end
   else
   begin
-    X := 24;
+    if Assigned(FDlg.CustomFooterIcon) and not (FDlg.CustomFooterIcon.Empty) then
+    begin
+      FooterImage := TImage.Create(Self);
+      FooterImage.Parent := AParent;
+      FooterImage.ImageWidth := SmallImageSize;
+      FooterImage.Picture.Assign(FDlg.CustomFooterIcon);
+    end;
   end;
-  Element[tdeFooter] := AddLabel(FooterText, False, X, Y, AFontHeight, AWidth, AParent);
+  if Assigned(FooterImage) then
+  begin
+    FooterImage.Stretch := True;
+    FooterImage.StretchOutEnabled := False;
+    FooterImage.Proportional := True;
+    FooterImage.Center := True;
+    FooterImage.SetBounds(GlobalLeftMargin,ATop,SmallImageSize,SmallImageSize);
+    ALeft := GlobalLeftMargin + Aleft + FooterImage.Width;
+  end;
+  Element[tdeFooter] := AddLabel(FooterText, False, ALeft, ATop, AFontHeight, AWidth, AParent);
+  Dec(ATop, LabelVSpacing div 2);
 end;
 
-function TLCLTaskDialog.AddLabel(const AText: string; BigFont: boolean; var X, Y: Integer; AFontHeight, AWidth: Integer; APArent: TWinControl): TLabel;
+function TLCLTaskDialog.AddLabel(const AText: string; BigFont: Boolean; const ALeft: Integer; var ATop: Integer; AFontHeight,
+                                 AWidth: Integer; APArent: TWinControl; Hidden: Boolean = False): TLabel;
 var
   R: TRect;
   W: integer;
 begin
-  //debugln(['TLCLTaskDialog.AddLabel A: AText=',AText,',X=',X,', AParent=',DbgSName(AParent),', AParent.Width=',AParent.Width,', Self.Width=',Self.Width]);
+  //debugln(['TLCLTaskDialog.AddLabel A: AText=',AText,',X=',ALeft,', AParent=',DbgSName(AParent),', AParent.Width=',AParent.Width,', Self.Width=',Self.Width]);
   if (AText = '') then
     Exit(nil);
   Result := TLabel.Create(Self);
@@ -645,29 +795,32 @@ begin
   Result.AutoSize := False;
   R.Left := 0;
   R.Top := 0;
-  W := aWidth-X-8;
+  W := aWidth-ALeft-GlobalLeftMargin;
   R.Right := W;
   R.Bottom := Result.Height;
   Result.Caption := AText;
   Result.Parent := AParent;
   LCLIntf.DrawText(Result.Canvas.Handle,PChar(AText),Length(AText),R,DT_CALCRECT or DT_WORDBREAK);
-  //debugln(['TLCLTaskDialog.AddLabel before Result.SetBounds(',X,',',Y,',',W,',',R.Bottom,')']);
-  Result.SetBounds(X,Y,W,R.Bottom);
-  //debugln(['TLCLTaskDialog.AddLabel after Result.SetBounds(',X,',',Y,',',W,',',R.Bottom,'), Result.BoundsRect=',DbgS(Result.BoundsRect)]);
-  inc(Y,R.Bottom+16);
-  //debugln(['TLCLTaskDialog.AddLabel End: X=',X,', Result.Left=',Result.Left]);
+  Result.SetBounds(ALeft,ATop,W,R.Bottom);
+  if not Hidden then
+    inc(ATop,R.Bottom+LabelVSpacing)
+  else
+    Result.Visible := False;
+  //else
+  //  ExpandHeightRequired := R.Bottom+LabelVSpacing;
+  //debugln(['TLCLTaskDialog.AddLabel End: X=',ALeft,', Result.Left=',Result.Left]);
 end;
 
-procedure TLCLTaskDialog.AddQueryCombo(var X, Y: Integer; AWidth: Integer; AParent: TWinControl);
+procedure TLCLTaskDialog.AddQueryCombo(const ALeft: Integer; var ATop: Integer; AWidth: Integer; AParent: TWinControl);
 begin
   QueryCombo := TComboBox.Create(Self);
   with QueryCombo do
   begin
     Items.Assign(FDlg.QueryChoices);
-    if (FCommandLinkButtonWidth > 0) then
-      SetBounds(X,Y,FCommandLinkButtonWidth,22) //right align with the buttons
+    if (CommandLinkButtonWidth > 0) then
+      SetBounds(ALeft,ATop,CommandLinkButtonWidth,ComboBoxHeight) //right align with the buttons
     else
-      SetBounds(X,Y,aWidth-32-X,22);
+      SetBounds(ALeft,ATop,aWidth-2*GlobalLeftMargin-ALeft,ComboBoxHeight);
     if (tfQueryFixedChoices in FDlg.Flags) then
       Style := csDropDownList
     else
@@ -683,7 +836,7 @@ begin
     end;
     Parent := AParent;
   end;
-  inc(Y,42);
+  inc(ATop,42);
 end;
 
 procedure TLCLTaskDialog.AddQueryEdit(var X, Y: Integer; AWidth: Integer; AParent: TWinControl);
@@ -691,8 +844,8 @@ begin
   QueryEdit := TEdit.Create(Self);
   with QueryEdit do
   begin
-    if (FCommandLinkButtonWidth > 0) then
-      SetBounds(X,Y,FCommandLinkButtonWidth,22) //right align with the buttons
+    if (CommandLinkButtonWidth > 0) then
+      SetBounds(X,Y,CommandLinkButtonWidth,QueryEditHeight) //right align with the buttons
     else
     SetBounds(X,Y,aWidth-16-X,22);
     Text := FDlg.SimpleQuery;
@@ -707,7 +860,7 @@ begin
   if not FExpanded then
     ExpandDialog
   else
-    CollapsDialog;
+    CollapseDialog;
   FExpanded := not FExpanded;
   {$PUSH}
   {$ObjectChecks OFF}
@@ -771,14 +924,36 @@ end;
 
 procedure TLCLTaskDialog.ExpandDialog;
 begin
-  ExpandBtn.Caption := ExpandButtonCaption;
-  //ToDo: actually expand the dialog
+  ExpandBtn.Caption := CollapseButtonCaption;
+  if not (tfExpandFooterArea in FDlg.Flags) then
+  begin
+    Element[tdeExpandedInfo].Parent.Height := Element[tdeExpandedInfo].Parent.Height + ExpandHeightRequired;
+    Height := Height + ExpandHeightRequired;
+    Element[tdeExpandedInfo].Visible := True;
+  end
+  else
+  begin
+    Height := Height + ExpandHeightRequired;
+    ExpandedTextBevel.Visible := True;
+    Element[tdeExpandedInfo].Visible := True;
+  end;
 end;
 
-procedure TLCLTaskDialog.CollapsDialog;
+procedure TLCLTaskDialog.CollapseDialog;
 begin
-  ExpandBtn.Caption := CollapsButtonCaption;
-  //ToDo: actually collaps the dialog
+  ExpandBtn.Caption := ExpandButtonCaption;
+  if not (tfExpandFooterArea in FDlg.Flags) then
+  begin
+    Element[tdeExpandedInfo].Visible := False;
+    Element[tdeExpandedInfo].Parent.Height := Element[tdeExpandedInfo].Parent.Height - ExpandHeightRequired;
+    Height := Height - ExpandHeightRequired;
+  end
+  else
+  begin
+    ExpandedTextBevel.Visible := False;
+    Element[tdeExpandedInfo].Visible := False;
+    Height := Height - ExpandHeightRequired;
+  end;
 end;
 
 procedure TLCLTaskDialog.DoDialogConstructed;
@@ -833,7 +1008,8 @@ var
   aRadioDef, aButtonDef: TModalResult;
   B: TTaskDialogBaseButtonItem;
   ButtonID: Integer;
-  ARadioOffset, FontHeight, aWidth, IconBorder, X, Y, i, XB: integer;
+  ARadioOffset, FontHeight, aWidth, ALeft {Left for controls aligned right to the icon, so on top 2 panels},
+  ATop, i, XB: integer;
   CurrParent: TWinControl;
   aDialogIcon: TLCLTaskDialogIcon;
   CommandLink: TBitBtn;
@@ -844,32 +1020,16 @@ var
 begin
   DisableAutoSizing;
   try
-    if FDlg.RadioButtons.DefaultButton<> nil then
-      aRadioDef := FDlg.RadioButtons.DefaultButton.Index
-    else
-      aRadioDef := 0;
-    if FDlg.Buttons.DefaultButton<>nil then
-      aButtonDef := FDlg.Buttons.DefaultButton.ModalResult
-    else
-      aButtonDef := TD_BTNMOD[FDlg.DefaultButton];
+    GetDefaultButtons(aButtonDef, aRadioDef);
 
     CustomButtonsTextLength := 0;
     for B in FDlg.Buttons do
       CustomButtonsTextLength := CustomButtonsTextLength + Length(B.Caption);
 
-
-    DialogCaption := FDlg.Caption;
-    DlgTitle := FDlg.Title;
-    DlgText := FDlg.Text;
-    ExpandButtonCaption := FDlg.ExpandButtonCaption;
-    CollapsButtonCaption := FDlg.CollapsButtonCaption;
-    ExpandedText := FDlg.ExpandedText;
-    FooterText := FDlg.FooterText;
-    VerificationText := FDlg.VerificationText;
+    InitCaptions;
     FVerifyChecked := (tfVerificationFlagChecked in FDlg.Flags);
 
     CommonButtons := FDlg.CommonButtons;
-
     if (CommonButtons=[]) and (FDlg.Buttons.Count=0) then
     begin
       CommonButtons := [tcbOk];
@@ -877,126 +1037,116 @@ begin
         aButtonDef := mrOk;
     end;
 
-    if (DialogCaption = '') then
-      if (Application.MainForm = nil) then
-        DialogCaption := Application.Title
-      else
-        DialogCaption := Application.MainForm.Caption;
+    InitGlobalDimensionsAndStyle(CustomButtonsTextLength, aWidth, FontHeight);
 
-    if (DlgTitle = '') then
-      DlgTitle := IconMessage(TF_DIALOGICON(FDlg.MainIcon));
-
-    PixelsPerInch := 96; // we are using 96 PPI in the code, scale it automatically at ShowModal
-    Font.PixelsPerInch := 96;
-    BorderStyle := bsDialog;
-    if (tfAllowDialogCancellation in FDlg.Flags) then
-      BorderIcons := [biSystemMenu]
-    else
-      BorderIcons := [];
-    if (tfPositionRelativeToWindow in FDlg.Flags) then
-      Position := poOwnerFormCenter
-    else
-      Position := poScreenCenter;
-
-    if not (tfEmulateClassicStyle in FDlg.Flags) then
-      Font := DefaultFont;
-
-    FontHeight := Font.Height;
-    if (FontHeight = 0) then
-      FontHeight := Screen.SystemFont.Height;
-
-    aWidth := FDlg.Width;
-    if (aWidth <= 0) then
-    begin
-      aWidth := Canvas.TextWidth(DlgTitle);
-      if (aWidth > 300) or (Canvas.TextWidth(DlgText) > 300) or
-         (CustomButtonsTextLength > 40) then
-        aWidth := 480 else
-        aWidth := 420;
-    end
-    else
-      if (aWidth < 120) then aWidth := 120;
-    ClientWidth := aWidth;
-
-    Height := TaskDialogFirstRadioButtonIndex;
     Caption := DialogCaption;
 
-    // create a white panel for the main dialog part
-    AddPanel;
-    CurrParent := Panel;
+    AddPanels;
+    CurrParent := TopPanel;
 
     // handle main dialog icon
-    AddIcon(IconBorder, X, Y, CurrParent);
+    GlobalLeftMargin := GetGlobalLeftMargin;
+    AddMainIcon(ALeft, ATop, GlobalLeftMargin, CurrParent);
+    //debugln('SetupControls');
+    //debugln(['  GlobalLeftMargin=',GlobalLeftMargin]);
+    //debugln(['  ALeft=',ALeft]);
+    //debugln(['  ATop=',ATop]);
 
     // add main texts (DlgTitle, DlgText, Information)
-    Element[tdeMainInstruction] := AddLabel(DlgTitle, True, X, Y, FontHeight, aWidth, CurrParent);
-    Element[tdeContent] := AddLabel(DlgText, False, X, Y, FontHeight, aWidth, CurrParent);
-    if (ExpandedText <> '') then
-      // no information collapse/expand yet: it's always expanded
-      Element[tdeExpandedInfo] := AddLabel(ExpandedText, False, X, Y,  FontHeight, aWidth, CurrParent);
+    Element[tdeMainInstruction] := AddLabel(DlgTitle, True, ALeft, ATop, FontHeight, aWidth, CurrParent);
+    Element[tdeContent] := AddLabel(DlgText, False, ALeft, ATop, FontHeight, aWidth, CurrParent);
+    if (ExpandedText <> '')  and not (tfExpandFooterArea in FDlg.Flags) then
+    begin
+      Element[tdeExpandedInfo] := AddLabel(ExpandedText, False, ALeft, ATop,  FontHeight, aWidth, CurrParent, not (tfExpandedByDefault in Fdlg.Flags));
+      ExpandHeightRequired := Element[tdeExpandedInfo].Height + LabelVSPacing;
+      //debugln(['ExpandHeightRequired=',ExpandHeightRequired]);
+    end;
 
+
+    TopPanel.Height := ATop;
+    CurrParent := MidPanel;
+    ATop := 0;
 
     // add radio CustomButtons
     if (FDlg.RadioButtons.Count > 0) then
     begin
       ARadioOffset := 1;
-      AddRadios(ARadioOffSet, aWidth, aRadioDef, FontHeight, X, Y, CurrParent);
+      AddRadios(ARadioOffSet, aWidth, aRadioDef, FontHeight, ALeft, ATop, CurrParent);
     end;
 
     // add command links CustomButtons
     if (tfUseCommandLinks in FDlg.Flags) and (FDlg.Buttons.Count<>0) then
-      AddCommandLinkButtons(X, Y, aWidth, aButtonDef, FontHeight, CurrParent);
+      AddCommandLinkButtons(ALeft, ATop, aWidth, aButtonDef, FontHeight, CurrParent);
 
 
     // add query combobox list or QueryEdit
     if (tfQuery in FDlg.Flags) and (FDlg.QueryChoices.Count > 0) then
-      AddQueryCombo(X, Y, aWidth, CurrParent)
+      AddQueryCombo(ALeft, ATop, aWidth, CurrParent)
     else
     begin
       if (tfSimpleQuery in FDlg.Flags) and (FDlg.SimpleQuery <> '') then
-        AddQueryEdit(X, Y, aWidth, CurrParent);
+        AddQueryEdit(ALeft, ATop, aWidth, CurrParent);
     end;
 
-    // from now we won't add components to the white panel, but to the form
-    Panel.Height := Y;
-    CurrParent := Self;
+    MidPanel.Height := ATop;
+    if MidPanel.ControlCount = 0 then
+      MidPanel.Visible := False;
+
+    CurrParent := BottomPanel;
+    ATop := 0;
 
     XB := 0;
+    //ALeft := GlobalLeftMargin; //Left most margin of the form
     // add CustomButtons and verification checkbox
     if (CommonButtons <> []) or
        ((FDlg.Buttons.Count<>0) and not (tfUseCommandLinks in FDlg.Flags)) then
     begin
-      AddButtons(X, Y, XB, aWidth, aButtonDef, CurrParent);
+      AddButtons(GlobalLeftMargin, ATop, XB, aWidth, aButtonDef, CurrParent);
     end;
 
     //Add Expand button
     if (ExpandedText <> '') then
-      AddExpandButton(X, Y, XB, aWidth, IconBorder, CurrParent);
+      AddExpandButton(GlobalLeftMargin, ATop, XB, aWidth, CurrParent);
+    FExpanded := (ExpandedText <> '') and (tfExpandedByDefault in FDlg.Flags);
 
     if (VerificationText <> '') then
-      AddCheckBox(X, Y, XB, aWidth, IconBorder, CurrParent);
-    inc(Y,36);
+      AddCheckBox(GlobalLeftMargin, ATop, XB, aWidth, CurrParent);
+    inc(ATop,36);
 
 
 
     // add FooterText text with optional icon
     if (FooterText <> '') then
-      AddFooter(X, Y, XB, FontHeight, aWidth, IconBorder, CurrParent);
+    begin
+      ALeft := GlobalLeftMargin;
+      AddFooter(ALeft, ATop, FontHeight, aWidth, CurrParent);
+    end;
 
-     ClientHeight := Y;
+    if (ExpandedText <> '') and (tfExpandFooterArea in FDlg.Flags) then
+    begin
+      ExpandedTextBevel := AddBevel(ATop, aWidth, CurrParent, not FExpanded);
+      Inc(ATop, LabelVSpacing div 2);
+      Element[tdeExpandedInfo] := AddLabel(ExpandedText, False, ALeft, ATop,  FontHeight, aWidth, CurrParent, not FExpanded);
 
-     if (tfCallBackTimer in FDlg.Flags) then
-       SetupTimer;
+      ExpandHeightRequired := Element[tdeExpandedInfo].Height + BevelHeight + (LabelVSPacing {div 2});
+      //debugln(['ExpandHeightRequired=',ExpandHeightRequired]);
+      //if not FExpanded then
+      Dec(ATop, LabelVSpacing div 2);
+    end;
 
-     //AddButtons (which comes after adding query) may have set ActiveControl
-     //so do this here and not in AddQueryCombo or AddQueryEdit
-     if Assigned(QueryCombo) and (tfQueryFocused in FDlg.Flags) then
-       ActiveControl := QueryCombo
-     else
-       if Assigned(QueryEdit) and (tfQueryFocused in FDlg.Flags) then
-         ActiveControl := QueryEdit;
+    ClientHeight := TopPanel.Height + MidPanel.Height + ATop;
 
-     FExpanded := (tfExpandedByDefault in FDlg.Flags);
+    if (tfCallBackTimer in FDlg.Flags) then
+      SetupTimer;
+
+    //AddButtons (which comes after adding query) may have set ActiveControl
+    //so do this here and not in AddQueryCombo or AddQueryEdit
+    if Assigned(QueryCombo) and (tfQueryFocused in FDlg.Flags) then
+      ActiveControl := QueryCombo
+    else
+      if Assigned(QueryEdit) and (tfQueryFocused in FDlg.Flags) then
+        ActiveControl := QueryEdit;
+
   finally
     EnableAutoSizing;
   end;

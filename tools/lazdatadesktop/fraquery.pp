@@ -7,8 +7,8 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, SynHighlighterSQL, SynEdit, LResources, Forms,
-  DB, LCLType, Controls, ComCtrls, StdCtrls, ActnList, Dialogs, ExtCtrls, Menus,
-  dmImages, fpDatadict, fradata, lazdatadeskstr, sqlscript, sqldb, fpddsqldb;
+  DB, LCLType, Controls, ComCtrls, StdCtrls, ActnList, Dialogs, ExtCtrls, Menus, StdActns,
+  dmImages, fpDatadict, fradata, lazdatadeskstr, sqlscript, sqldb, fpddsqldb, lazddsqlutils, fraparams;
 
 type
    TExecuteMode = (emSingle,emSelection,emScript,emSelectionScript);
@@ -21,6 +21,10 @@ type
     ACloseQuery: TAction;
     ACreateCode: TAction;
     aCommit: TAction;
+    aCopyAsSQLConst: TAction;
+    aCopyAsTStringsAdd: TAction;
+    aCleanPascalCode: TAction;
+    aPrepareParameters: TAction;
     aRollBack: TAction;
     AExecuteSelectionScript: TAction;
     AExecuteScript: TAction;
@@ -33,18 +37,37 @@ type
     APreviousQuery: TAction;
     AExecute: TAction;
     ALQuery: TActionList;
+    aCopy: TEditCopy;
+    aCut: TEditCut;
+    aPaste: TEditPaste;
+    aSelectAll: TEditSelectAll;
+    MenuItem1: TMenuItem;
+    MenuItem2: TMenuItem;
+    MenuItem3: TMenuItem;
+    MenuItem4: TMenuItem;
+    mnuPrevSQL: TMenuItem;
+    mnuNextSQL: TMenuItem;
+    mnuSep2: TMenuItem;
+    mnuSep: TMenuItem;
+    mnuSelectAll: TMenuItem;
+    mnuPaste: TMenuItem;
+    mnuCopy: TMenuItem;
+    mnuCut: TMenuItem;
     MIExecuteSelectionScript: TMenuItem;
     MIExecuteScript: TMenuItem;
     MIExecuteSelection: TMenuItem;
     MIExecuteSingle: TMenuItem;
-    MResult: TMemo;
     ODSQL: TOpenDialog;
     PCResult: TPageControl;
     FMSQL: TSynEdit;
     PMExecute: TPopupMenu;
+    pmSynEdit: TPopupMenu;
     SDSQL: TSaveDialog;
     SQuery: TSplitter;
     SQLSyn: TSynSQLSyn;
+    MResult: TSynEdit;
+    tbPrepareParams: TToolButton;
+    TSParams: TTabSheet;
     TBExecute: TToolButton;
     TBSep1: TToolButton;
     TBPrevious: TToolButton;
@@ -62,13 +85,17 @@ type
     TSResult: TTabSheet;
     TSData: TTabSheet;
     TBQuery: TToolBar;
+    procedure aCleanPascalCodeExecute(Sender: TObject);
     procedure aCommitExecute(Sender: TObject);
     procedure aCommitUpdate(Sender: TObject);
+    procedure aCopyAsSQLConstExecute(Sender: TObject);
+    procedure aCopyAsTStringsAddExecute(Sender: TObject);
     procedure AExecuteExecute(Sender: TObject);
     procedure AExecuteScriptExecute(Sender: TObject);
     procedure AExecuteSelectionExecute(Sender: TObject);
     procedure AExecuteSelectionScriptExecute(Sender: TObject);
     procedure AExecuteSingleExecute(Sender: TObject);
+    procedure aPrepareParametersExecute(Sender: TObject);
     procedure aRollBackExecute(Sender: TObject);
     procedure aRollBackUpdate(Sender: TObject);
     procedure CloseQueryClick(Sender: TObject);
@@ -77,15 +104,17 @@ type
     procedure HaveSQLSelection(Sender: TObject);
     procedure LoadQueryClick(Sender: TObject);
     procedure NextQueryClick(Sender: TObject);
+    procedure NotBusy(Sender: TObject);
     procedure OnMemoKey(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure PreviousQueryClick(Sender: TObject);
     procedure SaveQueryClick(Sender: TObject);
     procedure ExportDataClick(Sender: TObject);
     procedure CreateCodeClick(Sender: TObject);
-    Procedure NotBusy(Sender: TObject);
+    Procedure HaveParamsAvailabe(Sender: TObject);
     Procedure DataShowing(Sender: TObject);
   private
     { private declarations }
+    FParamFrame : TfraParams;
     FEngine: TFPDDEngine;
     FQueryHistory : TStrings;
     FCurrentQuery : Integer;
@@ -95,7 +124,12 @@ type
     FScriptMode : TScriptMode;
     FErrorCount,
     FStatementCount : Integer;
+    FSQLConstName: String;
+    FSQLQuoteOptions: TQuoteOptions;
     FAbortScript : Boolean;
+    FExecParams : TParams;
+    procedure AddToResult(const Msg: String; SetCursorPos : Boolean = false);
+    procedure ClearParams;
     procedure ClearResults;
     function CountStatements(const S: String): Integer;
     function DetermineExecuteMode: TExecuteMode;
@@ -104,7 +138,7 @@ type
     procedure DoDirective(Sender: TObject; Directive, Argument: AnsiString;  var StopExecution: Boolean);
     procedure DoSQLStatement(Sender: TObject; Statement: TStrings; var StopExecution: Boolean);
     // Execute SQL
-    procedure DoExecuteQuery(Const Qry: String; ACount : Integer = 0);
+    procedure DoExecuteQuery(const Qry: TStrings; ACount: Integer);
     function GetTransaction: TSQLTransaction;
     procedure LocalizeFrame;
     function SelectionHint: Boolean;
@@ -112,6 +146,7 @@ type
   public
   Protected
     Function HaveTransaction : Boolean;
+    Function HaveParams : Boolean;
     Function TransactionIsActive : Boolean;
     procedure SetEngine(const AValue: TFPDDEngine);
     Function GetDataset: TDataset;
@@ -120,7 +155,7 @@ type
   Public
     Constructor Create(AOwner : TComponent); override;
     Destructor Destroy; override;
-    Function ExecuteQuery(Const Qry: String; ACount : Integer = 0) : Boolean;
+    function ExecuteQuery(const Qry: TStrings; ACount: Integer = 0): Boolean;
     procedure ExecuteScript(AScript: String);
     procedure SaveQuery(AFileName: String);
     procedure LoadQuery(AFileName: String);
@@ -137,6 +172,9 @@ type
     Property QueryHistory : TStrings Read FQueryHistory;
     Property CurrentQuery : Integer Read FCurrentQuery;
     Property Busy : TBusyMode Read FBusy;
+    Property SQLQuoteOptions : TQuoteOptions Read FSQLQuoteOptions Write FSQLQuoteOptions;
+    Property SQLConstName : String Read FSQLConstName Write FSQLConstName;
+    Property ParamFrame : TfraParams Read FParamFrame;
     { public declarations }
   end;
 
@@ -147,13 +185,20 @@ type
      function GetConn: TSQLConnection;
      function GetTrans: TSQLTransaction;
    Public
+     {$IFDEF VER3_2}
+     Procedure ApplyParams(DS : TDataset;Params : TParams);
+     Function RunQuery(SQL : String; Params : TParams) : Integer; overload;
+     {$ENDIF}
      Property SQLConnection : TSQLConnection Read GetConn;
      Property Transaction : TSQLTransaction Read GetTrans;
    end;
 
 implementation
 
-uses strutils, fpdataexporter, fpcodegenerator;
+uses
+  Clipbrd, strutils,
+  fpdataexporter,
+  fpcodegenerator;
 
 {$r *.lfm}
 
@@ -177,6 +222,31 @@ begin
     Result:=Nil;
 end;
 
+{$IFDEF VER3_2}
+procedure TSQLDBHelper.ApplyParams(DS: TDataset; Params: TParams);
+begin
+  if Assigned(Params) and (DS is TSQLQuery) then
+    TSQLQuery(DS).Params.Assign(Params);
+end;
+
+function TSQLDBHelper.RunQuery(SQL: String; Params: TParams): Integer;
+
+Var
+  Q : TSQLQuery;
+
+begin
+  Q:=CreateSQLQuery(Nil);
+  Try
+    Q.SQL.Text:=SQL;
+    if Assigned(Params) then
+      ApplyParams(Q,Params);
+    Q.ExecSQL;
+    Result:=0;
+  Finally
+    Q.Free;
+  end;
+end;
+{$ENDIF}
 
 constructor TQueryFrame.Create(AOwner: TComponent);
 begin
@@ -203,6 +273,7 @@ begin
     end;
   FEngine:=AValue;
   SetTableNames;
+  TSParams.TabVisible:=HaveParams;
 end;
 
 procedure TQueryFrame.SetTableNames;
@@ -225,6 +296,15 @@ begin
   if not Result then
     if FEngine is TSQLDBDDEngine then
       Result:=Assigned(TSQLDBDDEngine(FEngine).Transaction);
+end;
+
+function TQueryFrame.HaveParams: Boolean;
+begin
+{$ifdef VER3_2}
+  Result:=FEngine is TSQLDBDDEngine;
+{$ELSE}
+  Result:=ecParams in FEngine.EngineCapabilities;
+{$endif}
 end;
 
 function TQueryFrame.TransactionIsActive: Boolean;
@@ -296,6 +376,10 @@ begin
   FScript.OnSQLStatement:=@DoSQLStatement;
   FScript.OnDirective:=@DoDirective;
   FScript.OnCommit:=@DoCommit;
+  PCResult.ActivePage:=TSResult;
+  FParamFrame:=TfraParams.Create(Self);
+  FParamFrame.Parent:=TSParams;
+  FParamFrame.Align:=alClient;
 end;
 
 { ---------------------------------------------------------------------
@@ -366,7 +450,7 @@ begin
   RetryStatement:=False;
   Inc(FStatementCount);
   Repeat
-    If not ExecuteQuery(Statement.Text,FStatementCount) then
+    If not ExecuteQuery(Statement,FStatementCount) then
       begin
       If not RetryStatement then
         Inc(FErrorCount);
@@ -392,7 +476,10 @@ end;
 
 procedure TQueryFrame.DoCommit(Sender: TObject);
 begin
-  MResult.Append(SErrCommitNotSupported);
+  if not HaveTransaction then
+    AddToResult(SErrCommitNotSupported)
+  else
+    Transaction.Commit;
 end;
 
 procedure TQueryFrame.DoDirective(Sender: TObject; Directive, Argument: AnsiString; var StopExecution: Boolean);
@@ -420,10 +507,79 @@ begin
     Transaction.Commit;
 end;
 
+procedure TQueryFrame.aCleanPascalCodeExecute(Sender: TObject);
+var
+  Src,Dest : TStrings;
+
+begin
+  Dest:=nil;
+  Src:=TStringList.Create;
+  try
+    Dest:=TStringList.Create;
+    if FMSQL.SelEnd=FMSQL.SelEnd then
+      Src.AddStrings(FMSQL.Lines)
+    else
+      Src.Text:=FMSQL.SelText;
+    UnQuoteSQL(Src,Dest);
+    if FMSQL.SelEnd=FMSQL.SelEnd then
+      FMSQL.Lines:=Dest
+    else
+      FMSQL.SelText:=Dest.Text
+  finally
+    Dest.Free;
+    Src.Free;
+  end;
+end;
+
 procedure TQueryFrame.aCommitUpdate(Sender: TObject);
 
 begin
   (Sender as TAction).Enabled:=HaveTransaction and Transaction.Active;
+end;
+
+procedure TQueryFrame.aCopyAsSQLConstExecute(Sender: TObject);
+
+var
+  Src,Dest : TStrings;
+
+begin
+  Dest:=nil;
+  Src:=TStringList.Create;
+  try
+    Dest:=TStringList.Create;
+    if FMSQL.SelEnd=FMSQL.SelEnd then
+      Src.AddStrings(FMSQL.Lines)
+    else
+      Src.Text:=FMSQL.SelText;
+    QuoteSQL(Src,Dest,SQLQuoteOptions,SQLConstName);
+    Clipboard.AsText:=Dest.Text;
+  finally
+    Dest.Free;
+    Src.Free;
+  end;
+end;
+
+
+
+procedure TQueryFrame.aCopyAsTStringsAddExecute(Sender: TObject);
+var
+  Src,Dest : TStrings;
+
+begin
+  Dest:=nil;
+  Src:=TStringList.Create;
+  try
+    Dest:=TStringList.Create;
+    if FMSQL.SelEnd=FMSQL.SelEnd then
+      Src.AddStrings(FMSQL.Lines)
+    else
+      Src.Text:=FMSQL.SelText;
+    QuoteSQL(Src,Dest,[qoTStringsAdd],SQLConstName);
+    Clipboard.AsText:=Dest.Text;
+  finally
+    Dest.Free;
+    Src.Free;
+  end;
 end;
 
 procedure TQueryFrame.AExecuteScriptExecute(Sender: TObject);
@@ -433,21 +589,62 @@ begin
 end;
 
 procedure TQueryFrame.AExecuteSelectionExecute(Sender: TObject);
+
+Var
+  SQL : TStrings;
+
 begin
   ClearResults;
-  ExecuteQuery(Trim(FMSQL.SelText));
+  SQL:=TStringList.Create;
+  try
+    SQL.Text:=FMSQL.SelText;
+    ExecuteQuery(SQL);
+  finally
+    SQL.Free;
+    ClearParams;
+  end;
 end;
 
 procedure TQueryFrame.AExecuteSelectionScriptExecute(Sender: TObject);
 begin
   ClearResults;
   ExecuteScript(Trim(FMSQL.SelText));
+  ClearParams;
 end;
 
 procedure TQueryFrame.AExecuteSingleExecute(Sender: TObject);
 begin
   ClearResults;
-  ExecuteQuery(Trim(FMSQL.Lines.Text));
+  ExecuteQuery(FMSQL.Lines);
+  ClearParams;
+end;
+
+procedure TQueryFrame.ClearParams;
+
+begin
+  FreeAndNil(FExecParams);
+  TSParams.TabVisible:=False;
+end;
+
+procedure TQueryFrame.aPrepareParametersExecute(Sender: TObject);
+
+begin
+//  ShowMessage(ParamFrame.SGParams.Columns[1].PickList.Text);
+  if Assigned(FExecParams) then
+    begin
+    ParamFrame.Params.Clear;
+    FreeAndNil(FExecParams);
+    PCResult.ActivePage:=TSResult;
+    TSParams.TabVisible:=False;
+    end
+  else
+    begin
+    FExecParams:=TParams.Create(TParam);
+    FExecParams.ParseSQL(FMSQL.Lines.Text,True);
+    ParamFrame.Params:=FExecParams;
+    TSParams.TabVisible:=True;
+    PCResult.ActivePage:=TSParams;
+    end;
 end;
 
 procedure TQueryFrame.aRollBackExecute(Sender: TObject);
@@ -467,10 +664,11 @@ begin
   CloseDataset;
 end;
 
-procedure TQueryFrame.NotBusy(Sender : TObject);
+procedure TQueryFrame.HaveParamsAvailabe(Sender: TObject);
 
 begin
-  (Sender as TAction).Enabled:=FBusy=bmIdle;
+  NotBusy(Sender);
+  (Sender as TAction).Enabled:=(Sender as TAction).Enabled and HaveParams;
 end;
 
 procedure TQueryFrame.DataShowing(Sender : TObject);
@@ -514,6 +712,11 @@ procedure TQueryFrame.NextQueryClick(Sender : TObject);
 
 begin
   NextQuery;
+end;
+
+procedure TQueryFrame.NotBusy(Sender: TObject);
+begin
+  (Sender as TAction).Enabled:=FBusy=bmIdle;
 end;
 
 procedure TQueryFrame.PreviousQueryClick(Sender : TObject);
@@ -597,11 +800,11 @@ begin
   FMSQL.Lines.SaveToFile(AFileName);
 end;
 
-procedure TQueryFrame.DoExecuteQuery(const Qry: String; ACount: Integer);
+procedure TQueryFrame.DoExecuteQuery(const Qry: TStrings; ACount: Integer);
 
 Var
   DS : TDataset;
-  S,RowsAff : String;
+  SQL,S,RowsAff : String;
   N : Integer;
   TS,TE : TDateTime;
 
@@ -609,48 +812,69 @@ begin
   RowsAff:='';
   TS:=Now;
   if ACount<>0 then
-    MResult.Append(Format(SExecutingSQLStatementCount,[DateTimeToStr(TS),ACount]))
+    AddToResult(Format(SExecutingSQLStatementCount,[DateTimeToStr(TS),ACount]))
   else
-    MResult.Append(Format(SExecutingSQLStatement,[DateTimeToStr(TS)]));
-  MResult.Append(Qry);
+    AddToResult(Format(SExecutingSQLStatement,[DateTimeToStr(TS)]));
+  For S in Qry do
+    AddToResult(S,False);
   If Not assigned(FEngine) then
     Raise Exception.Create(SErrNoEngine);
-  S:=ExtractDelimited(1,Trim(Qry),[' ',#9,#13,#10]);
-  If (CompareText(S,'SELECT')<>0) then
+  if Assigned(FExecParams) then
+    FExecParams.Assign(ParamFrame.Params);
+  SQL:=Qry.Text;
+  S:=ExtractDelimited(1,Trim(SQL),[' ',#9,#13,#10]);
+  If (IndexText(S,['With','SELECT'])=-1) then
     begin
-    N:=FEngine.RunQuery(Qry);
+    if HaveParams and Assigned(FExecParams) then
+      begin
+      {$IFDEF VER3_2}
+      if FEngine is TSQLDBDDEngine then
+        N:=TSQLDBDDEngine(FEngine).RunQuery(SQL,FExecParams)
+      {$ELSE}
+        FEngine.RunQuery(SQL,FExecParams)
+      {$ENDIF}
+      end
+    else
+      N:=FEngine.RunQuery(SQL);
     TE:=Now;
     If ecRowsAffected in FEngine.EngineCapabilities then
       RowsAff:=Format(SRowsAffected,[N]);
     TSData.TabVisible:=False;
+    TSParams.TabVisible:=False;
     PCResult.ActivePage:=TSResult;
     end
   else
     begin
     DS:=Dataset;
     If Assigned(DS) then
-      FEngine.SetQueryStatement(Qry,DS)
+      FEngine.SetQueryStatement(SQL,DS)
     else
       begin
-      DS:=FEngine.CreateQuery(Qry,Self);
+      DS:=FEngine.CreateQuery(SQL,Self);
       FData.Dataset:=DS;
       end;
     TSData.TabVisible:=true;
+    TSParams.TabVisible:=False;
     PCResult.ActivePage:=TSData;
     FData.Visible:=True;
+    if HaveParams and Assigned(FExecParams) then
+      begin
+      {$IFDEF VER3_2}
+      if FEngine is TSQLDBDDEngine then
+        TSQLDBDDEngine(FEngine).ApplyParams(DS,FExecParams);
+      {$ELSE}
+        FEngine.ApplyParams(DS,FExecParams)
+      {$ENDIF}
+      end;
     DS.Open;
     TE:=Now;
     RowsAff:=Format(SRecordsFetched,[DS.RecordCount]);
     end;
-  MResult.Append(Format(SSQLExecutedOK,[DateTimeToStr(TE)]));
-{$IFDEF VER2_6}
-  MResult.Append(Format(SExecutionTime,[FormatDateTime('hh:nn:ss.zzz',TE-TS)]));
-{$ELSE}
-  MResult.Append(Format(SExecutionTime,[FormatDateTime('hh:nn:ss.zzz',TE-TS,[fdoInterval])]));
-{$ENDIF}
+  AddToResult(Format(SSQLExecutedOK,[DateTimeToStr(TE)]));
+  AddToResult(Format(SExecutionTime,[FormatDateTime('hh:nn:ss.zzz',TE-TS,[fdoInterval])]),RowsAff='');
   if (RowsAff<>'') then
-    MResult.Append(RowsAff);
-  AddToHistory(Qry);
+    AddToResult(RowsAff,True);
+  AddToHistory(SQL);
   ACloseQuery.Update;
 end;
 
@@ -664,8 +888,27 @@ begin
       Result:=TSQLDBDDEngine(FEngine).Transaction;
 end;
 
+procedure TQueryFrame.AddToResult(const Msg: String; SetCursorPos: Boolean);
 
-function TQueryFrame.ExecuteQuery(const Qry: String; ACount: Integer): Boolean;
+var
+  MsgLines : TStringList;
+
+begin
+  MsgLines:=TStringList.Create;
+  try
+    MsgLines.Text:=Msg;
+    MResult.Lines.AddStrings(MsgLines);
+    if SetCursorPos then
+      begin
+      MResult.SelStart:=Length(MResult.Text);
+      MResult.EnsureCursorPosVisible;
+      end;
+  finally
+    MsgLines.Free;
+  end;
+end;
+
+function TQueryFrame.ExecuteQuery(const Qry: TStrings; ACount: Integer): Boolean;
 
 Var
   Msg : String;
@@ -699,10 +942,10 @@ begin
     if (Msg<>'') then
       begin
       PCResult.ActivePage:=TSResult;
-      MResult.Append(SErrorExecutingSQL);
-      MResult.Append(Msg);
+      AddToResult(Msg,True);
       end;
   Finally
+    TSParams.TabVisible:=False;
     if ACount<=0 then
       FBusy:=bmIdle;
   end;
@@ -789,6 +1032,5 @@ begin
   If SQLSyn.TableNames.Count=0 then
     SetTableNames;
 end;
-
 end.
 

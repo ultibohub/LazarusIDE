@@ -146,6 +146,7 @@ begin
   RegisterComponentRequirements(THTMLElementActionList,THTMLElementActionListRequirements);
   RegisterComponentRequirements(THTMLElementAction,THTMLElementActionListRequirements);
   RegisterComponentRequirements(THTMLCustomElementAction,THTMLElementActionListRequirements);
+  RegisterComponentRequirements(TDBHTMLElementAction,TDBElementActionRequirements);
   RegisterComponentRequirements(TDBHTMLInputElementAction,TDBElementActionRequirements);
   RegisterComponentRequirements(TDBHTMLButtonElementAction,TDBElementActionRequirements);
   RegisterComponentRequirements(TBootstrapModal,THTMLBootstrapWidgetRequirements);
@@ -190,7 +191,7 @@ begin
   RegisterPropertyEditor(TypeInfo(String),TBootstrapModal,'ParentID',TElementIDPropertyEditor);
   RegisterPropertyEditor(TypeInfo(String),TBootstrapModal,'ElementID',TElementIDPropertyEditor);
   RegisterPropertyEditor(TypeInfo(String),TDBBootstrapTableWidget,'ElementID',TElementIDPropertyEditor);
-  RegisterPropertyEditor(TypeInfo(String),TDBBootstrapTableWidget,'ParentIDID',TElementIDPropertyEditor);
+  RegisterPropertyEditor(TypeInfo(String),TDBBootstrapTableWidget,'ParentID',TElementIDPropertyEditor);
   RegisterPropertyEditor(TypeInfo(String),TReferenceItem,'Selector',TElementIDSelectorPropertyEditor);
 //  RegisterPropertyEditor(TypeInfo(String),TDBHTMLButtonElementAction,'ElementID',TElementIDPropertyEditor);
   RegisterPropertyEditor(TypeInfo(String),TBootstrapModal,'Template',TTemplatePropertyEditor);
@@ -254,6 +255,7 @@ begin
   RegisterComponents('Pas2js Data Access',[TSQLDBRestConnection,TSQLDBRestDataset,TLocalJSONDataset]);
   RegisterComponents('Pas2js Data Controls',[TDBBootstrapTableWidget,TDBLoopTemplateWidget,TDBSelectWidget]);
   RegisterClasses([TJSONDateField, TJSONTimeField, TJSONDateTimeField]);
+  RegisterClasses([THTMLCustomElementAction,THTMLElementAction,TDBHTMLElementAction, TDBHTMLInputElementAction,TDBHTMLButtonElementAction]);
   RegisterNoIcon([THTMLCustomElementAction,THTMLElementAction,TDBHTMLInputElementAction,TDBHTMLButtonElementAction]);
   RegisterRequirements;
   RegisterStandardHTMLActions;
