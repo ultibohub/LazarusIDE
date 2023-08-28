@@ -416,13 +416,20 @@ end;
   TApplication ProcesssMessages  "Enter the messageloop and process until empty"
 ------------------------------------------------------------------------------}
 procedure TApplication.ProcessMessages;
+var
+  context: TLCLHandle;
 begin
   if Self=nil then begin
     // when the programmer did a mistake, avoid getting strange errors
     raise Exception.Create('Application=nil');
   end;
-  WidgetSet.AppProcessMessages;
-  ProcessAsyncCallQueue;
+  context := WidgetSet.BeginMessageProcess;
+  try
+    WidgetSet.AppProcessMessages;
+    ProcessAsyncCallQueue;
+  finally
+    WidgetSet.EndMessageProcess(context);
+  end;
 end;
 
 {------------------------------------------------------------------------------
@@ -569,15 +576,13 @@ begin
     Result := FLastMouseControl
   else
     Result := FindControlAtPosition(P, False);
-  
-  if Assigned(Result) and (csDesigning in Result.ComponentState) then
-    Result := nil;
-  if Assigned(Result) then
-  begin
-    FLastMouseControlValid := True;
-    FLastMousePos := p;
-    FLastMouseControl := Result;
-  end;
+
+  if not Assigned(Result) or (csDesigning in Result.ComponentState) then
+    Exit(nil);
+
+  FLastMouseControlValid := True;
+  FLastMousePos := p;
+  FLastMouseControl := Result;
 end;
 
 procedure TApplication.SetBidiMode(const AValue: TBiDiMode) ;
@@ -1269,9 +1274,16 @@ end;
   Handles all messages first then the Idle
  ------------------------------------------------------------------------------}
 procedure TApplication.HandleMessage;
+var
+  context: TLCLHandle;
 begin
-  WidgetSet.AppProcessMessages; // process all events
-  if not Terminated then Idle(true);
+  context := WidgetSet.BeginMessageProcess;
+  try
+    WidgetSet.AppProcessMessages; // process all events
+    if not Terminated then Idle(true);
+  finally
+    WidgetSet.EndMessageProcess(context);
+  end;
 end;
 
 function TApplication.HelpContext(Context: THelpContext): Boolean;

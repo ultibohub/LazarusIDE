@@ -27,6 +27,7 @@ uses
   LMessages, LResources, LCLIntf, InterfaceBase, LCLStrConsts, LCLType,
   Forms, Controls, Themes, Graphics, Buttons, ButtonPanel, StdCtrls,
   ExtCtrls, LCLClasses, ClipBrd, Menus, {LCLTaskDialog,} DialogRes,
+  ComCtrls,
   // LazUtils
   GraphType, FileUtil, LazFileUtils, LazStringUtils, LazLoggerBase;
 
@@ -634,6 +635,53 @@ type
     property Items[Index: Integer]: TTaskDialogBaseButtonItem read GetItem write SetItem; default;
   end;
 
+  TProgressBarState = ComCtrls.TProgressBarState; //it's where Delphi defines this type, so we need to follow
+
+  { TTaskDialogProgressBar }
+
+const
+  PBST_NORMAL              = $0001;
+  PBST_ERROR               = $0002;
+  PBST_PAUSED              = $0003;
+  PB_DEFMIN                = 0;   //needed in TLCTaskDialog as well
+  PB_DEFMAX                = 100;
+  TDE_CONTENT              = 0;  //TTaskDialog.Text
+  TDE_EXPANDED_INFORMATION = 1;  //TTaskDialog.ExpandedText
+  TDE_FOOTER               = 2;  //TTaskDialog.FooterText
+  TDE_MAIN_INSTRUCTION     = 3;  //TTaskDialog.Title
+
+
+Type
+
+  TTaskDialogProgressBar = class(TPersistent)
+  private
+    const
+      ProgressBarStateValues: array[TProgressBarState] of Integer = (PBST_NORMAL,PBST_ERROR,PBST_PAUSED);
+  private
+    Dlg: TCustomTaskDialog;
+    FMarqueeSpeed: Cardinal;
+    FMax: Integer;
+    FMin: Integer;
+    FPosition: Integer;
+    FState: TProgressBarState;
+    procedure SetMarqueeSpeed(AValue: Cardinal);
+    procedure SetMax(AValue: Integer);
+    procedure SetMin(AValue: Integer);
+    procedure SetPosition(AValue: Integer);
+    procedure SetState(AValue: TProgressBarState);
+  public
+    constructor Create(ADialog: TCustomTaskDialog);
+    procedure Initialize;  //call after dialog has been instatiated to send message to the dialog window
+    procedure SetRange(AMin, AMax: Integer);
+  published
+    property MarqueeSpeed: Cardinal read FMarqueeSpeed write SetMarqueeSpeed default 0; //Vista+ native dialog only
+    property Max: Integer read FMax write SetMax default 100;
+    property Min: Integer read FMin write SetMin default 0;
+    property Position: Integer read FPosition write SetPosition default 0;
+    property State: TProgressBarState read FState write SetState default pbsNormal; //Vista+ native dialog only
+  end;
+
+
   { TCustomTaskDialog }
 
   TCustomTaskDialog = class(TLCLComponent)
@@ -652,6 +700,7 @@ type
     FFlags: TTaskDialogFlags;
     FFooterIcon: TTaskDialogIcon;
     FFooterText: TTranslateString;
+    FHandle: THandle;
     FMainIcon: TTaskDialogIcon;
     FModalResult: TModalResult;
     FOnDialogConstructed: TNotifyEvent;
@@ -664,6 +713,7 @@ type
     FOnRadioButtonClicked: TNotifyEvent;
     FOnTimer: TTaskDlgTimerEvent;
     FOnVerificationClicked: TNotifyEvent;
+    FProgressBar: TTaskDialogProgressBar;
     FQueryChoices: TStrings;
     FQueryResult: String;
     FQueryItemIndex: Integer;
@@ -703,6 +753,8 @@ type
     //which might be implemented in a derived class, but the event handler must be in base class for Delphi compatibility.
     procedure DoOnNavigated; dynamic;
 
+    procedure InternalSetDialogHandle(AHandle: THandle);  //only to be called from the dialog window
+
     procedure SetRadioButtonFromRadioIndex(AIndex: Integer);
   public
     constructor Create(AOwner: TComponent); override;
@@ -724,7 +776,9 @@ type
     property FooterIcon: TTaskDialogIcon read FFooterIcon write FFooterIcon default tdiNone;
     property FooterText: TTranslateString read FFooterText write FFooterText;
     property MainIcon: TTaskDialogIcon read FMainIcon write FMainIcon default tdiInformation;
+    property Handle: THandle read FHandle; //Handle to the dialog window
     property ModalResult: TModalResult read FModalResult write FModalResult;
+    property ProgressBar: TTaskDialogProgressBar read FProgressBar write FProgressBar;
     property QueryChoices: TStrings read FQueryChoices write SetQueryChoices;
     property QueryItemIndex: Integer read FQueryItemIndex write FQueryItemIndex;
     property QueryResult: String read FQueryResult write FQueryResult;
@@ -766,6 +820,7 @@ type
     property FooterIcon;
     property FooterText;
     property MainIcon;
+    property ProgressBar;
     property RadioButtons;
     property QueryChoices;
     property QueryItemIndex;

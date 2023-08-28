@@ -19,6 +19,8 @@ unit Win32WSDialogs;
 {$mode objfpc}{$H+}
 {$I win32defines.inc}
 
+{.$DEFINE VerboseTaskDialog}
+
 interface
 
 uses
@@ -843,7 +845,7 @@ begin
   Result := 0;
   if ofAllowMultiSelect in Options then Result := Result or FOS_ALLOWMULTISELECT;
   if ofCreatePrompt in Options then Result := Result or FOS_CREATEPROMPT;
-  if not (ofExtensionDifferent in Options) then Result := Result or FOS_STRICTFILETYPES;
+  if ofExtensionDifferent in Options then Result := Result or FOS_STRICTFILETYPES;
   if ofFileMustExist in Options then Result := Result or FOS_FILEMUSTEXIST;
   if ofNoChangeDir in Options then Result := Result or FOS_NOCHANGEDIR;
   if ofNoDereferenceLinks in Options then Result := Result or FOS_NODEREFERENCELINKS;
@@ -1663,6 +1665,10 @@ begin
       Assert((Dlg is TCustomTaskDialog),'TaskDialogCallbackProc: dwRefData is NOT a TCustomTaskDialog');
       {$PUSH}
       {$ObjectChecks OFF}
+      //testing shows that hwnd is the same in all notifications
+      //and since TDN_DIALOG_CONSTRUCTED comes first, just set it here
+      //so any OnTaskDialogxxx event will have access to the correct handle.
+      TTaskDialogAccess(Dlg).InternalSetDialogHandle(hwnd);
       TTaskDialogAccess(Dlg).DoOnDialogConstructed;
       {$POP}
     end;
@@ -1988,6 +1994,9 @@ procedure InitTaskDialogIndirect;
 var
   OSVersionInfo: TOSVersionInfo;
   Res: HRESULT;
+  {$IFDEF VerboseTaskDialog}
+  DbgOutput: string;
+  {$ENDIF}
 begin
   //There is no need to get the address of TaskDialogIndirect.
   //CommCtrl already has TaskDialogIndirect, which returns E_NOTIMPL if this function is not available in 'comctl32.dll'
@@ -1995,13 +2004,19 @@ begin
   //We shouldn't however set CommCtrl.TaskDialogIndirect to nil, other (third party) code may rely on in not ever being nil.
 
   Res := TaskDialogIndirect(nil,nil,nil,nil);
-  if IsConsole then
-  begin
-    write('InitTaskDialogIndirect: TaskDialogIndirect(nil,nil,nil,nil)=$',LongInt(Res).ToHexString);
-    if (Res = E_INVALIDARG) then writeln(' (=E_INVALIDARG)') else writeln;
-  end;
+
+  {$IFDEF VerboseTaskDialog}
+  DbgOutput := 'InitTaskDialogIndirect: TaskDialogIndirect(nil,nil,nil,nil)=$' + LongInt(Res).ToHexString;
+  if (Res = E_INVALIDARG) then
+    DbgOutput := DbgOutput + ' (=E_INVALIDARG)';
+  DebugLn(DbgOutput);
+  {$ENDIF}
+
   TaskDialogIndirectAvailable := (Res = E_INVALIDARG);//(Res <> E_NOTIMPL);
-  if IsConsole then writeln('InitTaskDialogIndirect: TaskDialogIndirectAvailable=',TaskDialogIndirectAvailable);
+
+  {$IFDEF VerboseTaskDialog}
+  DebugLn('InitTaskDialogIndirect: TaskDialogIndirectAvailable='+BoolToStr(TaskDialogIndirectAvailable, True));
+  {$ENDIF}
 
   //OSVersionInfo.dwOSVersionInfoSize := sizeof(OSVersionInfo);
   //GetVersionEx(OSVersionInfo);

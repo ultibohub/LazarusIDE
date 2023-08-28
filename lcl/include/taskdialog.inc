@@ -61,6 +61,164 @@ begin
   inherited SetItem(Index, Value);
 end;
 
+{ TTaskDialogProgressBar }
+
+procedure TTaskDialogProgressBar.SetMarqueeSpeed(AValue: Cardinal);
+begin
+  if FMarqueeSpeed = AValue then Exit;
+  FMarqueeSpeed := AValue;
+  if (tfShowMarqueeProgressBar in Dlg.Flags) and (Dlg.Handle <> 0) then
+    SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_MARQUEE, WPARAM(TRUE), LPARAM(FMarqueeSpeed));
+end;
+
+procedure TTaskDialogProgressBar.SetMax(AValue: Integer);
+begin
+  if (FMax = AValue) then Exit;
+  SetRange(FMin, AValue);
+end;
+
+procedure TTaskDialogProgressBar.SetMin(AValue: Integer);
+begin
+  if FMin = AValue then Exit;
+  SetRange(AValue, FMax);
+end;
+
+procedure TTaskDialogProgressBar.SetRange(AMin, AMax: Integer);
+var
+  Res: LRESULT;
+  Err: Integer;
+begin
+  if (AMin = FMin) and (AMax = FMax) then
+    Exit;
+  FMin := AMin;
+  FMax := AMax;
+  //several sources indicate that FMax must be <= High(Word)
+  //testing reveals that FMin must be >= 0 (Vista+ native dialog)
+  FMax := EnsureRange(FMax, Integer(0), High(Word));
+  FMin := EnsureRange(FMin, Integer(0), High(Word));
+  if (FMin > FMax) then
+    FMin := FMax;
+  FPosition := EnsureRange(FPosition, FMin, FMax); //the actual progressbar in the dialog will adjust this as well
+  if (tfShowProgressBar in Dlg.Flags) and (Dlg.Handle <> 0) then
+  begin
+    Res := SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(Word(FMin), Word(FMax)));   //Zero indicates failure
+    debugln(['TTaskDialogProgressBar.SetRange: TDM_SET_PROGRESS_BAR_RANGE, FMin=',FMin,', FMax=',FMax,', MAKELPARAM=',MAKELPARAM(Word(FMin), Word(FMax)),': LResult=',PtrInt(Res)]);
+    if (Res = 0) then
+    begin
+      Err := GetLastOSError;
+      debugln(['Err=',Err,': ',SysErrorMessage(Err)]);
+    end
+    else
+    begin
+      debugln(['Old Min=',LoWord(Res),', Old Max=',HiWord(Res)]);
+    end;
+  end;
+end;
+
+procedure TTaskDialogProgressBar.SetPosition(AValue: Integer);
+var
+  Res: LRESULT;
+begin
+  if FPosition = AValue then Exit;
+  FPosition := AValue;
+  if (FPosition < FMin) then
+    FPosition := FMIn
+  else
+    if (FPosition > FMax) then
+      FPosition := FMax;
+  if (tfShowProgressBar in Dlg.Flags) and (Dlg.Handle <> 0) then
+  begin
+    Res := SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_POS, WPARAM(FPosition), 0);
+    debugln(['TTaskDialogProgressBar.SetPosition: old Position=',PtrInt(Res)]);
+  end;
+end;
+
+procedure TTaskDialogProgressBar.SetState(AValue: TProgressBarState);
+var
+  Res: LRESULT;
+  Err: Integer;
+begin
+  if FState = AValue then Exit;
+  FState := AValue;
+  if (tfShowProgressBar in Dlg.Flags) and (Dlg.Handle <> 0) then
+  begin
+    Res := SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_STATE, WPARAM(ProgressBarStateValues[FState]), 0);
+    debugln(['TTaskDialogProgressBar.SetState: LResult=',PtrInt(Res)]);  //Zero iindicates failure
+    if (Res = 0) then
+    begin
+      Err := GetLastOSError;
+      debugln(['Err=',Err,': ',SysErrorMessage(Err)]);
+    end;
+  end;
+end;
+
+constructor TTaskDialogProgressBar.Create(ADialog: TCustomTaskDialog);
+begin
+  inherited Create;
+  Dlg := ADialog;
+  FMin := PB_DEFMIN;
+  FMax := PB_DEFMAX;
+  FMarqueeSpeed := 0;
+end;
+
+procedure TTaskDialogProgressBar.Initialize;
+//this should be invoked as soon as the dialog has been instatiated (so Dlg.Handle <> 0),
+//so probably in Dlg.DoOnConstructed??
+var
+  Res: LRESULT;
+  Err: Integer;
+  IsMarquee: BOOL;
+begin
+  //ToDo:
+  //  send TDM_SET_MARQUEE_PROGRESS_BAR to Dlg (differentiates between "normal" and marguee)
+  //  send range, position and state to dialog.
+  if (Dlg.Handle <> 0) and (Dlg.Flags * [tfShowProgressBar,tfShowMarqueeProgressBar] <> []) then
+  begin
+    IsMarquee := (tfShowMarqueeProgressBar in Dlg.Flags);
+    debugln(['TTaskDialogProgressBar.Initialize: IsMarquee=',IsMarquee]);
+    //wParam = 0 (nonMarque) wParam != 0 (Marquee), lParam must be 0
+    //if Both Flags are set, Windows seems to intepret this a Marquee
+    Res := SendMessage(Dlg.Handle, TDM_SET_MARQUEE_PROGRESS_BAR, WPARAM(IsMarquee), 0);  //Result is ignored
+    debugln(['TTaskDialogProgressBar.Initialize: TDM_SET_MARQUEE_PROGRESS_BAR: LResult=',PtrInt(Res)]);
+
+    if not IsMarquee then
+    begin
+      //wParam must be 0, lParam = MAKELPARAM(nMinRange, nMaxRange)
+      Res := SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_RANGE, 0, MAKELPARAM(Word(FMin), Word(FMax)));   //Zero indicates failure
+      debugln(['TTaskDialogProgressBar.Initialize: TDM_SET_PROGRESS_BAR_RANGE (FMin=,',FMin,', FMax=',FMax,'): LResult=',PtrInt(Res)]);
+      if (Res = 0) then
+      begin
+        Err := GetLastOSError;
+        debugln(['Err=',Err,': ',SysErrorMessage(Err)]);
+      end
+      else
+      begin
+        debugln(['Old Min=',LoWord(Res),', Old Max=',HiWord(Res)]);
+      end;
+
+      //wParam = new position, lParam must be 0, return value is previous position
+      Res := SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_POS, WPARAM(FPosition), 0);
+      debugln(['TTaskDialogProgressBar.Initialize: TDM_SET_PROGRESS_BAR_POS: LResult=',PtrInt(Res)]);
+
+    end//Not IsMarquee
+    else
+    begin //IsMarquee
+      // wParam = False (stop marquee), wParam = True (start marquee), lparam = speed (milliseconds between repaints) // Return value is ignored
+      SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_MARQUEE, WPARAM(TRUE), LPARAM(FMarqueeSpeed));
+    end;
+
+    //wParam = new progress state, lParam must be 0
+    Res := SendMessage(Dlg.Handle, TDM_SET_PROGRESS_BAR_STATE, WPARAM(ProgressBarStateValues[FState]), 0);
+    debugln(['TTaskDialogProgressBar.Initialize: TDM_SET_PROGRESS_BAR_STATE: LResult=',PtrInt(Res)]);  //Zero iindicates failure
+    if (Res = 0) then
+    begin
+      Err := GetLastOSError;
+      debugln(['Err=',Err,': ',SysErrorMessage(Err)]);
+    end;
+
+  end;
+end;
+
 { TTaskDialogRadioButtonItem }
 
 constructor TTaskDialogRadioButtonItem.Create(ACollection: TCollection);
@@ -98,6 +256,9 @@ begin
 
   FCustomFooterIcon := TIcon.Create;
   FCustomMainIcon := TIcon.Create;
+  FProgressBar := TTaskDialogProgressBar.Create(Self);
+
+  FHandle := 0;
 end;
 
 function TCustomTaskDialog.ButtonIDToModalResult(const AButtonID: Integer
@@ -137,6 +298,7 @@ begin
   FQueryChoices.Free;
   FCustomFooterIcon.Free;
   FCustomMainIcon.Free;
+  FProgressBar.Free;
   inherited Destroy;
 end;
 
@@ -188,6 +350,7 @@ procedure TCustomTaskDialog.DoOnDialogConstructed;
 begin
   if Assigned(FOnDialogConstructed) then
     FOnDialogConstructed(Self);
+  FProgressBar.Initialize;
 end;
 
 procedure TCustomTaskDialog.DoOnDialogCreated;
@@ -242,6 +405,11 @@ procedure TCustomTaskDialog.DoOnNavigated;
 begin
   if Assigned(FOnNavigated) then
     FOnNavigated(Self);
+end;
+
+procedure TCustomTaskDialog.InternalSetDialogHandle(AHandle: THandle);
+begin
+  FHandle := AHandle;
 end;
 
 procedure TCustomTaskDialog.SetRadioButtonFromRadioIndex(AIndex: Integer);
