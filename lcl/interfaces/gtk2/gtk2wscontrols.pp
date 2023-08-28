@@ -25,6 +25,8 @@ uses
   // RTL
   Classes, SysUtils,
   Gtk2, Gdk2, Glib2, gdk2pixbuf,
+  // LazUtils
+  LazLoggerBase,
   // LCL
 ////////////////////////////////////////////////////
 // I M P O R T A N T                                
@@ -32,14 +34,11 @@ uses
 // To get as little as posible circles,
 // uncomment only when needed for registration
 ////////////////////////////////////////////////////
-  Controls, ComCtrls,
-////////////////////////////////////////////////////
-  Graphics,
+  Controls, ComCtrls, Graphics, LMessages, Forms, LCLType,
 
   Gtk2Globals, Gtk2Def,
-  Gtk2Proc, LCLType, LCLProc,
-  WSControls, WSProc, Gtk2WinapiWindow;
-  
+  Gtk2Proc,
+  WSControls, WSProc, Gtk2WinapiWindow, Gtk2WSPrivate;
 
 type
 
@@ -133,6 +132,16 @@ type
     VScroll: PGTKWidget;
   end;
 
+  { TGtk2ListBoxPrivateList }
+  { Private class for gtklists }
+
+  TGtk2ListBoxPrivateList = class(TGtkPrivateList)
+  private
+  protected
+  public
+    class procedure SetCallbacks(const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo); override;
+  end;
+
   { TGtk2WSBaseScrollingWinControl }
 
   TGtk2WSBaseScrollingWinControl = class(TWSWinControl)
@@ -151,7 +160,7 @@ var
 implementation
 
 uses
-  Gtk2Int, LMessages, Gtk2WSPrivate, Forms;
+  Gtk2Int;
 
 { TGtk2WSWinControl }
 
@@ -1098,6 +1107,30 @@ begin
   if not WSCheckHandleAllocated(AWinControl, 'Repaint')
   then Exit;
   gtk_widget_queue_draw({%H-}PGtkWidget(AWinControl.Handle));
+end;
+
+procedure Gtk2WS_ListBoxChange({%H-}Selection: PGtkTreeSelection; WidgetInfo: PWidgetInfo); cdecl;
+var
+  Mess: TLMessage;
+begin
+  {$IFDEF EventTrace}
+  EventTrace('Gtk2WS_ListBoxChange', WidgetInfo^.LCLObject);
+  {$ENDIF}
+  FillChar(Mess{%H-}, SizeOf(Mess), 0);
+  Mess.msg := LM_SELCHANGE;
+  DeliverMessage(WidgetInfo^.LCLObject, Mess);
+end;
+
+{ TGtk2ListBoxPrivateList }
+
+class procedure TGtk2ListBoxPrivateList.SetCallbacks(const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
+var
+  Selection: PGtkTreeSelection;
+begin
+  TGtk2WSBaseScrollingWinControl.SetCallbacks(AGtkWidget, AWidgetInfo);
+
+  Selection := gtk_tree_view_get_selection(PGtkTreeView(AWidgetInfo^.CoreWidget));
+  SignalConnect(PGtkWidget(Selection), 'changed', @Gtk2WS_ListBoxChange, AWidgetInfo);
 end;
 
 { TGtk2WSBaseScrollingWinControl }

@@ -147,7 +147,14 @@ type
     function AppRestoreStayOnTopFlags(const ASystemTopAlso: Boolean = False): Boolean; virtual;
     procedure AppSetMainFormOnTaskBar(const DoSet: Boolean); virtual;
     procedure AppSetupMainForm(AMainForm: TObject); virtual;
-    
+
+    // Begin/End processing messages, which can be used to acquire/release
+    // resources during message processing.
+    // for example, on Cocoa, it needs to be used to release AutoReleasePool
+    // to avoid resource leaks.
+    function  BeginMessageProcess: THandle; virtual;
+    procedure EndMessageProcess(context: THandle); virtual;
+
     function  LCLPlatform: TLCLPlatform; virtual; abstract;
     function  GetLCLCapability(ACapability: TLCLCapability): PtrUInt; virtual;
 

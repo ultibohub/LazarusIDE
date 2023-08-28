@@ -84,6 +84,15 @@ procedure TWidgetSet.AppSetupMainForm(AMainForm: TObject);   //e.g. handle widge
 begin
 end;
 
+function  TWidgetSet.BeginMessageProcess: THandle;
+begin
+  Result := 0;
+end;
+
+procedure TWidgetSet.EndMessageProcess(context: THandle);
+begin
+end;
+
 function TWidgetSet.GetLCLCapability(ACapability: TLCLCapability): PtrUInt;
 begin
   case ACapability of

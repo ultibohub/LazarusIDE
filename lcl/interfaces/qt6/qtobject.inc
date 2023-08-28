@@ -508,7 +508,7 @@ procedure TQtWidgetSet.AppSetTitle(const ATitle: string);
 var
   W: WideString;
 begin
-  W := GetUtf8String(ATitle);
+  W := {%H-}ATitle;
   QCoreApplication_setApplicationName(@W);
 end;
 
@@ -529,8 +529,12 @@ function TQtWidgetSet.CreateDummyWidgetFrame(const ALeft, ATop, AWidth,
   AHeight: integer): boolean;
 var
   ADummy: TDummyWidget;
+  WM: String;
 begin
   Result := False;
+  WM := GetWindowManager;
+  if (WM = '') or (WM = 'wayland') then
+    exit;
   ADummy := TDummyWidget.Create;
   ADummy.ShowDummyWidget(ALeft, ATop, AWidth, AHeight);
   FWSFrameRect := ADummy.GetWidgetFrame;

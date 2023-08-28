@@ -31,8 +31,6 @@ begin
   {$IFDEF VerboseObject}
     DebugLn('TCocoaWidgetSet.AppInit');
   {$ENDIF}
-  InternalInit;
-
   WakeMainThread := @OnWakeMainThread;
   ScreenInfo.PixelsPerInchX := CocoaBasePPI;
   ScreenInfo.PixelsPerInchY := CocoaBasePPI;
@@ -123,6 +121,17 @@ procedure TCocoaWidgetSet.AppWaitMessage;
 begin
   AppRunMessages(true, NSDate.distantFuture);
 end;
+
+function TCocoaWidgetSet.BeginMessageProcess: THandle;
+begin
+  Result := THandle(NSAutoreleasePool.alloc.init);
+end;
+
+procedure TCocoaWidgetSet.EndMessageProcess(context: THandle);
+begin
+  NSAutoreleasePool(context).release;
+end;
+
 
 {------------------------------------------------------------------------------
   Method:  TCocoaWidgetSet.Create
