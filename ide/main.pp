@@ -1194,7 +1194,7 @@ begin
   end;
   if IsVersionRequested then
   begin
-    WriteHelp(GetLazarusVersionString+' '+lisRevision+LazarusRevisionStr);
+    WriteHelp(LazarusVersionStr+' '+lisRevision+LazarusRevisionStr);
     exit;
   end;
 
@@ -1350,15 +1350,15 @@ begin
   Application.ShowMenuGlyphs := EnvironmentGuiOpts.ShowMenuGlyphs;
 
   OldVer:=EnvironmentOptions.OldLazarusVersion;
-  NowVer:=GetLazarusVersionString;
+  NowVer:=LazarusVersionStr;
   //debugln(['TMainIDE.LoadGlobalOptions ',FEnvOptsCfgExisted,' diff=',OldVer<>NowVer,' Now=',NowVer,' Old=',OldVer,' Comp=',CompareLazarusVersion(NowVer,OldVer)]);
   if FEnvOptsCfgExisted and (OldVer<>NowVer) then
   begin
     IsUpgrade:=CompareLazarusVersion(NowVer,OldVer)>0;
     if OldVer='' then
-      OldVer:=SimpleFormat(lisPrior, [GetLazarusVersionString]);
+      OldVer:=SimpleFormat(lisPrior, [LazarusVersionStr]);
     s:=SimpleFormat(lisWelcomeToLazarusThereIsAlreadyAConfigurationFromVe,
-      [GetLazarusVersionString, LineEnding+LineEnding, OldVer, LineEnding, ChompPathDelim(PCP)+LineEnding] );
+      [LazarusVersionStr, LineEnding+LineEnding, OldVer, LineEnding, ChompPathDelim(PCP)+LineEnding] );
     if IsUpgrade then
       s+=lisTheOldConfigurationWillBeUpgraded
     else
@@ -9015,12 +9015,12 @@ var
 begin
   if MainIDEBar = nil then Exit;
   if ToolStatus = itExiting then Exit;
-  rev := GetLazarusRevision;
+  rev := LazarusRevisionStr;
   if IsNumber(rev) then
     NewCaption := Format(lisLazarusEditorV + ' r%s',
-                         [GetLazarusVersionString, rev])
+                         [LazarusVersionStr, rev])
   else
-    NewCaption := Format(lisLazarusEditorV, [GetLazarusVersionString]);
+    NewCaption := Format(lisLazarusEditorV, [LazarusVersionStr]);
   NewTitle := NewCaption;
   if MainBarSubTitle <> '' then
     NewCaption := AddToCaption(NewCaption, MainBarSubTitle)
@@ -9031,7 +9031,7 @@ begin
       ProjectName := Project1.GetTitleOrName;
       if ProjectName <> '' then
       begin
-        if EnvironmentGuiOpts.Desktop.IDEProjectDirectoryInIdeTitle then
+        if EnvironmentGuiOpts.Desktop.IDETitleShowsProjectDir then
         begin
           DirName := ExtractFileDir(Project1.ProjectInfoFile);
           if DirName <> '' then
@@ -9041,7 +9041,7 @@ begin
       else
         ProjectName := lisnewProject;
       NewTitle := AddToCaption(NewCaption, ProjectName);
-      if EnvironmentGuiOpts.Desktop.IDETitleIncludesBuildMode
+      if EnvironmentGuiOpts.Desktop.IDETitleShowsBuildMode
       and (Project1.BuildModes.Count > 1) then
         ProjectName:= ProjectName + ' - ' +Project1.ActiveBuildMode.GetCaption;
       NewCaption := AddToCaption(NewCaption, ProjectName);

@@ -430,6 +430,7 @@ end;
  ------------------------------------------------------------------------------}
 function TOpenDialog.DoExecute: boolean;
 begin
+  Exclude(FOptions, ofExtensionDifferent);
   Result:=inherited DoExecute;
   if not (ofNoResolveLinks in Options) then
     ResolveLinks;
@@ -441,6 +442,18 @@ begin
   end;
   if not Result then exit;
   Result:=CheckAllFiles;
+  //The behavour of ofExtensionDifferent is based upon the workings of Windows LPOPENFILENAME behaviour
+  //This behaviour is completely erratic when multiple files are selected, it can be on or off given the same input
+  //Delphi 7 seems to not include the ofExtensionDifferent flag if multiple files are selected, regardless of their extensions
+  //So, we unset the ofExtensionDifferent if multiple files are selected
+  if Result then begin
+    if (Files.Count > 1) then
+      Exclude(FOptions, ofExtensionDifferent)
+    else begin
+    if (DefaultExt <> '') and (CompareFileNames(DefaultExt,ExtractFileExt(Filename)) <> 0) then
+      Include(FOptions, ofExtensionDifferent);
+    end;
+  end;
 end;
 
 function TOpenDialog.DefaultTitle: string;
@@ -460,6 +473,7 @@ begin
   inherited Create(TheOwner);
   fCompStyle:=csOpenFileDialog;
   FOptions := DefaultOpenDialogOptions;
+  FOptionsEx := [];
 end;
 
 procedure TOpenDialog.DoCanClose(var CanClose: Boolean);

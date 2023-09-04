@@ -4186,10 +4186,11 @@ function TQtWidgetSet.GetTextExtentExPoint(DC: HDC; Str: PChar; Count,
   MaxWidth: Integer; MaxCount, PartialWidths: PInteger; var Size: TSize
   ): Boolean;
 var
-  i: Integer;
-  w: Integer;
+  i, w, Accu: Integer;
   AStr: WideString;
-  Accu: Integer;
+  AQtStr: QStringH;
+  WC: WideChar;
+  AMaxCount: PtrInt;
 begin
   Result := False;
   if not IsValidDC(DC) then Exit;
@@ -4199,60 +4200,83 @@ begin
       AStr := ''
     else
       AStr := Str;
-    Size.cx := 0;
-    Size.cY := Font.Metrics.Height;
-    if (AStr = '') then
-    begin
-      if MaxCount <> nil then
-        MaxCount^ := 0;
-      if PartialWidths <> nil then
+
+    AQtStr := QString_Create(PWideString(@AStr));
+    try
+      Size.cx := 0;
+      Size.cY := Font.Metrics.height;
+      if (AStr = '') then
       begin
-        for i := 0 to Count - 1 do
-          PartialWidths[i] := 0;
-      end;
-      exit(True);
-    end;
-    if PartialWidths = nil then
-    begin
-      if MaxCount <> nil then
-      begin
-        Size.cx := Font.Metrics.width(@AStr);
-        Accu := 0;
-        if MaxWidth <= 0 then
-          MaxCount^ := 0
-        else
+        if MaxCount <> nil then
+          MaxCount^ := 0;
+        if PartialWidths <> nil then
+        begin
           for i := 0 to Count - 1 do
-          begin
-            W := QFontMetrics_charWidth(Font.Metrics.FHandle, @AStr, i);
-            Accu := Accu + W;
-            if Accu <= MaxWidth then
-              MaxCount^ := i + 1
-            else
-              break;
-          end;
+            PartialWidths[i] := 0;
+        end;
+        exit(True);
       end;
-    end else
-    begin
-      if MaxCount <> nil then
-        MaxCount^ := 0;
-      for i := 0 to Count - 1 do
+
+      AMaxCount := QString_length(AQtStr);
+
+      Size.cx := Font.Metrics.width(PWideString(@AStr));
+
+      if PartialWidths = nil then
       begin
-        w := QFontMetrics_charWidth(Font.Metrics.FHandle, @AStr, i);
-        Inc(Size.cx, w);
         if MaxCount <> nil then
         begin
-          if Size.cx <= MaxWidth then
+          Accu := 0;
+          if MaxWidth <= 0 then
+            MaxCount^ := 0
+          else
+          if Size.cx < MaxWidth then
+            MaxCount^ := AMaxCount
+          else
+            for i := 0 to AMaxCount - 1 do
+            begin
+              QString_at(AQtStr, @WC, I);
+              W := QFontMetrics_width(Font.Metrics.FHandle, PWideChar(@WC));
+              Accu := Accu + W;
+              if Accu <= MaxWidth then
+                inc(MaxCount^)
+              else
+                break;
+            end;
+        end;
+      end else
+      begin
+        if MaxCount <> nil then
+          MaxCount^ := 0;
+        Accu := 0;
+        for i := 0 to AMaxCount - 1 do
+        begin
+          QString_at(AQtStr, @WC, I);
+          W := QFontMetrics_width(Font.Metrics.FHandle, PWideChar(@WC));
+
+          if Accu + w > Size.cx then
+            Accu := Size.cx
+          else
+            Inc(Accu, w);
+
+          if MaxCount <> nil then
           begin
-            inc(MaxCount^);
-            PartialWidths[i] := Size.cx;
+            if Accu <= MaxWidth then
+            begin
+              inc(MaxCount^);
+              PartialWidths[i] := Accu;
+              if MaxCount^ > AMaxCount then
+              begin
+                MaxCount^ := AMaxCount;
+                break;
+              end;
+            end else
+              break;
           end else
-          begin
-            Dec(Size.cx, w);
-            break;
-          end;
-        end else
-          PartialWidths[i] := Size.cx;
+            PartialWidths[i] := Accu;
+        end;
       end;
+    finally
+      QString_destroy(AQtStr);
     end;
   end;
   Result := True;
@@ -4282,7 +4306,7 @@ begin
   if (Count <= 0) or (Str = nil) or (StrPas(Str) = '') then
     exit;
   WideStr := Str;
-  Size.cx := QtDC.Metrics.width(@WideStr, Count);
+  Size.cx := QtDC.Metrics.width(@WideStr, UTF8Length(Str, Count));
   Size.cy := QtDC.Metrics.height;
 
   Result := True;
@@ -4315,16 +4339,7 @@ begin
     TM.tmDescent := QtFontMetrics.descent;
     TM.tmInternalLeading := 0;
     TM.tmExternalLeading := QtFontMetrics.leading;
-    {this is due qt bug in fontmetrics::averageCharWidth() under Mac
-     http://trolltech.com/developer/task-tracker/index_html?method=entry&id=169440 }
-    {$IFDEF DARWIN}
-    if (QtVersionMajor = 5) and (QtVersionMinor >= 2) then
-      TM.tmAveCharWidth := QtFontMetrics.averageCharWidth
-    else
-      TM.tmAveCharWidth := QtFontMetrics.charWidth('x',0);
-    {$ELSE}
     TM.tmAveCharWidth := QtFontMetrics.averageCharWidth;
-    {$ENDIF}
 
     TM.tmMaxCharWidth := QtFontMetrics.maxWidth;
     FontWeight := QtDC.font.getWeight;
