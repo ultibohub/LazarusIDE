@@ -13,7 +13,9 @@ msgstr ""
 "X-Poedit-SourceCharset: UTF-8\n"
 
 #: jcfuiconsts.format_about_menu
-msgid "&About"
+#, fuzzy
+#| msgid "&About"
+msgid "&About ..."
 msgstr "关于(&A)"
 
 #: jcfuiconsts.format_category_idecmd
@@ -45,7 +47,9 @@ msgid "&All Files in Project"
 msgstr "项目中的所有文件(&A)"
 
 #: jcfuiconsts.format_settings_menu
-msgid "&Format Settings"
+#, fuzzy
+#| msgid "&Format Settings"
+msgid "&Format Settings ..."
 msgstr "格式设置(&F)"
 
 #: jcfuiconsts.lisaboutaboutjedicodeformat
@@ -67,7 +71,7 @@ msgstr ""
 
 #: jcfuiconsts.lisaboutversion
 #, object-pascal-format
-msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+msgid "Version $VERSION$%s%sThis program attempts to standardise and make readable the layout of any Object Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
 msgstr ""
 
 #: jcfuiconsts.lisalignalign
@@ -407,6 +411,7 @@ msgid "%sAt line %s col %s"
 msgstr ""
 
 #: jcfuiconsts.lisederror
+msgctxt "jcfuiconsts.lisederror"
 msgid "Error"
 msgstr "错误"
 
@@ -433,6 +438,12 @@ msgstr "%s靠近%s"
 #, object-pascal-format
 msgid "Type: %s%s"
 msgstr "类型: %s%s"
+
+#: jcfuiconsts.liserroract
+#, fuzzy
+msgctxt "jcfuiconsts.liserroract"
+msgid "Error"
+msgstr "错误"
 
 #: jcfuiconsts.lisfindreplaceenablefindandreplace
 msgid "Enable find and replace"
@@ -487,6 +498,10 @@ msgstr ""
 #, object-pascal-format
 msgid "Version that wrote this file: %s"
 msgstr "写入这个文件的版本: %s"
+
+#: jcfuiconsts.lisimbalancedcommentact
+msgid "Imbalanced comment action"
+msgstr ""
 
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
@@ -930,6 +945,10 @@ msgstr "替换"
 #: jcfuiconsts.lisusesuses
 msgid "Uses"
 msgstr "Uses"
+
+#: jcfuiconsts.liswarnact
+msgid "Warn"
+msgstr ""
 
 #: jcfuiconsts.liswarningsignoreunusedparametersnamed
 msgid "&Ignore unused parameters named:"

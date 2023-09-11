@@ -15,7 +15,9 @@ msgstr ""
 "X-Generator: Lokalize 21.12.3\n"
 
 #: jcfuiconsts.format_about_menu
-msgid "&About"
+#, fuzzy
+#| msgid "&About"
+msgid "&About ..."
 msgstr "&Про програму"
 
 #: jcfuiconsts.format_category_idecmd
@@ -47,7 +49,9 @@ msgid "&All Files in Project"
 msgstr "Всі &файли у проєкті"
 
 #: jcfuiconsts.format_settings_menu
-msgid "&Format Settings"
+#, fuzzy
+#| msgid "&Format Settings"
+msgid "&Format Settings ..."
 msgstr "&Параметри форматування"
 
 #: jcfuiconsts.lisaboutaboutjedicodeformat
@@ -68,8 +72,9 @@ msgid "This program is still under development. In spite of thorough testing and
 msgstr "Ця програма ще знаходиться в стадії розробки. Незважаючи на ретельне тестування і усунення виявлених помилок, гарантій її коректної роботи не дається. Робіть резервні копії, а ще краще - використовуйте систему контролю версій."
 
 #: jcfuiconsts.lisaboutversion
-#, object-pascal-format
-msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+msgid "Version $VERSION$%s%sThis program attempts to standardise and make readable the layout of any Object Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
 msgstr "Версія $VERSION$%s$DATE$%s%sЦя програма намагається стандартизувати і зробити більш читабельним будь-який код на Delphi Object-Pascal.%s%s(C) Anthony Steele 1999-2008"
 
 #: jcfuiconsts.lisalignalign
@@ -409,6 +414,7 @@ msgid "%sAt line %s col %s"
 msgstr "%sВ рядку %s стовп. %s"
 
 #: jcfuiconsts.lisederror
+msgctxt "jcfuiconsts.lisederror"
 msgid "Error"
 msgstr "Помилка"
 
@@ -435,6 +441,12 @@ msgstr "%s близько %s"
 #, object-pascal-format
 msgid "Type: %s%s"
 msgstr "Тип: %s%s"
+
+#: jcfuiconsts.liserroract
+#, fuzzy
+msgctxt "jcfuiconsts.liserroract"
+msgid "Error"
+msgstr "Помилка"
 
 #: jcfuiconsts.lisfindreplaceenablefindandreplace
 msgid "Enable find and replace"
@@ -489,6 +501,10 @@ msgstr "Файл налаштувань є:"
 #, object-pascal-format
 msgid "Version that wrote this file: %s"
 msgstr "Файл записаний версією: %s"
+
+#: jcfuiconsts.lisimbalancedcommentact
+msgid "Imbalanced comment action"
+msgstr ""
 
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
@@ -932,6 +948,10 @@ msgstr "Замінити"
 #: jcfuiconsts.lisusesuses
 msgid "Uses"
 msgstr "Uses"
+
+#: jcfuiconsts.liswarnact
+msgid "Warn"
+msgstr ""
 
 #: jcfuiconsts.liswarningsignoreunusedparametersnamed
 msgid "&Ignore unused parameters named:"

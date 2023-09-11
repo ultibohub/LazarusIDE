@@ -9,11 +9,11 @@ License: Public Domain
 Program fpvtextwritetest2;
 
 {$mode objfpc}{$H+}
+{$define pdf_test}
 
 Uses
   fpvectorial,
-  odtvectorialwriter,
-  docxvectorialwriter,
+  odtvectorialwriter, docxvectorialwriter, {$ifdef pdf_test}pdfvectorialwriter,{$endif}
   fpvutils,
   SysUtils, FPImage;
 
@@ -89,6 +89,7 @@ Begin
     CurParagraph.Style := CenterParagraphStyle;
     CurParagraph.AddText('Introduction to Lazarus and FreePascal').Style := BoldTextStyle;
 
+    {$ifndef pdf_test}
     // Set the Footer
     CurParagraph := Page.Footer.AddParagraph;
     CurParagraph.Style := CenterParagraphStyle;
@@ -100,6 +101,7 @@ Begin
     CurParagraph.AddField(vfkNumPages).Style := BoldTextStyle;
     CurParagraph.AddText(#09);
     CurParagraph.AddField(vfkDateCreated).Style := BoldTextStyle;
+    {$endif}
 
     // Title
     CurParagraph := Page.AddParagraph();
@@ -153,6 +155,7 @@ Begin
     CurParagraph.AddText('Lazarus ').Style := BoldTextStyle;
     CurParagraph.AddText('features:');
 
+    {$ifndef pdf_test}
     // Simple List
     List := Page.AddList();
     List.Style := ListParaStyle;
@@ -171,11 +174,11 @@ Begin
     List.AddParagraph('Text resource manager for internationalization');
     List.AddParagraph('Automatic code formatting');
     List.AddParagraph('The ability to create custom components');
+    {$endif}
 
     // Empty line
     CurParagraph := Page.AddParagraph();
     CurParagraph.Style := Vec.StyleTextBody;
-
 
     // Second page sequence
     Page := Vec.AddTextPageSequence();
@@ -191,7 +194,6 @@ Begin
     CurParagraph := Page.AddParagraph();
     CurParagraph.Style := Vec.StyleHeading2;
     CurParagraph.AddText('Testing Strings');
-
 
     // Test for XML tags
     CurParagraph := Page.AddParagraph();
@@ -212,6 +214,7 @@ Begin
     CurParagraph.Style := Vec.StyleHeading2;
     CurText := CurParagraph.AddText('Testing Fields');
 
+    {$ifndef pdf_test}
     CurParagraph := Page.AddParagraph();
     CurParagraph.Style := Vec.StyleTextBody;
     CurParagraph.AddText('Page Count: ');
@@ -236,6 +239,7 @@ Begin
     CurParagraph.Style := Vec.StyleTextBody;
     CurParagraph.AddText('Date: ');
     CurParagraph.AddField(vfkDate);
+    {$endif}
 
     // Add a simple heading
     CurParagraph := Page.AddParagraph();
@@ -298,6 +302,7 @@ Begin
     CurParagraph.Style := Vec.StyleHeading2;
     CurParagraph.AddText('Manual Table');
 
+    {$ifndef pdf_test}
     CurTable := Page.AddTable;
     CurTable.PreferredWidth := Dimension(100, dimPercent);
 
@@ -474,6 +479,7 @@ Begin
           CurParagraph.AddText(Format('(%d x %d)', [i, j]));
       end;
     end;
+    {$endif}
 (*
     // Fourth page sequence
     Page := Vec.AddTextPageSequence();
@@ -499,6 +505,11 @@ Begin
     Vec.WriteToFile('text_output_odt', vfODT);
     WriteLn('Native odt writer: '+Format('%.1f msec', [24*60*60*1000*(Now-dtTime)]));
 
+    {$ifdef pdf_test}
+    dtTime := Now;
+    Vec.WriteToFile('text_output_pdf', vfPDF);
+    WriteLn('Native pdf writer: '+Format('%.1f msec', [24*60*60*1000*(Now-dtTime)]));
+    {$endif}
 
   Finally
     Vec.Free;

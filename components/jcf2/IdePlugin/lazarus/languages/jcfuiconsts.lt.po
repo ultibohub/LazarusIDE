@@ -12,7 +12,9 @@ msgstr ""
 "Language: lt\n"
 
 #: jcfuiconsts.format_about_menu
-msgid "&About"
+#, fuzzy
+#| msgid "&About"
+msgid "&About ..."
 msgstr "&Apie"
 
 #: jcfuiconsts.format_category_idecmd
@@ -44,7 +46,9 @@ msgid "&All Files in Project"
 msgstr "Visuose projekto &failuose"
 
 #: jcfuiconsts.format_settings_menu
-msgid "&Format Settings"
+#, fuzzy
+#| msgid "&Format Settings"
+msgid "&Format Settings ..."
 msgstr "&Formato parinktys"
 
 #: jcfuiconsts.lisaboutaboutjedicodeformat
@@ -65,8 +69,9 @@ msgid "This program is still under development. In spite of thorough testing and
 msgstr "Ši programa vis dar kuriama. Nepaisant kruopštaus testavimo ir praneštų ydų taisymo, garantijos nesuteikiamos. Todėl darykite atsargines kopijas, arba naudokite geresnę pirminio kodo valdymo sistemą."
 
 #: jcfuiconsts.lisaboutversion
-#, object-pascal-format
-msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+msgid "Version $VERSION$%s%sThis program attempts to standardise and make readable the layout of any Object Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
 msgstr "Laida $VERSION$%s$DATE$%s%sŠi programa siekia standartizuoti ir daryti įskaitomesniu bet kokį Delphi ar objektinio paskalio pirminį kodą.%s%sAutorinės teisės priklauso Anthony Steele 1999-2008"
 
 #: jcfuiconsts.lisalignalign
@@ -406,6 +411,7 @@ msgid "%sAt line %s col %s"
 msgstr "%sTies eilutę %s, bei stulpeliu  %s"
 
 #: jcfuiconsts.lisederror
+msgctxt "jcfuiconsts.lisederror"
 msgid "Error"
 msgstr "Klaida"
 
@@ -432,6 +438,12 @@ msgstr "%s greta %s"
 #, object-pascal-format
 msgid "Type: %s%s"
 msgstr "Tipas: %s%s"
+
+#: jcfuiconsts.liserroract
+#, fuzzy
+msgctxt "jcfuiconsts.liserroract"
+msgid "Error"
+msgstr "Klaida"
 
 #: jcfuiconsts.lisfindreplaceenablefindandreplace
 msgid "Enable find and replace"
@@ -486,6 +498,10 @@ msgstr ""
 #, object-pascal-format
 msgid "Version that wrote this file: %s"
 msgstr "Versija, kuria įrašutas šis failas: %s"
+
+#: jcfuiconsts.lisimbalancedcommentact
+msgid "Imbalanced comment action"
+msgstr ""
 
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
@@ -931,6 +947,10 @@ msgstr "Pakeisti"
 #: jcfuiconsts.lisusesuses
 msgid "Uses"
 msgstr "Naudojami moduliai"
+
+#: jcfuiconsts.liswarnact
+msgid "Warn"
+msgstr ""
 
 #: jcfuiconsts.liswarningsignoreunusedparametersnamed
 msgid "&Ignore unused parameters named:"

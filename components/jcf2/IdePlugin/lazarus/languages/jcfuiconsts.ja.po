@@ -12,7 +12,9 @@ msgstr ""
 "X-Generator: Poedit 1.5.7\n"
 
 #: jcfuiconsts.format_about_menu
-msgid "&About"
+#, fuzzy
+#| msgid "&About"
+msgid "&About ..."
 msgstr "JEDI について(&A)"
 
 #: jcfuiconsts.format_category_idecmd
@@ -44,7 +46,9 @@ msgid "&All Files in Project"
 msgstr "プロジェクト内すべてのファイル(&A)"
 
 #: jcfuiconsts.format_settings_menu
-msgid "&Format Settings"
+#, fuzzy
+#| msgid "&Format Settings"
+msgid "&Format Settings ..."
 msgstr "整形設定(&F)"
 
 #: jcfuiconsts.lisaboutaboutjedicodeformat
@@ -65,8 +69,9 @@ msgid "This program is still under development. In spite of thorough testing and
 msgstr "このプログラムはまだ開発中です。厳しいテストを通り報告されているバグが取り除けたとしても、まだ保証はできません。バックアップを作っておくか、使われていないソースコードを対象にするようにしてください。"
 
 #: jcfuiconsts.lisaboutversion
-#, object-pascal-format
-msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+msgid "Version $VERSION$%s%sThis program attempts to standardise and make readable the layout of any Object Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
 msgstr "バージョン $VERSION$%s$DATE$%s%sこのプログラムは標準化への推進と Delphi／Object Pascal のソースコードを読みやすい配置へとするものです。%s%sCopyright Anthony Steele 1999-2008"
 
 #: jcfuiconsts.lisalignalign
@@ -406,6 +411,7 @@ msgid "%sAt line %s col %s"
 msgstr "%s（行 %s、列 %s）"
 
 #: jcfuiconsts.lisederror
+msgctxt "jcfuiconsts.lisederror"
 msgid "Error"
 msgstr "エラー"
 
@@ -432,6 +438,12 @@ msgstr "%s（%s の近辺）"
 #, object-pascal-format
 msgid "Type: %s%s"
 msgstr "型名：%s%s"
+
+#: jcfuiconsts.liserroract
+#, fuzzy
+msgctxt "jcfuiconsts.liserroract"
+msgid "Error"
+msgstr "エラー"
 
 #: jcfuiconsts.lisfindreplaceenablefindandreplace
 msgid "Enable find and replace"
@@ -486,6 +498,10 @@ msgstr ""
 #, object-pascal-format
 msgid "Version that wrote this file: %s"
 msgstr "このファイルが書かれたバージョン：%s"
+
+#: jcfuiconsts.lisimbalancedcommentact
+msgid "Imbalanced comment action"
+msgstr ""
 
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
@@ -931,6 +947,10 @@ msgstr "置換"
 #: jcfuiconsts.lisusesuses
 msgid "Uses"
 msgstr "uses 節"
+
+#: jcfuiconsts.liswarnact
+msgid "Warn"
+msgstr ""
 
 #: jcfuiconsts.liswarningsignoreunusedparametersnamed
 msgid "&Ignore unused parameters named:"

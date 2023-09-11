@@ -10,8 +10,8 @@ resourcestring
   FORMAT_CURRENT_IDECMD   = 'Format code in current editor window';
   FORMAT_PROJECT_MENU     = '&All Files in Project';
   FORMAT_OPEN_MENU        = 'All &Open Windows';
-  FORMAT_SETTINGS_MENU    = '&Format Settings';
-  FORMAT_ABOUT_MENU       = '&About';
+  FORMAT_SETTINGS_MENU    = '&Format Settings ...';
+  FORMAT_ABOUT_MENU       = '&About ...';
   FORMAT_CATEGORY_IDECMD  = 'JEDI Code Format';
 
   //Settings caption and error messages
@@ -300,8 +300,8 @@ resourcestring
 
   //About dialog
   lisAboutAboutJEDICodeFormat = 'About JEDI Code Format';
-  lisAboutVersion = 'Version $VERSION$%s$DATE$%s%sThis program attempts to '
-    +'standardise and make readable the layout of any Delphi Object-Pascal '
+  lisAboutVersion = 'Version $VERSION$%s%sThis program attempts to '
+    +'standardise and make readable the layout of any Object Pascal '
     +'source code.%s%sCopyright Anthony Steele 1999-2008';
   lisAboutThisProgramIsStillUnderDevelopment = 'This program is still under '
     +'development. In spite of thorough testing and removal of reported bugs, '
@@ -326,6 +326,9 @@ resourcestring
   lisJEDICodeFormatOfAreYouSureThatYouWantToFormatAllFi = 'JEDI Code Format of'
     +' %sAre you sure that you want to format all %s files in the project?';
   lisJEDICodeFormatAllOpenWindow = 'JEDI Code Format of all open windows?';
+  lisImbalancedCommentAct = 'Imbalanced comment action';
+  lisErrorAct = 'Error';
+  lisWarnAct = 'Warn';
 
 implementation
 

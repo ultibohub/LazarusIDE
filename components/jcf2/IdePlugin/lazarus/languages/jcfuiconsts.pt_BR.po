@@ -12,7 +12,9 @@ msgstr ""
 "X-Generator: Poedit 1.8.13\n"
 
 #: jcfuiconsts.format_about_menu
-msgid "&About"
+#, fuzzy
+#| msgid "&About"
+msgid "&About ..."
 msgstr "&Sobre"
 
 #: jcfuiconsts.format_category_idecmd
@@ -44,7 +46,9 @@ msgid "&All Files in Project"
 msgstr "Todos os &Arquivos no Projeto"
 
 #: jcfuiconsts.format_settings_menu
-msgid "&Format Settings"
+#, fuzzy
+#| msgid "&Format Settings"
+msgid "&Format Settings ..."
 msgstr "Configurações de &Formatação"
 
 #: jcfuiconsts.lisaboutaboutjedicodeformat
@@ -65,8 +69,9 @@ msgid "This program is still under development. In spite of thorough testing and
 msgstr "Este programa ainda está em desenvolvimento. Apesar de testes rigorosos e remoção  de falhas reportadas, nenhuma garantia é dada. Favor fazer cópias de segurança, ou melhor ainda, usar um sistema de controle de código fonte."
 
 #: jcfuiconsts.lisaboutversion
-#, object-pascal-format
-msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Version $VERSION$%s$DATE$%s%sThis program attempts to standardise and make readable the layout of any Delphi Object-Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
+msgid "Version $VERSION$%s%sThis program attempts to standardise and make readable the layout of any Object Pascal source code.%s%sCopyright Anthony Steele 1999-2008"
 msgstr "Versão $VERSION$%S$DATE$%s%sEste programa tenta padronizar e tornar legível o \"layout\" de qualquer código fonte Delphi Object-Pascal.%s%sCopyright Anthony Steele 1999-2008"
 
 #: jcfuiconsts.lisalignalign
@@ -406,6 +411,7 @@ msgid "%sAt line %s col %s"
 msgstr "%sNa linha %s coluna %s"
 
 #: jcfuiconsts.lisederror
+msgctxt "jcfuiconsts.lisederror"
 msgid "Error"
 msgstr "Erro"
 
@@ -432,6 +438,12 @@ msgstr "%s perto %s"
 #, object-pascal-format
 msgid "Type: %s%s"
 msgstr "Tipo: %s%s"
+
+#: jcfuiconsts.liserroract
+#, fuzzy
+msgctxt "jcfuiconsts.liserroract"
+msgid "Error"
+msgstr "Erro"
 
 #: jcfuiconsts.lisfindreplaceenablefindandreplace
 msgid "Enable find and replace"
@@ -486,6 +498,10 @@ msgstr "Arquivo de configurações é:"
 #, object-pascal-format
 msgid "Version that wrote this file: %s"
 msgstr "Versão que gravou este arquivo: %s"
+
+#: jcfuiconsts.lisimbalancedcommentact
+msgid "Imbalanced comment action"
+msgstr ""
 
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
@@ -931,6 +947,10 @@ msgstr "Substituir"
 #: jcfuiconsts.lisusesuses
 msgid "Uses"
 msgstr "\"Uses\""
+
+#: jcfuiconsts.liswarnact
+msgid "Warn"
+msgstr ""
 
 #: jcfuiconsts.liswarningsignoreunusedparametersnamed
 msgid "&Ignore unused parameters named:"
