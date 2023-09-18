@@ -725,6 +725,8 @@ begin
   cnt.wincallback := cb;
   cnt.isCustomRange := true;
 
+  cnt.setVerticalScrollElasticity(NSScrollElasticityNone);
+  cnt.setHorizontalScrollElasticity(NSScrollElasticityNone);
   cnt.setDocumentView(doc);
   cnt.setDrawsBackground(false); // everything is covered anyway
   doc.setHidden(false);
