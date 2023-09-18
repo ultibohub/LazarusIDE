@@ -40,7 +40,7 @@ type
     FHeaderColor: TColor;
     FItemDataOffset: Integer;
     FOnClickCheck : TNotifyEvent;
-    FOnItemClick: TCheckListClicked;
+    FOnItemClick: TCheckListClicked;   // deprecated in v3.99
     function GetChecked(const AIndex: Integer): Boolean;
     function GetHeader(AIndex: Integer): Boolean;
     function GetItemEnabled(AIndex: Integer): Boolean;
@@ -66,7 +66,7 @@ type
     procedure ReadData(Stream: TStream);
     procedure WriteData(Stream: TStream);
     procedure ClickCheck; virtual;
-    procedure ItemClick(const AIndex: Integer); virtual;
+    procedure ItemClick(const AIndex: Integer); virtual;  deprecated 'Use ClickCheck instead';  // deprecated in V3.99
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure FontChanged(Sender: TObject); override;
   public
@@ -84,7 +84,7 @@ type
     property ItemEnabled[AIndex: Integer]: Boolean read GetItemEnabled write SetItemEnabled;
     property State[AIndex: Integer]: TCheckBoxState read GetState write SetState;
     property OnClickCheck: TNotifyEvent read FOnClickCheck write FOnClickCheck;
-    property OnItemClick: TCheckListClicked read FOnItemClick write FOnItemClick;
+    property OnItemClick: TCheckListClicked read FOnItemClick write FOnItemClick; deprecated 'Use OnClickCheck instead';  // deprecated in V3.99
   end;
   
   
@@ -137,7 +137,7 @@ type
     property OnEndDrag;
     property OnEnter;
     property OnExit;
-    property OnItemClick;
+    property OnItemClick; deprecated 'Use OnClickCheck instead';  // deprecated in v3.99
     property OnKeyPress;
     property OnKeyDown;
     property OnKeyUp;
@@ -266,7 +266,7 @@ procedure TCustomCheckListBox.DoChange(var Msg: TLMessage);
 begin
   //DebugLn(['TCustomCheckListBox.DoChange ',DbgSName(Self),' ',Msg.WParam]);
   ClickCheck;
-  ItemClick(Msg.WParam);
+  ItemClick(Msg.WParam);    // deprecated in V3.99
 end;
 
 function TCustomCheckListBox.GetCachedDataSize: Integer;
@@ -323,6 +323,7 @@ procedure TCustomCheckListBox.KeyDown(var Key: Word; Shift: TShiftState);
 var
   Index: Integer;
 begin
+  inherited KeyDown(Key,Shift);
   if (Key = VK_SPACE) and (Shift=[]) then
   begin
     //Delphi (7) sets ItemIndex to 0 in this case and fires OnClick
@@ -336,12 +337,9 @@ begin
       Index := ItemIndex;
       Checked[Index] := not Checked[Index];
       ClickCheck;
-      //ToDo: does Delphi fire OnItemClick and in the same order?
-      ItemClick(Index);
-      Key := VK_UNKNOWN;
+      ItemClick(Index);    // deprecated in V3.99
     end;
-  end else
-    inherited KeyDown(Key,Shift);
+  end;
 end;
 
 procedure TCustomCheckListBox.SetItemEnabled(AIndex: Integer;

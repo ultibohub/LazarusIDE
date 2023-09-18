@@ -1914,6 +1914,7 @@ lazbuildlclpackages:
 	$(MAKE) -C lazdebuggers/lazdebuggerlldb
 	$(MAKE) -C lazdebuggers/lazdebuggerfplldb
 	$(MAKE) -C lazdebuggers/lazdebuggerfp
+	$(MAKE) -C lazedit
 	$(MAKE) -C synedit
 idepackages: lazbuildlclpackages
 	$(MAKE) -C lazdebuggergdbmi
@@ -1958,6 +1959,7 @@ bigide:
 all: lazbuildlclpackages idepackages bigide
 clean:
 	$(MAKE) -C lazutils clean
+	$(MAKE) -C lazedit clean
 	$(MAKE) -C codetools clean
 	$(MAKE) -C codetools/ide clean
 	$(MAKE) -C freetype clean
@@ -2015,6 +2017,7 @@ clean:
 cleanall: clean
 distclean:
 	$(MAKE) -C lazutils distclean
+	$(MAKE) -C lazedit distclean
 	$(MAKE) -C codetools distclean
 	$(MAKE) -C codetools/ide distclean
 	$(MAKE) -C freetype distclean

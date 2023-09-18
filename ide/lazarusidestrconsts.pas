@@ -858,6 +858,12 @@ resourcestring
   lisNotNow = 'Not now';
   lisYouCanNotBuildLazarusWhileDebuggingOrCompiling = 'You cannot build '
     +'Lazarus while debugging or compiling.';
+  lisMajorChangesDetected = 'Major changes detected';
+  lisTheLazarusSourcesUse = 'The Lazarus sources use a different list of base '
+    +'packages.%sIt is recommended to compile the IDE clean using lazbuild.';
+  lisCleanUpLazbuild = 'Clean up + lazbuild';
+  lisLazbuild = 'lazbuild';
+  lisCompileNormally = 'Compile normally';
   lisReadError = 'Read Error';
   lisUnableToReadFile = 'Unable to read file';
   lisUnableToReadFile2 = 'Unable to read file "%s".';
@@ -1940,6 +1946,18 @@ resourcestring
   dlgUseSchemeLocal    = 'selected language';
   dlgColor = 'Color';
   dlgColors = 'Colors';
+  dlgColorsTml = 'TML Setup';
+  dlgColorsTmlRefresh = 'Reload';
+  dlgColorsTmlInfo = 'Below is a list of Highlighter (Textmate) found in the folder %1:s.%0:s' +
+    'This list may include files with errors and files not yet active in the IDE.%0:s' +
+    'To activate newly added/changed files restart the IDE.%0:s' +
+    'The "Reload" button will update the list below, checking if any errors were fixed.';
+  dlgColorsTmlNoFilesFound = 'No files found.';
+  dlgColorsTmlFromFile = 'File:';
+  dlgColorsTmlNoSampleTxt = 'No sample text configured';
+  dlgColorsTmlBadSampleTxtFile = 'Sample text file not found: %1:s';
+  dlgColorsTmlOk = 'OK';
+  dlgColorsTmlError = 'Error:';
   lisHeaderColors = 'Header colors';
   lisMsgColors = 'Message colors';
   lisSetAllColors = 'Set all colors:';

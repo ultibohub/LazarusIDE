@@ -1124,6 +1124,44 @@ msgstr "Ei muutettu"
 msgid "Colors"
 msgstr "Värit"
 
+#: lazarusidestrconsts.dlgcolorstml
+msgid "TML Setup"
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlbadsampletxtfile
+#, object-pascal-format
+msgid "Sample text file not found: %1:s"
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlerror
+msgid "Error:"
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlfromfile
+msgid "File:"
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlinfo
+#, object-pascal-format
+msgid "Below is a list of Highlighter (Textmate) found in the folder %1:s.%0:sThis list may include files with errors and files not yet active in the IDE.%0:sTo activate newly added/changed files restart the IDE.%0:sThe \"Reload\" button will update the list below, checking if any errors were fixed."
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlnofilesfound
+msgid "No files found."
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlnosampletxt
+msgid "No sample text configured"
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlok
+msgid "OK"
+msgstr ""
+
+#: lazarusidestrconsts.dlgcolorstmlrefresh
+msgid "Reload"
+msgstr ""
+
 #: lazarusidestrconsts.dlgcommandlineparams
 msgid "Command line parameters (without application name)"
 msgstr "Komentorivin parametrit (ilman ohjelman omaa nimeä)"
@@ -6353,6 +6391,10 @@ msgstr "Siivoa ja kokoa"
 msgid "Clean up and build project"
 msgstr "Siivoa ja kokoa projekti"
 
+#: lazarusidestrconsts.liscleanuplazbuild
+msgid "Clean up + lazbuild"
+msgstr ""
+
 #: lazarusidestrconsts.liscleanuppackage
 #, object-pascal-format
 msgid "Clean up package \"%s\"."
@@ -7136,6 +7178,10 @@ msgstr ""
 
 #: lazarusidestrconsts.liscompilefollowingmodes
 msgid "Compile the following modes"
+msgstr ""
+
+#: lazarusidestrconsts.liscompilenormally
+msgid "Compile normally"
 msgstr ""
 
 #: lazarusidestrconsts.liscompileproject
@@ -11731,6 +11777,10 @@ msgstr "Lazarus kieli-nimi (esim. english, deutsch)"
 msgid "lazarus [options] <project-filename>"
 msgstr "lazarus [valinnat] <projekti-tiedosto>"
 
+#: lazarusidestrconsts.lislazbuild
+msgid "lazbuild"
+msgstr ""
+
 #: lazarusidestrconsts.lislazbuildaboaction
 msgctxt "lazarusidestrconsts.lislazbuildaboaction"
 msgid "Action"
@@ -12090,6 +12140,10 @@ msgstr "Päätiedosto on Pascal-koodia"
 #: lazarusidestrconsts.lismainunitispascalsourcehint
 msgid "Assume Pascal even if it does not end with .pas/.pp suffix."
 msgstr "Oleta Pascal vaikkei pääte olisi .pas/.pp."
+
+#: lazarusidestrconsts.lismajorchangesdetected
+msgid "Major changes detected"
+msgstr ""
 
 #: lazarusidestrconsts.lismakecurrent
 msgctxt "lazarusidestrconsts.lismakecurrent"
@@ -18268,6 +18322,11 @@ msgstr "Lazarus-hakemistossa ovat IDEn lähdekoodit sekä LCL:n ja muiden pakett
 #, object-pascal-format
 msgid "The Lazarus directory \"%s\" does not look correct:%s%s"
 msgstr "Lazarus hakemisto \"%s\" ei näytä oikealta:%s%s"
+
+#: lazarusidestrconsts.listhelazarussourcesuse
+#, object-pascal-format
+msgid "The Lazarus sources use a different list of base packages.%sIt is recommended to compile the IDE clean using lazbuild."
+msgstr ""
 
 #: lazarusidestrconsts.listhelfmlazarusformfilecontainsinvalidpropertiesthis
 msgid "The LFM (Lazarus form) file contains invalid properties. This means for example it contains some properties/classes which do not exist in the current LCL. The normal fix is to remove these properties from the lfm and fix the Pascal code manually."

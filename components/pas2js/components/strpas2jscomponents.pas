@@ -18,8 +18,11 @@ Resourcestring
   rsMenuRestShowData = 'Show data';
   rsMenuRestCreateFieldDefs = 'Create field defs';
   rsMenuRestCreateParamDefs = 'Create parameters';
+  rsMenuGenHTMLForm = 'Create HTML form for data';
   rsNoMetaDataResource = 'No metadata resource present';
   rsNoResource = 'No resource present';
+  rsNoFieldsAvailable = 'No fields available';
+  rsHTMLCopiedToClipBoard = 'Data entry HTML copied to clipboard';
   rsNoMetaDataResourceCannotCreateFieldDefs = 'No metadata resource present, cannot get fielddefs';
   rsNoMetaDataResourceCannotCreateParams = 'No metadata resource present, cannot get parameters';
   rsNoResourceCannotCreateFieldDefs = 'No resource present, cannot get fielddefs';
@@ -38,6 +41,9 @@ Resourcestring
 
   rsEditingHTMLProp = 'Editing HTML property: %s';
   rsEditTemplate = 'Edit Template';
+
+  rsCreateMissingColumns = 'Create missing columns';
+  rsColumnsForAllFields = 'There is already a column for all fields.';
 
   rsStandardHTMLAction = 'Standard HTML Element action.';
   rsDBEditHTMLAction = 'Standard Data-Aware HTML Element action.';

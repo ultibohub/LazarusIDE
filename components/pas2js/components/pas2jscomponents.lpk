@@ -134,8 +134,27 @@
         <Filename Value="pas2jscompedits.pas"/>
         <UnitName Value="pas2jscompedits"/>
       </Item>
+      <Item>
+        <Filename Value="frmaddmissingtablecolumns.pas"/>
+        <UnitName Value="frmaddmissingtablecolumns"/>
+      </Item>
+      <Item>
+        <Filename Value="datasettoform.pas"/>
+        <UnitName Value="datasettoform"/>
+      </Item>
+      <Item>
+        <Filename Value="bootstrapformgen.pas"/>
+        <UnitName Value="bootstrapformgen"/>
+      </Item>
+      <Item>
+        <Filename Value="frmdatasettoform.pas"/>
+        <UnitName Value="frmdatasettoform"/>
+      </Item>
     </Files>
     <RequiredPkgs>
+      <Item>
+        <PackageName Value="RunTimeTypeInfoControls"/>
+      </Item>
       <Item>
         <PackageName Value="weblaz"/>
       </Item>

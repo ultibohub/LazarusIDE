@@ -266,45 +266,59 @@ type
   TShapeType = (stRectangle, stSquare, stRoundRect, stRoundSquare,
     stEllipse, stCircle, stSquaredDiamond, stDiamond,
     stTriangle, stTriangleLeft, stTriangleRight, stTriangleDown,
-    stStar, stStarDown);
+    stStar, stStarDown, stPolygon);
 
-  TShape = class(TGraphicControl)
+  TShapePointsEvent = procedure (Sender: TObject; var Points: TPointArray;
+    var Winding: Boolean) of object;
+
+  TCustomShape = class(TGraphicControl)
   private
     FPen: TPen;
     FBrush: TBrush;
     FShape: TShapeType;
     FBitmapCopy: TBitmap; // For testing if a mouse click is on the actual shape.
     FOnShapeClick: TNotifyEvent;
+    FOnShapePoints: TShapePointsEvent;
     procedure SetBrush(Value: TBrush);
     procedure SetPen(Value: TPen);
     procedure SetShape(Value: TShapeType);
+    procedure SetOnShapePoints(Value: TShapePointsEvent);
   protected
     class procedure WSRegisterClass; override;
     class function GetControlClassDefaultSize: TSize; override;
     procedure Click; override;
-    procedure CMShapeHitTest(var Message: TCMHittest); message CM_IRREGULARSHAPEHITTEST;
+    procedure CMShapeHitTest(var Message: TCMHittest); message CM_MASKHITTEST;
+    procedure DrawToCanvas(ACanvas: TCanvas); virtual;
+    procedure UpdateMask;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
-    function HitTest(const P: TPoint): Boolean;
+    function PtInShape(const P: TPoint): Boolean;
     procedure Paint; override;
     procedure StyleChanged(Sender: TObject);
+    property Brush: TBrush read FBrush write SetBrush;
+    property Pen: TPen read FPen write SetPen;
+    property Shape: TShapeType read FShape write SetShape default stRectangle;
+    property OnShapeClick: TNotifyEvent read FOnShapeClick write FOnShapeClick;
+    property OnShapePoints: TShapePointsEvent read FOnShapePoints write SetOnShapePoints;
+  end;
+
+  TShape = class(TCustomShape)
   published
     property Align;
     property Anchors;
     property BorderSpacing;
-    property Brush: TBrush read FBrush write SetBrush;
+    property Brush;
     property Constraints;
     property DragCursor;
     property DragKind;
     property DragMode;
     property Enabled;
     property ParentShowHint;
-    property Pen: TPen read FPen write SetPen;
-    property Shape: TShapeType read FShape write SetShape default stRectangle;
+    property Pen;
+    property Shape;
     property ShowHint;
     property Visible;
-
     property OnChangeBounds;
     property OnClick;
     property OnDragDrop;
@@ -326,7 +340,8 @@ type
     property OnResize;
     property OnStartDock;
     property OnStartDrag;
-    property OnShapeClick: TNotifyEvent read FOnShapeClick write FOnShapeClick;
+    property OnShapeClick;
+    property OnShapePoints;
   end;
 
 

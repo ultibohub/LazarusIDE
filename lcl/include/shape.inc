@@ -8,7 +8,7 @@
  *****************************************************************************
 }
 
-constructor TShape.Create(TheOwner: TComponent);
+constructor TCustomShape.Create(TheOwner: TComponent);
 begin
   inherited Create(TheOwner);
   with GetControlClassDefaultSize do
@@ -18,11 +18,9 @@ begin
   FPen.OnChange := @StyleChanged;
   FBrush := TBrush.Create;
   FBrush.OnChange := @StyleChanged;
-  FBitmapCopy := TBitmap.Create;
-  FBitmapCopy.Monochrome := True;
 end;
 
-destructor TShape.Destroy;
+destructor TCustomShape.Destroy;
 begin
   FreeAndNil(FBitmapCopy);
   FreeThenNil(FPen);
@@ -30,10 +28,10 @@ begin
   inherited Destroy;
 end;
 
-function TShape.HitTest(const P: TPoint): Boolean;
+function TCustomShape.PtInShape(const P: TPoint): Boolean;
 // Return True if point P is inside the actual shape.
 begin
-  Assert(Assigned(FBitmapCopy), 'FBitmapCopy=Nil');
+  UpdateMask;
   Result := (P.X >= 0) and (P.X < FBitmapCopy.Width)
         and (P.Y >= 0) and (P.Y < FBitmapCopy.Height)
         and (FBitmapCopy.Canvas.Pixels[P.X, P.Y] = clBlack);
@@ -70,31 +68,20 @@ const
     (Sin(9*pi/5 + pi/2), Sin(9*pi/5 - pi/2))
     );
 
-procedure TShape.Paint;
+procedure TCustomShape.DrawToCanvas(ACanvas: TCanvas);
 const
   cStarError = 2; // Detect N pixels error for 5-star horizontal lines
 var
   PaintRect: TRect;
   MinSize: Longint;
-  P: array[0..3] of TPoint;
-  PStar: array[0..10] of TPoint;
+  P: array of TPoint;
   PenInc, PenDec: Integer;
+  PolygonWinding: Boolean;
   RadiusBig, RadiusBig2, RadiusSm, i: Integer;
   PCenter: TPoint;
 begin
-  FBitmapCopy.SetSize(Width, Height);
-  FBitmapCopy.Canvas.Brush.Style:=bsSolid;
-  FBitmapCopy.Canvas.Brush.Color:=clWhite;
-  FBitmapCopy.Canvas.FillRect(0,0,Width,Height);
-  FBitmapCopy.Canvas.Brush.Color:=clBlack;
-  FBitmapCopy.Canvas.Pen := Pen;
-  FBitmapCopy.Canvas.Pen.Color:=clBlack;
-
-  Canvas.Pen := FPen;
-  Canvas.Brush := FBrush;
-
-  PenInc := Canvas.Pen.Width div 2;
-  PenDec := (Canvas.Pen.Width - 1) div 2;
+  PenInc := ACanvas.Pen.Width div 2;
+  PenDec := (ACanvas.Pen.Width - 1) div 2;
 
   PaintRect := Rect(PenInc, PenInc, Width - PenDec, Height - PenDec);
   if PaintRect.Left = PaintRect.Right then
@@ -113,22 +100,14 @@ begin
 
   case FShape of
     stRectangle, stSquare:
-      begin
-        Canvas.Rectangle(PaintRect);
-        FBitmapCopy.Canvas.Rectangle(PaintRect);
-      end;
+      ACanvas.Rectangle(PaintRect);
     stRoundRect, stRoundSquare:
-      begin
-        Canvas.RoundRect(PaintRect, MinSize div 4, MinSize div 4);
-        FBitmapCopy.Canvas.RoundRect(PaintRect, MinSize div 4, MinSize div 4);
-      end;
+      ACanvas.RoundRect(PaintRect, MinSize div 4, MinSize div 4);
     stCircle, stEllipse:
-      begin
-        Canvas.Ellipse(PaintRect);
-        FBitmapCopy.Canvas.Ellipse(PaintRect);
-      end;
+      ACanvas.Ellipse(PaintRect);
     stSquaredDiamond, stDiamond:
       begin
+        SetLength(P, 4);
         P[0].x := PaintRect.Left;
         P[0].y := (PaintRect.Top + PaintRect.Bottom) div 2;
         P[1].x := (PaintRect.Left + PaintRect.Right) div 2;
@@ -137,60 +116,51 @@ begin
         P[2].y := P[0].y;
         P[3].x := P[1].x;
         P[3].y := PaintRect.Bottom - 1;
-        Canvas.Polygon(P);
-        FBitmapCopy.Canvas.Polygon(P);
+        ACanvas.Polygon(P);
       end;
     stTriangle:
       begin
+        SetLength(P, 3);
         P[0].x := (Width - 1) div 2;
         P[0].y := PenInc;
         P[1].x := Width - PenInc - 1;
         P[1].y := Height - PenInc - 1;
         P[2].x := PenInc;
         P[2].y := Height - PenInc - 1;
-        P[3].x := P[0].x;
-        P[3].y := P[0].y;
-        Canvas.Polygon(P);
-        FBitmapCopy.Canvas.Polygon(P);
+        ACanvas.Polygon(P);
       end;
     stTriangleDown:
       begin
+        SetLength(P, 3);
         P[0].x := (Width - 1) div 2;
         P[0].y := Height - PenInc - 1;
         P[1].x := Width - PenInc - 1;
         P[1].y := PenInc;
         P[2].x := PenInc;
         P[2].y := PenInc;
-        P[3].x := P[0].x;
-        P[3].y := P[0].y;
-        Canvas.Polygon(P);
-        FBitmapCopy.Canvas.Polygon(P);
+        ACanvas.Polygon(P);
       end;
     stTriangleLeft:
       begin
+        SetLength(P, 3);
         P[0].x := PenInc;
         P[0].y := Height div 2;
         P[1].x := Width - PenInc - 1;
         P[1].y := PenInc;
         P[2].x := Width - PenInc - 1;
         P[2].y := Height - PenInc - 1;
-        P[3].x := P[0].x;
-        P[3].y := P[0].y;
-        Canvas.Polygon(P);
-        FBitmapCopy.Canvas.Polygon(P);
+        ACanvas.Polygon(P);
       end;
     stTriangleRight:
       begin
+        SetLength(P, 3);
         P[0].x := Width - PenInc - 1;
         P[0].y := Height div 2;
         P[1].x := PenInc;
         P[1].y := PenInc;
         P[2].x := PenInc;
         P[2].y := Height - PenInc - 1;
-        P[3].x := P[0].x;
-        P[3].y := P[0].y;
-        Canvas.Polygon(P);
-        FBitmapCopy.Canvas.Polygon(P);
+        ACanvas.Polygon(P);
       end;
     stStar, stStarDown:
       begin
@@ -213,52 +183,105 @@ begin
         PCenter.X := Width div 2;
         RadiusSm := RadiusBig * 57 div 150;
 
+        SetLength(P, 10);
         for i := 0 to 4 do
         begin
-          PStar[i*2].x := PCenter.X + Round(RadiusBig*CosStarBig[i, FShape=stStarDown]);
-          PStar[i*2].y := PCenter.Y - Round(RadiusBig*SinStarBig[i, FShape=stStarDown]);
-          PStar[i*2+1].x := PCenter.X + Round(RadiusSm*CosStarSmall[i, FShape=stStarDown]);
-          PStar[i*2+1].y := PCenter.Y - Round(RadiusSm*SinStarSmall[i, FShape=stStarDown]);
+          P[i*2].x := PCenter.X + Round(RadiusBig*CosStarBig[i, FShape=stStarDown]);
+          P[i*2].y := PCenter.Y - Round(RadiusBig*SinStarBig[i, FShape=stStarDown]);
+          P[i*2+1].x := PCenter.X + Round(RadiusSm*CosStarSmall[i, FShape=stStarDown]);
+          P[i*2+1].y := PCenter.Y - Round(RadiusSm*SinStarSmall[i, FShape=stStarDown]);
         end;
 
         // Fix 1 pixel error of horizontal lines, adjust point on small radius to the point on big one
         for i := 0 to 4 do
-          if Abs(PStar[i*2].y - PStar[i*2+1].y) <= cStarError then
-            PStar[i*2+1].y := PStar[i*2].y;
+          if Abs(P[i*2].y - P[i*2+1].y) <= cStarError then
+            P[i*2+1].y := P[i*2].y;
         for i := 1 to 4 do
-          if Abs(PStar[i*2].y - PStar[i*2-1].y) <= cStarError then
-            PStar[i*2-1].y := PStar[i*2].y;
+          if Abs(P[i*2].y - P[i*2-1].y) <= cStarError then
+            P[i*2-1].y := P[i*2].y;
 
-        PStar[10] := PStar[0];
-        Canvas.Polygon(PStar);
-        FBitmapCopy.Canvas.Polygon(PStar);
+        ACanvas.Polygon(P);
+      end;
+    stPolygon:
+      if (csDesigning in ComponentState) then
+      begin
+        if Assigned(FBitmapCopy) and (ACanvas <> FBitmapCopy.Canvas) then
+        begin
+          ACanvas.Brush.Color := Parent.Color;
+          ACanvas.Brush.Style := bsSolid;
+          ACanvas.Pen.Style := psDash;
+          ACanvas.Pen.Color := clWindowText;
+          ACanvas.Rectangle(PaintRect);
+          ACanvas.Pen.Color := clRed;
+          ACanvas.Line(0, 0, Width-1, Height-1);
+          ACanvas.Line(0, Height-1, Width-1, 0);
+        end else
+          ACanvas.Rectangle(PaintRect);
+      end else
+      if Assigned(FOnShapePoints) then
+      begin
+        SetLength(P, 0);
+        PolygonWinding := false;
+        FOnShapePoints(Self, P, PolygonWinding);
+        if Length(P) > 2 then
+          ACanvas.Polygon(P, PolygonWinding);
       end;
   end;
+end;
+
+procedure TCustomShape.UpdateMask;
+begin
+  if FBitmapCopy = nil then
+  begin
+    FBitmapCopy := TBitmap.Create;
+    FBitmapCopy.Monochrome := true;
+  end;
+  FBitmapCopy.SetSize(Width, Height);
+  FBitmapCopy.Canvas.Brush.Style := bsSolid;
+  FBitmapCopy.Canvas.Brush.Color := clWhite;
+  FBitmapCopy.Canvas.FillRect(0,0,Width,Height);
+  FBitmapCopy.Canvas.Brush.Color := clBlack;
+  FBitmapCopy.Canvas.Pen := Pen;
+  FBitmapCopy.Canvas.Pen.Color := clBlack;
+  DrawToCanvas(FBitmapCopy.Canvas);
+end;
+
+procedure TCustomShape.Paint;
+begin
+  Canvas.Pen := FPen;
+  Canvas.Brush := FBrush;
+  DrawToCanvas(Canvas);
 
   // to fire OnPaint event
   inherited Paint;
 end;
 
-procedure TShape.StyleChanged(Sender: TObject);
+procedure TCustomShape.StyleChanged(Sender: TObject);
 begin
   if (Parent <> nil) and (Visible or (csDesigning in ComponentState))
   and Parent.HandleAllocated then
     Invalidate;
 end;
 
-procedure TShape.SetBrush(Value: TBrush);
+procedure TCustomShape.SetBrush(Value: TBrush);
 begin
   if Value <> Brush then
     FBrush.Assign(Value);
 end;
 
-procedure TShape.SetPen(Value: TPen);
+procedure TCustomShape.SetOnShapePoints(Value: TShapePointsEvent);
+begin
+  FOnShapePoints := Value;
+  Invalidate;
+end;
+
+procedure TCustomShape.SetPen(Value: TPen);
 begin
   if Value <> Pen then
     FPen.Assign(Value);
 end;
 
-procedure TShape.SetShape(Value: TShapeType);
+procedure TCustomShape.SetShape(Value: TShapeType);
 begin
   if FShape <> Value then
   begin
@@ -267,32 +290,32 @@ begin
   end;
 end;
 
-class procedure TShape.WSRegisterClass;
+class procedure TCustomShape.WSRegisterClass;
 begin
   inherited WSRegisterClass;
-  RegisterShape;
+  RegisterCustomShape;
 end;
 
-class function TShape.GetControlClassDefaultSize: TSize;
+class function TCustomShape.GetControlClassDefaultSize: TSize;
 begin
   Result.CX := 65;
   Result.CY := 65;
 end;
 
-procedure TShape.Click;
+procedure TCustomShape.Click;
 begin
   inherited Click;
   if Assigned(OnShapeClick)
-  and HitTest(ScreenToClient(Mouse.CursorPos)) then
+  and PtInShape(ScreenToClient(Mouse.CursorPos)) then
     OnShapeClick(Self);
 end;
 
-procedure TShape.CMShapeHitTest(var Message: TCMHittest);
+procedure TCustomShape.CMShapeHitTest(var Message: TCMHittest);
 var
   p: TPoint;
 begin
   p := ParentToClient(Point(Message.XPos, Message.YPos),GetDesignerForm(Self));
-  if HitTest(p) then
+  if PtInShape(p) then
     Message.Result := 0
   else
     Message.Result := 1;

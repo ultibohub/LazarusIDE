@@ -120,7 +120,8 @@ uses
   MsgWnd_Options, Files_Options, Desktop_Options, window_options, IdeStartup_Options,
   Backup_Options, naming_options, fpdoc_options, idecoolbar_options, editortoolbar_options,
   editor_display_options, editor_keymapping_options, editor_mouseaction_options,
-  editor_mouseaction_options_advanced, editor_color_options, editor_markup_options,
+  editor_mouseaction_options_advanced, editor_color_options, editor_color_tml_options,
+  editor_markup_options,
   editor_markup_userdefined, editor_codetools_options, editor_codefolding_options,
   editor_general_misc_options, editor_dividerdraw_options,
   editor_multiwindow_options, editor_indent_options,
@@ -6148,7 +6149,7 @@ begin
   end;
 
   DlgResult:=ShowUnitInfoDlg(ShortUnitName,
-    GetSyntaxHighlighterCaption(ActiveUnitInfo.DefaultSyntaxHighlighter),
+    IdeSyntaxHighlighters.Captions[ActiveUnitInfo.DefaultSyntaxHighlighter],
     ActiveUnitInfo.IsPartOfProject,
     SizeInBytes,UnitSizeWithIncludeFiles,UnitSizeParsed,
     LineCount,UnitLineCountWithIncludes,UnitLineCountParsed,
@@ -8071,10 +8072,10 @@ begin
     ErrMsg:=PackageGraph.SrcBasePackagesNeedLazbuild;
     if ErrMsg<>'' then
     begin
-      r:=IDEQuestionDialog('Major changes detected',
-        'The Lazarus sources use a different list of base packages.'+LineEnding
-        +'It is recommended to compile the IDE clean using lazbuild.',
-        mtConfirmation,[mrYes,'Clean up + lazbuild',21,'lazbuild',mrIgnore,'Compile normally',mrCancel]);
+      r:=IDEQuestionDialog(lisMajorChangesDetected,
+        Format(lisTheLazarusSourcesUse, [LineEnding]),
+        mtConfirmation, [mrYes, lisCleanUpLazbuild, 21, lisLazbuild, mrIgnore,
+          lisCompileNormally, mrCancel]);
       case r of
       mrYes:
         exit(fBuilder.MakeIDEUsingLazbuild(true));
@@ -11923,7 +11924,7 @@ begin
   end;
 
   if AnUpdates * [sepuNewShared, sepuChangedHighlighter] <> [] then begin
-    p.SyntaxHighlighter := SrcEdit.SyntaxHighlighterType;
+    p.SyntaxHighlighter := SrcEdit.SyntaxHighlighterId;
   end;
 
   p.PageIndex := SrcEdit.PageIndex;

@@ -176,6 +176,7 @@ Procedure RegisterComponentEditors;
 begin
   RegisterComponentEditor(THTMLElementActionList,THTMLElementActionListComponentEditor);
   RegisterComponentEditor(TBootstrapModal,TBootstrapModalComponentEditor);
+  RegisterComponentEditor(TDBBootstrapTableWidget,TBootstrapTableWidgetComponentEditor);
   RegisterComponentEditor(TPas2JSRPCClient,TPas2JSRPCClientComponentEditor);
 end;
 
@@ -218,6 +219,7 @@ begin
 
   RegisterPropertyEditor(TypeInfo(string),TDBSelectWidget, 'ItemField', TFieldProperty);
   RegisterPropertyEditor(TypeInfo(string),TDBSelectWidget, 'ValueField', TFieldProperty);
+  RegisterPropertyEditor(TypeInfo(string),TDBHTMLElementAction, 'FieldName', TFieldProperty);
   RegisterPropertyEditor(TypeInfo(String),TDBSelectWidget,'ParentID',TElementIDPropertyEditor);
   RegisterPropertyEditor(TypeInfo(String),TDBSelectWidget,'ElementID',TElementIDPropertyEditor);
 end;

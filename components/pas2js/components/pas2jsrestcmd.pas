@@ -14,6 +14,7 @@ Type
 
   TIDEPas2JSRestCommandHandler = Class(TComponent)
   Private
+    FCmdGenHTML: TIDEMenuCommand;
     FCmdGetFieldDefs: TIDEMenuCommand;
     FCmdGetParamDefs: TIDEMenuCommand;
     FCmdShowData: TIDEMenuCommand;
@@ -31,6 +32,8 @@ Type
     Procedure RegisterCommands;
     // Check whether dataset is TSQLDBRestDataset
     Procedure CheckDataset(Sender : TObject); virtual;
+    // Create HTML form
+    procedure CreateHTML(Sender: TObject); virtual;
     // Create fielddefs for dataset
     Procedure CreateFieldDefs(Sender : TObject); virtual;
     // Create parameters for dataset
@@ -41,6 +44,7 @@ Type
     Property CmdShowData : TIDEMenuCommand Read FCmdShowData Write FCmdShowData;
     Property CmdGetFieldDefs : TIDEMenuCommand Read FCmdGetFieldDefs Write FCmdGetFieldDefs;
     Property CmdGetParamDefs : TIDEMenuCommand Read FCmdGetParamDefs Write FCmdGetParamDefs;
+    Property CmdGenHTML : TIDEMenuCommand Read FCmdGenHTML Write FCmdGenHTML;
     Property mnuCompRestSection : TIDEMenuSection Read FmnuCompRestSection Write FmnuCompRestSection;
     // Logging
     Property OnLog : TLogEvent read FOnLog write FOnLog;
@@ -53,7 +57,48 @@ Var
 
 implementation
 
-uses dialogs, bufdataset, strpas2jscomponents, pas2jsrestutils, frmRestData, FormEditingIntf, ComponentEditors;
+uses clipbrd, controls, datasettoform, frmdatasettoform,  dialogs, bufdataset, strpas2jscomponents, pas2jsrestutils, frmRestData, FormEditingIntf, ComponentEditors;
+
+procedure TIDEPas2JSRestCommandHandler.CreateHTML(Sender: TObject);
+
+var
+  DS : TDataset;
+  Source : TDatasource;
+  Gen : TDatasetHTMLGenerator;
+  Frm : TfrmDatasetToHTMLForm;
+  HTML : String;
+
+begin
+  DS:=GetDataset;
+  if DS=Nil then
+    exit;
+  Frm:=nil;
+  Source:=nil;
+  Gen:=TDatasetHTMLGenerator.Create(Self);
+  try
+    Source:=TDatasource.Create(Self);
+    Source.Dataset:=DS;
+    Gen.Datasource:=Source;
+    Gen.PopulateEntries;
+    if Gen.FieldEntries.Count=0 then
+      begin
+      ShowMessage(rsNoFieldsAvailable);
+      exit;
+      end;
+    Frm:=TfrmDatasetToHTMLForm.Create(Self);
+    Frm.Generator:=Gen;
+    if Frm.ShowModal=mrOK then
+      begin
+      HTML:=Frm.GetHTML;
+      Clipboard.AsText:=HTML;
+      ShowMessage(rsHTMLCopiedToClipBoard);
+      end;
+  finally
+    Frm.Free;
+    Gen.Free;
+    Source.Free;
+  end;
+end;
 
 procedure TIDEPas2JSRestCommandHandler.DoLog(const Msg: String);
 begin
@@ -88,11 +133,13 @@ procedure TIDEPas2JSRestCommandHandler.RegisterCommands;
 begin
   // Form designer menu
   mnuCompRestSection:=RegisterIDESubMenu(DesignerMenuSectionCustomDynamic,'comPas2JSRest',rsPas2JSRest,Nil,Nil);
+//  DesignerMenuSectionCustomDynamic.AddHandlerOnShow(@CheckDataset);
   mnuCompRestSection.AddHandlerOnShow(@CheckDataset);
 //  RegisterIDEMenuCommand(mnuCompDDSection,'ddeditfields',SMenuDatadictApply,@IDEDDC.ApplyDD,Nil,Nil);
   CmdShowData:=RegisterIDEMenuCommand(mnuCompRestSection,'showData',rsMenuRestShowData,@ShowData,Nil,Nil);
   CmdGetFieldDefs:=RegisterIDEMenuCommand(mnuCompRestSection,'createFieldDefs',rsMenuRestCreateFieldDefs,@CreateFieldDefs,Nil,Nil);
   CmdGetParamDefs:=RegisterIDEMenuCommand(mnuCompRestSection,'createParamDefs',rsMenuRestCreateParamDefs,@CreateParams,Nil,Nil);
+  CmdGenHTML:=RegisterIDEMenuCommand(mnuCompRestSection,'gendatahtml',rsMenuGenHTMLForm,@CreateHTML,Nil,Nil);
 
 end;
 
@@ -100,13 +147,17 @@ procedure TIDEPas2JSRestCommandHandler.CheckDataset(Sender: TObject);
 
 Var
   DS : TSQLDBRestDataset;
-  OK : Boolean;
+  MDOK,OK : Boolean;
 
 begin
   DS:=GetDataset;
   OK:=(DS<>Nil) and (DS.Connection<>Nil) and (DS.ResourceName<>'');
+  MDOK:=OK and (DS.Connection.MetaDataResourceName<>'');
+  mnuCompRestSection.Enabled:=OK;
   CmdShowData.Enabled:=OK ;
-  CmdGetFieldDefs.Enabled:=OK and (DS.Connection.MetaDataResourceName<>'');
+  CmdGetParamDefs.Enabled:=OK;
+  CmdGenHTML.Enabled:=OK and ((DS.FieldDefs.Count>0) or (DS.Fields.Count>0));
+  CmdGetFieldDefs.Enabled:=MDOK;
 end;
 
 procedure TIDEPas2JSRestCommandHandler.CreateFieldDefs(Sender: TObject);
