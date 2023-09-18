@@ -3098,6 +3098,7 @@ basecomponents:
 	$(MAKE) -C ide/packages/idedebugger
 	$(MAKE) -C components/anchordocking
 	$(MAKE) -C components/anchordocking/design
+	$(MAKE) -C components/jcf2
 	$(MAKE) -C components/jcf2/IdePlugin/lazarus
 	$(MAKE) -C components/synedit/design
 bigidecomponents:
