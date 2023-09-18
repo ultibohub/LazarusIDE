@@ -98,7 +98,7 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
   object grbTargetPlatform: TGroupBox
     AnchorSideBottom.Side = asrBottom
     Left = 0
-    Height = 125
+    Height = 150
     Top = 147
     Width = 594
     Align = alTop
@@ -148,7 +148,7 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       AnchorSideTop.Side = asrCenter
       Left = 6
       Height = 15
-      Top = 92
+      Top = 74
       Width = 81
       Caption = 'lblTargetController'
       ParentColor = False
@@ -159,7 +159,7 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       AnchorSideTop.Side = asrCenter
       Left = 6
       Height = 16
-      Top = 74
+      Top = 97
       Width = 74
       Caption = 'lblSubtarget'
       ParentColor = False
@@ -223,26 +223,6 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       BorderSpacing.Bottom = 3
       ItemHeight = 26
       Style = csDropDownList
-      TabOrder = 3
-      Text = '0'
-    end
-    object SubtargetComboBox: TComboBox
-      AnchorSideLeft.Control = lblSubtarget
-      AnchorSideLeft.Side = asrBottom
-      AnchorSideTop.Control = TargetProcComboBox
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = grbTargetPlatform
-      AnchorSideRight.Side = asrBottom
-      Left = 86
-      Height = 20
-      Top = 72
-      Width = 492
-      Anchors = [akTop, akLeft, akRight]
-      BorderSpacing.Left = 6
-      BorderSpacing.Top = 3
-      BorderSpacing.Right = 6
-      BorderSpacing.Bottom = 6
-      ItemHeight = 19
       TabOrder = 2
       Text = '0'
     end
@@ -255,7 +235,7 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       AnchorSideRight.Side = asrBottom
       Left = 93
       Height = 25
-      Top = 87
+      Top = 72
       Width = 491
       Anchors = [akTop, akLeft, akRight]
       BorderSpacing.Left = 6
@@ -265,7 +245,27 @@ object CompilerConfigTargetFrame: TCompilerConfigTargetFrame
       ItemHeight = 0
       OnSelect = TargetControllerComboBoxSelect
       Style = csDropDownList
-      TabOrder = 2
+      TabOrder = 3
+    end
+    object SubtargetComboBox: TComboBox
+      AnchorSideLeft.Control = lblSubtarget
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = TargetControllerComboBox
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = grbTargetPlatform
+      AnchorSideRight.Side = asrBottom
+      Left = 86
+      Height = 20
+      Top = 95
+      Width = 492
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 6
+      BorderSpacing.Top = 3
+      BorderSpacing.Right = 6
+      BorderSpacing.Bottom = 6
+      ItemHeight = 19
+      TabOrder = 4
+      Text = '0'
     end
   end
   object grbTargetOptions: TGroupBox
