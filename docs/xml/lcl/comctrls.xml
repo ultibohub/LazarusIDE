@@ -1057,8 +1057,25 @@ assigned.
 
 <element name="TStatusBar.LMDrawItem">
 <short>
-<var>LMDrawItem</var> - LCL message handler for drawing the item on the 
-current canvas.</short>
+Draws the status bar panel when the specified LM_DRAWITEMS message is handled 
+for the control.
+</short>
+<descr>
+<p>
+<var>LMDrawItem</var> is a method used to handle a TLMDrawItems message 
+received for the status bar control. LMDrawItem retrieves the status bar panel 
+(by item position) and the rectangle where it is drawn from the drawing 
+structure in the Message argument. It ensures that the handle for the control 
+Canvas is set to the device context for the control and calls DrawPanel to 
+render the status bar panel at the required coordinates. The Canvas handle is 
+restored to its original value prior to exit.
+</p>
+</descr>
+<seealso>
+<link id="TStatusBar.Canvas"/>
+<link id="TStatusBar.DrawPanel"/>
+<link id="#lcl.lmessages.TLMDrawItems">TLMDrawItems</link>
+</seealso>
 </element>
 <element name="TStatusBar.LMDrawItem.Message">
 <short>Message handled in the method.</short>
@@ -11756,6 +11773,11 @@ used for the <var>ViewStyle</var> property in <var>TCustomListView</var>.
 </descr>
 <seealso>
 <link id="TCustomListView.ViewStyle"/>
+<link id="TCustomListView.Columns"/>
+<link id="TCustomListView.Column"/>
+<link id="TCustomListView.Items"/>
+<link id="TListItem.Caption"/>
+<link id="TListItem.SubItems"/>
 </seealso>
 </element>
 <element name="TViewStyle.vsIcon">
@@ -11778,9 +11800,11 @@ items are arranged in columns.
 </element>
 <element name="TViewStyle.vsReport">
 <short>
-Displays a each list item as a series of columns with a small icon on the 
-left-hand side of the row. Each columns has a header at the top of the list 
-view control.
+Displays each list item as a series of columns with a small icon on the 
+left-hand side of the row. The Caption text for the list item is displayed in 
+the first column, with the text for additional columns coming from the Caption 
+for the SubItems in the list item. Each column has a header at the top of the 
+list view control.
 </short>
 </element>
 
@@ -15889,10 +15913,11 @@ full width), Icon (big icons), Small Icon (small icons, 16x16).
 </short>
 <descr>
 <p>
-ViewStyle is a TViewStyle which controls the appearance and layout for the 
-list items on the control. The default value for the property is vsList, and 
-causes an icon and caption to displayed for each list item. List items are 
-arranged in columns, filled from top to bottom and then left to right.
+<var>ViewStyle</var> is a <var>TViewStyle</var> property which controls the 
+appearance and layout for the list items on the control. The default value for 
+the property is vsList, and causes an icon and caption to be displayed for each 
+list item. List items are arranged in columns, filled from top to bottom and 
+then left to right.
 </p>
 <p>
 See <link id="TViewStyle">TViewStyle</link> for a description of the view 
@@ -15904,6 +15929,11 @@ updated when its handle has been allocated.
 </p>
 </descr>
 <seealso>
+<link id="TCustomListView.Items"/>
+<link id="TCustomListView.Columns"/>
+<link id="TCustomListView.Column"/>
+<link id="TListItem.Caption"/>
+<link id="TListItem.SubItems"/>
 <link id="TViewStyle"/>
 </seealso>
 </element>
@@ -39208,16 +39238,42 @@ default values for properties in the class instance.
 
 <element name="THeaderSection.Assign">
 <short>
-<var>Assign</var> - if <var>Source</var> is of correct type, copies 
-properties directly, otherwise calls inherited <var>Assign</var> which 
-probably raises an exception.
+Implements object persistence for the THeaderSection type.
 </short>
+<descr>
+<p>
+<var>Assign</var> is an overridden method in <var>THeaderSection</var>. It 
+extends the inherited method to provide support for persistent objects using 
+the THeaderSection type.
+</p>
+<p>
+If <var>Source</var> is a THeaderSection instance, the following properties are 
+copied into the current class instance:
+</p>
+<ul>
+<li>ImageIndex</li>
+<li>Text</li>
+<li>Width</li>
+</ul>
+<p>
+The Changed method is called to notify the collection that the current item has 
+been updated.
+</p>
+<p>
+If Source is not derived from THeaderSection, the inherited method (in 
+TPersistent) is called using Source as an argument. An EConvertError exception 
+is raised in the inherited method if Source has not been assigned.
+</p>
+</descr>
 <seealso>
+<link id="#rtl.classes.TCollectionItem">TCollectionItem</link>
 <link id="#rtl.classes.TPersistent.Assign">TPersistent.Assign</link>
 </seealso>
 </element>
 <element name="THeaderSection.Assign.Source">
-<short/>
+<short>
+Persistent object with the property values copied to the current class instance.
+</short>
 </element>
 
 <element name="THeaderSection.Left">
@@ -39240,29 +39296,197 @@ selected) or pressed (selected).
 <var>Alignment</var> - whether text is to be left or right justified or 
 centered.
 </short>
+<descr>
+<p>
+<var>Alignment</var> is a <var>TAlignment</var> property which indicates the 
+horizontal alignment used to display the Text for the header section. The 
+default value for the property is taLeftJustify as assigned in the Create 
+constructor. See <link id="#rtl.classes.TAlignment">TAlignment</link> for the 
+values allowed in the property.
+</p>
+<p>
+Changing the value for the property causes the Changed method to be called to 
+update the item in its collection.
+</p>
+<p>
+Alignment is used in the PaintSection method in TCustomHeaderControl when the 
+image, text, and drawing state are used to render the section on the control 
+canvas.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSection.Text"/>
+<link id="THeaderSection.ImageIndex"/>
+<link id="THeaderSection.State"/>
+<link id="THeaderSection.Create"/>
+<link id="TCustomHeaderControl.PaintSection"/>
+<link id="TCustomHeaderControl.Paint"/>
+<link id="#rtl.classes.TAlignment">TAlignment</link>
+</seealso>
 </element>
 
 <element name="THeaderSection.ImageIndex">
-<short>Index of the image in the imagelist.</short>
+<short>
+Ordinal position for the image displayed for the header section.
+</short>
+<descr>
+<p>
+<var>ImageIndex</var> is a <var>TImageIndex</var> property with the ordinal 
+position for an image displayed on the header section. The default value for 
+the property is -1 and indicates that a value has not been assigned for the 
+property. Changing the value for the property causes the Changed method to be 
+called to update the item in its collection.
+</p>
+<p>
+ImageIndex refers to the position in the Images property in an associated 
+THeaderControl. It is used, along with Text and Alignment, in the PaintSection 
+method in TCustomHeaderControl / THeaderControl. The values control the content 
+rendered for the header section on the control canvas.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Images"/>
+<link id="TCustomHeaderControl.PaintSection"/>
+</seealso>
 </element>
 
 <element name="THeaderSection.MaxWidth">
-<short>Maximum permissible width of a section.</short>
+<short>
+Maximum width in pixels allowed for the header section.
+</short>
+<descr>
+<p>
+<var>MaxWidth</var> is an <var>Integer</var> property with the maximum size in 
+pixels for the content displayed for the section on the header control. It 
+includes the image, text, and any padding used between the elements for the 
+section.
+</p>
+<p>
+The default value for the property is an arbitrarily large value (10000). 
+Changing the property causes the new value to be validated; it cannot exceed 
+10000 and cannot be smaller than the value in the MinWidth property. The value 
+in the Width property is range-limited to the new values in MinWidth and 
+MaxWidth. The collection is updated when MaxWidth has been changed in the 
+collection item.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSection.MinWidth"/>
+<link id="THeaderSection.Width"/>
+<link id="#rtl.classes.TCollectionItem">TCollectionItem</link>
+</seealso>
 </element>
 
 <element name="THeaderSection.MinWidth">
-<short>Minimum permissible width of a section (default = 0).</short>
+<short>
+Minimum width in pixels allowed for the header section.
+</short>
+<descr>
+<p>
+<var>MinWidth</var> is an <var>Integer</var> property with the minimum width in 
+pixels allowed for the content displayed for the section on the header control. 
+The default value for the property is 0 (zero). 
+</p>
+<p>
+Changing the property value causes the new value to be validated; it cannot be 
+less than 0 and cannot exceed the value in the MaxWidth property. The value in 
+the Width property is range-limited to the new values in MinWidth and MaxWidth. 
+The collection is updated when MinWidth has been changed in the collection item.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSection.MaxWidth"/>
+<link id="THeaderSection.Width"/>
+<link id="#rtl.classes.TCollectionItem">TCollectionItem</link>
+</seealso>
 </element>
 
 <element name="THeaderSection.Text">
-<short>The text string that is to appear in the section.</short>
+<short>
+The text displayed on the header section.
+</short>
+<descr>
+<p>
+<var>Text</var> is a <var>TCaption</var> property which contains the textual 
+value displayed on the header section.  Along with the image specified in 
+ImageIndex, it determines the content drawn for the section in the PaintSection 
+method of the THeaderControl.
+</p>
+<p>
+Changing the value for the property causes the collection item to be updated in 
+its collection.
+</p>
+<p>
+Use Alignment to set the horizontal alignment for the value in Text.
+</p>
+<p>
+Use ImageIndex to specify the position for the image drawn on the header 
+section.
+</p>
+<p>
+Use Visible to indicate whether the header section is visible on the header 
+control.
+</p>
+<p>
+Use Width to specify the cumulative width for the image and text on the header 
+section.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSection.Alignment"/>
+<link id="THeaderSection.ImageIndex"/>
+<link id="THeaderSection.Width"/>
+<link id="THeaderSection.MaxWidth"/>
+<link id="THeaderSection.MinWidth"/>
+<link id="THeaderSection.Visible"/>
+<link id="TCustomHeaderControl.PaintSection"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="#rtl.classes.TCollectionItem">TCollectionItem</link>
+<link id="#rtl.classes.TCollection">TCollection</link>
+</seealso>
 </element>
 
 <element name="THeaderSection.Width">
 <short>
-The <var>Width</var> of the section that appears on the 
-<var>THeaderControl</var>.
+Total width in pixels for the text and image on the header section.
 </short>
+<descr>
+<p>
+<var>Width</var> is an <var>Integer</var> property with the number of pixels 
+allocated for the text and image on the header section. It does not indicate 
+the actual width of the content - only the size allocated for its display.
+</p>
+<p>
+The Width property always returns 0 (zero) when Visible is set to <b>False</b>.
+</p>
+<p>
+Setting a new value for the property causes it to be range-limited to the 
+values in MinWidth and MaxWidth. The item is updated in its collection when 
+Width has been changed.
+</p>
+<p>
+The value in the property may be automatically scaled for high DPI displays in 
+the DoAutoAdjustLayout and ChangeScale methods for the header control.
+</p>
+<p>
+Width is updated at design-time when the divider between adjacent header 
+sections is dragged.
+</p>
+<p>
+Use MinWidth and MaxWidth to specify the smallest and largest sizes allowed for 
+the header section.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSection.MaxWidth"/>
+<link id="THeaderSection.MinWidth"/>
+<link id="THeaderSection.Text"/>
+<link id="THeaderSection.ImageIndex"/>
+<link id="TCustomHeaderControl.PaintSection"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.ChangeScale"/>
+<link id="TCustomHeaderControl.DoAutoAdjustLayout"/>
+</seealso>
 </element>
 
 <element name="THeaderSection.Visible">
@@ -39272,7 +39496,7 @@ The <var>Width</var> of the section that appears on the
 <var>Visible</var> is a <var>Boolean</var> property which indicates if the 
 header section is visible in the header control. When set to <b>False</b>, 
 the section cannot be drawn using the TCustomHeaderControl.PaintSection 
-method.
+method, and the Width for the section is 0.
 </p>
 <p>
 The default value for the property is <b>True</b>, as set in the constructor 
@@ -39283,9 +39507,27 @@ for the class instance.
 
 <element name="THeaderSection.OriginalIndex">
 <short>
-<var>OriginalIndex</var> - index which doesn't change when the user reorders 
-the sections.
+Index position which does not change when the user reorders the sections on a 
+header control.
 </short>
+<descr>
+<p>
+<var>OriginalIndex</var> is an <var>Integer</var> property which contains the 
+index order for the section when it was added to its Owner collection. The 
+property value is assigned when the class instance is created in the AddItem 
+method in THeaderSections. It normally contains the value in Index unless the 
+value is already in use in the collection.
+</p>
+<p>
+OriginalIndex may be updated when Delete in the THeaderSections is used to 
+remove a header section from the collection.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSections.AddItem"/>
+<link id="THeaderSections.Delete"/>
+<link id="#rtl.classes.TCollectionItem.Index">TCollectionItem.Index</link>
+</seealso>
 </element>
 
 <element name="THeaderSectionClass">
@@ -39296,7 +39538,7 @@ Class reference used to create new THeaderSection instances.
 
 <element name="THeaderSections">
 <short>
-Implements a collection for section in a TCustomHeaderControl control.
+Implements a collection for sections in a TCustomHeaderControl control.
 </short>
 <descr>
 <p>
@@ -39403,10 +39645,12 @@ the change.
 <short>Creates a new header section and adds it to the collection.</short>
 <descr>
 <p>
-Adds calls the AddItem method to get the return value for the method.
+Add calls the AddItem method to get the return value for the method.
 </p>
 </descr>
 <seealso>
+<link id="THeaderSections.AddItem"/>  
+<link id="THeaderSections.Delete"/>  
 <link id="#rtl.classes.TCollection.Add">TCollection.Add</link>
 </seealso>
 </element>
@@ -39567,15 +39811,47 @@ header section.
 
 <element name="TCustomHCCreateSectionClassEvent">
 <short>
-<var>TCustomHCCreateSectionClassEvent</var> - generic event handler method 
-for custom creation of header control.
+Specifies the event handler signalled to get the class type for a new section 
+on a THeaderControl instance.
 </short>
+<descr>
+<p>
+<var>TCustomHCCreateSectionClassEvent</var> is an object procedure type which 
+specifies an event handler signalled when a new section is created for 
+THeaderControl. It is the type used for the OnCreateSectionClass property in 
+TCustomHeaderControl.
+</p>
+<p>
+An application can implement and assign a method using the method signature to 
+respond to the event notification. Arguments to the handler include the 
+TCustomHeaderControl for the event notification (Sender) and the class type 
+needed to create a new section for the control (SectionClass).
+</p>
+<p>
+TCustomHCCreateSectionClassEvent allows a class other than THeaderSection to be 
+used to create a section collection item. The type should, however, be a 
+descendant of THeaderSection as it is the base type expected in the 
+THeaderSections collection.
+</p>
+</descr>
+<seealso>
+<link id="THeaderSections"/>
+<link id="THeaderSections.Add"/>
+<link id="THeaderSections.AddItem"/>
+<link id="TCustomHeaderControl.OnCreateSectionClass"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.CreateSection"/>
+</seealso>
 </element>
 <element name="TCustomHCCreateSectionClassEvent.Sender">
-<short/>
+<short>
+Object (TCustomHeaderControl) for the event notification.
+</short>
 </element>
 <element name="TCustomHCCreateSectionClassEvent.SectionClass">
-<short/>
+<short>
+Returns the class type used to create a new section on a THeaderControl.
+</short>
 </element>
 
 <element name="TCustomHeaderControl">
@@ -39670,26 +39946,84 @@ Original position (ignoring visibility) in the Sections property.
 </element>
 
 <element name="TCustomHeaderControl.UpdateSection">
-<short>Updates the control by calling Repaint.</short>
-<descr/>
-<seealso/>
+<short>
+Updates the header section at the specified position on the header control.
+</short>
+<descr>
+<p>
+<var>UpdateSection</var> is called from the THeaderSections.Update method when 
+a collection item (THeaderSection) is passed as an argument to the method.
+</p>
+<p>
+In the current LCL implementation, all sections are redrawn on the header 
+control by calling the Repaint method.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.UpdateSections"/>
+<link id="THeaderSections.Update"/>
+</seealso>
 </element>
 <element name="TCustomHeaderControl.UpdateSection.Index">
-<short/>
+<short>
+Ignored in the current implementation.
+</short>
 </element>
 
 <element name="TCustomHeaderControl.UpdateSections">
-<short>Updates all Sections in the control by calling Repaint.</short>
-<descr/>
-<seealso/>
+<short>
+Updates all header Sections on the control by calling Repaint.
+</short>
+<descr>
+<p>
+<var>UpdateSections</var> calls the Repaint method to redraw the Sections 
+defined on the header control. It is called from the THeaderSections.Update 
+method when a collection item (THeaderSection) is <b>not</b> passed as an 
+argument to the method.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.UpdateSection"/>
+<link id="THeaderSections.Update"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.CreateSection">
 <short>
 Creates a new header section for the control.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>CreateSection</var> is a <var>THeaderSection</var> function used to create 
+a new value in the Sections collection for the control. The return value 
+contains an instance of THeaderSection (or a descendant class) created in the 
+method with the Sections collection as the owner of the item.
+</p>
+<p>
+The OnCreateSectionClass event handler is signalled (when assigned) at run-time 
+to allow a custom item class to be used to create the collection item. The 
+handler returns the class type instantiated in the method. By default, the 
+class type is THeaderSection but can be overridden in OnCreateSectionClass to 
+use a THeaderSection descendant.
+</p>
+<p>
+OnCreateSectionClass is not signalled at design-time; THeaderSection is always 
+used as the item class when added to the Sections property using the Object 
+Inspector property editor.
+</p>
+<p>
+CreateSection is called from the AddItem method in the Sections 
+(THeaderSections) collection, and occurs when an item class instance is not 
+passed as an argument to the collection method.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.OnCreateSectionClass"/>
+<link id="THeaderSections.AddItem"/>
+<link id="THeaderSections.Items"/>
+<link id="THeaderSection"/>
+</seealso>
 </element>
 <element name="TCustomHeaderControl.CreateSection.Result">
 <short>THeaderSection instance created in the method.</short>
@@ -39697,16 +40031,40 @@ Creates a new header section for the control.
 
 <element name="TCustomHeaderControl.CreateSections">
 <short>
-Creates the collection used to store header sections defined in the control.
+Creates the collection used to store header sections defined for the control.
 </short>
-<descr/>
-<seealso/>
+<descr>
+CreateSections is called from the TCustomHeaderControl.Create constructor to 
+allocate the collection used to store the Sections defined for the control.
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.Create"/>
+<link id="THeaderSections.Create"/>
+<link id="THeaderSection"/>
+</seealso>
 </element>
 <element name="TCustomHeaderControl.CreateSections.Result">
 <short>THeaderSections instance created in the method.</short>
 </element>
 
-<element name="TCustomHeaderControl.Loaded" link="#lcl.controls.TWinControl.Loaded"/>
+<element name="TCustomHeaderControl.Loaded">
+<short>
+Performs actions when the component has been loaded during LCL component 
+streaming.
+</short>
+<descr/>
+<p>
+<var>Loaded</var> is an overridden method in <var>TCustomHeaderControl</var>. 
+It calls the inherited method (in TWinControl) on entry into the method. 
+It extends the inherited method to ensure that the internal member used to 
+track the cursor shape for the control is initialized to the value in Cursor.
+</p>
+<seealso>
+<link id="#lcl.controls.TWinControl.Loaded">TWinControl.Loaded</link>
+<link id="#lcl.controls.TControl.Cursor">TControl.Cursor</link>
+</seealso>
+</element>
 
 <element name="TCustomHeaderControl.Notification">
 <short>
@@ -39812,28 +40170,81 @@ occurs when mouse tracking has been enabled for the header control.
 
 <element name="TCustomHeaderControl.SectionEndDrag">
 <short>
-<var>SectionEndDrag</var> - method for emulating the 
-<var>OnSectionEndDrag</var> event.
+Signals the OnSectionEndDrag event handler (when assigned).
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>SectionEndDrag</var> is called from the MouseUp method when the a mouse 
+button is released during a drag operation for a header section on the control. 
+It is called after the selected header section has been reordered by updating 
+its Index property.
+</p>
+<p>
+Use OnSectionEndDrag to perform any actions needed when the section order has 
+been updated in a drag operation.
+</p>
+<p>
+Use DragReorder to enable or disable drag operations for the Sections on 
+the header control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.OnSectionEndDrag"/>
+<link id="TCustomHeaderControl.Mouseup"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.DragReorder"/>
+<link id="THeaderSection.OriginalIndex"/>
+<link id="#rtl.classes.TCollectionItem.Index">TCollectionItem.Index</link>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.SectionDrag">
 <short>
-<var>SectionDrag</var> - method to emulate the <var>OnSectionDrag</var> event.
+Signals the OnSectionDrag event handler (when assigned and enabled).
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>SectionDrag</var> is a <var>Boolean</var> function used to signal the 
+OnSectionDrag event handler when a drag operation is started for a section on 
+the header control. The return value is <b>True</b> if the DragReorder 
+property is enabled, and the OnSectionDrag event handler has been assigned and 
+allows the drag operation for the specified source and destination sections.
+</p>
+<p>
+No actions are performed in the method if DragReorder is set to <b>False</b>.
+</p>
+<p>
+Update the AllowDrag argument in the TSectionDragEvent handler to indicate 
+whether the section in FromSection can be dragged to the position for the 
+section in ToSection.
+</p>
+<p>
+SectionDrag is called from the MouseMove method when a Shift+Left mouse button 
+event is detected on one of the Sections for the control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.OnSectionDrag"/>
+<link id="TCustomHeaderControl.DragReorder"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.MouseMove"/>
+<link id="TSectionDragEvent"/>
+</seealso>
 </element>
 <element name="TCustomHeaderControl.SectionDrag.Result">
-<short/>
+<short>
+<b>True</b> if the drag operation can be performed the selected section.
+</short>
 </element>
 <element name="TCustomHeaderControl.SectionDrag.FromSection">
-<short/>
+<short>
+Section to be dragged on the header control.
+</short>
 </element>
 <element name="TCustomHeaderControl.SectionDrag.ToSection">
-<short/>
+<short>
+Section that is the potential drop target for the drag operation.
+</short>
 </element>
 
 <element name="TCustomHeaderControl.MouseEnter" link="#lcl.controls.TControl.MouseEnter"/>
@@ -39844,10 +40255,40 @@ occurs when mouse tracking has been enabled for the header control.
 
 <element name="TCustomHeaderControl.UpdateState">
 <short>
-<var>UpdateState</var> - bring the state of the control up-to-date.
+Updates the State property in one or more of the Sections on the header 
+control.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>UpdateState</var> is a method used to update the drawing state for one or 
+more of the Sections on the header control. When Enabled is set to <b>True</b>, 
+it ensures that the selected section on the control has its State property set 
+to the Up (hsNormal) or Down (hsPressed) drawing style as required. If a mouse 
+down event has not reported for the control, the section under the mouse 
+pointer is updated to use hsHot in its State property.
+</p>
+<p>
+UpdateState visits each of the THeaderSection instances in Sections, and sets 
+their State property to hsNormal if it is not the selected or highlighted 
+section on the control.
+</p>
+<p>
+UpdateState is called from the MouseEnter and MouseLeave methods when the 
+control gains or loses mouse capture for the control. It is also called from 
+MouseDown, MouseMove, and MouseUp when mouse events are handled for the control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.MouseEnter"/>
+<link id="TCustomHeaderControl.MouseLeave"/>
+<link id="TCustomHeaderControl.MouseMove"/>
+<link id="TCustomHeaderControl.MouseDown"/>
+<link id="TCustomHeaderControl.MouseUp"/>
+<link id="THeaderSection.State"/>
+<link id="THeaderSectionState"/>
+<link id="#lcl.controls.TControl.Enabled">TControl.Enabled</link>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.GetControlClassDefaultSize">
@@ -39867,29 +40308,51 @@ Gets the default size for new instances of the class.
 Applies an automatic layout policy to the control using the specified scaling 
 factors.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>DoAutoAdjustLayout</var> calls the inherited method (in TControl) to apply 
+adjusts to the dimensions, border spacing, and anchoring common to all 
+controls. It extends the inherited method to adjust the Width for the Sections 
+defined on the control using the AXProportion argument.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="THeaderSection.Width"/>
+<link id="#lcl.controls.TControl.DoAutoAdjustLayout">TControl.DoAutoAdjustLayout</link>
+</seealso>
 </element>
 <element name="TCustomHeaderControl.DoAutoAdjustLayout.AMode">
-<short/>
+<short>
+Layout adjustment policy applied in the method.
+</short>
 </element>
 <element name="TCustomHeaderControl.DoAutoAdjustLayout.AXProportion">
-<short/>
+<short>
+Scaling factor for horizontal adjustments applied in the method.
+</short>
 </element>
 <element name="TCustomHeaderControl.DoAutoAdjustLayout.AYProportion">
-<short/>
+<short>
+Scaling factor for vertical adjustments applied in the method.
+</short>
 </element>
 
 <element name="TCustomHeaderControl.SectionFromOriginalIndex">
 <short>
-<var>SectionFromOriginalIndex</var> - the section as defined by the original 
-(unchanged) index.
+Gets a header section by its original position in the Sections collection.
 </short>
 <descr/>
 <seealso/>
 </element>
-<element name="TCustomHeaderControl.SectionFromOriginalIndex.OriginalIndex">
-<short/>
+<element name="TCustomHeaderControl.SectionFromOriginalIndex.Result">
+<short>
+Header section located in Sections with the specified original index value.
+</short>
+</element><element name="TCustomHeaderControl.SectionFromOriginalIndex.OriginalIndex">
+<short>
+Value used to locate the header section in the return value.
+</short>
 </element>
 
 <element name="TCustomHeaderControl.Create">
@@ -40065,9 +40528,22 @@ and divisor to scale the section width.
 
 <element name="TCustomHeaderControl.DragReorder">
 <short>
-<var>DragReorder</var> - find out if the sections are allowed to be 
-re-ordered by dragging.
+Enables or disables reordering of header sections on the control using drag and 
+drop.
 </short>
+<descr>
+<p>
+<var>DragReorder</var> is used in the SectionDrag method to control whether 
+drag and drop is enabled for header sections. It also determines whether the 
+OnSectionDrag event handler is signalled to allow or disallow the source and 
+destination section targets.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.SectionDrag"/>
+<link id="TCustomHeaderControl.OnSectionDrag"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.Images">
@@ -40119,49 +40595,226 @@ layout, content, appearance, and state for each header section.
 
 <element name="TCustomHeaderControl.OnSectionDrag">
 <short>
-<var>OnSectionDrag</var> - event handler for dragging the section of header.
+Event handler signalled to determine whether a header section can be dragged 
+and dropped at a new position on the control.
 </short>
+<descr>
+<p>
+<var>OnSectionDrag</var> is a <var>TSectionDragEvent</var> property with the 
+event handler signalled when a drag and drop operation for a section header is 
+requested.
+</p>
+<p>
+Arguments passed to the TSectionDragEvent routine include the Sender object 
+(TCustomHeaderControl) for the event notification, and THeaderSection instances 
+representing the dragged section and the section that is the target for the 
+drag request. The AllowDrag variable parameter is used to indicate whether the 
+drag and drop operation using the specified source and destination is allowed. 
+Setting AllowDrag to <b>False</b> in the handler prevents the drag and drop 
+operation for the specified sections.
+</p>
+<p>
+OnSectionDrag is signalled (when assigned) from the SectionDrag method, and 
+occurs if DragReorder has been enabled for the control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.DragReorder"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.SectionDrag"/>
+<link id="TSectionDragEvent"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.OnSectionEndDrag">
 <short>
-<var>OnSectionEndDrag</var> - event handler for ending the drag process for 
-this section.
+Event handler signalled when a drag and drop operation for a section is 
+completed.
 </short>
+<descr>
+<p>
+<var>OnSectionEndDrag</var> is signalled (when assigned) from the 
+SectionEndDrag method called when the left mouse button is released for a 
+dragged header section. An application can implement and assign a handler 
+routine to perform actions needed when the drag and drop operation is 
+completed. The Sender argument for the handler contains the 
+TCustomHeaderControl instance for the event notification.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.OnSectionDrag"/>
+<link id="TCustomHeaderControl.DragReorder"/>
+<link id="#rtl.classes.TNotifyEvent">TNotifyEvent</link>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.OnSectionClick">
 <short>
-<var>OnSectionClick</var> - event handler for mouse click on this section of 
-header.
+Event handler signalled when a mouse click event occurs in a section header on 
+the control.
 </short>
+<descr>
+<p>
+<var>OnSectionClick</var> is a <var>TCustomSectionNotifyEvent</var> property 
+with the event handler signalled when a mouse click is handled for the header 
+control. It is signalled (when assigned) from the SectionClick method using 
+the THeaderSection instance where the mouse click occurred as an argument to 
+the handler routine. On SectionClick is not signalled if the mouse click was on 
+an unused part of the header control not covered by a header section.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.SectionClick"/>
+<link id="TCustomHeaderControl.Click"/>
+<link id="TCustomHeaderControl.GetSectionAt"/>
+<link id="TCustomSectionNotifyEvent"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.OnSectionResize">
 <short>
-<var>OnSectionResize</var> - event handler for re-sizing this section of the 
-header.
+Event handler signalled when a resize operation for a header section has been 
+completed.
 </short>
+<descr>
+<p>
+<var>OnSectionResize</var> is a <var>TCustomSectionNotifyEvent</var> property 
+with the event handler signalled when one of the header Sections has been 
+resized by dragging the  separator for the section. It is signalled (when 
+assigned) in the SectionResize method with arguments that identify the header 
+control and the header section for the event notification.
+</p>
+<p>
+SectionResize / OnSectionResize occur when the left mouse button is released to 
+complete a resizing operation. An application can implement and assign a 
+handler routine using the signature in TCustomSectionNotifyEvent to perform 
+actions related to the resize event for the selected section.
+</p>
+<p>
+Use OnSectionSeparatorDblClick to handle a mouse double-click event on the 
+section separator.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.SectionResize"/>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.MouseUp"/>
+<link id="TCustomHeaderControl.OnSectionSeparatorDblClick"/>
+<link id="TCustomSectionNotifyEvent"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.OnSectionTrack">
 <short>
-<var>OnSectionTrack</var> - event handler for tracking this section.
+Event handler signalled when drag tracking/resizing is activated for the 
+selected header section on the control.
 </short>
+<descr>
+<p>
+<var>OnSectionTrack</var> is a <var>TCustomSectionTrackEvent</var> property 
+with the event handler signalled when resize tracking is activated for one of 
+the Sections on the header control. It is signalled (when assigned) from the 
+SectionTrack method. The event occurs when MouseDown, MouseMove, and MouseUp 
+methods handle Shift+Left mouse button events on the control.
+</p>
+<p>
+An application can implement and assign a handler routine using the signature 
+in TCustomSectionTrackEvent to perform actions related to the resize tracking 
+operation. Arguments passed to the handler routine include the header control 
+and the header section for the notification. The Width and tracking state for 
+the section are also included.
+</p>
+<p>
+Use OnSectionResize to performs action needed when a resize operation has been 
+completed for one of the header Sections.
+</p>
+<p>
+Use OnSectionSeparatorDblClick to perform actions when the separator for a 
+header section is double-clicked.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.SectionTrack"/>
+<link id="TCustomHeaderControl.MouseDown"/>
+<link id="TCustomHeaderControl.MouseMove"/>
+<link id="TCustomHeaderControl.MouseUp"/>
+<link id="TCustomHeaderControl.OnSectionResize"/>
+<link id="TCustomHeaderControl.OnSectionSeparatorDblClick"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.OnSectionSeparatorDblClick">
 <short>
-<var>OnSectionSeparatorDblClick</var> - event handler for double-click on the 
-separator between sections.
+Event handler signalled when a separator between header sections on the 
+control is double-clicked.
 </short>
+<descr>
+<p>
+<var>OnSectionSeparatorDblClick</var> is a <var>TCustomSectionNotifyEvent</var> 
+property with the event handler signalled when the separator for a header 
+section has been double-clicked. It is signalled (when assigned) from the 
+SectionSeparatorDblClick method. It occurs when the DblClick method handles the 
+mouse event when resize tracking has been enabled by hovering the mouse over 
+the separator for the section.
+</p>
+<p>
+An application can implement and assign a routine using the signature in 
+TCustomSectionNotifyEvent to respond to the event notification. Arguments 
+passed to the handler include the header control and the header section 
+affected in the event.
+</p>
+<p>
+Use OnSectionTrack and OnSectionResize to perform actions needed then resize 
+tracking is activated or completed.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.Sections"/>
+<link id="TCustomHeaderControl.DblClick"/>
+<link id="TCustomHeaderControl.OnSectionTrack"/>
+<link id="TCustomHeaderControl.OnSectionResize"/>
+<link id="TCustomSectionNotifyEvent"/>
+</seealso>
 </element>
 
 <element name="TCustomHeaderControl.OnCreateSectionClass">
 <short>
-<var>OnCreateSectionClass</var> - event handler for creating a new section 
-class.
+Event handler signalled to get the class type used to create a new section for 
+the header control.
 </short>
+<descr>
+<p>
+<var>OnCreateSectionClass</var> is a 
+<var>TCustomHCCreateSectionClassEvent</var> property with the event handler 
+signalled to get the class type for a new section on the control.
+</p>
+<p>
+OnCreateSectionClass is signalled (when assigned) from the CreateSection 
+method, and allows the class type for a new section to be determined. The 
+variable SectionClass argument for the event handler is used to return the 
+class type. The return value is used in CreateSection to create the collection 
+item added to the Sections on the control.
+</p>
+<p>
+If OnCreateSectionClass is not assigned, the THeaderSection class type is used.
+</p>
+<p>
+OnCreateSectionClass is signalled at run-time when the Add or AddItem method in 
+the Sections collection is called. OnCreateSectionClass is not signalled at 
+design-time when the Object Inspector property editor is used to maintain the 
+Sections property. The THeaderSection class type is always used at design-time 
+as the item class for the Sections collection.
+</p>
+</descr>
+<seealso>
+<link id="TCustomHeaderControl.CreateSection"/>
+<link id="TCustomHeaderControl.CreateSections"/>
+<link id="THeaderSections.Add"/>
+<link id="THeaderSections.AddItem"/>
+<link id="THeaderSections.Create"/>
+<link id="TCustomHCCreateSectionClassEvent"/>
+</seealso>
 </element>
 
 <element name="THeaderControl">
@@ -40272,7 +40925,7 @@ Represents the selection changing notification message for tab controls.
 </element>
 
 <element name="CompareExpandedNodes">
-<short>Function to compare the node text in two nodes.</short>
+<short>Function to compare the node text in two tree nodes.</short>
 <descr>
 <p>
 This function does an ANSICompare on the NodeText of two nodes. The 
@@ -40307,7 +40960,7 @@ The nodetext from the first node is higher than the nodetext from the second.
 
 <element name="CompareTextWithExpandedNode">
 <short>
-Function to compare the given text with the nodetext of the specified node.
+Function to compare the given text with the nodetext of the specified tree node.
 </short>
 <descr>
 <p>
