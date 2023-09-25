@@ -69,7 +69,8 @@ uses
   // BuildIntf
   IDEOptionsIntf, MacroIntf,
   // IDEIntf
-  IDECommands, SrcEditorIntf, IDEOptEditorIntf, IDEDialogs, EditorSyntaxHighlighterDef,
+  IDECommands, SrcEditorIntf, IDEOptEditorIntf, IDEDialogs,
+  EditorSyntaxHighlighterDef, TextMateGrammar,
   // IdeConfig
   LazConf,
   // IDE
@@ -812,6 +813,8 @@ type
 
   TEditOptLangList = class(TList, TIdeSyntaxHighlighterList)
   private
+    function DoGetTMLGrammar(Sender: TTextMateGrammar; AScopeName: string
+      ): TTextMateGrammar;
     function GetLazSyntaxHighlighterType(AnId: TIdeSyntaxHighlighterID): TLazSyntaxHighlighter; deprecated '(to be removed in 4.99) -- Only temporary for StrToLazSyntaxHighlighter';
     function GetInfos(Index: Integer): TEditOptLanguageInfo;
     function GetSharedSynInstances(AnID: TIdeSyntaxHighlighterID): TSrcIDEHighlighter;
@@ -2827,6 +2830,20 @@ end;
 
 { TEditOptLangList }
 
+function TEditOptLangList.DoGetTMLGrammar(Sender: TTextMateGrammar;
+  AScopeName: string): TTextMateGrammar;
+var
+  i: Integer;
+begin
+  for i := 1 to Count - 1 do begin
+    if (SharedInstances[i] is TSynTextMateSyn) and
+       (TSynTextMateSyn(SharedInstances[i]).TextMateGrammar.LanguageScopeName = AScopeName)
+    then
+      exit(TSynTextMateSyn(SharedInstances[i]).TextMateGrammar);
+  end;
+  Result := nil;
+end;
+
 function TEditOptLangList.GetLazSyntaxHighlighterType(
   AnId: TIdeSyntaxHighlighterID): TLazSyntaxHighlighter;
 begin
@@ -3703,6 +3720,7 @@ begin
           StrLoader.Free;
         end;
       end;
+      tmlHighlighter.TextMateGrammar.OnGetIncludedGrammar := @DoGetTMLGrammar;
 
       NewInfo := TEditOptLanguageTextMateInfo.Create;
       TEditOptLanguageTextMateInfo(NewInfo).FileName := FileList[i];
@@ -3723,7 +3741,7 @@ begin
         CaretXY := Point(1,1);
         MappedAttributes := TStringList.Create;
         for j := 0 to tmlHighlighter.AttrCount - 1 do begin
-          n := tmlHighlighter.Attribute[j].StoredName;
+          n := tmlHighlighter.Attribute[j].StoredName+'.';
           if strlicomp(pchar(n), pchar('comment.'), 8) = 0           then MappedAttributes.Add(n+'=Comment');
           if strlicomp(pchar(n), pchar('string.'), 7) = 0            then MappedAttributes.Add(n+'=String');
           if strlicomp(pchar(n), pchar('constant.numeric.'), 17) = 0 then MappedAttributes.Add(n+'=Number');
@@ -3732,14 +3750,17 @@ begin
           if strlicomp(pchar(n), pchar('key.'), 4) = 0               then MappedAttributes.Add(n+'=Reserved word');
           if strlicomp(pchar(n), pchar('entity.name.'), 12) = 0      then MappedAttributes.Add(n+'=Identifier');
           if strlicomp(pchar(n), pchar('identifier.'), 11) = 0       then MappedAttributes.Add(n+'=Identifier');
-
-          if strlicomp(pchar(n), pchar('comment.'), 8) = 0           then MappedAttributes.Add(n+'=Comment');
         end;
       end;
       Add(NewInfo);
 
     end;
     FileList.Free;
+  end;
+
+  for i := 1 to Count - 1 do begin
+    if SharedInstances[i] is TSynTextMateSyn then
+      TSynTextMateSyn(SharedInstances[i]).TextMateGrammar.ResolveExternalIncludes;
   end;
 
 end;
