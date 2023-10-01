@@ -63,11 +63,14 @@ type
   private
     cmb: TCustomComboBox;
     newText: String;
+  private
     procedure AsyncResetText(Data:PtrInt);
+    procedure AsyncSetLastIndex(Data:PtrInt);
   public
-    constructor Create(ACmb:TCustomComboBox; ANewText:String);
+    constructor Create(ACmb:TCustomComboBox);
   public
     class procedure ResetTextIfNecessary(AObject:TObject; ANewText:String);
+    class procedure SetLastIndex(AObject:TObject);
   end;
 
   { TLCLComboboxCallback }
@@ -339,7 +342,7 @@ type
   protected
   published
     class function  CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
-//    class procedure SetAlignment(const ACustomStaticText: TCustomStaticText; const NewAlignment: TAlignment); override;
+    class procedure SetAlignment(const ACustomStaticText: TCustomStaticText; const NewAlignment: TAlignment); override;
   end;
 
 function AllocTextView(ATarget: TWinControl; const AParams: TCreateParams; fieldEditor: Boolean): NSTextView;
@@ -722,10 +725,9 @@ end;
 
 { TComboBoxAsyncHelper }
 
-constructor TComboBoxAsyncHelper.Create(ACmb:TCustomComboBox; ANewText:String);
+constructor TComboBoxAsyncHelper.Create(ACmb:TCustomComboBox);
 begin
   cmb:= ACmb;
-  newText:= ANewText;
 end;
 
 procedure TComboBoxAsyncHelper.AsyncResetText(Data:PtrInt);
@@ -736,15 +738,32 @@ begin
   Free;
 end;
 
+procedure TComboBoxAsyncHelper.AsyncSetLastIndex(Data:PtrInt);
+begin
+  TCocoaWSCustomComboBox.SetItemIndex(cmb, TCocoaReadOnlyComboBox(cmb.Handle).lastSelectedItemIndex);
+  Free;
+end;
+
 class procedure TComboBoxAsyncHelper.ResetTextIfNecessary(AObject:TObject; ANewText:String);
 var
   helper: TComboBoxAsyncHelper;
   ACmb: TCustomComboBox absolute AObject;
 begin
   if not (cbactRetainPrefixCase in ACmb.AutoCompleteText) then exit;
-  helper:= TComboBoxAsyncHelper.Create(ACmb, ANewText);
+  helper:= TComboBoxAsyncHelper.Create(ACmb);
+  helper.newText:= ANewText;
   Application.QueueAsyncCall(@helper.AsyncResetText, 0);
 end;
+
+class procedure TComboBoxAsyncHelper.SetLastIndex(AObject:TObject);
+var
+  helper: TComboBoxAsyncHelper;
+  ACmb: TCustomComboBox absolute AObject;
+begin
+  helper:= TComboBoxAsyncHelper.Create(ACmb);
+  Application.QueueAsyncCall(@helper.AsyncSetLastIndex, 0);
+end;
+
 
 { TLCLComboboxCallback }
 
@@ -989,6 +1008,7 @@ end;
 class function TCocoaWSCustomStaticText.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): TLCLIntfHandle;
 var
+  lclStaticText: TCustomStaticText absolute AWinControl;
   field: NSTextField;
 begin
   field := NSTextField(AllocTextField(AWinControl, AParams));
@@ -1003,7 +1023,16 @@ begin
   field.setEditable(False);
   field.setSelectable(False);
   {$endif}
+  field.setAlignment( AlignmentLCLToCocoa(lclStaticText.Alignment) );
   Result:=TLCLIntfHandle(field);
+end;
+
+class procedure TCocoaWSCustomStaticText.SetAlignment(
+  const ACustomStaticText: TCustomStaticText; const NewAlignment: TAlignment);
+begin
+  if not Assigned(ACustomStaticText) or (not ACustomStaticText.HandleAllocated) or (ACustomStaticText.Handle=0) then
+    exit;
+  NSTextField(ACustomStaticText.Handle).setAlignment( AlignmentLCLToCocoa(NewAlignment) );
 end;
 
 { TCocoaWSCustomEdit }
@@ -1886,7 +1915,8 @@ begin
     rocmb.list:=TCocoaReadOnlyComboBoxList.Create(rocmb);
     rocmb.setTarget(rocmb);
     rocmb.setAction(objcselector('comboboxAction:'));
-    rocmb.selectItemAtIndex(rocmb.lastSelectedItemIndex);
+    rocmb.lastSelectedItemIndex:= -1;
+    TComboBoxAsyncHelper.SetLastIndex(AWinControl);
     rocmb.callback:=TLCLComboboxCallback.Create(rocmb, AWinControl);
     Result:=TLCLIntfHandle(rocmb);
     rocmb.isOwnerDrawn := ComboBoxIsOwnerDrawn(TCustomComboBox(AWinControl).Style);

@@ -28,6 +28,7 @@ uses
   MacOSAll,
   // RTL
   sysutils,
+  math,
   // LCL
   Controls, Forms, Menus, Graphics, LCLType, LMessages, LCLProc, Classes,
   LCLMessageGlue, LCLStrConsts,
@@ -945,69 +946,44 @@ end;
 class procedure TCocoaWSPopupMenu.Popup(const APopupMenu: TPopupMenu; const X,
   Y: Integer);
 var
-  res : Boolean;
-  mnu : NSMenuItem;
+  menu : TCocoaMenu;
   view : NSView;
   w : NSWindow;
   px, py: Integer;
-  wi: NSUInteger;
+  menuY: Integer;
 begin
-  if Assigned(APopupMenu) and (APopupMenu.Handle<>0) then
+  if (not Assigned(APopupMenu)) or (APopupMenu.Handle=0) then
+    exit;
+
+  px := x;
+  py := y;
+  menu := TCocoaMenu(APopupMenu.Handle);
+  view := nil;
+  w :=NSApp.keyWindow;
+  // in macOS it's possible to "rightclick" without focusing a window
+  // so let's try to find the window
+  if not Assigned(w) then
+    w := GetCocoaWindowAtPos( NSMakePoint(px, py) );
+
+  if Assigned(w) then
   begin
-    // old method which doesn't consider position but supports 10.0+ (useless since we target 10.6+)
-    {w:=NSApp.keyWindow;
-    if Assigned(w) then
+    view := w.contentView;
+    if Assigned(view) then
     begin
-      NSMenu.popUpContextMenu_withEvent_forView( TCocoaMenu(APopupMenu.Handle),
-        NSApp.currentEvent, NSView(w.contentView));
-    end;}
-
-    // New method for 10.6+
-    px := x;
-    py := y;
-    view := nil;
-    w :=NSApp.keyWindow;
-    if not Assigned(w) and (NSApp.windows.count>0) then
-    begin
-      // in macOS it's possible to "rightclick" without focusing a window
-      // so let's try to find the window
-      for wi := 0 to NSApp.windows.count-1 do
-      begin
-        w := NSWindow(NSApp.windows.objectAtIndex(wi));
-        if not w.isVisible then Continue;
-        view := w.contentView;
-        view.lclScreenToLocal(px, py);
-        if (px >= 0) and (py >= 0)
-          and (px<=Round(view.frame.size.width))
-          and (py<=Round(view.frame.size.height))
-        then
-        begin
-          px := X;
-          py := Y;
-          Break;
-        end;
-        w := nil;
-        px := X;
-        py := Y;
-      end;
+      menuY := round(w.screen.frame.size.height - w.screen.visibleFrame.origin.y - menu.size.height) - 1;
+      py := min(py, menuY);
+      view.lclScreenToLocal(px, py);
+      // have to flip again, because popUpMenuPositioningItem expects point
+      // to be in View coordinates and it does respect Flipped flag
+      if not view.isFlipped then
+        py := Round(view.frame.size.height - py);
     end;
+  end
+  else
+    py := Round(NSScreenZeroHeight - py);
 
-    if Assigned(w) then
-    begin
-      view := w.contentView;
-      if Assigned(view) then
-      begin
-        view.lclScreenToLocal(px, py);
-        // have to flip again, because popUpMenuPositioningItem expects point
-        // to be in View coordinates and it does respect Flipped flag
-        if not view.isFlipped then
-          py := Round(view.frame.size.height - py);
-      end;
-    end;
-    res := TCocoaMenu(APopupMenu.Handle).popUpMenuPositioningItem_atLocation_inView(
-      nil, NSMakePoint(px, py), view);
-    APopupMenu.Close; // notify LCL popup menu
-  end;
+  menu.popUpMenuPositioningItem_atLocation_inView(nil, NSMakePoint(px, py), view);
+  APopupMenu.Close; // notify LCL popup menu
 end;
 
 procedure ShortcutToKeyEquivalent(const AShortCut: TShortcut; out Key: NSString; out shiftKeyMask: NSUInteger);
