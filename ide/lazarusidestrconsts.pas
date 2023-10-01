@@ -129,8 +129,8 @@ resourcestring
 
   // *** Rest of the resource strings ***
 
-  lisImportPackageListXml = 'Import package list (*.xml)';
-  lisExportPackageListXml = 'Export package list (*.xml)';
+  lisImportPackageListXml = 'Import package list';
+  lisExportPackageListXml = 'Export package list';
   lrsRescanLplFiles = 'Rescan lpl files';
   lisRenameShowResult = 'Show list of renamed Identifiers';
   lisResourceNameMustBeUnique = 'Resource name must be unique.';
@@ -1611,6 +1611,7 @@ resourcestring
   dlgFilterImagesPng = 'PNG images';
   dlgFilterImagesBitmap = 'Bitmap images';
   dlgFilterImagesPixmap = 'Pixmap images';
+  dlgFilterPackageListFiles = 'Package list files';
 
   // editor options
   dlgEdMisc = 'Miscellaneous';
@@ -5221,15 +5222,13 @@ resourcestring
   lisErrorMovingComponent2 = 'Error moving component %s:%s';
   lisInstallUninstallPackages = 'Install/Uninstall Packages';
   lisMenuEditInstallPkgs = 'Install/Uninstall Packages ...';
-  lisExportList = 'Export list';
   lisAvailableForInstallation = 'Available for installation';
   lisPkgsInstalled = 'Installed';
-  lisImportList = 'Import list';
   lisUninstallSelection = 'Uninstall selection';
   lisInstallSelection = 'Install selection';
   lisPackageInfo = 'Package info';
-  lisSaveAndRebuildIDE = 'Save and rebuild IDE';
-  lisSaveAndExitDialog = 'Save and exit dialog';
+  lisSaveAndRebuildIDE = 'Rebuild IDE';
+  lisSaveAndExitDialog = 'Only Save';
   lisAlignment = 'Alignment';
   lisHorizontal = 'Horizontal';
   lisNoChange = 'No change';

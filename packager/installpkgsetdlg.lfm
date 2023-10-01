@@ -4,15 +4,19 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
   Top = 219
   Width = 607
   ActiveControl = AvailableFilterEdit
+  AllowDropFiles = True
   BorderStyle = bsSizeToolWin
   Caption = 'InstallPkgSetDialog'
   ClientHeight = 638
   ClientWidth = 607
   Constraints.MinHeight = 400
   Constraints.MinWidth = 450
+  KeyPreview = True
   OnClose = FormClose
   OnCreate = InstallPkgSetDialogCreate
   OnDestroy = InstallPkgSetDialogDestroy
+  OnDropFiles = FormDropFiles
+  OnKeyDown = FormKeyDown
   OnResize = InstallPkgSetDialogResize
   OnShow = InstallPkgSetDialogShow
   Position = poScreenCenter
@@ -121,6 +125,7 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
       BorderSpacing.Around = 6
       Caption = 'SaveAndExitButton'
       Constraints.MinWidth = 75
+      Enabled = False
       Glyph.Data = {
         36040000424D3604000000000000360000002800000010000000100000000100
         2000000000000004000064000000640000000000000000000000FFFFFF00FFFF
@@ -170,6 +175,7 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
       BorderSpacing.Around = 6
       Caption = 'SaveAndRebuildButton'
       Constraints.MinWidth = 75
+      Enabled = False
       Glyph.Data = {
         36040000424D3604000000000000360000002800000010000000100000000100
         2000000000000004000064000000640000000000000000000000000000000000
@@ -293,8 +299,8 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
         ShowRoot = False
         TabOrder = 1
         OnAdvancedCustomDrawItem = TreeViewAdvancedCustomDrawItem
-        OnDblClick = InstallTreeViewDblClick
-        OnKeyPress = InstallTreeViewKeyPress
+        OnDblClick = AddToUninstall
+        OnKeyDown = InstallTreeViewKeyDown
         OnSelectionChanged = InstallTreeViewSelectionChanged
         Options = [tvoAllowMultiselect, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoToolTips, tvoThemedDraw]
       end
@@ -312,7 +318,7 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
         BorderSpacing.Bottom = 6
         Caption = 'UninstallButton'
         Layout = blGlyphRight
-        OnClick = UninstallButtonClick
+        OnClick = AddToUninstall
         TabOrder = 2
       end
       object InstalledFilterEdit: TTreeFilterEdit
@@ -335,6 +341,7 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
         ParentFont = False
         Spacing = 2
         TabOrder = 0
+        OnKeyDown = InstallTreeViewKeyDown
         FilteredTreeview = InstallTreeView
         OnGetImageIndex = FilterEditGetImageIndex
       end
@@ -422,8 +429,8 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
         ShowRoot = False
         TabOrder = 1
         OnAdvancedCustomDrawItem = TreeViewAdvancedCustomDrawItem
-        OnDblClick = AvailableTreeViewDblClick
-        OnKeyPress = AvailableTreeViewKeyPress
+        OnDblClick = AddToInstall
+        OnKeyDown = AvailableTreeViewKeyDown
         OnSelectionChanged = AvailableTreeViewSelectionChanged
         Options = [tvoAllowMultiselect, tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoToolTips, tvoThemedDraw]
       end
@@ -441,7 +448,7 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
         BorderSpacing.Top = 6
         BorderSpacing.Bottom = 6
         Caption = 'AddToInstallButton'
-        OnClick = AddToInstallButtonClick
+        OnClick = AddToInstall
         TabOrder = 2
       end
       object AvailableFilterEdit: TTreeFilterEdit
@@ -464,6 +471,7 @@ object InstallPkgSetDialog: TInstallPkgSetDialog
         ParentFont = False
         Spacing = 2
         TabOrder = 0
+        OnKeyDown = AvailableTreeViewKeyDown
         FilteredTreeview = AvailableTreeView
         OnGetImageIndex = FilterEditGetImageIndex
       end

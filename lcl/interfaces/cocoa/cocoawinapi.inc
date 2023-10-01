@@ -1032,7 +1032,7 @@ end;
   function ShowWindow(hWnd: HWND; nCmdShow: Integer): Boolean;
 
   nCmdShow:
-    SW_SHOWNORMAL, SW_MINIMIZE, SW_SHOWMAXIMIZED
+    SW_SHOWNORMAL, SW_MINIMIZE, SW_SHOWMAXIMIZED, SW_SHOWFULLSCREEN
 ------------------------------------------------------------------------------}
 function TCocoaWidgetSet.ShowWindow(hWnd: HWND; nCmdShow: Integer): Boolean;
 var
@@ -1554,11 +1554,8 @@ end;
 
 function TCocoaWidgetSet.WindowFromPoint(Point: TPoint): HWND;
 var 
-  windows: NSArray;
-  win: integer;
-  window, windowbelowpoint: NSWindow;
+  window:NSWindow;
   p:NSPoint;
-  winnr:NSInteger;
 begin
   Result := 0;
   if not assigned(NSApp) then
@@ -1566,19 +1563,9 @@ begin
 
   p.x:=Point.X;
   p.y:=NSScreenZeroHeight-Point.Y;
-  winnr:=NSWindow.windowNumberAtPoint_belowWindowWithWindowNumber(p,0);
-  windowbelowpoint:=NSWindow(NSApp.windowWithWindowNumber(winnr));
-
-  windows := NSApp.windows;
-  for win := 0 to windows.count - 1 do
-  begin
-    window:=windows.objectAtIndex(win);
-    if windowbelowpoint=window then
-    begin
-      Result:= HWND(window.contentView);
-      exit;
-    end;
-  end;
+  window := GetCocoaWindowAtPos(p);
+  if Assigned(window) then
+    Result:= HWND(window.contentView);
 end;
 
 

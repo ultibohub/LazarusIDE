@@ -1982,6 +1982,10 @@ msgctxt "lazarusidestrconsts.dlgfilterlazarusunit"
 msgid "Lazarus unit"
 msgstr "Lazarusユニット"
 
+#: lazarusidestrconsts.dlgfilterpackagelistfiles
+msgid "Package list files"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfilterpascalfile
 msgctxt "lazarusidestrconsts.dlgfilterpascalfile"
 msgid "Pascal file"
@@ -9761,12 +9765,10 @@ msgstr "HTMLとしてエクスポート"
 msgid "Export / Import"
 msgstr "エクスポート/インポート"
 
-#: lazarusidestrconsts.lisexportlist
-msgid "Export list"
-msgstr "エクスポートリスト"
-
 #: lazarusidestrconsts.lisexportpackagelistxml
-msgid "Export package list (*.xml)"
+#, fuzzy
+#| msgid "Export package list (*.xml)"
+msgid "Export package list"
 msgstr "パッケージリスト(*.xml)をエクスポート"
 
 #: lazarusidestrconsts.lisexportselected
@@ -10907,12 +10909,10 @@ msgstr "ファイルからインポート"
 msgid "Importing BuildModes is not supported for packages."
 msgstr "パッケージへのBuildModesのインポートはサポートされていません。"
 
-#: lazarusidestrconsts.lisimportlist
-msgid "Import list"
-msgstr "インポートリスト"
-
 #: lazarusidestrconsts.lisimportpackagelistxml
-msgid "Import package list (*.xml)"
+#, fuzzy
+#| msgid "Import package list (*.xml)"
+msgid "Import package list"
 msgstr "パッケージリスト(*.xml)をインポート"
 
 #: lazarusidestrconsts.lisimpossible
@@ -17580,11 +17580,15 @@ msgid "Save All/Original Messages to File ..."
 msgstr "すべて/元のメッセージをファイルに保存 ..."
 
 #: lazarusidestrconsts.lissaveandexitdialog
-msgid "Save and exit dialog"
+#, fuzzy
+#| msgid "Save and exit dialog"
+msgid "Only Save"
 msgstr "保存と終了ダイアログ"
 
 #: lazarusidestrconsts.lissaveandrebuildide
-msgid "Save and rebuild IDE"
+#, fuzzy
+#| msgid "Save and rebuild IDE"
+msgid "Rebuild IDE"
 msgstr "保存してIDEを再構築"
 
 #: lazarusidestrconsts.lissaveas
