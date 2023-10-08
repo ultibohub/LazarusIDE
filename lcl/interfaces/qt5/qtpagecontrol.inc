@@ -185,6 +185,77 @@ begin
   end;
 end;
 
+class function TQtWSCustomTabControl.GetDefaultClientRect(
+  const AWinControl: TWinControl; const aLeft, aTop, aWidth, aHeight: integer;
+  var aClientRect: TRect): boolean;
+
+  procedure setTabSizeInternal(AWidget: QWidgetH; const AWidth, AHeight: integer);
+  var
+    ANewSize: TSize;
+    WS: WideString;
+  begin
+    ANewSize := Default(TSize);
+    if AWidth > 0 then
+      ANewSize.cx := AWidth;
+    if AHeight > 0 then
+      ANewSize.cy := AHeight;
+    if (AWidth <= 0) and (AHeight <= 0) then
+      WS := ''
+    else
+      WS := {%H-}Format('QTabBar::tab { height: %dpx; width: %dpx; }',[ANewSize.cy, ANewSize.cx]);
+    QWidget_setStyleSheet(AWidget, @WS);
+  end;
+
+  function MeasureClientRectInternal: TRect;
+  var
+    WStr: WideString;
+    ANewTabW: QTabWidgetH;
+    ASize: TSize;
+  begin
+    Result := Rect(0, 0, 0, 0);
+    WStr := 'TabSheet1'; // do not translate.
+    ANewTabW := QTabWidget_Create(nil);
+    QWidget_setGeometry(ANewTabW, 0, 0, AWinControl.Width, AWinControl.Height);
+    QTabWidget_setTabPosition(ANewTabW, QTabWidgetTabPositionMap[TCustomTabControl(AWinControl).TabPosition]);
+    QTabWidget_setTabsClosable(ANewTabW, nboShowCloseButtons in TCustomTabControl(AWinControl).Options);
+    setTabSizeInternal(QWidgetH(ANewTabW), TCustomTabControl(AWinControl).TabHeight, TCustomTabControl(AWinControl).TabWidth);
+    QWidget_setVisible(QTabWidget_tabBar(ANewTabW), TCustomTabControl(AWinControl).ShowTabs);
+    QTabWidget_addTab(ANewTabW, QWidget_Create(nil), @WStr);
+    QTabWidget_setCurrentIndex(ANewTabW, 0);
+    QWidget_show(ANewTabW);
+    QWidget_contentsRect(QTabWidget_widget(ANewTabW, 0), @Result);
+    QTabWidget_Destroy(ANewTabW);
+  end;
+
+var
+  dx, dy: integer;
+  ATabWidget: TQtTabWidget;
+
+begin
+  Result := False;
+  if AWinControl.HandleAllocated then
+  begin
+    if TQtWidget(AWinControl.Handle).ChildOfComplexWidget <> ccwTTabControl then
+    begin
+      ATabWidget := TQtTabWidget(AWinControl.Handle);
+      if ATabWidget.testAttribute(QtWA_PendingResizeEvent) or not ATabWidget.testAttribute(QtWA_Mapped) then
+      begin
+        aClientRect := MeasureClientRectInternal;
+        Result := True;
+      end;
+    end;
+  end else
+  begin
+    if AWinControl is TTabControl then
+    begin
+      dx := GetPixelMetric(QStylePM_TabBarBaseHeight, nil, nil);
+      aClientRect := Rect(0,0, Max(0, aWidth - (dx * 2)), Max(0, aHeight - (dx * 2)));
+    end else
+      aClientRect := MeasureClientRectInternal;
+    Result := True;
+  end;
+end;
+
 class procedure TQtWSCustomTabControl.AddPage(const ATabControl: TCustomTabControl;
   const AChild: TCustomPage; const AIndex: integer);
 var
