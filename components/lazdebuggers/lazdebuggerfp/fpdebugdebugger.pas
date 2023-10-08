@@ -878,7 +878,7 @@ begin
         if c <> '' then
           c := c + '.';
         FCallstackEntry.Init(FAnAddress, nil, c + FFunctionName + FParamAsString,
-          FSourceFile, '', FLine, ddsValid);
+          ExtractFileName(FSourceFile), FSourceFile, FLine, ddsValid);
       end;
     end;
 
@@ -3612,12 +3612,16 @@ var
   ExceptionClass: string;
   ExceptionMessage: string;
   ExceptItem: TBaseException;
+  Offs: Integer;
 begin
+  Offs := 0;
   if not FDbgController.DefaultContext.ReadUnsignedInt(FDbgController.CurrentProcess.CallParamDefaultLocation(1),
     SizeVal(SizeOf(ExceptIP)), ExceptIP)
-  then
+  then begin
     ExceptIP := 0;
-  AnExceptionLocation:=GetLocationRec(ExceptIP, -1);
+    Offs := -1;
+  end;
+  AnExceptionLocation:=GetLocationRec(ExceptIP, Offs);
 
   if not FDbgController.DefaultContext.ReadUnsignedInt(FDbgController.CurrentProcess.CallParamDefaultLocation(0),
     SizeVal(SizeOf(AnExceptionObjectLocation)), AnExceptionObjectLocation)

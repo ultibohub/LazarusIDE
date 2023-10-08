@@ -128,6 +128,31 @@ begin
   Result := True;
 end;
 
+function HasEmptyLineOrDirectiveAfterComments(const pt: TSourceToken): Boolean;
+var
+  pnext: TSourceToken;
+begin
+  result:=false;
+  pnext:=pt.NextTokenWithExclusions([ttWhiteSpace]);  //End of current line
+  while (pnext<>nil) and (pnext.TokenType=ttReturn) do
+  begin
+    pnext:= pnext.NextTokenWithExclusions([ttWhiteSpace]);
+    if pnext<>nil then
+    begin
+      if pnext.TokenType=ttReturn then
+        Exit(true);
+      if pnext.TokenType=ttComment then
+      begin
+        if pnext.CommentStyle=eCompilerDirective then
+          Exit(true);
+        pnext:=pnext.NextTokenWithExclusions([ttWhiteSpace]);  //End of current line
+      end
+      else
+        Exit(false);
+    end;
+  end;
+end;
+
 function IsIndented(const pt: TSourceToken): Boolean;
 begin
   Result := IsFirstSolidTokenOnLine(pt);
@@ -666,6 +691,20 @@ begin
       begin
         Result := Result + FormattingSettings.Indent.IndentBeginEndSpaces;
       end;
+    end;
+  end;
+
+  // last comments in var, const,... sections belongs to the next procedure/function.
+  if (pt.TokenType = ttComment) and pt.HasParentNode([nTypeSection, nVarSection, nConstSection, nUses]) and
+    (pt.NextSolidTokenType in ProcedureWords) and (not pt.HasParentNode(ObjectBodies + [nRecordType]))
+    //not followed by a blank line.
+    and not HasEmptyLineOrDirectiveAfterComments(pt) then
+  begin
+    Result := 0;
+    if FormattingSettings.Indent.IndentLibraryProcs then
+    begin
+      if pt.HasParentNode([nLibrary, nProgram]) and (liIndentCount >= 1) then
+        Result := FormattingSettings.Indent.SpacesForIndentLevel(1);
     end;
   end;
 
