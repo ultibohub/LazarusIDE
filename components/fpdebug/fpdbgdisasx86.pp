@@ -2903,8 +2903,18 @@ begin
       case SimdOpcode of
         soNone: begin SetOpcode(OPmovu, OPSx_ps, True); AddVps; AddWps;         end;
         so66:   begin SetOpcode(OPmovu, OPSx_pd, True); AddVpd; AddWpd;         end;
-        soF2:   begin SetOpcode(OPmov,  OPSx_sd, True); AddVx;  AddHx;  AddWsd; end;
-        soF3:   begin SetOpcode(OPmov,  OPSx_ss, True); AddVx;  AddHx;  AddWss; end;
+        soF2:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_sd, True); AddVx;  AddHx;  AddWsd; end
+                 else begin SetOpcode(OPmov,  OPSx_sd, True); AddVx;          AddWsd; end;
+                end;
+        soF3:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_ss, True); AddVx;  AddHx;  AddWss; end
+                 else begin SetOpcode(OPmov,  OPSx_ss, True); AddVx;          AddWss; end;
+                end;
       end;
     end;
     $11: begin
@@ -2912,8 +2922,18 @@ begin
       case SimdOpcode of
         soNone: begin SetOpcode(OPmovu, OPSx_ps, True); AddWps; AddVps;         end;
         so66:   begin SetOpcode(OPmovu, OPSx_pd, True); AddWpd; AddVpd;         end;
-        soF2:   begin SetOpcode(OPmov,  OPSx_sd, True); AddWsd; AddHx;  AddVsd; end;
-        soF3:   begin SetOpcode(OPmov,  OPSx_ss, True); AddWss; AddHx;  AddVss; end;
+        soF2:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_sd, True); AddWsd; AddHx; AddVsd; end
+                 else begin SetOpcode(OPmov,  OPSx_sd, True); AddWsd;        AddVsd; end;
+                end;
+        soF3:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_ss, True); AddWss; AddHx; AddVss; end
+                 else begin SetOpcode(OPmov,  OPSx_ss, True); AddWss;        AddVss; end;
+                end;
       end;
     end;
     $12: begin
@@ -3274,6 +3294,7 @@ begin
       then begin
         if flagVex in Flags
         then begin
+          Exclude(Flags,flagModRM);
           if Vex.VectorLength = os128
           then SetOpcode(OPvzeroupper)
           else SetOpcode(OPvzeroall);
@@ -3309,9 +3330,9 @@ begin
     $7E: begin
       DecodeSIMD([soNone, so66, soF3]);
       case SimdOpcode of
-        soNone: begin SetOpcode(OPmov, OPSx_d      ); AddEy; AddPy; end;
-        so66:   begin SetOpcode(OPmov, OPSx_d, True); AddEy; AddVy; end;
-        soF3:   begin SetOpcode(OPmov, OPSx_q, True); AddVq; AddWq; end;
+        soNone: begin SetOpcode(OPmov, OPS_d_q      ); AddEy; AddPy; end;
+        so66:   begin SetOpcode(OPmov, OPS_d_q, True); AddEy; AddVy; end;
+        soF3:   begin SetOpcode(OPmov, OPSx_q , True); AddVq; AddWq; end;
       end;
     end;
     $7F: begin
@@ -4351,7 +4372,7 @@ begin
       $A9: begin
         SetOpcode(OPtest);
         AddReg(regGeneral, OperandSize, REG_A);
-        AddIv;
+        AddIz;
       end;
       $AA: begin
         SetOpcode(OPstos, OPSx_b); CheckRepeat;
@@ -5231,10 +5252,11 @@ function TX86AsmDecoder.UnwindFrame(var AnAddress, AStackPtr,
   end;
 
 const
-  MAX_SEARCH_ADDR = 1000;
-  MAX_SEARCH_CNT = 80;
+  MAX_SEARCH_ADDR = 8000;
+  MAX_SEARCH_CNT = 400;
 var
-  NewAddr, NewStack, NewFrame, MaxAddr, StartStack: TDBGPtr;
+  NewAddr, NewStack, NewFrame, MaxAddr, MaxAddr2, StartAddr, StartStack, Tmp: TDBGPtr;
+  ConditionalForwardAddr, BackwardJumpAddress: TDBGPtr;
   Cnt: Integer;
   instr: TX86AsmInstruction;
   RSize: Cardinal;
@@ -5242,18 +5264,33 @@ var
   CurAddr: PByte;
 begin
   Result := False;
-  NewAddr := AnAddress;
-  NewStack := AStackPtr;
+  NewAddr    := AnAddress;
+  NewStack   := AStackPtr;
+  NewFrame   := AFramePtr;
+  StartAddr  := AnAddress;
   StartStack := AStackPtr;
-  NewFrame := AFramePtr;
+  ConditionalForwardAddr := 0;
+  BackwardJumpAddress := 0;
 
   {$PUSH}{$R-}{$Q-}
   MaxAddr := AnAddress + MAX_SEARCH_ADDR;
   {$POP}
+  MaxAddr2 := MaxAddr;
   Cnt := MAX_SEARCH_CNT;
   if AQuick then Cnt := 10;
 
   while (NewAddr < MaxAddr) and (Cnt > 0) do begin
+    if NewAddr > MaxAddr2 then begin
+      if (ConditionalForwardAddr > 0) and (BackwardJumpAddress > 0) and
+         (ConditionalForwardAddr >= BackwardJumpAddress)
+      then begin
+        NewAddr := ConditionalForwardAddr;
+        MaxAddr2 := MaxAddr;
+      end
+      else
+        exit;
+    end;
+
     dec(Cnt);
     instr := TX86AsmInstruction(GetInstructionInfo(NewAddr));
     if instr.InstructionLength <= 0 then
@@ -5303,7 +5340,16 @@ begin
           NewStack := NewStack - RegisterSize(instr.X86Instruction.Operand[1].Value);
           {$POP}
         end;
-      OPpusha, OPpushf:
+      OPpusha:
+        begin
+          if (FProcess.Mode <> dm32) or (instr.X86Instruction.OpCode.Suffix <> OPSx_d) then
+            exit;
+          // push 8 registers
+          {$PUSH}{$R-}{$Q-}
+          NewStack := NewStack - (8*4);
+          {$POP}
+        end;
+      OPpushf:
         exit; // false
       OPpopa, OPpopad:
         exit; // false
@@ -5347,16 +5393,21 @@ begin
           if instr.X86Instruction.OperCnt <> 2 then
             exit;
 
-          if IsRegister(instr.X86Instruction.Operand[1].Value, 'sp')
+          if IsRegister(instr.X86Instruction.Operand[1].Value, 'sp') and
+             not(ofMemory in Instr.X86Instruction.Operand[2].Flags)
           then begin
             if (not IsRegister(instr.X86Instruction.Operand[2].Value, 'bp')) or
                (Instr.X86Instruction.Operand[2].ByteCount <> 0) or
                (Instr.X86Instruction.Operand[2].ByteCount2 <> 0) or
                (ofMemory in Instr.X86Instruction.Operand[2].Flags)
             then
-              exit;
+              exit; // TODO: check if source is known part of stack
             NewStack := NewFrame;
           end;
+          if IsRegister(instr.X86Instruction.Operand[1].Value, 'bp') and
+             not(ofMemory in Instr.X86Instruction.Operand[2].Flags)
+          then
+            exit; // TODO: check if source is SP or known part of stack
         end;
       OPlea:
         begin
@@ -5420,6 +5471,23 @@ begin
             {$POP}
           end;
         end;
+      OPj__:
+        if (not AQuick) and
+           (instr.X86Instruction.OperCnt = 1) and
+           (instr.X86Instruction.Operand[1].Value = '%s') and
+           (Instr.X86Instruction.Operand[1].ByteCount > 0) and
+           (Instr.X86Instruction.Operand[1].ByteCount2 = 0)
+        then
+        begin
+          Val := ValueFromMem(CurAddr[Instr.X86Instruction.Operand[1].CodeIndex], Instr.X86Instruction.Operand[1].ByteCount, Instr.X86Instruction.Operand[1].FormatFlags);
+          if Val > 0 then begin
+            {$PUSH}{$R-}{$Q-}
+            Tmp := NewAddr + Val;
+            {$POP}
+            if (Tmp > ConditionalForwardAddr) and (Tmp < MaxAddr) then
+              ConditionalForwardAddr := Tmp;
+          end;
+        end;
       OPjmp:
         begin
           if AQuick then
@@ -5429,18 +5497,27 @@ begin
           if (instr.X86Instruction.Operand[1].Value <> '%s') then
             exit; // false
           if (Instr.X86Instruction.Operand[1].ByteCount = 0) or
-             (Instr.X86Instruction.Operand[1].ByteCount > 2) or
              (Instr.X86Instruction.Operand[1].ByteCount2 <> 0)
           then
             exit;
 
           Val := ValueFromMem(CurAddr[Instr.X86Instruction.Operand[1].CodeIndex], Instr.X86Instruction.Operand[1].ByteCount, Instr.X86Instruction.Operand[1].FormatFlags);
-          if Val <= 0 then
-            exit;
-
           {$PUSH}{$R-}{$Q-}
-          NewAddr := NewAddr + Val
+          Tmp := NewAddr + Val;
           {$POP}
+          if (Val < 0) then begin
+            if ConditionalForwardAddr >= NewAddr then begin
+              NewAddr := ConditionalForwardAddr;
+              continue;
+            end;
+
+            if (Tmp > StartAddr) or (Tmp < StartAddr - MAX_SEARCH_ADDR) then
+              exit;
+            MaxAddr2 := StartAddr;
+            BackwardJumpAddress := NewAddr;
+          end;
+
+          NewAddr := Tmp;
         end;
       OPjmpe, OPint, OPint1, OPint3:
         exit; // false
