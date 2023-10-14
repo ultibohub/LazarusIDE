@@ -2903,8 +2903,18 @@ begin
       case SimdOpcode of
         soNone: begin SetOpcode(OPmovu, OPSx_ps, True); AddVps; AddWps;         end;
         so66:   begin SetOpcode(OPmovu, OPSx_pd, True); AddVpd; AddWpd;         end;
-        soF2:   begin SetOpcode(OPmov,  OPSx_sd, True); AddVx;  AddHx;  AddWsd; end;
-        soF3:   begin SetOpcode(OPmov,  OPSx_ss, True); AddVx;  AddHx;  AddWss; end;
+        soF2:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_sd, True); AddVx;  AddHx;  AddWsd; end
+                 else begin SetOpcode(OPmov,  OPSx_sd, True); AddVx;          AddWsd; end;
+                end;
+        soF3:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_ss, True); AddVx;  AddHx;  AddWss; end
+                 else begin SetOpcode(OPmov,  OPSx_ss, True); AddVx;          AddWss; end;
+                end;
       end;
     end;
     $11: begin
@@ -2912,8 +2922,18 @@ begin
       case SimdOpcode of
         soNone: begin SetOpcode(OPmovu, OPSx_ps, True); AddWps; AddVps;         end;
         so66:   begin SetOpcode(OPmovu, OPSx_pd, True); AddWpd; AddVpd;         end;
-        soF2:   begin SetOpcode(OPmov,  OPSx_sd, True); AddWsd; AddHx;  AddVsd; end;
-        soF3:   begin SetOpcode(OPmov,  OPSx_ss, True); AddWss; AddHx;  AddVss; end;
+        soF2:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_sd, True); AddWsd; AddHx; AddVsd; end
+                 else begin SetOpcode(OPmov,  OPSx_sd, True); AddWsd;        AddVsd; end;
+                end;
+        soF3:   begin
+                 DecodeModRM;
+                 if ModRM.Mode = 3
+                 then begin SetOpcode(OPmov,  OPSx_ss, True); AddWss; AddHx; AddVss; end
+                 else begin SetOpcode(OPmov,  OPSx_ss, True); AddWss;        AddVss; end;
+                end;
       end;
     end;
     $12: begin
@@ -3274,6 +3294,7 @@ begin
       then begin
         if flagVex in Flags
         then begin
+          Exclude(Flags,flagModRM);
           if Vex.VectorLength = os128
           then SetOpcode(OPvzeroupper)
           else SetOpcode(OPvzeroall);
@@ -3309,9 +3330,9 @@ begin
     $7E: begin
       DecodeSIMD([soNone, so66, soF3]);
       case SimdOpcode of
-        soNone: begin SetOpcode(OPmov, OPSx_d      ); AddEy; AddPy; end;
-        so66:   begin SetOpcode(OPmov, OPSx_d, True); AddEy; AddVy; end;
-        soF3:   begin SetOpcode(OPmov, OPSx_q, True); AddVq; AddWq; end;
+        soNone: begin SetOpcode(OPmov, OPS_d_q      ); AddEy; AddPy; end;
+        so66:   begin SetOpcode(OPmov, OPS_d_q, True); AddEy; AddVy; end;
+        soF3:   begin SetOpcode(OPmov, OPSx_q , True); AddVq; AddWq; end;
       end;
     end;
     $7F: begin
@@ -4351,7 +4372,7 @@ begin
       $A9: begin
         SetOpcode(OPtest);
         AddReg(regGeneral, OperandSize, REG_A);
-        AddIv;
+        AddIz;
       end;
       $AA: begin
         SetOpcode(OPstos, OPSx_b); CheckRepeat;

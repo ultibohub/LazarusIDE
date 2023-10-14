@@ -1214,6 +1214,9 @@ var
   MouseTargetLookup: Boolean;
   srchPt: TPoint;
 begin
+  if not NSApp.isActive then
+    exit;
+
   if Assigned(Owner) and not NSObjectIsLCLEnabled(Owner) then
   begin
     Result := True; // Cocoa should not handle the message.
@@ -1563,6 +1566,7 @@ begin
   if Assigned(FContext) then
     Exit;
   FContext := TCocoaContext.Create(ControlContext);
+  FContext.Control := FTarget;
   FContext.isControlDC := True;
   try
     // debugln('Draw '+Target.name+' bounds='+Dbgs(NSRectToRect(bounds))+' dirty='+Dbgs(NSRectToRect(dirty)));
