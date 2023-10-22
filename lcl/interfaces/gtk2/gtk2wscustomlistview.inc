@@ -367,19 +367,15 @@ var
 begin
   Widgets := PTVWidgets(WidgetInfo^.UserData);
 
-  if Length(Widgets^.ItemCache)=0 then
+  List := gtk_icon_view_get_selected_items(AIconView);
+  if (List <> nil) then
   begin
-    List := gtk_icon_view_get_selected_items(AIconView);
-    if (List <> nil) then
-    begin
-      Path := PGtkTreePath(g_list_first(List)^.data);
-      Indices := gtk_tree_path_get_indices(path)^;
-      ChangeItemCache(Widgets, Indices, tvisUnselected);
-      g_list_free(List);
-    end else
-      exit;
+    Path := PGtkTreePath(g_list_first(List)^.data);
+    Indices := gtk_tree_path_get_indices(path)^;
+    ChangeItemCache(Widgets, Indices, tvisUnselected);
+    g_list_free(List);
   end else
-    Exit;
+    exit;
 
   // LCL already sent selection !
   if wwiInvalidEvent in Widgets^.WidgetInfo^.Flags then
@@ -445,8 +441,12 @@ var
   ImageList: TCustomImageList;
   Bmp: TBitmap;
   pixbuf: PGdkPixbuf;
+  PixbufValue: TGValue;
 begin
-  PGtkCellRendererPixbuf(cell)^.pixbuf := nil;
+  PixbufValue:=Default(TGValue);
+  g_value_init(@PixbufValue, GDK_TYPE_PIXBUF);
+  g_object_set_property(G_OBJECT(cell), PChar('pixbuf'), @PixbufValue);
+  g_value_unset(@PixbufValue);
   Widgets := PTVWidgets(WidgetInfo^.UserData);
   gtk_tree_model_get(tree_model, iter, [0, @ListItem, -1]);
 
@@ -488,15 +488,19 @@ begin
       pixbuf := nil;
       ImageList.GetBitmap(ImageIndex, Bmp);
       Gtk2_PixBufFromBitmap(Bmp,pixbuf);
-      PGtkCellRendererPixbuf(cell)^.pixbuf :=pixbuf;
+      g_value_init(@PixbufValue, GDK_TYPE_PIXBUF);
+      g_value_set_object(@PixbufValue, pixbuf);
+      g_object_set_property(G_OBJECT(cell), PChar('pixbuf'), @PixbufValue);
+      g_value_unset(@PixbufValue);
     finally
       Bmp.Free;
     end;
   end else
-  if (ImageIndex > -1) and (ImageIndex <= Images.Count-1) then
-    PGtkCellRendererPixbuf(cell)^.pixbuf := PGdkPixbuf(Images.Items[ImageIndex])
-  else
-    PGtkCellRendererPixbuf(cell)^.pixbuf := nil;
+  g_value_init(@PixbufValue, GDK_TYPE_PIXBUF);
+  if (ImageIndex > -1) and (ImageIndex <= Images.Count-1) and (Images.Items[ImageIndex] <> nil) then
+    g_value_set_object(@PixbufValue, PGdkPixbuf(Images.Items[ImageIndex]));
+  g_object_set_property(G_OBJECT(cell), PChar('pixbuf'), @PixbufValue);
+  g_value_unset(@PixbufValue);
 end;
 
 procedure Gtk2WSLV_ListViewGetPixbufDataFuncForIconView({%H-}cell_layout:PGtkCellLayout;
@@ -507,8 +511,12 @@ var
   Widgets: PTVWidgets;
   ImageIndex: Integer;
   APath: PGtkTreePath;
+  PixbufValue: TGValue;
 begin
-  PGtkCellRendererPixbuf(cell)^.pixbuf := nil;
+  PixbufValue:=Default(TGValue);
+  g_value_init(@PixbufValue, GDK_TYPE_PIXBUF);
+  g_object_set_property(G_OBJECT(cell), 'pixbuf', @PixbufValue);
+  g_value_unset(@PixbufValue);
   Widgets := PTVWidgets(WidgetInfo^.UserData);
   gtk_tree_model_get(tree_model, iter, [0, @ListItem, -1]);
 
@@ -529,10 +537,11 @@ begin
 
   ImageIndex := ListItem.ImageIndex;
 
+  g_value_init(@PixbufValue, GDK_TYPE_PIXBUF);
   if (ImageIndex > -1) and (ImageIndex <= Images.Count-1) then
-    PGtkCellRendererPixbuf(cell)^.pixbuf := PGdkPixbuf(Images.Items[ImageIndex])
-  else
-    PGtkCellRendererPixbuf(cell)^.pixbuf := nil;
+    g_value_set_object(@PixbufValue, PGdkPixbuf(Images.Items[ImageIndex]));
+  g_object_set_property(G_OBJECT(cell), PChar('pixbuf'), @PixbufValue);
+  g_value_unset(@PixbufValue);
 end;
 
 { TGtk2WSCustomListView }
