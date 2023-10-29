@@ -2,15 +2,15 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2021-09-19 10:32+0200\n"
+"PO-Revision-Date: 2023-10-25 23:29+0200\n"
 "Last-Translator: Swen Heinig <swen@heinig.email>\n"
 "Language-Team: Deutsch <lazarus@miraclec.com>\n"
+"Language: de_DE\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"Language: de_DE\n"
-"X-Generator: Poedit 2.4.2\n"
+"X-Generator: Poedit 3.2\n"
 
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
@@ -1756,6 +1756,10 @@ msgstr ""
 msgid "Element Attributes"
 msgstr "Elementattribute"
 
+#: lazarusidestrconsts.dlgemulaterightbutton
+msgid "Emulate right button"
+msgstr ""
+
 #: lazarusidestrconsts.dlgendkeyjumpstoneareststart
 msgid "End key jumps to nearest end"
 msgstr "Ende-Taste springt zum nächsten Ende"
@@ -2430,6 +2434,10 @@ msgstr "Inaktiver $IFDEF Knoten"
 
 #: lazarusidestrconsts.dlgifdefnodetmpactive
 msgid "Included mixed state $IFDEF node"
+msgstr ""
+
+#: lazarusidestrconsts.dlgifenabledthemessages
+msgid "If enabled, the messages window will show the popup menu on left mouse button click with Ctrl pressed"
 msgstr ""
 
 #: lazarusidestrconsts.dlgimportdesktopexists
@@ -13581,15 +13589,13 @@ msgid "Run &Parameters ..."
 msgstr "Start&parameter ..."
 
 #: lazarusidestrconsts.lismenuruntocursor
-#, fuzzy
-#| msgid "Step over to &Cursor"
 msgctxt "lazarusidestrconsts.lismenuruntocursor"
 msgid "Run to Cursor"
-msgstr "Start bis &Cursor"
+msgstr "Start bis Cursor"
 
 #: lazarusidestrconsts.lismenurunwithdebugging
 msgid "Run with Debugging"
-msgstr ""
+msgstr "Start mit Debugger"
 
 #: lazarusidestrconsts.lismenurunwithoutdebugging
 msgid "Run without Debugging"
@@ -13904,10 +13910,8 @@ msgid "2) Search for units. Found paths are added to project settings."
 msgstr "2) Unit-Pfad auswählen, der zu den Projekteinstellungen hinzugefügt wird."
 
 #: lazarusidestrconsts.lismissingunitsinfo3
-#, fuzzy
-#| msgid "3) Abort now, install packages or fix paths and try again."
 msgid "3) Leave these units in uses sections as they are."
-msgstr "3) Jetzt abbrechen, die Unit-Pfade korrigieren oder Packages installieren und noch einmal probieren."
+msgstr "3) Diese Units unverändert in den uses-Abschnitten lassen."
 
 #: lazarusidestrconsts.lismissingunitssearch
 msgid "Search Unit Path"
@@ -14120,19 +14124,6 @@ msgid ", Mode: %s"
 msgstr ", Modus: %s"
 
 #: lazarusidestrconsts.lismodifiedlgplnotice
-#, fuzzy
-#| msgid ""
-#| "<description>\n"
-#| "\n"
-#| "Copyright (C) <year> <name of author> <contact>\n"
-#| "\n"
-#| "This library is free software; you can redistribute it and/or modify it under the terms of the GNU Library General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version with the following modification:\n"
-#| "\n"
-#| "As a special exception, the copyright holders of this library give you permission to link this library with independent modules to produce an executable, regardless of the license terms of these independent modules,and to copy and distribute the resulting executable under terms of your choice, provided that you also meet, for each linked independent module, the terms and conditions of the license of that module. An independent module is a module which is not derived from or based on this library. If you modify this library, you may extend this exception to your version of the library, but you are not obligated to do so. If you do not wish to do so, delete this exception statement from your version.\n"
-#| "\n"
-#| "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Library General Public License for more details. \n"
-#| "\n"
-#| "You should have received a copy of the GNU Library General Public License along with this library; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.\n"
 msgid ""
 "<description>\n"
 "\n"
@@ -14156,7 +14147,7 @@ msgstr ""
 "\n"
 "This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Library General Public License for more details. \n"
 "\n"
-"You should have received a copy of the GNU Library General Public License along with this library; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.\n"
+"You should have received a copy of the GNU Library General Public License along with this library; if not, write to the Free Software Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA."
 
 #: lazarusidestrconsts.lismore
 msgctxt "lazarusidestrconsts.lismore"
