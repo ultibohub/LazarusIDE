@@ -11634,7 +11634,8 @@ procedure TSourceEditorManager.OnSourceCompletionTimer(Sender: TObject);
       Exit;
 
     if (CodeAttribute = SYNS_XML_AttrComment) or
-       (CodeAttribute = SYNS_XML_AttrString)
+       (CodeAttribute = SYNS_XML_AttrString) or
+       (CodeAttribute = SYNS_XML_AttrNumber)
     then
       Exit;
 
