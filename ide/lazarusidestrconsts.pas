@@ -2128,6 +2128,7 @@ resourcestring
   dlgFoldPasProgram         = 'Program';
   dlgFoldPasUnit            = 'Unit';
   dlgFoldPasRecord          = 'Record';
+  dlgFoldPasRecordCase      = 'Record case';
   dlgFoldPasTry             = 'Try';
   dlgFoldPasExcept          = 'Except/Finally';
   dlgFoldPasRepeat          = 'Repeat';
