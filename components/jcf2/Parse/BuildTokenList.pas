@@ -44,6 +44,9 @@ uses
 
 type
 
+  TBuildTokenListFlag=(btlOnlyDirectives);
+  TBuildTokenListFlags = set of TBuildTokenListFlag;
+
   { TBuildTokenList }
 
   TBuildTokenList = class(TObject)
@@ -76,6 +79,7 @@ type
     function TryWhiteSpace(const pcToken: TSourceToken): boolean;
     function TryLiteralString(const pcToken: TSourceToken;
       const pcDelimiter: Char): boolean;
+    function TryMultiLineLiteralString(const pcToken: TSourceToken): boolean;
 
     function TryNumber(const pcToken: TSourceToken): boolean;
     function TryHexNumber(const pcToken: TSourceToken): boolean;
@@ -99,7 +103,7 @@ type
     constructor Create;
     destructor Destroy; override;
 
-    function BuildTokenList: TSourceTokenList;
+    procedure BuildTokenList(ASourceTokenList:TSourceTokenList;AFlags:TBuildTokenListFlags=[]);
 
     property SourceCode: String read fsSourceCode write SetSourceCode;
     property FileName: string read fsFileName write fsFileName;
@@ -175,6 +179,8 @@ var
     { the rest }
     if TryWhiteSpace(lcNewToken) then
       exit;
+    if TryMultiLineLiteralString(lcNewToken) then
+      exit;
     if TryLiteralString(lcNewToken, NativeSingleQuote) then
       exit;
     if TryLiteralString(lcNewToken, NativeDoubleQuote) then
@@ -217,9 +223,13 @@ begin
   begin
     lcNewToken := TSourceToken.Create;
     lcNewToken.FileName := FileName;
-    DoAllTheTries;
-
-    lcNewToken.WordType := WordTypeOfToken(lcNewToken.TokenType);
+    try
+      DoAllTheTries;
+      lcNewToken.WordType := WordTypeOfToken(lcNewToken.TokenType);
+    except
+      lcNewToken.Free;
+      raise;
+    end;
     Result := lcNewToken;
   end;
 end;
@@ -481,6 +491,51 @@ begin
   end;
 end;
 
+{ delphi 12 multiline string }
+function TBuildTokenList.TryMultiLineLiteralString(const pcToken: TSourceToken): boolean;
+var
+  liCount:integer;
+  liCountEnd:integer;
+begin
+  Result := False;
+  liCount:=0;
+  while ForwardChar(liCount)=NativeSingleQuote do
+    Inc(liCount);
+
+  if (liCount>=3) and ((liCount and 1)= 1) then
+  begin
+    Result := True;
+    { read the opening '''  odd number  of single quotes }
+    pcToken.SourceCode := pcToken.SourceCode + CurrentChars(liCount);
+    Consume(liCount);
+    { read until the close ''' }
+    repeat
+      if Current = #0 then
+        Raise Exception.Create('Unterminated string: ' + pcToken.SourceCode);
+
+      if (Current = NativeSingleQuote) then
+      begin
+        liCountEnd:=0;
+        while ForwardChar(liCountEnd)=NativeSingleQuote do
+          Inc(liCountEnd);
+        pcToken.SourceCode := pcToken.SourceCode + CurrentChars(liCountEnd);
+        Consume(liCountEnd);
+        if liCountEnd=liCount then
+           break;
+      end
+      else
+      begin
+        { normal char, read it }
+        pcToken.SourceCode := pcToken.SourceCode + Current;
+        Consume;
+      end;
+
+    until False;
+
+    pcToken.TokenType := ttQuotedLiteralString;
+  end;
+end;
+
 { complexities like 'Hello'#32'World' and #$12'Foo' are assemlbed in the parser }
 function TBuildTokenList.TryLiteralString(const pcToken: TSourceToken;
   const pcDelimiter: Char): boolean;
@@ -530,7 +585,6 @@ begin
     pcToken.TokenType := ttQuotedLiteralString;
   end;
 end;
-
 
 function TBuildTokenList.TryWord(const pcToken: TSourceToken): boolean;
 
@@ -955,32 +1009,51 @@ begin
   end;
 end;
 
-function TBuildTokenList.BuildTokenList: TSourceTokenList;
+procedure TBuildTokenList.BuildTokenList(ASourceTokenList:TSourceTokenList;AFlags:TBuildTokenListFlags=[]);
 const
   UPDATE_INTERVAL = 4096; // big increments here, this goes faster than parsing
 var
-  lcList:    TSourceTokenList;
   lcNew:     TSourceToken;
   liCounter: integer;
+  lbIncludeToken: boolean;
 begin
   Assert(SourceCode <> '');
   liCounter := 0;
-  lcList    := TSourceTokenList.Create;
 
   while not EndOfFile do
   begin
-    lcNew := GetNextToken;
-    lcList.Add(lcNew);
-    Inc(liCounter);
-    GetUI.UpdateGUI(liCounter, UPDATE_INTERVAL);
+    lbIncludeToken := True;
+    lcNew := nil;
+    try
+      lcNew := GetNextToken;
+      if lcNew<>nil then
+      begin
+        if btlOnlyDirectives in AFlags then
+        begin
+          if not ((lcNew.TokenType=ttComment) and (lcNew.CommentStyle=eCompilerDirective)) then
+            lbIncludeToken := False;
+        end;
+        if lbIncludeToken then
+          ASourceTokenList.Add(lcNew)
+        else
+          lcNew.Free;
+        lcNew := nil;
+      end;
+      Inc(liCounter);
+      GetUI.UpdateGUI(liCounter, UPDATE_INTERVAL);
+    except
+      lcNew.Free;
+      raise;
+    end;
   end;
-
-  Result := lcList;
 end;
 
 function TBuildTokenList.Current: Char;
 begin
-  Result := fsSourceCode[fiCurrentIndex];
+  if fiCurrentIndex<=Length(fsSourceCode) then
+    Result := fsSourceCode[fiCurrentIndex]
+  else
+    Result := #0;
 end;
 
 function TBuildTokenList.CurrentChars(const piCount: integer): String;

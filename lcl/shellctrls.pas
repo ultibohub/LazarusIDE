@@ -85,6 +85,7 @@ type
     FExpandCollapseMode: TExpandCollapseMode;
     FFileSortType: TFileSortType;
     FInitialRoot: String;
+    FUpdateLock: Integer;
     FUseBuiltinIcons: Boolean;
     FOnAddItem: TAddItemEvent;
     FOnSortCompare: TFileItemCompareEvent;
@@ -126,13 +127,13 @@ type
     function  GetPathFromNode(ANode: TTreeNode): string;
     procedure PopulateWithBaseFiles;
     procedure Refresh(ANode: TTreeNode); overload;
-    procedure UpdateView;
+    procedure UpdateView(AStartDir: String = '');
     property UseBuiltinIcons: Boolean read FUseBuiltinIcons write SetUseBuiltinIcons default true;
 
     { Properties }
-    property ObjectTypes: TObjectTypes read FObjectTypes write SetObjectTypes;
+    property ObjectTypes: TObjectTypes read FObjectTypes write SetObjectTypes default [otFolders];
     property ShellListView: TCustomShellListView read FShellListView write SetShellListView;
-    property FileSortType: TFileSortType read FFileSortType write SetFileSortType;
+    property FileSortType: TFileSortType read FFileSortType write SetFileSortType default fstNone;
     property Root: string read FRoot write SetRoot;
     property Path: string read GetPath write SetPath;
     property OnAddItem: TAddItemEvent read FOnAddItem write FOnAddItem;
@@ -267,6 +268,7 @@ type
     procedure SetMaskCaseSensitivity(AValue: TMaskCaseSensitivity);
     procedure SetShellTreeView(const Value: TCustomShellTreeView);
     procedure SetRoot(const Value: string);
+    procedure SetObjectTypes(const Value: TObjectTypes);
   protected
     { Methods specific to Lazarus }
     class procedure WSRegisterClass; override;
@@ -290,7 +292,7 @@ type
     property AutoSizeColumns: Boolean read FAutoSizeColumns write SetAutoSizeColumns default true;
     property Mask: string read FMask write SetMask; // Can be used to conect to other controls
     property MaskCaseSensitivity: TMaskCaseSensitivity read FMaskCaseSensitivity write SetMaskCaseSensitivity default mcsPlatformDefault;
-    property ObjectTypes: TObjectTypes read FObjectTypes write FObjectTypes;
+    property ObjectTypes: TObjectTypes read FObjectTypes write SetObjectTypes default [otNonFolders];
     property Root: string read FRoot write SetRoot;
     property ShellTreeView: TCustomShellTreeView read FShellTreeView write SetShellTreeView;
     property UseBuiltInIcons: Boolean read FUseBuiltinIcons write FUseBuiltInIcons default true;
@@ -651,12 +653,8 @@ begin
       RootNode := Items.AddChild(nil, FRoot);
       RootNode.HasChildren := True;
       RootNode.Expand(False);
-      try
-       SetPath(CurrPath);
-      except
-        // CurrPath may have been removed in the mean time by another process, just ignore
-        on E: EInvalidPath do ;//
-      end;
+      if Exists(CurrPath) then
+        SetPath(CurrPath);
     end;
   finally
     EndUpdate;
@@ -674,12 +672,8 @@ begin
   try
     BeginUpdate;
     Refresh(nil);
-    try
+    if Exists(CurrPath) then
       SetPath(CurrPath);
-    except
-      // CurrPath may have been removed in the mean time by another process, just ignore
-      on E: EInvalidPath do ;//
-    end;
   finally
     EndUpdate;
   end;
@@ -709,12 +703,8 @@ begin
       RootNode := Items.AddChild(nil, FRoot);
       RootNode.HasChildren := True;
       RootNode.Expand(False);
-      try
-       SetPath(CurrPath);
-      except
-        // CurrPath may have been removed in the mean time by another process, just ignore
-        on E: EInvalidPath do ;//
-      end;
+      if Exists(Currpath) then
+        SetPath(CurrPath);
     end;
   finally
     EndUpdate;
@@ -1235,7 +1225,10 @@ begin
   end;
 end;
 
-procedure TCustomShellTreeView.UpdateView;
+{ Rebuilds the tree for all expanded nodes from the node corresponding to
+  AStartDir (or from root if AStartDir is empty) to react on changes in the
+  file system. Collapsed nodes will be updated anyway when they are expanded. }
+procedure TCustomShellTreeView.UpdateView(AStartDir: String = '');
 
   procedure RecordNodeState(const ANode: TTreeNode; const AExpandedPaths: TStringList);
   var
@@ -1282,11 +1275,15 @@ procedure TCustomShellTreeView.UpdateView;
 
 var
   node: TTreeNode;
+  firstNode: TTreeNode;
   topNodePath: String;
   selectedPath: String;
   selectedWasExpanded: Boolean = false;
   expandedPaths: TStringList;
 begin
+  if FUpdateLock <> 0 then
+    exit;
+
   expandedPaths := TStringList.Create;
   Items.BeginUpdate;
   try
@@ -1295,7 +1292,17 @@ begin
     if Assigned(Selected) then
       selectedWasExpanded := Selected.Expanded;
 
-    node := Items.GetFirstNode;
+    firstNode := Items.GetFirstNode;
+    if AStartDir = '' then
+      node := firstNode
+    else
+    begin
+      node := Items.FindNodeWithTextPath(ChompPathDelim(AStartDir));
+      // Avoid starting at a non-existing folder
+      while not Exists(GetPathFromNode(node)) and (node <> firstNode) do
+        node := node.Parent;
+    end;
+
     RecordNodeState(node, expandedPaths);
     RestoreNodeState(node, true, expandedPaths);
 
@@ -1310,7 +1317,14 @@ begin
 
     // Force synchronization of associated ShellListView
     if Assigned(FShellListView) then
-      FShellListView.UpdateView;
+    begin
+      inc(FUpdateLock);
+      try
+        FShellListView.UpdateView;
+      finally
+        dec(FUpdateLock);
+      end;
+    end;
   finally
     Items.EndUpdate;
     expandedPaths.Free;
@@ -1688,6 +1702,27 @@ begin
   end;
 end;
 
+procedure TCustomShellListView.SetObjectTypes(const Value: TObjectTypes);
+var
+  sel: String = '';
+begin
+  if FObjectTypes = Value then Exit;
+  FObjectTypes := Value;
+  if (csLoading in ComponentState) then Exit;
+
+  BeginUpdate;
+  try
+    if Assigned(Selected) then
+      sel := Selected.Caption;
+    Clear;
+    PopulateWithRoot();
+    if Sel <> '' then
+      Selected := FindCaption(0, sel, false, true, false);
+  finally
+    EndUpdate;
+  end;
+end;
+
 procedure TCustomShellListView.SetRoot(const Value: string);
 begin
   if FRoot <> Value then
@@ -1892,6 +1927,7 @@ begin
   Result := IncludeTrailingPathDelimiter(FRoot) + ANode.Caption;
 end;
 
+{ Re-reads the list to react on changes in the file system. }
 procedure TCustomShellListView.UpdateView;
 var
   selectedItem: String = '';
@@ -1905,11 +1941,14 @@ begin
     if selectedItem <> '' then
       Selected := FindCaption(0, selectedItem, false, true, false);
 
-    inc(FLockUpdate);
-    try
-      ShellTreeView.UpdateView;
-    finally
-      dec(FLockUpdate);
+    if Assigned(ShellTreeView) then
+    begin
+      inc(FLockUpdate);
+      try
+        ShellTreeView.UpdateView(FRoot);
+      finally
+        dec(FLockUpdate);
+      end;
     end;
   end;
 end;
