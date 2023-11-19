@@ -74,6 +74,8 @@ const
   ecIdePSyncroOutOffset = ecSynPSyncroEdNextCell - ecIdePSyncroEdOutNextCell;
   ecIdePSyncroSelOffset = ecSynPSyncroEdStart    - ecIdePSyncroEdSelStart;
 
+  KeyMappingSchemeConfigDirName = 'userkeyschemes';
+
 type
   //---------------------------------------------------------------------------
   // TKeyCommandCategory is used to divide the key commands in handy packets
@@ -3600,8 +3602,11 @@ begin
   FileVersion:=XMLConfig.GetValue(Path+'Version/Value',0);
   ExtToolCount:=XMLConfig.GetValue(Path+'ExternalToolCount/Value',0);
 
+  Result:=false;
+
   if FileVersion>5 then begin
     Cnt:=XMLConfig.GetValue(Path+'Count',0);
+    Result:=Cnt>0;
     // load all keys from the config, this may be more than the current relations
     // for example because the command is not yet registered.
     for a:=1 to Cnt do begin
@@ -3662,6 +3667,7 @@ begin
         Relations[a].ShortcutA:=Relations[a].DefaultShortcutA;
         Relations[a].ShortcutB:=Relations[a].DefaultShortcutB;
       end else begin
+        Result:=true;
         p:=1;
         Key1:=word(ReadNextInt);
         Shift1:=FixShift(IntToShiftState(ReadNextInt));
@@ -3687,7 +3693,6 @@ begin
       end;
     end;
   end;
-  Result:=true;
 end;
 
 function TKeyCommandRelationList.SaveToXMLConfig(
@@ -4397,7 +4402,7 @@ begin
   if not Assigned(dst) then Exit;
 
   fn := FindAllFiles(
-    IncludeTrailingPathDelimiter(dir)+'keyschema', '*.xml', false);
+    IncludeTrailingPathDelimiter(dir)+KeyMappingSchemeConfigDirName, '*.xml', false);
 
   if not Assigned(fn) then Exit;
   try
@@ -4405,12 +4410,19 @@ begin
       try
         xml := TXMLConfig.Create(fn[i]);
         exp := TKeyCommandRelationList.Create;
-        nm := xml.GetValue('Name/Value','');
-        if nm = '' then nm := ExtractFileName(fn[i]);
-        if (dst.IndexOf(nm)<0) then begin
-          exp.DefineCommandCategories; // default Relations
-          exp.LoadFromXMLConfig(xml, 'KeyMapping/', false);
-          dst.AddObject(nm, exp);
+        try
+          nm := xml.GetValue('Name/Value','');
+          if nm = '' then nm := ExtractFileName(fn[i]);
+          if (dst.IndexOf(nm)<0) then begin
+            exp.DefineCommandCategories; // default Relations
+            exp.LoadFromXMLConfig(xml, 'KeyMapping/', false);
+            dst.AddObject(nm, exp);
+            //now exp is owned by dst, don't free it in this procedure
+            exp := nil;
+          end;
+        finally
+          xml.Free;
+          exp.Free;
         end;
       except
       end;
@@ -4444,11 +4456,9 @@ end;
 initialization
   RegisterKeyCmdIdentProcs(@IdentToIDECommand,
                            @IDECommandToIdent);
+  // CustomKeySchemas should be freed in TMainIDE.Destroy destructor
   CustomKeySchemas := TStringList.Create;
   CustomKeySchemas.OwnsObjects := true;
-
-finalization
-  CustomKeySchemas.Free;
 
 end.
 

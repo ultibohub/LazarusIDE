@@ -1825,6 +1825,7 @@ var
 procedure RepairEditorFontSize(var FontSize: integer);
 function BuildBorlandDCIFile(ACustomSynAutoComplete: TCustomSynAutoComplete): Boolean;
 function ColorSchemeFactory: TColorSchemeFactory;
+function UserKeySchemeDirectory(CreateIfNotExists: Boolean = False): String;
 function UserSchemeDirectory(CreateIfNotExists: Boolean = False): String;
 procedure InitLocale;
 
@@ -2573,6 +2574,13 @@ begin
     end;
   end;
   Result := Singleton;
+end;
+
+function UserKeySchemeDirectory(CreateIfNotExists: Boolean): String;
+begin
+  Result := AppendPathDelim(GetPrimaryConfigPath) + KeyMappingSchemeConfigDirName;
+  If CreateIfNotExists and (not DirectoryExistsUTF8(Result)) then
+    CreateDirUTF8(Result);
 end;
 
 function UserSchemeDirectory(CreateIfNotExists: Boolean): String;
@@ -5088,10 +5096,12 @@ begin
       XMLConfig.GetValue('EditorOptions/Display/DoNotWarnForFont', '');
 
     // Key Mappings options
+    LoadCustomKeySchemas;
     fKeyMappingScheme :=
       XMLConfig.GetValue('EditorOptions/KeyMapping/Scheme', KeyMapSchemeNames[kmsLazarus]);
-    fKeyMap.LoadFromXMLConfig(XMLConfig
-      , 'EditorOptions/KeyMapping/' + fKeyMappingScheme + '/');
+    if not fKeyMap.LoadFromXMLConfig(XMLConfig
+      , 'EditorOptions/KeyMapping/' + fKeyMappingScheme + '/') then
+      fKeyMappingScheme := KeyMapSchemeNames[kmsLazarus];
 
     // Color options
     for i := 0 to HighlighterList.Count - 1 do

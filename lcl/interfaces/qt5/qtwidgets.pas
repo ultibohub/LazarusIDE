@@ -5621,13 +5621,13 @@ const
     QtKey_Launch1,
     QtKey_unknown,
     QtKey_unknown,
-    QtKey_1,
-    QtKey_Plus,
+    QtKey_Semicolon,
+    QtKey_Equal,
     QtKey_Comma,
     QtKey_Minus,
     QtKey_Period,
-    QtKey_2,
-    QtKey_3,
+    QtKey_Slash,
+    QtKey_QuoteLeft,
     QtKey_unknown,
     QtKey_unknown,
     QtKey_unknown,
@@ -5654,10 +5654,10 @@ const
     QtKey_unknown,
     QtKey_unknown,
     QtKey_unknown,
-    QtKey_4,
-    QtKey_5,
-    QtKey_6,
-    QtKey_7,
+    QtKey_BracketLeft,
+    QtKey_Backslash,
+    QtKey_BracketRight,
+    QtKey_Apostrophe,
     QtKey_8,
     QtKey_unknown,
     QtKey_unknown,
@@ -16081,6 +16081,16 @@ begin
     Parent := TQtWidget(AParams.WndParent).GetContainerWidget
   else
     Parent := nil;
+
+  {$IFDEF HASX11}
+  // issue #40602
+  if (Parent = nil) and IsWayland and Assigned(FMenuItem) and FMenuItem.HasParent then
+  begin
+    if (FMenuItem.GetParentMenu is TMenu) then
+      Parent := TQtMenu(TMainMenu(FMenuItem.GetParentMenu).Handle).Widget;
+  end;
+  {$ENDIF}
+
   Result := QMenu_create(Parent);
   FDeleteLater := True;
   FActionHandle := nil;
