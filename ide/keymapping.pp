@@ -4444,6 +4444,7 @@ begin
             exp.DefineCommandCategories; // default Relations
             exp.LoadFromXMLConfig(xml, 'KeyMapping/', false);
             dst.AddObject(nm, exp);
+            //now exp is owned by dst, don't free it in this procedure
             exp := nil;
           end;
         finally

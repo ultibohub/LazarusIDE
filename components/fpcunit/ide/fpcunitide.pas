@@ -8,13 +8,16 @@ unit fpcunitide;
 interface
 
 uses
-  FPCUnitLazIDEIntf, strtestcaseopts, LazarusPackageIntf;
+  FPCUnitLazIDEIntf, strtestcaseopts, testcaseopts, fraTestInsightOpts, 
+  frmtestinsight, RegTestInsight, testinsightcontroller, testinsightserver, 
+  frmConsoleOpts, LazarusPackageIntf;
 
 implementation
 
 procedure Register;
 begin
   RegisterUnit('FPCUnitLazIDEIntf', @FPCUnitLazIDEIntf.Register);
+  RegisterUnit('RegTestInsight', @RegTestInsight.Register);
 end;
 
 initialization
