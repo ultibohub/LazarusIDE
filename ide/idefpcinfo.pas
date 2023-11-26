@@ -128,7 +128,7 @@ begin
     CompilerFilename:=LazarusIDE.GetCompilerFilename;
     FPCSrcDir:=EnvironmentOptions.GetParsedFPCSourceDirectory; // needs FPCVer macro
     UnitSetCache:=CodeToolBoss.CompilerDefinesCache.FindUnitSet(
-      CompilerFilename,TargetOS,TargetCPU,TargetProcessor,Subtarget,'',FPCSrcDir,true); //Ultibo
+      CompilerFilename,TargetOS,TargetCPU,TargetProcessor,Subtarget,'',FPCSrcDir,'',true); //Ultibo
     GatherFPCExecutable(UnitSetCache,sl);
 
     ValuesMemo.Lines.Assign(sl);
@@ -186,19 +186,25 @@ begin
     List.Free;
     sl.Add('');
 
+
     // fpc -va
     TargetOS:=BuildBoss.GetTargetOS;
     TargetCPU:=BuildBoss.GetTargetCPU;
     TargetProcessor:=BuildBoss.GetTargetProcessor; //Ultibo
     Subtarget:=BuildBoss.GetSubtarget;
+    WorkDir:='';
+    if (Project1<>nil) and (not Project1.IsVirtual)
+        and HasFPCParamsRelativeFilename(CompilerOptions) then
+      WorkDir:=Project1.Directory;
     Cfg:=CodeToolBoss.CompilerDefinesCache.ConfigCaches.Find(
-                        CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,Subtarget,true); //Ultibo
+                        CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,Subtarget,WorkDir,true); //Ultibo
     TestFilename:=CodeToolBoss.CompilerDefinesCache.TestFilename;
     Filename:=ExtractFileName(TestFilename);
-    WorkDir:=ExtractFilePath(TestFilename);
     sl.Add('The IDE asks the compiler with the following command for paths and macros:');
     ExtraOptions:=Cfg.GetFPCInfoCmdLineOptions(CodeToolBoss.CompilerDefinesCache.ExtraOptions);
     Params:=Trim('-va '+ExtraOptions)+' '+Filename;
+    if WorkDir='' then
+      WorkDir:=ExtractFilePath(TestFilename);
     sl.Add(CompilerFilename+' '+Params);
     sl.Add('Working directory: '+WorkDir);
     // create empty file

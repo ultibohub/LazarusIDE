@@ -58,6 +58,7 @@ type
   TTextMatePatternMap   = specialize TFPGMapObject<string, TTextMatePattern>;
   TTextMatePatternArray = array of TTextMatePattern;
   TTextMatePatternBaseNested = class;
+  TTextMatePatternForwarderNewEnd = class;
   TTextMateGrammar = class;
 
   TSynAttributeInfo = record
@@ -97,6 +98,7 @@ type
   { TTextMatePatternStateEntry }
 
   TTextMatePatternStateEntry = object
+    Grammar: TTextMateGrammar;
     Pattern: TTextMatePattern;
     PatternIndex: integer;
     SubTextBeginPos, SubTextLen: integer; // begin is always 1 // if otherwise then ATextOffset needs adjustment
@@ -107,9 +109,9 @@ type
     CachedMatchInfo: TTextMateMatchInfo;
     CachedCaptureLen: Integer;
 
-    procedure SetCache(AMatchInfo: TTextMateMatchInfo; ACaptureLen: Integer);
-    function  GetCache(out AMatchInfo: TTextMateMatchInfo; out ACaptureLen: Integer): boolean;
-    procedure ClearCache;
+    procedure SetCache(AMatchInfo: TTextMateMatchInfo; ACaptureLen: Integer); inline;
+    function  GetCache(out AMatchInfo: TTextMateMatchInfo; out ACaptureLen: Integer): boolean; inline;
+    procedure ClearCache; inline;
   end;
   PTextMatePatternStateEntry = ^TTextMatePatternStateEntry;
   TTextMatePatternStateArray = array of TTextMatePatternStateEntry;
@@ -119,20 +121,21 @@ type
   TTextMatePatternState = object
   private
     function GetEntryP(ADepth: integer): PTextMatePatternStateEntry; inline;
-    function GetParent(ADepth: integer): TTextMatePattern;
+    function GetParent(ADepth: integer): TTextMatePattern;  inline;
     function GetPattern(ADepth: integer): TTextMatePattern; inline;
   public
+    Grammar: TTextMateGrammar;
     StateList: TTextMatePatternStateArray;
     StateIdx: integer;
 
     procedure ValidateParentChain(AGrammar: TTextMateGrammar);
     procedure InitForDepth(ANewDepth: integer);
-    procedure Add(const AMatchInfo: TTextMateMatchInfo; const ASubTextBeginPos, ASubTextLen: integer; const AFlags: TTextMatePatternStateFlags = []);
-    procedure Pop;
+    procedure Add(const AMatchInfo: TTextMateMatchInfo; const ASubTextBeginPos, ASubTextLen: integer; const AFlags: TTextMatePatternStateFlags = []);  inline;
+    procedure Pop;  inline;
     procedure ClearRecurseData;
     procedure CallParentNextToken(const AText: String; ACurTokenPos: integer;
       var ANextTokenPos: integer; // May be set by caller, so it can be kept unchanged if StateIdx = 0
-      AnInitInfoOnly: Boolean = False);
+      AnInitInfoOnly: Boolean = False); inline;
     property Parent[ADepth: integer]: TTextMatePattern read GetParent;
     property Pattern[ADepth: integer]: TTextMatePattern read GetPattern;
     property EntryP[ADepth: integer]: PTextMatePatternStateEntry read GetEntryP; // valid only until next add/pop
@@ -147,11 +150,12 @@ type
     FName: String;
     FDebugName: String;
     FAttribInfo: TSynAttributeInfo; // Info for SynEdit
+    FRefCount: Integer;
   protected
     // detect recursions that do not move forward
     FDeepestRecurseTextAtOffset: Integer;
     FDeepestRecurseWasInit: Boolean;
-    function IsEndlessRecursion(ACurTokenPos: integer; AnInitInfoOnly: Boolean): boolean;
+    function IsEndlessRecursion(ACurTokenPos: integer; AnInitInfoOnly: Boolean): boolean; inline;
     procedure ClearDeepestRecurseData; virtual;
 
   protected
@@ -163,7 +167,7 @@ type
       out ATokenKind: integer; out AnAttr: TObject;
       ADepth: Integer
       ); virtual;
-    procedure InitFoundCaptures(AStateEntryP: PTextMatePatternStateEntry; ARegEx: TRegExpr);
+    procedure InitFoundCaptures(AStateEntryP: PTextMatePatternStateEntry; ARegEx: TRegExpr); //inline; // BUG in fpc
 
     function GetFirstMatchPos(const AText: String; const ATextStartOffset: integer;
       AStateEntryP: PTextMatePatternStateEntry;
@@ -178,14 +182,16 @@ type
     procedure DoInitRegex(var ARegEx: TRegExpr; const AText: string; AnErrKey: String);
   public
     procedure InitRegEx; virtual;
-    procedure InitStates(const AGrammar: TTextMateGrammar; var AStates: TTextMatePatternState; const AText: String);
+    procedure InitStates(const AGrammar: TTextMateGrammar; var AStates: TTextMatePatternState; const AText: String); inline;
     procedure GetCurrentTokenInfo(const AStates: TTextMatePatternState;
       const ACheckProc: TCheckAttributeInfoProc;
-      out ATokenKind: integer; out AnAttr: TObject);
+      out ATokenKind: integer; out AnAttr: TObject); inline;
 
     procedure NextToken(var AStates: TTextMatePatternState; const AText: String;
       ACurTokenPos: integer; out ANextTokenPos: integer;
       AnInitInfoOnly: Boolean = False; AnIsCalledAsParent: Boolean = False); virtual;
+    procedure IncRefCount; virtual;
+    procedure DecRefCount; virtual;
   public
     function DebugName: string; virtual;
     function DebugDump(AnIndent: Integer = 2; AnIncludeNested: Boolean = True; APrefix: string = ''): string; virtual;
@@ -226,6 +232,8 @@ type
       ACurTokenPos: integer; out ANextTokenPos: integer;
       AnInitInfoOnly: Boolean = False; AnIsCalledAsParent: Boolean = False); override;
 
+    procedure IncRefCount; override;
+    procedure DecRefCount; override;
   public
     function DebugDump(AnIndent: Integer = 2; AnIncludeNested: Boolean = True; APrefix: string = ''): string; override;
   end;
@@ -312,6 +320,9 @@ type
   TTextMatePatternBeginEnd = class(TTextMatePatternBaseNested)
   private
     FRegExMatchBegin, FRegExMatchEnd: TRegExpr;
+    FEndHasBackRef: Boolean;
+    FEndForwarders: array of TTextMatePatternForwarderNewEnd;
+    FEndForwarderCnt: integer;
     FRecursiveFirstMatchPos: integer;
     MatchBegin, MatchEnd: String;
     ContentName: String;
@@ -393,6 +404,7 @@ type
       AStateEntryP: PTextMatePatternStateEntry;
       out APattern: TTextMatePattern; out AFoundStartPos: integer;
       AMatchMustStartBefore: integer = 0): Boolean; override;
+    procedure CopyPatterns(const ASrc: TTextMatePatternArray);
   public
     procedure NextToken(var AStates: TTextMatePatternState;
       const AText: String; ACurTokenPos: integer; out ANextTokenPos: integer;
@@ -401,6 +413,26 @@ type
 
     function DebugDump(AnIndent: Integer = 2; AnIncludeNested: Boolean = True; APrefix: string = ''): string; override;
   end;
+
+  { TTextMatePatternForwarderNewEnd }
+
+  TTextMatePatternForwarderNewEnd = class(TTextMatePatternForwarder)
+  private
+    FRegExMatchEnd: TRegExpr;
+  protected
+    function GetFirstMatchPos(const AText: String;
+      const ATextStartOffset: integer;
+      AStateEntryP: PTextMatePatternStateEntry; out APattern: TTextMatePattern;
+      out AFoundStartPos: integer; AMatchMustStartBefore: integer = 0
+      ): Boolean; override;
+  public
+    destructor Destroy; override;
+    procedure NextToken(var AStates: TTextMatePatternState;
+      const AText: String; ACurTokenPos: integer; out ANextTokenPos: integer;
+      AnInitInfoOnly: Boolean = False; AnIsCalledAsParent: Boolean = False);
+      override;
+  end;
+
 
   { TTextMateGrammar }
 
@@ -428,7 +460,7 @@ type
 
 
     procedure ClearAttributeInfo(var AnAttribInfo: TSynAttributeInfo);
-    function  CreatePatternObject(AClass: TTextMatePatternClass): TTextMatePattern;
+    function  CreatePatternObject(AClass: TTextMatePatternClass; InitRefCnt: Integer = 1): TTextMatePattern;
     procedure DoOtherGrammarFreed(Sender: TObject);
 
     function  GetJson(AGrammarDef: String): TJSONObject;
@@ -703,9 +735,7 @@ begin
     Cur2 := Cur.GetForwardTarget;
 
     NewFwrd := TTextMatePatternForwarder(AGrammar.CreatePatternObject(TTextMatePatternForwarder));
-    SetLength(NewFwrd.Patterns, Length(Cur2.Patterns));
-    for j := 0 to Length(NewFwrd.Patterns) - 1 do
-      NewFwrd.Patterns[j] := Cur2.Patterns[j];
+    NewFwrd.CopyPatterns(Cur2.Patterns);
 
     NewFwrd.FParent := Par;
     NewFwrd.FForwardTo := Cur2;
@@ -719,10 +749,14 @@ begin
 end;
 
 procedure TTextMatePatternState.InitForDepth(ANewDepth: integer);
+var
+  i: Integer;
 begin
   if (Length(StateList) < ANewDepth) or (Length(StateList) > ANewDepth + 256) then
     SetLength(StateList, ANewDepth + 16);
   StateIdx := ANewDepth - 1; // for the top caller
+  for i := 0 to ANewDepth - 1 do
+    StateList[i].Grammar := Grammar;
 end;
 
 procedure TTextMatePatternState.Add(const AMatchInfo: TTextMateMatchInfo;
@@ -743,6 +777,7 @@ begin
   StateList[StateIdx].CurrentTokenAttribInfo.TokObject := nil;
   StateList[StateIdx].Flags := AFlags;
   StateList[StateIdx].ClearCache;
+  StateList[StateIdx].Grammar := Grammar;
   AMatchInfo.Pattern.InitStateAfterAdded(@StateList[StateIdx]);
 end;
 
@@ -804,6 +839,17 @@ procedure TTextMatePattern.NextToken(var AStates: TTextMatePatternState;
 begin
   ANextTokenPos := Length(AText);
   assert(False, 'TTextMatePattern.NextToken: False');
+end;
+
+procedure TTextMatePattern.IncRefCount;
+begin
+  inc(FRefCount);
+end;
+
+procedure TTextMatePattern.DecRefCount;
+begin
+  if FRefCount > 0 then
+    dec(FRefCount);
 end;
 
 function TTextMatePattern.DebugName: string;
@@ -940,6 +986,7 @@ begin
   FName       := AnOther.FName;
   FDebugName  := AnOther.FDebugName;
   FAttribInfo := AnOther.FAttribInfo;
+  FAttribInfo.TokId := FAttribInfo.TokId + AnIndexOffset;
 end;
 
 procedure TTextMatePattern.DoInitRegex(var ARegEx: TRegExpr;
@@ -1018,7 +1065,7 @@ begin
     AMatchInfo.Pattern := FndPattern;
     AMatchInfo.Index := i;
 
-    if AMatchInfo.Start = 1 then
+    if AMatchInfo.Start = ATextStartOffset then
       Break;
   end;
   FRecurseMatchPos := OldRecurseMatchPos;
@@ -1053,11 +1100,12 @@ var
 
   procedure InsertInto(ASrcList: TTextMatePatternArray);
   var
-    i, j: Integer;
+    i, j, l: Integer;
     PNest: TTextMatePatternNested;
     PIncl: TTextMatePatternInclude;
-    Src: TTextMatePattern;
-    k: String;
+    Src, SrcFwd, Tmp: TTextMatePattern;
+    k, pt1, pt2: String;
+    dbl: Boolean;
   begin
     SetLength(NewPtnList, Length(NewPtnList) + Length(ASrcList) - 1);
     for i := 0 to Length(ASrcList) - 1 do begin
@@ -1112,8 +1160,34 @@ var
       end
       else
       if Src <> nil then begin
-        NewPtnList[NewPtnIdx] := Src;
-        inc(NewPtnIdx);
+        l := NewPtnIdx - 1;
+        dbl := False;
+        if Src is TTextMatePatternBaseNested then
+          SrcFwd := Src.ForwardTarget
+        else
+          SrcFwd := Src;
+        pt1:= '';
+        if (SrcFwd is TTextMatePatternBeginEnd)   then pt1 := TTextMatePatternBeginEnd(SrcFwd).MatchBegin
+        else if (SrcFwd is TTextMatePatternMatch) then pt1 := TTextMatePatternMatch(SrcFwd).Match;
+
+        while l >= 0 do begin
+          Tmp := NewPtnList[l];
+          if Tmp is TTextMatePatternBaseNested then
+            Tmp := Tmp.ForwardTarget;
+          pt2:= '';
+          if (Tmp is TTextMatePatternBeginEnd)   then pt2 := TTextMatePatternBeginEnd(Tmp).MatchBegin
+          else if (Tmp is TTextMatePatternMatch) then pt2 := TTextMatePatternMatch(Tmp).Match;
+
+          dbl := (Tmp = SrcFwd) or
+                 ( (pt1 <> '') and (pt1=pt2) );
+          if dbl then
+            break;
+          dec(l);
+        end;
+        if not dbl then begin
+          NewPtnList[NewPtnIdx] := Src;
+          inc(NewPtnIdx);
+        end;
       end;
     end;
   end;
@@ -1202,6 +1276,20 @@ begin
   {$IFDEF TMATE_MATCHING}
   finally debuglnExit(['< '+ClassName+'.NextToken  << ',ANextTokenPos  ]); end;
   {$ENDIF}
+end;
+
+procedure TTextMatePatternBaseNested.IncRefCount;
+begin
+  inherited IncRefCount;
+  if FParent <> nil then
+    FParent.IncRefCount;
+end;
+
+procedure TTextMatePatternBaseNested.DecRefCount;
+begin
+  inherited DecRefCount;
+  if FParent <> nil then
+    FParent.DecRefCount;
 end;
 
 function TTextMatePatternBaseNested.DebugDump(AnIndent: Integer;
@@ -1480,6 +1568,10 @@ function TTextMatePatternBeginEnd.GetFirstMatchPos(const AText: String;
   AMatchMustStartBefore: integer): Boolean;
 var
   AMatchInfo: TTextMateMatchInfo;
+  NewFwrd: TTextMatePatternForwarderNewEnd;
+  i, j: Integer;
+  t: String;
+  EndPattern: TRegExpr;
 begin
   if ATextStartOffset = FRecursiveFirstMatchPos then
     exit(False);
@@ -1488,18 +1580,57 @@ begin
   Result := FRegExMatchBegin.ExecPos(ATextStartOffset, AMatchMustStartBefore);
   if Result then begin
     AFoundStartPos := FRegExMatchBegin.MatchPos[0];
-    APattern := Self;
+
+    if FEndHasBackRef then begin;
+      t := MatchEnd;
+      for i := 1 to FRegExMatchBegin.SubExprMatchCount do
+        t := ReplaceRegExpr('(?<!(?:^|[^\\])\\(?:\\\\)*)(\\'+IntToStr(i)+')', t, '(?:'+QuoteRegExprMetaChars(FRegExMatchBegin.Match[i])+')');
+      i := FEndForwarderCnt - 1;
+      j := -1;
+      while i >= 0 do begin
+        if t = FEndForwarders[i].FRegExMatchEnd.Expression then
+          break;
+        if FEndForwarders[i].FRefCount = 0 then
+          j := i;
+        dec(i);
+      end;
+      if i >= 0 then
+        NewFwrd := FEndForwarders[i]
+      else
+      if j >= 0 then
+        NewFwrd := FEndForwarders[j]
+      else
+      begin
+        NewFwrd := TTextMatePatternForwarderNewEnd(AStateEntryP^.Grammar.CreatePatternObject(TTextMatePatternForwarderNewEnd, 0));
+        NewFwrd.DoInitRegex(NewFwrd.FRegExMatchEnd,   t, 'matchEnd');
+        NewFwrd.FForwardTo := Self;
+        NewFwrd.CopyPatterns(Self.Patterns);
+        if FEndForwarderCnt >= Length(FEndForwarders) then
+          SetLength(FEndForwarders, FEndForwarderCnt+16);
+        FEndForwarders[FEndForwarderCnt] := NewFwrd;
+        inc(FEndForwarderCnt);
+      end;
+
+      EndPattern := NewFwrd.FRegExMatchEnd;
+      APattern := NewFwrd;
+    end
+    else
+    begin
+      APattern := Self;
+      EndPattern := FRegExMatchEnd;
+    end;
+
     // check for zero length
     if FRegExMatchBegin.MatchLen[0] <= 0 then begin
-      FRegExMatchEnd.SetInputSubString(AText, AStateEntryP^.SubTextBeginPos, AStateEntryP^.SubTextLen);
-      if FRegExMatchEnd.ExecPos(ATextStartOffset) and
-         (FRegExMatchEnd.MatchPos[0] = ATextStartOffset) and (FRegExMatchEnd.MatchLen[0] <=0)
+      EndPattern.SetInputSubString(AText, AStateEntryP^.SubTextBeginPos, AStateEntryP^.SubTextLen);
+      if EndPattern.ExecPos(AFoundStartPos, AFoundStartPos+1) and
+         (EndPattern.MatchPos[0] = AFoundStartPos) and (EndPattern.MatchLen[0] <=0)
       then begin
         if EndPatternLast then begin
-          FRecursiveFirstMatchPos := ATextStartOffset;
+          FRecursiveFirstMatchPos := AFoundStartPos;
           try
-            if TTextMatePatternBaseNested(AStateEntryP^.Pattern).FindPatternForNextMatchPos(AText, ATextStartOffset, AStateEntryP, AMatchInfo) and
-               (AMatchInfo.Start = ATextStartOffset)
+            if TTextMatePatternBaseNested(AStateEntryP^.Pattern).FindPatternForNextMatchPos(AText, AFoundStartPos, AStateEntryP, AMatchInfo, AFoundStartPos + 1) and
+               (AMatchInfo.Start = AFoundStartPos)
             then
               Result := False;
           finally
@@ -1514,7 +1645,11 @@ begin
 end;
 
 destructor TTextMatePatternBeginEnd.Destroy;
+var
+  i: Integer;
 begin
+  for i := 0 to FEndForwarderCnt - 1 do
+    FEndForwarders[i].FForwardTo := nil;
   FreeAndNil(FRegExMatchBegin);
   FreeAndNil(FRegExMatchEnd);
   inherited Destroy;
@@ -1522,8 +1657,12 @@ end;
 
 procedure TTextMatePatternBeginEnd.InitRegEx;
 begin
+  FEndHasBackRef := ExecRegExpr('(?<!(?:^|[^\\])\\(?:\\\\)*)\\\d+', MatchEnd);
   DoInitRegex(FRegExMatchBegin, MatchBegin, 'matchBegin');
-  DoInitRegex(FRegExMatchEnd,   MatchEnd, 'matchEnd');
+  if FEndHasBackRef  then
+    DoInitRegex(FRegExMatchEnd,   '.', 'matchEnd')
+  else
+    DoInitRegex(FRegExMatchEnd,   MatchEnd, 'matchEnd');
 end;
 
 procedure TTextMatePatternBeginEnd.NextToken(
@@ -1846,6 +1985,7 @@ begin
   end;
 
 
+  r := False;
   if (not (psfMatchBeginDone in st^.Flags)) then begin
     BodyPos := st^.FoundCaptures[0].Start + st^.FoundCaptures[0].Len;
     if (ACurTokenPos < BodyPos) then begin
@@ -1954,6 +2094,16 @@ begin
     APattern := Self;
 end;
 
+procedure TTextMatePatternForwarder.CopyPatterns(
+  const ASrc: TTextMatePatternArray);
+var
+  j: Integer;
+begin
+  SetLength(Patterns, Length(ASrc));
+  for j := 0 to Length(Patterns) - 1 do
+    Patterns[j] := ASrc[j];
+end;
+
 procedure TTextMatePatternForwarder.CopyFrom(AnOther: TTextMatePattern;
   AnIndexOffset: Integer; ANewList: TTextMatePatternList);
 var
@@ -1988,6 +2138,60 @@ begin
       Result := Result + Patterns[i].DebugDump(AnIndent + 2, AnIncludeNested, APrefix);
 end;
 
+{ TTextMatePatternForwarderNewEnd }
+
+function TTextMatePatternForwarderNewEnd.GetFirstMatchPos(const AText: String;
+  const ATextStartOffset: integer; AStateEntryP: PTextMatePatternStateEntry;
+  out APattern: TTextMatePattern; out AFoundStartPos: integer;
+  AMatchMustStartBefore: integer): Boolean;
+var
+  Tmp: TRegExpr;
+begin
+  Tmp := TTextMatePatternBeginEnd(FForwardTo).FRegExMatchEnd;
+  TTextMatePatternBeginEnd(FForwardTo).FRegExMatchEnd := FRegExMatchEnd;
+  Result := inherited GetFirstMatchPos(AText, ATextStartOffset, AStateEntryP,
+    APattern, AFoundStartPos, AMatchMustStartBefore);
+  TTextMatePatternBeginEnd(FForwardTo).FRegExMatchEnd := Tmp;
+end;
+
+destructor TTextMatePatternForwarderNewEnd.Destroy;
+var
+  be: TTextMatePatternBeginEnd;
+  i: Integer;
+begin
+  be := TTextMatePatternBeginEnd(FForwardTo);
+  if be <> nil then begin
+    i := be.FEndForwarderCnt-1;
+    while i >= 0 do begin
+      if be.FEndForwarders[i] = Self then
+        break;
+      dec(i);
+    end;
+    if i >= 0 then begin
+      move(be.FEndForwarders[i+1], be.FEndForwarders[i], i - (be.FEndForwarderCnt - 1)*SizeOf(TTextMatePatternForwarderNewEnd));
+      dec(be.FEndForwarderCnt);
+    end;
+  end;
+  FForwardTo := nil;
+  FRegExMatchEnd.Free;
+
+  inherited Destroy;
+end;
+
+procedure TTextMatePatternForwarderNewEnd.NextToken(
+  var AStates: TTextMatePatternState; const AText: String;
+  ACurTokenPos: integer; out ANextTokenPos: integer; AnInitInfoOnly: Boolean;
+  AnIsCalledAsParent: Boolean);
+var
+  Tmp: TRegExpr;
+begin
+  Tmp := TTextMatePatternBeginEnd(FForwardTo).FRegExMatchEnd;
+  TTextMatePatternBeginEnd(FForwardTo).FRegExMatchEnd := FRegExMatchEnd;
+  inherited NextToken(AStates, AText, ACurTokenPos, ANextTokenPos,
+    AnInitInfoOnly, AnIsCalledAsParent);
+  TTextMatePatternBeginEnd(FForwardTo).FRegExMatchEnd := Tmp;
+end;
+
 { TTextMateGrammar }
 
 procedure TTextMateGrammar.ClearAttributeInfo(
@@ -1997,14 +2201,15 @@ begin
   AnAttribInfo.TokObject := nil;
 end;
 
-function TTextMateGrammar.CreatePatternObject(
-  AClass: TTextMatePatternClass): TTextMatePattern;
+function TTextMateGrammar.CreatePatternObject(AClass: TTextMatePatternClass;
+  InitRefCnt: Integer): TTextMatePattern;
 begin
   if FMainPatternList.Count = FMainPatternList.Capacity then
     FMainPatternList.Capacity := FMainPatternList.Capacity +
     Min(Max(250, FMainPatternList.Capacity shr 2), 8000);
   Result := AClass.Create;
   Result.FMainIndex := FMainPatternList.Add(Result);
+  Result.FRefCount := InitRefCnt;
 end;
 
 procedure TTextMateGrammar.DoOtherGrammarFreed(Sender: TObject);
@@ -2149,7 +2354,7 @@ begin
   for i := 0 to AnOtherGrammar.FMainPatternCount - 1 do
     FMainPatternList[InsPos + i].CopyFrom(AnOtherGrammar.FMainPatternList[i], InsPos, FMainPatternList);
 
-  FPatternRepo.Add(AnIncludeName+'#', AnOtherGrammar.RootPattern);
+  FPatternRepo.Add(AnIncludeName+'#', TTextMatePattern.GetCopyFor(AnOtherGrammar.RootPattern, InsPos, FMainPatternList));
   for i := 0 to AnOtherGrammar.FPatternRepo.Count - 1 do begin
     k := AnOtherGrammar.FPatternRepo.Keys[i];
     if pos('#', k) > 0 then
@@ -2575,6 +2780,7 @@ end;
 procedure TTextMateGrammar.ClearGrammar;
 begin
   FCurrentState.InitForDepth(0);
+  FCurrentState.Grammar := Self;
   FRootPattern := nil;
   FMainPatternList.Clear;
   FMainPatternCount := 0;
@@ -2608,6 +2814,7 @@ begin
     FCurrentPattern := FMainPatternList[AnInitialPatternIndex];
 
   FCurrentState.ClearRecurseData; // the previous state
+  FCurrentState.Grammar := Self;
   FCurrentPattern.InitStates(Self, FCurrentState, AText);
   FCurrentTokenPos := 1;
   FNextTokenPos := 1;

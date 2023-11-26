@@ -14,11 +14,11 @@ uses
   // LCL
   Forms, StdCtrls, Dialogs, Spin,
   // LazUtils
-  LazFileCache, LazFileUtils, LazStringUtils, FileUtil,
+  LazFileCache, LazFileUtils, FileUtil,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, IDEUtils, IDEDialogs,
-  // Pas2Js
-  TestInsightController;
+  IDEOptionsIntf, IDEOptEditorIntf, IDEUtils,
+  // FPCUnit
+  TestInsightController, StrTestCaseOpts;
 
 Type
   { TTestInsightOptionsFrame }
@@ -48,7 +48,7 @@ implementation
 
 function TTestInsightOptionsFrame.GetTitle: String;
 begin
-  Result:='Testinsight';
+  Result := rsTestInsightTitle;
 end;
 
 procedure TTestInsightOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
@@ -58,6 +58,10 @@ begin
   seServerPort.Value:=DefaultPort;
   cbServerBasePath.Items.Add(DefaultBasePath);
   cbServerBasePath.ItemIndex:=0;
+
+  lblServerPort.Caption:=rsServerPort;
+  lblBaseURL.Caption:=rsServerPath;
+  cbAutoFetch.Caption:=rsAutomaticallyFetchTestListOnOpen;
 end;
 
 procedure TTestInsightOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

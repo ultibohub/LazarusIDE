@@ -206,6 +206,12 @@ type
     property ProfileChanged: boolean read fProfileChanged write fProfileChanged;
   end;
 
+  { TLazarusBuildManyDialog }
+
+  TLazarusBuildManyDialog = class(TGenericCheckListForm)
+    // nothing, just ApplyLayout() requires a specific class name
+  end;
+
 function GetMakeIDEConfigFilename: string;
 function GetBackupExeFilename(Filename: string): string;
 
@@ -1457,12 +1463,12 @@ procedure TConfigureBuildLazarusDlg.CompileAdvancedButtonClick(Sender: TObject);
 // mrYes=save and compile
 // mrCancel=do nothing
 var
-  EditForm: TGenericCheckListForm;
+  EditForm: TLazarusBuildManyDialog;
   i, ind: Integer;
 begin
   PrepareClose;
   // Add a button for building all.
-  EditForm:=TGenericCheckListForm.CreateWithActionButton(lisBuild, 'menu_build');
+  EditForm:=TLazarusBuildManyDialog.CreateWithActionButton(lisBuild, 'menu_build');
   try
     EditForm.Caption:=lisLazBuildSelectProfilesToBuild;
     // Copy profile names to checkboxlist and check the previously selected ones.
@@ -1471,6 +1477,7 @@ begin
       if fProfiles.Selected.IndexOf(fProfiles[i].Name)>-1 then
         EditForm.CheckListBox1.Checked[ind]:=True;
     end;
+    IDEDialogLayoutList.ApplyLayout(EditForm);
     // Show the form.
     EditForm.ShowModal;
     if EditForm.ModalResult in [mrOK, mrYes] then begin
@@ -1484,6 +1491,7 @@ begin
     if EditForm.ModalResult=mrYes then
       ModalResult:=mrAll;
   finally
+    IDEDialogLayoutList.SaveLayout(EditForm);
     EditForm.Free;
   end;
 end;
@@ -1557,6 +1565,7 @@ end;
 
 procedure TConfigureBuildLazarusDlg.CleanRadioButtonClick(Sender: TObject);
 begin
+  //
 end;
 
 end.

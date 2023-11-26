@@ -848,7 +848,7 @@ type
 
   { TPCTargetConfigCache
     Storing all information (macros, search paths) of one compiler
-    with one specific TargetOS and TargetCPU. }
+    with one specific TargetOS, TargetCPU, SubTarget, Compiler and CompilerOptions. }
 
   TPCTargetConfigCache = class(TComponent)
   private
@@ -861,6 +861,7 @@ type
     Subtarget: string; // will be passed lowercase
     Compiler: string; // full file name
     CompilerOptions: string; // e.g. -V<version> -Xp<path>
+    WorkingDir: string;
     // values
     Kind: TPascalCompiler;
     CompilerDate: longint;
@@ -933,7 +934,7 @@ type
                   CreateIfNotExists: boolean): TPCTargetConfigCache;
     function Find(CompilerFilename, CompilerOptions, TargetOS, TargetCPU, TargetProcessor: string;
                   CreateIfNotExists: boolean): TPCTargetConfigCache; //Ultibo
-    function Find(CompilerFilename, CompilerOptions, TargetOS, TargetCPU, TargetProcessor, Subtarget: string;
+    function Find(CompilerFilename, CompilerOptions, TargetOS, TargetCPU, TargetProcessor, Subtarget, WorkDir: string;
                   CreateIfNotExists: boolean): TPCTargetConfigCache; //Ultibo
     procedure GetDefaultCompilerTarget(const CompilerFilename,CompilerOptions: string;
                   out TargetOS, TargetCPU: string);
@@ -1002,7 +1003,7 @@ type
 
   { TFPCUnitSetCache
     Unit name to FPC source file.
-    Specific to one compiler, compileroptions, targetos, targetcpu and FPC source directory. }
+    Specific to one compiler, compileroptions, targetos, targetcpu, subtarget and FPC source directory. }
 
   TFPCUnitSetCache = class(TComponent)
   private
@@ -1025,15 +1026,17 @@ type
     fUnitStampOfFPC: integer;   // FConfigCache.ChangeStamp at creation of fUnitToSourceTree
     fUnitStampOfRules: integer; // fSourceRules.ChangeStamp at creation of fUnitToSourceTree
     fUnitToSourceTree: TStringToStringTree; // unit name to file name (maybe relative)
-    procedure SetCompilerFilename(const AValue: string);
+    FWorkingDir: string;
+    procedure ClearConfigCache;
+    procedure ClearSourceCache;
+    procedure SetCompilerFilename(AValue: string);
     procedure SetCompilerOptions(const AValue: string);
-    procedure SetFPCSourceDirectory(const AValue: string);
+    procedure SetFPCSourceDirectory(AValue: string);
     procedure SetSubtarget(AValue: string);
     procedure SetTargetCPU(const AValue: string);
     procedure SetTargetOS(const AValue: string);
     procedure SetTargetProcessor(const AValue: string); //Ultibo
-    procedure ClearConfigCache;
-    procedure ClearSourceCache;
+    procedure SetWorkingDir(AValue: string);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
@@ -1043,13 +1046,17 @@ type
     procedure Clear;
     procedure Init;
     property Caches: TCompilerDefinesCache read FCaches;
+
+    // key:
     property CompilerFilename: string read FCompilerFilename write SetCompilerFilename;
     property CompilerOptions: string read FCompilerOptions write SetCompilerOptions;
     property TargetOS: string read FTargetOS write SetTargetOS; // case insensitive, will be passed lowercase
     property TargetCPU: string read FTargetCPU write SetTargetCPU; // case insensitive, will be passed lowercase
     property TargetProcessor: string read FTargetProcessor write SetTargetProcessor; // case insensitive, will be passed lowercase //Ultibo
     property Subtarget: string read FSubtarget write SetSubtarget; // case insensitive, will be passed lowercase
+    property WorkingDir: string read FWorkingDir write SetWorkingDir;
     property FPCSourceDirectory: string read FFPCSourceDirectory write SetFPCSourceDirectory;
+
     function GetConfigCache(AutoUpdate: boolean): TPCTargetConfigCache;
     function GetSourceCache(AutoUpdate: boolean): TFPCSourceCache;
     function GetSourceRules(AutoUpdate: boolean): TFPCSourceRules;
@@ -1106,14 +1113,14 @@ type
                          Options, FPCSrcDir: string;
                          CreateIfNotExists: boolean): TFPCUnitSetCache; //Ultibo
     function FindUnitSet(const CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget,
-                         Options, FPCSrcDir: string;
+                         Options, FPCSrcDir, WorkDir: string;
                          CreateIfNotExists: boolean): TFPCUnitSetCache; //Ultibo
     function FindUnitSetWithID(const UnitSetID: string; out Changed: boolean;
                                CreateIfNotExists: boolean): TFPCUnitSetCache;
     function GetUnitSetID(CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget, Options,
-                          FPCSrcDir: string; ChangeStamp: integer): string; //Ultibo
+                          FPCSrcDir, WorkDir: string; ChangeStamp: integer): string; //Ultibo
     procedure ParseUnitSetID(const ID: string; out CompilerFilename,
-                             TargetOS, TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir: string;
+                             TargetOS, TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir, WorkDir: string;
                              out ChangeStamp: integer); //Ultibo
   end;
 
@@ -1137,6 +1144,8 @@ function GetFPCTargetProcessor(TargetProcessor: string): string; // normalize //
 function GetFPCSubtarget(Subtarget: string): string; // normalize
 function IsPas2jsTargetOS(TargetOS: string): boolean;
 function IsPas2jsTargetCPU(TargetCPU: string): boolean;
+
+function IsCPUX86(TargetCPU: string): boolean;
 
 function IsCTExecutable(AFilename: string; out ErrorMsg: string): boolean; // not thread-safe
 
@@ -1196,7 +1205,8 @@ function RunFPCVerbose(const CompilerFilename, TestFilename: string;
                        out IncludePaths: TStrings;
                        out UnitScopes: TStrings; // unit scopes/namespaces
                        out Defines, Undefines: TStringToStringTree;
-                       const Options: string = ''): boolean;
+                       const Options: string = '';
+                       const WorkDir: string = ''): boolean;
 procedure GatherUnitsInSearchPaths(SearchUnitPaths, SearchIncludePaths: TStrings;
                     const OnProgress: TDefinePoolProgress;
                     out Units: TStringToStringTree;
@@ -1243,7 +1253,7 @@ type
     fpkValue,
     fpkMultiValue, // e.g. -k
     fpkDefine, // -d and -u options
-    fpkConfig, // @ parameter
+    fpkConfig, // @ parameter, Name='', Value=filename
     fpkNonOption  // e.g. source file
     );
   TFPCParamFlag = (
@@ -1272,6 +1282,8 @@ function IndexOfFPCParamValue(ParsedParams: TObjectList { list of TFPCParamValue
   const Name: string): integer;
 function GetFPCParamValue(ParsedParams: TObjectList { list of TFPCParamValue };
   const Name: string): TFPCParamValue;
+function IndexOfFPCParamWithRelativeFile(ParsedParams: TObjectList): integer;
+function HasFPCParamsRelativeFilename(const CmdLineParams: string): boolean;
 function dbgs(k: TFPCParamKind): string; overload;
 function dbgs(f: TFPCParamFlag): string; overload;
 function dbgs(const Flags: TFPCParamFlags): string; overload;
@@ -1533,6 +1545,8 @@ begin
       DbgOut(['Hint: (lazarus) [RunTool] "',Filename,'"']);
       for i:=0 to Params.Count-1 do
         dbgout(' "',Params[i],'"');
+      if WorkingDirectory<>'' then
+        DbgOut([', WorkDir="',WorkingDirectory,'"']);
       Debugln;
     end;
     TheProcess := TProcessUTF8.Create(nil);
@@ -1913,11 +1927,11 @@ end;
 function RunFPCVerbose(const CompilerFilename, TestFilename: string; out
   ConfigFiles: TStrings; out RealCompilerFilename: string; out
   UnitPaths: TStrings; out IncludePaths: TStrings; out UnitScopes: TStrings;
-  out Defines, Undefines: TStringToStringTree; const Options: string): boolean;
+  out Defines, Undefines: TStringToStringTree; const Options: string;
+  const WorkDir: string): boolean;
 var
   Params: TStringList;
   Filename: String;
-  WorkDir: String;
   List: TStringList;
   fs: TFileStream;
 begin
@@ -1930,25 +1944,26 @@ begin
   Defines:=nil;
   Undefines:=nil;
 
-  Params:=TStringList.Create;
+  Filename:='';
   List:=nil;
+  Params:=TStringList.Create;
   try
     Params.Add('-va');
 
     if TestFilename<>'' then begin
+      Filename:=TestFilename;
+      if (not FilenameIsAbsolute(Filename)) and FilenameIsAbsolute(WorkDir) then
+        Filename:=ResolveDots(AppendPathDelim(WorkDir)+Filename);
       // create empty file
       try
-        fs:=TFileStream.Create(TestFilename,fmCreate);
+        fs:=TFileStream.Create(Filename,fmCreate);
         fs.Free;
       except
-        debugln(['Warning: [RunFPCVerbose] unable to create test file "'+TestFilename+'"']);
+        debugln(['Warning: [RunFPCVerbose] unable to create test file "'+Filename+'"']);
         exit;
       end;
-      Filename:=ExtractFileName(TestFilename);
-      WorkDir:=ExtractFilePath(TestFilename);
       Params.Add(Filename);
-    end else
-      WorkDir:='';
+    end;
 
     SplitCmdLineParams(Options,Params);
 
@@ -1963,8 +1978,8 @@ begin
   finally
     Params.Free;
     List.Free;
-    if TestFilename<>'' then
-      DeleteFileUTF8(TestFilename);
+    if Filename<>'' then
+      DeleteFileUTF8(Filename);
   end;
 end;
 
@@ -3399,6 +3414,44 @@ begin
     Result:=TFPCParamValue(ParsedParams[i]);
 end;
 
+function IndexOfFPCParamWithRelativeFile(ParsedParams: TObjectList): integer;
+
+  function IsRelativeFile(const Param: string): boolean;
+  begin
+    Result:=(Param<>'') and not FilenameIsAbsolute(Param);
+  end;
+
+var
+  Param: TFPCParamValue;
+  i: Integer;
+begin
+  Result:=-1;
+  if ParsedParams=nil then exit;
+  for i:=0 to ParsedParams.Count-1 do begin
+    Param:=TFPCParamValue(ParsedParams[i]);
+    case Param.Kind of
+      fpkConfig:
+        exit(i); // a custom config has potentially a relative filename
+      fpkNonOption:
+        if IsRelativeFile(Param.Value) then
+          exit(i);
+    end;
+  end;
+end;
+
+function HasFPCParamsRelativeFilename(const CmdLineParams: string): boolean;
+var
+  ParsedParams: TObjectList;
+begin
+  ParsedParams:=TObjectList.Create(true);
+  try
+    ParseFPCParameter(CmdLineParams,ParsedParams);
+    Result:=IndexOfFPCParamWithRelativeFile(ParsedParams)>=0;
+  finally
+    ParsedParams.Free;
+  end;
+end;
+
 function dbgs(k: TFPCParamKind): string;
 begin
   str(k,Result);
@@ -3626,6 +3679,8 @@ begin
   Result:=CompareFilenames(Item1.Compiler,Item2.Compiler);
   if Result<>0 then exit;
   Result:=CompareFilenames(Item1.CompilerOptions,Item2.CompilerOptions);
+  if Result<>0 then exit;
+  Result:=CompareFilenames(Item1.WorkingDir,Item2.WorkingDir);
 end;
 
 function CompareFPCSourceCacheItems(CacheItem1, CacheItem2: Pointer): integer;
@@ -4009,6 +4064,12 @@ end;
 function IsPas2jsTargetCPU(TargetCPU: string): boolean;
 begin
   Result:=PosI('ecmascript',TargetCPU)>0;
+end;
+
+function IsCPUX86(TargetCPU: string): boolean;
+begin
+  TargetCPU:=GetFPCTargetCPU(TargetCPU);
+  Result:=(TargetCPU='i8086') or (TargetCPU='i386') or (TargetCPU='x86_64');
 end;
 
 function IsCTExecutable(AFilename: string; out ErrorMsg: string): boolean;
@@ -6457,7 +6518,7 @@ begin
       Params.Add('-va');
       if (PosI('pas2js',ExtractFileName(CompilerPath))<1)
           and FileExistsCached(EnglishErrorMsgFilename) then
-          Params.Add('-Fr'+EnglishErrorMsgFilename);
+        Params.Add('-Fr'+EnglishErrorMsgFilename);
       if CompilerOptions<>'' then
         SplitCmdLineParams(CompilerOptions,Params,true);
       Params.Add(TestPascalFile);
@@ -9810,6 +9871,7 @@ begin
       or (not SameText(Subtarget,Item.Subtarget))
       or (Compiler<>Item.Compiler)
       or (CompilerOptions<>Item.CompilerOptions)
+      or (WorkingDir<>Item.WorkingDir)
     then
       exit;
   end;
@@ -9907,6 +9969,7 @@ begin
     Subtarget:=Item.Subtarget;
     Compiler:=Item.Compiler;
     CompilerOptions:=Item.CompilerOptions;
+    WorkingDir:=Item.WorkingDir;
     // values
     Kind:=Item.Kind;
     CompilerDate:=Item.CompilerDate;
@@ -10061,6 +10124,7 @@ begin
   Compiler:=XMLConfig.GetValue(Path+'Compiler/File','');
   CompilerOptions:=XMLConfig.GetValue(Path+'Compiler/Options','');
   CompilerDate:=XMLConfig.GetValue(Path+'Compiler/Date',0);
+  WorkingDir:=XMLConfig.GetValue(Path+'WorkingDir','');
   RealCompiler:=XMLConfig.GetValue(Path+'RealCompiler/File','');
   RealCompilerDate:=XMLConfig.GetValue(Path+'RealCompiler/Date',0);
   RealTargetOS:=XMLConfig.GetValue(Path+'RealCompiler/OS','');
@@ -10248,6 +10312,7 @@ begin
   XMLConfig.SetDeleteValue(Path+'Compiler/File',Compiler,'');
   XMLConfig.SetDeleteValue(Path+'Compiler/Options',CompilerOptions,'');
   XMLConfig.SetDeleteValue(Path+'Compiler/Date',CompilerDate,0);
+  XMLConfig.SetDeleteValue(Path+'WorkingDir',WorkingDir,'');
   XMLConfig.SetDeleteValue(Path+'RealCompiler/File',RealCompiler,'');
   XMLConfig.SetDeleteValue(Path+'RealCompiler/Date',RealCompilerDate,0);
   XMLConfig.SetDeleteValue(Path+'RealCompiler/OS',RealTargetOS,'');
@@ -10363,7 +10428,7 @@ function TPCTargetConfigCache.NeedsUpdate: boolean;
   procedure DebugMissing(const Msg: string);
   begin
     if CTConsoleVerbosity>0 then
-      debugln(['Hint: [TPCTargetConfigCache.NeedsUpdate] TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" Subtarget="',Subtarget,'" Options="',CompilerOptions,'" ',Msg]);
+      debugln(['Hint: [TPCTargetConfigCache.NeedsUpdate] TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" Subtarget="',Subtarget,'" WorkDir="',WorkingDir,'" Options="',CompilerOptions,'" ',Msg]);
   end;
 
 var
@@ -10458,7 +10523,7 @@ var
   Infos: TFPCInfoStrings;
   InfoTypes: TFPCInfoTypes;
   BaseDir: String;
-  FullFilename, KindErrorMsg: String;
+  FullFilename, KindErrorMsg, CurWorkDir: String;
 begin
   OldOptions:=TPCTargetConfigCache.Create(nil);
   CfgFiles:=nil;
@@ -10468,11 +10533,11 @@ begin
     Clear;
 
     if CTConsoleVerbosity>0 then
-      debugln(['Hint: [TPCTargetConfigCache.Update] ',Compiler,' TargetOS=',TargetOS,' TargetCPU=',TargetCPU,' Subtarget=',Subtarget,' CompilerOptions=',CompilerOptions,' ExtraOptions=',ExtraOptions,' PATH=',GetEnvironmentVariableUTF8('PATH')]);
+      debugln(['Hint: [TPCTargetConfigCache.Update] ',Compiler,' TargetOS=',TargetOS,' TargetCPU=',TargetCPU,' Subtarget=',Subtarget,' WorkDir="',WorkingDir,'" CompilerOptions="',CompilerOptions,'" ExtraOptions="',ExtraOptions,'" PATH=',GetEnvironmentVariableUTF8('PATH')]);
     CompilerDate:=-1;
     if FileExistsCached(Compiler) then begin
       CompilerDate:=FileAgeCached(Compiler);
-      ExtraOptions:=GetFPCInfoCmdLineOptions(ExtraOptions);// add -TTargetOS -PTargetCPU -CpTargetProcessor -tSubtarget //Ultibo
+      ExtraOptions:=GetFPCInfoCmdLineOptions(ExtraOptions);// add -TTargetOS -PTargetCPU -CpTargetProcessor -tSubtarget and CompilerOptions //Ultibo
       BaseDir:='';
 
       // check if this is a FPC compatible compiler and get version, OS and CPU
@@ -10500,8 +10565,14 @@ begin
 
         if (Pos('-Fr',ExtraOptions)<1) and (Pos('-Fr',Caches.ExtraOptions)>0) then
           ExtraOptions:=Trim(ExtraOptions+' '+Caches.ExtraOptions);
+        if FilenameIsAbsolute(WorkingDir) then
+          CurWorkDir:=WorkingDir
+        else
+          CurWorkDir:=ExtractFilePath(TestFilename);
+
+        //debugln('TPCTargetConfigCache.Update ExtraOptions="',ExtraOptions,'" CurWorkDir="',CurWorkDir,'" WorkingDir="',WorkingDir,'" TestFilename="',TestFilename,'"');
         RunFPCVerbose(Compiler,TestFilename,CfgFiles,RealCompiler,UnitPaths,
-                      IncludePaths,UnitScopes,Defines,Undefines,ExtraOptions);
+                      IncludePaths,UnitScopes,Defines,Undefines,ExtraOptions,CurWorkDir);
         //debugln(['TPCTargetConfigCache.Update UnitPaths="',UnitPaths.Text,'"']);
         //debugln(['TPCTargetConfigCache.Update UnitScopes="',UnitScopes.Text,'"']);
         //debugln(['TPCTargetConfigCache.Update IncludePaths="',IncludePaths.Text,'"']);
@@ -10850,11 +10921,11 @@ function TPCTargetConfigCaches.Find(CompilerFilename, CompilerOptions,
   TargetOS, TargetCPU, TargetProcessor: string; CreateIfNotExists: boolean
   ): TPCTargetConfigCache; //Ultibo
 begin
-  Result:=Find(CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,'',CreateIfNotExists);
+  Result:=Find(CompilerFilename,CompilerOptions,TargetOS,TargetCPU,TargetProcessor,'','',CreateIfNotExists);
 end;
 
 function TPCTargetConfigCaches.Find(CompilerFilename, CompilerOptions,
-  TargetOS, TargetCPU, TargetProcessor, Subtarget: string; CreateIfNotExists: boolean
+  TargetOS, TargetCPU, TargetProcessor, Subtarget, WorkDir: string; CreateIfNotExists: boolean
   ): TPCTargetConfigCache; //Ultibo
 var
   Node: TAVLTreeNode;
@@ -10868,6 +10939,7 @@ begin
     Cmp.TargetCPU:=TargetCPU;
     Cmp.TargetProcessor:=TargetProcessor; //Ultibo
     Cmp.Subtarget:=Subtarget;
+    Cmp.WorkingDir:=WorkDir;
     Node:=fItems.Find(cmp);
     if Node<>nil then begin
       Result:=TPCTargetConfigCache(Node.Data);
@@ -11526,12 +11598,12 @@ function TCompilerDefinesCache.FindUnitSet(const CompilerFilename, TargetOS,
   TargetCPU, TargetProcessor, Options, FPCSrcDir: string; CreateIfNotExists: boolean
   ): TFPCUnitSetCache; //Ultibo
 begin
-  Result:=FindUnitSet(CompilerFilename,TargetOS,TargetCPU,TargetProcessor,'',Options,FPCSrcDir,CreateIfNotExists);
+  Result:=FindUnitSet(CompilerFilename,TargetOS,TargetCPU,TargetProcessor,'',Options,FPCSrcDir,'',CreateIfNotExists);
 end;
 
 function TCompilerDefinesCache.FindUnitSet(const CompilerFilename, TargetOS,
-  TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir: string; CreateIfNotExists: boolean
-  ): TFPCUnitSetCache; //Ultibo
+  TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir, WorkDir: string;
+  CreateIfNotExists: boolean): TFPCUnitSetCache; //Ultibo
 var
   i: Integer;
 begin
@@ -11543,6 +11615,7 @@ begin
     and (SysUtils.CompareText(Result.TargetProcessor,TargetProcessor)=0) //Ultibo
     and (SysUtils.CompareText(Result.Subtarget,Subtarget)=0)
     and (CompareFilenames(Result.FPCSourceDirectory,FPCSrcDir)=0)
+    and (CompareFilenames(Result.WorkingDir,WorkDir)=0)
     and (Result.CompilerOptions=Options)
     then
       exit;
@@ -11556,6 +11629,7 @@ begin
     Result.TargetProcessor:=TargetProcessor; //Ultibo
     Result.Subtarget:=Subtarget;
     Result.FPCSourceDirectory:=FPCSrcDir;
+    Result.WorkingDir:=WorkDir;
     fUnitToSrcCaches.Add(Result);
   end else
     Result:=nil;
@@ -11564,26 +11638,28 @@ end;
 function TCompilerDefinesCache.FindUnitSetWithID(const UnitSetID: string; out
   Changed: boolean; CreateIfNotExists: boolean): TFPCUnitSetCache;
 var
-  CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir: string; //Ultibo
+  CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir, //Ultibo
+    WorkDir: string;
   ChangeStamp: integer;
 begin
   ParseUnitSetID(UnitSetID,CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget,
-                 Options, FPCSrcDir, ChangeStamp); //Ultibo
+                 Options, FPCSrcDir, WorkDir, ChangeStamp); //Ultibo
   //debugln(['TCompilerDefinesCache.FindUnitToSrcCache UnitSetID="',dbgstr(UnitSetID),'" CompilerFilename="',CompilerFilename,'" TargetOS="',TargetOS,'" TargetCPU="',TargetCPU,'" Options="',Options,'" FPCSrcDir="',FPCSrcDir,'" ChangeStamp=',ChangeStamp,' exists=',FindUnitToSrcCache(CompilerFilename, TargetOS, TargetCPU,Options, FPCSrcDir,false)<>nil]);
   Result:=FindUnitSet(CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget,
-                             Options, FPCSrcDir, false); //Ultibo
+                             Options, FPCSrcDir, WorkDir, false); //Ultibo
   if Result<>nil then begin
     Changed:=ChangeStamp<>Result.ChangeStamp;
   end else if CreateIfNotExists then begin
     Changed:=true;
     Result:=FindUnitSet(CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget,
-                               Options, FPCSrcDir, true); //Ultibo
+                               Options, FPCSrcDir, WorkDir, true); //Ultibo
   end else
     Changed:=false;
 end;
 
 function TCompilerDefinesCache.GetUnitSetID(CompilerFilename, TargetOS,
-  TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir: string; ChangeStamp: integer): string; //Ultibo
+  TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir, WorkDir: string; //Ultibo
+  ChangeStamp: integer): string;
 
   procedure Add(const aName, aValue: string);
   begin
@@ -11600,12 +11676,13 @@ begin
   Add('Subtarget',Subtarget);
   Add('Options',Options);
   Add('FPCSrcDir',FPCSrcDir);
+  Add('WorkDir',WorkDir);
   Add('Stamp',IntToStr(ChangeStamp));
 end;
 
 procedure TCompilerDefinesCache.ParseUnitSetID(const ID: string;
-  out CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir: string;
-  out ChangeStamp: integer); //Ultibo
+  out CompilerFilename, TargetOS, TargetCPU, TargetProcessor, Subtarget, Options, FPCSrcDir,
+  WorkDir: string; out ChangeStamp: integer); //Ultibo
 var
   NameStartPos: PChar;
 
@@ -11633,6 +11710,7 @@ begin
   Subtarget:='';
   Options:='';
   FPCSrcDir:='';
+  WorkDir:='';
   ChangeStamp:=0;
   if ID='' then exit;
   // read the lines with name=value
@@ -11669,6 +11747,9 @@ begin
         TargetCPU:=Value
       else if NameFits('TargetProcessor') then //Ultibo
         TargetProcessor:=Value; //Ultibo
+    'w','W':
+      if NameFits('WorkDir') then
+        WorkDir:=Value;
     end;
     NameStartPos:=ValueEndPos;
   end;
@@ -11676,13 +11757,11 @@ end;
 
 { TFPCUnitSetCache }
 
-procedure TFPCUnitSetCache.SetCompilerFilename(const AValue: string);
-var
-  NewFilename: String;
+procedure TFPCUnitSetCache.SetCompilerFilename(AValue: string);
 begin
-  NewFilename:=ResolveDots(AValue);
-  if FCompilerFilename=NewFilename then exit;
-  FCompilerFilename:=NewFilename;
+  AValue:=ResolveDots(AValue);
+  if FCompilerFilename=AValue then exit;
+  FCompilerFilename:=AValue;
   ClearConfigCache;
 end;
 
@@ -11693,13 +11772,11 @@ begin
   ClearConfigCache;
 end;
 
-procedure TFPCUnitSetCache.SetFPCSourceDirectory(const AValue: string);
-var
-  NewValue: String;
+procedure TFPCUnitSetCache.SetFPCSourceDirectory(AValue: string);
 begin
-  NewValue:=TrimAndExpandDirectory(AValue);
-  if FFPCSourceDirectory=NewValue then exit;
-  FFPCSourceDirectory:=NewValue;
+  AValue:=TrimAndExpandDirectory(AValue);
+  if FFPCSourceDirectory=AValue then exit;
+  FFPCSourceDirectory:=AValue;
   ClearSourceCache;
 end;
 
@@ -11741,6 +11818,14 @@ procedure TFPCUnitSetCache.ClearSourceCache;
 begin
   fSourceCache:=nil;
   Include(fFlags,fuscfUnitTreeNeedsUpdate);
+end;
+
+procedure TFPCUnitSetCache.SetWorkingDir(AValue: string);
+begin
+  AValue:=AppendPathDelim(ResolveDots(AValue)); // do not expand! A '' must remain ''
+  if FWorkingDir=AValue then Exit;
+  FWorkingDir:=AValue;
+  ClearConfigCache;
 end;
 
 procedure TFPCUnitSetCache.Notification(AComponent: TComponent;
@@ -11796,12 +11881,12 @@ begin
     raise Exception.Create('TFPCUnitToSrcCache.GetConfigCache missing TestFilename');
   if FConfigCache=nil then begin
     FConfigCache:=Caches.ConfigCaches.Find(CompilerFilename,CompilerOptions,
-                                           TargetOS,TargetCPU,TargetProcessor,true); //Ultibo
+                                           TargetOS,TargetCPU,TargetProcessor,Subtarget,WorkingDir,true); //Ultibo
     FConfigCache.FreeNotification(Self);
   end;
   //debugln(['TFPCUnitSetCache.GetConfigCache CompilerOptions="',CompilerOptions,'" FConfigCache.CompilerOptions="',FConfigCache.CompilerOptions,'"']);
   if AutoUpdate and FConfigCache.NeedsUpdate then
-    FConfigCache.Update(Caches.TestFilename,Caches.ExtraOptions);
+    FConfigCache.Update(Caches.TestFilename,'');
   Result:=FConfigCache;
 end;
 
@@ -11996,7 +12081,7 @@ end;
 function TFPCUnitSetCache.GetUnitSetID: string;
 begin
   Result:=Caches.GetUnitSetID(CompilerFilename,TargetOS,TargetCPU,TargetProcessor,Subtarget,
-                              CompilerOptions,FPCSourceDirectory,ChangeStamp); //Ultibo
+                     CompilerOptions,FPCSourceDirectory,WorkingDir,ChangeStamp); //Ultibo
 end;
 
 function TFPCUnitSetCache.GetFirstFPCCfg: string;

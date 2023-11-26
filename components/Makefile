@@ -1929,6 +1929,7 @@ bigide:
 	$(MAKE) -C turbopower_ipro
 	$(MAKE) -C turbopower_ipro/design
 	$(MAKE) -C fpcunit
+	$(MAKE) -C fpcunit/testinsight
 	$(MAKE) -C fpcunit/ide
 	$(MAKE) -C projecttemplates
 	$(MAKE) -C leakview
@@ -1978,6 +1979,7 @@ clean:
 	$(MAKE) -C turbopower_ipro clean
 	$(MAKE) -C turbopower_ipro/design clean
 	$(MAKE) -C fpcunit clean
+	$(MAKE) -C fpcunit/testinsight clean
 	$(MAKE) -C fpcunit/ide clean
 	$(MAKE) -C projecttemplates clean
 	$(MAKE) -C fpdebug clean
@@ -2036,6 +2038,7 @@ distclean:
 	$(MAKE) -C turbopower_ipro distclean
 	$(MAKE) -C turbopower_ipro/design distclean
 	$(MAKE) -C fpcunit distclean
+	$(MAKE) -C fpcunit/testinsight distclean
 	$(MAKE) -C fpcunit/ide distclean
 	$(MAKE) -C projecttemplates distclean
 	$(MAKE) -C fpdebug distclean

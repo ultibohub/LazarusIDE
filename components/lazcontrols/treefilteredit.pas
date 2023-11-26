@@ -698,20 +698,25 @@ var
 begin
   if fFilteredTreeview = nil then
     exit(false);
-  Key:=Char(VK_RETURN);
   Result:=Assigned(fFilteredTreeview.OnKeyPress);
   if Result then
+  begin
+    Key:=Char(VK_RETURN);
     fFilteredTreeview.OnKeyPress(fFilteredTreeview, Key);
+  end;
 end;
 
 procedure TTreeFilterEdit.EditKeyDown(var Key: Word; Shift: TShiftState);
   //
-  function AllowMultiSelectWithShift: Boolean;
+  function AllowMultiSelectWithShift: Boolean; inline;
   begin
     Result := (ssShift in Shift) and (msShiftSelect in fFilteredTreeview.MultiSelectStyle);
   end;
   //
 begin
+  inherited EditKeyDown(Key, Shift);
+  if Key = 0 then exit;
+
   if fFilteredTreeview <> nil then
   begin
     // current node
@@ -738,9 +743,6 @@ begin
       Key := 0;
     end
   end;
-
-  if Key <> 0 then
-    inherited EditKeyDown(Key, Shift);
 end;
 
 end.

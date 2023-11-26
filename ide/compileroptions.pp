@@ -191,6 +191,7 @@ type
     pcosCompilerPath, // the filename of the compiler
     pcosDebugPath,    // additional debug search path
     pcosMsgFile,       // fpc message file (errore.msg)
+    pcosCustomConfigFilePath, // additional custom config file
     pcosWriteConfigFilePath // auto generated cfg file
     );
   TParsedCompilerOptStrings = set of TParsedCompilerOptString;
@@ -200,7 +201,8 @@ const
   ParsedCompilerSearchPaths = [pcosUnitPath,pcosIncludePath,pcosObjectPath,
                                pcosLibraryPath,pcosSrcPath,pcosDebugPath];
   ParsedCompilerExecutables = [pcosCompilerPath];
-  ParsedCompilerFilenames = ParsedCompilerExecutables+[pcosMsgFile,pcosWriteConfigFilePath];
+  ParsedCompilerFilenames = ParsedCompilerExecutables+[pcosMsgFile,
+                              pcosCustomConfigFilePath,pcosWriteConfigFilePath];
   ParsedCompilerDirectories = [pcosOutputDir];
   ParsedCompilerOutDirectories = [pcosOutputDir];
   ParsedCompilerFiles =
@@ -221,6 +223,7 @@ const
     'CompilerPath',
     'DebugPath',
     'MsgFile',
+    'CustomConfigFile',
     'WriteCfgFile'
     );
   ParsedCompilerOptsUsageVars: array[TParsedCompilerOptString] of string = (
@@ -238,6 +241,7 @@ const
     '', // pcosCompilerPath
     'UsageDebugPath', // pcosDebugPath
     '', // pcosMsgFile
+    '',
     ''  // pcosWriteConfigFilePath
     );
   InheritedToParsedCompilerOption: array[TInheritedCompilerOption] of
@@ -2771,12 +2775,12 @@ begin
 
   { --------------- Parsing Tab ------------------- }
 
-  { Assembler reading style  -Ratt = AT&T    -Rintel = Intel  -Rdirect = direct }
-  case AssemblerStyle of
-    1: Result.Add('-Rintel');
-    2: Result.Add('-Ratt');
-    3: Result.Add('-Rdirect');
-  end;
+  { Assembler reading style  -Ratt = AT&T    -Rintel = Intel  -Rdefault (or no option) = default }
+  if IsCPUX86(CurTargetCPU) then
+    case AssemblerStyle of
+      1: Result.Add('-Rintel');
+      2: Result.Add('-Ratt');
+    end;
 
   // Syntax Options
   GetSyntaxOptions(Kind,Result);
