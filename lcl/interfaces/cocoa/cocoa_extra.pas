@@ -22,8 +22,7 @@ interface
 
 uses
   // rtl+ftl
-  Types, Classes, SysUtils,
-  CGGeometry,
+  Classes, SysUtils,
   // Libs
   MacOSAll, CocoaAll;
 
@@ -48,6 +47,20 @@ const // NSImageScaling values
   NSImageScaleAxesIndependently = 1;
   NSImageScaleNone = 2;
   NSImageScaleProportionallyUpOrDown = 3;
+
+type
+  NSPasteboardType = NSString;
+var
+  NSPasteboardTypeString: NSPasteboardType; cvar; external;
+  NSPasteboardTypePNG: NSPasteboardType; cvar; external;
+  NSPasteboardTypeTIFF: NSPasteboardType; cvar; external;
+  NSPasteboardTypePDF: NSPasteboardType; cvar; external;
+  NSPasteboardTypeHTML: NSPasteboardType; cvar; external;
+  NSPasteboardTypeRTF: NSPasteboardType; cvar; external;
+  NSPasteboardTypeColor: NSPasteboardType; cvar; external;
+  NSPasteboardTypeFont: NSPasteboardType; cvar; external;
+  NSPasteboardTypeRuler: NSPasteboardType; cvar; external;
+  NSPasteboardTypeSound: NSPasteboardType; cvar; external;
 
 type
   NSMenuFix = objccategory external (NSMenu)

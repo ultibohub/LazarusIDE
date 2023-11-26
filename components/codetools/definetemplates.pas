@@ -1124,6 +1124,8 @@ function GetFPCTargetProcessor(TargetProcessor: string): string; // normalize //
 function IsPas2jsTargetOS(TargetOS: string): boolean;
 function IsPas2jsTargetCPU(TargetCPU: string): boolean;
 
+function IsCPUX86(TargetCPU: string): boolean;
+
 function IsCTExecutable(AFilename: string; out ErrorMsg: string): boolean; // not thread-safe
 
 function GuessPascalCompilerFromExeName(Filename: string): TPascalCompiler; // thread-safe
@@ -3988,6 +3990,12 @@ end;
 function IsPas2jsTargetCPU(TargetCPU: string): boolean;
 begin
   Result:=PosI('ecmascript',TargetCPU)>0;
+end;
+
+function IsCPUX86(TargetCPU: string): boolean;
+begin
+  TargetCPU:=GetFPCTargetCPU(TargetCPU);
+  Result:=(TargetCPU='i8086') or (TargetCPU='i386') or (TargetCPU='x86_64');
 end;
 
 function IsCTExecutable(AFilename: string; out ErrorMsg: string): boolean;

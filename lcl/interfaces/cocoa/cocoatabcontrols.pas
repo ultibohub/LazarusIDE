@@ -24,11 +24,9 @@ interface
 
 uses
   // rtl+ftl
-  Types, Classes, SysUtils, Math,
-  CGGeometry,
+  Types, Classes, SysUtils,
   // Libs
-  MacOSAll, CocoaAll, CocoaUtils, //CocoaGDIObjects,
-  cocoa_extra, CocoaPrivate;
+  MacOSAll, CocoaAll, CocoaUtils, CocoaPrivate, CocoaConst;
 
 type
 
@@ -191,9 +189,9 @@ begin
   btn.setButtonType(NSMomentaryLightButton);
 
   if isPrev then
-    btn.setTitle( StrToNSString('◀') )
+    btn.setTitle( NSSTR_TABCONTROL_PREV_ARROW )
   else
-    btn.setTitle( StrToNSString('▶') );
+    btn.setTitle( NSSTR_TABCONTROL_NEXT_ARROW );
 
   {$ifdef BOOLFIX}
   btn.setBordered_(Ord(false));
