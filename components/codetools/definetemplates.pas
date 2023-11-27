@@ -10914,7 +10914,7 @@ end;
 function TPCTargetConfigCaches.Find(CompilerFilename: string;
   CreateIfNotExists: boolean): TPCTargetConfigCache;
 begin
-  Result:=Find(CompilerFilename,'','','','','',CreateIfNotExists);
+  Result:=Find(CompilerFilename,'','','','','','',CreateIfNotExists);
 end;
 
 function TPCTargetConfigCaches.Find(CompilerFilename, CompilerOptions,
