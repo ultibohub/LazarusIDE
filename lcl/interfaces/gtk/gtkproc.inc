@@ -3193,7 +3193,7 @@ var
   XKeyEvent: TXKeyEvent;
   KeySymStart, KeySymNext: PKeySym;
   UpKeySym, LoKeySym: TKeySym;
-  KeySyms: array of TKeySym;
+  KeySyms: array of TKeySym = nil;
 {$else}
   KeySyms: array of guint;
   KeyVals: Pguint;
@@ -3214,7 +3214,7 @@ var
 
   KeyCode: Byte;
   m: Integer;
-  LoKey, HiKey: Integer;
+  LoKey, HiKey, I: Integer;
 
   VKey, FreeVK: Byte;
   HasMultiVK, DummyBool, Extended, SecondKey, HasKey, ComputeVK: Boolean;
@@ -3258,8 +3258,14 @@ begin
     then XFree(KeySymStart);
     Exit;
   end;
-  if KeySymCount > Length(MVKeyInfo[0].KeySym)
-  then DebugLn('[WARNING] keysymcount=%u larger than expected=%u', [KeySymCount, Length(MVKeyInfo[0].KeySym)]);
+  // The code in Accelerate below assumes at least 2 items in the KeySym array
+  if KeySymCount > 2 then begin
+    for I:=Low(MVKeyInfo) to High(MVKeyInfo) do
+      SetLength(MVKeyInfo[I].KeySym, KeySymCount);
+  end else begin
+    for I:=Low(MVKeyInfo) to High(MVKeyInfo) do
+      SetLength(MVKeyInfo[I].KeySym, 2);
+  end;
   SetLength(KeySyms, KeySymCount);
 {$else gtk1}
   LoKey := 0;
@@ -5964,7 +5970,7 @@ begin
     MenuItem:=PGtkMenuItem(ListItem^.Data);
     if GTK_IS_CHECK_MENU_ITEM(PGtkWidget(MenuItem)) then begin
       CheckMenuItem:=MenuItem;
-      CurToggleSize:=OldCheckMenuItemToggleSize;
+      CurToggleSize:=1;
       LCLMenuItem:=TMenuItem(GetLCLObject(MenuItem));
       if LCLMenuItem<>nil then begin
         IconSize:=LCLMenuItem.GetIconSize(0);
@@ -6112,11 +6118,6 @@ var
           {$ELSE}
           bm_show_toggle_indicator;
           {$ENDIF}
-
-      // set our own draw handler
-      if OldCheckMenuItemDrawProc = nil then
-        OldCheckMenuItemDrawProc := CHECK_MENU_ITEM_CLASS(MenuItemWidget)^.draw_indicator;
-      CHECK_MENU_ITEM_CLASS(MenuItemWidget)^.draw_indicator := @DrawMenuItemIcon;
 
       {$IFNDEF Gtk2}
       // add a dummy widget for the icon height

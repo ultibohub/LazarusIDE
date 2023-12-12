@@ -944,6 +944,8 @@ begin
 end;
 
 procedure TListChartSource.UpdateCachesAfterAdd(const AX, AY: Double);
+var
+  i: Integer;
 begin
   if IsUpdating then exit; // Optimization
   if FBasicExtentIsValid then begin
@@ -955,6 +957,8 @@ begin
   FCumulativeExtentIsValid := false;
   FXListExtentIsValid := false;
   FYListExtentIsValid := false;
+  for i := 0 to YCount-1 do
+    FYRangeValid[i] := false;
   Notify;
 end;
 
@@ -975,7 +979,11 @@ begin
   if FXCount < FXCountMin then
     FXCount := FXCountMin;
   if FYCount < FYCountMin then
+  begin
     FYCount := FYCountMin;
+    SetLength(FYRange, FYCount);
+    SetLength(FYRangeValid, FYCount);
+  end;
 end;
 
 procedure TBuiltinListChartSource.CopyFrom(ASource: TCustomChartSource);
@@ -1038,6 +1046,8 @@ begin
   if FOrigin <> nil then begin
     FXCount := Origin.XCount;
     FYCount := Origin.YCount;
+    SetLength(FYRange, FYCount);
+    SetLength(FYRangeValid, FYCount);
     ResetTransformation(Origin.Count);
     if IsSorted and (not HasSameSorting(Origin)) then SortNoNotify;
   end else begin
@@ -1410,7 +1420,7 @@ end;
 procedure TRandomChartSource.SetYCount(AValue: Cardinal);
 begin
   if YCount = AValue then exit;
-  FYCount := AValue;
+  inherited SetYCount(AValue);
   Reset;
 end;
 
@@ -1496,8 +1506,10 @@ end;
 procedure TUserDefinedChartSource.SetYCount(AValue: Cardinal);
 begin
   if FYCount = AValue then exit;
-  FYCount := AValue;
+  inherited SetYCount(AValue);
   SetLength(FItem.YList, Max(YCount - 1, 0));
+  SetLength(FYRange, FYCount);
+  SetLength(FYRangeValid, FYCount);
   Reset;
 end;
 
@@ -1891,8 +1903,9 @@ begin
     end;
   end;
   FYCount := Length(FYOrder);
-
   SetLength(FItem.YList, Max(High(FYOrder), 0));
+  SetLength(FYRange, FYCount);
+  SetLength(FYRangeValid, FYCount);
   Changed(nil);
 end;
 

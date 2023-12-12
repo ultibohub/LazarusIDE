@@ -119,8 +119,6 @@ type
     FSize: TFpDbgValueSize;
     procedure SetAsString(AStartIndex, ALen: Int64; AValue: AnsiString);
   protected
-    procedure SetLastError(ALastError: TFpError);
-
     function GetKind: TDbgSymbolKind; virtual;
     function GetFieldFlags: TFpValueFieldFlags; virtual;
 
@@ -243,6 +241,7 @@ type
     property ParentTypeInfo: TFpSymbol read GetParentTypeInfo; // For members, the class in which this member is declared
 
     property LastError: TFpError read GetLastError;
+    procedure SetLastError(ALastError: TFpError);
     procedure ResetError;
   end;
 
@@ -691,7 +690,7 @@ type
     *)
     function FindSymbolScope(ALocationContext: TFpDbgLocationContext; {%H-}AAddress: TDbgPtr = 0): TFpDbgSymbolScope; virtual;
     function FindProcSymbol(AAddress: TDbgPtr): TFpSymbol; virtual; overload;
-    function FindProcSymbol(const {%H-}AName: String): TFpSymbol; virtual; overload;
+    function FindProcSymbol(const {%H-}AName: String; AIgnoreCase: Boolean = False): TFpSymbol; virtual; overload;
     function FindLineInfo(AAddress: TDbgPtr): TFpSymbol; virtual;
 
     function  FindProcStartEndPC(const AAddress: TDbgPtr; out AStartPC, AEndPC: TDBGPtr): boolean; virtual;
@@ -2116,7 +2115,8 @@ begin
   Result := nil;
 end;
 
-function TDbgInfo.FindProcSymbol(const AName: String): TFpSymbol;
+function TDbgInfo.FindProcSymbol(const AName: String; AIgnoreCase: Boolean
+  ): TFpSymbol;
 begin
   Result := nil;
 end;

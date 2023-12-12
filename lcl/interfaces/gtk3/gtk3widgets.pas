@@ -1288,7 +1288,9 @@ begin
         if TGtk3ComboBox(Data).DroppedDown then
           exit;
       end;
-      TGtk3Widget(Data).GtkEventFocus(Widget, Event);
+      if not (csNoFocus in TCustomForm(TGtk3Widget(Data).LCLObject).ControlStyle) then begin
+        TGtk3Widget(Data).GtkEventFocus(Widget, Event);
+      end;
     end;
   GDK_CONFIGURE:
     begin
@@ -7571,6 +7573,7 @@ begin
     // cannot gtk_widget_realize(Result), because that needs a valid widget parent
     FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtCustomControl]
   end;
+  Result^.set_size_request(Params.Width, Params.Height);
 
   FBox := TGtkVBox.new(GTK_ORIENTATION_VERTICAL, 0);
 

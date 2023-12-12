@@ -814,6 +814,16 @@ begin
     Result := '?';
 end;
 
+procedure ForwardError(ATarget, ASrc: TFpValue); inline;
+begin
+  if (ATarget = nil) or (ASrc = nil) then
+    exit;
+  if not IsError(ATarget.LastError) and
+     IsError(ASrc.LastError)
+  then
+    ATarget.SetLastError(ASrc.LastError);
+end;
+
 procedure TFpPascalExpressionPartList.Clear;
 begin
   assert(False, 'TFpPascalExpressionPartList.Clear: False');
@@ -1368,6 +1378,8 @@ begin
   //  exit(WResult);
 
   Result := FValue.AsString;
+  if IsError(FValue.LastError) then
+    SetLastError(FValue.LastError);
 end;
 
 function TFpPasParserValueAddressOf.GetAsWideString: WideString;
@@ -1385,6 +1397,8 @@ begin
   end;
 
   Result := FValue.AsWideString;
+  if IsError(FValue.LastError) then
+    SetLastError(FValue.LastError);
 end;
 
 constructor TFpPasParserValueAddressOf.Create(AValue: TFpValue;
@@ -1641,7 +1655,7 @@ begin
           end;
           a := TmpVal.DataAddress;
           if IsTargetAddr(a) and IsReadableMem(a) then
-            TFpValueConstChar(TmpVal2).SetAddress(a + Offs-1);
+            TFpValueConstWithType(TmpVal2).SetAddress(a + Offs-1);
         end;
       skWideString: begin
           //TODO: move to FpDwarfValue.member ??
@@ -3820,6 +3834,7 @@ begin
 
   tmp := Items[0].ResultValue;
   if (tmp = nil) or not IsTargetAddr(tmp.Address) then begin
+    SetError(fpErrAnyError, []);
   // seterror / cant take address
     exit;
   end;
@@ -4008,6 +4023,7 @@ begin
   end;
   {$POP}
 
+  ForwardError(Result, tmp1);
 end;
 
 { TFpPascalExpressionPartOperatorPlusMinus }
@@ -4274,6 +4290,8 @@ begin
                   Result := SubtractSets(tmp1, tmp2);
     end;
   end;
+  ForwardError(Result, tmp1);
+  ForwardError(Result, tmp2);
 
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then
    Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
@@ -4383,6 +4401,13 @@ function TFpPascalExpressionPartOperatorMulDiv.DoGetResultValue: TFpValue;
   function NumDivIntByValue(AIntVal, AOtherVal: TFpValue): TFpValue;
   begin
     Result := nil;
+    if (AOtherVal.AsInteger = 0) then begin
+      if (IsError(AOtherVal.LastError)) then
+        Result := TFpValueConstNumber.Create(0) // just for the error
+      else
+        SetError('Division by zero');
+    end
+    else
     case AOtherVal.Kind of
       skInteger:  Result := TFpValueConstNumber.Create(AIntVal.AsInteger div AOtherVal.AsInteger, True);
       skCardinal: Result := TFpValueConstNumber.Create(AIntVal.AsInteger div AOtherVal.AsCardinal, True);
@@ -4392,6 +4417,13 @@ function TFpPascalExpressionPartOperatorMulDiv.DoGetResultValue: TFpValue;
   function NumDivCardinalByValue(ACardinalVal, AOtherVal: TFpValue): TFpValue;
   begin
     Result := nil;
+    if (AOtherVal.AsInteger = 0) then begin
+      if (IsError(AOtherVal.LastError)) then
+        Result := TFpValueConstNumber.Create(0) // just for the error
+      else
+        SetError('Division by zero');
+    end
+    else
     case AOtherVal.Kind of
       skInteger:  Result := TFpValueConstNumber.Create(ACardinalVal.AsCardinal div AOtherVal.AsInteger, True);
       skCardinal: Result := TFpValueConstNumber.Create(ACardinalVal.AsCardinal div AOtherVal.AsCardinal, False);
@@ -4402,6 +4434,13 @@ function TFpPascalExpressionPartOperatorMulDiv.DoGetResultValue: TFpValue;
   function NumModIntByValue(AIntVal, AOtherVal: TFpValue): TFpValue;
   begin
     Result := nil;
+    if (AOtherVal.AsInteger = 0) then begin
+      if (IsError(AOtherVal.LastError)) then
+        Result := TFpValueConstNumber.Create(0) // just for the error
+      else
+        SetError('Modulo by zero')
+    end
+    else
     case AOtherVal.Kind of
       skInteger:  Result := TFpValueConstNumber.Create(AIntVal.AsInteger mod AOtherVal.AsInteger, True);
       skCardinal: Result := TFpValueConstNumber.Create(AIntVal.AsInteger mod AOtherVal.AsCardinal, True);
@@ -4411,6 +4450,13 @@ function TFpPascalExpressionPartOperatorMulDiv.DoGetResultValue: TFpValue;
   function NumModCardinalByValue(ACardinalVal, AOtherVal: TFpValue): TFpValue;
   begin
     Result := nil;
+    if (AOtherVal.AsInteger = 0) then begin
+      if (IsError(AOtherVal.LastError)) then
+        Result := TFpValueConstNumber.Create(0) // just for the error
+      else
+        SetError('Modulo by zero')
+    end
+    else
     case AOtherVal.Kind of
       skInteger:  Result := TFpValueConstNumber.Create(ACardinalVal.AsCardinal mod AOtherVal.AsInteger, True);
       skCardinal: Result := TFpValueConstNumber.Create(ACardinalVal.AsCardinal mod AOtherVal.AsCardinal, False);
@@ -4459,6 +4505,9 @@ begin
     end;
   end;
 
+  ForwardError(Result, tmp1);
+  ForwardError(Result, tmp2);
+
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then
    Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
@@ -4488,6 +4537,7 @@ begin
     skBoolean: Result := TFpValueConstBool.Create(not tmp1.AsBool);
   end;
   {$POP}
+  ForwardError(Result, tmp1);
 
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
@@ -4520,9 +4570,13 @@ begin
     skCardinal: if tmp2.Kind in [skInteger, skCardinal] then
                   Result := TFpValueConstNumber.Create(tmp1.AsCardinal AND tmp2.AsCardinal, False);
     skBoolean: if tmp2.Kind = skBoolean then
+                 {$PUSH}{$BOOLEVAL on}
                  Result := TFpValueConstBool.Create(tmp1.AsBool AND tmp2.AsBool);
+                 {$POP}
   end;
   {$POP}
+  ForwardError(Result, tmp1);
+  ForwardError(Result, tmp2);
 
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
@@ -4580,6 +4634,9 @@ begin
   Result := TFpValueConstNumber.Create(AVal >> AShift, False);
   {$POP}
 
+  ForwardError(Result, Items[0].ResultValue);
+  ForwardError(Result, Items[1].ResultValue);
+
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
 
@@ -4596,6 +4653,9 @@ begin
   {$PUSH}{$R-}{$Q-}
   Result := TFpValueConstNumber.Create(AVal << AShift, False);
   {$POP}
+
+  ForwardError(Result, Items[0].ResultValue);
+  ForwardError(Result, Items[1].ResultValue);
 
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
@@ -4631,7 +4691,9 @@ begin
                   if tmp2.Kind = skCardinal then
                     Result := TFpValueConstNumber.Create(tmp1.AsInteger OR tmp2.AsInteger, False);
       skBoolean: if tmp2.Kind = skBoolean then
+                   {$PUSH}{$BOOLEVAL on}
                    Result := TFpValueConstBool.Create(tmp1.AsBool OR tmp2.AsBool);
+                   {$POP}
     end;
     ootXor:
     case tmp1.Kind of
@@ -4643,10 +4705,14 @@ begin
                   if tmp2.Kind = skCardinal then
                     Result := TFpValueConstNumber.Create(tmp1.AsInteger XOR tmp2.AsInteger, False);
       skBoolean: if tmp2.Kind = skBoolean then
+                   {$PUSH}{$BOOLEVAL on}
                    Result := TFpValueConstBool.Create(tmp1.AsBool XOR tmp2.AsBool);
+                   {$POP}
     end;
   end;
   {$POP}
+  ForwardError(Result, tmp1);
+  ForwardError(Result, tmp2);
 
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
@@ -4950,6 +5016,8 @@ begin
       Result := SymDiffSets(tmp1, tmp2);
   end;
 
+  ForwardError(Result, tmp1);
+  ForwardError(Result, tmp2);
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then
    Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;

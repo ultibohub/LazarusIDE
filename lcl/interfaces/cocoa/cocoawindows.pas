@@ -1019,13 +1019,20 @@ function TCocoaWindow.makeFirstResponder( aResponder : NSResponder ): ObjCBOOL;
 var
   lastResponder : NSResponder;
   newResponder : NSResponder;
-  cb : ICommonCallback;
+  lastCb : ICommonCallback;
+  newCb : ICommonCallback;
 begin
   inc( makeFirstResponderCount );
   try
     lastResponder := self.firstResponder;
     newResponder := getProperFocusedResponder( self, aResponder );
     if lastResponder = newResponder then exit;
+
+    // get the callback of lastResponder first, because the callback of
+    // lastResponder may be changed dynamically.
+    // for example, when lastResponder is a FieldEditor.
+    // see also: TCocoaFieldEditor.lclGetCallback()
+    lastCb := getResponderCallback( lastResponder );
 
     // do toggle Focused Control
     // Result=false when the focused control has not been changed
@@ -1037,16 +1044,21 @@ begin
     if makeFirstResponderCount > 1 then
       exit;
 
+    // new Responder was not finalized until here
+    newCb := getResponderCallback( self.firstResponder );
+
+    // different Controls in Cocoa may correspond to the same LCL Control
+    // for example TextField and its FieldEditor both correspond to the same TEdit
+    if lastCb = newCb then exit;
+
     // 1st: send KillFocus Message first
-    cb:= getResponderCallback( lastResponder );
-    if Assigned(cb) then
-      cb.ResignFirstResponder;
+    if Assigned(lastCb) then
+      lastCb.ResignFirstResponder;
 
     // 2st: send SetFocus Message
     // TCocoaWindow.makeFirstResponder() may be triggered reentrant here
-    cb := getResponderCallback( self.firstResponder );
-    if Assigned(cb) then
-      cb.BecomeFirstResponder;
+    if Assigned(newCb) then
+      newCb.BecomeFirstResponder;
 
   finally
     dec( makeFirstResponderCount );

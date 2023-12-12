@@ -382,6 +382,9 @@ type
     procedure GetCurrentThreadAndStackFrame(out AThreadId, AStackFrame: Integer);
     function GetContextForEvaluate(const ThreadId, StackFrame: Integer): TFpDbgSymbolScope;
 
+    function CreateMemReader: TDbgMemReader; virtual;
+    function CreateMemConverter: TFpDbgMemConvertor; virtual;
+    function CreateMemManager: TFpDbgMemManager; virtual;
     function CreateLineInfo: TDBGLineInfo; override;
     function CreateWatches: TWatchesSupplier; override;
     function CreateThreads: TThreadsSupplier; override;
@@ -3583,6 +3586,21 @@ begin
   Result := FindSymbolScope(ThreadId, StackFrame);
 end;
 
+function TFpDebugDebugger.CreateMemReader: TDbgMemReader;
+begin
+  Result := TFpDbgMemReader.Create(self);
+end;
+
+function TFpDebugDebugger.CreateMemConverter: TFpDbgMemConvertor;
+begin
+  Result := TFpDbgMemConvertorLittleEndian.Create;
+end;
+
+function TFpDebugDebugger.CreateMemManager: TFpDbgMemManager;
+begin
+  Result := TFpDbgMemManager.Create(FMemReader, FMemConverter);
+end;
+
 function TFpDebugDebugger.GetClassInstanceName(AnAddr: TDBGPtr): string;
 var
   AnErr: TFpError;
@@ -4364,7 +4382,7 @@ end;
 
 procedure TFpDebugDebugger.DoAddBreakFuncLib;
 begin
-  FCacheBreakpoint := FDbgController.CurrentProcess.AddBreak(FCacheFileName, FCacheBoolean, FCacheLib);
+  FCacheBreakpoint := FDbgController.CurrentProcess.AddBreak(FCacheFileName, FCacheBoolean, FCacheLib, True);
 end;
 
 procedure TFpDebugDebugger.DoAddBreakLocation;
@@ -4590,9 +4608,9 @@ begin
   FBreakUpdateList := TBreakPointUpdateList.create();
   FExceptionStepper := TFpDebugExceptionStepping.Create(Self);
   FPrettyPrinter := TFpPascalPrettyPrinter.Create(sizeof(pointer));
-  FMemReader := TFpDbgMemReader.Create(self);
-  FMemConverter := TFpDbgMemConvertorLittleEndian.Create;
-  FMemManager := TFpDbgMemManager.Create(FMemReader, FMemConverter);
+  FMemReader    := CreateMemReader;
+  FMemConverter := CreateMemConverter;
+  FMemManager   := CreateMemManager;
   FMemManager.MemLimits.MaxMemReadSize := TFpDebugDebuggerProperties(GetProperties).MemLimits.MaxMemReadSize;
   FMemManager.MemLimits.MaxArrayLen := TFpDebugDebuggerProperties(GetProperties).MemLimits.MaxArrayLen;
   FMemManager.MemLimits.MaxStringLen := TFpDebugDebuggerProperties(GetProperties).MemLimits.MaxStringLen;

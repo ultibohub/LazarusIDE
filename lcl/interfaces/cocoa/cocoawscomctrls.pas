@@ -627,7 +627,7 @@ begin
   // hint
   if ACustomPage.ShowHint then lHintStr := ACustomPage.Hint
   else lHintStr := '';
-  ACocoaControl.setToolTip(NSStringUTF8(lHintStr));
+  ACocoaControl.setToolTip(StrToNSString(lHintStr));
 end;
 
 class procedure TCocoaWSCustomPage.SetBounds(const AWinControl: TWinControl;
@@ -1088,7 +1088,6 @@ begin
 
   if lNSColumn = nil then Exit;
   lTableLV.removeTableColumn(lNSColumn);
-  lNSColumn.release;
 end;
 
 class function TCocoaWSCustomListView.ColumnGetWidth(

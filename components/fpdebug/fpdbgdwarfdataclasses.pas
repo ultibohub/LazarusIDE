@@ -690,8 +690,8 @@ type
     FAddressMap: TMap; // Holds a key for each DW_TAG_subprogram / TFpSymbolDwarfDataProc, stores TDwarfAddressInfo
     FAddressMapBuild: Boolean;
     
-    FMinPC: QWord;  // the min and max PC value found in this unit.
-    FMaxPC: QWord;  //
+    FMinPC: TDBGPtr;  // the min and max PC value found in this unit.
+    FMaxPC: TDBGPtr;  //
     FFirstScope: TDwarfScopeInfo;
     FScopeList: TDwarfScopeList;
     FCompUnitScope: TDwarfScopeInfo;
@@ -755,6 +755,7 @@ type
     property UnitName: String read GetUnitName;
     property IdentifierCase: Integer read FIdentifierCase;
     property Producer: String read FProducer;
+    property BaseAddress: TDBGPtr read FMinPC;
 
     property Version: Word read FVersion;
     //property AbbrevOffset: QWord read FAbbrevOffset;
@@ -2309,7 +2310,7 @@ begin
         end;
 
       DW_OP_breg0..DW_OP_breg31: begin
-          if not FContext.ReadRegister(CurInstr^-DW_OP_breg0, NewValue) then begin
+          if not FContext.ReadRegisterasAddress(CurInstr^-DW_OP_breg0, NewValue) then begin
             SetError;
             exit;
           end;
@@ -2318,7 +2319,7 @@ begin
           {$POP}
         end;
       DW_OP_bregx: begin
-          if not FContext.ReadRegister(ULEB128toOrdinal(CurData), NewValue) then begin
+          if not FContext.ReadRegisterasAddress(ULEB128toOrdinal(CurData), NewValue) then begin
             SetError;
             exit;
           end;

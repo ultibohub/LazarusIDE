@@ -192,6 +192,50 @@ type
     property StoredStackFrame: TDBGPtr read FStoredStackFrame;
   end;
 
+  TTDbgStackUnwindResult = (suSuccess, suFailed,
+    suFailedAtEOS, // this is the End Of Stack
+    suGuessed      // Got a frame, but may be wrong
+  );
+
+  TDbgStackUnwinder = class
+  public
+    procedure InitForThread(AThread: TDbgThread); virtual; abstract;
+    // FrameBasePointer is optional
+    procedure GetTopFrame(out CodePointer, StackPointer, FrameBasePointer: TDBGPtr;
+                          out ANewFrame: TDbgCallstackEntry); virtual; abstract;
+    procedure InitForFrame(ACurrentFrame: TDbgCallstackEntry;
+                           out CodePointer, StackPointer, FrameBasePointer: TDBGPtr); virtual; abstract;
+    // AFrameIndex: The frame-index to be read. Starts at 1 (since 0 is top-lever, and handled by GetTopFrame)
+    function Unwind(AFrameIndex: integer;
+                    var CodePointer, StackPointer, FrameBasePointer: TDBGPtr;
+                    ACurrentFrame: TDbgCallstackEntry; // nil for top frame
+                    out ANewFrame: TDbgCallstackEntry
+                   ): TTDbgStackUnwindResult; virtual; abstract;
+  end;
+
+  { TDbgStackUnwinderX86Base }
+  // Avoid circular unit refs
+
+  TDbgStackUnwinderX86Base = class(TDbgStackUnwinder)
+  private
+    FThread: TDbgThread;
+    FProcess: TDbgProcess;
+    FAddressSize: Integer;
+  protected
+    FDwarfNumIP, FDwarfNumBP, FDwarfNumSP: integer;
+    FNameIP, FNameBP, FNameSP: String;
+    property Process: TDbgProcess read FProcess;
+    property Thread: TDbgThread read FThread;
+    property AddressSize: Integer read FAddressSize;
+  public
+    constructor Create(AProcess: TDbgProcess);
+    procedure InitForThread(AThread: TDbgThread); override;
+    procedure InitForFrame(ACurrentFrame: TDbgCallstackEntry; out CodePointer,
+      StackPointer, FrameBasePointer: TDBGPtr); override;
+    procedure GetTopFrame(out CodePointer, StackPointer, FrameBasePointer: TDBGPtr;
+      out ANewFrame: TDbgCallstackEntry); override;
+  end;
+
   { TDbgThread }
   TFpInternalBreakpoint = class;
 
@@ -223,6 +267,7 @@ type
     procedure DoBeforeBreakLocationMapChange; // A new location added / or a location removed => memory will change
     procedure ValidateRemovedBreakPointInfo;
     function GetName: String; virtual;
+    function GetStackUnwinder: TDbgStackUnwinder; virtual; abstract;
 
   public
     constructor Create(const AProcess: TDbgProcess; const AID: Integer; const AHandle: THandle); virtual;
@@ -504,7 +549,7 @@ type
     procedure UpdateState; override;
     procedure UpdateForLibraryLoaded(ALib: TDbgLibrary); override;
   public
-    constructor Create(const AProcess: TDbgProcess; const AFuncName: String; AnEnabled: Boolean; ASymInstance: TDbgInstance = nil); virtual;
+    constructor Create(const AProcess: TDbgProcess; const AFuncName: String; AnEnabled: Boolean; ASymInstance: TDbgInstance = nil; AIgnoreCase: Boolean = False); virtual;
   end;
 
   { TFpInternalBreakpointAtFileLine }
@@ -569,7 +614,7 @@ type
     function GetPointerSize: Integer;
 
     function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray): Boolean;
-    function FindProcSymbol(const AName: String): TFpSymbol; overload;
+    function FindProcSymbol(const AName: String; AIgnoreCase: Boolean = False): TFpSymbol; overload;
     function FindProcSymbol(AAdress: TDbgPtr): TFpSymbol; overload;
   protected
     FDbgInfo: TDbgInfo;
@@ -748,7 +793,7 @@ type
     function  AddBreak(const ALocation: TDBGPtr; AnEnabled: Boolean = True): TFpDbgBreakpoint; overload;
     function  AddBreak(const ALocation: TDBGPtrArray; AnEnabled: Boolean = True): TFpDbgBreakpoint; overload;
     function  AddBreak(const AFileName: String; ALine: Cardinal; AnEnabled: Boolean = True; ASymInstance: TDbgInstance = nil): TFpDbgBreakpoint; overload;
-    function  AddBreak(const AFuncName: String; AnEnabled: Boolean = True; ASymInstance: TDbgInstance = nil): TFpDbgBreakpoint; overload;
+    function  AddBreak(const AFuncName: String; AnEnabled: Boolean = True; ASymInstance: TDbgInstance = nil; AIgnoreCase: Boolean = False): TFpDbgBreakpoint; overload;
     function  AddWatch(const ALocation: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind;
                       AScope: TDBGWatchPointScope): TFpInternalWatchpoint;
     property WatchPointData: TFpWatchPointData read FWatchPointData;
@@ -762,14 +807,14 @@ type
     *)
     function  FindProcSymbol(const AName: String): TFpSymbol; overload; // deprecated 'backward compatible / use FindProcSymbol(AName, TheDbgProcess)';
     function  FindProcSymbol(const AName: String; ASymInstance: TDbgInstance): TFpSymbol; overload;
-    procedure FindProcSymbol(const AName: String; ASymInstance: TDbgInstance; out ASymList: TFpSymbolArray);
+    procedure FindProcSymbol(const AName: String; ASymInstance: TDbgInstance; out ASymList: TFpSymbolArray; AIgnoreCase: Boolean = False);
     function  FindProcSymbol(const AName, ALibraryName: String; IsFullLibName: Boolean = True): TFpSymbol;  overload;
     function  FindProcSymbol(AAdress: TDbgPtr): TFpSymbol;  overload;
     function  FindSymbolScope(AThreadId, AStackFrame: Integer): TFpDbgSymbolScope;
     function  FindProcStartEndPC(const AAdress: TDbgPtr; out AStartPC, AEndPC: TDBGPtr): boolean;
 
     function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray; ASymInstance: TDbgInstance = nil): Boolean;
-    function  ContextFromProc(AThreadId, AStackFrame: Integer; AProcSym: TFpSymbol): TFpDbgLocationContext; inline; deprecated 'use TFpDbgSimpleLocationContext.Create';
+    //function  ContextFromProc(AThreadId, AStackFrame: Integer; AProcSym: TFpSymbol): TFpDbgLocationContext; inline; deprecated 'use TFpDbgSimpleLocationContext.Create';
     function  GetLib(const AHandle: THandle; out ALib: TDbgLibrary): Boolean;
     property  LibMap: TLibraryMap read FLibMap;
     property  LastLibrariesLoaded: TDbgLibraryArr read GetLastLibrariesLoaded;
@@ -1424,7 +1469,7 @@ var
   Brk: TBreakLocationEntry;
 begin
   for Brk in Self do begin
-    if (Brk.Location >= AAdress) and (Brk.Location < (AAdress+ASize)) then
+    if (not Brk.ErrorSetting) and (Brk.Location >= AAdress) and (Brk.Location < (AAdress+ASize)) then
       PByte(@AData)[Brk.Location-AAdress] := Brk.OrigValue;
   end;
 end;
@@ -1891,14 +1936,15 @@ end;
 { TDbgInstance }
 
 
-function TDbgInstance.FindProcSymbol(const AName: String): TFpSymbol;
+function TDbgInstance.FindProcSymbol(const AName: String; AIgnoreCase: Boolean
+  ): TFpSymbol;
 begin
   if FDbgInfo <> nil then
     Result := FDbgInfo.FindProcSymbol(AName)
   else
     Result := nil;
   if (Result = nil) and (SymbolTableInfo <> nil) then
-    Result := SymbolTableInfo.FindProcSymbol(AName);
+    Result := SymbolTableInfo.FindProcSymbol(AName, AIgnoreCase);
 end;
 
 constructor TDbgInstance.Create(const AProcess: TDbgProcess);
@@ -2047,9 +2093,9 @@ begin
 end;
 
 function TDbgProcess.AddBreak(const AFuncName: String; AnEnabled: Boolean;
-  ASymInstance: TDbgInstance): TFpDbgBreakpoint;
+  ASymInstance: TDbgInstance; AIgnoreCase: Boolean): TFpDbgBreakpoint;
 begin
-  Result := TFpInternalBreakpointAtSymbol.Create(Self, AFuncName, AnEnabled, ASymInstance);
+  Result := TFpInternalBreakpointAtSymbol.Create(Self, AFuncName, AnEnabled, ASymInstance, AIgnoreCase);
   AfterBreakpointAdded(Result);
 end;
 
@@ -2081,7 +2127,8 @@ begin
 end;
 
 procedure TDbgProcess.FindProcSymbol(const AName: String;
-  ASymInstance: TDbgInstance; out ASymList: TFpSymbolArray);
+  ASymInstance: TDbgInstance; out ASymList: TFpSymbolArray; AIgnoreCase: Boolean
+  );
 var
   Lib: TDbgLibrary;
   Sym: TFpSymbol;
@@ -2089,21 +2136,21 @@ begin
   // TODO: find multiple symbols within the same DbgInfo
   ASymList := nil;
   if ASymInstance <> nil then begin
-    Sym := ASymInstance.FindProcSymbol(AName);
+    Sym := ASymInstance.FindProcSymbol(AName, AIgnoreCase);
     if Sym <> nil then begin
       SetLength(ASymList, 1);
       ASymList[0] := Sym;
     end;
   end
   else begin
-    Sym := FindProcSymbol(AName);
+    Sym := FindProcSymbol(AName, AIgnoreCase);
     if Sym <> nil then begin
       SetLength(ASymList, 1);
       ASymList[0] := Sym;
     end;
 
     for Lib in FLibMap do begin
-      Sym := Lib.FindProcSymbol(AName);
+      Sym := Lib.FindProcSymbol(AName, AIgnoreCase);
       if Sym <> nil then begin
         SetLength(ASymList, 1);
         ASymList[0] := Sym;
@@ -2335,11 +2382,11 @@ begin
   end;
 end;
 
-function TDbgProcess.ContextFromProc(AThreadId, AStackFrame: Integer;
-  AProcSym: TFpSymbol): TFpDbgLocationContext;
-begin
-  Result := TFpDbgSimpleLocationContext.Create(MemManager, LocToAddrOrNil(AProcSym.Address), DBGPTRSIZE[Mode], AThreadId, AStackFrame);
-end;
+//function TDbgProcess.ContextFromProc(AThreadId, AStackFrame: Integer;
+//  AProcSym: TFpSymbol): TFpDbgLocationContext;
+//begin
+//  Result := TFpDbgSimpleLocationContext.Create(MemManager, LocToAddrOrNil(AProcSym.Address), DBGPTRSIZE[Mode], AThreadId, AStackFrame);
+//end;
 
 function TDbgProcess.GetLib(const AHandle: THandle; out ALib: TDbgLibrary): Boolean;
 begin
@@ -3051,6 +3098,74 @@ begin
   FHasSteppedOut := True;
 end;
 
+{ TDbgStackUnwinderX86Base }
+
+constructor TDbgStackUnwinderX86Base.Create(AProcess: TDbgProcess);
+begin
+  FProcess := AProcess;
+  case AProcess.Mode of
+    dm32: begin
+      FAddressSize := 4;
+      FDwarfNumIP := 8; // Dwarf Reg Num EIP
+      FDwarfNumBP := 5; // EBP
+      FDwarfNumSP := 4; // ESP
+      FNameIP := 'eip';
+      FNameBP := 'ebp';
+      FNameSP := 'esp';
+    end;
+    dm64: begin
+      FAddressSize := 8;
+      FDwarfNumIP := 16; // Dwarf Reg Num RIP
+      FDwarfNumBP := 6; // RBP
+      FDwarfNumSP := 7; // RSP
+      FNameIP := 'rip';
+      FNameBP := 'rbp';
+      FNameSP := 'rsp';
+    end;
+  end;
+end;
+
+procedure TDbgStackUnwinderX86Base.InitForThread(AThread: TDbgThread);
+begin
+  FThread := AThread;
+end;
+
+procedure TDbgStackUnwinderX86Base.InitForFrame(
+  ACurrentFrame: TDbgCallstackEntry; out CodePointer, StackPointer,
+  FrameBasePointer: TDBGPtr);
+var
+  R: TDbgRegisterValue;
+begin
+    CodePointer      := ACurrentFrame.AnAddress;
+    FrameBasePointer := ACurrentFrame.FrameAdress;
+    R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(FDwarfNumBP);
+    if R <> nil then
+      FrameBasePointer := R.NumValue;
+    StackPointer     := 0;
+    R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(FDwarfNumSP);
+    if R = nil then exit;
+    StackPointer := R.NumValue;
+end;
+
+procedure TDbgStackUnwinderX86Base.GetTopFrame(out CodePointer, StackPointer,
+  FrameBasePointer: TDBGPtr; out ANewFrame: TDbgCallstackEntry);
+var
+  i: Integer;
+  R: TDbgRegisterValue;
+begin
+  CodePointer      := Thread.GetInstructionPointerRegisterValue;
+  StackPointer     := Thread.GetStackPointerRegisterValue;
+  FrameBasePointer := Thread.GetStackBasePointerRegisterValue;
+  ANewFrame        := TDbgCallstackEntry.create(Thread, 0, FrameBasePointer, CodePointer);
+
+  i := Thread.RegisterValueList.Count;
+  while i > 0 do begin
+    dec(i);
+    R := Thread.RegisterValueList[i];
+    ANewFrame.RegisterValueList.DbgRegisterAutoCreate[R.Name].SetValue(R.NumValue, R.StrValue, R.Size, R.DwarfIdx);
+  end;
+end;
+
 { TDbgThread }
 
 function TDbgThread.GetRegisterValueList: TDbgRegisterValueList;
@@ -3315,254 +3430,50 @@ procedure TDbgThread.PrepareCallStackEntryList(AFrameRequired: Integer);
 const
   MAX_FRAMES = 150000; // safety net
 var
-  Address, FrameBase, LastFrameBase, Dummy: QWord;
-  PrevAddress, PrevFrameBase, PrevStackPtr: QWord;
-  Size, CountNeeded, IP, BP, CodeReadErrCnt, SP, i,
-    PrevStmtAddressOffs: integer;
-  AnEntry, NewEntry: TDbgCallstackEntry;
-  R, StackReg, FrameReg: TDbgRegisterValue;
-  nIP, nBP, nSP: String;
+  Address, FrameBase, StackPtr: TDBGPtr;
+  CountNeeded, i: integer;
+  AnEntry: TDbgCallstackEntry;
   NextIdx: LongInt;
-  OutSideFrame: Boolean;
-  StackPtr: TDBGPtr;
-  Row: TDwarfCallFrameInformationRow;
-  CIE: TDwarfCIE;
-  CU: TDwarfCompilationUnit;
-
-  procedure CheckFrame(var NextEntry: TDbgCallstackEntry; AForce: boolean = False);
-  begin
-    if (not AForce) and (NextEntry <> nil) and Process.Disassembler.IsAfterCallInstruction(Address) then
-      exit;
-
-    if not Process.Disassembler.UnwindFrame(PrevAddress, PrevStackPtr, PrevFrameBase, False) then
-      exit;
-
-    if (NextEntry <> nil) and
-       (Address = PrevAddress) and (FrameBase = PrevFrameBase) and (StackPtr = PrevStackPtr)
-    then
-      exit;
-    if not Process.Disassembler.IsAfterCallInstruction(PrevAddress) then
-      exit;
-
-    Address := PrevAddress;
-    FrameBase := PrevFrameBase;
-    StackPtr := PrevStackPtr;
-    NextEntry.Free;
-    NextEntry := TDbgCallstackEntry.create(Self, NextIdx, FrameBase, Address);
-    NextEntry.RegisterValueList.DbgRegisterAutoCreate[nIP].SetValue(Address, IntToStr(Address),Size, IP);
-    NextEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(FrameBase, IntToStr(FrameBase),Size, BP);
-    NextEntry.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPtr, IntToStr(StackPtr),Size, SP);
-    LastFrameBase := FrameBase;
-    {$PUSH}{$R-}{$Q-}
-    if LastFrameBase > 0 then
-      LastFrameBase := LastFrameBase - 1;
-    {$POP}
-  end;
-
+  Unwinder: TDbgStackUnwinder;
+  Res: TTDbgStackUnwindResult;
 begin
   // TODO: use AFrameRequired // check if already partly done
-  if FCallStackEntryList = nil then
+  if FCallStackEntryList = nil then begin
     FCallStackEntryList := TDbgCallstackEntryList.Create;
+    FCallStackEntryList.FreeObjects:=true;
+  end;
   if AFrameRequired = -2 then
     exit;
 
   if (AFrameRequired >= 0) and (AFrameRequired < FCallStackEntryList.Count) then
     exit;
 
-  case FProcess.Mode of
-    dm32: begin
-      Size := 4;
-      IP := 8; // Dwarf Reg Num EIP
-      BP := 5; // EBP
-      SP := 4; // ESP
-      nIP := 'eip';
-      nBP := 'ebp';
-      nSP := 'esp';
-    end;
-    dm64: begin
-      Size := 8;
-      IP := 16; // Dwarf Reg Num RIP
-      BP := 6; // RBP
-      SP := 7; // RSP
-      nIP := 'rip';
-      nBP := 'rbp';
-      nSP := 'rsp';
-    end;
-    else begin
-      assert(False, 'unknown address size for stack');
-      exit;
-    end;
-  end;
+  Unwinder := GetStackUnwinder;
+  Unwinder.InitForThread(Self);
 
-  FCallStackEntryList.FreeObjects:=true;
-
-  PrevStmtAddressOffs := 1;
-  if FCallStackEntryList.Count > 0 then begin
-    AnEntry := FCallStackEntryList[FCallStackEntryList.Count - 1];
-    Address:=AnEntry.AnAddress;
-    FrameBase:=AnEntry.FrameAdress;
-    R := AnEntry.RegisterValueList.FindRegisterByDwarfIndex(SP);
-    if R = nil then exit;
-    StackPtr := R.NumValue;
+  if FCallStackEntryList.Count = 0 then begin
+    Unwinder.GetTopFrame(Address, StackPtr, FrameBase, AnEntry);
+    FCallStackEntryList.Add(AnEntry);
   end
   else begin
-    PrevStmtAddressOffs := 0;
-    Address := GetInstructionPointerRegisterValue;
-    FrameBase := GetStackBasePointerRegisterValue;
-    StackPtr := GetStackPointerRegisterValue;
-    AnEntry := TDbgCallstackEntry.create(Self, 0, FrameBase, Address);
-
-    // Initialize register values
-    // Top level could do without entry in registerlist, but this way the
-    // same code can handle both cases.
-    i := 0;
-    R := RegisterValueList.FindRegisterByDwarfIndex(i);
-    while Assigned(R) do
-      begin
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[R.Name].SetValue(R.NumValue, R.StrValue, R.Size, R.DwarfIdx);
-      inc(i);
-      R := RegisterValueList.FindRegisterByDwarfIndex(i);
-      end;
-    FCallStackEntryList.Add(AnEntry);
+    AnEntry := FCallStackEntryList[FCallStackEntryList.Count - 1];
+    Unwinder.InitForFrame(AnEntry, Address, StackPtr, FrameBase);
   end;
 
   NextIdx := FCallStackEntryList.Count;
+
   if AFrameRequired < 0 then
     AFrameRequired := MaxInt;
   CountNeeded := AFrameRequired - FCallStackEntryList.Count;
-  LastFrameBase := 0;
-  CodeReadErrCnt := 0;
   while (CountNeeded > 0) do
   begin
-    PrevAddress := Address;
-    PrevFrameBase := FrameBase;
-    PrevStackPtr := StackPtr;
-    {$PUSH}{$R-}{$Q-}
-    if (Process.DbgInfo as TFpDwarfInfo).FindCallFrameInfo(Address - PrevStmtAddressOffs, CIE, Row) and
-       TDwarfCallFrameInformation.TryObtainNextCallFrame(AnEntry, CIE, Size, NextIdx, Self, Row, Process, NewEntry)
-    {$POP}
-    then begin
-      PrevStmtAddressOffs := 1;
-      if not Assigned(NewEntry) then begin
-        CU := (Process.DbgInfo as TFpDwarfInfo).CompilationUnitForAddr(Address);
-        if (CU = nil) or (CU.DwarfSymbolClassMap = nil) or (not CU.DwarfSymbolClassMap.IgnoreCfiStackEnd) then
-          // Done.
-          Break;
-      end
-      else begin
-        Address := NewEntry.AnAddress;
-        StackReg := NewEntry.RegisterValueList.FindRegisterByDwarfIndex(SP);
-        FrameReg := NewEntry.RegisterValueList.FindRegisterByDwarfIndex(BP);
-        StackPtr := 0;
-        if (StackReg <> nil) and (FrameReg <> nil) then begin
-          StackPtr := StackReg.FNumValue;
-          FrameBase := FrameReg.FNumValue;
-        end;
-        AnEntry := NewEntry;
-        CheckFrame(NewEntry);
-        FCallStackEntryList.Add(NewEntry);
-        Dec(CountNeeded);
-        inc(NextIdx);
-        If (NextIdx > MAX_FRAMES) then
-          Break;
+    Res := Unwinder.Unwind(NextIdx, Address, StackPtr, FrameBase, AnEntry, AnEntry);
+    if not (Res in [suSuccess, suGuessed]) then
+      break;
 
-        Continue;
-      end;
-    end;
-    PrevStmtAddressOffs := 1;
-
-    if Process.Disassembler.UnwindFrame(PrevAddress, PrevStackPtr, PrevFrameBase, True) and
-       Process.Disassembler.IsAfterCallInstruction(PrevAddress)
-    then begin
-      Address := PrevAddress;
-      FrameBase := PrevFrameBase;
-      StackPtr := PrevStackPtr;
-      AnEntry := TDbgCallstackEntry.create(Self, NextIdx, FrameBase, Address);
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nIP].SetValue(Address, IntToStr(Address),Size, IP);
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(FrameBase, IntToStr(FrameBase),Size, BP);
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPtr, IntToStr(StackPtr),Size, SP);
-      FCallStackEntryList.Add(AnEntry);
-      Dec(CountNeeded);
-      inc(NextIdx);
-      CodeReadErrCnt := 0;
-      If (NextIdx > MAX_FRAMES) then
-        break;
-      LastFrameBase := FrameBase;
-      {$PUSH}{$R-}{$Q-}
-      if LastFrameBase > 0 then
-        LastFrameBase := LastFrameBase - 1;
-      {$POP}
-      continue;
-    end;
-    Address := PrevAddress;
-    FrameBase := PrevFrameBase;
-    StackPtr := PrevStackPtr;
-
-    if (FrameBase <> 0) and (FrameBase > LastFrameBase)
-    then begin
-      if StackPtr = 0 then
-        break;
-      // CFI not available or contains unsupported structures. Fallback to
-      // old fashioned stack-tracing.
-      OutSideFrame := False;
-      if not Process.Disassembler.GetFunctionFrameInfo(Address, OutSideFrame) then begin
-        if Process.Disassembler.LastErrorWasMemReadErr then begin
-          inc(CodeReadErrCnt);
-          if CodeReadErrCnt > 5 then break; // If the code cannot be read the stack pointer is wrong.
-          if NextIdx <= 1 then
-            OutSideFrame := True; // Maybe after "TProc(nil)();" call, then no frame could have been set up
-        end;
-      end;
-      LastFrameBase := FrameBase;
-
-      if (not OutSideFrame) and (NextIdx = 1) and (AnEntry.ProcSymbol <> nil) then begin
-        OutSideFrame := Address = LocToAddrOrNil(AnEntry.ProcSymbol.Address); // the top frame must be outside frame, if it is at entrypoint / needed for exceptions
-      end;
-
-      if OutSideFrame then begin
-        if not Process.ReadData(StackPtr, Size, Address) or (Address = 0) then Break;
-
-        if (not Process.ReadData(Address, 1, Dummy) or (Address = 0)) then begin
-          OutSideFrame := False;
-        end
-        else begin
-          {$PUSH}{$R-}{$Q-}
-          StackPtr := StackPtr + 1 * Size; // After popping return-addr from "StackPtr"
-          if LastFrameBase > 0 then
-            LastFrameBase := LastFrameBase - 1; // Make the loop think thas LastFrameBase was smaller
-          {$POP}
-          // last stack has no frame
-          //AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(0, '0',Size, BP);
-        end;
-      end;
-      if not OutSideFrame then begin
-        {$PUSH}{$R-}{$Q-}
-        StackPtr := FrameBase + 2 * Size; // After popping return-addr from "FrameBase + Size"
-        {$POP}
-        if not Process.ReadData(FrameBase + Size, Size, Address) or (Address = 0) then Break;
-        if not Process.ReadData(FrameBase, Size, FrameBase) then Break;
-      end;
-      AnEntry := TDbgCallstackEntry.create(Self, NextIdx, FrameBase, Address);
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nIP].SetValue(Address, IntToStr(Address),Size, IP);
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nBP].SetValue(FrameBase, IntToStr(FrameBase),Size, BP);
-      AnEntry.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPtr, IntToStr(StackPtr),Size, SP);
-      CheckFrame(AnEntry, FrameBase < StackPtr);
-      FCallStackEntryList.Add(AnEntry);
-      Dec(CountNeeded);
-      inc(NextIdx);
-      CodeReadErrCnt := 0;
-      If (NextIdx > MAX_FRAMES) then
-        break;
-    end
-    else
-    begin
-      AnEntry := nil;
-      CheckFrame(AnEntry);
-      if AnEntry <> nil then
-        FCallStackEntryList.Add(AnEntry)
-      else
-        Break;
-    end;
+    FCallStackEntryList.Add(AnEntry);
+    dec(CountNeeded);
+    inc(NextIdx);
   end;
   if CountNeeded > 0 then // there was an error / not possible to read more frames
     FCallStackEntryList.SetHasReadAllAvailableFrames;
@@ -3978,7 +3889,8 @@ begin
 end;
 
 constructor TFpInternalBreakpointAtSymbol.Create(const AProcess: TDbgProcess;
-  const AFuncName: String; AnEnabled: Boolean; ASymInstance: TDbgInstance);
+  const AFuncName: String; AnEnabled: Boolean; ASymInstance: TDbgInstance;
+  AIgnoreCase: Boolean);
 var
   a: TDBGPtrArray;
   AProcList: TFpSymbolArray;
@@ -3987,7 +3899,7 @@ begin
   FFuncName := AFuncName;
   FSymInstance := ASymInstance;
 
-  AProcess.FindProcSymbol(AFuncName, ASymInstance, AProcList);
+  AProcess.FindProcSymbol(AFuncName, ASymInstance, AProcList, AIgnoreCase);
   SetLength(a, Length(AProcList));
   for i := 0 to Length(AProcList) - 1 do begin
     a[i] := AProcList[i].Address.Address;
