@@ -487,7 +487,10 @@ begin
       else
         DoWritePointerWatchResultData(MemberValue, EntryRes, Addr);
 
-      if (i = StartIdx) and (MemberValue <> nil) and FEncounteredError then begin
+      if (i = StartIdx) and (MemberValue <> nil) and FEncounteredError and
+         (ti <> nil) and (ti.Flags * [sfDynArray, sfStatArray] <> [])
+      then begin
+        FEncounteredError := False;
         MLoc := MemberValue.Address;
         if IsValidLoc(MLoc) then
           Context.ReadMemory(MLoc, SizeVal(1), @Dummy);
@@ -975,8 +978,10 @@ begin
     AnResData.CreateError('No Data');
     exit;
   end;
-  if CheckError(AnFpValue, AnResData) then
+  if CheckError(AnFpValue, AnResData) then begin
+    Result := True;
     exit;
+  end;
 
   FRecurseAddrList.Clear;
   FRepeatCount := ARepeatCount;

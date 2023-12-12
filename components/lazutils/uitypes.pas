@@ -103,7 +103,7 @@ const
     'mrNoToAll',
     'mrYesToAll',
     'mrClose'
-    {$IF FPC_FULLVERSION >= 30203} //Ultibo
+    {$IF FPC_FULLVERSION>=30203}
     ,
     'mrContinue',
     'mrTryAgain'

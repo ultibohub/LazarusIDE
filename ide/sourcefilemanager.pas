@@ -1318,8 +1318,11 @@ begin
   end;
 
   if (FNewEditorInfo <> nil) and (FFlags * [ofProjectLoading, ofRevert] = [])
-  and (FNewEditorInfo.EditorComponent <> nil) then
+  and (FNewEditorInfo.EditorComponent <> nil) then begin
+    if not (ofDoNotActivateSourceEditor in FFLags) then
+      SourceEditorManager.ShowActiveWindowOnTop(True);
     exit(ChangeEditorPage);
+  end;
 
   Reverting:=ofRevert in FFlags;
   if Reverting then
