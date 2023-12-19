@@ -51,8 +51,9 @@ unit SynHighlighterPas;
 interface
 
 uses
-  SysUtils, Classes, Registry, Graphics, SynEditHighlighterFoldBase, SynEditMiscProcs,
-  SynEditTypes, SynEditHighlighter, SynEditTextBase, SynEditStrConst, SynEditMiscClasses;
+  SysUtils, Classes, Registry, Graphics, SynEditHighlighterFoldBase,
+  SynEditMiscProcs, SynEditTypes, SynEditHighlighter, SynEditTextBase,
+  SynEditStrConst, SynEditMiscClasses, LazLogger;
 
 type
   TSynPasStringMode = (spsmDefault, spsmStringOnly, spsmNone);
@@ -1600,7 +1601,7 @@ function TSynPasSyn.Func55: TtkTokenKind;
 begin
   if KeyComp('Object') then begin
     Result := tkKey;
-    if (rsAfterEqualOrColon in fRange) and (PasCodeFoldRange.BracketNestLevel = 0)
+    if (fRange * [rsAfterEqualOrColon, rsAfterEqualThenType] <> []) and (PasCodeFoldRange.BracketNestLevel = 0)
     then begin
       fRange := fRange + [rsAtClass] - [rsVarTypeInSpecification, rsAfterEqual];
       StartPascalCodeFoldBlock(cfbtClass);
@@ -1720,8 +1721,10 @@ begin
     if (PasCodeFoldRange.BracketNestLevel = 0) and
        (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
        (tbf in ProcModifierAllowed - [cfbtClass, cfbtClassSection, cfbtRecord])
-    then
-      FRange := FRange + [rsInProcHeader]
+    then begin
+      Result := tkKey;
+      FRange := FRange + [rsInProcHeader];
+    end
     else
       Result := tkIdentifier;
   end
@@ -1800,7 +1803,9 @@ begin
     if (PasCodeFoldRange.BracketNestLevel = 0)
        and (TopPascalCodeFoldBlockType in
         [cfbtVarType, cfbtLocalVarType, cfbtNone, cfbtProcedure, cfbtAnonymousProcedure, cfbtProgram,
-         cfbtUnit, cfbtUnitSection])
+         cfbtUnit, cfbtUnitSection,
+         cfbtClass, cfbtClassSection, cfbtRecord // if inside a type section in class/record
+        ])
     then begin
       if (rsAfterEqualOrColon in fRange) then begin
         if TypeHelpers then
@@ -3480,8 +3485,11 @@ procedure TSynPasSyn.GreaterProc;
 begin
   fTokenID := tkSymbol;
   inc(Run);
-  if fLine[Run] = '=' then
+  if fLine[Run] = '=' then begin
     inc(Run);
+    if (rsInTypeBlock in fRange) then // generic TFoo<..>= // no space between > and =
+      fRange := fRange + [rsAfterEqual, rsAfterEqualOrColon];
+  end;
   if fRange * [rsProperty, rsVarTypeInSpecification] = [rsProperty] then
     fRange := fRange + [rsAtPropertyOrReadWrite];
 end;

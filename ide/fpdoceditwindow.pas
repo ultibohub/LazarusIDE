@@ -309,7 +309,10 @@ begin
   IDEImages.AssignImage(InsertVarTagButton, 'insertvartag');
   IDEImages.AssignImage(InsertCodeTagButton, 'insertcodetag');
   IDEImages.AssignImage(InsertRemarkButton, 'insertremark');
-  IDEImages.AssignImage(InsertURLTagSpeedButton, 'formatunderline');
+  IDEImages.AssignImage(InsertURLTagSpeedButton, 'inserturltag');
+  IDEImages.AssignImage(InsertLinkSpeedButton, 'insertlink');
+  IDEImages.AssignImage(InsertParagraphSpeedButton, 'insertparagraph');
+  IDEImages.AssignImage(InsertPrintShortSpeedButton, 'insertprintshort');
   IDEImages.AssignImage(SaveButton, 'laz_save');
 
   SourceEditorManagerIntf.RegisterChangeEvent(semEditorActivate, @DoEditorUpdate);

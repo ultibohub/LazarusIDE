@@ -699,8 +699,8 @@ begin
   end;
 
   // Instructions with variable number of operands
-  if (instr.OpCode in [A_ELPM, A_LPM, A_SPM]) and
-     (instr.Oper[1] = operandNoIndex) then
+  if ((instr.OpCode in [A_ELPM, A_LPM]) and (instr.Oper[2] = operandNoIndex)) or
+     ((instr.OpCode = A_SPM) and (instr.Oper[1] = operandNoIndex)) then
     info.OperCount := 0;
 
   if info.OperCount > 0 then
@@ -1134,10 +1134,10 @@ begin
           $9588: instr := SetInstructionInfo(A_SLEEP, 0, 2, []);
           $9598: instr := SetInstructionInfo(A_BREAK, 0, 2, []);
           $95a8: instr := SetInstructionInfo(A_WDR, 0, 2, []);
-          $95c8: instr := SetInstructionInfo(A_LPM, 0, 2, []);
-          $95d8: instr := SetInstructionInfo(A_ELPM, 0, 2, []);
-          $95e8: instr := SetInstructionInfo(A_SPM, 0, 2, []);
-          $95f8: instr := SetInstructionInfo(A_SPM, operandZInc, 2, []);
+          $95c8: instr := SetInstructionInfo(A_LPM, 0, 2, [0, operandNoIndex]);
+          $95d8: instr := SetInstructionInfo(A_ELPM, 0, 2, [0, operandNoIndex]);
+          $95e8: instr := SetInstructionInfo(A_SPM, 0, 2, [operandNoIndex]);
+          $95f8: instr := SetInstructionInfo(A_SPM, 0, 2, [operandZInc]);
           else
           begin
             case (code and $fe0f) of
@@ -1155,18 +1155,18 @@ begin
               begin // LPM Load Program Memory 1001 000d dddd 01oo
                 r := (code shr 4) and $1f;
                 if (code and 1 = 1) then
-                  instr := SetInstructionInfo(A_LPM, operandZInc, 2, [r])
+                  instr := SetInstructionInfo(A_LPM, 0, 2, [r, operandZInc])
                 else
-                  instr := SetInstructionInfo(A_LPM, operandZ, 2, [r]);
+                  instr := SetInstructionInfo(A_LPM, 0, 2, [r, operandZ]);
               end;
               $9006,
               $9007:
               begin // ELPM Extended Load Program Memory 1001 000d dddd 01oo
                 r := (code shr 4) and $1f;
                 if (code and 1 = 1) then
-                  instr := SetInstructionInfo(A_ELPM, operandZInc, 2, [r])
+                  instr := SetInstructionInfo(A_ELPM, 0, 2, [r, operandZInc])
                 else
-                  instr := SetInstructionInfo(A_ELPM, operandZ, 2, [r]);
+                  instr := SetInstructionInfo(A_ELPM, 0, 2, [r, operandZ]);
               end;
               $900c,
               $900d,
@@ -1484,6 +1484,10 @@ begin
   FrameBasePointer := Thread.GetStackBasePointerRegisterValue;
   ANewFrame        := TDbgCallstackEntry.create(Thread, 0, FrameBasePointer, CodePointer);
 
+  // Frame pointer may not have been updated yet
+  if FrameBasePointer > StackPointer then
+    FrameBasePointer := StackPointer;
+
   i := Thread.RegisterValueList.Count;
   while i > 0 do begin
     dec(i);
@@ -1501,7 +1505,6 @@ const
   DataOffset = $800000;
   Size = 2;
 var
-  NextIdx: LongInt;
   LastFrameBase: TDBGPtr;
   OutSideFrame: Boolean;
   startPC, endPC: TDBGPtr;
@@ -1549,6 +1552,9 @@ begin
     if not Process.ReadData(DataOffset or (FrameBasePointer + returnAddrStackOffset), Size, CodePointer) or (CodePointer = 0) then exit;
     {$PUSH}{$R-}{$Q-}
     FrameBasePointer := StackPointer + returnAddrStackOffset + Size - 1; // After popping return-addr from stack
+    // An estimate of SP, needed when attempting unwinding of next frame
+    // If registers are spilled to stack this will be wrong.
+    StackPointer := FrameBasePointer;
     {$POP}
   end;
   // Convert return address from BE to LE, shl 1 to get byte address
@@ -1556,11 +1562,12 @@ begin
 
   FLastFrameBaseIncreased := (FrameBasePointer <> 0) and (FrameBasePointer > LastFrameBase);
 
-  ANewFrame:= TDbgCallstackEntry.create(Thread, NextIdx, FrameBasePointer, CodePointer);
+  ANewFrame:= TDbgCallstackEntry.create(Thread, AFrameIndex, FrameBasePointer, CodePointer);
   ANewFrame.RegisterValueList.DbgRegisterAutoCreate[nPC].SetValue(CodePointer, IntToStr(CodePointer),Size, PCindex);
   ANewFrame.RegisterValueList.DbgRegisterAutoCreate[nSP].SetValue(StackPointer, IntToStr(StackPointer),Size, SPindex);
-  ANewFrame.RegisterValueList.DbgRegisterAutoCreate['r28'].SetValue(byte(FrameBasePointer), IntToStr(b),Size, 28);
-  ANewFrame.RegisterValueList.DbgRegisterAutoCreate['r29'].SetValue((FrameBasePointer and $FF00) shr 8, IntToStr(b),Size, 29);
+  ANewFrame.RegisterValueList.DbgRegisterAutoCreate['r28'].SetValue(byte(FrameBasePointer), IntToStr(byte(FrameBasePointer)),Size, 28);
+  b := byte(FrameBasePointer shr 8);
+  ANewFrame.RegisterValueList.DbgRegisterAutoCreate['r29'].SetValue(b, IntToStr(b), Size, 29);
 
   FCodeReadErrCnt := 0;
   Result := suSuccess;

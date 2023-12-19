@@ -61,6 +61,7 @@ type
     procedure TestContextForProcedureNameAttr;
     procedure TestContextForInterface;
     procedure TestContextForDeprecated;
+    procedure TestContextForClassObjRecHelp;
     procedure TestContextForClassSection;
     procedure TestContextForClassModifier; // Sealed abstract
     procedure TestContextForClassHelper;
@@ -1460,13 +1461,112 @@ begin
   end;
 end;
 
+procedure TTestHighlighterPas.TestContextForClassObjRecHelp;
+var
+  i0, i1, i2, i3, i4: Integer;
+  s0, s1, s2: String;
+begin
+  ReCreateEdit;
+  EnableFolds([cfbtClass, cfbtRecord], []);
+
+  for i0 := 0 to 9 do
+  for i1 := 0 to 5 do
+  for i2 := 0 to 1 do
+  for i3 := 0 to 1 do
+  for i4 := 0 to 3 do
+  begin
+    if (i1 = 3) and (i2 = 1) then // type type helper
+      continue;
+
+    case i0 of
+      0: s0 := '';
+      1: s0 := 'TSome = class type';
+      2: s0 := 'TSome = class public type';
+      3: s0 := 'TSome = class var a: integer; type';
+      4: s0 := 'TSome = object type';
+      5: s0 := 'TSome = object public type';
+      6: s0 := 'TSome = object var a: integer; type';
+      7: s0 := 'TSome = record type';
+      8: s0 := 'TSome = record public type';
+      9: s0 := 'TSome = record var a: integer; type';
+// TODO: nested in record-case
+      //10: s0 := 'TSome = record case integer of 1: ( a: record b: integer; type'; // BracketNestLevel inside record-case
+    end;
+
+    case i4 of
+      0: s1 := 'TFoo = ';
+      1: s1 := 'TFoo=';
+      2: s1 := 'generic TFoo<A> = ';
+      3: s1 := 'generic TFoo<A>=';
+    end;
+
+    case i1 of
+      0: s2 := 'class';
+      1: s2 := 'record';
+      2: s2 := 'object';
+      3: s2 := 'type helper for integer';
+      4: s2 := 'class helper for TFoo';
+      5: s2 := 'record helper for TBar';
+    end;
+    if i2 = 1 then s2 := 'type '+s2;
+    if i3 = 1 then s2 := ' '+s2; // leading space
+
+    SetLines
+      ([ 'Unit A; interface {$modeswitch advancedrecords}{$modeswitch typehelpers}',  // 0
+         'type',
+         s0,
+         '',
+         s1,
+         s2,  // 5
+         'public',
+         'end;',
+         ''
+      ]);
+
+    AssertEquals(1, FTheHighLighter.FoldOpenCount(5));  // fold opens for class/record/...
+    AssertEquals(7, FTheHighLighter.FoldEndLine(5, 0));  // fold end for class/record/...
+  end;
+
+
+
+  for i2 := 0 to 1 do
+  for i3 := 0 to 1 do
+  for i4 := 0 to 1 do
+  begin
+
+    case i4 of
+      0: s1 := 'TFoo : ';
+      1: s1 := 'TFoo:';
+    end;
+
+    s2 := 'record';
+    if i2 = 1 then s2 := 'type '+s2;
+    if i3 = 1 then s2 := ' '+s2; // leading space
+    SetLines
+      ([ 'Unit A; interface {$modeswitch advancedrecords}{$modeswitch typehelpers}',  // 0
+         'var',
+         '',
+         '',
+         s1,
+         s2,  // 5
+         'public',
+         'end;',
+         ''
+      ]);
+
+    AssertEquals(1, FTheHighLighter.FoldOpenCount(5));  // fold opens for class/record/...
+    AssertEquals(7, FTheHighLighter.FoldEndLine(5, 0));  // fold end for class/record/...
+  end;
+end;
+
 procedure TTestHighlighterPas.TestContextForClassSection;
 var
-  rc, lead1, lead2, cm, s1, s2, v: string;
+  ty, rc, lead1, lead2, cm, s1, s2, v: string;
   strict1, strict2: Boolean;
   cmod, sp1, sp2: Integer;
 begin
-  for rc in ['class ', 'object'] do
+  for ty in ['     ', 'type '] do
+  for rc in ['class ', 'object', 'record'] do
   for lead1 in ['', '  '] do
   for lead2 in ['', '  '] do
   for cm  in ['                ', ' sealed abstract', ' sealed         ', ' abstract       '] do
@@ -1484,9 +1584,9 @@ begin
     cmod := 0;
     if cm[2] <> ' ' then
     case cm[9] of
-      ' ': cmod := 1;
-      'a': cmod := 2;
-      't': cmod := 1;
+      ' ': cmod := 1; // sealed
+      'a': cmod := 2; // sealed abstract
+      't': cmod := 1; // abstract
     end;
 
     if (rc <> 'class ') and ( (cmod <> 0) or strict1 or  strict2 )
@@ -1495,9 +1595,9 @@ begin
 
     ReCreateEdit;
     SetLines
-      ([ 'Unit A; interface',  // 0
+      ([ 'Unit A; interface {$modeswitch advancedrecords}',  // 0
          'type',
-         'TFoo='+rc+cm ,  // 2  class sealed abstract
+         'TFoo='+ty+rc+cm ,  // 2  class sealed abstract
          lead1+trim(s1),
          lead2+trim(s2),
            'a,'+trim(v)+':'+trim(v)+';', // 5
@@ -1515,10 +1615,19 @@ begin
          ''
       ]);
 
-    case cmod of
-      0: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkKey ]);
-      1: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkKey, tkSpace, tkKey, tkSpace ]);
-      2: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkKey, tkSpace, tkKey, tkSpace, tkKey ]);
+    if ty[1] = ' ' then begin
+      case cmod of
+        0: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkSpace, tkKey ]);
+        1: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey, tkSpace ]);
+        2: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey, tkSpace, tkKey ]);
+      end;
+    end
+    else begin
+      case cmod of
+        0: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkKey, tkSpace, tkKey ]);
+        1: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkKey, tkSpace, tkKey, tkSpace, tkKey, tkSpace ]);
+        2: CheckTokensForLine('TFoo=class',  2, [ tkIdentifier, tkSymbol, tkKey, tkSpace, tkKey, tkSpace, tkKey, tkSpace, tkKey ]);
+      end;
     end;
 
     case strict1 of
