@@ -21,7 +21,7 @@ Type
   TLazTestInsightForm = class(TTestInsightForm)
   private
   Public
-    procedure ShowMessage(Const Msg : String); override;
+    procedure ShowMessage(aType: TInsightMessageType; Const Msg : String); override;
     Function GetTestProject : String; override;
     procedure RunTestProject(aExecutable : string; SendNamesOnly : Boolean); override;
     procedure NavigateTo(const aClass, aMethod, aUnit, aLocationFile: String; aLocationLine: Integer); override;
@@ -105,7 +105,7 @@ begin
       F:=LProj.FindFile(aunit+'.pas',[pfsfOnlyProjectFiles]);
     if Not Assigned(F) then
       F:=LProj.FindFile(aunit+'.p',[pfsfOnlyProjectFiles]);
-    Writeln('Found unit "',aunit,'" : ',Assigned(F));
+    // Writeln('Found unit "',aunit,'" : ',Assigned(F));
     end;
   // Search in unit, if available
   Tool:=Nil;
@@ -123,7 +123,7 @@ begin
     if CodetoolBoss.Explore(C,Tool,False,false) then
       Node:=Tool.FindMainBeginEndNode;
     end;
-  Writeln('Node found for unit "',aunit,'" : ',Assigned(Node));
+  // Writeln('Node found for unit "',aunit,'" : ',Assigned(Node));
   if Node=nil then
     exit;
   Params:=TFindDeclarationParams.Create;
@@ -132,7 +132,7 @@ begin
   Params.SetIdentifier(Tool,PChar(aClass),nil);
   if not Tool.FindIdentifierInContext(Params) then
     begin
-    Writeln('Class not found for unit "',aunit,'", identifier ',aClass);
+    // Writeln('Class not found for unit "',aunit,'", identifier ',aClass);
     exit;
     end;
   NewNode:=Params.NewNode;
@@ -142,13 +142,13 @@ begin
      or (NewNode.Desc<>ctnTypeDefinition)
      or (ClassNode.Desc<>ctnClass) then
        begin
-       Writeln('Class identifier in unit "',aunit,'", is not a class identifier ',aClass);
+       // Writeln('Class identifier in unit "',aunit,'", is not a class identifier ',aClass);
        Exit;
        end;
   Ctx:=ClassTool.FindClassMember(ClassNode,aMethod,true);
   if not Assigned(Ctx.Node) then
     begin
-    Writeln('Method ',aMethod,' for class ',aClass,' not found in unit "',aunit);
+    // Writeln('Method ',aMethod,' for class ',aClass,' not found in unit "',aunit);
     exit;
     end;
   Ctx.Tool.CleanPosToCaretAndTopLine(Ctx.Node.StartPos,Caret,NewTopLine);
@@ -265,11 +265,15 @@ end;
 
 { TLazTestInsightForm }
 
-procedure TLazTestInsightForm.ShowMessage(const Msg: String);
+procedure TLazTestInsightForm.ShowMessage(aType: TInsightMessageType; const Msg: String);
+
+Const
+  MLU : Array[TInsightMessageType] of TMessageLineUrgency = (TMessageLineUrgency.mluImportant,TMessageLineUrgency.mluError);
+
 begin
-  Writeln('Message : ',Msg);
   if Assigned(IDEMessagesWindow) then
-    IDEMessagesWindow.AddCustomMessage(TMessageLineUrgency.mluError,Msg,'',0,0,rsTestInsightTitle)
+
+    IDEMessagesWindow.AddCustomMessage(MLU[aType],Msg,'',0,0,rsTestInsightTitle)
 end;
 
 function TLazTestInsightForm.GetTestProject: String;
@@ -313,7 +317,7 @@ begin
   if not NavOK then
     NavOK:=ShowMethod(aClass,aMethod,aUnit);
   if not NavOK then
-    ShowMessage(Format('Failed to navigate to test %s.%s in unit %s',[aClass,aMethod,aUnit]));
+    ShowMessage(imtError,Format('Failed to navigate to test %s.%s in unit %s',[aClass,aMethod,aUnit]));
 end;
 
 function TLazTestInsightForm.ShowRefreshTestproject: Boolean;

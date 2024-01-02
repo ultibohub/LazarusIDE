@@ -28,6 +28,7 @@ unit FpPascalParser;
 {$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 {$IF FPC_Fullversion=30202}{$Optimization NOPEEPHOLE}{$ENDIF}
 {$TYPEDADDRESS on}
+{$SafeFPUExceptions off}
 
 interface
 
@@ -79,6 +80,7 @@ type
     FTextExpression: String;
     FExpressionPart: TFpPascalExpressionPart;
     FValid: Boolean;
+    FFpuMask: TFPUExceptionMask;
     function GetResultValue: TFpValue;
     function GetValid: Boolean;
     procedure SetError(AMsg: String);  // deprecated;
@@ -3197,6 +3199,8 @@ end;
 constructor TFpPascalExpression.Create(ATextExpression: String;
   AContext: TFpDbgSymbolScope; ASkipParse: Boolean);
 begin
+  FFpuMask := GetExceptionMask;
+  SetExceptionMask([low(TFPUExceptionMask)..high(TFPUExceptionMask)]);
   FContext := AContext;
   FContext.AddReference;
   FTextExpression := ATextExpression;
@@ -3211,6 +3215,8 @@ begin
   FreeAndNil(FExpressionPart);
   FContext.ReleaseReference;
   inherited Destroy;
+  ClearExceptions(False);
+  SetExceptionMask(FFpuMask);
 end;
 
 function TFpPascalExpression.DebugDump(AWithResults: Boolean): String;
@@ -4829,6 +4835,42 @@ function TFpPascalExpressionPartOperatorCompare.DoGetResultValue: TFpValue;
     else
       SetError('= not supported');
   end;
+  function CheckEnumCompatible(AName: String; AExpVal: Integer; AnEnum: TFpValue): boolean;
+  var
+    m, t: TFpSymbol;
+  begin
+    Result := AName = ''; // un-named / maybe invalid ordinal value
+    if Result then
+      exit;
+
+    t := AnEnum.TypeInfo;
+    Result := t = nil;
+    if Result then // TODO: TFpValueDwarfEnumMember currently does not have type info
+      exit;
+
+    m := t.NestedSymbolByName[AName];
+    Result := m <> nil;
+    if not Result then
+      exit;
+    Result := m.HasOrdinalValue and (m.OrdinalValue = AExpVal);
+  end;
+  function EnumEqual(AnEnumVal, AOtherVal: TFpValue; AReverse: Boolean = False): TFpValue;
+  begin
+    Result := nil;
+    if (AOtherVal.Kind in [skEnum, skEnumValue]) and
+       (AnEnumVal.FieldFlags * [svfInteger, svfCardinal, svfOrdinal] <> []) and
+       (AOtherVal.FieldFlags * [svfInteger, svfCardinal, svfOrdinal] <> [])
+    then begin
+      if CheckEnumCompatible(AnEnumVal.AsString, AnEnumVal.AsInteger, AOtherVal) and
+         CheckEnumCompatible(AOtherVal.AsString, AOtherVal.AsInteger, AnEnumVal)
+      then
+        Result := TFpValueConstBool.Create((AnEnumVal.AsInteger = AOtherVal.AsInteger) xor AReverse)
+      else
+        SetError('type mismatch between enum');
+    end
+    else
+      SetError('= not supported');
+  end;
 
   function IntGreaterThanValue(AIntVal, AOtherVal: TFpValue; AReverse: Boolean = False): TFpValue;
   begin
@@ -4868,6 +4910,23 @@ function TFpPascalExpressionPartOperatorCompare.DoGetResultValue: TFpValue;
     else
       SetError('= not supported');
   end;
+  function EnumGreaterThanValue(AnEnumVal, AOtherVal: TFpValue; AReverse: Boolean = False): TFpValue;
+  begin
+    Result := nil;
+    if (AOtherVal.Kind in [skEnum, skEnumValue]) and
+       (AnEnumVal.FieldFlags * [svfInteger, svfCardinal, svfOrdinal] <> []) and
+       (AOtherVal.FieldFlags * [svfInteger, svfCardinal, svfOrdinal] <> [])
+    then begin
+      if CheckEnumCompatible(AnEnumVal.AsString, AnEnumVal.AsInteger, AOtherVal) and
+         CheckEnumCompatible(AOtherVal.AsString, AOtherVal.AsInteger, AnEnumVal)
+      then
+        Result := TFpValueConstBool.Create((AnEnumVal.AsInteger > AOtherVal.AsInteger) xor AReverse)
+      else
+        SetError('type mismatch between enum');
+    end
+    else
+      SetError(GetText+' not supported');
+  end;
 
   function IntSmallerThanValue(AIntVal, AOtherVal: TFpValue; AReverse: Boolean = False): TFpValue;
   begin
@@ -4906,6 +4965,23 @@ function TFpPascalExpressionPartOperatorCompare.DoGetResultValue: TFpValue;
       Result := TFpValueConstBool.Create((ACharVal.AsString < AOtherVal.AsString) xor AReverse)
     else
       SetError('= not supported');
+  end;
+  function EnumSmallerThanValue(AnEnumVal, AOtherVal: TFpValue; AReverse: Boolean = False): TFpValue;
+  begin
+    Result := nil;
+    if (AOtherVal.Kind in [skEnum, skEnumValue]) and
+       (AnEnumVal.FieldFlags * [svfInteger, svfCardinal, svfOrdinal] <> []) and
+       (AOtherVal.FieldFlags * [svfInteger, svfCardinal, svfOrdinal] <> [])
+    then begin
+      if CheckEnumCompatible(AnEnumVal.AsString, AnEnumVal.AsInteger, AOtherVal) and
+         CheckEnumCompatible(AOtherVal.AsString, AOtherVal.AsInteger, AnEnumVal)
+      then
+        Result := TFpValueConstBool.Create((AnEnumVal.AsInteger < AOtherVal.AsInteger) xor AReverse)
+      else
+        SetError('type mismatch between enum');
+    end
+    else
+      SetError(GetText+' not supported');
   end;
 
   function SymDiffSets(ASetVal, AOtherVal: TFpValue): TFpValue;
@@ -4980,6 +5056,8 @@ begin
                   Result := CharDataEqualToValue(tmp1, tmp2, (s = '<>'));
       skSet:      Result := SetEqual(tmp1, tmp2, (s = '<>'));
       skBoolean:  Result := BoolEqual(tmp1, tmp2, (s = '<>'));
+      skEnum, skEnumValue:
+                  Result := EnumEqual(tmp1, tmp2, (s = '<>'));
     end;
   end
   else
@@ -4994,6 +5072,8 @@ begin
                      Result := CharDataGreaterThanValue(tmp1, tmp2, (s = '<='));
       skString, skAnsiString, skWideString, skChar{, skWideChar}:
                   Result := CharDataGreaterThanValue(tmp1, tmp2, (s = '<='));
+      skEnum, skEnumValue:
+                  Result := EnumGreaterThanValue(tmp1, tmp2, (s = '<='));
     end;
   end
   else
@@ -5008,6 +5088,8 @@ begin
                      Result := CharDataSmallerThanValue(tmp1, tmp2, (s = '>='));
       skString, skAnsiString, skWideString, skChar{, skWideChar}:
                   Result := CharDataSmallerThanValue(tmp1, tmp2, (s = '>='));
+      skEnum, skEnumValue:
+                  Result := EnumSmallerThanValue(tmp1, tmp2, (s = '>='));
     end;
   end
   else
@@ -5103,6 +5185,18 @@ begin
           exit;
         end;
       end;
+    end;
+    SetError(fpErrNoMemberWithName, [MemberName]);
+    exit
+  end;
+
+  if (tmp.Kind in [skType]) and
+     (tmp.DbgSymbol <> nil) and (tmp.DbgSymbol.Kind in [skEnum])
+  then begin
+    Result := tmp.MemberByName[MemberName];
+    if Result <> nil then begin
+      {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
+      exit;
     end;
     SetError(fpErrNoMemberWithName, [MemberName]);
     exit

@@ -174,8 +174,8 @@ type
     function CreateServer(aOwner : TComponent) : TTestInsightServer; virtual;
     procedure NavigateTo(const {%H-}aClass, {%H-}aMethod,{%H-}aUnit,{%H-}aLocationFile : String; {%H-}aLocationLine : Integer); virtual;
     procedure DoneServer(aServer :TTestInsightServer); virtual;
-    procedure ShowMessage(Const Msg : String); virtual;
-    procedure HandleServerLog(Sender: TObject; const aMessage: String); virtual;
+    procedure ShowMessage(aType : TInsightMessageType; Const Msg : String); virtual;
+    procedure HandleServerLog(Sender: TObject; const aType : TInsightMessageType; const aMessage: String); virtual;
     Property Server : TTestInsightServer Read FServer;
   public
   end;
@@ -393,7 +393,7 @@ end;
 
 procedure TTestInsightForm.NavigateTo(const aClass,aMethod, aUnit, aLocationFile: String; aLocationLine: Integer);
 begin
-  ShowMessage(SNavigationNotAvailable);
+  ShowMessage(imtInfo,SNavigationNotAvailable);
 end;
 
 procedure TTestInsightForm.DoneServer(aServer: TTestInsightServer);
@@ -401,7 +401,7 @@ begin
   aServer.Free;
 end;
 
-procedure TTestInsightForm.ShowMessage(const Msg: String);
+procedure TTestInsightForm.ShowMessage(aType: TInsightMessageType; const Msg: String);
 begin
   Dialogs.ShowMessage(Msg);
 end;
@@ -590,7 +590,6 @@ procedure TTestInsightForm.TestTreeDblClick(Sender: TObject);
     P : integer;
 
   begin
-    Writeln('Path: ');
     Result:=False;
     P:=RPos('.',aPath);
     if P>0 then
@@ -604,7 +603,6 @@ procedure TTestInsightForm.TestTreeDblClick(Sender: TObject);
         aClass:=aPath;
       Result:=True;
       end;
-    Writeln('Path -> Class: ',aClass,' method: ',aMethod,': ',Result);
   end;
 
 var
@@ -630,7 +628,7 @@ begin
     begin
     If not ExtractMethod(Itm.TestPath,aClass,aMethod) then
       begin
-      ShowMessage(Format(rsCouldNotDete, [Itm.TestPath]));
+      ShowMessage(imtInfo,Format(rsCouldNotDete, [Itm.TestPath]));
       exit;
       end;
     aUnit:='';
@@ -760,6 +758,8 @@ begin
         rtError : AddError(N,Itm);
         rtWarning : AddFailure(N,Itm);
         rtPassed : EndTest(N,Itm);
+      else
+        ; // 
       end;
       end;
     end;
@@ -795,9 +795,9 @@ begin
   pbBar.Refresh;
 end;
 
-procedure TTestInsightForm.HandleServerLog(Sender: TObject; const aMessage: String);
+procedure TTestInsightForm.HandleServerLog(Sender: TObject; const aType: TInsightMessageType; const aMessage: String);
 begin
-  ShowMessage(aMessage);
+  ShowMessage(atype,aMessage);
 end;
 
 
@@ -1276,12 +1276,12 @@ procedure TTestInsightForm.RunTestProject(aExecutable: String; SendNamesOnly: Bo
 begin
   if TestRunning then
      begin
-     ShowMessage(Format('The test project %s is still running',[aExecutable]));
+     ShowMessage(imtInfo,Format('The test project %s is still running',[aExecutable]));
      Exit;
      end;
   if not FileExists(aExecutable) then
     begin
-    ShowMessage(Format(SNoExecutableAvailable,[aExecutable]));
+    ShowMessage(imtError,Format(SNoExecutableAvailable,[aExecutable]));
     Exit;
     end;
   CreateTestRunConfigFile(FConfStoreFile,SendNamesOnly);
@@ -1290,7 +1290,7 @@ begin
     PTest.Execute;
   except
     On E : Exception do
-      ShowMessage(Format('Error %s while running test project %s: %s',[E.ClassName,aExecutable,E.Message]));
+      ShowMessage(imtError,Format('Error %s while running test project %s: %s',[E.ClassName,aExecutable,E.Message]));
   end;
   FSelectedTestSuite:=Nil;
 end;

@@ -73,6 +73,7 @@ const
   StdDefTemplLazarusSrcDir  = 'Lazarus source directory';
   StdDefTemplLazarusBuildOpts = 'Lazarus build options';
   StdDefTemplLCLProject     = 'LCL project';
+  StdDefTemplCodetoolsFPCSrc = 'CodetoolsFPCSrc';
 
   // Standard macros
   DefinePathMacroName      = ExternalMacroStart+'DefinePath'; // the current directory
@@ -2577,11 +2578,17 @@ begin
        Format(ctsFreePascalSourcesPlusDesc,['RTL, FCL, Packages, Compiler']),
        '','',da_Block);
 
-    // The Free Pascal sources build a world of their own
-    // => reset all search paths
     MainDir:=TDefineTemplate.Create('Free Pascal Source Directory',
       ctsFreePascalSourceDir,'',FPCSrcDir,da_Directory);
     Result.AddChild(MainDir);
+    // add define
+    DefTempl:=TDefineTemplate.Create(StdDefTemplCodetoolsFPCSrc,
+      StdDefTemplCodetoolsFPCSrc,StdDefTemplCodetoolsFPCSrc,'',da_DefineRecurse);
+    MainDir.AddChild(DefTempl);
+
+    // The Free Pascal sources build a world of their own
+    // => reset all search paths
+
     DefTempl:=TDefineTemplate.Create('Reset SrcPath',
       ctsSrcPathInitialization,SrcPathMacroName,'',da_DefineRecurse);
     MainDir.AddChild(DefTempl);

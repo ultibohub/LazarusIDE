@@ -2,19 +2,19 @@
 $(AttributesStart)
 EnableMakros=true
 RemoveChar=true
+!FileVersion=1
 $(AttributesEnd)
-$Param(VariableName): array[0..$Param(HighNumber)] of $Param(Type);
-|
+$Param(VariableName): array[0..$Param(HighNumber)] of $Param(Type);|
 [arrayc | array declaration (const)]
 $(AttributesStart)
 EnableMakros=true
 $(AttributesEnd)
-array[$param(0)..$param(1)] of $param(Type) = (|);
+array[$Param(0)..$Param(1)] of $Param(Type) = (|);
 [cases | case statement]
 $(AttributesStart)
 EnableMakros=true
 $(AttributesEnd)
-case $param(var) of
+case $Param(var) of
   : |;
   : ;
 end$AddSemicolon()
@@ -24,15 +24,14 @@ EnableMakros=true
 $(AttributesEnd)
 begin
   |
-end else
-begin
+end else begin
 
 end$AddSemicolon()
 [casee | case statement (with else)]
 $(AttributesStart)
 EnableMakros=true
 $(AttributesEnd)
-case $param(var) of
+case $Param(var) of
   : |;
   : ;
 else ;
@@ -56,7 +55,7 @@ EnableMakros=true
 RemoveChar=true
 $(AttributesEnd)
 $Param(ClassName) = class($Param(InheritedClass))
-|
+  |
 end;
 [classc | class declaration (with Create/Destroy overrides)]
 $(AttributesStart)
@@ -99,13 +98,19 @@ end$AddSemicolon()
 $(AttributesStart)
 EnableMakros=true
 $(AttributesEnd)
-function $param(Name)($param( )): $param(Type);
+function $Param(Name)($Param()): $Param(Type);
 begin
   |
 end;
 [hexc | HexStr(Cardinal(),8)]
-HexStr(PtrUInt(|),8)
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+HexStr(PtrUInt($Param()),8)|
 [ifs | if (no begin/end)]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
 if $Param(Conditional) then
   |
 [ifb | if statement]
@@ -133,12 +138,14 @@ $(AttributesEnd)
 if $Param(Conditional) then
 begin
   |
-end
-else begin
+end else begin
 
 end$AddSemicolon()
 [procedure | procedure declaration]
-procedure $Param(ProcName)|($Param());
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+procedure $Param(ProcName)($Param());
 begin
   |
 end;
@@ -147,7 +154,7 @@ $(AttributesStart)
 EnableMakros=true
 $(AttributesEnd)
 of
-|$OfAll()end;
+|$OfAll()end$AddSemicolon()
 [trye | try except]
 $(AttributesStart)
 EnableMakros=true
@@ -188,6 +195,9 @@ begin
   |
 end$AddSemicolon()
 [whiles | while (no begin)]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
 while $Param(LoopCondition) do
   |
 [withb | with statement]
@@ -227,7 +237,7 @@ begin
   Width:=$Param(0);
   Height:=$Param(0);
   Caption:='$Param(CaptionText)';
-end;
+end$AddSemicolon()
 |
 [fpc | Conditional FPC Mode]
 $(AttributesStart)
@@ -251,35 +261,77 @@ writeln('$ProcedureName() '|)$AddSemicolon()
 [prws | property read write]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name) read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1);|
+property $Param(Name) read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1);|
 [prwd | property read write default]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name) read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1) default $param(Const);|
+property $Param(Name) read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1) default $Param(Const);|
 [pirws | property Integer read write]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name): Integer read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1);|
+property $Param(Name): Integer read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1);|
 [pirwd | property Integer read write default]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name): Integer read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1) default $param(Const);|
+property $Param(Name): Integer read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1) default $Param(Const);|
 [psrw | property string read write]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name): string read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1);|
+property $Param(Name): string read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1);|
 [pdrwd | property Double read write default]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name): Double read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1) default $param(Const);|
+property $Param(Name): Double read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1) default $Param(Const);|
 [pdrws | property Double read write]
 $(AttributesStart)
 !Version=1
+EnableMakros=true
 $(AttributesEnd)
-property $param(Name): Double read $param(Get)$param(Name,sync=1) write $param(Set)$param(Name,sync=1);| 
+property $Param(Name): Double read $Param(Get)$Param(Name,sync=1) write $Param(Set)$Param(Name,sync=1);|
+[is | IntToStr]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+IntToStr($Param())|
+[si | StrToInt()]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+StrToInt($Param())|
+[sid | StrToIntDef]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+StrToIntDef($Param(), $Param(-1))|
+[bs | BoolToStr]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+BoolToStr($Param(), true)|
+[sb | StrToBool]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+StrToBool($Param())|
+[sbd | StrToBoolDef]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+StrToBoolDef($Param(), $Param(false))|
+[ih | IntToHex]
+$(AttributesStart)
+EnableMakros=true
+$(AttributesEnd)
+IntToHex($Param())|
