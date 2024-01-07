@@ -6688,7 +6688,7 @@ begin
         Canvas.TextOut(r.Left+dx-1,r.Bottom-dy,Caption);
         if HeaderStyle.StyleDesc.NeedDrawHeaderAfterText then begin
           HeaderStyle.DrawProc(Canvas,HeaderStyle.StyleDesc,Rect(r.Left,r.Top,r.Right,r.Bottom-dy-TxtW-1),false,FFocused);
-          HeaderStyle.DrawProc(Canvas,HeaderStyle.StyleDesc,Rect(r.Left,r.Bottom-dy+1,r.Right,r.Bottom),false,FFocused);
+          HeaderStyle.DrawProc(Canvas,HeaderStyle.StyleDesc,Rect(r.Left,r.Bottom-dy+2,r.Right,r.Bottom),false,FFocused);
         end;
       end else begin
         // text does not fit
@@ -6706,7 +6706,7 @@ begin
         Canvas.TextRect(r,dx+2,dy,Caption);
         if HeaderStyle.StyleDesc.NeedDrawHeaderAfterText then begin
           HeaderStyle.DrawProc(Canvas,HeaderStyle.StyleDesc,Rect(r.Left,r.Top,r.Left+dx-1,r.Bottom),true,FFocused);
-          HeaderStyle.DrawProc(Canvas,HeaderStyle.StyleDesc,Rect(r.Left+dx+TxtW+2,r.Top,r.Right,r.Bottom),true,FFocused);
+          HeaderStyle.DrawProc(Canvas,HeaderStyle.StyleDesc,Rect(r.Right-dx+5,r.Top,r.Right,r.Bottom),true,FFocused);
         end;
       end else begin
         // text does not fit
@@ -8255,8 +8255,8 @@ end;
 procedure DrawFrame3DHeader(Canvas: TCanvas; {%H-}Style: TADHeaderStyleDesc; r: TRect;
   {%H-}Horizontal: boolean; {%H-}Focused: boolean);
 begin
-  Canvas.Frame3d(r,2,bvLowered);
-  Canvas.Frame3d(r,4,bvRaised);
+  Canvas.Frame3d(r,1,bvLowered);
+  Canvas.Frame3d(r,3,bvRaised);
 end;
 
 procedure DrawFrameLine(Canvas: TCanvas; {%H-}Style: TADHeaderStyleDesc; r: TRect;
@@ -8373,6 +8373,34 @@ begin
   ThemeServices.DrawElement(Canvas.Handle,ted, r);
 end;
 
+procedure DrawFrameGradientMenuBar(Canvas: TCanvas; {%H-}Style: TADHeaderStyleDesc; r: TRect;
+  {%H-}Horizontal: boolean; Focused: boolean);
+var
+  FillDir: TGradientDirection;
+  ColorStart, ColorEnd: TColor;
+begin
+  if Horizontal then
+    FillDir := gdVertical
+  else
+    FillDir := gdHorizontal;
+
+  if Focused then
+  begin
+    ColorStart := cl3DHiLight;
+    ColorEnd := cl3DLight;
+  end
+  else
+  begin
+    ColorStart := DecColor(clMenuBar, 32); // darken by 0.125
+    ColorEnd := clMenuBar;
+  end;
+  Canvas.GradientFill(r, ColorStart, ColorEnd, FillDir);
+
+  Canvas.Pen.Color := clActiveBorder;
+  Canvas.Pen.Width := 1;
+  Canvas.Frame(r);
+end;
+
 initialization
   DockMaster:=TAnchorDockMaster.Create(nil);
   DockMaster.RegisterHeaderStyle('Frame3D', @DrawFrame3DHeader, true, true);
@@ -8381,6 +8409,7 @@ initialization
   DockMaster.RegisterHeaderStyle('Points', @DrawFramePoints, true, true);
   DockMaster.RegisterHeaderStyle('ThemedCaption', @DrawFrameThemedCaption, false, false);
   DockMaster.RegisterHeaderStyle('ThemedButton', @DrawFrameThemedButton, false, false);
+  DockMaster.RegisterHeaderStyle('GradientMenuBar', @DrawFrameGradientMenuBar, false, false);
   DockTimer:=TTimer.Create(nil);
 
 finalization
