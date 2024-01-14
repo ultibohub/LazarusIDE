@@ -12,6 +12,18 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0;\n"
 "X-Generator: Poedit 3.3.2\n"
 
+#: lazarusidestrconsts.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourceline
+msgid "Source line"
+msgstr ""
+
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -10991,11 +11003,15 @@ msgid "Keep open"
 msgstr "保持打开/展现"
 
 #: lazarusidestrconsts.liskeeprelativeindentationofmultilinetemplate
-msgid "Keep relative indentation of multi line template"
+#, fuzzy
+#| msgid "Keep relative indentation of multi line template"
+msgid "Keep absolute indentation, regardless of the current cursor indentation in the text."
 msgstr "保持多行模板的相对缩进"
 
 #: lazarusidestrconsts.liskeepsubindentation
-msgid "Keep indentation"
+#, fuzzy
+#| msgid "Keep indentation"
+msgid "Absolute indentation"
 msgstr "保持缩进"
 
 #: lazarusidestrconsts.liskeepthemandcontinue

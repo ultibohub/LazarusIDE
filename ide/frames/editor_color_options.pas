@@ -1161,7 +1161,7 @@ begin
     ColorElementTree.Items.Add(nil, AdditionalHighlightGroupNames[agnDefault]);
   for j := low(TAhaGroupName) to high(TAhaGroupName) do
     if not(j in [agnDefault, agnLanguage]) then
-      ColorElementTree.Items.Add(nil, AdditionalHighlightGroupNames[j]);
+      ColorElementTree.Items.Add(nil, AdditionalHighlightGroupNames[j]).Visible := False;
 
   // Fill Attributes in
   DefNode := nil;
@@ -1186,6 +1186,7 @@ begin
       end;
       if ParentNode = nil then
         ParentNode := ColorElementTree.Items.Add(nil, ParentName);
+      ParentNode.Visible := True;
       NewNode :=  ColorElementTree.Items.AddChild(ParentNode, COLOR_NODE_PREFIX + Attr.Caption^);
       NewNode.Data := Pointer(Attr);
       if Attr.Group = agnDefault then
@@ -1228,10 +1229,10 @@ begin
     DefAttri := DefaultColorScheme.Attribute[FCurHighlightElement.StoredName];
     if FCurHighlightElement.IsUsingSchemeGlobals then begin
       // reset the globol settings for the element
-      FCurHighlightElement.GetSchemeGlobal.Assign(DefAttri);
+      FCurHighlightElement.GetSchemeGlobal.AssignColors(DefAttri);
     end
     else begin
-      FCurHighlightElement.Assign(DefAttri);
+      FCurHighlightElement.AssignColors(DefAttri);
       FCurHighlightElement.UseSchemeGlobals := False; // keep editing locals, for single elem reset, this should not change.
     end;
   end else begin
@@ -1294,12 +1295,18 @@ begin
     exit;
 
   FCurrentColorScheme := NewColorScheme;
+  FileExtensionsComboBox.Enabled := FCurrentColorScheme.SupportsFileExt;
   if not FIsEditingDefaults then begin
     FCurrentHighlighter.Free;
     FCurrentHighlighter := EditorOpts.HighlighterList.GetNewSynInstance(FCurrentColorScheme.IdeHighlighterID);
     SynColorAttrEditor1.CurrentColorScheme := FCurrentColorScheme;
     FillPriorEditor;
   end;
+  if FCurrentHighlighter <> nil then
+    SetComboBoxText(FileExtensionsComboBox,
+      GetCurFileExtensions(FCurrentHighlighter.LanguageName),cstFilename)
+  else
+    SetComboBoxText(FileExtensionsComboBox, '', cstFilename);
   ApplyCurrentScheme;
   FillColorElementListBox;
 end;
@@ -1409,8 +1416,6 @@ begin
                         GetColorSchemeForLang(EditorOpts.HighlighterList
                                      [CurLanguageID].SynInstance.LanguageName));
         SetColorSchemeItem(GetColorSchemeForLang(FCurrentHighlighter.LanguageName));
-        SetComboBoxText(FileExtensionsComboBox,
-          GetCurFileExtensions(FCurrentHighlighter.LanguageName),cstFilename);
       end;
     end;
     LanguageButton.Caption := Language;

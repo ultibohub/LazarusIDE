@@ -13,6 +13,18 @@ msgstr ""
 "Plural-Forms: nplurals=1; plural=0\n"
 "X-Generator: Easy Po 0.9.2\n"
 
+#: lazarusidestrconsts.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourceline
+msgid "Source line"
+msgstr ""
+
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -10952,11 +10964,11 @@ msgid "Keep open"
 msgstr ""
 
 #: lazarusidestrconsts.liskeeprelativeindentationofmultilinetemplate
-msgid "Keep relative indentation of multi line template"
+msgid "Keep absolute indentation, regardless of the current cursor indentation in the text."
 msgstr ""
 
 #: lazarusidestrconsts.liskeepsubindentation
-msgid "Keep indentation"
+msgid "Absolute indentation"
 msgstr ""
 
 #: lazarusidestrconsts.liskeepthemandcontinue

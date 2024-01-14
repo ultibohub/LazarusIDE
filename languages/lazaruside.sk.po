@@ -13,6 +13,18 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Language: sk\n"
 
+#: lazarusidestrconsts.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourceline
+msgid "Source line"
+msgstr ""
+
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -11056,11 +11068,13 @@ msgid "Keep open"
 msgstr "Ponechať otvorené"
 
 #: lazarusidestrconsts.liskeeprelativeindentationofmultilinetemplate
-msgid "Keep relative indentation of multi line template"
+msgid "Keep absolute indentation, regardless of the current cursor indentation in the text."
 msgstr ""
 
 #: lazarusidestrconsts.liskeepsubindentation
-msgid "Keep indentation"
+#, fuzzy
+#| msgid "Keep indentation"
+msgid "Absolute indentation"
 msgstr "Ponechať odsadenie"
 
 #: lazarusidestrconsts.liskeepthemandcontinue

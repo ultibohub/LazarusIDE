@@ -14,6 +14,18 @@ msgstr ""
 "X-Generator: Lokalize 21.12.3\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
+#: lazarusidestrconsts.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr ""
+
+#: lazarusidestrconsts.dbgasmwindowsourceline
+msgid "Source line"
+msgstr ""
+
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -10991,11 +11003,15 @@ msgid "Keep open"
 msgstr "Залишити відкритим"
 
 #: lazarusidestrconsts.liskeeprelativeindentationofmultilinetemplate
-msgid "Keep relative indentation of multi line template"
+#, fuzzy
+#| msgid "Keep relative indentation of multi line template"
+msgid "Keep absolute indentation, regardless of the current cursor indentation in the text."
 msgstr "Зберігати відносний відступ багаторядкового шаблона"
 
 #: lazarusidestrconsts.liskeepsubindentation
-msgid "Keep indentation"
+#, fuzzy
+#| msgid "Keep indentation"
+msgid "Absolute indentation"
 msgstr "Залишити відступи"
 
 #: lazarusidestrconsts.liskeepthemandcontinue

@@ -91,10 +91,7 @@ type
     procedure windowDidMove(notification: NSNotification); message 'windowDidMove:';
   public
     callback: IWindowCallback;
-    function acceptsFirstResponder: LCLObjCBoolean; override;
     function canBecomeKeyWindow: LCLObjCBoolean; override;
-    function becomeFirstResponder: LCLObjCBoolean; override;
-    function resignFirstResponder: LCLObjCBoolean; override;
     function lclGetCallback: ICommonCallback; override;
     procedure lclClearCallback; override;
     // mouse
@@ -122,6 +119,7 @@ type
     makeFirstResponderCount: Integer;
   private
     procedure DoWindowDidBecomeKey(); message 'DoWindowDidBecomeKey';
+    procedure DoMakeFirstResponder(aResponder: NSResponder); message 'DoMakeFirstResponder:';
   protected
     fieldEditor: TCocoaFieldEditor;
     firedMouseEvent: Boolean;
@@ -149,6 +147,7 @@ type
     //LCLForm: TCustomForm;
     procedure dealloc; override;
     function makeFirstResponder(aResponder: NSResponder): ObjCBOOL; override;
+    function makeFirstResponderFromLCL(aResponder: NSResponder): ObjCBOOL; message 'makeFirstResponderFromLCL:';
     function canBecomeKeyWindow: LCLObjCBoolean; override;
     function lclGetCallback: ICommonCallback; override;
     procedure lclClearCallback; override;
@@ -579,28 +578,9 @@ begin
     callback.Move;
 end;
 
-function TCocoaPanel.acceptsFirstResponder: LCLObjCBoolean;
-begin
-  Result := True;
-end;
-
 function TCocoaPanel.canBecomeKeyWindow: LCLObjCBoolean;
 begin
-  Result := Assigned(callback) and callback.CanActivate;
-end;
-
-function TCocoaPanel.becomeFirstResponder: LCLObjCBoolean;
-begin
-  Result := inherited becomeFirstResponder;
-//  if Assigned(callback) then
-//    callback.BecomeFirstResponder;
-end;
-
-function TCocoaPanel.resignFirstResponder: LCLObjCBoolean;
-begin
-  Result := inherited resignFirstResponder;
-//  if Assigned(callback) then
-//    callback.ResignFirstResponder;
+  Result := false;
 end;
 
 function TCocoaPanel.lclGetCallback: ICommonCallback;
@@ -1063,6 +1043,25 @@ begin
   finally
     dec( makeFirstResponderCount );
   end;
+end;
+
+function TCocoaWindow.makeFirstResponderFromLCL(aResponder: NSResponder): ObjCBOOL;
+begin
+  if makeFirstResponderCount=0 then begin
+    // not in makeFirstResponder processing, call makeFirstResponder directly
+    Result:= makeFirstResponder( aResponder );
+  end else begin
+    // otherwise, delay processing after makeFirstResponder
+    aResponder.retain;
+    performSelector_withObject_afterDelay( ObjCSelector('DoMakeFirstResponder:'), aResponder, 0 );
+    Result:= true;
+  end;
+end;
+
+procedure TCocoaWindow.DoMakeFirstResponder(aResponder: NSResponder);
+begin
+  makeFirstResponder( aResponder );
+  aResponder.release;
 end;
 
 

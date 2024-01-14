@@ -171,7 +171,6 @@ type
     procedure DoSetMainMenu(AMenu: NSMenu; ALCLMenu: TMenu);
   public
     // modal session
-    CurModalForm: NSWindow;
     Modals : TList;
     ModalCounter: Integer; // the cheapest way to determine if modal window was called
                            // used in mouse handling (in callbackobject)
@@ -218,6 +217,7 @@ type
     procedure SetMainMenu(const AMenu: HMENU; const ALCLMenu: TMenu);
     function StartModal(awin: NSWindow; hasMenu: Boolean): Boolean;
     procedure EndModal(awin: NSWindow);
+    function CurModalForm: NSWindow;
     function isTopModalWin(awin: NSWindow): Boolean;
     function isModalSession: Boolean;
 
@@ -257,7 +257,7 @@ function CocoaPromptUser(const DialogCaption, DialogMessage: String;
     EscapeResult: Longint;
     sheetOfWindow: NSWindow = nil; modalSheet: Boolean = false): Longint;
 
-function GetCocoaWindowAtPos(p: NSPoint): TCocoaWindow;
+function GetCocoaWindowAtPos(p: NSPoint): NSWindow;
 
 // The function tries to initialize the proper application class.
 // The desired application class can be specified in info.plit
@@ -520,7 +520,7 @@ end;
 // 3. in current App
 // 4. is visible window
 // 5. is not the misc window like Menu Bar
-function GetCocoaWindowAtPos(p: NSPoint): TCocoaWindow;
+function GetCocoaWindowAtPos(p: NSPoint): NSWindow;
 var
   windowNumber: NSInteger;
   windowNumbers: NSArray;
@@ -538,14 +538,13 @@ begin
 
   // ensure 5
   window := NSApp.windowWithWindowNumber(windowNumber);
-  if Assigned(window) and window.isKindOfClass(TCocoaWindow) then
-    Result := TCocoaWindow(window);
+  if Assigned(window) and (window.isKindOfClass(TCocoaWindow) or window.isKindOfClass(TCocoaPanel)) then
+    Result := window;
 end;
 
 procedure ForwardMouseMove(app: NSApplication; theEvent: NSEvent);
 var
   w   : NSWindow;
-  kw  : NSWindow;
   ev  : NSEvent;
   p   : NSPoint;
   wfr : NSRect;
@@ -553,13 +552,13 @@ begin
   if not app.isActive then
     exit;
 
-  kw := app.keyWindow;
   p := theEvent.mouseLocation;
+  w := GetCocoaWindowAtPos(p);;
 
-  if Assigned(kw) then
+  if Assigned(w) then
   begin
-    wfr := kw.contentRectForFrameRect(kw.frame);
-    // if mouse outside of ClientFrame of keyWindow,
+    wfr := w.contentRectForFrameRect(w.frame);
+    // if mouse outside of ClientFrame of Window,
     // Cursor should be forced to default.
     // see also: https://gitlab.com/freepascal.org/lazarus/lazarus/-/issues/40515
     if not NSPointInRect(p, wfr) then
@@ -571,9 +570,8 @@ begin
     end;
   end;
 
-  w := GetCocoaWindowAtPos(p);
-  if (not Assigned(w)) or (w=kw) then
-    exit;
+  if (not Assigned(w)) or (not Assigned(theEvent.window)) or (w=theEvent.window) then
+    Exit;
 
   p.x := p.x - w.frame.origin.x;
   p.y := p.y - w.frame.origin.y;
@@ -948,13 +946,22 @@ begin
   wakeupEventLoop;
 end;
 
+function TCocoaWidgetSet.CurModalForm: NSWindow;
+begin
+  if isModalSession then begin
+    Result := TModalSession(Modals[Modals.Count-1]).window;
+  end else begin
+    Result:= nil;
+  end;
+end;
+
 function TCocoaWidgetSet.isTopModalWin(awin: NSWindow): Boolean;
 begin
-  if not isModalSession then begin
-    Result := false;
-    Exit;
+  if Assigned(awin) then begin
+    Result:= CurModalForm=awin;
+  end else begin
+    Result:= false;
   end;
-  Result := TModalSession(Modals[Modals.Count-1]).window = awin;
 end;
 
 function TCocoaWidgetSet.isModalSession: Boolean;

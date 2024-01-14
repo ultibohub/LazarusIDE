@@ -2182,6 +2182,10 @@ resourcestring
   dlgIfDefNodeActive              = 'Active $IFDEF node';
   dlgIfDefNodeTmpActive           = 'Included mixed state $IFDEF node';
 
+  dbgAsmWindowSourceLine          = 'Source line';
+  dbgAsmWindowSourceFunc          = 'Function name';
+  dbgAsmWindowLinkTarget          = 'Link target line';
+
   dlgAddHiAttrGroupDefault  = 'Global';
   dlgAddHiAttrGroupText     = 'Text';
   dlgAddHiAttrGroupLine     = 'Line';
@@ -5415,7 +5419,7 @@ resourcestring
   lisAutomaticallyOnWordEnd = 'word end';
   lisAutomaticallyIgnoreForSelection = 'do not complete selection';
   lisAutomaticallyRemoveCharacter = 'do not add character';
-  lisKeepSubIndentation = 'Keep indentation';
+  lisKeepSubIndentation = 'Absolute indentation';
   lisPckOptsThisPackageProvidesTheSameAsTheFollowingPackages = 'This package '
     +'provides the same as the following packages:';
   lisPLDPackageLinks = 'Package Links';
@@ -5915,8 +5919,8 @@ resourcestring
   //IDE info dialog
   lisIDEInfoInformationAboutTheIDE = 'Information about the IDE';
 
-  lisKeepRelativeIndentationOfMultiLineTemplate = 'Keep relative indentation '
-    +'of multi line template';
+  lisKeepRelativeIndentationOfMultiLineTemplate = 'Keep absolute indentation, regardless '
+    +'of the current cursor indentation in the text.';
   lisTheCurrentFPCHasNoConfigFileItWillProbablyMissSome = 'The current FPC '
     +'has no config file. It will probably miss some units. Check your '
     +'installation of fpc.';

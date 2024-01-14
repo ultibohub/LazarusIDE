@@ -63,7 +63,7 @@ uses
   SynHighlighterIni, SynHighlighterPo, SynHighlighterPike, SynPluginMultiCaret,
   SynEditMarkupFoldColoring, SynEditMarkup, SynGutterLineOverview,
   SynBeautifierPascal, SynEditTextDynTabExpander, SynEditTextTabExpander,
-  SynTextMateSyn,
+  SynTextMateSyn, SynEditStrConst, SynHighlighterPosition,
   // codetools
   LinkScanner, CodeToolManager,
   // BuildIntf
@@ -74,7 +74,7 @@ uses
   // IdeConfig
   LazConf,
   // IDE
-  SourceMarks, LazarusIDEStrConsts, KeyMapping;
+  SourceMarks, LazarusIDEStrConsts, KeyMapping, AssemblerDlg;
 
 const
   DefaultCompletionLongLineHintType = sclpExtendRightOnly;
@@ -83,6 +83,9 @@ const
 type
   TPreviewPasSyn = TIDESynFreePasSyn;
   TSrcIDEHighlighter = TSynCustomHighlighter;
+  // TSynPositionHighlighter - minimum implementation needed.
+  TNonSrcIDEHighlighter = class(TSynPositionHighlighter); // Hold colors, not related to SourceEditor
+
   TSynHighlightElement = TSynHighlighterAttributes;
   TCustomSynClass = class of TSrcIDEHighlighter;
 
@@ -296,6 +299,7 @@ type
     function IsEnabled: boolean; override;
     procedure ApplyTo(aDest: TSynHighlighterAttributes; aDefault: TColorSchemeAttribute = nil);
     procedure Assign(Src: TPersistent); override;
+    procedure AssignColors(Src: TPersistent);
     function Equals(Other: TColorSchemeAttribute): Boolean; reintroduce;
     function GetStoredValuesForAttrib: TColorSchemeAttribute; // The IDE default colors from the resources
     function GetSchemeGlobal: TColorSchemeAttribute;
@@ -330,6 +334,8 @@ type
     function GetAttributeAtPos(Index: Integer): TColorSchemeAttribute;
     function GetAttributeByEnum(Index: TAdditionalHilightAttribute): TColorSchemeAttribute;
     function GetName: String;
+    function DoesSupportGroup(AGroup: TAhaGroupName): boolean;
+    function GetSupportsFileExt: Boolean;
   public
     constructor Create(AGroup: TColorScheme; AIdeHighlighterID: TIdeSyntaxHighlighterID;
       IsSchemeDefault: Boolean);
@@ -360,6 +366,7 @@ type
     property  AttributeAtPos[Index: Integer]: TColorSchemeAttribute read GetAttributeAtPos;
     property  DefaultAttribute: TColorSchemeAttribute read FDefaultAttribute;
     property  SharedHighlighter: TSynCustomHighlighter read FHighlighter;
+    property  SupportsFileExt: Boolean read GetSupportsFileExt;
   end;
 
   { TColorScheme }
@@ -1740,6 +1747,7 @@ type
     procedure ReadHighlighterDivDrawSettings(Syn: TSrcIDEHighlighter);
     procedure ReadDefaultsForHighlighterDivDrawSettings(Syn: TSrcIDEHighlighter);
     procedure WriteHighlighterDivDrawSettings(Syn: TSrcIDEHighlighter);
+    procedure GetHighlighterObjSettings(Syn: TObject); override; // read highlight settings from config file
     procedure GetHighlighterSettings(Syn: TSrcIDEHighlighter); // read highlight settings from config file
     procedure GetSynEditorSettings(ASynEdit: TObject; SimilarEdit: TObject = nil); override;
     procedure GetSynEditSettings(ASynEdit: TSynEdit; SimilarEdit: TSynEdit = nil); // read synedit settings from config file
@@ -1863,6 +1871,14 @@ type
     // Multi window
     property MultiWinEditAccessOrder: TEditorOptionsEditAccessOrderList
         read FMultiWinEditAccessOrder write FMultiWinEditAccessOrder;
+  end;
+
+  { TIDEAsmWinHighlighter }
+
+  TIDEAsmWinHighlighter = class(TNonSrcIDEHighlighter) // TODO: move to AssemblerDlg, when editoropts become a package
+  public
+    constructor Create(AOwner: TComponent); override;
+    class function GetLanguageName: string; override;
   end;
 
 var
@@ -3218,7 +3234,7 @@ begin
       Add('Comment=Comment');
       Add('Preprocessor=Comment');
       Add('Identifier=Identifier');
-      Add('Reserved_word=Reserved_word');
+      Add('Reserved word=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3245,7 +3261,7 @@ begin
     MappedAttributes := TStringList.Create;
     with MappedAttributes do
     begin
-      Add('Element=Reserved_word');
+      Add('Element=Reserved word');
       Add('Comment=Comment');
       Add('Text=Identifier');
       Add('Space=Space');
@@ -3272,10 +3288,10 @@ begin
     MappedAttributes := TStringList.Create;
     with MappedAttributes do
     begin
-      Add('Element=Reserved_word');
+      Add('Element=Reserved word');
       Add('Comment=Comment');
       Add('Identifier=Identifier');
-      Add('Key=Reserved_word');
+      Add('Key=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3304,7 +3320,7 @@ begin
     begin
       Add('Comment=Comment');
       Add('Identifier=Identifier');
-      Add('KeyAttri=Reserved_word');
+      Add('KeyAttri=Reserved word');
       Add('NumberAttri=Number');
       Add('SpaceAttri=Space');
       Add('StringAttri=String');
@@ -3340,7 +3356,7 @@ begin
       Add('Comment=Comment');
       Add('Documentation=Comment');
       Add('Identifier=Identifier');
-      Add('Reserved_word=Reserved_word');
+      Add('Reserved word=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3374,7 +3390,7 @@ begin
     begin
       Add('Comment=Comment');
       Add('Variable=Identifier');
-      Add('Key=Reserved_word');
+      Add('Key=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3408,7 +3424,7 @@ begin
       Add('Comment=Comment');
       Add('Identifier=Identifier');
       Add('Documentation=Comment');
-      Add('Reserved_word=Reserved_word');
+      Add('Reserved word=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3433,7 +3449,7 @@ begin
     MappedAttributes := TStringList.Create;
     with MappedAttributes do
     begin
-      Add('Element=Reserved_word');
+      Add('Element=Reserved word');
       Add('Comment=Comment');
       Add('Variable=Identifier');
       Add('Space=Space');
@@ -3465,7 +3481,7 @@ begin
     with MappedAttributes do
     begin
       Add('Comment=Comment');
-      Add('Element=Reserved_word');
+      Add('Element=Reserved word');
       Add('Variable=Identifier');
       Add('Space=Space');
       Add('Symbol=Symbol');
@@ -3497,7 +3513,7 @@ begin
     with MappedAttributes do
     begin
       Add('Comment=Comment');
-      Add('Selector=Reserved_word');
+      Add('Selector=Reserved word');
       Add('Identifier=Identifier');
       Add('Space=Space');
       Add('Symbol=Symbol');
@@ -3540,7 +3556,7 @@ begin
       Add('Comment=Comment');
       Add('Documentation=Comment');
       Add('Identifier=Identifier');
-      Add('Reserved_word=Reserved_word');
+      Add('Reserved word=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3680,7 +3696,7 @@ begin
       Add('Comment=Comment');
       Add('Documentation=Comment');
       Add('Identifier=Identifier');
-      Add('Reserved_word=Reserved_word');
+      Add('Reserved word=Reserved word');
       Add('Number=Number');
       Add('Space=Space');
       Add('String=String');
@@ -3706,6 +3722,35 @@ begin
     MappedAttributes := TStringList.Create;
     CaretXY := Point(1,1);
   end;
+  Add(NewInfo);
+
+  // create info for asm Window
+  // TODO: move to debugger package
+  NewInfo := TEditOptLanguageInfo.Create;
+  NewInfo.TheType := lshNone;
+  NewInfo.DefaultCommentType := comtNone;
+  NewInfo.SynInstance := TIDEAsmWinHighlighter.Create(nil);
+  NewInfo.SetBothFilextensions('');
+  NewInfo.SampleSource :=
+    '0000000100001537 4889C3                   mov rbx,rax'+#13#10+
+    '000000010000153A 4889D9                   mov rcx,rbx'+#13#10+
+    '000000010000153D E8EE6D0000               call +$00006DEE    # $0000000100008330 fpc_writeln_end text.inc:694'+#13#10+
+    '000000010000153A 4889D9                   mov rcx,rbx'+#13#10+
+    '000000010000153D E8EE6D0000               call +$00006DEE    # $0000000100008330 fpc_writeln_end text.inc:694'+#13#10+
+    '0000000100001537 4889C3                   mov rbx,rax'+#13#10+
+    '000000010000153A 4889D9                   mov rcx,rbx'+#13#10+
+    '000000010000153D E8EE6D0000               call +$00006DEE    # $0000000100008330 fpc_writeln_end text.inc:694'+#13#10+
+    '000000010000153A 4889D9                   mov rcx,rbx'+#13#10+
+    '000000010000153D E8EE6D0000               call +$00006DEE    # $0000000100008330 fpc_writeln_end text.inc:694'+#13#10;
+  with NewInfo do
+  begin
+    AddAttrSampleLines[ahaTextBlock] := 5;
+    MappedAttributes := TStringList.Create;
+    MappedAttributes.Add('ahaAsmSourceLine=Reserved word');
+    MappedAttributes.Add('ahaAsmSourceFunc=Reserved word');
+    CaretXY := Point(40,4);
+  end;
+  IdeAsmWinHlId :=
   Add(NewInfo);
 
 
@@ -6125,6 +6170,11 @@ begin
   end;
 end;
 
+procedure TEditorOptions.GetHighlighterObjSettings(Syn: TObject);
+begin
+  GetHighlighterSettings(TSrcIDEHighlighter(Syn));
+end;
+
 procedure TEditorOptions.GetHighlighterSettings(Syn: TSrcIDEHighlighter);
 // read highlight settings from config file
 begin
@@ -6519,6 +6569,26 @@ begin
   ASynEdit.ReadOnly := True;
 end;
 
+{ TIDEAsmWinHighlighter }
+
+constructor TIDEAsmWinHighlighter.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  FreeHighlighterAttributes;
+  AddAttribute( TSynHighlighterAttributes.Create(@dlgAddHiAttrDefault, 'ahaDefault')  );
+  AddAttribute( TSynHighlighterAttributes.Create(@dbgAsmWindowSourceLine, 'ahaAsmSourceLine')  );
+  AddAttribute( TSynHighlighterAttributes.Create(@dbgAsmWindowSourceFunc, 'ahaAsmSourceFunc')  );
+  AddAttribute( TSynHighlighterAttributesModifier.Create(@AdditionalHighlightAttributes[ahaTextBlock], GetAddiHilightAttrName(ahaTextBlock)) );
+  AddAttribute( TSynHighlighterAttributesModifier.Create(@AdditionalHighlightAttributes[ahaLineHighlight], GetAddiHilightAttrName(ahaLineHighlight)) );
+  AddAttribute( TSynHighlighterAttributesModifier.Create(@AdditionalHighlightAttributes[ahaMouseLink], GetAddiHilightAttrName(ahaMouseLink)) );
+  AddAttribute( TSynHighlighterAttributesModifier.Create(@dbgAsmWindowLinkTarget, 'ahaAsmLinkTarget') );
+end;
+
+class function TIDEAsmWinHighlighter.GetLanguageName: string;
+begin
+  Result := 'Disassembler Window';
+end;
+
 { TColorSchemeAttribute }
 
 procedure TColorSchemeAttribute.SetMarkupFoldLineAlpha(AValue: Byte);
@@ -6623,7 +6693,7 @@ begin
       aDest.UnderlinePriority := Src.UnderlinePriority;
     end;
 
-    if not (aDest is TSynSelectedColor) then begin
+    if not (aDest is TSynHighlighterAttributesModifier) then begin
       if aDefault <> nil then begin
         if aDefault.IsUsingSchemeGlobals then
           aDefault := aDefault.GetSchemeGlobal;
@@ -6665,6 +6735,28 @@ begin
     FMarkupFoldLineStyle := SrcAttr.FMarkupFoldLineStyle;
     FMarkupFoldLineAlpha := SrcAttr.FMarkupFoldLineAlpha;
   end;
+end;
+
+procedure TColorSchemeAttribute.AssignColors(Src: TPersistent);
+var
+  SrcAttr: TColorSchemeAttribute;
+  sn, n: String;
+begin
+  BeginUpdate;
+  sn := StoredName;
+  n := ConstName;
+  inherited Assign(Src);
+  StoredName := sn;
+  ConstName := n;
+
+  if Src is TColorSchemeAttribute then begin
+    SrcAttr := TColorSchemeAttribute(Src);
+    FUseSchemeGlobals    := SrcAttr.FUseSchemeGlobals;
+    FMarkupFoldLineColor := SrcAttr.FMarkupFoldLineColor;
+    FMarkupFoldLineStyle := SrcAttr.FMarkupFoldLineStyle;
+    FMarkupFoldLineAlpha := SrcAttr.FMarkupFoldLineAlpha;
+  end;
+  EndUpdate;
 end;
 
 function TColorSchemeAttribute.Equals(Other: TColorSchemeAttribute): Boolean;
@@ -6775,6 +6867,35 @@ begin
   Result := FOwner.Name;
 end;
 
+function TColorSchemeLanguage.DoesSupportGroup(AGroup: TAhaGroupName): boolean;
+begin
+  Result := True;
+  if (FHighlighter = nil) then Exit;
+
+  if FHighlighter is TNonSrcIDEHighlighter then begin
+    Result := AGroup in [agnDefault, agnLanguage];
+    exit;
+  end;
+
+  case AGroup of
+//    agnDefault: ;
+//    agnLanguage: ;
+//    agnText: ;
+//    agnLine: ;
+//    agnGutter: ;
+//    agnTemplateMode: ;
+//    agnSyncronMode: ;
+    agnIfDef: Result := FHighlighter is TSynPasSyn;
+//    agnIdentComplWindow: ;
+    agnOutlineColors: Result := FHighlighter is TSynCustomFoldHighlighter;
+  end;
+end;
+
+function TColorSchemeLanguage.GetSupportsFileExt: Boolean;
+begin
+  Result := (FHighlighter = nil) or not(FHighlighter is TNonSrcIDEHighlighter);
+end;
+
 function TColorSchemeLanguage.GetStoredValuesForLanguage: TColorSchemeLanguage;
 var
   cs: TColorScheme;
@@ -6829,15 +6950,22 @@ begin
   if FHighlighter <> nil then begin
     for i := 0 to FHighlighter.AttrCount - 1 do begin
       hla := FHighlighter.Attribute[i];
+      if hla.StoredName = FDefaultAttribute.StoredName then continue;
       csa := TColorSchemeAttribute.Create(Self, hla.Caption, hla.StoredName);
       csa.Assign(hla);
       csa.Group := agnLanguage;
+      if (FHighlighter <> nil) and (FHighlighter is TNonSrcIDEHighlighter) then
+        if hla is TSynHighlighterAttributesModifier then
+          csa.Features := [hafBackColor, hafForeColor, hafFrameColor, hafAlpha, hafPrior, hafStyle, hafStyleMask]
+        else
+          csa.Features := [hafBackColor, hafForeColor, hafFrameColor, hafStyle];
       FAttributes.AddObject(csa.StoredName, csa);
     end;
   end;
 
   for aha := Low(TAdditionalHilightAttribute) to High(TAdditionalHilightAttribute) do begin
     if aha = ahaNone then continue;
+    if not DoesSupportGroup(ahaGroupMap[aha]) then continue;
     csa := TColorSchemeAttribute.Create(Self, @AdditionalHighlightAttributes[aha],
                                         GetAddiHilightAttrName(aha) );
     csa.Features := ahaSupportedFeatures[aha];
@@ -6847,7 +6975,7 @@ begin
   FAttributes.Sorted := true;
 
   if (not FIsSchemeDefault) and (aPascalScheme <> nil) and (MappedAttributes <> nil) then begin
-    TmpPath := aPath + 'Lang' + StrToValidXMLName(FLanguageName) + '/';
+    TmpPath := aPath + 'Lang' + StrToValidXMLName(FLanguageName) + '/'  + 'Scheme' + StrToValidXMLName(Name) + '/';
     if not aXMLConfig.HasPath(TmpPath, False) then begin
       for i := 0 to FAttributes.Count - 1 do begin
         csa := TColorSchemeAttribute(FAttributes.Objects[i]);
@@ -6855,7 +6983,7 @@ begin
         if (n <> '') then begin
           pasattr := aPascalScheme.Attribute[n];
           if pasattr <> nil then
-            csa.Assign(pasattr);
+            csa.AssignColors(pasattr);
         end;
       end;
       exit;
@@ -6899,7 +7027,7 @@ begin
   for i := 0 to Src.AttributeCount - 1 do begin
     SrcAttr := Src.AttributeAtPos[i];
     // Reuse existing Attribute if possible.
-    j := FAttributes.IndexOf(UpperCase(SrcAttr.StoredName));
+    j := FAttributes.IndexOf(SrcAttr.StoredName);
     if j >= 0 then begin
       Attr := TColorSchemeAttribute(FAttributes.Objects[j]);
       DebugLn(['      Use existing attr ', Attr.StoredName]);
@@ -6909,7 +7037,7 @@ begin
       Attr := TColorSchemeAttribute.Create(Self, SrcAttr.Caption, SrcAttr.StoredName);
     end;
     Attr.Assign(SrcAttr);
-    NewList.AddObject(UpperCase(Attr.StoredName), Attr);
+    NewList.AddObject(Attr.StoredName, Attr);
     if SrcAttr = Src.DefaultAttribute then
       FDefaultAttribute := Attr;
   end;
@@ -6946,7 +7074,7 @@ procedure TColorSchemeLanguage.LoadFromXml(aXMLConfig: TRttiXMLConfig;
   const aOldPath: String);
 var
   Def, EmptyDef, CurAttr: TColorSchemeAttribute;
-  FormatVersion: longint;
+  FormatVersion, RealFormatVersion: longint;
   TmpPath: String;
   i: Integer;
 begin
@@ -6957,6 +7085,7 @@ begin
     TmpPath := aPath;
   if aXMLConfig.HasChildPaths(TmpPath) then begin
     FormatVersion := aXMLConfig.GetValue(TmpPath + 'Version', 0);
+    RealFormatVersion := FormatVersion;
     if FormatVersion > ColorVersion then
       FormatVersion := ColorVersion;
     if FIsSchemeDefault and (FormatVersion < 6) then
@@ -7007,7 +7136,7 @@ begin
         Def := EmptyDef;
     end;
     CurAttr.LoadFromXml(aXMLConfig, TmpPath, Def, FormatVersion);
-    if (ColorVersion < 9)
+    if (ColorVersion < 9) and (RealFormatVersion < 9)
     and (CurAttr.StoredName = GetAddiHilightAttrName(ahaMouseLink)) then
     begin
       // upgrade ahaMouseLink
