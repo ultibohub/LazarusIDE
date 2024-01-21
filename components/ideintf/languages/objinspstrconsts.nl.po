@@ -582,6 +582,10 @@ msgstr ""
 msgid "%d lines, %d chars"
 msgstr "%d regels, %d letters"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "Enumeration"
@@ -603,6 +607,11 @@ msgstr "Fout bij het laden van het plaatje"
 #| msgid "Error loading image %s%s%s:%s%s"
 msgid "Error loading image \"%s\":%s%s"
 msgstr "Fout bij het laden van plaatje \"%s\":%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -649,6 +658,10 @@ msgstr ""
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "Invoer masker"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -707,6 +720,10 @@ msgstr "Laad plaatje"
 msgid "Masks ..."
 msgstr "Maskers..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "Methode"
@@ -761,10 +778,6 @@ msgstr "&OK"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Ok"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "Open masker bestand (*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -891,6 +904,10 @@ msgstr ""
 
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
+msgstr ""
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
 msgstr ""
 
 #: objinspstrconsts.oisselectshortcut

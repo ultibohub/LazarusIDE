@@ -5,11 +5,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2022-10-10 01:36+0300\n"
+"PO-Revision-Date: 2024-01-19 18:20+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
-"X-Generator: Poedit 2.4.3\n"
+"X-Generator: Poedit 2.2.4\n"
 
 #: objinspstrconsts.cactionlisteditorallcategory
 msgid "(All)"
@@ -567,6 +567,10 @@ msgstr "Удалить выбранные поля"
 msgid "%d lines, %d chars"
 msgstr "%d строк, %d символов"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr "Затрагивает только свойство EnableSets тестового ввода"
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "Перечисление"
@@ -587,6 +591,11 @@ msgstr "Ошибка загрузки изображения"
 #, object-pascal-format
 msgid "Error loading image \"%s\":%s%s"
 msgstr "Ошибка загрузки изображения \"%s\":%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr "Ошибка чтения файла %s"
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -633,6 +642,10 @@ msgstr "Присвоение вещественному свойству зна�
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "Маска ввода:"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr "Редактор маски ввода"
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -689,6 +702,10 @@ msgstr "Загрузить изображение"
 msgid "Masks ..."
 msgstr "Маски ..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr "Файлы образцов масок ввода (*.lem;*.dem)|*.lem;*.dem|Все файлы|*"
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "Метод"
@@ -741,10 +758,6 @@ msgstr "&ОК"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "ОК"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "Открыть файл масок (*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -871,6 +884,10 @@ msgstr "Выбранные компоненты"
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "Вы&бранные свойства"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr "Выберите файл образца маски ввода"
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"

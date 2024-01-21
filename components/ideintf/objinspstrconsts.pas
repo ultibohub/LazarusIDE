@@ -257,12 +257,17 @@ resourcestring
   // Mask Editor
   sccsMaskEditor = 'Edit Mask Editor ...';
   oisMasks = 'Masks ...';
+  oisInputMaskEditor = 'Input Mask Editor';
   oisSaveLiteralCharacters = 'Save Literal Characters';
   oisInputMask = 'Input Mask:';
   oisSampleMasks = 'Sample Masks:';
   oisCharactersForBlanks = 'Characters for Blanks';
   oisTestInput = 'Test Input';
-  oisOpenMaskFile = 'Open masks file (*.dem)';
+  oisEnableSetsHint = 'Only affects the EnableSets property of the Test Input';
+  oisMaskSampleFilter = 'Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*';
+  oisSelectInputMaskSample = 'Select input mask sample file';
+  oisErrorReadingSampleFile = 'Error reading file %s';
+
   cActionListEditorDialogCategory = 'Dialog';
   cActionListEditorFileCategory = 'File';
   cActionListEditorDatabaseCategory = 'Database';

@@ -4473,6 +4473,15 @@ begin
       LoadCustomKeySchemasInDir(p, dir);
     dir.Sort;
 
+    // Create CustomKeySchemas just before doing a first write to it in order
+    // to avoid memory leak when calling `./lazarus --help`.
+    if CustomKeySchemas = nil then
+    begin
+      // CustomKeySchemas should be freed in TMainIDE.Destroy destructor
+      CustomKeySchemas := TStringList.Create;
+      CustomKeySchemas.OwnsObjects := true;
+    end;
+
     CustomKeySchemas.Clear;
     CustomKeySchemas.Assign(dir);
   finally
@@ -4483,9 +4492,6 @@ end;
 initialization
   RegisterKeyCmdIdentProcs(@IdentToIDECommand,
                            @IDECommandToIdent);
-  // CustomKeySchemas should be freed in TMainIDE.Destroy destructor
-  CustomKeySchemas := TStringList.Create;
-  CustomKeySchemas.OwnsObjects := true;
 
   emcIdeMouseCommandOffset := AllocatePluginMouseRange(emcIdeMouseCommandsCount);
   RegisterMouseCmdIdentProcs(@IdentToIDEMouseCommand,

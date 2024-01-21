@@ -571,6 +571,10 @@ msgstr "Kijelölt mező(k) törlése"
 msgid "%d lines, %d chars"
 msgstr "%d sor, %d karakter"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "Felsorolás"
@@ -591,6 +595,11 @@ msgstr "Hiba kép betöltése közben"
 #, object-pascal-format
 msgid "Error loading image \"%s\":%s%s"
 msgstr "Hiba a(z) \"%s\" kép betöltése közben:%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -637,6 +646,10 @@ msgstr ""
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "Beviteli maszk:"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -693,6 +706,10 @@ msgstr "Kép betöltése"
 msgid "Masks ..."
 msgstr "Maszkok ..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "Metódus"
@@ -745,10 +762,6 @@ msgstr "&OK"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Ok"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "Maszk fájl megnyitása (*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -875,6 +888,10 @@ msgstr "Kiválasztott vezérlők"
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "Kijelölt tulajdonságok"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr ""
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"

@@ -571,6 +571,10 @@ msgstr "Smazat označené položky"
 msgid "%d lines, %d chars"
 msgstr "%d řádků, %d znaků"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "Výčet"
@@ -591,6 +595,11 @@ msgstr "Chyba načítání obrázku"
 #, object-pascal-format
 msgid "Error loading image \"%s\":%s%s"
 msgstr "Chyba načítání souboru \"%s\":%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -637,6 +646,10 @@ msgstr ""
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "Vstupní maska:"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -694,6 +707,10 @@ msgstr "Načíst obrázek"
 msgid "Masks ..."
 msgstr "Masky ..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "Metoda"
@@ -746,10 +763,6 @@ msgstr "&OK"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Ok"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "Otevřít soubor masek (*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -876,6 +889,10 @@ msgstr "Vybrané prvky"
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "&Vybrané vlastnosti"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr ""
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"

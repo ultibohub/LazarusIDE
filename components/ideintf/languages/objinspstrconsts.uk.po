@@ -570,6 +570,10 @@ msgstr "Видалити вибрані поля"
 msgid "%d lines, %d chars"
 msgstr "%d рядків, %d символів"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "Перелік"
@@ -590,6 +594,11 @@ msgstr "Помилка завантаження зображення"
 #, object-pascal-format
 msgid "Error loading image \"%s\":%s%s"
 msgstr "Помилка завантаження зображення \"%s\":%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -636,6 +645,10 @@ msgstr "Встановлення властивості з рухомою ком
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "Маска введення:"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -692,6 +705,10 @@ msgstr "Завантажити зображення"
 msgid "Masks ..."
 msgstr "Маски ..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "Метод"
@@ -744,10 +761,6 @@ msgstr "&Гаразд"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Гаразд"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "Відкрити файл масок (*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -874,6 +887,10 @@ msgstr "Вибрані елементи керування"
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "&Вибрані властивості"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr ""
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"

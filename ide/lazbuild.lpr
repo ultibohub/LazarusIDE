@@ -1814,102 +1814,100 @@ begin
 end;
 
 procedure TLazBuildApplication.WriteUsage;
+var
+  CustomLang: string;
 const
-  space = '                      ';
-
-  function LongToConsole(s: string): string;
-  begin
-    Result:=UTF8ToConsole(BreakString(s,75, length(space)))
-  end;
+  cDescrIndent = 16;
+  cMaxLength = 80;
 
   procedure w(Msg: string);
   begin
-    writeln(LongToConsole(Msg));
+    writeln(UTF8ToConsole(UTF8WrapText(StringOfChar(' ', cDescrIndent) + Msg, LineEnding, [' ', #9], cMaxLength, cDescrIndent)));
   end;
 
 begin
-  TranslateResourceStrings(ProgramDirectoryWithBundle,'');
+  if LazBuildApp.HasOption('language') then
+    CustomLang:=LazBuildApp.GetOptionValue('language');
+  TranslateResourceStrings(ProgramDirectoryWithBundle,CustomLang);
   writeln('');
-  writeln('lazbuild [options] <project/package filename or package name>');
+  writeln(lisLazbuildOptionsSyntax);
   writeln('');
-  w(lisEdtExtToolParameters);
+  writeln(lisEdtExtToolParameters);
   writeln('');
-  writeln('--help or -?');
-  w(space+listhisHelpMessage);
-  writeln('-B or --build-all');
-  w(space+lisBuildAllFilesOfProjectPackageIDE);
-  writeln('-r or --recursive');
-  w(space+lisApplyBuildFlagsBToDependenciesToo);
-  writeln('-d or --skip-dependencies');
-  w(space+lisDoNotCompileDependencies);
+  writeln('-?, -h, --help');
+  w(lisThisHelpMessage);
+  writeln('');
+  writeln('-B, --build-all');
+  w(lisBuildAllFilesOfProjectPackageIDE);
+  writeln('');
+  writeln('-r, --recursive');
+  w(lisApplyBuildFlagsBToDependenciesToo);
+  writeln('');
+  writeln('-d, --skip-dependencies');
+  w(lisDoNotCompileDependencies);
+  writeln('');
   writeln('--build-ide=<options>');
-  w(space+lisBuildIDEWithPackages);
-  writeln('-v or --version');
-  w(space+lisShowVersionAndExit);
-  writeln('-q or --quiet');
-  w(space+lisBeLessVerboseCanBeGivenMultipleTimes);
-  w(space+'Passing quiet two times, will pass -vw-n-h-i-l-d-u-t-p-c-x- to the compiler');
+  w(lisBuildIDEWithPackages);
+  writeln('');
+  writeln('-v, --version');
+  w(lisShowVersionAndExit);
+  writeln('');
+  writeln('-q, --quiet');
+  w(lisBeLessVerboseCanBeGivenMultipleTimes);
+  w(lisPassingQuietTwoTimesWillP);
+  writeln('');
   writeln('--verbose');
-  w(space+lisBeMoreVerboseCanBeGivenMultipleTimes);
+  w(lisBeMoreVerboseCanBeGivenMultipleTimes);
+  writeln('');
   writeln('--verbose-pkgsearch');
-  w(space+'Write what package files are searched and found');
+  w(lisWriteWhatPackageFilesAreS);
   writeln('');
 
   writeln('--add-package');
-  w(space+lisAddPackageSToListOfInstalledPackagesCombineWithBui);
+  w(lisAddPackageSToListOfInstalledPackagesCombineWithBui);
+  writeln('');
   writeln('--add-package-link=<.lpk file>');
-  w(space+lisOnlyRegisterTheLazarusPackageFilesLpkDoNotBuild);
+  w(lisOnlyRegisterTheLazarusPackageFilesLpkDoNotBuild);
+  writeln('');
   writeln('--create-makefile');
-  w(space+lisInsteadOfCompilePackageCreateASimpleMakefile);
+  w(lisInsteadOfCompilePackageCreateASimpleMakefile);
   writeln('');
 
-  writeln(PrimaryConfPathOptLong,'<path>');
-  writeln('or ',PrimaryConfPathOptShort,'<path>');
-  w(space+lisprimaryConfigDirectoryWhereLazarusStoresItsConfig+LazConf.GetPrimaryConfigPath);
+  writeln(PrimaryConfPathOptShort,'<path>, ',PrimaryConfPathOptLong,'<path>');
+  w(Format(lisprimaryConfigDirectoryWhereLazarusStoresItsConfig, [LazConf.GetPrimaryConfigPath]));
   writeln('');
-  writeln(SecondaryConfPathOptLong,'<path>');
-  writeln('or ',SecondaryConfPathOptShort,'<path>');
-  w(space+lissecondaryConfigDirectoryWhereLazarusSearchesFor+LazConf.GetSecondaryConfigPath);
+  writeln(SecondaryConfPathOptShort,'<path>, ',SecondaryConfPathOptLong,'<path>');
+  w(Format(lissecondaryConfigDirectoryWhereLazarusSearchesFor, [LazConf.GetSecondaryConfigPath]));
   writeln('');
-  writeln('--operating-system=<operating-system>');
-  writeln('or --os=<operating-system>');
-  writeln(LongToConsole(Format(
-    lisOverrideTheProjectOperatingSystemEGWin32LinuxDefau, [space,
-    GetCompiledTargetOS])));
+  writeln('--os=<operating-system>, --operating-system=<operating-system>');
+  w(Format(lisOverrideTheProjectOperatingSystemEGWin32LinuxDefau, [GetCompiledTargetOS]));
   writeln('');
-  writeln('--widgetset=<widgetset>');
-  writeln('or --ws=<widgetset>');
-  writeln(LongToConsole(Format(
-    lisOverrideTheProjectWidgetsetEGGtkGtk2QtWin32CarbonD, [space,
-    LCLPlatformDirNames[GetBuildLCLWidgetType]])));
+  writeln('--ws=<widgetset>, --widgetset=<widgetset>');
+  w(Format(lisOverrideTheProjectWidgetsetEGGtkGtk2QtWin32CarbonD, [LCLPlatformDirNames[GetBuildLCLWidgetType]]));
   writeln('');
   writeln('--cpu=<cpu>');
-  writeln(LongToConsole(Format(
-    lisOverrideTheProjectCpuEGI386X86_64PowerpcPowerpc_64, [space,
-    GetCompiledTargetCPU])));
+  w(Format(lisOverrideTheProjectCpuEGI386X86_64PowerpcPowerpc_64, [GetCompiledTargetCPU]));
   writeln('');
   writeln('--subtarget=<subtarget>');
-  writeln(LongToConsole(space+'override the project subtarget'));
+  w(lisOverrideTheProjectSubtarg);
   writeln('');
-  writeln('--build-mode=<project/ide build mode>');
-  writeln('or --bm=<project/ide build mode>');
-  writeln(LongToConsole(Format(lisOverrideTheProjectBuildMode,[space])));
+  writeln('--bm=<project/IDE build mode>, --build-mode=<project/IDE build mode>');
+  w(lisOverrideTheProjectBuildMode);
   writeln('');
   writeln('--compiler=<ppcXXX>');
-  writeln(LongToConsole(Format(
-    lisOverrideTheDefaultCompilerEGPpc386Ppcx64PpcppcEtcD, [space])));
+  w(lisOverrideTheDefaultCompilerEGPpc386Ppcx64PpcppcEtcD);
   writeln('');
-  writeln(LanguageOpt);
-  w(space+lisOverrideLanguage);
+  writeln(LanguageOpt,'<Language ID>');
+  w(lisOverrideLanguage);
   writeln('');
   writeln('--lazarusdir=<Lazarus directory>');
-  w(space+lisLazarusDirOverride);
+  w(lisLazarusDirOverride);
   writeln('');
   writeln('--max-process-count=<count>');
-  w(space+lisMaximumNumberOfThreadsForCompilingInParallelDefaul);
+  w(lisMaximumNumberOfThreadsForCompilingInParallelDefaul);
   writeln('');
   writeln('--no-write-project');
-  w(space+lisDoNotWriteUpdatedProjectInfoAfterBuild);
+  w(lisDoNotWriteUpdatedProjectInfoAfterBuild);
   writeln('');
 end;
 

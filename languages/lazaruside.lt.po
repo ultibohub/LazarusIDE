@@ -2129,6 +2129,10 @@ msgstr "Record"
 msgid "Record case"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfoldpasrecordcasesect
+msgid "Record case section"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasrepeat
 msgctxt "lazarusidestrconsts.dlgfoldpasrepeat"
 msgid "Repeat"
@@ -5001,7 +5005,9 @@ msgid "Add package requirement?"
 msgstr "Pridėti paketo priklausomybę?"
 
 #: lazarusidestrconsts.lisaddpackagestolistofinstalledpackagescombinewithbui
-msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+#, fuzzy
+#| msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+msgid "Add package(s) to the list of installed packages (combine with --build-ide to rebuild IDE)."
 msgstr "į įdiegtų paketų sąrašą įdėti paketą ar paketus (darant IKA kombinuotina su „--build-ide“)."
 
 #: lazarusidestrconsts.lisaddpackagetoproject2
@@ -5255,7 +5261,9 @@ msgid "Apply"
 msgstr "Pritaikyti"
 
 #: lazarusidestrconsts.lisapplybuildflagsbtodependenciestoo
-msgid "apply build flags (-B) to dependencies too"
+#, fuzzy
+#| msgid "apply build flags (-B) to dependencies too"
+msgid "Apply build flags (-B) to dependencies too."
 msgstr "priklausomybėms taip pat taikyti darymo žymes (-B)"
 
 #: lazarusidestrconsts.lisapplyconventions
@@ -5425,11 +5433,15 @@ msgid "Behind related"
 msgstr "Už susijusio"
 
 #: lazarusidestrconsts.lisbelessverbosecanbegivenmultipletimes
-msgid "be less verbose, can be given multiple times"
+#, fuzzy
+#| msgid "be less verbose, can be given multiple times"
+msgid "Be less verbose. Can be given multiple times."
 msgstr "mažiau detalių, gali būti nustatytas daugelį kartų"
 
 #: lazarusidestrconsts.lisbemoreverbosecanbegivenmultipletimes
-msgid "be more verbose, can be given multiple times"
+#, fuzzy
+#| msgid "be more verbose, can be given multiple times"
+msgid "Be more verbose. Can be given multiple times."
 msgstr "daugiau detalių, gali būti nustatytas daugelį kartų"
 
 #: lazarusidestrconsts.lisbestviewedbyinstallingahtmlcontrolliketurbopowerip
@@ -5545,7 +5557,9 @@ msgid "Build"
 msgstr "Daryti"
 
 #: lazarusidestrconsts.lisbuildallfilesofprojectpackageide
-msgid "build all files of project/package/IDE"
+#, fuzzy
+#| msgid "build all files of project/package/IDE"
+msgid "Build all files of project/package/IDE."
 msgstr "daryti visus projekto/paketo/IKA failus"
 
 #: lazarusidestrconsts.lisbuildcaption
@@ -5562,7 +5576,9 @@ msgid "Build IDE"
 msgstr "Daryti IKA"
 
 #: lazarusidestrconsts.lisbuildidewithpackages
-msgid "build IDE with packages"
+#, fuzzy
+#| msgid "build IDE with packages"
+msgid "Build IDE with packages."
 msgstr "kartu su IKA daryti ir paketus"
 
 #: lazarusidestrconsts.lisbuilding
@@ -8864,8 +8880,9 @@ msgid "Do not change"
 msgstr "Nekeisti"
 
 #: lazarusidestrconsts.lisdonotcheckifanotherideinstanceisalreadyrunning
-#, object-pascal-format
-msgid "%sDo not check if another IDE instance is already running"
+#, fuzzy
+#| msgid "%sDo not check if another IDE instance is already running"
+msgid "Do not check if another IDE instance is already running."
 msgstr "%sNetikrinti ar tuo pat metu dirba kitas IKA programos egzempliorius"
 
 #: lazarusidestrconsts.lisdonotclosetheproject
@@ -8873,11 +8890,15 @@ msgid "Do not close the project"
 msgstr "Neužverti projekto"
 
 #: lazarusidestrconsts.lisdonotcompiledependencies
-msgid "do not compile dependencies"
+#, fuzzy
+#| msgid "do not compile dependencies"
+msgid "Do not compile dependencies."
 msgstr "priklausomybes nekompiliuoti"
 
 #: lazarusidestrconsts.lisdonotshowsplashscreen
-msgid "Do not show splash screen"
+#, fuzzy
+#| msgid "Do not show splash screen"
+msgid "Do not show splash screen."
 msgstr "Nerodyti prisistatymo langelio"
 
 #: lazarusidestrconsts.lisdonotshowthisdialogforthisproject
@@ -9903,7 +9924,7 @@ msgstr "Ne ASCII ir ne UTF-8 koduotės failai"
 #: lazarusidestrconsts.lisfilewheredebugoutputiswritten
 #, fuzzy
 #| msgid "file, where debug output is written to. If it is not specified, debug output is written to the console."
-msgid "file where debug output is written to. If it is not specified, debug output is written to the console."
+msgid "File where debug output is written to. Default is write to the console."
 msgstr "Failas, į kurį bus rašoma derinimo išvestis. Jei jis nenurodytas, tai derinimo išvestis bus spausdinama pulte."
 
 #: lazarusidestrconsts.lisfilter
@@ -10416,7 +10437,9 @@ msgid "Group automatically defined local variables"
 msgstr "Grupuoti automatiškai apibrėžtus vietinius kintamuosius"
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
-msgid "Enable or Disable groups of debug output. Valid Options are:"
+#, fuzzy
+#| msgid "Enable or Disable groups of debug output. Valid Options are:"
+msgid "Enable or disable groups of debug output. Valid options are:"
 msgstr "Aktyvinti arba pasyvinti derinimo išvesties grupes. Tinkamos parinktys yra:"
 
 #: lazarusidestrconsts.lisgrowtolarges
@@ -10983,7 +11006,9 @@ msgid "Install/Uninstall Packages"
 msgstr "Įdiegti/išdiegti paketus"
 
 #: lazarusidestrconsts.lisinsteadofcompilepackagecreateasimplemakefile
-msgid "Instead of compile package create a simple Makefile."
+#, fuzzy
+#| msgid "Instead of compile package create a simple Makefile."
+msgid "Instead of compiling a package create a simple Makefile."
 msgstr "Ne kompiliuoti paketą, o kurti paprastą „Makefile“."
 
 #: lazarusidestrconsts.lisinsufficientencoding
@@ -11778,7 +11803,7 @@ msgstr ""
 #: lazarusidestrconsts.lislazarusdiroverride
 #, fuzzy
 #| msgid "directory, to be used as a basedirectory"
-msgid "directory to be used as a basedirectory"
+msgid "Directory to be used as a basedirectory."
 msgstr "aplankas, naudotinas kaip pagrindinis"
 
 #: lazarusidestrconsts.lislazaruseditorv
@@ -11896,6 +11921,10 @@ msgstr "Parinktys:"
 #: lazarusidestrconsts.lislazbuildoptionspassedtocompiler
 msgid "Options passed to compiler"
 msgstr "Kompiliatoriui perduodamos parinktys"
+
+#: lazarusidestrconsts.lislazbuildoptionssyntax
+msgid "lazbuild [options] <project/package filename or package name>"
+msgstr ""
 
 #: lazarusidestrconsts.lislazbuildprofile
 msgid "Profile to build"
@@ -14786,7 +14815,9 @@ msgid "Output filename of project"
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridelanguage
-msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+#, fuzzy
+#| msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+msgid "Override language. For possible values see files in the \"languages\" directory. Example: \"--language=de\"."
 msgstr "Viršesnė kalba. Pavyzdžiui: --language=de. Galimas vertes galite sužinoti žvilgtelėję į kalbų aplanką."
 
 #: lazarusidestrconsts.lisoverridestringtypeswithfirstparamtype
@@ -14794,28 +14825,37 @@ msgid "Override function result string types with the first parameter expression
 msgstr "Funkcijos rezultato tipo tekstą pakeisti pirmojo parametro išraiškos tipu"
 
 #: lazarusidestrconsts.lisoverridethedefaultcompileregppc386ppcx64ppcppcetcd
-#, object-pascal-format
-msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+#, fuzzy
+#| msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+msgid "Override the default compiler. For example: ppc386 ppcx64 ppcppc. Default value is stored in environmentoptions.xml."
 msgstr "%snaudoti kitą, nei numatyta, kompiliatorių. Pvz. ppc386 ppcx64 ppcppc ir pan. Numatytasis bus įrašytas failan „environmentoptions.xml“"
 
 #: lazarusidestrconsts.lisoverridetheprojectbuildmode
-#, object-pascal-format
-msgid "%soverride the project or IDE build mode."
+#, fuzzy
+#| msgid "%soverride the project or IDE build mode."
+msgid "Override the project or IDE build mode."
 msgstr "%staikyti kitą projekto ar IKA darymo veikseną."
 
 #: lazarusidestrconsts.lisoverridetheprojectcpuegi386x86_64powerpcpowerpc_64
-#, object-pascal-format
-msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+msgid "Override the project CPU. For example: i386 x86_64 powerpc powerpc_64. Default: %s."
 msgstr "%sprojektui naudoti kitą procesorių. Pvz. i386 x86_64 powerpc powerpc_64 ir pan. Numatytasis: %s"
 
 #: lazarusidestrconsts.lisoverridetheprojectoperatingsystemegwin32linuxdefau
-#, object-pascal-format
-msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+msgid "Override the project operating system. For example: win32 linux. Default: %s."
 msgstr "%sprojektui naudoti kitą operacinę sistemą. Pvz. linux win32. Numatytoji: %s"
 
+#: lazarusidestrconsts.lisoverridetheprojectsubtarg
+msgid "Override the project subtarget."
+msgstr ""
+
 #: lazarusidestrconsts.lisoverridetheprojectwidgetseteggtkgtk2qtwin32carbond
-#, object-pascal-format
-msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+msgid "Override the project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s."
 msgstr "%sprojekte naudoti kitą valdiklių tipą. Pvz.. gtk gtk2 qt win32 carbon. Numatytasis: %s"
 
 #: lazarusidestrconsts.lisoverwritefile
@@ -14932,6 +14972,10 @@ msgstr "kompiliatoriaus apibrėžtis „%s“ peduodama du kart su skirtingomis 
 #, object-pascal-format
 msgid "passing compiler option -%s twice with different values"
 msgstr "kompiliatoriaus parinktis „-%s“ peduodama du kart su skirtingomis vertėmis"
+
+#: lazarusidestrconsts.lispassingquiettwotimeswillp
+msgid "Passing --quiet two times will pass -vw-n-h-i-l-d-u-t-p-c-x- to the compiler."
+msgstr ""
 
 #: lazarusidestrconsts.lispasteclipboard
 msgid "paste clipboard"
@@ -16364,9 +16408,9 @@ msgid "Preceding word"
 msgstr "Pirmesnis žodis"
 
 #: lazarusidestrconsts.lisprimaryconfigdirectorywherelazarusstoresitsconfig
-#, fuzzy
+#, object-pascal-format, fuzzy, badformat
 #| msgid "primary config directory, where Lazarus stores its config files. Default is "
-msgid "primary config directory where Lazarus stores its config files. Default is "
+msgid "Primary config directory where Lazarus stores its config files. Default is \"%s\"."
 msgstr "Pirminis aplankas nustatymų failams, kuriame Lazarus laikys savo nustatymų failus. Numatytasis yra "
 
 #: lazarusidestrconsts.lisprimaryconfigpath
@@ -17439,9 +17483,9 @@ msgid "Search Unit \"%s\""
 msgstr "Rasti modulį „%s“"
 
 #: lazarusidestrconsts.lissecondaryconfigdirectorywherelazarussearchesfor
-#, fuzzy
+#, object-pascal-format, fuzzy, badformat
 #| msgid "secondary config directory, where Lazarus searches for config template files. Default is "
-msgid "secondary config directory where Lazarus searches for config template files. Default is "
+msgid "Secondary config directory where Lazarus searches for config template files. Default is \"%s\"."
 msgstr "Antrinis aplankas nustatymų failams, kuriame Lazarus ieškos nustatymų šablonų failų. Numatytasis yra "
 
 #: lazarusidestrconsts.lissecondaryconfigpath
@@ -17708,7 +17752,9 @@ msgid "A box at the bottom shows description for the selected property."
 msgstr "Langelis apačioje rodo parinktos savybės aprašą."
 
 #: lazarusidestrconsts.lisshowsetupdialogformostimportantsettings
-msgid "Show setup dialog for most important settings"
+#, fuzzy
+#| msgid "Show setup dialog for most important settings"
+msgid "Show setup dialog for most important settings."
 msgstr "Rodyti svarbiausių nuostatų nustatymo dialogą"
 
 #: lazarusidestrconsts.lisshowspecialcharacters
@@ -17740,7 +17786,9 @@ msgid "Show value hints while debugging"
 msgstr "Derinant rodyti vertes"
 
 #: lazarusidestrconsts.lisshowversionandexit
-msgid "show version and exit"
+#, fuzzy
+#| msgid "show version and exit"
+msgid "Show version and exit."
 msgstr "parodyti laidą ir išeiti"
 
 #: lazarusidestrconsts.lisshrinktosmal
@@ -17776,11 +17824,13 @@ msgid "Skip file and continue loading"
 msgstr "Tęsti įkrovą praleidžiant failą"
 
 #: lazarusidestrconsts.lisskiploadinglastproject
-msgid "Skip loading last project"
+#, fuzzy
+#| msgid "Skip loading last project"
+msgid "Skip loading last project."
 msgstr "Neįkelti paskutinio naudoto projekto"
 
 #: lazarusidestrconsts.lisskipstartupchecks
-msgid "Skip selected checks at startup."
+msgid "Skip selected checks at startup. Valid options are:"
 msgstr ""
 
 #: lazarusidestrconsts.lisskipthesewarnings
@@ -18798,7 +18848,9 @@ msgid "This function needs an open .lfm file in the source editor."
 msgstr "Šiai funkcijai būtina kad pirminio kodo rengyklėje būtų atvertas „.lfm“ failas."
 
 #: lazarusidestrconsts.listhishelpmessage
-msgid "this help message"
+#, fuzzy
+#| msgid "this help message"
+msgid "This help message."
 msgstr "Šis žinyno pranešimas"
 
 #: lazarusidestrconsts.listhisistestprojectfordesigntimepackage
@@ -20009,6 +20061,10 @@ msgstr ""
 
 #: lazarusidestrconsts.liswriteprojectinfofailed
 msgid "Writing the project info file failed."
+msgstr ""
+
+#: lazarusidestrconsts.liswritewhatpackagefilesares
+msgid "Write what package files are searched and found."
 msgstr ""
 
 #: lazarusidestrconsts.liswrongversionin

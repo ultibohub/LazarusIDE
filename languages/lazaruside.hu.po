@@ -2081,6 +2081,10 @@ msgstr "Record"
 msgid "Record case"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfoldpasrecordcasesect
+msgid "Record case section"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasrepeat
 msgctxt "lazarusidestrconsts.dlgfoldpasrepeat"
 msgid "Repeat"
@@ -4890,7 +4894,9 @@ msgid "Add package requirement?"
 msgstr "Csomag követelmény hozzáadása?"
 
 #: lazarusidestrconsts.lisaddpackagestolistofinstalledpackagescombinewithbui
-msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+#, fuzzy
+#| msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+msgid "Add package(s) to the list of installed packages (combine with --build-ide to rebuild IDE)."
 msgstr "Csomag(ok) hozzáadása a telepítettek listájához (az IDE újraépítéséhez a --build-ide kapcsolóval)"
 
 #: lazarusidestrconsts.lisaddpackagetoproject2
@@ -5144,7 +5150,9 @@ msgid "Apply"
 msgstr "Alkalmazás"
 
 #: lazarusidestrconsts.lisapplybuildflagsbtodependenciestoo
-msgid "apply build flags (-B) to dependencies too"
+#, fuzzy
+#| msgid "apply build flags (-B) to dependencies too"
+msgid "Apply build flags (-B) to dependencies too."
 msgstr "Építési kapcsolók (-B) használata a függőségekhez is"
 
 #: lazarusidestrconsts.lisapplyconventions
@@ -5312,11 +5320,15 @@ msgid "Behind related"
 msgstr "Kapcsolódó után"
 
 #: lazarusidestrconsts.lisbelessverbosecanbegivenmultipletimes
-msgid "be less verbose, can be given multiple times"
+#, fuzzy
+#| msgid "be less verbose, can be given multiple times"
+msgid "Be less verbose. Can be given multiple times."
 msgstr "Kevésbé részletes, többször megadható"
 
 #: lazarusidestrconsts.lisbemoreverbosecanbegivenmultipletimes
-msgid "be more verbose, can be given multiple times"
+#, fuzzy
+#| msgid "be more verbose, can be given multiple times"
+msgid "Be more verbose. Can be given multiple times."
 msgstr "Részletesebb, többször megadható"
 
 #: lazarusidestrconsts.lisbestviewedbyinstallingahtmlcontrolliketurbopowerip
@@ -5430,7 +5442,9 @@ msgid "Build"
 msgstr "Építés"
 
 #: lazarusidestrconsts.lisbuildallfilesofprojectpackageide
-msgid "build all files of project/package/IDE"
+#, fuzzy
+#| msgid "build all files of project/package/IDE"
+msgid "Build all files of project/package/IDE."
 msgstr "Projekt/csomag/IDE minden fájljának építése"
 
 #: lazarusidestrconsts.lisbuildcaption
@@ -5447,7 +5461,9 @@ msgid "Build IDE"
 msgstr "IDE építése"
 
 #: lazarusidestrconsts.lisbuildidewithpackages
-msgid "build IDE with packages"
+#, fuzzy
+#| msgid "build IDE with packages"
+msgid "Build IDE with packages."
 msgstr "IDE építése csomagokkal"
 
 #: lazarusidestrconsts.lisbuilding
@@ -8743,8 +8759,9 @@ msgid "Do not change"
 msgstr "Ne változzon"
 
 #: lazarusidestrconsts.lisdonotcheckifanotherideinstanceisalreadyrunning
-#, object-pascal-format
-msgid "%sDo not check if another IDE instance is already running"
+#, fuzzy
+#| msgid "%sDo not check if another IDE instance is already running"
+msgid "Do not check if another IDE instance is already running."
 msgstr "%sNe legyen ellenőrizve, hogy fut-e már másik IDE példány"
 
 #: lazarusidestrconsts.lisdonotclosetheproject
@@ -8752,11 +8769,15 @@ msgid "Do not close the project"
 msgstr "Ne zárja be a projektet"
 
 #: lazarusidestrconsts.lisdonotcompiledependencies
-msgid "do not compile dependencies"
+#, fuzzy
+#| msgid "do not compile dependencies"
+msgid "Do not compile dependencies."
 msgstr "Ne fordítsa le a függőségeket"
 
 #: lazarusidestrconsts.lisdonotshowsplashscreen
-msgid "Do not show splash screen"
+#, fuzzy
+#| msgid "Do not show splash screen"
+msgid "Do not show splash screen."
 msgstr "Ne mutassa az indító képet"
 
 #: lazarusidestrconsts.lisdonotshowthisdialogforthisproject
@@ -9777,7 +9798,9 @@ msgid "Files not in ASCII nor UTF-8 encoding"
 msgstr "Nem ASCII vagy UTF-8 kódolású fájlok"
 
 #: lazarusidestrconsts.lisfilewheredebugoutputiswritten
-msgid "file where debug output is written to. If it is not specified, debug output is written to the console."
+#, fuzzy
+#| msgid "file where debug output is written to. If it is not specified, debug output is written to the console."
+msgid "File where debug output is written to. Default is write to the console."
 msgstr "A fájl, ahová a hibakereső kimenete mentésre kerül. Ha nincs megadva, a hibakereső kimenete a konzolra lesz kiírva."
 
 #: lazarusidestrconsts.lisfilter
@@ -10281,7 +10304,9 @@ msgid "Group automatically defined local variables"
 msgstr "Az automatikusan létrehozott helyi változók csoportosítása"
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
-msgid "Enable or Disable groups of debug output. Valid Options are:"
+#, fuzzy
+#| msgid "Enable or Disable groups of debug output. Valid Options are:"
+msgid "Enable or disable groups of debug output. Valid options are:"
 msgstr "Engedélyezi vagy letiltja a hibakereső kimenetének csoportjait. Érvényes beállítások:"
 
 #: lazarusidestrconsts.lisgrowtolarges
@@ -10849,7 +10874,9 @@ msgid "Install/Uninstall Packages"
 msgstr "Csomagok telepítése/eltávolítása"
 
 #: lazarusidestrconsts.lisinsteadofcompilepackagecreateasimplemakefile
-msgid "Instead of compile package create a simple Makefile."
+#, fuzzy
+#| msgid "Instead of compile package create a simple Makefile."
+msgid "Instead of compiling a package create a simple Makefile."
 msgstr "Csomag fordítása helyett egy egyszerű Makefile létrehozása"
 
 #: lazarusidestrconsts.lisinsufficientencoding
@@ -11632,7 +11659,9 @@ msgid "Lazarus sources. This path is relative to primary config directory (%s)."
 msgstr ""
 
 #: lazarusidestrconsts.lislazarusdiroverride
-msgid "directory to be used as a basedirectory"
+#, fuzzy
+#| msgid "directory to be used as a basedirectory"
+msgid "Directory to be used as a basedirectory."
 msgstr "A könyvtár, mely alapkönyvtárként használandó"
 
 #: lazarusidestrconsts.lislazaruseditorv
@@ -11750,6 +11779,10 @@ msgstr "Beállítások:"
 #: lazarusidestrconsts.lislazbuildoptionspassedtocompiler
 msgid "Options passed to compiler"
 msgstr "A fordítónak átadott beállítások"
+
+#: lazarusidestrconsts.lislazbuildoptionssyntax
+msgid "lazbuild [options] <project/package filename or package name>"
+msgstr ""
 
 #: lazarusidestrconsts.lislazbuildprofile
 msgid "Profile to build"
@@ -14582,7 +14615,9 @@ msgid "Output filename of project"
 msgstr "A projekt kimeneti fájljának neve"
 
 #: lazarusidestrconsts.lisoverridelanguage
-msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+#, fuzzy
+#| msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+msgid "Override language. For possible values see files in the \"languages\" directory. Example: \"--language=de\"."
 msgstr "Nyelv felülbírálása. Például --language=de. A lehetséges értékekért nézze meg a languages könyvtárat."
 
 #: lazarusidestrconsts.lisoverridestringtypeswithfirstparamtype
@@ -14590,28 +14625,37 @@ msgid "Override function result string types with the first parameter expression
 msgstr "A függvények által visszaadott karakterlánctípusok behelyettesítése az első paraméterben megadott kifejezés típusával."
 
 #: lazarusidestrconsts.lisoverridethedefaultcompileregppc386ppcx64ppcppcetcd
-#, object-pascal-format
-msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+#, fuzzy
+#| msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+msgid "Override the default compiler. For example: ppc386 ppcx64 ppcppc. Default value is stored in environmentoptions.xml."
 msgstr "%sAz alapértelmezett fordító felülbírálása. Pl. ppc386, ppcx64, ppcppc stb. Az alapértelmezett az environmentoptions.xml van tárolva"
 
 #: lazarusidestrconsts.lisoverridetheprojectbuildmode
-#, object-pascal-format
-msgid "%soverride the project or IDE build mode."
+#, fuzzy
+#| msgid "%soverride the project or IDE build mode."
+msgid "Override the project or IDE build mode."
 msgstr "%sA projekt vagy az IDE építési módjának felülbírálása"
 
 #: lazarusidestrconsts.lisoverridetheprojectcpuegi386x86_64powerpcpowerpc_64
-#, object-pascal-format
-msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+msgid "Override the project CPU. For example: i386 x86_64 powerpc powerpc_64. Default: %s."
 msgstr "%sA projekt cél CPU beállításának felülbírálása. Pl. i386, x86_64, powerpc, powerpc_64 stb. Alapértelmezett: %s"
 
 #: lazarusidestrconsts.lisoverridetheprojectoperatingsystemegwin32linuxdefau
-#, object-pascal-format
-msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+msgid "Override the project operating system. For example: win32 linux. Default: %s."
 msgstr "%sA projekt cél operációs rendszerének felülbírálása.pl. win32 linux. alapértelmezett: %s"
 
+#: lazarusidestrconsts.lisoverridetheprojectsubtarg
+msgid "Override the project subtarget."
+msgstr ""
+
 #: lazarusidestrconsts.lisoverridetheprojectwidgetseteggtkgtk2qtwin32carbond
-#, object-pascal-format
-msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+msgid "Override the project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s."
 msgstr "%sA projekt vezérlőkészletének felülbírálása. pl. gtk gtk2 qt win32 carbon. alapértelmezett: %s"
 
 #: lazarusidestrconsts.lisoverwritefile
@@ -14728,6 +14772,10 @@ msgstr "a(z) \"%s\" fordítói definíció kétszer fordul elő, eltérő érté
 #, object-pascal-format
 msgid "passing compiler option -%s twice with different values"
 msgstr "a fordító -%s kapcsolója kétszer fordul elő, eltérő értékekkel"
+
+#: lazarusidestrconsts.lispassingquiettwotimeswillp
+msgid "Passing --quiet two times will pass -vw-n-h-i-l-d-u-t-p-c-x- to the compiler."
+msgstr ""
 
 #: lazarusidestrconsts.lispasteclipboard
 msgid "paste clipboard"
@@ -16145,7 +16193,9 @@ msgid "Preceding word"
 msgstr "Megelőző szó"
 
 #: lazarusidestrconsts.lisprimaryconfigdirectorywherelazarusstoresitsconfig
-msgid "primary config directory where Lazarus stores its config files. Default is "
+#, object-pascal-format, fuzzy, badformat
+#| msgid "primary config directory where Lazarus stores its config files. Default is "
+msgid "Primary config directory where Lazarus stores its config files. Default is \"%s\"."
 msgstr "Elsődleges beállítások könyvtára, ahol a Lazarus a beállítási fájlokat tárolja. Alapértelmezett:"
 
 #: lazarusidestrconsts.lisprimaryconfigpath
@@ -17194,7 +17244,9 @@ msgid "Search Unit \"%s\""
 msgstr "Unit keresése: \"%s\""
 
 #: lazarusidestrconsts.lissecondaryconfigdirectorywherelazarussearchesfor
-msgid "secondary config directory where Lazarus searches for config template files. Default is "
+#, object-pascal-format, fuzzy, badformat
+#| msgid "secondary config directory where Lazarus searches for config template files. Default is "
+msgid "Secondary config directory where Lazarus searches for config template files. Default is \"%s\"."
 msgstr "Másodlagos beállítások könyvtára, ahol a Lazarus keresi a beállítási sablon fájlokat. Alapértelmezett:"
 
 #: lazarusidestrconsts.lissecondaryconfigpath
@@ -17457,7 +17509,9 @@ msgid "A box at the bottom shows description for the selected property."
 msgstr "Lent egy keretben megjelenik a kiválasztott tulajdonság leírása."
 
 #: lazarusidestrconsts.lisshowsetupdialogformostimportantsettings
-msgid "Show setup dialog for most important settings"
+#, fuzzy
+#| msgid "Show setup dialog for most important settings"
+msgid "Show setup dialog for most important settings."
 msgstr "Beállítás párbeszéd megjelenítése a legfontosabb beállításokhoz"
 
 #: lazarusidestrconsts.lisshowspecialcharacters
@@ -17489,7 +17543,9 @@ msgid "Show value hints while debugging"
 msgstr "Érték-tippek megjelenítése hibakeresés közben"
 
 #: lazarusidestrconsts.lisshowversionandexit
-msgid "show version and exit"
+#, fuzzy
+#| msgid "show version and exit"
+msgid "Show version and exit."
 msgstr "Változatszám megjelenítése és kilépés"
 
 #: lazarusidestrconsts.lisshrinktosmal
@@ -17525,11 +17581,13 @@ msgid "Skip file and continue loading"
 msgstr "Fájl kihagyása és a betöltés folytatása"
 
 #: lazarusidestrconsts.lisskiploadinglastproject
-msgid "Skip loading last project"
+#, fuzzy
+#| msgid "Skip loading last project"
+msgid "Skip loading last project."
 msgstr "Legutóbbi projekt betöltésének kihagyása"
 
 #: lazarusidestrconsts.lisskipstartupchecks
-msgid "Skip selected checks at startup."
+msgid "Skip selected checks at startup. Valid options are:"
 msgstr ""
 
 #: lazarusidestrconsts.lisskipthesewarnings
@@ -18540,7 +18598,9 @@ msgid "This function needs an open .lfm file in the source editor."
 msgstr "Ehhez a művelethez szükség van egy megnyitott .lfm fájlra a forráskódszerkesztőben."
 
 #: lazarusidestrconsts.listhishelpmessage
-msgid "this help message"
+#, fuzzy
+#| msgid "this help message"
+msgid "This help message."
 msgstr "Ez a súgó üzenet"
 
 #: lazarusidestrconsts.listhisistestprojectfordesigntimepackage
@@ -19738,6 +19798,10 @@ msgstr "A csomaginformációs fájl írása nem sikerült."
 #: lazarusidestrconsts.liswriteprojectinfofailed
 msgid "Writing the project info file failed."
 msgstr "A projektinformációs fájl írása nem sikerült."
+
+#: lazarusidestrconsts.liswritewhatpackagefilesares
+msgid "Write what package files are searched and found."
+msgstr ""
 
 #: lazarusidestrconsts.liswrongversionin
 #, object-pascal-format

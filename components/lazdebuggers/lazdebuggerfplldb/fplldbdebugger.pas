@@ -1363,6 +1363,7 @@ begin
 
     FImageLoaderList := Loader.ImageLoaderList;
     FMemReader := Loader.MemReader;
+    FMemModel := Loader.MemModel;
     FMemManager := Loader.MemManager;
     FDwarfInfo := Loader.DwarfInfo;
     Loader.Free;
@@ -1553,6 +1554,9 @@ begin
   r := Registers.CurrentRegistersList[AThreadId, AStackFrame];
   if (r <> nil) and (r.DataValidity = ddsValid) then begin
     try
+      if FDwarfInfo.TargetInfo.machineType in [mtARM, mtARM64] then
+        v := r.EntriesByName['PC'].ValueObjFormat[rdDefault].Value[rdDefault]
+      else
       if TargetWidth = 64 then
         v := r.EntriesByName['RIP'].ValueObjFormat[rdDefault].Value[rdDefault]
       else

@@ -573,6 +573,10 @@ msgstr "選択したフィールドを削除"
 msgid "%d lines, %d chars"
 msgstr "%d 行, %d 文字"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "一覧"
@@ -594,6 +598,11 @@ msgstr "イメージの読み込み中にエラー"
 #| msgid "Error loading image %s%s%s:%s%s"
 msgid "Error loading image \"%s\":%s%s"
 msgstr "イメージの読み込み中にエラー %s%s%s:%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -640,6 +649,10 @@ msgstr ""
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "入力マスク"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -697,6 +710,10 @@ msgstr "画像の読み込み"
 msgid "Masks ..."
 msgstr "マスク ..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "メソッド"
@@ -749,10 +766,6 @@ msgstr "OK(&O)"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Ok"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "マスクファイルを開く(*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -879,6 +892,10 @@ msgstr ""
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "選択されたプロパティ(&S)"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr ""
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"

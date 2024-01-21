@@ -2058,6 +2058,10 @@ msgstr ""
 msgid "Record case"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfoldpasrecordcasesect
+msgid "Record case section"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasrepeat
 msgctxt "lazarusidestrconsts.dlgfoldpasrepeat"
 msgid "Repeat"
@@ -4849,7 +4853,7 @@ msgid "Add package requirement?"
 msgstr ""
 
 #: lazarusidestrconsts.lisaddpackagestolistofinstalledpackagescombinewithbui
-msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+msgid "Add package(s) to the list of installed packages (combine with --build-ide to rebuild IDE)."
 msgstr ""
 
 #: lazarusidestrconsts.lisaddpackagetoproject2
@@ -5103,7 +5107,7 @@ msgid "Apply"
 msgstr ""
 
 #: lazarusidestrconsts.lisapplybuildflagsbtodependenciestoo
-msgid "apply build flags (-B) to dependencies too"
+msgid "Apply build flags (-B) to dependencies too."
 msgstr ""
 
 #: lazarusidestrconsts.lisapplyconventions
@@ -5269,11 +5273,11 @@ msgid "Behind related"
 msgstr ""
 
 #: lazarusidestrconsts.lisbelessverbosecanbegivenmultipletimes
-msgid "be less verbose, can be given multiple times"
+msgid "Be less verbose. Can be given multiple times."
 msgstr ""
 
 #: lazarusidestrconsts.lisbemoreverbosecanbegivenmultipletimes
-msgid "be more verbose, can be given multiple times"
+msgid "Be more verbose. Can be given multiple times."
 msgstr ""
 
 #: lazarusidestrconsts.lisbestviewedbyinstallingahtmlcontrolliketurbopowerip
@@ -5387,7 +5391,7 @@ msgid "Build"
 msgstr ""
 
 #: lazarusidestrconsts.lisbuildallfilesofprojectpackageide
-msgid "build all files of project/package/IDE"
+msgid "Build all files of project/package/IDE."
 msgstr ""
 
 #: lazarusidestrconsts.lisbuildcaption
@@ -5404,7 +5408,7 @@ msgid "Build IDE"
 msgstr ""
 
 #: lazarusidestrconsts.lisbuildidewithpackages
-msgid "build IDE with packages"
+msgid "Build IDE with packages."
 msgstr ""
 
 #: lazarusidestrconsts.lisbuilding
@@ -8685,8 +8689,7 @@ msgid "Do not change"
 msgstr ""
 
 #: lazarusidestrconsts.lisdonotcheckifanotherideinstanceisalreadyrunning
-#, object-pascal-format
-msgid "%sDo not check if another IDE instance is already running"
+msgid "Do not check if another IDE instance is already running."
 msgstr ""
 
 #: lazarusidestrconsts.lisdonotclosetheproject
@@ -8694,11 +8697,11 @@ msgid "Do not close the project"
 msgstr ""
 
 #: lazarusidestrconsts.lisdonotcompiledependencies
-msgid "do not compile dependencies"
+msgid "Do not compile dependencies."
 msgstr ""
 
 #: lazarusidestrconsts.lisdonotshowsplashscreen
-msgid "Do not show splash screen"
+msgid "Do not show splash screen."
 msgstr ""
 
 #: lazarusidestrconsts.lisdonotshowthisdialogforthisproject
@@ -9713,7 +9716,7 @@ msgid "Files not in ASCII nor UTF-8 encoding"
 msgstr ""
 
 #: lazarusidestrconsts.lisfilewheredebugoutputiswritten
-msgid "file where debug output is written to. If it is not specified, debug output is written to the console."
+msgid "File where debug output is written to. Default is write to the console."
 msgstr ""
 
 #: lazarusidestrconsts.lisfilter
@@ -10194,7 +10197,7 @@ msgid "Group automatically defined local variables"
 msgstr ""
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
-msgid "Enable or Disable groups of debug output. Valid Options are:"
+msgid "Enable or disable groups of debug output. Valid options are:"
 msgstr ""
 
 #: lazarusidestrconsts.lisgrowtolarges
@@ -10733,7 +10736,7 @@ msgid "Install/Uninstall Packages"
 msgstr ""
 
 #: lazarusidestrconsts.lisinsteadofcompilepackagecreateasimplemakefile
-msgid "Instead of compile package create a simple Makefile."
+msgid "Instead of compiling a package create a simple Makefile."
 msgstr ""
 
 #: lazarusidestrconsts.lisinsufficientencoding
@@ -11512,7 +11515,7 @@ msgid "Lazarus sources. This path is relative to primary config directory (%s)."
 msgstr ""
 
 #: lazarusidestrconsts.lislazarusdiroverride
-msgid "directory to be used as a basedirectory"
+msgid "Directory to be used as a basedirectory."
 msgstr ""
 
 #: lazarusidestrconsts.lislazaruseditorv
@@ -11629,6 +11632,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lislazbuildoptionspassedtocompiler
 msgid "Options passed to compiler"
+msgstr ""
+
+#: lazarusidestrconsts.lislazbuildoptionssyntax
+msgid "lazbuild [options] <project/package filename or package name>"
 msgstr ""
 
 #: lazarusidestrconsts.lislazbuildprofile
@@ -14415,7 +14422,7 @@ msgid "Output filename of project"
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridelanguage
-msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+msgid "Override language. For possible values see files in the \"languages\" directory. Example: \"--language=de\"."
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridestringtypeswithfirstparamtype
@@ -14423,28 +14430,30 @@ msgid "Override function result string types with the first parameter expression
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridethedefaultcompileregppc386ppcx64ppcppcetcd
-#, object-pascal-format
-msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+msgid "Override the default compiler. For example: ppc386 ppcx64 ppcppc. Default value is stored in environmentoptions.xml."
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridetheprojectbuildmode
-#, object-pascal-format
-msgid "%soverride the project or IDE build mode."
+msgid "Override the project or IDE build mode."
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridetheprojectcpuegi386x86_64powerpcpowerpc_64
 #, object-pascal-format
-msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+msgid "Override the project CPU. For example: i386 x86_64 powerpc powerpc_64. Default: %s."
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridetheprojectoperatingsystemegwin32linuxdefau
 #, object-pascal-format
-msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+msgid "Override the project operating system. For example: win32 linux. Default: %s."
+msgstr ""
+
+#: lazarusidestrconsts.lisoverridetheprojectsubtarg
+msgid "Override the project subtarget."
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridetheprojectwidgetseteggtkgtk2qtwin32carbond
 #, object-pascal-format
-msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+msgid "Override the project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s."
 msgstr ""
 
 #: lazarusidestrconsts.lisoverwritefile
@@ -14560,6 +14569,10 @@ msgstr ""
 #: lazarusidestrconsts.lispassingcompileroptiontwicewithdifferentvalues
 #, object-pascal-format
 msgid "passing compiler option -%s twice with different values"
+msgstr ""
+
+#: lazarusidestrconsts.lispassingquiettwotimeswillp
+msgid "Passing --quiet two times will pass -vw-n-h-i-l-d-u-t-p-c-x- to the compiler."
 msgstr ""
 
 #: lazarusidestrconsts.lispasteclipboard
@@ -15976,7 +15989,8 @@ msgid "Preceding word"
 msgstr ""
 
 #: lazarusidestrconsts.lisprimaryconfigdirectorywherelazarusstoresitsconfig
-msgid "primary config directory where Lazarus stores its config files. Default is "
+#, object-pascal-format
+msgid "Primary config directory where Lazarus stores its config files. Default is \"%s\"."
 msgstr ""
 
 #: lazarusidestrconsts.lisprimaryconfigpath
@@ -17006,7 +17020,8 @@ msgid "Search Unit \"%s\""
 msgstr ""
 
 #: lazarusidestrconsts.lissecondaryconfigdirectorywherelazarussearchesfor
-msgid "secondary config directory where Lazarus searches for config template files. Default is "
+#, object-pascal-format
+msgid "Secondary config directory where Lazarus searches for config template files. Default is \"%s\"."
 msgstr ""
 
 #: lazarusidestrconsts.lissecondaryconfigpath
@@ -17269,7 +17284,7 @@ msgid "A box at the bottom shows description for the selected property."
 msgstr ""
 
 #: lazarusidestrconsts.lisshowsetupdialogformostimportantsettings
-msgid "Show setup dialog for most important settings"
+msgid "Show setup dialog for most important settings."
 msgstr ""
 
 #: lazarusidestrconsts.lisshowspecialcharacters
@@ -17301,7 +17316,7 @@ msgid "Show value hints while debugging"
 msgstr ""
 
 #: lazarusidestrconsts.lisshowversionandexit
-msgid "show version and exit"
+msgid "Show version and exit."
 msgstr ""
 
 #: lazarusidestrconsts.lisshrinktosmal
@@ -17337,11 +17352,11 @@ msgid "Skip file and continue loading"
 msgstr ""
 
 #: lazarusidestrconsts.lisskiploadinglastproject
-msgid "Skip loading last project"
+msgid "Skip loading last project."
 msgstr ""
 
 #: lazarusidestrconsts.lisskipstartupchecks
-msgid "Skip selected checks at startup."
+msgid "Skip selected checks at startup. Valid options are:"
 msgstr ""
 
 #: lazarusidestrconsts.lisskipthesewarnings
@@ -18352,7 +18367,7 @@ msgid "This function needs an open .lfm file in the source editor."
 msgstr ""
 
 #: lazarusidestrconsts.listhishelpmessage
-msgid "this help message"
+msgid "This help message."
 msgstr ""
 
 #: lazarusidestrconsts.listhisistestprojectfordesigntimepackage
@@ -19549,6 +19564,10 @@ msgstr ""
 
 #: lazarusidestrconsts.liswriteprojectinfofailed
 msgid "Writing the project info file failed."
+msgstr ""
+
+#: lazarusidestrconsts.liswritewhatpackagefilesares
+msgid "Write what package files are searched and found."
 msgstr ""
 
 #: lazarusidestrconsts.liswrongversionin

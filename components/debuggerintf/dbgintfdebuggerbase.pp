@@ -1217,6 +1217,8 @@ type
     FTopFrame: TCallStackEntry;
   protected
     FThreadId: Integer;
+    FThreadTargetId: Int64;
+    FThreadNum: Integer;
     FThreadName: String;
     FThreadState: TDbgThreadState;
     procedure SetThreadState(AValue: TDbgThreadState); virtual;
@@ -1227,22 +1229,26 @@ type
                        const AnArguments: TStrings; const AFunctionName: String;
                        const FileName, FullName: String;
                        const ALine: Integer;
-                       const AThreadId: Integer; const AThreadName: String;
+                       const AThreadId, AThreadTargetId: Integer; const AThreadName: String;
                        const AThreadState: TDbgThreadState;
-                       AState: TDebuggerDataState = ddsValid);
+                       AState: TDebuggerDataState = ddsValid;
+                       AThreadNum: Integer = 0);
     procedure Init(const AnAdress: TDbgPtr;
                        const AnArguments: TStrings; const AFunctionName: String;
                        const FileName, FullName: String;
                        const ALine: Integer;
-                       const AThreadId: Integer; const AThreadName: String;
+                       const AThreadId, AThreadTargetId: Integer; const AThreadName: String;
                        const AThreadState: TDbgThreadState;
-                       AState: TDebuggerDataState = ddsValid);
+                       AState: TDebuggerDataState = ddsValid;
+                       AThreadNum: Integer = 0);
     procedure SetThreadStateOnly(AValue: TDbgThreadState); virtual;
     function CreateCopy: TThreadEntry; virtual;
     destructor Destroy; override;
     procedure Assign(AnOther: TThreadEntry); virtual;
   published
-    property ThreadId: Integer read FThreadId;
+    property ThreadId: Integer read FThreadId;           // Internal ID, used to select thread, depends on backend. Usually either TargetId or Num
+    property ThreadTargetId: Int64 read FThreadTargetId; // Thread-ID as identified by OS
+    property ThreadNum: Integer read FThreadNum;
     property ThreadName: String read FThreadName;
     property ThreadState: TDbgThreadState read FThreadState write SetThreadState;
     property TopFrame: TCallStackEntry read FTopFrame;
@@ -1271,9 +1277,10 @@ type
                        const AnArguments: TStrings; const AFunctionName: String;
                        const FileName, FullName: String;
                        const ALine: Integer;
-                       const AThreadId: Integer; const AThreadName: String;
+                       const AThreadId, AThreadTargetId: Integer; const AThreadName: String;
                        const AThreadState: TDbgThreadState;
-                       AState: TDebuggerDataState = ddsValid): TThreadEntry; virtual;
+                       AState: TDebuggerDataState = ddsValid;
+                       AThreadNum: Integer = 0): TThreadEntry; virtual;
     procedure SetValidity({%H-}AValidity: TDebuggerDataState); virtual;
     property Entries[const AnIndex: Integer]: TThreadEntry read GetEntry; default;
     property EntryById[const AnID: Integer]: TThreadEntry read GetEntryById;
@@ -2284,27 +2291,33 @@ end;
 
 constructor TThreadEntry.Create(const AnAdress: TDbgPtr;
   const AnArguments: TStrings; const AFunctionName: String; const FileName,
-  FullName: String; const ALine: Integer; const AThreadId: Integer;
-  const AThreadName: String; const AThreadState: TDbgThreadState;
-  AState: TDebuggerDataState);
+  FullName: String; const ALine: Integer; const AThreadId,
+  AThreadTargetId: Integer; const AThreadName: String;
+  const AThreadState: TDbgThreadState; AState: TDebuggerDataState;
+  AThreadNum: Integer);
 begin
   Create;
   TopFrame.Init(AnAdress, AnArguments, AFunctionName, FileName, FullName, ALine, AState);
-  FThreadId    := AThreadId;
-  FThreadName  := AThreadName;
-  FThreadState := AThreadState;
+  FThreadNum      := AThreadNum;
+  FThreadId       := AThreadId;
+  FThreadTargetId := AThreadTargetId;
+  FThreadName     := AThreadName;
+  FThreadState    := AThreadState;
 end;
 
 procedure TThreadEntry.Init(const AnAdress: TDbgPtr;
   const AnArguments: TStrings; const AFunctionName: String; const FileName,
-  FullName: String; const ALine: Integer; const AThreadId: Integer;
-  const AThreadName: String; const AThreadState: TDbgThreadState;
-  AState: TDebuggerDataState);
+  FullName: String; const ALine: Integer; const AThreadId,
+  AThreadTargetId: Integer; const AThreadName: String;
+  const AThreadState: TDbgThreadState; AState: TDebuggerDataState;
+  AThreadNum: Integer);
 begin
   TopFrame.Init(AnAdress, AnArguments, AFunctionName, FileName, FullName, ALine, AState);
-  FThreadId    := AThreadId;
-  FThreadName  := AThreadName;
-  FThreadState := AThreadState;
+  FThreadNum      := AThreadNum;
+  FThreadId       := AThreadId;
+  FThreadTargetId := AThreadTargetId;
+  FThreadName     := AThreadName;
+  FThreadState    := AThreadState;
 end;
 
 function TThreadEntry.CreateCopy: TThreadEntry;
@@ -2322,11 +2335,13 @@ end;
 procedure TThreadEntry.Assign(AnOther: TThreadEntry);
 begin
   FTopFrame.Free;
-  FTopFrame    := CreateStackEntry;  //   .CreateCopy;
+  FTopFrame       := CreateStackEntry;  //   .CreateCopy;
   FTopFrame.Assign(AnOther.TopFrame);
-  FThreadId    := AnOther.FThreadId;
-  FThreadName  := AnOther.FThreadName;
-  FThreadState := AnOther.FThreadState;
+  FThreadId       := AnOther.FThreadId;
+  FThreadTargetId := AnOther.FThreadTargetId;
+  FThreadNum      := AnOther.FThreadNum;
+  FThreadName     := AnOther.FThreadName;
+  FThreadState    := AnOther.FThreadState;
 end;
 
 { TThreads }
@@ -2413,12 +2428,13 @@ end;
 
 function TThreads.CreateEntry(const AnAdress: TDbgPtr;
   const AnArguments: TStrings; const AFunctionName: String; const FileName,
-  FullName: String; const ALine: Integer; const AThreadId: Integer;
-  const AThreadName: String; const AThreadState: TDbgThreadState;
-  AState: TDebuggerDataState): TThreadEntry;
+  FullName: String; const ALine: Integer; const AThreadId,
+  AThreadTargetId: Integer; const AThreadName: String;
+  const AThreadState: TDbgThreadState; AState: TDebuggerDataState;
+  AThreadNum: Integer): TThreadEntry;
 begin
   Result := TThreadEntry.Create(AnAdress, AnArguments, AFunctionName, FileName,
-    FullName, ALine, AThreadId, AThreadName, AThreadState, AState);
+    FullName, ALine, AThreadId, AThreadTargetId, AThreadName, AThreadState, AState, AThreadNum);
 end;
 
 procedure TThreads.SetValidity(AValidity: TDebuggerDataState);

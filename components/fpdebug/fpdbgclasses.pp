@@ -242,6 +242,7 @@ type
   TDbgThread = class(TObject)
   private
     FNextIsSingleStep: boolean;
+    FNum: Integer;
     FProcess: TDbgProcess;
     FID: Integer;
     FHandle: THandle;
@@ -322,12 +323,14 @@ type
     function IsAtStartOfLine: boolean;
     procedure StoreStepInfo(AnAddr: TDBGPtr = 0);
     property ID: Integer read FID;
+    property Num: Integer read FNum;
     property Handle: THandle read FHandle;
     property Name: String read GetName;
     property NextIsSingleStep: boolean read FNextIsSingleStep write FNextIsSingleStep;
     property RegisterValueList: TDbgRegisterValueList read GetRegisterValueList;
     property CallStackEntryList: TDbgCallstackEntryList read FCallStackEntryList;
     property StoreStepFuncName: String read FStoreStepFuncName;
+    property StoreStepFuncAddr: TDBGPtr read FStoreStepFuncAddr;
     property PausedAtHardcodeBreakPoint: Boolean read FPausedAtHardcodeBreakPoint;
   end;
   TDbgThreadClass = class of TDbgThread;
@@ -357,8 +360,11 @@ type
   { TThreadMap }
 
   TThreadMap = class(TMap)
+  private
+    FNumCounter: integer;
   public
     function GetEnumerator: TThreadMapEnumerator;
+    procedure Add(const AId, AData); reintroduce;
   end;
 
   // Simple array to pass a list of multiple libraries in a parameter. Does
@@ -473,6 +479,7 @@ type
     FEnabled: boolean;
     FOn_Thread_StateChange: TFpDbgBreakpointStateChangeEvent;
   protected
+    procedure SetFreeByDbgProcess(AValue: Boolean); virtual;
     procedure SetEnabled(AValue: boolean);
     function GetState: TFpDbgBreakpointState; virtual;
   public
@@ -488,7 +495,8 @@ type
     procedure ResetBreak; virtual; abstract;
 
     // FreeByDbgProcess: The breakpoint will be freed by TDbgProcess.Destroy
-    property FreeByDbgProcess: Boolean read FFreeByDbgProcess write FFreeByDbgProcess;
+    // If the breakpoint does not have a process, it will be destroyed immediately
+    property FreeByDbgProcess: Boolean read FFreeByDbgProcess write SetFreeByDbgProcess;
     property Enabled: boolean read FEnabled write SetEnabled;
     property State: TFpDbgBreakpointState read GetState;
     // Event runs in dbg-thread
@@ -501,6 +509,7 @@ type
   private
     FProcess: TDbgProcess;
   protected
+    procedure SetFreeByDbgProcess(AValue: Boolean); override;
     procedure UpdateForLibraryLoaded(ALib: TDbgLibrary); virtual;
     procedure UpdateForLibrareUnloaded(ALib: TDbgLibrary); virtual;
     property Process: TDbgProcess read FProcess;
@@ -1009,6 +1018,11 @@ begin
   Result := bksUnknown;
 end;
 
+procedure TFpDbgBreakpoint.SetFreeByDbgProcess(AValue: Boolean);
+begin
+  FFreeByDbgProcess := AValue;
+end;
+
 procedure TFpDbgBreakpoint.SetEnabled(AValue: boolean);
 begin
   if AValue then
@@ -1096,6 +1110,13 @@ end;
 function TThreadMap.GetEnumerator: TThreadMapEnumerator;
 begin
   Result := TThreadMapEnumerator.Create(Self);
+end;
+
+procedure TThreadMap.Add(const AId, AData);
+begin
+  inc(FNumCounter);
+  TDbgThread(AData).FNum := FNumCounter;
+  inherited Add(AId, AData);
 end;
 
 { TLibraryMapEnumerator }
@@ -2924,7 +2945,7 @@ end;
 
 procedure TDbgProcess.AfterBreakpointAdded(ABreak: TFpDbgBreakpoint);
 begin
-  if not assigned(FCurrentBreakpoint) then begin
+  if (FMainThread <> nil) and not assigned(FCurrentBreakpoint) then begin
     if ABreak.HasLocation(FMainThread.GetInstructionPointerRegisterValue) then
       FCurrentBreakpoint := TFpInternalBreakpoint(ABreak);
   end;
@@ -3264,6 +3285,7 @@ begin
   sym := FProcess.FindProcSymbol(AnAddr);
   FStoreStepStartAddr := AnAddr;
   FStoreStepEndAddr := AnAddr;
+  FStoreStepFuncAddr:=0;
   if assigned(sym) then
   begin
     FStoreStepSrcFilename:=sym.FileName;
@@ -3327,7 +3349,7 @@ end;
 
 function TDbgThread.GetName: String;
 begin
-  Result := 'Thread ' + IntToStr(FID);
+  Result := '';
 end;
 
 constructor TDbgThread.Create(const AProcess: TDbgProcess; const AID: Integer; const AHandle: THandle);
@@ -3674,6 +3696,13 @@ begin
 end;
 
 { TFpInternalBreakBase }
+
+procedure TFpInternalBreakBase.SetFreeByDbgProcess(AValue: Boolean);
+begin
+  inherited SetFreeByDbgProcess(AValue);
+  if AValue and (FProcess = nil) then
+    Destroy;
+end;
 
 procedure TFpInternalBreakBase.UpdateForLibraryLoaded(ALib: TDbgLibrary);
 begin

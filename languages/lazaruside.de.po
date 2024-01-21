@@ -2111,6 +2111,10 @@ msgstr "Record"
 msgid "Record case"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfoldpasrecordcasesect
+msgid "Record case section"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasrepeat
 msgctxt "lazarusidestrconsts.dlgfoldpasrepeat"
 msgid "Repeat"
@@ -4956,7 +4960,9 @@ msgid "Add package requirement?"
 msgstr "Paketabhängigkeit hinzufügen?"
 
 #: lazarusidestrconsts.lisaddpackagestolistofinstalledpackagescombinewithbui
-msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+#, fuzzy
+#| msgid "add package(s) to list of installed packages (combine with --build-ide to rebuild IDE)."
+msgid "Add package(s) to the list of installed packages (combine with --build-ide to rebuild IDE)."
 msgstr "Package(s) zur Liste der installierten Packages hinzufügen (in Verbindung mit --build-ide um die IDE zu rekompilieren)"
 
 #: lazarusidestrconsts.lisaddpackagetoproject2
@@ -5210,7 +5216,9 @@ msgid "Apply"
 msgstr "Übernehmen"
 
 #: lazarusidestrconsts.lisapplybuildflagsbtodependenciestoo
-msgid "apply build flags (-B) to dependencies too"
+#, fuzzy
+#| msgid "apply build flags (-B) to dependencies too"
+msgid "Apply build flags (-B) to dependencies too."
 msgstr "Build-Flag (-B) auf für die Abhängigkeiten setzen"
 
 #: lazarusidestrconsts.lisapplyconventions
@@ -5378,11 +5386,11 @@ msgid "Behind related"
 msgstr "nach ähnlichen"
 
 #: lazarusidestrconsts.lisbelessverbosecanbegivenmultipletimes
-msgid "be less verbose, can be given multiple times"
+msgid "Be less verbose. Can be given multiple times."
 msgstr ""
 
 #: lazarusidestrconsts.lisbemoreverbosecanbegivenmultipletimes
-msgid "be more verbose, can be given multiple times"
+msgid "Be more verbose. Can be given multiple times."
 msgstr ""
 
 #: lazarusidestrconsts.lisbestviewedbyinstallingahtmlcontrolliketurbopowerip
@@ -5498,7 +5506,9 @@ msgid "Build"
 msgstr "Neu kompilieren"
 
 #: lazarusidestrconsts.lisbuildallfilesofprojectpackageide
-msgid "build all files of project/package/IDE"
+#, fuzzy
+#| msgid "build all files of project/package/IDE"
+msgid "Build all files of project/package/IDE."
 msgstr "alle Dateien des Projekts/Packages/IDE kompilieren"
 
 #: lazarusidestrconsts.lisbuildcaption
@@ -5515,7 +5525,9 @@ msgid "Build IDE"
 msgstr "IDE erstellen"
 
 #: lazarusidestrconsts.lisbuildidewithpackages
-msgid "build IDE with packages"
+#, fuzzy
+#| msgid "build IDE with packages"
+msgid "Build IDE with packages."
 msgstr "IDE mit allen Packages kompilieren"
 
 #: lazarusidestrconsts.lisbuilding
@@ -8814,8 +8826,9 @@ msgid "Do not change"
 msgstr "unverändert"
 
 #: lazarusidestrconsts.lisdonotcheckifanotherideinstanceisalreadyrunning
-#, object-pascal-format
-msgid "%sDo not check if another IDE instance is already running"
+#, fuzzy
+#| msgid "%sDo not check if another IDE instance is already running"
+msgid "Do not check if another IDE instance is already running."
 msgstr "%sNicht prüfen, ob eine andere Lazarus-Instanz bereits läuft"
 
 #: lazarusidestrconsts.lisdonotclosetheproject
@@ -8823,11 +8836,15 @@ msgid "Do not close the project"
 msgstr "Schließen Sie das Projekt nicht"
 
 #: lazarusidestrconsts.lisdonotcompiledependencies
-msgid "do not compile dependencies"
+#, fuzzy
+#| msgid "do not compile dependencies"
+msgid "Do not compile dependencies."
 msgstr "Abhängigkeiten nicht kompilieren"
 
 #: lazarusidestrconsts.lisdonotshowsplashscreen
-msgid "Do not show splash screen"
+#, fuzzy
+#| msgid "Do not show splash screen"
+msgid "Do not show splash screen."
 msgstr "Startbildschirm nicht anzeigen"
 
 #: lazarusidestrconsts.lisdonotshowthisdialogforthisproject
@@ -9849,7 +9866,7 @@ msgstr "Dateien sind weder ASCII- nach UTF-8-kodiert"
 #: lazarusidestrconsts.lisfilewheredebugoutputiswritten
 #, fuzzy
 #| msgid "file, where debug output is written to. If it is not specified, debug output is written to the console."
-msgid "file where debug output is written to. If it is not specified, debug output is written to the console."
+msgid "File where debug output is written to. Default is write to the console."
 msgstr "Datei, in die Debug-Ausgaben geschrieben werden. Falls nichts angegeben ist, werden Debug-Ausgaben auf die Konsole geschrieben."
 
 #: lazarusidestrconsts.lisfilter
@@ -10360,7 +10377,9 @@ msgid "Group automatically defined local variables"
 msgstr "Automatisch definierte lokale Variablen gruppieren"
 
 #: lazarusidestrconsts.lisgroupsfordebugoutput
-msgid "Enable or Disable groups of debug output. Valid Options are:"
+#, fuzzy
+#| msgid "Enable or Disable groups of debug output. Valid Options are:"
+msgid "Enable or disable groups of debug output. Valid options are:"
 msgstr "Gruppen von Debuggerausgaben aktivieren oder deaktivieren. Gültige Optionen sind:"
 
 #: lazarusidestrconsts.lisgrowtolarges
@@ -10902,7 +10921,9 @@ msgid "Install/Uninstall Packages"
 msgstr "Packages de-/installieren"
 
 #: lazarusidestrconsts.lisinsteadofcompilepackagecreateasimplemakefile
-msgid "Instead of compile package create a simple Makefile."
+#, fuzzy
+#| msgid "Instead of compile package create a simple Makefile."
+msgid "Instead of compiling a package create a simple Makefile."
 msgstr "Erzeuge eine einfache Make-Datei anstatt das Package zu kompilieren"
 
 #: lazarusidestrconsts.lisinsufficientencoding
@@ -11689,7 +11710,7 @@ msgstr ""
 #: lazarusidestrconsts.lislazarusdiroverride
 #, fuzzy
 #| msgid "directory, to be used as a basedirectory"
-msgid "directory to be used as a basedirectory"
+msgid "Directory to be used as a basedirectory."
 msgstr "Verzeichnis, wird als Basisordner festgelegt"
 
 #: lazarusidestrconsts.lislazaruseditorv
@@ -11807,6 +11828,10 @@ msgstr "Einstellungen:"
 #: lazarusidestrconsts.lislazbuildoptionspassedtocompiler
 msgid "Options passed to compiler"
 msgstr "An den Compiler weitergereichte Einstellungen"
+
+#: lazarusidestrconsts.lislazbuildoptionssyntax
+msgid "lazbuild [options] <project/package filename or package name>"
+msgstr ""
 
 #: lazarusidestrconsts.lislazbuildprofile
 msgid "Profile to build"
@@ -14645,7 +14670,9 @@ msgid "Output filename of project"
 msgstr ""
 
 #: lazarusidestrconsts.lisoverridelanguage
-msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+#, fuzzy
+#| msgid "Override language. For example --language=de. For possible values see files in the languages directory."
+msgid "Override language. For possible values see files in the \"languages\" directory. Example: \"--language=de\"."
 msgstr "Sprache überschreiben. Beispielsweise --language=de. Für die möglichen Werte siehe die Dateien im Verzeichnis »languages«."
 
 #: lazarusidestrconsts.lisoverridestringtypeswithfirstparamtype
@@ -14653,28 +14680,37 @@ msgid "Override function result string types with the first parameter expression
 msgstr "Funktionsergebnis-Stringtypen mit erstem Parameter-Ausdruckstyp überschreiben"
 
 #: lazarusidestrconsts.lisoverridethedefaultcompileregppc386ppcx64ppcppcetcd
-#, object-pascal-format
-msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+#, fuzzy
+#| msgid "%soverride the default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in environmentoptions.xml"
+msgid "Override the default compiler. For example: ppc386 ppcx64 ppcppc. Default value is stored in environmentoptions.xml."
 msgstr "%süberschreibt den voreingestellten Compiler, z.B. ppc386, ppcx64, ppcppc etc. Die Voreinstellung ist in environmentoptions.xm abgelegt"
 
 #: lazarusidestrconsts.lisoverridetheprojectbuildmode
-#, object-pascal-format
-msgid "%soverride the project or IDE build mode."
+#, fuzzy
+#| msgid "%soverride the project or IDE build mode."
+msgid "Override the project or IDE build mode."
 msgstr "%shebt den Projekt- oder IDE-Erstellmodus auf"
 
 #: lazarusidestrconsts.lisoverridetheprojectcpuegi386x86_64powerpcpowerpc_64
-#, object-pascal-format
-msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s"
+msgid "Override the project CPU. For example: i386 x86_64 powerpc powerpc_64. Default: %s."
 msgstr "%süberschreibt die Projekt-CPU, z.B. i386, x86_64, powerpc, powerpc_64 usw. Voreinstellung: %s"
 
 #: lazarusidestrconsts.lisoverridetheprojectoperatingsystemegwin32linuxdefau
-#, object-pascal-format
-msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project operating system. e.g. win32 linux. default: %s"
+msgid "Override the project operating system. For example: win32 linux. Default: %s."
 msgstr "%süberschreibt das Betriebssystem des Projekts, z.B. win32, linux. Voreinstellung: %s"
 
+#: lazarusidestrconsts.lisoverridetheprojectsubtarg
+msgid "Override the project subtarget."
+msgstr ""
+
 #: lazarusidestrconsts.lisoverridetheprojectwidgetseteggtkgtk2qtwin32carbond
-#, object-pascal-format
-msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
+msgid "Override the project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s."
 msgstr "%sÜberschreibt das Widget-Set des Projekts. z.B. GTK, GTK2, Qt, Win32, Carbon. Voreinstellung: %s"
 
 #: lazarusidestrconsts.lisoverwritefile
@@ -14790,6 +14826,10 @@ msgstr ""
 #: lazarusidestrconsts.lispassingcompileroptiontwicewithdifferentvalues
 #, object-pascal-format
 msgid "passing compiler option -%s twice with different values"
+msgstr ""
+
+#: lazarusidestrconsts.lispassingquiettwotimeswillp
+msgid "Passing --quiet two times will pass -vw-n-h-i-l-d-u-t-p-c-x- to the compiler."
 msgstr ""
 
 #: lazarusidestrconsts.lispasteclipboard
@@ -16223,9 +16263,9 @@ msgid "Preceding word"
 msgstr "Vorheriges Wort"
 
 #: lazarusidestrconsts.lisprimaryconfigdirectorywherelazarusstoresitsconfig
-#, fuzzy
+#, object-pascal-format, fuzzy, badformat
 #| msgid "primary config directory, where Lazarus stores its config files. Default is "
-msgid "primary config directory where Lazarus stores its config files. Default is "
+msgid "Primary config directory where Lazarus stores its config files. Default is \"%s\"."
 msgstr "primäres Konfigurationsverzeichnis in dem Lazarus seine Konfigurationsdateien speichert. Voreinstellung ist "
 
 #: lazarusidestrconsts.lisprimaryconfigpath
@@ -17272,9 +17312,9 @@ msgid "Search Unit \"%s\""
 msgstr "Suche Unit \"%s\""
 
 #: lazarusidestrconsts.lissecondaryconfigdirectorywherelazarussearchesfor
-#, fuzzy
+#, object-pascal-format, fuzzy, badformat
 #| msgid "secondary config directory, where Lazarus searches for config template files. Default is "
-msgid "secondary config directory where Lazarus searches for config template files. Default is "
+msgid "Secondary config directory where Lazarus searches for config template files. Default is \"%s\"."
 msgstr "sekundäres Konfigurationsverzeichnis in dem Lazarus nach Vorlagendateien sucht. Voreinstellung ist "
 
 #: lazarusidestrconsts.lissecondaryconfigpath
@@ -17541,7 +17581,9 @@ msgid "A box at the bottom shows description for the selected property."
 msgstr ""
 
 #: lazarusidestrconsts.lisshowsetupdialogformostimportantsettings
-msgid "Show setup dialog for most important settings"
+#, fuzzy
+#| msgid "Show setup dialog for most important settings"
+msgid "Show setup dialog for most important settings."
 msgstr "Zeige Einrichtungsdialog für die wichtigsten Einstellungen"
 
 #: lazarusidestrconsts.lisshowspecialcharacters
@@ -17573,7 +17615,9 @@ msgid "Show value hints while debugging"
 msgstr "Werte-Hinweise während des Debuggens anzeigen"
 
 #: lazarusidestrconsts.lisshowversionandexit
-msgid "show version and exit"
+#, fuzzy
+#| msgid "show version and exit"
+msgid "Show version and exit."
 msgstr "Version anzeigen und Ende"
 
 #: lazarusidestrconsts.lisshrinktosmal
@@ -17609,11 +17653,13 @@ msgid "Skip file and continue loading"
 msgstr "Datei übergehen und das Laden fortsetzen"
 
 #: lazarusidestrconsts.lisskiploadinglastproject
-msgid "Skip loading last project"
+#, fuzzy
+#| msgid "Skip loading last project"
+msgid "Skip loading last project."
 msgstr "Das Laden des letzten Projekts übergehen"
 
 #: lazarusidestrconsts.lisskipstartupchecks
-msgid "Skip selected checks at startup."
+msgid "Skip selected checks at startup. Valid options are:"
 msgstr ""
 
 #: lazarusidestrconsts.lisskipthesewarnings
@@ -18632,7 +18678,9 @@ msgid "This function needs an open .lfm file in the source editor."
 msgstr "Diese Funktion benötigt eine geöffnete .lfm Datei im Quelltexteditor."
 
 #: lazarusidestrconsts.listhishelpmessage
-msgid "this help message"
+#, fuzzy
+#| msgid "this help message"
+msgid "This help message."
 msgstr "Diese Hilfeanzeige"
 
 #: lazarusidestrconsts.listhisistestprojectfordesigntimepackage
@@ -19842,6 +19890,10 @@ msgstr ""
 
 #: lazarusidestrconsts.liswriteprojectinfofailed
 msgid "Writing the project info file failed."
+msgstr ""
+
+#: lazarusidestrconsts.liswritewhatpackagefilesares
+msgid "Write what package files are searched and found."
 msgstr ""
 
 #: lazarusidestrconsts.liswrongversionin

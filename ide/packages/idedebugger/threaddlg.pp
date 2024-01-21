@@ -54,12 +54,13 @@ var
 const
   COL_THREAD_BRKPOINT = 1;
   COL_THREAD_INDEX    = 2;
-  COL_THREAD_NAME     = 3;
-  COL_THREAD_STATE    = 4;
-  COL_THREAD_SOURCE   = 5;
-  COL_THREAD_LINE     = 6;
-  COL_THREAD_FUNC     = 7;
-  COL_WIDTHS: Array[0..6] of integer = ( 20, 50, 100, 50,  150, 50, 300);
+  COL_THREAD_TID      = 3;
+  COL_THREAD_NAME     = 4;
+  COL_THREAD_STATE    = 5;
+  COL_THREAD_SOURCE   = 6;
+  COL_THREAD_LINE     = 7;
+  COL_THREAD_FUNC     = 8;
+  COL_WIDTHS: Array[0..7] of integer = ( 20, 50, 70, 100, 50,  150, 50, 300);
 
 const THREAD_STATE_NAMES: array [TDbgThreadState] of string = (
   '', 'running', 'paused', 'suspended'
@@ -124,6 +125,7 @@ begin
       Item.SubItems.add(lisThreadsNotEvaluated);
       Item.SubItems.add('');
       Item.SubItems.add('');
+      Item.SubItems.add('');
       exit;
     end;
 
@@ -137,6 +139,7 @@ begin
       Item.SubItems.add('');
       Item.SubItems.add('');
       Item.SubItems.add('');
+      Item.SubItems.add('');
     end;
 
     for i := 0 to Threads.Count - 1 do begin
@@ -144,14 +147,18 @@ begin
       if Threads[i].ThreadId = Threads.CurrentThreadId
       then lvThreads.Items[i].ImageIndex := imgCurrentLine
       else lvThreads.Items[i].ImageIndex := -1;
-      lvThreads.Items[i].SubItems[0] := IntToStr(Threads[i].ThreadId);
-      lvThreads.Items[i].SubItems[1] := Threads[i].ThreadName;
-      lvThreads.Items[i].SubItems[2] := THREAD_STATE_NAMES[Threads[i].ThreadState];
+      if Threads[i].ThreadNum > 0 then
+        lvThreads.Items[i].SubItems[0] := IntToStr(Threads[i].ThreadNum)
+      else
+        lvThreads.Items[i].SubItems[0] := IntToStr(Threads[i].ThreadId);
+      lvThreads.Items[i].SubItems[1] := IntToStr(Threads[i].ThreadTargetId);
+      lvThreads.Items[i].SubItems[2] := Threads[i].ThreadName;
+      lvThreads.Items[i].SubItems[3] := THREAD_STATE_NAMES[Threads[i].ThreadState];
       s := Threads[i].TopFrame.Source;
       if s = '' then s := ':' + IntToHex(Threads[i].TopFrame.Address, 8);
-      lvThreads.Items[i].SubItems[3] := s;
-      lvThreads.Items[i].SubItems[4] := IntToStr(Threads[i].TopFrame.Line);
-      lvThreads.Items[i].SubItems[5] := Threads[i].TopFrame.GetFunctionWithArg;
+      lvThreads.Items[i].SubItems[4] := s;
+      lvThreads.Items[i].SubItems[5] := IntToStr(Threads[i].TopFrame.Line);
+      lvThreads.Items[i].SubItems[6] := Threads[i].TopFrame.GetFunctionWithArg;
       lvThreads.Items[i].Data := Threads[i];
     end;
   finally
@@ -178,11 +185,12 @@ begin
   case AColId of
     COL_THREAD_BRKPOINT: lvThreads.Column[0].Width := ASize;
     COL_THREAD_INDEX:    lvThreads.Column[1].Width := ASize;
-    COL_THREAD_NAME:     lvThreads.Column[2].Width := ASize;
-    COL_THREAD_STATE:    lvThreads.Column[3].Width := ASize;
-    COL_THREAD_SOURCE:   lvThreads.Column[4].Width := ASize;
-    COL_THREAD_LINE:     lvThreads.Column[5].Width := ASize;
-    COL_THREAD_FUNC:     lvThreads.Column[6].Width := ASize;
+    COL_THREAD_TID:      lvThreads.Column[2].Width := ASize;
+    COL_THREAD_NAME:     lvThreads.Column[3].Width := ASize;
+    COL_THREAD_STATE:    lvThreads.Column[4].Width := ASize;
+    COL_THREAD_SOURCE:   lvThreads.Column[5].Width := ASize;
+    COL_THREAD_LINE:     lvThreads.Column[6].Width := ASize;
+    COL_THREAD_FUNC:     lvThreads.Column[7].Width := ASize;
   end;
 end;
 
@@ -194,7 +202,10 @@ var
 begin
   Item := lvThreads.Selected;
   if Item = nil then exit;
-  id := StrToIntDef(Item.SubItems[0], -1);
+  if TIdeThreadEntry(Item.Data) <> nil then
+    id := TIdeThreadEntry(Item.Data).ThreadId
+  else
+    id := StrToIntDef(Item.SubItems[0], -1);
   if id < 0 then exit;
   if GetSelectedSnapshot = nil
   then ThreadsMonitor.ChangeCurrentThread(id)
@@ -294,11 +305,12 @@ begin
   inherited Create(TheOwner);
   Caption:= lisThreads;
   lvThreads.Column[1].Caption := lisId;
-  lvThreads.Column[2].Caption := lisName;
-  lvThreads.Column[3].Caption := lisThreadsState;
-  lvThreads.Column[4].Caption := lisThreadsSrc;
-  lvThreads.Column[5].Caption := lisThreadsLine;
-  lvThreads.Column[6].Caption := lisThreadsFunc;
+  lvThreads.Column[2].Caption := lisThreadId;
+  lvThreads.Column[3].Caption := lisName;
+  lvThreads.Column[4].Caption := lisThreadsState;
+  lvThreads.Column[5].Caption := lisThreadsSrc;
+  lvThreads.Column[6].Caption := lisThreadsLine;
+  lvThreads.Column[7].Caption := lisThreadsFunc;
   tbCurrent.Caption := lisThreadsCurrent;
   tbGoto.Caption := lisThreadsGoto;
 
@@ -320,6 +332,7 @@ initialization
   ThreadDlgWindowCreator.OnGetDividerSize := @ThreadsDlgColSizeGetter;
   ThreadDlgWindowCreator.DividerTemplate.Add('ColumnThreadBrkPoint', COL_THREAD_BRKPOINT,  @drsColWidthBrkPointImg);
   ThreadDlgWindowCreator.DividerTemplate.Add('ColumnThreadIndex',    COL_THREAD_INDEX,     @drsColWidthIndex);
+  ThreadDlgWindowCreator.DividerTemplate.Add('ColumnThreadTId',      COL_THREAD_TID,       @drsColWidthTId);
   ThreadDlgWindowCreator.DividerTemplate.Add('ColumnThreadName',     COL_THREAD_NAME,      @drsColWidthName);
   ThreadDlgWindowCreator.DividerTemplate.Add('ColumnThreadState',    COL_THREAD_STATE,     @drsColWidthState);
   ThreadDlgWindowCreator.DividerTemplate.Add('ColumnThreadSource',   COL_THREAD_SOURCE,    @drsColWidthSource);

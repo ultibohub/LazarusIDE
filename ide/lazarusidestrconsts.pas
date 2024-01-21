@@ -146,33 +146,36 @@ resourcestring
   lisErrOptionNeeded = 'Option at position %d needs an argument : %s';
 
   // command line help
-  listhisHelpMessage = 'this help message';
-  lisprimaryConfigDirectoryWhereLazarusStoresItsConfig = 'primary config '+
-    'directory where Lazarus stores its config files. Default is ';
-  lislazarusOptionsProjectFilename = 'lazarus [options] <project-filename>';
+  lisThisHelpMessage = 'This help message.';
+  lisPrimaryConfigDirectoryWhereLazarusStoresItsConfig = 'Primary config '+
+    'directory where Lazarus stores its config files. Default is "%s".';
+  lisLazarusOptionsProjectFilename = 'lazarus [options] <project-filename>';
   lisIDEOptions = 'IDE Options:';
   lisCmdLineLCLInterfaceSpecificOptions = 'LCL Interface specific options:';
-  lisDoNotShowSplashScreen = 'Do not show splash screen';
-  lisSkipLoadingLastProject = 'Skip loading last project';
-  lisDoNotCheckIfAnotherIDEInstanceIsAlreadyRunning = '%sDo not check if '
-    +'another IDE instance is already running';
-  lisOverrideLanguage = 'Override language. For example --language=de.'+
-    ' For possible values see files in the languages directory.';
-  lissecondaryConfigDirectoryWhereLazarusSearchesFor = 'secondary config '+
-    'directory where Lazarus searches for config template files. Default is ';
+  lisDoNotShowSplashScreen = 'Do not show splash screen.';
+  lisSkipLoadingLastProject = 'Skip loading last project.';
+  lisDoNotCheckIfAnotherIDEInstanceIsAlreadyRunning = 'Do not check if '
+    +'another IDE instance is already running.';
+  lisOverrideLanguage = 'Override language. '+
+    'For possible values see files in the "languages" directory. Example: "--language=de".';
+  lisSecondaryConfigDirectoryWhereLazarusSearchesFor = 'Secondary config '+
+    'directory where Lazarus searches for config template files. Default is "%s".';
   lisFileWhereDebugOutputIsWritten =
-    'file where debug output is written to. If it is '+
-    'not specified, debug output is written to the console.';
-  lisSkipStartupChecks = 'Skip selected checks at startup.';
-  lisGroupsForDebugOutput = 'Enable or Disable groups of debug output.' +
-    ' Valid Options are:';
-  lisLazarusDirOverride = 'directory to be used as a basedirectory';
+    'File where debug output is written to. Default is write to the console.';
+  lisSkipStartupChecks = 'Skip selected checks at startup. Valid options are:';
+  lisGroupsForDebugOutput = 'Enable or disable groups of debug output. ' +
+    'Valid options are:';
+  lisLazarusDirOverride = 'Directory to be used as a basedirectory.';
+
   lisMaximumNumberOfThreadsForCompilingInParallelDefaul = 'Maximum number of '
     +'threads for compiling in parallel. Default is 0 which guesses the '
     +'number of cores in the system.';
   lisDoNotWriteUpdatedProjectInfoAfterBuild = 'Do not write updated project '+
     'info file after build. If not specified, build number will be incremented '+
     'if configured.';
+
+  lisLazbuildOptionsSyntax = 'lazbuild [options] <project/package filename or package '
+    +'name>';
 
   // component palette
   lisSelectionTool = 'Selection tool';
@@ -2100,6 +2103,7 @@ resourcestring
   dlgFoldPasUnit            = 'Unit';
   dlgFoldPasRecord          = 'Record';
   dlgFoldPasRecordCase      = 'Record case';
+  dlgFoldPasRecordCaseSect  = 'Record case section';
   dlgFoldPasTry             = 'Try';
   dlgFoldPasExcept          = 'Except/Finally';
   dlgFoldPasRepeat          = 'Repeat';
@@ -5517,28 +5521,32 @@ resourcestring
   lisObjectPascalDefault = 'Object Pascal - default';
   lisVerifyMethodCalls = 'Verify method calls';
   lisUnableToCreateLinkWithTarget = 'Unable to create link "%s" with target "%s"';
-  lisBuildAllFilesOfProjectPackageIDE =
-    'build all files of project/package/IDE';
-  lisApplyBuildFlagsBToDependenciesToo = 'apply build flags (-B) to dependencies too';
-  lisDoNotCompileDependencies = 'do not compile dependencies';
-  lisAddPackageSToListOfInstalledPackagesCombineWithBui = 'add package(s) to '
+  lisBuildAllFilesOfProjectPackageIDE = 'Build all files of project/package/IDE.';
+  lisApplyBuildFlagsBToDependenciesToo = 'Apply build flags (-B) to dependencies too.';
+  lisDoNotCompileDependencies = 'Do not compile dependencies.';
+  lisAddPackageSToListOfInstalledPackagesCombineWithBui = 'Add package(s) to the '
     +'list of installed packages (combine with --build-ide to rebuild IDE).';
-  lisBuildIDEWithPackages = 'build IDE with packages';
-  lisShowVersionAndExit = 'show version and exit';
-  lisBeLessVerboseCanBeGivenMultipleTimes = 'be less verbose, can be given '
-    +'multiple times';
-  lisBeMoreVerboseCanBeGivenMultipleTimes = 'be more verbose, can be given '
-    +'multiple times';
-  lisOverrideTheProjectOperatingSystemEGWin32LinuxDefau = '%soverride the '
-    +'project operating system. e.g. win32 linux. default: %s';
-  lisOverrideTheProjectWidgetsetEGGtkGtk2QtWin32CarbonD = '%soverride the '
-    +'project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s';
-  lisOverrideTheProjectCpuEGI386X86_64PowerpcPowerpc_64 = '%soverride the '
-    +'project cpu. e.g. i386 x86_64 powerpc powerpc_64 etc. default: %s';
-  lisOverrideTheDefaultCompilerEGPpc386Ppcx64PpcppcEtcD = '%soverride the '
-    +'default compiler. e.g. ppc386 ppcx64 ppcppc etc. default is stored in '
-    +'environmentoptions.xml';
-  lisOverrideTheProjectBuildMode = '%soverride the project or IDE build mode.';
+  lisWriteWhatPackageFilesAreS = 'Write what package files are searched and '
+    +'found.';
+  lisBuildIDEWithPackages = 'Build IDE with packages.';
+  lisShowVersionAndExit = 'Show version and exit.';
+  lisBeLessVerboseCanBeGivenMultipleTimes = 'Be less verbose. Can be given '
+    +'multiple times.';
+  lisPassingQuietTwoTimesWillP = 'Passing --quiet two times will pass -vw-n-h-'
+    +'i-l-d-u-t-p-c-x- to the compiler.';
+  lisBeMoreVerboseCanBeGivenMultipleTimes = 'Be more verbose. Can be given '
+    +'multiple times.';
+  lisOverrideTheProjectOperatingSystemEGWin32LinuxDefau = 'Override the '
+    +'project operating system. For example: win32 linux. Default: %s.';
+  lisOverrideTheProjectWidgetsetEGGtkGtk2QtWin32CarbonD = 'Override the '
+    +'project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s.';
+  lisOverrideTheProjectCpuEGI386X86_64PowerpcPowerpc_64 = 'Override the '
+    +'project CPU. For example: i386 x86_64 powerpc powerpc_64. Default: %s.';
+  lisOverrideTheDefaultCompilerEGPpc386Ppcx64PpcppcEtcD = 'Override the '
+    +'default compiler. For example: ppc386 ppcx64 ppcppc. Default value is stored in '
+    +'environmentoptions.xml.';
+  lisOverrideTheProjectBuildMode = 'Override the project or IDE build mode.';
+  lisOverrideTheProjectSubtarg = 'Override the project subtarget.';
   lisProjectChangedOnDisk = 'Project changed on disk';
   lisTheProjectInformationFileHasChangedOnDisk = 'The project information file "%s"%shas changed on disk.';
   lisReopenProject = 'Reopen project';
@@ -5955,7 +5963,7 @@ resourcestring
   dlgNoAvailableUnits = 'No available units to add.';
   lisOpenUnit = 'Open Unit';
   lisOpenPackage3 = 'Open Package';
-  lisInsteadOfCompilePackageCreateASimpleMakefile = 'Instead of compile '
+  lisInsteadOfCompilePackageCreateASimpleMakefile = 'Instead of compiling a '
     +'package create a simple Makefile.';
   lisOnlyRegisterTheLazarusPackageFilesLpkDoNotBuild = 'Only register the '
     +'Lazarus package files (.lpk). Do not build.';
@@ -5994,7 +6002,7 @@ resourcestring
   lisCFETheComponentEditorOfClassHasCreatedTheError = 'The component editor '
     +'of class "%s"has created the error:%s"%s"';
   lisShowSetupDialogForMostImportantSettings = 'Show setup dialog for most '
-    +'important settings';
+    +'important settings.';
   lisShowPositionOfSourceEditor = 'Show position of source editor';
 
   //Initial setup dialog

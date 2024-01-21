@@ -567,6 +567,10 @@ msgstr "Seçili alnları sil"
 msgid "%d lines, %d chars"
 msgstr "%d satırı, %d karakteri"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "Numaralandırma"
@@ -587,6 +591,11 @@ msgstr "Resim yüklenirken hata oluştu"
 #, object-pascal-format
 msgid "Error loading image \"%s\":%s%s"
 msgstr "Resim yüklenirken hata oluştu \"%s\":%s%s"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -633,6 +642,10 @@ msgstr "Tasarım zamanında kayan nokta özelliğinin pozitif veya negatif Infin
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "Maske gir:"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -689,6 +702,10 @@ msgstr "Resim yükle"
 msgid "Masks ..."
 msgstr "Maske...."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "Yöntem"
@@ -741,10 +758,6 @@ msgstr "&TAMAM"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Tamam"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "Maske dosyası aç (*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -871,6 +884,10 @@ msgstr "Seçilmiş kontroller"
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "&Seçilmiş Özellikler"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr ""
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"

@@ -568,6 +568,10 @@ msgstr "删除选择的字段"
 msgid "%d lines, %d chars"
 msgstr "%d行, %d字符"
 
+#: objinspstrconsts.oisenablesetshint
+msgid "Only affects the EnableSets property of the Test Input"
+msgstr ""
+
 #: objinspstrconsts.oisenumeration
 msgid "Enumeration"
 msgstr "枚举"
@@ -588,6 +592,11 @@ msgstr "加载图片错误"
 #, object-pascal-format
 msgid "Error loading image \"%s\":%s%s"
 msgstr "加载图片\"%s\":%s%s错误"
+
+#: objinspstrconsts.oiserrorreadingsamplefile
+#, object-pascal-format
+msgid "Error reading file %s"
+msgstr ""
 
 #: objinspstrconsts.oiserrorwhiledeletingaction
 #, object-pascal-format
@@ -634,6 +643,10 @@ msgstr ""
 #: objinspstrconsts.oisinputmask
 msgid "Input Mask:"
 msgstr "输入掩码:"
+
+#: objinspstrconsts.oisinputmaskeditor
+msgid "Input Mask Editor"
+msgstr ""
 
 #: objinspstrconsts.oisinsertpagename
 msgid "Insert Page Name"
@@ -690,6 +703,10 @@ msgstr "加载图片"
 msgid "Masks ..."
 msgstr "掩码..."
 
+#: objinspstrconsts.oismasksamplefilter
+msgid "Input mask sample files (*.lem;*.dem)|*.lem;*.dem|All files|*"
+msgstr ""
+
 #: objinspstrconsts.oismethod
 msgid "Method"
 msgstr "方法"
@@ -742,10 +759,6 @@ msgstr "确定(&O)"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "确定"
-
-#: objinspstrconsts.oisopenmaskfile
-msgid "Open masks file (*.dem)"
-msgstr "打开掩码文件(*.dem)"
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
@@ -872,6 +885,10 @@ msgstr "选择控件(controls)"
 #: objinspstrconsts.oisselectedproperties
 msgid "&Selected Properties"
 msgstr "选择属性(&S)"
+
+#: objinspstrconsts.oisselectinputmasksample
+msgid "Select input mask sample file"
+msgstr ""
 
 #: objinspstrconsts.oisselectshortcut
 msgid "Select short cut"
