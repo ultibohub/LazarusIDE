@@ -2148,8 +2148,15 @@ var
   lclobj : TObject;
 begin
   Result := 0;
+  if KillingFocus then
+    Exit;
+
   win := NSApp.keyWindow;
-  if not Assigned(win) then Exit;
+  if not Assigned(win) then
+    win := CocoaWidgetSet.KeyWindow;
+  if not Assigned(win) then
+    Exit;
+
   // assuming that that the content view of Window
   // is the focused handle and return it, by default
   Result := HWND(win.contentView);
@@ -2467,7 +2474,11 @@ begin
     if Assigned(lView) and Assigned(lView.window) then
     begin
       lView.window.makeKeyWindow;
-      lView.window.makeFirstResponder(lView.lclContentView);
+      if lView.window.isKindOfClass(TCocoaWindow) then begin
+        TCocoaWindow(lView.window).makeFirstResponderFromLCL(lView.lclContentView);
+      end else begin
+        lView.window.makeFirstResponder(lView.lclContentView);
+      end;
     end else
       Result := 0;
   end
