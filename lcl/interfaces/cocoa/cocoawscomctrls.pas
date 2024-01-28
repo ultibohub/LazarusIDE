@@ -284,6 +284,9 @@ type
 implementation
 
 type
+  TCustomListViewAccess = class(TCustomListView);
+
+type
 
   { TUpdownCommonCallback }
 
@@ -1608,9 +1611,15 @@ class procedure TCocoaWSCustomListView.SetImageList(const ALV: TCustomListView;
 var
   lCocoaLV: TCocoaListView;
   lTableLV: TCocoaTableListView;
+  spacing: NSSize;
 begin
   if not CheckParams(lCocoaLV, lTableLV, ALV) then Exit;
   lTableLV.lclSetImagesInCell(Assigned(AValue));
+
+  if AValue.Height < lTableLV.rowHeight-2 then Exit;
+  spacing:= lTableLV.intercellSpacing;
+  spacing.height:= lTableLV.rowHeight / 3 + 2;
+  lTableLV.setIntercellSpacing( spacing );
 end;
 
 class procedure TCocoaWSCustomListView.SetItemsCount(
@@ -2057,8 +2066,13 @@ end;
 
 procedure TLCLListViewCallback.DrawRow(rowidx: Integer; ctx: TCocoaContext;
   const r: TRect; state: TOwnerDrawState);
+var
+  ALV: TCustomListViewAccess;
 begin
-  // todo: check for custom draw listviews event
+  ALV:= TCustomListViewAccess(self.listView);
+  ALV.Canvas.Handle:= HDC(ctx);
+  ALV.IntfCustomDraw( dtItem, cdPrePaint, rowidx, 0, [], nil );
+  ALV.Canvas.Handle:= 0;
 end;
 
 procedure TLCLListViewCallback.GetRowHeight(rowidx: Integer; var h: Integer);

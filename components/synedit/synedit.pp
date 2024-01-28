@@ -2715,6 +2715,7 @@ begin
   FreeAndNil(FBlockSelection);
   FreeAndNil(FStrings);
   FreeAndNil(FTextViewsManager);
+  FFoldedLinesView := nil; // destroyed by FTextViewsManager
   TSynEditStringList(FLines).DetachSynEdit(Self);
   if TSynEditStringList(FLines).AttachedSynEditCount = 0 then
     FreeAndNil(fLines);
@@ -8951,6 +8952,8 @@ begin
   FreeAndNil(BufferBitmap);
   {$ENDIF}
   SurrenderPrimarySelection;
+  if FFoldedLinesView <> nil then
+    FFoldedLinesView.LinesInWindow := -1; // Mark as "not HandleAllocated"
   inherited DestroyWnd;
 end;
 
