@@ -2008,8 +2008,11 @@ begin
         exit;
       end;
       SplitCmdLineParams(Cmd,Params);
-      Result:=Params[0];
-      Params.Delete(0);
+      if Params.Count>0 then
+      begin
+        Result:=Params[0];
+        Params.Delete(0);
+      end;
     end;
   swsbkFirefox: Result:=GetBrowserFirefox(URL,Params);
   swsbkChrome: Result:=GetBrowserChrome(URL,Params);
@@ -2035,6 +2038,7 @@ function TSimpleWebServerController.GetBrowserChrome(URL: string;
 begin
   Result := FindBrowserPath([
     {$IFDEF Darwin}'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',{$ENDIF}
+    {$IFDEF MSWindows}'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',{$ENDIF}
     'google-chrome'],URL,Params);
 end;
 
@@ -2043,6 +2047,7 @@ function TSimpleWebServerController.GetBrowserFirefox(URL: string;
 begin
   Result := FindBrowserPath([
     {$IFDEF Darwin}'/Applications/Firefox.app/Contents/MacOS/firefox',{$ENDIF}
+    {$IFDEF MSWindows}'C:\Program Files\Mozilla Firefox\firefox.exe',{$ENDIF}
     'firefox','mozilla'],URL,Params);
 end;
 
@@ -2074,7 +2079,9 @@ end;
 function TSimpleWebServerController.GetBrowserEdge(URL: string; Params: TStrings
   ): string;
 begin
-  Result := FindBrowserPath(['edge'],URL,Params);
+  Result := FindBrowserPath([
+    'C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe',
+    'edge'],URL,Params);
 end;
 {$ENDIF}
 

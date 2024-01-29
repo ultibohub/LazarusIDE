@@ -1157,7 +1157,7 @@ var
     // indent for descriptions (all lines not starting with '-' or '/')
     for i := 0 to lOptions.Count - 1 do
       if (lOptions[i] <> '') and not (lOptions[i][1] in ['-', '/']) then
-        lOptions[i] := UTF8WrapText(StringOfChar(' ', cDescrIndent) + lOptions[i], LineEnding, [' ', #9], cMaxLength, cDescrIndent);
+        lOptions[i] := StringOfChar(' ', cDescrIndent) + UTF8WrapText(lOptions[i], LineEnding, [' ', #9], cMaxLength, cDescrIndent);
 
     lHelp.AddStrings(lOptions);
 
@@ -4245,16 +4245,14 @@ begin
 
   // project change build mode
   ACmd := IDECommandList.FindIDECommand(ecProjectChangeBuildMode);
-  AHint := lisChangeBuildMode+' '+KeyValuesToCaptionStr(ACmd.ShortcutA,ACmd.ShortcutB,'(');
+  AHint := lisChangeBuildMode;
   if Assigned(Project1) then
     AHint := AHint + sLineBreak + Project1.ActiveBuildMode.GetCaption;
   ACmd.Hint := AHint;
-  if ProjInspector<>nil then
-    ProjInspector.OptionsBitBtn.Hint := AHint;    //ProjInspector.UpdateTitle;
 
   // run
   ACmd := IDECommandList.FindIDECommand(ecRun);
-  AHint := lisRun+' '+KeyValuesToCaptionStr(ACmd.ShortcutA,ACmd.ShortcutB,'(');
+  AHint := lisRun;
   if Assigned(Project1) and Assigned(Project1.RunParameterOptions.GetActiveMode) then
     AHint := AHint + sLineBreak + Project1.RunParameterOptions.GetActiveMode.Name;
   ACmd.Hint := AHint;
@@ -7679,6 +7677,26 @@ begin
     Process.Executable := ExeFile;
     Process.Parameters.Assign(Params);
     Process.CurrentDirectory := RunWorkingDirectory;
+    {$IFDEF Windows}
+    ARunMode := Project1.RunParameterOptions.GetActiveMode;
+    if ARunMode <> nil then begin
+      if ARunMode.UseConsoleWinPos then begin
+        Process.StartupOptions := Process.StartupOptions + [suoUsePosition];
+        Process.WindowLeft    := ARunMode.ConsoleWinPos.X;
+        Process.WindowTop     := ARunMode.ConsoleWinPos.Y;
+      end;
+      if ARunMode.UseConsoleWinSize then begin
+        Process.StartupOptions := Process.StartupOptions + [suoUseSize];
+        Process.WindowWidth   := ARunMode.ConsoleWinSize.X;
+        Process.WindowHeight  := ARunMode.ConsoleWinSize.Y;
+      end;
+      if ARunMode.UseConsoleWinBuffer then begin
+        Process.StartupOptions := Process.StartupOptions + [suoUseCountChars];
+        Process.WindowColumns := ARunMode.ConsoleWinBuffer.X;
+        Process.WindowRows    := ARunMode.ConsoleWinBuffer.Y;
+      end;
+    end;
+    {$ENDIF}
 
     if MainBuildBoss.GetProjectUsesAppBundle
     and (FileExistsUTF8(ExeFile) or DirectoryExistsUTF8(ExeFile))

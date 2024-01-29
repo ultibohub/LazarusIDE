@@ -33,6 +33,7 @@ resourcestring
     +'line options for the command which starts the webserver.';
   rsSWUseThisBrowserWhenOpeningTheURLOrHTMLFileOfAWebBro = 'Use this browser '
     +'when opening the URL or HTML file of a web browser project';
+  rsSWForCustomBrowser = 'For custom browser';
   rsSWSBindAny = 'Bind Any';
   rsSWSUserOrigin = 'User';
   rsSWUnableToAddLocation = 'Unable to add location:';
@@ -47,6 +48,8 @@ resourcestring
     +'on disk, usually where the server fetches files from';
   rsSWAddLocation = 'Add Location';
   rsSWError = 'Error';
+  rsSWBrowserFileNotFound = 'Browser file not found: "%s"';
+  rsSWMissingBrowserFilename = 'Missing browser filename';
   rsSWThereIsAlreadyAServerOnPortOriginPath = 'There is already a server on '
     +'port %s:%sOrigin: %sPath: %s';
   rsSWErrorFindingFreeTCPPort = 'Error finding free TCP port:';

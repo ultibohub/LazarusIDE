@@ -1512,7 +1512,9 @@ begin
   else
     FQRootPath := '';
   RootIsAbsolute := (FQRootPath = '') or (FQRootPath = PathDelim)
-                    or ((Length(FQRootPath) = 3) and (FQRootPath[2] = ':') and (FQRootPath[3] = PathDelim));
+                    {$ifdef mswindows}
+                    or ((Length(FQRootPath) = 3) and (FQRootPath[2] = ':') and (FQRootPath[3] = PathDelim))
+                    {$endif};
 
   {$ifdef debug_shellctrls}
   debugln(['SetPath: FQRootPath = ',fqrootpath]);
@@ -1539,7 +1541,8 @@ begin
   end
   else
   begin
-    //AValue is an absoulte path to begin with
+    //AValue is an absoulte path to begin with , but still needs  expanding (because TryCreateRelativePath requires this)
+    AValue := ExpandFilenameUtf8(AValue);
     //if not DirectoryExistsUtf8(AValue) then
     if not Exists(AValue) then
       Raise EInvalidPath.CreateFmt(sShellCtrlsInvalidPath,[AValue]);

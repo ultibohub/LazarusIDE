@@ -2695,7 +2695,7 @@ resourcestring
   dlgPODpiAwarenessOldOnNewPerMonitor = 'Vista-8: on, 8.1+: per monitor';
   dlgPODpiAwarenessOldOnNewPerMonitorV2 = 'Vista-8: on, 8.1/10+: per monitor/V2';
   dlgPOUIAccess = 'UI Access (uiAccess)';
-  dlgPOLongPathAware = 'Long path awareness';
+  dlgPOLongPathAware = 'Long path awareness (Windows 10 1607+)';
   dlgPOAnsiUTF8  = 'ANSI codepage is UTF-8 (Windows 10 1903+)';
   dlgPOAsInvoker = 'as invoker (asInvoker)';
   dlgPOHighestAvailable = 'highest available (highestAvailable)';
@@ -2780,6 +2780,11 @@ resourcestring
   dlgROWorkingDirectory = 'Working directory';
   dlgRunODisplay = 'Display (not for win32, e.g. 198.112.45.11:0, x.org:1, hydra:0.1)';
   dlgRunOUsedisplay = 'Use display';
+  dlgDefaultWinPos = 'Default Window/Console position and size';
+  dlgUseConsolePos    = 'Set Left/Top';
+  dlgUseConsoleSize   = 'Set Width/Height';
+  dlgUseConsoleBuffer = 'Set Columns/Rows';
+  dlgConsoleSizeNotSupported = 'Current debugger does not support this.';
   dlgRunOSystemVariables = 'System variables';
   dlgRunOUserOverrides = 'User overrides';
   dlgIncludeSystemVariables = 'Include system variables';
