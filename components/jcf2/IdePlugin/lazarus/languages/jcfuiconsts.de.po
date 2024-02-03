@@ -400,10 +400,6 @@ msgstr "Einmalige Einstellung"
 msgid "Run &only these"
 msgstr "Nur die ausführen"
 
-#: jcfuiconsts.liscnfcancel
-msgid "Cancel"
-msgstr ""
-
 #: jcfuiconsts.liscnfcaption
 msgid "JCF Global Settings"
 msgstr ""
@@ -449,7 +445,8 @@ msgid "&Write settings file"
 msgstr ""
 
 #: jcfuiconsts.liscnflogapplication
-msgid "Application"
+#, object-pascal-format
+msgid "Application: %s"
 msgstr ""
 
 #: jcfuiconsts.liscnflogbackupfileext
@@ -481,11 +478,13 @@ msgid "Select specified directory"
 msgstr ""
 
 #: jcfuiconsts.liscnflogspecified
-msgid "Specified"
+#, object-pascal-format
+msgid "Specified: %s"
 msgstr ""
 
 #: jcfuiconsts.liscnflogtemp
-msgid "Temp"
+#, object-pascal-format
+msgid "Temp: %s"
 msgstr ""
 
 #: jcfuiconsts.liscnflogtime
@@ -502,10 +501,6 @@ msgstr ""
 
 #: jcfuiconsts.liscnflogviewlognow
 msgid "View Log now"
-msgstr ""
-
-#: jcfuiconsts.liscnfok
-msgid "Ok"
 msgstr ""
 
 #: jcfuiconsts.liscnftabexclusions

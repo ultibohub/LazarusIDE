@@ -174,8 +174,13 @@ resourcestring
     'info file after build. If not specified, build number will be incremented '+
     'if configured.';
 
-  lisLazbuildOptionsSyntax = 'lazbuild [options] <project/package filename or package '
-    +'name>';
+  lisGetExpandText = 'Print the result of substituting macros in the text for the specified build mode.'
+    +' By default, active build mode is used.';
+  lisGetBuildModes = 'Print a list of build modes in the project. Active mode is listed first.';
+  lisGetTargetPath = 'Print the full path to the executable file in the specified build mode.'
+    +' By default, active build mode is used.';
+
+  lisLazbuildOptionsSyntax = 'lazbuild [options] <project/package filename or package name>';
 
   // component palette
   lisSelectionTool = 'Selection tool';
@@ -4492,7 +4497,7 @@ resourcestring
   lisPkgMangThePackageIsMarkedForInstallationButCanNotBeFound = 'The package "%s" '
     +'is marked for installation but cannot be found.'
     +'%sRemove dependency from the installation list of packages?';
-  lisERRORInvalidBuildMode = 'Error: (lazarus) invalid build mode "%s"';
+  lisERRORInvalidBuildMode = 'Error: invalid build mode "%s"';
   lisAvailableProjectBuildModes = 'Available project build modes';
   lisThisProjectHasOnlyTheDefaultBuildMode = 'This project has only the default build mode.';
   lisPkgMangstaticPackagesConfigFile = 'static packages config file';

@@ -421,8 +421,8 @@ type
     class procedure MergeXMLConfig(ParentDefTempl: TDefineTemplate;
                   var FirstSibling, LastSibling:TDefineTemplate;
                   XMLConfig: TXMLConfig; const Path, NewNamePrefix: string);
-    constructor Create(const AName, ADescription, AVariable, AValue: string;
-                       AnAction: TDefineAction);
+    constructor Create(const AName, ADescription, AVariable: string;
+                       AValue: string; AnAction: TDefineAction);
     constructor Create;
     destructor Destroy; override;
     procedure ConsistencyCheck;
@@ -4666,8 +4666,9 @@ begin
   inherited Create;
 end;
 
-constructor TDefineTemplate.Create(const AName, ADescription, AVariable,
+constructor TDefineTemplate.Create(const AName, ADescription, AVariable: string;
   AValue: string; AnAction: TDefineAction);
+// Don't use "const" for AValue parameter.
 begin
   inherited Create;
   Name:=AName;

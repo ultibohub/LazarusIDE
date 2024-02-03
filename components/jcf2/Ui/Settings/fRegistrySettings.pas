@@ -33,13 +33,14 @@ interface
 
 uses
   SysUtils, Classes, Controls, Forms,
-  Dialogs, StdCtrls, Buttons, ExtCtrls, ComCtrls, Spin;
+  Dialogs, StdCtrls, Buttons, ExtCtrls, ComCtrls, Spin, ButtonPanel;
 
 type
 
+  { TfmRegistrySettings }
+
   TfmRegistrySettings = class(TForm)
-    btnCancel: TButton;
-    btnOK: TButton;
+    ButtonPanel: TButtonPanel;
     dlgOpen:         TOpenDialog;
     pgPages:         TPageControl;
     dlgSelectDirectory: TSelectDirectoryDialog;
@@ -52,7 +53,6 @@ type
     btnClearMRU:     TButton;
     Label2:          TLabel;
     rgShowParseTree: TRadioGroup;
-    pnlBottom:       TPanel;
     sbSpecifedDir:   TSpeedButton;
     Label3:          TLabel;
     lblBackupFileExt: TLabel;
@@ -75,14 +75,13 @@ type
     cbEditorIntegration: TCheckBox;
     cbFormatBeforeSave: TCheckBox;
     cbFormatAfterLoad: TCheckBox;
-    procedure btnOKClick(Sender: TObject);
-    procedure btnCancelClick(Sender: TObject);
     procedure btnClearMRUClick(Sender: TObject);
     {$push}{$warn 5024 off}
     procedure eSettingsFileKeyUp(Sender: TObject; var Key: word;
       Shift: TShiftState);
     {$pop}
     procedure FormCreate(Sender: TObject);
+    procedure OKButtonClick(Sender: TObject);
     procedure sbFileClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
     procedure sbSpecifedDirClick(Sender: TObject);
@@ -208,17 +207,6 @@ begin
   ShowModal;
 end;
 
-procedure TfmRegistrySettings.btnOKClick(Sender: TObject);
-begin
-  WriteSettings;
-  Close;
-end;
-
-procedure TfmRegistrySettings.btnCancelClick(Sender: TObject);
-begin
-  Close;
-end;
-
 procedure TfmRegistrySettings.btnClearMRUClick(Sender: TObject);
 begin
   GetRegSettings.ClearMRU;
@@ -259,9 +247,6 @@ begin
   rgLogLevel.Items[1] := lisCnfLogFile;
   rgLogLevel.Items[2] := lisCnfLogToken;
   rgLogDir.Caption := lisCnfLogFileDir;
-  rgLogDir.Items[0] := lisCnfLogTemp;
-  rgLogDir.Items[1] := lisCnfLogApplication;
-  rgLogDir.Items[2] := lisCnfLogSpecified;
   Label3.Caption := lisCnfLogSelectDir;
 
   cbViewLog.Caption := lisCnfLogViewLog;
@@ -276,9 +261,11 @@ begin
   //cbEditorIntegration.Caption := lisCnfIdeIntegration;
   //cbFormatAfterLoad.Caption := lisCnfIdeFormatAfterLoad;
   //cbFormatBeforeSave.Caption := lisCnfIdeFormatBeforeSave;
+end;
 
-  btnOK.Caption := lisCnfOk;
-  btnCancel.Caption := lisCnfCancel;
+procedure TfmRegistrySettings.OKButtonClick(Sender: TObject);
+begin
+  WriteSettings;
 end;
 
 procedure TfmRegistrySettings.sbFileClick(Sender: TObject);
@@ -322,10 +309,10 @@ end;
 
 procedure TfmRegistrySettings.ShowDirs;
 begin
-  rgLogDir.Items[0] := 'Temp: ' + GetTempDir;
-  rgLogDir.Items[1] := 'Application: ' + IncludeTrailingPathDelimiter(
-    ExtractFileDir(ParamStr(0)));
-  rgLogDir.Items[2] := 'Specified: ' + fsSpecifiedDirectory;
+  rgLogDir.Items[0] := Format(lisCnfLogTemp, [GetTempDir]);
+  rgLogDir.Items[1] := Format(lisCnfLogApplication, [IncludeTrailingPathDelimiter(
+    ExtractFileDir(ParamStr(0)))]);
+  rgLogDir.Items[2] := Format(lisCnfLogSpecified, [fsSpecifiedDirectory]);
 end;
 
 procedure TfmRegistrySettings.tsExclusionsResize(Sender: TObject);

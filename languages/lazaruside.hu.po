@@ -10279,6 +10279,18 @@ msgstr "Ez a képernyő használandó új Fppkg beállítási fájlok létrehoz�
 msgid "Generate new Fppkg configuration files"
 msgstr "Új Fppkg beállítási fájlok létrehozása"
 
+#: lazarusidestrconsts.lisgetbuildmodes
+msgid "Print a list of build modes in the project. Active mode is listed first."
+msgstr ""
+
+#: lazarusidestrconsts.lisgetexepath
+msgid "Print the full path to the executable file in the specified build mode. By default, active build mode is used."
+msgstr ""
+
+#: lazarusidestrconsts.lisgetexpandtext
+msgid "Print the result of substituting macros in the text for the specified build mode. By default, active build mode is used."
+msgstr ""
+
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
 msgid "get word at current cursor position"
 msgstr "kifejezés lekérdezése a beszúrási jel aktuális helyénél"

@@ -10268,6 +10268,18 @@ msgstr "Utiliser cet écran pour générer les nouveaux fichiers de configuratio
 msgid "Generate new Fppkg configuration files"
 msgstr "Générer de nouveaux fichiers de configuration Fppkg"
 
+#: lazarusidestrconsts.lisgetbuildmodes
+msgid "Print a list of build modes in the project. Active mode is listed first."
+msgstr ""
+
+#: lazarusidestrconsts.lisgetexepath
+msgid "Print the full path to the executable file in the specified build mode. By default, active build mode is used."
+msgstr ""
+
+#: lazarusidestrconsts.lisgetexpandtext
+msgid "Print the result of substituting macros in the text for the specified build mode. By default, active build mode is used."
+msgstr ""
+
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
 msgid "get word at current cursor position"
 msgstr "obtenir le mot à la position courante du curseur"

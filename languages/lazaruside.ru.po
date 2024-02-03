@@ -5,7 +5,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2024-01-28 23:27+0300\n"
+"PO-Revision-Date: 2024-02-03 02:25+0300\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
@@ -10195,6 +10195,18 @@ msgstr "Воспользуйтесь этим диалогом для созда
 #: lazarusidestrconsts.lisgeneratefppkgconfigurationcaption
 msgid "Generate new Fppkg configuration files"
 msgstr "Создание новых файлов настройки Fppkg"
+
+#: lazarusidestrconsts.lisgetbuildmodes
+msgid "Print a list of build modes in the project. Active mode is listed first."
+msgstr "Вывести список режимов сборки проекта. Активный режим выводится первым в списке."
+
+#: lazarusidestrconsts.lisgetexepath
+msgid "Print the full path to the executable file in the specified build mode. By default, active build mode is used."
+msgstr "Вывести полный путь к исполнимому файлу для указанного режима сборки. По умолчанию используется активный."
+
+#: lazarusidestrconsts.lisgetexpandtext
+msgid "Print the result of substituting macros in the text for the specified build mode. By default, active build mode is used."
+msgstr "Вывести результат раскрытия макросов в тексте для указанного режима сборки. По умолчанию используется активный."
 
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
 msgid "get word at current cursor position"
