@@ -5,10 +5,19 @@ unit WatchInspectToolbar;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ComCtrls, Buttons, StdCtrls, ExtCtrls,
-  Menus, LCLType, EditBtn, SpinEx, IDEImagesIntf, LazUTF8, LazClasses,
+  Classes, SysUtils,
+  // LCL
+  Forms, Controls, ComCtrls, Buttons, StdCtrls, ExtCtrls, Menus, LCLType, EditBtn,
+  // LazUtils
+  LazClasses,
+  // LazControls
+  SpinEx,
+  // IdeIntf
+  IDEImagesIntf,
+  // Debugger
   LazDebuggerIntf, IdeDebuggerStringConstants, ArrayNavigationFrame,
-  IdeDebuggerOpts, Debugger, IdeDebuggerBackendValueConv, IdeDebuggerBase;
+  IdeDebuggerOpts, Debugger, IdeDebuggerBackendValueConv, IdeDebuggerBase,
+  IdeDebuggerUtils;
 
 type
 
@@ -111,7 +120,6 @@ type
     function  GetShowButtons(AIndex: Integer): Boolean;
     procedure SetShowButtons(AIndex: Integer; AValue: Boolean);
 
-    function  DisplayFormatName(ADispFormat: TWatchDisplayFormat): string;
     procedure DoDbgOptChanged(Sender: TObject; Restore: boolean);
     procedure AddToHistory(AnExpression: String);
     procedure DoClear;
@@ -440,25 +448,6 @@ begin
   FrameResize(nil);
 end;
 
-function TWatchInspectNav.DisplayFormatName(ADispFormat: TWatchDisplayFormat
-  ): string;
-begin
-  Result := '?';
-  case ADispFormat of
-    wdfDefault:   Result := dbgDispFormatDefault     ;
-    wdfChar:      Result := dbgDispFormatCharacter   ;
-    wdfString:    Result := dbgDispFormatString      ;
-    wdfDecimal:   Result := dbgDispFormatDecimal     ;
-    wdfUnsigned:  Result := dbgDispFormatUnsigned    ;
-    wdfHex:       Result := dbgDispFormatHexadecimal ;
-    wdfBinary:    Result := dbgDispFormatBinary      ;
-    wdfFloat:     Result := dbgDispFormatFloatingPoin;
-    wdfPointer:   Result := dbgDispFormatPointer     ;
-    wdfStructure: Result := dbgDispFormatRecordStruct;
-    wdfMemDump:   Result := dbgDispFormatMemoryDump  ;
-  end;
-end;
-
 procedure TWatchInspectNav.DoDbgOptChanged(Sender: TObject; Restore: boolean);
 var
   m: TMenuItem;
@@ -508,10 +497,10 @@ begin
 
   if FHistoryList <> nil then begin
     if (FHistoryList.Count = 0) or
-       (UTF8CompareLatinTextFast(FHistoryList[0], AnExpression) <> 0)
+       (AnsiCompareText(FHistoryList[0], AnExpression) <> 0)
     then begin
       for i:=FHistoryList.Count-1 downto 0 do
-        if UTF8CompareLatinTextFast(FHistoryList[i], AnExpression) = 0 then
+        if AnsiCompareText(FHistoryList[i], AnExpression) = 0 then
           FHistoryList.Delete(i);
 
       FHistoryList.Insert(0, AnExpression);

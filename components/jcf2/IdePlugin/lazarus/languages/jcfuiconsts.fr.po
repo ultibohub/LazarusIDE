@@ -987,6 +987,10 @@ msgstr "Ajouter \"begin\" et \"end\" aux instructions uniques"
 msgid "Add or Remove &begin and end from single statements"
 msgstr "Ajouter ou enlèver \"&begin\" et \"end\" des instructions uniques"
 
+#: jcfuiconsts.listransformadvancedsettings
+msgid "Advanced settings"
+msgstr ""
+
 #: jcfuiconsts.listransformalphabetic
 msgid "Alphabetic"
 msgstr "Alphabétique"
@@ -1050,6 +1054,10 @@ msgstr "Transformer"
 #: jcfuiconsts.listransformusessortorder
 msgid "Uses sort &order"
 msgstr "&Ordre de tri de \"uses\""
+
+#: jcfuiconsts.listransformwarningsortusesclauses
+msgid "WARNING: changing order of uses clauses may break your code."
+msgstr ""
 
 #: jcfuiconsts.lisusesinsertintoimplementation
 msgid "Insert into Implementation"

@@ -544,7 +544,7 @@ end;
 function TNewLazIDEItemCategories.IndexOf(const CategoryName: string): integer;
 begin
   Result := Count - 1;
-  while (Result >= 0) and (UTF8CompareLatinTextFast(CategoryName, Items[Result].Name) <> 0) do
+  while (Result >= 0) and (AnsiCompareText(CategoryName, Items[Result].Name) <> 0) do
     Dec(Result);
 end;
 

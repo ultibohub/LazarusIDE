@@ -1,3 +1,18 @@
+{***************************************************************************
+ *                                                                         *
+ * This unit is distributed under the LGPL version 2                       *
+ *                                                                         *
+ * Additionally this unit can be used under any newer version (3 or up)    *
+ * of the LGPL                                                             *
+ *                                                                         *
+ * Users are also granted the same "linking exception" as defined          *
+ * for the LCL.                                                            *
+ * See the LCL license for details                                         *
+ *                                                                         *
+ *                                                                         *
+ ***************************************************************************
+ @author(Martin Friebe)
+}
 unit LazDebuggerValueConverter;
 
 {$mode objfpc}{$H+}
@@ -16,7 +31,7 @@ type
   ILazDbgValueConverterSettingsFrameIntf = interface
     ['{0A2F548B-0621-4E2C-A94A-8DE5C3DF81B8}']
     procedure ReadFrom(AConvertor: ILazDbgValueConverterIntf);
-    function WriteTo(AConvertor: ILazDbgValueConverterIntf): Boolean;
+    function WriteTo(AConvertor: ILazDbgValueConverterIntf): Boolean; // return TRUE, if anything changed
 
     function GetFrame: TObject;  // TFrame
     procedure Free;
@@ -43,6 +58,7 @@ type
   end;
 
   { ILazDbgValueConvertSelectorListIntf }
+  (* List of currently configured instance / passed to debugger *)
 
   ILazDbgValueConvertSelectorListIntf = interface
     ['{7004204B-14ED-4282-A150-81AF71D133E3}']
@@ -64,7 +80,7 @@ type
   public
     class function CreateValueConvertorIntf: ILazDbgValueConverterIntf; virtual; abstract;
     class function GetName: String; virtual; abstract;
-    class function GetConvertorClass: TClass; virtual; abstract;
+    class function GetConvertorClass: TClass; virtual; abstract; // Used as XML-NAME in XmlConfig
     class function GetDebuggerClass: TClass; virtual; abstract; //  class of TDebuggerIntf
   end;
 

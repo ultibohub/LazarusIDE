@@ -29,7 +29,8 @@ interface
 uses
   Classes, SysUtils, StrUtils,
   // LazUtils
-  Masks, LazUTF8, LazFileUtils;
+  Masks, LazUTF8, LazFileUtils,
+  Contnrs;
 
 {$IF defined(Windows) or defined(darwin) or defined(HASAMIGA)}
 {$define CaseInsensitiveFilenames}
@@ -137,14 +138,16 @@ type
     FFileAttribute: Word;
     FDirectoryAttribute: Word;
     FOnQueryFileFound: TQueryFileFoundEvent;
-    FOnQueryDirectoryFound: TQueryDirectoryFoundEvent;
+    FOnQueryDirectoryEnter: TQueryDirectoryFoundEvent;
+    FCircularLinkDetection: Boolean;
+    VisitedDirs: TFPStringHashTable;
     procedure RaiseSearchingError;
   protected
     procedure DoDirectoryEnter; virtual;
     procedure DoDirectoryFound; virtual;
     procedure DoFileFound; virtual;
     procedure DoQueryFileFound(const Fn: String; var Accept: Boolean);
-    procedure DoQueryDirectoryFound(const Dir: String; var Accept: Boolean);
+    procedure DoQueryDirectoryEnter(const Dir: String; var Accept: Boolean);
   public
     constructor Create;
     procedure Search(const ASearchPath: String; const ASearchMask: String = '';
@@ -155,11 +158,12 @@ type
     property FollowSymLink: Boolean read FFollowSymLink write FFollowSymLink;
     property FileAttribute: Word read FFileAttribute write FFileAttribute default faAnyfile;
     property DirectoryAttribute: Word read FDirectoryAttribute write FDirectoryAttribute default faDirectory;
+    property CircularLinkdetection: Boolean read FCircularLinkdetection write FCircularLinkdetection default False;
     property OnDirectoryFound: TDirectoryFoundEvent read FOnDirectoryFound write FOnDirectoryFound;
     property OnFileFound: TFileFoundEvent read FOnFileFound write FOnFileFound;
     property OnDirectoryEnter: TDirectoryEnterEvent read FOnDirectoryEnter write FOnDirectoryEnter;
     property OnQueryFileFound: TQueryFileFoundEvent read FOnQueryFileFound write FOnQueryFileFound;
-    property OnQueryDirectoryFound: TQueryDirectoryFoundEvent read FOnQueryDirectoryFound write FOnQueryDirectoryFound;
+    property OnQueryDirectoryEnter: TQueryDirectoryFoundEvent read FOnQueryDirectoryEnter write FOnQueryDirectoryEnter;
   end;
 
   { TListFileSearcher }

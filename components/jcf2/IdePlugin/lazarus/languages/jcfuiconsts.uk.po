@@ -988,6 +988,10 @@ msgstr "Додавати begin і end до одиничних операторі
 msgid "Add or Remove &begin and end from single statements"
 msgstr "Додати або видал&ити begin і end з одиничних операторів"
 
+#: jcfuiconsts.listransformadvancedsettings
+msgid "Advanced settings"
+msgstr ""
+
 #: jcfuiconsts.listransformalphabetic
 msgid "Alphabetic"
 msgstr "За алфавітом"
@@ -1051,6 +1055,10 @@ msgstr "Перетворення"
 #: jcfuiconsts.listransformusessortorder
 msgid "Uses sort &order"
 msgstr "По&рядок сортування Uses"
+
+#: jcfuiconsts.listransformwarningsortusesclauses
+msgid "WARNING: changing order of uses clauses may break your code."
+msgstr ""
 
 #: jcfuiconsts.lisusesinsertintoimplementation
 msgid "Insert into Implementation"

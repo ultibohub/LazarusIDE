@@ -782,11 +782,11 @@ begin
     FOnQueryFileFound(Self, Fn, Accept);
 end;
 
-procedure TFileSearcher.DoQueryDirectoryFound(const Dir: String;
+procedure TFileSearcher.DoQueryDirectoryEnter(const Dir: String;
   var Accept: Boolean);
 begin
-  if Assigned(FOnQueryDirectoryFound) then
-    FOnQueryDirectoryFound(Self, Dir, Accept);
+  if Assigned(FOnQueryDirectoryEnter) then
+    FOnQueryDirectoryEnter(Self, Dir, Accept);
 end;
 
 constructor TFileSearcher.Create;
@@ -795,6 +795,7 @@ begin
   FMaskSeparator := ';';
   FPathSeparator := ';';
   FFollowSymLink := True;
+  FCircularLinkDetection := False;
   FFileAttribute := faAnyFile;
   FDirectoryAttribute := faDirectory;
   FSearching := False;
@@ -815,11 +816,11 @@ var
     function AcceptDir(const Dir: String): Boolean;
     begin
       Result := True;
-      DoQueryDirectoryFound(Dir, Result);
+      DoQueryDirectoryEnter(Dir, Result);
     end;
 
   var
-    P: String;
+    P, FQDir, LinkTarget: String;
     PathInfo: TSearchRec;
   begin
     P := APath + AllDirectoryEntriesMask;
@@ -832,7 +833,7 @@ var
         // Deal with both files and directories
         if (PathInfo.Attr and faDirectory) = 0 then
         begin             // File
-          if ((MaskList = nil) or MaskList.Matches(PathInfo.Name)) and AcceptFile(APath+PathInfo.Name) then
+          if ((MaskList = nil) or MaskList.Matches(PathInfo.Name)) and AcceptFile(ExpandFilenameUtf8(APath+PathInfo.Name)) then
           begin
             FPath := APath;
             FLevel := ALevel;
@@ -841,13 +842,10 @@ var
           end;
         end
         else begin        // Directory
-          if AcceptDir(PathInfo.Name) then
-          begin
-            FPath := APath;
-            FLevel := ALevel;
-            FFileInfo := PathInfo;
-            DoDirectoryFound;
-          end;
+          FPath := APath;
+          FLevel := ALevel;
+          FFileInfo := PathInfo;
+          DoDirectoryFound;
         end;
 
       until (FindNextUTF8(PathInfo) <> 0) or not FSearching;
@@ -862,25 +860,52 @@ var
         repeat
           if (PathInfo.Name = '.') or (PathInfo.Name = '..') or
              (PathInfo.Name = '') or ((PathInfo.Attr and faDirectory) = 0) or
-             (not FFollowSymLink and FileIsSymlink(APath + PathInfo.Name)) or
-             (FileIsSymlink(APath + PathInfo.Name) and
-             ( //try to detect the simples case of a circular link
-               //is the link "up or down the current tree": infinite loop if we follow
-               FileIsInPath(ExpandFilenameUTF8(ReadAllLinks(APath+PathInfo.Name,False)),ExpandFilenameUTF8(APath)) or
-               FileIsInPath(ExpandFilenameUTF8(APath),ExpandFilenameUTF8(ReadAllLinks(APath+PathInfo.Name,False))))
-             ) or
-             (not AcceptDir(PathInfo.Name))
-          then Continue;
+             (not AcceptDir(ExpandFilenameUtf8(APath + PathInfo.Name)))
+          then
+            Continue;
+          if Assigned(VisitedDirs) then
+          begin
+            FQDir := ExpandFilenameUTF8(APath + PathInfo.Name);
+            {$ifdef CaseInsensitiveFilenames}
+            FQDir := Utf8LowerCase(FQDir);
+            {$endif}
+          end;
+
+          // deal with symlinks separately, avoid excessive calls to ExpandFilenameUTF8 and
+          // have a less convoluted boolean expression above here
+          if (FileIsSymlink(APath + PathInfo.Name)) then
+          begin
+            if not FFollowSymlink then
+              Continue;
+            LinkTarget := ReadAllLinks(APath+PathInfo.Name,False);
+            if (LinkTarget = '') then //broken link
+              Continue;
+            LinkTarget := ExpandFilenameUTF8(LinkTarget);
+            {$ifdef CaseInsensitiveFilenames}
+            LinkTarget := Utf8LowerCase(LinkTarget);
+            {$endif}
+            if
+              //is the link "up or down the current tree": infinite loop if we follow
+              FileIsInPath(LinkTarget,ExpandFilenameUTF8(APath)) or
+              FileIsInPath(ExpandFilenameUTF8(APath),LinkTarget) or
+              //did we already visit that directory, assuming we actually do check for that
+              (Assigned(VisitedDirs) and Assigned(VisitedDirs.Find(LinkTarget)))
+              then
+                Continue;
+            if Assigned(VisitedDirs) then
+              FQDir := LinkTarget;
+          end;
 
           FPath := APath;
           FLevel := ALevel;
           FFileInfo := PathInfo;
-          DoDirectoryEnter;
           if not FSearching then Break;
-
+          DoDirectoryEnter;
+          if Assigned(VisitedDirs) then
+            VisitedDirs.Add(FQDir,'');
           DoSearch(AppendPathDelim(APath + PathInfo.Name), Succ(ALevel));
 
-        until (FindNextUTF8(PathInfo) <> 0);
+        until (FindNextUTF8(PathInfo) <> 0) or (not FSearching);
       finally
         FindCloseUTF8(PathInfo);
       end;
@@ -893,6 +918,10 @@ var
   OtherDir: String;
 begin
   if FSearching then RaiseSearchingError;
+  if FCircularLinkDetection and FFollowSymLink then
+    VisitedDirs := TFPStringHashTable.Create
+  else
+    VisitedDirs := nil;
   {$ifdef windows}
   MaskList := TWindowsMaskList.Create(ASearchMask, FMaskSeparator, CaseSensitive);
   {$else}
@@ -944,6 +973,8 @@ begin
     SearchDirectories.Free;
     FSearching := False;
     MaskList.Free;
+    if Assigned(VisitedDirs) then
+      VisitedDirs.Free;
   end;
 end;
 
