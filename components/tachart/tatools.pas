@@ -408,9 +408,9 @@ type
     public
       procedure Assign(ASource: TPointRef);
       function AxisPos(ADefaultSeries: TBasicChartSeries = nil): TDoublePoint;
-      property GraphPos: TDoublePoint read FGraphPos;
-      property Index: Integer read FIndex;
-      property Series: TBasicChartSeries read FSeries;
+      property GraphPos: TDoublePoint read FGraphPos write SetGraphPos;
+      property Index: Integer read FIndex write FIndex;
+      property Series: TBasicChartSeries read FSeries write FSeries;
     end;
 
   strict private
@@ -2337,14 +2337,30 @@ function TAxisClickTool.GetHitTestInfo(APoint: TPoint): Boolean;
 var
   ax: TChartAxis;
 begin
+  { We must test the axes twice because some positions may be misinterpreted
+    to belong to other axes. A click on the axis line of an additional left axis
+    may be interpreted as a click on the bottom axis since the bottom axis usually
+    tested before the 2nd y axis. }
+  for ax in FChart.AxisList do
+  begin
+    FHitTest := ax.GetHitTestInfoAt(APoint, FGrabRadius, [ahtLine, ahtAxisStart, ahtAxisCenter, ahtAxisEnd]);
+    if FHitTest <> [] then
+    begin
+      FAxis := ax;
+      Result := true;
+      exit;
+    end;
+  end;
+
   for ax in FChart.AxisList do begin
-    FHitTest := ax.GetHitTestInfoAt(APoint, FGrabRadius);
+    FHitTest := ax.GetHitTestInfoAt(APoint, FGrabRadius, ALL_CHARTAXIS_HITTESTS - [ahtLine]);
     if FHitTest <> [] then begin
       FAxis := ax;
       Result := true;
       exit;
     end;
   end;
+
   Result := false;
   FAxis := nil;
   FHitTest := [];

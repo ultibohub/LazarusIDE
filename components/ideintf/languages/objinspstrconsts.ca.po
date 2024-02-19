@@ -2,12 +2,14 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2006-10-25 18:36+0100\n"
+"PO-Revision-Date: 2024-02-17 23:20+0100\n"
 "Last-Translator: J.Salvador Pérez <salvaperez@escomposlinux.org>\n"
 "Language-Team: \n"
+"Language: ca\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.4.1\n"
 
 #: objinspstrconsts.cactionlisteditorallcategory
 msgid "(All)"
@@ -1767,8 +1769,26 @@ msgctxt "objinspstrconsts.sccstredtapply"
 msgid "Apply"
 msgstr "Aplicar"
 
+#: objinspstrconsts.sccstredtcancel
+#, fuzzy
+msgctxt "objinspstrconsts.sccstredtcancel"
+msgid "&Cancel"
+msgstr "&Cancel·la"
+
 #: objinspstrconsts.sccstredtcaption
 msgid "TreeView Items Editor"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationcaption
+msgid "Confirmation"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationimages
+msgid "Information about node images cannot be stored in the file. Continue anyway?"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationreplace
+msgid "The file already exists, replace it?"
 msgstr ""
 
 #: objinspstrconsts.sccstredtdelete
@@ -1786,6 +1806,16 @@ msgctxt "objinspstrconsts.sccstredtgrprcaption"
 msgid "Item Properties"
 msgstr "Propietats de l'Element"
 
+#: objinspstrconsts.sccstredtimagelistnotassigned
+#, object-pascal-format
+msgid "%s not assigned."
+msgstr ""
+
+#: objinspstrconsts.sccstredtinvalidindex
+#, object-pascal-format
+msgid "%s has only %d images."
+msgstr ""
+
 #: objinspstrconsts.sccstredtitem
 msgctxt "objinspstrconsts.sccstredtitem"
 msgid "Item"
@@ -1793,16 +1823,16 @@ msgstr "Element"
 
 #: objinspstrconsts.sccstredtlabelimageindex
 msgctxt "objinspstrconsts.sccstredtlabelimageindex"
-msgid "Image Index:"
-msgstr "Index de l'Imatge:"
+msgid "Image Index"
+msgstr "Index de l'Imatge"
 
 #: objinspstrconsts.sccstredtlabelselindex
-msgid "Selected Index:"
-msgstr "Index sel·leccionat:"
+msgid "Selected Index"
+msgstr "Index sel·leccionat"
 
 #: objinspstrconsts.sccstredtlabelstateindex
 msgctxt "objinspstrconsts.sccstredtlabelstateindex"
-msgid "State Index:"
+msgid "State Index"
 msgstr ""
 
 #: objinspstrconsts.sccstredtlabeltext
@@ -1823,6 +1853,10 @@ msgctxt "objinspstrconsts.sccstredtnewsubitem"
 msgid "New SubItem"
 msgstr ""
 
+#: objinspstrconsts.sccstredtno
+msgid "&No"
+msgstr ""
+
 #: objinspstrconsts.sccstredtopendialog
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
@@ -1837,6 +1871,10 @@ msgstr "Desar"
 msgctxt "objinspstrconsts.sccstredtsavedialog"
 msgid "Save"
 msgstr "Desar"
+
+#: objinspstrconsts.sccstredtyes
+msgid "&Yes"
+msgstr ""
 
 #: objinspstrconsts.srgrabkey
 msgid "Grab key"

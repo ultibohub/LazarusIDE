@@ -1,7 +1,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: objinspstrconsts\n"
-"PO-Revision-Date: 2014-10-03 18:07+0100\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2024-02-17 23:24+0100\n"
 "Last-Translator: Giuliano Colla <giuliano.colla@fastwebnet.it>\n"
 "Language-Team: PincoPallo Team\n"
 "Language: it\n"
@@ -9,8 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Generator: Virtaal 0.5.1\n"
-"POT-Creation-Date: \n"
+"X-Generator: Poedit 3.4.1\n"
 
 #: objinspstrconsts.cactionlisteditorallcategory
 msgid "(All)"
@@ -1710,9 +1710,27 @@ msgctxt "objinspstrconsts.sccstredtapply"
 msgid "Apply"
 msgstr "Applica"
 
+#: objinspstrconsts.sccstredtcancel
+#, fuzzy
+msgctxt "objinspstrconsts.sccstredtcancel"
+msgid "&Cancel"
+msgstr "&Annulla"
+
 #: objinspstrconsts.sccstredtcaption
 msgid "TreeView Items Editor"
 msgstr "Editor voci della Treeview"
+
+#: objinspstrconsts.sccstredtconfirmationcaption
+msgid "Confirmation"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationimages
+msgid "Information about node images cannot be stored in the file. Continue anyway?"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationreplace
+msgid "The file already exists, replace it?"
+msgstr ""
 
 #: objinspstrconsts.sccstredtdelete
 msgctxt "objinspstrconsts.sccstredtdelete"
@@ -1729,6 +1747,16 @@ msgctxt "objinspstrconsts.sccstredtgrprcaption"
 msgid "Item Properties"
 msgstr "Proprietà delle voci"
 
+#: objinspstrconsts.sccstredtimagelistnotassigned
+#, object-pascal-format
+msgid "%s not assigned."
+msgstr ""
+
+#: objinspstrconsts.sccstredtinvalidindex
+#, object-pascal-format
+msgid "%s has only %d images."
+msgstr ""
+
 #: objinspstrconsts.sccstredtitem
 msgctxt "objinspstrconsts.sccstredtitem"
 msgid "Item"
@@ -1736,16 +1764,16 @@ msgstr "Voce"
 
 #: objinspstrconsts.sccstredtlabelimageindex
 msgctxt "objinspstrconsts.sccstredtlabelimageindex"
-msgid "Image Index:"
-msgstr "Image Index:"
+msgid "Image Index"
+msgstr "Image Index"
 
 #: objinspstrconsts.sccstredtlabelselindex
-msgid "Selected Index:"
-msgstr "Indice selezionato:"
+msgid "Selected Index"
+msgstr "Indice selezionato"
 
 #: objinspstrconsts.sccstredtlabelstateindex
 msgctxt "objinspstrconsts.sccstredtlabelstateindex"
-msgid "State Index:"
+msgid "State Index"
 msgstr "Indice di Stato"
 
 #: objinspstrconsts.sccstredtlabeltext
@@ -1766,6 +1794,10 @@ msgctxt "objinspstrconsts.sccstredtnewsubitem"
 msgid "New SubItem"
 msgstr "Nuova Sottovoce"
 
+#: objinspstrconsts.sccstredtno
+msgid "&No"
+msgstr ""
+
 #: objinspstrconsts.sccstredtopendialog
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
@@ -1780,6 +1812,10 @@ msgstr "Salva"
 msgctxt "objinspstrconsts.sccstredtsavedialog"
 msgid "Save"
 msgstr "Salva"
+
+#: objinspstrconsts.sccstredtyes
+msgid "&Yes"
+msgstr ""
 
 #: objinspstrconsts.srgrabkey
 msgid "Grab key"

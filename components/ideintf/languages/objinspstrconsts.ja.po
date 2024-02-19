@@ -1,13 +1,15 @@
 msgid ""
 msgstr ""
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"PO-Revision-Date: 2013-12-09 22:08+0900\n"
 "Project-Id-Version: objinspstrconsts.ja\n"
+"POT-Creation-Date: \n"
+"PO-Revision-Date: 2024-02-17 23:24+0100\n"
 "Last-Translator: Yuichiro Takahashi <yuichiro@pop07.odn.ne.jp>\n"
 "Language-Team: Japanese Lazarus ML\n"
 "Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.4.1\n"
 
 #: objinspstrconsts.cactionlisteditorallcategory
 msgid "(All)"
@@ -1715,9 +1717,27 @@ msgctxt "objinspstrconsts.sccstredtapply"
 msgid "Apply"
 msgstr "適用"
 
+#: objinspstrconsts.sccstredtcancel
+#, fuzzy
+msgctxt "objinspstrconsts.sccstredtcancel"
+msgid "&Cancel"
+msgstr "キャンセル(&C)"
+
 #: objinspstrconsts.sccstredtcaption
 msgid "TreeView Items Editor"
 msgstr "ツリービューアイテムエディタ"
+
+#: objinspstrconsts.sccstredtconfirmationcaption
+msgid "Confirmation"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationimages
+msgid "Information about node images cannot be stored in the file. Continue anyway?"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationreplace
+msgid "The file already exists, replace it?"
+msgstr ""
 
 #: objinspstrconsts.sccstredtdelete
 msgctxt "objinspstrconsts.sccstredtdelete"
@@ -1734,6 +1754,16 @@ msgctxt "objinspstrconsts.sccstredtgrprcaption"
 msgid "Item Properties"
 msgstr "項目のプロパティ"
 
+#: objinspstrconsts.sccstredtimagelistnotassigned
+#, object-pascal-format
+msgid "%s not assigned."
+msgstr ""
+
+#: objinspstrconsts.sccstredtinvalidindex
+#, object-pascal-format
+msgid "%s has only %d images."
+msgstr ""
+
 #: objinspstrconsts.sccstredtitem
 msgctxt "objinspstrconsts.sccstredtitem"
 msgid "Item"
@@ -1741,17 +1771,17 @@ msgstr "項目"
 
 #: objinspstrconsts.sccstredtlabelimageindex
 msgctxt "objinspstrconsts.sccstredtlabelimageindex"
-msgid "Image Index:"
-msgstr "イメージのインデックス:"
+msgid "Image Index"
+msgstr "イメージのインデックス"
 
 #: objinspstrconsts.sccstredtlabelselindex
-msgid "Selected Index:"
-msgstr "選択時のインデックス:"
+msgid "Selected Index"
+msgstr "選択時のインデックス"
 
 #: objinspstrconsts.sccstredtlabelstateindex
 msgctxt "objinspstrconsts.sccstredtlabelstateindex"
-msgid "State Index:"
-msgstr "ステートのインデックス:"
+msgid "State Index"
+msgstr "ステートのインデックス"
 
 #: objinspstrconsts.sccstredtlabeltext
 msgid "Text:"
@@ -1771,6 +1801,10 @@ msgctxt "objinspstrconsts.sccstredtnewsubitem"
 msgid "New SubItem"
 msgstr "新規サブアイテム"
 
+#: objinspstrconsts.sccstredtno
+msgid "&No"
+msgstr ""
+
 #: objinspstrconsts.sccstredtopendialog
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
@@ -1785,6 +1819,10 @@ msgstr "保存"
 msgctxt "objinspstrconsts.sccstredtsavedialog"
 msgid "Save"
 msgstr "保存"
+
+#: objinspstrconsts.sccstredtyes
+msgid "&Yes"
+msgstr ""
 
 #: objinspstrconsts.srgrabkey
 msgid "Grab key"

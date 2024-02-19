@@ -1208,6 +1208,11 @@ begin
 
   if ConsoleVerbosity>=0 then
   begin
+    // lazarus config file "lazarus.cfg"
+    if FileExistsUTF8(GetCfgFileName) then
+      Debugln('Hint: (lazarus) Using config file: "' + GetCfgFileName + '"');
+
+    // lazarus config dirs (--pcp and --scp)
     Debugln('Hint: (lazarus) [TMainIDE.ParseCmdLineOptions] PrimaryConfigPath="',GetPrimaryConfigPath,'"');
     Debugln('Hint: (lazarus) [TMainIDE.ParseCmdLineOptions] SecondaryConfigPath="',GetSecondaryConfigPath,'"');
   end;
@@ -7388,15 +7393,15 @@ var
 begin
   if not CodeToolsOpts.IdentComplIncludeCodeTemplates then
     Exit;
-
-  for I := 0 to SourceEditorManager.CodeTemplateModul.Completions.Count-1 do
-  begin
-    New := TCodeTemplateIdentifierListItem.Create(CodeTemplateCompatibility, False, CodeTemplateHistoryIndex,
-      PChar(SourceEditorManager.CodeTemplateModul.Completions[I]),
-      CodeTemplateLevel, nil, nil, ctnCodeTemplate);
-    New.Comment := SourceEditorManager.CodeTemplateModul.CompletionComments[I];
-    CodeToolBoss.IdentifierList.Add(New);
-  end;
+  with SourceEditorManager.CodeTemplateModul do
+    for I := 0 to CodeTemplates.Count-1 do
+    begin
+      New := TCodeTemplateIdentifierListItem.Create(CodeTemplateCompatibility,
+              False, CodeTemplateHistoryIndex, PChar(CodeTemplates[I].Key),
+              CodeTemplateLevel, nil, nil, ctnCodeTemplate);
+      New.Comment := CodeTemplates[I].Comment;
+      CodeToolBoss.IdentifierList.Add(New);
+    end;
 end;
 
 procedure TMainIDE.DoCompile;

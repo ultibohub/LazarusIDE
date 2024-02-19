@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2022-04-06 00:06+0200\n"
+"PO-Revision-Date: 2024-02-18 01:21+0100\n"
 "Last-Translator: Swen Heinig <swen@heinig.email>\n"
 "Language-Team: Deutsch <lazarus@miraclec.com>\n"
 "Language: de\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-SourceCharset: utf-8\n"
-"X-Generator: Poedit 3.0.1\n"
+"X-Generator: Poedit 3.4.1\n"
 
 #: objinspstrconsts.cactionlisteditorallcategory
 msgid "(All)"
@@ -1674,8 +1674,6 @@ msgid "Load ..."
 msgstr "Laden..."
 
 #: objinspstrconsts.sccssgedtmoverowscols
-#, fuzzy
-#| msgid "Move Rows/Columns"
 msgid "Move rows/columns"
 msgstr "Zeilen/Spalten verschieben"
 
@@ -1708,9 +1706,26 @@ msgctxt "objinspstrconsts.sccstredtapply"
 msgid "Apply"
 msgstr "Übernehmen"
 
+#: objinspstrconsts.sccstredtcancel
+msgctxt "objinspstrconsts.sccstredtcancel"
+msgid "&Cancel"
+msgstr "&Abbrechen"
+
 #: objinspstrconsts.sccstredtcaption
 msgid "TreeView Items Editor"
 msgstr "Editor für TreeView-Einträge"
+
+#: objinspstrconsts.sccstredtconfirmationcaption
+msgid "Confirmation"
+msgstr "Bestätigung"
+
+#: objinspstrconsts.sccstredtconfirmationimages
+msgid "Information about node images cannot be stored in the file. Continue anyway?"
+msgstr "Information über die Knoten-Bilder kann nicht in der Datei gespeichert werden. Trotzdem fortfahren?"
+
+#: objinspstrconsts.sccstredtconfirmationreplace
+msgid "The file already exists, replace it?"
+msgstr "Die Datei existiert bereits. Soll sie ersetzt werden?"
 
 #: objinspstrconsts.sccstredtdelete
 msgctxt "objinspstrconsts.sccstredtdelete"
@@ -1727,6 +1742,16 @@ msgctxt "objinspstrconsts.sccstredtgrprcaption"
 msgid "Item Properties"
 msgstr "Eigenschaften des Eintrags"
 
+#: objinspstrconsts.sccstredtimagelistnotassigned
+#, object-pascal-format
+msgid "%s not assigned."
+msgstr "%s nicht zugewiesen."
+
+#: objinspstrconsts.sccstredtinvalidindex
+#, object-pascal-format
+msgid "%s has only %d images."
+msgstr "%s enthält nur %d Bilder."
+
 #: objinspstrconsts.sccstredtitem
 msgctxt "objinspstrconsts.sccstredtitem"
 msgid "Item"
@@ -1734,17 +1759,17 @@ msgstr "Eintrag"
 
 #: objinspstrconsts.sccstredtlabelimageindex
 msgctxt "objinspstrconsts.sccstredtlabelimageindex"
-msgid "Image Index:"
-msgstr "Bildindex:"
+msgid "Image Index"
+msgstr "Bildindex"
 
 #: objinspstrconsts.sccstredtlabelselindex
-msgid "Selected Index:"
-msgstr "Ausgewählter Index:"
+msgid "Selected Index"
+msgstr "Ausgewählter Index"
 
 #: objinspstrconsts.sccstredtlabelstateindex
 msgctxt "objinspstrconsts.sccstredtlabelstateindex"
-msgid "State Index:"
-msgstr "Statusindex:"
+msgid "State Index"
+msgstr "Statusindex"
 
 #: objinspstrconsts.sccstredtlabeltext
 msgid "Text:"
@@ -1764,6 +1789,10 @@ msgctxt "objinspstrconsts.sccstredtnewsubitem"
 msgid "New SubItem"
 msgstr "Neuer Untereintrag"
 
+#: objinspstrconsts.sccstredtno
+msgid "&No"
+msgstr "&Nein"
+
 #: objinspstrconsts.sccstredtopendialog
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
@@ -1778,6 +1807,10 @@ msgstr "Sichern"
 msgctxt "objinspstrconsts.sccstredtsavedialog"
 msgid "Save"
 msgstr "Sichern"
+
+#: objinspstrconsts.sccstredtyes
+msgid "&Yes"
+msgstr "&Ja"
 
 #: objinspstrconsts.srgrabkey
 msgid "Grab key"

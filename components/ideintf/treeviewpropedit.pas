@@ -20,7 +20,8 @@ interface
 uses
   Classes, SysUtils,
   // LCL
-  Forms, Dialogs, Buttons, Controls, StdCtrls, ComCtrls,
+  LCLType, Forms, Dialogs, Buttons, Controls, StdCtrls, ComCtrls, ImgList, Spin,
+  ButtonPanel,
   // IdeIntf
   PropEdits, ComponentEditors, ObjInspStrConsts, IDEImagesIntf, IDEWindowIntf;
 
@@ -29,48 +30,48 @@ type
   { TTreeViewItemsEditorForm }
 
   TTreeViewItemsEditorForm = class(TForm)
-    BtnApply: TBitBtn;
-    BtnCancel: TBitBtn;
-    BtnHelp: TBitBtn;
-    BtnOK: TBitBtn;
-    BtnSave: TButton;
-    BtnNewItem: TButton;
-    BtnNewSubItem: TButton;
-    BtnDelete: TButton;
-    BtnLoad: TButton;
-    edtText: TEdit;
-    edtIndexImg: TEdit;
-    edtIndexSel: TEdit;
-    edtIndexState: TEdit;
-    GroupBox1: TGroupBox;
-    GroupBox2: TGroupBox;
-    LabelText: TLabel;
-    LabelImageIndex: TLabel;
-    LabelSelectedIndex: TLabel;
-    LabelStateIndex: TLabel;
-    OpenDialog1: TOpenDialog;
-    MoveDownBtn: TSpeedButton;
-    MoveUpBtn: TSpeedButton;
-    SaveDialog1: TSaveDialog;
-    TreeView1: TTreeView;
-    procedure BtnNewItemClick(Sender: TObject);
+    btnApply: TBitBtn;
+    btnSave: TButton;
+    btnNewItem: TButton;
+    btnNewSubItem: TButton;
+    btnDelete: TButton;
+    btnLoad: TButton;
+    ButtonPanel: TButtonPanel;
+    edtNodeText: TEdit;
+    grpTreeEditor: TGroupBox;
+    grpNodeEditor: TGroupBox;
+    lblNodeText: TLabel;
+    lblImageIndex: TLabel;
+    lblSelectedIndex: TLabel;
+    lblStateIndex: TLabel;
+    dlgOpen: TOpenDialog;
+    btnMoveDown: TSpeedButton;
+    btnMoveUp: TSpeedButton;
+    dlgSave: TSaveDialog;
+    spnImageIndex: TSpinEdit;
+    spnSelectedIndex: TSpinEdit;
+    spnStateIndex: TSpinEdit;
+    treEditor: TTreeView;
+    procedure btnNewItemClick(Sender: TObject);
     procedure Edit1Change(Sender: TObject);
     procedure FormClose(Sender: TObject; var {%H-}CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
-    procedure MoveUpBtnClick(Sender: TObject);
-    procedure MoveDownBtnClick(Sender: TObject);
-    procedure TreeView1SelectionChanged(Sender: TObject);
+    procedure btnMoveClick(Sender: TObject);
+    procedure btnMoveDownClick(Sender: TObject);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure treEditorSelectionChanged(Sender: TObject);
     procedure btnApplyClick(Sender: TObject);
     procedure btnDeleteClick(Sender: TObject);
     procedure btnLoadClick(Sender: TObject);
     procedure btnSaveClick(Sender: TObject);
-    procedure edtIndexStateEditingDone(Sender: TObject);
+    procedure spnIndexChange(Sender: TObject);
   private
     FTreeView: TCustomTreeView;
     FModified: Boolean;
     procedure LoadFromTree(ATreeView: TCustomTreeView);
     procedure SaveToTree;
     procedure UpdateEnabledStates;
+    procedure UpdateImageHints;
   public
   end; 
 
@@ -114,28 +115,35 @@ end;
 
 procedure TTreeViewItemsEditorForm.FormCreate(Sender: TObject);
 begin
+  // Captions
   Caption := sccsTrEdtCaption;
 
-  GroupBox1.Caption := sccsTrEdtGrpLCaption;
-  BtnNewItem.Caption := sccsTrEdtNewItem;
-  BtnNewSubItem.Caption := sccsTrEdtNewSubItem;
-  BtnDelete.Caption := sccsTrEdtDelete;
-  BtnLoad.Caption := sccsTrEdtLoad;
-  BtnSave.Caption := sccsTrEdtSave;
-  BtnApply.Caption := sccsTrEdtApply;
-  IDEImages.AssignImage(MoveUpBtn, 'arrow_up');
-  IDEImages.AssignImage(MoveDownBtn, 'arrow_down');
-  MoveUpBtn.Hint:=rscdMoveUp;
-  MoveDownBtn.Hint:=rscdMoveDown;
+  grpTreeEditor.Caption := sccsTrEdtGrpLCaption;
+  btnNewItem.Caption := sccsTrEdtNewItem;
+  btnNewSubItem.Caption := sccsTrEdtNewSubItem;
+  btnDelete.Caption := sccsTrEdtDelete;
+  btnLoad.Caption := sccsTrEdtLoad;
+  btnSave.Caption := sccsTrEdtSave;
+  btnApply.Caption := sccsTrEdtApply;
+  IDEImages.AssignImage(btnMoveUp, 'arrow_up');
+  IDEImages.AssignImage(btnMoveDown, 'arrow_down');
+  btnMoveUp.Hint:=rscdMoveUp + LineEnding + '[Ctrl+Shift+Up]';
+  btnMoveDown.Hint:=rscdMoveDown + LineEnding + '[Ctrl+Shift+Down]';
 
-  GroupBox2.Caption := sccsTrEdtGrpRCaption;
-  LabelText.Caption := sccsTrEdtLabelText;
-  LabelImageIndex.Caption := sccsTrEdtLabelImageIndex;
-  LabelSelectedIndex.Caption := sccsTrEdtLabelSelIndex;
-  LabelStateIndex.Caption := sccsTrEdtLabelStateIndex;
+  grpNodeEditor.Caption := sccsTrEdtGrpRCaption;
+  lblNodeText.Caption := sccsTrEdtLabelText;
+  lblImageIndex.Caption := sccsTrEdtLabelImageIndex + ':';
+  lblSelectedIndex.Caption := sccsTrEdtLabelSelIndex + ':';
+  lblStateIndex.Caption := sccsTrEdtLabelStateIndex + ':';
 
-  OpenDialog1.Title := sccsTrEdtOpenDialog;
-  SaveDialog1.Title := sccsTrEdtSaveDialog;
+  dlgOpen.Title := sccsTrEdtOpenDialog;
+  dlgSave.Title := sccsTrEdtSaveDialog;
+
+  // Button panel
+  ButtonPanel.ShowHint := true;
+  btnApply.LoadGlyphFromResource(idButtonRetry);
+
+  // Layout
   IDEDialogLayoutList.ApplyLayout(Self);
 end;
 
@@ -145,56 +153,172 @@ begin
   IDEDialogLayoutList.SaveLayout(Self);
 end;
 
-procedure TTreeViewItemsEditorForm.BtnNewItemClick(Sender: TObject);
-var
-  S: String;
+procedure TTreeViewItemsEditorForm.FormKeyDown(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
 begin
-  S := sccsTrEdtItem + IntToStr(TreeView1.Items.Count);
-  if (Sender as TComponent).Tag = 1 then
-    TreeView1.Selected := TreeView1.Items.Add(TreeView1.Selected, S)
-  else
-    TreeView1.Selected := TreeView1.Items.AddChild(TreeView1.Selected, S);
+  case Key of
+    // form actions
+    VK_RETURN:
+      if (Shift = [ssCtrl]) then
+      begin
+        Key := 0;
+        ModalResult := mrOK;
+      end else
+      if (Shift = [ssShift]) then
+      begin
+        Key := 0;
+        btnApplyClick(Sender);
+      end;
+    VK_ESCAPE:
+      if (Shift = []) then
+      begin
+        if not treEditor.IsEditing then
+        begin
+          Key := 0;
+          ModalResult := mrCancel;
+        end;
+      end;
 
-  GroupBox2.Enabled := TreeView1.Items.Count > 0;
+    // create items
+    VK_N:
+      if (Shift = [ssCtrl]) then
+      begin
+        Key := 0;
+        btnNewItemClick(btnNewItem); // "Sender" is the pressed button
+      end else
+      if (Shift = [ssCtrl, ssShift]) then
+      begin
+        Key := 0;
+        btnNewItemClick(btnNewSubItem); // "Sender" is the pressed button
+      end;
+
+    // delete item
+    VK_DELETE:
+      if (Shift = []) then
+      begin
+        // check to prevent it from working in TEdit or TSpinEdit
+        // or when renaming node
+        if treEditor.Focused and not treEditor.IsEditing then
+        begin
+          Key := 0;
+          btnDeleteClick(Sender);
+        end;
+      end;
+
+    // move item
+    VK_DOWN:
+      if (Shift = [ssCtrl, ssShift]) then
+      begin
+        Key := 0;
+        btnMoveClick(btnMoveDown); // "Sender" is the pressed button
+      end;
+    VK_UP:
+      if (Shift = [ssCtrl, ssShift]) then
+      begin
+        Key := 0;
+        btnMoveClick(btnMoveUp); // "Sender" is the pressed button
+      end;
+
+    // save and load in/from file
+    VK_S:
+      if (Shift = [ssCtrl]) then
+      begin
+        Key := 0;
+        btnSaveClick(Sender);
+      end;
+
+    VK_L, VK_O:
+      if (Shift = [ssCtrl]) then
+      begin
+        Key := 0;
+        btnLoadClick(Sender);
+      end;
+  end;
+end;
+
+procedure TTreeViewItemsEditorForm.btnNewItemClick(Sender: TObject);
+var
+  lNewName: String;
+begin
+  lNewName := sccsTrEdtItem + IntToStr(treEditor.Items.Count);
+  if Sender = btnNewItem then
+    treEditor.Selected := treEditor.Items.Add(treEditor.Selected, lNewName)
+  else
+  if Sender = btnNewSubItem then
+    treEditor.Selected := treEditor.Items.AddChild(treEditor.Selected, lNewName)
+  else
+    raise Exception.Create('[btnNewItemClick] Unknown Sender.');
+
+  //grpNodeEditor.Enabled := treEditor.Items.Count > 0;
   
-  edtText.SetFocus;
-  edtText.SelectAll;
+  edtNodeText.SetFocus;
+  //edtNodeText.SelectAll;
 end;
 
 procedure TTreeViewItemsEditorForm.Edit1Change(Sender: TObject);
 begin
-  if Assigned(TreeView1.Selected) then
-    TreeView1.Selected.Text := edtText.Text;
+  if Assigned(treEditor.Selected) then
+    treEditor.Selected.Text := edtNodeText.Text;
 end;
 
-procedure TTreeViewItemsEditorForm.MoveUpBtnClick(Sender: TObject);
+procedure TTreeViewItemsEditorForm.btnMoveClick(Sender: TObject);
 var
-  CurNode, PrevNode: TTreeNode;
+  lCurNode: TTreeNode;
 begin
-  CurNode := TreeView1.Selected;      Assert(Assigned(CurNode));
-  PrevNode := CurNode.GetPrevSibling; Assert(Assigned(PrevNode));
-  CurNode.MoveTo(PrevNode, naInsert);
+  lCurNode := treEditor.Selected;
+  if lCurNode = nil then exit;
+
+  if Sender = btnMoveUp then
+  begin
+    if lCurNode.GetPrevSibling = nil then exit;
+    lCurNode.MoveTo(lCurNode.GetPrevSibling, naInsert);
+  end else
+  if Sender = btnMoveDown then
+  begin
+    if lCurNode.GetNextSibling = nil then exit;
+    lCurNode.MoveTo(lCurNode.GetNextSibling, naInsertBehind);
+  end else
+    raise Exception.Create('[btnMoveClick] Unknown Sender');
+
   UpdateEnabledStates;
+  treEditor.SetFocus; // return focus after button click
 end;
 
-procedure TTreeViewItemsEditorForm.MoveDownBtnClick(Sender: TObject);
+procedure TTreeViewItemsEditorForm.btnMoveDownClick(Sender: TObject);
 var
   CurNode, NextNode: TTreeNode;
 begin
-  CurNode := TreeView1.Selected;      Assert(Assigned(CurNode));
+  CurNode := treEditor.Selected;      Assert(Assigned(CurNode));
   NextNode := CurNode.GetNextSibling; Assert(Assigned(NextNode));
   CurNode.MoveTo(NextNode, naInsertBehind);
   UpdateEnabledStates;
 end;
 
-procedure TTreeViewItemsEditorForm.TreeView1SelectionChanged(Sender: TObject);
+procedure TTreeViewItemsEditorForm.treEditorSelectionChanged(Sender: TObject);
 begin
-  if Assigned(TreeView1.Selected) then
+  if Assigned(treEditor.Selected) then
   begin
-    edtText.Text := TreeView1.Selected.Text;
-    edtIndexImg.Text := IntToStr(TreeView1.Selected.ImageIndex);
-    edtIndexSel.Text := IntToStr(TreeView1.Selected.SelectedIndex);
-    edtIndexState.Text := IntToStr(TreeView1.Selected.StateIndex);
+    // Update node text
+    edtNodeText.Text := treEditor.Selected.Text;
+
+    // Update image indexes
+    // Remove events to avoid cyclic calling
+    spnImageIndex.OnChange := nil;
+    spnSelectedIndex.OnChange := nil;
+    spnStateIndex.OnChange := nil;
+    try
+      // Read the indexes of the selected item
+      spnImageIndex.Value := treEditor.Selected.ImageIndex;
+      spnSelectedIndex.Value := treEditor.Selected.SelectedIndex;
+      spnStateIndex.Value := treEditor.Selected.StateIndex;
+    finally
+      // Restore events
+      spnImageIndex.OnChange := @spnIndexChange;
+      spnSelectedIndex.OnChange := @spnIndexChange;
+      spnStateIndex.OnChange := @spnIndexChange;
+    end;
+    // Update hints
+    UpdateImageHints;
   end;
   UpdateEnabledStates;
 end;
@@ -208,47 +332,139 @@ procedure TTreeViewItemsEditorForm.btnDeleteClick(Sender: TObject);
 var
   TempNode: TTreeNode;
 begin
-  if Assigned(TreeView1.Selected) then
+  if Assigned(treEditor.Selected) then
   begin
-    TempNode := TreeView1.Selected.GetNextSibling;
+    TempNode := treEditor.Selected.GetNextSibling;
     if TempNode = nil then
-      TempNode := TreeView1.Selected.GetPrevSibling;
+      TempNode := treEditor.Selected.GetPrevSibling;
     if TempNode = nil then
-      TempNode := TreeView1.Selected.Parent;
-    TreeView1.Items.Delete(TreeView1.Selected);
+      TempNode := treEditor.Selected.Parent;
+    treEditor.Items.Delete(treEditor.Selected);
     if TempNode <> nil then
-      TreeView1.Selected := TempNode;
+      treEditor.Selected := TempNode;
     UpdateEnabledStates;
-    TreeView1.SetFocus;
+    treEditor.SetFocus;
   end;
 end;
 
 procedure TTreeViewItemsEditorForm.btnLoadClick(Sender: TObject);
 begin
-  if OpenDialog1.Execute then
+  if dlgOpen.Execute then
   begin
-    TreeView1.LoadFromFile(OpenDialog1.FileName);
+    treEditor.LoadFromFile(dlgOpen.FileName);
+
+    treEditor.FullExpand;
+    treEditor.Selected := treEditor.Items.GetFirstNode;
+    treEditor.SetFocus; // return focus after button click
     UpdateEnabledStates;
   end;
 end;
 
 procedure TTreeViewItemsEditorForm.btnSaveClick(Sender: TObject);
+
+  function ImagesFound: boolean;
+  var
+    i: Integer;
+  begin
+    for i := 0 to treEditor.Items.Count - 1 do
+      if (treEditor.Items[i].ImageIndex    >= 0) or
+         (treEditor.Items[i].SelectedIndex >= 0) or
+         (treEditor.Items[i].StateIndex    >= 0)
+      then
+        exit(true);
+    Result := false;
+  end;
+
+  function ConfirmImagesLoss: boolean;
+  begin
+    if ImagesFound then
+      Result := QuestionDlg(sccsTrEdtConfirmationCaption, sccsTrEdtConfirmationImages,
+        TMsgDlgType.mtConfirmation, [mrYes, sccsTrEdtYes, mrNo, sccsTrEdtNo,
+        mrCancel, sccsTrEdtCancel], 0) = mrYes
+    else
+      Result := true;
+  end;
+
+  function ConfirmReplace: boolean;
+  begin
+    if FileExists(dlgSave.FileName) then
+      Result := QuestionDlg(sccsTrEdtConfirmationCaption, sccsTrEdtConfirmationReplace,
+        TMsgDlgType.mtConfirmation, [mrYes, sccsTrEdtYes, mrNo, sccsTrEdtNo,
+        mrCancel, sccsTrEdtCancel], 0) = mrYes
+    else
+      Result := true;
+  end;
+
 begin
-  if SaveDialog1.Execute then
-    TreeView1.SaveToFile(SaveDialog1.FileName);
+  if ConfirmImagesLoss and dlgSave.Execute and ConfirmReplace then
+    treEditor.SaveToFile(dlgSave.FileName);
+
+  treEditor.SetFocus; // return focus after button click
 end;
 
-procedure TTreeViewItemsEditorForm.edtIndexStateEditingDone(Sender: TObject);
+procedure TTreeViewItemsEditorForm.spnIndexChange(Sender: TObject);
 begin
-  if Assigned(TreeView1.Selected) then
+  if Assigned(treEditor.Selected) then
   begin
-    TreeView1.Selected.ImageIndex := StrToIntDef(edtIndexImg.Text, -1);
-    TreeView1.Selected.SelectedIndex := StrToIntDef(edtIndexSel.Text, -1);
-    TreeView1.Selected.StateIndex := StrToIntDef(edtIndexState.Text, -1);
-    
-    edtIndexImg.Text := IntToStr(TreeView1.Selected.ImageIndex);
-    edtIndexSel.Text := IntToStr(TreeView1.Selected.SelectedIndex);
-    edtIndexState.Text := IntToStr(TreeView1.Selected.StateIndex);
+    treEditor.Selected.ImageIndex := spnImageIndex.Value;
+    treEditor.Selected.SelectedIndex := spnSelectedIndex.Value;
+    treEditor.Selected.StateIndex := spnStateIndex.Value;
+
+    UpdateImageHints;
+  end;
+end;
+
+// Show hints and "*" in label for invalid index
+procedure TTreeViewItemsEditorForm.UpdateImageHints;
+
+  procedure UpdateImageHint(ASpinEdit: TSpinEdit;
+    AIsStateImages: boolean; ALabel: TLabel; ACaption: string);
+  var
+    lImageList: TCustomImageList;
+    lPropName: string;
+  begin
+    if AIsStateImages then
+    begin
+      lImageList := treEditor.StateImages;
+      lPropName := FTreeView.Name + '.StateImages';
+    end else begin
+      lImageList := treEditor.Images;
+      lPropName := FTreeView.Name + '.Images';
+    end;
+
+    // check valid index
+    if ASpinEdit.Value >= 0 then
+    begin
+      // check assign
+      if lImageList = nil then
+      begin
+        ALabel.Hint := Format(sccsTrEdtImageListNotAssigned, [lPropName]);
+        ALabel.ShowHint := true;
+      end else begin
+        // check count
+        if ASpinEdit.Value >= lImageList.Count then
+        begin
+          ALabel.Hint := Format(sccsTrEdtInvalidIndex, [lPropName, lImageList.Count]);
+          ALabel.ShowHint := true;
+        end else
+          ALabel.ShowHint := false;
+      end;
+    end else
+      aLabel.ShowHint := false;
+
+    // show asterisk if necessary
+    if ALabel.ShowHint then
+      ALabel.Caption := ACaption + '*:'
+    else
+      ALabel.Caption := ACaption + ':';
+  end;
+  //
+begin
+  if Assigned(treEditor.Selected) then
+  begin
+    UpdateImageHint(spnImageIndex,    false, lblImageIndex,    sccsTrEdtLabelImageIndex);
+    UpdateImageHint(spnSelectedIndex, false, lblSelectedIndex, sccsTrEdtLabelSelIndex);
+    UpdateImageHint(spnStateIndex,    true,  lblStateIndex,    sccsTrEdtLabelStateIndex);
   end;
 end;
 
@@ -257,10 +473,11 @@ begin
   FTreeView := ATreeView;
   if Assigned(ATreeView) then
   begin
-    TreeView1.Images := ATreeView.Images;
-    TreeView1.StateImages := ATreeView.StateImages;
-    TreeView1.Items.Assign(ATreeView.Items);
+    treEditor.Images := ATreeView.Images;
+    treEditor.StateImages := ATreeView.StateImages;
+    treEditor.Items.Assign(ATreeView.Items);
   end;
+  treEditor.Selected := treEditor.Items.GetFirstNode;
   UpdateEnabledStates;
 end;
 
@@ -268,19 +485,32 @@ procedure TTreeViewItemsEditorForm.SaveToTree;
 begin
   if Assigned(FTreeView) then
   begin
-    FTreeView.Items.Assign(TreeView1.Items);
+    FTreeView.Items.Assign(treEditor.Items);
     FModified := True;
   end;
 end;
 
 procedure TTreeViewItemsEditorForm.UpdateEnabledStates;
 var
-  CurNode: TTreeNode;
+  lCurNode: TTreeNode;
 begin
-  CurNode := TreeView1.Selected;
-  MoveUpBtn.Enabled := Assigned(CurNode) and Assigned(CurNode.GetPrevSibling);
-  MoveDownBtn.Enabled:=Assigned(CurNode) and Assigned(CurNode.GetNextSibling);
-  GroupBox2.Enabled := Assigned(CurNode);
+  lCurNode := treEditor.Selected;
+
+  // Control states
+  btnSave.Enabled := treEditor.Items.Count > 0;
+  btnMoveUp.Enabled := Assigned(lCurNode) and Assigned(lCurNode.GetPrevSibling);
+  btnMoveDown.Enabled := Assigned(lCurNode) and Assigned(lCurNode.GetNextSibling);
+  btnDelete.Enabled := Assigned(lCurNode);
+  grpNodeEditor.Enabled := Assigned(lCurNode);
+
+  // Clear disabled fields
+  if lCurNode = nil then
+  begin
+    edtNodeText.Text := '';
+    spnImageIndex.Value := -1;
+    spnSelectedIndex.Value := -1;
+    spnStateIndex.Value := -1;
+  end;
 end;
 
 

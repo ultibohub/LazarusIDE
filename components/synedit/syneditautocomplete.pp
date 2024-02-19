@@ -64,6 +64,54 @@ type
   TOnExecuteCompletion = procedure(ASynAutoComplete: TCustomSynAutoComplete;
                                    Index: integer) of object;
 
+  // Data for a single template item.
+
+  { TTemplate }
+
+  TTemplate = class
+  private
+    fKey: string;
+    fValue: string;
+    fComment: string;
+    fAttributes: TStringList;  // List of attributes.
+  public
+    constructor Create;
+    constructor Create(aTemplate: TTemplate);
+    constructor Create(aKey, aValue, aComment: string);
+    destructor Destroy; override;
+    procedure SetBooleanAttribute(aName: string; aValue: Boolean);
+    procedure SetValueWithoutLastEOL(aValue: string);
+    property Key: string read fKey write fKey;
+    property Value: string read fValue write fValue;
+    property Comment: string read fComment write fComment;
+    property Attributes: TStringList read fAttributes;
+  end;
+
+  { TTemplateList }
+
+  TTemplateList = class
+  private
+    fList: TStringListUTF8Fast;
+    function GetSorted: Boolean;
+    function GetTemplate(Index: Integer): TTemplate;
+    procedure SetSorted(AValue: Boolean);
+    procedure SetTemplate(Index: Integer; AValue: TTemplate);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function Add(aTemplate: TTemplate): Integer;
+    function ByKey(aKey: string): TTemplate;
+    function Count: Integer;
+    procedure Clear;
+    procedure Delete(Index: Integer);
+    function IndexOf(aKey: string): Integer;
+    procedure Sort;
+  public
+    property Sorted: Boolean read GetSorted write SetSorted;
+    property Templates[Index: Integer]: TTemplate read GetTemplate
+                                                 write SetTemplate; default;
+  end;
+
   { TCustomSynAutoComplete }
 
   TCustomSynAutoComplete = class(TLazSynMultiEditPlugin)
@@ -71,25 +119,18 @@ type
     fOnTokenNotFound: TOnTokenNotFound;
     fIndentToTokenStart: boolean;
     FOnExecuteCompletion: TOnExecuteCompletion;
-    fAttributes: TFPList;// list of TStrings
-    function GetCompletionAttributes(Index: integer): TStrings;
-    procedure ClearAttributes;
   protected
-    fAutoCompleteList: TStrings;
-    fCompletions: TStrings;
-    fCompletionComments: TStrings;
-    fCompletionValues: TStrings;
+    fCodeTemplSource: TStrings;
+    fCodeTemplates: TTemplateList;
     fEditor: TCustomSynEdit;
     fEditors: TList;
     fEOTokenChars: string;
     fCaseSensitive: boolean;
     fParsed: boolean;
     procedure CompletionListChanged(Sender: TObject);
-    function GetCompletions: TStrings;
-    function GetCompletionComments: TStrings;
-    function GetCompletionValues: TStrings;
+    function GetCodeTemplates: TTemplateList;
     procedure ParseCompletionList; virtual;
-    procedure SetAutoCompleteList(Value: TStrings); virtual;
+    procedure SetCodeTemplSource(Value: TStrings); virtual;
     procedure SynEditCommandHandler(Sender: TObject; AfterProcessing: boolean;
       var Handled: boolean; var Command: TSynEditorCommand;
       var AChar: TUTF8Char;
@@ -99,36 +140,26 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
-    procedure AddCompletion(AToken, AValue, AComment: string;
-                            TheAttributes: TStrings = nil);
-    procedure DeleteCompletion(Index: integer);
+    procedure AddCompletion(ATemplate: TTemplate);
+    procedure AddCompletion(AToken, AValue, AComment: string);
     procedure Execute(AEditor: TCustomSynEdit); virtual;
-    procedure ExecuteCompletion(AToken: string; AEditor: TCustomSynEdit);
-      virtual;
+    procedure ExecuteCompletion(AToken: string; AEditor: TCustomSynEdit); virtual;
   public
-    property AutoCompleteList: TStrings read fAutoCompleteList
-      write SetAutoCompleteList;
+    property CodeTemplSource: TStrings read fCodeTemplSource write SetCodeTemplSource;
     property CaseSensitive: boolean read fCaseSensitive write fCaseSensitive;
-    property Completions: TStrings read GetCompletions;
-    property CompletionComments: TStrings read GetCompletionComments;
-    property CompletionValues: TStrings read GetCompletionValues;
+    property CodeTemplates: TTemplateList read GetCodeTemplates;
     property EndOfTokenChr: string read fEOTokenChars write fEOTokenChars;
-    property CompletionAttributes[Index: integer]: TStrings
-                                                   read GetCompletionAttributes;
-    property OnTokenNotFound: TOnTokenNotFound
-      read fOnTokenNotFound write fOnTokenNotFound;
-    property IndentToTokenStart: boolean
-      read fIndentToTokenStart write fIndentToTokenStart;
+    property OnTokenNotFound: TOnTokenNotFound read fOnTokenNotFound write fOnTokenNotFound;
+    property IndentToTokenStart: boolean read fIndentToTokenStart write fIndentToTokenStart;
     property OnExecuteCompletion: TOnExecuteCompletion read FOnExecuteCompletion
-                                                     write FOnExecuteCompletion;
+                                                      write FOnExecuteCompletion;
   end;
 
   { TSynEditAutoComplete }
 
   TSynEditAutoComplete = class(TCustomSynAutoComplete)
   published
-    property AutoCompleteList;
+    property CodeTemplSource;
     property CaseSensitive;
     property Editor;
     property EndOfTokenChr;
@@ -139,22 +170,166 @@ type
 
 implementation
 
+{ TTemplate }
+
+constructor TTemplate.Create;
+begin
+  inherited Create;
+  fAttributes := TStringListUTF8Fast.Create;
+  fAttributes.UseLocale := False;
+end;
+
+constructor TTemplate.Create(aTemplate: TTemplate);
+begin             // A copy constructor
+  Create;
+  fKey := aTemplate.fKey;
+  fValue := aTemplate.fValue;
+  fComment := aTemplate.fComment;
+  fAttributes.Assign(aTemplate.Attributes);
+end;
+
+constructor TTemplate.Create(aKey, aValue, aComment: string);
+begin
+  Create;
+  fKey := aKey;
+  fValue := aValue;
+  fComment := aComment;
+end;
+
+destructor TTemplate.Destroy;
+begin
+  fAttributes.Free;
+  inherited Destroy;
+end;
+
+procedure TTemplate.SetBooleanAttribute(aName: string; aValue: Boolean);
+var
+  i: Integer;
+begin
+  if aValue then
+    fAttributes.Values[aName] := 'true'
+  else begin
+    i := fAttributes.IndexOfName(aName);
+    if i >= 0 then
+      fAttributes.Delete(i);
+  end;
+end;
+
+procedure TTemplate.SetValueWithoutLastEOL(aValue: string);
+var
+  l: Integer;
+begin                        // Remove last EOL from Value.
+  if aValue <> '' then begin
+    l := Length(aValue);
+    if aValue[l] in [#10,#13] then begin
+      Dec(l);
+      if (l > 0) and (aValue[l] in [#10,#13])
+      and (aValue[l] <> aValue[l+1]) then
+        Dec(l);
+      SetLength(aValue, l);
+    end;
+  end;
+  fValue := aValue;
+end;
+
+{ TTemplateList }
+
+constructor TTemplateList.Create;
+begin
+  inherited Create;
+  fList := TStringListUTF8Fast.Create;
+  fList.OwnsObjects := True;
+end;
+
+destructor TTemplateList.Destroy;
+begin
+  fList.Free;
+  inherited Destroy;
+end;
+
+function TTemplateList.Add(aTemplate: TTemplate): Integer;
+begin
+  Result := fList.AddObject(aTemplate.fKey, aTemplate);
+end;
+
+function TTemplateList.ByKey(aKey: string): TTemplate;
+var
+  i: Integer;
+begin
+  i := fList.IndexOf(aKey);
+  if i >= 0 then
+    Result := TTemplate(fList.Objects[i])
+  else
+    Result := Nil;
+end;
+
+function TTemplateList.Count: Integer;
+begin
+  Result := fList.Count;
+end;
+
+procedure TTemplateList.Clear;
+begin
+  fList.Clear;
+end;
+
+procedure TTemplateList.Delete(Index: Integer);
+begin
+  fList.Delete(Index);
+end;
+
+function TTemplateList.IndexOf(aKey: string): Integer;
+begin
+  Result := fList.IndexOf(aKey);
+end;
+
+procedure TTemplateList.Sort;
+begin
+  fList.Sort;
+end;
+
+function TTemplateList.GetSorted: Boolean;
+begin
+  Result := fList.Sorted;
+end;
+
+function TTemplateList.GetTemplate(Index: Integer): TTemplate;
+begin
+  Result := TTemplate(fList.Objects[Index]);
+end;
+
+procedure TTemplateList.SetSorted(AValue: Boolean);
+begin
+  fList.Sorted := AValue;
+end;
+
+procedure TTemplateList.SetTemplate(Index: Integer; AValue: TTemplate);
+begin
+  fList.Objects[Index] := AValue;
+end;
+
 { TCustomSynAutoComplete }
 
-procedure TCustomSynAutoComplete.AddCompletion(AToken, AValue, AComment: string;
-  TheAttributes: TStrings);
+procedure TCustomSynAutoComplete.AddCompletion(ATemplate: TTemplate);
+var
+  NewTemplate: TTemplate;
 begin
-  if AToken <> '' then begin
-    if not fParsed then
-      ParseCompletionList;
+  Assert(ATemplate.Key<>'', 'TCustomSynAutoComplete.AddCompletion: Key is empty.');
+  if not fParsed then
+    ParseCompletionList;
+  NewTemplate := TTemplate.Create(ATemplate);
+  fCodeTemplates.Add(NewTemplate);
+end;
 
-    fCompletions.Add(AToken);
-    fCompletionComments.Add(AComment);
-    fCompletionValues.Add(AValue);
-    if TheAttributes=nil then
-      TheAttributes:=TStringList.Create;
-    fAttributes.Add(TheAttributes);
-  end;
+procedure TCustomSynAutoComplete.AddCompletion(AToken, AValue, AComment: string);
+var
+  NewTemplate: TTemplate;
+begin
+  Assert(AToken<>'', 'TCustomSynAutoComplete.AddCompletion: Key is empty.');
+  if not fParsed then
+    ParseCompletionList;
+  NewTemplate := TTemplate.Create(AToken, AValue, AComment);
+  fCodeTemplates.Add(NewTemplate);
 end;
 
 procedure TCustomSynAutoComplete.CompletionListChanged(Sender: TObject);
@@ -165,48 +340,18 @@ end;
 constructor TCustomSynAutoComplete.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  fAutoCompleteList := TStringList.Create;
-  TStringList(fAutoCompleteList).OnChange := @CompletionListChanged;
-  fCompletions := TStringListUTF8Fast.Create;
-  fCompletionComments := TStringListUTF8Fast.Create;
-  fCompletionValues := TStringListUTF8Fast.Create;
+  fCodeTemplSource := TStringList.Create;
+  TStringList(fCodeTemplSource).OnChange := @CompletionListChanged;
+  fCodeTemplates := TTemplateList.Create;
   fEditors := TList.Create;
   fEOTokenChars := '()[]{}.';
-  fAttributes:=TFPList.Create;
-end;
-
-function TCustomSynAutoComplete.GetCompletionAttributes(Index: integer): TStrings;
-begin
-  Result:=TStrings(fAttributes[Index]);
-end;
-
-procedure TCustomSynAutoComplete.ClearAttributes;
-var
-  i: Integer;
-begin
-  for i:=0 to fAttributes.Count-1 do
-    TObject(fAttributes[i]).Free;
-  fAttributes.Clear;
-end;
-
-procedure TCustomSynAutoComplete.DeleteCompletion(Index: integer);
-begin
-  fCompletions.Delete(Index);
-  fCompletionComments.Delete(Index);
-  fCompletionValues.Delete(Index);
-  TObject(fAttributes[Index]).Free;
-  fAttributes.Delete(Index);
 end;
 
 destructor TCustomSynAutoComplete.Destroy;
 begin
   fEditors.Free;
-  fCompletions.Free;
-  fCompletionComments.Free;
-  fCompletionValues.Free;
-  fAutoCompleteList.Free;
-  ClearAttributes;
-  fAttributes.Free;
+  fCodeTemplates.Free;
+  fCodeTemplSource.Free;
   inherited Destroy;
 end;
 
@@ -231,7 +376,7 @@ begin
       if Assigned(OnTokenNotFound) then
         OnTokenNotFound(Self,'',AEditor,i);
       if i>=0 then
-        ExecuteCompletion(FCompletions[i], AEditor);
+        ExecuteCompletion(fCodeTemplates[i].Key, AEditor);
     end;
   end;
 end;
@@ -245,6 +390,7 @@ var
   p, p2: TPoint;
   NewCaretPos: boolean;
   Temp: TStringList;
+  Template: TTemplate;
 begin
   if not fParsed then
     ParseCompletionList;
@@ -255,15 +401,15 @@ begin
     OnTokenNotFound(Self,AToken,AEditor,i);
   end;
   if (Len > 0) and (AEditor <> nil) and not AEditor.ReadOnly
-    and (fCompletions.Count > 0)
+    and (fCodeTemplates.Count > 0)
   then begin
     // find completion for this token - not all chars necessary if unambiguous
-    i := fCompletions.Count - 1;
+    i := fCodeTemplates.Count - 1;
     IdxMaybe := -1;
     NumMaybe := 0;
     if fCaseSensitive then begin
       while i > -1 do begin
-        s := fCompletions[i];
+        s := fCodeTemplates[i].Key;
         if s = AToken then
           break
         else if LazStartsStr(AToken, s) then begin
@@ -274,7 +420,7 @@ begin
       end;
     end else begin
       while i > -1 do begin
-        s := fCompletions[i];
+        s := fCodeTemplates[i].Key;
         if AnsiCompareText(s, AToken) = 0 then
           break
         else if AnsiCompareText(Copy(s, 1, Len), AToken) = 0 then begin
@@ -322,8 +468,9 @@ begin
           NewCaretPos := FALSE;
           Temp := TStringList.Create;
           try
-            Temp.Text := fCompletionValues[i];
-            s:=fCompletionValues[i];
+            Template := fCodeTemplates[i];
+            s:=Template.fValue;
+            Temp.Text := s;
             if (s<>'') and (s[length(s)] in [#10,#13]) then
               Temp.Add('');
 
@@ -382,62 +529,47 @@ begin
   end;
 end;
 
-function TCustomSynAutoComplete.GetCompletions: TStrings;
+function TCustomSynAutoComplete.GetCodeTemplates: TTemplateList;
 begin
   if not fParsed then
     ParseCompletionList;
-  Result := fCompletions;
-end;
-
-function TCustomSynAutoComplete.GetCompletionComments: TStrings;
-begin
-  if not fParsed then
-    ParseCompletionList;
-  Result := fCompletionComments;
-end;
-
-function TCustomSynAutoComplete.GetCompletionValues: TStrings;
-begin
-  if not fParsed then
-    ParseCompletionList;
-  Result := fCompletionValues;
+  Result := fCodeTemplates;
 end;
 
 procedure TCustomSynAutoComplete.ParseCompletionList;
 var
-  sComplKey, sComment, sComplValue: string;
+  sKey, sValue, sComment: string;
 
   procedure SaveEntry;
   var
-    CurAttributes: TStrings;
     StartI, EndI: Integer;
+    Template: TTemplate;
   begin
-    fCompletions.Add(sComplKey);
-    sComplKey := '';
-    fCompletionComments.Add(sComment);
-    sComment := '';
-    CurAttributes:=TStringListUTF8Fast.Create;
-    Assert(not LazStartsStr(CodeTemplateMacroMagic, sComplValue), 'SaveEntry: Found '+CodeTemplateMacroMagic);
-    if LazStartsStr(CodeTemplateAttributesStartMagic, sComplValue) then
+    Template := TTemplate.Create;
+    Template.Key := sKey;
+    Template.Comment := sComment;
+    Assert(not LazStartsStr(CodeTemplateMacroMagic, sValue), 'SaveEntry: Found '+CodeTemplateMacroMagic);
+    if LazStartsStr(CodeTemplateAttributesStartMagic, sValue) then
     begin
       // Start of attributes
       StartI := Length(CodeTemplateAttributesStartMagic) + 1;
-      while (StartI <= Length(sComplValue)) and (sComplValue[StartI] in [#10,#13]) do
+      while (StartI <= Length(sValue)) and (sValue[StartI] in [#10,#13]) do
         Inc(StartI);
-      EndI := PosEx(CodeTemplateAttributesEndMagic, sComplValue, StartI);
+      EndI := PosEx(CodeTemplateAttributesEndMagic, sValue, StartI);
       if EndI = 0 then
         raise Exception.Create('TCustomSynAutoComplete.ParseCompletionList: "'
                               + CodeTemplateAttributesEndMagic + '" not found.');
-      CurAttributes.Text := Copy(sComplValue, StartI, EndI-StartI);
+      Template.Attributes.Text := Copy(sValue, StartI, EndI-StartI);
       // Start of value
       StartI := EndI + Length(CodeTemplateAttributesEndMagic);
-      while (StartI <= Length(sComplValue)) and (sComplValue[StartI] in [#10,#13]) do
+      while (StartI <= Length(sValue)) and (sValue[StartI] in [#10,#13]) do
         Inc(StartI);
-      sComplValue := Copy(sComplValue, StartI, Length(sComplValue));
+      Template.Value := Copy(sValue, StartI, Length(sValue));
     end;
-    fCompletionValues.Add(sComplValue);
-    sComplValue := '';
-    fAttributes.Add(CurAttributes);
+    fCodeTemplates.Add(Template);
+    sKey := '';
+    sValue := '';
+    sComment := '';
   end;
 
 var
@@ -446,29 +578,28 @@ var
   S: string;
   TemplateStarted: Boolean;
 begin
-  fCompletions.Clear;
-  fCompletionComments.Clear;
-  fCompletionValues.Clear;
-  ClearAttributes;
-
-  if fAutoCompleteList.Count > 0 then begin
-    S := fAutoCompleteList[0];
+  fCodeTemplates.Clear;
+  sKey := '';
+  sValue := '';
+  sComment := '';
+  if fCodeTemplSource.Count > 0 then begin
+    S := fCodeTemplSource[0];
     BorlandDCI := (S <> '') and (S[1] = '[');
     TemplateStarted:=false;
-    for i := 0 to fAutoCompleteList.Count - 1 do begin
-      S := fAutoCompleteList[i];
+    for i := 0 to fCodeTemplSource.Count - 1 do begin
+      S := fCodeTemplSource[i];
       Len := Length(S);
       if BorlandDCI then begin
         // the style of the Delphi32.dci file
         if (Len > 0) and (S[1] = '[') then begin
           // save last entry
-          if sComplKey <> '' then
+          if sKey <> '' then
             SaveEntry;
           // new completion entry
           j := 2;
           while (j <= Len) and (S[j] > ' ') do
             Inc(j);
-          sComplKey := Copy(S, 2, j - 2);
+          sKey := Copy(S, 2, j - 2);
           // start of comment in DCI file
           while (j <= Len) and (S[j] <= ' ') do
             Inc(j);
@@ -482,36 +613,37 @@ begin
           TemplateStarted:=true;
         end else begin
           if not TemplateStarted then
-            sComplValue := sComplValue + LineEnding;
+            sValue := sValue + LineEnding;
           TemplateStarted:=false;
-          sComplValue := sComplValue + S;
+          sValue := sValue + S;
         end;
       end else begin
         // the original style
         if (Len > 0) and (S[1] <> '=') then begin
           // save last entry
-          if sComplKey <> '' then
+          if sKey <> '' then
             SaveEntry;
           // new completion entry
-          sComplKey := S;
+          sKey := S;
           TemplateStarted:=true;
         end else if (Len > 0) and (S[1] = '=') then begin
           if not TemplateStarted then
-            sComplValue := sComplValue + LineEnding;
+            sValue := sValue + LineEnding;
           TemplateStarted:=false;
-          sComplValue := sComplValue + Copy(S, 2, Len);
+          sValue := sValue + Copy(S, 2, Len);
         end;
       end;
     end;
-    if sComplKey <> '' then
+    if sKey <> '' then
       SaveEntry;
   end;
+  fCodeTemplates.Sorted := True;
   fParsed:=true;
 end;
 
-procedure TCustomSynAutoComplete.SetAutoCompleteList(Value: TStrings);
+procedure TCustomSynAutoComplete.SetCodeTemplSource(Value: TStrings);
 begin
-  fAutoCompleteList.Assign(Value);
+  fCodeTemplSource.Assign(Value);
   fParsed := FALSE;
 end;
 

@@ -106,12 +106,20 @@ resourcestring
   sccsTrEdtLoad            = 'Load';
   sccsTrEdtSave            = 'Save';
   sccsTrEdtLabelText       = 'Text:';
-  sccsTrEdtLabelImageIndex = 'Image Index:';
-  sccsTrEdtLabelSelIndex   = 'Selected Index:';
-  sccsTrEdtLabelStateIndex = 'State Index:';
+  sccsTrEdtLabelImageIndex = 'Image Index';
+  sccsTrEdtLabelSelIndex   = 'Selected Index';
+  sccsTrEdtLabelStateIndex = 'State Index';
   sccsTrEdtItem            = 'Item';
   sccsTrEdtOpenDialog      = 'Open';
   sccsTrEdtSaveDialog      = 'Save';
+  sccsTrEdtYes             = '&Yes';
+  sccsTrEdtNo              = '&No';
+  sccsTrEdtCancel          = '&Cancel';
+  sccsTrEdtInvalidIndex         = '%s has only %d images.';
+  sccsTrEdtImageListNotAssigned = '%s not assigned.';
+  sccsTrEdtConfirmationCaption  = 'Confirmation';
+  sccsTrEdtConfirmationImages   = 'Information about node images cannot be stored in the file. Continue anyway?';
+  sccsTrEdtConfirmationReplace  = 'The file already exists, replace it?';
 
   // ListView Items Editor
   sccsLvEdtCaption         = 'ListView Items Editor';

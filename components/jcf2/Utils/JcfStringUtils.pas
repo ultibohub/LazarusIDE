@@ -167,6 +167,9 @@ type
 
 implementation
 
+uses
+  jcfbaseConsts;
+
 // define CharInSet
 function CharInSet(const C: Char; const testSet: TSysCharSet): Boolean;
 begin
@@ -185,7 +188,7 @@ end;
 
 function CharIsWordChar(const c: Char): Boolean;
 begin
-  Result := CharIsAlpha(c) or (c = '_');
+  Result := CharIsAlpha(c) or (c = '_') or (Ord(c) > 127);
 end;
 
 function CharIsControl(const C: Char): Boolean;
@@ -446,7 +449,7 @@ begin
   if (LowerS = 'true') or (LowerS = 'yes') or (LowerS = '1') or (LowerS = '-1') then
     Result := True
   else
-    raise EJcfConversionError.Create('Cannot convert string [' + S + '] to boolean');
+    raise EJcfConversionError.Create(Format(lisMsgCannotConvertStringToBoolean, [S]));
 end;
 
 function StrIsOneOf(const S: string; const List: array of string): Boolean;
