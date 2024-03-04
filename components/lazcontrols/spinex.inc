@@ -34,6 +34,9 @@ procedure TSpinEditExBase.UpdateControl;
 var
   ANumber: T;
 begin
+  {$ifdef debugspinex}
+  debugln(['TSpinEditExBase.UpdateControl: FSettingValue=',FSettingValue]);
+  {$endif}
   //if (MaxValue < MinValue) then FMaxValue := MinValue;
   if (FNullValueBehaviour <> nvbShowTextHint) then
     FValue := GetLimitedValue(FValue);
@@ -201,6 +204,9 @@ end;
 procedure TSpinEditExBase.InitializeWnd;
 begin
   inherited InitializeWnd;
+  // at this point Text will be empty, which in UpdateControl will invoke the NullValueBehaviour
+  // so make sure that Text will represent FValue now
+  Text := ValueToStr(FValue);
   UpdateControl;
 end;
 
@@ -253,7 +259,8 @@ begin
 
   FUpdatePending := True;
   UpdateControl;
-  FSettingValue := False;
+  if not (csLoading in ComponentState) then
+    FSettingValue := False;
 end;
 
 function TSpinEditExBase.GetValue: T;

@@ -373,7 +373,6 @@ type
     FPageLabel: PGtkLabel;
   protected
     procedure setText(const AValue: String); override;
-    function getText: String; override;
     function CreateWidget(const Params: TCreateParams):PGtkWidget; override;
     procedure DestroyWidget; override;
   public
@@ -4501,19 +4500,12 @@ procedure TGtk3Page.setText(const AValue: String);
 var
   bs:string;
 begin
+  inherited;
   if Assigned(FPageLabel) then
   begin
     bs:=ReplaceAmpersandsWithUnderscores(Avalue);
-    FPageLabel^.set_text(PChar(bs));
+    FPageLabel^.set_markup_with_mnemonic(PChar(bs));
   end;
-end;
-
-function TGtk3Page.getText: String;
-begin
-  if Assigned(FPageLabel) then
-    Result := FPageLabel^.get_text
-  else
-    Result := '';
 end;
 
 function TGtk3Page.CreateWidget(const Params: TCreateParams): PGtkWidget;
@@ -4533,9 +4525,9 @@ end;
 
 procedure TGtk3Page.DestroyWidget;
 begin
-  inherited DestroyWidget;
   // unref it to allow it to be destroyed
   FPageLabel^.unref;
+  inherited DestroyWidget;
 end;
 
 function TGtk3Page.getClientOffset: TPoint;
@@ -4782,19 +4774,14 @@ procedure TGtk3NoteBook.InsertPage(ACustomPage: TCustomPage; AIndex: Integer);
 var
   Gtk3Page: TGtk3Page;
   AMinSize, ANaturalSize: gint;
-  NB: PGtkNotebook;
 begin
   if IsWidgetOK then
   begin
     Gtk3Page := TGtk3Page(ACustomPage.Handle);
-    NB:=PGtkNoteBook(GetContainerWidget);
-    NB^.insert_page(Gtk3Page.Widget, Gtk3Page.FPageLabel, AIndex);
-    NB^.get_preferred_width(@AMinSize, @ANaturalSize);
-    NB^.get_preferred_height(@AMinSize, @ANaturalSize);
-    if (gtk_notebook_get_n_pages(NB) > 1) then
-    begin
+    with PGtkNoteBook(GetContainerWidget)^ do begin
+      insert_page(Gtk3Page.Widget, Gtk3Page.FPageLabel, AIndex);
       // Check why this give sometimes: Gtk-WARNING: Negative content width -1 (allocation 1, extents 1x1) while allocating gadget (node notebook, owner GtkNotebook)
-      //NB^.resize_children;
+      resize_children;
     end;
   end;
 end;
@@ -5117,6 +5104,7 @@ var
   Msg: TLMVScroll;
   MaxValue: gdouble;
   Widget: PGtkWidget;
+  StateFlags: TGtkStateFlags;
 begin
   Result := False;
 
@@ -5154,7 +5142,8 @@ begin
 
   if Msg.Scrollcode = SB_THUMBTRACK then
   begin
-    if Widget^.get_state_flags = GTK_STATE_FLAG_NORMAL then
+    StateFlags := Widget^.get_state_flags;
+    if not (GTK_STATE_FLAG_ACTIVE in StateFlags) then
     begin
       Msg.ScrollCode := SB_THUMBPOSITION;
       DeliverMessage(AData.LCLObject, Msg);
@@ -6754,7 +6743,7 @@ begin
     // PGtkEventBox(Result)^.set_visible_window(True);
   end;
   g_object_unref(ListStore);
-
+  PGtkComboBox(Result)^.set_id_column(0);
 end;
 
 function TGtk3ComboBox.EatArrowKeys(const AKey: Word): Boolean;
@@ -6764,15 +6753,29 @@ end;
 
 function TGtk3ComboBox.getText: String;
 begin
-  Result := inherited getText;
-  if Gtk3IsComboBox(GetContainerWidget) then
-    Result := StrPas(PGtkComboBox(GetContainerWidget)^.get_title);
+  Result := '';
+  if Gtk3IsComboBox(GetContainerWidget) then begin
+    with PGtkComboBox(GetContainerWidget)^ do begin
+      if has_entry then begin
+        Result := StrPas(PGtkEntry(get_child)^.Text);
+      end else begin
+        Result := active_id;
+      end;
+    end;
+  end;
 end;
 
 procedure TGtk3ComboBox.setText(const AValue: String);
 begin
-  if Gtk3IsComboBox(FWidget) then
-    PGtkComboBox(GetContainerWidget)^.set_title(PgChar(AValue));
+  if Gtk3IsComboBox(GetContainerWidget) then begin
+    with PGtkComboBox(GetContainerWidget)^ do begin
+      if has_entry then begin
+        PGtkEntry(get_child)^.Text := Pgchar(AValue);
+      end else begin
+        //active_id := Pgchar(AValue); TODO: Wait until property becomes writeble
+      end;
+    end;
+  end;
 end;
 
 procedure TGtk3ComboBox.DumpPrivateStructValues(const ADbgEvent: String);
@@ -7574,6 +7577,7 @@ begin
     FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtCustomControl]
   end;
   Result^.set_size_request(Params.Width, Params.Height);
+  Text := Params.Caption;
 
   FBox := TGtkVBox.new(GTK_ORIENTATION_VERTICAL, 0);
 
