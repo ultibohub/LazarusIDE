@@ -36,7 +36,7 @@ interface
 uses
   Classes, SysUtils, math,
   // LazUtils
-  LazLoggerBase, LazStringUtils,
+  {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazStringUtils,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfDebuggerBase,
   // LazDebuggerGdbmi
@@ -376,7 +376,6 @@ type
     // Value-Eval
     FExprEvaluatedAsText: String;
     FHasExprEvaluatedAsText: Boolean;
-    FExprEvaluateFormat: TWatchDisplayFormat;
     FRepeatCount: Integer;
 
     // Sub-Types (FNext is managed by creator / linked list)
@@ -414,7 +413,6 @@ type
   public
     constructor CreateForExpression(const AnExpression: string;
                                     const AFlags: TGDBTypeCreationFlags;
-                                    AFormat: TWatchDisplayFormat = wdfDefault;
                                     ARepeatCount: Integer = 0);
     destructor Destroy; override;
     function ProcessExpression: Boolean;
@@ -2208,7 +2206,7 @@ begin
 end;
 
 constructor TGDBType.CreateForExpression(const AnExpression: string;
-  const AFlags: TGDBTypeCreationFlags; AFormat: TWatchDisplayFormat; ARepeatCount: Integer);
+  const AFlags: TGDBTypeCreationFlags; ARepeatCount: Integer);
 begin
   Create(skSimple, ''); // initialize
   FInternalTypeName := '';
@@ -2216,7 +2214,6 @@ begin
   FExpression := AnExpression;
   FOrigExpression := FExpression;
   FCreationFlags := AFlags;
-  FExprEvaluateFormat := AFormat;
   FEvalStarted := False;
   FEvalRequest := nil;
   FFirstProcessingSubType := nil;
@@ -2839,11 +2836,6 @@ var
   procedure EvaluateExpressionDynArray;
   begin
     FProcessState := gtpsEvalExprDynArray;
-    if FExprEvaluateFormat <> wdfDefault then begin;
-      Result := True;
-      exit;
-    end;
-
 
     FBoundLow :=  -1;
     FBoundHigh := -1;
@@ -2903,10 +2895,6 @@ var
     PTypeResult: TGDBPTypeResult;
   begin
     FProcessState := gtpsEvalExprArray;
-    if FExprEvaluateFormat <> wdfDefault then begin;
-      Result := True;
-      exit;
-    end;
 
     PTypeResult := FReqResults[gptrPTypeExpr].Result;
     FBoundLow :=  PCLenToInt(PTypeResult.BoundLow);
@@ -3016,7 +3004,6 @@ var
     FRepeatCountEval := TGDBType.CreateForExpression(
       ExpArray.GetTextToIdx(ExpArray.IndexCount-2),
       FCreationFlags + [gtcfExprEvaluate, gtcfForceArrayEval],
-      FExprEvaluateFormat,
       FRepeatCount
     );
     FRepeatCountEval.RepeatFirstIndex := Idx;
@@ -3048,11 +3035,6 @@ var
     end;
     if saArray in FAttributes then begin
       EvaluateExpressionArray;
-      exit;
-    end;
-
-    if FExprEvaluateFormat <> wdfDefault then begin;
-      Result := True;
       exit;
     end;
 
@@ -3374,6 +3356,8 @@ var
   OldProcessState: TGDBTypeProcessState;
   OldReqMade: TGDBTypeProcessRequests;
   s: string;
+  i: Integer;
+  j: Longint;
 begin
   Result := False;
   FEvalRequest := nil;
@@ -3428,6 +3412,30 @@ begin
       FKind := skSimple;
       FreeAndNil(FFields);
     end;
+
+    if (FKind = skSimple) and FHasExprEvaluatedAsText and (FExprEvaluatedAsText <> '') then begin
+      // check value for string or char
+      i := 1;
+      while (i <= Length(FExprEvaluatedAsText)) and (FExprEvaluatedAsText[i] in ['0'..'9']) do
+        inc(i);
+      if (i > 1) and (i + 1 < Length(FExprEvaluatedAsText)) and
+         (FExprEvaluatedAsText[i] in [#9, ' ']) and (FExprEvaluatedAsText[i+1] in ['#', '''']) and
+         TryStrToInt(copy(FExprEvaluatedAsText, 1 , i-1), j) and (j < 256)
+      then begin
+        //char
+        FKind := skChar;
+        Delete(FExprEvaluatedAsText, 1, i);
+        FExprEvaluatedAsText := ParseGDBString(UnEscapeBackslashed(FExprEvaluatedAsText), True);
+      end
+      else
+      if (Length(FExprEvaluatedAsText) > 1) and (FExprEvaluatedAsText[1] in ['#', '''']) then begin
+        // string
+        FKind := skString;
+        FExprEvaluatedAsText := ParseGDBString(UnEscapeBackslashed(FExprEvaluatedAsText), True);
+      end;
+    end;
+
+
     if Value.AsString = '' then
       Value.AsString := ExprEvaluatedAsText;
 

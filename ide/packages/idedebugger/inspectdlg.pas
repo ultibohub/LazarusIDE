@@ -43,9 +43,9 @@ uses
   LazDebuggerIntf, LazDebuggerIntfBaseTypes,
   // IdeDebugger
   BaseDebugManager, Debugger, IdeDebuggerWatchResPrinter, IdeDebuggerWatchResult,
-  IdeDebuggerWatchResUtils, IdeDebuggerBase, ArrayNavigationFrame,
-  WatchInspectToolbar, DebuggerDlg,
-  IdeDebuggerStringConstants, IdeDebuggerUtils, EnvDebuggerOptions;
+  IdeDebuggerWatchResUtils, IdeDebuggerBase, ArrayNavigationFrame, WatchInspectToolbar,
+  DebuggerDlg, IdeDebuggerStringConstants, IdeDebuggerUtils, EnvDebuggerOptions,
+  IdeDebuggerDisplayFormats, IdeDebuggerOpts;
 
 type
 
@@ -103,6 +103,7 @@ type
     function DoBeforeUpdate(ASender: TObject): boolean;
     procedure DoColumnsChanged(Sender: TObject);
     procedure DoDebuggerState(ADebugger: TDebuggerIntf; AnOldState: TDBGState);
+    procedure DoDispFormatChanged(Sender: TObject);
     procedure DoEnvOptChanged(Sender: TObject; Restore: boolean);
     procedure DoWatchesInvalidated(Sender: TObject);
     procedure DoWatchUpdated(const ASender: TIdeWatches; const AWatch: TIdeWatch);
@@ -137,7 +138,9 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure DebugConfigChanged; override;
     procedure Execute(const AExpression: ansistring; AWatch: TWatch = nil);
+    property WatchPrinter: TWatchResultPrinter read FWatchPrinter;
   end;
 
 implementation
@@ -208,7 +211,7 @@ begin
   WatchInspectNav1.ColTypeEnabled := True;
   WatchInspectNav1.ColVisibilityEnabled := False;
 
-  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, WatchInspectNav1.DisplayFormat));
   StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + v;
 
   GridDataSetup;
@@ -221,6 +224,7 @@ procedure TIDEInspectDlg.InspectResDataPointer;
 var
   Res: TWatchResultData;
   v: String;
+  df: TWatchDisplayFormat;
 begin
   Res := FCurrentResData;
   DataPage.TabVisible:=true;
@@ -234,11 +238,13 @@ begin
   WatchInspectNav1.ColTypeEnabled := True;
   WatchInspectNav1.ColVisibilityEnabled := False;
 
-  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, WatchInspectNav1.DisplayFormat));
   StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + v;
 
   GridDataSetup;
-  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfPointer));
+  df := WatchInspectNav1.DisplayFormat;
+  df.NumBaseFormat := vdfBasePointer;
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, df));
   FGridData.Cells[1,1]:=WatchInspectNav1.Expression;
   FGridData.Cells[2,1]:=FCurrentTypePrefix+Res.TypeName;
   FGridData.Cells[3,1]:=v;
@@ -248,7 +254,7 @@ begin
     FGridData.RowCount := 3;
     FGridData.Cells[1,2]:=Format(lisInspectPointerTo, ['']);
     FGridData.Cells[2,2]:=Res.TypeName;
-    FGridData.Cells[3,2]:=ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+    FGridData.Cells[3,2]:=ClearMultiline(FWatchPrinter.PrintWatchValue(Res, WatchInspectNav1.DisplayFormat));
   end;
 end;
 
@@ -270,7 +276,7 @@ begin
   WatchInspectNav1.ColTypeEnabled := True;
   WatchInspectNav1.ColVisibilityEnabled := False;
 
-  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, wdfDefault));
+  v := ClearMultiline(FWatchPrinter.PrintWatchValue(Res, WatchInspectNav1.DisplayFormat));
   StatusBar1.SimpleText:=ShortenedExpression+' : '+FCurrentTypePrefix+Res.TypeName + ' = ' + v;
 
   GridDataSetup;
@@ -360,7 +366,7 @@ begin
         Res.SetSelectedIndex(i);
         Entry := Res.SelectedEntry;
         Entry := Entry.ConvertedRes;
-        s := ClearMultiline(FWatchPrinter.PrintWatchValue(Entry, wdfDefault));
+        s := ClearMultiline(FWatchPrinter.PrintWatchValue(Entry, WatchInspectNav1.DisplayFormat));
 
         if (filter <> '') and
            // index
@@ -505,7 +511,7 @@ begin
       else begin
         s := '';
         if Fld <> nil then
-          s := ClearMultiline(FWatchPrinter.PrintWatchValue(Fld, wdfDefault));
+          s := ClearMultiline(FWatchPrinter.PrintWatchValue(Fld, WatchInspectNav1.DisplayFormat));
         if (filter <> '') and
            // name
            (pos(filter, LowerCase(FldInfo.FieldName)) < 1) and
@@ -1300,9 +1306,11 @@ begin
   WatchInspectNav1.OnBeforeEvaluate := @DoBeforeUpdate;
   WatchInspectNav1.OnWatchUpdated := @DoWatchUpdated;
   WatchInspectNav1.OnColumnsChanged := @DoColumnsChanged;
+  WatchInspectNav1.OnDisplayFormatChanged := @DoDispFormatChanged;
 
   EnvironmentOptions.AddHandlerAfterWrite(@DoEnvOptChanged);
   DoEnvOptChanged(nil, False);
+  DebugConfigChanged;
 end;
 
 destructor TIDEInspectDlg.Destroy;
@@ -1313,6 +1321,17 @@ begin
   FCurrentResData := nil;
   FreeAndNil(FWatchPrinter);
   inherited Destroy;
+end;
+
+procedure TIDEInspectDlg.DebugConfigChanged;
+begin
+  inherited DebugConfigChanged;
+  FWatchPrinter.ValueFormatResolver.FallBackFormats.Clear;
+  if ProjectDisplayFormatConfigsUseIde then
+    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfInspect);
+  if ProjectDisplayFormatConfigsUseProject and (ProjectDisplayFormatConfigs <> nil) then
+    ProjectDisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfInspect);
+  DoDispFormatChanged(Nil);
 end;
 
 procedure TIDEInspectDlg.Execute(const AExpression: ansistring; AWatch: TWatch);
@@ -1352,11 +1371,12 @@ begin
   FExpressionWasEvaluated := True;
   FCurrentResData := WatchInspectNav1.CurrentWatchValue.ResultData;
   FCurrentTypePrefix := '';
-  FHumanReadable := FWatchPrinter.PrintWatchValue(FCurrentResData, wdfStructure);
+  FHumanReadable := FWatchPrinter.PrintWatchValue(FCurrentResData, DefaultWatchDisplayFormat);
 
   if WatchInspectNav1.CurrentWatchValue.Validity = ddsValid then begin
     if WatchInspectNav1.CurrentWatchValue.TypeInfo <> nil then begin
       WatchInspectNav1.ShowArrayNav := False;
+      WatchInspectNav1.ShowDisplayFormat := False;
       WatchInspectNav1.edFilter.Visible := False;
       case WatchInspectNav1.CurrentWatchValue.TypeInfo.Kind of
         skClass, skObject, skInterface: InspectClass();
@@ -1399,6 +1419,7 @@ begin
       WatchInspectNav1.ShowArrayNav := (FCurrentResData.ValueKind = rdkArray) or
         (FCurrentResData.ArrayLength > 0);
       WatchInspectNav1.ArrayNavigationBar1.HardLimits := (FCurrentResData.ValueKind <> rdkArray);
+      WatchInspectNav1.ShowDisplayFormat := True;
 
       WatchInspectNav1.edFilter.Visible := (FCurrentResData.ValueKind in [rdkStruct, rdkArray]) or
         (FCurrentResData.FieldCount > 0) or (FCurrentResData.ArrayLength > 0);
@@ -1484,6 +1505,12 @@ begin
     FCurrentResData := nil;
     WatchInspectNav1.UpdateData(True);
   end;
+end;
+
+procedure TIDEInspectDlg.DoDispFormatChanged(Sender: TObject);
+begin
+  if WatchInspectNav1.CurrentWatchValue <> nil then
+    DoWatchUpdated(WatchInspectNav1.Watches, WatchInspectNav1.CurrentWatchValue.Watch);
 end;
 
 procedure TIDEInspectDlg.DoEnvOptChanged(Sender: TObject; Restore: boolean);

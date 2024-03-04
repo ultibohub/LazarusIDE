@@ -43,13 +43,13 @@ uses
   // BuildIntf
   IDEOptionsIntf,
   // IdeIntf
-  IDEOptEditorIntf,
+  IDEOptEditorIntf, IdeDebuggerWatchValueIntf,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfDebuggerBase, DbgIntfPseudoTerminal,
   // LazDebuggerIntf
   LazDebuggerIntf,
   // IdeDebugger
-  IdeDebuggerBase, IdeDebuggerOpts, Debugger;
+  IdeDebuggerBase, IdeDebuggerOpts, Debugger, IdeDebuggerWatchResPrinter;
 
 type
   TDebugDialogType = (
@@ -107,6 +107,8 @@ type
   TDbgInitFlags = set of TDbgInitFlag;
 
   TBaseDebugManager = class(TBaseDebugManagerIntf)
+  private
+    FHintWatchPrinter: TWatchResultPrinter;
   protected
     FDestroying: boolean;
     FCallStack: TIdeCallStackMonitor;
@@ -131,6 +133,8 @@ type
     {$ENDIF}
     function GetCurrentDebuggerClass: TDebuggerClass; virtual; abstract;    (* TODO: workaround for http://bugs.freepascal.org/view.php?id=21834   *)
   public
+    constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     procedure Reset; virtual; abstract;
 
     procedure ConnectMainBarEvents; virtual; abstract;
@@ -198,7 +202,7 @@ type
     function DoDeleteBreakPointAtMark(const ASourceMarkObj: TObject): TModalResult; virtual; abstract;
 
     function ShowBreakPointProperties(const ABreakpoint: TIDEBreakPoint): TModalresult; virtual; abstract;
-    function ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String = ''): TModalresult; virtual; abstract;
+    function ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String = ''; AResDataType: TWatchResultDataKind = rdkUnknown): TModalresult; virtual; abstract;
 
     procedure RequestWatchData(AWatchValue: IDbgWatchValueIntf); override;
     // Dialog routines
@@ -242,6 +246,7 @@ type
     property Debugger: TDebuggerIntf read GetDebugger;
     {$ENDIF}
     property CurrentWatches: TCurrentWatches read FCurrentWatches; // for the hint
+    property HintWatchPrinter: TWatchResultPrinter read FHintWatchPrinter;
   end;
 
 
@@ -251,6 +256,18 @@ var
 implementation
 
 { TBaseDebugManager }
+
+constructor TBaseDebugManager.Create(AOwner: TComponent);
+begin
+  FHintWatchPrinter := TWatchResultPrinter.Create;
+  inherited Create(AOwner);
+end;
+
+destructor TBaseDebugManager.Destroy;
+begin
+  inherited Destroy;
+  FHintWatchPrinter.Free;
+end;
 
 procedure TBaseDebugManager.RequestWatchData(AWatchValue: IDbgWatchValueIntf);
 begin

@@ -769,6 +769,26 @@ begin
   {$ENDIF}
 end;
 
+procedure TCustomTabControl.MaybeSelectFirstControlOnPage(APage: TCustomPage);
+var
+  ParentForm: TCustomForm;
+  C, ActiveControl: TWinControl;
+begin
+  ParentForm := GetParentForm(Self);
+  //Debugln(['TCustomTabControl.ActivateFirstControl: Self=',DbgSName(Self),', APage=',DbgSName(APage),', ParentForm=',DbgSName(ParentForm)]);
+  if not (Assigned(APage) and Assigned(ParentForm) and APage.Visible and APage.Enabled and (APage.ControlCount > 0)) then
+    Exit;
+  //Debugln(['TCustomTabControl.ActivateFirstControl: APage.Visible=',APage.Visible,', APage.Enabled=',APage.Enabled,', (APage.ControlCount > 0)=', (APage.ControlCount > 0)]);
+  ActiveControl := ParentForm.ActiveControl;
+  //don't steal focus if a control outside is ActiveControl
+  if (Self = ActiveControl) or Self.ContainsControl(ActiveControl) then
+  begin
+    C := APage.FindNextControl(Self, True, True, False);
+    if Assigned(C) then
+      ParentForm.ActiveControl := C;
+  end;
+end;
+
 {------------------------------------------------------------------------------
   function TCustomTabControl.IsStoredActivePage: boolean;
  ------------------------------------------------------------------------------}
@@ -1028,12 +1048,27 @@ end;
   TCustomTabControl Change
  ------------------------------------------------------------------------------}
 procedure TCustomTabControl.Change;
+var
+  APage: TCustomPage;
+  ParentForm: TCustomForm;
+  ActiveControl: TWinControl;
 begin
   //DebugLn(['TCustomTabControl.Change ',DbgSName(Self),' fPageIndex=',fPageIndex]);
   ShowCurrentPage;
   FPageIndexOnLastChange := FPageIndex;
+
   if ([csLoading,csDestroying]*ComponentState=[]) and (not FAddingPages) then
+  begin
+    APage :=  ActivePageComponent;
+    //debugln(['TCustomTabControl.Change: Self=',DbgSName(Self),', APage',DbgSName(APage)]);
+    //if Assigned(APage) then debugln(['APage.Visible=',APage.Visible,', APage.Enabled=',APage.Enabled,', (APage.ControlCount > 0)=',(APage.ControlCount > 0)]);
+    ParentForm := GetParentForm(Self);
+    if not (Assigned(ParentForm) and Assigned(APage) and APage.Visible and APage.Enabled and (APage.ControlCount > 0)) then
+      Exit;
+    MaybeSelectFirstControlOnPage(APage);
+
     DoChange;
+  end;
 end;
 
 function TCustomTabControl.DialogChar(var Message: TLMKey): boolean;
@@ -1069,6 +1104,7 @@ begin
   FPageIndex := AValue;
   UpdateAllDesignerFlags;
   DoSendPageIndex;
+  MaybeSelectFirstControlOnPage(GetActivePageComponent);
 end;
 
 {------------------------------------------------------------------------------

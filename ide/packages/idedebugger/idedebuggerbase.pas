@@ -39,7 +39,7 @@ type
 
     function GetEnabled: Boolean;
     function GetValidity: TDebuggerDataState;
-    function GetDisplayFormat: TWatchDisplayFormat;
+//    function GetDisplayFormat: TWatchDisplayFormat;
     function GetTypeInfo: TDBGType; deprecated;
     function GetValue: string;
     function GetResultData: TWatchResultData;
@@ -49,7 +49,7 @@ type
 
     property Enabled: Boolean read GetEnabled;
     property Validity: TDebuggerDataState read GetValidity;
-    property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat;
+//    property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat;
     property TypeInfo: TDBGType read GetTypeInfo;
     property Value: string read GetValue; // for <Error> etc
     property ResultData: TWatchResultData read GetResultData;
@@ -60,9 +60,9 @@ type
   { TWatchValue }
 
   TWatchValue = class(TRefCountedObject)
-  private
   protected
     FWatch: TWatch;
+    FIsMemDump: Boolean;
     FTypeInfo: TDBGType;
     FValidity: TDebuggerDataState;
     FResultData: TWatchResultData;
@@ -70,7 +70,6 @@ type
     FResultDataContent: (rdcNotAnalysed, rdcNotSpecial, rdcJSon);
 
     procedure SetWatch(AValue: TWatch); virtual;
-    function GetDisplayFormat: TWatchDisplayFormat;
     function GetEvaluateFlags: TWatcheEvaluateFlags;
     function GetFirstIndexOffs: Int64;
     function GetRepeatCount: Integer;
@@ -78,14 +77,14 @@ type
     function GetThreadId: Integer;
     function GetValidity: TDebuggerDataState; virtual;
     procedure SetValidity(AValue: TDebuggerDataState); virtual;
-    procedure SetValue(AValue: String); virtual;
     procedure SetTypeInfo(AValue: TDBGType);
     procedure SetTypeInfo(AValue: TDBGTypeBase);
 
     function GetResultData: TWatchResultData; virtual;
     procedure SetResultData(AResultData: TWatchResultData);
+
+    property IsMemDump: Boolean read FIsMemDump;
   protected
-    FDisplayFormat: TWatchDisplayFormat;
     FEvaluateFlags: TWatcheEvaluateFlags;
     FRepeatCount: Integer;
     FFirstIndexOffs: Int64;
@@ -103,7 +102,6 @@ type
     destructor Destroy; override;
     procedure Assign(AnOther: TWatchValue); virtual;
     procedure ClearDisplayData; // keep only what's needed for the snapshot
-    property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat;
     property EvaluateFlags: TWatcheEvaluateFlags read GetEvaluateFlags;
     property FirstIndexOffs: Int64 read GetFirstIndexOffs;
     property RepeatCount: Integer read GetRepeatCount;
@@ -113,7 +111,7 @@ type
   public
     property Watch: TWatch read FWatch write SetWatch;
     property Validity: TDebuggerDataState read GetValidity write SetValidity;
-    property Value: String read GetValue write SetValue;
+    property Value: String read GetValue;
     property TypeInfo: TDBGType read GetTypeInfo write SetTypeInfo;
     property ResultData: TWatchResultData read GetResultData;
   end;
@@ -183,6 +181,7 @@ type
     procedure AssignTo(Dest: TPersistent); override;
     function CreateValueList: TWatchValueList; virtual;
 
+    function GetDisplayFormat: TWatchDisplayFormat; virtual;
     function GetBackendExpression: String;
     function GetFrontendExpressionSuffix: String;
   public
@@ -196,7 +195,7 @@ type
   public
     property Enabled: Boolean read FEnabled write SetEnabled;
     property Expression: String read FExpression write SetExpression;
-    property DisplayFormat: TWatchDisplayFormat read FDisplayFormat write SetDisplayFormat;
+    property DisplayFormat: TWatchDisplayFormat read GetDisplayFormat write SetDisplayFormat;
     property EvaluateFlags: TWatcheEvaluateFlags read FEvaluateFlags write SetEvaluateFlags;
     property FirstIndexOffs: Int64 read FFirstIndexOffs write SetFirstIndexOffs;
     property RepeatCount: Integer read FRepeatCount write SetRepeatCount;
@@ -441,19 +440,6 @@ begin
   FWatch := AValue;
 end;
 
-function TWatchValue.GetDisplayFormat: TWatchDisplayFormat;
-begin
-  if (FWatch <> nil) and
-     (FWatch.FDisplayFormat <> wdfMemDump) and
-     (FDisplayFormat <> wdfMemDump) and
-     (FResultData <> nil) and
-     (FResultData.ValueKind <> rdkPrePrinted)
-  then
-    Result := FWatch.DisplayFormat
-  else
-    Result := FDisplayFormat;
-end;
-
 function TWatchValue.GetRepeatCount: Integer;
 begin
   Result := FRepeatCount;
@@ -462,11 +448,6 @@ end;
 function TWatchValue.GetThreadId: Integer;
 begin
   Result := FThreadId;
-end;
-
-procedure TWatchValue.SetValue(AValue: String);
-begin
-  assert(False, 'TWatchValue.SetValue: False');
 end;
 
 procedure TWatchValue.SetTypeInfo(AValue: TDBGType);
@@ -576,6 +557,11 @@ begin
   DoModified;
 end;
 
+function TWatch.GetDisplayFormat: TWatchDisplayFormat;
+begin
+  Result := FDisplayFormat;
+end;
+
 procedure TWatch.SetEnabled(AValue: Boolean);
 begin
   if FEnabled <> AValue
@@ -670,7 +656,7 @@ begin
   then begin
     TWatch(Dest).FExpression    := FExpression;
     TWatch(Dest).FEnabled       := FEnabled;
-    TWatch(Dest).FDisplayFormat := FDisplayFormat;
+    TWatch(Dest).FDisplayFormat := DisplayFormat;
     TWatch(Dest).FFirstIndexOffs    := FFirstIndexOffs;
     TWatch(Dest).FRepeatCount   := FRepeatCount;
     TWatch(Dest).FEvaluateFlags := FEvaluateFlags;
@@ -727,6 +713,7 @@ constructor TWatch.Create(ACollection: TCollection);
 begin
   FEnabled := False;
   FValueList := CreateValueList;
+  FDisplayFormat := DefaultWatchDisplayFormat;
   inherited Create(ACollection);
 end;
 
@@ -831,7 +818,7 @@ begin
   while i >= 0 do begin
     Result := TWatchValue(FList[i]);
     if (Result.ThreadId = AThreadId) and (Result.StackFrame = AStackFrame) and
-       (Result.DisplayFormat = FWatch.DisplayFormat) and
+       (Result.IsMemDump = (FWatch.DisplayFormat.MemDump)) and
        (Result.EvaluateFlags = FWatch.EvaluateFlags) and
        (Result.FFirstIndexOffs <= AFirstIndexOffs) and
        (Result.FFirstIndexOffs + Result.FRepeatCount  > AFirstIndexOffs) and
@@ -879,7 +866,7 @@ begin
   while i >= 0 do begin
     Result := TWatchValue(FList[i]);
     if (Result.ThreadId = AThreadId) and (Result.StackFrame = AStackFrame) and
-       (Result.DisplayFormat = FWatch.DisplayFormat) and
+       (Result.IsMemDump = (FWatch.DisplayFormat.MemDump)) and
        (Result.RepeatCount = FWatch.RepeatCount) and
        (Result.FirstIndexOffs = FWatch.FirstIndexOffs) and
        (Result.EvaluateFlags = FWatch.EvaluateFlags)

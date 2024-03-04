@@ -52,7 +52,7 @@ uses
   IdeDebuggerStringConstants, BaseDebugManager, Debugger, DebuggerDlg,
   IdeDebuggerWatchResPrinter, IdeDebuggerUtils, DebuggerTreeView,
   IdeDebuggerWatchResult, IdeDebuggerBase, DbgTreeViewWatchData,
-  EnvDebuggerOptions, IdeDebuggerValueFormatter,
+  EnvDebuggerOptions, IdeDebuggerValueFormatter, IdeDebuggerDisplayFormats, IdeDebuggerOpts,
   {$ifdef Windows}ActiveX{$else}laz.FakeActiveX{$endif};
 
 type
@@ -140,6 +140,8 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure DebugConfigChanged; override;
+    property WatchPrinter: TWatchResultPrinter read FWatchPrinter;
     property LocalsMonitor;
     property ThreadsMonitor;
     property CallStackMonitor;
@@ -362,6 +364,8 @@ begin
 
   for i := low(COL_WIDTHS) to high(COL_WIDTHS) do
     vtLocals.Header.Columns[i].Width := COL_WIDTHS[i];
+
+  DebugConfigChanged;
 end;
 
 destructor TLocalsDlg.Destroy;
@@ -370,6 +374,17 @@ begin
   inherited Destroy;
   FWatchPrinter.free;
   FLocolsTreeMgr.Free;
+end;
+
+procedure TLocalsDlg.DebugConfigChanged;
+begin
+  inherited DebugConfigChanged;
+  FWatchPrinter.ValueFormatResolver.FallBackFormats.Clear;
+  if ProjectDisplayFormatConfigsUseIde then
+    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfLocals);
+  if ProjectDisplayFormatConfigsUseProject and (ProjectDisplayFormatConfigs <> nil) then
+    ProjectDisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfLocals);
+  LocalsChanged(nil);
 end;
 
 procedure TLocalsDlg.actInspectUpdate(Sender: TObject);
@@ -772,7 +787,7 @@ begin
     LVal := GetSelected;
     if (LVal <> nil) and (LVal.ResultData <> nil) then begin
       Clipboard.Open;
-      Clipboard.AsText := ValueToRAW(FWatchPrinter.PrintWatchValue(LVal.ResultData, wdfDefault));
+      Clipboard.AsText := ValueToRAW(FWatchPrinter.PrintWatchValue(LVal.ResultData, DefaultWatchDisplayFormat));
       Clipboard.Close;
     end;
   end;
@@ -792,7 +807,7 @@ begin
     LVal := GetSelected;
     if (LVal <> nil) and (LVal.ResultData <> nil) then begin
       Clipboard.Open;
-      Clipboard.AsText := FWatchPrinter.PrintWatchValue(LVal.ResultData, wdfDefault);
+      Clipboard.AsText := FWatchPrinter.PrintWatchValue(LVal.ResultData, DefaultWatchDisplayFormat);
       Clipboard.Close;
     end;
   end;
@@ -834,6 +849,7 @@ function TDbgTreeViewLocalsValueMgr.GetFieldAsText(Nd: PVirtualNode;
 var
   ResData: TWatchResultData;
   da: TDBGPtr;
+  DispFormat: TWatchDisplayFormat;
 begin
   if AWatchAbleResult = nil then
     exit(inherited);
@@ -868,6 +884,7 @@ begin
           end;
         end;
 
+        DispFormat := DefaultWatchDisplayFormat; // TODO TIdeLocalsValue(AWatchAble).DisplayFormat
         if vdoAllowMultiLine in AnOpts then
           FLocalsDlg.FWatchPrinter.FormatFlags := [rpfIndent, rpfMultiLine];
         try
@@ -876,15 +893,15 @@ begin
              not( (ResData.ValueKind = rdkPrePrinted) and (AWatchAbleResult.TypeInfo <> nil) )
           then begin
             if not ValueFormatterSelectorList.FormatValue(ResData,
-               AWatchAbleResult.DisplayFormat, FLocalsDlg.FWatchPrinter, Result)
+               DispFormat, FLocalsDlg.FWatchPrinter, Result)
             then begin
-              Result := FLocalsDlg.FWatchPrinter.PrintWatchValue(ResData, AWatchAbleResult.DisplayFormat);
+              Result := FLocalsDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
             end;
           end
           else begin
             if (AWatchAbleResult.TypeInfo = nil) or
                not ValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
-               AWatchAbleResult.Value, AWatchAbleResult.DisplayFormat, Result)
+               AWatchAbleResult.Value, DispFormat, Result)
             then begin
               Result := AWatchAbleResult.Value;
             end;
@@ -910,21 +927,23 @@ var
   WatchValueStr: String;
   ResData: TWatchResultData;
   da: TDBGPtr;
+  DispFormat: TWatchDisplayFormat;
 begin
   ResData :=  AWatchAbleResult.ResultData;
+  DispFormat := DefaultWatchDisplayFormat; // TODO TIdeLocalsValue(AWatchAble).DisplayFormat
   if (ResData <> nil) and
      not( (ResData.ValueKind = rdkPrePrinted) and (AWatchAbleResult.TypeInfo <> nil) )
   then begin
     if not ValueFormatterSelectorList.FormatValue(ResData,
-       AWatchAbleResult.DisplayFormat, FLocalsDlg.FWatchPrinter, WatchValueStr)
+       DispFormat, FLocalsDlg.FWatchPrinter, WatchValueStr)
     then begin
-      WatchValueStr := FLocalsDlg.FWatchPrinter.PrintWatchValue(ResData, AWatchAbleResult.DisplayFormat);
+      WatchValueStr := FLocalsDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
     end;
   end
   else begin
     if (AWatchAbleResult.TypeInfo = nil) or
        not ValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
-       AWatchAbleResult.Value, AWatchAbleResult.DisplayFormat, WatchValueStr)
+       AWatchAbleResult.Value, DispFormat, WatchValueStr)
     then begin
       WatchValueStr := AWatchAbleResult.Value;
     end;

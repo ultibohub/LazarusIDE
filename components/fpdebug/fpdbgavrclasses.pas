@@ -88,6 +88,7 @@ end;
     function FormatStatusFlags(sreg: byte): string;
     function GetStackUnwinder: TDbgStackUnwinder; override;
   public
+    destructor Destroy; override;
     procedure LoadRegisterValues; override;
     procedure SetRegisterValue(AName: string; AValue: QWord); override;
     function GetInstructionPointerRegisterValue: TDbgPtr; override;
@@ -104,13 +105,22 @@ end;
     FNumRegisters = 35;  // r0..r31, SREG, SP, PC
   protected
     function CreateThread(AthreadIdentifier: THandle; out IsMainThread: boolean): TDbgThread; override;
+    function CreateBreakPointTargetHandler: TFpBreakPointTargetHandler; override;
   public
     class function isSupported(target: TTargetDescriptor): boolean; override;
     constructor Create(const AFileName: string; AnOsClasses: TOSDbgClasses;
                       AMemManager: TFpDbgMemManager; AMemModel: TFpDbgMemModel;
                       AProcessConfig: TDbgProcessConfig = nil); override;
     destructor Destroy; override;
+    function CallParamDefaultLocation(AParamIdx: Integer): TFpDbgMemLocation; override;
   end;
+
+  TAvrBreakInfo = object
+  const
+    _CODE: Word = $9598;
+  end;
+
+  TAvrBreakPointTargetHandler = specialize TRspBreakPointTargetHandler<Word, TAvrBreakInfo>;
 
 implementation
 
@@ -195,6 +205,7 @@ function TAvrMemManager.ReadMemory(AReadDataType: TFpDbgMemReadDataType; const
 var
   loc: TFpDbgMemLocation;
   tmp: QWord;
+  b, shift: Byte;
 begin
   loc := ASourceLocation;
   // Update address to include possible address class modifications
@@ -202,6 +213,28 @@ begin
     loc.Address := MemModel.LocationToAddress(ASourceLocation);
   Result := inherited ReadMemory(AReadDataType, loc, ASourceSize,
     ADest, ADestSize, AContext, AFlags);
+
+  // ReadMemory only reads single registers, read extra registers if ASourceSize > 1
+  if (ASourceLocation.MType = mlfTargetRegister) and (ASourceSize.Size > 1) then
+  begin
+    shift := 1;
+    while (shift < byte(ASourceSize.Size)) and Result do
+    begin
+      inc(loc.Address);
+      // Parameters are allocated below r26
+      if loc.Address < 26 then
+      begin
+        Result := inherited ReadMemory(AReadDataType, loc, ASourceSize,
+          @b, ADestSize, AContext, AFlags);
+        if Result then
+          PQWord(ADest)^ := PQWord(ADest)^ + (b shl 8*shift);
+      end
+      else
+        Result := False;
+
+      inc(shift);
+    end;
+  end;
 
   { Assume an address is located in data memory.
     This can be updated when more information is known, e.g.
@@ -325,6 +358,13 @@ begin
   if FUnwinder = nil then
     FUnwinder := TDbgStackUnwinderAVR.Create(Process);
   Result := FUnwinder;
+end;
+
+destructor TDbgAvrThread.Destroy;
+begin
+  if Assigned(FUnwinder) then
+    FreeAndNil(FUnwinder);
+  inherited Destroy;
 end;
 
 procedure TDbgAvrThread.LoadRegisterValues;
@@ -459,6 +499,11 @@ begin
     result := nil;
 end;
 
+function TDbgAvrProcess.CreateBreakPointTargetHandler: TFpBreakPointTargetHandler;
+begin
+  Result := TAvrBreakPointTargetHandler.Create(Self);
+end;
+
 constructor TDbgAvrProcess.Create(const AFileName: string;
   AnOsClasses: TOSDbgClasses; AMemManager: TFpDbgMemManager;
   AMemModel: TFpDbgMemModel; AProcessConfig: TDbgProcessConfig);
@@ -470,6 +515,19 @@ end;
 destructor TDbgAvrProcess.Destroy;
 begin
   inherited Destroy;
+end;
+
+function TDbgAvrProcess.CallParamDefaultLocation(
+  AParamIdx: Integer): TFpDbgMemLocation;
+begin
+  Result := inherited CallParamDefaultLocation(AParamIdx);
+  // Assume word sized parameters passed via registers
+  // this means larger parameters will mess up this guess
+  if (AParamIdx >= 0) and (AParamIdx <= 8) then
+  begin
+    Result.MType := mlfTargetRegister;
+    Result.Address := 24 - 2*AParamIdx;
+  end;
 end;
 
 class function TDbgAvrProcess.isSupported(target: TTargetDescriptor): boolean;

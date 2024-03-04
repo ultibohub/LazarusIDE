@@ -93,7 +93,6 @@ type
     function GetTypeInfo: TDBGType; override;
     function GetValidity: TDebuggerDataState; override;
     function GetValue: String; override;
-    procedure SetValue(AValue: String); override;
   public
     constructor Create(AOwnerWatch: TWatch;
                        const AThreadId: Integer;
@@ -478,19 +477,12 @@ begin
   end;
 end;
 
-procedure TTestWatchValue.SetValue(AValue: String);
-begin
-  BeginUpdate;
-  ResData.CreatePrePrinted(AValue);
-  EndUpdate;
-end;
-
 constructor TTestWatchValue.Create(AOwnerWatch: TWatch; const AThreadId: Integer;
   const AStackFrame: Integer);
 begin
   inherited Create(AOwnerWatch);
   Validity := ddsUnknown;
-  FDisplayFormat := Watch.DisplayFormat;
+  FIsMemDump := Watch.DisplayFormat.MemDump;
   FEvaluateFlags := Watch.EvaluateFlags;
   FRepeatCount   := Watch.RepeatCount;
   FThreadId := AThreadId;
@@ -501,7 +493,7 @@ constructor TTestWatchValue.Create(AOwnerWatch: TWatch);
 begin
   inherited Create(AOwnerWatch);
   Validity := ddsUnknown;
-  FDisplayFormat := Watch.DisplayFormat;
+  FIsMemDump := Watch.DisplayFormat.MemDump;
   FEvaluateFlags := Watch.EvaluateFlags;
   FRepeatCount   := Watch.RepeatCount;
 end;

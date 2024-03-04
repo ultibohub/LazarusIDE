@@ -12,7 +12,7 @@
 { TWin32WSCustomListView }
 
 type
-  TLVStyleType = (lsStyle, lsInvert, lsExStyle);
+  TLVStyleType = (lsStyle, lsInvert, lsExStyle, lsRecreate);
 
 const
   LV_STYLES: array[TListViewProperty] of record
@@ -21,7 +21,7 @@ const
   end = (
     (StyleType: lsStyle;   Style: LVS_AUTOARRANGE),        // lvpAutoArrange
     (StyleType: lsExStyle; Style: LVS_EX_CHECKBOXES),      // lvpCheckboxes
-    (StyleType: lsInvert;  Style: LVS_NOSORTHEADER),       // lvpColumnClick
+    (StyleType: lsRecreate;Style: LVS_NOSORTHEADER),       // lvpColumnClick
     (StyleType: lsExStyle; Style: LVS_EX_FLATSB),          // lvpFlatScrollBars
     (StyleType: lsExStyle; Style: LVS_EX_HEADERDRAGDROP),  // lvpFullDrag
     (StyleType: lsExStyle; Style: LVS_EX_GRIDLINES),       // lvpGridLines
@@ -996,6 +996,8 @@ begin
       Flags := Flags or LVS_OWNERDRAWFIXED;
     if TCustomListView(AWinControl).BorderStyle = bsSingle then
       FlagsEx := FlagsEx or WS_EX_CLIENTEDGE;
+    if not TCustomListViewAccess(AWinControl).ColumnClick then
+      Flags := Flags or LVS_NOSORTHEADER;
   end;
   // create window
   FinishCreateWindow(AWinControl, Params, false);
@@ -1019,6 +1021,7 @@ end;
 class procedure TWin32WSCustomListView.EndUpdate(const ALV: TCustomListView);
 var
   ColIndex : Integer;
+  WasFocused: Boolean;
 begin
   if not WSCheckHandleAllocated(ALV, 'EndUpdate')
   then Exit;
@@ -1032,6 +1035,10 @@ begin
   // column resizing, but this way we we can really enforce it).
   // ShowWindow() itself does not force an immediate redraw,
   // so it won't flicker at all.
+
+  // If parent of the listview is not the form itself, then
+  // hiding it may cause it to loose focus. Issue #40786
+  WasFocused := ALV.Focused;
   ShowWindow(ALV.Handle, SW_HIDE);
   for ColIndex := 0 to TCustomListViewAccess(ALV).Columns.Count - 1 do
     if ALV.Column[ColIndex].AutoSize
@@ -1040,6 +1047,8 @@ begin
   SendMessage(ALV.Handle,WM_SETREDRAW,WPARAM(True),0);
   if ALV.Visible then
     ShowWindow(ALV.Handle, SW_SHOW);
+  if WasFocused and ALV.CanSetFocus then
+    ALV.SetFocus;
 end;
 
 class function TWin32WSCustomListView.GetBoundingRect(const ALV: TCustomListView): TRect;
@@ -1395,7 +1404,6 @@ class procedure TWin32WSCustomListView.SetProperty(const ALV: TCustomListView; c
 begin
   if not WSCheckHandleAllocated(ALV, 'SetProperty')
   then Exit;
-
   case LV_STYLES[AProp].StyleType of
     lsStyle: begin
       if AIsSet
@@ -1411,19 +1419,23 @@ begin
       if (AProp = lvpReadOnly) then
         UpdateStyle(ALV.Handle, LV_STYLES[AProp].Style, 0)
       else
-      if AIsSet then
-        UpdateStyle(ALV.Handle, LV_STYLES[AProp].Style, 0)
-      else
-        UpdateStyle(ALV.Handle, LV_STYLES[AProp].Style, LV_STYLES[AProp].Style);
+      begin
+        if AIsSet
+        then UpdateStyle(ALV.Handle, LV_STYLES[AProp].Style, 0)
+        else UpdateStyle(ALV.Handle, LV_STYLES[AProp].Style, LV_STYLES[AProp].Style);
+      end;
     end;
     lsExStyle: begin
       if AIsSet
       then UpdateExStyle(ALV.Handle, LV_STYLES[AProp].Style, LV_STYLES[AProp].Style)
       else UpdateExStyle(ALV.Handle, LV_STYLES[AProp].Style, 0);
+      if(aProp=lvpCheckboxes)and aIsSet
+        then ReCreateWnd(ALV)  // otherwise wrong size of checkbox, issue #26690
+    end;
+    lsRecreate: begin
+      ReCreateWnd(ALV);
     end;
   end;
-  if(aProp=lvpCheckboxes)and aIsSet
-    then ReCreateWnd(ALV)
 end;
 
 class procedure TWin32WSCustomListView.SetProperties(const ALV: TCustomListView; const AProps: TListViewProperties);

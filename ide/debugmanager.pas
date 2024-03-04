@@ -51,8 +51,8 @@ uses
   // BuildIntf
   ProjectIntf, CompOptsIntf,
   // IDEIntf
-  IDEWindowIntf, SrcEditorIntf, MenuIntf, IDECommands, LazIDEIntf,
-  IdeIntfStrConsts, IDEDialogs, ToolBarIntf, InputHistory, IdeDebuggerValueFormatterIntf,
+  IDEWindowIntf, SrcEditorIntf, MenuIntf, IDECommands, LazIDEIntf, IdeIntfStrConsts, IDEDialogs,
+  ToolBarIntf, InputHistory, IdeDebuggerValueFormatterIntf, IdeDebuggerWatchValueIntf,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfDebuggerBase, DbgIntfMiscClasses, DbgIntfPseudoTerminal,
   // LazDebuggerIntf
@@ -64,7 +64,7 @@ uses
   PseudoTerminalDlg, FeedbackDlg, ThreadDlg, HistoryDlg, ProcessDebugger,
   IdeDebuggerBase, IdeDebuggerOpts, EnvDebuggerOptions,
   IdeDebuggerBackendValueConv, Debugger, BaseDebugManager,
-  IdeDebuggerValueFormatter,
+  IdeDebuggerValueFormatter, IdeDebuggerDisplayFormats,
   // IdeConfig
   LazConf,
   // IDE
@@ -293,7 +293,7 @@ type
     function DoDeleteBreakPointAtMark(const ASourceMarkObj: TObject): TModalResult; override;
 
     function ShowBreakPointProperties(const ABreakpoint: TIDEBreakPoint): TModalresult; override;
-    function ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String = ''): TModalresult; override;
+    function ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String = ''; AResDataType: TWatchResultDataKind = rdkUnknown): TModalresult; override;
 
     // Dialog routines
     procedure CreateDebugDialog(Sender: TObject; aFormName: string;
@@ -2058,6 +2058,7 @@ constructor TDebugManager.Create(TheOwner: TComponent);
 var
   DialogType: TDebugDialogType;
 begin
+  inherited Create(TheOwner);
   FInStateChange := False;
   for DialogType := Low(TDebugDialogType) to High(TDebugDialogType) do
     FDialogs[DialogType] := nil;
@@ -2104,8 +2105,6 @@ begin
   FCurrentWatches := TCurrentWatches.Create(FWatches);
 
   FIsInitializingDebugger:= False;
-
-  inherited Create(TheOwner);
 
   LazarusIDE.AddHandlerOnProjectClose(@DoProjectClose);
 
@@ -2493,10 +2492,13 @@ begin
 end;
 
 procedure TDebugManager.DoBackendConverterChanged;
+var
+  d: TDebugDialogType;
 begin
   ValueConverterSelectorList.Lock;
   ProjectValueConverterSelectorList := nil;
   ProjectValueFormatterSelectorList := nil;
+  ProjectDisplayFormatConfigs := nil;
 
   try
     ValueConverterSelectorList.Clear;
@@ -2513,8 +2515,22 @@ begin
 
     if (Project1 <> nil) then begin
       ProjectValueConverterSelectorList := FProjectLink.BackendConverterConfig;
+      ProjectDisplayFormatConfigs       := FProjectLink.DisplayFormatConfigs;
       ProjectValueFormatterSelectorList := FProjectLink.ValueFormatterConfig;
     end;
+
+    ProjectDisplayFormatConfigsUseIde     := FProjectLink.UseDisplayFormatConfigsFromIDE;
+    ProjectDisplayFormatConfigsUseProject := FProjectLink.UseDisplayFormatConfigsFromProject;
+
+    HintWatchPrinter.ValueFormatResolver.FallBackFormats.Clear;
+    if ProjectDisplayFormatConfigsUseIde then
+      DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(HintWatchPrinter.ValueFormatResolver.FallBackFormats, dtfHint);
+    if ProjectDisplayFormatConfigsUseProject and (ProjectDisplayFormatConfigs <> nil) then
+      ProjectDisplayFormatConfigs.AddToTargetedList(HintWatchPrinter.ValueFormatResolver.FallBackFormats, dtfHint);
+
+    for d in TDebugDialogType do
+      if FDialogs[d] <> nil then
+        FDialogs[d].DebugConfigChanged;
   finally
     ValueConverterSelectorList.Unlock;
   end;
@@ -3532,9 +3548,10 @@ begin
   Result := TBreakPropertyDlg.Create(Self, ABreakpoint).ShowModal;
 end;
 
-function TDebugManager.ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String = ''): TModalresult;
+function TDebugManager.ShowWatchProperties(const AWatch: TCurrentWatch; AWatchExpression: String;
+  AResDataType: TWatchResultDataKind): TModalresult;
 begin
-  Result := TWatchPropertyDlg.Create(Self, AWatch, AWatchExpression).ShowModal;
+  Result := TWatchPropertyDlg.Create(Self, AWatch, AWatchExpression, AResDataType).ShowModal;
 end;
 
 procedure TDebugManager.SetDebugger(const ADebugger: TDebuggerIntf);

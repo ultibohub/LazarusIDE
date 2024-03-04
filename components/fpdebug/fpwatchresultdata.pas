@@ -7,7 +7,7 @@ interface
 
 uses
   FpDbgInfo, FpPascalBuilder, FpdMemoryTools, FpErrorMessages, FpDbgDwarf,
-  FpDbgDwarfDataClasses, DbgIntfBaseTypes, LazClasses, LazLoggerBase, fgl, Math,
+  FpDbgDwarfDataClasses, DbgIntfBaseTypes, LazClasses, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, fgl, Math,
   SysUtils, LazDebuggerIntf;
 
 type
@@ -888,7 +888,7 @@ begin
   if FRecurseCnt > 0 then begin
     PrettyPrinter := TFpPascalPrettyPrinter.Create(Context.SizeOfAddress);
     PrettyPrinter.Context := Context;
-    PrettyPrinter.PrintValue(s, AnFpValue, wdfDefault, 1, [], [ppvSkipClassBody]);
+    PrettyPrinter.PrintValue(s, AnFpValue, ddfDefault, 1, [], [ppvSkipClassBody]);
     AnResData.CreatePrePrinted(s);
     PrettyPrinter.Free;
     Result := True;

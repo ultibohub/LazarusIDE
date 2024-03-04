@@ -863,6 +863,7 @@ msgid "Remove from Favorites"
 msgstr "Elimina de Favorits"
 
 #: objinspstrconsts.oisrename
+msgctxt "objinspstrconsts.oisrename"
 msgid "Rename"
 msgstr ""
 
@@ -1783,12 +1784,18 @@ msgstr ""
 msgid "Confirmation"
 msgstr ""
 
-#: objinspstrconsts.sccstredtconfirmationimages
+#: objinspstrconsts.sccstredtconfirmationfilereplace
+msgctxt "objinspstrconsts.sccstredtconfirmationfilereplace"
+msgid "The file already exists, replace it?"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationimagesloss
+msgctxt "objinspstrconsts.sccstredtconfirmationimagesloss"
 msgid "Information about node images cannot be stored in the file. Continue anyway?"
 msgstr ""
 
-#: objinspstrconsts.sccstredtconfirmationreplace
-msgid "The file already exists, replace it?"
+#: objinspstrconsts.sccstredtconfirmationtreereplace
+msgid "The current tree will be overwritten, continue?"
 msgstr ""
 
 #: objinspstrconsts.sccstredtdelete
@@ -1796,24 +1803,14 @@ msgctxt "objinspstrconsts.sccstredtdelete"
 msgid "Delete"
 msgstr "Elimina"
 
-#: objinspstrconsts.sccstredtgrplcaption
-msgctxt "objinspstrconsts.sccstredtgrplcaption"
-msgid "Items"
-msgstr "Elements"
-
-#: objinspstrconsts.sccstredtgrprcaption
-msgctxt "objinspstrconsts.sccstredtgrprcaption"
-msgid "Item Properties"
-msgstr "Propietats de l'Element"
-
 #: objinspstrconsts.sccstredtimagelistnotassigned
 #, object-pascal-format
-msgid "%s not assigned."
+msgid "\"%s\" not assigned"
 msgstr ""
 
 #: objinspstrconsts.sccstredtinvalidindex
 #, object-pascal-format
-msgid "%s has only %d images."
+msgid "\"%s\" has only %d images"
 msgstr ""
 
 #: objinspstrconsts.sccstredtitem
@@ -1822,26 +1819,23 @@ msgid "Item"
 msgstr "Element"
 
 #: objinspstrconsts.sccstredtlabelimageindex
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Image Index"
 msgctxt "objinspstrconsts.sccstredtlabelimageindex"
-msgid "Image Index"
+msgid "Image Index%s:"
 msgstr "Index de l'Imatge"
 
 #: objinspstrconsts.sccstredtlabelselindex
-msgid "Selected Index"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Selected Index"
+msgid "Selected Index%s:"
 msgstr "Index sel·leccionat"
 
 #: objinspstrconsts.sccstredtlabelstateindex
+#, object-pascal-format
 msgctxt "objinspstrconsts.sccstredtlabelstateindex"
-msgid "State Index"
+msgid "State Index%s:"
 msgstr ""
-
-#: objinspstrconsts.sccstredtlabeltext
-msgid "Text:"
-msgstr "Texte:"
-
-#: objinspstrconsts.sccstredtload
-msgid "Load"
-msgstr "Carrega"
 
 #: objinspstrconsts.sccstredtnewitem
 msgctxt "objinspstrconsts.sccstredtnewitem"
@@ -1857,14 +1851,25 @@ msgstr ""
 msgid "&No"
 msgstr ""
 
+#: objinspstrconsts.sccstredtopen
+msgid "Open file"
+msgstr ""
+
 #: objinspstrconsts.sccstredtopendialog
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
 msgstr "Obre"
 
+#: objinspstrconsts.sccstredtrename
+msgctxt "objinspstrconsts.sccstredtrename"
+msgid "Rename"
+msgstr ""
+
 #: objinspstrconsts.sccstredtsave
+#, fuzzy
+#| msgid "Save"
 msgctxt "objinspstrconsts.sccstredtsave"
-msgid "Save"
+msgid "Save to file"
 msgstr "Desar"
 
 #: objinspstrconsts.sccstredtsavedialog

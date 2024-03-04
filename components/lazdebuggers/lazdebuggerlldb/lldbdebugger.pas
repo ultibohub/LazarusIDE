@@ -24,7 +24,7 @@ interface
 uses
   Classes, SysUtils, strutils, math,
   // LazUtils
-  LazClasses, LazFileUtils, LazLoggerBase, LazStringUtils, Maps,
+  LazClasses, LazFileUtils, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazStringUtils, Maps,
   // DebuggerIntf
   DbgIntfDebuggerBase, DbgIntfBaseTypes,
   // CmdLineDebuggerBase
@@ -2561,9 +2561,11 @@ procedure TLldbDebuggerCommandEvaluate.EvalInstructionSucceeded(Sender: TObject
   );
 begin
   if FWatchValue <> nil then begin
-    FWatchValue.Value := FInstr.Res;
+    FWatchValue.BeginUpdate;
+    FWatchValue.ResData.CreatePrePrinted(FInstr.Res);
     //FWatchValue.TypeInfo := TypeInfo;
     FWatchValue.Validity := ddsValid;
+    FWatchValue.EndUpdate;
   end
   else
   if FCallback <> nil then

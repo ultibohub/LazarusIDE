@@ -31,6 +31,7 @@ type
      IgnKindDw2,
      IgnKindDw3,
      IgnKindSt,
+     acceptSkSimple, // also accept skSimple
 
      IgnKindPtr,           // Ignore skSimple, ONLY if got kind=skPointer
      IgnKindPtrDw,
@@ -112,7 +113,6 @@ type
   TWatchExpectation = record
     TestName: String;
     Expression:  string;
-    DspFormat: TWatchDisplayFormat;
     RepeatCount: Integer;
     EvaluateFlags: TWatcheEvaluateFlags;
     StackFrame: Integer;
@@ -141,28 +141,28 @@ type
 
 
 function AddWatchExp(var ExpArray: TWatchExpectationArray;
-  const AnExpr:  string; AFmt: TWatchDisplayFormat;
+  const AnExpr:  string;
   const AMtch: string; AKind: TDBGSymbolKind; const ATpNm: string;
   AFlgs: TWatchExpectationFlags = [];
   AStackFrame: Integer = 0;
   AMinGdb: Integer = 0; AMinFpc: Integer = 0
 ): PWatchExpectation;
 function AddWatchExp(var ExpArray: TWatchExpectationArray;
-  const AnExpr:  string; AFmt: TWatchDisplayFormat; AEvaluateFlags: TWatcheEvaluateFlags;
+  const AnExpr:  string; AEvaluateFlags: TWatcheEvaluateFlags;
   const AMtch: string; AKind: TDBGSymbolKind; const ATpNm: string;
   AFlgs: TWatchExpectationFlags = [];
   AStackFrame: Integer = 0;
   AMinGdb: Integer = 0; AMinFpc: Integer = 0
 ): PWatchExpectation;
 function AddWatchExp(var ExpArray: TWatchExpectationArray; ATestName: String;
-  const AnExpr:  string; AFmt: TWatchDisplayFormat;
+  const AnExpr:  string;
   const AMtch: string; AKind: TDBGSymbolKind; const ATpNm: string;
   AFlgs: TWatchExpectationFlags = [];
   AStackFrame: Integer = 0;
   AMinGdb: Integer = 0; AMinFpc: Integer = 0
 ): PWatchExpectation;
 function AddWatchExp(var ExpArray: TWatchExpectationArray; ATestName: String;
-  const AnExpr:  string; AFmt: TWatchDisplayFormat; AEvaluateFlags: TWatcheEvaluateFlags;
+  const AnExpr:  string; AEvaluateFlags: TWatcheEvaluateFlags;
   const AMtch: string; AKind: TDBGSymbolKind; const ATpNm: string;
   AFlgs: TWatchExpectationFlags = [];
   AStackFrame: Integer = 0;
@@ -202,37 +202,37 @@ procedure AddMemberExpect(AWatchExp: PWatchExpectation;
 implementation
 
 function AddWatchExp(var ExpArray: TWatchExpectationArray;
-  const AnExpr: string; AFmt: TWatchDisplayFormat; const AMtch: string;
+  const AnExpr: string; const AMtch: string;
   AKind: TDBGSymbolKind; const ATpNm: string; AFlgs: TWatchExpectationFlags;
   AStackFrame: Integer; AMinGdb: Integer; AMinFpc: Integer): PWatchExpectation;
 begin
   Result := AddWatchExp(ExpArray,
-    AnExpr + ' (' + TWatchDisplayFormatNames[AFmt] + ', []',
-    AnExpr, AFmt, [], AMtch, AKind, ATpNm, AFlgs, AStackFrame, AMinGdb, AMinFpc);
+    AnExpr + ' []',
+    AnExpr, [], AMtch, AKind, ATpNm, AFlgs, AStackFrame, AMinGdb, AMinFpc);
 end;
 
 function AddWatchExp(var ExpArray: TWatchExpectationArray;
-  const AnExpr: string; AFmt: TWatchDisplayFormat;
+  const AnExpr: string;
   AEvaluateFlags: TWatcheEvaluateFlags; const AMtch: string;
   AKind: TDBGSymbolKind; const ATpNm: string; AFlgs: TWatchExpectationFlags;
   AStackFrame: Integer; AMinGdb: Integer; AMinFpc: Integer): PWatchExpectation;
 begin
   Result := AddWatchExp(ExpArray,
-    AnExpr + ' (' + TWatchDisplayFormatNames[AFmt] + ', ' + dbgs(AEvaluateFlags) + ')',
-    AnExpr, AFmt, AEvaluateFlags, AMtch, AKind, ATpNm, AFlgs, AStackFrame, AMinGdb, AMinFpc);
+    AnExpr + ' (' + dbgs(AEvaluateFlags) + ')',
+    AnExpr, AEvaluateFlags, AMtch, AKind, ATpNm, AFlgs, AStackFrame, AMinGdb, AMinFpc);
 end;
 
 function AddWatchExp(var ExpArray: TWatchExpectationArray; ATestName: String;
-  const AnExpr: string; AFmt: TWatchDisplayFormat; const AMtch: string;
+  const AnExpr: string; const AMtch: string;
   AKind: TDBGSymbolKind; const ATpNm: string; AFlgs: TWatchExpectationFlags;
   AStackFrame: Integer; AMinGdb: Integer; AMinFpc: Integer): PWatchExpectation;
 begin
-  Result := AddWatchExp(ExpArray, ATestName, AnExpr, AFmt, [], AMtch, AKind, ATpNm,
+  Result := AddWatchExp(ExpArray, ATestName, AnExpr, [], AMtch, AKind, ATpNm,
     AFlgs, AStackFrame, AMinGdb, AMinFpc);
 end;
 
 function AddWatchExp(var ExpArray: TWatchExpectationArray; ATestName: String;
-  const AnExpr: string; AFmt: TWatchDisplayFormat;
+  const AnExpr: string;
   AEvaluateFlags: TWatcheEvaluateFlags; const AMtch: string;
   AKind: TDBGSymbolKind; const ATpNm: string; AFlgs: TWatchExpectationFlags;
   AStackFrame: Integer; AMinGdb: Integer; AMinFpc: Integer): PWatchExpectation;
@@ -243,7 +243,6 @@ begin
   with ExpArray[Length(ExpArray)-1] do begin
     TestName     := ATestName;
     Expression   := AnExpr;
-    DspFormat    := AFmt;
     RepeatCount  := 0;
     EvaluateFlags := AEvaluateFlags;
     TheWatch := nil;
@@ -402,7 +401,7 @@ var
   fld: TDBGField;
   MemberTests: TFullTypeMemberExpectationResultArray;
 
-  function CmpNames(const TestName, Exp, Got: String; Match: Boolean): Boolean;
+  function CmpNames(const TestName, Exp: String; Got: String; Match: Boolean): Boolean;
   begin
     if Match then begin
       if Frx = nil then Frx := TRegExpr.Create;
@@ -410,7 +409,10 @@ var
       Frx.Expression := Exp;
       TestTrue(TestName + ' matches '+Exp+' but was '+Got,  Frx.Exec(Got), DataRes.MinGdb, DataRes.MinFpc, IgnoreText);
      end
-     else TestEquals(TestName + ' equals ',  LowerCase(Exp), LowerCase(Got), DataRes.MinGdb, DataRes.MinFpc, IgnoreText);
+     else begin
+       if LowerCase(Got) = 'ansichar' then Got := 'char'; // 3.3.1 returns ansichar
+       TestEquals(TestName + ' equals ',  LowerCase(Exp), LowerCase(Got), DataRes.MinGdb, DataRes.MinFpc, IgnoreText);
+     end;
   end;
 
 begin
@@ -431,7 +433,7 @@ begin
 
     // Get Value
     n := Data.TestName;
-    if n = '' then n := Data.Expression + ' (' + TWatchDisplayFormatNames[Data.DspFormat] + ', ' + dbgs(Data.EvaluateFlags) + ' RepCnt=' + dbgs(Data.RepeatCount) + ')';
+    if n = '' then n := Data.Expression + ' (' + dbgs(Data.EvaluateFlags) + ' RepCnt=' + dbgs(Data.RepeatCount) + ')';
     Name := Name + ' ' + n + ' ::: '+adbg.GetLocation.SrcFile+' '+IntToStr(ADbg.GetLocation.SrcLine);
     LogToFile('###### ' + Name + '###### '+LineEnding);
     flag := AWatch <> nil; // test for typeinfo/kind  // Awatch=nil > direct gdb command
@@ -488,14 +490,19 @@ begin
       else
       case wv.ResultData.ValueKind of
         rdkString:         s := 'skString';
+        rdkChar:           s := 'skChar';
         rdkWideString:     s := 'skWideString';
         rdkSignedNumVal:   s := 'skSimple';  // 'skInteger'
         rdkUnsignedNumVal: s := 'skSimple';
         rdkPointerVal:     s := 'skPointer';
         rdkFloatVal:       s := 'skFloat';
+        rdkEnum:           s := 'skEnum';
+        rdkEnumVal:        s := 'skEnumValue';
+        rdkBool:           s := 'skBoolean';
       end;
     end;
     WriteStr(s2, DataRes.ExpKind);
+    if (acceptSkSimple in DataRes.Flgs) and (s = 'skSimple') then s2 := 'skSimple';
     IgnoreText := '';    if IgnoreKind then IgnoreText := 'Ignored by flag';
     if IsValid and HasTpInfo then begin
       if (not IgnoreKind) and IgnoreKindPtr and (WV.TypeInfo.Kind = skPointer) then IgnoreText := 'Ignored by flag (Kind may be Ptr)';
@@ -600,7 +607,6 @@ begin
     if not SkipTest(ExpectList[i]) then begin
       ExpectList[i].TheWatch := TTestWatch.Create(AWatches);
       ExpectList[i].TheWatch.Expression := ExpectList[i].Expression;
-      ExpectList[i].TheWatch.DisplayFormat := ExpectList[i].DspFormat;
       ExpectList[i].TheWatch.RepeatCount := ExpectList[i].RepeatCount;
       ExpectList[i].TheWatch.EvaluateFlags:= ExpectList[i].EvaluateFlags;
       ExpectList[i].TheWatch.enabled := True;
@@ -642,6 +648,7 @@ end;
 
 initialization
   TheWatchPrinter := TWatchResultPrinter.Create;
+  TheWatchPrinter.FormatFlags := [];
 
 finalization
   FreeAndNil(Frx);

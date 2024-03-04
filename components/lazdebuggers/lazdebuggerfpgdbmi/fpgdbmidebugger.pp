@@ -14,8 +14,8 @@ uses
   {$ENDIF}
   Classes, sysutils, math, FpdMemoryTools, FpDbgInfo, FpDbgClasses,
   GDBMIDebugger, DbgIntfBaseTypes, DbgIntfDebuggerBase, GDBMIMiscClasses,
-  GDBTypeInfo, LCLProc, Forms, FpDbgLoader, FpDbgDwarf, LazLoggerBase,
-  LazLoggerProfiling, LazClasses, FpPascalParser, FpPascalBuilder,
+  GDBTypeInfo, LCLProc, Forms, FpDbgLoader, FpDbgDwarf, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif},
+  LazClasses, FpPascalParser, FpPascalBuilder,
   FpErrorMessages, FpDbgDwarfDataClasses, FpDbgDwarfFreePascal, FpDbgCommon,
   FpWatchResultData, MenuIntf, LazDebuggerIntf, LazDebuggerIntfBaseTypes;
 
@@ -1025,7 +1025,6 @@ var
   PasExpr, PasExpr2: TFpPascalExpression;
   ResValue: TFpValue;
   s: String;
-  DispFormat: TWatchDisplayFormat;
   RepeatCnt: Integer;
   TiSym: TFpSymbol;
 
@@ -1040,6 +1039,8 @@ var
 var
   CastName: String;
   WatchResConv: TFpWatchResultConvertor;
+  ddf: TDataDisplayFormat;
+  AMemDump: Boolean;
 begin
   Result := False;
   ATypeInfo := nil;
@@ -1057,12 +1058,10 @@ begin
 
   if AWatchValue <> nil then begin
     Ctx := GetInfoContextForContext(AWatchValue.ThreadId, AWatchValue.StackFrame);
-    DispFormat := AWatchValue.DisplayFormat;
     RepeatCnt := AWatchValue.RepeatCount;
   end
   else begin
     Ctx := GetInfoContextForContext(CurrentThreadId, CurrentStackFrame);
-    DispFormat := wdfDefault;
     RepeatCnt := -1;
   end;
   if Ctx = nil then exit;
@@ -1082,13 +1081,11 @@ begin
     if not IsWatchValueAlive then exit;
 
     if not PasExpr.Valid then begin
-DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
       if ErrorCode(PasExpr.Error) <> fpErrAnyError then begin
         Result := True;
-        AResText := ErrorHandler.ErrorAsString(PasExpr.Error);;
+        AResText := ErrorHandler.ErrorAsString(PasExpr.Error);
         if AWatchValue <> nil then begin;
-          AWatchValue.Value    := AResText;
-          AWatchValue.Validity := ddsError;
+          AWatchValue.ResData.CreateError(AResText);
         end;
         exit;
       end;
@@ -1123,9 +1120,12 @@ DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
       end;
     end;
 
+    AMemDump := (defMemDump in EvalFlags) or
+                ( (ResValue <> nil) and (ResValue.Kind = skAddress) );
+
     if (AWatchValue <> nil) and
        (ResValue <> nil) and (not IsError(ResValue.LastError)) and
-       (DispFormat <> wdfMemDump) and (AWatchValue.RepeatCount <= 0)  // TODO
+       (not AMemDump) and (AWatchValue.RepeatCount <= 0)  // TODO
     then begin
       WatchResConv := TFpWatchResultConvertor.Create(Ctx.LocationContext);
       Result := WatchResConv.WriteWatchResultData(ResValue, AWatchValue.ResData);
@@ -1135,6 +1135,8 @@ DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
     end;
 
 
+    ddf := ddfDefault;
+    if AMemDump then ddf := ddfMemDump;
     TiSym := ResValue.DbgSymbol;
     if (ResValue.Kind = skNone) and (TiSym <> nil) and (TiSym.SymbolType = stType) then begin
       if GetTypeAsDeclaration(AResText, TiSym) then
@@ -1147,16 +1149,16 @@ DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
       Result := True;
       if AWatchValue <> nil then begin
         if not IsWatchValueAlive then exit;
-        AWatchValue.Value    := AResText;
+        AWatchValue.ResData.CreatePrePrinted(AResText);
         AWatchValue.Validity := ddsValid; // TODO ddsError ?
       end;
       exit;
     end
     else begin
       if defNoTypeInfo in EvalFlags then
-        FPrettyPrinter.PrintValue(AResText, ResValue, DispFormat, RepeatCnt)
+        FPrettyPrinter.PrintValue(AResText, ResValue, ddf, RepeatCnt)
       else
-        FPrettyPrinter.PrintValue(AResText, ATypeInfo, ResValue, DispFormat, RepeatCnt);
+        FPrettyPrinter.PrintValue(AResText, ATypeInfo, ResValue, ddf, RepeatCnt);
     end;
     if not IsWatchValueAlive then exit;
 
@@ -1165,7 +1167,7 @@ DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
       PasExpr.FixPCharIndexAccess := True;
       PasExpr.ResetEvaluation;
       ResValue := PasExpr.ResultValue;
-      if (ResValue=nil) or (not FPrettyPrinter.PrintValue(s, ResValue, DispFormat, RepeatCnt)) then
+      if (ResValue=nil) or (not FPrettyPrinter.PrintValue(s, ResValue, ddf, RepeatCnt)) then
         s := 'Failed';
       AResText := 'PChar: '+AResText+ LineEnding + 'String: '+s;
     end
@@ -1177,12 +1179,15 @@ DebugLn(DBG_VERBOSE, [ErrorHandler.ErrorAsString(PasExpr.Error)]);
       Result := True;
       debugln(DBG_VERBOSE, ['TFPGDBMIWatches.InternalRequestData   GOOOOOOD ', AExpression]);
       if AWatchValue <> nil then begin
-        AWatchValue.Value    := AResText;
         AWatchValue.TypeInfo := ATypeInfo;
-        if IsError(ResValue.LastError) then
-          AWatchValue.Validity := ddsError
-        else
+        if IsError(ResValue.LastError) then begin
+          AWatchValue.ResData.CreateError(AResText);
+          AWatchValue.Validity := ddsError;
+        end
+        else begin
+          AWatchValue.ResData.CreatePrePrinted(AResText);
           AWatchValue.Validity := ddsValid;
+        end;
       end;
     end;
 

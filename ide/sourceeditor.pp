@@ -7386,7 +7386,7 @@ begin
       MaybeAddPopup('.pp');
       MaybeAddPopup('.p');
     end;
-    if FilenameExtIn(ShortFileName, ['lpi','lpk'], true) then begin
+    if FilenameExtIn(ShortFileName, ['lpi','lpk'], false) then begin
       AddContextPopupMenuItem(Format(lisOpenLfm,[ShortFileName]),true,@PopupMenuOpenFile);
     end;
     FPDocSrc:=LazarusHelp.GetFPDocFilenameForSource(CurFilename,false,AnOwner);
@@ -8514,7 +8514,7 @@ begin
   aFilename:=copy(aFilename,p,length(aFilename)-(length(ResStr)-2));
   if not FilenameIsAbsolute(aFilename) then
     aFilename:=TrimFilename(ExtractFilePath(GetActiveSE.Filename)+aFilename);
-  if FilenameExtIs(aFilename,'lpi',true) then
+  if FilenameExtIs(aFilename,'lpi',false) then
     MainIDEInterface.DoOpenProjectFile(aFilename,[ofOnlyIfExists,ofAddToRecent,ofUseCache])
   else if FilenameExtIs(aFilename,'lpk',true) then
     PackageEditingInterface.DoOpenPackageFile(aFilename,[pofAddToRecent],false)

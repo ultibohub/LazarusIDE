@@ -55,9 +55,9 @@ type
     procedure ClearAllTestArrays;
     function  HasTestArraysData: Boolean;
     // using FCurrentExpArray
-    function Add(AnExpr:  string; AFmt: TWatchDisplayFormat; AMtch: string;
+    function Add(AnExpr:  string; AMtch: string;
                  AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags): PWatchExpectation;
-    function Add(AnExpr:  string; AFmt: TWatchDisplayFormat; AEvalFlags: TWatcheEvaluateFlags; AMtch: string;
+    function Add(AnExpr:  string; AEvalFlags: TWatcheEvaluateFlags; AMtch: string;
                  AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags): PWatchExpectation;
     function AddFmtDef        (AnExpr, AMtch: string; AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags=[]): PWatchExpectation;
     function AddFmtDef        (AnExpr: String; AEvalFlags: TWatcheEvaluateFlags; AMtch: string; AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags=[]): PWatchExpectation;
@@ -154,29 +154,29 @@ begin
 
 end;
 
-function TTestWatches.Add(AnExpr: string; AFmt: TWatchDisplayFormat; AMtch: string;
+function TTestWatches.Add(AnExpr: string; AMtch: string;
   AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags): PWatchExpectation;
 begin
-  Result := AddWatchExp(FCurrentExpArray^, AnExpr, AFmt, AMtch, AKind, ATpNm, AFlgs );
+  Result := AddWatchExp(FCurrentExpArray^, AnExpr, AMtch, AKind, ATpNm, AFlgs );
 end;
 
-function TTestWatches.Add(AnExpr: string; AFmt: TWatchDisplayFormat;
+function TTestWatches.Add(AnExpr: string;
   AEvalFlags: TWatcheEvaluateFlags; AMtch: string; AKind: TDBGSymbolKind; ATpNm: string;
   AFlgs: TWatchExpectationFlags): PWatchExpectation;
 begin
-  Result := AddWatchExp(FCurrentExpArray^, AnExpr, AFmt, AEvalFlags, AMtch, AKind, ATpNm, AFlgs );
+  Result := AddWatchExp(FCurrentExpArray^, AnExpr, AEvalFlags, AMtch, AKind, ATpNm, AFlgs );
 end;
 
 function TTestWatches.AddFmtDef(AnExpr, AMtch: string; AKind: TDBGSymbolKind; ATpNm: string;
   AFlgs: TWatchExpectationFlags): PWatchExpectation;
 begin
-  Result := Add(AnExpr, wdfDefault, AMtch, AKind, ATpNm, AFlgs );
+  Result := Add(AnExpr,  AMtch, AKind, ATpNm, AFlgs );
 end;
 
 function TTestWatches.AddFmtDef(AnExpr: String; AEvalFlags: TWatcheEvaluateFlags; AMtch: string;
   AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags): PWatchExpectation;
 begin
-  Result := Add(AnExpr, wdfDefault, AEvalFlags, AMtch, AKind, ATpNm, AFlgs );
+  Result := Add(AnExpr,  AEvalFlags, AMtch, AKind, ATpNm, AFlgs );
 end;
 
 function TTestWatches.AddStringFmtDef(AnExpr, AMtch, ATpNm: string;
@@ -187,7 +187,7 @@ begin
   // but the IDE only gets that with Dwarf-3
   // might be prefixed, with address
   Result := AddFmtDef(AnExpr, '''' + AMtch + '''$', skPOINTER, ATpNm, AFlgs );
-  UpdExpRes(Result, stDwarf3,           skSimple);
+  UpdExpRes(Result, stDwarf3, '''' + AMtch + '''$', skString, ATpNm, AFlgs+[acceptSkSimple]);
 end;
 
 function TTestWatches.AddShortStrFmtDef(AnExpr, AMtch: string; ATpNm: string;
@@ -196,7 +196,7 @@ begin
   // TODO, encoding of special chars
   // shortstring
   // might be prefixed, with address
-  Result := AddFmtDef(AnExpr, '''' + AMtch + '''$', skSimple, ATpNm, AFlgs );
+  Result := AddFmtDef(AnExpr, '''' + AMtch + '''$', skString, ATpNm, AFlgs+[acceptSkSimple] );
 end;
 
 function TTestWatches.AddCharFmtDef(AnExpr, AMtch: string; ATpNm: string;
@@ -204,7 +204,7 @@ function TTestWatches.AddCharFmtDef(AnExpr, AMtch: string; ATpNm: string;
 begin
   // TODO, encoding of special chars
   // might be prefixed, with address
-  Result := AddFmtDef(AnExpr, '''' + AMtch + '''$', skSimple, ATpNm, AFlgs );
+  Result := AddFmtDef(AnExpr, '''' + AMtch + '''$', skChar, ATpNm, AFlgs+[acceptSkSimple] );
 end;
 
 function TTestWatches.AddPointerFmtDef(AnExpr, ATpNm: string;
@@ -230,11 +230,11 @@ begin
   if not TestControlCanTest(ControlTestWatchGdb) then exit;
   FCurrentExpArray := @ExpectBreakFooGdb;
 
-  Add('ptype ArgTFoo',  wdfDefault, 'type = \^TFoo = class : PUBLIC TObject', skClass, '', []);
-  Add('ptype ArgTFoo^', wdfDefault, 'type = TFoo = class : PUBLIC TObject',   skClass, '', []);
+  Add('ptype ArgTFoo',   'type = \^TFoo = class : PUBLIC TObject', skClass, '', []);
+  Add('ptype ArgTFoo^',  'type = TFoo = class : PUBLIC TObject',   skClass, '', []);
 
-  Add('-data-evaluate-expression sizeof(ArgTFoo)',  wdfDefault, 'value="(4|8)"|(parse|syntax) error in expression', skClass, '',  []);
-  Add('-data-evaluate-expression sizeof(ArgTFoo^)', wdfDefault, 'value="\d\d+"|(parse|syntax) error in expression', skClass, '',  []);
+  Add('-data-evaluate-expression sizeof(ArgTFoo)',   'value="(4|8)"|(parse|syntax) error in expression', skClass, '',  []);
+  Add('-data-evaluate-expression sizeof(ArgTFoo^)',  'value="\d\d+"|(parse|syntax) error in expression', skClass, '',  []);
 
   if RUN_GDB_TEST_ONLY > 0 then begin
     ExpectBreakFooGdb[0] := ExpectBreakFooGdb[abs(RUN_GDB_TEST_ONLY)];
@@ -482,8 +482,7 @@ begin
   //AddFmtDef('VArgPPFoo.ValueInt',      'error',            skSimple,   '',  []);
 
 
-  Add('ArgTFoo',    wdfPointer,  Match_Pointer,                           skClass,   'TFoo',  []);
-  Add('ArgTFoo',    wdfMemDump,  ':.*?6D 65 6D 20 6F 66 20 54 46 6F 6F',  skClass,   'TFoo',  []);
+  Add('ArgTFoo',  [defMemDump],  ':.*?6D 65 6D 20 6F 66 20 54 46 6F 6F',  skClass,   'TFoo',  []);
 
   {%region    * Classes * typecasts }
   // typecast does not change class
@@ -696,23 +695,23 @@ begin
 
   // accessing char
   // TODO: only works with dwarf 3
-  r:=AddFmtDef('ArgTMyAnsiString[1]',      '.',      skSimple,   'char', []);
-                    UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
-  r:=AddFmtDef('VArgTMyAnsiString[1]',     '.',      skSimple,   'char', []);
-                    UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
-  r:=AddFmtDef('ArgPMyAnsiString^[1]',     '.',      skSimple,   'char', []);
-                    UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
-  r:=AddFmtDef('VArgPMyAnsiString^[1]',    '.',      skSimple,   'char', []);
+  r:=AddFmtDef('ArgTMyAnsiString[1]',      '.',      skChar,   'char', [acceptSkSimple]);
+                    UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
+  r:=AddFmtDef('VArgTMyAnsiString[1]',     '.',      skChar,   'char', [acceptSkSimple]);
+                    UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
+  r:=AddFmtDef('ArgPMyAnsiString^[1]',     '.',      skChar,   'char', [acceptSkSimple]);
+                    UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
+  r:=AddFmtDef('VArgPMyAnsiString^[1]',    '.',      skChar,   'char', [acceptSkSimple]);
      UpdResMinFpc(r, stDwarf, 020600); UpdResMinFpc(r, stDwarfSet, 020600);
-     UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
-  r:=AddFmtDef('AnsiString(ArgTMyAnsiString)[1]',      '.',      skSimple,   'char', []);
-                    UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
-  r:=AddFmtDef('AnsiString(VArgTMyAnsiString)[1]',     '.',      skSimple,   'char', []);
-                    UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
+     UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
+  r:=AddFmtDef('AnsiString(ArgTMyAnsiString)[1]',      '.',      skChar,   'char', [acceptSkSimple]);
+                    UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
+  r:=AddFmtDef('AnsiString(VArgTMyAnsiString)[1]',     '.',      skChar,   'char', [acceptSkSimple]);
+                    UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
 
   // accessing char, after typecast
-  r:=AddFmtDef('AnsiString(ArgTMyAnsiString)[1]',      '.',      skSimple,   'char', []);
-                    UpdExpRes(r, stDwarf3,    '''M''$', skSimple,   'char', []);
+  r:=AddFmtDef('AnsiString(ArgTMyAnsiString)[1]',      '.',      skChar,   'char', [acceptSkSimple]);
+                    UpdExpRes(r, stDwarf3,    '''M''$', skChar,   'char', [acceptSkSimple]);
 
 
   // string in array
@@ -787,19 +786,19 @@ begin
   r:=AddStringFmtDef('ArgTStringHolderObj.FTMyAnsiString',   'Obj1 MyAnsi',         'AnsiString', []);
   r:=AddStringFmtDef('VArgTStringHolderObj.FTMyAnsiString',  'Obj2 MyAnsi',         'AnsiString', []);
 
-  r:=AddFmtDef('ArgTStringHolderObj.FTMyAnsiString[1]',   '.$',  skSimple,    'char', []);
-     UpdExpRes(r, stDwarf3,                         '''O''$', skSimple);
-  r:=AddFmtDef('VArgTStringHolderObj.FTMyAnsiString[1]',   '.$',  skSimple,    'char', []);
-     UpdExpRes(r, stDwarf3,                         '''O''$', skSimple);
+  r:=AddFmtDef('ArgTStringHolderObj.FTMyAnsiString[1]',   '.$',  skChar,    'char', [acceptSkSimple]);
+     UpdExpRes(r, stDwarf3,                         '''O''$', skChar,    'char', [acceptSkSimple]);
+  r:=AddFmtDef('VArgTStringHolderObj.FTMyAnsiString[1]',   '.$',  skChar,    'char', [acceptSkSimple]);
+     UpdExpRes(r, stDwarf3,                         '''O''$', skChar,    'char', [acceptSkSimple]);
 
   // string in rec
   r:=AddStringFmtDef('ArgTStringHolderRec.FTMyAnsiString',   'Rec1 MyAnsi',         'AnsiString', [fTstSkipDwarf3]);
   r:=AddStringFmtDef('VArgTStringHolderRec.FTMyAnsiString',  'Rec2 MyAnsi',         'AnsiString', [fTstSkipDwarf3]);
 
-  r:=AddFmtDef('ArgTStringHolderRec.FTMyAnsiString[1]',   '.$',  skSimple,    'char', [fTstSkipDwarf3]);
-     UpdExpRes(r, stDwarf3,                         '''R''$', skSimple);
-  r:=AddFmtDef('VArgTStringHolderRec.FTMyAnsiString[1]',   '.$',  skSimple,    'char', [fTstSkipDwarf3]);
-     UpdExpRes(r, stDwarf3,                         '''R''$', skSimple);
+  r:=AddFmtDef('ArgTStringHolderRec.FTMyAnsiString[1]',   '.$',  skChar,    'char', [fTstSkipDwarf3, acceptSkSimple]);
+     UpdExpRes(r, stDwarf3,                         '''R''$', skChar,    'char', [fTstSkipDwarf3, acceptSkSimple]);
+  r:=AddFmtDef('VArgTStringHolderRec.FTMyAnsiString[1]',   '.$',  skChar,    'char', [fTstSkipDwarf3, acceptSkSimple]);
+     UpdExpRes(r, stDwarf3,                         '''R''$', skChar,    'char', [fTstSkipDwarf3, acceptSkSimple]);
 
 
   //r:=AddFmtDef('ArgTNewAnsiString',       '''NewAnsi''$',     skPOINTER,   '(TNew)?AnsiString', []);
@@ -815,12 +814,12 @@ begin
 
 
 
-  AddFmtDef('ArgTMyShortString',        '''short''$',        skSimple,      '^(TMy)?ShortString$', [fTpMtch]);
-  AddFmtDef('VArgTMyShortString',       '''short''$',        skSimple,      '^(TMy)?ShortString$', [fTpMtch]);
+  AddFmtDef('ArgTMyShortString',        '''short''$',        skString,      '^(TMy)?ShortString$', [fTpMtch, acceptSkSimple]);
+  AddFmtDef('VArgTMyShortString',       '''short''$',        skString,      '^(TMy)?ShortString$', [fTpMtch, acceptSkSimple]);
   AddFmtDef('ArgPMyShortString',        Match_Pointer,      skPointer,     'P(My)?ShortString', [fTpMtch]);
   AddFmtDef('VArgPMyShortString',       Match_Pointer,      skPointer,     'P(My)?ShortString', [fTpMtch]);
-  AddFmtDef('ArgPMyShortString^',        '''short''$',        skSimple,      '^(TMy)?ShortString$', [fTpMtch]);
-  r := AddFmtDef('VArgPMyShortString^',       '''short''$',        skSimple,      '^(TMy)?ShortString$', [fTpMtch]);
+  AddFmtDef('ArgPMyShortString^',        '''short''$',        skString,      '^(TMy)?ShortString$', [fTpMtch, acceptSkSimple]);
+  r := AddFmtDef('VArgPMyShortString^',       '''short''$',        skString,      '^(TMy)?ShortString$', [fTpMtch, acceptSkSimple]);
      UpdResMinFpc(r, stDwarf, 020600); UpdResMinFpc(r, stDwarfSet, 020600);
 
   // string in array
@@ -851,12 +850,12 @@ begin
   r:=AddCharFmtDef('ArgTMyShortStringSArray[4][14]',  '4',      'char', [IgnDwrf2]);
 
   // string in obj
-  r:=AddFmtDef('ArgTStringHolderObj.FTMyShortString',   '''Obj1 Short''$',  skSimple,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3]);
-  r:=AddFmtDef('VArgTStringHolderObj.FTMyShortString',  '''Obj2 Short''$',  skSimple,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3]);
+  r:=AddFmtDef('ArgTStringHolderObj.FTMyShortString',   '''Obj1 Short''$',  skString,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3, acceptSkSimple]);
+  r:=AddFmtDef('VArgTStringHolderObj.FTMyShortString',  '''Obj2 Short''$',  skString,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3, acceptSkSimple]);
 
   // string in rec
-  r:=AddFmtDef('ArgTStringHolderRec.FTMyShortString',   '''Rec1 Short''$',  skSimple,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3]);
-  r:=AddFmtDef('VArgTStringHolderRec.FTMyShortString',  '''Rec2 Short''$',  skSimple,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3]);
+  r:=AddFmtDef('ArgTStringHolderRec.FTMyShortString',   '''Rec1 Short''$',  skString,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3, acceptSkSimple]);
+  r:=AddFmtDef('VArgTStringHolderRec.FTMyShortString',  '''Rec2 Short''$',  skString,     '^(TMy)?ShortString$', [fTpMtch, IgnDwrf3, acceptSkSimple]);
 
 
   (*
@@ -891,17 +890,17 @@ begin
   *)
 
 
-  Add('ArgTMyAnsiString',      wdfMemDump,  ': 4d 79 41 6e 73 69 00',      skPOINTER,      '^(TMy)?AnsiString$', [fTpMtch]);
+  Add('ArgTMyAnsiString',      [defMemDump],  ': 4d 79 41 6e 73 69 00',      skPOINTER,      '^(TMy)?AnsiString$', [fTpMtch]);
 
   // Utf8
   // a single ', must appear double ''
   // reg ex needs \\ for \
-  r:=AddStringFmtDef  ('ConstUtf8TextAnsi',     'a üü1'''' \\\\t 2 \\t 3''#9''4''#13''5\\n6',         'AnsiString', []);
-  r:=AddShortStrFmtDef('ConstUtf8TextShort',    'a üü1'''' \\\\t 2 \\t 3''#9''4''#13''5\\n6',         'ShortString', []);
-  r:=AddShortStrFmtDef('ConstUtf8TextShortStr', 'a üü1'''' \\\\t 2 \\t 3''#9''4''#13''5\\n6',         'ShortString', []);
-  r:=AddStringFmtDef  ('VarUtf8TextAnsi',       'a üü1'''' \\\\t 2 \\t 3''#9''4''#13''5\\n6',         'AnsiString', []);
-  r:=AddShortStrFmtDef('VarUtf8TextShort',      'a üü1'''' \\\\t 2 \\t 3''#9''4''#13''5\\n6',         'ShortString', []);
-  r:=AddShortStrFmtDef('VarUtf8TextShortStr',   'a üü1'''' \\\\t 2 \\t 3''#9''4''#13''5\\n6',         'ShortString', []);
+  r:=AddStringFmtDef  ('ConstUtf8TextAnsi',     'a üü1'''' \\\\t 2 \\t 3''#\$?0*9''4''#(13|\$0*D)''5\\n6',         'AnsiString', []);
+  r:=AddShortStrFmtDef('ConstUtf8TextShort',    'a üü1'''' \\\\t 2 \\t 3''#\$?0*9''4''#(13|\$0*D)''5\\n6',         'ShortString', []);
+  r:=AddShortStrFmtDef('ConstUtf8TextShortStr', 'a üü1'''' \\\\t 2 \\t 3''#\$?0*9''4''#(13|\$0*D)''5\\n6',         'ShortString', []);
+  r:=AddStringFmtDef  ('VarUtf8TextAnsi',       'a üü1'''' \\\\t 2 \\t 3''#\$?0*9''4''#(13|\$0*D)''5\\n6',         'AnsiString', []);
+  r:=AddShortStrFmtDef('VarUtf8TextShort',      'a üü1'''' \\\\t 2 \\t 3''#\$?0*9''4''#(13|\$0*D)''5\\n6',         'ShortString', []);
+  r:=AddShortStrFmtDef('VarUtf8TextShortStr',   'a üü1'''' \\\\t 2 \\t 3''#\$?0*9''4''#(13|\$0*D)''5\\n6',         'ShortString', []);
 
   r:=AddStringFmtDef  ('ConstUtf8TextAnsi2',     'üü''''1',         'AnsiString', []);
   r:=AddShortStrFmtDef('ConstUtf8TextShort2',    'üü''''1',         'ShortString', []);
@@ -910,12 +909,12 @@ begin
   r:=AddShortStrFmtDef('VarUtf8TextShort2',      'üü''''1',         'ShortString', []);
   r:=AddShortStrFmtDef('VarUtf8TextShortStr2',   'üü''''1',         'ShortString', []);
 
-  r:=AddStringFmtDef  ('ConstUtf8TextAnsiBad',     'a ''#170''b',         'AnsiString', []);
-  r:=AddShortStrFmtDef('ConstUtf8TextShortBad', 'a ''#170''b',         'ShortString', []);
-  r:=AddShortStrFmtDef('ConstUtf8TextShortStrBad', 'a ''#170''b',         'ShortString', []);
-  r:=AddStringFmtDef  ('VarUtf8TextAnsiBad',       'a ''#170''b',         'AnsiString', []);
-  r:=AddShortStrFmtDef('VarUtf8TextShortBad',   'a ''#170''b',         'ShortString', []);
-  r:=AddShortStrFmtDef('VarUtf8TextShortStrBad',   'a ''#170''b',         'ShortString', []);
+  r:=AddStringFmtDef  ('ConstUtf8TextAnsiBad',     'a ''#(170|\$AA)''b',         'AnsiString', []);
+  r:=AddShortStrFmtDef('ConstUtf8TextShortBad',    'a ''#(170|\$AA)''b',         'ShortString', []);
+  r:=AddShortStrFmtDef('ConstUtf8TextShortStrBad', 'a ''#(170|\$AA)''b',         'ShortString', []);
+  r:=AddStringFmtDef  ('VarUtf8TextAnsiBad',       'a ''#(170|\$AA)''b',         'AnsiString', []);
+  r:=AddShortStrFmtDef('VarUtf8TextShortBad',      'a ''#(170|\$AA)''b',         'ShortString', []);
+  r:=AddShortStrFmtDef('VarUtf8TextShortStrBad',   'a ''#(170|\$AA)''b',         'ShortString', []);
 
   {%endregion    * Strings * }
 
@@ -1057,21 +1056,21 @@ procedure TTestWatches.AddExpectBreakFooArray;
   function AddRecForArrFmtDef  (AnExpr: string; ARecSuffix, AValue: Integer;  AFlgs: TWatchExpectationFlags=[]): PWatchExpectation;
   begin
     case ARecSuffix of
-      1: Result := Add(AnExpr, wdfDefault, MatchRecord('TRecForArray1', ' a = '+IntToStr(AValue)), skRecord, 'TRecForArray1', AFlgs );
-      2: Result := Add(AnExpr, wdfDefault, MatchRecord('TRecForArray2', ' c = '+IntToStr(AValue)), skRecord, 'TRecForArray2', AFlgs );
-      3: Result := Add(AnExpr, wdfDefault, MatchRecord('TRecForArray3', ' a = '+IntToStr(AValue)), skRecord, 'TRecForArray3', AFlgs );
-      4: Result := Add(AnExpr, wdfDefault, MatchRecord('TRecForArray4', ' c = '+IntToStr(AValue)), skRecord, 'TRecForArray4', AFlgs );
+      1: Result := Add(AnExpr,  MatchRecord('TRecForArray1', ' a = '+IntToStr(AValue)), skRecord, 'TRecForArray1', AFlgs );
+      2: Result := Add(AnExpr,  MatchRecord('TRecForArray2', ' c = '+IntToStr(AValue)), skRecord, 'TRecForArray2', AFlgs );
+      3: Result := Add(AnExpr,  MatchRecord('TRecForArray3', ' a = '+IntToStr(AValue)), skRecord, 'TRecForArray3', AFlgs );
+      4: Result := Add(AnExpr,  MatchRecord('TRecForArray4', ' c = '+IntToStr(AValue)), skRecord, 'TRecForArray4', AFlgs );
     end;
 
     case ARecSuffix of
-      1,3: Add(AnExpr+'.a', wdfDefault, '^'+IntToStr(AValue)+'$', skSimple, M_Int, AFlgs+[fTpMtch] );
-      2,4: Add(AnExpr+'.c', wdfDefault, '^'+IntToStr(AValue)+'$', skSimple, M_Int, AFlgs+[fTpMtch] );
+      1,3: Add(AnExpr+'.a',  '^'+IntToStr(AValue)+'$', skSimple, M_Int, AFlgs+[fTpMtch] );
+      2,4: Add(AnExpr+'.c',  '^'+IntToStr(AValue)+'$', skSimple, M_Int, AFlgs+[fTpMtch] );
     end;
   end;
 
   function AddArrayFmtDef  (AnExpr, AMtch, ATpNm: string; AFlgs: TWatchExpectationFlags=[]): PWatchExpectation;
   begin
-    Result := Add(AnExpr, wdfDefault, AMtch, skSimple, ATpNm, AFlgs );
+    Result := Add(AnExpr,  AMtch, skSimple, ATpNm, AFlgs );
   end;
 
 var
@@ -1202,13 +1201,13 @@ begin
       //TDynStatArrayPRec2  = array of array [3..5] of ^TRecForArray2;
 
       (* Array in expression*)
-      Add(v+'ArgTDynArrayTRec1[0].a+'+v+'ArgTDynArrayTRec1[1].a', wdfDefault, '^181$', skSimple, M_Int+'|long', [fTpMtch] );
-      Add(v+'ArgTDynArrayTRec1[0].a+'+'ArgTDynArrayTRec1[1].a', wdfDefault, '^181$', skSimple, M_Int+'|long', [fTpMtch] );
-      Add('ArgTDynArrayTRec1[0].a+'+v+'ArgTDynArrayTRec1[1].a', wdfDefault, '^181$', skSimple, M_Int+'|long', [fTpMtch] );
-      Add(v+'ArgTDynArrayTRec1[0].a and '+v+'ArgTDynArrayTRec1[1].a', wdfDefault, '^90$', skSimple, M_Int+'|long', [fTpMtch] );
+      Add(v+'ArgTDynArrayTRec1[0].a+'+v+'ArgTDynArrayTRec1[1].a',  '^181$', skSimple, M_Int+'|long', [fTpMtch] );
+      Add(v+'ArgTDynArrayTRec1[0].a+'+'ArgTDynArrayTRec1[1].a',  '^181$', skSimple, M_Int+'|long', [fTpMtch] );
+      Add('ArgTDynArrayTRec1[0].a+'+v+'ArgTDynArrayTRec1[1].a',  '^181$', skSimple, M_Int+'|long', [fTpMtch] );
+      Add(v+'ArgTDynArrayTRec1[0].a and '+v+'ArgTDynArrayTRec1[1].a',  '^90$', skSimple, M_Int+'|long', [fTpMtch] );
 
-      Add(v+'ArgTDynDynArrayTRec1[1][1].a+'+v+'ArgTDynArrayPRec1[1]^.a', wdfDefault, '^177$', skSimple, M_Int+'|long', [fTpMtch] );
-      Add(v+'ArgTDynArrayPRec1[1]^.a+'+v+'ArgTDynDynArrayTRec1[1][1].a', wdfDefault, '^177$', skSimple, M_Int+'|long', [fTpMtch] );
+      Add(v+'ArgTDynDynArrayTRec1[1][1].a+'+v+'ArgTDynArrayPRec1[1]^.a',  '^177$', skSimple, M_Int+'|long', [fTpMtch] );
+      Add(v+'ArgTDynArrayPRec1[1]^.a+'+v+'ArgTDynDynArrayTRec1[1][1].a',  '^177$', skSimple, M_Int+'|long', [fTpMtch] );
 
       {%endregion DYN ARRAY (norm)}
 
@@ -1546,17 +1545,17 @@ procedure TTestWatches.AddExpectBreakFooMixInfo;
   begin
     if AExpClass = '' then AExpClass := ATCast;
     If ATCast <> ''
-    then Add(ATCast+'('+AVar+')', wdfDefault, MatchClass(AExpClass, ''), skClass, AExpClass, AFlgs)
-    else Add(AVar,                wdfDefault, MatchClass(AExpClass, ''), skClass, AExpClass, AFlgs);
+    then Add(ATCast+'('+AVar+')',  MatchClass(AExpClass, ''), skClass, AExpClass, AFlgs)
+    else Add(AVar,                 MatchClass(AExpClass, ''), skClass, AExpClass, AFlgs);
     if AIntMember <> '' then
-      Add(ATCast+'('+AVar+').'+AIntMember,  wdfDefault, IntToStr(AIntValue), skSimple, M_Int, [fTpMtch]);
+      Add(ATCast+'('+AVar+').'+AIntMember,   IntToStr(AIntValue), skSimple, M_Int, [fTpMtch]);
   end;
   procedure AddTCN(AVar, ATCast:  string; AExpClass: String = ''; AFlgs: TWatchExpectationFlags = []);
   begin
     if AExpClass = '' then AExpClass := ATCast;
     If ATCast <> ''
-    then Add(ATCast+'('+AVar+')', wdfDefault, MatchClassNil(AExpClass), skClass, AExpClass, AFlgs)
-    else Add(AVar,                wdfDefault, MatchClassNil(AExpClass), skClass, AExpClass, AFlgs);
+    then Add(ATCast+'('+AVar+')',  MatchClassNil(AExpClass), skClass, AExpClass, AFlgs)
+    else Add(AVar,                 MatchClassNil(AExpClass), skClass, AExpClass, AFlgs);
   end;
 begin
   if not TestControlCanTest(ControlTestWatchMix) then exit;
@@ -1661,7 +1660,7 @@ begin
   // MIXED symbol info types
   FCurrentExpArray := @ExpectBreakFooArray;
   if FDoStatIntArray then
-  Add('VarStatIntArray',  wdfDefault,     '10,[\s\r\n]+12,[\s\r\n]+14,[\s\r\n]+16,[\s\r\n]+18',
+  Add('VarStatIntArray',       '10,[\s\r\n]+12,[\s\r\n]+14,[\s\r\n]+16,[\s\r\n]+18',
                                 skSimple,       'TStatIntArray',
                                 []);
 end;
@@ -1682,31 +1681,31 @@ begin
 end;
 
 procedure TTestWatches.AddExpectBreakFooAndSubFoo;
-  procedure AddF(AnExpr:  string; AFmt: TWatchDisplayFormat;
+  procedure AddF(AnExpr:  string;
     AMtch: string; AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags;
     AStackFrame: Integer=0);
   begin
     FCurrentExpArray := @ExpectBreakFoo;
-    AddWatchExp(ExpectBreakFoo, AnExpr, AFmt, AMtch, AKind, ATpNm, AFlgs, AStackFrame)
+    AddWatchExp(ExpectBreakFoo, AnExpr, AMtch, AKind, ATpNm, AFlgs, AStackFrame)
   end;
-  procedure AddS(AnExpr:  string; AFmt: TWatchDisplayFormat;
+  procedure AddS(AnExpr:  string;
     AMtch: string; AKind: TDBGSymbolKind; ATpNm: string; AFlgs: TWatchExpectationFlags;
     AStackFrame: Integer=0);
   begin
     FCurrentExpArray := @ExpectBreakSubFoo;
-    AddWatchExp(ExpectBreakSubFoo, AnExpr, AFmt, AMtch, AKind, ATpNm, AFlgs, AStackFrame)
+    AddWatchExp(ExpectBreakSubFoo, AnExpr, AMtch, AKind, ATpNm, AFlgs, AStackFrame)
   end;
 begin
   if not TestControlCanTest(ControlTestWatchCache) then exit;
 //  FCurrentExpArray := @ExpectBreakSubFoo;
 
-  AddS('VarCacheTest1', wdfDefault, MatchRecord('TCacheTest', 'CTVal = 101'),
+  AddS('VarCacheTest1',  MatchRecord('TCacheTest', 'CTVal = 101'),
        skRecord, 'TCacheTest',  []);
-  AddF('VarCacheTest1', wdfDefault, '<TCacheTest(Type)?> = \{.*(<|vptr\$)TObject>?.+CTVal = 201',
+  AddF('VarCacheTest1',  '<TCacheTest(Type)?> = \{.*(<|vptr\$)TObject>?.+CTVal = 201',
        skClass, 'TCacheTest(Type)?',  [fTpMtch]);
 
-  AddS('VarCacheTest2', wdfDefault, '102',  skSimple, M_Int,  [fTpMtch], 0);
-  AddS('VarCacheTest2', wdfDefault, '202',  skSimple, M_Int,  [fTpMtch], 1);
+  AddS('VarCacheTest2',  '102',  skSimple, M_Int,  [fTpMtch], 0);
+  AddS('VarCacheTest2',  '202',  skSimple, M_Int,  [fTpMtch], 1);
 end;
 
 procedure TTestWatches.DoDbgOutput(Sender: TObject; const AText: String);

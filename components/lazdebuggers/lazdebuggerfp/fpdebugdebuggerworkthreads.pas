@@ -233,7 +233,6 @@ type
     FWatchValue: IDbgWatchValueIntf;
     function EvaluateExpression(const AnExpression: String;
                                 AStackFrame, AThreadId: Integer;
-                                ADispFormat: TWatchDisplayFormat;
                                 ARepeatCnt: Integer;
                                 AnEvalFlags: TWatcheEvaluateFlags;
                                 out AResText: String;
@@ -248,7 +247,6 @@ type
   private
     FExpression: String;
     FStackFrame, FThreadId: Integer;
-    FDispFormat: TWatchDisplayFormat;
     FRepeatCnt: Integer;
     FEvalFlags: TWatcheEvaluateFlags;
   protected
@@ -261,7 +259,6 @@ type
                        APriority: TFpThreadWorkerPriority;
                        const AnExpression: String;
                        AStackFrame, AThreadId: Integer;
-                       ADispFormat: TWatchDisplayFormat;
                        ARepeatCnt: Integer;
                        AnEvalFlags: TWatcheEvaluateFlags
                       );
@@ -1116,9 +1113,8 @@ begin
 end;
 
 function TFpThreadWorkerEvaluate.EvaluateExpression(const AnExpression: String;
-  AStackFrame, AThreadId: Integer; ADispFormat: TWatchDisplayFormat;
-  ARepeatCnt: Integer; AnEvalFlags: TWatcheEvaluateFlags; out AResText: String;
-  out ATypeInfo: TDBGType): Boolean;
+  AStackFrame, AThreadId: Integer; ARepeatCnt: Integer; AnEvalFlags: TWatcheEvaluateFlags;
+  out AResText: String; out ATypeInfo: TDBGType): Boolean;
 var
   APasExpr, PasExpr2: TFpPascalExpression;
   PrettyPrinter: TFpPascalPrettyPrinter;
@@ -1127,6 +1123,8 @@ var
   WatchResConv: TFpLazDbgWatchResultConvertor;
   ResData: IDbgWatchDataIntf;
   i: Integer;
+  ddf: TDataDisplayFormat;
+  AMemDump: Boolean;
 begin
   Result := False;
   AResText := '';
@@ -1152,8 +1150,9 @@ begin
       ErrorHandler.OnErrorTextLookup := @GetErrorText;
       AResText := ErrorHandler.ErrorAsString(APasExpr.Error);
       if FWatchValue <> nil then begin
-        FWatchValue.Value := AResText;
-        FWatchValue.Validity := ddsError;
+        FWatchValue.BeginUpdate;
+        FWatchValue.ResData.CreateError(AResText);
+        FWatchValue.EndUpdate;
       end;
       exit;
     end;
@@ -1162,8 +1161,9 @@ begin
     if ResValue = nil then begin
       AResText := 'Error';
       if FWatchValue <> nil then begin
-        FWatchValue.Value := AResText;
-        FWatchValue.Validity := ddsError;
+        FWatchValue.BeginUpdate;
+        FWatchValue.ResData.CreateError(AResText);
+        FWatchValue.EndUpdate;
       end;
       exit;
     end;
@@ -1202,11 +1202,10 @@ begin
       exit;
     end;
 
-    if (ResValue <> nil) and (ResValue.Kind = skAddress) then
-      ADispFormat := wdfMemDump;
+    AMemDump := (defMemDump in AnEvalFlags) or
+                ( (ResValue <> nil) and (ResValue.Kind = skAddress) );
 
-    if (FWatchValue <> nil) and (ResValue <> nil) and
-       (ADispFormat <> wdfMemDump)   // TODO
+    if (FWatchValue <> nil) and (ResValue <> nil) and (not AMemDump)
     then begin
       WatchResConv := TFpLazDbgWatchResultConvertor.Create(FExpressionScope.LocationContext);
       WatchResConv.MaxArrayConv := TFpDebugDebuggerProperties(FDebugger.GetProperties).MemLimits.MaxArrayConversionCnt;
@@ -1245,10 +1244,12 @@ begin
     PrettyPrinter := TFpPascalPrettyPrinter.Create(FExpressionScope.SizeOfAddress);
     PrettyPrinter.Context := FExpressionScope.LocationContext;
 
+    ddf := ddfDefault;
+    if AMemDump then ddf := ddfMemDump;
     if defNoTypeInfo in AnEvalFlags then
-      Result := PrettyPrinter.PrintValue(AResText, ResValue, ADispFormat, ARepeatCnt)
+      Result := PrettyPrinter.PrintValue(AResText, ResValue, ddf, ARepeatCnt)
     else
-      Result := PrettyPrinter.PrintValue(AResText, ATypeInfo, ResValue, ADispFormat, ARepeatCnt);
+      Result := PrettyPrinter.PrintValue(AResText, ATypeInfo, ResValue, ddf, ARepeatCnt);
 
     // PCHAR/String
     if Result and APasExpr.HasPCharIndexAccess and not IsError(ResValue.LastError) then begin
@@ -1256,7 +1257,7 @@ begin
       APasExpr.FixPCharIndexAccess := True;
       APasExpr.ResetEvaluation;
       ResValue := APasExpr.ResultValue;
-      if (ResValue=nil) or (not PrettyPrinter.PrintValue(ResText2, ResValue, ADispFormat, ARepeatCnt)) then
+      if (ResValue=nil) or (not PrettyPrinter.PrintValue(ResText2, ResValue, ddf, ARepeatCnt)) then
         ResText2 := 'Failed';
       AResText := 'PChar: '+AResText+ LineEnding + 'String: '+ResText2;
     end;
@@ -1269,9 +1270,11 @@ begin
     if not Result then
       FreeAndNil(ATypeInfo);
     if FWatchValue <> nil then begin
-      FWatchValue.Value := AResText;
+      FWatchValue.BeginUpdate;
+      FWatchValue.ResData.CreatePrePrinted(AResText);
       FWatchValue.TypeInfo := ATypeInfo;
       FWatchValue.Validity := ddsValid;
+      FWatchValue.EndUpdate;
     end;
   finally
     PrettyPrinter.Free;
@@ -1285,19 +1288,17 @@ end;
 procedure TFpThreadWorkerEvaluateExpr.DoExecute;
 begin
   FRes := EvaluateExpression(FExpression, FStackFrame, FThreadId,
-    FDispFormat, FRepeatCnt, FEvalFlags, FResText, FResDbgType);
+    FRepeatCnt, FEvalFlags, FResText, FResDbgType);
 end;
 
 constructor TFpThreadWorkerEvaluateExpr.Create(ADebugger: TFpDebugDebuggerBase;
   APriority: TFpThreadWorkerPriority; const AnExpression: String; AStackFrame,
-  AThreadId: Integer; ADispFormat: TWatchDisplayFormat; ARepeatCnt: Integer;
-  AnEvalFlags: TWatcheEvaluateFlags);
+  AThreadId: Integer; ARepeatCnt: Integer; AnEvalFlags: TWatcheEvaluateFlags);
 begin
   inherited Create(ADebugger, APriority);
   FExpression := AnExpression;
   FStackFrame := AStackFrame;
   FThreadId := AThreadId;
-  FDispFormat := ADispFormat;
   FRepeatCnt := ARepeatCnt;
   FEvalFlags := AnEvalFlags;
   FAllowFunctions := defAllowFunctionCall in AnEvalFlags;
@@ -1363,8 +1364,7 @@ constructor TFpThreadWorkerCmdEval.Create(ADebugger: TFpDebugDebuggerBase;
   AThreadId: Integer; AnEvalFlags: TWatcheEvaluateFlags;
   ACallback: TDBGEvaluateResultCallback);
 begin
-  inherited Create(ADebugger, APriority, AnExpression, AStackFrame, AThreadId, wdfDefault, 0,
-    AnEvalFlags);
+  inherited Create(ADebugger, APriority, AnExpression, AStackFrame, AThreadId, 0, AnEvalFlags);
   FCallback := ACallback;
 end;
 

@@ -6630,7 +6630,7 @@ var
       //debugln(' Found=',dbgs(Found));
       Node:=Params.NewNode;
       if Found and (Node<>nil) then begin
-        if ((Node.Desc=ctnUseUnit) or (Node.Parent.Desc=ctnUseUnit))
+        if ((Node.Desc=ctnUseUnit) or ((Node.Parent<>nil) and (Node.Parent.Desc=ctnUseUnit)))
             and (Params.NewCodeTool=Self) then begin
           // identifier is a unit reference
           if (DeclarationNode.Desc=ctnSrcName)
@@ -6655,7 +6655,7 @@ var
         //debugln('Context=',NodePathAsString(Params.NewNode),' FoundPos=',Params.NewCodeTool.CleanPosToStr(Params.NewNode.StartPos,true),' SearchPos=',DeclarationTool.CleanPosToStr(DeclarationNode.StartPos,true));
         if (Params.NewNode=DeclarationNode)
         or (Params.NewNode=AliasDeclarationNode) then begin
-          debugln(['ReadIdentifier reference found, adding ...']);
+          //debugln(['ReadIdentifier reference found, adding ...']);
           AddReference(IdentStartPos);
         end;
       end;

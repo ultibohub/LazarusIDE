@@ -35,7 +35,7 @@ interface
 uses
   Classes, {$IfDef WIN64}windows,{$EndIf} SysUtils, fgl, math, process,
   Forms, Dialogs, syncobjs,
-  Maps, LazLoggerBase, LazUTF8, lazCollections,
+  Maps, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazUTF8, lazCollections,
   DbgIntfDebuggerBase, LazDebuggerIntfBaseTypes,
   FpDebugDebuggerUtils, FpDebugDebuggerWorkThreads, FpDebugDebuggerBase, LazDebuggerIntf,
   // FpDebug
@@ -1111,7 +1111,7 @@ begin
   FWatchValue.AddNotification(weeCancel, @DoWachCanceled);
 
   inherited Create(ADebugger, twpWatch, FWatchValue.Expression, FWatchValue.StackFrame, FWatchValue.ThreadId,
-    FWatchValue.DisplayFormat, FWatchValue.RepeatCount, FWatchValue.EvaluateFlags);
+    FWatchValue.RepeatCount, FWatchValue.EvaluateFlags);
 end;
 
 { TFpThreadWorkerBreakPointSetUpdate }
@@ -2795,35 +2795,46 @@ begin
 end;
 
 procedure TFpDebugExceptionStepping.DoProcessLoaded;
+var
+  InternalExceptionBPSettings: TInternalExceptionBreakPoints;
 begin
   FBreakEnabled := [];
   FBreakNewEnabled := [];
-  debuglnEnter(DBG_BREAKPOINTS, ['>> TFpDebugDebugger.SetSoftwareExceptionBreakpoint FPC_RAISEEXCEPTION' ]);
-  FBreakPoints[bplRaise]         := FDebugger.AddBreak('FPC_RAISEEXCEPTION');
-  FBreakPoints[bplBreakError]    := FDebugger.AddBreak('FPC_BREAK_ERROR');
-  FBreakPoints[bplRunError]      := FDebugger.AddBreak('FPC_RUNERROR');
-  FBreakPoints[bplReRaise]       := FDebugger.AddBreak('FPC_RERAISE', nil,            False);
-  FBreakPoints[bplPopExcept]     := FDebugger.AddBreak('FPC_POPADDRSTACK', nil,       False);
-  FBreakPoints[bplCatches]       := FDebugger.AddBreak('FPC_CATCHES', nil,            False);
-  {$IFDEF MSWINDOWS}
-  if CurrentProcess.Mode = dm32 then begin
-    FBreakPoints[bplFpcExceptHandler]  := FDebugger.AddBreak('__FPC_except_handler', nil,  False);
-    FBreakPoints[bplFpcFinallyHandler] := FDebugger.AddBreak('__FPC_finally_handler', nil, False);
-    FBreakPoints[bplFpcLeaveHandler]   := FDebugger.AddBreak('_FPC_leave', nil, False);
-    FBreakPoints[bplSehW32Except]      := FDebugger.AddBreak(0, False);
-    FBreakPoints[bplSehW32Finally]     := FDebugger.AddBreak(0, False);
-  {$IfDef WIN64}
-  end
-  else
-  if CurrentProcess.Mode = dm64 then begin
-    FBreakPoints[bplFpcSpecific]   := FDebugger.AddBreak('__FPC_specific_handler', nil, False);
-    FBreakPoints[bplSehW64Except]  := FDebugger.AddBreak(0, False);
-    FBreakPoints[bplSehW64Finally] := FDebugger.AddBreak(0, False);
-    FBreakPoints[bplSehW64Unwound] := FDebugger.AddBreak(0, False);
-  {$EndIf}
+  debuglnEnter(DBG_BREAKPOINTS, ['>> TFpDebugDebugger.SetSoftwareExceptionBreakpoints' ]);
+  InternalExceptionBPSettings := TFpDebugDebuggerProperties(FDebugger.GetProperties).InternalExceptionBreakPoints;
+
+  if ieBreakErrorBreakPoint in InternalExceptionBPSettings then
+    FBreakPoints[bplBreakError]    := FDebugger.AddBreak('FPC_BREAK_ERROR');
+
+  if ieRunErrorBreakPoint in InternalExceptionBPSettings then
+    FBreakPoints[bplRunError]      := FDebugger.AddBreak('FPC_RUNERROR');
+
+  if ieRaiseBreakPoint in InternalExceptionBPSettings then
+  begin
+    FBreakPoints[bplRaise]         := FDebugger.AddBreak('FPC_RAISEEXCEPTION');
+    FBreakPoints[bplReRaise]       := FDebugger.AddBreak('FPC_RERAISE', nil,            False);
+    FBreakPoints[bplPopExcept]     := FDebugger.AddBreak('FPC_POPADDRSTACK', nil,       False);
+    FBreakPoints[bplCatches]       := FDebugger.AddBreak('FPC_CATCHES', nil,            False);
+    {$IFDEF MSWINDOWS}
+    if CurrentProcess.Mode = dm32 then begin
+      FBreakPoints[bplFpcExceptHandler]  := FDebugger.AddBreak('__FPC_except_handler', nil,  False);
+      FBreakPoints[bplFpcFinallyHandler] := FDebugger.AddBreak('__FPC_finally_handler', nil, False);
+      FBreakPoints[bplFpcLeaveHandler]   := FDebugger.AddBreak('_FPC_leave', nil, False);
+      FBreakPoints[bplSehW32Except]      := FDebugger.AddBreak(0, False);
+      FBreakPoints[bplSehW32Finally]     := FDebugger.AddBreak(0, False);
+    {$IfDef WIN64}
+    end
+    else
+    if CurrentProcess.Mode = dm64 then begin
+      FBreakPoints[bplFpcSpecific]   := FDebugger.AddBreak('__FPC_specific_handler', nil, False);
+      FBreakPoints[bplSehW64Except]  := FDebugger.AddBreak(0, False);
+      FBreakPoints[bplSehW64Finally] := FDebugger.AddBreak(0, False);
+      FBreakPoints[bplSehW64Unwound] := FDebugger.AddBreak(0, False);
+    {$EndIf}
+    end;
+    {$ENDIF}
   end;
-  {$ENDIF}
-  debuglnExit(DBG_BREAKPOINTS, ['<< TFpDebugDebugger.SetSoftwareExceptionBreakpoint ' ]);
+  debuglnExit(DBG_BREAKPOINTS, ['<< TFpDebugDebugger.SetSoftwareExceptionBreakpoint' ]);
 end;
 
 procedure TFpDebugExceptionStepping.DoNtDllLoaded(ALib: TDbgLibrary);
@@ -2941,7 +2952,7 @@ var
   n: String;
 begin
   case AnEventType of
-    deExitProcess: begin
+    deExitProcess, deDetachFromProcess: begin
       FDebugger.FExceptionStepper.DoDbgStopped;
       exit;
     end;
@@ -3750,8 +3761,10 @@ begin
     SizeVal(SizeOf(LongInt)), ErrNo)
   then
     ExceptName := Format('RunError(%d)', [ErrNo])
-  else
+  else begin
     ExceptName := 'RunError(unknown)';
+    ErrNo := 0;
+  end;
 
   ExceptItem := Exceptions.Find(ExceptName);
   if (ExceptItem <> nil) and (ExceptItem.Enabled)
@@ -3786,8 +3799,10 @@ begin
     SizeVal(SizeOf(Word)), ErrNo)
   then
     ExceptName := Format('RunError(%d)', [ErrNo])
-  else
+  else begin
     ExceptName := 'RunError(unknown)';
+    ErrNo := 0;
+  end;
 
   ExceptItem := Exceptions.Find(ExceptName);
   if (ExceptItem <> nil) and (ExceptItem.Enabled)
@@ -4043,6 +4058,11 @@ begin
      not assigned(FDbgController.MainProcess)
   then
   begin
+    try
+      FExceptionStepper.DoDbgStopped; // clear any old internal breakpoints
+    except
+      assert(False, 'TFpDebugDebugger.RequestCommand: DoDbgStopped failed');
+    end;
     FDbgController.ExecutableFilename:=FileName;
     AConsoleTty:=TFpDebugDebuggerProperties(GetProperties).ConsoleTty;
     FDbgController.ConsoleTty:=AConsoleTty;
@@ -4694,6 +4714,12 @@ begin
   {$IFDEF FPDEBUG_THREAD_CHECK} CurrentFpDebugThreadIdForAssert := MainThreadID;{$ENDIF}
 
   Application.RemoveAsyncCalls(Self);
+  try
+    FExceptionStepper.DoDbgStopped;
+  except
+    assert(False, 'TFpDebugDebugger.Destroy: DoDbgStopped failed');
+  end;
+
   FreeAndNil(FFpDebugOutputQueue);
   FreeAndNil(FBreakUpdateList);
   FreeAndNil(FDbgController);
@@ -4798,7 +4824,7 @@ begin
       if (t <> ct) and (t.SuspendCount > 0) then // new threads will have count=0
         t.DecSuspendCount;
 
-  if FDbgController.Event = deExitProcess then
+  if FDbgController.Event in [deExitProcess, deDetachFromProcess] then
     Application.QueueAsyncCall(@DebugLoopFinished, 0);
 end;
 

@@ -138,7 +138,7 @@ uses
   project_application_options, project_forms_options, project_lazdoc_options,
   project_save_options, project_versioninfo_options, project_i18n_options,
   project_misc_options, project_resources_options, project_debug_options,
-  project_valconv_options, Project_ValFormatter_Options,
+  project_displayFormat_options, project_valconv_options, Project_ValFormatter_Options,
   // project compiler option frames
   compiler_path_options, compiler_config_target, compiler_parsing_options,
   compiler_codegen_options, compiler_debugging_options, compiler_verbosity_options,
@@ -5973,14 +5973,14 @@ begin
   FileList := TStringList.Create;
   FileList.AddStrings(FileNames);
   try
-    if FilenameExtIs(FileList[0],'lpr') then
+    if FilenameExtIs(FileList[0],'lpr',false) then
     begin
       SourceEditorManager.IncUpdateLock;
       OpenEditorFile(FileList[0],-1,WindowIndex,Nil,[ofAddToRecent]);
       SourceEditorManager.DecUpdateLock;
       FileList.Delete(0);
     end
-    else if FilenameExtIs(FileList[0],'lpi',true) then
+    else if FilenameExtIs(FileList[0],'lpi',false) then
     begin
       DoOpenProjectFile(FileList[0],[ofAddToRecent]);
       FileList.Delete(0);
@@ -7890,9 +7890,9 @@ procedure TMainIDE.DoExecuteRemoteControl;
     AProjectFilename:='';
     for i:=Files.Count-1 downto 0 do begin
       AProjectFilename:=Files[0];
-      if FilenameExtIs(AProjectFilename,'lpr',true) then
+      if FilenameExtIs(AProjectFilename,'lpr',false) then
         AProjectFilename:=ChangeFileExt(AProjectFilename,'.lpi');
-      if FilenameExtIs(AProjectFilename,'lpi',true) then begin
+      if FilenameExtIs(AProjectFilename,'lpi',false) then begin
         // open a project
         Files.Delete(i); // remove from the list
         AProjectFilename:=CleanAndExpandFilename(AProjectFilename);
@@ -11992,6 +11992,7 @@ var
   WatchPrinter: TWatchResultPrinter;
   ResultText: String;
   ResData: TWatchResultData;
+  DispFormat: TWatchDisplayFormat;
 begin
   if (Sender <> FHintWatchData.WatchValue) or (FHintWatchData.WatchValue = nil) or
      (SourceEditorManager = nil) or
@@ -12004,58 +12005,58 @@ begin
 
 
   ResultText := '';
-  WatchPrinter := TWatchResultPrinter.Create;
-  try
-    if FHintWatchData.WatchValue.Validity = ddsValid then begin
-      ResData :=  FHintWatchData.WatchValue.ResultData;
-      if (ResData <> nil) and
-         not( (ResData.ValueKind = rdkPrePrinted) and (FHintWatchData.WatchValue.TypeInfo <> nil) )
+  WatchPrinter := DebugBoss.HintWatchPrinter;
+  DispFormat := DefaultWatchDisplayFormat;
+  if FHintWatchData.WatchValue.Watch <> nil then
+    DispFormat := FHintWatchData.WatchValue.Watch.DisplayFormat;
+
+  if FHintWatchData.WatchValue.Validity = ddsValid then begin
+    ResData :=  FHintWatchData.WatchValue.ResultData;
+    if (ResData <> nil) and
+       not( (ResData.ValueKind = rdkPrePrinted) and (FHintWatchData.WatchValue.TypeInfo <> nil) )
+    then begin
+      if not ValueFormatterSelectorList.FormatValue(ResData,
+         DispFormat, WatchPrinter, ResultText)
       then begin
-        if not ValueFormatterSelectorList.FormatValue(ResData,
-           FHintWatchData.WatchValue.DisplayFormat, WatchPrinter, ResultText)
-        then begin
-          ResultText := WatchPrinter.PrintWatchValue(ResData, FHintWatchData.WatchValue.DisplayFormat);
-          if (ResData.ValueKind = rdkArray) and (ResData.ArrayLength > 0)
-          then
-            ResultText := Format(drsLen, [ResData.ArrayLength]) + ResultText;
-        end;
-
-      end
-      else begin
-        if (FHintWatchData.WatchValue.TypeInfo = nil) or
-           not ValueFormatterSelectorList.FormatValue(FHintWatchData.WatchValue.TypeInfo,
-           FHintWatchData.WatchValue.Value, FHintWatchData.WatchValue.DisplayFormat, ResultText)
-        then begin
-          ResultText := FHintWatchData.WatchValue.Value;
-          if (FHintWatchData.WatchValue.TypeInfo <> nil) and
-             (FHintWatchData.WatchValue.TypeInfo.Attributes * [saArray, saDynArray] <> []) and
-             (FHintWatchData.WatchValue.TypeInfo.Len >= 0)
-          then
-            ResultText := Format(drsLen, [FHintWatchData.WatchValue.TypeInfo.Len]) + ResultText;
-        end;
+        ResultText := WatchPrinter.PrintWatchValue(ResData, DispFormat);
+        if (ResData.ValueKind = rdkArray) and (ResData.ArrayLength > 0)
+        then
+          ResultText := Format(drsLen, [ResData.ArrayLength]) + ResultText;
       end;
+
     end
+    else begin
+      if (FHintWatchData.WatchValue.TypeInfo = nil) or
+         not ValueFormatterSelectorList.FormatValue(FHintWatchData.WatchValue.TypeInfo,
+         FHintWatchData.WatchValue.Value, DispFormat, ResultText)
+      then begin
+        ResultText := FHintWatchData.WatchValue.Value;
+        if (FHintWatchData.WatchValue.TypeInfo <> nil) and
+           (FHintWatchData.WatchValue.TypeInfo.Attributes * [saArray, saDynArray] <> []) and
+           (FHintWatchData.WatchValue.TypeInfo.Len >= 0)
+        then
+          ResultText := Format(drsLen, [FHintWatchData.WatchValue.TypeInfo.Len]) + ResultText;
+      end;
+    end;
+  end
+  else
+    ResultText := FHintWatchData.WatchValue.Value;
+
+
+  FHintWatchData.Expression := FHintWatchData.Expression + ' = ' + ResultText;
+  if FHintWatchData.SmartHintStr<>'' then
+  begin
+    p:=PosI('<body>',FHintWatchData.SmartHintStr);
+    if p>0 then
+      Insert('<div class="debuggerhint">'+CodeHelpBoss.TextToHTML(FHintWatchData.Expression)+'</div><br>',
+             FHintWatchData.SmartHintStr, p+length('<body>'))
     else
-      ResultText := FHintWatchData.WatchValue.Value;
+      FHintWatchData.SmartHintStr:=FHintWatchData.Expression+LineEnding+LineEnding+FHintWatchData.SmartHintStr;
+  end else
+    FHintWatchData.SmartHintStr:=FHintWatchData.Expression;
 
+  FHintWatchData.SrcEdit.ActivateHint(FHintWatchData.HintPos, FHintWatchData.BaseURL, FHintWatchData.SmartHintStr, FHintWatchData.AutoShown, False);
 
-    FHintWatchData.Expression := FHintWatchData.Expression + ' = ' + ResultText;
-    if FHintWatchData.SmartHintStr<>'' then
-    begin
-      p:=PosI('<body>',FHintWatchData.SmartHintStr);
-      if p>0 then
-        Insert('<div class="debuggerhint">'+CodeHelpBoss.TextToHTML(FHintWatchData.Expression)+'</div><br>',
-               FHintWatchData.SmartHintStr, p+length('<body>'))
-      else
-        FHintWatchData.SmartHintStr:=FHintWatchData.Expression+LineEnding+LineEnding+FHintWatchData.SmartHintStr;
-    end else
-      FHintWatchData.SmartHintStr:=FHintWatchData.Expression;
-
-    FHintWatchData.SrcEdit.ActivateHint(FHintWatchData.HintPos, FHintWatchData.BaseURL, FHintWatchData.SmartHintStr, FHintWatchData.AutoShown, False);
-
-  finally
-    WatchPrinter.Free;
-  end;
 end;
 
 procedure TMainIDE.SrcNotebookShowHintForSource(SrcEdit: TSourceEditor;

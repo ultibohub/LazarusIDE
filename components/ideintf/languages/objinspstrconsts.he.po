@@ -861,6 +861,7 @@ msgid "Remove from Favorites"
 msgstr "הסר ממועדפים"
 
 #: objinspstrconsts.oisrename
+msgctxt "objinspstrconsts.oisrename"
 msgid "Rename"
 msgstr ""
 
@@ -1794,12 +1795,18 @@ msgstr "תצוגת עץ של עורך פריטים"
 msgid "Confirmation"
 msgstr ""
 
-#: objinspstrconsts.sccstredtconfirmationimages
+#: objinspstrconsts.sccstredtconfirmationfilereplace
+msgctxt "objinspstrconsts.sccstredtconfirmationfilereplace"
+msgid "The file already exists, replace it?"
+msgstr ""
+
+#: objinspstrconsts.sccstredtconfirmationimagesloss
+msgctxt "objinspstrconsts.sccstredtconfirmationimagesloss"
 msgid "Information about node images cannot be stored in the file. Continue anyway?"
 msgstr ""
 
-#: objinspstrconsts.sccstredtconfirmationreplace
-msgid "The file already exists, replace it?"
+#: objinspstrconsts.sccstredtconfirmationtreereplace
+msgid "The current tree will be overwritten, continue?"
 msgstr ""
 
 #: objinspstrconsts.sccstredtdelete
@@ -1807,24 +1814,14 @@ msgctxt "objinspstrconsts.sccstredtdelete"
 msgid "Delete"
 msgstr "מחק"
 
-#: objinspstrconsts.sccstredtgrplcaption
-msgctxt "objinspstrconsts.sccstredtgrplcaption"
-msgid "Items"
-msgstr "פריטים"
-
-#: objinspstrconsts.sccstredtgrprcaption
-msgctxt "objinspstrconsts.sccstredtgrprcaption"
-msgid "Item Properties"
-msgstr "תכונות פריט"
-
 #: objinspstrconsts.sccstredtimagelistnotassigned
 #, object-pascal-format
-msgid "%s not assigned."
+msgid "\"%s\" not assigned"
 msgstr ""
 
 #: objinspstrconsts.sccstredtinvalidindex
 #, object-pascal-format
-msgid "%s has only %d images."
+msgid "\"%s\" has only %d images"
 msgstr ""
 
 #: objinspstrconsts.sccstredtitem
@@ -1833,28 +1830,24 @@ msgid "Item"
 msgstr "פריט"
 
 #: objinspstrconsts.sccstredtlabelimageindex
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Image Index"
 msgctxt "objinspstrconsts.sccstredtlabelimageindex"
-msgid "Image Index"
+msgid "Image Index%s:"
 msgstr "אינדקס דמות"
 
 #: objinspstrconsts.sccstredtlabelselindex
-#, fuzzy
+#, object-pascal-format, fuzzy, badformat
 #| msgid "Selected Index:"
-msgid "Selected Index"
+msgid "Selected Index%s:"
 msgstr "אינדקס שנבחר"
 
 #: objinspstrconsts.sccstredtlabelstateindex
+#, object-pascal-format, fuzzy, badformat
+#| msgid "State Index"
 msgctxt "objinspstrconsts.sccstredtlabelstateindex"
-msgid "State Index"
+msgid "State Index%s:"
 msgstr "אינדקס מצב"
-
-#: objinspstrconsts.sccstredtlabeltext
-msgid "Text:"
-msgstr "טקסט:"
-
-#: objinspstrconsts.sccstredtload
-msgid "Load"
-msgstr "טען"
 
 #: objinspstrconsts.sccstredtnewitem
 msgctxt "objinspstrconsts.sccstredtnewitem"
@@ -1870,14 +1863,25 @@ msgstr "תת-פריט חדש"
 msgid "&No"
 msgstr ""
 
+#: objinspstrconsts.sccstredtopen
+msgid "Open file"
+msgstr ""
+
 #: objinspstrconsts.sccstredtopendialog
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
 msgstr "פתח"
 
+#: objinspstrconsts.sccstredtrename
+msgctxt "objinspstrconsts.sccstredtrename"
+msgid "Rename"
+msgstr ""
+
 #: objinspstrconsts.sccstredtsave
+#, fuzzy
+#| msgid "Save"
 msgctxt "objinspstrconsts.sccstredtsave"
-msgid "Save"
+msgid "Save to file"
 msgstr "שמור"
 
 #: objinspstrconsts.sccstredtsavedialog

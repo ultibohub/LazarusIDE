@@ -57,7 +57,7 @@ uses
   Debugger, DebuggerTreeView, IdeDebuggerBase, DebuggerDlg, BaseDebugManager,
   IdeDebuggerWatchResult, IdeDebuggerWatchResPrinter, ArrayNavigationFrame,
   IdeDebuggerUtils, IdeDebuggerStringConstants, DbgTreeViewWatchData,
-  EnvDebuggerOptions, IdeDebuggerValueFormatter;
+  EnvDebuggerOptions, IdeDebuggerValueFormatter, IdeDebuggerDisplayFormats, IdeDebuggerOpts;
 
 type
 
@@ -209,12 +209,14 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure DebugConfigChanged; override;
     function IsShortcut(var Message: TLMKey): Boolean; override;
     property WatchesMonitor;
     property ThreadsMonitor;
     property CallStackMonitor;
     property BreakPoints;
     property SnapshotManager;
+    property WatchPrinter: TWatchResultPrinter read FWatchPrinter;
   end;
 
   { TDbgTreeViewWatchValueMgr }
@@ -358,6 +360,7 @@ begin
   tvWatches.Header.Columns[2].Width := COL_WIDTHS[COL_WATCH_DATAADDR];
 
   //tvWatches.OnItemRemoved := @DoItemRemovedFromView;
+  DebugConfigChanged;
 end;
 
 destructor TWatchesDlg.Destroy;
@@ -371,6 +374,17 @@ begin
   FWatchTreeMgr.Free;
   tvWatches.Clear; // Must clear all nodes before any owned "Nav := TArrayNavigationBar" are freed;
   inherited Destroy;
+end;
+
+procedure TWatchesDlg.DebugConfigChanged;
+begin
+  inherited DebugConfigChanged;
+  FWatchPrinter.ValueFormatResolver.FallBackFormats.Clear;
+  if ProjectDisplayFormatConfigsUseIde then
+    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfWatches);
+  if ProjectDisplayFormatConfigsUseProject and (ProjectDisplayFormatConfigs <> nil) then
+    ProjectDisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfWatches);
+  UpdateAll;
 end;
 
 function TWatchesDlg.GetSelected: TIdeWatch;
@@ -630,7 +644,7 @@ begin
     DebugBoss.Watches.CurrentWatches.BeginUpdate;
     try
       NewWatch := DebugBoss.Watches.CurrentWatches.Add(s);
-      NewWatch.DisplayFormat := wdfDefault;
+      NewWatch.DisplayFormat := DefaultWatchDisplayFormat;
       NewWatch.Enabled       := True;
       if EnvironmentDebugOpts.DebuggerAutoSetInstanceFromClass then
         NewWatch.EvaluateFlags := [defClassAutoCast];
@@ -705,7 +719,7 @@ begin
       DebugBoss.Watches.CurrentWatches.BeginUpdate;
       try
         NewWatch := DebugBoss.Watches.CurrentWatches.Add(s);
-        NewWatch.DisplayFormat := wdfDefault;
+        NewWatch.DisplayFormat := DefaultWatchDisplayFormat;
         NewWatch.Enabled       := True;
         if EnvironmentDebugOpts.DebuggerAutoSetInstanceFromClass then
           NewWatch.EvaluateFlags := [defClassAutoCast];
@@ -1121,13 +1135,20 @@ end;
 procedure TWatchesDlg.popPropertiesClick(Sender: TObject);
 var
   Watch: TCurrentWatch;
+  d: TIdeWatchValue;
+  dk: TWatchResultDataKind;
 begin
   if GetSelectedSnapshot <> nil then exit;
   try
     DisableAllActions;
     Watch := TCurrentWatch(GetSelected);
-    if (Watch.TopParentWatch = Watch) then
-      DebugBoss.ShowWatchProperties(Watch);
+    if (Watch.TopParentWatch = Watch) then begin
+      d := Watch.Values[GetThreadId, GetStackframe];
+      dk := rdkUnknown;
+      if (d <> nil) and (d.Validity = ddsValid) and (d.ResultData <> nil) then
+        dk := d.ResultData.ValueKind;
+      DebugBoss.ShowWatchProperties(Watch, '', dk);
+    end;
   finally
     tvWatchesChange(nil, nil);
   end;
@@ -1139,7 +1160,7 @@ var
   i: integer;
   d: TIdeWatchValue;
   t: TDBGType;
-  s: String;
+  s, FldName: String;
 begin
   if not nbInspect.Visible then exit;
   DebugBoss.LockCommandProcessing;
@@ -1173,7 +1194,7 @@ begin
   if (d.ResultData <> nil) and
      not( (d.ResultData.ValueKind = rdkPrePrinted) and (t <> nil) )
   then begin
-    if ValueFormatterSelectorList.FormatValue(d.ResultData, d.DisplayFormat, FWatchPrinter, s)
+    if ValueFormatterSelectorList.FormatValue(d.ResultData, Watch.DisplayFormat, FWatchPrinter, s)
     then begin
       InspectMemo.WordWrap := True;
       InspectMemo.Text := s;
@@ -1182,7 +1203,7 @@ begin
   end
   else
   if (t <> nil) and
-     ValueFormatterSelectorList.FormatValue(t, d.Value, d.DisplayFormat, s)
+     ValueFormatterSelectorList.FormatValue(t, d.Value, Watch.DisplayFormat, s)
   then begin
     InspectMemo.WordWrap := True;
     InspectMemo.Text := s;
@@ -1191,27 +1212,30 @@ begin
 
 
   if (t <> nil) and (t.Fields <> nil) and (t.Fields.Count > 0) and
-     (d.DisplayFormat in [wdfDefault, wdfStructure])
+     (Watch.DisplayFormat.StructFormat <> vdfStructDefault)
   then begin
     InspectMemo.WordWrap := False;
     InspectMemo.Lines.BeginUpdate;
     try
       for i := 0 to t.Fields.Count - 1 do
+        FldName := '';
+        if Watch.DisplayFormat.StructFormat in [vdfStructFields, vdfStructFull] then
+          FldName := t.Fields[i].Name + ': ';
         case t.Fields[i].DBGType.Kind of
           skSimple:
             begin
               if t.Fields[i].DBGType.Value.AsString='$0' then begin
                 if t.Fields[i].DBGType.TypeName='ANSISTRING' then
-                  InspectMemo.Append(t.Fields[i].Name + ': ''''')
+                  InspectMemo.Append(FldName + '''''')
                 else
-                  InspectMemo.Append(t.Fields[i].Name + ': nil');
+                  InspectMemo.Append(FldName + 'nil');
               end
               else
-                InspectMemo.Append(t.Fields[i].Name + ': ' + t.Fields[i].DBGType.Value.AsString);
+                InspectMemo.Append(FldName + t.Fields[i].DBGType.Value.AsString);
             end;
           skProcedure, skFunction, skProcedureRef, skFunctionRef: ;
           else
-            InspectMemo.Append(t.Fields[i].Name + ': ' + t.Fields[i].DBGType.Value.AsString);
+            InspectMemo.Append(FldName + t.Fields[i].DBGType.Value.AsString);
         end;
     finally
       InspectMemo.Lines.EndUpdate;
@@ -1221,7 +1245,7 @@ begin
 
   InspectMemo.WordWrap := True;
   if d.ResultData <> nil then
-    s := FWatchPrinter.PrintWatchValue(d.ResultData, d.DisplayFormat)
+    s := FWatchPrinter.PrintWatchValue(d.ResultData, Watch.DisplayFormat)
   else
     s := d.Value;
   InspectMemo.Text := s;
@@ -1434,8 +1458,10 @@ function TDbgTreeViewWatchValueMgr.GetFieldAsText(Nd: PVirtualNode;
   AWatchAble: TObject; AWatchAbleResult: IWatchAbleResultIntf;
   AField: TTreeViewDataToTextField; AnOpts: TTreeViewDataToTextOptions): String;
 var
+  TheWatch: TIdeWatch absolute AWatchAble;
   ResData: TWatchResultData;
   da: TDBGPtr;
+  DispFormat: TWatchDisplayFormat;
 begin
   if AWatchAbleResult = nil then
     exit(inherited);
@@ -1444,7 +1470,7 @@ begin
   case AField of
     vdfName:
       if AWatchAble <> nil then
-        Result := TIdeWatch(AWatchAble).Expression;
+        Result := TheWatch.Expression;
     vdfValue: begin
         if AWatchAbleResult = nil then begin
           Result := '<not evaluated>';
@@ -1470,6 +1496,9 @@ begin
           end;
         end;
 
+        DispFormat := DefaultWatchDisplayFormat;
+        if AWatchAble <> nil then
+          DispFormat := TheWatch.DisplayFormat;
         if vdoAllowMultiLine in AnOpts then
           FWatchDlg.FWatchPrinter.FormatFlags := [rpfIndent, rpfMultiLine];
         try
@@ -1478,15 +1507,15 @@ begin
              not( (ResData.ValueKind = rdkPrePrinted) and (AWatchAbleResult.TypeInfo <> nil) )
           then begin
             if not ValueFormatterSelectorList.FormatValue(ResData,
-               AWatchAbleResult.DisplayFormat, FWatchDlg.FWatchPrinter, Result)
+               DispFormat, FWatchDlg.FWatchPrinter, Result)
             then begin
-              Result := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, AWatchAbleResult.DisplayFormat);
+              Result := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
             end;
           end
           else begin
             if (AWatchAbleResult.TypeInfo = nil) or
                not ValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
-               AWatchAbleResult.Value, AWatchAbleResult.DisplayFormat, Result)
+               AWatchAbleResult.Value, DispFormat, Result)
             then begin
               Result := AWatchAbleResult.Value;
             end;
@@ -1509,9 +1538,11 @@ end;
 procedure TDbgTreeViewWatchValueMgr.UpdateColumnsText(AWatchAble: TObject;
   AWatchAbleResult: IWatchAbleResultIntf; AVNode: PVirtualNode);
 var
+  TheWatch: TIdeWatch absolute AWatchAble;
   ResData: TWatchResultData;
   WatchValueStr: String;
   da: TDBGPtr;
+  DispFormat: TWatchDisplayFormat;
 begin
   TreeView.NodeText[AVNode, COL_WATCH_EXPR-1]:= TIdeWatch(AWatchAble).DisplayName;
   TreeView.NodeText[AVNode, 2] := '';
@@ -1527,15 +1558,19 @@ begin
        (AWatchAbleResult.Validity in [ddsValid, ddsInvalid, ddsError]) or // snapshot
        (AWatchAbleResult.ResultData <> nil)
     then begin
+      DispFormat := DefaultWatchDisplayFormat;
+      if AWatchAble <> nil then
+        DispFormat := TheWatch.DisplayFormat;
+
       ResData :=  AWatchAbleResult.ResultData;
       if (ResData <> nil) and
          not( (ResData.ValueKind = rdkPrePrinted) and (AWatchAbleResult.TypeInfo <> nil) )
       then begin
         FWatchDlg.FWatchPrinter.FormatFlags := [rpfClearMultiLine];
         if not ValueFormatterSelectorList.FormatValue(ResData,
-           AWatchAbleResult.DisplayFormat, FWatchDlg.FWatchPrinter, WatchValueStr)
+           DispFormat, FWatchDlg.FWatchPrinter, WatchValueStr)
         then begin
-          WatchValueStr := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, AWatchAbleResult.DisplayFormat);
+          WatchValueStr := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
           if (ResData.ValueKind = rdkArray) and (ResData.ArrayLength > 0)
           then
             WatchValueStr := Format(drsLen, [ResData.ArrayLength]) + WatchValueStr;
@@ -1552,7 +1587,7 @@ begin
       else begin
         if (AWatchAbleResult.TypeInfo = nil) or
            not ValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
-           AWatchAbleResult.Value, AWatchAbleResult.DisplayFormat, WatchValueStr)
+           AWatchAbleResult.Value, DispFormat, WatchValueStr)
         then begin
           WatchValueStr := AWatchAbleResult.Value;
           if (AWatchAbleResult.TypeInfo <> nil) and
@@ -1580,7 +1615,7 @@ end;
 procedure TDbgTreeViewWatchValueMgr.ConfigureNewSubItem(AWatchAble: TObject);
 begin
   if (AWatchAble <> nil) and (AWatchAble is TCurrentWatch) then
-    TCurrentWatch(AWatchAble).DisplayFormat := wdfDefault;
+    TCurrentWatch(AWatchAble).DisplayFormat := DefaultWatchDisplayFormat;
 end;
 
 procedure TDbgTreeViewWatchValueMgr.UpdateSubItems(AWatchAble: TObject;

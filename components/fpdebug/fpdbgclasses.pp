@@ -53,6 +53,7 @@ type
     deFinishedStep, deBreakpoint, deHardCodedBreakpoint,
     deException,
     deInternalContinue,
+    deDetachFromProcess,
     deFailed);
   TFPDCompareStepInfo = (dcsiNewLine, dcsiSameLine, dcsiNoLineInfo, dcsiZeroLine);
 
@@ -473,7 +474,7 @@ type
   { TFpBreakPointTargetHandler }
 
   TFpBreakPointTargetHandler = class abstract
-  private
+  protected
     class var DBG__VERBOSE, DBG__WARNINGS, DBG__BREAKPOINTS: PLazLoggerLogGroup;
   strict private
     FProcess: TDbgProcess;
@@ -512,15 +513,19 @@ type
       ErrorSetting: ByteBool;
     end;
     PInternalBreakLocationEntry = ^TInternalBreakLocationEntry;
+    P_BRK_STORE = ^_BRK_STORE;
 
   private
     FTmpRemovedBreaks: array of TDBGPtr;
 
   strict protected
     function HPtr(Src: PFpBreakPointTargetHandlerDataPointer): PInternalBreakLocationEntry; inline;
-    function GetOrigValueAtLocation(const ALocation: TDBGPtr): _BRK_STORE; // returns Int3, if there is no break at this location
+    function GetOrigValueAtLocation(const ALocation: TDBGPtr): _BRK_STORE; // returns break instruction, if there is no break at this location
     procedure AdaptOriginalValueAtLocation(const ALocation: TDBGPtr; const NewOrigValue: _BRK_STORE);
 
+    // Default implementation is to write break instruction to memory
+    function DoInsertBreakInstructionCode(const ALocation: TDBGPtr; out OrigValue: _BRK_STORE; AMakeTempRemoved: Boolean): Boolean; virtual;
+    function DoRemoveBreakInstructionCode(const ALocation: TDBGPtr; const OrigValue: _BRK_STORE): Boolean; virtual;
   public
     function GetDataSize: integer; override;
 
@@ -539,13 +544,6 @@ type
     procedure RestoreTempBreakInstructionCodes; override;
     procedure MaskBreakpointsInReadData(const AAdress: TDbgPtr; const ASize: Cardinal; var AData); override;
   end;
-
-  TBreakInfoX86 = object
-  const
-    _CODE: Byte = $CC;
-  end;
-
-  TBreakPointTargetHandler = specialize TGenericBreakPointTargetHandler<Byte, TBreakInfoX86>;
 
   { TFpDbgBreakpoint }
 
@@ -587,8 +585,10 @@ type
   { TFpInternalBreakBase }
 
   TFpInternalBreakBase = class(TFpDbgBreakpoint)
-  private
+  strict private
     FProcess: TDbgProcess;
+  private
+    procedure SetProcessToNil;
   protected
     procedure SetFreeByDbgProcess(AValue: Boolean); override;
     procedure UpdateForLibraryLoaded(ALib: TDbgLibrary); virtual;
@@ -827,8 +827,6 @@ type
   { TDbgProcess }
 
   TDbgProcess = class(TDbgInstance)
-  protected const
-    Int3: Byte = $CC deprecated 'Use FBreakMap.Int3';
   private
     FDisassembler: TDbgAsmDecoder;
     FExceptionClass: string;
@@ -876,8 +874,6 @@ type
     procedure AddLibrary(ALib: TDbgLibrary; AnID: TDbgPtr);
     function GetRequiresExecutionInDebuggerThread: boolean; virtual;
 
-    function InsertBreakInstructionCode(const ALocation: TDBGPtr; out OrigValue: Byte; AMakeTempRemoved: Boolean): Boolean; virtual;
-    function RemoveBreakInstructionCode(const ALocation: TDBGPtr; const OrigValue: Byte): Boolean; virtual;
     procedure BeforeChangingInstructionCode(const ALocation: TDBGPtr; ACount: Integer); virtual;
     procedure AfterChangingInstructionCode(const ALocation: TDBGPtr; ACount: Integer); virtual;
     procedure AfterBreakpointAdded(ABreak: TFpDbgBreakpoint);
@@ -891,6 +887,7 @@ type
     function CreateWatchPointData: TFpWatchPointData; virtual;
     procedure Init(const AProcessID, AThreadID: Integer);
     function CreateConfig: TDbgConfig;
+    function CreateBreakPointTargetHandler: TFpBreakPointTargetHandler; virtual; abstract;
     procedure InitializeLoaders; override;
   public
     class function isSupported(ATargetInfo: TTargetDescriptor): boolean; virtual;
@@ -1065,6 +1062,7 @@ const
     'deFinishedStep', 'deBreakpoint', 'deHardCodedBreakpoint',
     'deException',
     'deInternalContinue',
+    'deDetachFromProcess',
     'deFailed'
   );
 
@@ -1587,7 +1585,7 @@ begin
 
   SetLength(FTmpRemovedBreaks, l+1);
   FTmpRemovedBreaks[l] := ALocation;
-  Process.RemoveBreakInstructionCode(ALocation, OVal); // Do not update FBreakMap
+  DoRemoveBreakInstructionCode(ALocation, OVal); // Do not update FBreakMap
   DebugLn(DBG__VERBOSE or DBG__BREAKPOINTS, ['<<< TempRemoveBreakInstructionCode']);
 end;
 
@@ -1604,7 +1602,7 @@ begin
   FTmpRemovedBreaks := nil;
   for i := 0 to length(t) - 1 do
     if BreakMap.HasId(t[i]) then // may have been removed
-      Process.InsertBreakInstructionCode(t[i], OVal, False);
+      DoInsertBreakInstructionCode(t[i], OVal, False);
   DebugLnExit(DBG__VERBOSE or DBG__BREAKPOINTS, ['<<< RestoreTempBreakInstructionCodes']);
 end;
 
@@ -1615,7 +1613,7 @@ var
 begin
   for MapEnumData in BreakMap do begin
     if not HPtr(MapEnumData.TargetHandlerDataPtr)^.ErrorSetting and (MapEnumData.Location >= AAdress) and (MapEnumData.Location < (AAdress+ASize)) then
-      PByte(@AData)[MapEnumData.Location-AAdress] := HPtr(MapEnumData.TargetHandlerDataPtr)^.OrigValue;
+      P_BRK_STORE(@AData)[MapEnumData.Location-AAdress] := HPtr(MapEnumData.TargetHandlerDataPtr)^.OrigValue;
   end;
 end;
 
@@ -1626,6 +1624,46 @@ begin
   LocData := HPtr(BreakMap.GetTargetDataPtr(ALocation));
   if Assigned(LocData) then
     LocData^.OrigValue := NewOrigValue;
+end;
+
+function TGenericBreakPointTargetHandler.DoInsertBreakInstructionCode(
+  const ALocation: TDBGPtr; out OrigValue: _BRK_STORE;
+  AMakeTempRemoved: Boolean): Boolean;
+begin
+  Result := Process.ReadData(ALocation, SizeOf(_BRK_STORE), OrigValue);
+  if not Result then begin
+    DebugLn(DBG__WARNINGS or DBG__BREAKPOINTS, 'Unable to read pre-breakpoint at '+FormatAddress(ALocation));
+    exit;
+  end;
+
+  if (OrigValue = _BREAK._CODE) or AMakeTempRemoved then
+    exit; // breakpoint on a hardcoded breakpoint
+
+  Process.BeforeChangingInstructionCode(ALocation, SizeOf(_BRK_STORE));
+
+  Result := Process.WriteData(ALocation, SizeOf(_BRK_STORE), _BREAK._CODE);
+  DebugLn(DBG__VERBOSE or DBG__BREAKPOINTS, ['Breakpoint set to '+Process.FormatAddress(ALocation), ' Result:',Result, ' OVal:', OrigValue]);
+  if not Result then
+    DebugLn(DBG__WARNINGS or DBG__BREAKPOINTS, 'Unable to set breakpoint at '+FormatAddress(ALocation));
+
+  if Result then
+    Process.AfterChangingInstructionCode(ALocation, SizeOf(_BRK_STORE));
+end;
+
+function TGenericBreakPointTargetHandler.DoRemoveBreakInstructionCode(
+  const ALocation: TDBGPtr; const OrigValue: _BRK_STORE): Boolean;
+begin
+  if OrigValue = _BREAK._CODE then
+    exit(True); // breakpoint on a hardcoded breakpoint
+
+  Process.BeforeChangingInstructionCode(ALocation, SizeOf(_BRK_STORE));
+
+  Result := Process.WriteData(ALocation, SizeOf(_BRK_STORE), OrigValue);
+  DebugLn(DBG__VERBOSE or DBG__BREAKPOINTS, ['Breakpoint removed from '+FormatAddress(ALocation), ' Result:',Result, ' OVal:', OrigValue]);
+  DebugLn((not Result) and (not Process.GotExitProcess) and (DBG__WARNINGS or DBG__BREAKPOINTS), 'Unable to reset breakpoint at %s', [FormatAddress(ALocation)]);
+
+  if Result then
+    Process.AfterChangingInstructionCode(ALocation, SizeOf(_BRK_STORE));
 end;
 
 function TGenericBreakPointTargetHandler.HPtr(Src: PFpBreakPointTargetHandlerDataPointer): PInternalBreakLocationEntry;
@@ -1647,7 +1685,7 @@ begin
       break;
   end;
 
-  LocData^.ErrorSetting := not Process.InsertBreakInstructionCode(ALocation, LocData^.OrigValue, IsTempRemoved);
+  LocData^.ErrorSetting := not DoInsertBreakInstructionCode(ALocation, LocData^.OrigValue, IsTempRemoved);
 end;
 
 procedure TGenericBreakPointTargetHandler.RemoveBreakInstructionCode(const ALocation: TDBGPtr;
@@ -1656,7 +1694,7 @@ var
   LocData: PInternalBreakLocationEntry absolute AnEntry;
 begin
   if not LocData^.ErrorSetting then
-    Process.RemoveBreakInstructionCode(ALocation, LocData^.OrigValue);
+    DoRemoveBreakInstructionCode(ALocation, LocData^.OrigValue);
 end;
 
 { TDbgCallstackEntry }
@@ -2375,9 +2413,11 @@ begin
   FThreadMap := TThreadMap.Create(itu4, SizeOf(TDbgThread));
   FLibMap := TLibraryMap.Create(MAP_ID_SIZE, SizeOf(TDbgLibrary));
   FWatchPointData := CreateWatchPointData;
-  FBreakTargetHandler := TBreakPointTargetHandler.Create(Self);
+
+  FBreakTargetHandler := CreateBreakPointTargetHandler;
   FBreakMap := TFpBreakPointMap.Create(Self, FBreakTargetHandler);
   FBreakTargetHandler.BreakMap := FBreakMap;
+
   FCurrentBreakpoint := nil;
   FCurrentWatchpoint := nil;
 
@@ -2415,16 +2455,10 @@ begin
   FProcessID:=0;
   SetLastLibraryUnloaded(nil);
 
-  for i := 0 to FBreakpointList.Count - 1 do begin
-    FBreakpointList[i].FProcess := nil;
-    if FBreakpointList[i].FreeByDbgProcess then
-      FBreakpointList[i].Free;
-  end;
-  for i := 0 to FWatchPointList.Count - 1 do begin
-    FWatchPointList[i].FProcess := nil;
-    if FWatchPointList[i].FreeByDbgProcess then
-      FWatchPointList[i].Free;
-  end;
+  for i := 0 to FBreakpointList.Count - 1 do
+    FBreakpointList[i].SetProcessToNil;
+  for i := 0 to FWatchPointList.Count - 1 do
+    FWatchPointList[i].SetProcessToNil;
   FreeAndNil(FBreakpointList);
   FreeAndNil(FWatchPointList);
   //Assert(FBreakMap.Count=0, 'No breakpoints left');
@@ -3029,45 +3063,6 @@ begin
     FSymInstances.Add(ALib);
 end;
 
-function TDbgProcess.InsertBreakInstructionCode(const ALocation: TDBGPtr; out
-  OrigValue: Byte; AMakeTempRemoved: Boolean): Boolean;
-begin
-  Result := FProcess.ReadData(ALocation, 1, OrigValue);
-  if not Result then begin
-    DebugLn(DBG_WARNINGS or DBG_BREAKPOINTS, 'Unable to read pre-breakpoint at '+FormatAddress(ALocation));
-    exit;
-  end;
-
-  if (OrigValue = Int3) or AMakeTempRemoved then
-    exit; // breakpoint on a hardcoded breakpoint
-
-  BeforeChangingInstructionCode(ALocation, 1);
-
-  Result := FProcess.WriteData(ALocation, 1, Int3);
-  DebugLn(DBG_VERBOSE or DBG_BREAKPOINTS, ['Breakpoint Int3 set to '+FormatAddress(ALocation), ' Result:',Result, ' OVal:', OrigValue]);
-  if not Result then
-    DebugLn(DBG_WARNINGS or DBG_BREAKPOINTS, 'Unable to set breakpoint at '+FormatAddress(ALocation));
-
-  if Result then
-    AfterChangingInstructionCode(ALocation, 1);
-end;
-
-function TDbgProcess.RemoveBreakInstructionCode(const ALocation: TDBGPtr;
-  const OrigValue: Byte): Boolean;
-begin
-  if OrigValue = Int3 then
-    exit(True); // breakpoint on a hardcoded breakpoint
-
-  BeforeChangingInstructionCode(ALocation, 1);
-
-  Result := WriteData(ALocation, 1, OrigValue);
-  DebugLn(DBG_VERBOSE or DBG_BREAKPOINTS, ['Breakpoint Int3 removed from '+FormatAddress(ALocation), ' Result:',Result, ' OVal:', OrigValue]);
-  DebugLn((not Result) and (not GotExitProcess) and (DBG_WARNINGS or DBG_BREAKPOINTS), 'Unable to reset breakpoint at %s', [FormatAddress(ALocation)]);
-
-  if Result then
-    AfterChangingInstructionCode(ALocation, 1);
-end;
-
 procedure TDbgProcess.RemoveAllBreakPoints;
 var
   i: LongInt;
@@ -3077,7 +3072,7 @@ begin
   while i >= 0 do begin
     b := FBreakpointList[i];
     b.ResetBreak;
-    b.FProcess := nil;
+    b.SetProcessToNil;
     FBreakpointList.Delete(i);
     dec(i);
   end;
@@ -3085,7 +3080,7 @@ begin
   while i >= 0 do begin
     b := FWatchPointList[i];
     b.ResetBreak;
-    b.FProcess := nil;
+    b.SetProcessToNil;
     FWatchPointList.Delete(i);
     dec(i);
   end;
@@ -3879,6 +3874,13 @@ end;
 
 { TFpInternalBreakBase }
 
+procedure TFpInternalBreakBase.SetProcessToNil;
+begin
+  FProcess := nil;
+  if FFreeByDbgProcess then
+    Destroy;
+end;
+
 procedure TFpInternalBreakBase.SetFreeByDbgProcess(AValue: Boolean);
 begin
   inherited SetFreeByDbgProcess(AValue);
@@ -3936,7 +3938,7 @@ begin
     a := FLocation[i];
     FLocation[j] := a;
     if ALib.EnclosesAddressRange(a, a) then
-      FProcess.FBreakMap.RemoveLocation(a, Self)
+      Process.FBreakMap.RemoveLocation(a, Self)
     else
       inc(j);
   end;
@@ -3950,7 +3952,7 @@ constructor TFpInternalBreakpoint.Create(const AProcess: TDbgProcess;
   const ALocation: TDBGPtrArray; AnEnabled: Boolean);
 begin
   inherited Create(AProcess);
-  FProcess.FBreakpointList.Add(Self);
+  Process.FBreakpointList.Add(Self);
   FLocation := ALocation;
   FEnabled := AnEnabled;
   FState := bksUnknown;
@@ -3962,8 +3964,8 @@ end;
 destructor TFpInternalBreakpoint.Destroy;
 begin
   On_Thread_StateChange := nil;
-  if FProcess <> nil then
-    FProcess.FBreakpointList.Remove(Self);
+  if Process <> nil then
+    Process.FBreakpointList.Remove(Self);
   ResetBreak;
   inherited;
 end;
@@ -3972,9 +3974,9 @@ function TFpInternalBreakpoint.Hit(const AThreadID: Integer;
   ABreakpointAddress: TDBGPtr): Boolean;
 begin
   Result := False;
-  assert(FProcess<>nil, 'TFpInternalBreakpoint.Hit: FProcess<>nil');
-  if //FProcess.FBreakMap.HasId(ABreakpointAddress) and
-     (FProcess.FBreakTargetHandler.IsHardcodeBreakPoint(ABreakpointAddress))
+  assert(Process<>nil, 'TFpInternalBreakpoint.Hit: Process<>nil');
+  if //Process.FBreakMap.HasId(ABreakpointAddress) and
+     (Process.FBreakTargetHandler.IsHardcodeBreakPoint(ABreakpointAddress))
   then
     exit; // breakpoint on a hardcoded breakpoint
           // no need to jump back and restore instruction
@@ -4002,7 +4004,7 @@ begin
   SetLength(FLocation, l+1);
   FLocation[l] := ALocation;
   if Enabled then
-    FProcess.FBreakMap.AddLocation(ALocation, Self, True);
+    Process.FBreakMap.AddLocation(ALocation, Self, True);
   UpdateState;
 end;
 
@@ -4016,7 +4018,7 @@ begin
   if Enabled then begin
     for i := 0 to Length(ALocations) - 1 do begin
       FLocation[l + i] := ALocations[i];
-      FProcess.FBreakMap.AddLocation(ALocations[i], Self, True);
+      Process.FBreakMap.AddLocation(ALocations[i], Self, True);
     end;
   end
   else begin
@@ -4038,7 +4040,7 @@ begin
     exit;
   FLocation[i] := FLocation[l];
   SetLength(FLocation, l);
-  FProcess.FBreakMap.RemoveLocation(ALocation, Self);
+  Process.FBreakMap.RemoveLocation(ALocation, Self);
   UpdateState;
 end;
 
@@ -4054,12 +4056,12 @@ var
   i: Integer;
 begin
   {$IFDEF FPDEBUG_THREAD_CHECK}AssertFpDebugThreadId('TFpInternalBreakpoint.ResetBreak');{$ENDIF}
-  if FProcess = nil then
+  if Process = nil then
     exit;
 
   FEnabled := False;
   for i := 0 to High(FLocation) do
-    FProcess.FBreakMap.RemoveLocation(FLocation[i], Self);
+    Process.FBreakMap.RemoveLocation(FLocation[i], Self);
 end;
 
 procedure TFpInternalBreakpoint.SetBreak;
@@ -4067,12 +4069,12 @@ var
   i: Integer;
 begin
   {$IFDEF FPDEBUG_THREAD_CHECK}AssertFpDebugThreadId('TFpInternalBreakpoint.SetBreak');{$ENDIF}
-  if FProcess = nil then
+  if Process = nil then
     exit;
 
   FEnabled := True;
   for i := 0 to High(FLocation) do
-    FProcess.FBreakMap.AddLocation(FLocation[i], Self, True);
+    Process.FBreakMap.AddLocation(FLocation[i], Self, True);
 end;
 
 { TFpInternalBreakpointAtSymbol }
@@ -4095,7 +4097,7 @@ begin
   if FSymInstance <> nil then // Can not be the newly created ...
     exit;
 
-  FProcess.FindProcSymbol(FFuncName, ALib, AProcList);
+  Process.FindProcSymbol(FFuncName, ALib, AProcList);
   SetLength(a, Length(AProcList));
   for i := 0 to Length(AProcList) - 1 do begin
     a[i] := AProcList[i].Address.Address;
@@ -4148,8 +4150,8 @@ begin
     exit;
 
   addr := nil;
-  FProcess.GetLineAddresses(FFileName, FLine, addr, ALib);
-  if FProcess.FLastLineAddressesFoundFile and (Length(addr) = 0) then
+  Process.GetLineAddresses(FFileName, FLine, addr, ALib);
+  if Process.FLastLineAddressesFoundFile and (Length(addr) = 0) then
     FFoundFileWithoutLine := True;
   AddAddress(addr);
 end;
@@ -4199,7 +4201,7 @@ var
   BoundaryOffset, S, HalfSize: Integer;
 begin
   inherited Create(AProcess);
-  FProcess.FWatchPointList.Add(Self);
+  Process.FWatchPointList.Add(Self);
   FLocation := ALocation;
   FSize := ASize;
   FReadWrite := AReadWrite;
@@ -4246,8 +4248,8 @@ end;
 
 destructor TFpInternalWatchpoint.Destroy;
 begin
-  if FProcess <> nil then
-    FProcess.FWatchPointList.Remove(Self);
+  if Process <> nil then
+    Process.FWatchPointList.Remove(Self);
   ResetBreak;
   inherited Destroy;
 end;
@@ -4260,11 +4262,11 @@ var
   i: Integer;
 begin
   {$IFDEF FPDEBUG_THREAD_CHECK}AssertFpDebugThreadId('TFpInternalWatchpoint.SetBreak');{$ENDIF}
-  if FProcess = nil then
+  if Process = nil then
     exit;
   //TODO: read current mem content. So in case of overlap it can be checked
 
-  wd := FProcess.WatchPointData;
+  wd := Process.WatchPointData;
 
   a := FFirstWatchLocation;
   R := wd.AddOwnedWatchpoint(Self, a, FFirstWatchSize, FReadWrite);
@@ -4292,10 +4294,10 @@ end;
 procedure TFpInternalWatchpoint.ResetBreak;
 begin
   {$IFDEF FPDEBUG_THREAD_CHECK}AssertFpDebugThreadId('TFpInternalWatchpoint.ResetBreak');{$ENDIF}
-  if FProcess = nil then
+  if Process = nil then
     exit;
 
-  FProcess.WatchPointData.RemoveOwnedWatchpoint(Self);
+  Process.WatchPointData.RemoveOwnedWatchpoint(Self);
 end;
 
 initialization

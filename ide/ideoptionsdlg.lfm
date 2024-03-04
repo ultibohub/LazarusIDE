@@ -24,15 +24,18 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
     BorderSpacing.Bottom = 6
     BorderSpacing.Around = 0
     OKButton.Name = 'OKButton'
+    OKButton.Hint = '[Ctrl+Enter]'
     OKButton.DefaultCaption = True
     HelpButton.Name = 'HelpButton'
+    HelpButton.Hint = '[F1]'
     HelpButton.DefaultCaption = True
     CloseButton.Name = 'CloseButton'
     CloseButton.DefaultCaption = True
     CloseButton.Enabled = False
     CancelButton.Name = 'CancelButton'
+    CancelButton.Hint = '[Esc]'
     CancelButton.DefaultCaption = True
-    TabOrder = 0
+    TabOrder = 4
     ShowButtons = [pbOK, pbCancel, pbHelp]
   end
   object CatTVSplitter: TSplitter[1]
@@ -53,7 +56,7 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
     ClientHeight = 438
     ClientWidth = 255
     Constraints.MinWidth = 150
-    TabOrder = 2
+    TabOrder = 0
     object CategoryTree: TTreeView
       AnchorSideLeft.Control = FilterEdit
       AnchorSideTop.Control = FilterEdit
@@ -70,9 +73,10 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
       ReadOnly = True
       ScrollBars = ssAutoBoth
       ShowSeparators = False
-      TabOrder = 0
+      TabOrder = 1
       OnChange = CategoryTreeChange
       OnCollapsed = CategoryTreeCollapsed
+      OnCustomDrawItem = CategoryTreeCustomDrawItem
       OnExpanded = CategoryTreeExpanded
       OnKeyDown = CategoryTreeKeyDown
       Options = [tvoAutoItemHeight, tvoHideSelection, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips, tvoThemedDraw]
@@ -83,6 +87,7 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
       AnchorSideRight.Side = asrBottom
       Left = 6
       Height = 32
+      Hint = '[Ctrl+F]'
       Top = 6
       Width = 249
       OnFilterItem = FilterEditFilterItem
@@ -92,7 +97,9 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
       BorderSpacing.Top = 6
       NumGlyphs = 1
       MaxLength = 0
-      TabOrder = 1
+      ParentShowHint = False
+      ShowHint = True
+      TabOrder = 0
       FilteredTreeview = CategoryTree
       ExpandAllInitially = True
     end
@@ -122,7 +129,7 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
     BevelOuter = bvNone
     ClientHeight = 40
     ClientWidth = 535
-    TabOrder = 3
+    TabOrder = 2
     object BuildModeComboBox: TComboBox
       AnchorSideLeft.Control = BuildModesLabel
       AnchorSideLeft.Side = asrBottom
@@ -186,6 +193,6 @@ inherited IDEOptionsDialog: TIDEOptionsDialog
     Anchors = [akTop, akLeft, akRight, akBottom]
     BorderSpacing.Right = 6
     BorderStyle = bsNone
-    TabOrder = 4
+    TabOrder = 1
   end
 end

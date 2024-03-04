@@ -47,7 +47,7 @@ uses
   IdeDebuggerWatchValueIntf, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
   LazDebuggerValueConverter, LazDebuggerTemplate, IdeDebuggerBase,
   IdeDebuggerWatchResult, IdeDebuggerOpts, IdeDebuggerBackendValueConv,
-  IdeDebuggerUtils, IdeDebuggerValueFormatter;
+  IdeDebuggerUtils, IdeDebuggerValueFormatter, IdeDebuggerDisplayFormats;
 
 const
   XMLBreakPointsNode = 'BreakPoints';
@@ -493,16 +493,6 @@ type
  ******************************************************************************
  ******************************************************************************}
 
-const
-  TWatchDisplayFormatNames: array [TWatchDisplayFormat] of string =
-    ('wdfDefault',
-     'wdfStructure',
-     'wdfChar', 'wdfString',
-     'wdfDecimal', 'wdfUnsigned', 'wdfFloat', 'wdfHex',
-     'wdfPointer',
-     'wdfMemDump', 'wdfBinary'
-    );
-
 type
 
   TWatchesEvent =
@@ -624,7 +614,10 @@ type
     procedure DoEnableChange; override;
     procedure DoExpressionChange; override;
     procedure DoDisplayFormatChanged; override;
+    function GetDisplayFormat: TWatchDisplayFormat; override;
   protected
+    procedure DoLoadDisplayFormatFromXMLConfig(const AConfig: TXMLConfig;
+                                const APath, AOldPath: string; var ADisplayFormat: TWatchDisplayFormat);
     procedure LoadDataFromXMLConfig(const AConfig: TXMLConfig;
                                 const APath: string);
     procedure SaveDataToXMLConfig(const AConfig: TXMLConfig;
@@ -776,12 +769,13 @@ type
     procedure DoEndUpdating; override;
     function ResData: IDbgWatchDataIntf;
     function GetDbgValConverter: ILazDbgValueConvertSelectorIntf;
+    function GetIntfEvaluateFlags: TWatcheEvaluateFlags;
+    function IDbgWatchValueIntf.GetEvaluateFlags = GetIntfEvaluateFlags;
   private
     FOnValidityChanged: TNotifyEvent;
     FSnapShot: TIdeWatchValue;
     procedure SetSnapShot(const AValue: TIdeWatchValue);
   protected
-    procedure SetValue(AValue: String); override; // TODO: => one per DisplayFormat???
     procedure SetWatch(AValue: TWatch); override;
     function GetBackendExpression: String; reintroduce;
     function GetValidity: TDebuggerDataState; override;
@@ -2039,6 +2033,9 @@ var
   // filled in by the IDE, as the IdeDebugger can not (yet) see ProjectOptions
   ProjectValueConverterSelectorList: TIdeDbgValueConvertSelectorList;
   ProjectValueFormatterSelectorList: TIdeDbgValueFormatterSelectorList;
+  ProjectDisplayFormatConfigs: TDisplayFormatConfig;
+  ProjectDisplayFormatConfigsUseIde,
+  ProjectDisplayFormatConfigsUseProject: Boolean;
 
 implementation
 
@@ -4132,6 +4129,13 @@ begin
   Result := FDbgBackendConverter;
 end;
 
+function TCurrentWatchValue.GetIntfEvaluateFlags: TWatcheEvaluateFlags;
+begin
+  Result := EvaluateFlags;
+  if IsMemDump then
+    Result := Result + [defMemDump];
+end;
+
 procedure TCurrentWatchValue.SetSnapShot(const AValue: TIdeWatchValue);
 begin
   assert((FSnapShot=nil) or (AValue=nil), 'TCurrentWatchValue already have snapshot');
@@ -4139,13 +4143,6 @@ begin
   FSnapShot := AValue;
   if FSnapShot <> nil
   then FSnapShot.Assign(self);
-end;
-
-procedure TCurrentWatchValue.SetValue(AValue: String);
-begin
-  BeginUpdate;
-  ResData.CreatePrePrinted(AValue);
-  EndUpdate;
 end;
 
 procedure TCurrentWatchValue.SetWatch(AValue: TWatch);
@@ -4309,6 +4306,8 @@ begin
   for i := 0 to c - 1 do begin
     e := TIdeWatchValue.Create(Watch);
     e.LoadDataFromXMLConfig(AConfig, APath + IntToStr(i) + '/');
+// TODO xxxx may load the same entry more than once with diff display format
+// check before adding
     Add(e);
   end;
 end;
@@ -4550,7 +4549,7 @@ begin
   then Include(FEvaluateFlags, defClassAutoCast)
   else Exclude(FEvaluateFlags, defClassAutoCast);
   FRepeatCount := AConfig.GetValue(APath + 'RepeatCount', 0);
-  AConfig.GetValue(APath + 'DisplayFormat', int64(ord(wdfDefault)), FDisplayFormat, system.TypeInfo(TWatchDisplayFormat));
+  FIsMemDump := AConfig.GetValue(APath + 'DisplayFormat', 'wdfDefault') = 'wdfMemDump'; // use constants from TWatchDisplayFormat
 
   // Defaults to PrePrinted
   FResultData := TWatchResultData.CreateFromXMLConfig(AConfig, APath);
@@ -4569,17 +4568,15 @@ begin
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in EvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'RepeatCount', RepeatCount, 0);
 
-  if (Watch <> nil) and (FDisplayFormat <> wdfMemDump) and
-     (FResultData <> nil) and
-     (FResultData.ValueKind <> rdkPrePrinted)
-  then begin
-    // Use same path => "Value" will be readable for older IDE (read as wdDefault)
-    // ResultData does not write any "path/value" conflicting with the above fields
-    ResultData.SaveDataToXMLConfig(AConfig, APath);
+  if IsMemDump then begin
+    AConfig.SetDeleteValue(APath + 'DisplayFormat', 'wdfMemDump', 'wdfDefault'); // use constants from TWatchDisplayFormat
+    AConfig.SetValue(APath + 'Value', Value);
   end
   else begin
-    AConfig.SetDeleteValue(APath + 'DisplayFormat', DisplayFormat, int64(ord(wdfDefault)), system.TypeInfo(TWatchDisplayFormat));
-    AConfig.SetValue(APath + 'Value', Value);
+    if ResultData <> nil then
+      // Use same path => "Value" will be readable for older IDE (read as wdDefault)
+      // ResultData does not write any "path/value" conflicting with the above fields
+      ResultData.SaveDataToXMLConfig(AConfig, APath);
   end;
 end;
 
@@ -4587,7 +4584,7 @@ constructor TIdeWatchValue.Create(AOwnerWatch: TWatch);
 begin
   inherited Create(AOwnerWatch);
   Validity := ddsUnknown;
-  FDisplayFormat := Watch.DisplayFormat;
+  FIsMemDump := Watch.DisplayFormat.MemDump;
   FEvaluateFlags := Watch.EvaluateFlags;
   FRepeatCount   := Watch.RepeatCount;
   FFirstIndexOffs    := Watch.FirstIndexOffs;
@@ -4606,7 +4603,7 @@ begin
   inherited Assign(AnOther);
   FThreadId      := TIdeWatchValue(AnOther).FThreadId;
   FStackFrame    := TIdeWatchValue(AnOther).FStackFrame;
-  FDisplayFormat := TIdeWatchValue(AnOther).FDisplayFormat;
+  FIsMemDump := TIdeWatchValue(AnOther).FIsMemDump;
 end;
 
 function TIdeWatchValue.ExpressionForChildField(AName: String;
@@ -6724,6 +6721,17 @@ begin
   DoModified;
 end;
 
+function TIdeWatch.GetDisplayFormat: TWatchDisplayFormat;
+var
+  tw: TIdeWatch;
+begin
+  tw := GetTopParentWatch;
+  if tw <> Self then
+    Result := tw.DisplayFormat
+  else
+    Result := inherited GetDisplayFormat;
+end;
+
 function TIdeWatch.GetValue(const AThreadId: Integer; const AStackFrame: Integer): TIdeWatchValue;
 begin
   Result := TIdeWatchValue(inherited Values[AThreadId, AStackFrame]);
@@ -6849,6 +6857,47 @@ begin
   Result := TIdeWatches.Create;
 end;
 
+procedure TIdeWatch.DoLoadDisplayFormatFromXMLConfig(const AConfig: TXMLConfig;
+  const APath, AOldPath: string; var ADisplayFormat: TWatchDisplayFormat);
+  function ParseOldDispFormat(AnOldDispFormat: string): TWatchDisplayFormat;
+  begin
+    Result := DefaultWatchDisplayFormat;
+    Result.MemDump := AnOldDispFormat = 'wdfmemdump';
+    case AnOldDispFormat of
+      //'wdfdefault':   ;
+      'wdfstructure': Result.StructFormat := vdfStructFull; // enum = FULL / pointer = WithDataDeref
+      'wdfchar':      Result.NumCharFormat := vdfNumCharOnlyUnicode;
+      //'wdfstring':    ;  // nothing
+      'wdfdecimal':   begin
+                      Result.NumBaseFormat   := vdfBaseDecimal;
+                      Result.NumSignFormat   := vdfSignSigned;
+                      end;
+      'wdfunsigned':  begin
+                      Result.NumBaseFormat   := vdfBaseDecimal;
+                      Result.NumSignFormat   := vdfSignUnsigned;
+                      end;
+      'wdffloat':     ;
+      'wdfhex':       Result.NumBaseFormat    := vdfBaseHex;
+      'wdfbinary':    Result.NumBaseFormat    := vdfBaseBin;
+      'wdfpointers':  begin
+                      Result.NumBaseFormat    := vdfBasePointer;
+                      Result.StructAddrFormat := vdfStructAddressOnly;
+                      end;
+      //'wdfmemdump':   ;
+    end;
+  end;
+var
+  s: String;
+begin
+  s := LowerCase(AConfig.GetValue(APath+AOldPath, 'wdfDefault'));
+  if s <> 'wdfdefault' then begin
+    ADisplayFormat := ParseOldDispFormat(s);
+  end
+  else begin
+    LoadDisplayFormatFromXMLConfig(AConfig, APath+'/', ADisplayFormat);
+  end;
+end;
+
 procedure TIdeWatch.LoadDataFromXMLConfig(const AConfig: TXMLConfig; const APath: string);
 var
   s: String;
@@ -6864,8 +6913,9 @@ begin
   if AConfig.GetValue(APath + 'AllowFunctionThreads', False)
   then Include(FEvaluateFlags, defFunctionCallRunAllThreads)
   else Exclude(FEvaluateFlags, defFunctionCallRunAllThreads);
-  try    ReadStr(AConfig.GetValue(APath + 'DisplayFormat', 'wdfDefault'), FDisplayFormat);
-  except FDisplayFormat := wdfDefault; end;
+
+  DoLoadDisplayFormatFromXMLConfig(AConfig, APath + 'DisplayFormat', '', FDisplayFormat);
+
   FRepeatCount := AConfig.GetValue(APath + 'RepeatCount', 0);
 
   if AConfig.GetValue(APath + 'SkipFpDbgConv', False)
@@ -6891,12 +6941,13 @@ var
 begin
   AConfig.SetDeleteValue(APath + 'Enabled', FEnabled, True);
   AConfig.SetDeleteValue(APath + 'Expression', FExpression, '');
-  WriteStr(s{%H-}, FDisplayFormat);
-  AConfig.SetDeleteValue(APath + 'DisplayFormat', s, 'wdfDefault');
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionCall', defAllowFunctionCall in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionThreads', defFunctionCallRunAllThreads in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'RepeatCount', FRepeatCount, 0);
+
+  AConfig.DeleteValue(APath+'DisplayFormat');
+  SaveDisplayFormatToXMLConfig(AConfig, APath+'DisplayFormat/', FDisplayFormat);
 
   AConfig.SetDeleteValue(APath + 'SkipFpDbgConv', defSkipValConv in FEvaluateFlags, False);
   if DbgBackendConverter <> nil then begin
@@ -7025,12 +7076,9 @@ begin
   if AConfig.GetValue(APath + 'AllowFunctionThreads', False)
   then Include(FEvaluateFlags, defFunctionCallRunAllThreads)
   else Exclude(FEvaluateFlags, defFunctionCallRunAllThreads);
-  i := StringCase
-    (AConfig.GetValue(APath + 'DisplayStyle/Value', TWatchDisplayFormatNames[wdfDefault]),
-    TWatchDisplayFormatNames);
-  if i >= 0
-  then DisplayFormat := TWatchDisplayFormat(i)
-  else DisplayFormat := wdfDefault;
+
+  DoLoadDisplayFormatFromXMLConfig(AConfig, APath + 'DisplayStyle', '/Value', FDisplayFormat);
+
   FRepeatCount := AConfig.GetValue(APath + 'RepeatCount', 0);
 
   if AConfig.GetValue(APath + 'SkipFpDbgConv', False)
@@ -7052,8 +7100,9 @@ procedure TCurrentWatch.SaveToXMLConfig(const AConfig: TXMLConfig; const APath: 
 begin
   AConfig.SetDeleteValue(APath + 'Expression/Value', Expression, '');
   AConfig.SetDeleteValue(APath + 'Enabled/Value', Enabled, true);
-  AConfig.SetDeleteValue(APath + 'DisplayStyle/Value',
-    TWatchDisplayFormatNames[DisplayFormat], TWatchDisplayFormatNames[wdfDefault]);
+
+  AConfig.DeleteValue(APath+'DisplayFormat/Value');
+  SaveDisplayFormatToXMLConfig(AConfig, APath+'DisplayFormat/', FDisplayFormat);
   AConfig.SetDeleteValue(APath + 'ClassAutoCast', defClassAutoCast in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionCall', defAllowFunctionCall in FEvaluateFlags, False);
   AConfig.SetDeleteValue(APath + 'AllowFunctionThreads', defFunctionCallRunAllThreads in FEvaluateFlags, False);
@@ -7354,7 +7403,7 @@ end;
 
 function TIdeLocalsValue.GetDisplayFormat: TWatchDisplayFormat;
 begin
-  Result := wdfDefault;
+  Result := DefaultWatchDisplayFormat;
 end;
 
 function TIdeLocalsValue.GetTypeInfo: TDBGType;
