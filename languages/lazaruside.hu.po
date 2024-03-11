@@ -1742,10 +1742,6 @@ msgstr ""
 msgid "Element Attributes"
 msgstr "Elem jellemzői"
 
-#: lazarusidestrconsts.dlgemulaterightbutton
-msgid "Emulate right button"
-msgstr ""
-
 #: lazarusidestrconsts.dlgendkeyjumpstoneareststart
 msgid "End key jumps to nearest end"
 msgstr "Az End billentyűre a legközelebbi sorvéghez ugrik"
@@ -2421,10 +2417,6 @@ msgstr "Nem aktív $IFDEF csomópont"
 #: lazarusidestrconsts.dlgifdefnodetmpactive
 msgid "Included mixed state $IFDEF node"
 msgstr "Kevert állapotú $IFDEF csomópont"
-
-#: lazarusidestrconsts.dlgifenabledthemessages
-msgid "If enabled, the messages window will show the popup menu on left mouse button click with Ctrl pressed"
-msgstr ""
 
 #: lazarusidestrconsts.dlgimportdesktopexists
 msgid ""
@@ -4284,6 +4276,10 @@ msgstr ""
 msgid "Store converter config in session"
 msgstr ""
 
+#: lazarusidestrconsts.drsstoredispformatconfiginses
+msgid "Store display formats config in session"
+msgstr ""
+
 #: lazarusidestrconsts.drsstoreformatterconfiginses
 msgid "Store formatter config in session"
 msgstr ""
@@ -4296,12 +4292,24 @@ msgstr ""
 msgid "The \"Debugger Backend\" selection from the dropdown (list of IDE debugger backends) is always stored in the session. The project specific backends (below) are by default stored in the LPI."
 msgstr ""
 
+#: lazarusidestrconsts.drsthisonlyaffectsdispformats
+msgid "This only affects the display formats below. The settings which formats to use are always stored in the session."
+msgstr ""
+
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofc
 msgid "This only affects the list of converters below. The settings which list to use are always stored in the session."
 msgstr ""
 
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofformatter
 msgid "This only affects the list of formatters below. The settings which list to use are always stored in the session."
+msgstr ""
+
+#: lazarusidestrconsts.drsuseideglobaldispformats
+msgid "Use the IDEs-global display formats"
+msgstr ""
+
+#: lazarusidestrconsts.drsuseprojecfdispformats
+msgid "Use the projects display formats"
 msgstr ""
 
 #: lazarusidestrconsts.drsusetheidegloballistofconv
@@ -13898,14 +13906,6 @@ msgstr "Célok:"
 msgid "Undo last change to this grid"
 msgstr "Legutóbbi változtatás visszavonása e rácsban"
 
-#: lazarusidestrconsts.lismmusesystemencoding
-msgid "Use system encoding"
-msgstr "A rendszer kódolásának használata"
-
-#: lazarusidestrconsts.lismmusesystemencodinghint
-msgid "Disable support for UTF-8 default string encoding."
-msgstr "Az UTF-8 alapértelmezett karakterkódolás támogatásának kikapcsolása"
-
 #: lazarusidestrconsts.lismmvalues
 #, object-pascal-format
 msgid "Value \"%s\""
@@ -16146,10 +16146,6 @@ msgstr "Javítsa a hibát ami az üzenetablakban látható, ez alapértelmezette
 #: lazarusidestrconsts.lispleaseopenaunitbeforerun
 msgid "Please open a unit before run."
 msgstr "Nyisson meg egy unit-ot futtatás előtt!"
-
-#: lazarusidestrconsts.lispleaseselectatleastonebuildmode
-msgid "Please select at least one build mode."
-msgstr "Legalább egy építési módot ki kell választani."
 
 #: lazarusidestrconsts.lispleaseselectsomecodetoextractanewproceduremethod
 msgid "Please select some code to extract a new procedure/method."

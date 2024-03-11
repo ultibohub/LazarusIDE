@@ -1726,10 +1726,6 @@ msgstr "Elastik minimum Genişlikler"
 msgid "Element Attributes"
 msgstr "Öğe Öznitelikleri"
 
-#: lazarusidestrconsts.dlgemulaterightbutton
-msgid "Emulate right button"
-msgstr "Sağ düğmeyi taklit et"
-
 #: lazarusidestrconsts.dlgendkeyjumpstoneareststart
 msgid "End key jumps to nearest end"
 msgstr "End tuşu en yakın noktaya atlar"
@@ -2382,10 +2378,6 @@ msgstr "Pasif $IFDEF node"
 #: lazarusidestrconsts.dlgifdefnodetmpactive
 msgid "Included mixed state $IFDEF node"
 msgstr "Dahil edilen karma durum $IFDEF node"
-
-#: lazarusidestrconsts.dlgifenabledthemessages
-msgid "If enabled, the messages window will show the popup menu on left mouse button click with Ctrl pressed"
-msgstr "Etkinleştirilirse, mesajlar penceresi Ctrl tuşuna basıldığında sol fare düğmesi tıklandığında açılır menüyü gösterecektir."
 
 #: lazarusidestrconsts.dlgimportdesktopexists
 msgid ""
@@ -4232,6 +4224,10 @@ msgstr " (Aşağıdaki proje ayarları dikkate alınmaz)"
 msgid "Store converter config in session"
 msgstr "Dönüştürücü yapılandırmasını oturumda saklama"
 
+#: lazarusidestrconsts.drsstoredispformatconfiginses
+msgid "Store display formats config in session"
+msgstr ""
+
 #: lazarusidestrconsts.drsstoreformatterconfiginses
 msgid "Store formatter config in session"
 msgstr ""
@@ -4244,6 +4240,10 @@ msgstr "Proje hata ayıklayıcı yapılandırmalarını oturumda saklama"
 msgid "The \"Debugger Backend\" selection from the dropdown (list of IDE debugger backends) is always stored in the session. The project specific backends (below) are by default stored in the LPI."
 msgstr "Açılır menüden \"Hata Ayıklayıcı Arka Ucu\" seçimi (IDE hata ayıklayıcı arka uçlarının listesi) her zaman oturumda saklanır. Projeye özel arka uçlar (aşağıda) varsayılan olarak LPI'da saklanır."
 
+#: lazarusidestrconsts.drsthisonlyaffectsdispformats
+msgid "This only affects the display formats below. The settings which formats to use are always stored in the session."
+msgstr ""
+
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofc
 #, fuzzy
 #| msgid "This only affects the list of converters below. The options setting which list to use are always stored in the session."
@@ -4252,6 +4252,14 @@ msgstr "Bu sadece aşağıdaki dönüştürücü listesini etkiler. Hangi listen
 
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofformatter
 msgid "This only affects the list of formatters below. The settings which list to use are always stored in the session."
+msgstr ""
+
+#: lazarusidestrconsts.drsuseideglobaldispformats
+msgid "Use the IDEs-global display formats"
+msgstr ""
+
+#: lazarusidestrconsts.drsuseprojecfdispformats
+msgid "Use the projects display formats"
 msgstr ""
 
 #: lazarusidestrconsts.drsusetheidegloballistofconv
@@ -13775,14 +13783,6 @@ msgstr "Hedefler: "
 msgid "Undo last change to this grid"
 msgstr "Bu ızgaraya son değişikliği geri al"
 
-#: lazarusidestrconsts.lismmusesystemencoding
-msgid "Use system encoding"
-msgstr "Sistem kodlamasını kullan"
-
-#: lazarusidestrconsts.lismmusesystemencodinghint
-msgid "Disable support for UTF-8 default string encoding."
-msgstr "UTF-8 varsayılan dizge kodlamasının desteğini devre dışı bırak."
-
 #: lazarusidestrconsts.lismmvalues
 #, object-pascal-format
 msgid "Value \"%s\""
@@ -16010,10 +16010,6 @@ msgstr "Lütfen normalde kaynak düzenleyicinin altında olan mesaj penceresinde
 #: lazarusidestrconsts.lispleaseopenaunitbeforerun
 msgid "Please open a unit before run."
 msgstr "Lütfen çalıştırmadan önce bir ünite açın."
-
-#: lazarusidestrconsts.lispleaseselectatleastonebuildmode
-msgid "Please select at least one build mode."
-msgstr "Lütfen en az bir yapım modu seçin."
 
 #: lazarusidestrconsts.lispleaseselectsomecodetoextractanewproceduremethod
 msgid "Please select some code to extract a new procedure/method."

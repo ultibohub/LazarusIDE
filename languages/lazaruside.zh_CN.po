@@ -1733,10 +1733,6 @@ msgstr "最小弹性宽度"
 msgid "Element Attributes"
 msgstr "元素属性"
 
-#: lazarusidestrconsts.dlgemulaterightbutton
-msgid "Emulate right button"
-msgstr ""
-
 #: lazarusidestrconsts.dlgendkeyjumpstoneareststart
 msgid "End key jumps to nearest end"
 msgstr "End 键跳转到最近的末尾"
@@ -2410,10 +2406,6 @@ msgstr "非激活的 $IFDEF 节点"
 #: lazarusidestrconsts.dlgifdefnodetmpactive
 msgid "Included mixed state $IFDEF node"
 msgstr "包含混合状态的 $IFDEF 节点"
-
-#: lazarusidestrconsts.dlgifenabledthemessages
-msgid "If enabled, the messages window will show the popup menu on left mouse button click with Ctrl pressed"
-msgstr ""
 
 #: lazarusidestrconsts.dlgimportdesktopexists
 msgid ""
@@ -4270,6 +4262,10 @@ msgstr ""
 msgid "Store converter config in session"
 msgstr "在会话中存储转换器配置"
 
+#: lazarusidestrconsts.drsstoredispformatconfiginses
+msgid "Store display formats config in session"
+msgstr ""
+
 #: lazarusidestrconsts.drsstoreformatterconfiginses
 msgid "Store formatter config in session"
 msgstr ""
@@ -4282,12 +4278,24 @@ msgstr "在会话中保存项目调试器配置"
 msgid "The \"Debugger Backend\" selection from the dropdown (list of IDE debugger backends) is always stored in the session. The project specific backends (below) are by default stored in the LPI."
 msgstr ""
 
+#: lazarusidestrconsts.drsthisonlyaffectsdispformats
+msgid "This only affects the display formats below. The settings which formats to use are always stored in the session."
+msgstr ""
+
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofc
 msgid "This only affects the list of converters below. The settings which list to use are always stored in the session."
 msgstr ""
 
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofformatter
 msgid "This only affects the list of formatters below. The settings which list to use are always stored in the session."
+msgstr ""
+
+#: lazarusidestrconsts.drsuseideglobaldispformats
+msgid "Use the IDEs-global display formats"
+msgstr ""
+
+#: lazarusidestrconsts.drsuseprojecfdispformats
+msgid "Use the projects display formats"
 msgstr ""
 
 #: lazarusidestrconsts.drsusetheidegloballistofconv
@@ -13846,14 +13854,6 @@ msgstr "目标： "
 msgid "Undo last change to this grid"
 msgstr "撤消上次对这个网格的更改"
 
-#: lazarusidestrconsts.lismmusesystemencoding
-msgid "Use system encoding"
-msgstr "使用系统编码"
-
-#: lazarusidestrconsts.lismmusesystemencodinghint
-msgid "Disable support for UTF-8 default string encoding."
-msgstr "禁止支撑UTF-8默认字符串编码。"
-
 #: lazarusidestrconsts.lismmvalues
 #, object-pascal-format
 msgid "Value \"%s\""
@@ -16103,11 +16103,6 @@ msgstr ""
 #: lazarusidestrconsts.lispleaseopenaunitbeforerun
 msgid "Please open a unit before run."
 msgstr "请在运行前打开一个单元."
-
-#: lazarusidestrconsts.lispleaseselectatleastonebuildmode
-#, fuzzy
-msgid "Please select at least one build mode."
-msgstr "那里必须至少一个构建模式."
 
 #: lazarusidestrconsts.lispleaseselectsomecodetoextractanewproceduremethod
 msgid "Please select some code to extract a new procedure/method."

@@ -930,16 +930,6 @@ resourcestring
     +'looses characters at line %s, column %s.';
   lisNOTECouldNotCreateDefineTemplateForLazarusSources = 'NOTE: Could not '
     +'create Define Template for Lazarus Sources';
-  lisInvalidExpressionHintTheMakeResourcestringFunction = 'Invalid expression.%s'
-    +'Hint: The "Make Resourcestring" function expects a string constant in a '
-    +'single file. Please select the expression and try again.';
-  lisSelectionExceedsStringConstant = 'Selection exceeds string constant';
-  lisHintTheMakeResourcestringFunctionExpectsAStringCon = 'Hint: The "Make '
-    +'Resourcestring" function expects a string constant.%sPlease select the '
-    +'expression and try again.';
-  lisNoResourceStringSectionFound = 'No ResourceString Section found';
-  lisUnableToFindAResourceStringSectionInThisOrAnyOfThe = 'Unable to find a '
-    +'ResourceString section in this or any of the used units.';
   lisOwnerIsAlreadyUsedByTReaderTWriterPleaseChooseAnot = '''Owner'' is '
     +'already used by TReader/TWriter. Please choose another name.';
   lisDuplicateNameAComponentNamedAlreadyExistsInTheInhe = 'Duplicate name: A '
@@ -1316,9 +1306,6 @@ resourcestring
   dlgPreferDoubleClickOverSingleClick = 'Prefer double-click over single-click';
   dlgCurrentlyRespectedByMessagesWindow = 'Currently respected by messages window, '
     +'jump history and search results.';
-  dlgEmulateRightButton = 'Emulate right button';
-  dlgIfEnabledTheMessages = 'If enabled, the messages window will show the '
-    +'popup menu on left mouse button click with Ctrl pressed';
   lisExportEnvironmentOptions = 'Export environment options';
   lisImportEnvironmentOptions = 'Import environment options';
   lisComboBoxes = 'Combo Boxes';
@@ -3838,7 +3825,7 @@ resourcestring
   lisTheResourceClassDescendsFromProbablyThisIsATypoFor = 'The resource '
     +'class "%s" descends from "%s". Probably this is a typo for TForm.';
 
-  // make resource string dialog
+  // make resourcestring
   lisMakeResourceString = 'Make ResourceString';
   lisMakeResStrInvalidResourcestringSect = 'Invalid Resourcestring section';
   lisMakeResStrPleaseChooseAResourcestring = 'Please choose a resourcestring '
@@ -3860,6 +3847,17 @@ resourcestring
   lisMakeResStrInsertContexttSensitive = 'Insert context sensitive';
   lisMakeResStrSourcePreview = 'Source preview';
   lisNoStringConstantFound = 'No string constant found';
+  lisSelectionExceedsStringConstant = 'Selection exceeds string constant';
+  lisInvalidExpressionHintTheMakeResourcestringFunction = 'Invalid expression.'
+    +'%sHint: The "Make Resourcestring" function expects a string constant in a '
+    +'single file. Please select the expression and try again.';
+  lisHintTheMakeResourcestringFunctionExpectsAStringCon =
+    'Hint: The "Make Resourcestring" function expects a string constant.'
+    +'%sPlease select the expression and try again.';
+  lisNoResourceStringSectionFound = 'No ResourceString Section found';
+  lisUnableToFindAResourceStringSectionInThisOrAnyOfThe = 'Unable to find a '
+    +'ResourceString section in this or any of the used units.';
+
   lisFailedToResolveMacros = 'failed to resolve macros';
   lisToolHasNoExecutable = 'tool "%s" has no executable';
   lisCanNotFindExecutable = 'cannot find executable "%s"';
@@ -6069,7 +6067,6 @@ resourcestring
   lisCleanUpAndBuildProject = 'Clean up and build project';
   // Many Build Modes
   lisCompileFollowingModes = 'Compile the following modes';
-  lisPleaseSelectAtLeastOneBuildMode = 'Please select at least one build mode.';
   lisSelectedModesWereCompiled  = 'Selected %d modes were successfully compiled.';
   // Clean Build Project Dialog
   lisProjectOutputDirectory = 'Project output directory';
@@ -6194,8 +6191,6 @@ resourcestring
   lisMMCustomOption = 'Custom Option';
   lisMMIDEMacro = 'IDE Macro';
   lisMMOverrideOutputDirectory = 'Override output directory (-FU)';
-  lisMMUseSystemEncoding = 'Use system encoding';
-  lisMMUseSystemEncodingHint = 'Disable support for UTF-8 default string encoding.';
   lisMMWidgetSetAvailableForLCLProject = 'WidgetSet change is available only for LCL projects';
   lisPriority = 'Priority';
   lisUDScanningUnits = 'Scanning: %s units ...';

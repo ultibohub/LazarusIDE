@@ -1731,10 +1731,6 @@ msgstr ""
 msgid "Element Attributes"
 msgstr "Атрибути елемента"
 
-#: lazarusidestrconsts.dlgemulaterightbutton
-msgid "Emulate right button"
-msgstr ""
-
 #: lazarusidestrconsts.dlgendkeyjumpstoneareststart
 msgid "End key jumps to nearest end"
 msgstr "End переводить до найближчого кінця"
@@ -2408,10 +2404,6 @@ msgstr "Неактивний вузол $IFDEF"
 #: lazarusidestrconsts.dlgifdefnodetmpactive
 msgid "Included mixed state $IFDEF node"
 msgstr "Включений умовно активний вузол $IFDEF"
-
-#: lazarusidestrconsts.dlgifenabledthemessages
-msgid "If enabled, the messages window will show the popup menu on left mouse button click with Ctrl pressed"
-msgstr ""
 
 #: lazarusidestrconsts.dlgimportdesktopexists
 msgid ""
@@ -4269,6 +4261,10 @@ msgstr " (параметри проєкту нижче нехтуються)"
 msgid "Store converter config in session"
 msgstr "Зберігати параметри перетворення в сеансі роботи"
 
+#: lazarusidestrconsts.drsstoredispformatconfiginses
+msgid "Store display formats config in session"
+msgstr ""
+
 #: lazarusidestrconsts.drsstoreformatterconfiginses
 msgid "Store formatter config in session"
 msgstr ""
@@ -4281,6 +4277,10 @@ msgstr "Зберігати параметри зневаджувача проє�
 msgid "The \"Debugger Backend\" selection from the dropdown (list of IDE debugger backends) is always stored in the session. The project specific backends (below) are by default stored in the LPI."
 msgstr "Вибраний зі списку (рушіїв зневадження ІСР) рушій зневадження завжди зберігається в сеансі роботи.  Рушії зневадження проєкту (нижче) типово зберігаються в LPI."
 
+#: lazarusidestrconsts.drsthisonlyaffectsdispformats
+msgid "This only affects the display formats below. The settings which formats to use are always stored in the session."
+msgstr ""
+
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofc
 #, fuzzy
 #| msgid "This only affects the list of converters below. The options setting which list to use are always stored in the session."
@@ -4289,6 +4289,14 @@ msgstr "Стосується лише списку елементів перет
 
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofformatter
 msgid "This only affects the list of formatters below. The settings which list to use are always stored in the session."
+msgstr ""
+
+#: lazarusidestrconsts.drsuseideglobaldispformats
+msgid "Use the IDEs-global display formats"
+msgstr ""
+
+#: lazarusidestrconsts.drsuseprojecfdispformats
+msgid "Use the projects display formats"
 msgstr ""
 
 #: lazarusidestrconsts.drsusetheidegloballistofconv
@@ -13856,14 +13864,6 @@ msgstr "Цілі:"
 msgid "Undo last change to this grid"
 msgstr "Скасувати останню зміну для цієї сітки"
 
-#: lazarusidestrconsts.lismmusesystemencoding
-msgid "Use system encoding"
-msgstr "Використати системне кодування"
-
-#: lazarusidestrconsts.lismmusesystemencodinghint
-msgid "Disable support for UTF-8 default string encoding."
-msgstr "Вимкнути підтримку типового кодування рядків UTF-8."
-
 #: lazarusidestrconsts.lismmvalues
 #, object-pascal-format
 msgid "Value \"%s\""
@@ -16105,10 +16105,6 @@ msgstr "Виправте помилку, показану у вікні пові
 #: lazarusidestrconsts.lispleaseopenaunitbeforerun
 msgid "Please open a unit before run."
 msgstr "Відкрийте модуль перед запуском."
-
-#: lazarusidestrconsts.lispleaseselectatleastonebuildmode
-msgid "Please select at least one build mode."
-msgstr "Виберіть принаймні один режим побудови."
 
 #: lazarusidestrconsts.lispleaseselectsomecodetoextractanewproceduremethod
 msgid "Please select some code to extract a new procedure/method."

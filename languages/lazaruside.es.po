@@ -1769,10 +1769,6 @@ msgstr ""
 msgid "Element Attributes"
 msgstr "Atributos del Elemento"
 
-#: lazarusidestrconsts.dlgemulaterightbutton
-msgid "Emulate right button"
-msgstr ""
-
 #: lazarusidestrconsts.dlgendkeyjumpstoneareststart
 msgid "End key jumps to nearest end"
 msgstr "Saltar al end más cercano con la tecla END"
@@ -2476,10 +2472,6 @@ msgstr "Nodo $IFDEF inactivo"
 #: lazarusidestrconsts.dlgifdefnodetmpactive
 msgid "Included mixed state $IFDEF node"
 msgstr "Inclusión de nodo de estado $IFDEF mixto"
-
-#: lazarusidestrconsts.dlgifenabledthemessages
-msgid "If enabled, the messages window will show the popup menu on left mouse button click with Ctrl pressed"
-msgstr ""
 
 #: lazarusidestrconsts.dlgimportdesktopexists
 #, fuzzy
@@ -4393,6 +4385,10 @@ msgstr " (Ignorando la configuración del proyecto a continuación)"
 msgid "Store converter config in session"
 msgstr "Almacenar la configuración del convertidor en la sesión"
 
+#: lazarusidestrconsts.drsstoredispformatconfiginses
+msgid "Store display formats config in session"
+msgstr ""
+
 #: lazarusidestrconsts.drsstoreformatterconfiginses
 msgid "Store formatter config in session"
 msgstr ""
@@ -4405,6 +4401,10 @@ msgstr "Almacenar la configuración del depurador en la sesión"
 msgid "The \"Debugger Backend\" selection from the dropdown (list of IDE debugger backends) is always stored in the session. The project specific backends (below) are by default stored in the LPI."
 msgstr "El \"Backend del depurador\" seleccionado del menú desplegable (lista de backend de depueración del IDE) es siempre almacenado en la sesión. Los backends específicos del proyecto (a continuación) se almacenan de forma predeterminada en el LPI."
 
+#: lazarusidestrconsts.drsthisonlyaffectsdispformats
+msgid "This only affects the display formats below. The settings which formats to use are always stored in the session."
+msgstr ""
+
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofc
 #, fuzzy
 #| msgid "This only affects the list of converters below. The options setting which list to use are always stored in the session."
@@ -4413,6 +4413,14 @@ msgstr "Esto solo afecta la lista de convertidores a continuación. Las opciones
 
 #: lazarusidestrconsts.drsthisonlyaffectsthelistofformatter
 msgid "This only affects the list of formatters below. The settings which list to use are always stored in the session."
+msgstr ""
+
+#: lazarusidestrconsts.drsuseideglobaldispformats
+msgid "Use the IDEs-global display formats"
+msgstr ""
+
+#: lazarusidestrconsts.drsuseprojecfdispformats
+msgid "Use the projects display formats"
 msgstr ""
 
 #: lazarusidestrconsts.drsusetheidegloballistofconv
@@ -14133,14 +14141,6 @@ msgstr "Objetivos: "
 msgid "Undo last change to this grid"
 msgstr "Deshacer último cambio realizado en esta rejilla"
 
-#: lazarusidestrconsts.lismmusesystemencoding
-msgid "Use system encoding"
-msgstr "Usar codificación del sistema"
-
-#: lazarusidestrconsts.lismmusesystemencodinghint
-msgid "Disable support for UTF-8 default string encoding."
-msgstr "Deshabilitar soporte para UTF-8 para codificación de cadenas por defecto."
-
 #: lazarusidestrconsts.lismmvalues
 #, object-pascal-format
 msgid "Value \"%s\""
@@ -16411,10 +16411,6 @@ msgstr "Por favor solucione el error mostrado en la ventana de mensajes, que nor
 #: lazarusidestrconsts.lispleaseopenaunitbeforerun
 msgid "Please open a unit before run."
 msgstr "Por favor abra una unidad antes de ejecutar."
-
-#: lazarusidestrconsts.lispleaseselectatleastonebuildmode
-msgid "Please select at least one build mode."
-msgstr "Por favor, seleccione al menos un modo de construcción."
 
 #: lazarusidestrconsts.lispleaseselectsomecodetoextractanewproceduremethod
 msgid "Please select some code to extract a new procedure/method."

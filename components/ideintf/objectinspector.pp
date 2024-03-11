@@ -1337,12 +1337,8 @@ end;
 
 procedure TOICustomPropertyGrid.FocusCurrentEditor;
 begin
-  if (IsCurrentEditorAvailable) and (FCurrentEdit.CanFocus) then
-  begin
-    FCurrentEdit.SetFocus;
-    if (FCurrentEdit is TEdit) then
-      TEdit(FCurrentEdit).SelStart := Length((FCurrentEdit as TEdit).Text);
-  end;
+  if FCurrentEdit = ValueEdit then
+    ValueEdit.SelStart := Length(ValueEdit.Text);
 end;
 
 function TOICustomPropertyGrid.ConsistencyCheck: integer;

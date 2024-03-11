@@ -839,6 +839,10 @@ procedure TTextMatePattern.NextToken(var AStates: TTextMatePatternState;
 begin
   ANextTokenPos := Length(AText);
   assert(False, 'TTextMatePattern.NextToken: False');
+  if AStates.Grammar = nil then;
+  if ACurTokenPos=0 then ;
+  if AnInitInfoOnly then ;
+  if AnIsCalledAsParent then ;
 end;
 
 procedure TTextMatePattern.IncRefCount;
@@ -869,6 +873,7 @@ function TTextMatePattern.DebugDump(AnIndent: Integer;
 begin
   Result := StringOfChar(' ', AnIndent) + APrefix
           + '[' + IntToStr(FMainIndex) + '] ' + DebugName + LineEnding;
+  if AnIncludeNested then ;
 end;
 
 function TTextMatePattern.IsEndlessRecursion(ACurTokenPos: integer;
@@ -897,6 +902,11 @@ procedure TTextMatePattern.InitStates(const AGrammar: TTextMateGrammar;
   const AText: String; ADepth: Integer);
 begin
   assert(False, 'TTextMatePattern.InitStates: not TTextMatePatternBaseNested');
+  if AGrammar=nil then ;
+  if AStates.Grammar=nil then ;
+  if AParent=nil then ;
+  if AText='' then ;
+  if ADepth=0 then ;
 end;
 
 procedure TTextMatePattern.GetCurrentTokenInfo(
@@ -931,7 +941,7 @@ end;
 procedure TTextMatePattern.InitStateAfterAdded(
   AStateEntry: PTextMatePatternStateEntry);
 begin
-  //
+  if AStateEntry=nil then ;
 end;
 
 procedure TTextMatePattern.InitFoundCaptures(
@@ -954,7 +964,13 @@ function TTextMatePattern.GetFirstMatchPos(const AText: String;
   AMatchMustStartBefore: integer): Boolean;
 begin
   Result := False;
+  APattern:=nil;
+  AFoundStartPos:=0;
   assert(False);
+  if AText='' then ;
+  if ATextStartOffset=0 then ;
+  if AStateEntryP=nil then ;
+  if AMatchMustStartBefore=0 then ;
 end;
 
 function TTextMatePattern.GetForwardTarget: TTextMatePatternBaseNested;
@@ -967,7 +983,8 @@ end;
 procedure TTextMatePattern.FlattenNested(AGrammar: TTextMateGrammar;
   ARemoveMissingIncludes: boolean);
 begin
-  //
+  if AGrammar=nil then ;
+  if ARemoveMissingIncludes then ;
 end;
 
 class function TTextMatePattern.GetCopyFor(AnOther: TTextMatePattern;
@@ -987,6 +1004,7 @@ begin
   FDebugName  := AnOther.FDebugName;
   FAttribInfo := AnOther.FAttribInfo;
   FAttribInfo.TokId := FAttribInfo.TokId + AnIndexOffset;
+  if ANewList=nil then ;
 end;
 
 procedure TTextMatePattern.DoInitRegex(var ARegEx: TRegExpr;

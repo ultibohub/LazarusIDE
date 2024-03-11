@@ -49,6 +49,8 @@ uses
 {$IFDEF VIRTUALPASCAL}
      Use32,
 {$ENDIF}
+     SysUtils,
+     TTError,
      TTTypes,
      TTProfile;
 
@@ -199,7 +201,7 @@ type
                                 x,y,tx,ty: integer;
                                 OnRender: TDirectRenderingFunction) : TError; override;
 
-    procedure Set_Raster_Palette(const palette: TT_Gray_Palette); override;
+    procedure Set_Raster_Palette(const {%H-}palette: TT_Gray_Palette); override;
 
     constructor Create;
     destructor Destroy; override;
@@ -218,10 +220,6 @@ type
   function TTGetDefaultRasterizer: TFreeTypeRasterizer;
 
 implementation
-
-uses
-     TTError,
-     SysUtils;
 
 const
   Pixel_Bits = 6;        (* fractional bits of input coordinates  *)

@@ -232,7 +232,6 @@ type
   TEnvGuiOptions = class(TIDESubOptions)
   private
     FConfigStorage: TXMLOptionsStorage;
-    FEmulateRightMouseButton: boolean;
     // hints
     FShowHintsForComponentPalette: boolean;
     FShowHintsForMainSpeedButtons: boolean;
@@ -302,8 +301,8 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure ReadFromXml(OnlyDesktop: boolean); override;
-    procedure WriteToXml(OnlyDesktop: boolean); override;
+    procedure ReadFromXml({%H-}OnlyDesktop: boolean); override;
+    procedure WriteToXml({%H-}OnlyDesktop: boolean); override;
     procedure InitConfig; override;
 
     procedure UseDesktop(ADesktop: TDesktopOpt);
@@ -369,7 +368,6 @@ type
     // object inspector
     property ObjectInspectorOptions: TOIOptions read FObjectInspectorOptions;
     // messages view
-    property EmulateRightMouseButton: boolean read FEmulateRightMouseButton write FEmulateRightMouseButton;
     property MsgViewDblClickJumps: boolean read FMsgViewDblClickJumps
       write FMsgViewDblClickJumps; // true=dbl click jump to error, false=single click jumps
     property MsgViewFocus: boolean read FMsgViewFocus
@@ -1045,7 +1043,6 @@ begin
   FObjectInspectorOptions.Load;
   FObjectInspectorOptions.SaveBounds:=false;
   // messages view
-  FEmulateRightMouseButton:=XMLCfg.GetValue(Path+'EmulateRightMouseButton/Value',false);
   fMsgViewDblClickJumps:=XMLCfg.GetValue(Path+'MsgViewDblClickJumps/Value',false);
   fMsgViewFocus:=XMLCfg.GetValue(Path+'MsgViewFocus/Value',DefaultMsgViewFocus);
   FShowMessagesIcons:=XMLCfg.GetValue(Path+'MsgView/ShowMessagesIcons/Value',true);
@@ -1174,7 +1171,6 @@ begin
   FObjectInspectorOptions.SaveBounds:=false;
   FObjectInspectorOptions.Save;
   // messages view
-  XMLCfg.SetDeleteValue(Path+'EmulateRightMouseButton/Value',FEmulateRightMouseButton,false);
   XMLCfg.SetDeleteValue(Path+'MsgViewDblClickJumps/Value',fMsgViewDblClickJumps,false);
   XMLCfg.SetDeleteValue(Path+'MsgViewFocus/Value',fMsgViewFocus,DefaultMsgViewFocus);
   XMLCfg.SetDeleteValue(Path+'MsgView/ShowMessagesIcons/Value',FShowMessagesIcons,true);

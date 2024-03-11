@@ -40,9 +40,9 @@ type
     procedure Put(Index: Integer; const S: string); override;
     procedure InsertItem(Index: Integer; const S: string); override;
     procedure InsertItem(Index: Integer; const S: string; O: TObject); override;
-    function AddObject(const S: string; AObject: TObject): Integer; override;
   public
     constructor Create;
+    function AddObject(const S: string; AObject: TObject): Integer; override;
     function CheckTypeName(ATypeName: String): boolean;
     function CheckInheritedTypeName(ATypeName: String): boolean;
     property MatchesInheritedTypes: boolean read FMatchesInheritedTypes; // perform "is TFooClass"
@@ -250,12 +250,16 @@ end;
 procedure TDbgTypePatternList.InsertItem(Index: Integer; const S: string;
   O: TObject);
 begin
+  if Index=0 then ;
+  if S='' then ;
+  if O=nil then ;
   raise Exception.Create('');
 end;
 
 function TDbgTypePatternList.AddObject(const S: string; AObject: TObject
   ): Integer;
 begin
+  if AObject=nil then ;
   Result := Add(S); // used in assign, ignore object from other list
 end;
 
