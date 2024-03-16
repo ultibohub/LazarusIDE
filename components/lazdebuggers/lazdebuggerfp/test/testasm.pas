@@ -5,9 +5,9 @@ unit TestAsm;
 interface
 
 uses
-  Classes, SysUtils, FpPascalBuilder, FpDbgDisasX86, FpDbgClasses, FpDbgLoader,
-  FpDbgUtil, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, TestOutputLogger, TestDbgTestSuites, fpcunit,
-  testutils, testregistry, RegExpr;
+  Classes, SysUtils, FpPascalBuilder, FpDbgDisasX86, FpDbgClasses, FpDbgLoader, FpDbgUtil,
+  FpDbgCpuX86, LazLoggerBase, TestOutputLogger, TestDbgTestSuites, fpcunit, testutils,
+  testregistry, RegExpr;
 
 type
 
@@ -21,15 +21,27 @@ type
 implementation
 
 type
+
+  { TDummyProcess }
+
   TDummyProcess = class(TDbgProcess)
   public
+    function CreateBreakPointTargetHandler: TFpBreakPointTargetHandler; override;
     property NewMode: TFPDMode write SetMode;
   end;
+
+{ TDummyProcess }
+
+function TDummyProcess.CreateBreakPointTargetHandler: TFpBreakPointTargetHandler;
+begin
+  Result := TBreakPointx86Handler.Create(Self);
+end;
 
 procedure TTestAssembler.TestDisAsm;
 var
   DisAss: TX86AsmDecoder;
   Process: TDummyProcess;
+  IgnoreSizeWordPtr: Boolean;
 
 
   procedure TestDis(AName: String; AData: String; AExp: String);
@@ -51,17 +63,35 @@ codeBytes, '  ', asmInstr,
 
     AssertEquals(AName+' Cnt bytes', Length(AData), p-@s[1]);
 
+    s := Trim(LowerCase(asmInstr));
+    AExp := LowerCase(AExp);
+
+    if IgnoreSizeWordPtr and
+       ( (pos('word ptr', AExp) < 1) or (pos('word ptr', s) < 1) ) // don't ignore, if both have it
+    then begin
+      s := StringReplace(s, 'dword ptr',   ' ', [rfReplaceAll]);
+      s := StringReplace(s, 'qword ptr',   ' ', [rfReplaceAll]);
+      s := StringReplace(s, 'xmmword ptr', ' ', [rfReplaceAll]);
+      s := StringReplace(s, 'ymmword ptr', ' ', [rfReplaceAll]);
+      s := StringReplace(s, 'word ptr',    ' ', [rfReplaceAll]);
+      AExp := StringReplace(AExp, 'dword ptr',   ' ', [rfReplaceAll]);
+      AExp := StringReplace(AExp, 'qword ptr',   ' ', [rfReplaceAll]);
+      AExp := StringReplace(AExp, 'xmmword ptr', ' ', [rfReplaceAll]);
+      AExp := StringReplace(AExp, 'ymmword ptr', ' ', [rfReplaceAll]);
+      AExp := StringReplace(AExp, 'word ptr',    ' ', [rfReplaceAll]);
+    end;
+
     r := TRegExpr.Create('(\$)0+([0-9a-fA-F])');
 
-    s := Trim(LowerCase(asmInstr));
     s := StringReplace(s, '  ', ' ', [rfReplaceAll]);  // space
     s := StringReplace(s, ',  ', ',', [rfReplaceAll]); // space
+    s := StringReplace(s, ', ', ',', [rfReplaceAll]); // space
     s := r.Replace(s, '$1$2', True);
 
     AExp := StringReplace(AExp, '  ', ' ', [rfReplaceAll]);  // space
     AExp := StringReplace(AExp, ',  ', ',', [rfReplaceAll]); // space
+    AExp := StringReplace(AExp, ', ', ',', [rfReplaceAll]); // space
     AExp := r.Replace(AExp, '$1$2', True);
-    AExp := LowerCase(AExp);
     r.Free;
     AssertEquals(AName+' asm ', AExp, s);
 
@@ -69,6 +99,7 @@ codeBytes, '  ', asmInstr,
   end;
 
 begin
+  IgnoreSizeWordPtr := False;
   Process := TDummyProcess.Create('', nil, nil, nil);
   Process.NewMode := dm64;
   DisAss := TX86AsmDecoder.Create(Process);
@@ -261,7 +292,68 @@ begin
   TestDis('vmovsd xmm1,xmm2,xmm3',       #$C5#$EB#$10#$CB,                 'vmovsd xmm1,xmm2,xmm3');
   TestDis('vmovsd xmm1,xmm2,xmm3',       #$C5#$EB#$10#$CB,                 'vmovsd xmm1,xmm2,xmm3');
 
-
+  TestDis('pmovzxbq xmm3,xmm9',                  #$66#$41#$0f#$38#$32#$d9,             'pmovzxbq xmm3,xmm9');
+  TestDis('pmovzxbq xmm3,WORD PTR [rdi+$3]',     #$66#$0f#$38#$32#$5f#$03,             'pmovzxbq xmm3,WORD PTR [rdi+$3]');
+  TestDis('pmovsxbq xmm3,xmm9',                  #$66#$41#$0f#$38#$22#$d9,             'pmovsxbq xmm3,xmm9');
+  TestDis('pmovsxbq xmm3,WORD PTR [rdi+$3]',     #$66#$0f#$38#$22#$5f#$03,             'pmovsxbq xmm3,WORD PTR [rdi+$3]');
+  TestDis('vpmovzxbq xmm3,xmm9',                 #$c4#$c2#$79#$32#$d9,                 'vpmovzxbq xmm3,xmm9');
+  TestDis('vpmovzxbq xmm3,WORD PTR [rdi+$3]',    #$c4#$e2#$79#$32#$5f#$03,             'vpmovzxbq xmm3,WORD PTR [rdi+$3]');
+  TestDis('vpmovsxbq xmm3,xmm9',                 #$c4#$c2#$79#$22#$d9,                 'vpmovsxbq xmm3,xmm9');
+  TestDis('vpmovsxbq xmm3,WORD PTR [rdi+$3]',    #$c4#$e2#$79#$22#$5f#$03,             'vpmovsxbq xmm3,WORD PTR [rdi+$3]');
+  TestDis('vpmovzxbq ymm3,xmm9',                 #$c4#$c2#$7d#$32#$d9,                 'vpmovzxbq ymm3,xmm9');
+  TestDis('vpmovzxbq ymm3,DWORD PTR [rdi+$3]',   #$c4#$e2#$7d#$32#$5f#$03,             'vpmovzxbq ymm3,DWORD PTR [rdi+$3]');
+  TestDis('vpmovsxbq ymm3,xmm9',                 #$c4#$c2#$7d#$22#$d9,                 'vpmovsxbq ymm3,xmm9');
+  TestDis('vpmovsxbq ymm3,DWORD PTR [rdi+$3]',   #$c4#$e2#$7d#$22#$5f#$03,             'vpmovsxbq ymm3,DWORD PTR [rdi+$3]');
+  TestDis('pmovzxbw xmm1,xmm7',                  #$66#$0f#$38#$30#$cf,                 'pmovzxbw xmm1,xmm7');
+  TestDis('pmovzxbw xmm1,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$30#$4f#$03,             'pmovzxbw xmm1,QWORD PTR [rdi+$3]');
+  TestDis('pmovzxbd xmm2,xmm8',                  #$66#$41#$0f#$38#$31#$d0,             'pmovzxbd xmm2,xmm8');
+  TestDis('pmovzxbd xmm2,DWORD PTR [rdi+$3]',    #$66#$0f#$38#$31#$57#$03,             'pmovzxbd xmm2,DWORD PTR [rdi+$3]');
+  TestDis('pmovzxwd xmm4,xmm10',                 #$66#$41#$0f#$38#$33#$e2,             'pmovzxwd xmm4,xmm10');
+  TestDis('pmovzxwd xmm4,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$33#$67#$03,             'pmovzxwd xmm4,QWORD PTR [rdi+$3]');
+  TestDis('pmovzxwq xmm5,xmm11',                 #$66#$41#$0f#$38#$34#$eb,             'pmovzxwq xmm5,xmm11');
+  TestDis('pmovzxwq xmm5,DWORD PTR [rdi+$3]',    #$66#$0f#$38#$34#$6f#$03,             'pmovzxwq xmm5,DWORD PTR [rdi+$3]');
+  TestDis('pmovzxdq xmm6,xmm12',                 #$66#$41#$0f#$38#$35#$f4,             'pmovzxdq xmm6,xmm12');
+  TestDis('pmovzxdq xmm6,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$35#$77#$03,             'pmovzxdq xmm6,QWORD PTR [rdi+$3]');
+  TestDis('pmovsxbw xmm1,xmm7',                  #$66#$0f#$38#$20#$cf,                 'pmovsxbw xmm1,xmm7');
+  TestDis('pmovsxbw xmm1,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$20#$4f#$03,             'pmovsxbw xmm1,QWORD PTR [rdi+$3]');
+  TestDis('pmovsxbd xmm2,xmm8',                  #$66#$41#$0f#$38#$21#$d0,             'pmovsxbd xmm2,xmm8');
+  TestDis('pmovsxbd xmm2,DWORD PTR [rdi+$3]',    #$66#$0f#$38#$21#$57#$03,             'pmovsxbd xmm2,DWORD PTR [rdi+$3]');
+  TestDis('pmovsxwd xmm4,xmm10',                 #$66#$41#$0f#$38#$23#$e2,             'pmovsxwd xmm4,xmm10');
+  TestDis('pmovsxwd xmm4,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$23#$67#$03,             'pmovsxwd xmm4,QWORD PTR [rdi+$3]');
+  TestDis('pmovsxwq xmm5,xmm11',                 #$66#$41#$0f#$38#$24#$eb,             'pmovsxwq xmm5,xmm11');
+  TestDis('pmovsxwq xmm5,DWORD PTR [rdi+$3]',    #$66#$0f#$38#$24#$6f#$03,             'pmovsxwq xmm5,DWORD PTR [rdi+$3]');
+  TestDis('pmovsxdq xmm6,xmm12',                 #$66#$41#$0f#$38#$25#$f4,             'pmovsxdq xmm6,xmm12');
+  TestDis('pmovsxdq xmm6,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$25#$77#$03,             'pmovsxdq xmm6,QWORD PTR [rdi+$3]');
+  TestDis('pmovzxbw xmm1,xmm7',                  #$66#$0f#$38#$30#$cf,                 'pmovzxbw xmm1,xmm7');
+  TestDis('pmovzxbw xmm1,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$30#$4f#$03,             'pmovzxbw xmm1,QWORD PTR [rdi+$3]');
+  TestDis('pmovzxbd xmm2,xmm8',                  #$66#$41#$0f#$38#$31#$d0,             'pmovzxbd xmm2,xmm8');
+  TestDis('pmovzxbd xmm2,DWORD PTR [rdi+$3]',    #$66#$0f#$38#$31#$57#$03,             'pmovzxbd xmm2,DWORD PTR [rdi+$3]');
+  TestDis('pmovzxwd xmm4,xmm10',                 #$66#$41#$0f#$38#$33#$e2,             'pmovzxwd xmm4,xmm10');
+  TestDis('pmovzxwd xmm4,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$33#$67#$03,             'pmovzxwd xmm4,QWORD PTR [rdi+$3]');
+  TestDis('pmovzxwq xmm5,xmm11',                 #$66#$41#$0f#$38#$34#$eb,             'pmovzxwq xmm5,xmm11');
+  TestDis('pmovzxwq xmm5,DWORD PTR [rdi+$3]',    #$66#$0f#$38#$34#$6f#$03,             'pmovzxwq xmm5,DWORD PTR [rdi+$3]');
+  TestDis('pmovzxdq xmm6,xmm12',                 #$66#$41#$0f#$38#$35#$f4,             'pmovzxdq xmm6,xmm12');
+  TestDis('pmovzxdq xmm6,QWORD PTR [rdi+$3]',    #$66#$0f#$38#$35#$77#$03,             'pmovzxdq xmm6,QWORD PTR [rdi+$3]');
+  TestDis('vpmovsxbw xmm1,xmm7',                 #$c4#$e2#$79#$20#$cf,                 'vpmovsxbw xmm1,xmm7');
+  TestDis('vpmovsxbw xmm1,QWORD PTR [rdi+$3]',   #$c4#$e2#$79#$20#$4f#$03,             'vpmovsxbw xmm1,QWORD PTR [rdi+$3]');
+  TestDis('vpmovsxbd xmm2,xmm8',                 #$c4#$c2#$79#$21#$d0,                 'vpmovsxbd xmm2,xmm8');
+  TestDis('vpmovsxbd xmm2,DWORD PTR [rdi+$3]',   #$c4#$e2#$79#$21#$57#$03,             'vpmovsxbd xmm2,DWORD PTR [rdi+$3]');
+  TestDis('vpmovsxwd xmm4,xmm10',                #$c4#$c2#$79#$23#$e2,                 'vpmovsxwd xmm4,xmm10');
+  TestDis('vpmovsxwd xmm4,QWORD PTR [rdi+$3]',   #$c4#$e2#$79#$23#$67#$03,             'vpmovsxwd xmm4,QWORD PTR [rdi+$3]');
+  TestDis('vpmovsxwq xmm5,xmm11',                #$c4#$c2#$79#$24#$eb,                 'vpmovsxwq xmm5,xmm11');
+  TestDis('vpmovsxwq xmm5,DWORD PTR [rdi+$3]',   #$c4#$e2#$79#$24#$6f#$03,             'vpmovsxwq xmm5,DWORD PTR [rdi+$3]');
+  TestDis('vpmovsxdq xmm6,xmm12',                #$c4#$c2#$79#$25#$f4,                 'vpmovsxdq xmm6,xmm12');
+  TestDis('vpmovsxdq xmm6,QWORD PTR [rdi+$3]',   #$c4#$e2#$79#$25#$77#$03,             'vpmovsxdq xmm6,QWORD PTR [rdi+$3]');
+  TestDis('vpmovsxbw ymm1,xmm7',                 #$c4#$e2#$7d#$20#$cf,                 'vpmovsxbw ymm1,xmm7');
+  TestDis('vpmovsxbw ymm1,XMMWORD PTR [rdi+$3]', #$c4#$e2#$7d#$20#$4f#$03,             'vpmovsxbw ymm1,XMMWORD PTR [rdi+$3]');
+  TestDis('vpmovsxbd ymm2,xmm8',                 #$c4#$c2#$7d#$21#$d0,                 'vpmovsxbd ymm2,xmm8');
+  TestDis('vpmovsxbd ymm2,QWORD PTR [rdi+$3]',   #$c4#$e2#$7d#$21#$57#$03,             'vpmovsxbd ymm2,QWORD PTR [rdi+$3]');
+  TestDis('vpmovsxwd ymm4,xmm10',                #$c4#$c2#$7d#$23#$e2,                 'vpmovsxwd ymm4,xmm10');
+  TestDis('vpmovsxwd ymm4,XMMWORD PTR [rdi+$3]', #$c4#$e2#$7d#$23#$67#$03,             'vpmovsxwd ymm4,XMMWORD PTR [rdi+$3]');
+  TestDis('vpmovsxwq ymm5,xmm11',                #$c4#$c2#$7d#$24#$eb,                 'vpmovsxwq ymm5,xmm11');
+  TestDis('vpmovsxwq ymm5,QWORD PTR [rdi+$3]',   #$c4#$e2#$7d#$24#$6f#$03,             'vpmovsxwq ymm5,QWORD PTR [rdi+$3]');
+  TestDis('vpmovsxdq ymm6,xmm12',                #$c4#$c2#$7d#$25#$f4,                 'vpmovsxdq ymm6,xmm12');
+  TestDis('vpmovsxdq ymm6,XMMWORD PTR [rdi+$3]', #$c4#$e2#$7d#$25#$77#$03,             'vpmovsxdq ymm6,XMMWORD PTR [rdi+$3]');
 
 
   TestDis('movd mm1,edi',     #$0F#$6E#$CF,             'movd mm1,edi');
@@ -373,6 +465,190 @@ begin
   TestDis('vdppd  xmm3,xmm1,[rsi],$07', #$c4#$e3#$71#$41#$1e#$07,             'vdppd xmm3,xmm1,[rsi],$07');
 
 
+  TestDis('popcnt rcx,rdx',             #$f3#$48#$0f#$b8#$ca,          'popcnt rcx,rdx');
+  TestDis('popcnt ecx,edx',             #$f3#$0f#$b8#$ca,              'popcnt ecx,edx');
+  TestDis('popcnt cx,dx',               #$f3#$66#$0f#$b8#$ca,          'popcnt cx,dx');
+  TestDis('popcnt rcx,[rdx]',           #$f3#$48#$0f#$b8#$0a,          'popcnt rcx,[rdx]');
+  TestDis('popcnt ecx,[rdx]',           #$f3#$0f#$b8#$0a,              'popcnt ecx,[rdx]');
+  TestDis('popcnt cx,[rdx]',            #$f3#$66#$0f#$b8#$0a,          'popcnt cx,[rdx]');
+  TestDis('bsf    rcx,rdx',             #$48#$0f#$bc#$ca,              'bsf rcx,rdx');
+  TestDis('bsf    ecx,edx',             #$0f#$bc#$ca,                  'bsf ecx,edx');
+  TestDis('bsf    cx,dx',               #$66#$0f#$bc#$ca,              'bsf cx,dx');
+  TestDis('bsf    rcx,[rdx]',           #$48#$0f#$bc#$0a,              'bsf rcx,[rdx]');
+  TestDis('bsf    ecx,[rdx]',           #$0f#$bc#$0a,                  'bsf ecx,[rdx]');
+  TestDis('bsf    cx,[rdx]',            #$66#$0f#$bc#$0a,              'bsf cx,[rdx]');
+  TestDis('bsr    rcx,rdx',             #$48#$0f#$bd#$ca,              'bsr rcx,rdx');
+  TestDis('bsr    ecx,edx',             #$0f#$bd#$ca,                  'bsr ecx,edx');
+  TestDis('bsr    cx,dx',               #$66#$0f#$bd#$ca,              'bsr cx,dx');
+  TestDis('bsr    rcx,[rdx]',           #$48#$0f#$bd#$0a,              'bsr rcx,[rdx]');
+  TestDis('bsr    ecx,[rdx]',           #$0f#$bd#$0a,                  'bsr ecx,[rdx]');
+  TestDis('bsr    cx,[rdx]',            #$66#$0f#$bd#$0a,              'bsr cx,[rdx]');
+  TestDis('tzcnt  rcx,rdx',             #$f3#$48#$0f#$bc#$ca,          'tzcnt rcx,rdx');
+  TestDis('tzcnt  ecx,edx',             #$f3#$0f#$bc#$ca,              'tzcnt ecx,edx');
+  TestDis('tzcnt  cx,dx',               #$66#$f3#$0f#$bc#$ca,          'tzcnt cx,dx');
+  TestDis('tzcnt  rcx,[rdx]',           #$f3#$48#$0f#$bc#$0a,          'tzcnt rcx,[rdx]');
+  TestDis('tzcnt  ecx,[rdx]',           #$f3#$0f#$bc#$0a,              'tzcnt ecx,[rdx]');
+  TestDis('tzcnt  cx,[rdx]',            #$66#$f3#$0f#$bc#$0a,          'tzcnt cx,[rdx]');
+  TestDis('lzcnt  rcx,rdx',             #$f3#$48#$0f#$bd#$ca,          'lzcnt rcx,rdx');
+  TestDis('lzcnt  ecx,edx',             #$f3#$0f#$bd#$ca,              'lzcnt ecx,edx');
+  TestDis('lzcnt  cx,dx',               #$66#$f3#$0f#$bd#$ca,          'lzcnt cx,dx');
+  TestDis('lzcnt  rcx,[rdx]',           #$f3#$48#$0f#$bd#$0a,          'lzcnt rcx,[rdx]');
+  TestDis('lzcnt  ecx,[rdx]',           #$f3#$0f#$bd#$0a,              'lzcnt ecx,[rdx]');
+  TestDis('lzcnt  cx,[rdx]',            #$66#$f3#$0f#$bd#$0a,          'lzcnt cx,[rdx]');
+
+  TestDis('pextrw edx,mm1,$2',                   #$0f#$c5#$d1#$02,                         'pextrw edx,mm1,$2');
+  TestDis('pextrw edx,xmm2,$2',                  #$66#$0f#$c5#$d2#$02,                     'pextrw edx,xmm2,$2');
+  TestDis('pextrw edx,xmm2,$2',                  #$66#$0f#$3a#$15#$d2#$02,                 'pextrw edx,xmm2,$2');
+  TestDis('pextrw WORD PTR [rsi-$F],xmm3,$2',    #$66#$0f#$3a#$15#$5e#$f1#$02,             'pextrw WORD PTR [rsi-$F],xmm3,$2');
+  TestDis('vpextrw edx,xmm1,$2',                 #$c5#$f9#$c5#$d1#$02,                     'vpextrw edx,xmm1,$2');
+  TestDis('vpextrw WORD PTR [rsi-$F],xmm2,$2',   #$c4#$e3#$79#$15#$56#$f1#$02,             'vpextrw WORD PTR [rsi-$F],xmm2,$2');
+  TestDis('pextrb edx,xmm1,$2',                  #$66#$0f#$3a#$14#$ca#$02,                 'pextrb edx,xmm1,$2');
+  TestDis('pextrd edx,xmm2,$2',                  #$66#$0f#$3a#$16#$d2#$02,                 'pextrd edx,xmm2,$2');
+  TestDis('pextrq rdx,xmm3,$2',                  #$66#$48#$0f#$3a#$16#$da#$02,             'pextrq rdx,xmm3,$2');
+  TestDis('vpextrb edx,xmm1,$2',                 #$c4#$e3#$79#$14#$ca#$02,                 'vpextrb edx,xmm1,$2');
+  TestDis('vpextrd edx,xmm2,$2',                 #$c4#$e3#$79#$16#$d2#$02,                 'vpextrd edx,xmm2,$2');
+  TestDis('vpextrq rdx,xmm3,$2',                 #$c4#$e3#$f9#$16#$da#$02,                 'vpextrq rdx,xmm3,$2');
+  TestDis('pextrb BYTE PTR [rsi-$F],xmm1,$2',    #$66#$0f#$3a#$14#$4e#$f1#$02,             'pextrb BYTE PTR [rsi-$F],xmm1,$2');
+  TestDis('pextrd DWORD PTR [rsi-$F],xmm2,$2',   #$66#$0f#$3a#$16#$56#$f1#$02,             'pextrd DWORD PTR [rsi-$F],xmm2,$2');
+  TestDis('pextrq QWORD PTR [rsi-$F],xmm3,$2',   #$66#$48#$0f#$3a#$16#$5e#$f1#$02,         'pextrq QWORD PTR [rsi-$F],xmm3,$2');
+  TestDis('vpextrb BYTE PTR [rsi-$F],xmm1,$2',   #$c4#$e3#$79#$14#$4e#$f1#$02,             'vpextrb BYTE PTR [rsi-$F],xmm1,$2');
+  TestDis('vpextrd DWORD PTR [rsi-$F],xmm2,$2',  #$c4#$e3#$79#$16#$56#$f1#$02,             'vpextrd DWORD PTR [rsi-$F],xmm2,$2');
+  TestDis('vpextrq QWORD PTR [rsi-$F],xmm3,$2',  #$c4#$e3#$f9#$16#$5e#$f1#$02,             'vpextrq QWORD PTR [rsi-$F],xmm3,$2');
+
+  IgnoreSizeWordPtr := True;
+  TestDis('vcvtph2ps xmm1,xmm2',                            #$c4#$e2#$79#$13#$ca,                                               'vcvtph2ps xmm1,xmm2');
+  TestDis('vcvtph2ps xmm9,xmm2',                            #$c4#$62#$79#$13#$ca,                                               'vcvtph2ps xmm9,xmm2');
+  TestDis('vcvtph2ps xmm1,xmm1',                            #$c4#$e2#$79#$13#$c9,                                               'vcvtph2ps xmm1,xmm1');
+  TestDis('vcvtph2ps xmm1,xmm10',                           #$c4#$c2#$79#$13#$ca,                                               'vcvtph2ps xmm1,xmm10');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [rdi]',                 #$c4#$e2#$79#$13#$0f,                                               'vcvtph2ps xmm1,QWORD PTR [rdi]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [rdi]',                 #$c4#$62#$79#$13#$0f,                                               'vcvtph2ps xmm9,QWORD PTR [rdi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [rdi+$3]',              #$c4#$e2#$79#$13#$4f#$03,                                           'vcvtph2ps xmm1,QWORD PTR [rdi+$3]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [rdi+$3]',              #$c4#$62#$79#$13#$4f#$03,                                           'vcvtph2ps xmm9,QWORD PTR [rdi+$3]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [rax+rdi]',           #$c4#$e2#$79#$13#$0c#$07,                                             'vcvtph2ps xmm1,QWORD PTR [rax+rdi]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [rax+rdi]',           #$c4#$62#$79#$13#$0c#$07,                                             'vcvtph2ps xmm9,QWORD PTR [rax+rdi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax+edi]',           #$67#$c4#$e2#$79#$13#$0c#$07,                                         'vcvtph2ps xmm1,QWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [eax+edi]',           #$67#$c4#$62#$79#$13#$0c#$07,                                         'vcvtph2ps xmm9,QWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [rax+rdi+$3]',        #$c4#$e2#$79#$13#$4c#$07#$03,                                         'vcvtph2ps xmm1,QWORD PTR [rax+rdi+$3]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [rax+rdi+$3]',        #$c4#$62#$79#$13#$4c#$07#$03,                                         'vcvtph2ps xmm9,QWORD PTR [rax+rdi+$3]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax+edi+$3]',        #$67#$c4#$e2#$79#$13#$4c#$07#$03,                                     'vcvtph2ps xmm1,QWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [eax+edi+$3]',        #$67#$c4#$62#$79#$13#$4c#$07#$03,                                     'vcvtph2ps xmm9,QWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [rax*2+rdi]',           #$c4#$e2#$79#$13#$0c#$47,                                           'vcvtph2ps xmm1,QWORD PTR [rax*2+rdi]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [rax*2+rdi]',           #$c4#$62#$79#$13#$0c#$47,                                           'vcvtph2ps xmm9,QWORD PTR [rax*2+rdi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax*2+edi]',           #$67#$c4#$e2#$79#$13#$0c#$47,                                       'vcvtph2ps xmm1,QWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [eax*2+edi]',           #$67#$c4#$62#$79#$13#$0c#$47,                                       'vcvtph2ps xmm9,QWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [rax*2+rdi+$3]',        #$c4#$e2#$79#$13#$4c#$47#$03,                                       'vcvtph2ps xmm1,QWORD PTR [rax*2+rdi+$3]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [rax*2+rdi+$3]',        #$c4#$62#$79#$13#$4c#$47#$03,                                       'vcvtph2ps xmm9,QWORD PTR [rax*2+rdi+$3]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax*2+edi+$3]',        #$67#$c4#$e2#$79#$13#$4c#$47#$03,                                   'vcvtph2ps xmm1,QWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps xmm9,QWORD PTR [eax*2+edi+$3]',        #$67#$c4#$62#$79#$13#$4c#$47#$03,                                   'vcvtph2ps xmm9,QWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps ymm1,xmm2',                            #$c4#$e2#$7d#$13#$ca,                                               'vcvtph2ps ymm1,xmm2');
+  TestDis('vcvtph2ps ymm9,xmm2',                            #$c4#$62#$7d#$13#$ca,                                               'vcvtph2ps ymm9,xmm2');
+  TestDis('vcvtph2ps ymm1,xmm1',                            #$c4#$e2#$7d#$13#$c9,                                               'vcvtph2ps ymm1,xmm1');
+  TestDis('vcvtph2ps ymm1,xmm10',                           #$c4#$c2#$7d#$13#$ca,                                               'vcvtph2ps ymm1,xmm10');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [rdi]',               #$c4#$e2#$7d#$13#$0f,                                               'vcvtph2ps ymm1,XMMWORD PTR [rdi]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [rdi]',               #$c4#$62#$7d#$13#$0f,                                               'vcvtph2ps ymm9,XMMWORD PTR [rdi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [rdi+$3]',            #$c4#$e2#$7d#$13#$4f#$03,                                           'vcvtph2ps ymm1,XMMWORD PTR [rdi+$3]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [rdi+$3]',            #$c4#$62#$7d#$13#$4f#$03,                                           'vcvtph2ps ymm9,XMMWORD PTR [rdi+$3]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [rax+rdi]',         #$c4#$e2#$7d#$13#$0c#$07,                                             'vcvtph2ps ymm1,XMMWORD PTR [rax+rdi]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [rax+rdi]',         #$c4#$62#$7d#$13#$0c#$07,                                             'vcvtph2ps ymm9,XMMWORD PTR [rax+rdi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax+edi]',         #$67#$c4#$e2#$7d#$13#$0c#$07,                                         'vcvtph2ps ymm1,XMMWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [eax+edi]',         #$67#$c4#$62#$7d#$13#$0c#$07,                                         'vcvtph2ps ymm9,XMMWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [rax+rdi+$3]',      #$c4#$e2#$7d#$13#$4c#$07#$03,                                         'vcvtph2ps ymm1,XMMWORD PTR [rax+rdi+$3]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [rax+rdi+$3]',      #$c4#$62#$7d#$13#$4c#$07#$03,                                         'vcvtph2ps ymm9,XMMWORD PTR [rax+rdi+$3]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax+edi+$3]',      #$67#$c4#$e2#$7d#$13#$4c#$07#$03,                                     'vcvtph2ps ymm1,XMMWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [eax+edi+$3]',      #$67#$c4#$62#$7d#$13#$4c#$07#$03,                                     'vcvtph2ps ymm9,XMMWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [rax*2+rdi]',         #$c4#$e2#$7d#$13#$0c#$47,                                           'vcvtph2ps ymm1,XMMWORD PTR [rax*2+rdi]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [rax*2+rdi]',         #$c4#$62#$7d#$13#$0c#$47,                                           'vcvtph2ps ymm9,XMMWORD PTR [rax*2+rdi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi]',         #$67#$c4#$e2#$7d#$13#$0c#$47,                                       'vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [eax*2+edi]',         #$67#$c4#$62#$7d#$13#$0c#$47,                                       'vcvtph2ps ymm9,XMMWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [rax*2+rdi+$3]',      #$c4#$e2#$7d#$13#$4c#$47#$03,                                       'vcvtph2ps ymm1,XMMWORD PTR [rax*2+rdi+$3]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [rax*2+rdi+$3]',      #$c4#$62#$7d#$13#$4c#$47#$03,                                       'vcvtph2ps ymm9,XMMWORD PTR [rax*2+rdi+$3]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi+$3]',      #$67#$c4#$e2#$7d#$13#$4c#$47#$03,                                   'vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps ymm9,XMMWORD PTR [eax*2+edi+$3]',      #$67#$c4#$62#$7d#$13#$4c#$47#$03,                                   'vcvtph2ps ymm9,XMMWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps zmm1,ymm2',                            #$62#$f2#$7d#$48#$13#$ca,                                           'vcvtph2ps zmm1,ymm2');
+  TestDis('vcvtph2ps zmm9,ymm2',                            #$62#$72#$7d#$48#$13#$ca,                                           'vcvtph2ps zmm9,ymm2');
+  TestDis('vcvtph2ps zmm1,ymm1',                            #$62#$f2#$7d#$48#$13#$c9,                                           'vcvtph2ps zmm1,ymm1');
+  TestDis('vcvtph2ps zmm1,ymm10',                           #$62#$d2#$7d#$48#$13#$ca,                                           'vcvtph2ps zmm1,ymm10');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [rdi]',               #$62#$f2#$7d#$48#$13#$0f,                                           'vcvtph2ps zmm1,YMMWORD PTR [rdi]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [rdi]',               #$62#$72#$7d#$48#$13#$0f,                                           'vcvtph2ps zmm9,YMMWORD PTR [rdi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [rdi+$3]',            #$62#$f2#$7d#$48#$13#$8f#$03#$00#$00#$00,                           'vcvtph2ps zmm1,YMMWORD PTR [rdi+$3]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [rdi+$3]',            #$62#$72#$7d#$48#$13#$8f#$03#$00#$00#$00,                           'vcvtph2ps zmm9,YMMWORD PTR [rdi+$3]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [rax+rdi]',         #$62#$f2#$7d#$48#$13#$0c#$07,                                         'vcvtph2ps zmm1,YMMWORD PTR [rax+rdi]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [rax+rdi]',         #$62#$72#$7d#$48#$13#$0c#$07,                                         'vcvtph2ps zmm9,YMMWORD PTR [rax+rdi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax+edi]',         #$67#$62#$f2#$7d#$48#$13#$0c#$07,                                     'vcvtph2ps zmm1,YMMWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [eax+edi]',         #$67#$62#$72#$7d#$48#$13#$0c#$07,                                     'vcvtph2ps zmm9,YMMWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [rax+rdi+$3]',      #$62#$f2#$7d#$48#$13#$8c#$07#$03#$00#$00#$00,                         'vcvtph2ps zmm1,YMMWORD PTR [rax+rdi+$3]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [rax+rdi+$3]',      #$62#$72#$7d#$48#$13#$8c#$07#$03#$00#$00#$00,                         'vcvtph2ps zmm9,YMMWORD PTR [rax+rdi+$3]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax+edi+$3]',      #$67#$62#$f2#$7d#$48#$13#$8c#$07#$03#$00#$00#$00, 'vcvtph2ps zmm1,YMMWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [eax+edi+$3]',      #$67#$62#$72#$7d#$48#$13#$8c#$07#$03#$00#$00#$00, 'vcvtph2ps zmm9,YMMWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [rax*2+rdi]',         #$62#$f2#$7d#$48#$13#$0c#$47,                                       'vcvtph2ps zmm1,YMMWORD PTR [rax*2+rdi]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [rax*2+rdi]',         #$62#$72#$7d#$48#$13#$0c#$47,                                       'vcvtph2ps zmm9,YMMWORD PTR [rax*2+rdi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi]',         #$67#$62#$f2#$7d#$48#$13#$0c#$47,                                   'vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [eax*2+edi]',         #$67#$62#$72#$7d#$48#$13#$0c#$47,                                   'vcvtph2ps zmm9,YMMWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [rax*2+rdi+$3]',      #$62#$f2#$7d#$48#$13#$8c#$47#$03#$00#$00#$00,                       'vcvtph2ps zmm1,YMMWORD PTR [rax*2+rdi+$3]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [rax*2+rdi+$3]',      #$62#$72#$7d#$48#$13#$8c#$47#$03#$00#$00#$00,                       'vcvtph2ps zmm9,YMMWORD PTR [rax*2+rdi+$3]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi+$3]',      #$67#$62#$f2#$7d#$48#$13#$8c#$47#$03#$00#$00#$00, 'vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps zmm9,YMMWORD PTR [eax*2+edi+$3]',      #$67#$62#$72#$7d#$48#$13#$8c#$47#$03#$00#$00#$00, 'vcvtph2ps zmm9,YMMWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtps2ph xmm2,xmm1,$35',                        #$c4#$e3#$79#$1d#$ca#$35,                                           'vcvtps2ph xmm2,xmm1,$35');
+  TestDis('vcvtps2ph xmm2,xmm13,$35',                       #$c4#$63#$79#$1d#$ea#$35,                                           'vcvtps2ph xmm2,xmm13,$35');
+  TestDis('vcvtps2ph xmm12,xmm1,$35',                       #$c4#$c3#$79#$1d#$cc#$35,                                           'vcvtps2ph xmm12,xmm1,$35');
+  TestDis('vcvtps2ph xmm12,xmm13,$35',                      #$c4#$43#$79#$1d#$ec#$35,                                           'vcvtps2ph xmm12,xmm13,$35');
+  TestDis('vcvtps2ph xmm2,ymm1,$35',                        #$c4#$e3#$7d#$1d#$ca#$35,                                           'vcvtps2ph xmm2,ymm1,$35');
+  TestDis('vcvtps2ph xmm2,ymm13,$35',                       #$c4#$63#$7d#$1d#$ea#$35,                                           'vcvtps2ph xmm2,ymm13,$35');
+  TestDis('vcvtps2ph xmm12,ymm1,$35',                       #$c4#$c3#$7d#$1d#$cc#$35,                                           'vcvtps2ph xmm12,ymm1,$35');
+  TestDis('vcvtps2ph xmm12,ymm13,$35',                      #$c4#$43#$7d#$1d#$ec#$35,                                           'vcvtps2ph xmm12,ymm13,$35');
+  TestDis('vcvtps2ph ymm2,zmm1,$35',                        #$62#$f3#$7d#$48#$1d#$ca#$35,                                       'vcvtps2ph ymm2,zmm1,$35');
+  TestDis('vcvtps2ph ymm2,zmm13,$35',                       #$62#$73#$7d#$48#$1d#$ea#$35,                                       'vcvtps2ph ymm2,zmm13,$35');
+  TestDis('vcvtps2ph ymm12,zmm1,$35',                       #$62#$d3#$7d#$48#$1d#$cc#$35,                                       'vcvtps2ph ymm12,zmm1,$35');
+  TestDis('vcvtps2ph ymm12,zmm13,$35',                      #$62#$53#$7d#$48#$1d#$ec#$35,                                       'vcvtps2ph ymm12,zmm13,$35');
+  TestDis('vcvtps2ph QWORD PTR [rdi],xmm3,$35',             #$c4#$e3#$79#$1d#$1f#$35,                                           'vcvtps2ph QWORD PTR [rdi],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [rdi],xmm11,$35',            #$c4#$63#$79#$1d#$1f#$35,                                           'vcvtps2ph QWORD PTR [rdi],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rdi],ymm3,$35',           #$c4#$e3#$7d#$1d#$1f#$35,                                           'vcvtps2ph XMMWORD PTR [rdi],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rdi],ymm11,$35',          #$c4#$63#$7d#$1d#$1f#$35,                                           'vcvtps2ph XMMWORD PTR [rdi],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rdi],zmm3,$35',           #$62#$f3#$7d#$48#$1d#$1f#$35,                                       'vcvtps2ph YMMWORD PTR [rdi],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rdi],zmm11,$35',          #$62#$73#$7d#$48#$1d#$1f#$35,                                       'vcvtps2ph YMMWORD PTR [rdi],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [rdi+$3],xmm3,$35',          #$c4#$e3#$79#$1d#$5f#$03#$35,                                       'vcvtps2ph QWORD PTR [rdi+$3],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [rdi+$3],xmm11,$35',         #$c4#$63#$79#$1d#$5f#$03#$35,                                       'vcvtps2ph QWORD PTR [rdi+$3],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rdi+$3],ymm3,$35',        #$c4#$e3#$7d#$1d#$5f#$03#$35,                                       'vcvtps2ph XMMWORD PTR [rdi+$3],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rdi+$3],ymm11,$35',       #$c4#$63#$7d#$1d#$5f#$03#$35,                                       'vcvtps2ph XMMWORD PTR [rdi+$3],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rdi+$3],zmm3,$35',        #$62#$f3#$7d#$48#$1d#$9f#$03#$00#$00#$00#$35,                       'vcvtps2ph YMMWORD PTR [rdi+$3],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rdi+$3],zmm11,$35',       #$62#$73#$7d#$48#$1d#$9f#$03#$00#$00#$00#$35,                       'vcvtps2ph YMMWORD PTR [rdi+$3],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax+rdi],xmm3,$35',       #$c4#$e3#$79#$1d#$1c#$07#$35,                                         'vcvtps2ph QWORD PTR [rax+rdi],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax+rdi],xmm11,$35',      #$c4#$63#$79#$1d#$1c#$07#$35,                                         'vcvtps2ph QWORD PTR [rax+rdi],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax+rdi],ymm3,$35',     #$c4#$e3#$7d#$1d#$1c#$07#$35,                                         'vcvtps2ph XMMWORD PTR [rax+rdi],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax+rdi],ymm11,$35',    #$c4#$63#$7d#$1d#$1c#$07#$35,                                         'vcvtps2ph XMMWORD PTR [rax+rdi],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax+rdi],zmm3,$35',     #$62#$f3#$7d#$48#$1d#$1c#$07#$35,                                     'vcvtps2ph YMMWORD PTR [rax+rdi],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax+rdi],zmm11,$35',    #$62#$73#$7d#$48#$1d#$1c#$07#$35,                                     'vcvtps2ph YMMWORD PTR [rax+rdi],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax+rdi+$3],xmm3,$35',    #$c4#$e3#$79#$1d#$5c#$07#$03#$35,                                     'vcvtps2ph QWORD PTR [rax+rdi+$3],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax+rdi+$3],xmm11,$35',   #$c4#$63#$79#$1d#$5c#$07#$03#$35,                                     'vcvtps2ph QWORD PTR [rax+rdi+$3],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax+rdi+$3],ymm3,$35',  #$c4#$e3#$7d#$1d#$5c#$07#$03#$35,                                     'vcvtps2ph XMMWORD PTR [rax+rdi+$3],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax+rdi+$3],ymm11,$35', #$c4#$63#$7d#$1d#$5c#$07#$03#$35,                                     'vcvtps2ph XMMWORD PTR [rax+rdi+$3],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax+rdi+$3],zmm3,$35',  #$62#$f3#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [rax+rdi+$3],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax+rdi+$3],zmm11,$35', #$62#$73#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [rax+rdi+$3],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax*2+rdi],xmm3,$35',       #$c4#$e3#$79#$1d#$1c#$47#$35,                                       'vcvtps2ph QWORD PTR [rax*2+rdi],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax*2+rdi],xmm11,$35',      #$c4#$63#$79#$1d#$1c#$47#$35,                                       'vcvtps2ph QWORD PTR [rax*2+rdi],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax*2+rdi],ymm3,$35',     #$c4#$e3#$7d#$1d#$1c#$47#$35,                                       'vcvtps2ph XMMWORD PTR [rax*2+rdi],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax*2+rdi],ymm11,$35',    #$c4#$63#$7d#$1d#$1c#$47#$35,                                       'vcvtps2ph XMMWORD PTR [rax*2+rdi],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax*2+rdi],zmm3,$35',     #$62#$f3#$7d#$48#$1d#$1c#$47#$35,                                   'vcvtps2ph YMMWORD PTR [rax*2+rdi],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax*2+rdi],zmm11,$35',    #$62#$73#$7d#$48#$1d#$1c#$47#$35,                                   'vcvtps2ph YMMWORD PTR [rax*2+rdi],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax*2+rdi+$3],xmm3,$35',    #$c4#$e3#$79#$1d#$5c#$47#$03#$35,                                   'vcvtps2ph QWORD PTR [rax*2+rdi+$3],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [rax*2+rdi+$3],xmm11,$35',   #$c4#$63#$79#$1d#$5c#$47#$03#$35,                                   'vcvtps2ph QWORD PTR [rax*2+rdi+$3],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax*2+rdi+$3],ymm3,$35',  #$c4#$e3#$7d#$1d#$5c#$47#$03#$35,                                   'vcvtps2ph XMMWORD PTR [rax*2+rdi+$3],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [rax*2+rdi+$3],ymm11,$35', #$c4#$63#$7d#$1d#$5c#$47#$03#$35,                                   'vcvtps2ph XMMWORD PTR [rax*2+rdi+$3],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax*2+rdi+$3],zmm3,$35',  #$62#$f3#$7d#$48#$1d#$9c#$47#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [rax*2+rdi+$3],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [rax*2+rdi+$3],zmm11,$35', #$62#$73#$7d#$48#$1d#$9c#$47#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [rax*2+rdi+$3],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax+edi],xmm3,$35',       #$67#$c4#$e3#$79#$1d#$1c#$07#$35,                                     'vcvtps2ph QWORD PTR [eax+edi],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax+edi],xmm11,$35',      #$67#$c4#$63#$79#$1d#$1c#$07#$35,                                     'vcvtps2ph QWORD PTR [eax+edi],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax+edi],ymm3,$35',     #$67#$c4#$e3#$7d#$1d#$1c#$07#$35,                                     'vcvtps2ph XMMWORD PTR [eax+edi],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax+edi],ymm11,$35',    #$67#$c4#$63#$7d#$1d#$1c#$07#$35,                                     'vcvtps2ph XMMWORD PTR [eax+edi],ymm11,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [eax+edi],zmm3,$35',     #$67#$62#$f3#$7d#$48#$1d#$1c#$07#$35,                                 'vcvtps2ph YMMWORD PTR [eax+edi],zmm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [eax+edi],zmm11,$35',    #$67#$62#$73#$7d#$48#$1d#$1c#$07#$35,                                 'vcvtps2ph YMMWORD PTR [eax+edi],zmm11,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax+edi+$3],xmm3,$35',    #$67#$c4#$e3#$79#$1d#$5c#$07#$03#$35,                                 'vcvtps2ph QWORD PTR [eax+edi+$3],xmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax+edi+$3],xmm11,$35',   #$67#$c4#$63#$79#$1d#$5c#$07#$03#$35,                                 'vcvtps2ph QWORD PTR [eax+edi+$3],xmm11,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax+edi+$3],ymm3,$35',  #$67#$c4#$e3#$7d#$1d#$5c#$07#$03#$35,                                 'vcvtps2ph XMMWORD PTR [eax+edi+$3],ymm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax+edi+$3],ymm11,$35', #$67#$c4#$63#$7d#$1d#$5c#$07#$03#$35,                                 'vcvtps2ph XMMWORD PTR [eax+edi+$3],ymm11,$35');
+//  TestDis('vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm3,$35',  #$67#$62#$f3#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00, 'vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm3,$35');
+//  TestDis('vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm11,$35', #$67#$62#$73#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00, 'vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm11,$35');
+  IgnoreSizeWordPtr := False;
 
 
   Process.NewMode := dm32;
@@ -484,6 +760,69 @@ begin
   TestDis('vroundsd xmm1,xmm2,xmm3,$07', #$C4#$E3#$69#$0B#$CB#$07,     'vroundsd xmm1,xmm2,xmm3,$07');
   TestDis('vroundss xmm1,xmm2,xmm3,$07', #$C4#$E3#$69#$0A#$CB#$07,     'vroundss xmm1,xmm2,xmm3,$07');
 
+  TestDis('pmovzxbq xmm3,xmm7',                  #$66#$0f#$38#$32#$df,                 'pmovzxbq xmm3,xmm7');
+  TestDis('pmovzxbq xmm3,WORD PTR [edi+$3]',     #$66#$0f#$38#$32#$5f#$03,             'pmovzxbq xmm3,WORD PTR [edi+$3]');
+  TestDis('pmovsxbq xmm3,xmm7',                  #$66#$0f#$38#$22#$df,                 'pmovsxbq xmm3,xmm7');
+  TestDis('pmovsxbq xmm3,WORD PTR [edi+$3]',     #$66#$0f#$38#$22#$5f#$03,             'pmovsxbq xmm3,WORD PTR [edi+$3]');
+  TestDis('vpmovzxbq xmm3,xmm7',                 #$c4#$e2#$79#$32#$df,                 'vpmovzxbq xmm3,xmm7');
+  TestDis('vpmovzxbq xmm3,WORD PTR [edi+$3]',    #$c4#$e2#$79#$32#$5f#$03,             'vpmovzxbq xmm3,WORD PTR [edi+$3]');
+  TestDis('vpmovsxbq xmm3,xmm7',                 #$c4#$e2#$79#$22#$df,                 'vpmovsxbq xmm3,xmm7');
+  TestDis('vpmovsxbq xmm3,WORD PTR [edi+$3]',    #$c4#$e2#$79#$22#$5f#$03,             'vpmovsxbq xmm3,WORD PTR [edi+$3]');
+  TestDis('vpmovzxbq ymm3,xmm7',                 #$c4#$e2#$7d#$32#$df,                 'vpmovzxbq ymm3,xmm7');
+  TestDis('vpmovzxbq ymm3,DWORD PTR [edi+$3]',   #$c4#$e2#$7d#$32#$5f#$03,             'vpmovzxbq ymm3,DWORD PTR [edi+$3]');
+  TestDis('vpmovsxbq ymm3,xmm7',                 #$c4#$e2#$7d#$22#$df,                 'vpmovsxbq ymm3,xmm7');
+  TestDis('vpmovsxbq ymm3,DWORD PTR [edi+$3]',   #$c4#$e2#$7d#$22#$5f#$03,             'vpmovsxbq ymm3,DWORD PTR [edi+$3]');
+  TestDis('pmovzxbw xmm1,xmm7',                  #$66#$0f#$38#$30#$cf,                 'pmovzxbw xmm1,xmm7');
+  TestDis('pmovzxbw xmm1,QWORD PTR [edi+$3]',    #$66#$0f#$38#$30#$4f#$03,             'pmovzxbw xmm1,QWORD PTR [edi+$3]');
+  TestDis('pmovzxbd xmm2,xmm6',                  #$66#$0f#$38#$31#$d6,                 'pmovzxbd xmm2,xmm6');
+  TestDis('pmovzxbd xmm2,DWORD PTR [edi+$3]',    #$66#$0f#$38#$31#$57#$03,             'pmovzxbd xmm2,DWORD PTR [edi+$3]');
+  TestDis('pmovzxwd xmm4,xmm5',                  #$66#$0f#$38#$33#$e5,                 'pmovzxwd xmm4,xmm5');
+  TestDis('pmovzxwd xmm4,QWORD PTR [edi+$3]',    #$66#$0f#$38#$33#$67#$03,             'pmovzxwd xmm4,QWORD PTR [edi+$3]');
+  TestDis('pmovzxwq xmm5,xmm6',                  #$66#$0f#$38#$34#$ee,                 'pmovzxwq xmm5,xmm6');
+  TestDis('pmovzxwq xmm5,DWORD PTR [edi+$3]',    #$66#$0f#$38#$34#$6f#$03,             'pmovzxwq xmm5,DWORD PTR [edi+$3]');
+  TestDis('pmovzxdq xmm6,xmm1',                  #$66#$0f#$38#$35#$f1,                 'pmovzxdq xmm6,xmm1');
+  TestDis('pmovzxdq xmm6,QWORD PTR [edi+$3]',    #$66#$0f#$38#$35#$77#$03,             'pmovzxdq xmm6,QWORD PTR [edi+$3]');
+  TestDis('pmovsxbw xmm1,xmm7',                  #$66#$0f#$38#$20#$cf,                 'pmovsxbw xmm1,xmm7');
+  TestDis('pmovsxbw xmm1,QWORD PTR [edi+$3]',    #$66#$0f#$38#$20#$4f#$03,             'pmovsxbw xmm1,QWORD PTR [edi+$3]');
+  TestDis('pmovsxbd xmm2,xmm6',                  #$66#$0f#$38#$21#$d6,                 'pmovsxbd xmm2,xmm6');
+  TestDis('pmovsxbd xmm2,DWORD PTR [edi+$3]',    #$66#$0f#$38#$21#$57#$03,             'pmovsxbd xmm2,DWORD PTR [edi+$3]');
+  TestDis('pmovsxwd xmm4,xmm5',                  #$66#$0f#$38#$23#$e5,                 'pmovsxwd xmm4,xmm5');
+  TestDis('pmovsxwd xmm4,QWORD PTR [edi+$3]',    #$66#$0f#$38#$23#$67#$03,             'pmovsxwd xmm4,QWORD PTR [edi+$3]');
+  TestDis('pmovsxwq xmm5,xmm6',                  #$66#$0f#$38#$24#$ee,                 'pmovsxwq xmm5,xmm6');
+  TestDis('pmovsxwq xmm5,DWORD PTR [edi+$3]',    #$66#$0f#$38#$24#$6f#$03,             'pmovsxwq xmm5,DWORD PTR [edi+$3]');
+  TestDis('pmovsxdq xmm6,xmm1',                  #$66#$0f#$38#$25#$f1,                 'pmovsxdq xmm6,xmm1');
+  TestDis('pmovsxdq xmm6,QWORD PTR [edi+$3]',    #$66#$0f#$38#$25#$77#$03,             'pmovsxdq xmm6,QWORD PTR [edi+$3]');
+  TestDis('pmovzxbw xmm1,xmm7',                  #$66#$0f#$38#$30#$cf,                 'pmovzxbw xmm1,xmm7');
+  TestDis('pmovzxbw xmm1,QWORD PTR [edi+$3]',    #$66#$0f#$38#$30#$4f#$03,             'pmovzxbw xmm1,QWORD PTR [edi+$3]');
+  TestDis('pmovzxbd xmm2,xmm6',                  #$66#$0f#$38#$31#$d6,                 'pmovzxbd xmm2,xmm6');
+  TestDis('pmovzxbd xmm2,DWORD PTR [edi+$3]',    #$66#$0f#$38#$31#$57#$03,             'pmovzxbd xmm2,DWORD PTR [edi+$3]');
+  TestDis('pmovzxwd xmm4,xmm5',                  #$66#$0f#$38#$33#$e5,                 'pmovzxwd xmm4,xmm5');
+  TestDis('pmovzxwd xmm4,QWORD PTR [edi+$3]',    #$66#$0f#$38#$33#$67#$03,             'pmovzxwd xmm4,QWORD PTR [edi+$3]');
+  TestDis('pmovzxwq xmm5,xmm6',                  #$66#$0f#$38#$34#$ee,                 'pmovzxwq xmm5,xmm6');
+  TestDis('pmovzxwq xmm5,DWORD PTR [edi+$3]',    #$66#$0f#$38#$34#$6f#$03,             'pmovzxwq xmm5,DWORD PTR [edi+$3]');
+  TestDis('pmovzxdq xmm6,xmm1',                  #$66#$0f#$38#$35#$f1,                 'pmovzxdq xmm6,xmm1');
+  TestDis('pmovzxdq xmm6,QWORD PTR [edi+$3]',    #$66#$0f#$38#$35#$77#$03,             'pmovzxdq xmm6,QWORD PTR [edi+$3]');
+  TestDis('vpmovsxbw xmm1,xmm7',                 #$c4#$e2#$79#$20#$cf,                 'vpmovsxbw xmm1,xmm7');
+  TestDis('vpmovsxbw xmm1,QWORD PTR [edi+$3]',   #$c4#$e2#$79#$20#$4f#$03,             'vpmovsxbw xmm1,QWORD PTR [edi+$3]');
+  TestDis('vpmovsxbd xmm2,xmm6',                 #$c4#$e2#$79#$21#$d6,                 'vpmovsxbd xmm2,xmm6');
+  TestDis('vpmovsxbd xmm2,DWORD PTR [edi+$3]',   #$c4#$e2#$79#$21#$57#$03,             'vpmovsxbd xmm2,DWORD PTR [edi+$3]');
+  TestDis('vpmovsxwd xmm4,xmm5',                 #$c4#$e2#$79#$23#$e5,                 'vpmovsxwd xmm4,xmm5');
+  TestDis('vpmovsxwd xmm4,QWORD PTR [edi+$3]',   #$c4#$e2#$79#$23#$67#$03,             'vpmovsxwd xmm4,QWORD PTR [edi+$3]');
+  TestDis('vpmovsxwq xmm5,xmm6',                 #$c4#$e2#$79#$24#$ee,                 'vpmovsxwq xmm5,xmm6');
+  TestDis('vpmovsxwq xmm5,DWORD PTR [edi+$3]',   #$c4#$e2#$79#$24#$6f#$03,             'vpmovsxwq xmm5,DWORD PTR [edi+$3]');
+  TestDis('vpmovsxdq xmm6,xmm1',                 #$c4#$e2#$79#$25#$f1,                 'vpmovsxdq xmm6,xmm1');
+  TestDis('vpmovsxdq xmm6,QWORD PTR [edi+$3]',   #$c4#$e2#$79#$25#$77#$03,             'vpmovsxdq xmm6,QWORD PTR [edi+$3]');
+  TestDis('vpmovsxbw ymm1,xmm7',                 #$c4#$e2#$7d#$20#$cf,                 'vpmovsxbw ymm1,xmm7');
+  TestDis('vpmovsxbw ymm1,XMMWORD PTR [edi+$3]', #$c4#$e2#$7d#$20#$4f#$03,             'vpmovsxbw ymm1,XMMWORD PTR [edi+$3]');
+  TestDis('vpmovsxbd ymm2,xmm6',                 #$c4#$e2#$7d#$21#$d6,                 'vpmovsxbd ymm2,xmm6');
+  TestDis('vpmovsxbd ymm2,QWORD PTR [edi+$3]',   #$c4#$e2#$7d#$21#$57#$03,             'vpmovsxbd ymm2,QWORD PTR [edi+$3]');
+  TestDis('vpmovsxwd ymm4,xmm5',                 #$c4#$e2#$7d#$23#$e5,                 'vpmovsxwd ymm4,xmm5');
+  TestDis('vpmovsxwd ymm4,XMMWORD PTR [edi+$3]', #$c4#$e2#$7d#$23#$67#$03,             'vpmovsxwd ymm4,XMMWORD PTR [edi+$3]');
+  TestDis('vpmovsxwq ymm5,xmm6',                 #$c4#$e2#$7d#$24#$ee,                 'vpmovsxwq ymm5,xmm6');
+  TestDis('vpmovsxwq ymm5,QWORD PTR [edi+$3]',   #$c4#$e2#$7d#$24#$6f#$03,             'vpmovsxwq ymm5,QWORD PTR [edi+$3]');
+  TestDis('vpmovsxdq ymm6,xmm1',                 #$c4#$e2#$7d#$25#$f1,                 'vpmovsxdq ymm6,xmm1');
+  TestDis('vpmovsxdq ymm6,XMMWORD PTR [edi+$3]', #$c4#$e2#$7d#$25#$77#$03,             'vpmovsxdq ymm6,XMMWORD PTR [edi+$3]');
+
   TestDis('vmovss xmm1,xmm2,xmm3',       #$C5#$EA#$10#$CB,                 'vmovss xmm1,xmm2,xmm3');
   TestDis('vmovss xmm1,xmm2,xmm3',       #$C5#$EA#$10#$CB,                 'vmovss xmm1,xmm2,xmm3');
   TestDis('vmovsd xmm1,xmm2,xmm3',       #$C5#$EB#$10#$CB,                 'vmovsd xmm1,xmm2,xmm3');
@@ -588,6 +927,91 @@ begin
   TestDis('vdppd  xmm1,xmm2,[edi],$07', #$c4#$e3#$69#$41#$0f#$07,             'vdppd xmm1,xmm2,[edi],$07');
   TestDis('vdppd  xmm3,xmm4,[edi],$05', #$c4#$e3#$59#$41#$1f#$05,             'vdppd xmm3,xmm4,[edi],$05');
   TestDis('vdppd  xmm3,xmm1,[esi],$07', #$c4#$e3#$71#$41#$1e#$07,             'vdppd xmm3,xmm1,[esi],$07');
+
+
+  TestDis('popcnt ecx,edx',             #$f3#$0f#$b8#$ca,             'popcnt ecx,edx');
+  TestDis('popcnt cx,dx',               #$f3#$66#$0f#$b8#$ca,         'popcnt cx,dx');
+  TestDis('popcnt ecx,[edx]',           #$f3#$0f#$b8#$0a,             'popcnt ecx,[edx]');
+  TestDis('popcnt cx,[edx]',            #$f3#$66#$0f#$b8#$0a,         'popcnt cx,[edx]');
+  TestDis('bsf    ecx,edx',             #$0f#$bc#$ca,                 'bsf ecx,edx');
+  TestDis('bsf    cx,dx',               #$66#$0f#$bc#$ca,             'bsf cx,dx');
+  TestDis('bsf    ecx,[edx]',           #$0f#$bc#$0a,                 'bsf ecx,[edx]');
+  TestDis('bsf    cx,[edx]',            #$66#$0f#$bc#$0a,             'bsf cx,[edx]');
+  TestDis('bsr    ecx,edx',             #$0f#$bd#$ca,                 'bsr ecx,edx');
+  TestDis('bsr    cx,dx',               #$66#$0f#$bd#$ca,             'bsr cx,dx');
+  TestDis('bsr    ecx,[edx]',           #$0f#$bd#$0a,                 'bsr ecx,[edx]');
+  TestDis('bsr    cx,[edx]',            #$66#$0f#$bd#$0a,             'bsr cx,[edx]');
+  TestDis('tzcnt  ecx,edx',             #$f3#$0f#$bc#$ca,             'tzcnt ecx,edx');
+  TestDis('tzcnt  cx,dx',               #$66#$f3#$0f#$bc#$ca,         'tzcnt cx,dx');
+  TestDis('tzcnt  ecx,[edx]',           #$f3#$0f#$bc#$0a,             'tzcnt ecx,[edx]');
+  TestDis('tzcnt  cx,[edx]',            #$66#$f3#$0f#$bc#$0a,         'tzcnt cx,[edx]');
+  TestDis('lzcnt  ecx,edx',             #$f3#$0f#$bd#$ca,             'lzcnt ecx,edx');
+  TestDis('lzcnt  cx,dx',               #$66#$f3#$0f#$bd#$ca,         'lzcnt cx,dx');
+  TestDis('lzcnt  ecx,[edx]',           #$f3#$0f#$bd#$0a,             'lzcnt ecx,[edx]');
+  TestDis('lzcnt  cx,[edx]',            #$66#$f3#$0f#$bd#$0a,         'lzcnt cx,[edx]');
+
+  TestDis('pextrw edx,mm1,$2',                  #$0f#$c5#$d1#$02,                       'pextrw edx,mm1,$2');
+  TestDis('pextrw edx,xmm2,$2',                 #$66#$0f#$c5#$d2#$02,                   'pextrw edx,xmm2,$2');
+  TestDis('pextrw edx,xmm2,$2',                 #$66#$0f#$3a#$15#$d2#$02,               'pextrw edx,xmm2,$2');
+  TestDis('pextrw WORD PTR [esi-$F],xmm3,$2',   #$66#$0f#$3a#$15#$5e#$f1#$02,           'pextrw WORD PTR [esi-$F],xmm3,$2');
+  TestDis('vpextrw edx,xmm1,$2',                #$c5#$f9#$c5#$d1#$02,                   'vpextrw edx,xmm1,$2');
+  TestDis('vpextrw WORD PTR [esi-$F],xmm2,$2',  #$c4#$e3#$79#$15#$56#$f1#$02,           'vpextrw WORD PTR [esi-$F],xmm2,$2');
+  TestDis('pextrb edx,xmm1,$2',                 #$66#$0f#$3a#$14#$ca#$02,               'pextrb edx,xmm1,$2');
+  TestDis('pextrd edx,xmm2,$2',                 #$66#$0f#$3a#$16#$d2#$02,               'pextrd edx,xmm2,$2');
+  TestDis('vpextrb edx,xmm1,$2',                #$c4#$e3#$79#$14#$ca#$02,               'vpextrb edx,xmm1,$2');
+  TestDis('vpextrd edx,xmm2,$2',                #$c4#$e3#$79#$16#$d2#$02,               'vpextrd edx,xmm2,$2');
+  TestDis('pextrb BYTE PTR [esi-$F],xmm1,$2',   #$66#$0f#$3a#$14#$4e#$f1#$02,           'pextrb BYTE PTR [esi-$F],xmm1,$2');
+  TestDis('pextrd DWORD PTR [esi-$F],xmm2,$2',  #$66#$0f#$3a#$16#$56#$f1#$02,           'pextrd DWORD PTR [esi-$F],xmm2,$2');
+  TestDis('vpextrb BYTE PTR [esi-$F],xmm1,$2',  #$c4#$e3#$79#$14#$4e#$f1#$02,           'vpextrb BYTE PTR [esi-$F],xmm1,$2');
+  TestDis('vpextrd DWORD PTR [esi-$F],xmm2,$2', #$c4#$e3#$79#$16#$56#$f1#$02,           'vpextrd DWORD PTR [esi-$F],xmm2,$2');
+
+  IgnoreSizeWordPtr := True;
+  TestDis('vcvtph2ps xmm1,xmm2',                           #$c4#$e2#$79#$13#$ca,                           'vcvtph2ps xmm1,xmm2');
+  TestDis('vcvtph2ps xmm1,xmm1',                           #$c4#$e2#$79#$13#$c9,                           'vcvtph2ps xmm1,xmm1');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [edi]',                #$c4#$e2#$79#$13#$0f,                           'vcvtph2ps xmm1,QWORD PTR [edi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [edi+$3]',             #$c4#$e2#$79#$13#$4f#$03,                       'vcvtph2ps xmm1,QWORD PTR [edi+$3]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax+edi]',          #$c4#$e2#$79#$13#$0c#$07,                         'vcvtph2ps xmm1,QWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax+edi+$3]',       #$c4#$e2#$79#$13#$4c#$07#$03,                     'vcvtph2ps xmm1,QWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax*2+edi]',          #$c4#$e2#$79#$13#$0c#$47,                       'vcvtph2ps xmm1,QWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps xmm1,QWORD PTR [eax*2+edi+$3]',       #$c4#$e2#$79#$13#$4c#$47#$03,                   'vcvtph2ps xmm1,QWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps ymm1,xmm2',                           #$c4#$e2#$7d#$13#$ca,                           'vcvtph2ps ymm1,xmm2');
+  TestDis('vcvtph2ps ymm1,xmm1',                           #$c4#$e2#$7d#$13#$c9,                           'vcvtph2ps ymm1,xmm1');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [edi]',              #$c4#$e2#$7d#$13#$0f,                           'vcvtph2ps ymm1,XMMWORD PTR [edi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [edi+$3]',           #$c4#$e2#$7d#$13#$4f#$03,                       'vcvtph2ps ymm1,XMMWORD PTR [edi+$3]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax+edi]',        #$c4#$e2#$7d#$13#$0c#$07,                         'vcvtph2ps ymm1,XMMWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax+edi+$3]',     #$c4#$e2#$7d#$13#$4c#$07#$03,                     'vcvtph2ps ymm1,XMMWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi]',        #$c4#$e2#$7d#$13#$0c#$47,                       'vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi+$3]',     #$c4#$e2#$7d#$13#$4c#$47#$03,                   'vcvtph2ps ymm1,XMMWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtph2ps zmm1,ymm2',                           #$62#$f2#$7d#$48#$13#$ca,                       'vcvtph2ps zmm1,ymm2');
+  TestDis('vcvtph2ps zmm1,ymm1',                           #$62#$f2#$7d#$48#$13#$c9,                       'vcvtph2ps zmm1,ymm1');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [edi]',              #$62#$f2#$7d#$48#$13#$0f,                       'vcvtph2ps zmm1,YMMWORD PTR [edi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [edi+$3]',           #$62#$f2#$7d#$48#$13#$8f#$03#$00#$00#$00,       'vcvtph2ps zmm1,YMMWORD PTR [edi+$3]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax+edi]',        #$62#$f2#$7d#$48#$13#$0c#$07,                     'vcvtph2ps zmm1,YMMWORD PTR [eax+edi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax+edi+$3]',     #$62#$f2#$7d#$48#$13#$8c#$07#$03#$00#$00#$00,     'vcvtph2ps zmm1,YMMWORD PTR [eax+edi+$3]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi]',        #$62#$f2#$7d#$48#$13#$0c#$47,                   'vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi]');
+  TestDis('vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi+$3]',     #$62#$f2#$7d#$48#$13#$8c#$47#$03#$00#$00#$00,   'vcvtph2ps zmm1,YMMWORD PTR [eax*2+edi+$3]');
+  TestDis('vcvtps2ph xmm2,xmm1,$35',                       #$c4#$e3#$79#$1d#$ca#$35,                       'vcvtps2ph xmm2,xmm1,$35');
+  TestDis('vcvtps2ph xmm2,ymm1,$35',                       #$c4#$e3#$7d#$1d#$ca#$35,                       'vcvtps2ph xmm2,ymm1,$35');
+  TestDis('vcvtps2ph ymm2,zmm1,$35',                       #$62#$f3#$7d#$48#$1d#$ca#$35,                   'vcvtps2ph ymm2,zmm1,$35');
+  TestDis('vcvtps2ph QWORD PTR [edi],xmm3,$35',            #$c4#$e3#$79#$1d#$1f#$35,                       'vcvtps2ph QWORD PTR [edi],xmm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [edi],ymm3,$35',          #$c4#$e3#$7d#$1d#$1f#$35,                       'vcvtps2ph XMMWORD PTR [edi],ymm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [edi],zmm3,$35',          #$62#$f3#$7d#$48#$1d#$1f#$35,                   'vcvtps2ph YMMWORD PTR [edi],zmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [edi+$3],xmm3,$35',         #$c4#$e3#$79#$1d#$5f#$03#$35,                   'vcvtps2ph QWORD PTR [edi+$3],xmm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [edi+$3],ymm3,$35',       #$c4#$e3#$7d#$1d#$5f#$03#$35,                   'vcvtps2ph XMMWORD PTR [edi+$3],ymm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [edi+$3],zmm3,$35',       #$62#$f3#$7d#$48#$1d#$9f#$03#$00#$00#$00#$35,   'vcvtps2ph YMMWORD PTR [edi+$3],zmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax+edi],xmm3,$35',      #$c4#$e3#$79#$1d#$1c#$07#$35,                     'vcvtps2ph QWORD PTR [eax+edi],xmm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax+edi],ymm3,$35',    #$c4#$e3#$7d#$1d#$1c#$07#$35,                     'vcvtps2ph XMMWORD PTR [eax+edi],ymm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [eax+edi],zmm3,$35',    #$62#$f3#$7d#$48#$1d#$1c#$07#$35,                 'vcvtps2ph YMMWORD PTR [eax+edi],zmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax+edi+$3],xmm3,$35',   #$c4#$e3#$79#$1d#$5c#$07#$03#$35,                 'vcvtps2ph QWORD PTR [eax+edi+$3],xmm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax+edi+$3],ymm3,$35', #$c4#$e3#$7d#$1d#$5c#$07#$03#$35,                 'vcvtps2ph XMMWORD PTR [eax+edi+$3],ymm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm3,$35', #$62#$f3#$7d#$48#$1d#$9c#$07#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [eax+edi+$3],zmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax*2+edi],xmm3,$35',      #$c4#$e3#$79#$1d#$1c#$47#$35,                   'vcvtps2ph QWORD PTR [eax*2+edi],xmm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax*2+edi],ymm3,$35',    #$c4#$e3#$7d#$1d#$1c#$47#$35,                   'vcvtps2ph XMMWORD PTR [eax*2+edi],ymm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [eax*2+edi],zmm3,$35',    #$62#$f3#$7d#$48#$1d#$1c#$47#$35,               'vcvtps2ph YMMWORD PTR [eax*2+edi],zmm3,$35');
+  TestDis('vcvtps2ph QWORD PTR [eax*2+edi+$3],xmm3,$35',   #$c4#$e3#$79#$1d#$5c#$47#$03#$35,               'vcvtps2ph QWORD PTR [eax*2+edi+$3],xmm3,$35');
+  TestDis('vcvtps2ph XMMWORD PTR [eax*2+edi+$3],ymm3,$35', #$c4#$e3#$7d#$1d#$5c#$47#$03#$35,               'vcvtps2ph XMMWORD PTR [eax*2+edi+$3],ymm3,$35');
+  TestDis('vcvtps2ph YMMWORD PTR [eax*2+edi+$3],zmm3,$35', #$62#$f3#$7d#$48#$1d#$9c#$47#$03#$00#$00#$00#$35, 'vcvtps2ph YMMWORD PTR [eax*2+edi+$3],zmm3,$35');
+  IgnoreSizeWordPtr := False;
 
 
   Process.NewMode := dm64;

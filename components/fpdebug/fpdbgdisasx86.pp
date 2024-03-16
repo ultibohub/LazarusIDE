@@ -403,6 +403,7 @@ type
     procedure AddQq;
     procedure AddRd;
     procedure AddRd_Mb;
+    procedure AddRd_Mw;
     procedure AddRd_q;
     procedure AddRy;
     procedure AddRy_Mb;
@@ -436,6 +437,7 @@ type
     procedure AddWsd;
     procedure AddWss;
     procedure AddWx;
+    procedure AddWx_Mq;
     {$ifdef verbose_string_instructions}
     procedure AddXb;
     procedure AddXv;
@@ -1645,9 +1647,20 @@ end;
 
 procedure TX86Disassembler.AddRd_Mb;
 begin
+  DecodeModRM;
+
   if ModRM.Mode = 3 // reg
   then AddModRM([modReg], os32, regGeneral)
   else AddModRM([modMem], os8, regNone);
+end;
+
+procedure TX86Disassembler.AddRd_Mw;
+begin
+  DecodeModRM;
+
+  if ModRM.Mode = 3 // reg
+  then AddModRM([modReg], os32, regGeneral)
+  else AddModRM([modMem], os16, regNone);
 end;
 
 procedure TX86Disassembler.AddRd_q;
@@ -1727,14 +1740,25 @@ begin
   if ModRM.Mode = 3 // reg
   then begin
     case Vex.VectorLength of
-      os512: Size := os128;
-      os256: Size := os64;
+      os512: Size := os256;
     else
-      Size := os32;
+      Size := os128;
     end;
+
     AddModRM([modReg], Size, regXmm);
   end
-  else AddModRM([modMem], os32, regNone);
+  else
+  begin
+   case Vex.VectorLength of
+     os128: Size := os32;
+     os256: Size := os64;
+     os512: Size := os128;
+   else
+     Size := os32;
+   end;
+
+   AddModRM([modMem], Size, regNone);
+  end;
 end;
 
 procedure TX86Disassembler.AddUx_Mq;
@@ -1745,13 +1769,24 @@ begin
   then begin
     case Vex.VectorLength of
       os512: Size := os256;
+    else
+      Size := os128;
+    end;
+
+    AddModRM([modReg], Size, regXmm);
+  end
+  else
+  begin
+    case Vex.VectorLength of
+      os128: Size := os64;
       os256: Size := os128;
+      os512: Size := os256;
     else
       Size := os64;
     end;
-    AddModRM([modReg], Size, regXmm);
-  end
-  else AddModRM([modMem], os64, regNone);
+
+    AddModRM([modMem], Size, regNone);
+  end;
 end;
 
 procedure TX86Disassembler.AddUx_Mw;
@@ -1761,14 +1796,25 @@ begin
   if ModRM.Mode = 3 // reg
   then begin
     case Vex.VectorLength of
-      os512: Size := os64;
+      os512: Size := os256;
+    else
+      Size := os128;
+    end;
+
+    AddModRM([modReg], Size, regXmm);
+  end
+  else
+  begin
+    case Vex.VectorLength of
+      os128: Size := os16;
       os256: Size := os32;
+      os512: Size := os64;
     else
       Size := os16;
     end;
-    AddModRM([modReg], Size, regXmm);
-  end
-  else AddModRM([modMem], os16, regNone);
+
+    AddModRM([modMem], Size, regNone);
+  end;
 end;
 
 procedure TX86Disassembler.AddVdq;
@@ -1867,6 +1913,12 @@ end;
 procedure TX86Disassembler.AddWx;
 begin
   AddModRM([modReg, modMem], VectorSize, regXmm);
+end;
+
+procedure TX86Disassembler.AddWx_Mq;
+begin
+  DecodeModRM;
+  AddUx_Mq;
 end;
 
 {$ifdef verbose_string_instructions}
@@ -3468,7 +3520,7 @@ begin
       AddGv; AddEw;
     end;
     $B8: begin
-      DecodeSIMD([soNone, soF3]);
+      DecodeSIMD([soNone, soF3], True);
       case SimdOpcode of
         soNone: begin SetOpcode(OPjmpe  ); AddIz;        end;  // Itanium SDM, volume 4, page 256.
         soF3:   begin SetOpcode(OPpopcnt); AddGv; AddEv; end;
@@ -3485,16 +3537,18 @@ begin
       AddEv; AddGv;
     end;
     $BC: begin
-      DecodeSIMD([soNone, soF3]);
+      DecodeSIMD([soNone, soF3], True);
       case SimdOpcode of
-        soNone: begin SetOpcode(OPbsf  ); AddGv; AddEv; end;
+        soNone,
+        so66:   begin SetOpcode(OPbsf  ); AddGv; AddEv; end;
         soF3:   begin SetOpcode(OPtzcnt); AddGv; AddEv; end;
       end;
     end;
     $BD: begin
-      DecodeSIMD([soNone, soF3]);
+      DecodeSIMD([soNone, soF3], True);
       case SimdOpcode of
-        soNone: begin SetOpcode(OPbsr  ); AddGv; AddEv; end;
+        soNone,
+        so66:   begin SetOpcode(OPbsr  ); AddGv; AddEv; end;
         soF3:   begin SetOpcode(OPlzcnt); AddGv; AddEv; end;
       end;
     end;
@@ -3708,7 +3762,7 @@ begin
         $0E: begin SetOpcode(OPvtest,       OPSx_ps       ); AddVx;          AddWx;  CheckVex; end;
         $0F: begin SetOpcode(OPvtest,       OPSx_pd       ); AddVx;          AddWx;  CheckVex; end;
         $10: begin SetOpcode(OPpblendvb                   ); AddVdq; AddWdq;                   end;
-        $13: begin SetOpcode(OPvcvtph2ps                  ); AddVx;  AddWx;  AddIb;  CheckVex; end;
+        $13: begin SetOpcode(OPvcvtph2ps                  ); AddVx;  AddUx_Mq;       CheckVex; end;
         $14: begin SetOpcode(OPblendv,      OPSx_ps       ); AddVdq; AddWdq; AddReg(regXmm, os128, 0); end;
         $15: begin SetOpcode(OPblendv,      OPSx_pd       ); AddVdq; AddWdq; AddReg(regXmm, os128, 0); end;
         $16: begin SetOpcode(OPvperm,       OPSx_ps       ); AddVqq; AddHqq; AddWqq; CheckVex; end;
@@ -3862,13 +3916,13 @@ begin
         $0D: begin SetOpcode(OPblend,       OPSx_pd,  True); AddVx;    AddHx;  AddWx;     AddIb;           end;
         $0E: begin SetOpcode(OPpblend,      OPSx_w,   True); AddVx;    AddHx;  AddWx;     AddIb;           end;
         $0F: begin SetOpcode(OPpalignr,     OPSnone,  True); AddVx;    AddHx;  AddWx;     AddIb;           end;
-        $14: begin SetOpcode(OPpextr,       OPSx_b,   True); AddRd_Mb; AddVqq; AddIb;                      end;
-        $15: begin SetOpcode(OPpextr,       OPSx_w,   True); AddRd_Mb; AddVqq; AddIb;                      end;
-        $16: begin SetOpcode(OPpextr,       OPS_d_q,  True); AddEy;    AddVdq; AddIb;                      end;
+        $14: begin SetOpcode(OPpextr,       OPSx_b,   True); AddRd_Mb; AddVq;  AddIb;                      end;
+        $15: begin SetOpcode(OPpextr,       OPSx_w,   True); AddRd_Mw; AddVq;  AddIb;                      end;
+        $16: begin SetOpcode(OPpextr,       OPS_d_q,  True); AddEy;    AddVq;  AddIb;                      end;
         $17: begin SetOpcode(OPextract,     OPSx_ps,  True); AddEd;    AddVdq; AddIb;                      end;
         $18: begin SetOpcode(OPinsert,      OPSx_f128,True); AddVqq;   AddHqq; AddWqq;    AddIb; CheckVex; end;
         $19: begin SetOpcode(OPextract,     OPSx_f128,True); AddWdq;   AddVqq; AddIb;            CheckVex; end;
-        $1D: begin SetOpcode(OPcvtps2,      OPSx_ph,  True); AddWx;    AddVx;  AddIb;            CheckVex; end;
+        $1D: begin SetOpcode(OPcvtps2,      OPSx_ph,  True); AddWx_Mq; AddVx;  AddIb;            CheckVex; end;
         $20: begin SetOpcode(OPpinsr,       OPSx_b,   True); AddVdq;   AddHdq; AddRy_Mb;  AddIb;           end;
         $21: begin SetOpcode(OPinsert,      OPSx_ps,  True); AddVdq;   AddHdq; AddUdq_Md; AddIb;           end;
         $22: begin SetOpcode(OPpinsr,       OPS_d_q,  True); AddVdq;   AddHdq; AddEy;     AddIb;           end;
