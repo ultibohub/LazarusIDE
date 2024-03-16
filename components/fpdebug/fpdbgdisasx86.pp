@@ -405,6 +405,7 @@ type
     procedure AddQq;
     procedure AddRd;
     procedure AddRd_Mb;
+    procedure AddRd_Mw;
     procedure AddRd_q;
     procedure AddRy;
     procedure AddRy_Mb;
@@ -438,6 +439,7 @@ type
     procedure AddWsd;
     procedure AddWss;
     procedure AddWx;
+    procedure AddWx_Mq;
     {$ifdef verbose_string_instructions}
     procedure AddXb;
     procedure AddXv;
@@ -574,7 +576,7 @@ type
       AnIsOutsideFrame: Boolean): Boolean; override;
     function IsAfterCallInstruction(AnAddress: TDBGPtr): boolean; override;
     // Only Modify the values if result is true
-    function UnwindFrame(var AnAddress, AStackPtr, AFramePtr: TDBGPtr; AQuick: boolean): boolean; override;
+    function UnwindFrame(var AnAddress, AStackPtr, AFramePtr: TDBGPtr; AQuick: boolean; ARegisterValueList: TDbgRegisterValueList): boolean; override;
   end;
 
   { TDbgStackUnwinderIntelDisAssembler }
@@ -1659,9 +1661,20 @@ end;
 
 procedure TX86Disassembler.AddRd_Mb;
 begin
+  DecodeModRM;
+
   if ModRM.Mode = 3 // reg
   then AddModRM([modReg], os32, regGeneral)
   else AddModRM([modMem], os8, regNone);
+end;
+
+procedure TX86Disassembler.AddRd_Mw;
+begin
+  DecodeModRM;
+
+  if ModRM.Mode = 3 // reg
+  then AddModRM([modReg], os32, regGeneral)
+  else AddModRM([modMem], os16, regNone);
 end;
 
 procedure TX86Disassembler.AddRd_q;
@@ -1741,14 +1754,25 @@ begin
   if ModRM.Mode = 3 // reg
   then begin
     case Vex.VectorLength of
-      os512: Size := os128;
-      os256: Size := os64;
+      os512: Size := os256;
     else
-      Size := os32;
+      Size := os128;
     end;
+
     AddModRM([modReg], Size, regXmm);
   end
-  else AddModRM([modMem], os32, regNone);
+  else
+  begin
+   case Vex.VectorLength of
+     os128: Size := os32;
+     os256: Size := os64;
+     os512: Size := os128;
+   else
+     Size := os32;
+   end;
+
+   AddModRM([modMem], Size, regNone);
+  end;
 end;
 
 procedure TX86Disassembler.AddUx_Mq;
@@ -1759,13 +1783,24 @@ begin
   then begin
     case Vex.VectorLength of
       os512: Size := os256;
+    else
+      Size := os128;
+    end;
+
+    AddModRM([modReg], Size, regXmm);
+  end
+  else
+  begin
+    case Vex.VectorLength of
+      os128: Size := os64;
       os256: Size := os128;
+      os512: Size := os256;
     else
       Size := os64;
     end;
-    AddModRM([modReg], Size, regXmm);
-  end
-  else AddModRM([modMem], os64, regNone);
+
+    AddModRM([modMem], Size, regNone);
+  end;
 end;
 
 procedure TX86Disassembler.AddUx_Mw;
@@ -1775,14 +1810,25 @@ begin
   if ModRM.Mode = 3 // reg
   then begin
     case Vex.VectorLength of
-      os512: Size := os64;
+      os512: Size := os256;
+    else
+      Size := os128;
+    end;
+
+    AddModRM([modReg], Size, regXmm);
+  end
+  else
+  begin
+    case Vex.VectorLength of
+      os128: Size := os16;
       os256: Size := os32;
+      os512: Size := os64;
     else
       Size := os16;
     end;
-    AddModRM([modReg], Size, regXmm);
-  end
-  else AddModRM([modMem], os16, regNone);
+
+    AddModRM([modMem], Size, regNone);
+  end;
 end;
 
 procedure TX86Disassembler.AddVdq;
@@ -1881,6 +1927,12 @@ end;
 procedure TX86Disassembler.AddWx;
 begin
   AddModRM([modReg, modMem], VectorSize, regXmm);
+end;
+
+procedure TX86Disassembler.AddWx_Mq;
+begin
+  DecodeModRM;
+  AddUx_Mq;
 end;
 
 {$ifdef verbose_string_instructions}
@@ -3482,7 +3534,7 @@ begin
       AddGv; AddEw;
     end;
     $B8: begin
-      DecodeSIMD([soNone, soF3]);
+      DecodeSIMD([soNone, soF3], True);
       case SimdOpcode of
         soNone: begin SetOpcode(OPjmpe  ); AddIz;        end;  // Itanium SDM, volume 4, page 256.
         soF3:   begin SetOpcode(OPpopcnt); AddGv; AddEv; end;
@@ -3499,16 +3551,18 @@ begin
       AddEv; AddGv;
     end;
     $BC: begin
-      DecodeSIMD([soNone, soF3]);
+      DecodeSIMD([soNone, soF3], True);
       case SimdOpcode of
-        soNone: begin SetOpcode(OPbsf  ); AddGv; AddEv; end;
+        soNone,
+        so66:   begin SetOpcode(OPbsf  ); AddGv; AddEv; end;
         soF3:   begin SetOpcode(OPtzcnt); AddGv; AddEv; end;
       end;
     end;
     $BD: begin
-      DecodeSIMD([soNone, soF3]);
+      DecodeSIMD([soNone, soF3], True);
       case SimdOpcode of
-        soNone: begin SetOpcode(OPbsr  ); AddGv; AddEv; end;
+        soNone,
+        so66:   begin SetOpcode(OPbsr  ); AddGv; AddEv; end;
         soF3:   begin SetOpcode(OPlzcnt); AddGv; AddEv; end;
       end;
     end;
@@ -3722,7 +3776,7 @@ begin
         $0E: begin SetOpcode(OPvtest,       OPSx_ps       ); AddVx;          AddWx;  CheckVex; end;
         $0F: begin SetOpcode(OPvtest,       OPSx_pd       ); AddVx;          AddWx;  CheckVex; end;
         $10: begin SetOpcode(OPpblendvb                   ); AddVdq; AddWdq;                   end;
-        $13: begin SetOpcode(OPvcvtph2ps                  ); AddVx;  AddWx;  AddIb;  CheckVex; end;
+        $13: begin SetOpcode(OPvcvtph2ps                  ); AddVx;  AddUx_Mq;       CheckVex; end;
         $14: begin SetOpcode(OPblendv,      OPSx_ps       ); AddVdq; AddWdq; AddReg(regXmm, os128, 0); end;
         $15: begin SetOpcode(OPblendv,      OPSx_pd       ); AddVdq; AddWdq; AddReg(regXmm, os128, 0); end;
         $16: begin SetOpcode(OPvperm,       OPSx_ps       ); AddVqq; AddHqq; AddWqq; CheckVex; end;
@@ -3876,13 +3930,13 @@ begin
         $0D: begin SetOpcode(OPblend,       OPSx_pd,  True); AddVx;    AddHx;  AddWx;     AddIb;           end;
         $0E: begin SetOpcode(OPpblend,      OPSx_w,   True); AddVx;    AddHx;  AddWx;     AddIb;           end;
         $0F: begin SetOpcode(OPpalignr,     OPSnone,  True); AddVx;    AddHx;  AddWx;     AddIb;           end;
-        $14: begin SetOpcode(OPpextr,       OPSx_b,   True); AddRd_Mb; AddVqq; AddIb;                      end;
-        $15: begin SetOpcode(OPpextr,       OPSx_w,   True); AddRd_Mb; AddVqq; AddIb;                      end;
-        $16: begin SetOpcode(OPpextr,       OPS_d_q,  True); AddEy;    AddVdq; AddIb;                      end;
+        $14: begin SetOpcode(OPpextr,       OPSx_b,   True); AddRd_Mb; AddVq;  AddIb;                      end;
+        $15: begin SetOpcode(OPpextr,       OPSx_w,   True); AddRd_Mw; AddVq;  AddIb;                      end;
+        $16: begin SetOpcode(OPpextr,       OPS_d_q,  True); AddEy;    AddVq;  AddIb;                      end;
         $17: begin SetOpcode(OPextract,     OPSx_ps,  True); AddEd;    AddVdq; AddIb;                      end;
         $18: begin SetOpcode(OPinsert,      OPSx_f128,True); AddVqq;   AddHqq; AddWqq;    AddIb; CheckVex; end;
         $19: begin SetOpcode(OPextract,     OPSx_f128,True); AddWdq;   AddVqq; AddIb;            CheckVex; end;
-        $1D: begin SetOpcode(OPcvtps2,      OPSx_ph,  True); AddWx;    AddVx;  AddIb;            CheckVex; end;
+        $1D: begin SetOpcode(OPcvtps2,      OPSx_ph,  True); AddWx_Mq; AddVx;  AddIb;            CheckVex; end;
         $20: begin SetOpcode(OPpinsr,       OPSx_b,   True); AddVdq;   AddHdq; AddRy_Mb;  AddIb;           end;
         $21: begin SetOpcode(OPinsert,      OPSx_ps,  True); AddVdq;   AddHdq; AddUdq_Md; AddIb;           end;
         $22: begin SetOpcode(OPpinsr,       OPS_d_q,  True); AddVdq;   AddHdq; AddEy;     AddIb;           end;
@@ -5272,8 +5326,8 @@ begin
   end;
 end;
 
-function TX86AsmDecoder.UnwindFrame(var AnAddress, AStackPtr,
-  AFramePtr: TDBGPtr; AQuick: boolean): boolean;
+function TX86AsmDecoder.UnwindFrame(var AnAddress, AStackPtr, AFramePtr: TDBGPtr; AQuick: boolean;
+  ARegisterValueList: TDbgRegisterValueList): boolean;
 
   function IsRegister(Val, Reg: String): boolean;
   begin
@@ -5285,16 +5339,94 @@ function TX86AsmDecoder.UnwindFrame(var AnAddress, AStackPtr,
     if (Reg <> '') and (Reg[1] = 'r') then
       Result := 8;
   end;
+  function CleanRegisterName(Reg: String): String;
+  var
+    l: Integer;
+  begin
+    Result := Reg;
+    l := Length(reg);
+    if (l > 2) and (Reg[l-1] = '%') and (Reg[l] = 's') then Delete(Result, l-1, 2);
+  end;
+  function FullRegisterName(Reg: String): String;
+  var
+    l: Integer;
+    pre: String;
+  begin
+    Result := '';
+    Reg := CleanRegisterName(Reg);
+    l := Length(reg);
+
+    if (l < 2) then
+      Exit;
+
+    if (Reg[1] = 'r') and (Reg[2] in ['0'..'9']) then begin
+      if (l >=3) and (Reg[3] in ['0'..'9']) then
+        l := 3+1
+      else
+        l := 2+1;
+      Result := Reg;
+      Delete(Result, l, Length(Reg));
+      exit;
+    end;
+
+    if (l > 3) then
+      Exit;
+    if FProcess.Mode = dm32
+    then pre := 'e'
+    else pre := 'r';
+
+    case Reg[l] of
+      'l', 'h': case Reg[l-1] of
+          'a', 'b', 'c', 'd':  // ah al
+            if l = 2 then Result := pre + Reg[l-1] + 'x';
+        end;
+      'x': case Reg[l-1] of
+          'a', 'b', 'c', 'd': // eax rax ax
+            if l = 2 then Result := pre + Reg
+            else
+            if Reg[1] in ['r', 'e'] then Result := pre +Reg[l-1] + Reg[l];
+        end;
+      'p': case Reg[l-1] of
+          's', 'b', 'i':  // Rsp Esp Eip Ebp
+            if l = 2 then Result := pre + Reg
+            else
+            if Reg[1] in ['r', 'e'] then Result := pre +Reg[l-1] + Reg[l];
+        end;
+      'i':case Reg[l-1] of
+          'd', 's':  // esi edi
+            if l = 2 then Result := pre + Reg
+            else
+            if Reg[1] in ['r', 'e'] then Result := pre +Reg[l-1] + Reg[l];
+        end;
+      //'s':
+    end;
+  end;
+  procedure ClearRegister(Reg: String);
+  var
+    r: TDbgRegisterValue;
+  begin
+    Reg := CleanRegisterName(Reg);
+    r := ARegisterValueList.FindRegisterByName(Reg);
+    if r <> nil then ARegisterValueList.Remove(r);
+    Reg := FullRegisterName(Reg);
+    if Reg <> '' then begin
+      r := ARegisterValueList.FindRegisterByName(Reg);
+      if r <> nil then ARegisterValueList.Remove(r);
+    end;
+  end;
+
 
 var
   NewAddr, NewStack, NewFrame: TDBGPtr;
   CurAddr: PByte;
 
-  function ValueFromOperand(constref Oper: TInstructionOperand; out AVal: TDBGPtr): boolean;
+  function ValueFromOperand(constref Oper: TInstructionOperand; out AVal: TDBGPtr; IsLea: Boolean = False): boolean;
   var
     OpVal: Int64;
     Src: TDBGPtr;
     RSize: Cardinal;
+    FullName: String;
+    r: TDbgRegisterValue;
   begin
     AVal := 0;
     Result := True;
@@ -5303,17 +5435,29 @@ var
 
     if (Oper.ByteCount = 0)
     then begin
+      if IsLea then exit(False);
       if (IsRegister(Oper.Value, 'bp')) then
         AVal := NewFrame
       else
       if (IsRegister(Oper.Value, 'sp')) then
         AVal := NewStack
       else
+      begin
+        FullName := FullRegisterName(Oper.Value);
+        if (LowerCase(FullName) = LowerCase(Oper.Value)) then begin
+          r := ARegisterValueList.FindRegisterByName(FullName);
+          if r <> nil then begin
+            AVal := r.NumValue;
+            Exit(True);
+          end;
+        end;
         exit(False);
+      end;
     end
     else
     if (Oper.ByteCount <> 0)
     then begin
+      if IsLea and not (ofMemory in Oper.Flags) then exit(False);
       OpVal := ValueFromMem(CurAddr[Oper.CodeIndex], Oper.ByteCount, Oper.FormatFlags);
 
       if (IsRegister(Oper.Value, 'bp%s')) then
@@ -5335,7 +5479,7 @@ var
     else
       exit(False);
 
-    if (ofMemory in Oper.Flags) then begin
+    if (ofMemory in Oper.Flags) and not IsLea then begin
       Src := AVal;
       AVal := 0;
       RSize := RegisterSize(Oper.Value);
@@ -5354,6 +5498,8 @@ var
   instr: TX86AsmInstruction;
   RSize: Cardinal;
   Val: Int64;
+  ClearRecValList: Boolean;
+  FullName: String;
 begin
   Result := False;
   NewAddr    := AnAddress;
@@ -5371,7 +5517,10 @@ begin
   Cnt := MAX_SEARCH_CNT;
   if AQuick then Cnt := 10;
 
+  ClearRecValList := False;
   while (NewAddr < MaxAddr) and (Cnt > 0) do begin
+    if ClearRecValList then ARegisterValueList.Clear;
+
     if NewAddr > MaxAddr2 then begin
       if (ConditionalForwardAddr > 0) and (BackwardJumpAddress > 0) and
          (ConditionalForwardAddr >= BackwardJumpAddress)
@@ -5392,9 +5541,11 @@ begin
     {$POP}
     CurAddr := @instr.FCodeBin[0];
 
+    ClearRecValList := True;
     case instr.X86OpCode of
       OPret:
         begin
+          ClearRecValList := False;
           if instr.X86Instruction.OperCnt > 1 then begin
             exit;
           end;
@@ -5421,6 +5572,7 @@ begin
         end;
       OPpush:
         begin
+          ClearRecValList := False;
           if AQuick then
             exit;
           if (instr.X86Instruction.OperCnt <> 1) or
@@ -5435,6 +5587,7 @@ begin
         end;
       OPpusha:
         begin
+          ClearRecValList := False;
           if (FProcess.Mode <> dm32) or (instr.X86Instruction.OpCode.Suffix <> OPSx_d) then
             exit;
           // push 8 registers
@@ -5443,13 +5596,18 @@ begin
           {$POP}
         end;
       OPpushf:
-        exit; // false
+        begin
+          ClearRecValList := False;
+          exit; // false
+        end;
       OPpopa, OPpopad:
         exit; // false
       OPpop:
         begin
           if instr.X86Instruction.OperCnt <> 1 then
             exit;
+          ClearRecValList := False;
+          ClearRegister(instr.X86Instruction.Operand[1].Value);
           if not(instr.X86Instruction.Operand[1].Value[1] in ['e', 'r'])
           then
             exit; // false
@@ -5461,6 +5619,15 @@ begin
             RSize := RegisterSize(instr.X86Instruction.Operand[1].Value);
             if not FProcess.ReadData(NewStack, RSize, NewFrame, RSize) then
               exit;
+          end
+          else
+          if NewStack >= StartStack then begin
+            Tmp := 0;
+            RSize := RegisterSize(instr.X86Instruction.Operand[1].Value);
+            if FProcess.ReadData(NewStack, RSize, Tmp, RSize) then begin
+              FullName := LowerCase(FullRegisterName(instr.X86Instruction.Operand[1].Value));
+              ARegisterValueList.DbgRegisterAutoCreate[FullName].SetValue(Tmp, IntToStr(Tmp), RSize, 0);
+            end;
           end;
           {$PUSH}{$R-}{$Q-}
           NewStack := NewStack + RegisterSize(instr.X86Instruction.Operand[1].Value);
@@ -5468,6 +5635,7 @@ begin
         end;
       OPleave:
         begin
+          ClearRecValList := False;
           NewStack := NewFrame;
           NewFrame := 0;
           if FProcess.Mode = dm32 then begin
@@ -5485,6 +5653,7 @@ begin
         begin
           if instr.X86Instruction.OperCnt <> 2 then
             exit;
+          ClearRecValList := False;
 
           if IsRegister(instr.X86Instruction.Operand[1].Value, 'sp') and
              not(ofMemory in Instr.X86Instruction.Operand[1].Flags)
@@ -5492,19 +5661,30 @@ begin
             if not ValueFromOperand(instr.X86Instruction.Operand[2], Tmp) then
               exit;
             NewStack := Tmp;
-          end;
+          end
+          else
           if IsRegister(instr.X86Instruction.Operand[1].Value, 'bp') and
              not(ofMemory in Instr.X86Instruction.Operand[1].Flags)
           then begin
             if not ValueFromOperand(instr.X86Instruction.Operand[2], Tmp) then
               exit;
             NewFrame := Tmp;
+          end
+          else begin
+            FullName := LowerCase(FullRegisterName(instr.X86Instruction.Operand[1].Value));
+            if ValueFromOperand(instr.X86Instruction.Operand[2], Tmp) then begin
+              RSize := RegisterSize(instr.X86Instruction.Operand[1].Value);
+              ARegisterValueList.DbgRegisterAutoCreate[FullName].SetValue(Tmp, IntToStr(Tmp), RSize, 0);
+            end
+            else
+              ClearRegister(instr.X86Instruction.Operand[1].Value);
           end;
         end;
       OPlea:
         begin
           if instr.X86Instruction.OperCnt <> 2 then
             exit;
+          ClearRecValList := False;
           if IsRegister(instr.X86Instruction.Operand[1].Value, 'bp')
           then begin
             if (Instr.X86Instruction.Operand[2].ByteCount = 0) or
@@ -5525,7 +5705,8 @@ begin
               NewFrame := NewFrame + Val;
               {$POP}
             end;
-          end;
+          end
+          else
           if IsRegister(instr.X86Instruction.Operand[1].Value, 'sp')
           then begin
             if (Instr.X86Instruction.Operand[2].ByteCount = 0) or
@@ -5548,12 +5729,30 @@ begin
             end
             else
               exit;
+          end
+          else begin
+            FullName := LowerCase(FullRegisterName(instr.X86Instruction.Operand[1].Value));
+            if (Instr.X86Instruction.Operand[2].ByteCount = 0) or
+               (Instr.X86Instruction.Operand[2].ByteCount2 <> 0) or
+               not(ofMemory in Instr.X86Instruction.Operand[2].Flags)
+            then
+              ClearRegister(instr.X86Instruction.Operand[1].Value)
+            else begin
+              if ValueFromOperand(instr.X86Instruction.Operand[2], Tmp, True) then begin
+                RSize := RegisterSize(instr.X86Instruction.Operand[1].Value);
+                ARegisterValueList.DbgRegisterAutoCreate[FullName].SetValue(Tmp, IntToStr(Tmp), RSize, 0);
+              end
+              else
+                ClearRegister(instr.X86Instruction.Operand[1].Value)
+            end;
           end;
         end;
       OPadd:
         begin
           if instr.X86Instruction.OperCnt <> 2 then
             exit;
+          ClearRecValList := False;
+          ClearRegister(instr.X86Instruction.Operand[1].Value);
 
           if IsRegister(instr.X86Instruction.Operand[1].Value, 'sp') and
              not(ofMemory in Instr.X86Instruction.Operand[1].Flags)
@@ -5624,6 +5823,8 @@ begin
         end;
       OPjmpe, OPint, OPint1, OPint3:
         exit; // false
+      OPtest, OPtpause, OPnop, OPcmp, OPcmps:
+        ClearRecValList := False;
       else
         begin
           if (instr.X86Instruction.OperCnt >= 1) and
@@ -5637,6 +5838,7 @@ begin
         end;
     end;
   end;
+  if ClearRecValList then ARegisterValueList.Clear;
 end;
 
 { TDbgStackUnwinderIntelDisAssembler }
@@ -5645,18 +5847,25 @@ function TDbgStackUnwinderIntelDisAssembler.Unwind(AFrameIndex: integer;
   var CodePointer, StackPointer, FrameBasePointer: TDBGPtr;
   ACurrentFrame: TDbgCallstackEntry; out ANewFrame: TDbgCallstackEntry
   ): TTDbgStackUnwindResult;
+var
+  ARegisterValueList: TDbgRegisterValueList;
 begin
   ANewFrame := nil;
   Result := suFailed;
+  ARegisterValueList := TDbgRegisterValueList.Create(True);
+  if (ACurrentFrame <> nil) and (ACurrentFrame.RegisterValueList <> nil) then
+    ARegisterValueList.Assign(ACurrentFrame.RegisterValueList);
 
-  if Process.Disassembler.UnwindFrame(CodePointer, StackPointer, FrameBasePointer, False)
+  if Process.Disassembler.UnwindFrame(CodePointer, StackPointer, FrameBasePointer, False, ARegisterValueList)
   then begin
     ANewFrame := TDbgCallstackEntry.Create(Thread, AFrameIndex, FrameBasePointer, CodePointer);
+    ANewFrame.RegisterValueList.Assign(ARegisterValueList);
     ANewFrame.RegisterValueList.DbgRegisterAutoCreate[FNameIP].SetValue(CodePointer, IntToStr(CodePointer),AddressSize, FDwarfNumIP);
     ANewFrame.RegisterValueList.DbgRegisterAutoCreate[FNameBP].SetValue(FrameBasePointer, IntToStr(FrameBasePointer),AddressSize, FDwarfNumBP);
     ANewFrame.RegisterValueList.DbgRegisterAutoCreate[FNameSP].SetValue(StackPointer, IntToStr(StackPointer),AddressSize, FDwarfNumSP);
     Result := suSuccess;
   end;
+  ARegisterValueList.free
 end;
 
 

@@ -467,6 +467,10 @@ msgstr "Klammerhervorhebung"
 msgid "Code folding tree"
 msgstr "Codefaltungs-Baum"
 
+#: lazarusidestrconsts.dlgaddhiattrcodefoldingtreecur
+msgid "Code folding (current)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Standardtext"
@@ -2338,6 +2342,14 @@ msgstr "Gefaltet"
 #: lazarusidestrconsts.dlgguttercolor
 msgid "Gutter Color"
 msgstr "Farbe der Randleiste"
+
+#: lazarusidestrconsts.dlgguttercurrentlinenumber
+msgid "Current Line (number)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgguttercurrentlineother
+msgid "Current Line (other)"
+msgstr ""
 
 #: lazarusidestrconsts.dlggutteredgecolor
 msgid "Gutter Edge Color"
@@ -9536,7 +9548,9 @@ msgid "Error writing package list to file%s%s%s%s"
 msgstr "Fehler beim Schreiben der Package-Liste in die Datei%s%s%s%s"
 
 #: lazarusidestrconsts.liseverynthlinenumber
-msgid "Every n-th line number"
+#, fuzzy
+#| msgid "Every n-th line number"
+msgid "Show every n-th line number"
 msgstr "Jede n-te Zeile:"
 
 #: lazarusidestrconsts.lisexamplefile
@@ -10447,6 +10461,18 @@ msgstr "Gruppen von Debuggerausgaben aktivieren oder deaktivieren. Gültige Opti
 #: lazarusidestrconsts.lisgrowtolarges
 msgid "Grow to Largest"
 msgstr "Zum größten hin wachsen"
+
+#: lazarusidestrconsts.lisgutterpartmargin
+msgid "Margin"
+msgstr ""
+
+#: lazarusidestrconsts.lisgutterpartvisible
+msgid "Visible"
+msgstr ""
+
+#: lazarusidestrconsts.lisgutterpartwidth
+msgid "Width"
+msgstr ""
 
 #: lazarusidestrconsts.lishashelp
 msgid "Has Help"
@@ -12006,6 +12032,10 @@ msgstr "Linker Randabstand. Der Wert wird zum Grund-Randabstand addiert und für
 #: lazarusidestrconsts.lisleftgroupboxcaption
 msgid "Left anchoring"
 msgstr "Linke Verankerung"
+
+#: lazarusidestrconsts.lisleftgutter
+msgid "Left Gutter"
+msgstr ""
 
 #: lazarusidestrconsts.lisleftsiblingcomboboxhint
 #, fuzzy
@@ -17097,6 +17127,10 @@ msgstr "Rechte Verankerung"
 msgid "Right borderspace. This value is added to base borderspace and used for the space right to the control."
 msgstr "Rechter Randabstand. Der Wert wird zum Grund-Randabstand addiert und für den Platz rechts vom Element verwendet."
 
+#: lazarusidestrconsts.lisrightgutter
+msgid "Right Gutter"
+msgstr ""
+
 #: lazarusidestrconsts.lisrightsiblingcomboboxhint
 #, fuzzy
 #| msgid "This is the sibling control to which the right side is anchored. Leave empty for anchoring to parent in Delphi style (BorderSpacing and ReferenceSide does not matter)."
@@ -20138,6 +20172,34 @@ msgstr ""
 msgid "Straighten graph"
 msgstr ""
 
+#: lazarusidestrconsts.optdispgutterchanges
+msgid "Changes"
+msgstr ""
+
+#: lazarusidestrconsts.optdispgutterfolding
+msgid "Folding"
+msgstr ""
+
+#: lazarusidestrconsts.optdispguttermarks
+msgid "Marks"
+msgstr ""
+
+#: lazarusidestrconsts.optdispgutternocurrentlinecolor
+msgid "No current line color"
+msgstr ""
+
+#: lazarusidestrconsts.optdispgutterseparator
+msgid "Separator"
+msgstr ""
+
+#: lazarusidestrconsts.optdispgutterusecurrentlinecolor
+msgid "Use current line color"
+msgstr ""
+
+#: lazarusidestrconsts.optdispgutterusecurrentlinenumbercolor
+msgid "Use current line number color"
+msgstr ""
+
 #: lazarusidestrconsts.podaddpackageunittousessection
 msgid "Add package unit to uses section"
 msgstr "Package-Unit zum Uses-Abschnitt zufügen"
@@ -21532,6 +21594,22 @@ msgstr "Makro abspielen"
 msgid "Record Macro"
 msgstr "Makro aufnehmen"
 
+#: lazarusidestrconsts.srkmecsynpsyncroedaddcell
+msgid "Add Cell"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedaddcellcase
+msgid "Add Cell (case-sensitive)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedaddcellctx
+msgid "Add Cell (context-sensitive)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedaddcellctxcase
+msgid "Add Cell (context & case-sensitive)"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecsynpsyncroedcellend
 msgctxt "lazarusidestrconsts.srkmecsynpsyncroedcellend"
 msgid "Goto last pos in cell"
@@ -21546,10 +21624,22 @@ msgstr "Zur ersten Stelle in der Zelle"
 msgid "Select Cell"
 msgstr "Zelle wählen"
 
+#: lazarusidestrconsts.srkmecsynpsyncroeddelcell
+msgid "Remove current Cell"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecsynpsyncroedescape
 msgctxt "lazarusidestrconsts.srkmecsynpsyncroedescape"
 msgid "Escape"
 msgstr "Abbrechen"
+
+#: lazarusidestrconsts.srkmecsynpsyncroedgrowcellleft
+msgid "Grow cell on the left"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedgrowcellright
+msgid "Grow cell on the right"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecsynpsyncroednextcell
 msgctxt "lazarusidestrconsts.srkmecsynpsyncroednextcell"
@@ -21591,9 +21681,29 @@ msgctxt "lazarusidestrconsts.srkmecsynpsyncroedprevfirstcellsel"
 msgid "Previous Cell (all selected / firsts only)"
 msgstr "Vorherige Zelle (alle gewählten / nur erste)"
 
+#: lazarusidestrconsts.srkmecsynpsyncroedshrinkcellleft
+msgid "Shrink cell on the left"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedshrinkcellright
+msgid "Shrink cell on the right"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecsynpsyncroedstart
 msgid "Start Syncro edit"
 msgstr "Synchronbearbeitung beginnen"
+
+#: lazarusidestrconsts.srkmecsynpsyncroedstartcase
+msgid "Start Syncro edit (case-sensitive)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedstartctx
+msgid "Start Syncro edit (context-sensitive)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynpsyncroedstartctxcase
+msgid "Start Syncro edit (context & case-sensitive)"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecsynptmpledcellend
 msgctxt "lazarusidestrconsts.srkmecsynptmpledcellend"

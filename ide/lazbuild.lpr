@@ -804,15 +804,14 @@ var
     // apply options
     MainBuildBoss.SetBuildTargetProject1(true,smsfsSkip);
 
-    if HasOption('get-expand-text') then begin
-      S:=GetOptionValue('get-expand-text');
+    if HasLongOptIgnoreCase('get-expand-text',S) then begin
       Project1.MacroEngine.SubstituteStr(S);
       WriteLn(S);
       exit(true);
     end;
 
     TargetExeName := Project1.CompilerOptions.CreateTargetFilename;
-    if HasOption('get-target-path') then begin
+    if HasLongOptIgnoreCase('get-target-path',S) then begin
       WriteLn(TargetExeName);
       exit(true);
     end;
@@ -947,6 +946,7 @@ var
   i, MatchCount: Integer;
   ModeMask: TMask;
   CurResult: Boolean;
+  S: string;
 begin
   Result:=false;
   CloseProject(Project1);
@@ -963,7 +963,7 @@ begin
   else
     CompReason:= crCompile;
 
-  if HasOption('get-build-modes') then begin
+  if HasLongOptIgnoreCase('get-build-modes',S) then begin
     ShowBuildModes;
     exit(true);
   end;
@@ -1194,15 +1194,15 @@ end;
 
 procedure TLazBuildApplication.LoadEnvironmentOptions;
 var
-  Note: string;
+  Note, Lang: string;
 begin
   EnvironmentOptions.CreateConfig;
   EnvironmentOptions.Load(false);
   fCompilerInCfg:=EnvironmentOptions.CompilerFilename;
   fLazarusDirInCfg:=EnvironmentOptions.LazarusDirectory;
 
-  if HasOption('language') then
-    EnvironmentOptions.LanguageID:=GetOptionValue('language');
+  if HasLongOptIgnoreCase('language',Lang) then
+    EnvironmentOptions.LanguageID:=Lang;
   TranslateResourceStrings(EnvironmentOptions.GetParsedLazarusDirectory,
                            EnvironmentOptions.LanguageID);
   if CompilerOverride<>'' then
@@ -1744,9 +1744,8 @@ const
   end;
 
 begin
-  if LazBuildApp.HasOption('language') then
-    CustomLang:=LazBuildApp.GetOptionValue('language');
-  TranslateResourceStrings(ProgramDirectoryWithBundle,CustomLang);
+  if HasLongOptIgnoreCase('language',CustomLang) then
+    TranslateResourceStrings(ProgramDirectoryWithBundle,CustomLang);
   writeln('');
   writeln(lisLazbuildOptionsSyntax);
   writeln('');

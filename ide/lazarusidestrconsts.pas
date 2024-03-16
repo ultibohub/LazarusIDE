@@ -1075,6 +1075,7 @@ resourcestring
   lisChooseDebuggerExecutable = 'Choose debugger executable';
   lisChooseTestBuildDir = 'Choose the directory for tests';
   lisChooseExecutable = 'Choose an executable';
+  lisChooseFppkgConfigurationFile = 'Choose the fppkg configuration file';
 
   // dialogs
   lisProjectChanged = 'Project changed';
@@ -1578,6 +1579,7 @@ resourcestring
   dlgFilterPascalFile = 'Pascal file';
   dlgFilterDciFile = 'DCI file';
   dlgFilterFPCMessageFile = 'FPC message file';
+  dlgFilterFppkgConfigurationFile = 'Fppkg configuration file';
   dlgFilterCodetoolsTemplateFile = 'CodeTools template file';
   dlgFilterImagesPng = 'PNG images';
   dlgFilterImagesBitmap = 'Bitmap images';
@@ -2140,6 +2142,7 @@ resourcestring
   dlgAddHiAttrLineHighlight       = 'Current line highlight';
   dlgAddHiAttrModifiedLine        = 'Modified line';
   dlgAddHiAttrCodeFoldingTree     = 'Code folding tree';
+  dlgAddHiAttrCodeFoldingTreeCur  = 'Code folding (current)';
   dlgAddHiAttrHighlightWord       = 'Highlight current word';
   dlgAddHiAttrFoldedCode          = 'Folded code marker';
   dlgAddHiAttrFoldedCodeLine      = 'Fold start-line';
@@ -2171,6 +2174,8 @@ resourcestring
   dlgTopInfoHint                  = 'Current Class/Proc Hint';
   dlgCaretColor                   = 'Caret (Text-Cursor)';
   dlgOverviewGutterColor          = 'Overview Gutter';
+  dlgGutterCurrentLineOther       = 'Current Line (other)';
+  dlgGutterCurrentLineNumber      = 'Current Line (number)';
   dlgIfDefBlockInactive           = 'Inactive $IFDEF code';
   dlgIfDefBlockActive             = 'Active $IFDEF code';
   dlgIfDefBlockTmpActive          = 'Included mixed state $IFDEF code';
@@ -2534,6 +2539,7 @@ resourcestring
   lisUnableToReadProcessExitStatus = 'unable to read process ExitStatus';
   lisFreeingBufferLines = 'freeing buffer lines: %s';
   lisCompilerMessagesFileNotFound = 'Compiler messages file not found:%s%s';
+  lisFppkgConfigurationFileNotFound = 'Fppkg configuration file not found:%s%s';
   lisUnableToOpen = 'Unable to open "%s"';
   lisCompilerDoesNotSupportTarget = 'Compiler "%s" does not support target %s-%s';
   lisInvalidMode = 'Invalid mode %s';
@@ -3375,6 +3381,18 @@ resourcestring
   srkmecSynPSyncroEdCellSelect       = 'Select Cell';
   srkmecSynPSyncroEdEscape           = 'Escape';
   srkmecSynPSyncroEdStart            = 'Start Syncro edit';
+  srkmecSynPSyncroEdStartCase        = 'Start Syncro edit (case-sensitive)';
+  srkmecSynPSyncroEdStartCtx         = 'Start Syncro edit (context-sensitive)';
+  srkmecSynPSyncroEdStartCtxCase     = 'Start Syncro edit (context & case-sensitive)';
+  srkmecSynPSyncroEdGrowCellLeft     = 'Grow cell on the left';
+  srkmecSynPSyncroEdShrinkCellLeft   = 'Shrink cell on the left';
+  srkmecSynPSyncroEdGrowCellRight    = 'Grow cell on the right';
+  srkmecSynPSyncroEdShrinkCellRight  = 'Shrink cell on the right';
+  srkmecSynPSyncroEdAddCell          = 'Add Cell';
+  srkmecSynPSyncroEdAddCellCase      = 'Add Cell (case-sensitive)';
+  srkmecSynPSyncroEdAddCellCtx       = 'Add Cell (context-sensitive)';
+  srkmecSynPSyncroEdAddCellCtxCase   = 'Add Cell (context & case-sensitive)';
+  srkmecSynPSyncroEdDelCell          = 'Remove current Cell';
 
   // run menu
   srkmecCompile                   = 'compile program/project';
@@ -5498,9 +5516,14 @@ resourcestring
     +'not be deleted because it is not owned by %s.';
   lisFilter3 = 'Filter: %s';
   lisFileExtensionOfPrograms = 'File extension of programs';
-  lisEveryNThLineNumber = 'Every n-th line number';
+  lisEveryNThLineNumber = 'Show every n-th line number';
   lisShowOverviewGutter = 'Show overview gutter';
   lisTopInfoView = 'Show Class/Procedure hint';
+  lisLeftGutter = 'Left Gutter';
+  lisRightGutter = 'Right Gutter';
+  lisGutterPartVisible = 'Visible';
+  lisGutterPartWidth = 'Width';
+  lisGutterPartMargin = 'Margin';
   lisLink = 'Link:';
   lisShort = 'Short:';
   lisInsertUrlTag = 'Insert url tag';
@@ -6471,6 +6494,13 @@ resourcestring
     +'You may want to rebuild the IDE with the packages installed. After the '
     +'rebuild, the debugger backend can be changed in the menu: Tools -> '
     +'Options.';
+  optDispGutterMarks = 'Marks';
+  optDispGutterChanges = 'Changes';
+  optDispGutterSeparator = 'Separator';
+  optDispGutterFolding = 'Folding';
+  optDispGutterNoCurrentLineColor = 'No current line color';
+  optDispGutterUseCurrentLineColor = 'Use current line color';
+  optDispGutterUseCurrentLineNumberColor = 'Use current line number color';
 
 implementation
 

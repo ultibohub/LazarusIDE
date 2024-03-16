@@ -25,8 +25,6 @@ interface
 
 uses
   Classes, SysUtils, TypInfo, AVL_Tree, fgl,
-  // LCL
-  Controls,
   // LazUtils
   LazUtilities, LazLoggerBase, Laz2_XMLCfg, LazMethodList, LazUTF8;
 
@@ -38,12 +36,12 @@ type
     cpNormal,
     cpOptional
     );
-    
+
   TComponentPriority = record
     Category: TComponentPriorityCategory;
     Level: integer; // higher level means higher priority (range: -1000 to 1000)
   end;
-    
+
 const
   ComponentPriorityNormal: TComponentPriority = (Category: cpNormal; Level: 0);
 
@@ -148,29 +146,30 @@ type
     FOrigPageName: string;
     FRealPage: TBaseComponentPage;
     FVisible: boolean;
-  protected
     FNextSameName: TRegisteredComponent;
     FPrevSameName: TRegisteredComponent;
+    procedure AddToPalette;
+  protected
+    procedure ConsistencyCheck; virtual;
+    function GetPriority: TComponentPriority; virtual;
+    function InheritsFromControl: boolean; virtual; abstract;
   public
     constructor Create(TheComponentClass: TComponentClass; const ThePageName: string);
     destructor Destroy; override;
-    procedure ConsistencyCheck; virtual;
-    function GetUnitName: string; virtual; abstract;
-    function GetPriority: TComponentPriority; virtual;
-    procedure AddToPalette; virtual;
     function CanBeCreatedInDesigner: boolean; virtual;
     function GetCreationClass: TComponentClass; virtual;
-    function HasAmbiguousClassName: boolean; virtual; // true if another component class with same name (different unit) is registered
     function GetFullClassName(const UnitSep: char = '/'): string; virtual;
+    function GetUnitName: string; virtual; abstract;
+    function HasAmbiguousClassName: boolean; virtual; // true if another component class with same name (different unit) is registered
   public
     property ComponentClass: TComponentClass read FComponentClass; // Beware of ambiguous classnames
-    property OnGetCreationClass: TOnGetCreationClass read FOnGetCreationClass
-                                                     write FOnGetCreationClass;
     property OrigPageName: string read FOrigPageName; // case sensitive
     property RealPage: TBaseComponentPage read FRealPage write FRealPage;
     property Visible: boolean read FVisible write FVisible;
     property NextSameName: TRegisteredComponent read FNextSameName;
     property PrevSameName: TRegisteredComponent read FPrevSameName;
+    property OnGetCreationClass: TOnGetCreationClass read FOnGetCreationClass
+                                                     write FOnGetCreationClass;
   end;
 
   { TBaseComponentPage }
@@ -193,7 +192,7 @@ type
   TBaseComponentPageClass = class of TBaseComponentPage;
 
   { TBaseComponentPalette }
-  
+
   TComponentPaletteHandlerType = (
     cphtVoteVisibility,  // Visibility of component palette icons is recomputed
     cphtComponentAdded,  // Typically selection is changed after component was added.
@@ -313,7 +312,7 @@ type
     property UserOrder: TCompPaletteUserOrder read fUserOrder;
     property OnClassSelected: TNotifyEvent read fOnClassSelected write fOnClassSelected;
   end;
-  
+
 
 var
   IDEComponentPalette: TBaseComponentPalette = nil;
@@ -1284,7 +1283,7 @@ var
   i, Vote: Integer;
 begin
   Vote:=1;
-  if HideControls and AComponent.ComponentClass.InheritsFrom(TControl) then
+  if HideControls and AComponent.InheritsFromControl then
     Dec(Vote);
   i:=FHandlers[cphtVoteVisibility].Count;
   while FHandlers[cphtVoteVisibility].NextDownIndex(i) do

@@ -1451,7 +1451,10 @@ begin
     O.Options := DialogOptions;
     O.Filter := Filter;
     O.FilterIndex := FilterIndex;
-    O.InitialDir := CleanAndExpandDirectory(InitialDir);
+    if (InitialDir <> '') then   //don't force currentdir here, let WS do it's normal "magic" to decide where to open
+      O.InitialDir := CleanAndExpandDirectory(InitialDir)
+    else
+      O.InitialDir := '';
   end;
   // Set some common things.
   Result.Title := DialogTitle;
@@ -1503,10 +1506,15 @@ end;
 procedure TFileNameEdit.RunDialog;
 var
   D: TCommonDialog;
+  Res: Boolean;
 begin
   D := CreateDialog(DialogKind);
   try
-    if D.Execute then
+    Res := D.Execute;
+    //this is analogue to how TOpenDialog behaves, InitialDir is retrieved from the dialog, even if user cancels the dialog.
+    if (D is TOpenDialog) then
+      InitialDir := TOpenDialog(D).InitialDir;
+    if Res then
       SaveDialogResult(DialogKind, D);
   finally
     D.Free;

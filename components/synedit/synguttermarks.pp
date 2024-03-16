@@ -16,6 +16,7 @@ type
   TSynGutterMarks = class(TSynGutterPartBase)
   private
     FColumnCount: Integer;
+    FWantedColumns: integer;
     FColumnWidth: Integer;
     FDebugMarksImageIndex: Integer;
     FInternalImage: TSynInternalImage;
@@ -31,15 +32,18 @@ type
     function  PaintMarks(aScreenLine: Integer; Canvas : TCanvas; AClip : TRect;
                        var aFirstCustomColumnIdx: integer): Boolean;
     Procedure PaintLine(aScreenLine: Integer; Canvas : TCanvas; AClip : TRect); virtual;
-
-    property ColumnWidth: Integer read FColumnWidth; // initialized in Paint
-    property ColumnCount: Integer read FColumnCount;
+    property WantedColumns: integer read FWantedColumns;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
 
     procedure Paint(Canvas: TCanvas; AClip: TRect; FirstLine, LastLine: integer); override;
+    procedure SetWidthForColumns(AValue: Integer);
     property DebugMarksImageIndex: Integer read FDebugMarksImageIndex write FDebugMarksImageIndex;
+    property ColumnWidth: Integer read FColumnWidth; // initialized in Paint
+    property ColumnCount: Integer read FColumnCount;
+  published
+    property MarkupInfoCurrentLine;
   end;
 
 implementation
@@ -62,7 +66,13 @@ end;
 
 function TSynGutterMarks.PreferedWidth: Integer;
 begin
-  Result := 22 + FBookMarkOpt.LeftMargin
+  Result := 22 + FBookMarkOpt.LeftMargin;
+  if FWantedColumns > 0 then begin
+    if assigned(FBookMarkOpt) and assigned(FBookMarkOpt.BookmarkImages) then begin
+      FColumnWidth := GetImgListRes(FriendEdit.Canvas, FBookMarkOpt.BookmarkImages).Width;
+      Result := FWantedColumns*FColumnWidth;
+    end;
+  end;
 end;
 
 function TSynGutterMarks.LeftMarginAtCurrentPPI: Integer;
@@ -217,11 +227,7 @@ var
   rcLine: TRect;
 begin
   if not Visible then exit;
-  if MarkupInfo.Background <> clNone then
-    Canvas.Brush.Color := MarkupInfo.Background
-  else
-    Canvas.Brush.Color := Gutter.Color;
-  LCLIntf.SetBkColor(Canvas.Handle, TColorRef(Canvas.Brush.Color));
+  PaintBackground(Canvas, AClip);
 
   if assigned(FBookMarkOpt) and assigned(FBookMarkOpt.BookmarkImages) then
     FColumnWidth := GetImgListRes(Canvas, FBookMarkOpt.BookmarkImages).Width
@@ -243,6 +249,17 @@ begin
       PaintLine(i, Canvas, rcLine);
     end;
   end;
+end;
+
+procedure TSynGutterMarks.SetWidthForColumns(AValue: Integer);
+begin
+  if FWantedColumns = AValue then
+    exit;
+  FWantedColumns := AValue;
+  if not AutoSize then
+    AutoSize := True
+  else
+    DoAutoSize;
 end;
 
 end.
