@@ -41,10 +41,9 @@ uses
   Classes, SysUtils, LazFileUtils, Forms, Controls, Dialogs, IDEWindowIntf,
   Menus, ComCtrls, Debugger, DebuggerDlg, ActnList, ExtCtrls, IDEImagesIntf,
   {$ifdef Windows} ActiveX, {$else} laz.FakeActiveX, {$endif}
-  DbgIntfDebuggerBase, DbgIntfMiscClasses, BaseDebugManager,
-  IdeDebuggerStringConstants, DebuggerTreeView, breakpointgroupframe,
-  IdeDebuggerOpts, IdeIntfStrConsts, SrcEditorIntf, laz.VirtualTrees,
-  LazDebuggerIntf;
+  DbgIntfDebuggerBase, DbgIntfMiscClasses, BaseDebugManager, IdeDebuggerStringConstants,
+  DebuggerTreeView, breakpointgroupframe, IdeDebuggerOpts, EnvDebuggerOptions, IdeIntfStrConsts,
+  SrcEditorIntf, IDEDialogs, laz.VirtualTrees, LazDebuggerIntf;
 
 type
   TBreakPointsDlgState = (
@@ -75,6 +74,7 @@ type
     actDisableAllInSrc: TAction;
     ActionList1: TActionList;
     tbGroupByBrkGroup: TToolButton;
+    ToolButton1: TToolButton;
     tvBreakPoints: TDbgTreeView;
     popGroupSep: TMenuItem;
     popGroupSetNew: TMenuItem;
@@ -616,7 +616,7 @@ begin
 
   actDeleteAll.Caption := lisDeleteAll;
   actDeleteAll.Hint    := lisDbgAllItemDeleteHint;
-  actDeleteAll.ImageIndex := IDEImages.LoadImage('menu_clean');
+  actDeleteAll.ImageIndex := IDEImages.LoadImage('delete_all_in_list');
 
   actProperties.Caption:= liswlProperties;
   actProperties.Hint := lisDbgBreakpointPropertiesHint;
@@ -839,6 +839,8 @@ var
   VNode: PVirtualNode;
   CurBreakPoint: TIDEBreakPoint;
   Filename: String;
+  MsgResult: Integer;
+  NotAgain: Boolean;
 begin
   BeginUpdate;
   try
@@ -846,10 +848,15 @@ begin
     if VNode = nil then
       exit;
     Filename:=TIDEBreakpoint(tvBreakPoints.NodeItem[VNode]).Source;
-    if MessageDlg(lisDeleteAllBreakpoints,
-      Format(lisDeleteAllBreakpoints2, [Filename]),
-      mtConfirmation,[mbYes,mbCancel],0)<>mrYes
-    then exit;
+
+    if EnvironmentDebugOpts.ConfirmDeleteFileBreakPoints then begin
+      MsgResult:=TaskDlg(lisDeleteAllBreakpoints, lisDeleteAllBreakpoints2, '', tdiQuestion,
+                 [mbYes, mbNo], dbgDoNotShowThisMessageAgain, NotAgain);
+      if MsgResult = mrNo then
+        exit;
+      if NotAgain then
+        EnvironmentDebugOpts.ConfirmDeleteFileBreakPoints:= False;
+    end;
 
     for VNode in tvBreakPoints.NoInitItemNodes do
     begin
@@ -914,14 +921,20 @@ procedure TBreakPointsDlg.popDeleteAllClick(Sender: TObject);
 var
   VNode: PVirtualNode;
   CurBreakPoint: TIDEBreakPoint;
+  MsgResult: Integer;
+  NotAgain: Boolean;
 begin
+  if EnvironmentDebugOpts.ConfirmDeleteAllBreakPoints then begin
+    MsgResult:=TaskDlg(lisDeleteAllBreakpoints, lisDeleteAllBreakpoints, '', tdiQuestion,
+               [mbYes, mbNo], dbgDoNotShowThisMessageAgain, NotAgain);
+    if MsgResult = mrNo then
+      exit;
+    if NotAgain then
+      EnvironmentDebugOpts.ConfirmDeleteAllBreakPoints := False;
+  end;
+
   BeginUpdate;
   try
-    if MessageDlg(lisDeleteAllBreakpoints,
-      lisDeleteAllBreakpoints,
-      mtConfirmation,[mbYes,mbCancel],0)<>mrYes
-    then exit;
-
     for VNode in tvBreakPoints.NoInitItemNodes do
     begin
       CurBreakPoint:=TIDEBreakPoint(tvBreakPoints.NodeItem[VNode]);

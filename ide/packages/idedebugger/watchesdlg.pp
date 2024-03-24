@@ -43,12 +43,12 @@ uses
   // LazUtils
   LazLoggerBase, LazUTF8,
   // LCL
-  Clipbrd, Menus, ComCtrls, ActnList, ExtCtrls, StdCtrls, LCLType, LMessages, SpinEx,
+  Clipbrd, Menus, ComCtrls, ActnList, ExtCtrls, StdCtrls, LCLType, LMessages, Dialogs, SpinEx,
   laz.VirtualTrees,
   //SynEdit
   SynEdit,
   // IdeIntf
-  IDEWindowIntf, IDEImagesIntf, IdeIntfStrConsts, IdeDebuggerWatchValueIntf,
+  IDEWindowIntf, IDEImagesIntf, IdeIntfStrConsts, IdeDebuggerWatchValueIntf, IDEDialogs,
   // DebuggerIntf
   DbgIntfBaseTypes, DbgIntfDebuggerBase, DbgIntfMiscClasses,
   // LazDebuggerIntf
@@ -95,8 +95,8 @@ type
     ActionList1: TActionList;
     actProperties: TAction;
     InspectLabel: TLabel;
-    ToolButton1: TToolButton;
     btnShowDataAddr: TToolButton;
+    ToolButton3: TToolButton;
     tvWatches: TDbgTreeView;
     InspectMemo: TMemo;
     MenuItem1: TMenuItem;
@@ -328,7 +328,7 @@ begin
 
   actDeleteAll.Caption := liswlDeLeteAll; //lisDbgAllItemDelete;
   actDeleteAll.Hint    := lisDbgAllItemDeleteHint;
-  actDeleteAll.ImageIndex := IDEImages.LoadImage('menu_clean');
+  actDeleteAll.ImageIndex := IDEImages.LoadImage('delete_all_in_list');
 
   actProperties.Caption:= liswlProperties;
   actProperties.ImageIndex := IDEImages.LoadImage('menu_environment_options');
@@ -348,7 +348,7 @@ begin
   actInspect.Caption := lisInspect;
   actEvaluate.Caption := lisEvaluateModify;
 
-  btnShowDataAddr.ImageIndex := IDEImages.LoadImage('ce_implementation');
+  btnShowDataAddr.ImageIndex := IDEImages.LoadImage('address');
 
   Caption:=liswlWatchList;
 
@@ -902,7 +902,18 @@ end;
 procedure TWatchesDlg.popDeleteAllClick(Sender: TObject);
 var
   VNode: PVirtualNode;
+  MsgResult: Integer;
+  NotAgain: Boolean;
 begin
+  if EnvironmentDebugOpts.ConfirmDeleteAllWatches then begin
+    MsgResult:=TaskDlg(dlgWatchesDeleteAllConfirm, dlgWatchesDeleteAllConfirm, '', tdiQuestion,
+               [mbYes, mbNo], dbgDoNotShowThisMessageAgain, NotAgain);
+    if MsgResult = mrNo then
+      exit;
+    if NotAgain then
+      EnvironmentDebugOpts.ConfirmDeleteAllWatches := False;
+  end;
+
   Include(FStateFlags, wdsfNeedDeleteAll);
   if wdsfUpdating in FStateFlags then exit;
   Exclude(FStateFlags, wdsfNeedDeleteAll);

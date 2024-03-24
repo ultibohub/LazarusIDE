@@ -1874,6 +1874,10 @@ msgctxt "lazarusidestrconsts.dlgfilterfpcmessagefile"
 msgid "FPC message file"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfilterfppkgconfigurationfile
+msgid "Fppkg configuration file"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfilterhtml
 msgid "HTML files"
 msgstr ""
@@ -3591,6 +3595,42 @@ msgstr "Prichytiť k mriežke"
 #, object-pascal-format
 msgid "Really delete desktop \"%s\"?"
 msgstr "Naozaj zmazať pracovnú plochu \"%s\"?"
+
+#: lazarusidestrconsts.dlgredirappend
+msgid "To file (append)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgredirinput
+msgid "From file"
+msgstr ""
+
+#: lazarusidestrconsts.dlgredirinputend
+msgid "From file (at EOF)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgrediroff
+msgid "No redirection"
+msgstr ""
+
+#: lazarusidestrconsts.dlgrediroverwrite
+msgid "To file (overwrite)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgredirstderr
+msgid "Redirect StdErr"
+msgstr ""
+
+#: lazarusidestrconsts.dlgredirstdin
+msgid "Redirect StdIn"
+msgstr ""
+
+#: lazarusidestrconsts.dlgredirstdnotsupported
+msgid "Current debugger does not support redirection."
+msgstr ""
+
+#: lazarusidestrconsts.dlgredirstdout
+msgid "Redirect StdOut"
+msgstr ""
 
 #: lazarusidestrconsts.dlgreferencecolor
 msgid "Reference"
@@ -6287,6 +6327,10 @@ msgstr ""
 msgid "Choose FPC source directory"
 msgstr "Vyberte adresár zdrojových kódov FPC"
 
+#: lazarusidestrconsts.lischoosefppkgconfigurationfile
+msgid "Choose the fppkg configuration file"
+msgstr ""
+
 #: lazarusidestrconsts.lischooselazarussourcedirectory
 msgid "Choose Lazarus Directory"
 msgstr "Vyberte adresár Lazarus"
@@ -8319,6 +8363,22 @@ msgctxt "lazarusidestrconsts.lisdebug"
 msgid "Debug"
 msgstr "Ladiť"
 
+#: lazarusidestrconsts.lisdebugdialogconfirmdelbreaks
+msgid "Confirm to delete all Breakpoints"
+msgstr ""
+
+#: lazarusidestrconsts.lisdebugdialogconfirmdelbreaksfile
+msgid "Confirm to delete Breakpoints in same file"
+msgstr ""
+
+#: lazarusidestrconsts.lisdebugdialogconfirmdelhistory
+msgid "Confirm to clear History"
+msgstr ""
+
+#: lazarusidestrconsts.lisdebugdialogconfirmdelwatches
+msgid "Confirm to delete all Watches"
+msgstr ""
+
 #: lazarusidestrconsts.lisdebugger
 msgctxt "lazarusidestrconsts.lisdebugger"
 msgid "Debugger"
@@ -8382,6 +8442,10 @@ msgstr "Debuger"
 
 #: lazarusidestrconsts.lisdebugoptionsfrmdebuggerbackend
 msgid "Debugger Backend:"
+msgstr ""
+
+#: lazarusidestrconsts.lisdebugoptionsfrmdebuggerdialogsettings
+msgid "Debugger dialogs"
 msgstr ""
 
 #: lazarusidestrconsts.lisdebugoptionsfrmdebuggergeneraloptions
@@ -10128,6 +10192,11 @@ msgstr ""
 
 #: lazarusidestrconsts.lisfppkgconfiguration
 msgid "The configuration file typically has the name \"fppkg.cfg\". When incorrect it may be impossible to resolve dependencies on Free Pascal packages. Leave empty to use the default."
+msgstr ""
+
+#: lazarusidestrconsts.lisfppkgconfigurationfilenotfound
+#, object-pascal-format
+msgid "Fppkg configuration file not found:%s%s"
 msgstr ""
 
 #: lazarusidestrconsts.lisfppkgcreatefilefailed

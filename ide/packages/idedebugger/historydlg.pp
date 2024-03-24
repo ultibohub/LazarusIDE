@@ -5,9 +5,9 @@ unit HistoryDlg;
 interface
 
 uses
-  Classes, SysUtils, ComCtrls, Debugger, DebuggerDlg, Forms,
-  IDEWindowIntf,
-  BaseDebugManager, IDEImagesIntf, Dialogs, IdeDebuggerStringConstants;
+  Classes, SysUtils, ComCtrls, Debugger, DebuggerDlg, Forms, IDEWindowIntf, BaseDebugManager,
+  IDEImagesIntf, IDEDialogs, IdeIntfStrConsts, Dialogs, Controls, IdeDebuggerStringConstants,
+  EnvDebuggerOptions;
 
 type
 
@@ -28,6 +28,7 @@ type
     tbRemove: TToolButton;
     ToolButton2: TToolButton;
     tbExport: TToolButton;
+    ToolButton3: TToolButton;
     ToolButton4: TToolButton;
     tbImport: TToolButton;
     procedure lvHistoryDblClick(Sender: TObject);
@@ -117,7 +118,19 @@ begin
 end;
 
 procedure THistoryDialog.tbClearClick(Sender: TObject);
+var
+  MsgResult: Integer;
+  NotAgain: Boolean;
 begin
+  if EnvironmentDebugOpts.ConfirmDeleteAllHistory then begin
+    MsgResult:=TaskDlg(dlgHistoryDeleteAllConfirm, dlgHistoryDeleteAllConfirm, '', tdiQuestion,
+               [mbYes, mbNo], dbgDoNotShowThisMessageAgain, NotAgain);
+    if MsgResult = mrNo then
+      exit;
+    if NotAgain then
+      EnvironmentDebugOpts.ConfirmDeleteAllHistory := False;
+  end;
+
   if SnapshotManager <> nil
   then SnapshotManager.Clear;
 end;
@@ -335,7 +348,7 @@ begin
   tbPower.Hint := histdlgBtnPowerHint;
   tbHistorySelected.Hint := histdlgBtnEnableHint;
 
-  tbClear.ImageIndex := IDEImages.LoadImage('menu_clean');
+  tbClear.ImageIndex := IDEImages.LoadImage('delete_all_in_list');
   tbClear.Hint  := histdlgBtnClearHint;
 
   tbHist.ImageIndex := IDEImages.LoadImage('clock');

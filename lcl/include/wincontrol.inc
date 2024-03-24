@@ -84,6 +84,7 @@ type
     Control: TControl; // the Control of a leaf node
     MinimumSize: array[TAutoSizeBoxOrientation] of integer;
     MaximumSize: array[TAutoSizeBoxOrientation] of integer; // 0 means inifinte
+    LimitedSize: array[TAutoSizeBoxOrientation] of boolean; // Was force set by Max or Min
     PreferredSize: array[TAutoSizeBoxOrientation] of integer;// without theme space
     LeftTop: array[TAutoSizeBoxOrientation] of integer;
     BorderLeftTop: array[TAutoSizeBoxOrientation] of integer;
@@ -1416,19 +1417,6 @@ begin
     PreferredSize[asboVertical]:=
       Control.Constraints.MinMaxHeight(PreferredSize[asboVertical]);
 
-  if IsPrefWidthValid
-  and (Control.AutoSize or (Control.BorderSpacing.CellAlignHorizontal<>ccaFill))
-  then begin
-    // the control.width is fixed to its preferred width
-    MaximumSize[asboHorizontal]:=PreferredSize[asboHorizontal];
-  end;
-  if IsPrefHeightValid
-  and (Control.AutoSize or (Control.BorderSpacing.CellAlignVertical<>ccaFill))
-  then begin
-    // the control.height is fixed to its preferred height
-    MaximumSize[asboVertical]:=PreferredSize[asboVertical];
-  end;
-
   // if no preferred size is valid use the class defaults
   if not IsPrefWidthValid then
     PreferredSize[asboHorizontal]:=
@@ -1671,23 +1659,18 @@ begin
       inc(MinimumSize[Orientation],CurBorder);
       inc(PreferredSize[Orientation],CurBorder);
       // add item size in Orientation
-      if MaximumSize[Orientation]>0 then begin
-        if CurChild.MaximumSize[Orientation]>0 then
-          inc(MaximumSize[Orientation],CurChild.MaximumSize[Orientation])
-        else
-          MaximumSize[Orientation]:=0;
-      end;
+      if CurChild.MaximumSize[Orientation]>0 then
+        inc(MaximumSize[Orientation],CurChild.MaximumSize[Orientation]);
       inc(MinimumSize[Orientation],CurChild.MinimumSize[Orientation]);
       inc(PreferredSize[Orientation],CurChild.PreferredSize[Orientation]);
       
       // maximize in Orthogonal
-      if MaximumSize[Orthogonal]>0 then begin
-        if CurChild.MaximumSize[Orthogonal]>0 then
-          MaximumSize[Orthogonal]:=Max(MaximumSize[Orthogonal],
-                                       CurChild.MaximumSize[Orthogonal])
-        else
-          MaximumSize[Orthogonal]:=0;
-      end;
+      if MaximumSize[Orthogonal] = 0 then
+        MaximumSize[Orthogonal] := CurChild.MaximumSize[Orthogonal]
+      else
+      if CurChild.MaximumSize[Orthogonal] > 0 then
+        MaximumSize[Orthogonal]:=Min(MaximumSize[Orthogonal],
+                                     CurChild.MaximumSize[Orthogonal]);
       MinimumSize[Orthogonal]:=Max(MinimumSize[Orthogonal],
                                    CurChild.MinimumSize[Orthogonal]);
       PreferredSize[Orthogonal]:=Max(PreferredSize[Orthogonal],
@@ -1758,7 +1741,7 @@ type
 var
   EnlargeStyle: TChildControlResizeStyle;
   ShrinkStyle: TChildControlResizeStyle;
-  CurSize: LongInt;
+  CurSize, CurSpacing, CurrentMinimumSizeSum: LongInt;
 
   function GetChildTotalSize: integer;
   // computes the total preferred size of all children of this Orientation
@@ -1768,10 +1751,14 @@ var
     s: LongInt;
   begin
     Result:=0;
+    CurSpacing := 0;
+    CurrentMinimumSizeSum := 0;
     for i:=0 to ChildCount[Orientation]-1 do begin
       Child:=Children[Orientation][i];
-      if i=0 then
+      if i=0 then begin
         inc(Result,Child.BorderLeftTop[Orientation]);
+        inc(CurSpacing,Child.BorderLeftTop[Orientation]);
+      end;
       if Child.PreferredSize[Orientation]<1 then
         Child.PreferredSize[Orientation]:=1;
       inc(Result,Child.PreferredSize[Orientation]);
@@ -1779,355 +1766,414 @@ var
       if i<ChildCount[Orientation]-1 then
         s:=Max(s,Children[Orientation][i+1].BorderLeftTop[Orientation]);
       inc(Result,s);
+      inc(CurSpacing,s);
+      inc(CurrentMinimumSizeSum,Child.MinimumSize[Orientation]);
     end;
   end;
-  
-  procedure GetChildMaxResize(out Factor: TResizeFactor;
-    out ResizeableCount: integer);
-  // returns the number of children/gaps, that can grow (ResizeableCount)
-  // and the maximum factor, by which the children/gaps can grow (TResizeFactor)
+
+  procedure SimplifySpacing;
   var
     i: Integer;
-    CurScale: Double;
-    CurOffset: LongInt;
-    Child: TAutoSizeBox;
   begin
-    Factor.Scale:=0;
-    Factor.Offset:=0;
-    ResizeableCount:=0;
+    for i:=0 to ChildCount[Orientation]-2 do begin
+      Children[Orientation][i].BorderRightBottom[Orientation]:=Max(
+        Children[Orientation][i].BorderRightBottom[Orientation],
+        Children[Orientation][i+1].BorderLeftTop[Orientation]
+      );
+      Children[Orientation][i+1].BorderLeftTop[Orientation]:=0;
+    end;
+  end;
+
+  procedure EnlargeChilds;
+  var
+    i: Integer;
+    Child: TAutoSizeBox;
+    RemainingTargetSize, RemainingCurSize, NonResizeableCount: Integer;
+    ScaleChanged: Boolean;
+    CurScale, CurOffset: Double;
+    NewSizeEx, NewSizeCarry: Double;
+    NewSize, OldSize, DiffSize: Integer;
+  begin
     case EnlargeStyle of
-    
-    crsAnchorAligning:
-      exit; // no resizing
+      crsScaleChilds, crsHomogenousChildResize, crsSameSize:
+        begin
+          RemainingTargetSize := Max(0, TargetSize-CurSpacing);
+          RemainingCurSize := Max(0, CurSize-CurSpacing);
+          NonResizeableCount := 0;
 
-    crsScaleChilds,crsHomogenousChildResize:
-    
-      for i:=0 to ChildCount[Orientation]-1 do begin
-        Child:=Children[Orientation][i];
-        if (Child.MaximumSize[Orientation]>0)
-        and (Child.PreferredSize[Orientation]>=Child.MaximumSize[Orientation])
-        then begin
-          // this child can not be further enlarged
-          continue;
-        end;
-        inc(ResizeableCount);
+          if EnlargeStyle = crsSameSize then begin
+            (* First check for any cells forced bigger by there MinSize
+               This only happens for crsSameSize (because even if the total
+                 area grows, individual cells may shrink, if there
+                 PreferredSize is above the average)
+               If they take extra space, then other cells that would have hit
+                 there MaxSize, may stay below it.
+               In the "MaxSize Loop" the scale will only grow, so no further
+                 MinSize hits can happen there.
+            *)
+            if ChildCount[Orientation] > NonResizeableCount then
+              NewSize := RemainingTargetSize div (ChildCount[Orientation] - NonResizeableCount);
+            repeat
+              ScaleChanged:=False;
+              for i:=0 to ChildCount[Orientation]-1 do begin
+                Child:=Children[Orientation][i];
+                if Child.LimitedSize[Orientation] then
+                  continue;
 
-        case EnlargeStyle of
-
-        crsScaleChilds, crsHomogenousChildResize:
-          begin
-            if Child.MaximumSize[Orientation]=0 then begin
-              CurScale:=double(TargetSize);
-              CurOffset:=TargetSize;
-            end else begin
-              CurScale:=double(Child.MaximumSize[Orientation])
-                          /Child.PreferredSize[Orientation];
-              CurOffset:=Child.MaximumSize[Orientation]
-                         -Child.PreferredSize[Orientation];
-            end;
-            if (Factor.Offset=0) or (Factor.Offset>CurOffset) then begin
-              Factor.Scale:=CurScale;
-              Factor.Offset:=CurOffset;
-            end;
+                if (NewSize<=Child.MinimumSize[Orientation])
+                then begin
+                  // this childs size will be set to its MinimumSize
+                  RemainingTargetSize:=RemainingTargetSize - Child.MinimumSize[Orientation];
+                  RemainingCurSize:=RemainingCurSize - Child.PreferredSize[Orientation];
+                  Child.PreferredSize[Orientation]:=Child.MinimumSize[Orientation];
+                  Child.LimitedSize[Orientation] := True;
+                  inc(NonResizeableCount);
+                  OldSize := NewSize;
+                  if ChildCount[Orientation] > NonResizeableCount then
+                    NewSize := RemainingTargetSize div (ChildCount[Orientation] - NonResizeableCount)
+                  else
+                    break;
+                  ScaleChanged := OldSize <> NewSize;
+                  if ScaleChanged then
+                    break; // for i :=
+                end;
+              end;
+            until (not ScaleChanged) or (RemainingCurSize<=0);
+            if RemainingCurSize<=0 then
+              exit;
           end;
 
-        end;
-      end;
-      
-    crsHomogenousSpaceResize:
-      if ChildCount[Orientation]>0 then begin
-        Factor.Scale:=double(TargetSize);
-        Factor.Offset:=TargetSize;
-        ResizeableCount:=ChildCount[Orientation]+1;
-      end;
+          repeat
+            ScaleChanged:=False;
+            case EnlargeStyle of
+              crsScaleChilds: begin
+                  CurScale := double(RemainingTargetSize)/double(RemainingCurSize);
+                  CurOffset := 0;
+                end;
+              crsHomogenousChildResize: begin
+                  if ChildCount[Orientation] > NonResizeableCount then
+                    CurOffset := double(RemainingTargetSize - RemainingCurSize) / (ChildCount[Orientation] - NonResizeableCount);
+                  CurScale := 1;
+                end;
+              crsSameSize: begin
+                  if ChildCount[Orientation] > NonResizeableCount then
+                    CurOffset := double(RemainingTargetSize) / (ChildCount[Orientation] - NonResizeableCount);
+                  CurScale := 0;
+                end;
+            end;
+            for i:=0 to ChildCount[Orientation]-1 do begin
+              Child:=Children[Orientation][i];
+              if Child.LimitedSize[Orientation] or (Child.MaximumSize[Orientation]=0) then
+                continue;
 
-    else
-      raise Exception.Create('TAutoSizeBox.ResizeChilds');
-      
-    end;
-  end;
-  
-  procedure EnlargeChilds(const Factor: TResizeFactor);
-  var
-    i: Integer;
-    Child: TAutoSizeBox;
-    DiffSize: Integer;
-    NewSize: LongInt;
-    OldSize: LongInt;
-  begin
-    for i:=0 to ChildCount[Orientation]-1 do begin
-      if TargetSize=CurSize then break;
-    
-      Child:=Children[Orientation][i];
-      if (Child.MaximumSize[Orientation]<0)
-      and (Child.PreferredSize[Orientation]>=Child.MaximumSize[Orientation])
-      then begin
-        // this child can not be further enlarged
-        continue;
-      end;
+              NewSize:=Round(double(Child.PreferredSize[Orientation])*CurScale+CurOffset);
+              if (Child.MaximumSize[Orientation]>0)
+              and (NewSize>=Child.MaximumSize[Orientation])
+              then begin
+                // this childs size will be set to its MaximumSize
+                RemainingTargetSize:=RemainingTargetSize - Child.MaximumSize[Orientation];
+                RemainingCurSize:=RemainingCurSize - Child.PreferredSize[Orientation];
+                Child.PreferredSize[Orientation]:=Child.MaximumSize[Orientation];
+                Child.LimitedSize[Orientation] := True;
+                inc(NonResizeableCount);
+                ScaleChanged := True;
+                break; // for i :=
+              end;
+            end;
+          until (not ScaleChanged) or (RemainingCurSize<=0);
+          if RemainingCurSize<=0 then
+            exit;
 
-      case EnlargeStyle of
-      
-      crsScaleChilds:
-        begin
-          // scale PreferredSize
-          DiffSize:=TargetSize-CurSize;
-          OldSize:=Child.PreferredSize[Orientation];
-          NewSize:=round(double(OldSize)*Factor.Scale);
-          NewSize:=Min(OldSize+DiffSize,Max(OldSize+1,NewSize));
-          inc(CurSize,NewSize-OldSize);
-          Child.PreferredSize[Orientation]:=NewSize;
+          DiffSize := RemainingTargetSize - RemainingCurSize;
+          NewSizeCarry := 0;
+          for i:=0 to ChildCount[Orientation]-1 do begin
+            Child:=Children[Orientation][i];
+            if Child.LimitedSize[Orientation] then
+              continue;
+
+            OldSize:=Child.PreferredSize[Orientation];
+            NewSizeEx:=double(OldSize)*CurScale+CurOffset+NewSizeCarry;
+            NewSize:=Round(NewSizeEx);
+            if NewSize >= 1 then NewSizeCarry:=NewSizeEx - NewSize
+            else                 NewSizeCarry:=0;
+            if i = ChildCount[Orientation] - 1 then
+              NewSize:=OldSize+DiffSize
+            else
+            if (EnlargeStyle = crsSameSize) then
+              NewSize:=Max(1,NewSize)
+            else
+              NewSize:=Min(OldSize+DiffSize, Max(1,NewSize));
+            assert((Child.MaximumSize[Orientation]=0) or (NewSize<=Child.MaximumSize[Orientation]), 'EnlargeChilds: (Child.MaximumSize[Orientation]=0) or (NewSize<=Child.MaximumSize[Orientation])');
+            assert((NewSize>=Child.MinimumSize[Orientation]), 'EnlargeChilds: (NewSize>=Child.MinimumSize[Orientation])');
+
+            dec(DiffSize,NewSize-OldSize);
+            Child.PreferredSize[Orientation]:=NewSize;
+          end;
+          assert(DiffSize = 0, 'EnlargeChilds: DiffSize = 0');
         end;
-        
-      crsHomogenousChildResize:
-        begin
-          // add to PreferredSize
-          DiffSize:=TargetSize-CurSize;
-          OldSize:=Child.PreferredSize[Orientation];
-          NewSize:=Min(OldSize+Factor.Offset,OldSize+DiffSize);
-          inc(CurSize,NewSize-OldSize);
-          Child.PreferredSize[Orientation]:=NewSize;
-        end;
-        
+
       crsHomogenousSpaceResize:
         begin
-          if i=0 then begin
-            // add to left/top border
+          SimplifySpacing;
+          CurOffset := (TargetSize-CurSize) / (ChildCount[Orientation]+1);
+          if CurOffset < 1 then
+            CurOffset := 1;
+          NewSizeCarry := 0;
+          for i:=0 to ChildCount[Orientation]-1 do begin
+            Child:=Children[Orientation][i];
+            if i=0 then begin
+              // add to left/top border
+              OldSize:=Child.BorderLeftTop[Orientation];
+              NewSizeEx:=double(OldSize)+CurOffset+NewSizeCarry;
+              NewSize:=Round(NewSizeEx);
+              NewSizeCarry:=NewSizeEx - NewSize;
+              DiffSize:=TargetSize-CurSize;
+              NewSize:=Min(NewSize,OldSize+DiffSize);
+              inc(CurSize,NewSize-OldSize);
+              Child.BorderLeftTop[Orientation]:=NewSize;
+            end;
+            // add to right/bottom border
+            OldSize:=Child.BorderRightBottom[Orientation];
+            NewSizeEx:=double(OldSize)+CurOffset+NewSizeCarry;
+            NewSize:=Round(NewSizeEx);
+            NewSizeCarry:=NewSizeEx - NewSize;
             DiffSize:=TargetSize-CurSize;
-            OldSize:=Child.BorderLeftTop[Orientation];
-            NewSize:=Min(OldSize+Factor.Offset,OldSize+DiffSize);
+            NewSize:=Min(NewSize,OldSize+DiffSize);
             inc(CurSize,NewSize-OldSize);
-            Child.BorderLeftTop[Orientation]:=NewSize;
+            Child.BorderRightBottom[Orientation]:=NewSize;
           end;
-          // add to right/bottom border
-          DiffSize:=TargetSize-CurSize;
-          OldSize:=Child.BorderRightBottom[Orientation];
-          NewSize:=Min(OldSize+Factor.Offset,OldSize+DiffSize);
-          inc(CurSize,NewSize-OldSize);
-          Child.BorderRightBottom[Orientation]:=NewSize;
-          if i<ChildCount[Orientation]-1 then
-            Child.BorderLeftTop[Orientation]:=NewSize;
         end;
-      
-      end;
     end;
   end;
 
-  procedure GetChildMinResize(out Factor: TResizeFactor;
-    out ResizeableCount: integer);
-  // returns the number of children/gaps, that can shrink (ResizeableCount)
-  // and the maximum factor, by which the children/gaps can shrink (TResizeFactor)
+  procedure ShrinkChilds;
   var
     i: Integer;
-    CurScale: Double;
-    CurOffset: LongInt;
     Child: TAutoSizeBox;
+    RemainingTargetSize, RemainingCurSize, NonResizeableCount: Integer;
+    ScaleChanged, LeftMostSpaceLimited: Boolean;
+    CurScale, CurOffset: Double;
+    NewSizeEx, NewSizeCarry: Double;
+    NewSize, OldSize, DiffSize: Integer;
   begin
-    Factor.Scale:=0;
-    Factor.Offset:=0;
-    ResizeableCount:=0;
     case ShrinkStyle of
-
-    crsAnchorAligning:
-      exit; // no resizing
-
-    crsScaleChilds,crsHomogenousChildResize:
-      for i:=0 to ChildCount[Orientation]-1 do begin
-        Child:=Children[Orientation][i];
-        if (Child.PreferredSize[Orientation]<=Child.MinimumSize[Orientation])
-        or (Child.PreferredSize[Orientation]<=1)
-        then begin
-          // this child can not be further shrinked
-          continue;
-        end;
-        inc(ResizeableCount);
-
-        case ShrinkStyle of
-
-        crsScaleChilds:
-          begin
-            CurScale:=double(Child.MinimumSize[Orientation])
-                      /Child.PreferredSize[Orientation];
-            CurOffset:=Child.PreferredSize[Orientation]
-                       -Child.MinimumSize[Orientation];
-            if (Factor.Offset=0) or (Factor.Scale<CurScale) then begin
-              Factor.Scale:=CurScale;
-              Factor.Offset:=CurOffset;
-            end;
-          end;
-
-        crsHomogenousChildResize:
-          begin
-            CurScale:=double(Child.MinimumSize[Orientation])
-                      /Child.PreferredSize[Orientation];
-            CurOffset:=Child.PreferredSize[Orientation]
-                       -Child.MinimumSize[Orientation];
-            if (Factor.Offset=0) or (Factor.Offset>CurOffset) then begin
-              Factor.Scale:=CurScale;
-              Factor.Offset:=CurOffset;
-            end;
-          end;
-
-        end;
-      end;
-
-    crsHomogenousSpaceResize:
-      for i:=0 to ChildCount[Orientation]-1 do begin
-        Child:=Children[Orientation][i];
-        if i=0 then begin
-          CurScale:=double(TargetSize);
-          CurOffset:=Child.BorderLeftTop[Orientation];
-          if CurOffset>0 then begin
-            inc(ResizeableCount);
-            if (Factor.Offset=0) or (Factor.Offset>CurOffset) then begin
-              Factor.Scale:=CurScale;
-              Factor.Offset:=CurOffset;
-            end;
-          end;
-        end;
-        CurScale:=double(TargetSize);
-        CurOffset:=Child.BorderRightBottom[Orientation];
-        if CurOffset>0 then begin
-          inc(ResizeableCount);
-          if (Factor.Offset=0) or (Factor.Offset>CurOffset) then begin
-            Factor.Scale:=CurScale;
-            Factor.Offset:=CurOffset;
-          end;
-        end;
-      end;
-
-    else
-      raise Exception.Create('TAutoSizeBox.ResizeChilds');
-
-    end;
-  end;
-
-  procedure ShrinkChilds(const Factor: TResizeFactor);
-  var
-    i: Integer;
-    Child: TAutoSizeBox;
-    DiffSize: Integer;
-    NewSize: LongInt;
-    OldSize: LongInt;
-  begin
-    for i:=0 to ChildCount[Orientation]-1 do begin
-      Child:=Children[Orientation][i];
-      if (Child.PreferredSize[Orientation]<=1)
-      or (Child.PreferredSize[Orientation]<=Child.MinimumSize[Orientation])
-      then begin
-        // this child can not be further shrinked
-        continue;
-      end;
-
-      case ShrinkStyle of
-
-      crsScaleChilds:
+      crsScaleChilds, crsHomogenousChildResize, crsSameSize:
         begin
-          // scale PreferredSize
-          DiffSize:=CurSize-TargetSize;
-          OldSize:=Child.PreferredSize[Orientation];
-          NewSize:=Min(round(OldSize*Factor.Scale),OldSize-1);
-          NewSize:=Max(Max(1,NewSize),OldSize-DiffSize);
-          dec(CurSize,OldSize-NewSize);
-          Child.PreferredSize[Orientation]:=NewSize;
-        end;
+          RemainingTargetSize := Max(0, TargetSize-CurSpacing);
+          RemainingCurSize := Max(0, CurSize-CurSpacing);
+          NonResizeableCount := 0;
 
-      crsHomogenousChildResize:
-        begin
-          // add to PreferredSize
-          DiffSize:=CurSize-TargetSize;
-          OldSize:=Child.PreferredSize[Orientation];
-          NewSize:=OldSize-Factor.Offset;
-          NewSize:=Max(Max(NewSize,1),OldSize-DiffSize);
-          dec(CurSize,OldSize-NewSize);
-          Child.PreferredSize[Orientation]:=NewSize;
+          if ShrinkStyle = crsSameSize then begin
+            (* First check for any cells forced smaller by there MaxSize
+               This only happens for crsSameSize (because even if the total
+                 area shrinks, individual cells may grow, if there
+                 PreferredSize is below the average)
+               If they take less space, then other cells that would have hit
+                 there MinSize, may stay above it.
+               In the "MinSize Loop" the scale will only shrink, so no further
+                 MaxSize hits can happen there.
+            *)
+            if ChildCount[Orientation] > NonResizeableCount then
+              NewSize := RemainingTargetSize div (ChildCount[Orientation] - NonResizeableCount);
+            repeat
+              ScaleChanged:=False;
+              for i:=0 to ChildCount[Orientation]-1 do begin
+                Child:=Children[Orientation][i];
+                if Child.LimitedSize[Orientation] then
+                  continue;
+
+                if (Child.MaximumSize[Orientation] > 0) and (NewSize>=Child.MaximumSize[Orientation])
+                then begin
+                  // this childs size will be set to its MaximumSize
+                  RemainingTargetSize:=RemainingTargetSize - Child.MaximumSize[Orientation];
+                  RemainingCurSize:=RemainingCurSize - Child.PreferredSize[Orientation];
+                  CurrentMinimumSizeSum := CurrentMinimumSizeSum - Child.MinimumSize[Orientation];
+                  Child.PreferredSize[Orientation]:=Child.MaximumSize[Orientation];
+                  Child.LimitedSize[Orientation] := True;
+                  inc(NonResizeableCount);
+                  OldSize := NewSize;
+                  if ChildCount[Orientation] > NonResizeableCount then
+                    NewSize := RemainingTargetSize div (ChildCount[Orientation] - NonResizeableCount)
+                  else
+                    break;
+                  ScaleChanged := OldSize <> NewSize;
+                  if ScaleChanged then
+                    break; // for i :=
+                end;
+              end;
+            until (not ScaleChanged) or (RemainingCurSize<=0);
+            if RemainingCurSize<=0 then
+              exit;
+          end;
+
+          repeat
+            ScaleChanged:=False;
+            case ShrinkStyle of
+              crsScaleChilds: begin
+                  CurScale := double(RemainingTargetSize)/double(RemainingCurSize);
+                  CurOffset := 0;
+                end;
+              crsHomogenousChildResize: begin
+                  // negative CurOffset
+                  if ChildCount[Orientation] > NonResizeableCount then
+                    CurOffset := double(RemainingTargetSize - RemainingCurSize) / (ChildCount[Orientation] - NonResizeableCount);
+                  CurScale := 1;
+                end;
+              crsSameSize: begin
+                  if ChildCount[Orientation] > NonResizeableCount then
+                    CurOffset := double(RemainingTargetSize) / (ChildCount[Orientation] - NonResizeableCount);
+                  CurScale := 0;
+                end;
+            end;
+            for i:=0 to ChildCount[Orientation]-1 do begin
+              Child:=Children[Orientation][i];
+              if Child.LimitedSize[Orientation] then
+                continue;
+
+              NewSize:=Round(double(Child.PreferredSize[Orientation])*CurScale+CurOffset);
+              if (NewSize<=Child.MinimumSize[Orientation])
+              then begin
+                // this childs size will be set to its MinimumSize
+                NewSize := Max(Min(1, Max(0, RemainingTargetSize-CurrentMinimumSizeSum)),Child.MinimumSize[Orientation]);
+                RemainingTargetSize:=RemainingTargetSize - NewSize;
+                RemainingCurSize:=RemainingCurSize - Child.PreferredSize[Orientation];
+                CurrentMinimumSizeSum := CurrentMinimumSizeSum - Child.MinimumSize[Orientation];
+                Child.PreferredSize[Orientation]:=NewSize;
+                Child.LimitedSize[Orientation] := True;
+                inc(NonResizeableCount);
+                ScaleChanged := True;
+                break; // for i :=
+              end;
+            end;
+          until (not ScaleChanged) or (RemainingCurSize<=0);
+          if RemainingCurSize<=0 then
+            exit;
+
+          DiffSize := RemainingCurSize - RemainingTargetSize;
+          NewSizeCarry := 0;
+          for i:=0 to ChildCount[Orientation]-1 do begin
+            Child:=Children[Orientation][i];
+            if Child.LimitedSize[Orientation] then
+              continue;
+
+            OldSize:=Child.PreferredSize[Orientation];
+            NewSizeEx:=double(OldSize)*CurScale+CurOffset+NewSizeCarry;
+            NewSize:=Round(NewSizeEx);
+            if NewSize >= 1 then NewSizeCarry:=NewSizeEx - NewSize
+            else                 NewSizeCarry:=0;
+            if i = ChildCount[Orientation] - 1 then
+              NewSize:=OldSize-DiffSize
+            else
+            if (ShrinkStyle = crsSameSize) then
+              NewSize:=Max(1,NewSize)
+            else
+              NewSize:=Min(OldSize+DiffSize, Max(1,NewSize));
+            assert((Child.MaximumSize[Orientation]=0) or (NewSize<=Child.MaximumSize[Orientation]), 'EnlargeChilds: (Child.MaximumSize[Orientation]=0) or (NewSize<=Child.MaximumSize[Orientation])');
+            assert((NewSize>=Child.MinimumSize[Orientation]), 'EnlargeChilds: (NewSize>=Child.MinimumSize[Orientation])');
+
+            dec(DiffSize,OldSize-NewSize);
+            Child.PreferredSize[Orientation]:=NewSize;
+          end;
+          assert(DiffSize=0, 'ShrinkChilds: DiffSize=0');
         end;
 
       crsHomogenousSpaceResize:
         begin
-          if i=0 then begin
+          SimplifySpacing;
+          RemainingTargetSize := TargetSize;
+          RemainingCurSize := CurSize;
+          NonResizeableCount := 0;
+          LeftMostSpaceLimited := False;
+
+          repeat
+            ScaleChanged:=False;
+            CurOffset := (RemainingCurSize-RemainingTargetSize) / (ChildCount[Orientation]-NonResizeableCount+1);
+            DiffSize := Round(CurOffset);
+            if (ChildCount[Orientation] > 0) and not LeftMostSpaceLimited then begin
+              // add to left/top border
+              Child:=Children[Orientation][0];
+              OldSize:=Child.BorderLeftTop[Orientation];
+              NewSize:=OldSize-DiffSize;
+              if NewSize < 1 then begin
+                RemainingCurSize:=RemainingCurSize - Child.BorderLeftTop[Orientation];
+                Child.BorderLeftTop[Orientation]:=0;
+                LeftMostSpaceLimited := True;
+                inc(NonResizeableCount);
+                ScaleChanged := True;
+                continue;
+              end;
+            end;
+            for i:=0 to ChildCount[Orientation]-1 do begin
+              Child:=Children[Orientation][i];
+              if Child.LimitedSize[Orientation] then
+                Continue;
+              // add to right/bottom border
+              OldSize:=Child.BorderRightBottom[Orientation];
+              NewSize:=OldSize-DiffSize;
+              if NewSize < 1 then begin
+                RemainingCurSize:=RemainingCurSize - Child.BorderRightBottom[Orientation];
+                Child.BorderRightBottom[Orientation]:=0;
+                Child.LimitedSize[Orientation] := True;
+                inc(NonResizeableCount);
+                ScaleChanged := True;
+                break; // for i :=
+              end;
+            end;
+          until (not ScaleChanged) or (RemainingCurSize<=0) or (ChildCount[Orientation]<=NonResizeableCount-1);
+          if (RemainingCurSize<=0) or (ChildCount[Orientation]<=NonResizeableCount-1) then
+            exit;
+
+          DiffSize:=CurSize-TargetSize;
+          NewSizeCarry := 0;
+          if (ChildCount[Orientation] > 0) and not LeftMostSpaceLimited then begin
             // add to left/top border
-            DiffSize:=CurSize-TargetSize;
+            Child:=Children[Orientation][0];
             OldSize:=Child.BorderLeftTop[Orientation];
-            NewSize:=Max(Max(0,OldSize-Factor.Offset),OldSize-DiffSize);
-            dec(CurSize,OldSize-NewSize);
+            NewSizeEx:=double(OldSize)-CurOffset+NewSizeCarry;
+            NewSize:=Round(NewSizeEx);
+            NewSizeCarry:=NewSizeEx - NewSize;
+            NewSize:=Max(NewSize,OldSize-DiffSize);
+            dec(DiffSize,OldSize-NewSize);
             Child.BorderLeftTop[Orientation]:=NewSize;
           end;
-          // add to right/bottom border
-          DiffSize:=CurSize-TargetSize;
-          OldSize:=Child.BorderRightBottom[Orientation];
-          NewSize:=Max(Max(0,OldSize-Factor.Offset),OldSize-DiffSize);
-          dec(CurSize,OldSize-NewSize);
-          Child.BorderRightBottom[Orientation]:=NewSize;
-          if i<ChildCount[Orientation]-1 then
-            Child.BorderLeftTop[Orientation]:=NewSize;
+          for i:=0 to ChildCount[Orientation]-1 do begin
+            Child:=Children[Orientation][i];
+            if Child.LimitedSize[Orientation] then
+              Continue;
+            // add to right/bottom border
+            OldSize:=Child.BorderRightBottom[Orientation];
+            NewSizeEx:=double(OldSize)-CurOffset+NewSizeCarry;
+            NewSize:=Round(NewSizeEx);
+            NewSizeCarry:=NewSizeEx - NewSize;
+            NewSize:=Max(NewSize,OldSize-DiffSize);
+            dec(DiffSize,OldSize-NewSize);
+            Child.BorderRightBottom[Orientation]:=NewSize;
+          end;
         end;
-
-      end;
     end;
   end;
 
-var
-  MaxResizeFactorPerItem, MinResizeFactorPerItem, CurScale: TResizeFactor;
-  ResizeableCount: integer;
-  i: Integer;
 begin
   CurSize:=GetChildTotalSize;
   //DebugLn('TAutoSizeBox.ResizeChilds CurSize=',dbgs(CurSize),' TargetSize=',dbgs(TargetSize));
   EnlargeStyle:=crsAnchorAligning;
   ShrinkStyle:=crsAnchorAligning;
-  i:=0;
-  if TargetSize>CurSize then begin
+  if TargetSize>=CurSize then begin
     // enlarge
     if Orientation=asboHorizontal then
       EnlargeStyle:=ChildSizing.EnlargeHorizontal
     else
       EnlargeStyle:=ChildSizing.EnlargeVertical;
-    while TargetSize>CurSize do begin
-      // shrink children
-      GetChildMaxResize(MaxResizeFactorPerItem,ResizeableCount);
-      if (ResizeableCount=0) or (MaxResizeFactorPerItem.Offset=0) then break;
-      
-      CurScale.Scale:=(double(TargetSize)/CurSize);
-      if (MaxResizeFactorPerItem.Scale>0)
-      and (MaxResizeFactorPerItem.Scale<CurScale.Scale) then
-        CurScale.Scale:=MaxResizeFactorPerItem.Scale;
-        
-      CurScale.Offset:=((TargetSize-CurSize-1) div ResizeableCount)+1;
-      // note: the above formula makes sure, that Offset>0
-      if (MaxResizeFactorPerItem.Offset>0)
-      and (MaxResizeFactorPerItem.Offset<CurScale.Offset) then
-        CurScale.Offset:=MaxResizeFactorPerItem.Offset;
-      
-      EnlargeChilds(CurScale);
-      inc(i);
-      if i>1000 then RaiseGDBException('TAutoSizeBox.ResizeChilds consistency error');
-    end;
+    // grow children
+    if (TargetSize>CurSize) or (EnlargeStyle=crsSameSize) then
+      EnlargeChilds;
   end else if TargetSize<CurSize then begin
     // shrink
     if Orientation=asboHorizontal then
       ShrinkStyle:=ChildSizing.ShrinkHorizontal
     else
       ShrinkStyle:=ChildSizing.ShrinkVertical;
-    while TargetSize<CurSize do begin
-      GetChildMinResize(MinResizeFactorPerItem,ResizeableCount);
-      if (ResizeableCount=0) or (MinResizeFactorPerItem.Offset=0) then break;
-
-      CurScale.Scale:=(double(TargetSize)/CurSize);
-      if (MinResizeFactorPerItem.Scale>0)
-      and (MinResizeFactorPerItem.Scale>CurScale.Scale) then
-        CurScale.Scale:=MinResizeFactorPerItem.Scale;
-
-      CurScale.Offset:=((CurSize-TargetSize-1) div ResizeableCount)+1;
-      // note: the above formula makes sure, that Offset>0
-      if (MinResizeFactorPerItem.Offset>0)
-      and (MinResizeFactorPerItem.Offset>CurScale.Offset) then
-        CurScale.Offset:=MinResizeFactorPerItem.Offset;
-
-      ShrinkChilds(CurScale);
-      inc(i);
-      if i>1000 then RaiseGDBException('TAutoSizeBox.ResizeChilds consistency error');
-    end;
+    ShrinkChilds;
   end;
 end;
 
@@ -2222,11 +2268,11 @@ begin
       end else if (NewWidth>ColBox.PreferredSize[asboHorizontal]) then begin
         // column is smaller than preferred width of the control
         if ChildSizing.ShrinkHorizontal
-        in [crsScaleChilds,crsHomogenousChildResize]
+        in [crsScaleChilds,crsHomogenousChildResize,crsSameSize]
         then
           NewWidth:=CellBounds.Right-CellBounds.Left;
       end;
-      if (NewHeight<ColBox.PreferredSize[asboVertical]) then begin
+      if (NewHeight<RowBox.PreferredSize[asboVertical]) then begin
         // column is bigger than preferred height of the control
         case CurControl.BorderSpacing.CellAlignVertical of
         ccaFill:        NewHeight:=CellBounds.Bottom-CellBounds.Top;
@@ -2235,10 +2281,10 @@ begin
         ccaCenter:      NewBounds.Top:=NewBounds.Top
                             +(CellBounds.Bottom-CellBounds.Top-NewHeight) div 2;
         end;
-      end else if (NewHeight>ColBox.PreferredSize[asboVertical]) then begin
+      end else if (NewHeight>RowBox.PreferredSize[asboVertical]) then begin
         // column is smaller than preferred height of the control
         if ChildSizing.ShrinkVertical
-        in [crsScaleChilds,crsHomogenousChildResize]
+        in [crsScaleChilds,crsHomogenousChildResize,crsSameSize]
         then
           NewHeight:=CellBounds.Bottom-CellBounds.Top;
       end;
