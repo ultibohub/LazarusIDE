@@ -1699,11 +1699,18 @@ begin
 
   Recognise([ttOpenBracket,ttOpenSquareBracket]);
 
-  RecogniseTypedConstant;
-  while (fcTokenList.FirstSolidTokenType = ttComma) do
+  while True do
   begin
-    Recognise(ttComma);
     RecogniseTypedConstant;
+    // range   x..y
+    if fcTokenList.FirstSolidTokenType = ttDoubleDot then
+    begin
+      Recognise(ttDoubleDot);
+      RecogniseTypedConstant;
+    end;
+    if (fcTokenList.FirstSolidTokenType <> ttComma) then
+      break;
+    Recognise(ttComma)
   end;
 
   Recognise([ttCloseBracket,ttCloseSquareBracket]);
