@@ -774,6 +774,8 @@ var
 
   function StartBuilding : boolean;
   var
+    i: integer;
+    HasMacro: boolean;
     NeedBuildAllFlag: Boolean;
     CfgCode: TCodeBuffer;
     CfgFilename: String;
@@ -804,15 +806,21 @@ var
     // apply options
     MainBuildBoss.SetBuildTargetProject1(true,smsfsSkip);
 
-    if HasLongOptIgnoreCase('get-expand-text',S) then begin
+    if HasLongOptIgnoreCase('get',S) or
+       HasLongOptIgnoreCase('get-expand-text',S) then begin
+      // check for macros
+      HasMacro := false;
+      for i := 1 to length(S) - 1 do // skip last char
+        if (S[i] = '$') and (S[i + 1] <> '$') then begin // skip escaped '$'
+          HasMacro := true;
+          break;
+        end;
+      // if a macro is not specified, its name is assumed
+      if not HasMacro then
+        S := '$(' + S + ')';
+      // expand
       Project1.MacroEngine.SubstituteStr(S);
       WriteLn(S);
-      exit(true);
-    end;
-
-    TargetExeName := Project1.CompilerOptions.CreateTargetFilename;
-    if HasLongOptIgnoreCase('get-target-path',S) then begin
-      WriteLn(TargetExeName);
       exit(true);
     end;
 
@@ -860,6 +868,7 @@ var
         PrintErrorAndHalt(ErrorBuildFailed, 'Unable to create project unit output directory "' + S + '"');
 
       // create target output directory
+      TargetExeName := Project1.CompilerOptions.CreateTargetFilename;
       S := ExtractFileDir(TargetExeName);
       if not ForceDirectory(S) then
         PrintErrorAndHalt(ErrorBuildFailed, 'Unable to create project target directory "' + S + '"');
@@ -1531,7 +1540,7 @@ begin
   // ConsoleVerbosity
   if HasLongOptIgnoreCase('get-build-modes', p) or
      HasLongOptIgnoreCase('get-expand-text', p) or
-     HasLongOptIgnoreCase('get-target-path', p)
+     HasLongOptIgnoreCase('get', p)
   then
     ConsoleVerbosity := -100 // do not output anything other than the result
   else
@@ -1577,8 +1586,8 @@ begin
     LongOptions.Add('max-process-count:');
     LongOptions.Add('no-write-project');
     LongOptions.Add('get-expand-text:');
+    LongOptions.Add('get:');
     LongOptions.Add('get-build-modes');
-    LongOptions.Add('get-target-path');
     ErrorMsg:=RepairedCheckOptions('lBrdq',LongOptions,Options,NonOptions);
     if ErrorMsg<>'' then
       PrintErrorAndHalt(ErrorInvalidSyntax, ErrorMsg);
@@ -1744,8 +1753,11 @@ const
   end;
 
 begin
-  if HasLongOptIgnoreCase('language',CustomLang) then
-    TranslateResourceStrings(ProgramDirectoryWithBundle,CustomLang);
+  // Obtain 'language' option value if present.
+  // HasLongOptIgnoreCase correctly handles all cases, so no need to check its result:
+  // empty CustomLang means using default language.
+  HasLongOptIgnoreCase('language',CustomLang);
+  TranslateResourceStrings(ProgramDirectoryWithBundle,CustomLang);
   writeln('');
   writeln(lisLazbuildOptionsSyntax);
   writeln('');
@@ -1826,14 +1838,11 @@ begin
   writeln('--no-write-project');
   w(lisDoNotWriteUpdatedProjectInfoAfterBuild);
   writeln('');
-  writeln('--get-expand-text=<text>');
+  writeln('--get=<text>, --get-expand-text=<text>');
   w(lisGetExpandText);
   writeln('');
   writeln('--get-build-modes');
   w(lisGetBuildModes);
-  writeln('');
-  writeln('--get-target-path');
-  w(lisGetTargetPath);
   writeln('');
 end;
 

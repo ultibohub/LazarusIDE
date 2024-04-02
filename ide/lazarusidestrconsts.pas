@@ -174,11 +174,10 @@ resourcestring
     'info file after build. If not specified, build number will be incremented '+
     'if configured.';
 
-  lisGetExpandText = 'Print the result of substituting macros in the text for the specified build mode.'
-    +' By default, active build mode is used.';
+  lisGetExpandText = 'Print the result of substituting macros in the text. '+
+    'The absence of macros in the text means the name of the macro. '+
+    'By default, active build mode is used.';
   lisGetBuildModes = 'Print a list of build modes in the project. Active mode is listed first.';
-  lisGetTargetPath = 'Print the full path to the executable file in the specified build mode.'
-    +' By default, active build mode is used.';
 
   lisLazbuildOptionsSyntax = 'lazbuild [options] <project/package filename or package name>';
 
@@ -192,6 +191,9 @@ resourcestring
   lisCursorColumnInCurrentEditor = 'Cursor column in current editor';
   lisCursorRowInCUrrentEditor = 'Cursor row in current editor';
   lisCompilerFilename = 'Compiler filename';
+  lisShortFormOfTargetCPUParamTargetOSParamSubTargetPar = 'Short form of $'
+    +'TargetCPU(Param)-$TargetOS(Param)-$SubTarget(Param). Subtarget is '
+    +'omitted if empty.';
   lisWordAtCursorInCurrentEditor = 'Word at cursor in current editor';
   lisExpandedFilenameOfCurrentEditor = 'Expanded filename of current editor file';
   lisFreePascalSourceDirectory = 'Free Pascal source directory';

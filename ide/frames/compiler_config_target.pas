@@ -83,7 +83,7 @@ type
     procedure UpdateByTargetCPU(aTargetCPU: string);
 	procedure UpdateByTargetCPUUltibo(aTargetCPU: string); //Ultibo
 	procedure UpdateByTargetController(aTargetController: string); //Ultibo
-    procedure FillSubTargetComboBox;
+    procedure FillSubTargetComboBox(UseSubTarget: string);
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -396,7 +396,8 @@ begin
   end;
 end; //Ultibo
 
-procedure TCompilerConfigTargetFrame.FillSubTargetComboBox;
+procedure TCompilerConfigTargetFrame.FillSubTargetComboBox(UseSubTarget: string
+  );
 var
   sl: TStringListUTF8Fast;
   aCache: TFPCUnitSetCache;
@@ -409,6 +410,8 @@ begin
   sl:=TStringListUTF8Fast.Create;
   try
     sl.Assign(InputHistories.HistoryLists.GetList('Subtarget',true,rltCaseInsensitive));
+    if sl.IndexOf('')<0 then
+      sl.Add(''); // always have the default target
 
     // search for possible subtargets
     // fpc searches subtarget configs in the same directories it searches for normal configs
@@ -457,7 +460,7 @@ begin
     with SubtargetComboBox do begin
       Items.BeginUpdate;
       Items.Assign(sl);
-      SetComboBoxText(SubtargetComboBox,Subtarget,cstCaseInsensitive);
+      SetComboBoxText(SubtargetComboBox,UseSubTarget,cstCaseInsensitive);
       Items.EndUpdate;
     end;
   finally
@@ -593,7 +596,7 @@ begin
         Items.EndUpdate;
       end;
       // SubTarget
-      FillSubTargetComboBox;
+      FillSubTargetComboBox(Subtarget);
 
       PkgDep:=TProjectCompilerOptions(AOptions).LazProject.FindDependencyByName('LCL');
       CurrentWidgetTypeLabel.Visible:=Assigned(PkgDep);
