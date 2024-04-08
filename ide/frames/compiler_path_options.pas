@@ -13,9 +13,9 @@ uses
   // IdeIntf
   IDEOptionsIntf, IDEOptEditorIntf, MacroIntf, CompOptsIntf, IDEImagesIntf, IDEDialogs,
   // IdeConfig
-  SearchPathProcs,
+  SearchPathProcs, ParsedCompilerOpts, CompilerOptions,
   // IDE
-  Project, CompilerOptions, LazarusIDEStrConsts, PathEditorDlg,
+  Project, LazarusIDEStrConsts, PathEditorDlg,
   CheckCompilerOpts, ShowCompilerOpts, ImExportCompilerOpts;
 
 type
@@ -688,7 +688,6 @@ begin
   chkUseAsDefault.Caption := dlgCOSetAsDefault;
   chkUseAsDefault.ShowHint := True;
   chkUseAsDefault.Hint := lisWhenEnabledTheCurrentOptionsAreSavedToTheTemplateW;
-  chkUseAsDefault.TabStop := False;
 end;
 
 procedure TCompilerPathOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);

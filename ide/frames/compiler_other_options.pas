@@ -35,13 +35,17 @@ uses
   LazUTF8, LazLoggerBase,
   // Codetools
   CodeToolsCfgScript, KeywordFuncLists,
+  // BuildIntf
+  IDEOptionsIntf, CompOptsIntf,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, CompOptsIntf, IDECommands,
+  IDEOptEditorIntf, IDECommands,
   // SynEdit
   SynEdit, SynEditKeyCmds, SynCompletion,
+  // IdeConfig
+  ParsedCompilerOpts, CompilerOptions,
   // IDE
-  LazarusIDEStrConsts, CompilerOptions, Compiler, AllCompilerOptions, DefinesGui,
-  EditorOptions, PackageDefs, SourceSynEditor;
+  LazarusIDEStrConsts, Compiler,
+  AllCompilerOptions, DefinesGui, EditorOptions, PackageDefs, SourceSynEditor;
 
 type
 

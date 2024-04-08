@@ -60,11 +60,10 @@ uses
   IdeIntfStrConsts, LazIDEIntf, IDEMsgIntf, IDEHelpIntf, IDEImagesIntf, IDEWindowIntf,
   PackageIntf, IDEExternToolIntf, IDEDialogs, IDEUtils,
   // IdeConfig
-  EnvironmentOpts, LazConf, TransferMacros,
+  EnvironmentOpts, LazConf, TransferMacros, ParsedCompilerOpts, CompilerOptions,
   // IDE
-  LazarusIDEStrConsts, DialogProcs, MainBar,
-  ApplicationBundle, ModeMatrixOpts, CompilerOptions, BuildProfileManager,
-  GenericListEditor, GenericCheckList, PackageSystem, PackageDefs;
+  LazarusIDEStrConsts, DialogProcs, MainBar, ApplicationBundle, ModeMatrixOpts,
+  BuildProfileManager, GenericListEditor, GenericCheckList, PackageSystem, PackageDefs;
 
 type
 

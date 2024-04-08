@@ -50,9 +50,9 @@ uses
   IDEImagesIntf, MenuIntf, LazIDEIntf, FormEditingIntf, IDEHelpIntf, InputHistory,
   IdeIntfStrConsts, IDEWindowIntf, IDEDialogs, IDEOptEditorIntf,
   // IdeConfig
-  EnvironmentOpts, SearchPathProcs,
+  EnvironmentOpts, SearchPathProcs, ParsedCompilerOpts, CompilerOptions,
   // IDE
-  MainBase, DialogProcs, LazarusIDEStrConsts, IDEDefs, CompilerOptions,
+  MainBase, DialogProcs, LazarusIDEStrConsts, IDEDefs,
   PackageSystem, PackageDefs, AddToPackageDlg, AddPkgDependencyDlg, ComponentPalette,
   AddFPMakeDependencyDlg, ProjPackChecks, PkgVirtualUnitEditor, CleanPkgDeps,
   MissingPkgFilesDlg, ProjPackFilePropGui, ProjPackEditing, BasePkgManager;
@@ -1249,7 +1249,7 @@ begin
   Package1.IDEOptions.OnBeforeRead:=PackageEditors.OnBeforeReadPackage;
   Package1.IDEOptions.OnAfterWrite:=PackageEditors.OnAfterWritePackage;
   LazarusIDE.DoOpenIDEOptions(nil,
-    Format(lisPckEditCompilerOptionsForPackage, [LazPackage.IDAsString]),
+    Format(lisPckEditOptionsForPackage, [LazPackage.IDAsString]),
     [TPackageIDEOptions, TPkgCompilerOptions], Settings[LazPackage.ReadOnly]);
   UpdateTitle;
   UpdateButtons;

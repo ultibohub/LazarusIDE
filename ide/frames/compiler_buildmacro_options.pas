@@ -32,10 +32,14 @@ uses
   Controls, Forms, StdCtrls, Buttons, ExtCtrls, Dialogs, ComCtrls,
   // CodeTools
   KeywordFuncLists, CodeToolsCfgScript,
+  // BuildIntf
+  IDEOptionsIntf, CompOptsIntf, MacroIntf,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, CompOptsIntf, MacroIntf, IDEImagesIntf, IDEDialogs,
+  IDEOptEditorIntf, IDEImagesIntf, IDEDialogs,
+  // IdeConfig
+  ParsedCompilerOpts, CompilerOptions,
   // IDE
-  CompilerOptions, LazarusIDEStrConsts, PackageDefs;
+  LazarusIDEStrConsts, PackageDefs;
 
 type
   TCBMNodeType = (

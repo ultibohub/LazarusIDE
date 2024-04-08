@@ -24,6 +24,10 @@ Files in this package are for the main configuration of the IDE."/>
     <Version Major="1"/>
     <Files>
       <Item>
+        <Filename Value="compileroptions.pp"/>
+        <UnitName Value="CompilerOptions"/>
+      </Item>
+      <Item>
         <Filename Value="compoptsmodes.pas"/>
         <UnitName Value="CompOptsModes"/>
       </Item>
@@ -36,12 +40,28 @@ Files in this package are for the main configuration of the IDE."/>
         <UnitName Value="DiffPatch"/>
       </Item>
       <Item>
+        <Filename Value="editdefinetree.pas"/>
+        <UnitName Value="EditDefineTree"/>
+      </Item>
+      <Item>
         <Filename Value="editortoolbaroptions.pas"/>
         <UnitName Value="EditorToolBarOptions"/>
       </Item>
       <Item>
         <Filename Value="environmentopts.pp"/>
         <UnitName Value="EnvironmentOpts"/>
+      </Item>
+      <Item>
+        <Filename Value="etfpcmsgfilepool.pas"/>
+        <UnitName Value="etFPCMsgFilePool"/>
+      </Item>
+      <Item>
+        <Filename Value="etmakemsgparser.pas"/>
+        <UnitName Value="etMakeMsgParser"/>
+      </Item>
+      <Item>
+        <Filename Value="fppkghelper.pas"/>
+        <UnitName Value="FppkgHelper"/>
       </Item>
       <Item>
         <Filename Value="idecmdline.pas"/>
@@ -76,6 +96,14 @@ Files in this package are for the main configuration of the IDE."/>
         <UnitName Value="ModeMatrixOpts"/>
       </Item>
       <Item>
+        <Filename Value="parsedcompileropts.pas"/>
+        <UnitName Value="ParsedCompilerOpts"/>
+      </Item>
+      <Item>
+        <Filename Value="projpackcommon.pas"/>
+        <UnitName Value="ProjPackCommon"/>
+      </Item>
+      <Item>
         <Filename Value="recentlistprocs.pas"/>
         <UnitName Value="RecentListProcs"/>
       </Item>
@@ -93,6 +121,10 @@ Files in this package are for the main configuration of the IDE."/>
       </Item>
       <Item>
         <Filename Value="version.inc"/>
+        <Type Value="Include"/>
+      </Item>
+      <Item>
+        <Filename Value="include\linux\lazconf.inc"/>
         <Type Value="Include"/>
       </Item>
     </Files>

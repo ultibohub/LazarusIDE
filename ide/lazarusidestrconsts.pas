@@ -1010,10 +1010,6 @@ resourcestring
   lisFppkgFpcmkcfgProbTooOld = 'It is probably too old to create the configuration files.';
   lisFppkgFpcmkcfgMissing = 'Could not find the fpcmkcfg configuration tool, ' +
     'which is needed to create the configuration files.';
-  lisFppkgRtlNotFound = 'Fppkg reports that the RTL is not installed.';
-  lisFppkgCompilerNotFound = 'Could not find the compiler [%s] configured for Fppkg.';
-  lisFppkgCompilerNotExists = 'The compiler [%s] configured for Fppkg does not exist.';
-  lisFppkgCompilerNotExecutable = 'The compiler [%s] configured for Fppkg is not an executable.';
   lisGenerateFppkgConfigurationCaption = 'Generate new Fppkg configuration files';
   lisGenerateFppkgConfiguration = 'Use this screen to generate new Fppkg configuration files ' +
     'with the fpcmkcfg tool.';
@@ -1283,6 +1279,7 @@ resourcestring
   lisNumberOfFilesToConvert = 'Number of files to convert: %s';
   lisConvertEncoding = 'Convert Encoding';
   lisConvertProjectOrPackage = 'Convert project or package';
+  lisEdtDefCurrentProject = 'Current Project';
   lisNewEncoding = 'New encoding:';
   lisFileFilter = 'File filter';
   lisFilesInASCIIOrUTF8Encoding = 'Files in ASCII or UTF-8 encoding';
@@ -2593,6 +2590,8 @@ resourcestring
     +'does not look correct:%s%s';
   lisTheLazarusDirectoryDoesNotLookCorrect = 'The Lazarus directory "%s" does '
     +'not look correct:%s%s';
+  lisTheFppkgConfigurationFileDoesNotLookCorrect = 'The Fppkg configuration file '
+    +'"%s" does not look correct:%s%s';
   lisTheContainsANotExistingDirectory = 'The %s contains a nonexistent directory:%s%s';
   lisTheProjectDoesNotUseTheLCLUnitInterfacesButItSeems = 'The project does '
     +'not use the LCL unit interfaces, which is required by LCLBase.%sYou will '
@@ -4253,21 +4252,6 @@ resourcestring
   lisDiskDiffReloadCheckedFilesFromDisk = 'Reload checked files from disk';
   lisDiskDiffIgnoreAllDiskChanges = 'Ignore all disk changes';
   
-  // edit define tree
-  lisEdtDefCurrentProject = 'Current Project';
-  lisEdtDefAllPackages = 'All packages';
-  lisEdtDefsAllProjects = 'All projects';
-  lisEdtDefsetFPCModeToDELPHI = 'set FPC mode to DELPHI';
-  lisEdtDefsetFPCModeToTP = 'set FPC mode to TP';
-  lisEdtDefsetFPCModeToGPC = 'set FPC mode to GPC';
-  lisEdtDefsetFPCModeToMacPas = 'set FPC mode to MacPas';
-  lisEdtDefsetFPCModeToFPC = 'set FPC mode to FPC';
-  lisEdtDefsetIOCHECKSOn = 'set IOCHECKS on';
-  lisEdtDefsetRANGECHECKSOn = 'set RANGECHECKS on';
-  lisEdtDefsetOVERFLOWCHECKSOn = 'set OVERFLOWCHECKS on';
-  lisEdtDefuseLineInfoUnit = 'use LineInfo unit';
-  lisEdtDefuseHeapTrcUnit = 'use HeapTrc unit';
-  
   // external tools
   lisExtToolExternalTools = 'External Tools';
   lisTheseSettingsAreStoredWithTheProject = 'These settings are stored with '
@@ -4741,7 +4725,7 @@ resourcestring
   lisPckEditCompileEverything = 'Compile everything?';
   lisPckEditReCompileThisAndAllRequiredPackages = 'Re-Compile this and all '
    +'required packages?';
-  lisPckEditCompilerOptionsForPackage = 'Compiler Options for Package %s';
+  lisPckEditOptionsForPackage = 'Options for Package %s';
   lisPckEditSavePackage = 'Save Package';
   lisPckEditCompilePackage = 'Compile package';
   lisPckEditAddFilesFromFileSystem = 'Add Files from File System';
@@ -5940,7 +5924,10 @@ resourcestring
     +'sources and compile, but functions like find declaration will show unit-'
     +'not-found errors. This can take a minute.';
   lisActive = 'Active';
-  lisBuildModes = 'Build modes';
+  lisBuildModes = 'Build mode';
+  lisEditBuildModes = 'Edit build modes';
+  lisSelectBuildMode = 'Select build mode';
+  lisFindOption = 'Find option';
   lisAddFcUTF8 = 'Add -FcUTF8';
   lisAddFcUTF8Hint = 'May be needed if source files have non-ansistring literals.';
   lisInSession = 'In session';
@@ -6002,7 +5989,6 @@ resourcestring
   lisPENoFilesMissingAllFilesExist = 'No files missing. All files exist.';
   lisCurrentLCLWidgetSet = 'Current LCL widgetset: "%s"';
   lisSelectAnotherLCLWidgetSet = 'Select another LCL widgetset (macro LCLWidgetType)';
-  lisEndlessLoopInMacros = 'Endless loop in macros';
 
   // Uses Unit dialog
   dlgUseUnitCaption = 'Add unit to Uses section';

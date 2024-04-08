@@ -44,10 +44,9 @@ uses
   CodeToolsCfgScript,
   // IdeIntf
   BaseIDEIntf, LazIDEIntf, IDEImagesIntf, CompOptsIntf, ProjectIntf,
-  PackageIntf, MacroIntf,
+  PackageIntf, MacroIntf, ParsedCompilerOpts, CompilerOptions,
   // IDE
-  LazarusIDEStrConsts, Project, PackageDefs,
-  CompilerOptions, ModeMatrixOpts, MiscOptions;
+  LazarusIDEStrConsts, Project, PackageDefs, ModeMatrixOpts, MiscOptions;
 
 type
   TShowCompToolOpts = class
@@ -320,7 +319,7 @@ var
   i: integer;
   AncestorOptions: TAdditionalCompilerOptions;
   AncestorNode: TTreeNode;
-  AncestorBaseOpts: TBaseCompilerOptions;
+  AncestorBaseOpts: TLazCompilerOptions;
   Vars: TCTCfgScriptVariables;
   Macro: TLazBuildMacro;
   j: Integer;
@@ -444,7 +443,7 @@ begin
         AncestorNode.Text := AncestorOptions.GetOwnerName;
         AncestorNode.ImageIndex := ImageIndexPackage;
         AncestorNode.SelectedIndex := AncestorNode.ImageIndex;
-        AncestorBaseOpts:=AncestorOptions.GetBaseCompilerOptions;
+        AncestorBaseOpts:=AncestorOptions.GetLazCompilerOptions;
         with AncestorOptions.ParsedOpts do
         begin
           AddChildNode(lisunitPath,

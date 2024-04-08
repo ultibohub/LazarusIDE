@@ -49,7 +49,7 @@ uses
   LCLType, LCLIntf, Forms, Controls, Buttons, StdCtrls,
   ComCtrls, ExtCtrls, Menus, Graphics, Dialogs, ButtonPanel,
   // LazUtils
-  LazFileUtils, LazLogger, LazStringUtils,
+  LazFileUtils, LazLoggerBase, LazStringUtils,
   // SynEdit
   SynEdit,
   // Codetools
@@ -57,10 +57,10 @@ uses
   // IdeIntf
   IdeIntfStrConsts, IDEWindowIntf, IDEImagesIntf, IDEDialogs,
   // IdeConfig
-  LazConf, TransferMacros, IDEProcs,
+  LazConf, TransferMacros, IDEProcs, CompilerOptions, EditDefineTree,
   // IDE
   LazarusIDEStrConsts, CodeToolsOptions, CodeToolsDefPreview,
-  EditorOptions, InputFileDialog, EditDefineTree, CompilerOptions;
+  EditorOptions, InputFileDialog;
 
 type
 

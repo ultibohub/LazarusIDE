@@ -52,11 +52,11 @@ uses
   IDEDialogs, LazIDEIntf, IDEMsgIntf, SrcEditorIntf, InputHistory,
   // IdeConfig
   LazConf, EnvironmentOpts, ModeMatrixOpts, TransferMacros, IdeConfStrConsts,
-  IDEProcs,
+  IDEProcs, etMakeMsgParser, etFPCMsgFilePool, ParsedCompilerOpts, CompilerOptions,
+  EditDefineTree,
   // IDE
-  LazarusIDEStrConsts, DialogProcs,
-  EditDefineTree, ProjectResources, MiscOptions, CompilerOptions,
-  ExtTools, etMakeMsgParser, etFPCMsgParser, etPas2jsMsgParser, Compiler,
+  LazarusIDEStrConsts, DialogProcs, ProjectResources,
+  MiscOptions, ExtTools, etFPCMsgParser, etPas2jsMsgParser, Compiler,
   FPCSrcScan, PackageDefs, PackageSystem, Project, ProjectIcon, BaseBuildManager,
   ApplicationBundle, RunParamsOpts, IdeTransferMacros, SearchPathProcs;
   
@@ -192,7 +192,7 @@ type
     DefaultCfgVarsBuildMacroStamp: integer;
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
-    function GetBuildMacroValuesHandler(Options: TBaseCompilerOptions;
+    function GetBuildMacroValuesHandler(Options: TLazCompilerOptions;
                                    IncludeSelf: boolean): TCTCfgScriptVariables;
     function GetActiveBuildModeName: string;
     procedure AppendMatrixCustomOption(Sender: TObject;
@@ -440,7 +440,7 @@ begin
   GlobalMacroList:=TTransferMacroList.Create;
   GlobalMacroList.OnSubstitution:=@MacroSubstitution;
   IDEMacros:=TLazIDEMacros.Create;
-  CompilerOptions.OnParseString:=@SubstituteCompilerOption;
+  OnParseString:=@SubstituteCompilerOption;
 
   TIdeTransferMarcros.InitMacros(GlobalMacroList);
 
@@ -2713,7 +2713,7 @@ begin
   end;
 end;
 
-function TBuildManager.GetBuildMacroValuesHandler(Options: TBaseCompilerOptions;
+function TBuildManager.GetBuildMacroValuesHandler(Options: TLazCompilerOptions;
   IncludeSelf: boolean): TCTCfgScriptVariables;
 {off $DEFINE VerboseBuildMacros}
 
@@ -2864,7 +2864,7 @@ var
 begin
   Result:=nil;
 
-  ParseOpts:=Options.ParsedOpts;
+  ParseOpts:=TBaseCompilerOptions(Options).ParsedOpts;
   if ParseOpts=nil then exit;
 
   if IncludeSelf then begin

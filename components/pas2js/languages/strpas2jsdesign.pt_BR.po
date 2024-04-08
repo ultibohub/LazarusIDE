@@ -15,6 +15,10 @@ msgstr ""
 msgid "Create a javascript module instead of a script"
 msgstr "Criar um módulo javascript ao invés de um script"
 
+#: strpas2jsdesign.pjsdapply
+msgid "Apply"
+msgstr ""
+
 #: strpas2jsdesign.pjsdatompackagetemplatedirectory
 msgid "Atom package template directory"
 msgstr "Diretório de modelos de pacote do Atom"
@@ -35,14 +39,62 @@ msgstr "Selecionar o arquivo"
 msgid "Cancel refresh"
 msgstr "Cancelar atualização"
 
+#: strpas2jsdesign.pjsdcancel
+msgid "Cancel"
+msgstr ""
+
+#: strpas2jsdesign.pjsdchangesimplewebserverfromto
+#, object-pascal-format
+msgid "Change Simple Web Server from%s\"%s\"%sto%s\"%s\"%s?"
+msgstr ""
+
+#: strpas2jsdesign.pjsdclose
+msgid "Close"
+msgstr ""
+
+#: strpas2jsdesign.pjsdconfirmation
+msgid "Confirmation"
+msgstr ""
+
 #: strpas2jsdesign.pjsdcreateinitialhtmlpage
 msgid "Create initial HTML page"
 msgstr "Criar página HTML inicial"
+
+#: strpas2jsdesign.pjsddetails
+msgid "Details"
+msgstr ""
 
 #: strpas2jsdesign.pjsddirectorynotfound
 #, object-pascal-format
 msgid "directory \"%s\" not found"
 msgstr "diretório \"%s\" não encontrado"
+
+#: strpas2jsdesign.pjsddownloadedbytes
+#, object-pascal-format
+msgid "Downloaded %s bytes"
+msgstr ""
+
+#: strpas2jsdesign.pjsddownloaderror
+#, object-pascal-format
+msgid "Download error:%s"
+msgstr ""
+
+#: strpas2jsdesign.pjsddownloading
+#, object-pascal-format
+msgid "Downloading \"%s\" ..."
+msgstr ""
+
+#: strpas2jsdesign.pjsddownloading2
+msgid "Downloading"
+msgstr ""
+
+#: strpas2jsdesign.pjsddownloadpas2jsrelease
+msgid "Download Pas2JS Release?"
+msgstr ""
+
+#: strpas2jsdesign.pjsddownloadrelease
+msgid "Download Release"
+msgstr ""
 
 #: strpas2jsdesign.pjsdelectronwebapplication
 msgid "Electron Web Application"
@@ -51,6 +103,11 @@ msgstr "Aplicação Web Electron"
 #: strpas2jsdesign.pjsderror
 msgid "Error"
 msgstr "Erro"
+
+#: strpas2jsdesign.pjsderror2
+#, object-pascal-format
+msgid "Error: %s"
+msgstr ""
 
 #: strpas2jsdesign.pjsdfilenamedoesnotstartwithpas2js
 msgid "filename does not start with \"pas2js\""
@@ -65,6 +122,23 @@ msgstr "arquivo \"%s\" não é executável"
 #, object-pascal-format
 msgid "file \"%s\" not found"
 msgstr "arquivo \"%s\" não encontrado"
+
+#: strpas2jsdesign.pjsdfound
+#, object-pascal-format
+msgid "Found %s"
+msgstr ""
+
+#: strpas2jsdesign.pjsdfpcexecutable
+msgid "FPC executable:"
+msgstr ""
+
+#: strpas2jsdesign.pjsdfpcsourcedirectory
+msgid "FPC source directory:"
+msgstr ""
+
+#: strpas2jsdesign.pjsdfreepascalcompilerusedforcompilingtoolsandpas2jsit
+msgid "Free Pascal Compiler used for compiling tools and pas2js itself"
+msgstr ""
 
 #: strpas2jsdesign.pjsdhtmlfilenotfound
 #, object-pascal-format
@@ -85,6 +159,10 @@ msgstr "Arquivos HTML|*.html|Todos os arquivos|*.*"
 msgid "HTML Source not found"
 msgstr "Fonte HTML não encontrado"
 
+#: strpas2jsdesign.pjsdinstallupdatepas2js
+msgid "Install/Update Pas2JS"
+msgstr ""
+
 #: strpas2jsdesign.pjsdletrtlshowuncaughtexceptions
 msgid "Let RTL show uncaught exceptions"
 msgstr "Permitir RTL exibir exceções não capturadas"
@@ -96,6 +174,15 @@ msgstr "Local no Servidor Web Simples"
 #: strpas2jsdesign.pjsdmaintainhtmlpage
 msgid "Maintain HTML page"
 msgstr "Manter página HTML"
+
+#: strpas2jsdesign.pjsdmissing
+msgid "Missing"
+msgstr ""
+
+#: strpas2jsdesign.pjsdmissing2
+#, object-pascal-format
+msgid "Missing %s"
+msgstr ""
 
 #: strpas2jsdesign.pjsdmissingpathtopas2js
 msgid "missing path to pas2js"
@@ -143,6 +230,15 @@ msgstr "Aplicação Node.js"
 msgid "NodeJS project options"
 msgstr "Opções de projeto NodeJS"
 
+#: strpas2jsdesign.pjsdnote
+#, object-pascal-format
+msgid "Note: %s"
+msgstr ""
+
+#: strpas2jsdesign.pjsdnote2
+msgid "Note"
+msgstr ""
+
 #: strpas2jsdesign.pjsdoverwrite
 msgid "Overwrite?"
 msgstr "Sobrescrever?"
@@ -163,6 +259,15 @@ msgstr "URL atual de projeto Pas2JS"
 msgid "Pas2JS executable"
 msgstr "Executável Pas2JS"
 
+#: strpas2jsdesign.pjsdpas2jsinstaller
+msgid "Pas2JS Installer"
+msgstr ""
+
+#: strpas2jsdesign.pjsdpas2jsisnotexecutableat
+#, object-pascal-format
+msgid "\"%s\" is not an executable"
+msgstr ""
+
 #: strpas2jsdesign.pjsdpas2jsselectedbrowserexecutable
 msgid "Pas2JS selected browser executable"
 msgstr "Executável selecionado do navegador Pas2JS"
@@ -174,6 +279,10 @@ msgstr "Pas2JS executável Electron selecionado"
 #: strpas2jsdesign.pjsdpas2jsselectednodejsexcutable
 msgid "Pas2JS selected NodeJS excutable"
 msgstr "Executável NodeJS selecionado Pas2JS"
+
+#: strpas2jsdesign.pjsdpas2jssourcedirectory
+msgid "Pas2JS source directory"
+msgstr ""
 
 #: strpas2jsdesign.pjsdpathofelectronexecutablemacropas2jselectron
 msgid "Path of Electron executable, macro $(Pas2JSElectron)"
@@ -241,6 +350,18 @@ msgstr "Selecionar diretório de modelos de pacote do Atom"
 msgid "Select browser executable"
 msgstr "Selecionar executável do navegador"
 
+#: strpas2jsdesign.pjsdselectelectronexecutable
+msgid "Select Electron executable"
+msgstr ""
+
+#: strpas2jsdesign.pjsdselectfreepascalcompilerexecutable
+msgid "Select Free Pascal Compiler executable"
+msgstr ""
+
+#: strpas2jsdesign.pjsdselectfreepascalsourcedirectory
+msgid "Select Free Pascal source directory"
+msgstr ""
+
 #: strpas2jsdesign.pjsdselectnodejsexecutable
 msgid "Select Node.js executable"
 msgstr "Selecionar executável Node.js"
@@ -249,14 +370,13 @@ msgstr "Selecionar executável Node.js"
 msgid "Select pas2js executable"
 msgstr "Selecionar executável pas2js"
 
+#: strpas2jsdesign.pjsdselectpas2jssourcedirectory
+msgid "Select pas2js source directory"
+msgstr ""
+
 #: strpas2jsdesign.pjsdselectvscodetemplatedir
 msgid "Select Visual Studio Code extension template directory"
 msgstr "Selecionar diretório de modelos de extensão de código do Visual Studio"
-
-#: strpas2jsdesign.pjsdselectxexecutable
-#, object-pascal-format
-msgid "Select %s executable"
-msgstr "Selecionar executável %s"
 
 #: strpas2jsdesign.pjsdserverinstanceswillbestartedwithaportstartingfromt
 msgid "Server instances will be started with a port starting from this number, increasing per new project"
@@ -274,9 +394,29 @@ msgstr "Um programa pas2js executando como cache para um app web. Ele não execu
 msgid "Start HTTP Server on port"
 msgstr "Iniciar servidor HTTP na porta"
 
+#: strpas2jsdesign.pjsdthepas2jsexecutablefilenamedoesnotlooklikepas2js
+#, object-pascal-format
+msgid "The executable filename \"%s\" does not look like pas2js."
+msgstr ""
+
+#: strpas2jsdesign.pjsdthereisnoreleasefortarget
+#, object-pascal-format
+msgid "There is no release for target \"%s-%s\"."
+msgstr ""
+
 #: strpas2jsdesign.pjsdthesimplewebserverisautomaticallystartedonrunthelo
 msgid "The Simple Web Server is automatically started on Run. The location is like a subfolder in the URL serving the disk folder of the HTML file."
 msgstr "Um Servidor Web Simples é automaticamente iniciado no Executar. A localização é como um subpasta na URL servindo a pasta no disco do arquivo HTML."
+
+#: strpas2jsdesign.pjsdunabletocreatedirectory
+#, object-pascal-format
+msgid "Unable to create directory \"%s\"."
+msgstr ""
+
+#: strpas2jsdesign.pjsdunabletofindpas2jsat
+#, object-pascal-format
+msgid "Unable to find \"%s\""
+msgstr ""
 
 #: strpas2jsdesign.pjsdusebrowserapplicationobject
 msgid "Use Browser Application object"
@@ -305,6 +445,10 @@ msgstr "Executar programa WebAssembly:"
 #: strpas2jsdesign.pjsdvisualstudiocodeextensiontemplatedirectory
 msgid "Visual Studio Code extension template directory"
 msgstr "Diretório de modelos de extensão de código do Visual Studio"
+
+#: strpas2jsdesign.pjsdwarning
+msgid "Warning"
+msgstr ""
 
 #: strpas2jsdesign.pjsdwebappdescription
 msgctxt "strpas2jsdesign.pjsdwebappdescription"

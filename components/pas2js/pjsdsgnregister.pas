@@ -18,9 +18,9 @@ uses
   IDEDialogs, ProjectGroupIntf, IDEExternToolIntf, MacroIntf, PackageIntf,
   // Pas2js
   idehtml2class, PJSDsgnOptions, PJSDsgnOptsFrame, idedtstopas,
-  frmpas2jsnodejsprojectoptions,
-  frmpas2jsbrowserprojectoptions, PJSProjectOptions, idehtmltools,
-  frmhtmltoform, PJSController, StrPas2JSDesign, ProjectGroup;
+  frmpas2jsnodejsprojectoptions, frmpas2jsbrowserprojectoptions,
+  PJSProjectOptions, idehtmltools, frmhtmltoform, PJSController,
+  StrPas2JSDesign, FrmPas2jsInstaller, ProjectGroup;
 
 const
   ProjDescNamePas2JSWebApp = 'Web Application';
@@ -47,7 +47,7 @@ type
                                baoUseWASI,           // Use WASI browser app object
                                baoUseBrowserConsole, // use browserconsole unit to display Writeln()
                                baoUseModule,         // include as module as opposed to regular script
-                               baoLocationOnSWS,       // add location
+                               baoLocationOnSWS,     // location on Simple Web Server
                                baoStartServer,       // Start simple server
                                baoUseURL             // Use this URL to run/show project in browser
                                );
@@ -314,6 +314,7 @@ Type
     Procedure OnRefreshProjHTMLFormAllContext(Sender : TObject); virtual;
     Procedure OnSrcEditPopup(Sender : TObject); virtual;
     Procedure OnPrjInspPopup(Sender : TObject); virtual;
+    Procedure OnInstallPas2js(Sender : TObject); virtual;
   end;
 
 Var
@@ -347,6 +348,10 @@ begin
   PJSOptions:=TPas2jsOptions.Create;
   PJSOptions.Load;
   TPJSController.Instance.Hook; // this registers macros and events
+
+  // register menu item
+  RegisterIDEMenuCommand(itmOptionsDialogs, 'Pas2jsInstall',
+    pjsdInstallUpdatePas2JS, @Pas2JSHandler.OnInstallPas2js);
 
   // register new-project items
   RegisterProjectDescriptor(TProjectPas2JSWebApp.Create);
@@ -1852,6 +1857,11 @@ begin
     end;
   PrjMnuItem.Visible:=AllOK;
   PrjMnuItemAll.Visible:=AnyOK;
+end;
+
+procedure TPas2JSHandler.OnInstallPas2js(Sender: TObject);
+begin
+  ShowPas2jsInstallerDialog;
 end;
 
 function TPas2JSHandler.AskUserFile(aUnitName,aHTMLFileName: String): string;

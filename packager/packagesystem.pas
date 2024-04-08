@@ -62,9 +62,10 @@ uses
   LazarusPackageIntf,
   // IdeConfig
   EnvironmentOpts, LazConf, TransferMacros, IDEProcs, SearchPathProcs,
+  ParsedCompilerOpts, CompilerOptions, FppkgHelper,
   // IDE
-  LazarusIDEStrConsts, DialogProcs, IDETranslations, CompilerOptions,
-  PackageLinks, PackageDefs, FppkgHelper, PkgSysBasePkgs;
+  LazarusIDEStrConsts, DialogProcs, IDETranslations,
+  PackageLinks, PackageDefs, PkgSysBasePkgs;
 
 const
   MakefileCompileVersion = 2;

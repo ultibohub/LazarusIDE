@@ -18,8 +18,10 @@ uses
   IDEOptionsIntf, IDEExternToolIntf, CompOptsIntf,
   // IdeIntf
   IDEOptEditorIntf, IDEDialogs,
+  // IdeConfig
+  etFPCMsgFilePool, CompilerOptions,
   // IDE
-  CompilerOptions, LazarusIDEStrConsts, etFPCMsgParser;
+  LazarusIDEStrConsts;
 
 type
 

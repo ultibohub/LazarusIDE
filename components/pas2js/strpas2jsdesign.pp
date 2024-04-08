@@ -16,6 +16,23 @@ Resourcestring
     +'using Electron to run as desktop application.';
   pjsdOverwrite = 'Overwrite?';
   pjsdError = 'Error';
+  pjsdMissing2 = 'Missing %s';
+  pjsdDownloadError = 'Download error:%s';
+  pjsdNote2 = 'Note';
+  pjsdFound = 'Found %s';
+  pjsdMissing = 'Missing';
+  pjsdDownloading = 'Downloading "%s" ...';
+  pjsdNote = 'Note: %s';
+  pjsdDownloading2 = 'Downloading';
+  pjsdDownloadedBytes = 'Downloaded %s bytes';
+  pjsdDownloadPas2jsRelease = 'Download Pas2JS Release?';
+  pjsdUnableToCreateDirectory = 'Unable to create directory "%s".';
+  pjsdConfirmation = 'Confirmation';
+  pjsdChangeSimpleWebServerFromTo = 'Change Simple Web Server from%s"%s"%sto%s'
+    +'"%s"%s?';
+  pjsdWarning = 'Warning';
+  pjsdThePas2jsExecutableFilenameDoesNotLookLikePas2js =
+    'The executable filename "%s" does not look like pas2js.';
   pjsdNewProjectFile = 'New project file';
   pjsdProjectPascalFile = 'Project Pascal file';
   pjsdPleaseChooseAFileWithFullPath = 'Please choose a file with full path.';
@@ -34,15 +51,34 @@ Resourcestring
 
   // IDE options frame
   pjsdSelectPas2jsExecutable = 'Select pas2js executable';
-  pjsdSelectXExecutable = 'Select %s executable';
+  pjsdSelectPas2jsSourceDirectory = 'Select pas2js source directory';
+  pjsdCancel = 'Cancel';
+  pjsdPas2jsInstaller = 'Pas2JS Installer';
   pjsdSelectNodeJSExecutable = 'Select Node.js executable';
+  pjsdUnableToFindPas2jsAt = 'Unable to find "%s"';
+  pjsdPas2jsIsNotExecutableAt = '"%s" is not an executable';
   pjsdSelectBrowserExecutable = 'Select browser executable';
   pjsdSelectAtomTemplateDir = 'Select Atom package template directory';
+  pjsdSelectElectronExecutable = 'Select Electron executable';
   pjsdSelectVSCodeTemplateDir = 'Select Visual Studio Code extension template directory';
   pjsdYouCanUseIDEMacrosLikeMakeExeWithoutAFullPathIsSea = 'You can use IDE '
     +'macros like $MakeExe(). Without a full path, %s is searched in PATH.';
   pjsdPathOfXMacroPas2js = 'Path of %s, macro $(pas2js)';
   pjsdBrowse = 'Browse';
+  pjsdDetails = 'Details';
+  pjsdDownloadRelease = 'Download Release';
+  pjsdApply = 'Apply';
+  pjsdClose = 'Close';
+  pjsdSelectFreePascalCompilerExecutable = 'Select Free Pascal Compiler '
+    +'executable';
+  pjsdSelectFreePascalSourceDirectory = 'Select Free Pascal source directory';
+  pjsdThereIsNoReleaseForTarget = 'There is no release for target "%s-%s".';
+  pjsdError2 = 'Error: %s';
+  pjsdFPCSourceDirectory = 'FPC source directory:';
+  pjsdFreePascalCompilerUsedForCompilingToolsAndPas2jsIt = 'Free Pascal '
+    +'Compiler used for compiling tools and pas2js itself';
+  pjsdFPCExecutable = 'FPC executable:';
+  pjsdPas2jsSourceDirectory = 'Pas2JS source directory';
   pjsdWebServerAndBrowserOptions = 'Web server and browser options';
   pjsdPortNumberToStartAllocatingFrom = 'Port number to start allocating '
     +'from, macro $(Pas2JSWebServerPort)';
@@ -125,6 +161,7 @@ Resourcestring
   pjsdButtonCancel = 'Cancel refresh';
 
   pjsRefreshClassFromHTML = 'Refresh class from HTML source';
+  pjsdInstallUpdatePas2JS = 'Install/Update Pas2JS';
   pjsRefreshAllClassesFromHTML = 'Refresh all classes from HTML source';
   rsHTTPRequestFailed = 'HTML request to service URL %s failed: %s';
 

@@ -40,12 +40,12 @@ uses
   BaseIDEIntf, MacroIntf, PackageIntf, LazMsgWorker, ProjectIntf, IDEExternToolIntf,
   CompOptsIntf, IDEOptionsIntf, PackageDependencyIntf,
   // IdeConfig
-  LazConf, IDECmdLine, TransferMacros, EnvironmentOpts,
+  LazConf, IDECmdLine, TransferMacros, EnvironmentOpts, ParsedCompilerOpts, CompilerOptions,
   // IDE
-  InitialSetupProc, ExtToolsConsole, CompilerOptions, ApplicationBundle,
+  InitialSetupProc, ExtToolsConsole, ApplicationBundle,
   IDETranslations, LazarusIDEStrConsts, MiscOptions, Project, PackageDefs,
   PackageLinks, PackageSystem, InterPkgConflictFiles, BuildLazDialog,
-  BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts;
+  BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts, LazTTY;
 
 type
   TPkgAction = (
@@ -1849,25 +1849,37 @@ end;
 procedure TLazBuildApplication.PrintInfo(const Msg: string);
 begin
   if ConsoleVerbosity >= 1 then
-    debugln('Info: (lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+  begin
+    WriteColoredoutput(output,oc_lightgray,'Info:');
+    debugln('(lazbuild) ',LineBreaksToSystemLineBreaks(Msg))
+  end;
 end;
 
 procedure TLazBuildApplication.PrintHint(const Msg: string);
 begin
   if ConsoleVerbosity >= 0 then
-    debugln('Hint: (lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+  begin
+    WriteColoredoutput(output,oc_lightgray,'Hint:');
+    debugln('(lazbuild) ',LineBreaksToSystemLineBreaks(Msg));
+  end;
 end;
 
 procedure TLazBuildApplication.PrintWarning(const Msg: string);
 begin
   if ConsoleVerbosity >= -1 then
-    debugln('Warning: (lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+  begin
+    WriteColoredoutput(output,oc_magenta,'Warning:');
+    debugln('(lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+  end;
 end;
 
 procedure TLazBuildApplication.PrintErrorAndHalt(Code: Byte; const Msg: string);
 begin
   if Msg <> '' then
-    writeln('Error: (lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+  begin
+    WriteColoredoutput(output,oc_red,'Error:');
+    writeln('(lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+  end;
   halt(Code);
 end;
 

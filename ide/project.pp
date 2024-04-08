@@ -65,10 +65,10 @@ uses
   // IdeConfig
   EnvironmentOpts, LazConf, TransferMacros, SearchPathProcs, IdeXmlConfigProcs,
   IDECmdLine, IDEProcs, CompOptsModes, ModeMatrixOpts,
+  ParsedCompilerOpts, CompilerOptions, EditDefineTree, ProjPackCommon,
   // IDE
-  ProjectResources, ProjectIcon, CompilerOptions, RunParamsOpts,
-  ProjectDefs, EditDefineTree, LazarusIDEStrConsts,
-  ProjPackCommon, PackageDefs, PackageSystem;
+  ProjectResources, ProjectIcon, RunParamsOpts,
+  ProjectDefs, LazarusIDEStrConsts, PackageDefs, PackageSystem;
 
 type
   TUnitInfo = class;
@@ -517,6 +517,7 @@ type
     FDefaultCompileReasons: TCompileReasons;
     procedure SetDefaultCompileReasons(const AValue: TCompileReasons);
   protected
+    procedure DoClearErrorLines; override;
     procedure SetCompileReasons(const AValue: TCompileReasons); override;
     procedure SubstituteMacros(var s: string); override;
   public
@@ -6382,6 +6383,12 @@ begin
                                 CompOpts.CompileReasons, Tool);
   if Result then exit;
   if inherited CreateDiff(CompOpts, Tool) then Result:=true;
+end;
+
+procedure TProjectCompilationToolOptions.DoClearErrorLines;
+begin
+  if Assigned(SourceEditorManagerIntf) then
+    SourceEditorManagerIntf.ClearErrorLines;
 end;
 
 procedure TProjectCompilationToolOptions.LoadFromXMLConfig(XMLConfig: TXMLConfig;
