@@ -84,7 +84,6 @@ resourcestring
   lisPath = 'Path';
   lisId = 'ID';
   lisPage = 'Page';
-  lisUnit = 'Unit';
   lisPackage = 'Package';
   lisCompile = 'Compile';
   lisCompileStage = 'Compile';
@@ -246,17 +245,6 @@ resourcestring
   lisOpenProjectAgain = 'Open project again';
   lisStartWithANewProject = 'Start with a new project';
   lisConfigDirectory = 'Lazarus config directory';
-
-  lisPkgMacroPackageDirectoryParameterIsPackageID = 'Package directory. '
-    +'Parameter is package ID, e.g. "Name" or "Name 1.0"';
-  lisPkgMacroPackageSourceSearchPathParameterIsPackageID = 'Package source '
-    +'search path. Parameter is package ID, e.g. "Name" or "Name 1.0"';
-  lisPkgMacroPackageUnitSearchPathParameterIsPackageID = 'Package unit search '
-    +'path. Parameter is package ID, e.g. "Name" or "Name 1.0"';
-  lisPkgMacroPackageIncludeFilesSearchPathParameterIsPackageID = 'Package '
-    +'include files search path. Parameter is package ID, e.g. "Name" or "Name 1.0"';
-  lisPkgMacroPackageNameParameterIsPackageID = 'Package name. Parameter is package ID, e.g. "Name" or "Name 1.0"';
-  lisPkgMacroPackageOutputDirectoryParameterIsPackageID = 'Package output directory. Parameter is package ID, e.g. "Name" or "Name 1.0"';
 
   // main bar menu
   lisMenuFile = '&File';
@@ -607,7 +595,6 @@ resourcestring
   lisLFMFileCorrupt = 'LFM file corrupt';
   lisUnableToFindAValidClassnameIn = 'Unable to find a valid classname in "%s"';
   lisUnableToConvertFileError = 'Unable to convert file "%s"%sError: %s';
-  lisUnableToWriteFileError = 'Unable to write file "%s"%sError: %s';
   lisMissingUnitsComment = 'Comment Out';
   lisMissingUnitsForDelphi = 'For Delphi only';
   lisMissingUnitsSearch = 'Search Unit Path';
@@ -739,10 +726,6 @@ resourcestring
     +'%sRename it to lowercase?';
   lisRenameToLowercase = 'Rename to lowercase';
   lisKeepName = 'Keep name';
-  lisOverwriteFile = 'Overwrite file?';
-  lisAFileAlreadyExistsReplaceIt = 'A file "%s" already exists.'
-    +'%sReplace it?';
-  lisOverwriteFileOnDisk = 'Overwrite file on disk';
   lisAmbiguousFilesFound = 'Ambiguous files found';
   lisThereAreOtherFilesInTheDirectoryWithTheSameName = 'There are other files in '
     +'the directory with the same name,'
@@ -750,7 +733,6 @@ resourcestring
     +'%s%s'
     +'%sDelete them?';
   lisDeleteOldFile = 'Delete old file "%s"?';
-  lisDeletingOfFileFailed = 'Deleting of file "%s" failed.';
   lisStreamingError = 'Streaming error';
   lisUnableToStreamT = 'Unable to stream %s:T%s.';
   lisPathToInstance = 'Path to failed Instance:';
@@ -770,7 +752,6 @@ resourcestring
     +'%sAbort  will stop the loading.';
   lisSkipFileAndContinueLoading = 'Skip file and continue loading';
   lisAbortLoadingProject = 'Abort loading project';
-  lisFileNotFound2 = 'File "%s" not found.';
   lisFileNotFoundDoYouWantToCreateIt = 'File "%s" not found.%sDo you want to create it?';
   lisProjectInfoFileDetected = 'Project info file detected';
   lisTheFileSeemsToBeTheProgramFileOfAnExistingLazarusP = 'The file %s seems '
@@ -812,15 +793,7 @@ resourcestring
   lisOpenThePackage = 'Open the package %s?';
   lisRevertFailed = 'Revert failed';
   lisFileIsVirtual = 'File "%s" is virtual.';
-  lisFileNotText = 'File not text';
-  lisUnableToRenameFile = 'Unable to rename file';
-  lisUnableToCopyFile = 'Unable to copy file';
-  lisWriteError = 'Write Error';
   lisByte = '%s byte';
-  lisFileDoesNotLookLikeATextFileOpenItAnyway = 'File "%s"'
-    +'%sdoes not look like a text file.'
-    +'%sOpen it anyway?';
-  lisSourceAndDestinationAreTheSame = 'Source and Destination are the same:%s%s';
   lisUnableToAddToProjectBecauseThereIsAlreadyAUnitWith = 'Unable to add %s '
     +'to project because there is already a unit with the same name in the Project.';
   lisAddToProject = 'Add %s to project?';
@@ -851,9 +824,7 @@ resourcestring
   lisTheProjectHasNoCompileCommandSeePr = 'The project '
     +'has no compile command.%sSee Project -> Project Options'
     +' -> Compiler Options -> Compiler Commands';
-  lisExecutingCommandBefore = 'Executing command before';
   lisProject2 = 'Project: ';
-  lisExecutingCommandAfter = 'Executing command after';
   lisNoProgramFileSFound = 'No program file "%s" found.';
   lisNotNow = 'Not now';
   lisYouCanNotBuildLazarusWhileDebuggingOrCompiling = 'You cannot build '
@@ -864,25 +835,13 @@ resourcestring
   lisCleanUpLazbuild = 'Clean up + lazbuild';
   lisLazbuild = 'lazbuild';
   lisCompileNormally = 'Compile normally';
-  lisReadError = 'Read Error';
-  lisUnableToReadFile = 'Unable to read file';
-  lisUnableToReadFile2 = 'Unable to read file "%s".';
-  lisUnableToReadFileError = 'Unable to read file "%s"%sError: %s';
-  lisUnableToReadTheProjectInfoFile = 'Unable to read the project info file%s"%s".';
-  lisUnableToReadLpi = 'Unable to read lpi';
-  lisStrangeLpiFile = 'Strange lpi file';
-  lisTheFileDoesNotLookLikeALpiFile = 'The file %s does not look like a lpi file.';
-  lisAmbiguousUnitFound = 'Ambiguous unit found';
   lisTheUnitExistsTwiceInTheUnitPathOfThe = 'The unit %s exists twice in the '
     +'unit path of the %s:';
   lisHintCheckIfTwoPackagesContainAUnitWithTheSameName = 'Hint: Check if two '
     +'packages contain a unit with the same name.';
   lisIgnoreAll = 'Ignore all';
-  lisDeleteFileFailed = 'Delete file failed';
   lisUnableToRemoveOldBackupFile = 'Unable to remove old backup file "%s"!';
   lisRenameFileFailed = 'Rename file failed';
-  lisUnableToRenameFileTo = 'Unable to rename file "%s" to "%s"!';
-  lisUnableToRenameFileTo2= 'Unable to rename file "%s"%sto "%s".';
   lisBackupFileFailed = 'Backup file failed';
   lisUnableToBackupFileTo = 'Unable to backup file "%s" to "%s"!';
   lisFileNotLowercase = 'File not lowercase';
@@ -1532,7 +1491,6 @@ resourcestring
   dlgEnvBackupHelpNote = 'Notes: Project files are all files in the project directory';
   lisEnvOptDlgInvalidDebuggerFilename = 'Invalid debugger filename';
   lisEnvOptDlgInvalidDebuggerFilenameMsg = 'The debugger file "%s" is not an executable.';
-  lisEnvOptDlgDirectoryNotFound = 'Directory not found';
   lisDirectoryNotFound = 'Directory "%s" not found.';
   lisRemoveFromSearchPath = 'Remove from search path';
   lisEnvOptDlgTestDirNotFoundMsg = 'Test directory "%s" not found.';
@@ -2313,7 +2271,6 @@ resourcestring
   locwndSrcEditor = 'Source Editor';
   
   // compiler options
-  dlgCompilerOptions = 'Compiler Options';
   dlgCOSetAsDefault = 'Set compiler options as default';
   lisWhenEnabledTheCurrentOptionsAreSavedToTheTemplateW = 'When enabled the current '
     +'options are saved to the template which is used when creating new projects';
@@ -2524,7 +2481,6 @@ resourcestring
     +'This typically means your %s has wrong unit paths. Or your installation is broken.';
   dlgCCOTestRTLUnits = 'Test: Checking RTL units ...';
   dlgCCOTestCompilerDate = 'Test: Checking compiler date ...';
-  lisCCOErrorCaption = 'Error';
   lisThereIsNoFreePascalCompilerEGFpcOrPpcCpuConfigured = 'There is no Free '
     +'Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project '
     +'options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s';
@@ -2625,7 +2581,6 @@ resourcestring
   dlgCompilerMessage = 'Compiler messages';
 
   // project options dialog
-  dlgProjectOptions = 'Project Options';
   dlgProjectOptionsFor = 'Options for Project: %s';
   dlgPOApplication = 'Application';
   dlgPOFroms = 'Forms';
@@ -3530,34 +3485,6 @@ resourcestring
   lisKeyCatObjInspector = 'Object Inspector commands';
   lisKeyCatCustom       = 'Custom commands';
 
-  // Languages
-  rsLanguageAutomatic    = 'Automatic (or English)';
-  rsLanguageEnglish      = 'English';
-  rsLanguageGerman       = 'German';
-  rsLanguageSpanish      = 'Spanish';
-  rsLanguageFrench       = 'French';
-  rsLanguageRussian      = 'Russian';
-  rsLanguagePolish       = 'Polish';
-  rsLanguageItalian      = 'Italian';
-  rsLanguageCatalan      = 'Catalan';
-  rsLanguageFinnish      = 'Finnish';
-  rsLanguageHebrew       = 'Hebrew';
-  rsLanguageArabic       = 'Arabic';
-  rsLanguagePortugueseBr = 'Brazilian Portuguese';
-  rsLanguagePortuguese   = 'Portuguese';
-  rsLanguageUkrainian    = 'Ukrainian';
-  rsLanguageDutch        = 'Dutch';
-  rsLanguageJapanese     = 'Japanese';
-  rsLanguageChinese      = 'Chinese';
-  rsLanguageIndonesian   = 'Indonesian';
-  rsLanguageAfrikaans    = 'Afrikaans';
-  rsLanguageLithuanian   = 'Lithuanian';
-  rsLanguageSlovak       = 'Slovak';
-  rsLanguageTurkish      = 'Turkish';
-  rsLanguageCzech        = 'Czech';
-  rsLanguageHungarian    = 'Hungarian';
-  rsLanguageCorsican     = 'Corsican';
-
   // Unit dependencies
   dlgUnitDepRefresh      = 'Refresh';
 
@@ -3675,21 +3602,15 @@ resourcestring
   lisCodeToolsOptsCaret       = 'Caret (^)';
 
   // codetools defines
-  lisCodeToolsDefsWriteError = 'Write error';
   lisErrorWritingFile = 'Error writing file "%s"';
   lisFPDocErrorWriting = 'Error writing "%s"%s%s';
   lisFPDocFPDocSyntaxError = 'FPDoc syntax error';
   lisFPDocThereIsASyntaxErrorInTheFpdocElement = 'There is a syntax error in '
     +'the fpdoc element "%s":%s%s';
   lisChooseAnExampleFile = 'Choose an example file';
-  lisUnableToWriteTheProjectInfoFileError = 'Unable to write the project info '
-    +'file%s"%s".%sError: %s';
-  lisUnableToWriteTheProjectSessionFileError = 'Unable to write the project session '
-    +'file%s"%s".%sError: %s';
   lisStopDebugging2 = 'Stop debugging?';
   lisStopCurrentDebuggingAndRebuildProject = 'Stop current debugging and rebuild project?';
   lisErrorWritingPackageListToFile = 'Error writing package list to file%s%s%s%s';
-  lisCodeToolsDefsReadError = 'Read error';
   lisUnableToRead = 'Unable to read %s';
   lisErrorReadingPackageListFromFile = 'Error reading package list from file%s%s%s%s';
   lisDuplicate = 'Duplicate';
@@ -3922,14 +3843,6 @@ resourcestring
   lisDiffDlgOpenDiffInEditor = 'Open difference in editor';
 
   // packages
-  lisPkgFileTypeVirtualUnit = 'Virtual Unit';
-  lisPkgFileTypeMainUnit = 'Main Unit';
-  lisPkgFileTypeLFM = 'LFM - Lazarus form text';
-  lisPkgFileTypeLRS = 'LRS - Lazarus resource';
-  lisPkgFileTypeInclude = 'Include file';
-  lisPkgFileTypeIssues = 'Issues xml file';
-  lisPkgFileTypeText = 'Text';
-  lisPkgFileTypeBinary = 'Binary';
   lisCreateNewPackage = '(Create new package)';
   lisCreateNewPackageComponent = 'Create new package component';
   lisMenuNewComponent = 'New Component';
@@ -4072,17 +3985,7 @@ resourcestring
     +'standard package.%sA package is a collection of units and components.';
 
   // file checks
-  lisUnableToCreateFile = 'Unable to create file';
-  lisUnableToCreateFile2 = 'Unable to create file "%s"';
-  lisUnableToCreateFile3 = 'Unable to create file%s"%s"';
-  lisUnableToCopyFileTo = 'Unable to copy file "%s"%sto "%s"';
   lisCanNotCreateFile = 'Cannot create file "%s"';
-  lisExtendUnitPath = 'Extend unit path?';
-  lisUnableToWrite2 = 'Unable to write "%s"';
-  lisUnableToWriteFile = 'Unable to write file';
-  lisUnableToWriteFile2 = 'Unable to write file "%s".';
-  lisUnableToWriteToFile2 = 'Unable to write to file "%s".';
-  lisFileIsNotWritable = 'File is not writable';
   lisErrorDeletingFile = 'Error deleting file';
   lisInvalidMask = 'Invalid Mask';
   lisTheFileMaskIsNotAValidRegularExpression = 'The file mask "%s" is not a '
@@ -4299,6 +4202,10 @@ resourcestring
   lisDirectories = 'Directories';
   lisFindFileFileMask = 'Fi&le mask';
   lisFindFileIncludeSubDirectories = 'Include &sub directories';
+  lisFindFileReplacementIsNotPossible = 'This file contains characters that have '
+    + 'different lengths in upper and lower case. The current implementation does '
+    + 'not allow for correct replacement in this case (but you can use '
+    + 'case-sensitive replacement). This file will have to be skipped:';
 
   // package manager
   lisPkgMangPackage = 'Package: %s';
@@ -4335,13 +4242,6 @@ resourcestring
   lisPkgMangReplaceExistingFile = 'Replace existing file "%s"?';
   lisPkgMangDeleteOldPackageFile = 'Delete Old Package File?';
   lisPkgMangDeleteOldPackageFile2 = 'Delete old package file "%s"?';
-  lisPkgMangDeleteFailed = 'Delete failed';
-  lisTheFileWasFoundInOneOfTheSourceDirectoriesOfThePac = 'The file "%s"'
-    +'%swas found in one of the source directories of the package %s and looks '
-    +'like a compiled unit. Compiled units must be in the output directory of '
-    +'the package, otherwise other packages can get problems using this package.'
-    +'%sDelete ambiguous file?';
-  lisPkgMangUnableToDeleteFile = 'Unable to delete file "%s".';
   lisSkipErrors = 'Skip errors';
   lisDeleteAllTheseFiles = 'Delete all these files?';
   lisCheckUncheckAll = 'Check/uncheck all';
@@ -4377,32 +4277,6 @@ resourcestring
   lisPkgMangThereIsAFPCUnitWithTheSameNameAsAPackage = 'There is a FPC unit '
     +'with the same name as a package:'
     +'%s"%s"';
-  lisPkgMangErrorWritingFile = 'Error writing file';
-  lisProjMangUnableToWriteStateFileForProjectError = 'Unable to write state '
-    +'file for project %s%sError: %s';
-  lisPkgMangUnableToWriteStateFileOfPackageError = 'Unable to write state '
-    +'file "%s"%sof package %s.%sError: %s';
-  lisPkgMangErrorReadingFile = 'Error reading file';
-  lisProjMangUnableToReadStateFileOfProjectError = 'Unable to read state '
-    +'file %s of project %s%sError: %s';
-  lisPkgMangUnableToReadStateFileOfPackageError = 'Unable to read state file '
-    +'"%s"%sof package %s.%sError: %s';
-  lisPkgMangUnableToCreateDirectory = 'Unable to create directory';
-  lisPassingCompilerOptionTwiceWithDifferentValues = 'passing compiler option '
-    +'-%s twice with different values';
-  lisPassingCompilerDefineTwiceWithDifferentValues = 'passing compiler define '
-    +'"%s" twice with different values';
-  lisUnableToCreateDirectory = 'Unable to create directory "%s".';
-  lisPkgMangUnableToCreateOutputDirectoryForPackage = 'Unable to create '
-    +'output directory "%s"%sfor package %s.';
-  lisPkgMangUnableToDeleteFilename = 'Unable to delete file';
-  lisPkgMangUnableToDeleteOldStateFileForPackage = 'Unable to delete old '
-    +'state file "%s"%sfor package %s.';
-  lisPkgMangUnableToCreatePackageSourceDirectoryForPackage = 'Unable to '
-    +'create package source directory "%s"%sfor package %s.';
-  lisPkgMangUnableToLoadPackage = 'Unable to load package';
-  lisPkgMangUnableToOpenThePackage = 'Unable to open the package "%s".'
-    +'%sThis package was marked for installation.';
   lisOpenPackage2 = 'Open package %s';
   lisPkgMangThePackageNameOfTheFileIsInvalid = 'The package name "%s" of'
     +'%sthe file "%s" is invalid.';
@@ -4458,7 +4332,6 @@ resourcestring
   lisOutputDirectoryOfContainsPascalUnitSource = 'output directory of %s '
     +'contains Pascal unit source "%s"';
   lisInsertAssignment = 'Insert Assignment %s := ...';
-  lisPkgMangpackageMainSourceFile = 'package main source file';
   lisErrorLoadingFile = 'Error loading file';
   lisErrorLoadingFile2 = 'Error loading file "%s":';
   lisLoadingFailed = 'Loading %s failed.';
@@ -4512,52 +4385,10 @@ resourcestring
   lisERRORInvalidBuildMode = 'Error: invalid build mode "%s"';
   lisAvailableProjectBuildModes = 'Available project build modes';
   lisThisProjectHasOnlyTheDefaultBuildMode = 'This project has only the default build mode.';
-  lisPkgMangstaticPackagesConfigFile = 'static packages config file';
   lisPkgMangUnableToCreateTargetDirectoryForLazarus = 'Unable to create '
     +'target directory for Lazarus:'
     +'%s"%s".'
     +'%sThis directory is needed for the new changed Lazarus IDE with your custom packages.';
-  lisPkgMangCompilePackage = 'Compile package %s';
-  lisIDEInfoCreatingMakefileForPackage = 'Creating Makefile for package %s';
-
-  // package system
-  lisPkgSysInvalidUnitname = 'Invalid Unitname: %s';
-  lisPkgSysUnitWasNotFoundInTheLpkFileProbablyThisLpkFileWasN =
-     'Unit "%s" was not found in the lpk file.'
-    +'%sProbably this lpk file was not used for building this IDE. '
-    +'Or the package misuses the procedure RegisterUnit.';
-  lisPkgSysUnitWasRemovedFromPackageLpk = 'Unit "%s" was removed from package (lpk)';
-  lisPkgSysCanNotRegisterComponentsWithoutUnit = 'Cannot register components without unit';
-  lisPkgSysInvalidComponentClass = 'Invalid component class';
-  lisPkgSysComponentClassAlreadyDefined = 'Component Class "%s" already defined';
-  lisPkgSysRegisterUnitWasCalledButNoPackageIsRegistering = 'RegisterUnit was '
-    +'called but no package is registering.';
-  lisPkgSysUnitName = '%s%sUnit Name: "%s"';
-  lisPkgSysFileName = '%s%sFile Name: "%s"';
-  lisPkgSysLPKFilename = '%s%slpk file: "%s"';
-  lisPkgSysTheLpkFileWasNotFound = '%s%sThe lpk file was not found.';
-  lisPkgSysPackageRegistrationError = 'Package registration error';
-  lisPkgSysThisIsTheDefaultPackageUsedOnlyForComponents = 'This is the '
-    +'default package. Used only for components without a package. These '
-    +'components are outdated.';
-  lisUpdatingPoFilesFailedForPackage = 'Updating PO files failed for package %s';
-  lisPkgSysRegisterProcedureIsNil = 'Register procedure is nil';
-  lisPkgSysThisPackageIsInstalledButTheLpkFileWasNotFound = 'This package is installed '
-    +'but the lpk file was not found. All its components are deactivated. Please fix this.';
-  lisPkgSysPackageFileNotFound = 'Package file not found';
-  lisPkgMangTheFileOfPackageWasNotFound = 'The file "%s" of package %s was not found.';
-  lisPkgSysThePackageIsInstalledButNoValidPackageFileWasFound =
-     'The package "%s" is installed but no valid package file (.lpk) was found.'
-    +'%sA broken dummy package was created.';
-  lisSkipTheseWarnings = 'Skip these warnings';
-
-  // package defs
-  lisPkgDefsOutputDirectory = 'Output directory';
-  lisPkgDefsCompiledSrcPathAddition = 'CompiledSrcPath addition';
-  lisPkgDefsNamespaces = 'Namespaces';
-  lisPkgDefsUnitPath = 'Unit Path';
-  lisProjProjectSourceDirectoryMark = 'Project Source Directory Mark';
-  lisPkgDefsSrcDirMark = 'Package Source Directory Mark';
 
   // add active file to package dialog
   lisAF2PInvalidPackage = 'Invalid Package';
@@ -4756,10 +4587,8 @@ resourcestring
   lisPckEditPackage = 'Package %s';
   lisPckEditRemovedFiles = 'Removed Files';
   lisPckEditRemovedRequiredPackages = 'Removed required packages';
-  lisPckEditDefault = '%s, default: %s';
   lisPckEditCheckAvailabilityOnline = 'Check availability online';
   lisPckEditAvailableOnline = '(available online)';
-  lisPckEditFPMakePackage = '(fpmake)';
   lisPckEditDependencyProperties = 'Dependency Properties';
   lisFilesHasRegisterProcedureInPackageUsesSection = 'Files: %s, has Register '
     +'procedure: %s, in package uses section: %s';
@@ -4774,15 +4603,6 @@ resourcestring
   lisPETheFileIsCurrentlyNotInTheIncludePathOfThePackageA = 'The file "%s" is '
     +'currently not in the include path of the package.%sAdd "%s" to the '
     +'include path?';
-  lisExtendUnitSearchPathOfProjectWith = 'Extend unit search path of project '
-    +'with%s"%s"?';
-  lisExtendUnitSearchPathOfPackageWith = 'Extend unit search path of package "'
-    +'%s" with%s"%s"?';
-  lisExtendIncludePath = 'Extend include path?';
-  lisExtendIncludeFilesSearchPathOfProjectWith = 'Extend include files search '
-    +'path of project with%s"%s"?';
-  lisExtendIncludeFileSearchPathOfPackageWith = 'Extend include file search '
-    +'path of package "%s" with%s"%s"?';
   lisConflictDetected = 'Conflict detected';
   lisThereIsAlreadyAFileIn = 'There is already a file%s%s%sin %s';
   lisDuplicateUnit = 'Duplicate Unit';
@@ -4850,7 +4670,6 @@ resourcestring
   lisPckOptsThePackageHasTheAutoInstallFlagThisMeans = 'The package "%s" has the auto install flag.'
     +'%sThis means it will be installed in the IDE.'
     +'%sInstallation packages must be designtime Packages.';
-  lisPckOptsPackageOptions = 'Package Options';
 
   // package explorer (package graph)
   lisMenuPackageGraph = 'Package Graph';
@@ -5261,7 +5080,6 @@ resourcestring
   lisCEModeShowCategories = 'Show Categories';
   lisCEModeShowSourceNodes = 'Show Source Nodes';
   lisCESurrounding = 'Surrounding';
-  lisCEIn = '%s in %s';
   lisCEOUpdate = 'Update';
   lisCEORefreshAutomatically = 'Refresh automatically';
   lisCEONeverOnlyManually = 'Never, only manually';
@@ -5477,21 +5295,6 @@ resourcestring
   rsCloseAll = 'Close all pages';
 
   // Application Bundle
-  lisErrorLoadingFrom = 'Error loading %s from%s%s%s%s';
-  lisErrorSavingTo = 'Error saving %s to%s%s%s%s';
-  lisXMLError = 'XML Error';
-  lisXMLParserErrorInFileError = 'XML parser error in file %s%sError: %s';
-  lisUnableToWriteXmlStreamToError = 'Unable to write xml stream to %s%sError: %s';
-  lisFileIsSymlink = 'File is symlink';
-  lisTheFileIsASymlinkOpenInstead = 'The file "%s" is a symlink.'
-    +'%sOpen "%s" instead?';
-  lisOpenTarget = 'Open target';
-  lisOpenSymlink = 'Open symlink';
-  lisWriteErrorFile = 'Write error: %s%sFile: %s%s%s';
-  lisTheCodetoolsFoundAnError = 'The Codetools found an error:%s%s';
-  lisIgnoreAndContinue = 'Ignore and continue';
-  lisNotImplemented = 'Not implemented';
-  lisNotImplementedYet = 'Not implemented yet:%s%s';
   lisMovePage = 'Move Page';
   lisFileSettings = 'File Settings';
 
@@ -5554,7 +5357,6 @@ resourcestring
   lisDoNotShowThisDialogForThisProject = 'Do not show this dialog for this project';
   lisObjectPascalDefault = 'Object Pascal - default';
   lisVerifyMethodCalls = 'Verify method calls';
-  lisUnableToCreateLinkWithTarget = 'Unable to create link "%s" with target "%s"';
   lisBuildAllFilesOfProjectPackageIDE = 'Build all files of project/package/IDE.';
   lisApplyBuildFlagsBToDependenciesToo = 'Apply build flags (-B) to dependencies too.';
   lisDoNotCompileDependencies = 'Do not compile dependencies.';
@@ -5670,11 +5472,6 @@ resourcestring
     +'%sThe system.ppu for this target was not found in the FPC binary directories.'
     +'%sMake sure fpc is installed correctly '
     +'for this target and the fpc.cfg contains the right directories.';
-  lisCouldNotAddToMainSource = 'Could not add "%s" to main source!';
-  lisCouldNotRemoveRFromMainSource = 'Could not remove "{$R %s}" from main source!';
-  lisCouldNotAddRToMainSource = 'Could not add "{$R %s}" to main source!';
-  lisCouldNotRemoveIFromMainSource = 'Could not remove "{$I %s}" from main source!';
-  lisCouldNotAddIToMainSource = 'Could not add "{$I %s}" to main source!';
   lisFailedToLoadFoldStat = 'Failed to load fold state';
   lisUppercaseString = 'uppercase string';
   lisUppercaseStringGivenAsParameter = 'Uppercase string given as parameter.';
@@ -5859,8 +5656,6 @@ resourcestring
     +'identifiers=%s/%s lines=%s bytes=%s';
   lisScanning2 = '%s. Scanning ...';
   lisShowGlyphsFor = 'Show Glyphs for';
-  lisDirectoryNotWritable = 'Directory not writable';
-  lisTheDirectoryIsNotWritable = 'The directory "%s" is not writable.';
   lisBuildingLazarusFailed = 'Building Lazarus failed';
   lisThisSetOfOptionsToBuildLazarusIsNotSupportedByThis = 'This set of '
     +'options to build Lazarus is not supported by this installation.%sThe '

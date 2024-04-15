@@ -3,7 +3,7 @@
 
    fpmake.pp for IdeConfig 1.0
 
-   This file was generated on 06.04.2024
+   This file was generated on 13/04/2024
 }
 
 {$ifndef ALLPACKAGES} 
@@ -30,7 +30,7 @@ begin
 
     P.Author:='Lazarus Team';
     P.License:='GPLv2';
-    P.Description:='-- This package is part of the IDE --'#10'This package does not guarantee any particular interface/API. Files are maintained for the use by the IDE.'#10''#10'Files in this package are for the main configuration of the IDE.';
+    P.Description:='-- This package is part of the IDE --'#13#10'This package does not guarantee any particular interface/API. Files are maintained for the use by the IDE.'#13#10''#13#10'Files in this package are for the main configuration of the IDE.';
 
     P.Flags.Add('LazarusDsgnPkg');
 
@@ -59,6 +59,7 @@ begin
     t.Dependencies.AddUnit('environmentopts');
     t.Dependencies.AddUnit('etfpcmsgfilepool');
     t.Dependencies.AddUnit('etmakemsgparser');
+    t.Dependencies.AddUnit('fppkghelper');
     t.Dependencies.AddUnit('idecmdline');
     t.Dependencies.AddUnit('ideconfstrconsts');
     t.Dependencies.AddUnit('ideguicmdline');
@@ -83,6 +84,7 @@ begin
     T:=P.Targets.AddUnit('environmentopts.pp');
     T:=P.Targets.AddUnit('etfpcmsgfilepool.pas');
     T:=P.Targets.AddUnit('etmakemsgparser.pas');
+    T:=P.Targets.AddUnit('fppkghelper.pas');
     T:=P.Targets.AddUnit('idecmdline.pas');
     T:=P.Targets.AddUnit('ideconfstrconsts.pas');
     T:=P.Targets.AddUnit('ideguicmdline.pas');

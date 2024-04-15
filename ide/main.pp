@@ -82,7 +82,7 @@ uses
   IDEIntf, ObjectInspector, PropEdits, PropEditUtils, EditorSyntaxHighlighterDef,
   IDECommands, IDEWindowIntf, IDEDialogs, SrcEditorIntf, IDEMsgIntf,
   MenuIntf, LazIDEIntf, IDEOptEditorIntf, IDEImagesIntf, ComponentEditors,
-  IdeIntfStrConsts, ToolBarIntf, SelEdits, InputHistoryCopy, InputHistory,
+  IdeIntfStrConsts, ToolBarIntf, SelEdits, InputHistory,
   // protocol
   IDEProtocol,
   // compile
@@ -114,8 +114,14 @@ uses
   etQuickFixes, etMessageFrame, etMessagesWnd,
   // converter
   ChgEncodingDlg, ConvertDelphi, MissingPropertiesDlg, LazXMLForms,
+  // IdeUtils
+  IdeUtilsPkg, IdeUtilsPkgStrConsts,
   // IdeConfig
   IdeConfig, LazConf, EnvironmentOpts, TransferMacros, IDECmdLine, IDEGuiCmdLine, IDEProcs,
+  // IdePackager,
+  IdePackager, IdePackagerStrConsts,
+  // IdeProject,
+  IdeProject, RunParamOptions,
   // environment option frames
   editor_general_options, componentpalette_options, formed_options, OI_options,
   MsgWnd_Options, Files_Options, Desktop_Options, window_options, IdeStartup_Options,
@@ -165,7 +171,7 @@ uses
   AboutFrm, CompatibilityRestrictions, RestrictionBrowser, ProjectWizardDlg,
   CodeExplOpts, EditorMacroListViewer,
   SourceFileManager, EditorToolbarStatic, IDEInstances,
-  WordCompletion, EnvGuiOptions, EnvDebuggerOptions, IdeDebuggerValueFormatter,
+  WordCompletion, EnvGuiOptions, EnvDebuggerOptions, IdeDebuggerValueFormatter, ProjectDebugLink,
   // main ide
   MainBar, MainIntf, MainBase, SearchPathProcs;
 
@@ -1457,8 +1463,6 @@ begin
   Assert(InputHistories = nil, 'TMainIDE.LoadGlobalOptions: InputHistories is already assigned.');
   InputHistoriesSO := TInputHistoriesWithSearchOpt.Create;
   InputHistories := InputHistoriesSO;
-  // A temporary copy. To be deleted.
-  InputHistoryCopy.InputHistories := {%H-}InputHistoryCopy.TInputHistories(InputHistoriesSO);
   MainBuildBoss.SetupInputHistories(InputHistories);
 
   CreateDirUTF8(GetProjectSessionsConfigPath);
@@ -6531,8 +6535,7 @@ begin
     if (GetActiveMode=nil) and (Count>0) then
       ActiveModeName:=Modes[0].Name;
 
-  Assert(Assigned(DebugBossMgr.ProjectLink), 'CreateProjectObject: ProjectLink=Nil');
-  DebugBossMgr.ProjectLink.Project:=Result;
+  DbgProjectLink.Project:=Result;
   Result.MainProject:=true;
   Result.OnFileBackup:=@MainBuildBoss.BackupFileForWrite;
   Result.OnLoadProjectInfo:=@LoadProjectInfoFromXMLConfig;

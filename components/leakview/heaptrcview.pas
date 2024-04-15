@@ -250,7 +250,7 @@ var
   sz  : Integer;
 begin
   sz := 32 + trace.Count * 16; // 8 hex digits for Size + 8 hex digits for Size
-  SetLength(Result, sz);
+  SetLength(Result{%H-}, sz);
   HexInt64ToStr(trace.BlockSize, Result, 1);
   HexInt64ToStr(hash(trace.RawStackData), Result, 17);
   for i := 0 to trace.Count - 1 do
@@ -362,7 +362,7 @@ begin
   trace := TStackTrace(nd.Parent.Data);
   if not Assigned(trace) or (idx >= trace.Count) then Exit;
 
-  searchFile := trace.Lines[idx].FileName;
+  searchFile := Trim(SetDirSeparators(trace.Lines[idx].FileName));
   if searchFile = '' then Exit;
 
   StackLine:= trace.Lines[idx];

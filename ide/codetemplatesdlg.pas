@@ -33,14 +33,17 @@ interface
 uses
   Classes, SysUtils, RegExpr,
   // LCL
-  LCLProc, Forms, Controls, Dialogs, ClipBrd, StdCtrls, ExtCtrls, Menus,
+  Forms, Controls, Dialogs, ClipBrd, StdCtrls, ExtCtrls, Menus,
   ButtonPanel, EditBtn, LCLType,
   // LazUtils
-  FileUtil, LazFileUtils, LazLoggerBase, LazStringUtils, LazUTF8,
+  FileUtil, LazFileUtils, LazLoggerBase, LazStringUtils, LazUtilities, LazTracer,
+  LazUTF8,
   // synedit
   SynEdit, SynHighlighterPas, SynEditAutoComplete, SynEditTypes,
   // codetools
   CodeToolManager, CodeCache, KeywordFuncLists, BasicCodeTools, PascalParserTool,
+  // IdeUtils
+  IdeUtilsPkgStrConsts,
   // IDEIntf
   SrcEditorIntf, MenuIntf, IDEWindowIntf, LazIDEIntf, IDEHelpIntf, IDEDialogs,
   // IDE

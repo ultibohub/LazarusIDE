@@ -418,6 +418,9 @@ DEFAULT_IDE_OPTIONS= $(LAZARUS_LIBPATHS) \
   -Fu../components/jcf2/IdePlugin/lazarus/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fu../components/synedit/design/units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fupackages/ideconfig/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fupackages/ideutils/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fupackages/idepackager/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fupackages/ideproject/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
   -Fupackages/idedebugger/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM)
 BIG_IDE_OPTIONS=-dBigIDE $(DEFAULT_IDE_OPTIONS) \
   -Fu../components/lazedit/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
@@ -4777,6 +4780,9 @@ endif
 endif
 idepackages:
 	$(MAKE) -C packages/ideconfig
+	$(MAKE) -C packages/ideutils
+	$(MAKE) -C packages/idepackager
+	$(MAKE) -C packages/ideproject
 	$(MAKE) -C packages/idedebugger
 ide: $(COMPILER_UNITTARGETDIR) revisioninc
 	$(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
@@ -4814,6 +4820,9 @@ ifneq ($(findstring $(OS_TARGET),win32 win64),)
 endif
 cleanlaz: clean cleanide
 	$(MAKE) -C packages/ideconfig clean
+	$(MAKE) -C packages/ideutils clean
+	$(MAKE) -C packages/idepackager clean
+	$(MAKE) -C packages/ideproject clean
 	$(MAKE) -C packages/idedebugger clean
 	${DELTREE} ../units/*
 purge: cleanlaz

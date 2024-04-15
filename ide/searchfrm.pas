@@ -36,12 +36,14 @@ uses
   // LCL
   LCLIntf, Forms, Controls, ComCtrls, Dialogs, ExtCtrls, StdCtrls, Buttons,
   // CodeTools
-  SourceLog, KeywordFuncLists, BasicCodeTools, FileProcs,
+  SourceLog, BasicCodeTools, FileProcs,
   // LazUtils
-  FileUtil, LazFileUtils, LazFileCache, LazTracer,
+  FileUtil, LazFileUtils, LazFileCache, LazTracer, LazUTF8,
   // IDEIntf
   IdeIntfStrConsts, IDEWindowIntf, LazIDEIntf, SrcEditorIntf, IDEDialogs,
   ProjectGroupIntf, InputHistory,
+  // IdeUtils
+  IdeUtilsPkgStrConsts,
   // IdeConfig
   SearchPathProcs,
   // IDE
@@ -87,7 +89,6 @@ type
     fSearchProject: boolean;
     fSearchProjectGroup: boolean;
     fResultsPageIndex: integer;
-    fAborting: boolean;
     fLastUpdateProgress: DWORD;
     fWasActive: boolean;
     procedure AddMatchHandler(const Filename: string; const StartPos, EndPos: TPoint;
@@ -104,6 +105,7 @@ type
     procedure SetFlag(Flag: TSrcEditSearchOption; AValue: boolean);
     procedure DoSearchAndAddToSearchResults;
     function DoSearch: integer;
+    procedure SearchEvent(FileIterator: TFileIterator);
   public
     procedure DoSearchOpenFiles;
     procedure DoSearchActiveFile;
@@ -127,9 +129,6 @@ type
     property Progress: TIDESearchInTextProgress read FProgress;
   end;
 
-var
-  SearchProgressForm: TSearchProgressForm;
-  
 function SearchInText(const TheFileName: string;
   var TheText: string;// if TheFileName='' then use TheText
   SearchFor, ReplaceText: string;
@@ -530,6 +529,7 @@ var
   Src: String;
   NewMatchStartPos: PtrInt;
   NewMatchEndPos: PtrInt;
+  i, l, n1, n2: Integer;
 begin
   //debugln(['SearchInText TheFileName=',TheFileName,' SearchFor=',SearchFor,'" ReplaceText=',ReplaceText,'"']);
 
@@ -582,9 +582,38 @@ begin
     end else begin
       // convert case if necessary
       if not (sesoMatchCase in Flags) then begin
-        CaseFile:=TSourceLog.Create(UpperCaseStr(OriginalFile.Source));
-        TempSearch:=UpperCaseStr(TempSearch);
+        CaseFile:=TSourceLog.Create(UTF8UpperCase(OriginalFile.Source));
+        TempSearch:=UTF8UpperCase(TempSearch);
         Src:=CaseFile.Source;
+
+        // Comparing character lengths after UTF8UpperCase:
+        // their difference can lead to damage to the text when replacing
+        // issue #40893
+        if sesoReplace in Flags then
+        begin
+          // length of strings in bytes (not use UTF8Length)
+          n1 := length(OriginalFile.Source);
+          n2 := length(CaseFile.Source);
+          l := n1; // assumed n1=n2
+          i := 1;
+          while (n1 = n2) and (i <= l) do
+          begin
+            // length of characters in bytes
+            n1 := UTF8CodepointSize(@OriginalFile.Source[i]);
+            n2 := UTF8CodepointSize(@CaseFile.Source[i]);
+            inc(i, n1); // assumed n1=n2
+          end;
+          if n1 <> n2 then
+          begin
+            if IDEMessageDialog(lisCCOWarningCaption,
+              lisFindFileReplacementIsNotPossible + LineEnding + LineEnding + TheFileName,
+              mtWarning, [mbOK, mbCancel]) = mrCancel
+            then
+              DoAbort;
+
+            exit(mrAbort);
+          end;
+        end;
       end else
         Src:=OriginalFile.Source;
     end;
@@ -782,7 +811,6 @@ function TSearchProgressForm.DoSearch: integer;
 begin
   Result:= 0;
   PromptOnReplace:=true;
-  fAborting:=false;
   Progress.Abort:=false;
   lblSearchText.Caption:= fSearchFor;
   fMatches:= 0;
@@ -812,79 +840,9 @@ begin
   Close;
 end;//DoSearch
 
-type
-
-  { TLazFileSearcher }
-
-  TLazFileSearcher = class(TFileSearcher)
-  private
-    FParent: TSearchProgressForm;
-    procedure CheckAbort;
-  protected
-    procedure DoDirectoryEnter; override;
-    procedure DoDirectoryFound; override;
-    procedure DoFileFound; override;
-  public
-    constructor Create(AParent: TSearchProgressForm);
-    destructor Destroy; override;
-  end;
-
-{ TLazFileSearcher }
-
-procedure TLazFileSearcher.CheckAbort;
-begin
-  if FParent.Progress.Abort then
-  begin
-    if not FParent.FAborting then
-    begin
-      FParent.FAborting := True;
-      FParent.FResultsList.Insert(0, FParent.FAbortString);
-    end;
-
-    Stop;
-  end;
-end;
-
-procedure TLazFileSearcher.DoDirectoryEnter;
-begin
-  CheckAbort;
-end;
-
-procedure TLazFileSearcher.DoDirectoryFound;
-begin
-  CheckAbort;
-end;
-
-procedure TLazFileSearcher.DoFileFound;
-var
-  F: String;
-begin
-  F := FileName;
-  if FileIsTextCached(F) then
-  begin
-    FParent.UpdateProgress(F);
-    FParent.SearchFile(F);
-  end;
-  CheckAbort;
-end;
-
-constructor TLazFileSearcher.Create(AParent: TSearchProgressForm);
-begin
-  inherited Create;
-  FParent := AParent;
-end;
-
-destructor TLazFileSearcher.Destroy;
-begin
-  FParent:=nil;
-  inherited Destroy;
-end;
-
-{ TSearchProgressForm }
-
 procedure TSearchProgressForm.DoFindInFiles(ADirectories: string);
 var
-  Searcher: TLazFileSearcher;
+  Searcher: TFileSearcher;
   SearchPath: String;
   p: Integer;
   Dir: String;
@@ -900,11 +858,32 @@ begin
   until false;
   if SearchPath='' then
     exit;
-  Searcher := TLazFileSearcher.Create(Self);
+  Searcher := TFileSearcher.Create;
+  Searcher.OnDirectoryFound := @SearchEvent;
+  Searcher.OnDirectoryEnter := @SearchEvent;
+  Searcher.OnFileFound      := @SearchEvent;
   try
     Searcher.Search(SearchPath, FMask, FRecursive);
   finally
     Searcher.Free;
+  end;
+end;
+
+procedure TSearchProgressForm.SearchEvent(FileIterator: TFileIterator);
+begin
+  // File found
+  if not FileIterator.IsDirectory then
+    if FileIsTextCached(FileIterator.FileName) then
+    begin
+      UpdateProgress(FileIterator.FileName);
+      SearchFile(FileIterator.FileName);
+    end;
+
+  // Check abort
+  if Progress.Abort then
+  begin
+    FileIterator.Stop;
+    FResultsList.Insert(0, FAbortString);
   end;
 end;
 
