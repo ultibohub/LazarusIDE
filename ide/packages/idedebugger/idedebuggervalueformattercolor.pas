@@ -46,7 +46,7 @@ type
     procedure Assign(AnOther: TObject); override;
   public
     function SupportedFeatures: TLazDbgIdeValFormatterFeatures; override;
-    function SupportedDisplayFormatFilters: TValueDisplayFormatGroups; override;
+    function SupportedDataKinds: TWatchResultDataKinds; override;
   published
     property ShowName: Boolean read FShowName write FShowName;
     property ShowRgb:  Boolean read FShowRgb write FShowRgb;
@@ -179,9 +179,9 @@ begin
   Result := [vffFormatValue, vffFormatOldValue, vffValueData];
 end;
 
-function TIdeDbgValueFormatterColorBase.SupportedDisplayFormatFilters: TValueDisplayFormatGroups;
+function TIdeDbgValueFormatterColorBase.SupportedDataKinds: TWatchResultDataKinds;
 begin
-  Result := [vdfgBase, vdfgSign];
+  Result := [rdkSignedNumVal, rdkUnsignedNumVal];
 end;
 
 class function TIdeDbgValueFormatterColor.GetRegisteredDisplayName: String;

@@ -8,7 +8,8 @@ interface
 uses
   Classes, SysUtils, LazClasses, LazLoggerBase, LazMethodList,
   IdeDebuggerWatchResult, IdeDebuggerBackendValueConv,
-  IdeDebuggerWatchResultJSon, DbgIntfDebuggerBase, DbgIntfMiscClasses,
+  IdeDebuggerWatchResultJSon, IdeDebuggerValueFormatter,
+  ProjectDebugLink, IdeDebuggerOpts, Project, DbgIntfDebuggerBase, DbgIntfMiscClasses,
   IdeDebuggerWatchValueIntf, LazDebuggerIntf, LazDebuggerTemplate,
   LazDebuggerIntfBaseTypes, LazDebuggerValueConverter, FpDebugConvDebugForJson;
 
@@ -153,11 +154,14 @@ type
 
   TWatch = class(TDelayedUdateItem)
   private
+    FDbgValueFormatter: TIdeDbgValueFormatterSelector;
     FFreeNotificationList: TMethodList;
     FFirstIndexOffs: Int64;
     FDbgBackendConverter: TIdeDbgValueConvertSelector;
 
+    procedure DoDbgValueFormatterFreed(Sender: TObject);
     procedure FDbgBackendConverterFreed(Sender: TObject);
+    procedure SetDbgValueFormatter(AValue: TIdeDbgValueFormatterSelector);
     procedure SetDisplayFormat(AValue: TWatchDisplayFormat);
     procedure SetEnabled(AValue: Boolean);
     procedure SetEvaluateFlags(AValue: TWatcheEvaluateFlags);
@@ -200,6 +204,7 @@ type
     property FirstIndexOffs: Int64 read FFirstIndexOffs write SetFirstIndexOffs;
     property RepeatCount: Integer read FRepeatCount write SetRepeatCount;
     property DbgBackendConverter: TIdeDbgValueConvertSelector read FDbgBackendConverter write SetDbgBackendConverter;
+    property DbgValueFormatter: TIdeDbgValueFormatterSelector read FDbgValueFormatter write SetDbgValueFormatter;
     property Values[const AThreadId: Integer; const AStackFrame: Integer]: TWatchValue
              read GetValue;
     property ValueList: TWatchValueList read FValueList;
@@ -294,10 +299,108 @@ type
     destructor Destroy; override;
   end;
 
+  { TIdeGlobalDbgValueConvertSelectorList }
+
+  TIdeGlobalDbgValueConvertSelectorList = class(TIdeDbgValueConvertSelectorList)
+  private
+    procedure ConfigChanged(Sender: TObject);
+  public
+    constructor Create;
+    destructor Destroy; override;
+  end;
+
+  { TIdeDbgGlobalValueFormatterSelectorList }
+
+  TIdeDbgGlobalValueFormatterSelectorList = class(TIdeDbgValueFormatterSelectorList)
+  private
+    procedure ConfigChanged(Sender: TObject);
+  public
+    constructor Create;
+  end;
+
+function GetGlobalValueConverterSelectorList: TIdeGlobalDbgValueConvertSelectorList;
+function GetGlobalValueFormatterSelectorList: TIdeDbgGlobalValueFormatterSelectorList;
+
+property GlobalValueConverterSelectorList: TIdeGlobalDbgValueConvertSelectorList read GetGlobalValueConverterSelectorList;
+property GlobalValueFormatterSelectorList: TIdeDbgGlobalValueFormatterSelectorList read GetGlobalValueFormatterSelectorList;
+
 implementation
 
 var
   DBG_DATA_MONITORS: PLazLoggerLogGroup;
+  TheGlobalValueConverterSelectorList: TIdeGlobalDbgValueConvertSelectorList = nil;
+  TheGlobalValueFormatterSelectorList: TIdeDbgGlobalValueFormatterSelectorList = nil;
+
+function GetGlobalValueConverterSelectorList: TIdeGlobalDbgValueConvertSelectorList;
+begin
+  if TheGlobalValueConverterSelectorList = nil then begin
+    TheGlobalValueConverterSelectorList := TIdeGlobalDbgValueConvertSelectorList.Create;
+    ValueConverterConfigList := TheGlobalValueConverterSelectorList;
+  end;
+  Result := TheGlobalValueConverterSelectorList;
+end;
+
+function GetGlobalValueFormatterSelectorList: TIdeDbgGlobalValueFormatterSelectorList;
+begin
+  if TheGlobalValueFormatterSelectorList = nil then
+    TheGlobalValueFormatterSelectorList := TIdeDbgGlobalValueFormatterSelectorList.Create;
+  Result := TheGlobalValueFormatterSelectorList;
+end;
+
+{ TIdeGlobalDbgValueConvertSelectorList }
+
+procedure TIdeGlobalDbgValueConvertSelectorList.ConfigChanged(Sender: TObject);
+begin
+  Lock;
+  try
+    Clear;
+    if {(Project1 <> nil) and} (DbgProjectLink.UseBackendConverterFromProject) then
+      DbgProjectLink.BackendConverterConfig.AssignEnabledTo(Self, True);
+    if (Project1 = nil) or (DbgProjectLink.UseBackendConverterFromIDE) then
+      DebuggerOptions.BackendConverterConfig.AssignEnabledTo(Self, True);
+
+    CallChangeNotifications;
+  finally
+    Unlock;
+  end;
+end;
+
+constructor TIdeGlobalDbgValueConvertSelectorList.Create;
+begin
+  inherited Create;
+
+  DbgProjectLink.BackendConverterConfig.AddChangeNotification(@ConfigChanged);
+  DebuggerOptions.BackendConverterConfig.AddChangeNotification(@ConfigChanged);
+  ConfigChanged(nil);
+end;
+
+destructor TIdeGlobalDbgValueConvertSelectorList.Destroy;
+begin
+  ValueConverterConfigList := nil;
+  inherited Destroy;
+end;
+
+{ TIdeDbgGlobalValueFormatterSelectorList }
+
+procedure TIdeDbgGlobalValueFormatterSelectorList.ConfigChanged(Sender: TObject);
+begin
+  Clear;
+  if {(Project1 <> nil) and} (DbgProjectLink.UseValueFormatterFromProject) then
+    DbgProjectLink.ValueFormatterConfig.AssignEnabledTo(Self, True);
+  if (Project1 = nil) or (DbgProjectLink.UseValueFormatterFromIDE) then
+    DebuggerOptions.ValueFormatterConfig.AssignEnabledTo(Self, True);
+
+  CallChangeNotifications;
+end;
+
+constructor TIdeDbgGlobalValueFormatterSelectorList.Create;
+begin
+  inherited Create;
+
+  DbgProjectLink.ValueFormatterConfig.AddChangeNotification(@ConfigChanged);
+  DebuggerOptions.ValueFormatterConfig.AddChangeNotification(@ConfigChanged);
+  ConfigChanged(nil);
+end;
 
 { TWatchValue }
 
@@ -557,6 +660,27 @@ begin
   DoModified;
 end;
 
+procedure TWatch.DoDbgValueFormatterFreed(Sender: TObject);
+begin
+  FDbgValueFormatter := nil;
+  DoDisplayFormatChanged;
+end;
+
+procedure TWatch.SetDbgValueFormatter(AValue: TIdeDbgValueFormatterSelector);
+begin
+  if FDbgValueFormatter = AValue then Exit;
+
+  if FDbgValueFormatter <> nil then
+    FDbgValueFormatter.RemoveFreeNotification(@DoDbgValueFormatterFreed);
+
+  FDbgValueFormatter := AValue;
+
+  if FDbgValueFormatter <> nil then
+    FDbgValueFormatter.AddFreeNotification(@DoDbgValueFormatterFreed);
+
+  DoDisplayFormatChanged;
+end;
+
 function TWatch.GetDisplayFormat: TWatchDisplayFormat;
 begin
   Result := FDisplayFormat;
@@ -661,6 +785,7 @@ begin
     TWatch(Dest).FRepeatCount   := FRepeatCount;
     TWatch(Dest).FEvaluateFlags := FEvaluateFlags;
     TWatch(Dest).DbgBackendConverter := DbgBackendConverter;
+    TWatch(Dest).DbgValueFormatter := DbgValueFormatter;
     TWatch(Dest).FValueList.Assign(FValueList);
   end
   else inherited;
@@ -721,6 +846,8 @@ destructor TWatch.Destroy;
 begin
   if FDbgBackendConverter <> nil then
     FDbgBackendConverter.RemoveFreeNotification(@FDbgBackendConverterFreed);
+  if FDbgValueFormatter <> nil then
+    FDbgValueFormatter.RemoveFreeNotification(@DoDbgValueFormatterFreed);
 
   FValueList.Clear;
 
@@ -1083,7 +1210,12 @@ begin
 end;
 
 initialization
+  GetGlobalValueConverterSelectorList; // init ValueConverterConfigList
   DBG_DATA_MONITORS := DebugLogger.FindOrRegisterLogGroup('DBG_DATA_MONITORS' {$IFDEF DBG_DATA_MONITORS} , True {$ENDIF} );
+
+finalization
+  FreeAndNil(TheGlobalValueConverterSelectorList);
+  FreeAndNil(TheGlobalValueFormatterSelectorList);
 
 end.
 

@@ -654,7 +654,8 @@ type
     procedure UpdateState; override;
     procedure UpdateForLibraryLoaded(ALib: TDbgLibrary); override;
   public
-    constructor Create(const AProcess: TDbgProcess; const AFileName: String; ALine: Cardinal; AnEnabled: Boolean; ASymInstance: TDbgInstance = nil); virtual;
+    constructor Create(const AProcess: TDbgProcess; const AFileName: String; ALine: Cardinal;
+      AnEnabled: Boolean; ASymInstance: TDbgInstance = nil); virtual;
   end;
 
   { TFpInternalWatchpoint }
@@ -693,6 +694,7 @@ type
 
   TDbgConfig = class
   private
+    FBreakpointSearchMaxLines: integer;
     // WindowBounds
     FUseConsoleWinPos: boolean;
     FUseConsoleWinSize: boolean;
@@ -722,6 +724,8 @@ type
     property FileOverwriteStdIn:  Boolean read FFileOverwriteStdIn  write FFileOverwriteStdIn;
     property FileOverwriteStdOut: Boolean read FFileOverwriteStdOut write FFileOverwriteStdOut;
     property FileOverwriteStdErr: Boolean read FFileOverwriteStdErr write FFileOverwriteStdErr;
+    // Breakpoints
+    property BreakpointSearchMaxLines: integer read FBreakpointSearchMaxLines  write FBreakpointSearchMaxLines;
   end;
 
   { TDbgInstance }
@@ -739,7 +743,8 @@ type
     function GetOSDbgClasses: TOSDbgClasses;
     function GetPointerSize: Integer;
 
-    function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray): Boolean;
+    function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray;
+      AFindSibling: TGetLineAddrFindSibling = fsNone; AMaxSiblingDistance: integer = 0): Boolean;
     function FindProcSymbol(const AName: String; AIgnoreCase: Boolean = False): TFpSymbol; overload;
     function FindProcSymbol(AAdress: TDbgPtr): TFpSymbol; overload;
   protected
@@ -866,6 +871,7 @@ type
     FBreakpointList, FWatchPointList: TFpInternalBreakpointList;
     FCurrentBreakpoint: TFpInternalBreakpoint;  // set if we are executing the code at the break
                                          // if the singlestep is done, set the break again
+    FCurrentBreakpointList: TFpInternalBreakpointArray; // further current breakpoint
     FCurrentWatchpoint: Pointer;         // Indicates the owner
     FReEnableBreakStep: Boolean;         // Set when we are reenabling a breakpoint
                                          // We need a single step, so the IP is after the break to set
@@ -941,7 +947,8 @@ type
     function  FindSymbolScope(AThreadId, AStackFrame: Integer): TFpDbgSymbolScope;
     function  FindProcStartEndPC(const AAdress: TDbgPtr; out AStartPC, AEndPC: TDBGPtr): boolean;
 
-    function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray; ASymInstance: TDbgInstance = nil): Boolean;
+    function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray; ASymInstance: TDbgInstance = nil;
+      AFindSibling: TGetLineAddrFindSibling = fsNone; AMaxSiblingDistance: integer = 0): Boolean;
     //function  ContextFromProc(AThreadId, AStackFrame: Integer; AProcSym: TFpSymbol): TFpDbgLocationContext; inline; deprecated 'use TFpDbgSimpleLocationContext.Create';
     function  GetLib(const AHandle: THandle; out ALib: TDbgLibrary): Boolean;
     property  LibMap: TLibraryMap read FLibMap;
@@ -1008,6 +1015,7 @@ type
     property ThreadID: integer read FThreadID;
     property ExitCode: DWord read FExitCode;
     property CurrentBreakpoint: TFpInternalBreakpoint read FCurrentBreakpoint;
+    property CurrentBreakpointList: TFpInternalBreakpointArray read FCurrentBreakpointList; experimental; // need getter
     property CurrentWatchpoint: Pointer read FCurrentWatchpoint;
     property PauseRequested: boolean read GetPauseRequested write SetPauseRequested;
     function GetAndClearPauseRequested: Boolean;
@@ -1625,13 +1633,45 @@ procedure TGenericBreakPointTargetHandler.MaskBreakpointsInReadData(const AAdres
   const ASize: Cardinal; var AData);
 var
   MapEnumData: TFpBreakPointMap.TFpBreakPointMapEnumerationData;
-  offset: TDbgPtr;
+  i, len: TDBGPtr;
+  PtrOrig: Pointer;
 begin
   for MapEnumData in BreakMap do begin
-    if not HPtr(MapEnumData.TargetHandlerDataPtr)^.ErrorSetting and (MapEnumData.Location >= AAdress) and (MapEnumData.Location < (AAdress+ASize)) then
-    begin
-      offset := MapEnumData.Location - AAdress;
-      P_BRK_STORE(@AData + offset)^ := HPtr(MapEnumData.TargetHandlerDataPtr)^.OrigValue;
+    // Does break instruction fall completely outside AData
+    if (MapEnumData.Location + SizeOf(_BRK_STORE) <= AAdress) or
+       (MapEnumData.Location >= (AAdress + ASize)) or
+       HPtr(MapEnumData.TargetHandlerDataPtr)^.ErrorSetting then
+      continue;
+
+    if (MapEnumData.Location >= AAdress) and (MapEnumData.Location + SizeOf(_BRK_STORE) <= (AAdress + ASize)) then begin
+      // Breakpoint is completely inside AData
+      // MapEnumData.Location >= AAdress
+      i := MapEnumData.Location - AAdress;
+      P_BRK_STORE(@AData + i)^ := HPtr(MapEnumData.TargetHandlerDataPtr)^.OrigValue;
+    end
+    else
+    if (MapEnumData.Location < AAdress) then begin
+      // Breakpoint starts on or partially overlaps with start of AData
+      // Breakpoint may overhang past end of AData
+      // AAdress > MapEnumData.Location
+      i := AAdress - MapEnumData.Location;
+      // i < SizeOf(_BRK_STORE) / since MapEnumData.Location + SizeOf(_BRK_STORE) > AAdress
+      len := SizeOf(_BRK_STORE) - i;
+      // Do not write past end of AData
+      if len > ASize then
+        len := ASize;
+
+      PtrOrig := @HPtr(MapEnumData.TargetHandlerDataPtr)^.OrigValue;
+      move(PByte(PtrOrig+i)^, PByte(@AData)^, len);
+    end
+    else begin
+      // Breakpoint partially overlaps with end of AData
+      // MapEnumData.Location > AAdress
+      // MapEnumData.Location < AAdress + ASize;
+      i := MapEnumData.Location - AAdress;
+      len := ASize - i;  // AAdress + ASize - MapEnumData.Location;
+      PtrOrig := @HPtr(MapEnumData.TargetHandlerDataPtr)^.OrigValue;
+      move(PByte(PtrOrig)^, PByte(@AData+i)^, len);
     end;
   end;
 end;
@@ -2198,12 +2238,14 @@ begin
   inherited;
 end;
 
-function TDbgInstance.GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray): Boolean;
+function TDbgInstance.GetLineAddresses(AFileName: String; ALine: Cardinal;
+  var AResultList: TDBGPtrArray; AFindSibling: TGetLineAddrFindSibling;
+  AMaxSiblingDistance: integer): Boolean;
 var
   FoundLine: Integer;
 begin
   if Assigned(DbgInfo) and DbgInfo.HasInfo then
-    Result := DbgInfo.GetLineAddresses(AFileName, ALine, AResultList, fsNone, @FoundLine, @FLastLineAddressesFoundFile)
+    Result := DbgInfo.GetLineAddresses(AFileName, ALine, AResultList, AFindSibling, @FoundLine, @FLastLineAddressesFoundFile, AMaxSiblingDistance)
   else
     Result := False;
 end;
@@ -2438,6 +2480,7 @@ begin
   FBreakTargetHandler.BreakMap := FBreakMap;
 
   FCurrentBreakpoint := nil;
+  FCurrentBreakpointList := nil;
   FCurrentWatchpoint := nil;
 
   FSymInstances := TList.Create;
@@ -2596,24 +2639,25 @@ begin
 end;
 
 function TDbgProcess.GetLineAddresses(AFileName: String; ALine: Cardinal;
-  var AResultList: TDBGPtrArray; ASymInstance: TDbgInstance): Boolean;
+  var AResultList: TDBGPtrArray; ASymInstance: TDbgInstance;
+  AFindSibling: TGetLineAddrFindSibling; AMaxSiblingDistance: integer): Boolean;
 var
   Lib: TDbgLibrary;
 begin
   if ASymInstance <> nil then begin
     if ASymInstance = self then begin
-      Result := inherited GetLineAddresses(AFileName, ALine, AResultList);
+      Result := inherited GetLineAddresses(AFileName, ALine, AResultList, AFindSibling, AMaxSiblingDistance);
     end
     else begin
-      Result := ASymInstance.GetLineAddresses(AFileName, ALine, AResultList);
+      Result := ASymInstance.GetLineAddresses(AFileName, ALine, AResultList, AFindSibling, AMaxSiblingDistance);
       FLastLineAddressesFoundFile := ASymInstance.FLastLineAddressesFoundFile;
     end;
     exit;
   end;
 
-  Result := inherited GetLineAddresses(AFileName, ALine, AResultList);
+  Result := inherited GetLineAddresses(AFileName, ALine, AResultList, AFindSibling, AMaxSiblingDistance);
   for Lib in FLibMap do begin
-    if Lib.GetLineAddresses(AFileName, ALine, AResultList) then
+    if Lib.GetLineAddresses(AFileName, ALine, AResultList, AFindSibling, AMaxSiblingDistance) then
       Result := True;
     if Lib.FLastLineAddressesFoundFile then
       FLastLineAddressesFoundFile := True;
@@ -2791,6 +2835,7 @@ begin
     if (FCurrentWatchpoint <> nil) and (FWatchPointList.IndexOf(TFpInternalWatchpoint(FCurrentWatchpoint)) < 0) then
       FCurrentWatchpoint := Pointer(-1);
     FCurrentBreakpoint:=nil;
+    FCurrentBreakpointList := nil;
     AThread.NextIsSingleStep:=false;
 
     // Whatever reason there was to change the result to deInternalContinue,
@@ -2915,9 +2960,27 @@ begin
 end;
 
 procedure TDbgProcess.RemoveBreak(const ABreakPoint: TFpDbgBreakpoint);
+var
+  i: SizeInt;
 begin
-  if ABreakPoint=FCurrentBreakpoint then
+  if ABreakPoint=FCurrentBreakpoint then begin
     FCurrentBreakpoint := nil;
+    if Length(FCurrentBreakpointList) > 0 then begin
+      FCurrentBreakpoint := FCurrentBreakpointList[0];
+      SetLength(FCurrentBreakpointList, Length(FCurrentBreakpointList) - 1);
+    end;
+  end;
+
+  i := Length(FCurrentBreakpointList) - 1;
+  while (i >= 0) and (FCurrentBreakpointList[i] <> ABreakPoint) do
+    dec(i);
+  if i >= 0 then begin
+    while i < Length(FCurrentBreakpointList) - 2 do begin
+      FCurrentBreakpointList[i] := FCurrentBreakpointList[i+1];
+      inc(i);
+    end;
+    SetLength(FCurrentBreakpointList, Length(FCurrentBreakpointList) - 1);
+  end;
 end;
 
 procedure TDbgProcess.DoBeforeBreakLocationMapChange;
@@ -3037,7 +3100,7 @@ end;
 function TDbgProcess.DoBreak(BreakpointAddress: TDBGPtr; AThreadID: integer): Boolean;
 var
   BList: TFpInternalBreakpointArray;
-  i: Integer;
+  i, xtra: Integer;
 begin
   Result := False;
 
@@ -3045,16 +3108,24 @@ begin
   if BList = nil then exit;
   i := 0;
   FCurrentBreakpoint := nil;
-  while (i < Length(BList)) and (FCurrentBreakpoint = nil) do
-    if BList[0].FInternal then
-      inc(i)
-    else
-      FCurrentBreakpoint := BList[i];
-  if FCurrentBreakpoint = nil then Exit;
+  SetLength(FCurrentBreakpointList, Length(BList));
+  xtra := 0;
+  for i := 0 to Length(BList) - 1 do begin
+    if not BList[0].FInternal then begin
+      BList[i].Hit(AThreadId, BreakpointAddress);
+      if (FCurrentBreakpoint = nil) then begin
+        FCurrentBreakpoint := BList[i];
+      end
+      else begin
+        FCurrentBreakpointList[xtra] := BList[i];
+        inc(xtra);
+        BList[i].Hit(AThreadId, BreakpointAddress);
+      end;
+    end;
+  end;
 
-  Result := True;
-  if not FCurrentBreakpoint.Hit(AThreadId, BreakpointAddress)
-  then FCurrentBreakpoint := nil; // no need for a singlestep if we continue
+  SetLength(FCurrentBreakpointList, xtra);
+  Result := (FCurrentBreakpoint <> nil);
 end;
 
 procedure TDbgProcess.SetLastLibraryUnloaded(ALib: TDbgLibrary);
@@ -3118,6 +3189,7 @@ end;
 procedure TDbgProcess.AfterBreakpointAdded(ABreak: TFpDbgBreakpoint);
 begin
   if (FMainThread <> nil) and not assigned(FCurrentBreakpoint) then begin
+    // TODO: what if there is a hardcoded int3?
     if ABreak.HasLocation(FMainThread.GetInstructionPointerRegisterValue) then
       FCurrentBreakpoint := TFpInternalBreakpoint(ABreak);
   end;
@@ -4165,29 +4237,38 @@ procedure TFpInternalBreakpointAtFileLine.UpdateForLibraryLoaded(
   ALib: TDbgLibrary);
 var
   addr: TDBGPtrArray;
+  m: Integer;
 begin
   if FSymInstance <> nil then // Can not be the newly created ...
     exit;
 
   addr := nil;
-  Process.GetLineAddresses(FFileName, FLine, addr, ALib);
+  m := Process.Config.BreakpointSearchMaxLines;
+  if m > 0 then
+    Process.GetLineAddresses(FFileName, FLine, addr, ALib, fsNextFuncLazy, m)
+  else
+    Process.GetLineAddresses(FFileName, FLine, addr, ALib);
   if Process.FLastLineAddressesFoundFile and (Length(addr) = 0) then
     FFoundFileWithoutLine := True;
   AddAddress(addr);
 end;
 
 constructor TFpInternalBreakpointAtFileLine.Create(const AProcess: TDbgProcess;
-  const AFileName: String; ALine: Cardinal; AnEnabled: Boolean;
-  ASymInstance: TDbgInstance);
+  const AFileName: String; ALine: Cardinal; AnEnabled: Boolean; ASymInstance: TDbgInstance);
 var
   addr: TDBGPtrArray;
+  m: Integer;
 begin
   FFileName := AFileName;
   FLine := ALine;
   FSymInstance := ASymInstance;
 
   addr := nil;
-  AProcess.GetLineAddresses(AFileName, ALine, addr, ASymInstance);
+  m := AProcess.Config.BreakpointSearchMaxLines;
+  if m > 0 then
+    AProcess.GetLineAddresses(AFileName, ALine, addr, ASymInstance, fsNextFuncLazy, m)
+  else
+    AProcess.GetLineAddresses(AFileName, ALine, addr, ASymInstance);
   FFoundFileWithoutLine := AProcess.FLastLineAddressesFoundFile and (Length(addr) = 0);
   inherited Create(AProcess, addr, AnEnabled);
 end;

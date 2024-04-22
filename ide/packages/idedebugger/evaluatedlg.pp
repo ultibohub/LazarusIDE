@@ -172,11 +172,11 @@ end;
 procedure TEvaluateDlg.DebugConfigChanged;
 begin
   inherited DebugConfigChanged;
-  FWatchPrinter.ValueFormatResolver.FallBackFormats.Clear;
+  FWatchPrinter.DisplayFormatResolver.FallBackFormats.Clear;
   if DbgProjectLink.UseDisplayFormatConfigsFromIDE then
-    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfEvalMod);
+    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.DisplayFormatResolver.FallBackFormats, dtfEvalMod);
   if DbgProjectLink.UseDisplayFormatConfigsFromProject then
-    DbgProjectLink.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfEvalMod);
+    DbgProjectLink.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.DisplayFormatResolver.FallBackFormats, dtfEvalMod);
   DoDispFormatChanged(nil);
 end;
 
@@ -275,6 +275,11 @@ begin
   ResultText := '';
 
   if WatchInspectNav1.CurrentWatchValue.Validity = ddsValid then begin
+    if WatchInspectNav1.SkipDbgValueFormatter then
+      FWatchPrinter.FormatFlags := FWatchPrinter.FormatFlags + [rpfSkipValueFormatter]
+    else
+      FWatchPrinter.FormatFlags := FWatchPrinter.FormatFlags - [rpfSkipValueFormatter];
+    FWatchPrinter.OnlyValueFormatter := WatchInspectNav1.DbgValueFormatter;
     ResultText := FWatchPrinter.PrintWatchValue(WatchInspectNav1.CurrentWatchValue.ResultData, WatchInspectNav1.DisplayFormat);
     if (WatchInspectNav1.CurrentWatchValue.ResultData <> nil) and
        (WatchInspectNav1.CurrentWatchValue.ResultData.ValueKind = rdkArray) and (WatchInspectNav1.CurrentWatchValue.ResultData.ArrayLength > 0)

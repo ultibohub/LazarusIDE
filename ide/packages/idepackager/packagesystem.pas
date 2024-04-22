@@ -52,10 +52,10 @@ uses
   FileProcs, DefineTemplates, CodeToolManager, CodeCache, DirectoryCacher,
   BasicCodeTools, NonPascalCodeTools, SourceChanger,
   // BuildIntf
-  IDEExternToolIntf, IDEOptionsIntf, MacroDefIntf, ProjectIntf, CompOptsIntf,
+  IDEExternToolIntf, MacroDefIntf, ProjectIntf, CompOptsIntf, LazMsgWorker,
   FppkgIntf, PackageDependencyIntf, PackageLinkIntf, PackageIntf, ComponentReg,
   // IDEIntf
-  IDEDialogs, IDEMsgIntf, LazIDEIntf, IDEOptEditorIntf,
+  LazIDEIntf,
   // Package registration
   LazarusPackageIntf,
   // IdeUtils
@@ -97,9 +97,11 @@ type
    pvPkgSearch // write debug messsages what packages are searched and found
    );
   TPkgVerbosityFlags = set of TPkgVerbosityFlag;
-
   TPkgUninstallFlags = set of TPkgUninstallFlag;
-
+  // Events
+  TShowMsgEvent = function(aUrgency: TMessageLineUrgency;
+                        aMsg, aSrcFilename: string; aLineNumber, aColumn: integer;
+                        aViewCaption: string): TMessageLine of object;
   TPkgAddedEvent = procedure(APackage: TLazPackage) of object;
   TPkgDeleteEvent = procedure(APackage: TLazPackage) of object;
   TPkgUninstall = function(APackage: TLazPackage;
@@ -213,6 +215,7 @@ type
     FOnDeletePackage: TPkgDeleteEvent;
     FOnDependencyModified: TDependencyModifiedEvent;
     FOnEndUpdate: TPkgGraphEndUpdateEvent;
+    FOnShowMessage: TShowMsgEvent;
     FOnSrcEditFileIsModified: TSrcEditFileIsModifiedEvent;
     FOnTranslatePackage: TPkgTranslate;
     FOnUninstallPackage: TPkgUninstall;
@@ -251,7 +254,7 @@ type
     function LoadPackageCompiledStateFile(APackage: TLazPackage; o: TPkgOutputDir;
                     StateFile: string; IgnoreErrors, ShowAbort: boolean): TModalResult;
     procedure InvalidateStateFile(APackage: TLazPackage);
-    procedure OnExtToolBuildStopped(Sender: TObject);
+    procedure ExtToolBuildStopped(Sender: TObject);
     procedure PkgModify(Sender: TObject);
   protected
     procedure IncChangeStamp; override;
@@ -449,6 +452,7 @@ type
     function SaveAutoInstallConfig: TModalResult;// for the uses section
     function IsCompiledInBasePackage(PackageName: string): boolean;
     procedure FreeAutoInstallDependencies;
+    procedure WarnSuspiciousCompilerOptions(ViewCaption, Target: string; CompilerParams: TStrings);
   public
     // registration
     procedure RegisterUnitHandler(const TheUnitName: string;
@@ -508,26 +512,27 @@ type
 
     // events
     property OnAddPackage: TPkgAddedEvent read FOnAddPackage write FOnAddPackage;
+    property OnBeforeCompilePackages: TOnBeforeCompilePackages read
+                        FOnBeforeCompilePackages write FOnBeforeCompilePackages;
     property OnBeginUpdate: TNotifyEvent read FOnBeginUpdate write FOnBeginUpdate;
     property OnChangePackageName: TPkgChangeNameEvent read FOnChangePackageName
                                                      write FOnChangePackageName;
     property OnCheckInterPkgFiles: TOnCheckInterPkgFiles
                          read FOnCheckInterPkgFiles write FOnCheckInterPkgFiles;
-    property OnDependencyModified: TDependencyModifiedEvent
-                         read FOnDependencyModified write FOnDependencyModified;
-    property OnDeletePackage: TPkgDeleteEvent read FOnDeletePackage
-                                              write FOnDeletePackage;
-    property OnEndUpdate: TPkgGraphEndUpdateEvent read FOnEndUpdate write FOnEndUpdate;
     property OnDeleteAmbiguousFiles: TPkgDeleteAmbiguousFiles
                      read FOnDeleteAmbiguousFiles write FOnDeleteAmbiguousFiles;
+    property OnDeletePackage: TPkgDeleteEvent read FOnDeletePackage
+                                              write FOnDeletePackage;
+    property OnDependencyModified: TDependencyModifiedEvent
+                         read FOnDependencyModified write FOnDependencyModified;
+    property OnEndUpdate: TPkgGraphEndUpdateEvent read FOnEndUpdate write FOnEndUpdate;
+    property OnShowMessage: TShowMsgEvent read FOnShowMessage write FOnShowMessage;
+    property OnSrcEditFileIsModified: TSrcEditFileIsModifiedEvent read FOnSrcEditFileIsModified
+                                                 write FOnSrcEditFileIsModified;
     property OnTranslatePackage: TPkgTranslate read FOnTranslatePackage
                                                write FOnTranslatePackage;
     property OnUninstallPackage: TPkgUninstall read FOnUninstallPackage
                                                write FOnUninstallPackage;
-    property OnBeforeCompilePackages: TOnBeforeCompilePackages read
-                        FOnBeforeCompilePackages write FOnBeforeCompilePackages;
-    property OnSrcEditFileIsModified: TSrcEditFileIsModifiedEvent read FOnSrcEditFileIsModified
-                                                 write FOnSrcEditFileIsModified;
 
     // set during calling Register procedures
     property RegistrationFile: TPkgFile read FRegistrationFile;
@@ -546,7 +551,6 @@ function ExtractMakefileCompiledParams(CompParams: TStrings;
 function FPCParamNeedsBuildAll(const Param: String): boolean;
 function FPCParamForBuildAllHasChanged(OldParams, NewParams: TStrings): boolean;
 function RemoveFPCVerbosityParams(CompParams: TStrings): TStrings;
-procedure WarnSuspiciousCompilerOptions(ViewCaption, Target: string; CompilerParams: TStrings);
 function WriteCompilerCfgFile(CfgFilename: string; CompilerParams: TStrings;
                               out CmdLineParams: TStrings): TCodeBuffer;
 
@@ -732,38 +736,6 @@ begin
       // verbosity
     else
       Result.Add(Param);
-  end;
-end;
-
-procedure WarnSuspiciousCompilerOptions(ViewCaption, Target: string;
-  CompilerParams: TStrings);
-var
-  ParsedParams: TObjectList;
-  i: Integer;
-  Param: TFPCParamValue;
-  Msg: String;
-begin
-  if IDEMessagesWindow=nil then exit;
-  ParsedParams:=TObjectList.Create(true);
-  try
-    ParseFPCParameters(CompilerParams,ParsedParams);
-    for i:=0 to ParsedParams.Count-1 do begin
-      Param:=TFPCParamValue(ParsedParams[i]);
-      if fpfValueChanged in Param.Flags then begin
-        Msg:='';
-        if Param.Kind in [fpkBoolean,fpkValue] then begin
-          if Param.Name<>'M' then  // Many -M options are allowed.
-            Msg:=Format(lisPassingCompilerOptionTwiceWithDifferentValues, [Param.Name]);
-        end
-        else if Param.Kind=fpkDefine then
-          Msg:=Format(lisPassingCompilerDefineTwiceWithDifferentValues, [Param.Name]);
-        if Msg='' then continue;
-        if Target<>'' then Msg:=Target+' '+Msg;
-        IDEMessagesWindow.AddCustomMessage(mluNote,Msg,'',0,0,ViewCaption);
-      end;
-    end;
-  finally
-    ParsedParams.Free;
   end;
 end;
 
@@ -986,8 +958,7 @@ end;
 
 { TLazPkgGraphExtToolData }
 
-constructor TLazPkgGraphExtToolData.Create(aKind, aModuleName, aFilename: string
-  );
+constructor TLazPkgGraphExtToolData.Create(aKind, aModuleName, aFilename: string);
 begin
   inherited Create(aKind, aModuleName, aFilename);
   CompilerParams:=TStringListUTF8Fast.Create;
@@ -1131,8 +1102,8 @@ end;
 procedure TLazPackageGraph.AddMessage(TheUrgency: TMessageLineUrgency;
   const Msg, Filename: string);
 begin
-  if Assigned(IDEMessagesWindow) then
-    IDEMessagesWindow.AddCustomMessage(TheUrgency,Msg,Filename)
+  if Assigned(FOnShowMessage) then
+    FOnShowMessage(TheUrgency, Msg, Filename, 0, 0, '')
   else
     DebugLn([MessageLineUrgencyNames[TheUrgency],': (lazarus) ',Msg,' Filename="',Filename,'"']);
 end;
@@ -1162,7 +1133,7 @@ begin
   // the directory does not exist, and its parent is writable => try creating it
   if not ForceDirectoriesUTF8(Directory) then begin
     if Verbose then begin
-      IDEMessageDialog(lisPkgMangUnableToCreateDirectory,
+      LazMessageWorker(lisPkgMangUnableToCreateDirectory,
         Format(lisPkgMangUnableToCreateOutputDirectoryForPackage,
                [Directory, LineEnding, APackage.IDAsString]),
         mtError,[mbCancel]);
@@ -2121,7 +2092,7 @@ begin
 
   // tell user
   IgnoreAll:=mrLast+1;
-  DlgResult:=IDEQuestionDialog(lisPkgSysPackageRegistrationError, ErrorMsg,
+  DlgResult:=LazQuestionWorker(lisPkgSysPackageRegistrationError, ErrorMsg,
                      mtError, [mrIgnore,
                                IgnoreAll, lispIgnoreAll,
                                mrAbort]);
@@ -2131,23 +2102,23 @@ begin
     AbortRegistration:=true;
 end;
 
-procedure TLazPackageGraph.OnExtToolBuildStopped(Sender: TObject);
+procedure TLazPackageGraph.ExtToolBuildStopped(Sender: TObject);
 var
   PkgCompileTool: TAbstractExternalTool;
   Data: TLazPkgGraphExtToolData;
   aPackage: TLazPackage;
-  SrcPPUFile: String;
-  MsgResult: TModalResult;
+  SrcF: String;
   SrcPPUFileExists: Boolean;
+  MsgResult: TModalResult;
 begin
   PkgCompileTool:=Sender as TAbstractExternalTool;
   Data:=PkgCompileTool.Data as TLazPkgGraphExtToolData;
   aPackage:=Data.Pkg;
-  //debugln(['TLazPackageGraph.OnExtToolBuildStopped aPackage=',aPackage.IDAsString]);
+  //debugln(['TLazPackageGraph.ExtToolBuildStopped aPackage=',aPackage.IDAsString]);
 
   // check if main ppu file was created
-  SrcPPUFile:=Data.SrcPPUFilename;
-  SrcPPUFileExists:=(SrcPPUFile<>'') and FileExistsUTF8(SrcPPUFile);
+  SrcF:=Data.SrcPPUFilename;
+  SrcPPUFileExists:=(SrcF<>'') and FileExistsUTF8(SrcF);
   // write state file
   MsgResult:=SavePackageCompiledState(APackage,
                     Data.CompilerFilename,Data.CompilerParams,
@@ -2169,8 +2140,8 @@ begin
       Data.ErrorMessage:='ConvertPackageRSTFiles failed';
       PkgCompileTool.ErrorMessage:=Data.ErrorMessage;
       DebugLn('Error: (lazarus) failed to update .po files: ',APackage.IDAsString);
-      IDEMessagesWindow.AddCustomMessage(mluError,
-        Format(lisUpdatingPoFilesFailedForPackage, [APackage.IDAsString]));
+      SrcF:=Format(lisUpdatingPoFilesFailedForPackage, [APackage.IDAsString]);
+      FOnShowMessage(mluError, SrcF, '', 0, 0, '');
       exit;
     end;
   end;
@@ -2406,7 +2377,7 @@ begin
     Dependency.PackageName:=PackageName;
     Dependency.AddToList(FirstInstallDependency,pddRequires);
     if OpenDependency(Dependency,false)<>lprSuccess then begin
-      IDEMessageDialog(lisPkgMangUnableToLoadPackage,
+      LazMessageWorker(lisPkgMangUnableToLoadPackage,
         Format(lisPkgMangUnableToOpenThePackage, [PackageName, LineEnding]),
         mtWarning,[mbOk]);
       continue;
@@ -2530,6 +2501,38 @@ begin
     Dependency.RequiredPackage:=nil;
     Dependency.RemoveFromList(FirstInstallDependency,pddRequires);
     Dependency.Free;
+  end;
+end;
+
+procedure TLazPackageGraph.WarnSuspiciousCompilerOptions(ViewCaption, Target: string;
+  CompilerParams: TStrings);
+var
+  ParsedParams: TObjectList;
+  i: Integer;
+  Param: TFPCParamValue;
+  Msg: String;
+begin
+  if FOnShowMessage=nil then exit;
+  ParsedParams:=TObjectList.Create(true);
+  try
+    ParseFPCParameters(CompilerParams,ParsedParams);
+    for i:=0 to ParsedParams.Count-1 do begin
+      Param:=TFPCParamValue(ParsedParams[i]);
+      if fpfValueChanged in Param.Flags then begin
+        Msg:='';
+        if Param.Kind in [fpkBoolean,fpkValue] then begin
+          if Param.Name<>'M' then  // Many -M options are allowed.
+            Msg:=Format(lisPassingCompilerOptionTwiceWithDifferentValues, [Param.Name]);
+        end
+        else if Param.Kind=fpkDefine then
+          Msg:=Format(lisPassingCompilerDefineTwiceWithDifferentValues, [Param.Name]);
+        if Msg='' then continue;
+        if Target<>'' then Msg:=Target+' '+Msg;
+        FOnShowMessage(mluNote, Msg, '', 0, 0, ViewCaption);
+      end;
+    end;
+  finally
+    ParsedParams.Free;
   end;
 end;
 
@@ -3345,7 +3348,7 @@ begin
     Stats.StateFileLoaded:=true;
   except
     on E: Exception do begin
-      Result:=IDEMessageDialogAb(lisPkgMangErrorWritingFile,
+      Result:=LazMessageDialogAb(lisPkgMangErrorWritingFile,
         Format(lisPkgMangUnableToWriteStateFileOfPackageError,
                [StateFile, LineEnding, APackage.IDAsString, LineEnding, E.Message]),
         mtError,[mbCancel],ShowAbort);
@@ -4035,7 +4038,7 @@ begin
         if IgnoreErrors then begin
           Result:=mrOk;
         end else begin
-          Result:=IDEMessageDialogAb(lisPkgMangErrorReadingFile,
+          Result:=LazMessageDialogAb(lisPkgMangErrorReadingFile,
             Format(lisPkgMangUnableToReadStateFileOfPackageError,
               [StateFile, LineEnding, APackage.IDAsString, LineEnding, E.Message]),
             mtError,[mbCancel],ShowAbort);
@@ -4452,7 +4455,7 @@ begin
             CfgFilename:=APackage.GetWriteConfigFilePath;
             CfgCode:=WriteCompilerCfgFile(CfgFilename,CompilerParams,CmdLineParams);
             if CfgCode=nil then begin
-              IDEMessageDialog(lisReadError,Format(lisUnableToReadFile2,
+              LazMessageWorker(lisReadError,Format(lisUnableToReadFile2,
                                [CfgFilename]),mtError,[mbOk]);
               exit(mrCancel);
             end;
@@ -4499,7 +4502,7 @@ begin
           ExtToolData.SrcPPUFilename:=APackage.GetSrcPPUFilename;
           ExtToolData.CompilerFilename:=CompilerFilename;
           ExtToolData.CompilerParams.Assign(CompilerParams);
-          PkgCompileTool.AddHandlerOnStopped(@OnExtToolBuildStopped);
+          PkgCompileTool.AddHandlerOnStopped(@ExtToolBuildStopped);
           if BuildItem<>nil then
           begin
             // run later
@@ -4706,7 +4709,7 @@ begin
     end;
   except
     on E: Exception do begin
-      Result:=IDEMessageDialog(lisPkgMangErrorWritingFile,
+      Result:=LazMessageWorker(lisPkgMangErrorWritingFile,
         Format(lisPkgMangUnableToWriteStateFileOfPackageError,
           [TargetCompiledFile, LineEnding, APackage.IDAsString, LineEnding, E.Message]),
         mtError,[mbCancel],'');
@@ -5458,7 +5461,7 @@ begin
 
   // delete old Compile State file
   if FileExistsUTF8(StateFile) and not DeleteFileUTF8(StateFile) then begin
-    Result:=IDEMessageDialog(lisPkgMangUnableToDeleteFilename,
+    Result:=LazMessageWorker(lisPkgMangUnableToDeleteFilename,
       Format(lisPkgMangUnableToDeleteOldStateFileForPackage,
              [StateFile, LineEnding, APackage.IDAsString]),
       mtError,[mbCancel,mbAbort]);
@@ -5469,7 +5472,7 @@ begin
 
   // create the package src directory
   if not ForceDirectoriesUTF8(PkgSrcDir) then begin
-    Result:=IDEMessageDialog(lisPkgMangUnableToCreateDirectory,
+    Result:=LazMessageWorker(lisPkgMangUnableToCreateDirectory,
       Format(lisPkgMangUnableToCreatePackageSourceDirectoryForPackage,
              [PkgSrcDir, LineEnding, APackage.IDAsString]),
       mtError,[mbCancel,mbAbort]);
@@ -5563,7 +5566,7 @@ var
       AmbiguousFilename:=SearchFileInSearchPath(ShortFilename,PkgDir,SrcDirs,SearchFlags);
       if (AmbiguousFilename='') then exit;
       if not YesToAll then
-        Result:=IDEMessageDialog(lisAmbiguousUnitFound,
+        Result:=LazMessageWorker(lisAmbiguousUnitFound,
           Format(lisTheFileWasFoundInOneOfTheSourceDirectoriesOfThePac,
             [AmbiguousFilename, LineEnding, APackage.IDAsString, LineEnding+LineEnding]),
           mtWarning,[mbYes,mbYesToAll,mbNo,mbAbort])
@@ -5574,7 +5577,7 @@ var
       if Result in [mrYes,mrYesToAll] then begin
         YesToAll:=Result=mrYesToAll;
         if (not DeleteFileUTF8(AmbiguousFilename))
-        and (IDEMessageDialog(lisPkgMangDeleteFailed,
+        and (LazMessageWorker(lisPkgMangDeleteFailed,
               Format(lisDeletingOfFileFailed, [AmbiguousFilename]),
               mtError, [mbIgnore, mbCancel])<>mrIgnore)
         then
@@ -6430,7 +6433,7 @@ begin
     if (not Quiet) and DirPathExistsCached(LazPackageLinks.GetGlobalLinkDirectory)
     then begin
       // tell the user
-      CurResult:=IDEQuestionDialog(lisPkgSysPackageFileNotFound,
+      CurResult:=LazQuestionWorker(lisPkgSysPackageFileNotFound,
         Format(lisPkgSysThePackageIsInstalledButNoValidPackageFileWasFound,
                [BrokenPackage.Name, LineEnding]),
         mtError, [mrOk, mrYesToAll, lisSkipTheseWarnings]);
@@ -6711,10 +6714,6 @@ begin
     AddConnections(Pkg.FirstRequiredDependency);
   end;
 end;
-
-initialization
-  RegisterIDEOptionsGroup(GroupPackage, TPackageIDEOptions);
-  RegisterIDEOptionsGroup(GroupPkgCompiler, TPkgCompilerOptions);
 
 end.
 

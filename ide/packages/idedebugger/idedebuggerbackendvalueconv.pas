@@ -5,7 +5,7 @@ unit IdeDebuggerBackendValueConv;
 interface
 
 uses
-  Classes, SysUtils, fgl, Laz2_XMLCfg, LazClasses, lazCollections,
+  Classes, SysUtils, fgl, Laz2_XMLCfg, LazClasses, lazCollections, IdeDebuggerUtils,
   LazDebuggerValueConverter;
 
 type
@@ -43,7 +43,7 @@ type
   { TIdeDbgValueConvertSelectorList }
 
   TIdeDbgValueConvertSelectorList = class(
-    specialize TFPGObjectList<TIdeDbgValueConvertSelector>,
+    specialize TChangeNotificationGeneric< specialize TFPGObjectList<TIdeDbgValueConvertSelector> >,
     ILazDbgValueConvertSelectorListIntf
   )
   private
@@ -52,8 +52,6 @@ type
     FOnChanged: TNotifyEvent;
     function Count: Integer;
     function Get(Index: Integer): ILazDbgValueConvertSelectorIntf;
-    function GetIdeItems(Index: Integer): TIdeDbgValueConvertSelector;
-    procedure PutIdeItems(Index: Integer; AValue: TIdeDbgValueConvertSelector);
     procedure SetChanged(AValue: Boolean);
   public
     constructor Create;
@@ -68,15 +66,11 @@ type
     procedure LoadDataFromXMLConfig(const AConfig: TRttiXMLConfig; const APath: string);
     procedure SaveDataToXMLConfig(const AConfig: TRttiXMLConfig; const APath: string);
 
-    function IdeItemByName(AName: String): TIdeDbgValueConvertSelector;
+    function ItemByName(AName: String): TIdeDbgValueConvertSelector;
 
-    property IdeItems[Index: Integer]: TIdeDbgValueConvertSelector read GetIdeItems write PutIdeItems; default;
     property Changed: Boolean read FChanged write SetChanged;
     property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
   end;
-
-var
-  ValueConverterSelectorList: TIdeDbgValueConvertSelectorList;
 
 implementation
 
@@ -173,25 +167,14 @@ begin
   Result := Items[Index];
 end;
 
-function TIdeDbgValueConvertSelectorList.GetIdeItems(Index: Integer
-  ): TIdeDbgValueConvertSelector;
-begin
-  Result := TIdeDbgValueConvertSelector(Items[Index]);
-  assert(Result is TIdeDbgValueConvertSelector, 'TIdeDbgValueConvertSelectorList.GetIdeItems: Result is TIdeDbgValueConvertSelector');
-end;
-
-procedure TIdeDbgValueConvertSelectorList.PutIdeItems(Index: Integer;
-  AValue: TIdeDbgValueConvertSelector);
-begin
-  Items[Index] := AValue;
-end;
-
 procedure TIdeDbgValueConvertSelectorList.SetChanged(AValue: Boolean);
 begin
-  if FChanged = AValue then Exit;
-  FChanged := AValue;
-  if FChanged and (FOnChanged <> nil) then
-    FOnChanged(Self);
+  if FChanged <> AValue then begin
+    FChanged := AValue;
+    if FChanged and (FOnChanged <> nil) then
+      FOnChanged(Self);
+  end;
+  CallChangeNotifications;
 end;
 
 constructor TIdeDbgValueConvertSelectorList.Create;
@@ -202,6 +185,7 @@ end;
 
 destructor TIdeDbgValueConvertSelectorList.Destroy;
 begin
+  FreeChangeNotifications;
   inherited Destroy;
   FLock.Free;
 end;
@@ -236,7 +220,7 @@ begin
     ADest.Clear;
 
   for i := 0 to Count - 1 do
-    if IdeItems[i].Enabled then
+    if Items[i].Enabled then
       ADest.Add(Items[i].CreateCopy);
 end;
 
@@ -255,7 +239,8 @@ begin
       Add(obj)
     else
       obj.Free;
-  end
+  end;
+  CallChangeNotifications;
 end;
 
 procedure TIdeDbgValueConvertSelectorList.SaveDataToXMLConfig(
@@ -265,29 +250,21 @@ var
 begin
   AConfig.DeletePath(APath);
   for i := 0 to Count - 1 do
-    IdeItems[i].SaveDataToXMLConfig(AConfig, APath + 'Entry[' + IntToStr(i+1) + ']/');
+    Items[i].SaveDataToXMLConfig(AConfig, APath + 'Entry[' + IntToStr(i+1) + ']/');
 end;
 
-function TIdeDbgValueConvertSelectorList.IdeItemByName(AName: String
+function TIdeDbgValueConvertSelectorList.ItemByName(AName: String
   ): TIdeDbgValueConvertSelector;
 var
   i: Integer;
 begin
   Result := nil;
   i := Count - 1;
-  while (i >= 0) and (IdeItems[i].Name <> AName) do
+  while (i >= 0) and (Items[i].Name <> AName) do
     dec(i);
   if i >= 0 then
-    Result := IdeItems[i];
+    Result := Items[i];
 end;
-
-initialization
-  ValueConverterSelectorList := TIdeDbgValueConvertSelectorList.Create;
-  ValueConverterConfigList := ValueConverterSelectorList;
-
-finalization
-  ValueConverterConfigList := nil;
-  FreeAndNil(ValueConverterSelectorList);
 
 end.
 

@@ -5,7 +5,7 @@ unit IdeDbgValueFormatterSettingsFrame;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, ExtCtrls, CheckLst, StdCtrls, Dialogs,
+  Classes, SysUtils, Forms, Controls, ExtCtrls, CheckLst, StdCtrls, Dialogs, Spin,
   StrUtils, IdeDebuggerValueFormatterIntf, IdeDebuggerWatchValueIntf,
   laz.VirtualTrees, LazDebuggerIntf, IdeDebuggerStringConstants,
   IdeDebuggerValueFormatter, IdeDebuggerDisplayFormats;
@@ -20,9 +20,10 @@ type
     btnRemove: TButton;
     btnUp: TButton;
     cbAppendOriginalValue: TComboBox;
+    cbNesting: TCheckBox;
     dropAction: TComboBox;
     EdName: TEdit;
-    vtvDisplayFormat: TLazVirtualStringTree;
+    lblNestLvl: TLabel;
     lblDesc: TLabel;
     lblName: TLabel;
     lblTypeNames: TLabel;
@@ -30,9 +31,12 @@ type
     memoTypeNames: TMemo;
     Panel1: TPanel;
     Panel2: TPanel;
+    PanelOpts: TPanel;
     Panel5: TPanel;
     pnlCurFormatterSetting: TPanel;
     pnlCurrentFormatter: TPanel;
+    SpinMinNest: TSpinEdit;
+    SpinMaxNest: TSpinEdit;
     Splitter1: TSplitter;
     procedure btnAddClick(Sender: TObject);
     procedure btnRemoveClick(Sender: TObject);
@@ -41,9 +45,8 @@ type
     procedure EdNameEditingDone(Sender: TObject);
     procedure lstFormattersClick(Sender: TObject);
     procedure lstFormattersItemClick(Sender: TObject; Index: integer);
-    procedure vtvDisplayFormatGetText(Sender: TBaseVirtualTree;
-      Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType;
-      var CellText: String);
+    procedure SpinMaxNestChange(Sender: TObject);
+    procedure SpinMinNestChange(Sender: TObject);
   private
     FValFormmaterList: TIdeDbgValueFormatterSelectorList;
     FCurIdx: Integer;
@@ -168,10 +171,6 @@ begin
 end;
 
 procedure TIdeDbgVarFormatterFrame.lstFormattersClick(Sender: TObject);
-var
-  vnd: PVirtualNode;
-  ValForm: ILazDbgIdeValueFormatterIntf;
-  dt: PVtvData;
 begin
   SaveCurrent;
   pnlCurrentFormatter.Enabled := lstFormatters.Count > 0;
@@ -183,7 +182,13 @@ begin
     lblDesc.Caption := '';
     EdName.Text := '';
     memoTypeNames.Text := '';
-    vtvDisplayFormat.Visible := False;
+
+    PanelOpts.Enabled := False;
+    cbNesting.Checked := False;
+    SpinMinNest.Value := 0;
+    SpinMaxNest.Value := 0;
+
+    cbAppendOriginalValue.ItemIndex := -1;
   end
   else begin
     pnlCurrentFormatter.Enabled := True;
@@ -191,31 +196,15 @@ begin
     lblDesc.Caption := FCurFormatter.ValFormatterRegEntry.GetDisplayName;
     EdName.Text := FCurFormatter.Name;
     memoTypeNames.Text := FCurFormatter.MatchTypeNames.Text;
+
+    PanelOpts.Enabled := True;
+    cbNesting.Checked := FCurFormatter.LimitByNestLevel;
+    SpinMinNest.Value := FCurFormatter.LimitByNestMin;
+    SpinMaxNest.Value := FCurFormatter.LimitByNestMax;
+
+    cbAppendOriginalValue.ItemIndex := ord(FCurFormatter.OriginalValue);
   end;
 
-  cbAppendOriginalValue.ItemIndex := ord(FCurFormatter.OriginalValue);
-
-  if FCurFormatter <> nil then begin
-    ValForm := FCurFormatter.ValFormatter;
-    if (ValForm <> nil) and (ValForm.SupportedDisplayFormatFilters <> []) then begin
-      vtvDisplayFormat.Visible := True;
-
-      for vnd in vtvDisplayFormat.Nodes do begin
-        dt := PVtvData(vtvDisplayFormat.GetNodeData(vnd));
-        if dt^.IsGrp then
-          vtvDisplayFormat.IsVisible[vnd] := dt^.Grp in ValForm.SupportedDisplayFormatFilters
-        else
-        if (dt^.DispForm in FCurFormatter.FilterDisplayFormats) and
-           (ValueDisplayFormatGroupMap[dt^.DispForm] in ValForm.SupportedDisplayFormatFilters)
-        then
-          vtvDisplayFormat.CheckState[vnd] := csCheckedNormal
-        else
-          vtvDisplayFormat.CheckState[vnd] := csUncheckedNormal;
-      end;
-    end
-    else
-      vtvDisplayFormat.Visible := False;
-  end;
 
   btnRemove.Enabled := FCurIdx >= 0;
   btnUp.Enabled     := FCurIdx >= 1;
@@ -230,7 +219,6 @@ procedure TIdeDbgVarFormatterFrame.lstFormattersItemClick(Sender: TObject;
   Index: integer);
 begin
   if Index < 0 then begin
-    vtvDisplayFormat.Visible := False;
     exit;
   end;
 
@@ -245,17 +233,16 @@ begin
   UpdateButtons;
 end;
 
-procedure TIdeDbgVarFormatterFrame.vtvDisplayFormatGetText(
-  Sender: TBaseVirtualTree; Node: PVirtualNode; Column: TColumnIndex;
-  TextType: TVSTTextType; var CellText: String);
-var
-  dt: PVtvData;
+procedure TIdeDbgVarFormatterFrame.SpinMaxNestChange(Sender: TObject);
 begin
-  dt := PVtvData(vtvDisplayFormat.GetNodeData(Node));
-  if dt^.IsGrp then
-    CellText := DisplayFormatGroupName(dt^.Grp)
-  else
-    CellText := DisplayFormatName(dt^.DispForm);
+  if SpinMinNest.Value > SpinMaxNest.Value then
+    SpinMinNest.Value := SpinMaxNest.Value;
+end;
+
+procedure TIdeDbgVarFormatterFrame.SpinMinNestChange(Sender: TObject);
+begin
+  if SpinMaxNest.Value < SpinMinNest.Value then
+    SpinMaxNest.Value := SpinMinNest.Value;
 end;
 
 procedure TIdeDbgVarFormatterFrame.SetCurFormatter(
@@ -359,10 +346,6 @@ begin
 end;
 
 procedure TIdeDbgVarFormatterFrame.SaveCurrent;
-var
-  df: TValueDisplayFormats;
-  i: Integer;
-  vnd: PVirtualNode;
 begin
   if (FCurFormatter = nil) or (FCurFormatter.ValFormatter = nil) then
     exit;
@@ -371,69 +354,44 @@ begin
         (FCurFormatterFrame as ILazDbgIdeValueFormatterSettingsFrameIntf).WriteTo(FCurFormatter.ValFormatter)
      ) or
      (TrimSet(FCurFormatter.MatchTypeNames.Text, [#1..#32]) <> TrimSet(memoTypeNames.Text, [#1..#32])) or
-     (EdName.Text <> FCurFormatter.Name)
+     (EdName.Text <> FCurFormatter.Name) or
+     (FCurFormatter.LimitByNestLevel <> cbNesting.Checked) or
+     (FCurFormatter.LimitByNestMin <> SpinMinNest.Value) or
+     (FCurFormatter.LimitByNestMax <> SpinMaxNest.Value)
   then begin
     FValFormmaterList.Changed := True;
     FCurFormatter.MatchTypeNames.Text := memoTypeNames.Text;
-    FCurFormatter.Name := EdName.Text
+    FCurFormatter.Name := EdName.Text;
+
+    FCurFormatter.LimitByNestLevel := cbNesting.Checked;
+    FCurFormatter.LimitByNestMin := SpinMinNest.Value;
+    FCurFormatter.LimitByNestMax := SpinMaxNest.Value;
   end;
 
 
   if FCurFormatter.OriginalValue <> TLazDbgIdeValFormatterOriginalValue(cbAppendOriginalValue.ItemIndex) then
     FValFormmaterList.Changed := True;
   FCurFormatter.OriginalValue := TLazDbgIdeValFormatterOriginalValue(cbAppendOriginalValue.ItemIndex);
-
-
-  df := [];
-  for vnd in vtvDisplayFormat.CheckedNodes do
-    df := df + [PVtvData(vtvDisplayFormat.GetNodeData(vnd))^.DispForm];
-  if FCurFormatter.FilterDisplayFormats <> df then
-    FValFormmaterList.Changed := True;
-  FCurFormatter.FilterDisplayFormats := df;
 end;
 
 procedure TIdeDbgVarFormatterFrame.Setup;
 var
   AvailClass: TLazDbgIdeValueFormatterRegistry;
   i: Integer;
-  df: TValueDisplayFormat;
-  CurDfg, dfg: TValueDisplayFormatGroup;
-  VNdGroup, VNdItem: PVirtualNode;
 begin
   btnAdd.Caption       := dlgBackConvOptAddNew;
   btnRemove.Caption    := dlgBackConvOptRemove;
   lblName.Caption      := dlgBackConvOptName;
   lblTypeNames.Caption := dlgBackConvOptMatchTypesByName;
 
+  cbNesting.Caption := dlgBackConvOptNesting;
+  lblNestLvl.Caption := dlgBackConvOptNestLvl;
+
   cbAppendOriginalValue.Clear;
   // same order as enum / ItemIndex to match ord(enum)
   cbAppendOriginalValue.AddItem(ValFormatterOrigValHide, nil); // vfovHide;
   cbAppendOriginalValue.AddItem(ValFormatterOrigValAtEnd, nil); // vfovAtEnd
   cbAppendOriginalValue.AddItem(ValFormatterOrigValAtStart, nil); // vfovAtFront;
-
-  vtvDisplayFormat.Clear;
-  vtvDisplayFormat.NodeDataSize := SizeOf(TVtvData);
-  VNdGroup := nil;
-  CurDfg := low(TValueDisplayFormatGroup);
-  for df in TValueDisplayFormat do begin
-    dfg := ValueDisplayFormatGroupMap[df];
-    if (VNdGroup = nil) or (CurDfg <> dfg) then begin
-      VNdGroup := vtvDisplayFormat.AddChild(nil);
-      with PVtvData(vtvDisplayFormat.GetNodeData(VNdGroup))^ do begin
-        IsGrp := True;
-        Grp := dfg;
-      end;
-      CurDfg := dfg;
-    end;
-    VNdItem := vtvDisplayFormat.AddChild(VNdGroup);
-    vtvDisplayFormat.CheckType[VNdItem] := ctCheckBox;
-    with PVtvData(vtvDisplayFormat.GetNodeData(VNdItem))^ do begin
-      IsGrp := False;
-      DispForm := df;
-    end;
-
-    vtvDisplayFormat.Expanded[VNdGroup] := True;
-  end;
 
   FCurFormatter := nil;
   lblDesc.Caption := '';

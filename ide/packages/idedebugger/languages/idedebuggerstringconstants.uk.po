@@ -138,6 +138,10 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnenum"
 msgid "Enum"
 msgstr ""
 
+#: idedebuggerstringconstants.dispformatdlgbtnenumval
+msgid "Enum (Identifier)"
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatdlgbtnfloat
 msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
@@ -432,6 +436,14 @@ msgctxt "idedebuggerstringconstants.dlgbackconvoptname"
 msgid "Name"
 msgstr "Назва"
 
+#: idedebuggerstringconstants.dlgbackconvoptnesting
+msgid "Limit to (un)nested"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgbackconvoptnestlvl
+msgid "Min/Max level"
+msgstr ""
+
 #: idedebuggerstringconstants.dlgbackconvoptremove
 msgid "Remove"
 msgstr "Вилучити"
@@ -601,6 +613,10 @@ msgstr "Графа значення"
 msgid "Converter"
 msgstr "Конвертер"
 
+#: idedebuggerstringconstants.drsdebugvalformatter
+msgid "Value formatter"
+msgstr ""
+
 #: idedebuggerstringconstants.drsdisableenableupdatesforth
 msgctxt "idedebuggerstringconstants.drsdisableenableupdatesforth"
 msgid "Disable/Enable updates for the entire window"
@@ -696,6 +712,10 @@ msgstr "Без конвертера"
 #: idedebuggerstringconstants.drsnohistorykept
 msgid "No history kept"
 msgstr "Історія не зберігається"
+
+#: idedebuggerstringconstants.drsnovalformatter
+msgid "No value formatter"
+msgstr ""
 
 #: idedebuggerstringconstants.drsrunallthreadswhileevaluat
 msgid "Run all threads while evaluating"
@@ -1727,6 +1747,14 @@ msgstr "Зневаджувач не зміг змінити значення."
 #: idedebuggerstringconstants.uemtogglebreakpoint
 msgid "Toggle &Breakpoint"
 msgstr "Перемкнути &точку зупинки"
+
+#: idedebuggerstringconstants.valformatterchararraytostringname
+msgid "CharArray as String"
+msgstr ""
+
+#: idedebuggerstringconstants.valformatterchararraytostringstopnull
+msgid "Stop at #0"
+msgstr ""
 
 #: idedebuggerstringconstants.valformattercolorname
 msgid "TColor"

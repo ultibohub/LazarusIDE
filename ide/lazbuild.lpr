@@ -24,7 +24,10 @@ program lazbuild;
 {$mode objfpc}{$H+}
 
 uses
-  {$IFDEF unix}
+  {$IF defined(HASAMIGA)}
+  athreads,
+  {$ENDIF}
+  {$IF defined(UNIX)}
   cthreads,
   {$ENDIF}
   Classes, SysUtils, Math, CustApp, System.UITypes,
@@ -33,7 +36,7 @@ uses
   Masks, LConvEncoding, FileUtil, LazFileUtils, LazLoggerBase, LazUtilities,
   LazUTF8, Laz2_XMLCfg, LazStringUtils, FPCAdds,
   // LCL
-  LCLPlatformDef, Forms,
+  LCLPlatformDef,
   // Codetools
   CodeCache, CodeToolManager, DefineTemplates, FileProcs,
   // BuildIntf
@@ -47,7 +50,8 @@ uses
   InitialSetupProc, ExtToolsConsole, ApplicationBundle,
   IDETranslations, LazarusIDEStrConsts, MiscOptions, Project, PackageDefs,
   PackageLinks, PackageSystem, InterPkgConflictFiles, BuildLazDialog,
-  BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts;
+  BuildProfileManager, BuildManager, BaseBuildManager, ModeMatrixOpts,
+  ColorTTY;
 
 type
   TPkgAction = (
@@ -1869,7 +1873,7 @@ end;
 procedure TLazBuildApplication.PrintErrorAndHalt(Code: Byte; const Msg: string);
 begin
   if Msg <> '' then
-    writeln('Error: (lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
+    debugln('Error: (lazbuild) ', LineBreaksToSystemLineBreaks(Msg));
   halt(Code);
 end;
 
@@ -1880,8 +1884,6 @@ begin
 
   HasGUI:=false;
   FilterConfigFileContent;
-  // free LCL Application to help debugging nogui issues
-  Application.Free;
   // start our own LazBuildApp
   LazBuildApp:=TLazBuildApplication.Create(nil);
   LazBuildApp.Run;

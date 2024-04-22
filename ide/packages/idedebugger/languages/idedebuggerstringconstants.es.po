@@ -130,6 +130,10 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnenum"
 msgid "Enum"
 msgstr ""
 
+#: idedebuggerstringconstants.dispformatdlgbtnenumval
+msgid "Enum (Identifier)"
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatdlgbtnfloat
 msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
@@ -424,6 +428,14 @@ msgctxt "idedebuggerstringconstants.dlgbackconvoptname"
 msgid "Name"
 msgstr "Nombre"
 
+#: idedebuggerstringconstants.dlgbackconvoptnesting
+msgid "Limit to (un)nested"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgbackconvoptnestlvl
+msgid "Min/Max level"
+msgstr ""
+
 #: idedebuggerstringconstants.dlgbackconvoptremove
 msgid "Remove"
 msgstr ""
@@ -595,6 +607,10 @@ msgstr "Columna valor"
 msgid "Converter"
 msgstr ""
 
+#: idedebuggerstringconstants.drsdebugvalformatter
+msgid "Value formatter"
+msgstr ""
+
 #: idedebuggerstringconstants.drsdisableenableupdatesforth
 #, fuzzy
 msgctxt "idedebuggerstringconstants.drsdisableenableupdatesforth"
@@ -691,6 +707,10 @@ msgstr ""
 
 #: idedebuggerstringconstants.drsnohistorykept
 msgid "No history kept"
+msgstr ""
+
+#: idedebuggerstringconstants.drsnovalformatter
+msgid "No value formatter"
 msgstr ""
 
 #: idedebuggerstringconstants.drsrunallthreadswhileevaluat
@@ -1739,6 +1759,14 @@ msgstr "El depurador no ha sido capaz de modificar el valor."
 #: idedebuggerstringconstants.uemtogglebreakpoint
 msgid "Toggle &Breakpoint"
 msgstr "Ac&tivar/desactivar Punto de Interrupción"
+
+#: idedebuggerstringconstants.valformatterchararraytostringname
+msgid "CharArray as String"
+msgstr ""
+
+#: idedebuggerstringconstants.valformatterchararraytostringstopnull
+msgid "Stop at #0"
+msgstr ""
 
 #: idedebuggerstringconstants.valformattercolorname
 msgid "TColor"

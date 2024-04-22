@@ -43,9 +43,9 @@ uses
   FileUtil, LazFileUtils, LazFileCache, Laz2_XMLCfg, LazLoggerBase,
   // CodeTools
   CodeToolsConfig, CodeCache, CodeToolManager,
-  // IdeIntf
-  LazIDEIntf, IDEDialogs,
-  // IDE
+  // BuildIntf
+  LazMsgWorker,
+  // IdeUtils
   IdeUtilsPkgStrConsts;
 
 type
@@ -116,9 +116,6 @@ function SaveLazStringToFile(const Filename, Content: string;
                         ): TModalResult;
 function ConvertLFMToLRSFileInteractive(const LFMFilename,
                          LRSFilename: string; ShowAbort: boolean): TModalResult;
-function IfNotOkJumpToCodetoolErrorAndAskToAbort(Ok: boolean;
-                            Ask: boolean; out NewResult: TModalResult): boolean;
-function JumpToCodetoolErrorAndAskToAbort(Ask: boolean): TModalResult;
 procedure NotImplementedDialog(const Feature: string);
 
 function SimpleDirectoryCheck(const OldDir, NewDir,
@@ -153,7 +150,7 @@ begin
       break;
     end else begin
       DlgButtons:=[mbRetry]+ExtraButtons;
-      Result:=IDEMessageDialog(lisUnableToRenameFile,
+      Result:=LazMessageWorker(lisUnableToRenameFile,
         Format(lisUnableToRenameFileTo2, [SrcFilename, LineEnding, DestFilename]),
         mtError,DlgButtons);
       if (Result<>mrRetry) then exit;
@@ -169,7 +166,7 @@ var
 begin
   if CompareFilenames(SrcFilename,DestFilename)=0 then begin
     Result:=mrAbort;
-    IDEMessageDialog(lisUnableToCopyFile,
+    LazMessageWorker(lisUnableToCopyFile,
       Format(lisSourceAndDestinationAreTheSame, [LineEnding, SrcFilename]),
       mtError, [mbAbort]);
     exit;
@@ -180,7 +177,7 @@ begin
       break;
     end else begin
       DlgButtons:=[mbCancel,mbRetry]+ExtraButtons;
-      Result:=IDEMessageDialog(lisUnableToCopyFile,
+      Result:=LazMessageWorker(lisUnableToCopyFile,
         Format(lisUnableToCopyFileTo, [SrcFilename, LineEnding, DestFilename]),
         mtError,DlgButtons);
       if (Result<>mrRetry) then exit;
@@ -220,7 +217,7 @@ begin
       end else begin
         ACaption:=lisFileNotText;
         AText:=Format(lisFileDoesNotLookLikeATextFileOpenItAnyway,[AFilename,LineEnding,LineEnding]);
-        Result:=IDEMessageDialogAb(ACaption, AText, mtConfirmation,
+        Result:=LazMessageDialogAb(ACaption, AText, mtConfirmation,
                            [mbOk, mbIgnore],ShowAbort);
       end;
       if Result<>mrOk then break;
@@ -245,7 +242,7 @@ begin
       else begin
         ACaption:=lisReadError;
         AText:=Format(lisUnableToReadFile2, [AFilename]);
-        Result:=IDEMessageDialogAb(ACaption,AText,mtError,[mbRetry,mbIgnore],ShowAbort);
+        Result:=LazMessageDialogAb(ACaption,AText,mtError,[mbRetry,mbIgnore],ShowAbort);
         if Result=mrAbort then exit;
       end;
     end;
@@ -263,7 +260,7 @@ begin
     if ACodeBuffer.Save then begin
       Result:=mrOk;
     end else begin
-      Result:=IDEMessageDialog(lisCodeToolsDefsWriteError,
+      Result:=LazMessageWorker(lisCodeToolsDefsWriteError,
         Format(lisUnableToWrite2, [ACodeBuffer.Filename]),
         mtError,[mbAbort,mbRetry,mbIgnore]);
     end;
@@ -289,7 +286,7 @@ begin
     end else begin
       ACaption:=lisWriteError;
       AText:=Format(lisUnableToWriteToFile2, [Filename]);
-      Result:=IDEMessageDialog(ACaption,AText,mtError,[mbAbort, mbRetry, mbIgnore]);
+      Result:=LazMessageWorker(ACaption,AText,mtError,[mbAbort, mbRetry, mbIgnore]);
       if Result=mrAbort then exit;
       if Result=mrIgnore then Result:=mrOk;
     end;
@@ -307,7 +304,7 @@ begin
     Result:=mrOk;
   except
     on E: Exception do begin
-      IDEMessageDialog(lisCCOErrorCaption,
+      LazMessageWorker(lisCCOErrorCaption,
         Format(lisErrorLoadingFrom,
               [ListTitle, LineEnding, Filename, LineEnding+LineEnding, E.Message]),
         mtError, [mbOk]);
@@ -326,7 +323,7 @@ begin
     Result:=mrOk;
   except
     on E: Exception do begin
-      IDEMessageDialog(lisCCOErrorCaption, Format(lisErrorSavingTo, [ListTitle,
+      LazMessageWorker(lisCCOErrorCaption, Format(lisErrorSavingTo, [ListTitle,
         LineEnding, Filename, LineEnding+LineEnding, E.Message]), mtError, [mbOk]);
     end;
   end;
@@ -356,7 +353,7 @@ begin
         if (lbfQuiet in Flags) then begin
           Result:=mrCancel;
         end else begin
-          Result:=IDEMessageDialog(lisXMLError,
+          Result:=LazMessageWorker(lisXMLError,
             Format(lisXMLParserErrorInFileError, [Filename, LineEnding, E.Message]),
               mtError, [mbCancel]);
         end;
@@ -387,7 +384,7 @@ begin
       Config.WriteToStream(ms);
     except
       on E: Exception do begin
-        Result:=IDEMessageDialog(lisXMLError,
+        Result:=LazMessageWorker(lisXMLError,
           Format(lisUnableToWriteXmlStreamToError, [Filename, LineEnding, E.Message]),
             mtError, [mbCancel]);
       end;
@@ -414,7 +411,7 @@ begin
       fs:=TFileStream.Create(AFilename,fmCreate);
       fs.Free;
     except
-      Result:=IDEMessageDialog(lisUnableToCreateFile,
+      Result:=LazMessageWorker(lisUnableToCreateFile,
         Format(lisUnableToCreateFile2, [AFilename]),
         mtError, [mbCancel, mbAbort]);
       exit;
@@ -422,7 +419,7 @@ begin
   end else begin
     // file already exists
     if WarnOverwrite then begin
-      Result:=IDEQuestionDialog(lisOverwriteFile,
+      Result:=LazQuestionWorker(lisOverwriteFile,
         Format(lisAFileAlreadyExistsReplaceIt, [AFilename, LineEnding]),
         mtConfirmation, [mrYes, lisOverwriteFileOnDisk,
                          mrCancel]);
@@ -450,7 +447,7 @@ begin
       fs.Free;
     end;
   except
-    Result:=IDEMessageDialog(lisUnableToWriteFile,
+    Result:=LazMessageWorker(lisUnableToWriteFile,
       Format(lisUnableToWriteToFile2, [AFilename]), mtError, [mbCancel, mbAbort]);
     exit;
   end;
@@ -465,7 +462,7 @@ begin
       fs.Free;
     end;
   except
-    Result:=IDEMessageDialog(lisUnableToReadFile,
+    Result:=LazMessageWorker(lisUnableToReadFile,
       Format(lisUnableToReadFile2, [AFilename]),
       mtError, [mbCancel, mbAbort]);
     exit;
@@ -477,7 +474,7 @@ function CheckFileIsWritable(const Filename: string;
   ErrorButtons: TMsgDlgButtons): TModalResult;
 begin
   while not FileIsWritable(Filename) do begin
-    Result:=IDEMessageDialog(lisFileIsNotWritable,
+    Result:=LazMessageWorker(lisFileIsNotWritable,
       Format(lisUnableToWriteToFile2, [Filename]), mtError,
       ErrorButtons+[mbCancel,mbRetry]);
     if Result<>mrRetry then exit;
@@ -488,7 +485,7 @@ end;
 function ChooseSymlink(var Filename: string; const TargetFilename: string): TModalResult;
 begin
   // ask which filename to use
-  case IDEQuestionDialog(lisFileIsSymlink,
+  case LazQuestionWorker(lisFileIsSymlink,
     Format(lisTheFileIsASymlinkOpenInstead,[Filename,LineEnding+LineEnding,TargetFilename]),
     mtConfirmation, [mrYes, lisOpenTarget,
                      mrNo, lisOpenSymlink,
@@ -507,7 +504,7 @@ begin
   {$IFDEF Unix}
   if FpReadLink(LinkFilename)=TargetFilename then exit(mrOk);
   while FPSymLink(PChar(TargetFilename),PChar(LinkFilename)) <> 0 do begin
-    Result:=IDEMessageDialog(lisCodeToolsDefsWriteError,
+    Result:=LazMessageWorker(lisCodeToolsDefsWriteError,
       Format(lisUnableToCreateLinkWithTarget, [LinkFilename, TargetFilename]),
       mtError,ErrorButtons+[mbCancel,mbRetry],'');
     if Result<>mrRetry then exit;
@@ -535,7 +532,7 @@ begin
       Dir:=copy(Directory,1,i-1);
       if not DirPathExists(Dir) then begin
         while not CreateDirUTF8(Dir) do begin
-          Result:=IDEMessageDialog(lisPkgMangUnableToCreateDirectory,
+          Result:=LazMessageWorker(lisPkgMangUnableToCreateDirectory,
             Format(lisUnableToCreateDirectory, [Dir]),
             mtError,ErrorButtons+[mbCancel]);
           if Result<>mrRetry then exit;
@@ -552,7 +549,7 @@ function CheckDirectoryIsWritable(const Filename: string;
   ErrorButtons: TMsgDlgButtons): TModalResult;
 begin
   while not DirectoryIsWritable(Filename) do begin
-    Result:=IDEMessageDialog(lisDirectoryNotWritable,
+    Result:=LazMessageWorker(lisDirectoryNotWritable,
       Format(lisTheDirectoryIsNotWritable, [Filename]),
       mtError,ErrorButtons+[mbCancel,mbRetry]);
     if Result<>mrRetry then exit;
@@ -576,7 +573,7 @@ begin
   end;
 
   if (not FileIsExecutable(Filename)) then begin
-    if IDEMessageDialog(ErrorCaption,Format(ErrorMsg,[Filename]),
+    if LazMessageWorker(ErrorCaption,Format(ErrorMsg,[Filename]),
       mtWarning,[mbIgnore,mbCancel])=mrCancel
     then begin
       Result:=false;
@@ -587,7 +584,7 @@ end;
 function CheckDirPathExists(const Dir, ErrorCaption, ErrorMsg: string): TModalResult;
 begin
   if not DirPathExists(Dir) then begin
-    Result:=IDEMessageDialog(ErrorCaption,Format(ErrorMsg,[Dir]),mtWarning,
+    Result:=LazMessageWorker(ErrorCaption,Format(ErrorMsg,[Dir]),mtWarning,
                        [mbIgnore,mbCancel]);
   end else
     Result:=mrOk;
@@ -600,7 +597,7 @@ begin
     Result:=mrOk;
     if not FileExistsUTF8(Filename) then exit;
     if not DeleteFileUTF8(Filename) then begin
-      Result:=IDEMessageDialogAb(lisDeleteFileFailed,
+      Result:=LazMessageDialogAb(lisDeleteFileFailed,
         Format(lisPkgMangUnableToDeleteFile, [Filename]),
         mtError,[mbCancel,mbRetry]+ErrorButtons-[mbAbort],mbAbort in ErrorButtons);
       if Result<>mrRetry then exit;
@@ -625,7 +622,7 @@ begin
     Result:=mrOk;
   except
     on E: Exception do begin
-      Result:=IDEMessageDialog(lisCodeToolsDefsWriteError,
+      Result:=LazMessageWorker(lisCodeToolsDefsWriteError,
          Format(lisWriteErrorFile, [E.Message, LineEnding, Filename, LineEnding, Context]),
          mtError,[mbAbort]+ErrorButtons);
     end;
@@ -670,7 +667,7 @@ begin
         {$ENDIF}
         debugln(['Error: (lazarus) [ConvertLFMToLRSFileInteractive] unable to convert '+LFMFilename+' to '+LRSFilename+':'+LineEnding
           +E.Message]);
-        Result:=IDEMessageDialogAb('Error',
+        Result:=LazMessageDialogAb('Error',
           'Error while converting '+LFMFilename+' to '+LRSFilename+':'+LineEnding
           +E.Message,mtError,[mbCancel,mbIgnore],ShowAbort);
         exit;
@@ -692,39 +689,9 @@ begin
   end;
 end;
 
-function IfNotOkJumpToCodetoolErrorAndAskToAbort(Ok: boolean;
-  Ask: boolean; out NewResult: TModalResult): boolean;
-begin
-  if Ok then begin
-    NewResult:=mrOk;
-    Result:=true;
-  end else begin
-    NewResult:=JumpToCodetoolErrorAndAskToAbort(Ask);
-    Result:=NewResult<>mrAbort;
-  end;
-end;
-
-function JumpToCodetoolErrorAndAskToAbort(Ask: boolean): TModalResult;
-// returns mrCancel or mrAbort
-var
-  ErrMsg: String;
-begin
-  ErrMsg:=CodeToolBoss.ErrorMessage;
-  LazarusIDE.DoJumpToCodeToolBossError;
-  if Ask then begin
-    Result:=IDEQuestionDialog(lisCCOErrorCaption,
-      Format(lisTheCodetoolsFoundAnError, [LineEnding, ErrMsg]),
-      mtWarning, [mrIgnore, lisIgnoreAndContinue,
-                  mrAbort]);
-    if Result=mrIgnore then Result:=mrCancel;
-  end else begin
-    Result:=mrCancel;
-  end;
-end;
-
 procedure NotImplementedDialog(const Feature: string);
 begin
-  IDEMessageDialog(lisNotImplemented,
+  LazMessageWorker(lisNotImplemented,
     Format(lisNotImplementedYet, [LineEnding, Feature]), mtError, [mbCancel]);
 end;
 

@@ -10,7 +10,7 @@ uses
   // LazUtils
   Laz2_XMLCfg, Classes, fgl,
   // IdeDebugger
-  IdeDebuggerStringConstants;
+  IdeDebuggerStringConstants, IdeDebuggerUtils;
 
 type
   TDisplayFormatTarget = (
@@ -34,17 +34,20 @@ type
 
   { TDisplayFormatConfig }
 
-  TDisplayFormatConfig = class
+  TDisplayFormatConfig = class(specialize TChangeNotificationGeneric<TObject>)
   private
     FDefaultDisplayFormats: array [TDisplayFormatTarget] of TWatchDisplayFormat;
   private
     FGLobalDefault: Boolean;
     FChanged: Boolean;
     FOnChanged: TNotifyEvent;
+    procedure DoChanged;
     function GetDefaultDisplayFormats(AnIndex: TDisplayFormatTarget): TWatchDisplayFormat;
+    procedure SetChanged(AValue: Boolean);
     procedure SetDefaultDisplayFormats(AnIndex: TDisplayFormatTarget; AValue: TWatchDisplayFormat);
   public
     constructor Create(AGLobalDefault: Boolean = False);
+    destructor Destroy; override;
     procedure Clear;
 
     procedure Assign(ASource: TDisplayFormatConfig);
@@ -55,7 +58,7 @@ type
 
     property DefaultDisplayFormats[AnIndex: TDisplayFormatTarget]: TWatchDisplayFormat
       read GetDefaultDisplayFormats write SetDefaultDisplayFormats; default;
-    property Changed: Boolean read FChanged write FChanged;
+    property Changed: Boolean read FChanged write SetChanged;
     property OnChanged: TNotifyEvent read FOnChanged write FOnChanged;
   end;
 
@@ -138,6 +141,10 @@ begin
    AConfig.GetValue(APath + 'Enum',         ord(DefaultWatchDisplayFormat.Enum.MainFormat),               ADisplayFormat.Enum.MainFormat,              TypeInfo(TValueDisplayFormatEnum));
    AConfig.GetValue(APath + 'EnumBase',     ord(DefaultWatchDisplayFormat.Enum.BaseFormat),           ADisplayFormat.Enum.BaseFormat,          TypeInfo(TValueDisplayFormatBase));
    AConfig.GetValue(APath + 'EnumSign',     ord(DefaultWatchDisplayFormat.Enum.SignFormat),           ADisplayFormat.Enum.SignFormat,          TypeInfo(TValueDisplayFormatSign));
+  ADisplayFormat.EnumVal.UseInherited := AConfig.GetValue(APath + 'ENumValInherit', DefaultWatchDisplayFormat.EnumVal.UseInherited);
+   AConfig.GetValue(APath + 'EnumVal',         ord(DefaultWatchDisplayFormat.EnumVal.MainFormat),           ADisplayFormat.EnumVal.MainFormat,          TypeInfo(TValueDisplayFormatEnum));
+   AConfig.GetValue(APath + 'EnumValBase',     ord(DefaultWatchDisplayFormat.EnumVal.BaseFormat),           ADisplayFormat.EnumVal.BaseFormat,          TypeInfo(TValueDisplayFormatBase));
+   AConfig.GetValue(APath + 'EnumValSign',     ord(DefaultWatchDisplayFormat.EnumVal.SignFormat),           ADisplayFormat.EnumVal.SignFormat,          TypeInfo(TValueDisplayFormatSign));
   ADisplayFormat.Bool.UseInherited := AConfig.GetValue(APath + 'BoolInherit', DefaultWatchDisplayFormat.Bool.UseInherited);
    AConfig.GetValue(APath + 'Bool',         ord(DefaultWatchDisplayFormat.Bool.MainFormat),               ADisplayFormat.Bool.MainFormat,              TypeInfo(TValueDisplayFormatBool));
    AConfig.GetValue(APath + 'BoolBase',     ord(DefaultWatchDisplayFormat.Bool.BaseFormat),           ADisplayFormat.Bool.BaseFormat,          TypeInfo(TValueDisplayFormatBase));
@@ -191,6 +198,10 @@ begin
    AConfig.SetDeleteValue(APath + 'Enum',              ADisplayFormat.Enum.MainFormat,                 ord(DefaultWatchDisplayFormat.Enum.MainFormat),              TypeInfo(TValueDisplayFormatEnum));
    AConfig.SetDeleteValue(APath + 'EnumBase',          ADisplayFormat.Enum.BaseFormat,             ord(DefaultWatchDisplayFormat.Enum.BaseFormat),          TypeInfo(TValueDisplayFormatBase));
    AConfig.SetDeleteValue(APath + 'EnumSign',          ADisplayFormat.Enum.SignFormat,             ord(DefaultWatchDisplayFormat.Enum.SignFormat),          TypeInfo(TValueDisplayFormatSign));
+  AConfig.SetDeleteValue(APath + 'ENumValInherit',     ADisplayFormat.EnumVal.UseInherited,        DefaultWatchDisplayFormat.EnumVal.UseInherited);
+   AConfig.SetDeleteValue(APath + 'EnumVal',           ADisplayFormat.EnumVal.MainFormat,          ord(DefaultWatchDisplayFormat.EnumVal.MainFormat),              TypeInfo(TValueDisplayFormatEnum));
+   AConfig.SetDeleteValue(APath + 'EnumValBase',       ADisplayFormat.EnumVal.BaseFormat,          ord(DefaultWatchDisplayFormat.EnumVal.BaseFormat),          TypeInfo(TValueDisplayFormatBase));
+   AConfig.SetDeleteValue(APath + 'EnumValSign',       ADisplayFormat.EnumVal.SignFormat,          ord(DefaultWatchDisplayFormat.EnumVal.SignFormat),          TypeInfo(TValueDisplayFormatSign));
   AConfig.SetDeleteValue(APath + 'BoolInherit',        ADisplayFormat.Bool.UseInherited,              DefaultWatchDisplayFormat.Bool.UseInherited);
    AConfig.SetDeleteValue(APath + 'Bool',              ADisplayFormat.Bool.MainFormat,                 ord(DefaultWatchDisplayFormat.Bool.MainFormat),              TypeInfo(TValueDisplayFormatBool));
    AConfig.SetDeleteValue(APath + 'BoolBase',          ADisplayFormat.Bool.BaseFormat,             ord(DefaultWatchDisplayFormat.Bool.BaseFormat),          TypeInfo(TValueDisplayFormatBase));
@@ -318,10 +329,24 @@ end;
 
 { TDisplayFormatConfig }
 
+procedure TDisplayFormatConfig.DoChanged;
+begin
+  if (FOnChanged <> nil) then
+    FOnChanged(Self);
+  CallChangeNotifications;
+end;
+
 function TDisplayFormatConfig.GetDefaultDisplayFormats(AnIndex: TDisplayFormatTarget
   ): TWatchDisplayFormat;
 begin
   Result := FDefaultDisplayFormats[AnIndex];
+end;
+
+procedure TDisplayFormatConfig.SetChanged(AValue: Boolean);
+begin
+  FChanged := AValue;
+  if AValue then
+    CallChangeNotifications;
 end;
 
 procedure TDisplayFormatConfig.SetDefaultDisplayFormats(AnIndex: TDisplayFormatTarget;
@@ -333,8 +358,7 @@ begin
   FDefaultDisplayFormats[AnIndex] := AValue;
   if c then begin
     FChanged := True;
-    if (FOnChanged <> nil) then
-      FOnChanged(Self);
+    DoChanged;
   end;
 end;
 
@@ -343,6 +367,12 @@ begin
   FGLobalDefault := AGLobalDefault;
   inherited Create;
   Clear;
+end;
+
+destructor TDisplayFormatConfig.Destroy;
+begin
+  inherited Destroy;
+  FreeChangeNotifications;
 end;
 
 procedure TDisplayFormatConfig.Clear;
@@ -365,8 +395,7 @@ begin
   end;
   if c then begin
     FChanged := True;
-    if (FOnChanged <> nil) then
-      FOnChanged(Self);
+    DoChanged;
   end;
 end;
 
@@ -389,6 +418,7 @@ var
 begin
   for i in TDisplayFormatTarget do
     LoadDisplayFormatFromXMLConfig(AXMLCfg, APath + XmlDisplayFormatTargetNames[i] + '/', FDefaultDisplayFormats[i]);
+  CallChangeNotifications;
 end;
 
 procedure TDisplayFormatConfig.SaveToXml(AXMLCfg: TRttiXMLConfig; APath: String);

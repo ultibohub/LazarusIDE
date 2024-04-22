@@ -5,29 +5,48 @@ unit SynGutterMarks;
 interface
 
 uses
-  Classes, SysUtils, Graphics, LCLType, LCLIntf, Controls, ImgList,
+  Classes, SysUtils, Graphics, LCLType, LCLIntf, Controls, ImgList, FPCanvas,
   SynGutterBase, SynEditMiscClasses, SynEditMarks, LazSynEditText,
   SynEditMiscProcs;
 
 type
+
+  TSynGutterMarksOption = (
+    sgmoDeDuplicateMarks,            // don't show consecutive marks with same icon
+    sgmoDeDuplicateMarksKeepTwo,     // show max 2 consecutive, if not limited by MaxMarksCount
+    sgmoDeDuplicateMarksOnOverflow   // remove consecutive dups, until there are more than MaxMarksCount marks
+  );
+  TSynGutterMarksOptions = set of TSynGutterMarksOption;
 
   { TSynGutterMarks }
 
   TSynGutterMarks = class(TSynGutterPartBase)
   private
     FColumnCount: Integer;
+    FMaxExtraMarksColums: Integer;
+    FOptions: TSynGutterMarksOptions;
     FWantedColumns: integer;
     FColumnWidth: Integer;
     FDebugMarksImageIndex: Integer;
     FInternalImage: TSynInternalImage;
     FNoInternalImage: Boolean;
+  protected type
+    TSynEditMarkDrawInfo = record
+      Mark: TSynEditMark;
+      Images: TCustomImageList;
+      IconIdx: integer;
+    end;
+    TSynEditMarkDrawInfoArray = array of TSynEditMarkDrawInfo;
   protected
     FBookMarkOpt: TSynBookMarkOpt;
+    FTempDrawInfo: TSynEditMarkDrawInfoArray;
     procedure Init; override;
     function  PreferedWidth: Integer; override;
     function  LeftMarginAtCurrentPPI: Integer;
-    function GetImgListRes(const ACanvas: TCanvas;
-      const AImages: TCustomImageList): TScaledImageListResolution; virtual;
+    function GetImgListRes(const ACanvas: TCanvas; const AImages: TCustomImageList): TScaledImageListResolution; virtual;
+    function MarksToDrawInfo(AMLine: TSynEditMarkLine; var ADrawInfo: TSynEditMarkDrawInfoArray;
+                              AMaxEntries: integer;
+                              out aFirstCustomColumnIdx: integer; out AHasNonBookmark: boolean): integer; virtual;
     // PaintMarks: True, if it has any Mark, that is *not* a bookmark
     function  PaintMarks(aScreenLine: Integer; Canvas : TCanvas; AClip : TRect;
                        var aFirstCustomColumnIdx: integer): Boolean;
@@ -43,6 +62,9 @@ type
     property ColumnWidth: Integer read FColumnWidth; // initialized in Paint
     property ColumnCount: Integer read FColumnCount;
   published
+    // Max amount of marks show in addition to ColumnCount
+    property MaxExtraMarksColums: Integer read FMaxExtraMarksColums write FMaxExtraMarksColums;
+    property Options: TSynGutterMarksOptions read FOptions write FOptions;
     property MarkupInfoCurrentLine;
   end;
 
@@ -55,6 +77,7 @@ begin
   FInternalImage := nil;
   FDebugMarksImageIndex := -1;
   FNoInternalImage := False;
+  FOptions := [sgmoDeDuplicateMarksOnOverflow];
   inherited Create(AOwner);
 end;
 
@@ -86,8 +109,8 @@ begin
   inherited Destroy;
 end;
 
-function TSynGutterMarks.GetImgListRes(const ACanvas: TCanvas;
-  const AImages: TCustomImageList): TScaledImageListResolution;
+function TSynGutterMarks.GetImgListRes(const ACanvas: TCanvas; const AImages: TCustomImageList
+  ): TScaledImageListResolution;
 var
   Scale: Double;
   PPI: Integer;
@@ -104,18 +127,123 @@ begin
   Result := AImages.ResolutionForPPI[0, PPI, Scale];
 end;
 
+function TSynGutterMarks.MarksToDrawInfo(AMLine: TSynEditMarkLine;
+  var ADrawInfo: TSynEditMarkDrawInfoArray; AMaxEntries: integer; out
+  aFirstCustomColumnIdx: integer; out AHasNonBookmark: boolean): integer;
+var
+  i, CntUniq, CntRep2, CntKeepRep2, CntDel3: Integer;
+  prev_iidx, pprev_iidx: LongInt;
+begin
+  Result := AMLine.VisibleCount;
+  if (FOptions * [sgmoDeDuplicateMarks, sgmoDeDuplicateMarksKeepTwo] <> []) or
+     ((sgmoDeDuplicateMarksOnOverflow in FOptions) and (Result > ColumnCount))
+  then begin
+    CntUniq := 0;
+    CntRep2 := 0;
+    prev_iidx := low(integer);
+    pprev_iidx := low(integer);
+    for i := 0 to AMLine.Count - 1 do begin
+      if (not AMLine[i].Visible) or
+         (AMLine[i].IsBookmark and (not FBookMarkOpt.GlyphsVisible))
+      then
+        continue;
+      if AMLine[i].ImageIndex <> prev_iidx then
+        inc(CntUniq)  // Uniq
+      else
+      if (i=1) or (AMLine[i].ImageIndex <> pprev_iidx) then
+        inc(CntRep2); // sgmoDeDuplicateMarksKeepTwo
+      pprev_iidx := prev_iidx;
+      prev_iidx := AMLine[i].ImageIndex;
+    end;
+
+    if (sgmoDeDuplicateMarks in FOptions) then begin
+      Result := Min(cntUniq, AMaxEntries);
+      CntKeepRep2 := 0;
+    end
+    else
+    if (sgmoDeDuplicateMarksKeepTwo in FOptions) then begin
+      CntKeepRep2 := Min(CntRep2, Max(0, AMaxEntries- cntUniq));
+      Result := Min(cntUniq+CntKeepRep2, AMaxEntries);
+    end
+    else begin
+      // only dedup for MaxExtraMarksColums
+      CntKeepRep2 := Min(CntRep2, Max(0, AMaxEntries - cntUniq));
+      Result := Min(cntUniq+CntKeepRep2, AMaxEntries);
+    end;
+    CntDel3 := AMLine.VisibleCount - Result;
+  end
+  else begin
+    Result := Min(AMLine.VisibleCount, AMaxEntries);
+    CntKeepRep2 := MaxInt; // keep duplicate if exactly 2nd
+    CntDel3 := 0;    // del 3rd or later
+  end;
+
+  if Length(ADrawInfo) < Result then
+    SetLength(ADrawInfo, AMaxEntries); // Expand to max needed (for further runs)
+
+  aFirstCustomColumnIdx := 0;
+  AHasNonBookmark := False;
+  prev_iidx := low(integer);
+  pprev_iidx := low(integer);
+  for i := 0 to AMLine.Count - 1 do begin
+    if (not AMLine[i].Visible) or
+       (AMLine[i].IsBookmark and (not FBookMarkOpt.GlyphsVisible))
+    then
+      continue;
+
+    if (i = 0) and FBookMarkOpt.DrawBookmarksFirst and
+       (Result < ColumnCount) and (not AMLine[i].IsBookmark)
+    then begin
+      ADrawInfo[aFirstCustomColumnIdx].Mark := nil;
+      ADrawInfo[aFirstCustomColumnIdx].IconIdx := 0;
+      ADrawInfo[aFirstCustomColumnIdx].Images  := nil;
+      inc(Result);
+      inc(aFirstCustomColumnIdx);
+    end;
+
+    if AMLine[i].ImageIndex = prev_iidx then begin
+      if (AMLine[i].ImageIndex = pprev_iidx) and (CntDel3 > 0) then begin
+        dec(CntDel3);
+        continue;
+      end;
+      if CntKeepRep2 = 0 then
+        Continue;
+      dec(CntKeepRep2);
+    end;
+
+    AHasNonBookmark := AHasNonBookmark or (not AMLine[i].IsBookmark); // Line has a none-bookmark glyph
+
+    ADrawInfo[aFirstCustomColumnIdx].Mark := AMLine[i];
+    ADrawInfo[aFirstCustomColumnIdx].IconIdx := 0;   //AMLine[i].ImageIndex;
+    ADrawInfo[aFirstCustomColumnIdx].Images  := nil; //AMLine[i].ImageList;
+    inc(aFirstCustomColumnIdx);
+    if aFirstCustomColumnIdx >= AMaxEntries then
+      break;
+
+    pprev_iidx := prev_iidx;
+    prev_iidx := AMLine[i].ImageIndex;
+  end;
+end;
+
 function TSynGutterMarks.PaintMarks(aScreenLine: Integer; Canvas : TCanvas;
   AClip : TRect; var aFirstCustomColumnIdx: integer): Boolean;
 var
   LineHeight: Integer;
+  BkMkOptImg: TScaledImageListResolution;
+  BkMkOptImgDone: Boolean;
 
-  procedure DoPaintMark(CurMark: TSynEditMark; aRect: TRect);
+  procedure DoPaintMark(const CurMarkInfo: TSynEditMarkDrawInfo; aRect: TRect);
   var
     img: TScaledImageListResolution;
+    CurMark: TSynEditMark;
+    idx: Integer;
   begin
-    if CurMark.InternalImage or
-       ( (not assigned(FBookMarkOpt.BookmarkImages)) and
-         (not assigned(CurMark.ImageList)) )
+    CurMark := CurMarkInfo.Mark;
+    if (CurMark <> nil) and
+       ( CurMark.InternalImage or
+         ( (not assigned(FBookMarkOpt.BookmarkImages)) and
+           (not assigned(CurMark.ImageList)) )
+       )
     then begin
       // draw internal image
       if CurMark.ImageIndex in [0..9] then
@@ -133,30 +261,44 @@ var
     end
     else begin
       // draw from ImageList
-      if assigned(CurMark.ImageList) then
-        img := GetImgListRes(Canvas, CurMark.ImageList)
+      if CurMark = nil then begin
+        if CurMarkInfo.Images = nil then
+          exit;
+        img := GetImgListRes(Canvas, CurMarkInfo.Images);
+        idx := CurMarkInfo.IconIdx;
+      end
       else
-        img := GetImgListRes(Canvas, FBookMarkOpt.BookmarkImages);
+      if assigned(CurMark.ImageList) then begin
+        img := GetImgListRes(Canvas, CurMark.ImageList);
+        idx := CurMark.ImageIndex;
+      end
+      else begin
+        if not BkMkOptImgDone then begin
+          BkMkOptImg := GetImgListRes(Canvas, FBookMarkOpt.BookmarkImages);
+          BkMkOptImgDone := True;
+        end;
+        img := BkMkOptImg;
+        idx := CurMark.ImageIndex;
+      end;
 
-      if (CurMark.ImageIndex <= img.Count) and (CurMark.ImageIndex >= 0) then begin
+      if (idx <= img.Count) and (idx >= 0) then begin
         if LineHeight > img.Height then
           aRect.Top := (aRect.Top + aRect.Bottom - img.Height) div 2;
 
-        img.Draw(Canvas, aRect.Left, aRect.Top, CurMark.ImageIndex, True);
+        img.Draw(Canvas, aRect.Left, aRect.Top, idx, True);
       end;
     end
   end;
 
 var
-  j, lm: Integer;
+  j, lm, StoredColumnWidth, lx, vcnt: Integer;
   MLine: TSynEditMarkLine;
   MarkRect: TRect;
-  LastMarkIsBookmark: Boolean;
   iRange: TLineRange;
 begin
   Result := False;
   aFirstCustomColumnIdx := 0;
-  if FBookMarkOpt.DrawBookmarksFirst then
+  if (FBookMarkOpt.DrawBookmarksFirst) then
     aFirstCustomColumnIdx := 1;
   aScreenLine := aScreenLine + ToIdx(GutterArea.TextArea.TopLine);
   j := ViewedTextBuffer.DisplayView.ViewToTextIndexEx(aScreenLine, iRange);
@@ -173,42 +315,33 @@ begin
   else
     MLine.Sort(smsoBookMarkLast, smsoPriority);
 
-  LineHeight := SynEdit.LineHeight;
+  vcnt := MarksToDrawInfo(MLine, FTempDrawInfo, ColumnCount + MaxExtraMarksColums, aFirstCustomColumnIdx, Result);
+
   //Gutter.Paint always supplies AClip.Left = GutterPart.Left
-  lm := LeftMarginAtCurrentPPI;
-  MarkRect := Rect(AClip.Left + lm,
-                   AClip.Top,
-                   AClip.Left + lm + FColumnWidth,
-                   AClip.Top + LineHeight);
+  BkMkOptImgDone := False;
+  LineHeight := SynEdit.LineHeight;
+  StoredColumnWidth := FColumnWidth;
+  try
+    lm := LeftMarginAtCurrentPPI;
+    lx := 0;
+    if vcnt > ColumnCount then begin
+      lx := FColumnWidth;
+      FColumnWidth := Min(lx, Max(2, (Width + vcnt - 1) div vcnt));
+      lx := (lx - FColumnWidth - 1) div 2;
+    end;
+    MarkRect := Rect(AClip.Left + lm - lx,
+                     AClip.Top,
+                     AClip.Left + lm - lx + FColumnWidth,
+                     AClip.Top + LineHeight);
 
+    for j := 0 to vcnt - 1 do begin
+      DoPaintMark(FTempDrawInfo[j], MarkRect);
 
-  LastMarkIsBookmark := FBookMarkOpt.DrawBookmarksFirst;
-  for j := 0 to MLine.Count - 1 do begin
-    if (not MLine[j].Visible) or
-       (MLine[j].IsBookmark and (not FBookMarkOpt.GlyphsVisible))
-    then
-      continue;
-
-    if (MLine[j].IsBookmark <> LastMarkIsBookmark) and
-       (j = 0) and (FColumnCount > 1)
-    then begin
-      // leave one column empty
       MarkRect.Left := MarkRect.Right;
       MarkRect.Right := Min(MarkRect.Right + FColumnWidth, AClip.Right);
     end;
-
-    DoPaintMark(MLine[j], MarkRect);
-    MarkRect.Left := MarkRect.Right;
-    MarkRect.Right := Min(MarkRect.Right + FColumnWidth, AClip.Right);
-
-    Result := Result or (not MLine[j].IsBookmark); // Line has a none-bookmark glyph
-    if (MLine[j].IsBookmark <> LastMarkIsBookmark)  and
-       (not MLine[j].IsBookmark) and (j > 0)
-    then
-      aFirstCustomColumnIdx := j; // first none-bookmark column
-
-    if j >= ColumnCount then break;
-    LastMarkIsBookmark := MLine[j].IsBookmark;
+  finally
+    FColumnWidth := StoredColumnWidth;
   end;
 end;
 
@@ -224,7 +357,8 @@ procedure TSynGutterMarks.Paint(Canvas : TCanvas; AClip : TRect; FirstLine, Last
 var
   i: integer;
   LineHeight: Integer;
-  rcLine: TRect;
+  rcLine, clpr: TRect;
+  clp: Boolean;
 begin
   if not Visible then exit;
   PaintBackground(Canvas, AClip);
@@ -238,15 +372,25 @@ begin
   else
     FColumnCount := Max((Width+1) div FColumnWidth, 1); // full columns
 
-  rcLine := AClip;
-  rcLine.Bottom := rcLine.Top;
   if FBookMarkOpt.GlyphsVisible and (LastLine >= FirstLine) then
   begin
-    LineHeight := SynEdit.LineHeight;
-    for i := FirstLine to LastLine do begin
-      rcLine.Top := rcLine.Bottom;
-      rcLine.Bottom := Min(AClip.Bottom, rcLine.Top + LineHeight);
-      PaintLine(i, Canvas, rcLine);
+    clp  := Canvas.Clipping;
+    clpr := Canvas.ClipRect;
+    try
+      rcLine := AClip;
+      Canvas.ClipRect := rcLine;
+      Canvas.Clipping := True;
+      LineHeight := SynEdit.LineHeight;
+      rcLine := AClip;
+      rcLine.Bottom := rcLine.Top;
+      for i := FirstLine to LastLine do begin
+        rcLine.Top := rcLine.Bottom;
+        rcLine.Bottom := Min(AClip.Bottom, rcLine.Top + LineHeight);
+        PaintLine(i, Canvas, rcLine);
+      end;
+    finally
+      Canvas.ClipRect := clpr;
+      Canvas.Clipping := clp;
     end;
   end;
 end;

@@ -7,7 +7,8 @@ interface
 
 uses
   Classes, SysUtils, Math, IdeDebuggerWatchResult, IdeDebuggerUtils, IdeDebuggerDisplayFormats,
-  LazDebuggerIntf, LazUTF8, IdeDebuggerWatchValueIntf, StrUtils;
+  IdeDebuggerBase, IdeDebuggerStringConstants, IdeDebuggerValueFormatter, LazDebuggerIntf, LazUTF8,
+  IdeDebuggerWatchValueIntf, StrUtils;
 
 type
 
@@ -57,7 +58,9 @@ type
   TWatchResultPrinterFormatFlag = (
     rpfIndent,           // use Indent. Only when MultiLine
     rpfMultiLine,
-    rpfClearMultiLine    // clean up pre-printed data
+    rpfClearMultiLine,   // clean up pre-printed data
+    rpfPrefixOuterArrayLen,
+    rpfSkipValueFormatter
   );
   TWatchResultPrinterFormatFlags = set of TWatchResultPrinterFormatFlag;
 
@@ -67,8 +70,11 @@ type
   private
     FFormatFlags: TWatchResultPrinterFormatFlags;
     FLineSeparator: String;
+    FOnlyValueFormatter: TIdeDbgValueFormatterSelector;
     FTargetAddressSize: integer;
-    FValueFormatResolver: TDisplayFormatResolver;
+    FDisplayFormatResolver: TDisplayFormatResolver;
+    FInValueFormatter: Boolean;
+    FInValFormNestLevel: integer;
   protected const
     MAX_ALLOWED_NEST_LVL = 100;
   protected
@@ -90,8 +96,10 @@ type
     function PrintWatchValue(AResValue: IWatchResultDataIntf; const ADispFormat: TWatchDisplayFormat): String;
 
     property FormatFlags: TWatchResultPrinterFormatFlags read FFormatFlags write FFormatFlags;
+    property OnlyValueFormatter: TIdeDbgValueFormatterSelector read FOnlyValueFormatter write FOnlyValueFormatter;
+
     property TargetAddressSize: integer read FTargetAddressSize write FTargetAddressSize;
-    property ValueFormatResolver: TDisplayFormatResolver read FValueFormatResolver;
+    property DisplayFormatResolver: TDisplayFormatResolver read FDisplayFormatResolver;
   end;
 
 const
@@ -268,7 +276,7 @@ begin
       ResolveMinDigits(Result.Num2.MinDigits, Result.Num2.BaseFormat);
     end;
 
-    rdkEnum, rdkEnumVal, rdkSet: begin
+    rdkEnum, rdkSet: begin
       Result.Enum := ADispFormat.Enum;
 
       if Result.Enum.UseInherited then begin
@@ -276,6 +284,23 @@ begin
         while (i >0) and (FFallBackFormats[i].Enum.UseInherited) do
           dec(i);
         Result.Enum  := FFallBackFormats[i].Enum;
+      end;
+
+      Result.Num2            := DefaultEnumNum;
+      Result.Num2.Visible    := Result.Enum.MainFormat in [vdfEnumNameAndOrd, vdfEnumOrd];
+      Result.Num2.BaseFormat := Result.Enum.BaseFormat;
+      Result.Num2.SignFormat := Result.Enum.SignFormat;
+      ResolveSign(Result.Num2.SignFormat, DefaultEnumNum.SignFormat);
+    end;
+
+    rdkEnumVal: begin
+      Result.Enum := ADispFormat.Enum;
+
+      if Result.Enum.UseInherited then begin
+        i := FFallBackFormats.Count -1;
+        while (i >0) and (FFallBackFormats[i].EnumVal.UseInherited) do
+          dec(i);
+        Result.Enum  := FFallBackFormats[i].EnumVal;
       end;
 
       Result.Num2            := DefaultEnumNum;
@@ -567,6 +592,9 @@ begin
   if AResValue.Count < AResValue.ArrayLength then
     Result := Result + sep +'...';
   Result := '(' + Result +')';
+
+  if (rpfPrefixOuterArrayLen in FFormatFlags) and (ANestLvl = 0) and (AResValue.ArrayLength > 0) then
+    Result := Format(drsLen, [AResValue.ArrayLength]) + Result;
 end;
 
 function TWatchResultPrinter.PrintStruct(AResValue: TWatchResultData;
@@ -582,7 +610,7 @@ var
   vis, indent, sep, tn, Header: String;
   InclVisSect: Boolean;
 begin
-  Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+  Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
   Result := '';
 
   tn := AResValue.TypeName;
@@ -721,7 +749,7 @@ var
   Resolved: TResolvedDisplayFormat;
   s: String;
 begin
-  Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+  Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
   Result := PrintNumber(AResValue.AsQWord, AResValue.AsInt64, TargetAddressSize, Resolved.Num2, True);
 
   if AResValue.AsString <> '' then
@@ -751,7 +779,7 @@ function TWatchResultPrinter.PrintWatchValueEx(AResValue: TWatchResultData;
     Resolved: TResolvedDisplayFormat;
     s: String;
   begin
-    Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+    Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
 
     result := '';
     s := '';
@@ -780,7 +808,7 @@ function TWatchResultPrinter.PrintWatchValueEx(AResValue: TWatchResultData;
     c: QWord;
     s: String;
   begin
-    Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+    Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
 
     c := AResValue.AsQWord;
     result := '';
@@ -805,7 +833,7 @@ function TWatchResultPrinter.PrintWatchValueEx(AResValue: TWatchResultData;
     Resolved: TResolvedDisplayFormat;
     s: String;
   begin
-    Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+    Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
 
     result := '';
     s := '';
@@ -847,6 +875,22 @@ begin
   if AResValue = nil then
     exit('???');
 
+  if not (FInValueFormatter or (rpfSkipValueFormatter in FFormatFlags)) then begin
+    FInValueFormatter := True;
+    FInValFormNestLevel := ANestLvl;
+    try
+      if OnlyValueFormatter <> nil then begin
+        if OnlyValueFormatter.FormatValue(AResValue, ADispFormat, ANestLvl, Self, Result) then
+          exit;
+      end
+      else
+      if GlobalValueFormatterSelectorList.FormatValue(AResValue, ADispFormat, ANestLvl, Self, Result) then
+        exit;
+    finally
+      FInValueFormatter := False;
+    end;
+  end;
+
   Result := '';
   case AResValue.ValueKind of
     rdkError:
@@ -864,15 +908,15 @@ begin
     end;
     rdkSignedNumVal,
     rdkUnsignedNumVal: begin
-      Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+      Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
       Result := PrintNumber(AResValue.AsQWord, AResValue.AsInt64, AResValue.ByteSize, Resolved.Num1);
-      if Resolved.Num2.Visible then begin;
+      if Resolved.Num2.Visible then begin
         Result := Result +' = ' +
                   PrintNumber(AResValue.AsQWord, AResValue.AsInt64, AResValue.ByteSize, Resolved.Num2);
       end;
     end;
     rdkPointerVal: begin
-      Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+      Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
       Result := '';
 
       PtrDeref :=  PointerValue.DerefData;
@@ -905,7 +949,7 @@ begin
       end;
     end;
     rdkFloatVal: begin
-      Resolved := ValueFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
+      Resolved := DisplayFormatResolver.ResolveDispFormat(ADispFormat, AResValue);
       if Resolved.Float.NumFormat = vdfFloatScientific then
         case AResValue.FloatPrecission of
           dfpSingle:   Result := FloatToStrF(AResValue.AsFloat, ffExponent,  9, 0);
@@ -948,13 +992,13 @@ constructor TWatchResultPrinter.Create;
 begin
   FFormatFlags := [rpfMultiLine, rpfIndent];
   FTargetAddressSize := SizeOf(Pointer); // TODO: ask debugger
-  FValueFormatResolver := TDisplayFormatResolver.Create;
+  FDisplayFormatResolver := TDisplayFormatResolver.Create;
 end;
 
 destructor TWatchResultPrinter.Destroy;
 begin
   inherited Destroy;
-  FValueFormatResolver.Free;
+  FDisplayFormatResolver.Free;
 end;
 
 function TWatchResultPrinter.PrintWatchValue(AResValue: TWatchResultData;
@@ -965,7 +1009,10 @@ begin
   else
     FLineSeparator := ' ';
 
-  Result := PrintWatchValueEx(AResValue, ADispFormat, -1);
+  if FInValueFormatter then
+    Result := PrintWatchValueEx(AResValue, ADispFormat, FInValFormNestLevel) // This will increase it by one, compared to the value given to the formatter
+  else
+    Result := PrintWatchValueEx(AResValue, ADispFormat, -1);
 end;
 
 function TWatchResultPrinter.PrintWatchValue(AResValue: IWatchResultDataIntf;

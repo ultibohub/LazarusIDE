@@ -379,11 +379,11 @@ end;
 procedure TWatchesDlg.DebugConfigChanged;
 begin
   inherited DebugConfigChanged;
-  FWatchPrinter.ValueFormatResolver.FallBackFormats.Clear;
+  FWatchPrinter.DisplayFormatResolver.FallBackFormats.Clear;
   if DbgProjectLink.UseDisplayFormatConfigsFromIDE then
-    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfWatches);
+    DebuggerOptions.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.DisplayFormatResolver.FallBackFormats, dtfWatches);
   if DbgProjectLink.UseDisplayFormatConfigsFromProject then
-    DbgProjectLink.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.ValueFormatResolver.FallBackFormats, dtfWatches);
+    DbgProjectLink.DisplayFormatConfigs.AddToTargetedList(FWatchPrinter.DisplayFormatResolver.FallBackFormats, dtfWatches);
   UpdateAll;
 end;
 
@@ -1205,22 +1205,23 @@ begin
   if (d.ResultData <> nil) and
      not( (d.ResultData.ValueKind = rdkPrePrinted) and (t <> nil) )
   then begin
-    if ValueFormatterSelectorList.FormatValue(d.ResultData, Watch.DisplayFormat, FWatchPrinter, s)
-    then begin
-      InspectMemo.WordWrap := True;
-      InspectMemo.Text := s;
-      exit;
-    end;
-  end
-  else
-  if (t <> nil) and
-     ValueFormatterSelectorList.FormatValue(t, d.Value, Watch.DisplayFormat, s)
-  then begin
+    if defSkipValueFormatter in Watch.EvaluateFlags then
+      FWatchPrinter.FormatFlags := [rpfIndent, rpfMultiLine, rpfSkipValueFormatter];
+    FWatchPrinter.OnlyValueFormatter := Watch.DbgValueFormatter;
+    s := FWatchPrinter.PrintWatchValue(d.ResultData, Watch.DisplayFormat);
     InspectMemo.WordWrap := True;
     InspectMemo.Text := s;
     exit;
   end;
 
+  // Old style value
+  if (t <> nil) and
+     GlobalValueFormatterSelectorList.FormatValue(t, d.Value, Watch.DisplayFormat, s)
+  then begin
+    InspectMemo.WordWrap := True;
+    InspectMemo.Text := s;
+    exit;
+  end;
 
   if (t <> nil) and (t.Fields <> nil) and (t.Fields.Count > 0) and
      (not Watch.DisplayFormat.Struct.UseInherited)
@@ -1255,11 +1256,7 @@ begin
   end;
 
   InspectMemo.WordWrap := True;
-  if d.ResultData <> nil then
-    s := FWatchPrinter.PrintWatchValue(d.ResultData, Watch.DisplayFormat)
-  else
-    s := d.Value;
-  InspectMemo.Text := s;
+  InspectMemo.Text := d.Value;
   finally
     FWatchPrinter.FormatFlags := [rpfClearMultiLine];
     DebugBoss.UnLockCommandProcessing;
@@ -1508,15 +1505,15 @@ begin
           if (ResData <> nil) and
              not( (ResData.ValueKind = rdkPrePrinted) and (AWatchAbleResult.TypeInfo <> nil) )
           then begin
-            if not ValueFormatterSelectorList.FormatValue(ResData,
-               DispFormat, FWatchDlg.FWatchPrinter, Result)
-            then begin
-              Result := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
-            end;
+            if defSkipValueFormatter in TheWatch.EvaluateFlags then
+              FWatchDlg.FWatchPrinter.FormatFlags := [rpfIndent, rpfMultiLine, rpfSkipValueFormatter];
+            FWatchDlg.FWatchPrinter.OnlyValueFormatter := TheWatch.DbgValueFormatter;
+
+            Result := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
           end
           else begin
             if (AWatchAbleResult.TypeInfo = nil) or
-               not ValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
+               not GlobalValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
                AWatchAbleResult.Value, DispFormat, Result)
             then begin
               Result := AWatchAbleResult.Value;
@@ -1568,15 +1565,12 @@ begin
       if (ResData <> nil) and
          not( (ResData.ValueKind = rdkPrePrinted) and (AWatchAbleResult.TypeInfo <> nil) )
       then begin
-        FWatchDlg.FWatchPrinter.FormatFlags := [rpfClearMultiLine];
-        if not ValueFormatterSelectorList.FormatValue(ResData,
-           DispFormat, FWatchDlg.FWatchPrinter, WatchValueStr)
-        then begin
-          WatchValueStr := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
-          if (ResData.ValueKind = rdkArray) and (ResData.ArrayLength > 0)
-          then
-            WatchValueStr := Format(drsLen, [ResData.ArrayLength]) + WatchValueStr;
-        end;
+        if defSkipValueFormatter in TheWatch.EvaluateFlags then
+          FWatchDlg.FWatchPrinter.FormatFlags := [rpfClearMultiLine, rpfPrefixOuterArrayLen, rpfSkipValueFormatter]
+        else
+          FWatchDlg.FWatchPrinter.FormatFlags := [rpfClearMultiLine, rpfPrefixOuterArrayLen];
+        FWatchDlg.FWatchPrinter.OnlyValueFormatter := TheWatch.DbgValueFormatter;
+        WatchValueStr := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat);
         TreeView.NodeText[AVNode, COL_WATCH_VALUE-1] := WatchValueStr;
 
         if ResData.HasDataAddress then begin
@@ -1588,7 +1582,7 @@ begin
       end
       else begin
         if (AWatchAbleResult.TypeInfo = nil) or
-           not ValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
+           not GlobalValueFormatterSelectorList.FormatValue(AWatchAbleResult.TypeInfo,
            AWatchAbleResult.Value, DispFormat, WatchValueStr)
         then begin
           WatchValueStr := AWatchAbleResult.Value;

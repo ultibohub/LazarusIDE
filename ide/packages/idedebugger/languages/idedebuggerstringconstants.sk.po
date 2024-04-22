@@ -135,6 +135,10 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnenum"
 msgid "Enum"
 msgstr ""
 
+#: idedebuggerstringconstants.dispformatdlgbtnenumval
+msgid "Enum (Identifier)"
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatdlgbtnfloat
 msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
@@ -429,6 +433,14 @@ msgctxt "idedebuggerstringconstants.dlgbackconvoptname"
 msgid "Name"
 msgstr "Meno"
 
+#: idedebuggerstringconstants.dlgbackconvoptnesting
+msgid "Limit to (un)nested"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgbackconvoptnestlvl
+msgid "Min/Max level"
+msgstr ""
+
 #: idedebuggerstringconstants.dlgbackconvoptremove
 msgid "Remove"
 msgstr "Odstrániť"
@@ -599,6 +611,10 @@ msgstr ""
 msgid "Converter"
 msgstr "Konvertor"
 
+#: idedebuggerstringconstants.drsdebugvalformatter
+msgid "Value formatter"
+msgstr ""
+
 #: idedebuggerstringconstants.drsdisableenableupdatesforth
 msgctxt "idedebuggerstringconstants.drsdisableenableupdatesforth"
 msgid "Disable/Enable updates for the entire window"
@@ -693,6 +709,10 @@ msgstr ""
 
 #: idedebuggerstringconstants.drsnohistorykept
 msgid "No history kept"
+msgstr ""
+
+#: idedebuggerstringconstants.drsnovalformatter
+msgid "No value formatter"
 msgstr ""
 
 #: idedebuggerstringconstants.drsrunallthreadswhileevaluat
@@ -1723,6 +1743,14 @@ msgstr ""
 #: idedebuggerstringconstants.uemtogglebreakpoint
 msgid "Toggle &Breakpoint"
 msgstr "Prepnúť &bod prerušenia"
+
+#: idedebuggerstringconstants.valformatterchararraytostringname
+msgid "CharArray as String"
+msgstr ""
+
+#: idedebuggerstringconstants.valformatterchararraytostringstopnull
+msgid "Stop at #0"
+msgstr ""
 
 #: idedebuggerstringconstants.valformattercolorname
 msgid "TColor"

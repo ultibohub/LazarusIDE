@@ -104,7 +104,7 @@ uses
   LazDebuggerGdbmi, GDBMIDebugger, RunParamsOpts, BaseDebugManager,
   DebugManager, debugger, DebuggerDlg, DebugAttachDialog,
   DbgIntfDebuggerBase, DbgIntfProcess, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
-  idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBackendValueConv,
+  idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBackendValueConv, IdeDebuggerBase,
   // packager
   PackageSystem, PkgManager, BasePkgManager, LPKCache,
   // source editing
@@ -1457,8 +1457,6 @@ begin
   DebuggerOptions.PrimaryConfigPath := GetPrimaryConfigPath;
   DebuggerOptions.CreateConfig;
   DebuggerOptions.Load;
-  if DebugBoss <> nil then
-    DebugBoss.DoBackendConverterChanged;
 
   Assert(InputHistories = nil, 'TMainIDE.LoadGlobalOptions: InputHistories is already assigned.');
   InputHistoriesSO := TInputHistoriesWithSearchOpt.Create;
@@ -7274,9 +7272,8 @@ begin
           debugln(['Error: (lazarus) [TMainIDE.DoBuildProject] SaveStateFile before compile failed']);
           exit;
         end;
-
-        WarnSuspiciousCompilerOptions('Project checks','',CompilerParams);
-
+        // Use PackageGraph method also for project compiler options.
+        PackageGraph.WarnSuspiciousCompilerOptions('Project checks','',CompilerParams);
         StartTime:=Now;
         Result:=TheCompiler.Compile(Project1,
                                 WorkingDir,CompilerFilename,CmdLineParams,
@@ -11916,6 +11913,7 @@ begin
 
   ResultText := '';
   WatchPrinter := DebugBoss.HintWatchPrinter;
+  WatchPrinter.FormatFlags := [rpfMultiLine, rpfIndent, rpfPrefixOuterArrayLen];
   DispFormat := DefaultWatchDisplayFormat;
   if FHintWatchData.WatchValue.Watch <> nil then
     DispFormat := FHintWatchData.WatchValue.Watch.DisplayFormat;
@@ -11925,19 +11923,11 @@ begin
     if (ResData <> nil) and
        not( (ResData.ValueKind = rdkPrePrinted) and (FHintWatchData.WatchValue.TypeInfo <> nil) )
     then begin
-      if not ValueFormatterSelectorList.FormatValue(ResData,
-         DispFormat, WatchPrinter, ResultText)
-      then begin
-        ResultText := WatchPrinter.PrintWatchValue(ResData, DispFormat);
-        if (ResData.ValueKind = rdkArray) and (ResData.ArrayLength > 0)
-        then
-          ResultText := Format(drsLen, [ResData.ArrayLength]) + ResultText;
-      end;
-
+      ResultText := WatchPrinter.PrintWatchValue(ResData, DispFormat);
     end
     else begin
       if (FHintWatchData.WatchValue.TypeInfo = nil) or
-         not ValueFormatterSelectorList.FormatValue(FHintWatchData.WatchValue.TypeInfo,
+         not GlobalValueFormatterSelectorList.FormatValue(FHintWatchData.WatchValue.TypeInfo,
          FHintWatchData.WatchValue.Value, DispFormat, ResultText)
       then begin
         ResultText := FHintWatchData.WatchValue.Value;

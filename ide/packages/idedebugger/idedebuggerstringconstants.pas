@@ -60,6 +60,8 @@ resourcestring
   dlgIdeDbgNewItem = 'New Item';
   dlgIdeDbgEnterName = 'Enter name';
   dlgBackConvOptName = 'Name';
+  dlgBackConvOptNesting = 'Limit to (un)nested';
+  dlgBackConvOptNestLvl = 'Min/Max level';
 
   drsUseInstanceClass = 'Instance';
   drsUseInstanceClassHint = 'Use Instance class type';
@@ -72,6 +74,8 @@ resourcestring
   drsHistory = 'History';
   drsDebugConverter = 'Converter';
   drsNoDebugConverter= 'No Converter';
+  drsDebugValFormatter = 'Value formatter';
+  drsNoValFormatter= 'No value formatter';
   drsDisableEnableUpdatesForTh = 'Disable/Enable updates for the entire window';
   drsNoHistoryKept = 'No history kept';
   drsInsertResultAtTopOfHistor = 'Insert result at top of history';
@@ -406,6 +410,9 @@ resourcestring
   ValFormatterColorRgbDec = 'RGB in decimal';
 
   ValFormatterCurrencyName = 'Currency';
+  ValFormatterCharArrayToStringName = 'CharArray as String';
+
+  ValFormatterCharArrayToStringStopNull = 'Stop at #0';
 
   DispFormatDlgBtnCurrent   = 'Current';
   DispFormatDlgBtnAll       = 'All';
@@ -413,6 +420,7 @@ resourcestring
   DispFormatDlgBtnNumber2   = 'Number (2nd)';
   DispFormatDlgBtnOrd       = 'Ordinal';
   DispFormatDlgBtnEnum      = 'Enum';
+  DispFormatDlgBtnEnumVal   = 'Enum (Identifier)';
   DispFormatDlgBtnBool      = 'Boolean';
   DispFormatDlgBtnChar      = 'Char';
   DispFormatDlgBtnFloat     = 'Float';

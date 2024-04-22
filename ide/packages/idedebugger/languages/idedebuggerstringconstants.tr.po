@@ -136,6 +136,10 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnenum"
 msgid "Enum"
 msgstr ""
 
+#: idedebuggerstringconstants.dispformatdlgbtnenumval
+msgid "Enum (Identifier)"
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatdlgbtnfloat
 msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
@@ -430,6 +434,14 @@ msgctxt "idedebuggerstringconstants.dlgbackconvoptname"
 msgid "Name"
 msgstr "Ad"
 
+#: idedebuggerstringconstants.dlgbackconvoptnesting
+msgid "Limit to (un)nested"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgbackconvoptnestlvl
+msgid "Min/Max level"
+msgstr ""
+
 #: idedebuggerstringconstants.dlgbackconvoptremove
 msgid "Remove"
 msgstr "Kaldır"
@@ -596,6 +608,10 @@ msgstr "Değer sütunu"
 msgid "Converter"
 msgstr "Dönüştürücü"
 
+#: idedebuggerstringconstants.drsdebugvalformatter
+msgid "Value formatter"
+msgstr ""
+
 #: idedebuggerstringconstants.drsdisableenableupdatesforth
 msgctxt "idedebuggerstringconstants.drsdisableenableupdatesforth"
 msgid "Disable/Enable updates for the entire window"
@@ -691,6 +707,10 @@ msgstr "Dönüştürülemedi"
 #: idedebuggerstringconstants.drsnohistorykept
 msgid "No history kept"
 msgstr "Geçmiş tutulmadı"
+
+#: idedebuggerstringconstants.drsnovalformatter
+msgid "No value formatter"
+msgstr ""
 
 #: idedebuggerstringconstants.drsrunallthreadswhileevaluat
 msgid "Run all threads while evaluating"
@@ -1729,6 +1749,14 @@ msgstr "Hata ayıklayıcı değeri değiştiremiyor."
 #: idedebuggerstringconstants.uemtogglebreakpoint
 msgid "Toggle &Breakpoint"
 msgstr "Kesme &noktası değiştir"
+
+#: idedebuggerstringconstants.valformatterchararraytostringname
+msgid "CharArray as String"
+msgstr ""
+
+#: idedebuggerstringconstants.valformatterchararraytostringstopnull
+msgid "Stop at #0"
+msgstr ""
 
 #: idedebuggerstringconstants.valformattercolorname
 msgid "TColor"
