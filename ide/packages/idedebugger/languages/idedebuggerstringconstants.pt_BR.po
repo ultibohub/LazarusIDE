@@ -38,6 +38,10 @@ msgstr "Selecionar grupos à habilitar quando o ponto de parada for atingido"
 msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
 msgstr "Alguns grupos na lista Habilitar/Desabilitar não existem.%0:sCriá-los?%0:s%0:s%1:s"
 
+#: idedebuggerstringconstants.dbgconvertordinaltoname
+msgid "Conversion of ordinal to name"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgdonotshowthismessageagain
 msgid "Do not ask again"
 msgstr ""
@@ -519,6 +523,14 @@ msgstr "Limites: %d .. %d"
 #: idedebuggerstringconstants.dlginspectindexoffirstitemtoshow
 msgid "Index of first item to show"
 msgstr "Índice do primeiro item a exibir"
+
+#: idedebuggerstringconstants.dlgsortdown
+msgid "Down"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortup
+msgid "Up"
+msgstr ""
 
 #: idedebuggerstringconstants.dlgunitdeprefresh
 msgctxt "lazarusidestrconsts.dlgunitdeprefresh"
@@ -1712,6 +1724,10 @@ msgstr "&Propriedades"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "Observadores"
+
+#: idedebuggerstringconstants.optdispguttercustomdisplayformat
+msgid "Custom Display Format"
+msgstr ""
 
 #: idedebuggerstringconstants.regdlgbinary
 msgctxt "lazarusidestrconsts.regdlgbinary"

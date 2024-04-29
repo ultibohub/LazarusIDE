@@ -46,6 +46,9 @@ resourcestring
   //
   lisMenuViewCallStack = 'Call Stack';
 
+  dlgSortUp = 'Up';
+  dlgSortDown = 'Down';
+
   dlgInspectIndexOfFirstItemToShow = 'Index of first item to show';
   dlgInspectAmountOfItemsToShow = 'Amount of items to show';
   dlgInspectBoundsDD = 'Bounds: %d .. %d';
@@ -500,6 +503,8 @@ resourcestring
   DispFormatOptProjectText       = 'General and specific project settings will be used first. Only if none of them sets a default, then the IDE-wide settings will be tried.';
 
   dbgDoNotShowThisMessageAgain = 'Do not ask again';
+  optDispGutterCustomDisplayformat = 'Custom Display Format';
+  dbgConvertOrdinalToName = 'Conversion of ordinal to name';
 
 implementation
 

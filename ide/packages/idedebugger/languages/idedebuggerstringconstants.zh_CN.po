@@ -38,6 +38,10 @@ msgstr "选择组来启用 当断点被命中时"
 msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
 msgstr "一些组在启用/禁用列表中不存在。%0:s创建它们吗？%0:s%0:s%1:s"
 
+#: idedebuggerstringconstants.dbgconvertordinaltoname
+msgid "Conversion of ordinal to name"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgdonotshowthismessageagain
 msgid "Do not ask again"
 msgstr ""
@@ -503,6 +507,14 @@ msgstr ""
 
 #: idedebuggerstringconstants.dlginspectindexoffirstitemtoshow
 msgid "Index of first item to show"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortdown
+msgid "Down"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortup
+msgid "Up"
 msgstr ""
 
 #: idedebuggerstringconstants.dlgunitdeprefresh
@@ -1689,6 +1701,10 @@ msgstr "属性(&P)"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "监视(&W)"
+
+#: idedebuggerstringconstants.optdispguttercustomdisplayformat
+msgid "Custom Display Format"
+msgstr ""
 
 #: idedebuggerstringconstants.regdlgbinary
 msgctxt "lazarusidestrconsts.regdlgbinary"

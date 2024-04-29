@@ -31,6 +31,10 @@ msgstr "Valitse sallittavat ryhmät, kun keskeytyskohta aktivoituu"
 msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
 msgstr "Joitain Salli/Estä listan ryhmiä ei ole.%0:sLuodaanko ne?%0:s%0:s%1:s"
 
+#: idedebuggerstringconstants.dbgconvertordinaltoname
+msgid "Conversion of ordinal to name"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgdonotshowthismessageagain
 msgid "Do not ask again"
 msgstr ""
@@ -496,6 +500,14 @@ msgstr ""
 
 #: idedebuggerstringconstants.dlginspectindexoffirstitemtoshow
 msgid "Index of first item to show"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortdown
+msgid "Down"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortup
+msgid "Up"
 msgstr ""
 
 #: idedebuggerstringconstants.dlgunitdeprefresh
@@ -1691,6 +1703,10 @@ msgstr "&Ominaisuudet"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "Vahdit"
+
+#: idedebuggerstringconstants.optdispguttercustomdisplayformat
+msgid "Custom Display Format"
+msgstr ""
 
 #: idedebuggerstringconstants.regdlgbinary
 msgctxt "lazarusidestrconsts.regdlgbinary"

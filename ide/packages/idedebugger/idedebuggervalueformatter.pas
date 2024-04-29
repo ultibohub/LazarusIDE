@@ -1,6 +1,7 @@
 unit IdeDebuggerValueFormatter;
 
 {$mode objfpc}{$H+}
+{$INTERFACES CORBA}
 
 interface
 
@@ -19,9 +20,23 @@ type
 
   TLazDbgIdeValFormatterOriginalValue = (vfovHide, vfovAtEnd, vfovAtFront);
 
+  IIdeDbgValueFormatterIntf = interface ['{2BEC59F6-7CD8-4CFE-B399-C25AFCADB700}']
+    function FormatValue(AWatchValue: IWatchResultDataIntf;
+      ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer;
+      AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String;
+      const AWatchedVarUpper, AWatchedExprUpper: String // must be already uppercase
+      ): Boolean;
+    function FormatValue(aDBGType: TDBGType;
+                         aValue: string;
+                         ADisplayFormat: TWatchDisplayFormat;
+                         out APrintedValue: String;
+                         const AWatchedVarUpper, AWatchedExprUpper: String // must be already uppercase
+                        ): boolean; deprecated 'For values from older backends only - to be removed as backends are upgraded';
+  end;
+
   { TIdeDbgValueFormatterSelector }
 
-  TIdeDbgValueFormatterSelector = class(TFreeNotifyingObject)
+  TIdeDbgValueFormatterSelector = class(TFreeNotifyingObject, IIdeDbgValueFormatterIntf)
   private
     FLimitByNestLevel: Boolean;
     FLimitByNestMax: integer;
@@ -32,6 +47,7 @@ type
     FEnabled: Boolean;
     FName: String;
     FValFormatterRegEntry: TLazDbgIdeValueFormatterRegistryEntryClass;
+    FInFormatValue: boolean;
 
     procedure FreeValFormater;
     function GetMatchInherited: boolean;
@@ -49,14 +65,23 @@ type
     procedure LoadDataFromXMLConfig(const AConfig: TRttiXMLConfig; const APath: string);
     procedure SaveDataToXMLConfig(const AConfig: TRttiXMLConfig; const APath: string);
 
-    function MatchesAll(AWatchValue: IWatchResultDataIntf; ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer): Boolean;
+    function MatchesAll(AWatchValue: IWatchResultDataIntf; ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer;
+                        const AWatchedVarUpper, AWatchedExprUpper: String): Boolean;
     function FormatValue(AWatchValue: IWatchResultDataIntf;
       ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer;
-      AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String
+      AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String;
+      const AWatchedVarUpper, AWatchedExprUpper: String // must be already uppercase
       ): Boolean; experimental;
+    function FormatValue(aDBGType: TDBGType;
+                         aValue: string;
+                         ADisplayFormat: TWatchDisplayFormat;
+                         out APrintedValue: String;
+                         const AWatchedVarUpper, AWatchedExprUpper: String // must be already uppercase
+                        ): boolean; deprecated 'For values from older backends only - to be removed as backends are upgraded';
 
-    function IsMatchingTypeName(ATypeName: String): boolean;
-    function IsMatchingInheritedTypeName(ATypeName: String): boolean;
+    function IsMatchingTypeName(const ATypeNameUpper: String): boolean; inline;
+    function IsMatchingInheritedTypeName(ATypeName: String): boolean; inline;
+    function IsMatchingName(const AWatchedVarUpper, AWatchedExprUpper: String): boolean; inline;
   published
     property ValFormatter: ILazDbgIdeValueFormatterIntf read FValFormatter;
     property ValFormatterRegEntry: TLazDbgIdeValueFormatterRegistryEntryClass read FValFormatterRegEntry;
@@ -74,7 +99,8 @@ type
   { TIdeDbgValueFormatterSelectorList }
 
   TIdeDbgValueFormatterSelectorList = class(
-    specialize TChangeNotificationGeneric< specialize TFPGObjectList<TIdeDbgValueFormatterSelector> >
+    specialize TChangeNotificationGeneric< specialize TFPGObjectList<TIdeDbgValueFormatterSelector> >,
+    IIdeDbgValueFormatterIntf
   )
   private
     FChanged: Boolean;
@@ -98,12 +124,14 @@ type
     destructor Destroy; override;
     function FormatValue(AWatchValue: IWatchResultDataIntf;
       ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer;
-      AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String
+      AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String;
+      const AWatchedVarUpper, AWatchedExprUpper: String
       ): Boolean;
     function FormatValue(aDBGType: TDBGType;
                          aValue: string;
                          ADisplayFormat: TWatchDisplayFormat;
-                         out APrintedValue: String
+                         out APrintedValue: String;
+                         const AWatchedVarUpper, AWatchedExprUpper: String
                         ): boolean; deprecated 'For values from older backends only - to be removed as backends are upgraded';
   published
     // This will only be saved to disk, if "Changed = True", i.e. if the list itself changed
@@ -136,6 +164,7 @@ function TIdeDbgValueFormatterSelector.DoFormatValue(AWatchValue: IWatchResultDa
   ADisplayFormat: TWatchDisplayFormat; AWatchResultPrinter: IWatchResultPrinter; out
   APrintedValue: String): Boolean;
 begin
+  FInFormatValue := True;
   Result := ValFormatter.FormatValue(AWatchValue, ADisplayFormat, AWatchResultPrinter, APrintedValue);
   if Result then begin
     case OriginalValue of
@@ -143,6 +172,7 @@ begin
       vfovAtFront: APrintedValue := AWatchResultPrinter.PrintWatchValue(AWatchValue, ADisplayFormat) + ' = ' + APrintedValue;
     end;
   end;
+  FInFormatValue := False;
 end;
 
 constructor TIdeDbgValueFormatterSelector.Create;
@@ -194,7 +224,8 @@ procedure TIdeDbgValueFormatterSelector.LoadDataFromXMLConfig(
   const AConfig: TRttiXMLConfig; const APath: string);
 var
   s: String;
-  Def: TObject;
+  Def, o: TObject;
+  intf: ILazDbgIdeValueFormatterConfigStorageIntf;
 begin
   FreeValFormater;
   AConfig.ReadObject(APath + 'Filter/', Self);
@@ -207,28 +238,40 @@ begin
 
   FValFormatter := FValFormatterRegEntry.CreateValueFormatter;
 
-  Def := FValFormatter.GetDefaultsObject;
-  AConfig.ReadObject(APath + 'Formatter/', FValFormatter.GetObject, Def);
-  Def.Free;
+  o := FValFormatter.GetObject;
+  if o <> nil then begin
+    Def := FValFormatter.GetDefaultsObject;
+    AConfig.ReadObject(APath + 'Formatter/', o, Def);
+    Def.Free;
+  end;
+  if FValFormatter.GetInterface(ILazDbgIdeValueFormatterConfigStorageIntf, intf) and (intf <> nil) then
+    intf.LoadDataFromXMLConfig(AConfig, APath);
 end;
 
 procedure TIdeDbgValueFormatterSelector.SaveDataToXMLConfig(
   const AConfig: TRttiXMLConfig; const APath: string);
 var
-  Def: TObject;
+  Def, o: TObject;
+  intf: ILazDbgIdeValueFormatterConfigStorageIntf;
 begin
   AConfig.WriteObject(APath + 'Filter/', Self);
   AConfig.SetDeleteValue(APath + 'Filter/MatchTypeNames', MatchTypeNames.CommaText, '');
 
   AConfig.SetValue(APath + 'FormatterClass', FValFormatterRegEntry.GetClassName);
 
-  Def := FValFormatter.GetDefaultsObject;
-  AConfig.WriteObject(APath + 'Formatter/', FValFormatter.GetObject, Def);
-  Def.Free;
+  o := FValFormatter.GetObject;
+  if o <> nil then begin
+    Def := FValFormatter.GetDefaultsObject;
+    AConfig.WriteObject(APath + 'Formatter/', o, Def);
+    Def.Free;
+  end;
+  if FValFormatter.GetInterface(ILazDbgIdeValueFormatterConfigStorageIntf, intf) and (intf <> nil) then
+    intf.SaveDataToXMLConfig(AConfig, APath);
 end;
 
 function TIdeDbgValueFormatterSelector.MatchesAll(AWatchValue: IWatchResultDataIntf;
-  ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer): Boolean;
+  ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer; const AWatchedVarUpper,
+  AWatchedExprUpper: String): Boolean;
 var
   j: Integer;
   a: IWatchResultDataIntf;
@@ -236,6 +279,7 @@ begin
   Result := False;
   if (ValFormatter = nil) or
      (not (vffFormatValue in ValFormatter.SupportedFeatures)) or
+     ((vffSkipOnRecursion in ValFormatter.SupportedFeatures) and FInFormatValue) or
      (not (AWatchValue.ValueKind in ValFormatter.SupportedDataKinds)) or
      ( ADisplayFormat.MemDump       and (not(vffValueMemDump in ValFormatter.SupportedFeatures)) ) or
      ( (not ADisplayFormat.MemDump) and (not(vffValueData in ValFormatter.SupportedFeatures)) ) or
@@ -243,7 +287,7 @@ begin
   then
     exit;
 
-  if not IsMatchingTypeName(AWatchValue.TypeName) then begin
+  if not IsMatchingTypeName(AnsiUpperCase(AWatchValue.TypeName)) then begin
     if not MatchInherited then
       exit;
     j := AWatchValue.AnchestorCount - 1;
@@ -257,27 +301,72 @@ begin
       exit;
   end;
 
+  if not IsMatchingName(AWatchedVarUpper, AWatchedExprUpper) then
+    exit;
+
   Result := True;
 end;
 
 function TIdeDbgValueFormatterSelector.FormatValue(AWatchValue: IWatchResultDataIntf;
   ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer;
-  AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String): Boolean;
+  AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String;
+  const AWatchedVarUpper, AWatchedExprUpper: String): Boolean;
 begin
-  Result := MatchesAll(AWatchValue, ADisplayFormat, ANestLevel);
+  Result := MatchesAll(AWatchValue, ADisplayFormat, ANestLevel, AWatchedVarUpper, AWatchedExprUpper);
   if Result then
     Result := DoFormatValue(AWatchValue, ADisplayFormat, AWatchResultPrinter, APrintedValue);
 end;
 
-function TIdeDbgValueFormatterSelector.IsMatchingTypeName(ATypeName: String): boolean;
+function TIdeDbgValueFormatterSelector.FormatValue(aDBGType: TDBGType; aValue: string;
+  ADisplayFormat: TWatchDisplayFormat; out APrintedValue: String;
+  const AWatchedVarUpper, AWatchedExprUpper: String): boolean;
 begin
-  Result := FMatchTypeNames.CheckTypeName(ATypeName);
+  Result := False;
+  if (ValFormatter = nil) or
+     (not (vffFormatOldValue in ValFormatter.SupportedFeatures)) or
+     ((vffSkipOnRecursion in ValFormatter.SupportedFeatures) and FInFormatValue) or
+     ( ADisplayFormat.MemDump       and (not(vffValueMemDump in ValFormatter.SupportedFeatures)) ) or
+     ( (not ADisplayFormat.MemDump) and (not(vffValueData in ValFormatter.SupportedFeatures)) ) or
+     ( LimitByNestLevel and (LimitByNestMin > 0) ) // only level 0 for old style watches
+  then
+    exit;
+
+  if not IsMatchingTypeName(AnsiUpperCase(aDBGType.TypeName)) then
+    exit;
+  if not IsMatchingName(AWatchedVarUpper, AWatchedExprUpper) then
+    exit;
+
+  FInFormatValue := True;
+  Result := ValFormatter.FormatValue(aDBGType, aValue, ADisplayFormat, APrintedValue);
+  if Result then begin
+    case OriginalValue of
+      vfovAtEnd:   APrintedValue := APrintedValue + ' = ' + aValue;
+      vfovAtFront: APrintedValue := aValue + ' = ' + APrintedValue;
+    end;
+  end;
+  FInFormatValue := False;
+end;
+
+function TIdeDbgValueFormatterSelector.IsMatchingTypeName(const ATypeNameUpper: String): boolean;
+begin
+  Result := FMatchTypeNames.CheckUpperCaseTypeName(ATypeNameUpper);
 end;
 
 function TIdeDbgValueFormatterSelector.IsMatchingInheritedTypeName(
   ATypeName: String): boolean;
 begin
   Result := FMatchTypeNames.CheckInheritedTypeName(ATypeName);
+end;
+
+function TIdeDbgValueFormatterSelector.IsMatchingName(const AWatchedVarUpper,
+  AWatchedExprUpper: String): boolean;
+begin
+  Result := not (FMatchTypeNames.MatchesName or FMatchTypeNames.MatchesExpression);
+  if Result then
+    exit;
+  Result := (AWatchedVarUpper = '') or FMatchTypeNames.CheckUpperCaseName(AWatchedVarUpper);
+  if not Result then
+    Result := (AWatchedExprUpper = '') or FMatchTypeNames.CheckUpperCaseExpression(AWatchedExprUpper);
 end;
 
 { TIdeDbgValueFormatterSelectorList }
@@ -383,14 +472,15 @@ end;
 
 function TIdeDbgValueFormatterSelectorList.FormatValue(AWatchValue: IWatchResultDataIntf;
   ADisplayFormat: TWatchDisplayFormat; ANestLevel: integer;
-  AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String): Boolean;
+  AWatchResultPrinter: IWatchResultPrinter; out APrintedValue: String; const AWatchedVarUpper,
+  AWatchedExprUpper: String): Boolean;
 var
   i: Integer;
   f: TIdeDbgValueFormatterSelector;
 begin
   for i := 0 to Count - 1 do begin
     f := Items[i];
-    if not f.MatchesAll(AWatchValue, ADisplayFormat, ANestLevel) then
+    if not f.MatchesAll(AWatchValue, ADisplayFormat, ANestLevel, AWatchedVarUpper, AWatchedExprUpper) then
       continue;
 
     Result := f.DoFormatValue(AWatchValue, ADisplayFormat, AWatchResultPrinter, APrintedValue);
@@ -400,39 +490,19 @@ begin
   Result := False;
 end;
 
-function TIdeDbgValueFormatterSelectorList.FormatValue(aDBGType: TDBGType;
-  aValue: string; ADisplayFormat: TWatchDisplayFormat; out APrintedValue: String
-  ): boolean;
+function TIdeDbgValueFormatterSelectorList.FormatValue(aDBGType: TDBGType; aValue: string;
+  ADisplayFormat: TWatchDisplayFormat; out APrintedValue: String; const AWatchedVarUpper,
+  AWatchedExprUpper: String): boolean;
 var
   i: Integer;
-  f: TIdeDbgValueFormatterSelector;
-  v: ILazDbgIdeValueFormatterIntf;
 begin
   Result := aDBGType <> nil;
   if not Result then
     exit;
   for i := 0 to Count - 1 do begin
-    f := Items[i];
-    v := f.ValFormatter;
-
-    if (v = nil) or
-       (not (vffFormatOldValue in v.SupportedFeatures)) or
-       ( ADisplayFormat.MemDump       and (not(vffValueMemDump in v.SupportedFeatures)) ) or
-       ( (not ADisplayFormat.MemDump) and (not(vffValueData in v.SupportedFeatures)) ) or
-       ( f.LimitByNestLevel and (f.LimitByNestMin > 0) ) // only level 0 for old style watches
-    then
-      continue;
-
-    if not f.IsMatchingTypeName(aDBGType.TypeName) then
-      continue;
-    Result := f.ValFormatter.FormatValue(aDBGType, aValue, ADisplayFormat, APrintedValue);
-    if Result then begin
-      case f.OriginalValue of
-        vfovAtEnd:   APrintedValue := APrintedValue + ' = ' + aValue;
-        vfovAtFront: APrintedValue := aValue + ' = ' + APrintedValue;
-      end;
+    Result := Items[i].FormatValue(aDBGType, aValue, ADisplayFormat, APrintedValue, AWatchedVarUpper, AWatchedExprUpper);
+    if Result then
       exit;
-    end;
   end;
   Result := False;
 end;

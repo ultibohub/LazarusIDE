@@ -31,6 +31,10 @@ msgstr "Vybrat skupiny, které se mají povolit při dosáhnutí bodu přerušen
 msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
 msgstr "Některé skupiny v seznamu Povolené/Zakázané neexistují.%0:sMají se vytvořit?%0:s%0:s%1:s"
 
+#: idedebuggerstringconstants.dbgconvertordinaltoname
+msgid "Conversion of ordinal to name"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgdonotshowthismessageagain
 msgid "Do not ask again"
 msgstr ""
@@ -498,6 +502,14 @@ msgstr ""
 
 #: idedebuggerstringconstants.dlginspectindexoffirstitemtoshow
 msgid "Index of first item to show"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortdown
+msgid "Down"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortup
+msgid "Up"
 msgstr ""
 
 #: idedebuggerstringconstants.dlgunitdeprefresh
@@ -1698,6 +1710,10 @@ msgstr "&Vlastnosti"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "Sledování"
+
+#: idedebuggerstringconstants.optdispguttercustomdisplayformat
+msgid "Custom Display Format"
+msgstr ""
 
 #: idedebuggerstringconstants.regdlgbinary
 msgctxt "lazarusidestrconsts.regdlgbinary"

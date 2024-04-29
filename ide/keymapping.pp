@@ -648,7 +648,6 @@ begin
     ecSaveAs                  : Result:= lisMenuSaveAs;
     ecSaveAll                 : Result:= lisSaveAll;
     ecClose                   : Result:= lisClose;
-    ecCloseAll                : Result:= lisMenuCloseAll;
     ecCloseOtherTabs          : Result:= uemCloseOtherPages;
     ecCloseRightTabs          : Result:= uemCloseOtherPagesRight;
     ecCleanDirectory          : Result:= lisMenuCleanDirectory;
@@ -1457,7 +1456,6 @@ begin
   ecSaveAs:              SetSingle(VK_UNKNOWN,[]);
   ecSaveAll:             SetSingle(VK_S,[XCtrl,ssShift]);
   ecClose:               SetSingle(VK_F4,[XCtrl]);
-  ecCloseAll:            SetSingle(VK_UNKNOWN,[]);
   ecCloseOtherTabs:      SetSingle(VK_UNKNOWN,[]);
   ecCloseRightTabs:      SetSingle(VK_UNKNOWN,[]);
   ecCleanDirectory:      SetSingle(VK_UNKNOWN,[]);
@@ -1925,7 +1923,6 @@ begin
   ecSaveAs:              SetSingle(VK_UNKNOWN,[]);
   ecSaveAll:             SetSingle(VK_F2,[ssShift]);
   ecClose:               SetSingle(VK_F3,[ssAlt]);
-  ecCloseAll:            SetSingle(VK_UNKNOWN,[]);
   ecCloseOtherTabs:      SetSingle(VK_UNKNOWN,[]);
   ecCloseRightTabs:      SetSingle(VK_UNKNOWN,[]);
   ecCleanDirectory:      SetSingle(VK_UNKNOWN,[]);
@@ -2583,7 +2580,6 @@ begin
   ecSaveAs:              SetSingle(VK_S,[ssMeta,ssShift]);
   ecSaveAll:             SetSingle(VK_S,[ssMeta,ssAlt]);
   ecClose:               SetSingle(VK_W,[ssMeta],VK_W,[ssMeta,ssShift]);
-  ecCloseAll:            SetSingle(VK_UNKNOWN,[]);
   ecCloseOtherTabs:      SetSingle(VK_UNKNOWN,[]);
   ecCloseRightTabs:      SetSingle(VK_UNKNOWN,[]);
   ecCleanDirectory:      SetSingle(VK_UNKNOWN,[]);
@@ -3334,7 +3330,6 @@ begin
   AddDefault(C, 'SaveAs', lisKMSaveAs, ecSaveAs);
   AddDefault(C, 'SaveAll', lisKMSaveAll, ecSaveAll);
   AddDefault(C, 'Close', lisClose, ecClose);
-  AddDefault(C, 'CloseAll', lisCloseAll, ecCloseAll);
   AddDefault(C, 'CloseAllOther', uemCloseOtherPagesPlain, ecCloseOtherTabs);
   AddDefault(C, 'CloseAllRight', uemCloseOtherPagesRightPlain, ecCloseRightTabs);
   AddDefault(C, 'Clean Directory', lisClDirCleanDirectory, ecCleanDirectory);

@@ -295,6 +295,18 @@
       <Item>
         <Filename Value="idedebuggervalueformatterarrayofchartostring.pas"/>
         <UnitName Value="IdeDebuggerValueFormatterArrayOfCharToString"/>
+        <ResourceBaseClass Value="Frame"/>
+        <ResourceBaseClassname Value=""/>
+      </Item>
+      <Item>
+        <Filename Value="idedebuggervalueformatterdisplayformat.pas"/>
+        <UnitName Value="IdeDebuggerValueFormatterDisplayFormat"/>
+        <ResourceBaseClass Value="Frame"/>
+        <ResourceBaseClassname Value=""/>
+      </Item>
+      <Item>
+        <Filename Value="idedebuggervalueformatterordinaltoname.pas"/>
+        <UnitName Value="IdeDebuggerValueFormatterOrdinalToName"/>
       </Item>
     </Files>
     <i18n>

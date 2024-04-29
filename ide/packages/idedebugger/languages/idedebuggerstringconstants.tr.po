@@ -37,6 +37,10 @@ msgstr "Kesme noktasına gelindiğinde etkinleştirilecek grupları seç"
 msgid "Some groups in the Enable/Disable list do not exist.%0:sCreate them?%0:s%0:s%1:s"
 msgstr "Etkin/Devre dışı listesindeki bazı gruplar mevcut değil.%0:sOluşturulsun mu?%0:s%0:s%1:s"
 
+#: idedebuggerstringconstants.dbgconvertordinaltoname
+msgid "Conversion of ordinal to name"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgdonotshowthismessageagain
 msgid "Do not ask again"
 msgstr ""
@@ -503,6 +507,14 @@ msgstr "Sınırlar: %d .. %d"
 #: idedebuggerstringconstants.dlginspectindexoffirstitemtoshow
 msgid "Index of first item to show"
 msgstr "Gösterilecek ilk öğenin dizini"
+
+#: idedebuggerstringconstants.dlgsortdown
+msgid "Down"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgsortup
+msgid "Up"
+msgstr ""
 
 #: idedebuggerstringconstants.dlgunitdeprefresh
 msgid "Refresh"
@@ -1693,6 +1705,10 @@ msgstr "&Özellikler"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "İzlemeler"
+
+#: idedebuggerstringconstants.optdispguttercustomdisplayformat
+msgid "Custom Display Format"
+msgstr ""
 
 #: idedebuggerstringconstants.regdlgbinary
 msgctxt "lazarusidestrconsts.regdlgbinary"

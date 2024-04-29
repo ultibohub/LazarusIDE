@@ -71,7 +71,7 @@ uses
   // use lazutf8, lazfileutils and lazfilecache after FileProcs and FileUtil
   FileUtil, LazFileUtils, LazUtilities, LazUTF8, UTF8Process,
   LConvEncoding, Laz2_XMLCfg, LazLoggerBase, LazLogger, LazFileCache, AvgLvlTree,
-  GraphType, LazStringUtils,
+  GraphType, LazStringUtils, LazTracer,
   LCLExceptionStacktrace, {$IFDEF WINDOWS} Win32Proc, {$ENDIF}
   // SynEdit
   SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter,
@@ -218,7 +218,6 @@ type
     procedure mnuSaveAllClicked(Sender: TObject);
     procedure mnuExportHtml(Sender: TObject);
     procedure mnuCloseClicked(Sender: TObject);
-    procedure mnuCloseAllClicked(Sender: TObject);
     procedure mnuCleanDirectoryClicked(Sender: TObject);
     procedure mnuRestartClicked(Sender: TObject);
     procedure mnuQuitClicked(Sender: TObject);
@@ -2747,8 +2746,6 @@ begin
     itmFileExportHtml.OnClick  := @mnuExportHtml;
     itmFileClose.Enabled := False;
     itmFileClose.OnClick := @mnuCloseClicked;
-    itmFileCloseAll.Enabled := False;
-    itmFileCloseAll.OnClick := @mnuCloseAllClicked;
     itmFileCleanDirectory.OnClick := @mnuCleanDirectoryClicked;
     itmFileRestart.OnClick := @mnuRestartClicked;
     itmFileQuit.OnClick := @mnuQuitClicked;
@@ -2994,7 +2991,6 @@ begin
     itmFileSaveAs.Command:=GetIdeCmdRegToolBtn(ecSaveAs);
     itmFileSaveAll.Command:=GetIdeCmdRegToolBtn(ecSaveAll);
     itmFileClose.Command:=GetIdeCmdRegToolBtn(ecClose);
-    itmFileCloseAll.Command:=GetIdeCmdRegToolBtn(ecCloseAll);
     itmFileCleanDirectory.Command:=GetIdeCmdRegToolBtn(ecCleanDirectory);
     itmFileQuit.Command:=GetIdeCmdRegToolBtn(ecQuit);
 
@@ -3495,11 +3491,6 @@ begin
     PageIndex := SourceEditorManager.ActiveSourceWindow.PageIndex;
   end;
   DoCloseEditorFile(NB.FindSourceEditorWithPageIndex(PageIndex), [cfSaveFirst]);
-end;
-
-procedure TMainIDE.mnuCloseAllClicked(Sender: TObject);
-begin
-  CloseAll;
 end;
 
 procedure TMainIDE.mnuCleanDirectoryClicked(Sender: TObject);
@@ -4036,9 +4027,7 @@ begin
   GetCurrentUnit(ASrcEdit,AnUnitInfo);
   if not UpdateFileCommandsStamp.Changed(ASrcEdit) then
     Exit;
-
   IDECommandList.FindIDECommand(ecClose).Enabled := ASrcEdit<>nil;
-  IDECommandList.FindIDECommand(ecCloseAll).Enabled := ASrcEdit<>nil;
 end;
 
 procedure TMainIDE.UpdateMainIDECommands(Sender: TObject);
@@ -6648,7 +6637,7 @@ begin
   AFilename:=ExpandFileNameUTF8(TrimFilename(AFilename));
   //debugln('TMainIDE.DoOpenProjectFile A2 "'+AFileName+'"');
   if not FilenameIsAbsolute(AFilename) then
-    RaiseGDBException('TMainIDE.DoOpenProjectFile: buggy ExpandFileNameUTF8');
+    LazTracer.RaiseGDBException('TMainIDE.DoOpenProjectFile: buggy ExpandFileNameUTF8');
   DiskFilename:=GetPhysicalFilenameCached(AFilename,false);
   if DiskFilename<>AFilename then begin
     // e.g. encoding changed
@@ -8882,10 +8871,10 @@ begin
   ActiveUnitInfo:=nil;
   if AForm<>nil then begin
     if (AForm.Designer=nil) then
-      RaiseGDBException('TMainIDE.GetUnitWithForm AForm.Designer');
+      LazTracer.RaiseGDBException('TMainIDE.GetUnitWithForm AForm.Designer');
     AComponent:=AForm.Designer.LookupRoot;
     if AComponent=nil then
-      RaiseGDBException('TMainIDE.GetUnitWithForm AComponent=nil');
+      LazTracer.RaiseGDBException('TMainIDE.GetUnitWithForm AComponent=nil');
     GetUnitWithPersistent(AComponent,ActiveSourceEditor,ActiveUnitInfo);
   end;
 end;
@@ -11897,7 +11886,7 @@ procedure TMainIDE.HintWatchValidityChanged(Sender: TObject);
 var
   p: SizeInt;
   WatchPrinter: TWatchResultPrinter;
-  ResultText: String;
+  ResultText, s: String;
   ResData: TWatchResultData;
   DispFormat: TWatchDisplayFormat;
 begin
@@ -11923,12 +11912,13 @@ begin
     if (ResData <> nil) and
        not( (ResData.ValueKind = rdkPrePrinted) and (FHintWatchData.WatchValue.TypeInfo <> nil) )
     then begin
-      ResultText := WatchPrinter.PrintWatchValue(ResData, DispFormat);
+      ResultText := WatchPrinter.PrintWatchValue(ResData, DispFormat, FHintWatchData.WatchValue.Expression);
     end
     else begin
+      s := AnsiUpperCase(FHintWatchData.WatchValue.Expression);
       if (FHintWatchData.WatchValue.TypeInfo = nil) or
          not GlobalValueFormatterSelectorList.FormatValue(FHintWatchData.WatchValue.TypeInfo,
-         FHintWatchData.WatchValue.Value, DispFormat, ResultText)
+         FHintWatchData.WatchValue.Value, DispFormat, ResultText, s, s)
       then begin
         ResultText := FHintWatchData.WatchValue.Value;
         if (FHintWatchData.WatchValue.TypeInfo <> nil) and
@@ -12428,7 +12418,7 @@ begin
         AComponent.Name,NewName,AComponent.ClassName,true);
       ApplyBossResult(lisUnableToRenameVariableInSource);
     end else begin
-      RaiseGDBException('TMainIDE.DesignerRenameComponent internal error:'+AComponent.Name+':'+AComponent.ClassName);
+      LazTracer.RaiseGDBException('TMainIDE.DesignerRenameComponent internal error:'+AComponent.Name+':'+AComponent.ClassName);
     end;
 
     // rename inherited components
@@ -13438,7 +13428,7 @@ var
 begin
   AComponent:=ADesigner.LookupRoot;
   if AComponent=nil then
-    RaiseGDBException('TMainIDE.GetProjectFileWithDesigner Designer.LookupRoot=nil');
+    LazTracer.RaiseGDBException('TMainIDE.GetProjectFileWithDesigner Designer.LookupRoot=nil');
   Result:=GetProjectFileWithRootComponent(AComponent);
 end;
 
@@ -13970,11 +13960,11 @@ begin
   if not BeginCodeTool(CurDesigner,SrcEdit,UnitInfo,[ctfSwitchToFormSource]) then
     exit;
   if CurDesigner.Form=nil then
-    RaiseGDBException('[TMainIDE.OnPropHookPersistentDeleting] Error: TDesigner without a form');
+    LazTracer.RaiseGDBException('[TMainIDE.OnPropHookPersistentDeleting] Error: TDesigner without a form');
   // find source for form
   Assert(UnitInfo=Project1.UnitWithComponent(CurDesigner.LookupRoot), 'TMainIDE.PropHookPersistentDeleting check fail.');
   if UnitInfo=nil then
-    RaiseGDBException('[TMainIDE.OnPropHookPersistentDeleting] Error: form without source');
+    LazTracer.RaiseGDBException('[TMainIDE.OnPropHookPersistentDeleting] Error: form without source');
   // mark references modified
   MarkUnitsModifiedUsingSubComponent(Comp);
   // remember cursor position
