@@ -141,6 +141,10 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
 msgstr ""
 
+#: idedebuggerstringconstants.dispformatdlgbtnindent
+msgid "Multiline"
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatdlgbtnnum2visible
 msgid "Show value in a second format"
 msgstr ""
@@ -263,6 +267,14 @@ msgstr ""
 
 #: idedebuggerstringconstants.dispformatgroupstructaddress
 msgid "Structures (Addr)"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatindentmaxwrap
+msgid "Max multiline level"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatnoleadzero
+msgid "Hide leading zeros"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatnumdigits
@@ -1742,6 +1754,10 @@ msgstr "תכונות&"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "רשימת המשגיחים"
+
+#: idedebuggerstringconstants.liswordwrapbtnhint
+msgid "Word wrap"
+msgstr ""
 
 #: idedebuggerstringconstants.optdispguttercustomdisplayformat
 msgid "Custom Display Format"

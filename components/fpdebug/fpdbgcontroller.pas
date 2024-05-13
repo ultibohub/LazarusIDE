@@ -1679,6 +1679,7 @@ begin
 
   if assigned(FMainProcess) then begin
     DebugLn(DBG_WARNINGS, 'The debuggee is already running');
+    FLastError := CreateError(fpInternalErr, ['The debugger is already running']);
     Exit;
   end;
 
@@ -2157,10 +2158,12 @@ begin
 
   if FExecutableFilename = '' then begin
     DebugLn(DBG_WARNINGS, 'No filename given to execute.');
+    FLastError := CreateError(fpInternalErr, ['No filename given to execute.']);
     Exit;
   end;
   if not FileExists(FExecutableFilename) then begin
     DebugLn(DBG_WARNINGS, 'File %s does not exist.',[FExecutableFilename]);
+    FLastError := CreateError(fpInternalErr, ['File does not exist: ' + FExecutableFilename]);
     Exit;
   end;
 
@@ -2168,6 +2171,7 @@ begin
   CheckExecutableAndLoadClasses;
   if not Assigned(OsDbgClasses) then begin
     DebugLn(DBG_WARNINGS, 'Error - No support registered for debug target');
+    FLastError := CreateError(fpInternalErr, ['Unknown target for file: ' + FExecutableFilename]);
     Exit;
   end;
 
@@ -2176,6 +2180,7 @@ begin
 
   if not Assigned(Result) then begin
     DebugLn(DBG_WARNINGS, 'Error - could not create TDbgProcess');
+    FLastError := CreateError(fpInternalErr, ['could not create TDbgProcess']);
     Exit;
   end;
 end;

@@ -86,6 +86,7 @@ resourcestring
   lisInspectShowColClass = 'Show class column';
   lisInspectShowColType = 'Show type column';
   lisInspectShowColVisibility = 'Show visibility column';
+  lisWordWrapBtnHint = 'Word wrap';
   drsNewValue = 'New Value';
   drsNewValueToAssignToTheVari = 'New value to assign to the variable in the '
     +'debugged process (use Shift-Enter to confirm)';
@@ -430,6 +431,7 @@ resourcestring
   DispFormatDlgBtnStruct    = 'Structure';
   DispFormatDlgBtnPointer   = 'Pointer';
   DispFormatDlgBtnAdrFormat = 'Address';
+  DispFormatDlgBtnIndent    = 'Multiline';
 
   DispFormatDlgCaptionShowChar = '(Show Char)';
   DispFormatDlgCaptionAddress  = '(Address)';
@@ -458,6 +460,7 @@ resourcestring
   DispFormatSignAuto             = 'Auto-sign';
   DispFormatSignSigned           = 'Signed';
   DispFormatSignUnsigned         = 'Unsigned';
+  DispFormatNoLeadZero           = 'Hide leading zeros';
   DispFormatDlgBtnNum2Visible    = 'Show value in a second format';
   DispFormatNumDigits            = 'Digits';
   DispFormatNumDigitsFull        = 'Full';
@@ -489,6 +492,7 @@ resourcestring
   DispFormatPointerDerefOff      = 'No deref data';
   DispFormatPointerDerefOn       = 'Show deref data';
   DispFormatPointerDerefOnly     = 'Only deref data';
+  DispFormatIndentMaxWrap        = 'Max multiline level';
   DispFormatCategoryData         = 'Value';
   DispFormatCategoryMemDump      = 'Memory dump';
 

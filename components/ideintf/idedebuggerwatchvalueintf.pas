@@ -133,6 +133,7 @@ type
     TypeFormat:            TValueDisplayFormatAddress;
     BaseFormat:            TValueDisplayFormatBase;
     Signed:                boolean;
+    NoLeadZero:            boolean;
     class operator = (a,b: TWatchDisplayFormatAddr): boolean;
   end;
 
@@ -150,6 +151,14 @@ type
     class operator = (a,b: TWatchDisplayFormatPointer): boolean;
   end;
 
+  { TWatchDisplayFormatMultiline }
+
+  TWatchDisplayFormatMultiline = packed record
+    UseInherited:          boolean;
+    MaxMultiLineDepth:     integer; // Deeper than this will not be line-wrapped
+    class operator = (a,b: TWatchDisplayFormatMultiline): boolean;
+  end;
+
   { TWatchDisplayFormat }
 
   TWatchDisplayFormat = packed record
@@ -162,6 +171,7 @@ type
     Float:   TWatchDisplayFormatFloat;
     Struct:  TWatchDisplayFormatStruct;
     Pointer: TWatchDisplayFormatPointer;
+    MultiLine: TWatchDisplayFormatMultiline;
 
     MemDump: boolean;
 
@@ -223,6 +233,7 @@ const
                        TypeFormat:     vdfAddressPlain;
                        BaseFormat: vdfBaseHex;
                        Signed:     False;
+                       NoLeadZero: False;
                       );
             );
     Pointer: (UseInherited:     True;
@@ -231,8 +242,12 @@ const
                         TypeFormat:    vdfAddressPlain;
                         BaseFormat:vdfBaseHex;
                         Signed:    False;
+                        NoLeadZero: False;
                        );
              );
+    MultiLine: (UseInherited:     True;
+                MaxMultiLineDepth: 3;
+               );
     MemDump:       False;
   );
 
@@ -492,9 +507,10 @@ begin
     'Char: '+dbgs(df.Char.UseInherited)+' '+dbgs(df.Char.MainFormat)+' '+dbgs(df.Char.BaseFormat)+' '+dbgs(df.Char.SignFormat) + LineEnding+
     'Float: '+dbgs(df.Float.UseInherited)+' '+dbgs(df.Float.NumFormat)+' '+dbgs(df.Float.Precission) + LineEnding+
     'Struct: '+dbgs(df.Struct.UseInherited)+' '+dbgs(df.Struct.DataFormat)+' '+dbgs(df.Struct.ShowPointerFormat) + LineEnding+
-    'Addr: '+dbgs(df.Struct.Address.UseInherited)+' '+dbgs(df.Struct.Address.TypeFormat)+' '+dbgs(df.Struct.Address.BaseFormat)+' '+dbgs(df.Struct.Address.Signed) + LineEnding+
+    'Addr: '+dbgs(df.Struct.Address.UseInherited)+' '+dbgs(df.Struct.Address.TypeFormat)+' '+dbgs(df.Struct.Address.BaseFormat)+' '+dbgs(df.Struct.Address.Signed)+' '+dbgs(df.Struct.Address.NoLeadZero) + LineEnding+
     'Ptr: '+dbgs(df.Pointer.UseInherited)+' '+dbgs(df.Pointer.DerefFormat) + LineEnding+
-    'Addr: '+dbgs(df.Pointer.Address.UseInherited)+' '+dbgs(df.Pointer.Address.TypeFormat)+' '+dbgs(df.Pointer.Address.BaseFormat)+' '+dbgs(df.Pointer.Address.Signed) + LineEnding+
+    'Addr: '+dbgs(df.Pointer.Address.UseInherited)+' '+dbgs(df.Pointer.Address.TypeFormat)+' '+dbgs(df.Pointer.Address.BaseFormat)+' '+dbgs(df.Pointer.Address.Signed)+' '+dbgs(df.Struct.Address.NoLeadZero) + LineEnding+
+    'Indent: '+dbgs(df.MultiLine.UseInherited)+' '+dbgs(df.MultiLine.MaxMultiLineDepth) + LineEnding+
     'Dmp: '+dbgs(df.MemDump);
 end;
 
@@ -604,7 +620,8 @@ begin
     (a.UseInherited           = b.UseInherited) and
     (a.TypeFormat             = b.TypeFormat) and
     (a.BaseFormat             = b.BaseFormat) and
-    (a.Signed                 = b.Signed)
+    (a.Signed                 = b.Signed) and
+    (a.NoLeadZero             = b.NoLeadZero)
   ;
 end;
 
@@ -631,19 +648,29 @@ begin
   ;
 end;
 
+{ TWatchDisplayFormatMultiline }
+
+class operator TWatchDisplayFormatMultiline. = (a, b: TWatchDisplayFormatMultiline): boolean;
+begin
+  Result :=
+    (a.UseInherited          = b.UseInherited) and
+    (a.MaxMultiLineDepth     = b.MaxMultiLineDepth);
+end;
+
 class operator TWatchDisplayFormat. = (a, b: TWatchDisplayFormat): boolean;
 begin
   Result :=
-    (a.Num     = b.Num) and
-    (a.Num2    = b.Num2) and
-    (a.Enum    = b.Enum) and
-    (a.EnumVal = b.EnumVal) and
-    (a.Bool    = b.Bool) and
-    (a.Char    = b.Char) and
-    (a.Float   = b.Float) and
-    (a.Struct  = b.Struct) and
-    (a.Pointer = b.Pointer) and
-    (a.MemDump = b.MemDump);
+    (a.Num       = b.Num) and
+    (a.Num2      = b.Num2) and
+    (a.Enum      = b.Enum) and
+    (a.EnumVal   = b.EnumVal) and
+    (a.Bool      = b.Bool) and
+    (a.Char      = b.Char) and
+    (a.Float     = b.Float) and
+    (a.Struct    = b.Struct) and
+    (a.Pointer   = b.Pointer) and
+    (a.MultiLine = b.MultiLine) and
+    (a.MemDump   = b.MemDump);
 end;
 
 function TWatchDisplayFormat.HasOverrides: boolean;
@@ -652,7 +679,8 @@ begin
                 Enum.UseInherited and EnumVal.UseInherited and Bool.UseInherited and Char.UseInherited and
                 Float.UseInherited and
                 Struct.UseInherited and Struct.Address.UseInherited and
-                Pointer.UseInherited and Pointer.Address.UseInherited
+                Pointer.UseInherited and Pointer.Address.UseInherited and
+                MultiLine.UseInherited
                );
 end;
 
@@ -669,6 +697,7 @@ begin
   Struct.Address.UseInherited  := False;
   Pointer.UseInherited         := False;
   Pointer.Address.UseInherited := False;
+  MultiLine.UseInherited := False;
 end;
 
 procedure TWatchDisplayFormat.CopyInheritedFrom(AnOther: TWatchDisplayFormat);
@@ -687,7 +716,8 @@ begin
   if not a.UseInherited           then Struct.Address  := a;
   a := Pointer.Address;
   if Pointer.UseInherited         then Pointer         := AnOther.Pointer;
-  if not a.UseInherited           then Pointer.Address  := a;
+  if not a.UseInherited           then Pointer.Address := a;
+  if MultiLine.UseInherited       then MultiLine       := AnOther.MultiLine;
 end;
 
 end.

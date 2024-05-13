@@ -143,6 +143,10 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
 msgstr "Вещественный"
 
+#: idedebuggerstringconstants.dispformatdlgbtnindent
+msgid "Multiline"
+msgstr "Многострочный"
+
 #: idedebuggerstringconstants.dispformatdlgbtnnum2visible
 msgid "Show value in a second format"
 msgstr "Показывать значение во вторичном формате"
@@ -264,6 +268,14 @@ msgstr "Структуры"
 #: idedebuggerstringconstants.dispformatgroupstructaddress
 msgid "Structures (Addr)"
 msgstr "Структуры (адрес)"
+
+#: idedebuggerstringconstants.dispformatindentmaxwrap
+msgid "Max multiline level"
+msgstr "Максимальный уровень многострочного"
+
+#: idedebuggerstringconstants.dispformatnoleadzero
+msgid "Hide leading zeros"
+msgstr "Скрывать начальные нули"
 
 #: idedebuggerstringconstants.dispformatnumdigits
 msgid "Digits"
@@ -1695,6 +1707,10 @@ msgstr "&Свойства"
 msgctxt "lazarusidestrconsts.liswlwatchlist"
 msgid "Watches"
 msgstr "Наблюдения"
+
+#: idedebuggerstringconstants.liswordwrapbtnhint
+msgid "Word wrap"
+msgstr "Перенос слов"
 
 #: idedebuggerstringconstants.optdispguttercustomdisplayformat
 msgid "Custom Display Format"

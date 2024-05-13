@@ -1423,13 +1423,20 @@ type
     procedure AssignTo(ADest: TvVectorialDocument);
     procedure WriteToFile(AFileName: string; AFormat: TvVectorialFormat); overload;
     procedure WriteToFile(AFileName: string); overload;
-    procedure WriteToStream(AStream: TStream; AFormat: TvVectorialFormat);
-    procedure WriteToStrings(AStrings: TStrings; AFormat: TvVectorialFormat);
+    procedure WriteToFile(AFileName: String; AWriter: TvCustomVectorialWriter); overload;
+    procedure WriteToStream(AStream: TStream; AFormat: TvVectorialFormat); overload;
+    procedure WriteToStream(AStream: TStream; AWriter: TvCustomVectorialWriter); overload;
+    procedure WriteToStrings(AStrings: TStrings; AFormat: TvVectorialFormat); overload;
+    procedure WriteToStrings(AStrings: TStrings; AWriter: TvCustomVectorialWriter); overload;
     procedure ReadFromFile(AFileName: string; AFormat: TvVectorialFormat); overload;
     procedure ReadFromFile(AFileName: string); overload;
-    procedure ReadFromStream(AStream: TStream; AFormat: TvVectorialFormat);
-    procedure ReadFromStrings(AStrings: TStrings; AFormat: TvVectorialFormat);
-    procedure ReadFromXML(ADoc: TXMLDocument; AFormat: TvVectorialFormat);
+    procedure ReadFromFile(AFileName: String; AReader: TvCustomVectorialReader); overload;
+    procedure ReadFromStream(AStream: TStream; AFormat: TvVectorialFormat); overload;
+    procedure ReadFromStream(AStream: TStream; AReader: TvCustomVectorialReader); overload;
+    procedure ReadFromStrings(AStrings: TStrings; AFormat: TvVectorialFormat); overload;
+    procedure ReadFromStrings(AStrings: TStrings; AReader: TvCustomVectorialReader); overload;
+    procedure ReadFromXML(ADoc: TXMLDocument; AFormat: TvVectorialFormat); overload;
+    procedure ReadFromXML(ADoc: TXMLDocument; AReader: TvCustomVectorialReader); overload;
     class function GetFormatFromExtension(AFileName: string; ARaiseException: Boolean = True): TvVectorialFormat;
     function  GetDetailedFileFormat(): string;
     procedure GuessDocumentSize();
@@ -1694,16 +1701,6 @@ type
     procedure WriteToStrings(AStrings: TStrings; AData: TvVectorialDocument); virtual;
   end;
 
-  {@@ List of registered formats }
-
-  TvVectorialFormatData = record
-    ReaderClass: TvVectorialReaderClass;
-    WriterClass: TvVectorialWriterClass;
-    ReaderRegistered: Boolean;
-    WriterRegistered: Boolean;
-    Format: TvVectorialFormat;
-  end;
-
   TvRenderer = class
   public
     procedure BeginRender(var ARenderInfo: TvRenderInfo; ADoDraw: Boolean); virtual; abstract;
@@ -1712,9 +1709,6 @@ type
     procedure TPath_Render(var ARenderInfo: TvRenderInfo; ADoDraw: Boolean; APath: TPath); virtual; abstract;
   end;
   TvRendererClass = class of TvRenderer;
-
-var
-  GvVectorialFormats: array of TvVectorialFormatData;
 
 const
   FormulaOperators = [fekSubtraction, fekMultiplication, fekSum, fekFraction, fekRoot, fekPower];
@@ -1735,6 +1729,14 @@ implementation
 
 uses fpvutils;
 
+type
+  {@@ List of registered formats }
+  TvVectorialFormatData = record
+    ReaderClass: TvVectorialReaderClass;
+    WriterClass: TvVectorialWriterClass;
+    Format: TvVectorialFormat;
+  end;
+
 const
   Str_Error_Nil_Path = ' The program attempted to add a segment before creating a path';
   INVALID_RENDERINFO_CANVAS_XY = Low(Integer);
@@ -1746,6 +1748,7 @@ var
 {$endif}
 
 var
+  GvVectorialFormats: array of TvVectorialFormatData = nil;
   gDefaultRenderer: TvRendererClass = nil;
 
 {@@
@@ -1756,80 +1759,56 @@ procedure RegisterVectorialReader(
   AFormat: TvVectorialFormat);
 var
   i, len: Integer;
-  FormatInTheList: Boolean;
 begin
   len := Length(GvVectorialFormats);
-  FormatInTheList := False;
 
   { First search for the format in the list }
   for i := 0 to len - 1 do
   begin
     if GvVectorialFormats[i].Format = AFormat then
     begin
-      //if GvVectorialFormats[i].ReaderRegistered then
-       //raise Exception.Create('RegisterVectorialReader: Reader class for format ' {+ AFormat} + ' already registered.');
-
-      GvVectorialFormats[i].ReaderRegistered := True;
+      { If found, register the reader class. }
       GvVectorialFormats[i].ReaderClass := AReaderClass;
-
-      FormatInTheList := True;
-      Break;
+      Exit;
     end;
   end;
 
   { If not already in the list, then add it }
-  if not FormatInTheList then
-  begin
-    SetLength(GvVectorialFormats, len + 1);
-
-    GvVectorialFormats[len].ReaderClass := AReaderClass;
-    GvVectorialFormats[len].WriterClass := nil;
-    GvVectorialFormats[len].ReaderRegistered := True;
-    GvVectorialFormats[len].WriterRegistered := False;
-    GvVectorialFormats[len].Format := AFormat;
-  end;
+  SetLength(GvVectorialFormats, len + 1);
+  GvVectorialFormats[len].Format := AFormat;
+  GvVectorialFormats[len].ReaderClass := AReaderClass;
+  GvVectorialFormats[len].WriterClass := nil;
 end;
 
 {@@
   Registers a new writer for a format
+
+  An already-registered writer is replaced.
 }
 procedure RegisterVectorialWriter(
   AWriterClass: TvVectorialWriterClass;
   AFormat: TvVectorialFormat);
 var
   i, len: Integer;
-  FormatInTheList: Boolean;
 begin
   len := Length(GvVectorialFormats);
-  FormatInTheList := False;
 
   { First search for the format in the list }
   for i := 0 to len - 1 do
   begin
     if GvVectorialFormats[i].Format = AFormat then
     begin
-      if GvVectorialFormats[i].WriterRegistered then
-       raise Exception.Create('RegisterVectorialWriter: Writer class for format ' + {AFormat +} ' already registered.');
-
-      GvVectorialFormats[i].WriterRegistered := True;
+      { If found, register the writer class. }
       GvVectorialFormats[i].WriterClass := AWriterClass;
-
-      FormatInTheList := True;
-      Break;
+      Exit;
     end;
   end;
 
   { If not already in the list, then add it }
-  if not FormatInTheList then
-  begin
-    SetLength(GvVectorialFormats, len + 1);
-
-    GvVectorialFormats[len].ReaderClass := nil;
-    GvVectorialFormats[len].WriterClass := AWriterClass;
-    GvVectorialFormats[len].ReaderRegistered := False;
-    GvVectorialFormats[len].WriterRegistered := True;
-    GvVectorialFormats[len].Format := AFormat;
-  end;
+  SetLength(GvVectorialFormats, len + 1);
+  GvVectorialFormats[len].Format := AFormat;
+  GvVectorialFormats[len].ReaderClass := nil;
+  GvVectorialFormats[len].WriterClass := AWriterClass;
 end;
 
 function Make2DPoint(AX, AY: Double): T3DPoint;
@@ -10317,6 +10296,13 @@ begin
   WriteToFile(AFileName, lFormat);
 end;
 
+procedure TvVectorialDocument.WriteToFile(AFilename: String;
+  AWriter: TvCustomVectorialWriter);
+begin
+  if AWriter <> nil then
+    AWriter.WriteToFile(AFileName, Self);
+end;
+
 {@@
   Writes the document to a stream
 }
@@ -10332,6 +10318,13 @@ begin
   end;
 end;
 
+procedure TvVectorialDocument.WriteToStream(AStream: TStream;
+  AWriter: TvCustomVectorialWriter);
+begin
+  if AWriter <> nil then
+    AWriter.WriteToStream(AStream, self);
+end;
+
 procedure TvVectorialDocument.WriteToStrings(AStrings: TStrings;
   AFormat: TvVectorialFormat);
 var
@@ -10343,6 +10336,13 @@ begin
   finally
     AWriter.Free;
   end;
+end;
+
+procedure TvVectorialDocument.WriteToStrings(AStrings: TStrings;
+  AWriter: TvCustomVectorialWriter);
+begin
+  if AWriter <> nil then
+    AWriter.WriteToStrings(AStrings, Self);
 end;
 
 {@@
@@ -10378,6 +10378,19 @@ begin
 end;
 
 {@@
+  Reads the document from a file. A variant that allow to use to an unregistered, custom reader.
+}
+procedure TvVectorialDocument.ReadFromFile(AFileName: String;
+  AReader: TvCustomVectorialReader);
+begin
+  if AReader <> nil then
+  begin
+    Self.Clear;
+    AReader.ReadFromFile(AFileName, Self);
+  end;
+end;
+
+{@@
   Reads the document from a stream.
 
   Any current contents in this object will be removed.
@@ -10398,6 +10411,16 @@ begin
   end;
 end;
 
+procedure TvVectorialDocument.ReadFromStream(AStream: TStream;
+  AReader: TvCustomVectorialReader);
+begin
+  if AReader <> nil then
+  begin
+    Self.Clear;
+    AReader.ReadFromStream(AStream, Self);
+  end;
+end;
+
 procedure TvVectorialDocument.ReadFromStrings(AStrings: TStrings;
   AFormat: TvVectorialFormat);
 var
@@ -10414,6 +10437,16 @@ begin
   end;
 end;
 
+procedure TvVectorialDocument.ReadFromStrings(AStrings: TStrings;
+  AReader: TvCustomVectorialReader);
+begin
+  if AReader <> nil then
+  begin
+    Self.Clear;
+    AReader.ReadFromStrings(AStrings, Self);
+  end;
+end;
+
 procedure TvVectorialDocument.ReadFromXML(ADoc: TXMLDocument; AFormat: TvVectorialFormat);
 var
   AReader: TvCustomVectorialReader;
@@ -10425,6 +10458,15 @@ begin
     AReader.ReadFromXML(ADoc, Self);
   finally
     AReader.Free;
+  end;
+end;
+
+procedure TvVectorialDocument.ReadFromXML(ADoc: TXMLDocument; AReader: TvCustomVectorialReader);
+begin
+  if AReader <> nil then
+  begin
+    Self.Clear;
+    AReader.ReadFromXML(ADoc, Self);
   end;
 end;
 

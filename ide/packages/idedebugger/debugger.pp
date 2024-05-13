@@ -6710,8 +6710,7 @@ begin
   if Result then
     exit;
 
-  Result := (GetAnyValidParentWatchValue(AThreadId, AStackFrame) <> nil) and
-            FParentWatch.HasAllValidParents(AThreadId, AStackFrame);
+  Result := (GetAnyValidParentWatchValue(AThreadId, AStackFrame) <> nil);
 end;
 
 procedure TIdeWatch.DoEnableChange;
@@ -6760,9 +6759,9 @@ begin
   vl := FParentWatch.FValueList;
   i := vl.Count - 1;
   while (i >= 0) and (
-    (vl.EntriesByIdx[i].Validity <> ddsValid) or
     (vl.EntriesByIdx[i].ThreadId <> AThreadId) or
-    (vl.EntriesByIdx[i].StackFrame <> AStackFrame)
+    (vl.EntriesByIdx[i].StackFrame <> AStackFrame) or
+    (not vl.EntriesByIdx[i].IsValid)
   ) do
     dec(i);
   if i >= 0 then
