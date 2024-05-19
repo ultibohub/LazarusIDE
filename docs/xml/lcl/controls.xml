@@ -1077,8 +1077,8 @@ Uncomment when the topic exists in the RTL documentation.
 <short>Set type used to store values from the TAnchorKind enumeration.</short>
 <descr>
 <p>
-TAnchors is the the type used to implement the Anchors property in TControl 
-and descendent classes.
+TAnchors is the type used to implement the Anchors property in TControl and 
+descendent classes.
 </p>
 </descr>
 <version>
@@ -3944,8 +3944,8 @@ and <var>DragImages</var>.
 <short>Asks the Control to provide a drag cursor.</short>
 <descr>
 <p>
-Called when a TDragPerformer repositions the the mouse pointer during an 
-active drag operation.
+Called when a TDragPerformer repositions the mouse pointer during an active 
+drag operation.
 </p>
 </descr>
 <seealso>
@@ -5287,10 +5287,36 @@ TSizeConstraints.
 
 <element name="TSizeConstraints">
 <short>
-Holds maximum and minimum values that can be used in sizing objects.
+Holds minimum and maximum values for the width or height of a control.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>TSizeConstraints</var> is a <var>TPersistent</var> descendant which 
+contains size constraints used to control the minimum or maximum width or 
+height for an associated control. TSizeConstraints is the type used to 
+implement the Constraints property in TControl and descendent classes.
+</p>
+<p>
+The initial values for properties are retrieved from the widgetset class 
+instance for the Control when its handle has been allocated. Values in 
+TSizeConstraints properties are used when the Control is resized or its layout 
+is adjusted, and prevent the control from being resized to Width or Height 
+values that are in excess of the specified minimum or maximum values. If 
+properties are modified in TSizeConstraints, the associated control is updated 
+to apply the new size constraints (when needed).
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.EffectiveMaxHeight"/>
+<link id="TSizeConstraints.EffectiveMaxWidth"/>
+<link id="TSizeConstraints.EffectiveMinHeight"/>
+<link id="TSizeConstraints.EffectiveMinWidth"/>
+<link id="TSizeConstraints.MinMaxHeight"/>
+<link id="TSizeConstraints.MinMaxWidth"/>
+<link id="TControl.Constraints"/>
+<link id="TControl.AdjustSize"/>
+<link id="TControl.AutoAdjustLayout"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.FControl"/>
@@ -5315,20 +5341,74 @@ Holds maximum and minimum values that can be used in sizing objects.
 </element>
 
 <element name="TSizeConstraints.Change">
-<short>Signals an OnChange handler if assigned.</short>
-<descr/>
-<seealso/>
+<short>
+Adjusts the size for the associated Control, and signals the OnChange handler 
+when assigned.
+</short>
+<descr>
+<p>
+Change causes the AdjustSize method to be called in the associated Control. 
+It signals the OnChange event handler (when assigned) using the 
+TSizeConstraints instance as the Sender argument in the notification.
+</p>
+<p>
+Change is called when a new value is assigned to the MaxWidth, MinWidth, 
+MaxHeight, or MinHeight properties. It is called when AssignTo is used to store 
+property values from the class instance to another persistent object. It is 
+also called when the AutoAdjustLayout is used to scale values in MaxWidth, 
+MinWidth, MaxHeight, or MinHeight properties by a specified size factor.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Control"/>
+<link id="TSizeConstraints.OnChange"/>
+<link id="TSizeConstraints.AssignTo"/>
+<link id="TSizeConstraints.AutoAdjustLayout"/>
+<link id="TControl.AdjustSize"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.AssignTo">
-<short>Copies property values to the specified persistent object.</short>
-<descr/>
+<short>
+Copies property values to the specified persistent object.
+</short>
+<descr>
+<p>
+<var>AssignTo</var> is an overridden method in <var>TSizeConstraints</var> used 
+to implement object persistence. It ensures that properties specific to 
+TSizeConstraints are stored to the persistent object in the <var>Dest</var> 
+parameter, and includes the MaxHeight, MaxWidth, MinHeight, and MinWidth 
+properties. The Change method is called to adjust the size for the associated 
+Control, and to signal the OnChange event handler when assigned.
+</p>
+<p>
+No actions are performed in the method if the properties in the class instance
+have the same values as their counterparts in the Dest argument.
+</p>
+<p>
+If Dest is not derived from TSizeConstraints, the inherited AssignTo method is 
+called.
+</p>
+</descr>
 <seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TSizeConstraints.OnChange"/>
+<link id="TControl.AdjustSize"/>
 <link id="#rtl.classes.TPersistent.Assign">TPersistent.Assign</link>
 </seealso>
 </element>
 <element name="TSizeConstraints.AssignTo.Dest">
-<short>Persistent object where property values are stored.</short>
+<short>
+Persistent object where property values are stored.
+</short>
 </element>
 
 <element name="TSizeConstraints.SetMaxHeight">
@@ -5376,23 +5456,73 @@ Holds maximum and minimum values that can be used in sizing objects.
 </element>
 
 <element name="TSizeConstraints.Create">
-<short>Constructor for the class instance.</short>
-<descr/>
-<seealso/>
+<short>
+Constructor for the class instance.
+</short>
+<descr>
+<p>
+<var>Create</var> is the constructor for the class instance, and calls the 
+inherited constructor on entry. Create sets the default values for properties 
+including:
+</p>
+<ul>
+<li>MaxHeight (0)</li>
+<li>MaxWidth (0)</li>
+<li>MinHeight (0)</li>
+<li>MinWidth (0)</li>
+</ul>
+<p>
+It also sets the value in the Control property to the associated control 
+specified in the AControl argument.
+</p>
+<p>
+Create calls the UpdateInterfaceConstraints method to ensure that size 
+constraints from the Control are applied to the widgetset class instance when 
+Control is a TWinControl instance and its handle has been allocated.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Control"/>
+<link id="TSizeConstraints.UpdateInterfaceConstraints"/>
+</seealso>
 </element>
 <element name="TSizeConstraints.Create.AControl">
-<short>TControl instance where the size constraints are applied.</short>
+<short>
+TControl instance where the size constraints are implemented.
+</short>
 </element>
 
 <element name="TSizeConstraints.UpdateInterfaceConstraints">
-<short>Asks the interface for size constraints.</short>
-<descr/>
-<seealso/>
+<short>
+Applies size constraints from the specified Control to the widgetset class 
+instance.
+</short>
+<descr>
+<p>
+No actions are performed in the method if Control is not derived from 
+TWinControl, or its handle has not been allocated. UpdateInterfaceConstraints 
+is called from the Create constructor after setting default property values, 
+and assigning the associated Control for the class instance.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Control"/>
+<link id="TSizeConstraints.Create"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.SetInterfaceConstraints">
 <short>
-Used by the LCL interface to set the widgetset constraints.
+Used by the LCL interface to set the widgetset constraints in the class 
+instance.
 </short>
 <descr>
 <p>
@@ -5402,75 +5532,95 @@ Should only be used by custom components, not by applications.
 <seealso/>
 </element>
 <element name="TSizeConstraints.SetInterfaceConstraints.MinW">
-<short/>
+<short>
+Minimum width provided by the widgetset class instance.
+</short>
 </element>
 <element name="TSizeConstraints.SetInterfaceConstraints.MinH">
-<short/>
+<short>
+Minimum height provided by the widgetset class instance.
+</short>
 </element>
 <element name="TSizeConstraints.SetInterfaceConstraints.MaxW">
-<short/>
+<short>
+Maximum width provided by the widgetset class instance.
+</short>
 </element>
 <element name="TSizeConstraints.SetInterfaceConstraints.MaxH">
-<short/>
+<short>
+Maximum height provided by the widgetset class instance.
+</short>
 </element>
 
 <element name="TSizeConstraints.EffectiveMinWidth">
 <short>
-Determines the minimum applicable width, given the local and interface 
+Determines the minimum applicable width given the local and interface 
 constraints.
 </short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="TSizeConstraints.MinMaxWidth"/>
+<link id="TSizeConstraints.SetInterfaceConstraints"/>
+</seealso>
 </element>
 <element name="TSizeConstraints.EffectiveMinWidth.Result">
-<short>Zero means no constraints.</short>
+<short>Zero means no size constraint is defined.</short>
 </element>
 
 <element name="TSizeConstraints.EffectiveMinHeight">
 <short>
-Determines the minimum applicable height, given the local and interface 
+Determines the minimum applicable height given the local and interface 
 constraints.
 </short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="TSizeConstraints.MinMaxHeight"/>
+<link id="TSizeConstraints.SetInterfaceConstraints"/>
+</seealso>
 </element>
 <element name="TSizeConstraints.EffectiveMinHeight.Result">
-<short>Zero means no constraints.</short>
+<short>Zero means no size constraint is defined.</short>
 </element>
 
 <element name="TSizeConstraints.EffectiveMaxWidth">
 <short>
-Determines the maximum applicable width, given the local and interface 
+Determines the maximum applicable width given the local and interface 
 constraints.
 </short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="TSizeConstraints.MinMaxWidth"/>
+<link id="TSizeConstraints.SetInterfaceConstraints"/>
+</seealso>
 </element>
 <element name="TSizeConstraints.EffectiveMaxWidth.Result">
-<short>Zero means no constraints.</short>
+<short>Zero means no size constraint is defined.</short>
 </element>
 
 <element name="TSizeConstraints.EffectiveMaxHeight">
 <short>
-Determines the maximum applicable height, given the local and interface 
+Determines the maximum applicable height given the local and interface 
 constraints.
 </short>
 <descr/>
-<seealso/>
+<seealso>
+<link id="TSizeConstraints.MinMaxHeight"/>
+<link id="TSizeConstraints.SetInterfaceConstraints"/>
+</seealso>
 </element>
 <element name="TSizeConstraints.EffectiveMaxHeight.Result">
-<short>Zero means no constraints.</short>
+<short>Zero means no size constraint is defined.</short>
 </element>
 
 <element name="TSizeConstraints.MinMaxWidth">
 <short>
-Determines the constrained Width, and transfers it to the widget.
+Determines the constrained Width and transfers it to the widget.
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TSizeConstraints.MinMaxWidth.Result">
-<short>The constrained width.</short>
+<short>The actual constrained width.</short>
 </element>
 <element name="TSizeConstraints.MinMaxWidth.Width">
 <short>The suggested width.</short>
@@ -5478,13 +5628,13 @@ Determines the constrained Width, and transfers it to the widget.
 
 <element name="TSizeConstraints.MinMaxHeight">
 <short>
-Determines the constrained Height, and transfers it to the widget.
+Determines the constrained Height and transfers it to the widget.
 </short>
 <descr/>
 <seealso/>
 </element>
 <element name="TSizeConstraints.MinMaxHeight.Result">
-<short>The constrained height.</short>
+<short>The actual constrained height.</short>
 </element>
 <element name="TSizeConstraints.MinMaxHeight.Height">
 <short>The suggested height.</short>
@@ -5495,8 +5645,33 @@ Determines the constrained Height, and transfers it to the widget.
 Adjusts width and height values in the class using the specified scaling 
 factors.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>AutoAdjustLayout</var> ensures that assigned (non-zero) values in 
+MinHeight, MaxHeight, MinWidth, and MaxWidth are scaled by the corresponding 
+scaling factor. If any of the property values are scaled, the Change method is 
+called to notify the associated Control that it should adjust it size. The 
+OnChange event is signalled (when assigned).
+</p>
+<p>
+AutoAdjustLayout is called from the DoAutoAdjustLayout method in Control, and 
+occurs after values in BorderSpacing have been scaled. It occurs before the new 
+height and width for the Control are calculated and applied to its BaseBounds.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Control"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TControl.DoConstraintsChange"/>
+<link id="TControl.DoAutoAdjustLayout"/>
+<link id="TControl.BorderSpacing"/>
+<link id="TControl.AdjustSize"/>
+<link id="TControl.BaseBounds"/>
+</seealso>
 </element>
 <element name="TSizeConstraints.AutoAdjustLayout.AXProportion">
 <short>Scaling factor applied to width values.</short>
@@ -5530,45 +5705,218 @@ factors.
 </element>
 
 <element name="TSizeConstraints.Control">
-<short>The <var>Control</var> to which these constraints apply.</short>
-<descr/>
-<seealso/>
+<short>
+The associated Control to which these constraints apply.
+</short>
+<descr>
+<p>
+<var>Control</var> contains the value passed as an argument to the Create 
+constructor. It represents the control which is notified and updated when 
+values in the MaxHeight, MaxWidth, MinHeight, or MinWidth properties are 
+changed. Control is used in the Change method to apply the new size 
+constraints. It also allows access to properties in both the control and its 
+widget instance - like the handle and component state.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.Create"/>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TControl.Constraints"/>
+<link id="TControl.DoConstraintsChange"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.Options">
-<short>Options used to determine the size constraints.</short>
-<descr/>
-<seealso/>
+<short>
+Options used to determine the size constraints.
+</short>
+<descr>
+<p>
+<var>Options</var> is a <var>TSizeConstraintsOptions</var> property which 
+contains zero (0) or more values from the <var>TSizeConstraintsOption</var> 
+enumeration. The default value for the property is an empty set (<b>[]</b>). 
+Values in Options are <b>not</b> used in the current LCL implementation.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraintsOption"/>
+<link id="TSizeConstraintsOptions"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.OnChange">
-<short>Event handler for a change in the constraints.</short>
-<descr/>
-<seealso/>
+<short>
+Event handler signalled when a value in the class instance has been changed.
+</short>
+<descr>
+<p>
+<var>OnChange</var> is a <var>TNotifyEvent</var> property with the even handler 
+signalled when one of the values in MaxHeight, MaxWidth, MinHeight, or MinWidth 
+has been changed. OnChange is signalled (when assigned) from the Change method 
+using the current class instance as the Sender for the notification. OnChange 
+occurs after the modified constraints have been applied to the associated 
+Control and its size has been adjusted.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TSizeConstraints.Control"/>
+<link id="TControl.Constraints"/>
+<link id="TControl.DoConstraintsChange"/>
+<link id="TControl.AdjustSize"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.MaxHeight">
-<short>The maximum height.</short>
-<descr/>
-<seealso/>
+<short>
+The maximum height for the associated Control.
+</short>
+<descr>
+<p>
+<var>MaxHeight</var> is a <var>TConstraintSize</var> property which contains 
+the maximum height in pixels allowed for the associated Control. The default 
+value for the property is 0 (zero) and indicates that the size constraint has 
+not been assigned and is not enforced.
+</p>
+<p>
+Changing the value for the property causes assigned (non-zero) values in 
+MaxHeight and MinHeight to be normalized; the smaller of the two values becomes 
+the MinHeight, and the larger of the two values becomes the MaxHeight. The 
+Change method is called to apply the new size constraints to Control, and to 
+signal the OnChange event handler (when assigned).
+</p>
+<p>
+Use MinHeight to set minimum height for the associated Control.
+</p>
+<p>
+Use MaxWidth and MinWidth to set the constrained width for the associated 
+Control.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TSizeConstraints.OnChange"/>
+<link id="TSizeConstraints.Control"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.MaxWidth">
-<short>The maximum width.</short>
-<descr/>
-<seealso/>
+<short>
+The maximum width for the associated Control.
+</short>
+<descr>
+<p>
+<var>MaxWidth</var> is a <var>TConstraintSize</var> property which contains 
+the maximum width in pixels allowed for the associated Control. The default 
+value for the property is 0 (zero) and indicates that the size constraint has 
+not been assigned and is not enforced.
+</p>
+<p>
+Changing the value for the property causes assigned (non-zero) values in 
+MaxWidth and MinWidth to be normalized; the smaller of the two values becomes 
+the MinWidth, and the larger of the two values becomes the MaxWidth. The 
+Change method is called to apply the new size constraints to Control, and to 
+signal the OnChange event handler (when assigned).
+</p>
+<p>
+Use MinWidth to set minimum width for the associated Control.
+</p>
+<p>
+Use MaxHeight and MinHeight to set the constrained height for the associated 
+Control.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TSizeConstraints.OnChange"/>
+<link id="TSizeConstraints.Control"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.MinHeight">
-<short>The minimum height.</short>
-<descr/>
-<seealso/>
+<short>
+The minimum height for the associated Control.
+</short>
+<descr>
+<p>
+<var>MinHeight</var> is a <var>TConstraintSize</var> property which contains 
+the minimum height in pixels allowed for the associated Control. The default 
+value for the property is 0 (zero) and indicates that the size constraint has 
+not been assigned and is not enforced.
+</p>
+<p>
+Changing the value for the property causes assigned (non-zero) values in 
+MaxHeight and MinHeight to be normalized; the smaller of the two values becomes 
+the MinHeight, and the larger of the two values becomes the MaxHeight. The 
+Change method is called to apply the new size constraints to Control, and to 
+signal the OnChange event handler (when assigned).
+</p>
+<p>
+Use MaxHeight to set minimum height for the associated Control.
+</p>
+<p>
+Use MaxWidth and MinWidth to set the constrained width for the associated 
+Control.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.MinWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TSizeConstraints.OnChange"/>
+<link id="TSizeConstraints.Control"/>
+</seealso>
 </element>
 
 <element name="TSizeConstraints.MinWidth">
-<short>The minimum width.</short>
-<descr/>
-<seealso/>
+<short>
+The minimum width for the associated Control.
+</short>
+<descr>
+<p>
+<var>MixWidth</var> is a <var>TConstraintSize</var> property which contains 
+the minimum width in pixels allowed for the associated Control. The default 
+value for the property is 0 (zero) and indicates that the size constraint has 
+not been assigned and is not enforced.
+</p>
+<p>
+Changing the value for the property causes assigned (non-zero) values in 
+MaxWidth and MinWidth to be normalized; the smaller of the two values becomes 
+the MinWidth, and the larger of the two values becomes the MaxWidth. The 
+Change method is called to apply the new size constraints to Control, and to 
+signal the OnChange event handler (when assigned).
+</p>
+<p>
+Use MaxWidth to set maximum width for the associated Control.
+</p>
+<p>
+Use MaxHeight and MinHeight to set the constrained height for the associated 
+Control.
+</p>
+</descr>
+<seealso>
+<link id="TSizeConstraints.MaxHeight"/>
+<link id="TSizeConstraints.MinHeight"/>
+<link id="TSizeConstraints.MaxWidth"/>
+<link id="TSizeConstraints.Change"/>
+<link id="TSizeConstraints.OnChange"/>
+<link id="TSizeConstraints.Control"/>
+</seealso>
 </element>
 
 <element name="TConstrainedResizeEvent">
@@ -5696,9 +6044,9 @@ Used to differentiate default values in derived <var>TControl</var> classes.
 <short>Describes the (minimum) spacing around a control.</short>
 <descr>
 <p>
-TControlBorderSpacing defines the spacing around a control. The spacing 
-around its children and between its children is defined in <link 
-id="TWinControl.ChildSizing"/>.
+<var>TControlBorderSpacing</var> defines the number of pixels reserved as 
+spacing on the various borders for a control. TControlBorderSpacing is the type 
+used to implement the <var>BorderSpacing</var> property in <var>TControl</var>.
 </p>
 <dl>
 <dt>
@@ -5732,8 +6080,24 @@ CellAlignHorizontal, CellAlignVertical: TControlCellAlign;
 Used, for example, when the Parent ChildSizing.Layout defines a table layout.
 </dd>
 </dl>
+<p>
+See <link id="TWinControl.ChildSizing"/> and <link id="TControlChildSizing"/> 
+for information about spacing around and between child controls on a control 
+instance.
+</p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControlBorderSpacing.InnerBorder"/>
+<link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.Right"/>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.CellAlignHorizontal"/>
+<link id="TControlBorderSpacing.CellAlignVertical"/>
+<link id="TControl.BorderSpacing"/>
+<link id="TWinControl.ChildSizing"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.FAround"/>
@@ -5842,7 +6206,7 @@ Implements the storage specifier for the Around property.
 <short>
 Returns <b>True</b> if border spacing value in Around has been assigned 
 and contains a non-zero value, or when the value is different than the 
-default value passes to the constructor.
+default value passed to the constructor.
 </short>
 </element>
 
@@ -6136,6 +6500,7 @@ The space on a control side including Around space.
 <short>Ordinal position for the value in the indexed property.</short>
 </element>
 
+<!-- TODO: Review. This feels wrong for some reason. -->
 <element name="TControlBorderSpacing.AutoAdjustLayout">
 <short>
 Automatically adjusts the size of the control using the specified proportions.
@@ -6187,7 +6552,9 @@ value(s) in <var>InnerBorder</var> have been altered.
 </element>
 
 <element name="TControlBorderSpacing.Control">
-<short>The control to which this border spacing applies.</short>
+<short>
+The control where the border spacing values are applied.
+</short>
 <descr/>
 <seealso/>
 </element>
@@ -6199,19 +6566,35 @@ Provides indexed access to the border spacing value for a given anchor side.
 <descr>
 <p>
 <var>Space</var> is an indexed <var>Integer</var> property which provides 
-access to the border spacing used for a specified TAnchorKind value. For example:
+access to the border spacing used for a specified <var>TAnchorKind</var> value.
+</p>
+<p>
+For example:
 </p>
 <code>AControl.BorderSpacing.Space[akTop] := 6;</code>
+<p>
+Which is equivalent to:
+</p>
+<code>AControl.BorderSpacing.Top := 6;</code>
 </descr>
-<seealso/>
+<seealso>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.Right"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControl.BorderSpacing"/>
+<link id="TAnchorKind"/>
+</seealso>
 </element>
 <element name="TControlBorderSpacing.Space.Kind">
-<short>The side with border spacing accessed in the property.</short>
+<short>
+The side with border spacing accessed in the property.
+</short>
 </element>
 
 <element name="TControlBorderSpacing.AroundLeft">
 <short>
-Spacing reserved on the left-hand side of the control.
+Total border spacing reserved using the Around and Left properties.
 </short>
 <descr>
 <p>
@@ -6219,9 +6602,7 @@ Spacing reserved on the left-hand side of the control.
 indicates the spacing used around and on the left-hand side of the control.
 </p>
 <p>
-AroundLeft represents the total space reserved on all sides of the control, 
-plus any additional space reserved on it left-hand edge. The value for the 
-property is calculated as the sum of the values from the <var>Around</var> 
+AroundLeft is calculated as the sum of the values in the <var>Around</var> 
 and <var>Left</var> properties. Updates must be performed to the Around and 
 Left properties.
 </p>
@@ -6229,73 +6610,140 @@ Left properties.
 <seealso>
 <link id="TControlBorderSpacing.Around"/>
 <link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.AroundRight"/>
 </seealso>
 </element>
 
 <element name="TControlBorderSpacing.AroundTop">
 <short>
-Space reserved on the top edge of the control.
+Total border spacing reserved using the Around and Top properties.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>AroundTop</var> is a read-only <var>Integer</var> property which 
+indicates the spacing used around and on the top side of the control.
+</p>
+<p>
+AroundTop is calculated as the sum of the values in the <var>Around</var> 
+and <var>Top</var> properties. Updates must be performed to the Around and 
+Top properties.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.AroundBottom"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.AroundRight">
 <short>
-Space reserved on the right-hand side of the control.
+Total border spacing reserved using the Around and Right properties.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>AroundRight</var> is a read-only <var>Integer</var> property which 
+indicates the spacing used around and on the right-hand edge of the control.
+</p>
+<p>
+AroundRight is calculated as the sum of the values in the <var>Around</var> 
+and <var>Right</var> properties. Updates must be performed to the Around and 
+Right properties.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Right"/>
+<link id="TControlBorderSpacing.AroundLeft"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.AroundBottom">
 <short>
-Space reserved on the bottom edge of the control.
+Total border spacing reserved using the Around and Bottom properties.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>AroundBottom</var> is a read-only <var>Integer</var> property which 
+indicates the spacing used around and on the bottom side of the control.
+</p>
+<p>
+AroundBottom is calculated as the sum of the values in the <var>Around</var> 
+and <var>Bottom</var> properties. Updates must be performed to the Around and 
+Bottom properties.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControlBorderSpacing.AroundTop"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.ControlLeft">
 <short>
-Space reserved on the left-hand edge of the control relative to the position 
-for the control.
+Position for the left-hand edge of the associated Control after it has been 
+adjusted for border spacing.
 </short>
 <descr>
 <p>
-<var>ControlLeft</var> is a read-only <var>Integer</var> property that 
-indicates the space reserved on the left-hand edge of the control relative to 
-the position for the control class instance. The value in 
-<var>ControlLeft</var> is calculated as the difference between the 
-<var>Left</var> position for the control and the values in the 
-<var>Around</var> and <var>Left</var> properties. For example:
+<var>ControlLeft</var> is a read-only <var>Integer</var> property. Its value is 
+calculated as the difference between the <var>Left</var> property in the 
+<var>Control</var> and the values in the <var>Around</var> and <var>Left</var> 
+properties for the class instance. 
 </p>
-<code>FControl.Left-Around-Left</code>
+<p>
+For example:
+</p>
+<code>Control.Left - Around - Left</code>
 <p>
 If a <var>TControl</var> instance is not available in <var>Control</var>, the 
 value for the property is <b>0</b> (<b>zero</b>).
 </p>
 </descr>
 <seealso>
+<link id="TControlBorderSpacing.Control"/>
 <link id="TControlBorderSpacing.Around"/>
 <link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.ControlWidth"/>
 <link id="TControl.Left"/>
 </seealso>
 </element>
 
 <element name="TControlBorderSpacing.ControlTop">
 <short>
-Space reserved on the top edge of the control relative to the position for 
-the control.
+Position for the top edge of the associated Control after it has been 
+adjusted for border spacing.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>ControlTop</var> is a read-only <var>Integer</var> property. Its value is 
+calculated as the difference between the <var>Top</var> property in the 
+<var>Control</var> and the values in the <var>Around</var> and <var>Top</var> 
+properties.
+</p>
+<p>
+For example:
+</p>
+<code>Control.Top - Around - Top</code>
+<p>
+If a <var>TControl</var> instance is not available in <var>Control</var>, the 
+value for the property is <b>0</b> (<b>zero</b>).
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.ControlHeight"/>
+<link id="TControl.Top"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.ControlWidth">
 <short>
-Total width for the control including spacing values in Around, Left, and 
-Right.
+Total width for the control including border spacing values in Around, Left, 
+and Right.
 </short>
 <descr>
 <p>
@@ -6304,110 +6752,470 @@ contains the total width for the control including spacing values in the
 <var>Around</var>, <var>Left</var>, and <var>Right</var> properties. The 
 property value is calculated using the following formula:
 </p>
-<code>TControl.Width + (2 * Around) + Left + Right</code>
+<code>Control.Width + (2 * Around) + Left + Right</code>
 <p>
 If a <var>TControl</var> instance is not available in <var>Control</var>, the 
 value for the property is <b>0</b> (<b>zero</b>).
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.Right"/>
+<link id="TControlBorderSpacing.ControlHeight"/>
+<link id="TControl.Width"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.ControlHeight">
 <short>
-Total height for the control including spacing values in Around, Top, and 
-Bottom.
+Total height for the control including border spacing values in Around, Top, 
+and Bottom.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>ControlHeight</var> is a read-only <var>Integer</var> property with the 
+total height for the associated <var>Control</var> including border spacing 
+values. The property value is calculated using the following formula:
+</p>
+<code>Control.Height + (2 * Around) + Top + Bottom</code>
+<p>
+If a <var>TControl</var> instance is not available in <var>Control</var>, the 
+value for the property is <b>0</b> (<b>zero</b>).
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControlBorderSpacing.ControlWidth"/>
+<link id="TControl.Height"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.ControlRight">
 <short>
-Space reserved on the right-hand edge of the control relative to the position 
-for the control.
+Position for the right-hand edge of the associated Control after it has been 
+adjusted for border spacing.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>ControlRight</var> is a read-only <var>Integer</var> property. Its value 
+is calculated as the sum of the <var>Left</var> property in the 
+<var>Control</var>, its <var>Width</var>, and the values in the 
+<var>Around</var> and <var>Right</var> properties for the class instance. 
+</p>
+<p>
+For example:
+</p>
+<code>Control.Left + Control.Width + Around + Right</code>
+<p>
+If a <var>TControl</var> instance is not available in <var>Control</var>, the 
+value for the property is <b>0</b> (<b>zero</b>).
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Right"/>
+<link id="TControlBorderSpacing.ControlLeft"/>
+<link id="TControl.Left"/>
+<link id="TControl.Width"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.ControlBottom">
 <short>
-Space reserved on the bottom edge of the control relative to the position for 
-the control.
+Position for the bottom of the associated Control including assigned border 
+spacing.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>ControlBottom</var> is a read-only <var>Integer</var> property. Its value 
+is calculated as the sum of the <var>Top</var> property in the 
+<var>Control</var> and its <var>Height</var> with the values in the 
+<var>Around</var> and <var>Bottom</var> properties.
+</p>
+<p>
+For example:
+</p>
+<code>Control.Top + Control.Height + Around + Bottom</code>
+<p>
+If a <var>TControl</var> instance is not available in <var>Control</var>, the 
+value for the property is <b>0</b> (<b>zero</b>).
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControlBorderSpacing.ControlWidth"/>
+<link id="TControl.Top"/>
+<link id="TControl.Height"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.OnChange">
-<short>Event handler for a change in border spacing.</short>
-<descr/>
-<seealso/>
+<short>
+Event handler signalled when border spacing value(s) have been changed.
+</short>
+<descr>
+<p>
+<var>OnChange</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled when one of the properties in the class instance has been 
+changed. OnChange is signalled (when assigned) from the Change method. It 
+occurs after the border spacing values have been applied to the associated 
+Control, and its size has been adjusted.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControl.DoBorderSpacingChange"/>
+<link id="#rtl.classes.TNotifyEvent">TNotifyEvent</link>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.Left">
-<short>The space at the left border.</short>
-<descr/>
-<seealso/>
+<short>
+The border space on the left edge of the associated control.
+</short>
+<descr>
+<p>
+<var>Left</var> is a <var>TSpacingSize</var> property which indicates the 
+number of pixels used as border spacing for the associated <var>Control</var>. 
+It specifies the minimum distance between either the left edge of the parent 
+control or the right edge of an adjacent sibling control.
+</p>
+<p>
+Changing the value for the property causes the <var>Change</var> method to be 
+called to notify and apply modifications to the associated Control, and to 
+signal the <var>OnChange</var> event handler (when assigned).
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder may be scaled by X 
+and Y scaling factors when the AutoAdjustLayout method is called.
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder are used in Control 
+methods which anchor or adjust the layout and size for the control instance on 
+its parent control.
+</p>
+<p>
+Use Right to specify the border spacing on the right-hand edge of the 
+associated Control.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.AutoAdjustLayout"/>
+<link id="TWinControl.AlignControls"/>
+<link id="TWinControl.Controls"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+<link id="TControl.Parent"/>
+<link id="TControl.DoAutoAdjustLayout"/>
+<link id="TControl.AnchorToNeighbour"/>
+<link id="TControl.AnchorAsAlign"/>
+<link id="TSpacingSize"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.Top">
-<short>The space at the top border.</short>
-<descr/>
-<seealso/>
+<short>
+The border space on the top edge of the associated control.
+</short>
+<descr>
+<p>
+<var>Top</var> is a <var>TSpacingSize</var> property which indicates the number 
+of pixels used as border spacing for the associated <var>Control</var>. It 
+specifies the minimum distance between either the top edge of the parent 
+control or the bottom edge of an adjacent sibling control.
+</p>
+<p>
+Changing the value for the property causes the <var>Change</var> method to be 
+called to notify and apply modifications to the associated Control, and to 
+signal the <var>OnChange</var> event handler (when assigned).
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder may be scaled by X 
+and Y scaling factors when the AutoAdjustLayout method is called.
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder are used in Control 
+methods which anchor or adjust the layout and size for the control instance on 
+its parent control.
+</p>
+<p>
+Use Bottom to specify the border spacing on the bottom edge of the 
+associated Control.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.AutoAdjustLayout"/>
+<link id="TWinControl.AlignControls"/>
+<link id="TWinControl.Controls"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+<link id="TControl.Parent"/>
+<link id="TControl.DoAutoAdjustLayout"/>
+<link id="TControl.AnchorToNeighbour"/>
+<link id="TControl.AnchorAsAlign"/>
+<link id="TSpacingSize"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.Right">
-<short>The space at the right border.</short>
-<descr/>
-<seealso/>
+<short>
+The border space on the right edge of the associated control.
+</short>
+<descr>
+<p>
+<var>Right</var> is a <var>TSpacingSize</var> property which indicates the 
+number of pixels used as border spacing for the associated <var>Control</var>. 
+It specifies the minimum distance between either the right edge of the parent 
+control or the left edge of an adjacent sibling control.
+</p>
+<p>
+Changing the value for the property causes the <var>Change</var> method to be 
+called to notify and apply modifications to the associated Control, and to 
+signal the <var>OnChange</var> event handler (when assigned).
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder may be scaled by X 
+and Y scaling factors when the AutoAdjustLayout method is called.
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder are used in Control 
+methods which anchor or adjust the layout and size for the control instance on 
+its parent control.
+</p>
+<p>
+Use Left to specify the border spacing on the left-hand edge of the associated 
+Control.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.AutoAdjustLayout"/>
+<link id="TWinControl.AlignControls"/>
+<link id="TWinControl.Controls"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+<link id="TControl.Parent"/>
+<link id="TControl.DoAutoAdjustLayout"/>
+<link id="TControl.AnchorToNeighbour"/>
+<link id="TControl.AnchorAsAlign"/>
+<link id="TSpacingSize"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.Bottom">
-<short>The space at the bottom border.</short>
-<descr/>
-<seealso/>
+<short>
+The border space on the bottom edge of the associated control.
+</short>
+<descr>
+<p>
+<var>Bottom</var> is a <var>TSpacingSize</var> property which indicates the 
+number of pixels used as border spacing for the associated <var>Control</var>. 
+It specifies the minimum distance between either the bottom edge of the parent 
+control or the top edge of an adjacent sibling control.
+</p>
+<p>
+Changing the value for the property causes the <var>Change</var> method to be 
+called to notify and apply modifications to the associated Control, and to 
+signal the <var>OnChange</var> event handler (when assigned).
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder may be scaled by X 
+and Y scaling factors when the AutoAdjustLayout method is called.
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder are used in Control 
+methods which anchor or adjust the layout and size for the control instance on 
+its parent control.
+</p>
+<p>
+Use Bottom to specify the border spacing on the bottom edge of the 
+associated Control.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Around"/>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.AutoAdjustLayout"/>
+<link id="TWinControl.AlignControls"/>
+<link id="TWinControl.Controls"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+<link id="TControl.Parent"/>
+<link id="TControl.DoAutoAdjustLayout"/>
+<link id="TControl.AnchorToNeighbour"/>
+<link id="TControl.AnchorAsAlign"/>
+<link id="TSpacingSize"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.Around">
-<short>The space to add on each side of a control.</short>
-<descr/>
-<seealso/>
+<short>
+The border space on each of the edges for the associated control.
+</short>
+<descr>
+<p>
+<var>Around</var> is a is a <var>TSpacingSize</var> property which indicates 
+the number of pixels used as border spacing for the associated 
+<var>Control</var>. It specifies the minimum distance between an edge on the 
+parent control or an adjacent edge on a sibling control.
+</p>
+<p>
+Changing the value for the property causes the <var>Change</var> method to be 
+called to notify and apply modifications to the associated Control, and to 
+signal the <var>OnChange</var> event handler (when assigned).
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder may be scaled by X 
+and Y scaling factors when the AutoAdjustLayout method is called.
+</p>
+<p>
+Values in Left, Right, Top, Bottom, Around, and InnerBorder are used in Control 
+methods which anchor or adjust the layout and size for the control instance on 
+its parent control. Around is applied independent of values in the Left, Right, 
+Top, or Bottom properties; the effective border spacing is always a sum of the 
+value in Around and the corresponding property for a given edge.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Top"/>
+<link id="TControlBorderSpacing.Left"/>
+<link id="TControlBorderSpacing.Right"/>
+<link id="TControlBorderSpacing.Bottom"/>
+<link id="TControlBorderSpacing.AutoAdjustLayout"/>
+<link id="TWinControl.AlignControls"/>
+<link id="TWinControl.Controls"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+<link id="TControl.Parent"/>
+<link id="TControl.DoAutoAdjustLayout"/>
+<link id="TControl.AnchorToNeighbour"/>
+<link id="TControl.AnchorAsAlign"/>
+<link id="TSpacingSize"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.InnerBorder">
 <short>
-Space added to the widget's <link id="TControl.GetPreferredSize">preferred 
-size</link>
+Space added to the <link id="TControl.GetPreferredSize">preferred 
+size</link> for the widget.
 </short>
 <descr>
 <p>
 When <link id="TControl.GetPreferredSize">calculating the preferred 
-size</link> of control, the LCL asks the widget first.
+size</link> of the associated Control, the LCL checks the widget first.
 </p>
 <p>
-When the widget returns a preferred size, e.g. a TButton widget, then the 
-InnerBorder is added twice to this size - e.g. to the Height for top and 
-bottom space.
+If the widget has a preferred size, such as a TButton widget, then the 
+InnerBorder value is added to increase the Height or Width of the control at 
+both of the opposing borders; Top and Bottom for preferred height, Left and 
+Right for preferred width.
 </p>
 <p>
 If the widget does not return a preferred size, the InnerBorder has no effect.
 </p>
+<p>
+Changing the value for the property causes the Change method to be called to 
+recalculate the preferred size for the associated Control, and to signal the 
+OnChange event handler (when assigned).
+</p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.OnChange"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.CellAlignHorizontal">
-<short>The horizontal alignment inside a table cell.</short>
-<descr/>
-<seealso/>
+<short>
+The horizontal alignment of the associated Control when the control ChildSizing 
+uses a tabular layout.
+</short>
+<descr>
+<p>
+<var>CellAlignHorizontal</var> is a <var>TControlCellAlign</var> property which 
+controls the horizontal alignment and sizing of the control when its Parent 
+uses a tabular layout for child controls. The default value for the property is 
+<var>caFill</var> and causes the control to be resized to horizontally fill the 
+cell where the control is displayed.
+</p>
+<p>
+See <link id="TControlCellAlign">TControlCellAlign</link>  for more information 
+about the values in the enumeration and their meanings.
+</p>
+<p>
+Changing the value for the property causes the Change method to be called to 
+recalculate the preferred size for the associated Control, and to signal the 
+OnChange event handler (when assigned).
+</p>
+<p>
+The value in CellAlignHorizontal is used when the AlignControls method in the 
+associated Control is called.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.CellAlignVertical"/>
+<link id="TControlCellAlign"/>
+<link id="TWinControl.ChildSizing"/>
+<link id="TWinControl.AlignControls"/>
+</seealso>
 </element>
 
 <element name="TControlBorderSpacing.CellAlignVertical">
-<short>The vertical alignment inside a table cell.</short>
-<descr/>
-<seealso/>
+<short>
+The vertical alignment of the associated Control when the control ChildSizing 
+uses a tabular layout.
+</short>
+<descr>
+<p>
+<var>CellAlignVertical</var> is a <var>TControlCellAlign</var> property which 
+controls the vertical alignment and sizing of the control when its Parent 
+uses a tabular layout for child controls. The default value for the property is 
+<var>caFill</var> and causes the control to be resized to vertically fill the 
+cell where the control is displayed.
+</p>
+<p>
+See <link id="TControlCellAlign">TControlCellAlign</link> for more information 
+about the values in the enumeration and their meanings.
+</p>
+<p>
+Changing the value for the property causes the Change method to be called to 
+recalculate the preferred size for the associated Control, and to signal the 
+OnChange event handler (when assigned).
+</p>
+<p>
+The value in CellAlignVertical is used when the AlignControls method in the 
+associated Control is called.
+</p>
+</descr>
+<seealso>
+<link id="TControlBorderSpacing.Control"/>
+<link id="TControlBorderSpacing.Change"/>
+<link id="TControlBorderSpacing.CellAlignHorizontal"/>
+<link id="TControlCellAlign"/>
+<link id="TWinControl.ChildSizing"/>
+<link id="TWinControl.AlignControls"/>
+</seealso>
 </element>
 
 <element name="TAnchorSideChangeOperation">
@@ -10422,7 +11230,7 @@ Contains the result for the Drag message.
 The Result member is polymorphic:
 </p>
 <p>
-For dmFindTarget, the result is a reference to the the target control. For 
+For dmFindTarget, the result is a reference to the target control. For 
 dmDragDropm the result is zero (0). For other drag messages, the result 
 indicates acceptance of the drop message.
 </p>
@@ -11588,7 +12396,7 @@ in the LCL translation facilities.
 </seealso>
 </element>
 <element name="TControl.SetParent.NewParent">
-<short>New value for the the Parent property.</short>
+<short>New value for the Parent property.</short>
 </element>
 
 <element name="TControl.SetParentBackground">
@@ -12086,7 +12894,7 @@ RemoveHandler can be used if the control handler type is passed as an
 argument.
 </p>
 <p>
-See EnabledChanged for the actions performed after the value in Enabled  is 
+See EnabledChanged for the actions performed after the value in Enabled is 
 updated.
 </p>
 </descr>
@@ -16279,7 +17087,7 @@ conditions are satisfied.
 </dd>
 </dl>
 <p>
-ShowHelp is called from methods in the the TApplication instance. It occurs 
+ShowHelp is called from methods in the TApplication instance. It occurs 
 when the F1 key is pressed when the control has focus, or when its 
 ShowHelpForObject method is called for a specific control instance.
 </p>
@@ -23799,7 +24607,7 @@ event like: Ctrl, Shift, Alt, or Meta.
 </p>
 <remark>
 When a key is held down, the OnKeyDown event is re-triggered. The first 
-re-triggered event occurs after approximately 500ms, and subsequent events  
+re-triggered event occurs after approximately 500ms, and subsequent events 
 cycle between 30ms and 50ms until the key is released.
 </remark>
 <p>
@@ -23984,7 +24792,7 @@ instance. Setting the property to <b>0</b> (zero) causes the handle to be
 destroyed. <b>0</b> is the unassigned handle value.
 </p>
 <p>
-ParentWindow is used in the the CreateWnd method to form an association 
+ParentWindow is used in the CreateWnd method to form an association 
 between the Handle in the widgetset class instance and the window handle 
 for a control.
 </p>

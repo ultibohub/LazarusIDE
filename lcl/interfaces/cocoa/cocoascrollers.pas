@@ -420,10 +420,13 @@ end;
 procedure TCocoaManualScrollHost.setFrame(newValue: NSRect);
 var
   sc: TCocoaManualScrollView;
+  scFrame: NSRect;
 begin
   inherited setFrame(newValue);
   sc:= TCocoaManualScrollView(self.documentView);
-  sc.setFrame(newValue);
+  scFrame.origin:= NSZeroPoint;
+  scFrame.size:= self.contentSize;
+  sc.setFrame( scFrame );
   updateDocSize(sc, sc.documentView, sc.horizontalScroller, sc.verticalScroller);
 end;
 
@@ -815,6 +818,9 @@ begin
   Result:=inherited initWithFrame(ns);
   sc:=TCocoaScrollView(Result);
 
+  if NOT sc.isCustomRange then
+    Exit;
+
   //sc.contentView.setPostsBoundsChangedNotifications(true);
   NSNotificationCenter.defaultCenter
     .addObserver_selector_name_object(sc, ObjCSelector('scrollContentViewBoundsChanged:')
@@ -1062,11 +1068,10 @@ end;
 
 procedure TCocoaScrollBar.scrollWheel(event: NSEvent);
 begin
-  if suppressLCLMouse then
-    inherited scrollWheel(event)
+  if Assigned(callback) then
+    callback.scrollWheel(event)
   else
-  if not Assigned(callback) or not callback.scrollWheel(event) then
-    inherited scrollWheel(event);
+    Inherited;
 end;
 
 function TCocoaScrollBar.acceptsFirstResponder: LCLObjCBoolean;
