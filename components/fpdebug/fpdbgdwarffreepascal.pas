@@ -237,6 +237,36 @@ type
 
   (* *** Array vs AnsiString *** *)
 
+  { TFpSymbolDwarfFreePascalTypeString }
+
+  TFpSymbolDwarfFreePascalTypeString = class(TFpSymbolDwarfTypeString)
+  protected
+    //procedure KindNeeded; override; // Could return diff for ansi / short, but will be done in TFpValue // Short has DW_AT_byte_size for size of length == 1 *)
+    function DoReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize): Boolean; override;
+  public
+    function GetTypedValueObject({%H-}ATypeCast: Boolean; AnOuterType: TFpSymbolDwarfType = nil): TFpValueDwarf; override;
+  end;
+
+  { TFpValueDwarfFreePascalString }
+
+  TFpValueDwarfFreePascalString = class(TFpValueDwarfString) // DW_TAG_String
+  protected
+    function IsValidTypeCast: Boolean; override;
+    function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetKind: TDbgSymbolKind; override;
+    function GetAsString: AnsiString; override;
+    //function GetAsWideString: WideString; override;
+    function GetMemberCount: Integer; override;
+    procedure SetAsCardinal(AValue: QWord); override;
+    function GetAsCardinal: QWord; override;
+  public
+    function GetFpcRefCount(out ARefCount: Int64): Boolean; override;
+    function GetSubString(AStartIndex, ALen: Int64; out ASubStr: AnsiString;
+      AIgnoreBounds: Boolean = False): Boolean; override;
+    //function GetSubWideString(AStartIndex, ALen: Int64; out ASubStr: WideString;
+    //  AIgnoreBounds: Boolean = False): Boolean; override;
+  end;
+
   { TFpSymbolDwarfV3FreePascalSymbolTypeArray }
 
   TFpSymbolDwarfV3FreePascalSymbolTypeArray = class(TFpSymbolDwarfFreePascalSymbolTypeArray)
@@ -261,13 +291,13 @@ type
     FValueDone, FBoundsDone: Boolean;
     FDynamicCodePage: TSystemCodePage;
     function GetCodePage: TSystemCodePage;
-    function ObtainDynamicCodePage(Addr: TFpDbgMemLocation; out Codepage: TSystemCodePage): Boolean;
     procedure CalcBounds;
     // check if this is a string, and return bounds
     function CheckTypeAndGetAddr(out AnAddr: TFpDbgMemLocation): boolean;
   protected
     function IsValidTypeCast: Boolean; override;
     function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetStringLen(out ALen: Int64): boolean; inline;
     function GetAsString: AnsiString; override;
     function GetAsWideString: WideString; override;
     procedure SetAsCardinal(AValue: QWord); override;
@@ -311,6 +341,34 @@ uses
 
 var
   FPDBG_DWARF_VERBOSE: PLazLoggerLogGroup;
+
+function ObtainDynamicCodePage(Addr: TFpDbgMemLocation; AContext: TFpDbgLocationContext;
+  TypeInfo: TFpSymbolDwarfType; out Codepage: TSystemCodePage): Boolean;
+var
+  CodepageOffset: SmallInt;
+  v: Cardinal;
+begin
+  // Only call this function for non-empty strings!
+  Result := False;
+  if not IsTargetNotNil(Addr) then
+    exit;
+
+  // Only AnsiStrings in fpc 3.0.0 and higher have a dynamic codepage.
+  v := TFpDwarfFreePascalSymbolClassMapDwarf3(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion;
+  if (v >= $030000) then begin
+    // Too bad the debug-information does not deliver this information. So we
+    // use these hardcoded information, and hope that FPC does not change and
+    // we never reach this point for a compilationunit that is not compiled by
+    // fpc.
+    if v >= $030300 { $030301 } then
+      CodepageOffset := TypeInfo.CompilationUnit.AddressSize + SizeOf(Longint) + SizeOf(Word) + SizeOf(Word)
+    else
+      CodepageOffset := TypeInfo.CompilationUnit.AddressSize * 3;
+    Addr.Address := Addr.Address - CodepageOffset;
+    if AContext.ReadMemory(Addr, SizeVal(2), @Codepage) then
+      Result := CodePageToCodePageName(Codepage) <> '';
+  end;
+end;
 
 { TFpDwarfFreePascalSymbolClassMap }
 
@@ -430,6 +488,7 @@ begin
     DW_TAG_structure_type,
     DW_TAG_class_type:       Result := TFpSymbolDwarfFreePascalTypeStructure;
     DW_TAG_array_type:       Result := TFpSymbolDwarfFreePascalSymbolTypeArray;
+    DW_TAG_string_type:      Result := TFpSymbolDwarfFreePascalTypeString;
     DW_TAG_subprogram:       Result := TFpSymbolDwarfFreePascalDataProc;
     DW_TAG_formal_parameter: Result := TFpSymbolDwarfFreePascalDataParameter;
     else                     Result := inherited GetDwarfSymbolClass(ATag);
@@ -603,8 +662,6 @@ function TFpDwarfFreePascalSymbolScope.FindExportedSymbolInUnits(
 var
   i: Integer;
   CU: TDwarfCompilationUnit;
-  FoundInfoEntry: TDwarfInformationEntry;
-  FndIsExternal: Boolean;
   s: String;
 begin
   if not FSearchSpecialCuDone then begin
@@ -1289,7 +1346,7 @@ begin
   len := LenSym.AsCardinal;
   LenSym.ReleaseReference;
 
-  if not GetSize(Size) then begin;
+  if not GetSize(Size) then begin
     SetLastError(CreateError(fpErrAnyError));
     exit('');
   end;
@@ -1484,6 +1541,235 @@ begin
   Result := Context.ReadSignedInt(Addr, SizeVal(AddressSize), ARefCount);
 end;
 
+{ TFpSymbolDwarfFreePascalTypeString }
+
+function TFpSymbolDwarfFreePascalTypeString.DoReadSize(const AValueObj: TFpValue; out
+  ASize: TFpDbgValueSize): Boolean;
+begin
+  Result := DoReadLenSize(nil, ASize) and (ASize  >= 4); // not shortstring
+
+  ASize := ZeroSize;
+  ASize.Size := CompilationUnit.AddressSize;
+end;
+
+function TFpSymbolDwarfFreePascalTypeString.GetTypedValueObject(ATypeCast: Boolean;
+  AnOuterType: TFpSymbolDwarfType): TFpValueDwarf;
+begin
+  if AnOuterType = nil then
+    AnOuterType := Self;
+  Result := TFpValueDwarfFreePascalString.Create(AnOuterType);
+end;
+
+{ TFpValueDwarfFreePascalString }
+
+function TFpValueDwarfFreePascalString.IsValidTypeCast: Boolean;
+var
+  f: TFpValueFieldFlags;
+begin
+  Result := inherited IsValidTypeCast;
+  if Result then
+    exit;
+  Result := HasTypeCastInfo;
+  If not Result then
+    exit;
+
+  f := TypeCastSourceValue.FieldFlags;
+  if (f * [svfAddress, svfSize, svfSizeOfPointer] = [svfAddress]) or
+     (svfOrdinal in f)
+  then
+    exit;
+end;
+
+function TFpValueDwarfFreePascalString.GetFieldFlags: TFpValueFieldFlags;
+begin
+  Result := inherited GetFieldFlags;
+
+  if Kind in [skWideString, skAnsiString] then
+    Result := Result + [svfDataAddress, svfSizeOfPointer, svfOrdinal];
+end;
+
+function TFpValueDwarfFreePascalString.GetKind: TDbgSymbolKind;
+var
+  s: TFpDbgValueSize;
+begin
+  Result := inherited GetKind;
+  if (Result = skString) and GetLenSize(s) and (s >= 4) then
+    Result := skAnsiString;
+end;
+
+function TFpValueDwarfFreePascalString.GetAsString: AnsiString;
+var
+  ALen: Int64;
+  WResult: WideString;
+  RResult: RawByteString;
+  Codepage: TSystemCodePage;
+begin
+  if FValueDone then
+    exit(FValue);
+
+  Result := '';
+  FValue := '';
+  FValueDone := True;
+
+  if not GetStringLen(ALen) then
+    exit;
+
+  if Kind = skWideString then begin
+    if not Context.ReadWString(DataAddress, ALen, WResult) then
+      SetLastError(Context.LastMemError)
+    else
+      Result := WResult;
+  end
+  else
+  if Kind = skAnsiString then begin
+    if not Context.ReadString(DataAddress, ALen, RResult) then begin
+      SetLastError(Context.LastMemError);
+    end
+    else begin
+      if ObtainDynamicCodePage(DataAddress, Context, TypeInfo, Codepage) then
+        SetCodePage(RResult, Codepage, False);
+      Result := RResult;
+    end;
+  end
+  else begin
+    // ShortString;
+    if not Context.ReadString(DataAddress, ALen, RResult) then
+      SetLastError(Context.LastMemError)
+    else
+      Result := RResult;
+  end;
+
+  FValue := Result;
+end;
+
+function TFpValueDwarfFreePascalString.GetMemberCount: Integer;
+var
+  ALen: Int64;
+begin
+  if GetStringLen(ALen) and (ALen < MaxInt) then
+    Result := ALen
+  else
+    Result := 0;
+end;
+
+procedure TFpValueDwarfFreePascalString.SetAsCardinal(AValue: QWord);
+begin
+  if not Context.WriteUnsignedInt(Address, SizeVal(AddressSize), AValue) then begin
+    SetLastError(Context.LastMemError);
+  end;
+  Reset;
+end;
+
+function TFpValueDwarfFreePascalString.GetAsCardinal: QWord;
+var
+  d: TFpDbgMemLocation;
+begin
+  d := DataAddress;
+  if IsTargetAddr(d) then
+    Result := DataAddress.Address
+  else
+    Result := inherited GetAsCardinal;
+end;
+
+function TFpValueDwarfFreePascalString.GetFpcRefCount(out ARefCount: Int64): Boolean;
+var
+  Addr: TFpDbgMemLocation;
+begin
+  ARefCount := 0;
+  Result := (Kind = skAnsiString);
+  if not Result then
+    exit;
+
+  GetDwarfDataAddress(Addr);
+  if (not IsValidLoc(Addr)) and
+     (HasTypeCastInfo) and
+     (svfOrdinal in TypeCastSourceValue.FieldFlags)
+  then
+    Addr := TargetLoc(TypeCastSourceValue.AsCardinal);
+
+  Result := IsTargetNil(Addr);
+  if Result then
+    exit;
+
+  if not MemManager.MemModel.IsReadableLocation(Addr) then
+    exit;
+
+  if TFpDwarfFreePascalSymbolClassMap(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion >= $030301
+  then begin
+    Addr:= Addr - AddressSize - 4;
+    Result := Context.ReadSignedInt(Addr, SizeVal(4), ARefCount);
+  end
+  else begin
+    Addr:= Addr - (AddressSize * 2);
+    Result := Context.ReadSignedInt(Addr, SizeVal(AddressSize), ARefCount);
+  end;
+end;
+
+function TFpValueDwarfFreePascalString.GetSubString(AStartIndex, ALen: Int64; out
+  ASubStr: AnsiString; AIgnoreBounds: Boolean): Boolean;
+var
+  AFullLen: Int64;
+  WResult: WideString;
+  RResult: RawByteString;
+  Codepage: TSystemCodePage;
+begin
+  // TODO: if FValueDone, and covers selected range, then use FValue;
+  ASubStr := '';
+  Result := True;
+  if ALen <= 0 then
+    exit;
+
+  dec(AStartIndex);
+  if AStartIndex < 0 then begin // not supported, return partial
+    Result := AIgnoreBounds;
+    ALen := ALen + AStartIndex;
+    AStartIndex := 0;
+  end;
+
+  if (not GetStringLen(AFullLen)) or (AFullLen <= 0) then begin
+    Result := AIgnoreBounds;
+    exit;
+  end;
+
+  if AStartIndex + ALen > AFullLen then begin
+    Result := AIgnoreBounds;
+    ALen := AFullLen - AStartIndex;
+  end;
+
+  if ALen <= 0 then
+    exit;
+
+  if Kind = skWideString then begin
+    {$PUSH}{$Q-}{$R-}
+    if not Context.ReadWString(DataAddress+AStartIndex*2, ALen, WResult, True) then
+    {$POP}
+      SetLastError(Context.LastMemError)
+    else
+      ASubStr := WResult;
+  end
+  else
+  if Kind = skAnsiString then begin
+    {$PUSH}{$Q-}{$R-}
+    if not Context.ReadString(DataAddress+AStartIndex, ALen, RResult) then begin
+    {$POP}
+      SetLastError(Context.LastMemError);
+    end
+    else begin
+      if ObtainDynamicCodePage(DataAddress, Context, TypeInfo, Codepage) then
+        SetCodePage(RResult, Codepage, False);
+      ASubStr := RResult;
+    end;
+  end
+  else begin
+    {$PUSH}{$Q-}{$R-}
+    if not Context.ReadString(DataAddress+AStartIndex, ALen, RResult, True) then
+    {$POP}
+      SetLastError(Context.LastMemError)
+    else
+      ASubStr := RResult;
+  end;
+end;
+
 { TFpSymbolDwarfV3FreePascalSymbolTypeArray }
 
 function TFpSymbolDwarfV3FreePascalSymbolTypeArray.GetInternalStringType: TArrayOrStringType;
@@ -1651,12 +1937,24 @@ begin
   end;
 end;
 
+function TFpValueDwarfV3FreePascalString.GetStringLen(out ALen: Int64): boolean;
+begin
+  ALen := 0;
+  Result := True; // Todo: add error checks
+  CalcBounds;
+  if FHighBound < FLowBound then
+    exit; // empty string
+  {$PUSH}{$Q-}{$R-}
+  ALen := FHighBound-FLowBound+1;
+  {$POP}
+  Result := True;
+end;
+
 function TFpValueDwarfV3FreePascalString.GetSubString(AStartIndex, ALen: Int64;
   out ASubStr: AnsiString; AIgnoreBounds: Boolean): Boolean;
 var
-  Addr: TFpDbgMemLocation;
+  Addr, StartAddr: TFpDbgMemLocation;
   FullLen: Int64;
-  t: TFpSymbol;
   WResult: WideString;
   RResult: RawByteString;
   Codepage: TSystemCodePage;
@@ -1670,13 +1968,7 @@ begin
     AStartIndex := 1;
   end;
 
-  // get length
-  CalcBounds;
-  if FHighBound < FLowBound then
-    exit; // empty string
-  {$PUSH}{$Q-}{$R-}
-  FullLen := FHighBound-FLowBound+1;
-  {$POP}
+  GetStringLen(FullLen);
 
   if AStartIndex - 1 + ALen > FullLen then begin
     Result := AIgnoreBounds;
@@ -1700,22 +1992,11 @@ begin
     exit(False);
 
 
-  if (MemManager.MemLimits.MaxStringLen > 0) and
-     (QWord(ALen) > MemManager.MemLimits.MaxStringLen)
-  then
-    ALen := MemManager.MemLimits.MaxStringLen;
-
-  if ALen <= 0 then
-    exit;
-
-  t := TypeInfo;
-  if t.Kind = skWideString then begin
+  if Kind = skWideString then begin
     {$PUSH}{$Q-}{$R-}
     Addr.Address := Addr.Address + (AStartIndex - 1) * 2;
     {$POP}
-    if not ( (MemManager.SetLength(WResult, ALen)) and
-             (Context.ReadMemory(Addr, SizeVal(ALen*2), @WResult[1])) )
-    then
+    if not Context.ReadWString(Addr, ALen, WResult, True) then
       SetLastError(Context.LastMemError)
     else
       ASubStr := WResult;
@@ -1725,23 +2006,20 @@ begin
     {$PUSH}{$Q-}{$R-}
     Addr.Address := Addr.Address + AStartIndex - 1;
     {$POP}
-    if not ( (MemManager.SetLength(ASubStr, ALen)) and
-             (Context.ReadMemory(Addr, SizeVal(ALen), @ASubStr[1])) )
-    then begin
-      ASubStr := '';
-      SetLastError(Context.LastMemError);
-    end;
+    if not Context.ReadString(Addr, ALen, RResult, True) then
+      SetLastError(Context.LastMemError)
+    else
+      ASubStr := RResult;
   end
   else begin
+    StartAddr := Addr;
     {$PUSH}{$Q-}{$R-}
     Addr.Address := Addr.Address + QWord(AStartIndex - 1);
     {$POP}
-    if not ( (MemManager.SetLength(RResult, ALen)) and
-             (Context.ReadMemory(Addr, SizeVal(ALen), @RResult[1])) )
-    then begin
+    if not Context.ReadString(Addr, ALen, RResult, True) then begin
       SetLastError(Context.LastMemError);
     end else begin
-      if ObtainDynamicCodePage(Addr, Codepage) then
+      if ObtainDynamicCodePage(StartAddr, Context, TypeInfo, Codepage) then
         begin
         SetCodePage(RResult, Codepage, False);
         FDynamicCodePage:=Codepage;
@@ -1762,7 +2040,6 @@ end;
 
 function TFpValueDwarfV3FreePascalString.GetAsString: AnsiString;
 var
-  t: TFpSymbol;
   Len: Int64;
   Addr: TFpDbgMemLocation;
   WResult: WideString;
@@ -1780,45 +2057,26 @@ begin
   if not CheckTypeAndGetAddr(Addr) then
     exit;
 
-  // get length
-  CalcBounds;
-  if FHighBound < FLowBound then
-    exit; // empty string
-  {$PUSH}{$Q-}{$R-}
-  Len := FHighBound-FLowBound+1;
-  {$POP}
+  GetStringLen(Len);
 
-  if (MemManager.MemLimits.MaxStringLen > 0) and
-     (QWord(Len) > MemManager.MemLimits.MaxStringLen)
-  then
-      Len := MemManager.MemLimits.MaxStringLen;
-
-
-  t := TypeInfo;
-  if t.Kind = skWideString then begin
-    if not ( (MemManager.SetLength(WResult, Len)) and
-             (Context.ReadMemory(Addr, SizeVal(Len*2), @WResult[1])) )
-    then
+  if Kind = skWideString then begin
+    if not Context.ReadWString(Addr, Len, WResult) then
       SetLastError(Context.LastMemError)
     else
       Result := WResult;
   end else
   if Addr.Address = Address.Address + 1 then begin
     // shortstring
-    if not ( (MemManager.SetLength(Result, Len)) and
-             (Context.ReadMemory(Addr, SizeVal(Len), @Result[1])) )
-    then begin
-      Result := '';
-      SetLastError(Context.LastMemError);
-    end;
+    if not Context.ReadString(Addr, Len, RResult) then
+      SetLastError(Context.LastMemError)
+    else
+      Result := RResult;
   end
   else begin
-    if not ( (MemManager.SetLength(RResult, Len)) and
-             (Context.ReadMemory(Addr, SizeVal(Len), @RResult[1])) )
-    then begin
+    if not Context.ReadString(Addr, Len, RResult) then begin
       SetLastError(Context.LastMemError);
     end else begin
-      if ObtainDynamicCodePage(Addr, Codepage) then
+      if ObtainDynamicCodePage(Addr, Context, TypeInfo, Codepage) then
         begin
         SetCodePage(RResult, Codepage, False);
         FDynamicCodePage:=Codepage;
@@ -1868,7 +2126,7 @@ var
   Addr: TFpDbgMemLocation;
 begin
   ARefCount := 0;
-  Result := (TypeInfo.Kind = skString);
+  Result := (TypeInfo.Kind in [skString, skAnsiString]); // todo only skAnsiString;
   if not Result then
     exit;
 
@@ -1894,32 +2152,6 @@ begin
   else begin
     Addr:= Addr - (AddressSize * 2);
     Result := Context.ReadSignedInt(Addr, SizeVal(AddressSize), ARefCount);
-  end;
-end;
-
-function TFpValueDwarfV3FreePascalString.ObtainDynamicCodePage(Addr: TFpDbgMemLocation; out
-  Codepage: TSystemCodePage): Boolean;
-var
-  CodepageOffset: SmallInt;
-begin
-  // Only call this function for non-empty strings!
-  Result := False;
-  if not IsTargetNotNil(Addr) then
-    exit;
-
-  // Only AnsiStrings in fpc 3.0.0 and higher have a dynamic codepage.
-  if (TypeInfo.Kind = skString) and (TFpDwarfFreePascalSymbolClassMapDwarf3(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion >= $030000) then begin
-    // Too bad the debug-information does not deliver this information. So we
-    // use these hardcoded information, and hope that FPC does not change and
-    // we never reach this point for a compilationunit that is not compiled by
-    // fpc.
-    if TFpDwarfFreePascalSymbolClassMapDwarf3(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion >= $030300 { $030301 } then
-      CodepageOffset := AddressSize + SizeOf(Longint) + SizeOf(Word) + SizeOf(Word)
-    else
-      CodepageOffset := AddressSize * 3;
-    Addr.Address := Addr.Address - CodepageOffset;
-    if Context.ReadMemory(Addr, SizeVal(2), @Codepage) then
-      Result := CodePageToCodePageName(Codepage) <> '';
   end;
 end;
 
@@ -1956,7 +2188,7 @@ begin
   if not MemManager.MemModel.IsReadableLocation(Addr) then
     exit;
 
-  assert((TypeInfo <> nil) and (TypeInfo.CompilationUnit <> nil) and (TypeInfo.CompilationUnit.DwarfSymbolClassMap is TFpDwarfFreePascalSymbolClassMapDwarf3), 'TFpValueDwarfV3FreePascalString.GetAsString: (Owner <> nil) and (Owner.CompilationUnit <> nil) and (TypeInfo.CompilationUnit.DwarfSymbolClassMap is TFpDwarfFreePascalSymbolClassMapDwarf3)');
+  assert((TypeInfo <> nil) and (TypeInfo.CompilationUnit <> nil) and (TypeInfo.CompilationUnit.DwarfSymbolClassMap is TFpDwarfFreePascalSymbolClassMapDwarf3), 'TFpValueDwarfV3FreePascalString.CalcBounds: (Owner <> nil) and (Owner.CompilationUnit <> nil) and (TypeInfo.CompilationUnit.DwarfSymbolClassMap is TFpDwarfFreePascalSymbolClassMapDwarf3)');
   if (TFpDwarfFreePascalSymbolClassMapDwarf3(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion > 0) and
      (TFpDwarfFreePascalSymbolClassMapDwarf3(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion < $030100)
   then begin

@@ -33,7 +33,7 @@ uses
   // Widgetset
   WSLCLClasses, WSDialogs,
   // LCL Cocoa
-  CocoaUtils, CocoaGDIObjects, Cocoa_Extra, CocoaMenus;
+  CocoaConst, CocoaUtils, CocoaGDIObjects, Cocoa_Extra, CocoaMenus;
 
 type
 
@@ -301,6 +301,10 @@ var
 
   isMenuOn: Boolean;
 
+  oldMainMenu: NSMenu = nil;
+  oldEditMenu: NSMenuItem = nil;
+  editMenuIndex: NSInteger;
+
   // setup panel and its accessory view
   procedure CreateAccessoryView(AOpenOwner: NSOpenPanel; ASaveOwner: NSSavePanel);
   const
@@ -406,6 +410,74 @@ var
     lFilter.DialogHandle.setDelegate(lFilter);
   end;
 
+  class procedure ReplaceEditMenu();
+  var
+    mainMenu: NSMenu;
+    appMenu: NSMenuItem;
+    editMenu: NSMenuItem;
+    editSubmenu: NSMenu;
+    editMenuTitle: NSString;
+  begin
+    oldMainMenu:= NSApplication(NSApp).mainMenu;
+    mainMenu:= oldMainMenu;
+    if NOT Assigned(mainMenu) then begin
+      mainMenu:= NSMenu.alloc.init;
+      NSApplication(NSApp).setMainMenu(mainMenu);
+      mainMenu.release;
+
+      appMenu:= NSMenuItem.alloc.init;
+      mainMenu.addItem(appMenu);
+      appMenu.release;
+    end;
+
+    oldEditMenu:= FindEditMenu(mainMenu, CocoaConst.NSSTR_EDIT_MENU);
+    if Assigned(oldEditMenu) then begin
+      editMenuIndex:= mainMenu.indexOfItem(oldEditMenu);
+      oldEditMenu.retain;
+      mainMenu.removeItemAtIndex(editMenuIndex);
+      editMenuTitle:= oldEditMenu.title;
+    end else begin
+      editMenuIndex:= mainMenu.numberOfItems;
+      editMenuTitle:= CocoaConst.NSSTR_EDIT_MENU;
+    end;
+
+    editMenu:= NSMenuItem.alloc.init;
+    mainMenu.insertItem_atIndex(editMenu, editMenuIndex);
+    editMenu.release;
+
+    editSubmenu:= NSMenu.alloc.initWithTitle(editMenuTitle);
+    editMenu.setSubmenu(editSubmenu);
+    editSubmenu.release;
+
+    editSubmenu.addItemWithTitle_action_keyEquivalent(
+      CocoaConst.NSSTR_EDIT_MENU_UNDO, objcselector('undo:'), NSSTR('z'));
+    editSubmenu.addItemWithTitle_action_keyEquivalent(
+      CocoaConst.NSSTR_EDIT_MENU_REDO, objcselector('redo:'), NSSTR('Z'));
+    editSubmenu.addItem(NSMenuItem.separatorItem);
+
+    editSubmenu.addItemWithTitle_action_keyEquivalent(
+      CocoaConst.NSSTR_EDIT_MENU_CUT, objcselector('cut:'), NSSTR('x'));
+    editSubmenu.addItemWithTitle_action_keyEquivalent(
+      CocoaConst.NSSTR_EDIT_MENU_COPY, objcselector('copy:'), NSSTR('c'));
+    editSubmenu.addItemWithTitle_action_keyEquivalent(
+      CocoaConst.NSSTR_EDIT_MENU_PASTE, objcselector('paste:'), NSSTR('v'));
+    editSubmenu.addItemWithTitle_action_keyEquivalent(
+      CocoaConst.NSSTR_EDIT_MENU_SELECTALL, objcselector('selectAll:'), NSSTR('a'));
+  end;
+
+  class procedure RestoreEditMenu();
+  var
+    mainMenu: NSMenu;
+  begin
+    mainMenu:= NSApplication(NSApp).mainMenu;
+    mainMenu.removeItemAtIndex(editMenuIndex);
+    if Assigned(oldEditMenu) then begin
+      mainMenu.insertItem_atIndex(oldEditMenu, editMenuIndex);
+      oldEditMenu.release;
+    end;
+    NSApplication(NSApp).setMainMenu(oldMainMenu);
+  end;
+
 begin
   {$IFDEF VerboseWSClass}
   DebugLn('TCocoaWSFileDialog.ShowModal for ' + ACommonDialog.Name);
@@ -478,6 +550,8 @@ begin
   UpdateOptions(FileDialog, saveDlg);
 
   isMenuOn := ToggleAppMenu(false);
+  ReplaceEditMenu();
+
   try
     if saveDlg.runModal = NSOKButton then
     begin
@@ -500,6 +574,7 @@ begin
     saveDlg.release;
     LocalPool.Release;
   finally
+    RestoreEditMenu();
     ToggleAppMenu(isMenuOn);
   end;
 

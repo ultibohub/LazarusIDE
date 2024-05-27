@@ -80,8 +80,20 @@ type
 
   { TFpDbgLocationContext }
 
+  TFpDbgLocationContext = class;
+
+  TGetFrameBaseCallback = function(AContext: TFpDbgLocationContext; out AnError: TFpError): TDBGPtr of object;
+
   TFpDbgLocationContext = class(TRefCountedObject)
   private
+    FCfaFrameBaseError: TFpError;
+    FFrameBaseCallback: TGetFrameBaseCallback;
+    FCfaFrameBaseCallback: TGetFrameBaseCallback;
+    FFrameBaseError: TFpError;
+    FFrameBase, FCfaFrameBase: TDBGPtr;
+
+    function GetFrameBase: TDBGPtr;
+    function GetCfaFrameBase: TDBGPtr;
     function GetLastMemError: TFpError;
     function GetPartialReadResultLenght: QWord;
   protected
@@ -98,6 +110,13 @@ type
     property SizeOfAddress: Integer read GetSizeOfAddress;
     property MemManager: TFpDbgMemManager read GetMemManager;
     property MemModel: TFpDbgMemModel read GetMemModel;
+  public
+    procedure SetFrameBaseCallback(ACallback: TGetFrameBaseCallback);
+    procedure SetCfaFrameBaseCallback(ACallback: TGetFrameBaseCallback);
+    property FrameBase: TDBGPtr read GetFrameBase;        // as requested by DW_OP_fbreg
+    property FrameBaseError: TFpError read FFrameBaseError;
+    property CfaFrameBase: TDBGPtr read GetCfaFrameBase;  // as requested by DW_OP_call_frame_cfa
+    property FCfarameBaseError: TFpError read FCfaFrameBaseError;
   public
     procedure ClearLastMemError;
     property LastMemError: TFpError read GetLastMemError;
@@ -163,6 +182,9 @@ type
     //function ReadFloat      (const ALocation: TFpDbgMemLocation; ASize: TFpDbgValueSize;
     //                         out AValue: Extended;
     //                         AnOpts: TFpDbgMemReadOptions): Boolean; inline;
+
+    function ReadString(const ALocation: TFpDbgMemLocation; ALen: Int64; out AValue: RawByteString; AnIgnoreMaxStringLen: boolean = False): Boolean;
+    function ReadWString(const ALocation: TFpDbgMemLocation; ALen: Int64; out AValue: WideString; AnIgnoreMaxStringLen: boolean = False): Boolean;
   end;
 
 
@@ -974,9 +996,41 @@ begin
   Result := MemManager.LastError;
 end;
 
+function TFpDbgLocationContext.GetFrameBase: TDBGPtr;
+begin
+  if FFrameBaseCallback <> nil then begin
+    FFrameBase := FFrameBaseCallback(Self, FFrameBaseError);
+    if (FFrameBase = 0) and not IsError(FFrameBaseError) then
+      FFrameBaseError := CreateError(fpErrAnyError, []);
+    FFrameBaseCallback := nil;
+  end;
+  Result := FFrameBase;
+end;
+
+function TFpDbgLocationContext.GetCfaFrameBase: TDBGPtr;
+begin
+  if FCfaFrameBaseCallback <> nil then begin
+    FCfaFrameBase := FCfaFrameBaseCallback(Self, FCfaFrameBaseError);
+    if (FCfaFrameBase = 0) and not IsError(FCfaFrameBaseError) then
+      FCfaFrameBaseError := CreateError(fpErrAnyError, []);
+    FCfaFrameBaseCallback := nil;
+  end;
+  Result := FCfaFrameBase;
+end;
+
 function TFpDbgLocationContext.GetPartialReadResultLenght: QWord;
 begin
   Result := MemManager.PartialReadResultLenght;
+end;
+
+procedure TFpDbgLocationContext.SetFrameBaseCallback(ACallback: TGetFrameBaseCallback);
+begin
+  FFrameBaseCallback := ACallback;
+end;
+
+procedure TFpDbgLocationContext.SetCfaFrameBaseCallback(ACallback: TGetFrameBaseCallback);
+begin
+  FCfaFrameBaseCallback := ACallback;
 end;
 
 procedure TFpDbgLocationContext.ClearLastMemError;
@@ -1102,6 +1156,56 @@ function TFpDbgLocationContext.ReadFloat(const ALocation: TFpDbgMemLocation;
   ASize: TFpDbgValueSize; out AValue: Extended): Boolean;
 begin
   Result := MemManager.ReadMemory(rdtfloat, ALocation, ASize, @AValue, (SizeOf(AValue)), Self);
+end;
+
+function TFpDbgLocationContext.ReadString(const ALocation: TFpDbgMemLocation; ALen: Int64; out
+  AValue: RawByteString; AnIgnoreMaxStringLen: boolean): Boolean;
+begin
+  Result := False;
+  AValue := '';
+
+  if (not AnIgnoreMaxStringLen) and
+     (MemManager.MemLimits.MaxStringLen > 0) and
+     (ALen > MemManager.MemLimits.MaxStringLen)
+  then
+    ALen := MemManager.MemLimits.MaxStringLen;
+
+  if ALen = 0 then begin
+    Result := True;
+    exit;
+  end;
+
+  if not MemManager.SetLength(AValue, ALen) then
+    exit;
+
+  Result := ReadMemory(ALocation, SizeVal(Length(AValue)), @AValue[1]);
+  if not Result then
+    AValue := ''
+end;
+
+function TFpDbgLocationContext.ReadWString(const ALocation: TFpDbgMemLocation; ALen: Int64; out
+  AValue: WideString; AnIgnoreMaxStringLen: boolean): Boolean;
+begin
+  Result := False;
+  AValue := '';
+
+  if (not AnIgnoreMaxStringLen) and
+     (MemManager.MemLimits.MaxStringLen > 0) and
+     (ALen > MemManager.MemLimits.MaxStringLen)
+  then
+    ALen := MemManager.MemLimits.MaxStringLen;
+
+  if ALen = 0 then begin
+    Result := True;
+    exit;
+  end;
+
+  if not MemManager.SetLength(AValue, ALen) then
+    exit;
+
+  Result := ReadMemory(ALocation, SizeVal(Length(AValue)*2), @AValue[1]);
+  if not Result then
+    AValue := ''
 end;
 
 { TFpDbgMemLimits }
@@ -2013,7 +2117,9 @@ function TFpDbgMemManager.SetLength(var ADest: RawByteString; ALength: Int64
   ): Boolean;
 begin
   Result := False;
-  if (FMemLimits.MaxMemReadSize > 0) and (ALength > FMemLimits.MaxMemReadSize) then begin
+  if (ALength < 0) or
+     ( (FMemLimits.MaxMemReadSize > 0) and (ALength > FMemLimits.MaxMemReadSize) )
+  then begin
     FLastError := CreateError(fpErrReadMemSizeLimit);
     exit;
   end;
@@ -2025,7 +2131,9 @@ function TFpDbgMemManager.SetLength(var ADest: AnsiString; ALength: Int64
   ): Boolean;
 begin
   Result := False;
-  if (FMemLimits.MaxMemReadSize > 0) and (ALength > FMemLimits.MaxMemReadSize) then begin
+  if (ALength < 0) or
+     ( (FMemLimits.MaxMemReadSize > 0) and (ALength > FMemLimits.MaxMemReadSize) )
+  then begin
     FLastError := CreateError(fpErrReadMemSizeLimit);
     exit;
   end;
@@ -2037,7 +2145,9 @@ function TFpDbgMemManager.SetLength(var ADest: WideString; ALength: Int64
   ): Boolean;
 begin
   Result := False;
-  if (FMemLimits.MaxMemReadSize > 0) and (ALength * 2 > FMemLimits.MaxMemReadSize) then begin
+  if (ALength < 0) or
+     ( (FMemLimits.MaxMemReadSize > 0) and (ALength * 2 > FMemLimits.MaxMemReadSize) )
+  then begin
     FLastError := CreateError(fpErrReadMemSizeLimit);
     exit;
   end;

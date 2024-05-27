@@ -82,9 +82,14 @@ type
 
   TDwarfCompilationUnitArray = array of TDwarfCompilationUnit;
 
+  TFindExportedSymbolsFlag = (fsfIgnoreEnumVals, fsfMatchUnitName);
+  TFindExportedSymbolsFlags = set of TFindExportedSymbolsFlag;
+
   { TFpThreadWorkerFindSymbolInUnits }
 
   TFpThreadWorkerFindSymbolInUnits = class(TFpThreadWorkerItem)
+  private
+    FFindFlags: TFindExportedSymbolsFlags;
   protected
     FScope: TFpDwarfInfoSymbolScope;
     FCUs: TDwarfCompilationUnitArray;
@@ -96,10 +101,8 @@ type
   public
     constructor Create(AScope: TFpDwarfInfoSymbolScope; CUs: TDwarfCompilationUnitArray; const ANameInfo: TNameSearchInfo);
     destructor Destroy; override;
+    property FindFlags: TFindExportedSymbolsFlags read FFindFlags write FFindFlags;
   end;
-
-  TFindExportedSymbolsFlag = (fsfIgnoreEnumVals);
-  TFindExportedSymbolsFlags = set of TFindExportedSymbolsFlag;
 
   { TFpDwarfInfoSymbolScope }
 
@@ -508,15 +511,23 @@ type
 
   TFpValueDwarfString  = class(TFpValueDwarf)
   private
+    FLenSize: TFpDbgValueSize;
+    FHasLenSize, FLenSizeDone: Boolean;
+  protected
     FValue: String;
     FValueDone: Boolean;
-    function GetStringLen: Int64;
-  protected
+    function GetLenSize(out ASize: TFpDbgValueSize): boolean;
+    function GetStringLen(out ALen: Int64): boolean;
+
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetAsString: AnsiString; override;
+    function GetAsWideString: WideString; override;
+  public
     function GetSubString(AStartIndex, ALen: Int64; out ASubStr: AnsiString;
       AIgnoreBounds: Boolean = False): Boolean; override;
-  public
+    function GetSubWideString(AStartIndex, ALen: Int64; out ASubStr: WideString;
+      AIgnoreBounds: Boolean = False): Boolean; override;
+    procedure Reset; override;
   end;
 
   { TFpValueDwarfSubroutine }
@@ -550,23 +561,16 @@ type
   TFpSymbolDwarf = class(TDbgDwarfSymbolBase)
   private
     FNestedTypeInfo: TFpSymbolDwarfType;
-    (* FLocalProcInfo: the procedure in which a local symbol is defined/used *)
-    FLocalProcInfo: TFpSymbolDwarf;
     FDwarfReadFlags: set of (didtNameRead, didtTypeRead, didtArtificialRead, didtIsArtifical);
     function GetNestedTypeInfo: TFpSymbolDwarfType;
     function GetTypeInfo: TFpSymbolDwarfType; inline;
   protected
-    procedure SetLocalProcInfo(AValue: TFpSymbolDwarf); virtual;
-
     function  DoGetNestedTypeInfo: TFpSymbolDwarfType; virtual;
     function  ReadMemberVisibility(out AMemberVisibility: TDbgSymbolMemberVisibility): Boolean;
     function  IsArtificial: Boolean; // usud by formal param and subprogram
     procedure NameNeeded; override;
     procedure TypeInfoNeeded; override;
     property NestedTypeInfo: TFpSymbolDwarfType read GetNestedTypeInfo;
-
-    // LocalProcInfo: funtion for local var / param
-    property LocalProcInfo: TFpSymbolDwarf read FLocalProcInfo write SetLocalProcInfo;
 
     function DoForwardReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize): Boolean; inline;
     function DoReadDataSize(const AValueObj: TFpValue; out ADataSize: TFpDbgValueSize): Boolean; virtual;
@@ -642,12 +646,8 @@ type
   { TFpSymbolDwarfDataWithLocation }
 
   TFpSymbolDwarfDataWithLocation = class(TFpSymbolDwarfData)
-  private
-    procedure FrameBaseNeeded(ASender: TObject); // Sender = TDwarfLocationExpression
   protected
     function GetValueObject: TFpValue; override;
-    function InitLocationParser(const ALocationParser: TDwarfLocationExpression;
-                                AnInitLocParserData: PInitLocParserData): Boolean; override;
   end;
 
   TFpSymbolDwarfThirdPartyExtension = class(TFpSymbolDwarf)
@@ -1057,6 +1057,8 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
   protected
     //function DoGetNestedTypeInfo: TFpSymbolDwarfType; override;
     procedure KindNeeded; override;
+    function DoReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize): Boolean; override;
+    function DoReadLenSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize): Boolean;
     function  DoReadLengthLocation(const AValueObj: TFpValueDwarf; out ALocation: TFpDbgMemLocation): Boolean;
   public
     function GetTypedValueObject({%H-}ATypeCast: Boolean; AnOuterType: TFpSymbolDwarfType = nil): TFpValueDwarf; override;
@@ -1081,7 +1083,6 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
     procedure DoReferenceReleased; override;
     function GetLineEndAddress: TDBGPtr; override;
     function GetLineStartAddress: TDBGPtr; override;
-    function GetFrameBase(ASender: TDwarfLocationExpression): TDbgPtr;
     function GetFlags: TDbgSymbolFlags; override;
     procedure TypeInfoNeeded; override;
 
@@ -1105,6 +1106,7 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
     function CreateSymbolScope(ALocationContext: TFpDbgLocationContext; ADwarfInfo: TFpDwarfInfo): TFpDbgSymbolScope; override;
     // TODO members = locals ?
     function GetSelfParameter(AnAddress: TDbgPtr = 0): TFpValueDwarf;
+    function GetFrameBase(AContext: TFpDbgLocationContext; out AnError: TFpError): TDbgPtr;
 
     function ResolveInternalFinallySymbol(Process: Pointer): TFpSymbol; virtual; // so it can be overriden by the fpc classes
 
@@ -1345,7 +1347,7 @@ var
 begin
   FFoundInfoEntry := nil;
   for i := 0 to Length(FCUs) - 1 do begin
-    if FScope.FindExportedSymbolInUnit(FCUs[i], FNameInfo, InfoEntry, IsExt) then begin
+    if FScope.FindExportedSymbolInUnit(FCUs[i], FNameInfo, InfoEntry, IsExt, FFindFlags) then begin
       FFoundInfoEntry.ReleaseReference;
       FFoundInfoEntry := InfoEntry;
       if FIsExt then
@@ -1465,7 +1467,9 @@ begin
   // compile_unit can not have startscope
 
   s := CU.UnitName;
-  if (s <> '') and (CompareUtf8BothCase(PChar(ANameInfo.NameUpper), PChar(ANameInfo.NameLower), @s[1])) then begin
+  if (fsfMatchUnitName in AFindFlags) and
+     (s <> '') and (CompareUtf8BothCase(PChar(ANameInfo.NameUpper), PChar(ANameInfo.NameLower), @s[1]))
+  then begin
     Result := True;
     AnInfoEntry := InfoEntry;
     AnIsExternal := True;
@@ -1502,6 +1506,7 @@ var
   FoundInfoEntry: TDwarfInformationEntry;
   IsExt: Boolean;
   WorkItem, PrevWorkItem: TFpThreadWorkerFindSymbolInUnits;
+  AFindFlags: TFindExportedSymbolsFlags;
 begin
   Result := False;
 
@@ -1509,6 +1514,9 @@ begin
   FoundInfoEntry := nil;
   PrevWorkItem := nil;
   IsExt := False;
+  AFindFlags := [];
+  if OnlyUnitNameLower = '' then
+    AFindFlags := [fsfMatchUnitName];
 
   i := FDwarf.CompilationUnitsCount;
   while i > 0 do begin
@@ -1536,6 +1544,7 @@ begin
 
     if j > 0 then begin
       WorkItem := TFpThreadWorkerFindSymbolInUnits.Create(Self, CUList, ANameInfo);
+      WorkItem.FFindFlags := AFindFlags;
       WorkItem.AddRef;
     end
     else
@@ -1709,8 +1718,6 @@ begin
     exit;
   if InfoEntry.IsAddressInStartScope(FAddress) and not InfoEntry.IsArtificial then begin
     ADbgValue := SymbolToValue(TFpSymbolDwarf.CreateSubClass(AName, InfoEntry));
-    if ADbgValue <> nil then
-      TFpSymbolDwarf(ADbgValue.DbgSymbol).LocalProcInfo := TFpSymbolDwarfDataProc(FSymbol);
   end;
   Result := ADbgValue <> nil;
 end;
@@ -1748,10 +1755,12 @@ var
   CU: TDwarfCompilationUnit;
   //Scope,
   StartScopeIdx: Integer;
-  InfoEntry: TDwarfInformationEntry;
+  InfoEntry, UnitInfoEntry: TDwarfInformationEntry;
   NameInfo: TNameSearchInfo;
   InfoName: PChar;
   tg: Cardinal;
+  i: SizeInt;
+  s: String;
 begin
   Result := nil;
   //if (FSymbol = nil) or not(FSymbol is TFpSymbolDwarfDataProc) or (AName = '') then
@@ -1763,6 +1772,7 @@ begin
   if OnlyUnitName <> '' then begin
     // TODO: dwarf info for libraries
     FindExportedSymbolInUnits(AName, NameInfo, nil, Result, LowerCase(OnlyUnitName));
+    ApplyContext(Result);
     exit;
   end;
 
@@ -1779,6 +1789,7 @@ begin
     exit;
   end;
 
+  UnitInfoEntry := nil;
   try
     CU := Symbol.CompilationUnit;
     InfoEntry := Symbol.InformationEntry.Clone;
@@ -1788,10 +1799,11 @@ begin
       StartScopeIdx := InfoEntry.ScopeIndex;
 
       tg := InfoEntry.AbbrevTag;
-      if (tg = DW_TAG_compile_unit) and
-         (not CU.KnownNameHashes^[NameInfo.NameHash and KnownNameHashesBitMask])
-      then
-        break;
+      if (tg = DW_TAG_compile_unit) then begin
+        UnitInfoEntry := InfoEntry.Clone;
+        if (not CU.KnownNameHashes^[NameInfo.NameHash and KnownNameHashesBitMask]) then
+          break;
+      end;
 
       //if InfoEntry.Abbrev = nil then
       //  exit;
@@ -1856,6 +1868,14 @@ begin
       InfoEntry.GoParent;
     end;
 
+    if UnitInfoEntry <> nil then begin
+      s := CU.UnitName;
+      if (CompareUtf8BothCase(PChar(NameInfo.NameUpper), PChar(NameInfo.NameLower), PChar(s))) then begin
+        Result := SymbolToValue(TFpSymbolDwarf.CreateSubClass(AName, UnitInfoEntry));
+        exit;
+      end;
+    end;
+
     FindExportedSymbolInUnits(AName, NameInfo, CU, Result);
 
   finally
@@ -1863,6 +1883,7 @@ begin
     then DebugLn(FPDBG_DWARF_SEARCH, ['TDbgDwarf.FindIdentifier NOT found  Name=', AName])
     else DebugLn(FPDBG_DWARF_SEARCH, ['TDbgDwarf.FindIdentifier(',AName,') found Scope=', TFpSymbolDwarf(Result.DbgSymbol).InformationEntry.ScopeDebugText, '  ResultSymbol=', DbgSName(Result.DbgSymbol), ' ', Result.DbgSymbol.Name, ' in ', TFpSymbolDwarf(Result.DbgSymbol).CompilationUnit.FileName]);
     ReleaseRefAndNil(InfoEntry);
+    ReleaseRefAndNil(UnitInfoEntry);
 
     assert((Result = nil) or (Result is TFpValueDwarfBase), 'TDbgDwarfInfoAddressContext.FindSymbol: (Result = nil) or (Result is TFpValueDwarfBase)');
     ApplyContext(Result);
@@ -1875,7 +1896,10 @@ end;
 
 function TFpValueDwarfTypeDefinition.GetKind: TDbgSymbolKind;
 begin
-  Result := skType;
+  if FSymbol.Kind = skUnit then
+    Result := skUnit
+  else
+    Result := skType;
 end;
 
 function TFpValueDwarfTypeDefinition.GetDbgSymbol: TFpSymbol;
@@ -2089,7 +2113,9 @@ end;
 
 function TFpValueDwarf.IsValidTypeCast: Boolean;
 begin
-  Result := False;
+  // At least for array GetMember this should always be true.
+  Result := TypeCastSourceValue is TFpValueConstAddress;
+  //Result := False;
 end;
 
 function TFpValueDwarf.GetKind: TDbgSymbolKind;
@@ -4052,48 +4078,86 @@ end;
 
 { TFpValueDwarfString }
 
-function TFpValueDwarfString.GetStringLen: Int64;
+function TFpValueDwarfString.GetLenSize(out ASize: TFpDbgValueSize): boolean;
 var
   t: TFpSymbolDwarfType;
-  HasSize: Boolean;
-  ASize: TFpDbgValueSize;
-  ALenLoc: TFpDbgMemLocation;
 begin
-  Result := -1;
+  ASize := FLenSize;
+  Result := FHasLenSize;
+  if FLenSizeDone then
+    exit;
+
+  FLenSize := ZeroSize;
+  FHasLenSize := False;
+  FLenSizeDone := True;
+
 
   t := TypeInfo;
+  if t <> nil then
+    t := TFpSymbolDwarfType(t.InternalTypeInfo);
   if (t = nil) or not(t is TFpSymbolDwarfTypeString) then
     exit;
 
-  HasSize := t.DoReadSize(Self, ASize);
+  FHasLenSize := TFpSymbolDwarfTypeString(t).DoReadLenSize(Self, FLenSize);
+  if not FHasLenSize then
+    FLenSize := SizeVal(0);
+
+  ASize  := FLenSize;
+  Result := FHasLenSize;
+end;
+
+function TFpValueDwarfString.GetStringLen(out ALen: Int64): boolean;
+var
+  t: TFpSymbolDwarfType;
+  HasLenSize: Boolean;
+  LenSize: TFpDbgValueSize;
+  ALenLoc: TFpDbgMemLocation;
+begin
+  Result := False;
+  ALen := -1;
+
+  t := TypeInfo;
+  if t <> nil then
+    t := TFpSymbolDwarfType(t.InternalTypeInfo);
+  if (t = nil) or not(t is TFpSymbolDwarfTypeString) then
+    exit;
+
+  HasLenSize := GetLenSize(LenSize);
 
   if TFpSymbolDwarfTypeString(t).DoReadLengthLocation(Self, ALenLoc) then begin
-    if not HasSize then
-      ASize := SizeVal(AddressSize);
-    if not Context.ReadSignedInt(ALenLoc, ASize, Result) then begin
+    if not HasLenSize then
+      LenSize := SizeVal(AddressSize);
+    Result := Context.ReadSignedInt(ALenLoc, LenSize, ALen);
+    if not Result then begin
       SetLastError(Context.LastMemError);
-      Result := -1;
+      ALen := -1;
     end;
   end
   else
-  if HasSize then begin
-    Result := SizeToFullBytes(ASize);
+  if HasLenSize then begin
+    ALen := SizeToFullBytes(LenSize);
+    Result := True;
   end
   else begin
     SetLastError(CreateError(fpErrAnyError));
-    Result := -1;
+    ALen := -1;
   end;
 end;
 
 function TFpValueDwarfString.GetFieldFlags: TFpValueFieldFlags;
 begin
   Result := inherited GetFieldFlags;
-  Result := Result + [svfString];
+  if Kind = skWideString then
+    Result := Result + [svfWideString]
+  else
+    Result := Result + [svfString];
 end;
 
 function TFpValueDwarfString.GetAsString: AnsiString;
 var
   ALen: Int64;
+  WResult: WideString;
+  RResult: RawByteString;
 begin
   if FValueDone then
     exit(FValue);
@@ -4102,28 +4166,36 @@ begin
   FValue := '';
   FValueDone := True;
 
-  ALen := GetStringLen;
-  if ALen <= 0 then
-    exit;
+  if not GetStringLen(ALen) then
+    exit; // Error should be set by GetStringLen
 
-  if (MemManager.MemLimits.MaxStringLen > 0) and
-     (QWord(ALen) > MemManager.MemLimits.MaxStringLen)
-  then
-    ALen := MemManager.MemLimits.MaxStringLen;
-
-  SetLength(Result, ALen);
-  if not (Context.ReadMemory(DataAddress, SizeVal(ALen), @Result[1]))
-  then begin
-    SetLastError(Context.LastMemError);
-    Result := '';
+  if Kind = skWideString then begin
+    if not Context.ReadWString(DataAddress, ALen, WResult) then
+      SetLastError(Context.LastMemError)
+    else
+      Result := WResult;
+  end
+  else begin
+    if not Context.ReadString(DataAddress, ALen, RResult) then
+      SetLastError(Context.LastMemError)
+    else
+      Result := RResult;
   end;
+
   FValue := Result;
+end;
+
+function TFpValueDwarfString.GetAsWideString: WideString;
+begin
+  Result := GetAsString;
 end;
 
 function TFpValueDwarfString.GetSubString(AStartIndex, ALen: Int64; out
   ASubStr: AnsiString; AIgnoreBounds: Boolean): Boolean;
 var
   AFullLen: Int64;
+  WResult: WideString;
+  RResult: RawByteString;
 begin
   // TODO: if FValueDone, and covers selected range, then use FValue;
   ASubStr := '';
@@ -4138,8 +4210,7 @@ begin
     AStartIndex := 0;
   end;
 
-  AFullLen := GetStringLen;
-  if AFullLen <= 0 then begin
+  if (not GetStringLen(AFullLen)) or (AFullLen <= 0) then begin
     Result := AIgnoreBounds;
     exit;
   end;
@@ -4152,18 +4223,38 @@ begin
   if ALen <= 0 then
     exit;
 
-  if (MemManager.MemLimits.MaxStringLen > 0) and
-     (QWord(ALen) > MemManager.MemLimits.MaxStringLen)
-  then
-    ALen := MemManager.MemLimits.MaxStringLen;
-
-  SetLength(ASubStr, ALen);
-  if not (Context.ReadMemory(DataAddress + AStartIndex, SizeVal(ALen), @ASubStr[1]))
-  then begin
-    SetLastError(Context.LastMemError);
-    ASubStr := '';
-    exit;
+  if Kind = skWideString then begin
+    {$PUSH}{$Q-}{$R-}
+    if not Context.ReadWString(DataAddress+AStartIndex*2, ALen, WResult, True) then
+    {$POP}
+      SetLastError(Context.LastMemError)
+    else
+      ASubStr := WResult;
+  end
+  else begin
+    {$PUSH}{$Q-}{$R-}
+    if not Context.ReadString(DataAddress+AStartIndex, ALen, RResult, True) then
+    {$POP}
+      SetLastError(Context.LastMemError)
+    else
+      ASubStr := RResult;
   end;
+end;
+
+function TFpValueDwarfString.GetSubWideString(AStartIndex, ALen: Int64; out ASubStr: WideString;
+  AIgnoreBounds: Boolean): Boolean;
+var
+  AnsiSubStr: AnsiString;
+begin
+  Result := GetSubString(AStartIndex, ALen, AnsiSubStr, AIgnoreBounds);
+  ASubStr := AnsiSubStr;
+end;
+
+procedure TFpValueDwarfString.Reset;
+begin
+  FValueDone := False;
+  FLenSizeDone := False;
+  inherited Reset;
 end;
 
 { TDbgDwarfIdentifier }
@@ -4186,18 +4277,6 @@ function TFpSymbolDwarf.GetTypeInfo: TFpSymbolDwarfType;
 begin
   assert((inherited TypeInfo = nil) or (inherited TypeInfo is TFpSymbolDwarfType), 'TFpSymbolDwarf.GetTypeInfo: (inherited TypeInfo = nil) or (inherited TypeInfo is TFpSymbolDwarfType)');
   Result := TFpSymbolDwarfType(inherited TypeInfo);
-end;
-
-procedure TFpSymbolDwarf.SetLocalProcInfo(AValue: TFpSymbolDwarf);
-begin
-  if FLocalProcInfo = AValue then exit;
-
-  FLocalProcInfo.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FLocalProcInfo, 'FLocalProcInfo'){$ENDIF};
-
-  FLocalProcInfo := AValue;
-
-  if (FLocalProcInfo <> nil) then
-    FLocalProcInfo.AddReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FLocalProcInfo, 'FLocalProcInfo'){$ENDIF};
 end;
 
 function TFpSymbolDwarf.DoGetNestedTypeInfo: TFpSymbolDwarfType;
@@ -4610,7 +4689,7 @@ begin
   AnAddress := InvalidLoc;
 
   AForm :=  AnAttribData.InformationEntry.AttribForm[AnAttribData.Idx];
-  if (AForm = DW_FORM_data4) or (AForm = DW_FORM_data8) then begin
+  if (AForm = DW_FORM_data4) or (AForm = DW_FORM_data8) or (AForm = DW_FORM_sec_offset) then begin
     // location list
     if not LocationExprFromLocationList(AnAttribData, AValueObj, Val) then begin
       DebugLn(FPDBG_DWARF_VERBOSE, ['LocationFromAttrData: failed to read DW_AT_location from loc-list']);
@@ -4868,7 +4947,6 @@ destructor TFpSymbolDwarf.Destroy;
 begin
   inherited Destroy;
   FNestedTypeInfo.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FNestedTypeInfo, ClassName+'.FNestedTypeInfo'){$ENDIF};
-  FLocalProcInfo.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FLocalProcInfo, 'FLocalProcInfo'){$ENDIF};
 end;
 
 function TFpSymbolDwarf.StartScope: TDbgPtr;
@@ -4968,39 +5046,6 @@ begin
 end;
 
 { TFpSymbolDwarfDataWithLocation }
-
-function TFpSymbolDwarfDataWithLocation.InitLocationParser(const ALocationParser: TDwarfLocationExpression;
-  AnInitLocParserData: PInitLocParserData): Boolean;
-begin
-  Result := inherited InitLocationParser(ALocationParser, AnInitLocParserData);
-  ALocationParser.OnFrameBaseNeeded := @FrameBaseNeeded;
-end;
-
-procedure TFpSymbolDwarfDataWithLocation.FrameBaseNeeded(ASender: TObject);
-var
-  p: TFpSymbolDwarf;
-  fb: TDBGPtr;
-begin
-  debugln(FPDBG_DWARF_SEARCH, ['TFpSymbolDwarfDataVariable.FrameBaseNeeded ']);
-  p := LocalProcInfo;
-  // TODO: what if parent is declaration?
-  if p is TFpSymbolDwarfDataProc then begin
-    fb := TFpSymbolDwarfDataProc(p).GetFrameBase(ASender as TDwarfLocationExpression);
-    (ASender as TDwarfLocationExpression).FrameBase := fb;
-    if fb = 0 then begin
-      debugln(FPDBG_DWARF_ERRORS, ['DWARF ERROR in TFpSymbolDwarfDataWithLocation.FrameBaseNeeded result is 0']);
-    end;
-    exit;
-  end;
-
-{$warning TODO}
-  //else
-  //if ParentTypeInfo <> nil then
-  //  ParentTypeInfo.fr;
-  // TODO: check owner
-  debugln(FPDBG_DWARF_ERRORS, ['DWARF ERROR in TFpSymbolDwarfDataWithLocation.FrameBaseNeeded no parent type info']);
-  (ASender as TDwarfLocationExpression).FrameBase := 0;
-end;
 
 function TFpSymbolDwarfDataWithLocation.GetValueObject: TFpValue;
 var
@@ -5534,11 +5579,22 @@ var
 begin
   assert((AValueObj = nil) or (AValueObj is TFpValueDwarf), 'TFpSymbolDwarfTypeSubRange.GetValueLowBound: AValueObj is TFpValueDwarf(');
   if FLowBoundState = rfNotRead then begin
-    if InformationEntry.GetAttribData(DW_AT_lower_bound, AttrData) then
-      ConstRefOrExprFromAttrData(AttrData, TFpValueDwarf(AValueObj), t, @FLowBoundState, @FLowBoundSymbol)
-    else
-      FLowBoundState := rfNotFound;
-    FLowBoundConst := t;
+    if InformationEntry.GetAttribData(DW_AT_lower_bound, AttrData) then begin
+      ConstRefOrExprFromAttrData(AttrData, TFpValueDwarf(AValueObj), t, @FLowBoundState, @FLowBoundSymbol);
+      FLowBoundConst := t;
+    end
+    else begin
+      FLowBoundState := rfConst;
+      case CompilationUnit.LanguageId of
+        DW_LANG_Ada83, DW_LANG_Cobol74, DW_LANG_Cobol85,
+        DW_LANG_Fortran77, DW_LANG_Fortran90, DW_LANG_Pascal83,
+        DW_LANG_Modula2, DW_LANG_Ada95, DW_LANG_Fortran95,
+        DW_LANG_PLI:
+          FLowBoundConst := 1;
+        else
+          FLowBoundConst := 0;
+      end;
+    end;
   end;
 
   Result := FLowBoundState in [rfConst, rfValue, rfExpression];
@@ -6600,8 +6656,31 @@ end;
 { TFpSymbolDwarfTypeString }
 
 procedure TFpSymbolDwarfTypeString.KindNeeded;
+var
+  t: TFpSymbolDwarfType;
+  CharSize: TFpDbgValueSize;
 begin
-  SetKind(skString);
+  t := NestedTypeInfo;
+  if (t <> nil) and (t.Kind = skChar) and t.ReadSize(nil, CharSize) then begin
+    if CharSize.Size = 2 then
+      SetKind(skWideString)
+    else
+      SetKind(skString);
+  end
+  else
+    SetKind(skString);
+end;
+
+function TFpSymbolDwarfTypeString.DoReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize
+  ): Boolean;
+begin
+  Result := False;
+end;
+
+function TFpSymbolDwarfTypeString.DoReadLenSize(const AValueObj: TFpValue; out
+  ASize: TFpDbgValueSize): Boolean;
+begin
+  Result := inherited DoReadSize(AValueObj, ASize);
 end;
 
 function TFpSymbolDwarfTypeString.DoReadLengthLocation(
@@ -6612,8 +6691,8 @@ var
 begin
   Result := False;
   if InformationEntry.GetAttribData(DW_AT_string_length, AttrData) then begin
-    ALocation := AValueObj.Address;
-    InitLocParserData.ObjectDataAddress := AValueObj.Address;
+    ALocation := AValueObj.OrdOrAddress;
+    InitLocParserData.ObjectDataAddress := ALocation;
     InitLocParserData.ObjectDataAddrPush := False;
     Result := LocationFromAttrData(AttrData, AValueObj, ALocation, @InitLocParserData);
   end;
@@ -6905,12 +6984,14 @@ begin
     NilThenReleaseRef(TFpSymbolDwarfTypeProc(TypeInfo).FLastMember {$IFDEF WITH_REFCOUNT_DEBUG}, 'TFpSymbolDwarfDataProc.FLastMember'{$ENDIF});
 end;
 
-function TFpSymbolDwarfDataProc.GetFrameBase(ASender: TDwarfLocationExpression): TDbgPtr;
+function TFpSymbolDwarfDataProc.GetFrameBase(AContext: TFpDbgLocationContext; out AnError: TFpError
+  ): TDbgPtr;
 var
   Val: TByteDynArray;
   rd: TFpDbgMemLocation;
 begin
   Result := 0;
+  AnError := nil;
   if FFrameBaseParser = nil then begin
     //TODO: avoid copying data
     if not  InformationEntry.ReadValue(DW_AT_frame_base, Val) then begin
@@ -6924,25 +7005,23 @@ begin
       exit;
     end;
 
-    FFrameBaseParser := TDwarfLocationExpression.Create(@Val[0], Length(Val), CompilationUnit,
-      ASender.Context);
+    FFrameBaseParser := TDwarfLocationExpression.Create(@Val[0], Length(Val), CompilationUnit, AContext);
     FFrameBaseParser.IsDwAtFrameBase := True;
     FFrameBaseParser.Evaluate;
   end;
 
-  rd := FFrameBaseParser.ResultData;
-  // TODO: should mlfConstant be allowed?
-  assert(rd.MType in [mlfTargetMem, mlfConstant], 'TFpSymbolDwarfDataProc.GetFrameBase: rd.MType in [mlfTargetMem, mlfConstant]');
-  if IsValidLoc(rd) then
-    Result := rd.Address;
-
   if IsError(FFrameBaseParser.LastError) then begin
-    ASender.SetLastError(FFrameBaseParser.LastError);
-    debugln(FPDBG_DWARF_ERRORS, ['TFpSymbolDwarfDataProc.GetFrameBase location parser failed ', ErrorHandler.ErrorAsString(ASender.LastError)]);
+    AnError := FFrameBaseParser.LastError;
+    debugln(FPDBG_DWARF_ERRORS, ['TFpSymbolDwarfDataProc.GetFrameBase location parser failed ', ErrorHandler.ErrorAsString(AnError)]);
   end
-  else
-  if Result = 0 then begin
-    debugln(FPDBG_DWARF_ERRORS, ['TFpSymbolDwarfDataProc.GetFrameBase location parser failed. result is 0']);
+  else begin
+    rd := FFrameBaseParser.ResultData;
+    // TODO: should mlfConstant be allowed?
+    assert(rd.MType in [mlfTargetMem, mlfConstant], 'TFpSymbolDwarfDataProc.GetFrameBase: rd.MType in [mlfTargetMem, mlfConstant]');
+    if IsValidLoc(rd) then
+      Result := rd.Address;
+    if Result = 0 then
+      debugln(FPDBG_DWARF_ERRORS, ['TFpSymbolDwarfDataProc.GetFrameBase location parser failed. result is 0']);
   end;
 
 end;
@@ -7030,7 +7109,6 @@ begin
         Result := TFpValueDwarf(TFpSymbolDwarfData.CreateValueSubClass('self', InfoEntry).Value);
         if Result <> nil then begin
           Result.FDataSymbol.ReleaseReference;
-          Result.FDataSymbol.LocalProcInfo := Self;
         end;
         debugln(FPDBG_DWARF_SEARCH, ['TFpSymbolDwarfDataProc.GetSelfParameter ', InfoEntry.ScopeDebugText, DbgSName(Result)]);
       end;
@@ -7108,8 +7186,6 @@ begin
   FLastMember := TFpSymbolDwarf.CreateSubClass('', TDwarfInformationEntry(FProcMembers[AIndex]));
   {$IFDEF WITH_REFCOUNT_DEBUG}FLastMember.DbgRenameReference(@FLastMember, 'TFpSymbolDwarfDataProc.FLastMember');{$ENDIF}
   Result := FLastMember;
-  //if Result <> nil then
-  //  TFpSymbolDwarf(Result).LocalProcInfo := FProcValue;
 end;
 
 function TFpSymbolDwarfTypeProc.GetNestedSymbolExByName(const AIndex: String;
@@ -7132,8 +7208,6 @@ begin
     end;
   end;
   Result := FLastMember;
-  //if Result <> nil then
-  //  TFpSymbolDwarf(Result).LocalProcInfo := FProcValue;
 end;
 
 function TFpSymbolDwarfTypeProc.GetNestedSymbolCount: Integer;

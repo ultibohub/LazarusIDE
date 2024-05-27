@@ -109,6 +109,7 @@ type
   PDwarfLNPInfoHeader = ^TDwarfLNPInfoHeader;
   TDwarfLNPInfoHeader = record
     MinimumInstructionLength: Byte;
+    //MaximumInstructionLength: Byte; // Version 4 and up
     DefaultIsStmt: Byte;
     LineBase: ShortInt;
     LineRange: Byte;
@@ -666,6 +667,7 @@ type
     FCompDir:  String;
     FUnitName: String;
     FIdentifierCase: Integer;
+    FLanguageId: Integer;
     FProducer: String;
 
     FAbbrevList: TDwarfAbbrevList;
@@ -677,9 +679,11 @@ type
       DataEnd: Pointer;
 
       Valid: Boolean;
+      Version: Word;
       Addr64: Boolean;
       AddrSize: Byte;
       MinimumInstructionLength: Byte;
+      MaximumInstructionLength: Byte; // Dwarf 4
       DefaultIsStmt: Boolean;
       LineBase: ShortInt;
       LineRange: Byte;
@@ -763,6 +767,7 @@ type
     property FileName: String read FFileName;
     property UnitName: String read GetUnitName;
     property IdentifierCase: Integer read FIdentifierCase;
+    property LanguageId: Integer read FLanguageId;
     property Producer: String read FProducer;
     property BaseAddress: TDBGPtr read FMinPC;
 
@@ -872,7 +877,6 @@ type
     FFrameBase: TDbgPtr;
     FIsDwAtFrameBase: Boolean;
     FLastError: TFpError;
-    FOnFrameBaseNeeded: TNotifyEvent;
     FStack: TDwarfLocationStack;
     FCU: TDwarfCompilationUnit;
     FData: PByte;
@@ -885,8 +889,7 @@ type
     procedure Evaluate;
     function ResultData: TFpDbgMemLocation;
     procedure Push(const AValue: TFpDbgMemLocation);
-    property  FrameBase: TDbgPtr read FFrameBase write FFrameBase;
-    property  OnFrameBaseNeeded: TNotifyEvent read FOnFrameBaseNeeded write FOnFrameBaseNeeded;
+    //property  FrameBase: TDbgPtr read FFrameBase write FFrameBase;
     property LastError: TFpError read FLastError;
     property Context: TFpDbgLocationContext read FContext write FContext;
     // for DW_OP_push_object_address
@@ -992,7 +995,8 @@ begin
   Result := True;
   case AForm of
     DW_FORM_addr     : Inc(AEntryData, AddrSize);
-    DW_FORM_block    : begin
+    DW_FORM_block,
+    DW_FORM_exprloc  : begin
         UValue := ULEB128toOrdinal(AEntryData);
         Inc(AEntryData, UValue);
       end;
@@ -1020,7 +1024,9 @@ begin
         while (PByte(AEntryData)^ and $80) <> 0 do Inc(AEntryData);
         Inc(AEntryData);
       end;
-    DW_FORM_strp: begin
+    DW_FORM_ref_sig8 : Inc(AEntryData, 8);
+    DW_FORM_strp,
+    DW_FORM_sec_offset: begin
         if IsDwarf64 then
           Inc(AEntryData, 8)
         else
@@ -1047,6 +1053,7 @@ begin
         while AForm = DW_FORM_indirect do AForm := ULEB128toOrdinal(AEntryData);
         Result := SkipEntryDataForForm(AEntryData, AForm, AddrSize, IsDwarf64, Version);
       end;
+    DW_FORM_flag_present: ; // No data
   else begin
       DebugLn(FPDBG_DWARF_WARNINGS, ['Error: Unknown Form: ', AForm]);
       Result := False;
@@ -2170,6 +2177,17 @@ var
   CurInstr, CurData: PByte;
   AddrSize: Byte;
 
+  procedure SetError(AnError: TFpError);
+  begin
+    FStack.Push(InvalidLoc); // Mark as failed
+    FLastError := AnError;
+    debugln(FPDBG_DWARF_ERRORS,
+            ['DWARF ERROR in TDwarfLocationExpression: Failed at Pos=', CurInstr-FData,
+             ' OpCode=', IntToHex(CurInstr^, 2), ' Depth=', FStack.Count,
+             ' Data: ', dbgMemRange(FData, FMaxData-FData),
+             ' Extra: ', ErrorHandler.ErrorAsString(AnError) ]);
+  end;
+
   procedure SetError(AnInternalErrorCode: TFpErrorCode = fpErrNoError);
   begin
     FStack.Push(InvalidLoc); // Mark as failed
@@ -2345,12 +2363,13 @@ begin
         end;
 
       DW_OP_fbreg: begin
-          if (FFrameBase = 0) and (FOnFrameBaseNeeded <> nil) then FOnFrameBaseNeeded(Self);
-          if FFrameBase = 0 then begin
-            if not IsError(FLastError) then
-              SetError;
-            exit;
+          if (FFrameBase = 0) then begin
+            FFrameBase := FContext.FrameBase;
+            if FFrameBase = 0 then
+              SetError(FContext.FrameBaseError);
           end;
+          if FFrameBase = 0 then
+            exit;
           {$PUSH}{$R-}{$Q-}
           FStack.PushTargetMem(FFrameBase+SLEB128toOrdinal(CurData));
           {$POP}
@@ -2624,15 +2643,29 @@ begin
         end;
         Push(FCurrentObjectAddress);
       end;
+
+      DW_OP_call_frame_cfa: begin
+          NewValue := Context.CfaFrameBase;
+          if NewValue = 0 then begin
+            SetError(Context.FCfarameBaseError);
+            exit;
+          end;
+          FStack.PushTargetMem(NewValue);
+        end;
 (*
   // --- DWARF3 ---
   DW_OP_call2                 = $98;    // 1 2-byte offset of DIE
   DW_OP_call4                 = $99;    // 1 4-byte offset of DIE
   DW_OP_call_ref              = $9a;    // 1 4- or 8-byte offset of DIE
   DW_OP_form_tls_address      = $9b;    // 0
-  DW_OP_call_frame_cfa        = $9c;    // 0
   DW_OP_bit_piece             = $9d;    // 2
 *)
+      // dwarf 4
+      DW_OP_stack_value: begin
+          EntryP := FStack.Peek;
+          EntryP^.MType := mlfConstantDeref;
+      end;
+
       else
         begin
           debugln(FPDBG_DWARF_ERRORS, ['DWARF ERROR in TDwarfLocationExpression.Evaluate UNKNOWN ', CurInstr^]);
@@ -2831,6 +2864,9 @@ begin
   InEnum := False;
   if not HasValidScope then
     exit;
+
+  h := objpas.Hash(QuickUtf8UpperCase(CompUnit.UnitName)) and $7fff or $8000;
+  AKNownHashes^[h and KnownNameHashesBitMask] := True;
 
   NextTopLevel := 0;
   dec(FScope.FIndex);
@@ -4137,9 +4173,11 @@ begin
   for i := 0 to high(FFiles) do
     begin
     inf := FFiles[i].Sections[dsFrame];
+    if inf.Size = 0 then
+      continue;
+
     CFI := TDwarfCallFrameInformation.Create;
     FCallFrameInformationList.Add(CFI);
-
     p := inf.RawData;
     pe := inf.RawData + inf.Size;
     while (p <> nil) and (p < pe) do
@@ -4498,13 +4536,8 @@ begin
   if FEndSequence
   then begin
     Reset;
-  end
-  else begin
-    FBasicBlock := False;
-    FPrologueEnd := False;
-    FEpilogueBegin := False;
   end;
-  
+
   while pbyte(FLineInfoPtr) < FMaxPtr do
   begin
     Opcode := pbyte(FLineInfoPtr)^;
@@ -4544,6 +4577,7 @@ begin
           then Inc(FAddress, Opcode * FOwner.FLineInfo.MinimumInstructionLength)
           else Inc(FAddress, (Opcode div FOwner.FLineInfo.LineRange) * FOwner.FLineInfo.MinimumInstructionLength);
           {$POP}
+          // version 4 also op_index register, if architecture has VLIW
         end;
         DW_LNS_fixed_advance_pc: begin
           {$PUSH}{$R-}{$Q-}
@@ -4597,6 +4631,12 @@ begin
               //length
               //ULEB128toOrdinal(p));
             end;
+            // Version-4
+             DW_LNE_set_discriminator: begin
+               // for now just skif the value
+               //p := pbyte(FLineInfoPtr);
+               //FDiscriminator := ULEB128toOrdinal(pbyte(p));
+             end;
           else
             // unknown extendend opcode
           end;
@@ -4604,6 +4644,11 @@ begin
         end;
       else
         // unknown opcode
+        if Opcode >= Length(FOwner.FLineInfo.StandardOpcodeLengths) then begin
+          debugln(FPDBG_DWARF_ERRORS, ['Error, unknown line machine opcode: ', Opcode]);
+          exit(False); // can't handle unknow upcode
+        end;
+        debugln(FPDBG_DWARF_WARNINGS, ['Skipping unknown line machine opcode: ', Opcode]);
         Inc(pbyte(FLineInfoPtr), FOwner.FLineInfo.StandardOpcodeLengths[Opcode])
       end;
       Continue;
@@ -4621,6 +4666,11 @@ begin
       Inc(FLine, FOwner.FLineInfo.LineBase + (Opcode mod FOwner.FLineInfo.LineRange));
     end;
     {$POP}
+    FBasicBlock    := False;
+    FPrologueEnd   := False;
+    FEpilogueBegin := False;
+    //FDiscriminator := False;
+
     Result := True;
     Exit;
   end;
@@ -4963,9 +5013,15 @@ begin
             then begin
               ReadAddressValue(Attrib, Form, Info.StartPC);
 
-              if LocateAttribute(Scope.Entry, DW_AT_high_pc, AttribList, Attrib, Form)
-              then ReadAddressValue(Attrib, Form, Info.EndPC)
-              else Info.EndPC := Info.StartPC;
+              if LocateAttribute(Scope.Entry, DW_AT_high_pc, AttribList, Attrib, Form) then begin
+                ReadAddressValue(Attrib, Form, Info.EndPC);
+                if (Form = DW_FORM_data1) or (Form = DW_FORM_data2) or (Form = DW_FORM_data4) or
+                   (Form = DW_FORM_data8) or (Form = DW_FORM_udata) or (Form = DW_FORM_sdata)
+                then
+                  Info.EndPC := Info.StartPC + Info.EndPC;
+              end
+              else
+                Info.EndPC := Info.StartPC;
 
               // TODO (dafHasName in Abbrev.flags)
               if (dafHasName in AttribList.Abbrev^.flags) and
@@ -5033,8 +5089,19 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     FLineInfo.Addr64 := FAddressSize = 8;
     FLineInfo.AddrSize := FAddressSize;
     FLineInfo.DataStart := PByte(Info) + HeaderLength;
+    FLineInfo.Version := Version;
+
 
     FLineInfo.MinimumInstructionLength := Info^.MinimumInstructionLength;
+    FLineInfo.MaximumInstructionLength := 1;
+    if Version >= 4 then begin
+      // FreePascal writes an incorrect header
+      //if (PosI('free pascal 3.2.3', FProducer) <= 0) then begin
+      if (Pos('free pascal', LowerCase(FProducer)) <= 0) then begin
+        inc(PByte(Info)); // All fields move by 1 byte // Dwarf-4 has a new field
+        FLineInfo.MaximumInstructionLength := Info^.MinimumInstructionLength;
+      end;
+    end;
     FLineInfo.DefaultIsStmt := Info^.DefaultIsStmt <> 0;
     FLineInfo.LineBase := Info^.LineBase;
     FLineInfo.LineRange := Info^.LineRange;
@@ -5048,6 +5115,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     FLineInfo.Directories.Add(''); // current dir
     Name := PChar(@Info^.StandardOpcodeLengths);
     Inc(Name, Info^.OpcodeBase-1);
+
     // directories
     while Name^ <> #0 do
     begin
@@ -5083,6 +5151,9 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     FLineInfo.StateMachine := TDwarfLineInfoStateMachine.Create(Self, FLineInfo.DataStart, FLineInfo.DataEnd);
     FLineInfo.StateMachines := TFPObjectList.Create(True);
 
+    // MaximumInstructionLength is currently not supported
+    if FLineInfo.MaximumInstructionLength <> 1 then
+      exit;
     FLineInfo.Valid := True;
   end;
 
@@ -5164,6 +5235,9 @@ begin
   if LocateAttribute(Scope.Entry, DW_AT_producer, AttribList, Attrib, Form)
   then ReadValue(Attrib, Form, FProducer);
 
+  if LocateAttribute(Scope.Entry, DW_AT_language, AttribList, Attrib, Form)
+  then ReadValue(Attrib, Form, FLanguageId);
+
   FDwarfSymbolClassMap := DwarfSymbolClassMapList.FindMapForCompUnit(Self);
   assert(FDwarfSymbolClassMap <> nil, 'TDwarfCompilationUnit.Create: FDwarfSymbolClassMap <> nil');
 
@@ -5196,8 +5270,13 @@ begin
   if LocateAttribute(Scope.Entry, DW_AT_low_pc, AttribList, Attrib, Form)
   then ReadAddressValue(Attrib, Form, FMinPC);
 
-  if LocateAttribute(Scope.Entry, DW_AT_high_pc, AttribList, Attrib, Form)
-  then ReadAddressValue(Attrib, Form, FMaxPC);
+  if LocateAttribute(Scope.Entry, DW_AT_high_pc, AttribList, Attrib, Form) then begin
+    ReadAddressValue(Attrib, Form, FMaxPC);
+    if (Form = DW_FORM_data1) or (Form = DW_FORM_data2) or (Form = DW_FORM_data4) or
+       (Form = DW_FORM_data8) or (Form = DW_FORM_udata) or (Form = DW_FORM_sdata)
+    then
+      FMaxPC := FMinPC + FMaxPC;
+  end;
 
   if FMinPC = 0 then FMinPC := FMaxPC;
   if FMaxPC = 0 then FMAxPC := FMinPC;
@@ -5540,6 +5619,7 @@ begin
     DW_FORM_ref_addr : begin
       AValue := LocToAddrOrNil(ReadDwarfSectionOffsetOrLenFromDwarfSection(AAttribute));
     end;
+    DW_FORM_flag_present: AValue := 1;
     DW_FORM_flag,
     DW_FORM_ref1,
     DW_FORM_data1    : begin
@@ -5556,6 +5636,12 @@ begin
     DW_FORM_ref8,
     DW_FORM_data8    : begin
       AValue := PQWord(AAttribute)^;
+    end;
+    DW_FORM_sec_offset: begin
+      if IsDwarf64 then
+        AValue := PQWord(AAttribute)^
+      else
+        AValue := PLongWord(AAttribute)^;
     end;
     DW_FORM_sdata    : begin
       AValue := SLEB128toOrdinal(AAttribute);
@@ -5578,6 +5664,7 @@ begin
     DW_FORM_ref_addr : begin
       AValue := LocToAddrOrNil(ReadDwarfSectionOffsetOrLenFromDwarfSection(AAttribute));
     end;
+    DW_FORM_flag_present: AValue := 1;
     DW_FORM_flag,
     DW_FORM_ref1,
     DW_FORM_data1    : begin
@@ -5594,6 +5681,12 @@ begin
     DW_FORM_ref8,
     DW_FORM_data8    : begin
       AValue := PInt64(AAttribute)^;
+    end;
+    DW_FORM_sec_offset: begin
+      if IsDwarf64 then
+        AValue := PQWord(AAttribute)^
+      else
+        AValue := PLongWord(AAttribute)^;
     end;
     DW_FORM_sdata    : begin
       AValue := SLEB128toOrdinal(AAttribute);
@@ -5616,6 +5709,7 @@ begin
     DW_FORM_ref_addr : begin
       AValue := LocToAddrOrNil(ReadDwarfSectionOffsetOrLenFromDwarfSection(AAttribute));
     end;
+    DW_FORM_flag_present: AValue := 1;
     DW_FORM_flag,
     DW_FORM_ref1,
     DW_FORM_data1    : begin
@@ -5632,6 +5726,12 @@ begin
     DW_FORM_ref8,
     DW_FORM_data8    : begin
       AValue := PInt64(AAttribute)^;
+    end;
+    DW_FORM_sec_offset: begin
+      if IsDwarf64 then
+        AValue := PQWord(AAttribute)^
+      else
+        AValue := PLongWord(AAttribute)^;
     end;
     DW_FORM_sdata    : begin
       AValue := SLEB128toOrdinal(AAttribute);
@@ -5672,6 +5772,7 @@ begin
     DW_FORM_ref_addr : begin
       AValue := LocToAddrOrNil(ReadDwarfSectionOffsetOrLenFromDwarfSection(AAttribute));
     end;
+    DW_FORM_flag_present: AValue := 1;
     DW_FORM_flag,
     DW_FORM_ref1,
     DW_FORM_data1    : begin
@@ -5688,6 +5789,12 @@ begin
     DW_FORM_ref8,
     DW_FORM_data8    : begin
       AValue := PQWord(AAttribute)^;
+    end;
+    DW_FORM_sec_offset: begin
+      if IsDwarf64 then
+        AValue := PQWord(AAttribute)^
+      else
+        AValue := PLongWord(AAttribute)^;
     end;
     DW_FORM_sdata    : begin
       AValue := QWord(SLEB128toOrdinal(AAttribute));
@@ -5727,7 +5834,8 @@ var
 begin
   Result := True;
   case AForm of
-    DW_FORM_block    : begin
+    DW_FORM_block,
+    DW_FORM_exprloc  : begin
       Size := ULEB128toOrdinal(AAttribute);
     end;
     DW_FORM_block1   : begin

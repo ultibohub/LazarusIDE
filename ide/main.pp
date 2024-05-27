@@ -72,7 +72,7 @@ uses
   FileUtil, LazFileUtils, LazUtilities, LazUTF8, UTF8Process,
   LConvEncoding, Laz2_XMLCfg, LazLoggerBase, LazLogger, LazFileCache, AvgLvlTree,
   GraphType, LazStringUtils, LazTracer,
-  LCLExceptionStacktrace, {$IFDEF WINDOWS} Win32Proc, {$ENDIF}
+  LCLExceptionStacktrace, {$IFDEF LCLWin} Win32Proc, {$ENDIF}
   // SynEdit
   SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter,
   // BuildIntf
@@ -1225,6 +1225,20 @@ end;
 
 procedure TMainIDE.LoadGlobalOptions;
 // load environment, miscellaneous, editor and codetools options
+  function NormalizeLazExe(LazExe: string): string;
+  {$IFDEF Darwin}
+  var
+    p: SizeInt;
+  {$ENDIF}
+  begin
+    Result:=TrimFilename(LazExe);
+    {$IFDEF Darwin}
+    p:=Pos('.app/Contents/MacOS/',Result);
+    if p>0 then
+      Result:=LeftStr(Result,p-1);
+    {$ENDIF}
+  end;
+
   function GetSecondConfDirWarning: String;
   var
     StartFile: String;
@@ -1238,24 +1252,10 @@ procedure TMainIDE.LoadGlobalOptions;
       Result+=StartFile+' --pcp=C:\test_lazarus\configs';
     {$ELSE}
       {$IFDEF darwin}
-      Result+='open '+StartFile+' --pcp=~/.lazarus_test';
+      Result+='open '+NormalizeLazExe(StartFile)+'.app --args --pcp=~/.lazarus_test';
       {$ELSE}
       Result+=StartFile+' --pcp=~/.lazarus_test';
       {$ENDIF}
-    {$ENDIF}
-  end;
-
-  function NormalizeLazExe(LazExe: string): string;
-  {$IFDEF Darwin}
-  var
-    p: SizeInt;
-  {$ENDIF}
-  begin
-    Result:=TrimFilename(LazExe);
-    {$IFDEF Darwin}
-    p:=Pos('.app/Contents/MacOS/',Result);
-    if p>0 then
-      Result:=LeftStr(LazExe,p-1);
     {$ENDIF}
   end;
 
@@ -6098,7 +6098,7 @@ var ActiveSrcEdit:TSourceEditor;
   UnitLineCountWithIncludes: LongInt;
   UnitLineCountParsed: LongInt;
   Code: TCodeBuffer;
-  CTTool: TCodeTool;
+  CTTool, aCodeTool: TCodeTool;
   TreeOfSourceCodes: TAVLTree;
   Node: TAVLTreeNode;
   SubCode: TCodeBuffer;
@@ -6158,8 +6158,12 @@ begin
     TrimSearchPath(CodeToolBoss.GetIncludePathForDirectory(FileDir),FileDir),
     TrimSearchPath(CodeToolBoss.GetCompleteSrcPathForDirectory(FileDir),FileDir)
     );
-  if ClearIncludedByFile then
+  if ClearIncludedByFile then begin
     ActiveUnitInfo.Source.LastIncludedByFile:='';
+    CodeToolBoss.SourceCache.ClearIncludedByEntry(ActiveUnitInfo.Source.Filename);
+    CodeToolBoss.Explore(ActiveUnitInfo.Source,aCodeTool,false,true);
+    SaveIncludeLinks;
+  end;
   if (DlgResult=mrYes) and (ActiveUnitInfo.Source.LastIncludedByFile<>'') then
     DoGotoIncludeDirective;
 end;
@@ -7729,7 +7733,7 @@ begin
             Process.SetRedirection(dtStdErr, FileErr, ARunMode.RedirectStdErr = rprOverwrite);
         end;
 
-        {$IFDEF MSWINDOWS}
+        {$IFDEF LCLWin}
         if (WindowsVersion > wvUnknown) and (WindowsVersion <= wv7) then
           Process.ApplyWin7Fix;
         {$ENDIF}
