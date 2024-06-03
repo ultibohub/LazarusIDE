@@ -33,7 +33,7 @@ uses
   // Widgetset
   WSMenus,
   // LCL Cocoa
-  CocoaInt, CocoaMenus, CocoaWSCommon, CocoaUtils, CocoaGDIObjects;
+  CocoaConfig, CocoaInt, CocoaMenus, CocoaWSCommon, CocoaUtils, CocoaGDIObjects;
 
 type
 
@@ -147,7 +147,6 @@ end;
 class function TCocoaWSMainMenu.CreateHandle(const AMenu: TMenu): HMENU;
 begin
   Result := HMENU(AllocCocoaMenu);
-  TCocoaMenu(Result).createAppleMenu();
 end;
 
 { TCocoaWSMenuItem }
@@ -162,12 +161,12 @@ end;
 // used from the MenuMadness example
 class function TCocoaWSMenuItem.NSMenuCheckmark: NSImage;
 begin
-  Result:=NSImage.imageNamed(NSStringUtf8('NSMenuCheckmark'));
+  Result:=NSImage.imageNamed(CocoaConfig.CocoaDefaultCheckMenuImageName);
 end;
 
 class function TCocoaWSMenuItem.NSMenuRadio: NSImage;
 begin
-  Result:=NSImage.imageNamed(NSStringUtf8('NSMenuRadio'))
+  Result:=NSImage.imageNamed(CocoaConfig.CocoaDefaultRadioMenuImageName)
 end;
 
 class function TCocoaWSMenuItem.isSeparator(const ACaption: AnsiString): Boolean;
@@ -529,5 +528,14 @@ begin
   menu.popUpMenuPositioningItem_atLocation_inView(nil, NSMakePoint(x,menuY), nil);
   APopupMenu.Close; // notify LCL popup menu
 end;
+
+
+function CreateMenuItemHandle(const AMenuItem: TMenuItem): NSMenuItem;
+begin
+  Result:= NSMenuItem( TCocoaWSMenuItem.CreateHandle(AMenuItem) );
+end;
+
+initialization
+  CocoaMenus.menuItemHandleCreateFunc:= @CreateMenuItemHandle;
 
 end.
