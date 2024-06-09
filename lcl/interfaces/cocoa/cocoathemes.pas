@@ -942,14 +942,18 @@ begin
 end;
 
 procedure TCocoaThemeServices.CellDrawStart(dst: TCocoaContext; const r: Trect; out cur: NSGraphicsContext; out dstRect: NSRect);
-var
-  acc : TCocoaContextAccess absolute dst;
 begin
+  CGContextSaveGState(dst.ctx.CGContext);
   cur := NSGraphicsContext.currentContext;
-  NSGraphicsContext.setCurrentContext( acc.ctx );
+  NSGraphicsContext.setCurrentContext(dst.ctx);
 
-  acc.SetCGFillping(acc.CGContext, 0, -acc.Size.cy);
-  LCLToNSRect( R, acc.size.cy, dstRect);
+  if NOT dst.ctx.isFlipped then begin
+    CGContextTranslateCTM(dst.ctx.CGContext, 0, dst.Size.cy);
+    CGContextScaleCTM(dst.ctx.CGContext, 1, -1);
+    LCLToNSRect(R, dst.size.cy, dstRect);
+  end else begin
+    dstRect:= RectTONSRect(R);
+  end;
 end;
 
 procedure TCocoaThemeServices.CellDrawFrame(cell: NSCell; const dst: NSRect);
@@ -958,11 +962,9 @@ begin
 end;
 
 procedure TCocoaThemeServices.CellDrawEnd(dst: TCocoaContext; cur: NSGraphicsContext);
-var
-  acc : TCocoaContextAccess absolute dst;
 begin
-  acc.SetCGFillping(acc.CGContext, 0, -acc.Size.cy);
-  NSGraphicsContext.setCurrentContext( cur );
+  NSGraphicsContext.setCurrentContext(cur);
+  CGContextRestoreGState(dst.ctx.lclCGContext);
 end;
 
 { TCocoaThemeCallback }

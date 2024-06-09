@@ -229,7 +229,6 @@ type
     function GetKind: TDbgSymbolKind; override;
     function GetMemberCount: Integer; override;
     function DoGetStride(out AStride: TFpDbgValueSize): Boolean; override;
-    function DoGetMainStride(out AStride: TFpDbgValueSize): Boolean; override;
     function DoGetDimStride(AnIndex: integer; out AStride: TFpDbgValueSize): Boolean; override;
   public
     function GetFpcRefCount(out ARefCount: Int64): Boolean; override;
@@ -364,7 +363,9 @@ begin
       CodepageOffset := TypeInfo.CompilationUnit.AddressSize + SizeOf(Longint) + SizeOf(Word) + SizeOf(Word)
     else
       CodepageOffset := TypeInfo.CompilationUnit.AddressSize * 3;
+    {$PUSH}{$Q-}{$R-}
     Addr.Address := Addr.Address - CodepageOffset;
+    {$POP}
     if AContext.ReadMemory(Addr, SizeVal(2), @Codepage) then
       Result := CodePageToCodePageName(Codepage) <> '';
   end;
@@ -1497,16 +1498,6 @@ begin
     Result := TFpSymbolDwarfType(TypeInfo.NestedSymbol[0]).ReadStride(Self, AStride);
 end;
 
-function TFpValueDwarfFreePascalArray.DoGetMainStride(out
-  AStride: TFpDbgValueSize): Boolean;
-begin
-  if (TFpDwarfFreePascalSymbolClassMap(TypeInfo.CompilationUnit.DwarfSymbolClassMap).FCompilerVersion >= $030300)
-  then
-    Result := inherited DoGetMainStride(AStride)
-  else
-    Result := GetMemberSize(AStride);
-end;
-
 function TFpValueDwarfFreePascalArray.DoGetDimStride(AnIndex: integer; out
   AStride: TFpDbgValueSize): Boolean;
 begin
@@ -2058,6 +2049,8 @@ begin
     exit;
 
   GetStringLen(Len);
+  if Len = 0 then
+    exit('');
 
   if Kind = skWideString then begin
     if not Context.ReadWString(Addr, Len, WResult) then
