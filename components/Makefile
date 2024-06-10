@@ -1951,7 +1951,6 @@ bigide:
 	$(MAKE) -C sqldb
 	$(MAKE) -C PascalScript/Source
 	$(MAKE) -C macroscript
-	$(MAKE) -C onlinepackagemanager
 	$(MAKE) -C simplewebservergui
 	$(MAKE) -C projectgroups
 	$(MAKE) -C pas2js

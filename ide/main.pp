@@ -9369,6 +9369,7 @@ begin
       //Lines.Add('laz.virtualtreeview_package,');
       //Lines.Add('lazdebuggerfp,');
       Lines.Add('allsyneditdsgn,');
+      Lines.Add('onlinepackagemanager,');
 
       Lines.SaveToFile(Path + 'staticpackages.inc');
     finally
@@ -9412,6 +9413,11 @@ begin
   //  MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('lazdebuggerfp');
   //  Update := True;
   //end;
+  if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('onlinepackagemanager') < 0 then
+  begin
+    MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('onlinepackagemanager');
+    Update := True;
+  end;
 
   if Update then
   begin

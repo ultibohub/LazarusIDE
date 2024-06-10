@@ -75,6 +75,7 @@ uses
   anchordockingdsgn, //Ultibo
   jcfidelazarus, //Ultibo
   allsyneditdsgn, //Ultibo
+  OnlinePackageManager, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
     //AllSynEditDsgn, //Ultibo
@@ -87,7 +88,7 @@ uses
     FPCUnitTestRunner, FPCUnitIDE, ProjTemplates, TAChartLazarusPkg,
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
     EditorMacroScript, ExampleProjects,
-    OnlinePackageManager,
+    //OnlinePackageManager, //Ultibo
     SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn, charactermap_ide_pkg,
   {$ENDIF}
   MainBase;
