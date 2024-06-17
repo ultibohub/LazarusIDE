@@ -126,6 +126,8 @@ type
 
     procedure changeColor(sender: id); override;
     // keyboard
+    procedure cut(sender: id); override;
+    procedure paste(sender: id); override;
     procedure insertNewline(sender: id); override;
     // mouse
     procedure mouseDown(event: NSEvent); override;
@@ -170,6 +172,8 @@ type
     procedure setDelegate(adelegate: NSTextDelegateProtocol); override;
     procedure lclReviseCursorColor; message 'lclReviseCursorColor';
     // keyboard
+    procedure cut(sender: id); override;
+    procedure paste(sender: id); override;
     procedure insertNewline(sender: id); override;
     // mouse
     procedure mouseDown(event: NSEvent); override;
@@ -799,6 +803,30 @@ begin
     setInsertionPointColor(ReverseColor(clr));
 end;
 
+procedure TCocoaFieldEditor.cut(sender: id);
+var
+  callback: ICommonCallback;
+  accept: Boolean = False;
+begin
+  callback:= self.lclGetCallback;
+  if Assigned(callback) then
+    accept:= callback.SendOnEditCut;
+  if accept then
+    inherited cut(sender);
+end;
+
+procedure TCocoaFieldEditor.paste(sender: id);
+var
+  callback: ICommonCallback;
+  accept: Boolean = False;
+begin
+  callback:= self.lclGetCallback;
+  if Assigned(callback) then
+    accept:= callback.SendOnEditPaste;
+  if accept then
+    inherited paste(sender);
+end;
+
 procedure TCocoaFieldEditor.insertNewline(sender: id);
 begin
   // 10.6 cocoa handles the editors Return key as "insertNewLine" command (that makes sense)
@@ -1047,6 +1075,26 @@ procedure TCocoaTextView.changeColor(sender: id);
 begin
   //preventing text color from being changed
   //inherited changeColor(sender);
+end;
+
+procedure TCocoaTextView.cut(sender: id);
+var
+  accept: Boolean = False;
+begin
+  if Assigned(callback) then
+    accept:= callback.SendOnEditCut;
+  if accept then
+    inherited cut(sender);
+end;
+
+procedure TCocoaTextView.paste(sender: id);
+var
+  accept: Boolean = False;
+begin
+  if Assigned(callback) then
+    accept:= callback.SendOnEditPaste;
+  if accept then
+    inherited paste(sender);
 end;
 
 procedure TCocoaTextView.dealloc;
@@ -1634,6 +1682,7 @@ begin
       dr := lclFrame;
       Types.OffsetRect(dr, -dr.Left, -dr.Top);
       SubLayoutFromFrame( lclGetFrameToLayoutDelta, dr);
+      ctx.InitDraw(dr.Width, dr.Height);
 
       // magic offsets are based on the macOS 10.13.6 visual style
       // but hard-coding is never reliable
@@ -2117,7 +2166,7 @@ begin
   lRect.Right := lRect.Right - SPINEDIT_DEFAULT_STEPPER_WIDTH;
   lStepperRect.Left := lRect.Right;
   svHeight := GetNSViewSuperViewHeight(Self);
-  if Assigned(superview)  then
+  if Assigned(superview) and NOT superview.isFlipped then
   begin
     LCLToNSRect(lRect, svHeight, ns);
     LCLToNSRect(lStepperRect, svHeight, lStepperNS);
