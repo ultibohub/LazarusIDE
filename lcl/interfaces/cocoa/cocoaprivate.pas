@@ -92,6 +92,8 @@ type
     procedure ResignFirstResponder;
     procedure DidBecomeKeyNotification;
     procedure DidResignKeyNotification;
+    function SendOnEditCut: Boolean;
+    function SendOnEditPaste: Boolean;
     procedure SendOnChange;
     procedure SendOnTextChanged;
     procedure scroll(isVert: Boolean; Pos: Integer; AScrollPart: NSScrollerPart = NSScrollerNoPart);
@@ -505,9 +507,15 @@ begin
 end;
 
 procedure SetViewDefaults(AView: NSView);
+var
+  mask: NSUInteger;
 begin
   if not Assigned(AView) then Exit;
-  AView.setAutoresizingMask(NSViewMinYMargin or NSViewMaxXMargin);
+  if Assigned(AView.superview) and AView.superview.isFlipped then
+    mask:= NSViewMaxYMargin or NSViewMaxXMargin
+  else
+    mask:= NSViewMinYMargin or NSViewMaxXMargin;
+  AView.setAutoresizingMask(mask);
 end;
 
 function CheckMainThread: Boolean;
@@ -627,6 +635,8 @@ begin
 end;
 
 procedure TCocoaCustomControl.addSubView(aview: NSView);
+var
+  mask: NSUInteger;
 begin
   inherited addSubView(aview);
 
@@ -639,7 +649,11 @@ begin
       {$else}
       setAutoresizesSubviews(true);
       {$endif}
-    aview.setAutoresizingMask(NSViewMaxXMargin or NSViewMinYMargin);
+    if self.isFlipped then
+      mask:= NSViewMaxYMargin or NSViewMaxXMargin
+    else
+      mask:= NSViewMinYMargin or NSViewMaxXMargin;
+    aview.setAutoresizingMask(mask);
   end;
 end;
 
@@ -1360,7 +1374,7 @@ begin
   if (AParams.WndParent <> 0) then
     p := NSView(AParams.WndParent).lclContentView;
 
-  if Assigned(p) then
+  if Assigned(p) and p.isFlipped then
     LCLToNSRect(Types.Bounds(AParams.X, AParams.Y, AParams.Width, AParams.Height),
       p.frame.size.height, ns)
   else

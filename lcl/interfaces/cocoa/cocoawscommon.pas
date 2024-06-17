@@ -97,6 +97,8 @@ type
     procedure ResignFirstResponder; virtual;
     procedure DidBecomeKeyNotification; virtual;
     procedure DidResignKeyNotification; virtual;
+    function SendOnEditCut: Boolean; virtual;
+    function SendOnEditPaste: Boolean; virtual;
     procedure SendOnChange; virtual;
     procedure SendOnTextChanged; virtual; // text controls (like spin) respond to OnChange for this event, but not for SendOnChange
     procedure scroll(isVert: Boolean; Pos: Integer; AScrollPart: NSScrollerPart); virtual;
@@ -1404,6 +1406,20 @@ begin
   LCLSendKillFocusMsg(Target);
 end;
 
+function TLCLCommonCallback.SendOnEditCut: Boolean;
+begin
+  Result:= false;
+  if Assigned(Target) then
+    Result:= SendSimpleMessage(Target, LM_CUT)=0;
+end;
+
+function TLCLCommonCallback.SendOnEditPaste: Boolean;
+begin
+  Result:= false;
+  if Assigned(Target) then
+    Result:= SendSimpleMessage(Target, LM_PASTE)=0;
+end;
+
 procedure TLCLCommonCallback.SendOnChange;
 begin
   if not Assigned(Target) then Exit;
@@ -1482,7 +1498,8 @@ begin
     if FContext.InitDraw(Round(bounds.size.width), Round(bounds.size.height)) then
     begin
       nsr:=dirty;
-      nsr.origin.y:=bounds.size.height-dirty.origin.y-dirty.size.height;
+      if NOT Owner.isKindOfClass(NSView) or NOT NSView(Owner).isFlipped then
+         nsr.origin.y:=bounds.size.height-dirty.origin.y-dirty.size.height;
 
       if FIsOpaque and (Target.Color<>clDefault) then
       begin
@@ -1507,13 +1524,17 @@ end;
 procedure TLCLCommonCallback.DrawBackground(ctx: NSGraphicsContext; const bounds, dirtyRect: NSRect);
 var
   lTarget: TWinControl;
+  nsr:NSRect;
 begin
   // Implement Color property
   lTarget := TWinControl(GetTarget());
   if (lTarget.Color <> clDefault) and (lTarget.Color <> clBtnFace) then
   begin
     ColorToNSColor(ColorToRGB(lTarget.Color)).set_();
-    NSRectFill(dirtyRect);
+    nsr:=dirtyRect;
+    if NOT Owner.isKindOfClass(NSView) or NOT NSView(Owner).isFlipped then
+       nsr.origin.y:=bounds.size.height-dirtyRect.origin.y-dirtyRect.size.height;
+    NSRectFill(nsr);
   end;
 end;
 
@@ -1534,7 +1555,8 @@ begin
     if FContext.InitDraw(Round(bounds.size.width), Round(bounds.size.height)) then
     begin
       nsr:=dirty;
-      nsr.origin.y:=bounds.size.height-dirty.origin.y-dirty.size.height;
+      if NOT Owner.isKindOfClass(NSView) or NOT NSView(Owner).isFlipped then
+         nsr.origin.y:=bounds.size.height-dirty.origin.y-dirty.size.height;
 
       FillChar(PS, SizeOf(TPaintStruct), 0);
       PS.hdc := HDC(FContext);

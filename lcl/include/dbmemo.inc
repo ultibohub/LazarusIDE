@@ -150,6 +150,24 @@ begin
         if not FieldIsEditable(FDatalink.Field) or not FDataLink.Edit then
           Key := VK_UNKNOWN;
       end;
+{$IFDEF DARWIN}
+// the code for macOS here has been carefully considered
+// and must be specially handled here.
+// on macOS, because of the special key processing mechanism
+// and the various possibilities combined with IME,
+// we need to enter the editing state in KeyDown().
+// if we enter the edit state in KeyPress(), it is too late
+// and will cause the Memo content to change, leading to the issue #40985
+    VK_0..VK_9,
+    VK_A..VK_Z,
+    VK_NUMPAD0..VK_DIVIDE,
+    VK_OEM_1..VK_OEM_3,
+    VK_OEM_4..VK_OEM_8:
+      begin
+        if not FDatalink.Edit then
+          Key:= 0;
+      end;
+{$ENDIF}
   end;
 end;
 
@@ -237,15 +255,19 @@ begin
 end;
 
 procedure TDBMemo.LoadMemo;
+var
+  newText: String;
 begin
   if not FDBMemoLoaded and (FDataLink.Field<>nil)
   and FDataLink.Field.IsBlob then begin
     try
       // issue #33598: Possibility to change field text in OnGetText
       if Assigned(FDataLink.Field.OnGetText) then
-        Lines.Text := FDataLink.Field.Text
+        newText := FDataLink.Field.Text
       else 
-        Lines.Text := FDataLink.Field.AsString;
+        newText := FDataLink.Field.AsString;
+      if Lines.Text <> newText then
+        Lines.Text:= newText;
       FDBMemoLoaded:=True;
     except
       on E:EInvalidOperation do
