@@ -5415,17 +5415,17 @@ procedure TMainIDE.mnuToolRunInQEMUClicked(Sender: TObject); //Ultibo
     WorkingDir:=Project1.Directory;
     if Length(WorkingDir) <> 0 then
      begin
-      Result:='Project=' + CreateAbsolutePath(Project1.MainUnitInfo.Filename,WorkingDir);
+      Result:='Project=' + PrepareCmdLineOption(CreateAbsolutePath(Project1.MainUnitInfo.Filename,WorkingDir));
      end
     else
      begin
-      Result:='Project=' + Project1.ProjectInfoFile;
+      Result:='Project=' + PrepareCmdLineOption(Project1.ProjectInfoFile);
      end;
    end
   else
    begin
     WorkingDir:=GetTestBuildDirectory;
-    Result:='Project=' + MainBuildBoss.GetTestUnitFilename(Project1.MainUnitInfo);
+    Result:='Project=' + PrepareCmdLineOption(MainBuildBoss.GetTestUnitFilename(Project1.MainUnitInfo));
    end;
   
   Result:=Result + ' CPU=' + Project1.CompilerOptions.TargetCPU;
