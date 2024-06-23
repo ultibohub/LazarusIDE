@@ -879,7 +879,7 @@ type
     Defines: TStringToStringTree; // macro to value
     Undefines: TStringToStringTree; // macro
     Units: TStringToStringTree; // unit name to file name
-    Includes: TStringToStringTree; // inc name to file name
+    Includes: TStringToStringTree; // short file name to full file name
     UnitToFPM: TStringToPointerTree; // unitname to TPCFPMFileState
     FPMNameToFPM: TStringToPointerTree; // fpm name to TPCFPMFileState
     ErrorMsg: string;
@@ -2008,7 +2008,7 @@ var
   FileCount: Integer;
   Abort: boolean;
   FileInfo: TSearchRec;
-  ShortFilename, Filename, File_Name: String;
+  ShortFilename, Filename, File_Name, Ext: String;
 begin
   // units sources
   Units:=TStringToStringTree.Create(false);
@@ -2065,14 +2065,13 @@ begin
             ShortFilename:=FileInfo.Name;
             if (ShortFilename='') or (ShortFilename='.') or (ShortFilename='..') then
               continue;
-            //debugln(['GatherUnitsInSearchPaths ShortFilename=',ShortFilename,' IsDir=',(FileInfo.Attr and faDirectory)>0]);
+            Ext:=ExtractFileExt(ShortFilename);
+            if IsPascalIncExt(PChar(Ext))=pietNone then
+              continue;
+
             Filename:=Directory+ShortFilename;
-            if FilenameExtIs(ShortFilename,'.inc') then begin
-              File_Name:=ExtractFileName(Filename);
-              if (not Includes.Contains(File_Name))
-              then
-                Includes[File_Name]:=Filename;
-            end;
+            if not Includes.Contains(ShortFilename) then
+              Includes[ShortFilename]:=Filename;
           until FindNextUTF8(FileInfo)<>0;
         finally
           FindCloseUTF8(FileInfo);
@@ -10110,7 +10109,7 @@ procedure TPCTargetConfigCache.LoadFromXMLConfig(XMLConfig: TXMLConfig;
     end;
   end;
 
-  procedure LoadFilesFor(var ADest: TStringToStringTree; const ASubPath: string);
+  procedure LoadFilesFor(IsUnit: boolean; var ADest: TStringToStringTree; const ASubPath: string);
   var
     i: Integer;
     List: TStringList;
@@ -10131,10 +10130,18 @@ procedure TPCTargetConfigCache.LoadFromXMLConfig(XMLConfig: TXMLConfig;
       FileList:=Decompress1FileList(List);
       for i:=0 to FileList.Count-1 do begin
         Filename:=TrimFilename(FileList[i]);
-        File_Name:=ExtractFileNameOnly(Filename);
-        if (File_Name='') or not IsDottedIdentifier(File_Name) then begin
-          DebugLn(['Warning: [TPCTargetConfigCache.LoadFromXMLConfig] invalid filename "',File_Name,'" in "',XMLConfig.Filename,'" at "',CurPath,'"']);
-          continue;
+        if IsUnit then begin
+          File_Name:=ExtractFileNameOnly(Filename);
+          if (File_Name='') or not IsDottedIdentifier(File_Name) then begin
+            DebugLn(['Warning: [TPCTargetConfigCache.LoadFromXMLConfig] invalid filename "',File_Name,'" in "',XMLConfig.Filename,'" at "',CurPath,'"']);
+            continue;
+          end;
+        end else begin
+          File_Name:=ExtractFileName(Filename);
+          if (File_Name='') then begin
+            DebugLn(['Warning: [TPCTargetConfigCache.LoadFromXMLConfig] invalid filename "',File_Name,'" in "',XMLConfig.Filename,'" at "',CurPath,'"']);
+            continue;
+          end;
         end;
         ADest[File_Name]:=Filename;
       end;
@@ -10214,8 +10221,8 @@ begin
   LoadSemicolonList(UnitScopes, 'UnitScopes');
 
   // Files
-  LoadFilesFor(Units,'Units/');
-  LoadFilesFor(Includes,'Includes/');
+  LoadFilesFor(true,Units,'Units/');
+  LoadFilesFor(false,Includes,'Includes/');
 
   // read FPMNameToFPM before UnitToFPM!
   Cnt:=XMLConfig.GetValue(Path+'FPMs/Count',0);

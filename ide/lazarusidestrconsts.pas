@@ -1814,6 +1814,7 @@ resourcestring
   dlgMultiCaretMode = 'Navigation keys move all carets';
   dlgMultiCaretDelSkipCr = 'Skip delete key at EOL (do not join lines)';
   dlgColorLink = '(Edit Color)';
+  dlgEditMaxLength = '(Edit Max Length)';
   dlgKeyLink = '(Edit Key)';
   dlgBracketHighlight = 'Bracket highlight';
   dlgNoBracketHighlight = 'No Highlight';
@@ -5325,8 +5326,8 @@ resourcestring
   lisEveryNThLineNumber = 'Show every n-th line number';
   lisShowOverviewGutter = 'Show overview gutter';
   lisTopInfoView = 'Show Class/Procedure hint';
-  lisLeftGutter = 'Left Gutter';
-  lisRightGutter = 'Right Gutter';
+  lisLeftGutter = 'Left';
+  lisRightGutter = 'Right';
   lisGutterPartVisible = 'Visible';
   lisGutterPartWidth = 'Width';
   lisGutterPartMargin = 'Margin';

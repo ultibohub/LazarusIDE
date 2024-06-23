@@ -65,7 +65,7 @@ type
     procedure GatherGlobalOptions(sl: TStrings);
     procedure GatherProjectOptions(sl: TStrings);
     procedure GatherActiveOptions(sl: TStrings);
-    procedure GatherFPCExecutable(UnitSetCache: TFPCUnitSetCache; sl: TStrings);
+    procedure GatherFPCConfig(UnitSetCache: TFPCUnitSetCache; sl: TStrings);
   public
   end;
 
@@ -129,7 +129,7 @@ begin
     FPCSrcDir:=EnvironmentOptions.GetParsedFPCSourceDirectory; // needs FPCVer macro
     UnitSetCache:=CodeToolBoss.CompilerDefinesCache.FindUnitSet(
       CompilerFilename,TargetOS,TargetCPU,TargetProcessor,Subtarget,'',FPCSrcDir,'',true); //Ultibo
-    GatherFPCExecutable(UnitSetCache,sl);
+    GatherFPCConfig(UnitSetCache,sl);
 
     ValuesMemo.Lines.Assign(sl);
   finally
@@ -305,7 +305,7 @@ begin
   sl.Add('');
 end;
 
-procedure TIDEFPCInfoDialog.GatherFPCExecutable(UnitSetCache: TFPCUnitSetCache;
+procedure TIDEFPCInfoDialog.GatherFPCConfig(UnitSetCache: TFPCUnitSetCache;
   sl: TStrings);
 var
   CfgCache: TPCTargetConfigCache;
