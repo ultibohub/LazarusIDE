@@ -1141,7 +1141,10 @@ end;
 
 function TSynEditStringList.GetPChar(ALineIndex: Integer; out ALen: Integer): PChar;
 begin
-  Result := FList.GetPChar(ALineIndex, ALen);
+  if (ALineIndex = 0) and (Count = 0) then  // simulate empty line
+    Result := nil
+  else
+    Result := FList.GetPChar(ALineIndex, ALen);
 end;
 
 {end}                                                                           // DJLP 2000-11-01
@@ -1775,9 +1778,12 @@ begin
 end;
 
 function TSynEditStringMemory.GetPChar(ALineIndex: Integer; out ALen: Integer): PChar;
+var
+  ip: Pointer;
 begin
-  ALen   := length((PString(ItemPointer[ALineIndex]))^);
-  Result := (PPChar(ItemPointer[ALineIndex]))^;
+  ip := ItemPointer[ALineIndex];
+  ALen   := length(PString(ip)^);
+  Result := PPChar(ip)^;
 end;
 
 procedure TSynEditStringMemory.Move(AFrom, ATo, ALen: Integer);

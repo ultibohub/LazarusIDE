@@ -1,7 +1,6 @@
 unit FPDbgController;
 
 {$mode objfpc}{$H+}
-{$TYPEDADDRESS on}
 {$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 
 interface
@@ -2188,6 +2187,9 @@ end;
 constructor TDbgController.Create(AMemManager: TFpDbgMemManager;
   AMemModel: TFpDbgMemModel);
 begin
+  {$IFOPT T+}
+  raise exception.Create('TypeAddress / Sy not supported');
+  {$ENDIF}
   FMemManager := AMemManager;
   FMemModel := AMemModel;
   FParams := TStringList.Create;

@@ -41,10 +41,12 @@ uses
   // IdeIntf
   IdeIntfStrConsts, LazIDEIntf, IDEWindowIntf, SrcEditorIntf, PackageIntf,
   IDEDialogs, InputHistory,
+  // IdeUtils
+  DialogProcs,
   // LazConfig
   TransferMacros, IDEProcs, SearchPathProcs,
   // IDE
-  LazarusIDEStrConsts, MiscOptions, DialogProcs, SearchResultView, CodeHelp;
+  LazarusIDEStrConsts, MiscOptions, SearchResultView, CodeHelp;
 
 type
 
@@ -69,11 +71,13 @@ type
     procedure FindRenameIdentifierDialogCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure HelpButtonClick(Sender: TObject);
+    procedure NewEditChange(Sender: TObject);
     procedure RenameCheckBoxChange(Sender: TObject);
   private
     FAllowRename: boolean;
     FIdentifierFilename: string;
     FIdentifierPosition: TPoint;
+    FIdentifier: string;
     FIsPrivate: boolean;
     procedure SetAllowRename(const AValue: boolean);
     procedure SetIsPrivate(const AValue: boolean);
@@ -91,8 +95,6 @@ type
     property IsPrivate: boolean read FIsPrivate write SetIsPrivate;
   end;
 
-procedure CleanUpFileList(Files: TStringList);
-
 function ShowFindRenameIdentifierDialog(const Filename: string;
   const Position: TPoint;
   AllowRename: boolean; // allow user to disable/enable rename
@@ -105,9 +107,6 @@ function DoFindRenameIdentifier(
 function GatherIdentifierReferences(Files: TStringList;
   DeclarationCode: TCodeBuffer; const DeclarationCaretXY: TPoint;
   SearchInComments: boolean;
-  var TreeOfPCodeXYPosition: TAVLTree): TModalResult;
-function GatherUnitReferences(Files: TStringList;
-  UnitCode: TCodeBuffer; SearchInComments, IgnoreErrors, IgnoreMissingFiles: boolean;
   var TreeOfPCodeXYPosition: TAVLTree): TModalResult;
 function ShowIdentifierReferences(
   DeclarationCode: TCodeBuffer; const DeclarationCaretXY: TPoint;
@@ -130,27 +129,6 @@ function GatherReferencesInFPDocFile(
 implementation
 
 {$R *.lfm}
-
-procedure CleanUpFileList(Files: TStringList);
-var
-  i: Integer;
-begin
-  // sort files
-  Files.Sort;
-  // remove doubles
-  i:=0;
-  while i<=Files.Count-2 do begin
-    while (i<=Files.Count-2) and (CompareFilenames(Files[i],Files[i+1])=0) do
-      Files.Delete(i+1);
-    inc(i);
-  end;
-  // remove non files
-  for i:=Files.Count-1 downto 0 do
-    if ExtractFilename(Files[i])='' then begin
-      debugln(['Note: (lazarus) [FindRenameIdentifier.CleanUpFileList] invalid file "',Files[i],'"']);
-      Files.Delete(i);
-    end;
-end;
 
 function ShowFindRenameIdentifierDialog(const Filename: string;
   const Position: TPoint; AllowRename: boolean; SetRenameActive: boolean;
@@ -295,15 +273,19 @@ begin
   CodeToolBoss.GetIdentifierAt(DeclCode,DeclarationCaretXY.X,DeclarationCaretXY.Y,Identifier);
   CurUnitname:=ExtractFileNameOnly(DeclCode.Filename);
 
-  // ToDo: Support renaming and saving a unit also here.
-  // Now just inform a user that renaming is not possible.
-  if SetRenameActive and (CompareDottedIdentifiers(PChar(Identifier),PChar(CurUnitName))=0) then
-  begin
-    IDEMessageDialog(srkmecRenameIdentifier,
-      lisTheIdentifierIsAUnitPleaseUseTheFileSaveAsFunction,
-      mtInformation,[mbCancel],'');
-    exit(mrCancel);
-  end;
+  // identifier is unit
+  if CompareDottedIdentifiers(PChar(Identifier),PChar(CurUnitName))=0 then
+    if SetRenameActive then
+    begin
+      // ToDo: Support renaming and saving a unit also here
+      // inform a user that renaming is not possible
+      IDEMessageDialog(srkmecRenameIdentifier,
+        lisTheIdentifierIsAUnitPleaseUseTheFileSaveAsFunction,
+        mtInformation,[mbCancel],'');
+      exit(mrCancel);
+    end else
+      // allow search references only
+      AllowRename:=false;
 
   // open unit with declaration
   Result:=LazarusIDE.DoOpenFileAndJumpToPos(DeclCode.Filename, DeclarationCaretXY,
@@ -522,72 +504,6 @@ begin
     if Result<>mrOk then
       CodeToolBoss.FreeTreeOfPCodeXYPosition(TreeOfPCodeXYPosition);
     Cache.Free;
-  end;
-end;
-
-function GatherUnitReferences(Files: TStringList; UnitCode: TCodeBuffer;
-  SearchInComments, IgnoreErrors, IgnoreMissingFiles: boolean;
-  var TreeOfPCodeXYPosition: TAVLTree): TModalResult;
-var
-  ListOfPCodeXYPosition: TFPList;
-  LoadResult: TModalResult;
-  Code: TCodeBuffer;
-  i: Integer;
-begin
-  Result:=mrCancel;
-  ListOfPCodeXYPosition:=nil;
-  TreeOfPCodeXYPosition:=nil;
-  try
-    CleanUpFileList(Files);
-
-    Result:=mrOk;
-    // search in every file
-    for i:=0 to Files.Count-1 do begin
-      if CompareFilenames(Files[i],UnitCode.Filename)=0 then continue;
-      if IgnoreMissingFiles then
-      begin
-        if FilenameIsAbsolute(Files[i]) then
-        begin
-          if not FileExistsCached(Files[i]) then continue;
-        end else begin
-          Code:=CodeToolBoss.LoadFile(Files[i],false,false);
-          if (Code=nil) then continue;
-        end;
-      end;
-      LoadResult:=
-          LoadCodeBuffer(Code,Files[i],[lbfCheckIfText,lbfUpdateFromDisk],true);
-      if LoadResult=mrAbort then begin
-        debugln('GatherUnitReferences unable to load "',Files[i],'"');
-        if IgnoreErrors then
-          continue;
-        Result:=mrCancel;
-        exit;
-      end;
-      if LoadResult<>mrOk then continue;
-
-      // search references
-      CodeToolBoss.FreeListOfPCodeXYPosition(ListOfPCodeXYPosition);
-      if not CodeToolBoss.FindUnitReferences(
-        UnitCode, Code, not SearchInComments, ListOfPCodeXYPosition) then
-      begin
-        debugln('GatherUnitReferences unable to FindUnitReferences in "',Code.Filename,'"');
-        if IgnoreErrors then
-          continue;
-        Result:=mrCancel;
-        exit;
-      end;
-      //debugln('GatherUnitReferences FindUnitReferences in "',Code.Filename,'" ',dbgs(ListOfPCodeXYPosition<>nil));
-
-      // add to tree
-      if ListOfPCodeXYPosition<>nil then begin
-        if TreeOfPCodeXYPosition=nil then
-          TreeOfPCodeXYPosition:=CodeToolBoss.CreateTreeOfPCodeXYPosition;
-        CodeToolBoss.AddListToTreeOfPCodeXYPosition(ListOfPCodeXYPosition,
-                                              TreeOfPCodeXYPosition,true,false);
-      end;
-    end;
-  finally
-    CodeToolBoss.FreeListOfPCodeXYPosition(ListOfPCodeXYPosition);
   end;
 end;
 
@@ -860,6 +776,11 @@ begin
   OpenUrl('http://wiki.freepascal.org/IDE_Window:_Find_or_Rename_identifier');
 end;
 
+procedure TFindRenameIdentifierDialog.NewEditChange(Sender: TObject);
+begin
+  UpdateRename;
+end;
+
 procedure TFindRenameIdentifierDialog.RenameCheckBoxChange(Sender: TObject);
 begin
   UpdateRename;
@@ -874,6 +795,8 @@ begin
     ButtonPanel1.OKButton.Caption:=lisFRIRenameAllReferences
   else
     ButtonPanel1.OKButton.Caption:=lisFRIFindReferences;
+  ButtonPanel1.OKButton.Enabled := not NewEdit.Enabled or
+    ((NewEdit.Text <> FIdentifier) and (NewEdit.Text <> ''));
 end;
 
 procedure TFindRenameIdentifierDialog.SetAllowRename(const AValue: boolean);
@@ -967,7 +890,6 @@ var
   ListOfCodeBuffer: TFPList;
   i: Integer;
   CurCode: TCodeBuffer;
-  NewIdentifier: String;
   Tool: TCodeTool;
   CodeXY: TCodeXYPosition;
   CleanPos: integer;
@@ -993,11 +915,12 @@ begin
       ListOfCodeBuffer.Free;
     end;
     if CodeToolBoss.GetIdentifierAt(ACodeBuffer,
-      NewIdentifierPosition.X,NewIdentifierPosition.Y,NewIdentifier) then
+      NewIdentifierPosition.X,NewIdentifierPosition.Y,FIdentifier) then
     begin
-      CurrentGroupBox.Caption:=Format(lisFRIIdentifier, [NewIdentifier]);
-      NewEdit.Text:=NewIdentifier;
-    end;
+      CurrentGroupBox.Caption:=Format(lisFRIIdentifier, [FIdentifier]);
+      NewEdit.Text:=FIdentifier;
+    end else
+      FIdentifier := '';
     // check if in implementation or private section
     if CodeToolBoss.Explore(ACodeBuffer,Tool,false) then begin
       CodeXY:=CodeXYPosition(NewIdentifierPosition.X,NewIdentifierPosition.Y,ACodeBuffer);
