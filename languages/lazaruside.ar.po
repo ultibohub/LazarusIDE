@@ -5141,10 +5141,6 @@ msgstr ""
 msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
 msgstr ""
 
-#: lazarusidestrconsts.lisambiguousfilesfound
-msgid "Ambiguous files found"
-msgstr ""
-
 #: lazarusidestrconsts.lisanchorbottomtobottomside
 msgid "Anchor bottom side to bottom side of sibling. Use BorderSpacing to set a distance. BorderSpacing of sibling is ignored."
 msgstr ""
@@ -8548,10 +8544,6 @@ msgstr ""
 msgid "Delete old file \"%s\"?"
 msgstr ""
 
-#: lazarusidestrconsts.lisdeleteoldfile2
-msgid "Delete old file?"
-msgstr ""
-
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr ""
@@ -8592,6 +8584,11 @@ msgstr ""
 
 #: lazarusidestrconsts.lisdestructorcode
 msgid "Destructor code"
+msgstr ""
+
+#: lazarusidestrconsts.lisdfileswererenamedtol
+#, object-pascal-format
+msgid "%d files were renamed to lowercase."
 msgstr ""
 
 #: lazarusidestrconsts.lisdiffdlgcaseinsensitive
@@ -13127,6 +13124,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lismenurenameidentifier
 msgid "Rename Identifier ..."
+msgstr ""
+
+#: lazarusidestrconsts.lismenurenamelowercase
+msgid "Rename Unit Files to LowerCase ..."
 msgstr ""
 
 #: lazarusidestrconsts.lismenureportingbug

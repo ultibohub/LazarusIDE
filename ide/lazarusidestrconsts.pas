@@ -462,6 +462,7 @@ resourcestring
   lisKMViewProjectSource = 'View Project Source';
   lisMenuAddToProject = 'Add Editor File to Project';
   lisMenuRemoveFromProject = 'Remove from Project ...';
+  lisMenuRenameLowerCase = 'Rename Unit Files to LowerCase ...';
   lisMenuViewProjectSource = '&View Project Source';
   lisMenuProjectOptions = 'Project Options ...';
 
@@ -723,8 +724,8 @@ resourcestring
     +'various problems on some filesystems and different compilers.'
     +'%sRename it to lowercase?';
   lisRenameToLowercase = 'Rename to lowercase';
+  lisDFilesWereRenamedToL = '%d files were renamed to lowercase.';
   lisKeepName = 'Keep name';
-  lisAmbiguousFilesFound = 'Ambiguous files found';
   lisThereAreOtherFilesInTheDirectoryWithTheSameName = 'There are other files in '
     +'the directory with the same name,'
     +'%swhich only differ in case:'
@@ -5335,7 +5336,6 @@ resourcestring
   lisShort = 'Short:';
   lisInsertUrlTag = 'Insert url tag';
   lisInsertPrintshortTag2 = 'Insert printshort tag';
-  lisDeleteOldFile2 = 'Delete old file?';
   lisTheUnitSearchPathOfContainsTheSourceDirectoryOfPac = 'The unit search '
     +'path of "%s" contains the source directory "%s" of package %s';
   lisFPCVersionEG222 = 'FPC Version (e.g. 2.2.2)';

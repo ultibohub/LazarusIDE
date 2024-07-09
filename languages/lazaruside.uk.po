@@ -5146,10 +5146,6 @@ msgstr "Знайдено двозначний файл"
 msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
 msgstr "Знайдено двозначний файл: \"%s\"%sЙого можна сплутати з \"%s\"%sВидалити цей файл?"
 
-#: lazarusidestrconsts.lisambiguousfilesfound
-msgid "Ambiguous files found"
-msgstr "Знайдено двозначні файли"
-
 #: lazarusidestrconsts.lisanchorbottomtobottomside
 msgid "Anchor bottom side to bottom side of sibling. Use BorderSpacing to set a distance. BorderSpacing of sibling is ignored."
 msgstr "Якорити нижній край до нижнього краю брата. Використовуйте BorderSpacing, щоб задати відстань. BorderSpacing брата нехтується."
@@ -8556,10 +8552,6 @@ msgstr "Видалити режим \"%s\""
 msgid "Delete old file \"%s\"?"
 msgstr "Видалити старий файл \"%s\"?"
 
-#: lazarusidestrconsts.lisdeleteoldfile2
-msgid "Delete old file?"
-msgstr "Видалити старий файл?"
-
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "Видалити вибраний макрос?"
@@ -8601,6 +8593,11 @@ msgstr "Тека призначення"
 #: lazarusidestrconsts.lisdestructorcode
 msgid "Destructor code"
 msgstr "Код деструктора"
+
+#: lazarusidestrconsts.lisdfileswererenamedtol
+#, object-pascal-format
+msgid "%d files were renamed to lowercase."
+msgstr ""
 
 #: lazarusidestrconsts.lisdiffdlgcaseinsensitive
 msgid "Case Insensitive"
@@ -13212,6 +13209,10 @@ msgstr "Прибрати з проєкту ..."
 #: lazarusidestrconsts.lismenurenameidentifier
 msgid "Rename Identifier ..."
 msgstr "Перейменувати ID ..."
+
+#: lazarusidestrconsts.lismenurenamelowercase
+msgid "Rename Unit Files to LowerCase ..."
+msgstr ""
 
 #: lazarusidestrconsts.lismenureportingbug
 msgctxt "lazarusidestrconsts.lismenureportingbug"

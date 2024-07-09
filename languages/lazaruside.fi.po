@@ -5153,10 +5153,6 @@ msgstr "Ristiriitainen tiedosto löytyi"
 msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
 msgstr "Ristiriitainen tiedosto löytyi: \"%s\"%smikä voi sekoittua tähän: \"%s\"%sPoistetaanko?"
 
-#: lazarusidestrconsts.lisambiguousfilesfound
-msgid "Ambiguous files found"
-msgstr "Ristiriitaisia tiedostoja löytyi"
-
 #: lazarusidestrconsts.lisanchorbottomtobottomside
 msgid "Anchor bottom side to bottom side of sibling. Use BorderSpacing to set a distance. BorderSpacing of sibling is ignored."
 msgstr "Ankkuroi alareuna sisarusten alareunaan. Käytä BorderSpacing välimatkan säätämiseen. Sisarusten BorderSpacing ei vaikuta."
@@ -8564,10 +8560,6 @@ msgstr "Poista moodi \"%s\""
 msgid "Delete old file \"%s\"?"
 msgstr "Poistetaanko vanha fiedosto \"%s\"?"
 
-#: lazarusidestrconsts.lisdeleteoldfile2
-msgid "Delete old file?"
-msgstr "Poistetaanko vanha tiedosto?"
-
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "Poista valitut makrot?"
@@ -8609,6 +8601,11 @@ msgstr "Kohdehakemisto"
 #: lazarusidestrconsts.lisdestructorcode
 msgid "Destructor code"
 msgstr "Destructor koodi"
+
+#: lazarusidestrconsts.lisdfileswererenamedtol
+#, object-pascal-format
+msgid "%d files were renamed to lowercase."
+msgstr ""
 
 #: lazarusidestrconsts.lisdiffdlgcaseinsensitive
 msgid "Case Insensitive"
@@ -13170,6 +13167,10 @@ msgstr "Poista projektista ..."
 #: lazarusidestrconsts.lismenurenameidentifier
 msgid "Rename Identifier ..."
 msgstr "Vaihda tunnisteen nimeä ..."
+
+#: lazarusidestrconsts.lismenurenamelowercase
+msgid "Rename Unit Files to LowerCase ..."
+msgstr ""
 
 #: lazarusidestrconsts.lismenureportingbug
 msgid "Reporting a Bug"

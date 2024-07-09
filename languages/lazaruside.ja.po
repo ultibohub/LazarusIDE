@@ -5266,10 +5266,6 @@ msgstr "曖昧なファイルが見つかりました"
 msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
 msgstr "曖昧なファイルが見つかりました。 \"%s\"%sこのファイルは \"%s\"%sと間違うかもしれません。曖昧なファイルを削除しますか？ "
 
-#: lazarusidestrconsts.lisambiguousfilesfound
-msgid "Ambiguous files found"
-msgstr "曖昧なファイルが見つかりました"
-
 #: lazarusidestrconsts.lisanchorbottomtobottomside
 msgid "Anchor bottom side to bottom side of sibling. Use BorderSpacing to set a distance. BorderSpacing of sibling is ignored."
 msgstr "下端を兄弟の下端にアンカー。距離を設定するにはBorderSpacingを使ってください。兄弟のBorderSpacingは無視されます。"
@@ -8697,10 +8693,6 @@ msgstr "モード  \"%s\"を削除"
 msgid "Delete old file \"%s\"?"
 msgstr "古いファイル\"%s\"を削除しますか？"
 
-#: lazarusidestrconsts.lisdeleteoldfile2
-msgid "Delete old file?"
-msgstr "古いファイルを削除しますか？"
-
 #: lazarusidestrconsts.lisdeleteselectedmacro
 msgid "Delete selected macro?"
 msgstr "選択したマクロを削除しますか？"
@@ -8744,6 +8736,11 @@ msgstr "行き先のディレクトリ"
 #: lazarusidestrconsts.lisdestructorcode
 msgid "Destructor code"
 msgstr "デストラクタコード"
+
+#: lazarusidestrconsts.lisdfileswererenamedtol
+#, object-pascal-format
+msgid "%d files were renamed to lowercase."
+msgstr ""
 
 #: lazarusidestrconsts.lisdiffdlgcaseinsensitive
 msgid "Case Insensitive"
@@ -13385,6 +13382,10 @@ msgstr "プロジェクトから削除 ..."
 #: lazarusidestrconsts.lismenurenameidentifier
 msgid "Rename Identifier ..."
 msgstr "識別子名を変更 ..."
+
+#: lazarusidestrconsts.lismenurenamelowercase
+msgid "Rename Unit Files to LowerCase ..."
+msgstr ""
 
 #: lazarusidestrconsts.lismenureportingbug
 msgctxt "lazarusidestrconsts.lismenureportingbug"
