@@ -2216,6 +2216,7 @@ var
     AnEntry.TargetFile := '';
     AnEntry.TargetLine := 0;
     if AnInfo.InstrType = itJump then begin
+      AnEntry.IsJump := True;
       {$PUSH}{$R-}{$Q-}
       AnEntry.TargetAddr := ALineAddr + AnInfo.InstrTargetOffs;
       {$POP}
@@ -2231,6 +2232,12 @@ var
           AnEntry.TargetName := AnEntry.TargetName + '+' + IntToStr(AOffset);
         Sym.ReleaseReference;
       end;
+    end
+    else
+    if AnInfo.InstrTargetOffs <> 0 then begin
+      {$PUSH}{$R-}{$Q-}
+      AnEntry.TargetAddr := ALineAddr + AnInfo.InstrTargetOffs;
+      {$POP}
     end;
     ATargetRange.Append(@AnEntry);
     inc(StatIndex);
@@ -2470,8 +2477,9 @@ begin
   for i := 0 to ARegisterList.Count-1 do
     begin
     ARegisterValue := ARegisters.EntriesByName[ARegisterList[i].Name];
-    ARegisterValue.ValueObj.SetAsNum(ARegisterList[i].NumValue, ARegisterList[i].Size);
-    ARegisterValue.ValueObj.SetAsText(ARegisterList[i].StrValue);
+    if ARegisterList[i].Size <= 8 then
+      ARegisterValue.ValueObj.SetAsNum(ARegisterList[i].NumValue, ARegisterList[i].Size);
+    ARegisterValue.ValueObj.SetAsText(ARegisterList[i].StrFormatted[ARegisterValue.DisplayFormat]);
     ARegisterValue.Modified := ARegisterList.IsModified[ARegisterList[i]];
     ARegisterValue.DataValidity:=ddsValid;
     end;

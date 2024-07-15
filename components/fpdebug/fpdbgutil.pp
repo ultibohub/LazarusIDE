@@ -36,12 +36,13 @@ unit FpDbgUtil;
 {$mode objfpc}{$H+}
 {$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 {$IF FPC_Fullversion=30202}{$Optimization NOPEEPHOLE}{$ENDIF}
-
+{$WARN 4066 off : Arithmetic "$1" on untyped pointer is unportable to ?$T+?, suggest typecast}
 interface
 
 uses
-  Classes, SysUtils, fgl, math, LazUTF8, lazCollections,
-  UTF8Process, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, syncobjs;
+  {$IFDEF WINDOWS} Windows, {$ENDIF}
+  Classes, SysUtils, fgl, math, LazUTF8, lazCollections, UTF8Process, LazLoggerBase,
+  DbgIntfDebuggerBase, FpdMemoryTools, LazDebuggerUtils, syncobjs;
 
 type
   TFPDMode = (dm32, dm64);
@@ -65,7 +66,7 @@ type
     EVENT_DONE_INDICATOR = Pointer(1);
   private
     FWorkerItemEventPtr: PPRTLEvent;
-    FState: Cardinal;
+    FState: cardinal;
     FError: Exception;
     FRefCnt: LongInt;
     FStopRequested: Boolean;
@@ -218,6 +219,29 @@ function SLEB128toOrdinal(var p: PByte): Int64;
 
 function ReadUnsignedFromExpression(var CurInstr: Pointer; ASize: Integer): QWord;
 function ReadSignedFromExpression(var CurInstr: Pointer; ASize: Integer): Int64;
+
+type
+  {$IFDEF WINDOWS}
+    {$ifdef cpux86_64}
+    M128A = Windows.TM128A;
+    {$ELSE}
+    M128A = record
+       Low: QWord;
+       High: Int64;
+    end;
+    {$ENDIF}
+  {$ELSE}
+  M128A = record
+     Low: QWord;
+     High: Int64;
+  end;
+  {$ENDIF}
+  PM128A = ^M128A;
+
+function XmmToString(const xmm: M128A): String;
+function YmmToString(const Xmm, Ymm: M128A): String;
+function XmmToFormat(AReg: TDbgRegisterValue; AFormat: TRegisterDisplayFormat = rdDefault): String;
+function YmmToFormat(AReg: TDbgRegisterValue; AFormat: TRegisterDisplayFormat = rdDefault): String;
 
 var
   ProcessMessagesProc: procedure of object; // Application.ProcessMessages, if needed. To be called while waiting.
@@ -443,6 +467,176 @@ begin
   Result := Result + HexStr(i, ASize * 2);
 end;
 
+function XmmToString(const xmm: M128A): String;
+begin
+  Result := format('{"D": [%s, %s], "S": [%s, %s, %s, %s], "I64": [%s, %s], "I32": [%s, %s, %s, %s], "I16": [%s, %s, %s, %s, %s, %s, %s, %s], "I8": [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s]}', [
+    FloatToStr(PDouble(@xmm+0)^), FloatToStr(PDouble(@xmm+8)^),
+
+    FloatToStr(PSingle(@xmm+0)^), FloatToStr(PSingle(@xmm+4)^),
+    FloatToStr(PSingle(@xmm+8)^), FloatToStr(PSingle(@xmm+12)^),
+
+    IntToStr(PInt64(@xmm+0)^), IntToStr(PInt64(@xmm+8)^),
+
+    IntToStr(PInt32(@xmm+0)^), IntToStr(PInt32(@xmm+4)^),
+    IntToStr(PInt32(@xmm+8)^), IntToStr(PInt32(@xmm+12)^),
+
+    IntToStr(Pint16(@xmm+ 0)^), IntToStr(Pint16(@xmm+ 2)^),
+    IntToStr(Pint16(@xmm+ 4)^), IntToStr(Pint16(@xmm+ 6)^),
+    IntToStr(Pint16(@xmm+ 8)^), IntToStr(Pint16(@xmm+10)^),
+    IntToStr(Pint16(@xmm+12)^), IntToStr(Pint16(@xmm+14)^),
+
+    IntToStr(PInt8(@xmm+ 0)^), IntToStr(PInt8(@xmm+ 1)^),
+    IntToStr(PInt8(@xmm+ 2)^), IntToStr(PInt8(@xmm+ 3)^),
+    IntToStr(PInt8(@xmm+ 4)^), IntToStr(PInt8(@xmm+ 5)^),
+    IntToStr(PInt8(@xmm+ 6)^), IntToStr(PInt8(@xmm+ 7)^),
+    IntToStr(PInt8(@xmm+ 8)^), IntToStr(PInt8(@xmm+ 9)^),
+    IntToStr(PInt8(@xmm+10)^), IntToStr(PInt8(@xmm+11)^),
+    IntToStr(PInt8(@xmm+12)^), IntToStr(PInt8(@xmm+13)^),
+    IntToStr(PInt8(@xmm+14)^), IntToStr(PInt8(@xmm+15)^)
+    ]);
+end;
+
+function YmmToString(const Xmm, Ymm: M128A): String;
+begin
+  Result := format('{"D": [%s, %s, %s, %s], "S": [%s, %s, %s, %s, %s, %s, %s, %s], "I64": [%s, %s, %s, %s], "I32": [%s, %s, %s, %s, %s, %s, %s, %s], "I16": [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s], "I8": [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s]}', [
+    FloatToStr(PDouble(@xmm+0)^), FloatToStr(PDouble(@xmm+8)^),
+    FloatToStr(PDouble(@ymm+0)^), FloatToStr(PDouble(@ymm+8)^),
+
+    FloatToStr(PSingle(@xmm+0)^), FloatToStr(PSingle(@xmm+4)^),
+    FloatToStr(PSingle(@xmm+8)^), FloatToStr(PSingle(@xmm+12)^),
+    FloatToStr(PSingle(@ymm+0)^), FloatToStr(PSingle(@ymm+4)^),
+    FloatToStr(PSingle(@ymm+8)^), FloatToStr(PSingle(@ymm+12)^),
+
+    IntToStr(PInt64(@xmm+0)^), IntToStr(PInt64(@xmm+8)^),
+    IntToStr(PInt64(@ymm+0)^), IntToStr(PInt64(@ymm+8)^),
+
+    IntToStr(PInt32(@xmm+0)^), IntToStr(PInt32(@xmm+4)^),
+    IntToStr(PInt32(@xmm+8)^), IntToStr(PInt32(@xmm+12)^),
+    IntToStr(PInt32(@ymm+0)^), IntToStr(PInt32(@ymm+4)^),
+    IntToStr(PInt32(@ymm+8)^), IntToStr(PInt32(@ymm+12)^),
+
+    IntToStr(Pint16(@xmm+ 0)^), IntToStr(Pint16(@xmm+ 2)^),
+    IntToStr(Pint16(@xmm+ 4)^), IntToStr(Pint16(@xmm+ 6)^),
+    IntToStr(Pint16(@xmm+ 8)^), IntToStr(Pint16(@xmm+10)^),
+    IntToStr(Pint16(@xmm+12)^), IntToStr(Pint16(@xmm+14)^),
+    IntToStr(Pint16(@ymm+ 0)^), IntToStr(Pint16(@ymm+ 2)^),
+    IntToStr(Pint16(@ymm+ 4)^), IntToStr(Pint16(@ymm+ 6)^),
+    IntToStr(Pint16(@ymm+ 8)^), IntToStr(Pint16(@ymm+10)^),
+    IntToStr(Pint16(@ymm+12)^), IntToStr(Pint16(@ymm+14)^),
+
+    IntToStr(PInt8(@xmm+ 0)^), IntToStr(PInt8(@xmm+ 1)^),
+    IntToStr(PInt8(@xmm+ 2)^), IntToStr(PInt8(@xmm+ 3)^),
+    IntToStr(PInt8(@xmm+ 4)^), IntToStr(PInt8(@xmm+ 5)^),
+    IntToStr(PInt8(@xmm+ 6)^), IntToStr(PInt8(@xmm+ 7)^),
+    IntToStr(PInt8(@xmm+ 8)^), IntToStr(PInt8(@xmm+ 9)^),
+    IntToStr(PInt8(@xmm+10)^), IntToStr(PInt8(@xmm+11)^),
+    IntToStr(PInt8(@xmm+12)^), IntToStr(PInt8(@xmm+13)^),
+    IntToStr(PInt8(@xmm+14)^), IntToStr(PInt8(@xmm+15)^),
+    IntToStr(PInt8(@ymm+ 0)^), IntToStr(PInt8(@ymm+ 1)^),
+    IntToStr(PInt8(@ymm+ 2)^), IntToStr(PInt8(@ymm+ 3)^),
+    IntToStr(PInt8(@ymm+ 4)^), IntToStr(PInt8(@ymm+ 5)^),
+    IntToStr(PInt8(@ymm+ 6)^), IntToStr(PInt8(@ymm+ 7)^),
+    IntToStr(PInt8(@ymm+ 8)^), IntToStr(PInt8(@ymm+ 9)^),
+    IntToStr(PInt8(@ymm+10)^), IntToStr(PInt8(@ymm+11)^),
+    IntToStr(PInt8(@ymm+12)^), IntToStr(PInt8(@ymm+13)^),
+    IntToStr(PInt8(@ymm+14)^), IntToStr(PInt8(@ymm+15)^)
+    ]);
+
+end;
+
+function XmmToFormat(AReg: TDbgRegisterValue; AFormat: TRegisterDisplayFormat): String;
+var
+  b: Integer;
+  p: String;
+begin
+  b := 10;
+  p := '';
+  case AFormat of
+    rdRaw,
+    rdDefault:
+      exit(XmmToString(PM128A(AReg.Data)^));
+    rdHex:     begin b := 16; p := '$'; end;
+    rdBinary:  begin b :=  2; p := '%'; end;
+    rdOctal:   begin b :=  8; p := '&'; end;
+    rdDecimal: begin b := 10; p := '';  end;
+  end;
+
+  Result := format('{"I64": [%s, %s], "I32": [%s, %s, %s, %s], "I16": [%s, %s, %s, %s, %s, %s, %s, %s], "I8": [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s]}', [
+    p+Dec64ToNumb(PInt64(@AReg.Data+0)^,0,b), p+Dec64ToNumb(PInt64(@AReg.Data+8)^,0,b),
+
+    p+Dec64ToNumb(PInt32(@AReg.Data+0)^,0,b), p+Dec64ToNumb(PInt32(@AReg.Data+4)^,0,b),
+    p+Dec64ToNumb(PInt32(@AReg.Data+8)^,0,b), p+Dec64ToNumb(PInt32(@AReg.Data+12)^,0,b),
+
+    p+Dec64ToNumb(Pint16(@AReg.Data+ 0)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+ 2)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+ 4)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+ 6)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+ 8)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+10)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+12)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+14)^,0,b),
+
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 0)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 1)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 2)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 3)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 4)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 5)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 6)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 7)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 8)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 9)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+10)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+11)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+12)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+13)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+14)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+15)^,0,b)
+    ]);
+end;
+
+function YmmToFormat(AReg: TDbgRegisterValue; AFormat: TRegisterDisplayFormat): String;
+var
+  b: Integer;
+  p: String;
+begin
+  b := 10;
+  p := '';
+  case AFormat of
+    rdRaw,
+    rdDefault:
+      exit(YmmToString(PM128A(AReg.Data)^, PM128A(AReg.Data+16)^));
+    rdHex:     begin b := 16; p := '$'; end;
+    rdBinary:  begin b :=  2; p := '%'; end;
+    rdOctal:   begin b :=  8; p := '&'; end;
+    rdDecimal: begin b := 10; p := '';  end;
+  end;
+
+  Result := format('{"I64": [%s, %s, %s, %s], "I32": [%s, %s, %s, %s, %s, %s, %s, %s], "I16": [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s], "I8": [%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s]}', [
+    p+Dec64ToNumb(PInt64(@AReg.Data+0)^,0,b), p+Dec64ToNumb(PInt64(@AReg.Data+8)^,0,b),
+    p+Dec64ToNumb(PInt64(@AReg.Data+16+0)^,0,b), p+Dec64ToNumb(PInt64(@AReg.Data+16+8)^,0,b),
+
+    p+Dec64ToNumb(PInt32(@AReg.Data+0)^,0,b), p+Dec64ToNumb(PInt32(@AReg.Data+4)^,0,b),
+    p+Dec64ToNumb(PInt32(@AReg.Data+8)^,0,b), p+Dec64ToNumb(PInt32(@AReg.Data+12)^,0,b),
+    p+Dec64ToNumb(PInt32(@AReg.Data+16+0)^,0,b), p+Dec64ToNumb(PInt32(@AReg.Data+16+4)^,0,b),
+    p+Dec64ToNumb(PInt32(@AReg.Data+16+8)^,0,b), p+Dec64ToNumb(PInt32(@AReg.Data+16+12)^,0,b),
+
+    p+Dec64ToNumb(Pint16(@AReg.Data+ 0)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+ 2)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+ 4)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+ 6)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+ 8)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+10)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+12)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+14)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+16+ 0)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+16+ 2)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+16+ 4)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+16+ 6)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+16+ 8)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+16+10)^,0,b),
+    p+Dec64ToNumb(Pint16(@AReg.Data+16+12)^,0,b), p+Dec64ToNumb(Pint16(@AReg.Data+16+14)^,0,b),
+
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 0)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 1)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 2)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 3)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 4)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 5)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 6)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 7)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+ 8)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+ 9)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+10)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+11)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+12)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+13)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+14)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+15)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+ 0)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+ 1)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+ 2)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+ 3)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+ 4)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+ 5)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+ 6)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+ 7)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+ 8)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+ 9)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+10)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+11)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+12)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+13)^,0,b),
+    p+Dec64ToNumb(PInt8(@AReg.Data+16+14)^,0,b), p+Dec64ToNumb(PInt8(@AReg.Data+16+15)^,0,b)
+    ]);
+end;
+
 type
 
   { TFpThreadWorkerTerminateItem }
@@ -545,7 +739,7 @@ end;
 
 destructor TFpGlobalThreadWorkerQueue.Destroy;
 begin
-  Assert(InterLockedExchangeAdd(FRefCnt, 0) = 0);
+  Assert(system.InterLockedExchangeAdd(FRefCnt, 0) = 0);
   inherited Destroy;
 end;
 
@@ -572,12 +766,12 @@ end;
 
 function TFpThreadWorkerItem.GetIsDone: Boolean;
 begin
-  Result := InterLockedExchangeAdd(FState, 0) = TWSTATE_DONE;
+  Result := system.InterLockedExchangeAdd(FState, 0) = TWSTATE_DONE;
 end;
 
 function TFpThreadWorkerItem.GetIsCancelled: Boolean;
 begin
-  Result := InterLockedExchangeAdd(FState, 0) = TWSTATE_CANCEL;
+  Result := system.InterLockedExchangeAdd(FState, 0) = TWSTATE_CANCEL;
 end;
 
 procedure TFpThreadWorkerItem.DoExecute;
@@ -587,7 +781,7 @@ end;
 
 procedure TFpThreadWorkerItem.DoFinished;
 begin
-  if InterLockedExchangeAdd(FRefCnt, 0) <= 0 then
+  if system.InterLockedExchangeAdd(FRefCnt, 0) <= 0 then
     Destroy;
 end;
 
@@ -601,7 +795,7 @@ var
   OldState: Cardinal;
   Evnt: PPRTLEvent;
 begin
-  OldState := InterlockedCompareExchange(FState, TWSTATE_RUNNING, TWSTATE_NEW);
+  OldState := system.InterlockedCompareExchange(FState, TWSTATE_RUNNING, TWSTATE_NEW);
   DebugLn(FLogGroup, '%s!%s Executing WorkItem: %s "%s" StopRequested=%s', [dbgsThread, DbgSTime, dbgsWorkItemState(OldState), DebugText, dbgs(StopRequested)]);
 
   if (OldState in [TWSTATE_NEW, TWSTATE_WAIT_WORKER]) then begin
@@ -612,18 +806,18 @@ begin
         DoExecute;
     finally
       DebugLnExit(FLogGroup);
-      OldState := InterLockedExchange(FState, TWSTATE_DONE);
+      OldState := system.InterLockedExchange(FState, TWSTATE_DONE);
       if (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER, TWSTATE_CANCEL]) then begin
         // The FState is in TWSTATE_WAIT___ or TWSTATE_CANCEL
         // => so the event will exist, until it returned from RTLEventWaitFor
         // It is save to access
-        Evnt := InterlockedExchange(FWorkerItemEventPtr, EVENT_DONE_INDICATOR);
+        Evnt := system.InterlockedExchange(FWorkerItemEventPtr, EVENT_DONE_INDICATOR);
         if Evnt <> nil then
           RTLEventSetEvent(Evnt^);
       end
       else
       // If other threads have a ref, they may call WaitForFinish and read data from this.
-      if (InterLockedExchangeAdd(FRefCnt, 0) > 1) then
+      if (system.InterLockedExchangeAdd(FRefCnt, 0) > 1) then
         WriteBarrier;
       DebugLn(FLogGroup, '%s!%s Finished WorkItem: %s "%s" StopRequested=%s', [dbgsThread, DbgSTime, dbgsWorkItemState(OldState), DebugText, dbgs(StopRequested)]);
     end;
@@ -641,7 +835,7 @@ begin
        belongs to the thread, until it has been waited for
      - If there is an ExistingEvnt, it must be SET once our event was waited for.
   *)
-  ExistingEvnt := InterlockedExchange(FWorkerItemEventPtr, AnEvntPtr);
+  ExistingEvnt := system.InterlockedExchange(FWorkerItemEventPtr, AnEvntPtr);
 
   if ExistingEvnt <> nil then begin
     // Someone is already waiting for this Item
@@ -672,7 +866,7 @@ var
   ExistingEvntPtr: PPRTLEvent;
 begin
   Result := False;
-  ExistingEvntPtr := InterlockedExchange(FWorkerItemEventPtr, EVENT_DONE_INDICATOR);
+  ExistingEvntPtr := system.InterlockedExchange(FWorkerItemEventPtr, EVENT_DONE_INDICATOR);
   if (ExistingEvntPtr <> nil) and (ExistingEvntPtr^ <> nil) and (ExistingEvntPtr^ <> AnEvnt) then begin    // Some one else is waiting
     RTLEventSetEvent(ExistingEvntPtr^);
     RTLEventWaitFor(AnEvnt);
@@ -717,7 +911,7 @@ begin
   *)
 
   if AWaitForExecInThread then begin
-    OldState := InterlockedExchange(FState, TWSTATE_WAIT_WORKER);
+    OldState := system.InterlockedExchange(FState, TWSTATE_WAIT_WORKER);
     DebugLn(FLogGroup, '%s!%s WaitForFinish (WITH exe): %s "%s" StopRequested=%s', [dbgsThread, DbgSTime, dbgsWorkItemState(OldState), DebugText, dbgs(StopRequested)]);
     assert(not (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER, TWSTATE_CANCEL]), 'TFpThreadWorkerItem.WaitForFinish: not (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER, TWSTATE_CANCEL])');
     if (OldState in [TWSTATE_NEW, TWSTATE_RUNNING]) then begin
@@ -734,13 +928,13 @@ begin
   end
   else
   begin
-    OldState := InterlockedExchange(FState, TWSTATE_WAITING);
+    OldState := system.InterlockedExchange(FState, TWSTATE_WAITING);
     DebugLn(FLogGroup, '%s!%s WaitForFinish (NO exe): %s "%s" StopRequested=%s', [dbgsThread, DbgSTime, dbgsWorkItemState(OldState), DebugText, dbgs(StopRequested)]);
     assert(not (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER, TWSTATE_CANCEL]), 'TFpThreadWorkerItem.WaitForFinish: not (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER, TWSTATE_CANCEL])');
     if OldState = TWSTATE_NEW then begin
       DoExecute;
 
-      InterLockedExchange(FState, TWSTATE_DONE);
+      system.InterLockedExchange(FState, TWSTATE_DONE);
       MaybeWaitForEvent(Evnt);
     end
     else
@@ -789,7 +983,7 @@ begin
   *)
 
 
-  OldState := InterLockedExchange(FState, TWSTATE_CANCEL); // Prevent thread form executing this
+  OldState := system.InterLockedExchange(FState, TWSTATE_CANCEL); // Prevent thread form executing this
   Debugln(FLogGroup, '%s!%s WaitForCancel: %s "%s"', [dbgsThread, DbgSTime, dbgsWorkItemState(OldState), DebugText]);
   assert(not (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER]), 'TFpThreadWorkerItem.WaitForCancel: not (OldState in [TWSTATE_WAITING, TWSTATE_WAIT_WORKER])');
   if OldState = TWSTATE_RUNNING then begin
@@ -827,13 +1021,13 @@ end;
 
 function TFpThreadWorkerItem.RefCount: Integer;
 begin
-  Result := InterLockedExchangeAdd(FRefCnt, 0);
+  Result := system.InterLockedExchangeAdd(FRefCnt, 0);
 end;
 
 procedure TFpThreadWorkerItem.RequestStop;
 begin
   FStopRequested := True;
-  InterlockedCompareExchange(FState, TWSTATE_CANCEL, TWSTATE_NEW); // if not running, then WaitForcancel
+  system.InterlockedCompareExchange(FState, TWSTATE_CANCEL, TWSTATE_NEW); // if not running, then WaitForcancel
 end;
 
 function TFpThreadWorkerItem.DebugText: String;
@@ -946,17 +1140,17 @@ end;
 
 function TFpThreadWorkerQueue.GetCurrentCount: Integer;
 begin
-  Result := InterLockedExchangeAdd(FCurrentCount, 0);
+  Result := system.InterLockedExchangeAdd(FCurrentCount, 0);
 end;
 
 function TFpThreadWorkerQueue.GetIdleThreadCount: integer;
 begin
-  Result := InterLockedExchangeAdd(FIdleThreadCount, 0);
+  Result := system.InterLockedExchangeAdd(FIdleThreadCount, 0);
 end;
 
 function TFpThreadWorkerQueue.GetWantedCount: Integer;
 begin
-  Result := InterLockedExchangeAdd(FWantedCount, 0);
+  Result := system.InterLockedExchangeAdd(FWantedCount, 0);
 end;
 
 procedure TFpThreadWorkerQueue.SetThreadCount(AValue: integer);
@@ -968,7 +1162,7 @@ begin
   {$ENDIF}
   FThreadMonitor.Enter;
   try
-    InterLockedExchange(FWantedCount, AValue);
+    system.InterLockedExchange(FWantedCount, AValue);
     FWantedCount := AValue;
 
     c := FWorkerThreadList.Count;
@@ -977,14 +1171,14 @@ begin
         dec(c);
         PushItem(TFpThreadWorkerTerminateItem.Create); // will terminate one thread, if no more work is to be done
       end;
-      InterLockedExchange(FCurrentCount, FWorkerThreadList.Count);
+      system.InterLockedExchange(FCurrentCount, FWorkerThreadList.Count);
     end
 
     else
     begin
       // increase
       FWorkerThreadList.Count := AValue;
-      InterLockedExchange(FCurrentCount, AValue);
+      system.InterLockedExchange(FCurrentCount, AValue);
       while c < AValue do begin
         FWorkerThreadList[c] := TFpWorkerThread.Create(Self);
         inc(c);
@@ -997,7 +1191,7 @@ end;
 
 function TFpThreadWorkerQueue.GetRtlEvent: PRTLEvent;
 begin
-  Result := InterlockedExchange(FMainWaitEvent, nil);
+  Result := system.InterlockedExchange(FMainWaitEvent, nil);
   if Result = nil then
     Result := RTLEventCreate;
 end;
@@ -1006,7 +1200,7 @@ procedure TFpThreadWorkerQueue.FreeRtrEvent(AnEvent: PRTLEvent);
 begin
   assert(AnEvent <> nil, 'TFpThreadWorkerQueue.FreeRtrEvent: AnEvent <> nil');
   RTLEventResetEvent(AnEvent);
-  AnEvent := InterlockedExchange(FMainWaitEvent, AnEvent);
+  AnEvent := system.InterlockedExchange(FMainWaitEvent, AnEvent);
   if AnEvent <> nil then
     RTLEventDestroy(AnEvent);
 end;
@@ -1016,7 +1210,7 @@ begin
   FThreadMonitor.Enter;
   try
     FWorkerThreadList.Remove(Item);
-    InterLockedExchange(FCurrentCount, FWorkerThreadList.Count);
+    system.InterLockedExchange(FCurrentCount, FWorkerThreadList.Count);
   finally
     FThreadMonitor.Leave;
   end;

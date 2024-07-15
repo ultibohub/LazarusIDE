@@ -6,14 +6,6 @@ unit FpDbgLinuxClasses;
 {$modeswitch advancedrecords}
 {off $define DebuglnLinuxDebugEvents}
 
-// New FPC 331 TProcess to allow StdIn/StdOut redirection
-{$UnDef HAS_NEW_PROCESS}{$UnDef USES_NEW_PROCESS}
-{$IF FPC_Fullversion>=30301} {$define HAS_NEW_PROCESS}
-{$ELSE}
-{$IFDEF WINDOWS} {$define USES_NEW_PROCESS} {$define HAS_NEW_PROCESS} {$ENDIF}
-{$IFDEF LINUX}    {$define USES_NEW_PROCESS} {$define HAS_NEW_PROCESS} {$ENDIF}
-{$ENDIF}
-
 interface
 
 uses
@@ -273,6 +265,8 @@ type
 
   TDbgLinuxThread = class(TDbgx86Thread)
   private
+    FFpRegs: user_fpxregs_struct32;
+    FFpRegsAvail: Boolean;
     FUserRegs: TUserRegs;
     FStoredUserRegs: TUserRegs;
     FUserRegsChanged: boolean;
@@ -494,26 +488,19 @@ begin
     if FpSetsid <> -1 then
       FpIOCtl(ConsoleTtyFd, TIOCSCTTY, nil);
 
-    {$IFDEF HAS_NEW_PROCESS}
     if Config.StdInRedirFile = '' then begin
+      //if DBG_PROCESS_HAS_REDIRECT then ????????????
       FpClose(0);
-      {$ENDIF}
       FpDup2(ConsoleTtyFd,0);
-    {$IFDEF HAS_NEW_PROCESS}
     end;
     if Config.StdOutRedirFile = '' then begin
       FpClose(1);
-      {$ENDIF}
       FpDup2(ConsoleTtyFd,1);
-    {$IFDEF HAS_NEW_PROCESS}
     end;
     if Config.StdErrRedirFile = '' then begin
       FpClose(2);
-      {$ENDIF}
       FpDup2(ConsoleTtyFd,2);
-    {$IFDEF HAS_NEW_PROCESS}
     end;
-    {$ENDIF}
     FpClose(ConsoleTtyFd);
   end
   else
@@ -598,6 +585,7 @@ begin
   result := true;
   if FHasThreadState then
     exit;
+  FFpRegsAvail:=False;
   io.iov_base:=@(FUserRegs.regs32[0]);
   io.iov_len:= sizeof(FUserRegs);
   if fpPTrace(PTRACE_GETREGSET, ID, pointer(PtrUInt(NT_PRSTATUS)), @io) <> 0 then
@@ -609,6 +597,13 @@ begin
   FRegisterValueListValid:=false;
   FHasThreadState := Result;
   FHasResetInstructionPointerAfterBreakpoint := False;
+
+  io.iov_base:=@FFpRegs;
+  io.iov_len:= sizeof(FFpRegs);
+  if fpPTrace(PTRACE_GETREGSET, ID, pointer(PtrUInt(NT_PRFPREG)), @io) = 0 then
+    FFpRegsAvail:=True
+  else
+    DebugLn(DBG_WARNINGS, 'Failed to read thread registers from threadid '+inttostr(ID)+'. Errcode: '+inttostr(fpgeterrno));
 end;
 
 function TDbgLinuxThread.RequestInternalPause: Boolean;
@@ -839,6 +834,38 @@ begin
     FRegisterValueList.DbgRegisterAutoCreate['cs'].SetValue(FUserRegs.regs64[cs], IntToStr(FUserRegs.regs64[cs]),8,43);
     FRegisterValueList.DbgRegisterAutoCreate['fs'].SetValue(FUserRegs.regs64[fs], IntToStr(FUserRegs.regs64[fs]),8,46);
     FRegisterValueList.DbgRegisterAutoCreate['gs'].SetValue(FUserRegs.regs64[gs], IntToStr(FUserRegs.regs64[gs]),8,47);
+
+    if FFpRegsAvail then begin
+      FRegisterValueList.DbgRegisterAutoCreate['st0'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 0*4])^),10,500);
+      FRegisterValueList.DbgRegisterAutoCreate['st1'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 1*4])^),10,501);
+      FRegisterValueList.DbgRegisterAutoCreate['st2'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 2*4])^),10,502);
+      FRegisterValueList.DbgRegisterAutoCreate['st3'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 3*4])^),10,503);
+      FRegisterValueList.DbgRegisterAutoCreate['st4'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 4*4])^),10,504);
+      FRegisterValueList.DbgRegisterAutoCreate['st5'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 5*4])^),10,505);
+      FRegisterValueList.DbgRegisterAutoCreate['st6'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 6*4])^),10,506);
+      FRegisterValueList.DbgRegisterAutoCreate['st7'].SetValue(0, FloatToStr(PExtended(@FFpRegs.st_space[ 7*4])^),10,507);
+
+      FRegisterValueList.DbgRegisterAutoCreate['fctrl'].SetValue(FFpRegs.cwd, IntToStr(FFpRegs.cwd),2,510);
+      FRegisterValueList.DbgRegisterAutoCreate['fstat'].SetValue(FFpRegs.swd, IntToStr(FFpRegs.swd),2,511);
+      FRegisterValueList.DbgRegisterAutoCreate['ftwd'].SetValue(FFpRegs.twd, IntToStr(FFpRegs.twd),2,512);
+      FRegisterValueList.DbgRegisterAutoCreate['fop'].SetValue(FFpRegs.fop, IntToStr(FFpRegs.fop),2,513);
+      FRegisterValueList.DbgRegisterAutoCreate['fcs'].SetValue(FFpRegs.fcs, IntToStr(FFpRegs.fcs),4,514);
+      FRegisterValueList.DbgRegisterAutoCreate['fip'].SetValue(FFpRegs.fip, IntToStr(FFpRegs.fip),4,515);
+      FRegisterValueList.DbgRegisterAutoCreate['foo'].SetValue(FFpRegs.foo, IntToStr(FFpRegs.foo),4,516);
+      FRegisterValueList.DbgRegisterAutoCreate['fos'].SetValue(FFpRegs.fos, IntToStr(FFpRegs.fos),4,517);
+
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm0' ].SetValue(@FFpRegs.xmm_space[0*4],16,600, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm1' ].SetValue(@FFpRegs.xmm_space[1*4],16,601, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm2' ].SetValue(@FFpRegs.xmm_space[2*4],16,602, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm3' ].SetValue(@FFpRegs.xmm_space[3*4],16,603, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm4' ].SetValue(@FFpRegs.xmm_space[4*4],16,604, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm5' ].SetValue(@FFpRegs.xmm_space[5*4],16,605, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm6' ].SetValue(@FFpRegs.xmm_space[6*4],16,606, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm7' ].SetValue(@FFpRegs.xmm_space[7*4],16,607, @XmmToFormat);
+
+      FRegisterValueList.DbgRegisterAutoCreate['mxcsr'].SetValue(FFpRegs.fos, IntToStr(FFpRegs.mxcsr),4,620);
+
+    end;
   end;
   FRegisterValueListValid:=true;
 end;

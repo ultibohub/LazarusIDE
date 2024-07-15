@@ -546,6 +546,8 @@ begin
            @mnuOpenFile);
 end;
 
+// Variables and functions used by TMainIDEBase
+
 {$IFDEF LCLCocoa}
 var
   mnuApple: TIDEMenuSection = nil;
@@ -553,12 +555,89 @@ var
   itmApplePref: TIDEMenuSection;
 {$ENDIF}
 
+function FormCaptionOrName(aForm: TCustomForm): string;
+begin
+  if IsFormDesign(AForm)
+  and (AForm.ClassName <> 'TFrameProxyDesignerForm')        // frame
+  and (AForm.ClassName <> 'TNonControlProxyDesignerForm')   // datamodule
+  and EnvironmentGuiOpts.Desktop.IDENameForDesignedFormList
+  then
+    Result := AForm.Name
+  else
+    Result := AForm.Caption;
+end;
+
 function FormMatchesCmd(aForm: TCustomForm; aCmd: TIDEMenuCommand): Boolean;
 begin
-  if EnvironmentGuiOpts.Desktop.IDENameForDesignedFormList and IsFormDesign(aForm) then
-    Result := aForm.Name = aCmd.Caption
+  Result := aCmd.Caption = FormCaptionOrName(aForm);
+end;
+
+procedure InitMenuItem(AMenuItem: TIDEMenuItem; AForm: TCustomForm; AIcon: Integer);
+begin
+  AMenuItem.ImageIndex := AIcon;
+  AMenuItem.Caption := FormCaptionOrName(aForm);
+  AMenuItem.UserTag := {%H-}PtrUInt(AForm);
+end;
+
+function GetMenuItem(Index: Integer; ASection: TIDEMenuSection): TIDEMenuItem;
+begin
+  Result := RegisterIDEMenuCommand(ASection,'Window'+IntToStr(Index)+ASection.Name,'');
+  Result.CreateMenuItem;
+end;
+
+function GetIconIndex(AForm: TWinControl): Integer;
+begin
+  if csDesigning in AForm.ComponentState then             // in designer
+    case AForm.ClassName of
+      'TFrameProxyDesignerForm':
+        Exit(IDEImages.GetImageIndex('frame_designer'));      // frame
+      'TNonControlProxyDesignerForm':
+        Exit(IDEImages.GetImageIndex('datamodule_designer')); // datamodule
+    else
+      Exit(IDEImages.GetImageIndex('form_designer'));         // own form class (TForm1, TForm2, etc.)
+    end;
+
+  with MainIDEBar do
+  case AForm.ClassName of
+    'TObjectInspectorDlg':     Exit(itmViewInspector.ImageIndex);
+    'TSourceNotebook':         Exit(itmViewSourceEditor.ImageIndex);
+    'TMessagesView':           Exit(itmViewMessage.ImageIndex);
+    'TCodeExplorerView':       Exit(itmViewCodeExplorer.ImageIndex);
+    'TFPDocEditor':            Exit(-1);                      // for future icon
+    'TCodeBrowserView':        Exit(itmViewCodeBrowser.ImageIndex);
+    'TUnitDependenciesWindow': Exit(-1);                      // for future icon
+    'TRestrictionBrowserView': Exit(itmViewRestrictionBrowser.ImageIndex);
+    'TComponentListForm':      Exit(itmViewComponents.ImageIndex);
+    'TJumpHistoryViewWin':     Exit(itmJumpHistory.ImageIndex);
+    'TMacroListView':          Exit(-1);                      // for future icon
+    'TTabOrderDialog':         Exit(itmViewTabOrder.ImageIndex);
+    'TSearchResultsView':      Exit(itmViewSearchResults.ImageIndex);
+    'TWatchesDlg':             Exit(itmViewWatches.ImageIndex);
+    'TBreakPointsDlg':         Exit(itmViewBreakPoints.ImageIndex);
+    'TLocalsDlg':              Exit(-1);                      // for future icon
+    'TRegistersDlg':           Exit(-1);                      // for future icon
+    'TCallStackDlg':           Exit(itmViewCallStack.ImageIndex);
+    'TThreadsDlg':             Exit(-1);                      // for future icon
+    'TAssemblerDlg':           Exit(itmViewAssembler.ImageIndex);
+    'TDbgEventsForm':          Exit(-1);                      // for future icon
+    'THistoryDialog':          Exit(-1);                      // for future icon
+    'TDbgOutputForm':          Exit(itmViewDebugOutput.ImageIndex);
+    'TProjectInspectorForm':   Exit(itmProjectInspector.ImageIndex);
+    'TPkgGraphExplorerDlg':    Exit(itmPkgPkgGraph.ImageIndex);
+    'TPackageEditorForm':      Exit(IDEImages.GetImageIndex('item_package'));
+    'TDSFieldsEditorFrm':               Exit(-1);             // for future icon
+    'TDBGridColumnsPropertyEditorForm': Exit(-1);             // for future icon
+    'TActionListEditor':                Exit(-1);             // for future icon
+    'TCollectionPropertyEditorForm':    Exit(-1);             // for future icon
+    'TSeriesEditorForm':                Exit(-1);             // for future icon
+    // In packages, may not be installed:
+    'TProjectGroupEditorForm': Exit(IDEImages.GetImageIndex('pg_item'));
+    'THeapTrcViewForm':        Exit(-1);                      // for future icon
+    'TIDETodoWindow':          Exit(IDEImages.GetImageIndex('menu_view_todo'));
+    'TAnchorDesigner':         Exit(IDEImages.GetImageIndex('menu_view_anchor_editor'));
   else
-    Result := aForm.Caption = aCmd.Caption;
+    Exit(-1);
+  end;
 end;
 
 { TMainIDEBase }
@@ -1470,86 +1549,6 @@ function TMainIDEBase.DoOpenMacroFile(Sender: TObject; const AFilename: string
 begin
   Result:=DoOpenEditorFile(AFilename,-1,-1,
                   [ofOnlyIfExists,ofAddToRecent,ofRegularFile,ofConvertMacros]);
-end;
-
-function GetIconIndex(AForm: TWinControl): Integer;
-begin
-  if csDesigning in AForm.ComponentState then             // in designer
-    case AForm.ClassName of
-      'TFrameProxyDesignerForm':
-        Exit(IDEImages.GetImageIndex('frame_designer'));      // frame
-      'TNonControlProxyDesignerForm':
-        Exit(IDEImages.GetImageIndex('datamodule_designer')); // datamodule
-    else
-      Exit(IDEImages.GetImageIndex('form_designer'));         // own form class (TForm1, TForm2, etc.)
-    end;
-
-  with MainIDEBar do
-  case AForm.ClassName of
-    'TObjectInspectorDlg':     Exit(itmViewInspector.ImageIndex);
-    'TSourceNotebook':         Exit(itmViewSourceEditor.ImageIndex);
-    'TMessagesView':           Exit(itmViewMessage.ImageIndex);
-    'TCodeExplorerView':       Exit(itmViewCodeExplorer.ImageIndex);
-    'TFPDocEditor':            Exit(-1);                      // for future icon
-    'TCodeBrowserView':        Exit(itmViewCodeBrowser.ImageIndex);
-    'TUnitDependenciesWindow': Exit(-1);                      // for future icon
-    'TRestrictionBrowserView': Exit(itmViewRestrictionBrowser.ImageIndex);
-    'TComponentListForm':      Exit(itmViewComponents.ImageIndex);
-    'TJumpHistoryViewWin':     Exit(itmJumpHistory.ImageIndex);
-    'TMacroListView':          Exit(-1);                      // for future icon
-    'TTabOrderDialog':         Exit(itmViewTabOrder.ImageIndex);
-    'TSearchResultsView':      Exit(itmViewSearchResults.ImageIndex);
-    'TWatchesDlg':             Exit(itmViewWatches.ImageIndex);
-    'TBreakPointsDlg':         Exit(itmViewBreakPoints.ImageIndex);
-    'TLocalsDlg':              Exit(-1);                      // for future icon
-    'TRegistersDlg':           Exit(-1);                      // for future icon
-    'TCallStackDlg':           Exit(itmViewCallStack.ImageIndex);
-    'TThreadsDlg':             Exit(-1);                      // for future icon
-    'TAssemblerDlg':           Exit(itmViewAssembler.ImageIndex);
-    'TDbgEventsForm':          Exit(-1);                      // for future icon
-    'THistoryDialog':          Exit(-1);                      // for future icon
-    'TDbgOutputForm':          Exit(itmViewDebugOutput.ImageIndex);
-    'TProjectInspectorForm':   Exit(itmProjectInspector.ImageIndex);
-    'TPkgGraphExplorerDlg':    Exit(itmPkgPkgGraph.ImageIndex);
-    'TPackageEditorForm':      Exit(IDEImages.GetImageIndex('item_package'));
-    'TDSFieldsEditorFrm':               Exit(-1);             // for future icon
-    'TDBGridColumnsPropertyEditorForm': Exit(-1);             // for future icon
-    'TActionListEditor':                Exit(-1);             // for future icon
-    'TCollectionPropertyEditorForm':    Exit(-1);             // for future icon
-    'TSeriesEditorForm':                Exit(-1);             // for future icon
-    // In packages, may not be installed:
-    'TProjectGroupEditorForm': Exit(IDEImages.GetImageIndex('pg_item'));
-    'THeapTrcViewForm':        Exit(-1);                      // for future icon
-    'TIDETodoWindow':          Exit(IDEImages.GetImageIndex('menu_view_todo'));
-    'TAnchorDesigner':         Exit(IDEImages.GetImageIndex('menu_view_anchor_editor'));
-  else
-    Exit(-1);
-  end;
-end;
-
-function GetMenuItem(Index: Integer; ASection: TIDEMenuSection): TIDEMenuItem;
-begin
-  Result := RegisterIDEMenuCommand(ASection,'Window'+IntToStr(Index)+ASection.Name,'');
-  Result.CreateMenuItem;
-end;
-
-procedure InitMenuItem(AMenuItem: TIDEMenuItem; AForm: TCustomForm; AIcon: Integer);
-begin
-  AMenuItem.ImageIndex := AIcon;
-  if not IsFormDesign(AForm) then
-    AMenuItem.Caption := AForm.Caption
-  else
-    case AForm.ClassName of
-      'TFrameProxyDesignerForm',         // frame
-      'TNonControlProxyDesignerForm':    // datamodule
-          AMenuItem.Caption := AForm.Caption;
-    else                                 // form
-      if EnvironmentGuiOpts.Desktop.IDENameForDesignedFormList then
-        AMenuItem.Caption := AForm.Name+' - Designer'
-      else
-        AMenuItem.Caption := AForm.Caption+' - Designer';
-    end;
-  AMenuItem.UserTag := {%H-}PtrUInt(AForm);
 end;
 
 procedure TMainIDEBase.UpdateWindowMenu;

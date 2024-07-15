@@ -76,7 +76,7 @@ uses
   {$IFDEF LCLWin} Win32Proc, {$ENDIF}
   {$IFDEF LCLCocoa} CocoaMenus, {$ENDIF}
   // SynEdit
-  SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter,
+  SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter, SynHighlighterPas,
   // BuildIntf
   BaseIDEIntf, MacroIntf, NewItemIntf, IDEExternToolIntf, LazMsgWorker,
   PackageIntf, ProjectIntf, CompOptsIntf, IDEOptionsIntf, ComponentReg,
@@ -4055,10 +4055,13 @@ var
   Editable, SelEditable: Boolean;
   SelAvail, DesignerCanCopy: Boolean;
   SrcEditorActive, DsgEditorActive: Boolean;
-  IdentFound, StringFound: Boolean;
+  IdentFound, StringFound, cont: Boolean;
   ActiveDesigner: TComponentEditorDesigner;
-  CurWordAtCursor: string;
+  CurWordAtCursor, TokenTxt: string;
   FindDeclarationCmd: TIDECommand;
+  i, TokenType, Start: Integer;
+  Attri: TSynHighlighterAttributes;
+  xy: TPoint;
 begin
   GetCurrentUnit(ASrcEdit, AnUnitInfo);
   ActiveDesigner := GetActiveDesignerSkipMainBar;
@@ -4072,17 +4075,45 @@ begin
   SrcEditorActive := DisplayState = dsSource;
   DsgEditorActive := DisplayState = dsForm;
 
+  IdentFound := False;
+  StringFound := False;
   if ASrcEdit<>nil then
   begin
     CurWordAtCursor := ASrcEdit.GetWordAtCurrentCaret;
-    //it is faster to get information from SynEdit than from CodeTools
-    ASrcEdit.EditorComponent.CaretAtIdentOrString(ASrcEdit.EditorComponent.CaretXY,
-                                                  IdentFound, StringFound);
+
+    if ASrcEdit.EditorComponent.Highlighter is TSynPasSyn then begin
+      xy := ASrcEdit.EditorComponent.CaretXY;
+      cont := False;
+      if xy.X > 1 then begin
+        dec(xy.x); // look at the very end of the token
+        ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
+          TokenTxt, TokenType, Start, Attri);
+        inc(xy.x);
+        if Start + Length(TokenTxt) = xy.X then begin
+          IdentFound := TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString];
+          StringFound := TtkTokenKind(TokenType) = tkString;
+        end;
+        cont := True;
+      end;
+      if not (IdentFound or StringFound) then begin
+        ASrcEdit.EditorComponent.GetHighlighterAttriAtRowColEx(xy,
+          TokenTxt, TokenType, Start, Attri, cont);
+        IdentFound := TtkTokenKind(TokenType) in [tkAsm, tkComment, tkIdentifier, tkString];
+        StringFound := TtkTokenKind(TokenType) = tkString;
+      end;
+    end;
+
+    if IdentFound then begin
+      IdentFound := (CurWordAtCursor <> '') and (CurWordAtCursor[1] in ['A'..'Z', 'a'..'z', '_']);
+      i := 2;
+      while IdentFound and (i <= Length(CurWordAtCursor)) do begin
+        IdentFound := CurWordAtCursor[i] in ['A'..'Z', 'a'..'z', '_', '0'..'9'];
+        inc(i);
+      end;
+    end;
   end
   else begin
     CurWordAtCursor := '';
-    IdentFound := False;
-    StringFound := False;
   end;
 
   if Assigned(ActiveDesigner) then
@@ -13708,7 +13739,8 @@ begin
     end else begin
       DebugLn(['Error: (lazarus) TMainIDE.PropHookCreateMethod failed adding method "'+ShortMethodName+'" to source']);
       DoJumpToCodeToolBossError;
-      raise Exception.Create(lisUnableToCreateNewMethod+' '+lisPleaseFixTheErrorInTheMessageWindow);
+      //Firing the exception twice + its handling message dialog causes high CPU load. Issue #41019.
+      //raise Exception.Create(lisUnableToCreateNewMethod+' '+lisPleaseFixTheErrorInTheMessageWindow);
     end;
   finally
     OpenEditorsOnCodeToolChange:=OldChange;
@@ -13759,7 +13791,7 @@ begin
   end else begin
     DebugLn(['Error: (lazarus) TMainIDE.PropHookShowMethod failed finding the method in code']);
     DoJumpToCodeToolBossError;
-    raise Exception.Create(lisUnableToShowMethod+' '+lisPleaseFixTheErrorInTheMessageWindow);
+    //raise Exception.Create(lisUnableToShowMethod+' '+lisPleaseFixTheErrorInTheMessageWindow);
   end;
 end;
 

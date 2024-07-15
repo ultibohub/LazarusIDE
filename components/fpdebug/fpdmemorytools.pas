@@ -26,8 +26,9 @@ unit FpdMemoryTools;
 interface
 
 uses
-  Classes, SysUtils, math, DbgIntfBaseTypes, FpErrorMessages, LazClasses,
-  AVL_Tree, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif};
+  Classes, SysUtils, math, DbgIntfBaseTypes, DbgIntfDebuggerBase, FpErrorMessages, LazClasses,
+  AVL_Tree, LazDebuggerUtils,
+  {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif};
 
 const
   MINIMUM_MEMREAD_LIMIT = 1024;
@@ -77,6 +78,39 @@ type
   TByteDynArray = array of Byte;
 
   TFpDbgMemModel = class;
+
+  { TDbgRegisterValue }
+
+  TDbgRegisterValue = class;
+  TRegisterFormatterProc = function(AReg: TDbgRegisterValue; AFormat: TRegisterDisplayFormat = rdDefault): String;
+
+  TDbgRegisterValue = class
+  private
+    FDwarfIdx: cardinal;
+    FName: string;
+    FNumValue: TDBGPtr;
+    FSize: byte;
+    FMem: Pointer;
+    FStrValue: string;
+    FFormatter: TRegisterFormatterProc;
+    function GetStrFormatted(AFormat: TRegisterDisplayFormat): string;
+    function GetStrValue: string;
+  public
+    constructor Create(const AName: String);
+    destructor Destroy; override;
+    procedure Assign(ASource: TDbgRegisterValue);
+    function HasEqualVal(AnOther: TDbgRegisterValue): Boolean;
+    procedure SetValue(ANumValue: TDBGPtr; const AStrValue: string; ASize: byte; ADwarfIdx: cardinal);
+    procedure SetValue(const AData: Pointer; ASize: byte; ADwarfIdx: cardinal; AFormatter: TRegisterFormatterProc);
+    procedure Setx86EFlagsValue(ANumValue: TDBGPtr);
+    property Name: string read FName;
+    property NumValue: TDBGPtr read FNumValue;
+    property StrValue: string read GetStrValue;
+    property StrFormatted[AFormat: TRegisterDisplayFormat]: string read GetStrFormatted;
+    property Size: byte read FSize;
+    property Data: Pointer read FMem;
+    property DwarfIdx: cardinal read FDwarfIdx;
+  end;
 
   { TFpDbgLocationContext }
 
@@ -185,6 +219,8 @@ type
 
     function ReadString(const ALocation: TFpDbgMemLocation; ALen: Int64; out AValue: RawByteString; AnIgnoreMaxStringLen: boolean = False): Boolean;
     function ReadWString(const ALocation: TFpDbgMemLocation; ALen: Int64; out AValue: WideString; AnIgnoreMaxStringLen: boolean = False): Boolean;
+
+    function GetRegister(const ARegNum: Cardinal): TDbgRegisterValue;
   end;
 
 
@@ -207,6 +243,7 @@ type
     function WriteRegister(ARegNum: Cardinal; const AValue: TDbgPtr; AContext: TFpDbgLocationContext): Boolean; virtual; abstract;
     function RegisterSize(ARegNum: Cardinal): Integer; virtual; abstract;
     function RegisterNumber(ARegName: String; out ARegNum: Cardinal): Boolean; virtual; abstract;
+    function GetRegister(const ARegNum: Cardinal; AContext: TFpDbgLocationContext): TDbgRegisterValue; virtual; abstract;
     // Registernum from name
   end;
 
@@ -989,6 +1026,112 @@ begin
   WriteStr(Result, AReadDataType);
 end;
 
+{ TDbgRegisterValue }
+
+function TDbgRegisterValue.GetStrFormatted(AFormat: TRegisterDisplayFormat): string;
+begin
+  if FFormatter <> nil then
+    exit(FFormatter(Self, AFormat));
+  if FStrValue <> '' then
+    exit(FStrValue);
+
+  case AFormat of
+    rdDefault: Result := IntToStr(FNumValue);
+    rdHex:     Result := '$'+Dec64ToNumb(FNumValue, 0, 16);
+    rdBinary:  Result := '%'+Dec64ToNumb(FNumValue, 0, 2);
+    rdOctal:   Result := '&'+Dec64ToNumb(FNumValue, 0, 8);
+    rdDecimal: Result := IntToStr(FNumValue);
+    rdRaw:     Result := IntToStr(FNumValue);
+  end;
+end;
+
+function TDbgRegisterValue.GetStrValue: string;
+begin
+  if (FStrValue = '') and (FFormatter <> nil) then
+    FStrValue := FFormatter(Self);
+  if (FStrValue = '') then
+    FStrValue := '?';
+  Result := FStrValue;
+end;
+
+constructor TDbgRegisterValue.Create(const AName: String);
+begin
+  FName:=AName;
+end;
+
+destructor TDbgRegisterValue.Destroy;
+begin
+  inherited Destroy;
+  Freemem(FMem);
+end;
+
+procedure TDbgRegisterValue.Assign(ASource: TDbgRegisterValue);
+begin
+  FDwarfIdx := ASource.FDwarfIdx;
+  FName     := ASource.FName;
+  FNumValue := ASource.FNumValue;
+  FSize     := ASource.FSize;
+  FStrValue := ASource.FStrValue;
+end;
+
+function TDbgRegisterValue.HasEqualVal(AnOther: TDbgRegisterValue): Boolean;
+begin
+  Result :=
+    (FNumValue = AnOther.FNumValue) and
+    (FSize     = AnOther.FSize)     and
+    (FStrValue = AnOther.FStrValue);
+end;
+
+procedure TDbgRegisterValue.SetValue(ANumValue: TDBGPtr;
+  const AStrValue: string; ASize: byte; ADwarfIdx: cardinal);
+begin
+  FStrValue:=AStrValue;
+  FNumValue:=ANumValue;
+  FSize:=ASize;
+  FDwarfIdx:=ADwarfIdx;
+end;
+
+procedure TDbgRegisterValue.SetValue(const AData: Pointer; ASize: byte; ADwarfIdx: cardinal;
+  AFormatter: TRegisterFormatterProc);
+begin
+  FStrValue:='';
+  FNumValue:=0;
+  FSize := ASize;
+  FDwarfIdx:=ADwarfIdx;
+  FFormatter := AFormatter;
+  if FMem <> nil then
+    FMem := ReAllocMem(FMem, ASize)
+  else
+    FMem := AllocMem(ASize);
+  move(AData^, FMem^, ASize);
+end;
+
+procedure TDbgRegisterValue.Setx86EFlagsValue(ANumValue: TDBGPtr);
+var
+  FlagS: string;
+begin
+  FlagS := '';
+  if ANumValue and (1 shl 0) <> 0 then FlagS := FlagS + 'CF ';
+  if ANumValue and (1 shl 2) <> 0 then FlagS := FlagS + 'PF ';
+  if ANumValue and (1 shl 4) <> 0 then FlagS := FlagS + 'AF ';
+  if ANumValue and (1 shl 6) <> 0 then FlagS := FlagS + 'ZF ';
+  if ANumValue and (1 shl 7) <> 0 then FlagS := FlagS + 'SF ';
+  if ANumValue and (1 shl 8) <> 0 then FlagS := FlagS + 'TF ';
+  if ANumValue and (1 shl 9) <> 0 then FlagS := FlagS + 'IF ';
+  if ANumValue and (1 shl 10) <> 0 then FlagS := FlagS + 'DF ';
+  if ANumValue and (1 shl 11) <> 0 then FlagS := FlagS + 'OF ';
+  if (ANumValue shr 12) and 3 <> 0 then FlagS := FlagS + 'IOPL=' + IntToStr((ANumValue shr 12) and 3);
+  if ANumValue and (1 shl 14) <> 0 then FlagS := FlagS + 'NT ';
+  if ANumValue and (1 shl 16) <> 0 then FlagS := FlagS + 'RF ';
+  if ANumValue and (1 shl 17) <> 0 then FlagS := FlagS + 'VM ';
+  if ANumValue and (1 shl 18) <> 0 then FlagS := FlagS + 'AC ';
+  if ANumValue and (1 shl 19) <> 0 then FlagS := FlagS + 'VIF ';
+  if ANumValue and (1 shl 20) <> 0 then FlagS := FlagS + 'VIP ';
+  if ANumValue and (1 shl 21) <> 0 then FlagS := FlagS + 'ID ';
+
+  SetValue(ANumValue, trim(FlagS),4,Cardinal(-1));
+end;
+
 { TFpDbgLocationContext }
 
 function TFpDbgLocationContext.GetLastMemError: TFpError;
@@ -1206,6 +1349,11 @@ begin
   Result := ReadMemory(ALocation, SizeVal(Length(AValue)*2), @AValue[1]);
   if not Result then
     AValue := ''
+end;
+
+function TFpDbgLocationContext.GetRegister(const ARegNum: Cardinal): TDbgRegisterValue;
+begin
+  Result := MemManager.MemReader.GetRegister(ARegNum, Self);
 end;
 
 { TFpDbgMemLimits }

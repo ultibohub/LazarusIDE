@@ -111,6 +111,10 @@ uses
   Classes,
   SysUtils,
   Windows,
+  {$IF FPC_Fullversion>30202}
+  {$ifNdef cpui386} ufloatx80, sfpux80, {$endif}
+  {$ENDIF}
+  Math,
   LazLinkedList,
   FpDbgUtil,
   FpDbgClasses,
@@ -143,6 +147,7 @@ type
     FIgnoreNextInt3: Boolean;
     FName: String;
     FUnwinder: TDbgStackUnwinderX86MultiMethod;
+    FFailed_CONTEXT_EXTENDED_REGISTERS: boolean;
   protected
     FThreadContextChanged: boolean;
     FThreadContextChangeFlags: TFpContextChangeFlags;
@@ -344,6 +349,35 @@ begin
 end;
 
 
+const
+  {$ifdef cpux86_64}
+  CONTEXT_XSTATE = $00100040; // 64bit  // Early Win-7-SP1 needs $00100020
+  {$else}
+  CONTEXT_XSTATE = $00010040; // 32 bit
+  {$endif}
+
+  XSTATE_LEGACY_FLOATING_POINT = 0;
+  XSTATE_LEGACY_SSE            = 1;
+  XSTATE_GSSE                  = 2;
+  XSTATE_AVX                   = XSTATE_GSSE;
+  XSTATE_MPX_BNDREGS           = 3;
+  XSTATE_MPX_BNDCSR            = 4;
+  XSTATE_AVX512_KMASK          = 5;
+  XSTATE_AVX512_ZMM_H          = 6;
+  XSTATE_AVX512_ZMM            = 7;
+  XSTATE_IPT                   = 8;
+  XSTATE_CET_U                 = 11;
+  XSTATE_LWP                   = 62;
+  MAXIMUM_XSTATE_FEATURES      = 64;
+
+  XSTATE_MASK_LEGACY_FLOATING_POINT = DWORD64(1 << XSTATE_LEGACY_FLOATING_POINT);
+  XSTATE_MASK_LEGACY_SSE            = DWORD64(1 << XSTATE_LEGACY_SSE);
+  XSTATE_MASK_LEGACY                = (XSTATE_MASK_LEGACY_FLOATING_POINT or XSTATE_MASK_LEGACY_SSE);
+  XSTATE_MASK_GSSE                  = DWORD64(1 << XSTATE_GSSE);
+  XSTATE_MASK_AVX                   = XSTATE_MASK_GSSE;
+type
+  PPCONTEXT = ^PCONTEXT;
+
 var
   DebugBreakAddr: Pointer = nil;
   _CreateRemoteThread: function(hProcess: THandle; lpThreadAttributes: Pointer; dwStackSize: DWORD; lpStartAddress: TFNThreadStartRoutine; lpParameter: Pointer; dwCreationFlags: DWORD; var lpThreadId: DWORD): THandle; stdcall = nil;
@@ -358,6 +392,13 @@ var
   _DebugBreakProcess: function(Process:HANDLE): WINBOOL; stdcall = nil;
   _GetThreadDescription: function(hThread: THandle; ppszThreadDescription: PPWSTR): HResult; stdcall = nil;
   _WaitForDebugEventEx: function(var lpDebugEvent: TDebugEvent; dwMilliseconds: DWORD): BOOL; stdcall = nil;
+  // XState
+  _GetEnabledXStateFeatures: function(): DWORD64; stdcall = nil;
+  _InitializeContext:     function(Buffer: Pointer; ContextFlags: DWORD; Context: PPCONTEXT; ContextLength: PDWORD): BOOL; stdcall = nil;
+  _GetXStateFeaturesMask: function(Context: PCONTEXT; FeatureMask: PDWORD64): BOOL; stdcall = nil;
+  _LocateXStateFeature:   function(Context: PCONTEXT; FeatureId: DWORD; Length: PDWORD): PM128A; stdcall = nil;
+  _SetXStateFeaturesMask: function(Context: PCONTEXT; FeatureMask: DWORD64): BOOL; stdcall = nil;
+  _xstate_FeatureMask: DWORD64;
 
 procedure LoadKernelEntryPoints;
 var
@@ -383,6 +424,22 @@ begin
   Pointer(_Wow64SuspendThread) := GetProcAddress(hMod, 'Wow64SuspendThread');
   {$endif}
   Pointer(_WaitForDebugEventEx) := GetProcAddress(hMod, 'WaitForDebugEventEx');
+  // xstate
+  Pointer(_GetEnabledXStateFeatures) := GetProcAddress(hMod, 'GetEnabledXStateFeatures');
+  Pointer(_InitializeContext)        := GetProcAddress(hMod, 'InitializeContext');
+  Pointer(_GetXStateFeaturesMask)    := GetProcAddress(hMod, 'GetXStateFeaturesMask');
+  Pointer(_LocateXStateFeature)      := GetProcAddress(hMod, 'LocateXStateFeature');
+  Pointer(_SetXStateFeaturesMask)    := GetProcAddress(hMod, 'SetXStateFeaturesMask');
+  if (_GetEnabledXStateFeatures=nil) or (_InitializeContext=nil) or (_GetXStateFeaturesMask=nil) or
+     (_LocateXStateFeature=nil) or (_SetXStateFeaturesMask=nil)
+  then begin
+    _GetEnabledXStateFeatures := nil;
+  end
+  else begin
+    _xstate_FeatureMask := _GetEnabledXStateFeatures();
+    if (_xstate_FeatureMask and XSTATE_MASK_GSSE) = 0 then
+      _GetEnabledXStateFeatures := nil;
+  end;
 
   DebugLn(DBG_WARNINGS and (DebugBreakAddr = nil), ['WARNING: Failed to get DebugBreakAddr']);
   DebugLn(DBG_WARNINGS and (_CreateRemoteThread = nil), ['WARNING: Failed to get CreateRemoteThread']);
@@ -1719,6 +1776,22 @@ end;
 { TDbgWinThread }
 
 procedure TDbgWinThread.LoadRegisterValues;
+{$IF FPC_Fullversion>30202}{$ifNdef cpui386}
+type
+  PExtended = ^floatx80;
+{$endif}{$ENDIF}
+const
+  M128A_NULL: M128A = (Low: 0; High: 0;  );
+var
+  Context: PCONTEXT;
+  ContextSize: DWord;
+  Buffer, Buffer2: Pointer;
+  FeatureMask: DWORD64;
+  Xmm, Ymm: PM128A;
+  FeatureLength, FeatureLength2: DWORD;
+  i: Integer;
+  EM, SEM: TFPUExceptionMask;
+  r: TDbgRegisterValue;
 begin
   {$IFDEF FPDEBUG_THREAD_CHECK}AssertFpDebugThreadId('TDbgWinThread.LoadRegisterValues');{$ENDIF}
   assert(MDebugEvent.dwProcessId <> 0, 'TDbgWinThread.LoadRegisterValues: MDebugEvent.dwProcessId <> 0');
@@ -1726,6 +1799,17 @@ begin
   if FCurrentContext = nil then
     if not ReadThreadState then
       exit;
+
+  EM := GetExceptionMask;
+  {$IF FPC_Fullversion>30202}{$ifNdef cpui386}
+  SEM := softfloat_exception_mask;
+  {$endif}{$ENDIF}
+  try
+  SetExceptionMask(EM + [exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+  {$IF FPC_Fullversion>30202}{$ifNdef cpui386}
+  softfloat_exception_mask := SEM + [exInvalidOp, exDenormalized, exZeroDivide,exOverflow, exUnderflow, exPrecision];
+  {$endif}{$ENDIF}
+
   {$ifdef cpui386}
   with FCurrentContext^.def do
   begin
@@ -1747,6 +1831,38 @@ begin
     FRegisterValueList.DbgRegisterAutoCreate['es'].SetValue(SegEs, IntToStr(SegEs),4,0);
     FRegisterValueList.DbgRegisterAutoCreate['fs'].SetValue(SegFs, IntToStr(SegFs),4,0);
     FRegisterValueList.DbgRegisterAutoCreate['gs'].SetValue(SegGs, IntToStr(SegGs),4,0);
+
+    FRegisterValueList.DbgRegisterAutoCreate['st0'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[ 0])^),10,500);
+    FRegisterValueList.DbgRegisterAutoCreate['st1'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[10])^),10,501);
+    FRegisterValueList.DbgRegisterAutoCreate['st2'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[20])^),10,502);
+    FRegisterValueList.DbgRegisterAutoCreate['st3'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[30])^),10,503);
+    FRegisterValueList.DbgRegisterAutoCreate['st4'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[40])^),10,504);
+    FRegisterValueList.DbgRegisterAutoCreate['st5'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[50])^),10,505);
+    FRegisterValueList.DbgRegisterAutoCreate['st6'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[60])^),10,506);
+    FRegisterValueList.DbgRegisterAutoCreate['st7'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[70])^),10,507);
+
+    FRegisterValueList.DbgRegisterAutoCreate['fctrl'  ].SetValue(FloatSave.ControlWord,   IntToStr(FloatSave.ControlWord),2,510);
+    FRegisterValueList.DbgRegisterAutoCreate['fstat'  ].SetValue(FloatSave.StatusWord,    IntToStr(FloatSave.StatusWord),2,511);
+    FRegisterValueList.DbgRegisterAutoCreate['ftag'   ].SetValue(FloatSave.TagWord,       IntToStr(FloatSave.TagWord),1,512);
+    //FRegisterValueList.DbgRegisterAutoCreate['fErrOp' ].SetValue(FloatSave.ErrorOpcode,   IntToStr(FloatSave.ErrorOpcode),2,513);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrOff'].SetValue(FloatSave.ErrorOffset,   IntToStr(FloatSave.ErrorOffset),4,514);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrSel'].SetValue(FloatSave.ErrorSelector, IntToStr(FloatSave.ErrorSelector),2,515);
+    FRegisterValueList.DbgRegisterAutoCreate['fDatOff'].SetValue(FloatSave.DataOffset,    IntToStr(FloatSave.DataOffset),4,516);
+    FRegisterValueList.DbgRegisterAutoCreate['fDatSel'].SetValue(FloatSave.DataSelector,  IntToStr(FloatSave.DataSelector),2,517);
+    FRegisterValueList.DbgRegisterAutoCreate['fCr0NpxSt'].SetValue(FloatSave.Cr0NpxState, IntToStr(FloatSave.Cr0NpxState),4,518);
+
+    if not FFailed_CONTEXT_EXTENDED_REGISTERS then begin
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm0'].SetValue(@ExtendedRegisters[10*16],16,600, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm1'].SetValue(@ExtendedRegisters[11*16],16,601, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm2'].SetValue(@ExtendedRegisters[12*16],16,602, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm3'].SetValue(@ExtendedRegisters[13*16],16,603, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm4'].SetValue(@ExtendedRegisters[14*16],16,604, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm5'].SetValue(@ExtendedRegisters[15*16],16,605, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm6'].SetValue(@ExtendedRegisters[16*16],16,606, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm7'].SetValue(@ExtendedRegisters[17*16],16,607, @XmmToFormat);
+
+      FRegisterValueList.DbgRegisterAutoCreate['MxCsr'].SetValue(PDWORD(@ExtendedRegisters[24])^,  IntToStr(PDWORD(@ExtendedRegisters[24])^),4,620);
+    end;
   end;
 {$else}
   if (TDbgWinProcess(Process).FBitness = b32) then
@@ -1770,6 +1886,41 @@ begin
     FRegisterValueList.DbgRegisterAutoCreate['es'].SetValue(SegEs, IntToStr(SegEs),4,0);
     FRegisterValueList.DbgRegisterAutoCreate['fs'].SetValue(SegFs, IntToStr(SegFs),4,0);
     FRegisterValueList.DbgRegisterAutoCreate['gs'].SetValue(SegGs, IntToStr(SegGs),4,0);
+
+  // TODO: 64bit extended is not 10 byte // currently downgrading to double
+    {$IF FPC_Fullversion>30202}
+    FRegisterValueList.DbgRegisterAutoCreate['st0'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[ 0])^),10,500);
+    FRegisterValueList.DbgRegisterAutoCreate['st1'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[10])^),10,501);
+    FRegisterValueList.DbgRegisterAutoCreate['st2'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[20])^),10,502);
+    FRegisterValueList.DbgRegisterAutoCreate['st3'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[30])^),10,503);
+    FRegisterValueList.DbgRegisterAutoCreate['st4'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[40])^),10,504);
+    FRegisterValueList.DbgRegisterAutoCreate['st5'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[50])^),10,505);
+    FRegisterValueList.DbgRegisterAutoCreate['st6'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[60])^),10,506);
+    FRegisterValueList.DbgRegisterAutoCreate['st7'].SetValue(0, FloatToStr(PExtended(@FloatSave.RegisterArea[70])^),10,507);
+    {$ENDIF}
+
+    FRegisterValueList.DbgRegisterAutoCreate['fctrl'  ].SetValue(FloatSave.ControlWord,   IntToStr(FloatSave.ControlWord),2,510);
+    FRegisterValueList.DbgRegisterAutoCreate['fstat'  ].SetValue(FloatSave.StatusWord,    IntToStr(FloatSave.StatusWord),2,511);
+    FRegisterValueList.DbgRegisterAutoCreate['ftag'   ].SetValue(FloatSave.TagWord,       IntToStr(FloatSave.TagWord),1,512);
+    //FRegisterValueList.DbgRegisterAutoCreate['fErrOp' ].SetValue(FloatSave.ErrorOpcode,   IntToStr(FloatSave.ErrorOpcode),2,513);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrOff'].SetValue(FloatSave.ErrorOffset,   IntToStr(FloatSave.ErrorOffset),4,514);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrSel'].SetValue(FloatSave.ErrorSelector, IntToStr(FloatSave.ErrorSelector),2,515);
+    FRegisterValueList.DbgRegisterAutoCreate['fDatOff'].SetValue(FloatSave.DataOffset,    IntToStr(FloatSave.DataOffset),4,516);
+    FRegisterValueList.DbgRegisterAutoCreate['fDatSel'].SetValue(FloatSave.DataSelector,  IntToStr(FloatSave.DataSelector),2,517);
+    FRegisterValueList.DbgRegisterAutoCreate['fCr0NpxSt'].SetValue(FloatSave.Cr0NpxState, IntToStr(FloatSave.Cr0NpxState),4,518);
+
+    if not FFailed_CONTEXT_EXTENDED_REGISTERS then begin
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm0'].SetValue(@ExtendedRegisters[10*16],16,600, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm1'].SetValue(@ExtendedRegisters[11*16],16,601, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm2'].SetValue(@ExtendedRegisters[12*16],16,602, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm3'].SetValue(@ExtendedRegisters[13*16],16,603, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm4'].SetValue(@ExtendedRegisters[14*16],16,604, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm5'].SetValue(@ExtendedRegisters[15*16],16,605, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm6'].SetValue(@ExtendedRegisters[16*16],16,606, @XmmToFormat);
+      FRegisterValueList.DbgRegisterAutoCreate['Xmm7'].SetValue(@ExtendedRegisters[17*16],16,607, @XmmToFormat);
+
+      FRegisterValueList.DbgRegisterAutoCreate['MxCsr'].SetValue(PDWORD(@ExtendedRegisters[24])^,  IntToStr(PDWORD(@ExtendedRegisters[24])^),4,620);
+    end;
   end
   else
   with FCurrentContext^.def do
@@ -1801,36 +1952,171 @@ begin
     FRegisterValueList.DbgRegisterAutoCreate['es'].SetValue(SegEs, IntToStr(SegEs),8,42);
     FRegisterValueList.DbgRegisterAutoCreate['fs'].SetValue(SegFs, IntToStr(SegFs),8,46);
     FRegisterValueList.DbgRegisterAutoCreate['gs'].SetValue(SegGs, IntToStr(SegGs),8,47);
+
+  // TODO: 64bit extended is not 10 byte // currently downgrading to double
+    {$IF FPC_Fullversion>30202}
+    FRegisterValueList.DbgRegisterAutoCreate['st0'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[0])^),10,500);
+    FRegisterValueList.DbgRegisterAutoCreate['st1'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[1])^),10,501);
+    FRegisterValueList.DbgRegisterAutoCreate['st2'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[2])^),10,502);
+    FRegisterValueList.DbgRegisterAutoCreate['st3'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[3])^),10,503);
+    FRegisterValueList.DbgRegisterAutoCreate['st4'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[4])^),10,504);
+    FRegisterValueList.DbgRegisterAutoCreate['st5'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[5])^),10,505);
+    FRegisterValueList.DbgRegisterAutoCreate['st6'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[6])^),10,506);
+    FRegisterValueList.DbgRegisterAutoCreate['st7'].SetValue(0, FloatToStr(PExtended(@FltSave.FloatRegisters[7])^),10,507);
+    {$ENDIF}
+
+    FRegisterValueList.DbgRegisterAutoCreate['fctrl'  ].SetValue(FltSave.ControlWord,   IntToStr(FltSave.ControlWord),2,510);
+    FRegisterValueList.DbgRegisterAutoCreate['fstat'  ].SetValue(FltSave.StatusWord,    IntToStr(FltSave.StatusWord),2,511);
+    FRegisterValueList.DbgRegisterAutoCreate['ftag'   ].SetValue(FltSave.TagWord,       IntToStr(FltSave.TagWord),1,512);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrOp' ].SetValue(FltSave.ErrorOpcode,   IntToStr(FltSave.ErrorOpcode),2,513);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrOff'].SetValue(FltSave.ErrorOffset,   IntToStr(FltSave.ErrorOffset),4,514);
+    FRegisterValueList.DbgRegisterAutoCreate['fErrSel'].SetValue(FltSave.ErrorSelector, IntToStr(FltSave.ErrorSelector),2,515);
+    FRegisterValueList.DbgRegisterAutoCreate['fDatOff'].SetValue(FltSave.DataOffset,    IntToStr(FltSave.DataOffset),4,516);
+    FRegisterValueList.DbgRegisterAutoCreate['fDatSel'].SetValue(FltSave.DataSelector,  IntToStr(FltSave.DataSelector),2,517);
+
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm0' ].SetValue(@FltSave.XmmRegisters[ 0],16,600, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm1' ].SetValue(@FltSave.XmmRegisters[ 1],16,601, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm2' ].SetValue(@FltSave.XmmRegisters[ 2],16,602, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm3' ].SetValue(@FltSave.XmmRegisters[ 3],16,603, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm4' ].SetValue(@FltSave.XmmRegisters[ 4],16,604, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm5' ].SetValue(@FltSave.XmmRegisters[ 5],16,605, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm6' ].SetValue(@FltSave.XmmRegisters[ 6],16,606, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm7' ].SetValue(@FltSave.XmmRegisters[ 7],16,607, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm8' ].SetValue(@FltSave.XmmRegisters[ 8],16,608, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm9' ].SetValue(@FltSave.XmmRegisters[ 9],16,609, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm10'].SetValue(@FltSave.XmmRegisters[10],16,610, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm11'].SetValue(@FltSave.XmmRegisters[11],16,611, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm12'].SetValue(@FltSave.XmmRegisters[12],16,612, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm13'].SetValue(@FltSave.XmmRegisters[13],16,613, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm14'].SetValue(@FltSave.XmmRegisters[14],16,614, @XmmToFormat);
+    FRegisterValueList.DbgRegisterAutoCreate['Xmm15'].SetValue(@FltSave.XmmRegisters[15],16,615, @XmmToFormat);
+
+    FRegisterValueList.DbgRegisterAutoCreate['MxCsr'].SetValue(FltSave.MxCsr,  IntToStr(FltSave.MxCsr),4,620);
+    FRegisterValueList.DbgRegisterAutoCreate['MxCsrM'].SetValue(FltSave.MxCsr_Mask,  IntToStr(FltSave.MxCsr_Mask),4,621);
   end;
-{$endif}
-  FRegisterValueListValid:=true;
+  {$endif} // 64bit
+
+  if _GetEnabledXStateFeatures <> nil then begin
+    ContextSize := 0;
+
+    if _InitializeContext(nil, CONTEXT_ALL or CONTEXT_XSTATE, nil, @ContextSize) or
+       (GetLastError <> ERROR_INSUFFICIENT_BUFFER)
+    then
+      exit;
+
+    Buffer := AllocMem(ContextSize+$40);
+    if Buffer = nil then
+      exit;
+    Buffer2 := AlignPtr(Buffer, $40);
+
+    try
+      if not _InitializeContext(Buffer2, CONTEXT_ALL or CONTEXT_XSTATE, @Context, @ContextSize) then
+        exit;
+      if not _SetXStateFeaturesMask(Context, XSTATE_MASK_AVX) then
+        exit;
+      if not  GetThreadContext(Handle, Context^) then // context is VAR PARAM
+        exit;
+
+      Xmm := _LocateXStateFeature(Context, XSTATE_LEGACY_SSE, @FeatureLength);
+      Ymm := _LocateXStateFeature(Context, XSTATE_AVX, @FeatureLength2);
+      if (Xmm = nil) or (Ymm = nil) or (FeatureLength2 = 0) then
+        exit;
+      {$ifdef cpux86_64}
+      if (TDbgWinProcess(Process).FBitness = b32) and (FeatureLength > 8 * SizeOf(M128A)) then
+        FeatureLength := 8 * SizeOf(M128A);
+      {$endif}
+
+      if (_GetXStateFeaturesMask(Context, @FeatureMask)) and
+         ((FeatureMask and XSTATE_MASK_AVX) = 0)
+      then begin
+        // AVX not init yet // upper half must be 0
+        for i := 0 to FeatureLength div SizeOf(M128A) - 1 do begin
+          r := FRegisterValueList.DbgRegisterAutoCreate['Ymm'+IntToStr(i)];
+          r.SetValue(@Xmm[i],32,700+i, @YmmToFormat);
+          FillByte(PByte(r.Data+16)^, 16, 0);
+        end;
+      end
+      else begin
+        for i := 0 to FeatureLength div SizeOf(M128A) - 1 do begin
+          r := FRegisterValueList.DbgRegisterAutoCreate['Ymm'+IntToStr(i)];
+          r.SetValue(@Xmm[i],32,700+i, @YmmToFormat);
+          move(Ymm[i], PByte(r.Data+16)^, 16);
+        end;
+      end;
+
+    finally
+      Freemem(Buffer);
+    end;
+  end;
+
+  finally
+    FRegisterValueListValid:=true;
+    SetExceptionMask(EM);
+    {$IF FPC_Fullversion>30202}{$ifNdef cpui386}
+    softfloat_exception_mask := SEM;
+    {$endif}{$ENDIF}
+  end;
 end;
 
 function TDbgWinThread.GetFpThreadContext(var AStorage: TFpContext; out
   ACtxPtr: PFpContext; ACtxFlags: TFpWinCtxFlags): Boolean;
 begin
   ACtxPtr := AlignPtr(@AStorage, $10);
-  SetLastError(0);
 
-  {$ifdef cpux86_64}
-  if (TDbgWinProcess(Process).FBitness = b32) then begin
-    case ACtxFlags of
-      cfControl: ACtxPtr^.WOW.ContextFlags := WOW64_CONTEXT_CONTROL;
-      cfFull:    ACtxPtr^.WOW.ContextFlags := WOW64_CONTEXT_SEGMENTS or WOW64_CONTEXT_INTEGER or WOW64_CONTEXT_CONTROL or WOW64_CONTEXT_DEBUG_REGISTERS;
+  if not FFailed_CONTEXT_EXTENDED_REGISTERS then begin
+    SetLastError(0);
+    {$ifdef cpux86_64}
+    if (TDbgWinProcess(Process).FBitness = b32) then begin
+      case ACtxFlags of
+        cfControl: ACtxPtr^.WOW.ContextFlags := WOW64_CONTEXT_CONTROL;
+        cfFull:    ACtxPtr^.WOW.ContextFlags := WOW64_CONTEXT_SEGMENTS or WOW64_CONTEXT_INTEGER or WOW64_CONTEXT_CONTROL or WOW64_CONTEXT_DEBUG_REGISTERS or WOW64_CONTEXT_FLOATING_POINT or WOW64_CONTEXT_EXTENDED_REGISTERS;
+      end;
+      Result := (_Wow64GetThreadContext <> nil) and _Wow64GetThreadContext(Handle, ACtxPtr^.WOW);
+    end
+    else begin
+    {$endif}
+      case ACtxFlags of
+        cfControl: ACtxPtr^.def.ContextFlags := CONTEXT_CONTROL;
+        {$ifdef cpui386}
+        cfFull:    ACtxPtr^.def.ContextFlags := CONTEXT_SEGMENTS or CONTEXT_INTEGER or CONTEXT_CONTROL or CONTEXT_DEBUG_REGISTERS or CONTEXT_FLOATING_POINT or CONTEXT_EXTENDED_REGISTERS;
+        {$else}
+        cfFull:    ACtxPtr^.def.ContextFlags := CONTEXT_SEGMENTS or CONTEXT_INTEGER or CONTEXT_CONTROL or CONTEXT_DEBUG_REGISTERS or CONTEXT_FLOATING_POINT;
+        {$endif}
+      end;
+  (* or CONTEXT_FLOATING_POINT or CONTEXT_EXTENDED_REGISTERS *)
+      Result := GetThreadContext(Handle, ACtxPtr^.def_w);
+    {$ifdef cpux86_64}
     end;
-    Result := (_Wow64GetThreadContext <> nil) and _Wow64GetThreadContext(Handle, ACtxPtr^.WOW);
-  end
-  else begin
-  {$endif}
-    case ACtxFlags of
-      cfControl: ACtxPtr^.def.ContextFlags := CONTEXT_CONTROL;
-      cfFull:    ACtxPtr^.def.ContextFlags := CONTEXT_SEGMENTS or CONTEXT_INTEGER or CONTEXT_CONTROL or CONTEXT_DEBUG_REGISTERS;
-    end;
-    Result := GetThreadContext(Handle, ACtxPtr^.def);
-  {$ifdef cpux86_64}
+    {$endif}
+    if GetLastError <> 0 then
+      FFailed_CONTEXT_EXTENDED_REGISTERS := True;
+    DebugLn(DBG_WARNINGS and (not Result), ['Unable to get Context for ', ID, ': ', GetLastErrorText, ' ', FFailed_CONTEXT_EXTENDED_REGISTERS]);
   end;
-  {$endif}
-  DebugLn(DBG_WARNINGS and (not Result), ['Unable to get Context for ', ID, ': ', GetLastErrorText]);
+
+  if FFailed_CONTEXT_EXTENDED_REGISTERS then begin
+
+    SetLastError(0);
+    {$ifdef cpux86_64}
+    if (TDbgWinProcess(Process).FBitness = b32) then begin
+      case ACtxFlags of
+        cfControl: ACtxPtr^.WOW.ContextFlags := WOW64_CONTEXT_CONTROL;
+        cfFull:    ACtxPtr^.WOW.ContextFlags := WOW64_CONTEXT_SEGMENTS or WOW64_CONTEXT_INTEGER or WOW64_CONTEXT_CONTROL or WOW64_CONTEXT_DEBUG_REGISTERS or WOW64_CONTEXT_FLOATING_POINT;
+      end;
+      Result := (_Wow64GetThreadContext <> nil) and _Wow64GetThreadContext(Handle, ACtxPtr^.WOW);
+    end
+    else begin
+    {$endif}
+      case ACtxFlags of
+        cfControl: ACtxPtr^.def.ContextFlags := CONTEXT_CONTROL;
+        cfFull:    ACtxPtr^.def.ContextFlags := CONTEXT_SEGMENTS or CONTEXT_INTEGER or CONTEXT_CONTROL or CONTEXT_DEBUG_REGISTERS or CONTEXT_FLOATING_POINT;
+      end;
+      Result := GetThreadContext(Handle, ACtxPtr^.def_w);
+    {$ifdef cpux86_64}
+    end;
+    {$endif}
+    DebugLn(DBG_WARNINGS and (not Result), ['Unable to get Context for ', ID, ': ', GetLastErrorText]);
+  end;
+
 end;
 
 function TDbgWinThread.SetFpThreadContext(ACtxPtr: PFpContext;
@@ -1859,7 +2145,7 @@ begin
       ACtxPtr^.def.ContextFlags := ACtxPtr^.def.ContextFlags or CONTEXT_CONTROL;
     if ccfInteger in FThreadContextChangeFlags then
       ACtxPtr^.def.ContextFlags := ACtxPtr^.def.ContextFlags or CONTEXT_INTEGER;
-    Result := SetThreadContext(Handle, ACtxPtr^.def);
+    Result := SetThreadContext(Handle, ACtxPtr^.def_w);
   {$ifdef cpux86_64}
   end;
   {$endif}

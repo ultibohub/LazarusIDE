@@ -922,7 +922,7 @@ resourcestring
     +'is inherited from %s.%sTo rename an inherited component open the '
     +'ancestor and rename it there.';
   lisUnableToFindMethod = 'Unable to find method.';
-  lisUnableToCreateNewMethod = 'Unable to create new method.';
+  //lisUnableToCreateNewMethod = 'Unable to create new method.';
   lisUnableToShowMethod = 'Unable to show method.';
   lisPleaseFixTheErrorInTheMessageWindow = 'Please fix the error shown in the'
     +' message window which is normally below the source editor.';
@@ -1325,9 +1325,9 @@ resourcestring
   lisWindowMenuWithNameForDesignedForm = 'Window menu shows designed form''s name instead of caption';
   lisWindowMenuWithNameForDesignedFormHint = 'Useful especially if the caption is left empty.';
   lisTitleInTaskbarShowsForExampleProject1LpiLazarus = 'Title in taskbar '
-    +'shows for example: project1.lpi - Lazarus';
+    +'shows for example: project1 - Lazarus';
   lisBuildModeInTitleInExample = 'Title in taskbar '
-    +'shows for example: project1.lpi - Release - Lazarus';
+    +'shows for example: project1 - Release - Lazarus';
   lisProjectDirectoryIsShowedInIdeTitleBar = 'Title in taskbar '
     +'shows also directory path of the project';
 
