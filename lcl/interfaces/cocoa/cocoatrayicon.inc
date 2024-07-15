@@ -15,6 +15,12 @@ type
     procedure menuWillOpen(menu: NSMenu); message 'menuWillOpen:';
   end;
 
+  { TCocoaUserNotificationCenterDelegate }
+
+  TCocoaUserNotificationCenterDelegate = objcclass(NSObject, NSUserNotificationCenterDelegateProtocol)
+    function userNotificationCenter_shouldPresentNotification (center: NSUserNotificationCenter; notification: NSUserNotification): ObjCBOOL; message 'userNotificationCenter:shouldPresentNotification:';
+  end;
+
 { TCocoaStatusItemHandle }
 
 procedure TCocoaStatusItemHandle.lclAction(sender: id);
@@ -34,7 +40,10 @@ begin
   if (ATrayIcon.icon <> nil) and (ATrayIcon.icon.Handle <> 0) then
   begin
     image := TCocoaBitmap(ATrayIcon.icon.Handle).image;
-    if image <> nil then statusitem.setImage(image);
+    if image <> nil then begin
+      statusItem.button.setImageScaling(NSImageScaleProportionallyUpOrDown);
+      statusItem.button.setImage(image);
+    end;
   end;
 
   // Show the menu
@@ -59,6 +68,13 @@ begin
     and (TrayIcon.PopUpMenu = nil) // LCL changes the value w/o letting WS know! :(
   then
     menu.cancelTrackingWithoutAnimation;
+end;
+
+function TCocoaUserNotificationCenterDelegate.userNotificationCenter_shouldPresentNotification
+  (center: NSUserNotificationCenter; notification: NSUserNotification
+  ): ObjCBOOL;
+begin
+  Result:= True;
 end;
 
 { TCocoaWSCustomTrayIcon }
@@ -138,9 +154,69 @@ begin
   StatusItemHandle.lclSetTrayIcon(ATrayIcon);
 end;
 
+// macOS 10.14+ required
+// APP codesign required
+// codesign --deep --force --verify --verbose --sign '-' 'your.app'
+class function TCocoaWSCustomTrayIcon.newUserNotify(const ATrayIcon: TCustomTrayIcon): Boolean;
+var
+  nc: UNUserNotificationCenter;
+  trigger: UNTimeIntervalNotificationTrigger;
+  message: UNMutableNotificationContent;
+  request: UNNotificationRequest;
+const
+  options: NSInteger = UNAuthorizationOptionAlert or
+                       UNAuthorizationOptionBadge or
+                       UNAuthorizationOptionSound;
+begin
+  Result:= True;
+
+  nc:= UNUserNotificationCenter.currentNotificationCenter;
+  nc.requestAuthorizationWithOptions_completionHandler( options );
+
+  trigger:= UNTimeIntervalNotificationTrigger.triggerWithTimeInterval_repeats(
+    0.01, False);
+
+  message:= UNMutableNotificationContent.new;
+  message.setTitle( StrToNSString(ATrayIcon.BalloonTitle) );
+  message.setBody( StrToNSString(ATrayIcon.BalloonHint) );
+  message.setSound( UNNotificationSound.defaultSound );
+
+  request:= UNNotificationRequest.requestWithIdentifier_content_trigger(
+    NSString.string_, message, trigger );
+
+  nc.addNotificationRequest_withCompletionHandler( request );
+
+  message.release;
+end;
+
+class function TCocoaWSCustomTrayIcon.legacyUserNotify(const ATrayIcon: TCustomTrayIcon): Boolean;
+var
+  nc: NSUserNotificationCenter;
+  message: NSUserNotification;
+begin
+  Result := True;
+  message:= NSUserNotification.new;
+  message.setTitle( StrToNSString(ATrayIcon.BalloonTitle) );
+  message.setInformativeText( StrToNSString(ATrayIcon.BalloonHint) );
+  if NOT NSApplication(NSApp).isActive then
+    message.setSoundName( NSUserNotificationDefaultSoundName );
+
+  nc:= NSUserNotificationCenter.defaultUserNotificationCenter;
+  if CocoaConfig.CocoaAlwaysPresentNotification then begin
+    if NOT Assigned(nc.delegate) then
+      nc.setDelegate( TCocoaUserNotificationCenterDelegate.new );
+  end;
+  nc.deliverNotification( message );
+
+  message.release;
+end;
+
 class function TCocoaWSCustomTrayIcon.ShowBalloonHint(const ATrayIcon: TCustomTrayIcon): Boolean;
 begin
-  Result := False;
+  if NSAppKitVersionNumber >= NSAppKitVersionNumber11_0 then
+    Result:= newUserNotify( ATrayIcon )       // APP codesign required
+  else
+    Result:= legacyUserNotify( ATrayIcon );
 end;
 
 class function TCocoaWSCustomTrayIcon.GetPosition(const ATrayIcon: TCustomTrayIcon): TPoint;
