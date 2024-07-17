@@ -75,6 +75,7 @@ uses
   jcfidelazarus, //Ultibo
   allsyneditdsgn, //Ultibo
   OnlinePackageManager, //Ultibo
+  ExampleProjects, //Ultibo
   {$ENDIF}
   {$IFDEF BigIDE}
     //AllSynEditDsgn, //Ultibo
@@ -86,7 +87,7 @@ uses
 	chmhelppkg,
     FPCUnitTestRunner, FPCUnitIDE, ProjTemplates, TAChartLazarusPkg,
     TodoListLaz, DateTimeCtrls, SQLDBLaz, DBFLaz, pascalscript,
-    EditorMacroScript, ExampleProjects,
+    EditorMacroScript, //ExampleProjects, //Ultibo
     //OnlinePackageManager, //Ultibo
     SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn, charactermap_ide_pkg,
   {$ENDIF}

@@ -1953,7 +1953,6 @@ bigide:
 	$(MAKE) -C simplewebservergui
 	$(MAKE) -C projectgroups
 	$(MAKE) -C pas2js
-	$(MAKE) -C exampleswindow
 	$(MAKE) -C charactermap
 	$(MAKE) -C charactermap/design
 all: lazbuildlclpackages idepackages bigide
