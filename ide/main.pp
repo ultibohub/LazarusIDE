@@ -9370,6 +9370,7 @@ begin
       //Lines.Add('lazdebuggerfp,');
       Lines.Add('allsyneditdsgn,');
       Lines.Add('onlinepackagemanager,');
+      Lines.Add('exampleprojects,');
 
       Lines.SaveToFile(Path + 'staticpackages.inc');
     finally
@@ -9416,6 +9417,11 @@ begin
   if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('onlinepackagemanager') < 0 then
   begin
     MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('onlinepackagemanager');
+    Update := True;
+  end;
+  if MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.IndexOf('exampleprojects') < 0 then
+  begin
+    MiscellaneousOptions.BuildLazProfiles.StaticAutoInstallPackages.Add('exampleprojects');
     Update := True;
   end;
 

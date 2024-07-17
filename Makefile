@@ -3112,6 +3112,7 @@ basecomponents:
 	$(MAKE) -C components/jcf2/IdePlugin/lazarus
 	$(MAKE) -C components/synedit/design
 	$(MAKE) -C components/onlinepackagemanager
+	$(MAKE) -C components/exampleswindow
 bigidecomponents:
 	$(MAKE) -C components bigide
 tools:
