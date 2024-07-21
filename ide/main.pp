@@ -6022,11 +6022,10 @@ begin
   FileList := TStringList.Create;
   FileList.AddStrings(FileNames);
   try
+    SourceEditorManager.IncUpdateLock;
     if FilenameExtIs(FileList[0],'lpr',false) then
     begin
-      SourceEditorManager.IncUpdateLock;
       OpenEditorFile(FileList[0],-1,WindowIndex,Nil,[ofAddToRecent]);
-      SourceEditorManager.DecUpdateLock;
       FileList.Delete(0);
     end
     else if FilenameExtIs(FileList[0],'lpi',false) then
@@ -6036,6 +6035,7 @@ begin
     end;
     MaybeOpenEditorFiles(FileList, WindowIndex);
   finally
+    SourceEditorManager.DecUpdateLock;
     FileList.Free;
   end;
   UpdateRecentFilesEnv;
@@ -6758,15 +6758,20 @@ begin
   and (AskSaveProject(lisDoYouStillWantToOpenAnotherProject, lisDiscardChangesAndOpenProject)<>mrOk) then
     exit;
 
-  Result:=DoCloseProject;
-  if Result=mrAbort then exit;
+  try
+    SourceEditorManager.IncUpdateLock;
+    Result:=DoCloseProject;
+    if Result=mrAbort then exit;
 
-  // create a new project
-  //debugln('TMainIDE.DoOpenProjectFile B');
-  {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.DoOpenProjectFile B');{$ENDIF}
-  Project1:=CreateProjectObject(ProjectDescriptorProgram,
-                                ProjectDescriptorProgram);
-  Result:=InitOpenedProjectFile(AFileName, Flags);
+    // create a new project
+    //debugln('TMainIDE.DoOpenProjectFile B');
+    {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.DoOpenProjectFile B');{$ENDIF}
+    Project1:=CreateProjectObject(ProjectDescriptorProgram,
+                                  ProjectDescriptorProgram);
+    Result:=InitOpenedProjectFile(AFileName, Flags);
+  finally
+    SourceEditorManager.DecUpdateLock;
+  end;
 
   {$push}{$overflowchecks off}
   Inc(BookmarksStamp);
@@ -8042,6 +8047,7 @@ begin
     Files:=nil;
     try
       // load and delete the file
+      SourceEditorManager.IncUpdateLock;
       try
         List.LoadFromFile(Filename);
       except
@@ -8065,6 +8071,7 @@ begin
       if Files.Count>0 then
         OpenFiles(Files);
     finally
+      SourceEditorManager.DecUpdateLock;
       List.Free;
       Files.Free;
     end;

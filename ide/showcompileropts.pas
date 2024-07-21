@@ -295,20 +295,22 @@ end;
 procedure TShowCompilerOptionsDlg.UpdateMemo;
 var
   Flags: TCompilerCmdLineOptions;
-  CompPath: String;
   CompOptions: TStringListUTF8Fast;
 begin
   if CompilerOpts=nil then exit;
 
+  // set flags
   Flags:=CompilerOpts.DefaultMakeOptionsFlags;
+  Include(Flags,ccloAddCompilerPath);
   if not RelativePathsCheckBox.Checked then
     Include(Flags,ccloAbsolutePaths);
+
+  // get command line parameters (include compiler path)
   CompOptions := CompilerOpts.MakeCompilerParams(Flags);
   try
-    CompPath:=CompilerOpts.ParsedOpts.GetParsedValue(pcosCompilerPath);
-    if Pos(' ',CompPath)>0 then
-      CompPath:=QuotedStr(CompPath);
-    CompOptions.Add(CompPath);
+    CompOptions.Add(CompilerOpts.GetDefaultMainSourceFileName);
+
+    // show
     FillMemo(CmdLineMemo,CompOptions);
   finally
     CompOptions.Free;
