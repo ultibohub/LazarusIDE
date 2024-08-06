@@ -27,14 +27,15 @@ uses
   // Libs
   MacOSAll, CocoaAll, Classes, sysutils,
   // LCL
-  Controls, StdCtrls, ComboEx, Graphics, LCLType, LMessages, LCLProc, LCLMessageGlue, Forms,
+  Controls, StdCtrls, ComboEx, Graphics, LCLType, LMessages, LCLProc, LCLMessageGlue,
+  Forms, ComCtrls,
   // LazUtils
   LazUTF8, TextStrings,
   // Widgetset
   WSStdCtrls, WSLCLClasses,
   // LCL Cocoa
   CocoaConst, CocoaConfig,
-  CocoaWSCommon, CocoaPrivate, CocoaUtils, CocoaGDIObjects, CocoaButtons,
+  CocoaWSCommon, CocoaPrivate, CocoaCallback, CocoaUtils, CocoaGDIObjects, CocoaButtons,
   CocoaTables, CocoaTextEdits, CocoaScrollers, CocoaWSScrollers, Cocoa_Extra;
 
 type
@@ -274,7 +275,6 @@ type
     function GetImageFromIndex(imgIdx: Integer): NSImage; virtual;
     procedure SetItemTextAt(ARow, ACol: Integer; const Text: String); virtual;
     procedure SetItemCheckedAt(ARow, ACol: Integer; isChecked: Integer); virtual;
-    procedure selectionChanged(ARow: Integer; Added, Removed: NSIndexSet); virtual;
     function shouldSelectionChange(NewSel: Integer): Boolean; virtual;
     procedure ColumnClicked(ACol: Integer); virtual;
     procedure DrawRow(rowidx: Integer; ctx: TCocoaContext; const r: TRect; state: TOwnerDrawState); virtual;
@@ -368,8 +368,6 @@ procedure ButtonSetState(btn: NSButton; NewState: TCheckBoxState;
 procedure TextFieldSetTextHint(txt: NSTextField; const str: string);
 procedure ObjSetTextHint(obj: NSObject; const str: string);
 
-procedure ScrollViewSetScrollStyles(AScroll: TCocoaScrollView; AStyles: TScrollStyle);
-
 function ComboBoxStyleIsReadOnly(AStyle: TComboBoxStyle): Boolean;
 function ComboBoxIsReadOnly(cmb: TCustomComboBox): Boolean;
 function ComboBoxIsOwnerDrawn(AStyle: TComboBoxStyle): Boolean;
@@ -382,38 +380,9 @@ procedure ComboBoxSetBorderStyle(box: NSComboBox; astyle: TBorderStyle);
 // LCL expects a change notification in either way. (by software or by user)
 procedure ControlSetTextWithChangeEvent(ctrl: NSControl; const text: string);
 
+procedure TListBox_selectionChanged( tv: NSTableView );
+
 implementation
-
-const
-  VerticalScrollerVisible: array[TScrollStyle] of boolean = (
- {ssNone          } false,
- {ssHorizontal    } false,
- {ssVertical      } true,
- {ssBoth          } true,
- {ssAutoHorizontal} false,
- {ssAutoVertical  } true,
- {ssAutoBoth      } true
-  );
-
-  HorizontalScrollerVisible: array[TScrollStyle] of boolean = (
- {ssNone          } false,
- {ssHorizontal    } true,
- {ssVertical      } false,
- {ssBoth          } true,
- {ssAutoHorizontal} true,
- {ssAutoVertical  } false,
- {ssAutoBoth      } true
-  );
-
-  ScrollerAutoHide: array[TScrollStyle] of boolean = (
- {ssNone          } false,
- {ssHorizontal    } false,
- {ssVertical      } false,
- {ssBoth          } false,
- {ssAutoHorizontal} true,
- {ssAutoVertical  } true,
- {ssAutoBoth      } true
-  );
 
 function AllocButton(const ATarget: TWinControl; const ACallBackClass: TLCLButtonCallBackClass; const AParams: TCreateParams; btnBezel: NSBezelStyle; btnType: NSButtonType): TCocoaButton;
 begin
@@ -508,13 +477,6 @@ begin
   end
   else
     btn.setState(buttonState[NewState]);
-end;
-
-procedure ScrollViewSetScrollStyles(AScroll: TCocoaScrollView; AStyles: TScrollStyle);
-begin
-  AScroll.setHasVerticalScroller(VerticalScrollerVisible[AStyles]);
-  AScroll.setHasHorizontalScroller(HorizontalScrollerVisible[AStyles]);
-  AScroll.setAutohidesScrollers(ScrollerAutoHide[AStyles]);
 end;
 
 procedure TextFieldSetTextHint(txt: NSTextField; const str: string);
@@ -677,14 +639,6 @@ begin
   // do nothing
 end;
 
-procedure TLCLListBoxCallback.selectionChanged(ARow: Integer; Added,
-  Removed: NSIndexSet);
-begin
-  // do not notify about selection changes while clearing
-  if Assigned(strings) and (strings.isClearing) then Exit;
-  SendSimpleMessage(Target, LM_SELCHANGE);
-end;
-
 function TLCLListBoxCallback.shouldSelectionChange(NewSel: Integer
   ): Boolean;
 begin
@@ -718,6 +672,23 @@ end;
 function TLCLListBoxCallback.GetBorderStyle: TBorderStyle;
 begin
   Result:= TCustomListBox(Target).BorderStyle;
+end;
+
+procedure TListBox_selectionChanged( tv: NSTableView );
+var
+  lclListView: TCustomListView;
+  cocoaTLV: TCocoaTableListView Absolute tv;
+  lclcb: TLCLListBoxCallback;
+begin
+  if NOT Assigned(cocoaTLV.callback) then
+    Exit;
+
+  lclcb:= TLCLListBoxCallback( cocoaTLV.callback.GetCallbackObject );
+  lclListView:= TCustomListView( lclcb.Target );
+
+  // do not notify about selection changes while clearing
+  if Assigned(lclcb.strings) and (lclcb.strings.isClearing) then Exit;
+  SendSimpleMessage(lclListView, LM_SELCHANGE);
 end;
 
 { TLCLCheckBoxCallback }
@@ -2445,6 +2416,7 @@ begin
     Result := 0;
     Exit;
   end;
+  list.onSelectionChanged:= @TListBox_selectionChanged;
 
   cb := TLCLListBoxCallback.CreateWithView(list, AWinControl);
   list.callback := cb;

@@ -23,10 +23,8 @@ unit CocoaTabControls;
 interface
 
 uses
-  // rtl+ftl
   Types, Classes, SysUtils,
-  // Libs
-  MacOSAll, CocoaAll, CocoaUtils, CocoaPrivate, CocoaConst;
+  MacOSAll, CocoaAll, CocoaUtils, CocoaPrivate, CocoaCallback, CocoaConst;
 
 type
 

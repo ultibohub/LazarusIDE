@@ -23,11 +23,9 @@ unit CocoaScrollers;
 interface
 
 uses
-  // rtl+ftl
   Math, Classes, SysUtils, LclType,
-  // Libs
   Controls, Forms,
-  MacOSAll, CocoaAll, CocoaUtils, CocoaPrivate, CocoaConfig;
+  MacOSAll, CocoaAll, CocoaUtils, CocoaPrivate, CocoaCallback, CocoaConfig;
 
 type
   { TCocoaScrollView }

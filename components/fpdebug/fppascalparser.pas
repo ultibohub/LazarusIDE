@@ -25,6 +25,7 @@
 unit FpPascalParser;
 
 {$mode objfpc}{$H+}
+{$ModeSwitch advancedrecords}
 {$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 {$IF FPC_Fullversion=30202}{$Optimization NOPEEPHOLE}{$ENDIF}
 {$TYPEDADDRESS on}
@@ -33,8 +34,10 @@ unit FpPascalParser;
 interface
 
 uses
-  Classes, sysutils, math, DbgIntfBaseTypes, FpDbgInfo, FpdMemoryTools,
-  FpErrorMessages, FpDbgDwarf, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazClasses;
+  Classes, sysutils, math, fgl, DbgIntfBaseTypes, FpDbgInfo, FpdMemoryTools, FpErrorMessages,
+  FpDbgDwarf, FpWatchResultData, FpDbgClasses,
+  {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif},
+  LazClasses;
 
 const
   MAX_ERR_EXPR_QUOTE_LEN = 200;
@@ -43,11 +46,15 @@ type
 
   TFpPascalExpressionPartList= class;
 
+  TFpPascalExpression = class;
   TFpPascalExpressionPart = class;
   TFpPascalExpressionPartContainer = class;
   TFpPascalExpressionPartWithPrecedence = class;
   TFpPascalExpressionPartBracket = class;
   TFpPascalExpressionPartOperator = class;
+  TFpPascalExpressionPartIntrinsicBase = class;
+  TFpPascalExpressionPartOperatorArraySlice = class;
+  PFpPascalExpressionPartOperatorArraySlice = ^TFpPascalExpressionPartOperatorArraySlice;
 
   TFpPascalExpressionPartClass = class of TFpPascalExpressionPart;
   TFpPascalExpressionPartBracketClass = class of TFpPascalExpressionPartBracket;
@@ -58,62 +65,128 @@ type
   TFpIntrinsicFunc = (
     ifErrorNotFound,
     ifChildClass,
+    ifTry, ifTryN,
+    ifObj,
+    ifFlatten, ifFlattenPlaceholder,
     ifLength, ifRefCount, ifPos, ifSubStr, ifLower, ifUpper,
-    ifRound, ifTrunc
+    ifOrd,
+    ifRound, ifTrunc, ifSqrt, ifPi, ifLn, ifLog, ifSin, ifCos, ifTan
   );
+
+  TFpPascalParserGetSymbolForIdentProc = function(APart: TFpPascalExpressionPart; AnIdent: String): TFpValue of object;
+  TFpPascalParserGetIntrinsicForIdentProc = function(AnExpression: TFpPascalExpression; AStart: PChar; ALen: Integer): TFpPascalExpressionPartIntrinsicBase of object;
 
   TFpPascalParserCallFunctionProc = function (AnExpressionPart: TFpPascalExpressionPart;
     AFunctionValue: TFpValue; ASelfValue: TFpValue; AParams: TFpPascalExpressionPartList;
     out AResult: TFpValue; var AnError: TFpError): boolean of object;
 
-  { TFpPascalExpression }
+  { TFpPascalExpressionSharedData }
 
-  TFpPascalExpression = class
-  private
-    FAutoDeref: Boolean;
-    FError: TFpError;
-    FScope: TFpDbgSymbolScope;
-    FFixPCharIndexAccess: Boolean;
-    FHasPCharIndexAccess: Boolean;
-    FIntrinsicPrefix: TFpIntrinsicPrefix;
-    FOnFunctionCall: TFpPascalParserCallFunctionProc;
-    FTextExpression: String;
-    FExpressionPart: TFpPascalExpressionPart;
-    FValid: Boolean;
+  TFpPascalExpressionSharedData = class(TRefCountedObject)
+  // Data used while EVALUATING the expression result
+  strict private
     FFpuMask: TFPUExceptionMask;
-    function GetResultValue: TFpValue;
+
+    FTextExpression: String;
+    FScope: TFpDbgSymbolScope;
+    FError: TFpError;
+
+    FAutoDeref: Boolean;
+    FFixPCharIndexAccess: Boolean;
+    FOnFunctionCall: TFpPascalParserCallFunctionProc;
+    FGlobalCache: TFpDbgDataCache;
+
+    function GetTextExpressionAddr: PChar; inline;
     function GetValid: Boolean;
+  protected
+    FHasPCharIndexAccess: Boolean;
+  public
+    constructor Create(ATextExpression: String; AScope: TFpDbgSymbolScope);
+    destructor Destroy; override;
+
+    function GetDbgSymbolForIdentifier({%H-}AnIdent: String): TFpValue;
+    function GetRegisterValue({%H-}AnIdent: String): TFpValue;
+
     procedure SetError(AMsg: String);  // deprecated;
     procedure SetError(AnErrorCode: TFpErrorCode; const AnNestedErr: TFpError = nil);
     procedure SetError(AnErrorCode: TFpErrorCode; AData: array of const; const AnNestedErr: TFpError = nil);
     procedure SetError(const AnErr: TFpError);
+    procedure ClearError;
     function PosFromPChar(APChar: PChar): Integer;
-    function LookupIntrinsic(AStart: PChar; ALen: Integer): TFpIntrinsicFunc;
-  protected
-    function GetDbgSymbolForIdentifier({%H-}AnIdent: String): TFpValue;
-    function GetRegisterValue({%H-}AnIdent: String): TFpValue;
-    property ExpressionPart: TFpPascalExpressionPart read FExpressionPart;
+
+    property TextExpression: String read FTextExpression;
+    property TextExpressionAddr: PChar read GetTextExpressionAddr;
     property Scope: TFpDbgSymbolScope read FScope;
+    property Error: TFpError read FError;
+    property Valid: Boolean read GetValid;
+
+    (* *** CONFIG *** *)
+    property AutoDeref: Boolean read FAutoDeref write FAutoDeref;
+    property HasPCharIndexAccess: Boolean read FHasPCharIndexAccess;    // Set by GetResultValue
+    property FixPCharIndexAccess: Boolean read FFixPCharIndexAccess write FFixPCharIndexAccess;   // handle pchar as string (adjust index)
+    property OnFunctionCall: TFpPascalParserCallFunctionProc read FOnFunctionCall write FOnFunctionCall;
+    property GlobalCache: TFpDbgDataCache read FGlobalCache write FGlobalCache;
+  end;
+
+  { TFpPascalExpression }
+
+  TFpPascalExpression = class
+  strict private
+    FSharedData: TFpPascalExpressionSharedData;
+
+    function GetAutoDeref: Boolean; inline;
+    function GetFixPCharIndexAccess: Boolean; inline;
+    function GetHasPCharIndexAccess: Boolean; inline;
+    function GetGlobalCache: TFpDbgDataCache; inline;
+    function GetOnFunctionCall: TFpPascalParserCallFunctionProc; inline;
+    procedure SetAutoDeref(AValue: Boolean); inline;
+    procedure SetFixPCharIndexAccess(AValue: Boolean); inline;
+    procedure SetGlobalCache(AValue: TFpDbgDataCache); inline;
+    procedure SetOnFunctionCall(AValue: TFpPascalParserCallFunctionProc); inline;
+
+    function GetError: TFpError; inline;
+    function GetValid: Boolean; inline;
+  strict private
+    FOnFindIntrinsc: TFpPascalParserGetIntrinsicForIdentProc;
+    FIntrinsicPrefix: TFpIntrinsicPrefix;
+    FExpressionPart: TFpPascalExpressionPart;
+    FPreviousArraySlice: TFpPascalExpressionPartOperatorArraySlice;
+
+    function GetResultValue: TFpValue;
+
+    function LookupIntrinsic(AStart: PChar; ALen: Integer): TFpPascalExpressionPart;
+  protected
+    procedure SetError(AnErrorCode: TFpErrorCode; const AnNestedErr: TFpError = nil);
+    procedure SetError(AnErrorCode: TFpErrorCode; AData: array of const; const AnNestedErr: TFpError = nil);
+  protected
+    property ExpressionPart: TFpPascalExpressionPart read FExpressionPart;
   public
     constructor Create(ATextExpression: String; AScope: TFpDbgSymbolScope; ASkipParse: Boolean = False);
     destructor Destroy; override;
     procedure Parse;
     function DebugDump(AWithResults: Boolean = False): String;
     procedure ResetEvaluation;
-    property TextExpression: String read FTextExpression;
-    property Error: TFpError read FError;
+//    property TextExpression: String read GetTextExpression;
+    property Error: TFpError read GetError;
     property Valid: Boolean read GetValid;
-    // Set by GetResultValue
-    property HasPCharIndexAccess: Boolean read FHasPCharIndexAccess;
-    // handle pchar as string (adjust index)
-    property FixPCharIndexAccess: Boolean read FFixPCharIndexAccess write FFixPCharIndexAccess;
-    property IntrinsicPrefix: TFpIntrinsicPrefix read FIntrinsicPrefix write FIntrinsicPrefix;
-    property AutoDeref: Boolean read FAutoDeref write FAutoDeref;
+
     // ResultValue
     // - May be a type, if expression is a type
     // - Only valid, as long as the expression is not destroyed
     property ResultValue: TFpValue read GetResultValue;
-    property OnFunctionCall: TFpPascalParserCallFunctionProc read FOnFunctionCall write FOnFunctionCall;
+
+    (* *** CONFIG *** *)
+    // Parser-only
+    property IntrinsicPrefix: TFpIntrinsicPrefix read FIntrinsicPrefix write FIntrinsicPrefix;
+    property OnFindIntrinsc: TFpPascalParserGetIntrinsicForIdentProc read FOnFindIntrinsc write FOnFindIntrinsc;
+    // Shared, available during evaluation
+    property AutoDeref: Boolean read GetAutoDeref write SetAutoDeref;
+    property HasPCharIndexAccess: Boolean read GetHasPCharIndexAccess;  // Set by GetResultValue
+    property FixPCharIndexAccess: Boolean read GetFixPCharIndexAccess write SetFixPCharIndexAccess;   // handle pchar as string (adjust index)
+    property OnFunctionCall: TFpPascalParserCallFunctionProc read GetOnFunctionCall write SetOnFunctionCall;
+    property GlobalCache: TFpDbgDataCache read GetGlobalCache write SetGlobalCache;
+
+    property SharedData: TFpPascalExpressionSharedData read FSharedData;
   end;
 
 
@@ -134,42 +207,50 @@ type
     property Items[AIndex: Integer]: TFpPascalExpressionPart read GetItems;
   end;
 
+  TFindInParentsFlag = (fipIncludeBracketFunction);
+  TFindInParentsFlags = set of TFindInParentsFlag;
+
   { TFpPascalExpressionPart }
 
   TFpPascalExpressionPart = class
   private
+    FExpressionData: TFpPascalExpressionSharedData;
     FEndChar: PChar;
     FParent: TFpPascalExpressionPartContainer;
     FStartChar: PChar;
-    FExpression: TFpPascalExpression;
     FResultValue: TFpValue;
     FResultValDone: Boolean;
+    FIsCopy: Boolean;
     function GetResultValue: TFpValue;
     function GetSurroundingOpenBracket: TFpPascalExpressionPartBracket;
     function GetTopParent: TFpPascalExpressionPart;
     procedure SetEndChar(AValue: PChar);
     procedure SetParent(AValue: TFpPascalExpressionPartContainer); virtual;
     procedure SetStartChar(AValue: PChar);
-    procedure SetError(AMsg: String = ''); // deprecated;
-    procedure SetError(APart: TFpPascalExpressionPart; AMsg: String = ''); // deprecated;
     function  CreateErrorWithPos(AnErrorCode: TFpErrorCode; AData: array of const; APos: integer = -1): TFpError;
     procedure SetErrorWithPos(AnErrorCode: TFpErrorCode; AData: array of const);
-    //procedure SetError(AnErrorCode: TFpErrorCode; const AnNestedErr: TFpError = nil);
-    procedure SetError(AnErrorCode: TFpErrorCode; AData: array of const; const AnNestedErr: TFpError = nil);
-    procedure SetError(AnError: TFpError);
   protected
     function DebugText(AIndent: String; {%H-}AWithResults: Boolean): String; virtual; // Self desc only
     function DebugDump(AIndent: String; AWithResults: Boolean): String; virtual;
   protected
+    FPrecedence: Integer;
     procedure Init; virtual;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); virtual;
+    function  FindCopiedInParents(ASourcePart, AFindInSourcePart: TFpPascalExpressionPart; AFindFlags: TFindInParentsFlags = []): TFpPascalExpressionPart;
     function  DoGetIsTypeCast: Boolean; virtual; deprecated;
     function  DoGetResultValue: TFpValue; virtual;
-    procedure ResetEvaluation;
+    procedure SetError(AMsg: String = ''); // deprecated;
+    procedure SetError(APart: TFpPascalExpressionPart; AMsg: String = ''); // deprecated;
+    //procedure SetError(AnErrorCode: TFpErrorCode; const AnNestedErr: TFpError = nil);
+    procedure SetError(AnErrorCode: TFpErrorCode; AData: array of const; const AnNestedErr: TFpError = nil);
+    procedure SetError(AnError: TFpError);
+    procedure ResetEvaluation; virtual;
     procedure ResetEvaluationRecursive; virtual;
     procedure ResetEvaluationForAnchestors; virtual;
 
     Procedure ReplaceInParent(AReplacement: TFpPascalExpressionPart);
     procedure DoHandleEndOfExpression; virtual;
+    procedure DoParentIndexBraceClosed(APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice); virtual; // called on index-Item in array[XXX]
 
     function IsValidNextPart(APart: TFpPascalExpressionPart): Boolean; virtual;
     function IsValidAfterPart({%H-}APrevPart: TFpPascalExpressionPart): Boolean; virtual;
@@ -181,23 +262,39 @@ type
                                              TFpPascalExpressionPart; virtual;
     function CanHaveOperatorAsNext: Boolean; virtual; // True
     function HandleSeparator(ASeparatorType: TSeparatorType; var APart: TFpPascalExpressionPart): Boolean; virtual; // False
+
+    procedure GetFirstLastChar(out AFirst, ALast: PChar); virtual;
   public
-    constructor Create(AExpression: TFpPascalExpression; AStartChar: PChar; AnEndChar: PChar = nil);
+    constructor Create(AnExpressionData: TFpPascalExpressionSharedData; AStartChar: PChar; AnEndChar: PChar = nil);
     destructor Destroy; override;
+    function CreateCopy(ACopiedParent: TFpPascalExpressionPartContainer): TFpPascalExpressionPart;
+    procedure BeginNeedCopy; virtual;
+    procedure EndNeedCopy; virtual;
     function  HandleNextPart(APart: TFpPascalExpressionPart): TFpPascalExpressionPart; virtual;
     procedure HandleEndOfExpression; virtual;
+
+    // AcceptParamAsSeparator: called on the first Item in TFpPascalExpressionPartBracketArgumentList
+    function AcceptParamAsSeparator(AParamPart: TFpPascalExpressionPart;
+      ABracketsPart: TFpPascalExpressionPartContainer;
+      var AResult: TFpPascalExpressionPart): boolean; virtual;
+    // HandleNewParameterInList: called on the first Item in TFpPascalExpressionPartBracketArgumentList
+    procedure HandleNewParameterInList(AParamPart: TFpPascalExpressionPart; ABracketsPart: TFpPascalExpressionPartContainer); virtual;
+    procedure HandleEndOfParameterInList(AParamPart: TFpPascalExpressionPart; ABracketsPart: TFpPascalExpressionPartContainer); virtual;
 
     function GetText(AMaxLen: Integer=0): String;
     function GetPos: Integer;
     function GetFullText(AMaxLen: Integer=0): String; virtual; // including children
     function ReturnsVariant: boolean; virtual;
+    function IsClosed: boolean; virtual; // for brackets
     property StartChar: PChar read FStartChar write SetStartChar;
     property EndChar: PChar read FEndChar write SetEndChar;
     property Parent: TFpPascalExpressionPartContainer read FParent write SetParent;
+    function FindInParents(APart: TFpPascalExpressionPart): Boolean;
     property TopParent: TFpPascalExpressionPart read GetTopParent; // or self
+    property Precedence: Integer read FPrecedence;
     property SurroundingBracket: TFpPascalExpressionPartBracket read GetSurroundingOpenBracket; // incl self
     property ResultValue: TFpValue read GetResultValue;
-    property Expression: TFpPascalExpression read FExpression;
+    property ExpressionData: TFpPascalExpressionSharedData read FExpressionData;
   end;
 
   { TFpPascalExpressionPartContainer }
@@ -212,11 +309,15 @@ type
     procedure SetLastItem(AValue: TFpPascalExpressionPart);
   protected
     procedure Init; override;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
     procedure ResetEvaluationRecursive; override;
+    procedure GetFirstLastChar(out AFirst, ALast: PChar); override;
     function DebugDump(AIndent: String; AWithResults: Boolean): String; override;
   public
     destructor Destroy; override;
-    function GetFullText(AMaxLen: Integer=0): String; virtual; // including children
+    procedure BeginNeedCopy; override;
+    procedure EndNeedCopy; override;
+    function GetFullText(AMaxLen: Integer=0): String; override; // including children
     function Add(APart: TFpPascalExpressionPart): Integer;
     function IndexOf(APart: TFpPascalExpressionPart): Integer;
     procedure Clear;
@@ -228,9 +329,13 @@ type
   { TFpPascalExpressionPartIdentifier }
 
   TFpPascalExpressionPartIdentifier = class(TFpPascalExpressionPartContainer)
+  private
+    FOnGetSymbol: TFpPascalParserGetSymbolForIdentProc;
   protected
     function DoGetIsTypeCast: Boolean; override;
     function DoGetResultValue: TFpValue; override;
+    property OnGetSymbol: TFpPascalParserGetSymbolForIdentProc read FOnGetSymbol write FOnGetSymbol;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
   end;
 
   { TFpPascalExpressionPartCpuRegister }
@@ -240,21 +345,41 @@ type
     function DoGetResultValue: TFpValue; override;
   end;
 
-  { TFpPascalExpressionPartIntrinsic }
+
   TFpPascalExpressionPartBracketArgumentList = class;
 
-  TFpPascalExpressionPartIntrinsic = class(TFpPascalExpressionPartContainer)
-  private
-    FIntrinsic: TFpIntrinsicFunc;
-    FChildClassCastType: TFpValue;
+  { TFpPascalExpressionPartIntrinsicBase }
 
+  TFpPascalExpressionPartIntrinsicBase = class(TFpPascalExpressionPartContainer)
+  protected
     function CheckArgumentCount(AParams: TFpPascalExpressionPartBracketArgumentList; ARequiredCount: Integer; AMaxAccepted: Integer = -1): Boolean;
     // GetArg; ANum is 1 based
     function GetArg(AParams: TFpPascalExpressionPartBracketArgumentList; ANum: Integer; out AValue: TFpValue;
                     AnErr: String = ''): Boolean;
+    function DoGetResultValue: TFpValue; override;
+    function DoGetResultValue(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue; virtual;
+  end;
+
+  { TFpPascalExpressionPartIntrinsic }
+
+  TFpPascalExpressionPartIntrinsic = class(TFpPascalExpressionPartIntrinsicBase)
+  private
+    FIntrinsic: TFpIntrinsicFunc;
+    FChildClassCastType: TFpValue;
+    FFlattenCurrentVal, FFlattenCurrentValOrig: TFpValue;
+    FFlattenMemberName: String;
+    FFlattenMemberNotFound: boolean;
+
+    function DoGetMemberForFlattenExpr(APart: TFpPascalExpressionPart; AnIdent: String): TFpValue;
   protected
+    function DoTry(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoTryN(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoObj(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoOrd(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoLength(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoChildClass(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoFlatten(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoFlattenPlaceholder(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoRefCnt(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoPos(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoSubStr(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
@@ -262,14 +387,28 @@ type
     function DoUpper(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoRound(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
     function DoTrunc(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoSqrt(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoPi(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoLn(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoLog(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoSin(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoCos(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoTan(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
 
     function DoGetResultValue: TFpValue; override;
-    function DoGetResultValue(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+    function DoGetResultValue(AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue; override;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
   public
-    constructor Create(AExpression: TFpPascalExpression; AStartChar: PChar;
+    constructor Create(AnExpressionData: TFpPascalExpressionSharedData; AStartChar: PChar;
       AnEndChar: PChar; AnIntrinsic: TFpIntrinsicFunc);
     destructor Destroy; override;
     function ReturnsVariant: boolean; override;
+    function AcceptParamAsSeparator(AParamPart: TFpPascalExpressionPart;
+      ABracketsPart: TFpPascalExpressionPartContainer; var AResult: TFpPascalExpressionPart
+      ): boolean; override;
+    procedure HandleNewParameterInList(AParamPart: TFpPascalExpressionPart; ABracketsPart: TFpPascalExpressionPartContainer); override;
+    procedure HandleEndOfParameterInList(AParamPart: TFpPascalExpressionPart;
+      ABracketsPart: TFpPascalExpressionPartContainer); override;
   end;
 
   TFpPascalExpressionPartConstant = class(TFpPascalExpressionPartContainer)
@@ -295,16 +434,14 @@ type
   protected
     FValue: String;
     function DoGetResultValue: TFpValue; override;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
   end;
 
   { TFpPascalExpressionPartWithPrecedence }
 
   TFpPascalExpressionPartWithPrecedence = class(TFpPascalExpressionPartContainer)
   protected
-    FPrecedence: Integer;
     function HasPrecedence: Boolean; override;
-  public
-    property Precedence: Integer read FPrecedence;
   end;
 
   { TFpPascalExpressionPartBracket }
@@ -314,7 +451,9 @@ type
   private
     FIsClosed: boolean;
     FIsClosing: boolean;
+    FIsSeparatorChecking: boolean;
     FAfterComma: Integer;
+    FFullEndChar: PChar;
     function GetAfterComma: Boolean;
   protected
     procedure Init; override;
@@ -324,11 +463,16 @@ type
     function HandleNextPartInBracket(APart: TFpPascalExpressionPart): TFpPascalExpressionPart; virtual;
     procedure SetAfterCommaFlag;
     property AfterComma: Boolean read GetAfterComma;
+    procedure GetFirstLastChar(out AFirst, ALast: PChar); override;
+    procedure CheckBeforeSeparator(APart: TFpPascalExpressionPart);
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
   public
-    procedure CloseBracket;
+    procedure CloseBracket(ALastAddedPart: TFpPascalExpressionPart;
+                           APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice;
+                           AStartChar: PChar; AnEndChar: PChar = nil); virtual;
     function HandleNextPart(APart: TFpPascalExpressionPart): TFpPascalExpressionPart; override;
     procedure HandleEndOfExpression; override;
-    property IsClosed: boolean read FIsClosed;
+    function IsClosed: boolean; override;
   end;
 
   { TFpPascalExpressionPartRoundBracket }
@@ -344,6 +488,10 @@ type
     function HandleNextPartInBracket(APart: TFpPascalExpressionPart): TFpPascalExpressionPart; override;
     function DoGetResultValue: TFpValue; override;
     function HandleSeparator(ASeparatorType: TSeparatorType; var APart: TFpPascalExpressionPart): Boolean; override;
+  public
+    procedure CloseBracket(ALastAddedPart: TFpPascalExpressionPart;
+                           APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice;
+                           AStartChar: PChar; AnEndChar: PChar = nil); override;
   end;
 
   { TFpPascalExpressionPartBracketArgumentList }
@@ -360,7 +508,11 @@ type
       var AResult: TFpPascalExpressionPart): Boolean; override;
     function HandleSeparator(ASeparatorType: TSeparatorType; var APart: TFpPascalExpressionPart): Boolean; override;
   public
+    procedure CloseBracket(ALastAddedPart: TFpPascalExpressionPart;
+                           APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice;
+                           AStartChar: PChar; AnEndChar: PChar = nil); override;
     function ReturnsVariant: boolean; override;
+    function IntrinsicType: TFpIntrinsicFunc;
   end;
 
 
@@ -392,6 +544,10 @@ type
       var AResult: TFpPascalExpressionPart): Boolean; override;
     procedure DoHandleEndOfExpression; override;
     function HandleSeparator(ASeparatorType: TSeparatorType; var APart: TFpPascalExpressionPart): Boolean; override;
+  public
+    procedure CloseBracket(ALastAddedPart: TFpPascalExpressionPart;
+                           APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice;
+                           AStartChar: PChar; AnEndChar: PChar = nil); override;
   end;
 
   { TFpPascalExpressionPartOperator }
@@ -425,7 +581,9 @@ type
   protected
     function HasAllOperands: Boolean; override;
     function IsValidAfterPart(APrevPart: TFpPascalExpressionPart): Boolean; override;
+    function IsValidAfterPartWithPrecedence(APrevPart: TFpPascalExpressionPart): Boolean; virtual;
   public
+    function HandleNextPart(APart: TFpPascalExpressionPart): TFpPascalExpressionPart; override;
     function MaybeHandlePrevPart(APrevPart: TFpPascalExpressionPart;
       var AResult: TFpPascalExpressionPart): Boolean; override;
   end;
@@ -470,6 +628,37 @@ type
   protected
     procedure Init; override;
     function DoGetResultValue: TFpValue; override;
+  end;
+
+  { TFpPascalExpressionPartOperatorQuestionMark }
+
+  TFpPascalExpressionPartOperatorQuestionMark = class(TFpPascalExpressionPartBinaryOperator)  // ? :
+  protected
+    procedure Init; override;
+    function DoGetResultValue: TFpValue; override;
+    function FindLeftSideOperandByPrecedence(AnOperator: TFpPascalExpressionPartWithPrecedence
+      ): TFpPascalExpressionPart; override;
+    function IsValidAfterPartWithPrecedence(APrevPart: TFpPascalExpressionPart): Boolean; override;
+    procedure DoHandleEndOfExpression; override;
+  public
+    function ReturnsVariant: boolean; override;
+    function IsClosed: boolean; override;
+  end;
+
+  { TFpPascalExpressionPartOperatorColon }
+
+  TFpPascalExpressionPartOperatorColon = class(TFpPascalExpressionPartBinaryOperator)  // ? :
+  private
+    FIsClosed: boolean;
+  protected
+    procedure Init; override;
+    function DoGetResultValue: TFpValue; override;
+    function FindLeftSideOperandByPrecedence(AnOperator: TFpPascalExpressionPartWithPrecedence
+      ): TFpPascalExpressionPart; override;
+    function IsValidAfterPartWithPrecedence(APrevPart: TFpPascalExpressionPart): Boolean; override;
+    procedure DoHandleEndOfExpression; override;
+  public
+    function IsClosed: boolean; override;
   end;
 
   { TFpPascalExpressionPartOperatorPlusMinus }
@@ -536,8 +725,9 @@ type
     FOp: TOpOrType;
     procedure Init; override;
     function DoGetResultValue: TFpValue; override;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
   public
-    constructor Create(AExpression: TFpPascalExpression; AnOp: TOpOrType; AStartChar: PChar;
+    constructor Create(AnExpressionData: TFpPascalExpressionSharedData; AnOp: TOpOrType; AStartChar: PChar;
       AnEndChar: PChar = nil);
   end;
 
@@ -566,26 +756,35 @@ type
     function DoGetResultValue: TFpValue; override;
   end;
 
-  TFpPascalExpressionPartOperatorArraySlice = class;
-
   { TFpPascalExpressionPartOperatorArraySliceController }
 
-  TFpPascalExpressionPartOperatorArraySliceController = class(TFpPascalExpressionPartContainer)    // enum in set
+  TFpPascalExpressionPartOperatorArraySliceController = class(TFpPascalExpressionPartBracketSubExpression)
   private
+    FDisableSlice: boolean;
     FSlicePart: TFpPascalExpressionPartOperatorArraySlice;
     FInResetEvaluationForIndex: Boolean;
     FHasVariantPart: Boolean;
     FCheckedForVariantPart: Boolean;
+    FNeedCopy: integer;
+    function GetCanDisableSlice: boolean;
   protected
     function DoGetResultValue: TFpValue; override;
+    function InternalDoGetResultValue(ANeedCopy: boolean): TFpValue;
+    procedure DoParentIndexBraceClosed(APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice); override;
+    procedure ResetEvaluation; override;
     procedure ResetEvaluationForIndex;
     procedure ResetEvaluationForAnchestors; override;
   public
-    constructor Create(AExpression: TFpPascalExpression;
+    constructor Create(AnExpressionData: TFpPascalExpressionSharedData;
       ASlicePart: TFpPascalExpressionPartOperatorArraySlice;
-      ATopPart: TFpPascalExpressionPart;
       AStartChar: PChar; AnEndChar: PChar = nil);
-    function HandleNextPart(APart: TFpPascalExpressionPart): TFpPascalExpressionPart; override;
+    procedure BeginNeedCopy; override;
+    procedure EndNeedCopy; override;
+    function GetFullText(AMaxLen: Integer = 0): String; override;
+    function DebugText(AIndent: String; AWithResults: Boolean): String; override;
+    property SlicePart: TFpPascalExpressionPartOperatorArraySlice read FSlicePart;
+    property DisableSlice: boolean read FDisableSlice write FDisableSlice;
+    property CanDisableSlice: boolean read GetCanDisableSlice;
   end;
 
   { TFpPascalExpressionPartOperatorArraySlice }
@@ -593,14 +792,77 @@ type
   TFpPascalExpressionPartOperatorArraySlice = class(TFpPascalExpressionPartBinaryOperator)    // enum in set
   private
     FCurrentIndex: Int64;
+    FController: TFpPascalExpressionPartOperatorArraySliceController;
+    FPreviousArraySlice: TFpPascalExpressionPartOperatorArraySlice;
+    FHasUpperLimit: Boolean;
+    FUpperLimit: Integer;
   protected
+    FTouched: boolean;
     procedure Init; override;
-    procedure SetParent(AValue: TFpPascalExpressionPartContainer); override;
+    procedure DoParentIndexBraceClosed(APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice); override;
     function DoGetResultValue: TFpValue; override;
     function StartValue: Int64;
     function EndValue: Int64;
     procedure CheckForVariantExpressionParts;
+    procedure Assign(ASourcePart: TFpPascalExpressionPart); override;
+  public
+    destructor Destroy; override;
+    function IsClosed: boolean; override;
+    function AddController(ACurPart: TFpPascalExpressionPart): TFpPascalExpressionPart;
+    function AddControllerRecursive(ACurPart: TFpPascalExpressionPart): TFpPascalExpressionPart;
+    property Controller: TFpPascalExpressionPartOperatorArraySliceController read FController;
   end;
+
+  { TFpPasParserValueSlicedArrayIndex }
+
+  TFpPasParserValueSlicedArrayIndex = class(TFpSymbol)
+  private
+    FLowBound: Int64;
+  public
+    function GetValueLowBound(AValueObj: TFpValue; out ALowBound: Int64): Boolean; override;
+  end;
+
+  { TFpPasParserValue }
+
+  TFpPasParserValue = class(TFpValue)
+  private
+    FContext: TFpDbgLocationContext;
+    FExpressionPart: TFpPascalExpressionPart;
+  protected
+    function DebugText(AIndent: String): String; virtual;
+  public
+    constructor Create(AnExpressionPart: TFpPascalExpressionPart);
+    property Context: TFpDbgLocationContext read FContext;
+  end;
+
+  { TFpPasParserValueSlicedArray }
+
+  TFpPasParserValueSlicedArray = class(TFpPasParserValue)
+  private
+    FLowBoundIndex: TFpPasParserValueSlicedArrayIndex;
+    FArraySlice: TFpPascalExpressionPartOperatorArraySliceController;
+    FOwnsController: Boolean;
+  protected
+    //function DebugText(AIndent: String): String; override;
+    function SlicePart: TFpPascalExpressionPartOperatorArraySlice; inline;
+  protected
+    function GetKind: TDbgSymbolKind; override;
+    function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetTypeInfo: TFpSymbol; override;
+
+    function GetMember(AIndex: Int64): TFpValue; override;
+    function GetMemberCount: Integer; override;
+
+    function GetIndexType(AIndex: Integer): TFpSymbol; override;
+    function GetIndexTypeCount: Integer; override;
+    function GetOrdLowBound: Int64; override;
+  public
+    constructor Create(ASlice: TFpPascalExpressionPartOperatorArraySliceController; AnOwnsController: boolean = False);
+    destructor Destroy; override;
+    function SliceBracketStartOffs: integer;
+    function SliceBracketLength: integer;
+  end;
+
 
 implementation
 
@@ -625,7 +887,9 @@ const
   PRECEDENCE_OR         = 13;        // a OR b  // XOR
   PRECEDENCE_IN         = 19;        // enum IN set // officially the same as PRECEDENCE_COMPARE
   PRECEDENCE_COMPARE    = 20;        // a <> b // a=b
+  PRECEDENCE_QUEST_COLON= 27;        // ? :
   PRECEDENCE_ARRAY_SLICE= 30;        // array[5..9] // array slice
+  PRECEDENCE_SEPARATOR_COLON= MaxInt; // : used as separator in intrinsics // Operator used to hold both sides
 
 type
 
@@ -683,19 +947,6 @@ type
   {%endregion  DebugSymbol }
 
   {%region  DebugSymbolValue }
-
-  { TFpPasParserValue }
-
-  TFpPasParserValue = class(TFpValue)
-  private
-    FContext: TFpDbgLocationContext;
-    FExpressionPart: TFpPascalExpressionPart;
-  protected
-    function DebugText(AIndent: String): String; virtual;
-  public
-    constructor Create(AnExpressionPart: TFpPascalExpressionPart);
-    property Context: TFpDbgLocationContext read FContext;
-  end;
 
   { TFpPasParserValueCastToPointer
     used by TPasParserSymbolPointer.TypeCastValue (which is used by TFpPasParserValueMakeReftype.GetDbgSymbol)
@@ -790,6 +1041,88 @@ type
 
   {%endregion  DebugSymbolValue }
 
+  {%region  Intrinsic Flatten}
+
+  { TFpValueFlatteArray }
+
+  TFpValueFlatteArray = class(TFpValueConstArray)
+  private
+    FList: TRefCntObjList;
+    FFullEvaluated: boolean;
+  protected
+    function GetOrdHighBound: Int64; override;
+  public
+    constructor Create(ALowBound: Integer);
+    destructor Destroy; override;
+
+    function GetMember(AIndex: Int64): TFpValue; override;
+    function GetMemberCount: Integer; override;
+  end;
+  PFpValueFlatteArray = ^TFpValueFlatteArray;
+
+  TFpPascalExpressionFlattenFlag = (
+    iffShowNil,
+    iffShowNoMember,
+    iffShowRecurse,
+    iffShowSeen,
+    iffShowErrAny,
+    iffDerefPtr,
+    iffObj1, iffObj2, iffObj3, iffObj4
+  );
+  TFpPascalExpressionFlattenFlags = set of TFpPascalExpressionFlattenFlag;
+
+  { TFpPascalExpressionCacheFlattenKey }
+
+  TFpPascalExpressionCacheFlattenKey = record
+    CtxThread, CtxStack: Integer;
+    Key: String;
+    Flags: TFpPascalExpressionFlattenFlags;
+    ExpandArrayDepth: integer;
+
+    class operator = (a,b: TFpPascalExpressionCacheFlattenKey): boolean;
+    class operator < (a,b: TFpPascalExpressionCacheFlattenKey): boolean;
+    class operator > (a,b: TFpPascalExpressionCacheFlattenKey): boolean;
+  end;
+  PFpPascalExpressionCacheFlattenKey = ^TFpPascalExpressionCacheFlattenKey;
+
+  { TFpPascalExpressionCacheFlatten }
+
+  TFpPascalExpressionCacheFlatten = class(specialize TFPGMap<TFpPascalExpressionCacheFlattenKey, TFpValueFlatteArray>)
+  private
+    function DoKeyPtrComp(Key1, Key2: Pointer): Integer;
+  protected
+    procedure Deref(Item: Pointer); override;
+  public
+    constructor Create;
+    function Add(const AKey: TFpPascalExpressionCacheFlattenKey; const AData: TFpValueFlatteArray): Integer; inline;
+    function Replace(const AKey: TFpPascalExpressionCacheFlattenKey; const AData: TFpValueFlatteArray): Integer; inline;
+  end;
+
+  { TAddrSeenList }
+
+  TAddrSeenList = class(specialize TFPGMap<TFpDbgMemLocation, Integer>)
+  private
+    function DoKeyPtrComp(Key1, Key2: Pointer): Integer;
+  public
+    constructor Create;
+  end;
+
+  {%endregion  Intrinsic Flatten}
+
+  {%region  Intrinsic Separator ":" }
+
+  { TFpPascalExpressionPartOperatorColonAsSeparator }
+
+  TFpPascalExpressionPartOperatorColonAsSeparator = class(TFpPascalExpressionPartBinaryOperator)  // + -
+  protected
+    procedure Init; override;
+    function DoGetResultValue: TFpValue; override;
+  public
+    function IsClosed: boolean; override;
+  end;
+
+  {%endregion  Intrinsic Separator ":" }
+
 function DbgsResultValue(AVal: TFpValue; AIndent: String): String;
 begin
   if AVal is TFpPasParserValue then
@@ -877,7 +1210,7 @@ end;
 constructor TFpPasParserValue.Create(AnExpressionPart: TFpPascalExpressionPart);
 begin
   FExpressionPart := AnExpressionPart;
-  FContext := AnExpressionPart.Expression.Scope.LocationContext;
+  FContext := AnExpressionPart.ExpressionData.Scope.LocationContext;
   inherited Create;
 end;
 
@@ -1419,6 +1752,143 @@ begin
   FTypeInfo.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FTypeInfo, 'TPasParserAddressOfSymbolValue'){$ENDIF};
 end;
 
+{ TFpValueFlatteArray }
+
+function TFpValueFlatteArray.GetOrdHighBound: Int64;
+begin
+  Result := FList.Count - 1;
+end;
+
+constructor TFpValueFlatteArray.Create(ALowBound: Integer);
+begin
+  inherited Create(ALowBound);
+  FList := TRefCntObjList.Create;
+  Flags := Flags + [vfArrayUpperBoundLimit];
+end;
+
+destructor TFpValueFlatteArray.Destroy;
+begin
+  FList.Free;
+  inherited Destroy;
+end;
+
+function TFpValueFlatteArray.GetMember(AIndex: Int64): TFpValue;
+begin
+  if AIndex >= FList.Count then
+    exit(nil);
+  Result := TFpValue(FList[AIndex]);
+  Result.AddReference;
+end;
+
+function TFpValueFlatteArray.GetMemberCount: Integer;
+begin
+  Result := FList.Count;
+end;
+
+{ TFpPascalExpressionCacheFlattenKey }
+
+class operator TFpPascalExpressionCacheFlattenKey. = (a, b: TFpPascalExpressionCacheFlattenKey
+  ): boolean;
+begin
+  Result := (a.CtxThread = b.CtxThread) and
+            (a.CtxStack  = b.CtxStack) and
+            (a.Flags     = b.Flags) and
+            (a.ExpandArrayDepth  = b.ExpandArrayDepth) and
+            (a.Key = b.Key);
+end;
+
+class operator TFpPascalExpressionCacheFlattenKey.<(a, b: TFpPascalExpressionCacheFlattenKey
+  ): boolean;
+begin
+  raise Exception.Create('not supported');
+  result := false;
+end;
+
+class operator TFpPascalExpressionCacheFlattenKey.>(a, b: TFpPascalExpressionCacheFlattenKey
+  ): boolean;
+begin
+  raise Exception.Create('not supported');
+  result := false;
+end;
+
+{ TFpPascalExpressionCacheFlatten }
+
+function TFpPascalExpressionCacheFlatten.DoKeyPtrComp(Key1, Key2: Pointer): Integer;
+begin
+  if PFpPascalExpressionCacheFlattenKey(Key1)^ = PFpPascalExpressionCacheFlattenKey(Key2)^
+  then Result := 0
+  else Result := -1; // no sorting needed
+end;
+
+procedure TFpPascalExpressionCacheFlatten.Deref(Item: Pointer);
+begin
+  Finalize(TFpPascalExpressionCacheFlattenKey(Item^));
+  PFpValueFlatteArray(Pointer(PByte(Item)+KeySize))^.ReleaseReference;
+end;
+
+constructor TFpPascalExpressionCacheFlatten.Create;
+begin
+  inherited Create;
+  OnKeyPtrCompare := @DoKeyPtrComp;
+end;
+
+function TFpPascalExpressionCacheFlatten.Add(const AKey: TFpPascalExpressionCacheFlattenKey;
+  const AData: TFpValueFlatteArray): Integer;
+begin
+  while Count >= 5 do
+    Delete(0);
+  AData.AddReference;
+  Result := inherited Add(AKey, AData);
+end;
+
+function TFpPascalExpressionCacheFlatten.Replace(const AKey: TFpPascalExpressionCacheFlattenKey;
+  const AData: TFpValueFlatteArray): Integer;
+var
+  i: Integer;
+begin
+  i := IndexOf(AKey);
+  if i >= 0 then
+    Delete(i);
+  Result := Add(AKey, AData);
+end;
+
+{ TAddrSeenList }
+
+function TAddrSeenList.DoKeyPtrComp(Key1, Key2: Pointer): Integer;
+begin
+  if PFpDbgMemLocation(Key1)^ = PFpDbgMemLocation(Key2)^
+  then Result := 0
+  else Result := -1; // no sorting needed
+end;
+
+constructor TAddrSeenList.Create;
+begin
+  inherited Create;
+  OnKeyPtrCompare := @DoKeyPtrComp;
+end;
+
+{ TFpPascalExpressionPartOperatorColonAsSeparator }
+
+procedure TFpPascalExpressionPartOperatorColonAsSeparator.Init;
+begin
+  FPrecedence := PRECEDENCE_SEPARATOR_COLON;
+  inherited Init;
+end;
+
+function TFpPascalExpressionPartOperatorColonAsSeparator.DoGetResultValue: TFpValue;
+begin
+  assert(False, 'TFpPascalExpressionPartOperatorColonAsSeparator.DoGetResultValue: False');
+  Result := nil;
+end;
+
+function TFpPascalExpressionPartOperatorColonAsSeparator.IsClosed: boolean;
+begin
+  // Colon separators should only exist in intrinsics
+  Result := (Parent <> nil) and
+            (Parent is TFpPascalExpressionPartBracket) and
+            (Parent.IsClosed);
+end;
+
 { TPasParserSymbolArrayDeIndex }
 
 function TPasParserSymbolArrayDeIndex.GetNestedSymbolCount: Integer;
@@ -1476,7 +1946,7 @@ constructor TPasParserSymbolPointer.Create(const APointedTo: TFpSymbol;
 begin
   inherited Create('');
   FExpressionPart := AnExpressionPart;
-  FContext := FExpressionPart.Expression.Scope.LocationContext;
+  FContext := FExpressionPart.ExpressionData.Scope.LocationContext;
   FPointerLevels := APointerLevels;
   FPointedTo := APointedTo;
   FPointedTo.AddReference{$IFDEF WITH_REFCOUNT_DEBUG}(FPointedTo, 'TPasParserSymbolPointer'){$ENDIF};
@@ -1543,7 +2013,7 @@ begin
       exit;
     end;
 
-    if Expression.AutoDeref and (TmpVal.Kind = skPointer) and
+    if ExpressionData.AutoDeref and (TmpVal.Kind = skPointer) and
       (TmpVal.TypeInfo <> nil) and (TmpVal.TypeInfo.TypeInfo <> nil) and
       (TmpVal.TypeInfo.TypeInfo.Kind in [skString, skAnsiString, skWideString, skArray])
     then begin
@@ -1603,8 +2073,8 @@ begin
                      (not(TmpVal is TFpPasParserValueAddressOf)) and
                      (not(TmpVal is TFpPasParserValueCastToPointer)) and
                      (not(TmpVal is TFpPasParserValueMakeReftype));
-          if IsPChar then FExpression.FHasPCharIndexAccess := True;
-          if IsPChar and FExpression.FixPCharIndexAccess then begin
+          if IsPChar then ExpressionData.FHasPCharIndexAccess := True;
+          if IsPChar and ExpressionData.FixPCharIndexAccess then begin
             // fix for string in dwarf 2
             if Offs > 0 then
               dec(Offs);
@@ -1619,8 +2089,10 @@ begin
         end;
       skString, skAnsiString: begin
           //TODO: move to FpDwarfValue.member ??
-          if (Count = 2) and (Items[1] is TFpPascalExpressionPartOperatorArraySlice)
+          if (Count = 2) and (Items[1] is TFpPascalExpressionPartOperatorArraySlice) and
+             TFpPascalExpressionPartOperatorArraySlice(Items[1]).Controller.CanDisableSlice
           then begin
+            TFpPascalExpressionPartOperatorArraySlice(Items[1]).Controller.DisableSlice := True;
             Offs := TFpPascalExpressionPartOperatorArraySlice(Items[1]).StartValue;
             Len  := TFpPascalExpressionPartOperatorArraySlice(Items[1]).EndValue - Offs + 1;
             TmpVal.GetSubString(Offs, Len, v);
@@ -1802,9 +2274,22 @@ begin
 
   Result := (Count > FAfterComma) and (Count > 1); // First element is name of array (in front of "[")
   if Result then begin
+    CheckBeforeSeparator(APart);
     SetAfterCommaFlag;
     APart := Self;
   end;
+end;
+
+procedure TFpPascalExpressionPartBracketIndex.CloseBracket(
+  ALastAddedPart: TFpPascalExpressionPart;
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice; AStartChar: PChar;
+  AnEndChar: PChar);
+var
+  i: Integer;
+begin
+  inherited CloseBracket(ALastAddedPart, APreviousArraySliceList, AStartChar, AnEndChar);
+  for i := 1 to Count - 1 do
+    Items[i].DoParentIndexBraceClosed(APreviousArraySliceList);
 end;
 
 { TFpPascalExpressionPartBracketSet }
@@ -1837,6 +2322,7 @@ begin
 
   Result := (Count > FAfterComma) and (Count > 0);
   if Result then begin
+    CheckBeforeSeparator(APart);
     SetAfterCommaFlag;
     APart := Self;
   end;
@@ -1875,17 +2361,17 @@ begin
 
   Itm0 := Items[0];
 
-  if Itm0 is TFpPascalExpressionPartIntrinsic then begin
-    Result := TFpPascalExpressionPartIntrinsic(Itm0).DoGetResultValue(Self);
+  if Itm0 is TFpPascalExpressionPartIntrinsicBase then begin
+    Result := TFpPascalExpressionPartIntrinsicBase(Itm0).DoGetResultValue(Self);
     exit;
   end;
 
   tmp := Itm0.ResultValue;
-  if (tmp = nil) or (not Expression.Valid) then
+  if (tmp = nil) or (not ExpressionData.Valid) then
     exit;
 
   if (tmp.DbgSymbol <> nil) and (tmp.DbgSymbol.Kind in [skFunction, skFunctionRef]) then begin
-    if not Assigned(Expression.OnFunctionCall) then begin
+    if not Assigned(ExpressionData.OnFunctionCall) then begin
       SetError('calling functions not allowed');
       exit;
     end;
@@ -1903,11 +2389,11 @@ begin
     err := NoError;
     Params := TFpPascalExpressionPartListForwarder.Create(Self, 1, Count - 1);
     try
-      if not Expression.OnFunctionCall(Self, tmp, tmpSelf, Params, Result, err) then begin
+      if not ExpressionData.OnFunctionCall(Self, tmp, tmpSelf, Params, Result, err) then begin
         if not IsError(err) then
           SetError('unknown error calling function')
         else
-          Expression.SetError(err);
+          ExpressionData.SetError(err);
         Result := nil;
       end;
     finally
@@ -1962,19 +2448,20 @@ begin
     APart.Free;
     exit;
   end;
+
+  if Items[0].AcceptParamAsSeparator(APart, Self, Result) then // Must "Add" APart
+    exit;
+
   if (Count > 1) and (not AfterComma) then begin // Todo a,b,c
     SetError(APart, 'Comma or closing ")" expected: '+GetText+': ');
-    APart.Free;
-    exit;
-  end;
-  if not IsValidNextPart(APart) then begin
-    SetError(APart, 'Invalid operand in () '+GetText+': ');
     APart.Free;
     exit;
   end;
 
   Add(APart);
   Result := APart;
+
+  Items[0].HandleNewParameterInList(APart, Self);
 end;
 
 function TFpPascalExpressionPartBracketArgumentList.MaybeHandlePrevPart(APrevPart: TFpPascalExpressionPart;
@@ -2017,9 +2504,21 @@ begin
 
   Result := (Count > FAfterComma) and (Count > 1); // First element is name of function (in front of "(")
   if Result then begin
+    CheckBeforeSeparator(APart);
     SetAfterCommaFlag;
+    Items[0].HandleEndOfParameterInList(APart, Self);
     APart := Self;
   end;
+end;
+
+procedure TFpPascalExpressionPartBracketArgumentList.CloseBracket(
+  ALastAddedPart: TFpPascalExpressionPart;
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice; AStartChar: PChar;
+  AnEndChar: PChar);
+begin
+  inherited CloseBracket(ALastAddedPart, APreviousArraySliceList, AStartChar, AnEndChar);
+  if ExpressionData.Valid then
+    Items[0].HandleEndOfParameterInList(ALastAddedPart, Self);
 end;
 
 function TFpPascalExpressionPartBracketArgumentList.ReturnsVariant: boolean;
@@ -2035,6 +2534,72 @@ begin
     exit;
 
   Result := Itm0.ReturnsVariant;
+end;
+
+function TFpPascalExpressionPartBracketArgumentList.IntrinsicType: TFpIntrinsicFunc;
+begin
+  Result := ifErrorNotFound;
+  if (Count > 1) and (Items[0] is TFpPascalExpressionPartIntrinsic) then
+    Result := TFpPascalExpressionPartIntrinsic(Items[0]).FIntrinsic;
+end;
+
+{ TFpPascalExpressionPartIntrinsicBase }
+
+function TFpPascalExpressionPartIntrinsicBase.CheckArgumentCount(
+  AParams: TFpPascalExpressionPartBracketArgumentList; ARequiredCount: Integer;
+  AMaxAccepted: Integer): Boolean;
+var
+  i: Integer;
+begin
+  if AMaxAccepted < 0 then
+    Result := AParams.Count - 1 = ARequiredCount
+  else
+    Result := (AParams.Count - 1 >= ARequiredCount) and
+              (AParams.Count - 1 <= AMaxAccepted);
+  if not Result then begin
+    SetError('wrong argument count');
+    exit;
+  end;
+
+  for i := 1 to ARequiredCount do
+    if (AParams.Items[i] = nil) then begin
+      Result := False;
+      SetError('wrong argument count');
+      exit;
+    end;
+end;
+
+function TFpPascalExpressionPartIntrinsicBase.GetArg(
+  AParams: TFpPascalExpressionPartBracketArgumentList; ANum: Integer; out AValue: TFpValue;
+  AnErr: String): Boolean;
+begin
+  AValue := nil;
+  Result := ANum < AParams.Count;
+  if not Result then begin
+    if AnErr <> '' then
+      SetError(AnErr);
+    exit;
+  end;
+
+  AValue := AParams.Items[ANum].ResultValue;
+  Result := (AValue <> nil) and (not IsError(ExpressionData.Error)) and (not IsError(AValue.LastError));
+  if not Result then begin
+    if AnErr <> '' then
+      SetError(AnErr);
+  end;
+end;
+
+function TFpPascalExpressionPartIntrinsicBase.DoGetResultValue: TFpValue;
+begin
+  SetError('wrong argument count');
+  Result := nil;
+end;
+
+function TFpPascalExpressionPartIntrinsicBase.DoGetResultValue(
+  AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+begin
+  SetError('internal error');
+  Result := nil;
 end;
 
 { TFpPascalExpressionPartBracketSubExpression }
@@ -2066,10 +2631,22 @@ function TFpPascalExpressionPartBracketSubExpression.HandleSeparator(
   ASeparatorType: TSeparatorType; var APart: TFpPascalExpressionPart): Boolean;
 begin
   if IsClosed then
-    inherited HandleSeparator(ASeparatorType, APart)
+    Result := inherited HandleSeparator(ASeparatorType, APart)
   else
     Result := False;
 end;
+
+procedure TFpPascalExpressionPartBracketSubExpression.CloseBracket(
+  ALastAddedPart: TFpPascalExpressionPart;
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice; AStartChar: PChar;
+  AnEndChar: PChar);
+begin
+  if (Count <> 1) then
+    SetError('Empty brackets')
+  else
+    inherited CloseBracket(ALastAddedPart, APreviousArraySliceList, AStartChar, AnEndChar);
+end;
+
 
 { TFpPascalExpressionPartIdentifier }
 
@@ -2084,7 +2661,10 @@ var
   tmp: TFpValueConstAddress;
 begin
   s := GetText;
-  Result := FExpression.GetDbgSymbolForIdentifier(s);
+  if FOnGetSymbol <> nil then
+    Result := FOnGetSymbol(Self, s)
+  else
+    Result := ExpressionData.GetDbgSymbolForIdentifier(s);
   if Result = nil then begin
     if CompareText(s, 'nil') = 0 then begin
       tmp := TFpValueConstAddress.Create(NilLoc);
@@ -2114,6 +2694,23 @@ begin
   ;
 end;
 
+procedure TFpPascalExpressionPartIdentifier.Assign(ASourcePart: TFpPascalExpressionPart);
+var
+  IdentSourcePart: TFpPascalExpressionPartIdentifier absolute ASourcePart;
+  p: TFpPascalExpressionPart;
+begin
+  inherited Assign(ASourcePart);
+  if ASourcePart is TFpPascalExpressionPartIdentifier then begin
+    if IdentSourcePart.FOnGetSymbol <> nil then begin
+      p := FindCopiedInParents(ASourcePart,
+           TFpPascalExpressionPart(TMethod(IdentSourcePart.FOnGetSymbol).Data),
+           [fipIncludeBracketFunction]);
+      if p <> nil then
+        FOnGetSymbol := @TFpPascalExpressionPartIntrinsic(p).DoGetMemberForFlattenExpr;
+    end;
+  end;
+end;
+
 function GetFirstToken(AText: PChar): String;
 begin
   Result := AText[0];
@@ -2138,7 +2735,7 @@ end;
 
 function TFpPascalExpressionPartCpuRegister.DoGetResultValue: TFpValue;
 begin
-  Result := FExpression.GetRegisterValue(GetText);
+  Result := ExpressionData.GetRegisterValue(GetText);
   {$IFDEF WITH_REFCOUNT_DEBUG}
   if Result <> nil then
     Result.DbgRenameReference(nil, 'DoGetResultValue')
@@ -2147,48 +2744,144 @@ end;
 
 { TFpPascalExpressionPartIntrinsic }
 
-function TFpPascalExpressionPartIntrinsic.CheckArgumentCount(
-  AParams: TFpPascalExpressionPartBracketArgumentList; ARequiredCount: Integer;
-  AMaxAccepted: Integer): Boolean;
-var
-  i: Integer;
+function TFpPascalExpressionPartIntrinsic.DoGetMemberForFlattenExpr(
+  APart: TFpPascalExpressionPart; AnIdent: String): TFpValue;
 begin
-  if AMaxAccepted < 0 then
-    Result := AParams.Count - 1 = ARequiredCount
-  else
-    Result := (AParams.Count - 1 >= ARequiredCount) and
-              (AParams.Count - 1 <= AMaxAccepted);
-  if not Result then begin
-    SetError('wrong argument count');
-    exit;
-  end;
+  if FFlattenCurrentVal = nil then
+    exit(nil);
 
-  for i := 1 to ARequiredCount do
-    if (AParams.Items[i] = nil) then begin
-      Result := False;
-      SetError('wrong argument count');
-      exit;
-    end;
+  Result := FFlattenCurrentVal.MemberByName[AnIdent];
+  if Result = nil then begin
+    SetError(fpErrNoMemberWithName, [AnIdent]);
+    FFlattenMemberNotFound := True;
+    FFlattenMemberName := AnIdent;
+  end;
 end;
 
-function TFpPascalExpressionPartIntrinsic.GetArg(
-  AParams: TFpPascalExpressionPartBracketArgumentList; ANum: Integer; out
-  AValue: TFpValue; AnErr: String): Boolean;
+function TFpPascalExpressionPartIntrinsic.DoTry(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Expr: TFpPascalExpressionPart;
+  HighIdx, i: Integer;
+  ff: TFpValueFieldFlags;
 begin
-  AValue := nil;
-  Result := ANum < AParams.Count;
-  if not Result then begin
-    if AnErr <> '' then
-      SetError(AnErr);
+  Result := nil;
+  if IsError(ExpressionData.Error) then
     exit;
+  if not CheckArgumentCount(AParams, 2, 999) then
+    exit;
+
+  HighIdx := AParams.Count-1;
+  for i := 1 to HighIdx-1 do begin
+    Expr := AParams.Items[i];
+    Result := Expr.GetResultValue;
+    if (Result <> nil) and (not IsError(ExpressionData.Error)) then begin
+      ff := Result.FieldFlags;
+      if ( (not (svfAddress in ff))     or (IsValidLoc(Result.Address))     )
+      then begin
+        Result.AddReference;
+        exit;
+      end;
+    end;
+
+    Expr.ResetEvaluationRecursive;
+    ExpressionData.ClearError;
   end;
 
-  AValue := AParams.Items[ANum].ResultValue;
-  Result := (AValue <> nil) and (not IsError(Expression.Error)) and (not IsError(AValue.LastError));
-  if not Result then begin
-    if AnErr <> '' then
-      SetError(AnErr);
+  Expr := AParams.Items[HighIdx];
+  Result := Expr.GetResultValue;
+  Result.AddReference;
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoTryN(
+  AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+var
+  Expr: TFpPascalExpressionPart;
+  HighIdx, i: Integer;
+  ff: TFpValueFieldFlags;
+begin
+  Result := nil;
+  if IsError(ExpressionData.Error) then
+    exit;
+  if not CheckArgumentCount(AParams, 2, 999) then
+    exit;
+
+  HighIdx := AParams.Count-1;
+  for i := 1 to HighIdx-1 do begin
+    Expr := AParams.Items[i];
+    Result := Expr.GetResultValue;
+    if (Result <> nil) and (not IsError(ExpressionData.Error)) then begin
+      ff := Result.FieldFlags;
+      if ( (not (svfAddress in ff))     or (IsReadableLoc(Result.Address))     ) and
+         ( (not (svfDataAddress in ff)) or (IsReadableLoc(Result.DataAddress)) )
+      then begin
+        Result.AddReference;
+        exit;
+      end;
+    end;
+
+    Expr.ResetEvaluationRecursive;
+    ExpressionData.ClearError;
   end;
+
+  Expr := AParams.Items[HighIdx];
+  Result := Expr.GetResultValue;
+  Result.AddReference;
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoObj(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Res: TFpValueConstStruct absolute Result;
+  i: Integer;
+  p: TFpPascalExpressionPart;
+  p_c: TFpPascalExpressionPartOperatorColonAsSeparator absolute p;
+  rv: TFpValue;
+begin
+  Result := TFpValueConstStruct.Create;
+  for i := 1 to AParams.Count - 1 do begin
+    p := AParams.Items[i];
+    if not (p is TFpPascalExpressionPartOperatorColonAsSeparator) then begin
+      ReleaseRefAndNil(Result);
+      exit;
+    end;
+
+    rv := p_c.Items[1].ResultValue;
+    if (rv = nil) or IsError(ExpressionData.Error) then begin
+      if IsError(ExpressionData.Error) then
+        rv := TFpValueConstError.Create(ExpressionData.Error)
+      else
+        rv := TFpValueConstError.Create(CreateError(fpErrAnyError, ['internal error']));
+      ExpressionData.ClearError;
+
+      Res.AddMember(p_c.Items[0].GetText, rv);
+      rv.ReleaseReference;
+    end
+    else
+      Res.AddMember(p_c.Items[0].GetText, rv);
+
+    p_c.Items[1].ResetEvaluationRecursive;
+  end;
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoOrd(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Arg: TFpValue;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 1) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
+
+  if Arg.FieldFlags * [svfOrdinal, svfCardinal] <> [] then
+    Result := TFpValueConstNumber.Create(Arg.AsCardinal, False)
+  else
+  if Arg.FieldFlags * [svfInteger] <> [] then
+    Result := TFpValueConstNumber.Create(Arg.AsInteger, True)
+  else
+    SetError('Can''t get ordinal value of argument');
 end;
 
 function TFpPascalExpressionPartIntrinsic.DoLength(
@@ -2243,7 +2936,7 @@ begin
     exit;
 
   FChildClassCastType.ReleaseReference;
-  FChildClassCastType := Expression.GetDbgSymbolForIdentifier(CastName);
+  FChildClassCastType := ExpressionData.GetDbgSymbolForIdentifier(CastName);
   if (FChildClassCastType = nil) or (FChildClassCastType.DbgSymbol = nil) or
      (FChildClassCastType.DbgSymbol.SymbolType <> stType) or
      (FChildClassCastType.DbgSymbol.Kind <> skClass)
@@ -2258,6 +2951,633 @@ begin
     Result.ReleaseReference;
     Result := NewResult;
   end;
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoFlatten(
+  AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+var
+  Res: TFpValueFlatteArray absolute Result;
+  Seen: TAddrSeenList;
+  HighParam: integer;
+  Flags: TFpPascalExpressionFlattenFlags;
+  MaxCnt, ExpandArrayDepth: integer;
+  TpSym: TFpSymbol;
+  CacheKey: TFpPascalExpressionCacheFlattenKey;
+
+
+  function FlattenRecurse(ACurrentVal: TFpValue; ACurDepth: integer; ACurKey: String): boolean; forward;
+  function FlattenArray(ACurrentVal: TFpValue; AMapExpr: TFpPascalExpressionPart; ACurDepth, ACurKeyIdx: integer; ACurKey: String;
+                        AnExpandDepth: integer): boolean; forward;
+
+  function InternalAdd(ACurrentVal: TFpValue; ACurDepth, ACurKeyIdx: integer; ACurKey: String): Integer;
+  var
+    TmpVal: TFpValueConstStruct;
+    TmpVal2: TFpValue;
+  begin
+    if iffObj1 in Flags then begin
+      TmpVal := TFpValueConstStruct.Create;
+      TmpVal2 := TFpValueConstNumber.Create(ACurDepth, False);
+      TmpVal.AddMember('d', TmpVal2);
+      TmpVal2.ReleaseReference;
+
+      TmpVal2 := TFpValueConstString.Create(ACurKey);
+      TmpVal.AddMember('k', TmpVal2);
+      TmpVal2.ReleaseReference;
+
+      TmpVal.AddMember('v', ACurrentVal);
+      Result := Res.FList.Add(TmpVal);
+      TmpVal.ReleaseReference;
+    end
+    else
+    if iffObj2 in Flags then begin
+      TmpVal := TFpValueConstStruct.Create;
+      TmpVal2 := TFpValueConstNumber.Create(ACurDepth, False);
+      TmpVal.AddMember('d', TmpVal2);
+      TmpVal2.ReleaseReference;
+
+      TmpVal2 := TFpValueConstNumber.Create(QWord(ACurKeyIdx), True);
+      TmpVal.AddMember('k', TmpVal2);
+      TmpVal2.ReleaseReference;
+
+      TmpVal.AddMember('v', ACurrentVal);
+      Result := Res.FList.Add(TmpVal);
+      TmpVal.ReleaseReference;
+    end
+    else
+    if Flags * [iffObj3, iffObj4] <> [] then begin
+      TmpVal := TFpValueConstStruct.Create;
+      TmpVal2 := TFpValueConstString.Create(ACurKey);
+      TmpVal.AddMember('k', TmpVal2);
+      TmpVal2.ReleaseReference;
+
+      TmpVal.AddMember('v', ACurrentVal);
+      Result := Res.FList.Add(TmpVal);
+      TmpVal.ReleaseReference;
+    end
+    else
+      Result := Res.FList.Add(ACurrentVal);
+  end;
+
+  procedure AddErrToList(AnErr: TFpError; ACurDepth, ACurKeyIdx: integer; ACurKey: String);
+  var
+    E: TFpValueConstError;
+  begin
+    E := TFpValueConstError.Create(AnErr);
+    InternalAdd(E, ACurDepth, ACurKeyIdx, ACurKey);
+    E.ReleaseReference
+  end;
+
+  function EvalExression(AnExpr: TFpPascalExpressionPart; ACurrentVal, AnOrigVal: TFpValue;
+    ShowMemberNotFoundErr: boolean; ACurDepth, ACurKeyIdx: integer; ACurKey: String): TFpValue;
+  var
+    s: String;
+    Err: TFpError;
+  begin
+    Result := nil;
+    Err := NoError;
+    if AnExpr is TFpPascalExpressionPartIdentifier then begin
+      FFlattenMemberNotFound := not(ACurrentVal.Kind in [skClass, skInterface, skRecord, skObject]);
+      if not FFlattenMemberNotFound then begin
+        FFlattenMemberName := AnExpr.GetText;
+        Result := ACurrentVal.MemberByName[FFlattenMemberName];
+        FFlattenMemberNotFound := (Result = nil) and ShowMemberNotFoundErr;
+      end;
+    end
+    else begin
+      FFlattenCurrentVal := ACurrentVal;
+      FFlattenCurrentValOrig := AnOrigVal; // for :_
+      FFlattenMemberNotFound := False;
+      FFlattenMemberName := '';
+      AnExpr.ResetEvaluationRecursive;
+      Result := AnExpr.GetResultValue;
+      if Result <> nil then Result.AddReference;
+
+      if not ShowMemberNotFoundErr then
+        FFlattenMemberNotFound := False; // show general error instead
+
+      Err := ExpressionData.Error;
+      //AnExpr.ResetEvaluationRecursive;
+      ExpressionData.ClearError;
+
+      if (not FFlattenMemberNotFound) and IsError(Err) then begin
+        if (iffShowErrAny in Flags) then
+          AddErrToList(CreateError(fpErrAnyError, ['Failed eval for member: ' + FFlattenMemberName + ' '+ErrorHandler.ErrorAsString(Err)]), ACurDepth, ACurKeyIdx, ACurKey);
+        ReleaseRefAndNil(Result);
+        exit
+      end;
+
+      if (not FFlattenMemberNotFound) and AnExpr.ReturnsVariant then
+        Res.Flags := Res.Flags + [vfArrayOfVariant];
+    end;
+
+    if FFlattenMemberNotFound then begin
+      if (iffShowNoMember in Flags) then
+        AddErrToList(CreateError(fpErrAnyError, ['Member not found: ' + FFlattenMemberName]), ACurDepth, ACurKeyIdx, ACurKey);
+      ReleaseRefAndNil(Result);
+      exit;
+    end;
+
+    if Result = nil then begin
+      if (iffShowErrAny in Flags) then begin
+        s := '';
+        if IsError(Err) then
+          s := ErrorHandler.ErrorAsString(Err);
+        AddErrToList(CreateError(fpErrAnyError, ['Internal error for member: ' + FFlattenMemberName + ' '+s]), ACurDepth, ACurKeyIdx, ACurKey);
+      end;
+      exit;
+    end;
+  end;
+
+  function AddFlatValue(ACurrentVal: TFpValue; AMapExpr: TFpPascalExpressionPart; ACurDepth, ACurKeyIdx: integer; ACurKey: String; AnExpandDepth: integer): boolean;
+  var
+    s, ResIdx, SeenIdx, ValIdx: Integer;
+    PrevVal, TmpAutoDereVal, DisplayVal, OrigVal: TFpValue;
+    DA: TFpDbgMemLocation;
+    DoExpArray, HasDtAddr: Boolean;
+  begin
+    Result := True;
+    if ACurrentVal = nil then begin
+      if (iffShowErrAny in Flags) then
+        AddErrToList(CreateError(fpErrAnyError, ['Internal error for member: ' + FFlattenMemberName + ' '+ErrorHandler.ErrorAsString(ExpressionData.Error)]), ACurDepth, ACurKeyIdx, ACurKey);
+      exit;
+    end;
+
+    OrigVal := ACurrentVal;
+    OrigVal.AddReference;
+    DisplayVal := nil;
+    ResIdx := -1;
+    try
+      if (iffDerefPtr in Flags) and (ACurrentVal.Kind = skPointer) and
+        (ACurrentVal.TypeInfo <> nil) and (ACurrentVal.TypeInfo.TypeInfo <> nil) and
+        (ACurrentVal.TypeInfo.TypeInfo.Kind in [skClass, skInterface, skRecord, skObject])
+      then begin
+        if (svfDataAddress in ACurrentVal.FieldFlags) and (IsReadableLoc(ACurrentVal.DerefAddress)) and // TODO, what if Not readable addr
+           (ACurrentVal.TypeInfo <> nil) //and (ACurrentVal.TypeInfo.TypeInfo <> nil)
+        then begin
+          TmpAutoDereVal := ACurrentVal.Member[0];
+          if TmpAutoDereVal <> nil then begin
+            ACurrentVal.ReleaseReference;
+            ACurrentVal := TmpAutoDereVal;
+          end;
+        end;
+      end;
+
+      DoExpArray := (AnExpandDepth > 0) and (ACurrentVal.Kind = skArray);
+
+      HasDtAddr := (svfDataAddress in ACurrentVal.FieldFlags);
+      DA := ACurrentVal.DataAddress;
+      if IsReadableLoc(DA) then begin
+        SeenIdx := Seen.IndexOf(DA);
+        if (SeenIdx >= 0) then begin
+          ValIdx := Seen.Data[SeenIdx];
+          if (not DoExpArray) and (not (ACurrentVal.Kind in [skClass, skInterface])) then begin
+            PrevVal := TFpValue(Res.FList[ValIdx]);
+            if (ACurrentVal.TypeInfo = nil) or (PrevVal.TypeInfo = nil) or
+               (not ACurrentVal.TypeInfo.IsEqual(PrevVal.TypeInfo))
+            then
+              SeenIdx := -1;
+          end;
+          if (SeenIdx >= 0) then begin
+            if (iffShowRecurse in Flags) and (ValIdx >= 0) then begin
+              if DoExpArray then
+                AddErrToList(CreateError(fpErrAnyError, [Format('Recursion detected for array at member: %s (At Index %d)', [FFlattenMemberName, ValIdx])]), ACurDepth, ACurKeyIdx, ACurKey)
+              else
+                AddErrToList(CreateError(fpErrAnyError, [Format('Recursion detected for member: %s (At Index %d)', [FFlattenMemberName, ValIdx])]), ACurDepth, ACurKeyIdx, ACurKey);
+            end
+            else
+            if (iffShowSeen in Flags) then begin
+              if ValIdx < 0 then ValIdx := -(ValIdx + 1);
+              if DoExpArray then
+                AddErrToList(CreateError(fpErrAnyError, [Format('Array for member already shown: %s (At Index %d)', [FFlattenMemberName, ValIdx])]), ACurDepth, ACurKeyIdx, ACurKey)
+              else
+                AddErrToList(CreateError(fpErrAnyError, [Format('Member already shown: %s (At Index %d)', [FFlattenMemberName, ValIdx])]), ACurDepth, ACurKeyIdx, ACurKey);
+            end;
+            ReleaseRefAndNil(ACurrentVal);
+            exit;
+          end;
+        end;
+      end;
+
+      if ( (not DoExpArray) or
+           (HasDtAddr and not IsReadableLoc(DA))
+         ) and
+         ( (iffShowNil in Flags) or (not IsNilLoc(DA))
+         )
+      then begin
+        // not an array, or array can not be expanded => show value
+        if (AMapExpr = nil) then begin
+          DisplayVal := ACurrentVal;
+          DisplayVal.AddReference;
+        end
+        else
+          DisplayVal := EvalExression(AMapExpr, ACurrentVal, OrigVal, False, ACurDepth, ACurKeyIdx, ACurKey);
+
+        if (DisplayVal <> nil) then begin
+          ResIdx := InternalAdd(DisplayVal, ACurDepth, ACurKeyIdx, ACurKey);
+          if (DisplayVal.TypeInfo = nil) or (not DisplayVal.TypeInfo.IsEqual(TpSym)) or
+             (DisplayVal.Flags * [vfArrayOfVariant, vfVariant] <> [])
+          then
+            Res.Flags := Res.Flags + [vfArrayOfVariant];
+        end;
+      end;
+      if ResIdx < 0 then
+        ResIdx := Res.FList.Count; // the index for the firs element of the array (if any)
+
+      if IsNilLoc(DA) or
+         ( (not IsReadableLoc(DA)) and ((not DoExpArray) or HasDtAddr) )
+      then begin
+        ReleaseRefAndNil(ACurrentVal);
+        exit;
+      end;
+
+      s := Seen.Add(DA, ResIdx);
+      if DoExpArray then
+        Result := FlattenArray(ACurrentVal, AMapExpr, ACurDepth + 1, ACurKeyIdx, ACurKey, AnExpandDepth)
+      else
+        Result := FlattenRecurse(ACurrentVal, ACurDepth+1, ACurKey);
+
+      ReleaseRefAndNil(ACurrentVal);
+      if (iffShowSeen in Flags) then
+        Seen.Data[s] := -1-ResIdx
+      else
+        Seen.Delete(s);
+
+    finally
+      DisplayVal.ReleaseReference;
+      OrigVal.ReleaseReference;
+    end;
+  end;
+
+  function FlattenArray(ACurrentVal: TFpValue; AMapExpr: TFpPascalExpressionPart; ACurDepth, ACurKeyIdx: integer; ACurKey: String;
+    AnExpandDepth: integer): boolean;
+  var
+    Idx, Cnt: Integer;
+    TmpNew: TFpValue;
+    LBnd: Int64;
+  begin
+    LBnd := ACurrentVal.OrdLowBound;
+    Cnt := ACurrentVal.MemberCount;
+    if Cnt > 1 then begin
+// LOCK the ExpressionData
+    end;
+    for Idx := 0 to Cnt - 1 do begin
+      if Res.FList.Count >= MaxCnt then
+        exit(False);
+      TmpNew := ACurrentVal.Member[Idx+LBnd];
+      // AddFlatValue will release TmpNew
+      Result := AddFlatValue(TmpNew, AMapExpr, ACurDepth, ACurKeyIdx, ACurKey+'['+IntToStr(Idx+LBnd)+']', Max(0, AnExpandDepth-1));
+      if not Result then
+        exit;
+    end;
+// UNLOCK
+    Result := True;
+  end;
+
+  function FlattenRecurse(ACurrentVal: TFpValue; ACurDepth: integer; ACurKey: String): boolean;
+  var
+    i: Integer;
+    OrigVal, AutoDereVal, TmpNew: TFpValue;
+    Expr, MapExpr, TmpExpr: TFpPascalExpressionPart;
+    Expr_as_ColSep: TFpPascalExpressionPartOperatorColonAsSeparator absolute Expr;
+    r: Boolean;
+    NxtKey: String;
+  begin
+    Result := True;
+    if HighParam < 2 then
+      exit;
+
+    AutoDereVal := nil;
+    OrigVal := ACurrentVal;
+    OrigVal.AddReference;
+    try
+      if ExpressionData.AutoDeref and (ACurrentVal.Kind = skPointer) and
+        (ACurrentVal.TypeInfo <> nil) and (ACurrentVal.TypeInfo.TypeInfo <> nil) and
+        (ACurrentVal.TypeInfo.TypeInfo.Kind in [skClass, skInterface, skRecord, skObject])
+      then begin
+        if (svfDataAddress in ACurrentVal.FieldFlags) and (IsReadableLoc(ACurrentVal.DerefAddress)) and // TODO, what if Not readable addr
+           (ACurrentVal.TypeInfo <> nil) //and (ACurrentVal.TypeInfo.TypeInfo <> nil)
+        then begin
+          AutoDereVal := ACurrentVal.Member[0];
+          ACurrentVal := AutoDereVal;
+        end;
+        if (ACurrentVal = nil) then begin
+          //if (iffShowErrAny in Flags) then
+          //  AddErrToList(CreateError(fpErrAnyError, ['Can't flatten nil pointer']), ACurDepth, -1, ACurKey);
+          exit;
+        end;
+      end;
+
+
+      case ACurrentVal.Kind of
+        skClass, skInterface, skRecord, skObject: begin
+          for i := 2 to HighParam do begin
+            if Res.FList.Count >= MaxCnt then
+              exit(False);
+
+            Expr := AParams.Items[i];
+            MapExpr := nil;
+            if Expr is TFpPascalExpressionPartOperatorColonAsSeparator then begin
+              if Expr_as_ColSep.Count <> 2 then begin
+                SetError('Internal erorr');
+                exit(false);
+              end;
+              MapExpr := Expr_as_ColSep.Items[1];
+              Expr    := Expr_as_ColSep.Items[0];
+
+              if MapExpr is TFpPascalExpressionPartConstantNumber then begin
+                TmpNew := MapExpr.ResultValue;
+                if (TmpNew is TFpValueConstNumber) then begin
+                  TmpExpr := AParams.Items[1+TmpNew.AsInteger];
+                  if (not (TmpExpr is TFpPascalExpressionPartOperatorColonAsSeparator)) or
+                     (TFpPascalExpressionPartOperatorColonAsSeparator(TmpExpr).Count <> 2)
+                  then begin
+                    SetError('Incorrect reference to map-expression');
+                    exit(false);
+                  end;
+                  MapExpr := TFpPascalExpressionPartOperatorColonAsSeparator(TmpExpr).Items[1];
+                  if (MapExpr is TFpPascalExpressionPartConstantNumber) and
+                     (MapExpr.ResultValue is TFpValueConstNumber)
+                  then begin
+                    SetError('Incorrect reference to map-expression');
+                    exit(false);
+                  end;
+                end;
+              end;
+            end;
+
+            if (iffObj4 in Flags) and (Length(ACurKey) < 1000) then begin
+              if (ACurKey = '') then
+                NxtKey := IntToStr(i-2)
+              else
+                NxtKey := ACurKey + '.' + IntToStr(i-2);
+            end
+            else begin
+              NxtKey := Expr.GetFullText;
+              if (iffObj3 in Flags) and (ACurKey <> '') and (Length(ACurKey) < 1000) then
+                NxtKey := ACurKey + '.' + NxtKey
+            end;
+
+            Expr.BeginNeedCopy;
+
+            TmpNew := EvalExression(Expr, ACurrentVal, OrigVal, True, ACurDepth, i-2, NxtKey);
+            if TmpNew = nil then begin
+              Expr.EndNeedCopy;
+              Continue;
+            end;
+
+            // AddFlatValue will release TmpNew
+            r := AddFlatValue(TmpNew, MapExpr, ACurDepth, i-2, NxtKey, ExpandArrayDepth);
+
+            Expr.EndNeedCopy;
+
+            if not r then
+              exit(False);
+          end;
+
+        end;
+        //skArray: begin end;
+        else begin
+          //if (iffShowErrAny in Flags) then
+          //  AddErrToList(CreateError(fpErrAnyError, ['Can''t flatten value']), ACurDepth, -1, ACurKey);
+        end;
+      end;
+    finally
+      OrigVal.ReleaseReference;
+      AutoDereVal.ReleaseReference;
+    end;
+    Result := True;
+  end;
+
+var
+  FirstVal: TFpValue;
+  DA: TFpDbgMemLocation;
+  LastParam, Itm: TFpPascalExpressionPart;
+  OptSet: TFpPascalExpressionPartBracketSet absolute LastParam;
+  i: Integer;
+  OName: String;
+  OVal, CustomMaxCnt, LastParamNeg, SkipCache: Boolean;
+  PParent: TFpPascalExpressionPartContainer;
+  ListCache: TFpPascalExpressionCacheFlatten;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 1, 999) then
+    exit;
+
+  if not GetArg(AParams, 1, FirstVal, 'Value required')  then exit;
+
+  if (FirstVal.Kind <> skArray) and (not CheckArgumentCount(AParams, 2, 999)) then
+    exit;
+
+  Flags := [iffShowNil, iffShowNoMember, iffShowRecurse, iffShowSeen, iffShowErrAny, iffDerefPtr];
+  ExpandArrayDepth  := 0;
+  MaxCnt       := 1000;
+  CustomMaxCnt := False;
+
+  HighParam := AParams.Count - 1;
+  if HighParam > 0 then begin
+    LastParam := AParams.Items[HighParam];
+
+    LastParamNeg := False;
+    if (LastParam is TFpPascalExpressionPartOperatorUnaryPlusMinus) and
+       (TFpPascalExpressionPartOperatorUnaryPlusMinus(LastParam).Count = 1) and
+       (TFpPascalExpressionPartOperatorUnaryPlusMinus(LastParam).Items[0] is TFpPascalExpressionPartBracketSet)
+    then begin
+      // Add or Sub from defaults
+      LastParamNeg := LastParam.GetText = '-';
+      LastParam := TFpPascalExpressionPartOperatorUnaryPlusMinus(LastParam).Items[0];
+    end
+    else
+    if LastParam is TFpPascalExpressionPartBracketSet then
+      Flags := [];  // NO +/- => Start with empty,
+
+    if LastParam is TFpPascalExpressionPartBracketSet then begin
+      if (FirstVal.Kind <> skArray) and (not CheckArgumentCount(AParams, 3, 999)) then
+        exit;
+
+      dec(HighParam);
+      if HighParam < 2 then begin
+        SetError('Not enough parameter');
+        exit;
+      end;
+      if (HighParam > 2) and (Flags <> []) then
+        Flags := Flags + [iffObj1];
+
+      for i := 0 to OptSet.Count - 1 do begin
+        Itm := OptSet.Items[i];
+        OName := '';
+        OVal := True;
+        if (Itm is TFpPascalExpressionPartIdentifier) then
+          OName := Itm.GetText
+        else
+        if (Itm is TFpPascalExpressionPartOperatorCompare) and (Itm.GetText = '=') and
+           (TFpPascalExpressionPartOperatorCompare(Itm).Count = 2) and
+           (TFpPascalExpressionPartOperatorCompare(Itm).Items[1].ResultValue <> nil)
+        then begin
+          OName := TFpPascalExpressionPartOperatorCompare(Itm).Items[0].GetText;
+          if LowerCase(OName)= 'max' then begin
+            MaxCnt := TFpPascalExpressionPartOperatorCompare(Itm).Items[1].ResultValue.AsInteger;
+            CustomMaxCnt := True;
+            Continue;
+          end;
+          if LowerCase(OName)= 'array' then begin
+            ExpandArrayDepth := TFpPascalExpressionPartOperatorCompare(Itm).Items[1].ResultValue.AsInteger;
+            Continue;
+          end;
+          OVal := TFpPascalExpressionPartOperatorCompare(Itm).Items[1].ResultValue.AsBool;
+        end;
+
+        OVal := OVal xor LastParamNeg;
+        case LowerCase(OName) of
+          'nil':             if OVal then include(Flags, iffShowNil)      else exclude(Flags, iffShowNil);
+          'field', 'fld':    if OVal then include(Flags, iffShowNoMember) else exclude(Flags, iffShowNoMember);
+          'loop', 'recurse': if OVal then include(Flags, iffShowRecurse)  else exclude(Flags, iffShowRecurse);
+          'seen', 'dup':     if OVal then include(Flags, iffShowSeen)     else exclude(Flags, iffShowSeen);
+          'err', 'error':    if OVal then include(Flags, iffShowErrAny)   else exclude(Flags, iffShowErrAny);
+          'array':           ExpandArrayDepth  := 1;
+          'ptr', 'deref':    if OVal then include(Flags, iffDerefPtr)     else exclude(Flags, iffDerefPtr);
+          'obj':           begin
+                             Flags := Flags - [iffObj1, iffObj2, iffObj3, iffObj4];
+                             if OVal then include(Flags, iffObj1);
+                           end;
+          'o1', 'obj1':    begin
+                             if Oval then Flags := Flags - [iffObj1, iffObj2, iffObj3, iffObj4];
+                             if OVal then include(Flags, iffObj1)         else exclude(Flags, iffObj1);
+                           end;
+          'o2', 'obj2':    begin
+                             if Oval then Flags := Flags - [iffObj1, iffObj2, iffObj3, iffObj4];
+                             if OVal then include(Flags, iffObj2)         else exclude(Flags, iffObj2);
+                           end;
+          'o3', 'obj3':    begin
+                             if Oval then Flags := Flags - [iffObj1, iffObj2, iffObj3, iffObj4];
+                             if OVal then include(Flags, iffObj3)         else exclude(Flags, iffObj3);
+                           end;
+          'o4', 'obj4':    begin
+                             if Oval then Flags := Flags - [iffObj1, iffObj2, iffObj3, iffObj4];
+                             if OVal then include(Flags, iffObj4)         else exclude(Flags, iffObj4);
+                           end;
+          else begin
+            SetError('Unknown flag: '+Itm.GetText);
+            exit;
+          end;
+        end;
+      end;
+    end
+    else
+    if HighParam > 2 then
+      Flags := Flags + [iffObj1];
+  end;
+
+  ListCache := nil;
+  SkipCache := False;
+  if (ExpressionData.GlobalCache <> nil) then begin
+    Itm := TopParent;
+    while (not SkipCache) and (Itm is TFpPascalExpressionPartOperatorArraySliceController)
+    do begin
+      SkipCache := TFpPascalExpressionPartOperatorArraySliceController(Itm).SlicePart.FindInParents(Self.Parent);
+      Itm := TFpPascalExpressionPartContainer(Itm).Items[0];
+    end;
+  end;
+
+  if (not SkipCache) and (ExpressionData.GlobalCache <> nil) then begin
+    CacheKey.CtxThread := ExpressionData.Scope.LocationContext.ThreadId;
+    CacheKey.CtxStack := ExpressionData.Scope.LocationContext.StackFrame;
+    CacheKey.Flags := Flags;
+    CacheKey.ExpandArrayDepth := ExpandArrayDepth;
+    CacheKey.Key := Parent.GetFullText;
+    i := ExpressionData.GlobalCache.IndexOf(Pointer(TFpPascalExpressionPartIntrinsic));
+    if i >= 0 then begin
+      ListCache := TFpPascalExpressionCacheFlatten(ExpressionData.GlobalCache.Data[i]);
+      i := ListCache.IndexOf(CacheKey);
+      if i >= 0 then begin
+        Result := ListCache.Data[i];
+        if Res.FFullEvaluated then begin
+          Res.AddReference;
+          exit;
+        end;
+      end;
+    end;
+  end;
+
+  // check the maximum needed
+  PParent := Parent.Parent;
+  if (PParent is TFpPascalExpressionPartBracketIndex) and (PParent.Count = 2) then begin
+    Itm := PParent.Items[1];
+    if (Itm is TFpPascalExpressionPartOperatorArraySlice) then begin
+      if TFpPascalExpressionPartOperatorArraySlice(Itm).Count = 2 then
+        Itm := TFpPascalExpressionPartOperatorArraySlice(Itm).Items[1]
+      else
+        Itm := nil;
+    end;
+
+    if (Itm <> nil) and (Itm.ResultValue <> nil) then
+      if CustomMaxCnt
+      then MaxCnt := Min(MaxCnt, Itm.ResultValue.AsInteger+101) // Cache 100 extra
+      else MaxCnt := Itm.ResultValue.AsInteger+101;
+  end;
+
+  if (Result <> nil) and (Res.FList.Count >= MaxCnt) then begin// cached
+    Res.AddReference;
+    exit;
+  end;
+
+  Result := TFpValueFlatteArray.Create(0);
+  Seen := TAddrSeenList.Create;
+  Seen.Capacity := 256;
+  TpSym := FirstVal.TypeInfo;
+  try
+    DA := FirstVal.DataAddress;
+    Seen.Add(DA);
+
+    if (FirstVal.Kind = skArray) then begin
+      FlattenArray(FirstVal, nil, 0, -1, '', Max(1, ExpandArrayDepth));
+    end
+    else begin
+      InternalAdd(FirstVal, 0, -1, '');
+      if not IsReadableLoc(DA) then
+        exit;
+      if IsError(ExpressionData.Error) then
+        exit;
+
+      Res.FFullEvaluated := FlattenRecurse(FirstVal, 0, '');
+    end;
+  finally
+    Seen.Free;
+  end;
+
+  if (not SkipCache) and (ExpressionData.GlobalCache <> nil) then begin
+    if ListCache = nil then begin
+      ListCache := TFpPascalExpressionCacheFlatten.Create;
+      ExpressionData.GlobalCache[Pointer(TFpPascalExpressionPartIntrinsic)] := ListCache;
+    end;
+    ListCache.Replace(CacheKey, Res);
+  end;
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoFlattenPlaceholder(
+  AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+var
+  f: TFpPascalExpressionPartContainer;
+begin
+  Result := nil;
+  f := Parent;
+  while (f <> nil) and
+        not( (f is TFpPascalExpressionPartBracketArgumentList) and
+             (f.Count > 1) and (f.Items[0] is TFpPascalExpressionPartIntrinsic) and
+             (TFpPascalExpressionPartIntrinsic(f.Items[0]).FIntrinsic = ifFlatten)
+           )
+  do
+    f := f.Parent;
+  if f = nil then begin
+    SetError(':_ outside of :flatten');
+    exit;
+  end;
+
+  if not CheckArgumentCount(AParams, 0) then
+    exit;
+
+  Result := TFpPascalExpressionPartIntrinsic(f.Items[0]).FFlattenCurrentValOrig;
+  if Result <> nil then
+    Result.AddReference;
 end;
 
 function TFpPascalExpressionPartIntrinsic.DoRefCnt(
@@ -2406,7 +3726,7 @@ begin
         Size := SizeVal(1);
     end;
 
-    ctx := Expression.Scope.LocationContext;
+    ctx := ExpressionData.Scope.LocationContext;
     {$PUSH}{$R-}{$Q-}
     if (Tmp.Kind = skWideString) or
        ( (Tmp.Kind = skPointer) and (Size.Size = 2))
@@ -2509,16 +3829,181 @@ begin
   Result := TFpValueConstNumber.Create(QWord(trunc(Arg.AsFloat)), True);
 end;
 
-function TFpPascalExpressionPartIntrinsic.DoGetResultValue: TFpValue;
+function TFpPascalExpressionPartIntrinsic.DoSqrt(
+  AParams: TFpPascalExpressionPartBracketArgumentList): TFpValue;
+var
+  Arg: TFpValue;
 begin
   Result := nil;
-  SetError('wrong argument count');
-  // this gets called, if an intrinsic has no () after it. I.e. no arguments and no empty brackets
+  if not CheckArgumentCount(AParams, 1) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
 
-  {$IFDEF WITH_REFCOUNT_DEBUG}
-  if Result <> nil then
-    Result.DbgRenameReference(nil, 'DoGetResultValue')
-  {$ENDIF}
+  if svfFloat in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Sqrt(Arg.AsFloat))
+  else
+  if svfInteger in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Sqrt(Arg.AsInteger))
+  else
+  if svfCardinal in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Sqrt(Arg.AsInteger))
+  else
+    SetError('Argument not numeric');
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoPi(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+begin
+  if not CheckArgumentCount(AParams, 0) then
+    exit;
+
+  Result := TFpValueConstFloat.Create(Pi)
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoLn(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Arg: TFpValue;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 1) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
+
+  if svfFloat in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Ln(Arg.AsFloat))
+  else
+  if svfInteger in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Ln(Arg.AsInteger))
+  else
+  if svfCardinal in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Ln(Arg.AsInteger))
+  else
+    SetError('Argument not numeric');
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoLog(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Arg: TFpValue;
+  n: Extended;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 2) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
+
+  if svfFloat in Arg.FieldFlags then
+    n := Arg.AsFloat
+  else
+  if Arg.FieldFlags * [svfInteger, svfCardinal] <> [] then
+    n := Arg.AsCardinal
+  else
+    SetError('Argument not numeric');
+
+  if not GetArg(AParams, 2, Arg, 'argument required') then
+    exit;
+
+  if svfFloat in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(LogN(n,Arg.AsFloat))
+  else
+  if svfInteger in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(LogN(n,Arg.AsInteger))
+  else
+  if svfCardinal in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(LogN(n,Arg.AsInteger))
+  else
+    SetError('Argument not numeric');
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoSin(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Arg: TFpValue;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 1) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
+
+  if svfFloat in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Sin(Arg.AsFloat))
+  else
+  if svfInteger in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Sin(Arg.AsInteger))
+  else
+  if svfCardinal in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Sin(Arg.AsInteger))
+  else
+    SetError('Argument not numeric');
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoCos(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Arg: TFpValue;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 1) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
+
+  if svfFloat in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Cos(Arg.AsFloat))
+  else
+  if svfInteger in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Cos(Arg.AsInteger))
+  else
+  if svfCardinal in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Cos(Arg.AsInteger))
+  else
+    SetError('Argument not numeric');
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoTan(AParams: TFpPascalExpressionPartBracketArgumentList
+  ): TFpValue;
+var
+  Arg: TFpValue;
+begin
+  Result := nil;
+  if not CheckArgumentCount(AParams, 1) then
+    exit;
+  if not GetArg(AParams, 1, Arg, 'argument required') then
+    exit;
+
+  if svfFloat in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Tan(Arg.AsFloat))
+  else
+  if svfInteger in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Tan(Arg.AsInteger))
+  else
+  if svfCardinal in Arg.FieldFlags then
+    Result := TFpValueConstFloat.Create(Tan(Arg.AsInteger))
+  else
+    SetError('Argument not numeric');
+end;
+
+function TFpPascalExpressionPartIntrinsic.DoGetResultValue: TFpValue;
+var
+  p: TFpPascalExpressionPartBracketArgumentList;
+begin
+  Result := nil;
+  if not (FIntrinsic in [ifFlattenPlaceholder, ifPi]) then begin
+    // this gets called, if an intrinsic has no () after it. I.e. no arguments and no empty brackets
+    SetError('wrong argument count');
+    exit;
+  end;
+
+  p := TFpPascalExpressionPartBracketArgumentList.Create(ExpressionData, nil);
+  p.FList.Add(Self);
+  Result := DoGetResultValue(p);
+  p.FList.Clear; // make sure the container does not destroy self
+  p.Free;
 end;
 
 function TFpPascalExpressionPartIntrinsic.DoGetResultValue(
@@ -2526,15 +4011,28 @@ function TFpPascalExpressionPartIntrinsic.DoGetResultValue(
 begin
   Result := nil;
   case FIntrinsic of
+    ifTry:        Result := DoTry(AParams);
+    ifTryN:       Result := DoTryN(AParams);
+    ifObj:        Result := DoObj(AParams);
+    ifOrd:        Result := DoOrd(AParams);
     ifLength:     Result := DoLength(AParams);
     ifChildClass: Result := DoChildClass(AParams);
     ifRefCount:   Result := DoRefCnt(AParams);
     ifPos:        Result := DoPos(AParams);
+    ifFlatten:    Result := DoFlatten(AParams);
+    ifFlattenPlaceholder:    Result := DoFlattenPlaceholder(AParams);
     ifSubStr:     Result := DoSubStr(AParams);
     ifLower:      Result := DoLower(AParams);
     ifUpper:      Result := DoUpper(AParams);
     ifRound:      Result := DoRound(AParams);
     ifTrunc:      Result := DoTrunc(AParams);
+    ifSqrt:       Result := DoSqrt(AParams);
+    ifPi:         Result := DoPi(AParams);
+    ifLn:         Result := DoLn(AParams);
+    ifLog:        Result := DoLog(AParams);
+    ifSin:        Result := DoSin(AParams);
+    ifCos:        Result := DoCos(AParams);
+    ifTan:        Result := DoTan(AParams);
   end;
   {$IFDEF WITH_REFCOUNT_DEBUG}
   if Result <> nil then
@@ -2542,11 +4040,18 @@ begin
   {$ENDIF}
 end;
 
+procedure TFpPascalExpressionPartIntrinsic.Assign(ASourcePart: TFpPascalExpressionPart);
+begin
+  inherited Assign(ASourcePart);
+  if ASourcePart is TFpPascalExpressionPartIntrinsic then
+    FIntrinsic := TFpPascalExpressionPartIntrinsic(ASourcePart).FIntrinsic;
+end;
+
 constructor TFpPascalExpressionPartIntrinsic.Create(
-  AExpression: TFpPascalExpression; AStartChar: PChar; AnEndChar: PChar;
+  AnExpressionData: TFpPascalExpressionSharedData; AStartChar: PChar; AnEndChar: PChar;
   AnIntrinsic: TFpIntrinsicFunc);
 begin
-  inherited Create(AExpression, AStartChar, AnEndChar);
+  inherited Create(AnExpressionData, AStartChar, AnEndChar);
   FIntrinsic := AnIntrinsic;
 end;
 
@@ -2558,7 +4063,63 @@ end;
 
 function TFpPascalExpressionPartIntrinsic.ReturnsVariant: boolean;
 begin
-  Result := FIntrinsic = ifChildClass;
+  Result := (inherited ReturnsVariant) or
+            (FIntrinsic in [ifChildClass, ifTry, ifTryN]);
+            // TODO: compare types of each argument for ifTry/N
+end;
+
+function TFpPascalExpressionPartIntrinsic.AcceptParamAsSeparator(
+  AParamPart: TFpPascalExpressionPart; ABracketsPart: TFpPascalExpressionPartContainer;
+  var AResult: TFpPascalExpressionPart): boolean;
+var
+  LastItm: TFpPascalExpressionPart;
+begin
+  Result := False;
+  LastItm := ABracketsPart.LastItem;
+  if ( ((FIntrinsic = ifFlatten) and (ABracketsPart.Count >= 3)) or // only for keys / not for the initial value
+       ((FIntrinsic = ifObj) and (ABracketsPart.Count >= 2))
+     ) and
+     (AParamPart is TFpPascalExpressionPartOperatorColon) and
+     (TFpPascalExpressionPartOperatorColon(AParamPart).Count = 0) and
+     not(LastItm is TFpPascalExpressionPartOperatorColonAsSeparator)
+  then begin
+    // Handle ":" as separator
+    AResult := TFpPascalExpressionPartOperatorColonAsSeparator.Create(ExpressionData, AParamPart.FStartChar, AParamPart.FEndChar);
+    AParamPart.Free;
+    LastItm.HandleNextPart(AResult);
+    Result := True;
+  end;
+end;
+
+procedure TFpPascalExpressionPartIntrinsic.HandleNewParameterInList(AParamPart: TFpPascalExpressionPart;
+  ABracketsPart: TFpPascalExpressionPartContainer);
+begin
+  if (FIntrinsic = ifFlatten) and (ABracketsPart.Count > 2) then begin
+    // part 1 is the intrinsic / part 2 is the initial object
+    // Part 3..n are the member expressions
+    if AParamPart is TFpPascalExpressionPartIdentifier then begin
+      TFpPascalExpressionPartIdentifier(AParamPart).OnGetSymbol := @DoGetMemberForFlattenExpr;
+    end;
+  end;
+end;
+
+procedure TFpPascalExpressionPartIntrinsic.HandleEndOfParameterInList(
+  AParamPart: TFpPascalExpressionPart; ABracketsPart: TFpPascalExpressionPartContainer);
+var
+  n: TFpPascalExpressionPart;
+begin
+  inherited HandleEndOfParameterInList(AParamPart, ABracketsPart);
+  if FIntrinsic = ifObj then begin
+    if (ABracketsPart.Count > 1) and
+       (not (ABracketsPart.LastItem is TFpPascalExpressionPartOperatorColonAsSeparator))
+    then begin
+      SetError('Argument must be "key:name"');
+      exit;
+    end;
+    n := TFpPascalExpressionPartOperatorColonAsSeparator(ABracketsPart.LastItem).Items[0];
+    if (not (n is TFpPascalExpressionPartIdentifier)) then
+      SetError('Argument must be "key" must be identifier');
+  end;
 end;
 
 { TFpPascalExpressionPartConstantNumber }
@@ -2585,7 +4146,7 @@ begin
   if FStartChar^ in ['0'..'9'] then
     Result := TFpValueConstNumber.Create(i, False)
   else
-    Result := TFpValueConstNumber.Create(Int64(i), True); // hex,oct,bin values default to signed
+    Result := TFpValueConstNumber.Create(i, True); // hex,oct,bin values default to signed
   {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
 end;
 
@@ -2628,6 +4189,13 @@ begin
   {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
 end;
 
+procedure TFpPascalExpressionPartConstantText.Assign(ASourcePart: TFpPascalExpressionPart);
+begin
+  inherited Assign(ASourcePart);
+  if ASourcePart is TFpPascalExpressionPartConstantText then
+    FValue := TFpPascalExpressionPartConstantText(ASourcePart).FValue;
+end;
+
 function CheckToken(const tk: String; CurPtr: PChar): boolean; inline;
 var
   p, t: PChar;
@@ -2645,6 +4213,117 @@ begin
   end;
   Result := True;
 end;
+
+{ TFpPascalExpressionSharedData }
+
+function TFpPascalExpressionSharedData.GetValid: Boolean;
+begin
+  Result := not IsError(FError);
+end;
+
+function TFpPascalExpressionSharedData.GetTextExpressionAddr: PChar;
+begin
+  Result := PChar(FTextExpression);
+end;
+
+procedure TFpPascalExpressionSharedData.SetError(AMsg: String);
+begin
+  if IsError(FError) then begin
+DebugLn(DBG_WARNINGS, ['Skipping error ', AMsg]);
+    exit;
+  end;
+  SetError(fpErrAnyError, [AMsg]);
+DebugLn(DBG_WARNINGS, ['PARSER ERROR ', AMsg]);
+end;
+
+procedure TFpPascalExpressionSharedData.SetError(AnErrorCode: TFpErrorCode;
+  const AnNestedErr: TFpError);
+begin
+  SetError(AnErrorCode, [], AnNestedErr);
+end;
+
+procedure TFpPascalExpressionSharedData.SetError(AnErrorCode: TFpErrorCode; AData: array of const;
+  const AnNestedErr: TFpError);
+begin
+  FError := ErrorHandler.CreateError(AnErrorCode, AnNestedErr, AData);
+  DebugLn(DBG_WARNINGS, ['Setting error ', ErrorHandler.ErrorAsString(FError)]);
+end;
+
+procedure TFpPascalExpressionSharedData.SetError(const AnErr: TFpError);
+begin
+  FError := AnErr;
+  DebugLn(DBG_WARNINGS, ['Setting error ', ErrorHandler.ErrorAsString(FError)]);
+end;
+
+procedure TFpPascalExpressionSharedData.ClearError;
+begin
+  FError := NoError;
+end;
+
+function TFpPascalExpressionSharedData.PosFromPChar(APChar: PChar): Integer;
+begin
+  Result := APChar - @FTextExpression[1] + 1;
+end;
+
+constructor TFpPascalExpressionSharedData.Create(ATextExpression: String; AScope: TFpDbgSymbolScope
+  );
+begin
+  inherited Create;
+  AddReference;
+
+  FFpuMask := GetExceptionMask;
+  SetExceptionMask([low(TFPUExceptionMask)..high(TFPUExceptionMask)]);
+
+  FTextExpression := ATextExpression;
+  FScope := AScope;
+  FScope.AddReference;
+  FError := NoError;
+end;
+
+destructor TFpPascalExpressionSharedData.Destroy;
+begin
+  inherited Destroy;
+  FScope.ReleaseReference;
+
+  ClearExceptions(False);
+  SetExceptionMask(FFpuMask);
+end;
+
+function TFpPascalExpressionSharedData.GetDbgSymbolForIdentifier(AnIdent: String): TFpValue;
+begin
+  if FScope <> nil then
+    Result := FScope.FindSymbol(AnIdent)
+  else
+    Result := nil;
+end;
+
+function TFpPascalExpressionSharedData.GetRegisterValue(AnIdent: String): TFpValue;
+var
+  RNum: Cardinal;
+  RSize: Integer;
+  RVal: QWord;
+  Reg: TDbgRegisterValue;
+begin
+  Result := nil;
+  if FScope = nil then
+    exit;
+
+  if not FScope.MemManager.RegisterNumber(AnIdent, RNum) then
+    exit;
+
+  RSize := FScope.MemManager.RegisterSize(RNum);
+  if (RSize <= 8) and
+     FScope.LocationContext.ReadUnsignedInt(RegisterLoc(RNum), SizeVal(RSize), RVal)
+  then begin
+    Result := TFpValueConstNumber.Create(RVal, False);
+  end
+  else begin
+    Reg := FScope.LocationContext.GetRegister(RNum);
+    if Reg <> nil then
+      Result := TFpValueConstString.Create(Reg.StrValue);
+  end;
+end;
+
 { TFpPascalExpression }
 
 procedure TFpPascalExpression.Parse;
@@ -2657,24 +4336,24 @@ var
   begin
     if PrevPart = nil
     then SetError(AnErrorCode, [GetFirstToken(CurPtr)], CreateError(fpErrPasParser_AtStart, []) )
-    else SetError(AnErrorCode, [GetFirstToken(CurPtr)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr), PrevPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]) );
+    else SetError(AnErrorCode, [GetFirstToken(CurPtr)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr), PrevPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]) );
   end;
   procedure SetParserError(AnErrorCode: TFpErrorCode; AData: array of const);
   begin
     if PrevPart = nil
     then SetError(AnErrorCode, AData, CreateError(fpErrPasParser_AtStart, []) )
-    else SetError(AnErrorCode, AData, CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr), PrevPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]) );
+    else SetError(AnErrorCode, AData, CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr), PrevPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]) );
   end;
   procedure SetParserErrorPosOnly(AnErrorCode: TFpErrorCode);
   begin
     if PrevPart = nil
     then SetError(AnErrorCode, [], CreateError(fpErrPasParser_AtStart, []) )
-    else SetError(AnErrorCode, [], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr), PrevPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]) );
+    else SetError(AnErrorCode, [], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr), PrevPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]) );
   end;
 
   procedure AddPart(AClass: TFpPascalExpressionPartClass);
   begin
-    NewPart := AClass.Create(Self, CurPtr, TokenEndPtr-1);
+    NewPart := AClass.Create(FSharedData, CurPtr, TokenEndPtr-1);
   end;
 
   procedure AddPlusMinus;
@@ -2684,22 +4363,17 @@ var
     else AddPart(TFpPascalExpressionPartOperatorPlusMinus);
   end;
 
-  procedure AddIntrinsic(AnIntrinsic: TFpIntrinsicFunc);
-  begin
-    if AnIntrinsic = ifErrorNotFound then
-      SetParserError(fpErrPasParserUnknownIntrinsic_p)
-    else
-      NewPart := TFpPascalExpressionPartIntrinsic.Create(Self, CurPtr, TokenEndPtr-1, AnIntrinsic);
-  end;
-
   procedure AddIntrinsic;
   var
-    intr: TFpIntrinsicFunc;
+    intr: TFpPascalExpressionPart;
   begin
     while TokenEndPtr^ in ['a'..'z', 'A'..'Z', '_', '0'..'9', '$'] do
       inc(TokenEndPtr);
     intr := LookupIntrinsic(CurPtr, TokenEndPtr - CurPtr);
-    AddIntrinsic(intr);
+    if intr = nil then
+      SetParserError(fpErrPasParserUnknownIntrinsic_p)
+    else
+      NewPart := intr;
   end;
 
   function CheckOpenBracket: Boolean;
@@ -2713,8 +4387,6 @@ var
   end;
 
   procedure AddIdentifier;
-  var
-    intr: TFpIntrinsicFunc;
   begin
     while TokenEndPtr^ in ['a'..'z', 'A'..'Z', '_', '0'..'9', '$'] do
       inc(TokenEndPtr);
@@ -2723,46 +4395,58 @@ var
     case TokenEndPtr - CurPtr of
       3: case chr(ord(CurPtr^) AND $DF) of
           'D': if CheckToken('IV', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorMulDiv.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorMulDiv.Create(FSharedData, CurPtr, TokenEndPtr-1);
           'M': if CheckToken('OD', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorMulDiv.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorMulDiv.Create(FSharedData, CurPtr, TokenEndPtr-1);
           'A': if CheckToken('ND', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorAnd.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorAnd.Create(FSharedData, CurPtr, TokenEndPtr-1);
           'X': if CheckToken('OR', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorOr.Create(Self, ootXor, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorOr.Create(FSharedData, ootXor, CurPtr, TokenEndPtr-1);
           'N': if CheckToken('OT', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorUnaryNot.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorUnaryNot.Create(FSharedData, CurPtr, TokenEndPtr-1);
           'S': if CheckToken('HL', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorShl.Create(Self, CurPtr, TokenEndPtr-1)
+              NewPart := TFpPascalExpressionPartOperatorShl.Create(FSharedData, CurPtr, TokenEndPtr-1)
             else
             if CheckToken('HR', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorShr.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorShr.Create(FSharedData, CurPtr, TokenEndPtr-1);
         end;
       2: case chr(ord(CurPtr^) AND $DF) of
           'I': if CheckToken('N', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorMemberIn.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorMemberIn.Create(FSharedData, CurPtr, TokenEndPtr-1);
           'O': if CheckToken('R', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorOr.Create(Self, ootOr, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorOr.Create(FSharedData, ootOr, CurPtr, TokenEndPtr-1);
         end;
     end
     else
     case TokenEndPtr - CurPtr of
       3: case chr(ord(CurPtr^) AND $DF) of
           'N': if CheckToken('OT', CurPtr) then
-              NewPart := TFpPascalExpressionPartOperatorUnaryNot.Create(Self, CurPtr, TokenEndPtr-1);
+              NewPart := TFpPascalExpressionPartOperatorUnaryNot.Create(FSharedData, CurPtr, TokenEndPtr-1);
         end;
     end;
 
-    if (FIntrinsicPrefix = ipNoPrefix) then begin
-      intr := LookupIntrinsic(CurPtr, TokenEndPtr - CurPtr);
-      if (intr <> ifErrorNotFound) and CheckOpenBracket then begin
-        AddIntrinsic(intr);
+    if (FIntrinsicPrefix = ipNoPrefix) and CheckOpenBracket then begin
+      NewPart := LookupIntrinsic(CurPtr, TokenEndPtr - CurPtr);
+      if (NewPart <> nil)  then
         exit;
-      end;
     end;
 
     if NewPart = nil then
-      NewPart := TFpPascalExpressionPartIdentifier.Create(Self, CurPtr, TokenEndPtr-1);
+      NewPart := TFpPascalExpressionPartIdentifier.Create(FSharedData, CurPtr, TokenEndPtr-1);
+  end;
+
+  procedure HandleExclamation;
+  begin
+    if (CurPart = nil) or (not CurPart.CanHaveOperatorAsNext) then begin
+      SetParserError(fpErrPasParserUnexpectedToken_p);
+      exit;
+    end;
+    if not Valid then
+      exit;
+    if FPreviousArraySlice <> nil then begin
+      CurPart := FPreviousArraySlice.AddController(CurPart);
+      FPreviousArraySlice := FPreviousArraySlice.FPreviousArraySlice;
+    end;
   end;
 
   procedure HandleDot;
@@ -2814,10 +4498,10 @@ var
     end
     else
     if not (BracketPart is ABracketClass) then begin
-      SetParserError(fpErrPasParserWrongOpenBracket_p, [GetFirstToken(CurPtr), PosFromPChar(BracketPart.StartChar), BracketPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]);
+      SetParserError(fpErrPasParserWrongOpenBracket_p, [GetFirstToken(CurPtr), FSharedData.PosFromPChar(BracketPart.StartChar), BracketPart.GetText(MAX_ERR_EXPR_QUOTE_LEN)]);
     end
     else begin
-      TFpPascalExpressionPartBracket(BracketPart).CloseBracket;
+      TFpPascalExpressionPartBracket(BracketPart).CloseBracket(CurPart, @FPreviousArraySlice, CurPtr, TokenEndPtr-1);
       CurPart := BracketPart;
     end;
   end;
@@ -2837,7 +4521,7 @@ var
              // escaped keyword used as identifier
              while TokenEndPtr^ in ['a'..'z', 'A'..'Z', '0'..'9', '_'] do inc(TokenEndPtr);
              inc(CurPtr);
-             NewPart := TFpPascalExpressionPartIdentifier.Create(Self, CurPtr, TokenEndPtr-1);
+             NewPart := TFpPascalExpressionPartIdentifier.Create(FSharedData, CurPtr, TokenEndPtr-1);
              exit;
            end
            else
@@ -2873,7 +4557,7 @@ var
     if (TokenEndPtr < EndPtr) and (TokenEndPtr^ in ['0'..'9', 'a'..'z', 'A'..'Z']) or
        (TokenEndPtr[-1] in ['x', '$', '&', '%'])
     then begin
-      SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr+1), '#']) );
+      SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr+1), '#']) );
       exit;
     end
     else
@@ -2923,7 +4607,7 @@ var
     dec(TokenEndPtr);
     str := '';
     WasQuote := False;
-    while (TokenEndPtr < EndPtr) and FValid do begin
+    while (TokenEndPtr < EndPtr) and Valid do begin
       case TokenEndPtr^ of
         '''': begin
             if WasQuote then
@@ -2954,7 +4638,7 @@ var
               '$': begin
                   inc(TokenEndPtr);
                   if (not (TokenEndPtr < EndPtr)) or (not (TokenEndPtr^ in ['0'..'9', 'a'..'f', 'A'..'F'])) then begin
-                    SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr+1), '#']) );
+                    SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr+1), '#']) );
                     exit;
                   end;
                   while (TokenEndPtr < EndPtr) and (TokenEndPtr^ in ['0'..'9', 'a'..'f', 'A'..'F']) do
@@ -2963,7 +4647,7 @@ var
               '&': begin
                   inc(TokenEndPtr);
                   if (not (TokenEndPtr < EndPtr)) or (not (TokenEndPtr^ in ['0'..'7'])) then begin
-                    SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr+1), '#']) );
+                    SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr+1), '#']) );
                     exit;
                   end;
                   while (TokenEndPtr < EndPtr) and (TokenEndPtr^ in ['0'..'7']) do
@@ -2972,7 +4656,7 @@ var
               '%': begin
                   inc(TokenEndPtr);
                   if (not (TokenEndPtr < EndPtr)) or (not (TokenEndPtr^ in ['0'..'1'])) then begin
-                    SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr+1), '#']) );
+                    SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr+1), '#']) );
                     exit;
                   end;
                   while (TokenEndPtr < EndPtr) and (TokenEndPtr^ in ['0'..'1']) do
@@ -2983,14 +4667,14 @@ var
                     inc(TokenEndPtr);
                 end;
               else begin
-                  SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr+1), '#']) );
+                  SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr+1), '#']) );
                   exit;
                 end;
             end;
             c := StrToIntDef(copy(p , 1 , TokenEndPtr - p), -1);
             if (c < 0) or ( (TokenEndPtr < EndPtr) and (TokenEndPtr^ in ['0'..'9', 'a'..'z', 'A'..'Z']) )
             then begin
-              SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [PosFromPChar(CurPtr+1), '#']) );
+              SetError(fpErrPasParserExpectedNumber_p, [GetFirstToken(CurPtr+1)], CreateError(fpErrPasParser_PositionAfter, [FSharedData.PosFromPChar(CurPtr+1), '#']) );
               exit;
             end;
             if c > 255 then // todo: need wide handling
@@ -3004,19 +4688,19 @@ var
           break;
       end;
     end;
-    if not FValid then
+    if not Valid then
       exit;
     AddPart(TFpPascalExpressionPartConstantText);
     TFpPascalExpressionPartConstantText(NewPart).FValue := str;
   end;
 
 begin
-  if FTextExpression = '' then begin
+  if FSharedData.TextExpression = '' then begin
     SetError(fpErrPasParserEmptyExpression);
     exit;
   end;
-  CurPtr := @FTextExpression[1];
-  EndPtr := CurPtr + length(FTextExpression);
+  CurPtr := FSharedData.TextExpressionAddr;
+  EndPtr := CurPtr + length(FSharedData.TextExpression);
   while (CurPtr^ in [' ', #9, #10, #13]) and (CurPtr < EndPtr) do
     Inc(CurPtr);
   if CurPtr = EndPtr then begin
@@ -3027,7 +4711,7 @@ begin
 
   CurPart := nil;
   PrevPart := nil;
-  While (CurPtr < EndPtr) and FValid do begin
+  While (CurPtr < EndPtr) and Valid do begin
     if CurPtr^ in [' ', #9, #10, #13] then begin
       while (CurPtr^ in [' ', #9, #10, #13]) and (CurPtr < EndPtr) do
         Inc(CurPtr);
@@ -3036,18 +4720,32 @@ begin
 
     NewPart := nil;
     TokenEndPtr := CurPtr + 1;
-    if (FIntrinsicPrefix = ipExclamation) and (CurPtr^ = '!') then begin
+    if (FIntrinsicPrefix = ipExclamation) and (CurPtr^ = '!') and
+       ((CurPart = nil) or (not CurPart.CanHaveOperatorAsNext) )
+    then begin
       inc(CurPtr);
       AddIntrinsic;
     end
     else
-    if (FIntrinsicPrefix = ipColon) and (CurPtr^ = ':') then begin
-      inc(CurPtr);
-      AddIntrinsic;
+    if (CurPtr^ = ':') then begin
+      if (CurPart <> nil) and CurPart.CanHaveOperatorAsNext then begin
+        AddPart(TFpPascalExpressionPartOperatorColon);
+      end
+      else
+      if (FIntrinsicPrefix = ipColon) then begin
+        inc(CurPtr);
+        AddIntrinsic;
+      end
+      else begin
+        SetParserError(fpErrPasParserUnexpectedToken_p);
+        break;
+      end;
     end
     else
     case CurPtr^ of
       '@' :      AddPart(TFpPascalExpressionPartOperatorAddressOf);
+      '?' :      AddPart(TFpPascalExpressionPartOperatorQuestionMark);
+      '!' :      HandleExclamation;
       '^':       AddRefOperator; // ^A may be #$01
       '.':       HandleDot;
       '+', '-' : AddPlusMinus;
@@ -3069,7 +4767,7 @@ begin
           break;
         end;
     end;
-    if not FValid then
+    if not Valid then
       break;
 
     PrevPart := NewPart;
@@ -3096,6 +4794,8 @@ begin
   if CurPart <> nil then
     CurPart := CurPart.TopParent;
 
+  if FPreviousArraySlice <> nil then
+    CurPart := FPreviousArraySlice.AddControllerRecursive(CurPart);
   FExpressionPart := CurPart;
 end;
 
@@ -3105,122 +4805,147 @@ begin
     Result := nil
   else begin
     Result := FExpressionPart.ResultValue;
-    if (Result = nil) and (not IsError(FError)) then
+    if (Result = nil) and Valid then
       SetError(fpErrAnyError, ['Internal eval error']);
   end;
 end;
 
+function TFpPascalExpression.GetGlobalCache: TFpDbgDataCache;
+begin
+  Result := FSharedData.GlobalCache;
+end;
+
+function TFpPascalExpression.GetOnFunctionCall: TFpPascalParserCallFunctionProc;
+begin
+  Result := FSharedData.OnFunctionCall;
+end;
+
+function TFpPascalExpression.GetAutoDeref: Boolean;
+begin
+  Result := FSharedData.AutoDeref;
+end;
+
+function TFpPascalExpression.GetError: TFpError;
+begin
+  Result := FSharedData.Error;
+end;
+
+function TFpPascalExpression.GetFixPCharIndexAccess: Boolean;
+begin
+  Result := FSharedData.FixPCharIndexAccess;
+end;
+
+function TFpPascalExpression.GetHasPCharIndexAccess: Boolean;
+begin
+  Result := FSharedData.HasPCharIndexAccess;
+end;
+
 function TFpPascalExpression.GetValid: Boolean;
 begin
-  Result := FValid and (not IsError(FError));
+  Result := FSharedData.Valid;
 end;
 
-procedure TFpPascalExpression.SetError(AMsg: String);
+procedure TFpPascalExpression.SetAutoDeref(AValue: Boolean);
 begin
-  if IsError(FError) then begin
-DebugLn(DBG_WARNINGS, ['Skipping error ', AMsg]);
-    FValid := False;
-    exit;
-  end;
-  SetError(fpErrAnyError, [AMsg]);
-DebugLn(DBG_WARNINGS, ['PARSER ERROR ', AMsg]);
+  FSharedData.AutoDeref := AValue;
 end;
 
-procedure TFpPascalExpression.SetError(AnErrorCode: TFpErrorCode;
-  const AnNestedErr: TFpError);
+procedure TFpPascalExpression.SetGlobalCache(AValue: TFpDbgDataCache);
 begin
-  SetError(AnErrorCode, [], AnNestedErr);
+  FSharedData.GlobalCache := AValue;
 end;
 
-procedure TFpPascalExpression.SetError(AnErrorCode: TFpErrorCode;
-  AData: array of const; const AnNestedErr: TFpError);
+procedure TFpPascalExpression.SetOnFunctionCall(AValue: TFpPascalParserCallFunctionProc);
 begin
-  FValid := False;
-  FError := ErrorHandler.CreateError(AnErrorCode, AnNestedErr, AData);
-  DebugLn(DBG_WARNINGS, ['Setting error ', ErrorHandler.ErrorAsString(FError)]);
+  FSharedData.OnFunctionCall := AValue;
 end;
 
-procedure TFpPascalExpression.SetError(const AnErr: TFpError);
+procedure TFpPascalExpression.SetFixPCharIndexAccess(AValue: Boolean);
 begin
-  FValid := False;
-  FError := AnErr;
-  DebugLn(DBG_WARNINGS, ['Setting error ', ErrorHandler.ErrorAsString(FError)]);
-end;
-
-function TFpPascalExpression.PosFromPChar(APChar: PChar): Integer;
-begin
-  Result := APChar - @FTextExpression[1] + 1;
+  FSharedData.FixPCharIndexAccess := AValue;
 end;
 
 function TFpPascalExpression.LookupIntrinsic(AStart: PChar; ALen: Integer
-  ): TFpIntrinsicFunc;
-begin
-  Result := ifErrorNotFound;
-  case ALen of
-    2: if strlicomp(AStart, 'CC', 2) = 0     then Result := ifChildClass;
-    3: case AStart^ of
-        'l', 'L': if strlicomp(AStart, 'LEN', 3) = 0 then Result := ifLength;
-        'p', 'P': if strlicomp(AStart, 'POS', 3) = 0 then Result := ifPos;
-    end;
-    5: case AStart^ of
-        'l', 'L': if strlicomp(AStart, 'LOWER', 5) = 0 then Result := ifLower;
-        'u', 'U': if strlicomp(AStart, 'UPPER', 5) = 0 then Result := ifUpper;
-        'r', 'R': if strlicomp(AStart, 'ROUND', 5) = 0 then Result := ifRound;
-        't', 'T': if strlicomp(AStart, 'TRUNC', 5) = 0 then Result := ifTrunc;
-       end;
-    6: case AStart^ of
-        'l', 'L': if strlicomp(AStart, 'LENGTH', 6) = 0 then Result := ifLength;
-        'r', 'R': if strlicomp(AStart, 'REFCNT', 6) = 0 then Result := ifRefCount;
-        's', 'S': if strlicomp(AStart, 'SUBSTR', 6) = 0 then Result := ifSubStr;
-      end;
-  end;
-end;
-
-function TFpPascalExpression.GetDbgSymbolForIdentifier(AnIdent: String): TFpValue;
-begin
-  if FScope <> nil then
-    Result := FScope.FindSymbol(AnIdent)
-  else
-    Result := nil;
-end;
-
-function TFpPascalExpression.GetRegisterValue(AnIdent: String): TFpValue;
+  ): TFpPascalExpressionPart;
 var
-  RNum: Cardinal;
-  RSize: Integer;
-  RVal: QWord;
-  Reg: TDbgRegisterValue;
+  Intr: TFpIntrinsicFunc;
 begin
   Result := nil;
-  if FScope = nil then
-    exit;
-
-  if not FScope.MemManager.RegisterNumber(AnIdent, RNum) then
-    exit;
-
-  RSize := FScope.MemManager.RegisterSize(RNum);
-  if (RSize <= 8) and
-     FScope.LocationContext.ReadUnsignedInt(RegisterLoc(RNum), SizeVal(RSize), RVal)
-  then begin
-    Result := TFpValueConstNumber.Create(RVal, False);
-  end
-  else begin
-    Reg := FScope.LocationContext.GetRegister(RNum);
-    if Reg <> nil then
-      Result := TFpValueConstString.Create(Reg.StrValue);
+  Intr := ifErrorNotFound;
+  case ALen of
+    1: begin
+        if AStart^ = '_'   then Intr := ifFlattenPlaceholder;
+    end;
+    2: begin
+        if strlicomp(AStart, 'CC', 2) = 0     then Intr := ifChildClass
+        else
+        if strlicomp(AStart, 'F_', 2) = 0     then Intr := ifFlatten
+        else
+        if strlicomp(AStart, 'PI', 2) = 0     then Intr := ifPi
+        else
+        if strlicomp(AStart, 'LN', 2) = 0     then Intr := ifLn
+        ;
+    end;
+    3: case AStart^ of
+        'l', 'L': if strlicomp(AStart, 'LEN', 3) = 0 then Intr := ifLength
+                  else
+                  if strlicomp(AStart, 'LOG', 3) = 0 then Intr := ifLog;
+        'p', 'P': if strlicomp(AStart, 'POS', 3) = 0 then Intr := ifPos;
+        'o', 'O': if strlicomp(AStart, 'ORD', 3) = 0 then Intr := ifOrd
+                  else
+                  if strlicomp(AStart, 'OBJ', 3) = 0 then Intr := ifObj;
+        't', 'T': if strlicomp(AStart, 'TRY', 3) = 0 then Intr := ifTry
+                  else
+                  if strlicomp(AStart, 'TAN', 3) = 0 then Intr := ifTan;
+        's', 'S': if strlicomp(AStart, 'SIN', 3) = 0 then Intr := ifSin;
+        'c', 'C': if strlicomp(AStart, 'COS', 3) = 0 then Intr := ifCos;
+    end;
+    4: case AStart^ of
+        's', 'S': if strlicomp(AStart, 'SQRT', 4) = 0 then Intr := ifSqrt;
+        'l', 'L': if strlicomp(AStart, 'LOGN', 4) = 0 then Intr := ifLog;
+        't', 'T': if strlicomp(AStart, 'TRYN', 4) = 0 then Intr := ifTryN;
+    end;
+    5: case AStart^ of
+        'l', 'L': if strlicomp(AStart, 'LOWER', 5) = 0 then Intr := ifLower;
+        'u', 'U': if strlicomp(AStart, 'UPPER', 5) = 0 then Intr := ifUpper;
+        'r', 'R': if strlicomp(AStart, 'ROUND', 5) = 0 then Intr := ifRound;
+        't', 'T': if strlicomp(AStart, 'TRUNC', 5) = 0 then Intr := ifTrunc
+                  else
+                  if strlicomp(AStart, 'TRYNN', 5) = 0 then Intr := ifTryN;
+       end;
+    6: case AStart^ of
+        'l', 'L': if strlicomp(AStart, 'LENGTH', 6) = 0 then Intr := ifLength;
+        'r', 'R': if strlicomp(AStart, 'REFCNT', 6) = 0 then Intr := ifRefCount;
+        's', 'S': if strlicomp(AStart, 'SUBSTR', 6) = 0 then Intr := ifSubStr;
+      end;
+    7: case AStart^ of
+        'f', 'F': if strlicomp(AStart, 'FLATTEN', 7) = 0 then Intr := ifFlatten;
+      end;
   end;
+  if Intr <> ifErrorNotFound then begin
+    Result := TFpPascalExpressionPartIntrinsic.Create(FSharedData, AStart, AStart+ALen, Intr);
+    exit;
+  end;
+  if (FOnFindIntrinsc <> nil) and (ALen > 0) then begin
+    Result := FOnFindIntrinsc(Self, AStart, ALen);
+  end;
+end;
+
+procedure TFpPascalExpression.SetError(AnErrorCode: TFpErrorCode; const AnNestedErr: TFpError);
+begin
+  FSharedData.SetError(AnErrorCode, AnNestedErr);
+end;
+
+procedure TFpPascalExpression.SetError(AnErrorCode: TFpErrorCode; AData: array of const;
+  const AnNestedErr: TFpError);
+begin
+  FSharedData.SetError(AnErrorCode, AData, AnNestedErr);
 end;
 
 constructor TFpPascalExpression.Create(ATextExpression: String; AScope: TFpDbgSymbolScope;
   ASkipParse: Boolean);
 begin
-  FFpuMask := GetExceptionMask;
-  SetExceptionMask([low(TFPUExceptionMask)..high(TFPUExceptionMask)]);
-  FScope := AScope;
-  FScope.AddReference;
-  FTextExpression := ATextExpression;
-  FError := NoError;
-  FValid := True;
+  FSharedData := TFpPascalExpressionSharedData.Create(ATextExpression, AScope);
   if not ASkipParse then
     Parse;
 end;
@@ -3228,16 +4953,14 @@ end;
 destructor TFpPascalExpression.Destroy;
 begin
   FreeAndNil(FExpressionPart);
-  FScope.ReleaseReference;
   inherited Destroy;
-  ClearExceptions(False);
-  SetExceptionMask(FFpuMask);
+  FSharedData.ReleaseReference;
 end;
 
 function TFpPascalExpression.DebugDump(AWithResults: Boolean): String;
 begin
-  Result := 'TFpPascalExpression: ' + FTextExpression + LineEnding +
-            'Valid: ' + dbgs(FValid) + '   Error: "' + dbgs(ErrorCode(FError)) + '"'+ LineEnding
+  Result := 'TFpPascalExpression: ' + FSharedData.TextExpression + LineEnding +
+            'Valid: ' + dbgs(Valid) + '   Error: "' + dbgs(ErrorCode(Error)) + '"'+ LineEnding
             ;
   if FExpressionPart <> nil then
     Result := Result + FExpressionPart.DebugDump('  ', AWithResults);
@@ -3319,7 +5042,7 @@ end;
 
 function TFpPascalExpressionPart.GetPos: Integer;
 begin
-  Result := FExpression.PosFromPChar(FStartChar);
+  Result := ExpressionData.PosFromPChar(FStartChar);
 end;
 
 function TFpPascalExpressionPart.GetFullText(AMaxLen: Integer): String;
@@ -3330,13 +5053,34 @@ end;
 function TFpPascalExpressionPart.ReturnsVariant: boolean;
 begin
   Result := False;
+  if FResultValue <> nil then
+    Result := (FResultValue.Flags * [vfVariant, vfArrayOfVariant] <> []);
+end;
+
+function TFpPascalExpressionPart.IsClosed: boolean;
+begin
+  Result := True;
+end;
+
+function TFpPascalExpressionPart.FindInParents(APart: TFpPascalExpressionPart): Boolean;
+var
+  p: TFpPascalExpressionPart;
+begin
+  p := Self;
+  while p <> nil do begin
+    Result := APart = p;
+    if Result then
+      exit;
+    p := p.Parent;
+  end;
+  Result := False;
 end;
 
 procedure TFpPascalExpressionPart.SetError(AMsg: String);
 begin
   if AMsg = '' then
     AMsg := 'Invalid Expression';
-  FExpression.SetError(Format('%0:s at %1:d: "%2:s"', [AMsg, FExpression.PosFromPChar(FStartChar), GetText(20)]));
+  ExpressionData.SetError(Format('%0:s at %1:d: "%2:s"', [AMsg, ExpressionData.PosFromPChar(FStartChar), GetText(20)]));
 end;
 
 procedure TFpPascalExpressionPart.SetError(APart: TFpPascalExpressionPart; AMsg: String);
@@ -3359,23 +5103,51 @@ end;
 procedure TFpPascalExpressionPart.SetErrorWithPos(AnErrorCode: TFpErrorCode;
   AData: array of const);
 begin
-  FExpression.SetError(CreateErrorWithPos(AnErrorCode, AData));
+  ExpressionData.SetError(CreateErrorWithPos(AnErrorCode, AData));
 end;
 
 procedure TFpPascalExpressionPart.SetError(AnErrorCode: TFpErrorCode;
   AData: array of const; const AnNestedErr: TFpError);
 begin
-  FExpression.SetError(AnErrorCode, AData, AnNestedErr);
+  ExpressionData.SetError(AnErrorCode, AData, AnNestedErr);
 end;
 
 procedure TFpPascalExpressionPart.SetError(AnError: TFpError);
 begin
-  FExpression.SetError(AnError);
+  ExpressionData.SetError(AnError);
 end;
 
 procedure TFpPascalExpressionPart.Init;
 begin
   //
+end;
+
+procedure TFpPascalExpressionPart.Assign(ASourcePart: TFpPascalExpressionPart);
+begin
+  FStartChar      := ASourcePart.FStartChar;
+  FEndChar        := ASourcePart.FEndChar;
+  FExpressionData := ASourcePart.ExpressionData;
+  FPrecedence     := ASourcePart.FPrecedence;
+end;
+
+function TFpPascalExpressionPart.FindCopiedInParents(ASourcePart,
+  AFindInSourcePart: TFpPascalExpressionPart; AFindFlags: TFindInParentsFlags
+  ): TFpPascalExpressionPart;
+begin
+  Result := Self;
+  while (Result <> nil) and (ASourcePart <> nil) do begin
+    if AFindInSourcePart = ASourcePart then
+      exit;
+    if (fipIncludeBracketFunction in AFindFlags) and
+       (ASourcePart is TFpPascalExpressionPartBracketArgumentList) and
+       (TFpPascalExpressionPartContainer(ASourcePart).Count > 1) and
+       (AFindInSourcePart = TFpPascalExpressionPartContainer(ASourcePart).Items[0])
+    then
+      exit(TFpPascalExpressionPartContainer(ASourcePart).Items[0]);
+
+    ASourcePart := ASourcePart.Parent;
+    Result := Result.Parent;
+  end;
 end;
 
 function TFpPascalExpressionPart.DoGetIsTypeCast: Boolean;
@@ -3424,6 +5196,12 @@ begin
   //
 end;
 
+procedure TFpPascalExpressionPart.DoParentIndexBraceClosed(
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice);
+begin
+  //
+end;
+
 function TFpPascalExpressionPart.IsValidNextPart(APart: TFpPascalExpressionPart): Boolean;
 begin
   Result := APart.IsValidAfterPart(Self);
@@ -3461,10 +5239,16 @@ begin
   Result := (Parent <> nil) and Parent.HandleSeparator(ASeparatorType, APart);
 end;
 
+procedure TFpPascalExpressionPart.GetFirstLastChar(out AFirst, ALast: PChar);
+begin
+  AFirst := FStartChar;
+  ALast  := FEndChar;
+end;
+
 function TFpPascalExpressionPart.DebugText(AIndent: String; AWithResults: Boolean): String;
 begin
   Result := Format('%s%s at %d: "%s"',
-                   [AIndent, ClassName, FExpression.PosFromPChar(FStartChar), GetText])
+                   [AIndent, ClassName, ExpressionData.PosFromPChar(FStartChar), GetText])
                    + LineEnding;
 end;
 
@@ -3478,10 +5262,11 @@ begin
       Result := Result + AIndent+'    //  FResultValue = ' + DbgSName(FResultValue) + LineEnding;
 end;
 
-constructor TFpPascalExpressionPart.Create(AExpression: TFpPascalExpression; AStartChar: PChar;
-  AnEndChar: PChar);
+constructor TFpPascalExpressionPart.Create(AnExpressionData: TFpPascalExpressionSharedData;
+  AStartChar: PChar; AnEndChar: PChar);
 begin
-  FExpression := AExpression;
+  FExpressionData := AnExpressionData;
+  FExpressionData.AddReference;
   FStartChar := AStartChar;
   FEndChar := AnEndChar;
   //FResultTypeFlag := rtUnknown;
@@ -3492,8 +5277,29 @@ end;
 destructor TFpPascalExpressionPart.Destroy;
 begin
   inherited Destroy;
+  FExpressionData.ReleaseReference;
   //FResultType.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(nil, 'DoGetResultType'){$ENDIF};
   FResultValue.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FResultValue, 'DoGetResultValue'){$ENDIF};
+end;
+
+function TFpPascalExpressionPart.CreateCopy(ACopiedParent: TFpPascalExpressionPartContainer
+  ): TFpPascalExpressionPart;
+begin
+  Result := TFpPascalExpressionPartClass(ClassType).Create(ExpressionData, FStartChar, FEndChar);
+  Result.FParent := ACopiedParent;
+  Result.FIsCopy := True;
+  //Result.ExpressionData.AddReference;
+  Result.Assign(Self);
+end;
+
+procedure TFpPascalExpressionPart.BeginNeedCopy;
+begin
+  //
+end;
+
+procedure TFpPascalExpressionPart.EndNeedCopy;
+begin
+  //
 end;
 
 function TFpPascalExpressionPart.HandleNextPart(APart: TFpPascalExpressionPart): TFpPascalExpressionPart;
@@ -3510,6 +5316,24 @@ begin
   SetError(APart, 'Unexpected ');
   APart.Free;
   Result := Self;
+end;
+
+function TFpPascalExpressionPart.AcceptParamAsSeparator(AParamPart: TFpPascalExpressionPart;
+  ABracketsPart: TFpPascalExpressionPartContainer; var AResult: TFpPascalExpressionPart): boolean;
+begin
+  Result := False;
+end;
+
+procedure TFpPascalExpressionPart.HandleNewParameterInList(AParamPart: TFpPascalExpressionPart;
+  ABracketsPart: TFpPascalExpressionPartContainer);
+begin
+  //
+end;
+
+procedure TFpPascalExpressionPart.HandleEndOfParameterInList(AParamPart: TFpPascalExpressionPart;
+  ABracketsPart: TFpPascalExpressionPartContainer);
+begin
+  //
 end;
 
 procedure TFpPascalExpressionPart.HandleEndOfExpression;
@@ -3553,6 +5377,19 @@ begin
   inherited Init;
 end;
 
+procedure TFpPascalExpressionPartContainer.Assign(ASourcePart: TFpPascalExpressionPart);
+var
+  AContainerSourcePart: TFpPascalExpressionPartContainer absolute ASourcePart;
+  i: Integer;
+begin
+  inherited Assign(ASourcePart);
+  Clear;
+  if ASourcePart is TFpPascalExpressionPartContainer then begin
+    for i := 0 to AContainerSourcePart.Count - 1 do
+      Add(AContainerSourcePart.Items[i].CreateCopy(Self));
+  end;
+end;
+
 procedure TFpPascalExpressionPartContainer.ResetEvaluationRecursive;
 var
   i: Integer;
@@ -3560,6 +5397,21 @@ begin
   inherited ResetEvaluationRecursive;
   for i := 0 to Count - 1 do
     Items[i].ResetEvaluationRecursive;
+end;
+
+procedure TFpPascalExpressionPartContainer.GetFirstLastChar(out AFirst, ALast: PChar);
+var
+  i: Integer;
+  f, l: PChar;
+begin
+  inherited GetFirstLastChar(AFirst, ALast);
+  for i := 0 to Count -1 do begin
+    Items[i].GetFirstLastChar(f,l);
+    if (AFirst = nil) or ( (f <> nil) and (f < AFirst) ) then
+      AFirst := f;
+    if (ALast = nil) or ( (l <> nil) and (l > ALast) ) then
+      ALast := l;
+  end;
 end;
 
 function TFpPascalExpressionPartContainer.DebugDump(AIndent: String;
@@ -3584,20 +5436,30 @@ begin
   inherited Destroy;
 end;
 
+procedure TFpPascalExpressionPartContainer.BeginNeedCopy;
+var
+  i: Integer;
+begin
+  inherited BeginNeedCopy;
+  for i := 0 to Count - 1 do
+    Items[i].BeginNeedCopy;
+end;
+
+procedure TFpPascalExpressionPartContainer.EndNeedCopy;
+var
+  i: Integer;
+begin
+  inherited EndNeedCopy;
+  for i := 0 to Count - 1 do
+    Items[i].EndNeedCopy;
+end;
+
 function TFpPascalExpressionPartContainer.GetFullText(AMaxLen: Integer): String;
 var
   s, e: PChar;
-  i: Integer;
-  p: TFpPascalExpressionPart;
   Len: Integer;
 begin
-  s := FStartChar;
-  e := FEndChar;
-  for i := 0 to Count - 1 do begin
-    p := Items[i];
-    if p.FStartChar < s then s := p.FStartChar;
-    if p.FEndChar   > e then e := p.FEndChar;
-  end;
+  GetFirstLastChar(s,e);
 
   if e <> nil
   then Len := e - s + 1
@@ -3674,15 +5536,48 @@ begin
   FAfterComma := Count;
 end;
 
-procedure TFpPascalExpressionPartBracket.CloseBracket;
+procedure TFpPascalExpressionPartBracket.GetFirstLastChar(out AFirst, ALast: PChar);
 begin
+  inherited GetFirstLastChar(AFirst, ALast);
+  if (FFullEndChar <> nil) and
+     ( (FFullEndChar > ALast) or (ALast = nil))
+  then
+    ALast  := FFullEndChar;
+end;
+
+procedure TFpPascalExpressionPartBracket.CheckBeforeSeparator(APart: TFpPascalExpressionPart);
+begin
+  if APart = nil then
+    exit;
+  FIsSeparatorChecking := True;
+  APart.HandleEndOfExpression;
+  FIsSeparatorChecking := False;
+end;
+
+procedure TFpPascalExpressionPartBracket.Assign(ASourcePart: TFpPascalExpressionPart);
+var
+  ABracketSourcePart: TFpPascalExpressionPartBracket absolute ASourcePart;
+begin
+  inherited Assign(ASourcePart);
+  if ASourcePart is TFpPascalExpressionPartBracket then begin
+    FIsClosed    := ABracketSourcePart.FIsClosed;
+    FIsClosing   := ABracketSourcePart.FIsClosing;
+    FFullEndChar := ABracketSourcePart.FFullEndChar;
+  end;
+end;
+
+procedure TFpPascalExpressionPartBracket.CloseBracket(ALastAddedPart: TFpPascalExpressionPart;
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice; AStartChar: PChar;
+  AnEndChar: PChar);
+begin
+  FFullEndChar := AnEndChar;
   if AfterComma then begin
     SetError(fpErrPasParserMissingExprAfterComma, [GetText(MAX_ERR_EXPR_QUOTE_LEN), GetPos]);
     exit;
   end;
   FIsClosing := True;
-  if LastItem <> nil then
-    LastItem.HandleEndOfExpression;
+  if ALastAddedPart <> nil then
+    ALastAddedPart.HandleEndOfExpression;
   FIsClosing := False;
   FIsClosed := True;
 end;
@@ -3694,20 +5589,18 @@ begin
     exit;
   end;
 
-  if not IsValidNextPart(APart) then begin
-    SetError(APart, 'Invalid operand in () '+GetText+': ');
-    Result := self;
-    APart.Free;
-    exit;
-  end;
-
   Result := HandleNextPartInBracket(APart);
 end;
 
 procedure TFpPascalExpressionPartBracket.HandleEndOfExpression;
 begin
-  if not FIsClosing then
+  if not (FIsClosing or FIsSeparatorChecking) then
     inherited HandleEndOfExpression;
+end;
+
+function TFpPascalExpressionPartBracket.IsClosed: boolean;
+begin
+  Result := FIsClosed;
 end;
 
 { TFpPascalExpressionPartOperator }
@@ -3821,15 +5714,36 @@ begin
     exit;
 
   Result := APrevPart.CanHaveOperatorAsNext;
+  if Result then
+    Result := IsValidAfterPartWithPrecedence(APrevPart);
+end;
 
-  // BinaryOperator...
-  //   foo
-  //   Identifier
-  // "Identifier" can hane a binary-op next. But it must be applied to the parent.
-  // So it is not valid here.
-  // If new operator has a higher precedence, it go down to the child again and replace it
-  if (APrevPart.Parent <> nil) and (APrevPart.Parent.HasPrecedence) then
-    Result := False;
+function TFpPascalExpressionPartBinaryOperator.IsValidAfterPartWithPrecedence(
+  APrevPart: TFpPascalExpressionPart): Boolean;
+begin
+  Result := True;
+  (*
+   BinaryOperator...
+     # (e.g. Self = "+")
+     # APrevPart = Identifier
+     # APrevPart.Parent = "*" or "-"
+       foo * Identifier +
+       foo - Identifier +
+   The binary-op "+" after "Identifier" must be applied to the parent.
+   So, if SELF is the "+", then it is not valid after "Identifier".
+   If new operator has a higher precedence, it go down to the child again and replace it
+  *)
+  // precedence: 1 = highest
+  Result := (APrevPart.Parent = nil) or not (APrevPart.Parent.HasPrecedence) or
+            (Precedence < APrevPart.Parent.Precedence)
+end;
+
+function TFpPascalExpressionPartBinaryOperator.HandleNextPart(APart: TFpPascalExpressionPart
+  ): TFpPascalExpressionPart;
+begin
+  if Count = 0 then
+    SetError('Missing operand');
+  Result := inherited HandleNextPart(APart);
 end;
 
 function TFpPascalExpressionPartBinaryOperator.MaybeHandlePrevPart(APrevPart: TFpPascalExpressionPart;
@@ -3948,7 +5862,7 @@ begin
         Result := tmp.Member[0];
         if Result = nil then begin
           SetErrorWithPos(fpErrCannotDeref_p, [Items[0].GetText(MAX_ERR_EXPR_QUOTE_LEN)]);
-          SetError(fpInternalErr, [], Expression.Error); // mark as internal error
+          SetError(fpInternalErr, [], ExpressionData.Error); // mark as internal error
         end
         else
           {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
@@ -4045,6 +5959,177 @@ begin
   {$POP}
 
   ForwardError(Result, tmp1);
+end;
+
+{ TFpPascalExpressionPartOperatorQuestionMark }
+
+procedure TFpPascalExpressionPartOperatorQuestionMark.Init;
+begin
+  FPrecedence := PRECEDENCE_QUEST_COLON;
+  inherited Init;
+end;
+
+function TFpPascalExpressionPartOperatorQuestionMark.DoGetResultValue: TFpValue;
+var
+  tmp: TFpValue;
+  ff: TFpValueFieldFlags;
+  b: Boolean;
+begin
+  Result := nil;
+  if (Count <> 2) or not (Items[1] is TFpPascalExpressionPartOperatorColon) or
+     (TFpPascalExpressionPartOperatorColon(Items[1]).Count <> 2)
+  then begin
+    SetError('internal error ?:');
+    exit;
+  end;
+
+  tmp := Items[0].ResultValue;
+  ff := tmp.FieldFlags;
+  if      (ff * [svfBoolean] <> [])               then b := tmp.AsBool
+  else if (ff * [svfCardinal, svfOrdinal] <> [])  then b := tmp.AsCardinal <> 0
+  else if (ff * [svfString, svfWideString] <> []) then b := Length(tmp.AsString) <> 0
+  else begin
+    SetError('"?" needs an input than can be cast to bool');
+    exit;
+  end;
+
+  if b
+  then Result := TFpPascalExpressionPartOperatorColon(Items[1]).Items[0].ResultValue
+  else Result := TFpPascalExpressionPartOperatorColon(Items[1]).Items[1].ResultValue;
+
+  if Result = nil then
+    exit;
+  Result.AddReference;
+end;
+
+function TFpPascalExpressionPartOperatorQuestionMark.FindLeftSideOperandByPrecedence(
+  AnOperator: TFpPascalExpressionPartWithPrecedence): TFpPascalExpressionPart;
+begin
+  Result := Self;
+
+  if (not HasAllOperands) or (LastItem = nil) then begin
+    Result := nil;
+    exit
+  end;
+
+  (* If precedence is equal, APart can be
+    - a :  - we don't have one yet => Return from LastItem
+           - we have a : => return self
+    - a ?  - => Return from LastItem
+  *)
+  if (Precedence = AnOperator.Precedence) then begin
+    if (Count = 2) and (Items[1] is TFpPascalExpressionPartOperatorColon)
+      and (AnOperator is TFpPascalExpressionPartOperatorColon)
+    then
+      Result := Self
+    else
+      Result := LastItem.FindLeftSideOperandByPrecedence(AnOperator);
+  end
+  else
+  // precedence: 1 = highest
+  if Precedence >= AnOperator.Precedence then
+    Result := LastItem.FindLeftSideOperandByPrecedence(AnOperator);
+end;
+
+function TFpPascalExpressionPartOperatorQuestionMark.IsValidAfterPartWithPrecedence(
+  APrevPart: TFpPascalExpressionPart): Boolean;
+begin
+  Result := (APrevPart.Parent = nil) or not (APrevPart.Parent.HasPrecedence) or
+            (Precedence <= APrevPart.Parent.Precedence);
+  (* inherited only checks for "<" instead of "<="
+     Other operators at the same precedence must have the 2nd (in left to right
+     reading order) operator become the parent, so that it executes the entire
+     left operation first.
+     ? : act as nested constructs. The right part is a nested operation
+     Therefore at same precedence, the new "?" is valid after any ongoing ? or :
+  *)
+end;
+
+procedure TFpPascalExpressionPartOperatorQuestionMark.DoHandleEndOfExpression;
+begin
+  inherited DoHandleEndOfExpression;
+  if (Count <> 2) or not(Items[1] is TFpPascalExpressionPartOperatorColon) then
+    SetError('Missing ":"');
+end;
+
+function TFpPascalExpressionPartOperatorQuestionMark.ReturnsVariant: boolean;
+begin
+  Result := True; // TODO: compare types of each argument
+end;
+
+function TFpPascalExpressionPartOperatorQuestionMark.IsClosed: boolean;
+begin
+  Result := (Count = 2) and (Items[1] is TFpPascalExpressionPartOperatorColon);
+end;
+
+{ TFpPascalExpressionPartOperatorColon }
+
+procedure TFpPascalExpressionPartOperatorColon.Init;
+begin
+  FPrecedence := PRECEDENCE_QUEST_COLON;
+  inherited Init;
+end;
+
+function TFpPascalExpressionPartOperatorColon.DoGetResultValue: TFpValue;
+begin
+  raise Exception.Create('invalid call to ":"');
+  Result := nil;
+end;
+
+function TFpPascalExpressionPartOperatorColon.FindLeftSideOperandByPrecedence(
+  AnOperator: TFpPascalExpressionPartWithPrecedence): TFpPascalExpressionPart;
+begin
+  Result := Self;
+
+  if (not HasAllOperands) or (LastItem = nil) then begin
+    Result := nil;
+    exit
+  end;
+
+  (* If precedence is equal
+    - a : => must be outer => return self
+    - a ? => LastItem
+  *)
+
+  if (Precedence = AnOperator.Precedence) then begin
+    if AnOperator is TFpPascalExpressionPartOperatorQuestionMark then
+      Result := LastItem.FindLeftSideOperandByPrecedence(AnOperator)
+    else
+      Result := Self;
+  end
+  else
+  // precedence: 1 = highest
+  if Precedence > AnOperator.Precedence then
+    Result := LastItem.FindLeftSideOperandByPrecedence(AnOperator);
+end;
+
+function TFpPascalExpressionPartOperatorColon.IsValidAfterPartWithPrecedence(
+  APrevPart: TFpPascalExpressionPart): Boolean;
+var
+  Prev: TFpPascalExpressionPartOperatorQuestionMark absolute APrevPart;
+begin
+  Result := (APrevPart.Parent = nil) or not (APrevPart.Parent.HasPrecedence) or
+            (Precedence <= APrevPart.Parent.Precedence);
+  if not Result then
+    exit;
+
+  // A colon is valid only after a questionmark that does not yet have its ":"
+  // Otherwise it belongs to an outer question mark
+  Result := (APrevPart is TFpPascalExpressionPartOperatorQuestionMark) and
+            ( (Prev.Count = 2) and not(Prev.Items[1] is TFpPascalExpressionPartOperatorColon) )
+end;
+
+procedure TFpPascalExpressionPartOperatorColon.DoHandleEndOfExpression;
+begin
+  inherited DoHandleEndOfExpression;
+  FIsClosed := True;
+  if not(Parent is TFpPascalExpressionPartOperatorQuestionMark) then
+    SetError('No "?" for ":"');
+end;
+
+function TFpPascalExpressionPartOperatorColon.IsClosed: boolean;
+begin
+  Result := FIsClosed;
 end;
 
 { TFpPascalExpressionPartOperatorPlusMinus }
@@ -4738,11 +6823,18 @@ begin
  {$IFDEF WITH_REFCOUNT_DEBUG}if Result <> nil then Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
 
+procedure TFpPascalExpressionPartOperatorOr.Assign(ASourcePart: TFpPascalExpressionPart);
+begin
+  inherited Assign(ASourcePart);
+  if ASourcePart is TFpPascalExpressionPartOperatorOr then
+    FOp := TFpPascalExpressionPartOperatorOr(ASourcePart).FOp;
+end;
+
 constructor TFpPascalExpressionPartOperatorOr.Create(
-  AExpression: TFpPascalExpression; AnOp: TOpOrType; AStartChar: PChar;
+  AnExpressionData: TFpPascalExpressionSharedData; AnOp: TOpOrType; AStartChar: PChar;
   AnEndChar: PChar);
 begin
-  inherited Create(AExpression, AStartChar, AnEndChar);
+  inherited Create(AnExpressionData, AStartChar, AnEndChar);
   FOp := AnOp;
 end;
 
@@ -4763,6 +6855,8 @@ function TFpPascalExpressionPartOperatorCompare.DoGetResultValue: TFpValue;
       skInteger:  Result := TFpValueConstBool.Create((AIntVal.AsInteger = AOtherVal.AsInteger) xor AReverse);
       skCardinal: Result := TFpValueConstBool.Create((AIntVal.AsInteger = AOtherVal.AsCardinal) xor AReverse);
       skFloat:    Result := TFpValueConstBool.Create((AIntVal.AsInteger = AOtherVal.AsFloat) xor AReverse);
+      skPointer, skAddress:
+                  Result := TFpValueConstBool.Create((AIntVal.AsCardinal = AOtherVal.AsCardinal) xor AReverse)
       else SetError('= not supported');
     end;
   end;
@@ -4773,6 +6867,8 @@ function TFpPascalExpressionPartOperatorCompare.DoGetResultValue: TFpValue;
       skInteger:  Result := TFpValueConstBool.Create((ACardinalVal.AsCardinal = AOtherVal.AsInteger) xor AReverse);
       skCardinal: Result := TFpValueConstBool.Create((ACardinalVal.AsCardinal = AOtherVal.AsCardinal) xor AReverse);
       skFloat:    Result := TFpValueConstBool.Create((ACardinalVal.AsCardinal = AOtherVal.AsFloat) xor AReverse);
+      skPointer, skAddress:
+                  Result := TFpValueConstBool.Create((ACardinalVal.AsCardinal = AOtherVal.AsCardinal) xor AReverse)
       else SetError('= not supported');
     end;
   end;
@@ -4789,7 +6885,9 @@ function TFpPascalExpressionPartOperatorCompare.DoGetResultValue: TFpValue;
   function AddressPtrEqualToValue(AIntVal, AOtherVal: TFpValue; AReverse: Boolean = False): TFpValue;
   begin
     Result := nil;
-    if AOtherVal.Kind in [skClass,skInterface,skAddress,skPointer] then
+    if (AOtherVal.Kind in [skClass,skInterface,skAddress,skPointer]) or
+       ((AIntVal.Kind in [skPointer, skAddress]) and (AOtherVal.Kind in [skInteger,skCardinal]))
+    then
       Result := TFpValueConstBool.Create((AIntVal.AsCardinal = AOtherVal.AsCardinal) xor AReverse)
     else
       SetError('= not supported');
@@ -5151,7 +7249,7 @@ begin
 
   AutoDereVal := nil;
   try
-    if Expression.AutoDeref then begin
+    if ExpressionData.AutoDeref then begin
       // Copy from TFpPascalExpressionPartOperatorDeRef.DoGetResultValue
       if tmp.Kind = skPointer then begin
         if (svfDataAddress in tmp.FieldFlags) and (IsReadableLoc(tmp.DerefAddress)) and // TODO, what if Not readable addr
@@ -5226,7 +7324,7 @@ begin
        then it would hide the unitname, but otherwise a unit in the uses clause would
        hide the structure.
     *)
-    Result := Expression.FScope.FindSymbol(MemberName, Items[0].GetText);
+    Result := ExpressionData.Scope.FindSymbol(MemberName, Items[0].GetText);
     if Result <> nil then begin
       {$IFDEF WITH_REFCOUNT_DEBUG}Result.DbgRenameReference(nil, 'DoGetResultValue'){$ENDIF};
       exit;
@@ -5297,41 +7395,6 @@ begin
     Result.DbgRenameReference(nil, 'DoGetResultValue');{$ENDIF}
 end;
 
-type
-
-  { TFpPasParserValueSlicedArrayIndex }
-
-  TFpPasParserValueSlicedArrayIndex = class(TFpSymbol)
-  private
-    FLowBound: Int64;
-  public
-    function GetValueLowBound(AValueObj: TFpValue; out ALowBound: Int64): Boolean; override;
-  end;
-
-  { TFpPasParserValueSlicedArray }
-
-  TFpPasParserValueSlicedArray = class(TFpPasParserValue)
-  private
-    FLowBoundIndex: TFpPasParserValueSlicedArrayIndex;
-    FArraySlice: TFpPascalExpressionPartOperatorArraySliceController;
-  protected
-    //function DebugText(AIndent: String): String; override;
-    function SlicePart: TFpPascalExpressionPartOperatorArraySlice; inline;
-  protected
-    function GetKind: TDbgSymbolKind; override;
-    function GetFieldFlags: TFpValueFieldFlags; override;
-    function GetTypeInfo: TFpSymbol; override;
-
-    function GetMember(AIndex: Int64): TFpValue; override;
-    function GetMemberCount: Integer; override;
-
-    function GetIndexType(AIndex: Integer): TFpSymbol; override;
-    function GetIndexTypeCount: Integer; override;
-  public
-    constructor Create(ASlice: TFpPascalExpressionPartOperatorArraySliceController);
-    destructor Destroy; override;
-  end;
-
 { TFpPasParserValueSlicedArrayIndex }
 
 function TFpPasParserValueSlicedArrayIndex.GetValueLowBound(
@@ -5372,17 +7435,21 @@ begin
     // Some evaluation errors (such as deref nil) are marked on the Expression,
     // rather than on the value(s).
     // If this code is called, the Expression should have been valid before.
-    FExpressionPart.Expression.FValid := True;
-    FExpressionPart.Expression.FError := nil;
+    FExpressionPart.ExpressionData.ClearError;
   end;
   Result := FArraySlice.Items[0].ResultValue;
 
   if Result <> nil then begin
+    //if IsError(FExpressionPart.ExpressionData.FError) and not IsError(Result.LastError) then
+    //  Result.SetLastError(FExpressionPart.ExpressionData.FError);
+
     Result.AddReference;
     Result.Reset;
     if FArraySlice.FHasVariantPart then
       Result.Flags := Result.Flags + [vfVariant];
   end;
+
+  FExpressionPart.ExpressionData.ClearError;
 end;
 
 function TFpPasParserValueSlicedArray.GetMemberCount: Integer;
@@ -5400,10 +7467,17 @@ begin
   Result := 1;
 end;
 
-constructor TFpPasParserValueSlicedArray.Create(ASlice: TFpPascalExpressionPartOperatorArraySliceController);
+function TFpPasParserValueSlicedArray.GetOrdLowBound: Int64;
+begin
+  Result := FLowBoundIndex.FLowBound;
+end;
+
+constructor TFpPasParserValueSlicedArray.Create(
+  ASlice: TFpPascalExpressionPartOperatorArraySliceController; AnOwnsController: boolean);
 begin
   inherited Create(ASlice);
   FArraySlice := ASlice;
+  FOwnsController := AnOwnsController;
   FLowBoundIndex := TFpPasParserValueSlicedArrayIndex.Create('');
   FLowBoundIndex.FLowBound := SlicePart.StartValue;
 end;
@@ -5412,43 +7486,129 @@ destructor TFpPasParserValueSlicedArray.Destroy;
 begin
   inherited Destroy;
   FLowBoundIndex.ReleaseReference;
+  if FOwnsController then
+    FArraySlice.Free;
+end;
+
+function TFpPasParserValueSlicedArray.SliceBracketStartOffs: integer;
+var
+  sp: TFpPascalExpressionPartOperatorArraySlice;
+  s, e: PChar;
+begin
+  Result := -1;
+  sp := SlicePart;
+  if (sp <> nil) then begin
+    sp.GetFirstLastChar(s, e);
+    Result := s - sp.ExpressionData.TextExpressionAddr + 1;
+  end;
+end;
+
+function TFpPasParserValueSlicedArray.SliceBracketLength: integer;
+var
+  sp: TFpPascalExpressionPartOperatorArraySlice;
+  s, e: PChar;
+begin
+  Result := -1;
+  sp := SlicePart;
+  if (sp <> nil) then begin
+    sp.GetFirstLastChar(s, e);
+    while e[1] = '!' do e := e + 1;
+    Result := e - s + 1;
+  end;
 end;
 
 { TFpPascalExpressionPartOperatorArraySliceController }
 
-function TFpPascalExpressionPartOperatorArraySliceController.HandleNextPart
-  (APart: TFpPascalExpressionPart): TFpPascalExpressionPart;
+function TFpPascalExpressionPartOperatorArraySliceController.GetFullText(AMaxLen: Integer): String;
 begin
-  SetError(APart, 'array slice error');
-  APart.Free;
-  Result := Self;
+  Result := '';
+  if Count > 0 then
+    Result := Items[0].GetFullText(AMaxLen);
+end;
+
+function TFpPascalExpressionPartOperatorArraySliceController.DebugText(AIndent: String;
+  AWithResults: Boolean): String;
+begin
+  Result := inherited DebugText(AIndent, AWithResults) +
+            AIndent +'// '+ GetFullText+LineEnding;
+end;
+
+function TFpPascalExpressionPartOperatorArraySliceController.GetCanDisableSlice: boolean;
+begin
+  Result := (not FResultValDone);
 end;
 
 function TFpPascalExpressionPartOperatorArraySliceController.DoGetResultValue: TFpValue;
 var
+  me: TFpPascalExpressionPartOperatorArraySliceController;
+begin
+  if FNeedCopy > 0 then
+    me := TFpPascalExpressionPartOperatorArraySliceController(CreateCopy(Parent))
+  else
+    me := Self;
+
+  Result := me.InternalDoGetResultValue(FNeedCopy > 0);
+end;
+
+function TFpPascalExpressionPartOperatorArraySliceController.InternalDoGetResultValue(
+  ANeedCopy: boolean): TFpValue;
+var
   tmp: TFpValue;
 begin
-  if (FSlicePart.Parent <> nil) and
-     (FSlicePart.Parent is TFpPascalExpressionPartBracketIndex) and
-     (FSlicePart.Parent.Count = 2) // variable and ONE index
-  then begin
+  FSlicePart.FCurrentIndex := FSlicePart.StartValue;
+  FSlicePart.EndValue; // needs to be touched
+  FSlicePart.FTouched := False;
+  ResetEvaluationForIndex;
+  Result := Items[0].ResultValue;
+
+  if (not FSlicePart.FTouched) or DisableSlice then begin
+    // The array slice is not part of the ExpressionData ("? :" or Try)
+    // Or already handled.
+    if Result <> nil then
+      Result.AddReference;
+
+    if ANeedCopy then
+      Self.Free;
+    exit;
+  end;
+
+
+  if (FSlicePart.Parent.Items[0].ResultValue <> nil) then begin
     tmp := FSlicePart.Parent.Items[0].ResultValue;
-    if (tmp <> nil) and (Tmp.Kind in [skString, skAnsiString, skWideString])
-    then begin
-      // Handled in TFpPascalExpressionPartBracketIndex.DoGetResultValue
-      Result := Items[0].ResultValue;
-      if Result <> nil then
-        Result.AddReference;
-      exit;
+    if (vfArrayUpperBoundLimit in tmp.Flags) then begin
+      FSlicePart.FUpperLimit := tmp.OrdHighBound;
+      FSlicePart.FHasUpperLimit := True;
     end;
   end;
+
+
+  // Need to return an array, the array itself should not set an error (the 1st (or any) member may do)
+  // We need to get the error again later, when we get the first member
+  if IsError(ExpressionData.Error) then
+    Items[0].ResetEvaluation;
+  ExpressionData.ClearError;
 
   if not FCheckedForVariantPart then begin
     FSlicePart.CheckForVariantExpressionParts;
     FCheckedForVariantPart := True;
   end;
 
-  Result := TFpPasParserValueSlicedArray.Create(Self);
+  Result := TFpPasParserValueSlicedArray.Create(Self, ANeedCopy);
+  if FHasVariantPart then
+    Result.Flags := Result.Flags + [vfArrayOfVariant];
+end;
+
+procedure TFpPascalExpressionPartOperatorArraySliceController.DoParentIndexBraceClosed(
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice);
+begin
+  if Count = 1 then
+    Items[0].DoParentIndexBraceClosed(APreviousArraySliceList);
+end;
+
+procedure TFpPascalExpressionPartOperatorArraySliceController.ResetEvaluation;
+begin
+  inherited ResetEvaluation;
+  FDisableSlice := False;
 end;
 
 procedure TFpPascalExpressionPartOperatorArraySliceController.ResetEvaluationForIndex;
@@ -5466,17 +7626,24 @@ begin
 end;
 
 constructor TFpPascalExpressionPartOperatorArraySliceController.Create(
-  AExpression: TFpPascalExpression;
-  ASlicePart: TFpPascalExpressionPartOperatorArraySlice;
-  ATopPart: TFpPascalExpressionPart; AStartChar: PChar; AnEndChar: PChar);
+  AnExpressionData: TFpPascalExpressionSharedData;
+  ASlicePart: TFpPascalExpressionPartOperatorArraySlice; AStartChar: PChar; AnEndChar: PChar);
 begin
-  inherited Create(AExpression, AStartChar, AnEndChar);
+  inherited Create(AnExpressionData, AStartChar, AnEndChar);
   FSlicePart := ASlicePart;
+  FIsClosed := True;
+end;
 
-  while ATopPart is TFpPascalExpressionPartOperatorArraySliceController do
-    ATopPart := TFpPascalExpressionPartOperatorArraySliceController(ATopPart).Items[0];
-  ATopPart.ReplaceInParent(Self);
-  Add(ATopPart);
+procedure TFpPascalExpressionPartOperatorArraySliceController.BeginNeedCopy;
+begin
+  inherited BeginNeedCopy;
+  inc(FNeedCopy);
+end;
+
+procedure TFpPascalExpressionPartOperatorArraySliceController.EndNeedCopy;
+begin
+  inherited EndNeedCopy;
+  dec(FNeedCopy);
 end;
 
 { TFpPascalExpressionPartOperatorArraySlice }
@@ -5487,18 +7654,38 @@ begin
   FPrecedence := PRECEDENCE_ARRAY_SLICE;
 end;
 
-procedure TFpPascalExpressionPartOperatorArraySlice.SetParent(
-  AValue: TFpPascalExpressionPartContainer);
+procedure TFpPascalExpressionPartOperatorArraySlice.DoParentIndexBraceClosed(
+  APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice);
+var
+  p, p2: TFpPascalExpressionPartOperatorArraySlice;
 begin
-  if (Parent = nil) and (AValue <> nil) then
-    TFpPascalExpressionPartOperatorArraySliceController.Create(FExpression,
-      Self, AValue.TopParent, FStartChar, FEndChar);
+  FPreviousArraySlice := APreviousArraySliceList^;
+  APreviousArraySliceList^ := Self;
 
-  inherited SetParent(AValue);
+  if FindInParents(FPreviousArraySlice) then  begin
+    p := FPreviousArraySlice;
+    p2 := p.FPreviousArraySlice;
+    while FindInParents(p2) do begin
+      p := p2;
+      p2 := p.FPreviousArraySlice;
+    end;
+    if APreviousArraySliceList^ = Self then begin
+      APreviousArraySliceList^ := p;
+    end
+    else begin
+      p2 := APreviousArraySliceList^;
+      while p2.FPreviousArraySlice <> self do
+        p2 := p2.FPreviousArraySlice;
+      p2.FPreviousArraySlice := p;
+    end;
+      FPreviousArraySlice := p.FPreviousArraySlice;
+      p.FPreviousArraySlice := Self;
+  end;
 end;
 
 function TFpPascalExpressionPartOperatorArraySlice.DoGetResultValue: TFpValue;
 begin
+  FTouched := True;
   Result := TFpValueConstNumber.Create(QWord(FCurrentIndex), True);
 end;
 
@@ -5516,12 +7703,16 @@ end;
 function TFpPascalExpressionPartOperatorArraySlice.EndValue: Int64;
 var
   tmp: TFpValue;
+  i: Int64;
 begin
   Result := 0;
   if Count < 2 then exit;
   tmp := Items[1].ResultValue;
-  if tmp <> nil then
+  if tmp <> nil then begin
     Result := tmp.AsInteger;
+    if FHasUpperLimit and (FUpperLimit < Result) then
+      Result := FUpperLimit;
+  end;
 end;
 
 procedure TFpPascalExpressionPartOperatorArraySlice.CheckForVariantExpressionParts;
@@ -5539,6 +7730,71 @@ begin
   // The most inner TFpPascalExpressionPartOperatorArraySliceController, even if not belonging to this slice
   if APart is TFpPascalExpressionPartOperatorArraySliceController then
     TFpPascalExpressionPartOperatorArraySliceController(APart).FHasVariantPart := AHasVariantPart;
+end;
+
+procedure TFpPascalExpressionPartOperatorArraySlice.Assign(ASourcePart: TFpPascalExpressionPart);
+var
+  SliceSourcePart: TFpPascalExpressionPartOperatorArraySlice absolute ASourcePart;
+begin
+  inherited Assign(ASourcePart);
+  if ASourcePart is TFpPascalExpressionPartOperatorArraySlice then begin
+    FController := TFpPascalExpressionPartOperatorArraySliceController(FindCopiedInParents(ASourcePart, SliceSourcePart.FController));
+    if FController <> nil then
+      FController.FSlicePart := Self
+    else
+      FController := SliceSourcePart.FController;
+  end;
+end;
+
+destructor TFpPascalExpressionPartOperatorArraySlice.Destroy;
+begin
+  if (FController <> nil) and (FController.SlicePart = Self) then
+    FController.FSlicePart := nil; // in case of DebugDump
+  inherited Destroy;
+end;
+
+function TFpPascalExpressionPartOperatorArraySlice.IsClosed: boolean;
+begin
+  Result := (Parent <> nil) and
+            (Parent is TFpPascalExpressionPartBracketIndex) and
+            Parent.IsClosed; // the enclosing index brackets "[   ]"
+end;
+
+function TFpPascalExpressionPartOperatorArraySlice.AddController(ACurPart: TFpPascalExpressionPart
+  ): TFpPascalExpressionPart;
+var
+  p: TFpPascalExpressionPart;
+begin
+  Result := ACurPart;
+  if not ExpressionData.Valid then
+    exit;
+  if FController <> nil then
+    exit;
+
+  p := ACurPart;
+  while (ACurPart.Parent <> nil) and
+        ( ACurPart.Parent.IsClosed or
+          not FindInParents(ACurPart)
+        )
+  do
+    ACurPart := ACurPart.Parent;
+
+  FController := TFpPascalExpressionPartOperatorArraySliceController.Create(ExpressionData, Self, FStartChar, FEndChar);
+  FController.Parent := ACurPart.Parent;
+  ACurPart.ReplaceInParent(FController);
+  p.HandleEndOfExpression;
+  FController.Add(ACurPart);
+  Result := FController;
+end;
+
+function TFpPascalExpressionPartOperatorArraySlice.AddControllerRecursive(
+  ACurPart: TFpPascalExpressionPart): TFpPascalExpressionPart;
+begin
+  Result := AddController(ACurPart);
+  if not ExpressionData.Valid then
+    exit;
+  if FPreviousArraySlice <> nil then
+    Result := FPreviousArraySlice.AddControllerRecursive(Result);
 end;
 
 initialization

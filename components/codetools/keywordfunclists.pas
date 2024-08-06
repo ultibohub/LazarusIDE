@@ -221,10 +221,20 @@ end;
 
 function CompareIdentifiers(Identifier1, Identifier2: PChar): integer;
 begin
-  if (Identifier1<>nil) then begin
-    if (Identifier2<>nil) then begin
-      while (UpChars[Identifier1[0]]=UpChars[Identifier2[0]]) do begin
-        if (IsIdentChar[Identifier1[0]]) then begin
+  if (Identifier1<>nil)
+      and (IsIdentStartChar[Identifier1^]
+         or ((Identifier1^='&') and IsIdentStartChar[Identifier1[1]])) then
+  begin
+    if Identifier1^='&' then inc(Identifier1);
+
+    if (Identifier2<>nil)
+        and (IsIdentStartChar[Identifier2^]
+           or ((Identifier2^='&') and IsIdentStartChar[Identifier2[1]])) then
+    begin
+      if Identifier2^='&' then inc(Identifier2);
+
+      while UpChars[Identifier1^]=UpChars[Identifier2^] do begin
+        if IsIdentChar[Identifier1^] then begin
           inc(Identifier1);
           inc(Identifier2);
         end else begin
@@ -232,9 +242,9 @@ begin
           exit;
         end;
       end;
-      if (IsIdentChar[Identifier1[0]]) then begin
-        if (IsIdentChar[Identifier2[0]]) then begin
-          if UpChars[Identifier1[0]]>UpChars[Identifier2[0]] then
+      if IsIdentChar[Identifier1^] then begin
+        if IsIdentChar[Identifier2^] then begin
+          if UpChars[Identifier1^]>UpChars[Identifier2^] then
             Result:=-1 // for example  'aab' 'aaa'
           else
             Result:=1; // for example  'aaa' 'aab'
@@ -242,7 +252,7 @@ begin
           Result:=-1; // for example  'aaa' 'aa;'
         end;
       end else begin
-        if (IsIdentChar[Identifier2[0]]) then
+        if IsIdentChar[Identifier2^] then
           Result:=1 // for example  'aa;' 'aaa'
         else
           Result:=0; // for example  'aa;' 'aa,'
@@ -251,7 +261,10 @@ begin
       Result:=-1; // for example  'aaa' nil
     end;
   end else begin
-    if (Identifier2<>nil) then begin
+    if (Identifier2<>nil)
+        and (IsIdentStartChar[Identifier2^]
+           or ((Identifier2^='&') and IsIdentStartChar[Identifier2[1]])) then
+    begin
       Result:=1; // for example  nil 'bbb'
     end else begin
       Result:=0; // for example  nil nil
@@ -1035,6 +1048,7 @@ begin
     Add('MS_ABI_DEFAULT'  ,{$ifdef FPC}@{$endif}AllwaysTrue);
     Add('MS_ABI_CDECL'    ,{$ifdef FPC}@{$endif}AllwaysTrue);
     Add('STDCALL'      ,{$ifdef FPC}@{$endif}AllwaysTrue);
+    Add('PASCAL'       ,{$ifdef FPC}@{$endif}AllwaysTrue);
     Add('REGISTER'     ,{$ifdef FPC}@{$endif}AllwaysTrue);
     Add('EXTDECL'      ,{$ifdef FPC}@{$endif}AllwaysTrue);
     Add('MWPASCAL'     ,{$ifdef FPC}@{$endif}AllwaysTrue);

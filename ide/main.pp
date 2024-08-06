@@ -108,7 +108,7 @@ uses
   DbgIntfDebuggerBase, DbgIntfProcess, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
   idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBackendValueConv, IdeDebuggerBase,
   // packager
-  PackageSystem, PkgManager, BasePkgManager, LPKCache,
+  PackageSystem, PkgManager, BasePkgManager, LPKCache, LazarusPackageIntf,
   // source editing
   SourceEditor, CodeToolsOptions, IDEOptionDefs,
   CodeToolsDefines, DiffDialog, UnitInfoDlg, EditorOptions,
@@ -1359,9 +1359,6 @@ begin
     end;
   end;
 
-  Application.ShowButtonGlyphs := EnvironmentGuiOpts.ShowButtonGlyphs;
-  Application.ShowMenuGlyphs := EnvironmentGuiOpts.ShowMenuGlyphs;
-
   OldVer:=EnvironmentOptions.OldLazarusVersion;
   NowVer:=LazarusVersionStr;
   //debugln(['TMainIDE.LoadGlobalOptions ',FEnvOptsCfgExisted,' diff=',OldVer<>NowVer,' Now=',NowVer,' Old=',OldVer,' Comp=',CompareLazarusVersion(NowVer,OldVer)]);
@@ -1476,6 +1473,7 @@ var
   Note: string;
   ConfigFile: string;
   SkipAllTests: Boolean;
+  i: Integer;
 begin
   {$IFDEF DebugSearchFPCSrcThread}
   ShowSetupDialog:=true;
@@ -1560,6 +1558,11 @@ begin
   //  ShowSetupDialog:=true; //Ultibo
   //end; //Ultibo
 
+  for i := 0 to SetupDlgFrameList.Count - 1 do begin
+    if ShowSetupDialog then break;
+    ShowSetupDialog := SetupDlgFrameList[i].RequireSetup;
+  end;
+
   // show setup dialog
   if ShowSetupDialog then begin
     OldLazDir:=EnvironmentOptions.LazarusDirectory;
@@ -1608,8 +1611,6 @@ begin
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.Create BUILD MANAGER');{$ENDIF}
   // setup macros before loading options
   MainBuildBoss.SetupTransferMacros;
-  EnvironmentGuiOpts := TEnvGuiOptions.Create;
-  EnvironmentOptions.RegisterSubConfig(EnvironmentGuiOpts, '/');
   EnvironmentDebugOpts := TEnvDebuggerOptions.Create;
   EnvironmentOptions.RegisterSubConfig(EnvironmentDebugOpts, 'EnvironmentOptions/');
 
@@ -1621,9 +1622,6 @@ begin
   StartProtocol;
   LoadGlobalOptions;
   if Application.Terminated then exit;
-
-  if EnvironmentGuiOpts.Desktop.SingleTaskBarButton then
-    Application.TaskBarBehavior := tbSingleButton;
 
   // setup code templates
   SetupCodeMacros;
@@ -1637,6 +1635,14 @@ begin
   // setup interactive if neccessary
   SetupInteractive;
   if Application.Terminated then exit;
+
+  EnvironmentGuiOpts := TEnvGuiOptions.Create;
+  EnvironmentOptions.RegisterSubConfig(EnvironmentGuiOpts, '/',True);
+
+  if EnvironmentGuiOpts.Desktop.SingleTaskBarButton then
+    Application.TaskBarBehavior := tbSingleButton;
+  Application.ShowButtonGlyphs := EnvironmentGuiOpts.ShowButtonGlyphs;
+  Application.ShowMenuGlyphs := EnvironmentGuiOpts.ShowMenuGlyphs;
 
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.Create CODETOOLS');{$ENDIF}
 
@@ -4714,9 +4720,8 @@ end;
 
 procedure TMainIDE.mnuCleanUpAndBuildProjectClicked(Sender: TObject);
 begin
-  if PrepareForCompileWithMsg<>mrOk then exit;
-  if ShowBuildProjectDialog(Project1)<>mrOk then exit;
-  DoBuildProject(crBuild,[]);
+  if ShowBuildProjectDialog(Project1) = mrOk then
+    DoBuildProject(crBuild, []);
 end;
 
 procedure TMainIDE.mnuBuildManyModesClicked(Sender: TObject);

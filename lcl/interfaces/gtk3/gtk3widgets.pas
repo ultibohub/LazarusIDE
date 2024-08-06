@@ -7571,6 +7571,7 @@ begin
     FWidget:=Result;
     FWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
     gtk_widget_realize(Result);
+    Title:=Params.Caption;
     decor:=decoration_flags(AForm);
     gdk_window_set_decorations(Result^.window, decor);
     gtk_window_set_decorated(PGtkWindow(Result),(decor <> []));
@@ -7584,7 +7585,6 @@ begin
     // cannot gtk_widget_realize(Result), because that needs a valid widget parent
     FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtCustomControl]
   end;
-  Result^.set_size_request(Params.Width, Params.Height);
   Text := Params.Caption;
 
   FBox := TGtkVBox.new(GTK_ORIENTATION_VERTICAL, 0);
@@ -7640,11 +7640,18 @@ end;
 
 function TGtk3Window.getText: String;
 begin
-  Result := Title;
+  // query widget
+  Result:=Title;
+  // return cached
+  if Result='' then
+    Result := inherited GetText;
 end;
 
 procedure TGtk3Window.setText(const AValue: String);
 begin
+  // set cached text
+  inherited SetText(AValue);
+  // set widget text
   Title := AValue;
 end;
 
@@ -8171,7 +8178,7 @@ begin
     { this stuff is implemened in gtk3objects.Tgtk3Font.UpdateLogFont
       so this is backward mapping of properties }
     sfamily:=pfd^.get_family();
-    sface:=lowercase(pch^.get_font_face()^.get_face_name());
+    sface:=lowercase(pfc^.get_face_name());
 
     sz:=pch^.get_font_size() div PANGO_SCALE;
     fnt.Name:=sfamily;

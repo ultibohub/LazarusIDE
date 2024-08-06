@@ -29,8 +29,8 @@ uses
   // Widgetset
   WSCheckLst, WSLCLClasses,
   // LCL Cocoa
-  CocoaWSCommon, CocoaPrivate, CocoaUtils, CocoaWSStdCtrls, CocoaTables,
-  CocoaScrollers, CocoaWSScrollers;
+  CocoaWSCommon, CocoaPrivate, CocoaCallback, CocoaWSStdCtrls,
+  CocoaTables, CocoaScrollers, CocoaWSScrollers;
 
 type
 
@@ -219,6 +219,7 @@ begin
     Result := 0;
     Exit;
   end;
+  list.onSelectionChanged:= @TListBox_selectionChanged;
   list.callback := TLCLCheckboxListCallback.CreateWithView(list, AWinControl);
   list.lclSetFirstColumCheckboxes(true);
   //list.list := TCocoaStringList.Create(list);

@@ -10,7 +10,8 @@ interface
 uses
   Types, Classes, Controls, SysUtils,
   WSControls, LCLType, LCLMessageGlue, LMessages, LCLProc, LCLIntf, Graphics, Forms,
-  CocoaAll, CocoaInt, CocoaConfig, CocoaPrivate, CocoaUtils,
+  StdCtrls,
+  CocoaAll, CocoaInt, CocoaConfig, CocoaPrivate, CocoaCallback, CocoaUtils,
   CocoaScrollers, CocoaWSScrollers,
   CocoaGDIObjects, CocoaCursor, CocoaCaret, cocoa_extra;
 
@@ -172,6 +173,8 @@ type
   end;
 
 procedure UpdateFocusRing(v: NSView; astyle: TBorderStyle);
+procedure ScrollViewSetScrollStyles(AScroll: TCocoaScrollView; AStyles: TScrollStyle);
+procedure ScrollViewSetBorderStyle(sv: NSScrollView; astyle: TBorderStyle);
 
 function ButtonStateToShiftState(BtnState: PtrUInt): TShiftState;
 function CocoaModifiersToKeyState(AModifiers: NSUInteger): PtrInt;
@@ -181,6 +184,37 @@ function CocoaModifiersToShiftState(AModifiers: NSUInteger; AMouseButtons: NSUIn
 function NSObjectDebugStr(obj: NSObject): string;
 function CallbackDebugStr(cb: ICommonCallback): string;
 procedure DebugDumpParents(fromView: NSView);
+
+const
+  VerticalScrollerVisible: array[TScrollStyle] of boolean = (
+ {ssNone          } false,
+ {ssHorizontal    } false,
+ {ssVertical      } true,
+ {ssBoth          } true,
+ {ssAutoHorizontal} false,
+ {ssAutoVertical  } true,
+ {ssAutoBoth      } true
+  );
+
+  HorizontalScrollerVisible: array[TScrollStyle] of boolean = (
+ {ssNone          } false,
+ {ssHorizontal    } true,
+ {ssVertical      } false,
+ {ssBoth          } true,
+ {ssAutoHorizontal} true,
+ {ssAutoVertical  } false,
+ {ssAutoBoth      } true
+  );
+
+  ScrollerAutoHide: array[TScrollStyle] of boolean = (
+ {ssNone          } false,
+ {ssHorizontal    } false,
+ {ssVertical      } false,
+ {ssBoth          } false,
+ {ssAutoHorizontal} true,
+ {ssAutoVertical  } true,
+ {ssAutoBoth      } true
+  );
 
 implementation
 
@@ -228,6 +262,13 @@ const
 begin
   if Assigned(v) and CocoaHideFocusNoBorder then
     v.setFocusRingType( NSFocusRing[astyle] );
+end;
+
+procedure ScrollViewSetScrollStyles(AScroll: TCocoaScrollView; AStyles: TScrollStyle);
+begin
+  AScroll.setHasVerticalScroller(VerticalScrollerVisible[AStyles]);
+  AScroll.setHasHorizontalScroller(HorizontalScrollerVisible[AStyles]);
+  AScroll.setAutohidesScrollers(ScrollerAutoHide[AStyles]);
 end;
 
 { TLCLCommonCallback }
@@ -1103,8 +1144,12 @@ begin
   DeliverMessage(Msg);
   // 1. for MouseMove Event, it has been processed by LCL,
   //    and does not need Cocoa to continue processing.
-  // 2. for MouseDragged Event, it needs Cocoa to continue processing.
-  Result := Event.type_ = NSMouseMoved;
+  // 2. for MouseDragged Event, it needs Cocoa to continue processing
+  //    (when not Dragging yet)
+  if Event.type_ = NSMouseMoved then
+    Result:= True
+  else
+    Result:= Target.Dragging;
 
   // if Screen.Cursor set, LCL won't call TCocoaWSWinControl.SetCursor().
   // we need to set the cursor ourselves
@@ -1980,6 +2025,17 @@ begin
     writeln(fromView.lclClassName);
     fromView := fromView.superView;
   end;
+end;
+
+procedure ScrollViewSetBorderStyle(sv: NSScrollView; astyle: TBorderStyle);
+const
+  NSBorderStyle : array [TBorderStyle] of NSBorderType = (
+    NSNoBorder,   // bsNone
+    NSBezelBorder // bsSingle     (NSLineBorder is too thick)
+  );
+begin
+  if not Assigned(sv) then Exit;
+  sv.setBorderType( NSBorderStyle[astyle] );
 end;
 
 initialization

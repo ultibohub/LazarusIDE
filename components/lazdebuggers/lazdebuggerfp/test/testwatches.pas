@@ -11,7 +11,7 @@ uses
   LazDebuggerIntfBaseTypes, LazDebuggerValueConverter, DbgIntfDebuggerBase,
   DbgIntfBaseTypes, FpDbgInfo, FpPascalParser, FpDbgCommon,
   IdeDebuggerWatchValueIntf, Forms, IdeDebuggerBase, IdeDebuggerWatchResult,
-  IdeDebuggerBackendValueConv, FpDebugStringConstants;
+  IdeDebuggerBackendValueConv, FpDebugStringConstants, FpDebugDebuggerUtils;
 
 type
 
@@ -27,6 +27,7 @@ type
     procedure TestWatchesScope;
     procedure TestWatchesValue;
     procedure TestWatchesIntrinsic;
+    procedure TestWatchesIntrinsic2;
     procedure TestWatchesFunctions;
     procedure TestWatchesFunctions2;
     procedure TestWatchesFunctionsWithString;
@@ -43,7 +44,7 @@ type
 implementation
 
 var
-  ControlTestWatch, ControlTestWatchScope, ControlTestWatchValue, ControlTestWatchIntrinsic,
+  ControlTestWatch, ControlTestWatchScope, ControlTestWatchValue, ControlTestWatchIntrinsic, ControlTestWatchIntrinsic2,
   ControlTestWatchFunct, ControlTestWatchFunct2, ControlTestWatchFunctStr, ControlTestWatchFunctRec,
   ControlTestWatchFunctVariant, ControlTestWatchAddressOf, ControlTestWatchTypeCast, ControlTestModify,
   ControlTestExpression, ControlTestErrors, ControlTestRTTI: Pointer;
@@ -1984,6 +1985,256 @@ begin
 
 
   finally
+    Debugger.RunToNextPause(dcStop);
+    t.Free;
+    Debugger.ClearDebuggerMonitors;
+    Debugger.FreeDebugger;
+
+    AssertTestErrors;
+  end;
+end;
+
+procedure TTestWatches.TestWatchesIntrinsic2;
+var
+  ExeName: String;
+  Src: TCommonSource;
+  BrkPrg: TDBGBreakPoint;
+  t: TWatchExpectationList;
+begin
+  if SkipTest then exit;
+  if not TestControlCanTest(ControlTestWatchIntrinsic2) then exit;
+  t := nil;
+
+  Src := GetCommonSourceFor(AppDir + 'WatchesIntrinsicPrg.pas');
+  TestCompile(Src, ExeName);
+
+  AssertTrue('Start debugger', Debugger.StartDebugger(AppDir, ExeName));
+  try
+    t := TWatchExpectationList.Create(Self);
+    t.AcceptSkSimple := [skInteger, skCardinal, skBoolean, skChar, skFloat,
+      skString, skAnsiString, skCurrency, skVariant, skWideString,
+      skInterface, skEnumValue];
+    t.AddTypeNameAlias('integer', 'integer|longint');
+
+    BrkPrg         := Debugger.SetBreakPoint(Src, 'Prg');
+
+    AssertDebuggerNotInErrorState;
+    RunToPause(BrkPrg);
+
+
+    t.Clear;
+    t.Add('flatten', ':flatten(f1, Next, [])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass)
+      ], 4)).IgnTypeName();
+    t.Add('flatten', ':flatten(f1, Next)',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass),
+        weMatch('rec',skNone).ExpectError()
+      ], 5)).IgnTypeName();
+
+    t.Add('flatten', ':flatten(f1, Next, Value, [loop, nil, obj=false])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+         weMatch('Value *:?=? ?2', skClass),
+          weMatch('Value *:?=? ?3', skClass),
+           weMatch('Value *:?=? ?4', skClass),
+            weMatch('rec',skNone).ExpectError(),
+           weInteger(4),
+          weInteger(3),
+         weInteger(2),
+        weInteger(1)
+      ], 9)).IgnTypeName();
+    t.Add('flatten', ':flatten(f1, Next, Value, -[obj])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+         weMatch('Value *:?=? ?2', skClass),
+          weMatch('Value *:?=? ?3', skClass),
+           weMatch('Value *:?=? ?4', skClass),
+            weMatch('rec',skNone).ExpectError(),
+           weInteger(4),
+          weInteger(3),
+         weInteger(2),
+        weInteger(1)
+      ], 9)).IgnTypeName();
+
+    t.Add('flatten', ':flatten(f1, Next, Dummy, -[obj, err])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+         weMatch('Value *:?=? ?2', skClass),
+          weMatch('Value *:?=? ?3', skClass),
+           weMatch('Value *:?=? ?4', skClass),
+            weMatch('rec',skNone).ExpectError(),
+           weRecord(weInteger(994).N('a')),
+           weMatch('err',skNone).ExpectError(), // not found NEXT
+           weMatch('err',skNone).ExpectError(), // not found DUMMY
+          weRecord(weInteger(993).N('a')),
+          weMatch('err',skNone).ExpectError(),
+          weMatch('err',skNone).ExpectError(),
+         weRecord(weInteger(992).N('a')),
+         weMatch('err',skNone).ExpectError(),
+         weMatch('err',skNone).ExpectError(),
+        weRecord(weInteger(991).N('a')),
+        weMatch('err',skNone).ExpectError(),
+        weMatch('err',skNone).ExpectError()
+      ], 17)).IgnTypeName();
+
+    t.Add('flatten', ':flatten(f1, Dummy,a, [])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weRecord(weInteger(991).N('a')),
+        weInteger(991)
+      ], 3)).IgnTypeName();
+
+    t.Add('flatten', ':flatten(f1.Dummy, (:_.a), [loop, obj=false])',     weArray([
+        weRecord(weInteger(991).N('a')),
+        weInteger(991)
+      ], 2)).IgnTypeName();
+    t.Add('flatten', ':flatten(f1.Dummy, (TDummy(:_.a)), [loop, obj=false])',     weArray([
+        weRecord(weInteger(991).N('a')),
+        weRecord(weInteger(991).N('a')), // the typecast => diff location
+        weMatch('err',skNone).ExpectError()   // rec
+      ], 3)).IgnTypeName();
+
+    t.Add('flatten', ':flatten(f1.Dummy2, (:_.a), [loop])',     weArray([
+        weRecord(weMatch('a.*1991', skRecord).N('a')),        //weRecord(weRecord(weInteger(991).N('a')).N('a')),
+        weRecord(weInteger(1991).N('a')),
+        weInteger(1991)
+      ], 3)).IgnTypeName();
+    t.Add('flatten', ':flatten(f1.Dummy2, (TDummy2(:_.a)), [loop])',     weArray([
+        weRecord(weMatch('a.*1991', skRecord).N('a')),
+        weMatch('err',skNone).ExpectError()   // rec
+      ], 2)).IgnTypeName();
+
+
+
+    t.Add('flatten', ':flatten(f1, NextP)',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass),
+        weMatch('rec',skNone).ExpectError()
+      ], 5)).IgnTypeName();
+    t.Add('flatten', ':flatten(f1, NextP^)',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass),
+        weMatch('rec',skNone).ExpectError()
+      ], 5)).IgnTypeName();
+
+    t.Add('flatten', ':flatten(f1, NextP, [loop,err])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        wePointer(weMatch('.', skClass))
+      ], 2)).IgnTypeName();
+    t.Add('flatten', ':flatten(f1, NextP^, [loop,err])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass),
+        weMatch('rec',skNone).ExpectError()
+      ], 5)).IgnTypeName();
+
+
+
+
+    t.Add('flatten', ':flatten(fa[4], (fa[:_.Idx]))',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass),
+        weMatch('rec',skNone).ExpectError()
+      ], 5)).IgnTypeName();
+
+
+    t.Add('flatten', ':flatten(f1, more[3..9]!,  [array])',     weArray([
+      weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?100004', skClass),
+        weMatch('Value *:?=? ?100005', skClass),
+        weMatch('Value *:?=? ?100006', skClass),
+        weMatch('Value *:?=? ?100007', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+          weMatch('Value *:?=? ?4', skClass),
+            weMatch('Value *:?=? ?400003', skClass),
+            weMatch('Value *:?=? ?400004', skClass),
+          weMatch('Value *:?=? ?200004', skClass),
+          weMatch('Value *:?=? ?200005', skClass),
+          weMatch('Value *:?=? ?200006', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+          weMatch('Value *:?=? ?300003', skClass),
+          weMatch('Value *:?=? ?300004', skClass),
+          weMatch('Value *:?=? ?300005', skClass)
+      ], 16)).IgnTypeName();
+
+
+    t.Add('flatten', ':flatten(f2, more2[0..1][3..5]!!, moreidx[1..2]!, [array=2])',     weArray([
+      weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?4', skClass),  //[0,3]
+          weMatch('Value *:?=? ?10400003', skClass),
+            weInteger(1),weInteger(2),
+          weMatch('Value *:?=? ?10400004', skClass),
+            weInteger(1),weInteger(2),
+          weMatch('Value *:?=? ?20400003', skClass),
+            weInteger(1),weInteger(2),
+          weMatch('Value *:?=? ?20400004', skClass),
+            weInteger(1),weInteger(2),
+          weInteger(1),weInteger(2),
+        weMatch('Value *:?=? ?10200004', skClass), //[0,4]
+          weInteger(1),weInteger(2),
+        weMatch('Value *:?=? ?10200005', skClass), //[0,5]
+          weInteger(1),weInteger(2),
+
+        weMatch('Value *:?=? ?4', skClass),  //[1,0]
+          weMatch('Value *:?=? ?10400003', skClass),
+            weInteger(1),weInteger(2),
+          weMatch('Value *:?=? ?10400004', skClass),
+            weInteger(1),weInteger(2),
+          weMatch('Value *:?=? ?20400003', skClass),
+            weInteger(1),weInteger(2),
+          weMatch('Value *:?=? ?20400004', skClass),
+            weInteger(1),weInteger(2),
+          weInteger(1),weInteger(2),
+        weMatch('Value *:?=? ?20200004', skClass), //[1,4]
+          weInteger(1),weInteger(2),
+        weMatch('Value *:?=? ?20200005', skClass), //[1,5]
+          weInteger(1),weInteger(2),
+        weInteger(1),weInteger(2)
+      ], 45)).IgnTypeName();
+
+
+    t.Add('i2o', ':i2o(AnIntf1)', weClass([
+        weInteger(123).N('a'), weInteger(987).N('b'), weInteger(551177).N('c') ], 'TIntf1'));
+    t.Add('i2o', ':i2o(AnIntf2)', weClass([
+        weInteger(321).N('x'), weInteger(789).N('y'), weInteger(441188).N('c') ], 'TIntf2'));
+
+    t.EvaluateWatches;
+    t.CheckResults;
+
+
+    t.Clear;
+    TFpDebugDebuggerProperties(Debugger.LazDebugger.GetProperties).AutoDeref := True;
+    Debugger.RunToNextPause(dcStepOver); // changing settings, requires the cache to be cleared
+    t.Add('flatten(autoderef)', ':flatten(f1, NextP, [loop,err])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        wePointer(weMatch('.', skClass)),
+        wePointer(weMatch('.', skClass)),
+        wePointer(weMatch('.', skClass)),
+        wePointer(weMatch('.', skClass)),
+        weMatch('.',skNone).ExpectError()
+      ], 6)).IgnTypeName();
+    t.Add('flatten(autoderef)', ':flatten(f1, NextP^, [loop,err])',     weArray([
+        weMatch('Value *:?=? ?1', skClass),
+        weMatch('Value *:?=? ?2', skClass),
+        weMatch('Value *:?=? ?3', skClass),
+        weMatch('Value *:?=? ?4', skClass),
+        weMatch('rec',skNone).ExpectError()
+      ], 5)).IgnTypeName();
+
+    t.EvaluateWatches;
+    t.CheckResults;
+
+  finally
+    TFpDebugDebuggerProperties(Debugger.LazDebugger.GetProperties).AutoDeref := False;
     Debugger.RunToNextPause(dcStop);
     t.Free;
     Debugger.ClearDebuggerMonitors;
@@ -4625,6 +4876,7 @@ initialization
   ControlTestWatchScope     := TestControlRegisterTest('Scope', ControlTestWatch);
   ControlTestWatchValue     := TestControlRegisterTest('Value', ControlTestWatch);
   ControlTestWatchIntrinsic := TestControlRegisterTest('Intrinsic', ControlTestWatch);
+  ControlTestWatchIntrinsic2:= TestControlRegisterTest('Intrinsic2', ControlTestWatch);
   ControlTestWatchFunct     := TestControlRegisterTest('Function', ControlTestWatch);
   ControlTestWatchFunct2    := TestControlRegisterTest('Function2', ControlTestWatch);
   ControlTestWatchFunctStr  := TestControlRegisterTest('FunctionString', ControlTestWatch);

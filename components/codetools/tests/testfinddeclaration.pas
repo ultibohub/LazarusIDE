@@ -136,6 +136,7 @@ type
     procedure TestFindDeclaration_GenericsDelphi_InterfaceAncestor;
     procedure TestFindDeclaration_GenericsDelphi_FuncParam;
     procedure TestFindDeclaration_GenericsDelphi_PublicProcType;
+    procedure TestFindDeclaration_GenericsDelphi_MultiGenParams;
     procedure TestFindDeclaration_ForIn;
     procedure TestFindDeclaration_FileAtCursor;
     procedure TestFindDeclaration_CBlocks;
@@ -148,6 +149,7 @@ type
     procedure TestFindDeclaration_ArrayMultiDimDot;
     procedure TestFindDeclaration_VarArgsOfType;
     procedure TestFindDeclaration_ProcRef;
+    procedure TestFindDeclaration_Ampersand;
 
     // unit/include search
     procedure TestFindDeclaration_UnitSearch_CurrentDir;
@@ -307,7 +309,6 @@ var
   NewExprType: TExpressionType;
   ListOfPCodeXYPosition: TFPList;
   Cache: TFindIdentifierReferenceCache;
-  CodePos: PCodeXYPosition;
 begin
   FMainCode:=aCode;
   DoParseModule(MainCode,FMainTool);
@@ -899,8 +900,7 @@ begin
   FindDeclarations(Code);
 end;
 
-procedure TTestFindDeclaration.
-  TestFindDeclaration_GenericsDelphi_PublicProcType;
+procedure TTestFindDeclaration.TestFindDeclaration_GenericsDelphi_PublicProcType;
 begin
   StartProgram;
   Add([
@@ -920,6 +920,36 @@ begin
   'var Bird: TBird;',
   'begin',
   '  Bird.Fly(nil);',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_GenericsDelphi_MultiGenParams;
+begin
+  StartProgram;
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TBird = class',
+  '    A: boolean;',
+  '    function Fly: boolean;',
+  '  end;',
+  '  TBird<T> = class',
+  '    B: T;',
+  '    function Fly: T;',
+  '  end;',
+  'function TBird.Fly: boolean;',
+  'begin',
+  'end;',
+  'function TBird<T>.Fly: T;',
+  'begin',
+  'end;',
+  'var',
+  '  One: TBird;',
+  '  Two: TBird<word>;',
+  'begin',
+  '  One.Fly;',
+  '  Two.Fly;',
   'end.']);
   FindDeclarations(Code);
 end;
@@ -1311,6 +1341,25 @@ begin
   '  Foo.Test{declaration:TFoo.Test} := @Foo.TestProc{declaration:TFoo.TestProc};',
   '  with Foo do',
   '    Test{declaration:TFoo.Test} := @TestProc{declaration:TFoo.TestProc};',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_Ampersand;
+begin
+  StartUnit;
+  Add([
+  'const',
+  '  &true = 1;',
+  'type',
+  '  TBird = record',
+  '    &type: word;',
+  '  end;',
+  'var',
+  '  Bird: TBird;',
+  'implementation',
+  'initialization',
+  '  Bird.&Type{declaration:test1.TBird.Type} = &True{declaration:test1.True};',
   'end.']);
   FindDeclarations(Code);
 end;

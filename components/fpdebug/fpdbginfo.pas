@@ -105,7 +105,9 @@ type
   TFpValueFieldFlags = set of TFpValueFieldFlag;
 
   TFpValueFlag = (
-    vfVariant
+    vfVariant,
+    vfArrayOfVariant,
+    vfArrayUpperBoundLimit // can not get members past upper bound
   );
   TFpValueFlags = set of TFpValueFlag;
 
@@ -117,8 +119,11 @@ type
     FFlags: TFpValueFlags;
     FLastError: TFpError;
     FSize: TFpDbgValueSize;
+    FName: String;
     procedure SetAsString(AStartIndex, ALen: Int64; AValue: AnsiString);
   protected
+    procedure SetName(AValue: String); virtual;
+    function GetName: String; virtual;
     function GetKind: TDbgSymbolKind; virtual;
     function GetFieldFlags: TFpValueFieldFlags; virtual;
 
@@ -177,6 +182,7 @@ type
     function GetSubWideString(AStartIndex, ALen: Int64; out ASubStr: WideString; AIgnoreBounds: Boolean = False): Boolean; virtual;
 
     // Kind: determines which types of value are available
+    property Name: String read GetName write SetName;
     property Kind: TDbgSymbolKind read GetKind;
     property Flags: TFpValueFlags read FFlags write FFlags;
     property FieldFlags: TFpValueFieldFlags read GetFieldFlags;
@@ -260,6 +266,18 @@ type
     procedure SetTypeName(AName: String);
     procedure SetType(AType: TFpSymbol);
     procedure SetAddress(AnAddress: TFpDbgMemLocation);
+  end;
+
+  { TFpValueConstError }
+
+  TFpValueConstError = class(TFpValue)
+  private
+    FError: TFpError;
+  protected
+    function GetLastError: TFpError; override;
+    function GetKind: TDbgSymbolKind; override;
+  public
+    constructor Create(AnError: TFpError);
   end;
 
   { TFpValueConstNumber }
@@ -392,7 +410,7 @@ type
 
   TFpValueConstEnumValue = class(TFpValueConstWithType)
   private
-    FName: String;
+    FEnumName: String;
   protected
     function GetFieldFlags: TFpValueFieldFlags; override;
     function GetKind: TDbgSymbolKind; override;
@@ -414,6 +432,22 @@ type
   public
     constructor Create(ANames: TStrings);
     destructor Destroy; override;
+  end;
+
+  { TFpValueConstStruct }
+
+  TFpValueConstStruct = class(TFpValueConstWithType)
+  private
+    FList: TRefCntObjList;
+  protected
+    function GetKind: TDbgSymbolKind; override;
+    function GetMember(AIndex: Int64): TFpValue; override;
+    function GetMemberByName(const AnIndex: String): TFpValue; override;
+    function GetMemberCount: Integer; override;
+  protected
+  public
+    destructor Destroy; override;
+    procedure AddMember(AName: String; AMember: TFpValue);
   end;
 
   TFpDbgSymbolScope = class;
@@ -540,9 +574,38 @@ type
     function TypeCastValue({%H-}AValue: TFpValue): TFpValue; virtual;
 
     function CreateSymbolScope(ALocationContext: TFpDbgLocationContext): TFpDbgSymbolScope; virtual;
+    function IsEqual(AnOther: TFpSymbol): Boolean; virtual;
   end;
 
   TFpSymbolArray = array of TFpSymbol;
+
+  { TFpValueConstArray }
+
+  TFpValueConstArray = class(TFpValue)
+  private type
+    TFpValueConstArrayLowBound = class(TFpSymbol)
+    private
+      FLowBound: Integer;
+    protected
+      function GetValueLowBound(AValueObj: TFpValue; out ALowBound: Int64): Boolean; override;
+    end;
+  private
+// lowbound will be substracted from any index to GetMember
+    FLowBoundSym: TFpValueConstArrayLowBound; // symbol with GetValueLowBound // highbnd?
+  protected
+    function GetKind: TDbgSymbolKind; override;
+    function GetFieldFlags: TFpValueFieldFlags; override;
+    function GetTypeInfo: TFpSymbol; override;
+
+    //function GetMember(AIndex: Int64): TFpValue; override;
+    //function GetMemberCount: Integer; override;
+
+    function GetIndexType(AIndex: Integer): TFpSymbol; override;
+    function GetIndexTypeCount: Integer; override;
+  public
+    constructor Create(ALowBound: Integer);
+    destructor Destroy; override;
+  end;
 
   { TFpSymbolForwarder }
 
@@ -573,6 +636,7 @@ type
     function GetValueBounds(AValueObj: TFpValue; out ALowBound, AHighBound: Int64): Boolean; override;
     function GetValueLowBound(AValueObj: TFpValue; out ALowBound: Int64): Boolean; override;
     function GetValueHighBound(AValueObj: TFpValue; out AHighBound: Int64): Boolean; override;
+    function IsEqual(AnOther: TFpSymbol): Boolean; override;
   end;
 
   { TFpDbgSymbolScope }
@@ -1160,6 +1224,24 @@ begin
 
 end;
 
+procedure TFpValue.SetName(AValue: String);
+begin
+  FName := AValue;
+end;
+
+function TFpValue.GetName: String;
+var
+  sym: TFpSymbol;
+begin
+  if FName <> '' then
+    exit(FName);
+  sym := DbgSymbol;
+  if sym <> nil then
+    Result := sym.Name
+  else
+    Result := '';
+end;
+
 procedure TFpValue.Reset;
 begin
   FEvalFlags := [];
@@ -1329,6 +1411,24 @@ begin
   FValAddress := AnAddress;
 end;
 
+{ TFpValueConstError }
+
+function TFpValueConstError.GetLastError: TFpError;
+begin
+  Result := FError;
+end;
+
+function TFpValueConstError.GetKind: TDbgSymbolKind;
+begin
+  Result := skNone;
+end;
+
+constructor TFpValueConstError.Create(AnError: TFpError);
+begin
+  inherited Create;
+  FError := AnError;
+end;
+
 { TPasParserConstNumberSymbolValue }
 
 function TFpValueConstNumber.GetKind: TDbgSymbolKind;
@@ -1355,7 +1455,9 @@ end;
 
 function TFpValueConstNumber.GetAsInteger: Int64;
 begin
+  {$push}{$R-}{$Q-}
   Result := Int64(FValue);
+  {$pop}
 end;
 
 function TFpValueConstNumber.GetAsFloat: Extended;
@@ -1489,13 +1591,13 @@ end;
 
 function TFpValueConstEnumValue.GetAsString: AnsiString;
 begin
-  Result := FName;
+  Result := FEnumName;
 end;
 
 constructor TFpValueConstEnumValue.Create(AName: String);
 begin
   inherited Create;
-  FName := AName;
+  FEnumName := AName;
 end;
 
 { TFpValueConstSet }
@@ -1531,6 +1633,110 @@ destructor TFpValueConstSet.Destroy;
 begin
   inherited Destroy;
   FNames.Free;
+end;
+
+{ TFpValueConstStruct }
+
+function TFpValueConstStruct.GetKind: TDbgSymbolKind;
+begin
+  Result := skRecord;
+end;
+
+function TFpValueConstStruct.GetMember(AIndex: Int64): TFpValue;
+begin
+  if (FList = nil) or (AIndex >= FList.Count) then
+    exit(nil);
+  Result := TFpValue(FList[AIndex]);
+  Result.AddReference;
+end;
+
+function TFpValueConstStruct.GetMemberByName(const AnIndex: String): TFpValue;
+var
+  n: String;
+  i: Integer;
+begin
+  n := LowerCase(AnIndex);
+  if (FList = nil) then
+    exit(nil);
+  for i := 0 to FList.Count - 1 do begin
+    Result := TFpValue(FList[i]);
+    if LowerCase(Result.Name) = n then begin
+      Result.AddReference;
+      exit;
+    end;
+  end;
+  Result := nil;
+end;
+
+function TFpValueConstStruct.GetMemberCount: Integer;
+begin
+  if FList <> nil then
+    Result := FList.Count
+  else
+    Result := 0;
+end;
+
+destructor TFpValueConstStruct.Destroy;
+begin
+  FList.Free;
+  inherited Destroy;
+end;
+
+procedure TFpValueConstStruct.AddMember(AName: String; AMember: TFpValue);
+begin
+  if FList = nil then
+    FList := TRefCntObjList.Create;
+  AMember.Name := AName;
+  FList.Add(AMember);
+end;
+
+{ TFpValueConstArray }
+
+function TFpValueConstArray.GetKind: TDbgSymbolKind;
+begin
+  Result := skArray;
+end;
+
+function TFpValueConstArray.GetFieldFlags: TFpValueFieldFlags;
+begin
+  Result := [svfMembers];
+end;
+
+function TFpValueConstArray.GetTypeInfo: TFpSymbol;
+begin
+  Result := nil;
+end;
+
+function TFpValueConstArray.GetIndexType(AIndex: Integer): TFpSymbol;
+begin
+  Result := FLowBoundSym;
+end;
+
+function TFpValueConstArray.GetIndexTypeCount: Integer;
+begin
+  Result := 1;
+end;
+
+constructor TFpValueConstArray.Create(ALowBound: Integer);
+begin
+  inherited Create;
+  FLowBoundSym := TFpValueConstArrayLowBound.Create('');
+  FLowBoundSym.FLowBound := ALowBound;
+end;
+
+destructor TFpValueConstArray.Destroy;
+begin
+  FLowBoundSym.ReleaseReference;
+  inherited Destroy;
+end;
+
+{ TFpValueConstArray.TFpValueConstArrayLowBound }
+
+function TFpValueConstArray.TFpValueConstArrayLowBound.GetValueLowBound(AValueObj: TFpValue; out
+  ALowBound: Int64): Boolean;
+begin
+  Result := True;
+  ALowBound := FLowBound;
 end;
 
 { TDbgInfoAddressContext }
@@ -1695,6 +1901,11 @@ function TFpSymbol.CreateSymbolScope(ALocationContext: TFpDbgLocationContext
   ): TFpDbgSymbolScope;
 begin
   Result := nil;
+end;
+
+function TFpSymbol.IsEqual(AnOther: TFpSymbol): Boolean;
+begin
+  Result := False;
 end;
 
 function TFpSymbol.GetAddress: TFpDbgMemLocation;
@@ -2086,6 +2297,17 @@ begin
     Result := p.GetValueHighBound(AValueObj, AHighBound)
   else
     Result := inherited GetValueHighBound(AValueObj, AHighBound);
+end;
+
+function TFpSymbolForwarder.IsEqual(AnOther: TFpSymbol): Boolean;
+var
+  p: TFpSymbol;
+begin
+  p := GetForwardToSymbol;
+  if p <> nil then
+    Result := p.IsEqual(AnOther)
+  else
+    Result := inherited IsEqual(AnOther);
 end;
 
 function TFpSymbolForwarder.GetNestedSymbol(AIndex: Int64): TFpSymbol;

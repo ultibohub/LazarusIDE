@@ -2212,6 +2212,8 @@ end;
 constructor TFpValueDwarf.Create(ADwarfTypeSymbol: TFpSymbolDwarfType);
 begin
   FTypeSymbol := ADwarfTypeSymbol;
+  if FTypeSymbol <> nil then
+    FTypeSymbol.AddReference;
   inherited Create;
 end;
 
@@ -2220,6 +2222,7 @@ begin
   FTypeCastSourceValue.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FTypeCastSourceValue, ClassName+'.FTypeCastSourceValue'){$ENDIF};
   FStructureValue.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FStructureValue, 'TDbgDwarfSymbolValue'){$ENDIF};
   FDataSymbol.ReleaseReference{$IFDEF WITH_REFCOUNT_DEBUG}(@FDataSymbol, ClassName+'.FDataSymbol'){$ENDIF};
+  FTypeSymbol.ReleaseReference;
   inherited Destroy;
 end;
 
@@ -3265,9 +3268,9 @@ end;
 procedure TFpValueDwarfSet.SetAsString(AValue: AnsiString);
 type
   TCharSet = set of char;
-  function CheckInChar(var p: PChar; c: TCharSet): Boolean;
+  function CheckAndConsumeChar(var p: PChar; c: Char): Boolean;
   begin
-    Result := p^ in c;
+    Result := p^ = c;
     if Result then
       inc(p)
     else
@@ -3310,7 +3313,7 @@ begin
 
   p := Pchar(AValue);
   SkipSpaces(p);
-  if not CheckInChar(p, ['[']) then
+  if not CheckAndConsumeChar(p, '[') then
     exit;
 
   SkipSpaces(p);
@@ -3349,7 +3352,7 @@ begin
         SkipSpaces(p);
         if p^ = ']' then
           break;
-        if not CheckInChar(p, [',']) then
+        if not CheckAndConsumeChar(p, ',') then
           exit;
         SkipSpaces(p);
       end;
@@ -3389,7 +3392,7 @@ begin
         SkipSpaces(p);
         if p^ = ']' then
           break;
-        if not CheckInChar(p, [',']) then
+        if not CheckAndConsumeChar(p, ',') then
           exit;
         SkipSpaces(p);
       end;
@@ -3397,10 +3400,10 @@ begin
     end;
 
   end;
-  if not CheckInChar(p, [']']) then
+  if not CheckAndConsumeChar(p, ']') then
     exit;
   SkipSpaces(p);
-  if not CheckInChar(p, [#0]) then
+  if not CheckAndConsumeChar(p, #0) then
     exit;
 
   // we got the value

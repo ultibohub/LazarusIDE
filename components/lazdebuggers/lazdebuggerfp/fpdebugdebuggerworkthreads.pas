@@ -50,7 +50,7 @@ uses
   DbgIntfBaseTypes, FpDbgClasses, FpDbgUtil, FPDbgController, FpPascalBuilder,
   FpdMemoryTools, FpDbgInfo, FpPascalParser, FpErrorMessages,
   FpDebugDebuggerBase, FpDebuggerResultData, FpDbgCallContextInfo, FpDbgDwarf,
-  FpDbgDwarfDataClasses, FpWatchResultData, LazDebuggerIntf,
+  FpDbgDwarfDataClasses, FpWatchResultData, FpDbgDwarfFreePascal, FpDbgDisasX86, LazDebuggerIntf,
   LazDebuggerValueConverter, Forms, fgl, math, Classes, sysutils, LazClasses,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif};
 
@@ -226,6 +226,8 @@ type
     FAllowFunctions, FAllowFunctionsAllThread: Boolean;
     FExpressionScope: TFpDbgSymbolScope;
 
+    function DoFindIntrinsic(AnExpression: TFpPascalExpression; AStart: PChar; ALen: Integer
+      ): TFpPascalExpressionPartIntrinsicBase;
     function DoWatchFunctionCall(AnExpressionPart: TFpPascalExpressionPart;
       AFunctionValue, ASelfValue: TFpValue; AParams: TFpPascalExpressionPartList;
       out AResult: TFpValue; var AnError: TFpError): boolean;
@@ -757,6 +759,8 @@ begin
   finally
     APasExpr.Free;
     ExpressionScope.ReleaseReference;
+    if FDebugger.DbgController.CurrentProcess.GlobalCache <> nil then
+      FDebugger.DbgController.CurrentProcess.GlobalCache.Clear;
     Queue(@DoCallback_DecRef);
   end;
 end;
@@ -914,7 +918,7 @@ begin
           ExprParamVal := AParams.Items[FoundIdx].ResultValue;
           if (ExprParamVal = nil) then begin
             DebugLn(FPDBG_FUNCCALL or DBG_WARNINGS, 'Internal error for arg %d ', [FoundIdx]);
-            AnError := AnExpressionPart.Expression.Error;
+            AnError := AnExpressionPart.ExpressionData.Error;
             if not IsError(AnError) then
               AnError := CreateError(fpErrAnyError, ['internal error, computing parameter']);
             exit;
@@ -1113,6 +1117,19 @@ begin
 
 end;
 
+function TFpThreadWorkerEvaluate.DoFindIntrinsic(AnExpression: TFpPascalExpression; AStart: PChar;
+  ALen: Integer): TFpPascalExpressionPartIntrinsicBase;
+begin
+  Result := nil;
+  if (ALen = 3) and (strlicomp(AStart, pchar('i2o'), 3) = 0) and
+     (FDebugger.DbgController.CurrentProcess.Disassembler is TX86AsmDecoder)
+  then
+    Result := TFpPascalExpressionPartIntrinsicIntfToObj.Create(AnExpression.SharedData,
+      AStart, AStart+ALen,
+      TX86AsmDecoder(FDebugger.DbgController.CurrentProcess.Disassembler)
+    );
+end;
+
 function TFpThreadWorkerEvaluate.EvaluateExpression(const AnExpression: String;
   AStackFrame, AThreadId: Integer; ARepeatCnt: Integer; AnEvalFlags: TWatcheEvaluateFlags;
   out AResText: String; out ATypeInfo: TDBGType): Boolean;
@@ -1142,6 +1159,8 @@ begin
   APasExpr := TFpPascalExpression.Create(AnExpression, FExpressionScope, True);
   APasExpr.IntrinsicPrefix := TFpDebugDebuggerProperties(FDebugger.GetProperties).IntrinsicPrefix;
   APasExpr.AutoDeref := TFpDebugDebuggerProperties(FDebugger.GetProperties).AutoDeref;
+  APasExpr.GlobalCache := FDebugger.DbgController.CurrentProcess.GlobalCache;
+  APasExpr.OnFindIntrinsc := @DoFindIntrinsic;
   APasExpr.Parse;
   try
     if FAllowFunctions and (dfEvalFunctionCalls in FDebugger.EnabledFeatures) then
@@ -1181,6 +1200,7 @@ begin
         PasExpr2 := TFpPascalExpression.Create(CastName+'('+AnExpression+')', FExpressionScope, True);
         PasExpr2.IntrinsicPrefix := TFpDebugDebuggerProperties(FDebugger.GetProperties).IntrinsicPrefix;
         PasExpr2.AutoDeref := TFpDebugDebuggerProperties(FDebugger.GetProperties).AutoDeref;
+        PasExpr2.GlobalCache := FDebugger.DbgController.CurrentProcess.GlobalCache;
         PasExpr2.Parse;
         PasExpr2.ResultValue;
         if PasExpr2.Valid then begin
@@ -1195,6 +1215,17 @@ begin
         ResValue.ResetError; // in case GetInstanceClassName did set an error
         // TODO: indicate that typecasting to instance failed
       end;
+    end;
+
+    if FWatchValue <> nil then begin
+      if ResValue is TFpPasParserValueSlicedArray then begin
+        FWatchValue.SetSliceIndexPos(
+          TFpPasParserValueSlicedArray(ResValue).SliceBracketStartOffs,
+          TFpPasParserValueSlicedArray(ResValue).SliceBracketLength
+        );
+      end
+      else
+        FWatchValue.SetSliceIndexPos(-1,-1);
     end;
 
     if StopRequested then begin
