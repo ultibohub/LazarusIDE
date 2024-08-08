@@ -64,7 +64,7 @@ type
     procedure SaveToFile(AFilename: String);
     procedure LoadFromFile(AFilename: String);
   public
-    property EnableAnchorDock: boolean read FEnableAnchorDock write FEnableAnchorDock default False;
+    property EnableAnchorDock: boolean read FEnableAnchorDock write FEnableAnchorDock default True; //False; //Ultibo
     property DoneAskUserEnableAnchorDock: boolean read FDoneAskUserEnableAnchorDock write FDoneAskUserEnableAnchorDock default False;
   end;
 
@@ -353,7 +353,7 @@ var
 begin
   Cfg := GetIDEConfigStorage(AFilename, False);
   try
-    Cfg.SetDeleteValue('EnableAnchorDock/Value',             EnableAnchorDock,            False);
+    Cfg.SetDeleteValue('EnableAnchorDock/Value',             EnableAnchorDock,            True); //False //Ultibo
     Cfg.SetDeleteValue('DoneAskUserEnableAnchorDock/Value',  DoneAskUserEnableAnchorDock, False);
   finally
     Cfg.Free;
@@ -366,7 +366,7 @@ var
 begin
   Cfg := GetIDEConfigStorage(AFilename, True);
   try
-    EnableAnchorDock            := Cfg.GetValue('EnableAnchorDock/Value',             False);
+    EnableAnchorDock            := Cfg.GetValue('EnableAnchorDock/Value',             True); //False //Ultibo
     DoneAskUserEnableAnchorDock := Cfg.GetValue('DoneAskUserEnableAnchorDock/Value',  False);
   finally
     Cfg.Free;

@@ -90,7 +90,8 @@ uses
     EditorMacroScript, //ExampleProjects, //Ultibo
     //OnlinePackageManager, //Ultibo
     SimpleWebServerGUI, LazProjectGroups, Pas2jsDsgn, charactermap_ide_pkg,
-    AnchorDockingDsgn, DockedFormEditor,
+    //AnchorDockingDsgn, //Ultibo
+    DockedFormEditor,
   {$ENDIF}
   MainBase,
   ColorTTY;

@@ -1959,8 +1959,6 @@ bigide:
 	$(MAKE) -C charactermap
 	$(MAKE) -C charactermap/design
 	$(MAKE) -C dockedformeditor
-	$(MAKE) -C anchordocking
-	$(MAKE) -C anchordocking/design
 all: lazbuildlclpackages idepackages bigide
 clean:
 	$(MAKE) -C lazutils clean
