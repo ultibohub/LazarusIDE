@@ -7,10 +7,9 @@ unit FpDbgDwarfFreePascal;
 interface
 
 uses
-  Classes, SysUtils, Types, math,
-  FpDbgDwarfDataClasses, FpDbgDwarf, FpDbgInfo,
-  FpDbgUtil, FpDbgDwarfConst, FpErrorMessages, FpdMemoryTools, FpDbgClasses, FpPascalParser, FpDbgDisasX86,
-  DbgIntfBaseTypes,
+  Classes, SysUtils, Types, math, FpDbgDwarfDataClasses, FpDbgDwarf, FpDbgInfo, FpDbgUtil,
+  FpDbgDwarfConst, FpErrorMessages, FpdMemoryTools, FpDbgClasses, FpPascalParser, FpDbgDisasX86,
+  fpDbgSymTableContext, DbgIntfBaseTypes,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif},
   LazStringUtils, LazClasses;
 
@@ -37,7 +36,7 @@ type
     constructor Create(ACU: TDwarfCompilationUnit; AHelperData: Pointer); override;
     function IgnoreCfiStackEnd: boolean; override;
     function GetDwarfSymbolClass(ATag: Cardinal): TDbgDwarfSymbolBaseClass; override;
-    function CreateScopeForSymbol(ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
+    function CreateScopeForSymbol(ALocationContext: TFpDbgSimpleLocationContext; ASymbol: TFpSymbol;
       ADwarf: TFpDwarfInfo): TFpDbgSymbolScope; override;
     function CreateProcSymbol(ACompilationUnit: TDwarfCompilationUnit;
       AInfo: PDwarfAddressInfo; AAddress: TDbgPtr; ADbgInfo: TFpDwarfInfo
@@ -80,7 +79,7 @@ type
     class function ClassCanHandleCompUnit(ACU: TDwarfCompilationUnit): Boolean; override;
   public
     function GetDwarfSymbolClass(ATag: Cardinal): TDbgDwarfSymbolBaseClass; override;
-    function CreateScopeForSymbol(ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
+    function CreateScopeForSymbol(ALocationContext: TFpDbgSimpleLocationContext; ASymbol: TFpSymbol;
       ADwarf: TFpDwarfInfo): TFpDbgSymbolScope; override;
     //class function CreateSymbolScope(AThreadId, AStackFrame: Integer; AnAddress: TDBGPtr; ASymbol: TFpSymbol;
     //  ADwarf: TFpDwarfInfo): TFpDbgSymbolScope; override;
@@ -110,7 +109,8 @@ type
       AFindFlags: TFindExportedSymbolsFlags = []): Boolean; override;
     function FindExportedSymbolInUnits(const AName: String;
       const ANameInfo: TNameSearchInfo; SkipCompUnit: TDwarfCompilationUnit;
-      out ADbgValue: TFpValue; const OnlyUnitNameLower: String = ''): Boolean;
+      out ADbgValue: TFpValue; const OnlyUnitNameLower: String = '';
+      AFindFlags: TFindExportedSymbolsFlags = []): Boolean;
       override;
     function FindLocalSymbol(const AName: String; const ANameInfo: TNameSearchInfo;
       InfoEntry: TDwarfInformationEntry; out ADbgValue: TFpValue): Boolean; override;
@@ -326,6 +326,19 @@ type
     property DynamicCodePage: TSystemCodePage read GetCodePage;
   end;
 
+  { TFpValueDwarfFreePascalSubroutine }
+
+  TFpValueDwarfFreePascalSubroutine = class(TFpValueDwarfSubroutine)
+  protected
+    function GetMangledArguments: String;
+    function GetMangledMethodName(AClassName, AnUnitName: String): String;
+    function GetMangledFunctionName(AnUnitName: String): String;
+    function GetEntryPCAddress: TFpDbgMemLocation; override;
+  public
+    function GetMangledAddress: TFpDbgMemLocation;
+
+  end;
+
   { TFpSymbolDwarfFreePascalDataProc }
 
   TFpSymbolDwarfFreePascalDataProc = class(TFpSymbolDwarfDataProc)
@@ -335,6 +348,7 @@ type
     function GetLine: Cardinal; override;
     function GetColumn: Cardinal; override;
     // Todo: LineStartAddress, ...
+    function GetValueObject: TFpValue; override;
   public
     destructor Destroy; override;
     function ResolveInternalFinallySymbol(Process: Pointer): TFpSymbol; override;
@@ -526,7 +540,7 @@ begin
 end;
 
 function TFpDwarfFreePascalSymbolClassMap.CreateScopeForSymbol(
-  ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
+  ALocationContext: TFpDbgSimpleLocationContext; ASymbol: TFpSymbol;
   ADwarf: TFpDwarfInfo): TFpDbgSymbolScope;
 begin
   Result := TFpDwarfFreePascalSymbolScope.Create(ALocationContext, ASymbol, ADwarf);
@@ -634,7 +648,7 @@ begin
 end;
 
 function TFpDwarfFreePascalSymbolClassMapDwarf3.CreateScopeForSymbol(
-  ALocationContext: TFpDbgLocationContext; ASymbol: TFpSymbol;
+  ALocationContext: TFpDbgSimpleLocationContext; ASymbol: TFpSymbol;
   ADwarf: TFpDwarfInfo): TFpDbgSymbolScope;
 begin
   Result := TFpDwarfFreePascalSymbolScopeDwarf3.Create(ALocationContext, ASymbol, ADwarf);
@@ -693,10 +707,9 @@ begin
   end;
 end;
 
-function TFpDwarfFreePascalSymbolScope.FindExportedSymbolInUnits(
-  const AName: String; const ANameInfo: TNameSearchInfo;
-  SkipCompUnit: TDwarfCompilationUnit; out ADbgValue: TFpValue;
-  const OnlyUnitNameLower: String): Boolean;
+function TFpDwarfFreePascalSymbolScope.FindExportedSymbolInUnits(const AName: String;
+  const ANameInfo: TNameSearchInfo; SkipCompUnit: TDwarfCompilationUnit; out ADbgValue: TFpValue;
+  const OnlyUnitNameLower: String; AFindFlags: TFindExportedSymbolsFlags): Boolean;
 var
   i: Integer;
   CU: TDwarfCompilationUnit;
@@ -719,7 +732,7 @@ begin
   FInAllUnitSearch := True;
   FFoundSystemInfoEntry := nil;
   Result := inherited FindExportedSymbolInUnits(AName, ANameInfo, SkipCompUnit,
-    ADbgValue, OnlyUnitNameLower);
+    ADbgValue, OnlyUnitNameLower, AFindFlags);
   FInAllUnitSearch := False;
 
   if (not Result) and (FFoundSystemInfoEntry <> nil) then
@@ -881,7 +894,7 @@ begin
     MangledNameInfo := NameInfoForSearch(StaticName);
 
     if CU.KnownNameHashes^[MangledNameInfo.NameHash and KnownNameHashesBitMask] then begin
-      if FindExportedSymbolInUnit(CU, MangledNameInfo, FoundInfoEntry, IsExternal) then begin
+      if FindExportedSymbolInUnit(CU, MangledNameInfo, FoundInfoEntry, IsExternal, [fsfIgnoreEnumVals]) then begin
         if {(IsExternal) and} (FoundInfoEntry.ReadName(FoundName)) then begin
           if FoundName = StaticName then begin // must be case-sensitive
             ADbgValue := SymbolToValue(TFpSymbolDwarf.CreateSubClass(AName, FoundInfoEntry));
@@ -2329,6 +2342,133 @@ begin
   Result := True;
 end;
 
+{ TFpValueDwarfFreePascalSubroutine }
+
+function TFpValueDwarfFreePascalSubroutine.GetMangledArguments: String;
+var
+  i: Integer;
+  m: TFpValue;
+  n: String;
+begin
+  Result := '';
+  // First argument is SELF, and must be skipped
+  for i := 1 to MemberCount - 1 do begin
+    m := Member[i];
+    if (m.TypeInfo = nil) then
+      exit('');
+    n := m.TypeInfo.Name;
+    if n = '' then
+      exit('');
+    Result := Result + '$' + n;
+  end;
+  if Kind = skFunction then begin
+    if (TypeInfo = nil) or (TypeInfo.TypeInfo = nil) then
+      exit('');
+    n := TypeInfo.TypeInfo.Name;
+    if n = '' then
+      exit('');
+    Result := Result + '$$' + n;
+  end;
+end;
+
+function TFpValueDwarfFreePascalSubroutine.GetMangledMethodName(AClassName, AnUnitName: String
+  ): String;
+var
+  i: Integer;
+  m: TFpValue;
+  n: String;
+begin
+  Result := '';
+  if (AClassName = '') or (AnUnitName = '') or (Name = '') then
+    exit;
+  UniqueString(AClassName);
+  i := pos('.', AClassName);
+  while i > 0 do begin
+    AClassName[i] := '_';
+    Insert('_$', AClassName, i);
+    i := pos('.', AClassName);
+  end;
+  Result := AnUnitName + '$_$' + AClassName + '_$__$$_' + Name + GetMangledArguments;
+end;
+
+function TFpValueDwarfFreePascalSubroutine.GetMangledFunctionName(AnUnitName: String): String;
+var
+  i: Integer;
+  m: TFpValue;
+  n: String;
+begin
+  Result := '';
+  if (AnUnitName = '') or (Name = '') then
+    exit;
+  Result := AnUnitName + '_$$_' + Name + GetMangledArguments;
+end;
+
+function TFpValueDwarfFreePascalSubroutine.GetEntryPCAddress: TFpDbgMemLocation;
+begin
+  Result := inherited GetEntryPCAddress;
+
+  if IsValidLoc(Result) then
+    exit;
+
+  Result := GetMangledAddress;
+end;
+
+function TFpValueDwarfFreePascalSubroutine.GetMangledAddress: TFpDbgMemLocation;
+var
+  ParentIdx: Integer;
+  TheClassName, TheUnitName, n: String;
+  SymTbl: TDbgInfo;
+  SymProc: TFpSymbol;
+  s: TFpValueDwarf;
+begin
+  Result := InvalidLoc;
+  if (Context = nil) or (Context.SymbolTableInfo = nil) or
+     (not (DbgSymbol is TFpSymbolDwarfDataProc))
+  then
+    exit;
+
+  SymTbl := Context.SymbolTableInfo;
+  n := '';
+  s := StructureValue;
+  if s = nil then begin
+    s := TFpSymbolDwarfDataProc(DbgSymbol).GetSelfParameter(Context.Address);
+    if s <> nil then
+      s.Context := Context;
+  end
+  else
+    s.AddReference;
+  if (s <> nil) then begin
+    ParentIdx := 0;
+    // TODO: we need the structure parent in which we were found
+    while s.GetInstanceClassName(@TheClassName, @TheUnitName, ParentIdx) do begin
+      // if TheClassName = '' then TheClassName := 'P$'+ProjecName;
+      n := GetMangledMethodName(TheClassName, TheUnitName);
+      SymProc := SymTbl.FindProcSymbol(n, True);
+      if SymProc <> nil then begin
+        Result := SymProc.Address;
+        SymProc.ReleaseReference;
+        DebugLn(FPDBG_DWARF_VERBOSE, 'Using mangled address for method "%s": %s', [n, dbgs(Result)]);
+        s.ReleaseReference;
+        exit;
+      end;
+
+      inc(ParentIdx);
+      if ParentIdx > 100 then break; // safety net
+    end;
+    s.ReleaseReference;
+  end
+  else begin
+    n := GetMangledFunctionName(TFpSymbolDwarfDataProc(DbgSymbol).CompilationUnit.UnitName);
+    SymProc := SymTbl.FindProcSymbol(n, True);
+    if SymProc <> nil then begin
+      Result := SymProc.Address;
+      SymProc.ReleaseReference;
+      DebugLn(FPDBG_DWARF_VERBOSE, 'Using mangled address for function "%s": %s', [n, dbgs(Result)]);
+    end;
+  end;
+
+end;
+
 { TFpSymbolDwarfFreePascalDataProc }
 
 function TFpSymbolDwarfFreePascalDataProc.GetLine: Cardinal;
@@ -2345,6 +2485,13 @@ begin
     Result := FOrigSymbol.GetColumn
   else
     Result := inherited GetColumn;
+end;
+
+function TFpSymbolDwarfFreePascalDataProc.GetValueObject: TFpValue;
+begin
+  assert(TypeInfo is TFpSymbolDwarfType, 'TFpSymbolDwarfDataProc.GetValueObject: TypeInfo is TFpSymbolDwarfType');
+  Result := TFpValueDwarfFreePascalSubroutine.Create(TFpSymbolDwarfType(TypeInfo)); // TODO: GetTypedValueObject;
+  TFpValueDwarf(Result).SetDataSymbol(self);
 end;
 
 destructor TFpSymbolDwarfFreePascalDataProc.Destroy;
