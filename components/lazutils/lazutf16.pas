@@ -45,8 +45,13 @@ function UTF16CharacterToUnicode(p: PWideChar; out CharLen: integer): Cardinal;
 function UnicodeToUTF16(u: cardinal): UnicodeString;
 function IsUTF16CharValid(AChar, ANextChar: WideChar): Boolean;
 function IsUTF16StringValid(AStr: UnicodeString): Boolean;
-function Utf16StringReplace(const S, OldPattern, NewPattern: UnicodeString; Flags: TReplaceFlags): UnicodeString; Inline;
-function Utf16StringReplace(const S, OldPattern, NewPattern: UnicodeString; Flags: TReplaceFlags; out Count: Integer): UnicodeString;
+// Deprecated in Lazarus 3.99 in August 2024.
+function Utf16StringReplace(const S, OldPattern, NewPattern: UnicodeString;
+  Flags: TReplaceFlags): UnicodeString;
+  deprecated 'Use SysUtils.StringReplace or UnicodeStringReplace instead.';
+function Utf16StringReplace(const S, OldPattern, NewPattern: UnicodeString;
+  Flags: TReplaceFlags; out Count: Integer): UnicodeString;
+  deprecated 'Use SysUtils.StringReplace or UnicodeStringReplace instead.';
 
 // The following functions use UnicodeTables which are initialized
 //  only when the functions are called.
@@ -128,14 +133,6 @@ begin
     Result:=nil;
 end;
 
-function IndexOfWideChar(Const Buf: PWideChar; Len: PtrInt; b: WideChar): PtrInt;
-begin
-  for Result:=0 to len-1 do
-    if buf[Result]=b then
-      Exit;
-  Result:=-1;
-end;
-
 // Helper used by UTF16Pos
 function UTF16PosP(SearchForText: PWideChar; SearchForTextLen: PtrInt;
   SearchInText: PWideChar; SearchInTextLen: PtrInt): PWideChar;
@@ -148,7 +145,7 @@ begin
   if (SearchForText=nil) or (SearchForTextLen=0) or (SearchInText=nil) then
     exit;
   while SearchInTextLen>0 do begin
-    p:=IndexOfWideChar(SearchInText,SearchInTextLen,SearchForText^);
+    p:=IndexWord(SearchInText, SearchInTextLen,Word(SearchForText^));
     if p<0 then exit;
     inc(SearchInText, p);
     dec(SearchInTextLen, p);
@@ -259,52 +256,14 @@ end;
 
 function Utf16StringReplace(const S, OldPattern, NewPattern: UnicodeString;
   Flags: TReplaceFlags): UnicodeString;
-var
-  DummyCount: Integer;
 begin
-  Result := Utf16StringReplace(S, OldPattern, NewPattern, Flags, DummyCount);
+  Result:=UnicodeStringReplace(S, OldPattern, NewPattern, Flags);
 end;
 
-//Same as SysUtil.StringReplace but for WideStrings/UnicodeStrings, since it's not available in fpc yet
 function Utf16StringReplace(const S, OldPattern, NewPattern: UnicodeString;
   Flags: TReplaceFlags; out Count: Integer): UnicodeString;
-var
-  Srch, OldP, RemS: UnicodeString; // Srch and OldP can contain WideUpperCase versions of S,OldPattern
-  P: Integer;
 begin
-  Srch:=S;
-  OldP:=OldPattern;
-  Count := 0;
-  if rfIgnoreCase in Flags then
-  begin
-    Srch:=WideUpperCase(Srch);
-    OldP:=WideUpperCase(OldP);
-  end;
-  RemS:=S;
-  Result:='';
-  while (Length(Srch)<>0) do
-  begin
-    P:=Pos(OldP, Srch);
-    if P=0 then
-    begin
-      Result:=Result+RemS;
-      Srch:='';
-    end
-    else
-    begin
-      Inc(Count);
-      Result:=Result+Copy(RemS,1,P-1)+NewPattern;
-      P:=P+Length(OldP);
-      RemS:=Copy(RemS,P,Length(RemS)-P+1);
-      if not (rfReplaceAll in Flags) then
-      begin
-        Result:=Result+RemS;
-        Srch:='';
-      end
-      else
-        Srch:=Copy(Srch,P,Length(Srch)-P+1);
-    end;
-  end;
+  Result:=UnicodeStringReplace(S, OldPattern, NewPattern, Flags, Count);
 end;
 
 
@@ -1103,8 +1062,6 @@ var
   Changed: Boolean;
   p: PChar;
 begin
-  if not UnicodeTablesInitialized then
-    InitUnicodeTables;      // Initialize only when needed.
   Result:=s;
   if Result='' then exit;
   Changed:=false;

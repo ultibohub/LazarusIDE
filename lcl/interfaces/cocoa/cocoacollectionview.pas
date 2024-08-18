@@ -40,8 +40,7 @@ type
   public
     procedure resetSize; virtual; abstract;
     procedure onInit; virtual;
-    procedure onUpdateItemValue( indexPath:NSIndexPath;
-      cocoaItem:TCocoaCollectionItem ); virtual; abstract;
+    function isSupportIcon: Boolean; virtual;
     procedure onUpdateItemSize( baseSize: NSSize ); virtual; abstract;
     procedure onUpdateItemLayout( cocoItem: TCocoaCollectionItem ); virtual; abstract;
     procedure onAdjustTextEditorRect( var aFrame: NSRect ); virtual; abstract;
@@ -206,12 +205,9 @@ function realVisibleItems( cv: NSCollectionView ): NSArray;
 implementation
 
 type
-  TCustomListViewAccess = class(TCustomListView);
-
   { TCocoaListView_CollectionView_LargeIconHandler }
   TCocoaListView_CollectionView_LargeIconHandler = class(TCocoaListView_CollectionView_StyleHandler)
     procedure resetSize; override;
-    procedure onUpdateItemValue( indexPath:NSIndexPath; cocoaItem:TCocoaCollectionItem ); override;
     procedure onUpdateItemSize( baseSize: NSSize ); override;
     procedure onUpdateItemLayout( cocoaItem: TCocoaCollectionItem ); override;
     procedure onAdjustTextEditorRect( var aFrame: NSRect ); override;
@@ -220,7 +216,6 @@ type
   { TCocoaListView_CollectionView_SmallIconHandler }
   TCocoaListView_CollectionView_SmallIconHandler = class(TCocoaListView_CollectionView_StyleHandler)
     procedure resetSize; override;
-    procedure onUpdateItemValue( indexPath:NSIndexPath; cocoaItem:TCocoaCollectionItem ); override;
     procedure onUpdateItemSize( baseSize: NSSize ); override;
     procedure onUpdateItemLayout( cocoaItem: TCocoaCollectionItem ); override;
     procedure onAdjustTextEditorRect( var aFrame: NSRect ); override;
@@ -229,7 +224,7 @@ type
   { TCocoaListView_CollectionView_ListHandler }
   TCocoaListView_CollectionView_ListHandler = class(TCocoaListView_CollectionView_StyleHandler)
     procedure resetSize; override;
-    procedure onUpdateItemValue( indexPath:NSIndexPath; cocoaItem:TCocoaCollectionItem ); override;
+    function isSupportIcon: Boolean; override;
     procedure onUpdateItemSize( baseSize: NSSize ); override;
     procedure onUpdateItemLayout( cocoaItem: TCocoaCollectionItem ); override;
     procedure onAdjustTextEditorRect( var aFrame: NSRect ); override;
@@ -300,6 +295,11 @@ begin
   self.resetSize;
 end;
 
+function TCocoaListView_CollectionView_StyleHandler.isSupportIcon: Boolean;
+begin
+  Result:= True;
+end;
+
 { TCocoaListView_CollectionView_LargeIconHandler }
 
 procedure TCocoaListView_CollectionView_LargeIconHandler.resetSize;
@@ -320,25 +320,6 @@ begin
   layout.setMinimumLineSpacing( 4 );
 end;
 
-procedure TCocoaListView_CollectionView_LargeIconHandler.onUpdateItemValue(
-  indexPath: NSIndexPath; cocoaItem: TCocoaCollectionItem);
-var
-  row: NSInteger;
-  cv: TCocoaCollectionView;
-  cocoaImage: NSImage;
-  lclImageIndex: Integer;
-  lclText: String;
-begin
-  row:= indexPath.item;
-  cv:= TCocoaCollectionView(_collectionView);
-  cv.callback.GetItemImageAt( row, 0, lclImageIndex );
-  cocoaImage:= cv.callback.GetImageFromIndex( lclImageIndex );
-  cocoaItem.imageView.setImage( cocoaImage );
-
-  cv.callback.GetItemTextAt( row, 0, lclText );
-  cocoaItem.textField.setStringValue( StrToNSString(lclText) );
-end;
-
 procedure TCocoaListView_CollectionView_LargeIconHandler.onUpdateItemSize(
   baseSize: NSSize);
 var
@@ -351,8 +332,8 @@ begin
   if cv.iconSize.Height < 32 then
     cv.iconSize.Height:= 32;
 
-  cv.itemSize.Width:= 10 + baseSize.Width + 10;
-  cv.itemSize.Height:= 10 + baseSize.Height + 2 + 14 + 10;
+  cv.itemSize.Width:= 10 + cv.iconSize.Width + 10;
+  cv.itemSize.Height:= 10 + cv.iconSize.Height + 2 + 14 + 10;
   if cv.itemSize.Width < 64 then
     cv.itemSize.Width:= 64;
   if cv.itemSize.Height < 68 then
@@ -400,6 +381,7 @@ end;
 procedure TCocoaListView_CollectionView_LargeIconHandler.onAdjustTextEditorRect(
   var aFrame: NSRect);
 begin
+  aFrame.origin.y:= aFrame.origin.y - 1;
   aFrame.origin.x:= aFrame.origin.x + 2;
   aFrame.size.width:= aFrame.size.width - 4;
 end;
@@ -423,29 +405,11 @@ begin
   layout.setMinimumLineSpacing( 0 );
 end;
 
-procedure TCocoaListView_CollectionView_SmallIconHandler.onUpdateItemValue(
-  indexPath: NSIndexPath; cocoaItem: TCocoaCollectionItem);
-var
-  row: NSInteger;
-  cv: TCocoaCollectionView;
-  cocoaImage: NSImage;
-  lclImageIndex: Integer;
-  lclText: String;
-begin
-  row:= indexPath.item;
-  cv:= TCocoaCollectionView(_collectionView);
-  cv.callback.GetItemImageAt( row, 0, lclImageIndex );
-  cocoaImage:= cv.callback.GetImageFromIndex( lclImageIndex );
-  cocoaItem.imageView.setImage( cocoaImage );
-
-  cv.callback.GetItemTextAt( row, 0, lclText );
-  cocoaItem.textField.setStringValue( StrToNSString(lclText) );
-end;
-
 procedure TCocoaListView_CollectionView_SmallIconHandler.onUpdateItemSize(
   baseSize: NSSize);
 var
   cv: TCocoaCollectionView;
+  textWidth: Integer;
 begin
   cv:= TCocoaCollectionView(_collectionView);
   cv.iconSize:= baseSize;
@@ -454,8 +418,11 @@ begin
   if cv.iconSize.Height < 16 then
     cv.iconSize.Height:= 16;
 
-  cv.itemSize.Width:= 6 + baseSize.Width + 2 + 120 + 6;
-  cv.itemSize.Height:= 4 + baseSize.Height + 4;
+  textWidth:= Round( cv.iconSize.Width * 3 );
+  if textWidth < 128 then
+    textWidth:= 128;
+  cv.itemSize.Width:= 6 + cv.iconSize.Width + 2 + textWidth + 6;
+  cv.itemSize.Height:= 4 + cv.iconSize.Height + 4;
   if cv.itemSize.Height < 28 then
     cv.itemSize.Height:= 28;
 
@@ -482,7 +449,7 @@ begin
 
   aFrame.origin.x:= aFrame.origin.x + aFrame.size.width + 2;
   aFrame.origin.y:= (cv.itemSize.Height - 15) / 2;
-  aFrame.size.width:= 120;
+  aFrame.size.width:= cv.itemSize.Width - aFrame.origin.x - 4;
   aFrame.size.height:= 15;
   cocoaItem.textField.setFrame( aFrame );
 
@@ -498,7 +465,8 @@ end;
 procedure TCocoaListView_CollectionView_SmallIconHandler.onAdjustTextEditorRect(
   var aFrame: NSRect);
 begin
-  aFrame.size.width:= aFrame.size.width + 4;
+  aFrame.origin.y:= aFrame.origin.y + 2;
+  aFrame.size.width:= aFrame.size.width + 2;
 end;
 
 { TCocoaListView_CollectionView_ListHandler }
@@ -523,17 +491,9 @@ begin
   layout.setScrollDirection( NSCollectionViewScrollDirectionHorizontal );
 end;
 
-procedure TCocoaListView_CollectionView_ListHandler.onUpdateItemValue(
-  indexPath: NSIndexPath; cocoaItem: TCocoaCollectionItem);
-var
-  cv: TCocoaCollectionView;
-  cocoaImage: NSImage;
-  lclImageIndex: Integer;
-  lclText: String;
+function TCocoaListView_CollectionView_ListHandler.isSupportIcon: Boolean;
 begin
-  cv:= TCocoaCollectionView(_collectionView);
-  cv.callback.GetItemTextAt( indexPath.item, 0, lclText );
-  cocoaItem.textField.setStringValue( StrToNSString(lclText) );
+  Result:= False;
 end;
 
 procedure TCocoaListView_CollectionView_ListHandler.onUpdateItemSize(
@@ -570,8 +530,8 @@ end;
 procedure TCocoaListView_CollectionView_ListHandler.onAdjustTextEditorRect(
   var aFrame: NSRect);
 begin
+  aFrame.origin.y:= aFrame.origin.y + 2;
   aFrame.origin.x:= aFrame.origin.x - 2;
-  aFrame.origin.y:= aFrame.origin.y - 2;
   aFrame.size.width:= aFrame.size.width + 4;
 end;
 
@@ -599,9 +559,11 @@ begin
   cv:= TCocoaCollectionView( self.collectionView );
   indexPath:= cv.indexPathForItem( self );
   row:= indexPath.item;
-  cv.callback.SetItemCheckedAt( row, 0, sender.state );
-  if sender.state = NSOnState then
+  cv.callback.SetItemCheckedAt( row, sender.state );
+  if sender.state = NSOnState then begin
     cv.selectOneItemByIndex( row, True );
+    self.view.window.makeFirstResponder( self.collectionView );
+  end;
 end;
 
 procedure TCocoaCollectionItem.loadView;
@@ -614,7 +576,7 @@ begin
   itemView.item:= self;
 
   imageControl:= NSImageView.alloc.initWithFrame( NSZeroRect );
-  imageControl.cell.setImageScaling( NSImageScaleProportionallyUpOrDown );
+  imageControl.setImageScaling( NSImageScaleProportionallyUpOrDown );
   self.setImageView( imageControl );
   itemView.addSubview( imageControl );
 
@@ -642,6 +604,7 @@ begin
     _checkBox:= nil;
   end;
 
+  self.imageView.setImage( nil );
   self.view.removeFromSuperview;
 end;
 
@@ -721,6 +684,7 @@ begin
 
   _checkBoxes:= checkBoxes;
   self.styleHandler.resetSize;
+  self.updateItemSize( self.iconSize );
   self.reloadData;
 end;
 
@@ -771,14 +735,11 @@ begin
 end;
 
 procedure TCocoaCollectionView.addSubview(aView: NSView);
-var
-  field: TCocoaTextField;
 begin
-  if aView.isKindOfClass(TCocoaTextField) then begin
-    field:= TCocoaTextField( aView );
-    field.setBezeled( False );
-    field.fixedBorderStyle:= True;
-  end;
+  if NOT Assigned(self.callback) then
+    Exit;
+  if self.callback.onAddSubview(aView) then
+    Exit;
   inherited addSubview(aView);
 end;
 
@@ -788,26 +749,36 @@ var
   row: Integer;
   checkBox: NSButton;
   checkedValue: Integer;
+  cocoaImage: NSImage;
+  lclImageIndex: Integer;
+  lclText: String;
   isSelected: Boolean;
 begin
   if NOT Assigned(self.callback) then
     Exit;
 
-  if _checkBoxes then
-    cocoaItem.createCheckBox;
-
-  self.styleHandler.onUpdateItemValue( indexPath, cocoaItem );
-
   row:= indexPath.item;
+
   isSelected:= self.callback.getItemStableSelection( row );
   cocoaItem.setSelected( isSelected );
 
+  if _checkBoxes then
+    cocoaItem.createCheckBox;
   checkBox:= cocoaItem.checkBox;
   if Assigned(checkBox) then begin
-    self.callback.GetItemCheckedAt( row, 0, checkedValue );
+    self.callback.GetItemCheckedAt( row, checkedValue{%H-} );
     checkBox.setState( checkedValue );
     checkBox.setHidden( NOT ((checkedValue=NSOnState) or isSelected) );
   end;
+
+  if self.styleHandler.isSupportIcon then begin
+    self.callback.GetItemImageAt( row, 0, lclImageIndex{%H-} );
+    cocoaImage:= self.callback.GetImageFromIndex( lclImageIndex );
+    cocoaItem.imageView.setImage( cocoaImage );
+  end;
+
+  self.callback.GetItemTextAt( row, 0, lclText{%H-} );
+  cocoaItem.textField.setStringValue( StrToNSString(lclText) );
 end;
 
 procedure TCocoaCollectionView.updateItemSize( baseSize: NSSize );
@@ -1106,26 +1077,30 @@ function TCocoaWSListView_CollectionViewHandler.ItemDisplayRect(const AIndex,
 var
   item: NSCollectionViewItem;
   frame: NSRect;
+  rect: TRect;
 begin
   Result:= Bounds(0,0,0,0);
   item:= _collectionView.itemAtIndex( AIndex );
   if NOT Assigned(item) then
     Exit;
 
+  frame:= item.view.frame;
   case ACode of
     drLabel:
       begin
         frame:= item.textField.frame;
-        frame:= item.view.convertRect_toView( frame, _collectionView );
         _collectionView.styleHandler.onAdjustTextEditorRect( frame );
+        NSToLCLRect( frame, item.view.frame.size.height, rect );
+        item.view.lclLocalToScreen( rect.left, rect.top );
+        _listView.lclScreenToLocal( rect.left, rect.top );
+        frame.origin.x:= rect.left;
+        frame.origin.y:= rect.top;
       end;
     drIcon:
       begin
         frame:= item.imageView.frame;
         frame:= item.view.convertRect_toView( frame, _collectionView );
       end
-    else
-      frame:= item.view.frame;
   end;
 
   Result:= NSRectToRect( frame );

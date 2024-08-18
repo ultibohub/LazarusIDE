@@ -610,6 +610,8 @@ end;
 
 procedure TManagedBreakPoints.Update(Item: TCollectionItem);
 begin
+  if IgnoreUpdate then
+    exit;
   inherited Update(Item);
   if (Project1 <> nil) and (Item is TIDEBreakPoint) and (TIDEBreakPoint(Item).UserModified)
   then begin
@@ -864,6 +866,7 @@ begin
   if Destroying or (AUnitinfo = nil) then exit;
   Filename := AUnitinfo.LocationFullFile;
   Result := Filename <> '';
+  if Result then exit;
 
   if (dlfSearchByFunctionName in AUnitinfo.Flags) and (AUnitinfo.FunctionName<>'')
   and FindFullFilenameSrc(AUnitinfo) then

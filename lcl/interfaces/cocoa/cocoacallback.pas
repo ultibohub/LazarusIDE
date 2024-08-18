@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils,
-  LclType, Controls,
+  LclType,
   MacOSAll, CocoaAll, CocoaGDIObjects;
 
 type
@@ -86,23 +86,6 @@ type
     property HasCaret: Boolean read GetHasCaret write SetHasCaret;
     property IsOpaque: Boolean read GetIsOpaque write SetIsOpaque;
     property CocoaOnlyState: Boolean read IsCocoaOnlyState write SetCocoaOnlyState;
-  end;
-
-  { IListViewCallBack }
-
-  IListViewCallBack = interface(ICommonCallback)
-    function ItemsCount: Integer;
-    function GetItemTextAt(ARow, ACol: Integer; var Text: String): Boolean;
-    function GetItemCheckedAt(ARow, ACol: Integer; var CheckState: Integer): Boolean;
-    function GetItemImageAt(ARow, ACol: Integer; var imgIdx: Integer): Boolean;
-    function GetImageFromIndex(imgIdx: Integer): NSImage;
-    procedure SetItemTextAt(ARow, ACol: Integer; const Text: String);
-    procedure SetItemCheckedAt(ARow, ACol: Integer; CheckState: Integer);
-    function shouldSelectionChange(NewSel: Integer): Boolean;
-    procedure ColumnClicked(ACol: Integer);
-    procedure DrawRow(rowidx: Integer; ctx: TCocoaContext; const r: TRect; state: TOwnerDrawState);
-    procedure GetRowHeight(rowidx: Integer; var height: Integer);
-    function GetBorderStyle: TBorderStyle;
   end;
 
   { TCocoaStatusBar }

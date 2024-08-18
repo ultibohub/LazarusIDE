@@ -11,7 +11,7 @@ uses
   Controls, ComCtrls, Types, StdCtrls, LCLProc, Graphics, ImgList, Forms,
   WSComCtrls,
   CocoaAll, CocoaPrivate, CocoaWSCommon,
-  CocoaListView, CocoaTables, CocoaCollectionView;
+  CocoaListControl, CocoaListView, CocoaTables, CocoaCollectionView;
 
 type
   { TCocoaWSCustomListView }
@@ -96,10 +96,12 @@ type
 procedure CocoaListViewAllocFuncImpl(const listView: NSView; const viewStyle: TViewStyle; out backendControl: NSView; out WSHandler: TCocoaWSListViewHandler );
 var
   cocoaListView: TCocoaListView Absolute listView;
+  processor: TCocoaTableViewProcessor;
 begin
   if viewStyle = vsReport then begin
     backendControl:= AllocCocoaTableListView;
-    TCocoaTableListView(backendControl).onSelectionChanged:= CocoaTables.TListView_onSelectionChanged;
+    processor:= TCocoaTableListViewProcessor.Create;
+    TCocoaTableListView(backendControl).lclSetProcessor( processor );
     WSHandler:= TCocoaWSListView_TableViewHandler.Create( cocoaListView );
   end else begin
     backendControl:= AllocCocoaCollectionView( viewStyle );
@@ -160,7 +162,7 @@ begin
   if not Assigned(AWinControl) or not AWinControl.HandleAllocated then Exit;
   cocoaListView:= TCocoaListView(AWinControl.Handle);
   ScrollViewSetBorderStyle(cocoaListView.scrollView, ABorderStyle);
-  UpdateFocusRing(cocoaListView.documentView, ABorderStyle);
+  UpdateControlFocusRing(cocoaListView.documentView, AWinControl);
 end;
 
 class procedure TCocoaWSCustomListView.ColumnDelete(const ALV: TCustomListView;

@@ -25,68 +25,108 @@ interface
 
 uses
   Classes, SysUtils,
+  LCLType, LCLMessageGlue, LMessages, Controls, Graphics,
+  ComCtrls, StdCtrls, ImgList, Forms,
   MacOSAll, CocoaAll,
-  CocoaPrivate, Cocoa_Extra, CocoaCallback, CocoaConst, CocoaConfig,
-  CocoaWSCommon, CocoaUtils, CocoaGDIObjects,
-  CocoaListView,
-  LCLType, LCLMessageGlue, LMessages, Controls, ComCtrls, StdCtrls, ImgList, Forms;
+  CocoaPrivate, Cocoa_Extra, CocoaCallback, CocoaListControl,
+  CocoaConst, CocoaConfig, CocoaWSCommon, CocoaUtils, CocoaGDIObjects,
+  CocoaListView, CocoaTextEdits;
 
 type
 
-  { TCocoaStringList }
+  { TCocoaTableListItem }
 
-  TCocoaStringList = class(TStringList)
-  protected
-    procedure Changed; override;
+  TCocoaTableListItem = objcclass(NSTableCellView)
+  private
+    _tableView: NSTableView;
+    _column: NSTableColumn;
+    _checkBox: NSButton;
+  private
+    procedure createTextField; message 'createTextField';
+    procedure createImageView; message 'createImageView';
+    procedure createCheckBox; message 'createCheckBox';
   public
-    Owner: NSTableView;
-    // some notificaitons (i.e. selection change)
-    // should not be passed to LCL while clearing
-    isClearing: Boolean;
-    constructor Create(AOwner: NSTableView);
-    procedure Clear; override;
-  end;
+    procedure setColumn( column: NSTableColumn ); message 'setColumn:';
+    function checkBox: NSButton; message 'checkBox';
+    function fittingSize: NSSize; override;
 
-  TCocoaTalbeListView_onSelectionChanged = procedure( tv: NSTableView );
+    procedure drawRect(dirtyRect: NSRect); override;
+
+    procedure loadView( row: Integer; col: Integer );
+      message 'loadView:col:';
+    procedure updateItemValue( row: NSInteger; col: NSInteger );
+      message 'updateItemValue:col:';
+    procedure updateItemLayout( row: NSInteger; col: NSInteger );
+      message 'updateItemLayout:col:';
+
+    procedure prepareForReuse; override;
+    procedure dealloc; override;
+  end;
 
   { TCocoaTableListView }
 
-  TCocoaTableListView = objcclass(NSTableView, NSTableViewDelegateProtocol, NSTableViewDataSourceProtocol)
+  TCocoaTableListView = objcclass(
+    NSTableView,
+    NSTableViewDelegateProtocol,
+    NSTableViewDataSourceProtocol,
+    TCocoaListViewBackendControlProtocol )
+  private
+    _processor: TCocoaTableViewProcessor;
+    _checkBoxes: Boolean;
   public
-    callback: IListViewCallback;
-
-    onSelectionChanged: TCocoaTalbeListView_onSelectionChanged;
+    iconSize: NSSize;
+    callback: TLCLListControlCallback;
     selectingByProgram: Boolean;
-
     readOnly: Boolean;
-
-    isImagesInCell: Boolean;
-    isFirstColumnCheckboxes: Boolean;
     isOwnerDraw : Boolean;
     isDynamicRowHeight: Boolean;
     CustomRowHeight: Integer;
     ScrollWidth: Integer;
+  public
+    procedure backend_setCallback( cb:TLCLListViewCallback );
+    procedure backend_reloadData;
+    procedure backend_onInit;
+  public
+    procedure addSubview(aView: NSView); override;
+    procedure dealloc; override;
 
-    smallimages : NSMutableDictionary;
+    procedure lclSetProcessor( processor: TCocoaTableViewProcessor ); message 'lclSetProcessor:';
+    procedure lclSetCheckBoxes( checkBoxes: Boolean); message 'lclSetCheckBoxes:';
+    function lclHasCheckBoxes: Boolean; message 'lclHasCheckBoxes';
+    function lclGetCanvas: TCanvas; message 'lclGetCanvas';
 
+    function tableView_viewForTableColumn_row(tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): NSView;
+    function tableView_rowViewForRow(tableView: NSTableView; row: NSInteger): NSTableRowView;
+
+    procedure lclInsertItem(const AIndex: Integer); message 'lclInsertItem:';
+    procedure lclDeleteItem(const AIndex: Integer); message 'lclDeleteItem:';
+    procedure lclExchangeItem(const AIndex1: Integer; const AIndex2: Integer); message 'lclExchangeItem:AIndex2:';
+    procedure lclClearItem; message 'lclClearItem';
+    procedure checkboxAction(sender: NSButton); message 'checkboxAction:';
     function acceptsFirstResponder: LCLObjCBoolean; override;
     function lclGetCallback: ICommonCallback; override;
     procedure lclClearCallback; override;
 
     // Own methods, mostly convenience methods
     function getIndexOfColumn(ACol: NSTableColumn): Integer; message 'getIndexOfColumn:';
+
+    procedure restoreFromStableSelection; message 'restoreFromStableSelection';
+    procedure reloadData; override;
     procedure reloadDataForRow_column(ARow, ACol: NSInteger); message 'reloadDataForRow:column:';
+
     procedure selectOneItemByIndex( index: Integer; isSelected: Boolean );
       message 'selectOneItemByIndex:isSelected:';
     procedure selectRowIndexesByProgram( indexes: NSIndexSet );
       message 'selectRowIndexesByProgram:';
 
     function initWithFrame(frameRect: NSRect): id; override;
-    procedure dealloc; override;
     function fittingSize: NSSize; override;
 
-    procedure drawRow_clipRect(row: NSInteger; clipRect: NSRect); override;
     procedure drawRect(dirtyRect: NSRect); override;
+    function lclCallDrawItem( row: NSInteger; ctxSize: NSSize; clipRect: NSRect): Boolean;
+      message 'lclCallDrawItem:ctxSize:clipRect:';
+    function lclCallCustomDraw( row: Integer; col: Integer; ctxSize: NSSize; clipRect: NSRect): Boolean;
+      message 'lclCallCustomDraw:col:ctxSize:clipRect:';
 
     // mouse
     procedure mouseDown(event: NSEvent); override;
@@ -101,21 +141,6 @@ type
     procedure mouseMoved(event: NSEvent); override;
     // key
     procedure lclExpectedKeys(var wantTabs, wantKeys, wantReturn, wantAllKeys: Boolean); override;
-    procedure lclSetFirstColumCheckboxes(acheckboxes: Boolean); message 'lclSetFirstColumCheckboxes:';
-    procedure lclSetImagesInCell(aimagesInCell: Boolean); message 'lclSetImagesInCell:';
-
-    procedure lclRegisterSmallImage(idx: Integer; img: NSImage); message 'lclRegisterSmallImage::';
-    function lclGetSmallImage(idx: INteger): NSImage; message 'lclGetSmallImage:';
-    function lclGetItemImageAt(ARow, ACol: Integer): NSImage; message 'lclGetItemImageAt::';
-
-    // BoundsRect - is the rectangle of the cell, speciifed of aRow, acol.
-    // so the function lclGetLabelRect, lclGetIconRect should only adjust "BoundsRect"
-    // and return the adjusted rectangle
-    function lclGetLabelRect(ARow, ACol: Integer; const BoundsRect: TRect): TRect; message 'lclGetLabelRect:::';
-    function lclGetIconRect(ARow, ACol: Integer; const BoundsRect: TRect): TRect; message 'lclGetIconRect:::';
-
-    procedure lclInsDelRow(Arow: Integer; inserted: Boolean); message 'lclInsDelRow::';
-    procedure lclSetColumnAlign(acolumn: NSTableColumn; aalignment: NSTextAlignment); message 'lclSetColumn:Align:';
 
     // NSTableViewDataSourceProtocol
     function numberOfRowsInTableView(tableView: NSTableView): NSInteger; message 'numberOfRowsInTableView:';
@@ -144,72 +169,13 @@ type
     function tableView_shouldTrackCell_forTableColumn_row(tableView: NSTableView; cell: NSCell; tableColumn: NSTableColumn; row: NSInteger): Boolean; message 'tableView:shouldTrackCell:forTableColumn:row:';
     }
     {
-    function tableView_isGroupRow(tableView: NSTableView; row: NSInteger): Boolean; message 'tableView:isGroupRow:';
-    function tableView_sizeToFitWidthOfColumn(tableView: NSTableView; column: NSInteger): CGFloat; message 'tableView:sizeToFitWidthOfColumn:';
-    function tableView_shouldReorderColumn_toColumn(tableView: NSTableView; columnIndex: NSInteger; newColumnIndex: NSInteger): Boolean; message 'tableView:shouldReorderColumn:toColumn:';}
+    function tableView_isGroupRow(tableView: NSTableView; row: NSInteger): Boolean; message 'tableView:isGroupRow:';}
+    function tableView_sizeToFitWidthOfColumn(tableView: NSTableView; column: NSInteger): CGFloat;
+    {function tableView_shouldReorderColumn_toColumn(tableView: NSTableView; columnIndex: NSInteger; newColumnIndex: NSInteger): Boolean; message 'tableView:shouldReorderColumn:toColumn:';}
     procedure tableViewSelectionDidChange(notification: NSNotification); message 'tableViewSelectionDidChange:';
-    {procedure tableViewColumnDidMove(notification: NSNotification); message 'tableViewColumnDidMove:';
+    {procedure tableViewColumnDidMove(notification: NSNotification); message 'tableViewColumnDidMove:';}
     procedure tableViewColumnDidResize(notification: NSNotification); message 'tableViewColumnDidResize:';
-    procedure tableViewSelectionIsChanging(notification: NSNotification); message 'tableViewSelectionIsChanging:';}
-  end;
-
-
-  { NSImageAndTextCell }
-
-  NSImageAndTextCell = objcclass(NSTextFieldCell)
-    drawImage : NSImage;
-    procedure drawWithFrame_inView(cellFrame: NSRect; controlView_: NSView); override;
-  end;
-
-  { NSTableButtonCell }
-
-  // NSButtonCell would handle a click on a checkbox caption as a click on
-  // the checkbox itself.  (You can experience that by clicking on TCheckBox)
-  // This is the expected behavior for a standalone checkbox control.
-  // However, for a checkbox is in a table, it's not desired to have checkbox
-  // triggered, by clicking on its caption.
-  // (You can try it in macOS "System Preferences"->"Keyboard"->"Shortcuts")
-  // Since a checkbox and the text are put in the same NSTableView column
-  // using NSButtonCell, there's an override for hitTesting function.
-  // IF a user hits caption, then hitTest returns "none" suppressing the hit.
-  // Thus a checkbox in a table can only be checked if clicked directly into
-  // the checkbox.
-  //
-  // todo: add support for images. (For TListView with checkboxes and images)
-  //       It's rarely used (if ever), yet it's possible
-
-  NSTableButtonCell = objcclass (NSButtonCell)
-    _type: NSButtonType;
-    function hitTestForEvent_inRect_ofView(event: NSEvent; cellFrame: NSRect; controlView_: NSView): NSUInteger; override;
-    procedure setButtonType(aType: NSButtonType); override;
-  end;
-
-  // View based NSTableView
-
-  TCocoaTableListItem = objcclass(NSView)
-  private
-    column: NSTableColumn;
-    checkedSubView: NSButton;
-    imageSubView: NSImageView;
-    textSubView: NSTextField;
-    idStr: NSString;
-  public
-    function initWithFrame(frameRect: NSRect): id; override;
-    procedure dealloc; override;
-    procedure setColumn(AColumn: NSTableColumn); message 'setColumn:';
-    procedure setImage(AImage: NSImage); message 'setImage:';
-    procedure setCheckState(AState: NSInteger); message 'setCheckState:';
-    procedure setStringValue(AString: NSString); message 'setStringValue:';
-    procedure setEditable(flag: Boolean); message 'setEditable:';
-    procedure setFont(AFont: NSFont); message 'setFont:';
-    procedure setTarget(ATarget: id); message 'setTarget:';
-    procedure setCheckAction(aSelector: SEL); message 'setCheckAction:';
-    procedure setTextAction(aSelector: SEL); message 'setTextAction:';
-    procedure resizeSubviewsWithOldSize(oldSize: NSSize); override;
-    procedure setIdentifier(identifier_: NSString); message 'setIdentifier:'; override;
-    function identifier: NSString; message 'identifier'; override;
-    function textFrame: NSRect; message 'textFrame';
-    procedure lclSetEnabled(AEnabled: Boolean); override;
+    {procedure tableViewSelectionIsChanging(notification: NSNotification); message 'tableViewSelectionIsChanging:';}
   end;
 
   { TCocoaWSListView_TableViewHandler }
@@ -268,8 +234,16 @@ type
       const {%H-}ASortDirection: TSortDirection); override;
   end;
 
+  { TCocoaTableListViewProcessor }
+
+  TCocoaTableListViewProcessor = class( TCocoaTableListControlProcessor )
+  public
+    function isInitializing( tv: NSTableView ): Boolean; override;
+    function getLCLControlCanvas( tv: NSTableView ): TCanvas; override;
+    procedure onSelectionChanged( tv: NSTableView ); override;
+  end;
+
 function AllocCocoaTableListView: TCocoaTableListView;
-procedure TListView_onSelectionChanged( tv: NSTableView );
 
 function LCLCoordToRow(tbl: NSTableView; X,Y: Integer): Integer;
 function LCLGetItemRect(tbl: NSTableView; row, col: Integer; var r: TRect): Boolean;
@@ -281,43 +255,14 @@ const
 implementation
 
 type
-  { TCellCocoaTableListView }
+  { TCocoaTableRowView }
 
-  TCellCocoaTableListView = objcclass(
-    TCocoaTableListView,
-    NSTableViewDelegateProtocol,
-    NSTableViewDataSourceProtocol,
-    TCocoaListViewBackendControlProtocol )
+  TCocoaTableRowView = objcclass(NSTableRowView)
   public
-    procedure backend_setCallback( cb:TLCLListViewCallback );
-    procedure backend_reloadData;
-    procedure backend_onInit;
+    tableView: TCocoaTableListView;
+    row: Integer;
   public
-    function tableView_objectValueForTableColumn_row(tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): id; message 'tableView:objectValueForTableColumn:row:';
-    procedure tableView_setObjectValue_forTableColumn_row(tableView: NSTableView; object_: id; tableColumn: NSTableColumn; row: NSInteger); message 'tableView:setObjectValue:forTableColumn:row:';
-    function tableView_dataCellForTableColumn_row(tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): NSCell; message 'tableView:dataCellForTableColumn:row:';
-    procedure lclInsDelRow(Arow: Integer; inserted: Boolean); override;
-    procedure lclSetColumnAlign(acolumn: NSTableColumn; aalignment: NSTextAlignment); override;
-  end;
-
-  TCellCocoaTableListView1013 = objcclass(TCellCocoaTableListView, NSTableViewDelegateProtocol, NSTableViewDataSourceProtocol)
-    // overriding the highlight color for dark theme
-    procedure highlightSelectionInClipRect(clipRect: NSRect); override;
-  end;
-
-  { TViewCocoaTableListView }
-
-  TViewCocoaTableListView = objcclass(TCocoaTableListView, NSTableViewDelegateProtocol, NSTableViewDataSourceProtocol)
-    // todo: this should be "override" for 10.7 and later
-    //       on the other hand, it doesn't call "inherited" so there's no need
-    //       to do an actual override
-    function tableView_viewForTableColumn_row(tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): NSView; message 'tableView:viewForTableColumn:row:';
-
-    procedure textFieldAction(sender: NSTextField); message 'textFieldAction:';
-    procedure checkboxAction(sender: NSButton); message 'checkboxAction:';
-
-    function lclGetLabelRect(ARow, ACol: Integer; const BoundsRect: TRect): TRect; override;
-    procedure lclInsDelRow(Arow: Integer; inserted: Boolean); override;
+    procedure drawRect(dirtyRect: NSRect); override;
   end;
 
 function LCLCoordToRow(tbl: NSTableView; X,Y: Integer): Integer;
@@ -372,75 +317,81 @@ begin
   end;
 end;
 
-// not yet!
-{.$DEFINE DYNAMIC_NSTABLEVIEW_BASE}
-
-function AllocCocoaTableListView: TCocoaTableListView; // init will happen outside
+function AllocCocoaTableListView: TCocoaTableListView;
 begin
-  {$IFDEF DYNAMIC_NSTABLEVIEW_BASE}
-  if NSAppKitVersionNumber >= NSAppKitVersionNumber10_7 then
-    Result := TViewCocoaTableListView.alloc
-  else
-    Result := TCellCocoaTableListView.alloc;
-  {$ELSE}
-
-  // this is required for "dark theme" support on 10.13
-  if (NSAppkitVersionNumber >= NSAppKitVersionNumber10_13)
-    and (NSAppkitVersionNumber < NSAppKitVersionNumber10_14)
-  then
-    Result := TCellCocoaTableListView1013.alloc
-  else
-    Result := TCellCocoaTableListView.alloc;
-  {$ENDIF}
+  // init will happen outside
+  Result := TCocoaTableListView.alloc;
 end;
 
-{ NSTableButtonCell }
-
-function NSTableButtonCell.hitTestForEvent_inRect_ofView(event: NSEvent;
-  cellFrame: NSRect; controlView_: NSView): NSUInteger;
+procedure hideAllSubviews( parent: NSView );
 var
-  r  : NSRect;
-  pt : NSPoint;
+  view: NSView;
 begin
-  Result := inherited hitTestForEvent_inRect_ofView(event, cellFrame, controlView_);
-  if _type = NSSwitchButton then
-  begin
-    pt := event.locationInWindow;
-    if Assigned(controlView_) then
-      pt := controlView_.convertPoint_fromView(pt, nil);
-    r := titleRectForBounds(cellFrame);
+  for view in parent.subviews do
+    view.setHidden( True );
+end;
 
-    // todo: pt.y seems to be off by some amount
-    if ((pt.x >= r.origin.x) and (pt.x<=r.origin.x + r.size.width)) then
-      Result := NSCellHitNone;
+
+procedure updateNSTextFieldWithTFont( cocoaField: NSTextField; lclFont: TFont );
+var
+  saveFontColor: TColor;
+  cocoaFont: NSFont;
+  cocoaColor: NSColor;
+begin
+  saveFontColor:= lclFont.Color;
+
+  lclFont.Color:= clDefault;
+  if NOT lclFont.isDefault then begin
+    cocoaFont:= TCocoaFont(lclFont.Reference.Handle).Font;
+    cocoaField.setFont( cocoaFont );
+  end;
+
+  lclFont.Color:= saveFontColor;
+  if lclFont.Color <> clDefault then begin
+    cocoaColor:= ColorToNSColor(ColorToRGB(lclFont.Color));
+    cocoaField.setTextColor( cocoaColor );
+  end;
+
+end;
+
+procedure drawNSViewBackground( view: NSView; lclBrush: TBrush );
+var
+  ctx: TCocoaContext;
+  cocoaBrush: TCocoaBrush;
+  width: Integer;
+  height: Integer;
+begin
+  if lclBrush.Color = clWindow then
+    Exit;
+
+  width:= Round( view.bounds.size.width );
+  height:= Round( view.bounds.size.height );
+
+  ctx := TCocoaContext.Create( NSGraphicsContext.currentContext );
+  ctx.InitDraw( width, height );
+  try
+    cocoaBrush:= TCocoaBrush( lclBrush.Reference.Handle );
+    ctx.Rectangle( 0, 0, width, height, True, cocoaBrush );
+  finally
+    ctx.Free;
   end;
 end;
 
-procedure NSTableButtonCell.setButtonType(aType: NSButtonType);
-begin
-  _type := aType;
-  inherited setButtonType(aType);
-end;
-
-{ NSImageAndTextCell }
-
-procedure NSImageAndTextCell.drawWithFrame_inView(cellFrame: NSRect;
-  controlView_: NSView);
+procedure TCocoaTableRowView.drawRect(dirtyRect: NSRect);
 var
-  r : NSRect;
-  srcsz : NSSize;
+  done: Boolean;
 begin
-  r:=cellFrame;
-  cellFrame.origin.x:=cellFrame.origin.x+cellFrame.size.height;
-  cellFrame.size.width:=cellFrame.size.width-cellFrame.size.height;
-  inherited drawWithFrame_inView(cellFrame, controlView_);
-  if Assigned(drawImage) then
-  begin
-    r.size.width:=r.size.height;
-    srcsz := drawImage.size;
-    drawImage.drawInRect_fromRect_operation_fraction_respectFlipped_hints(
-      r, NSMakeRect(0,0, srcsz.width, srcsz.height), NSCompositeSourceOver, 1, true, nil
-    );
+  done:= self.tableView.lclCallDrawItem( row , self.bounds.size, dirtyRect );
+
+  if done then begin
+    // the Cocoa default drawing cannot be skipped in NSTableView,
+    // we can only hide the CellViews to get the same effect.
+    // in the Lazarus IDE, there is a ListBox with OwnerDraw in Project-Forms,
+    // it's a case where the default drawing must be skipped.
+    hideAllSubviews( self );
+  end else begin
+    drawNSViewBackground( self, tableView.lclGetCanvas.Brush );
+    inherited drawRect( dirtyRect );
   end;
 end;
 
@@ -456,95 +407,70 @@ begin
   wantAllKeys := false;
 end;
 
-procedure TCocoaTableListView.lclSetFirstColumCheckboxes(acheckboxes: Boolean);
+procedure TCocoaTableListView.lclSetCheckBoxes(checkBoxes: Boolean);
 begin
-  if isFirstColumnCheckboxes = acheckboxes then Exit;
-  isFirstColumnCheckboxes := acheckboxes;
-  reloadData();
-end;
-
-procedure TCocoaTableListView.lclSetImagesInCell(aimagesInCell: Boolean);
-begin
-  if isImagesInCell = aimagesInCell then Exit;
-  isImagesInCell := aimagesInCell;
-  reloadData();
-end;
-
-procedure TCocoaTableListView.lclRegisterSmallImage(idx: Integer; img: NSImage);
-begin
-  if not Assigned(smallimages) then
-    smallimages := (NSMutableDictionary.alloc).init;
-
-  if Assigned(img) then
-    smallimages.setObject_forKey(img, NSNumber.numberWithInt(idx) )
-  else
-    smallimages.removeObjectForKey( NSNumber.numberWithInt(idx) );
-end;
-
-function TCocoaTableListView.lclGetSmallImage(idx: INteger): NSImage;
-begin
-  if not Assigned(smallimages) then Result := nil;
-  Result := NSImage(smallimages.objectForKey( NSNumber.numberWithInt(idx) ) );
-end;
-
-function TCocoaTableListView.lclGetItemImageAt(ARow, ACol: Integer): NSImage;
-var
-  idx : Integer;
-  img : NSimage;
-begin
-  if not Assigned(callback) then
-  begin
-    Result := nil;
+  if _checkBoxes = checkBoxes then
     Exit;
-  end;
 
-  idx := -1;
-  callback.GetItemImageAt(ARow, ACol, idx);
-  if idx>=0 then
-  begin
-    img := lclGetSmallImage(idx);
-    if not Assigned(img) then begin
-      img := callback.GetImageFromIndex(idx);
-      if Assigned(img) then lclRegisterSmallImage(idx, img);
-    end;
-  end else
-    img := nil;
-  Result := img;
+  _checkBoxes:= checkBoxes;
+  self.reloadData;
 end;
 
-function TCocoaTableListView.lclGetLabelRect(ARow, ACol: Integer;
-  const BoundsRect: TRect): TRect;
+function TCocoaTableListView.lclHasCheckBoxes: Boolean;
 begin
-  Result:= BoundsRect;
-  Result.Top:= Result.Top - 2;
-  Result.Height:= Result.Height + 4;
-  if self.isImagesInCell then begin
-    Result.Left:= Result.Left + BoundsRect.Height;
+  Result:= _checkBoxes;
+end;
+
+procedure TCocoaTableListView.backend_setCallback(cb: TLCLListViewCallback);
+begin
+  self.callback:= cb;
+end;
+
+procedure TCocoaTableListView.backend_reloadData;
+begin
+  self.reloadData;
+  if Assigned(self.callback) then begin
+    self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
   end;
 end;
 
-function TCocoaTableListView.lclGetIconRect(ARow, ACol: Integer;
-  const BoundsRect: TRect): TRect;
+procedure TCocoaTableListView.backend_onInit;
+var
+  sz: NSSize;
 begin
-  if self.isImagesInCell then begin
-    Result:= BoundsRect;
-    Result.Width:= Result.Height;
-  end else begin
-    Result:= TRect.Empty;
-  end;
+  self.setDataSource(self);
+  self.setDelegate(self);
+  self.setAllowsColumnReordering(False);
+  self.setAllowsColumnSelection(False);
+
+  sz := self.intercellSpacing;
+  // Windows compatibility. on Windows there's no extra space between columns
+  sz.width := 0;
+  self.setIntercellSpacing(sz);
 end;
 
-procedure TCocoaTableListView.lclInsDelRow(Arow: Integer; inserted: Boolean);
+procedure TCocoaTableListView.addSubview(aView: NSView);
 begin
-  // a row has been inserted or removed
-  // the following rows needs to be invalidated
-  // as well as number of total items in the table should be marked as modified
+  if NOT Assigned(self.callback) then
+    Exit;
+  if self.callback.onAddSubview(aView) then
+    Exit;
+  inherited addSubview(aView);
 end;
 
-procedure TCocoaTableListView.lclSetColumnAlign(acolumn: NSTableColumn;
-  aalignment: NSTextAlignment);
+function TCocoaTableListView.lclGetCanvas: TCanvas;
 begin
+  Result:= _processor.getLCLControlCanvas( self );
+end;
 
+procedure TCocoaTableListView.dealloc;
+begin
+  FreeAndNil( _processor );
+end;
+
+procedure TCocoaTableListView.lclSetProcessor( processor: TCocoaTableViewProcessor);
+begin
+  _processor:= processor;
 end;
 
 function TCocoaTableListView.acceptsFirstResponder: LCLObjCBoolean;
@@ -562,46 +488,117 @@ begin
   callback := nil;
 end;
 
-procedure TCocoaTableListView.dealloc;
-begin
-  //if Assigned(Items) then FreeAndNil(Items);
-  if Assigned(smallimages) then smallimages.release; // all contents is released automatically
-  inherited dealloc;
-end;
-
 function TCocoaTableListView.fittingSize: NSSize;
 begin
   Result:= NSZeroSize;
 end;
 
-procedure TCocoaTableListView.drawRow_clipRect(row: NSInteger; clipRect: NSRect
-  );
+function isFocused( tv: TCocoaTableListView ; row: NSInteger ): Boolean;
+begin
+  Result:= False;
+  if Assigned(tv.window) and (tv.window.firstResponder = tv) then begin
+    if row < 0 then
+      Result:= True
+    else if tv.isRowSelected(row) then
+      Result:= True;
+  end;
+end;
+
+function isChecked( tv: TCocoaTableListView ; row: NSInteger ): Boolean;
+var
+  checked: Integer;
+begin
+  Result:= False;
+  if row < 0 then
+    Exit;
+
+  tv.callback.GetItemCheckedAt( row, checked );
+  Result:= checked=NSOnState;
+end;
+
+function TCocoaTableListView.lclCallDrawItem(row: NSInteger;
+  ctxSize: NSSize; clipRect: NSRect ): Boolean;
 var
   ctx: TCocoaContext;
   ItemState: TOwnerDrawState;
 begin
-  inherited;
-  if not Assigned(callback) then Exit;
+  Result:= False;
+  if NOT self.isOwnerDraw then
+    Exit;
+  if not Assigned(self.callback) then
+    Exit;
+
   ctx := TCocoaContext.Create(NSGraphicsContext.currentContext);
-  ctx.InitDraw(Round(bounds.size.width), Round(bounds.size.height));
+  ctx.InitDraw(Round(ctxSize.width), Round(ctxSize.height));
   try
     ItemState := [];
     if isRowSelected(row) then Include(ItemState, odSelected);
-    if lclIsEnabled then Include(ItemState, odDisabled);
-    if Assigned(window) and (window.firstResponder = self) and (odSelected in ItemState) then
+    if NOT lclIsEnabled then Include(ItemState, odDisabled);
+    if isFocused(self,row) then
       Include(ItemState, odFocused);
+    if isChecked(self,row) then
+      Include(ItemState, odChecked);
 
-    callback.DrawRow(row, ctx, NSRectToRect(rectOfRow(row)), ItemState);
+    Result:= self.callback.drawItem(row, ctx, NSRectToRect(clipRect), ItemState);
+  finally
+    ctx.Free;
+  end;
+end;
+
+function TCocoaTableListView.lclCallCustomDraw(row: Integer; col: Integer;
+  ctxSize: NSSize; clipRect: NSRect): Boolean;
+var
+  ctx: TCocoaContext;
+  state: TCustomDrawState;
+begin
+  Result:= False;
+  if NOT Assigned(self.callback) then
+    Exit;
+  if NOT self.callback.isCustomDrawSupported then
+    Exit;
+
+  ctx := TCocoaContext.Create(NSGraphicsContext.currentContext);
+  ctx.InitDraw(Round(ctxSize.width), Round(ctxSize.height));
+  try
+    state := [];
+    if isRowSelected(row) then Include(state, cdsSelected);
+    if NOT lclIsEnabled then Include(state, cdsDisabled);
+    if isFocused(self,row) then
+      Include(state, cdsFocused);
+    if isChecked(self,row) then
+      Include(state, cdsChecked);
+
+    Result:= self.callback.customDraw(row, col, ctx, state);
   finally
     ctx.Free;
   end;
 end;
 
 procedure TCocoaTableListView.drawRect(dirtyRect: NSRect);
+var
+  done: Boolean;
 begin
-  inherited drawRect(dirtyRect);
-  if CheckMainThread and Assigned(callback) then
-    callback.Draw(NSGraphicsContext.currentContext, bounds, dirtyRect);
+  if NOT Assigned(self.callback) then
+    Exit;
+
+  if CheckMainThread then
+    self.callback.Draw(NSGraphicsContext.currentContext, bounds, dirtyRect);
+
+  if NOT self.callback.isCustomDrawSupported then begin
+    inherited;
+    Exit;
+  end;
+
+  done:= self.lclCallCustomDraw( -1, -1, self.bounds.size, dirtyRect );
+
+  if done then begin
+    // the Cocoa default drawing cannot be skipped in NSTableView,
+    // we can only hide the SubviewViews to get the same effect.
+    hideAllSubviews( self );
+  end else begin
+    drawNSViewBackground( self, self.lclGetCanvas.Brush );
+    inherited;
+  end;
 end;
 
 function TCocoaTableListView.getIndexOfColumn(ACol: NSTableColumn): Integer;
@@ -615,6 +612,25 @@ begin
     Result := Integer(idx);
 end;
 
+procedure TCocoaTableListView.restoreFromStableSelection;
+begin
+  if NOT Assigned(self.callback) then
+    Exit;
+
+  self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
+end;
+
+procedure TCocoaTableListView.reloadData;
+begin
+  if NOT Assigned(_processor) then
+    Exit;
+  if _processor.isInitializing(self) then
+    Exit;
+
+  inherited reloadData;
+  _processor.onReloadData( self );
+end;
+
 procedure TCocoaTableListView.reloadDataForRow_column(ARow, ACol: NSInteger);
 var
   lRowSet, lColSet: NSIndexSet;
@@ -626,13 +642,11 @@ end;
 
 procedure TCocoaTableListView.selectOneItemByIndex( index: Integer; isSelected: Boolean );
 var
-  lclcb: TLCLListViewCallback;
   selection: NSMutableIndexSet;
 begin
   if (index < 0) or (index >= self.numberOfRows) then
     Exit;
 
-  lclcb:= TLCLListViewCallback( self.callback.GetCallbackObject );
   selection:= NSMutableIndexSet.alloc.initWithIndexSet( self.selectedRowIndexes );
   if isSelected then begin
     if NOT self.allowsMultipleSelection then
@@ -643,8 +657,8 @@ begin
   end;
 
   if NOT selection.isEqualToIndexSet(self.selectedRowIndexes) then begin
-    lclcb.selectionIndexSet.removeAllIndexes;
-    lclcb.selectionIndexSet.addIndexes( selection );
+    if Assigned(_processor) then
+      _processor.onSelectOneItem( self, selection );
     self.selectRowIndexesByProgram( selection );
   end;
 
@@ -729,8 +743,8 @@ end;
 function TCocoaTableListView.numberOfRowsInTableView(tableView: NSTableView
   ): NSInteger;
 begin
-  if Assigned(callback) then
-    Result := callback.ItemsCount
+  if Assigned(self.callback) then
+    Result := self.callback.ItemsCount
   else
     Result := 0;
 end;
@@ -750,14 +764,14 @@ end;
 function TCocoaTableListView.tableView_shouldSelectRow(tableView: NSTableView;
   row: NSInteger): Boolean;
 begin
-  Result:= callback.shouldSelectionChange( row );
+  Result:= self.callback.shouldSelectionChange( row );
 end;
 
 procedure TCocoaTableListView.tableView_didClickTableColumn(
   tableView: NSTableView; tableColumn: NSTableColumn);
 begin
-  if Assigned(callback) then
-    callback.ColumnClicked(getIndexOfColumn(tableColumn));
+  if Assigned(self.callback) then
+    self.callback.ColumnClicked(getIndexOfColumn(tableColumn));
 end;
 
 function TCocoaTableListView.tableView_heightOfRow(tableView: NSTableView;
@@ -768,12 +782,59 @@ begin
   h := CustomRowHeight;
   if h = 0 then h := DefaultRowHeight;
 
-  if isDynamicRowHeight and Assigned(callback) then
+  if isDynamicRowHeight and Assigned(self.callback) then
   begin
-    callback.GetRowHeight(Integer(row), h);
+    self.callback.GetRowHeight(Integer(row), h);
     if h<=0 then h:=1; // must be positive (non-zero)
   end;
   Result := h;
+end;
+
+function TCocoaTableListView.tableView_sizeToFitWidthOfColumn(
+  tableView: NSTableView; column: NSInteger): CGFloat;
+var
+  totalCount: Integer;
+  startIndex: Integer;
+  endIndex: Integer;
+
+  row: Integer;
+  item: TCocoaTableListItem;
+  tableColumn: NSTableColumn;
+  currentWidth: CGFloat;
+begin
+  Result:= CocoaConfig.CocoaTableColumnAutoFitWidthMin;
+  tableColumn:= NSTableColumn( self.tableColumns.objectAtIndex(column) );
+  tableColumn.sizeToFit;
+  currentWidth:= tableColumn.width + 4;
+  if currentWidth > Result then
+    Result:= currentWidth;
+
+  totalCount:= self.numberOfRows;
+  if totalCount = 0 then
+    Exit;
+
+  if totalCount <= CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows then begin
+    startIndex:= 0;
+    endIndex:= totalCount - 1;
+  end else begin
+    startIndex:= self.rowsInRect(self.visibleRect).location;
+    endIndex:= startIndex + CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows div 2;
+    if endIndex > totalCount - 1 then
+      endIndex:= totalCount - 1;
+    startIndex:= endIndex - CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows + 1;
+    if startIndex < 0 then
+      startIndex:= 0;
+    endIndex:= startIndex + CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows - 1;
+  end;
+
+  for row:=startIndex to endIndex do begin
+    item:= TCocoaTableListItem( self.viewAtColumn_row_makeIfNecessary( column, row , True ) );
+    if Assigned(item) then begin
+      currentWidth:= item.fittingSize.width;
+      if currentWidth > Result then
+        Result:= currentWidth;
+    end;
+  end;
 end;
 
 type
@@ -1010,406 +1071,267 @@ begin
   LCLMessageGlue.DeliverMessage(lclListView, Msg);}
 end;
 
-procedure TListView_onSelectionChanged( tv: NSTableView );
-var
-  NewSel: Integer;
-  rm : NSIndexSet;
-  ad : NSIndexSet;
-  selectionIndexSet: NSMutableIndexSet;
-
-  lclListView: TCustomListView;
-  cocoaTLV: TCocoaTableListView Absolute tv;
-  lclcb: TLCLListViewCallback;
-begin
-  if NOT Assigned(cocoaTLV.callback) then
-    Exit;
-
-  lclcb:= TLCLListViewCallback( cocoaTLV.callback.GetCallbackObject );
-  lclListView:= TCustomListView( lclcb.Target );
-
-  if TCocoaListView(lclcb.Owner).initializing then
-    Exit;
-
-  selectionIndexSet:= lclcb.selectionIndexSet;
-  CompareIndexSets(selectionIndexSet, cocoaTLV.selectedRowIndexes, rm, ad);
-
-  NewSel := cocoaTLV.selectedRow();
-  sendSelectionChangedMsgToLCL( lclListView, NewSel, ad, rm );
-
-  if NOT cocoaTLV.selectingByProgram then begin
-    selectionIndexSet.removeAllIndexes;
-    selectionIndexSet.addIndexes( cocoaTLV.selectedRowIndexes );
-  end;
-end;
-
 procedure TCocoaTableListView.tableViewSelectionDidChange(notification: NSNotification);
-begin
-  if Assigned(onSelectionChanged) then
-    onSelectionChanged( self );
-end;
-
-{ TCocoaStringList }
-
-procedure TCocoaStringList.Changed;
-begin
-  inherited Changed;
-  Owner.reloadData;
-end;
-
-constructor TCocoaStringList.Create(AOwner: NSTableView);
-begin
-  Owner:=AOwner;
-  inherited Create;
-end;
-
-procedure TCocoaStringList.Clear;
-begin
-  isClearing := true;
-  try
-    inherited Clear;
-  finally
-    isClearing := false;
-  end;
-end;
-
-{ TCellCocoaTableListView }
-
-procedure TCellCocoaTableListView.tableView_setObjectValue_forTableColumn_row(
-  tableView: NSTableView; object_: id; tableColumn: NSTableColumn;
-  row: NSInteger);
 var
-  lColumnIndex: NSInteger;
-  lNewValue: NSString;
-  isSel: Integer;
+  selectionIndexSet: NSMutableIndexSet;
 begin
-  if (NSObject(object_).isKindOfClass(NSNumber)) and isFirstColumnCheckboxes then begin
-    lColumnIndex := getIndexOfColumn(tableColumn);
-    if Assigned(callback) and (lColumnIndex = 0) then
-      callback.SetItemCheckedAt(row, lColumnIndex, NSNumber(object_).integerValue);
-
+  if NOT Assigned(self.callback) then
     Exit;
+
+  if Assigned(_processor) then begin
+    if _processor.isInitializing(self) then
+      Exit;
+    _processor.onSelectionChanged( self );
   end;
 
-  //WriteLn('[TCocoaTableListView.tableView_setObjectValue_forTableColumn_row]');
-  if not NSObject(object_).isKindOfClass(NSString) then Exit;
-  lNewValue := NSString(object_);
-  //WriteLn('[TCocoaTableListView.tableView_setObjectValue_forTableColumn_row] A');}
-  if ReadOnly then Exit;
-
-  lColumnIndex := getIndexOfColumn(tableColumn);
-  if Assigned(callback) then
-  begin
-    callback.SetItemTextAt(row, lColumnIndex, lNewValue.UTF8String);
-    reloadDataForRow_column(lColumnIndex, row);
+  if NOT self.selectingByProgram then begin
+    selectionIndexSet:= self.callback.selectionIndexSet;
+    selectionIndexSet.removeAllIndexes;
+    selectionIndexSet.addIndexes( self.selectedRowIndexes );
   end;
 end;
 
-function TCellCocoaTableListView.tableView_dataCellForTableColumn_row(
-  tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): NSCell;
-var
-  chk : Boolean;
-  txt : string;
-  col : Integer;
-  nstxt : NSString;
-  idx  : Integer;
-  img  : NSImage;
-  btn  : NSTableButtonCell;
-  colorTitle : NSMutableAttributedString;
-begin
-  Result:=nil;
-  if not isFirstColumnCheckboxes and not isImagesInCell then Exit;
-
-  col := getIndexOfColumn(tableColumn);
-  if (col <> 0) then Exit;
-
-  if not isFirstColumnCheckboxes and isImagesInCell then begin
-    img := lclGetItemImageAt(row, col);
-
-    Result := NSImageAndTextCell(NSImageAndTextCell.alloc).initTextCell(NSSTR_EMPTY);
-    NSImageAndTextCell(Result).drawImage := img; // if "image" is assigned, text won't be drawn :(
-    Exit;
-  end;
-  txt := '';
-  chk := false;
-
-  callback.GetItemTextAt(row, col, txt);
-
-  if txt = '' then nstxt := NSString.string_
-  else nstxt := NSString.stringWithUTF8String(@txt[1]);
-
-  btn := NSTableButtonCell.alloc.init.autorelease;
-  //Result.setAllowsMixedState(True);
-  btn.setButtonType(NSSwitchButton);
-  btn.setTitle(nstxt);
-
-  // forced "controlTextColor" provides a better result on unfocused
-  // nstablelist view with checkboxes
-  colorTitle := NSMutableAttributedString.alloc.initWithAttributedString(btn.attributedTitle);
-  colorTitle.addAttribute_value_range(NSForegroundColorAttributeName
-   , NSColor.controlTextColor
-   , NSMakeRange(0, colorTitle.length));
-  btn.setAttributedTitle(colorTitle);
-  colorTitle.release;
-
-  if chk then begin
-    btn.setIntValue(1);
-    btn.setCellAttribute_to(NSCellState, NSOnState);
-  end;
-  Result := btn;
-end;
-
-procedure TCellCocoaTableListView.lclInsDelRow(Arow: Integer; inserted: Boolean);
-begin
-  noteNumberOfRowsChanged;
-end;
-
-procedure TCellCocoaTableListView.lclSetColumnAlign(acolumn: NSTableColumn;
-  aalignment: NSTextAlignment);
-begin
-  if not Assigned(acolumn) then Exit;
-  NSCell(acolumn.headerCell).setAlignment( aalignment );
-  NSCell(acolumn.dataCell).setAlignment( aalignment );
-end;
-
-procedure TCellCocoaTableListView.backend_setCallback(cb: TLCLListViewCallback);
-begin
-  self.callback:= cb;
-end;
-
-procedure TCellCocoaTableListView.backend_reloadData;
-var
-  lclcb: TLCLListViewCallback;
+procedure TCocoaTableListView.tableViewColumnDidResize(
+  notification: NSNotification);
 begin
   self.reloadData;
-  if Assigned(self.callback) then begin
-    lclcb:= TLCLListViewCallback( self.callback.GetCallbackObject );
-    self.selectRowIndexesByProgram( lclcb.selectionIndexSet );
-  end;
-end;
-
-procedure TCellCocoaTableListView.backend_onInit;
-var
-  sz: NSSize;
-begin
-  self.setDataSource(self);
-  self.setDelegate(self);
-  self.setAllowsColumnReordering(False);
-  self.setAllowsColumnSelection(False);
-
-  UpdateFocusRing( self, self.callback.getBorderStyle );
-
-  sz := self.intercellSpacing;
-  // Windows compatibility. on Windows there's no extra space between columns
-  sz.width := 0;
-  self.setIntercellSpacing(sz);
-end;
-
-function TCellCocoaTableListView.tableView_objectValueForTableColumn_row(
-  tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): id;
-var
-  lStringList: TStringList;
-  col: NSInteger;
-  StrResult: NSString;
-  chk : Integer;
-  txt : string;
-begin
-  {$IFDEF COCOA_DEBUG_TABCONTROL}
-  WriteLn(Format('[TCocoaTableListView.tableView_objectValueForTableColumn_row] col=%d row=%d Items.Count=%d',
-    [col, row, Items.Count]));
-  {$ENDIF}
-
-  Result := nil;
-  if not Assigned(callback) then Exit;
-  col := getIndexOfColumn(tableColumn);
-  if (col = 0) and isFirstColumnCheckboxes then begin
-    chk := 0;
-    callback.GetItemCheckedAt(row, col, chk);
-    Result := NSNumber.numberWithInt(chk);
-    Exit;
-  end;
-
-  txt := '';
-  if callback.GetItemTextAt(row, col, txt) then begin
-    if txt = '' then Result := NSString.string_
-    else Result := NSString.stringWithUTF8String(@txt[1])
-  end;
-  (*
-  if row > Items.Count-1 then begin
-    Result := nil;
-    Exit;
-  end;
-  if col = 0 then
-    StrResult := NSStringUTF8(Items.Strings[row])
-  else
-  begin
-    lStringList := TStringList(Items.Objects[row]);
-    StrResult := NSStringUTF8(lStringList.Strings[col-1]);
-  end;
-  Result := StrResult;
-  *)
 end;
 
 { TCocoaTableListItem }
 
-function TCocoaTableListItem.initWithFrame(frameRect: NSRect): id;
-var
-  ImageIndex: NSInteger;
-  //bmp: TBitmap;
-  Img: NSImage;
+function TCocoaTableListItem.checkBox: NSButton;
 begin
-  Result := inherited initWithFrame(frameRect);
-  {$ifdef BOOLFIX}
-  Result.setAutoresizesSubviews_(Ord(True));
-  {$else}
-  Result.setAutoresizesSubviews(True);
-  {$endif}
+  Result:= _checkBox;
+end;
 
-  checkedSubview := NSButton.alloc.init;
-  checkedSubview.setButtonType(NSSwitchButton);
-  checkedSubview.setFrameOrigin(GetNSPoint(0,0));
-  checkedSubview.setFrameSize(GetNSSize(frameRect.size.height, frameRect.size.height));
-  Result.addSubview(checkedSubView);
+function TCocoaTableListItem.fittingSize: NSSize;
+var
+  width: CGFloat;
+begin
+  width:= self.textField.fittingSize.width;
+  if Assigned(_checkBox) then
+    width:= width + _checkBox.frame.size.width + 4;
+  if Assigned(self.imageView) then
+    width:= width + self.imageView.frame.size.width + 4;
+  Result.width:= width;
+  Result.height:= self.frame.size.height;
+end;
 
-  imageSubView := NSImageView.alloc.initWithFrame(checkedSubView.frame);
-  Result.addSubview(imageSubView);
+procedure TCocoaTableListItem.drawRect(dirtyRect: NSRect);
+var
+  row: Integer;
+  col: Integer;
+  done: Boolean;
+  cocoaTLV: TCocoaTableListView;
+begin
+  cocoaTLV:= TCocoaTableListView( _tableView );
 
-  textSubView := NSTextField.alloc.initWithFrame(frameRect);
-  textSubView.setBordered(False);
-  textSubView.setDrawsBackground(False);
-  textSubView.cell.setSendsActionOnEndEditing(True);
-  textSubView.cell.setLineBreakMode(NSLineBreakByTruncatingTail);
-  textSubView.setEditable(False);
-  textSubView.setAllowsEditingTextAttributes(False);
-  Result.addSubview(textSubView);
+  if NOT Assigned(cocoaTLV.callback) then
+    Exit;
+
+  if NOT cocoaTLV.callback.isCustomDrawSupported then begin
+    inherited;
+    Exit;
+  end;
+
+  row:= _tableView.rowForView( self );
+  col:= _tableView.columnForView( self );
+  done:= cocoaTLV.lclCallCustomDraw( row, col, self.bounds.size, dirtyRect );
+
+  if done then begin
+    // the Cocoa default drawing cannot be skipped in NSTableView,
+    // we can only hide the CellViews to get the same effect.
+    // in the Lazarus IDE, there is a ListView with OnCustomDrawItem
+    // in Perferences-Component Palette.
+    hideAllSubviews( self );
+  end else begin
+    updateNSTextFieldWithTFont( self.textField, cocoaTLV.lclGetCanvas.Font );
+    inherited drawRect(dirtyRect);
+  end;
+end;
+
+procedure TCocoaTableListItem.createTextField;
+var
+  fieldControl: NSTextField;
+begin
+  if Assigned(self.textField) then
+    Exit;
+
+  fieldControl:= NSTextField.alloc.initWithFrame(NSZeroRect);
+  fieldControl.setBordered( False );
+  fieldControl.setDrawsBackground( False );
+  fieldControl.setEditable( False );
+  fieldControl.setLineBreakMode( NSLineBreakByTruncatingTail );
+  self.setTextField( fieldControl );
+  self.addSubview( fieldControl );
+end;
+
+procedure TCocoaTableListItem.createImageView;
+var
+  imageControl: NSImageView;
+begin
+  if Assigned(self.imageView) then
+    Exit;
+
+  imageControl:= NSImageView.alloc.initWithFrame( NSZeroRect );
+  imageControl.setImageScaling( NSImageScaleProportionallyUpOrDown );
+  self.setImageView( imageControl );
+  self.addSubview( imageControl );
+end;
+
+procedure TCocoaTableListItem.createCheckBox;
+begin
+  if Assigned(_checkBox) then
+    Exit;
+
+  _checkBox:= NSButton.alloc.init;
+  _checkBox.setButtonType( NSSwitchButton );
+  _checkBox.setTitle( CocoaConst.NSSTR_EMPTY );
+  _checkBox.setTarget( _tableView );
+  _checkBox.setAction( ObjCSelector('checkboxAction:') );
+  self.addSubview( _checkBox );
+end;
+
+procedure TCocoaTableListItem.setColumn(column: NSTableColumn);
+begin
+  _tableView:= column.tableView;
+  _column:= column;
+end;
+
+procedure TCocoaTableListItem.loadView( row: Integer; col: Integer );
+var
+  tv: TCocoaTableListView;
+  lclcb: IListViewCallback;
+  lclImageIndex: Integer;
+  lvil: TListViewImageList;
+begin
+  tv:= TCocoaTableListView( _tableView );
+  lclcb:= tv.callback;
+
+  self.createTextField;
+
+  if col=0 then begin
+    if lclcb.GetImageListType(lvil) then
+      self.createImageView;
+  end else begin
+    lclcb.GetItemImageAt( row, col, lclImageIndex );
+    if lclImageIndex >= 0 then
+      self.createImageView;
+  end;
+
+  if (col=0) and tv.lclHasCheckBoxes then
+    self.createCheckBox;
+end;
+
+procedure TCocoaTableListItem.updateItemValue(row: NSInteger; col: NSInteger );
+var
+  tv: TCocoaTableListView;
+  lclcb: IListViewCallback;
+  checkedValue: Integer;
+  cocoaImage: NSImage;
+  lclImageIndex: Integer;
+  lclText: String;
+begin
+  tv:= TCocoaTableListView( _tableView );
+  lclcb:= tv.callback;
+
+  if Assigned(_checkBox) then begin
+    lclcb.GetItemCheckedAt( row, checkedValue );
+    _checkBox.setState( checkedValue );
+  end;
+
+  if Assigned(self.imageView) then begin
+    lclcb.GetItemImageAt( row, col, lclImageIndex );
+    if lclImageIndex >= 0 then begin
+      cocoaImage:= lclcb.GetImageFromIndex( lclImageIndex );
+      self.imageView.setImage( cocoaImage );
+    end;
+  end;
+
+  lclcb.GetItemTextAt( row, col, lclText );
+  self.textField.setStringValue( StrToNSString(lclText) );
+end;
+
+procedure TCocoaTableListItem.updateItemLayout(row: NSInteger; col: NSInteger );
+var
+  tv: TCocoaTableListView;
+  aFrame: NSRect;
+  rowHeight: CGFloat;
+begin
+  tv:= TCocoaTableListView( _tableView );
+
+  aFrame:= NSZeroRect;
+  rowHeight:= tv.tableView_heightOfRow( tv, row );
+
+  if Assigned(_checkBox) then begin
+    aFrame.size.width:= 18;
+    aFrame.size.height:= 18;
+    aFrame.origin.x:= 0;
+    aFrame.origin.y:= (rowHeight - aFrame.size.height ) / 2;
+    _checkBox.setFrame( aFrame );
+
+    aFrame.origin.x:= 4;
+  end;
+
+  if Assigned(self.imageView) then begin
+    aFrame.origin.x:= aFrame.origin.x + aFrame.size.width;
+    aFrame.origin.y:= (rowHeight - tv.iconSize.Height) / 2;
+    aFrame.size:= tv.iconSize;
+    self.imageView.setFrame( aFrame );
+
+    aFrame.origin.x:= aFrame.origin.x + 4;
+  end;
+
+  if Assigned(self.textField) then begin
+    aFrame.size.height:= self.textField.frame.size.height;
+    aFrame.origin.x:= aFrame.origin.x + aFrame.size.width;
+    aFrame.origin.y:= (rowHeight - 15) / 2;
+    aFrame.size.width:= _column.width - aFrame.origin.x;
+    if aFrame.size.width < 16 then
+      aFrame.size.width:= 16;
+    aFrame.size.height:= 15;
+    self.textField.setFrame( aFrame );
+  end;
+end;
+
+procedure TCocoaTableListItem.prepareForReuse;
+begin
+  Inherited;
+
+  if Assigned(self.imageView) then begin
+    self.imageView.removeFromSuperview;
+    self.imageView.release;
+    self.setImageView(nil);
+  end;
+
+  if Assigned(_checkBox) then begin
+    _checkBox.removeFromSuperview;
+    _checkBox.release;
+    _checkBox:= nil;
+  end;
+
+  self.removeFromSuperview;
 end;
 
 procedure TCocoaTableListItem.dealloc;
 begin
-  checkedSubView.release;
-  imageSubView.release;
-  textSubView.release;
+  self.textField.removeFromSuperview;
+  self.textField.release;
+
+  if Assigned(self.imageView) then begin
+    self.imageView.removeFromSuperview;
+    self.imageView.release;
+  end;
+
+  if Assigned(_checkBox) then begin
+    _checkBox.removeFromSuperview;
+    _checkBox.release;
+  end;
+
   inherited dealloc;
 end;
 
-procedure TCocoaTableListItem.setColumn(AColumn: NSTableColumn);
-begin
-  column := AColumn;
-  resizeSubviewsWithOldSize(GetNSSize(column.width, column.tableView.rowHeight));
-end;
-
-procedure TCocoaTableListItem.setImage(AImage: NSImage);
-begin
-  imageSubView.setImage(AImage);
-  {$ifdef BOOLFIX}
-  imageSubView.setHidden_(Ord(AImage = nil));
-  {$else}
-  imageSubView.setHidden(AImage = nil);
-  {$endif}
-  resizeSubviewsWithOldSize(GetNSSize(column.width, column.tableView.rowHeight));
-end;
-
-procedure TCocoaTableListItem.setCheckState(AState: NSInteger);
-begin
-  checkedSubView.setState(AState);
-  {$ifdef BOOLFIX}
-  checkedSubView.setHidden_(Ord(AState = -1));
-  {$else}
-  checkedSubView.setHidden(AState = -1);
-  {$endif}
-  resizeSubviewsWithOldSize(GetNSSize(column.width, column.tableView.rowHeight));
-end;
-
-procedure TCocoaTableListItem.setStringValue(AString: NSString);
-begin
-  if Assigned(textSubView) and Assigned(AString) then
-    textSubView.setStringValue(AString);
-end;
-
-procedure TCocoaTableListItem.setEditable(flag: Boolean);
-begin
-  textSubView.setEditable(flag);
-end;
-
-procedure TCocoaTableListItem.setFont(AFont: NSFont);
-begin
-  textSubView.setFont(AFont);
-  resizeSubviewsWithOldSize(GetNSSize(column.width, column.tableView.rowHeight));
-end;
-
-procedure TCocoaTableListItem.setTarget(ATarget: id);
-begin
-  checkedSubView.setTarget(ATarget);
-  textSubView.setTarget(ATarget);
-end;
-
-procedure TCocoaTableListItem.setCheckAction(aSelector: SEL);
-begin
-  checkedSubView.setAction(aSelector);
-end;
-
-procedure TCocoaTableListItem.setTextAction(aSelector: SEL);
-begin
-  textSubView.setAction(aSelector);
-end;
-
-procedure TCocoaTableListItem.resizeSubviewsWithOldSize(oldSize: NSSize);
-var
-  origin: NSPoint;
-  size: NSSize;
-  height: CGFloat;
-begin
-  origin := bounds.origin;
-  size := oldSize;
-  if not checkedSubView.isHidden then
-  begin
-    checkedSubView.setFrameOrigin(origin);
-    origin.x := origin.x + checkedSubView.frame.size.width;
-    size.width := size.width - checkedSubView.frame.size.width;
-  end;
-
-  if not imageSubView.isHidden then
-  begin
-    imageSubView.setFrameOrigin(origin);
-    origin.x := origin.x + imageSubView.frame.size.width;
-    size.width := size.width - imageSubView.frame.size.width;
-  end;
-
-  // Vertically center text
-  height := textSubView.font.boundingRectForFont.size.height;
-  origin.y := ((size.height - height + 0.5) / 2.0);
-  size.height := height;
-  textSubView.setFrameOrigin(origin);
-  textSubView.setFrameSize(size);
-end;
-
-procedure TCocoaTableListItem.setIdentifier(identifier_: NSString);
-begin
-  idStr := identifier_;
-end;
-
-function TCocoaTableListItem.identifier: NSString;
-begin
-  Result := idStr;
-end;
-
-function TCocoaTableListItem.textFrame: NSRect;
-begin
-  Result := textSubView.frame;
-end;
-
-procedure TCocoaTableListItem.lclSetEnabled(AEnabled: Boolean);
-begin
-  // If NSTextField editable is set False, text color won't change when disabled
-  if AEnabled then
-    textSubView.setTextColor(NSColor.controlTextColor)
-  else
-    textSubView.setTextColor(NSColor.disabledControlTextColor);
-  inherited lclSetEnabled(AEnabled);
-end;
-
-{ TViewCocoaTableListView }
-
-function TViewCocoaTableListView.tableView_viewForTableColumn_row(tableView: NSTableView;
+function TCocoaTableListView.tableView_viewForTableColumn_row(tableView: NSTableView;
   tableColumn: NSTableColumn; row: NSInteger): NSView;
 var
   col: NSInteger;
@@ -1419,118 +1341,114 @@ var
   chkst: Integer;
   txt: String;
 begin
-  frameRect.origin := GetNSPoint(0,0);
-  frameRect.size := GetNSSize(tableColumn.width, rowHeight);
+  Result:= nil;
+  if row >= numberOfRowsInTableView(self) then
+    Exit;
 
-  item := TCocoaTableListItem(makeViewWithIdentifier_owner(NSSTR('tblview'), self));
+  frameRect.origin:= GetNSPoint(0,0);
+  frameRect.size:= GetNSSize(tableColumn.width, rowHeight);
+
+  item:= TCocoaTableListItem(makeViewWithIdentifier_owner(NSSTR('tblview'), self));
   if item = nil then begin
-    item := TCocoaTableListItem.alloc.initWithFrame(frameRect);
-    //todo: should be system font :?
-    //item.setfont(TCocoaFont(ListView.Font.Handle).Font);
-    item.setTarget(self);
-    item.setCheckAction(ObjCSelector('checkboxAction:'));
-    item.setTextAction(ObjCSelector('textFieldAction:'));
+    item:= TCocoaTableListItem.alloc.initWithFrame(frameRect);
     item.setidentifier(NSSTR('tblview'));
   end;
 
-  item.setFrame(frameRect);
-  item.setColumn(tableColumn);
-  col := tableColumns.indexOfObject(tableColumn);
-  if (col = 0) and isFirstColumnCheckboxes then begin
-    callback.GetItemCheckedAt(row, col, chkst);
-    item.setCheckState(chkst)
-  end
-  else
-    item.setCheckState(-1);
+  col:= self.getIndexOfColumn( tableColumn );
+  item.setColumn( tableColumn );
+  item.loadView( row, col );
+  item.updateItemValue( row, col );
+  item.updateItemLayout( row, col );
 
-  item.setImage(lclGetItemImageAt(row, col));
-
-  txt := '';
-  if not callback.GetItemTextAt(row, col, txt) then txt := '';
-
-  item.setStringValue(NSStringUtf8(txt));
-  item.lclSetEnabled(isEnabled);
-  Result := item
+  Result:= item;
 end;
 
-procedure TViewCocoaTableListView.textFieldAction(sender: NSTextField);
+function TCocoaTableListView.tableView_rowViewForRow(
+  tableView: NSTableView; row: NSInteger): NSTableRowView;
 var
-  column, row: NSInteger;
+  rowView: TCocoaTableRowView Absolute Result;
 begin
-  if not Assigned(callback) then Exit;
-
-  column := columnForView(sender);
-  row := rowForView(sender);
-  callback.SetItemTextAt(row, column, NSStringToString(sender.stringValue));
-  reloadDataForRow_column(row, column);
+  Result:= TCocoaTableRowView.alloc.init;
+  rowView.tableView:= self;
+  rowView.row:= row;
 end;
 
-procedure TViewCocoaTableListView.checkboxAction(sender: NSButton);
+procedure TCocoaTableListView.lclInsertItem(const AIndex: Integer);
+begin
+  if NOT Assigned(self.callback) then
+    Exit;
+
+  if _processor.isInitializing(self) then
+    Exit;
+
+  self.callback.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
+  self.callback.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
+  self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
+  self.reloadData;
+  self.sizeToFit();
+end;
+
+procedure TCocoaTableListView.lclDeleteItem(const AIndex: Integer);
+begin
+  if NOT Assigned(self.callback) then
+    Exit;
+
+  self.callback.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1);
+  self.callback.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1 );
+  self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
+  self.reloadData;
+end;
+
+procedure ExchangeIndexSetItem( indexSet: NSMutableIndexSet;
+  const AIndex1: Integer; const AIndex2: Integer );
+var
+  hasIndex1: Boolean;
+  hasIndex2: Boolean;
+begin
+  hasIndex1:= indexSet.containsIndex(AIndex1);
+  hasIndex2:= indexSet.containsIndex(AIndex2);
+  if hasIndex1 = hasIndex2 then
+    Exit;
+
+  if hasIndex1 then begin
+    indexSet.removeIndex( AIndex1 );
+    indexSet.addIndex( AIndex2 );
+  end;
+  if hasIndex2 then begin
+    indexSet.removeIndex( AIndex2 );
+    indexSet.addIndex( AIndex1 );
+  end;
+end;
+
+procedure TCocoaTableListView.lclExchangeItem(const AIndex1: Integer;
+  const AIndex2: Integer);
+begin
+  if NOT Assigned(self.callback) then
+    Exit;
+
+  ExchangeIndexSetItem( self.callback.checkedIndexSet, AIndex1, AIndex2 );
+  ExchangeIndexSetItem( self.callback.selectionIndexSet, AIndex1, AIndex2 );
+  self.reloadData;
+end;
+
+procedure TCocoaTableListView.lclClearItem;
+begin
+  self.callback.checkedIndexSet.removeAllIndexes;
+  self.callback.selectionIndexSet.removeAllIndexes;
+  self.reloadData;
+end;
+
+procedure TCocoaTableListView.checkboxAction(sender: NSButton);
 var
   row: NSInteger;
 begin
-  if not Assigned(callback) then Exit;
+  if not Assigned(self.callback) then Exit;
 
-  row := rowForView(sender);
-  callback.SetItemCheckedAt(row, 0, sender.state);
-  reloadDataForRow_column(row, 0);
-end;
-
-function TViewCocoaTableListView.lclGetLabelRect(ARow, ACol: Integer;
-  const BoundsRect: TRect): TRect;
-var
-  lTableItemLV: TCocoaTableListItem;
-begin
-  Result := BoundsRect;
-  lTableItemLV := TCocoaTableListItem(viewAtColumn_row_makeIfNecessary(ACol, ARow, False));
-  Result.Left := Round(lTableItemLV.textFrame.origin.x - 1);
-  Result.Width := Round(lTableItemLV.textFrame.size.width);
-end;
-
-procedure TViewCocoaTableListView.lclInsDelRow(Arow: Integer; inserted: Boolean);
-var
-  rows: NSIndexSet;
-begin
-  rows := NSIndexSet.indexSetWithIndexesInRange(NSMakeRange(Arow,1));
-  if inserted then
-    insertRowsAtIndexes_withAnimation(rows, 0)
-  else
-    removeRowsAtIndexes_withAnimation(rows, 0);
-end;
-
-{ TCellCocoaTableListView1013 }
-
-procedure TCellCocoaTableListView1013.highlightSelectionInClipRect(clipRect: NSRect
-  );
-var
-  r   : NSInteger;
-  rows : NSRange;
-  cnt  : integer;
-  focused: Boolean;
-  hicolor: NSColor;
-begin
-  if not IsPaintDark then begin
-    inherited highlightSelectionInClipRect(clipRect);
-    Exit;
-  end;
-
-
-  focused := Assigned(window) and (window.firstResponder = Self);
-  if focused then
-    hicolor := NSColor.alternateSelectedControlColor
-  else
-    // the default color is NSColor.secondarySelectedControlColor;
-    hicolor := NSColor.darkGrayColor;
-
-  rows := rowsInRect(clipRect);
-  cnt := rows.length;
-  r := rows.location;
-  hicolor.setFill;
-  while cnt>0 do
-  begin
-    if isRowSelected(r) then NSRectFill(rectOfRow(r));
-    inc(r);
-    dec(cnt);
+  row := rowForView(sender.superview);
+  self.callback.SetItemCheckedAt(row, sender.state);
+  if sender.state = NSOnState then begin
+    self.selectOneItemByIndex(row, True);
+    self.window.makeFirstResponder( self );
   end;
 end;
 
@@ -1558,17 +1476,8 @@ begin
 end;
 
 procedure TCocoaWSListView_TableViewHandler.doReloadDataAfterDelete( AIndex: PtrInt);
-var
-  lclcb : TLCLListViewCallback;
 begin
-  lclcb:= getCallback;
-  if NOT Assigned(lclcb) then
-    Exit;
-
-  lclcb.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1);
-  lclcb.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1 );
-  _tableView.selectRowIndexesByProgram( lclcb.selectionIndexSet );
-  _tableView.lclInsDelRow(AIndex, false);
+  _tableView.lclDeleteItem( AIndex );
 end;
 
 procedure TCocoaWSListView_TableViewHandler.ColumnDelete(
@@ -1627,19 +1536,7 @@ end;
 procedure TCocoaWSListView_TableViewHandler.ColumnSetAlignment(
   const AIndex: Integer; const AColumn: TListColumn;
   const AAlignment: TAlignment);
-var
-  cocoaColumn: NSTableColumn;
-const
-  txtAlign : array[TAlignment] of NSTextAlignment = (
-    NSLeftTextAlignment, NSRightTextAlignment, NSCenterTextAlignment
-  );
 begin
-  cocoaColumn:= getColumnFromIndex( AIndex );
-  if NOT Assigned(cocoaColumn) then
-    Exit;
-  _tableView.lclSetColumnAlign(cocoaColumn, txtAlign[AAlignment]);
-  _tableView.setNeedsDisplayInRect(_tableView.rectOfColumn(AIndex));
-  _tableView.headerView.setNeedsDisplayInRect( _tableView.headerView.headerRectOfColumn(AIndex) );
 end;
 
 procedure TCocoaWSListView_TableViewHandler.ColumnSetAutoSize(
@@ -1769,12 +1666,37 @@ end;
 
 function TCocoaWSListView_TableViewHandler.ItemDisplayRect(const AIndex,
   ASubItem: Integer; ACode: TDisplayCode): TRect;
+var
+  item: TCocoaTableListItem;
+  frame: NSRect;
+  rect: TRect;
 begin
-  LCLGetItemRect(_tableView, AIndex, ASubItem, Result);
+  Result:= Bounds(0,0,0,0);
+  item:= _tableView.viewAtColumn_row_makeIfNecessary( ASubItem, AIndex, True );
+  if NOT Assigned(item) then
+    Exit;
+
+  frame:= item.frame;
   case ACode of
-    drLabel: Result:= _tableView.lclGetLabelRect(AIndex, ASubItem, Result);
-    drIcon:  Result:= _tableView.lclGetIconRect(AIndex, ASubItem, Result);
+    drLabel:
+      begin
+        frame:= item.textField.frame;
+        frame.origin.y:= frame.origin.y + 2;
+        NSToLCLRect( frame, item.frame.size.height, rect );
+        item.lclLocalToScreen( rect.left, rect.top );
+        _listView.lclScreenToLocal( rect.left, rect.top );
+        frame.origin.x:= rect.left;
+        frame.origin.y:= rect.top;
+      end;
+    drIcon:
+      begin
+        if Assigned(item.imageView) then begin
+          frame:= item.imageView.frame;
+        end;
+      end;
   end;
+
+  Result:= NSRectToRect( frame );
 end;
 
 function TCocoaWSListView_TableViewHandler.ItemGetPosition(
@@ -1802,21 +1724,8 @@ end;
 
 procedure TCocoaWSListView_TableViewHandler.ItemInsert(
   const AIndex: Integer; const AItem: TListItem);
-var
-  lclcb: TLCLListViewCallback;
 begin
-  lclcb:= getCallback;
-  if NOT Assigned(lclcb) then
-    Exit;
-
-  if TCocoaListView(lclcb.Owner).initializing then
-    Exit;
-
-  lclcb.checkedIndexSet.shiftIndexesStartingAtIndex_by(AIndex, 1);
-  lclcb.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
-  _tableView.lclInsDelRow(AIndex, true);
-  _tableView.selectRowIndexesByProgram( lclcb.selectionIndexSet );
-  _tableView.sizeToFit();
+  _tableView.lclInsertItem( AIndex );
 end;
 
 procedure TCocoaWSListView_TableViewHandler.ItemSetChecked(
@@ -1933,18 +1842,14 @@ begin
   if AList <> lvil then
     Exit;
 
-  _tableView.lclSetImagesInCell(Assigned(AValue));
-
   if NOT Assigned(AValue) then
     Exit;
 
-  spacing:= _tableView.intercellSpacing;
-  spacing.height:= AValue.Height / 3 + 2;
-  if spacing.height < 6 then
-    spacing.height:= 6
-  else if spacing.height > 12 then
-    spacing.height:= 12;
-  _tableView.setIntercellSpacing( spacing );
+  _tableView.iconSize.Width:= AValue.Width;
+  _tableView.iconSize.Height:= AValue.Height;
+  _tableView.CustomRowHeight:= AValue.Height + 8;
+
+  _tableView.reloadData;
 end;
 
 procedure TCocoaWSListView_TableViewHandler.SetItemsCount(
@@ -1963,7 +1868,7 @@ const
 begin
   case AProp of
     {lvpAutoArrange,}
-    lvpCheckboxes: _tableView.lclSetFirstColumCheckboxes(AIsSet);
+    lvpCheckboxes: _tableView.lclSetCheckboxes(AIsSet);
    // lvpColumnClick: lTableLV.setAllowsColumnSelection(AIsSet);
   {  lvpFlatScrollBars,
     lvpFullDrag,}
@@ -1971,7 +1876,7 @@ begin
     {lvpHideSelection,
     lvpHotTrack,}
     lvpMultiSelect: _tableView.setAllowsMultipleSelection(AIsSet);
-    {lvpOwnerDraw,}
+    lvpOwnerDraw: _tableView.isOwnerDraw:= AIsSet;
     lvpReadOnly: _tableView.readOnly := AIsSet;
   {  lvpRowSelect,}
     lvpShowColumnHeaders:
@@ -2017,6 +1922,46 @@ begin
       objcselector('none:')
     )
   );}
+end;
+
+{ TCocoaTableListViewProcessor }
+
+function TCocoaTableListViewProcessor.isInitializing( tv: NSTableView ): Boolean;
+var
+  cocoaTLV: TCocoaTableListView Absolute tv;
+begin
+  Result:= False;
+  if NOT Assigned(cocoaTLV.callback) then
+    Exit;
+
+  Result:= TCocoaListView( self.getCallback(tv).Owner ).initializing;
+end;
+
+function TCocoaTableListViewProcessor.getLCLControlCanvas(tv: NSTableView
+  ): TCanvas;
+begin
+  Result:= TCustomListView(tv.lclGetTarget).Canvas;
+end;
+
+procedure TCocoaTableListViewProcessor.onSelectionChanged(tv: NSTableView);
+var
+  NewSel: Integer;
+  rm : NSIndexSet;
+  ad : NSIndexSet;
+  selectionIndexSet: NSMutableIndexSet;
+
+  lclListView: TCustomListView;
+  cocoaTLV: TCocoaTableListView Absolute tv;
+  lclcb: TLCLListControlCallback;
+begin
+  lclcb:= self.getCallback( tv );
+  lclListView:= TCustomListView( lclcb.Target );
+
+  selectionIndexSet:= lclcb.selectionIndexSet;
+  CompareIndexSets(selectionIndexSet, cocoaTLV.selectedRowIndexes, rm, ad);
+
+  NewSel := cocoaTLV.selectedRow();
+  sendSelectionChangedMsgToLCL( lclListView, NewSel, ad, rm );
 end;
 
 end.
