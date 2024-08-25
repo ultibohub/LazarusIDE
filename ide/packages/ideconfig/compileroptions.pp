@@ -3007,6 +3007,7 @@ begin
   fTargetCPU := CompOpts.fTargetCPU;
   fTargetProc := CompOpts.fTargetProc;
   fTargetController := CompOpts.fTargetController; //Ultibo
+  FSubtarget := CompOpts.FSubtarget;
   fOptLevel := CompOpts.fOptLevel;
   fVarsInReg := CompOpts.fVarsInReg;
   fUncertainOpt := CompOpts.fUncertainOpt;

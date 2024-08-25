@@ -2,194 +2,264 @@ unit CocoaConfig;
 
 {$mode objfpc}{$H+}
 {$modeswitch objectivec1}
+{$include cocoadefines.inc}
 
 interface
 
 uses
+  Menus,
   CocoaAll, Cocoa_Extra, CocoaConst;
 
 type
+  TCocoaConfigMenuItem = record
+    defaultCheckImageName: NSString;
+    defaultRadioImageName: NSString;
+  end;
+
+  // Application interface provided to facilitate APP to operate App Menu.
+  // it's easy to set About, Preferences, and customized menus,
+  // only the LCL TMenuItem is needed to pass in.
+  // and we can control whether Cocoa is needed to automatically add
+  // Hide, Hide Others, Show All, and Quit menu items.
+  TCocoaConfigAppMenu = record
+    aboutItem: TMenuItem;
+    preferencesItem: TMenuItem;
+    customMenus: TMenuItem;
+    dontAutoCreateItems: Boolean;
+  end;
+
+  // Application interface provided to facilitate APP to operate Dock Menu.
+  // only the LCL TMenuItem is needed to pass in.
+  TCocoaConfigDockMenu = record
+    customMenus: TMenuItem;
+  end;
+
+  TCocoaConfigMenu = record
+    menuItem: TCocoaConfigMenuItem;
+    appMenu: TCocoaConfigAppMenu;
+    dockMenu: TCocoaConfigDockMenu;
+  end;
+
+type
+  TCocoaConfigGlobal = record
+    basePPI: Integer;
+    useIcon: Boolean;
+    useLocalizedFontName: Boolean;
+  end;
+
+type
+  TCocoaConfigSize = record
+    width: Double;
+    height: Double;
+  end;
+
+  TCocoaConfigTableRow = record
+    defaultHeight: Integer;
+    imageLineSpacing: Integer;
+  end;
+
+  TCocoaConfigTableColumn = record
+    controlSpacing: Integer;
+    textFieldMinWidth: Integer;
+  end;
+
+  TCocoaConfigTableColumnAutoFit = record
+    // for performance, when the column divider is double-clicked to automatically
+    // calculate the column width, the maximum number of rows calculated
+    maxCalcRows: Integer;
+    // min Column Width when the column divider is double-clicked
+    minWidth: Double;
+    // additional width for header
+    headerAdditionalWidth: Double;
+  end;
+
+  TCocoaConfigTable = record
+    // default NSTableViewStyle
+    tableViewStyle: NSTableViewStyle;
+    row: TCocoaConfigTableRow;
+    column: TCocoaConfigTableColumn;
+    columnAutoFit: TCocoaConfigTableColumnAutoFit;
+  end;
+
+  TCocoaConfigCollectionItem = record
+    minSize: TCocoaConfigSize;
+    controlSpacing: Double;
+    textFieldAlignment: NSTextAlignment;
+    checkBoxOccupiedWidth: Double;
+  end;
+
+  TCocoaConfigCollection = object
+    interitemSpacing: Double;
+    lineSpacing: Double;
+    item: TCocoaConfigCollectionItem;
+  end;
+
+  TCocoaConfigCollectionIconImageView = record
+    minSize: TCocoaConfigSize;
+    padding: Double;
+  end;
+
+  TCocoaConfigCollectionLargeIconTextField = record
+    defaultHeight: Double;
+  end;
+
+  TCocoaConfigCollectionSmallIconTextField = record
+    iconWidthFactor: Double;
+    baseWidth: Double;
+    minWidth: Double;
+  end;
+
+  TCocoaConfigCollectionIcon = object( TCocoaConfigCollection )
+    imageView: TCocoaConfigCollectionIconImageView;
+  end;
+
+  TCocoaConfigCollectionLargeIcon = object( TCocoaConfigCollectionIcon )
+    textField: TCocoaConfigCollectionLargeIconTextField;
+  end;
+
+  TCocoaConfigCollectionSmallIcon = object( TCocoaConfigCollectionIcon )
+    textField: TCocoaConfigCollectionSmallIconTextField;
+  end;
+
+  TCocoaConfigListView = record
+    vsReport: TCocoaConfigTable;
+    vsIcon: TCocoaConfigCollectionLargeIcon;
+    vsSmallIcon: TCocoaConfigCollectionSmallIcon;
+    vsList: TCocoaConfigCollection;
+  end;
+
+type
+  NSColorFunction = Function(): NSColor;
+  function getCocoaScrollerDefaultKnobColor: NSColor;
+
+type
+  TCocoaConfgiScrollerKnob = object
+    radius: Double;
+    color: NSColorFunction;
+    pos: Double;
+    shrunkSize: Double;
+  end;
+
+  TCocoaConfgiScrollerLegacyKnob = object( TCocoaConfgiScrollerKnob )
+    alpha: Double;
+    alphaBlack: Double;
+    fadeStep: Double;
+  end;
+
+  TCocoaConfgiScrollerOverlayKnob = object( TCocoaConfgiScrollerKnob )
+    minSize: Double;
+  end;
+
+  TCocoaConfigScrollerLegacy = record
+    knob: TCocoaConfgiScrollerLegacyKnob;
+  end;
+
+  TCocoaConfigScrollerOverlayBar = record
+    autoShowDelayTime: Double;
+    autoHideDelayTime: Double;
+    alpha: Double;
+    alphaFadeStep: Double;
+    alphaFadeTo: Double;
+    expandTimeInterval: Double;
+    expandSize: Double;
+  end;
+
+  TCocoaConfigScrollerOverlay = record
+    bar: TCocoaConfigScrollerOverlayBar;
+    knob: TCocoaConfgiScrollerOverlayKnob;
+  end;
+
+  TCocoaConfigScroller = record
+    preferredStyle: NSScrollerStyle;
+    fadeTimeInterval: Double;
+    legacy: TCocoaConfigScrollerLegacy;
+    overlay: TCocoaConfigScrollerOverlay;
+  end;
+
+type
+  TCocoaConfigToggleBox = record
+    bezelStyle: NSBezelStyle;
+    buttonType: NSButtonType;
+  end;
+
+type
+  TCocoaConfigNotification = record
+    alwaysPresent: Boolean;
+  end;
+
+type
+  
+  { TCocoaConfigFocusRing }
+
   // on macOS, the FocusRing takes up extra space, which may cause strange
   // display in some cases. it may block other controls, or be partially cut off.
   // for example, in the Lazarus IDE - About dialog, the FocusRing of the
   // Tab of TPageControl is partially cut off.
   // by providing a configurable infrastructure, FocusRing can be controlled
   // for different control types.
-  {$scopedEnums on}
-  TCocoaFocusRingStrategy = (
-    default,   // by macOS Default
-    none,      // no FoucsRing
-    required,  // have FocusRing
-    border     // by LCL Control Border
-  );
+  TCocoaConfigFocusRing = class
+    {$scopedEnums on}
+    type Strategy = (
+      default,   // by macOS Default
+      none,      // no FoucsRing
+      required,  // have FocusRing
+      border     // by LCL Control Border
+    );
+  private
+    _strategies: NSMutableDictionary;
+  public
+    constructor Create;
+    destructor Destroy; override;
 
-  // set the FocusRing strategy of the control according to ClassName
-  // (eg. 'TCocoaTabControl')
-  // APP can change the default setting of Cocoa WidgetSet
-  // by calling setCocoaControlFocusRingStrategy() too.
-  procedure setCocoaControlFocusRingStrategry( frs: TCocoaFocusRingStrategy; AClassName: NSString );
+    // set the FocusRing strategy of the control according to ClassName
+    // (eg. 'TCocoaTabControl')
+    // APP can change the default setting of Cocoa WidgetSet
+    // by calling setStrategy() too.
+    procedure setStrategy( frs: Strategy; AClassName: NSString );
 
-  // getCocoaControlFocusRingStrategy() is mainly used internally by Cocoa WidgetSet
-  function getCocoaControlFocusRingStrategry( AClassName: NSString ): TCocoaFocusRingStrategy;
+    // getStrategy() is mainly used internally by Cocoa WidgetSet
+    function getStrategy( AClassName: NSString ): Strategy;
+  end;
 
-type
-  NSColorFunction = Function(): NSColor;
-  function getCocoaScrollerDefaultKnobColor: NSColor;
+// config data is stored in CocoaConfig.inc
+{$include cocoaconfig.inc}
 
 var
-  // the style of the TCocoaScrollBar managed by TCocoaManualScrollView,
-  // the default value is System Preferred.
-  // note: TCocoaScrollBar not managed by TCocoaManualScrollView is always
-  //       Legacy Style.
-  CocoaScrollerPreferredStyle : NSScrollerStyle = -1;
-
-  // Scroller Knob Fade in/out time interval, in Seconds
-  CocoaScrollerKnobFadeTimeInterval : Double = 0.02;
-
-  // Scroller Knob Radius, in Dots
-  CocoaScrollerKnobRadius : Double = 4;
-
-
-  // Legacy Style Scroller Knob Color
-  CocoaScrollerOverlayStyleKnobColor : NSColorFunction = @getCocoaScrollerDefaultKnobColor;
-
-  // Legacy Style Scroller Knob Alpha in Normal
-  CocoaScrollerLegacyStyleAlpha : Double = 0.25;
-
-  // Legacy Style Scroller Knob Alpha when mouse enters
-  CocoaScrollerLegacyStyleAlphaBlack : Double = 0.50;
-
-  // Legacy Style Scroller Knob Alpha Step when fading in/out
-  CocoaScrollerLegacyStyleFadeStep : Double = 0.05;
-
-  // Legacy Style Scroller Knob Position, in Dots
-  CocoaScrollerLegacyStyleKnobPos : Double = 3;
-
-  // Legacy Style Scroller Knob Shrunk Size, in Dots
-  CocoaScrollerLegacyStyleKnobShrunkSize : Double = 5;
-
-
-  // Overly Style Scroller Knob Color
-  CocoaScrollerLegacyStyleKnobColor : NSColorFunction = @getCocoaScrollerDefaultKnobColor;
-
-  // Overly Style Scroller Auto Show Delay Time, in Seconds
-  // the scrollbar is not shown because the value is updated,
-  // but because it is triggered by other factors, such as
-  // double-finger tapping the touchpad
-  CocoaScrollerOverlayStyleAutoShowDelayTime : Double = 0.2;
-
-  // Overly Style Scroller Auto Hide Delay Time, in Seconds
-  CocoaScrollerOverlayStyleAutoHideDelayTime : Double = 0.9;
-
-  // Overlay Style Scroller Alpha in Normal
-  CocoaScrollerOverlayStyleAlpha : Double = 0.5;
-
-  // Overlay Style Scroller Alpha Step when fading out
-  CocoaScrollerOverlayStyleFadeStep : Double = -0.1;
-
-  // Overlay Style Scroller Alpha when fade out ends
-  CocoaScrollerOverlayStyleFadeTo : Double = 0;
-
-  // Overlay Style Scroller expands time interval, in Seconds
-  CocoaScrollerOverlayStyleExpandTimeInterval : Double = 0.03;
-
-  // Overlay Style Scroller expands when the mouse enters, in Dots
-  CocoaScrollerOverlayStyleExpandSize : Double = 4;
-
-  // Overlay Style Scroller Knob Position, in Dots
-  CocoaScrollerOverlayStyleKnobPos : Double = 5;
-
-  // Overlay Style Scroller Knob Shrunk Size, in Dots
-  CocoaScrollerOverlayStyleKnobShrunkSize : Double = 6;
-
-  // in extreme cases, the normally calculated Knob size of Overlay Scroller
-  // may be too small, keep the min size.
-  // min height for the Knob of VerticalScroller
-  // min width for the Knob of HorizontalScroller
-  CocoaScrollerOverlayStyleKnobMinSize : Double = 25;
-
-
-  // by default on macOS, Notification is only Presented when the APP is
-  // in the background.
-  // when CocoaAlwaysPresentNotification is set to True, Notification is
-  // always Presented.
-  CocoaAlwaysPresentNotification : Boolean = True;
-
-
-  // default NSTableViewStyle
-  CocoaTableViewStyle : NSTableViewStyle = NSTableViewStyleAutomatic;
-
-  // for performance, when the column divider is double-clicked to automatically
-  // calculate the column width, the maximum number of rows calculated
-  CocoaTableColumnAutoFitWidthCalcRows : Integer = 100;
-
-  // min Column Width when the column divider is double-clicked
-  CocoaTableColumnAutoFitWidthMin: Double = 20;
-
-  // for compatiblity with LCL 1.8 release. The macOS base is 72ppi
-  CocoaBasePPI : Integer = 96;
-
-  // if set to true, then WS would not assign icons via TCocoaWSForm SetIcon
-  // The icon would have to be changed manually. By default LCL behaviour is used
-  CocoaIconUse: Boolean = false;
-  CocoaToggleBezel : NSBezelStyle = NSRoundedBezelStyle;
-  CocoaToggleType  : NSButtonType = NSPushOnPushOffButton;
-
-  CocoaHideFocusNoBorder : Boolean = true;
-
-  // some localized named might be too long to be returned properly by APIs
-  CocoaUseLocalizedFontName : Boolean = false;
-
-  // default Image Name for MenuItem
-  CocoaDefaultCheckMenuImageName : NSString;
-  CocoaDefaultRadioMenuImageName : NSString;
-
-  {$ifdef COCOALOOPHIJACK}
-  // The flag is set to true once hi-jacked loop is finished (at the end of app)
-  // The flag is checked in Menus to avoid "double" Cmd+Q menu
-  LoopHiJackEnded : Boolean = false;
-  {$endif}
+  CocoaConfigFocusRing: TCocoaConfigFocusRing;
 
 implementation
 
-var
-  FocusRingStrategySetting: NSMutableDictionary;
+constructor TCocoaConfigFocusRing.Create;
+begin
+  _strategies:= NSMutableDictionary.alloc.initWithCapacity( 16 );
+  // FocusRing config data is stored in CocoaConfigFocusRing.inc
+  {$include cocoaconfigfocusring.inc}
+end;
 
-procedure setCocoaControlFocusRingStrategry( frs: TCocoaFocusRingStrategy; AClassName: NSString );
+destructor TCocoaConfigFocusRing.Destroy;
+begin
+  inherited Destroy;
+  _strategies.release;
+end;
+
+procedure TCocoaConfigFocusRing.setStrategy(
+  frs: Strategy; AClassName: NSString);
 var
   valueObject: NSNumber;
 begin
   valueObject:= NSNumber.numberWithInt( Ord(frs) );
-  FocusRingStrategySetting.setValue_forKey( valueObject , AClassName );
+  _strategies.setValue_forKey( valueObject , AClassName );
 end;
 
-function getCocoaControlFocusRingStrategry( AClassName: NSString ): TCocoaFocusRingStrategy;
+function TCocoaConfigFocusRing.getStrategy(
+  AClassName: NSString): Strategy;
 var
   valueObject: NSNumber;
 begin
-  Result:= TCocoaFocusRingStrategy.default;
-  valueObject:= NSNumber( FocusRingStrategySetting.valueForKey(AClassName) );
+  Result:= TCocoaConfigFocusRing.Strategy.default;
+  valueObject:= NSNumber( _strategies.valueForKey(AClassName) );
   if Assigned(valueObject) then
-    Result:= TCocoaFocusRingStrategy(valueObject.intValue);
-  if Result = TCocoaFocusRingStrategy.required then
-    Writeln( 'required' );
-end;
-
-// no need to set TCocoaFocusRingStrategy.default control
-// the controls not in FocusRingStrategySetting are TCocoaFocusRingStrategy.default
-procedure initDefaultFoucsRingSetting;
-begin
-  FocusRingStrategySetting:= NSMutableDictionary.alloc.initWithCapacity( 16 );
-
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaTabControl') );
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaButton') );
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaTextField') );
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaComboBox') );
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaReadOnlyComboBox') );
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaTableListView') );
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.none, NSSTR('TCocoaCollectionView') );
-
-  setCocoaControlFocusRingStrategry( TCocoaFocusRingStrategy.border, NSSTR('TCocoaTextView') );
+    Result:= TCocoaConfigFocusRing.Strategy(valueObject.intValue);
 end;
 
 function getCocoaScrollerDefaultKnobColor: NSColor;
@@ -198,8 +268,9 @@ begin
 end;
 
 initialization
-  CocoaDefaultCheckMenuImageName:= NSSTR('NSMenuCheckmark');
-  CocoaDefaultRadioMenuImageName:= NSSTR('NSDatePickerCalendarHome');
-  initDefaultFoucsRingSetting;
+  CocoaConfigMenu.menuItem.defaultCheckImageName:= NSSTR('NSMenuCheckmark');
+  CocoaConfigMenu.menuItem.defaultRadioImageName:= NSSTR('NSDatePickerCalendarHome');
+
+  CocoaConfigFocusRing:= TCocoaConfigFocusRing.Create;
 end.
 

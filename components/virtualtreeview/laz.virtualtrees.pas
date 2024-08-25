@@ -30850,11 +30850,12 @@ begin
                 // Adjust height of temporary node bitmap.
                 with NodeBitmap do
                 begin
-                  if Height <> PaintInfo.Node.NodeHeight then
+                  if Height < PaintInfo.Node.NodeHeight then
                   begin
                     // Avoid that the VCL copies the bitmap while changing its height.
                     {$ifdef LCLCocoa}
-                    Height := Round(PaintInfo.Node.NodeHeight * sc);
+                    if Height > 0 then SetSize(1,1); // can't go to 0, must keep canvas
+                    SetSize(Round(PaintWidth*sc), Round(PaintInfo.Node.NodeHeight * sc));
                     cg := TCocoaBitmapContext(NodeBitmap.Canvas.Handle).CGContext;
                     if cglast <> cg then
                     begin
@@ -30862,7 +30863,8 @@ begin
                       cglast := cg;
                     end;
                     {$else}
-                    Height := PaintInfo.Node.NodeHeight;
+                    if Height > 0 then SetSize(1,1); // can't go to 0, must keep canvas
+                    SetSize(PaintWidth, PaintInfo.Node.NodeHeight);
                     {$endif}
                     {$ifdef UseSetCanvasOrigin}
                     SetCanvasOrigin(Canvas, Window.Left, 0);
@@ -31195,12 +31197,12 @@ begin
                       Window.Left,
                       Round(YCorrect * sc),
                       NodeBitmap.Width,
-                      NodeBitmap.Height - Round(YCorrect * sc),
+                      Round(PaintInfo.Node.NodeHeight * sc) - Round(YCorrect * sc),
                       SRCCOPY
                     );
                     {$else}
                     BitBlt(TargetCanvas.Handle, Left,
-                     Top {$ifdef ManualClipNeeded} + YCorrect{$endif}, Width, Height, Canvas.Handle, Window.Left,
+                     Top {$ifdef ManualClipNeeded} + YCorrect{$endif}, Width, PaintInfo.Node.NodeHeight, Canvas.Handle, Window.Left,
                      {$ifdef ManualClipNeeded}YCorrect{$else}0{$endif}, SRCCOPY);
                     {$endif}
                   end;

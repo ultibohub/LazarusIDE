@@ -12,7 +12,12 @@ msgstr ""
 "Language: sk\n"
 "X-Generator: Poedit 2.2.3\n"
 
+#: idedebuggerstringconstants.arrnavautohide
+msgid "Hide automatically"
+msgstr ""
+
 #: idedebuggerstringconstants.arrnavenforcebounds
+msgctxt "idedebuggerstringconstants.arrnavenforcebounds"
 msgid "Enforce bounds"
 msgstr ""
 
@@ -47,6 +52,19 @@ msgstr ""
 
 #: idedebuggerstringconstants.dbgdonotshowthismessageagain
 msgid "Do not ask again"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarraynavautohide
+msgid "Auto-hide"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarraynavenforcebounds
+msgctxt "idedebuggerstringconstants.dispformatarraynavenforcebounds"
+msgid "Enforce bounds"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarraynavpagesize
+msgid "Page-size"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatbasebin
@@ -115,6 +133,10 @@ msgctxt "idedebuggerstringconstants.dispformatcharord"
 msgid "Ordinal"
 msgstr ""
 
+#: idedebuggerstringconstants.dispformatdlgarraynav
+msgid "Array Navigation"
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatdlgbtnadrformat
 msgid "Address"
 msgstr ""
@@ -152,10 +174,6 @@ msgctxt "idedebuggerstringconstants.dispformatdlgbtnfloat"
 msgid "Float"
 msgstr ""
 
-#: idedebuggerstringconstants.dispformatdlgbtnindent
-msgid "Multiline"
-msgstr ""
-
 #: idedebuggerstringconstants.dispformatdlgbtnnum2visible
 msgid "Show value in a second format"
 msgstr ""
@@ -166,6 +184,10 @@ msgstr ""
 
 #: idedebuggerstringconstants.dispformatdlgbtnnumber2
 msgid "Number (2nd)"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatdlgbtnoptions
+msgid "Options"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatdlgbtnord
@@ -204,6 +226,11 @@ msgstr ""
 
 #: idedebuggerstringconstants.dispformatdlgcaptiontyped
 msgid "(Typed)"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatdlgindent
+msgctxt "idedebuggerstringconstants.dispformatdlgindent"
+msgid "Multiline"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatenumname

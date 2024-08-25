@@ -196,7 +196,7 @@ const
   FPCOperatingSystemAlternative2Names: array[1..2] of shortstring =(
       'bsd', 'linux' // see GetDefaultSrcOS2ForTargetOS
     );
-  FPCProcessorNames: array[1..16] of shortstring =(
+  FPCProcessorNames: array[1..18] of shortstring =(
       'aarch64',
       'arm',
       'avr',
@@ -211,6 +211,8 @@ const
       'powerpc64',
       'sparc',
       'x86_64',
+      'riscv32',
+      'riscv64',
       'xtensa',
       'wasm32'
     );
@@ -3879,6 +3881,10 @@ begin
     Result:=Result+'ia64'
   else if SysUtils.CompareText(TargetCPU,'aarch64')=0 then
     Result:=Result+'a64' //Ultibo //Note: a64 not aarch64
+  else if SysUtils.CompareText(TargetCPU,'riscv32')=0 then
+    Result:=Result+'riscv32'
+  else if SysUtils.CompareText(TargetCPU,'riscv64')=0 then
+    Result:=Result+'riscv64'
   else if SysUtils.CompareText(TargetCPU,'loongarch64')=0 then
     Result:=Result+'loongarch64'
   else if SysUtils.CompareText(TargetCPU,'xtensa')=0 then
@@ -4030,6 +4036,16 @@ procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
     aList.Add('LOONGARCH64');
   end;
 
+  procedure Riscv32;
+  begin
+    aList.Add('RISCV32');
+  end;
+
+  procedure Riscv64;
+  begin
+    aList.Add('RISCV64');
+  end;
+
 begin
   case TargetCPU of
     'arm'            : Arm;
@@ -4044,6 +4060,8 @@ begin
     'mipsel','mips'  : Mips;
     'jvm'            : ;
     'aarch64'        : Aarch64; //Ultibo
+    'riscv32'        : Riscv32;
+    'riscv64'        : Riscv64;
     'loongarch64'    : LoongArch64;
     'xtensa'         : Xtensa;
     'wasm32'         : ;

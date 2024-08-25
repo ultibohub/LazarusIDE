@@ -289,6 +289,8 @@ begin
   FStateFlags := [];
   nbInspect.Visible := False;
 
+  FWatchTreeMgr.DisplayFormatResolver := FWatchPrinter.DisplayFormatResolver;
+
   WatchesNotification.OnAdd       := @WatchAdd;
   WatchesNotification.OnUpdate    := @WatchUpdate;
   WatchesNotification.OnRemove    := @WatchRemove;
@@ -300,6 +302,7 @@ begin
   ToolBar1.Images := IDEImages.Images_16;
   ToolBar2.Images := IDEImages.Images_16;
   mnuPopup.Images := IDEImages.Images_16;
+  tvWatches.LazImages := IDEImages.Images_16;
 
   FPowerImgIdx := IDEImages.LoadImage('debugger_power');
   FPowerImgIdxGrey := IDEImages.LoadImage('debugger_power_grey');

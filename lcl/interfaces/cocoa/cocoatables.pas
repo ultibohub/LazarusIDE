@@ -249,9 +249,6 @@ function LCLCoordToRow(tbl: NSTableView; X,Y: Integer): Integer;
 function LCLGetItemRect(tbl: NSTableView; row, col: Integer; var r: TRect): Boolean;
 function LCLGetTopRow(tbl: NSTableView): Integer;
 
-const
-  DefaultRowHeight = 16; // per "rowHeight" property docs
-
 implementation
 
 type
@@ -332,18 +329,21 @@ begin
 end;
 
 
-procedure updateNSTextFieldWithTFont( cocoaField: NSTextField; lclFont: TFont );
+function updateNSTextFieldWithTFont( cocoaField: NSTextField; lclFont: TFont ):
+  Boolean;
 var
   saveFontColor: TColor;
   cocoaFont: NSFont;
   cocoaColor: NSColor;
 begin
+  Result:= False;
   saveFontColor:= lclFont.Color;
 
   lclFont.Color:= clDefault;
   if NOT lclFont.isDefault then begin
     cocoaFont:= TCocoaFont(lclFont.Reference.Handle).Font;
     cocoaField.setFont( cocoaFont );
+    Result:= True;
   end;
 
   lclFont.Color:= saveFontColor;
@@ -351,7 +351,6 @@ begin
     cocoaColor:= ColorToNSColor(ColorToRGB(lclFont.Color));
     cocoaField.setTextColor( cocoaColor );
   end;
-
 end;
 
 procedure drawNSViewBackground( view: NSView; lclBrush: TBrush );
@@ -361,7 +360,7 @@ var
   width: Integer;
   height: Integer;
 begin
-  if lclBrush.Color = clWindow then
+  if (lclBrush.Color=clWindow) or (lclBrush.Color=clDefault) then
     Exit;
 
   width:= Round( view.bounds.size.width );
@@ -381,6 +380,11 @@ procedure TCocoaTableRowView.drawRect(dirtyRect: NSRect);
 var
   done: Boolean;
 begin
+  if NOT self.tableView.isOwnerDraw then begin
+    inherited drawRect( dirtyRect );
+    Exit;
+  end;
+
   done:= self.tableView.lclCallDrawItem( row , self.bounds.size, dirtyRect );
 
   if done then begin
@@ -450,12 +454,17 @@ begin
 end;
 
 procedure TCocoaTableListView.addSubview(aView: NSView);
+var
+  textField: TCocoaTextField Absolute aView;
 begin
+  inherited;
+  if NOT aView.isKindOfClass(TCocoaTextField) then
+    Exit;
   if NOT Assigned(self.callback) then
     Exit;
-  if self.callback.onAddSubview(aView) then
+  if NOT (self.callback.Owner.isKindOfClass(TCocoaListView)) then
     Exit;
-  inherited addSubview(aView);
+  TCocoaListView(self.callback.Owner).setCaptionEditor( textField );
 end;
 
 function TCocoaTableListView.lclGetCanvas: TCanvas;
@@ -676,7 +685,7 @@ function TCocoaTableListView.initWithFrame(frameRect: NSRect): id;
 begin
   Result:=inherited initWithFrame(frameRect);
   if NSAppkitVersionNumber >= NSAppKitVersionNumber11_0 then
-    setStyle( CocoaConfig.CocoaTableViewStyle );
+    setStyle( CocoaConfigListView.vsReport.tableViewStyle );
 end;
 
 procedure TCocoaTableListView.mouseDown(event: NSEvent);
@@ -777,17 +786,18 @@ end;
 function TCocoaTableListView.tableView_heightOfRow(tableView: NSTableView;
   row: NSInteger): CGFloat;
 var
-  h : integer;
+  h: Integer;
 begin
-  h := CustomRowHeight;
-  if h = 0 then h := DefaultRowHeight;
+  h:= self.CustomRowHeight;
+  if h = 0 then
+    h:= CocoaConfigListView.vsReport.row.defaultHeight;
 
-  if isDynamicRowHeight and Assigned(self.callback) then
-  begin
-    self.callback.GetRowHeight(Integer(row), h);
+  if isDynamicRowHeight and Assigned(self.callback) then begin
+    self.callback.GetRowHeight( row, h );
     if h<=0 then h:=1; // must be positive (non-zero)
   end;
-  Result := h;
+
+  Result:= h;
 end;
 
 function TCocoaTableListView.tableView_sizeToFitWidthOfColumn(
@@ -802,10 +812,11 @@ var
   tableColumn: NSTableColumn;
   currentWidth: CGFloat;
 begin
-  Result:= CocoaConfig.CocoaTableColumnAutoFitWidthMin;
+  Result:= CocoaConfigListView.vsReport.columnAutoFit.minWidth;
   tableColumn:= NSTableColumn( self.tableColumns.objectAtIndex(column) );
   tableColumn.sizeToFit;
-  currentWidth:= tableColumn.width + 4;
+  currentWidth:= tableColumn.width +
+                 CocoaConfigListView.vsReport.columnAutoFit.headerAdditionalWidth;
   if currentWidth > Result then
     Result:= currentWidth;
 
@@ -813,18 +824,18 @@ begin
   if totalCount = 0 then
     Exit;
 
-  if totalCount <= CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows then begin
+  if totalCount <= CocoaConfigListView.vsReport.columnAutoFit.maxCalcRows then begin
     startIndex:= 0;
     endIndex:= totalCount - 1;
   end else begin
     startIndex:= self.rowsInRect(self.visibleRect).location;
-    endIndex:= startIndex + CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows div 2;
+    endIndex:= startIndex + CocoaConfigListView.vsReport.columnAutoFit.maxCalcRows div 2;
     if endIndex > totalCount - 1 then
       endIndex:= totalCount - 1;
-    startIndex:= endIndex - CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows + 1;
+    startIndex:= endIndex - CocoaConfigListView.vsReport.columnAutoFit.maxCalcRows + 1;
     if startIndex < 0 then
       startIndex:= 0;
-    endIndex:= startIndex + CocoaConfig.CocoaTableColumnAutoFitWidthCalcRows - 1;
+    endIndex:= startIndex + CocoaConfigListView.vsReport.columnAutoFit.maxCalcRows - 1;
   end;
 
   for row:=startIndex to endIndex do begin
@@ -1110,9 +1121,11 @@ var
 begin
   width:= self.textField.fittingSize.width;
   if Assigned(_checkBox) then
-    width:= width + _checkBox.frame.size.width + 4;
+    width:= width + _checkBox.frame.size.width +
+            CocoaConfigListView.vsReport.column.controlSpacing;
   if Assigned(self.imageView) then
-    width:= width + self.imageView.frame.size.width + 4;
+    width:= width + self.imageView.frame.size.width +
+            CocoaConfigListView.vsReport.column.controlSpacing;
   Result.width:= width;
   Result.height:= self.frame.size.height;
 end;
@@ -1145,7 +1158,8 @@ begin
     // in Perferences-Component Palette.
     hideAllSubviews( self );
   end else begin
-    updateNSTextFieldWithTFont( self.textField, cocoaTLV.lclGetCanvas.Font );
+    if updateNSTextFieldWithTFont(self.textField, cocoaTLV.lclGetCanvas.Font) then
+      updateItemLayout( row, col );
     inherited drawRect(dirtyRect);
   end;
 end;
@@ -1264,32 +1278,31 @@ begin
   rowHeight:= tv.tableView_heightOfRow( tv, row );
 
   if Assigned(_checkBox) then begin
-    aFrame.size.width:= 18;
-    aFrame.size.height:= 18;
-    aFrame.origin.x:= 0;
-    aFrame.origin.y:= (rowHeight - aFrame.size.height ) / 2;
-    _checkBox.setFrame( aFrame );
+    _checkBox.sizeToFit;
+    aFrame.size:= _checkBox.frame.size;
+    aFrame.origin.y:= round( (rowHeight - aFrame.size.height ) / 2 );
+    _checkBox.setFrameOrigin( aFrame.origin );
 
-    aFrame.origin.x:= 4;
+    aFrame.origin.x:= CocoaConfigListView.vsReport.column.controlSpacing;
   end;
 
   if Assigned(self.imageView) then begin
     aFrame.origin.x:= aFrame.origin.x + aFrame.size.width;
-    aFrame.origin.y:= (rowHeight - tv.iconSize.Height) / 2;
+    aFrame.origin.y:= round( (rowHeight - tv.iconSize.Height) / 2 );
     aFrame.size:= tv.iconSize;
     self.imageView.setFrame( aFrame );
 
-    aFrame.origin.x:= aFrame.origin.x + 4;
+    aFrame.origin.x:= aFrame.origin.x + CocoaConfigListView.vsReport.column.controlSpacing;
   end;
 
   if Assigned(self.textField) then begin
-    aFrame.size.height:= self.textField.frame.size.height;
+    self.textField.sizeToFit;
     aFrame.origin.x:= aFrame.origin.x + aFrame.size.width;
-    aFrame.origin.y:= (rowHeight - 15) / 2;
+    aFrame.origin.y:= round( (rowHeight - self.textField.frame.size.height) / 2 );
     aFrame.size.width:= _column.width - aFrame.origin.x;
-    if aFrame.size.width < 16 then
-      aFrame.size.width:= 16;
-    aFrame.size.height:= 15;
+    aFrame.size.height:= self.textField.frame.size.height;
+    if aFrame.size.width < CocoaConfigListView.vsReport.column.textFieldMinWidth then
+      aFrame.size.width:= CocoaConfigListView.vsReport.column.textFieldMinWidth;
     self.textField.setFrame( aFrame );
   end;
 end;
@@ -1669,7 +1682,6 @@ function TCocoaWSListView_TableViewHandler.ItemDisplayRect(const AIndex,
 var
   item: TCocoaTableListItem;
   frame: NSRect;
-  rect: TRect;
 begin
   Result:= Bounds(0,0,0,0);
   item:= _tableView.viewAtColumn_row_makeIfNecessary( ASubItem, AIndex, True );
@@ -1680,13 +1692,12 @@ begin
   case ACode of
     drLabel:
       begin
+        _listView.setCaptionFont( item.textField.font );
+        _listView.setCaptionAlignment( NSTextAlignmentLeft );
+        // to do: completely restore TFont
+        _listView.getLCLControlCanvas.Font.Height:= Round(item.textField.font.pointSize);
         frame:= item.textField.frame;
-        frame.origin.y:= frame.origin.y + 2;
-        NSToLCLRect( frame, item.frame.size.height, rect );
-        item.lclLocalToScreen( rect.left, rect.top );
-        _listView.lclScreenToLocal( rect.left, rect.top );
-        frame.origin.x:= rect.left;
-        frame.origin.y:= rect.top;
+        frame:= item.convertRect_toView( frame, _tableView );
       end;
     drIcon:
       begin
@@ -1847,7 +1858,8 @@ begin
 
   _tableView.iconSize.Width:= AValue.Width;
   _tableView.iconSize.Height:= AValue.Height;
-  _tableView.CustomRowHeight:= AValue.Height + 8;
+  _tableView.CustomRowHeight:= AValue.Height +
+     CocoaConfigListView.vsReport.row.imageLineSpacing;
 
   _tableView.reloadData;
 end;
