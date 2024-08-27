@@ -567,6 +567,21 @@ begin
     +'{  Some simple example programs are available under Tools, Example Projects.   }'+LineEnding
     +LineEnding
     +'uses'+LineEnding
+    +'  {$IFDEF RPI}'+LineEnding
+    +'  RaspberryPi,'+LineEnding
+    +'  {$ENDIF}'+LineEnding
+    +'  {$IFDEF RPI2}'+LineEnding
+    +'  RaspberryPi2,'+LineEnding
+    +'  {$ENDIF}'+LineEnding
+    +'  {$IFDEF RPI3}'+LineEnding
+    +'  RaspberryPi3,'+LineEnding
+    +'  {$ENDIF}'+LineEnding
+    +'  {$IFDEF RPI4}'+LineEnding
+    +'  RaspberryPi4,'+LineEnding
+    +'  {$ENDIF}'+LineEnding
+    +'  {$IFDEF QEMUVPB}'+LineEnding
+    +'  QEMUVersatilePB,'+LineEnding
+    +'  {$ENDIF}'+LineEnding
     +'  GlobalConfig,'+LineEnding
     +'  GlobalConst,'+LineEnding
     +'  GlobalTypes,'+LineEnding
