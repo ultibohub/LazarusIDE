@@ -73,6 +73,7 @@ type
   private
     _processor: TCocoaTableViewProcessor;
     _checkBoxes: Boolean;
+    _checkBoxAllowsMixed: Boolean;
   public
     iconSize: NSSize;
     callback: TLCLListControlCallback;
@@ -90,9 +91,12 @@ type
     procedure addSubview(aView: NSView); override;
     procedure dealloc; override;
 
+    function lclGetPorcessor: TCocoaTableViewProcessor; message 'lclGetPorcessor';
     procedure lclSetProcessor( processor: TCocoaTableViewProcessor ); message 'lclSetProcessor:';
-    procedure lclSetCheckBoxes( checkBoxes: Boolean); message 'lclSetCheckBoxes:';
+    procedure lclSetCheckBoxes( checkBoxes: Boolean ); message 'lclSetCheckBoxes:';
     function lclHasCheckBoxes: Boolean; message 'lclHasCheckBoxes';
+    procedure lclSetCheckBoxAllowsMixed( allowsMixed: Boolean ); message 'lclSetCheckBoxAllowsMixed:';
+    function lclCheckBoxAllowsMixed: Boolean; message 'lclCheckBoxAllowsMixed';
     function lclGetCanvas: TCanvas; message 'lclGetCanvas';
 
     function tableView_viewForTableColumn_row(tableView: NSTableView; tableColumn: NSTableColumn; row: NSInteger): NSView;
@@ -123,10 +127,10 @@ type
     function fittingSize: NSSize; override;
 
     procedure drawRect(dirtyRect: NSRect); override;
-    function lclCallDrawItem( row: NSInteger; ctxSize: NSSize; clipRect: NSRect): Boolean;
-      message 'lclCallDrawItem:ctxSize:clipRect:';
-    function lclCallCustomDraw( row: Integer; col: Integer; ctxSize: NSSize; clipRect: NSRect): Boolean;
-      message 'lclCallCustomDraw:col:ctxSize:clipRect:';
+    function lclCallDrawItem( row: NSInteger; canvasRect: NSRect ): Boolean;
+      message 'lclCallDrawItem:canvasRect:';
+    function lclCallCustomDraw( row: Integer; col: Integer; canvasRect: NSRect ): Boolean;
+      message 'lclCallCustomDraw:col:canvasRect:';
 
     // mouse
     procedure mouseDown(event: NSEvent); override;
@@ -320,15 +324,6 @@ begin
   Result := TCocoaTableListView.alloc;
 end;
 
-procedure hideAllSubviews( parent: NSView );
-var
-  view: NSView;
-begin
-  for view in parent.subviews do
-    view.setHidden( True );
-end;
-
-
 function updateNSTextFieldWithTFont( cocoaField: NSTextField; lclFont: TFont ):
   Boolean;
 var
@@ -385,14 +380,15 @@ begin
     Exit;
   end;
 
-  done:= self.tableView.lclCallDrawItem( row , self.bounds.size, dirtyRect );
+  done:= self.tableView.lclCallDrawItem( row, self.bounds );
 
   if done then begin
     // the Cocoa default drawing cannot be skipped in NSTableView,
     // we can only hide the CellViews to get the same effect.
     // in the Lazarus IDE, there is a ListBox with OwnerDraw in Project-Forms,
     // it's a case where the default drawing must be skipped.
-    hideAllSubviews( self );
+    if Assigned(self.tableView.lclGetPorcessor) then
+      self.tableView.lclGetPorcessor.onOwnerDrawItem( self );
   end else begin
     drawNSViewBackground( self, tableView.lclGetCanvas.Brush );
     inherited drawRect( dirtyRect );
@@ -423,6 +419,16 @@ end;
 function TCocoaTableListView.lclHasCheckBoxes: Boolean;
 begin
   Result:= _checkBoxes;
+end;
+
+procedure TCocoaTableListView.lclSetCheckBoxAllowsMixed(allowsMixed: Boolean);
+begin
+  _checkBoxAllowsMixed:= allowsMixed;
+end;
+
+function TCocoaTableListView.lclCheckBoxAllowsMixed: Boolean;
+begin
+  Result:= _checkBoxAllowsMixed;
 end;
 
 procedure TCocoaTableListView.backend_setCallback(cb: TLCLListViewCallback);
@@ -477,6 +483,11 @@ begin
   FreeAndNil( _processor );
 end;
 
+function TCocoaTableListView.lclGetPorcessor: TCocoaTableViewProcessor;
+begin
+  Result:= _processor;
+end;
+
 procedure TCocoaTableListView.lclSetProcessor( processor: TCocoaTableViewProcessor);
 begin
   _processor:= processor;
@@ -522,11 +533,11 @@ begin
     Exit;
 
   tv.callback.GetItemCheckedAt( row, checked );
-  Result:= checked=NSOnState;
+  Result:= checked<>NSOffState;
 end;
 
 function TCocoaTableListView.lclCallDrawItem(row: NSInteger;
-  ctxSize: NSSize; clipRect: NSRect ): Boolean;
+  canvasRect: NSRect ): Boolean;
 var
   ctx: TCocoaContext;
   ItemState: TOwnerDrawState;
@@ -538,7 +549,7 @@ begin
     Exit;
 
   ctx := TCocoaContext.Create(NSGraphicsContext.currentContext);
-  ctx.InitDraw(Round(ctxSize.width), Round(ctxSize.height));
+  ctx.InitDraw(Round(canvasRect.size.width), Round(canvasRect.size.height));
   try
     ItemState := [];
     if isRowSelected(row) then Include(ItemState, odSelected);
@@ -548,14 +559,14 @@ begin
     if isChecked(self,row) then
       Include(ItemState, odChecked);
 
-    Result:= self.callback.drawItem(row, ctx, NSRectToRect(clipRect), ItemState);
+    Result:= self.callback.drawItem(row, ctx, NSRectToRect(canvasRect), ItemState);
   finally
     ctx.Free;
   end;
 end;
 
 function TCocoaTableListView.lclCallCustomDraw(row: Integer; col: Integer;
-  ctxSize: NSSize; clipRect: NSRect): Boolean;
+  canvasRect: NSRect ): Boolean;
 var
   ctx: TCocoaContext;
   state: TCustomDrawState;
@@ -567,7 +578,7 @@ begin
     Exit;
 
   ctx := TCocoaContext.Create(NSGraphicsContext.currentContext);
-  ctx.InitDraw(Round(ctxSize.width), Round(ctxSize.height));
+  ctx.InitDraw(Round(canvasRect.size.width), Round(canvasRect.size.height));
   try
     state := [];
     if isRowSelected(row) then Include(state, cdsSelected);
@@ -598,7 +609,7 @@ begin
     Exit;
   end;
 
-  done:= self.lclCallCustomDraw( -1, -1, self.bounds.size, dirtyRect );
+  done:= self.lclCallCustomDraw( -1, -1, self.bounds );
 
   if done then begin
     // the Cocoa default drawing cannot be skipped in NSTableView,
@@ -1149,7 +1160,7 @@ begin
 
   row:= _tableView.rowForView( self );
   col:= _tableView.columnForView( self );
-  done:= cocoaTLV.lclCallCustomDraw( row, col, self.bounds.size, dirtyRect );
+  done:= cocoaTLV.lclCallCustomDraw( row, col, self.bounds );
 
   if done then begin
     // the Cocoa default drawing cannot be skipped in NSTableView,
@@ -1200,6 +1211,7 @@ begin
 
   _checkBox:= NSButton.alloc.init;
   _checkBox.setButtonType( NSSwitchButton );
+  _checkBox.setAllowsMixedState( TCocoaTableListView(_tableView).lclCheckBoxAllowsMixed );
   _checkBox.setTitle( CocoaConst.NSSTR_EMPTY );
   _checkBox.setTarget( _tableView );
   _checkBox.setAction( ObjCSelector('checkboxAction:') );
@@ -1395,6 +1407,7 @@ begin
     Exit;
 
   self.callback.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
+  self.callback.mixedCheckedIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
   self.callback.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
   self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
   self.reloadData;
@@ -1407,6 +1420,7 @@ begin
     Exit;
 
   self.callback.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1);
+  self.callback.mixedCheckedIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1);
   self.callback.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1 );
   self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
   self.reloadData;
@@ -1440,6 +1454,7 @@ begin
     Exit;
 
   ExchangeIndexSetItem( self.callback.checkedIndexSet, AIndex1, AIndex2 );
+  ExchangeIndexSetItem( self.callback.mixedCheckedIndexSet, AIndex1, AIndex2 );
   ExchangeIndexSetItem( self.callback.selectionIndexSet, AIndex1, AIndex2 );
   self.reloadData;
 end;
@@ -1447,6 +1462,7 @@ end;
 procedure TCocoaTableListView.lclClearItem;
 begin
   self.callback.checkedIndexSet.removeAllIndexes;
+  self.callback.mixedCheckedIndexSet.removeAllIndexes;
   self.callback.selectionIndexSet.removeAllIndexes;
   self.reloadData;
 end;
@@ -1459,7 +1475,7 @@ begin
 
   row := rowForView(sender.superview);
   self.callback.SetItemCheckedAt(row, sender.state);
-  if sender.state = NSOnState then begin
+  if sender.state <> NSOffState then begin
     self.selectOneItemByIndex(row, True);
     self.window.makeFirstResponder( self );
   end;

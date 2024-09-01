@@ -12,23 +12,31 @@
   3. mabye the support for MultiSelections in MultiCaretsPlugin is not perfect.
      for example, Shift+Arrow can only expand the Selection of the Main Caret,
      but not other Carets
+
+  macOS Lookup Word supported:
+  1. implement ICocoaLookupWord in LazSynImeCocoa
+  2. ICocoaLookupWord and ICocoaIMEControl can be implemented in different classes.
+     considering that LazSynImeCocoa is relatively simple, it is appropriate to
+     implement both interfaces in LazSynImeCocoa.
 }
 
 unit LazSynCocoaIMM;
 
 {$mode objfpc}{$H+}
+{$interfaces corba}
 
 interface
 
 uses
-  CocoaFullControlEdit,
   Classes, SysUtils,
+  Graphics,
+  CocoaFullControlEdit,
   SynEditMiscClasses, LazSynIMMBase, SynEditKeyCmds, SynEditTextBase;
 
 type
   { LazSynImeCocoa }
 
-  LazSynImeCocoa = class( LazSynIme, ICocoaIMEControl )
+  LazSynImeCocoa = class( LazSynIme, ICocoaIMEControl, ICocoaLookupWord )
   private
     _undoList: TSynEditUndoList;
     _IntermediateTextBeginPos: TPoint;
@@ -37,12 +45,18 @@ type
     procedure IMESessionEnd;
     procedure IMEUpdateIntermediateText( var params: TCocoaIMEParameters );
     procedure IMEInsertFinalText( var params: TCocoaIMEParameters );
-    function  IMEGetTextBound( var params: TCocoaIMEParameters ) : TRect;
+    function  IMEGetTextBound( var params: TCocoaIMEParameters ): TRect;
+  public
+    procedure LWRowColForScreenPoint( var params: TCocoaLWParameters;
+      const screenPoint: TPoint );
+    procedure LWLineForRow( var params: TCocoaLWParameters );
+    function  LWGetTextBound( var params: TCocoaLWParameters ): TRect;
+    function  LWGetFont( var params: TCocoaLWParameters ): TFont;
   private
-    procedure InsertTextAtCaret_CompatibleWithMultiCarets( var params: TCocoaIMEParameters ) ;
+    procedure InsertTextAtCaret_CompatibleWithMultiCarets( var params: TCocoaIMEParameters );
     procedure SelectText_CompatibleWithMultiCarets( var params: TCocoaIMEParameters );
-    function calcBound( var params: TCocoaIMEParameters ) : TRect;
-    function PosToPixels( const pos: TPoint ) : TPoint;
+    function calcBound( var params: TCocoaIMEParameters ): TRect;
+    function PosToPixels( const pos: TPoint ): TPoint;
   public
     constructor Create(AOwner: TSynEditBase);
     destructor Destroy; override;
@@ -159,6 +173,67 @@ begin
   Result:= FriendEdit.ClientToScreen( Result );
 end;
 
+procedure LazSynImeCocoa.LWRowColForScreenPoint(
+  var params: TCocoaLWParameters; const screenPoint: TPoint);
+var
+  localPoint: TPoint;
+  logicalPoint: TPoint;
+  lineText: String;
+begin
+  localPoint:= FriendEdit.ScreenToClient( screenPoint );
+  logicalPoint:= TSynEdit(FriendEdit).PixelsToLogicalPos( localPoint );
+  params.row:= logicalPoint.Y;
+  if params.row > 0 then
+    params.row:= params.row - 1;
+  lineText:= FriendEdit.Lines[params.row];
+  if (lineText.length>0) and (logicalPoint.x<=lineText.length+1) then begin
+    if logicalPoint.x > lineText.length then
+      logicalPoint.x:= lineText.length;
+    params.col:= UTF8CodepointCount( pchar(lineText), logicalPoint.x ) - 1;
+  end else begin
+    params.col:= -1;
+  end;
+end;
+
+procedure LazSynImeCocoa.LWLineForRow( var params: TCocoaLWParameters );
+begin
+  params.text:= FriendEdit.Lines[params.row];
+end;
+
+function LazSynImeCocoa.LWGetTextBound( var params: TCocoaLWParameters
+  ): TRect;
+var
+  p1: TPoint;
+  p2: TPoint;
+  lineText: String;
+  col1Bytes: PtrInt;
+  col2Bytes: PtrInt;
+begin
+  lineText:= FriendEdit.Lines[params.row];
+
+
+  col1Bytes:= UTF8CodepointToByteIndex( pchar(lineText),
+                lineText.Length, params.col );
+  col2Bytes:= col1Bytes + UTF8CodepointToByteIndex( pchar(lineText)+col1Bytes,
+                lineText.Length-col1Bytes, params.length );
+  // two vertexs in bytes
+  p1:= Point( col1Bytes + 1, params.row + 1 );
+  p2:= Point( col2Bytes + 1, params.row + 1 );
+
+  // two vertexs in pixels
+  p1:= PosToPixels( p1 );
+  p2:= PosToPixels( p2 );
+  p2.Y:= p2.Y + FriendEdit.LineHeight - FriendEdit.ExtraLineSpacing;
+
+  // client rect in pixels
+  Result:= TRect.Create( p1 , p2 );
+  Result:= FriendEdit.ClientToScreen( Result );
+end;
+
+function LazSynImeCocoa.LWGetFont( var params: TCocoaLWParameters ): TFont;
+begin
+  Result:= FriendEdit.Font;
+end;
 
 procedure LazSynImeCocoa.InsertTextAtCaret_CompatibleWithMultiCarets( var params: TCocoaIMEParameters );
 var
@@ -203,8 +278,10 @@ begin
   // two vertexs in bytes
   p1:= _IntermediateTextBeginPos;
   p2:= p1;
-  p1.X:= p1.X + UTF8CodepointToByteIndex( pchar(@params.text[1]), params.textByteLength, params.selectedStart );
-  p2.X:= p2.X + UTF8CodepointToByteIndex( pchar(@params.text[1]), params.textByteLength, params.selectedStart+params.selectedLength );
+  p1.X:= p1.X + UTF8CodepointToByteIndex( pchar(@params.text[1]),
+                  params.textByteLength, params.selectedStart );
+  p2.X:= p1.X + UTF8CodepointToByteIndex( pchar(@params.text[1])+p1.X,
+                  params.textByteLength-p1.X, params.selectedLength );
 
   // two vertexs in pixels
   p1:= PosToPixels( p1 );

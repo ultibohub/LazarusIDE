@@ -84,6 +84,9 @@ function UTF8Length(p: PChar; ByteCount: PtrInt): PtrInt;
 function UTF8LengthFast(const s: string): PtrInt; inline;
 function UTF8LengthFast(p: PChar; ByteCount: PtrInt): PtrInt;
 
+function UTF8CodepointCount(const s: string): SizeInt; inline;
+function UTF8CodepointCount(p: PChar; ByteCount: SizeInt): SizeInt;
+
 // Functions dealing with unicode number U+xxx.
 function UTF8CodepointToUnicode(p: PChar; out CodepointLen: integer): Cardinal;
 function UTF8CharacterToUnicode(p: PChar; out CharLen: integer): Cardinal; deprecated 'Use UTF8CodepointToUnicode instead.';
@@ -565,6 +568,28 @@ begin
     inc(pn8);
   end;
   Result := ByteCount - Result;
+end;
+
+function UTF8CodepointCount(const s: string): PtrInt;
+begin
+  Result:=UTF8CodepointCount(PChar(s),length(s));
+end;
+
+function UTF8CodepointCount(p: PChar; ByteCount: SizeInt): SizeInt;
+var
+  codepointLen: SizeInt;
+begin
+  Result:=0;
+  while (ByteCount>0) do begin
+    codepointLen:=UTF8CodepointLen(p,ByteCount,False);
+    if codepointLen >= 0 then
+      inc(Result);
+    if codepointLen = 0 then
+      Exit;
+    codepointLen:= abs( codepointLen);
+    inc(p,codepointLen);
+    dec(ByteCount,codepointLen);
+  end;
 end;
 
 function UTF8CodepointToUnicode(p: PChar; out CodepointLen: integer): Cardinal;

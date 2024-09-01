@@ -19,6 +19,10 @@ unit PropEdits;
 // This unit contains a lot of base type conversions. Disable range checking.
 {$R-}
 
+{$IF FPC_FULLVERSION>30300}
+  {$Define HasExtRtti}
+{$ENDIF}
+
 interface
 
 uses
@@ -400,7 +404,7 @@ type
                             {%H-}AState: TPropEditDrawState); virtual;
     procedure UpdateSubProperties; virtual;
     function SubPropertiesNeedsUpdate: boolean; virtual;
-    function ValueIsStreamed: boolean; virtual;
+    function ValueIsStreamed: boolean; virtual; // if value is stored, usually because it differs from default value
     function IsRevertableToInherited: boolean; virtual;
     // These are used for the popup menu in OI
     function GetVerbCount: Integer; virtual;
@@ -639,11 +643,11 @@ type
     FSubPropsNameFilter: String;
     FHideClassName: Boolean;
     FSubProps: TObjectList;
-    procedure ListSubProps(Prop: TPropertyEditor);
-    procedure SetSubPropsTypeFilter(const AValue: TTypeKinds);
-    function EditorFilter(const AEditor: TPropertyEditor): Boolean;
   protected
     function GetSelections: TPersistentSelectionList; virtual;
+    function EditorFilter(const AEditor: TPropertyEditor): Boolean; virtual;
+    procedure ListSubProps(Prop: TPropertyEditor); virtual;
+    procedure SetSubPropsTypeFilter(const AValue: TTypeKinds); virtual;
   public
     constructor Create(Hook: TPropertyEditorHook; APropCount: Integer); override;
     destructor Destroy; override;
@@ -652,7 +656,7 @@ type
     function AllEqual: Boolean; override;
     function GetAttributes: TPropertyAttributes; override;
     procedure GetProperties(Proc: TGetPropEditProc); override;
-    function GetValue: ansistring; override;
+    function GetValue: String; override;
 
     property SubPropsTypeFilter: TTypeKinds
       read FSubPropsTypeFilter write SetSubPropsTypeFilter default tkAny;
@@ -661,26 +665,6 @@ type
     property HideClassName: Boolean read FHideClassName write FHideClassName;
   end;
 
-{ TMethodPropertyEditor
-  Property editor for all method properties. }
-
-  TMethodPropertyEditor = class(TPropertyEditor)
-  private
-    function GetTrimmedEventName: shortstring;
-  public
-    function AllEqual: Boolean; override;
-    procedure Edit; override;
-    procedure ShowValue; override;
-    function GetAttributes: TPropertyAttributes; override;
-    function GetEditLimit: Integer; override;
-    function GetValue: ansistring; override;
-    procedure GetValues(Proc: TGetStrProc); override;
-    procedure SetValue(const NewValue: ansistring); override;
-    function GetFormMethodName: shortstring;
-    class function GetDefaultMethodName(Root, Component: TComponent;
-        const RootClassName, ComponentName, PropName: shortstring): shortstring;
-  end;
-  
 { TPersistentPropertyEditor
   A base editor for TPersistent. It does allow editing of the properties.
   It allows the user to set the value of this property to point to a component
@@ -785,6 +769,59 @@ type
     procedure Edit; override;
     function CreateDlg(s: TStrings): TPagesPropEditorDlg; virtual;
     function GetAttributes: TPropertyAttributes; override;
+  end;
+
+  { TRecordPropertyEditor }
+
+  TRecordPropertyEditor = class(TPropertyEditor)
+  private
+    FCanReadFields: boolean;
+    FCanWriteFields: boolean;
+    FSubPropsTypeFilter: TTypeKinds;
+    FSubPropsNameFilter: String;
+    FHideRecordName: Boolean;
+    FSubProps: TObjectList;
+  protected
+    function EditorFilter(const AEditor: TPropertyEditor): Boolean; virtual;
+    procedure ListSubProps(Prop: TPropertyEditor); virtual;
+    procedure SetSubPropsTypeFilter(const AValue: TTypeKinds); virtual;
+  public
+    constructor Create(Hook: TPropertyEditorHook; APropCount: Integer); override;
+    destructor Destroy; override;
+    function AllEqual: Boolean; override;
+    function GetAttributes: TPropertyAttributes; override;
+    procedure GetProperties(Proc: TGetPropEditProc); override;
+    function GetValue: string; override;
+    procedure Initialize; override;
+    function ValueIsStreamed: boolean; override;
+
+    property SubPropsTypeFilter: TTypeKinds
+      read FSubPropsTypeFilter write SetSubPropsTypeFilter default tkAny;
+    property SubPropsNameFilter: String
+      read FSubPropsNameFilter write FSubPropsNameFilter;
+    property HideRecordName: Boolean read FHideRecordName write FHideRecordName;
+    property CanReadFields: boolean read FCanReadFields;
+    property CanWriteFields: boolean read FCanWriteFields;
+  end;
+
+{ TMethodPropertyEditor
+  Property editor for all method properties. }
+
+  TMethodPropertyEditor = class(TPropertyEditor)
+  private
+    function GetTrimmedEventName: shortstring;
+  public
+    function AllEqual: Boolean; override;
+    procedure Edit; override;
+    procedure ShowValue; override;
+    function GetAttributes: TPropertyAttributes; override;
+    function GetEditLimit: Integer; override;
+    function GetValue: ansistring; override;
+    procedure GetValues(Proc: TGetStrProc); override;
+    procedure SetValue(const NewValue: ansistring); override;
+    function GetFormMethodName: shortstring;
+    class function GetDefaultMethodName(Root, Component: TComponent;
+        const RootClassName, ComponentName, PropName: shortstring): shortstring;
   end;
 
 { TComponentNamePropertyEditor
@@ -1279,7 +1316,8 @@ type
 procedure GetPersistentProperties(ASelection: TPersistentSelectionList;
   AFilter: TTypeKinds; AHook: TPropertyEditorHook; AProc: TGetPropEditProc;
   APropInfoFilterFunc: TPropInfoFilterFunc;
-  AEditorFilterFunc: TPropertyEditorFilterFunc);
+  AEditorFilterFunc: TPropertyEditorFilterFunc
+  {$IFDEF HasExtRtti};ExtVisibility: TVisibilityClasses = []{$ENDIF});
 
 procedure GetPersistentProperties(ASelection: TPersistentSelectionList;
   AFilter: TTypeKinds; AHook: TPropertyEditorHook; AProc: TGetPropEditProc;
@@ -1649,10 +1687,17 @@ type
   private
     FList: PPropList;
     FCount: Integer;
-    FSize: Integer;
+    {$IFDEF HasExtRtti}
+    FExtVisibility: TVisibilityClasses;
+    FListExt: PPropListEx;
+    function GetExt(Index: Integer): PPropInfoEx;
+    {$ENDIF}
     function Get(Index: Integer): PPropInfo;
   public
     constructor Create(Instance: TPersistent; Filter: TTypeKinds);
+    {$IFDEF HasExtRtti}
+    constructor Create(Instance: TPersistent; Filter: TTypeKinds; AddExtVisibility: TVisibilityClasses);
+    {$ENDIF}
     destructor Destroy; override;
     function Contains(P: PPropInfo): Boolean;
     procedure Delete(Index: Integer);
@@ -1660,6 +1705,10 @@ type
     procedure Sort;
     property Count: Integer read FCount;
     property Items[Index: Integer]: PPropInfo read Get; default;
+    {$IFDEF HasExtRtti}
+    property ExtVisibility: TVisibilityClasses read FExtVisibility;
+    property Ext[Index: Integer]: PPropInfoEx read GetExt;
+    {$ENDIF}
   end;
 
 //==============================================================================
@@ -1981,6 +2030,174 @@ begin
   Result := [paDialog, paRevertable, paReadOnly];
 end;
 
+{ TRecordPropertyEditor }
+
+procedure TRecordPropertyEditor.SetSubPropsTypeFilter(const AValue: TTypeKinds);
+begin
+  if FSubPropsTypeFilter=AValue then Exit;
+  FSubPropsTypeFilter:=AValue;
+end;
+
+function TRecordPropertyEditor.EditorFilter(const AEditor: TPropertyEditor): Boolean;
+begin
+  Result := IsInteresting(AEditor, SubPropsTypeFilter, SubPropsNameFilter);
+end;
+
+procedure TRecordPropertyEditor.ListSubProps(Prop: TPropertyEditor);
+begin
+  FSubProps.Add(Prop);
+end;
+
+constructor TRecordPropertyEditor.Create(Hook: TPropertyEditorHook; APropCount: Integer);
+begin
+  inherited Create(Hook, APropCount);
+  FSubPropsTypeFilter:=tkAny;
+end;
+
+destructor TRecordPropertyEditor.Destroy;
+begin
+  FSubProps.Free;
+  inherited Destroy;
+end;
+
+function TRecordPropertyEditor.AllEqual: Boolean;
+begin
+  Result:=True; // ToDo: Maybe all sub-properties should be compared for equality.
+end;
+
+function TRecordPropertyEditor.GetAttributes: TPropertyAttributes;
+begin
+  Result := [{paMultiSelect, }paSubProperties, paReadOnly];
+end;
+
+procedure TRecordPropertyEditor.GetProperties(Proc: TGetPropEditProc);
+{$IFDEF HasExtRtti}
+var
+  aPropInfo: PPropInfo;
+  aTypeData: PTypeData;
+  Fields: PManagedField;
+  i: Integer;
+  FieldTypeInfo: PTypeInfo;
+  FieldCnt: LongInt;
+  ReadAccess, WriteAccess: Byte;
+  ReadNeedsCall, HasManagedTypes, WriteNeedsCall: Boolean;
+  //RecInit: PRecInitData;
+{$ENDIF}
+begin
+  writeln('TRecordPropertyEditor.GetProperties START');
+  {$IFDEF HasExtRtti}
+  aPropInfo:=GetPropInfo;
+  writeln('TRecordPropertyEditor.GetProperties aPropInfo^.Name=',aPropInfo^.Name);
+  aTypeData:=GetTypeData(aPropInfo^.PropType);
+  FieldCnt:=aTypeData^.TotalFieldCount;
+  writeln('TRecordPropertyEditor.GetProperties RecSize=',aTypeData^.RecSize,' TotalFieldCount=',FieldCnt);
+
+  // check read and write access
+  ReadAccess:=(aPropInfo^.PropProcs) and 3;
+  case ReadAccess of
+  ptStatic,
+  ptVirtual: ReadNeedsCall:=true;
+  else ReadNeedsCall:=false;
+  end;
+  FCanReadFields:=true;
+
+  WriteAccess:=(aPropInfo^.PropProcs shr 2) and 3;
+  case WriteAccess of
+  ptStatic,
+  ptVirtual: WriteNeedsCall:=true;
+  else WriteNeedsCall:=false;
+  end;
+  FCanWriteFields:=true;
+
+  Fields:=PManagedField(AlignToPtr(PByte(@aTypeData^.TotalFieldCount)+SizeOf(Longint)));
+  for i:=0 to FieldCnt-1 do begin
+    FieldTypeInfo:=Fields[i].TypeRef;
+    writeln('TRecordPropertyEditor.GetProperties Normal ',i,'/',FieldCnt,' FldOffset=',Fields[i].FldOffset,' ',FieldTypeInfo^.Name,' ',FieldTypeInfo^.Kind);
+    // todo read value
+    case FieldTypeInfo^.Kind of
+      tkInteger: ;
+      //tkChar,
+      //tkEnumeration,
+      //tkFloat,
+      //tkSet,
+      //tkMethod,
+      //tkSString,
+      //tkClass,
+      //tkWChar,
+      //tkBool,
+      //tkInt64,
+      //tkQWord,
+      //tkUChar,
+      //tkClassRef,
+      //tkPointer: ;
+
+      //tkLString,
+      //tkAString,
+      //tkWString,
+
+      //tkUnknown: ;
+      //tkVariant: ;
+      //tkArray: ;
+      //tkRecord: ;
+      //tkInterface: ;
+      //tkObject: ;
+      //tkDynArray: ;
+      //tkInterfaceRaw: ;
+      //tkProcVar: ;
+      //tkUString: ;
+      //tkHelper: ;
+      //tkFile: ;
+    else
+      if ReadNeedsCall then
+        FCanReadFields:=false;
+      if WriteNeedsCall then
+        FCanWriteFields:=false;
+    end;
+  end;
+
+  // create field editors
+  if CanReadFields then begin
+    for i:=0 to FieldCnt-1 do begin
+      FieldTypeInfo:=Fields[i].TypeRef;
+
+      case FieldTypeInfo^.Kind of
+      tkInteger:
+        begin
+
+        end;
+      else
+
+      end;
+    end;
+  end;
+
+  {$ELSE}
+  if Proc<>nil then ;
+  FCanReadFields:=false;
+  {$ENDIF}
+end;
+
+function TRecordPropertyEditor.GetValue: string;
+begin
+  if FHideRecordName then
+    Result:=''
+  else
+    Result:='(' + GetPropType^.Name + ')';
+end;
+
+procedure TRecordPropertyEditor.Initialize;
+begin
+  inherited Initialize;
+  if FSubProps<>nil then exit;
+  FSubProps:=TObjectList.Create(true);
+  GetProperties(@ListSubProps);
+end;
+
+function TRecordPropertyEditor.ValueIsStreamed: boolean;
+begin
+  Result:=false;
+end;
+
 { TSelectableComponentEnumerator }
 
 procedure TSelectableComponentEnumerator.GetSelectableComponents(
@@ -2145,7 +2362,7 @@ const
                    tkDynArray,tkInterfaceRaw,tkProcVar,tkUString,tkUChar,
                    tkHelper);
 }
-
+  // default property editor classes
   PropClassMap:array[TypInfo.TTypeKind] of TPropertyEditorClass=(
     nil,                       // tkUnknown
     TIntegerPropertyEditor,    // tkInteger
@@ -2160,7 +2377,7 @@ const
     TWideStringPropertyEditor, // tkWString
     TPropertyEditor,           // tkVariant
     nil,                       // tkArray
-    nil,                       // tkRecord
+    TRecordPropertyEditor,     // tkRecord
     TInterfacePropertyEditor,  // tkInterface
     TClassPropertyEditor,      // tkClass
     nil,                       // tkObject
@@ -2216,24 +2433,65 @@ type
 
 constructor TPropInfoList.Create(Instance:TPersistent; Filter:TTypeKinds);
 var
-  BigList: PPropList;
-  TypeInfo: PTypeInfo;
+  ListCapacity: integer;
+
+  procedure Add(PropInfo: PPropInfo{$IFDEF HasExtRtti}; Ext: PPropInfoEx{$ENDIF});
+  var
+    i: Integer;
+  begin
+    if PropInfo^.PropType^.Kind in Filter then begin
+      // check if name already exists in list
+      i:=FCount-1;
+      while (i>=0) and (CompareText(FList^[i]^.Name,PropInfo^.Name)<>0) do
+        dec(i);
+      if (i<0) then begin
+        // add property info
+        if FCount=ListCapacity then begin
+          if ListCapacity<16 then
+            ListCapacity:=16
+          else
+            ListCapacity:=ListCapacity*2;
+          ReAllocMem(FList,ListCapacity*SizeOf(Pointer));
+          {$IFDEF HasExtRtti}
+          ReAllocMem(FListExt,ListCapacity*SizeOf(Pointer));
+          {$ENDIF}
+        end;
+        FList^[FCount]:=PropInfo;
+        {$IFDEF HasExtRtti}
+        FListExt^[FCount]:=Ext;
+        {$ENDIF}
+        inc(FCount);
+      end;
+    end;
+  end;
+
+var
+  aTypeInfo: PTypeInfo;
   TypeData: PTypeData;
   PropInfo: PPropInfo;
   PropData: ^TPropData;
-  CurCount, i: integer;
+  {$IFDEF HasExtRtti}
+  PropList: PPropListEx;
+  PropInfoEx: PPropInfoEx;
+  {$ENDIF}
+  CurCount: integer;
   //CurParent: TClass;
 begin
-  TypeInfo:=Instance.ClassInfo;
-  TypeData:=GetTypeData(TypeInfo);
-  GetMem(BigList,TypeData^.PropCount * SizeOf(Pointer));
+  aTypeInfo:=Instance.ClassInfo;
 
-  // read all properties and remove doubles
-  TypeInfo:=Instance.ClassInfo;
+  // read all published properties and remove doubles
+  TypeData:=GetTypeData(aTypeInfo);
+  ListCapacity:=TypeData^.PropCount;
+  ReAllocMem(FList,ListCapacity * SizeOf(Pointer));
+  {$IFDEF HASEXTRTTI}
+  ReAllocMem(FListExt,ListCapacity * SizeOf(Pointer));
+  {$ENDIF}
+
+  aTypeInfo:=Instance.ClassInfo;
   FCount:=0;
   repeat
     // read all property infos of current class
-    TypeData:=GetTypeData(TypeInfo);
+    TypeData:=GetTypeData(aTypeInfo);
     // skip unitname
     PropData:=AlignToPtr(Pointer(@TypeData^.UnitName)+Length(TypeData^.UnitName)+1);
     // read property count
@@ -2242,7 +2500,7 @@ begin
 
     {writeln('TPropInfoList.Create D ',CurCount,' TypeData^.ClassType=',DbgS(TypeData^.ClassType));
     writeln('TPropInfoList.Create E ClassName="',TypeData^.ClassType.ClassName,'"',
-    ' TypeInfo=',DbgS(TypeInfo),
+    ' TypeInfo=',DbgS(aTypeInfo),
     ' TypeData^.ClassType.ClassInfo=',DbgS(TypeData^.ClassType.ClassInfo),
     ' TypeData^.ClassType.ClassParent=',DbgS(TypeData^.ClassType.ClassParent),
     ' TypeData^.ParentInfo=',DbgS(TypeData^.ParentInfo),
@@ -2256,37 +2514,46 @@ begin
 
     // read properties
     while CurCount>0 do begin
-      if PropInfo^.PropType^.Kind in Filter then begin
-        // check if name already exists in list
-        i:=FCount-1;
-        while (i>=0) and (CompareText(BigList^[i]^.Name,PropInfo^.Name)<>0) do
-          dec(i);
-        if (i<0) then begin
-          // add property info to BigList
-          BigList^[FCount]:=PropInfo;
-          inc(FCount);
-        end;
-      end;
+      Add(PropInfo{$IFDEF HasExtRtti},nil{$ENDIF});
       // point PropInfo to next propinfo record.
       // Located at Name[Length(Name)+1] !
       PropInfo:=PPropInfo(AlignToPtr(pointer(@PropInfo^.Name)+PByte(@PropInfo^.Name)^+1));
       dec(CurCount);
     end;
-    TypeInfo:=TypeData^.ParentInfo;
-    if TypeInfo=nil then break;
-  until false;
 
-  // create FList
-  FSize:=FCount * SizeOf(Pointer);
-  GetMem(FList,FSize);
-  Move(BigList^,FList^,FSize);
-  FreeMem(BigList);
+    {$IFDEF HasExtRtti}
+    if FExtVisibility<>[] then begin
+      CurCount:=GetPropListEx(aTypeInfo,PropList,FExtVisibility);
+      try
+        while CurCount>0 do begin
+          dec(CurCount);
+          PropInfoEx:=PropList^[CurCount];
+          Add(PropInfoEx^.Info,PropInfoEx);
+        end;
+      finally
+        Freemem(PropList);
+      end;
+    end;
+    {$ENDIF}
+
+    aTypeInfo:=TypeData^.ParentInfo;
+  until aTypeInfo=nil;
+
   Sort;
 end;
 
+{$IFDEF HasExtRtti}
+constructor TPropInfoList.Create(Instance: TPersistent; Filter: TTypeKinds;
+  AddExtVisibility: TVisibilityClasses);
+begin
+  FExtVisibility:=AddExtVisibility;
+  Create(Instance,Filter);
+end;
+{$ENDIF}
+
 destructor TPropInfoList.Destroy;
 begin
-  if FList<>nil then FreeMem(FList,FSize);
+  if FList<>nil then FreeMem(FList);
 end;
 
 function TPropInfoList.Contains(P:PPropInfo):Boolean;
@@ -2310,9 +2577,11 @@ end;
 procedure TPropInfoList.Delete(Index:Integer);
 begin
   Dec(FCount);
-  if Index < FCount then
-    Move(FList^[Index+1],FList^[Index],
-      (FCount-Index) * SizeOf(Pointer));
+  if Index >= FCount then exit;
+  System.Move(FList^[Index+1],FList^[Index],(FCount-Index) * SizeOf(Pointer));
+  {$IFDEF HasExtRtti}
+  System.Move(FListExt^[Index+1],FListExt^[Index],(FCount-Index) * SizeOf(Pointer));
+  {$ENDIF}
 end;
 
 function TPropInfoList.Get(Index:Integer):PPropInfo;
@@ -2320,42 +2589,56 @@ begin
   Result:=FList^[Index];
 end;
 
+{$IFDEF HasExtRtti}
+function TPropInfoList.GetExt(Index: Integer): PPropInfoEx;
+begin
+  Result:=FListExt^[Index];
+end;
+{$ENDIF}
+
 procedure TPropInfoList.Intersect(List:TPropInfoList);
 var
-  I:Integer;
+  i:Integer;
 begin
-  for I:=FCount-1 downto 0 do
-    if not List.Contains(FList^[I]) then Delete(I);
+  for i:=FCount-1 downto 0 do
+    if not List.Contains(FList^[i]) then Delete(i);
 end;
 
 procedure TPropInfoList.Sort;
+
   procedure QuickSort(L, R: Integer);
   var
-    I, J: Longint;
-    P, Q: PPropInfo;
+    i, j: Longint;
+    p: PPropInfo;
+    h: Pointer;
   begin
     repeat
-      I := L;
-      J := R;
-      P := FList^[(L + R) div 2];
+      i := L;
+      j := R;
+      p := FList^[(L + R) div 2];
       repeat
-        while CompareText(P^.Name, FList^[i]^.Name) > 0 do
-          inc(I);
-        while CompareText(P^.Name, FList^[J]^.Name) < 0 do
-          dec(J);
-        if I <= J then
+        while CompareText(p^.Name, FList^[i]^.Name) > 0 do
+          inc(i);
+        while CompareText(p^.Name, FList^[j]^.Name) < 0 do
+          dec(j);
+        if i <= j then
         begin
-          Q := FList^[I];
-          Flist^[I] := FList^[J];
-          FList^[J] := Q;
-          inc(I);
-          dec(J);
+          h := FList^[i];
+          Flist^[i] := FList^[j];
+          FList^[j] := h;
+          {$IFDEF HasExtRtti}
+          h := FListExt^[i];
+          FListExt^[i] := FListExt^[j];
+          FListExt^[j] := h;
+          {$ENDIF}
+          inc(i);
+          dec(j);
         end;
-      until I > J;
-      if L < J then
-        QuickSort(L, J);
-      L := I;
-    until I >= R;
+      until i > j;
+      if L < j then
+        QuickSort(L, j);
+      L := i;
+    until i >= R;
   end;
 begin
   if Count > 0 then
@@ -2491,9 +2774,8 @@ begin
              GetTypeData(P^.PropertyType)^.ClassType)
          )
       then
-        if ((P^.PersistentClass=nil) or (Obj.InheritsFrom(P^.PersistentClass))) and
-           ((P^.PropertyName='')
-           or (CompareText(PropInfo^.Name,P^.PropertyName)=0))
+        if ((P^.PersistentClass=nil) or (Obj.InheritsFrom(P^.PersistentClass)))
+            and ((P^.PropertyName='') or (CompareText(PropInfo^.Name,P^.PropertyName)=0))
         then
           if (C=nil) or   // see if P is better match than C
              ((C^.PersistentClass=nil) and (P^.PersistentClass<>nil)) or
@@ -2532,7 +2814,8 @@ end;
 procedure GetPersistentProperties(ASelection: TPersistentSelectionList;
   AFilter: TTypeKinds; AHook: TPropertyEditorHook; AProc: TGetPropEditProc;
   APropInfoFilterFunc: TPropInfoFilterFunc;
-  AEditorFilterFunc: TPropertyEditorFilterFunc);
+  AEditorFilterFunc: TPropertyEditorFilterFunc
+  {$IFDEF HasExtRtti};ExtVisibility: TVisibilityClasses = []{$ENDIF});
 var
   I, J, SelCount: Integer;
   ClassTyp: TClass;
@@ -2554,12 +2837,13 @@ begin
   ClassTyp := Instance.ClassType;
   // Create a property candidate list of all properties that can be found in
   // every component in the list and in the Filter
-  Candidates := TPropInfoList.Create(Instance, AFilter);
+  Candidates := TPropInfoList.Create(Instance, AFilter{$IFDEF HasExtRtti},ExtVisibility{$ENDIF});
   try
     // check each property candidate
     for I := Candidates.Count - 1 downto 0 do
     begin
       PropInfo := Candidates[I];
+
       // check if property is readable
       if (PropInfo^.GetProc=nil)
       or ((not GShowReadOnlyProps) and (PropInfo^.PropType^.Kind <> tkClass)
@@ -2597,7 +2881,7 @@ begin
         PropLists.Count := SelCount;
         // Create a property info list for each component in the selection
         for I := 0 to SelCount - 1 do
-          PropLists[i] := TPropInfoList.Create(ASelection[I], AFilter);
+          PropLists[i] := TPropInfoList.Create(ASelection[I], AFilter{$IFDEF HasExtRtti},ExtVisibility{$ENDIF});
 
         // Eliminate each property in Candidates that is not in all property lists
         for I := 0 to SelCount - 1 do
@@ -2704,7 +2988,7 @@ begin
   FPropertyHook:=Hook;
   PropListSize:=APropCount * SizeOf(TInstProp);
   GetMem(FPropList,PropListSize);
-  FillChar(FPropList^,PropListSize,0);
+  FillByte(FPropList^,PropListSize,0);
   FPropCount:=APropCount;
 end;
 
@@ -3441,6 +3725,7 @@ begin
           Changed:=true;
           SetInterfaceProp(InstProp.Instance,InstProp.PropInfo,NewInterface);
         end;
+      else
       end;
     end;
   finally
@@ -4784,7 +5069,7 @@ begin
   end;
 end;
 
-function TClassPropertyEditor.GetValue: ansistring;
+function TClassPropertyEditor.GetValue: String;
 begin
   if FHideClassName then
     Result:=''

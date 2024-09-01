@@ -7,8 +7,9 @@ interface
 
 uses
   Classes, SysUtils,
-  LCLType, Graphics, Controls, ComCtrls,
-  CocoaAll, CocoaPrivate, CocoaCallback, CocoaWSCommon, CocoaGDIObjects;
+  LCLType, Graphics, Controls, ComCtrls, StdCtrls,
+  CocoaAll, CocoaPrivate, CocoaCallback, CocoaWSCommon, CocoaGDIObjects,
+  CocoaUtils;
 
 type
   {
@@ -53,11 +54,13 @@ type
   private
     _selectionIndexSet: NSMutableIndexSet;
     _checkedIndexSet: NSMutableIndexSet;
+    _mixedCheckedIndexSet: NSMutableIndexSet;
   public
     constructor Create(AOwner: NSObject; ATarget: TWinControl; AHandleFrame: NSView = nil); override;
     destructor Destroy; override;
     function selectionIndexSet: NSMutableIndexSet; virtual;
     function checkedIndexSet: NSMutableIndexSet; virtual;
+    function mixedCheckedIndexSet: NSMutableIndexSet; virtual;
     function GetItemCheckedAt( row: Integer; var CheckState: Integer): Boolean; virtual;
     procedure SetItemCheckedAt( row: Integer; CheckState: Integer); virtual;
     function getItemStableSelection(ARow: Integer): Boolean; virtual;
@@ -97,6 +100,7 @@ type
     procedure onReloadData( tv: NSTableView ); virtual; abstract;
     procedure onSelectOneItem( tv: NSTableView; selection: NSIndexSet ); virtual; abstract;
     procedure onSelectionChanged( tv: NSTableView ); virtual; abstract;
+    procedure onOwnerDrawItem( rowView: NSView ); virtual abstract;
   end;
 
   { TCocoaTableListControlProcessor }
@@ -107,6 +111,7 @@ type
   public
     procedure onReloadData( tv: NSTableView ); override;
     procedure onSelectOneItem( tv: NSTableView; selection: NSIndexSet ); override;
+    procedure onOwnerDrawItem( rowView: NSView ); override;
   end;
 
   { TCocoaListControlStringList }
@@ -133,12 +138,14 @@ begin
   inherited;
   _selectionIndexSet:= NSMutableIndexSet.new;
   _checkedIndexSet:= NSMutableIndexSet.new;
+  _mixedCheckedIndexSet:= NSMutableIndexSet.new;
 end;
 
 destructor TLCLListControlCallback.Destroy;
 begin
   _selectionIndexSet.release;
   _checkedIndexSet.release;
+  _mixedCheckedIndexSet.release;
   inherited Destroy;
 end;
 
@@ -152,22 +159,40 @@ begin
   Result:= _checkedIndexSet;
 end;
 
+function TLCLListControlCallback.mixedCheckedIndexSet: NSMutableIndexSet;
+begin
+  Result:= _mixedCheckedIndexSet;
+end;
+
 function TLCLListControlCallback.GetItemCheckedAt(row: Integer;
   var CheckState: Integer): Boolean;
 var
-  BoolState : array [Boolean] of Integer = (NSOffState, NSOnState);
+  checkStateArray : array [Boolean] of Integer = (NSOffState, NSOnState);
+  mixStateArray : array [Boolean] of Integer = (NSOffState, NSMixedState);
 begin
-  CheckState := BoolState[self.checkedIndexSet.containsIndex(row)];
+  CheckState := checkStateArray[self.checkedIndexSet.containsIndex(row)];
+  if CheckState = NSOffState then
+    CheckState := mixStateArray[self.mixedCheckedIndexSet.containsIndex(row)];
   Result := true;
 end;
 
 procedure TLCLListControlCallback.SetItemCheckedAt(row: Integer;
   CheckState: Integer);
 begin
-  if CheckState = NSOnState then
-    self.checkedIndexSet.addIndex( row )
-  else
-    self.checkedIndexSet.removeIndex( row );
+  case CheckState of
+    NSOnState: begin
+      self.checkedIndexSet.addIndex( row );
+      self.mixedCheckedIndexSet.removeIndex( row );
+    end;
+    NSMixedState: begin
+      self.checkedIndexSet.removeIndex( row );
+      self.mixedCheckedIndexSet.addIndex( row );
+    end;
+    else begin
+      self.checkedIndexSet.removeIndex( row );
+      self.mixedCheckedIndexSet.removeIndex( row );
+    end;
+  end;
 end;
 
 function TLCLListControlCallback.getItemStableSelection(ARow: Integer): Boolean;
@@ -202,6 +227,11 @@ begin
 
   lclcb.selectionIndexSet.removeAllIndexes;
   lclcb.selectionIndexSet.addIndexes( selection );
+end;
+
+procedure TCocoaTableListControlProcessor.onOwnerDrawItem( rowView: NSView );
+begin
+  hideAllSubviews( rowView );
 end;
 
 { TCocoaListControlStringList }

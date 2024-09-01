@@ -29,8 +29,8 @@ uses
   // Widgetset
   WSCheckLst, WSLCLClasses,
   // LCL Cocoa
-  CocoaWSCommon, CocoaPrivate, CocoaCallback, CocoaWSStdCtrls,
-  CocoaListControl, CocoaTables, CocoaScrollers, CocoaWSScrollers;
+  CocoaWSCommon, CocoaPrivate, CocoaConfig, CocoaGDIObjects,
+  CocoaWSStdCtrls, CocoaListControl, CocoaTables, CocoaScrollers, CocoaWSScrollers;
 
 type
 
@@ -43,6 +43,14 @@ type
     checklist: TCustomCheckListBox;
     constructor Create(AOwner: NSObject; ATarget: TWinControl; AHandleView: NSView); override;
     procedure SetItemCheckedAt( row: Integer; CheckState: Integer); override;
+    function drawItem(row: Integer; ctx: TCocoaContext; const r: TRect;
+      state: TOwnerDrawState): Boolean; override;
+  end;
+
+  { TCocoaTableCheckListBoxProcessor }
+
+  TCocoaTableCheckListBoxProcessor = class( TCocoaTableListBoxProcessor )
+    procedure onOwnerDrawItem(rowView: NSView); override;
   end;
 
   { TCocoaWSCustomCheckListBox }
@@ -52,6 +60,8 @@ type
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLHandle; override;
     class function GetState(const ACheckListBox: TCustomCheckListBox; const AIndex: integer): TCheckBoxState; override;
     class procedure SetState(const ACheckListBox: TCustomCheckListBox; const AIndex: integer; const AState: TCheckBoxState); override;
+    class function GetCheckWidth(const ACheckListBox: TCustomCheckListBox): integer; override;
+    class procedure SetStyle(const ACustomListBox: TCustomListBox); override;
   end;
 
 implementation
@@ -75,6 +85,38 @@ procedure TLCLCheckboxListCallback.SetItemCheckedAt( row: Integer;
 begin
   Inherited;
   LCLSendChangedMsg( self.Target, row );
+end;
+
+function TLCLCheckboxListCallback.drawItem(row: Integer; ctx: TCocoaContext;
+  const r: TRect; state: TOwnerDrawState): Boolean;
+var
+  rectReducedLeftSpacing: TRect;
+  lv: TCocoaTableListView;
+  itemView: NSView;
+begin
+  rectReducedLeftSpacing:= r;
+  lv:= TCocoaTableListView( self.Owner );
+  if Assigned(lv) then begin
+    itemView:= lv.viewAtColumn_row_makeIfNecessary( 0, row, false );
+    if Assigned(itemView) then
+      rectReducedLeftSpacing.Left:= Round( itemView.frame.origin.x );
+  end;
+  Result:= inherited drawItem(row, ctx, rectReducedLeftSpacing, state);
+end;
+
+{ TCocoaTableCheckListBoxProcessor }
+
+procedure TCocoaTableCheckListBoxProcessor.onOwnerDrawItem(rowView: NSView);
+var
+  itemView: TCocoaTableListItem;
+begin
+  itemView:= TCocoaTableListItem( rowView.subviews.objectAtIndex(0) );
+  if NOT Assigned(itemView) then
+    Exit;
+  if Assigned(itemView.imageView) then
+    itemView.imageView.setHidden( True );
+  if Assigned(itemView.textField) then
+    itemView.textField.setHidden( True );
 end;
 
 { TCocoaWSCustomCheckListBox }
@@ -101,20 +143,24 @@ begin
     Result := 0;
     Exit;
   end;
-  processor:= TCocoaTableListBoxProcessor.Create;
+  processor:= TCocoaTableCheckListBoxProcessor.Create;
   list.lclSetProcessor( processor );
   list.callback := TLCLCheckboxListCallback.CreateWithView(list, AWinControl);
   list.lclSetCheckboxes(true);
+  list.lclSetCheckBoxAllowsMixed( lclCheckListBox.AllowGrayed );
   //list.list := TCocoaStringList.Create(list);
   list.addTableColumn(NSTableColumn.alloc.init.autorelease);
   list.setHeaderView(nil);
   list.setDataSource(list);
   list.setDelegate(list);
   list.setAllowsMultipleSelection(lclCheckListBox.MultiSelect);
+  list.CustomRowHeight:= lclCheckListBox.ItemHeight;
   list.readOnly := true;
   //todo:
   //list.AllowMixedState := TCustomCheckListBox(AWinControl).AllowGrayed;
   list.isOwnerDraw := lclCheckListBox.Style in [lbOwnerDrawFixed, lbOwnerDrawVariable];
+
+  ListBoxSetStyle(list, TCustomListBox(AWinControl).Style);
 
   scroll := EmbedInScrollView(list);
   if not Assigned(scroll) then
@@ -141,6 +187,9 @@ end;
  ------------------------------------------------------------------------------}
 class function TCocoaWSCustomCheckListBox.GetState(
   const ACheckListBox: TCustomCheckListBox; const AIndex: integer): TCheckBoxState;
+const
+  checkStateArray: Array [NSMixedState..NSOnState] of TCheckBoxState =
+    ( cbGrayed, cbUnchecked, cbChecked );
 var
   lclcb : TLCLCheckboxListCallback;
   checkState: Integer;
@@ -151,10 +200,8 @@ begin
   if NOT Assigned(lclcb) then
     Exit;
 
-  if lclcb.GetItemCheckedAt(AIndex, checkState) then begin
-    if checkState <> NSOffState then
-      Result:= cbChecked;
-  end;
+  if lclcb.GetItemCheckedAt(AIndex, checkState) then
+    Result:= checkStateArray[checkState];
 end;
 
 {------------------------------------------------------------------------------
@@ -169,6 +216,9 @@ end;
 class procedure TCocoaWSCustomCheckListBox.SetState(
   const ACheckListBox: TCustomCheckListBox; const AIndex: integer;
   const AState: TCheckBoxState);
+const
+  checkStateArray: Array [TCheckBoxState] of Integer =
+    ( NSOffState, NSOnState, NSMixedState );
 var
   cocoaTLV: TCocoaTableListView;
   lclcb : TLCLCheckboxListCallback;
@@ -178,15 +228,23 @@ begin
   if NOT Assigned(lclcb) then
     Exit;
 
-  if AState <> cbUnchecked then
-    checkState:= NSOnState
-  else
-    checkState:= NSOffState;
-
+  checkState:= checkStateArray[AState];
   lclcb.SetItemCheckedAt( AIndex, checkState );
 
   cocoaTLV:= getTableViewFromLCLListBox( ACheckListBox );
   cocoaTLV.reloadDataForRow_column( AIndex, 0 );
+end;
+
+class function TCocoaWSCustomCheckListBox.GetCheckWidth(
+  const ACheckListBox: TCustomCheckListBox): integer;
+begin
+  Result:= Round( CocoaConfigListView.vsList.item.checkBoxOccupiedWidth );
+end;
+
+class procedure TCocoaWSCustomCheckListBox.SetStyle(
+  const ACustomListBox: TCustomListBox);
+begin
+  TCocoaWSCustomListBox.SetStyle( ACustomListBox );
 end;
 
 end.

@@ -86,6 +86,7 @@ type
     procedure ComboBoxSelectionDidChange;
     procedure ComboBoxSelectionIsChanging;
 
+    procedure GetRowHeight(rowidx: integer; var h: Integer);
     procedure ComboBoxDrawItem(itemIndex: Integer; ctx: TCocoaContext;
       const r: TRect; isSelected: Boolean);
   end;
@@ -824,6 +825,9 @@ end;
 
 { TLCLComboboxCallback }
 
+type
+  TCustomComboBoxAccess = class(TCustomComboBox);
+
 procedure TLCLComboboxCallback.ComboBoxWillPopUp;
 begin
   isShowPopup := true;
@@ -844,6 +848,11 @@ end;
 procedure TLCLComboboxCallback.ComboBoxSelectionIsChanging;
 begin
 
+end;
+
+procedure TLCLComboboxCallback.GetRowHeight(rowidx: integer; var h: Integer);
+begin
+  TCustomComboBoxAccess(Target).MeasureItem(rowidx, h);
 end;
 
 procedure TLCLComboboxCallback.ComboBoxDrawItem(itemIndex: Integer;
@@ -1940,11 +1949,6 @@ end;
 
 { TCocoaWSCustomComboBox }
 
-type
-  TCustomComboBoxAccess = class(TCustomComboBox)
-  end;
-
-
 class function TCocoaWSCustomComboBox.getNSText(const ACustomComboBox: TCustomComboBox): NSText;
 var
   control: NSControl;
@@ -1975,6 +1979,7 @@ begin
     TComboBoxAsyncHelper.SetLastIndex(rocmb);
     rocmb.callback:=TLCLComboboxCallback.Create(rocmb, AWinControl);
     Result:=TLCLHandle(rocmb);
+    rocmb.lclSetDefaultItemHeight( TCustomComboBoxAccess(AWinControl).ItemHeight );
     rocmb.isOwnerDrawn := ComboBoxIsOwnerDrawn(TCustomComboBox(AWinControl).Style);
     rocmb.isOwnerMeasure := ComboBoxIsVariable(TCustomComboBox(AWinControl).Style);
   end
@@ -2218,7 +2223,7 @@ begin
   end;
 
   if ComboBoxStyleIsReadOnly(ACustomComboBox.Style) then
-    Result := 26 // ToDo
+    Result:=TCocoaReadOnlyComboBox(ACustomComboBox.Handle).lclGetDefaultItemHeight
   else
     Result:=Round(TCocoaComboBox(ACustomComboBox.Handle).itemHeight);
 end;
@@ -2230,7 +2235,7 @@ begin
     Exit;
 
   if ComboBoxStyleIsReadOnly(ACustomComboBox.Style) then
-    Exit // ToDo
+    TCocoaReadOnlyComboBox(ACustomComboBox.Handle).lclSetDefaultItemHeight(AItemHeight)
   else
     TCocoaComboBox(ACustomComboBox.Handle).setItemHeight(AItemHeight);
 end;
@@ -2524,6 +2529,7 @@ begin
   list.setDataSource(list);
   list.setDelegate(list);
   list.setAllowsMultipleSelection(lclListBox.MultiSelect);
+  list.CustomRowHeight:= lclListBox.ItemHeight;
   list.readOnly := true;
   // LCL ItemHeight for TListBox can only be set during Recreation of Handle
   if TCustomListBox(AWinControl).ItemHeight>0 then
@@ -2725,8 +2731,8 @@ var
   view: TCocoaTableListView;
 begin
   view := getTableViewFromLCLListBox(ACustomListBox);
-  ListBoxSetStyle(view, TCustomListBox(ACustomListBox).Style);
-  view.setNeedsDisplay_(true);
+  ListBoxSetStyle(view, ACustomListBox.Style);
+  view.reloadData;
 end;
 
 class procedure TCocoaWSCustomListBox.SetTopIndex(const ACustomListBox: TCustomListBox; const NewTopIndex: integer);
