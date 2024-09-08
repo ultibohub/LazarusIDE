@@ -54,6 +54,29 @@ msgstr "Преобразование значения простого типа 
 msgid "Do not ask again"
 msgstr "Больше не спрашивать"
 
+#: idedebuggerstringconstants.dispformatarrayhidelenifless
+msgctxt "idedebuggerstringconstants.dispformatarrayhidelenifless"
+msgid "Max len"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarrayhidelenkeepdepth
+msgid "Min nested"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarrayhidelenthreseach
+msgctxt "idedebuggerstringconstants.dispformatarrayhidelenthreseach"
+msgid "Max sub-values"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarrayhidelenthresfulllen
+msgctxt "idedebuggerstringconstants.dispformatarrayhidelenthresfulllen"
+msgid "Max text len"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatarrayhidelentoggle
+msgid "Hide \"Len\", if ..."
+msgstr ""
+
 #: idedebuggerstringconstants.dispformatarraynavautohide
 msgid "Auto-hide"
 msgstr "Скрывать автоматически"
@@ -131,45 +154,43 @@ msgstr "Числовое значение"
 
 #: idedebuggerstringconstants.dispformatdlgarraycombine
 msgid "Combine lengths"
-msgstr ""
+msgstr "Складывать длины"
 
 #: idedebuggerstringconstants.dispformatdlgarraycombineall
 msgid "Always"
-msgstr ""
+msgstr "Всегда"
 
 #: idedebuggerstringconstants.dispformatdlgarraycombinedyn
 msgid "Dynamic"
-msgstr ""
+msgstr "Для динамических"
 
 #: idedebuggerstringconstants.dispformatdlgarraycombinenone
 msgid "Never"
-msgstr ""
+msgstr "Никогда"
 
 #: idedebuggerstringconstants.dispformatdlgarraycombinestat
 msgid "Static"
-msgstr ""
+msgstr "Для статических"
 
 #: idedebuggerstringconstants.dispformatdlgarraylen
 msgid "Array len"
-msgstr ""
+msgstr "Длина массива"
 
 #: idedebuggerstringconstants.dispformatdlgarraymaxnest
 msgid "Nested"
-msgstr ""
+msgstr "Вложенность"
 
 #: idedebuggerstringconstants.dispformatdlgarraynav
-#, fuzzy
-#| msgid "Array Navigation"
 msgid "Array navigation"
 msgstr "Перемещение по массиву"
 
 #: idedebuggerstringconstants.dispformatdlgarrayshowprefix
 msgid "Show len"
-msgstr ""
+msgstr "Показывать длину"
 
 #: idedebuggerstringconstants.dispformatdlgarrayshowprefixembedded
 msgid "Include embedded"
-msgstr ""
+msgstr "Учитывать вложенные"
 
 #: idedebuggerstringconstants.dispformatdlgbtnadrformat
 msgid "Address"
@@ -181,7 +202,7 @@ msgstr "Все"
 
 #: idedebuggerstringconstants.dispformatdlgbtnarray
 msgid "Array"
-msgstr ""
+msgstr "Массив"
 
 #: idedebuggerstringconstants.dispformatdlgbtnbool
 msgid "Boolean"
@@ -288,6 +309,37 @@ msgstr "Десятичный"
 #: idedebuggerstringconstants.dispformatfloatscientific
 msgid "Exponent"
 msgstr "С плавающей точкой"
+
+#: idedebuggerstringconstants.dispformatforcesinglelinearraylen
+msgctxt "idedebuggerstringconstants.dispformatforcesinglelinearraylen"
+msgid "Max len"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatforcesinglelinedepth
+msgid "Max sub-levels"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatforcesinglelinedigitsany
+msgid "Any"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatforcesinglelineeach
+msgctxt "idedebuggerstringconstants.dispformatforcesinglelineeach"
+msgid "Max sub-values"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatforcesinglelinelen
+msgctxt "idedebuggerstringconstants.dispformatforcesinglelinelen"
+msgid "Max text len"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatforcesinglelinestructfld
+msgid "Max fields"
+msgstr ""
+
+#: idedebuggerstringconstants.dispformatforcesinglelinetoggle
+msgid "Keep singleline, if ..."
+msgstr ""
 
 #: idedebuggerstringconstants.dispformatgroupaddress
 msgctxt "idedebuggerstringconstants.dispformatgroupaddress"
@@ -784,7 +836,7 @@ msgstr "Длина=%d: "
 #: idedebuggerstringconstants.drslen2
 #, object-pascal-format
 msgid "Len=%s: "
-msgstr ""
+msgstr "Длина=%s: "
 
 #: idedebuggerstringconstants.drsnewvalue
 msgid "New Value"

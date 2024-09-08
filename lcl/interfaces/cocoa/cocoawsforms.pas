@@ -30,9 +30,9 @@ uses
   // Widgetset
   WSForms, WSLCLClasses, LCLMessageGlue,
   // LCL Cocoa
-  CocoaInt, CocoaConfig, CocoaPrivate, CocoaCallback, CocoaUtils, CocoaWSCommon, CocoaMenus,
-  CocoaGDIObjects,
-  CocoaWindows, CocoaCustomControl, CocoaScrollers, CocoaWSScrollers, cocoa_extra;
+  CocoaInt, CocoaConfig, CocoaPrivate, CocoaCallback, CocoaWSCommon, CocoaGDIObjects,
+  CocoaWindows, CocoaToolBar, CocoaCustomControl, CocoaScrollers, CocoaWSScrollers,
+  CocoaUtils, CocoaMenus, Cocoa_Extra;
 
 type
   { TLCLWindowCallback }
@@ -234,6 +234,64 @@ begin
   win.setLevel(lvl);
   if win.isKindOfClass(TCocoaWindow) then
     TCocoaWindow(win).keepWinLevel := lvl;
+end;
+
+type
+  PCocoaConfigForm = ^TCocoaConfigForm;
+
+  { TCocoaFormUtils }
+
+  TCocoaFormUtils = class
+    class function getConfigByName( const name: String ): PCocoaConfigForm;
+    class function getConfigByClassName( const aClassName: String ): PCocoaConfigForm;
+    class function getConfigForMainForm: PCocoaConfigForm;
+  end;
+
+class function TCocoaFormUtils.getConfigByName( const name: String ):
+  PCocoaConfigForm;
+var
+  i: Integer;
+  count: Integer;
+begin
+  Result:= nil;
+  count:= length( CocoaConfigForms );
+  for i:=0 to count-1 do begin
+    if name = CocoaConfigForms[i].name then begin
+      Result:= @CocoaConfigForms[i];
+      Exit;
+    end;
+  end;
+end;
+
+class function TCocoaFormUtils.getConfigByClassName( const aClassName: String ):
+  PCocoaConfigForm;
+var
+  i: Integer;
+  count: Integer;
+begin
+  Result:= nil;
+  count:= length( CocoaConfigForms );
+  for i:=0 to count-1 do begin
+    if aClassName = CocoaConfigForms[i].className then begin
+      Result:= @CocoaConfigForms[i];
+      Exit;
+    end;
+  end;
+end;
+
+class function TCocoaFormUtils.getConfigForMainForm: PCocoaConfigForm;
+var
+  i: Integer;
+  count: Integer;
+begin
+  Result:= nil;
+  count:= length( CocoaConfigForms );
+  for i:=0 to count-1 do begin
+    if CocoaConfigForms[i].isMainForm then begin
+      Result:= @CocoaConfigForms[i];
+      Exit;
+    end;
+  end;
 end;
 
 { TCocoaWSHintWindow }
@@ -729,6 +787,51 @@ var
   lDestView: NSView;
   ds: TCocoaDesignOverlay;
   cb: TLCLWindowCallback;
+
+  procedure applyCocoaConfigToolBar( const config: TCocoaConfigToolBar );
+  var
+    toolbar: TCocoaToolBar;
+  begin
+    toolbar:= TCocoaToolBarUtils.createToolBar( config );
+    win.setToolbarStyle( config.style );
+    win.setToolbar( toolbar );
+  end;
+
+  procedure applyCocoaConfigTitleBar( const config: TCocoaConfigTitleBar );
+  begin
+    win.setTitlebarAppearsTransparent( config.transparent );
+    win.setTitlebarSeparatorStyle( config.separatorStyle );
+  end;
+
+  function getFormConfig: PCocoaConfigForm;
+  begin
+    Result:= TCocoaFormUtils.getConfigByName( AWinControl.Name );
+    if Assigned(Result) then
+      Exit;
+
+    Result:= TCocoaFormUtils.getConfigByClassName( AWinControl.ClassName );
+    if Assigned(Result) then
+      Exit;
+
+    if Application.MainForm = AWinControl then
+      Result:= TCocoaFormUtils.getConfigForMainForm;
+  end;
+
+  procedure applyCocoaConfigForm;
+  var
+    pFormConfig: PCocoaConfigForm;
+  begin
+    if NSAppKitVersionNumber < NSAppKitVersionNumber11_0 then
+      Exit;
+
+    pFormConfig:= getFormConfig;
+    if NOT Assigned(pFormConfig) then
+      Exit;
+
+    applyCocoaConfigTitleBar( pFormConfig^.titleBar );
+    applyCocoaConfigToolBar( pFormConfig^.toolBar );
+  end;
+
 begin
   //todo: create TCocoaWindow or TCocoaPanel depending on the border style
   //      if parent is specified neither Window nor Panel needs to be created
@@ -816,6 +919,8 @@ begin
     cnt.callback.IsOpaque:=true;
     cnt.wincallback := TCocoaWindow(win).callback;
     win.setContentView(cnt);
+
+    applyCocoaConfigForm;
 
     win.makeFirstResponder(doc);
   end

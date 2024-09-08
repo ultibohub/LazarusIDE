@@ -127,6 +127,7 @@ type
     function fittingSize: NSSize; override;
 
     procedure drawRect(dirtyRect: NSRect); override;
+    procedure setNeedsDisplayInRect(invalidRect: NSRect); override;
     function lclCallDrawItem( row: NSInteger; canvasRect: NSRect ): Boolean;
       message 'lclCallDrawItem:canvasRect:';
     function lclCallCustomDraw( row: Integer; col: Integer; canvasRect: NSRect ): Boolean;
@@ -190,7 +191,6 @@ type
     _tableView: TCocoaTableListView;
   private
     function getCallback: TLCLListViewCallback;
-    procedure doReloadDataAfterDelete( AIndex: PtrInt );
   public
     constructor Create( listView: TCocoaListView );
     function getColumnFromIndex( const AIndex: Integer ): NSTableColumn;
@@ -212,6 +212,7 @@ type
     // Item
     procedure ItemDelete( const AIndex: Integer); override;
     function  ItemDisplayRect( const AIndex, ASubItem: Integer; ACode: TDisplayCode): TRect; override;
+    procedure ItemExchange(const ALV: TCustomListView; AItem: TListItem; const AIndex1, AIndex2: Integer); override;
     function  ItemGetPosition( const AIndex: Integer): TPoint; override;
     function  ItemGetState( const AIndex: Integer; const {%H-}AItem: TListItem; const AState: TListItemState; out AIsSet: Boolean): Boolean; override; // returns True if supported
     procedure ItemInsert( const AIndex: Integer; const {%H-}AItem: TListItem); override;
@@ -355,7 +356,7 @@ var
   width: Integer;
   height: Integer;
 begin
-  if (lclBrush.Color=clWindow) or (lclBrush.Color=clDefault) then
+  if lclBrush.Color = clWhite then   // see also TBrush.create
     Exit;
 
   width:= Round( view.bounds.size.width );
@@ -618,6 +619,29 @@ begin
   end else begin
     drawNSViewBackground( self, self.lclGetCanvas.Brush );
     inherited;
+  end;
+end;
+
+procedure TCocoaTableListView.setNeedsDisplayInRect( invalidRect: NSRect );
+var
+  rowRange: NSRange;
+  rowView: NSView;
+  row: Integer;
+  startIndex: Integer;
+  endIndex: Integer;
+begin
+  inherited;
+
+  rowRange := self.rowsInRect( invalidRect );
+  if rowRange.length = 0 then
+    Exit;;
+
+  startIndex:= rowRange.location;
+  endIndex:= rowRange.location + rowRange.length - 1;
+  for row:= startIndex to endIndex do begin
+    rowView := self.rowViewAtRow_makeIfNecessary( row, False );
+    if Assigned(rowView) then
+      rowView.setNeedsDisplay_( True );
   end;
 end;
 
@@ -1504,11 +1528,6 @@ begin
   Result:= TLCLListViewCallback( _tableView.lclGetCallback.GetCallbackObject );
 end;
 
-procedure TCocoaWSListView_TableViewHandler.doReloadDataAfterDelete( AIndex: PtrInt);
-begin
-  _tableView.lclDeleteItem( AIndex );
-end;
-
 procedure TCocoaWSListView_TableViewHandler.ColumnDelete(
   const AIndex: Integer);
 var
@@ -1690,7 +1709,7 @@ end;
 procedure TCocoaWSListView_TableViewHandler.ItemDelete(const AIndex: Integer
   );
 begin
-  Application.QueueAsyncCall( @doReloadDataAfterDelete, AIndex );
+  _tableView.lclDeleteItem( AIndex );
 end;
 
 function TCocoaWSListView_TableViewHandler.ItemDisplayRect(const AIndex,
@@ -1726,6 +1745,12 @@ begin
   Result:= NSRectToRect( frame );
 end;
 
+procedure TCocoaWSListView_TableViewHandler.ItemExchange(
+  const ALV: TCustomListView; AItem: TListItem; const AIndex1, AIndex2: Integer);
+begin
+  _tableView.lclExchangeItem( AIndex1, AIndex2 );
+end;
+
 function TCocoaWSListView_TableViewHandler.ItemGetPosition(
   const AIndex: Integer): TPoint;
 var
@@ -1739,12 +1764,18 @@ end;
 function TCocoaWSListView_TableViewHandler.ItemGetState(
   const AIndex: Integer; const AItem: TListItem; const AState: TListItemState;
   out AIsSet: Boolean): Boolean;
+var
+  lclcb : TLCLListViewCallback;
 begin
   Result:= false;
+  lclcb:= getCallback;
+  if NOT Assigned(lclcb) then
+    Exit;
+
   case AState of
     lisSelected: begin
-      Result:= (AIndex>=0) and (AIndex <= _tableView.numberOfRows);
-      AIsSet:= _tableView.isRowSelected(AIndex);
+      Result:= (AIndex>=0) and (AIndex < _tableView.numberOfRows);
+      AIsSet:= lclcb.getItemStableSelection( AIndex );
     end;
   end;
 end;

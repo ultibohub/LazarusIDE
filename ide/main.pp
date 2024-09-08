@@ -74,7 +74,7 @@ uses
   GraphType, LazStringUtils, LazTracer,
   LCLExceptionStacktrace,
   {$IFDEF LCLWin} Win32Proc, {$ENDIF}
-  {$IFDEF LCLCocoa} CocoaConfig, {$ENDIF}
+  {$IFDEF LCLCocoa} CocoaConfig, CocoaIDEFormConfig,{$ENDIF}
   // SynEdit
   SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter, SynHighlighterPas,
   // BuildIntf
@@ -2064,6 +2064,11 @@ var
   ActiveUnitInfo: TUnitInfo;
   CTResult: Boolean;
 begin
+  if (InstProp^.Instance=nil) or (InstProp^.PropInfo=nil) then begin
+    debugln(['TMainIDE.PropHookGetCompatibleMethods not a TPersistent property']);
+    exit;
+  end;
+
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[ctfSwitchToFormSource])
   then exit;
@@ -2090,6 +2095,11 @@ var
   ActiveSrcEdit: TSourceEditor;
   ActiveUnitInfo: TUnitInfo;
 begin
+  if (InstProp^.Instance=nil) or (InstProp^.PropInfo=nil) then begin
+    debugln(['TMainIDE.PropHookCompatibleMethodExists not a TPersistent property']);
+    exit;
+  end;
+
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[ctfSwitchToFormSource]) then
     Exit(False);
@@ -11250,6 +11260,7 @@ var
   ActiveSrcEdit: TSourceEditor;
   ActiveUnitInfo: TUnitInfo;
   LogCaretXY: TPoint;
+  CodePos:integer;
 begin
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[]) then exit(false);
@@ -11260,9 +11271,15 @@ begin
   {$ENDIF}
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.DoInitIdentCompletion A');{$ENDIF}
   LogCaretXY:=ActiveSrcEdit.EditorComponent.LogicalCaretXY;
-  Result:=CodeToolBoss.GatherIdentifiers(ActiveUnitInfo.Source,
+  ActiveSrcEdit.CodeBuffer.LineColToPosition(LogCaretXY.Y,LogCaretXY.X,CodePos);
+  Result:=True;
+  if (CodePos>1) and (CodePos<=ActiveSrcEdit.CodeBuffer.SourceLength)
+  and (ActiveSrcEdit.CodeBuffer.Source[CodePos-1]='&')
+  and not IsIdentStartChar[ActiveSrcEdit.CodeBuffer.Source[CodePos]] then
+    Result:=False;
+  if Result then
+    Result:=CodeToolBoss.GatherIdentifiers(ActiveUnitInfo.Source,
                                          LogCaretXY.X,LogCaretXY.Y);
-
   if not Result then begin
     if JumpToError then
       DoJumpToCodeToolBossError
