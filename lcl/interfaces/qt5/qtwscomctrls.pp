@@ -739,6 +739,7 @@ begin
         QtListWidget.setWrapping(IconOptions.AutoArrange);
         QtListWidget.setViewFlow(IconArngToQListFlow[IconOptions.Arrangement]);
         QtListWidget.setWordWrap(IconOptions.WrapText);
+        QtListWidget.setUniformItemSizes(IconOptions.WrapText);
       end;
 
     end else
@@ -842,6 +843,9 @@ begin
 
   // TODO: columns in vsIcon mode
   if IsIconView(ALV) then
+    exit(0);
+
+  if (TQtWidget(ALV.Handle) is TQtListWidget) then
     exit(0);
 
   QtTreeWidget := TQtTreeWidget(ALV.Handle);

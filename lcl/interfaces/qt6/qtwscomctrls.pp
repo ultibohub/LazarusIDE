@@ -737,6 +737,7 @@ begin
         QtListWidget.setWrapping(IconOptions.AutoArrange);
         QtListWidget.setViewFlow(IconArngToQListFlow[IconOptions.Arrangement]);
         QtListWidget.setWordWrap(IconOptions.WrapText);
+        QtListWidget.setUniformItemSizes(IconOptions.WrapText);
       end;
 
     end else
@@ -842,6 +843,9 @@ begin
   if IsIconView(ALV) then
     exit(0);
 
+  if (TQtWidget(ALV.Handle) is TQtListWidget) then
+    exit(0);
+
   QtTreeWidget := TQtTreeWidget(ALV.Handle);
 
   {Issue #39353.Such scenario happens only when SetStyle() calls RecreateWnd
@@ -849,7 +853,6 @@ begin
    unfortunatelly it''s hardcoded in listcolumn.inc.}
   if (csDesigning in ALV.ComponentState) and (QtTreeWidget.ColCount <> ALV.ColumnCount) then
     exit(50);
-
   Result := QtTreeWidget.ColWidth[AIndex];
 end;
 
