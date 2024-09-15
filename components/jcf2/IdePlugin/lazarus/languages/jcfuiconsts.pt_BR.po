@@ -278,6 +278,14 @@ msgstr "Identificadores"
 msgid "Set capitalisation on these identifiers:"
 msgstr "Definir maiúsculas/minúsculas destes identificadores:"
 
+#: jcfuiconsts.liscapsnormalizecapitalisation
+msgid "Normalization of capitalisation"
+msgstr ""
+
+#: jcfuiconsts.liscapsnormalizecapitalisationonenamespace
+msgid "Use only one namespace"
+msgstr ""
+
 #: jcfuiconsts.liscapsnotidentifiersnotidentifiers
 msgid "Non-identifiers"
 msgstr "Não-identificadores"
@@ -642,9 +650,17 @@ msgstr "Identação extra para \"begin/end\" dentro de procedimento"
 msgid "Extra Indent for Case...Else blocks"
 msgstr "Identação extra para blocos \"Case...Else\""
 
+#: jcfuiconsts.lisindentextraindentforcaselabels
+msgid "Extra Indent for Case labels"
+msgstr ""
+
 #: jcfuiconsts.lisindentextraindentforifelseblocks
 msgid "Extra Indent for If...Else blocks"
 msgstr "Identação extra para blocos \"If...Else\""
+
+#: jcfuiconsts.lisindentextraindentforinterfaceguid
+msgid "Extra Indent for interface guid"
+msgstr ""
 
 #: jcfuiconsts.lisindentindentation
 msgid "Indentation"

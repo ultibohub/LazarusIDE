@@ -1,0 +1,263 @@
+object IconViewerFrame: TIconViewerFrame
+  Left = 0
+  Height = 291
+  Top = 0
+  Width = 425
+  ClientHeight = 291
+  ClientWidth = 425
+  TabOrder = 0
+  DesignLeft = 319
+  DesignTop = 171
+  object FilterPanel: TPanel
+    Left = 0
+    Height = 39
+    Top = 0
+    Width = 425
+    Align = alTop
+    AutoSize = True
+    BevelOuter = bvNone
+    ClientHeight = 39
+    ClientWidth = 425
+    ParentBackground = False
+    ParentColor = False
+    TabOrder = 0
+    object cmbFilterBySize: TComboBox
+      AnchorSideLeft.Control = FilterPanel
+      AnchorSideTop.Control = FilterPanel
+      AnchorSideBottom.Side = asrBottom
+      Left = 6
+      Height = 32
+      Top = 0
+      Width = 150
+      BorderSpacing.Left = 6
+      DropDownCount = 24
+      ItemHeight = 0
+      Style = csDropDownList
+      TabOrder = 0
+      OnChange = cmbFilterBySizeChange
+    end
+    object cmbFilterByStyle: TComboBox
+      AnchorSideLeft.Control = cmbFilterBySize
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = cmbFilterBySize
+      AnchorSideTop.Side = asrCenter
+      AnchorSideBottom.Side = asrBottom
+      Left = 162
+      Height = 32
+      Top = 0
+      Width = 150
+      BorderSpacing.Left = 6
+      DropDownCount = 24
+      ItemHeight = 0
+      Style = csDropDownList
+      TabOrder = 1
+      OnChange = cmbFilterByStyleChange
+    end
+    object cmbFilterByKeywords: TComboBox
+      AnchorSideLeft.Control = cmbFilterByStyle
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = cmbFilterBySize
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = btnKeywordEditor
+      AnchorSideBottom.Side = asrBottom
+      Left = 318
+      Height = 33
+      Top = 0
+      Width = 23
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Left = 6
+      BorderSpacing.Right = 2
+      BorderSpacing.Bottom = 6
+      DropDownCount = 24
+      ItemHeight = 0
+      TabOrder = 2
+      TextHint = 'Enter keywords here'
+      OnEditingDone = cmbFilterByKeywordsEditingDone
+    end
+    object btnKeywordEditor: TSpeedButton
+      AnchorSideTop.Control = cmbFilterByKeywords
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = btnClearFilter
+      Left = 343
+      Height = 24
+      Top = 4
+      Width = 24
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 2
+      Caption = '...'
+      OnClick = btnKeywordEditorClick
+    end
+    object btnExecuteFilter: TSpeedButton
+      AnchorSideTop.Control = cmbFilterByKeywords
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = FilterPanel
+      AnchorSideRight.Side = asrBottom
+      Left = 395
+      Height = 24
+      Top = 4
+      Width = 24
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 6
+      OnClick = btnExecuteFilterClick
+    end
+    object btnClearFilter: TSpeedButton
+      AnchorSideTop.Control = cmbFilterByKeywords
+      AnchorSideTop.Side = asrCenter
+      AnchorSideRight.Control = btnExecuteFilter
+      Left = 369
+      Height = 24
+      Top = 4
+      Width = 24
+      Anchors = [akTop, akRight]
+      BorderSpacing.Right = 2
+      OnClick = btnClearFilterClick
+    end
+  end
+  object IconDetailsPanel: TPanel
+    Left = 6
+    Height = 72
+    Top = 219
+    Width = 413
+    Align = alBottom
+    AutoSize = True
+    BorderSpacing.Left = 6
+    BorderSpacing.Top = 6
+    BorderSpacing.Right = 6
+    BevelOuter = bvNone
+    ClientHeight = 72
+    ClientWidth = 413
+    TabOrder = 1
+    OnResize = IconDetailsPanelResize
+    object CaptionPanel: TPanel
+      AnchorSideLeft.Control = IconDetailsPanel
+      AnchorSideTop.Control = IconDetailsPanel
+      Left = 0
+      Height = 72
+      Top = 0
+      Width = 66
+      AutoSize = True
+      BorderSpacing.Right = 8
+      BevelOuter = bvNone
+      ClientHeight = 72
+      ClientWidth = 66
+      TabOrder = 0
+      object lblFileName: TLabel
+        AnchorSideLeft.Control = CaptionPanel
+        AnchorSideTop.Control = CaptionPanel
+        Left = 0
+        Height = 16
+        Top = 0
+        Width = 61
+        Caption = 'File name:'
+        Font.Style = [fsItalic]
+        ParentFont = False
+      end
+      object lblSize: TLabel
+        AnchorSideLeft.Control = CaptionPanel
+        AnchorSideTop.Control = lblFileName
+        AnchorSideTop.Side = asrBottom
+        Left = 0
+        Height = 16
+        Top = 18
+        Width = 30
+        BorderSpacing.Top = 2
+        Caption = 'Size:'
+        Font.Style = [fsItalic]
+        ParentFont = False
+      end
+      object lblKeywords: TLabel
+        AnchorSideLeft.Control = CaptionPanel
+        AnchorSideTop.Control = lblStyle
+        AnchorSideTop.Side = asrBottom
+        Left = 0
+        Height = 16
+        Top = 54
+        Width = 66
+        BorderSpacing.Top = 2
+        BorderSpacing.Bottom = 2
+        Caption = 'Keywords: '
+        Font.Style = [fsItalic]
+        ParentFont = False
+      end
+      object lblStyle: TLabel
+        AnchorSideLeft.Control = CaptionPanel
+        AnchorSideTop.Control = lblSize
+        AnchorSideTop.Side = asrBottom
+        Left = 0
+        Height = 16
+        Top = 36
+        Width = 34
+        BorderSpacing.Top = 2
+        Caption = 'Style:'
+        Font.Style = [fsItalic]
+        ParentFont = False
+      end
+    end
+    object infoFileName: TLabel
+      AnchorSideLeft.Control = CaptionPanel
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideRight.Side = asrBottom
+      Left = 74
+      Height = 16
+      Top = 0
+      Width = 77
+      Caption = 'infoFileName'
+    end
+    object infoSize: TLabel
+      AnchorSideLeft.Control = CaptionPanel
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = infoFileName
+      AnchorSideTop.Side = asrBottom
+      Left = 74
+      Height = 16
+      Top = 18
+      Width = 47
+      BorderSpacing.Top = 2
+      Caption = 'infoSize'
+    end
+    object infoStyle: TLabel
+      AnchorSideLeft.Control = CaptionPanel
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = infoSize
+      AnchorSideTop.Side = asrBottom
+      Left = 74
+      Height = 16
+      Top = 36
+      Width = 51
+      BorderSpacing.Top = 2
+      Caption = 'infoStyle'
+    end
+    object infoKeywords: TLabel
+      AnchorSideLeft.Control = CaptionPanel
+      AnchorSideLeft.Side = asrBottom
+      AnchorSideTop.Control = infoStyle
+      AnchorSideTop.Side = asrBottom
+      AnchorSideRight.Control = IconDetailsPanel
+      AnchorSideRight.Side = asrBottom
+      Left = 74
+      Height = 16
+      Top = 54
+      Width = 339
+      Anchors = [akTop, akLeft, akRight]
+      BorderSpacing.Top = 2
+      Caption = 'infoKeywords'
+      WordWrap = True
+    end
+  end
+  object Bevel1: TBevel
+    Left = 0
+    Height = 4
+    Top = 209
+    Width = 425
+    Align = alBottom
+    Shape = bsBottomLine
+  end
+  object Bevel2: TBevel
+    Left = 0
+    Height = 2
+    Top = 39
+    Width = 425
+    Align = alTop
+    Shape = bsBottomLine
+  end
+end

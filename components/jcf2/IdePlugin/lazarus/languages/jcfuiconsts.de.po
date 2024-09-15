@@ -276,6 +276,14 @@ msgstr "Schlüsselworte"
 msgid "Set capitalisation on these identifiers:"
 msgstr "Schreibweise für diese Bezeichner anwenden:"
 
+#: jcfuiconsts.liscapsnormalizecapitalisation
+msgid "Normalization of capitalisation"
+msgstr ""
+
+#: jcfuiconsts.liscapsnormalizecapitalisationonenamespace
+msgid "Use only one namespace"
+msgstr ""
+
 #: jcfuiconsts.liscapsnotidentifiersnotidentifiers
 msgid "Non-identifiers"
 msgstr "Nicht-Bezeicher"
@@ -641,9 +649,17 @@ msgstr "Zusätzliche Einrückung für Begin/End in Prozeduren"
 msgid "Extra Indent for Case...Else blocks"
 msgstr "Zusätzliche Einrückung bei Case..Else-Blöcken"
 
+#: jcfuiconsts.lisindentextraindentforcaselabels
+msgid "Extra Indent for Case labels"
+msgstr ""
+
 #: jcfuiconsts.lisindentextraindentforifelseblocks
 msgid "Extra Indent for If...Else blocks"
 msgstr "Zusätzliche Einrückung bei If..Else-Blöcken"
+
+#: jcfuiconsts.lisindentextraindentforinterfaceguid
+msgid "Extra Indent for interface guid"
+msgstr ""
 
 #: jcfuiconsts.lisindentindentation
 msgid "Indentation"

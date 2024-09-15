@@ -788,6 +788,7 @@ var
   ds: TCocoaDesignOverlay;
   cb: TLCLWindowCallback;
 
+{$if NOT defined(DisableCocoaModernForm)}
   procedure applyCocoaConfigToolBar( const config: TCocoaConfigToolBar );
   var
     toolbar: TCocoaToolBar;
@@ -795,6 +796,9 @@ var
     toolbar:= TCocoaToolBarUtils.createToolBar( config );
     win.setToolbarStyle( config.style );
     win.setToolbar( toolbar );
+    // in win.setToolBar(), macOS may incorrectly calculate the window size
+    // (ignoring the original TitleBar size) and need to be reset.
+    win.contentView.lclSetFrame( AWinControl.BoundsRect );
   end;
 
   procedure applyCocoaConfigTitleBar( const config: TCocoaConfigTitleBar );
@@ -831,6 +835,7 @@ var
     applyCocoaConfigTitleBar( pFormConfig^.titleBar );
     applyCocoaConfigToolBar( pFormConfig^.toolBar );
   end;
+{$endif}
 
 begin
   //todo: create TCocoaWindow or TCocoaPanel depending on the border style
@@ -920,7 +925,9 @@ begin
     cnt.wincallback := TCocoaWindow(win).callback;
     win.setContentView(cnt);
 
+{$if NOT defined(DisableCocoaModernForm)}
     applyCocoaConfigForm;
+{$endif}
 
     win.makeFirstResponder(doc);
   end

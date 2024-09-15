@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: ru\n"
-"X-Generator: Poedit 2.2.4\n"
+"X-Generator: Poedit 2.3.1\n"
 
 #: jcfuiconsts.format_about_menu
 msgid "&About ..."
@@ -272,6 +272,14 @@ msgstr "Идентификаторы"
 #: jcfuiconsts.liscapsidentifierssetcapitalisationontheseidentifiers
 msgid "Set capitalisation on these identifiers:"
 msgstr "Устанавливать регистр следующих идентификаторов:"
+
+#: jcfuiconsts.liscapsnormalizecapitalisation
+msgid "Normalization of capitalisation"
+msgstr "Унификация регистра"
+
+#: jcfuiconsts.liscapsnormalizecapitalisationonenamespace
+msgid "Use only one namespace"
+msgstr "Использовать только одно пространство имён"
 
 #: jcfuiconsts.liscapsnotidentifiersnotidentifiers
 msgid "Non-identifiers"
@@ -634,9 +642,17 @@ msgstr "Дополнительный отступ для begin/end в проце
 msgid "Extra Indent for Case...Else blocks"
 msgstr "Дополнительный отступ для блоков Case...Else"
 
+#: jcfuiconsts.lisindentextraindentforcaselabels
+msgid "Extra Indent for Case labels"
+msgstr ""
+
 #: jcfuiconsts.lisindentextraindentforifelseblocks
 msgid "Extra Indent for If...Else blocks"
 msgstr "Дополнительный отступ для блоков If...Else"
+
+#: jcfuiconsts.lisindentextraindentforinterfaceguid
+msgid "Extra Indent for interface guid"
+msgstr ""
 
 #: jcfuiconsts.lisindentindentation
 msgid "Indentation"

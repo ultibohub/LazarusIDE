@@ -518,9 +518,13 @@ var
   ns : NSString;
 begin
   if not Assigned(txt) then Exit;
-  ns := NSStringUtf8(str);
-  txt.setPlaceholderString(ns);
-  ns.release;
+  if str <> '' then begin
+    ns := NSStringUtf8(str);
+    txt.setPlaceholderString(ns);
+    ns.release;
+  end else begin
+    txt.setPlaceholderString(nil);
+  end;
 end;
 
 procedure ObjSetTextHint(obj: NSObject; const str: string);
@@ -2001,6 +2005,7 @@ begin
     // to be tested and considered
     //ComboBoxSetBorderStyle(cmb, TCustomComboBoxAccess(AWinControl).BorderStyle);
     Result:=TLCLHandle(cmb);
+    UpdateControlFocusRing(cmb, AWinControl);
   end;
   //todo: 26 pixels is the height of 'normal' combobox. The value is taken from the Interface Builder!
   //      use the correct way to set the size constraints
@@ -2490,6 +2495,11 @@ begin
   lclListBox:= TCustomListBox( lclcb.Target );
   if lclListBox = nil then
     Exit;
+
+  if NOT cocoaTLV.selectingByProgram then begin
+    lclcb.selectionIndexSet.removeAllIndexes;
+    lclcb.selectionIndexSet.addIndexes( tv.selectedRowIndexes );
+  end;
 
   // do not notify about selection changes while clearing
   if Assigned(lclcb.strings) and (lclcb.strings.isClearing) then Exit;

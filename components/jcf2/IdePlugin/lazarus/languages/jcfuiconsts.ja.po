@@ -278,6 +278,14 @@ msgstr "識別子"
 msgid "Set capitalisation on these identifiers:"
 msgstr "大文字小文字で整える識別子"
 
+#: jcfuiconsts.liscapsnormalizecapitalisation
+msgid "Normalization of capitalisation"
+msgstr ""
+
+#: jcfuiconsts.liscapsnormalizecapitalisationonenamespace
+msgid "Use only one namespace"
+msgstr ""
+
 #: jcfuiconsts.liscapsnotidentifiersnotidentifiers
 msgid "Non-identifiers"
 msgstr "識別子以外"
@@ -642,9 +650,17 @@ msgstr "手続き内での begin/end にインデントを追加する"
 msgid "Extra Indent for Case...Else blocks"
 msgstr "case...else ブロックにインデントを追加する"
 
+#: jcfuiconsts.lisindentextraindentforcaselabels
+msgid "Extra Indent for Case labels"
+msgstr ""
+
 #: jcfuiconsts.lisindentextraindentforifelseblocks
 msgid "Extra Indent for If...Else blocks"
 msgstr "if...else ブロックにインデントを追加する"
+
+#: jcfuiconsts.lisindentextraindentforinterfaceguid
+msgid "Extra Indent for interface guid"
+msgstr ""
 
 #: jcfuiconsts.lisindentindentation
 msgid "Indentation"

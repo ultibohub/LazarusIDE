@@ -345,9 +345,8 @@ end;
 
 function TMenuItem.InternalRethinkLines(AForced: Boolean): Boolean;
 var
-  LItem: TMenuItem;
-  LLastVisibleIsLine, HideSeps: Boolean;
-  LLastVisibleItem: TMenuItem;
+  CurItem, LastVisibleItem: TMenuItem;
+  HideSeps: Boolean;
   I: Integer;
 begin
   //debugln(['TMenuItem.InternalRethinkLines, AForced=',AForced]);
@@ -355,52 +354,60 @@ begin
   if (csDesigning in ComponentState) then
     Exit;
   HideSeps := GetAutoLineReduction;
+  // debugln(['TMenuItem.InternalRethinkLines, AForced=',AForced,', HideSeps=',HideSeps]);
   if {AForced or} HideSeps then
   begin
-    LLastVisibleIsLine := True; // to hide head line
-    LLastVisibleItem := nil;
+    LastVisibleItem := nil;
 
     for I:= 0 to Count - 1 do
     begin
-      LItem := Items[I];
-      if LItem.IsLine then
+      CurItem := Items[I];
+      if CurItem.IsLine {and CurItem.Visible} then
       begin
-        // hide head or double lines
-        if LItem.Visible <> not LLastVisibleIsLine then
+        if CurItem.Visible then
         begin
-          LItem.Visible := not LLastVisibleIsLine;
-          Result := True;
-          //debugln(['TMenuItem.InternalRethinkLines: hiding separator with name "',LItem.Name,'"']);
+          // debugln(['TMenuItem.InternalRethinkLines: LastVisibleItem=',dbgsname(LastVisibleItem)]);
+          if (LastVisibleItem = nil) or (LastVisibleItem.IsLine) or (I = Count-1) then
+          begin
+            CurItem.Visible := False;
+            Result := True;
+            // debugln(['TMenuItem.InternalRethinkLines: hiding separator with name "',CurItem.Name,'"']);
+          end;
+        end
+        else
+        begin
+          //if a previously hidden item is now visible and it was between separators
+          // we may need to unhide the separator now
+          if (LastVisibleItem <> nil) and (not LastVisibleItem.IsLine) then
+          begin
+            CurItem.Visible := True;
+            Result := True;
+            // debugln(['TMenuItem.InternalRethinkLines: UNhiding separator with name "',CurItem.Name,'"']);
+          end;
         end;
       end;
-
-      if LItem.Visible then
-      begin
-        LLastVisibleIsLine := LItem.IsLine;
-        LLastVisibleItem := LItem;
-      end;
-    end;
-
-    // hide end line
-    if (LLastVisibleItem <> nil) and
-      LLastVisibleItem.IsLine and LLastVisibleItem.Visible then
+      if CurItem.Visible then
+        LastVisibleItem := CurItem;
+    end;//for
+    //we may have accidently unhidden a separator which turns out to be the last visible item: we must hide that
+    if (LastVisibleItem <> nil) and (LastVisibleItem.IsLine) then
     begin
-      LLastVisibleItem.Visible := False;
+      LastVisibleItem.Visible := False;
       Result := True;
-      //debugln(['TMenuItem.InternalRethinkLines: hiding separator with name "',LItem.Name,'"']);
+      // debugln(['TMenuItem.InternalRethinkLines: hiding LastVisibleItem with name "',LastVisibleItem.Name,'"']);
     end;
-  end
+  end// if AForced or HideSep
   else
-  //apparently if GetAToLineReduction is False, Delphi sets all separators to be visible
   begin
+    //apparently if GetAutoLineReduction is False, Delphi sets all separators to be visible
     for i := 0 to Count - 1 do
     begin
-      LItem := Items[i];
-      if LItem.IsLine and not LItem.Visible then
+      CurItem := Items[i];
+      if CurItem.IsLine and not CurItem.Visible then
       begin
-        LItem.Visible := True;
+        CurItem.Visible := True;
         Result := True;
-        //debugln(['TMenuItem.InternalRethinkLines: unhiding separator with name "',LItem.Name,'"']);
+        // debugln(['TMenuItem.InternalRethinkLines: unhiding separator with name "',CurItem.Name,'"']);
       end;
     end;
   end;
