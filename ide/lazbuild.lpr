@@ -540,12 +540,11 @@ begin
 
   // check if Package with same name is already loaded
   ConflictPkg:=PackageGraph.FindPackageWithName(Result.Name,nil);
-  if not PackageGraph.PackageCanBeReplaced(ConflictPkg,Result) then
-    PrintErrorAndHalt(ErrorLoadPackageFailed,
-      'Cannot replace loaded package '+ConflictPkg.IDAsString+' with '+Result.IDAsString+' from "'+Result.Filename+'"');
-
   if ConflictPkg<>nil then begin
     // replace package
+    if not PackageGraph.PackageCanBeReplaced(ConflictPkg,Result) then
+      PrintErrorAndHalt(ErrorLoadPackageFailed,
+        'Cannot replace loaded package '+ConflictPkg.IDAsString+' with '+Result.IDAsString+' from "'+Result.Filename+'"');
     PackageGraph.ReplacePackage(ConflictPkg,Result);
   end else begin
     // add to graph
@@ -1012,7 +1011,7 @@ begin
     Result := StartBuilding;
 
   // Auto increment build number
-  if Result and not NoWriteProject
+  if Result and BuildAll and not NoWriteProject
   and Project1.ProjResources.VersionInfo.UseVersionInfo
   and Project1.ProjResources.VersionInfo.AutoIncrementBuild
   then begin
@@ -1036,7 +1035,7 @@ begin
     if ProjectDesc.InitProject(Result)<>mrOk then begin
       Result.EndUpdate;
       Result.Free;
-      Result:=nil;
+      exit(nil);
     end;
     Result.EndUpdate;
 

@@ -29,13 +29,13 @@ See http://www.gnu.org/licenses/gpl.html
   Converter class for the IDE pluggin
 }
 
-{$I JcfGlobal.inc}
+{$mode delphi}
 
 interface
 
 uses
   Classes, SysUtils,
-  SrcEditorIntf,
+  SrcEditorIntf, IDEMsgIntf,
   { local }
   Converter, ConvertTypes;
 
@@ -50,7 +50,7 @@ type
     fsCurrentUnitName: string;
     fiConvertCount: integer;
     fOnIncludeFile: TOnIncludeFile;
-    prOcedure SendStatusMessage(const psUnit, psMessage: string;
+    procedure SendStatusMessage(const psUnit, psMessage: string;
       const peMessageType: TStatusMessageType;
       const piY, piX: integer);
 
@@ -85,7 +85,7 @@ implementation
 
 uses
   { local }
-  JcfLog, JcfRegistrySettings, diffmerge, jcfbaseConsts;
+  JcfLog, JcfRegistrySettings, diffmerge, jcfbaseConsts, JcfIdeMain;
 
 constructor TEditorConverter.Create;
 begin
@@ -129,7 +129,9 @@ begin
     WriteToIDE(pciUnit, fcConverter.OutputCode);
     SendStatusMessage(pciUnit.FileName, 'Formatted unit', mtProgress, -1, -1);
     Inc(fiConvertCount);
-  end;
+  end
+  else
+    TJcfIdeMain.ShowIdeMessages;
 end;
 
 function TEditorConverter.ReadFromIDE(const pcUnit: TSourceEditorInterface): string;

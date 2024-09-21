@@ -2165,45 +2165,43 @@ function TCocoaContext.StretchDraw(X, Y, Width, Height: Integer;
   SrcDC: TCocoaBitmapContext; XSrc, YSrc, SrcWidth, SrcHeight: Integer;
   Msk: TCocoaBitmap; XMsk, YMsk: Integer; Rop: DWORD): Boolean;
 var
-  Bmp: TCocoaBitmap;
-  MskImage: CGImageRef = nil;
-  ImgRect: CGRect;
-
-  dcWidth: Integer;
-  dcHeight: Integer;
+  dcBitmap: TCocoaBitmap;
+  maskImage: CGImageRef = nil;
+  cgImage: CGImageRef;
+  imageRep: NSBitmapImageRep;
 begin
-  Bmp := SrcDC.Bitmap;
-  if not Assigned(Bmp) then
+  dcBitmap := SrcDC.Bitmap;
+  if not Assigned(dcBitmap) then
     Exit(False);
 
-  dcWidth:= Max(Width,FSize.Width);
-  dcHeight:= Max(Height,FSize.Height);
-
   // Make sure that bitmap is the most up-to-date
-  Bmp.ReCreateHandle_IfModified(); // Fix for bug 28102
+  dcBitmap.ReCreateHandle_IfModified(); // Fix for bug 28102
 
   // see https://bugs.freepascal.org/view.php?id=34197
   // Bitmap context windowsofs should be used when rendering a bitmap
   inc(XSrc, -SrcDC.WindowOfs.X);
   inc(YSrc, -SrcDC.WindowOfs.Y);
 
-  CGContextSaveGState(CGContext);
-  //apply window offset
-  if (Msk <> nil) and (Msk.Image <> nil) then begin
-    MskImage := Msk.CreateMaskImage(Bounds(XMsk, YMsk, SrcWidth, SrcHeight));
-    ImgRect := CGRectMake(x, y, dcWidth, dcHeight);
-    CGContextClipToMask(CGContext, ImgRect, MskImage);
-  end;
-
   if NOT SrcDC.ctx.isFlipped then begin
-    YSrc := Bmp.Height - (SrcHeight + YSrc);
+    YSrc := dcBitmap.Height - (SrcHeight + YSrc);
   end;
 
-  Result := DrawImageRep(GetNSRect(X, Y, Width, Height),GetNSRect(XSrc, YSrc, SrcWidth, SrcHeight), bmp.ImageRep);
+  imageRep:= dcBitmap.ImageRep;
+  if (Msk <> nil) and (Msk.Image <> nil) then begin
+    maskImage := Msk.CreateMaskImage(Bounds(XMsk, YMsk, SrcWidth, SrcHeight));
+    cgImage:= CGImageCreateWithMask(imageRep.CGImage, maskImage);
+    imageRep:= NSBitmapImageRep.alloc.initWithCGImage(cgImage);
+  end;
 
-  if Assigned(MskImage) then
-    CGImageRelease(MskImage);
-  CGContextRestoreGState(CGContext);
+  Result := DrawImageRep( GetNSRect(X, Y, Width, Height),
+                          GetNSRect(XSrc, YSrc, SrcWidth, SrcHeight),
+                          imageRep );
+
+  if Assigned(maskImage) then begin
+    imageRep.release;
+    CGImageRelease(cgImage);
+    CGImageRelease(maskImage);
+  end;
 
   AttachedBitmap_SetModified();
 end;

@@ -71,6 +71,8 @@ type
     NSTableViewDataSourceProtocol,
     TCocoaListViewBackendControlProtocol )
   private
+    _coocaInitializing: Boolean;
+  private
     _processor: TCocoaTableViewProcessor;
     _checkBoxes: Boolean;
     _checkBoxAllowsMixed: Boolean;
@@ -632,6 +634,13 @@ var
 begin
   inherited;
 
+  // NSTableView.initWithFrame() will call setNeedsDisplayInRect()
+  // at this time, calling rowsInRect() will crash on macOS 10.14.
+  // it seems that this issue does not exist on other macOS versions.
+  // FYI: https://gitlab.com/freepascal.org/lazarus/lazarus/-/issues/41133
+  if  _coocaInitializing then
+    Exit;
+
   rowRange := self.rowsInRect( invalidRect );
   if rowRange.length = 0 then
     Exit;;
@@ -657,11 +666,14 @@ begin
 end;
 
 procedure TCocoaTableListView.restoreFromStableSelection;
+var
+  selection: NSIndexSet;
 begin
   if NOT Assigned(self.callback) then
     Exit;
 
-  self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
+  selection:= self.callback.selectionIndexSet;
+  self.selectRowIndexesByProgram( selection );
 end;
 
 procedure TCocoaTableListView.reloadData;
@@ -718,7 +730,9 @@ end;
 
 function TCocoaTableListView.initWithFrame(frameRect: NSRect): id;
 begin
+  _coocaInitializing:= True;
   Result:=inherited initWithFrame(frameRect);
+  _coocaInitializing:= False;
   if NSAppkitVersionNumber >= NSAppKitVersionNumber11_0 then
     setStyle( CocoaConfigListView.vsReport.tableViewStyle );
 end;
@@ -1204,6 +1218,7 @@ begin
   fieldControl.setDrawsBackground( False );
   fieldControl.setEditable( False );
   fieldControl.setLineBreakMode( NSLineBreakByTruncatingTail );
+  fieldControl.setAllowsExpansionToolTips(True);
   self.setTextField( fieldControl );
   self.addSubview( fieldControl );
 end;

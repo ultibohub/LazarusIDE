@@ -33,7 +33,7 @@ unit BuildTokenList;
  2017.05.17 ~pktv Added lexing of octal constants (ex. -> const a=&777;)
 }
 
-{$I JcfGlobal.inc}
+{$mode delphi}
 
 interface
 
@@ -114,7 +114,7 @@ implementation
 
 uses
   { local }
-  JcfStringUtils, JcfRegistrySettings, ParseError, jcfbaseConsts;
+  JcfStringUtils, JcfRegistrySettings, ParseError, jcfbaseConsts, FormatFlags;
 
 const
   CurlyLeft =  '{'; //widechar(123);
@@ -243,6 +243,7 @@ function TBuildTokenList.TryBracketStarComment(const pcToken: TSourceToken): boo
 var
   liCommentLength, lNestedDepth: integer;
   bPossiblyImbalanced: Boolean;
+  liCommentStart, liLine, liCol:integer;
 
   procedure MoveToCommentEnd;
   var
@@ -258,6 +259,9 @@ var
           // $ (US): 2021-06-28 15:48:59 $
           //  Although it is not a parse error, but I do not want to introduce
           //  another exception class.
+          FindLineCol(fsSourceCode, liCommentStart, liLine, liCol);
+          pcToken.XPosition := liCol;
+          pcToken.YPosition := liLine;
           raise TEParseError.Create(lisMsgUnableToRecoverImbalancedBracketStarComment, pcToken);
         end else
         begin
@@ -303,6 +307,7 @@ begin
   if CurrentChars(2) <> '(*' then
     exit;
 
+  liCommentStart := fiCurrentIndex;
   lNestedDepth := 1;
   { if the comment starts with (*) that is not the end of the comment }
   liCommentLength := 2;
@@ -327,6 +332,7 @@ function TBuildTokenList.TryCurlyComment(const pcToken: TSourceToken): boolean;
 var
   liCommentLength, lNestedDepth: integer;
   bPossiblyImbalanced: Boolean;
+  liCommentStart, liLine, liCol:integer;
 
   procedure MoveToCommentEnd;
   var
@@ -342,6 +348,9 @@ var
           // $ (US): 2021-06-28 15:48:59 $
           //  Although it is not a parse error, but I do not want to introduce
           //  another exception class.
+          FindLineCol(fsSourceCode, liCommentStart, liLine, liCol);
+          pcToken.XPosition := liCol;
+          pcToken.YPosition := liLine;
           raise TEParseError.Create(lisMsgUnableToRecoverImbalancedCurlyComment, pcToken);
         end else
         begin
@@ -373,6 +382,7 @@ begin
   if Current <> '{' then
     exit;
 
+  liCommentStart := fiCurrentIndex;
   bPossiblyImbalanced := False;
 
   pcToken.TokenType  := ttComment;
@@ -498,8 +508,10 @@ function TBuildTokenList.TryMultiLineLiteralString(const pcToken: TSourceToken):
 var
   liCount,liAux:integer;
   liCountEnd:integer;
+  liLiteralStart, liLine, liCol, liPos:integer;
 begin
   Result := False;
+  liLiteralStart := fiCurrentIndex;
   liCount:=0;
   while ForwardChar(liCount)=NativeSingleQuote do
     Inc(liCount);
@@ -518,7 +530,13 @@ begin
     { read until the close ''' }
     repeat
       if Current = #0 then
-        raise TEParseError.Create(Format(lisMsgUnterminatedString,[pcToken.SourceCode]),pcToken);
+      begin
+        FindLineCol(fsSourceCode, liLiteralStart, liLine, liCol);
+        pcToken.XPosition := liCol;
+        pcToken.YPosition := liLine;
+        liPos := 1;
+        raise TEParseError.Create(Format(lisMsgUnterminatedString,[ExtractSubStr(pcToken.SourceCode,liPos,[#13,#10])]),pcToken);
+      end;
 
       if (Current = NativeSingleQuote) then
       begin
@@ -543,12 +561,16 @@ begin
   end;
 end;
 
+
 { complexities like 'Hello'#32'World' and #$12'Foo' are assemlbed in the parser }
 function TBuildTokenList.TryLiteralString(const pcToken: TSourceToken;
   const pcDelimiter: Char): boolean;
+var
+  liLiteralStart, liLine, liCol: integer;
 begin
   Result := False;
 
+  liLiteralStart := fiCurrentIndex;
   if Current = pcDelimiter then
   begin
     Result := True;
@@ -561,8 +583,12 @@ begin
       if Current = #0 then
         break;
       if CharIsReturn(Current) then
+      begin
+        FindLineCol(fsSourceCode, liLiteralStart, liLine, liCol);
+        pcToken.XPosition := liCol;
+        pcToken.YPosition := liLine;
         raise TEParseError.Create(Format(lisMsgUnterminatedString,[pcToken.SourceCode]),pcToken);
-
+      end;
       { two quotes in a row are still part of the string }
       if (Current = pcDelimiter) then
       begin
@@ -1023,9 +1049,16 @@ var
   lcNew:     TSourceToken;
   liCounter: integer;
   lbIncludeToken: boolean;
+  liParseDisabledCount: integer;
+  liParseDisabledCountRaw: integer;   // needed to emit warning.
+  lsError: string;
+  leFlags: TFormatFlags;
+  lbOn: boolean;
 begin
   Assert(SourceCode <> '');
   liCounter := 0;
+  liParseDisabledCount := 0;
+  liParseDisabledCountRaw := 0;
 
   while not EndOfFile do
   begin
@@ -1035,6 +1068,31 @@ begin
       lcNew := GetNextToken;
       if lcNew<>nil then
       begin
+        if (lcNew.TokenType=ttComment) then
+        begin
+          if ReadCommentJcfFlags(lcNew.SourceCode, lsError, leFlags, lbOn) then
+          begin
+            if eParse in leFlags then
+            begin
+              if not lbOn then // //jcf:parse=off
+              begin
+                Inc(liParseDisabledCount);
+                Inc(liParseDisabledCountRaw);
+              end
+              else
+              begin
+                if (liParseDisabledCount > 0) then // //jcf:parse=on
+                  Dec(liParseDisabledCount);
+                Dec(liParseDisabledCountRaw);
+              end;
+            end;
+          end;
+        end
+        else
+        begin
+          if (liParseDisabledCount > 0) and lcNew.IsSolid then
+            lcNew.TokenType := ttComment;
+        end;
         if btlOnlyDirectives in AFlags then
         begin
           if not ((lcNew.TokenType=ttComment) and (lcNew.CommentStyle=eCompilerDirective)) then
@@ -1053,6 +1111,8 @@ begin
       raise;
     end;
   end;
+  if liParseDisabledCountRaw <> 0 then
+    raise EBuildTokenListWarning.Create(lisMsgImbalancedParseDisable);
 end;
 
 function TBuildTokenList.Current: Char;

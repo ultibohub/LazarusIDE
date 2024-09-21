@@ -31,7 +31,7 @@ See http://www.gnu.org/licenses/gpl.html
 ------------------------------------------------------------------------------*)
 {*)}
 
-{$I JcfGlobal.inc}
+{$mode delphi}
 
 interface
 
@@ -80,6 +80,8 @@ type
     procedure DoRegistrySettings(Sender: TObject);
     procedure DoFormatSettings(Sender: TObject);
     procedure DoAbout(Sender: TObject);
+
+    class procedure ShowIdeMessages;
   end;
 
 
@@ -276,6 +278,7 @@ begin
   GetSelectedBlockFullLines(BlockBegin,BlockEnd);
   fcConverter := TConverter.Create;
   try
+    ClearToolMessages;
     fcConverter.OnStatusMessage := LogIDEMessage;
     fcConverter.InputCode := sourceCode;
     fcConverter.GuiMessages := false; //true;
@@ -293,7 +296,6 @@ begin
     end
     else
     begin    //try formating wrapping selected code in fake unit.
-      ClearToolMessages;
       BlockBegin := srcEditor.BlockBegin;
       BlockBegin.X := 1;     // full lines.
       BlockEnd := srcEditor.BlockEnd;
@@ -331,7 +333,7 @@ begin
       fcConverter.GuiMessages := true;
       fcConverter.FileName := SourceEditorManagerIntf.ActiveEditor.FileName;
       fcConverter.OnIncludeFile := OnIncludeFile;
-      fcConverter.ConvertUsingFakeUnit;
+      fcConverter.ConvertUsingFakeUnit(BlockBegin.Y);
       if not fcConverter.ConvertError then
       begin
         outputstr:=StrTrimLastEndOfLine(fcConverter.OutputCode);
@@ -339,6 +341,8 @@ begin
       end;
     end;
   finally
+    if fcConverter.ConvertError then
+      ShowIdeMessages;
     fcConverter.Free;
   end;
 end;
@@ -384,6 +388,8 @@ begin
       DiffMergeEditor(srcEditor, outputstr, BlockBegin.Y, BlockEnd.Y);
     end;
   finally
+    if fcConverter.ConvertError then
+      ShowIdeMessages;
     fcConverter.Free;
   end;
 end;
@@ -398,6 +404,11 @@ begin
   finally
     lcAbout.Free;
   end;
+end;
+
+class procedure TJcfIdeMain.ShowIdeMessages;
+begin
+  LazarusIDE.DoShowMessagesView({PutOnTop} True);
 end;
 
 procedure TJcfIdeMain.DoRegistrySettings(Sender: TObject);
