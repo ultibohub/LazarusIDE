@@ -8,7 +8,8 @@ interface
 uses
   Classes, SysUtils, Math, IdeDebuggerWatchResult, IdeDebuggerUtils, IdeDebuggerDisplayFormats,
   IdeDebuggerBase, IdeDebuggerStringConstants, IdeDebuggerValueFormatter, IdeDebuggerWatchResUtils,
-  LazDebuggerIntf, LazUTF8, IdeDebuggerWatchValueIntf, StrUtils, LazDebuggerUtils;
+  LazDebuggerIntf, LazUTF8, IdeDebuggerWatchValueIntf, StrUtils, LazDebuggerUtils,
+  LazDebuggerIntfFloatTypes;
 
 type
 
@@ -107,6 +108,7 @@ type
     function PrintStruct(AResValue: TWatchResultData; const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer; const AWatchedExpr: String): TStringBuilderPart;
     function PrintConverted(AResValue: TWatchResultData; const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer; const AWatchedExpr: String): TStringBuilderPart;
     function PrintProc(AResValue: TWatchResultData; const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): TStringBuilderPart;
+    function PrintMemDump(AResValue: TWatchResultData; const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer): TStringBuilderPart;
 
     function PrintWatchValueEx(AResValue: TWatchResultData; const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer; const AWatchedExpr: String): TStringBuilderPart;
   public
@@ -1194,6 +1196,67 @@ begin
   Result.RawAsString := R;
 end;
 
+function TWatchResultPrinter.PrintMemDump(AResValue: TWatchResultData;
+  const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer
+  ): TStringBuilderPart;
+const
+  HDIG = '0123456789ABCDEF';
+var
+  r: PString;
+  m: RawByteString;
+  s: String;
+  i, l, j, b: Integer;
+begin
+  m := AResValue.AsString;
+  r := Result.RawAsStringPtr;
+  SetLength(r^, Length(m)*4 + Max(20, FTargetAddressSize*2+4));
+
+  i := 1;
+  l := 0;
+  if AResValue.DataAddress <> 0 then begin
+    s := IntToHex(AResValue.DataAddress, FTargetAddressSize*2)+':';
+    move(s[1], r^[i], Length(s));
+    inc(i, Length(s));
+    if (rpfMultiLine in FFormatFlags) and (Length(FLineSeparator) > 0) then begin
+      move(FLineSeparator[1], r^[i], Length(FLineSeparator));
+      inc(i, Length(FLineSeparator));
+    end
+    else begin
+      r^[i] := ' ';      inc(i);
+    end;
+    l := i;
+  end;
+
+  for j := 1 to Length(m) do begin
+    b := ord(m[j]);
+    r^[i] := HDIG[(b div 16)+1];    inc(i);
+    r^[i] := HDIG[(b and 15)+1];    inc(i);
+    l := i;
+
+    if ((j and 15) = 0) then begin
+      if (rpfMultiLine in FFormatFlags) and (Length(FLineSeparator) > 0) then begin
+        move(FLineSeparator[1], r^[i], Length(FLineSeparator));
+        inc(i, Length(FLineSeparator));
+        l := i;
+      end
+      else begin
+        r^[i] := ' ';        inc(i);
+        r^[i] := ' ';        inc(i);
+        r^[i] := ' ';        inc(i);
+      end;
+    end
+    else
+    if ((j and 7) = 0) then begin
+      r^[i] := ' ';      inc(i);
+      r^[i] := ' ';      inc(i);
+    end
+    else begin
+      r^[i] := ' ';      inc(i);
+    end;
+  end;
+  SetLength(r^, l+1);
+end;
+
 function TWatchResultPrinter.PrintWatchValueEx(AResValue: TWatchResultData;
   const ADispFormat: TWatchDisplayFormat; ANestLvl: Integer; const AWatchedExpr: String
   ): TStringBuilderPart;
@@ -1451,6 +1514,7 @@ begin
       rdkFunctionRef,
       rdkProcedureRef: Result := PrintProc(AResValue, ADispFormat, ANestLvl);
       rdkVariant: Result := PrintWatchValueEx(AResValue.DerefData, ADispFormat, ANestLvl, AWatchedExpr);
+      rdkMemDump: Result := PrintMemDump(AResValue, ADispFormat, ANestLvl);
     end;
   finally
     FCurrentResValue := OldCurrentResValue;
@@ -1479,32 +1543,37 @@ function TWatchResultPrinter.PrintWatchValue(AResValue: TWatchResultData;
 var
   Res: TStringBuilderPart;
 begin
-  FNextValueFormatter := nil;
-  if FOnlyValueFormatter <> nil then
-    FDefaultValueFormatter := FOnlyValueFormatter
-  else
-    FDefaultValueFormatter := GlobalValueFormatterSelectorList;
+  DisableFloatExceptions;
+  try
+    FNextValueFormatter := nil;
+    if FOnlyValueFormatter <> nil then
+      FDefaultValueFormatter := FOnlyValueFormatter
+    else
+      FDefaultValueFormatter := GlobalValueFormatterSelectorList;
 
-  if rpfSkipValueFormatter in FormatFlags then
-    FCurrentValueFormatter := nil
-  else
-    FCurrentValueFormatter := FDefaultValueFormatter;
+    if rpfSkipValueFormatter in FormatFlags then
+      FCurrentValueFormatter := nil
+    else
+      FCurrentValueFormatter := FDefaultValueFormatter;
 
-  if rpfMultiLine in FFormatFlags then
-    FLineSeparator := LineEnding
-  else
-    FLineSeparator := ' ';
+    if rpfMultiLine in FFormatFlags then
+      FLineSeparator := LineEnding
+    else
+      FLineSeparator := ' ';
 
-  FWatchedVarName := UpperCase(AWatchedExpr);
-  FParentResValue := nil;
-  FCurrentResValue := nil;
-  FElementCount := 0;
-  FCurrentMultilineLvl := 0;
-  FDeepestMultilineLvl := 0;
-  FDeepestArray := 0;
-  Res := PrintWatchValueEx(AResValue, ADispFormat, -1, FWatchedVarName);
-  Result := Res.GetFullString;
-  Res.FreeAll;
+    FWatchedVarName := UpperCase(AWatchedExpr);
+    FParentResValue := nil;
+    FCurrentResValue := nil;
+    FElementCount := 0;
+    FCurrentMultilineLvl := 0;
+    FDeepestMultilineLvl := 0;
+    FDeepestArray := 0;
+    Res := PrintWatchValueEx(AResValue, ADispFormat, -1, FWatchedVarName);
+    Result := Res.GetFullString;
+    Res.FreeAll;
+  finally
+    EnableFloatExceptions;
+  end;
 end;
 
 function TWatchResultPrinter.PrintWatchValueIntf(AResValue: IWatchResultDataIntf;

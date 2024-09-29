@@ -8,7 +8,7 @@ International public license.
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
 file://../../cc-by-sa-4-0.txt
 
-Copyright (c) 1997-2023, by the Lazarus Development Team.
+Copyright (c) 1997-2024, by the Lazarus Development Team.
 
 -->
 <fpdoc-descriptions>
@@ -2260,7 +2260,7 @@ changed.
 </short>
 <descr>
 <p>
-Calls the inherited method on entry to signal assigned OnVisbleChanging event 
+Calls the inherited method on entry to signal assigned OnVisibleChanging event
 handlers in the control or form hierarchy. Updates the Visible property in 
 each of the editor controls to match the property value in the 
 TCompositeCellEditor instance. When displaying the editor controls, their 

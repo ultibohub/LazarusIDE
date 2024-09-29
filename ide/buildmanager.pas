@@ -299,13 +299,13 @@ end;
 
 function CompareUnitFiles(UnitFile1, UnitFile2: PUnitFile): integer;
 begin
-  Result:=CompareIdentifierPtrs(Pointer(UnitFile1^.FileUnitName),
-                                Pointer(UnitFile2^.FileUnitName));
+  Result:=CompareIdentifiers(PChar(UnitFile1^.FileUnitName),
+                             PChar(UnitFile2^.FileUnitName));
 end;
 
 function CompareUnitNameAndUnitFile(UnitName: PChar; UnitFile: PUnitFile): integer;
 begin
-  Result:=CompareIdentifierPtrs(Pointer(UnitName),Pointer(UnitFile^.FileUnitName));
+  Result:=CompareIdentifiers(PChar(UnitName),PChar(UnitFile^.FileUnitName));
 end;
 
 procedure OnCompilerParseStampIncreased;
@@ -368,7 +368,7 @@ begin
     {$ENDIF}
     s:='';
     //IDEMessageDialog('Unknown Macro','Macro not defined: "'+s+'".',mtError,[mbAbort],0);
-    Handled:=true;
+    Handled:=false;
     exit;
   end;
 end;
@@ -1865,7 +1865,7 @@ begin
       else
         continue;
       CurUnitName:=ExtractFilenameOnly(CurFilename);
-      if not LazIsValidIdent(CurUnitName) then
+      if not IsValidIdent(CurUnitName) then
         continue;
       //DebugLn(['TBuildManager.CheckUnitPathForAmbiguousPascalFiles ',CurUnitName,' ',CurFilename]);
       // check if unit already found

@@ -13,16 +13,15 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     Height = 26
     Top = 0
     Width = 679
-    Caption = 'ToolBar1'
     ShowCaptions = True
     TabOrder = 0
     object btnGlobal: TSpeedButton
       AnchorSideBottom.Control = ToolButton1
       AnchorSideBottom.Side = asrBottom
       Left = 1
-      Height = 19
+      Height = 25
       Top = 2
-      Width = 56
+      Width = 62
       AllowAllUp = True
       AutoSize = True
       Caption = 'btnGlobal'
@@ -31,7 +30,7 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
       OnClick = btnGlobalClick
     end
     object ToolButton1: TToolButton
-      Left = 57
+      Left = 63
       Height = 22
       Top = 2
       Caption = 'ToolButton1'
@@ -40,10 +39,10 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     object btnHint: TSpeedButton
       AnchorSideBottom.Control = ToolButton1
       AnchorSideBottom.Side = asrBottom
-      Left = 62
-      Height = 19
+      Left = 68
+      Height = 25
       Top = 2
-      Width = 45
+      Width = 51
       AllowAllUp = True
       AutoSize = True
       Caption = 'btnHint'
@@ -54,10 +53,10 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     object btnWatches: TSpeedButton
       AnchorSideBottom.Control = ToolButton1
       AnchorSideBottom.Side = asrBottom
-      Left = 107
-      Height = 19
+      Left = 119
+      Height = 25
       Top = 2
-      Width = 67
+      Width = 73
       AllowAllUp = True
       AutoSize = True
       Caption = 'btnWatches'
@@ -68,10 +67,10 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     object btnLocals: TSpeedButton
       AnchorSideBottom.Control = ToolButton1
       AnchorSideBottom.Side = asrBottom
-      Left = 174
-      Height = 19
+      Left = 192
+      Height = 25
       Top = 2
-      Width = 55
+      Width = 61
       AllowAllUp = True
       AutoSize = True
       Caption = 'btnLocals'
@@ -82,10 +81,10 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     object btnInspect: TSpeedButton
       AnchorSideBottom.Control = ToolButton1
       AnchorSideBottom.Side = asrBottom
-      Left = 229
-      Height = 19
+      Left = 253
+      Height = 25
       Top = 2
-      Width = 60
+      Width = 66
       AllowAllUp = True
       AutoSize = True
       Caption = 'btnInspect'
@@ -96,16 +95,37 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     object btnEvalMod: TSpeedButton
       AnchorSideBottom.Control = ToolButton1
       AnchorSideBottom.Side = asrBottom
-      Left = 289
-      Height = 19
+      Left = 319
+      Height = 25
       Top = 2
-      Width = 68
+      Width = 74
       AllowAllUp = True
       AutoSize = True
       Caption = 'btnEvalMod'
       GroupIndex = 6
       Transparent = False
       OnClick = btnTargetClick
+    end
+    object ToolButton2: TToolButton
+      Left = 393
+      Height = 22
+      Top = 2
+      Caption = 'ToolButton2'
+      Style = tbsDivider
+    end
+    object btnPresets: TSpeedButton
+      AnchorSideBottom.Control = ToolButton1
+      AnchorSideBottom.Side = asrBottom
+      Left = 398
+      Height = 25
+      Top = 2
+      Width = 65
+      AllowAllUp = True
+      AutoSize = True
+      Caption = 'btnPresets'
+      GroupIndex = 7
+      Transparent = False
+      OnClick = btnPresetsClick
     end
   end
   object lblChangingDescr: TLabel
@@ -118,6 +138,7 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     BorderSpacing.Bottom = 3
     Caption = 'lblChangingDescr'
     ParentFont = False
+    WordWrap = True
   end
   object lblProjectText: TLabel
     Left = 0
@@ -128,14 +149,1054 @@ object DisplayFormatDefaultsConfigFrame: TDisplayFormatDefaultsConfigFrame
     BorderSpacing.Top = 3
     BorderSpacing.Bottom = 3
     Caption = 'lblProjectText'
+    WordWrap = True
   end
-  inline DisplayFormatFrame1: TDisplayFormatFrame
+  object pnlPresetList: TPanel
+    Left = 0
     Height = 410
     Top = 65
-    Width = 679
-    Align = alClient
+    Width = 170
+    Align = alLeft
     ClientHeight = 410
-    ClientWidth = 679
+    ClientWidth = 170
+    Constraints.MinWidth = 30
     TabOrder = 1
+    object lbPresets: TListBox
+      AnchorSideLeft.Control = pnlPresetList
+      AnchorSideTop.Control = pnlPresetList
+      AnchorSideRight.Control = pnlPresetList
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = btnPreNew
+      Left = 4
+      Height = 253
+      Top = 1
+      Width = 162
+      Anchors = [akTop, akLeft, akRight, akBottom]
+      BorderSpacing.Left = 3
+      BorderSpacing.Right = 3
+      BorderSpacing.Bottom = 5
+      ItemHeight = 0
+      TabOrder = 0
+      OnClick = lbPresetsClick
+    end
+    object btnPreNew: TButton
+      AnchorSideLeft.Control = pnlPresetList
+      AnchorSideRight.Control = pnlPresetList
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = btnPreDel
+      Left = 4
+      Height = 25
+      Top = 259
+      Width = 162
+      Anchors = [akLeft, akRight, akBottom]
+      BorderSpacing.Around = 3
+      Caption = 'btnPreNew'
+      TabOrder = 1
+      OnClick = btnPreNewClick
+    end
+    object btnPreDel: TButton
+      AnchorSideLeft.Control = pnlPresetList
+      AnchorSideRight.Control = pnlPresetList
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = btnPreDefaults
+      Left = 4
+      Height = 25
+      Top = 287
+      Width = 162
+      Anchors = [akLeft, akRight, akBottom]
+      BorderSpacing.Around = 3
+      Caption = 'btnPreDel'
+      TabOrder = 2
+      OnClick = btnPreDelClick
+    end
+    object btnPreDefaults: TButton
+      AnchorSideLeft.Control = pnlPresetList
+      AnchorSideRight.Control = pnlPresetList
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = btnPreUp
+      Left = 4
+      Height = 25
+      Top = 315
+      Width = 162
+      Anchors = [akLeft, akRight, akBottom]
+      BorderSpacing.Around = 3
+      Caption = 'btnPreDefaults'
+      TabOrder = 5
+      Visible = False
+      OnClick = btnPreDefaultsClick
+    end
+    object btnPreUp: TButton
+      AnchorSideLeft.Control = pnlPresetList
+      AnchorSideRight.Control = pnlPresetList
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = btnPreDown
+      Left = 4
+      Height = 25
+      Top = 353
+      Width = 162
+      Anchors = [akLeft, akRight, akBottom]
+      BorderSpacing.Top = 10
+      BorderSpacing.Around = 3
+      Caption = 'btnPreUp'
+      TabOrder = 3
+      OnClick = btnPreUpClick
+    end
+    object btnPreDown: TButton
+      AnchorSideLeft.Control = pnlPresetList
+      AnchorSideRight.Control = pnlPresetList
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = pnlPresetList
+      AnchorSideBottom.Side = asrBottom
+      Left = 4
+      Height = 25
+      Top = 381
+      Width = 162
+      Anchors = [akLeft, akRight, akBottom]
+      BorderSpacing.Around = 3
+      Caption = 'btnPreDown'
+      TabOrder = 4
+      OnClick = btnPreDownClick
+    end
+  end
+  object Panel1: TPanel
+    Left = 175
+    Height = 410
+    Top = 65
+    Width = 504
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 410
+    ClientWidth = 504
+    Constraints.MinWidth = 350
+    TabOrder = 2
+    inline DisplayFormatFrame1: TDisplayFormatFrame
+      Height = 384
+      Top = 26
+      Width = 504
+      HorzScrollBar.Increment = 48
+      HorzScrollBar.Page = 487
+      VertScrollBar.Increment = 36
+      VertScrollBar.Page = 367
+      Align = alClient
+      ClientHeight = 367
+      ClientWidth = 487
+      inherited ToolBar1: TToolBar
+        Width = 545
+        inherited ToolButton2: TToolButton
+          Left = 95
+          Height = 22
+        end
+        inherited tbAll: TSpeedButton
+          Left = 103
+        end
+        inherited ToolButton4: TToolButton
+          Left = 127
+          Height = 22
+        end
+        inherited tbNumber: TSpeedButton
+          Left = 135
+        end
+        inherited tbEnum: TSpeedButton
+          Left = 202
+        end
+        inherited tbBool: TSpeedButton
+          Left = 251
+        end
+        inherited tbChar: TSpeedButton
+          Left = 293
+        end
+        inherited tbFloat: TSpeedButton
+          Left = 336
+        end
+        inherited tbStruct: TSpeedButton
+          Left = 380
+        end
+        inherited tbPointer: TSpeedButton
+          Left = 451
+        end
+        inherited tbArray: TSpeedButton
+          Left = 499
+        end
+        inherited ToolButton12: TToolButton
+          Left = 194
+          Height = 22
+        end
+        inherited ToolButton13: TToolButton
+          Left = 243
+          Height = 22
+        end
+        inherited ToolButton14: TToolButton
+          Left = 285
+          Height = 22
+        end
+        inherited ToolButton15: TToolButton
+          Left = 328
+          Height = 22
+        end
+        inherited ToolButton16: TToolButton
+          Left = 372
+          Height = 22
+        end
+        inherited ToolButton17: TToolButton
+          Left = 443
+          Height = 22
+        end
+        inherited ToolButton5: TToolButton
+          Left = 537
+          Height = 22
+        end
+        inherited tbIndent: TSpeedButton
+          Left = 51
+        end
+      end
+      inherited PanelNum: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer1: TLabel
+          Width = 98
+        end
+        inherited Spacer2: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelNum: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideNumBase: TLabel
+          Width = 80
+        end
+        inherited PanelNumBase: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbNumDec: TRadioButton
+            Width = 74
+          end
+          inherited rbNumHex: TRadioButton
+            Left = 74
+            Width = 74
+          end
+          inherited rbNumOct: TRadioButton
+            Left = 148
+            Width = 73
+          end
+          inherited rbNumBin: TRadioButton
+            Left = 221
+            Width = 74
+          end
+          inherited rbNumChar: TRadioButton
+            Left = 295
+            Width = 74
+          end
+          inherited Label3: TLabel
+            Left = 369
+            Width = 74
+          end
+        end
+        inherited PanelNumSign: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbSignAuto: TRadioButton
+            Width = 148
+          end
+          inherited rbSignSigned: TRadioButton
+            Left = 148
+            Width = 147
+          end
+          inherited rbSignUnsigned: TRadioButton
+            Left = 295
+            Width = 148
+          end
+        end
+        inherited PanelNumDigits: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited DigitSpacer2: TLabel
+            Width = 295
+          end
+          inherited DigitSpacer1: TLabel
+            Left = 295
+            Width = 148
+          end
+          inherited lbNumDigits: TLabel
+            Left = 295
+          end
+          inherited SpinDigits: TSpinEdit
+            Left = 365
+          end
+          inherited cbNumSeparator: TCheckBox
+            Width = 291
+          end
+          inherited PanelNumSepGroup: TPanel
+            Width = 199
+            ClientWidth = 199
+            inherited rbNumSepNone: TRadioButton
+              Width = 47
+            end
+            inherited rbNumSepByte: TRadioButton
+              Left = 53
+              Width = 45
+            end
+            inherited rbNumSepWord: TRadioButton
+              Left = 100
+              Width = 47
+            end
+            inherited rbNumSepLong: TRadioButton
+              Left = 149
+              Width = 46
+            end
+          end
+          inherited Shape13: TShape
+            Left = 291
+          end
+        end
+        inherited Shape10: TShape
+          Left = 98
+        end
+        inherited Shape11: TShape
+          Left = 98
+        end
+        inherited Shape12: TShape
+          Left = 98
+        end
+      end
+      inherited PanelNum2: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer13: TLabel
+          Width = 98
+        end
+        inherited Spacer14: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelNum2: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideNum2Base: TLabel
+          Width = 80
+        end
+        inherited PanelNum2Visible: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited cbNum2Visibile: TCheckBox
+            Width = 443
+          end
+        end
+        inherited PanelNum2All: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited PanelNum2Base: TPanel
+            Width = 443
+            ClientWidth = 443
+            inherited rbNum2Dec: TRadioButton
+              Width = 74
+            end
+            inherited rbNum2Hex: TRadioButton
+              Left = 74
+              Width = 74
+            end
+            inherited rbNum2Oct: TRadioButton
+              Left = 148
+              Width = 73
+            end
+            inherited rbNum2Bin: TRadioButton
+              Left = 221
+              Width = 74
+            end
+            inherited rbNum2Char: TRadioButton
+              Left = 295
+              Width = 74
+            end
+            inherited Label1: TLabel
+              Left = 369
+              Width = 74
+            end
+          end
+          inherited PanelNum2Sign: TPanel
+            Width = 443
+            ClientWidth = 443
+            inherited rbSign2Auto: TRadioButton
+              Width = 148
+            end
+            inherited rbSign2Signed: TRadioButton
+              Left = 148
+              Width = 147
+            end
+            inherited rbSign2Unsigned: TRadioButton
+              Left = 295
+              Width = 148
+            end
+          end
+          inherited PanelNum2Digits: TPanel
+            Width = 443
+            ClientWidth = 443
+            inherited DigitSpacer4: TLabel
+              Width = 295
+            end
+            inherited DigitSpacer3: TLabel
+              Left = 295
+              Width = 148
+            end
+            inherited lbNum2Digits: TLabel
+              Left = 295
+            end
+            inherited Spin2Digits: TSpinEdit
+              Left = 371
+              Width = 67
+            end
+            inherited cbNum2Separator: TCheckBox
+              Width = 295
+            end
+            inherited PanelNum2SepGroup: TPanel
+              Width = 230
+              ClientWidth = 230
+              inherited rbNum2SepNone: TRadioButton
+                Width = 55
+              end
+              inherited rbNum2SepByte: TRadioButton
+                Left = 61
+                Width = 52
+              end
+              inherited rbNum2SepWord: TRadioButton
+                Left = 115
+                Width = 55
+              end
+              inherited rbNum2SepLong: TRadioButton
+                Left = 172
+                Width = 54
+              end
+            end
+          end
+        end
+      end
+      inherited PanelEnum: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer3: TLabel
+          Width = 98
+        end
+        inherited Spacer4: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelEnum: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideEnum: TLabel
+          Width = 80
+        end
+        inherited PanelEnumRb1: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbEnumName: TRadioButton
+            Width = 148
+          end
+          inherited rbEnumOrd: TRadioButton
+            Left = 148
+            Width = 147
+          end
+          inherited rbEnumNameAndOrd: TRadioButton
+            Left = 295
+            Width = 148
+          end
+        end
+        inherited PanelENumBase: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbENumDec: TRadioButton
+            Width = 74
+          end
+          inherited rbENumHex: TRadioButton
+            Left = 74
+            Width = 74
+          end
+          inherited rbENumOct: TRadioButton
+            Left = 148
+            Width = 73
+          end
+          inherited rbENumBin: TRadioButton
+            Left = 221
+            Width = 74
+          end
+          inherited rbENumChar: TRadioButton
+            Left = 295
+            Width = 74
+          end
+          inherited cbEnumSign: TCheckBox
+            Left = 369
+            Width = 74
+          end
+          inherited lbEnumBaseSpace: TLabel
+            Width = 74
+          end
+          inherited Shape18: TShape
+            Left = 365
+          end
+        end
+        inherited Shape16: TShape
+          Left = 98
+        end
+        inherited Shape17: TShape
+          Left = 98
+        end
+      end
+      inherited PanelEnumVal: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer15: TLabel
+          Width = 98
+        end
+        inherited Spacer16: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelEnumVal: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideEnumVal: TLabel
+          Width = 80
+        end
+        inherited PanelEnumValRb: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbEnumValName: TRadioButton
+            Width = 148
+          end
+          inherited rbEnumValOrd: TRadioButton
+            Left = 148
+            Width = 147
+          end
+          inherited rbEnumValNameAndOrd: TRadioButton
+            Left = 295
+            Width = 148
+          end
+        end
+        inherited PanelENumValBase: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbENumValDec: TRadioButton
+            Width = 74
+          end
+          inherited rbENumValHex: TRadioButton
+            Left = 74
+            Width = 74
+          end
+          inherited rbENumValOct: TRadioButton
+            Left = 148
+            Width = 73
+          end
+          inherited rbENumValBin: TRadioButton
+            Left = 221
+            Width = 74
+          end
+          inherited rbENumValChar: TRadioButton
+            Left = 295
+            Width = 74
+          end
+          inherited cbEnumValSign: TCheckBox
+            Left = 369
+            Width = 74
+          end
+          inherited lbEnumValBaseSpace: TLabel
+            Width = 74
+          end
+        end
+      end
+      inherited PanelFloat: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer5: TLabel
+          Width = 98
+        end
+        inherited Spacer6: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelFloat: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideFloat: TLabel
+          Width = 80
+        end
+        inherited PanelFloatRb: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbFloatPoint: TRadioButton
+            Width = 148
+          end
+          inherited rbFloatScience: TRadioButton
+            Left = 148
+            Width = 147
+          end
+          inherited lbFloatPrec: TLabel
+            Left = 295
+          end
+          inherited SpinFloatDigits: TSpinEdit
+            Left = 357
+          end
+        end
+      end
+      inherited PanelStruct: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer7: TLabel
+          Width = 98
+        end
+        inherited Spacer8: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelStruct: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideStruct: TLabel
+          Width = 80
+        end
+        inherited PanelStructFld: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbStructValOnly: TRadioButton
+            Width = 111
+          end
+          inherited rbStructFields: TRadioButton
+            Left = 111
+            Width = 110
+          end
+          inherited rbStructFull: TRadioButton
+            Left = 221
+            Width = 111
+          end
+          inherited lbStructAddrTypedFiller: TLabel
+            Left = 332
+            Width = 111
+          end
+        end
+        inherited PanelStructPointer: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbStructAddrOff: TRadioButton
+            Width = 111
+          end
+          inherited rbStructAddrOn: TRadioButton
+            Left = 111
+            Width = 110
+          end
+          inherited rbStructAddrOnly: TRadioButton
+            Left = 221
+            Width = 111
+          end
+          inherited cbStructAddrTyped: TCheckBox
+            Left = 332
+            Width = 111
+          end
+        end
+      end
+      inherited PanelPointer: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer9: TLabel
+          Width = 98
+        end
+        inherited Spacer10: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelPointerDeref: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverridePointerDeref: TLabel
+          Width = 80
+        end
+        inherited PanelPointerDeref: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbPointerDerefOn: TRadioButton
+            Width = 111
+          end
+          inherited rbPointerDerefOff: TRadioButton
+            Left = 111
+            Width = 110
+          end
+          inherited rbPointerDerefOnly: TRadioButton
+            Left = 221
+            Width = 111
+          end
+          inherited cbPointerAddrTyped: TCheckBox
+            Left = 332
+            Width = 111
+          end
+        end
+      end
+      inherited PanelAddressFormat: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer11: TLabel
+          Width = 98
+        end
+        inherited Spacer12: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelAddressFormat: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideAddressFormat: TLabel
+          Width = 80
+        end
+        inherited PanelAddressType: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbAddressPlain: TRadioButton
+            Width = 148
+          end
+          inherited rbAddressTyped: TRadioButton
+            Left = 148
+            Width = 147
+          end
+          inherited Label5: TLabel
+            Left = 295
+            Width = 148
+          end
+        end
+        inherited PanelAddressBase: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited rbAddrNumHex: TRadioButton
+            Width = 74
+          end
+          inherited rbAddrNumDec: TRadioButton
+            Left = 74
+            Width = 74
+          end
+          inherited rbAddrNumOct: TRadioButton
+            Left = 148
+            Width = 73
+          end
+          inherited rbAddrNumBin: TRadioButton
+            Left = 221
+            Width = 74
+          end
+          inherited lpAddrSpace: TLabel
+            Left = 295
+            Width = 74
+          end
+          inherited cbAddrSign: TCheckBox
+            Left = 369
+            Width = 74
+          end
+        end
+        inherited PanelAddressLeadZero: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited cbAddrNoLeadZero: TCheckBox
+            Width = 443
+          end
+        end
+      end
+      inherited PanelIndent: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer17: TLabel
+          Width = 98
+        end
+        inherited Spacer18: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelPointerDeref1: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideIndent: TLabel
+          Width = 80
+        end
+        inherited PanelIndentMax: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+        end
+        inherited PanelIndentForceSingleLine: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited fill10: TLabel
+            Width = 94
+          end
+          inherited fill2: TLabel
+            Left = 115
+          end
+          inherited lbForceSingleLineStructFld: TLabel
+            Left = 163
+            Width = 91
+          end
+          inherited spinForceSingleLineStructFld: TSpinEdit
+            Left = 257
+          end
+          inherited lbForceSingleLineArrayLen: TLabel
+            Left = 305
+            Width = 90
+          end
+          inherited spinForceSingleLineArrayLen: TSpinEdit
+            Left = 398
+          end
+          inherited lbForceSingleLineRevDepth: TLabel
+            Width = 94
+          end
+          inherited spinForceSingleLineRevDepth: TSpinEdit
+            Left = 115
+          end
+          inherited lbForceSingleLineEach: TLabel
+            Left = 163
+            Width = 91
+          end
+          inherited spinForceSingleLineEach: TSpinEdit
+            Left = 257
+          end
+          inherited lbForceSingleLineLen: TLabel
+            Left = 305
+            Width = 90
+          end
+          inherited spinForceSingleLineLen: TSpinEdit
+            Left = 398
+          end
+        end
+      end
+      inherited PanelArray: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer21: TLabel
+          Width = 98
+        end
+        inherited Spacer22: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelArray: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideArray: TLabel
+          Width = 80
+        end
+        inherited PanelArrayShowPrefix: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited cbArrayShowPrefix: TCheckBox
+            Width = 148
+          end
+          inherited cbArrayShowPrefixEmbedded: TCheckBox
+            Left = 148
+            Width = 147
+          end
+          inherited lbArrayLenMaxNest: TLabel
+            Left = 295
+          end
+          inherited spinArrayLenMaxNest: TSpinEdit
+            Left = 402
+            Width = 45
+          end
+        end
+        inherited lbArrayCombine: TLabel
+          Left = 102
+        end
+        inherited PanelArrayPrefixCombine: TPanel
+          Left = 192
+          Width = 353
+          ClientWidth = 353
+          inherited rbArrayCombineNone: TRadioButton
+            Width = 88
+          end
+          inherited rbArrayCombineAll: TRadioButton
+            Left = 88
+            Width = 88
+          end
+          inherited rbArrayCombineStat: TRadioButton
+            Left = 176
+            Width = 89
+          end
+          inherited rbArrayCombineDyn: TRadioButton
+            Left = 265
+            Width = 88
+          end
+        end
+        inherited PanelArrayHideLen: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited fill8: TLabel
+            Width = 97
+          end
+          inherited fill6: TLabel
+            Left = 118
+          end
+          inherited fill5: TLabel
+            Left = 166
+            Width = 92
+          end
+          inherited fill4: TLabel
+            Left = 261
+          end
+          inherited lbArrayHideLenIfLess: TLabel
+            Left = 309
+            Width = 86
+          end
+          inherited spinArrayHideLenIfLess: TSpinEdit
+            Left = 398
+          end
+          inherited lbArrayHideLenKeepDepth: TLabel
+            Width = 97
+          end
+          inherited spinArrayHideLenRevDepth: TSpinEdit
+            Left = 118
+          end
+          inherited lbArrayHideLenThresEach: TLabel
+            Left = 166
+            Width = 92
+          end
+          inherited spinArrayHideLenThresEach: TSpinEdit
+            Left = 261
+          end
+          inherited lbArrayHideLenThresLen: TLabel
+            Left = 309
+            Width = 86
+          end
+          inherited spinArrayHideLenThresLen: TSpinEdit
+            Left = 398
+          end
+        end
+      end
+      inherited PanelArrayNavBar: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited Spacer19: TLabel
+          Width = 98
+        end
+        inherited Spacer20: TLabel
+          Left = 102
+          Width = 443
+        end
+        inherited DividerBevelArrayNavBar: TDividerBevel
+          Width = 545
+        end
+        inherited lbOverrideArrayNavBar: TLabel
+          Width = 80
+        end
+        inherited PanelArrayNavBarOpts: TPanel
+          Left = 102
+          Width = 443
+          ClientWidth = 443
+          inherited cbArrayNavAutoHide: TCheckBox
+            Width = 148
+          end
+          inherited cbArrayNavEnforceBounds: TCheckBox
+            Left = 148
+            Width = 147
+          end
+          inherited lbPageSize: TLabel
+            Left = 295
+          end
+          inherited SpinPageSize: TSpinEdit
+            Left = 354
+          end
+        end
+      end
+      inherited PanelMemDump: TPanel
+        AnchorSideLeft.Control = DisplayFormatFrame1
+        AnchorSideRight.Control = DisplayFormatFrame1
+        Width = 545
+        ClientWidth = 545
+        inherited DividerBevelMemDump: TDividerBevel
+          Width = 545
+        end
+        inherited cbMemDump: TCheckBox
+          Width = 535
+        end
+      end
+    end
+    object pnlPresetOpts: TPanel
+      Left = 0
+      Height = 23
+      Top = 0
+      Width = 504
+      Align = alTop
+      AutoSize = True
+      BorderSpacing.Bottom = 3
+      BevelOuter = bvNone
+      ClientHeight = 23
+      ClientWidth = 504
+      TabOrder = 1
+      object lblPreName: TLabel
+        AnchorSideLeft.Control = pnlPresetOpts
+        AnchorSideTop.Control = edPreName
+        AnchorSideTop.Side = asrCenter
+        Left = 0
+        Height = 15
+        Top = 4
+        Width = 62
+        BorderSpacing.Right = 3
+        Caption = 'lblPreName'
+      end
+      object edPreName: TEdit
+        AnchorSideLeft.Control = lblPreName
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = pnlPresetOpts
+        AnchorSideRight.Control = pnlPresetOpts
+        AnchorSideRight.Side = asrBottom
+        Left = 65
+        Height = 23
+        Top = 0
+        Width = 439
+        Anchors = [akTop, akLeft, akRight]
+        TabOrder = 0
+        OnEditingDone = edPreNameEditingDone
+      end
+    end
+  end
+  object Splitter1: TSplitter
+    AnchorSideLeft.Control = pnlPresetList
+    AnchorSideLeft.Side = asrBottom
+    Left = 170
+    Height = 410
+    Top = 65
+    Width = 5
+    AutoSnap = False
+    MinSize = 50
   end
 end

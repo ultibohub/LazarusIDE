@@ -1,26 +1,28 @@
 object DisplayFormatFrame: TDisplayFormatFrame
   Left = 0
-  Height = 754
+  Height = 780
   Top = 0
   Width = 592
+  HorzScrollBar.Increment = 1
   HorzScrollBar.Page = 1
-  HorzScrollBar.Visible = False
+  HorzScrollBar.Smooth = True
+  HorzScrollBar.Tracking = True
   VertScrollBar.Increment = 1
   VertScrollBar.Page = 1
   VertScrollBar.Smooth = True
   VertScrollBar.Tracking = True
   AutoScroll = True
   AutoSize = True
-  ClientHeight = 754
+  ClientHeight = 780
   ClientWidth = 592
-  Constraints.MaxWidth = 850
-  Constraints.MinWidth = 480
+  Constraints.MaxWidth = 1400
+  Constraints.MinWidth = 500
   TabOrder = 0
   DesignLeft = 430
   DesignTop = 14
   object ToolBar1: TToolBar
     Left = 0
-    Height = 24
+    Height = 27
     Top = 0
     Width = 592
     AutoSize = True
@@ -29,9 +31,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
     TabOrder = 0
     object tbCurrent: TSpeedButton
       Left = 1
-      Height = 19
+      Height = 25
       Top = 2
-      Width = 44
+      Width = 50
       AllowAllUp = True
       AutoSize = True
       Caption = 'Current'
@@ -42,7 +44,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbCurrentClick
     end
     object ToolButton2: TToolButton
-      Left = 45
+      Left = 51
       Height = 22
       Top = 2
       Caption = 'ToolButton2'
@@ -50,10 +52,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Style = tbsSeparator
     end
     object tbAll: TSpeedButton
-      Left = 53
-      Height = 19
+      Left = 59
+      Height = 25
       Top = 2
-      Width = 18
+      Width = 24
       AllowAllUp = True
       AutoSize = True
       Caption = 'All'
@@ -64,7 +66,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbAllClick
     end
     object ToolButton4: TToolButton
-      Left = 71
+      Left = 83
       Height = 22
       Top = 2
       Caption = 'ToolButton4'
@@ -72,10 +74,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Style = tbsSeparator
     end
     object tbNumber: TSpeedButton
-      Left = 79
-      Height = 19
+      Left = 91
+      Height = 25
       Top = 2
-      Width = 53
+      Width = 59
       AllowAllUp = True
       AutoSize = True
       Caption = 'Numbers'
@@ -86,10 +88,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbEnum: TSpeedButton
-      Left = 140
-      Height = 19
+      Left = 158
+      Height = 25
       Top = 2
-      Width = 35
+      Width = 41
       AllowAllUp = True
       AutoSize = True
       Caption = 'Enum'
@@ -100,10 +102,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbBool: TSpeedButton
-      Left = 183
-      Height = 19
+      Left = 207
+      Height = 25
       Top = 2
-      Width = 28
+      Width = 34
       AllowAllUp = True
       AutoSize = True
       Caption = 'Bool'
@@ -114,10 +116,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbChar: TSpeedButton
-      Left = 219
-      Height = 19
+      Left = 249
+      Height = 25
       Top = 2
-      Width = 29
+      Width = 35
       AllowAllUp = True
       AutoSize = True
       Caption = 'Char'
@@ -128,10 +130,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbFloat: TSpeedButton
-      Left = 256
-      Height = 19
+      Left = 292
+      Height = 25
       Top = 2
-      Width = 30
+      Width = 36
       AllowAllUp = True
       AutoSize = True
       Caption = 'Float'
@@ -142,10 +144,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbStruct: TSpeedButton
-      Left = 294
-      Height = 19
+      Left = 336
+      Height = 25
       Top = 2
-      Width = 57
+      Width = 63
       AllowAllUp = True
       AutoSize = True
       Caption = 'Structures'
@@ -156,10 +158,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbPointer: TSpeedButton
-      Left = 359
-      Height = 19
+      Left = 407
+      Height = 25
       Top = 2
-      Width = 42
+      Width = 48
       AllowAllUp = True
       AutoSize = True
       Caption = 'Pointer'
@@ -170,10 +172,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object tbArray: TSpeedButton
-      Left = 401
-      Height = 19
+      Left = 455
+      Height = 25
       Top = 2
-      Width = 32
+      Width = 38
       AllowAllUp = True
       AutoSize = True
       Caption = 'Array'
@@ -184,7 +186,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       OnClick = tbFormatClick
     end
     object ToolButton12: TToolButton
-      Left = 132
+      Left = 150
       Height = 22
       Top = 2
       Caption = 'ToolButton12'
@@ -193,7 +195,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Visible = False
     end
     object ToolButton13: TToolButton
-      Left = 175
+      Left = 199
       Height = 22
       Top = 2
       Caption = 'ToolButton13'
@@ -202,7 +204,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Visible = False
     end
     object ToolButton14: TToolButton
-      Left = 211
+      Left = 241
       Height = 22
       Top = 2
       Caption = 'ToolButton14'
@@ -211,7 +213,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Visible = False
     end
     object ToolButton15: TToolButton
-      Left = 248
+      Left = 284
       Height = 22
       Top = 2
       Caption = 'ToolButton15'
@@ -220,7 +222,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Visible = False
     end
     object ToolButton16: TToolButton
-      Left = 286
+      Left = 328
       Height = 22
       Top = 2
       Caption = 'ToolButton16'
@@ -229,7 +231,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Visible = False
     end
     object ToolButton17: TToolButton
-      Left = 351
+      Left = 399
       Height = 22
       Top = 2
       Caption = 'ToolButton17'
@@ -238,7 +240,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Visible = False
     end
     object ToolButton5: TToolButton
-      Left = 433
+      Left = 493
       Height = 22
       Top = 2
       Caption = 'ToolButton5'
@@ -246,10 +248,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
       Style = tbsSeparator
     end
     object tbIndent: TSpeedButton
-      Left = 441
-      Height = 19
+      Left = 501
+      Height = 25
       Top = 2
-      Width = 38
+      Width = 44
       AllowAllUp = True
       AutoSize = True
       Caption = 'Indent'
@@ -268,7 +270,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 79
-    Top = 24
+    Top = 27
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -376,8 +378,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 80
         AutoSize = False
         Caption = 'rbNumDec'
+        Checked = True
         ParentColor = False
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbNumHex: TRadioButton
@@ -464,7 +468,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 160
         AutoSize = False
         Caption = 'rbSignAuto'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbSignSigned: TRadioButton
@@ -591,6 +597,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Top = 21
         Width = 89
         Caption = 'lbNumSepGroup'
+        Constraints.MinWidth = 1
       end
       object PanelNumSepGroup: TPanel
         AnchorSideLeft.Control = lbNumSepGroup
@@ -622,7 +629,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Top = 0
           Width = 54
           Caption = 'rbNumSepNone'
+          Checked = True
+          Constraints.MinWidth = 1
           TabOrder = 0
+          TabStop = True
           OnChange = FormatNumGroupChanged
         end
         object rbNumSepByte: TRadioButton
@@ -631,6 +641,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Top = 0
           Width = 50
           Caption = 'rbNumSepByte'
+          Constraints.MinWidth = 1
           TabOrder = 1
           OnChange = FormatNumGroupChanged
         end
@@ -640,6 +651,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Top = 0
           Width = 54
           Caption = 'rbNumSepWord'
+          Constraints.MinWidth = 1
           TabOrder = 2
           OnChange = FormatNumGroupChanged
         end
@@ -649,6 +661,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Top = 0
           Width = 53
           Caption = 'rbNumSepLong'
+          Constraints.MinWidth = 1
           TabOrder = 3
           OnChange = FormatNumGroupChanged
         end
@@ -758,7 +771,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 98
-    Top = 107
+    Top = 110
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -909,8 +922,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Width = 80
           AutoSize = False
           Caption = 'rbNumDec'
+          Checked = True
           ParentColor = False
           TabOrder = 0
+          TabStop = True
           OnChange = FormatRadioChanged
         end
         object rbNum2Hex: TRadioButton
@@ -955,7 +970,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         end
         object Label1: TLabel
           Left = 401
-          Height = 19
+          Height = 1
           Top = 0
           Width = 80
           Constraints.MaxHeight = 1
@@ -999,7 +1014,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Width = 160
           AutoSize = False
           Caption = 'rbSignAuto'
+          Checked = True
           TabOrder = 0
+          TabStop = True
           OnChange = FormatRadioChanged
         end
         object rbSign2Signed: TRadioButton
@@ -1126,6 +1143,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
           Top = 21
           Width = 62
           Caption = 'lbSepGroup'
+          Constraints.MinWidth = 1
         end
         object PanelNum2SepGroup: TPanel
           AnchorSideLeft.Control = lbNum2SepGroup
@@ -1156,7 +1174,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
             Top = 0
             Width = 62
             Caption = 'rbNumSepNone'
+            Checked = True
+            Constraints.MinWidth = 1
             TabOrder = 0
+            TabStop = True
             OnChange = FormatNumGroupChanged
           end
           object rbNum2SepByte: TRadioButton
@@ -1165,6 +1186,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
             Top = 0
             Width = 58
             Caption = 'rbNumSepByte'
+            Constraints.MinWidth = 1
             TabOrder = 1
             OnChange = FormatNumGroupChanged
           end
@@ -1174,6 +1196,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
             Top = 0
             Width = 62
             Caption = 'rbNumSepWord'
+            Constraints.MinWidth = 1
             TabOrder = 2
             OnChange = FormatNumGroupChanged
           end
@@ -1183,6 +1206,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
             Top = 0
             Width = 60
             Caption = 'rbNumSepLong'
+            Constraints.MinWidth = 1
             TabOrder = 3
             OnChange = FormatNumGroupChanged
           end
@@ -1208,7 +1232,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 42
-    Top = 209
+    Top = 212
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -1310,7 +1334,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 160
         AutoSize = False
         Caption = 'rbEnumName'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbEnumOrd: TRadioButton
@@ -1374,8 +1400,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 80
         AutoSize = False
         Caption = 'rbNumDec'
+        Checked = True
         ParentColor = False
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbENumHex: TRadioButton
@@ -1519,7 +1547,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 42
-    Top = 255
+    Top = 258
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -1623,7 +1651,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 160
         AutoSize = False
         Caption = 'rbEnumName'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbEnumValOrd: TRadioButton
@@ -1687,8 +1717,10 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 80
         AutoSize = False
         Caption = 'rbNumDec'
+        Checked = True
         ParentColor = False
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbENumValHex: TRadioButton
@@ -1769,7 +1801,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 26
-    Top = 301
+    Top = 304
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -1871,7 +1903,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 160
         AutoSize = False
         Caption = 'rbFloatPoint'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbFloatScience: TRadioButton
@@ -1934,7 +1968,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 43
-    Top = 331
+    Top = 334
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -2038,7 +2072,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 120
         AutoSize = False
         Caption = 'rbStructValOnly'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbStructFields: TRadioButton
@@ -2107,7 +2143,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 120
         AutoSize = False
         Caption = 'rbStructAddrOff'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbStructAddrOn: TRadioButton
@@ -2160,7 +2198,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 22
-    Top = 378
+    Top = 381
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -2262,7 +2300,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 120
         AutoSize = False
         Caption = 'rbPointerDerefOn'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbPointerDerefOff: TRadioButton
@@ -2315,7 +2355,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 60
-    Top = 404
+    Top = 407
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -2417,7 +2457,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 160
         AutoSize = False
         Caption = 'rbAddressPlain'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbAddressTyped: TRadioButton
@@ -2432,7 +2474,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       end
       object Label5: TLabel
         Left = 321
-        Height = 19
+        Height = 1
         Top = 0
         Width = 160
         Constraints.MaxHeight = 1
@@ -2475,7 +2517,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 80
         AutoSize = False
         Caption = 'rbAddrNumHex'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbAddrNumDec: TRadioButton
@@ -2510,7 +2554,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
       end
       object lpAddrSpace: TLabel
         Left = 321
-        Height = 19
+        Height = 1
         Top = 0
         Width = 80
         Constraints.MaxHeight = 1
@@ -2572,7 +2616,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 1
         Anchors = [akLeft, akBottom]
         AutoSize = False
+        Checked = True
         TabOrder = 1
+        TabStop = True
       end
     end
   end
@@ -2583,8 +2629,8 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     Left = 0
-    Height = 74
-    Top = 468
+    Height = 79
+    Top = 471
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -2594,7 +2640,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     ChildSizing.ShrinkHorizontal = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 2
-    ClientHeight = 74
+    ClientHeight = 79
     ClientWidth = 592
     TabOrder = 10
     object Spacer17: TLabel
@@ -2713,10 +2759,11 @@ object DisplayFormatFrame: TDisplayFormatFrame
       AnchorSideRight.Side = asrBottom
       Left = 111
       Height = 48
-      Top = 26
+      Top = 31
       Width = 481
       Anchors = [akTop, akLeft, akRight]
       AutoSize = True
+      BorderSpacing.Top = 5
       BevelOuter = bvNone
       ChildSizing.HorizontalSpacing = 3
       ChildSizing.VerticalSpacing = 2
@@ -2765,6 +2812,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 4
         Width = 103
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbForceSingleLineStructFld'
       end
@@ -2787,6 +2835,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 4
         Width = 103
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbForceSingleLineArrayLen'
       end
@@ -2815,6 +2864,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 29
         Width = 107
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbForceSingleLineRevDepth'
       end
@@ -2839,6 +2889,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 29
         Width = 103
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbForceSingleLineEach'
       end
@@ -2861,6 +2912,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 29
         Width = 103
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbForceSingleLineLen'
       end
@@ -2886,8 +2938,8 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     Left = 0
-    Height = 93
-    Top = 546
+    Height = 98
+    Top = 554
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -2897,7 +2949,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     ChildSizing.ShrinkHorizontal = crsScaleChilds
     ChildSizing.Layout = cclLeftToRightThenTopToBottom
     ChildSizing.ControlsPerLine = 2
-    ClientHeight = 93
+    ClientHeight = 98
     ClientWidth = 592
     TabOrder = 12
     object Spacer21: TLabel
@@ -3071,7 +3123,9 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Width = 98
         AutoSize = False
         Caption = 'rbSignAuto'
+        Checked = True
         TabOrder = 0
+        TabStop = True
         OnChange = FormatRadioChanged
       end
       object rbArrayCombineAll: TRadioButton
@@ -3122,10 +3176,11 @@ object DisplayFormatFrame: TDisplayFormatFrame
       AnchorSideRight.Side = asrBottom
       Left = 111
       Height = 48
-      Top = 45
+      Top = 50
       Width = 481
       Anchors = [akTop, akLeft, akRight]
       AutoSize = True
+      BorderSpacing.Top = 5
       BevelOuter = bvNone
       ChildSizing.HorizontalSpacing = 3
       ChildSizing.VerticalSpacing = 2
@@ -3186,6 +3241,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 4
         Width = 99
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbArrayHideLenIfLess'
       end
@@ -3214,6 +3270,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 29
         Width = 110
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbArrayHideLenKeepDepth'
       end
@@ -3236,6 +3293,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 29
         Width = 104
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbArrayHideLenThresEach'
       end
@@ -3258,6 +3316,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
         Height = 15
         Top = 29
         Width = 99
+        Alignment = taRightJustify
         BorderSpacing.CellAlignVertical = ccaCenter
         Caption = 'lbArrayHideLenThresLen'
       end
@@ -3284,7 +3343,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 26
-    Top = 643
+    Top = 656
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True
@@ -3440,7 +3499,7 @@ object DisplayFormatFrame: TDisplayFormatFrame
     AnchorSideRight.Side = asrBottom
     Left = 0
     Height = 34
-    Top = 673
+    Top = 686
     Width = 592
     Anchors = [akTop, akLeft, akRight]
     AutoSize = True

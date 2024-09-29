@@ -460,7 +460,8 @@ type
     procedure CopyToClipboard; override;
     procedure CutToClipboard; override;
     function GetBookMark(BookMark: Integer; out X, Y: Integer): Boolean; override;
-    procedure SetBookMark(BookMark: Integer; X, Y: Integer); override;
+    function GetBookMark(BookMark: Integer; out X, Y, ALeft, ATop: Integer): Boolean; override;
+    procedure SetBookMark(BookMark: Integer; X, Y: Integer; AnLeft: Integer = -1; AnTop: Integer = -1); override;
 
     procedure ExportAsHtml(AFileName: String);
 
@@ -924,6 +925,7 @@ type
     function IndexOfEditorInShareWith(AnOtherEditor: TSourceEditorInterface): Integer; override;
     procedure MoveEditor(OldPageIndex, NewPageIndex: integer);
     procedure MoveEditor(OldPageIndex, NewWindowIndex, NewPageIndex: integer);
+    procedure AddControlToEditor(aSourceEditor : TSourceEditorInterface; aControl : TControl; aAlign : TAlign); override;
 
     procedure UpdateStatusBar;
     function AddStatusPanel(AnOwner: TClass; ATag: PtrUInt = 0): TSourceEditorStatusPanelInterface; override;
@@ -1174,6 +1176,9 @@ type
     procedure EditorRemoved(AEditor: TSourceEditor);
     procedure SendEditorCreated(AEditor: TSourceEditor);
     procedure SendEditorDestroyed(AEditor: TSourceEditor);
+    procedure SendEditorMoved(AEditor: TSourceEditor);
+    procedure SendEditorCloned(AEditor: TSourceEditor);
+    procedure SendEditorReconfigured(AEditor: TSourceEditor);
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure RemoveWindow(AWindow: TSourceNotebook);
   public
@@ -4947,9 +4952,17 @@ begin
   Result := FEditor.GetBookMark(BookMark, X, Y);
 end;
 
-procedure TSourceEditor.SetBookMark(BookMark: Integer; X, Y: Integer);
+function TSourceEditor.GetBookMark(BookMark: Integer; out X, Y, ALeft, ATop: Integer): Boolean;
 begin
-  FEditor.SetBookMark(BookMark, X, Y);
+  X := 0; Y := 0;
+  ALeft := -1; ATop := -1;
+  Result := FEditor.GetBookMark(BookMark, X, Y, ALeft, ATop);
+end;
+
+procedure TSourceEditor.SetBookMark(BookMark: Integer; X, Y: Integer; AnLeft: Integer;
+  AnTop: Integer);
+begin
+  FEditor.SetBookMark(BookMark, X, Y, AnLeft, AnTop);
 end;
 
 procedure TSourceEditor.ExportAsHtml(AFileName: String);
@@ -5056,9 +5069,9 @@ begin
       FEditor.Beautifier := nil; // use default
     EditorOpts.GetSynEditSettings(FEditor, nil);
   end;
-
   FSyntaxHighlighterId:=AHighlighterId;
   SourceNotebook.UpdateActiveEditColors(FEditor);
+  SourceEditorManager.SendEditorReconfigured(Self);
 end;
 
 procedure TSourceEditor.SetErrorLine(NewLine: integer);
@@ -8482,6 +8495,7 @@ begin
       DestWin.UpdateActiveEditColors(Edit.EditorComponent);
       DestWin.UpdateStatusBar;
       DestWin.NotebookPageChanged(nil); // make sure page SynEdit willl be visible
+      SourceEditorManager.SendEditorMoved(Edit);
     finally
       DestWin.EnableAutoSizing{$IFDEF DebugDisableAutoSizing}('TSourceNotebook.MoveEdito DestWinr'){$ENDIF};
       DestWin.DecUpdateLock;
@@ -8496,6 +8510,28 @@ begin
 
   DoActiveEditorChanged;
   Manager.ActiveEditor := Edit;
+end;
+
+procedure TSourceNotebook.AddControlToEditor(
+  aSourceEditor: TSourceEditorInterface; aControl: TControl; aAlign: TAlign);
+
+var
+  I,lPageIndex : Integer;
+  TabSheet : TTabSheet;
+
+begin
+  for i := 0 to EditorCount - 1 do
+    if Editors[i]=aSourceEditor then
+      begin
+      lPageIndex:=Editors[i].PageIndex;
+      TabSheet:=GetNoteBookPage(lPageIndex);
+      if Assigned(TabSheet) then
+        begin
+        aControl.Parent:=TabSheet;
+        // Force alignment
+        aControl.Align:=aAlign;
+        end;
+      end;
 end;
 
 procedure TSourceNotebook.CopyEditor(OldPageIndex, NewWindowIndex,
@@ -8526,6 +8562,7 @@ begin
   UpdatePageNames;
   UpdateProjectFiles;
   DestWin.UpdateProjectFiles(NewEdit);
+  SourceEditorManager.SendEditorCloned(NewEdit);
   // Creating a shared edit invalidates the tree in SynMarkup. Force setting it for all editors
   for i := 0 to SrcEdit.SharedEditorCount - 1 do
     SrcEdit.SharedEditors[i].UpdateIfDefNodeStates(True);
@@ -10901,10 +10938,27 @@ begin
   FChangeNotifyLists[semEditorCreate].CallNotifyEvents(AEditor);
 end;
 
+procedure TSourceEditorManager.SendEditorMoved(AEditor: TSourceEditor);
+begin
+  FChangeNotifyLists[semEditorMoved].CallNotifyEvents(AEditor);
+end;
+
+procedure TSourceEditorManager.SendEditorCloned(AEditor: TSourceEditor);
+begin
+  FChangeNotifyLists[semEditorCloned].CallNotifyEvents(AEditor);
+end;
+
 procedure TSourceEditorManager.SendEditorDestroyed(AEditor: TSourceEditor);
 begin
   FChangeNotifyLists[semEditorDestroy].CallNotifyEvents(AEditor);
 end;
+
+procedure TSourceEditorManager.SendEditorReconfigured(AEditor: TSourceEditor);
+begin
+  FChangeNotifyLists[semEditorReConfigured].CallNotifyEvents(AEditor);
+end;
+
+
 
 procedure TSourceEditorManager.Notification(AComponent: TComponent;
   Operation: TOperation);

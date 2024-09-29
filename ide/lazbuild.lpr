@@ -120,6 +120,7 @@ type
   protected
     function GetParams(Index: Integer): String; override;
     function GetParamCount: Integer; override;
+    function HasCustomCompilerOpts(out aValue: string): boolean;
 
     // Builds project or package, depending on extension.
     // Packages can also be specified by package name if they are known to the IDE.
@@ -207,6 +208,7 @@ const
   ErrorLoadProjectFailed  = 5;
   ErrorInvalidSyntax      = 6;
   ErrorInitialization     = 7;
+  ErrorExpandMacro        = 8;
   VersionStr = {$I packages/ideconfig/version.inc};
 
 procedure FilterConfigFileContent;
@@ -403,6 +405,33 @@ begin
   Result := ToolParamCount;
 end;
 
+function TLazBuildApplication.HasCustomCompilerOpts(out aValue: string): boolean;
+var
+  p: string; // current parameter
+  v: string; // value of current parameter
+  i: Integer;
+begin
+  aValue := '';
+  for i := 1 to GetParamCount do
+  begin
+    p := GetParams(i);
+    if LazStartsText('--opt=', p) then
+    begin
+      // get value
+      v := copy(p, length('--opt=') + 1, length(p));
+      // remove quotes
+      if length(v) >= 2 then
+        if ((v[1] = '"' ) and (v[length(v)] = '"' )) or
+           ((v[1] = '''') and (v[length(v)] = ''''))
+        then
+          v := copy(v, 2, length(v) - 2);
+      // append
+      aValue := MergeCustomOptions(aValue, v);
+    end;
+  end;
+  result := aValue <> '';
+end;
+
 function TLazBuildApplication.BuildFile(Filename: string): boolean;
 var
   OriginalFilename: string;
@@ -473,6 +502,7 @@ function TLazBuildApplication.BuildPackage(const AFilename: string): boolean;
 var
   APackage: TLazPackage;
   Flags: TPkgCompileFlags;
+  S: String;
 begin
   Result:=false;
   
@@ -502,6 +532,9 @@ begin
     APackage.CompilerOptions.TargetProcessor:=ProcessorOverride; //Ultibo
   if SubtargetOverride then
     APackage.CompilerOptions.Subtarget:=SubtargetOverrideValue;
+  if HasCustomCompilerOpts(S) then
+    with APackage.CompilerOptions do
+      CustomOptions := MergeCustomOptions(CustomOptions, S);
 
   if CreateMakefile then
     DoCreateMakefile(APackage)
@@ -608,14 +641,14 @@ begin
     CurProf.TargetPlatform:=DirNameToLCLPlatform(WidgetSetOverride)
   else
     CurProf.TargetPlatform:=GetBuildLCLWidgetType;
-  if BuildIDEOptions<>'' then
-  begin
-    s:=CurProf.ExtraOptions;
-    if s<>'' then
-      s+=' ';
-    s+=BuildIDEOptions;
-    CurProf.ExtraOptions:=s;
-  end;
+
+  // add custom options from --build-ide after build mode options
+  if BuildIDEOptions <> '' then
+    CurProf.ExtraOptions := MergeCustomOptions(CurProf.ExtraOptions, BuildIDEOptions);
+  // add parameters from the --opt option after --build-ide, as higher priority
+  if HasCustomCompilerOpts(s) then
+    CurProf.ExtraOptions := MergeCustomOptions(CurProf.ExtraOptions, s);
+
   if BuildAll then
     CurProf.IdeBuildMode:=bmCleanAllBuild;
   MainBuildBoss.SetBuildTargetIDE;
@@ -813,11 +846,22 @@ var
       MatrixOption.MacroName:='LCLWidgetType';
       MatrixOption.Value:=WidgetSetOverride;
     end;
+    if HasCustomCompilerOpts(S) then
+      with Project1.CompilerOptions do
+        CustomOptions := MergeCustomOptions(CustomOptions, S);
+
     // apply options
     MainBuildBoss.SetBuildTargetProject1(true,smsfsSkip);
 
     if HasLongOptIgnoreCase('get',S) or
        HasLongOptIgnoreCase('get-expand-text',S) then begin
+      // check for empty text
+      if S = '' then
+      begin
+        writeln('');            // print empty text as well
+        halt(ErrorExpandMacro); // exit with error
+      end;
+
       // check for macros
       HasMacro := false;
       for i := 1 to length(S) - 1 do // skip last char
@@ -829,7 +873,13 @@ var
       if not HasMacro then
         S := '$(' + S + ')';
       // expand
-      Project1.MacroEngine.SubstituteStr(S);
+      Project1.MacroEngine.MarkUnhandledMacros := false;
+      if not Project1.MacroEngine.SubstituteStr(S) then
+      begin
+        writeln(S);             // print partially expanded text
+        halt(ErrorExpandMacro); // exit with error
+      end;
+      // print result
       WriteLn(S);
       exit(true);
     end;
@@ -1590,6 +1640,7 @@ begin
     LongOptions.Add('subtarget:');
     LongOptions.Add('bm:');
     LongOptions.Add('build-mode:');
+    LongOptions.Add('opt:');
     LongOptions.Add('compiler:');
     LongOptions.Add('lazarusdir:');
     LongOptions.Add('create-makefile');
@@ -1832,6 +1883,9 @@ begin
   writeln('');
   writeln('--bm=<project/IDE build mode>, --build-mode=<project/IDE build mode>');
   w(lisOverrideTheProjectBuildMode);
+  writeln('');
+  writeln('--opt=<extra-options>');
+  w(lisExtraOpts);
   writeln('');
   writeln('--compiler=<ppcXXX>');
   w(lisOverrideTheDefaultCompilerEGPpc386Ppcx64PpcppcEtcD);

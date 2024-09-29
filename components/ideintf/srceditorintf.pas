@@ -132,7 +132,8 @@ type
     procedure CopyToClipboard; virtual; abstract;
     procedure CutToClipboard; virtual; abstract;
     function GetBookMark(BookMark: Integer; out X, Y: Integer): Boolean; virtual; abstract;
-    procedure SetBookMark(BookMark: Integer; X, Y: Integer); virtual; abstract;
+    function GetBookMark(BookMark: Integer; out X, Y, ALeft, ATop: Integer): Boolean; virtual; abstract;
+    procedure SetBookMark(BookMark: Integer; X, Y: Integer; AnLeft: Integer = -1; AnTop: Integer = -1); virtual; abstract;
 
     // screen and text position mapping
     function LineCount: Integer; virtual; abstract;
@@ -311,6 +312,7 @@ type
     // Editor Page Caption update
     procedure AddUpdateEditorPageCaptionHandler(AEvent: TNotifyEvent; const AsLast: Boolean = True); virtual; abstract;
     procedure RemoveUpdateEditorPageCaptionHandler(AEvent: TNotifyEvent); virtual; abstract;
+    procedure AddControlToEditor(aSourceEditor : TSourceEditorInterface; aControl : TControl; aAlign : TAlign); virtual; abstract;
     property BaseCaption: String read GetBaseCaption write SetBaseCaption;
 
     function AddStatusPanel(AnOwner: TClass; ATag: PtrUInt = 0): TSourceEditorStatusPanelInterface; virtual; abstract;
@@ -333,7 +335,10 @@ type
     semEditorActivate,  // Editor is ActiveEditor
     semEditorStatus,    // any status change of the editor (Caret, Selection, topline, ...)
     semEditorMouseDown,
-    semEditorMouseUp
+    semEditorMouseUp,
+    semEditorMoved,     // Called when moved to a new window
+    semEditorCloned,     // Called when cloned to a new window.
+    semEditorReConfigured // Called when the configuration of an editor changes
   );
 
   TSemSelectionMode = (

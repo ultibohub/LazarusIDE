@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Language: ru\n"
-"X-Generator: Poedit 2.4.3\n"
+"X-Generator: Poedit 2.3.1\n"
 
 #: instantsearchstrings.lrsabortoperation
 msgid "No, abort operation"
@@ -184,8 +184,9 @@ msgid "Finished indexing project \"%s\". Processed %d files."
 msgstr "Индексирование проекта \"%s\" завершено. Обработано файлов: %d."
 
 #: instantsearchstrings.lrsfinishedindexingtree
-#, object-pascal-format
-msgid "Finished indexing tree \"%s\". Processed %d files."
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Finished indexing tree \"%s\". Processed %d files."
+msgid "Finished indexing tree \"%s\". Processed %d files in %d minutes."
 msgstr "Индексирование дерева \"%s\" завершено. Обработано файлов: %d."
 
 #: instantsearchstrings.lrshost
@@ -218,6 +219,11 @@ msgstr "Индексирование и поиск"
 #, object-pascal-format
 msgid "Indexing project \"%s\" was terminated. Processed %d files."
 msgstr "Индексирование проекта \"%s\" прервано. Обработано файлов: %d."
+
+#: instantsearchstrings.lrsindexingtreefilecount
+#, object-pascal-format
+msgid "Tree \"%s\", indexed file count: %d"
+msgstr "Дерево \"%s\", количество проиндексированных файлов: %d"
 
 #: instantsearchstrings.lrsindexlater
 msgid "No, do not index now"

@@ -933,7 +933,7 @@ const
   // keywords
   MySqlKW: string = 'ACTION,AFTER,AGAINST,AGGREGATE,ALL,ALTER,ANALYZE,AND,AS,' +
     'ASC,AUTO_INCREMENT,AVG_ROW_LENGTH,BACKUP,BEGIN,BENCHMARK,BETWEEN,BINARY,' +
-    'BIT,BOOL,BOTH,BY,CASCADE,CHANGE,CHARACTER,CHECK,CHECKSUM,COLUMN,COLUMNS,' +
+    'BIT,BOOL,BOTH,BY,CASCADE,CHANGE,CHARACTER,CHECK,CHECKSUM,COLLATE,COLUMN,COLUMNS,' +
     'COMMENT,COMMIT,CONSTRAINT,CREATE,CROSS,DATA,DATABASES,DEC,DEFAULT,' +
     'DELAYED,DELAY_KEY_WRITE,DELETE,DESC,DESCRIBE,DISTINCT,DISTINCTROW,DROP,' +
     'ELSE,ENCLOSED,END,ESCAPE,ESCAPED,EXISTS,EXPLAIN,FIELDS,FILE,FIRST,' +
@@ -945,13 +945,13 @@ const
     'NATURAL,NO,NOT,NULL,OPTIMIZE,OPTION,OPTIONALLY,ON,OPEN,OR,ORDER,OUTER,' +
     'OUTFILE,PACK_KEYS,PARTIAL,PRECISION,PRIMARY,PRIVILEGES,PROCEDURE,' +
     'PROCESS,PROCESSLIST,READ,REFERENCES,REGEXP,RELOAD,RENAME,REPAIR,' +
-    'RESTRICT,RESTORE,RETURNS,REVOKE,RLIKE,ROLLBACK,ROW,ROWS,SELECT,SHOW,' +
+    'RESTRICT,RESTORE,RETURN,RETURNS,REVOKE,RLIKE,ROLLBACK,ROW,ROWS,SELECT,SHOW,' +
     'SHUTDOWN,SONAME,SQL_BIG_RESULT,SQL_BIG_SELECTS,SQL_BIG_TABLES,' +
     'SQL_LOG_OFF,SQL_LOG_UPDATE,SQL_LOW_PRIORITY_UPDATES,SQL_SELECT_LIMIT,' +
     'SQL_SMALL_RESULT,SQL_WARNINGS,STARTING,STATUS,STRAIGHT_JOIN,TABLE,' +
     'TABLES,TEMPORARY,TERMINATED,THEN,TO,TRAILING,TRANSACTION,TYPE,UNION,UNIQUE,' +
     'UNLOCK,UNSIGNED,UPDATE,USAGE,USE,USING,VALUES,VARBINARY,VARCHAR,' +
-    'VARIABLES,VARYING,WHERE,WITH,WRITE,ZEROFILL';
+    'VARIABLES,VARYING,VIEW,WHERE,WITH,WRITE,ZEROFILL';
 
   // types
   MySqlTypes: string = 'TINYINT,SMALLINT,MEDIUMINT,INT,INTEGER,BIGINT,FLOAT,' +
@@ -973,7 +973,7 @@ const
     'LPAD,LTRIM,MAKE_SET,MASTER_POS_WAIT,MAX,MD5,MID,MIN,MINUTE,' +
     'MINUTE_SECOND,MOD,MONTH,MONTHNAME,NOW,NULLIF,OCT,OCTET_LENGTH,ORD,' +
     'PASSWORD,PERIOD_ADD,PERIOD_DIFF,PI,POSITION,POW,POWER,QUARTER,RADIANS,' +
-    'RAND,RELEASE_LOCK,REPEAT,REPLACE,REVERSE,RIGHT,ROUND,RPAD,RTRIM,SECOND,' +
+    'RAND,REGEXP_REPLACE,RELEASE_LOCK,REPEAT,REPLACE,REVERSE,RIGHT,ROUND,RPAD,RTRIM,SECOND,' +
     'SEC_TO_TIME,SESSION_USER,SIGN,SIN,SOUNDEX,SPACE,SQRT,STD,STDDEV,STRCMP,' +
     'SUBDATE,SUBSTRING,SUBSTRING_INDEX,SUM,SYSDATE,SYSTEM_USER,TAN,' +
     'TIME_FORMAT,TIME_TO_SEC,TO_DAYS,TRIM,TRUNCATE,UCASE,UNIX_TIMESTAMP,' +
@@ -1405,31 +1405,30 @@ begin
     NullProc
   else begin
     fTokenID := tkString;
-    // else it's end of multiline string
+    if (fRange = rsString) and (fLine[Run] = #39) then begin
+      // End of a string after linebreak
+      Inc(Run);
+      fRange := rsUnknown;
+    end
+    else
     if SQLDialect <> sqlMySql then begin
-      if (Run > 0) or (fRange <> rsString) or (fLine[Run] <> #39) then begin
-        fRange := rsString;
-        repeat
-          Inc(Run);
-        until fLine[Run] in [#0, #10, #13, #39];
-      end;
+      fRange := rsString;
+      repeat
+        Inc(Run);
+      until fLine[Run] in [#0, #10, #13, #39];
       if fLine[Run] = #39 then begin
         Inc(Run);
         fRange := rsUnknown;
       end;
     end
     else begin
-      if (Run > 0) or (fRange <> rsString) or ((fLine[Run] <> #39) and (fLine[Run-1] <> '\')) then begin
-        fRange := rsString;
-        repeat
-          if (fLine[Run] <> '\') and (fLine[Run+1] = #39) then begin
-            Inc(Run);
-            break;
-          end;
+      fRange := rsString;
+      repeat
+        if (fLine[Run] = '\') and (fLine[Run+1] in [#39, '\']) then
           Inc(Run);
-        until fLine[Run] in [#0, #10, #13];
-      end;
-      if (fLine[Run] = #39) and not(fLine[Run-1] = '\') then begin
+        Inc(Run);
+      until fLine[Run] in [#0, #10, #13, #39];
+      if fLine[Run] = #39 then begin
         Inc(Run);
         fRange := rsUnknown;
       end;
@@ -1578,7 +1577,7 @@ begin
   Inc(Run);
   while not (fLine[Run] in [#0, #10, #13]) do begin
     case fLine[Run] of
-      '\': if fLine[Run + 1] = #34 then
+      '\': if fLine[Run + 1] in [#34, '\'] then
              Inc(Run);
       #34: if fLine[Run + 1] <> #34 then
            begin

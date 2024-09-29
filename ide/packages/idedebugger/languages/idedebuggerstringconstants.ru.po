@@ -416,6 +416,7 @@ msgid "Group"
 msgstr "Группировка"
 
 #: idedebuggerstringconstants.dispformatnumsepgroupbyte
+msgctxt "idedebuggerstringconstants.dispformatnumsepgroupbyte"
 msgid "Byte"
 msgstr "Байт"
 
@@ -437,13 +438,17 @@ msgctxt "idedebuggerstringconstants.dispformatoptchangingdescrall"
 msgid "Setting fallback options for all windows."
 msgstr "Установка резервных значений параметров для всех окон."
 
+#: idedebuggerstringconstants.dispformatoptchangingdescrpreset
+msgid "Presets that can be applied to individual watches/locals."
+msgstr "Предустановки, которые могут быть применены к отдельным наблюдениям / локальным переменным."
+
 #: idedebuggerstringconstants.dispformatoptchangingdescrsome
 msgctxt "idedebuggerstringconstants.dispformatoptchangingdescrsome"
-msgid "Setting fallback options for all windows."
-msgstr "Установка резервных значений параметров для всех окон."
+msgid "Setting fallback options for selected windows."
+msgstr "Установка резервных значений параметров для выбранных окон."
 
 #: idedebuggerstringconstants.dispformatoptprojecttext
-msgid "General and specific project settings will be used first. Only if none of them sets a default, then the IDE-wide settings will be tried."
+msgid "General and specific project settings will be used first. Only if none of them sets a default, then the IDE-wide settings will be used."
 msgstr "Сначала будут использоваться общие и частные параметры проекта. Если ни один из них не задаёт нужного значения, будут использоваться глобальные параметры IDE."
 
 #: idedebuggerstringconstants.dispformatpointeraddressplain
@@ -470,6 +475,34 @@ msgstr "Показывать разыменованные данные"
 msgctxt "idedebuggerstringconstants.dispformatpointerderefonly"
 msgid "Only deref data"
 msgstr "Только разыменованные данные"
+
+#: idedebuggerstringconstants.dispformatpresetdefaults
+msgid "Add Defaults"
+msgstr "Добавить стандартные"
+
+#: idedebuggerstringconstants.dispformatpresetdel
+msgctxt "idedebuggerstringconstants.dispformatpresetdel"
+msgid "Delete"
+msgstr "Удалить"
+
+#: idedebuggerstringconstants.dispformatpresetdown
+msgctxt "idedebuggerstringconstants.dispformatpresetdown"
+msgid "Down"
+msgstr "Вниз"
+
+#: idedebuggerstringconstants.dispformatpresetname
+msgctxt "idedebuggerstringconstants.dispformatpresetname"
+msgid "Name"
+msgstr "Имя"
+
+#: idedebuggerstringconstants.dispformatpresetnew
+msgid "New"
+msgstr "Новая"
+
+#: idedebuggerstringconstants.dispformatpresetup
+msgctxt "idedebuggerstringconstants.dispformatpresetup"
+msgid "Up"
+msgstr "Вверх"
 
 #: idedebuggerstringconstants.dispformatsignauto
 msgctxt "idedebuggerstringconstants.dispformatsignauto"
@@ -530,6 +563,10 @@ msgstr "Просмотр"
 #: idedebuggerstringconstants.dispformattargetlocals
 msgid "Locals"
 msgstr "Локальные"
+
+#: idedebuggerstringconstants.dispformattargetpreset
+msgid "Presets"
+msgstr "Предустановки"
 
 #: idedebuggerstringconstants.dispformattargetwatches
 msgctxt "idedebuggerstringconstants.dispformattargetwatches"
@@ -637,10 +674,12 @@ msgid "Index of first item to show"
 msgstr "Индекс первого показываемого элемента"
 
 #: idedebuggerstringconstants.dlgsortdown
+msgctxt "idedebuggerstringconstants.dlgsortdown"
 msgid "Down"
 msgstr "Вниз"
 
 #: idedebuggerstringconstants.dlgsortup
+msgctxt "idedebuggerstringconstants.dlgsortup"
 msgid "Up"
 msgstr "Вверх"
 
@@ -1623,6 +1662,10 @@ msgstr "Журнал событий"
 msgid "Debug Output"
 msgstr "Вывод отладчика"
 
+#: idedebuggerstringconstants.lismenuviewmemviewer
+msgid "Mem viewer"
+msgstr "Средство просмотра памяти"
+
 #: idedebuggerstringconstants.lismore
 msgctxt "lazarusidestrconsts.lismore"
 msgid "More"
@@ -1828,9 +1871,17 @@ msgctxt "idedebuggerstringconstants.liswlinspectpane"
 msgid "Inspect pane"
 msgstr "Панель просмотра"
 
+#: idedebuggerstringconstants.liswlmemview
+msgid "Memory"
+msgstr "Память"
+
 #: idedebuggerstringconstants.liswlproperties
 msgid "&Properties"
 msgstr "&Свойства"
+
+#: idedebuggerstringconstants.liswlquickformat
+msgid "&Format"
+msgstr "&Формат"
 
 #: idedebuggerstringconstants.liswlwatchlist
 msgctxt "lazarusidestrconsts.liswlwatchlist"
@@ -1840,6 +1891,35 @@ msgstr "Наблюдения"
 #: idedebuggerstringconstants.liswordwrapbtnhint
 msgid "Word wrap"
 msgstr "Перенос слов"
+
+#: idedebuggerstringconstants.memviewgroupbyte
+msgctxt "idedebuggerstringconstants.memviewgroupbyte"
+msgid "Byte"
+msgstr "Byte"
+
+#: idedebuggerstringconstants.memviewgroupdwordbigendian
+msgid "DWord (Big Endian)"
+msgstr "DWord (от старшего байта к младшему)"
+
+#: idedebuggerstringconstants.memviewgroupdwordlittleendian
+msgid "DWord (Little Endian)"
+msgstr "DWord (от младшего байта к старшему)"
+
+#: idedebuggerstringconstants.memviewgroupqwordbigendian
+msgid "QWord (Big Endian)"
+msgstr "QWord (от старшего байта к младшему)"
+
+#: idedebuggerstringconstants.memviewgroupqwordlittleendian
+msgid "QWord (Little Endian)"
+msgstr "QWord (от младшего байта к старшему)"
+
+#: idedebuggerstringconstants.memviewgroupwordbigendian
+msgid "Word (Big Endian)"
+msgstr "Word (от старшего байта к младшему)"
+
+#: idedebuggerstringconstants.memviewgroupwordlittleendian
+msgid "Word (Little Endian)"
+msgstr "Word (от младшего байта к старшему)"
 
 #: idedebuggerstringconstants.optdispguttercustomdisplayformat
 msgid "Custom Display Format"
@@ -1881,13 +1961,25 @@ msgstr "Восьмеричное"
 msgid "Raw"
 msgstr "Исходное"
 
+#: idedebuggerstringconstants.rsaddressoffset
+msgid "Address-offset"
+msgstr "Смещение"
+
 #: idedebuggerstringconstants.rsattachto
 msgid "Attach to"
 msgstr "Присоединение"
 
+#: idedebuggerstringconstants.rsbaseaddress
+msgid "Base-address"
+msgstr "Базовый адрес"
+
 #: idedebuggerstringconstants.rsenterpid
 msgid "Enter PID"
 msgstr "Введите идентификатор процесса"
+
+#: idedebuggerstringconstants.rslength
+msgid "Length"
+msgstr "Длина"
 
 #: idedebuggerstringconstants.synfnewvalueisempty
 msgid "\"New value\" is empty."

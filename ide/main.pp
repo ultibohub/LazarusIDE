@@ -77,6 +77,7 @@ uses
   {$IFDEF LCLCocoa} CocoaConfig, CocoaIDEFormConfig,{$ENDIF}
   // SynEdit
   SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter, SynHighlighterPas,
+  SynEditTypes,
   // BuildIntf
   BaseIDEIntf, MacroIntf, NewItemIntf, IDEExternToolIntf, LazMsgWorker,
   PackageIntf, ProjectIntf, CompOptsIntf, IDEOptionsIntf, ComponentReg,
@@ -9003,6 +9004,7 @@ begin
   APackageList:=nil;
   AIgnoreList:=nil;
   LFMLoaded:=nil;
+  SourceEditorManager.IncUpdateLock;
   try
     InvalidateFileStateCache;
 
@@ -9118,6 +9120,7 @@ begin
 
     Result:=mrOk;
   finally
+    SourceEditorManager.DecUpdateLock;
     CheckFilesOnDiskEnabled:=True;
     LFMLoaded.Free;
     BufferList.Free;
@@ -11662,7 +11665,11 @@ var
   UnitInfo: TUnitInfo;
 begin
   UnitInfo := Project1.UnitWithEditorComponent(TSourceEditor(Sender));
-  UnitInfo.AddBookmark(Mark.Column, Mark.Line, Mark.BookmarkNumber);
+  if (Mark is TSynEditBookMark) and (TSynEditBookMark(Mark).TopLeftMark <> nil) then
+    UnitInfo.AddBookmark(Mark.Column, Mark.Line,
+      TSynEditBookMark(Mark).Column, TSynEditBookMark(Mark).Line, Mark.BookmarkNumber)
+  else
+    UnitInfo.AddBookmark(Mark.Column, Mark.Line, Mark.BookmarkNumber);
 end;
 
 procedure TMainIDE.SrcNotebookEditorClearBookmark(Sender: TObject; var Mark: TSynEditMark);
@@ -11737,7 +11744,7 @@ Begin
       SetMark:=false;
   end;
   if SetMark then
-    ActEdit.EditorComponent.SetBookMark(ID,NewXY.X,NewXY.Y);
+    ActEdit.EditorComponent.SetBookMark(ID,NewXY.X,NewXY.Y, ActEdit.EditorComponent.LeftChar, ActEdit.EditorComponent.TopLine);
 
   {$push}{$overflowchecks off}
   Inc(BookmarksStamp);
@@ -11904,7 +11911,7 @@ begin
   try
     AnEditor.BeginUpdate;
     AnEditor.EditorComponent.GotoBookMark(ID);
-    if not AnEditor.IsLocked then
+    if not (AnEditor.IsLocked or (eoBookmarkRestoresScroll in AnEditor.EditorComponent.Options2)) then
       AnEditor.CenterCursor(True);
   finally
     AnEditor.EndUpdate;

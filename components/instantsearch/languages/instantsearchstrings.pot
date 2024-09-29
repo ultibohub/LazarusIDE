@@ -161,7 +161,7 @@ msgstr ""
 
 #: instantsearchstrings.lrsfinishedindexingtree
 #, object-pascal-format
-msgid "Finished indexing tree \"%s\". Processed %d files."
+msgid "Finished indexing tree \"%s\". Processed %d files in %d minutes."
 msgstr ""
 
 #: instantsearchstrings.lrshost
@@ -193,6 +193,11 @@ msgstr ""
 #: instantsearchstrings.lrsindexingprojectterminated
 #, object-pascal-format
 msgid "Indexing project \"%s\" was terminated. Processed %d files."
+msgstr ""
+
+#: instantsearchstrings.lrsindexingtreefilecount
+#, object-pascal-format
+msgid "Tree \"%s\", indexed file count: %d"
 msgstr ""
 
 #: instantsearchstrings.lrsindexlater

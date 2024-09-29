@@ -6,9 +6,12 @@ unit FpWatchResultData;
 interface
 
 uses
+  // DbgIntf
+  LazDebuggerIntfFloatTypes, DbgIntfBaseTypes, LazDebuggerIntf,
+  //
   FpDbgInfo, FpPascalBuilder, FpdMemoryTools, FpErrorMessages, FpDbgDwarf,
-  FpDbgDwarfDataClasses, DbgIntfBaseTypes, LazClasses, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, fgl, Math,
-  SysUtils, LazDebuggerIntf;
+  FpDbgDwarfDataClasses, LazClasses, {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, fgl, Math,
+  SysUtils;
 
 type
 
@@ -79,6 +82,10 @@ type
     destructor Destroy; override;
 
     function WriteWatchResultData(AnFpValue: TFpValue;
+                                  AnResData: IDbgWatchDataIntf;
+                                  ARepeatCount: Integer = 0
+                                 ): Boolean;
+    function WriteWatchResultMemDump(AnFpValue: TFpValue;
                                   AnResData: IDbgWatchDataIntf;
                                   ARepeatCount: Integer = 0
                                  ): Boolean;
@@ -319,21 +326,13 @@ end;
 
 function TFpWatchResultConvertor.FloatToResData(AnFpValue: TFpValue;
   AnResData: IDbgWatchDataIntf): Boolean;
-var
-  p: TLzDbgFloatPrecission;
-  s: TFpDbgValueSize;
 begin
   Result := True;
-
-  p := dfpSingle;
-  if AnFpValue.GetSize(s) then begin
-    if SizeToFullBytes(s) > SizeOf(Double) then
-      p := dfpExtended
-    else
-    if SizeToFullBytes(s) > SizeOf(Single) then
-      p := dfpDouble
+  case AnFpValue.FloatPrecission of
+    fpSingle:   AnResData.CreateFloatValue(AnFpValue.AsSingle);
+    fpDouble:   AnResData.CreateFloatValue(AnFpValue.AsDouble);
+    fpExtended: AnResData.CreateFloatValue(AnFpValue.AsExtended);
   end;
-  AnResData.CreateFloatValue(AnFpValue.AsFloat, p);
   AddTypeNameToResData(AnFpValue, AnResData);
 end;
 
@@ -1010,6 +1009,54 @@ begin
   FLastValueKind := AnFpValue.Kind;
   FHasEmbeddedPointer := False;
   Result := DoWriteWatchResultData(AnFpValue, AnResData);
+end;
+
+function TFpWatchResultConvertor.WriteWatchResultMemDump(AnFpValue: TFpValue;
+  AnResData: IDbgWatchDataIntf; ARepeatCount: Integer): Boolean;
+var
+  MemAddr: TFpDbgMemLocation;
+  MemSize: Integer;
+  ValSize: TFpDbgValueSize;
+  MemDest: RawByteString;
+begin
+  Result := True;
+
+  MemAddr := UnInitializedLoc;
+  if svfDataAddress in AnFpValue.FieldFlags then begin
+    MemAddr := AnFpValue.DataAddress;
+    MemSize := SizeToFullBytes(AnFpValue.DataSize);
+  end
+  else
+  if svfAddress in AnFpValue.FieldFlags then begin
+    MemAddr := AnFpValue.Address;
+    if not AnFpValue.GetSize(ValSize) then
+      ValSize := SizeVal(256);
+    MemSize := SizeToFullBytes(ValSize);
+  end
+  else if AnFpValue is TFpValueConstNumber then begin
+    MemAddr := TargetLoc(AnFpValue.AsCardinal);
+    MemSize := 256;
+  end;
+  if MemSize < ARepeatCount then MemSize := ARepeatCount;
+  if MemSize <= 0 then MemSize := 256;
+
+  if not IsTargetAddr(MemAddr) then begin
+    AnResData.CreateError('Value not in memory');
+    exit;
+  end;
+
+  if not Context.MemManager.SetLength(MemDest, MemSize) then begin
+    AnResData.CreateError(ErrorHandler.ErrorAsString(Context.MemManager.LastError));
+    exit;
+  end;
+
+  if not FContext.ReadMemory(MemAddr, SizeVal(MemSize), @MemDest[1]) then begin
+    AnResData.CreateError(ErrorHandler.ErrorAsString(Context.MemManager.LastError));
+    exit;
+  end;
+
+  AnResData.CreateMemDump(MemDest);
+  AnResData.SetDataAddress(MemAddr.Address);
 end;
 
 end.

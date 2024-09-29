@@ -329,7 +329,7 @@ type
                                 ): string; virtual;
     function GetDefaultMainSourceFileName: string; virtual;
     function GetDefaultWriteConfigFilePath: string; virtual; abstract;
-    function CanBeDefaulForProject: boolean; virtual;
+    function CanBeDefaultForProject: boolean; virtual;
     function NeedsLinkerOpts: boolean;
     function HasCommands: boolean; // true if there is at least one commad to execute
     function HasCompilerCommand: boolean; virtual;
@@ -1882,7 +1882,7 @@ begin
   Result:='';
 end;
 
-function TBaseCompilerOptions.CanBeDefaulForProject: boolean;
+function TBaseCompilerOptions.CanBeDefaultForProject: boolean;
 begin
   Result:=false;
 end;
@@ -3111,7 +3111,7 @@ begin
   // target
   if Done(Tool.AddDiff('TargetFileExt',fTargetFileExt,CompOpts.fTargetFileExt)) then exit;
   if Done(Tool.AddDiff('TargetFilename',fTargetFilename,CompOpts.fTargetFilename)) then exit;
-  if Done(Tool.AddDiff('TargetFilenameAppplyConventions',FTargetFilenameAppplyConventions,CompOpts.FTargetFilenameAppplyConventions)) then exit;
+  if Done(Tool.AddDiff('TargetFilenameApplyConventions',FTargetFilenameApplyConventions,CompOpts.FTargetFilenameApplyConventions)) then exit;
 
   // search paths
   if Tool<>nil then Tool.Path:='Paths';

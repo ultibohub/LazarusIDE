@@ -357,6 +357,7 @@ type
     FUpdatingDisplay: Integer;
     FInButtonClick: Boolean;
     FButtonStates: array[TFmtButtons] of boolean;
+    FSetupDone: boolean;
 
     procedure EnableParentOverride(c: TControl; AEnableVisible: Boolean = False);
     function GetDisplayFormat: TWatchDisplayFormat;
@@ -392,6 +393,7 @@ type
     procedure UpdateDisplay;
     procedure UpdateFormatOverrides;
     procedure UpdateFormat;
+    procedure UpdateConstraints;
     procedure CreateHandle; override;
   public
     constructor Create(TheOwner: TComponent); override;
@@ -975,6 +977,8 @@ end;
 
 procedure TDisplayFormatFrame.SetDisplayFormat(ADispFormat: TWatchDisplayFormat);
 begin
+  FDisplayFormatCount := 1;
+  SetLength(FDisplayFormat, 1);
   FDisplayFormat[0] := ADispFormat;
   UpdateDisplay;
 end;
@@ -1064,6 +1068,7 @@ begin
   cbOverridePointerDeref.Visible  := FShowOverrideChecks;
   cbOverrideAddressFormat.Visible := FShowOverrideChecks;
   cbOverrideIndent.Visible        := FShowOverrideChecks;
+  cbOverrideArray.Visible         := FShowOverrideChecks;
   cbOverrideArrayNavBar.Visible   := FShowOverrideChecks;
 end;
 
@@ -1313,7 +1318,11 @@ begin
     AddToStr(CaptRbEnumName, DispFormatCharLetter, '/');
   end;
 
-  rbEnumName.Caption        := CaptRbEnumName;
+  if rbEnumName.Caption <> CaptRbEnumName then begin
+    rbEnumName.Caption        := CaptRbEnumName;
+    rbEnumName.Constraints.MinWidth := 0;
+  end;
+
   lbOverrideEnum.Caption    := CaptDivEnum;
   if FButtonStates[bsStruct] and FButtonStates[bsPtr] then
     lbOverrideAddressFormat.Caption := {DispFormatDlgBtnAdrFormat+ ': ' +} DispFormatDlgBtnStruct + ', ' + DispFormatDlgBtnPointer
@@ -1691,6 +1700,42 @@ begin
   end;
 end;
 
+procedure TDisplayFormatFrame.UpdateConstraints;
+var
+  i, px, py: Integer;
+  c: TControl;
+begin
+  if not (HandleAllocated and FSetupDone) then
+    exit;
+  DisableAutoSizing;
+  try
+    for i := 0 to ComponentCount - 1 do begin
+      if (not (Components[i] is TControl)) then
+        Continue;
+      c := TControl(Components[i]);
+      if (not ((c is TCheckBox) or (c is TRadioButton) or (c is TLabel) or (c is TCustomEdit))) or
+         (Trim(c.Caption) = '') or
+         (not c.IsVisible) or
+         (c.Constraints.MinWidth > 0) or
+         ((c is TLabel) and (TLabel(c).WordWrap))
+      then
+        Continue;
+
+      px := 0;
+      py := 0;
+      if c is TWinControl then TWinControl(c).Handle;
+      c.InvalidatePreferredSize;
+      c.GetPreferredSize(px, py);
+      if (px > c.Constraints.MinWidth) and
+         ((c.Constraints.MaxWidth = 0) or (px < c.Constraints.MaxWidth))
+      then
+        c.Constraints.MinWidth := px;
+    end;
+  finally
+    EnableAutoSizing;
+  end;
+end;
+
 procedure TDisplayFormatFrame.CreateHandle;
 begin
   inc(FUpdatingDisplay); // gtk2 send extra events
@@ -1699,6 +1744,8 @@ begin
   finally
     dec(FUpdatingDisplay);
   end;
+
+  UpdateConstraints;
   UpdateDisplay;
 end;
 
@@ -2177,6 +2224,7 @@ begin
 
     cbMemDump.State := BoolsetToCBState(FormatIsMemDump, False);
 
+    UpdateConstraints;
   finally
     EnableAutoSizing;
 
@@ -2461,6 +2509,8 @@ begin
   DividerBevelMemDump.Caption       := '';
   cbMemDump.Caption             := DispFormatCategoryMemDump;
 
+  FSetupDone := True;
+  UpdateConstraints;
 end;
 
 procedure TDisplayFormatFrame.BeginUdpate;

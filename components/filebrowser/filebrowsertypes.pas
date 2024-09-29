@@ -46,6 +46,7 @@ Type
     Property Name : String Read FName;
     Property Parent : TFileSystemEntry Read FParent;
   end;
+  TFileSystemEntryArray = Array of TFileSystemEntry;
 
   { TSymlinkEntry }
 
@@ -69,7 +70,7 @@ Type
   Public
     Constructor Create(aParent : TFileSystemEntry; const aName: string); override;
     Destructor Destroy; override;
-    Procedure Clear; virtual;
+    Procedure Clear; override;
     Procedure ReadEntries(aOptions : TReadEntryOptions); override;
     Class function EntryType : TEntryType; override;
     Class function HasEntries(aPath : String; aShowHidden : Boolean; aTypes : TEntryTypes = AllEntryTypes) : Boolean; virtual;
@@ -81,6 +82,29 @@ Type
 
   TFileEntry = Class(TFileSystemEntry)
     Class function EntryType : TEntryType; override;
+  end;
+  TFileEntryArray = Array of TFileEntry;
+
+  TTreeDoneEvent = procedure (Sender : TThread; aTree : TDirectoryEntry) of object;
+  TTreeErrorEvent = procedure (Sender : TThread; const aError : String) of object;
+
+  { TTreeCreatorThread }
+
+  TTreeCreatorThread = Class(TThread)
+  Private
+    FRootDir : String;
+    FOptions : TReadEntryOptions;
+    FOnDone : TTreeDoneEvent;
+    FOnError : TTreeErrorEvent;
+    FNode : TDirectoryEntry;
+    FError : String;
+  Protected
+    procedure FillNode(N: TDirectoryEntry);
+    procedure DoDone;
+    procedure DoError;
+  Public
+    constructor Create(aRootDir: String; aOptions: TReadEntryOptions; aOnDone: TTreeDoneEvent; aOnError : TTreeErrorEvent);
+    procedure execute; override;
   end;
 
 
@@ -101,10 +125,18 @@ const
   KeyFilesInTree      = 'FilesInTree';
   KeyDirectoriesBeforeFiles     = 'DirectoriesBeforeFiles';
   KeySyncCurrentEditor = 'SyncCurrentEditor';
+  KeySearchMatchOnlyFilename = 'MatchOnlyFileNames';
+  KeySearchAbsoluteFilenames = 'AbsoluteFileNames';
+  KeySearchLetters = 'SearchLetters';
+
+  SViewFilebrowser = 'File browser';
 
 resourcestring
   SFileBrowserIDEMenuCaption = 'File Browser';
-
+  SFileSearcherIDEMenuCaption = 'File Searcher';
+  SErrSearching = 'Error searching for files in directory "%s": %s';
+  SFilesFound = 'Collected %d files in directory "%s"';
+  SSearchingFiles = 'Start collecting files in directory "%s"';
 
 implementation
 
@@ -216,7 +248,7 @@ var
   LinkTarget : RawByteString;
   isHidden : Boolean;
   isType : TEntryType;
-  Add : Boolean;
+
 begin
   Clear;
   CurrentDir:=IncludeTrailingPathDelimiter(AbsolutePath);
@@ -247,8 +279,13 @@ begin
             etDirectory : Entry:=TDirectoryEntry.Create(Self,Name);
             etSymlink :
               begin
+              try
               if not FileGetSymLinkTarget(CurrentDir+Name,LinkTarget) then
                 LinkTarget:='<?>';
+              except
+                // We get an exception in 3.2.2
+                LinkTarget:='<?>';
+              end;
               Entry:=TSymLinkEntry.Create(Self,Name,LinkTarget);
               end;
           else
@@ -345,6 +382,75 @@ end;
 class function TFileEntry.EntryType: TEntryType;
 begin
   Result:=etFile;
+end;
+
+{ TTreeCreatorThread }
+
+constructor TTreeCreatorThread.Create(aRootDir: String;
+  aOptions: TReadEntryOptions; aOnDone: TTreeDoneEvent;
+  aOnError: TTreeErrorEvent);
+begin
+  FRootDir:=aRootDir;
+  FOptions:=aOptions;
+  FOnDone:=aOnDone;
+  FOnError:=aOnError;
+  Inherited Create(false);
+end;
+
+procedure TTreeCreatorThread.FillNode(N : TDirectoryEntry);
+
+var
+  i : integer;
+
+begin
+  N.ReadEntries(FOptions);
+  For I:=0 to N.EntryCount-1 do
+    begin
+    if terminated then
+      break;
+    if N.Entries[I].EntryType=etDirectory then
+      FillNode(TDirectoryEntry(N.Entries[I]));
+    end;
+end;
+
+procedure TTreeCreatorThread.DoDone;
+begin
+  FOnDone(Self,FNode);
+  // Caller is responsible for freeing now...
+  FNode:=Nil;
+end;
+
+procedure TTreeCreatorThread.DoError;
+begin
+  if assigned(FonError) then
+    FOnError(Self,FError);
+end;
+
+procedure TTreeCreatorThread.execute;
+
+begin
+
+  FNode:=TDirectoryEntry.Create(Nil,FRootDir);
+  try
+    Try
+      FillNode(FNode);
+    except
+      on E : Exception do
+        begin
+        FError:=Format('Error indexing %s : %s',[E.ClassName,E.Message]);
+        if Assigned(FOnError) then
+          Synchronize(@DoError);
+        Terminate;
+        end;
+    end;
+    if Not Terminated then
+      begin
+      if Assigned(FOnDOne) then
+        Synchronize(@DoDone);
+      end;
+  finally
+    FNode.Free;
+  end;
 end;
 
 end.

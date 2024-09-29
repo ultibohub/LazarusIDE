@@ -81,7 +81,7 @@ type
     fLoadSaveThread: TCodyUDLoadSaveThread;
     fCritSec: TRTLCriticalSection;
     fLoaded: boolean; // has loaded the file
-    fStartTime: TDateTime;
+    fStartTime: QWord;
     fClosing: boolean;
     fCheckFiles: TStringToStringTree;
     procedure CheckFiles;
@@ -537,6 +537,7 @@ var
   UnitSet: TFPCUnitSetCache;
   CfgCache: TPCTargetConfigCache;
   DefaultFile: String;
+  t: QWord;
 begin
   // check without critical section if currently loading/saving
   if fLoadSaveThread<>nil then
@@ -624,14 +625,15 @@ begin
           end;
         end;
 
-        if ChangeStamp<>OldChangeStamp then begin
+        if fLoaded and (ChangeStamp<>OldChangeStamp) then begin
           if (fTimer=nil) and (not fClosing) then begin
             fTimer:=TTimer.Create(nil);
-            fTimer.Interval:=SaveIntervalInS*1000;
             fTimer.OnTimer:=@OnTimer;
           end;
-          if fTimer<>nil then
+          if fTimer<>nil then begin
+            fTimer.Interval:=SaveIntervalInS*1000;
             fTimer.Enabled:=true;
+          end;
         end;
       end;
     finally
@@ -640,17 +642,31 @@ begin
     end;
   end else if fCheckFiles<>nil then begin
     CheckFiles;
-  end else begin
-    // nothing to do, maybe it's time to load the database
-    if fStartTime=0 then
-      fStartTime:=Now
-    else if (fLoadSaveThread=nil) and (not fLoaded)
-    and (Abs(Now-fStartTime)*86400>=LoadAfterStartInS) then
-      StartLoadSaveThread;
   end;
-  Done:=fQueuedTools.Count=0;
-  if Done then
+  Done:= fQueuedTools.Count=0;
+  if Done then begin
     IdleConnected:=false;
+
+    if (not fLoaded) and (fLoadSaveThread=nil) then begin
+      // nothing to do, maybe it's time to load the database
+      {$PUSH}{$R-}{$Q-}
+      t := GetTickCount64-fStartTime;
+      {$POP}
+      if (t >= LoadAfterStartInS*1000) then begin
+        StartLoadSaveThread;
+      end
+      else begin
+        if (fTimer=nil) then begin
+          fTimer:=TTimer.Create(nil);
+          fTimer.OnTimer:=@OnTimer;
+        end;
+        if fTimer<>nil then begin
+          fTimer.Interval:=LoadAfterStartInS*1000 - t;
+          fTimer.Enabled:=true;
+        end;
+      end;
+    end;
+  end;
 end;
 
 procedure TCodyUnitDictionary.WaitForThread;
@@ -787,6 +803,7 @@ begin
   CodeToolBoss.AddHandlerToolTreeChanging(@ToolTreeChanged);
   LazarusIDE.AddHandlerOnIDEClose(@OnIDEClose);
   CodyOptions.AddHandlerApply(@OnApplyOptions);
+  fStartTime:=GetTickCount64;
 end;
 
 destructor TCodyUnitDictionary.Destroy;

@@ -10,7 +10,6 @@ object WatchesDlg: TWatchesDlg
   ClientHeight = 240
   ClientWidth = 520
   KeyPreview = True
-  LCLVersion = '3.99.0.0'
   OnDestroy = FormDestroy
   OnKeyDown = FormKeyDown
   OnShow = FormShow
@@ -134,11 +133,13 @@ object WatchesDlg: TWatchesDlg
       end
     end
     object tvWatches: TDbgTreeView
+      Cursor = 63
       Left = 0
       Height = 218
       Top = 22
       Width = 315
       Align = alClient
+      DefaultNodeHeight = 19
       DefaultText = 'Node'
       DragMode = dmAutomatic
       DragType = dtVCL
@@ -252,6 +253,10 @@ object WatchesDlg: TWatchesDlg
     object popEnabled: TMenuItem
       Action = actToggleCurrentEnable
     end
+    object popupWatchFormatPresets: TMenuItem
+      Caption = 'popupWatchFormatPresets'
+      Visible = False
+    end
     object popDelete: TMenuItem
       Action = actDeleteSelected
     end
@@ -275,6 +280,9 @@ object WatchesDlg: TWatchesDlg
     end
     object popEvaluate: TMenuItem
       Action = actEvaluate
+    end
+    object menuMemView: TMenuItem
+      Action = actMemView
     end
     object popAddWatchPoint: TMenuItem
       Action = actAddWatchPoint
@@ -369,10 +377,6 @@ object WatchesDlg: TWatchesDlg
       Caption = 'actEvaluate'
       OnExecute = actEvaluateExecute
     end
-    object actToggleInspectSite: TAction
-      Caption = 'actToggleInspectSite'
-      OnExecute = actToggleInspectSiteExecute
-    end
     object actCopyName: TAction
       Category = 'copy'
       Caption = 'actCopyName'
@@ -405,6 +409,14 @@ object WatchesDlg: TWatchesDlg
       Category = 'copy'
       Caption = 'actCopyAll'
       OnExecute = actCopyAllExecute
+    end
+    object actMemView: TAction
+      Caption = 'actMemView'
+      OnExecute = actMemViewExecute
+    end
+    object actToggleInspectSite: TAction
+      Caption = 'actToggleInspectSite'
+      OnExecute = actToggleInspectSiteExecute
     end
   end
 end

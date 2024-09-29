@@ -865,6 +865,10 @@ msgstr ""
 msgid "Block indent (tabs)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgbookmarksetscroll
+msgid "Restore scroll position for bookmarks"
+msgstr ""
+
 #: lazarusidestrconsts.dlgborderspacecanbesetinanchoreditor
 msgid "Border space can be set in Anchor editor. A colored line is shown if spacing > 0."
 msgstr ""
@@ -1811,7 +1815,7 @@ msgid "Language"
 msgstr "Bahasa"
 
 #: lazarusidestrconsts.dlgenvlanguagehint
-msgid "Language of all IDE strings. Restart IDE after changing it for best result."
+msgid "Restart the IDE to complete the language change"
 msgstr ""
 
 #: lazarusidestrconsts.dlgenvlguidelines
@@ -11821,6 +11825,11 @@ msgstr "Toggle lihat tombol cepat IDE"
 msgid "View Local Variables"
 msgstr "Toggle lihat Variabel Lokal"
 
+#: lazarusidestrconsts.liskmtoggleviewmemviewer
+msgctxt "lazarusidestrconsts.liskmtoggleviewmemviewer"
+msgid "View Mem viewer"
+msgstr ""
+
 #: lazarusidestrconsts.liskmtoggleviewmessages
 msgid "Toggle view Messages"
 msgstr "Toggle lihat Pesan"
@@ -21706,6 +21715,11 @@ msgstr ""
 
 #: lazarusidestrconsts.srkmectogglemarkupword
 msgid "Toggle Current-Word highlight"
+msgstr ""
+
+#: lazarusidestrconsts.srkmectogglememviewer
+msgctxt "lazarusidestrconsts.srkmectogglememviewer"
+msgid "View Mem viewer"
 msgstr ""
 
 #: lazarusidestrconsts.srkmectogglemessages

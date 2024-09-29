@@ -287,8 +287,10 @@ var
     while (i < c) and Result do begin
       m := ADbgSymbol.NestedSymbol[i];
       AddVisibility(m.MemberVisibility, i= 0);
-      if tdfStopAfterPointer in ANewFlags then
-        r := GetTypeName(s, m)
+      if tdfStopAfterPointer in ANewFlags then begin
+        r := GetTypeName(s, m);
+        s := m.Name + ': ' + s;
+      end
       else
         r := GetTypeAsDeclaration(s, m, [tdfIncludeVarName, tdfStopAfterPointer] + ANewFlags, AnIndent + 4);
       if r then
@@ -1400,6 +1402,10 @@ begin
         if not AValue.GetSize(ValSize) then
           ValSize := SizeVal(256);
         MemSize := SizeToFullBytes(ValSize);
+      end
+      else if AValue is TFpValueConstNumber then begin
+        MemAddr := TargetLoc(AValue.AsCardinal);
+        MemSize := 256;
       end;
       if MemSize < ARepeatCount then MemSize := ARepeatCount;
       if MemSize <= 0 then MemSize := 256;
