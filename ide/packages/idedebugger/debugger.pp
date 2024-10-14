@@ -1420,6 +1420,7 @@ type
     procedure ChangeCurrentIndex(ANewIndex: Integer); virtual;
     function HasAtLeastCount(ARequiredMinCount: Integer): TNullableBool; virtual; // Can be faster than getting the full count
     function CountLimited(ALimit: Integer): Integer; override;
+    function HasEntry(AIndex: Integer): Boolean; virtual;
     property Entries[AIndex: Integer]: TIdeCallStackEntry read GetEntry;
     property CountValidity: TDebuggerDataState read GetCountValidity;
   end;
@@ -1482,6 +1483,7 @@ type
     procedure DoEntriesCreated; override;
     procedure DoEntriesUpdated; override;
     function HasAtLeastCount(ARequiredMinCount: Integer): TNullableBool; override;
+    function HasEntry(AIndex: Integer): Boolean; override;
     property NewCurrentIndex: Integer read FNewCurrentIndex;
     property SnapShot: TIdeCallStack read FSnapShot write SetSnapShot;
   public
@@ -1508,6 +1510,7 @@ type
 
   TIdeCallStackMonitor = class(TCallStackMonitor)
   private
+    FDebugger: TDebuggerIntf;
     FSnapshots: TDebuggerDataSnapShotList;
     FNotificationList: TDebuggerChangeNotificationList;
     FUnitInfoProvider: TDebuggerUnitInfoProvider;
@@ -1540,6 +1543,7 @@ type
     property Snapshots[AnID: Pointer]: TIdeCallStackList read GetSnapshot;
     property UnitInfoProvider: TDebuggerUnitInfoProvider                        // Provided by DebugBoss, to map files to packages or project
              read FUnitInfoProvider write FUnitInfoProvider;
+    property Debugger: TDebuggerIntf read FDebugger write FDebugger;
   end;
 
   {%endregion   ^^^^^  Callstack  ^^^^^   }
@@ -1566,6 +1570,7 @@ type
   private
     FNotificationList: TList;
     FMaster: TDBGDisassembler;
+    FInChange: Boolean;
     procedure DisassemblerChanged(Sender: TObject);
     procedure SetMaster(AMaster: TDBGDisassembler);
   protected
@@ -5217,6 +5222,14 @@ begin
   end;
 end;
 
+function TCurrentCallStack.HasEntry(AIndex: Integer): Boolean;
+var
+  d: TCurrentCallStack;
+begin
+  Result := (AIndex >= 0) and
+            FEntries.GetData(AIndex, d);
+end;
+
 procedure TCurrentCallStack.SetCountValidity(AValidity: TDebuggerDataState);
 begin
   if FCountValidity = AValidity then exit;
@@ -5982,6 +5995,12 @@ procedure TIDEBreakPoint.DoHit(const ACount: Integer; var AContinue,
   ANeedInternalPause: Boolean);
 begin
   inherited DoHit(ACount, AContinue, ANeedInternalPause);
+
+  if (BreakHitcount > 0) and (ACount < BreakHitcount) then begin
+    AContinue := True;
+    exit;
+  end;
+
   AContinue := AContinue or not (bpaStop in Actions);
   if bpaLogMessage in Actions
   then Master.DoLogMessage(FLogMessage);
@@ -8702,6 +8721,12 @@ begin
   end;
 end;
 
+function TIdeCallStack.HasEntry(AIndex: Integer): Boolean;
+begin
+  Result := (AIndex >= 0) and (AIndex < CountLimited(AIndex+1)) and
+            (FList[AIndex] <> nil);
+end;
+
 procedure TIdeCallStack.SetCount(ACount: Integer);
 begin
   // can not set count
@@ -8796,6 +8821,7 @@ end;
 
 procedure TIdeCallStackMonitor.RequestCount(ACallstack: TIdeCallStack);
 begin
+  if (FDebugger = nil) or not(FDebugger.State in [dsPause, dsInternalPause]) then exit;
   if (Supplier <> nil) and (ACallstack is TCurrentCallStack)
   then Supplier.RequestCount(TCurrentCallStack(ACallstack));
 end;
@@ -8803,18 +8829,21 @@ end;
 procedure TIdeCallStackMonitor.RequestAtLeastCount(ACallstack: TIdeCallStack;
   ARequiredMinCount: Integer);
 begin
+  if (FDebugger = nil) or not(FDebugger.State in [dsPause, dsInternalPause]) then exit;
   if (Supplier <> nil) and (ACallstack is TCurrentCallStack)
   then Supplier.RequestAtLeastCount(TCurrentCallStack(ACallstack), ARequiredMinCount);
 end;
 
 procedure TIdeCallStackMonitor.RequestCurrent(ACallstack: TIdeCallStack);
 begin
+  if (FDebugger = nil) or not(FDebugger.State in [dsPause, dsInternalPause]) then exit;
   if (Supplier <> nil) and (ACallstack is TCurrentCallStack)
   then Supplier.RequestCurrent(TCurrentCallStack(ACallstack));
 end;
 
 procedure TIdeCallStackMonitor.RequestEntries(ACallstack: TIdeCallStack);
 begin
+  if (FDebugger = nil) or not(FDebugger.State in [dsPause, dsInternalPause]) then exit;
   if (Supplier <> nil) and (ACallstack is TCurrentCallStack)
   then Supplier.RequestEntries(TCurrentCallStack(ACallstack));
 end;
@@ -9263,6 +9292,10 @@ var
   n: Integer;
   Notification: TIDEDisassemblerNotification;
 begin
+  if FInChange then
+    exit;
+
+  LockChanged;
   if FMaster <> nil
   then begin
     SetCountBefore(FMaster.CountBefore);
@@ -9270,6 +9303,10 @@ begin
     SetBaseAddr(FMaster.BaseAddr);
   end
   else Clear;
+
+  FInChange := True;
+  UnlockChanged;
+  FInChange := False;
 
   for n := 0 to FNotificationList.Count - 1 do
   begin

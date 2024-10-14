@@ -2516,39 +2516,14 @@ function TQtWidgetSet.GetCapture: HWND;
 var
   w: QWidgetH;
   Widget: TQtWidget;
-  {$IFDEF MSWINDOWSQT4}
-  AWin: HWND;
-  {$ENDIF}
 begin
-  {$IFDEF MSWINDOWSQT4}
-  AWin := Windows.GetCapture;
-  if AWin <> 0 then
-    w := QWidget_find(AWin)
-  else
-    w := nil;
-
-  if (w = nil) and (QGUIApplication_mouseButtons() > 0) then
-    w := QApplication_focusWidget()
-  else
-    if (w <> QWidget_mouseGrabber) and (QWidget_mouseGrabber <> nil) then
-      w := QWidget_mouseGrabber;
-
-  {$ELSE}
   w := QWidget_mouseGrabber();
-  {$ENDIF}
 
   if w <> nil then
   begin
     // Capture widget can be child of complex control. In any case we should return TQtWidget as result.
     // So we will look for parent while not found apropriate LCL handle.
     Widget := GetFirstQtObjectFromWidgetH(w);
-    {$IFDEF MSWINDOWSQT4}
-    if Widget <> nil then
-    begin
-      if Widget is TQtCustomControl then
-        Widget := TQtCustomControl(Widget).Viewport;
-    end;
-    {$ENDIF}
     Result := HWND(Widget);
   end
   else
@@ -4189,113 +4164,6 @@ begin
 end;
 
 {------------------------------------------------------------------------------
-  Function: GetTextExtentExPoint
-  Params: http://msdn.microsoft.com/en-us/library/dd144935%28VS.85%29.aspx
-  Returns: True on success
- ------------------------------------------------------------------------------}
-function TQtWidgetSet.GetTextExtentExPoint(DC: HDC; Str: PChar; Count,
-  MaxWidth: Integer; MaxCount, PartialWidths: PInteger; var Size: TSize
-  ): Boolean;
-var
-  i, w, Accu: Integer;
-  AStr: WideString;
-  AQtStr: QStringH;
-  WC: WideChar;
-  AMaxCount: PtrInt;
-begin
-  Result := False;
-  if not IsValidDC(DC) then Exit;
-  with TQtDeviceContext(DC) do
-  begin
-    if Str = nil then
-      AStr := ''
-    else
-      AStr := Str;
-
-    AQtStr := QString_Create(PWideString(@AStr));
-    try
-      Size.cx := 0;
-      Size.cY := Font.Metrics.height;
-      if (AStr = '') then
-      begin
-        if MaxCount <> nil then
-          MaxCount^ := 0;
-        if PartialWidths <> nil then
-        begin
-          for i := 0 to Count - 1 do
-            PartialWidths[i] := 0;
-        end;
-        exit(True);
-      end;
-
-      AMaxCount := QString_length(AQtStr);
-
-      Size.cx := Font.Metrics.width(AQtStr, -1);
-
-      if PartialWidths = nil then
-      begin
-        if MaxCount <> nil then
-        begin
-          Accu := 0;
-          if MaxWidth <= 0 then
-            MaxCount^ := 0
-          else
-          if Size.cx < MaxWidth then
-            MaxCount^ := AMaxCount
-          else begin
-            MaxCount^ := 0;
-            for i := 0 to AMaxCount - 1 do
-            begin
-              QString_at(AQtStr, @WC, I);
-              W := QFontMetrics_horizontalAdvance(Font.Metrics.FHandle, PWideChar(@WC));
-              Accu := Accu + W;
-              if Accu <= MaxWidth then
-                inc(MaxCount^)
-              else
-                break;
-            end;
-          end;
-        end;
-      end else
-      begin
-        if MaxCount <> nil then
-          MaxCount^ := 0;
-        Accu := 0;
-        for i := 0 to AMaxCount - 1 do
-        begin
-          QString_at(AQtStr, @WC, I);
-          W := QFontMetrics_horizontalAdvance(Font.Metrics.FHandle, PWideChar(@WC));
-
-          if Accu + w > Size.cx then
-            Accu := Size.cx
-          else
-            Inc(Accu, w);
-
-          if MaxCount <> nil then
-          begin
-            if Accu <= MaxWidth then
-            begin
-              inc(MaxCount^);
-              PartialWidths[i] := Accu;
-              if MaxCount^ > AMaxCount then
-              begin
-                MaxCount^ := AMaxCount;
-                break;
-              end;
-            end else
-              break;
-          end else
-            PartialWidths[i] := Accu;
-        end;
-      end;
-    finally
-      QString_destroy(AQtStr);
-    end;
-  end;
-  Result := True;
-end;
-
-{------------------------------------------------------------------------------
   Function: GetTextExtentPoint
   Params:  none
   Returns: Nothing
@@ -5612,16 +5480,7 @@ begin
   w := TQtWidget(GetCapture);
   Result := w <> nil;
   if Result then
-  begin
-    {$IFDEF MSWINDOWSQT4}
-    if (w is TQtMainWindow) then
-      w.releaseMouse()
-    else
-      windows.ReleaseCapture;
-    {$ELSE}
     w.releaseMouse();
-    {$ENDIF}
-  end;
   {$ifdef VerboseQtWinAPI}
   WriteLn('[WinAPI ReleaseCapture] Capture = ', TLCLHandle(w));
   {$endif}
@@ -6060,13 +5919,6 @@ begin
       ReleaseCapture;
     if IsValidHandle(AHandle) then
     begin
-      {$IFDEF MSWINDOWSQT4}
-      if TQtWidget(AHandle) is TQtCustomControl then
-      begin
-        Windows.SetCapture(QWidget_winID(TQtCustomControl(AHandle).Viewport.Widget))
-      end else
-        Windows.SetCapture(QWidget_winID(TQtWidget(AHandle).Widget));
-      {$ELSE}
       if qtwsInsideMouseDoubleClickEvent in TQtWidget(AHandle).WidgetState then
         // issue #27384
         {$IFDEF DebugQtFocus}
@@ -6074,7 +5926,6 @@ begin
         {$ENDIF}
       else
         TQtWidget(AHandle).grabMouse();
-      {$ENDIF}
     end;
     {$ifdef VerboseQtWinAPI}
       WriteLn('[WinAPI SetCapture] Capture = ', Result, ' New capture = ', AHandle);

@@ -1784,11 +1784,10 @@ msgctxt "lazarusidestrconsts.dlgenvlanguage"
 msgid "Language"
 msgstr "Langage"
 
-#: lazarusidestrconsts.dlgenvlanguagehint
-#, fuzzy
-#| msgid "Language of all IDE strings. Restart IDE after changing it for best result."
-msgid "Restart the IDE to complete the language change"
-msgstr "Langue de toutes les chaînes de l'EDI. Redémarrez l'EDI après modification pour de meilleurs résultats."
+#: lazarusidestrconsts.dlgenvlanguagerestarthint
+msgctxt "lazarusidestrconsts.dlgenvlanguagerestarthint"
+msgid "Restart the IDE to complete the language change."
+msgstr ""
 
 #: lazarusidestrconsts.dlgenvlguidelines
 msgid "Guide lines"
@@ -2359,7 +2358,9 @@ msgid "Height:"
 msgstr "Hauteur :"
 
 #: lazarusidestrconsts.dlghideideonrun
-msgid "Hide IDE windows on run"
+#, fuzzy
+#| msgid "Hide IDE windows on run"
+msgid "Hide IDE windows on Run/Debug"
 msgstr "Cacher l'EDI à l'exécution"
 
 #: lazarusidestrconsts.dlghideideonrunhint
@@ -2686,15 +2687,21 @@ msgid "Delete list \"%s\"?"
 msgstr "Voulez-vous supprimer la liste \"%s\" ?"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
-msgid "Add Word or Term"
+#, fuzzy
+#| msgid "Add Word or Term"
+msgid "Add Word or Term by key"
 msgstr "Ajouter un mot ou un terme"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyremove
-msgid "Remove Word or Term"
+#, fuzzy
+#| msgid "Remove Word or Term"
+msgid "Remove Word or Term by key"
 msgstr "Retirer un mot ou un terme"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeytoggle
-msgid "Toggle Word or Term"
+#, fuzzy
+#| msgid "Toggle Word or Term"
+msgid "Toggle Word or Term by key"
 msgstr "Inverser un mot ou un terme"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
@@ -2768,7 +2775,9 @@ msgid "Select ..."
 msgstr "Sélectionner..."
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagekeys
-msgid "Key Settings"
+#, fuzzy
+#| msgid "Key Settings"
+msgid "Key mappings"
 msgstr "Paramètres des touches"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagemain
@@ -5562,7 +5571,7 @@ msgstr "Création de l'EDI"
 #: lazarusidestrconsts.lisbuildidewithpackages
 #, fuzzy
 #| msgid "build IDE with packages"
-msgid "Build IDE with packages."
+msgid "Build IDE with packages. Optional compiler options will be passed after the options from used build mode and can be specified here or with the --opt option."
 msgstr "créer l'EDI avec les paquets"
 
 #: lazarusidestrconsts.lisbuilding
@@ -5589,12 +5598,6 @@ msgstr "Différences avec d'autres modes de création"
 #: lazarusidestrconsts.lisbuildmodediffmode
 msgid "Mode:"
 msgstr "Mode :"
-
-#: lazarusidestrconsts.lisbuildmodeintitleinexample
-#, fuzzy
-#| msgid "Title in taskbar shows for example: project1.lpi - Release - Lazarus"
-msgid "Title in taskbar shows for example: project1 - Release - Lazarus"
-msgstr "Le titre dans la barre des tâches indique par exemple : Project1.lpi - Release - Lazarus"
 
 #: lazarusidestrconsts.lisbuildmodes
 #, fuzzy
@@ -5704,6 +5707,10 @@ msgstr "Impossible de trouver un \"%s.ppu\" correct"
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
 msgstr "Comparer les fichiers (pas pour créer des patches)"
+
+#: lazarusidestrconsts.liscaptionofactivebuildmode
+msgid "Caption of active build mode"
+msgstr ""
 
 #: lazarusidestrconsts.liscbpfiles
 #, object-pascal-format
@@ -9566,6 +9573,10 @@ msgctxt "lazarusidestrconsts.lisextractprocedure"
 msgid "Extract Procedure"
 msgstr "Extraire la procédure"
 
+#: lazarusidestrconsts.lisextraopts
+msgid "Pass additional options to the compiler. Can be given multiple times. If compilation options are also specified in --build-ide, then the options from --opt will be added after them."
+msgstr ""
+
 #: lazarusidestrconsts.lisextremelyverbose
 msgid "Extremely Verbose"
 msgstr "Très verbeux"
@@ -10207,7 +10218,7 @@ msgid "Print a list of build modes in the project. Active mode is listed first."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetexpandtext
-msgid "Print the result of substituting macros in the text. The absence of macros in the text means the name of the macro. By default, active build mode is used."
+msgid "Print the result of substituting macros in the text. The absence of macros means the name of the macro. In case of an error, returns only the text with partially expanded macros and sets the error code (also for an empty string). Takes into account the active (or specified via --bm option) build mode."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
@@ -10427,6 +10438,10 @@ msgstr "EDI"
 msgid "IDE build options"
 msgstr "Options de création de l'EDI"
 
+#: lazarusidestrconsts.lisidecaptioncustomhint
+msgid "The caption of the main IDE window"
+msgstr ""
+
 #: lazarusidestrconsts.lisidecompileandrestart
 msgid "The IDE will be recompiled and restarted during installation/uninstallation of packages."
 msgstr "L'EDI devra être recompilé et redémarré après l'installation et la désinstallation de paquets."
@@ -10468,9 +10483,13 @@ msgstr "L'identificateur contient..."
 msgid "IDE Options:"
 msgstr "Options de l'EDI :"
 
-#: lazarusidestrconsts.lisidetitleshowsbuildmode
-msgid "IDE title shows selected build mode"
-msgstr "Le titre de l'EDI indique le mode de construction choisi"
+#: lazarusidestrconsts.lisidetitlecustom
+msgid "Custom IDE title"
+msgstr ""
+
+#: lazarusidestrconsts.lisidetitleoptions
+msgid "IDE main window title"
+msgstr ""
 
 #: lazarusidestrconsts.lisidetitleshowsprojectdir
 msgid "IDE title shows project directory"
@@ -19871,6 +19890,10 @@ msgstr "Cacher le bloc"
 msgid "Indent block"
 msgstr "Indenter le bloc"
 
+#: lazarusidestrconsts.srkmecblockindentmove
+msgid "Indent (move) block"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecblockmove
 msgid "Move Block"
 msgstr "Déplacer le bloc"
@@ -19894,6 +19917,10 @@ msgstr "Inverser le bloc"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Désindenter le bloc"
+
+#: lazarusidestrconsts.srkmecblockunindentmove
+msgid "Unindent (move) block"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbreakpointproperties
 msgid "show breakpoint properties"
@@ -21546,6 +21573,31 @@ msgstr "REC"
 #: lazarusidestrconsts.uepreadonly
 msgid "Readonly"
 msgstr "Lecture seule"
+
+#: lazarusidestrconsts.uepselchars
+#, object-pascal-format
+msgid "%d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcol
+msgid "COL"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcxchars
+#, object-pascal-format
+msgid "%d * %d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselline
+#, fuzzy
+#| msgid "Line"
+msgctxt "lazarusidestrconsts.uepselline"
+msgid "LINE"
+msgstr "Ligne"
+
+#: lazarusidestrconsts.uepselnorm
+msgid "DEF"
+msgstr ""
 
 #: lazarusidestrconsts.unitdepoptionsforpackage
 msgid "Options for Package graph"

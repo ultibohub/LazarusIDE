@@ -1821,11 +1821,10 @@ msgctxt "lazarusidestrconsts.dlgenvlanguage"
 msgid "Language"
 msgstr "言語"
 
-#: lazarusidestrconsts.dlgenvlanguagehint
-#, fuzzy
-#| msgid "Language of all IDE strings. Restart IDE after changing it for best result."
-msgid "Restart the IDE to complete the language change"
-msgstr "すべてのIDE文字列の言語。最良の結果を得るために、変更後はIDEを再起動して下さい。"
+#: lazarusidestrconsts.dlgenvlanguagerestarthint
+msgctxt "lazarusidestrconsts.dlgenvlanguagerestarthint"
+msgid "Restart the IDE to complete the language change."
+msgstr ""
 
 #: lazarusidestrconsts.dlgenvlguidelines
 msgid "Guide lines"
@@ -2405,7 +2404,9 @@ msgid "Height:"
 msgstr "高さ:"
 
 #: lazarusidestrconsts.dlghideideonrun
-msgid "Hide IDE windows on run"
+#, fuzzy
+#| msgid "Hide IDE windows on run"
+msgid "Hide IDE windows on Run/Debug"
 msgstr "実行中はIDEウィンドウを隠す"
 
 #: lazarusidestrconsts.dlghideideonrunhint
@@ -2748,15 +2749,21 @@ msgid "Delete list \"%s\"?"
 msgstr "リスト\"%s\"を削除しますか？"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
-msgid "Add Word or Term"
+#, fuzzy
+#| msgid "Add Word or Term"
+msgid "Add Word or Term by key"
 msgstr "単語もしくは用語を追加"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyremove
-msgid "Remove Word or Term"
+#, fuzzy
+#| msgid "Remove Word or Term"
+msgid "Remove Word or Term by key"
 msgstr "単語もしくは用語を削除"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeytoggle
-msgid "Toggle Word or Term"
+#, fuzzy
+#| msgid "Toggle Word or Term"
+msgid "Toggle Word or Term by key"
 msgstr "単語もしくは用語をトグル"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
@@ -2830,7 +2837,9 @@ msgid "Select ..."
 msgstr "選択 ..."
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagekeys
-msgid "Key Settings"
+#, fuzzy
+#| msgid "Key Settings"
+msgid "Key mappings"
 msgstr "キー設定"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagemain
@@ -5669,7 +5678,7 @@ msgstr "IDEを構築"
 #: lazarusidestrconsts.lisbuildidewithpackages
 #, fuzzy
 #| msgid "build IDE with packages"
-msgid "Build IDE with packages."
+msgid "Build IDE with packages. Optional compiler options will be passed after the options from used build mode and can be specified here or with the --opt option."
 msgstr "パッケージ付きのIDEを構築"
 
 #: lazarusidestrconsts.lisbuilding
@@ -5696,12 +5705,6 @@ msgstr "他の構築モードとの違い"
 #: lazarusidestrconsts.lisbuildmodediffmode
 msgid "Mode:"
 msgstr "モード："
-
-#: lazarusidestrconsts.lisbuildmodeintitleinexample
-#, fuzzy
-#| msgid "Title in taskbar shows for example: project1.lpi - Release - Lazarus"
-msgid "Title in taskbar shows for example: project1 - Release - Lazarus"
-msgstr "タスクバーのタイトルは例えば project1.lpi - Release - Lazarusのように表示されます。"
 
 #: lazarusidestrconsts.lisbuildmodes
 #, fuzzy
@@ -5811,6 +5814,10 @@ msgstr "有効な%s.ppuが見つかりません"
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
 msgstr "ファイルを比較（パッチを作成するためではなく）"
+
+#: lazarusidestrconsts.liscaptionofactivebuildmode
+msgid "Caption of active build mode"
+msgstr ""
 
 #: lazarusidestrconsts.liscbpfiles
 #, object-pascal-format
@@ -9694,6 +9701,10 @@ msgctxt "lazarusidestrconsts.lisextractprocedure"
 msgid "Extract Procedure"
 msgstr "手続きを抽出"
 
+#: lazarusidestrconsts.lisextraopts
+msgid "Pass additional options to the compiler. Can be given multiple times. If compilation options are also specified in --build-ide, then the options from --opt will be added after them."
+msgstr ""
+
 #: lazarusidestrconsts.lisextremelyverbose
 msgid "Extremely Verbose"
 msgstr "極めて詳細"
@@ -10334,7 +10345,7 @@ msgid "Print a list of build modes in the project. Active mode is listed first."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetexpandtext
-msgid "Print the result of substituting macros in the text. The absence of macros in the text means the name of the macro. By default, active build mode is used."
+msgid "Print the result of substituting macros in the text. The absence of macros means the name of the macro. In case of an error, returns only the text with partially expanded macros and sets the error code (also for an empty string). Takes into account the active (or specified via --bm option) build mode."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
@@ -10565,6 +10576,10 @@ msgstr "IDE"
 msgid "IDE build options"
 msgstr "IDE 構築オプション"
 
+#: lazarusidestrconsts.lisidecaptioncustomhint
+msgid "The caption of the main IDE window"
+msgstr ""
+
 #: lazarusidestrconsts.lisidecompileandrestart
 msgid "The IDE will be recompiled and restarted during installation/uninstallation of packages."
 msgstr "パッケージのインストール／アンインストールの過程で、IDE は再コンパイルされて再起動されます。"
@@ -10607,9 +10622,13 @@ msgstr "識別子が次を含む ..."
 msgid "IDE Options:"
 msgstr "IDE オプション"
 
-#: lazarusidestrconsts.lisidetitleshowsbuildmode
-msgid "IDE title shows selected build mode"
-msgstr "IDEが選択された構築モードを表示"
+#: lazarusidestrconsts.lisidetitlecustom
+msgid "Custom IDE title"
+msgstr ""
+
+#: lazarusidestrconsts.lisidetitleoptions
+msgid "IDE main window title"
+msgstr ""
 
 #: lazarusidestrconsts.lisidetitleshowsprojectdir
 msgid "IDE title shows project directory"
@@ -20095,6 +20114,10 @@ msgstr "ブロックを隠す"
 msgid "Indent block"
 msgstr "ブロックをインデント"
 
+#: lazarusidestrconsts.srkmecblockindentmove
+msgid "Indent (move) block"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecblockmove
 msgid "Move Block"
 msgstr "ブロックを移動"
@@ -20118,6 +20141,10 @@ msgstr "ブロックをトグル"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "ブロックのインデントを戻す"
+
+#: lazarusidestrconsts.srkmecblockunindentmove
+msgid "Unindent (move) block"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbreakpointproperties
 msgid "show breakpoint properties"
@@ -21774,6 +21801,31 @@ msgstr "上書き"
 #: lazarusidestrconsts.uepreadonly
 msgid "Readonly"
 msgstr "読み取り専用"
+
+#: lazarusidestrconsts.uepselchars
+#, object-pascal-format
+msgid "%d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcol
+msgid "COL"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcxchars
+#, object-pascal-format
+msgid "%d * %d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselline
+#, fuzzy
+#| msgid "Line"
+msgctxt "lazarusidestrconsts.uepselline"
+msgid "LINE"
+msgstr "行"
+
+#: lazarusidestrconsts.uepselnorm
+msgid "DEF"
+msgstr ""
 
 #: lazarusidestrconsts.unitdepoptionsforpackage
 msgid "Options for Package graph"

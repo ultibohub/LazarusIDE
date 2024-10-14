@@ -172,14 +172,14 @@ resourcestring
     'info file after build. If not specified, build number will be incremented '+
     'if configured.';
 
-  lisExtraOpts = 'Pass additional options to the compiler, can be specified '+
+  lisExtraOpts = 'Pass additional options to the compiler. Can be given '+
     'multiple times. If compilation options are also specified in --build-ide, '+
     'then the options from --opt will be added after them.';
   lisGetExpandText = 'Print the result of substituting macros in the text. '+
     'The absence of macros means the name of the macro. '+
     'In case of an error, returns only the text with partially expanded macros '+
     'and sets the error code (also for an empty string). '+
-    'Takes into account the active build mode (or specified via "--bm").';
+    'Takes into account the active (or specified via --bm option) build mode.';
   lisGetBuildModes = 'Print a list of build modes in the project. Active mode is listed first.';
 
   lisLazbuildOptionsSyntax = 'lazbuild [options] <project/package filename or package name>';
@@ -1254,7 +1254,7 @@ resourcestring
 
   // IDE General options
   dlgEnvLanguage = 'Language';
-  dlgEnvLanguageRestartHint = 'Restart the IDE to complete the language change'; // If changed update the copy in procedure TDesktopOptionsFrame.LanguageComboBoxChange
+  dlgEnvLanguageRestartHint = 'Restart the IDE to complete the language change.'; // If changed update the copy in procedure TDesktopOptionsFrame.LanguageComboBoxChange
   dlgCheckAndAutoSaveFiles = 'Check and Auto Save Files';
   lisAskBeforeSavingProjectSSession = 'Ask before saving project''s session';
   lisIfOnlySessionInfoChangedThenAsk = 'If only the session info changed, ask about saving it.';
@@ -1312,7 +1312,7 @@ resourcestring
   // Window options
   dlgShowingWindows = 'Showing Windows';
   dlgSingleTaskBarButton  = 'Show single button in TaskBar';
-  dlgHideIDEOnRun = 'Hide IDE windows on run';
+  dlgHideIDEOnRun = 'Hide IDE windows on Run/Debug';
   dlgHideIDEOnRunHint = 'Do not show the IDE at all while program is running.';
   lisShowOnlyOneButtonInTheTaskbarForTheWholeIDEInstead = 'Show only one '
     +'button in the taskbar for the whole IDE instead of one per window. Some'
@@ -1320,7 +1320,9 @@ resourcestring
     +' one button per window.';
   lisIDETitleStartsWithProjectName = 'IDE title starts with project name';
   lisIDETitleShowsProjectDir = 'IDE title shows project directory';
-  lisIDETitleShowsBuildMode = 'IDE title shows selected build mode';
+  lisIDETitleOptions = 'IDE main window title';
+  lisIDETitleCustom = 'Custom IDE title';
+  lisIDECaptionCustomHint = 'The caption of the main IDE window';
   lisAutoAdjustIDEHeight = 'Automatically adjust IDE main window height';
   lisAutoAdjustIDEHeightHint = '';
   lisAutoAdjustIDEHeightFullComponentPalette = 'Show complete component palette';
@@ -1331,8 +1333,6 @@ resourcestring
   lisWindowMenuWithNameForDesignedFormHint = 'Useful especially if the caption is left empty.';
   lisTitleInTaskbarShowsForExampleProject1LpiLazarus = 'Title in taskbar '
     +'shows for example: project1 - Lazarus';
-  lisBuildModeInTitleInExample = 'Title in taskbar '
-    +'shows for example: project1 - Release - Lazarus';
   lisProjectDirectoryIsShowedInIdeTitleBar = 'Title in taskbar '
     +'shows also directory path of the project';
 
@@ -1454,6 +1454,7 @@ resourcestring
   dlgReferenceColor = 'Reference';
   lisAllBuildModes = '<All build modes>';
   lisNameOfActiveBuildMode = 'Name of active build mode';
+  lisCaptionOfActiveBuildMode = 'Caption of active build mode';
   dlfReadOnlyColor = 'Read Only';
   dlgHighlightColor = 'Highlight Color';
   dlgHighlightFontColor = 'Highlight Font Color';
@@ -1996,13 +1997,13 @@ resourcestring
   dlgMarkupUserDefinedListNew = 'Add list';
   dlgMarkupUserDefinedListDel = 'Delete list';
   dlgMarkupUserDefinedPageMain = 'Main settings';
-  dlgMarkupUserDefinedPageKeys = 'Key Settings';
+  dlgMarkupUserDefinedPageKeys = 'Key mappings';
   dlgMarkupUserDefinedMatchCase = 'Case sensitive';
   dlgMarkupUserDefinedMatchStartBound = 'Set bound at term start';
   dlgMarkupUserDefinedMatchEndBound = 'Set bound at term end';
-  dlgMarkupUserDefinedDivKeyAdd = 'Add Word or Term';
-  dlgMarkupUserDefinedDivKeyRemove = 'Remove Word or Term';
-  dlgMarkupUserDefinedDivKeyToggle = 'Toggle Word or Term';
+  dlgMarkupUserDefinedDivKeyAdd = 'Add Word or Term by key';
+  dlgMarkupUserDefinedDivKeyRemove = 'Remove Word or Term by key';
+  dlgMarkupUserDefinedDivKeyToggle = 'Toggle Word or Term by key';
   dlgMarkupUserDefinedDelCaption = 'Delete';
   dlgMarkupUserDefinedDelPrompt = 'Delete list "%s"?';
   dlgMarkupUserDefinedListName = 'Name';
@@ -2926,6 +2927,11 @@ resourcestring
   uepReadonly= 'Readonly';
   uepIns='INS';
   uepOvr='OVR';
+  uepSelNorm='DEF';
+  uepSelLine='LINE';
+  uepSelCol ='COL';
+  uepSelChars ='%d';
+  uepSelCxChars ='%d * %d';
   lisUEFontWith = 'Font without UTF-8';
   lisUETheCurre = 'The current editor font does not support UTF-8 but your system seems to use it.'
     +'%sThat means non ASCII characters will probably be shown incorrectly.'
@@ -3109,6 +3115,8 @@ resourcestring
   srkmecToggleMode            = 'Toggle Mode';
   srkmecBlockIndent           = 'Indent block';
   srkmecBlockUnindent         = 'Unindent block';
+  srkmecBlockIndentMove       = 'Indent (move) block';
+  srkmecBlockUnindentMove     = 'Unindent (move) block';
   srkmecPluginMultiCaretSetCaret         = 'Add extra caret';
   srkmecPluginMultiCaretUnsetCaret       = 'Remove extra caret';
   srkmecPluginMultiCaretToggleCaret      = 'Toggle extra caret';
@@ -5374,8 +5382,8 @@ resourcestring
   lisWriteWhatPackageFilesAreS = 'Write what package files are searched and '
     +'found.';
   lisBuildIDEWithPackages = 'Build IDE with packages. Optional compiler options '+
-    'can be specified to be passed after the build mode options, or they can be '+
-    'specified with the --opt option';
+    'will be passed after the options from used build mode and can be specified here or '+
+    'with the --opt option.';
   lisShowVersionAndExit = 'Show version and exit.';
   lisBeLessVerboseCanBeGivenMultipleTimes = 'Be less verbose. Can be given '
     +'multiple times.';

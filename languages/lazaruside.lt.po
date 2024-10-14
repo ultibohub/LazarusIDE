@@ -1826,11 +1826,10 @@ msgctxt "lazarusidestrconsts.dlgenvlanguage"
 msgid "Language"
 msgstr "Kalba"
 
-#: lazarusidestrconsts.dlgenvlanguagehint
-#, fuzzy
-#| msgid "Language of all IDE strings. Restart IDE after changing it for best result."
-msgid "Restart the IDE to complete the language change"
-msgstr "Visų IKA tekstų kalba. Kad įsigaliotų pakeitimai IKA būtina startuoti iš naujo."
+#: lazarusidestrconsts.dlgenvlanguagerestarthint
+msgctxt "lazarusidestrconsts.dlgenvlanguagerestarthint"
+msgid "Restart the IDE to complete the language change."
+msgstr ""
 
 #: lazarusidestrconsts.dlgenvlguidelines
 msgid "Guide lines"
@@ -2407,7 +2406,9 @@ msgid "Height:"
 msgstr "Aukštis:"
 
 #: lazarusidestrconsts.dlghideideonrun
-msgid "Hide IDE windows on run"
+#, fuzzy
+#| msgid "Hide IDE windows on run"
+msgid "Hide IDE windows on Run/Debug"
 msgstr "Startuojant programą slėpti IKA langus"
 
 #: lazarusidestrconsts.dlghideideonrunhint
@@ -2750,15 +2751,21 @@ msgid "Delete list \"%s\"?"
 msgstr "Šalinti sąrašą „%s“?"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
-msgid "Add Word or Term"
+#, fuzzy
+#| msgid "Add Word or Term"
+msgid "Add Word or Term by key"
 msgstr "Pridėti žodį arba termą"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyremove
-msgid "Remove Word or Term"
+#, fuzzy
+#| msgid "Remove Word or Term"
+msgid "Remove Word or Term by key"
 msgstr "Pašalinti žodį arba termą"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeytoggle
-msgid "Toggle Word or Term"
+#, fuzzy
+#| msgid "Toggle Word or Term"
+msgid "Toggle Word or Term by key"
 msgstr "Įjungti ar išjungti žodį arba termą"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
@@ -2832,7 +2839,9 @@ msgid "Select ..."
 msgstr "Žymėti…"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagekeys
-msgid "Key Settings"
+#, fuzzy
+#| msgid "Key Settings"
+msgid "Key mappings"
 msgstr "Klavišų nuostatos"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagemain
@@ -5674,7 +5683,7 @@ msgstr "Daryti IKA"
 #: lazarusidestrconsts.lisbuildidewithpackages
 #, fuzzy
 #| msgid "build IDE with packages"
-msgid "Build IDE with packages."
+msgid "Build IDE with packages. Optional compiler options will be passed after the options from used build mode and can be specified here or with the --opt option."
 msgstr "kartu su IKA daryti ir paketus"
 
 #: lazarusidestrconsts.lisbuilding
@@ -5701,12 +5710,6 @@ msgstr "Skirtumai lyginant su kitomis darymo veiksenomis"
 #: lazarusidestrconsts.lisbuildmodediffmode
 msgid "Mode:"
 msgstr "Veiksena:"
-
-#: lazarusidestrconsts.lisbuildmodeintitleinexample
-#, fuzzy
-#| msgid "Title in taskbar shows for example: project1.lpi - Release - Lazarus"
-msgid "Title in taskbar shows for example: project1 - Release - Lazarus"
-msgstr "Antraštė užduočių juostoje rodo pavyzdžiui: projektas1.lpi - laida - Lazarus"
 
 #: lazarusidestrconsts.lisbuildmodes
 #, fuzzy
@@ -5816,6 +5819,10 @@ msgstr "Nepavyko rasti tinkamo „%s.ppu“"
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
 msgstr "Palyginti failus (ne pataisų kūrimui)"
+
+#: lazarusidestrconsts.liscaptionofactivebuildmode
+msgid "Caption of active build mode"
+msgstr ""
 
 #: lazarusidestrconsts.liscbpfiles
 #, object-pascal-format
@@ -9698,6 +9705,10 @@ msgctxt "lazarusidestrconsts.lisextractprocedure"
 msgid "Extract Procedure"
 msgstr "Ištraukti procedūrą"
 
+#: lazarusidestrconsts.lisextraopts
+msgid "Pass additional options to the compiler. Can be given multiple times. If compilation options are also specified in --build-ide, then the options from --opt will be added after them."
+msgstr ""
+
 #: lazarusidestrconsts.lisextremelyverbose
 msgid "Extremely Verbose"
 msgstr "Ypatingai išsamiai"
@@ -10338,7 +10349,7 @@ msgid "Print a list of build modes in the project. Active mode is listed first."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetexpandtext
-msgid "Print the result of substituting macros in the text. The absence of macros in the text means the name of the macro. By default, active build mode is used."
+msgid "Print the result of substituting macros in the text. The absence of macros means the name of the macro. In case of an error, returns only the text with partially expanded macros and sets the error code (also for an empty string). Takes into account the active (or specified via --bm option) build mode."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
@@ -10568,6 +10579,10 @@ msgstr "IKA"
 msgid "IDE build options"
 msgstr "IKA darymo parinktys"
 
+#: lazarusidestrconsts.lisidecaptioncustomhint
+msgid "The caption of the main IDE window"
+msgstr ""
+
 #: lazarusidestrconsts.lisidecompileandrestart
 msgid "The IDE will be recompiled and restarted during installation/uninstallation of packages."
 msgstr "Įdiegiant arba išdiegiant paketus IKA kompiliuotas ir paleistas iš naujo."
@@ -10610,9 +10625,13 @@ msgstr "Identifikatoriuje yra…"
 msgid "IDE Options:"
 msgstr "IKA parinktys:"
 
-#: lazarusidestrconsts.lisidetitleshowsbuildmode
-msgid "IDE title shows selected build mode"
-msgstr "IKA antraštėje rodomas parinktas darymo režimas"
+#: lazarusidestrconsts.lisidetitlecustom
+msgid "Custom IDE title"
+msgstr ""
+
+#: lazarusidestrconsts.lisidetitleoptions
+msgid "IDE main window title"
+msgstr ""
 
 #: lazarusidestrconsts.lisidetitleshowsprojectdir
 msgid "IDE title shows project directory"
@@ -20135,6 +20154,10 @@ msgstr "Slėpti bloką"
 msgid "Indent block"
 msgstr "Suteikti blokui įtrauką"
 
+#: lazarusidestrconsts.srkmecblockindentmove
+msgid "Indent (move) block"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecblockmove
 msgid "Move Block"
 msgstr "Perkelti bloką"
@@ -20158,6 +20181,10 @@ msgstr "Įjungti ar išjungti bloką"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Naikinti bloko įtrauką"
+
+#: lazarusidestrconsts.srkmecblockunindentmove
+msgid "Unindent (move) block"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbreakpointproperties
 msgid "show breakpoint properties"
@@ -21812,6 +21839,31 @@ msgstr "KEISTI"
 #: lazarusidestrconsts.uepreadonly
 msgid "Readonly"
 msgstr "Tik skaitymui"
+
+#: lazarusidestrconsts.uepselchars
+#, object-pascal-format
+msgid "%d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcol
+msgid "COL"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcxchars
+#, object-pascal-format
+msgid "%d * %d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselline
+#, fuzzy
+#| msgid "Line"
+msgctxt "lazarusidestrconsts.uepselline"
+msgid "LINE"
+msgstr "Eilutė"
+
+#: lazarusidestrconsts.uepselnorm
+msgid "DEF"
+msgstr ""
 
 #: lazarusidestrconsts.unitdepoptionsforpackage
 msgid "Options for Package graph"

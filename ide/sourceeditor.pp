@@ -716,6 +716,7 @@ type
     FIsClosing: Boolean;
     FSrcEditsSortedForFilenames: TAvlTree; // TSourceEditorInterface sorted for Filename
     TabPopUpMenu, SrcPopUpMenu, DbgPopUpMenu: TPopupMenu;
+
     FStatusPanels: TSourceEditorStatusPanelList;
     procedure ApplyPageIndex;
     procedure ExecuteEditorItemClick(Sender: TObject);
@@ -1551,6 +1552,14 @@ const
   SoftCenterMinimum = 1;
   SoftCenterMaximum = 8;
 
+  CStatusPanelXY = 0;
+  CStatusPanelMacro = 1;
+  CStatusPanelFileMode = 2;
+  CStatusPanelCharMode = 3;
+  CStatusPanelSel = 4;
+  CStatusPanelFile = 5;
+  CStatusPanelCustomFirst = 6;
+
 var
   AutoStartCompletionBoxTimer: TIdleTimer = nil;
   SourceCompletionCaretXY: TPoint;
@@ -1698,6 +1707,9 @@ begin
   {%endregion}
 end;
 
+var
+  DbgPopUpStandAlone: TIDEMenuSection = nil;
+
 procedure RegisterStandardSourceEditorMenuItems;
 var
   AParent: TIDEMenuSection;
@@ -1836,6 +1848,7 @@ begin
     // register the Debug submenu
     SrcEditSubMenuDebug:=RegisterIDESubMenu(SrcEditMenuSectionDebug,
                                             'Debug', uemDebugWord, nil, nil, 'debugger');
+
     AParent:=SrcEditSubMenuDebug;
 
       // register the Debug submenu items
@@ -1856,6 +1869,8 @@ begin
           'Run to cursor', lisMenuRunToCursor, nil, nil, nil, 'menu_run_cursor');
       SrcEditMenuViewCallStack:=RegisterIDEMenuCommand(AParent,
           'View Call Stack', uemViewCallStack, nil, @ExecuteIdeMenuClick, nil, 'debugger_call_stack');
+
+    DbgPopUpStandAlone := RegisterIDEMenuRoot(SourceEditorMenuRootName+'Dbg');
   {%endregion}
 
   {%region *** Source Section ***}
@@ -4448,6 +4463,9 @@ begin
       end;
     end;
 
+  ecStickySelection, ecStickySelectionCol, ecStickySelectionLine, ecStickySelectionStop:
+    FSourceNoteBook.UpdateStatusBar;
+
   else
     begin
       Handled:=false;
@@ -5593,7 +5611,7 @@ begin
     NewPageCaption:=FPageName;
   if IsLocked then NewPageCaption:='#'+NewPageCaption;
   if Modified then NewPageCaption:='*'+NewPageCaption;
-  NewPageCaption := StringReplace(NewPageCaption, '&', '', [rfReplaceAll]);
+  NewPageCaption := StringReplace(NewPageCaption, '&', '&&', [rfReplaceAll]);
   if SourceNotebook.NoteBookPages[p] <> NewPageCaption then begin
     SourceNotebook.NoteBookPages[p] := NewPageCaption;
     SourceNotebook.UpdateTabsAndPageTitle;
@@ -6906,6 +6924,7 @@ begin
     Result := Items[i];
     if Result.FPanel = APanel then
       exit;
+    dec(i);
   end;
   Result := nil;
 end;
@@ -7396,6 +7415,18 @@ var
 begin
   IDECommandList.ExecuteUpdateEvents;
 
+  if SrcEditMenuToggleBreakpoint.Section <> SrcEditSubMenuDebug then begin
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuToggleBreakpoint);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuEvaluateModify);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuAddWatchAtCursor);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuAddWatchPointAtCursor);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuInspect);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuStepToCursor);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuRunToCursor);
+    SrcEditSubMenuDebug.AddLast(SrcEditMenuViewCallStack);
+  end;
+
+
   SourceEditorMenuRoot.MenuItem:=SrcPopupMenu.Items;
   RemoveUserDefinedMenuItems;
   RemoveContextMenuItems;
@@ -7482,8 +7513,19 @@ end;
 
 procedure TSourceNotebook.DbgPopUpMenuPopup(Sender: TObject);
 begin
-  SrcEditSubMenuDebug.MenuItem:=DbgPopUpMenu.Items;
-  SrcEditSubMenuDebug.Enabled:=MainIDEInterface.AllowDebugControls; //Ultibo
+  if SrcEditMenuToggleBreakpoint.Section <> DbgPopUpStandAlone then begin
+    DbgPopUpStandAlone.AddLast(SrcEditMenuToggleBreakpoint);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuEvaluateModify);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuAddWatchAtCursor);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuAddWatchPointAtCursor);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuInspect);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuStepToCursor);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuRunToCursor);
+    DbgPopUpStandAlone.AddLast(SrcEditMenuViewCallStack);
+  end;
+
+  DbgPopUpStandAlone.MenuItem:=DbgPopUpMenu.Items;
+  DbgPopUpStandAlone.Enabled:=MainIDEInterface.AllowDebugControls; //Ultibo
 end;
 
 procedure TSourceNotebook.NotebookShowTabHint(Sender: TObject;
@@ -7954,6 +7996,7 @@ procedure TSourceNotebook.AcceptEditor(AnEditor: TSourceEditor; SendEvent: Boole
 begin
   FSourceEditorList.Add(AnEditor);
   FSrcEditsSortedForFilenames.Add(AnEditor);
+  StatusBar.Visible := FSourceEditorList.Count > 0;
 
   AnEditor.EditorComponent.BeginUpdate;
   AnEditor.PopupMenu := SrcPopupMenu;
@@ -7974,6 +8017,7 @@ procedure TSourceNotebook.ReleaseEditor(AnEditor: TSourceEditor; SendEvent: Bool
 begin
   FSourceEditorList.Remove(AnEditor);
   FSrcEditsSortedForFilenames.RemovePointer(AnEditor);
+  StatusBar.Visible := FSourceEditorList.Count > 0;
   if SendEvent then
     Manager.SendEditorDestroyed(AnEditor);
 end;
@@ -8662,10 +8706,10 @@ var
 begin
   P := StatusBar.ScreenToClient(Mouse.CursorPos);
   i := StatusBar.GetPanelIndexAt(P.X, P.Y);
-  if i = 1  then
+  if i = CStatusPanelMacro  then
     EditorMacroForRecording.Stop;
 
-  if i >= 0 then begin
+  if i >= 0 {CStatusPanelCustomFirst} then begin
     pnl := FStatusPanels.GetItemForPanel(StatusBar.Panels[i]);
     if (pnl <> nil) and (pnl.OnClick <> nil) then
       pnl.OnClick(Self);
@@ -8681,10 +8725,10 @@ begin
   P := StatusBar.ScreenToClient(Mouse.CursorPos);
   i := StatusBar.GetPanelIndexAt(P.X, P.Y);
   case StatusBar.GetPanelIndexAt(P.X, P.Y) of  // Based on panel:
-    0: GoToLineMenuItemClick(Nil);    // Show "Goto Line" dialog.
-    4: OpenFolderMenuItemClick(Nil);  // Show system file manager on file's folder.
-    else
-      if i >= 0 then begin
+    CStatusPanelXY: GoToLineMenuItemClick(Nil);    // Show "Goto Line" dialog.
+    CStatusPanelFile: OpenFolderMenuItemClick(Nil);  // Show system file manager on file's folder.
+    else 
+      if i >= 0 {CStatusPanelCustomFirst} then begin
         pnl := FStatusPanels.GetItemForPanel(StatusBar.Panels[i]);
         if (pnl <> nil) and (pnl.OnDoubleClick <> nil) then
           pnl.OnDoubleClick(Self);
@@ -8699,12 +8743,12 @@ var
   pnl: TSourceEditorStatusPanel;
 begin
   i := StatusBar.GetPanelIndexAt(MousePos.X, MousePos.Y);
-  GoToLineMenuItem.Visible := i=0;
-  OpenFolderMenuItem.Visible := i=4;
-  if i in [0, 4] then
+  GoToLineMenuItem.Visible := i=CStatusPanelXY;
+  OpenFolderMenuItem.Visible := i=CStatusPanelFile;
+  if i in [CStatusPanelXY, CStatusPanelFile] then
     StatusPopUpMenu.PopUp
   else
-  if i >= 0 then begin
+  if i >= 0 {CStatusPanelCustomFirst} then begin
     pnl := FStatusPanels.GetItemForPanel(StatusBar.Panels[i]);
     if (pnl <> nil) and (pnl.OnContextPopup <> nil) then
       pnl.OnContextPopup(Self, MousePos, Handled);
@@ -8716,7 +8760,7 @@ procedure TSourceNotebook.StatusBarDrawPanel(AStatusBar: TStatusBar; APanel: TSt
 var
   pnl: TSourceEditorStatusPanel;
 begin
-  if APanel = StatusBar.Panels[1] then begin
+  if APanel = StatusBar.Panels[CStatusPanelMacro] then begin
     IDEImages.Images_16.ResolutionForControl[16, AStatusBar]
       .Draw(StatusBar.Canvas, ARect.Left,  ARect.Top, FStopBtnIdx);
   end
@@ -8936,7 +8980,7 @@ end;
 
 procedure TSourceNotebook.OpenFolderMenuItemClick(Sender: TObject);
 begin
-  OpenDocument(ExtractFilePath(Statusbar.Panels[4].Text));
+  OpenDocument(ExtractFilePath(Statusbar.Panels[CStatusPanelFile].Text));
 end;
 
 procedure TSourceNotebook.ExecuteEditorItemClick(Sender: TObject);
@@ -8966,9 +9010,9 @@ begin
     end;
     W := 0;
     for i := 0 to StatusBar.Panels.Count - 1 do
-      if i <> 4 then
+      if i <> 5 then
         w := w + StatusBar.Panels[i].Width;
-    StatusBar.Panels[4].Width := Max(150, StatusBar.Width - W);
+    StatusBar.Panels[5].Width := Max(150, StatusBar.Width - W);
   finally
     StatusBar.EndUpdate;
   end;
@@ -9148,8 +9192,10 @@ var
   PanelFilename: String;
   PanelCharMode: string;
   PanelXY: string;
-  PanelFileMode: string;
+  PanelFileMode, PanelSelMode: string;
   CurEditor: TSynEdit;
+  bb, be: TPoint;
+  m: TSynSelectionMode;
 begin
   if FUpdateLock > 0 then begin
     include(FUpdateFlags, ufStatusBar);
@@ -9221,6 +9267,35 @@ begin
       PanelFileMode := PanelFileMode + ueLocked;
     end;
 
+    PanelSelMode := '';
+    if CurEditor.SelAvail or CurEditor.IsStickySelecting then
+      m := CurEditor.SelectionMode
+    else
+      m := CurEditor.DefaultSelectionMode;
+    case m of
+      smNormal: if CurEditor.IsStickySelecting or CurEditor.SelAvail then
+                  PanelSelMode := uepSelNorm;
+      smLine:   PanelSelMode := uepSelLine;
+      smColumn: PanelSelMode := uepSelCol;
+    end;
+    if CurEditor.SelAvail then begin
+      PanelSelMode := PanelSelMode + ': ';
+      case CurEditor.SelectionMode of
+        smNormal: PanelSelMode := PanelSelMode + Format(uepSelChars, [Length(CurEditor.SelText)]);
+        smLine:   PanelSelMode := PanelSelMode + Format(uepSelChars, [Length(CurEditor.SelText)]);
+        smColumn: begin
+          bb := CurEditor.LogicalToPhysicalPos(CurEditor.BlockBegin);
+          be := CurEditor.LogicalToPhysicalPos(CurEditor.BlockEnd);
+          PanelSelMode := PanelSelMode + Format(uepSelCxChars, [abs(be.X - bb.X), abs(be.Y - bb.Y)+1]);
+        end;
+      end;
+    end
+    else
+    if PanelSelMode <> '' then
+      PanelSelMode := PanelSelMode + ': -';
+    if CurEditor.IsStickySelecting then
+      PanelSelMode := '* '+PanelSelMode;
+
     PanelXY := Format(' %6d:%4d',
                  [TempEditor.CurrentCursorYLine,TempEditor.CurrentCursorXLine]);
 
@@ -9229,16 +9304,25 @@ begin
     else
       PanelCharMode := uepOvr;
 
-    Statusbar.Panels[0].Text := PanelXY;
-    StatusBar.Panels[2].Text := PanelFileMode;
-    Statusbar.Panels[3].Text := PanelCharMode;
-    Statusbar.Panels[4].Text := PanelFilename;
-    if(EditorMacroForRecording.IsRecording(CurEditor)) then
-      Statusbar.Panels[1].Width := IDEImages.ScaledSize(20)
+    StatusBar.Panels[CStatusPanelXY].Text := PanelXY;
+    StatusBar.Panels[CStatusPanelFileMode].Text := PanelFileMode;
+    StatusBar.Panels[CStatusPanelCharMode].Text := PanelCharMode;
+    Statusbar.Panels[CStatusPanelSel].Text := PanelSelMode;
+    if PanelSelMode = '' then
+      Statusbar.Panels[CStatusPanelSel].Width := 0
     else
-      Statusbar.Panels[1].Width := 0;
+    if CurEditor.SelAvail then
+      Statusbar.Panels[CStatusPanelSel].Width := 100
+    else
+      Statusbar.Panels[CStatusPanelSel].Width := 50;
+    Statusbar.Panels[5].Text := PanelFilename;
+    if(EditorMacroForRecording.IsRecording(CurEditor)) then
+      Statusbar.Panels[CStatusPanelMacro].Width := IDEImages.ScaledSize(20)
+    else
+      Statusbar.Panels[CStatusPanelMacro].Width := 0;
 
   end;
+  CalculateStatusBarSizes;
   Statusbar.EndUpdate;
 
   CheckCurrentCodeBufferChanged;

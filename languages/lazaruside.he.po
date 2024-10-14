@@ -1859,8 +1859,9 @@ msgctxt "lazarusidestrconsts.dlgenvlanguage"
 msgid "Language"
 msgstr "שפה"
 
-#: lazarusidestrconsts.dlgenvlanguagehint
-msgid "Restart the IDE to complete the language change"
+#: lazarusidestrconsts.dlgenvlanguagerestarthint
+msgctxt "lazarusidestrconsts.dlgenvlanguagerestarthint"
+msgid "Restart the IDE to complete the language change."
 msgstr ""
 
 #: lazarusidestrconsts.dlgenvlguidelines
@@ -2460,7 +2461,9 @@ msgid "Height:"
 msgstr "גובה:"
 
 #: lazarusidestrconsts.dlghideideonrun
-msgid "Hide IDE windows on run"
+#, fuzzy
+#| msgid "Hide IDE windows on run"
+msgid "Hide IDE windows on Run/Debug"
 msgstr "הסתר את חלונות ה IDE בזמן ריצה"
 
 #: lazarusidestrconsts.dlghideideonrunhint
@@ -2821,15 +2824,15 @@ msgid "Delete list \"%s\"?"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
-msgid "Add Word or Term"
+msgid "Add Word or Term by key"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyremove
-msgid "Remove Word or Term"
+msgid "Remove Word or Term by key"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeytoggle
-msgid "Toggle Word or Term"
+msgid "Toggle Word or Term by key"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
@@ -2903,7 +2906,7 @@ msgid "Select ..."
 msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagekeys
-msgid "Key Settings"
+msgid "Key mappings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagemain
@@ -5836,7 +5839,7 @@ msgstr ""
 #: lazarusidestrconsts.lisbuildidewithpackages
 #, fuzzy
 #| msgid "build IDE with packages"
-msgid "Build IDE with packages."
+msgid "Build IDE with packages. Optional compiler options will be passed after the options from used build mode and can be specified here or with the --opt option."
 msgstr "בנה את ה IDE עם חבילות"
 
 #: lazarusidestrconsts.lisbuilding
@@ -5865,10 +5868,6 @@ msgstr "הבדלים מאופני בנייה אחרים"
 #: lazarusidestrconsts.lisbuildmodediffmode
 msgid "Mode:"
 msgstr "אופן:"
-
-#: lazarusidestrconsts.lisbuildmodeintitleinexample
-msgid "Title in taskbar shows for example: project1 - Release - Lazarus"
-msgstr ""
 
 #: lazarusidestrconsts.lisbuildmodes
 #, fuzzy
@@ -5983,6 +5982,10 @@ msgstr ""
 
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
+msgstr ""
+
+#: lazarusidestrconsts.liscaptionofactivebuildmode
+msgid "Caption of active build mode"
 msgstr ""
 
 #: lazarusidestrconsts.liscbpfiles
@@ -9965,6 +9968,10 @@ msgctxt "lazarusidestrconsts.lisextractprocedure"
 msgid "Extract Procedure"
 msgstr "חלץ פרוצדורה"
 
+#: lazarusidestrconsts.lisextraopts
+msgid "Pass additional options to the compiler. Can be given multiple times. If compilation options are also specified in --build-ide, then the options from --opt will be added after them."
+msgstr ""
+
 #: lazarusidestrconsts.lisextremelyverbose
 msgid "Extremely Verbose"
 msgstr ""
@@ -10614,7 +10621,7 @@ msgid "Print a list of build modes in the project. Active mode is listed first."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetexpandtext
-msgid "Print the result of substituting macros in the text. The absence of macros in the text means the name of the macro. By default, active build mode is used."
+msgid "Print the result of substituting macros in the text. The absence of macros means the name of the macro. In case of an error, returns only the text with partially expanded macros and sets the error code (also for an empty string). Takes into account the active (or specified via --bm option) build mode."
 msgstr ""
 
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
@@ -10838,6 +10845,10 @@ msgstr "IDE"
 msgid "IDE build options"
 msgstr "אפשרויות הבניה של ה IDE "
 
+#: lazarusidestrconsts.lisidecaptioncustomhint
+msgid "The caption of the main IDE window"
+msgstr ""
+
 #: lazarusidestrconsts.lisidecompileandrestart
 msgid "The IDE will be recompiled and restarted during installation/uninstallation of packages."
 msgstr ""
@@ -10879,8 +10890,12 @@ msgstr "מזהה מכיל ..."
 msgid "IDE Options:"
 msgstr "אפשרויות IDE"
 
-#: lazarusidestrconsts.lisidetitleshowsbuildmode
-msgid "IDE title shows selected build mode"
+#: lazarusidestrconsts.lisidetitlecustom
+msgid "Custom IDE title"
+msgstr ""
+
+#: lazarusidestrconsts.lisidetitleoptions
+msgid "IDE main window title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidetitleshowsprojectdir
@@ -20835,6 +20850,10 @@ msgstr "הסתר בלוק"
 msgid "Indent block"
 msgstr "הזכך בלוק"
 
+#: lazarusidestrconsts.srkmecblockindentmove
+msgid "Indent (move) block"
+msgstr ""
+
 #: lazarusidestrconsts.srkmecblockmove
 msgid "Move Block"
 msgstr "הזז בלוק"
@@ -20858,6 +20877,10 @@ msgstr "החלף בלוק"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "בטל זיהוי בלוק"
+
+#: lazarusidestrconsts.srkmecblockunindentmove
+msgid "Unindent (move) block"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecbreakpointproperties
 msgid "show breakpoint properties"
@@ -22631,6 +22654,31 @@ msgstr "OVR"
 #: lazarusidestrconsts.uepreadonly
 msgid "Readonly"
 msgstr "קריאה בלבד"
+
+#: lazarusidestrconsts.uepselchars
+#, object-pascal-format
+msgid "%d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcol
+msgid "COL"
+msgstr ""
+
+#: lazarusidestrconsts.uepselcxchars
+#, object-pascal-format
+msgid "%d * %d"
+msgstr ""
+
+#: lazarusidestrconsts.uepselline
+#, fuzzy
+#| msgid "Line"
+msgctxt "lazarusidestrconsts.uepselline"
+msgid "LINE"
+msgstr "שורה"
+
+#: lazarusidestrconsts.uepselnorm
+msgid "DEF"
+msgstr ""
 
 #: lazarusidestrconsts.unitdepoptionsforpackage
 msgid "Options for Package graph"

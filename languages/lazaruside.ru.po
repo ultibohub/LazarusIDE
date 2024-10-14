@@ -5,7 +5,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2024-09-25 18:07+0300\n"
+"PO-Revision-Date: 2024-10-05 22:24+0300\n"
 "Language-Team: \n"
 "MIME-Version: 1.0\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
@@ -1769,9 +1769,10 @@ msgctxt "lazarusidestrconsts.dlgenvlanguage"
 msgid "Language"
 msgstr "Язык"
 
-#: lazarusidestrconsts.dlgenvlanguagehint
-msgid "Restart the IDE to complete the language change"
-msgstr "Перезапустите IDE для завершения переключения языка"
+#: lazarusidestrconsts.dlgenvlanguagerestarthint
+msgctxt "lazarusidestrconsts.dlgenvlanguagerestarthint"
+msgid "Restart the IDE to complete the language change."
+msgstr "Перезапустите IDE для завершения переключения языка."
 
 #: lazarusidestrconsts.dlgenvlguidelines
 msgid "Guide lines"
@@ -2342,8 +2343,8 @@ msgid "Height:"
 msgstr "Высота:"
 
 #: lazarusidestrconsts.dlghideideonrun
-msgid "Hide IDE windows on run"
-msgstr "Скрывать окна IDE при запуске"
+msgid "Hide IDE windows on Run/Debug"
+msgstr "Скрывать окна IDE при запуске/отладке"
 
 #: lazarusidestrconsts.dlghideideonrunhint
 msgid "Do not show the IDE at all while program is running."
@@ -2669,16 +2670,16 @@ msgid "Delete list \"%s\"?"
 msgstr "Удалить список \"%s\"?"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
-msgid "Add Word or Term"
-msgstr "Добавление слова или терма"
+msgid "Add Word or Term by key"
+msgstr "Добавление слова или терма клавишами"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyremove
-msgid "Remove Word or Term"
-msgstr "Удаление слова или терма"
+msgid "Remove Word or Term by key"
+msgstr "Удаление слова или терма клавишами"
 
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeytoggle
-msgid "Toggle Word or Term"
-msgstr "Переключение слова или терма"
+msgid "Toggle Word or Term by key"
+msgstr "Переключение слова или терма клавишами"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
 msgid "Duplicate Term"
@@ -2751,8 +2752,8 @@ msgid "Select ..."
 msgstr "Выбрать ..."
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagekeys
-msgid "Key Settings"
-msgstr "Параметры клавиш"
+msgid "Key mappings"
+msgstr "Комбинации клавиш"
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedpagemain
 msgid "Main settings"
@@ -5519,8 +5520,8 @@ msgid "Build IDE"
 msgstr "Сборка IDE"
 
 #: lazarusidestrconsts.lisbuildidewithpackages
-msgid "Build IDE with packages."
-msgstr "Собрать IDE с пакетами."
+msgid "Build IDE with packages. Optional compiler options will be passed after the options from used build mode and can be specified here or with the --opt option."
+msgstr "Собрать IDE с пакетами. Необязательные дополнительные параметры компиляции будут переданы после параметров используемого режима сборки и могут быть указаны здесь либо в --opt."
 
 #: lazarusidestrconsts.lisbuilding
 msgid "Building"
@@ -5546,10 +5547,6 @@ msgstr "Отличия от других режимов сборки"
 #: lazarusidestrconsts.lisbuildmodediffmode
 msgid "Mode:"
 msgstr "Режим:"
-
-#: lazarusidestrconsts.lisbuildmodeintitleinexample
-msgid "Title in taskbar shows for example: project1 - Release - Lazarus"
-msgstr "Пример отображаемых данных в заголовке в панели задач: project1 - Release - Lazarus"
 
 #: lazarusidestrconsts.lisbuildmodes
 msgid "Build mode"
@@ -5657,6 +5654,10 @@ msgstr "Невозможно найти корректный %s.ppu"
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
 msgstr "Сравнение файлов (не для создания файлов разницы)"
+
+#: lazarusidestrconsts.liscaptionofactivebuildmode
+msgid "Caption of active build mode"
+msgstr "Заголовок активного режима сборки"
 
 #: lazarusidestrconsts.liscbpfiles
 #, object-pascal-format
@@ -9500,6 +9501,10 @@ msgctxt "lazarusidestrconsts.lisextractprocedure"
 msgid "Extract Procedure"
 msgstr "Извлечь в процедуру"
 
+#: lazarusidestrconsts.lisextraopts
+msgid "Pass additional options to the compiler. Can be given multiple times. If compilation options are also specified in --build-ide, then the options from --opt will be added after them."
+msgstr "Передать дополнительные параметры компилятору. Может задаваться несколько раз. Если параметры компиляции также указаны в --build-ide, параметры из --opt будут переданы после них."
+
 #: lazarusidestrconsts.lisextremelyverbose
 msgid "Extremely Verbose"
 msgstr "Крайне подробное"
@@ -10125,8 +10130,8 @@ msgid "Print a list of build modes in the project. Active mode is listed first."
 msgstr "Вывести список режимов сборки проекта. Активный режим выводится первым в списке."
 
 #: lazarusidestrconsts.lisgetexpandtext
-msgid "Print the result of substituting macros in the text. The absence of macros in the text means the name of the macro. By default, active build mode is used."
-msgstr "Вывести результат раскрытия макросов в тексте. При отсутствии макросов текст интерпретируется как имя макроса. По умолчанию используется активный режим сборки."
+msgid "Print the result of substituting macros in the text. The absence of macros means the name of the macro. In case of an error, returns only the text with partially expanded macros and sets the error code (also for an empty string). Takes into account the active (or specified via --bm option) build mode."
+msgstr "Вывести результат раскрытия макросов в тексте. При отсутствии макросов текст интерпретируется как имя макроса. При возникновении ошибки возвращается только текст с частично раскрытыми макросами и устанавливается код ошибки (в том числе для пустой строки). При обработке используется активный (или указанный через параметр --bm) режим сборки."
 
 #: lazarusidestrconsts.lisgetwordatcurrentcursorposition
 msgid "get word at current cursor position"
@@ -10342,6 +10347,10 @@ msgstr "IDE"
 msgid "IDE build options"
 msgstr "Параметры сборки IDE"
 
+#: lazarusidestrconsts.lisidecaptioncustomhint
+msgid "The caption of the main IDE window"
+msgstr "Заголовок главного окна IDE"
+
 #: lazarusidestrconsts.lisidecompileandrestart
 msgid "The IDE will be recompiled and restarted during installation/uninstallation of packages."
 msgstr "При установке/удалении пакетов IDE будет пересобрана и перезапущена."
@@ -10383,9 +10392,13 @@ msgstr "Идентификатор содержит ..."
 msgid "IDE Options:"
 msgstr "Параметры IDE:"
 
-#: lazarusidestrconsts.lisidetitleshowsbuildmode
-msgid "IDE title shows selected build mode"
-msgstr "Отображать в заголовке IDE выбранный режим сборки"
+#: lazarusidestrconsts.lisidetitlecustom
+msgid "Custom IDE title"
+msgstr "Пользовательский заголовок IDE"
+
+#: lazarusidestrconsts.lisidetitleoptions
+msgid "IDE main window title"
+msgstr "Заголовок главного окна IDE"
 
 #: lazarusidestrconsts.lisidetitleshowsprojectdir
 msgid "IDE title shows project directory"
@@ -19727,6 +19740,10 @@ msgstr "Скрыть выделенное"
 msgid "Indent block"
 msgstr "Увеличить отступ выделенного"
 
+#: lazarusidestrconsts.srkmecblockindentmove
+msgid "Indent (move) block"
+msgstr "Увеличить отступ блока (сдвинуть)"
+
 #: lazarusidestrconsts.srkmecblockmove
 msgid "Move Block"
 msgstr "Переместить выделенное"
@@ -19750,6 +19767,10 @@ msgstr "Переключить видимость выделенного"
 #: lazarusidestrconsts.srkmecblockunindent
 msgid "Unindent block"
 msgstr "Уменьшить отступ выделенного"
+
+#: lazarusidestrconsts.srkmecblockunindentmove
+msgid "Unindent (move) block"
+msgstr "Уменьшить отступ блока (сдвинуть)"
 
 #: lazarusidestrconsts.srkmecbreakpointproperties
 msgid "show breakpoint properties"
@@ -21402,6 +21423,29 @@ msgstr "ЗАМ"
 #: lazarusidestrconsts.uepreadonly
 msgid "Readonly"
 msgstr "Только чтение"
+
+#: lazarusidestrconsts.uepselchars
+#, object-pascal-format
+msgid "%d"
+msgstr "%d"
+
+#: lazarusidestrconsts.uepselcol
+msgid "COL"
+msgstr "СТЛБ"
+
+#: lazarusidestrconsts.uepselcxchars
+#, object-pascal-format
+msgid "%d * %d"
+msgstr "%d * %d"
+
+#: lazarusidestrconsts.uepselline
+msgctxt "lazarusidestrconsts.uepselline"
+msgid "LINE"
+msgstr "СТРК"
+
+#: lazarusidestrconsts.uepselnorm
+msgid "DEF"
+msgstr "УМЛЧ"
 
 #: lazarusidestrconsts.unitdepoptionsforpackage
 msgid "Options for Package graph"

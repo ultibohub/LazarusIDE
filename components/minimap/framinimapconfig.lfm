@@ -9,41 +9,42 @@ object MiniMapConfigFrame: TMiniMapConfigFrame
   DesignLeft = 652
   DesignTop = 343
   object cbEnabled: TCheckBox
+    AnchorSideLeft.Control = Owner
     AnchorSideTop.Control = Owner
-    Left = 152
+    Left = 6
     Height = 23
-    Top = 8
-    Width = 123
-    BorderSpacing.Top = 8
+    Top = 6
+    Width = 112
+    BorderSpacing.Left = 6
+    BorderSpacing.Top = 6
     Caption = 'Show minimap'
     TabOrder = 0
   end
   object lblMapWidth: TLabel
+    AnchorSideLeft.Control = cbEnabled
     AnchorSideTop.Control = seWidth
-    AnchorSideRight.Control = seWidth
-    AnchorSideBottom.Control = seWidth
+    AnchorSideTop.Side = asrCenter
     AnchorSideBottom.Side = asrBottom
-    Left = 16
-    Height = 34
-    Top = 70
-    Width = 128
+    Left = 6
+    Height = 16
+    Top = 72
+    Width = 60
     Alignment = taRightJustify
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    AutoSize = False
-    BorderSpacing.Right = 8
     Caption = 'Map width'
     FocusControl = seWidth
     Layout = tlCenter
   end
   object seWidth: TSpinEditEx
-    AnchorSideLeft.Control = cbEnabled
+    AnchorSideLeft.Control = lblMapWidth
+    AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Control = cbAlignLeft
     AnchorSideTop.Side = asrBottom
-    Left = 152
-    Height = 34
-    Top = 70
-    Width = 64
-    BorderSpacing.Top = 8
+    Left = 72
+    Height = 33
+    Top = 64
+    Width = 80
+    BorderSpacing.Left = 6
+    BorderSpacing.Top = 6
     MaxLength = 0
     SpinButtonWidth = 17
     TabOrder = 1
@@ -53,14 +54,16 @@ object MiniMapConfigFrame: TMiniMapConfigFrame
     Value = 100
   end
   object seInitialFontSize: TSpinEditEx
-    AnchorSideLeft.Control = cbEnabled
+    AnchorSideLeft.Control = lblInitialFontSize
+    AnchorSideLeft.Side = asrBottom
     AnchorSideTop.Control = seWidth
     AnchorSideTop.Side = asrBottom
-    Left = 152
-    Height = 34
-    Top = 112
-    Width = 60
-    BorderSpacing.Top = 8
+    Left = 97
+    Height = 33
+    Top = 103
+    Width = 80
+    BorderSpacing.Left = 6
+    BorderSpacing.Top = 6
     MaxLength = 0
     SpinButtonWidth = 17
     TabOrder = 2
@@ -70,79 +73,70 @@ object MiniMapConfigFrame: TMiniMapConfigFrame
     Value = 1
   end
   object lblInitialFontSize: TLabel
+    AnchorSideLeft.Control = cbEnabled
     AnchorSideTop.Control = seInitialFontSize
-    AnchorSideRight.Control = seInitialFontSize
-    AnchorSideBottom.Control = seInitialFontSize
+    AnchorSideTop.Side = asrCenter
     AnchorSideBottom.Side = asrBottom
-    Left = 16
-    Height = 34
-    Top = 112
-    Width = 128
+    Left = 6
+    Height = 16
+    Top = 111
+    Width = 85
     Alignment = taRightJustify
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    AutoSize = False
-    BorderSpacing.Right = 8
     Caption = 'Initial font size'
     FocusControl = seInitialFontSize
     Layout = tlCenter
   end
   object cbViewWindow: TColorBox
-    AnchorSideLeft.Control = cbEnabled
-    AnchorSideTop.Control = seInitialFontSize
+    AnchorSideLeft.Control = lblViewWindowColor
+    AnchorSideTop.Control = lblViewWindowColor
     AnchorSideTop.Side = asrBottom
-    Left = 152
-    Height = 29
-    Top = 154
-    Width = 128
+    Left = 6
+    Height = 28
+    Top = 158
+    Width = 235
     Style = [cbStandardColors, cbExtendedColors, cbSystemColors, cbIncludeNone, cbCustomColor]
     ColorDialog = CDView
-    BorderSpacing.Top = 8
     ItemHeight = 0
     TabOrder = 3
   end
   object lblViewWindowColor: TLabel
-    AnchorSideTop.Control = cbViewWindow
-    AnchorSideRight.Control = cbViewWindow
-    AnchorSideBottom.Control = cbViewWindow
+    AnchorSideLeft.Control = cbEnabled
+    AnchorSideTop.Control = seInitialFontSize
+    AnchorSideTop.Side = asrBottom
     AnchorSideBottom.Side = asrBottom
-    Left = 16
-    Height = 29
-    Top = 154
-    Width = 125
+    Left = 6
+    Height = 16
+    Top = 142
+    Width = 109
     Alignment = taRightJustify
-    Anchors = [akTop, akLeft, akBottom]
-    AutoSize = False
-    BorderSpacing.Right = 8
+    BorderSpacing.Top = 6
     Caption = 'View window color'
     Layout = tlCenter
   end
   object lblViewWindowTextColor: TLabel
-    AnchorSideTop.Control = cbViewText
-    AnchorSideRight.Control = cbViewText
-    AnchorSideBottom.Control = cbViewText
+    AnchorSideLeft.Control = cbViewWindow
+    AnchorSideTop.Control = cbViewWindow
+    AnchorSideTop.Side = asrBottom
     AnchorSideBottom.Side = asrBottom
-    Left = 16
-    Height = 29
-    Top = 191
-    Width = 128
+    Left = 6
+    Height = 16
+    Top = 192
+    Width = 87
     Alignment = taRightJustify
-    Anchors = [akTop, akLeft, akRight, akBottom]
-    AutoSize = False
-    BorderSpacing.Right = 8
+    BorderSpacing.Top = 6
     Caption = 'View text color'
     Layout = tlCenter
   end
   object cbViewText: TColorBox
-    AnchorSideLeft.Control = cbEnabled
-    AnchorSideTop.Control = cbViewWindow
+    AnchorSideLeft.Control = lblViewWindowTextColor
+    AnchorSideTop.Control = lblViewWindowTextColor
     AnchorSideTop.Side = asrBottom
-    Left = 152
-    Height = 29
-    Top = 191
-    Width = 123
+    Left = 6
+    Height = 28
+    Top = 208
+    Width = 235
     Style = [cbStandardColors, cbSystemColors, cbIncludeNone, cbCustomColor]
     ColorDialog = CDView
-    BorderSpacing.Top = 8
     ItemHeight = 0
     TabOrder = 4
   end
@@ -150,11 +144,11 @@ object MiniMapConfigFrame: TMiniMapConfigFrame
     AnchorSideLeft.Control = cbEnabled
     AnchorSideTop.Control = cbEnabled
     AnchorSideTop.Side = asrBottom
-    Left = 152
+    Left = 6
     Height = 23
-    Top = 39
-    Width = 428
-    BorderSpacing.Top = 8
+    Top = 35
+    Width = 371
+    BorderSpacing.Top = 6
     Caption = 'Put map left of editor (requires IDE restart for existing tabs)'
     TabOrder = 5
   end
@@ -182,7 +176,7 @@ object MiniMapConfigFrame: TMiniMapConfigFrame
       'ColorS=F0FBFF'
       'ColorT=A4A0A0'
     )
-    Left = 301
-    Top = 124
+    Left = 288
+    Top = 96
   end
 end

@@ -3050,6 +3050,8 @@ begin
 
   // Other
   fDontUseConfigFile := CompOpts.fDontUseConfigFile;
+  FWriteConfigFile := CompOpts.FWriteConfigFile;
+  FWriteConfigFilePath := CompOpts.FWriteConfigFilePath;
   fCustomConfigFile := CompOpts.fCustomConfigFile;
   fConfigFilePath := CompOpts.fConfigFilePath;
   fStopAfterErrCount := CompOpts.fStopAfterErrCount;

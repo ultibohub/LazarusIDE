@@ -391,7 +391,7 @@ begin
   inherited Create(AOwner);
   MaxLineCount:=30;
   WordWrap := True;
-  Layout := tlCenter;
+  Layout := tlTop;
   Alignment := taLeftJustify;
   Font.Color := clInfoText;
   BorderSpacing.Around := 4;

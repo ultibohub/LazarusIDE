@@ -1476,10 +1476,10 @@ begin
     then FSnapshots.DoStateChange(OldState);
   end;
 
-  UnlockDialogs;
-
   for i := 0 to FStateNotificationList.Count-1 do
     TDebuggerStateChangeNotification(FStateNotificationList[i])(ADebugger, OldState);
+
+  UnlockDialogs;
 
   if FDebugger.State = dsInternalPause
   then exit;
@@ -1974,9 +1974,11 @@ var
   TheDialog: TBreakPointsDlg;
 begin
   TheDialog:=TBreakPointsDlg(FDialogs[ddtBreakpoints]);
+  TheDialog.BeginUpdate;
   if Project1 <> nil
   then TheDialog.BaseDirectory := Project1.Directory;
   TheDialog.BreakPoints := FBreakPoints;
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitWatchesDlg;
@@ -1984,11 +1986,13 @@ var
   TheDialog: TWatchesDlg;
 begin
   TheDialog := TWatchesDlg(FDialogs[ddtWatches]);
+  TheDialog.BeginUpdate;
   TheDialog.WatchesMonitor := FWatches;
   TheDialog.ThreadsMonitor := FThreads;
   TheDialog.CallStackMonitor := FCallStack;
   TheDialog.BreakPoints := FBreakPoints;
   TheDialog.SnapshotManager := FSnapshots;
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitThreadsDlg;
@@ -1996,8 +2000,10 @@ var
   TheDialog: TThreadsDlg;
 begin
   TheDialog := TThreadsDlg(FDialogs[ddtThreads]);
+  TheDialog.BeginUpdate;
   TheDialog.ThreadsMonitor := FThreads;
   TheDialog.SnapshotManager := FSnapshots;
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitPseudoTerminal;
@@ -2013,10 +2019,12 @@ var
   TheDialog: TLocalsDlg;
 begin
   TheDialog := TLocalsDlg(FDialogs[ddtLocals]);
+  TheDialog.BeginUpdate;
   TheDialog.LocalsMonitor := FLocals;
   TheDialog.ThreadsMonitor := FThreads;
   TheDialog.CallStackMonitor := FCallStack;
   TheDialog.SnapshotManager := FSnapshots;
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitRegistersDlg;
@@ -2024,9 +2032,11 @@ var
   TheDialog: TRegistersDlg;
 begin
   TheDialog := TRegistersDlg(FDialogs[ddtRegisters]);
+  TheDialog.BeginUpdate;
   TheDialog.ThreadsMonitor := FThreads;
   TheDialog.CallStackMonitor := FCallStack;
   TheDialog.RegistersMonitor := FRegisters;
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitAssemblerDlg;
@@ -2034,10 +2044,12 @@ var
   TheDialog: TAssemblerDlg;
 begin
   TheDialog := TAssemblerDlg(FDialogs[ddtAssembler]);
+  TheDialog.BeginUpdate;
   TheDialog.BreakPoints := FBreakPoints;
   TheDialog.Disassembler := FDisassembler;
   TheDialog.DebugManager := Self;
   TheDialog.SetLocation(FDebugger, FCurrentLocation.Address);
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitMemViewerDlg;
@@ -2045,7 +2057,9 @@ var
   TheDialog: TMemViewDlg;
 begin
   TheDialog := TMemViewDlg(FDialogs[ddtMemViewer]);
+  //TheDialog.BeginUpdate;
 //  TheDialog.DebugManager := Self;
+  //TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitInspectDlg;
@@ -2055,10 +2069,12 @@ begin
   TheDialog := TIDEInspectDlg(FDialogs[ddtInspect]);
   if (SourceEditorManager.GetActiveSE = nil) then
     exit;
+  //TheDialog.BeginUpdate;
   if SourceEditorManager.GetActiveSE.SelectionAvailable then
     TheDialog.Execute(SourceEditorManager.GetActiveSE.Selection)
   else
     TheDialog.Execute(SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret);
+  //TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitHistoryDlg;
@@ -2066,7 +2082,9 @@ var
   TheDialog: THistoryDialog;
 begin
   TheDialog := THistoryDialog(FDialogs[ddtHistory]);
+  //TheDialog.BeginUpdate;
   TheDialog.SnapshotManager := FSnapshots;
+  //TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitCallStackDlg;
@@ -2074,10 +2092,12 @@ var
   TheDialog: TCallStackDlg;
 begin
   TheDialog := TCallStackDlg(FDialogs[ddtCallStack]);
+  TheDialog.BeginUpdate;
   TheDialog.CallStackMonitor := FCallStack;
   TheDialog.BreakPoints := FBreakPoints;
   TheDialog.ThreadsMonitor := FThreads;
   TheDialog.SnapshotManager := FSnapshots;
+  TheDialog.EndUpdate;
 end;
 
 procedure TDebugManager.InitEvaluateDlg;
@@ -2087,11 +2107,13 @@ begin
   TheDialog := TEvaluateDlg(FDialogs[ddtEvaluate]);
   if (SourceEditorManager.GetActiveSE = nil) then
     exit;
+  //TheDialog.BeginUpdate;
   if SourceEditorManager.GetActiveSE.SelectionAvailable
   then
     TheDialog.EvalExpression := SourceEditorManager.GetActiveSE.Selection
   else
     TheDialog.EvalExpression := SourceEditorManager.GetActiveSE.GetOperandAtCurrentCaret;
+  //TheDialog.EndUpdate;
 end;
 
 constructor TDebugManager.Create(TheOwner: TComponent);
@@ -3635,6 +3657,7 @@ begin
     FSignals.Master := nil;
     FRegisters.Supplier := nil;
     FSnapshots.Debugger := nil;
+    FCallStack.Debugger := nil;
   end
   else begin
     TManagedBreakpoints(FBreakpoints).Master := FDebugger.BreakPoints;
@@ -3649,6 +3672,7 @@ begin
     FSignals.Master := FDebugger.Signals;
     FRegisters.Supplier := FDebugger.Registers;
     FSnapshots.Debugger := FDebugger;
+    FCallStack.Debugger := FDebugger;
 
     FDebugger.Exceptions := FExceptions;
   end;

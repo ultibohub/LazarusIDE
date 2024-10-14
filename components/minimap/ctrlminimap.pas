@@ -14,7 +14,8 @@ unit CtrlMiniMap;
 interface
 
 uses
-  Classes, SysUtils, Graphics, IDEOptEditorIntf, SrcEditorIntf, LazConfigStorage, pnlMiniMap;
+  Classes, SysUtils, Graphics, IDEOptEditorIntf, SrcEditorIntf, LazConfigStorage, LazLogger,
+  pnlMiniMap;
 
 const
   DefaultEnabled = True;
@@ -30,7 +31,6 @@ type
     FConfigFrame: TAbstractIDEOptionsEditorClass;
     FList: TFPList;
     FEnabled: Boolean;
-    FMiniMapCount: Integer;
     FNeedSave : Boolean;
     FInitialViewFontSize: Integer;
     FMapWidth: Integer;
@@ -39,19 +39,20 @@ type
     procedure EditorReconfigured(Sender: TObject);
     function FindMiniMapForEditor(aEditor: TSourceEditorInterface): TMiniMapControl;
     function GetMiniMap(aIndex : Integer): TMiniMapControl;
+    function GetMiniMapCount: Integer;
     procedure SetAlignLeft(AValue: Boolean);
     procedure SetEnabled(AValue: Boolean);
     procedure SetInitialViewFontSize(AValue: Integer);
     procedure SetMapWidth(AValue: Integer);
-    procedure SetMiniMapCount(AValue: Integer);
     procedure SetViewWindowColor(AValue: TColor);
     procedure SetViewWindowTextColor(AValue: TColor);
   protected
     procedure NewEditorCreated(Sender: TObject);
+    procedure EditorDestroyed(Sender: TObject);
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure ConfigPanel(aPanel: TMiniMapControl; aFull: Boolean = False);
     Property MiniMaps[aIndex : Integer] : TMiniMapControl Read GetMiniMap;
-    Property MiniMapCount : Integer read FMiniMapCount write SetMiniMapCount;
+    Property MiniMapCount : Integer read GetMiniMapCount;
   Public
     Constructor Create(aOwner : TComponent); override;
     Destructor Destroy; override;
@@ -90,6 +91,7 @@ begin
       SourceEditorManagerIntf.RegisterChangeEvent(semEditorMoved,@NewEditorCreated);
       SourceEditorManagerIntf.RegisterChangeEvent(semEditorCloned,@NewEditorCreated);
       SourceEditorManagerIntf.RegisterChangeEvent(semEditorReConfigured,@EditorReconfigured);
+      SourceEditorManagerIntf.RegisterChangeEvent(semEditorDestroy,@EditorDestroyed);
       end
     else
       begin
@@ -97,6 +99,7 @@ begin
       SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorMoved,@NewEditorCreated);
       SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorCloned,@NewEditorCreated);
       SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorReConfigured,@EditorReconfigured);
+      SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorDestroy,@EditorDestroyed);
       end;
 end;
 
@@ -144,6 +147,11 @@ begin
   Result:=TMiniMapControl(FList[aIndex]);
 end;
 
+function TMinimapController.GetMiniMapCount: Integer;
+begin
+  Result:=FList.Count;
+end;
+
 procedure TMinimapController.SetInitialViewFontSize(AValue: Integer);
 begin
   if FInitialViewFontSize=AValue then Exit;
@@ -156,12 +164,6 @@ begin
   if FMapWidth=AValue then Exit;
   FMapWidth:=AValue;
   FNeedSave:=True;
-end;
-
-procedure TMinimapController.SetMiniMapCount(AValue: Integer);
-begin
-  if FMiniMapCount=AValue then Exit;
-  FMiniMapCount:=AValue;
 end;
 
 procedure TMinimapController.SetViewWindowColor(AValue: TColor);
@@ -200,6 +202,21 @@ begin
   EditorWindow.AddControlToEditor(Editor,Panel,Aligns[AlignLeft]);
 end;
 
+procedure TMinimapController.EditorDestroyed(Sender: TObject);
+var
+  Editor : TSourceEditorInterface;
+  Map : TMiniMapControl;
+begin
+  Editor:=TSourceEditorInterface(Sender);
+  Map:=FindMiniMapForEditor(Editor);
+  if Assigned(Map) then
+    begin
+    Map.UnHook;
+    Map.Hide;
+    Application.ReleaseComponent(Map);
+    end;
+end;
+
 procedure TMinimapController.Notification(AComponent: TComponent;
   Operation: TOperation);
 begin
@@ -214,7 +231,7 @@ begin
   aPanel.Width:=MapWidth;
   aPanel.ViewWindowColor:=ViewWindowColor;
   aPanel.ViewWindowTextColor:=ViewWindowTextColor;
-  If aFull then
+  if aFull then
     aPanel.ViewFontSize:=InitialViewFontSize;
 end;
 
@@ -229,7 +246,6 @@ begin
   FAlignLeft:=DefaultAlignLeft;
   Enabled:=True;
 end;
-
 
 destructor TMinimapController.Destroy;
 begin

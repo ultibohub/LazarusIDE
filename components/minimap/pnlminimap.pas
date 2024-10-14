@@ -15,7 +15,8 @@ interface
 
 uses
   Classes, SysUtils, Controls, ExtCtrls, SynEdit, SrcEditorIntf, Graphics, lclType,
-  SynEditMarkupSpecialLine, SynEditTypes, SynEditMiscClasses, SynEditMarkupBracket;
+  SynEditMarkupSpecialLine, SynEditTypes, SynEditMiscClasses, SynEditMarkupBracket, LazLogger,
+  LazLoggerBase;
 
 Const
   DefaultViewFontSize        = 3;
@@ -41,20 +42,19 @@ Type
     procedure SetViewWindowColor(AValue: TColor);
     procedure SetViewWindowTextColor(AValue: TColor);
     procedure SyncMiniMapProps;
-    procedure UnHook;
   Protected
     // Event handlers
     procedure HandleLineMarkup(Sender: TObject; Line: integer; var Special: boolean; Markup: TSynSelectedColor); virtual;
-    procedure HandleStatusChange(Sender: TObject; Changes: TSynStatusChanges); virtual;
-    Procedure HandleClick(aSender : TObject); virtual;
-    procedure HandleEditorDestroy(Sender: TObject); virtual;
+    procedure HandleStatusChange(Sender: TObject; {%H-}Changes: TSynStatusChanges); virtual;
+    Procedure HandleClick({%H-}aSender : TObject); virtual;
     Procedure SyncViewWindow;
     Property MiniSynEdit : TSynEdit Read FMiniSynEdit;
     Property SourceSynEdit : TCustomSynEdit Read FSourceSynEdit;
   Public
-    constructor create(aOwner : TComponent); override;
-    destructor destroy; override;
+    constructor Create(aOwner : TComponent); override;
+    destructor Destroy; override;
     Procedure Reconfigure;
+    procedure UnHook;
     Property SourceEditor: TSourceEditorInterface Read FSourceEditor Write SetSourceEditor;
     Property ViewWindowColor : TColor Read FViewWindowColor Write SetViewWindowColor;
     Property ViewWindowTextColor:TColor Read FViewWindowTextColor Write SetViewWindowTextColor;
@@ -186,7 +186,7 @@ begin
     ParentColor:=False;
     ParentFont:=False;
 
-    Font.Name := 'Courier New';
+    Font.Name := SynDefaultFontName;
     Font.Pitch := fpFixed;
     Font.Quality := fqNonAntialiased;
     Gutter.Visible := False;
@@ -240,14 +240,8 @@ begin
 //  FMiniSynEdit.Gutter.Parts[4].Visible := False; // code folding disabled.
 end;
 
-procedure TMiniMapControl.HandleEditorDestroy(Sender : TObject);
 
-begin
-  if (Sender=FSourceEditor) then
-    Unhook;
-end;
-
-constructor TMiniMapControl.create(aOwner: TComponent);
+constructor TMiniMapControl.Create(aOwner: TComponent);
 begin
   Inherited;
   BevelInner:=bvNone;
@@ -257,7 +251,6 @@ begin
   FViewFontSize:=DefaultViewFontSize;
   FViewWindowColor:=DefaultViewWindowColor;
   FViewWindowTextColor:=DefaultViewWindowTextColor;
-  SourceEditorManagerIntf.RegisterChangeEvent(semEditorDestroy, @HandleEditorDestroy);
   ConfigMiniEdit;
 end;
 
@@ -269,12 +262,11 @@ begin
     exit;
   FMiniSynedit.UnShareTextBuffer;
   FSourceSynEdit.UnRegisterStatusChangedHandler(@HandleStatusChange);
-  SourceEditorManagerIntf.UnRegisterChangeEvent(semEditorDestroy, @HandleEditorDestroy);
   FSourceSynEdit:=nil;
   FSourceEditor:=nil;
 end;
 
-destructor TMiniMapControl.destroy;
+destructor TMiniMapControl.Destroy;
 begin
   Unhook;
   inherited destroy;
