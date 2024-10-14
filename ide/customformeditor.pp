@@ -1316,11 +1316,13 @@ var
         FreeMediator:=true;
       end;
     end;
-    if Mediator<>nil then
+    if (Mediator<>nil) and (ParentComponent=nil) then
     begin
       NewSize:=Mediator.GetDefaultSize;
-      NewWidth:=NewSize.X;
-      NewHeight:=NewSize.Y;
+      if NewWidth=0 then
+        NewWidth:=NewSize.X;
+      if NewHeight=0 then
+        NewHeight:=NewSize.Y;
     end;
   end;
 
@@ -1534,9 +1536,6 @@ begin
       end
       else begin
         // non TControl
-        if CompWidth <= 0 then CompWidth := 50;
-        if CompHeight <= 0 then CompHeight := 50;
-
         CompLeft := Max(Low(SmallInt), Min(High(SmallInt), CompLeft));
         CompTop := Max(Low(SmallInt), Min(High(SmallInt), CompTop));
         if Mediator=nil then
