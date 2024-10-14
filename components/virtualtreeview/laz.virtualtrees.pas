@@ -93,6 +93,7 @@ uses
   TypInfo,   // for migration stuff
   ActnList,
   StdActns,  // for standard action support
+  FPImage, IntfGraphics, LazCanvas,  // for alpha-transparent bitmaps
   GraphType
   {$ifdef LCLCocoa}
   ,CocoaGDIObjects // hack: while using buffered drawing, multiply the context
@@ -266,6 +267,7 @@ const
   DEFAULT_MARGIN = 4;
   DEFAULT_NODE_HEIGHT = 18;
   DEFAULT_SPACING = 3;
+  DEFAULT_MINHEIGHT = 10;
 
   LIS_NORMAL = 1;
   {$EXTERNALSYM LIS_NORMAL}
@@ -291,6 +293,12 @@ var // Clipboard format IDs used in OLE drag'n drop and clipboard transfers.
   IsWinVistaOrAbove: Boolean;
 
   UtilityImageSize: Integer = cUtilityImageSize;
+
+{$ifdef gtk}
+// Workaround LCL bug 8553
+var
+  pf32bit: TPixelFormat = pfDevice;
+{$endif}
 
 type
   // The exception used by the trees.
@@ -1227,7 +1235,7 @@ type
   TVTHeaderStyle = (
     hsThickButtons,    // TButton look and feel
     hsFlatButtons,     // flatter look than hsThickButton, like an always raised flat TToolButton
-    hsPlates          // flat TToolButton look and feel (raise on hover etc.)
+    hsPlates           // flat TToolButton look and feel (raise on hover etc.)
   );
 
   TVTHeaderOption = (
@@ -1319,6 +1327,7 @@ type
     function IsDefaultHeightStored: Boolean;
     function IsFontStored: Boolean;
     function IsHeightStored: Boolean;
+    function IsMinHeightStored: Boolean;
     procedure SetAutoSizeIndex(Value: TColumnIndex);
     procedure SetBackground(Value: TColor);
     procedure SetColumns(Value: TVirtualTreeColumns);
@@ -1414,7 +1423,7 @@ type
     {$IFEND}
     property MainColumn: TColumnIndex read GetMainColumn write SetMainColumn default 0;
     property MaxHeight: Integer read FMaxHeight write SetMaxHeight default 10000;
-    property MinHeight: Integer read FMinHeight write SetMinHeight default 10;
+    property MinHeight: Integer read FMinHeight write SetMinHeight stored IsMinHeightStored;
     property Options: TVTHeaderOptions read FOptions write SetOptions default [hoColumnResize, hoDrag, hoShowSortGlyphs];
     property ParentFont: Boolean read FParentFont write SetParentFont default False;
     property PopupMenu: TPopupMenu read FPopupMenu write FPopupMenu;
@@ -4192,11 +4201,6 @@ const
   //Copyright: string = 'Virtual Treeview © 1999, 2010 Mike Lischke';
 
 var
-  //Workaround to LCL bug 8553
-  {$ifndef LCLWin32}
-  pf32bit: TPixelFormat = pfDevice;
-  {$endif}
-
   StandardOLEFormat: TFormatEtc = (
     // Format must later be set.
     cfFormat: 0;
@@ -6238,7 +6242,7 @@ begin
   else
     BlendMode := bmMasterAlpha;
   with FDragImage do
-    AlphaBlend(Canvas.Handle, FAlphaImage.Canvas.Handle, Rect(0, 0, Width, Height), Point(0, 0), BlendMode,
+    laz.VTGraphics.AlphaBlend(Canvas.Handle, FAlphaImage.Canvas.Handle, Rect(0, 0, Width, Height), Point(0, 0), BlendMode,
       FTransparency, FPostBlendBias);
 
   with FAlphaImage do
@@ -6600,7 +6604,7 @@ begin
       with FDragImage do
         BitBlt(Canvas.Handle, 0, 0, Width, Height, DragImage.Canvas.Handle, 0, 0, SRCCOPY)
     else
-      AlphaBlend(DragImage.Canvas.Handle, FDragImage.Canvas.Handle, Rect(0, 0, Width, Height), Point(0, 0),
+      laz.VTGraphics.AlphaBlend(DragImage.Canvas.Handle, FDragImage.Canvas.Handle, Rect(0, 0, Width, Height), Point(0, 0),
         bmConstantAlpha, 255, FPreBlendBias);
 
     // Create a proper alpha channel also if no fading is required (transparent parts).
@@ -6917,13 +6921,8 @@ begin
 
   inherited Create(Collection);
 
-  {$IF LCL_FullVersion >= 1080000}
-  FMargin := Owner.Header.TreeView.Scale96ToFont(DEFAULT_MARGIN);
-  FSpacing := Owner.Header.TreeView.Scale96ToFont(DEFAULT_SPACING);
-  {$ELSE}
   FMargin := DEFAULT_MARGIN;
   FSpacing := DEFAULT_SPACING;
-  {$IFEND}
 
   FWidth := Owner.FDefaultWidth;
   FLastWidth := Owner.FDefaultWidth;
@@ -7043,22 +7042,14 @@ end;
 
 function TVirtualTreeColumn.IsMarginStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FMargin <> Owner.Header.TreeView.Scale96ToFont(DEFAULT_MARGIN);
-  {$ELSE}
   Result := FMargin <> DEFAULT_MARGIN;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 function TVirtualTreeColumn.IsSpacingStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FSpacing <> Owner.Header.TreeView.Scale96ToFont(DEFAULT_SPACING);
-  {$ELSE}
   Result := FSpacing <> DEFAULT_SPACING;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -8095,11 +8086,7 @@ begin
   FClickIndex := NoColumn;
   FDropTarget := NoColumn;
   FTrackIndex := NoColumn;
-  {$IF LCL_FullVersion >= 1080000}
-  FDefaultWidth := Header.TreeView.Scale96ToFont(DEFAULT_COLUMN_WIDTH);
-  {$ELSE}
   FDefaultWidth := DEFAULT_COLUMN_WIDTH;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -8146,11 +8133,7 @@ end;
 
 function TVirtualTreeColumns.IsDefaultWidthStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FDefaultWidth <> Header.TreeView.Scale96ToFont(DEFAULT_COLUMN_WIDTH);
-  {$ELSE}
   Result := FDefaultWidth <> DEFAULT_COLUMN_WIDTH;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -9862,14 +9845,9 @@ begin
   inherited Create;
   FOwner := AOwner;
   FColumns := GetColumnsClass.Create(Self);
-  {$IF LCL_FullVersion >= 1080000}
-  FHeight := FOwner.Scale96ToFont(DEFAULT_HEADER_HEIGHT);
-  FDefaultHeight := FOwner.Scale96ToFont(DEFAULT_HEADER_HEIGHT);
-  {$ELSE}
   FHeight := DEFAULT_HEADER_HEIGHT;
   FDefaultHeight := DEFAULT_HEADER_HEIGHT;
-  {$IFEND}
-  FMinHeight := 10;
+  FMinHeight := DEFAULT_MINHEIGHT;
   FMaxHeight := 10000;
   FFont := TFont.Create;
   FFont.OnChange := FontChanged;
@@ -9963,11 +9941,7 @@ end;
 
 function TVTHeader.IsDefaultHeightStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FDefaultHeight <> FOwner.Scale96ToFont(DEFAULT_HEADER_HEIGHT);
-  {$ELSE}
   Result := FDefaultHeight <> DEFAULT_HEADER_HEIGHT;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -9982,14 +9956,15 @@ end;
 
 function TVTHeader.IsHeightStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FHeight <> FOwner.Scale96ToFont(DEFAULT_HEADER_HEIGHT);
-  {$ELSE}
   Result := FHeight <> DEFAULT_HEADER_HEIGHT;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
+
+function TVTHeader.IsMinHeightStored: Boolean;
+begin
+  Result := FMinHeight <> DEFAULT_MINHEIGHT;
+end;
 
 procedure TVTHeader.SetAutoSizeIndex(Value: TColumnIndex);
 
@@ -11495,15 +11470,17 @@ var
   i: Integer;
   col: TVirtualTreeColumn;
 begin
-  if IsDefaultHeightStored then
-    FDefaultHeight := Round(FDefaultHeight * AYProportion);
-
-  if IsHeightStored then
-    FHeight := Round(FHeight * AYProportion);
-
-  if Columns.IsDefaultWidthStored then
-    Columns.DefaultWidth := Round(Columns.DefaultWidth * AXProportion);
-
+//  if not (toAutoChangeScale in Treeview.TreeOptions.AutoOptions) then
+//  begin
+  {
+    if IsDefaultHeightStored then
+      FDefaultHeight := Round(FDefaultHeight * AYProportion);
+  }
+  FMinHeight := Round(FMinHeight * AYProportion);
+  {
+    if Columns.IsDefaultWidthStored then
+      Columns.DefaultWidth := Round(Columns.DefaultWidth * AXProportion);
+}
   for i := 0 to Columns.Count-1 do begin
     col := Columns[i];
     if col.IsWidthStored then
@@ -11513,6 +11490,10 @@ begin
     if col.IsMarginStored then
       col.Margin := Round(col.Margin * AXProportion);
   end;
+
+//  FontChanged(nil);
+  if IsHeightStored then
+    FHeight := Round(FHeight * AYProportion);
 end;
 {$IFEND}
 
@@ -12367,26 +12348,22 @@ begin
   FLastSelectionLevel := -1;
   FSelectionBlendFactor := 128;
 
-  {$IF LCL_FullVersion >= 1080000}
-  FDefaultNodeHeight := Scale96ToFont(DEFAULT_NODE_HEIGHT);
-  FIndent := Scale96ToFont(DEFAULT_INDENT);
-  FMargin := Scale96ToFont(DEFAULT_MARGIN);
-  FTextMargin := Scale96ToFont(DEFAULT_MARGIN);
-  FDragHeight := Scale96ToFont(DEFAULT_DRAG_HEIGHT);
-  FDragWidth := Scale96ToFont(DEFAULT_DRAG_WIDTH);
-  {$ELSE}
   FDefaultNodeHeight := DEFAULT_NODE_HEIGHT;
   FIndent := DEFAULT_INDENT;
   FMargin := DEFAULT_MARGIN;
   FTextMargin := DEFAULT_MARGIN;
   FDragHeight := DEFAULT_DRAG_HEIGHT;
   FDragWidth := DEFAULT_DRAG_WIDTH;
-  {$IFEND}
 
   FPlusBM := TBitmap.Create;
   FHotPlusBM := TBitmap.Create;
   FMinusBM := TBitmap.Create;
   FHotMinusBM := TBitmap.Create;
+
+  FPlusBM.PixelFormat := pf32Bit;
+  FHotPlusBM.PixelFormat := pf32Bit;
+  FMinusBM.PixelFormat := pf32Bit;
+  FHotMinusBM.PixelFormat := pf32Bit;
 
   BorderStyle := bsSingle;
   FButtonStyle := bsRectangle;
@@ -14055,11 +14032,7 @@ end;
 
 function TBaseVirtualTree.IsDefaultNodeHeightStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FDefaultNodeHeight <> Scale96ToFont(DEFAULT_NODE_HEIGHT);
-  {$ELSE}
   Result := FDefaultNodeHeight <> DEFAULT_NODE_HEIGHT;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -14102,44 +14075,28 @@ end;
 
 function TBaseVirtualTree.IsDragHeightStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FDragHeight <> Scale96ToFont(DEFAULT_DRAG_HEIGHT);
-  {$ELSE}
   Result := FDragHeight <> DEFAULT_DRAG_HEIGHT;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 function TBaseVirtualTree.IsDragWidthStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FDragWidth <> Scale96ToFont(DEFAULT_DRAG_WIDTH);
-  {$ELSE}
   Result := FDragWidth <> DEFAULT_DRAG_WIDTH;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 function TBaseVirtualTree.IsIndentStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FIndent <> Scale96ToFont(DEFAULT_INDENT);
-  {$ELSE}
   Result := FIndent <> DEFAULT_INDENT;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
 
 function TBaseVirtualTree.IsMarginStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FMargin <> Scale96ToFont(DEFAULT_MARGIN);
-  {$ELSE}
   Result := FMargin <> DEFAULT_MARGIN;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -14153,11 +14110,7 @@ end;
 
 function TBaseVirtualTree.IsTextMarginStored: Boolean;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  Result := FTextMargin <> Scale96ToFont(DEFAULT_MARGIN);
-  {$ELSE}
   Result := FTextMargin <> DEFAULT_MARGIN;
-  {$IFEND}
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -14329,6 +14282,7 @@ const
   LineBitsSolid: array [0..7] of Word = (0, 0, 0, 0, 0, 0, 0, 0);
 
 var
+  p9, p8, p6, p4, p2, p1: Integer;
   PatternBitmap: HBITMAP;
   Bits: Pointer;
   Size: TSize;
@@ -14339,7 +14293,7 @@ var
   {$EndIf ThemeSupport}
     R: TRect;
  
-  //--------------- local function --------------------------------------------
+  //--------------- local functions -------------------------------------------
 
   procedure FillBitmap (ABitmap: TBitmap);
   begin
@@ -14364,28 +14318,81 @@ var
     end;
   end;
 
+  procedure PaintButtonBitmap(ABitmap: TBitmap; BtnStyle: TVTButtonStyle; IsPlus: Boolean);
+  var
+    img: TLazIntfImage;
+    canv: TLazCanvas;
+    m, c: Integer;
+  begin
+    img := ABitmap.CreateIntfImage;
+    canv := TLazCanvas.Create(img);
+    try
+      img.FillPixels(colTransparent);
+      c := Img.Width div 2;
+      case BtnStyle of
+        bsRectangle:
+          begin
+            if FButtonFillMode in [fmTreeColor, fmWindowColor, fmTransparent] then
+            begin
+              case FButtonFillMode of
+                fmTreeColor:
+                  canv.Brush.FPColor := TColorToFPColor(ColorToRGB(FColors.BackGroundColor));
+                fmWindowColor:
+                  canv.Brush.FPColor := TColorToFPColor(ColorToRGB(clWindow));
+                fmTransparent:
+                  canv.Brush.Style := bsClear;
+              end;
+              canv.Pen.FPColor := TColorToFPColor(ColorToRGB(FColors.TreeLineColor)); //clWindowText));
+              m := c div 2;
+              if m = 0 then m := 1;
+              canv.Rectangle(0, 0, img.Width, img.Height);
+              canv.Pen.FPColor := TColorToFPColor(ColorToRGB(clWindowText));
+              canv.Line(c-m, c, c+m, c);
+              if IsPlus then
+                canv.Line(c, c-m, c, c+m);
+            end else
+            begin
+              if IsPlus then
+                LoadBitmapFromResource(FMinusBM, 'laz_vt_xpbuttonplus')
+              else
+                LoadBitmapFromResource(FMinusBM, 'laz_vt_xpbuttonminus');
+            end;
+          end;
+
+        bsTriangle:
+          begin
+            canv.Brush.FPColor := TColorToFPColor(ColorToRGB(clWindowText));
+            canv.Pen.FPColor := canv.Brush.FPColor;
+            if IsPlus then
+            begin
+              m := Img.Width * 7 div 10;
+              if BiDiMode = bdLeftToRight then
+                canv.Polygon([Point(0, 0), Point(0, Img.Height-1), Point(m, c)])
+              else
+                canv.Polygon([Point(Img.Width-1-m, c), Point(Img.Width-1, Img.Height-1), Point(Img.Width-1, 0)]);
+            end else
+            begin
+              m := Img.Width * 7 div 20;
+              if BiDiMode = bdLeftToRight then
+                canv.Polygon([Point(c-m, c+m), Point(c+m, c+m), Point(c+m, c-m)])
+              else
+                canv.Polygon([Point(c-m, c-m), Point(c-m, c+m), Point(c+m, c+m)]);
+            end;
+          end;
+      end;
+
+      ABitmap.LoadFromIntfImage(img);
+    finally
+      canv.Free;
+      img.Free;
+    end;
+  end;
+
   //--------------- end local function ----------------------------------------
 
-var
-   p9, p8, p6, p4, p2, p1: Integer;
 begin
-  {$IF LCL_FullVersion >= 1080000}
-  p1 := Scale96ToFont(1);
-  p2 := Scale96ToFont(2);
-  p4 := p2 + p2;
-  p6 := p4 + p2;
-  p8 := p4 + p4;
-  p9 := p8 + p1;
-  if not odd(p9) then dec(p9);
-  {$ELSE}
-  p9 := 9;
-  p8 := 8;
-  p6 := 6;
-  p4 := 4;
-  p2 := 2;
-  p1 := 1;
-  {$IFEND}
-  Size.cx := p9;
+  Size.cx := Scale96ToFont(9);
+  if not odd(Size.cx) then dec(Size.cx);
   Size.cy := Size.cx;
 
   {$ifdef ThemeSupport}
@@ -14409,102 +14416,33 @@ begin
 
   if NeedButtons then
   begin
-     with FMinusBM, Canvas do
-     begin
-      // box is always of odd size
-      FillBitmap(FMinusBM);
-      FillBitmap(FHotMinusBM);
-      // Weil die selbstgezeichneten Bitmaps sehen im Vcl Style schei? aus
-      if (not VclStyleEnabled) {or (Theme = 0)} then
+    // box is always of odd size
+    FillBitmap(FMinusBM);
+    FillBitmap(FHotMinusBM);
+    if (not VclStyleEnabled) {or (Theme = 0)} then
+    begin
+      if not(tsUseExplorerTheme in FStates) then
       begin
-        if not(tsUseExplorerTheme in FStates) then
-        begin
-          if FButtonStyle = bsTriangle then
-          begin
-            Brush.Color := clBlack;
-            Pen.Color := clBlack;
-            if BiDiMode = bdLeftToRight then
-              Polygon([Point(p1, p8-p1), Point(p8-p1, p8-p1), Point(p8-p1, p1)])
-            else
-              Polygon([Point(p1, p1), Point(p1, p8-p1), Point(p8-p1, p8-p1)]);
-
-            // or?
-            //Polygon([Point(0, p2), Point(p8, p2), Point(p4, p6)]);
-          end
-          else
-          begin
-            // Button style is rectangular. Now ButtonFillMode determines how to fill the interior.
-            if FButtonFillMode in [fmTreeColor, fmWindowColor, fmTransparent] then
-            begin
-              case FButtonFillMode of
-                fmTreeColor:
-                  Brush.Color := FColors.BackGroundColor;
-                fmWindowColor:
-                  Brush.Color := clWindow;
-              end;
-              Pen.Color := FColors.TreeLineColor;
-              Rectangle(0, 0, Width, Height);
-              Pen.Color := FColors.NodeFontColor;
-              MoveTo(p2, Width div 2);
-              LineTo(Width - p2, Width div 2);
-            end
-            else
-              LoadBitmapFromResource(FMinusBM, 'laz_vt_xpbuttonminus');
-            FHotMinusBM.Canvas.Draw(0, 0, FMinusBM);
-          end;
-        end;
+        PaintButtonBitmap(FMinusBM, FButtonStyle, false);
+        FHotMinusBM.Canvas.Draw(0, 0, FMinusBM);
       end;
     end;
 
-    with FPlusBM, Canvas do
+    FillBitmap(FPlusBM);
+    FillBitmap(FHotPlusBM);
+    if (not VclStyleEnabled) {or (Theme = 0)} then
     begin
-      FillBitmap(FPlusBM);
-      FillBitmap(FHotPlusBM);
-      if (not VclStyleEnabled) {or (Theme = 0)} then
+      if not(tsUseExplorerTheme in FStates) then
       begin
-        if not(tsUseExplorerTheme in FStates) then
-        begin
-          if FButtonStyle = bsTriangle then
-          begin
-            Brush.Color := clBlack;
-            Pen.Color := clBlack;
-            if BiDiMode = bdLeftToRight then
-              Polygon([Point(p2, 0), Point(p6, p4), Point(p2, p8)])
-            else
-              Polygon([Point(p2, p4), Point(p6, 0), Point(p6, p8)])
-          end
-          else
-          begin
-            // Button style is rectangular. Now ButtonFillMode determines how to fill the interior.
-            if FButtonFillMode in [fmTreeColor, fmWindowColor, fmTransparent] then
-            begin
-              case FButtonFillMode of
-                fmTreeColor:
-                  Brush.Color := FColors.BackGroundColor;
-                fmWindowColor:
-                  Brush.Color := clWindow;
-              end;
-
-              Pen.Color := FColors.TreeLineColor;
-              Rectangle(0, 0, Width, Height);
-              Pen.Color := FColors.NodeFontColor;
-              MoveTo(p2, Width div 2);
-              LineTo(Width - p2, Width div 2);
-              MoveTo(Width div 2, p2);
-              LineTo(Width div 2, Width - p2);
-            end
-            else
-              LoadBitmapFromResource(FPlusBM, 'laz_vt_xpbuttonplus');
-            FHotPlusBM.Canvas.Draw(0, 0, FPlusBM);
-          end;
-        end;
+        PaintButtonBitmap(FPlusBM, FButtonstyle, true);
+        FHotPlusBM.Canvas.Draw(0, 0, FPlusBM);
       end;
     end;
 
     {$ifdef ThemeSupport}
     {$ifdef LCLWin}
       // Overwrite glyph images if theme is active.
-      if (tsUseThemes in FStates) and (Theme <> 0) then
+      if ((tsUseThemes in FStates) and (Theme <> 0)) then
       begin
         R := Rect(0, 0, Size.cx, Size.cy);
         DrawThemeBackground(Theme, FPlusBM.Canvas.Handle, TVP_GLYPH, GLPS_CLOSED, R, nil);
@@ -14550,9 +14488,6 @@ begin
   {$endif}
   {$endif ThemeSupport}
 end;
-
-//----------------------------------------------------------------------------------------------------------------------
-
 
 //----------------------------------------------------------------------------------------------------------------------
 
@@ -14916,11 +14851,7 @@ procedure TBaseVirtualTree.SetDefaultNodeHeight(Value: Cardinal);
 
 begin
   if Value = 0 then
-    {$IF LCL_FullVersion >= 2000000}
-    Value := Scale96ToFont(DEFAULT_NODE_HEIGHT);
-    {$ELSE}
     Value := DEFAULT_NODE_HEIGHT;
-    {$IFEND}
   if FDefaultNodeHeight <> Value then
   begin
     Inc(Integer(FRoot.TotalHeight), Integer(Value) - Integer(FDefaultNodeHeight));
@@ -24358,11 +24289,7 @@ var
 begin
   {$ifdef DEBUG_VTV}Logger.EnterMethod([lcCheck],'PaintCheckImage');{$endif}
 
-  {$if LCL_FullVersion >= 1080000}
-  checkSize := Scale96ToFont(DEFAULT_CHECK_WIDTH);
-  {$else}
   checkSize := DEFAULT_CHECK_WIDTH;
-  {$ifend}
 
   with ImageInfo do
   begin
@@ -24693,7 +24620,7 @@ begin
     if IntersectRect({%H-}BlendRect, OrderRect(SelectionRect), TargetRect) then
     begin
       OffsetRect(BlendRect, -WindowOrgX, 0);
-      AlphaBlend(0, Target.Handle, BlendRect, Point(0, 0), bmConstantAlphaAndColor, FSelectionBlendFactor,
+      laz.VTGraphics.AlphaBlend(0, Target.Handle, BlendRect, Point(0, 0), bmConstantAlphaAndColor, FSelectionBlendFactor,
         ColorToRGB(FColors.SelectionRectangleBlendColor));
 
       Target.Brush.Color := FColors.SelectionRectangleBorderColor;
@@ -24738,7 +24665,7 @@ var
       R.Left := 0;
     if R.Right > MaxWidth then
       R.Right := MaxWidth;
-    AlphaBlend(0, PaintInfo.Canvas.Handle, R, Point(0, 0), bmConstantAlphaAndColor,
+    laz.VTGraphics.AlphaBlend(0, PaintInfo.Canvas.Handle, R, Point(0, 0), bmConstantAlphaAndColor,
       FSelectionBlendFactor, ColorToRGB(Color));
   end;
 
@@ -26937,6 +26864,7 @@ begin
       if IsDragWidthStored then
         FDragWidth := Round(FDragWidth * AXProportion);
       FHeader.AutoAdjustLayout(AXProportion, AYProportion);
+      PrepareBitmaps(true, false);
     finally
       EnableAutoSizing;
     end;
