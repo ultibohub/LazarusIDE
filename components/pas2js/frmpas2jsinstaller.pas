@@ -15,19 +15,21 @@ unit FrmPas2jsInstaller;
 {$mode ObjFPC}{$H+}
 
 {$IF FPC_FULLVERSION>30300}
-  {off $DEFINE HasSSL}
+  {$DEFINE HasSSL}
 {$ENDIF}
 
 interface
 
 uses
   Classes, SysUtils, fphttpclient, Zipper,
-  opensslsockets, // opensslsockets is needed for https download on windows
+  {$IFDEF HasSSL}
+  opensslsockets, ssockets, sslsockets, // opensslsockets is needed for https download on windows
+  {$ENDIF}
   LazFileUtils, FPCAdds, LazLoggerBase, FileUtil,
   Forms, Controls, Graphics, Dialogs, StdCtrls, ExtCtrls, ComCtrls,
   IDEUtils, IDEDialogs,
   SimpleWebSrvController,
-  StrPas2JSDesign, PJSDsgnOptions, PJSController, FrmPas2jsProgressDlg;
+  StrPas2JSDesign, PJSDsgnOptions, PJSController, FrmPas2jsProgressDlg, DefineTemplates;
 
 type
 
@@ -48,6 +50,7 @@ type
     {$ENDIF}
   public
     URL: String;
+    Dir: String;
     Stream: TMemoryStream;
     ContentLength, CurrentPos: Int64;
     OnProgress: TNotifyEvent;
@@ -120,6 +123,7 @@ type
     procedure Apply;
     procedure CheckSimpleWebserver(SetServerIfEmpty: boolean);
     function ShowProgressDialog(aCaption, ANote: string; const OnExecute: TNotifyEvent): boolean;
+    function DirectoryIsEmpty(aDir: string): boolean;
   protected
   public
     procedure Init;
@@ -209,7 +213,14 @@ end;
 {$ENDIF}
 
 procedure TPas2jsDownloadReleaseThread.Execute;
+var
+  Exe, TmpFile: String;
+  Params, TheOutput: TStringList;
+  ms: TMemoryStream;
+  UseFallback: Boolean;
 begin
+  UseFallback:=true;
+  {$IFDEF HasSSL}
   FHTTPClient:=TFPHTTPClient.Create(Nil);
   FHTTPClient.AllowRedirect:=True;
   FHTTPClient.OnRedirect:=@OnWorkerShowRedirect;
@@ -217,18 +228,70 @@ begin
   FHTTPClient.OnHeaders:=@OnWorkerHeaders;
   FHTTPClient.IOTimeout:=30000;
   FHTTPClient.ConnectTimeout:=60000;
-  {$IFDEF HasSSL}
-  Client.VerifySSlCertificate:=True;
-  Client.OnVerifySSLCertificate:=@DoVerifyCertificate;
-  Client.AfterSocketHandlerCreate:=@DoHaveSocketHandler;
-  {$ENDIF}
+  FHTTPClient.VerifySSlCertificate:=True;
+  FHTTPClient.OnVerifySSLCertificate:=@DoVerifyCertificate;
+  FHTTPClient.AfterSocketHandlerCreate:=@DoHaveSocketHandler;
 
   try
     HttpClient.Get(URL,Stream);
+    UseFallback:=false;
   except
     on E: Exception do
       ErrorMsg:=E.Message;
   end;
+  {$ENDIF}
+
+  if UseFallback then
+  begin
+    // fallback: download via curl
+    Params:=nil;
+    ms:=nil;
+    TheOutput:=nil;
+    TmpFile:='';
+    try
+      try
+        Exe:='curl'+GetExeExt;
+        Exe:=FindDefaultExecutablePath(Exe);
+        if Exe<>'' then
+        begin
+          TmpFile:=GetTempFileNameUTF8(ChompPathDelim(Dir),'pas2js-zip');
+
+          Params:=TStringList.Create;
+          Params.Add(URL);
+          Params.Add('-o');
+          Params.Add(TmpFile);
+          debugln(['Hint: (lazarus) [TPas2jsDownloadReleaseThread.Execute] run: ',Exe,' ',URL,' -o ',TmpFile]);
+          TheOutput:=RunTool(Exe,Params,Dir);
+          if not FileExists(TmpFile) then
+          begin
+            ErrorMsg:='Tool: '+Exe+' '+URL+' -o '+TmpFile+': '+TheOutput.Text;
+          end else begin
+            ms:=TMemoryStream.Create;
+            ms.LoadFromFile(TmpFile);
+            if ms.Size=0 then
+            begin
+              ErrorMsg:='Tool: '+Exe+' '+URL+' -o '+TmpFile+': '+TheOutput.Text;
+            end else begin
+              ms.Position:=0;
+              Stream.CopyFrom(ms,ms.Size);
+            end;
+          end;
+        end else if ErrorMsg='' then begin
+          ErrorMsg:='curl'+GetExeExt+' not found';
+        end;
+      finally
+        TheOutput.Free;
+        Params.Free;
+        ms.Free;
+        if (TmpFile<>'') and FileExists(TmpFile) then
+          DeleteFile(TmpFile);
+      end;
+    except
+      on E: Exception do
+        ErrorMsg:=E.Message;
+    end;
+  end;
+
   if not Terminated then
     Synchronize(@OnSyncFinish);
 end;
@@ -331,8 +394,8 @@ begin
   // check if there is an URL
   if ReleaseURL='' then
   begin
-    s:=Format(pjsdThereIsNoReleaseForTarget, [GetCompiledTargetCPU,
-      GetCompiledTargetOS]);
+    s:=Format(pjsdThereIsNoReleaseForTarget, [FPCAdds.GetCompiledTargetCPU,
+      FPCAdds.GetCompiledTargetOS]);
     DetailsMemo.Lines.Add(Format(pjsdError2, [s]));
     IDEMessageDialog(pjsdError, s, mtError, [mbOk, mbCancel]);
     exit;
@@ -349,24 +412,34 @@ begin
   try
     //InputHistories.ApplyFileDialogSettings(aDialog);
     //aDialog.Options:=aDialog.Options+[ofPathMustExist];
-    aDialog.Title:='Select directory where to extract Pas2js';
-    if not aDialog.Execute then exit;
-    aDir:=CleanAndExpandDirectory(aDialog.Filename);
-    if not DirectoryExists(aDir) then
+    aDir:=CleanAndExpandDirectory(Pas2jsSrcDirComboBox.Text);
+    if (not DirectoryExists(aDir)) or (not DirectoryIsEmpty(aDir)) then
     begin
-      if not ForceDirectoriesUTF8(aDir) then
+      // ask for a directory
+      aDialog.Title:=pjsdSelectDirectoryWhereToExtractPas2js;
+      if aDir<>'' then
+        aDialog.InitialDir:=aDir;
+      if not aDialog.Execute then exit;
+      aDir:=CleanAndExpandDirectory(aDialog.Filename);
+      if not DirectoryExists(aDir) then
       begin
-        s:=Format(pjsdUnableToCreateDirectory, [aDir]);
-        DetailsMemo.Lines.Add(Format(pjsdError2, [s]));
-        IDEMessageDialog(pjsdError, s, mtError, [mbOk]);
-        exit;
+        if not ForceDirectoriesUTF8(aDir) then
+        begin
+          s:=Format(pjsdUnableToCreateDirectory, [aDir]);
+          DetailsMemo.Lines.Add(Format(pjsdError2, [s]));
+          IDEMessageDialog(pjsdError, s, mtError, [mbOk]);
+          exit;
+        end;
       end;
+
+      // set Pas2jsSrcDir
+      SetComboBoxText(Pas2jsSrcDirComboBox,aDir,cstFilename,30);
     end;
 
     // download
     s:=Format(pjsdDownloading, [ReleaseURL]);
     DetailsMemo.Lines.Add(Format(pjsdNote, [s]));
-    DebugLn(['Note: TPas2jsInstallerDialog.DownloadReleaseButtonClick ',s]);
+    DebugLn(['Note: (lazarus) [TPas2jsInstallerDialog.DownloadReleaseButtonClick] ',s]);
     FZipStream:=TMemoryStream.Create;
 
     if not ShowProgressDialog(pjsdDownloading2, ReleaseURL, @OnStartDownloadRelease) then
@@ -374,13 +447,10 @@ begin
 
     s:=Format(pjsdDownloadedBytes, [IntToStr(FZipStream.Size)]);
     DetailsMemo.Lines.Add(Format(pjsdNote, [s]));
-    debugln(['Note: TPas2jsInstallerDialog.DownloadReleaseButtonClick ',s]);
+    debugln(['Note: (lazarus) [TPas2jsInstallerDialog.DownloadReleaseButtonClick] ',s]);
 
     // unzip
     UnzipRelease(aDir);
-
-    // set Pas2jsSrcDir
-    SetComboBoxText(Pas2jsSrcDirComboBox,aDir,cstFilename,30);
 
     // set Pas2js compile exe
     if FFoundPas2jsExe='' then
@@ -506,6 +576,7 @@ begin
   FDownloadReleaseThread:=TPas2jsDownloadReleaseThread.Create(true);
   FDownloadReleaseThread.FreeOnTerminate:=false;
   FDownloadReleaseThread.URL:=ReleaseURL;
+  FDownloadReleaseThread.Dir:=CleanAndExpandDirectory(Pas2jsSrcDirComboBox.Text);
   FDownloadReleaseThread.Stream:=FZipStream;
   FDownloadReleaseThread.OnProgress:=@OnDownloadReleaseProgress;
   FDownloadReleaseThread.OnFinish:=@OnDownloadReleaseFinish;
@@ -521,7 +592,7 @@ end;
 
 procedure TPas2jsInstallerDialog.OnDownloadReleaseFinish(Sender: TObject);
 begin
-  debugln(['TPas2jsInstallerDialog.OnDownloadReleaseFinish ']);
+  debugln(['Hint: (lazarus) [TPas2jsInstallerDialog.OnDownloadReleaseFinish]']);
   if Pas2jsProgressDialog.ModalResult<>mrNone then exit;
 
   if FDownloadReleaseThread.ErrorMsg<>'' then
@@ -640,7 +711,7 @@ begin
     Zip.OutputPath:=aDirectory;
     Zip.OnStartFile:=@OnUnzipStartFile;
     Zip.UnZipAllFiles;
-    debugln(['Note: TPas2jsInstallerDialog.UnzipRelease completed']);
+    debugln(['Note: (lazarus) [TPas2jsInstallerDialog.UnzipRelease] completed']);
     Check('exe',FFoundPas2jsExe);
     Check('cfg',FFoundPas2jsCfg);
     Check('compileserver',FFoundCompileserver);
@@ -732,6 +803,25 @@ begin
   end;
 end;
 
+function TPas2jsInstallerDialog.DirectoryIsEmpty(aDir: string): boolean;
+var
+  Info: TRawByteSearchRec;
+begin
+  aDir:=AppendPathDelim(aDir);
+  if FindFirst(aDir+GetAllFilesMask,faAnyFile,Info)=0 then
+  begin
+    repeat
+      case Info.Name of
+      '','.','..': ;
+      else
+        Result:=false;
+        break;
+      end;
+    until FindNext(Info)<>0;
+  end;
+  FindCloseUTF8(Info);
+end;
+
 procedure TPas2jsInstallerDialog.Init;
 begin
   FOldPas2jsExe:=PJSOptions.CompilerFilename;
@@ -749,8 +839,10 @@ begin
   FReleaseURL+='windows/pas2js-win64-x86_64-current.zip';
   {$ELSEIF defined(Darwin) and defined(CPU64)}
   FReleaseURL+='darwin/pas2js-darwin-x86_64-current.zip';
-  {$ELSEIF defined(Linux) and defined(CPU64)}
-  FReleaseURL+='linux/pas2js-linux-x86_64-current.zip';
+  {$ELSEIF defined(Darwin)}
+  FReleaseURL+='darwin/pas2js-darwin-aarch64-current.zip';
+  {$ELSEIF defined(Linux)}
+  FReleaseURL+='linux/pas2js-linux-'+FPCAdds.GetCompiledTargetCPU+'-current.zip';
   {$ELSE}
   FReleaseURL:='';
   {$ENDIF}
