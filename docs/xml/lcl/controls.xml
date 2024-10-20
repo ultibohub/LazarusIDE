@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -357,6 +357,12 @@ Starting value for control message constants defined in the LCL.
 <element name="CM_PARENTTABLETOPTIONSCHANGED">
 <short>Control message constant.</short>
 </element>
+<element name="CM_MASKHITTEST">
+<short>
+Control message constant implement by controls with an irregular shape to check 
+if a point belongs to a shape.
+</short>
+</element>
 <element name="CM_APPSHOWBTNGLYPHCHANGED">
 <short>Control message constant.</short>
 </element>
@@ -450,7 +456,7 @@ Modified in LCL 3.0 to be an alias to mrNone in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrNone">mrNone</link>
 -->
@@ -465,7 +471,7 @@ Modified in LCL 3.0 to be an alias to mrOK in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrOK">mrOK</link>
 -->
@@ -480,7 +486,7 @@ Modified in LCL 3.0 to be an alias to mrCancel in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrCancel">mrCancel</link>
 -->
@@ -495,7 +501,7 @@ Modified in LCL 3.0 to be an alias to mrAbort in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrAbort">mrAbort</link>
 -->
@@ -510,7 +516,7 @@ Modified in LCL 3.0 to be an alias to mrRetry in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrRetry">mrRetry</link>
 -->
@@ -525,7 +531,7 @@ Modified in LCL 3.0 to be an alias to mrIgnore in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrIgnore">mrIgnore</link>
 -->
@@ -541,7 +547,7 @@ Modified in LCL 3.0 to be an alias to mrYes in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrYes">mrYes</link>
 -->
@@ -556,7 +562,7 @@ Modified in LCL 3.0 to be an alias to mrNo in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrNo">mrNo</link>
 -->
@@ -571,7 +577,7 @@ Modified in LCL 3.0 to be an alias to mrAll in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrAll">mrAll</link>
 -->
@@ -586,7 +592,7 @@ Modified in LCL 3.0 to be an alias to mrNoToAll in System.UITypes for FPC
 3.2.0 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrNoToAll">mrNoToAll</link>
 -->
@@ -601,7 +607,7 @@ Modified in LCL 3.0 to be an alias to mrYesToAll in System.UITypes for FPC
 3.2.0 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrYesToAll">mrYesToAll</link>
 -->
@@ -616,12 +622,45 @@ Modified in LCL 3.0 to be an alias to mrClose in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrClose">mrClose</link>
 -->
 </seealso>
 </element>
+
+<element name="mrContinue">
+<short>
+Modal result for the Continue button on a dialog.
+</short>
+<descr/>
+<version>
+Added in LCL version 3.0 for FPC compiler version 3.2.3 and higher.
+</version>
+<seealso>
+<!--
+Uncomment when the topic exists in the RTL documentation. 
+<link id="#rtl.system.uitypes.mrContinue">mrContinue</link>
+-->
+</seealso>
+</element>
+
+<element name="mrTryAgain">
+<short>
+Modal result for the Tray Again button on a dialog.
+</short>
+<descr/>
+<version>
+Added in LCL version 3.0 for FPC compiler version 3.2.3 and higher.
+</version>
+<seealso>
+<!--
+Uncomment when the topic exists in the RTL documentation. 
+<link id="#rtl.system.uitypes.mrTryAgain">mrTryAgain</link>
+-->
+</seealso>
+</element>
+
 <element name="mrLast">
 <short>
 Last (highest) value of modal results.
@@ -631,13 +670,14 @@ Modified in LCL 3.0 to be an alias to mrLast in System.UITypes for FPC 3.2.0
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mrLast">mrLast</link>
 -->
 </seealso>
 </element>
 
+<!--
 <element name="GetModalResultStr">
 <short>
 Deprecated; Use the ModalResultStr array from the <file>UITypes</file> unit.
@@ -647,7 +687,9 @@ Deprecated; Use the ModalResultStr array from the <file>UITypes</file> unit.
 </element>
 <element name="GetModalResultStr.Result"/>
 <element name="GetModalResultStr.ModalResult"/>
+-->
 
+<!--
 <element name="ModalResultStr">
 <short>
 Gets the string representation for a modal result value.
@@ -664,7 +706,8 @@ ModalResultStr array from the <file>UITypes</file> unit directly.
 <link id="#lcl.uitypes.ModalResultStr">ModalResultStr</link>
 <link id="#lcl.uitypes.TModalResult">TModalResult</link>
 </seealso>
-</element>
+</element> 
+-->
 
 <element name="fsSurface">
 <short>
@@ -875,10 +918,7 @@ representing the arguments and the result for a Control Change Message.
 <short>Control to receive the change message.</short>
 </element>
 <element name="TCMControlChange.Inserting">
-<short>
-Indicates if the control message is an insert operation. QwordBool for 64-bit 
-platforms, LongBool for other platforms.
-</short>
+<short>Indicates if the control message is an insert operation.</short>
 </element>
 <element name="TCMControlChange.Result">
 <short>Result for the control change message.</short>
@@ -888,7 +928,6 @@ platforms, LongBool for other platforms.
 <short>Not used in the current LCL implementation.</short>
 </element>
 <element name="TCMChanged.Msg"/>
-<element name="TCMChanged.UnusedMsg"/>
 <element name="TCMChanged.Unused"/>
 <element name="TCMChanged.Child"/>
 <element name="TCMChanged.Result"/>
@@ -897,7 +936,6 @@ platforms, LongBool for other platforms.
 <short>Not used in the current LCL implementation.</short>
 </element>
 <element name="TCMControlListChange.Msg"/>
-<element name="TCMControlListChange.UnusedMsg"/>
 <element name="TCMControlListChange.Control"/>
 <element name="TCMControlListChange.Inserting"/>
 <element name="TCMControlListChange.Result"/>
@@ -941,11 +979,6 @@ Contains information representing a CM_CANCELMODE control message.
 <element name="TCMCancelMode.Msg">
 <short>
 Message constant.
-</short>
-</element>
-<element name="TCMCancelMode.UnusedMsg">
-<short>
-Padding for alignment on 64-bit platforms.
 </short>
 </element>
 <element name="TCMCancelMode.Unused">
@@ -1051,10 +1084,10 @@ vertical alignment of the control's center.
 </descr>
 <version>
 Modified in LCL 3.0 to be an alias to the TAnchorKind type in System.UITypes 
-for FPC 3.2.0 or higher.
+for FPC 3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation.
 <link id="#rtl.system.uitypes.TAnchorKind">TAnchorKind</link>
 -->
@@ -1083,12 +1116,12 @@ descendent classes.
 </descr>
 <version>
 Modified in LCL 3.0 to be an alias to the TAnchors type in System.UITypes 
-for FPC 3.2.0 or higher.
+for FPC 3.2.3 or higher.
 </version>
 <seealso>
 <link id="TAnchorKind"/>
 <link id="TControl.Anchors"/>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation.
 <link id="#rtl.system.uitypes.TAnchors">TAnchors</link>
 -->
@@ -1102,10 +1135,10 @@ The side of another control, to which this control's side is anchored.
 <descr/>
 <version>
 Modified in LCL 3.0 to be an alias to the TAnchorSideReference type in 
-System.UITypes for FPC 3.2.0 or higher.
+System.UITypes for FPC 3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.TAnchorSideReference">TAnchorSideReference</link>
 -->
@@ -1127,11 +1160,11 @@ Represents the enumeration value akLeft in TAnchorKind.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.akLeft">akLeft</link>
 -->
@@ -1144,11 +1177,11 @@ Represents the enumeration value akTop in TAnchorKind.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.akTop">akTop</link>
 -->
@@ -1161,11 +1194,11 @@ Represents the enumeration value akRight in TAnchorKind.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.akRight">akRight</link>
 -->
@@ -1177,11 +1210,11 @@ Represents the enumeration value akRight in TAnchorKind.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.akBottom">akBottom</link>
 -->
@@ -1194,11 +1227,11 @@ Represents the enumeration value asrTop in TAnchorSideReference.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.asrTop">asrTop</link>
 -->
@@ -1211,11 +1244,11 @@ Represents the enumeration value asrBottom in TAnchorSideReference.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.asrBottom">asrBottom</link>
 -->
@@ -1228,11 +1261,11 @@ Represents the enumeration value asrCenter in TAnchorSideReference.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.0 or 
+Added in LCL 3.0 as an alias to the System.UITypes constant for FPC 3.2.3 or 
 higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.asrCenter">asrCenter</link>
 -->
@@ -1488,10 +1521,10 @@ swapped for left-handed users.
 </descr>
 <version>
 Modified in LCL version 3.0 to be an alias for the TMouseButton type in 
-System.UITypes for FPC 3.2.0 or higher.
+System.UITypes for FPC 3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.TMouseButton">TMouseButton</link> 
 -->
@@ -1527,11 +1560,11 @@ Represents the mbLeft enumeration value in TMouseButton.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.0 
+Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.3  
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mbLeft">mbLeft</link> 
 -->
@@ -1544,11 +1577,11 @@ Represents the mbRight enumeration value in TMouseButton.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.0 
+Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.3  
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mbRight">mbRight</link> 
 -->
@@ -1561,11 +1594,11 @@ Represents the mbMiddle enumeration value in TMouseButton.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.0 
+Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.3 
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mbMiddle">mbMiddle</link> 
 -->
@@ -1578,11 +1611,11 @@ Represents the mbExtra1 enumeration value in TMouseButton.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.0 
+Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.3 
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mbExtra1">mbExtra1</link> 
 -->
@@ -1595,11 +1628,11 @@ Represents the mbExtra2 enumeration value in TMouseButton.
 </short>
 <descr/>
 <version>
-Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.0 
+Added in LCL 3.0 as an alias to the constant in System.UITypes for FPC 3.2.3 
 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documentation. 
 <link id="#rtl.system.uitypes.mbExtra2">mbExtra2</link> 
 -->
@@ -2634,7 +2667,7 @@ the values for internal members in the class instance.
 <var>GetHotSpot</var> is an overridden <var>TPoint</var> function which gets 
 the <var>HotSpot</var> for the image list resolution. GetHotSpot uses the 
 value from the <var>DragHotspot</var> property. It contains the screen 
-coordinates where the Drag and Drop operation was started. X is is the 
+coordinates where the Drag and Drop operation was started. X is the 
 horizontal position, and Y is the vertical position in the <var>TPoint</var> 
 type.
 </p>
@@ -3388,11 +3421,11 @@ TDragKind is the type used to implement the Dragkind property in TControl.
 </descr>
 <version>
 Modified in LCL 3.0 to be ab alias to TDragKind in System.UITypes for FPC 
-3.2.0 or higher.
+3.2.3 or higher.
 </version>
 <seealso>
 <link id="TControl.DragKind"/>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.TDragKind">TDragKind</link> 
 -->
@@ -3412,10 +3445,10 @@ Indicates whether a drag operation can start automatically.
 <descr/>
 <version>
 Modified in LCL 3.0 to be an alias to TDragMode in System.UITypes for FPC 
-3.2.0 or higher.
+3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.TDragMode">TDragMode</link> 
 -->
@@ -3440,10 +3473,10 @@ special actions when the mouse moves over, enters, or leaves the control.
 </descr>
 <version>
 Modified in LCL 3.0 to be an alias to TDragState in System.UITypes for FPC 
-3.2.0 or higher.
+3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.TDragState">TDragState</link> 
 -->
@@ -3483,10 +3516,10 @@ dmDragCancel is sent to the source control.
 </descr>
 <version>
 Modified in LCL 3.0 to be an alias to TDragMessage in System.UITypes for FPC 
-3.2.0 or higher.
+3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in RTL documentation. 
 <link id="#rtl.system.uitypes.TDragMessage">TDragMessage</link> 
 -->
@@ -7886,10 +7919,10 @@ Range type used to represent the tab order for windowed controls.
 <descr/>
 <version>
 Modified in LCL 3.0 to be an alias to TTabOrder in System.UITypes for FPC 
-3.2.0 or higher.
+3.2.3 or higher.
 </version>
 <seealso>
-<!-- 
+<!--
 Uncomment when the topic exists in the RTL documenetation. 
 <link id="#rtl.system.uitypes.TTabOrder">TTabOrder</link>
 -->
@@ -9026,21 +9059,9 @@ is set to <b>False</b>.
 <element name="TControl.IsVisibleStored.Result"/>
 
 <element name="TControl.DoBeforeMouseMessage">
-<short>
-Generates MouseEnter and MouseLeave events.
-</short>
+<short>Generate MouseEnter and MouseLeave events.</short>
 <descr/>
-<version>
-Modified in LCL version 4.0 to update the capture control at the mouse 
-position prior to passing the mouse message to the Application.
-</version>
 <seealso/>
-</element>
-<element name="TControl.DoBeforeMouseMessage.TheMessage">
-<short>
-TLMessage instance with the command, parameters, and result code for the 
-message.
-</short>
 </element>
 
 <element name="TControl.DoConstrainedResize">
@@ -12496,7 +12517,7 @@ immediate abort of dragging before dragging really starts.
 
 <element name="TControl.Notification">
 <short>
-Notification handler for insertion or deletion of components in the control.
+Notification handler for insertion or deletion of components.
 </short>
 <descr>
 <p>
@@ -12505,19 +12526,12 @@ all attached notification handlers.
 </p>
 <p>
 If <var>Operation</var> is <var>opRemove</var>, additional actions are 
-performed in the method. If <var>AComponent</var> is the component used in 
-PopupMenu, Action, or HostDockSite the property value is set to <b>Nil</b>. If 
-AComponent is an alignment control in anchor docking, the reference is also 
-set to <b>Nil</b> for the AnchorSide where it is used.
+performed, depending on <var>AComponent</var>: the PopupMenu, Action, or 
+anchors for the removed control are detached.
 </p>
 </descr>
 <seealso>
-<link id="TControl.Action"/>
-<link id="TControl.PopupMenu"/>
-<link id="TControl.HostDockSite"/>
-<link id="TControl.AnchorSide"/>
 <link id="#rtl.classes.TComponent.Notification">TComponent.Notification</link>
-<link id="#rtl.classes.TOperation">TOperation</link>
 </seealso>
 </element>
 <element name="TControl.Notification.AComponent">
@@ -17886,10 +17900,10 @@ WMLButtonTripleClk, WMLButtonQuadClk, et. al.
 <descr>
 <p>
 <var>ClientHeight</var> is an <var>Integer</var> property with the number of 
-pixels needed for client area on the control. The property contains the value 
-from the Bottom member in ClientRect. Changing the value for ClientHeight 
-causes SetClientSize to be called to apply the existing ClientWidth and the 
-new value for the property.
+pixels needed for the vertical client area on the control. The property 
+contains the value from the Bottom member in ClientRect. Changing the value for 
+ClientHeight causes SetClientSize to be called to apply the existing 
+ClientWidth and the new value for the property.
 </p>
 <p>
 The value for ClientHeight is not stored or used to set the Height for the 
@@ -17898,10 +17912,29 @@ is restored and when auto-layout policies using Anchors are applied to the
 control. For example, when Anchors is set to [akBottom] the value in 
 ClientHeight is needed / used.
 </p>
+<remark>
+In the LCL, ClientHeight has the same value as Height. Derived classes (like 
+TCustomForm or TForm) may implement a ClientHeight property that differs from 
+Height - but in the current LCL version, they do not. This differs from the 
+behavior in the Delphi VCL where a TForm instance adjusts the value in 
+ClientHeight to remove pixels used in non-client areas like the title bar, 
+borders, frames, and scroll bars. LCL uses this approach because there is no 
+reliable way to determine the sizes for all of the non-client areas on all of 
+the platforms where LCL is supported. Without a reliable way, the LCL would 
+needlessly move the forms around on the screen or resize them endlessly. In the 
+LCL, neither Height nor ClientHeight include the non-client area on a form 
+instance. The height of a TMainMenu instance is omitted from both values as 
+well.
+</remark>
+<p>
+Use ClientWidth to access the number of pixels needed for the horizontal client 
+area on the control.
+</p>
 </descr>
 <seealso>
 <link id="TControl.ClientRect"/>
 <link id="TControl.ClientWidth"/>
+<link id="TControl.Height"/>
 <link id="TControl.AutoSizing"/>
 <link id="TControl.EnableAutoSizing"/>
 <link id="TControl.AutoAdjustLayout"/>
@@ -17970,8 +18003,8 @@ for the control.
 <descr>
 <p>
 <var>ClientWidth</var> is an <var>Integer</var> property with the number of 
-pixels need for the width of the client area on the control. The property 
-contains the value from the Right member in ClientRect. Changing the value 
+pixels need for the horizontal client area on the control. The property 
+contains the value from the Right member in ClientRect. Changing the value
 for ClientWidth causes SetClientSize to be called to apply the new property 
 value and the existing ClientHeight for the control.
 </p>
@@ -17982,10 +18015,27 @@ is restored and when auto-layout policies using Anchors are applied to the
 control. For example, when Anchors is set to [akRight] the value in 
 ClientWidth is needed / used.
 </p>
+<remark>
+In the LCL, ClientWidth has the same value as Width. Derived classes (like 
+TCustomForm or TForm) may implement a ClientWidth property that differs from 
+Width - but in the current LCL version, they do not. This differs from the 
+behavior in the Delphi VCL where a TForm instance adjusts the value in 
+ClientWidth to remove pixels used in non-client areas like the borders, frames, 
+and scroll bars. LCL uses this approach because there is no reliable way to 
+determine the sizes for all of the non-client areas on all of the platforms 
+where LCL is supported. Without a reliable way, the LCL would needlessly move 
+the forms around on the screen or resize them endlessly. In the LCL, neither 
+Width nor ClientWidth include the non-client area on a form instance.
+</remark>
+<p>
+Use ClientHeight to access the number of pixels needed for the vertical client 
+area on the control.
+</p>
 </descr>
 <seealso>
 <link id="TControl.ClientRect"/>
 <link id="TControl.ClientHeight"/>
+<link id="TControl.Width"/>
 <link id="TControl.AutoSizing"/>
 <link id="TControl.EnableAutoSizing"/>
 <link id="TControl.AutoAdjustLayout"/>
@@ -18825,11 +18875,13 @@ property along with the existing values in Top, Width, and Height.
 </element>
 
 <element name="TControl.Height">
-<short>The vertical size for the control.</short>
+<short>
+The vertical size for the control.
+</short>
 <descr>
 <p>
-Height is an Integer property with the vertical size for the control in 
-pixels.
+<var>Height</var> is an <var>Integer</var> property with the vertical size for 
+the control in pixels.
 </p>
 <p>
 Setting a negative value in Height is not allowed, and the property defaults 
@@ -18839,9 +18891,8 @@ IDE).
 </p>
 <p>
 Setting a new value for the property causes SetBounds and ChangeBounds to be 
-called. This ensures that the new value is is the range allowed in 
-Constraints, and that the control is aligned on its Parent using the Anchors 
-for the control.
+called. This ensures that the new value is in the range allowed in Constraints, 
+and that the control is aligned on its Parent using the Anchors for the control.
 </p>
 <p>
 A value assigned to Height is ignored when AutoSize is set to <b>True</b>; 
@@ -18853,8 +18904,22 @@ Values in Top, Left, Width, and Height are used to calculate the display area
 for the control in GetClientRect. They determine the clipping rectangle used 
 when the control is drawn on its Parent.
 </p>
+<remark>
+In the LCL, Height has the same value as ClientHeight. Derived classes (like 
+TCustomForm or TForm) may implement a ClientHeight property that differs from 
+Height - but in the current LCL version, they do not. This differs from the 
+behavior in the Delphi VCL where the value in Height includes pixels used in 
+non-client areas like the title bar, borders, frames, and scroll bars. LCL 
+uses  this approach because there is no reliable way to determine the sizes for 
+all of the non-client areas on all of the platforms where LCL is supported. 
+Without a reliable way, the LCL would needlessly move the forms around on the 
+screen or resize them endlessly. In the LCL, neither Height nor ClientHeight 
+include the non-client area on a form instance. The height of a TMainMenu 
+instance is omitted from both values as well.
+</remark>
 </descr>
 <seealso>
+<link id="TControl.ClientHeight"/>
 <link id="TControl.Left"/>
 <link id="TControl.Top"/>
 <link id="TControl.Width"/>
@@ -18929,7 +18994,9 @@ property along with the existing values in Left, Width, and Height.
 </element>
 
 <element name="TControl.Width">
-<short>The horizontal size for the control.</short>
+<short>
+The horizontal size for the control.
+</short>
 <descr>
 <p>
 <var>Width</var> is an <var>Integer</var> property with the horizontal size 
@@ -18942,9 +19009,8 @@ to <b>0</b> (zero). At design-time, setting Width to a value not in the range
 </p>
 <p>
 Setting a new value for the property causes SetBounds and ChangeBounds to be 
-called. This ensures that the new value is is the range allowed in 
-Constraints, and that the control is aligned on its Parent using the Anchors 
-for the control.
+called. This ensures that the new value is in the range allowed in Constraints, 
+and that the control is aligned on its Parent using the Anchors for the control.
 </p>
 <p>
 A value assigned to Width is ignored when AutoSize is set to <b>True</b>; the 
@@ -18955,8 +19021,21 @@ Values in Top, Left, Width, and Height are used to calculate the display area
 for the control in GetClientRect. They determine the clipping rectangle used 
 when the control is drawn on its Parent.
 </p>
+<remark>
+In the LCL, Width has the same value as ClientWidth. Derived classes (like 
+TCustomForm or TForm) may implement a ClientWidth property that differs from 
+Width - but in the current LCL version, they do not. This differs from the 
+behavior in the Delphi VCL where the value in Width includes pixels used in 
+non-client areas like the borders, frames, and scroll bars. LCL uses this 
+approach because there is no reliable way to determine the sizes for all of the 
+non-client areas on all of the platforms where LCL is supported. Without a 
+reliable way, the LCL would needlessly move the forms around on the screen or 
+resize them endlessly. In the LCL, neither Width nor ClientWidth include the 
+non-client area on a form instance.
+</remark>
 </descr>
 <seealso>
+<link id="TControl.ClientWidth"/>
 <link id="TControl.Height"/>
 <link id="TControl.Left"/>
 <link id="TControl.Top"/>
@@ -19113,145 +19192,311 @@ Type used for a callback method, to be called for all children of a control.
 </element>
 
 <element name="TChildControlResizeStyle">
-<short>Defines how child controls are resized / aligned.</short>
-<descr/>
-<seealso/>
+<short>
+Defines how child controls are resized / aligned.
+</short>
+<descr>
+<p>
+<var>TChildControlResizeStyle</var> is an enumerated type with values that 
+represent the resizing styles used to resize and position child controls in a 
+tabular arrangement.
+</p>
+<p>
+TChildControlResizeStyle the type used for the EnlargeHorizontal, 
+EnlargeVertical, ShrinkHorizontal, and ShrinkVertical properties in 
+TControlChildSizing.
+</p>
+<p>
+The enumeration values identify the algorithm used to resize and position the 
+child controls on a parent when its ChildSizing.Layout property set to a value 
+other than clNone. The resizing algorithms apply to child controls which do 
+<b>not</b> have settings in their Align, Anchors, or AnchorSide properties 
+which determine the position / alignment for the child control. Anchored or 
+aligned controls are excluded from the tabular layout.
+</p>
+<dl>
+<dt>crsAnchorAligning</dt>
+<dd>
+<p>
+Uses a static layout for normally anchored controls.
+</p>
+<p>
+crsAnchorAligning examines child controls to get the preferred size and any 
+size constraints (minimum or maximum) for each. Preferred size determines the 
+dimensions for a control. Size constraints determine whether the control size 
+is adjusted to the corresponding minimum or maximum value. The child sizing 
+Layout in the parent control determines the order and direction the child 
+controls are arranged in the tabular layout. The larger of the derived control 
+sizes is used for all controls in the same column or row in the tabular layout.
+</p>
+<p>
+Values from the BorderSpacing and ChildSizing properties in the parent control 
+determine where the control matrix is displayed and the spacing used between 
+adjacent controls. See TControl.BorderSpacing and TControl.ChildSizing for more 
+information.
+</p>
+<p>
+The derived sizes for child controls and their positions do not change when the 
+parent control is resized. This algorithm does not try to fill unused 
+space on the parent control. Unused space is displayed to right of or beneath 
+the control matrix.
+</p>
+</dd>
+<dt>crsScaleChilds</dt>
+<dd>
+<p>
+Scales child controls with fixed spacing between the controls.
+</p>
+<p>
+crsScaleChilds examines child controls to get the preferred size and any 
+size constraints (minimum or maximum) for each. Preferred size determines the 
+dimensions for a control. Size constraints determine whether the control size 
+is adjusted to the corresponding minimum or maximum value. The derived control 
+size is the size to which it would autosize if it was not anchored / 
+size-controlled.
+</p>
+<p>
+The child sizing Layout in the parent control determines the order and 
+direction the child controls are arranged in the tabular layout. Values from 
+the BorderSpacing and ChildSizing properties in the parent control determine 
+where the control matrix is displayed and the spacing used between adjacent 
+controls. See TControl.BorderSpacing and TControl.ChildSizing for more
+information.
+</p>
+<p>
+The larger of the derived control sizes is used for all controls in the same 
+column or row in the tabular layout. The size for a column or row is scaled to 
+fill the unused space in the parent while keeping the ratio for the derived 
+size relative to the size of the parent control. A size constraint present in a 
+column or a row is enforced in the tabular layout. Adjacent controls are scaled 
+to fill unused space after the size constraint has been applied.
+</p>
+<p>
+For a horizontal left-to-right layout with 3 controls A, B, and C:
+</p>
+<code>
+Parent.ClientWidth = 120
+A Preferred Width = 10
+B Preferred Width = 20
+C Preferred Width = 30
+A, B, C are scaled by a factor of 2.0 (120/60) for scaled widths of 20, 40 and 
+60 respectively.
+</code>
+<p>
+If B has a maximum width constraint of 30, then A and C are resized equally 
+with the remaining space made available by the size constraint. Scaling factor 
+for A and C is (120-30)/40 or 2.25.
+</p>
+<code>
+Parent.ClientWidth = 120
+A.Width = 23
+B.Width = 30
+C.Width = 67
+</code>
+</dd>
+<dt>crsHomogenousChildResize</dt>
+<dd>
+<p>
+Enlarge or shrink child controls equally, i.e. by the same number of pixels.
+</p>
+<p>
+crsHomogenousChildResize applies a homogenous size to child controls in the 
+tabular layout. Child controls are resized to their preferred size by default 
+and use the controls per line and spacing defined in the ChildSizing for the 
+parent control. Size constraints in child controls are used when calculating 
+the display size for the controls in the same column or row. Unused space in 
+the client area for a parent control is distributed equally to the size for 
+each child control which is not size constrained.
+</p>
+<p>
+For a horizontal left-to-right layout with 3 controls A, B, and C:
+</p>
+<code>
+Parent.ClientWidth = 120
+A Preferred Width = 10
+B Preferred Width = 20
+C Preferred Width = 30
+A, B, C are resized to include 20 additional pixels per child control (120-60)/3.
+A.Width = 30
+B.Width = 40
+C.Width = 50
+</code>
+<p>
+If B has a maximum width constraint of 30, then the size made available by the 
+constraint is allocated equally to A and C. 120-30-10-30/2=25 pixels.
+</p>  
+<code>
+A.Width = 35
+B.Width = 30
+C.Width = 55
+</code>
+</dd>
+<dt>crsHomogenousSpaceResize</dt>
+<dd>
+<p>
+Enlarges the space between child controls equally.
+</p>
+<p>
+crsHomogenousSpaceResize applies a uniform number of pixels as horizontal or 
+vertical spacing between child controls on the same column or row. The size for 
+the controls are derived using the preferred size and any size constraints 
+(minimum or maximum) for the child controls. The collective derived size is 
+applied to all controls in the same column or row. The remaining space on the 
+parent is allocated equally as spacing before, between, and after each column 
+or row in the tabular layout - including on the left / right or top / bottom 
+edges of the Control.
+</p>
+<p>
+For a horizontal left-to-right layout with 3 controls A, B, and C:
+</p>
+<code>
+Parent.ClientWidth = 120
+A Preferred Width = 10
+B Preferred Width = 20
+C Preferred Width = 30
+Unused space (120-60)/4=15 is allocated equally as Left, Right, and Horizontal spacing.
+</code>
+<p>
+Column widths do not change when the parent control is resized; only the 
+spacing between edges and columns is affected.
+</p>
+</dd>
+<dt>crsSameSize</dt>
+<dd>
+<p>
+Each child gets the same size (maybe one pixel difference due to rounding).
+</p>
+<p>
+crsSameSize applies a uniform size to all columns or rows in the tabular 
+layout. The unused space on the parent control, after BorderSpacing and 
+ChildSizing spacings are applied, is allocated equally for the number of 
+controls per line in the columns or rows. Size constraints (minimum or maximum) 
+for child controls are enforced if a constraint would be enabled for the 
+derived size. All child controls in the same column or row are given the same 
+derived size.
+</p>
+<p>
+For a horizontal left-to-right layout with 3 controls A, B, and C:
+</p>
+<code>
+Parent.ClientWidth = 120
+A Preferred Width = 10
+B Preferred Width = 20
+C Preferred Width = 30
+Each column is given a width of 40 pixels (120/3).
+A.Width = 40
+B.Width = 40
+C.Width = 40
+</code>
+<p>
+If B has a maximum width constraint of 30, then the space made available by the 
+size constraint is allocated equally to A and C.
+</p>  
+<code>
+A.Width = 45
+B.Width = 30
+C.Width = 45
+</code>
+<p>
+Column widths are recalculated when the parent control is resized.
+</p>
+</dd>
+</dl>
+<p>
+Please note that the differences between the crsScaleChilds, 
+crsHomogenousChildResize, and crsSameSize algorithms largely disappear when one 
+or more of the child controls have a minimum or maximum size constraint applied.
+</p>
+</descr>
+<seealso>
+<link id="TControlChildSizing.EnlargeHorizontal"/>
+<link id="TControlChildSizing.EnlargeVertical"/>
+<link id="TControlChildSizing.ShrinkHorizontal"/>
+<link id="TControlChildSizing.ShrinkVertical"/>
+<link id="TWinControl.ChildSizing"/>
+<link id="TWinControl.CalculatePreferredSize"/>
+<link id="TControl.GetPreferredSize"/>
+<link id="TSizeConstraints"/>
+<link id="TControlBorderSpacing"/>
+</seealso>
 </element>
 <element name="TChildControlResizeStyle.crsAnchorAligning">
-<short>Using <link id="TControl.Anchors"/> (Delphi compatible).</short>
-<descr>
-<p>
-Anchors and Align work like Delphi. For example if Anchors property of the 
-control is [akLeft], it means fixed distance between left border of parent's 
-client area. [akRight] means fixed distance between right border of the 
-control and the right border of the parent's client area. When the parent is 
-resized the child is moved to keep the distance. [akLeft,akRight] means fixed 
-distance to left border and fixed distance to right border. When the parent 
-is resized, the controls width is changed (resized) to keep the left and 
-right distance. Same for akTop,akBottom.
-</p>
-<p>
-Align=alLeft for a control means set Left leftmost, Top topmost and maximize 
-Height. The width is kept, if akRight is not set. If akRight is set in the 
-Anchors property, then the right distance is kept and the control's width is 
-resized. If there several controls with Align=alLeft, they will not overlap 
-and be put side by side. Same for alRight, alTop, alBottom. (Always expand 3 
-sides).
-</p>
-<p>
-Align=alClient. The control will fill the whole remaining space. Setting two 
-children to Align=alClient does only make sense, if you set maximum 
-Constraints.
-</p>
-<p>
-Order: First all alTop children are resized, then alBottom, then alLeft, then 
-alRight and finally alClient.
-</p>
-</descr>
+<short>
+Uses a static layout for normally anchored controls.
+</short>
 </element>
 <element name="TChildControlResizeStyle.crsScaleChilds">
-<short>Scale children, keep space between children fixed.</short>
-<descr>
-<p>
-Scale children, keep space between them fixed. Children are resized to their 
-normal / advised size. If there is some space left in the client area of the 
-parent, then the children are scaled to fill the space. You can set maximum 
-Constraints. Then the other children are scaled more.
-</p>
-<p>
-For example: 3 child controls A, B, C with A.Width=10, B.Width=20 and 
-C.Width=30 (total=60). If the Parent's client area has a ClientWidth of 120, 
-then the children are scaled with Factor 2.
-</p>
-<p>
-If B has a maximum constraint width of 30, then first the children will be 
-scaled with 1.5 (A.Width=15, B.Width=30, C.Width=45). Then A and C (15+45=60 
-and 30 pixel space left) will be scaled by 1.5 again, to a final result of: 
-A.Width=23, B.Width=30, C.Width=67 (23+30+67=120).
-</p>
-</descr>
+<short>
+Scale children keeping fixed space between children.
+</short>
 </element>
 <element name="TChildControlResizeStyle.crsHomogenousChildResize">
-<short>Enlarge children equally, i.e. by the same amount of pixels.</short>
-<descr>
-<p>
-Enlarge children equally. Children are resized to their normal/advised size. 
-If there is space left in the client area of the parent, the remaining space 
-is distributed equally to each child.
-</p>
-<p>
-For example: 3 child controls A, B, C with A.Width=10, B.Width=20 and 
-C.Width=30 (total=60). If the Parent's client area has a ClientWidth of 120, 
-then 60/3=20 is added to each Child.
-</p>
-<p>
-If B has a maximum constraint width of 30, then first 10 is added to all 
-children (A.Width=20, B.Width=30, C.Width=40). Then A and C (20+40=60 and 30 
-pixel space left) will get 30/2=15 additional, resulting in: A.Width=35, 
-B.Width=30, C.Width=55 (35+30+55=120).
-</p>
-</descr>
+<short>
+Enlarge children equally, i.e. by the same number of pixels.
+</short>
 </element>
 <element name="TChildControlResizeStyle.crsHomogenousSpaceResize">
-<short>Enlarge space between children equally.</short>
-<descr>
-<p>
-Enlarge space between children equally. Children are resized to their 
-normal/advised size. If there is some space left in the client area of the 
-parent, then the space between the children is expanded.
-</p>
-<p>
-For example: 3 child controls A, B, C with A.Width=10, B.Width=20 and 
-C.Width=30 (total=60). If the Parent's client area has a ClientWidth of 120, 
-then there will be 60/2=30 space between A and B and between B and C.
-</p>
-</descr>
+<short>
+Enlarge space between children equally.
+</short>
 </element>
 <element name="TChildControlResizeStyle.crsSameSize">
-<short>Each child gets the same size (maybe one pixel difference).</short>
-<descr>
-<remark>
-Not implemented in the current LCL version.
-</remark>
-<p>
-Set each child to the same size (maybe one pixel difference). The client area 
-is divided by the number of controls and each control gets the same size. The 
-remainder is distributed to the first children.
-</p>
-</descr>
+<short>
+Each child gets the same size (maybe one pixel difference).
+</short>
 </element>
 
 <element name="TControlChildrenLayout">
-<short>Defines the logic used to wrap child controls.</short>
-<descr/>
-<seealso/>
+<short>
+Defines the logic used to arrange child controls.
+</short>
+<descr>
+<p>
+<var>TControlChildrenLayout</var> is an enumerated type with values that 
+control the order of processing and arrangement of child controls. It is the 
+type used to implement the Layout property in TControlChildSizing.
+</p>
+</descr>
+<seealso>
+<link id="TControlChildSizing"/>
+<link id="TWinControl.ChildSizing"/>
+</seealso>
 </element>
 <element name="TControlChildrenLayout.cclNone">
-<short>No wrapping.</short>
+<short>
+Child controls not arranged in a tabular layout. Child controls are positioned 
+and sized using the Align and Anchors settings in the controls.
+</short>
 </element>
 <element name="TControlChildrenLayout.cclLeftToRightThenTopToBottom">
 <short>
 Arranges controls in a row filled from left to right, and then top to bottom. 
-Uses the value in BiDiMode; when it contains bdRightToLeft the horizontal 
-direction is reversed (Right to Left).
+The number of controls per line in TControlChildSizing determines when a new 
+row is started. Uses the value in BiDiMode; when it contains bdRightToLeft the 
+horizontal direction is reversed (Right to Left).
 </short>
 </element>
 <element name="TControlChildrenLayout.cclTopToBottomThenLeftToRight">
 <short>
 Arranges controls in columns, from top to bottom and then left to right.
+The number of controls per line in TControlChildSizing determines when a new 
+column is started.
 </short>
 </element>
 
 <element name="TControlChildSizing">
-<short>How child controls are sized relative to their parent.</short>
+<short>
+Contains settings which determine how child controls are sized and positioned 
+on their parent.
+</short>
 <descr>
 <p>
 <var>TControlChildSizing</var> is a <var>TPersistent</var> descendant which 
 provides properties and methods used to layout, align, and resize child 
-controls relative to their parent. Properties are provided which define the 
-horizontal and vertical spacing between controls, the preferred direction 
-controls are aligned, and whether controls are scaled to fit in the parent 
-control.
+controls relative to their parent control. Properties are provided which define 
+the horizontal and vertical spacing between controls, the preferred direction 
+controls are aligned, and whether controls are scaled or resized to fill the 
+parent control.
 </p>
 <p>
 See <link id="TChildControlResizeStyle"/> and <link 
@@ -19341,11 +19586,11 @@ inherited constructor, and sets the default values for properties including:
 </p>
 <dl>
 <dt>Control</dt>
-<dd>Set to the value in the OwnerControl argument</dd>
+<dd>Set to the value in the OwnerControl argument.</dd>
 <dt>Layout</dt>
-<dd>Set to cclNone</dd>
+<dd>Set to cclNone.</dd>
 <dt>EnlargeHorizontal, EnlargeVertical, ShrinkHorizontal, ShrinkVertical</dt>
-<dd>Set to crsAnchorAligning</dd>
+<dd>Set to crsAnchorAligning.</dd>
 </dl>
 </descr>
 </element>
@@ -19532,8 +19777,7 @@ implementation-specific properties and methods.
 
 <element name="TControlChildSizing.ControlsPerLine">
 <short>
-The number of controls displayed per column or row for the orientation 
-specified in Layout.
+The number of controls displayed per column or row for the orientation / fill direction specified in Layout.
 </short>
 <descr>
 <p>
@@ -19569,59 +19813,115 @@ arrange the radio buttons or check boxes on the control into columns and rows.
 
 <element name="TControlChildSizing.EnlargeHorizontal">
 <short>
-Indicates how child controls are expanded and/or aligned horizontally on the 
+Indicates how child controls are expanded and aligned horizontally on the 
 parent Control.
 </short>
 <descr>
 <p>
 <var>EnlargeHorizontal</var> is a <var>TChildControlResizeStyle</var> property 
 which indicates how child controls are expanded or aligned horizontally on the 
-parent Control. The default value for the property is crsAnchorAligning, and 
-indicates that the Anchors, Align, and BorderSpacing properties in the child 
-controls are used - and work like Delphi.
+parent Control. The default value for the property is crsAnchorAligning.
+</p>
+<p>
+Child sizing styles include:
 </p>
 <dl>
 <dt>crsAnchorAligning</dt>
 <dd>
-The Layout and spacing values in the class instance are not used. Instead, 
-properties in the child controls like Align, Anchors, and BorderSpacing are 
-used to resize and align the controls horizontally. Child controls which use 
-the Align property are processed in a specific order: alTop, alBottom, alLeft, 
-and finally alRight.
+<p>
+Uses a static layout based on the preferred width and size constraints for the 
+child controls. Child controls widths are not changed when the parent Control 
+is resized.
+</p>
 </dd>
 <dt>crsHomogenousChildResize</dt>
 <dd>
-Applies a homogeneous width to child controls when Layout is set to a value 
-other than cclNone. The realized width is adjusted for the number of pixels 
-specified in LeftRightSpacing, and the number of rows or columns needed for 
-the setting in ControlsPerLine. 
+<p>  
+Applies a homogenous width to child controls in a given column on the tabular 
+layout. The width of child controls is expanded to fill the unused area in the 
+parent Control after spacing and size constraints have been applied.
+</p>
 </dd>
 <dt>crsHomogenousSpaceResize</dt>
 <dd>
-Applies a uniform number of pixels as horizontal space between child controls 
-on the same row. The number of available pixels is determined by the unused 
-space on the Control and the settings in Layout and ControlsPerLine. An equal 
-number of pixels is applied before, between, and after each column on a given 
-row - including on the left and right edges of the Control. The width of the 
-child controls is not affected.
+<p>
+Applies a uniform number of pixels as horizontal spacing between child controls 
+on the same row. The width for controls in a given column are derived using the 
+preferred width for the controls and any width constraints (minimum or maximum) 
+in the child controls. Any unused horizontal space on the Control is allocated 
+equally as spacing before, between, and after each column in the tabular layout 
+- including on the left and right edges of the Control.
+</p>
+<p>
+Column widths do not change when the parent Control is resized; only the 
+spacing between edges and columns is affected.
+</p>
 </dd>
 <dt>crsScaleChilds</dt>
 <dd>
-Scales child controls so they all have a uniform width. The width for each 
-control is determined by the unused client area for the Control and the Layout 
-and ControlsPerLine properties.
+<p>
+Scales the width for child controls while keeping the space between them fixed. 
+Children are resized so that the control widths are a ratio of their preferred 
+widths (or size constraints) relative to the client area on the parent Control. 
+Controls are scaled to fill the unused horizontal space. All controls in a 
+given column are given the same derived width.
+</p>
+</dd>
+<dt>
+crsSameSize
+</dt>
+<dd>
+<p>
+Child controls use a uniform size for all controls in the same column for the 
+tabular layout. Size constraints (minimum or maximum) for child controls are 
+enforced if the constraint would be enabled for the column size. The unused 
+space on the parent Control, after spacing, is allocated equally to columns 
+where a size constraint is not in effect. Column widths are recalculated when 
+the parent Control is resized.
+</p>
 </dd>
 </dl>
 <p>
-The value in EnlargeHorizontal is not used or applied when Layout is set to 
-cclNone.
+See <link id="TChildControlResizeStyle"/> for more information about the child 
+sizing layout algorithms.
+</p>
+<p>
+The styles in EnlargeHorizontal, EnlargeVertical, ShrinkHorizontal, and  
+ShrinkVertical are used when Layout is set to a value other than cclNone. The 
+styles apply to child controls which have their Anchors set to [akLeft, akTop], 
+Align set alNone, and are not anchored to another control using AnchorSide. Any 
+control with other Anchors or Align settings cannot be displayed in the tabular 
+layout.
+</p>
+<p>
+The child controls are positioned using the BorderSpacing for the control (and 
+its parent control) and the spacing values in LeftRightSpacing and 
+HorizontalSpacing.
+</p>
+<p>
+Setting a new value for EnlargeHorizontal causes the Change method to be 
+called. This invalidate the preferred sizes for the child controls, and causes 
+them to be realigned. The OnChange event handler is also signalled (when 
+assigned).
+</p>
+<p>
+Use ShrinkHorizontal to specify the child sizing style applied when control 
+widths are reduced to fit within the client area for the parent Control.
 </p>
 </descr>
 <seealso>
 <link id="TControlChildSizing.Control"/>
 <link id="TControlChildSizing.Layout"/>
-<link id="TControlChildSizing.EnlargeVertical"/>
+<link id="TControlChildSizing.ShrinkHorizontal"/>
+<link id="TControlChildSizing.LeftRightSpacing"/>
+<link id="TControlChildSizing.HorizontalSpacing"/>
+<link id="TControlChildSizing.Change"/>
+<link id="TControlChildSizing.OnChange"/>
 <link id="TChildControlResizeStyle"/>
+<link id="TControlBorderSpacing"/>
+<link id="TSizeConstraints"/>
+<link id="TControl.BorderSpacing"/>
+<link id="TControl.Constraints"/>
 </seealso>
 </element>
 
@@ -19634,45 +19934,96 @@ Control.
 <p>
 <var>EnlargeVertical</var> is a <var>TChildControlResizeStyle</var> property 
 which indicates how child controls are expanded or aligned vertically on the 
-parent Control. The default value for the property is crsAnchorAligning, and 
-indicates that the Anchors, Align, and BorderSpacing properties in the child 
-controls are used - and work like Delphi.
+parent Control. The default value for the property is crsAnchorAligning.
 </p>
+<p>
+Child sizing styles include:
+</p>
+
 <dl>
 <dt>crsAnchorAligning</dt>
 <dd>
-The Layout and spacing values in the class instance are not used. Instead, 
-properties in the child controls like Align, Anchors, and BorderSpacing are 
-used to resize and align the controls vertically. Child controls which use the 
-Align property are processed in a specific order: alTop, alBottom, alLeft, and 
-finally alRight.
+<p>
+Uses a static layout based on the preferred height and size constraints for the 
+child controls. Child controls heights are not changed when the parent Control 
+is resized.
+</p>
 </dd>
+
 <dt>crsScaleChilds</dt>
 <dd>
-Scales child controls so they all have a uniform height. The height for each 
-control is determined by the unused client area for the Control and the Layout 
-and ControlsPerLine properties.
+<p>
+Scales the width for child controls while keeping the space between them fixed. 
+Children are resized so that the control heights are a ratio of their preferred 
+widths (or size constraints) relative to the client area on the parent Control. 
+Controls are scaled to fill the unused vertical space. All controls in a 
+given row are given the same derived height.
+</p>
 </dd>
+
 <dt>crsHomogenousChildResize</dt>
 <dd>
-Applies a homogeneous height to child controls when Layout is set to a value 
-other than cclNone. The realized height is adjusted for the number of pixels 
-specified in TopBottomSpacing, and the number of rows or columns needed for 
-the setting in ControlsPerLine. 
+<p>
+Applies a homogenous height to child controls in a given row on the tabular 
+layout. The height of child controls is expanded to fill the unused area in the 
+parent Control after spacing and size constraints have been applied.
+</p>
 </dd>
+
 <dt>crsHomogenousSpaceResize</dt>
 <dd>
-Applies a uniform number of pixels as vertical space between child controls 
-in the same column. The number of pixels is determined by the unused space on 
-the Control and the settings in Layout and ControlsPerLine. An equal number of 
-pixels is applied before, between, and after each child control in a given 
-column - including on the top and bottom edges of the Control. The height of 
-the child controls is not affected.
+<p>
+Applies a uniform number of pixels as vertical spacing between child controls 
+on the same column. The height for controls in a given column are derived using 
+the preferred height for the controls and any height constraints (minimum or 
+maximum) in the child controls. Any unused vertical space on the Control is 
+allocated equally as spacing above, between, and below each row in the tabular 
+layout - including on the top and bottom edges of the Control.
+</p>
+<p>
+Row heights do not change when the parent Control is resized; only the 
+spacing between edges and rows is affected.
+</p>
+</dd>
+
+<dt>crsSameSize</dt>
+<dd>
+<p>
+Child controls use a uniform size for all controls in the same row for the 
+tabular layout. Size constraints (minimum or maximum) for child controls are 
+enforced if the constraint would be enabled for the row size. The unused 
+space on the parent Control, after spacing, is allocated equally to rows  
+where a size constraint is not in effect. Row heights are recalculated when 
+the parent Control is resized.
+</p>
 </dd>
 </dl>
 <p>
-The value in EnlargeVertical is not used or applied when Layout is set to 
-cclNone.
+See <link id="TChildControlResizeStyle"/> for more information about the child 
+sizing layout algorithms.
+</p>
+<p>
+The styles in EnlargeHorizontal, EnlargeVertical, ShrinkHorizontal, and  
+ShrinkVertical are used when Layout is set to a value other than cclNone. The 
+styles apply to child controls which have their Anchors set to [akLeft, akTop], 
+Align set alNone, and are not anchored to another control using AnchorSide. Any 
+control with other Anchors or Align settings cannot be displayed in the tabular 
+layout.
+</p>
+<p>
+The child controls are positioned using the BorderSpacing for the control (and 
+its parent control) and the spacing values in TopBottomSpacing and 
+VerticalSpacing.
+</p>
+<p>
+Setting a new value for EnlargeVertical causes the Change method to be 
+called. This invalidate the preferred sizes for the child controls, and causes 
+them to be realigned. The OnChange event handler is also signalled (when 
+assigned).
+</p>
+<p>
+Use ShrinkVertical to specify the child sizing style applied when control 
+heights are reduced to fit within the client area for the parent Control.
 </p>
 </descr>
 <seealso>
@@ -19691,7 +20042,8 @@ Minimum space between child controls which are horizontally adjacent.
 <p>
 HorizontalSpacing is the number of pixels reserved as space between 
 horizontally adjacent child controls. It is used when Layout contains a value 
-other than cclNone.
+other than cclNone, but it also affects horizontal control spacing when using 
+Anchors for positioning child controls on a parent.
 </p>
 <p>
 Use VerticalSpacing to set the space reserved between vertically adjacent 
@@ -19723,8 +20075,8 @@ arranged into rows and / or columns.
 <p>
 <var>Layout</var> is a <var>TControlChildrenLayout</var> property which 
 indicates the layout behavior for adjacent controls in the parent Control. 
-Layout is used when methods in TControl (and descendent classes) need to 
-arrange their child controls into columns or rows.
+Layout is used when methods in TControl descendants need to arrange their child 
+controls into columns or rows.
 </p>
 <p>
 The default value for the property is cclNone, and indicates that a layout 
@@ -19828,108 +20180,209 @@ for the child controls, and calls their Realign method.
 
 <element name="TControlChildSizing.ShrinkHorizontal">
 <short>
-Various ways to fit controls into the available Width.
+Indicates how child controls are shrunk and aligned horizontally on the parent 
+Control.
 </short>
 <descr>
 <p>
 <var>ShrinkHorizontal</var> is a <var>TChildControlResizeStyle</var> property 
-which indicates if and how child controls are resized and aligned horizontally 
-on the parent control. It can contain one of the values from the 
-TChildControlResizeStyle enumeration.
+which indicates how child controls are resized and aligned horizontally on the 
+parent control. It can contain one of the values from the 
+TChildControlResizeStyle enumeration. The default value for the property is 
+<var>crsAnchorAligning</var>.
 </p>
 <p>
-The default value for the property is <var>crsAnchorAligning</var>, and causes 
-the width of child control to be determined using the Anchor and Align 
-properties (like Delphi). For example if Anchors property of the control is 
-[akLeft], it means fixed distance between left border of parent's client area. 
-[akRight] means fixed distance between right border for the control and the 
-right border for the client area on the Parent. 
+Child sizing styles include:
+</p>
+<dl>
+<dt>crsAnchorAligning</dt>
+<dd>
+<p>
+Uses a static layout based on the preferred width and size constraints for the 
+child controls. Child controls widths are not changed when the parent Control 
+is resized.
+</p>
+</dd>
+<dt>crsHomogenousChildResize</dt>
+<dd>
+<p>  
+Applies a homogenous width to child controls in a given column on the tabular 
+layout. The width of child controls is reduced to fill the client area in the 
+parent Control after spacing and size constraints have been applied.
+</p>
+</dd>
+<dt>crsHomogenousSpaceResize</dt>
+<dd>
+<p>
+Applies a uniform number of pixels as horizontal spacing between child controls 
+on the same row. The width for controls in a given column are derived using the 
+preferred width for the controls and any width constraints (minimum or maximum) 
+in the child controls. Any unused horizontal space on the Control is allocated 
+equally as spacing before, between, and after each column in the tabular layout 
+- including on the left and right edges of the Control.
 </p>
 <p>
-When the parent is resized, the child is moved to keep the defined distances. 
-[akLeft,akRight] means fixed distance to left border and fixed distance to 
-right border. When the parent is resized, the controls width is changed 
-(resized) to keep the left and right distance. Same for akTop, akBottom.
+Column widths do not change when the parent Control is resized; only the 
+spacing between edges and columns is affected.
+</p>
+</dd>
+<dt>crsScaleChilds</dt>
+<dd>
+<p>
+Scales the width for child controls while keeping the space between them fixed. 
+Children are resized so that the control widths are a ratio of their preferred 
+widths (or size constraints) relative to the client area on the parent Control. 
+Controls are scaled to fill the client width in the parent Control. All 
+controls in a given column are given the same derived width.
+</p>
+</dd>
+<dt>
+crsSameSize
+</dt>
+<dd>
+<p>
+Child controls use a uniform size for all controls in the same column for the 
+tabular layout. Size constraints (minimum or maximum) for child controls are 
+enforced if the constraint would be enabled for the column size. The client 
+width for the parent Control, after spacing, is allocated equally to columns 
+where a size constraint is not in effect. Column widths are recalculated when 
+the parent Control is resized.
+</p>
+</dd>
+</dl>
+<p>
+See <link id="TChildControlResizeStyle"/> for more information about the child 
+sizing layout algorithms.
 </p>
 <p>
-When Align is set to alLeft, the means the control Left and Top are adjusted 
-to fill the available space with the Height at its maximum value. The Width is 
-retained if akRight is not set. If akRight is set in the Anchors property, 
-then the right distance is kept and the control width is resized. If there are 
-several child controls with Align set to alLeft, they will not overlap and be 
-placed side by side. Same for alRight, alTop, alBottom. (Always expand 3 
-sides).
+The styles in EnlargeHorizontal, EnlargeVertical, ShrinkHorizontal, and  
+ShrinkVertical are used when Layout is set to a value other than cclNone. The 
+styles apply to child controls which have their Anchors set to [akLeft, akTop], 
+Align set alNone, and are not anchored to another control using AnchorSide. Any 
+control with other Anchors or Align settings cannot be displayed in the tabular 
+layout.
 </p>
 <p>
-When Align is alClient. The control will fill the available space in the 
-client area on the parent control. Setting Align in two child controls to 
-alClient can be used if there are maximum value (for width and/or height) in 
-the Constraints property.
+The child controls are positioned using the BorderSpacing for the control (and 
+its parent control) and the spacing values in LeftRightSpacing and 
+HorizontalSpacing.
 </p>
 <p>
-Order: First all alTop children are resized, then alBottom, then alLeft,
-then alRight and finally alClient.
+Setting a new value for ShrinkHorizontal causes the Change method to be called. 
+This invalidate the preferred sizes for the child controls, and causes them to 
+be realigned. The OnChange event handler is also signalled (when assigned).
 </p>
 <p>
-Changing the value for the ShrinkHorizontal property causes the Change method 
-to be called. This causes child controls to recalculate their preferred size 
-and to be realigned on the Control. The OnChange event handler is also 
-signalled (when assigned).
+Use EnlargeHorizontal to specify the child sizing style applied when control 
+widths are expanded to fit within the client area for the parent Control.
 </p>
 </descr>
 <seealso>
+<link id="TControlChildSizing.Control"/>
+<link id="TControlChildSizing.Layout"/>
 <link id="TControlChildSizing.Change"/>
-<link id="TWinControl.DoChildSizingChange"/>
-<link id="TWinControl.Realign"/>
-<link id="TControl.Align"/>
-<link id="TControl.Anchors"/>
+<link id="TControlChildSizing.OnChange"/>
+<link id="TControlChildSizing.EnlargeHorizontal"/>
+<link id="TControlChildSizing.LeftRightSpacing"/>
+<link id="TControlChildSizing.HorizontalSpacing"/>
+<link id="TChildControlResizeStyle"/>
+<link id="TControlBorderSpacing"/>
+<link id="TSizeConstraints"/>
 <link id="TControl.BorderSpacing"/>
+<link id="TControl.Constraints"/>
 </seealso>
 </element>
 
 <element name="TControlChildSizing.ShrinkVertical">
 <short>
-Various ways to fit controls into the available Height.
+Indicates how child controls are shrunk and aligned vertically on the parent 
+Control.
 </short>
 <descr>
 <p>
 <var>ShrinkVertical</var> is a <var>TChildControlResizeStyle</var> property 
 which indicates if and how child controls are resized and aligned vertically 
 on the parent control. It can contain one of the values from the 
-TChildControlResizeStyle enumeration.
+TChildControlResizeStyle enumeration. The default value for the property is 
+<var>crsAnchorAligning</var>. 
 </p>
 <p>
-The default value for the property is <var>crsAnchorAligning</var>, and causes 
-the height of child control to be determined using the Anchor and Align 
-properties (like Delphi). For example if Anchors property of the control is 
-[akTop], it means the distance is fixed between top border of the control and 
-the child control. [akBottom] means the distance is fixed between the bottom 
-border for the control and the bottom border for the child control. 
+Child sizing styles include:
+</p>
+<dl>
+<dt>crsAnchorAligning</dt>
+<dd>
+<p>
+Uses a static layout based on the preferred height and size constraints for the 
+child controls. Child controls heights are not changed when the parent Control 
+is resized.
+</p>
+</dd>
+
+<dt>crsScaleChilds</dt>
+<dd>
+<p>
+Scales the width for child controls while keeping the space between them fixed. 
+Children are resized so that the control heights are a ratio of their preferred 
+heights (or size constraints) relative to the client area on the parent 
+Control. Controls are scaled to fill the client height in the parent control. 
+All controls in a given row are given the same derived height.
+</p>
+</dd>
+
+<dt>crsHomogenousChildResize</dt>
+<dd>
+<p>
+Applies a homogenous height to child controls in a given row on the tabular 
+layout. The height of child controls is reduced to fill the client height in 
+the parent Control after spacing and size constraints have been applied.
+</p>
+</dd>
+
+<dt>crsHomogenousSpaceResize</dt>
+<dd>
+<p>
+Applies a uniform number of pixels as vertical spacing between child controls 
+in the same column. The height for controls in a given column are derived using 
+the preferred height for the controls and any height constraints (minimum or 
+maximum) in the child controls. Any unused vertical space on the Control is 
+allocated equally as spacing above, between, and below each row in the tabular 
+layout - including on the top and bottom edges of the Control.
 </p>
 <p>
-When the parent is resized, the child is moved to keep the defined distances. 
-[akLeft,akRight] means fixed distance to left border and fixed distance to 
-right border. When the parent is resized, the controls width is changed 
-(resized) to keep the left and right distance. Same for akTop, akBottom.
+Row heights do not change when the parent Control is resized; only the 
+spacing between edges and rows is affected.
+</p>
+</dd>
+
+<dt>crsSameSize</dt>
+<dd>
+<p>
+Child controls use a uniform height for all controls in the same row for the 
+tabular layout. Size constraints (minimum or maximum) for child controls are 
+enforced if the constraint would be enabled for the row size. The unused 
+space on the parent Control, after spacing, is allocated equally to rows  
+where a size constraint is not in effect. Row heights are recalculated when 
+the parent Control is resized.
+</p>
+</dd>
+</dl>
+<p>
+See <link id="TChildControlResizeStyle"/> for more information about the child 
+sizing layout algorithms.
 </p>
 <p>
-When Align is set to alLeft, the means the control Left and Top are adjusted 
-to fill the available space with the Height at its maximum value. The Width is 
-retained if akRight is not set. If akRight is set in the Anchors property, 
-then the right distance is kept and the control width is resized. If there are 
-several child controls with Align set to alLeft, they will not overlap and be 
-placed side by side. Same for alRight, alTop, alBottom. (Always expand 3 
-sides).
+The styles in EnlargeHorizontal, EnlargeVertical, ShrinkHorizontal, and  
+ShrinkVertical are used when Layout is set to a value other than cclNone. The 
+styles apply to child controls which have their Anchors set to [akLeft, akTop], 
+Align set alNone, and are not anchored to another control using AnchorSide. Any 
+control with other Anchors or Align settings cannot be displayed in the tabular 
+layout.
 </p>
 <p>
-When Align is alClient. The control will fill the available space in the 
-client area on the parent control. Setting Align in two child controls to 
-alClient can be used if there are maximum value (for width and/or height) in 
-the Constraints property.
-</p>
-<p>
-Order: alTop children are resized first, then alBottom, then alLeft,
-then alRight, and finally alClient.
+The child controls are positioned using the BorderSpacing for the control (and 
+its parent control) and the spacing values in TopBottomSpacing and 
+VerticalSpacing.
 </p>
 <p>
 Changing the value for the ShrinkVertical property causes the Change method 
@@ -19937,14 +20390,23 @@ to be called. This causes child controls to recalculate their preferred size
 and to be realigned on the Control. The OnChange event handler is also 
 signalled (when assigned).
 </p>
+<p>
+Use EnlargeVertical to specify the child sizing style applied when control 
+heights are expanded to fit within the client area for the parent Control.
+</p>
 </descr>
 <seealso>
+<link id="TControlChildSizing.Control"/>
+<link id="TControlChildSizing.Layout"/>
 <link id="TControlChildSizing.Change"/>
-<link id="TWinControl.DoChildSizingChange"/>
+<link id="TControlChildSizing.OnChange"/>
+<link id="TControlChildSizing.EnlargeHorizontal"/>
 <link id="TWinControl.Realign"/>
 <link id="TControl.Align"/>
 <link id="TControl.Anchors"/>
 <link id="TControl.BorderSpacing"/>
+<link id="TControl.Constraints"/>
+<link id="TChildControlResizeStyle"/>
 </seealso>
 </element>
 
@@ -19955,10 +20417,10 @@ bottom edge for a child control.
 </short>
 <descr>
 <p>
-<var>TopBottomSpacing</var> is an <var>Integer</var> property with number of 
-pixels reserved as spacing between child controls and the top and bottom edges 
-of the Control. For example: When TopBottomSpacing is set to 5 for a Control, 
-the Top property for a child control starts at 5.
+<var>TopBottomSpacing</var> is an <var>Integer</var> property with the number 
+of pixels reserved as spacing between child controls and the top and bottom 
+edges of the Control. For example: When TopBottomSpacing is set to 5 for a 
+Control, the Top property for a child control starts at 5.
 </p>
 <p>
 The default value for the property is 0 (zero) and indicates that no 
@@ -19968,12 +20430,24 @@ resize/realign child controls. The OnChange event handler is also signalled
 (when assigned).
 </p>
 <p>
+TopBottomSpacing also affects control alignment when using Anchors for 
+positioning child controls on a parent.
+</p>
+<p>
+Use VerticalSpacing to reserve space between vertically adjacent child controls 
+in a column on the tabular Layout.
+</p>
+<p>
 Use LeftRightSpacing to reserved space on the left and right edges of the 
 Control.
 </p>
 </descr>
 <seealso>
 <link id="TControlChildSizing.Change"/>
+<link id="TControlChildSizing.OnChange"/>
+<link id="TControlChildSizing.Layout"/>
+<link id="TControlChildSizing.ControlsPerLine"/>
+<link id="TControlChildSizing.VerticalSpacing"/>
 <link id="TControlChildSizing.LeftRightSpacing"/>
 </seealso>
 </element>
@@ -19992,12 +20466,12 @@ value for the property causes the Change method to be called to resize/realign
 child controls. The OnChange event handler is also signalled (when assigned).
 </p>
 <p>
-Use HorizontalSpacing to set the space reserved between horizontally adjacent 
-child control.
+VerticalSpacing also affects control spacing when using Anchors for positioning 
+child controls on a parent.
 </p>
 <p>
-Use TopBottomSpacing to set the space reserved at the top or bottom edge for 
-the Control.
+Use HorizontalSpacing to set the space reserved between horizontally adjacent 
+child control.
 </p>
 <p>
 Use TopBottomSpacing to set the space reserved at the top or bottom edge for 
@@ -20006,7 +20480,11 @@ the Control.
 </descr>
 <seealso>
 <link id="TControlChildSizing.Change"/>
+<link id="TControlChildSizing.OnChange"/>
+<link id="TControlChildSizing.Layout"/>
+<link id="TControlChildSizing.ControlsPerLine"/>
 <link id="TControlChildSizing.TopBottomSpacing"/>
+<link id="TControlChildSizing.HorizontalSpacing"/>
 </seealso>
 </element>
 
@@ -24146,19 +24624,45 @@ layout.
 <descr>
 <p>
 <var>ChildSizing</var> is a <var>TControlChildSizing</var> property which 
-contains properties and methods used to resize and layout child controls on 
-the control instance. ChildSizing provides an alternative to using Anchors and 
-Align to position and resize child controls. It allows a dynamic tabular (or 
-matrix) layout to be applied to its child Controls.
+contains properties and methods used to resize and layout the child controls on 
+a control instance. ChildSizing provides an alternative to using Anchors and 
+Align properties to position and resize child controls. It allows a dynamic 
+tabular (or matrix) layout to be applied to its child Controls.
+</p>
+<p>
+Use the Layout property to specify both the order and direction child controls 
+are aligned, and which algorithm is used to size and position child controls. 
+Values in ChildSizing are used and applied when its Layout property is set to a 
+value other than cclNone.
 </p>
 <p>
 See <link id="TControlChildSizing">TControlChildSizing</link> for more 
 detailed information about the properties and methods in the class instance.
 </p>
+<p>
+Additional information about child sizing and layout can be found on the 
+Lazarus Wiki at:
+</p>
+<p>
+<url href="https://wiki.lazarus.freepascal.org/Autosize_/_Layout">
+Autosize / Layout
+(https://wiki.lazarus.freepascal.org/Autosize_/_Layout)
+</url>
+</p>
+<p>
+<url href="https://wiki.lazarus.freepascal.org/LCL_AutoSizing">
+LCL AutoSizing
+(https://wiki.lazarus.freepascal.org/LCL_AutoSizing)
+</url>
+</p>
 </descr>
 <version>
 Behavior modified in LCL version 3.4 to use the adjusted client rectangle when 
 controls are aligned.
+</version>
+<version>
+Implementation refactored in LCL version 4.0. This may result in behavior that 
+differs from previous LCL versions.
 </version>
 <seealso>
 <link id="TWinControl.ControlCount"/>
@@ -27623,8 +28127,57 @@ Used in the AnchorDocking package for the Lazarus IDE.
 
 <element name="DefaultSideForAnchorKind">
 <short>
+Provides adjacent edges where controls are aligned for a given anchor kind.
 </short>
 <descr>
+<p>
+<var>DefaultSideForAnchorKind</var> is an array type which contains 
+TAnchorSideReference values, The values are accessed using the enumeration 
+values in TAnchorKind, and indicate the edge on a control where an adjacent 
+control is aligned for the anchor kind. For example:
+</p>
+<table>
+<tr>
+<td>
+<b>Anchor Kind</b>
+</td>
+<td>
+<b>Default Side</b>
+</td>
+</tr>
+<tr>
+<td>
+akTop
+</td>
+<td>
+asrBottom
+</td>
+</tr>
+<tr>
+<td>
+akLeft
+</td>
+<td>
+asrBottom
+</td>
+</tr>
+<tr>
+<td>
+akRight
+</td>
+<td>
+asrTop
+</td>
+</tr>
+<tr>
+<td>
+akBottom
+</td>
+<td>
+asrTop
+</td>
+</tr>
+</table>
 <p>
 Used in the <file>ldocktree</file> unit and in the TControl.AnchorToNeighbour 
 method.
@@ -28192,7 +28745,7 @@ transparent.
 <var>CheckTransparentWindow</var> is procedure used to check whether the 
 handle for a windowed control (or a parent control) is transparent. 
 CheckTransparentWindow uses the current mouse position to locate controls or 
-forms under the mouse rectangle. The LM_NCHITTEST message is performed for 
+forms under the mouse pointer. The LM_NCHITTEST message is performed for 
 AWinControl to determine if the handle is drawn transparently. Additional 
 Forms in the Z-Order are visited until an opaque windowed control is located. 
 Parent controls are searched too (when needed).
@@ -28204,7 +28757,16 @@ located, the value in Handle is set to 0, and AWinControl is set to
 <b>Nil</b>.
 </p>
 </descr>
-<seealso/>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type for the Handle argument.
+</version>
+<seealso>
+<link id="TControl.Parent"/>
+<link id="TMouse.CursorPos"/>
+<link id="#lcl.forms.TScreen.CustomFormZOrderCount">TScreen.CustomFormZOrderCount</link>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 <element name="CheckTransparentWindow.Handle">
 <short>
@@ -28229,8 +28791,8 @@ AWinHandle. The return value contains the Word value used in the Msg member in
 a TLMMouse mouse message.
 </p>
 <p>
-LastMouse contains the most recent mouse event information examined and 
-potentially updated in the method.
+The LastMouse parameter is updated with the most recent mouse event 
+information examined and used in the method.
 </p>
 <p>
 CheckMouseButtonDownUp consolidates mouse down events (single, double, triple, 
@@ -28238,7 +28800,7 @@ and quadruple) into a single value used in a mouse message, and updates
 LastMouse when needed.
 </p>
 <p>
-AWinControl contains the control with the handle where the event mouse events 
+AWinControl contains the control with the handle where the mouse event(s) 
 occurred.
 </p>
 <p>
@@ -28262,6 +28824,10 @@ CheckMouseButtonDownUp is used in the callback routine for a widgetset class
 when a mouse event message is created and passed to the class instance.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the AWinHandle argument.
+</version>
 <seealso/>
 </element>
 <element name="CheckMouseButtonDownUp.Result">
@@ -28639,9 +29205,9 @@ Register can also be used to register the controls required by an application.
 </seealso>
 </element>
 
-<!-- 
+<!--
 
-TODO: For FPC 3.3.0+. Uncomment when FPC 3.3 docs are released.
+TODO: For FPC 3.2.3+. Uncomment when FPC 3.3 docs are released.
 
 <element name="dkDrag" link="#rtl.System.UITypes.dkDrag"/>
 <element name="dkDock" link="#rtl.System.UITypes.dkDock"/>

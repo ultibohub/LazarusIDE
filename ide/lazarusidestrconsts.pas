@@ -3113,10 +3113,10 @@ resourcestring
   srkmecInsertMode            = 'Insert Mode';
   srkmecOverwriteMode         = 'Overwrite Mode';
   srkmecToggleMode            = 'Toggle Mode';
-  srkmecBlockIndent           = 'Indent block';
-  srkmecBlockUnindent         = 'Unindent block';
-  srkmecBlockIndentMove       = 'Indent (move) block';
-  srkmecBlockUnindentMove     = 'Unindent (move) block';
+  srkmecBlockIndent           = 'Indent line/block';
+  srkmecBlockUnindent         = 'Unindent line/block';
+  srkmecBlockIndentMove       = 'Indent line/block (move columns)';
+  srkmecBlockUnindentMove     = 'Unindent line/block (move columns)';
   srkmecPluginMultiCaretSetCaret         = 'Add extra caret';
   srkmecPluginMultiCaretUnsetCaret       = 'Remove extra caret';
   srkmecPluginMultiCaretToggleCaret      = 'Toggle extra caret';
@@ -5375,6 +5375,8 @@ resourcestring
   lisObjectPascalDefault = 'Object Pascal - default';
   lisVerifyMethodCalls = 'Verify method calls';
   lisBuildAllFilesOfProjectPackageIDE = 'Build all files of project/package/IDE.';
+  lisCompilePackageTwiceAndCheckIfAnyUnitWasCompiledAga = 'Compile package twice and check if any '
+    +'unit was compiled again.';
   lisApplyBuildFlagsBToDependenciesToo = 'Apply build flags (-B) to dependencies too.';
   lisDoNotCompileDependencies = 'Do not compile dependencies.';
   lisAddPackageSToListOfInstalledPackagesCombineWithBui = 'Add package(s) to the '
@@ -6319,6 +6321,9 @@ resourcestring
   optDispGutterNoCurrentLineColor = 'No current line color';
   optDispGutterUseCurrentLineColor = 'Use current line color';
   optDispGutterUseCurrentLineNumberColor = 'Use current line number color';
+  dlgMatchWords = 'Match words';
+  dlgKeyWord = 'KeyWord';
+  dlgModifier = 'Modifier';
 
 implementation
 

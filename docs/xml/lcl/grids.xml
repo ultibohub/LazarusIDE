@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -449,6 +449,9 @@ in TCustomGrid and descendent classes.
 Modified in version 3.0 to include goEditorParentColor and goEditorParentFont 
 options.
 </version>
+<version>
+Modified in version 4.0 to include the goCopyWithoutTrailingLinebreak options.
+</version>
 <seealso>
 <link id="TCustomGrid.Options2"/>
 </seealso>
@@ -471,6 +474,11 @@ Sets the color in a cell editor to the color for the parent control.
 <element name="TGridOption2.goEditorParentFont">
 <short>
 Sets the font in a cell editor to the font for the parent control.
+</short>
+</element>
+<element name="TGridOption2.goCopyWithoutTrailingLinebreak">
+<short>
+Copies cell(s) to the clipboard without trailing linebreak sequence.
 </short>
 </element>
 
@@ -5428,7 +5436,7 @@ TGridColumn instance. It is called from the ScaleFontsPPI method in
 TCustomGrid when Columns have been defined for the grid control.
 </p>
 <p>
-ScaleFontsPPI calls the The DoScaleFontPPI method in Grid to adjust the 
+ScaleFontsPPI calls the DoScaleFontPPI method in Grid to adjust the 
 control font using the arguments in AToPPI and AProportion.
 </p>
 <p>
@@ -9235,17 +9243,6 @@ Indicates if the existing cursor shape is stored for later reuse.
 </short>
 </element>
 
-<element name="TCustomGrid.TrySmoothScrollBy">
-<short>
-Scroll the grid origin by the specified relative columns and rows as needed.
-</short>
-<descr/>
-<seealso/>
-</element>
-<element name="TCustomGrid.TrySmoothScrollBy.Result"/>
-<element name="TCustomGrid.TrySmoothScrollBy.aColDelta"/>
-<element name="TCustomGrid.TrySmoothScrollBy.aRowDelta"/>
-
 <element name="TCustomGrid.TryScrollTo">
 <short>
 Attempts to scroll the grid until the specified coordinates are at the origin 
@@ -11446,7 +11443,7 @@ deactivated by setting EditorMode to False.
 <p>
 The ColRowDeleted method is called when the affected data has been removed 
 from the grid control and the cached values in GCache. In a descendent class 
-(TCustomDrawGrid), the the OnColRowDeleted event handler is signalled (when 
+(TCustomDrawGrid), the OnColRowDeleted event handler is signalled (when 
 assigned).
 </p>
 <p>
@@ -12769,7 +12766,7 @@ or the column index is not valid, APriority is set to <b>1</b>.
 </p>
 <p>
 GetAutoFillColumnInfo is called when AutoFillColumns is set to <b>True</b>, 
-and the column sizes are recalculated for the the grid control.
+and the column sizes are recalculated for the grid control.
 </p>
 </descr>
 <seealso>
@@ -15643,17 +15640,29 @@ Scrolls the non-fixed area for the control by the specified delta values.
 </short>
 <descr>
 <p>
-Calls ScrollWindowEx to perform the scrolling operation for the non-fixed 
-client area in the control. No scrolling is performed when both DeltaX and 
-DeltaY contain 0 (zero).
+<var>ScrollBy</var> us an overridden method in <var>TCustomGrid</var>. No 
+actions are performed in the method when both DeltaX and DeltaY contain 0 
+(zero).
 </p>
 <p>
-Updates the visible grid area in the cached information for the control, and 
-recalculates the scroll bar ranges.
+ScrollBy calls ScrollWindowEx to perform the scrolling operation for the 
+non-fixed client area on the control. It updates the visible grid area in the 
+cached information for the control, and recalculates the scroll bar ranges.
+</p>
+<p>
+ScrollBy is called from the TrySmoothScrollBy method, and occurs when scroll 
+bar messages or mouse wheel events are handled for the grid control.
 </p>
 </descr>
 <seealso>
+<link id="TCustomGrid.FixedCols"/>
+<link id="TCustomGrid.FixedRows"/>
+<link id="TCustomGrid.TrySmoothScrollBy"/>
+<link id="TCustomGrid.LeftCol"/>
+<link id="TCustomGrid.TopRow"/>
+<link id="TCustomGrid.GridMouseWheel"/>
 <link id="#lcl.controls.TWinControl.ScrollBy">TWinControl.ScrollBy</link>
+<link id="#lcl.controls.TControl.ClientRect">TControl.ClientRect</link>
 </seealso>
 </element>
 <element name="TCustomGrid.ScrollBy.DeltaX">
@@ -15849,7 +15858,7 @@ SetCursor calls the inherited method to perform the
 <short>Sets the value used in the cell Editor to the specified text.</short>
 <descr>
 <p>
-Sets the the text displayed in the <var>Editor</var> for the cell at the 
+Sets the text displayed in the <var>Editor</var> for the cell at the 
 position specified in <var>ACol</var> and <var>ARow</var> to the given value.
 </p>
 <p>
@@ -16174,6 +16183,85 @@ Row offset or number for the selection.
 </short>
 </element>
 
+<element name="TCustomGrid.TrySmoothScrollBy">
+<short>
+Scrolls the grid origin by the specified relative amounts.
+</short>
+<descr>
+<p>
+<var>TrySmoothScrollBy</var> is an <var>Integer</var> function used to scroll 
+the grid control by the specified horizontal and vertical amounts (Deltas). 
+TrySmoothScrollBy ensures that the internal cache for the control is updated to 
+reflect the visible area for the control after the scroll operation.
+</p>
+<p>
+TrySmoothScrollBy is called from methods that handle scroll bar or the event 
+handler for mouse wheel messages, and occurs when the user interacts with the 
+the grid control. For example: WMHScroll, WMVScroll, and GridMouseWheel. In is 
+not intended for use in end-user code - but it's not expressly forbidden either.
+</p>
+<p>
+<var>AColDelta</var> and <var>ARowDelta</var> contain the number of pixels that 
+the control content should be scrolled in the horizontal and vertical 
+directions. Positive values indicate that the content should scroll towards the 
+right or bottom of the control. Negative values indicate that the content 
+should scroll towards the left or top of the control.
+</p>
+<p>
+No actions are performed in the method when both AColDelta and ARowDelta are 
+set to 0 (zero).
+</p>
+<p>
+TrySmoothScrollBy uses the coordinates for the visible cell at the top and left 
+coordinates on the control for the scroll operation. It also uses values in 
+ColWidths and RowHeights to determine when a cells become visible (or hidden) 
+on the control canvas and in its cache. When goScrollKeepVisible has been 
+included in Options, the selection on the control is extended to include the 
+scrolled area. The ScrollBy method is called using the calculated X and Y 
+offsets for the new top and left coordinates on the control.
+</p>
+<p>
+The return value is <b>True</b> if the scroll operation was successfully 
+completed in the method. The return value is <b>False</b> if the operation 
+failed due to cell that is too tall or too wide for the requested scroll 
+value(s). This can occur when goSmoothScroll is <b>not</b> included in the grid 
+Options.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to have protected visibility.
+</version>
+<seealso>
+<link id="TCustomGrid.ColWidths"/>
+<link id="TCustomGrid.GCache"/>
+<link id="TCustomGrid.GetPxTopLeft"/>
+<link id="TCustomGrid.GetSmoothScroll"/>
+<link id="TCustomGrid.GridMouseWheel"/>
+<link id="TCustomGrid.MoveNextSelectable"/>
+<link id="TCustomGrid.Options"/>
+<link id="TCustomGrid.RowHeights"/>
+<link id="TCustomGrid.ScrollBy"/>
+<link id="TCustomGrid.TopLeftChanged"/>
+<link id="TCustomDrawGrid.GridMouseWheel"/>
+<link id="TGridOption"/>
+</seealso>
+</element>
+<element name="TCustomGrid.TrySmoothScrollBy.Result">
+<short>
+<b>True</b> on successful completion of the scroll operation.
+</short>
+</element>
+<element name="TCustomGrid.TrySmoothScrollBy.aColDelta">
+<short>
+Indicates the direction and number of pixels for a horizontal scroll request.
+</short>
+</element>
+<element name="TCustomGrid.TrySmoothScrollBy.aRowDelta">
+<short>
+Indicates the direction and number of pixels for a vertical scroll request.
+</short>
+</element>
+
 <element name="TCustomGrid.UnLockEditor">
 <short>
 Decrements the lock count for the cell Editor following a call to LockEditor.
@@ -16212,19 +16300,27 @@ position.
 </short>
 <descr>
 <p>
-<var>UpdateHorzScrollBar</var> calls <var>ScrollBarShow</var> to updated the 
+<var>UpdateHorzScrollBar</var> calls <var>ScrollBarShow</var> to update the 
 scroll bar visibility when it differs from the value in <var>aVisible</var>. 
-The <var>ScrollBarRange</var> method is called to apply the values in ARange, 
-APage, and APos to the horizontal scroll bar for the control. No actions are 
-performed if the visibility has not been changed and the scroll bar is not 
-visible.
+The <var>ScrollBarRange</var> method is called to apply the values in the 
+ARange, APage, and APos arguments to the horizontal scroll bar for the control. 
+</p>
+<p>
+The scroll bar range is not updated if the scroll bar visibility has not been 
+changed or if the scroll bar is not visible. For the Darwin platform, 
+ScrollBarRange is always called - regardless of visibility; overlay-style 
+scroll bars on macOS require the latest range, page, and position values.
 </p>
 <p>
 UpdateHorzScrollBar is called from the CalcScrollbarsRange method when the 
 visible area in the grid is scrolled.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TCustomGrid.ScrollBarShow"/>
+<link id="TCustomGrid.ScrollBarRange"/>
+<link id="TCustomGrid.ScrollBarIsVisible"/>
+</seealso>
 </element>
 <element name="TCustomGrid.UpdateHorzScrollBar.AVisible">
 <short><b>True</b> if the scroll bar is visible.</short>
@@ -16280,19 +16376,27 @@ page values.
 </short>
 <descr>
 <p>
-<var>UpdateVertScrollbar</var> calls <var>ScrollBarShow</var> to updated the 
+<var>UpdateVertScrollbar</var> calls <var>ScrollBarShow</var> to update the 
 scroll bar visibility when it differs from the value in <var>aVisible</var>. 
 The <var>ScrollBarRange</var> method is called to apply the values in ARange, 
-APage, and APos to the vertical scroll bar for the control. No actions are 
-performed if the visibility has not been changed and the scroll bar is not 
-visible.
+APage, and APos to the vertical scroll bar for the control. 
+</p>
+<p>
+The scroll bar range is not updated if the scroll bar visibility has not been 
+changed or if the scroll bar is not visible. For the Darwin platform, 
+ScrollBarRange is always called - regardless of visibility; overlay-style 
+scroll bars on macOS require the latest range, page, and position values.
 </p>
 <p>
 UpdateVertScrollbar is called from the CalcScrollbarsRange method when the 
 visible area in the grid is scrolled.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TCustomGrid.ScrollBarShow"/>
+<link id="TCustomGrid.ScrollBarRange"/>
+<link id="TCustomGrid.ScrollBarIsVisible"/>
+</seealso>
 </element>
 <element name="TCustomGrid.UpdateVertScrollbar.AVisible">
 <short><b>True</b> if the scroll bar should be visible.</short>
@@ -17684,7 +17788,7 @@ The color used to draw the focus rectangle when a cell has focus.
 <var>FocusColor</var> is a <var>TColor</var> property with the color used to 
 draw the focus rectangle (or rubber band) for the focused cell in the grid 
 control. The default value for the property is clRed. Changing the value for 
-the property causes the current in Col and Row to be redrawn.
+the property causes the current cell at Col and Row to be redrawn.
 </p>
 <p>
 FocusColor is used in the DrawFocusRect method when DefaultDrawing is enabled 
@@ -17692,7 +17796,10 @@ for the grid control. But it is not used when UseXORFeatures is enabled;
 clWhite is used as the pixel color instead.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TCustomGrid.DrawFocusRect"/>
+<link id="TCustomGrid.UseXORFeatures"/>
+</seealso>
 </element>
 
 <element name="TCustomGrid.FocusRectVisible">
@@ -17702,8 +17809,7 @@ clWhite is used as the pixel color instead.
 <var>FocusRectVisible</var> is a <var>Boolean</var> property which indicates 
 if the focus rectangle (or rubber band) is drawn for the focused cell, extent, 
 or row in the grid control. Changing the value for the property causes the 
-grid control to be redrawn. The default value for the property is <b>True</b> 
-as assigned in the Create constructor.
+grid control to be redrawn. The default value for the property is <b>True</b>.
 </p>
 <p>
 FocusRectVisible is used in the DrawRow method when the current cell or 
@@ -17714,7 +17820,9 @@ for the grid, the focus rectangle is drawn for the entire row.
 Set FocusRectVisible to <b>False</b> to disable the feature in the control.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TCustomGrid.DrawRow"/>
+</seealso>
 </element>
 
 <element name="TCustomGrid.GCache">
@@ -18728,7 +18836,7 @@ rectangle using the <var>FocusColor</var> property.
 </p>
 <p>
 It also controls the look of column/row resizing operations. When 
-<b>True</b>, a line shows visually the size that the the column or row will 
+<b>True</b>, a line shows visually the size that the column or row will 
 have if the user ends the operation. When <b>False</b>, the column or row 
 resizing takes effect as the user drags the mouse.
 </p>
@@ -20669,7 +20777,7 @@ not already in the array).
 </p>
 <p>
 Use SelectedRange to access the selection rectangles by the ordinal position 
-in the the internal TGridRectArray instance.
+in the internal TGridRectArray instance.
 </p>
 <p>
 Use AddSelectedRange to add a selection rectangle when RangeSelectMode is set 
@@ -21298,7 +21406,7 @@ TVirtualGrid instance created for the control.
 
 <element name="TCustomDrawGrid.DrawCell">
 <short>
-Draws the the content for the cell specified in the ACol and ARow arguments.
+Draws the content for the cell specified in the ACol and ARow arguments.
 </short>
 <descr>
 <p>
@@ -21904,7 +22012,7 @@ the new state value for the CheckBox.
 <short>Sets the value used in the cell Editor to the specified text.</short>
 <descr>
 <p>
-<var>SetEditText</var> is an overridden method used to set the the text 
+<var>SetEditText</var> is an overridden method used to set the text 
 displayed in the <var>Editor</var> for the cell specified in <var>ACol</var> 
 and <var>ARow</var>.
 </p>
@@ -22780,6 +22888,8 @@ TStringGrid
 <element name="TDrawGrid.FixedCols" link="#lcl.grids.TCustomGrid.FixedCols"/>
 <element name="TDrawGrid.FixedRows" link="#lcl.grids.TCustomGrid.FixedRows"/>
 <element name="TDrawGrid.Flat" link="#lcl.grids.TCustomGrid.Flat"/>
+<element name="TDrawGrid.FocusColor" link="#lcl.grids.TCustomDrawGrid.FocusColor"/>
+<element name="TDrawGrid.FocusRectVisible" link="#lcl.grids.TCustomDrawGrid.FocusRectVisible"/>
 <element name="TDrawGrid.Font" link="#lcl.controls.TControl.Font"/>
 <element name="TDrawGrid.GridLineColor" link="#lcl.grids.TCustomGrid.GridLineColor"/>
 <element name="TDrawGrid.GridLineStyle" link="#lcl.grids.TCustomGrid.GridLineStyle"/>
@@ -22843,8 +22953,6 @@ GetRGBColorResolvingParent method.
 <element name="TDrawGrid.TitleStyle" link="#lcl.grids.TCustomGrid.TitleStyle"/>
 <element name="TDrawGrid.UseXORFeatures" link="#lcl.grids.TCustomGrid.UseXORFeatures"/>
 <element name="TDrawGrid.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TDrawGrid.VisibleColCount" link="#lcl.grids.TCustomGrid.VisibleColCount"/>
-<element name="TDrawGrid.VisibleRowCount" link="#lcl.grids.TCustomGrid.VisibleRowCount"/>
 <element name="TDrawGrid.OnAfterSelection" link="#lcl.grids.TCustomGrid.OnAfterSelection"/>
 <element name="TDrawGrid.OnBeforeSelection" link="#lcl.grids.TCustomGrid.OnBeforeSelection"/>
 <element name="TDrawGrid.OnCheckboxToggled" link="#lcl.grids.TCustomGrid.OnCheckboxToggled"/>
@@ -23438,7 +23546,15 @@ values. Others are quietly discarded. HTML TABLE syntax is used to store the
 cell values copied in the method. LineEnd and HTML reserved characters are 
 translated into HTML-safe tags or HTML character entities.
 </remark>
+<p>
+Include goCopyWithoutTrailingLinebreak in the Options2 property to discard 
+a trailing end-of-line sequence at the end of rows in the copied cell 
+rectangle.
+</p>
 </descr>
+<version>
+Modified in LCL version 4.0 to trim trailing line breaks when enabled.
+</version>
 <seealso/>
 </element>
 <element name="TCustomStringGrid.CopyCellRectToClipboard.R">
@@ -24941,6 +25057,8 @@ TStringGrid
 <element name="TStringGrid.FixedCols" link="#lcl.grids.TCustomGrid.FixedCols"/>
 <element name="TStringGrid.FixedRows" link="#lcl.grids.TCustomGrid.FixedRows"/>
 <element name="TStringGrid.Flat" link="#lcl.grids.TCustomGrid.Flat"/>
+<element name="TStringGrid.FocusColor" link="#lcl.grids.TCustomDrawGrid.FocusColor"/>
+<element name="TStringGrid.FocusRectVisible" link="#lcl.grids.TCustomDrawGrid.FocusRectVisible"/>
 <element name="TStringGrid.Font" link="#lcl.controls.TControl.Font"/>
 <element name="TStringGrid.GridLineColor" link="#lcl.grids.TCustomGrid.GridLineColor"/>
 <element name="TStringGrid.GridLineStyle" link="#lcl.grids.TCustomGrid.GridLineStyle"/>
@@ -25004,8 +25122,6 @@ GetRGBColorResolvingParent method.
 <element name="TStringGrid.TitleStyle" link="#lcl.grids.TCustomGrid.TitleStyle"/>
 <element name="TStringGrid.UseXORFeatures" link="#lcl.grids.TCustomGrid.UseXORFeatures"/>
 <element name="TStringGrid.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TStringGrid.VisibleColCount" link="#lcl.grids.TCustomGrid.VisibleColCount"/>
-<element name="TStringGrid.VisibleRowCount" link="#lcl.grids.TCustomGrid.VisibleRowCount"/>
 <element name="TStringGrid.OnAfterSelection" link="#lcl.grids.TCustomGrid.OnAfterSelection"/>
 <element name="TStringGrid.OnBeforeSelection" link="#lcl.grids.TCustomGrid.OnBeforeSelection"/>
 <element name="TStringGrid.OnCellProcess" link="#lcl.grids.TCustomStringGrid.OnCellProcess"/>

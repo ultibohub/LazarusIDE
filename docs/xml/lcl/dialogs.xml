@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -19,7 +19,9 @@ Dialogs
 ====================================================================
 -->
 <module name="Dialogs">
-<short>Contains common dialogs used in Lazarus LCL applications.</short>
+<short>
+Contains common dialogs used in Lazarus LCL applications.
+</short>
 <descr>
 <p>
 <file>dialogs.pp</file> contains classes, types, and routines used to 
@@ -54,6 +56,7 @@ The following components are added to the Lazarus IDE component palette:
 <element name="TypInfo"/>
 <element name="Classes"/>
 <element name="SysUtils"/>
+<element name="System.UITypes"/>
 <element name="LMessages"/>
 <element name="LResources"/>
 <element name="LCLIntf"/>
@@ -71,144 +74,232 @@ The following components are added to the Lazarus IDE component palette:
 <element name="LCLClasses"/>
 <element name="ClipBrd"/>
 <element name="Menus"/>
-<element name="LCLTaskDialog"/>
+<element name="DialogRes"/>
+<element name="ComCtrls"/>
 <element name="GraphType"/>
-<element name="UITypes"/>
 <element name="FileUtil"/>
 <element name="LazFileUtils"/>
 <element name="LazStringUtils"/>
 <element name="LazLoggerBase"/>
 
+<!-- 
+Link to the topic content in system.uitypes when it exists in RTL.CHM. 
+-->
 <element name="TMsgDlgType">
-<short>Identifies a dialog type or style.</short>
+<short>
+Identifies the type or style for a message dialog.
+</short>
 <descr>
 <p>
-<var>TMsgDlgType</var> is an alias to the <var>TMsgDlgType</var> type in 
-<file>uitypes.pas</file>.
+<var>TMsgDlgType</var> is an alias to the <var>TMsgDlgType</var> enumerated 
+type in the RTL <file>system.uitypes.pp</file> unit. TMsgDlgType defines a 
+type of dialog implemented in a message box. Values in the enumeration 
+determine the caption, icon, string literals, and buttons displayed in various 
+dialog types.
+</p>
+<p>
+Values from the enumeration can be represented using the descriptive modal 
+dialog type constants, such as: mtWarning, mtError, mtInformation, 
+mtConfirmation, and mtCustom.
+</p>
+<p>
+Values from TMsgDlgType are used in several routines, such as: 
+<var>MessageDlg</var>, <var>MessageDlgPos</var>,<var> MessageDlgPosHelp</var>, 
+<var>CreateMessageDialog</var>, <var>QuestionDlg</var>, and 
+<var>LazMessageDlg</var>.
 </p>
 </descr>
 <seealso>
-<link id="#lazutils.uitypes.TMsgDlgType">UITypes.TMsgDlgType</link>
+<!--
+TODO: Uncomment when system.uitypes exists in RTL.CHM.
+<link id="#rtl.system.uitypes.TMsgDlgType">System.UITypes.TMsgDlgType</link> 
+-->
+<link id="mtWarning"/>
+<link id="mtError"/>
+<link id="mtInformation"/>
+<link id="mtConfirmation"/>
+<link id="mtCustom"/>
+<link id="MessageDlg"/>
+<link id="MessageDlgPos"/>
+<link id="MessageDlgPosHelp"/>
+<link id="CreateMessageDialog"/>
+<link id="QuestionDlg"/>
+<link id="#lcl.lazdialogs.LazMessageDlg">LazMessageDlg</link>
 </seealso>
 </element>
 
+<!-- 
+Link to the topic content in system.uitypes when it exists in RTL.CHM. 
+-->
 <element name="TMsgDlgBtn">
 <short>Identifies dialog button types.</short>
 <descr>
 <p>
 <var>TMsgDlgBtn</var> is an alias to the <var>TMsgDlgBtn</var> type in 
-<file>uitypes.pas</file>.
+<file>system.uitypes.pp</file>. TMsgDlgBtn is an enumeration type with values 
+that define the buttons that can be displayed in a message dialog. TMsgDlgBtn 
+values also determine the modal result returned from the dialog when the 
+corresponding button is clicked.
+</p>
+<p>
+Values from the enumeration can be represented using the descriptive message 
+button constants, such as: mbYes, mbNo, mbOK, mbCancel, mbAbort, mbRetry, 
+mbIgnore, mbAll, mbNoToAll, mbYesToAll, mbHelp, and mbClose.
+</p>
+<p>
+Values in the enumeration are used in various routines, such as: <var>
+MessageDlg</var>, <var>MessageDlgPos</var>, <var>MessageDlgPosHelp</var>, 
+<var>CreateMessageDialog</var>, <var>QuestionDlg</var>, and 
+<var>LazMessageDlg</var>.
 </p>
 </descr>
 <seealso>
-<link id="#lazutils.uitypes.TMsgDlgBtn">UITypes.TMsgDlgBtn</link>
+<!--
+TODO: Uncomment when system.uitypes exists in RTL.CHM.
+<link id="#rtl.system.uitypes.TMsgDlgBtn">System.UITypes.TMsgDlgBtn</link> 
+-->
+<link id="mbYes"/>
+<link id="mbNo"/>
+<link id="mbOK"/>
+<link id="mbCancel"/>
+<link id="mbAbort"/>
+<link id="mbRetry"/>
+<link id="mbIgnore"/>
+<link id="mbAll"/>
+<link id="mbNoToAll"/>
+<link id="mbYesToAll"/>
+<link id="mbHelp"/>
+<link id="mbClose"/>
+<link id="MessageDlg"/>
+<link id="MessageDlgPos"/>
+<link id="MessageDlgPosHelp"/>
+<link id="CreateMessageDialog"/>
+<link id="QuestionDlg"/>
+<link id="#lcl.lazdialogs.LazMessageDlg">LazMessageDlg</link>
 </seealso>
 </element>
 
+<!-- 
+Link to the topic content in system.uitypes when it exists in RTL.CHM. 
+-->
 <element name="TMsgDlgButtons">
-<short>Set with button messages for dialogs.</short>
+<short>
+Set type used to store the buttons on a message dialog.
+</short>
 <descr>
 <p>
-<var>TMsgDlgButtons</var> is an alias to the <var>TMsgDlgButtons</var> type 
-in <file>uitypes.pas</file>.
+<var>TMsgDlgButtons</var> is an alias to the <var>TMsgDlgButtons</var> type in 
+<file>system.uitypes.pp</file>. TMsgDlgButtons is a set type used to store 
+zero or more values from the TMsgDlgBtn enumeration. TMsgDlgButtons is passed 
+as an argument to routines like: <var>MessageDlg</var>, 
+<var>MessageDlgPos</var>, <var>MessageDlgPosHelp</var>, 
+<var>CreateMessageDialog</var>, <var>QuestionDlg</var>, and 
+<var>LazMessageDlg</var>.
 </p>
 </descr>
 <seealso>
-<link id="#lazutils.uitypes.TMsgDlgButtons">UITypes.TMsgDlgButtons</link>
+<!--
+TODO: Uncomment when system.uitypes exists in RTL.CHM.
+<link id="#rtl.system.uitypes.TMsgDlgButtons">System.UITypes.TMsgDlgButtons</link>
+<link id="#rtl.system.uitypes.TMsgDlgBtn">System.UITypes.TMsgDlgBtn</link>
+-->
+<link id="TMsgDlgBtn"/>
 </seealso>
 </element>
 
 <element name="mtWarning">
 <short>
-Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgType enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mtError">
 <short>
-Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgType enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mtInformation">
 <short>
-Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgType enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mtConfirmation">
 <short>
-Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgType enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mtCustom">
 <short>
-Alias to the TMsgDlgType enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgType enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 
 <element name="mbYes">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbNo">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbOK">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbCancel">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbAbort">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbRetry">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbIgnore">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbAll">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbNoToAll">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbYesToAll">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbHelp">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 <element name="mbClose">
 <short>
-Alias to the TMsgDlgBtn enumeration value in <file>uitypes</file>.
+Alias to the TMsgDlgBtn enumeration value in <file>system.uitypes.pp</file>.
 </short>
 </element>
 
 <element name="mbYesNoCancel">
 <short>A set constant with Yes, No, Cancel buttons.</short>
 <descr>
+<p>
 A set constant used to show Yes, No, and Cancel buttons on a message dialog.
+</p>
 </descr>
 <seealso/>
 </element>
@@ -216,7 +307,9 @@ A set constant used to show Yes, No, and Cancel buttons on a message dialog.
 <element name="mbYesNo">
 <short>A set constant with Yes, No buttons.</short>
 <descr>
+<p>
 A set constant used to show Yes and No buttons on a message dialog.
+</p>
 </descr>
 <seealso/>
 </element>
@@ -225,8 +318,11 @@ A set constant used to show Yes and No buttons on a message dialog.
 <short>
 A set constant to show an OK and a Cancel button on a message dialog.
 </short>
-<descr>A set constant to show an OK and a Cancel button on a message 
-dialog.</descr>
+<descr>
+<p>
+A set constant to show an OK and a Cancel button on a message dialog.
+</p>
+</descr>
 <seealso/>
 </element>
 
@@ -235,7 +331,9 @@ dialog.</descr>
 A set constant to show an Abort, Retry , Ignore buttons on a message dialog.
 </short>
 <descr>
+<p>
 A set constant to show an Abort, Retry and Ignore buttons on a message dialog.
+</p>
 </descr>
 <seealso/>
 </element>
@@ -383,7 +481,7 @@ resources.
 </element>
 
 <element name="TCommonDialog.IsTitleStored">
-<short>Implements the storage specifier for the the Title property.</short>
+<short>Implements the storage specifier for the Title property.</short>
 <descr>
 <p>
 Returns <b>True</b> when <var>Title</var> contains a value other than 
@@ -477,12 +575,13 @@ String used as the default title or caption for the dialog form.
 <short>Resets the values in internal state flags for the dialog.</short>
 <descr>
 <p>
-Called from the <var>Execute</var> method before the widgetset handle is 
+Called from the <var>Execute</var> method before the widgetset Handle is 
 allocated and the dialog is displayed.
 </p>
 </descr>
 <seealso>
 <link id="TCommonDialog.Execute"/>
+<link id="TCommonDialog.Handle"/>
 <link id="TCommonDialog.DoExecute"/>
 </seealso>
 </element>
@@ -571,26 +670,52 @@ exit the dialog.
 </element>
 
 <element name="TCommonDialog.Handle">
-<short>Operating system <var>Handle</var> for the dialog.</short>
-<descr/>
-<seealso/>
+<short>
+Contains the handle for the dialog form.
+</short>
+<descr>
+<p>
+<var>Handle</var> is a <var>TLCLHandle</var> property with the handle for the 
+dialog form. Its value is assigned in the Execute method and contains the 
+handle from the widgetset class instance. Handle is checked during execution 
+of the dialog to ensure that it does not contain an unassigned value. The 
+unassigned value for Handle is 0 (zero). Handle is destroyed when the Close 
+method is executed.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the property.
+</version>
+<seealso>
+<link id="TCommonDialog.Execute"/>
+<link id="TCommonDialog.Close"/>
+<link id="TCommonDialog.HandleAllocated"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 
 <element name="TCommonDialog.UserChoice">
-<short><var>UserChoice</var> - the value selected by the user.</short>
+<short>
+Contains the modal result value selected by the user.
+</short>
 <descr>
 <p>
-<var>UserChoice</var> is an <var>name</var> property which contains the modal 
-result value returned for the dialog. It uses modal result constants like 
-mrOk, mrCancel, et. al. as defined in the <file>UITypes</file> unit. Its 
-value is updated by methods in the widgetset class when they display and 
-process the dialog for the platform.
+<var>UserChoice</var> is an <var>Integer</var> property which contains the 
+modal result value returned for the dialog. It uses values from the modal 
+result constants like mrOk, mrCancel, et. al. as defined in this unit and in 
+the <file>system.uitypes.pp</file> unit. Its value is updated by methods in 
+the widgetset class when they display and process the dialog for the platform.
 </p>
 </descr>
 <seealso>
 <link id="TCommonDialog.Execute"/>
 <link id="TCommonDialog.DoExecute"/>
-<link id="#lazutils.uitypes.TModalResult">TModalResult</link>
+<link id="TModalResult"/>
+<!-- 
+TODO: Uncomment when system.uitypes exists in RTL.CHM. 
+<link id="#rtl.system.uitypes.TModalResult">System.UITypes.TModalResult</link>
+-->
 </seealso>
 </element>
 
@@ -703,7 +828,7 @@ widgetset <var>Handle</var> for the dialog is freed.
 
 <element name="TCommonDialog.HandleAllocated">
 <short>
-Returns <b>True</b> if a widgetset handle has been allocated for the dialog.
+Returns <b>True</b> if a widgetset Handle has been allocated for the dialog.
 </short>
 <descr/>
 <seealso>
@@ -712,7 +837,7 @@ Returns <b>True</b> if a widgetset handle has been allocated for the dialog.
 </element>
 <element name="TCommonDialog.HandleAllocated.Result">
 <short>
-<b>True</b> if a widgetset handle has been allocated for the dialog.
+<b>True</b> if a widgetset Handle has been allocated for the dialog.
 </short>
 </element>
 
@@ -972,7 +1097,7 @@ Stores the names of files (or directories) selected using the dialog.
 </short>
 <descr>
 <p>
-<var>Files</var> is a <var>TStrings</var> property used to store values  
+<var>Files</var> is a <var>TStrings</var> property used to store values 
 selected using the file dialog. A TStringList instance is created and 
 assigned to the property in the Create constructor.
 </p>
@@ -1111,19 +1236,22 @@ classes. For example, it represents a directory name in the
 
 <element name="TFileDialog.Filter">
 <short>
-A string which contains possible filename filters (e.g. .doc, .xmp, .pas etc).
+A string which contains available filename filters used to select files by 
+their file extensions.
 </short>
 <descr>
 <p>
-This is a string which contains the filters a user can choose from. The 
-available filters and their description are separated by pipe symbols.
+This is a string which contains the filters a user can choose from. The filters 
+contain descriptive text for the filters and their file masks. The component 
+values in the filter are separated by the Pipe (|) symbol.
 </p>
 <p>
-To set this property at run-time assign a value like:
+A value can be assigned to the property using notation like:
 </p>
 <code>'All files|*.*|Lazarus Project files|*.lpr'</code>
 <p>
-An entry can contain multiple masks separated by semicolon, like:
+A filter can contain multiple file masks separated by the Semicolon (;) 
+character, like:
 </p>
 <code>'Pascal units|*.pas;*.pp;*.p|All files|*.*'</code>
 </descr>
@@ -1263,15 +1391,17 @@ Allows file names with invalid characters.
 </element>
 <element name="TOpenOption.ofExtensionDifferent">
 <short>
-Allows a file name with an extension which does not match the filters or 
-default extension in a file dialog.
+Indicates that a non-blank extension which differs from the default extension 
+was entered using a file open dialog. Included in the option values if the 
+condition occurs during execution of a dialog. Specifically excluded from the 
+options prior to executing a dialog.
 </short>
 </element>
 <element name="TOpenOption.ofPathMustExist">
-<short>Shows an error message if selected path does not exist.</short>
+<short>Shows an error message if an entered file path does not exist.</short>
 </element>
 <element name="TOpenOption.ofFileMustExist">
-<short>Shows an error message if selected file does not exist.</short>
+<short>Shows an error message if an entered file does not exist.</short>
 </element>
 <element name="TOpenOption.ofCreatePrompt">
 <short>
@@ -1357,6 +1487,114 @@ set, it is enabled during execution of the dialog.
 <link id="TOpenOption"/>
 <link id="DefaultOpenDialogOptions"/>
 </seealso>
+</element>
+
+<element name="TOpenOptionEx">
+<short>
+Widgetset-specific open options which cannot be mapped to the standard values 
+in TOpenOptions.
+</short>
+<descr>
+<p>
+Values from <var>TOpenOptionEx</var> are stored in the TOpenOptionsEx set type 
+used to implement the OptionsEx property in TOpenDialog.
+</p>
+<p>
+The current implementation contains values that are specific to the IFileDialog 
+interface (ShlObj) and represent dialog options available in Windows Vista or 
+later versions.
+</p>
+<p>
+Values which are intentionally not supported include: ofDefaultNoMiniMode and 
+ofHideMruPlaces. These values are not supported as of Windows 7.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TOpenOptionsEx"/>
+<link id="TOpenDialog.OptionsEx"/>
+</seealso>
+</element>
+<element name="TOpenOptionEx.ofHidePinnedPlaces">
+<short>
+Hides items shown by default in the view's navigation pane. (Windows Vista+)
+</short>
+</element>
+<element name="TOpenOptionEx.ofForcePreviewPaneOn">
+<short>
+Indicates an Open dialog should always display the preview pane. (Windows 
+Vista+)
+</short>
+</element>
+<element name="TOpenOptionEx.ofStrictFileTypes">
+<short>
+In a Save dialog, restrict the file extension to a file type available in the 
+Filter property for the dialog. (Windows Vista+)
+</short>
+</element>
+<element name="TOpenOptionEx.ofPickFolders">
+<short>
+Turns the dialog into a TSelectDirectoryDialog. (Windows Vista+)
+</short>
+</element>
+<element name="TOpenOptionEx.ofOkButtonNeedsInteraction">
+<short>
+The OK button will be disabled until the user navigates the view or edits the 
+filename (if applicable). (Windows Vista+)
+</short>
+</element>
+<element name="TOpenOptionEx.ofForceFileSystem">
+<short>
+Ensures that returned items are file system items. (Windows Vista+)
+</short>
+</element>
+<element name="TOpenOptionEx.ofAllNonStorageItems">
+<short>
+Allows the user to choose any item in the Shell namespace, not just those with 
+SFGAO_STREAM or SFGAO_FILESYSTEM attributes. This flag cannot be combined with 
+FOS_FORCEFILESYSTEM. (Windows Vista+)
+</short>
+</element>
+
+<element name="TOpenOptionsEx">
+<short>
+Set type used to store values from the TOpenOptionEx enumeration.
+</short>
+<descr>
+<p>
+<var>TOpenOptionsEx</var> is a set type used to store zero (0) or more values 
+from the <var>TOpenOptionEx</var> enumeration. It is the type used to implement 
+the OptionsEx property in TOpenDialog, and contains the widgetset-specific 
+options enabled for a dialog.
+</p>
+<p>
+In the current implementation, TOpenOptionsEx contains values specific to 
+Windows Vista or later versions. It contains values which cannot be mapped 
+directly to values in the TOpenOption enumeration.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TOpenOptionEx"/>
+<link id="TOpenOption"/>
+<link id="TOpenOptions"/>
+<link id="TOpenDialog.OptionsEx"/>
+<link id="TOpenDialog.Options"/>
+</seealso>
+</element>
+
+<element name="ofExNoPlacesBar">
+<short>
+Mapped to the ofHidePinnedPlaces option in TOpenOptionEx. Maintains code 
+compatibility with older Delphi versions.
+</short>
+<version>
+Added in LCL version 4.0.
+</version>
 </element>
 
 <element name="DefaultOpenDialogOptions">
@@ -1620,9 +1858,14 @@ Performs actions needed to display the dialog and capture its result.
 <descr>
 <p>
 <var>DoExecute</var> is an overridden <var>Boolean</var> function in 
-<var>TOpenDialog</var>, and calls the inherited method on entry. It extends 
-the execution loop for the dialog to use the Options enabled for the dialog, 
-including:
+<var>TOpenDialog</var>. It ensures that the value ofExtensionDifferent is 
+excluded from the Options property prior to executing the dialog. It calls the 
+inherited method (in TCommonDialog) to display the dialog form and to get the 
+UserChoice used to complete execution of the dialog.
+</p>
+<p>
+DoExecute extends the execution loop for the dialog to use the Options enabled 
+for the dialog, including:
 </p>
 <dl>
 <dt>ofNoResolveLinks</dt>
@@ -1632,28 +1875,48 @@ Calls ResolveLinks to follow symbolic links when ofNoResolveLinks has been
 </dd>
 <dt>ofNoChangeDir</dt>
 <dd>
-Updates the InitialDir property when a path in FileName or Files is changed 
-and ofNoChangeDir has been <b>omitted</b>.
+Updates the InitialDir property when a path in FileName or Files has been 
+changed and ofNoChangeDir has been <b>omitted</b>.
 </dd>
 </dl>
+<p>
+The return value is <b>True</b> when all of the steps are successfully 
+completed. The return value is <b>False</b> if any mechanism other than the OK
+button was used to close the dialog.
+</p>
 <p>
 If execution of the inherited method was successfully completed, the 
 CheckAllFiles method is called to validate the values in the FileName and 
 Files properties.
 </p>
 <p>
-The return value is <b>True</b> when all of these steps are successfully 
-completed.
+The return value is set to <b>True</b> if the selected FileName or Files is/are 
+valid for the dialog. Options is updated to exclude the value 
+ofExtensionDifferent when Files contains more than 1 (one) file entry. This  
+avoids the erratic behavior displayed when multiple file selections are enabled 
+and used on the dialog, and mimics the behavior used in Delphi 7.
+</p>
+<p>
+If a single file is selected on the dialog, and has an extension which does not 
+match the assigned value in DefaultExt, the value ofExtensionDifferent is 
+included in Options to indicate the condition.
+</p>
+<p>
+DoExecute is called from the Execute method in the TCommonDialog ancestor, and 
+occurs immediately before the Close method is called.
 </p>
 </descr>
 <seealso>
 <link id="TOpenDialog.Options"/>
 <link id="TOpenDialog.CheckAllFiles"/>
+<link id="TOpenDialog.CheckFile"/>
 <link id="TOpenDialog.ResolveLinks"/>
 <link id="TFileDialog.FileName"/>
 <link id="TFileDialog.Files"/>
 <link id="TCommonDialog.DoExecute"/>
+<link id="TCommonDialog.Execute"/>
 <link id="TOpenOption"/>
+<link id="TOpenOptions"/>
 </seealso>
 </element>
 <element name="TOpenDialog.DoExecute.Result">
@@ -1869,6 +2132,31 @@ method is used to apply changes from the widgetset class instance.
 </seealso>
 </element>
 
+<element name="TOpenDialog.OptionsEx">
+<short>
+Widgetset-specific options enabled for the dialog.
+</short>
+<descr>
+<p>
+<var>OptionsEx</var> is a <var>TOpenOptionsEx</var> property which contains the 
+widgetset-specific options enabled when the dialog is executed. It can contain 
+zero (0) or more values from the TOpenOptionEx enumeration. The default value 
+for the property is an empty set ([]).
+</p>
+<p>
+OptionsEx is used in the widgetset class instance to apply values which cannot 
+be represented using TOpenOptions and TOpenOption, which are used on all of the 
+supported LCL platforms. In the current LCL version, OptionsEx is used for the 
+Windows platform and supports Windows Vista or later version.
+</p>
+</descr>
+<seealso>
+<link id="TOpenDialog.Options"/>
+<link id="TOpenOptionsEx"/>
+<link id="TOpenOptionEx"/>
+</seealso>
+</element>
+
 <element name="TOpenDialog.OnFolderChange">
 <short>
 Event signalled when a new directory is selected in the dialog.
@@ -1879,7 +2167,7 @@ Event signalled when a new directory is selected in the dialog.
 event handler signalled when the current directory is changed using the 
 dialog. OnFolderChange is signalled (when assigned) from the DoFolderChange 
 method when it is called from methods in the widgetset class instance. It is 
-called  when the value in FileName has been changed as a result of directory 
+called when the value in FileName has been changed as a result of directory 
 navigation using the native dialog for the platform.
 </p>
 <p>
@@ -2226,7 +2514,7 @@ constant.
 </element>
 <element name="TColorDialog.DefaultTitle.Result">
 <short>
-Returns  the values defined in the rsSelectcolorTitle constant.
+Returns the values defined in the rsSelectcolorTitle constant.
 </short>
 </element>
 
@@ -4801,13 +5089,22 @@ Causes the current page only to be printed.
 </element>
 
 <element name="TTaskDialogFlag">
-<short>Represents options that can be enabled for TTaskDialog.</short>
+<short>
+Represents options that can be enabled for TTaskDialog.
+</short>
 <descr>
+<p>
 TTaskDialogFlag values are stored in the TTaskDialogFlags type, as used in 
 the TCustomTaskDialog.Flags property.
+</p>
 </descr>
 <version>
+<p>
 Modified in LCL 3.0 to include tfEmulateClassicStyle in the enumeration.
+</p>
+<p>
+Modified in LCL 4.0 to include additional flag values in the enumeration.
+</p>
 </version>
 <seealso>
 <link id="TTaskDialogFlags"/>
@@ -4816,83 +5113,150 @@ Modified in LCL 3.0 to include tfEmulateClassicStyle in the enumeration.
 </element>
 <element name="TTaskDialogFlag.tfEnableHyperlinks">
 <short>
-Allows HTML-like hyperlinks in the dialog (in Text, Footer, and ExpandedText) 
-using the <b>'&lt;a href="target"&gt;Target&lt;/a&gt;'</b> notation.
+Allows HTML-like hyperlinks in the dialog (in Text, FooterText, and 
+ExpandedText) using the <b>'&lt;a href="target"&gt;Target&lt;/a&gt;'</b> 
+notation. For platforms that use an emulated (non-native) task dialog form, 
+the markup text is displayed instead of a formatted hyperlink.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfUseHiconMain">
 <short>
 Uses the handle to the image in MainIcon as the primary image for the Task 
-dialog. Disables hyperlinks.
+dialog. Disables hyperlinks and expanded text areas. Not used in the current 
+implementation.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfUseHiconFooter">
 <short>
 Uses the handle to the image in FooterIcon as the footer icon in the Task 
-dialog. Disables hyperlinks.
+dialog. Disables hyperlinks and expanded text areas. Not used in the current 
+implementation.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfAllowDialogCancellation">
 <short>
-Allow canceling the dialog by Esc key, or Alt+F4 (i.e. OS default hotkey).
+Allow cancelling the dialog using the Esc key or Alt+F4 (i.e. OS default 
+hotkey).
 </short>
 </element>
 <element name="TTaskDialogFlag.tfUseCommandLinks">
 <short>
-Custom buttons will be shown as big buttons in the middle of the dialog. Use 
-#10 to add info to buttons (shown in hint in emulated dialog). Disables 
-hyperlinks.
+Custom buttons will be shown as larger buttons with an icon in the text 
+content area on the dialog. On native task dialog forms, the CommandLinkHint 
+for buttons is included on a separate line (using a slightly smaller font) on 
+the buttons. On emulated task dialog forms, the text in the CommandLinkHint 
+for the buton is omitted.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfUseCommandLinksNoIcon">
 <short>
-Hides glyphs for custom buttons in the "command links" mode. Disables 
-hyperlinks.
+Like tfUseCommandLinks, but hides glyphs for custom buttons in the "command 
+links" mode.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfExpandFooterArea">
 <short>
-Show ExpandedText in the footer, instead of inline after the main text.
+Show ExpandedText in the footer, instead of immediately after the main text.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfExpandedByDefault">
-<short>Displays the dialog with ExpandedText in the expanded state.</short>
+<short>
+Displays the dialog with the content in ExpandedText in the expanded state.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfVerificationFlagChecked">
 <short>
-Displays the verification check-box verification shows in the checked state.
+Displays the verification check-box using the checked state on entry.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfShowProgressBar">
-<short>Shows a progress bar.</short>
+<short>
+Shows a progress bar on the dialog form. Implemented for native Windows Vista 
+or later platforms.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfShowMarqueeProgressBar">
-<short>Shows a progress bar using the marquee style.</short>
+<short>
+Shows a progress bar on the dialog form using the marquee style. Implemented 
+for native Windows Vista or later platforms.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfCallbackTimer">
-<short>Execute the timer callback event every 200 milliseconds.</short>
+<short>
+Execute the timer callback event every 200 milliseconds. Enables the timer event on the dialog form.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfPositionRelativeToWindow">
 <short>
-Form position will be poOwnerFormCenter, instead of poScreenCenter.
+Position for the dialog form is set to poOwnerFormCenter instead of 
+poScreenCenter.
 </short>
 </element>
 <element name="TTaskDialogFlag.tfRtlLayout">
-<short>Use Right-to-Left layout for texts.</short>
+<short>
+Use Right-to-Left layout for texts. Implemented for native Windows Vista 
+or later platforms.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfNoDefaultRadioButton">
-<short>Does not pre-select any of the radio buttons.</short>
+<short>
+Does not pre-select a default radio button.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfCanBeMinimized">
-<short>Allow the dialog to be minimized.</short>
+<short>
+Allows the dialog form to be minimized.
+</short>
+</element>
+<element name="TTaskDialogFlag.tfNoSetForeGround">
+<short>
+Prevents bringing the dialog to the foreground when the dialog is activated. 
+Implemented for native Windows Vista or later platforms.
+</short>
+</element>
+<element name="TTaskDialogFlag.tfSizeToContent">
+<short>
+Indicates the width for the dialog is determined by the caption, title, or 
+lines of text in the content areas areas. The flag is ignored if the 
+dialog width is not set to 0 (zero). Implemented for native Windows Vista 
+or later platforms.
+</short>
 </element>
 <element name="TTaskDialogFlag.tfForceNonNative">
 <short>Forces use of an emulated task dialog form.</short>
 </element>
 <element name="TTaskDialogFlag.tfEmulateClassicStyle">
 <short>
-Used to enforce conformity in the visual appearance of a dialog in an 
-application which is not using a theme.
+Causes the dialog form to be displayed using a classic style where the content 
+areas use clForm as the background color instead of clWindow. Applies to 
+platforms which use an emulated task dialog only.
+</short>
+</element>
+<element name="TTaskDialogFlag.tfQuery">
+<short>
+Causes a query input control to be displayed on the task dialog using an 
+editable (non-fixed) combo-box control.
+</short>
+</element>
+<element name="TTaskDialogFlag.tfSimpleQuery">
+<short>
+Causes a query input control to be displayed on the task dialog using a simple 
+TEdit control instance with optional password character-style obfuscation. 
+tfQuery takes precedence if both values are included in the flags for a task 
+dialog.
+</short>
+</element>
+<element name="TTaskDialogFlag.tfQueryFixedChoices">
+<short>
+Causes a query input control to be displayed on the task dialog using a 
+combo-box to select from non-editable predefined values. tfQuery must also be 
+included to enable a query control on the dialog form.
+</short>
+</element>
+<element name="TTaskDialogFlag.tfQueryFocused">
+<short>
+Causes the query input control to be focused when the task dialog is executed. 
+Requires tfQuery or tfSimpleQuery in the flags for a task dialog.
 </short>
 </element>
 
@@ -4983,6 +5347,51 @@ TCustomTaskDialog.
 <short><b>True</b> if the dialog can close.</short>
 </element>
 
+<element name="TTaskDlgTimerEvent">
+<short>
+Specifies an event handler signalled when the timer callback is enabled in a 
+task dialog.
+</short>
+<descr>
+<p>
+<var>TTaskDlgTimerEvent</var> is an object procedure type which defines an 
+event handler signalled when the timer internal in a task dialog has elapsed. 
+Applications can implement and assign a routine using the signature for the 
+type to the OnTimer event handler in TTaskDialog.
+</p>
+<p>
+The routine is signalled from the DoOnTimer method in TCustomTaskDialog and is 
+called periodically from the widgetset class when the callback timer is 
+enabled in the task dialog. Arguments passed to the routine indicate the 
+dialog form for the event notification, the number of ticks (milliseconds) 
+since the timer was started, and an updatable value to indicate that the time 
+should be reset.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.OnTimer"/>
+</seealso>
+</element>
+<element name="TTaskDlgTimerEvent.Sender">
+<short>
+Task dialog for the event notification.
+</short>
+</element>
+<element name="TTaskDlgTimerEvent.TickCount">
+<short>
+Number of ticks (milliseconds) since the timer was started.
+</short>
+</element>
+<element name="TTaskDlgTimerEvent.Reset">
+<short>
+Set to <b>True</b> to reset the timer. Set to <b>False</b> to continue 
+execution of the timer callback.
+</short>
+</element>
+
 <element name="TTaskDialogIcon">
 <short>Identifier for an icon displayed on a Task dialog.</short>
 <descr>
@@ -5041,11 +5450,12 @@ TTaskDialogBaseButtonItem is the ancestor class for
 </seealso>
 </element>
 
+<!-- private -->
 <element name="TTaskDialogBaseButtonItem.FCaption"/>
 <element name="TTaskDialogBaseButtonItem.FClient"/>
+<element name="TTaskDialogBaseButtonItem.FCommandLinkHint"/>
 <element name="TTaskDialogBaseButtonItem.FModalResult"/>
 
-<!-- private -->
 <element name="TTaskDialogBaseButtonItem.GetDefault"/>
 <element name="TTaskDialogBaseButtonItem.GetDefault.Result"/>
 <element name="TTaskDialogBaseButtonItem.SetCaption"/>
@@ -5150,6 +5560,28 @@ property in the TCustomTaskDialog instance.
 </seealso>
 </element>
 
+<element name="TTaskDialogBaseButtonItem.CommandLinkHint">
+<short>
+Provides additional information about the button when command links are 
+enabled in a task dialog.
+</short>
+<descr>
+<p>
+CommandLinkHint is a TTranslateString property which contains additional 
+information about the button. The translatable content is used as second line 
+of text for the button when command links are enabled in a native TTaskDialog 
+instance. The value is not displayed as an additional line on platforms where 
+an emulated task dialog is used; this includes all platforms other Windows 
+(Vista or later).
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+
 <element name="TTaskDialogBaseButtonItem.Caption">
 <short>Caption text displayed on the button surface.</short>
 <descr>
@@ -5230,6 +5662,8 @@ also used as the <var>DisplayName</var> for the collection item when assigned.
 <element name="TTaskDialogButtonItem.Create.ACollection">
 <short>Collection which owns the button item.</short>
 </element>
+
+<element name="TTaskDialogButtonItem.CommandLinkHint" link="#lcl.dialogs.TTaskDialogBaseButtonItem.CommandLinkHint"/>
 
 <element name="TTaskDialogButtonItem.ModalResult" link="#lcl.dialogs.TTaskDialogBaseButtonItem.ModalResult"/>
 
@@ -5487,27 +5921,584 @@ the class instance.
 <short>Ordinal position in the collection for the property value.</short>
 </element>
 
-<element name="TCustomTaskDialog">
-<short>Defines a configurable, modal task dialog at run-time.</short>
+<element name="TProgressBarState">
+<short>
+Alias to the TProgressBarState type in <file>comctrls.pp</file>.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="#lcl.comctrls.TProgressBarState"/>
+</seealso>
+</element>
+
+<element name="PBST_NORMAL">
+<short>
+Numeric constant used in the Task Dialog API to represent pbsNormal from the 
+TProgressBarState enumeration.
+</short>
+<descr/>
+<seealso>
+<link id="TProgressBarState"/>
+</seealso>
+</element>
+
+<element name="PBST_ERROR">
+<short>
+Numeric constant used in the Task Dialog API to represent pbsError from the 
+TProgressBarState enumeration.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TProgressBarState"/>
+</seealso></element>
+
+<element name="PBST_PAUSED">
+<short>
+Numeric constant used in the Task Dialog API to represent pbsPaused from the 
+TProgressBarState enumeration.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TProgressBarState"/>
+</seealso></element>
+
+<element name="PB_DEFMIN">
+<short>
+Numeric constant which defines the default value for the Min property in a 
+progress bar.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="PB_DEFMAX">
+<short>
+Numeric constant which defines the default value for the Max property in a 
+progress bar.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TDE_CONTENT">
+<short>
+Numeric constant which identifies the text in the main content area on a task 
+dialog.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TDE_EXPANDED_INFORMATION">
+<short>
+Numeric constant which identifies the expandable text for a task dialog.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TDE_FOOTER">
+<short>
+Numeric constant which identifies the footer text for a task dialog.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TDE_MAIN_INSTRUCTION">
+<short>
+Numeric constant which identifies the title in the main content areas on a task 
+dialog.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TTaskDialogProgressBar">
+<short>
+Provides information about a progress bar displayed on a TTaskDialog instance.
+</short>
 <descr>
 <p>
-<var>TCustomTaskDialog</var> is a <var>TComponent</var> descendant which 
-defines a configurable, modal task dialog. It is a non-visual component which 
-creates modal dialogs at run-time, with rich UI elements. It is a wrapper for 
-<var>LCLTaskDialog.TTaskDialog</var> which implements the Windows TaskDialog 
-API.
+<var>TTaskDialogProgressBar</var> is a <var>TPersistent</var> descendant used 
+to represent information about a progress bar displayed on a task dialog. It 
+provides properties used to configure or update the progress bar, like: Min, 
+Max, Position, MarqueeSpeed, and State. It includes methods used to create the 
+progress bar on the task dialog, and to send its settings to the widgetset 
+class including its drawing state. It is not the actual progress bar control, 
+however.
 </p>
 <p>
-TCustomTaskDialog provides properties which can be used to configure the 
-class instance at design-time in the object inspector. At run-time, the 
-<var>Execute</var> method handles converting properties and calling routines 
-in the <var>LCLTaskDialog.TTaskDialog</var> implementation.
+TTaskDialogProgressBar is the type used to implement the ProgressBar property 
+in TTaskDialog.
 </p>
 </descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialog.ProgressBar"/>
+</seealso>
+</element>
+
+<!-- private -->
+<element name="TTaskDialogProgressBar.ProgressBarStateValues"/>
+<element name="TTaskDialogProgressBar.Dlg"/>
+<element name="TTaskDialogProgressBar.FMarqueeSpeed"/>
+<element name="TTaskDialogProgressBar.FMax"/>
+<element name="TTaskDialogProgressBar.FMin"/>
+<element name="TTaskDialogProgressBar.FPosition"/>
+<element name="TTaskDialogProgressBar.FState"/>
+
+<!-- private -->
+<element name="TTaskDialogProgressBar.SetMarqueeSpeed"/>
+<element name="TTaskDialogProgressBar.SetMarqueeSpeed.AValue"/>
+<element name="TTaskDialogProgressBar.SetMax"/>
+<element name="TTaskDialogProgressBar.SetMax.AValue"/>
+<element name="TTaskDialogProgressBar.SetMin"/>
+<element name="TTaskDialogProgressBar.SetMin.AValue"/>
+<element name="TTaskDialogProgressBar.SetPosition"/>
+<element name="TTaskDialogProgressBar.SetPosition.AValue"/>
+<element name="TTaskDialogProgressBar.SetState"/>
+<element name="TTaskDialogProgressBar.SetState.AValue"/>
+
+<!-- public -->
+<element name="TTaskDialogProgressBar.Create">
+<short>
+Constructor for the class instance.
+</short>
+<descr>
+<p>
+<var>Create</var> is the constructor for the class instance. It extends the 
+constructor to specify the task dialog where the progress bar information is 
+used in the <var>ADialog</var> argument. It sets the default values for 
+properties in the class instance, including: Min (PB_DEFMIN), Max (PB_DEFMAX), 
+and MarqueeSpeed (0 milliseconds).
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialogProgressBar.Max"/>
+<link id="TTaskDialogProgressBar.Min"/>
+<link id="TTaskDialogProgressBar.MarqueeSpeed"/>
+<link id="PB_DEFMIN"/>
+<link id="PB_DEFMAX"/>
+<link id="TCustomTaskDialog"/>
+</seealso>
+
+</element>
+<element name="TTaskDialogProgressBar.Create.ADialog">
+<short>
+Task dialog where the progress bar is hosted.
+</short>
+</element>
+
+<element name="TTaskDialogProgressBar.Initialize">
+<short>
+Sends the initial values for the progress bar to the task dialog where it is 
+hosted.
+</short>
+<descr>
+<p>
+<var>Initialize</var> is a method used to apply the values in the progress bar 
+by notifying the task dialog and its widget. This includes setting the progress 
+bar display style, its minimum and maximum range values, the current position, 
+the drawing state, and the update frequency for a progress bar drawn using the 
+marquee style.
+</p>
+<p>
+Initialize is called from the DoOnDialogConstructed method in the task dialog 
+when the Handle for the task dialog has been assigned. No actions are performed 
+in the method if the Handle in the task dialog has not been assigned, or when a 
+progress bar has not been enabled using the flags for the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Handle"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.DoOnDialogConstructed"/>
+</seealso>
+</element>
+
+<element name="TTaskDialogProgressBar.SetRange">
+<short>
+Applies the values in the Min and Max properties to the progress bar control on 
+a task dialog.
+</short>
+<descr>
+<p>
+<var>SetRange</var> is a method used to apply the values in the <var>AMin</var> 
+and <var>AMax</var> arguments to the progress bar control on a task dialog. 
+SetRange is called when the value for the Min or Max property has been updated 
+in the class instance. No actions are performed in the method if the argument 
+values are the same as the existing property values in the class instance.
+</p>
+<p>
+SetRange ensures that values in the AMin and AMax are in the range 0..High(
+Word) (32767). This is done to ensure that the values are valid for the 
+platforms and APIs where the value is used. If a valid is too small, it is set 
+to 0. If a value is too large, it is set to High(Word). If AMin is larger than 
+AMax, AMin is set to the value in the upper limit.
+</p>
+<p>
+SetRange also ensures that the value in Position is within the range specified 
+by Min..Max.
+</p>
+<p>
+SetRange updates the task dialog where the progress bar is displayed when the 
+Flags property in the dialog includes the value tfShowProgressBar and the 
+Handle for the dialog has been assigned. A TDM_SET_PROGRESS_BAR_RANGE message 
+is sent using the Handle for the dialog and the newly assigned values for Min 
+and Max.
+</p>
+<p>
+Use the Min and Max properties to set the lower and upper limits for the value 
+in Position.
+</p>
+<p>
+Set the value in Position to cause the completion percentage to be 
+recalculated and the progress bar control to be redrawn.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialogProgressBar.Min"/>
+<link id="TTaskDialogProgressBar.Max"/>
+<link id="TTaskDialog.ProgressBar"/>
+<link id="TCustomTaskDialog.Handle"/>
+<link id="TTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+<element name="TTaskDialogProgressBar.SetRange.AMin">
+<short>
+Lower limit for the value in Position.
+</short>
+</element>
+<element name="TTaskDialogProgressBar.SetRange.AMax">
+<short>
+Upper limit for the value in Position.
+</short>
+</element>
+
+<!-- published -->
+<element name="TTaskDialogProgressBar.MarqueeSpeed">
+<short>
+Contains the number of milliseconds between updates for a progress bar using 
+the marquee display style.
+</short>
+<descr>
+<p>
+<var>MarqueeSpeed</var> is a <var>Cardinal</var> property which sets the update 
+interval for the progress bar. It specifies, in milliseconds, often a progress 
+bar using the marquee display style is updated. The default value for the 
+property is 0.
+</p>
+<p>
+Changing the value for the property causes a TDM_SET_PROGRESS_BAR_RANGE message 
+to be sent using the Handle for the task dialog. It allows the widgetset class 
+to be notified when the marquee progress bar style is enabled, or when its 
+update interval has been changed. The update is sent when 
+tfShowMarqueeProgressBar has been included in the Flags for the task dialog and 
+its Handle has been assigned.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Handle"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TTaskDialogProgressBar.Max">
+<short>
+Upper limit for the Position on the progress bar.
+</short>
+<descr>
+<p>
+<var>Max</var> is an <var>Integer</var> property which contains the upper limit 
+for the position on the progress bar; the value in Position must be in the 
+range Min..Max inclusive. The default value for the property is 100.
+</p>
+<p>
+Changing the property value causes the SetRange method to be called. This 
+allows the task dialog and the widgetset class to be notified when the range 
+for the progress bar has been updated.
+</p>
+<p>
+Use Min to set the lower limit for the value in Position.
+</p>
+<p>
+Use Position to set the current position for the progress bar.
+</p>
+<p>
+Position, Min, and Max are not used when the task dialog is configured to use 
+the marquee drawing style for its progress bar.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialogProgressBar.Min"/>
+<link id="TTaskDialogProgressBar.Position"/>
+<link id="TTaskDialogProgressBar.SetRange"/>
+</seealso>
+</element>
+
+<element name="TTaskDialogProgressBar.Min">
+<short>
+Lower limit for the Position on the progress bar.
+</short>
+<descr>
+<p>
+<var>Min</var> is an <var>Integer</var> property which contains the lower limit 
+for the position on the progress bar; the value in Position must be in the 
+range Min..Max inclusive. The default value for the property is 0.
+</p>
+<p>
+Changing the property value causes the SetRange method to be called. This 
+allows the task dialog and the widgetset class to be notified when the range 
+for the progress bar has been updated.
+</p>
+<p>
+Use Max to set the upper limit for the value in Position.
+</p>
+<p>
+Use Position to set the current position for the progress bar.
+</p>
+<p>
+Position, Min, and Max are not used when the task dialog is configured to use 
+the marquee drawing style for its progress bar.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialogProgressBar.Max"/>
+<link id="TTaskDialogProgressBar.Position"/>
+<link id="TTaskDialogProgressBar.SetRange"/>
+</seealso>
+</element>
+
+<element name="TTaskDialogProgressBar.Position">
+<short>
+Contains the current position for the progress bar.
+</short>
+<descr>
+<p>
+<var>Position</var> is an <var>Integer</var> property which indicates the 
+current position on the progress bar. Position and Max are used to calculate 
+the completion percentage for the progress bar. The default value for the 
+property is 0 (zero).
+</p>
+<p>
+The value in Position must be in the range Min..Max inclusive. If Position is 
+set to a value which exceeds the allowed range, it is normalized to the Min 
+or Max value as needed.
+</p>
+<p>
+Changing the value in the property causes a TDM_SET_PROGRESS_BAR_POS message to 
+be sent using the Handle for the task dialog. This allows the widgetset class 
+to be notified when the progress bar needs to be redrawn. The message is not 
+sent to the dialog if tfShowProgressBar has not been included in its Flags 
+property or the Handle for the dialog has not been assigned.
+</p>
+<p>
+Use Min to set the lower limit for the value in Position.
+</p>
+<p>
+Use Max to set the upper limit for the value in Position.
+</p>
+<p>
+Position, Min, and Max are not used when the task dialog is configured to use 
+the marquee drawing style for its progress bar.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<notes>
+<note>
+Does Delphi raise an exception if Position is out of range?
+</note>
+</notes>
+<seealso>
+<link id="TTaskDialogProgressBar.Max"/>
+<link id="TTaskDialogProgressBar.Min"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TTaskDialogProgressBar.State">
+<short>
+Contains the current drawing state for the progress bar.
+</short>
+<descr>
+<p>
+<var>State</var> is a <var>TProgressBarState</var> property which indicates the 
+drawing style used to render the progress bar. The default value for the 
+property is pbsNormal. Values in the property affect the drawing style used for 
+the completion indicator on the progress bar as follows:
+</p>
+<dl>
+<dt>pbsNormal</dt>
+<dd>
+Causes the default drawing style for the platform to be applied to the 
+completion indicator.
+</dd>
+<dt>pbsError</dt>
+<dd>
+Causes the completion bar to be drawn with a red fill color to indicate an 
+error condition.
+</dd>
+<dt>pbsPaused</dt>
+<dd>
+Causes the completion bar to be drawn with an amber fill color to indicate 
+that the progress bar has been paused.
+</dd>
+</dl>
+<p>
+Changing the value for the property causes the TDM_SET_PROGRESS_BAR_STATE 
+message to be sent to the task dialog instance. This allows the task dialog and 
+its widget to be updated with the mew state for the progress bar. This action 
+is not performed if tfShowProgressBar has not been included in the flags for 
+the task dialog or its Handle has not been assigned.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomTaskDialog">
+<short>
+Defines a configurable, modal task dialog at run-time.
+</short>
+<descr>
+<p>
+<var>TCustomTaskDialog</var> is a <var>TLCLComponent</var> descendant which 
+defines a configurable, modal task dialog. It can be used to display and edit 
+information on a dialog form with more features than those available on a 
+standard message box. TCustomTaskDialog includes values like:
+</p>
+<ul>
+<li>
+A Title for the dialog.
+</li>
+<li>
+A Caption for the dialog.
+</li>
+<li>
+A main Icon for the dialog.
+</li>
+<li>
+Text to describe the task dialog.
+</li>
+<li>
+A footer to display additional information on the dialog.
+</li>
+<li>
+An expandable / collapsible text area which can be displayed in the main 
+content area or the footer for the dialog.
+</li>
+<li>
+Standard buttons used to return a modal result value.
+</li>
+<li>
+Custom command buttons for task-specific actions.
+</li>
+<li>
+Radio buttons to select dialog options.
+</li>
+<li>
+A progress bar using either the standard or marquee display styles.
+</li>
+<li>
+A query field to capture user input as text or by selecting a value from a list 
+of values in a combo-box control.
+</li>
+<li>
+A verification message and check box.
+</li>
+<li>
+Support for hyperlinks in text areas.
+</li>
+</ul>
+<p>
+TCustomTaskDialog is the base class for TaskDialog, and provides a 
+multi-platform implementation of the Windows TaskDialog API. It provides 
+properties which can be used to configure the task dialog at design-time or at 
+run-time. At run-time, the <var>Execute</var> method handles converting 
+properties and calling routines and methods in the widgetset which implement 
+the task dialog for a given platform.
+</p>
+<p>
+<b>Platform Support</b>
+</p>
+<p>
+The TaskDialog API, upon which TCustomTaskDialog and TTaskDialog are based, is 
+available only on Windows Vista or later versions. On these platforms, the form 
+displayed at run-time is the native form for the platform. On older Windows 
+versions, and other platforms, the TaskDialog API is not available or 
+supported. For these platforms, a standard LCL form is created and populated at 
+run-time to emulate the appearance and behaviors for the Windows 
+implementation. This occurs in the widget set class and uses the components 
+found in the <file>taskdlgemulation.pp</file> unit. It can be forced by 
+including a value in the Flags property for the class instance.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0. The implementation for the most part is rewritten, 
+and includes additional features not found in previous versions.
+</version>
 <seealso>
 <link id="TTaskDialog"/>
-<link id="#rtl.classes.TComponent">TComponent</link>
-<link id="#lcl.lcltaskdialog.TTaskDialog">LCLTaskDialog.TTaskDialog</link>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog">TLCLTaskDialog</link>
+<link id="#lcl.lclclasses.TLCLComponent">TLCLComponent</link>
 </seealso>
 </element>
 
@@ -5515,90 +6506,150 @@ in the <var>LCLTaskDialog.TTaskDialog</var> implementation.
 <element name="TCustomTaskDialog.FButton"/>
 <element name="TCustomTaskDialog.FButtons"/>
 <element name="TCustomTaskDialog.FCaption"/>
+<element name="TCustomTaskDialog.FCollapseButtonCaption"/>
 <element name="TCustomTaskDialog.FCommonButtons"/>
+<element name="TCustomTaskDialog.FCustomFooterIcon"/>
+<element name="TCustomTaskDialog.FCustomMainIcon"/>
 <element name="TCustomTaskDialog.FDefaultButton"/>
 <element name="TCustomTaskDialog.FExpandButtonCaption"/>
+<element name="TCustomTaskDialog.FExpanded"/>
 <element name="TCustomTaskDialog.FExpandedText"/>
 <element name="TCustomTaskDialog.FFlags"/>
 <element name="TCustomTaskDialog.FFooterIcon"/>
 <element name="TCustomTaskDialog.FFooterText"/>
+<element name="TCustomTaskDialog.FHandle"/>
 <element name="TCustomTaskDialog.FMainIcon"/>
 <element name="TCustomTaskDialog.FModalResult"/>
+<element name="TCustomTaskDialog.FOnDialogConstructed"/>
+<element name="TCustomTaskDialog.FOnDialogCreated"/>
+<element name="TCustomTaskDialog.FOnDialogDestroyed"/>
+<element name="TCustomTaskDialog.FOnExpanded"/>
+<element name="TCustomTaskDialog.FOnHelp"/>
+<element name="TCustomTaskDialog.FOnHyperlinkClicked"/>
+<element name="TCustomTaskDialog.FOnNavigated"/>
+<element name="TCustomTaskDialog.FOnRadioButtonClicked"/>
+<element name="TCustomTaskDialog.FOnTimer"/>
+<element name="TCustomTaskDialog.FOnVerificationClicked"/>
+<element name="TCustomTaskDialog.FProgressBar"/>
+<element name="TCustomTaskDialog.FQueryChoices"/>
+<element name="TCustomTaskDialog.FQueryResult"/>
+<element name="TCustomTaskDialog.FQueryItemIndex"/>
 <element name="TCustomTaskDialog.FRadioButton"/>
 <element name="TCustomTaskDialog.FRadioButtons"/>
 <element name="TCustomTaskDialog.FTask"/>
 <element name="TCustomTaskDialog.FTitle"/>
+<element name="TCustomTaskDialog.FURL"/>
 <element name="TCustomTaskDialog.FVerificationText"/>
 <element name="TCustomTaskDialog.FWidth"/>
 <element name="TCustomTaskDialog.FOnButtonClicked"/>
 
-<element name="TCustomTaskDialog.DoOnButtonClickedHandler"/>
-<element name="TCustomTaskDialog.DoOnButtonClickedHandler.Sender"/>
-<element name="TCustomTaskDialog.DoOnButtonClickedHandler.AButtonID"/>
-<element name="TCustomTaskDialog.DoOnButtonClickedHandler.ACanClose"/>
+<element name="TCustomTaskDialog.IsCustomFooterIconStored"/>
+<element name="TCustomTaskDialog.IsCustomFooterIconStored.Result"/>
+<element name="TCustomTaskDialog.IsCustomMainIconStored"/>
+<element name="TCustomTaskDialog.IsCustomMainIconStored.Result"/>
 <element name="TCustomTaskDialog.SetButtons"/>
 <element name="TCustomTaskDialog.SetButtons.Value"/>
+<element name="TCustomTaskDialog.SetCustomFooterIcon"/>
+<element name="TCustomTaskDialog.SetCustomFooterIcon.AValue"/>
+<element name="TCustomTaskDialog.SetCustomMainIcon"/>
+<element name="TCustomTaskDialog.SetCustomMainIcon.AValue"/>
+<element name="TCustomTaskDialog.SetFlags"/>
+<element name="TCustomTaskDialog.SetFlags.AValue"/>
+<element name="TCustomTaskDialog.SetQueryChoices"/>
+<element name="TCustomTaskDialog.SetQueryChoices.AValue"/>
 <element name="TCustomTaskDialog.SetRadioButtons"/>
 <element name="TCustomTaskDialog.SetRadioButtons.Value"/>
 
-<element name="TCustomTaskDialog.ButtonIDToModalResult"/>
-<element name="TCustomTaskDialog.ButtonIDToModalResult.Result"/>
-<element name="TCustomTaskDialog.ButtonIDToModalResult.AButtonID"/>
-
-<element name="TCustomTaskDialog.DoExecute">
+<!-- protected -->
+<element name="TCustomTaskDialog.WSRegisterClass">
 <short>
-Performs actions to configure and execute the dialog using the wrapper in the 
-LCLTaskDialog unit.
+Registers the task dialog class in the widgetset when needed.
 </short>
 <descr>
 <p>
-<var>DoExecute</var> is a dynamic <var>Boolean</var> function used to 
-initialize and execute the task dialog. It ensures that the index for the 
-default Buttons and RadioButtons are updated before executing the task 
-dialog. It also builds the delimited list of captions for each of the items 
-in Buttons and RadioButtons. The lists use the format needed for the task 
-dialog wrapper (#10 is the delimiter).
+Calls the factory routine in the widgetset implementation if it has not already been registered.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomTaskDialog.DoExecute">
+<short>
+Performs actions to configure and execute the dialog.
+</short>
+<descr>
+<p>
+<var>DoExecute</var> is a <var>Boolean</var> function used to initialize and 
+execute the task dialog form. It is called from the Execute method and uses the 
+handle in ParentWnd as the parent form for the task dialog.
 </p>
 <p>
-Property values are copied to the members in the TTaskDialog instance, 
-including:
+DoExecute sets the default values for properties used as return values for the 
+dialog like ModalResult (mrNone) and QueryResult (''). It calls the Execute 
+method in the widgetset class instance to perform the actions needed for the 
+platform. On Windows Vista and later versions, this causes the native routines 
+in the Win32 Task Dialog API to be called. For other platforms, including 
+Windows versions prior to Vista, the emulated task dialog in TLCLTaskDialog is 
+used in the widget.
+</p>
+<p>
+Use the Flags property to specify which features or behaviors are enabled on 
+the task dialog form.
+</p>
+<p>
+DoExecute captures various return values from the widgetset class. These 
+include:
 </p>
 <ul>
-<li>Caption</li>
-<li>Title</li>
-<li>Text</li>
-<li>ExpandButtonCaption</li>
-<li>ExpandedText</li>
-<li>FooterText</li>
-<li>VerificationText</li>
+<li>
+The button identifier used to close the dialog form.
+</li>
+<li>
+The modal result value for the button identifier used to close the form.
+</li>
+<li>
+The optional radio button selected on the dialog.
+</li>
+<li>
+The value from a query control on the dialog and its index position in the 
+query choices.
+</li>
 </ul>
 <p>
-DoExecute calls the Execute method in the TTaskDialog wrapper. The return 
-value is <b>True</b> if the ModalResult value contains a valid button 
-identifier defined in the Buttons for the dialog.
+The return value is <b>False</b> if the button identifier returned from the 
+widget is a negative value. The return value is <b>True</b> if the dialog form 
+was successfully displayed, and a valid button identifier was used to close the 
+form - including when Esc, Alt+F4 or the Cancel button is used.
 </p>
-<p>
-DoExecute is called from the Execute method.
-</p>
+<remark>
+This behavior is different than other LCL dialogs where a ModalResult of 
+mrCancel would cause Execute / DoExecute to return <b>False</b>. This is 
+consistent with the task dialog behavior in the Delphi VCL; the Delphi 
+documentation states otherwise but it is incorrect.
+</remark>
 </descr>
 <seealso>
 <link id="TCustomTaskDialog.Execute"/>
 <link id="TCustomTaskDialog.Flags"/>
-<link id="TCustomTaskDialog.Buttons"/>
-<link id="TCustomTaskDialog.RadioButtons"/>
-<link id="TCustomTaskDialog.ExpandButtonCaption"/>
-<link id="TCustomTaskDialog.ExpandedText"/>
-<link id="TCustomTaskDialog.FooterText"/>
-<link id="TCustomTaskDialog.Text"/>
-<link id="TCustomTaskDialog.VerificationText"/>
-<link id="TCustomTaskDialog.Caption"/>
-<link id="TCustomTaskDialog.Title"/>
 <link id="TCustomTaskDialog.ModalResult"/>
-<link id="#lcl.lcltaskdialog.TTaskDialog">TTaskDialog</link>
+<link id="TCustomTaskDialog.QueryResult"/>
+<link id="TCustomTaskDialog.QueryItemIndex"/>
+<link id="TCustomTaskDialog.Button"/>
+<link id="TCustomTaskDialog.RadioButton"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog">TLCLTaskDialog</link>
 </seealso>
 </element>
 <version>
-Modified in version 3.0 to use the tfForceNonNative flag to determine whether an emulated dialog is displayed.
+<p>
+Modified in version 3.0 to use the tfForceNonNative flag to determine whether 
+an emulated dialog is displayed.
+</p>
+<p>
+Implementation modified in LCL 4.0.
+</p>
 </version>
 <element name="TCustomTaskDialog.DoExecute.Result">
 <short>
@@ -5632,14 +6683,312 @@ execution.
 </short>
 </element>
 
+<element name="TCustomTaskDialog.DoOnRadioButtonClicked">
+<short>
+Sets the active radio button and signals the OnRadioButtonClicked event handler 
+(when assigned).
+</short>
+<descr>
+<p>
+No actions are performed in the method if <var>OnRadioButtonClicked</var> has 
+not been assigned.
+</p>
+<p>
+Calls SetRadioButtonFromRadioIndex to set RadioButton to the control at the 
+position specified in the <var>ButtonID</var> argument. RadioButton is set to 
+<b>Nil</b> if ButtonID is not a valid position in RadioButtons.
+</p>
+<p>
+DoOnRadioButtonClicked is called from the private OnRadioButtonClicked method 
+in the TLCLTaskDialog class when an emulated task dialog is used for the 
+platform.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.RadioButton"/>
+<link id="TCustomTaskDialog.RadioButtons"/>
+<link id="TCustomTaskDialog.SetRadioButtonFromRadioIndex"/>
+<link id="TCustomTaskDialog.OnRadioButtonClicked"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog">TLCLTaskDialog.OnRadioButtonClicked</link>
+</seealso>
+<notes>
+<note>
+OnRadioButtonClicked is a property in TCustomTaskDialog and a method in 
+TLCLTaskDIalog. Confusing...
+</note>
+</notes>
+</element>
+<element name="TCustomTaskDialog.DoOnRadioButtonClicked.ButtonID">
+<short>
+Index value for the radio button locates and signalled in the method.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.DoOnDialogConstructed">
+<short>
+Signals the OnDialogConstructed event handler (when assigned).
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.OnDialogConstructed"/>
+<link id="TTaskDialogProgressBar.Initialize"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.DoOnDialogCreated">
+<short>
+Signals the OnDialogCreated event handler (when assigned).
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomTaskDialog.DoOnDialogDestroyed">
+<short>
+Signals the OnDialogDestroyed event handler (when assigned).
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomTaskDialog.DoOnExpandButtonClicked">
+<short>
+Updates the value in the Expanded property and signals the OnExpanded event 
+handler (when assigned).
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+<element name="TCustomTaskDialog.DoOnExpandButtonClicked.Expanded">
+<short>
+New value for the Expanded property.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.DoOnTimer">
+<short>
+Signals the OnTimer event handler (when assigned) using the specified parameter 
+values.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+<element name="TCustomTaskDialog.DoOnTimer.TickCount">
+<short>
+Elapsed number of milliseconds since the timer was started.
+</short>
+</element>
+<element name="TCustomTaskDialog.DoOnTimer.Reset">
+<short>
+Set to <b>True</b> to reset (cancel) the timer for the task dialog. 
+<b>False</b> allows the timer to continue executing.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.DoOnVerificationClicked">
+<short>
+Updates Flags to reflect the checked state for the verification control and 
+signals the OnVerificationClicked event handler (when assigned).
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.OnVerificationClicked"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+<element name="TCustomTaskDialog.DoOnVerificationClicked.Checked">
+<short>
+State for the verification check box control on the dialog.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.DoOnHelp">
+<short>
+Signals the OnHelp event handler (when assigned).
+</short>
+<descr>
+<p>
+<var>DoOnHelp</var> is a method called to perform actions needed when the Help 
+command is executed for the task dialog. It signals the OnHelp event handler 
+(when assigned) to respond to the help request.
+</p>
+<p>
+DoOnHelp is called when the widgetset handles a TDN_HELP task dialog 
+notification message which occurs when the Help button is clicked. For 
+platforms where an emulated task dialog form is used, it is called from the 
+KeyDown method in the TLCLTaskDialog instance when the F1 key is pressed.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.OnHelp"/>
+<link id="TCustomTaskDialog.Buttons"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.KeyDown">TLCLTaskDialog.KeyDown</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.DoOnHyperlinkClicked">
+<short>
+Updates the value in URL and signals the OnHyperlinkClicked event handler (when 
+assigned).
+</short>
+<descr>
+<p>
+Called from the widgetset class instance when a hyperlink in Text, 
+ExpandedText, or FooterText is clicked. Use Flags to enable hyperlinks in the 
+text areas by including tfEnableHyperlinks in the property.
+</p>
+<p>
+Use OnHyperlinkClicked to perform actions needed to handle the URL in the 
+hyperlink.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.URL"/>
+<link id="TCustomTaskDialog.OnHyperlinkClicked"/>
+</seealso>
+</element>
+<element name="TCustomTaskDialog.DoOnHyperlinkClicked.AURL">
+<short>
+New value for the URL property, and the target for the hyperlink.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.DoOnNavigated">
+<short>
+Signals the OnNavigated event handler (when assigned).
+</short>
+<descr>
+<p>
+Requires use of pages in the Task Dialog; see
+<url href="https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.taskdialogpage.navigate?view=windowsdesktop-7.0)">
+TaskDialogPage.Navigate Method
+</url>
+which might be implemented in a derived class. The event handler must be in 
+base class for Delphi compatibility.
+</p>
+</descr>
+<seealso/>
+</element>
+
+<element name="TCustomTaskDialog.InternalSetDialogHandle">
+<short>
+Sets the value for the Handle property.
+</short>
+<descr>
+<p>
+<var>InternalSetDialogHandle</var> is called when the form instance for the 
+dialog is created. For platforms using a native task dialog (Windows Vista or 
+later), it is called from the callback routine in the widgetset when the 
+TDN_DIALOG_CONSTRUCTED is handled for the widget. For platforms using an 
+emulated task dialog, it is called when the TLCLTaskDialog instance executes 
+the AfterConstruction method in the form instance. It updates the value in 
+Handle before the OnDialogConstructed event is signalled for the class instance.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Handle"/>
+<link id="TCustomTaskDialog.OnDialogConstructed"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.AfterConstruction">TLCLTaskDialog.AfterConstruction</link>
+</seealso>
+</element>
+<element name="TCustomTaskDialog.InternalSetDialogHandle.AHandle">
+<short>
+New value for the Handle property.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.SetRadioButtonFromRadioIndex">
+<short>
+Makes the radio button with the specified identifier the active RadioButton on 
+the task dialog.
+</short>
+<descr>
+<p>
+<var>SetRadioButtonFromRadioIndex</var> is a method used to make the radio 
+button specified in <var>AIndex</var> the active (or default) RadioButton on 
+the task dialog.
+</p>
+<p>
+<var>AIndex</var> is an Integer value which contains the button identifier for 
+the radio button (not its ordinal position) selected from the RadioButtons on 
+the dialog. The TTaskDialogButtons instance with the specified identifier is 
+stored in the RadioButton property. RadioButton may be set to <b>Nil</b> if 
+AIndex is not in the valid range for radio buttons starting at 
+TaskDialogFirstRadioButtonIndex, or RadioButtons does not contain the 
+identifier.
+</p>
+<p>
+SetRadioButtonFromRadioIndex is called from methods like DoExecute and 
+DoOnRadioButtonClicked.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.RadioButton"/>
+<link id="TCustomTaskDialog.RadioButtons"/>
+<link id="TCustomTaskDialog.DoExecute"/>
+<link id="TCustomTaskDialog.DoOnRadioButtonClicked"/>
+<link id="TTaskDialogButtons"/>
+<link id="TTaskDialogBaseButtonItem"/>
+<link id="TaskDialogFirstRadioButtonIndex"/>
+</seealso>
+</element>
+<element name="TCustomTaskDialog.SetRadioButtonFromRadioIndex.AIndex">
+<short/>
+</element>
+
 <element name="TCustomTaskDialog.Create">
 <short>Constructor for the class instance.</short>
 <descr>
 <p>
 <var>Create</var> is the overridden constructor for the class instance, and 
 calls the inherited method on entry. Create allocates resources needed for 
-the <var>Buttons</var> and <var>RadioButtons</var> properties. It sets the 
-default values for the following properties:
+properties like:
+</p>
+<ul>
+<li>Buttons</li>
+<li>RadioButtons</li>
+<li>QueryChoices</li>
+<li>CustomMainIcon</li>
+<li>CustomFooterIcon</li>
+<li>ProgressBar</li>
+</ul>
+<p>
+Create sets the default values for the following properties:
 </p>
 <dl>
 <dt>CommonButtons</dt>
@@ -5652,16 +7001,20 @@ default values for the following properties:
 <dd>Set to tdiNone.</dd>
 <dt>MainIcon</dt>
 <dd>Set to tdiInformation.</dd>
+<dt>Handle</dt>
+<dd>Set to the unassigned handle value (0).</dd>
 </dl>
 </descr>
 <seealso>
 <link id="TCustomTaskDialog.Buttons"/>
-<link id="TCustomTaskDialog.RadioButtons"/>
 <link id="TCustomTaskDialog.CommonButtons"/>
 <link id="TCustomTaskDialog.DefaultButton"/>
 <link id="TCustomTaskDialog.Flags"/>
 <link id="TCustomTaskDialog.FooterIcon"/>
 <link id="TCustomTaskDialog.MainIcon"/>
+<link id="TCustomTaskDialog.QueryChoices"/>
+<link id="TCustomTaskDialog.RadioButtons"/>
+<link id="TCustomTaskDialog.ProgressBar"/>
 </seealso>
 </element>
 <element name="TCustomTaskDialog.Create.AOwner">
@@ -5673,37 +7026,128 @@ default values for the following properties:
 <descr>
 <p>
 <var>Destroy</var> is the overridden destructor for the class instance. It 
-frees resources allocated for the <var>Buttons</var> and 
-<var>RadioButtons</var> properties, and calls the inherited method prior to 
-exit.
+frees resources allocated for the Buttons, RadioButtons, QueryChoices, 
+CustomFooterIcon, CustomMainIcon, and ProgressBar properties. It calls the 
+inherited method prior to exit.
 </p>
 </descr>
 <seealso>
 <link id="TCustomTaskDialog.Buttons"/>
 <link id="TCustomTaskDialog.RadioButtons"/>
+<link id="TCustomTaskDialog.QueryChoices"/>
+<link id="TCustomTaskDialog.CustomFooterIcon"/>
+<link id="TCustomTaskDialog.CustomMainIcon"/>
+<link id="TCustomTaskDialog.ProgressBar"/>
 </seealso>
 </element>
 
-<element name="TCustomTaskDialog.Execute">
-<short>Displays the dialog and captures the modal result value.</short>
+<element name="TCustomTaskDialog.ButtonIDToModalResult">
+<short>
+Gets the modal result value for the button with the specified identifier.
+</short>
 <descr>
 <p>
-<var>Execute</var> is an overloaded <var>Boolean</var> function used to 
-display the dialog and capture the modal result value using the wrapper in 
-the <file>LCLTaskDialog</file> unit. The return value is <b>True</b> if a 
-valid button identifier was selected in the wrapper.
+<var>ButtonIDToModalResult</var> is a <var>TModalResult</var> function used to 
+get the modal result value for the button with the identifier specified in the 
+<var>AButtonID</var> argument.
 </p>
 <p>
-Execute calls the <var>DoExecute</var> method to convert property values in 
-the class instance to the values expected in the <var>TTaskDialog</var> 
-record, and execute the dialog using the <file>LCLTaskDialog</file> wrapper. 
-The value in ModalResult is updated from the Button with the identifier 
-returned from the wrapper.
+AButtonID contains one of the button identifier constants which correspond to 
+the standard Buttons used on the task dialog, including:
+</p>
+<ul>
+<li>IDOK</li>
+<li>IDCANCEL</li>
+<li>IDABORT</li>
+<li>IDRETRY</li>
+<li>IDIGNORE</li>
+<li>IDYES</li>
+<li>IDNO</li>
+<li>IDCLOSE</li>
+</ul>
+<p>
+If AButtonID is in the range of button identifiers starting at 
+TaskDialogFirstButtonIndex, but is not found in Buttons, the value in AButtonID 
+is used in the return value. If the identifier is valid for and found in 
+Buttons, the return value is set to one the modal result constants like:
+</p>
+<ul>
+<li>mrOK</li>
+<li>mrCancel</li>
+<li>mrAbort</li>
+<li>mrRetry</li>
+<li>mrIgnore</li>
+<li>mrYes</li>
+<li>mrNo</li>
+<li>mrClose</li>
+<li>mrNone</li>
+</ul>
+<p>
+The return value is set to mrNone if AButtonID is not valid for or not found in 
+the Buttons collection.
+</p>
+<p>
+ButtonIDToModalResult is called from the DoExecute method using the button 
+identifier returned from the Execute method in the widgetset class instance.
 </p>
 </descr>
 <seealso>
+<link id="TCustomTaskDialog.Buttons"/>
+<link id="TaskDialogFirstButtonIndex"/>
+<link id="TTaskDialogButtons"/>
+<link id="TTaskDialogBaseButtonItem.ModalResult"/>
+<link id="#lcl.forms.TModalResult">TModalResult</link>
+</seealso>
+</element>
+<element name="TCustomTaskDialog.ButtonIDToModalResult.Result">
+<short>
+Modal result value for the button with the specified identifier.
+</short>
+</element>
+<element name="TCustomTaskDialog.ButtonIDToModalResult.AButtonID">
+<short>
+Numeric identifier for the button with the modal result value returned in the 
+method.
+</short>
+</element>
+
+<element name="TCustomTaskDialog.Execute">
+<short>Displays the task dialog and captures the modal result value.</short>
+<descr>
+<p>
+<var>Execute</var> is an overloaded <var>Boolean</var> function used to 
+display the dialog and capture the value for the ModalResult property. The 
+parameterless variant is normally called to display and execute the dialog 
+form. It gets the handle for the active form which is used as the parent for 
+the task dialog form from the Screen singleton. If a TCustomForm has not been 
+assigned in Screen, the unassigned handle value (0) is used. The overloaded 
+variant is called using the handle value as an argument.
+</p>
+<p>
+Execute calls the <var>DoExecute</var> method to perform actions needed to 
+initialize and display the dialog form. It also processes return values used in 
+properties like ModalResult, QueryResult, QueryItemIndex, Button, and 
+RadioButton.
+</p>
+<p>
+The return value is <b>True</b> if the dialog was successfully displayed and a 
+valid button identifier was clicked to close the dialog - including when Esc, 
+Alt+F4 or the Cancel button is used.
+</p>
+<remark>
+This behavior is different than other LCL dialogs where a ModalResult of 
+mrCancel would cause Execute / DoExecute to return <b>False</b>. This is 
+consistent with the task dialog behavior in the Delphi VCL; the Delphi 
+documentation states otherwise but it is incorrect.
+</remark>
+</descr>
+<seealso>
+<link id="TCustomTaskDialog.DoExecute"/>
 <link id="TCustomTaskDialog.ModalResult"/>
 <link id="TCustomTaskDialog.Button"/>
+<link id="TCustomTaskDialog.RadioButton"/>
+<link id="TCustomTaskDialog.QueryResult"/>
+<link id="TCustomTaskDialog.QueryItemIndex"/>
 <link id="#lcl.lcltaskdialog.TTaskDialog">TTaskDialog</link>
 </seealso>
 </element>
@@ -5730,7 +7174,9 @@ used in the current LCL version.
 </element>
 
 <element name="TCustomTaskDialog.Buttons">
-<short>Collection with the buttons for the Task dialog.</short>
+<short>
+Collection with the buttons for the Task dialog.
+</short>
 <descr>
 <p>
 <var>Buttons</var> is a <var>TTaskDialogButtons</var> property with the 
@@ -5763,6 +7209,100 @@ dialog.
 <seealso/>
 </element>
 
+<element name="TCustomTaskDialog.CustomFooterIcon">
+<short>
+Contains a custom icon displayed in the footer area on the dialog.
+</short>
+<descr>
+<p>
+<var>CustomFooterIcon</var> is a <var>TIcon</var> property which contains the 
+custom icon used in the footer area on the task dialog. It allows an icon other 
+than one of the built-in resources in FooterIcon to be used in the content 
+area. The image content can be loaded at design-time using the property editor 
+in the Object Inspector, or assigned at run-time prior to calling Execute for 
+the task dialog.
+</p>
+<p>
+The property value is stored during component streaming when an icon has been 
+assigned to the property and its image data is not empty. Otherwise, it is 
+omitted from the LFM resource.
+</p>
+<p>
+The handle for the custom icon image is used when the execute method in the 
+widgetset class instance is called. Include the value tfUseHIconFooter in the 
+Flags property to enable use of the handle in the widget instance instead of a 
+handle for one of the built-in icon resources.
+</p>
+<p>
+Use FooterIcon to select one the standard built-in icons for use in the footer 
+the content area.
+</p>
+<p>
+Use MainIcon or CustomMainIcon to specify the icon displayed in the main 
+content area on the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.FooterIcon"/>
+<link id="TCustomTaskDialog.MainIcon"/>
+<link id="TCustomTaskDialog.CustomMainIcon"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+<link id="#lcl.graphics.TIcon">TIcon</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.CustomMainIcon">
+<short>
+Contains a custom icon displayed in the main content area on the dialog.
+</short>
+<descr>
+<p>
+<var>CustomMainIcon</var> is a <var>TIcon</var> property which contains the 
+custom icon used in the main content area on the task dialog. It allows an icon 
+other than one of the built-in resources in MainIcon to be used in the content 
+area. The image content can be loaded at design-time using the property editor 
+in the Object Inspector, or assigned at run-time prior to calling Execute for 
+the task dialog.
+</p>
+<p>
+The property value is stored during component streaming when an icon has been 
+assigned to the property and its image data is not empty. Otherwise, it is 
+omitted from the LFM resource.
+</p>
+<p>
+The handle for the custom icon image is used when the Execute method in the 
+widgetset class instance is called. Include the value tfUseHIconMain in the 
+Flags property to enable use of the handle in the widget instance instead of a 
+handle for one of the built-in icon resources.
+</p>
+<p>
+Use MainIcon to select one the standard built-in icons for use in the main 
+content area.
+</p>
+<p>
+Use FooterIcon or CustomFooterIcon to specify the icon displayed in the footer 
+content area on the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.MainIcon"/>
+<link id="TCustomTaskDialog.FooterIcon"/>
+<link id="TCustomTaskDialog.CustomFooterIcon"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+<link id="#lcl.graphics.TIcon">TIcon</link>
+</seealso>
+</element>
+
 <element name="TCustomTaskDialog.CommonButtons">
 <short>Set of common buttons displayed on the Task dialog.</short>
 <descr>
@@ -5788,6 +7328,39 @@ and passed as arguments to the wrapper in <file>LCLTaskDialog</file>.
 <link id="TTaskDialogCommonButtons"/>
 <link id="TTaskDialogCommonButton"/>
 <link id="#lcl.lcltaskdialog.TTaskDialog">LCLTaskDialog.TTaskDialog</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.CollapseButtonCaption">
+<short>
+Caption text for the "expando" button on the task dialog.
+</short>
+<descr>
+<p>
+<var>CollapseButtonCaption</var> is a <var>TTranslateString</var> property with 
+the text displayed next to the "expando" button for the dialog when Expanded is 
+set to <b>True</b>. It describes the action performed the next time the button 
+is clicked. When omitted (or set to an empty string), the value 'Hide details' 
+is used.
+</p>
+<p>
+The property value can be localized using the translation facilities provided 
+in the Lazarus IDE when enabled for a project, or by manually calling the 
+translation routines in LazUtils.
+</p>
+<p>
+Use ExpandButtonCaption to specify the caption displayed when the content in 
+ExpandedText is collapsed (Expanded is set to <b>False</b>).
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.ExpandButtonCaption"/>
+<link id="TCustomTaskDialog.Expanded"/>
+<link id="TCustomTaskDialog.ExpandedText"/>
+<link id="#lcl.lcltype.TTranslateString">TTranslateString</link>
 </seealso>
 </element>
 
@@ -5833,9 +7406,11 @@ the standard LCL translation facilities.
 <p>
 The default value for the property is an empty String (''), and cause the 
 values "See details" or "Hide details" to be used on the Task dialog (when 
-the language is English). Setting a value for the property causes the same 
-caption to be displayed for both the expanded and collapsed states; only the 
-button indicator changes.
+the language is English).
+</p>
+<p>
+Use CollapseButtonCaption to assign the caption displayed when ExpandedText is 
+Expanded.
 </p>
 <p>
 Use the Flags property to control the position (tfExpandFooterArea) or the 
@@ -5843,8 +7418,12 @@ expanded / collapsed state (tfExpandedByDefault) for the ExpandedText on the
 Task dialog.
 </p>
 </descr>
+<version>
+Added in LCL version 4.0.
+</version>
 <seealso>
 <link id="TCustomTaskDialog.ExpandedText"/>
+<link id="TCustomTaskDialog.CollapseButtonCaption"/>
 <link id="TCustomTaskDialog.Flags"/>
 <link id="TTaskDialogFlags"/>
 <link id="TTaskDialogFlag"/>
@@ -5870,8 +7449,8 @@ ADialog.ExpandedText := 'Please read the Terms of Service.'+#10+
   'Available on our Website.';
 </code>
 <p>
-Or, the multi-line value can be entered in the object inspector property 
-editor at design-time.
+Or, the multi-line value can be entered in the object inspector using the 
+property editor at design-time.
 </p>
 <p>
 Text, ExpandedText, and FooterText allow an HTML-like hyperlinking capability 
@@ -5894,17 +7473,39 @@ version 2.2.0.
 </element>
 
 <element name="TCustomTaskDialog.Flags">
-<short>Set of options enabled for the Task dialog.</short>
+<short>
+Set of options enabled for the Task dialog.
+</short>
 <descr>
 <p>
-Flags is a TTaskDialogFlags property with the set of options for the Task 
-dialog. It contains values from the TTaskDialogFlag enumeration, and when 
-included, enable the corresponding feature in the Task Dialog. The default 
-value for the property is [tfAllowDialogCancellation] and allows the dialog 
-to be cancelled.
+<var>Flags</var> is a <var>TTaskDialogFlags</var> property with the set of 
+options enabled for the Task dialog. It contains zero or more values from the 
+TTaskDialogFlag enumeration, which when included, enable the corresponding 
+features in the Task Dialog. The default value for the property is 
+[tfAllowDialogCancellation] and allows the dialog to be cancelled using the Esc 
+key or Alt+F4 key combination.
+</p>
+<p>
+Changing the property value causes validation and normalization of the flag 
+values to be performed. tfQuery and tfSimpleQuery are mutually exclusive 
+values; if both are specified in the property value, then tfSimpleQuery is 
+excluded from the new property value. In addition, tfQuery and tfSimpleQuery 
+causes other flag values to be ignored, and certain features are disbaled. They 
+cause the expando control (expand or collapse indicator) to be hidden and 
+ExpandedText is displayed in the expanded state (tfExpandedByDefault). 
+Hyperlinks (tfEnableHyperlinks) are disabled when tfQuery or tfSimpleQuery is 
+included in the property; the markup for the hyperlink is still displayed in 
+the text areas though.
+</p>
+<p>
+See <link id="TTaskDialogFlag">TTaskDialogFlag</link> for the complete list of 
+enumeration values allowed in the property and their meanings.
 </p>
 </descr>
 <seealso>
+<link id="TCustomTaskDialog.ExpandedText"/>
+<link id="TCustomTaskDialog.FooterText"/>
+<link id="TCustomTaskDialog.Text"/>
 <link id="TTaskDialogFlags"/>
 <link id="TTaskDialogFlag"/>
 </seealso>
@@ -5943,12 +7544,12 @@ when line ending characters (#13,#10) are embedded in the String value. For
 example:
 </p>
 <code>
-ADialog.FooterText := '(c) Copyright 1960-2021, Acme Corporation LLC.' + #10 +
-  'All rights reserved.';
+ADialog.FooterText := '(c) Copyright 1960-2021, Acme Corporation LLC.' + 
+  #10 + 'All rights reserved.';
 </code>
 <p>
-Or, the multi-line value can be entered in the object inspector property 
-editor at design-time.
+Or, the multi-line value can be entered in the object inspector using the 
+property editor at design-time.
 </p>
 <p>
 Text, ExpandedText, and FooterText allow an HTML-like hyperlinking capability 
@@ -5994,6 +7595,35 @@ enumeration and their meanings.
 </seealso>
 </element>
 
+<element name="TCustomTaskDialog.Handle">
+<short>
+Handle for the form displayed for the task dialog.
+</short>
+<descr>
+<p>
+<var>Handle</var> is a read-only <var>THandle</var> property which contains the 
+handle for the dialog form displayed for the task dialog. The value for the 
+property is assigned when the form has been created in the widgetset class 
+instance. For platforms using a native task dialog (Windows Vista or later), it 
+is assigned when the TDN_DIALOG_CONSTRUCTED notification is handled in the 
+callback routine for the widget. For platforms using an emulated task dialog, 
+it is assigned when the AfterConstruction method for the TLCLTaskDialog instance
+is called.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<notes>
+<note>Should this use the TLCLHandle type?</note>
+</notes>
+<seealso>
+<link id="TCustomTaskDialog.InternalSetDialogHandle"/>
+<link id="TCustomTaskDialog.OnDialogConstructed"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.AfterConstruction">TLCLTaskDialog.AfterConstruction</link>
+</seealso>
+</element>
+
 <element name="TCustomTaskDialog.ModalResult">
 <short>Modal result value returned when the Task dialog was executed.</short>
 <descr>
@@ -6013,21 +7643,169 @@ dialog was displayed, or <var>mrNone</var> if the dialog was cancelled.
 </seealso>
 </element>
 
+<element name="TCustomTaskDialog.ProgressBar">
+<short>
+Contains information used to configure and update a progress bar enabled on the 
+task dialog.
+</short>
+<descr>
+<p>
+<var>ProgressBar</var> is a <var>TTaskDialogProgressBar</var> property which 
+contains range, position, and state information for a progress bar enabled on 
+the task dialog. Changes to property values in ProgressBar cause the widgetset 
+class to be updated and redrawn. The Handle for the dialog is used to send task 
+dialog messages to the widget with the new values for the members.
+</p>
+<p>
+Use the Flags property to enable a progress bar on the task dialog. 
+tfShowProgressBar enables a conventional progress bar which displays completion 
+percentage. tfShowMarqueeProgressBar enables the scrolling marquee-style 
+progress bar.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialogProgressBar"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.QueryChoices">
+<short>
+Predefined values for the query control on the task dialog.
+</short>
+<descr>
+<p>
+<var>QueryChoices</var> is a <var>TStrings</var> property with a list of 
+predefined values that can be selected in the query control on the task 
+dialog. Values in QueryChoices are displayed in a TComboBox control created for 
+the task dialog when tfQuery has been included in the Flags property. Include 
+tfQueryFixedChoices in Flags to make the values in QueryChoices read-only in 
+the combo-box control.
+</p>
+<p>
+Use QueryItemIndex to determine which value is initially selected in 
+QueryChoices, or returned when the task dialog was executed. Use QueryResult to 
+access the string value returned in the query control.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.QueryItemIndex"/>
+<link id="TCustomTaskDialog.QueryResult"/>
+<link id="TCustomTaskDialog.Execute"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.QueryItemIndex">
+<short>
+Ordinal position for the value in QueryChoices selected when the task dialog 
+is executed.
+</short>
+<descr>
+<p>
+<var>QueryItemIndex</var> is an <var>Integer</var> property which contains the 
+ordinal position for the selected value in the QueryChoices on the dialog. It 
+contains the initial item in QueryChoices selected when the Execute method is 
+called. It is updated with the option selected during execution of the dialog 
+form.
+</p>
+<p>
+Use QueryResult to access the string value for the selected item in 
+QueryChoices.
+</p>
+<p>
+QueryItem and QueryResult are relevant when tfQuery has been included in the 
+Flags for the task dialog.
+</p>
+<p>
+Use ModalResult to determine the button or key combination used to complete 
+execution of the dialog form.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.QueryChoices"/>
+<link id="TCustomTaskDialog.QueryResult"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.Execute"/>
+<link id="TCustomTaskDialog.ModalResult"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.QueryResult">
+<short>
+String representation for the query entered or selected on the dialog form.
+</short>
+<descr>
+<p>
+<var>QueryResult</var> is a <var>String</var> property with the value for the 
+query control dialog form. The content may reflect either the SimpleQuery or 
+the selected value in QueryChoices for the class instance.
+</p>
+<p>
+Use Flags to specify which editing control and mode are used to capture the 
+query value (tfSimpleQuery for SimpleQuery and tfQuery for QueryChoices).
+</p>
+<p>
+QueryResult is set to an empty string ('') when the Execute method is called, 
+and updated prior to exit.
+</p>
+<p>
+Use ModalResult to determine the button or key press used to complete execution 
+of the task dialog. The value in QueryResult is set to the respective source 
+even when Esc or Alt+F4 is used to cancel the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.QueryChoices"/>
+<link id="TCustomTaskDialog.QueryItemIndex"/>
+<link id="TCustomTaskDialog.SimpleQuery"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.Execute"/>
+<link id="TCustomTaskDialog.DoExecute"/>
+<link id="TCustomTaskDialog.ModalResult"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
 <element name="TCustomTaskDialog.RadioButton">
-<short>The radio button selected in the Task dialog.</short>
+<short>The radio button selected on the Task dialog.</short>
 <descr>
 <p>
 <var>RadioButton</var> is a read-only <var>TTaskDialogRadioButtonItem</var> 
-property with the radio button selected when the Task dialog was executed. 
-The property value is set when the <var>Execute</var> method calls the 
-wrapper in <file>LCLTaskDialog</file>. It contains an entry from the 
-<var>RadioButtons</var> collection that was passed as an argument to the 
-<var>TTaskDialog</var> wrapper.
+property with the radio button selected when the Task dialog was executed. The 
+property value is set in the Execute method, and contains an entry from the 
+RadioButtons collection or <b>Nil</b> if a radio button was not selected or 
+available.
+</p>
+<p>
+Use the Default property in one of the RadioButtons to indicate the selected 
+radio button control when the Execute method is called.
+</p>
+<p>
+Include tfNoDefaultRadioButton in the Flags property to disable automatic 
+selection of a default radio button on the dialog form.
 </p>
 </descr>
 <seealso>
 <link id="TCustomTaskDialog.RadioButtons"/>
 <link id="TCustomTaskDialog.Execute"/>
+<link id="TCustomTaskDialog.Flags"/>
 <link id="TCustomTaskDialog.DoExecute"/>
 <link id="TTaskDialogRadioButtonItem"/>
 </seealso>
@@ -6065,6 +7843,65 @@ selected on the Task dialog.
 </seealso>
 </element>
 
+<element name="TCustomTaskDialog.SimpleQuery">
+<short>
+Contains the text displayed and edited using the query control on the task 
+dialog.
+</short>
+<descr>
+<p>
+<var>SimpleQuery</var> is a <var>String</var> property which contains free-form 
+text maintained using the query control for the task dialog. A single-line edit 
+control is used to display and edit the value for the property.
+</p>
+<p>
+SimpleQuery is displayed on the dialog when tfSimpleQuery has been included in 
+the Flags property. Please note that tfQuery and tfSimpleQuery flag values are 
+mutually exclusive with tfQuery taking precedence.
+</p>
+<p>
+Use QueryChoices if predefined choices selected using a combo-box control are 
+needed on the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.SimpleQueryPasswordChar"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.SimpleQueryPasswordChar">
+<short>
+Character value used to obfuscate text in SimpleQuery for the query control.
+</short>
+<descr>
+<p>
+The default value for the property is #0 (NULL character) and indicates that 
+obfuscation is not enabled for the simple query control. Another character 
+stored in the property is used to obfuscate the characters entered in the 
+SimpleQuery property.
+</p>
+<p>
+SimpleQueryPasswordChar is used when tfSimpleQuery has been included in the 
+Flags for the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.SimpleQuery"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
 <element name="TCustomTaskDialog.Text">
 <short>
 Text displayed as main content for the Task dialog.
@@ -6082,14 +7919,13 @@ ADialog.Text := 'Please read and accept the Terms of Service. ' + #10 +
 'You must agree before the application can be installed.';
 </code>
 <p>
-Or, the multi-line value can be entered in the object inspector property 
-editor at design-time.
+Or, the multi-line value can be entered in the object inspector using the 
+property editor at design-time.
 </p>
 <p>
 Text, ExpandedText, and FooterText allow an HTML-like hyperlinking capability 
 using the &lt;a href="linktarget"&gt;Link Text&lt;/a&gt; notation. The 
 feature must be enabled by including tfEnableHyperlinks in the Flags property.
-Use tfExpandFooterArea to position the expanded text in the footer area.
 </p>
 <p>
 Use ExpandedText to set the content in the collapsible area on the Task 
@@ -6113,15 +7949,61 @@ version 2.2.0.
 
 <element name="TCustomTaskDialog.Title">
 <short>
-Header text displayed at the top of dialog, with a larger font size and using 
-a bold font style.
+Text displayed at the top of dialog adjacent to the main icon.
 </short>
-<descr/>
+<descr>
+<p>
+<var>Title</var> is a <var>TTranslateString</var> property which contains text 
+displayed at the top of dialog using a larger font size and a highlighted, bold 
+font style. Title is displayed adjacent to the MainIcon for the dialog (when 
+used).
+</p>
+<p>
+Title can be localized using the Lazarus IDE translation facilities when 
+enabled in the project, or by calling translation routines in LazUtils.
+</p>
+<p>
+Use Caption to assigned the value displayed on the window header for the task 
+dialog form.
+</p>
+</descr>
 <seealso>
 <link id="TCustomTaskDialog.MainIcon"/>
+<link id="TCustomTaskDialog.Caption"/>
 <link id="TCustomTaskDialog.Text"/>
 <link id="TCustomTaskDialog.ExpandedText"/>
 <link id="TCustomTaskDialog.FooterText"/>
+<link id="TCustomTaskDialog.ExpandButtonCaption"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.VerificationText">
+<short>
+Optional caption for the verification check box displayed near the bottom of 
+the Task dialog.
+</short>
+<descr>
+<p>
+<var>VerificationText</var> is a <var>TTranslateString</var> property with the 
+text displayed next to a verification check box enabled on the dialog. The 
+verification check box is omitted from the task dialog (even when 
+tfVerificationFlagChecked is enabled in Flags) if VerificationText is an empty 
+string ('').
+</p>
+<p>
+VerificationText can be localized using the Lazarus IDE translation facilities 
+when enabled in the project, or by calling translation routines in LazUtils.
+</p>
+<p>
+Use OnVerificationClicked to perform actions needed when the verification check 
+box is clicked on the dialog.
+</p>
+</descr>
+<seealso>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.OnVerificationClicked"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
 </seealso>
 </element>
 
@@ -6134,7 +8016,7 @@ Sets the width in pixels for the task dialog form.
 <var>Width</var> is an <var>Integer</var> property which sets the width (in 
 pixels) for the task dialog form. The default value for the property is 0 
 (zero), and causes the width for the dialog form to be calculated when the 
-dialog is executed using the length of its textual content.
+dialog is executed using the length of its textual content and controls.
 </p>
 <p>
 Width is passed as an argument to the Execute method in the TTaskDialog 
@@ -6153,16 +8035,83 @@ pixels) or an upper limit (480 pixels) on the auto-calculated width.
 </seealso>
 </element>
 
-<element name="TCustomTaskDialog.VerificationText">
+<element name="TCustomTaskDialog.URL">
 <short>
-Optional caption text for the check box displayed at the bottom of the Task 
+Universal Resource Locator (or identifier) for a hyperlink clicked on the task 
 dialog.
 </short>
-<descr/>
+<descr>
+<p>
+<var>URL</var> is a read-only <var>String</var> property which contains the 
+resource identifier for a hyperlink clicked in one of the text areas for the 
+task dialog.
+</p>
+<p>
+Include tfEnableHyperlinks in the Flags property to enable hyperlinks in text 
+areas on the task dialog like Text, ExpandedText, and FooterText.
+</p>
+<p>
+Hyperlinks are written using the common HTML Anchor notation:
+</p>
+<code>
+&lt;a href="https://forum.lazarus.freepascal.org/"&gt;Lazarus Forum&lt;/a&gt;
+</code>
+<p>
+Use the OnHyperlinkClicked event handler to perform any actions needed to 
+locate, open, or display content represented by the value in URL. Please note 
+that URL can contain any valid URI.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
 <seealso>
 <link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.Text"/>
+<link id="TCustomTaskDialog.ExpandedText"/>
+<link id="TCustomTaskDialog.FooterText"/>
+<link id="TCustomTaskDialog.OnHyperlinkClicked"/>
 <link id="TTaskDialogFlags"/>
 <link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.Expanded">
+<short>
+Indicates the expanded or collapsed state for the ExpandedText on the task 
+dialog form.
+</short>
+<descr>
+<p>
+<var>Expanded</var> is a read-only <var>Boolean</var> property which indicates 
+whether the content in ExpandedText is currently displayed in the expanded or 
+collapsed state. The property value is updated each time the expando control 
+(expand / collapse indicator) is clicked.
+</p>
+<p>
+When set to <b>True</b>b>, the values in ExpandedText ar displayed in the 
+expanded state on its text area. Otherwise the values in ExpandText are not 
+visible on the dialog.
+</p>
+<remark>
+Expanded is always <b>True</b> when tfquery or tfSimpleQuery is included in the 
+Flags for the dialog. In addition, the expando control is not displayed on the 
+dialog.
+</remark>
+<p>
+Use the OnExpanded event handler to perform actions needed after the property 
+value has been updated in the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.ExpandedText"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TCustomTaskDialog.OnExpanded"/>
+<link id="TTaskDialogFlag"/>
+<link id="TTaskDialogFlags"/>
 </seealso>
 </element>
 
@@ -6173,18 +8122,368 @@ executed.
 </short>
 <descr>
 <p>
-OnButtonClicked is signalled after a button is clicked on the Task dialog.
+<var>OnButtonClicked</var> is a <var>TTaskDlgClickEvent</var> property with the 
+event handler signalled (when assigned) after a button is clicked on the task 
+dialog during execution. It is signalled from the DoOnButtonClicked method.
+</p>
+<p>
+Arguments passed to the TTaskDlgClickEvent event handler include the 
+TTaskDialog instance, the modal result value, and a Boolean flag which 
+indicates if the dialog can be closed. Setting the CanClose argument to 
+<b>False</b> in the handler routine causes the dialog to continue its Execute 
+processing loop.
 </p>
 </descr>
 <seealso/>
 </element>
 
-<element name="TTaskDialog">
-<short>Creates a configurable, modal task dialog at run-time.</short>
+<element name="TCustomTaskDialog.OnDialogConstructed">
+<short>
+Event handler signalled when the constructor for the dialog form instance has 
+completed.
+</short>
 <descr>
 <p>
-A non-visual component which creates modal dialogs at run-time, with rich UI 
-elements. Like the Windows TaskDialog API. For example:
+<var>OnDialogConstructed</var> is a <var>TNotifyEvent</var> property with the 
+event handler signalled when the constructor for the task dialog has completed. 
+It is signalled (when assigned) from the DoOnDialogConstructed method.
+</p>
+<p>
+For native implementations using the Task Dialog API (supported Windows 
+versions), it occurs when the TDN_DIALOG_CONSTRUCTED notification is handled in 
+the callback routine for the class instance. For emulated task dialog forms, it 
+occurs when the overridden AfterConstruction method is called.
+</p>
+<p>
+Applications can implement a handler routine to perform actions needed when the 
+dialog form has been allocated but not yet displayed or executed for the
+class instance.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.DoOnDialogConstructed"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.CreateNew">TLCLTaskDialog.CreateNew</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnDialogCreated">
+<short>
+Event handler signalled when a form instance has been created for the dialog.
+</short>
+<descr>
+<p>
+<var>OnDialogCreated</var> is a <var>TNotifyEvent</var> property with the
+event handler signalled after a new dialog form instance has been created for 
+the class. It is signalled (when assigned) in the DoOnDialogCreated method, and 
+occurs when the dialog form is created for the class instance. 
+</p>
+<p>
+For native implementations using the Task Dialog API (supported Windows 
+versions), it occurs when the TDN_CREATED notification is handled in the 
+callback routine for the class instance. For emulated task dialog forms, it 
+occurs when the TLCLTaskDialog.CreateNew method is called. It is the last 
+action performed in the method, and allows the caller to be notified when the 
+LCL form instance is valid and available to the TTaskDialog owner.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.DoOnDialogCreated"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.CreateNew">TLCLTaskDialog.CreateNew</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnDialogDestroyed">
+<short>
+Event handler signalled when the task dialog form has been freed for the class 
+instance.
+</short>
+<descr>
+<p>
+<var>OnDialogDestroyed</var> is a <var>TNotifyEvent</var> property with the 
+event handler signalled when the dialog form for the class instance has been 
+freed. It is signalled (when assigned) from the DoOnDialogDestroyed method.
+</p>
+<p>
+For native implementations using the Task Dialog API (supported Windows 
+versions), it occurs when the TDN_DESTROYED notification is handled in the 
+callback routine for the class instance. For emulated task dialog forms, it 
+occurs when the TLCLTaskDialog.Destroy method is called. It is the first action 
+performed in the method, and occurs before the inherited destructor is called 
+for the LCL form instance.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.DoOnDialogDestroyed"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.Destroy">TLCLTaskDialog.Destroy</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnVerificationClicked">
+<short>
+Event handler signalled when the verification check box has been clicked on the 
+task dialog.
+</short>
+<descr>
+<p>
+<var>OnVerificationClicked</var> is a <var>TNotifyEvent</var> property with the 
+event handler signalled when the verification check box for the task dialog is 
+clicked. It is signalled (when assigned) from the DoOnVerificationClicked 
+method, and occurs after the checked state for the check box control has been 
+applied to the Flags in the task dialog.
+</p>
+<p>
+Use OnVerificationClicked to perform actions needed when the checked state has 
+been changed.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.DoOnVerificationClicked"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnExpanded">
+<short>
+Event handler signalled when the ExpandedText on the dialog has been expanded 
+or collapsed.
+</short>
+<descr>
+<p>
+<var>OnExpanded</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled when the expanded or collapsed state for the 
+<var>ExpandedText</var> area on the task dialog has been changed. OnExpanded is 
+signalled (when assigned) from the DoOnExpandButtonClicked method, and occurs 
+after the member for the read-only Expanded property has been updated with the 
+new value.
+</p>
+<p>
+Use Flags to specify the content area on the dialog where the values in 
+ExpandedText are displayed (tfExpandFooterArea).
+</p>
+<p>
+Use ExpandButtonCaption and CollapseButtonCaption to set the text displayed 
+next to the expando button on the task dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Expanded"/>
+<link id="TCustomTaskDialog.DoOnExpandButtonClicked"/>
+<link id="TCustomTaskDialog.ExpandButtonCaption"/>
+<link id="TCustomTaskDialog.CollapseButtonCaption"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+<link id="#rtl.classes.TNotifyEvent">TNotifyEvent</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnTimer">
+<short>
+Event handler signalled when the interval for the timer on the dialog has 
+elapsed.
+</short>
+<descr>
+<p>
+<var>OnTimer</var> is a <var>TTaskDlgTimerEvent</var> property with the event 
+handler signalled when the interval for the timer in the task dialog has 
+elapsed. It is signalled (when assigned) from the DoOnTimer method and receives 
+values for the object instance, tick count since the timer was started, and a 
+reset flag.
+</p>
+<p>
+For the native Windows Task Dialog API, it occurs when the TDN_TIMER 
+notification is handled in the callback procedure for the dialog. For platforms 
+which use an emulated task dialog, it occurs when the handler routine for the 
+internal TTimer instance in TLCLTaskDialog has elapsed. The timer interval is 
+200ms.
+</p>
+<p>
+An application can implement and assign a handler using the signature in 
+TTaskDlgTimerEvent to perform actions needed when the notification occurs in 
+the class instance.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+<notes>
+<note>
+There are no mechanisms to set the progress bar range (min, max) or update the 
+progress bar position on the widget.
+</note>
+</notes>
+</element>
+
+<element name="TCustomTaskDialog.OnRadioButtonClicked">
+<short>
+Event handler signalled when a radio button on the dialog has been clicked.
+</short>
+<descr>
+<p>
+<var>OnRadioButtonClicked</var> is a <var>TNotifyEvent</var> property with the 
+event handler signalled when a radio button on the task dialog has been clicked. It is signalled (when assigned) from the DoOnRadioButtonClicked method, and occurs after the value in RadioButton has been updated to reflect the button identifier clicked on the dialog form.
+</p>
+
+<p>
+For native implementations using the Task Dialog API (supported Windows 
+versions), it occurs when the TDN_RADIO_BUTTON_CLICKED notification is handled 
+in the callback routine for the class instance. For emulated task dialog forms, 
+it occurs when the corresponding event handler implementation for the LCL form 
+instance is called. 
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.DoOnRadioButtonClicked"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog">TLCLTaskDialog</link>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnHyperlinkClicked">
+<short>
+Event handler signalled when a hyperlink in one of the text areas has been 
+clicked.
+</short>
+<descr>
+<p>
+<var>OnHyperlinkClicked</var> is a <var>TNotifyEvent</var> property with the 
+event handler signalled when a hyperlink in one of the text areas on the task 
+dialog has been clicked. The URL property contains the target for the hyperlink in the event notification.
+</p>
+<p>
+Hyperlinks may appear in the Text, ExpandedText, and FooterText properties. 
+They use the common HTML Anchor notation like:
+</p>
+<code>
+&lt;a href="https://www.lazarus-ide.org/"&gt;Lazarus website&lt;/a&gt;
+</code>
+<p>
+Include tfEnableHyperlinks in the Flags property to enable display and handling 
+for hyperlinks in the text areas on the dialog.
+</p>
+<remark>
+Hyperlinks are automatically disabled when tfQuery or tfSimpleQuery are included in Flags. The textual content for hyperlinks is still displayed - but without formatting and event handler notifications.
+</remark>
+</descr>
+<seealso>
+<link id="TCustomTaskDialog.Text"/>
+<link id="TCustomTaskDialog.ExpandedText"/>
+<link id="TCustomTaskDialog.FooterText"/>
+<link id="TCustomTaskDialog.URL"/>
+<link id="TCustomTaskDialog.Flags"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+</seealso>
+</element>
+
+<element name="TCustomTaskDialog.OnNavigated">
+<short/>
+<descr>
+<p>
+<var>OnNavigated</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled when a page of content is needed for the task dialog. It is 
+signalled (when assigned) from the DoOnNavigated method.
+</p>
+<p>
+See <url href="https://learn.microsoft.com/en-us/dotnet/api/system.windows.forms.taskdialogpage.navigate?view=windowsdesktop-7.0">
+TaskDialogPage.Navigate
+</url> for more information about the API implementation.
+</p>
+<p>
+Please note that the page instance used in the native Task Dialog API is not 
+available in the event handler. It might be implemented in a derived class, but 
+the event handler must be in base class for Delphi compatibility.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+
+<element name="TCustomTaskDialog.OnHelp">
+<short>
+Event handler signalled to display help for the task dialog.
+</short>
+<descr>
+<p>
+<var>OnHelp</var> is a <var>TNotifyEvent</var> property with the event handler 
+signalled to display help for the task dialog. It is signalled (when assigned) 
+from the DoOnHelp method.
+</p>
+<p>
+For native implementations using the Task Dialog API (supported Windows 
+versions), it occurs when the TDN_HELP notification is handled in 
+the callback routine for the class instance. For emulated task dialog forms, it 
+occurs when the F1 key is processed in the KeyDown handler for the LCL form 
+instance.
+</p>
+<p>
+Applications can implement and assign a routine to the handler to perform the 
+actions needed to display context or keyword help for the dialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.DoOnHelp"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog.KeyDown">TLCLTaskDialog.KeyDown</link>
+</seealso>
+</element>
+
+<element name="TTaskDialog">
+<short>
+Implements a configurable modal task dialog.
+</short>
+<descr>
+<p>
+<var>TTaskDialog</var> is a <var>TCustomTaskDialog</var> descendant which 
+implements a configurable, modal task dialog. It can be used to display and 
+edit information on a dialog form with more features than those available on a 
+standard message box.
+</p>
+<p>
+TTaskDialog sets the visibility for properties introduced in ancestor classes, 
+and provides a multi-platform implementation of the Windows TaskDialog API. It 
+provides properties which can be used to configure the task dialog at 
+design-time or at run-time. At run-time, the <var>Execute</var> method handles 
+converting properties and calling routines and methods in the widgetset which 
+implement the task dialog for a given platform.
+</p>
+<p>
+<b>Platform Support</b>
+</p>
+<p>
+The TaskDialog API, upon which TTaskDialog is based, is available only on 
+Windows Vista or later versions. On these platforms, the form displayed at 
+run-time is the native form for the platform. On older Windows versions, and 
+other platforms, the TaskDialog API is not available or supported. For these 
+platforms, a standard LCL form is created and populated at run-time to emulate 
+the appearance and behaviors for the Windows implementation. This occurs in the 
+widget set class and uses the components found in the 
+<file>taskdlgemulation.pp</file> unit. It can be forced by including a value in 
+the Flags property for the class instance.
 </p>
 <p>
 <b>Using TTaskDialog at Run-time.</b>
@@ -6212,9 +8511,9 @@ begin
 
     CommonButtons := [tcbOk,tcbCancel,tcbRetry];
 
-    ExpandedText := 'The Terms of Service grants a waiver of responsibility to ' +
-      'Acme Corporation LLC (the Corporation) for any insane acts a Coyote ' +
-      'might perform using products or services provided by the Corporation. '+#10+#10+
+    ExpandedText := 'The Terms of Service grants a waiver of responsibility '+
+      'to Acme Corporation LLC for any insane acts a Coyote might perform '+
+      'using products or services provided by the Corporation.'+#10+#10+
       'There is no legal venue where the Corporation is responsible. ' +
       'Especially Albuquerque, NM USA. ' +#10+#10+
       'Buyer beware. All rights reserved. Shipping fees and taxes may apply.';
@@ -6224,19 +8523,31 @@ begin
     FooterIcon := tdiWarning;
     FooterText := 'This is your &lt;a href="#terminus"&gt;final&lt;/a&gt; warning.';
 
-    Flags := [tfEnableHyperlinks, tfAllowDialogCancellation, tfExpandFooterArea, tfExpandedByDefault, tfVerificationFlagChecked, tfShowMarqueeProgressBar];
+    Flags := [tfEnableHyperlinks, tfAllowDialogCancellation, 
+      tfExpandedByDefault, tfVerificationFlagChecked];
 
-    if Execute then ; // do something with the ModalResult
+    if Execute then ; // do something based on ModalResult
     Free;
   end;
 end;
 </code>
 </descr>
+<version>
+Modified in LCL version 4.0. The implementation for the most part is rewritten, 
+and includes additional features not found in previous versions.
+</version>
+<seealso>
+<link id="TCustomTaskDialog"/>
+<link id="#lcl.taskdlgemulation.TLCLTaskDialog">TLCLTaskDialog</link>
+</seealso>
 </element>
 
 <element name="TTaskDialog.Buttons" link="#lcl.dialogs.TCustomTaskDialog.Buttons"/>
 <element name="TTaskDialog.Caption" link="#lcl.dialogs.TCustomTaskDialog.Caption"/>
 <element name="TTaskDialog.CommonButtons" link="#lcl.dialogs.TCustomTaskDialog.CommonButtons"/>
+<element name="TTaskDialog.CollapseButtonCaption" link="#lcl.dialogs.TCustomTaskDialog.CollapseButtonCaption"/>
+<element name="TTaskDialog.CustomFooterIcon" link="#lcl.dialogs.TCustomTaskDialog.CustomFooterIcon"/>
+<element name="TTaskDialog.CustomMainIcon" link="#lcl.dialogs.TCustomTaskDialog.CustomMainIcon"/>
 <element name="TTaskDialog.DefaultButton" link="#lcl.dialogs.TCustomTaskDialog.DefaultButton"/>
 <element name="TTaskDialog.ExpandButtonCaption" link="#lcl.dialogs.TCustomTaskDialog.ExpandButtonCaption"/>
 <element name="TTaskDialog.ExpandedText" link="#lcl.dialogs.TCustomTaskDialog.ExpandedText"/>
@@ -6244,12 +8555,75 @@ end;
 <element name="TTaskDialog.FooterIcon" link="#lcl.dialogs.TCustomTaskDialog.FooterIcon"/>
 <element name="TTaskDialog.FooterText" link="#lcl.dialogs.TCustomTaskDialog.FooterText"/>
 <element name="TTaskDialog.MainIcon" link="#lcl.dialogs.TCustomTaskDialog.MainIcon"/>
+<element name="TTaskDialog.ProgressBar" link="#lcl.dialogs.TCustomTaskDialog.ProgressBar"/>
 <element name="TTaskDialog.RadioButtons" link="#lcl.dialogs.TCustomTaskDialog.RadioButtons"/>
+<element name="TTaskDialog.QueryChoices" link="#lcl.dialogs.TCustomTaskDialog.QueryChoices"/>
+<element name="TTaskDialog.QueryItemIndex" link="#lcl.dialogs.TCustomTaskDialog.QueryItemIndex"/>
+<element name="TTaskDialog.SimpleQuery" link="#lcl.dialogs.TCustomTaskDialog.SimpleQuery"/>
+<element name="TTaskDialog.SimpleQueryPasswordChar" link="#lcl.dialogs.TCustomTaskDialog.SimpleQueryPasswordChar"/>
 <element name="TTaskDialog.Text" link="#lcl.dialogs.TCustomTaskDialog.Text"/>
 <element name="TTaskDialog.Title" link="#lcl.dialogs.TCustomTaskDialog.Title"/>
-<element name="TTaskDialog.Width" link="#lcl.dialogs.TCustomTaskDialog.Width"/>
 <element name="TTaskDialog.VerificationText" link="#lcl.dialogs.TCustomTaskDialog.VerificationText"/>
+<element name="TTaskDialog.Width" link="#lcl.dialogs.TCustomTaskDialog.Width"/>
 <element name="TTaskDialog.OnButtonClicked" link="#lcl.dialogs.TCustomTaskDialog.OnButtonClicked"/>
+<element name="TTaskDialog.OnDialogConstructed" link="#lcl.dialogs.TCustomTaskDialog.OnDialogConstructed"/>
+<element name="TTaskDialog.OnDialogCreated" link="#lcl.dialogs.TCustomTaskDialog.OnDialogCreated"/>
+<element name="TTaskDialog.OnDialogDestroyed" link="#lcl.dialogs.TCustomTaskDialog.OnDialogDestroyed"/>
+<element name="TTaskDialog.OnVerificationClicked" link="#lcl.dialogs.TCustomTaskDialog.OnVerificationClicked"/>
+<element name="TTaskDialog.OnExpanded" link="#lcl.dialogs.TCustomTaskDialog.OnExpanded"/>
+<element name="TTaskDialog.OnTimer" link="#lcl.dialogs.TCustomTaskDialog.OnTimer"/>
+<element name="TTaskDialog.OnRadioButtonClicked" link="#lcl.dialogs.TCustomTaskDialog.OnRadioButtonClicked"/>
+<element name="TTaskDialog.OnHyperlinkClicked" link="#lcl.dialogs.TCustomTaskDialog.OnHyperlinkClicked"/>
+
+<element name="TaskDialogFirstButtonIndex">
+<short>
+Lowest index value for a button identifier used on a task dialog instance.
+</short>
+<descr>
+<p>
+<var>TaskDialogFirstButtonIndex</var> is a constant which sets the lowest value 
+for a button identifier used on a task dialog instance. The value is used to 
+assign the modal result value for a new button when its identifier is added to 
+the Buttons collection in TTaskDialog.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.Buttons"/>
+<link id="TCustomTaskDialog.ButtonIDToModalResult"/>
+<link id="TTaskDialogButtonItem.ModalResult"/>
+<link id="TTaskDialogBaseButtonItem.Create"/>
+<link id="TaskDialogFirstRadioButtonIndex"/>
+<link id="#rtl.classes.TCollectionItem.ID">TCollectionItem.ID</link>
+</seealso>
+</element>
+
+<element name="TaskDialogFirstRadioButtonIndex">
+<short>
+Lowest index value for a radio button used on a TTaskDialog instance.
+</short>
+<descr>
+<p>
+<var>TaskDialogFirstRadioButtonIndex</var> is a constant with the initial value 
+for a radio button identifier used on a task dialog instance.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomTaskDialog.RadioButton"/>
+<link id="TCustomTaskDialog.SetRadioButtonFromRadioIndex"/>
+<link id="TCustomTaskDialog.Execute"/>
+<link id="TCustomTaskDialog.DoExecute"/>
+<link id="TTaskDialogRadioButtonItem"/>
+<link id="TTaskDialogBaseButtonItem.Create"/>
+<link id="TaskDialogFirstButtonIndex"/>
+<link id="#rtl.classes.TCollectionItem.ID">TCollectionItem.ID</link>
+</seealso>
+</element>
 
 <element name="MinimumDialogButtonWidth">
 <short>Minimum width for a button on a dialog.</short>
@@ -6630,7 +9004,7 @@ DialogType
 <dd>
 A LongInt value which indicates the icon and default caption displayed for 
 the dialog. It contains one of the constant values defined in the LCLType 
-unit like:  idDialogWarning, idDialogError, idDialogInfo, idDialogConfirm, or 
+unit like: idDialogWarning, idDialogError, idDialogInfo, idDialogConfirm, or 
 idDialogShield.
 </dd>
 <dt>
@@ -6765,7 +9139,7 @@ allows to use custom button captions and user-specified response values.
 <p>
 <var>QuestionDlg</var> has the same functionality as MessageDlg except for 
 the <var>Buttons</var> parameter which is of a different type. You can define 
-your own captions,  return values, and optional flags in Buttons using this 
+your own captions, return values, and optional flags in Buttons using this 
 function.
 </p>
 <p>
@@ -7302,6 +9676,189 @@ Initial directory displayed in the dialog.
 </short>
 </element>
 
+<element name="TaskDlg">
+<short>
+Provides a wrapper function used to configure and execute a TTaskDialog 
+instance.
+</short>
+<descr>
+<p>
+<var>TaskDlg</var> is an overloaded function which implements a wrapper used to 
+execute a TTaskDialog with the specified parameter values. TaskDlg is a 
+convenience routine that allows a task dialog to be used in a manner similar to 
+the MessageDlg routine. The overloaded variants allow different features / 
+behaviors to be enabled when the task dialog is executed.
+</p>
+<p>
+The parameter values are copied to the corresponding properties in the 
+TTaskDialog instance created (and freed after execution) in the routine. The 
+Execute method in the dialog is called to display the dialog form and to 
+capture the result.
+</p>
+<p>
+The return value is the <var>TModalResult</var> enumeration value returned in 
+the ModalResult property for the TTaskdialog instance. The default value is 
+<var>mrCancel</var>.
+</p>
+<p>
+Use the Flags argument to indicate whether specific features are enabled (or 
+disabled) when the task dialog is executed. See TTaskDialogFlag for the values 
+allows in the Flags argument and their usage.
+</p>
+<p>
+See TTaskDialog for more information about the features and behaviors supported 
+in the dialog type.
+</p>
+<p>
+For example:
+</p>
+<code>
+var
+  IsChecked: boolean;
+  RadioResult: integer;
+begin
+  TaskDlg('I am the caption', 'I am the message', 
+    'Some text as information. Lorem ipsum foo bar.',
+    tdiInformation, [mbOk, mbCancel], ['Custom', 'Button', 'first'], 500,
+    'Checkbox text', IsChecked, ['radio 1', 'radio 2', 'radio default'], 
+    RadioResult, 2 {0-based}, 'Example footer text',
+    { Can be in body or footer }
+    'If there is need for more DETAILS, then the can be added here. ' + 
+    'And can be controlled by tfExpandedByDefault, tfExpandFooterArea', 
+    { These have default text, rarely need to be changed }
+    'Click to see details', 'Click to hide details', 
+    [tfAllowDialogCancellation {, tfExpandedByDefault, tfExpandFooterArea}]
+    );
+end;    
+</code>
+<p>
+Please note that the TaskDlg wrapper does not provide access to all of the 
+features / behaviors available in TTaskDialog. You must use a TTaskDialog 
+instance to configure and enable those features when parameters are not 
+provided in TaskDlg.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTaskDialog"/>
+<link id="TTaskDialogIcon"/>
+<link id="TMsgDlgButtons"/>
+<link id="TMsgDlgBtn"/>
+<link id="TTaskDialogFlags"/>
+<link id="TTaskDialogFlag"/>
+<link id="MessageDlg"/>
+<link id="#lcl.forms.TModalResult">TModalResult</link>
+</seealso>
+</element>
+<element name="TaskDlg.Result">
+<short>
+TModalResult value returned when the task dialog is executed. The default value is mrCancel.
+</short>
+</element>
+<element name="TaskDlg.aCaption">
+<short>
+Text displayed as the title bar caption on the task dialog form.
+</short>
+</element>
+<element name="TaskDlg.aMsg">
+<short>
+Text displayed as the header-like text in the body of the task dialog.
+</short>
+</element>
+<element name="TaskDlg.aInfo">
+<short>
+Text displayed in the main content area on the task dialog immediately after 
+the header text in aMsg.
+</short>
+</element>
+<element name="TaskDlg.DlgIcon">
+<short>
+Indicates the icon displayed on the task dialog.
+</short>
+</element>
+<element name="TaskDlg.AButtons">
+<short>
+Set with the common buttons displayed on the task dialog. These buttons have a 
+modal result value associated with the button, and can include values like 
+mbOK, mbCancel, mbYes, mbNo, mbRetry, and mbClose.
+</short>
+</element>
+<element name="TaskDlg.aFooter">
+<short>
+Text displayed as the caption in the footer area on the task dialog.
+</short>
+</element>
+<element name="TaskDlg.aDetails">
+<short>
+Text displayed in an expandable text area on the task dialog. Include 
+tfExpandedByDefault in Flags to automatically expand the text area in the main 
+body of the task dialog. Include tfExpandFooterArea in Flags to place the 
+detail text in the expandable footer area.
+</short>
+</element>
+<element name="TaskDlg.AFlags">
+<short>
+Set of features or behaviors enabled in task dialog. The default value is 
+[tfAllowDialogCancellation] and allows the task dialog to be cancelled.
+</short>
+</element>
+<element name="TaskDlg.ADefaultButton">
+<short>
+Indicates the default button on the task dialog. Button identifiers start at 
+500 for the task dialog.
+</short>
+</element>
+<element name="TaskDlg.ARadioButtons">
+<short>
+Array of string values used as the captions for radio buttons displayed on the 
+task dialog.
+</short>
+</element>
+<element name="TaskDlg.RadioIndex">
+<short>
+Output parameter used to return the ordinal position for the radio button 
+selected on the task dialog during execution.
+</short>
+</element>
+<element name="TaskDlg.ADefaultRadio">
+<short>
+Ordinal position for the default radio button selected when the task dialog is 
+executed. The default value is -1 and indicates that a default radio button has 
+not been specified. The task dialog will default at run-time to the first radio 
+button unless tfNoDefaultRadioButton has been included in Flags.
+</short>
+</element>
+<element name="TaskDlg.ACheckBoxText">
+<short>
+Text displayed as the verification text on the task dialog.
+</short>
+</element>
+<element name="TaskDlg.Checked">
+<short>
+Output parameter used to return the checked state for the verification check 
+box on the task dialog.
+</short>
+</element>
+<element name="TaskDlg.ACustomButtons">
+<short>
+Array of string values with the captions for custom buttons displayed on the task dialog.
+</short>
+</element>
+<element name="TaskDlg.AShowDetails">
+<short>
+Text displayed as the caption for the expand/collapse button when the text area 
+is enabled and collapsed.
+</short>
+</element>
+<element name="TaskDlg.AHideDetails">
+<short>
+Text displayed as the caption for the expand/collapse button when the text area 
+is enabled and expanded.
+</short>
+</element>
+
 <element name="TCustomCopyToClipboardDialog">
 <short>
 Base class for a dialog form used during copy to clipboard operations.
@@ -7594,7 +10151,7 @@ dialog box.
 </short>
 <descr>
 <p>
-<var>Value</var> is a variable parameter used to pass the initial value(s)  
+<var>Value</var> is a variable parameter used to pass the initial value(s) 
 displayed in the dialog box. The overloaded variants allow Value to be 
 specified using either a <var>String</var> or an <var>Array of String</var> 
 type. Value is where the modified content from the dialog box is returned 
@@ -7879,6 +10436,10 @@ Identifier for the dialog type, i. e. idDialogWarning or idDialogShield.
 Creates a formatted debugger message for one or more TOpenOption values.
 </short>
 <descr/>
+<version>
+Modified in LCL version 4.0 to add additional overloads using TTaskDialogFlag 
+and TTaskDialogFlags arguments.
+</version>
 <seealso/>
 </element>
 <element name="dbgs.Result">
@@ -7895,6 +10456,16 @@ TOpenOption enumeration value used to generate the formatted message.
 <element name="dbgs.Options">
 <short>
 TOpenOptions set type with the options used to generate the formatted message.
+</short>
+</element>
+<element name="DbgS.AFlag">
+<short>
+TTaskDIalogFlag value converted to a string in the formatted message.
+</short>
+</element>
+<element name="DbgS.Flags">
+<short>
+TTaskDialogFlags value converted to a string in the formatted message.
 </short>
 </element>
 

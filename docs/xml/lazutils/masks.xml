@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -1553,7 +1553,7 @@ prior to calling the inherited Compile method.
 </p>
 <p>
 Compile may raise an exception when an invalid or incomplete mask is 
-encountered. The the Compile method is called again with the same value in 
+encountered. The Compile method is called again with the same value in 
 Mask, is simply returns <b>False</b> rather than re-raise the exception.
 </p>
 <p>

@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -258,7 +258,7 @@ ValueType is stored in uppercase.
 <element name="TLResourceList.Find.Result">
 <short>
 TLResource instance for the resource found with the specified name and value 
-type.  
+type.
 </short>
 </element>
 <element name="TLResourceList.Find.Name">
@@ -1750,6 +1750,7 @@ pointer to the item data.
 <seealso/>
 </element>
 
+<!-- Deprecated in 5b65498e. -->
 <element name="TUTF8Parser">
 <short>
 Deprecated. Parser for UTF-8-encoded identifiers, string, and number literals.
@@ -1774,7 +1775,7 @@ with toFloat values subdivided into number, single, date or currency,
 according to FloatType.
 </p>
 <p>
-All other characters are returned literally.
+All other characters are returned verbatim.
 </p>
 </descr>
 <version>
@@ -2075,6 +2076,7 @@ Deprecated. Sets Token to the unrecognized character (no error).
 <version>
 Deprecated in LCL version 3.0. Use Classes.TParser instead.
 </version>
+<descr/>
 <seealso/>
 </element>
 
@@ -2128,6 +2130,9 @@ Deprecated in LCL version 3.0. Use Classes.TParser instead.
 Deprecated. Asserts that Token is of the expected type.
 </short>
 <descr/>
+<version>
+Deprecated in LCL version 4.0. Use Classes.TParser instead.
+</version>
 <seealso/>
 <errors>
 EParserError when Token doesn't match the expected type.
@@ -2145,6 +2150,9 @@ Deprecated in LCL version 3.0. Use Classes.TParser instead.
 Deprecated. Asserts that the given name was parsed (case insensitive).
 </short>
 <descr/>
+<version>
+Deprecated in LCL version 4.0. Use Classes.TParser instead.
+</version>
 <seealso/>
 <errors>
 EParserError when Token doesn't match the expected type or name.
@@ -2283,7 +2291,8 @@ Deprecated in LCL version 3.0. Use Classes.TParser instead.
 <element name="TUTF8Parser.TokenFloat.Result"/>
 
 <element name="TUTF8Parser.TokenInt">
-<short>Deprecated. Returns the binary value of an integral number.
+<short>
+Deprecated. Returns the binary value of an integral number.
 </short>
 <descr/>
 <version>
@@ -2347,6 +2356,9 @@ Deprecated in LCL version 3.0. Use Classes.TParser instead.
 Deprecated. The current column number in the source line.
 </short>
 <descr/>
+<version>
+Deprecated in LCL version 4.0. Use Classes.TParser instead.
+</version>
 <seealso/>
 </element>
 <element name="TUTF8Parser.SourceColumn.Result"/>
@@ -2368,7 +2380,7 @@ A queue to stream components, used for multi-threading or network.
 </short>
 <descr>
 <p>
-ConvertComponentAsString converts a component to binary format with a leading 
+ConvertComponentAsString converts a component to binary format with leading 
 size information (using WriteLRSInt64MB).
 </p>
 <p>
@@ -3147,9 +3159,55 @@ include a unit name space such as 'ns.unit2/TForm2'.
 <short/>
 </element>
 
+<element name="SameLFMTypeName">
+<short>
+Indicates whether the specified LFM resource matches the specified unit and 
+type names.
+</short>
+<descr>
+<p>
+<var>SameLFMTypeName</var> is <var>Boolean</var> function used to determine 
+whether the type name specified in LFMTypeName refers to the same definition as 
+the one represented by the AUntiName and ATypeName arguments. It accounts for 
+optional unit information in LFMTypeName. If a unit name prefix is not included 
+in LFMTypeName, CompareText is called to perform a case-insensitive comparison 
+of the values in ATypeName and LFMTypeName. When unit information is present, 
+AUnitName is included in the comparision when it is not an empty string.
+</p>
+<p>
+SameLFMType is used in the implementation of the source code file manager in 
+the Lazarus IDE.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+<element name="SameLFMTypeName.Result">
+<short>
+<b>True</b> when the specified values refer to the same LFM resource.
+</short>
+</element>
+<element name="SameLFMTypeName.AUnitName">
+<short>
+Unit name used in the comparison.
+</short>
+</element>
+<element name="SameLFMTypeName.ATypeName">
+<short>
+Type name for the form resource used in the comparison.
+</short>
+</element>
+<element name="SameLFMTypeName.LFMTypeName">
+<short>
+Qualified LFM resource name compared to the unit and type arguments.
+</short>
+</element>
+
 <element name="TLRSStreamOriginalFormat">
 <short>
-Represent the LRS stream format offered as the original content for conversion 
+Represents the LRS stream format offered as the original content for conversion 
 routines like LRSObjectToText and LRSObjectResToText.
 </short>
 <descr/>
@@ -3731,7 +3789,7 @@ Writes the specified number of Null characters to a TStream instance.
 <descr>
 <p>
 An ASCII NUL character has the value #0.
-</p>  
+</p>
 </descr>
 <seealso/>
 </element>

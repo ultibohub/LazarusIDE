@@ -7236,6 +7236,10 @@ msgstr "Compilar os seguintes modos"
 msgid "Compile normally"
 msgstr ""
 
+#: lazarusidestrconsts.liscompilepackagetwiceandcheckifanyunitwascompiledaga
+msgid "Compile package twice and check if any unit was compiled again."
+msgstr ""
+
 #: lazarusidestrconsts.liscompileproject
 msgid "Compile Project"
 msgstr "Compilar projeto"
@@ -19921,11 +19925,13 @@ msgid "Hide Block"
 msgstr "Ocultar Bloco"
 
 #: lazarusidestrconsts.srkmecblockindent
-msgid "Indent block"
+#, fuzzy
+#| msgid "Indent block"
+msgid "Indent line/block"
 msgstr "Recuar bloco"
 
 #: lazarusidestrconsts.srkmecblockindentmove
-msgid "Indent (move) block"
+msgid "Indent line/block (move columns)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecblockmove
@@ -19949,11 +19955,13 @@ msgid "Toggle block"
 msgstr "Alternar bloco"
 
 #: lazarusidestrconsts.srkmecblockunindent
-msgid "Unindent block"
+#, fuzzy
+#| msgid "Unindent block"
+msgid "Unindent line/block"
 msgstr "Retirar recuo bloco"
 
 #: lazarusidestrconsts.srkmecblockunindentmove
-msgid "Unindent (move) block"
+msgid "Unindent line/block (move columns)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecbreakpointproperties

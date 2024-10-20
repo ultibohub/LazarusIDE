@@ -1,0 +1,359 @@
+<?xml version="1.0" encoding="utf-8"?>
+<fpdoc-descriptions>
+<package name="lcl">
+<!-- 
+====================================================================
+WSReferences
+====================================================================
+-->
+<module name="WSReferences">
+<short>
+Contains types used to represent references to widget set classes and their 
+handles.
+</short>
+<descr>
+<p>
+<file>wsreferences.pp</file> contains types used as skeleton widget set 
+component classes. These classes are never directly instantiated and may only 
+contain class functions. Includes type used represent a handle and a pointer 
+to a handle in widget set classes and LCL components.
+</p>
+<p>
+<file>wsreferences.pp</file> is part of the Lazarus Component Library 
+(<b>LCL</b>).
+</p>
+</descr>
+
+<element name="TLCLHandle">
+<short>
+The type used for handles in LCL applications, components, controls, and widget set classes.
+</short>
+<descr>
+<p>
+<var>TLCLHandle</var> is an alias for the <var>PtrUInt</var> (Pointer to 
+Unsigned Integer) type, and the type used to represent handles in the Lazarus 
+Component Library (LCL).
+</p>
+<p>
+TLCLHandle differentiates the handle type used in LCL from the THandle type 
+used in the FPC Run-time Library (RTL) and numerous other libraries. It is 
+needed because the RTL THandle type is a longint (signed) value on 64-bit 
+Linux platforms and not suitable for use as a window handle in the 
+multi-platform LCL.
+</p>
+<p>
+TLCLHandle is the type used to represent all handles for an application, 
+controls, and components in the LCL - including those in widgetset class 
+instances. In the LCL type system, it is equivalent to HWND (and related 
+identifiers like HDC, HFONT, HICON, HBRUSH, et. al.) used to identify window 
+objects and resources. TLCLHandle is one of the values that can be returned by 
+the TWSReference class used for widgetset class references (The other is a 
+Pointer to the TLCLHandle type).
+</p>
+<p>
+TLCLHandle is used in the implementation of classes like:
+</p>
+<ul>
+<li>TApplication</li>
+<li>TLCLComponent</li>
+<li>TLCLReferenceComponent</li>
+<li>TCustomBitBtn</li>
+<li>TCustomTimer</li>
+<li>TCommonDialog</li>
+<li>TScreen</li>
+<li>TGraphic</li>
+<li>TPicture</li>
+<li>TSharedRasterImage</li>
+<li>TRasterImage</li>
+<li>TCustomBitmap</li>
+<li>TSharedIcon</li>
+<li>TCustomIcon</li>
+<li>TIcon</li>
+<li>TBrush</li>
+<li>TPen</li>
+<li>TCursorImage</li>
+<li>TCustomImageList</li>
+<li>TCustomImageListResolution</li>
+<li>TChangeLink</li>
+<li>TRegion</li>
+<li>TTreeNode</li>
+<li>TTreeNodes</li>
+</ul>
+<remark>
+TLCLHandle is the replacement for the redefined THandle alias in LCL versions 
+prior to 4.0. THandle is deprecated in LCL 4.0; TLCLHandle is used instead. 
+THandle is still used in the FPC RTL (and in LazUtils) to represent files, 
+file or handle streams, sockets, IO devices, processes, etc.
+</remark>
+</descr>
+<seealso>
+<link id="#lcl.lcltype.TLCLHandle">LCLType.TLCLHandle</link>
+<link id="#lcl.lclclasses.TLCLComponent">TLCLComponent</link>
+<link id="#lcl.lclclasses.TLCLReferenceComponent">TLCLReferenceComponent</link>
+</seealso>
+</element>
+
+<element name="PLCLHandle">
+<short>
+Pointer to a TLCLHandle instance.
+</short>
+<descr>
+<p>
+Used when accessing cached resource items in the LCL.
+</p>
+</descr>
+<seealso>
+<link id="TLCLHandle"/>
+<link id="#lcl.lclrescache.ComparePHandleWithResourceCacheItem">ComparePHandleWithResourceCacheItem</link>
+</seealso>
+</element>
+
+<element name="PWSReference">
+<short>
+Pointer to a widget set reference instance.
+</short>
+<descr>
+<p>
+Used in the implementation of the TLCLReferenceComponent and descendants, and 
+returned by their WSCreateReference methods.
+</p>
+</descr>
+<seealso>
+<link id="#lcl.lclclasses.TLCLReferenceComponent.WSCreateReference">TLCLReferenceComponent.WSCreateReference</link>
+<link id="#lcl.imglist.TCustomImageListResolution.WSCreateReference">TCustomImageListResolution.WSCreateReference</link>
+</seealso>
+</element>
+
+<element name="TWSReference">
+<short>
+Represents a reference to a widget set class instance.
+</short>
+<descr>
+<p>
+Abstract (temporary) base object for all references to widgetset classes. This 
+reference replaces the functionality of a Handle. An object is used to 
+disallow assignments using different types of handles. It is used as the base 
+class for widgetset descendants like TWSCustomImageListReference, 
+TWSGDIObjReference, TWSDeviceContextReference, and TWSIconReference.
+</p>
+</descr>
+<seealso/>
+</element>
+
+<!-- private -->
+<element name="TWSReference.GetAllocated"/>
+<element name="TWSReference.GetAllocated.Result"/>
+
+<!-- protected -->
+<element name="TWSReference.FRef">
+<short>
+Variant record type which allows access to TLCLHandle and Pointer values in 
+the reference.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSReference._Clear">
+<short>
+Clears the handle assigned in the reference.
+</short>
+<descr>
+<p>
+Sets the internal Pointer for the reference to <b>Nil</b>.
+</p>
+<remark>  
+This method, and the others with a '_' prefix, are temporary and for widgetset 
+use only. They can be removed at any time, and without any prior notice.
+</remark>
+</descr>
+<seealso/>
+</element>
+
+<element name="TWSReference._Init">
+<short>
+Stores the specified handle or pointer to an internal member in the reference.
+</short>
+<descr>
+<remark>  
+This method, and the others with a '_' prefix, are temporary and for widgetset 
+use only. They can be removed at any time, and without any prior notice.
+</remark>
+</descr>
+<seealso>
+<link id="TLCLHandle"/>
+</seealso>
+</element>
+<element name="TWSReference._Init.APtr">
+<short>
+Pointer to the handle stored in the reference.  
+</short>
+</element>
+<element name="TWSReference._Init.AHandle">
+<short>
+TLCLHandle instance stored in the reference.    
+</short>
+</element>
+
+<element name="TWSReference._Handle">
+<short/>
+<descr>
+<p>
+Gets the TLCLHandle instance assigned to the reference.
+</p>
+<remark>  
+This method, and the others with a '_' prefix, are temporary and for widgetset 
+use only. They can be removed at any time, and without any prior notice.
+</remark>
+</descr>
+<seealso>
+<link id="TLCLHandle"/>
+</seealso>
+</element>
+
+<element name="TWSReference.Allocated">
+<short>
+Contains <b>True</b> if a handle has been assigned in the reference.  
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSReference.Ptr">
+<short>
+Returns a Pointer with the handle for the reference.
+</short>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSCustomImageListReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSCustomImageListReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSGDIObjReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+  
+<element name="TWSBitmapReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSBitmapReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSBrushReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSBrushReference._lclHandle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSBrushReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSPenReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSPenReference._lclHandle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSPenReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSFontReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSFontReference._lclHandle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSFontReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSRegionReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSRegionReference._lclHandle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSRegionReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+  
+<element name="TWSDeviceContextReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSDeviceContextReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSIconReference">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+<element name="TWSIconReference.Handle">
+<short/>
+<descr/>
+<seealso/>
+</element>
+
+</module>
+<!-- WSReferences -->
+</package>
+</fpdoc-descriptions>

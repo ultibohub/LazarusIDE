@@ -7264,6 +7264,10 @@ msgstr "Sestavit následující režimy"
 msgid "Compile normally"
 msgstr ""
 
+#: lazarusidestrconsts.liscompilepackagetwiceandcheckifanyunitwascompiledaga
+msgid "Compile package twice and check if any unit was compiled again."
+msgstr ""
+
 #: lazarusidestrconsts.liscompileproject
 msgid "Compile Project"
 msgstr "Přeložit projekt"
@@ -19965,11 +19969,13 @@ msgid "Hide Block"
 msgstr "Skrýt blok"
 
 #: lazarusidestrconsts.srkmecblockindent
-msgid "Indent block"
+#, fuzzy
+#| msgid "Indent block"
+msgid "Indent line/block"
 msgstr "Odsadit blok"
 
 #: lazarusidestrconsts.srkmecblockindentmove
-msgid "Indent (move) block"
+msgid "Indent line/block (move columns)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecblockmove
@@ -19993,11 +19999,13 @@ msgid "Toggle block"
 msgstr "Přepnout blok"
 
 #: lazarusidestrconsts.srkmecblockunindent
-msgid "Unindent block"
+#, fuzzy
+#| msgid "Unindent block"
+msgid "Unindent line/block"
 msgstr "Vrátit odsazení bloku"
 
 #: lazarusidestrconsts.srkmecblockunindentmove
-msgid "Unindent (move) block"
+msgid "Unindent line/block (move columns)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecbreakpointproperties

@@ -11,7 +11,7 @@ object MainForm: TMainForm
   Constraints.MinWidth = 700
   Position = poScreenCenter
   ShowHint = True
-  LCLVersion = '3.99.0.0'
+  LCLVersion = '4.99.0.0'
   OnClose = FormClose
   OnCreate = FormCreate
   OnDropFiles = FormDropFiles
@@ -23,7 +23,7 @@ object MainForm: TMainForm
     AnchorSideRight.Control = sbtnLastDirs
     Left = 10
     Height = 23
-    Hint = 'Folder with images for which the html preview should be created'
+    Hint = 'Folder with images for which the HTML preview should be created'
     Top = 10
     Width = 655
     ShowHidden = False
@@ -556,7 +556,7 @@ object MainForm: TMainForm
     AnchorSideTop.Side = asrCenter
     Left = 15
     Height = 19
-    Hint = 'Creates an html page with dark background'
+    Hint = 'Create HTML page with dark background'
     Top = 483
     Width = 76
     BorderSpacing.Left = 15
@@ -587,7 +587,6 @@ object MainForm: TMainForm
     AnchorSideBottom.Side = asrBottom
     Left = 614
     Height = 26
-    Hint = 'Closes the application'
     Top = 479
     Width = 76
     Anchors = [akRight, akBottom]
@@ -598,6 +597,7 @@ object MainForm: TMainForm
     Caption = 'Close'
     Images = ImageList
     ImageIndex = 6
+    ParentShowHint = False
     Spacing = 5
     TabOrder = 6
     OnClick = bbtnCloseClick
@@ -608,7 +608,7 @@ object MainForm: TMainForm
     AnchorSideRight.Control = bbtnClose
     Left = 535
     Height = 26
-    Hint = 'Save the generated html text as file "IconTable.html" in the specified folder'
+    Hint = 'Save created HTML page as "IconTable.html" file in the specified folder'
     Top = 479
     Width = 71
     Anchors = [akTop, akRight]
@@ -628,7 +628,7 @@ object MainForm: TMainForm
     AnchorSideRight.Control = bbtnPreview
     Left = 316
     Height = 26
-    Hint = 'Create a html page for the images found in the selected directory'
+    Hint = 'Create HTML page for images found in the selected directory'
     Top = 479
     Width = 116
     Anchors = [akTop, akRight]
@@ -659,6 +659,21 @@ object MainForm: TMainForm
     ImageIndex = 4
     TabOrder = 4
     OnClick = bbtnPreviewClick
+  end
+  object cbTranslatedHTML: TCheckBox
+    AnchorSideLeft.Control = cbDarkMode
+    AnchorSideLeft.Side = asrBottom
+    AnchorSideTop.Control = cbDarkMode
+    Left = 115
+    Height = 19
+    Hint = 'Unchecked: Use the GUI language in the HTML text'#13#10'Checked: Write the HTML text in English'
+    Top = 483
+    Width = 130
+    BorderSpacing.Left = 24
+    Caption = 'Translated HTML text'
+    Checked = True
+    State = cbChecked
+    TabOrder = 7
   end
   object TaskDialog: TTaskDialog
     Buttons = <>

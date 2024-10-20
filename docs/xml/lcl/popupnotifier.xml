@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -817,7 +817,7 @@ Frees the component.
 <p>
 <var>Destroy</var> is the destructor for the component instance. Destroy 
 calls the <var>Hide</var> method for the pop-up notification form, and frees 
-the the vNotifierForm member. Destroy calls the inherited destructor prior to 
+the vNotifierForm member. Destroy calls the inherited destructor prior to 
 exiting from the method.
 </p>
 </descr>

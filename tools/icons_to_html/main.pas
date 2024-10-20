@@ -5,9 +5,9 @@ unit main;
 interface
 
 uses
-  Classes, SysUtils, Forms, FPImage, Controls, Dialogs, StdCtrls, EditBtn, FileUtil,
+  Classes, SysUtils, StrUtils, Forms, FPImage, Controls, Dialogs, StdCtrls, EditBtn, FileUtil,
   LazUTF8, LazFileUtils, LCLIntf, LCLType, Buttons, Menus, IniFiles,
-  SynEdit, SynHighlighterHTML;
+  SynEdit, SynHighlighterHTML, DefaultTranslator;
 
 type
 
@@ -19,6 +19,7 @@ type
     bbtnSave: TBitBtn;
     bbtnPreview: TBitBtn;
     cbDarkMode: TCheckBox;
+    cbTranslatedHTML: TCheckBox;
     DirectoryEdit: TDirectoryEdit;
     ImageList: TImageList;
     popLastDirs: TPopupMenu;
@@ -65,6 +66,33 @@ const
   TempFileName = 'IconTableTemp.html';
   DefaultDirectory = '../../images/general_purpose/';
   LastDirsMax = 9;
+  URL_RolandHahn = 'https://www.rhsoft.de/';
+  URL_CC0 = 'https://creativecommons.org/publicdomain/zero/1.0/';
+  License_CC0 = 'Creative Commons CC0 1.0 Universal';
+  ThisFolderContains = 'This folder contains %0:d icons in %1:d icon groups with %2:d icon sizes.';
+
+resourcestring
+  rsInformation = 'Information';
+  rsError = 'Error';
+  rsTheConfigurationCouldNotBeSaved = 'Configuration file could not be saved.';
+  rsTheTempFileCouldNotBeDeleted = 'Temporary file could not be deleted.';
+  rsTheFileCouldNotBeSavedAs = 'The file could not be saved as: %s';
+  rsSavedAs = 'Saved as: %s';
+  rsNoPngImageFilesFoundIn = 'No PNG image files found in %s';
+  rsNoMatchingPngImageFilesFoundIn = 'No matching PNG image files found in %s';
+  rsTheFolderDoesNotExist = 'Folder "%s" does not exist or is currently not available.'+LineEnding+LineEnding+'Should it be removed from the list?';
+  rsThisFolderContains = ThisFolderContains;
+  rsSize = 'Size';
+  rsName = 'Name';
+  rsInfoText1 = 'The images in this folder can be used in Lazarus applications as toolbar or button icons.';
+  rsInfoText2 = 'The different sizes as required by LCL scaling for high-dpi screens can be used like this, for example:';
+  rsSizeInfoSmall = '16x16, 24x24 and 32x32 pixels for "small" images,';
+  rsSizeInfoMedium = '24x24, 36x36 and 48x48 pixels for "medium" sized images,';
+  rsSizeInfoLarge = '32x32, 48x48 and 64x64 pixels for "large" images.';
+  rsImagesWereProvidedBy = 'The images were kindly provided by Roland Hahn (%s).';
+  rsLicense = 'License:'#13'%s';
+  rsFreelyAvailable = 'freely available, no restrictions in usage';
+
 
 { TMainForm }
 
@@ -110,6 +138,7 @@ begin
     end;
 
     cbDarkMode.Checked := Config.ReadBool('Options', 'DarkMode', False);
+    cbTranslatedHTML.Checked := Config.ReadBool('Options', 'TranslatedHTML', true);
   finally
     Config.Free;
   end;
@@ -164,8 +193,9 @@ begin
         Config.WriteString('LastDirs', 'LastDir' + i.ToString, popLastDirs.Items[i].Caption);
 
       Config.WriteBool('Options', 'DarkMode', cbDarkMode.Checked);
+      Config.WriteBool('Options', 'TranslatedHTML', cbTranslatedHTML.Checked);
     except
-      ShowMsg('Error', 'The configuration could not be saved.');
+      ShowMsg(rsError, rsTheConfigurationCouldNotBeSaved);
     end;
   finally
     Config.Free;
@@ -175,7 +205,7 @@ begin
     if FileExists(Application.Location + TempFileName) then
       DeleteFile(Application.Location + TempFileName);
   except
-    ShowMsg('Error', 'The temp file could not be deleted.');
+    ShowMsg(rsError, rsTheTempFileCouldNotBeDeleted);
   end;
 end;
 
@@ -205,7 +235,7 @@ begin
   try
     HTMLLines.SaveToFile(Application.Location + TempFileName);
   except
-    ShowMsg('Error', 'The file could not be saved as: ' + Application.Location + TempFileName);
+    ShowMsg(rsError, Format(rsTheFileCouldNotBeSavedAs, [Application.Location + TempFileName]));
   end;
   HTMLLines.Free;
 
@@ -219,9 +249,9 @@ procedure TMainForm.bbtnSaveClick(Sender: TObject);
 begin
   try
     SynEdit.Lines.SaveToFile(ImgDirectory + IconTableFileName);
-    ShowMsg('Information', 'Saved as: ' + ImgDirectory + IconTableFileName);
+    ShowMsg(rsInformation, Format(rsSavedAs, [ImgDirectory + IconTableFileName]));
   except
-    ShowMsg('Error', 'The file could not be saved as: ' + ImgDirectory + IconTableFileName);
+    ShowMsg(rsError, Format(rsTheFileCouldNotBeSavedAs, [ImgDirectory + IconTableFileName]));
   end;
 end;
 
@@ -231,6 +261,12 @@ begin
 end;
 
 procedure TMainForm.CreateHTML(HTMLLines: TStrings; Preview: Boolean);
+
+  function Link(URL, AText: String): string;
+  begin
+    Result := Format('<a href="%s">%s</a>', [URL, AText]);
+  end;
+
 var
   AllFileList: TStringList;
   IcoFileList: TStringList;
@@ -242,6 +278,8 @@ var
   IcoFile: String;
   IcoSize: String;
   IcoName: String;
+  translated: Boolean;
+  ThisFolderContainsStr: String;
   IcoWidth: Integer = 0;
   IcoHeight: Integer = 0;
   DPos: Integer;
@@ -256,50 +294,58 @@ var
   BodyColors: String = 'color: #000000; background-color: #ffffff;}';
   HoverColors: String = 'color: #ffffff; background-color: #303030;}';
 begin
+  Screen.BeginWaitCursor;
+  AllFileList := TStringList.Create;
+  IcoFileList := TStringList.Create;
+  IcoNameList := TStringList.Create;
+  IcoSizeList := TStringList.Create;
+  PixSizeList := TStringList.Create;
   try
-    Screen.BeginWaitCursor;
-    AllFileList := TStringList.Create;
-    IcoFileList := TStringList.Create;
-    IcoNameList := TStringList.Create;
-    IcoSizeList := TStringList.Create;
-    PixSizeList := TStringList.Create;
+    translated := cbTranslatedHTML.Checked;
 
     FindAllFiles(AllFileList, ImgDirectory, '*.png', False);
 
     if AllFileList.Count = 0 then
     begin
-      ShowMsg('Error', 'No png image files found in ' + ImgDirectory);
+      ShowMsg(rsError, Format(rsNoPngImageFilesFoundIn, [ImgDirectory]));
       Exit;
     end;
 
     AllFileList.Sort;
     for i := 0 to AllFileList.Count - 1 do
     begin
-      IcoFile := ChangeFileExt(ExtractFileName(AllFileList.Strings[i]), '');
-      GetPixSize(AllFileList.Strings[i], IcoWidth, IcoHeight);
-      IcoSize := IntToStr(IcoWidth);
+      try
+        GetPixSize(AllFileList.Strings[i], IcoWidth, IcoHeight);
+        IcoSize := IntToStr(IcoWidth);
+      except
+        IcoSize := '';
+      end;
 
-      DPos := LastDelimiter('_', IcoFile);
-      if TryStrToInt(RightStr(IcoFile, Utf8Length(IcoFile) - DPos), IntDummy) then
-        IcoName := Utf8Copy(IcoFile, 1, DPos - 1)
-      else
-        IcoName := IcoFile;
+      if IcoSize <> '' then
+      begin
+        IcoFile := ChangeFileExt(ExtractFileName(AllFileList.Strings[i]), '');
+        DPos := LastDelimiter('_', IcoFile);
+        if TryStrToInt(RightStr(IcoFile, Utf8Length(IcoFile) - DPos), IntDummy) then
+          IcoName := Utf8Copy(IcoFile, 1, DPos - 1)
+        else
+          IcoName := IcoFile;
 
-      if Preview then
-        IcoFileList.Add('file:///' + ImgDirectory + IcoFile)
-      else
-        IcoFileList.Add(IcoFile);
+        if Preview then
+          IcoFileList.Add('file:///' + ImgDirectory + IcoFile)
+        else
+          IcoFileList.Add(IcoFile);
 
-      IcoNameList.Add(IcoName);
-      IcoSizeList.Add(IcoSize);
-      if PixSizeList.IndexOf(IcoSize) = -1 then
-        PixSizeList.Add(IcoSize);
+        IcoNameList.Add(IcoName);
+        IcoSizeList.Add(IcoSize);
+        if PixSizeList.IndexOf(IcoSize) = -1 then
+          PixSizeList.Add(IcoSize);
+      end;
     end;
     PixSizeList.CustomSort(@CustomSortProc);
 
     if IcoFileList.Count = 0 then
     begin
-      ShowMsg('Error', 'No matching png image files found in ' + ImgDirectory);
+      ShowMsg(rsError, Format(rsNoMatchingPngImageFilesFoundIn, [ImgDirectory]));
       Exit;
     end;
 
@@ -335,10 +381,10 @@ begin
     HTMLLines.Add('<table>');
     HTMLLines.Add('  <tr class="no_border">');
     HTMLLines.Add('    <td class="colorset1 right_border"></td>');
-    HTMLLines.Add('    <td class="colorset2 text_center" colspan="' + PixSizeList.Count.ToString + '">Size</td>');
+    HTMLLines.Add('    <td class="colorset2 text_center" colspan="' + PixSizeList.Count.ToString + '">' + IfThen(translated, rsSize, 'Size') + '</td>');
     HTMLLines.Add('  </tr>');
     HTMLLines.Add('  <tr>');
-    HTMLLines.Add('    <td class="colorset1 right_border">Name</td>');
+    HTMLLines.Add('    <td class="colorset1 right_border">' + IfThen(translated, rsName, 'Name') + '</td>');
     for i := 0 to PixSizeList.Count - 1 do
       HTMLLines.Add('    <td class="colorset2 text_center">' + PixSizeList[i] + '</td>');
     HTMLLines.Add('  </tr>');
@@ -369,7 +415,25 @@ begin
     HTMLLines.Add('</table>');
 
     HTMLLines.Add('<div class="infobox colorset2">');
-    HTMLLines.Add('This folder contains ' + IcoFileList.Count.ToString + ' icons in ' + IconGroups.ToString + ' icon groups with ' + PixSizeList.Count.ToString + ' icon sizes.');
+    HTMLLines.Add(Format(IfThen(translated, rsThisFolderContains, ThisFolderContains), [
+      IcoFileList.Count, IconGroups, PixSizeList.Count
+    ]));
+
+    if cbTranslatedHTML.Checked then
+    begin
+      HTMLLines.Add('<hr>');
+      HTMLLines.Add('<p>' + rsInfoText1 + '</p>');
+      HTMLLines.Add('<p>' + rsInfoText2 + '</p>');
+      HTMLLines.Add('<ul>');
+      HTMLLines.Add('  <li>' + rsSizeInfoSmall + '</li>');
+      HTMLLines.Add('  <li>' + rsSizeInfoMedium + '</li>');
+      HTMLLines.Add('  <li>' + rsSizeInfoLarge + '</li>');
+      HTMLLines.Add('</ul>');
+      HTMLLines.Add('<p>' + Format(rsImagesWereProvidedBy, [Link(URL_RolandHahn, URL_RolandHahn)]) + '</p>');
+      HTMLLines.Add('<p>' + Format(rsLicense, [License_CC0]) + '<br>');
+      HTMLLines.Add(Link(URL_CC0, URL_CC0) + '<br>');
+      HTMLLines.Add(rsFreelyAvailable + '</p>');
+    end else
     if FileExists(ImgDirectory + InfoTextFileName) then
     begin
       try
@@ -420,13 +484,12 @@ begin
   end
   else
   begin
-    TaskDialog.Caption := 'Information';
+    TaskDialog.Caption := rsInformation;
     TaskDialog.MainIcon := tdiInformation;
-    TaskDialog.Title := 'Information';
+    TaskDialog.Title := rsInformation;
     TaskDialog.CommonButtons := [tcbYes, tcbNo];
     TaskDialog.DefaultButton := tcbNo;
-    TaskDialog.Text := 'The folder [' + TMenuItem(Sender).Caption + '] does not exist or is currently not available.' +
-      LineEnding + LineEnding + 'Should it be removed from the list?';
+    TaskDialog.Text := Format(rsTheFolderDoesNotExist, [TMenuItem(Sender).Caption]);
     TaskDialog.Execute;
     if TaskDialog.ModalResult = mrYes then
       UpdateLastDirs(TMenuItem(Sender).Caption, True);
@@ -467,7 +530,7 @@ end;
 
 procedure TMainForm.ShowMsg(const AMsgCaption: String; const AMsg: String);
 begin
-  if AMsgCaption = 'Error' then
+  if AMsgCaption = rsError then
     TaskDialog.MainIcon := tdiError
   else
     TaskDialog.MainIcon := tdiInformation;
@@ -497,7 +560,7 @@ var
 begin
   stream := TFileStream.Create(FileName, fmOpenRead + fmShareDenyWrite);
   try
-    reader :=  TFPCustomImage.FindReaderFromStream(stream);
+    reader := TFPCustomImage.FindReaderFromStream(stream);
     with reader.ImageSize(stream) do
     begin
       PixWidth := X;

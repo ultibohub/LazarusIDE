@@ -363,6 +363,7 @@ It uses the Visible property in the TTreeNode instances to show/hide it.
 <!-- private -->
 <element name="TTreeFilterEdit.fFilteredTreeview"/>
 <element name="TTreeFilterEdit.fImageIndexDirectory"/>
+<element name="TTreeFilterEdit.FScrolledPos"/>
 <element name="TTreeFilterEdit.fSelectionList"/>
 <element name="TTreeFilterEdit.fShowDirHierarchy"/>
 <element name="TTreeFilterEdit.fBranches"/>
@@ -410,8 +411,19 @@ control.
 </short>
 <descr>
 <p>
-Implements the abstract virtual method introduced in the 
-TCustomControlFilterEdit ancestor.
+Implements the abstract virtual method introduced in the TCustomControlFilterEdit ancestor. 
+</p>
+<p>
+MoveNext ensures that FilteredTreeview has been configured to allow 
+multi-selections and use of the Shift key when selecting nodes on the control.
+</p>
+<p>
+ASelect indicates whether the next Node is selected (<b>True</b>) or unselected 
+(<b>False</b>). If the tree view controls has not enabled multi-selections 
+using the Shift key, its value is changed to <b>False</b>.
+</p>
+<p>
+No actions are performed in the method if the FilteredTreeview property has not been assigned.
 </p>
 </descr>
 <seealso/>
@@ -432,6 +444,18 @@ control.
 <p>
 Implements the abstract virtual method introduced in the 
 TCustomControlFilterEdit ancestor.
+</p>
+<p>
+MovePrev ensures that FilteredTreeview has been configured to allow 
+multi-selections and use of the Shift key when selecting nodes on the control.
+</p>
+<p>
+ASelect indicates whether the previous Node is selected (<b>True</b>) or 
+unselected (<b>False</b>). If the tree view controls has not enabled 
+multi-selections using the Shift key, its value is changed to <b>False</b>.
+</p>
+<p>
+No actions are performed in the method if the FilteredTreeview property has not been assigned.
 </p>
 </descr>
 <seealso/>
@@ -528,13 +552,22 @@ event handler for the associated tree view.
 </short>
 <descr>
 <p>
-Implements the abstract virtual method introduced in the 
-TCustomControlFilterEdit ancestor.
+<var>ReturnKeyHandled</var> is an overridden <var>Boolean</var> function which 
+implements the abstract virtual method introduced in the 
+TCustomControlFilterEdit ancestor. ReturnKeyHandled is used to forward a Return 
+(Enter) key to the FilteredTreeView for the control when it is handled in the 
+edit box for the control. No actions are performed in the method if either 
+FilteredTreeView or its OnKeypress event handler has not been assigned.
+</p>
+<p>
+The return value is <b>True</b> if the key down event was forwarded to the 
+FilteredTreeView control for the class instance.
 </p>
 </descr>
 <seealso>
 <link id="TTreeFilterEdit.FilteredTreeview"/>
 <link id="#lcl.editbtn.TCustomControlFilterEdit.EditKeyDown">TCustomControlFilterEdit.EditKeyDown</link>
+<link id="#lcl.controls.TWinControl.OnKeyPress">TWinControl.OnKeyPress</link>
 </seealso>
 </element>
 <element name="TTreeFilterEdit.ReturnKeyHandled.Result">
@@ -554,15 +587,23 @@ It extends the inherited method to ensure that key strokes in the Edit for the
 control are applied (when needed) to its FilteredTreeview control.
 </p>
 <p>
+EditKeyDown calls the inherited method on entry to handle key down events 
+supported in the TCustomControlFilterEdit ancestor. The value in Key is set to 
+0 if it was handled in the inherited method, and no additional actions are 
+performed in the method.
+</p>
+<p>
 When FilteredTreeview has been assigned in the control, the following values 
 in Key and Shift are handled:
 </p>
 <dl>
-<dt>Alt+Left, Alt+Right</dt>
+<dt>Alt+Left</dt>
 <dd>
-Moves the selection in the associated tree view. Extends the selected cells in 
-the associated tree view when the option is enabled in the MultiSelectionStyle 
-for the tree view control.
+Moves the selection in the associated tree view and collapses its child nodes. 
+</dd>
+<dt>Alt+Right</dt>
+<dd>
+Moves the selection in the associated tree view and expands its child nodes. 
 </dd>
 <dt>Shift+Alt+Left</dt>
 <dd>
@@ -574,13 +615,7 @@ Expands all of the tree nodes in the FilteredTreeview control.
 </dd>
 </dl>
 <p>
-The value in Key is set to 0 if it was forward handled using methods in the 
-tree view control.
-</p>
-<p>
-If Key has a value that is not handled in the method, or FilteredTreeview is 
-unassigned, the inherited method is called to handle the key combination for 
-the control.
+The value in Key is set to 0 if it was handled in the method.
 </p>
 </descr>
 <version>
@@ -742,6 +777,21 @@ to the SelectionList property.
 </short>
 <descr>
 <p>
+<var>StoreSelection</var> is an overridden method in <var>TTreeFilterEdit</var> 
+which implements the abstract virtual method introduced in 
+TCustomControlFilterEdit. StoreSelection ensures that ScrolledLeft and 
+ScrolledTop values from the tree view are used when the selected node is not 
+within the visible area for the tree view control. ScrolledLeft and ScrolledTop 
+are assumed to be -1 if the tree node is already visible on the 
+FilteredTreeview control.
+</p>
+<p>
+Values in SelectionList are cleared and reloaded if the selected tree node is 
+not the first node in the list; SelectionList will contain only the selected 
+tree node on exit. SelectionList is not changed if the selected node <b>is</b> 
+the first tree node in the selection list.
+</p>
+<p>
 No actions are performed in the method for the following conditions:
 </p>
 <ul>
@@ -749,9 +799,18 @@ No actions are performed in the method for the following conditions:
 <li>FilteredTreeview does not have a Selected tree node.</li>
 </ul>
 </descr>
+<version>
+Modified in LCL version 4.0 to use the ScrolledLeft and ScrolledTop values from 
+the FilteredTreeView control.
+</version>
 <seealso>
 <link id="TTreeFilterEdit.FilteredTreeview"/>
 <link id="TTreeFilterEdit.RestoreSelection"/>
+<link id="TTreeFilterEdit.SelectionList"/>
+<link id="TTreeView.Selected"/>
+<link id="TTreeView.ScrolledLeft"/>
+<link id="TTreeView.ScrolledTop"/>
+<link id="#lcl.editbtn.TCustomControlFilterEdit.StoreSelection">TCustomControlFilterEdit.StoreSelection</link>
 </seealso>
 </element>
 
@@ -762,6 +821,14 @@ FilteredTreeview control.
 </short>
 <descr>
 <p>
+<var>RestoreSelection</var> is an overridden method in 
+<var>TTreeFilterEdit</var> which implements the abstract virtual method 
+introduced in the TTreeFilterEdit ancestor. RestoreSelection ensures that the 
+ScrolledLeft and ScrolledTop properties in the FilteredTreeView control are 
+updated when the selected node in SelectionList is located on the tree view 
+control.
+</p>
+<p>
 No actions are performed in the method if FilteredTreeview has not been 
 assigned.
 </p>
@@ -770,8 +837,19 @@ Raises an assertion exception if SelectionList has more than one node in the
 list.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to update the ScrolledLeft and ScrolledTop 
+properties in the FilteredTreeView control.
+</version>
 <seealso>
+<link id="TTreeFilterEdit.FilteredTreeview"/>
 <link id="TTreeFilterEdit.StoreSelection"/>
+<link id="TTreeFilterEdit.RestoreSelection"/>
+<link id="TTreeFilterEdit.SelectionList"/>
+<link id="TTreeView.Selected"/>
+<link id="TTreeView.ScrolledLeft"/>
+<link id="TTreeView.ScrolledTop"/>
+<link id="#lcl.editbtn.TCustomControlFilterEdit.RestoreSelection">TCustomControlFilterEdit.RestoreSelection</link>
 </seealso>
 </element>
 
@@ -925,12 +1003,13 @@ The associated TTreeView with the filtered tree nodes for the control.
 <var>FilteredTreeview</var> is a <var>TCustomTreeview</var> property with the 
 associated tree view for the filter control. FilteredTreeview is used to 
 display the tree nodes which match the Filter for the control. Assigning a new 
-value to the property causes the InternalSetFilter method to be called to 
-update the Button for the control and apply the Filter to the tree nodes using 
-the value in Text and the OnFilterNode and OnFilterItem event handlers.
+value to the property causes the InvalidateFilter method to be called to 
+reapply the text in Filter to the new tree view control.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="#lcl.editbtn.TCustomControlFilterEdit.InvalidateFilter">TCustomControlFilterEdit.InvalidateFilter</link>
+</seealso>
 </element>
 
 <element name="TTreeFilterEdit.ExpandAllInitially">

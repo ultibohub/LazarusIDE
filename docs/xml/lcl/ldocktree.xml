@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -41,10 +41,10 @@ TDockTree used in the LCL.
 <element name="SysUtils"/>
 <element name="TypInfo"/>
 <element name="LazLoggerBase"/>
-<element name="LCLProc"/>
+<element name="LazTracer"/>
+<element name="GraphMath"/>
 <element name="LCLType"/>
 <element name="LCLIntf"/>
-<element name="LCLStrConsts"/>
 <element name="Graphics"/>
 <element name="Controls"/>
 <element name="ExtCtrls"/>

@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -552,7 +552,6 @@ value.
 <short>TObject instance examined in the routine.</short>
 </element>
 
-<!-- function Visibility: default -->
 <element name="dbgObjMem">
 <short>
 Generates a message with the hexadecimal-encoded memory content for the 
@@ -570,13 +569,17 @@ String with hexadecimal-encoded values for the specified object instance.
 <short>Object instance examined in the routine.</short>
 </element>
 
-<!-- function Visibility: default -->
 <element name="dbghex">
 <short>
 Generates a message with the hexadecimal representation for the specified 
-Int64 value.
+numeric value.
 </short>
-<descr/>
+<descr>
+<p>
+dbghex is an overloaded String function. The overloaded variants allow either 
+an Int64 or a qword value to be specified in the <var>i</var> argument.
+</p>
+</descr>
 <seealso/>
 </element>
 <element name="dbghex.Result">
@@ -585,7 +588,7 @@ String with the hexadecimal representation for the specified value.
 </short>
 </element>
 <element name="dbghex.i">
-<short>Int64 value converted in the routine.</short>
+<short>Numeric value converted to hexadecimal in the routine.</short>
 </element>
 
 <element name="DbgSTime">
@@ -908,9 +911,9 @@ handled in OnWidgetSetDebugLn, no additional actions are performed in the
 method.
 </p>
 <p>
-Otherwise, the output handle is opened when not already assigned. If 
-ActiveLogText is unassigned after trying to open the output handle, no 
-additional actions are performed in the method.
+Otherwise, the output file type is opened when not already assigned. If 
+ActiveLogText (the pointer to stdout) is unassigned after trying to open the 
+output handle, no additional actions are performed in the method.
 </p>
 <p>
 The RTL WriteLn routine is called to write the value in S to the output 
@@ -925,7 +928,8 @@ If an exception occurs during output to the handle, it is caught and the
 values in WriteFailedCount and LastWriteFailed are updated to reflect the 
 error condition.
 </p>
-</descr>        <seealso/>
+</descr>
+<seealso/>
 </element>
 <element name="TLazLoggerFileHandle.WriteLnToFile.s">
 <short>Log message written in the method.</short>

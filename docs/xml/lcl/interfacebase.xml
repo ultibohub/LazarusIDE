@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -51,6 +51,7 @@ this unit to the OnLCLWidgetTypeName function variable in
 <element name="LCLPlatformDef"/>
 <element name="IntfGraphics"/>
 <element name="Themes"/>
+<element name="WSReferences"/>
 <element name="LazUTF8"/>
 <element name="IntegerList"/>
 <element name="LazUtilities"/>
@@ -575,7 +576,7 @@ Use <var>Cancel</var> to control whether the button is used as the Cancel
 button in the dialog.
 </p>
 <p>
-Use <var>ModalResult</var> to set the value returned when the button is 
+Use <var>ModalResult</var> to get or set the value returned when the button is 
 clicked.
 </p>
 </descr>
@@ -590,17 +591,52 @@ clicked.
 <short>The modal result value returned when the button is clicked.</short>
 <descr>
 <p>
-<var>ModalResult</var> is a <var>LongInt</var> property which contains the 
-modal result value returned when the button is clicked in the dialog.
+<var>ModalResult</var> is a <var>LongInt</var> property which contains the modal result value returned when the button is clicked in the dialog.
 </p>
 <p>
-ModalResult values correspond to the values in the <var>TModalResult</var> 
-enumeration, but use the native data type expected in <var>TWidgetSet</var> 
-methods.
+ModalResult can contain a value defined the <var>TModalResult</var> range type 
+found in the RTL <file>system.uitypes.pp</file> unit. Applications will 
+normally want to use the descriptive modal result constants when reading or 
+writing the value, like:
+</p>
+<ul>
+<li>mrNone</li>
+<li>mrOK</li>
+<li>mrCancel</li>
+<li>mrAbort</li>
+<li>mrRetry</li>
+<li>mrIgnore</li>
+<li>mrYes</li>
+<li>mrNo</li>
+<li>mrAll</li>
+<li>mrNoToAll</li>
+<li>mrYesToAll</li>
+<li>mrClose</li>
+</ul>
+<p>
+The default value for the property is set to 0 (mrNone) in the Create 
+constructor.
 </p>
 </descr>
 <seealso>
-<link id="#lazutils.uitypes.TModalResult">TModalResult</link>
+<link id="TDialogButton.Create"/>
+<!--
+TODO: Uncomment when system.uitypes exists in RTL.CHM.
+
+<link id="#rtl.system.uitypes.TModalResult">TModalResult</link>
+<link id="#rtl.system.uitypes.mrNone">mrNone</link>
+<link id="#rtl.system.uitypes.mrOK">mrOK</link>
+<link id="#rtl.system.uitypes.mrCancel">mrCancel</link>
+<link id="#rtl.system.uitypes.mrAbort">mrAbort</link>
+<link id="#rtl.system.uitypes.mrRetry">mrRetry</link>
+<link id="#rtl.system.uitypes.mrIgnore">mrIgnore</link>
+<link id="#rtl.system.uitypes.mrYes">mrYes</link>
+<link id="#rtl.system.uitypes.mrNo">mrNo</link>
+<link id="#rtl.system.uitypes.mrAll">mrAll</link>
+<link id="#rtl.system.uitypes.mrNoToAll">mrNoToAll</link>
+<link id="#rtl.system.uitypes.mrYesToAll">mrYesToAll</link>
+<link id="#rtl.system.uitypes.mrClose">mrClose</link>
+-->
 </seealso>
 </element>
 
@@ -887,11 +923,56 @@ be preprocessed or modified prior to starting an application.
 <element name="TWidgetSet.CreateThemeServices" link="#lcl.interfacebase.TWidgetSet.ThemeServices"/>
 <element name="TWidgetSet.CreateThemeServices.Result"/>
 
-<element name="TWidgetSet.GetAppHandle" link="#lcl.interfacebase.TWidgetSet.AppHandle"/>
-<element name="TWidgetSet.GetAppHandle.Result"/>
+<element name="TWidgetSet.GetAppHandle">
+<short>
+Gets the value for the AppHandle property.
+</short>
+<descr>
+<p>
+Always returns 0 (the unassigned handle value) in TWidgetSet. It is overridden 
+in descendent classes to return the value provided for the platform.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type for the property value.
+</version>
+<seealso>
+<link id="TWidgetSet.AppHandle"/>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
+</seealso>
+</element>
+<element name="TWidgetSet.GetAppHandle.Result">
+<short>
+Value for the AppHandle property.
+</short>
+</element>
 
-<element name="TWidgetSet.SetAppHandle" link="#lcl.interfacebase.TWidgetSet.AppHandle"/>
-<element name="TWidgetSet.SetAppHandle.AValue"/>
+<element name="TWidgetSet.SetAppHandle">
+<short>
+Sets the value for the AppHandle property.
+</short>
+<descr>
+<p>
+SetAppHandle has an empty implementation in TWidgetSet. It is overridden in 
+descendent classes, and generally ensures that an assigned handle is not 
+unassigned after it has been created.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type for the property value.
+</version>
+<seealso>
+<link id="TWidgetSet.AppHandle"/>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
+</seealso>
+</element>
+<element name="TWidgetSet.SetAppHandle.AValue">
+<short>
+New value for the AppHandle property.
+</short>
+</element>
 
 <element name="TWidgetSet.Create">
 <short>Constructor for the class instance.</short>
@@ -916,7 +997,7 @@ allocate the <var>TThemeServices</var> instance used in the
 <var>BeforeDestruction</var> is an overridden method used to perform actions 
 needed prior to freeing the class instance. BeforeDestruction ensures that 
 resources allocated for the <var>ThemeServices</var> property are freed and 
-nil'd. BeforeDestruction calls the inherited method prior to exit.
+<b>nil</b>'d. BeforeDestruction calls the inherited method prior to exit.
 </p>
 </descr>
 <seealso>
@@ -1343,25 +1424,43 @@ Component for the designer flag value.
 </element>
 
 <element name="TWidgetSet.CreateTimer">
-<short>Creates a timer with the given callback method.</short>
-<descr/>
-<seealso/>
-</element>
-<element name="TWidgetSet.CreateTimer.Result">
-<short>The timer ID, zero on failure.</short>
+<short>
+Creates a timer with the given callback method.
+</short>
+<descr>
+<p>
+Declared as an abstract virtual method in TWidgetSet. Must be implemented in 
+a descendent class to use the platform-specific mechanism(s) required for the 
+implementation.
+</p>
+</descr><version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the return value.
+</version>
 <seealso>
 <link id="TWidgetSet.DestroyTimer"/>
+<link id="TWSTimerProc"/>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
 </seealso>
 </element>
+<element name="TWidgetSet.CreateTimer.Result">
+<short>
+The handle (or ID) for the timer. Zero on failure.
+</short>
+</element>
 <element name="TWidgetSet.CreateTimer.Interval">
-<short>The time interval.</short>
+<short>The timer interval before the callback is executed.</short>
 </element>
 <element name="TWidgetSet.CreateTimer.TimerProc">
-<short>The callback method.</short>
+<short>
+The callback method executed when the timer interval has elapsed.
+</short>
 </element>
 
 <element name="TWidgetSet.DestroyTimer">
-<short>Destroys a timer.</short>
+<short>
+Destroys the timer with the specified handle.
+</short>
 <descr>
 <p>
 Declared as an abstract virtual method in TWidgetSet. Must be implemented in 
@@ -1369,26 +1468,44 @@ a descendent class to use the platform-specific mechanism(s) required for the
 implementation.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the TimerHandle parameter.
+</version>
 <seealso>
 <link id="TWidgetSet.CreateTimer"/>
+<link id="TWSTimerProc"/>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
 </seealso>
 </element>
 <element name="TWidgetSet.DestroyTimer.Result">
-<short><b>False</b> on failure.</short>
+<short>
+<b>True</b> if the timer was successfully destroyed. <b>False</b> on failure.
+</short>
 </element>
 <element name="TWidgetSet.DestroyTimer.TimerHandle">
-<short>The timer ID.</short>
+<short>Handle (or ID) for the timer destroyed in the method.</short>
 </element>
 
 <element name="TWidgetSet.AppHandle">
-<short>Native handle for a TApplication instance.</short>
+<short>
+Native handle for a TApplication instance.
+</short>
 <descr>
 <p>
-<var>AppHandle</var> is a platform-specific property. The meaning and use for 
-the handle changes from widgetset to widgetset.
+<var>AppHandle</var> is a <var>TLCLHandle</var> property with the handle for 
+the application in the widgetset class instance. <var>AppHandle</var> is a 
+platform-specific property. The meaning and use for the handle changes from 
+widgetset to widgetset.
 </p>
 </descr>
-<seealso/>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the property value.
+</version>
+<seealso>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 
 <!-- winapi includes -->
@@ -7436,6 +7553,63 @@ Class reference used to create new instance of the TWidgetSet class.
 </seealso>
 </element>
 
+<!-- TODO: Added in 92e31d44. -->
+<element name="TMessageDispatcher">
+<short>
+Implements a class used to dispatch messages originating in a widgetset class 
+to a handler routine in the LCL class instance.
+</short>
+<descr>
+Used in the GTK widgetset to implement the AllocateHWnd and DeallocateHWnd 
+methods in the widgetset class.
+</descr>
+<seealso/>
+</element>
+
+<!-- private -->
+<element name="TMessageDispatcher.FMethod"/>
+
+<!-- public -->
+<element name="TMessageDispatcher.Create">
+<short>
+Constructor for the class instance.
+</short>
+<descr/>
+<seealso>
+<link id="TLCLWndMethod"/>
+</seealso>
+</element>
+<element name="TMessageDispatcher.Create.AMethod">
+<short>
+Window handler routine in an LCL object where a message is delivered.
+</short>
+</element>
+
+<element name="TMessageDispatcher.Dispatch">
+<short>
+Sends the specified message to the handler routine for the dispatcher.
+</short>
+<descr>
+<p>
+Dispatch is an overridden method in TMessageDispatcher. It reimplements the 
+method introduced in the TObject ancestor. It executes the TLCLWndMethod 
+routine passed as an argument to the constructor using the specified message as 
+a parameter.
+</p>
+</descr>
+<seealso>
+<link id="TLCLWndMethod"/>
+<link id="#lcl.lmessages.TLMessage">TLMessage</link>
+<link id="#rtl.system.TObject.Dispatch">TObject.Dispatch</link>
+</seealso>
+</element>
+<element name="TMessageDispatcher.Dispatch.message">
+<short>
+Untyped variable argument with the message sent in the method. Cast to an 
+TLMessage instance when passed to the handler routine.
+</short>
+</element>
+
 <element name="GetDefaultLCLWidgetType">
 <short>
 Gets the enumeration value representing the LCL platform for the current 
@@ -7567,66 +7741,128 @@ the initial value for the edit control on entry.
 </element>
 
 <element name="TPromptDialogFunction">
-<short/>
-<descr/>
-<seealso/>
+<short>
+Specifies a function called to display and execute a widgetset-independent 
+dialog using the specified settings.
+</short>
+<descr>
+<p>
+<var>TPromptDialogFunction</var> is the type used for the PromptDialogFunction 
+variable in the <file>interfacebase.pp</file> unit. DefaultPromptDialog in 
+<file>dialogs.pp</file> is an implementation of the type.
+</p>
+</descr>
+<seealso>
+<link id="PromptDialogFunction"/>
+<link id="#lcl.dialogs.DefaultPromptDialog">DefaultPromptDialog</link>
+</seealso>
 </element>
 <element name="TPromptDialogFunction.Result">
-<short/>
+<short>
+Modal result value returned when the dialog is executed.
+</short>
 </element>
 <element name="TPromptDialogFunction.DialogCaption">
-<short/>
+<short>
+Caption for the dialog. An empty string causes the default description for the 
+dialog type to be used.
+</short>
 </element>
 <element name="TPromptDialogFunction.DialogMessage">
-<short/>
+<short>
+Text displayed as the main content on the dialog. Allows embedded end-of-line 
+sequences in the text.
+</short>
 </element>
 <element name="TPromptDialogFunction.DialogType">
-<short/>
+<short>
+Integer constant which indicates the dialog type like idDialogWarning, 
+idDialogError, idDialogInfo, idDialogConfirm, or idDialogShield.
+</short>
 </element>
 <element name="TPromptDialogFunction.Buttons">
-<short/>
+<short>
+Pointer to the address where the button identifiers for the dialog are 
+specified.
+</short>
 </element>
 <element name="TPromptDialogFunction.ButtonCount">
-<short/>
+<short>
+Number of buttons located at the specified address.
+</short>
 </element>
 <element name="TPromptDialogFunction.DefaultIndex">
-<short/>
+<short>
+Ordinal position for the default button on the dialog. 0 is used if the value 
+is not valid for the number of buttons.
+</short>
 </element>
 <element name="TPromptDialogFunction.EscapeResult">
-<short/>
+<short>
+Modal result value returned when the Esc or Alt+F4 is used to cancel the dialog.
+</short>
 </element>
 <element name="TPromptDialogFunction.UseDefaultPos">
-<short/>
+<short>
+True causes the dialog to be centered on the screen using the screen size and 
+the dimensions for the dialog. False causes the values in X and Y to be used to 
+set the left and top coordinates for the dialog.
+</short>
 </element>
 <element name="TPromptDialogFunction.X">
-<short/>
+<short>
+Horizontal coordinate for the left edge of the dialog. Used when UseDefaultPos 
+is False.
+</short>
 </element>
 <element name="TPromptDialogFunction.Y">
-<short/>
+<short>
+Vertical coordinate for the top edge of the dialog. Used when UseDefaultPos is 
+False.
+</short>
 </element>
 
 <element name="TQuestionDialogFunction">
-<short/>
+<short>
+Specifies a function called to display and execute a widgetset-independent 
+Question Mark dialog using the specified settings.
+</short>
 <descr/>
 <seealso/>
 </element>
 <element name="TQuestionDialogFunction.Result">
-<short/>
+<short>
+Modal result value returned when the dialog is executed.
+</short>
 </element>
 <element name="TQuestionDialogFunction.aCaption">
-<short/>
+<short>
+Caption for the dialog. An empty string causes the default description for the 
+dialog type to be used.
+</short>
 </element>
 <element name="TQuestionDialogFunction.aMsg">
-<short/>
+<short>
+Text displayed as the main content on the dialog. Allows embedded end-of-line 
+sequences in the text.
+</short>
 </element>
 <element name="TQuestionDialogFunction.DlgType">
-<short/>
+<short>
+Integer constant which indicates the dialog type like idDialogWarning, 
+idDialogError, idDialogInfo, idDialogConfirm, or idDialogShield.
+</short>
 </element>
 <element name="TQuestionDialogFunction.Buttons">
-<short/>
+<short>
+Pointer to the address where the button identifiers for the dialog are 
+specified.
+</short>
 </element>
 <element name="TQuestionDialogFunction.HelpCtx">
-<short/>
+<short>
+Context identifier for help displayed using a Help button on the dialog.
+</short>
 </element>
 
 <element name="TLoadBitmapFunction">
@@ -7635,8 +7871,13 @@ Specifies a function called to load a bitmap image from the specified file or
 resource and return the handle for the image.
 </short>
 <descr/>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the hInstance parameter.
+</version>
 <seealso>
 <link id="LoadBitmapFunction"/>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
 </seealso>
 </element>
 <element name="TLoadBitmapFunction.Result">
@@ -7661,6 +7902,14 @@ Specifies a function called to load a cursor shape with the specified
 identifier and return the handle for the cursor image.
 </short>
 <descr/>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the hInstance parameter.
+</version>
+<seealso>
+<link id="LoadCursorFunction"/>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
+</seealso>
 <seealso/>
 </element>
 <element name="TLoadCursorFunction.Result">
@@ -7680,34 +7929,67 @@ Identifier for the cursor shape loaded in the routine.
 </element>
 
 <element name="TLoadIconFunction">
-<short/>
-<descr/>
-<seealso/>
+<short>
+Specifies a function called to load a named icon from a resource with the 
+specified handle.
+</short>
+<descr>
+<p>
+<var>TLoadIconFunction</var> is the type used to implement the LoadIconFunction 
+procedure variable. An example implementation is provided in the LocalLoadIcon 
+function found in the implementation for the <file>graphics.pp</file> unit.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the hInstance parameter.
+</version>
+<seealso>
+<link id="LoadIconFunction"/>
+<link id="#lcl.graphics.TIcon.LoadFromResourceHandle">TIcon.LoadFromResourceHandle</link>
+<link id="#lcl.wsreferences.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 <element name="TLoadIconFunction.Result">
-<short/>
+<short>
+Handle for the icon created and loaded in the routine.
+</short>
 </element>
 <element name="TLoadIconFunction.hInstance">
-<short/>
+<short>
+Handle for the resource where the icon is located.
+</short>
 </element>
 <element name="TLoadIconFunction.lpIconName">
-<short/>
+<short>
+PChar value which points to the resource name or identifier for the icon loaded 
+in the routine.
+</short>
 </element>
 
 <element name="InputDialogFunction">
-<short/>
+<short>
+Procedure variable with the routine called to execute a platform-independent 
+input dialog.
+</short>
 <descr/>
 <seealso/>
 </element>
 
 <element name="PromptDialogFunction">
-<short/>
+<short>
+Procedure variable with the routine called to execute a platform-independent 
+prompt dialog.
+</short>
 <descr/>
 <seealso/>
 </element>
 
 <element name="QuestionDialogFunction">
-<short/>
+<short>
+Procedure variable with the routine called to execute a platform-independent 
+dialog using the Question Mark icon.
+</short>
 <descr/>
 <seealso/>
 </element>

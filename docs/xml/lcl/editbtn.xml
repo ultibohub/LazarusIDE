@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -948,6 +948,21 @@ The default value for the property is <var>bsNone</var> in
 <element name="TEditButton.Layout" link="#lcl.groupededit.TCustomAbstractGroupedEdit.Layout"/>
 <element name="TEditButton.MaxLength" link="#lcl.stdctrls.TCustomEdit.MaxLength"/>
 <element name="TEditButton.NumGlyphs" link="#lcl.editbtn.TCustomEditButton.NumGlyphs"/>
+<element name="TEditButton.ParentBidiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TEditButton.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TEditButton.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TEditButton.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TEditButton.PasswordChar" link="#lcl.stdctrls.TCustomEdit.PasswordChar"/>
+<element name="TEditButton.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TEditButton.ReadOnly" link="#lcl.stdctrls.TCustomEdit.ReadOnly"/>
+<element name="TEditButton.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TEditButton.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
+<element name="TEditButton.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TEditButton.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TEditButton.Text" link="#lcl.stdctrls.TCustomEdit.Text"/>
+<element name="TEditButton.TextHint" link="#lcl.stdctrls.TCustomEdit.TextHint"/>
+<element name="TEditButton.Visible" link="#lcl.controls.TControl.Visible"/>
+
 <element name="TEditButton.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
 <element name="TEditButton.OnChange" link="#lcl.stdctrls.TCustomEdit.OnChange"/>
 <element name="TEditButton.OnClick" link="#lcl.controls.TControl.OnClick"/>
@@ -972,20 +987,6 @@ The default value for the property is <var>bsNone</var> in
 <element name="TEditButton.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TEditButton.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TEditButton.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TEditButton.ParentBidiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TEditButton.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TEditButton.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TEditButton.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TEditButton.PasswordChar" link="#lcl.stdctrls.TCustomEdit.PasswordChar"/>
-<element name="TEditButton.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TEditButton.ReadOnly" link="#lcl.stdctrls.TCustomEdit.ReadOnly"/>
-<element name="TEditButton.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TEditButton.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
-<element name="TEditButton.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TEditButton.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TEditButton.Text" link="#lcl.stdctrls.TCustomEdit.Text"/>
-<element name="TEditButton.TextHint" link="#lcl.stdctrls.TCustomEdit.TextHint"/>
-<element name="TEditButton.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TFilterStringOption">
 <short>String filter options which can be enabled in controls.</short>
@@ -1420,13 +1421,21 @@ instance.
 </element>
 
 <element name="TCustomControlFilterEdit.EditKeyDown">
-<short>Handles a KeyDown event for the Edit control.</short>
+<short>
+Handles a KeyDown event for the Edit control.
+</short>
 <descr>
 <p>
-EditKeyDown is an overridden method in TCustomControlFilterEdit. It 
-implements the OnKeyDown event handler for the Edit in the grouped edit 
-control. It extends the inherited method to handle additional key down 
-events, including:
+<var>EditKeyDown</var> is an overridden method in 
+<var>TCustomControlFilterEdit</var>. It implements the OnKeyDown event handler 
+for the Edit in the grouped edit control. It calls the inherited EditKeyDown 
+method on entry to signal an assigned OnEditKeyDown handler using the values in 
+Key and Shift. No additional actions are performed if Key is set to 0 in the 
+inherited method.
+</p>
+<p>
+EditKeyDown extends the inherited method to handle additional key down events, 
+including:
 </p>
 <ul>
 <li>Return</li>
@@ -1444,12 +1453,19 @@ descendent classes to call methods in the associated control for the filter
 edit control.
 </p>
 <p>
-If the value in Key is handled in the method, Key is set to VK_UNKNOWN (0). 
-Otherwise, the inherited method is called to handle the Key and Shift 
-modifier.
+If the value in Key is handled in the method, Key is set to VK_UNKNOWN (0).
 </p>
 </descr>
-<seealso></seealso>
+<seealso>
+<link id="TCustomControlFilterEdit.ReturnKeyHandled"/>
+<link id="TCustomControlFilterEdit.MovePrev"/>
+<link id="TCustomControlFilterEdit.MoveNext"/>
+<link id="TCustomControlFilterEdit.MovePageUp"/>
+<link id="TCustomControlFilterEdit.MovePageDown"/>
+<link id="TCustomControlFilterEdit.MoveHome"/>
+<link id="TCustomControlFilterEdit.MoveEnd"/>
+<link id="#lcl.groupededit.TCustomAbstractGroupedEdit.EditKeyDown">TCustomAbstractGroupedEdit.EditKeyDown</link>
+</seealso>
 </element>
 <element name="TCustomControlFilterEdit.EditKeyDown.Key">
 <short>
@@ -2084,6 +2100,8 @@ CheckListbox.
 <element name="TCustomControlFilterEdit.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
 <element name="TCustomControlFilterEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
 <element name="TCustomControlFilterEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TCustomControlFilterEdit.Text" link="#lcl.controls.TControl.Text"/>
+<element name="TCustomControlFilterEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 <element name="TCustomControlFilterEdit.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TCustomControlFilterEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
 <element name="TCustomControlFilterEdit.OnChange" link="#lcl.groupededit.TCustomAbstractGroupedEdit.OnChange"/>
@@ -2109,8 +2127,6 @@ CheckListbox.
 <element name="TCustomControlFilterEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TCustomControlFilterEdit.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TCustomControlFilterEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TCustomControlFilterEdit.Text" link="#lcl.controls.TControl.Text"/>
-<element name="TCustomControlFilterEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 
 <element name="TAcceptFileNameEvent">
 <short>
@@ -2235,14 +2251,14 @@ For example:
 </p>
 <dl>
 <dt>dkOpen</dt>
-<dd>TOpenDialog is the type in return value</dd>
+<dd>TOpenDialog is the type in return value.</dd>
 <dt>dkPictureOpen</dt>
-<dd>TOpenPictureDialog is the type in return value</dd>
+<dd>TOpenPictureDialog is the type in return value.</dd>
 <dt>dkSave, dkPictureSave</dt>
-<dd>TSaveDialog is the type in return value</dd>
+<dd>TSaveDialog is the type in return value.</dd>
 </dl>
 <p>
-Properties relevant to the dialog kind are copied into the dialog, and mat 
+Properties relevant to the dialog kind are copied into the dialog, and may 
 include:
 </p>
 <ul>
@@ -2256,13 +2272,30 @@ include:
 <li>DialogTitle</li>
 </ul>
 <p>
+For an open dialog, path information in FileName is retained if the path is 
+valid. This causes use of InitialDir to be disabled in the dialog. If the path 
+in Filename is invalid, only the base file name and extension are copied to the 
+dialog. An explicit value in InitialDir is resolved (cleaned and expanded) when 
+valid, and stored to the dialog. Otherwise, the initial directory is determined 
+by the widgetset when the dialog is executed.
+</p>
+<p>
 CreateDialog is used in the implementation of the RunDialog method.
 </p>
 </descr>
 <seealso>
+<link id="TFileNameEdit.DefaultExt"/>
+<link id="TFileNameEdit.DialogOptions"/>
+<link id="TFileNameEdit.DialogTitle"/>
+<link id="TFileNameEdit.FileName"/>
+<link id="TFileNameEdit.Filter"/>
+<link id="TFileNameEdit.FilterIndex"/>
+<link id="TFileNameEdit.InitialDir"/>
+<link id="TFileNameEdit.RunDialog"/>
 <link id="#lcl.dialogs.TCommonDialog">TCommonDialog</link>
 <link id="#lcl.dialogs.TOpenDialog">TOpenDialog</link>
 <link id="#lcl.dialogs.TSaveDialog">TSaveDialog</link>
+<link id="#lazutils.lazfileutils.CleanAndExpandDirectory">CleanAndExpandDirectory</link>
 </seealso>
 </element>
 <element name="TFileNameEdit.CreateDialog.Result">
@@ -2432,10 +2465,36 @@ placed in the Text Box, or the value selected from the dialog.
 
 <element name="TFileNameEdit.InitialDir">
 <short>
-<var>InitialDir</var> is the directory from which the search starts.
+Initial directory displayed when the dialog is executed for the control.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>InitialDir</var> determines the first directory displayed when the 
+RunDialog method is called. InitialDir is resolved (cleaned and expanded) 
+before it is used during dialog execution. If FileName contains qualified path 
+information, the value in InitialDir is ignored; the path information in 
+FileName is used instead. When omitted (contains ''), the widgetset determines 
+the active directory when the dialog for the control is executed.
+</p>
+<p>
+For a file open dialog, InitialDir is updated in the RunDialog method with the 
+value returned by the dialog. This occurs even when the Cancel button is used 
+to close the dialog. This mimics the behavior used in TOpenDialog.
+</p>
+<p>
+Use FileName to assign the default file name (and optional path information) 
+used when the dialog is executed for the control.
+</p>
+<p>
+Use the DialogOptions property to control whether the active directory can be 
+changed using the dialog for the control (ofNoChangeDir).
+</p>
+</descr>
+<seealso>
+<link id="TFileNameEdit.FileName"/>
+<link id="TFileNameEdit.DialogOptions"/>
+<link id="TFileNameEdit.RunDialog"/>
+</seealso>
 </element>
 
 <element name="TFileNameEdit.OnAcceptFileName">
@@ -2624,6 +2683,8 @@ Text displayed in the balloon hint for the button in the control.
 <element name="TFileNameEdit.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
 <element name="TFileNameEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
 <element name="TFileNameEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TFileNameEdit.Text" link="#lcl.controls.TControl.Text"/>
+<element name="TFileNameEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 <element name="TFileNameEdit.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TFileNameEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
 <element name="TFileNameEdit.OnChange" link="#lcl.stdctrls.TCustomEdit.OnChange"/>
@@ -2649,8 +2710,6 @@ Text displayed in the balloon hint for the button in the control.
 <element name="TFileNameEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TFileNameEdit.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TFileNameEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TFileNameEdit.Text" link="#lcl.controls.TControl.Text"/>
-<element name="TFileNameEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 
 <element name="TDirectoryEdit">
 <short>
@@ -2735,7 +2794,7 @@ instantiated and used as the return value is actually
 <p>
 CreateDialog ensures that values for the InitialDir and FileName properties 
 in the dialog are set using the properties in the class instance. 
-<var>Directory</var> and <var>Filename</var> are used in the the dialog when 
+<var>Directory</var> and <var>Filename</var> are used in the dialog when 
 the directory exists on the local file system. Otherwise, the initial 
 directory is set to the value in <var>RootDir</var> and the file name is set 
 to the value in <var>Directory</var>.
@@ -3031,6 +3090,8 @@ Hint displayed when the mouse hovers over the button for the control.
 <element name="TDirectoryEdit.Spacing" link="#lcl.groupededit.TCustomAbstractGroupedEdit.Spacing"/>
 <element name="TDirectoryEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
 <element name="TDirectoryEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TDirectoryEdit.Text" link="#lcl.controls.TControl.Text"/>
+<element name="TDirectoryEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 <element name="TDirectoryEdit.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TDirectoryEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
 <element name="TDirectoryEdit.OnChange" link="#lcl.stdctrls.TCustomEdit.OnChange"/>
@@ -3056,8 +3117,6 @@ Hint displayed when the mouse hovers over the button for the control.
 <element name="TDirectoryEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TDirectoryEdit.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TDirectoryEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TDirectoryEdit.Text" link="#lcl.controls.TControl.Text"/>
-<element name="TDirectoryEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 
 <element name="TAcceptDateEvent">
 <short>
@@ -3708,7 +3767,7 @@ property. The value in DateOrder determines the date format used for the text
 value.
 </p>
 <p>
-Loaded calls the the inherited method prior to exit to update the spacing and 
+Loaded calls the inherited method prior to exit to update the spacing and 
 color for the control.
 </p>
 </descr>
@@ -3913,89 +3972,6 @@ when the Button is clicked for the control.
 <link id="#lcl.calendar.TDisplaySetting">TDisplaySetting</link>
 <link id="#lcl.calendar.TCustomCalendar.DisplaySettings">TCustomCalendar.DisplaySettings</link>
 <link id="#lcl.calendarpopup.ShowCalendarPopup">ShowCalendarPopup</link>
-</seealso>
-</element>
-
-<element name="TDateEdit.OnAcceptDate">
-<short>
-Event handler signalled to accept or reject a new date value selected using 
-the calendar dialog for the control.
-</short>
-<descr>
-<p>
-<var>OnAcceptDate</var> is a <var>TAcceptDateEvent</var> property with the 
-event handler signalled to accept or reject a new value for the Date 
-property. The handler routine can perform actions to validate or update the 
-TDateTime and Boolean arguments.
-</p>
-<p>
-OnAcceptDate is signalled (when assigned) when the pop-up calendar dialog is 
-displayed for the grouped edit control. The handler routine can update the 
-value in the date argument if its value is not in an acceptable range. If the 
-Boolean argument is <b>True</b> on exit from the handler, the date argument 
-is stored to the Date property. Otherwise, the new date/time value is 
-discarded.
-</p>
-<p>
-An exception raised during execution of the pop-up calendar dialog is handled 
-in the class instance; MessageDlg is called to display the exception message.
-</p>
-</descr>
-<seealso>
-<link id="TDateEdit.ButtonClick"/>
-<link id="TDateEdit.Date"/>
-<link id="TAcceptDateEvent"/>
-</seealso>
-</element>
-
-<element name="TDateEdit.OnCustomDate">
-<short>
-<var>OnCustomDate</var> - event handler for inserting a custom date.
-</short>
-<descr>
-<p>
-<var>OnCustomDate</var> is a <var>TCustomDateEvent</var> property with the 
-event handler signalled to validate or update a string value before it is 
-converted to the TDateTime type. OnCustomDate is signalled (when assigned) 
-when the value in Text is converted to the TDateTime type used in the Date 
-property. It also occurs when a new value is assigned to DirectInput, and 
-when reading the value for the Date property when DirectInput is enabled.
-</p>
-</descr>
-<seealso>
-<link id="TDateEdit.Date"/>
-<link id="TDateEdit.DateOrder"/>
-<link id="TDateEdit.DirectInput"/>
-<link id="TDateEdit.Text"/>
-</seealso>
-</element>
-
-<element name="TDateEdit.OnDateRangeCheck">
-<short>
-Event handler signalled prior to validating and range checking a date value.
-</short>
-<descr>
-<p>
-<var>OnDateRangeCheck</var> is a <var>TDateRangeCheckEvent</var> with the 
-event handler signalled prior to validating and range checking a date value. 
-It allows the application to perform actions needed before a date value is 
-potentially updated. An application can implement and assign a routine to the 
-handler which responds to the event notification.
-</p>
-<p>
-OnDateRangeCheck is signalled (when assigned) from the DoDateRangeCheck 
-method. It occurs when a new value is assigned to either the MinDate or 
-MaxDate property, and when ButtonClick is called to display the pop-up 
-calendar for the control.
-</p>
-</descr>
-<seealso>
-<link id="TDateEdit.Date"/>
-<link id="TDateEdit.MinDate"/>
-<link id="TDateEdit.MaxDate"/>
-<link id="TDateEdit.DoDateRangeCheck"/>
-<link id="TDateEdit.ButtonClick"/>
-<link id="TDateRangeCheckEvent"/>
 </seealso>
 </element>
 
@@ -4234,6 +4210,103 @@ their native calendar controls.
 <element name="TDateEdit.Font" link="#lcl.controls.TControl.Font"/>
 <element name="TDateEdit.Layout" link="#lcl.groupededit.TCustomAbstractGroupedEdit.Layout"/>
 <element name="TDateEdit.MaxLength" link="#lcl.stdctrls.TCustomEdit.MaxLength"/>
+<element name="TDateEdit.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TDateEdit.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TDateEdit.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TDateEdit.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TDateEdit.PasswordChar" link="#lcl.stdctrls.TCustomEdit.PasswordChar"/>
+<element name="TDateEdit.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TDateEdit.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TDateEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TDateEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TDateEdit.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
+<element name="TDateEdit.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TDateEdit.Text" link="#lcl.controls.TControl.Text"/>
+<element name="TDateEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
+
+<element name="TDateEdit.OnAcceptDate">
+<short>
+Event handler signalled to accept or reject a new date value selected using 
+the calendar dialog for the control.
+</short>
+<descr>
+<p>
+<var>OnAcceptDate</var> is a <var>TAcceptDateEvent</var> property with the 
+event handler signalled to accept or reject a new value for the Date 
+property. The handler routine can perform actions to validate or update the 
+TDateTime and Boolean arguments.
+</p>
+<p>
+OnAcceptDate is signalled (when assigned) when the pop-up calendar dialog is 
+displayed for the grouped edit control. The handler routine can update the 
+value in the date argument if its value is not in an acceptable range. If the 
+Boolean argument is <b>True</b> on exit from the handler, the date argument 
+is stored to the Date property. Otherwise, the new date/time value is 
+discarded.
+</p>
+<p>
+An exception raised during execution of the pop-up calendar dialog is handled 
+in the class instance; MessageDlg is called to display the exception message.
+</p>
+</descr>
+<seealso>
+<link id="TDateEdit.ButtonClick"/>
+<link id="TDateEdit.Date"/>
+<link id="TAcceptDateEvent"/>
+</seealso>
+</element>
+
+<element name="TDateEdit.OnCustomDate">
+<short>
+<var>OnCustomDate</var> - event handler for inserting a custom date.
+</short>
+<descr>
+<p>
+<var>OnCustomDate</var> is a <var>TCustomDateEvent</var> property with the 
+event handler signalled to validate or update a string value before it is 
+converted to the TDateTime type. OnCustomDate is signalled (when assigned) 
+when the value in Text is converted to the TDateTime type used in the Date 
+property. It also occurs when a new value is assigned to DirectInput, and 
+when reading the value for the Date property when DirectInput is enabled.
+</p>
+</descr>
+<seealso>
+<link id="TDateEdit.Date"/>
+<link id="TDateEdit.DateOrder"/>
+<link id="TDateEdit.DirectInput"/>
+<link id="TDateEdit.Text"/>
+</seealso>
+</element>
+
+<element name="TDateEdit.OnDateRangeCheck">
+<short>
+Event handler signalled prior to validating and range checking a date value.
+</short>
+<descr>
+<p>
+<var>OnDateRangeCheck</var> is a <var>TDateRangeCheckEvent</var> with the 
+event handler signalled prior to validating and range checking a date value. 
+It allows the application to perform actions needed before a date value is 
+potentially updated. An application can implement and assign a routine to the 
+handler which responds to the event notification.
+</p>
+<p>
+OnDateRangeCheck is signalled (when assigned) from the DoDateRangeCheck 
+method. It occurs when a new value is assigned to either the MinDate or 
+MaxDate property, and when ButtonClick is called to display the pop-up 
+calendar for the control.
+</p>
+</descr>
+<seealso>
+<link id="TDateEdit.Date"/>
+<link id="TDateEdit.MinDate"/>
+<link id="TDateEdit.MaxDate"/>
+<link id="TDateEdit.DoDateRangeCheck"/>
+<link id="TDateEdit.ButtonClick"/>
+<link id="TDateRangeCheckEvent"/>
+</seealso>
+</element>
+
 <element name="TDateEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
 <element name="TDateEdit.OnChange" link="#lcl.stdctrls.TCustomEdit.OnChange"/>
 <element name="TDateEdit.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
@@ -4256,19 +4329,6 @@ their native calendar controls.
 <element name="TDateEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TDateEdit.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TDateEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TDateEdit.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TDateEdit.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TDateEdit.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TDateEdit.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TDateEdit.PasswordChar" link="#lcl.stdctrls.TCustomEdit.PasswordChar"/>
-<element name="TDateEdit.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TDateEdit.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TDateEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TDateEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TDateEdit.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
-<element name="TDateEdit.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TDateEdit.Text" link="#lcl.controls.TControl.Text"/>
-<element name="TDateEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 
 <element name="TAcceptTimeEvent">
 <short>
@@ -4319,33 +4379,53 @@ implement the <var>OnCustomTime</var> property in <var>TTimeEdit</var>.
 </element>
 
 <element name="TTimeEdit">
-<short>Implements a control used to edit time values.</short>
+<short>
+Implements a control used to edit time values.
+</short>
 <descr>
 <p>
 <var>TTimeEdit</var> is a <var>TCustomEditButton</var> descendant which 
 implements a control used to edit a time value. TTimeEdit provides the 
 <var>Edit</var> and <var>Button</var> properties defined in the ancestor 
 class, and a dialog that is executed to select a time value when the Button 
-is clicked.
+is clicked. The dialog allows selection of Hour and Minute values from a 
+drop-down list. Enable DirectInput to enter a time value that includes 
+additional time parts (like Seconds and Milliseconds).
 </p>
 <p>
-The time value in the control is represented using the <var>TDateTime</var> 
-type; only the time portion of the value is significant.
+The Time value in the control is represented using the <var>TDateTime</var> 
+type; only the time portion of the value is significant. 
+</p>
+<p>
+Use TimeFormat and TimeSeparator to override the default format settings used 
+to generate the display Text for the time edit control.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to include additional properties and methods.
+</version>
 <seealso>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.Text"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.TimeSeparator"/>
 <link id="TCustomEditButton"/>
 </seealso>
 </element>
 
+<!-- private -->
 <element name="TTimeEdit.FTime"/>
 <element name="TTimeEdit.IsEmptyTime"/>
 <element name="TTimeEdit.FDefaultNow"/>
 <element name="TTimeEdit.FDroppedDown"/>
 <element name="TTimeEdit.FSimpleLayout"/>
+<element name="TTimeEdit.FTimeAMPMString"/>
+<element name="TTimeEdit.FTimeFormat"/>
+<element name="TTimeEdit.FTimeSeparator"/>
 <element name="TTimeEdit.FOnAcceptTime"/>
 <element name="TTimeEdit.FOnCustomTime"/>
 
+<!-- private -->
 <element name="TTimeEdit.GetTime">
 <short>Gets the value for the Time property.</short>
 <descr/>
@@ -4355,6 +4435,28 @@ type; only the time portion of the value is significant.
 </element>
 <element name="TTimeEdit.GetTime.Result">
 <short>Value for the property.</short>
+</element>
+
+<element name="TTimeEdit.GetTimeAMPMString">
+<short>
+Gets the value for the indexed TimeAMString or TimePMString properties.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+<element name="TTimeEdit.GetTimeAMPMString.AIndex">
+<short>
+Ordinal position in the internal member for the property value. 0 is for 
+TimeAMString. 1 is for TimePMString.
+</short>
+</element>
+<element name="TTimeEdit.GetTimeAMPMString.Result">
+<short>
+Value for the indexed property.
+</short>
 </element>
 
 <element name="TTimeEdit.SetTime">
@@ -4412,6 +4514,64 @@ method, and in the constructor for the class instance.
 </element>
 <element name="TTimeEdit.SetLayout.AValue">
 <short>New value for the property.</short>
+</element>
+
+<element name="TTimeEdit.SetTimeAMPMString">
+<short>
+Sets the value for the indexed TimeAMString and TimePMString properties.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso/>
+</element>
+<element name="TTimeEdit.SetTimeAMPMString.AIndex">
+<short>
+Ordinal position in the internal member for the property value updated in the 
+method. 0 is for TimeAMString, 1 is for TimePMString.
+</short>
+</element>
+<element name="TTimeEdit.SetTimeAMPMString.AValue">
+<short>
+New value for the indexed property represented by AIndex.
+</short>
+</element>
+
+<element name="TTimeEdit.SetTimeFormat">
+<short>
+Sets the value for the TimeFormat property.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.TimeFormat"/>
+</seealso>
+</element>
+<element name="TTimeEdit.SetTimeFormat.AValue">
+<short>
+New value for the property.
+</short>
+</element>
+
+<element name="TTimeEdit.SetTimeSeparator">
+<short>
+Sets the value for the TimeSeparator property.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.TimeSeparator"/>
+</seealso>
+</element>
+<element name="TTimeEdit.SetTimeSeparator.AValue">
+<short>
+New value for the property.
+</short>
 </element>
 
 <element name="TTimeEdit.TimePopupReturnTime">
@@ -4515,6 +4675,124 @@ Default resource name for the glyph used on the button in the control.
 </short>
 </element>
 
+<element name="TTimeEdit.UsedFormatSettings">
+<short>
+Gets the effective format settings used to format the value for the time edit 
+control.
+</short>
+<descr>
+<p>
+The return value contains the DefaultFormatSettings for the platform combined 
+with the values assigned to the TimeFormat and TimeSeparator properties. 
+UsedFormatSettings is called when a new value is stored in the Time property, 
+and is used to format the Text displayed on the control.
+</p>
+<p>
+Use TimeFormat to specify the short time format settings applied to the Time 
+property. Use TimeSeparator to specify the time separator character used in the 
+short time settings applied to the Time property.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.TimeSeparator"/>
+<link id="TTimeEdit.Text"/>
+<link id="TTimeEdit.UsedTimeFormat"/>
+<link id="TTimeEdit.UsedTimeSeparator"/>
+<link id="#rtl.sysutils.DefaultFormatSettings">DefaultFormatSettings</link>
+<link id="#rtl.sysutils.TFormatSettings">TFormatSettings</link>
+</seealso>
+</element>
+<element name="TTimeEdit.UsedFormatSettings.Result">
+<short>
+Format settings after the values in TimeFormat and TimeSeparator have been 
+applied.
+</short>
+</element>
+
+<element name="TTimeEdit.UsedTimeFormat">
+<short>
+Gets the effective short time format used for the Time value in the control.
+</short>
+<descr>
+<p>
+The return value contains the short time format used to format the value in the 
+Text property. It defaults to the short time setting in the 
+DefaultFormatSettings for the platform. The value in TimeFormat is substituted 
+when an explicit value has been assigned to the property.
+</p>
+<p>
+UsedTimeFormat is called from the UsedFormatSettings method, which occurs when 
+a new value has been assigned to the Time property.
+</p>
+<p>
+See TimeSeparator and UsedTimeSeparator for the separator character used in the 
+short time format settings.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.TimeSeparator"/>
+<link id="TTimeEdit.Text"/>
+<link id="TTimeEdit.UsedFormatSettings"/>
+<link id="TTimeEdit.UsedTimeSeparator"/>
+<link id="#rtl.sysutils.DefaultFormatSettings">DefaultFormatSettings</link>
+<link id="#rtl.sysutils.TFormatSettings">TFormatSettings</link>
+</seealso>
+</element>
+<element name="TTimeEdit.UsedTimeFormat.Result">
+<short>
+Short time format used in the class instance.
+</short>
+</element>
+
+<element name="TTimeEdit.UsedTimeSeparator">
+<short>
+Gets the effective time separator character used in the short time format 
+settings.
+</short>
+<descr>
+<p>
+The return value contains the time separator character in the short time format 
+used in the class instance. It defaults to the time separator character found 
+in the DefaultFormatSettings for the platform. The first character found in 
+TimeSeparator is substituted when an explicit value has been assigned to the 
+property. Other characters in TimeSeparator are ignored.
+</p>
+<p>
+UsedTimeSeparator is called from the UsedFormatSettings method, which occurs 
+when a new value has been assigned to the Time property.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.TimeSeparator"/>
+<link id="TTimeEdit.Text"/>
+<link id="TTimeEdit.UsedFormatSettings"/>
+<link id="TTimeEdit.UsedTimeFormat"/>
+<link id="#rtl.sysutils.DefaultFormatSettings">DefaultFormatSettings</link>
+<link id="#rtl.sysutils.TFormatSettings">TFormatSettings</link>
+</seealso>
+</element>
+<element name="TTimeEdit.UsedTimeSeparator.Result">
+<short>
+Time separator character used in the short time format settings for the class 
+instance.
+</short>
+</element>
+
 <element name="TTimeEdit.ButtonClick">
 <short>
 Performs actions needed when the Button for the control is clicked.
@@ -4549,6 +4827,61 @@ Implements the OnEditingDone event handler for the Edit in the control.
 </element>
 <element name="TTimeEdit.Create.AOwner">
 <short>Owner of the class instance.</short>
+</element>
+
+<element name="TTimeEdit.ValidTimeFormat">
+<short>
+Indicates whether the specified value is a valid time format for the TTimeEdit 
+control.
+</short>
+<descr>
+<p>
+TTimeEdit requires a time format string that does not include date or interval 
+parts which are not used/allowed in the class instance. ValidTimeFormat 
+examines the characters in AFormat to determine which parts are used.
+</p>
+<p>
+The return value is <b>False</b> if AFormat contains any format specifier(s) or 
+combination of specifier(s) which are not allowed in the control.
+</p>
+<p>
+The return value is <b>True</b> if AFormat is a valid time format setting for 
+use in the TimeFormat property.
+</p>
+<p>
+ValidTimeFormat is called when a new value is assigned to the TimeFormat 
+property, and prevents updates to both TimeFormat and Time if the method 
+returns <b>False</b>.
+</p>
+<p>
+See <link id="TTimeEdit.TimeFormat">TimeFormat</link> for more information 
+about the available format specifiers and their usage.
+</p>
+<p>
+Use TimeSeparator to specify the separator character used to delimit time 
+parts in the formatted Text.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.TimeSeparator"/>
+<link id="TTimeEdit.Time"/>
+<link id="#rtl.sysutils.FormatDateTime">FormatDateTime</link>
+<link id="#rtl.sysutils.formatchars">FormatChars</link>
+</seealso>
+</element>
+<element name="TTimeEdit.ValidTimeFormat.AFormat">
+<short>
+Time format examined in the method.
+</short>
+</element>
+<element name="TTimeEdit.ValidTimeFormat.Result">
+<short>
+Returns <b>True</b> if the specified time format is valid for the control.
+</short>
 </element>
 
 <element name="TTimeEdit.Time">
@@ -4634,28 +4967,6 @@ Event handler signalled to get an arbitrary time value for the control.
 <element name="TTimeEdit.FocusOnButtonClick" link="#lcl.editbtn.TCustomEditButton.FocusOnButtonClick"/>
 <element name="TTimeEdit.Font" link="#lcl.controls.TControl.Font"/>
 <element name="TTimeEdit.MaxLength" link="#lcl.groupededit.TCustomAbstractGroupedEdit.MaxLength"/>
-<element name="TTimeEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
-<element name="TTimeEdit.OnChange" link="#lcl.groupededit.TCustomAbstractGroupedEdit.OnChange"/>
-<element name="TTimeEdit.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
-<element name="TTimeEdit.OnClick" link="#lcl.controls.TControl.OnClick"/>
-<element name="TTimeEdit.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
-<element name="TTimeEdit.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
-<element name="TTimeEdit.OnEditingDone" link="#lcl.controls.TControl.OnEditingDone"/>
-<element name="TTimeEdit.OnEnter" link="#lcl.controls.TWinControl.OnEnter"/>
-<element name="TTimeEdit.OnExit" link="#lcl.controls.TWinControl.OnExit"/>
-<element name="TTimeEdit.OnKeyDown" link="#lcl.controls.TWinControl.OnKeyDown"/>
-<element name="TTimeEdit.OnKeyPress" link="#lcl.controls.TWinControl.OnKeyPress"/>
-<element name="TTimeEdit.OnKeyUp" link="#lcl.controls.TWinControl.OnKeyUp"/>
-<element name="TTimeEdit.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
-<element name="TTimeEdit.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
-<element name="TTimeEdit.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
-<element name="TTimeEdit.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
-<element name="TTimeEdit.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
-<element name="TTimeEdit.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
-<element name="TTimeEdit.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
-<element name="TTimeEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
-<element name="TTimeEdit.OnResize" link="#lcl.controls.TControl.OnResize"/>
-<element name="TTimeEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
 <element name="TTimeEdit.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
 <element name="TTimeEdit.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
 <element name="TTimeEdit.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
@@ -4682,9 +4993,267 @@ by 5 columns using 5 minute time intervals is used.
 <element name="TTimeEdit.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
 <element name="TTimeEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
 <element name="TTimeEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+
+<element name="TTimeEdit.TimeAMString">
+<short>
+Specifies the value displayed for a 12-hour time value prior to midday (Noon).
+</short>
+<descr>
+<p>
+<var>TimeAMString</var> contains the <b><i>ante meridiem</i></b> ("before 
+midday") value displayed for a 12-hour Time value. It can be used to override 
+the TimeAMString setting provided in DefaultFormatSettings. Its value is used 
+in the UsedFormatSettings method, and applied when the feature is enabled using 
+one of the corresponding format specifiers in the TimeFormat property.
+</p>
+<p>
+See <link id="TTimeEdit.TimeFormat">TimeFormat</link> for more information 
+about the available time format specifiers and their usage.
+</p>
+<p>
+Use TimePMString for the <b><i>post meridiem</i></b> value.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.TimePMString"/>
+<link id="TTimeEdit.UsedFormatSettings"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.Time"/>
+<link id="#rtl.sysutils.DefaultFormatSettings">DefaultFormatSettings</link>
+</seealso>
+</element>
+
+<element name="TTimeEdit.TimeFormat">
+<short>
+Specifies the time format used to generate the display Text for the time edit 
+control.
+</short>
+<descr>
+<p>
+<var>TimeFormat</var> is a <var>String</var> property which contains 
+FormatDateTime-compatible specifiers used to generate the Text displayed on the 
+time edit control. It can be used to override the default time format settings 
+for a given platform. TimeFormat is used in the UsedTimeFormat method called 
+when a new value is assigned to the Time property.
+</p>
+<p>
+TimeFormat can contain only format specifiers accepted by FormatDateTime(), 
+except for those which apply to date or interval parts. The following symbols 
+are interpreted in a specific way:
+</p>
+<dl>
+<dt>'h', 'H'</dt>
+<dd>Represents hours.</dd>
+<dt>'n', 'N'</dt>
+<dd>Represents minutes.</dd>
+<dt>'m', 'M'</dt>
+<dd>
+Represents minutes, but allowed only in conjunction with at least 'h' to avoid 
+misinterpretation as "month".
+</dd>
+<dt>'s', 'S'</dt>
+<dd>Represents seconds.</dd>
+<dt>'z', 'Z'</dt>
+<dd>Represents milliseconds.</dd>
+<dt>':'</dt>
+<dd>Replaced with the value in the TimeSeparator property.</dd>
+<dt>'.'</dt>
+<dd>Represents the separator between seconds and milliseconds.</dd>
+<dt>'ampm', 'AMPM'</dt>
+<dd>
+Formats the time in the 12-hour format, appends the TimeAMString or 
+TimePMString of the DefaultFormatSettings, depending on whether the time is in 
+the first or second half of the day.
+</dd>
+<dt>'a/p', 'am/pm', 'A/P', 'AM/PM'</dt>
+<dd>
+Formats the time in the 12-hour format with the corresponding part of the 
+symbol appended for the first or second half of the day.
+</dd>
+<dt>'t', 'tt'</dt>
+<dd>
+Replaced with the value from ShortTimeFormat or LongTimeFormat in 
+DefaultFormatSettings, respectively.
+</dd>
+<dt>'y', 'Y', 'd', 'D'</dt>
+<dd>
+<b>Forbidden</b> because they will introduce date parts.
+</dd>
+<dt>'[', ']'</dt>
+<dd>
+<b>Forbidden</b> because time interval formatting is not supported by this 
+control.
+</dd>
+<dt>Single (') or Double (") quotes</dt>
+<dd>
+Symbol replacement is <b>not</b> performed within the quoted substring.
+</dd>
+</dl>
+<p>
+Any other characters can be inserted without quoting unless they collide with 
+those specified above.
+</p>
+<p>
+Changing the value in TimeFormat causes the new property value to be validated 
+and either accepted or rejected using the ValidTimeFormat method. When 
+accepted, the Text property is updated using the new format settings.
+</p>
+<p>
+Use TimeSeparator to specify the separator character used to delimit time 
+parts in the format settings.
+</p>
+<p>
+Use TimeAMString and TimePMString to override the DefaultFormatSettings suffixes used for 12-hour time format.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.Text"/>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.TimeSeparator"/>
+<link id="TTimeEdit.TimeAMString"/>
+<link id="TTimeEdit.TimePMString"/>
+<link id="TTimeEdit.ValidTimeFormat"/>
+<link id="#rtl.sysutils.FormatDateTime">FormatDateTime</link>
+<link id="#rtl.sysutils.formatchars">FormatChars</link>
+</seealso>
+</element>
+
+<element name="TTimeEdit.TimeSeparator">
+<short>
+Specifies the separator character used to delimit time parts in the format 
+settings applied to the control.
+</short>
+<descr>
+<p>
+<var>TimeSeparator</var> is a <var>String</var> property which contains the 
+separator used to delimit time parts specified in the TimeFormat property. It 
+allows the default time separator from the system format settings to be 
+overridden in the class instance.
+</p>
+<p>
+Changing the value for the property causes the Text property to be updated 
+using the new separator.
+</p>
+<p>
+TimeSeparator is used in the UsedTimeSeparator method called when a new value 
+is assigned to the Time property. When omitted, the default time separator in 
+DefaultFormatSettings is used instead.
+</p>
+<p>
+Please note: While TimeSeparator is a String type, only the first character 
+specified in the property is actually used. The other characters in the 
+property are ignored.
+</p>
+<p>
+Use TimeFormat to specify the time format settings used in the class instance.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.Text"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.ValidTimeFormat"/>
+<link id="TTimeEdit.UsedTimeSeparator"/>
+<link id="#rtl.sysutils.FormatDateTime">FormatDateTime</link>
+<link id="#rtl.sysutils.formatchars">FormatChars</link>
+</seealso>
+</element>
+
+<element name="TTimeEdit.TimePMString">
+<short>
+Specifies the value displayed for a 12-hour time value after midday (Noon).
+</short>
+<descr>
+<p>
+<var>TimePMString</var> contains the <b><i>post meridiem</i></b> ("after 
+midday") value displayed for a 12-hour Time value. It can be used to override 
+the TimePMString setting provided in DefaultFormatSettings. Its value is used 
+in the UsedFormatSettings method, and applied when the feature is enabled using 
+one of the corresponding format specifiers in the TimeFormat property.
+</p>
+<p>
+See <link id="TTimeEdit.TimeFormat">TimeFormat</link> for more information 
+about the available time format specifiers and their usage.
+</p>
+<p>
+Use TimeAMString for the <b><i>ante meridiem</i></b> value.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTimeEdit.TimeAMString"/>
+<link id="TTimeEdit.UsedFormatSettings"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.Time"/>
+<link id="#rtl.sysutils.DefaultFormatSettings">DefaultFormatSettings</link>
+</seealso></element>
+
 <element name="TTimeEdit.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TTimeEdit.Text" link="#lcl.controls.TControl.Text"/>
+
+<element name="TTimeEdit.Text">
+<short>
+Contains the formatted text used to represent the Time value for the control.
+</short>
+<descr>
+<p>
+<var>Text</var> is a published property in TTimeEdit. It contains the formatted 
+text displayed for the Time value in the control. It is automatically updated 
+when a new value is assigned to the Time, TimeFormat, or TimeSeparator 
+properties. It contains the result from the FormatDateTime routine called using 
+the Time value and format settings for the control.
+</p>
+<p>
+Use TimeFormat to specify a FormatDateTime-compatible string used to generate 
+the value for the Text property.
+</p>
+<p>
+Use TimeSeparator to specify the delimiter character used between time parts in 
+the TimeFormat.
+</p>
+</descr>
+<seealso>
+<link id="TTimeEdit.Time"/>
+<link id="TTimeEdit.TimeFormat"/>
+<link id="TTimeEdit.TimeSeparator"/>
+<link id="#lcl.groupededit.TCustomAbstractGroupedEdit.Text">TCustomAbstractGroupedEdit.Text</link>
+</seealso>
+</element>
+
 <element name="TTimeEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
+
+<element name="TTimeEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
+<element name="TTimeEdit.OnChange" link="#lcl.groupededit.TCustomAbstractGroupedEdit.OnChange"/>
+<element name="TTimeEdit.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
+<element name="TTimeEdit.OnClick" link="#lcl.controls.TControl.OnClick"/>
+<element name="TTimeEdit.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
+<element name="TTimeEdit.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
+<element name="TTimeEdit.OnEditingDone" link="#lcl.controls.TControl.OnEditingDone"/>
+<element name="TTimeEdit.OnEnter" link="#lcl.controls.TWinControl.OnEnter"/>
+<element name="TTimeEdit.OnExit" link="#lcl.controls.TWinControl.OnExit"/>
+<element name="TTimeEdit.OnKeyDown" link="#lcl.controls.TWinControl.OnKeyDown"/>
+<element name="TTimeEdit.OnKeyPress" link="#lcl.controls.TWinControl.OnKeyPress"/>
+<element name="TTimeEdit.OnKeyUp" link="#lcl.controls.TWinControl.OnKeyUp"/>
+<element name="TTimeEdit.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
+<element name="TTimeEdit.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
+<element name="TTimeEdit.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
+<element name="TTimeEdit.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
+<element name="TTimeEdit.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
+<element name="TTimeEdit.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
+<element name="TTimeEdit.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
+<element name="TTimeEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
+<element name="TTimeEdit.OnResize" link="#lcl.controls.TControl.OnResize"/>
+<element name="TTimeEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
 
 <element name="TAcceptValueEvent">
 <short>
@@ -4990,6 +5559,8 @@ for the dialog in the RunDialog method.
 <element name="TCalcEdit.Spacing" link="#lcl.editbtn.TCustomEditButton.Spacing"/>
 <element name="TCalcEdit.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
 <element name="TCalcEdit.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TCalcEdit.Text" link="#lcl.controls.TControl.Text"/>
+<element name="TCalcEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 <element name="TCalcEdit.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TCalcEdit.OnButtonClick" link="#lcl.editbtn.TCustomEditButton.OnButtonClick"/>
 <element name="TCalcEdit.OnChange" link="#lcl.stdctrls.TCustomEdit.OnChange"/>
@@ -5015,8 +5586,6 @@ for the dialog in the RunDialog method.
 <element name="TCalcEdit.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TCalcEdit.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TCalcEdit.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TCalcEdit.Text" link="#lcl.controls.TControl.Text"/>
-<element name="TCalcEdit.TextHint" link="#lcl.groupededit.TCustomAbstractGroupedEdit.TextHint"/>
 
 <element name="ResBtnListFilter">
 <short>

@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -125,6 +125,28 @@ corresponding state using its Draw method.
 <short>
 Draw the button when the mouse cursor is hovered over the control.
 </short>
+</element>
+
+<element name="TButtonImage">
+<short>
+Represents button identifiers defined in the <file>lcltype.pp</file> unit.
+</short>
+<descr>
+<p>
+<var>TButtonImage</var> is a range type used to represent the button 
+identifier constants defined in the <file>lcltype.pp</file> unit, like: 
+idButtonOk, idButtonCancel, idButtonHelp, idButtonYes, idButtonNo, et. al. 
+TButtonImage is the type passed as an argument to routines like: 
+GetButtonImageIndex, BitBtnResNames, and LoadGlyphFromResource. It is also 
+passed as an argument to the TCustomBitBtn.LoadGlyphFromResource method.
+</p>
+</descr>
+<seealso>
+<link id="TCustomBitBtn.LoadGlyphFromResource"/>
+<link id="GetButtonImageIndex"/>
+<link id="BitBtnResNames"/>
+<link id="LoadGlyphFromResource"/>
+</seealso>
 </element>
 
 <element name="TNumGlyphs">
@@ -644,7 +666,7 @@ cache then creates a Glyph Bitmap.
 <p>
 If you drop a component on the form in the form editor, you don't need to add 
 code to explicitly create it. The component is automatically created together 
-with the the form, and destroyed when the form is destroyed.
+with the form, and destroyed when the form is destroyed.
 </p>
 <p>
 However, if you create the component by code, don't forget to free it when it 
@@ -2038,16 +2060,32 @@ event is handled for the control.
 <short>
 Loads the Glyph image with the specified named from a resource instance.
 </short>
-<descr></descr>
-<seealso></seealso>
+<descr>
+<p>
+Calls the LoadGlyphFromLazarusResource routine in <file>buttons.pas</file> to 
+load the bitmap for the specified resource name into the Glyph for the button 
+control.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type for the Instance 
+argument instead of the deprecated THandle type.
+</version>
+<seealso>
+<link id="TCustomBitBtn.Glyph"/>
+<link id="LoadGlyphFromLazarusResource"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 <element name="TCustomBitBtn.LoadGlyphFromResourceName.Instance">
 <short>
-Handle for the resource instance where the glyph is stored.
+Handle for the resource instance where the glyph image is stored.
 </short>
 </element>
 <element name="TCustomBitBtn.LoadGlyphFromResourceName.AName">
-<short>Resource name for the glyph loaded in the method.</short>
+<short>
+Resource name for the glyph loaded in the method.
+</short>
 </element>
 
 <element name="TCustomBitBtn.LoadGlyphFromLazarusResource">
@@ -2069,6 +2107,36 @@ Loads a glyph image from the Lazarus resource file (.lrs).
 <element name="TCustomBitBtn.LoadGlyphFromStock.idButton">
 <short>
 Button identifier used to determine the image loaded in the Glyph.
+</short>
+</element>
+
+<element name="TCustomBitBtn.LoadGlyphFromResource">
+<short>
+Loads the glyph image for the specified button identifier from the internal LCL 
+resource.
+</short>
+<descr>
+<p>
+<var>LoadGlyphFromResource</var> is a method used to load the glyph for the 
+specified button identifier from the internal LCL resource with the button 
+images. <var>idButton</var> contains a value in the TButtonImage range for the 
+button identifier. No actions are performed in the method if idButton is not in 
+the TButtonImage range.
+</p>
+<p>
+LoadGlyphFromResource calls the LoadGlyphFromResource routine using the 
+resource name in BitBtnResNames for the button identifier. 
+</p>
+</descr>
+<seealso>
+<link id="LoadGlyphFromResource"/>
+<link id="BitBtnResNames"/>
+<link id="TButtonImage"/>
+</seealso>
+</element>
+<element name="TCustomBitBtn.LoadGlyphFromResource.idButton">
+<short>
+Button identifier for glyph image loaded in the method.
 </short>
 </element>
 
@@ -2598,6 +2666,40 @@ TBitBtn sets the visibility for properties introduced in ancestor classes.
 <element name="TBitBtn.Images" link="#lcl.buttons.TCustomBitBtn.Images"/>
 <element name="TBitBtn.ImageIndex" link="#lcl.buttons.TCustomBitBtn.ImageIndex"/>
 <element name="TBitBtn.ImageWidth" link="#lcl.buttons.TCustomBitBtn.ImageWidth"/>
+<element name="TBitBtn.ParentBidiMode" link="#lcl.controls.TControl.ParentBidiMode"/>
+<element name="TBitBtn.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TBitBtn.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TBitBtn.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TBitBtn.PressedImageIndex" link="#lcl.buttons.TCustomBitBtn.PressedImageIndex"/>
+<!--
+<element name="TBitBtn.SelectedImageIndex" link="#lcl.buttons.TCustomBitBtn.SelectedImageIndex"/>
+-->
+<element name="TBitBtn.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TBitBtn.Spacing" link="#lcl.buttons.TCustomBitBtn.Spacing"/>
+<element name="TBitBtn.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TBitBtn.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+
+<element name="TBitBtn.Visible">
+<short>Indicates if the control is visible on its parent.</short>
+<descr>
+<p>
+The <var>Visible</var> property indicates the ability to see a visual 
+control. If <var>Visible</var> is <b>True</b>, the control is shown, 
+otherwise it is hidden. Calling <var>Show</var> sets <var>Visible</var> to 
+<b>True</b>. Setting <var>Visible</var> to <b>False</b> is equivalent to 
+calling the <var>Hide</var> method.
+</p>
+<remark>
+The <var>Visible</var> property does not depend on the visibility of a parent 
+control. Use <var>IsVisible</var> method to consider this, and get the real 
+visibility for a control in its parent container.
+</remark>
+</descr>
+<seealso>
+<link id="#lcl.controls.TControl.Visible">TControl.Visible</link>
+</seealso>
+</element>
+
 <element name="TBitBtn.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TBitBtn.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TBitBtn.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
@@ -2670,39 +2772,6 @@ control has focus.
 <element name="TBitBtn.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TBitBtn.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TBitBtn.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TBitBtn.ParentBidiMode" link="#lcl.controls.TControl.ParentBidiMode"/>
-<element name="TBitBtn.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TBitBtn.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TBitBtn.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TBitBtn.PressedImageIndex" link="#lcl.buttons.TCustomBitBtn.PressedImageIndex"/>
-<!--
-<element name="TBitBtn.SelectedImageIndex" link="#lcl.buttons.TCustomBitBtn.SelectedImageIndex"/>
--->
-<element name="TBitBtn.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TBitBtn.Spacing" link="#lcl.buttons.TCustomBitBtn.Spacing"/>
-<element name="TBitBtn.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TBitBtn.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-
-<element name="TBitBtn.Visible">
-<short>Indicates if the control is visible on its parent.</short>
-<descr>
-<p>
-The <var>Visible</var> property indicates the ability to see a visual 
-control. If <var>Visible</var> is <b>True</b>, the control is shown, 
-otherwise it is hidden. Calling <var>Show</var> sets <var>Visible</var> to 
-<b>True</b>. Setting <var>Visible</var> to <b>False</b> is equivalent to 
-calling the <var>Hide</var> method.
-</p>
-<remark>
-The <var>Visible</var> property does not depend on the visibility of a parent 
-control. Use <var>IsVisible</var> method to consider this, and get the real 
-visibility for a control in its parent container.
-</remark>
-</descr>
-<seealso>
-<link id="#lcl.controls.TControl.Visible">TControl.Visible</link>
-</seealso>
-</element>
 
 <element name="TSpeedButtonActionLink">
 <short>Links a TSpeedButton with a TAction instance.</short>
@@ -3291,7 +3360,7 @@ Used in the implementation of the CalculatePreferredSize and Paint methods.
 <link id="TCustomSpeedButton.Layout"/>
 <link id="TCustomSpeedButton.ShowCaption"/>
 <link id="TCustomSpeedButton.Alignment"/>
-<link id="TCustomSpeedButton.State"/>
+<link id="TCustomSpeedButton.FState"/>
 <link id="TCustomSpeedButton.Transparent"/>
 <link id="TCustomSpeedButton.CalculatePreferredSize"/>
 <link id="TCustomSpeedButton.PaintBackground"/>
@@ -3897,7 +3966,7 @@ scaling factor for the control are used to scale the image.
 </p>
 <p>
 The return value is a TRect instance with are needed to draw the glyph image 
-on the the specified canvas. Its member values are set to 0 (zero) when a 
+on the specified canvas. Its member values are set to 0 (zero) when a 
 TButtonGlyph instance has not been assigned by setting a Glyph bitmap for the 
 control.
 </p>
@@ -4001,8 +4070,22 @@ value is the current class instance in this circumstance.
 Loads the image for the Glyph with the specified name from a resource 
 instance.
 </short>
-<descr></descr>
-<seealso></seealso>
+<descr>
+<p>
+Calls the LoadGlyphFromLazarusResource routine in <file>buttons.pas</file> to 
+load the bitmap for the specified resource name into the Glyph for the button 
+control.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type for the Instance 
+argument instead of the deprecated THandle type.
+</version>
+<seealso>
+<link id="TCustomSpeedButton.Glyph"/>
+<link id="LoadGlyphFromLazarusResource"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 <element name="TCustomSpeedButton.LoadGlyphFromResourceName.Instance">
 <short>
@@ -4771,6 +4854,13 @@ the IsVisible method to get the realized visibility.
 </seealso>
 </element>
 
+<element name="TSpeedButton.ShowCaption" link="#lcl.buttons.TCustomSpeedButton.ShowCaption"/>
+<element name="TSpeedButton.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TSpeedButton.ParentBidiMode" link="#lcl.controls.TControl.ParentBidiMode"/>
+<element name="TSpeedButton.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TSpeedButton.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TSpeedButton.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+
 <element name="TSpeedButton.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TSpeedButton.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
 <element name="TSpeedButton.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
@@ -4789,12 +4879,6 @@ the IsVisible method to get the realized visibility.
 <element name="TSpeedButton.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TSpeedButton.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TSpeedButton.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
-<element name="TSpeedButton.ShowCaption" link="#lcl.buttons.TCustomSpeedButton.ShowCaption"/>
-<element name="TSpeedButton.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TSpeedButton.ParentBidiMode" link="#lcl.controls.TControl.ParentBidiMode"/>
-<element name="TSpeedButton.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TSpeedButton.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TSpeedButton.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
 
 <element name="TGetDefaultBitBtnGlyph">
 <short>
@@ -4875,15 +4959,16 @@ Determines the default image loaded for the bitmapped button.
 </short>
 </element>
 
-
 <element name="LoadGlyphFromResourceName">
-<short>Loads a bitmap from a named resource into the specified Glyph.</short>
+<short>
+Loads a bitmap from a named resource into the specified Glyph.
+</short>
 <descr>
 <p>
 <var>LoadGlyphFromResourceName</var> is a procedure used to load a bitmap 
 into the specified <var>Glyph</var> from a named resource. <var>AGlyph</var> 
 is the <var>TButtonGlyph</var> where the bitmap is stored. 
-<var>Instance</var> is a <var>THandle</var> for the resource instance 
+<var>Instance</var> is a <var>TLCLHandle</var> for the resource instance 
 accessed in the routine. <var>AName</var> contains the name for the resource 
 loaded in the routine.
 </p>
@@ -4901,11 +4986,16 @@ set to <b>Nil</b>.
 and <var>TCustomSpeedButton</var>.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type for the Instance 
+argument instead of the deprecated THandle type.
+</version>
 <seealso>
 <link id="TCustomBitBtn.LoadGlyphFromResourceName"/>
 <link id="TCustomSpeedButton.LoadGlyphFromResourceName"/>
 <link id="TButtonGlyph"/>
 <link id="CreateBitmapFromResourceName"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
 </seealso>
 </element>
 <element name="LoadGlyphFromResourceName.AGlyph">
@@ -4969,6 +5059,44 @@ both <var>TCustomBitBtn</var>.
 </element>
 <element name="LoadGlyphFromStock.idButton">
 <short>Button identifier for the image loaded in the routine.</short>
+</element>
+
+<element name="LoadGlyphFromResource">
+<short>
+Loads the image for the specified button glyph from the LCL glyph resource.
+</short>
+<descr>
+<p>
+<var>LoadGlyphFromResource</var> is a routine used to load the LCL glyph image 
+for the specified button identifier into the specified button glyph.
+</p>
+<p>
+<var>AGlyph</var> is the TButtonGlyph instance where the glyph image is stored 
+in the routine.
+</p>
+<p>
+<var>idButton</var> contains one of the button identifier constants defined in 
+the <file>lcltype.pp</file> unit, such as: idButtonOk, idButtonCancel, et. al. 
+idButton must be in the range allowed for the TButtonImage type; no actions are 
+performed in the routine if idButton is not within the required range.
+</p>
+<p>
+LoadGlyphFromResource assigns the resource name in BitBtnResNames for the 
+specified button identifier to the LCLGlyphName property in AGlyph. This causes 
+the image with that name to be loaded from the LCLGlyphs image list.
+</p>
+</descr>
+<seealso/>
+</element>
+<element name="LoadGlyphFromResource.AGlyph">
+<short>
+TButtonGlyph instance where the glyph image is stored.
+</short>
+</element>
+<element name="LoadGlyphFromResource.idButton">
+<short>
+Button identifier for the image resource loaded in the routine.
+</short>
 </element>
 
 <element name="GetButtonCaption">
@@ -5144,6 +5272,46 @@ Bitmap instance with the glyph for the specified button.
 <element name="GetButtonIcon.idButton">
 <short>
 Numeric button identifier for the glyph loaded in the routine.
+</short>
+</element>
+
+<element name="GetButtonImageIndex">
+<short>
+Gets the ordinal position in the LCL Glyph image list for the specified button 
+identifier.
+</short>
+<descr>
+<p>
+<var>GetButtonImageIndex</var> is an <var>Integer</var> function used to 
+retrieve the position for the specified button identifier in the LCL glyph 
+image list.
+</p>
+<p>
+<var>idButton</var> is the TButtonImage value for the button identifier 
+requested in the routine. It is used to identify the resource name in 
+BitBtnResNames for the button glyph. The resource name is located in the 
+LCLGlyphs image list using its GetImageIndex method.
+</p>
+<p>
+The return value contains the ordinal position in LCLGlyphs where the 
+corresponding resource name is stored, or -1 if the resource name is not found.
+</p>
+</descr>
+<seealso>
+<link id="TButtonImage"/>
+<link id="BitBtnResNames"/>
+<link id="#lcl.imglist.TLCLGlyphs.GetImageIndex">TLCLGlyphs.GetImageIndex</link>
+<link id="#lcl.imglist.LCLGlyphs">LCLGlyphs</link>
+</seealso>
+</element>
+<element name="GetButtonImageIndex.Result">
+<short>
+Ordinal position for the specified button identifier, or -1 when not found.
+</short>
+</element>
+<element name="GetButtonImageIndex.idButton">
+<short>
+Button identifier constant for the image requested in the routine.
 </short>
 </element>
 
