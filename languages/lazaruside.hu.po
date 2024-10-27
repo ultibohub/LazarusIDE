@@ -11,6 +11,26 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 2.0.6\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "Ugrás vissza"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "Ugrás előre"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -2403,6 +2423,90 @@ msgstr "A Home billentyűre a legközelebbi sorkezdethez ugrik"
 msgid "Host application"
 msgstr "Külső alkalmazás"
 
+#: lazarusidestrconsts.dlgiahadentifiercomplentryabstractprocfunc
+msgid "Abstract proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrycodetemplate
+msgid "Template"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryconst
+msgid "Const"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryenum
+msgid "Enum"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryfunc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryfunc"
+msgid "Function"
+msgstr "Függvény"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryident
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryident"
+msgid "Identifier"
+msgstr "Azonosító"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrykeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrykeyword"
+msgid "Keyword"
+msgstr "Kulcsszó"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylabel
+msgid "Label"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylowervisibilityprocfunc
+msgid "Lower visibility proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrynamespace
+msgid "Namespace"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryother
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryother"
+msgid "Other"
+msgstr "Egyéb"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryproc"
+msgid "Procedure"
+msgstr "Procedure"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproperty
+msgid "Property"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytext
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytext"
+msgid "Text"
+msgstr "Szöveg"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytype
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytype"
+msgid "Type"
+msgstr "Típus"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryunit
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryunit"
+msgid "Unit"
+msgstr "Unit"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryvar
+msgid "Var"
+msgstr ""
+
 #: lazarusidestrconsts.dlgidentifiercompletion
 msgctxt "lazarusidestrconsts.dlgidentifiercompletion"
 msgid "Identifier Completion"
@@ -2559,6 +2663,12 @@ msgstr "Gyorsbillentyűk"
 #: lazarusidestrconsts.dlgkeymappingerrors
 msgid "Key mapping errors"
 msgstr "Gyorsbillentyű hiba"
+
+#: lazarusidestrconsts.dlgkeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgkeyword"
+msgid "Keyword"
+msgstr "Kulcsszó"
 
 #: lazarusidestrconsts.dlgkeywordpolicy
 msgid "Keyword policy"
@@ -2809,6 +2919,10 @@ msgstr ""
 msgid "Trim spaces (when highlighting current selection)"
 msgstr "Szóközök levágása (az aktuális kijelölés kiemelésekor)"
 
+#: lazarusidestrconsts.dlgmatchwords
+msgid "Match words"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmaxcntr
 msgid "Maximum counter"
 msgstr "Maximum számláló"
@@ -2844,6 +2958,10 @@ msgstr "Metódusok és tulajdonságok vegyítése"
 #: lazarusidestrconsts.dlgmode
 msgid "Mode"
 msgstr "Mód"
+
+#: lazarusidestrconsts.dlgmodifier
+msgid "Modifier"
+msgstr ""
 
 #: lazarusidestrconsts.dlgmouseaction
 msgid "Mouse Action"
@@ -3693,6 +3811,14 @@ msgstr "Jelentés"
 msgctxt "lazarusidestrconsts.dlgreset"
 msgid "Reset"
 msgstr "Alaphelyzet"
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtncaption
+msgid "Restore active"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtnhint
+msgid "Restore window layout of active desktop"
+msgstr ""
 
 #: lazarusidestrconsts.dlgresetall
 msgid "Reset all"
@@ -7123,6 +7249,7 @@ msgid "Identifier"
 msgstr "Azonosító"
 
 #: lazarusidestrconsts.liscodetoolsoptskeyword
+msgctxt "lazarusidestrconsts.liscodetoolsoptskeyword"
 msgid "Keyword"
 msgstr "Kulcsszó"
 
@@ -11385,11 +11512,16 @@ msgid "Run program"
 msgstr "Program futtatása"
 
 #: lazarusidestrconsts.liskmsaveall
-msgid "SaveAll"
+#, fuzzy
+#| msgid "SaveAll"
+msgctxt "lazarusidestrconsts.liskmsaveall"
+msgid "Save All"
 msgstr "Minden mentése"
 
 #: lazarusidestrconsts.liskmsaveas
-msgid "SaveAs"
+#, fuzzy
+#| msgid "SaveAs"
+msgid "Save As"
 msgstr "Mentés másként"
 
 #: lazarusidestrconsts.liskmsaveproject
@@ -13058,10 +13190,12 @@ msgid "&Inspect ..."
 msgstr "Megf&igyelés ..."
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "Ugrás vissza"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "Ugrás előre"
 
@@ -13308,6 +13442,15 @@ msgstr "Hibakereső visszaállítása"
 #: lazarusidestrconsts.lismenurevert
 msgid "Revert"
 msgstr "Visszaállítás"
+
+#: lazarusidestrconsts.lismenurevertconfirm
+#, object-pascal-format
+msgid ""
+"Discard all unsaved changes in\n"
+"\"%s\"?\n"
+"\n"
+"This action cannot be undone and will affect all editor tabs with the file."
+msgstr ""
 
 #: lazarusidestrconsts.lismenurun
 msgctxt "lazarusidestrconsts.lismenurun"
@@ -14558,10 +14701,6 @@ msgstr "Beállítások"
 #: lazarusidestrconsts.lisoptionvalueignored
 msgid "ignored"
 msgstr "kihagyva"
-
-#: lazarusidestrconsts.lisor
-msgid "or"
-msgstr "vagy"
 
 #: lazarusidestrconsts.lisos
 #, object-pascal-format

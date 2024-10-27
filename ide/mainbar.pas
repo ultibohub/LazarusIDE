@@ -49,7 +49,7 @@ uses
   // BuildIntf
   ComponentReg,
   // IDEIntf
-  MenuIntf, LazIDEIntf, IDEWindowIntf, IDEImagesIntf,
+  MenuIntf, LazIDEIntf, IDEWindowIntf, IDEImagesIntf, IDECommands,
   // IdeConfig
   CoolBarOptions,
   // IDE
@@ -869,6 +869,7 @@ begin
   itmRunMenuRun.Enabled:=aAllow and aAllowDebug; //Ultibo
   itmRunMenuCompile.Enabled:=aAllow;
   itmRunMenuBuild.Enabled:=aAllow;
+  itmRunMenuBuildManyModes.Enabled:=aAllow;
   itmRunMenuQuickCompile.Enabled:=aAllow;
   itmRunMenuCleanUpAndBuild.Enabled:=aAllow;
   itmRunMenuAbortBuild.Enabled:=not aAllow;
@@ -880,6 +881,8 @@ begin
   itmToolRunInQEMU.Enabled:=aAllow and aAllowEmulation; //Ultibo
   itmToolBuildLazarus.Enabled:=aAllow;
   //itmToolConfigureBuildLazarus.Enabled:=aAllow;
+  // IDE CoolBar
+  IDECommandList.FindIDECommand(ecProjectChangeBuildMode).Enabled := aAllow;
 end;
 
 end.

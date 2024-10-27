@@ -272,14 +272,15 @@ resourcestring
   lisMenuOpen = '&Open ...';
   lisMenuOpenUnit = 'Open Unit ...';
   lisMenuRevert = 'Revert';
+  lisMenuRevertConfirm = 'Discard all unsaved changes in' + LineEnding + '"%s"?' + LineEnding + LineEnding + 'This action cannot be undone and will affect all editor tabs with the file.';
   lisPESavePackageAs = 'Save Package As ...';
   lisPkgEditPublishPackage = 'Publish Package';
   lisPERevertPackage = 'Revert Package';
   lisMenuOpenRecent = 'Open &Recent';
   lisMenuSave = '&Save';
   lisMenuSaveAs = 'Save &As ...';
-  lisKMSaveAs = 'SaveAs';
-  lisKMSaveAll = 'SaveAll';
+  lisKMSaveAs = 'Save As';
+  lisKMSaveAll = 'Save All';
   lisDiscardChanges = 'Discard changes';
   lisDiscardChangesAll = 'Discard all changes';
   lisDoNotCloseTheProject = 'Do not close the project';
@@ -335,7 +336,6 @@ resourcestring
   lisMenuInsertCVSKeyword = 'Insert CVS Keyword';
   lisMenuInsertGeneral = 'Insert General';
   lisGeneral = 'General';
-  lisOr = 'or';
   lisUnitPaths = 'Unit paths';
   lisIncludePaths = 'Include paths';
   lisSourcePaths = 'Source paths';
@@ -1291,6 +1291,8 @@ resourcestring
   dlgNewDesktop = 'New desktop ...';
   dlgSetActiveDesktopBtnCaption = 'Set active';
   dlgSetActiveDesktopBtnHint = 'Set active';
+  dlgResetActiveDesktopBtnCaption = 'Restore active';
+  dlgResetActiveDesktopBtnHint = 'Restore window layout of active desktop';
   dlgToggleDebugDesktopBtnCaption = 'Toggle as debug desktop';
   dlgToggleDebugDesktopBtnHint = 'Toggle as debug desktop';
   dlgDesktopName = 'Desktop name';
@@ -5261,6 +5263,12 @@ resourcestring
   lisIncludeRecursive = 'Include, recursive';
   lisExclude = 'Exclude';
 
+  // cocoa Modern Form Style ToolBar Item Config
+  cocoaMFSTBIJumpBack = 'Jump Back';
+  cocoaMFSTBIJumpForward = 'Jump Forward';
+  cocoaMFSTBISearch = 'Search Instantly';
+  cocoaMFSTBICommand = 'Command';
+
   // version info tab
   VersionInfoTitle = 'Version Info';
   
@@ -6322,8 +6330,25 @@ resourcestring
   optDispGutterUseCurrentLineColor = 'Use current line color';
   optDispGutterUseCurrentLineNumberColor = 'Use current line number color';
   dlgMatchWords = 'Match words';
-  dlgKeyWord = 'KeyWord';
+  dlgKeyWord = 'Keyword';
   dlgModifier = 'Modifier';
+  dlgIAhadentifierComplEntryVar = 'Var';
+  dlgIAhadentifierComplEntryType = 'Type';
+  dlgIAhadentifierComplEntryConst = 'Const';
+  dlgIAhadentifierComplEntryProc = 'Procedure';
+  dlgIAhadentifierComplEntryFunc = 'Function';
+  dlgIAhadentifierComplEntryAbstractProcFunc = 'Abstract proc/func';
+  dlgIAhadentifierComplEntryLowerVisibilityProcFunc = 'Lower visibility proc/func';
+  dlgIAhadentifierComplEntryProperty = 'Property';
+  dlgIAhadentifierComplEntryIdent = 'Identifier';
+  dlgIAhadentifierComplEntryLabel = 'Label';
+  dlgIAhadentifierComplEntryUnit = 'Unit';
+  dlgIAhadentifierComplEntryNamespace = 'Namespace';
+  dlgIAhadentifierComplEntryText = 'Text';
+  dlgIAhadentifierComplEntryCodeTemplate = 'Template';
+  dlgIAhadentifierComplEntryKeyword = 'Keyword';
+  dlgIAhadentifierComplEntryOther = 'Other';
+  dlgIAhadentifierComplEntryEnum = 'Enum';
 
 implementation
 

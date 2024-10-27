@@ -9,6 +9,26 @@ msgstr ""
 "Language-Team: Japanese Lazarus ML\n"
 "Language: ja\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "後方へ移動"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "前方へ移動"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -2453,6 +2473,90 @@ msgstr "Home キーで最も近い開始点に移動"
 msgid "Host application"
 msgstr "ホストアプリケーション"
 
+#: lazarusidestrconsts.dlgiahadentifiercomplentryabstractprocfunc
+msgid "Abstract proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrycodetemplate
+msgid "Template"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryconst
+msgid "Const"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryenum
+msgid "Enum"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryfunc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryfunc"
+msgid "Function"
+msgstr "関数"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryident
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryident"
+msgid "Identifier"
+msgstr "識別子"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrykeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrykeyword"
+msgid "Keyword"
+msgstr "キーワード"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylabel
+msgid "Label"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylowervisibilityprocfunc
+msgid "Lower visibility proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrynamespace
+msgid "Namespace"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryother
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryother"
+msgid "Other"
+msgstr "その他"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryproc"
+msgid "Procedure"
+msgstr "手続き"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproperty
+msgid "Property"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytext
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytext"
+msgid "Text"
+msgstr "テキスト"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytype
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytype"
+msgid "Type"
+msgstr "タイプ"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryunit
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryunit"
+msgid "Unit"
+msgstr "ユニット"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryvar
+msgid "Var"
+msgstr ""
+
 #: lazarusidestrconsts.dlgidentifiercompletion
 msgctxt "lazarusidestrconsts.dlgidentifiercompletion"
 msgid "Identifier Completion"
@@ -2615,6 +2719,12 @@ msgstr "キーマッピング"
 #: lazarusidestrconsts.dlgkeymappingerrors
 msgid "Key mapping errors"
 msgstr "キーマッピングエラー"
+
+#: lazarusidestrconsts.dlgkeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgkeyword"
+msgid "Keyword"
+msgstr "キーワード"
 
 #: lazarusidestrconsts.dlgkeywordpolicy
 msgid "Keyword policy"
@@ -2875,6 +2985,10 @@ msgstr ""
 msgid "Trim spaces (when highlighting current selection)"
 msgstr "空白を削除（現在の選択部分を強調している時）"
 
+#: lazarusidestrconsts.dlgmatchwords
+msgid "Match words"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmaxcntr
 msgid "Maximum counter"
 msgstr "カウンターの上限"
@@ -2909,6 +3023,10 @@ msgstr "メソッドとプロパティを混合"
 
 #: lazarusidestrconsts.dlgmode
 msgid "Mode"
+msgstr ""
+
+#: lazarusidestrconsts.dlgmodifier
+msgid "Modifier"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmouseaction
@@ -3776,6 +3894,14 @@ msgstr "レポート"
 msgctxt "lazarusidestrconsts.dlgreset"
 msgid "Reset"
 msgstr "リセット"
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtncaption
+msgid "Restore active"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtnhint
+msgid "Restore window layout of active desktop"
+msgstr ""
 
 #: lazarusidestrconsts.dlgresetall
 msgid "Reset all"
@@ -7232,6 +7358,7 @@ msgid "Identifier"
 msgstr "識別子"
 
 #: lazarusidestrconsts.liscodetoolsoptskeyword
+msgctxt "lazarusidestrconsts.liscodetoolsoptskeyword"
 msgid "Keyword"
 msgstr "キーワード"
 
@@ -11495,11 +11622,16 @@ msgid "Run program"
 msgstr "プログラムを実行"
 
 #: lazarusidestrconsts.liskmsaveall
-msgid "SaveAll"
+#, fuzzy
+#| msgid "SaveAll"
+msgctxt "lazarusidestrconsts.liskmsaveall"
+msgid "Save All"
 msgstr "すべて保存"
 
 #: lazarusidestrconsts.liskmsaveas
-msgid "SaveAs"
+#, fuzzy
+#| msgid "SaveAs"
+msgid "Save As"
 msgstr "名前を付けて保存"
 
 #: lazarusidestrconsts.liskmsaveproject
@@ -13195,10 +13327,12 @@ msgid "&Inspect ..."
 msgstr "インスペクト(&I) ..."
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "後方へ移動"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "前方へ移動"
 
@@ -13445,6 +13579,15 @@ msgstr "デバッガをリセット"
 #: lazarusidestrconsts.lismenurevert
 msgid "Revert"
 msgstr "元に戻す"
+
+#: lazarusidestrconsts.lismenurevertconfirm
+#, object-pascal-format
+msgid ""
+"Discard all unsaved changes in\n"
+"\"%s\"?\n"
+"\n"
+"This action cannot be undone and will affect all editor tabs with the file."
+msgstr ""
 
 #: lazarusidestrconsts.lismenurun
 msgctxt "lazarusidestrconsts.lismenurun"
@@ -14719,10 +14862,6 @@ msgstr "オプション"
 #: lazarusidestrconsts.lisoptionvalueignored
 msgid "ignored"
 msgstr "無視"
-
-#: lazarusidestrconsts.lisor
-msgid "or"
-msgstr "または"
 
 #: lazarusidestrconsts.lisos
 #, object-pascal-format

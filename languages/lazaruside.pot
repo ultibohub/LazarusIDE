@@ -4,6 +4,24 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -2376,6 +2394,82 @@ msgstr ""
 msgid "Host application"
 msgstr ""
 
+#: lazarusidestrconsts.dlgiahadentifiercomplentryabstractprocfunc
+msgid "Abstract proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrycodetemplate
+msgid "Template"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryconst
+msgid "Const"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryenum
+msgid "Enum"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryfunc
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryfunc"
+msgid "Function"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryident
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryident"
+msgid "Identifier"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrykeyword
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrykeyword"
+msgid "Keyword"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylabel
+msgid "Label"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylowervisibilityprocfunc
+msgid "Lower visibility proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrynamespace
+msgid "Namespace"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryother
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryother"
+msgid "Other"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproc
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryproc"
+msgid "Procedure"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproperty
+msgid "Property"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytext
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytext"
+msgid "Text"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytype
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytype"
+msgid "Type"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryunit
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryunit"
+msgid "Unit"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryvar
+msgid "Var"
+msgstr ""
+
 #: lazarusidestrconsts.dlgidentifiercompletion
 msgctxt "lazarusidestrconsts.dlgidentifiercompletion"
 msgid "Identifier Completion"
@@ -2529,6 +2623,11 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgkeymappingerrors
 msgid "Key mapping errors"
+msgstr ""
+
+#: lazarusidestrconsts.dlgkeyword
+msgctxt "lazarusidestrconsts.dlgkeyword"
+msgid "Keyword"
 msgstr ""
 
 #: lazarusidestrconsts.dlgkeywordpolicy
@@ -2772,6 +2871,10 @@ msgstr ""
 msgid "Trim spaces (when highlighting current selection)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgmatchwords
+msgid "Match words"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmaxcntr
 msgid "Maximum counter"
 msgstr ""
@@ -2806,6 +2909,10 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgmode
 msgid "Mode"
+msgstr ""
+
+#: lazarusidestrconsts.dlgmodifier
+msgid "Modifier"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmouseaction
@@ -3651,6 +3758,14 @@ msgstr ""
 #: lazarusidestrconsts.dlgreset
 msgctxt "lazarusidestrconsts.dlgreset"
 msgid "Reset"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtncaption
+msgid "Restore active"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtnhint
+msgid "Restore window layout of active desktop"
 msgstr ""
 
 #: lazarusidestrconsts.dlgresetall
@@ -7041,6 +7156,7 @@ msgid "Identifier"
 msgstr ""
 
 #: lazarusidestrconsts.liscodetoolsoptskeyword
+msgctxt "lazarusidestrconsts.liscodetoolsoptskeyword"
 msgid "Keyword"
 msgstr ""
 
@@ -11223,11 +11339,12 @@ msgid "Run program"
 msgstr ""
 
 #: lazarusidestrconsts.liskmsaveall
-msgid "SaveAll"
+msgctxt "lazarusidestrconsts.liskmsaveall"
+msgid "Save All"
 msgstr ""
 
 #: lazarusidestrconsts.liskmsaveas
-msgid "SaveAs"
+msgid "Save As"
 msgstr ""
 
 #: lazarusidestrconsts.liskmsaveproject
@@ -12873,10 +12990,12 @@ msgid "&Inspect ..."
 msgstr ""
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr ""
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr ""
 
@@ -13120,6 +13239,15 @@ msgstr ""
 
 #: lazarusidestrconsts.lismenurevert
 msgid "Revert"
+msgstr ""
+
+#: lazarusidestrconsts.lismenurevertconfirm
+#, object-pascal-format
+msgid ""
+"Discard all unsaved changes in\n"
+"\"%s\"?\n"
+"\n"
+"This action cannot be undone and will affect all editor tabs with the file."
 msgstr ""
 
 #: lazarusidestrconsts.lismenurun
@@ -14345,10 +14473,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lisoptionvalueignored
 msgid "ignored"
-msgstr ""
-
-#: lazarusidestrconsts.lisor
-msgid "or"
 msgstr ""
 
 #: lazarusidestrconsts.lisos

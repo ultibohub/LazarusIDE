@@ -12,6 +12,26 @@ msgstr ""
 "Language: pl_PL\n"
 "X-Generator: Poedit 2.3.1\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "Przeskocz do ostatniej pozycji"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "Przeskocz do początkowej pozycji"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -2454,6 +2474,90 @@ msgstr "Klawisz Home przenosi do najbliższego początku"
 msgid "Host application"
 msgstr "Główna aplikacja"
 
+#: lazarusidestrconsts.dlgiahadentifiercomplentryabstractprocfunc
+msgid "Abstract proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrycodetemplate
+msgid "Template"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryconst
+msgid "Const"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryenum
+msgid "Enum"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryfunc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryfunc"
+msgid "Function"
+msgstr "Funkcja"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryident
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryident"
+msgid "Identifier"
+msgstr "Identyfikator"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrykeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrykeyword"
+msgid "Keyword"
+msgstr "Słowo kluczowe"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylabel
+msgid "Label"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylowervisibilityprocfunc
+msgid "Lower visibility proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrynamespace
+msgid "Namespace"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryother
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryother"
+msgid "Other"
+msgstr "Inne"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryproc"
+msgid "Procedure"
+msgstr "Procedura"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproperty
+msgid "Property"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytext
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytext"
+msgid "Text"
+msgstr "Tekst"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytype
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytype"
+msgid "Type"
+msgstr "Typ"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryunit
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryunit"
+msgid "Unit"
+msgstr "Moduł"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryvar
+msgid "Var"
+msgstr ""
+
 #: lazarusidestrconsts.dlgidentifiercompletion
 msgctxt "lazarusidestrconsts.dlgidentifiercompletion"
 msgid "Identifier Completion"
@@ -2619,6 +2723,12 @@ msgstr "Klawisze skrótów"
 #: lazarusidestrconsts.dlgkeymappingerrors
 msgid "Key mapping errors"
 msgstr "Błędne klawisze skrótu"
+
+#: lazarusidestrconsts.dlgkeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgkeyword"
+msgid "Keyword"
+msgstr "Słowo kluczowe"
 
 #: lazarusidestrconsts.dlgkeywordpolicy
 msgid "Keyword policy"
@@ -2884,6 +2994,10 @@ msgstr ""
 msgid "Trim spaces (when highlighting current selection)"
 msgstr "Spacje końcowe (gdy podświetlone bieżące zaznaczenie)"
 
+#: lazarusidestrconsts.dlgmatchwords
+msgid "Match words"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmaxcntr
 msgid "Maximum counter"
 msgstr "Maksymalny licznik"
@@ -2919,6 +3033,10 @@ msgstr "Mieszanie metod i właściwości"
 #: lazarusidestrconsts.dlgmode
 msgid "Mode"
 msgstr "Tryb"
+
+#: lazarusidestrconsts.dlgmodifier
+msgid "Modifier"
+msgstr ""
 
 #: lazarusidestrconsts.dlgmouseaction
 msgid "Mouse Action"
@@ -3790,6 +3908,14 @@ msgstr "Raport"
 #: lazarusidestrconsts.dlgreset
 msgctxt "lazarusidestrconsts.dlgreset"
 msgid "Reset"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtncaption
+msgid "Restore active"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtnhint
+msgid "Restore window layout of active desktop"
 msgstr ""
 
 #: lazarusidestrconsts.dlgresetall
@@ -7237,6 +7363,7 @@ msgid "Identifier"
 msgstr "Identyfikator"
 
 #: lazarusidestrconsts.liscodetoolsoptskeyword
+msgctxt "lazarusidestrconsts.liscodetoolsoptskeyword"
 msgid "Keyword"
 msgstr "Słowo kluczowe"
 
@@ -11503,11 +11630,13 @@ msgid "Run program"
 msgstr "Uruchom program"
 
 #: lazarusidestrconsts.liskmsaveall
-msgid "SaveAll"
-msgstr ""
+#, fuzzy
+msgctxt "lazarusidestrconsts.liskmsaveall"
+msgid "Save All"
+msgstr "Zapisz wszystko"
 
 #: lazarusidestrconsts.liskmsaveas
-msgid "SaveAs"
+msgid "Save As"
 msgstr ""
 
 #: lazarusidestrconsts.liskmsaveproject
@@ -13175,10 +13304,12 @@ msgid "&Inspect ..."
 msgstr "Badaj..."
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "Przeskocz do ostatniej pozycji"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "Przeskocz do początkowej pozycji"
 
@@ -13431,6 +13562,15 @@ msgstr "Zresetuj odpluskwiacz"
 #: lazarusidestrconsts.lismenurevert
 msgid "Revert"
 msgstr "Przywróć"
+
+#: lazarusidestrconsts.lismenurevertconfirm
+#, object-pascal-format
+msgid ""
+"Discard all unsaved changes in\n"
+"\"%s\"?\n"
+"\n"
+"This action cannot be undone and will affect all editor tabs with the file."
+msgstr ""
 
 #: lazarusidestrconsts.lismenurun
 msgctxt "lazarusidestrconsts.lismenurun"
@@ -14680,10 +14820,6 @@ msgstr "Opcje"
 #: lazarusidestrconsts.lisoptionvalueignored
 msgid "ignored"
 msgstr "ignorowany"
-
-#: lazarusidestrconsts.lisor
-msgid "or"
-msgstr ""
 
 #: lazarusidestrconsts.lisos
 #, object-pascal-format, fuzzy, badformat

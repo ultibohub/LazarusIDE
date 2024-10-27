@@ -13,6 +13,26 @@ msgstr ""
 "POT-Creation-Date: \n"
 "Language: lt\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "Peršokti atgal"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "Peršokti pirmyn"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -2455,6 +2475,90 @@ msgstr "Spustelėjus „Home“, žymeklis peršoks į artimiausią pradžią"
 msgid "Host application"
 msgstr "Programa-šeimininkė"
 
+#: lazarusidestrconsts.dlgiahadentifiercomplentryabstractprocfunc
+msgid "Abstract proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrycodetemplate
+msgid "Template"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryconst
+msgid "Const"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryenum
+msgid "Enum"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryfunc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryfunc"
+msgid "Function"
+msgstr "Funkcija"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryident
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryident"
+msgid "Identifier"
+msgstr "Identifikatorius"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrykeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrykeyword"
+msgid "Keyword"
+msgstr "Bazinis žodis"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylabel
+msgid "Label"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrylowervisibilityprocfunc
+msgid "Lower visibility proc/func"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrynamespace
+msgid "Namespace"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryother
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryother"
+msgid "Other"
+msgstr "Kiti"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproc
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryproc"
+msgid "Procedure"
+msgstr "Procedūra"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryproperty
+msgid "Property"
+msgstr ""
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytext
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytext"
+msgid "Text"
+msgstr "Teksto"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentrytype
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentrytype"
+msgid "Type"
+msgstr "Tipas"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryunit
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgiahadentifiercomplentryunit"
+msgid "Unit"
+msgstr "Unit"
+
+#: lazarusidestrconsts.dlgiahadentifiercomplentryvar
+msgid "Var"
+msgstr ""
+
 #: lazarusidestrconsts.dlgidentifiercompletion
 msgctxt "lazarusidestrconsts.dlgidentifiercompletion"
 msgid "Identifier Completion"
@@ -2617,6 +2721,12 @@ msgstr "Klavišų priskyrimai"
 #: lazarusidestrconsts.dlgkeymappingerrors
 msgid "Key mapping errors"
 msgstr "Klavišų priskyrimų klaidos"
+
+#: lazarusidestrconsts.dlgkeyword
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgkeyword"
+msgid "Keyword"
+msgstr "Bazinis žodis"
 
 #: lazarusidestrconsts.dlgkeywordpolicy
 msgid "Keyword policy"
@@ -2877,6 +2987,10 @@ msgstr ""
 msgid "Trim spaces (when highlighting current selection)"
 msgstr "Šalinti tarpus eilutės galuose (paryškinant pažymėjimą)"
 
+#: lazarusidestrconsts.dlgmatchwords
+msgid "Match words"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmaxcntr
 msgid "Maximum counter"
 msgstr "Skaitliuko riba"
@@ -2911,6 +3025,10 @@ msgstr "Maišyti metodus su savybėm"
 
 #: lazarusidestrconsts.dlgmode
 msgid "Mode"
+msgstr ""
+
+#: lazarusidestrconsts.dlgmodifier
+msgid "Modifier"
 msgstr ""
 
 #: lazarusidestrconsts.dlgmouseaction
@@ -3778,6 +3896,14 @@ msgstr "Ataskaita"
 msgctxt "lazarusidestrconsts.dlgreset"
 msgid "Reset"
 msgstr "Atstatyti"
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtncaption
+msgid "Restore active"
+msgstr ""
+
+#: lazarusidestrconsts.dlgresetactivedesktopbtnhint
+msgid "Restore window layout of active desktop"
+msgstr ""
 
 #: lazarusidestrconsts.dlgresetall
 msgid "Reset all"
@@ -7236,6 +7362,7 @@ msgid "Identifier"
 msgstr "Identifikatorius"
 
 #: lazarusidestrconsts.liscodetoolsoptskeyword
+msgctxt "lazarusidestrconsts.liscodetoolsoptskeyword"
 msgid "Keyword"
 msgstr "Bazinis žodis"
 
@@ -11523,11 +11650,16 @@ msgid "Run program"
 msgstr "Startuoti programą"
 
 #: lazarusidestrconsts.liskmsaveall
-msgid "SaveAll"
+#, fuzzy
+#| msgid "SaveAll"
+msgctxt "lazarusidestrconsts.liskmsaveall"
+msgid "Save All"
 msgstr "Įrašyti visus"
 
 #: lazarusidestrconsts.liskmsaveas
-msgid "SaveAs"
+#, fuzzy
+#| msgid "SaveAs"
+msgid "Save As"
 msgstr "Įrašyti taip"
 
 #: lazarusidestrconsts.liskmsaveproject
@@ -13225,10 +13357,12 @@ msgid "&Inspect ..."
 msgstr "I&nspektuoti…"
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "Peršokti atgal"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "Peršokti pirmyn"
 
@@ -13475,6 +13609,15 @@ msgstr "Atstatyti derintuvę pradžion"
 #: lazarusidestrconsts.lismenurevert
 msgid "Revert"
 msgstr "Atstatyti"
+
+#: lazarusidestrconsts.lismenurevertconfirm
+#, object-pascal-format
+msgid ""
+"Discard all unsaved changes in\n"
+"\"%s\"?\n"
+"\n"
+"This action cannot be undone and will affect all editor tabs with the file."
+msgstr ""
 
 #: lazarusidestrconsts.lismenurun
 msgctxt "lazarusidestrconsts.lismenurun"
@@ -14755,10 +14898,6 @@ msgstr "Parinktys"
 #: lazarusidestrconsts.lisoptionvalueignored
 msgid "ignored"
 msgstr "ignoruojamas"
-
-#: lazarusidestrconsts.lisor
-msgid "or"
-msgstr "arba"
 
 #: lazarusidestrconsts.lisos
 #, object-pascal-format

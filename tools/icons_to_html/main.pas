@@ -5,9 +5,9 @@ unit main;
 interface
 
 uses
-  Classes, SysUtils, StrUtils, Forms, FPImage, Controls, Dialogs, StdCtrls, EditBtn, FileUtil,
+  Classes, SysUtils, StrUtils, Forms, FPImage, Controls, Dialogs, EditBtn, FileUtil,
   LazUTF8, LazFileUtils, LCLIntf, LCLType, Buttons, Menus, IniFiles,
-  SynEdit, SynHighlighterHTML, DefaultTranslator;
+  SynEdit, SynHighlighterHTML, DefaultTranslator, ComCtrls;
 
 type
 
@@ -18,27 +18,31 @@ type
     bbtnCreateHTML: TBitBtn;
     bbtnSave: TBitBtn;
     bbtnPreview: TBitBtn;
-    cbDarkMode: TCheckBox;
-    cbTranslatedHTML: TCheckBox;
     DirectoryEdit: TDirectoryEdit;
     ImageList: TImageList;
+    menuDarkHTMLpage: TMenuItem;
+    menuHTMLpageEnglish: TMenuItem;
     popLastDirs: TPopupMenu;
-    sbtnLastDirs: TSpeedButton;
+    popMenu: TPopupMenu;
     SynEdit: TSynEdit;
     SynHTMLSyn: TSynHTMLSyn;
     TaskDialog: TTaskDialog;
+    ToolBar: TToolBar;
+    tbLastDirs: TToolButton;
+    tbMenu: TToolButton;
     procedure bbtnCloseClick(Sender: TObject);
     procedure bbtnCreateHTMLClick(Sender: TObject);
     procedure bbtnPreviewClick(Sender: TObject);
     procedure bbtnSaveClick(Sender: TObject);
     procedure cbDarkModeChange(Sender: TObject);
     procedure DirectoryEditChange(Sender: TObject);
-    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
+    procedure FormClose(Sender: TObject; var {%H-}CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure FormShow(Sender: TObject);
     procedure LastDirClick(Sender: TObject);
-    procedure sbtnLastDirsClick(Sender: TObject);
+    procedure menuDarkHTMLpageClick(Sender: TObject);
+    procedure menuHTMLpageEnglishClick(Sender: TObject);
   private
     ImgDirectory: String;
     function GetImgDirectory(P: String): String;
@@ -80,19 +84,18 @@ resourcestring
   rsSavedAs = 'Saved as: %s';
   rsNoPngImageFilesFoundIn = 'No PNG image files found in %s';
   rsNoMatchingPngImageFilesFoundIn = 'No matching PNG image files found in %s';
-  rsTheFolderDoesNotExist = 'Folder "%s" does not exist or is currently not available.'+LineEnding+LineEnding+'Should it be removed from the list?';
+  rsTheFolderDoesNotExist = 'Folder "%s" does not exist or is currently not available.' + LineEnding + LineEnding + 'Should it be removed from the list?';
   rsThisFolderContains = ThisFolderContains;
   rsSize = 'Size';
   rsName = 'Name';
   rsInfoText1 = 'The images in this folder can be used in Lazarus applications as toolbar or button icons.';
-  rsInfoText2 = 'The different sizes as required by LCL scaling for high-dpi screens can be used like this, for example:';
+  rsInfoText2 = 'The different sizes as required by LCL scaling for Hi-DPI screens can be used like this, for example:';
   rsSizeInfoSmall = '16x16, 24x24 and 32x32 pixels for "small" images,';
   rsSizeInfoMedium = '24x24, 36x36 and 48x48 pixels for "medium" sized images,';
   rsSizeInfoLarge = '32x32, 48x48 and 64x64 pixels for "large" images.';
   rsImagesWereProvidedBy = 'The images were kindly provided by Roland Hahn (%s).';
-  rsLicense = 'License:'#13'%s';
-  rsFreelyAvailable = 'freely available, no restrictions in usage';
-
+  rsLicense = 'License:' + LineEnding + '%s';
+  rsFreelyAvailable = '(freely available, no restrictions in usage)';
 
 { TMainForm }
 
@@ -137,8 +140,8 @@ begin
       popLastDirs.Items[i].Visible := popLastDirs.Items[i].Caption > '';
     end;
 
-    cbDarkMode.Checked := Config.ReadBool('Options', 'DarkMode', False);
-    cbTranslatedHTML.Checked := Config.ReadBool('Options', 'TranslatedHTML', true);
+    menuDarkHTMLpage.Checked := Config.ReadBool('Options', 'DarkMode', menuDarkHTMLpage.Checked);
+    menuHTMLpageEnglish.Checked := Config.ReadBool('Options', 'HTMLpageEnglish', menuHTMLpageEnglish.Checked);
   finally
     Config.Free;
   end;
@@ -156,7 +159,7 @@ begin
   if DirectoryExists(popLastDirs.Items[0].Caption) then
     DirectoryEdit.Directory := popLastDirs.Items[0].Caption;
 
-  sbtnLastDirs.Enabled := popLastDirs.Items[0].Caption > '';
+  tbLastDirs.Enabled := popLastDirs.Items[0].Caption > '';
 end;
 
 procedure TMainForm.FormDropFiles(Sender: TObject; const FileNames: array of String);
@@ -192,8 +195,8 @@ begin
       for i := 0 to LastDirsMax do
         Config.WriteString('LastDirs', 'LastDir' + i.ToString, popLastDirs.Items[i].Caption);
 
-      Config.WriteBool('Options', 'DarkMode', cbDarkMode.Checked);
-      Config.WriteBool('Options', 'TranslatedHTML', cbTranslatedHTML.Checked);
+      Config.WriteBool('Options', 'DarkMode', menuDarkHTMLpage.Checked);
+      Config.WriteBool('Options', 'HTMLpageEnglish', menuHTMLpageEnglish.Checked);
     except
       ShowMsg(rsError, rsTheConfigurationCouldNotBeSaved);
     end;
@@ -220,9 +223,12 @@ begin
   SynEdit.Lines.Clear;
   CreateHTML(SynEdit.Lines, False);
 
-  bbtnPreview.Enabled := True;
-  bbtnSave.Enabled := True;
-  bbtnPreview.SetFocus;
+  if SynEdit.Text > '' then
+  begin
+    bbtnPreview.Enabled := True;
+    bbtnSave.Enabled := True;
+    bbtnPreview.SetFocus;
+  end;
   UpdateLastDirs(ImgDirectory, False);
 end;
 
@@ -262,7 +268,7 @@ end;
 
 procedure TMainForm.CreateHTML(HTMLLines: TStrings; Preview: Boolean);
 
-  function Link(URL, AText: String): string;
+  function Link(URL, AText: String): String;
   begin
     Result := Format('<a href="%s">%s</a>', [URL, AText]);
   end;
@@ -279,7 +285,6 @@ var
   IcoSize: String;
   IcoName: String;
   translated: Boolean;
-  ThisFolderContainsStr: String;
   IcoWidth: Integer = 0;
   IcoHeight: Integer = 0;
   DPos: Integer;
@@ -301,7 +306,7 @@ begin
   IcoSizeList := TStringList.Create;
   PixSizeList := TStringList.Create;
   try
-    translated := cbTranslatedHTML.Checked;
+    translated := not menuHTMLpageEnglish.Checked;
 
     FindAllFiles(AllFileList, ImgDirectory, '*.png', False);
 
@@ -349,7 +354,7 @@ begin
       Exit;
     end;
 
-    if cbDarkMode.Checked then
+    if menuDarkHTMLpage.Checked then
     begin
       ColorSet1 := 'color: #ffffff; background-color: #5c0000;}';
       ColorSet2 := 'color: #ffffff; background-color: #000057;}';
@@ -415,35 +420,36 @@ begin
     HTMLLines.Add('</table>');
 
     HTMLLines.Add('<div class="infobox colorset2">');
-    HTMLLines.Add(Format(IfThen(translated, rsThisFolderContains, ThisFolderContains), [
-      IcoFileList.Count, IconGroups, PixSizeList.Count
-    ]));
+    HTMLLines.Add(Format(IfThen(translated, rsThisFolderContains, ThisFolderContains), [IcoFileList.Count, IconGroups, PixSizeList.Count]));
 
-    if cbTranslatedHTML.Checked then
-    begin
-      HTMLLines.Add('<hr>');
-      HTMLLines.Add('<p>' + rsInfoText1 + '</p>');
-      HTMLLines.Add('<p>' + rsInfoText2 + '</p>');
-      HTMLLines.Add('<ul>');
-      HTMLLines.Add('  <li>' + rsSizeInfoSmall + '</li>');
-      HTMLLines.Add('  <li>' + rsSizeInfoMedium + '</li>');
-      HTMLLines.Add('  <li>' + rsSizeInfoLarge + '</li>');
-      HTMLLines.Add('</ul>');
-      HTMLLines.Add('<p>' + Format(rsImagesWereProvidedBy, [Link(URL_RolandHahn, URL_RolandHahn)]) + '</p>');
-      HTMLLines.Add('<p>' + Format(rsLicense, [License_CC0]) + '<br>');
-      HTMLLines.Add(Link(URL_CC0, URL_CC0) + '<br>');
-      HTMLLines.Add(rsFreelyAvailable + '</p>');
-    end else
     if FileExists(ImgDirectory + InfoTextFileName) then
     begin
-      try
-        InfoTxtList := TStringList.Create;
-        InfoTxtList.LoadFromFile(ImgDirectory + InfoTextFileName);
+      if not menuHTMLpageEnglish.Checked then
+      begin
         HTMLLines.Add('<hr>');
-        for i := 0 to InfoTxtList.Count - 1 do
-          HTMLLines.Add(InfoTxtList[i] + '<br>');
-      finally
-        InfoTxtList.Free;
+        HTMLLines.Add('<p>' + rsInfoText1 + '</p>');
+        HTMLLines.Add('<p>' + rsInfoText2 + '</p>');
+        HTMLLines.Add('<ul>');
+        HTMLLines.Add('  <li>' + rsSizeInfoSmall + '</li>');
+        HTMLLines.Add('  <li>' + rsSizeInfoMedium + '</li>');
+        HTMLLines.Add('  <li>' + rsSizeInfoLarge + '</li>');
+        HTMLLines.Add('</ul>');
+        HTMLLines.Add('<p>' + Format(rsImagesWereProvidedBy, [Link(URL_RolandHahn, URL_RolandHahn)]) + '</p>');
+        HTMLLines.Add('<p>' + Format(rsLicense, [License_CC0]) + '<br>');
+        HTMLLines.Add(Link(URL_CC0, URL_CC0) + '<br>');
+        HTMLLines.Add(rsFreelyAvailable + '</p>');
+      end
+      else
+      begin
+        InfoTxtList := TStringList.Create;
+        try
+          InfoTxtList.LoadFromFile(ImgDirectory + InfoTextFileName);
+          HTMLLines.Add('<hr>');
+          for i := 0 to InfoTxtList.Count - 1 do
+            HTMLLines.Add(InfoTxtList[i] + '<br>');
+        finally
+          InfoTxtList.Free;
+        end;
       end;
     end;
     HTMLLines.Add('</div>');
@@ -496,12 +502,18 @@ begin
   end;
 end;
 
-procedure TMainForm.sbtnLastDirsClick(Sender: TObject);
-var
-  pt: TPoint;
+procedure TMainForm.menuDarkHTMLpageClick(Sender: TObject);
 begin
-  pt := sbtnLastDirs.ClientToScreen(Point(sbtnLastDirs.Width, sbtnLastDirs.Height));
-  popLastDirs.PopUp(pt.X, pt.Y);
+  menuDarkHTMLpage.Checked := not menuDarkHTMLpage.Checked;
+  if (bbtnCreateHTML.Enabled) and (SynEdit.Text <> '') then
+    bbtnCreateHTML.Click;
+end;
+
+procedure TMainForm.menuHTMLpageEnglishClick(Sender: TObject);
+begin
+  menuHTMLpageEnglish.Checked := not menuHTMLpageEnglish.Checked;
+  if (bbtnCreateHTML.Enabled) and (SynEdit.Text <> '') then
+    bbtnCreateHTML.Click;
 end;
 
 procedure TMainForm.UpdateLastDirs(ImgDir: String; Delete: Boolean);
@@ -525,7 +537,7 @@ begin
     popLastDirs.Items[LastDirsMax].Visible := True;
     popLastDirs.Items[LastDirsMax].MenuIndex := 0;
   end;
-  sbtnLastDirs.Enabled := popLastDirs.Items[0].Caption > '';
+  tbLastDirs.Enabled := popLastDirs.Items[0].Caption > '';
 end;
 
 procedure TMainForm.ShowMsg(const AMsgCaption: String; const AMsg: String);

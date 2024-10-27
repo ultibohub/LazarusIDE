@@ -1285,17 +1285,15 @@ begin
   AddDefaultRecentProjects;            // Add some initial recent projects.
 
   // read language and lazarusdir parameters, needed for translation
-  if Application.HasOption('language') then
+  if GetParamOptionPlusValue('--language=',s) then
   begin
-    debugln('Hint: (lazarus) [TMainIDE.LoadGlobalOptions] overriding language with command line: ',
-      Application.GetOptionValue('language'));
-    EnvironmentOptions.LanguageID := Application.GetOptionValue('language');
+    debugln('Hint: (lazarus) [TMainIDE.LoadGlobalOptions] overriding language with command line: ',s);
+    EnvironmentOptions.LanguageID := s;
   end;
-  if Application.HasOption('lazarusdir') then
+  if GetParamOptionPlusValue('--lazarusdir=',s) then
   begin
-    debugln('Hint: (lazarus) [TMainIDE.LoadGlobalOptions] overriding Lazarusdir with command line: ',
-      Application.GetOptionValue('lazarusdir'));
-    EnvironmentOptions.Lazarusdirectory:= Application.GetOptionValue('lazarusdir');
+    debugln('Hint: (lazarus) [TMainIDE.LoadGlobalOptions] overriding Lazarusdir with command line: ',s);
+    EnvironmentOptions.Lazarusdirectory:= s;
   end;
 
   // translate IDE resourcestrings
@@ -1649,6 +1647,8 @@ begin
 
   MainBuildBoss.SetupExternalTools(TExternalToolsIDE);
   MainBuildBoss.EnvOptsChanged;
+
+  {$IFDEF LCLCOCOA}initIDECocoaConfigForms;{$ENDIF}
 
   // build and position the MainIDE form
   Application.CreateForm(TMainIDEBar,MainIDEBar);
@@ -3420,6 +3420,12 @@ procedure TMainIDE.mnuRevertClicked(Sender: TObject);
 begin
   if (SourceEditorManager.ActiveSourceWindowIndex < 0)
   or (SourceEditorManager.ActiveSourceWindow.PageIndex < 0) then exit;
+
+  if IDEMessageDialog(lisConfirm, Format(lisMenuRevertConfirm,
+    [SourceEditorManager.ActiveSourceWindow.ActiveEditor.FileName]),
+    mtConfirmation, mbYesNo) <> mrYes
+  then exit;
+
   DoOpenEditorFile('', SourceEditorManager.ActiveSourceWindow.PageIndex,
     SourceEditorManager.ActiveSourceWindowIndex, [ofRevert]);
 end;
@@ -3678,6 +3684,7 @@ begin
   ecCleanUpAndBuild:          mnuCleanUpAndBuildProjectClicked(nil);
   ecQuickCompile:             DoQuickCompile;
   ecAbortBuild:               DoAbortBuild(false);
+  ecStopProgram:              mnuStopProjectClicked(self);
   ecBuildFile:                DoBuildFile(false);
   ecRunFile:                  DoRunFile;
   ecFindInFiles:              DoFindInFiles;
@@ -4298,8 +4305,10 @@ begin
   if not UpdateProjectCommandsStamp.Changed(AUnitInfo) then
     Exit;
 
-  IDECommandList.FindIDECommand(ecAddCurUnitToProj).Enabled:=Assigned(AUnitInfo) and not AUnitInfo.IsPartOfProject;
-  IDECommandList.FindIDECommand(ecBuildManyModes).Enabled:=(Project1<>nil) and (Project1.BuildModes.Count>1);
+  IDECommandList.FindIDECommand(ecAddCurUnitToProj).Enabled :=
+    Assigned(AUnitInfo) and not AUnitInfo.IsPartOfProject;
+  IDECommandList.FindIDECommand(ecBuildManyModes).Enabled :=
+    Assigned(Project1) and (Project1.BuildModes.Count>1) and (ToolStatus <> itBuilder);
 
   // project change build mode
   ACmd := IDECommandList.FindIDECommand(ecProjectChangeBuildMode);

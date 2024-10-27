@@ -690,6 +690,30 @@ msgstr "Оставлять однострочные комментарии с к
 msgid "Keep single-line comments with code in procedures"
 msgstr "Оставлять однострочные комментарии с кодом в процедурах"
 
+#: jcfuiconsts.lisindentlabels
+msgid "Indent labels"
+msgstr "Отступ для меток"
+
+#: jcfuiconsts.lisindentlabelsdontindent
+msgid "Don't indent"
+msgstr "Не добавлять"
+
+#: jcfuiconsts.lisindentlabelsindentprevlevel
+msgid "Indent to prior level"
+msgstr "По предыдущему уровню"
+
+#: jcfuiconsts.lisindentlabelsindentx0
+msgid "Indent to first column position"
+msgstr "По положению первого столбца"
+
+#: jcfuiconsts.lisindentlabelslindenttoprocedure
+msgid "Indent to procedure level"
+msgstr "По уровню процедуры"
+
+#: jcfuiconsts.lisindentlabelsstatement
+msgid "Indent statement"
+msgstr "Добавить для оператора"
+
 #: jcfuiconsts.lisindentoptions
 msgid "Options"
 msgstr "Параметры"

@@ -16,8 +16,8 @@ msgid "Error"
 msgstr "Fehler"
 
 #: main.rsfreelyavailable
-msgid "freely available, no restrictions in usage"
-msgstr "Frei verwendbar ohne Einschränkungen"
+msgid "(freely available, no restrictions in usage)"
+msgstr "(Frei verwendbar ohne Einschränkungen)"
 
 #: main.rsimageswereprovidedby
 #, object-pascal-format
@@ -33,7 +33,7 @@ msgid "The images in this folder can be used in Lazarus applications as toolbar 
 msgstr "Die Bilder in diesem Ordner können in Lazarus-Anwendungen als Toolbar- oder Button-Icons verwendet werden."
 
 #: main.rsinfotext2
-msgid "The different sizes as required by LCL scaling for high-dpi screens can be used like this, for example:"
+msgid "The different sizes as required by LCL scaling for Hi-DPI screens can be used like this, for example:"
 msgstr "Die verschiedenen, für LCL-Skalierung auf hochaufgelösten Bildschirmen benötigten Größen können beispielsweise wie folgt eingesetzt werden:"
 
 #: main.rslicense
@@ -50,16 +50,14 @@ msgid "Name"
 msgstr "Name"
 
 #: main.rsnomatchingpngimagefilesfoundin
-#, object-pascal-format, fuzzy
-#| msgid "No matching png image files found in %s"
+#, object-pascal-format
 msgid "No matching PNG image files found in %s"
-msgstr "Keine passenden png-Bilddateien gefunden in %s"
+msgstr "Keine passenden PNG-Bilddateien gefunden in %s"
 
 #: main.rsnopngimagefilesfoundin
-#, object-pascal-format, fuzzy
-#| msgid "No png image files found in %s"
+#, object-pascal-format
 msgid "No PNG image files found in %s"
-msgstr "Keine png-Bilddateien gefunden in %s"
+msgstr "Keine PNG-Bilddateien gefunden in %s"
 
 #: main.rssavedas
 #, object-pascal-format
@@ -83,8 +81,6 @@ msgid "16x16, 24x24 and 32x32 pixels for \"small\" images,"
 msgstr "16x16, 24x24 und 32x32 Pixel für \"kleine\" Bilder,"
 
 #: main.rstheconfigurationcouldnotbesaved
-#, fuzzy
-#| msgid "The configuration file could not be saved."
 msgid "Configuration file could not be saved."
 msgstr "Die Konfiguration konnte nicht gespeichert werden."
 
@@ -94,11 +90,7 @@ msgid "The file could not be saved as: %s"
 msgstr "Die Datei konnte nicht gespeichert werden als: %s"
 
 #: main.rsthefolderdoesnotexist
-#, object-pascal-format, fuzzy
-#| msgid ""
-#| "The folder [%s] does not exist or is currently not available.\n"
-#| "\n"
-#| "Should it be removed from the list?"
+#, object-pascal-format
 msgid ""
 "Folder \"%s\" does not exist or is currently not available.\n"
 "\n"
@@ -109,8 +101,6 @@ msgstr ""
 "Soll er von der Liste gestrichen werden?"
 
 #: main.rsthetempfilecouldnotbedeleted
-#, fuzzy
-#| msgid "The temp file could not be deleted."
 msgid "Temporary file could not be deleted."
 msgstr "Die Temporär-Datei konnte nicht gelöscht werden."
 
@@ -122,6 +112,10 @@ msgstr "Dieser Ordner enthält %0:d Icons in %1:d Icon-Gruppen mit %2:d Icon-Gr�
 #: tmainform.bbtnclose.caption
 msgid "Close"
 msgstr "Beenden"
+
+#: tmainform.bbtnclose.hint
+msgid "Close application"
+msgstr "Programm beenden"
 
 #: tmainform.bbtncreatehtml.caption
 msgid "Create HTML"
@@ -145,33 +139,27 @@ msgstr "Speichert den generierten HTML-Code in der Datei \"IconTable.html\" im a
 
 #: tmainform.caption
 msgid "IconTable"
-msgstr "Icon-Tabelle"
-
-#: tmainform.cbdarkmode.caption
-msgid "Dark Mode"
-msgstr "Dunkler Modus"
-
-#: tmainform.cbdarkmode.hint
-msgid "Create HTML page with dark background"
-msgstr "Erzeugt eine HTML-Seite mit dunklem Hintergrund"
-
-#: tmainform.cbtranslatedhtml.caption
-msgid "Translated HTML text"
-msgstr "Übersetzter HTML-Text"
-
-#: tmainform.cbtranslatedhtml.hint
-msgid ""
-"Unchecked: Use the GUI language in the HTML text\n"
-"Checked: Write the HTML text in English"
 msgstr ""
-"Nicht markiert: HTML-Text in der Sprache der Benutzeroberfläche speicher\n"
-"Markiert: HTML-Text auf Englisch erzeugen"
 
 #: tmainform.directoryedit.hint
 msgid "Folder with images for which the HTML preview should be created"
 msgstr "Ordner mit den Bildern, für die der HTML-Code erzeugt werden soll"
 
-#: tmainform.sbtnlastdirs.hint
+#: tmainform.menudarkhtmlpage.caption
+msgctxt "tmainform.menudarkhtmlpage.caption"
+msgid "Dark HTML page"
+msgstr "Dunkle HTML-Seite"
+
+#: tmainform.menuhtmlpageenglish.caption
+msgctxt "tmainform.menuhtmlpageenglish.caption"
+msgid "HTML page in English"
+msgstr "HTML-Seite auf Englisch"
+
+#: tmainform.tblastdirs.hint
 msgid "Last used"
 msgstr "Zuletzt benutzt"
+
+#: tmainform.tbmenu.hint
+msgid "Options"
+msgstr "Optionen"
 
