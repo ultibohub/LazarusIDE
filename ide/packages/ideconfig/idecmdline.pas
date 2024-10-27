@@ -123,6 +123,7 @@ function ParamIsOption(ParamIndex : integer; const Option : string) : boolean; o
 function ParamIsOption(ParamIndex : integer; const OptionShort, OptionLong: string) : boolean; overload; // case insensitive
 function ParamIsOptionPlusValue(ParamIndex : integer;
             const Option : string; out AValue : string) : boolean;
+function GetParamOptionPlusValue(const Option: string; out AValue: string): boolean; overload; // case insensitive
 
 procedure ParseNoGuiCmdLineParams;
 
@@ -355,7 +356,7 @@ begin
   end;
 end;
 
-function GetCommandLineParameters(aCmdLineParams : TStrings; isStartLazarus : Boolean = False) : String;
+function GetCommandLineParameters(aCmdLineParams: TStrings; isStartLazarus: Boolean): string;
 var
   i: Integer;
   s: String;
@@ -474,6 +475,16 @@ begin
    AValue := copy(p, length(Option) + 1, length(p))
  else
    AValue := '';
+end;
+
+function GetParamOptionPlusValue(const Option: string; out AValue: string): boolean;
+var
+  i: Integer;
+begin
+  AValue:='';
+  for i:=1 to ParamsAndCfgCount do
+    if ParamIsOptionPlusValue(i,Option,AValue) then exit(true);
+  Result:=false;
 end;
 
 procedure ParseNoGuiCmdLineParams;

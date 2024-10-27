@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -41,8 +41,10 @@ that are useful in LCL applications.
 <element name="LazUtilities"/>
 <element name="LazMethodList"/>
 <element name="LazUTF8"/>
+<element name="LazUTF16"/>
 <element name="LazLoggerBase"/>
 <element name="LazTracer"/>
+<element name="GraphMath"/>
 <element name="LCLStrConsts"/>
 <element name="LCLType"/>
 
@@ -299,85 +301,25 @@ Compares the Item addresses.
 <short/>
 </element>
 
-<element name="TStringsSortCompare">
+<element name="MergeSort">
 <short>
-Specifies a comparison function type for string values in a TStrings instance.
+Deprecated.
 </short>
 <descr>
 <p>
-TStringsSortCompare is an Integer function type used to compare string values 
-to determine the relative sort order. The return value indicates the relative 
-sort order for the compared items, and normally contains a value like the one 
-returned from CompareText. For example:
-</p>
-<dl>
-<dt>&lt;0</dt>
-<dd>Item1 has a value that comes before Item2.</dd>
-<dt>0</dt>
-<dd>Item1 and Item2 have the same value.</dd>
-<dt>&gt;0</dt>
-<dd>Item1 has a value that comes after Item2.</dd>
-</dl>
-<p>
-The address for a TStringsSortCompare type is passed as an argument to the 
-MergeSort routine.
+Use the <var>MergeSort</var> routine in the <file>lazutilities.pas</file> unit 
+(LazUtils) instead.
 </p>
 </descr>
-<seealso>
-<link id="MergeSort"/>
-</seealso>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso/>
 </element>
-<element name="TStringsSortCompare.Result">
-<short>Integer with the relative sort order for the compared values.</short>
-</element>
-<element name="TStringsSortCompare.Item1">
-<short>First string value for the comparison.</short>
-</element>
-<element name="TStringsSortCompare.Item2">
-<short>Second string value for the comparison.</short>
-</element>
-
-<element name="MergeSort">
-<short>Implements a merge/sort for TStrings or TFPList.</short>
-<descr>
-<p>
-MergeSort is an overloaded routine used to implement a comparison-based sort 
-routine for values in List. List can be a TStrings or TFPList instance. No 
-actions are performed in the routine when List has not been assigned 
-(contains <b>Nil</b>).
-</p>
-<p>
-The StartIndex and EndIndex arguments allow the initial and final entries in 
-a TFPList instance to be specified. When the values are omitted, they default 
-to the first value (position 0) and the last value (Count-1) in List.
-</p>
-<p>
-OnCompare is the comparison routine used to determine the order for the 
-sorted values. It can be a TListSortCompare or TStringsSortCompare function, 
-depending on the overloaded variant of the called routine.
-</p>
-<p>
-MergeSort implements the J. von Nuemann divide-and-conquer algorithm, with an 
-insertion sort used for lists with 6 or fewer elements.
-</p>
-</descr>
-<seealso>
-<link id="TListSortCompare"/>
-<link id="TStringsSortCompare"/>
-</seealso>
-</element>
-<element name="MergeSort.List">
-<short>The list of values to sort (overloaded type).</short>
-</element>
-<element name="MergeSort.OnCompare">
-<short>The sort compare function.</short>
-</element>
-<element name="MergeSort.StartIndex">
-<short>The initial entry in List used in the merge/sort.</short>
-</element>
-<element name="MergeSort.EndIndex">
-<short>The final entry in List used in the merge/sort.</short>
-</element>
+<element name="MergeSort.List"/>
+<element name="MergeSort.OnCompare"/>
+<element name="MergeSort.StartIndex"/>
+<element name="MergeSort.EndIndex"/>
 
 <element name="KeyAndShiftStateToKeyString">
 <short>
@@ -784,6 +726,32 @@ instead.
 <short>The object reference freed and <b>Nil</b>'d in the routine.</short>
 </element>
 
+<element name="CompareRect">
+.
+<short>
+Deprecated. Indicates if the specified rectangle pointers have the same 
+coordinate values.
+</short>
+<descr/>
+<version>
+Deprecated in LCL version 3.99 (June 2023). Use the SameRect routine in the 
+<file>graphmath.pp</file> unit (LazUtils) instead.
+</version>
+<seealso/>
+</element>
+<element name="CompareRect.Result">
+<short>
+<b>True</b> when the top, left, bottom, and right values in each rectangle 
+are the same.
+</short>
+</element>
+<element name="CompareRect.R1">
+<short>Pointer to the first rectangle for the comparison.</short>
+</element>
+<element name="CompareRect.R2">
+<short>Pointer to the second rectangle for the comparison.</short>
+</element>
+
 <element name="RegisterInterfaceInitializationHandler">
 <short>
 Registers an initialization routine needed before the LCL is initialized.
@@ -1007,27 +975,6 @@ The return value contains the following:
 <short>Second handle for the comparison.</short>
 </element>
 
-<element name="CompareRect">
-<short>
-Indicates if the specified rectangle pointers have the same coordinate values.
-</short>
-<descr/>
-<errors/>
-<seealso/>
-</element>
-<element name="CompareRect.Result">
-<short>
-<b>True</b> when the top, left, bottom, and right values in each rectangle 
-are the same.
-</short>
-</element>
-<element name="CompareRect.R1">
-<short>Pointer to the first rectangle for the comparison.</short>
-</element>
-<element name="CompareRect.R2">
-<short>Pointer to the second rectangle for the comparison.</short>
-</element>
-
 <element name="ComparePoints">
 <short>
 Compares the specified TPoint values to get their relative order.
@@ -1081,97 +1028,106 @@ See ComparePoints.
 <short/>
 </element>
 
+<!-- TODO: Modified in c1274517. -->
+<!-- TODO: Needs See Also links to lazloggerbase,DebugLogger (not in fpdoc). -->
 <element name="RaiseGDBException">
-<short>Raises a catchable exception.</short>
+<short>
+Deprecated. Use LazTracer.RaiseGDBException instead.
+</short>
 <descr>
+<p>
+Raises a catchable exception.
+</p>
 <p>
 Normally, GDB does not catch FPC Exception objects. This procedure raises a 
 standard divide by zero exception which is caught by GDB.
 </p>
+<p>
+Calls the RaiseGDBException routine in <file>LazTracer</file>.
+</p>
 </descr>
-<errors/>
-<seealso/>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<link id="#lazutils.laztracer.RaiseGDBException">LazTracer.RaiseGDBException</link>
+</seealso>
 </element>
 <element name="RaiseGDBException.Msg">
-<short/>
+<short>
+Message for the catchable exception.
+</short>
 </element>
 
 <element name="DebugLn">
 <short>
-Writes a number of strings (heavily overloaded) to the debug output.
+Deprecated. Use DebugLogger.DebugLn instead.
 </short>
-<errors/>
-<seealso/>
+<descr>
+<p>
+Overloaded routine used to write a number of strings to the debug output.
+</p>
+<p>
+Calls the DebugLn method in the DebugLogger unit property implemented in 
+<file>LazLoggerBase.pas</file> (LazUtils).
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.TLazLogger.DebugLn">TLazLogger.DebugLn</link>
+</seealso>
 </element>
 <element name="DebugLn.S">
-<short>A single string, or a Format string when followed by an argument list.
+<short>
+A single string, or a Format string when followed by an argument list.
 </short>
 </element>
 <element name="DebugLn.Args">
-<short>Writes the formatted dump of the typed arguments.</short>
+<short>
+Writes the formatted dump of the typed arguments.
+</short>
 </element>
-<element name="DebugLn.s1">
-<short/>
-</element>
-<element name="DebugLn.s2">
-<short/>
-</element>
-<element name="DebugLn.s3">
-<short/>
-</element>
-<element name="DebugLn.s4">
-<short/>
-</element>
-<element name="DebugLn.s5">
-<short/>
-</element>
-<element name="DebugLn.s6">
-<short/>
-</element>
-<element name="DebugLn.s7">
-<short/>
-</element>
-<element name="DebugLn.s8">
-<short/>
-</element>
-<element name="DebugLn.s9">
-<short/>
-</element>
-<element name="DebugLn.s10">
-<short/>
-</element>
-<element name="DebugLn.s11">
-<short/>
-</element>
-<element name="DebugLn.s12">
-<short/>
-</element>
-<element name="DebugLn.s13">
-<short/>
-</element>
-<element name="DebugLn.s14">
-<short/>
-</element>
-<element name="DebugLn.s15">
-<short/>
-</element>
-<element name="DebugLn.s16">
-<short/>
-</element>
+<element name="DebugLn.s1"/>
+<element name="DebugLn.s2"/>
+<element name="DebugLn.s3"/>
+<element name="DebugLn.s4"/>
+<element name="DebugLn.s5"/>
+<element name="DebugLn.s6"/>
+<element name="DebugLn.s7"/>
+<element name="DebugLn.s8"/>
+<element name="DebugLn.s9"/>
+<element name="DebugLn.s10"/>
+<element name="DebugLn.s11"/>
+<element name="DebugLn.s12"/>
+<element name="DebugLn.s13"/>
+<element name="DebugLn.s14"/>
+<element name="DebugLn.s15"/>
+<element name="DebugLn.s16"/>
 
 <element name="DebugLnEnter">
 <short>
-Optionally writes a value to the debugger and increases the indentation level.
+Deprecated. Use Use DebugLogger.DebugLnEnter instead.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+Overloaded routine used to write the specified argument values to the debugger. 
+Increases the indentation level for subsequent debugger output.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.TLazLogger.DebugLnEnter">TLazLogger.DebugLnEnter</link>
+<link id="#lazutils.lazloggerbase.TLazLogger.DebugLnExit">TLazLogger.DebugLnExit</link>
+</seealso>
 </element>
-<element name="DebugLnEnter.s">
-<short/>
-</element>
-<element name="DebugLnEnter.Args">
-<short/>
-</element>
+<element name="DebugLnEnter.s"/>
+<element name="DebugLnEnter.Args"/>
 <element name="DebugLnEnter.s1"/>
 <element name="DebugLnEnter.s2"/>
 <element name="DebugLnEnter.s3"/>
@@ -1193,19 +1149,25 @@ Optionally writes a value to the debugger and increases the indentation level.
 
 <element name="DebugLnExit">
 <short>
-Optionally writes a value to the debugger and decreases the indentation level.
+Deprecated. Use Use DebugLogger.DebugLnExit instead.
 </short>
-<descr/>
-<errors>
-</errors>
-<seealso/>
+<descr>
+<p>
+Overloaded routine used to write the specified argument values to the debugger. 
+Decreases the indentation level for subsequent debugger output.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.TLazLogger.DebugLnEnter">TLazLogger.DebugLnEnter</link>
+<link id="#lazutils.lazloggerbase.TLazLogger.DebugLnExit">TLazLogger.DebugLnExit</link>
+</seealso>
 </element>
-<element name="DebugLnExit.s">
-<short/>
-</element>
-<element name="DebugLnExit.Args">
-<short/>
-</element>
+<element name="DebugLnExit.s"/>
+<element name="DebugLnExit.Args"/>
 <element name="DebugLnExit.s1"/>
 <element name="DebugLnExit.s2"/>
 <element name="DebugLnExit.s3"/>
@@ -1227,18 +1189,27 @@ Optionally writes a value to the debugger and decreases the indentation level.
 
 <element name="DbgOut">
 <short>
-Signals the OnDbgOut event handler for the debug logger class instance.
+Deprecated. Use DebugLogger.DbgOut instead.
 </short>
-<descr/>
-<errors/>
-<seealso/>
+<descr>
+<p>
+Signals the OnDbgOut event handler for the debug logger class instance.
+</p>
+<p>
+Calls the DbgOut method in the DebugLogger unit property implemented in 
+<file>LazLoggerBase.pas</file> (LazUtils).
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 204).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.TLazLogger.DbgOut">TLazLogger.DbgOut</link>
+</seealso>
 </element>
-<element name="DbgOut.s">
-<short/>
-</element>
-<element name="DbgOut.Args">
-<short/>
-</element>
+<element name="DbgOut.s"/>
+<element name="DbgOut.Args"/>
 <element name="DbgOut.s1"/>
 <element name="DbgOut.s2"/>
 <element name="DbgOut.s3"/>
@@ -1252,189 +1223,225 @@ Signals the OnDbgOut event handler for the debug logger class instance.
 <element name="DbgOut.s11"/>
 <element name="DbgOut.s12"/>
 
+<!-- TODO: Some overloads are still valid. -->
 <element name="DbgS">
-<short>Formats debug output for various argument types (overloaded).</short>
+<short>
+Formats debug output for various argument types (overloaded).
+</short>
 <descr>
-<ul>
-<li>boolean: "True" or "False".</li>
-<li>pointer: hexadecimal address.</li>
-<li>TRect, TPoint: shows the x/y coordinates.</li>
-<li>TComponentState: set.</li>
-<li>TObject: Name:ClassName.</li>
-<li>TClass: ClassName.</li>
-<li>
-String, WideString: chars &gt; #126 are translated into #nn (or #nnnn) 
-character constants.
-</li>
-</ul>
+<dl>
+<dt>TTextMetric</dt>
+<dd>
+Generates a delimited list of member names and values for the text metric. For 
+example: 'tmHeight: 16 tmAscent: 2 tmDescent: 2 ...'.
+</dd>
+<dt>TScrollInfo</dt>
+<dd>
+Generates a delimited list of member names and values for the scroll 
+information. For example: 'Pos: 2 Min: 1 Max: 10 Page: 1 TrackPos: 2' or 
+'(no scrollinfo)'.
+</dd>
+<dt>Variant</dt>
+<dd>
+Returns the string representation for the variant value. Returns 
+'&lt;empty&gt;' or '&lt;null&gt;' for variants with the varEmpty or varNull 
+types (respectively).
+</dd>
+</dl>
+<remark>
+Other overloaded variants of DbgS have been deprecated in LCL version 3.99 (as 
+of Apr 2024). Use the DbgS routine from LazLoggerIntf (lazloggerbase, 
+lazloggerfile, lazloggerdummy) for these variants instead.
+</remark>
 </descr>
-<seealso/>
+<seealso>
+<link id="#lazutils.lazloggerbase.DbgS">LazLoggerBase.DbgS</link>
+</seealso>
 </element>
 <element name="DbgS.Result">
-<short/>
-</element>
-<element name="DbgS.s">
-<short/>
-</element>
-<element name="DbgS.q">
-<short/>
-</element>
-<element name="DbgS.MaxDecimals">
-<short/>
-</element>
-<element name="DbgS.m">
-<short/>
-</element>
-<element name="DbgS.c">
-<short/>
-</element>
-<element name="DbgS.i">
-<short/>
-</element>
-<element name="DbgS.r">
-<short/>
-</element>
-<element name="DbgS.p">
-<short/>
-</element>
-<element name="DbgS.e">
-<short/>
-</element>
-<element name="DbgS.b">
-<short/>
-</element>
-<element name="DbgS.Shift">
-<short/>
-</element>
-<element name="DbgS.i1">
-<short/>
-</element>
-<element name="DbgS.i2">
-<short/>
-</element>
-<element name="DbgS.i3">
-<short/>
-</element>
-<element name="DbgS.i4">
-<short/>
-</element>
-<element name="DbgS.ASize">
-<short/>
+<short>
+String with the content representing the specified argument.
+</short>
 </element>
 <element name="DbgS.ATM">
-<short/>
+<short>
+TTextMetric instance with member values stored in the result.
+</short>
 </element>
 <element name="DbgS.AScrollInfo">
-<short/>
+<short>
+TScrollInfo instance with member values stored in the result.
+</short>
 </element>
+<element name="DbgS.AVariant">
+<short>
+TVarData instance with member values stored in the result.
+</short>
+</element>
+<element name="DbgS.s"/>
+<element name="DbgS.q"/>
+<element name="DbgS.MaxDecimals"/>
+<element name="DbgS.m"/>
+<element name="DbgS.c"/>
+<element name="DbgS.i"/>
+<element name="DbgS.r"/>
+<element name="DbgS.p"/>
+<element name="DbgS.e"/>
+<element name="DbgS.b"/>
+<element name="DbgS.Shift"/>
+<element name="DbgS.i1"/>
+<element name="DbgS.i2"/>
+<element name="DbgS.i3"/>
+<element name="DbgS.i4"/>
+<element name="DbgS.ASize"/>
+
 
 <element name="DbgSName">
-<short>Returns the component or class name.</short>
-<descr/>
-<seealso/>
+<short>
+Deprecated. Use DbgSName from LazLoggerIntf instead.
+</short>
+<descr>
+<p>
+Returns the component or class name.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgSName">LazLoggerBase.DbgSName</link>
+</seealso>
 </element>
-<element name="DbgSName.Result">
-<short/>
-</element>
-<element name="DbgSName.p">
-<short/>
-</element>
+<element name="DbgSName.Result"/>
+<element name="DbgSName.p"/>
 
 <element name="DbgStr">
 <short>
-Converts control characters, or characters above #126 into #hex format.
+Deprecated. Use DebugLogger.DbgStr instead.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+Converts control characters, or characters above #126 into #hex format.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgStr">LazLoggerBase.DbgStr</link>
+</seealso>
 </element>
-<element name="DbgStr.Result">
-<short/>
-</element>
-<element name="DbgStr.StringWithSpecialChars">
-<short/>
-</element>
+<element name="DbgStr.Result"/>
+<element name="DbgStr.StringWithSpecialChars"/>
 
 <element name="DbgWideStr">
 <short>
-Converts control characters, or characters above #126 into #hex format.
+Deprecated. Use DbgWideStr from LazLoggerIntf instead.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+Converts control characters, or characters above #126 into #hex format.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgWideStr">LazLoggerBase.DbgWideStr</link>
+</seealso>
 </element>
-<element name="DbgWideStr.Result">
-<short/>
-</element>
-<element name="DbgWideStr.StringWithSpecialChars">
-<short/>
-</element>
+<element name="DbgWideStr.Result"/>
+<element name="DbgWideStr.StringWithSpecialChars"/>
 
 <element name="dbgMemRange">
-<short>Provides an hex dump of a memory section.
+<short>
+Deprecated. Use DbgMemRange from LazLoggerIntf instead.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+Provides an dump of a memory region in hexadecimal format.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgMemRange">LazLoggerBase.DbgMemRange</link>
+</seealso>
 </element>
-<element name="dbgMemRange.Result">
-<short>The formatted dump.</short>
-</element>
-<element name="dbgMemRange.P">
-<short>The start address.</short>
-</element>
-<element name="dbgMemRange.Count">
-<short>The number of bytes to dump.</short>
-</element>
-<element name="dbgMemRange.Width">
-<short>The number of bytes per line, zero for no line breaks.</short>
-</element>
+<element name="dbgMemRange.Result"/>
+<element name="dbgMemRange.P"/>
+<element name="dbgMemRange.Count"/>
+<element name="dbgMemRange.Width"/>
 
 <element name="dbgMemStream">
-<short>Provides a hex dump of an memory stream.</short>
-<descr/>
-<errors>
+<short>
+Deprecated. Use dbgMemStream from LazLoggerIntf instead.
+</short>
+<descr>
+<p>
+Provides a hex dump of an memory stream.
+</p>
 <p>
 The dump starts at the <b>current</b> stream position, the position moves to 
 the end of the dumped range.
 </p>
-</errors>
-<seealso/>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgMemStream">LazLoggerBase.DbgMemStream</link>
+</seealso>
 </element>
-<element name="dbgMemStream.Result">
-<short/>
-</element>
-<element name="dbgMemStream.MemStream">
-<short/>
-</element>
-<element name="dbgMemStream.Count">
-<short>The maximum number of bytes to dump.</short>
-</element>
+<element name="dbgMemStream.Result"/>
+<element name="dbgMemStream.MemStream"/>
+<element name="dbgMemStream.Count"/>
 
 <element name="dbgObjMem">
-<short>Provides an hex dump of an TObject.</short>
-<descr/>
-<errors>
-</errors>
-<seealso/>
+<short>
+Deprecated. Use DbgObjMem from LazLoggerIntf instead.
+</short>
+<descr>
+<p>
+Provides an hex dump of an TObject.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgObjMem">LazLoggerBase.DbgObjMem</link>
+</seealso>
 </element>
-<element name="dbgObjMem.Result">
-<short/>
-</element>
-<element name="dbgObjMem.AnObject">
-<short/>
-</element>
+<element name="dbgObjMem.Result"/>
+<element name="dbgObjMem.AnObject"/>
 
-<element name="dbghex">
-<short>Provides a hex dump of an Int64 value, (sign + absolute value).</short>
-<descr/>
-<errors>
-</errors>
-<seealso/>
+<element name="dbgHex">
+<short>
+Deprecated. Use DbgHex from LazLoggerIntf instead.
+</short>
+<descr>
+<p>
+Provides a hex dump of an Int64 value, (sign + absolute value).
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.DbgHex">LazLoggerBase.DbgHex</link>
+</seealso>
 </element>
-<element name="dbghex.Result">
-<short/>
-</element>
-<element name="dbghex.i">
-<short/>
-</element>
+<element name="dbgHex.Result"/>
+<element name="dbgHex.i"/>
 
 <element name="DbgSWindowPosFlags">
 <short>Provides a dump of SetWindowPosition flags.</short>
@@ -1528,11 +1535,21 @@ includes the thread identifier.
 </element>
 
 <element name="CloseDebugOutput">
-<short>Calls the Finish method for the debug logger class instance.</short>
-<descr/>
-<errors>
-</errors>
-<seealso/>
+<short>
+Deprecated. Use DebugLogger.Finish instead.
+</short>
+<descr>
+<p>
+Calls the Finish method for the debug logger class instance.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 204).
+</version>
+<seealso>
+<!-- <link id="#lazutils.lazloggerbase.DebugLogger">DebugLogger</link> -->
+<link id="#lazutils.lazloggerbase.TLazLogger.Finish">TLazLogger.Finish</link>
+</seealso>
 </element>
 
 <element name="ClassCase">
@@ -1558,71 +1575,62 @@ found.
 </short>
 </element>
 
-<element name="UTF16String">
-<short>Alias to the UnicodeString type.</short>
-<descr/>
-<seealso/>
-</element>
-
-<element name="PUTF16String" link="UTF16String">
-<short>Pointer to the UTF16String type.</short>
-<descr/>
-<seealso/>
-</element>
-
 <element name="UTF16CharacterLength">
 <short>
-Deprecated, see the <file>LazUTF16</file> unit in the <file>LazUtils</file> 
-package for replacements.
+Deprecated. Use the <var>LazUTF16.UTF16CharacterLength</var> routine instead.
 </short>
+<version>
+Deprecated in LCL version 4.0 (July 2023).
+</version>
+<seealso>
+<link id="#lazutils.lazutf16.UTF16CharacterLength"/>
+</seealso>
 </element>
-<element name="UTF16CharacterLength.Result">
-<short/>
-</element>
-<element name="UTF16CharacterLength.p">
-<short/>
-</element>
+<element name="UTF16CharacterLength.Result"/>
+<element name="UTF16CharacterLength.p"/>
 
 <element name="UTF16Length">
 <short>
-Deprecated, see the <file>LazUTF16</file> unit in the <file>LazUtils</file> 
-package for replacements.
+Deprecated. Use the <var>LazUTF16.UTF16Length</var> routine instead.
 </short>
+<version>
+Deprecated in LCL version 4.0 (July 2023).
+</version>
+<seealso>
+<link id="#lazutils.lazutf16.UTF16Length"/>
+</seealso>
 </element>
-<element name="UTF16Length.Result">
-<short/>
-</element>
-<element name="UTF16Length.s">
-<short/>
-</element>
-<element name="UTF16Length.p">
-<short/>
-</element>
-<element name="UTF16Length.WordCount">
-<short/>
-</element>
+<element name="UTF16Length.Result"/>
+<element name="UTF16Length.s"/>
+<element name="UTF16Length.p"/>
+<element name="UTF16Length.WordCount"/>
 
 <element name="UTF16CharacterToUnicode">
 <short>
-Deprecated, see the <file>LazUTF16</file> unit in the <file>LazUtils</file> 
-package for replacements.
+Deprecated. Use the <var>LazUTF16.UTF16CharacterToUnicode</var> routine 
+instead.
 </short>
+<version>
+Deprecated in LCL version 4.0 (July 2023).
+</version>
+<seealso>
+<link id="#lazutils.lazutf16.UTF16CharacterToUnicode"/>
+</seealso>
 </element>
-<element name="UTF16CharacterToUnicode.Result">
-<short/>
-</element>
-<element name="UTF16CharacterToUnicode.p">
-<short/>
-</element>
-<element name="UTF16CharacterToUnicode.CharLen">
-<short/>
-</element>
+<element name="UTF16CharacterToUnicode.Result"/>
+<element name="UTF16CharacterToUnicode.p"/>
+<element name="UTF16CharacterToUnicode.CharLen"/>
 
 <element name="UnicodeToUTF16">
 <short>
-Deprecated, see the <file>LazUTF16</file> unit in the <file>LazUtils</file> 
-package for replacements.
+Deprecated. Use the <var>LazUTF16.UnicodeToUTF16</var> routine instead.
 </short>
+<version>
+Deprecated in LCL version 4.0 (July 2023).
+</version>
+<seealso>
+<link id="#lazutils.lazutf16.UnicodeToUTF16"/>
+</seealso>
 </element>
 <element name="UnicodeToUTF16.Result">
 <short/>
@@ -1632,44 +1640,98 @@ package for replacements.
 </element>
 
 <element name="CreateFirstIdentifier">
-<short>Replaces last digits with 1.</short>
+<short>
+Deprecated.
+</short>
 <descr>
 <p>
-For example Name321 becomes Name1.
+Use the <var>CreateFirstIdentifier</var> routine in the 
+<file>lazutilities.pas</file> unit (<b>LazUtils</b>) instead.
 </p>
 </descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
 <seealso/>
 </element>
-<element name="CreateFirstIdentifier.Result">
-<short/>
-</element>
-<element name="CreateFirstIdentifier.Identifier">
-<short/>
-</element>
+<element name="CreateFirstIdentifier.Result"/>
+<element name="CreateFirstIdentifier.Identifier"/>
 
 <element name="CreateNextIdentifier">
 <short>
-Deprecated, see the <file>LazUTF8</file> unit in the <file>LazUtils</file> 
-package for replacements.
+Deprecated.
 </short>
+<descr>
+<p>
+Use the <var>CreateNextIdentifier</var> routine in the 
+<file>lazutilities.pas</file> unit (<b>LazUtils</b>) instead.
+</p>
+</descr>
+<version>
+Deprecated in LCL version 3.99 (Apr 2024).
+</version>
+<seealso/>
 </element>
-<element name="CreateNextIdentifier.Result">
-<short/>
-</element>
-<element name="CreateNextIdentifier.Identifier">
-<short/>
-</element>
+<element name="CreateNextIdentifier.Result"/>
+<element name="CreateNextIdentifier.Identifier"/>
 
 <element name="IsFontNameDefault">
-<short>Indicates if the specified name contains 'default'.</short>
+<short>
+Indicates whether the specified font name contains 'default'.
+</short>
 <descr/>
 <seealso/>
 </element>
 <element name="IsFontNameDefault.Result">
-<short><b>True</b> when AName contains 'default'.</short>
+<short>
+<b>True</b> when AName contains 'default'.
+</short>
 </element>
 <element name="IsFontNameDefault.AName">
-<short>Font name examined in the routine.</short>
+<short>
+Font name examined in the routine.
+</short>
+</element>
+
+<element name="AddCmdLineParamDesc">
+<short>
+Adds the help displayed for a command line parameter (and options) to the 
+specified TStringList instance.
+</short>
+<descr>
+<p>
+<var>AddCmdLineParamDesc</var> stores the values from <var>aParamOpts</var> and 
+<var>aDescr</var> as separate lines appended to the string list in 
+<var>aText</var>. Multiple values in aParamOpts are combined into a 
+comma-delimited list and added as a single line to AText. aDescr is appended to 
+aText as the last entry.
+</p>
+<p>
+No actions are performed in the routine if aParamOpts is an empty array (Length 
+= 0).
+</p>
+</descr>
+<version>
+Added in LCL 4.0.
+</version>
+<seealso/>
+</element>
+<element name="AddCmdLineParamDesc.aText">
+<short>
+TStringList instance where the formatted help output is stored.
+</short>
+</element>
+<element name="AddCmdLineParamDesc.aParamOpts">
+<short>
+Array with the list of parameters / options for the generated help content. 
+Normally contains the short and/or long variants of the command line switch(es) 
+and any argument(s).
+</short>
+</element>
+<element name="AddCmdLineParamDesc.aDescr">
+<short>
+Descriptive text for the specified parameter(s).
+</short>
 </element>
 
 </module>

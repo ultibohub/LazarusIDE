@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -310,6 +310,12 @@ property is changed in a <var>TNotebook</var> instance.
 <element name="TPage.Top" link="#lcl.controls.TControl.Top"/>
 <element name="TPage.Width" link="#lcl.controls.TControl.Width"/>
 <element name="TPage.Height" link="#lcl.controls.TControl.Height"/>
+<element name="TPage.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TPage.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TPage.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TPage.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TPage.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TPage.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TPage.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
 <element name="TPage.OnEnter" link="#lcl.controls.TWinControl.OnEnter"/>
 <element name="TPage.OnExit" link="#lcl.controls.TWinControl.OnExit"/>
@@ -322,12 +328,6 @@ property is changed in a <var>TNotebook</var> instance.
 <element name="TPage.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
 <element name="TPage.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TPage.OnResize" link="#lcl.controls.TControl.OnResize"/>
-<element name="TPage.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TPage.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TPage.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TPage.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TPage.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TPage.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TUNBPages">
 <short>Represents page names and page class instances for a notebook.</short>
@@ -511,7 +511,7 @@ Ordinal position in the page list where the page object was stored.
 <p>
 <var>Clear</var> is an overridden method which implements the abstract 
 virtual method declared in the <var>TStrings</var> ancestor. Clear is used to 
-remove all <var>TPage</var> instances stored in the the internal page list. 
+remove all <var>TPage</var> instances stored in the internal page list. 
 It calls the <var>Delete</var> method to remove the last TPage instance in 
 the list until all items in the list have been deleted.
 </p>
@@ -1029,6 +1029,10 @@ Inspector to maintain the values in the property.
 <element name="TNotebook.DragCursor" link="#lcl.controls.TControl.DragCursor"/>
 <element name="TNotebook.DragMode" link="#lcl.controls.TControl.DragMode"/>
 <element name="TNotebook.Enabled" link="#lcl.controls.TControl.Enabled"/>
+<element name="TNotebook.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TNotebook.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TNotebook.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TNotebook.TabStop" link="#lcl.control.TWinControl.TabStop"/>
 <element name="TNotebook.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TNotebook.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
 <element name="TNotebook.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
@@ -1046,10 +1050,6 @@ Inspector to maintain the values in the property.
 <element name="TNotebook.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TNotebook.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TNotebook.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
-<element name="TNotebook.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TNotebook.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TNotebook.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TNotebook.TabStop" link="#lcl.control.TWinControl.TabStop"/>
 
 <element name="TTimer">
 <short>
@@ -1425,7 +1425,7 @@ standard geometric shapes. TShapeType is the type used to implement the
 </p>
 </descr>
 <seealso>
-<link id="TShape.Shape"/>
+<link id="TCustomShape.Shape"/>
 </seealso>
 </element>
 <element name="TShapeType.stRectangle">
@@ -1502,67 +1502,134 @@ Draws a five-point star shape (center angle points down) in the client area
 for a TShape control.
 </short>
 </element>
-
-<element name="TShape">
+<element name="TShapeType.stPolygon">
 <short>
-<var>TShape</var> draws an arbitrary geometric shape.
+Draws a shape with user-specified vertices in the client area for a TShape 
+control.
+</short>
+</element>
+
+<element name="TShapePointsEvent">
+<short>
+Specifies an event handler used to get an array of user-specified vertices for 
+a polygonal shape in TShape,
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShape.OnShapePoints"/>
+<link id="#lazutils.graphtype.TPointArray">TPointArray</link>
+</seealso>
+</element>
+<element name=" TShapePointsEvent.Sender">
+<short>
+Object instance (TShape) for the event notification.
+</short>
+</element>
+<element name="TShapePointsEvent.Points">
+<short>
+Returns the TPoint instances for the vertices on a polygonal shape.
+</short>
+</element>
+<element name="TShapePointsEvent.Winding">
+<short>
+Returns <b>True</b> if Winding order was used for the TPoint instances in 
+Points.
+</short>
+</element>
+
+<element name="TCustomShape">
+<short>
+Defines a shaped control with an arbitrary geometric shape.
 </short>
 <descr>
 <p>
-<var>TShape</var> is a TGraphicControl descendant used to draw an arbitrary 
-geometric shape. It may be one of a series of standard shapes defined in the 
-<var>TShapeType</var> enumeration.
+<var>TCustomShape</var> is a <var>TGraphicControl</var> descendant used to draw 
+the control with an arbitrary geometric shape. The Shape property determines 
+which geometric shape is displayed, and can be one of a series of standard 
+shapes defined in the <var>TShapeType</var> enumeration. The Brush and Pen 
+properties control the fill and line attributes for the shaped control.
 </p>
 <p>
-It can be displayed using the <var>Paint</var> method, or the 
-<var>Brush</var> and <var>Pen</var> tools.
+TCustomShape is the base class for TShape. Do not create instances of 
+TCustomShape; use TShape instead.
 </p>
 </descr>
+<version>
+Added in LCL version 4.0 as the base class for TShape.
+</version>
 <seealso>
+<link id="TShape"/>
 <link id="TShapeType"/>
+<link id="#lcl.controls.TGraphicControl">TGraphicControl</link>
 </seealso>
 </element>
 
-<element name="TShape.FPen"/>
-<element name="TShape.FBrush"/>
-<element name="TShape.FShape"/>
+<!-- private -->
+<element name="TCustomShape.FPen"/>
+<element name="TCustomShape.FBrush"/>
+<element name="TCustomShape.FShape"/>
+<element name="TCustomShape.FBitmapCopy"/>
+<element name="TCustomShape.FOnShapeClick"/>
+<element name="TCustomShape.FOnShapePoints"/>
 
-<element name="TShape.SetBrush">
+<element name="TCustomShape.SetBrush">
 <short>Sets the value for the Brush property.</short>
 <descr/>
 <seealso>
-<link id="TShape.Brush"/>
+<link id="TCustomShape.Brush"/>
 </seealso>
 </element>
-<element name="TShape.SetBrush.Value">
+<element name="TCustomShape.SetBrush.Value">
 <short>New value for the property.</short>
 </element>
 
-<element name="TShape.SetPen">
+<element name="TCustomShape.SetPen">
 <short>Sets the value for the Pen property.</short>
 <descr/>
 <seealso>
-<link id="TShape.Pen"/>
+<link id="TCustomShape.Pen"/>
 </seealso>
 </element>
-<element name="TShape.SetPen.Value">
+<element name="TCustomShape.SetPen.Value">
 <short>New value for the property.</short>
 </element>
 
-<element name="TShape.SetShape">
+<element name="TCustomShape.SetShape">
 <short>Sets the value for the Shape property.</short>
 <descr/>
 <seealso>
-<link id="TShape.Shape"/>
+<link id="TCustomShape.Shape"/>
 </seealso>
 </element>
-<element name="TShape.SetShape.Value">
+<element name="TCustomShape.SetShape.Value">
 <short>New value for the property.</short>
 </element>
 
-<element name="TShape.WSRegisterClass" link="#lcl.lclclasses.TLCLComponent.WSRegisterClass"/>
+<element name="TCustomShape.SetOnShapePoints">
+<short>
+Updates the shaped control when a new value is assigned to the OnShapePoints 
+event handler.
+</short>
+<descr/>
+<seealso>
+<link id="TCustomShape.OnShapePoints"/>
+<link id="TShapePointsEvent"/>
+</seealso>
 
-<element name="TShape.GetControlClassDefaultSize">
+</element>
+<element name="TCustomShape.SetOnShapePoints.Value">
+<short>
+New value for the OnShapePoints event handler.
+</short>
+</element>
+
+<!-- protected -->
+<element name="TCustomShape.WSRegisterClass" link="#lcl.lclclasses.TLCLComponent.WSRegisterClass"/>
+
+<element name="TCustomShape.GetControlClassDefaultSize">
 <short>Gets the default size for instances of the control.</short>
 <descr>
 <p>
@@ -1579,38 +1646,283 @@ used to set the initial value in the <var>Bounds</var> for the control.
 <link id="#lcl.controls.TControl.GetControlClassDefaultSize">TControl.GetControlClassDefaultSize</link>
 </seealso>
 </element>
-<element name="TShape.GetControlClassDefaultSize.Result">
+<element name="TCustomShape.GetControlClassDefaultSize.Result">
 <short>
 TSize instance with the dimensions for instances of the control class.
 </short>
 </element>
 
-<element name="TShape.Create">
+<element name="TCustomShape.Click">
 <short>
-<var>Create</var> - constructor for <var>TShape</var>: calls inherited 
-<var>Create</var>, sets default styles and bounds, creates pen and brush.
+Performs actions needed when a mouse click event occurs on the shaped control.
 </short>
-<descr/>
+<descr>
+<p>
+<var>Click</var> is an overridden method in <var>TShape</var>. It calls the 
+inherited method (in TControl) to signal an assigned OnClick event handler, and/
+or execute and assigned Action when the control has been clicked. It extends 
+the method to signal the OnShapeClick event handler (when assigned) if the 
+mouse was positioned within the interior for the Shape on the control. 
+</p>
+<p>
+Click is activated (in the ancestor class) when the left mouse button is 
+released.
+</p>
+</descr>
 <seealso>
-<link id="#lcl.controls.TGraphicControl.Create">TGraphicControl.Create</link>
+<link id="TCustomShape.OnShapeClick"/>
+<link id="#lcl.controls.TControl.Click">TControl.Click</link>
+<link id="#lcl.controls.TControl.OnClick">TControl.OnClick</link>
 </seealso>
 </element>
-<element name="TShape.Create.TheOwner">
+
+<element name="TCustomShape.CMShapeHitTest">
+<short>
+Handles a CM_MASKHITTEST message for the control.
+</short>
+<descr>
+<p>
+Converts the parent screen coordinates in <var>Message</var> to client 
+coordinates for the control. It calls PtInShape and updates the Result member 
+in Message to indicate whether the mouse click occurred on the interior of the 
+shape on the control. 0 indicates that the mouse event was inside or on the 
+Shape. 1 indicates that the event was outside of the area for the Shape.
+</p>
+</descr>
+<seealso>
+<link id="TCustomShape.PtInShape"/>
+<link id="#lcl.controls.TControl.ParentToClient">TControl.ParentToClient</link>
+<link id="#lcl.controls.TCMHitTest">TCMHitTest</link>
+</seealso>
+</element>
+<element name="TCustomShape.CMShapeHitTest.Message">
+<short>
+Control message with the parent screen coordinates for the mouse event.
+</short>
+</element>
+
+<element name="TCustomShape.DrawToCanvas">
+<short>
+Draws the Shape for the control on the specified canvas.
+</short>
+<descr>
+<p>
+<var>DrawToCanvas</var> is a method used to draw the shaped control on the 
+TCanvas instance specified in the <var>ACanvas</var> argument. It calculates 
+the drawing area (TRect) needed using the control Width and Height, the width 
+of the Pen on the canvas, and the Shape for the control.
+</p>
+<p>
+The Brush style and color for the canvas are set in the calling routine. This 
+allows the same method to be used to draw either the content for the shaped 
+control or its Monochrome mask - depending on the settings in the canvas.
+</p>
+<p>
+DrawToCanvas calls methods in ACanvas to perform drawing operations needed for 
+the value in Shape. For example:
+</p>
+<dl>
+<dt>stRectangle, stSquare</dt>
+<dd>
+Calls the Rectangle method.
+</dd>
+<dt>stRoundRect, stRoundSquare</dt>
+<dd>
+Calls the RoundRect method.
+</dd>
+<dt>stCircle, stEllipse</dt>
+<dd>
+Calls the Ellipse method.
+</dd>
+<dt>stSquaredDiamond, stDiamond</dt>
+<dd>
+Allocates TPoint instances with the four (4) vertices needed for the shape and 
+calls the Polygon method.
+</dd>
+<dt>stTriangle, stTriangleDown, stTriangleLeft, stTriangleRight</dt>
+<dd>
+Allocates TPoint instances with the three (3) vertices needed for the shape and 
+calls the Polygon method.
+</dd>
+<dt>stStar, stStarDown</dt>
+<dd>
+Calculates the center point and radii needed to scale the width or height for 
+the shape. Allocates the elevent (11) vertices needed for the shape and calls 
+the Polyon method.
+</dd>
+<dt>stPolygon</dt>
+<dd>
+Signals the OnShapePoints event handler (when assigned) to get the vertices and 
+polygon winding for a user-specified or irregular polygonal shape. If the event 
+handler returns more than 2 vertices, the Polygon method is called using the 
+points. No actions are performed if 2 (or fewer points) are returned as 
+vertices for the polygon. Please note that the Shape is not drawn on the 
+control canvas at design-time; a rectangle with a dashed border and a red 'X' 
+are drawn to the corners of the designer surface.
+</dd>
+</dl>
+<p>
+DrawToCanvas is called from the UpdateMask and Paint methods.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShape.Shape"/>
+<link id="TCustomShape.Pen"/>
+<link id="TCustomShape.OnShapePoints"/>
+<link id="TCustomShape.UpdateMask"/>
+<link id="TCustomShape.Paint"/>
+<link id="#lcl.graphics.TCanvas">TCanvas</link>
+<link id="#lcl.controls.TControl.Width">TControl.Width</link>
+<link id="#lcl.controls.TControl.Height">TControl.Height</link>
+<link id="#rtl.classes.TRect">TRect</link>
+<link id="#rtl.classes.TPoint">TPoint</link>
+</seealso>
+</element>
+<element name="`TShape.DrawToCanvas.ACanvas">
+<short>
+TCanvas instance where the shaped control is drawn.
+</short>
+</element>
+
+<element name="TCustomShape.UpdateMask">
+<short>
+Updates the internal Monochrome bitmap used as a mask to detect mouse click 
+events on the shaped control.
+</short>
+<descr>
+<p>
+<var>UpdateMask</var> ensures that the internal TBitmap instance used in the 
+class is allocated and configured (when not already assigned). It is configured 
+as a Monochrome image where pixels outside of the area for the Shape use the 
+color clWhite. Pixels which are inside of (or on an edge) for the Shape use the 
+color clBlack.
+</p>
+<p>
+UpdateMask calls the DrawToCanvas method to draw the image for the shaped 
+control on the canvas for the bitmap.
+</p>
+<p>
+UpdateMask is called from the PtInShape method prior to checking where the 
+mouse pointer was located when a click event occurred.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShape.DrawToCanvas"/>
+<link id="TCustomShape.PtInShape"/>
+<link id="TCustomShape.Pen"/>
+<link id="#lcl.graphics.TCanvas">TCanvas</link>
+<link id="#lcl.graphics.TBitmap">TBitmap</link>
+<link id="#lcl.controls.TControl.Width">TControl.Width</link>
+<link id="#lcl.controls.TControl.Height">TControl.Height</link>
+</seealso>
+</element>
+
+<!-- public -->
+<element name="TCustomShape.Create">
+<short>
+Constructor for the class instance.
+</short>
+<descr>
+<p>
+<var>Create</var> is the overridden constructor for the class instance. It 
+calls the inherited constructor on entry to instantiate and configure the 
+control including its Canvas. It sets the initial bounds for the control using 
+the default size for the class type. Create allocates resources needed for the 
+Pen and Brush in the control, and assigns the OnChange handlers notified when 
+the members have been changed.
+</p>
+</descr>
+<seealso>
+<link id="TCustomShape.Brush"/>
+<link id="TCustomShape.Pen"/>
+<link id="TCustomShape.GetControlClassDefaultSize"/>
+<link id="#lcl.controls.TGraphicControl.Canvas">TGraphicControl.Canvas</link>
+<link id="#lcl.controls.TGraphicControl.Create">TGraphicControl.Create</link>
+<link id="#lcl.controls.TControl.ControlStyle">TControl.ControlStyle</link>
+</seealso>
+</element>
+<element name="TCustomShape.Create.TheOwner">
 <short>Owner of the class instance.</short>
 </element>
 
-<element name="TShape.Destroy">
+<element name="TCustomShape.Destroy">
 <short>
-<var>Destroy</var> - destructor for <var>TShape</var>: frees pen and brush, 
-then calls inherited <var>Destroy</var>.
+Destructor for the class instance.
 </short>
-<descr/>
+<descr>
+<p>
+<var>Destroy</var> is the overridden destructor for the class instance. It 
+ensures that resources allocated in the class instance, including the Pen and 
+Brush, are freed. It calls the inherited destructor prior to exit to free the 
+Canvas and other resources allocated in ancestor classes.
+</p>
+</descr>
 <seealso>
+<link id="TCustomShape.Brush"/>
+<link id="TCustomShape.Pen"/>
+<link id="#lcl.controls.TGraphicControl.Canvas">TGraphicControl.Canvas</link>
 <link id="#lcl.controls.TGraphicControl.Destroy">TGraphicControl.Destroy</link>
+<link id="#lcl.controls.TControl.Destroy">TControl.Destroy</link>
 </seealso>
 </element>
 
-<element name="TShape.Paint">
+<element name="TCustomShape.PtInShape">
+<short>
+Determines whether the coordinates for the specified Point are within the area 
+for the shaped control.
+</short>
+<descr>
+<p>
+<var>PtInShape</var> uses a temporary TBitmap instance to determine whether the 
+coordinates in P are within the interior of the shaped control. The Bitmap 
+contains a monochrome variant of the filled shape where the pixels inside the 
+shape have the color clBlack. Pixels outside of the filled interior area have 
+the mask color for the monochrome bitmap.
+</p>
+<p>
+The return value is <b>True</b> if the pixel located at the X and Y coordinates 
+in <var>P</var> has the color clBlack. False indicates that the parent control 
+(or a partially obstructed sibling control) was the target under the specified 
+mouse position.
+</p>
+<p>
+PtInShape is used in the Click method to determine whether an assigned 
+OnShapeClick event handler is signalled for the mouse position on the control. 
+It is also called when CMShapeHitTest handles a TCMHittest message received for 
+the control design surface.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShape.Click"/>
+<link id="TCustomShape.OnShapeClick"/>
+<link id="TCustomShape.CMShapeHitTest"/>
+<link id="#lcl.graphics.TBitmap">TBitmap</link>
+<link id="#rtl.classes.TPoint">TPoint</link>
+</seealso>
+</element>
+<element name="TCustomShape.PtInShape.Result">
+<short>
+Returns <b>True</b> if the specified coordinates are within the interior of the 
+shape.
+</short>
+</element>
+<element name="TCustomShape.PtInShape.P">
+<short>
+TPoint instance with the horizontal (X) and vertical (Y) coordinates tested in 
+the method.
+</short>
+</element>
+
+<element name="TCustomShape.Paint">
 <short>Draws the shape for the control on its Canvas.</short>
 <descr>
 <p>
@@ -1626,49 +1938,300 @@ assigned in the class instance.
 </p>
 </descr>
 <seealso>
-<link id="TShape.Pen"/>
-<link id="TShape.Brush"/>
+<link id="TCustomShape.Pen"/>
+<link id="TCustomShape.Brush"/>
 <link id="TGraphicControl.Canvas"/>
 <link id="TShapeType"/>
 <link id="#lcl.controls.TGraphicControl.Paint">TGraphicControl.Paint</link>
 </seealso>
 </element>
 
-<element name="TShape.StyleChanged">
+<element name="TCustomShape.StyleChanged">
 <short>
-<var>StyleChanged</var> - method for handling change of style by Sender.
+Implements an OnChange event handler signalled when the Brush or the Pen on the 
+control has been changed.
 </short>
-<descr/>
-<seealso/>
+<descr>
+<p>
+<var>StyleChanged</var> is a method used to perform actions needed when the 
+Brush or Pen for the shaped control has been changed. StyleChanged is assigned 
+to the OnChanged event handler (in both Brush and Pen) in the Create 
+constructor.
+</p>
+<p>
+<var>Sender</var> contains the object instance for the event notification, but 
+it is not used in the implementation.
+</p>
+<p>
+StyleChanged ensures that the control has an assigned Parent with a valid 
+Handle before calling Invalidate to redraw the control. No actions are 
+performed in the handler if Parent is <b>Nil</b>, when the control is not 
+Visible, or at design-time.
+</p>
+</descr>
+<seealso>
+<link id="TCustomShape.Brush"/>
+<link id="TCustomShape.Pen"/>
+<link id="TCustomShape.Create"/>
+<link id="#lcl.graphics.TBrush">TBrush</link>
+<link id="#lcl.graphics.TPen">TPen</link>
+<link id="#lcl.controls.TControl.Parent">TControl.Parent</link>
+<link id="#lcl.controls.TControl.Visible">TControl.Visible</link>
+<link id="#lcl.controls.TControl.Invalidate">TControl.Invalidate</link>
+<link id="#rtl.classes.TComponent.ComponentState">TComponent.ComponentState</link>
+</seealso>
 </element>
-<element name="TShape.StyleChanged.Sender">
+<element name="TCustomShape.StyleChanged.Sender">
 <short>Object for the event notification.</short>
 </element>
 
+<element name="TCustomShape.Brush">
+<short>
+The Brush used to fill the shaped control.
+</short>
+<descr>
+<p>
+<var>Brush</var> is a <var>TBrush</var> property which contains the attributes 
+used to fill the shaped control. Its Color property can be used to control the 
+fill color for the shaped control. Its Style property determines whether the 
+fill Color is opaque or transparent.
+</p>
+<p>
+Resources allocated to Brush are managed by the class instance in the Create 
+and Destroy methods. Setting a new value for the property causes Invalidate to 
+be called to redraw the control.
+</p>
+<p>
+Brush and Pen are used in the DrawToCanvas method, and in UpdateMask when the 
+internal mask image is created for the shaped control.
+</p>
+<p>
+Use Pen to set attributes applied to the lines drawn for the Shape on the 
+control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomShape.Pen"/>
+<link id="TCustomShape.Create"/>
+<link id="TCustomShape.Destroy"/>
+<link id="TCustomShape.DrawToCanvas"/>
+<link id="TCustomShape.UpdateMask"/>
+<link id="#lcl.graphics.TBrush">TBrush</link>
+<link id="#lcl.controls.TControl.Invalidate">TControl.Invalidate</link>
+</seealso>
+</element>
+
+<element name="TCustomShape.Pen">
+<short>
+The Pen used to draw lines on the shaped control.
+</short>
+<descr>
+<p>
+Pen is a TPen property which contains the attributes used to draw lines for the 
+shape on the control. Its Color property can be used to control the fill color 
+for the lines. Its Style property determines the line drawing style like solid, 
+dotted, or dashed.
+</p>
+<p>
+Resources allocated to Pen are managed by the class instance in the Create 
+and Destroy methods. Setting a new value for the property causes Invalidate to 
+be called to redraw the control.
+</p>
+<p>
+Brush and Pen are used in the DrawToCanvas method, and in UpdateMask when the 
+internal mask image is created for the shaped control.
+</p>
+<p>
+Use Brush to set attributes like the fill color and opacity for the Shape on 
+the control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomShape.Brush"/>
+<link id="TCustomShape.Create"/>
+<link id="TCustomShape.Destroy"/>
+<link id="TCustomShape.DrawToCanvas"/>
+<link id="TCustomShape.UpdateMask"/>
+<link id="#lcl.graphics.TPen">TPen</link>
+<link id="#lcl.controls.TControl.Invalidate">TControl.Invalidate</link>
+</seealso>
+</element>
+
+<element name="TCustomShape.Shape">
+<short>
+Indicates the geometric shape drawn on the shaped control.
+</short>
+<descr>
+<p>
+<var>Shape</var> is a <var>TShapeType</var> property that specifies the 
+geometric shape drawn on the control. Shape is used in the DrawToCanvas method. 
+It and determines the number of vertices needed for the shape, and their 
+locations on the control. It also determines the drawing operations performed 
+to draw the Shape on the control Canvas. For example:
+</p>
+<dl>
+<dt>stRectangle, stSquare</dt>
+<dd>
+Calls the Rectangle method for the canvas.
+</dd>
+<dt>stRoundRect, stRoundSquare</dt>
+<dd>
+Calls the RoundRect method for the canvas.
+</dd>
+<dt>stCircle, stEllipse</dt>
+<dd>
+Calls the Ellipse method for the canvas.
+</dd>
+<dt>stSquaredDiamond, stDiamond</dt>
+<dd>
+Allocates TPoint instances with the four (4) vertices needed for the shape and 
+calls the Polygon method for the canvas.
+</dd>
+<dt>stTriangle, stTriangleDown, stTriangleLeft, stTriangleRight</dt>
+<dd>
+Allocates TPoint instances with the three (3) vertices needed for the shape and 
+calls the Polygon method for the canvas.
+</dd>
+<dt>stStar, stStarDown</dt>
+<dd>
+Calculates the center point and radii needed to scale the width or height for 
+the shape. Allocates the elevent (11) vertices needed for the shape and calls 
+the Polyon method for the canvas.
+</dd>
+<dt>stPolygon</dt>
+<dd>
+Signals the OnShapePoints event handler (when assigned) to get the vertices and 
+polygon winding for a user-specified or irregular polygonal shape. Line 
+segments are drawn betwwen the vertices to render the shape for the control.
+</dd>
+</dl>
+<p>
+Use Brush and Pen to control the color and drawing style for the background and 
+lines on the shaped control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomShape.DrawToCanvas"/>
+<link id="TCustomShape.OnShapePoints"/>
+<link id="TCustomShape.Brush"/>
+<link id="TCustomShape.Pen"/>
+<link id="TShapeType"/>
+<link id="#lcl.graphics.TCanvas">TCanvas</link>
+</seealso>
+</element>
+
+<element name="TCustomShape.OnShapeClick">
+<short>
+Event handler signalled for a mouse click within the shaped control.
+</short>
+<descr>
+<p>
+<var>OnShapeClick</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled if a mouse click occurs on the shaped control.
+</p>
+<p>
+OnShapeClick is signalled (when assigned) from the Click method, and occurs 
+after the OnClick handler has been signalled and an optional Action assigned to 
+the control has been executed. The event handler is <b>not</b> signalled if 
+PtInShape indicates that the mouse click did not occur within the interior
+of the shape on the control.
+</p>
+<p>
+An application must implement and assign a routine to the handler to respond to 
+the event notification.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShape.Click"/>
+<link id="TCustomShape.PtInShape"/>
+<link id="#lcl.controls.TControl.OnClick">TControl.OnClick</link>
+<link id="#lcl.controls.TControl.Action">TControl.Action</link>
+<link id="#rtl.classes.TNotifyEvent">TNotifyEvent</link>
+</seealso>
+</element>
+
+<element name="TCustomShape.OnShapePoints">
+<short>
+Event handler signalled to get a custom vertices for the shape drawn on the 
+control.
+</short>
+<descr>
+<p>
+<var>OnShapePoints</var> is a <var>TShapePointsEvent</var> property with the 
+event handler signalled to get user-specified vertices for a polygonal Shape on 
+the control. It allows a custom shape to be defined for the control, or an 
+irregular variant of one of the predefined values in TShapeType. For example: a 
+parallelogram, an isocoles triangle, or an octagon.
+</p>
+<p>
+An application can implement and assign a handler routine using the signature 
+in TShapePointsEvent to respond to the event notification. The handler can 
+poulate its array with the number of TPoint instances needed for the vertices 
+on the polygon. It can also indicate whether Winding order was used for the 
+returned vertices.
+</p>
+<p>
+Changing the routine assigned to the handler causes the control to be redrawn.
+</p>
+<p>
+OnShapePoints is signalled (when assigned) from the DrawToCanvas method when 
+the Shape property is set to stPolygon.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShape.Shape"/>
+<link id="TCustomShape.DrawToCanvas"/>
+<link id="TShapePointsEvent"/>
+<link id="TShapeType"/>
+<link id="#lazutils.graphtype.TPointArray">TPointArray</link>
+</seealso>
+</element>
+
+<element name="TShape">
+<short>
+Implements a shaped control with an arbitrary geometric shape.
+</short>
+<descr>
+<p>
+<var>TShape</var> is a <var>TCustomShape</var> descendant 
+used to draw the control with an arbitrary geometric shape. The Shape property 
+determines which geometric shape is displayed, and can be one of a series of 
+standard shapes defined in the <var>TShapeType</var> enumeration. The Brush and 
+Pen properties control the fill and line attributes for the shaped control.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to be a TCustomShape descendant.
+</version>
+<seealso>
+<link id="TCustomShape"/>
+<link id="TShapeType"/>
+</seealso>
+</element>
+
+<!-- published -->
 <element name="TShape.Align" link="#lcl.controls.TControl.Align"/>
 <element name="TShape.Anchors" link="#lcl.controls.TControl.Anchors"/>
 <element name="TShape.BorderSpacing" link="#lcl.controls.TControl.BorderSpacing"/>
-
-<element name="TShape.Brush">
-<short>The Brush to be used for coloring this shape.</short>
-<descr/>
-<seealso/>
-</element>
-
+<element name="TShape.Brush" link="#lcl.extctrls.TCustomShape.Brush"/>
 <element name="TShape.Constraints" link="#lcl.controls.TControl.Constraints"/>
 <element name="TShape.DragCursor" link="#lcl.controls.TControl.DragCursor"/>
 <element name="TShape.DragKind" link="#lcl.controls.TControl.DragKind"/>
 <element name="TShape.DragMode" link="#lcl.controls.TControl.DragMode"/>
 <element name="TShape.Enabled" link="#lcl.controls.TControl.Enabled"/>
 <element name="TShape.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-
-<element name="TShape.Pen">
-<short>The Pen to be used for drawing this shape.</short>
-<descr/>
-<seealso/>
-</element>
-
+<element name="TShape.Pen" link="#lcl.extctrls.TCustomShape.Pen"/>
+<element name="TShape.Shape" link="#lcl.extctrls.TCustomShape.Shape"/>
+<element name="TShape.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TShape.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TShape.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
+<element name="TShape.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TShape.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
 <element name="TShape.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
 <element name="TShape.OnEndDock" link="#lcl.controls.TControl.OnEndDock"/>
@@ -1688,23 +2251,8 @@ assigned in the class instance.
 <element name="TShape.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TShape.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
 <element name="TShape.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
-
-<element name="TShape.Shape">
-<short>Indicates the geometric shape drawn in the control.</short>
-<descr>
-<p>
-<var>Shape</var> is a <var>TShapeType</var> property that specifies the 
-geometric shape drawn in the control. See <link id="TShapeType"/> for the 
-values that can be assigned to the property.
-</p>
-</descr>
-<seealso>
-<link id="TShapeType"/>
-</seealso>
-</element>
-
-<element name="TShape.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TShape.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TShape.OnShapeClick" link="#lcl.extctrls.TCustomShape.OnShapeClick"/>
+<element name="TShape.OnShapePoints" link="#lcl.extctrls.TCustomShape.OnShapePoints"/>
 
 <element name="TResizeStyle">
 <short>
@@ -2866,6 +3414,15 @@ size can be adjusted using the sizing bars and with the
 <element name="TSplitter.DoubleBuffered" link="#lcl.controls.TWinControl.DoubleBuffered"/>
 <element name="TSplitter.Height" link="#lcl.controls.TControl.Height"/>
 <element name="TSplitter.MinSize" link="#lcl.extctrls.TCustomSplitter.MinSize"/>
+<element name="TSplitter.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TSplitter.ParentDoubleBuffered" link="#lcl.controls.TWinControl.ParentDoubleBuffered"/>
+<element name="TSplitter.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TSplitter.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TSplitter.ResizeAnchor" link="#lcl.extctrls.TCustomSplitter.ResizeAnchor"/>
+<element name="TSplitter.ResizeStyle" link="#lcl.extctrls.TCustomSplitter.ResizeStyle"/>
+<element name="TSplitter.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TSplitter.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TSplitter.Width" link="#lcl.controls.TControl.Width"/>
 <element name="TSplitter.OnCanOffset" link="#lcl.extctrls.TCustomSplitter.OnCanOffset"/>
 <element name="TSplitter.OnCanResize" link="#lcl.extctrls.TCustomSplitter.OnCanResize"/>
 <element name="TSplitter.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
@@ -2877,15 +3434,6 @@ size can be adjusted using the sizing bars and with the
 <element name="TSplitter.OnMouseWheelLeft" link="#lcl.controls.TControl.OnMouseWheelLeft"/>
 <element name="TSplitter.OnMouseWheelRight" link="#lcl.controls.TControl.OnMouseWheelRight"/>
 <element name="TSplitter.OnPaint" link="#lcl.controls.TCustomControl.OnPaint"/>
-<element name="TSplitter.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TSplitter.ParentDoubleBuffered" link="#lcl.controls.TWinControl.ParentDoubleBuffered"/>
-<element name="TSplitter.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TSplitter.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TSplitter.ResizeAnchor" link="#lcl.extctrls.TCustomSplitter.ResizeAnchor"/>
-<element name="TSplitter.ResizeStyle" link="#lcl.extctrls.TCustomSplitter.ResizeStyle"/>
-<element name="TSplitter.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TSplitter.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TSplitter.Width" link="#lcl.controls.TControl.Width"/>
 
 <element name="TPaintBox">
 <short>
@@ -3754,6 +4302,16 @@ Use TImageList when a list of images with scaling capabilities is needed.
 <element name="TImage.DragCursor" link="#lcl.controls.TControl.DragCursor"/>
 <element name="TImage.DragMode" link="#lcl.controls.TControl.DragMode"/>
 <element name="TImage.Enabled" link="#lcl.controls.TControl.Enabled"/>
+<element name="TImage.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TImage.Picture" link="#lcl.extctrls.TCustomImage.Picture"/>
+<element name="TImage.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TImage.Proportional" link="#lcl.extctrls.TCustomImage.Proportional"/>
+<element name="TImage.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TImage.Stretch" link="#lcl.extctrls.TCustomImage.Stretch"/>
+<element name="TImage.StretchOutEnabled" link="#lcl.extctrls.TCustomImage.StretchOutEnabled"/>
+<element name="TImage.StretchInEnabled" link="#lcl.extctrls.TCustomImage.StretchInEnabled"/>
+<element name="TImage.Transparent" link="#lcl.extctrls.TCustomImage.Transparent"/>
+<element name="TImage.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TImage.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TImage.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TImage.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
@@ -3777,16 +4335,6 @@ Use TImageList when a list of images with scaling capabilities is needed.
 <element name="TImage.OnPaintBackground" link="#lcl.extctrls.TCustomImage.OnPaintBackground"/>
 <element name="TImage.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TImage.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
-<element name="TImage.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TImage.Picture" link="#lcl.extctrls.TCustomImage.Picture"/>
-<element name="TImage.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TImage.Proportional" link="#lcl.extctrls.TCustomImage.Proportional"/>
-<element name="TImage.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TImage.Stretch" link="#lcl.extctrls.TCustomImage.Stretch"/>
-<element name="TImage.StretchOutEnabled" link="#lcl.extctrls.TCustomImage.StretchOutEnabled"/>
-<element name="TImage.StretchInEnabled" link="#lcl.extctrls.TCustomImage.StretchInEnabled"/>
-<element name="TImage.Transparent" link="#lcl.extctrls.TCustomImage.Transparent"/>
-<element name="TImage.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TBevelStyle">
 <short>
@@ -4208,6 +4756,10 @@ specify the radio buttons required for the grouped control.
 <short>Object instance for the event notification.</short>
 </element>
 
+<element name="TCustomRadioGroup.GetButton"/>
+<element name="TCustomRadioGroup.GetButton.Result"/>
+<element name="TCustomRadioGroup.GetButton.Index"/>
+
 <element name="TCustomRadioGroup.ItemEnter">
 <short>
 Implements the OnEnter event handler for radio buttons in the group.
@@ -4352,6 +4904,41 @@ Implements the OnResize event handler assigned to radio buttons in the group.
 </element>
 <element name="TCustomRadioGroup.SetAutoFill.AValue">
 <short>New value for the property.</short>
+</element>
+
+<element name="TCustomRadioGroup.Buttons">
+<short>
+Provides indexed access to the radio buttons on the group box control.
+</short>
+<descr>
+<p>
+<var>Buttons</var> is a <var>TRadioButton</var> property which allows access to 
+a radio button on the group box by its ordinal position in Items.
+</p>
+<p>
+Use ItemIndex to get the currently selected radio button on the group box.
+</p>
+<p>
+For example:
+</p>
+<code>
+AChecked := (AGroupBox.ItemIndex &lt;&gt; -1) and 
+  AGroupBox.Buttons[AGroupBox.ItemIndex].Checked;
+</code>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomRadioGroup.ItemIndex"/>
+<link id="TCustomRadioGroup.Items"/>
+<link id="#lcl.stdctrls.TRadioButton">TRadioButton</link>
+</seealso>
+</element>
+<element name="TCustomRadioGroup.Buttons.Index">
+<short>
+Ordinal position for the radio button returned as the property value. Must be in the range 0..Items.Count-1.
+</short>
 </element>
 
 <element name="TCustomRadioGroup.SetColumnLayout">
@@ -5018,6 +5605,17 @@ boxes, and determine their order and layout using the <var>Rows</var>,
 </seealso>
 </element>
 
+<element name="TRadioGroup.ParentBackground" link="#lcl.controls.TWinControl.ParentBackground"/>
+<element name="TRadioGroup.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TRadioGroup.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TRadioGroup.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TRadioGroup.ParentDoubleBuffered" link="#lcl.controls.TWinControl.DoubleBuffered"/>
+<element name="TRadioGroup.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TRadioGroup.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TRadioGroup.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TRadioGroup.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TRadioGroup.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TRadioGroup.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TRadioGroup.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TRadioGroup.OnClick" link="#lcl.extctrls.TCustomRadioGroup.OnClick"/>
 <element name="TRadioGroup.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
@@ -5043,17 +5641,6 @@ boxes, and determine their order and layout using the <var>Rows</var>,
 <element name="TRadioGroup.OnSelectionChanged" link="#lcl.extctrls.TCustomRadioGroup.OnSelectionChanged"/>
 <element name="TRadioGroup.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TRadioGroup.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TRadioGroup.ParentBackground" link="#lcl.controls.TWinControl.ParentBackground"/>
-<element name="TRadioGroup.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TRadioGroup.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TRadioGroup.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TRadioGroup.ParentDoubleBuffered" link="#lcl.controls.TWinControl.DoubleBuffered"/>
-<element name="TRadioGroup.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TRadioGroup.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TRadioGroup.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TRadioGroup.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TRadioGroup.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TRadioGroup.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TCheckGroupClicked">
 <short>
@@ -5096,6 +5683,10 @@ the columns first, or across the rows first.
 <element name="TCustomCheckGroup.FColumns"/>
 <element name="TCustomCheckGroup.FOnItemClick"/>
 <element name="TCustomCheckGroup.FUpdatingItems"/>
+
+<element name="TCustomCheckGroup.GetButton"/>
+<element name="TCustomCheckGroup.GetButton.Result"/>
+<element name="TCustomCheckGroup.GetButton.Index"/>
 
 <element name="TCustomCheckGroup.GetChecked">
 <short>Gets the value for the indexed Checked property.</short>
@@ -5569,6 +6160,43 @@ AutoFill is set to <b>True</b> in the <var>Create</var> constructor.
 <seealso/>
 </element>
 
+<element name="TCustomCheckGroup.Buttons">
+<short>
+Provides indexed access to the check boxes on the group box control.
+</short>
+<descr>
+<p>
+<var>Buttons</var> a <var>TCheckBox</var> property which provides indexed 
+access to the check boxes on the group box control. Values in the property are 
+accessed by their ordinal position in the Items.
+</p>
+<p>
+Use Items to access the captions displayed on each of the check box controls.
+</p>
+<p>
+Use Checked to access the Boolean state for each of the Items.
+</p>
+<p>
+Use CheckEnabled to read or write the value for the Enabled property in each of 
+the check box controls.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomCheckGroup.Items"/>
+<link id="TCustomCheckGroup.Checked"/>
+<link id="TCustomCheckGroup.CheckEnabled"/>
+<link id="#lcl.stdctrls.TCheckBox">TCheckBox</link>
+</seealso>
+</element>
+<element name="TCustomCheckGroup.Buttons.Index">
+<short>
+Ordinal position for the check box returned as the property value.
+</short>
+</element>
+
 <element name="TCustomCheckGroup.Items">
 <short>
 String list with the captions for the check boxes in the grouped edit control.
@@ -5596,24 +6224,49 @@ and provides access to values in <var>Checked</var> and
 </element>
 
 <element name="TCustomCheckGroup.Checked">
-<short>Whether an individual entry in the list is <var>Checked</var>.</short>
+<short>
+Controls whether an individual check box in the group is in the checked state.
+</short>
 <descr>
 <p>
 <var>Checked</var> is an indexed <var>Boolean</var> property used to read or 
 write the state for a check box at the ordinal position specified in 
-<var>Index</var>.
+<var>Index</var>. Index must be in the range <b>0..Count-1</b>. An exception is 
+raised if an invalid index position is specified.
+</p>
+<p>
+The value is True if the Checked property for the specified item is set. The 
+OnClick event handler for the check box is not signalled when the checked state 
+is changed using the property.
+</p>
+<p>
+Use CheckEnabled to control whether a specific check box is enabled, and can 
+toggle the value in its Checked property.
+</p>
+<p>
+Use Buttons to access the TCheckBox controls for the captions in Items.
 </p>
 </descr>
-<seealso/>
+<errors>
+Raises an exception with the message <var>rsIndexOutOfBounds</var> if an 
+invalid index position is specified.
+</errors><seealso>
+<link id="TCustomCheckGroup.CheckEnabled"/>
+<link id="TCustomCheckGroup.Buttons"/>
+<link id="TCustomCheckGroup.Items"/>
+<link id="TCustomCheckGroup.OnItemClick"/>
+<link id="#lcl.stdctrls.TCheckBox.OnClick">TCheckBox.OnClick</link>
+</seealso>
 </element>
 <element name="TCustomCheckGroup.Checked.Index">
-<short>Ordinal position in Items for the requested check box.</short>
+<short>
+Ordinal position in Items for the requested check box.
+</short>
 </element>
 
 <element name="TCustomCheckGroup.CheckEnabled">
 <short>
-<var>CheckEnabled</var> - whether a given (indexed) entry in the list is 
-allowed to be checked.
+Indicates whether a check box control in the group is enabled or disabled.
 </short>
 <descr>
 <p>
@@ -5632,14 +6285,22 @@ Use the <var>Checked</var> property to determine if a check box has its
 Use <var>Items</var> to maintain the Captions for the check boxes displayed 
 in the grouped edit control.
 </p>
+<p>
+Use Buttons to access the TCheckBox controls for the captions in Items.
+</p>
 </descr>
+<errors>
+Raises an exception with the message <var>rsIndexOutOfBounds</var> if an 
+invalid index position is specified.
+</errors>
 <seealso>
 <link id="TCustomCheckGroup.Checked"/>
+<link id="TCustomCheckGroup.Buttons"/>
 <link id="TCustomCheckGroup.Items"/>
 </seealso>
 </element>
 <element name="TCustomCheckGroup.CheckEnabled.Index">
-<short>Ordinal position for the check box examined in the method.</short>
+<short>Ordinal position for the check box accessed in the method.</short>
 </element>
 
 <element name="TCustomCheckGroup.Columns">
@@ -5792,6 +6453,18 @@ determine their order and layout.
 </descr>
 </element>
 
+<element name="TCheckGroup.ParentBackground" link="#lcl.controls.TWinControl.ParentBackground"/>
+<element name="TCheckGroup.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TCheckGroup.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TCheckGroup.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TCheckGroup.ParentDoubleBuffered" link="#lcl.controls.TWinControl.ParentDoubleBuffered"/>
+<element name="TCheckGroup.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TCheckGroup.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TCheckGroup.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TCheckGroup.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TCheckGroup.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TCheckGroup.Visible" link="#lcl.controls.TControl.Visible"/>
+
 <element name="TCheckGroup.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TCheckGroup.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TCheckGroup.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
@@ -5815,20 +6488,11 @@ determine their order and layout.
 <element name="TCheckGroup.OnResize" link="#lcl.controls.TControl.OnResize"/>
 <element name="TCheckGroup.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TCheckGroup.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TCheckGroup.ParentBackground" link="#lcl.controls.TWinControl.ParentBackground"/>
-<element name="TCheckGroup.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TCheckGroup.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TCheckGroup.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TCheckGroup.ParentDoubleBuffered" link="#lcl.controls.TWinControl.ParentDoubleBuffered"/>
-<element name="TCheckGroup.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TCheckGroup.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TCheckGroup.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TCheckGroup.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TCheckGroup.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TCheckGroup.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TBoundLabel">
-<short>Implements a label bound to another control.</short>
+<short>
+Implements a label bound to another control.
+</short>
 <descr>
 <p>
 <var>TBoundLabel</var> is a <var>TCustomLabel</var> descendant which 
@@ -5837,36 +6501,74 @@ implement the <var>EditLabel</var> property in <var>TCustomLabeledEdit</var>
 and <var>TLabeledEdit</var>.
 </p>
 <p>
-Use <var>Caption</var> to assign the text displayed in the label. Use 
-<var>Layout</var> to specify the text alignment used for the Caption value.
+Use <var>Caption</var> to assign the text displayed in the label. An 
+accelerator key can be specified in Caption to activate the control to which it 
+is bound.
 </p>
 <p>
 The <var>FocusControl</var> property specifies the control given focus when a 
-Dialog accelerator key or other input event in the class is handled. Use one 
-of the <b>AnchorSide*</b> properties to specify the edge anchored to the 
-FocusControl.
+Dialog accelerator key or other input event in the class is handled. The 
+<b>AnchorSide*</b> properties indicate the edge anchored to the FocusControl.
 </p>
 <p>
-Other than a constructor, the class does not have any new methods or event 
-handlers.
+Use <var>Alignment</var> and <var>Layout</var> to specify the horizontal and 
+vertical alignment used for the label Caption. Values in these properties may 
+be ignored (in the implementing control) if they do not apply to the position 
+for the bound label relative to its associated control. Alignment does not 
+apply when the label is positioned on the left or right of its associated 
+control. Layout does not apply when the label is positioned above or below its 
+associated control.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to include the Alignment and Layout properties.
+</version>
 <seealso>
-<link id="TCustomLabel"/>
-<link id="TCustomLabeledEdit"/>
+<link id="TBoundLabel.Alignment"/>
+<link id="TBoundLabel.Layout"/>
+<link id="TBoundLabel.FocusControl"/>
+<link id="TBoundLabel.Caption"/>
+<link id="TCustomLabeledEdit.EditLabel"/>
+<link id="TCustomLabeledEdit.LabelPosition"/>
 <link id="TLabeledEdit"/>
+<link id="#lcl.stdctrls.TCustomLabel">TCustomLabel</link>
 </seealso>
 </element>
 
 <element name="TBoundLabel.Create">
 <short>Constructor for the class instance.</short>
 <descr>
+<p>
 <var>Create</var> is the constructor for <var>TBoundLabel</var>. It calls the 
 inherited <var>Create</var> method, and makes itself a SubComponent of the 
-Owner. The Caption in the control is changed to the Name in the Owner.
+Owner. The default values for the following properties are set:
+</p>
+<dl>
+<dt>Alignment</dt>
+<dd>
+Set to taLeftJustify to align text to the left in the label.
+</dd>
+<dt>Layout</dt>
+<dd>
+Set to tlCenter to center the text vertically on the label. The top of the 
+label is determined using the height for the control to which it is bound.
+</dd>
+</dl>
+<p>
+The Caption for the label is changed to the value from the Name property in the 
+Owner control.
+</p>
 </descr>
+<version>
+Modified in LCL version 4.0 to set default values for the Alignment and Layout 
+properties.
+</version>
 <seealso>
+<link id="TBoundLabel.Alignment"/>
+<link id="TBoundLabel.Caption"/>
+<link id="TBoundLabel.Layout"/>
 <link id="#lcl.stdctrls.TCustomLabel.Create">TCustomLabel.Create</link>
+<link id="#rtl.classes.TComponent.SetSubComponent">TComponent.SetSubComponent</link>
 </seealso>
 </element>
 <element name="TBoundLabel.Create.TheOwner">
@@ -5875,15 +6577,77 @@ Owner. The Caption in the control is changed to the Name in the Owner.
 
 <element name="TBoundLabel.FocusControl">
 <short>
-<var>FocusControl</var> is the control to receive focus when the label is 
-activated.
+Control focused when the accelerator key for the label is detected.
 </short>
 <descr>
 <p>
-FocusControl also receives key messages in the DialogChar method.
+<var>FocusControl</var> is a public <var>TWinControl</var> property in 
+<var>TBoundLabel</var>. A label control cannot receive the input focus (it is 
+read-only), but can display an accelerator key indicator, just like a menu 
+entries. A windowed control (Edit...) can receive focus, but cannot indicate an 
+accelerator key.
+</p>
+<p>
+An accelerator key is designated using an Ampersand '&amp;' in the label 
+Caption, immediately preceding the character to be used as the accelerator key. 
+The marked character appears with an underline on the screen when ShowAccelChar 
+is set to <b>True</b>.
+</p>
+<p> 
+FocusControl receives key messages in the DialogChar method.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="#lcl.stdctrls.TCustomLabel.DialogChar">TCustomLabel.DialogChar</link>
+<link id="#lcl.stdctrls.TCustomLabel.FocusControl">TCustomLabel.FocusControl</link>
+<link id="#lcl.stdctrls.TCustomLabel.ShowAccelChar">TCustomLabel.ShowAccelChar</link>
+</seealso>
+</element>
+
+<element name="TBoundLabel.Alignment">
+<short>
+Horizontal alignment for the Caption displayed on the bound label.
+</short>
+<descr>
+<p>
+<var>Alignment</var> is a published <var>TAlignment</var> property in 
+<var>TBoundLabel</var> which controls how Caption text is aligned horizontally 
+on the label.
+</p>
+<p>
+The default value for Alignment is taCenter as assigned in the Create 
+constructor. Please note that this is different than the default property value 
+(taLeftJustify) used in the TCustomLabel ancestor.
+</p>
+<p>
+See <link id="#rtl.classes.TAlignment">TAlignment</link> for the values 
+allowed in the property and their meanings.
+</p>
+<p>
+The property value is used when it is relevant to the position for the bound 
+label relative to its FocusControl. In short, when the bound label appears 
+above or below the FocusControl. The property value is not used when the bound 
+label is positioned to the left or right of the FocusControl; the label width 
+is auto-sized in this use case. See 
+<link id="TCustomLabeledEdit.LabelPosition"/> for more information.
+</p>
+<p>
+Use the Layout property to control the vertical alignment for the Caption text 
+displayed on the label.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TBoundLabel.Caption"/>
+<link id="TBoundLabel.Layout"/>
+<link id="TBoundLabel.FocusControl"/>
+<link id="TCustomLabeledEdit.LabelPosition"/>
+<link id="TCustomLabeledEdit.LabelSpacing"/>
+<link id="#lcl.stdctrls.TCustomLabel.Alignment">TCustomLabel.Alignment</link>
+<link id="#rtl.classes.TAlignment">TAlignment</link>
+</seealso>
 </element>
 
 <element name="TBoundLabel.AnchorSideLeft" link="#lcl.controls.TControl.AnchorSideLeft"/>
@@ -5905,7 +6669,44 @@ FocusControl also receives key messages in the DialogChar method.
 <element name="TBoundLabel.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
 <element name="TBoundLabel.ShowAccelChar" link="#lcl.stdctrls.TCustomLabel.ShowAccelChar"/>
 <element name="TBoundLabel.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TBoundLabel.Layout" link="#lcl.stdctrls.TCustomLabel.Layout"/>
+
+<element name="TBoundLabel.Layout">
+<short>
+Specifies the vertical alignment for the Caption text on the label.
+</short>
+<descr>
+<p>
+<var>Layout</var> is a published <var>TTextLayout</var> property in <var>
+TBoundLabel</var>. The default value for the property is tlCenter in 
+TBoundLabel, and causes the Caption to be centered vertically using the Height 
+for the label. Please note that the default value differs from the default used 
+in the TCustomLabel ancestor (tlTop).
+</p>
+<p>
+See <link id="#lcl.graphics.TTextLayout">TTextLayout</link> for the values 
+allowed in the property and their meanings.
+</p>
+<p>
+The property value is used when it is relevant to the position for the bound 
+label relative to its FocusControl. In short, when the bound label appears to 
+the left or right of the FocusControl. The property value is not used when the 
+bound label is positioned above or below the FocusControl; the label height is 
+auto-sized in this use case. See <link id="TCustomLabeledEdit.LabelPosition"/> 
+for more information.
+</p>
+<p>
+Use Alignment to control the horizontal alignment used for the Caption text.
+</p>
+</descr>
+<seealso>
+<link id="TBoundLabel.Alignment"/>
+<link id="TBoundLabel.Caption"/>
+<link id="TCustomLabeledEdit.LabelPosition"/>
+<link id="TCustomLabeledEdit.LabelSpacing"/>
+<link id="#lcl.stdctrls.TCustomLabel.Layout">TCustomLabel.Layout</link>
+</seealso>
+</element>
+
 <element name="TBoundLabel.WordWrap" link="#lcl.stdctrls.TCustomLabel.WordWrap"/>
 <element name="TBoundLabel.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TBoundLabel.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
@@ -5924,12 +6725,26 @@ FocusControl also receives key messages in the DialogChar method.
 
 <element name="TLabelPosition">
 <short>
+Specifies the position for a label relative to an associated control.
+</short>
+<descr>
+<p>
 <var>TLabelPosition</var> is an enumerated type with values that represent 
 the position of a label relative to an associated control: i. e. above, 
 below, left, or right.
-</short>
-<descr/>
-<seealso/>
+</p>
+<p>
+TLabelPosition is the type used for the LabelPosition property in 
+TCustomLabeledEdit and descendent classes. It is used in the DoPositionLabel 
+method to position and anchor the EditLabel to its companion control.
+</p>
+</descr>
+<seealso>
+<link id="TCustomLabeledEdit.LabelPosition"/>
+<link id="TCustomLabeledEdit.LabelSpacing"/>
+<link id="TCustomLabeledEdit.DoPositionLabel"/>
+<link id="TBoundLabel.FocusControl"/>
+</seealso>
 </element>
 <element name="TLabelPosition.lpAbove">
 <short>Label is displayed above the control.</short>
@@ -5945,12 +6760,14 @@ below, left, or right.
 </element>
 
 <element name="TCustomLabeledEdit">
-<short>Defines an edit control with a label bound to the control.</short>
+<short>
+Defines an edit control with a label bound to the control.
+</short>
 <descr>
 <p>
-<var>TCustomLabeledEdit</var> is a TCustomEdit descendant which defines an 
-edit control with a label bound to the control. TCustomLabeledEdit is the 
-base type for <var>TLabeledEdit</var>.
+<var>TCustomLabeledEdit</var> is a <var>TCustomEdit</var> descendant which 
+defines an edit control with a label bound to the control. TCustomLabeledEdit 
+is the base type for <var>TLabeledEdit</var>.
 </p>
 <p>
 Note particularly the <link 
@@ -5962,6 +6779,47 @@ the label attached to the Edit control.
 Use LabelPosition to specify the location where EditLabel is displayed 
 relative to the edit box in the control. Use LabelSpacing to set the spacing 
 between EditLabel and the edit control.
+</p>
+<p>
+<b>About TCustomLabeledEdit / TLabeledEdit</b>
+</p>
+<p>
+<var>TCustomLabeledEdit</var> and <var>TLabeledEdit</var> are based on the 
+similarly named controls from the Delphi VCL. While they offer code 
+compatibility with the VCL class, they have some drawbacks when used in the 
+LCL. For instance:
+</p>
+<ul>
+<li>
+They do not work very well with the positioning and anchoring mechanisms 
+used in LCL. They do not have an Align property used to position, align, and 
+stack controls towards one of the edges on the parent control.
+</li>
+<li>
+There are also shortcomings when using BorderSpacing; the extra spacing is 
+inserted between the bound label and the edit box on the control instead around 
+the composite control.
+</li>
+<li>
+Labels with long captions are not ellipsified or aligned properly when longer 
+than the associated edit control. 
+</li>
+<li>
+Multi-line captions on a label are not positioned as expected; the label often 
+overlaps (or is obscured by) adjacent controls.
+</li>
+<li>
+When EditLabel is placed above or below the Edit control, and its caption is 
+wider than the Edit, the text will be clipped at the Edit's left/right sides. 
+Likewise, when the EditLabel is placed at the left or right of the Edit control 
+and is taller than the Edit, it will be clipped at the top and bottom edges of 
+the Edit control.
+</li>
+</ul>
+<p>
+Despite the convenience of TCustomLabeledEdit / TLabeledEdit, most will elect 
+to use separate label and edit controls to avoid the shortcomings in the align 
+and anchoring mechanisms for the composite control.
 </p>
 </descr>
 <seealso>
@@ -6080,14 +6938,19 @@ for the Parent control prior to exiting from the method.
 <p>
 DoPositionLabel updates EditLabel to use the values assigned to the Parent 
 and <var>Visibility</var> properties. The values in <var>LabelPosition</var> 
-and <var>LabelSpacing</var> are used to determine the anchoring to the 
-companion control applied to EditLabel.
+and <var>LabelSpacing</var> are used to set the anchor position for the 
+EditLabel and the spacing between EditLabel and the edit box on the control.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to use the Layout property in the TBoundLabel 
+instance to determine vertical alignment for the label caption.
+</version>
 <seealso>
 <link id="TCustomLabeledEdit.EditLabel"/>
 <link id="TCustomLabeledEdit.LabelPosition"/>
 <link id="TCustomLabeledEdit.LabelSpacing"/>
+<link id="TBoundLabel.Layout"/>
 <link id="#lcl.controls.TControl.Visible">TControl.Visible</link>
 <link id="#lcl.controls.TWinControl.DisableAlign">TWinControl.DisableAlign</link>
 <link id="#lcl.controls.TWinControl.EnableAlign">TWinControl.EnableAlign</link>
@@ -6316,15 +7179,16 @@ aligned.
 </element>
 
 <element name="TLabeledEdit">
-<short>Implements an edit control with a label bound to the control.</short>
+<short>
+Implements an edit control with a label bound to the control.
+</short>
 <descr>
 <p>
 <var>TLabeledEdit</var> is a <var>TCustomLabeledEdit</var> descendant which 
 implements an edit control with a label bound to the control. It saves time 
 and effort over placing separate Label and Edit Box on Form. The properties 
-are described in the parent component, <link 
-id="#lcl.ExtCtrls.TCustomLabeledEdit">TCustomLabeledEdit</link> from which 
-most of the properties are inherited.
+are described in the parent component, 
+<link id="#lcl.ExtCtrls.TCustomLabeledEdit">TCustomLabeledEdit</link> from which most of the properties are inherited.
 </p>
 <p>
 Note particularly the 
@@ -6337,6 +7201,47 @@ Use LabelPosition to specify the location where EditLabel is displayed
 relative to the edit box in the control. Use LabelSpacing to set the spacing 
 (in pixels) between EditLabel and the edit control.
 </p>
+<p>
+<b>About TCustomLabeledEdit / TLabeledEdit</b>
+</p>
+<p>
+<var>TCustomLabeledEdit</var> and <var>TLabeledEdit</var> are based on the 
+similarly named controls from the Delphi VCL. While they offer code 
+compatibility with the VCL class, they have some drawbacks when used in the 
+LCL. For instance:
+</p>
+<ul>
+<li>
+They do not work very well with the positioning and anchoring mechanisms 
+used in LCL. They do not have an Align property used to position, align, and 
+stack controls towards one of the edges on the parent control.
+</li>
+<li>
+There are also shortcomings when using BorderSpacing; the extra spacing is 
+inserted between the bound label and the edit box on the control instead around 
+the composite control.
+</li>
+<li>
+Labels with long captions are not ellipsified or aligned properly when longer 
+than the associated edit control. 
+</li>
+<li>
+Multi-line captions on a label are not positioned as expected; the label often 
+overlaps (or is obscured by) adjacent controls.
+</li>
+<li>
+When EditLabel is placed above or below the Edit control, and its caption is 
+wider than the Edit, the text will be clipped at the Edit's left/right sides. 
+Likewise, when the EditLabel is placed at the left or right of the Edit control 
+and is taller than the Edit, it will be clipped at the top and bottom edges of 
+the Edit control.
+</li>
+</ul>
+<p>
+Despite the convenience of TCustomLabeledEdit / TLabeledEdit, most will elect 
+to use separate label and edit controls to avoid the shortcomings in the align 
+and anchoring mechanisms for the composite control.
+</p>
 </descr>
 <seealso>
 <link id="TCustomLabeledEdit.EditLabel"/>
@@ -6347,7 +7252,6 @@ relative to the edit box in the control. Use LabelSpacing to set the spacing
 <link id="#lcl.stdctrls.TCustomEdit">TCustomEdit</link>
 <link id="#lcl.stdctrls.TCustomLabel">TCustomLabel</link>
 </seealso>
-
 </element>
 
 <element name="TLabeledEdit.Alignment" link="#lcl.stdctrls.TCustomEdit.Alignment"/>
@@ -6370,6 +7274,7 @@ relative to the edit box in the control. Use LabelSpacing to set the spacing
 <element name="TLabeledEdit.LabelPosition" link="#lcl.extctrls.TCustomLabeledEdit.LabelPosition"/>
 <element name="TLabeledEdit.LabelSpacing" link="#lcl.extctrls.TCustomLabeledEdit.LabelSpacing"/>
 <element name="TLabeledEdit.MaxLength" link="#lcl.stdctrls.TCustomEdit.MaxLength"/>
+<element name="TLabeledEdit.NumbersOnly" link="#lcl.stdctrls.TCustomEdit.NumbersOnly"/>
 <element name="TLabeledEdit.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
 <element name="TLabeledEdit.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
 <element name="TLabeledEdit.ParentDoubleBuffered" link="#lcl.controls.TWinControl.ParentDoubleBuffered"/>
@@ -6386,6 +7291,7 @@ relative to the edit box in the control. Use LabelSpacing to set the spacing
 <element name="TLabeledEdit.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TLabeledEdit.OnChange" link="#lcl.stdctrls.TCustomEdit.OnChange"/>
 <element name="TLabeledEdit.OnClick" link="#lcl.controls.TControl.OnClick"/>
+<element name="TLabeledEdit.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
 <element name="TLabeledEdit.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
 <element name="TLabeledEdit.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
 <element name="TLabeledEdit.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
@@ -7115,7 +8021,7 @@ will need to be resolved using the <var>GetDefaultColor</var> method.
 Convenience routines which obtain the color by resolving clDefault and 
 ParentColor are also provided in <var>TControl.GetColorResolvingParent</var> 
 and <var>TControl.GetRGBColorResolvingParent</var>. If UseCLDefault is not 
-defined, the the default value is clWindow. 
+defined, the default value is clWindow. 
 </p>
 <p>
 Setting an explicit value in Color causes both ParentColor and 
@@ -9757,7 +10663,7 @@ Control drawn on the band, its visibility, and position and size information.
 <p>
 <var>BandRect</var> is a <var>TRect</var> property which contains the bounds 
 for the band control. BandRect is used in methods which set the layout and 
-placement for the the band control, like <var>InitializeBand</var> and 
+placement for the band control, like <var>InitializeBand</var> and 
 <var>MoveBand</var>.
 </p>
 <p>

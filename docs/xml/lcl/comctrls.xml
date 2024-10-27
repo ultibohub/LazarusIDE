@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -3644,15 +3644,10 @@ Performs actions to show or hide pages when the current page is changed.
 pages in the tabbed control.
 </p>
 <p>
-Change causes the TCustomPage instance in Page stored at the position in 
-PageIndex to become visible, and hides the previously visible page on the 
-tabbed control. If a control was focused on the previous page, the new page is 
-focused prior to hiding the previous page.
-</p>
-<p>
-At run-time, MaybeSelectFirstControlOnPage is called when a page instance is 
-active for the control; it selects the focused control for the ActivePage. 
-DoChange is called to signal the OnChange event handler (when assigned).
+Change calls ShowCurrentPage to display the page in PageIndex, and hide the 
+previously visible page in the tabbed control. Change calls DoChange when the 
+control is not being destroyed, or loaded in the LCL component streaming 
+mechanism.
 </p>
 <p>
 Change is called from the MoveTab method, and when selection change messages 
@@ -3665,10 +3660,9 @@ OnChange is signalled for the active page.
 </version>
 <seealso>
 <link id="TCustomTabControl.ActivePage"/>
-<link id="TCustomTabControl.Page"/>
+<link id="TCustomTabControl.MaybeSelectFirstControlOnPage"/>
 <link id="TCustomTabControl.PageIndex"/>
 <link id="TCustomTabControl.TabIndex"/>
-<link id="TCustomTabControl.MaybeSelectFirstControlOnPage"/>
 <link id="TCustomTabControl.DoChange"/>
 <link id="TCustomTabControl.OnChange"/>
 </seealso>
@@ -3803,8 +3797,7 @@ Handles an accelerator key for the active page in the tabbed control.
 
 <element name="TCustomTabControl.InternalSetPageIndex">
 <short>
-Updates the internal page index (when assigned) without triggering an OnChange 
-event.
+Updates the internal page index without triggering an OnChange event.
 </short>
 <descr/>
 <seealso/>
@@ -5509,24 +5502,6 @@ control (TPageControl) is resized. Left is always set to 0 (zero).
 </seealso>
 </element>
 
-<element name="TTabSheet.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
-<element name="TTabSheet.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
-<element name="TTabSheet.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
-<element name="TTabSheet.OnEndDrag" link="#lcl.controls.TControl.OnEndDrag"/>
-<element name="TTabSheet.OnEnter" link="#lcl.controls.TWinControl.OnEnter"/>
-<element name="TTabSheet.OnExit" link="#lcl.controls.TWinControl.OnExit"/>
-<element name="TTabSheet.OnHide" link="#lcl.comctrls.TCustomPage.OnHide"/>
-<element name="TTabSheet.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
-<element name="TTabSheet.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
-<element name="TTabSheet.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
-<element name="TTabSheet.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
-<element name="TTabSheet.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
-<element name="TTabSheet.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
-<element name="TTabSheet.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
-<element name="TTabSheet.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
-<element name="TTabSheet.OnResize" link="#lcl.controls.TControl.OnResize"/>
-<element name="TTabSheet.OnShow" link="#lcl.comctrls.TCustomPage.OnShow"/>
-<element name="TTabSheet.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TTabSheet.PageIndex" link="#lcl.comctrls.TCustomPage.PageIndex"/>
 <element name="TTabSheet.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
 <element name="TTabSheet.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
@@ -5614,6 +5589,25 @@ container for scrollable content.
 <link id="#lcl.comctrls.TCustomPage.Width"/>
 </seealso>
 </element>
+
+<element name="TTabSheet.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
+<element name="TTabSheet.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
+<element name="TTabSheet.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
+<element name="TTabSheet.OnEndDrag" link="#lcl.controls.TControl.OnEndDrag"/>
+<element name="TTabSheet.OnEnter" link="#lcl.controls.TWinControl.OnEnter"/>
+<element name="TTabSheet.OnExit" link="#lcl.controls.TWinControl.OnExit"/>
+<element name="TTabSheet.OnHide" link="#lcl.comctrls.TCustomPage.OnHide"/>
+<element name="TTabSheet.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
+<element name="TTabSheet.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
+<element name="TTabSheet.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
+<element name="TTabSheet.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
+<element name="TTabSheet.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
+<element name="TTabSheet.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
+<element name="TTabSheet.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
+<element name="TTabSheet.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
+<element name="TTabSheet.OnResize" link="#lcl.controls.TControl.OnResize"/>
+<element name="TTabSheet.OnShow" link="#lcl.comctrls.TCustomPage.OnShow"/>
+<element name="TTabSheet.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 
 <element name="TPageControl">
 <short>
@@ -5861,6 +5855,44 @@ updated in the Lazarus IDE.
 <element name="TPageControl.ChildClassAllowed.ChildClass">
 <short>
 Class reference used to create instances if the child control.
+</short>
+</element>
+
+<element name="TPageControl.UpdateDockCaption">
+<short>
+Updates page captions to reflect the captions for docked clients controls.
+</short>
+<descr>
+<p>
+<var>UpdateDockCaption</var> is an overridden method in <var>TPageControl</var> 
+which implements the method defined in the TWinControl ancestor. It ensures 
+that the Caption for each of the Pages (TTabSheet) is updated with the Caption 
+from the first child control on each page.
+</p>
+<p>
+UpdateDockCaption is called when the control has an assigned HostDockSite, and 
+either the list of docked clients has changed or one of their captions has 
+changed.
+</p>
+<p>
+In TPageControl, the Exclude argument is not used.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TPageControl.Pages"/>
+<link id="TTabSheet.Caption"/>
+<link id="#lcl.controls.TWinControl.UpdateDockCaption"/>
+<link id="#lcl.controls.TWinControl.Controls"/>
+<link id="#lcl.controls.TControl.HostDockSite"/>
+<link id="#lcl.controls.TControl.Text"/>
+</seealso>
+</element>
+<element name="TPageControl.UpdateDockCaption.Exclude">
+<short>
+Not used in TPageControl.
 </short>
 </element>
 
@@ -6117,6 +6149,7 @@ TCustomTabControl, where it is defined as a <var>String</var>.
 <element name="TPageControl.Images" link="#lcl.comctrls.TCustomTabControl.Images"/>
 <element name="TPageControl.ImagesWidth" link="#lcl.comctrls.TCustomTabControl.ImagesWidth"/>
 <element name="TPageControl.MultiLine" link="#lcl.comctrls.TCustomTabControl.MultiLine"/>
+<element name="TPageControl.Options" link="#lcl.comctrls.TCustomTabControl.Options"/>
 <element name="TPageControl.ParentBidiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
 <element name="TPageControl.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
 <element name="TPageControl.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
@@ -6159,7 +6192,6 @@ TCustomTabControl, where it is defined as a <var>String</var>.
 <element name="TPageControl.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
 <element name="TPageControl.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TPageControl.OnUnDock" link="#lcl.controls.TWinControl.OnUnDock"/>
-<element name="TPageControl.Options" link="#lcl.comctrls.TCustomTabControl.Options"/>
 
 <element name="TTabControlStrings">
 <short>
@@ -8156,6 +8188,14 @@ client rectangle for the control as the value for the property. Use
 <element name="TTabControl.DragMode" link="#lcl.controls.TControl.DragMode"/>
 <element name="TTabControl.Enabled" link="#lcl.controls.TControl.Enabled"/>
 <element name="TTabControl.Font" link="#lcl.controls.TControl.Font"/>
+<element name="TTabControl.Options" link="#lcl.comctrls.TCustomTabControl.Options"/>
+<element name="TTabControl.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TTabControl.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TTabControl.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TTabControl.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TTabControl.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TTabControl.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TTabControl.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TTabControl.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TTabControl.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
 <element name="TTabControl.OnDockDrop" link="#lcl.controls.TWinControl.OnDockDrop"/>
@@ -8179,14 +8219,6 @@ client rectangle for the control as the value for the property. Use
 <element name="TTabControl.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
 <element name="TTabControl.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TTabControl.OnUnDock" link="#lcl.controls.TWinControl.OnUnDock"/>
-<element name="TTabControl.Options" link="#lcl.comctrls.TCustomTabControl.Options"/>
-<element name="TTabControl.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TTabControl.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TTabControl.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TTabControl.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TTabControl.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TTabControl.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TTabControl.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TCustomDrawTarget">
 <short>
@@ -9364,7 +9396,7 @@ TRect instance with the coordinates for the specified display region.
 
 <element name="TListItem.DisplayRectSubItem">
 <short>
-Gets the the display rectangle coordinates for a region in the specified 
+Gets the display rectangle coordinates for a region in the specified 
 sub-item on its list view control.
 </short>
 <descr>
@@ -12106,6 +12138,9 @@ TLVChangeEvent is the type used for the <var>OnChange</var> property in
 <var>TCustomListView</var>.
 </p>
 </descr>
+<version>
+Added in LCL version 4.0.
+</version>
 <seealso>
 <link id="TItemChange"/>
 <link id="TCustomListView.OnChange"/>
@@ -12119,6 +12154,75 @@ TLVChangeEvent is the type used for the <var>OnChange</var> property in
 </element>
 <element name="TLVChangeEvent.Change">
 <short>Indicates the property value that was changed in Item.</short>
+</element>
+
+<element name="TLVChangingEvent">
+<short>
+Defines an event handler signalled when a widgetset class is updating an item 
+on a list view control.
+</short>
+<descr>
+<p>
+<var>TLVChangingEvent</var> is an object procedure used to define the event 
+handler signalled when a list item on a TListView is being updated by the 
+widgetset class instance. It is the type used to implement the OnChanging 
+property in TCustomListView, and allows the pending change to be accepted or 
+rejected on an item-by-item basis.
+</p>
+<p>
+The <var>Sender</var> argument contains the object for the event notification, 
+It must be cast to TCustomListView to access properties and methods specific to 
+the list view control.
+</p>
+<p>
+<var>Item</var> contains the TListItem instance on the list view control which 
+is being updated, and the values for the modified list item.
+</p>
+<p>
+<var>Change</var> indicates which value in Item is being modified: the caption 
+text, the image for the item, or the item drawing state. See TItemChange for 
+the values used in the argument, and their meanings.
+</p>
+<p>
+<var>AllowChange</var> is a variable Boolean argument which allows the handler 
+to indicate whether the change is accepted or rejected. Set AllowChange to 
+<b>False</b> to reject the modified value in Item.
+</p>
+<p>
+See <link id="TCustomListView.OnChanging">TCustomListView.OnChanging</link> 
+for more information about the event notification for the list view control.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TItemChange"/>
+<link id="TListItem"/>
+<link id="TCustomListView.OnChanging"/>
+<link id="TCustomListView.Items"/>
+</seealso>
+</element>
+<element name="TLVChangingEvent.Sender">
+<short>
+Object (TCustomListView control) for the event notification.
+</short>
+</element>
+<element name="TLVChangingEvent.Item">
+<short>
+List item with the pending change,
+</short>
+</element>
+<element name="TLVChangingEvent.Change">
+<short>
+Identifies the list item value changed in the notification.
+</short>
+</element>
+<element name="TLVChangingEvent.AllowChange">
+<short>
+Indicates whether the change is accepted or rejected in the event handler. 
+<b>True</b> for an accepted change.
+</short>
 </element>
 
 <element name="TLVDataFindEvent">
@@ -12505,7 +12609,7 @@ control.
 <p>
 <var>TLVInsertEvent</var> is an alias for the <var>TLVDeletedEvent</var> 
 type, and uses the same arguments. TLVInsertEvent is the type used to 
-implement the the <var>OnInsert</var> event handler in 
+implement the <var>OnInsert</var> event handler in 
 <var>TCustomListView</var>.
 </p>
 </descr>
@@ -13355,6 +13459,7 @@ and List View Work Areas.
 <element name="TCustomListView.FHoverTime"/>
 <element name="TCustomListView.FUpdateCount"/>
 <element name="TCustomListView.FOnChange"/>
+<element name="TCustomListView.FOnChanging"/>
 <element name="TCustomListView.FOnColumnClick"/>
 <element name="TCustomListView.FOnCompare"/>
 <element name="TCustomListView.FOnData"/>
@@ -14109,6 +14214,13 @@ item are changed.
 CNNotify updates property values and calls methods in the class instance as 
 needed to respond to the notification message.
 </p>
+<p>
+Please note that LVN_ITEMCHANGING control notification is handled in the 
+ListViewParentMsgHandler routine in the widgetset class for the Windows 
+platform. Changes are accepted and applied when CanChange in the list view 
+control returns <b>True</b>. No additional processing is performed for the 
+notification message in the Windows message process loop.
+</p>
 </descr>
 <seealso/>
 </element>
@@ -14528,6 +14640,63 @@ the programmer has assigned a method to this event.
 </element>
 <element name="TCustomListView.Change.AChange">
 <short/>
+</element>
+
+<element name="TCustomListView.CanChange">
+<short>
+Indicates whether a change notification can be applied for an item on the list 
+view control.
+</short>
+<descr>
+<p>
+<var>CanChange</var> is a <var>Boolean</var> function used to determine whether 
+a change notification message for an item in a list view control can be 
+accepted and applied. CanChange is called from the widgetset class instance, 
+and occurs when change notification messages are handled for the list view 
+control.
+</p>
+<p>
+CanChange signals the OnChanging event handler (when assigned) to determine the 
+return value for the method. The return value is <b>True</b> if the changed 
+value in AItem is accepted and can be applied to the list item. The return 
+value is <b>False</b> if the modification is rejected in the OnChanging event 
+handler.
+</p>
+<remark>
+Interestingly, the return value is True if AChange contains an Integer value 
+that is <b>not</b> represented in the TItemChange enumeration. In this case, 
+the OnChanging event is <b>not</b> signalled.
+</remark>
+<p>
+In the current LCL implementation, CanChange and OnChanging apply to the 
+Windows widgetset only. Other platforms do not currently generate change 
+notifications for item values.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomListView.OnChanging"/>
+<link id="TLVChangingEvent"/>
+<link id="TItemChange"/>
+</seealso>
+</element>
+<element name="TCustomListView.CanChange.Result">
+<short>
+Returns <b>True</b> if the modified value in the list item is accepted.
+</short>
+</element>
+<element name="TCustomListView.CanChange.AItem">
+<short>
+List item with the modified value examined in the method.
+</short>
+</element>
+<element name="TCustomListView.CanChange.AChange">
+<short>
+Indicates which value in the list item has been modified. Corresponds to the 
+ordinal values in the TItemChange enumeration.
+</short>
 </element>
 
 <element name="TCustomListView.ColClick">
@@ -15578,16 +15747,24 @@ Enables or disables OnColumnClick events for column headers on the control.
 <p>
 <var>ColumnClick</var> is an indexed <var>Boolean</var> property which 
 controls whether the <var>OnColumnClick</var> event handler is signalled when 
-a Report view column is clicked. The default value for the property is 
-<b>True</b>.
+a Report view column header is clicked. It also controls whether a column 
+header is drawn using the "pressed" or "down" state while the mouse button is 
+down on a column header. The default value for the property is <b>True</b>, and 
+enables both the event handler and the header drawing state (on supported 
+platforms).
 </p>
 <p>
 ColumnClick is one of the TListViewProperty values included in the 
 TListViewProperties set type and exchanged with the widgetset class. The 
 property value is read from and written to the TCustomTreeview widgetset 
 class instance when its handle is valid. Changing the value for the property 
-causes the widgetset class to be updated with the new property value.
+causes the widgetset class to be updated with the new value.
 </p>
+<remark>
+Changing the property value causes the handle for the widgetset class to be 
+recreated on the Windows platform. This causes multi-selections to be cleared - 
+but the last item in the multi-selection is retained as the selected item.
+</remark>
 <p>
 ColumnClick is used in the <var>ColClick</var> method, which is called when 
 the LVN_COLUMNCLICK control notification message is handled for the list view 
@@ -16197,6 +16374,46 @@ a list item has been changed.
 </p>
 </descr>
 <seealso/>
+</element>
+
+<element name="TCustomListView.OnChanging">
+<short>
+Event handler signalled when a change notification is received for a list item.
+</short>
+<descr>
+<p>
+<var>OnChanging</var> is a <var>TLVChangingEvent</var> property with the event 
+handler signalled when a change notification is handled for the list view 
+control. It allows modifications to list items to be handled on an item-by-item 
+basis. It is signalled from the CanChange method (when assigned), and occurs 
+when the widgetset class handles change notification messages for the control.
+</p>
+<p>
+An application can implement and assign a handler to the property to determine 
+whether a pending change is accepted or rejected for a list item.
+</p>
+<p>
+See <link id="TItemChange">TItemChange</link> for the changes items or states 
+available in the event notification.
+</p>
+<p>
+See <link id="TLVChangingEvent">TLVChangingEvent</link> for more information 
+about the event type and its arguments.
+</p>
+<p>
+Please note that CanChange and OnChanging are relevant for the Windows platform 
+only. Other platforms do not currently generate or handle change notifications 
+for list item values.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomListView.CanChange"/>
+<link id="TLVChangingEvent"/>
+<link id="TItemChange"/>
+</seealso>
 </element>
 
 <element name="TCustomListView.OnColumnClick">
@@ -17773,7 +17990,7 @@ This feature can be used in List View and in Tab controls.
 <p>
 <var>HotTrackStyles</var> is a <var>TListHotTrackStyles</var> property which 
 contains the extended list view style options for hot tracking. It contains 
-zero or more values from the the TListHotTrackStyle enumeration. The values 
+zero or more values from the TListHotTrackStyle enumeration. The values 
 control the cursor shape or the font attributes applied to list items when 
 the mouse pointer is hovered over the items.
 </p>
@@ -18416,6 +18633,7 @@ GetRGBColorResolvingParent method.
 <element name="TListView.OnAdvancedCustomDrawItem" link="#lcl.comctrls.TCustomListView.OnAdvancedCustomDrawItem"/>
 <element name="TListView.OnAdvancedCustomDrawSubItem" link="#lcl.comctrls.TCustomListView.OnAdvancedCustomDrawSubItem"/>
 <element name="TListView.OnChange" link="#lcl.comctrls.TCustomListView.OnChange"/>
+<element name="TListView.OnChanging" link="#lcl.comctrls.TCustomListView.OnChanging"/>
 <element name="TListView.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TListView.OnColumnClick" link="#lcl.comctrls.TCustomListView.OnColumnClick"/>
 <element name="TListView.OnCompare" link="#lcl.comctrls.TCustomListView.OnCompare"/>
@@ -18523,6 +18741,40 @@ style or theme for the platform.
 <short>
 Progress bar indicator is displayed as an animated marquee, where movement 
 indicates activity but does not reflect the completed portion of a task.
+</short>
+</element>
+
+<element name="TProgressBarState">
+<short>
+Represents state values used when drawing a progress bar.
+</short>
+<descr>
+<p>
+<var>TProgressBarState</var> is an enumerated type with values that represent 
+the states for a progress bar. TProgressBarState is the type used to implement 
+the State property in TTaskDialogProgressBar.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="#lcl.dialogs.TTaskDialogProgressBar.State">TTaskDialogProgressBar.State</link>
+</seealso>
+</element>
+<element name="TProgressBarState.pbsNormal">
+<short>
+Progress bar is rendered using the normal drawing style for the platform.
+</short>
+</element>
+<element name="TProgressBarState.pbsError">
+<short>
+Progress bar is drawn using a style which indicates an error condition. 
+</short>
+</element>
+<element name="TProgressBarState.pbsPaused">
+<short>
+Progress bar is drawn using a style which indicates that the bar is paused. 
 </short>
 </element>
 
@@ -19055,6 +19307,20 @@ to bottom to represent the progress for the process.
 <element name="TProgressBar.Hint" link="#lcl.controls.TControl.Hint"/>
 <element name="TProgressBar.Max" link="#lcl.comctrls.TCustomProgressBar.Max"/>
 <element name="TProgressBar.Min" link="#lcl.comctrls.TCustomProgressBar.Min"/>
+<element name="TProgressBar.Orientation" link="#lcl.comctrls.TCustomProgressBar.Orientation"/>
+<element name="TProgressBar.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TProgressBar.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TProgressBar.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TProgressBar.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TProgressBar.Position" link="#lcl.comctrls.TCustomProgressBar.Position"/>
+<element name="TProgressBar.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TProgressBar.Smooth" link="#lcl.comctrls.TCustomProgressBar.Smooth"/>
+<element name="TProgressBar.Step" link="#lcl.comctrls.TCustomProgressBar.Step"/>
+<element name="TProgressBar.Style" link="#lcl.comctrls.TCustomProgressBar.Style"/>
+<element name="TProgressBar.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TProgressBar.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TProgressBar.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TProgressBar.BarShowText" link="#lcl.comctrls.TCustomProgressBar.BarShowText"/>
 <element name="TProgressBar.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
 <element name="TProgressBar.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
 <element name="TProgressBar.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
@@ -19071,20 +19337,6 @@ to bottom to represent the progress for the process.
 <element name="TProgressBar.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
 <element name="TProgressBar.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
 <element name="TProgressBar.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
-<element name="TProgressBar.Orientation" link="#lcl.comctrls.TCustomProgressBar.Orientation"/>
-<element name="TProgressBar.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TProgressBar.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TProgressBar.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TProgressBar.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TProgressBar.Position" link="#lcl.comctrls.TCustomProgressBar.Position"/>
-<element name="TProgressBar.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TProgressBar.Smooth" link="#lcl.comctrls.TCustomProgressBar.Smooth"/>
-<element name="TProgressBar.Step" link="#lcl.comctrls.TCustomProgressBar.Step"/>
-<element name="TProgressBar.Style" link="#lcl.comctrls.TCustomProgressBar.Style"/>
-<element name="TProgressBar.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TProgressBar.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TProgressBar.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TProgressBar.BarShowText" link="#lcl.comctrls.TCustomProgressBar.BarShowText"/>
 
 <element name="TUDAlignButton">
 <short>
@@ -20191,7 +20443,7 @@ used to display and edit the value for the Position property in the control.
 </p>
 <p>
 Changing the value for the property causes a previously assigned control to be 
-disconnected; its event handlers are unassigned and the the Associate property 
+disconnected; its event handlers are unassigned and the Associate property 
 is <b>Nil</b>'d prior to setting the new value for the property.
 </p>
 <p>
@@ -20445,7 +20697,7 @@ on the control.
 <var>Orientation</var> is a <var>TUDOrientation</var> property which indicates 
 the horizontal or vertical orientation for the buttons displayed on the 
 control. The default value for the property is udVertical, and causes the 
-speed buttons to be stacked vertically with the the button glyphs drawn in the 
+speed buttons to be stacked vertically with the button glyphs drawn in the 
 upwards and downwards directions. Use udHorizontal to orient the buttons 
 side-by-side with their glyphs pointing towards the left and right.
 </p>
@@ -20665,6 +20917,18 @@ increment or decrement the number displayed by a specified amount.
 <element name="TUpDown.Max" link="#lcl.comctrls.TCustomUpDown.Max"/>
 <element name="TUpDown.Min" link="#lcl.comctrls.TCustomUpDown.Min"/>
 <element name="TUpDown.MinRepeatInterval" link="#lcl.comctrls.TCustomUpDown.MinRepeatInterval"/>
+<element name="TUpDown.Orientation" link="#lcl.comctrls.TCustomUpDown.Orientation"/>
+<element name="TUpDown.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TUpDown.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TUpDown.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TUpDown.Position" link="#lcl.comctrls.TCustomUpDown.Position"/>
+<element name="TUpDown.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TUpDown.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TUpDown.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TUpDown.Thousands" link="#lcl.comctrls.TCustomUpDown.Thousands"/>
+<element name="TUpDown.Flat" link="#lcl.comctrls.TCustomUpDown.Flat"/>
+<element name="TUpDown.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TUpDown.Wrap" link="#lcl.comctrls.TCustomUpDown.Wrap"/>
 <element name="TUpDown.OnChanging" link="#lcl.comctrls.TCustomUpDown.OnChanging"/>
 <element name="TUpDown.OnChangingEx" link="#lcl.comctrls.TCustomUpDown.OnChangingEx"/>
 <element name="TUpDown.OnClick" link="#lcl.comctrls.TCustomUpDown.OnClick"/>
@@ -20682,18 +20946,6 @@ increment or decrement the number displayed by a specified amount.
 <element name="TUpDown.OnMouseWheelHorz" link="#lcl.controls.TControl.OnMouseWheelHorz"/>
 <element name="TUpDown.OnMouseWheelLeft" link="#lcl.controls.TControl.OnMouseWheelLeft"/>
 <element name="TUpDown.OnMouseWheelRight" link="#lcl.controls.TControl.OnMouseWheelRight"/>
-<element name="TUpDown.Orientation" link="#lcl.comctrls.TCustomUpDown.Orientation"/>
-<element name="TUpDown.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TUpDown.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TUpDown.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TUpDown.Position" link="#lcl.comctrls.TCustomUpDown.Position"/>
-<element name="TUpDown.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TUpDown.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TUpDown.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TUpDown.Thousands" link="#lcl.comctrls.TCustomUpDown.Thousands"/>
-<element name="TUpDown.Flat" link="#lcl.comctrls.TCustomUpDown.Flat"/>
-<element name="TUpDown.Visible" link="#lcl.controls.TControl.Visible"/>
-<element name="TUpDown.Wrap" link="#lcl.comctrls.TCustomUpDown.Wrap"/>
 
 <element name="CN_DROPDOWNCLOSED">
 <short>Control notification message constant.</short>
@@ -20770,7 +21022,7 @@ Values from TToolButton are stored in the TToolButtonFlags set type.
 <short>The mouse cursor is hovered over the drop-down indicator.</short>
 </element>
 <element name="TToolButtonFlag.tbfDropDownMenuShown">
-<short>The the drop-down menu for the tool button is visible.</short>
+<short>The drop-down menu for the tool button is visible.</short>
 </element>
 
 <element name="TToolButtonFlags">
@@ -21354,7 +21606,7 @@ the control.
 <descr>
 <p>
 <var>Paint</var> is an overridden method in <var>TToolButton</var>, and 
-provides nested routines used to draw the the tool button using the style, 
+provides nested routines used to draw the tool button using the style, 
 caption, and image for the control. Paint requires <var>ToolBar</var> to be 
 assigned before it can render the button control using the routines in the 
 overridden method. When ToolBar is unassigned, only the inherited Paint 
@@ -22282,67 +22534,7 @@ clicked.
 <seealso/>
 </element>
 
-<element name="TToolButton.OnArrowClick">
-<short>
-Event handler signalled when the drop-down indicator for a tool button is 
-clicked.
-</short>
-<descr>
-<p>
-<var>OnArrowClick</var> is a <var>TNotifyEvent</var> property with the event 
-handler signalled when the drop-down indicator is clicked on a tool button 
-using a drop-down <var>Style</var>.
-</p>
-<p>
-OnArrowClick is signalled from the <var>ArrowClick</var> method (when 
-assigned), and occurs when the left mouse button was clicked on the drop-down 
-indicator. It is not executed if the <var>DropDownMenu</var> has already been 
-displayed.
-</p>
-<p>
-Use <var>OnClick</var> (or OnExecute in the Action) for the event handler 
-signalled when the tool button was clicked.
-</p>
-</descr>
-<seealso>
-<link id="TToolButton.Style"/>
-<link id="TToolButton.ArrowClick"/>
-<link id="TToolButton.Click"/>
-<link id="TToolButton.DropDownMenu"/>
-<link id="#lcl.controls.TControl.OnClick">OnClick</link>
-</seealso>
-</element>
 
-<element name="TToolButton.OnClick">
-<short>Event handler signalled when the tool button has been clicked.</short>
-<descr>
-<p>
-<var>OnClick</var> is a <var>TNotifyEvent</var> property with the event 
-handler signalled when the left mouse button is clicked on the tool button.
-</p>
-</descr>
-<seealso>
-<link id="TToolButton.Style"/>
-<link id="TToolButton.OnArrowClick"/>
-<link id="#lcl.controls.TControl.OnClick">TControl.OnClick</link>
-</seealso>
-</element>
-
-<element name="TToolButton.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
-<element name="TToolButton.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
-<element name="TToolButton.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
-<element name="TToolButton.OnEndDock" link="#lcl.controls.TControl.OnEndDock"/>
-<element name="TToolButton.OnEndDrag" link="#lcl.controls.TControl.OnEndDrag"/>
-<element name="TToolButton.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
-<element name="TToolButton.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
-<element name="TToolButton.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
-<element name="TToolButton.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
-<element name="TToolButton.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
-<element name="TToolButton.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
-<element name="TToolButton.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
-<element name="TToolButton.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
-<element name="TToolButton.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
-<element name="TToolButton.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TToolButton.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
 <element name="TToolButton.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
 
@@ -22448,6 +22640,68 @@ tool bar.
 <descr/>
 <seealso/>
 </element>
+
+<element name="TToolButton.OnArrowClick">
+<short>
+Event handler signalled when the drop-down indicator for a tool button is 
+clicked.
+</short>
+<descr>
+<p>
+<var>OnArrowClick</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled when the drop-down indicator is clicked on a tool button 
+using a drop-down <var>Style</var>.
+</p>
+<p>
+OnArrowClick is signalled from the <var>ArrowClick</var> method (when 
+assigned), and occurs when the left mouse button was clicked on the drop-down 
+indicator. It is not executed if the <var>DropDownMenu</var> has already been 
+displayed.
+</p>
+<p>
+Use <var>OnClick</var> (or OnExecute in the Action) for the event handler 
+signalled when the tool button was clicked.
+</p>
+</descr>
+<seealso>
+<link id="TToolButton.Style"/>
+<link id="TToolButton.ArrowClick"/>
+<link id="TToolButton.Click"/>
+<link id="TToolButton.DropDownMenu"/>
+<link id="#lcl.controls.TControl.OnClick">OnClick</link>
+</seealso>
+</element>
+
+<element name="TToolButton.OnClick">
+<short>Event handler signalled when the tool button has been clicked.</short>
+<descr>
+<p>
+<var>OnClick</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled when the left mouse button is clicked on the tool button.
+</p>
+</descr>
+<seealso>
+<link id="TToolButton.Style"/>
+<link id="TToolButton.OnArrowClick"/>
+<link id="#lcl.controls.TControl.OnClick">TControl.OnClick</link>
+</seealso>
+</element>
+
+<element name="TToolButton.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
+<element name="TToolButton.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
+<element name="TToolButton.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
+<element name="TToolButton.OnEndDock" link="#lcl.controls.TControl.OnEndDock"/>
+<element name="TToolButton.OnEndDrag" link="#lcl.controls.TControl.OnEndDrag"/>
+<element name="TToolButton.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
+<element name="TToolButton.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
+<element name="TToolButton.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
+<element name="TToolButton.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
+<element name="TToolButton.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
+<element name="TToolButton.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
+<element name="TToolButton.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
+<element name="TToolButton.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
+<element name="TToolButton.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
+<element name="TToolButton.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 
 <element name="TToolBarEnumerator">
 <short>Implements an enumerator for the buttons defined on a tool bar.</short>
@@ -26813,33 +27067,6 @@ SetParams method.
 </seealso>
 </element>
 
-<element name="TCustomTrackBar.OnChange">
-<short>
-Event handler signalled when the Position in the control has been changed.
-</short>
-<descr>
-<p>
-<var>OnChange</var> is a <var>TNotifyEvent</var> property with the event 
-handler signalled when the value in the Position property is changed. The 
-Sender argument for the event is the TCustomTrackBar instance for the 
-notification.
-</p>
-<p>
-OnChange is signalled from the Change method. It occurs after the new value 
-for Position has been stored and the OnEditingDone event handler has been 
-signalled (when assigned).
-</p>
-</descr>
-<seealso>
-<link id="TCustomTrackBar.Position"/>
-<link id="TCustomTrackBar.Min"/>
-<link id="TCustomTrackBar.Max"/>
-<link id="TCustomTrackBar.Changed"/>
-<link id="TCustomTrackBar.DoChange"/>
-<link id="#lcl.controls.TControl.OnEditingDone">TControl.OnEditingDone</link>
-</seealso>
-</element>
-
 <element name="TCustomTrackBar.Orientation">
 <short>
 Indicates the horizontal or vertical orientation for the track bar control.
@@ -27102,6 +27329,33 @@ markers but no other tick marks.
 </descr>
 </element>
 
+<element name="TCustomTrackBar.OnChange">
+<short>
+Event handler signalled when the Position in the control has been changed.
+</short>
+<descr>
+<p>
+<var>OnChange</var> is a <var>TNotifyEvent</var> property with the event 
+handler signalled when the value in the Position property is changed. The 
+Sender argument for the event is the TCustomTrackBar instance for the 
+notification.
+</p>
+<p>
+OnChange is signalled from the Change method. It occurs after the new value 
+for Position has been stored and the OnEditingDone event handler has been 
+signalled (when assigned).
+</p>
+</descr>
+<seealso>
+<link id="TCustomTrackBar.Position"/>
+<link id="TCustomTrackBar.Min"/>
+<link id="TCustomTrackBar.Max"/>
+<link id="TCustomTrackBar.Changed"/>
+<link id="TCustomTrackBar.DoChange"/>
+<link id="#lcl.controls.TControl.OnEditingDone">TControl.OnEditingDone</link>
+</seealso>
+</element>
+
 <element name="TTrackBar">
 <short>
 <var>TTrackBar</var>: a device which allows the user to determine the value 
@@ -27150,6 +27404,23 @@ associated <link id="#lcl.comctrls.TProgressBar">TProgressBar</link>.
 <element name="TTrackBar.LineSize" link="#lcl.comctrls.TCustomTrackBar.LineSize"/>
 <element name="TTrackBar.Max" link="#lcl.comctrls.TCustomTrackBar.Max"/>
 <element name="TTrackBar.Min" link="#lcl.comctrls.TCustomTrackBar.Min"/>
+<element name="TTrackBar.PageSize" link="#lcl.comctrls.TCustomTrackBar.PageSize"/>
+<element name="TTrackBar.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TTrackBar.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TTrackBar.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TTrackBar.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TTrackBar.Position" link="#lcl.comctrls.TCustomTrackBar.Position"/>
+<element name="TTrackBar.Reversed" link="#lcl.comctrls.TCustomTrackBar.Reversed"/>
+<element name="TTrackBar.ScalePos" link="#lcl.comctrls.TCustomTrackBar.ScalePos"/>
+<element name="TTrackBar.SelEnd" link="#lcl.comctrls.TCustomTrackBar.SelEnd"/>
+<element name="TTrackBar.SelStart" link="#lcl.comctrls.TCustomTrackBar.SelStart"/>
+<element name="TTrackBar.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TTrackBar.ShowSelRange" link="#lcl.comctrls.TCustomTrackBar.ShowSelRange"/>
+<element name="TTrackBar.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TTrackBar.TabStop" link="#lcl.comctrls.TCustomTrackBar.TabStop"/>
+<element name="TTrackBar.TickMarks" link="#lcl.comctrls.TCustomTrackBar.TickMarks"/>
+<element name="TTrackBar.TickStyle" link="#lcl.comctrls.TCustomTrackBar.TickStyle"/>
+<element name="TTrackBar.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TTrackBar.OnChange" link="#lcl.comctrls.TCustomTrackBar.OnChange"/>
 <element name="TTrackBar.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
 <element name="TTrackBar.OnClick" link="#lcl.controls.TControl.OnClick"/>
@@ -27177,23 +27448,6 @@ associated <link id="#lcl.comctrls.TProgressBar">TProgressBar</link>.
 <element name="TTrackBar.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TTrackBar.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
 <element name="TTrackBar.Orientation" link="#lcl.comctrls.TCustomTrackBar.Orientation"/>
-<element name="TTrackBar.PageSize" link="#lcl.comctrls.TCustomTrackBar.PageSize"/>
-<element name="TTrackBar.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TTrackBar.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TTrackBar.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TTrackBar.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TTrackBar.Position" link="#lcl.comctrls.TCustomTrackBar.Position"/>
-<element name="TTrackBar.Reversed" link="#lcl.comctrls.TCustomTrackBar.Reversed"/>
-<element name="TTrackBar.ScalePos" link="#lcl.comctrls.TCustomTrackBar.ScalePos"/>
-<element name="TTrackBar.SelEnd" link="#lcl.comctrls.TCustomTrackBar.SelEnd"/>
-<element name="TTrackBar.SelStart" link="#lcl.comctrls.TCustomTrackBar.SelStart"/>
-<element name="TTrackBar.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TTrackBar.ShowSelRange" link="#lcl.comctrls.TCustomTrackBar.ShowSelRange"/>
-<element name="TTrackBar.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TTrackBar.TabStop" link="#lcl.comctrls.TCustomTrackBar.TabStop"/>
-<element name="TTrackBar.TickMarks" link="#lcl.comctrls.TCustomTrackBar.TickMarks"/>
-<element name="TTrackBar.TickStyle" link="#lcl.comctrls.TCustomTrackBar.TickStyle"/>
-<element name="TTrackBar.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TTreeNodeClass">
 <short>Class type used to create new TTreeNode instances.</short>
@@ -27217,7 +27471,7 @@ enumeration are stored in the TNodeStates type.
 </seealso>
 </element>
 <element name="TNodeState.nsCut">
-<short>Cut has been set in the the TTreeNode.</short>
+<short>Cut has been set in the TTreeNode.</short>
 </element>
 <element name="TNodeState.nsDropHilited">
 <short>DropTarget has been set in the TTreeNode.</short>
@@ -28090,7 +28344,7 @@ structure displayed in a <var>TTreeView</var> control.
 <p>
 TTreeNode has properties with the content displayed for the tree node like: 
 Text, Data, ImageIndex, and OverlayIndex. It has properties which indicate 
-the the the state for the node on the tree view control like: Cut, Deleting, 
+the state for the node on the tree view control like: Cut, Deleting, 
 Expanded, Focused, IsVisible, Selected, MultiSelected, States, Visible, and 
 Enabled. It also includes properties that represent its relationship and 
 position in the hierarchical tree structure like: TreeView, Owner / 
@@ -28903,14 +29157,20 @@ Gets the value for the Handle property.
 </short>
 <descr>
 <p>
-GetHandle is a THandle function used to get the value for the Handle 
-property. It is the Handle allocated for the associated TreeView control, or 
-zero (0) if the TreeView property has not been assigned for the node.
+<var>GetHandle</var> is a <var>TLCLHandle</var> function used to get the value 
+for the <var>Handle</var> property. It is the Handle allocated for the 
+associated TreeView control, or zero (0) if the TreeView property has not been 
+assigned for the node.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to return the TLCLHandle type instead of the 
+deprecated THandle type.
+</version>
 <seealso>
 <link id="TTreeNode.Handle"/>
 <link id="TTreeNode.TreeView"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
 </seealso>
 </element>
 <element name="TTreeNode.GetHandle.Result">
@@ -30229,13 +30489,19 @@ tree node.
 </short>
 <descr>
 <p>
-<var>THandle</var> is a read-only <var>THandle</var> property with the handle 
-assigned for the associated <var>TreeView</var> control. The property value 
-is <b>0</b> (<b>zero</b>) if a handle has not been assigned for the TreeView 
-control.
+<var>Handle</var> is a read-only <var>TLCLHandle</var> property with the 
+handle assigned for the associated <var>TreeView</var> control. The property 
+value is <b>0</b> (<b>zero</b>) if a handle has not been assigned for the 
+TreeView control.
 </p>
 </descr>
-<seealso/>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type.
+</version>
+<seealso>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 
 <element name="TTreeNode.HasChildren">
@@ -30338,7 +30604,7 @@ contains -1 if the node does not have an assigned Parent node.
 Changing the value for the property causes the tree node to be relocated in 
 the Parent node, or the Owner for top-level nodes. An ETreeViewError exception 
 is raised if the Index for a top-level node is changed and Owner has not been 
-assigned. The MoveTo method is called to relocate the the tree node to the new 
+assigned. The MoveTo method is called to relocate the tree node to the new 
 position in the property value.
 </p>
 <p>
@@ -30500,7 +30766,7 @@ TGraphicsDrawEffect</link> for the other values allowed in the property, and
 their meanings.
 </p>
 <p>
-Changing the value for the property causes the the Update method to be called 
+Changing the value for the property causes the Update method to be called 
 to redraw the TreeView control for the node. The Changed method is called to 
 notify the TreeView control of the reason that the node was changed.
 </p>
@@ -30590,7 +30856,7 @@ property value is <b>True</b> when <var>nsSelected</var> or
 <var>nsMultiSelected</var> has been included in the <var>States</var> 
 property. nsSelected indicates that the node is assigned to the 
 <var>TCustomTreeView.Selected</var> property. nsMultiSelected indicates that 
-the node is stored in the the <var>TCustomTreeView.Selections</var> property 
+the node is stored in the <var>TCustomTreeView.Selections</var> property 
 when it has <var>MultiSelect</var> enabled.
 </p>
 <p>
@@ -31081,7 +31347,14 @@ and <var>TreeNodes</var> properties in <var>TTreeNode</var>.
 Gets the handle for the TreeView component using the collection of nodes.
 </short>
 <descr/>
-<seealso/>
+<version>
+Modified in LCL version 4.0 to return the TLCLHandle type instead of the 
+deprecated THandle type.
+</version>
+<seealso>
+<link id="TCustomTreeView.Handle"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+</seealso>
 </element>
 <element name="TTreeNodes.GetHandle.Result">
 <short>The handle for the TreeView, or 0 when TreeView is unassigned.</short>
@@ -32197,6 +32470,28 @@ Decrements the internal counter used to track active updates to the container.
 </seealso>
 </element>
 
+<element name="TTreeNodes.IsUpdating">
+<short>
+Indicates whether BeginUpdate has been called at the start of an update to the 
+node container.
+</short>
+<descr/>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TTreeNodes.BeginUpdate"/>
+<link id="TTreeNodes.EndUpdate"/>
+</seealso>
+</element>
+<element name="TTreeNodes.IsUpdating.Result">
+<short>
+Returns <b>True</b> if the internal update counter for the container has a 
+non-zero value. Returns <b>False</b> when BeginUpdate has not been called, or 
+when EndUpdate has caused the internal update count to return to zero (0).
+</short>
+</element>
+
 <element name="TTreeNodes.FreeAllNodeData">
 <short>
 Frees the pointer in the Data property for each of the nodes in the container.
@@ -33005,8 +33300,8 @@ CanvasChanged is not used in the current LCL implementation.
 <element name="TCustomTreeView.NodeIsSelected"/>
 <element name="TCustomTreeView.NodeIsSelected.Result"/>
 <element name="TCustomTreeView.NodeIsSelected.ANode"/>
-<element name="TCustomTreeView.OnChangeTimer"/>
-<element name="TCustomTreeView.OnChangeTimer.Sender"/>
+<element name="TCustomTreeView.ChangeTimer"/>
+<element name="TCustomTreeView.ChangeTimer.Sender"/>
 <element name="TCustomTreeView.SetAutoExpand"/>
 <element name="TCustomTreeView.SetAutoExpand.Value"/>
 <element name="TCustomTreeView.SetBackgroundColor"/>
@@ -37295,7 +37590,7 @@ found at the position.
 </short>
 </element>
 <element name="TCustomTreeView.GetNodeAt.X">
-<short>Horizontal coordinate for the the node or row.</short>
+<short>Horizontal coordinate for the node or row.</short>
 </element>
 <element name="TCustomTreeView.GetNodeAt.Y">
 <short>Vertical coordinate for the tree node or row.</short>
@@ -39132,6 +39427,11 @@ shown by their caption and an optional bitmap.
 </seealso>
 </element>
 
+<!-- public -->
+<element name="TTreeView.PathDelimiter" link="TCustomTreeView.PathDelimiter"/>
+<element name="TTreeView.ScrolledLeft" link="TCustomTreeView.ScrolledLeft"/>
+<element name="TTreeView.ScrolledTop" link="TCustomTreeView.ScrolledTop"/>
+
 <element name="TTreeView.Align" link="#lcl.controls.TControl.Align"/>
 <element name="TTreeView.Anchors" link="#lcl.controls.TControl.Anchors"/>
 <element name="TTreeView.AutoExpand" link="#lcl.comctrls.TCustomTreeView.AutoExpand"/>
@@ -39208,6 +39508,11 @@ The default value for the property is <b>True</b> in TTreeView.
 <element name="TTreeView.Tag" link="#rtl.classes.TComponent.Tag"/>
 <element name="TTreeView.ToolTips" link="#lcl.comctrls.TCustomTreeView.ToolTips"/>
 <element name="TTreeView.Visible" link="#lcl.controls.TControl.Visible"/>
+
+<element name="TTreeView.Options" link="#lcl.comctrls.TCustomTreeView.Options"/>
+<element name="TTreeView.Items" link="#lcl.comctrls.TCustomTreeView.Items"/>
+<element name="TTreeView.TreeLineColor" link="#lcl.comctrls.TCustomTreeView.TreeLineColor"/>
+<element name="TTreeView.TreeLinePenStyle" link="#lcl.comctrls.TCustomTreeView.TreeLinePenStyle"/>
 <element name="TTreeView.OnAddition" link="#lcl.comctrls.TCustomTreeView.OnAddition"/>
 <element name="TTreeView.OnAdvancedCustomDraw" link="#lcl.comctrls.TCustomTreeView.OnAdvancedCustomDraw"/>
 <element name="TTreeView.OnAdvancedCustomDrawItem" link="#lcl.comctrls.TCustomTreeView.OnAdvancedCustomDrawItem"/>
@@ -39258,10 +39563,6 @@ The default value for the property is <b>True</b> in TTreeView.
 <element name="TTreeView.OnShowHint" link="#lcl.controls.TControl.OnShowHint"/>
 <element name="TTreeView.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TTreeView.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TTreeView.Options" link="#lcl.comctrls.TCustomTreeView.Options"/>
-<element name="TTreeView.Items" link="#lcl.comctrls.TCustomTreeView.Items"/>
-<element name="TTreeView.TreeLineColor" link="#lcl.comctrls.TCustomTreeView.TreeLineColor"/>
-<element name="TTreeView.TreeLinePenStyle" link="#lcl.comctrls.TCustomTreeView.TreeLinePenStyle"/>
 
 <element name="TTVGetNodeText">
 <short>
@@ -39677,6 +39978,34 @@ selected) or pressed (selected).
 </short>
 </element>
 
+<element name="THeaderSection.OriginalIndex">
+<short>
+Index position which does not change when the user reorders the sections on a 
+header control.
+</short>
+<descr>
+<p>
+<var>OriginalIndex</var> is an <var>Integer</var> property which contains the 
+index order for the section when it was added to its Owner collection. The 
+property value is assigned when the class instance is created in the AddItem 
+method in THeaderSections. It normally contains the value in Index unless the 
+value is already in use in the collection.
+</p>
+<p>
+OriginalIndex may be updated when Delete in the THeaderSections is used to 
+remove a header section from the collection.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0; changed to public visibility.
+</version>
+<seealso>
+<link id="THeaderSections.AddItem"/>
+<link id="THeaderSections.Delete"/>
+<link id="#rtl.classes.TCollectionItem.Index">TCollectionItem.Index</link>
+</seealso>
+</element>
+
 <element name="THeaderSection.Alignment">
 <short>
 <var>Alignment</var> - whether text is to be left or right justified or 
@@ -39686,9 +40015,9 @@ centered.
 <p>
 <var>Alignment</var> is a <var>TAlignment</var> property which indicates the 
 horizontal alignment used to display the Text for the header section. The 
-default value for the property is taLeftJustify as assigned in the Create 
-constructor. See <link id="#rtl.classes.TAlignment">TAlignment</link> for the 
-values allowed in the property.
+default value for the property is taLeftJustify. See 
+<link id="#rtl.classes.TAlignment">TAlignment</link> for the values allowed in 
+the property.
 </p>
 <p>
 Changing the value for the property causes the Changed method to be called to 
@@ -39885,35 +40214,9 @@ the section cannot be drawn using the TCustomHeaderControl.PaintSection
 method, and the Width for the section is 0.
 </p>
 <p>
-The default value for the property is <b>True</b>, as set in the constructor 
-for the class instance.
+The default value for the property is <b>True</b>.
 </p>
 </descr>
-</element>
-
-<element name="THeaderSection.OriginalIndex">
-<short>
-Index position which does not change when the user reorders the sections on a 
-header control.
-</short>
-<descr>
-<p>
-<var>OriginalIndex</var> is an <var>Integer</var> property which contains the 
-index order for the section when it was added to its Owner collection. The 
-property value is assigned when the class instance is created in the AddItem 
-method in THeaderSections. It normally contains the value in Index unless the 
-value is already in use in the collection.
-</p>
-<p>
-OriginalIndex may be updated when Delete in the THeaderSections is used to 
-remove a header section from the collection.
-</p>
-</descr>
-<seealso>
-<link id="THeaderSections.AddItem"/>
-<link id="THeaderSections.Delete"/>
-<link id="#rtl.classes.TCollectionItem.Index">TCollectionItem.Index</link>
-</seealso>
 </element>
 
 <element name="THeaderSectionClass">

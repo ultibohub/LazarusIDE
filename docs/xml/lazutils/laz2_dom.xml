@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -263,12 +263,6 @@ Represents the node type for DOM Document Type Declarations (DTD).
 <!-- constant Visibility: default -->
 <element name="NOTATION_NODE">
 <short>Represents the node type for DOM Notation Declarations.</short>
-<descr></descr>
-</element>
-
-<!-- set type Visibility: default -->
-<element name="TSetOfChar">
-<short>Defines a set with values using the Char type.</short>
 <descr></descr>
 </element>
 

@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -1957,7 +1957,9 @@ access scroll bar page, range, and visibility when AutoScroll is not enabled.
 </p>
 <p>
 An example application using TScrollBox is located in the 
-<file>examples/imgviewer</file> directory.
+<url href="https://gitlab.com/freepascal.org/lazarus/lazarus/-/tree/main/examples/imgviewer">
+<file>examples/imgviewer</file>
+</url> directory.
 </p>
 </descr>
 <seealso>
@@ -3098,6 +3100,17 @@ been assigned to the Parent for the control.
 </seealso>
 </element>
 
+<element name="TFrame.ParentBackground" link="#lcl.forms.TCustomFrame.ParentBackground"/>
+<element name="TFrame.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
+<element name="TFrame.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
+<element name="TFrame.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
+<element name="TFrame.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
+<element name="TFrame.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
+<element name="TFrame.Scaled" link="#lcl.forms.TCustomDesignControl.Scaled"/>
+<element name="TFrame.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
+<element name="TFrame.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
+<element name="TFrame.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
+<element name="TFrame.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TFrame.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TFrame.OnConstrainedResize" link="#lcl.controls.TControl.OnConstrainedResize"/>
 <element name="TFrame.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
@@ -3126,17 +3139,6 @@ been assigned to the Parent for the control.
 <element name="TFrame.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
 <element name="TFrame.OnStartDrag" link="#lcl.controls.TControl.OnStartDrag"/>
 <element name="TFrame.OnUnDock" link="#lcl.controls.TWinControl.OnUnDock"/>
-<element name="TFrame.ParentBackground" link="#lcl.forms.TCustomFrame.ParentBackground"/>
-<element name="TFrame.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
-<element name="TFrame.ParentColor" link="#lcl.controls.TControl.ParentColor"/>
-<element name="TFrame.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
-<element name="TFrame.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
-<element name="TFrame.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TFrame.Scaled" link="#lcl.forms.TCustomDesignControl.Scaled"/>
-<element name="TFrame.ShowHint" link="#lcl.controls.TControl.ShowHint"/>
-<element name="TFrame.TabOrder" link="#lcl.controls.TWinControl.TabOrder"/>
-<element name="TFrame.TabStop" link="#lcl.controls.TWinControl.TabStop"/>
-<element name="TFrame.Visible" link="#lcl.controls.TControl.Visible"/>
 
 <element name="TWindowMagnetOptions">
 <short>
@@ -4863,17 +4865,39 @@ Dispatches the value in Message to all Components on the form.
 </element>
 
 <element name="TCustomForm.CMIconChanged">
-<short>Handles the CM_ICONCHANGED control message for the form.</short>
+<short>
+Handles the CM_ICONCHANGED control message for the form.
+</short>
 <descr>
 <p>
-Frees and re-creates handle(s) for icons used on the form, and notifies the 
-widgetset class by calling its SetIcon method.
+CMIconChanged is a method used to perform actions needed when the 
+CM_ICONCHANGED control message is handled for a form. CMIconChanged calls a 
+private method (IconChanged) to free and re-create handle(s) for icons used on 
+the form.
+</p>
+<p>
+The CM_ICONCHANGED control message occurs when a new value is assigned to the 
+Icon property, and when the BorderStyle property is changed. At run-time, the 
+widgetset class is notified by calling its SetIcon method when BorderStyle 
+contains a value that allows icons. bsDialog and bsNone do not display icons.
 </p>
 </descr>
-<seealso/>
+<version>
+Modified in LCL version 4.0 to use assigned handles in SmallIconHandle and 
+BigIconHandle when BorderStyle is changed to a value other than bsNone or 
+bsDialog.
+</version>
+<seealso>
+<link id="TCustomForm.BorderStyle"/>
+<link id="TCustomForm.Icon"/>
+<link id="TCustomForm.SmallIconHandle"/>
+<link id="TCustomForm.BigIconHandle"/>
+</seealso>
 </element>
 <element name="TCustomForm.CMIconChanged.Message">
-<short>Control message for the notification.</short>
+<short>
+Control message for the notification.
+</short>
 </element>
 
 <element name="TCustomForm.CMRelease">
@@ -6769,14 +6793,14 @@ Modified in LCL version 3.6 to include the overloaded variant which stores the
 image to an existing bitmap instance.
 </version>
 <seealso>
-<link id="TCustomForm.ClientHeight"/>
-<link id="TCustomForm.ClientWidth"/>
 <link id="#lcl.graphics.TCustomBitmap">TCustomBitmap</link>
 <link id="#lcl.graphics.TBitmap">TBitmap</link>
 <link id="#lcl.graphics.TJpegImage">TJpegImage</link>
 <link id="#lcl.graphics.TPortableNetworkGraphic">TTPortableNetworkGraphic</link>
 <link id="#lcl.controls.TWinControl.GetClientOrigin">TWinControl.GetClientOrigin</link>
 <link id="#lcl.controls.TWinControl.PaintTo">TWinControl.PaintTo</link>
+<link id="#lcl.controls.TControl.ClientHeight">TControl.ClientHeight</link>
+<link id="#lcl.controls.TControl.ClientWidth">TControl.ClientWidth</link>
 <link id="#lcl.lclintf.GetWindowRect">GetWindowRect</link>
 </seealso>
 </element>
@@ -7875,26 +7899,57 @@ specific border style.
 
 <element name="TCustomForm.BorderStyle">
 <short>
-The border style affects the title bar, border and resize behavior of the 
-form.
+The border style affects the title bar, border, icon(s), and resize behavior 
+for the form.
 </short>
 <descr>
 <p>
-Use BorderStyle to get or set the appearance of the form's border.
+<var>BorderStyle</var> is a <var>TFormBorderStyle</var> property used to 
+control the appearance of the border on a form. The default value is bsSizeable 
+and displays the standard border for a sizeable window. But it could, for 
+example, be a dialog form or a tool window, or could be non-sizeable. See 
+TFormBorderStyle for the enumeration values allowed in the property and their 
+meanings.
 </p>
 <p>
-By default it is a sizeable window, but it could, for example, be a dialog 
-form or a tool window, or could be non-sizeable.
+Changing the value for the property causes other properties in the form 
+instance to be updated:
 </p>
+<dl>
+<dt>AutoScroll</dt>
+<dd>
+Disabled when the property contains a value other than bsSizeable or 
+bsSizeToolWin.
+</dd>
+<dt>BorderIcons</dt>
+<dd>
+Updated at run-time when the new property value requires a different set of 
+default border icons than the previous value.
+</dd>
+<dt>Icon, SmallIconHandle, BigIconHandle</dt>
+<dd>
+Updated at run-time by performing the CM_ICONCHANGED control message.
+</dd>
+<dt>Menu</dt>
+<dd>
+Updated at run-time to create (or re-create) the window handle for a TMainMenu 
+instance using the Handle for the form.
+</dd>
+</dl>
 <p>
-This property is slightly different (has a different base type) from the 
-<var>TCustomControl.BorderStyle</var> property. When the form is put into 
-another control the window borders depend on the widgetset. There are no 
-borders under GTK.
+In TCustomForm (and TForm), BorderStyle is slightly different (has a different 
+base type) from the <var>TCustomControl.BorderStyle</var> property. When the 
+form is put into another control the window borders depend on the widgetset. 
+There are no borders under GTK.
 </p>
 </descr>
 <seealso>
 <link id="TCustomForm.AutoScroll"/>
+<link id="TCustomForm.Icon"/>
+<link id="TCustomForm.SmallIconHandle"/>
+<link id="TCustomForm.BigIconHandle"/>
+<link id="TCustomForm.CMIconChanged"/>
+<link id="TCustomForm.Menu"/>
 <link id="#lcl.controls.TFormBorderStyle">TFormBorderStyle</link>
 <link id="#lcl.controls.TBorderStyle">TBorderStyle</link>
 <link id="#lcl.controls.TCustomControl.BorderStyle">TCustomControl.BorderStyle</link>
@@ -9352,49 +9407,6 @@ widgetset class when its <var>Handle</var> has been allocated.
 <element name="TForm.Icon" link="#lcl.forms.TCustomForm.Icon"/>
 <element name="TForm.KeyPreview" link="#lcl.forms.TCustomForm.KeyPreview"/>
 <element name="TForm.Menu" link="#lcl.forms.TCustomForm.Menu"/>
-<element name="TForm.OnActivate" link="#lcl.forms.TCustomForm.OnActivate"/>
-<element name="TForm.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
-<element name="TForm.OnClick" link="#lcl.controls.TControl.OnClick"/>
-<element name="TForm.OnClose" link="#lcl.forms.TCustomForm.OnClose"/>
-<element name="TForm.OnCloseQuery" link="#lcl.forms.TCustomForm.OnCloseQuery"/>
-<element name="TForm.OnConstrainedResize" link="#lcl.controls.TControl.OnConstrainedResize"/>
-<element name="TForm.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
-<element name="TForm.OnCreate" link="#lcl.forms.TCustomForm.OnCreate"/>
-<element name="TForm.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
-<element name="TForm.OnDeactivate" link="#lcl.forms.TCustomForm.OnDeactivate"/>
-<element name="TForm.OnDestroy" link="#lcl.forms.TCustomForm.OnDestroy"/>
-<element name="TForm.OnDockDrop" link="#lcl.controls.TWinControl.OnDockDrop"/>
-<element name="TForm.OnDockOver" link="#lcl.controls.TWinControl.OnDockOver"/>
-<element name="TForm.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
-<element name="TForm.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
-<element name="TForm.OnDropFiles" link="#lcl.forms.TCustomForm.OnDropFiles"/>
-<element name="TForm.OnEndDock" link="#lcl.controls.TControl.OnEndDock"/>
-<element name="TForm.OnGetSiteInfo" link="#lcl.controls.TWinControl.OnGetSiteInfo"/>
-<element name="TForm.OnHelp" link="#lcl.forms.TCustomForm.OnHelp"/>
-<element name="TForm.OnHide" link="#lcl.forms.TCustomForm.OnHide"/>
-<element name="TForm.OnKeyDown" link="#lcl.controls.TWinControl.OnKeyDown"/>
-<element name="TForm.OnKeyPress" link="#lcl.controls.TWinControl.OnKeyPress"/>
-<element name="TForm.OnKeyUp" link="#lcl.controls.TWinControl.OnKeyUp"/>
-<element name="TForm.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
-<element name="TForm.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
-<element name="TForm.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
-<element name="TForm.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
-<element name="TForm.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
-<element name="TForm.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
-<element name="TForm.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
-<element name="TForm.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
-<element name="TForm.OnMouseWheelHorz" link="#lcl.controls.TControl.OnMouseWheelHorz"/>
-<element name="TForm.OnMouseWheelLeft" link="#lcl.controls.TControl.OnMouseWheelLeft"/>
-<element name="TForm.OnMouseWheelRight" link="#lcl.controls.TControl.OnMouseWheelRight"/>
-<element name="TForm.OnPaint" link="#lcl.controls.TCustomControl.OnPaint"/>
-<element name="TForm.OnResize" link="#lcl.controls.TControl.OnResize"/>
-<element name="TForm.OnShortCut" link="#lcl.forms.TCustomForm.OnShortcut"/>
-<element name="TForm.OnShow" link="#lcl.forms.TCustomForm.OnShow"/>
-<element name="TForm.OnShowHint" link="#lcl.controls.TControl.OnShowHint"/>
-<element name="TForm.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
-<element name="TForm.OnUnDock" link="#lcl.controls.TWinControl.OnUnDock"/>
-<element name="TForm.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TForm.OnWindowStateChange" link="#lcl.forms.TCustomForm.OnWindowStateChange"/>
 <element name="TForm.ParentBiDiMode" link="#lcl.controls.TControl.ParentBiDiMode"/>
 <element name="TForm.ParentDoubleBuffered" link="#lcl.controls.TWinControl.ParentDoubleBuffered"/>
 <element name="TForm.ParentFont" link="#lcl.forms.TCustomForm.ParentFont"/>
@@ -9475,6 +9487,49 @@ Used to distinguish form streaming content for different versions of the LCL.
 <element name="TForm.Scaled" link="#lcl.forms.TCustomDesignControl.Scaled"/>
 <element name="TForm.Visible" link="#lcl.forms.TCustomForm.Visible"/>
 <element name="TForm.WindowState" link="#lcl.forms.TCustomForm.WindowState"/>
+<element name="TForm.OnActivate" link="#lcl.forms.TCustomForm.OnActivate"/>
+<element name="TForm.OnChangeBounds" link="#lcl.controls.TControl.OnChangeBounds"/>
+<element name="TForm.OnClick" link="#lcl.controls.TControl.OnClick"/>
+<element name="TForm.OnClose" link="#lcl.forms.TCustomForm.OnClose"/>
+<element name="TForm.OnCloseQuery" link="#lcl.forms.TCustomForm.OnCloseQuery"/>
+<element name="TForm.OnConstrainedResize" link="#lcl.controls.TControl.OnConstrainedResize"/>
+<element name="TForm.OnContextPopup" link="#lcl.controls.TControl.OnContextPopup"/>
+<element name="TForm.OnCreate" link="#lcl.forms.TCustomForm.OnCreate"/>
+<element name="TForm.OnDblClick" link="#lcl.controls.TControl.OnDblClick"/>
+<element name="TForm.OnDeactivate" link="#lcl.forms.TCustomForm.OnDeactivate"/>
+<element name="TForm.OnDestroy" link="#lcl.forms.TCustomForm.OnDestroy"/>
+<element name="TForm.OnDockDrop" link="#lcl.controls.TWinControl.OnDockDrop"/>
+<element name="TForm.OnDockOver" link="#lcl.controls.TWinControl.OnDockOver"/>
+<element name="TForm.OnDragDrop" link="#lcl.controls.TControl.OnDragDrop"/>
+<element name="TForm.OnDragOver" link="#lcl.controls.TControl.OnDragOver"/>
+<element name="TForm.OnDropFiles" link="#lcl.forms.TCustomForm.OnDropFiles"/>
+<element name="TForm.OnEndDock" link="#lcl.controls.TControl.OnEndDock"/>
+<element name="TForm.OnGetSiteInfo" link="#lcl.controls.TWinControl.OnGetSiteInfo"/>
+<element name="TForm.OnHelp" link="#lcl.forms.TCustomForm.OnHelp"/>
+<element name="TForm.OnHide" link="#lcl.forms.TCustomForm.OnHide"/>
+<element name="TForm.OnKeyDown" link="#lcl.controls.TWinControl.OnKeyDown"/>
+<element name="TForm.OnKeyPress" link="#lcl.controls.TWinControl.OnKeyPress"/>
+<element name="TForm.OnKeyUp" link="#lcl.controls.TWinControl.OnKeyUp"/>
+<element name="TForm.OnMouseDown" link="#lcl.controls.TControl.OnMouseDown"/>
+<element name="TForm.OnMouseEnter" link="#lcl.controls.TControl.OnMouseEnter"/>
+<element name="TForm.OnMouseLeave" link="#lcl.controls.TControl.OnMouseLeave"/>
+<element name="TForm.OnMouseMove" link="#lcl.controls.TControl.OnMouseMove"/>
+<element name="TForm.OnMouseUp" link="#lcl.controls.TControl.OnMouseUp"/>
+<element name="TForm.OnMouseWheel" link="#lcl.controls.TControl.OnMouseWheel"/>
+<element name="TForm.OnMouseWheelDown" link="#lcl.controls.TControl.OnMouseWheelDown"/>
+<element name="TForm.OnMouseWheelUp" link="#lcl.controls.TControl.OnMouseWheelUp"/>
+<element name="TForm.OnMouseWheelHorz" link="#lcl.controls.TControl.OnMouseWheelHorz"/>
+<element name="TForm.OnMouseWheelLeft" link="#lcl.controls.TControl.OnMouseWheelLeft"/>
+<element name="TForm.OnMouseWheelRight" link="#lcl.controls.TControl.OnMouseWheelRight"/>
+<element name="TForm.OnPaint" link="#lcl.controls.TCustomControl.OnPaint"/>
+<element name="TForm.OnResize" link="#lcl.controls.TControl.OnResize"/>
+<element name="TForm.OnShortCut" link="#lcl.forms.TCustomForm.OnShortcut"/>
+<element name="TForm.OnShow" link="#lcl.forms.TCustomForm.OnShow"/>
+<element name="TForm.OnShowHint" link="#lcl.controls.TControl.OnShowHint"/>
+<element name="TForm.OnStartDock" link="#lcl.controls.TControl.OnStartDock"/>
+<element name="TForm.OnUnDock" link="#lcl.controls.TWinControl.OnUnDock"/>
+<element name="TForm.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
+<element name="TForm.OnWindowStateChange" link="#lcl.forms.TCustomForm.OnWindowStateChange"/>
 
 <element name="TFormClass">
 <short>
@@ -9636,13 +9691,13 @@ when BorderStyle is changed to another value.
 
 <element name="TCustomDockForm.BorderStyle">
 <short>
-The border style affects the title bar, border and resize behavior of the 
-form.
+The border style affects the title bar, border, icons, and resize behavior of 
+the form.
 </short>
 <descr>
 <p>
-Use BorderStyle to get or set the appearance of the form's border. The 
-default value in TCustomDockForm is bsSizeToolWin.
+Use BorderStyle to get or set the appearance of the border on a form. 
+The default value in TCustomDockForm is bsSizeToolWin.
 </p>
 <p>
 This property is slightly different (has a different base type) than the 
@@ -11713,6 +11768,40 @@ UseCLDefault define for the platform).
 <short>Value for the property.</short>
 </element>
 
+<element name="TScreen.Notification">
+<short>
+Performs actions when the specified component is added to or removed from the 
+class instance.
+</short>
+<descr>
+<p>
+<var>Notification</var> is an overridden method used to perform actions needed 
+when a component is added to or removed from the class instance. It calls the 
+inherited method on entry to remove the free notification for the component 
+and to signal the Notification method for any child components. In TScreen, it 
+ensures that an internal member used to track the value in ActiveControl or  
+ActiveCustomForm is <b>Nil</b>'d when AComponent is removed and it is stored 
+in one of the members.
+</p>
+</descr>
+<seealso>
+<link id="TScreen.ActiveControl"/>
+<link id="TScreen.ActiveCustomForm"/>
+<link id="#rtl.classes.TComponent">TComponent</link>
+<link id="#rtl.classes.TComponent.Components">TComponent.Components</link>
+</seealso>
+</element>
+<element name="TScreen.Notification.AComponent">
+<short>
+Component added or removed in the notification.
+</short>
+</element>
+<element name="TScreen.Notification.Operation">
+<short>
+Operation performed for the specified component.
+</short>
+</element>
+
 <element name="TScreen.MagnetManager">
 <short>
 Manages screen / form snapping behavior for the screen.
@@ -12557,37 +12646,55 @@ Finds the monitor containing the form with the given window handle.
 </short>
 <descr>
 <p>
-MonitorFromWindow is a TMonitor function used to locate monitor where the 
+MonitorFromWindow is a TMonitor function used to locate the monitor where the 
 form represented by the specified window Handle is displayed.
 </p>
 <p>
 <var>MonitorDefault</var> is a <var>TMonitorDefaultTo</var> enumeration value 
 which indicates the monitor used when the display area for the form is not 
-found on a monitor. See TMonitorDefaultTo for more information about the 
-values in the enumeration and their meanings.
+found on a monitor. 
+See <link id="TMonitorDefaultTo">TMonitorDefaultTo</link> for more 
+information about the values in the enumeration and their meanings.
 </p>
 <p>
-MonitorFromWindow calls MonitorFromWindow in the widgetset class to get a 
-monitor handle used to locate the monitor in the Monitors property. The 
-UpdatedMonitor method is called to ensure that Monitors contains up-to-date 
+MonitorFromWindow calls the MonitorFromWindow routine in the LCL interface to 
+get the HMONITOR handle to locate in the Monitors property. The 
+UpdatedMonitors method is called to ensure that Monitors contains up-to-date 
 values for the available monitors.
 </p>
 <p>
-If a monitor with the Handle is not found, GetWindowRect is called to get the 
-display areas for the monitor Handle. MonitorFromRect is called to locate the 
-monitor which contains the rectangle.
+If the handle is found in Monitors, the TMonitor instance with the handle is 
+used as the return value.
+</p>
+<p>
+If a monitor is not found, GetWindowRect is called to get the display area for 
+the TLCLHandle specified in the Handle argument. MonitorFromRect is called to 
+locate the monitor which contains the rectangle. The TMonitor instance is used 
+as the return value.
+</p>
+<p>
+MonitorFromWindow is called from methods like TCustomForm.GetMonitor.
 </p>
 </descr>
-<seealso/>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type in the Handle parameter.
+</version>
+<seealso>
+<link id="TMonitor.Handle"/>
+<link id="TMonitorDefaultTo"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+<link id="#lcl.lcltype.HMONITOR">HMONITOR</link>
+</seealso>
 </element>
 <element name="TScreen.MonitorFromWindow.Result">
-<short>The monitor found.</short>
+<short>The TMonitor instance found for the specified handle.</short>
 </element>
 <element name="TScreen.MonitorFromWindow.Handle">
-<short>The window handle to use.</short>
+<short>The TLCLHandle instance on the monitor located in the method.</short>
 </element>
 <element name="TScreen.MonitorFromWindow.MonitorDefault">
-<short>What to return when no monitor was found.</short>
+<short>What to return if a monitor was found.</short>
 </element>
 
 <element name="TScreen.BeginTempCursor">
@@ -15218,24 +15325,65 @@ DoOnMouseMove is called from the NotifyUserInputHandler method.
 </element>
 
 <element name="TApplication.ShowHintWindow">
-<short>Shows or hides the Hint window for the application.</short>
+<short>
+Shows or hides the hint window for a control in the application.
+</short>
 <descr>
 <p>
-When a parented HintControl has been assigned, handler routines are signalled 
-to check whether the hint can be display in the event handler. The OnShowHint 
-event handler is signalled first (when assigned). Additional application 
-handlers assigned using AddOnShowHintHandler are signalled next.
+<var>ShowHintWindow</var> performs actions needed to display hint text in a 
+pop-up window for the control represented by the mouse coordinates in the 
+<var>Info</var> argument. No actions are performed in the method if ShowHint 
+has not been enabled, or a valid hint control cannot be determined for the 
+application.
 </p>
 <p>
-If the hint text is not empty, it is displayed and its timer is started. 
-Otherwise the HideHint method is called to hide the hint window.
+ShowHintWindow maintains an internal THintInfo structure used to store  
+information with the text for the hint, configuration information about its 
+display window, and the control for the hint.
+</p>
+<p>
+For a valid parented hint control, handler routines are signalled to check 
+whether the hint can be displayed for the application. The OnShowHint event 
+handler(s) are signalled first (when assigned) to determine the hint text or 
+hint data. Additional OnShowHint handlers assigned using AddOnShowHintHandler 
+are signalled next.
+</p>
+<p>
+If the hint text or hint data was not assigned in the event handlers, the hint 
+text for the hovered control is used. Only the first "|"-delimited line of text 
+in TControl.Hint is used for the hint.
+</p>
+<p>
+The hint window for the application is created (or re-created) and configured 
+as needed, and the show hint command is performed for the hint control. The 
+ActivateHintData method in the hint window is called to display (or hide) the 
+hint window and activate (or reset) the auto-hide timer.
+</p>
+<p>
+If the hint control is no longer valid or the hint text is empty, the HideHint 
+method is called to hide an existing hint window.
 </p>
 </descr>
-<seealso/>
+<seealso>
+<link id="TApplication.ShowHint"/>
+<link id="TApplication.HideHint"/>
+<link id="TApplication.OnShowHint"/>
+<link id="TApplication.StartHintTimer"/>
+<link id="THintWindow.ActivateHintData"/>
+<link id="THintWindow.ActivateHint"/>
+<link id="HintWindowClass"/>
+<link id="#lcl.controls.TControl.Hint">TControl.Hint</link>
+<link id="#lcl.controls.THintInfo">THintInfo</link>
+</seealso>
 </element>
+<version>
+Modified in LCL version 4.0 to call ActivateHintData for the hint window 
+(instead of ActivateHint).
+</version>
 <element name="TApplication.ShowHintWindow.Info">
 <short>
-Updated with the Hint-related information for a parent control or form.
+Contains information about the hint control, its mouse coordinates, and the 
+hint text used in the method.
 </short>
 </element>
 
@@ -15571,22 +15719,43 @@ Application variables do not contain the same TCustomApplication instance.
 </element>
 
 <element name="TApplication.ActivateHint">
-<short>Configures a hint window for the specified mouse position.</short>
+<short>
+Configures a hint window for the specified mouse position.
+</short>
 <descr>
 <p>
-<var>ActivateHint</var> is a procedure used to configure a hint window 
-display at the coordinates specified in <var>CursorPos</var>.
+<var>ActivateHint</var> is a procedure used to configure and control a hint 
+window displayed at the coordinates specified in <var>CursorPos</var>. 
+ActivateHint retrieves the control with hint information at the specified mouse 
+position.
 </p>
 <p>
-ActivateHint retrieves the hint information at the mouse position. If the 
-control for the hint differs from the current hint control, the existing hint 
-is deactivated. The new hint window sets its hint timer and calculates the 
-rectangle for the hint window.
+<var>CheckHintControlChange</var> indicates whether the active Hint control is 
+compared to the control under the mouse position to determine if the active 
+hint control has changed. When set to <b>False</b>, only the mouse leaving the 
+hint rectangle causes the window to be updated. When set to <var>True</var>, a 
+change of control at the mouse position also causes the hint window to be 
+updated.
 </p>
 <p>
-If a hint is not available for the specified mouse position, the 
-<var>CancelHint</var> method is called.
+If the hint control at the specified coordinates differs from the one in the 
+active hint, an existing hint is deactivated. The new hint window sets its hint 
+timer and calculates the rectangle for the hint window.
 </p>
+<p>
+If hint text is not available for the specified control and mouse position, the 
+<var>CancelHint</var> method is called instead.
+</p>
+<p>
+Use the following properties to control the interval for the timer which  
+displays or hides a hint window in the application:
+</p>
+<ul>
+<li>HintPause</li>
+<li>HintHidePause</li>
+<li>HintHidePausePerChar</li>
+<li>HintShortPause</li>
+</ul>
 <p>
 ActivateHint is used in the implementation of the <var>DoOnMouseMove</var> 
 and <var>ShowHintWindow</var> methods.
@@ -15599,11 +15768,19 @@ and <var>ShowHintWindow</var> methods.
 <link id="TApplication.HideHint"/>
 <link id="TApplication.Hint"/>
 <link id="TApplication.HintPause"/>
+<link id="TApplication.HintHidePause"/>
+<link id="TApplication.HintHidePausePerChar"/>
+<link id="TApplication.HintShortPause"/>
 <link id="TApplication.OnHint"/>
+<link id="THintWindow.ActivateHint"/>
+<link id="THintWindow.HintRect"/>
+<link id="THintWindow.HintControl"/>
 </seealso>
 </element>
 <element name="TApplication.ActivateHint.CursorPos">
-<short>Mouse cursor position used to retrieve the hint information.</short>
+<short>
+Mouse cursor position used to retrieve the hint control information.
+</short>
 </element>
 <element name="TApplication.ActivateHint.CheckHintControlChange">
 <short>
@@ -15763,28 +15940,96 @@ Calls the AppBringToFront method in the widgetset class.
 </element>
 
 <element name="TApplication.CreateForm">
-<short>Creates a Form or component, owned by Application.</short>
+<short>
+Creates a Form or component owned by the Application instance.
+</short>
 <descr>
 <remark>
 The method name is slightly misleading, and kept only for Delphi 
 compatibility. The method can actually create any kind of component.
 </remark>
 <p>
-CreateForm creates a Component instance of the given class, and sets the 
-pointer to the component variable. If it is a form, it will be added to the 
-list of forms in the application.
+<var>CreateForm</var> creates a new Component instance of the given class, and 
+sets the pointer to the component variable in <var>Reference</var>. If 
+InstanceClass is a TForm descendant, it will be added to the list of forms in 
+the application. It is assigned as the MainForm in Application if a form has 
+not already been assigned to the property. A form with its FormStyle property 
+set to fsMDIChild or fsSplash is not used as the MainForm for the Application.
 </p>
 <p>
-A splash form is shown immediately.
+If the new form instance is a splash form (FormStyle=fsSplash), it is displayed 
+immediately and a message processing loop is started for the form instance.
 </p>
+<p>
+<b>Use in a .lpr Project File</b>
+</p>
+<p>
+The most common use of CreateForm is in the project (.lpr) program file. It is 
+used to initialize the auto-created form instances for the project. For example:
+</p>
+<code>
+program PoFileMaintenance;
+
+{$mode objfpc}{$H+}
+
+uses
+  {$IFDEF UNIX}
+  cthreads,
+  {$ENDIF}
+  {$IFDEF HASAMIGA}
+  athreads,
+  {$ENDIF}
+  Interfaces, Forms, PotFile, Unit1, 
+  { you can add units after this };
+
+{$R *.res}
+
+begin
+  RequireDerivedFormResource := True;
+  Application.Scaled := True;
+  Application.Initialize;
+  Application.CreateForm(TForm1, Form1);
+  Application.Run;
+end.
+</code>
+<p>
+<b>Use in Program Code</b>
+</p>
+<p>
+Another common use of CreateForm is to allocate a dynamic, temporary form 
+instance as needed in program code. For example:
+</p>
+<code>
+function ShowDialog(FormClass: TFormClass): Boolean;
+var
+  Dlg: TForm;
+begin
+  Application.CreateForm(FormClass, Dlg);
+  try
+    Result := Dlg.ShowModal in [mrOk, mrYes];
+  finally
+    Dlg.Free;
+  end;
+end;
+</code>
 </descr>
-<seealso/>
+<seealso>
+<link id="TApplication.MainForm"/>
+<link id="TApplication.UpdateMainForm"/>
+<link id="TApplication.ProcessMessages"/>
+<link id="TCustomForm.FormStyle"/>
+<link id="TCustomForm.Show"/>
+</seealso>
 </element>
 <element name="TApplication.CreateForm.InstanceClass">
-<short>The class type used to create the new instance.</short>
+<short>
+The class type used to create the new class instance.
+</short>
 </element>
 <element name="TApplication.CreateForm.Reference">
-<short>The variable for the new component reference.</short>
+<short>
+The output parameter used to return the new component reference.
+</short>
 </element>
 
 <element name="TApplication.UpdateMainForm">
@@ -18050,23 +18295,28 @@ Values are added to and removed from Flags in methods like:
 
 <element name="TApplication.Handle">
 <short>
-Provides access to the widgetset handle for the application instance.
+Provides access to the handle for the application instance.
 </short>
 <descr>
 <p>
-<var>Handle</var> is a <var>THandle</var> property which provides access to 
-the widgetset handle used for the application instance. Reading the value for 
-the property is redirected to the AppHandle allocated in the widgetset class. 
-Setting the value for the property causes the AppHandle in the widgetset 
-class to be updated with the new value.
+<var>Handle</var> is a <var>TLCLHandle</var> property which provides access to 
+the handle used for the application instance. Reading the value for the 
+property is redirected to the AppHandle allocated in the widgetset class. 
+Setting the value for the property causes the AppHandle in the widgetset class 
+to be updated with the new value.
 </p>
 <p>
 Handle is used to send and receive window messages and state change 
 notifications for the application instance using the <b>LCL</b> interface.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.0 to use the TLCLHandle type instead of the 
+deprecated THandle type.
+</version>
 <seealso>
-<link id="TWidgetSet.AppHandle"/>
+<link id="#lcl.lcltype.TLCLHandle">TLCLHandle</link>
+<link id="#lcl.interfacebase.TWidgetSet.AppHandle">TWidgetSet.AppHandle</link>
 </seealso>
 </element>
 

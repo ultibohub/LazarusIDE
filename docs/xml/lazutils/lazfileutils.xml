@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -2255,7 +2255,7 @@ Gets the value of file attributes for the specified file name.
 attributes for the specified file name. For the Windows environment, 
 GetFileAttributesW in Windows is called to the file attribute value for 
 Filename. For UNIX-like environments, FileGetAttr in SysUtils is called to 
-the the return value.
+the return value.
 </p>
 <p>
 The return value contains a numeric value that can be OR-ed with the 

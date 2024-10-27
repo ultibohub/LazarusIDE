@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -632,6 +632,88 @@ Even faster UTF-8 character counting
 <short>Number of byte values in the UTF-8-encoded string.</short>
 </element>
 
+<element name="UTF8CodepointCount">
+<short>
+Gets the number of valid UTF-8 codepoints in the specified value.
+</short>
+<descr>
+<p>
+<var>UTF8CodepointCount</var> is an overloaded <var>SizeInt</var> function used 
+to determine the number of UTF-8 codepoints found in the specified value. It is 
+similar to the UTF8Length routine, but excludes any invalid codepoints found in 
+the input value from the count in the return value. The overloaded variants 
+allow the input value to be specified using either the String or the PChar type.
+</p>
+<p>
+UTF8CodepointCount iterates over the byte values in the s or p arguments, and 
+increments the return value when a valid UTF-8 codepoint is found. 
+UTF8CodepointLen (in system.pp) is called to the get the size for each of the 
+UTF-8 codepoints. Valid codepoints include those represented using combining 
+characters. The process is repeated until all of the bytes in the input value 
+have been examined, or until a codepoint with a length of zero (0) is 
+encountered.
+</p>
+<p>
+The return value is zero (0) if the s or p arguments are empty, or when the 
+ByteCount argument is zero (0).
+</p>
+<p>
+For example:
+</p>
+<code>
+// var
+//   Utf8Str, InvalidUtf8Str: String;
+//   Cnt, Len: Integer;
+
+{A macron (decomposed)}
+Utf8Str := 'A' + #$CC#$84;
+
+{invalid single byte UTF-8}
+InvalidUtf8Str := #$C0#$C1#$F5#$F6#$F7#$F8#$F9#$FA#$FB#$FC#$FD#$FE#$FF;
+
+Cnt := UTF8CodePointCount(Utf8Str); // Cnt = 2
+Len := UTF8Length(Utf8Str); // Len = 2
+
+Cnt := UTF8CodePointCount(InvalidUtf8Str); // Cnt = 0
+Len := UTF8Length(InvalidUtf8Str); // Len = 13
+
+Cnt := UTF8CodePointCount(InvalidUtf8Str + Utf8Str); // Cnt = 2
+Len := UTF8Length(InvalidUtf8Str + Utf8Str); // Len = 15
+</code>
+</descr>
+<version>
+Added in LazUtils version 4.0.
+</version>
+<seealso>
+<link id="UTF8Length"/>
+<link id="UTF8CodepointSize"/>
+<link id="UTF8LengthFast"/>
+<link id="UTF8CharacterLength"/>
+<link id="#rtl.system.UTF8CodepointLen">UTF8CodepointLen</link>
+</seealso>
+</element>
+<element name="UTF8CodepointCount.Result">
+<short>
+Integer value with the number of valid codepoints including combining 
+characters.
+</short>
+</element>
+<element name="UTF8CodepointCount.s">
+<short>
+String with the codepoints examined in the routine.
+</short>
+</element>
+<element name="UTF8CodepointCount.p">
+<short>
+PChar type with the codepoints examined in the routine.
+</short>
+</element>
+<element name="UTF8CodepointCount.ByteCount">
+<short>
+Number of bytes in the PChar value.
+</short>
+</element>
+
 <element name="UTF8CodepointToUnicode">
 <short>
 Converts a UTF-8-encoded character to its unique Unicode U+XXXX character 
@@ -1065,35 +1147,38 @@ Deprecated. Use UTF8CodepointToByteIndex instead.
 
 <element name="UTF8FixBroken">
 <short>
-Replaces all invalid UTF-8 characters with spaces.
+Replaces all invalid UTF-8 characters in a string with the specified character.
 </short>
 <descr>
 <p>
 <var>UTF8FixBroken</var> is an overloaded routine used to replace all invalid 
-UTF-8 characters with spaces. The overloaded variants allow the UTF-8-encoded 
-content to be specified using either a PChar or a String type.
+UTF-8 characters in the specified value with a replacement character. The 
+overloaded variants allow the UTF-8-encoded content to be specified using 
+either a PChar or a String type.
+</p>
+<p>
+<var>ReplaceChar</var> contains the character used to replace any invalid UTF-8 
+characters found in the input value. The default value for ReplaceChar is the 
+Space character (Hex $20 Decimal 32).
 </p>
 <p>
 The PChar variant examines the specified byte values to determine when an 
-invalid UTF-8 codepoint is found. This includes byte values that fall outside 
-of the ranges allowed in UTF-8, and common byte sequences used to inject XSS 
-vulnerabilities.
+invalid UTF-8 codepoint is found. This includes 1, 2, or 3 byte values, those 
+that fall outside of the ranges allowed in UTF-8, and common byte sequences 
+used to inject XSS vulnerabilities. UTF8FixBroken stops processing at the first 
+occurrence of the byte value #0 (Decimal 0). UTF-8 byte sequences updated in 
+the routine are stored in the original PChar argument.
 </p>
 <p>
-UTF-8 byte sequences updated in the routine are stored in the original PChar 
-argument.
-</p>
-<p>
-UTF8FixBroken processing at the first occurrence of the byte value #0 
-(Decimal 0).
-</p>
-<p>
-The String variant converts the argument to a PChar type and calls 
-FindInvalidUTF8Codepoint to locate invalid UTF-8 byte sequences. When found, 
-UniqueString is called to get a new reference-counted String for the return 
-value.
+The String variant converts the input argument to a PChar type and calls 
+FindInvalidUTF8Codepoint to locate invalid UTF-8 byte sequences. If invalid 
+bytes are found, UniqueString is called to get a new reference-counted String 
+for the return value generated by calling the overloaded PChar variant.
 </p>
 </descr>
+<version>
+Modified in LazUtils version 4.0 to include the ReplaceChar argument.
+</version>
 <seealso>
 <link id="FindInvalidUTF8Codepoint"/>
 <link id="#rtl.system.UniqueString">UniqueString</link>
@@ -1107,6 +1192,12 @@ PChar with the UTF-8-encoded values examined in the routine.
 <element name="UTF8FixBroken.S">
 <short>
 String with the UTF-8-encoded values examined in the routine.
+</short>
+</element>
+<element name="UTF8FixBroken.ReplaceChar">
+<short>
+Character used to replace invalid codepoints in the input argument. The default 
+value for the argument is the Space character (decimal 32 hex $20).
 </short>
 </element>
 
@@ -1528,6 +1619,76 @@ Inline variant of UTF8UpperCase.
 </element>
 <element name="UTF8UpperString.s">
 <short>Values to convert in the function.</short>
+</element>
+
+<element name="UTF8UpperCaseFast">
+<short>
+Gets the uppercase value for the specified text. Optimized to improve speed for ASCII content in the argument.
+</short>
+<descr>
+<p>
+<var>UTF8UpperCaseFast</var> examines the ordinal values for the characters in 
+<var>AText</var> to determine how the return value is derived. It is optimized 
+for ASCII content (byte values in the range 1..128). It converts individual 
+characters in the range ['a'..'z'] by subtracting 32 from their ordinal values.
+</p>
+<p>
+If a non-ASCII byte value is found in AText, the return value is derived by 
+calling UTF8UpperCase with the value in AText as an argument.
+</p>
+</descr>
+<version>
+Added in LazUtils version 4.0.
+</version>
+<seealso>
+<link id="UTF8UpperCase"/>
+<link id="UTF8LowerCaseFast"/>
+</seealso>
+</element>
+<element name="UTF8UpperCaseFast.Result">
+<short>
+Uppercase value for the specified text.
+</short>
+</element>
+<element name="UTF8UpperCaseFast.AText">
+<short>
+String with the content examined and converted to its uppercase representation.
+</short>
+</element>
+
+<element name="UTF8LowerCaseFast">
+<short>
+Gets the lowercase value for the specified text. Optimized to improve speed for ASCII content in the argument.
+</short>
+<descr>
+<p>
+<var>UTF8LowerCaseFast</var> examines the ordinal values for the characters in 
+<var>AText</var> to determine how the return value is derived. It is optimized 
+for ASCII content (byte values in the range 1..128). It converts individual 
+characters in the range ['A'..'Z'] by adding 32 to their ordinal values.
+</p>
+<p>
+If a non-ASCII byte value is found in AText, the return value is derived by 
+calling UTF8LowerCase with the value in AText as an argument.
+</p>
+</descr><version>
+Added in LazUtils version 4.0.
+</version>
+<seealso>
+<link id="UTF8LowerCase"/>
+<link id="UTF8UpperCase"/>
+<link id="UTF8UpperCaseFast"/>
+</seealso>
+</element>
+<element name="UTF8LowerCaseFast.Result">
+<short>
+Lowercase value for the specified text.
+</short>
+</element>
+<element name="UTF8LowerCaseFast.AText">
+<short>
+String with the content examined and converted to its lowercase representation.
+</short>
 </element>
 
 <element name="UTF8SwapCase">
@@ -2027,7 +2188,7 @@ number of byte values in p to the return value for the function.
 
 <element name="UTF8RPos">
 <short>
-Gets the right-most position in the source string for the substring value.
+Gets the right-most position in the Source string for the value in Substr.
 </short>
 <descr></descr>
 <seealso>
@@ -2045,7 +2206,9 @@ Gets the right-most position in the source string for the substring value.
 </element>
 
 <element name="UTF8WrapText">
-<short>Creates a word wrapped version of the specified string.</short>
+<short>
+Creates a word-wrapped version of the specified string.
+</short>
 <descr>
 <p>
 <var>UTF8WrapText</var> is an overloaded <var>String</var> function used to 
@@ -2061,11 +2224,27 @@ and #9 (Tab). <var>BreakStr</var> contains the end-of-line sequence used to
 represent a line break inserted into the return value.
 </p>
 <p>
+Use <var>Indent</var> to specify the number of Space (#32) characters inserted 
+as indentation at the beginning of each word-wrapped line. The default value is 
+0 (zero) and omits indentation in the word-wrapped lines. A negative value in 
+Indent causes the argument to be set to 0.
+</p>
+<p>
+The Indent argument affects the number of UTF-8 characters allowed in each 
+word-wrapped line. When set to a positive non-zero value, the maximum number of 
+characters allowed per line is <b>MaxCol - Indent</b>.
+</p>
+<p>
 No actions are performed in the function when S is an empty string (''), 
-MaxCol is set to 0 (zero), or BreakChars is an empty set.
+MaxCol is set to 0 (zero), or BreakChars is an empty set ([]).
 </p>
 </descr>
-<seealso/>
+<version>
+Modified in LazUtils 4.0 to include the overload with an indentation argument.
+</version>
+<seealso>
+<link id="#lazutils.lazstringutils.BreakString">BreakString</link>
+</seealso>
 </element>
 <element name="UTF8WrapText.Result">
 <short>Word-wrapped version of the specified text.</short>
@@ -2081,6 +2260,12 @@ MaxCol is set to 0 (zero), or BreakChars is an empty set.
 </element>
 <element name="UTF8WrapText.MaxCol">
 <short>Maximum line width in number of UTF-8 characters.</short>
+</element>
+<element name="UTF8WrapText.Indent">
+<short>
+Number of Space (#32) characters used to indent the individual lines of 
+word-wrapped text.
+</short>
 </element>
 
 <element name="IsPureAscii">

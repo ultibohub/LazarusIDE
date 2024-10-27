@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -866,6 +866,76 @@ System Menu Command.
 </element>
 
 <element name="LM_CLEAR">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_NAVIGATE_PAGE">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_CLICK_BUTTON">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_MARQUEE_PROGRESS_BAR">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_PROGRESS_BAR_STATE">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_PROGRESS_BAR_RANGE">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_PROGRESS_BAR_POS">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_PROGRESS_BAR_MARQUEE">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_ELEMENT_TEXT">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_CLICK_RADIO_BUTTON">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_ENABLE_BUTTON">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_CLICK_VERIFICATION">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_UPDATE_ELEMENT_TEXT">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_SET_BUTTON_ELEVATION_REQUIRED_STATE">
+<short/>
+<descr/>
+</element>
+
+<element name="TDM_UPDATE_ICON">
 <short/>
 <descr/>
 </element>

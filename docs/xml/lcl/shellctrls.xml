@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -510,6 +510,7 @@ methods implemented in the descendent classes.
 <element name="TCustomShellTreeView.FExpandCollapseMode"/>
 <element name="TCustomShellTreeView.FFileSortType"/>
 <element name="TCustomShellTreeView.FInitialRoot"/>
+<element name="TCustomShellTreeView.FUpdateLock"/>
 <element name="TCustomShellTreeView.FUseBuiltinIcons"/>
 <element name="TCustomShellTreeView.FOnAddItem"/>
 
@@ -886,8 +887,8 @@ The value in <var>AutoExpand</var> is restored to its original value prior to
 exiting from the method.
 </p>
 <p>
-The entire update process is done in a BeginUpdate  / EndUpdate block to 
-reduce the number of screen refreshes in the method.
+The entire update process is done in a BeginUpdate / EndUpdate block to reduce 
+the number of screen refreshes in the method.
 </p>
 </descr>
 <seealso>
@@ -1005,6 +1006,55 @@ unit.
 </element>
 <element name="TCustomShellTreeView.DrawBuiltInIcon.ARect">
 <short>Rectangle where the icon is drawn.</short>
+</element>
+
+<element name="TCustomShellTreeView.ExistsAndIsValid">
+<short>
+Checks whether the specified path is a valid file system object and type for 
+the tree view control.
+</short>
+<descr>
+<p>
+<var>ExistsAndIsValid</var> is a <var>Boolean</var> function used to determine 
+whether a file system object at the path specified in <var>APath</var> can be 
+displayed on the tree view control.
+</p>
+<p>
+APath is a UTF-8-encoded fully-qualified path name. File attributes for the 
+argument are retrieved to check whether it exists on the local file system. 
+ObjectTypes is checked to determine whether the item is one of the object types 
+displayed on the tree view control; this includes checking whether the otHidden 
+object type setting matches the file system attributes for the path.
+</p>
+<p>
+The return value is <b>False</b> if both conditions are <b>not</b> satisfied. 
+The return value is <b>True</b> if APath a valid file (or directory) on the 
+local file system.
+</p>
+<p>
+ExistsAndIsValid is used in the UpdateView method when the Path and expanded 
+state for a Selected node are updated.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShellTreeView.ObjectTypes"/>
+<link id="TCustomShellTreeView.Path"/>
+<link id="TCustomShellTreeView.UpdateView"/>
+</seealso>
+</element>
+<element name="TCustomShellTreeView.ExistsAndIsValid.Result">
+<short>
+Returns <b>True</b> if the specified path exists and is valid for the object 
+types displayed on the control. 
+</short>
+</element>
+<element name="TCustomShellTreeView.ExistsAndIsValid.APath">
+<short>
+Path name examined in the method.
+</short>
 </element>
 
 <element name="TCustomShellTreeView.GetBuiltinIconSize">
@@ -1145,6 +1195,11 @@ Create sets the default values for properties, including:
 <dd>Set to True top enable the built-in icons in the widgetset class.</dd>
 <dt>PathDelimiter</dt>
 <dd>Set to the platform-specific PathDelim from the SysUtils unit.</dd>
+<dt>Options</dt>
+<dd>
+Includes tvoReadOnly in the set to match the default value for the ReadOnly 
+property.
+</dd>
 <dt>ObjectTypes</dt>
 <dd>
 Set to [otFolders] to display folders (but not files) in the tree view.
@@ -1152,7 +1207,10 @@ Set to [otFolders] to display folders (but not files) in the tree view.
 </dl>
 <p>
 Create initializes internal members used to monitor the <var>Root</var> 
-property for changes to its value, and the find options used to locate nodes in the Items for the tree view control. Find options include use of case-insensitive comparisons in node values when the CaseInsensitiveFilenames compiler define is enabled.
+property for changes to its value, and the find options used to locate nodes in 
+the Items for the tree view control. Find options include use of 
+case-insensitive comparisons in node values when the CaseInsensitiveFilenames 
+compiler define is enabled.
 </p>
 <p>
 Please note: Values in the <var>Items</var> property are populated when the 
@@ -1160,7 +1218,9 @@ Please note: Values in the <var>Items</var> property are populated when the
 </p>
 </descr>
 <version>
-Modified in LCL version 3.0 to initialize the PathDelimiter property and internal find options.
+Modified in LCL version 3.0 to initialize the PathDelimiter property and 
+internal find options. 
+Modified in LCL version 4.0 to update the Options property.
 </version>
 <seealso>
 <link id="TCustomShellTreeView.ObjectTypes"/>
@@ -1461,6 +1521,64 @@ to the root directory.
 </short>
 </element>
 
+<element name="TCustomShellTreeView.UpdateView">
+<short>
+Reloads the nodes for tree view control and synchronizes an associated 
+ShellListView control.
+</short>
+<descr>
+<p>
+<var>UpdateView</var> is a method used to repopulate the nodes on a tree view 
+control. It ensures that Items contains the entries needed for the current 
+state of the local file system in the tree view control.
+</p>
+<p>
+UpdateView ensures that the Selected and expanded tree node(s) are captured, 
+and restored when the nodes in Items have been reloaded. If one of the selected 
+or expanded nodes no longer exists on the file system, the Path in an existing 
+parent node is used for the update. When a node is updated, its HasChildren 
+property is changed to reflect whether subdirectories have been added or 
+removed for the node.
+</p>
+<p>
+The Selected property provides the selected tree node on the control.
+</p>
+<p>
+Updates to the Items in the control are enclosed by BeginUpdate and EndUpdate 
+method calls to reduce the number of updates while the control is reloaded.
+</p>
+<p>
+UpdateView causes an associated ShellListView control to call its UpdateView 
+method to synchronize the two controls. This action is omitted if ShellListView 
+has not been assigned, or the directory requested does not affect the Selected 
+tree node.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShellTreeView.Items"/>
+<link id="TCustomShellTreeView.Refresh"/>
+<link id="TCustomShellTreeView.GetPathFromNode"/>
+<link id="TCustomShellTreeView.NodeHasChildren"/>
+<link id="TCustomShellTreeView.ShellListView"/>
+<link id="TCustomShellListView.UpdateView"/>
+<link id="TCustomShellTreeView.Root"/>
+<link id="TCustomShellTreeView.Path"/>
+<link id="TCustomShellTreeView.ExistsAndIsValid"/>
+<link id="#lcl.comctrls.TCustomTreeView.TopItem">TCustomTreeView.TopItem</link>
+<link id="#lcl.comctrls.TCustomTreeView.Selected">TCustomTreeView.Selected</link>
+<link id="#lcl.comctrls.TTreeNodes.BeginUpdate">TTreeNodes.BeginUpdate</link>
+<link id="#lcl.comctrls.TTreeNodes.EndUpdate">TTreeNodes.EndUpdate</link>
+</seealso>
+</element>
+<element name="TCustomShellTreeView.UpdateView.AStartDir">
+<short>
+Path to the first tree node updated in the method. Root is used when omitted.
+</short>
+</element>
+
 <element name="TCustomShellTreeView.UseBuiltinIcons">
 <short>
 Indicates if OS-provided icons are used for entries in the Shell control.
@@ -1502,30 +1620,42 @@ enabled and displayed on the control.
 </p>
 <dl>
 <dt>otFolders</dt>
-<dd>Enables and displays folders.</dd>
+<dd>
+Enables and displays folders (directories).
+</dd>
 <dt>otNonFolders</dt>
-<dd>Enables and displays files and other file system entries which are not a 
-folder.</dd>
+<dd>
+Enables and displays files and other file system entries which are not a 
+folder.
+</dd>
 <dt>otHidden</dt>
-<dd>Enables and displays hidden directories and/or files on the tree view 
-control.</dd>
+<dd>
+Enables and displays hidden directories and/or files on the tree view 
+control.
+</dd>
 </dl>
 <p>
-Changing the values in the property causes the Refresh method to be called to 
-reload the Items for the control starting at the root directory. The 
-currently Selected tree node is saved before the nodes are refreshed, and 
-restored when Items has been reloaded. An exception raised when the path no 
-longer exists in the tree nodes is handled and ignored in the method.
+The default value for the property is [otFolders].
+</p>
+<p>
+Changing the values in the property causes the UpdateView method to be called 
+to reload the Items displayed on the control. The currently Selected tree node 
+is saved before the nodes are refreshed, and restored (when able) when Items 
+has been reloaded. If the selected path has become invalid after the property 
+change, an previous path (or the root node) becomes the Selected item on the 
+control.
 </p>
 </descr>
 <seealso>
-<link id="TCustomShellTreeView.ObjectTypes"/>
 <link id="TCustomShellTreeView.Items"/>
+<link id="TCustomShellTreeView.ExistsAndIsValid"/>
 <link id="TCustomShellTreeView.Path"/>
 <link id="TCustomShellTreeView.Root"/>
-<link id="TCustomShellTreeView.Refresh"/>
+<link id="TCustomShellTreeView.UpdateView"/>
 <link id="TObjectTypes"/>
 <link id="TObjectType"/>
+<link id="#lcl.comctrls.TCustomTreeView.Selected">TCustomTreeView.Selected</link>
+<link id="#lcl.comctrls.TCustomTreeView.TopItem">TCustomTreeView.TopItem</link>
 </seealso>
 </element>
 
@@ -1558,35 +1688,38 @@ list view control.
 </element>
 
 <element name="TCustomShellTreeView.FileSortType">
-<short>Indicates how the items should be sorted in the tree.</short>
+<short>
+Indicates the sort type used for items in the tree.
+</short>
 <descr>
 <p>
 <var>FileSortType</var> is a <var>TFileSortType</var> property used to 
-indicate the sort order for tree nodes in the <var>Items</var> property. See 
-<var>TFileSortType</var> for information about enumeration values and their 
-meanings.
+indicate the sort order for tree nodes in the <var>Items</var> property. The 
+default value for the property is <b>fstNone</b>, and indicates the default 
+sort order is used for tree nodes. See 
+<link id="TFileSortType">TFileSortType</link> for information about the 
+enumeration values and their meanings.
 </p>
 <p>
 Changing the value in <var>FileSortType</var> causes the <var>Items</var> 
-property to be cleared, and the tree nodes to be re-created for the 
-<var>Path</var> when <var>Root</var> has been assigned. If Root contains an 
-empty string (<b>''</b>), the <var>PopulateWithBaseFiles</var> method is 
-called. Otherwise, the <var>Path</var> is updated to force the control to be 
-reloaded.
+property to be cleared, and tree nodes to be reloaded. If Root has not been 
+assigned, PopulateWithBaseFiles is used to fill the Items property. Otherwise, 
+the path to the Selected node is restored to the Path property (if it still 
+exists on the local file system).
 </p>
 <p>
 No action other than setting the property value is performed in the method at 
 design-time.
 </p>
 <p>
-The value in <var>FileSortType</var> is used in the 
-<var>PopulateTreeNodeWithFiles</var> method and passed as an argument to the 
-internal <var>GetFilesInDir</var> procedure.
+The value in FileSortType is used in the PopulateTreeNodeWithFiles method and 
+passed as an argument to an internal method used to load the files in a given 
+path name.
 </p>
 <remark>
 The value in FileSortType is not used in <var>PopulateWithBaseFiles</var> on 
-Windows platforms. The entries are logical drive letters, and are processed 
-in the order provided by the file system.
+Windows platforms. The entries are logical drive letters processed in the order 
+provided by the file system.
 </remark>
 </descr>
 <seealso>
@@ -1595,6 +1728,7 @@ in the order provided by the file system.
 <link id="TCustomShellTreeView.Items"/>
 <link id="TCustomShellTreeView.Root"/>
 <link id="TCustomShellTreeView.Path"/>
+<link id="TCustomShellTreeView.ExistsAndIsValid"/>
 <link id="TCustomShellTreeView.PopulateWithBaseFiles"/>
 <link id="TCustomShellTreeView.PopulateTreeNodeWithFiles"/>
 </seealso>
@@ -1611,7 +1745,7 @@ logical device) used to fill the list of items in the tree view control.
 Changing the value in Root causes the Items in the control to be re-populated.
 </p>
 <p>
-No actions are performed in the method when a new value is set for the the 
+No actions are performed in the method when a new value is set for the 
 Root property while the component is being loaded using the LCL streaming 
 mechanism. The actions are performed when the Loaded method is called.
 </p>
@@ -1646,7 +1780,9 @@ updated to match the new value for the property.
 </element>
 
 <element name="TCustomShellTreeView.Path">
-<short>Path to the directory displayed in the shell control.</short>
+<short>
+Path to the directory displayed in the shell control.
+</short>
 <descr>
 <p>
 <var>Path</var> is a <var>String</var> property which represents the path on 
@@ -1660,24 +1796,35 @@ path delimiter appended for a directory entry. If the path is not absolute,
 the base path name is prepended to the path value.
 </p>
 <p>
-Setting the value for the property causes the the new value to be resolved to 
-a fully qualified path name when needed. A relative path is expanded into a 
-fully qualified absolute path value resolved relative to the base path in 
+Setting the value for the property causes the new value to be resolved to 
+a fully-qualified path name when needed. A relative path is expanded into a 
+fully-qualified absolute path value resolved relative to the base path in 
 <var>Root</var>.
 </p>
 <p>
-An <var>EInvalidPath</var> exception is raised when setting Path to a value 
+An <var>EInvalidPath</var> exception is raised if Path is set to a value 
 that is not valid, including:
 </p>
 <ul>
-<li>The path does not exist on the local file system</li>
-<li>The path cannot be resolved as a directory located under the Root 
-directory</li>
-<li>The path represents an entry not valid for the settings in 
-ObjectTypes</li>
+<li>
+The path does not exist on the local file system.
+</li>
+<li>
+The path cannot be resolved as a directory located under the Root directory.
+</li>
+<li>
+The path represents an entry not valid for the settings in ObjectTypes.
+</li>
 </ul>
 </descr>
-<seealso></seealso>
+<seealso>
+<link id="TCustomShellTreeView.GetPathFromNode"/>
+<link id="TCustomShellTreeView.GetRootPath"/>
+<link id="TCustomShellTreeView.ExistsAndIsValid"/>
+<link id="TCustomShellTreeView.ObjectTypes"/>
+<link id="EInvalidPath"/>
+<link id="#lazutils.lazfileutils.FilenameIsAbsolute">FilenameIsAbsolute</link>
+</seealso>
 </element>
 
 <element name="TCustomShellTreeView.OnAddItem">
@@ -1724,7 +1871,9 @@ the tree view control when its FileSortType property is set to fstCustom.
 </p>
 <p>
 Changing the routine assigned to the property causes the Items in the control 
-to be reloaded and ordered using the new file sort compare routine.
+to be reloaded and ordered using the new file sort compare routine. The Path 
+property is used to to expand and select a node if the path still exists and is 
+valid for the settings in ObjectTypes.
 </p>
 <p>
 An application can implement and assign a routine using the signature perform 
@@ -1789,6 +1938,8 @@ Added in LCL version 3.0.
 <link id="TCustomShellTreeView.FileSortType"/>
 <link id="TCustomShellTreeView.Items"/>
 <link id="TCustomShellTreeView.Path"/>
+<link id="TCustomShellTreeView.ExistsAndIsValid"/>
+<link id="TCustomShellTreeView.ObjectTypes"/>
 <link id="TCustomShellTreeView.PopulateTreeNodeWithFiles"/>
 <link id="TCustomShellTreeView.PopulateWithBaseFiles"/>
 <link id="TCustomShellTreeView.Root"/>
@@ -1864,7 +2015,54 @@ application, then ParentColor will be automatically set to <b>False</b>.
 <element name="TShellTreeView.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
 <element name="TShellTreeView.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
 <element name="TShellTreeView.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TShellTreeView.ReadOnly" link="#lcl.comctrls.TCustomTreeView.ReadOnly"/>
+
+<element name="TShellTreeView.ReadOnly">
+<short>
+Indicates whether the text (or caption) for tree nodes can be edited in the 
+shell control.
+</short>
+<descr>
+<p>
+<var>ReadOnly</var> is a <var>Boolean</var> property which indicates whether 
+the text for the <var>TTreeNode</var> instances in Items can be edited in the 
+control. When ReadOnly is set to <b>False</b>, the <var>BeginEditing</var> 
+method is <b>not</b> called when the <b>F2</b> key is pressed, or when the Left 
+mouse button is double clicked. The default value for the property is 
+<b>True</b>.
+</p>
+<p>
+The property value is <b>True</b> when <var>tvoReadOnly</var> has been 
+included in the <var>Options</var> for the control. Setting a new value for 
+the property causes tvoReadOnly to be included in or excluded from the values 
+in Options. Changing the value to <b>False</b> causes the 
+<var>EndEditing</var> method to be called.
+</p>
+<p>
+The ReadOnly property was changed to <b>True</b> because the shell tree view 
+does not automatically propagate changes to a tree node caption to the file 
+system. The previous behavior was confusing because the user was able to rename 
+a node but had to notice that the change was not persistent without additional 
+code.
+</p>
+<p>
+Applications using the shell controls only for selecting files and folders are 
+not affected. In "file-manager" application types, however, the ReadOnly 
+property must be changed explicitely to <b>False</b> so that the user can edit 
+items/nodes again.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to set the default value for the property to 
+<b>True</b>.
+</version>
+<seealso>
+<link id="#lcl.comctrls.TCustomTreeView.ReadOnly"/>
+<link id="#lcl.comctrls.TCustomTreeView.Options"/>
+<link id="#lcl.comctrls.TTreeViewOption"/>
+<link id="#lcl.comctrls.TTreeViewOptions"/>
+</seealso>
+</element>
+
 <element name="TShellTreeView.RightClickSelect" link="#lcl.comctrls.TCustomTreeView.RightClickSelect"/>
 <element name="TShellTreeView.Root" link="#lcl.shellctrls.TCustomShellTreeView.Root"/>
 <element name="TShellTreeView.RowSelect" link="#lcl.comctrls.TCustomTreeView.RowSelect"/>
@@ -1906,6 +2104,12 @@ used for instance to quickly identify a component in an event handler.
 
 <element name="TShellTreeView.ToolTips" link="#lcl.comctrls.TCustomTreeView.ToolTips"/>
 <element name="TShellTreeView.Visible" link="#lcl.controls.TControl.Visible"/>
+<element name="TShellTreeView.Options" link="#lcl.comctrls.TCustomTreeView.Options"/>
+<element name="TShellTreeView.TreeLineColor" link="#lcl.comctrls.TCustomTreeView.TreeLineColor"/>
+<element name="TShellTreeView.TreeLinePenStyle" link="#lcl.comctrls.TCustomTreeView.TreeLinePenStyle"/>
+<element name="TShellTreeView.ExpandSignColor" link="#lcl.comctrls.TCustomTreeView.ExpandSignColor"/>
+<element name="TShellTreeView.ObjectTypes" link="#lcl.shellctrls.TCustomShellTreeView.ObjectTypes"/>
+<element name="TShellTreeView.ShellListView" link="#lcl.shellctrls.TCustomShellTreeView.ShellListView"/>
 <element name="TShellTreeView.OnAddItem" link="#lcl.shellctrls.TCustomShellTreeView.OnAddItem"/>
 <element name="TShellTreeView.OnAdvancedCustomDraw" link="#lcl.comctrls.TCustomTreeView.OnAdvancedCustomDraw"/>
 <element name="TShellTreeView.OnAdvancedCustomDrawItem" link="#lcl.comctrls.TCustomTreeView.OnAdvancedCustomDrawItem"/>
@@ -1944,12 +2148,6 @@ used for instance to quickly identify a component in an event handler.
 <element name="TShellTreeView.OnShowHint" link="#lcl.controls.TControl.OnShowHint"/>
 <element name="TShellTreeView.OnSortCompare" link="#lcl.shellctrls.TCustomShellTreeView.OnSortCompare"/>
 <element name="TShellTreeView.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
-<element name="TShellTreeView.Options" link="#lcl.comctrls.TCustomTreeView.Options"/>
-<element name="TShellTreeView.TreeLineColor" link="#lcl.comctrls.TCustomTreeView.TreeLineColor"/>
-<element name="TShellTreeView.TreeLinePenStyle" link="#lcl.comctrls.TCustomTreeView.TreeLinePenStyle"/>
-<element name="TShellTreeView.ExpandSignColor" link="#lcl.comctrls.TCustomTreeView.ExpandSignColor"/>
-<element name="TShellTreeView.ObjectTypes" link="#lcl.shellctrls.TCustomShellTreeView.ObjectTypes"/>
-<element name="TShellTreeView.ShellListView" link="#lcl.shellctrls.TCustomShellTreeView.ShellListView"/>
 
 <element name="TCSLVFileAddedEvent">
 <short>
@@ -2140,6 +2338,7 @@ in the class.
 <element name="TCustomShellListView.FRoot"/>
 <element name="TCustomShellListView.FShellTreeView"/>
 <element name="TCustomShellListView.FUseBuiltInIcons"/>
+<element name="TCustomShellListView.FLockUpdate"/>
 <element name="TCustomShellListView.FOnAddItem"/>
 <element name="TCustomShellListView.FOnSortCompare"/>
 <element name="TCustomShellListView.FOnFileAdded"/>
@@ -2198,6 +2397,24 @@ path name.
 </element>
 <element name="TCustomShellListView.SetRoot.Value">
 <short>New value for the property.</short>
+</element>
+
+<element name="TCustomShellListView.SetObjectTypes">
+<short>
+Sets the value for the ObjectTypes property.
+</short>
+<descr>
+<p>
+Forces the Items property to be cleared and reloaded. Selected is restored if 
+it was assigned on entry.
+</p>
+</descr>
+<seealso/>
+</element>
+<element name="TCustomShellListView.SetObjectTypes.Value">
+<short>
+New value for the ObjectTypes property.
+</short>
 </element>
 
 <element name="TCustomShellListView.WSRegisterClass">
@@ -2616,6 +2833,39 @@ path on the local file system for the list item specified in
 <short>List item examined in the method.</short>
 </element>
 
+<element name="TCustomShellListView.UpdateView">
+<short>
+Reloads the contents for the list view control and restores the Selected item.
+</short>
+<descr>
+<p>
+<var>UpdateView</var> is a method used to repopulate the Items for the control. 
+It ensures that the Selected entry is captured and restored (if assigned and 
+still available) when the file system entries have been reloaded in the method.
+</p>
+<p>
+UpdateView calls Clear to discard existing entries in Items, and 
+PopulateWithRoot to recreate the entries starting at the path in Root. 
+FindCaption is called to locate and restore the value in Selected.
+</p>
+<p>
+UpdateView ensures that an associated ShellTreeView control calls its 
+UpdateView method to synchronize the contents for the controls. Root is used as 
+the starting directory for the update.
+</p>
+</descr>
+<version>
+Added in LCL version 4.0.
+</version>
+<seealso>
+<link id="TCustomShellListView.Root"/>
+<link id="TCustomShellListView.PopulateWithRoot"/>
+<link id="TCustomShellTreeView.UpdateView"/>
+<link id="#lcl.comctrls.TCustomListView.Clear">TCustomListView.Clear</link>
+<link id="#lcl.comctrls.TCustomListView.Selected">TCustomListView.Selected</link>
+</seealso>
+</element>
+
 <element name="TCustomShellListView.AutoSizeColumns">
 <short>
 Indicates if columns in the control are automatically resized to fill the 
@@ -2705,14 +2955,32 @@ to re-populate its file Items using the <var>Mask</var> for the control.
 
 <element name="TCustomShellListView.ObjectTypes">
 <short>
-Indicates which objects are visible in the control (files and/or directories, 
-hidden files, etc.).
+Controls which file system objects are visible on the list view control.
 </short>
 <descr>
+<p>
+<var>ObjectTypes</var> is a <var>TObjectTypes</var> property with the set of 
+file system objects displayed by the list view control. It allows zero or more 
+values from the TObjectType enumeration to be included in the property. The 
+default value for the property is [otNonFolders] and allows file system objects 
+other than directories to be displayed on the list view control.
+</p>
+<p>
+See <link id="TObjectType">TObjectType</link> for the list of enumeration 
+values and their meanings.
+</p>
+<p>
+Changing the value for the property causes the contents of the list view 
+control to be cleared and reloaded. If Selected has been assigned, it is 
+restored following the update to the list view items.
+</p>
 </descr>
 <seealso>
-<link id="TObjectTypes"/>
+<link id="TCustomShellListView.PopulateWithRoot"/>
 <link id="TCustomShellTreeView.ObjectTypes"/>
+<link id="TObjectTypes"/>
+<link id="#lcl.comctrls.TCustomListView.Clear">TCustomListView.Clear</link>
+<link id="#lcl.comctrls.TCustomListView.Selected">TCustomListView.Selected</link>
 </seealso>
 </element>
 
@@ -2939,7 +3207,53 @@ GetRGBColorResolvingParent method.
 <element name="TShellListView.ParentFont" link="#lcl.controls.TControl.ParentFont"/>
 <element name="TShellListView.ParentShowHint" link="#lcl.controls.TControl.ParentShowHint"/>
 <element name="TShellListView.PopupMenu" link="#lcl.controls.TControl.PopupMenu"/>
-<element name="TShellListView.ReadOnly" link="#lcl.comctrls.TCustomListView.ReadOnly"/>
+
+<element name="TShellListView.ReadOnly">
+<short>
+Disables editing of list items on the shell control when set to <b>True</b>.
+</short>
+<descr>
+<p>
+<var>ReadOnly</var> is a <var>Boolean</var> property used to enable or 
+disable editing of captions for list items at run-time. When ReadOnly is set 
+to <b>True</b>, the editor for the control cannot be activated using a mouse 
+double Click or by pressing the F2 function key.
+</p>
+<p>
+The default value for the property is <b>True</b>, and indicates that item 
+editing is not allowed.
+</p>
+<p>
+ReadOnly is one of the TListViewProperty values included in the 
+TListViewProperties set type and exchanged with the widgetset class. The 
+property value is read from and written to the TCustomTreeview widgetset 
+class instance when its handle is valid. Changing the value for the property 
+causes the widgetset class to be updated with the new value.
+</p>
+<p>
+The ReadOnly property was changed to <b>True</b> because the shell list view 
+does not automatically propagate changes in a list item to the file system. The 
+previous behavior was confusing because the user was able to modify a list item 
+but had to notice that the change was not persistent without additional code.
+</p>
+<p>
+Applications using the shell controls only for selecting files and folders are 
+not affected. In "file-manager" application types, however, the ReadOnly 
+property must be changed explicitely to <b>False</b> so that the user can edit 
+items/nodes again.
+</p>
+</descr>
+<version>
+Modified in LCL version 4.0 to set the default value for the property to 
+<b>True</b>.
+</version>
+<seealso>
+<link id="#lcl.comctrls.TCustomListView.ReadOnly"/>
+<link id="TListViewProperties"/>
+<link id="TListViewProperty"/>
+</seealso>
+</element>
+
 <element name="TShellListView.RowSelect" link="#lcl.comctrls.TCustomListView.RowSelect"/>
 <element name="TShellListView.ScrollBars" link="#lcl.comctrls.TCustomListView.ScrollBars"/>
 <element name="TShellListView.ShowColumnHeaders" link="#lcl.comctrls.TCustomListView.ShowColumnHeaders"/>
@@ -2954,6 +3268,9 @@ GetRGBColorResolvingParent method.
 <element name="TShellListView.ToolTips" link="#lcl.comctrls.TCustomListView.ToolTips"/>
 <element name="TShellListView.Visible" link="#lcl.controls.TControl.Visible"/>
 <element name="TShellListView.ViewStyle" link="#lcl.comctrls.TCustomListView.ViewStyle"/>
+<element name="TShellListView.ObjectTypes" link="#lcl.shellctrls.TCustomShellListView.ObjectTypes"/>
+<element name="TShellListView.Root" link="#lcl.shellctrls.TCustomShellListView.Root"/>
+<element name="TShellListView.ShellTreeView" link="#lcl.shellctrls.TCustomShellListView.ShellTreeView"/>
 <element name="TShellListView.OnChange" link="#lcl.comctrls.TCustomListView.OnChange"/>
 <element name="TShellListView.OnClick" link="#lcl.controls.TControl.OnClick"/>
 <element name="TShellListView.OnColumnClick" link="#lcl.comctrls.TCustomListView.OnColumnClick"/>
@@ -2986,9 +3303,6 @@ GetRGBColorResolvingParent method.
 <element name="TShellListView.OnUTF8KeyPress" link="#lcl.controls.TWinControl.OnUTF8KeyPress"/>
 <element name="TShellListView.OnAddItem" link="#lcl.shellctrls.TCustomShellListView.OnAddItem"/>
 <element name="TShellListView.OnFileAdded" link="#lcl.shellctrls.TCustomShellListView.OnFileAdded"/>
-<element name="TShellListView.ObjectTypes" link="#lcl.shellctrls.TCustomShellListView.ObjectTypes"/>
-<element name="TShellListView.Root" link="#lcl.shellctrls.TCustomShellListView.Root"/>
-<element name="TShellListView.ShellTreeView" link="#lcl.shellctrls.TCustomShellListView.ShellTreeView"/>
 
 <element name="TShellTreeNode">
 <short>Represents tree nodes in TCustomShellTreeView / TShellTreeView.</short>
@@ -3116,7 +3430,7 @@ Indicates if the tree node is a directory on the local file system.
 <descr>
 <p>
 <var>IsDirectory</var> is a <var>Boolean</var> function which indicates if 
-the file system object for the the tree node is a directory on the local file 
+the file system object for the tree node is a directory on the local file 
 system. The return value is <b>True</b> when the file attributes in the 
 internal <var>TSearchRec</var> instance for the tree node includes the 
 <var>faDirectory</var> attribute.

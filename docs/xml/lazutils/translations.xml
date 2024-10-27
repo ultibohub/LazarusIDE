@@ -6,7 +6,7 @@ Utilities) are published under the Creative Commons Attribution-ShareAlike 4.0
 International public license.
 
 https://creativecommons.org/licenses/by-sa/4.0/legalcode.txt
-file://../../cc-by-sa-4-0.txt
+https://gitlab.com/freepascal.org/lazarus/lazarus/-/blob/main/docs/cc-by-sa-4-0.txt
 
 Copyright (c) 1997-2024, by the Lazarus Development Team.
 
@@ -357,7 +357,7 @@ comment.
 </p>
 <p>
 The value in Comments is detected when the ReadPOText method in TPOFile is 
-called to process the the contents of a .po file, and stored when the FillItem 
+called to process the contents of a .po file, and stored when the FillItem 
 method in TPOFile is called.
 </p>
 <p>
