@@ -25,7 +25,7 @@ type
   TCocoaToolBarItemCreator = function ( const identifier: String;
     const items: TCocoaConfigToolBarItems ): NSToolbarItem;
   TCocoaToolBarItemActionHandler = procedure ( const Sender: id );
-  TCocoaToolBarItemMenuOnGetMenu = function: TMenuItem;
+  TCocoaToolBarItemMenuOnGetMenu = procedure ( const menu: TMenu );
   TCocoaToolBarItemSharingOnGetItems = function ( item: NSToolBarItem ): TStringArray;
 
 type
@@ -67,7 +67,8 @@ type
 
   TCocoaConfigToolBarItemMenu = object( TCocoaConfigToolBarItemWithAction )
     showsIndicator: Boolean;
-    menu: TMenuItem;
+    dynamic: Boolean;   // dynamically load each time before displaying the menu
+    menu: TMenu;
     onGetMenu: TCocoaToolBarItemMenuOnGetMenu;
   end;
 
@@ -140,6 +141,18 @@ type
     menuItem: TCocoaConfigMenuItem;
     appMenu: TCocoaConfigAppMenu;
     dockMenu: TCocoaConfigDockMenu;
+  end;
+
+type
+  // return True for event Handled, bypass post system processing
+  TCocoaApplicationEventHandler = function( event: NSEvent ): Boolean of object;
+
+  TCocoaConfigApplicationEvent = record
+    highestHandler: TCocoaApplicationEventHandler;
+  end;
+
+  TCocoaConfigApplication = record
+    event: TCocoaConfigApplicationEvent;
   end;
 
 type

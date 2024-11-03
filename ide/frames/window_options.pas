@@ -27,15 +27,15 @@ interface
 uses
   SysUtils,
   // LCL
-  Forms, StdCtrls, InterfaceBase,
+  Forms, StdCtrls, InterfaceBase, ExtCtrls, Controls,
   // LazControls
   DividerBevel,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf,
+  IDEOptionsIntf, IDEOptEditorIntf, LazStringUtils,
   // IdeConfig
-  EnvironmentOpts,
+  EnvironmentOpts, LazConf, TransferMacros,
   // IDE
-  LazarusIDEStrConsts, EnvGuiOptions;
+  LazarusIDEStrConsts, EnvGuiOptions, Classes;
 
 type
   { TWindowOptionsFrame }
@@ -44,7 +44,10 @@ type
     AutoAdjustIDEHeightFullCompPalCheckBox: TCheckBox;
     bvWindowTitle: TDividerBevel;
     EdTitleBar: TComboBox;
+    lbTitlePreviewHeader: TLabel;
+    lbTitlePreview: TLabel;
     lblTitleBar: TLabel;
+    pnlTitlePreview: TPanel;
     ProjectInspectorShowPropsCheckBox: TCheckBox;
     lblShowingWindows: TDividerBevel;
     NameForDesignedFormListCheckBox: TCheckBox;
@@ -52,7 +55,8 @@ type
     HideIDEOnRunCheckBox: TCheckBox;
     SingleTaskBarButtonCheckBox: TCheckBox;
     TitleStartsWithProjectCheckBox: TCheckBox;
-    TitleShowsProjectDirCheckBox: TCheckBox;
+    procedure EdTitleBarChange(Sender: TObject);
+    procedure TitleStartsWithProjectCheckBoxChange(Sender: TObject);
   public
     function GetTitle: String; override;
     procedure Setup({%H-}ADialog: TAbstractOptionsEditorDialog); override;
@@ -66,6 +70,49 @@ implementation
 {$R *.lfm}
 
 { TWindowOptionsFrame }
+
+procedure TWindowOptionsFrame.EdTitleBarChange(Sender: TObject);
+  function AddToCaption(const CurrentCaption, CaptAddition: string): String;
+  begin
+    if TitleStartsWithProjectCheckBox.Checked then
+      Result := CaptAddition + ' - ' + CurrentCaption
+    else
+      Result := CurrentCaption + ' - ' + CaptAddition;
+  end;
+
+var
+  rev, NewCaption: String;
+  CustomCaption: TCaption;
+  OldMarkUnhandledMacros: Boolean;
+begin
+  if GlobalMacroList = nil then
+    exit;
+
+  rev := LazarusRevisionStr;
+  if IsNumber(rev) then
+    NewCaption := Format(lisLazarusEditorV + ' r%s',
+                         [LazarusVersionStr, rev])
+  else
+    NewCaption := Format(lisLazarusEditorV, [LazarusVersionStr]);
+
+  CustomCaption := EdTitleBar.Text;
+  if CustomCaption <> '' then begin
+    OldMarkUnhandledMacros := GlobalMacroList.MarkUnhandledMacros;
+    GlobalMacroList.MarkUnhandledMacros := false;
+    GlobalMacroList.SubstituteStr(CustomCaption, 0, 0, True);
+    if CustomCaption <> '' then begin
+      NewCaption := AddToCaption(NewCaption, CustomCaption);
+    end;
+    GlobalMacroList.MarkUnhandledMacros := OldMarkUnhandledMacros;
+  end;
+
+  lbTitlePreview.Caption := NewCaption;
+end;
+
+procedure TWindowOptionsFrame.TitleStartsWithProjectCheckBoxChange(Sender: TObject);
+begin
+  EdTitleBarChange(nil);
+end;
 
 function TWindowOptionsFrame.GetTitle: String;
 begin
@@ -84,8 +131,6 @@ begin
   HideIDEOnRunCheckBox.Hint := dlgHideIDEOnRunHint;
   TitleStartsWithProjectCheckBox.Caption:=lisIDETitleStartsWithProjectName;
   TitleStartsWithProjectCheckBox.Hint:=lisTitleInTaskbarShowsForExampleProject1LpiLazarus;
-  TitleShowsProjectDirCheckBox.Caption:=lisIDETitleShowsProjectDir;
-  TitleShowsProjectDirCheckBox.Hint:=lisProjectDirectoryIsShowedInIdeTitleBar;
   bvWindowTitle.Caption:=lisIDETitleOptions;
   lblTitleBar.Caption:=lisIDETitleCustom;
   EdTitleBar.Hint := lisIDECaptionCustomHint;
@@ -96,6 +141,9 @@ begin
   AutoAdjustIDEHeightFullCompPalCheckBox.Caption:=lisAutoAdjustIDEHeightFullComponentPalette;
   AutoAdjustIDEHeightFullCompPalCheckBox.Hint:=lisAutoAdjustIDEHeightFullComponentPaletteHint;
   ProjectInspectorShowPropsCheckBox.Caption:=lisProjectInspectorShowProps;
+  lbTitlePreviewHeader.Caption := dlgWRDPreview;
+  lbTitlePreviewHeader.Visible := GlobalMacroList <> nil;
+  pnlTitlePreview.Visible := GlobalMacroList <> nil;
 
   EdTitleBar.AddItem('$project(TitleNew)', nil);
   EdTitleBar.AddItem('$project(TitleNew) $EncloseBracket($project(infodir))', nil);
@@ -122,13 +170,13 @@ begin
     SingleTaskBarButtonCheckBox.Checked := SingleTaskBarButton;
     HideIDEOnRunCheckBox.Checked := HideIDEOnRun;
     TitleStartsWithProjectCheckBox.Checked := IDETitleStartsWithProject;
-    TitleShowsProjectDirCheckBox.Checked := IDETitleShowsProjectDir;
     EdTitleBar.Text := IDETitleBarCustomText;
     NameForDesignedFormListCheckBox.Checked := IDENameForDesignedFormList;
     AutoAdjustIDEHeightCheckBox.Checked := AutoAdjustIDEHeight;
     AutoAdjustIDEHeightFullCompPalCheckBox.Checked := AutoAdjustIDEHeightFullCompPal;
     ProjectInspectorShowPropsCheckBox.Checked := ProjectInspectorShowProps;
   end;
+  EdTitleBarChange(nil);
 end;
 
 procedure TWindowOptionsFrame.WriteSettings(AOptions: TAbstractIDEOptions);
@@ -144,7 +192,6 @@ begin
     SingleTaskBarButton := SingleTaskBarButtonCheckBox.Checked;
     HideIDEOnRun := HideIDEOnRunCheckBox.Checked;
     IDETitleStartsWithProject := TitleStartsWithProjectCheckBox.Checked;
-    IDETitleShowsProjectDir := TitleShowsProjectDirCheckBox.Checked;
     IDETitleBarCustomText := EdTitleBar.Text;
     IDENameForDesignedFormList := NameForDesignedFormListCheckBox.Checked;
     AutoAdjustIDEHeight := AutoAdjustIDEHeightCheckBox.Checked;

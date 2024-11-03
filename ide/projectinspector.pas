@@ -164,6 +164,7 @@ type
     procedure mnuOpenFolderClick(Sender: TObject);
     procedure MoveDependencyUpClick(Sender: TObject);
     procedure MoveDependencyDownClick(Sender: TObject);
+    procedure PropsGroupBoxResize(Sender: TObject);
     procedure SetDependencyDefaultFilenameMenuItemClick(Sender: TObject);
     procedure SetDependencyPreferredFilenameMenuItemClick(Sender: TObject);
     procedure ClearDependencyFilenameMenuItemClick(Sender: TObject);
@@ -669,6 +670,12 @@ begin
   if SortAlphabetically or (Dependency=nil) or Dependency.Removed
   or (Dependency.NextRequiresDependency=nil) then exit;
   LazProject.MoveRequiredDependencyDown(Dependency);
+end;
+
+procedure TProjectInspectorForm.PropsGroupBoxResize(Sender: TObject);
+begin
+  if PropsGroupBox.Visible then
+    EnvironmentGuiOpts.Desktop.ProjectInspectorPropsPanelHeight := PropsGroupBox.Height;
 end;
 
 procedure TProjectInspectorForm.SetDependencyDefaultFilenameMenuItemClick(Sender: TObject);
@@ -1386,6 +1393,7 @@ end;
 procedure TProjectInspectorForm.OptionsChanged(Sender: TObject; Restore: boolean);
 begin
   PropsGroupBox.Visible := EnvironmentGuiOpts.Desktop.ProjectInspectorShowProps;
+  PropsGroupBox.Height := EnvironmentGuiOpts.Desktop.ProjectInspectorPropsPanelHeight;
   Splitter1.Visible := PropsGroupBox.Visible;
 end;
 

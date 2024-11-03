@@ -88,7 +88,7 @@ type
 
     procedure GetRowHeight(rowidx: integer; var h: Integer);
     procedure ComboBoxDrawItem(itemIndex: Integer; ctx: TCocoaContext;
-      const r: TRect; isSelected: Boolean);
+      const r: TRect; isSelected: Boolean; backgroundPainted: Boolean);
   end;
 
   { TCocoaWSCustomComboBox }
@@ -860,7 +860,7 @@ begin
 end;
 
 procedure TLCLComboboxCallback.ComboBoxDrawItem(itemIndex: Integer;
-  ctx: TCocoaContext; const r: TRect; isSelected: Boolean);
+  ctx: TCocoaContext; const r: TRect; isSelected: Boolean; backgroundPainted: Boolean);
 var
   itemstruct: TDrawListItemStruct;
 begin
@@ -871,6 +871,7 @@ begin
   if isSelected then Include(itemstruct.ItemState, odSelected);
   // we don't distingiush at the moment
   if isSelected then Include(itemstruct.ItemState, odFocused);
+  if backgroundPainted then Include(itemstruct.ItemState, odBackgroundPainted);
 
   LCLSendDrawListItemMsg(Target, @itemstruct);
 end;
@@ -1977,8 +1978,6 @@ begin
     if not Assigned(rocmb) then Exit;
     rocmb.isComboBoxEx:= AWinControl is TCustomComboBoxEx;
     rocmb.list:=TCocoaReadOnlyComboBoxList.Create(rocmb);
-    rocmb.setTarget(rocmb);
-    rocmb.setAction(objcselector('comboboxAction:'));
     rocmb.lastSelectedItemIndex:= -1;
     TComboBoxAsyncHelper.SetLastIndex(rocmb);
     rocmb.callback:=TLCLComboboxCallback.Create(rocmb, AWinControl);

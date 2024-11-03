@@ -131,6 +131,9 @@ type
   { TDesktopOpt }
 
   TDesktopOpt = class(TCustomDesktopOpt)
+  private const
+    DEFAULT_CUSTOM_TITLE = '$project(TitleNew) $EncloseBracket($project(infodir)) $(BuildModeCaption)';
+    cDefaultPropsPanelHeight = 140;
   private
     // window layout
     FIDEWindowCreatorsLayoutList: TSimpleWindowLayoutList;
@@ -141,6 +144,7 @@ type
     FAutoAdjustIDEHeight: boolean;
     FAutoAdjustIDEHeightFullCompPal: boolean;
     FProjectInspectorShowProps: boolean;
+    FProjectInspectorPropsPanelHeight: integer;
     // window menu
     FIDENameForDesignedFormList: boolean;
     // CompletionWindow
@@ -148,8 +152,8 @@ type
     FCompletionWindowHeight: Integer;
     // title
     FIDETitleStartsWithProject: boolean;
-    FIDETitleShowsBuildMode: boolean;
-    FIDETitleShowsProjectDir: boolean;
+    FIDETitleShowsBuildMode: boolean;   // deprecated: ONLY read from XML for upgrade to IDETitleBarCustomText
+    FIDETitleShowsProjectDir: boolean;  // deprecated: ONLY read from XML for upgrade to IDETitleBarCustomText
     FIDETitleBarCustomText: string;
     // IDE Coolbar
     FIDECoolBarOptions: TIDECoolBarOptions;
@@ -188,9 +192,8 @@ type
     property CompletionWindowHeight: Integer read FCompletionWindowHeight write FCompletionWindowHeight;
     property IDETitleStartsWithProject: boolean read FIDETitleStartsWithProject
                                                write FIDETitleStartsWithProject;
-    property IDETitleShowsBuildMode: boolean read FIDETitleShowsBuildMode;
-    property IDETitleShowsProjectDir: boolean read FIDETitleShowsProjectDir
-                                             write FIDETitleShowsProjectDir;
+    property IDETitleShowsBuildMode: boolean read FIDETitleShowsBuildMode;    // deprecated: ONLY read from XML for upgrade to IDETitleBarCustomText
+    property IDETitleShowsProjectDir: boolean read FIDETitleShowsProjectDir;  // deprecated: ONLY read from XML for upgrade to IDETitleBarCustomText
     property IDETitleBarCustomText: string read FIDETitleBarCustomText
                                              write FIDETitleBarCustomText;
     property IDECoolBarOptions: TIDECoolBarOptions read FIDECoolBarOptions;
@@ -199,6 +202,8 @@ type
     property ObjectInspectorOptions: TDesktopOIOptions read FObjectInspectorOptions;
     property ProjectInspectorShowProps: boolean read FProjectInspectorShowProps
                                                write FProjectInspectorShowProps;
+    property ProjectInspectorPropsPanelHeight: integer read FProjectInspectorPropsPanelHeight
+                                                      write FProjectInspectorPropsPanelHeight;
   end;
 
   { TUnsupportedDesktopOpt }
@@ -585,6 +590,7 @@ begin
   FObjectInspectorOptions:=TDesktopOIOptions.Create;
   // project inspector
   FProjectInspectorShowProps := true;
+  FProjectInspectorPropsPanelHeight := cDefaultPropsPanelHeight;
   // Windows layout
   InitLayoutList;
 
@@ -653,6 +659,7 @@ begin
   FObjectInspectorOptions.Assign(Source.FObjectInspectorOptions);
   // project inspector
   FProjectInspectorShowProps := Source.FProjectInspectorShowProps;
+  FProjectInspectorPropsPanelHeight := Source.FProjectInspectorPropsPanelHeight;
 
   if IsCompatible and Assigned(FDockedOpt) then
     FDockedOpt.Assign(Source.FDockedOpt);
@@ -676,8 +683,8 @@ begin
   FIDETitleStartsWithProject:=FXMLCfg.GetValue(Path+'IDETitleStartsWithProject/Value',true);
   FIDETitleShowsBuildMode:=FXMLCfg.GetValue(Path+'IDETitleShowsBuildMode/Value',true);
   FIDETitleShowsProjectDir:=FXMLCfg.GetValue(Path+'IDETitleShowsProjectDir/Value',true);
-  FIDETitleBarCustomText:=FXMLCfg.GetValue(Path+'IDETitleBarCustomText/Value','');
-  if (EnvironmentOptions.FileVersion < 112) and (FIDETitleBarCustomText = '')
+  FIDETitleBarCustomText:=FXMLCfg.GetValue(Path+'IDETitleBarCustomText/Value',DEFAULT_CUSTOM_TITLE);
+  if (EnvironmentOptions.FileVersion < 112) and (FIDETitleBarCustomText = DEFAULT_CUSTOM_TITLE)
   then begin
     FIDETitleBarCustomText := '$project(TitleNew)';
     if FIDETitleShowsProjectDir then
@@ -690,6 +697,7 @@ begin
   FCompletionWindowHeight:=FXMLCfg.GetValue(Path+'CompletionWindowOptions/Height/Value', 6);
   // Project Inspector
   FProjectInspectorShowProps := FXMLCfg.GetValue(Path+'ProjectInspectorShowProps/Value', true);
+  FProjectInspectorPropsPanelHeight := FXMLCfg.GetValue(Path+'ProjectInspectorPropsPanelHeight/Value', cDefaultPropsPanelHeight);
 
   if not FXMLCfg.HasPath(Path+'IDECoolBarOptions/', True) then
     Path := '';             // Toolbars and palette were at the top level in XML.
@@ -737,12 +745,13 @@ begin
   FXMLCfg.SetDeleteValue(Path+'IDETitleStartsWithProject/Value',FIDETitleStartsWithProject,true);
   FXMLCfg.SetDeleteValue(Path+'IDETitleShowsBuildMode/Value',FIDETitleShowsBuildMode,true);
   FXMLCfg.SetDeleteValue(Path+'IDETitleShowsProjectDir/Value',FIDETitleShowsProjectDir,true);
-  FXMLCfg.SetDeleteValue(Path+'IDETitleBarCustomText/Value',FIDETitleBarCustomText,'');
+  FXMLCfg.SetDeleteValue(Path+'IDETitleBarCustomText/Value',FIDETitleBarCustomText,DEFAULT_CUSTOM_TITLE);
   // CompletionWindow
   FXMLCfg.SetValue(Path+'CompletionWindowOptions/Width/Value',FCompletionWindowWidth);
   FXMLCfg.SetDeleteValue(Path+'CompletionWindowOptions/Height/Value',FCompletionWindowHeight, 6);
   // Project Inspector
   FXMLCfg.SetDeleteValue(Path+'ProjectInspectorShowProps/Value', FProjectInspectorShowProps, true);
+  FXMLCfg.SetDeleteValue(Path+'ProjectInspectorPropsPanelHeight/Value', FProjectInspectorPropsPanelHeight, cDefaultPropsPanelHeight);
   // IDE Coolbar
   FIDECoolBarOptions.Save(FXMLCfg, Path);
   // Editor Toolbar
