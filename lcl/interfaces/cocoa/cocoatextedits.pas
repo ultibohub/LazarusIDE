@@ -47,6 +47,8 @@ const
   COMBOBOX_RO_SMALL_HEIGHT = 17;
   COMBOBOX_RO_MINI_HEIGHT  = 15;
 
+  COMBOBOX_RO_ROUND_SIZE = 7;
+  COMBOBOX_RO_BUTTON_WIDTH = 18;
 
 type
 
@@ -213,10 +215,8 @@ type
 
     procedure GetRowHeight(rowidx: integer; var h: Integer);
     procedure ComboBoxDrawItem(itemIndex: Integer; ctx: TCocoaContext;
-      const r: TRect; isSelected: Boolean);
+      const r: TRect; isSelected: Boolean; backgroundPainted: Boolean );
   end;
-
-  { TCocoaComboBox }
 
   { TCocoaComboBoxItemCell }
 
@@ -243,6 +243,8 @@ type
     //procedure tableView_willDisplayCell_forTableColumn_row(tableView: NSTableView; cell: id; tableColumn: NSTableColumn; row: NSInteger); message 'tableView:willDisplayCell:forTableColumn:row:';
     //function tableView_heightOfRow(tableView: NSTableView; row: NSInteger): CGFloat; message 'tableView:heightOfRow:';
   end;
+
+  { TCocoaComboBox }
 
   TCocoaComboBox = objcclass(NSComboBox, NSComboBoxDataSourceProtocol, NSComboBoxDelegateProtocol)
   private
@@ -288,13 +290,12 @@ type
   { TCocoaReadOnlyView }
 
   TCocoaReadOnlyView = objcclass (NSView)
+  private
     itemIndex: Integer;
     combobox: TCocoaReadOnlyComboBox;
-    isMouseOver: Boolean;
+  public
     procedure drawRect(dirtyRect: NSRect); override;
     procedure mouseUp(event: NSEvent); override;
-    procedure mouseEntered(theEvent: NSEvent); override;
-    procedure mouseExited(theEvent: NSEvent); override;
   end;
 
   { TCocoaReadOnlyComboBoxList }
@@ -306,6 +307,7 @@ type
     FOwner: TCocoaReadOnlyComboBox;
     procedure InsertItem(Index: Integer; const S: string; O: TObject); override;
     procedure Put(Index: Integer; const S: string); override;
+    procedure UpdateItemSize;
   public
     // Pass only 1 owner and nil for the other ones
     constructor Create(AOwner: TCocoaReadOnlyComboBox);
@@ -313,10 +315,21 @@ type
     procedure Clear; override;
   end;
 
+  { TCocoaReadOnlyComboBoxMenuDelegate }
+
+  TCocoaReadOnlyComboBoxMenuDelegate = objcclass( NSObject, NSMenuDelegateProtocol )
+  private
+    _lastHightlightItem: NSMenuItem;
+    _comboBox: NSPopUpButton;
+    procedure menu_willHighlightItem (menu: NSMenu; item: NSMenuItem);
+    procedure menuDidClose (menu: NSMenu);
+  end;
+
   { TCocoaReadOnlyComboBox }
 
   TCocoaReadOnlyComboBox = objcclass(NSPopUpButton)
   private
+    _menuDelegate: TCocoaReadOnlyComboBoxMenuDelegate;
     _textColorAttribs: NSDictionary;
     _defaultItemHeight: Integer;
   public
@@ -331,6 +344,7 @@ type
     isComboBoxEx: Boolean;
 
     function initWithFrame(frameRect: NSRect): id; override;
+    procedure setFrameSize(newSize: NSSize); override;
     procedure dealloc; override;
 
     function lclGetItemHeight( row: Integer ): Integer; message 'lclGetItemHeight:';
@@ -488,7 +502,6 @@ var
   astr     : NSString;
   mn       : NSMenuItem;
   menuItem : TCocoaReadOnlyView;
-  track: NSTrackingArea;
 begin
   inherited InsertItem(Index, S, O);
 
@@ -530,13 +543,6 @@ begin
       NSMakeRect(0,0, FOwner.frame.size.width, FOwner.lclGetItemHeight(index)) );
     menuItem.itemIndex := Index;
     menuItem.combobox := FOwner;
-
-    track:=NSTrackingArea(NSTrackingArea.alloc).initWithRect_options_owner_userInfo(
-      menuItem.bounds
-      , NSTrackingMouseEnteredAndExited or NSTrackingActiveAlways
-      , menuItem, nil);
-    menuItem.addTrackingArea(track);
-    track.release;
     mn.setView(menuItem);
     menuItem.release;
   end;
@@ -554,6 +560,20 @@ begin
     astr := NSStringUtf8(S);
     mn.setTitle(astr);
     astr.release;
+  end;
+end;
+
+procedure TCocoaReadOnlyComboBoxList.UpdateItemSize;
+var
+  menuItem: NSMenuItem;
+  itemView: TCocoaReadOnlyView;
+  size: NSSize;
+begin
+  size.width:= FOwner.frame.size.width;
+  for menuItem in FOwner.menu.itemArray do begin
+    itemView:= TCocoaReadOnlyView( menuItem.view );
+    size.height:= itemView.frame.size.height;
+    itemView.setFrameSize( size );
   end;
 end;
 
@@ -671,16 +691,19 @@ procedure TCocoaReadOnlyView.drawRect(dirtyRect: NSRect);
 var
   ctx : TCocoaContext;
   ctxRect: TRect;
+  isHighlighted: Boolean;
 begin
   inherited drawRect(dirtyRect);
 
   if not Assigned(combobox) then Exit;
 
+  isHighlighted:= self.combobox.itemAtIndex(itemIndex).isHighlighted;
+
   ctx := TCocoaContext.Create(NSGraphicsContext.currentContext);
   try
     ctxRect:= NSRectToRect( bounds );
     ctx.InitDraw( ctxRect.Width, ctxRect.Height );
-    combobox.callback.ComboBoxDrawItem(itemIndex, ctx, ctxRect, isMouseOver);
+    combobox.callback.ComboBoxDrawItem(itemIndex, ctx, ctxRect, isHighlighted, false);
   finally
     ctx.Free;
   end;
@@ -692,24 +715,8 @@ begin
   if Assigned(combobox) then
   begin
     combobox.selectItemAtIndex(itemIndex);
-    combobox.callback.ComboBoxSelectionDidChange;
-    combobox.menu.performActionForItemAtIndex(itemIndex);
     combobox.menu.cancelTracking;
   end;
-end;
-
-procedure TCocoaReadOnlyView.mouseEntered(theEvent: NSEvent);
-begin
-  isMouseOver := true;
-  inherited mouseEntered(theEvent);
-  lclInvalidate;
-end;
-
-procedure TCocoaReadOnlyView.mouseExited(theEvent: NSEvent);
-begin
-  isMouseOver := false;
-  inherited mouseExited(theEvent);
-  lclInvalidate;
 end;
 
 { TCocoaComboBoxItemCell }
@@ -1601,11 +1608,21 @@ function TCocoaReadOnlyComboBox.initWithFrame(frameRect: NSRect): id;
 begin
   Result:=inherited initWithFrame(frameRect);
   _defaultItemHeight:= CocoaConfigComboBox.readOnly.item.defaultHeight;
+  _menuDelegate:= TCocoaReadOnlyComboBoxMenuDelegate.new;
+  _menuDelegate._comboBox:= self;
+  self.menu.setDelegate( _menuDelegate );
+end;
+
+procedure TCocoaReadOnlyComboBox.setFrameSize(newSize: NSSize);
+begin
+  inherited setFrameSize(newSize);
+  TCocoaReadOnlyComboBoxList(self.list).UpdateItemSize;
 end;
 
 procedure TCocoaReadOnlyComboBox.dealloc;
 begin
   FreeAndNil( list );
+  _menuDelegate.release;
   _textColorAttribs.release;
   if resultNS <> nil then resultNS.release;
   inherited dealloc;
@@ -1722,18 +1739,20 @@ begin
       //       (however, one should be careful and take layout offsets into account!)
       //       on the other hand, "cells" themselves are being deprecated...
       dr := lclFrame;
+
+      // crop the drawing rectangle according to the
+      // rounded corners and popup button of the ComboBox.
+      // the APP can get better effect by drawing in the cropped rectangle.
+      // the APP can also expand the rectangle if it knows what it is doing.
       Types.OffsetRect(dr, -dr.Left, -dr.Top);
-      SubLayoutFromFrame( lclGetFrameToLayoutDelta, dr);
+      inc( dr.Left, COMBOBOX_RO_ROUND_SIZE );
+      inc( dr.Top, 2 );
+      dec( dr.Right, COMBOBOX_RO_BUTTON_WIDTH );
+      inc( dr.Bottom, 1 );
+
       ctx.InitDraw(dr.Width, dr.Height);
 
-      // magic offsets are based on the macOS 10.13.6 visual style
-      // but hard-coding is never reliable
-      //inc(dr.Left, 11);
-      //inc(dr.Top, 5);
-      //dec(dr.Right,18);
-      //dec(dr.Bottom, 2);
-
-      callback.ComboBoxDrawItem(lastSelectedItemIndex, ctx, dr, false);
+      callback.ComboBoxDrawItem(lastSelectedItemIndex, ctx, dr, False, True);
     finally
       ctx.Free;
     end;
@@ -1839,6 +1858,21 @@ procedure TCocoaReadOnlyComboBox.scrollWheel(event: NSEvent);
 begin
   if not Assigned(callback) or not callback.scrollWheel(event) then
     inherited scrollWheel(event);
+end;
+
+{ TCocoaReadOnlyComboBoxMenuDelegate }
+
+procedure TCocoaReadOnlyComboBoxMenuDelegate.menu_willHighlightItem(
+  menu: NSMenu; item: NSMenuItem);
+begin
+  if Assigned(_lastHightlightItem) then
+    _lastHightlightItem.view.setNeedsDisplay_( True );
+  _lastHightlightItem:= item;
+end;
+
+procedure TCocoaReadOnlyComboBoxMenuDelegate.menuDidClose(menu: NSMenu);
+begin
+  TCocoaReadOnlyComboBox(_comboBox).comboboxAction( nil );
 end;
 
 { TCocoaSpinEdit }

@@ -14,6 +14,26 @@ msgstr ""
 "X-Generator: Lokalize 21.12.3\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "Перейти назад"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "Перейти вперед"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -10419,7 +10439,7 @@ msgid "IDE build options"
 msgstr "Параметри збирання ІСР"
 
 #: lazarusidestrconsts.lisidecaptioncustomhint
-msgid "The caption of the main IDE window"
+msgid "Additional info to display in the IDE title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidecompileandrestart
@@ -10468,15 +10488,13 @@ msgid "Custom IDE title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidetitleoptions
-msgid "IDE main window title"
+msgid "IDE main window and taskbar title"
 msgstr ""
 
-#: lazarusidestrconsts.lisidetitleshowsprojectdir
-msgid "IDE title shows project directory"
-msgstr "Показувати у заголовку ІСР теку проєкту"
-
 #: lazarusidestrconsts.lisidetitlestartswithprojectname
-msgid "IDE title starts with project name"
+#, fuzzy
+#| msgid "IDE title starts with project name"
+msgid "Show custom IDE title before built-in IDE title or info"
 msgstr "Заголовок ІСР починається з назви проєкту"
 
 #: lazarusidestrconsts.lisiecoallbuildmodes
@@ -13025,10 +13043,12 @@ msgid "&Inspect ..."
 msgstr "&Слідкувати за ..."
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "Перейти назад"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "Перейти вперед"
 
@@ -16027,10 +16047,6 @@ msgctxt "lazarusidestrconsts.lisprojectdirectory"
 msgid "Project directory"
 msgstr "Тека проєкту"
 
-#: lazarusidestrconsts.lisprojectdirectoryisshowedinidetitlebar
-msgid "Title in taskbar shows also directory path of the project"
-msgstr "Назва на панелі завдань показує також шлях до теки проєкту"
-
 #: lazarusidestrconsts.lisprojectfilename
 msgid "Project filename"
 msgstr "Назва файлу проєкту"
@@ -18270,7 +18286,7 @@ msgstr "&Заголовок"
 #: lazarusidestrconsts.listitleintaskbarshowsforexampleproject1lpilazarus
 #, fuzzy
 #| msgid "Title in taskbar shows for example: project1.lpi - Lazarus"
-msgid "Title in taskbar shows for example: project1 - Lazarus"
+msgid "Show the custom IDE title before the IDE's name and other info in the title. Example: project1 - Lazarus."
 msgstr "Назва на панелі завдань показує наприклад: project1.lpi - Lazarus"
 
 #: lazarusidestrconsts.listitleleaveemptyfordefault

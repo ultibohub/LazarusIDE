@@ -1648,6 +1648,8 @@ begin
   MainBuildBoss.SetupExternalTools(TExternalToolsIDE);
   MainBuildBoss.EnvOptsChanged;
 
+  {$IFDEF LCLCOCOA}initIDECocoaConfigForms;{$ENDIF}
+
   // build and position the MainIDE form
   Application.CreateForm(TMainIDEBar,MainIDEBar);
   MainIDEBar.Name := NonModalIDEWindowNames[nmiwMainIDE];
@@ -9148,7 +9150,8 @@ procedure TMainIDE.UpdateCaption;
   end;
 
 var
-  rev, NewCaption, NewTitle, ProjectName, DirName, CustomnCaption: String;
+  rev, NewCaption, DirName, CustomCaption: String;
+  OldMarkUnhandledMacros: boolean;
 begin
   if MainIDEBar = nil then Exit;
   if ToolStatus = itExiting then Exit;
@@ -9158,37 +9161,19 @@ begin
                          [LazarusVersionStr, rev])
   else
     NewCaption := Format(lisLazarusEditorV, [LazarusVersionStr]);
-  NewTitle := NewCaption;
   if MainBarSubTitle <> '' then
-    NewCaption := AddToCaption(NewCaption, MainBarSubTitle)
-  else
-  begin
-    if Project1 <> nil then
-    begin
-      ProjectName := Project1.GetTitleOrName;
-      if ProjectName <> '' then
-      begin
-        if EnvironmentGuiOpts.Desktop.IDETitleShowsProjectDir then
-        begin
-          DirName := ExtractFileDir(Project1.ProjectInfoFile);
-          if DirName <> '' then
-            ProjectName := ProjectName + ' ('+DirName+')';
-        end;
-      end
-      else
-        ProjectName := lisnewProject;
-      NewTitle := AddToCaption(NewTitle, ProjectName);
-    end;
-  end;
+    NewCaption := AddToCaption(NewCaption, MainBarSubTitle);
 
   if (GlobalMacroList <> nil) then begin
-    CustomnCaption := EnvironmentGuiOpts.Desktop.IDETitleBarCustomText;
-    if CustomnCaption <> '' then begin
-      if not GlobalMacroList.SubstituteStr(CustomnCaption) then
-        CustomnCaption := EnvironmentGuiOpts.Desktop.IDETitleBarCustomText;
-      if CustomnCaption <> '' then begin
-        NewCaption := AddToCaption(NewCaption, CustomnCaption);
+    CustomCaption := EnvironmentGuiOpts.Desktop.IDETitleBarCustomText;
+    if CustomCaption <> '' then begin
+      OldMarkUnhandledMacros := GlobalMacroList.MarkUnhandledMacros;
+      GlobalMacroList.MarkUnhandledMacros := false;
+      GlobalMacroList.SubstituteStr(CustomCaption, 0, 0, True);
+      if CustomCaption <> '' then begin
+        NewCaption := AddToCaption(NewCaption, CustomCaption);
       end;
+      GlobalMacroList.MarkUnhandledMacros := OldMarkUnhandledMacros;
     end;
   end;
 
@@ -9204,7 +9189,7 @@ begin
   else
   end;
   MainIDEBar.Caption := NewCaption;
-  Application.Title := NewTitle;
+  Application.Title := NewCaption;
   UpdateControlState; //Ultibo
 end;
 

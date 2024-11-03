@@ -13,6 +13,26 @@ msgstr ""
 "Plural-Forms: nplurals=3; plural=(n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2;\n"
 "Language: cs\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "Skočit zpět"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "Skočit vpřed"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -10503,7 +10523,7 @@ msgid "IDE build options"
 msgstr "Volby sestavení IDE"
 
 #: lazarusidestrconsts.lisidecaptioncustomhint
-msgid "The caption of the main IDE window"
+msgid "Additional info to display in the IDE title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidecompileandrestart
@@ -10552,15 +10572,13 @@ msgid "Custom IDE title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidetitleoptions
-msgid "IDE main window title"
+msgid "IDE main window and taskbar title"
 msgstr ""
 
-#: lazarusidestrconsts.lisidetitleshowsprojectdir
-msgid "IDE title shows project directory"
-msgstr "Titulek IDE zobrazuje adresář projektu"
-
 #: lazarusidestrconsts.lisidetitlestartswithprojectname
-msgid "IDE title starts with project name"
+#, fuzzy
+#| msgid "IDE title starts with project name"
+msgid "Show custom IDE title before built-in IDE title or info"
 msgstr "Titulek IDE začíná názvem projektu"
 
 #: lazarusidestrconsts.lisiecoallbuildmodes
@@ -13112,10 +13130,12 @@ msgid "&Inspect ..."
 msgstr "Zkoumat ..."
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "Skočit zpět"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "Skočit vpřed"
 
@@ -16146,10 +16166,6 @@ msgctxt "lazarusidestrconsts.lisprojectdirectory"
 msgid "Project directory"
 msgstr "Adresář projektu"
 
-#: lazarusidestrconsts.lisprojectdirectoryisshowedinidetitlebar
-msgid "Title in taskbar shows also directory path of the project"
-msgstr "Titulek panelu úloh zobrazuje také adresářovou cestu projektu"
-
 #: lazarusidestrconsts.lisprojectfilename
 msgid "Project filename"
 msgstr "Jméno souboru projektu"
@@ -18382,7 +18398,7 @@ msgstr "&Titulek"
 #: lazarusidestrconsts.listitleintaskbarshowsforexampleproject1lpilazarus
 #, fuzzy
 #| msgid "Title in taskbar shows for example: project1.lpi - Lazarus"
-msgid "Title in taskbar shows for example: project1 - Lazarus"
+msgid "Show the custom IDE title before the IDE's name and other info in the title. Example: project1 - Lazarus."
 msgstr "Titulek v panelu úloh zobrazí například: projekt1.lpi - Lazarus"
 
 #: lazarusidestrconsts.listitleleaveemptyfordefault

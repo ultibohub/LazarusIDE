@@ -351,6 +351,18 @@ type
     procedure setEnabled_(aenabled: ObjCBool); message 'setEnabled:';
   end;
 
+type
+  NSFontWeight = CGFloat;
+const
+  NSFontWeightRegular = 0.0;
+
+type
+  NSFontFix = objccategory external (NSFont)
+    // available in 10.15+
+    class function monospacedSystemFontOfSize_weight (fontSize: CGFloat; weight: NSFontWeight): NSFont;
+      message 'monospacedSystemFontOfSize:weight:';
+  end;
+
   NSApplicationFix = objccategory external (NSApplication)
     {$ifdef BOOLFIX}
     procedure activateIgnoringOtherApps_(flag: ObjCBool); message 'activateIgnoringOtherApps:';
@@ -469,6 +481,8 @@ type
     function backingScaleFactor: CGFloat; message 'backingScaleFactor';
     function isRestorable: LCLObjCBoolean; message 'isRestorable';
     procedure setRestorable(ARestore: LCLObjCBoolean); message 'setRestorable:';
+    // 10.11
+    procedure performWindowDragWithEvent(event: NSEvent); message 'performWindowDragWithEvent:';
     // 10.12
     procedure setTabbingMode(amode: NSWindowTabbingMode); message 'setTabbingMode:';
     function tabbingMode: NSWindowTabbingMode; message 'tabbingMode';
@@ -640,9 +654,11 @@ const
   NSAppKitVersionNumber10_13 = 1561;
   //NSAppKitVersionNumber10_14 = 1641.10; // Mojave's beta?
   NSAppKitVersionNumber10_14 = 1671;
+  NSAppKitVersionNumber10_15 = 1894;
   NSAppKitVersionNumber11_0  = 2022; // 2000 starts with beta?
   NSAppKitVersionNumber12_0  = 2113;
   NSAppKitVersionNumber13_0  = 2299;
+  NSAppKitVersionNumber14_0  = 2487;
 
 function NSNormalWindowLevel: NSInteger; inline;
 function NSFloatingWindowLevel: NSInteger; inline;
@@ -696,6 +712,38 @@ const
   NSTableViewAnimationSlideDown  = $20; // Animates a row in or out by sliding downward.
   NSTableViewAnimationSlideLeft  = $30; // Animates a row in by sliding from the left. Animates a row out by sliding towards the left.
   NSTableViewAnimationSlideRight = $40; // Animates a row in by sliding from the right. Animates a row out by sliding towards the right.
+
+{ NSVisualEffectView }
+// Taken from macOS 10.10 headers at https://github.com/genericptr/MacOS_10_10
+type
+  NSVisualEffectMaterial = NSInteger;
+  NSVisualEffectMaterialPtr = ^NSVisualEffectMaterial;
+const
+  NSVisualEffectMaterialAppearanceBased = 0 deprecated;
+  NSVisualEffectMaterialLight = 1 deprecated;
+  NSVisualEffectMaterialDark = 2 deprecated;
+  NSVisualEffectMaterialTitlebar = 3;
+  NSVisualEffectMaterialSelection = 4;
+  // 10.11
+  NSVisualEffectMaterialMenu = 5;
+  NSVisualEffectMaterialPopover = 6;
+  NSVisualEffectMaterialSidebar =  7;
+  NSVisualEffectMaterialMediumLight = 8 deprecated;
+  NSVisualEffectMaterialUltraDark = 9 deprecated;
+  // 10.14
+  NSVisualEffectMaterialHeaderView = 10;
+  NSVisualEffectMaterialSheet = 11;
+  NSVisualEffectMaterialWindowBackground = 12;
+  NSVisualEffectMaterialHUDWindow = 13;
+  NSVisualEffectMaterialFullScreenUI = 15;
+  NSVisualEffectMaterialToolTip = 17;
+  NSVisualEffectMaterialContentBackground = 18;
+  NSVisualEffectMaterialUnderWindowBackground = 21;
+  NSVisualEffectMaterialUnderPageBackground = 22;
+type
+  NSColorFix = objccategory external (NSColor)
+    class function linkColor: NSColor; message 'linkColor';
+  end;
 
 
 // all of the sudden those are gone! in FPC 3.2.0rc

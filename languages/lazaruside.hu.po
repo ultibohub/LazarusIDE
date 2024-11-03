@@ -11,6 +11,26 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "X-Generator: Poedit 2.0.6\n"
 
+#: lazarusidestrconsts.cocoamfstbicommand
+msgid "Command"
+msgstr ""
+
+#: lazarusidestrconsts.cocoamfstbijumpback
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpback"
+msgid "Jump Back"
+msgstr "Ugrás vissza"
+
+#: lazarusidestrconsts.cocoamfstbijumpforward
+#, fuzzy
+msgctxt "lazarusidestrconsts.cocoamfstbijumpforward"
+msgid "Jump Forward"
+msgstr "Ugrás előre"
+
+#: lazarusidestrconsts.cocoamfstbisearch
+msgid "Search Instantly"
+msgstr ""
+
 #: lazarusidestrconsts.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -10449,7 +10469,7 @@ msgid "IDE build options"
 msgstr "IDE építési beállítások"
 
 #: lazarusidestrconsts.lisidecaptioncustomhint
-msgid "The caption of the main IDE window"
+msgid "Additional info to display in the IDE title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidecompileandrestart
@@ -10498,15 +10518,13 @@ msgid "Custom IDE title"
 msgstr ""
 
 #: lazarusidestrconsts.lisidetitleoptions
-msgid "IDE main window title"
+msgid "IDE main window and taskbar title"
 msgstr ""
 
-#: lazarusidestrconsts.lisidetitleshowsprojectdir
-msgid "IDE title shows project directory"
-msgstr "Az IDE címe megjeleníti a projekt könyvtárát"
-
 #: lazarusidestrconsts.lisidetitlestartswithprojectname
-msgid "IDE title starts with project name"
+#, fuzzy
+#| msgid "IDE title starts with project name"
+msgid "Show custom IDE title before built-in IDE title or info"
 msgstr "Az IDE címe a projekt nevével kezdődik"
 
 #: lazarusidestrconsts.lisiecoallbuildmodes
@@ -13059,10 +13077,12 @@ msgid "&Inspect ..."
 msgstr "Megf&igyelés ..."
 
 #: lazarusidestrconsts.lismenujumpback
+msgctxt "lazarusidestrconsts.lismenujumpback"
 msgid "Jump Back"
 msgstr "Ugrás vissza"
 
 #: lazarusidestrconsts.lismenujumpforward
+msgctxt "lazarusidestrconsts.lismenujumpforward"
 msgid "Jump Forward"
 msgstr "Ugrás előre"
 
@@ -16068,10 +16088,6 @@ msgctxt "lazarusidestrconsts.lisprojectdirectory"
 msgid "Project directory"
 msgstr "Projekt könyvtár"
 
-#: lazarusidestrconsts.lisprojectdirectoryisshowedinidetitlebar
-msgid "Title in taskbar shows also directory path of the project"
-msgstr "A cím a tálcán a projekt útvonalát is megjeleníti"
-
 #: lazarusidestrconsts.lisprojectfilename
 msgid "Project filename"
 msgstr "Projektfájl neve"
@@ -18309,7 +18325,7 @@ msgstr "Cím"
 #: lazarusidestrconsts.listitleintaskbarshowsforexampleproject1lpilazarus
 #, fuzzy
 #| msgid "Title in taskbar shows for example: project1.lpi - Lazarus"
-msgid "Title in taskbar shows for example: project1 - Lazarus"
+msgid "Show the custom IDE title before the IDE's name and other info in the title. Example: project1 - Lazarus."
 msgstr "A cím a tálcán így jelenik meg: project1.lpi - Lazarus"
 
 #: lazarusidestrconsts.listitleleaveemptyfordefault

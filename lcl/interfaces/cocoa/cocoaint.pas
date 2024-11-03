@@ -42,8 +42,10 @@ type
 
   TCocoaTimerObject = objcclass(NSObject)
     func: TWSTimerProc;
-    procedure timerEvent; message 'timerEvent';
-    class function newWithFunc(afunc: TWSTimerProc): TCocoaTimerObject; message 'newWithFunc:';
+    timer: NSTimer;
+    function initWithInterval_func(interval: integer; timerFunc: TWSTimerProc): id; message 'initWithInterval:func:';
+    procedure invalidate; message 'invalidate';
+    procedure timerFireMethod(atimer: NSTimer); message 'timerFireMethod:';
   end;
 
   { TAppDelegate }
@@ -663,6 +665,18 @@ begin
   Result:=inherited nextEventMatchingMask_untilDate_inMode_dequeue(mask,
     expiration, mode, deqFlag);
   {$endif}
+
+  {
+    Monitors from NSEvent.addLocalMonitorForEvents aren't called until
+    NSApplication.sendEvent, so it's not early enough to capture the tracking
+    run loop behavior below or to prevent key events going into KeyEvBefore, and
+    Application.OnUserInput doesn't allow filtering messages.
+    see also !351
+  }
+  if Assigned(Result) and Assigned(CocoaConfigApplication.event.highestHandler) then begin
+    if CocoaConfigApplication.event.highestHandler(Result) then
+      Exit;
+  end;
 
   if (Result.type_=NSApplicationDefined) and (Result.subtype=LazarusApplicationDefinedSubtypeWakeup) then
     Result:= nil;
