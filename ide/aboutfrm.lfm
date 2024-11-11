@@ -16,7 +16,7 @@ object AboutForm: TAboutForm
   PopupMenu = PopupMenu1
   Position = poScreenCenter
   ShowHint = True
-  LCLVersion = '2.1.0.0'
+  LCLVersion = '3.7.0.0'
   object Notebook: TPageControl
     Left = 0
     Height = 340
@@ -40,6 +40,8 @@ object AboutForm: TAboutForm
         Height = 300
         Top = 6
         Width = 450
+        Proportional = True
+        Stretch = True
       end
       object VersionLabel: TLabel
         AnchorSideLeft.Control = LogoImage

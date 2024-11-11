@@ -300,9 +300,15 @@ begin
 end;
 
 procedure TAboutForm.LoadLogo;
+var
+  W, H: Integer;
+  ScaleFactor: Double;
 begin
   LogoImage.Picture.LoadFromResourceName(HInstance, 'splash_logo', TPortableNetworkGraphic);
-  ScaleImg(LogoImage.Picture.Bitmap, LogoImage.Width, LogoImage.Height)
+  ScaleFactor := GetCanvasScaleFactor;
+  W := round(LogoImage.Width * ScaleFactor);
+  H := round(LogoImage.Height * ScaleFactor);
+  ScaleImg(LogoImage.Picture.Bitmap, W, H);
 end;
 
 
