@@ -1143,12 +1143,10 @@ function gdk_screen_get_resolution(screen:PGdkScreen):gdouble; cdecl; external g
  ------------------------------------------------------------------------------}
 procedure TGtk2WidgetSet.AppInit(var ScreenInfo: TScreenInfo);
 begin
-  {$if defined(cpui386) or defined(cpux86_64)}
   // needed otherwise some gtk theme engines crash with division by zero
   {$IFNDEF DisableGtkDivZeroFix}
     SetExceptionMask(GetExceptionMask + [exOverflow,exZeroDivide,exInvalidOp]);
   {$ENDIF}
-  {$ifend}
 
   InitKeyboardTables;
   { Compute pixels per inch variable }
@@ -1533,6 +1531,11 @@ begin
 
   FIsLibraryInstance := False;
   FGtkTerminated := False;
+  {$IFDEF HASX}
+  FIsWayland := UTF8LowerCase(GetEnvironmentVariableUTF8('XDG_SESSION_TYPE')) = 'wayland';
+  {$ELSE}
+  FIsWayland := False;
+  {$ENDIF}
 
   {$IFDEF EnabledGtkThreading}
     {$IFNDEF Win32}
@@ -1933,7 +1936,7 @@ var
 begin
   Result := False;
   WM := GetWindowManager;
-  if (WM = '') or (WM = 'wayland') then
+  if (WM = '') or (WM = 'wayland') or IsWayland then
     exit;
   ADummy := TDummyWidget.Create;
   ADummy.ShowDummyWidget(ALeft, ATop, AWidth, AHeight);
@@ -4630,6 +4633,11 @@ begin
        end;
     end;
   end;
+end;
+
+function TGtk2WidgetSet.IsWayland: boolean;
+begin
+  Result := FIsWayland;
 end;
 
 function TGtk2WidgetSet.X11GetActiveWindow: HWND;

@@ -80,6 +80,7 @@ type
     iconSize: NSSize;
     callback: TLCLListControlCallback;
     selectingByProgram: Boolean;
+    dontSendOnChangeMessage: Boolean;
     readOnly: Boolean;
     isOwnerDraw : Boolean;
     isDynamicRowHeight: Boolean;
@@ -442,9 +443,6 @@ end;
 procedure TCocoaTableListView.backend_reloadData;
 begin
   self.reloadData;
-  if Assigned(self.callback) then begin
-    self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
-  end;
 end;
 
 procedure TCocoaTableListView.backend_onInit;
@@ -672,8 +670,10 @@ begin
   if NOT Assigned(self.callback) then
     Exit;
 
+  self.dontSendOnChangeMessage:= True;
   selection:= self.callback.selectionIndexSet;
   self.selectRowIndexesByProgram( selection );
+  self.dontSendOnChangeMessage:= False;
 end;
 
 procedure TCocoaTableListView.reloadData;
@@ -685,6 +685,12 @@ begin
 
   inherited reloadData;
   _processor.onReloadData( self );
+
+  // 1. the first step is here
+  //    synchronously restore the selection immediately after calling reloadData()
+  // 2. the second step is elsewhere
+  //    the selection will be restored asynchronously after reloadData actually takes effect.
+  self.restoreFromStableSelection;
 end;
 
 procedure TCocoaTableListView.reloadDataForRow_column(ARow, ACol: NSInteger);
@@ -1439,7 +1445,6 @@ begin
   self.callback.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
   self.callback.mixedCheckedIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
   self.callback.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex, 1 );
-  self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
   self.reloadData;
   self.sizeToFit();
 end;
@@ -1452,7 +1457,6 @@ begin
   self.callback.checkedIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1);
   self.callback.mixedCheckedIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1);
   self.callback.selectionIndexSet.shiftIndexesStartingAtIndex_by( AIndex+1, -1 );
-  self.selectRowIndexesByProgram( self.callback.selectionIndexSet );
   self.reloadData;
 end;
 
@@ -2029,6 +2033,9 @@ begin
     selectionIndexSet.removeAllIndexes;
     selectionIndexSet.addIndexes( tv.selectedRowIndexes );
   end;
+
+  if cocoaTLV.dontSendOnChangeMessage then
+    Exit;
 
   NewSel := cocoaTLV.selectedRow();
   sendSelectionChangedMsgToLCL( lclListView, NewSel, ad, rm );

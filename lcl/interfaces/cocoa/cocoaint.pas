@@ -278,8 +278,7 @@ implementation
 
 uses
   dl,dynlibs,
-  CocoaCaret,
-  CocoaThemes;
+  CocoaCaret, CocoaThemes;
 
 const
   // Lack of documentation, provisional definition
