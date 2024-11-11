@@ -575,7 +575,7 @@ begin
   FIDETitleStartsWithProject:=true;
   FIDETitleShowsBuildMode:=true;
   FIDETitleShowsProjectDir:=true;
-  FIDETitleBarCustomText:='';
+  FIDETitleBarCustomText:=DEFAULT_CUSTOM_TITLE;
   // IDE Coolbar
   FIDECoolBarOptions:=TIDECoolBarOptions.Create;
   // Editor Toolbar

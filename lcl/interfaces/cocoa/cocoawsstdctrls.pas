@@ -2500,6 +2500,9 @@ begin
     lclcb.selectionIndexSet.addIndexes( tv.selectedRowIndexes );
   end;
 
+  if cocoaTLV.dontSendOnChangeMessage then
+    Exit;
+
   // do not notify about selection changes while clearing
   if Assigned(lclcb.strings) and (lclcb.strings.isClearing) then Exit;
   SendSimpleMessage(lclListBox, LM_SELCHANGE);
@@ -2562,7 +2565,7 @@ begin
     Result := 0;
     Exit;
   end;
-  cb.HandleFrame := scroll;
+  cb.SetHandleFrame(scroll);
   scroll.callback := list.callback;
   scroll.setHasVerticalScroller(true);
   scroll.setHasHorizontalScroller(true);
