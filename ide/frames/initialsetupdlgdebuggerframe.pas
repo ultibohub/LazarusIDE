@@ -210,6 +210,9 @@ begin
   {$ElseIf defined(Darwin)}
   Result := TFpLldbDebugger;
   {$ENDIF}
+
+  Result := TGDBMIDebugger; //Always use GDB //Ultibo 
+
   if dfNotSuitableForOsArch in Result.SupportedFeatures then
     Result := TGDBMIDebugger;
 end;
