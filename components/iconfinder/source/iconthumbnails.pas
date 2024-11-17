@@ -13,12 +13,13 @@ unit IconThumbNails;
 
 {$mode ObjFPC}{$H+}
 {$define OVERLAY_ICONS}
+{$define SPEED_TIMER}
 {$WARN 6058 off : Call to subroutine "$1" marked as inline is not inlined}
 interface
 
 uses
-  Classes, SysUtils, fgl, FPImage, StrUtils, LazLoggerBase,
-  laz2_dom, laz2_xmlread, laz2_xmlwrite,
+  Classes, SysUtils, fgl, contnrs, FPImage, FPReadBMP, StrUtils, LazLoggerBase,
+  laz2_dom, laz2_xmlread, laz2_xmlwrite, IntfGraphics,
   FileUtil, LazFileUtils, Graphics, Controls, Dialogs, Menus, Forms,
   IconFinderStrConsts, BasicThumbnails;
 
@@ -84,9 +85,13 @@ type
     property Width: Integer read FWidth;
   end;
 
-  TIconList = class(specialize TFPGObjectList<TIconItem>)
+  TIconList = class(TFPHashObjectList)
+  private
+    function GetItem(AIndex: Integer): TIconItem;
+    procedure SetItem(AIndex: Integer; AValue: TIconItem);
   public
     function IndexOfFileName(AFileName: String): Integer;
+    property Items[AIndex: Integer]: TIconItem read GetItem write SetItem; default;
   end;
 
   TIconFolderItem = class
@@ -161,6 +166,7 @@ type
     function FindLargestIcon(AIcon: TIconItem): TIconItem;
     procedure GetIconSizesAsStrings(AList: TStrings);
     procedure GetKeywordsAsStrings(AList: TStrings);
+    function IndexOfFolder(AFolder: String): Integer;
     function IndexOfThumbnail(AIcon: TIconItem): Integer;
     procedure LockFilter;
     procedure PopulateIconFoldersMenu(AMenu: TMenu);
@@ -190,7 +196,6 @@ function StrToIconStyle(AText: String): TIconStyle;
 
 const
   IMAGES_MASK = '*.png;*.bmp';
-
 
 implementation
 
@@ -262,6 +267,8 @@ begin
   begin
     x := (Viewer.ThumbnailWidth - pic.Width) div 2;
     y := (Viewer.ThumbnailHeight - pic.Height) div 2;
+    if Assigned(pic.Bitmap) then
+      pic.Bitmap.Transparent := true;
     ACanvas.Draw(ARect.Left + x, ARect.Top + y, pic.Bitmap);
   end;
 end;
@@ -435,21 +442,19 @@ end;
 
 { TIconList }
 
-function TIconList.IndexOfFileName(AFileName: String): Integer;
-var
-  i: Integer;
-  item: TIconItem;
+function TIconList.GetItem(AIndex: Integer): TIconItem;
 begin
-  for i := 0 to Count-1 do
-  begin
-    item := Items[i];
-    if item.FileName = AFileName then
-    begin
-      Result := i;
-      exit;
-    end;
-  end;
-  Result := -1;
+  Result := TIconItem(inherited Items[AIndex]);
+end;
+
+function TIconList.IndexOfFileName(AFileName: String): Integer;
+begin
+  Result := FindIndexOf(AFileName);
+end;
+
+procedure TIconList.SetItem(AIndex: Integer; AValue: TIconItem);
+begin
+  inherited Items[AIndex] := AValue;
 end;
 
 
@@ -682,7 +687,7 @@ begin
   begin
     Result := TIconItem.Create(AFileName, AKeywords, AStyle, AWidth, AHeight);
     Result.FViewer := Self;
-    FIconList.Add(Result);
+    FIconList.Add(AFileName, Result);
   end else
     Result := FIconList[idx];
 
@@ -707,6 +712,7 @@ end;
 
 procedure TIconThumbnailViewer.Clear;
 begin
+  SelectedIndex := -1;
   inherited;
   FLargestIconWidth := 0;
   FLargestIconHeight := 0;
@@ -729,7 +735,7 @@ begin
   for i := 0 to FIconList.Count-1 do
   begin
     item := FIconList[i];
-    itemDir := FIconList[i].Directory;
+    itemDir := item.Directory;
     if SameText(iconNameBase, item.NameBase) and SameText(iconDir, itemDir) and (item <> AIcon) then
       item.CopyMetadataFrom(AIcon);
   end;
@@ -997,6 +1003,14 @@ begin
 //  end;
 end;
 
+function TIconThumbnailViewer.IndexOfFolder(AFolder: String): Integer;
+begin
+  for Result := 0 to FIconFolders.Count-1 do
+    if FIconFolders[Result].FolderName = AFolder then
+      exit;
+  Result := -1;
+end;
+
 function TIconThumbnailViewer.IndexOfThumbnail(AIcon: TIconItem): Integer;
 var
   i: Integer;
@@ -1101,7 +1115,7 @@ var
   isHidden: Boolean;
 begin
   if SelectedIcon <> nil then
-    selectedIconFileName := SelectedIcon.FileName;;
+    selectedIconFileName := SelectedIcon.FileName;
   SelectedIndex := -1;  // this sets FSelectedIcon to nil.
   FIconFolders.Clear;
   FIconList.Clear;
@@ -1114,8 +1128,12 @@ begin
     TIconFolderList(FIconFolders).AddFolder(folder, isHidden);
     ReadIconFolder(AList[i]);
   end;
-  FilterIcons;
-  SelectIconInFile(selectedIconFileName);
+
+  if not FilterLocked then
+  begin
+    FilterIcons;
+    SelectIconInFile(selectedIconFileName);
+  end;
 end;
 
 { Looks for image files (*.png, *.bmp) in the given folder and adds them to
@@ -1138,6 +1156,11 @@ begin
         reader := TFPCustomImage.FindReaderFromStream(stream);
         if reader <> nil then
         begin
+          {$if FPC_FullVersion < 30301}
+          // Workaround for FPReaderBMP not implementing "ImageSize"
+          if reader = TFPReaderBMP then
+            reader := TLazReaderBMP;
+          {$ifend}
           stream.Position := 0;
           with reader.ImageSize(stream) do
           begin
@@ -1155,21 +1178,28 @@ begin
   end;
 end;
 
-procedure TIconThumbnailViewer.ReadMetadataFile(AFileName: String; AHidden: Boolean);
+procedure TIconThumbnailViewer.ReadMetadataFile(AFileName: String;
+  AHidden: Boolean);
 var
   doc: TXMLDocument = nil;
   iconsNode, iconNode: TDOMNode;
   keywordsNode, keywordNode: TDOMNode;
   folder, fn: String;
-  i: Integer;
+  i, idx: Integer;
   w, h: Integer;
   style: TIconStyle;
   s: String;
   keywords: String;
-  files: TStringList;
+  files: TStringList = nil;
   stream: TStream;
   reader: TFPCustomImageReaderClass;
+  {$ifdef SPEED_TIMER}
+  t1, t2: TDateTime;
+  {$endif}
 begin
+  {$ifdef SPEED_TIMER}
+  t1 := Now();
+  {$endif}
   folder := ExtractFilePath(AFileName);
   files := TStringList.Create;
   try
@@ -1178,6 +1208,9 @@ begin
     ReadXMLFile(doc, AFileName);
     iconsNode := doc.DocumentElement.FindNode('icons');
     iconNode := iconsNode.FindNode('icon');
+    {$ifdef SPEED_TIMER}
+    t2 := Now();
+    {$endif}
     while iconNode <> nil do begin
       fn := '';
       style := isAnystyle;
@@ -1186,36 +1219,48 @@ begin
         begin
           s := iconNode.Attributes[i].NodeValue;
           case iconNode.Attributes[i].NodeName of
-            'filename': fn := s;
-            'width': w := StrToIntDef(s, 0);
-            'height': h := StrToIntDef(s, 0);
-            'style': style := StrToIconStyle(s);
+            'filename':
+              begin
+                fn := folder + s;
+                // Check existence of icon file fn
+                if not files.Find(fn, idx) then   // faster than FileExists(fn)
+                begin
+                  fn := '';
+                  break;
+                end;
+              end;
+            'width':
+              w := StrToIntDef(s, 0);
+            'height':
+              h := StrToIntDef(s, 0);
+            'style':
+              style := StrToIconStyle(s);
           end;
         end;
-      keywords := '';
-      keywordsNode := iconNode.FindNode('keywords');
-      if keywordsNode <> nil then
-      begin
-        keywordNode := keywordsNode.FindNode('keyword');
-        while keywordNode <> nil do
-        begin
-          s := keywordNode.TextContent;
-          keywords := keywords + ';' + s;
-          keywordNode := keywordNode.NextSibling;
-        end;
-      end;
-      if keywords <> '' then
-        System.Delete(keywords, 1, 1);
 
-      if (fn <> '') then
+      // ignore metadata entries for which the icon files do not exist.
+      if fn <> '' then
       begin
-        fn := folder + fn;
-        if FileExists(fn) then   // ignore metadata entries for which the icon files do not exist.
-          AddIcon(fn, keywords, style, w, h).Hidden := AHidden;
+        keywords := '';
+        keywordsNode := iconNode.FindNode('keywords');
+        if keywordsNode <> nil then
+        begin
+          keywordNode := keywordsNode.FindNode('keyword');
+          while keywordNode <> nil do
+          begin
+            s := keywordNode.TextContent;
+            keywords := keywords + ';' + s;
+            keywordNode := keywordNode.NextSibling;
+          end;
+        end;
+        if keywords <> '' then
+          System.Delete(keywords, 1, 1);
+
+        AddIcon(fn, keywords, style, w, h).Hidden := AHidden;
 
         // Delete the processed filename from the files list
-        i := files.IndexOf(fn);
-        if i > -1 then files.Delete(i);
+        if files.Find(fn, i) then
+          files.Delete(i);
       end;
 
       iconNode := iconNode.NextSibling;
@@ -1245,10 +1290,20 @@ begin
       end;
     end;
 
+    {$ifdef SPEED_TIMER}
+    t2 := Now()-t2;
+    {$endif}
+
   finally
     doc.Free;
     files.Free;
   end;
+
+  {$ifdef SPEED_TIMER}
+  t1 := Now() - t1;
+  DebugLn(['[TIconThumbnailViewer.ReadMetadataFile] Total time=', FormatDateTime('s.zzz "sec"', t1), ', Loop time=', FormatdateTime('s.zzz "sec"', t2)]);
+  {$endif}
+
 end;
 
 procedure TIconThumbnailViewer.SetFilterByIconKeywords(AValue: String);

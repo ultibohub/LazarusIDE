@@ -6,8 +6,8 @@
   for details about the license.
  *****************************************************************************
 
- A frame composed of the essential controls for viewer thumbnails and filtering
- them.
+ A frame composed of the essential controls for viewing thumbnails and
+ filtering them.
 
  Is used by the imagelist component editor, by the graphic property editor
  and by the IDE settings page.
@@ -24,8 +24,9 @@ uses
   Classes, SysUtils,
   // LazUtils
   LazFileUtils, LazLoggerBase,
-  // LCL
-  Forms, Controls, Graphics, StdCtrls, ExtCtrls, FileCtrl, Buttons, Dialogs, ImgList,
+  // LCL/LazControls
+  Forms, Controls, Graphics, StdCtrls, ExtCtrls, FileCtrl, Buttons, Dialogs,
+  ImgList, DividerBevel,
   // Icon Finder
   IconFinderStrConsts, IconThumbnails, IconKeywordFilterEditor;
 
@@ -34,12 +35,12 @@ type
   { TIconViewerFrame }
 
   TIconViewerFrame = class(TFrame)
-    Bevel1: TBevel;
     Bevel2: TBevel;
     btnKeywordEditor: TSpeedButton;
     cmbFilterByKeywords: TComboBox;
     cmbFilterBySize: TComboBox;
     cmbFilterByStyle: TComboBox;
+    DividerBevel1: TDividerBevel;
     FilterPanel: TPanel;
     infoFileName: TLabel;
     infoKeywords: TLabel;
@@ -92,8 +93,10 @@ type
     procedure DeleteSelectedIcon;
     procedure FocusKeywordFilter;
     procedure GetKeywordsHistory(AList: TStrings);
+    function IndexOfIconFolder(AFolder: String): Integer;
     procedure ReadIconFolders(AList: TStrings);
     procedure SetKeywordsHistory(AList: TStrings);
+    procedure UpdateIconCount;
     procedure UpdateIconSizes(ASizeIndex: Integer);
     procedure UpdateIconStyles(AStyleIndex: Integer);
     procedure UpdateLanguage;
@@ -154,6 +157,7 @@ begin
   UpdateIconSizes(filterBySize);
   UpdateIconStyles(filterByStyle);
   UpdateIconDetails;
+  UpdateIconCount;
   UpdateCmds;
 end;
 
@@ -215,6 +219,7 @@ begin
   FIconViewer.FilterByIconKeywords := filter;
   AddKeywordFilterToHistory(filter);
   cmbFilterByKeywords.Text := filter;   // Must be after AddKeywordFilterToHistory!
+  UpdateIconCount;
 end;
 
 procedure TIconViewerFrame.cmbFilterByKeywordsEditingDone(Sender: TObject);
@@ -229,12 +234,14 @@ begin
   else
     FIconViewer.FilterByIconSize := cmbFilterBySize.Items[cmbFilterBySize.ItemIndex];
   FIconViewer.Invalidate;
+  UpdateIconCount;
 end;
 
 procedure TIconViewerFrame.cmbFilterByStyleChange(Sender: TObject);
 begin
   FIconViewer.FilterByIconStyle := TIconStyle(cmbFilterByStyle.ItemIndex);
   FIconViewer.Invalidate;
+  UpdateIconCount;
 end;
 
 procedure TIconViewerFrame.CopyMetadataToNameBase(AIcon: TIconItem);
@@ -264,6 +271,7 @@ end;
 
 procedure TIconViewerFrame.DoIconViewerFilter(Sender: TObject);
 begin
+  UpdateIconCount;
   if Assigned(FOnFilter) then
     FOnFilter(Self);
 end;
@@ -336,16 +344,24 @@ begin
   end;
 end;
 
+function TIconViewerFrame.IndexOfIconFolder(AFolder: String): Integer;
+begin
+  Result := FIconViewer.IndexOfFolder(AFolder);
+end;
+
 { Reads the icons from the directories contained in AList and adds them to the
   library. }
 procedure TIconViewerFrame.ReadIconFolders(AList: TStrings);
 var
   sizeFilt, styleFilt: Integer;
+  selectedIconFileName: String = '';
 begin
   styleFilt := cmbFilterByStyle.ItemIndex;
   if styleFilt = -1 then styleFilt := 0;
   sizeFilt := cmbFilterBySize.ItemIndex;
   if sizeFilt = -1 then sizeFilt := 0;
+  if Assigned(IconViewer.SelectedIcon) then
+    selectedIconFileName := IconViewer.SelectedIcon.FileName;
 
   IconViewer.LockFilter;
   try
@@ -354,6 +370,7 @@ begin
     UpdateIconStyles(stylefilt);
   finally
     IconViewer.UnlockFilter;
+    IconViewer.SelectIconInFile(selectedIconFileName);;
   end;
 end;
 
@@ -410,6 +427,13 @@ end;
 procedure TIconViewerFrame.UpdateCmds;
 begin
   btnKeywordEditor.Enabled := TotalCount > 0;
+end;
+
+procedure TIconViewerFrame.UpdateIconCount;
+begin
+  DividerBevel1.Caption := Format(RSIconViewer_IconCountInfo,
+    [ FIconViewer.ThumbnailCount, FIconViewer.IconCount ]
+  );
 end;
 
 procedure TIconViewerFrame.UpdateIconDetails;
