@@ -243,10 +243,7 @@ begin
 
   if Visible and (Caption=AHint)
   and EqualRect(FHintRect, BoundsRect) then
-  begin
-    FActivating := FActivating;
     Exit; // nothing changed, exit -> don't flicker
-  end;
 
   FActivating := True;
   try
@@ -267,6 +264,8 @@ begin
   ActivateHint(AHint);
 end;
 
+// The purpose of this method is to allow showing a hint without
+// adjusting its position via AdjustBoundsForMonitor call.
 procedure THintWindow.ActivateWithBounds(ARect: TRect; const AHint: String);
 begin
   HintRect := ARect;
@@ -276,6 +275,7 @@ end;
 procedure THintWindow.ActivateHintData(ARect: TRect; const AHint: String; AData: pointer);
 begin
   HintRect := ARect;
+  AdjustBoundsForMonitor;
   ActivateHint(AHint);                // AData is not used now.
 end;
 

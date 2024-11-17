@@ -1494,11 +1494,6 @@ begin
     rdtEnum, rdtSet: ;
     rdtfloat:
       Result := IsByteSize(AConvData.SourceSize) and
-                ( (AConvData.SourceFullSize = AConvData.DestSize) or
-                  ( (AConvData.SourceFullSize = SizeOf(Real48)) and
-                    (AConvData.SourceSize.Size = SizeOf(Double))
-                  )
-                ) and
                 ( (AConvData.SourceSize.Size = DBG_EXTENDED_SIZE) or
                   (AConvData.SourceSize.Size = SizeOf(Extended)) or
                   (AConvData.SourceSize.Size = SizeOf(Double)) or
@@ -2129,7 +2124,12 @@ begin
           FPartialReadResultLenght := SourceReadSize;
 
         if SourceReadSize > ConvData.SourceSize.Size then
-          SourceReadSize := ConvData.SourceSize.Size;
+          SourceReadSize := ConvData.SourceSize.Size
+        else
+        if SourceReadSize <= ConvData.SourceSize.Size then begin
+          ConvData.SourceSize         := SizeVal(SourceReadSize);
+          ConvData.SourceFullSize     := SourceReadSize;
+        end;
 
         ReadData := @TmpVal;
 
