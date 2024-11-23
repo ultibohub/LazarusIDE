@@ -5438,6 +5438,7 @@ begin
     QtKey_QuoteLeft: Result := VK_OEM_3;
     QtKey_BraceLeft,
     QtKey_BracketLeft: Result := VK_OEM_4;
+    QtKey_Bar: Result := VK_LCL_BACKSLASH;
     QtKey_BackSlash: Result := VK_OEM_5;
     QtKey_BraceRight,
     QtKey_BracketRight: Result := VK_OEM_6;
@@ -6214,7 +6215,9 @@ begin
     QEventMouseButtonRelease:
       begin
         Result := SlotMouse(Sender, Event);
-        if not QWidget_hasFocus(Widget) and (QMouseEvent_button(QMouseEventH(Event)) = QtLeftButton) then
+        if not QWidget_hasFocus(Widget) and
+        (QMouseEvent_button(QMouseEventH(Event)) = QtLeftButton) and
+        (QWidget_focusPolicy(Widget) > QtNoFocus) then
         begin
           QObject_blockSignals(Sender, True);
           Application.QueueAsyncCall(@PushButtonUnblock, PtrInt(Sender));
@@ -12245,6 +12248,13 @@ begin
       FMouseCaptureFix := True
     else
       FMouseCaptureFix := False;
+
+    {issue #41255}
+    if (QEvent_type(Event) = QEventMouseMove) and (QMouseEvent_buttons(QMouseEventH(Event)) = 0) then
+    begin
+      inherited EventFilter(Sender, Event);
+      exit(True);
+    end;
   end;
 
   Result := inherited EventFilter(Sender, Event);
