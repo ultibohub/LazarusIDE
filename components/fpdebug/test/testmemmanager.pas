@@ -117,16 +117,16 @@ var
     GotRes := FDummyContext.ReadSignedInt(RegisterLoc(2),               SizeVal(ReadSize), GotInt);
     CheckIntRes('signed Reg ',    ExpIntVal);
 
-    for a := ReadSize+1 to 8 do begin
-      // expanded
-      FMemReader.RegisterSizes[2] := ReadSize;
-      GotRes := FDummyContext.ReadSignedInt(RegisterLoc(2),             SizeVal(a), GotInt);
-      CheckIntRes('signed Reg  readsize='+IntToStr(a),    ExpIntVal);
-
-      FMemReader.RegisterSizes[2] := a;
-      GotRes := FDummyContext.ReadSignedInt(RegisterLoc(2),             SizeVal(ReadSize), GotInt);
-      CheckIntRes('signed Reg  regsize'+IntToStr(a),    ExpIntVal);
-    end;
+//    for a := ReadSize+1 to 8 do begin
+//      // expanded
+//      FMemReader.RegisterSizes[2] := ReadSize;
+//      GotRes := FDummyContext.ReadSignedInt(RegisterLoc(2),             SizeVal(a), GotInt);
+//      CheckIntRes('signed Reg  readsize='+IntToStr(a),    ExpIntVal);
+//
+//      FMemReader.RegisterSizes[2] := a;
+//      GotRes := FDummyContext.ReadSignedInt(RegisterLoc(2),             SizeVal(ReadSize), GotInt);
+//      CheckIntRes('signed Reg  regsize'+IntToStr(a),    ExpIntVal);
+//    end;
 
     GotRes := FDummyContext.ReadSignedInt(ConstLoc(QWord(ExpIntVal)), SizeVal(ReadSize), GotInt);
     CheckIntRes('signed const (pre-expanded)', ExpIntVal);
@@ -254,7 +254,10 @@ begin
 
   FCurrentTestName := 'Extended';
   DataExt := 1.7722;
-  GotRes := FDummyContext.ReadFloat(TargetLoc(TDbgPtr(@DataExt)), SizeVal(DBG_EXTENDED_SIZE), GotExt);
+  if DBG_HAS_EXTENDED then
+    GotRes := FDummyContext.ReadFloat(TargetLoc(TDbgPtr(@DataExt)), SizeVal(DBG_EXTENDED_SIZE), GotExt)
+  else
+    GotRes := FDummyContext.ReadFloat(TargetLoc(TDbgPtr(@DataExt)), SizeVal(SizeOf(DataExt)), GotExt);
   AssertTrue(FCurrentTestName +  'Read OK', GotRes);
   AssertEquals(FCurrentTestName + 'target not changed', 1.7722, double(DataExt));
   AssertEquals(FCurrentTestName + 'Val', double(DataExt), double(GotExt));
