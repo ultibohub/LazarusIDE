@@ -921,7 +921,7 @@ begin
   for I := #0 to #255 do
   begin
     case I of
-      '_', '0'..'9', 'a'..'z', 'A'..'Z': Identifiers[I] := True;
+      '_', '0'..'9', 'a'..'z', 'A'..'Z', #128..#255: Identifiers[I] := True;
     else Identifiers[I] := False;
     end;
     J := UpCase(I);
@@ -1606,7 +1606,10 @@ begin
     ]);
     //debugln('TSynPasSyn.Func37 BEGIN ',dbgs(ord(TopPascalCodeFoldBlockType)),' LineNumber=',dbgs(fLineNumber),' ',dbgs(MinimumNestFoldBlockLevel),' ',dbgs(CurrentCodeFoldBlockLevel));
   end else
-  if FExtendedKeywordsMode and KeyComp('Break') then
+  if FExtendedKeywordsMode and KeyComp('Break') and
+     (TopPascalCodeFoldBlockType() in PascalStatementBlocks) and (fRange * [rsAfterEqualOrColon] = []) and
+     (PasCodeFoldRange.BracketNestLevel = 0)
+  then
     Result := tkKey
   else
     Result := tkIdentifier;
@@ -1884,7 +1887,10 @@ end;
 
 function TSynPasSyn.Func58: TtkTokenKind;
 begin
-  if FExtendedKeywordsMode and KeyComp('Exit') then
+  if FExtendedKeywordsMode and KeyComp('Exit') and
+     (TopPascalCodeFoldBlockType() in PascalStatementBlocks) and (fRange * [rsAfterEqualOrColon] = []) and
+     (PasCodeFoldRange.BracketNestLevel = 0)
+  then
     Result := tkKey
   else
     Result := tkIdentifier;
@@ -2633,17 +2639,17 @@ function TSynPasSyn.Func101: TtkTokenKind;
 var
   tbf: TPascalCodeFoldBlockType;
 begin
+  tbf := TopPascalCodeFoldBlockType;
   if KeyComp('Register') and
      (PasCodeFoldRange.BracketNestLevel in [0, 1]) and
      (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-     (TopPascalCodeFoldBlockType in ProcModifierAllowed)
+     (tbf in ProcModifierAllowed)
   then begin
     Result := tkModifier;
     FRange := FRange + [rsInProcHeader];
   end
   else
   if KeyComp('Platform') then begin
-    tbf := TopPascalCodeFoldBlockType;
     if ( ( (tbf in [cfbtVarType, cfbtLocalVarType]) and
            (FTokenState <> tsAfterAbsolute) and
            (fRange * [rsVarTypeInSpecification, rsAfterEqualOrColon] = [rsVarTypeInSpecification]) ) or
@@ -2661,7 +2667,7 @@ begin
     then begin
       Result := tkModifier;
       if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader, rsAfterClassMembers] = [rsWasInProcHeader, rsAfterClassMembers]) and
-         (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection]) and
+         (tbf in [cfbtClass, cfbtClassSection]) and
          (CompilerMode = pcmDelphi)
       then
         FRange := FRange + [rsInProcHeader]; // virtual reintroduce overload can be after virtual
@@ -2669,7 +2675,11 @@ begin
     else
       Result := tkIdentifier;
   end
-  else if FExtendedKeywordsMode and KeyComp('Continue') then
+  else
+  if FExtendedKeywordsMode and KeyComp('Continue') and
+     (tbf in PascalStatementBlocks) and (fRange * [rsAfterEqualOrColon] = []) and
+     (PasCodeFoldRange.BracketNestLevel = 0)
+  then
     Result := tkKey
   else
     Result := tkIdentifier;
@@ -4294,8 +4304,20 @@ end;
 procedure TSynPasSyn.SpaceProc;
 begin
   inc(Run);
+  if IsCombiningCodePoint(fLine+Run) then begin
+    IdentProc;
+    exit;
+  end;
+
   fTokenID := tkSpace;
+
+  if not IsSpaceChar[FLine[Run]] then
+    exit;
+
+  inc(Run);
   while IsSpaceChar[FLine[Run]] do inc(Run);
+  if IsCombiningCodePoint(fLine+Run) then
+    dec(Run);
 end;
 
 procedure TSynPasSyn.StringProc;
