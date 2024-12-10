@@ -148,6 +148,7 @@ type
     procedure FormDeactivate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
+    procedure FormResize(Sender: TObject);
     procedure ItemsPopupMenuPopup(Sender: TObject);
     procedure ItemsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView;
       Node: TTreeNode; {%H-}State: TCustomDrawState; Stage: TCustomDrawStage;
@@ -677,7 +678,7 @@ end;
 procedure TProjectInspectorForm.PropsGroupBoxResize(Sender: TObject);
 begin
   if PropsGroupBox.Visible then
-    EnvironmentGuiOpts.Desktop.ProjectInspectorPropsPanelHeight := PropsGroupBox.Height;
+    EnvironmentGuiOpts.Desktop.ProjectInspectorPropsPanelHeight := ScaleFormTo96(PropsGroupBox.Height);
 end;
 
 procedure TProjectInspectorForm.SetDependencyDefaultFilenameMenuItemClick(Sender: TObject);
@@ -902,6 +903,11 @@ begin
   finally
     EndUpdate;
   end;
+end;
+
+procedure TProjectInspectorForm.FormResize(Sender: TObject);
+begin
+  PropsGroupBox.Constraints.MaxHeight := self.Height - FilterPanel.Height - ToolBar.Height - 20;
 end;
 
 procedure TProjectInspectorForm.ItemsPopupMenuPopup(Sender: TObject);
@@ -1185,21 +1191,17 @@ end;
 procedure TProjectInspectorForm.RemoveNonExistingFilesMenuItemClick(Sender: TObject);
 var
   AnUnitInfo: TUnitInfo;
-  NextUnitInfo: TUnitInfo;
   HasChanged: Boolean;
 begin
   if LazProject.IsVirtual then exit;
   BeginUpdate;
   try
     HasChanged:=false;
-    AnUnitInfo:=LazProject.FirstPartOfProject;
-    while AnUnitInfo<>nil do begin
-      NextUnitInfo:=AnUnitInfo.NextPartOfProject;
+    for TLazProjectFile(AnUnitInfo) in LazProject.UnitsBelongingToProject do begin
       if not (AnUnitInfo.IsVirtual or FileExistsUTF8(AnUnitInfo.Filename)) then begin
         AnUnitInfo.IsPartOfProject:=false;
         HasChanged:=true;
       end;
-      AnUnitInfo:=NextUnitInfo;
     end;
     if HasChanged then begin
       LazProject.Modified:=true;
@@ -1403,7 +1405,7 @@ procedure TProjectInspectorForm.OptionsChanged(Sender: TObject; Restore: boolean
 begin
   PropsGroupBox.Visible := EnvironmentGuiOpts.Desktop.ProjectInspectorShowProps;
   ShowPropsPanelButton.Down := PropsGroupBox.Visible;
-  PropsGroupBox.Height := EnvironmentGuiOpts.Desktop.ProjectInspectorPropsPanelHeight;
+  PropsGroupBox.Height := Scale96ToForm(EnvironmentGuiOpts.Desktop.ProjectInspectorPropsPanelHeight);
   Splitter1.Visible := PropsGroupBox.Visible;
 end;
 
@@ -1498,14 +1500,12 @@ begin
     FilterEdit.SortData:=SortAlphabetically;
     FilterEdit.ImageIndexDirectory:=ImageIndexDirectory;
     // collect and sort files
-    CurFile:=LazProject.FirstPartOfProject;
-    while CurFile<>nil do begin
+    for TLazProjectFile(CurFile) in LazProject.UnitsBelongingToProject do begin
       Filename:=CurFile.GetShortFilename(true);
       if Filename<>'' then Begin
         ANodeData:=FPropGui.CreateNodeData(penFile, CurFile.Filename, False);
         FilesBranch.AddNodeData(Filename, ANodeData, CurFile.Filename);
       end;
-      CurFile:=CurFile.NextPartOfProject;
     end;
   end;
   FilterEdit.InvalidateFilter;            // Data is shown by FilterEdit.

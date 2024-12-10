@@ -333,8 +333,8 @@ function GetDsgnComponentBaseClassname(aCompClass: TClass): string;
       LRSCode, LFMCode: TCodeBuffer; Flags: TSaveFlags): TModalResult;
   function RemoveLooseEvents(AnUnitInfo: TUnitInfo): TModalResult;
   function RenameUnit(AnUnitInfo: TUnitInfo; NewFilename, NewUnitName: string;
-      var LFMCode, LRSCode: TCodeBuffer): TModalResult;
-  function RenameUnitLowerCase(AnUnitInfo: TUnitInfo; AskUser: boolean): TModalresult;
+      var LFMCode, LRSCode: TCodeBuffer; AutoRemoveOldFile: boolean = False): TModalResult;
+  function RenameUnitLowerCase(AnUnitInfo: TUnitInfo; AskUser, AutoRemoveOldFile: boolean): TModalresult;
   function ReplaceUnitUse(OldFilename, OldUnitName, NewFilename, NewUnitName: string;
                           IgnoreErrors, Quiet, Confirm: boolean): TModalResult;
 //designer
@@ -620,12 +620,6 @@ begin
   else
     SrcNotebook := SourceEditorManager.SourceWindows[FWindowIndex];
 
-  // get syntax highlighter type
-  if (uifInternalFile in AnUnitInfo.Flags) then
-    AnUnitInfo.UpdateDefaultHighlighter(IdeSyntaxHighlighters.GetIdForLazSyntaxHighlighter(lshFreePascal))
-  else
-    AnUnitInfo.UpdateDefaultHighlighter(FilenameToLazSyntaxHighlighter(AFilename));
-
   SrcNotebook.IncUpdateLock;
   try
     //DebugLn(['TFileOpener.OpenFileInSourceEditor Revert=',ofRevert in Flags,' ',AnUnitInfo.Filename,' PageIndex=',PageIndex]);
@@ -673,7 +667,7 @@ begin
 
     // restore source editor settings
     DebugBossMgr.DoRestoreDebuggerMarks(AnUnitInfo);
-    NewSrcEdit.SyntaxHighlighterId := AnEditorInfo.SyntaxHighlighter;
+    NewSrcEdit.SyntaxHighlighterId := AnEditorInfo.CustomSyntaxHighlighter;
     NewSrcEdit.EditorComponent.AfterLoadFromFile;
     try
       NewSrcEdit.EditorComponent.FoldState := FoldState;
@@ -925,7 +919,6 @@ begin
       if MacroListViewer.MacroByFullName(FFileName) <> nil then
         NewBuf.Source := MacroListViewer.MacroByFullName(FFileName).GetAsSource;
       FNewUnitInfo:=TUnitInfo.Create(NewBuf);
-      FNewUnitInfo.DefaultSyntaxHighlighter := IdeSyntaxHighlighters.GetIdForLazSyntaxHighlighter(lshFreePascal);
       Project1.AddFile(FNewUnitInfo,false);
     end
     else begin
@@ -1871,8 +1864,7 @@ begin
     end;
 
     // removed directories still used for ObsoleteUnitPaths, ObsoleteIncPaths
-    AnUnitInfo:=Project1.FirstPartOfProject;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in Project1.UnitsBelongingToProject do begin
       if FilenameIsAbsolute(AnUnitInfo.Filename) then begin
         UnitPath:=ChompPathDelim(ExtractFilePath(AnUnitInfo.Filename));
         if FilenameIsPascalUnit(AnUnitInfo.Filename) then
@@ -1880,7 +1872,6 @@ begin
         if FilenameExtIs(AnUnitInfo.Filename,'inc') then
           ObsoleteIncPaths:=RemoveSearchPaths(ObsoleteIncPaths,UnitPath);
       end;
-      AnUnitInfo:=AnUnitInfo.NextPartOfProject;
     end;
 
     // check if compiler options contain paths of ObsoleteUnitPaths
@@ -1938,9 +1929,7 @@ begin
     if AnUnitInfo.Source=nil then
       AnUnitInfo.ReadUnitSource(false,false);
     // Marked here means to remove old files silently.
-    AnUnitInfo.Marked:=True;
-    Result:=RenameUnitLowerCase(AnUnitInfo, false);
-    AnUnitInfo.Marked:=False;
+    Result:=RenameUnitLowerCase(AnUnitInfo, false,True);
     if Result<>mrOK then exit;
   end;
   ShowMessage(Format(lisDFilesWereRenamedToL, [fUnitInfos.Count]));
@@ -2123,7 +2112,7 @@ begin
   if IsPascal and (EnvironmentOptions.CharcaseFileAction<>ccfaIgnore) then
   begin
     // ask user to apply naming conventions
-    Result:=RenameUnitLowerCase(ActiveUnitInfo,true);
+    Result:=RenameUnitLowerCase(ActiveUnitInfo,true,false);
     if Result=mrIgnore then Result:=mrOk;
     if Result<>mrOk then begin
       DebugLn('AddUnitToProject A RenameUnitLowerCase failed ',ActiveUnitInfo.Filename);
@@ -2499,7 +2488,7 @@ begin
       CreateSrcEditPageName(NewUnitInfo.Unit_Name, NewUnitInfo.Filename, AShareEditor),
       NewUnitInfo.Source, True, AShareEditor);
     MainIDEBar.itmFileClose.Enabled:=True;
-    NewSrcEdit.SyntaxHighlighterId:=NewUnitInfo.EditorInfo[0].SyntaxHighlighter;
+    NewSrcEdit.SyntaxHighlighterId:=NewUnitInfo.EditorInfo[0].CustomSyntaxHighlighter;
     NewUnitInfo.GetClosedOrNewEditorInfo.EditorComponent := NewSrcEdit;
     NewSrcEdit.EditorComponent.CaretXY := Point(1,1);
 
@@ -3544,12 +3533,9 @@ begin
       end;
       if (fuooListed in Flags) then begin
         // add listed units (i.e. units in project inspector)
-        AnUnitInfo:=aProject.FirstPartOfProject;
-        while AnUnitInfo<>nil do
-        begin
+        for TLazProjectFile(AnUnitInfo) in aProject.UnitsBelongingToProject do begin
           if FilenameIsPascalUnit(AnUnitInfo.Filename) then
             Add(AnUnitInfo.Filename);
-          AnUnitInfo:=AnUnitInfo.NextPartOfProject;
         end;
       end;
       if (fuooListed in Flags) and (fuooPackages in Flags) then
@@ -4334,8 +4320,7 @@ begin
       DebugLn(['SaveProject - unit not found for page ',i,' File="',SrcEdit.FileName,'" SrcEdit=',dbgsname(SrcEdit),'=',dbgs(Pointer(SrcEdit))]);
       DumpStack;
       debugln(['SaveProject Project1 has the following information about the source editor:']);
-      AnUnitInfo:=Project1.FirstUnitWithEditorIndex;
-      while AnUnitInfo<>nil do begin
+      for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithEditorIndex do begin
         for j:=0 to AnUnitInfo.EditorInfoCount-1 do begin
           dbgout(['  ',AnUnitInfo.Filename,' ',j,'/',AnUnitInfo.EditorInfoCount,' Component=',dbgsname(AnUnitInfo.EditorInfo[j].EditorComponent),'=',dbgs(Pointer(AnUnitInfo.EditorInfo[j].EditorComponent))]);
           if AnUnitInfo.EditorInfo[j].EditorComponent<>nil then
@@ -4343,7 +4328,6 @@ begin
           debugln;
         end;
         debugln(['  ',AnUnitInfo.EditorInfoCount]);
-        AnUnitInfo:=AnUnitInfo.NextUnitWithEditorIndex;
       end;
     end else begin
       if AnUnitInfo.IsVirtual then begin
@@ -5760,13 +5744,12 @@ begin
   end;
 end;
 
-function RenameUnit(AnUnitInfo: TUnitInfo; NewFilename, NewUnitName: string;
-  var LFMCode, LRSCode: TCodeBuffer): TModalResult;
+function RenameUnit(AnUnitInfo: TUnitInfo; NewFilename, NewUnitName: string; var LFMCode,
+  LRSCode: TCodeBuffer; AutoRemoveOldFile: boolean): TModalResult;
 var
   NewSource: TCodeBuffer;
   NewFilePath, OldFilePath: String;
   OldFilename, OldLFMFilename, NewLFMFilename, S: String;
-  NewHighlighter: TIdeSyntaxHighlighterID;
   AmbiguousFiles: TStringList;
   i: Integer;
   DirRelation: TSPFileMaskRelation;
@@ -5908,15 +5891,10 @@ begin
         DebugLn(['RenameUnit CodeToolBoss.RenameMainInclude failed: AnUnitInfo.Source="',AnUnitInfo.Source,'" ResourceCode="',ExtractFilename(LRSCode.Filename),'"']);
     end;
 
-    // change syntax highlighter
-    NewHighlighter:=FilenameToLazSyntaxHighlighter(NewFilename);
-    AnUnitInfo.UpdateDefaultHighlighter(NewHighlighter);
     for i := 0 to AnUnitInfo.EditorInfoCount - 1 do
-      if (AnUnitInfo.EditorInfo[i].EditorComponent <> nil) and
-         (not AnUnitInfo.EditorInfo[i].CustomHighlighter)
-      then
+      if (AnUnitInfo.EditorInfo[i].EditorComponent <> nil) then
         TSourceEditor(AnUnitInfo.EditorInfo[i].EditorComponent).SyntaxHighlighterId :=
-          AnUnitInfo.EditorInfo[i].SyntaxHighlighter;
+          AnUnitInfo.EditorInfo[i].CustomSyntaxHighlighter;
 
     // save file
     if not NewSource.IsVirtual then begin
@@ -5950,7 +5928,7 @@ begin
           S:=Format(lisDeleteOldFile, [ExtractFilename(OldFilename)]);
           OldFileRemoved:=true;
           // Marked here means to remove an old file silently.
-          if AnUnitInfo.Marked then
+          if AutoRemoveOldFile then
             Silence:=true;
         end
         else
@@ -6011,7 +5989,8 @@ begin
   Result:=mrOk;
 end;
 
-function RenameUnitLowerCase(AnUnitInfo: TUnitInfo; AskUser: boolean): TModalresult;
+function RenameUnitLowerCase(AnUnitInfo: TUnitInfo; AskUser, AutoRemoveOldFile: boolean
+  ): TModalresult;
 var
   OldFilename: String;
   OldShortFilename: String;
@@ -6046,7 +6025,7 @@ begin
   end;
   LFMCode:=nil;
   LRSCode:=nil;
-  Result:=RenameUnit(AnUnitInfo,NewFilename,NewUnitName,LFMCode,LRSCode);
+  Result:=RenameUnit(AnUnitInfo,NewFilename,NewUnitName,LFMCode,LRSCode,AutoRemoveOldFile);
 end;
 
 function CheckLFMInEditor(LFMUnitInfo: TUnitInfo; Quiet: boolean): TModalResult;
@@ -7695,9 +7674,8 @@ function CloseUnitComponent(AnUnitInfo: TUnitInfo; Flags: TCloseFlags): TModalRe
   var
     CompUnitInfo: TUnitInfo;
   begin
-    CompUnitInfo:=Project1.FirstUnitWithComponent;
     Project1.UpdateUnitComponentDependencies;
-    while CompUnitInfo<>nil do begin
+    for TLazProjectFile(CompUnitInfo) in Project1.UnitsWithComponent do begin
       //DebugLn(['FreeUnusedComponents ',CompUnitInfo.Filename,' ',dbgsName(CompUnitInfo.Component),' UnitComponentIsUsed=',UnitComponentIsUsed(CompUnitInfo,true)]);
       if not UnitComponentIsUsed(CompUnitInfo,true) then begin
         // close the unit component
@@ -7705,7 +7683,6 @@ function CloseUnitComponent(AnUnitInfo: TUnitInfo; Flags: TCloseFlags): TModalRe
         // this has recursively freed all components, so exit here
         exit;
       end;
-      CompUnitInfo:=CompUnitInfo.NextUnitWithComponent;
     end;
   end;
 
@@ -8121,8 +8098,7 @@ var
   AnUnitInfo: TUnitInfo;
   LFMFilename: String;
 begin
-  AnUnitInfo:=Project1.FirstPartOfProject;
-  while AnUnitInfo<>nil do begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsBelongingToProject do begin
     if (not AnUnitInfo.HasResources)
     and (not AnUnitInfo.IsVirtual) and FilenameHasPascalExt(AnUnitInfo.Filename)
     then begin
@@ -8131,7 +8107,6 @@ begin
         LFMFilename:=ChangeFileExt(AnUnitInfo.Filename,'.dfm');
       AnUnitInfo.HasResources:=FileExistsCached(LFMFilename);
     end;
-    AnUnitInfo:=AnUnitInfo.NextPartOfProject;
   end;
 end;
 

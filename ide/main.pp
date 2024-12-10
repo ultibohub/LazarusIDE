@@ -454,7 +454,6 @@ type
     procedure EnvironmentOptionsBeforeRead(Sender: TObject);
     procedure EnvironmentOptionsBeforeWrite(Sender: TObject; Restore: boolean);
     procedure EnvironmentOptionsAfterWrite(Sender: TObject; Restore: boolean);
-    procedure EditorOptionsBeforeRead(Sender: TObject);
     procedure EditorOptionsAfterWrite(Sender: TObject; Restore: boolean);
     procedure CodetoolsOptionsAfterWrite(Sender: TObject; Restore: boolean);
     procedure CodeExplorerOptionsAfterWrite(Sender: TObject; Restore: boolean);
@@ -1040,13 +1039,11 @@ var
 begin
   Result:=nil;
   if Project1=nil then exit;
-  AnUnitInfo:=Project1.FirstUnitWithComponent;
-  while AnUnitInfo<>nil do begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithComponent do begin
     if SysUtils.CompareText(aName,AnUnitInfo.Component.Name)=0 then begin
       Result:=AnUnitInfo.Component;
       exit;
     end;
-    AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
   end;
 end;
 
@@ -1416,7 +1413,6 @@ begin
 
   EditorOpts := TEditorOptions.Create;
   IDEEditorOptions := EditorOpts;
-  EditorOpts.OnBeforeRead := @EditorOptionsBeforeRead;
   EditorOpts.OnAfterWrite := @EditorOptionsAfterWrite;
   SetupIDECommands;
   // Only after EditorOpts.KeyMap.DefineCommandCategories; in SetupIDECommands
@@ -3920,9 +3916,7 @@ var
   ADesigner: TDesigner;
 begin
   if Project1=nil then exit;
-  AnUnitInfo:=Project1.FirstUnitWithComponent;
-  while AnUnitInfo<>nil do
-  begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithComponent do begin
     if AnUnitInfo.Component<>nil then
     begin
       CurDesignerForm:=FormEditor1.GetDesignerForm(AnUnitInfo.Component);
@@ -3937,7 +3931,6 @@ begin
         CurDesignerForm.Invalidate;
       end;
     end;
-    AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
   end;
 end;
 
@@ -4509,45 +4502,43 @@ var
   AbortFlag, ReadSaveFailFlag: boolean;
 begin
   AbortFlag:=false;
-  AnUnitInfo:=Project1.FirstPartOfProject;
-  while (AnUnitInfo<>nil) and (not AbortFlag) do
-  begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsBelongingToProject do begin
     ReadSaveFailFlag:=false;
-    if FileNameIsPascalSource(AnUnitInfo.Filename) then
-    begin
-      LFMFileName:=AnUnitInfo.UnitResourceFileformat.GetUnitResourceFilename(AnUnitInfo.Filename,true);
-      if FileExistsCached(LFMFileName) and (not AnUnitInfo.DisableI18NForLFM) then
+    repeat
+      if FileNameIsPascalSource(AnUnitInfo.Filename) then
       begin
-        OpenStatus:=DoOpenEditorFile(AnUnitInfo.Filename,-1,-1,[ofAddToRecent, ofDoLoadResource]);
-        if OpenStatus=mrOk then
+        LFMFileName:=AnUnitInfo.UnitResourceFileformat.GetUnitResourceFilename(AnUnitInfo.Filename,true);
+        if FileExistsCached(LFMFileName) and (not AnUnitInfo.DisableI18NForLFM) then
         begin
-          AnUnitInfo.Modified:=true;
-          WriteStatus:=DoSaveEditorFile(AnUnitInfo.Filename,[]);
-          //DebugLn(['TMainIDE.mnuProjectResaveFormsWithI18n Resaving form "',AnUnitInfo.Filename,'"']);
-          if WriteStatus<>mrOk then
+          OpenStatus:=DoOpenEditorFile(AnUnitInfo.Filename,-1,-1,[ofAddToRecent, ofDoLoadResource]);
+          if OpenStatus=mrOk then
+          begin
+            AnUnitInfo.Modified:=true;
+            WriteStatus:=DoSaveEditorFile(AnUnitInfo.Filename,[]);
+            //DebugLn(['TMainIDE.mnuProjectResaveFormsWithI18n Resaving form "',AnUnitInfo.Filename,'"']);
+            if WriteStatus<>mrOk then
+            begin
+              ReadSaveFailFlag:=true;
+              if (WriteStatus=mrAbort) or
+                (IDEMessageDialog(lisErrorSavingForm,
+                                  Format(lisCannotSaveForm,[AnUnitInfo.Filename]),
+                                  mtError, [mbRetry,mbAbort]) = mrAbort) then
+                  AbortFlag:=true;
+            end;
+          end
+          else
           begin
             ReadSaveFailFlag:=true;
-            if (WriteStatus=mrAbort) or
-              (IDEMessageDialog(lisErrorSavingForm,
-                                Format(lisCannotSaveForm,[AnUnitInfo.Filename]),
+            if (OpenStatus=mrAbort) or
+              (IDEMessageDialog(lisErrorOpeningForm,
+                                Format(lisCannotOpenForm,[AnUnitInfo.Filename]),
                                 mtError, [mbRetry,mbAbort]) = mrAbort) then
                 AbortFlag:=true;
           end;
-        end
-        else
-        begin
-          ReadSaveFailFlag:=true;
-          if (OpenStatus=mrAbort) or
-            (IDEMessageDialog(lisErrorOpeningForm,
-                              Format(lisCannotOpenForm,[AnUnitInfo.Filename]),
-                              mtError, [mbRetry,mbAbort]) = mrAbort) then
-              AbortFlag:=true;
         end;
       end;
-    end;
     //we try next file only if read and write were successful, otherwise we retry current file or abort
-    if not ReadSaveFailFlag then
-      AnUnitInfo:=AnUnitInfo.NextPartOfProject;
+    until not ReadSaveFailFlag;
   end;
 end;
 
@@ -4669,10 +4660,8 @@ begin
   Files := TFilenameToPointerTree.Create(false);
   FileList:=TStringList.Create;
   try
-    AnUnitInfo:=AProject.FirstPartOfProject;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in AProject.UnitsBelongingToProject do begin
       CurFilename:=AnUnitInfo.Filename;
-      AnUnitInfo:=AnUnitInfo.NextPartOfProject;
       if not FilenameIsAbsolute(CurFilename) then continue;
       if (AProject.MainFilename<>CurFilename)
       and (not FilenameHasPascalExt(CurFilename)) then
@@ -5305,19 +5294,11 @@ begin
   UpdateCaption;
 end;
 
-procedure TMainIDE.EditorOptionsBeforeRead(Sender: TObject);
-begin
-  // update editor options?
-  if Project1=nil then exit;
-  Project1.UpdateAllCustomHighlighter;
-end;
-
 procedure TMainIDE.EditorOptionsAfterWrite(Sender: TObject; Restore: boolean);
 begin
   if Restore then exit;
-  if Project1<>nil then
-    Project1.UpdateAllSyntaxHighlighter;
   SourceEditorManager.BeginGlobalUpdate;
+  SourceEditorManager.UpdateDefaultDefaultSyntaxHighlighterId;
   try
     UpdateHighlighters(True);
     SourceEditorManager.ReloadEditorOptions;
@@ -5392,8 +5373,8 @@ begin
       Project1.WriteProject([pwfSkipSeparateSessionInfo,pwfIgnoreModified],
         aFilename,EnvironmentOptions.BuildMatrixOptions);
     end;
-    Project1.UpdateAllSyntaxHighlighter;
     SourceEditorManager.BeginGlobalUpdate;
+    SourceEditorManager.UpdateDefaultDefaultSyntaxHighlighterId;
     try
       UpdateHighlighters(True);
       SourceEditorManager.ReloadEditorOptions;
@@ -6227,7 +6208,6 @@ begin
   end;
 
   DlgResult:=ShowUnitInfoDlg(ShortUnitName,
-    IdeSyntaxHighlighters.Captions[ActiveUnitInfo.DefaultSyntaxHighlighter],
     ActiveUnitInfo.IsPartOfProject,
     SizeInBytes,UnitSizeWithIncludeFiles,UnitSizeParsed,
     LineCount,UnitLineCountWithIncludes,UnitLineCountParsed,
@@ -6313,6 +6293,7 @@ begin
        State=iwgfDisabled,OwningComponent);
     ComponentListForm.OnOpenPackage:=@PkgBoss.IDEComponentPaletteOpenPackage;
     ComponentListForm.OnOpenUnit:=@PkgBoss.IDEComponentPaletteOpenUnit;
+    ComponentListForm.OnClassSelected:=@ComponentPaletteClassSelected;
   end else if State=iwgfDisabled then
     ComponentListForm.DisableAutoSizing{$IFDEF DebugDisableAutoSizing}('TMainIDE.DoShowComponentList'){$ENDIF};
   if State>=iwgfShow then
@@ -8976,14 +8957,12 @@ begin
   ActiveSourceEditor:=nil;
   ActiveUnitInfo:=nil;
   if (APersistent<>nil) and (Project1<>nil) then begin
-    ActiveUnitInfo:=Project1.FirstUnitWithComponent;
-    while ActiveUnitInfo<>nil do begin
+    for TLazProjectFile(ActiveUnitInfo) in Project1.UnitsWithComponent do begin
       if ActiveUnitInfo.Component=APersistent then begin
         if ActiveUnitInfo.OpenEditorInfoCount > 0 then
           ActiveSourceEditor := TSourceEditor(ActiveUnitInfo.OpenEditorInfo[0].EditorComponent);
         exit;
       end;
-      ActiveUnitInfo:=ActiveUnitInfo.NextUnitWithComponent;
     end;
   end;
 end;
@@ -9031,7 +9010,7 @@ begin
     end;
 
     AIgnoreList := TFPList.Create;
-    Project1.GetAutoRevertLockedFiles(BufferList);
+    Project1.GetSourcesChangedOnDisk(BufferList);
     PkgBoss.GetPackagesChangedOnDisk(APackageList, True);
     if (BufferList=nil) and (APackageList=nil) then exit;
     Reload:=ShowDiskDiffsDialog(BufferList,APackageList,AIgnoreList);
@@ -9264,15 +9243,11 @@ end;
 procedure TMainIDE.CloseUnmodifiedDesigners;
 var
   AnUnitInfo: TUnitInfo;
-  NextUnitInfo: TUnitInfo;
 begin
   if Project1=nil then exit;
-  AnUnitInfo:=Project1.FirstUnitWithComponent;
-  while AnUnitInfo<>nil do begin
-    NextUnitInfo:=AnUnitInfo.NextUnitWithComponent;
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithComponent do begin
     if not AnUnitInfo.NeedsSaveToDisk(true) then
       CloseUnitComponent(AnUnitInfo,[]);
-    AnUnitInfo:=NextUnitInfo;
   end;
 end;
 
@@ -10660,11 +10635,9 @@ begin
             AProject:=TProject(Owners[i]);
             if AProject.MainUnitInfo<>nil then
               AddUnit(AProject.MainUnitInfo);
-            AnUnitInfo:=AProject.FirstPartOfProject;
-            while AnUnitInfo<>nil do begin
+            for TLazProjectFile(AnUnitInfo) in AProject.UnitsBelongingToProject do begin
               if AnUnitInfo<>AProject.MainUnitInfo then
                 AddUnit(AnUnitInfo);
-              AnUnitInfo:=AnUnitInfo.NextPartOfProject;
             end;
           end else if TObject(Owners[i]) is TLazPackage then begin
             APackage:=TLazPackage(Owners[i]);
@@ -11951,7 +11924,7 @@ begin
   end;
 
   if AnUpdates * [sepuNewShared, sepuChangedHighlighter] <> [] then begin
-    p.SyntaxHighlighter := SrcEdit.SyntaxHighlighterId;
+    p.CustomSyntaxHighlighter := SrcEdit.SyntaxHighlighterId;
   end;
 
   p.PageIndex := SrcEdit.PageIndex;
@@ -13511,13 +13484,11 @@ var
   AnUnitInfo: TUnitInfo;
 begin
   if AComponent=nil then exit(nil);
-  AnUnitInfo:=Project1.FirstUnitWithComponent;
-  while AnUnitInfo<>nil do begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithComponent do begin
     if AnUnitInfo.Component=AComponent then begin
       Result:=AnUnitInfo;
       exit;
     end;
-    AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
   end;
   Result:=nil;
 end;

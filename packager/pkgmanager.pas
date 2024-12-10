@@ -2614,9 +2614,7 @@ var
         NewProjFile.ComponentResourceName:=OldProjFile.ComponentResourceName;
         NewProjFile.BuildFileIfActive:=OldProjFile.BuildFileIfActive;
         NewProjFile.RunFileIfActive:=OldProjFile.RunFileIfActive;
-        NewProjFile.DefaultSyntaxHighlighter:=OldProjFile.DefaultSyntaxHighlighter;
         NewProjFile.DisableI18NForLFM:=OldProjFile.DisableI18NForLFM;
-        NewProjFile.CustomDefaultHighlighter:=OldProjFile.CustomDefaultHighlighter;
       end;
       if (not SrcIsTarget)
       and (pfMainUnitHasUsesSectionForAllUnits in TargetProject.Flags) then
@@ -4754,11 +4752,9 @@ begin
       end;
     end else if CurOwner is TProject then begin
       CurProject:=TProject(CurOwner);
-      CurUnit:=CurProject.FirstPartOfProject;
-      while CurUnit<>nil do begin
+      for TLazProjectFile(CurUnit) in CurProject.UnitsBelongingToProject do begin
         if FilenameIsPascalSource(CurUnit.Filename) then
           AddFile(CurOwner,CurUnit.Filename);
-        CurUnit:=CurUnit.NextPartOfProject;
       end;
     end;
   end;
@@ -6341,10 +6337,8 @@ begin
   FMainUnitInfoValid:=false;
   if (MainOwner=nil) or (MainUnitInfo=nil) then exit;
   // search all open designer forms (can be hidden)
-  AnUnitInfo:=Project1.FirstUnitWithComponent;
-  while AnUnitInfo<>nil do begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithComponent do begin
     CheckUnit(AnUnitInfo);
-    AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
   end;
 end;
 

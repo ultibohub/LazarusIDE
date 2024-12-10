@@ -172,7 +172,6 @@ type
     uifBuildFileIfActive,
     uifComponentUsedByDesigner,
     uifComponentIndirectlyUsedByDesigner,
-    uifCustomDefaultHighlighter,
     uifDisableI18NForLFM,
     uifFileReadOnly,
     uifHasErrorInLFM,
@@ -204,15 +203,13 @@ type
     FTopLine: integer;
     FCursorPos: TPoint;  // physical (screen) position
     FFoldState: String;
-    // Todo: FCustomHighlighter is only ever set to false, and not stored in XML
-    FCustomHighlighter: boolean; // do not change highlighter on file extension change
-    FSyntaxHighlighter: TIdeSyntaxHighlighterID;
+    FCustomSyntaxHighlighter: TIdeSyntaxHighlighterID;
     procedure SetCursorPos(const AValue: TPoint);
     procedure SetFoldState(AValue: String);
     procedure SetIsLocked(const AValue: Boolean);
     procedure SetPageIndex(const AValue: Integer);
     procedure SetIsVisibleTab(const AValue: Boolean);
-    procedure SetSyntaxHighlighter(AValue: TIdeSyntaxHighlighterID);
+    procedure SetCustomSyntaxHighlighter(AValue: TIdeSyntaxHighlighterID);
     procedure SetTopLine(const AValue: Integer);
     procedure SetWindowIndex(const AValue: Integer);
   protected
@@ -233,8 +230,7 @@ type
     property CursorPos: TPoint read FCursorPos write SetCursorPos;
     property FoldState: String read FFoldState write SetFoldState;
     property IsLocked: Boolean read FIsLocked  write SetIsLocked;
-    property CustomHighlighter: Boolean read FCustomHighlighter write FCustomHighlighter; // SetCustomHighlighter
-    property SyntaxHighlighter: TIdeSyntaxHighlighterID read FSyntaxHighlighter write SetSyntaxHighlighter; // SetSyntaxHighlighter
+    property CustomSyntaxHighlighter: TIdeSyntaxHighlighterID read FCustomSyntaxHighlighter write SetCustomSyntaxHighlighter; // User-set HL to override default
   end;
 
   { TUnitEditorInfoList }
@@ -275,7 +271,6 @@ type
   private
     FComponentTypesToClasses: TStringToPointerTree;
     FComponentVarsToClasses: TStringToPointerTree;
-    FDefaultSyntaxHighlighter: TIdeSyntaxHighlighterID;
     FEditorInfoList: TUnitEditorInfoList;
     fAutoRevertLockCount: integer;// =0 means, codetools can auto update from disk
     fBookmarks: TFileBookmarks;
@@ -314,7 +309,6 @@ type
     function ComponentLFMOnDiskHasChanged: boolean;
     function GetAutoReferenceSourceDir: boolean;
     function GetBuildFileIfActive: boolean;
-    function GetCustomDefaultHighlighter: boolean;
     function GetDisableI18NForLFM: boolean;
     function GetEditorInfo(Index: Integer): TUnitEditorInfo;
     function GetFileReadOnly: Boolean;
@@ -324,27 +318,14 @@ type
     function GetLoaded: Boolean;
     function GetLoadedDesigner: Boolean;
     function GetLoadingComponent: boolean;
-    function GetMarked: boolean;
     function GetModified: boolean;
-    function GetNextAutoRevertLockedUnit: TUnitInfo;
-    function GetNextLoadedUnit: TUnitInfo;
-    function GetNextPartOfProject: TUnitInfo;
-    function GetNextUnitWithComponent: TUnitInfo;
-    function GetNextUnitWithEditorIndex: TUnitInfo;
     function GetOpenEditorInfo(Index: Integer): TUnitEditorInfo;
-    function GetPrevAutoRevertLockedUnit: TUnitInfo;
-    function GetPrevLoadedUnit: TUnitInfo;
-    function GetPrevPartOfProject: TUnitInfo;
-    function GetPrevUnitWithComponent: TUnitInfo;
-    function GetPrevUnitWithEditorIndex: TUnitInfo;
     function GetRunFileIfActive: boolean;
     function GetSessionModified: boolean;
     function GetUnitResourceFileformat: TUnitResourcefileFormatClass;
     function GetUserReadOnly: Boolean;
     procedure SetAutoReferenceSourceDir(const AValue: boolean);
     procedure SetBuildFileIfActive(const AValue: boolean);
-    procedure SetCustomDefaultHighlighter(AValue: boolean);
-    procedure SetDefaultSyntaxHighlighter(const AValue: TIdeSyntaxHighlighterID);
     procedure SetDisableI18NForLFM(const AValue: boolean);
     procedure SetFileReadOnly(const AValue: Boolean);
     procedure SetComponent(const AValue: TComponent);
@@ -354,7 +335,6 @@ type
     procedure SetLoaded(const AValue: Boolean);
     procedure SetLoadedDesigner(const AValue: Boolean);
     procedure SetLoadingComponent(AValue: boolean);
-    procedure SetMarked(AValue: boolean);
     procedure SetModified(const AValue: boolean);
     procedure SetProject(const AValue: TProject);
     procedure SetRunFileIfActive(const AValue: boolean);
@@ -371,7 +351,6 @@ type
     procedure SetInternalFilename(const NewFilename: string);
     procedure SetUnitName(const AValue: string); override;
 
-    procedure UpdateHasCustomHighlighter(aDefaultHighlighter: TIdeSyntaxHighlighterID);
     procedure UpdatePageIndex;
   public
     constructor Create(ACodeBuffer: TCodeBuffer);
@@ -442,23 +421,9 @@ type
     property OpenEditorInfo[Index: Integer]: TUnitEditorInfo read GetOpenEditorInfo;
     function GetClosedOrNewEditorInfo: TUnitEditorInfo;
     procedure SetLastUsedEditor(AEditor:TSourceEditorInterface);
-    // Highlighter
-    procedure UpdateDefaultHighlighter(aDefaultHighlighter: TIdeSyntaxHighlighterID);
   public
     { Properties }
     property UnitResourceFileformat: TUnitResourcefileFormatClass read GetUnitResourceFileformat;
-
-    // Unit lists
-    property NextUnitWithEditorIndex: TUnitInfo read GetNextUnitWithEditorIndex;
-    property PrevUnitWithEditorIndex: TUnitInfo read GetPrevUnitWithEditorIndex;
-    property NextUnitWithComponent: TUnitInfo read GetNextUnitWithComponent;
-    property PrevUnitWithComponent: TUnitInfo read GetPrevUnitWithComponent;
-    property NextLoadedUnit: TUnitInfo read GetNextLoadedUnit;
-    property PrevLoadedUnit: TUnitInfo read GetPrevLoadedUnit;
-    property NextAutoRevertLockedUnit: TUnitInfo read GetNextAutoRevertLockedUnit;
-    property PrevAutoRevertLockedUnit: TUnitInfo read GetPrevAutoRevertLockedUnit;
-    property NextPartOfProject: TUnitInfo read GetNextPartOfProject;
-    property PrevPartOfProject: TUnitInfo read GetPrevPartOfProject;
   public
     property Bookmarks: TFileBookmarks read FBookmarks write FBookmarks;
     property BuildFileIfActive: boolean read GetBuildFileIfActive
@@ -481,8 +446,6 @@ type
              read FComponentLastLRSStreamSize write FComponentLastLRSStreamSize;
     property ComponentLastLFMStreamSize: TStreamSeekType
              read FComponentLastLFMStreamSize write FComponentLastLFMStreamSize;
-    property CustomDefaultHighlighter: boolean
-             read GetCustomDefaultHighlighter write SetCustomDefaultHighlighter;
     property Directives: TStrings read FDirectives write FDirectives;
     property DisableI18NForLFM: boolean read GetDisableI18NForLFM write SetDisableI18NForLFM;
     property FileReadOnly: Boolean read GetFileReadOnly write SetFileReadOnly;
@@ -495,7 +458,6 @@ type
     property Loaded: Boolean read GetLoaded write SetLoaded;
     property LoadedDesigner: Boolean read GetLoadedDesigner write SetLoadedDesigner;
     property LoadingComponent: boolean read GetLoadingComponent write SetLoadingComponent;
-    property Marked: boolean read GetMarked write SetMarked;
     property Modified: boolean read GetModified write SetModified;// not Session data
     property SessionModified: boolean read GetSessionModified write SetSessionModified;
     property OnFileBackup: TOnFileBackup read fOnFileBackup write fOnFileBackup;
@@ -507,13 +469,44 @@ type
     property RunFileIfActive: boolean read GetRunFileIfActive write SetRunFileIfActive;
     property Source: TCodeBuffer read fSource write SetSource;
     property SourceLFM: TCodeBuffer read FSourceLFM write SetSourceLFM;
-    property DefaultSyntaxHighlighter: TIdeSyntaxHighlighterID
-                               read FDefaultSyntaxHighlighter write SetDefaultSyntaxHighlighter;
     property UserReadOnly: Boolean read GetUserReadOnly write SetUserReadOnly;
     property AutoReferenceSourceDir: boolean read GetAutoReferenceSourceDir
                                              write SetAutoReferenceSourceDir;
   end;
 
+
+  { TIdeLazProjectFileList }
+
+  TIdeLazProjectFileList = class(TLazProjectFileList)
+  public type
+
+    { TIdeLazProjectFileListEnumerator }
+
+    TIdeLazProjectFileListEnumerator = object(TLazProjectFileListEnumerator)
+    private
+      function GetCurrent: TLazProjectFile; virtual;
+    public
+      constructor Create(AList: TLazProjectFileList; AData: TUnitInfoList);
+      function MoveNext: Boolean; virtual;
+      property Current: TLazProjectFile read GetCurrent;
+    end;
+
+    { TIdeLazProjectFileListEnumeration }
+
+    TIdeLazProjectFileListEnumeration = object(TLazProjectFileListEnumeration)
+    public
+      constructor Create(AList: TLazProjectFileList; AData: TUnitInfoList);
+      function GetEnumerator: TLazProjectFileListEnumerator; virtual;
+    end;
+  protected
+    function GetFilesBelongingToProject: TLazProjectFileListEnumeration; override;
+    function GetFilesLoaded: TLazProjectFileListEnumeration; override;
+    function GetFilesWithComponent: TLazProjectFileListEnumeration; override;
+    function GetFilesWithEditorIndex: TLazProjectFileListEnumeration; override;
+    function GetFilesWithRevertLock: TLazProjectFileListEnumeration; override;
+  public
+    constructor Create(AnOwner: TLazProject);
+  end;
 
   //---------------------------------------------------------------------------
 
@@ -822,7 +815,7 @@ type
     FStateFileDate: longint;
     FStateFlags: TLazProjectStateFlags;
     FStorePathDelim: TPathDelimSwitch;
-    FUnitList: TFPList;  // list of _all_ units (TUnitInfo)
+    FUnitList: TIdeLazProjectFileList;  // list of _all_ units (TUnitInfo)
     FOtherDefines: TStrings; // list of user selectable defines for custom options
     FUpdateLock: integer;
     FUseAsDefault: Boolean;
@@ -837,10 +830,11 @@ type
     function GetAllEditorsInfo(Index: Integer): TUnitEditorInfo;
     function GetCompilerOptions: TProjectCompilerOptions;
     function GetBaseCompilerOptions: TBaseCompilerOptions;
-    function GetFirstAutoRevertLockedUnit: TUnitInfo;
-    function GetFirstLoadedUnit: TUnitInfo;
-    function GetFirstPartOfProject: TUnitInfo;
-    function GetFirstUnitWithComponent: TUnitInfo;
+    function GetFilesBelongingToProject: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+    function GetFilesLoaded: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+    function GetFilesWithComponent: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+    function GetFilesWithEditorIndex: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+    function GetFilesWithRevertLock: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
     function GetFirstUnitWithEditorIndex: TUnitInfo;
     function GetIDEOptions: TProjectIDEOptions;
     function GetMainFilename: String;
@@ -957,7 +951,7 @@ type
     function SomeDataModified(Verbose: boolean = false): boolean;
     function SomeSessionModified(Verbose: boolean = false): boolean;
     procedure MainSourceFilenameChanged;
-    procedure GetAutoRevertLockedFiles(var ACodeBufferList: TFPList);
+    procedure GetSourcesChangedOnDisk(var ACodeBufferList: TFPList);
     function HasProjectInfoFileChangedOnDisk: boolean;
     procedure IgnoreProjectInfoFileOnDisk;
     function ReadProject(const NewProjectInfoFile: string;
@@ -996,11 +990,11 @@ type
     // search
     function IndexOf(AUnitInfo: TUnitInfo): integer;
     function IndexOfUnitWithName(const AnUnitName: string;
-                      OnlyProjectUnits:boolean; IgnoreUnit: TUnitInfo): integer;
+                      OnlyProjectUnits: boolean; IgnoreUnit: TUnitInfo): integer;
     function IndexOfUnitWithComponent(AComponent: TComponent;
-                      OnlyProjectUnits:boolean; IgnoreUnit: TUnitInfo): integer;
+                      OnlyProjectUnits: boolean; IgnoreUnit: TUnitInfo): integer;
     function IndexOfUnitWithComponentName(const AComponentName: string;
-                      OnlyProjectUnits:boolean; IgnoreUnit: TUnitInfo): integer;
+                      OnlyProjectUnits: boolean; IgnoreUnit: TUnitInfo): integer;
     function IndexOfFilename(const AFilename: string): integer;
     function IndexOfFilename(const AFilename: string;
                              SearchFlags: TProjectFileSearchFlags): integer;
@@ -1037,15 +1031,15 @@ type
     function UpdateIsPartOfProjectFromMainUnit: TModalResult;
 
     // Application.CreateForm statements
-    function AddCreateFormToProjectFile(const AClassName, AName:string): boolean;
+    function AddCreateFormToProjectFile(const AClassName, AName: string): boolean;
     function RemoveCreateFormFromProjectFile(const AName: string): boolean;
-    function FormIsCreatedInProjectFile(const AClassname, AName:string): boolean;
+    function FormIsCreatedInProjectFile(const AClassname, AName: string): boolean;
     function GetAutoCreatedFormsList: TStrings;
     property TmpAutoCreatedForms: TStrings read FTmpAutoCreatedForms write FTmpAutoCreatedForms;
 
     // resources
     function GetMainResourceFilename(AnUnitInfo: TUnitInfo): string;
-    function GetResourceFile(AnUnitInfo: TUnitInfo; Index:integer):TCodeBuffer;
+    function GetResourceFile(AnUnitInfo: TUnitInfo; Index: integer): TCodeBuffer;
     procedure LoadDefaultIcon; override;
 
     // filenames and fileinfo
@@ -1104,10 +1098,6 @@ type
     function SaveStateFile(const CompilerFilename: string; CompilerParams: TStrings;
                            Complete: boolean): TModalResult;
 
-    // source editor
-    procedure UpdateAllCustomHighlighter;
-    procedure UpdateAllSyntaxHighlighter;
-    
     // i18n
     function GetPOOutDirectory: string;
 
@@ -1137,12 +1127,8 @@ type
     property I18NExcludedOriginals: TStrings read FI18NExcludedOriginals;
     property UseLegacyLists: Boolean read GetUseLegacyLists;
     property ForceUpdatePoFiles: Boolean read FForceUpdatePoFiles write FForceUpdatePoFiles;
-    property FirstAutoRevertLockedUnit: TUnitInfo read GetFirstAutoRevertLockedUnit;
-    property FirstLoadedUnit: TUnitInfo read GetFirstLoadedUnit;
-    property FirstPartOfProject: TUnitInfo read GetFirstPartOfProject;
     property FirstRemovedDependency: TPkgDependency read FFirstRemovedDependency;
     property FirstRequiredDependency: TPkgDependency read FFirstRequiredDependency;
-    property FirstUnitWithComponent: TUnitInfo read GetFirstUnitWithComponent;
     property FirstUnitWithEditorIndex: TUnitInfo read GetFirstUnitWithEditorIndex;
     property IDAsString: string read GetIDAsString;
     property IDAsWord: string read GetIDAsWord;
@@ -1188,6 +1174,11 @@ type
     property OtherDefines: TStrings read FOtherDefines;
     property UpdateLock: integer read FUpdateLock;
     property UseAsDefault: Boolean read FUseAsDefault write FUseAsDefault; // for dialog only (used to store options once)
+    property UnitsBelongingToProject: TIdeLazProjectFileList.TLazProjectFileListEnumeration read GetFilesBelongingToProject;
+    property UnitsWithEditorIndex: TIdeLazProjectFileList.TLazProjectFileListEnumeration read GetFilesWithEditorIndex;
+    property UnitsWithComponent: TIdeLazProjectFileList.TLazProjectFileListEnumeration read GetFilesWithComponent;
+    property UnitsLoaded: TIdeLazProjectFileList.TLazProjectFileListEnumeration read GetFilesLoaded;
+    property UnitsWithRevertLock: TIdeLazProjectFileList.TLazProjectFileListEnumeration read GetFilesWithRevertLock;
   end;
 
 
@@ -1202,7 +1193,6 @@ const
 var
   Project1: TProject absolute LazProject1;// the main project
   
-function FilenameToLazSyntaxHighlighter(Filename: String): TIdeSyntaxHighlighterID;
 function AddCompileReasonsDiff(const PropertyName: string;
        const Old, New: TCompileReasons; Tool: TCompilerDiffTool = nil): boolean;
 function dbgs(aType: TUnitCompDependencyType): string; overload;
@@ -1216,14 +1206,6 @@ const
   ProjectInfoFileVersion = 12;
   ProjOptionsPath = 'ProjectOptions/';
 
-
-function FilenameToLazSyntaxHighlighter(Filename: String): TIdeSyntaxHighlighterID;
-var
-  CompilerMode: TCompilerMode;
-begin
-  CompilerMode:=CodeToolBoss.GetCompilerModeForDirectory(ExtractFilePath(Filename));
-  Result := IdeSyntaxHighlighters.GetIdForFileExtension(ExtractFileExt(Filename), CompilerMode in [cmDELPHI,cmTP]);
-end;
 
 function AddCompileReasonsDiff(const PropertyName: string;
   const Old, New: TCompileReasons; Tool: TCompilerDiffTool): boolean;
@@ -1337,11 +1319,10 @@ begin
   FUnitInfo.SessionModified := True;
 end;
 
-procedure TUnitEditorInfo.SetSyntaxHighlighter(AValue: TIdeSyntaxHighlighterID);
+procedure TUnitEditorInfo.SetCustomSyntaxHighlighter(AValue: TIdeSyntaxHighlighterID);
 begin
-  if FSyntaxHighlighter = AValue then Exit;
-  FSyntaxHighlighter := AValue;
-  FCustomHighlighter := FSyntaxHighlighter <> FUnitInfo.DefaultSyntaxHighlighter;
+  if FCustomSyntaxHighlighter = AValue then Exit;
+  FCustomSyntaxHighlighter := AValue;
   FUnitInfo.SessionModified := True;
 end;
 
@@ -1368,8 +1349,7 @@ begin
   FCursorPos.X := -1;
   FCursorPos.Y := -1;
   FFoldState := '';
-  FSyntaxHighlighter := FUnitInfo.DefaultSyntaxHighlighter;
-  FCustomHighlighter := FUnitInfo.CustomDefaultHighlighter;
+  FCustomSyntaxHighlighter := IdeHighlighterNotSpecifiedId;
 end;
 
 constructor TUnitEditorInfo.Create(aUnitInfo: TUnitInfo);
@@ -1401,9 +1381,11 @@ begin
   FFoldState := XMLConfig.GetValue(Path+'FoldState/Value', '');
   FIsLocked := XMLConfig.GetValue(Path+'IsLocked/Value', False);
   if IdeSyntaxHighlighters <> nil then
-    FSyntaxHighlighter := IdeSyntaxHighlighters.GetIdForName(
+    FCustomSyntaxHighlighter := IdeSyntaxHighlighters.GetIdForName(
                      XMLConfig.GetValue(Path+'SyntaxHighlighter/Value',
-                     IdeSyntaxHighlighters.Names[UnitInfo.DefaultSyntaxHighlighter]));
+                     IdeSyntaxHighlighters.Names[IdeHighlighterNotSpecifiedId]))
+  else
+    FCustomSyntaxHighlighter := IdeHighlighterUnknownId;
 end;
 
 procedure TUnitEditorInfo.SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string;
@@ -1420,10 +1402,11 @@ begin
     XMLConfig.SetDeleteValue(Path+'FoldState/Value', FoldState, '')
   else
     XMLConfig.DeletePath(Path+'FoldState');
-  if IdeSyntaxHighlighters <> nil then
+  if (FCustomSyntaxHighlighter <> IdeHighlighterUnknownId) and // Don't overwrite, if the value is currently not registerd
+     (IdeSyntaxHighlighters <> nil)
+  then
     XMLConfig.SetDeleteValue(Path+'SyntaxHighlighter/Value',
-                           IdeSyntaxHighlighters.Names[fSyntaxHighlighter],
-                           IdeSyntaxHighlighters.Names[UnitInfo.DefaultSyntaxHighlighter]);
+                             IdeSyntaxHighlighters.Names[FCustomSyntaxHighlighter], '');
 end;
 
 { TUnitEditorInfoList }
@@ -1774,9 +1757,7 @@ begin
   fComponentName := '';
   fComponentResourceName := '';
   FComponentState := wsNormal;
-  FDefaultSyntaxHighlighter := IdeHighlighterNoneID;
   DisableI18NForLFM:=false;
-  CustomDefaultHighlighter := False;
   FEditorInfoList.ClearEachInfo;
   fFilename := '';
   FileReadOnly := false;
@@ -1912,10 +1893,6 @@ begin
                              RunFileIfActive,false);
     // save custom session data
     SaveStringToStringTree(XMLConfig,CustomSessionData,Path+'CustomSessionData/');
-    if IdeSyntaxHighlighters <> nil then
-      XMLConfig.SetDeleteValue(Path+'DefaultSyntaxHighlighter/Value',
-                             IdeSyntaxHighlighters.Names[FDefaultSyntaxHighlighter],
-                             IdeSyntaxHighlighters.Names[IdeSyntaxHighlighters.GetIdForLazSyntaxHighlighter(lshFreePascal)]);
   end;
 end;
 
@@ -1968,10 +1945,6 @@ begin
   end;
 
   // session data
-  if IdeSyntaxHighlighters <> nil then
-    FDefaultSyntaxHighlighter := IdeSyntaxHighlighters.GetIdForName(
-      XMLConfig.GetValue(Path+'DefaultSyntaxHighlighter/Value',
-                       IdeSyntaxHighlighters.Names[IdeSyntaxHighlighters.GetIdForLazSyntaxHighlighter(lshFreePascal)]));
   FEditorInfoList.Clear;
   FEditorInfoList.NewEditorInfo;
   FEditorInfoList[0].LoadFromXMLConfig(XMLConfig, Path);
@@ -2054,20 +2027,7 @@ begin
   end;
   
   fFileName:=NewFilename;
-  if IDEEditorOptions<>nil then
-    UpdateDefaultHighlighter(FilenameToLazSyntaxHighlighter(FFilename));
   UpdateSourceDirectoryReference;
-end;
-
-procedure TUnitInfo.UpdateHasCustomHighlighter(
-  aDefaultHighlighter: TIdeSyntaxHighlighterID);
-var
-  i: Integer;
-begin
-  CustomDefaultHighlighter := FDefaultSyntaxHighlighter <> aDefaultHighlighter;
-  for i := 0 to FEditorInfoList.Count - 1 do
-    FEditorInfoList[i].CustomHighlighter :=
-      FEditorInfoList[i].SyntaxHighlighter <> aDefaultHighlighter;
 end;
 
 procedure TUnitInfo.UpdatePageIndex;
@@ -2105,20 +2065,6 @@ begin
     else // OpenEditorInfoCount = 0
       Project1.Bookmarks.DeleteAllWithUnitInfo(Self);
   end;
-end;
-
-procedure TUnitInfo.UpdateDefaultHighlighter(
-  aDefaultHighlighter: TIdeSyntaxHighlighterID);
-var
-  i: Integer;
-begin
-  //debugln(['TUnitInfo.UpdateDefaultHighlighter ',Filename,' ',ord(aDefaultHighlighter)]);
-  if not CustomDefaultHighlighter then
-    DefaultSyntaxHighlighter := aDefaultHighlighter
-  else
-    for i := 0 to FEditorInfoList.Count - 1 do
-      if not FEditorInfoList[i].CustomHighlighter then
-        FEditorInfoList[i].SyntaxHighlighter := aDefaultHighlighter;
 end;
 
 function TUnitInfo.GetFileName: string;
@@ -2226,11 +2172,6 @@ end;
 function TUnitInfo.GetBuildFileIfActive: boolean;
 begin
   Result:=uifBuildFileIfActive in FFlags;
-end;
-
-function TUnitInfo.GetCustomDefaultHighlighter: boolean;
-begin
-  Result:=uifCustomDefaultHighlighter in FFlags;
 end;
 
 function TUnitInfo.GetDisableI18NForLFM: boolean;
@@ -2566,70 +2507,15 @@ begin
   Result:=uifHasErrorInLFM in FFlags;
 end;
 
-function TUnitInfo.GetMarked: boolean;
-begin
-  Result:=uifMarked in FFlags;
-end;
-
 function TUnitInfo.GetModified: boolean;
 begin
   Result:=(uifModified in FFlags)
     or ((Source<>nil) and (Source.ChangeStep<>fSourceChangeStep));
 end;
 
-function TUnitInfo.GetNextAutoRevertLockedUnit: TUnitInfo;
-begin
-  Result:=fNext[uilAutoRevertLocked];
-end;
-
-function TUnitInfo.GetNextLoadedUnit: TUnitInfo;
-begin
-  Result:=fNext[uilLoaded];
-end;
-
-function TUnitInfo.GetNextPartOfProject: TUnitInfo;
-begin
-  Result:=fNext[uilPartOfProject];
-end;
-
-function TUnitInfo.GetNextUnitWithComponent: TUnitInfo;
-begin
-  Result:=fNext[uilWithComponent];
-end;
-
-function TUnitInfo.GetNextUnitWithEditorIndex: TUnitInfo;
-begin
-  Result:=fNext[uilWithEditorIndex];
-end;
-
 function TUnitInfo.GetOpenEditorInfo(Index: Integer): TUnitEditorInfo;
 begin
   Result := FEditorInfoList.OpenEditorInfos[Index];
-end;
-
-function TUnitInfo.GetPrevAutoRevertLockedUnit: TUnitInfo;
-begin
-  Result:=fPrev[uilAutoRevertLocked];
-end;
-
-function TUnitInfo.GetPrevLoadedUnit: TUnitInfo;
-begin
-  Result:=fPrev[uilLoaded];
-end;
-
-function TUnitInfo.GetPrevPartOfProject: TUnitInfo;
-begin
-  Result:=fPrev[uilPartOfProject];
-end;
-
-function TUnitInfo.GetPrevUnitWithComponent: TUnitInfo;
-begin
-  Result:=fPrev[uilWithComponent];
-end;
-
-function TUnitInfo.GetPrevUnitWithEditorIndex: TUnitInfo;
-begin
-  Result:=fPrev[uilWithEditorIndex];
 end;
 
 function TUnitInfo.GetRunFileIfActive: boolean;
@@ -2692,26 +2578,6 @@ begin
   else
     Exclude(FFlags, uifBuildFileIfActive);
   SessionModified:=true;
-end;
-
-procedure TUnitInfo.SetCustomDefaultHighlighter(AValue: boolean);
-begin
-  if AValue then
-    Include(FFlags, uifCustomDefaultHighlighter)
-  else
-    Exclude(FFlags, uifCustomDefaultHighlighter);
-end;
-
-procedure TUnitInfo.SetDefaultSyntaxHighlighter(
-  const AValue: TIdeSyntaxHighlighterID);
-var
-  i: Integer;
-begin
-  if FDefaultSyntaxHighlighter = AValue then exit;
-  FDefaultSyntaxHighlighter := AValue;
-  for i := 0 to FEditorInfoList.Count - 1 do
-    if not FEditorInfoList[i].CustomHighlighter then
-      FEditorInfoList[i].SyntaxHighlighter := AValue;
 end;
 
 procedure TUnitInfo.SetDisableI18NForLFM(const AValue: boolean);
@@ -2828,14 +2694,6 @@ begin
     Exclude(FFlags, uifLoadingComponent);
 end;
 
-procedure TUnitInfo.SetMarked(AValue: boolean);
-begin
-  if AValue then
-    Include(FFlags, uifMarked)
-  else
-    Exclude(FFlags, uifMarked);
-end;
-
 procedure TUnitInfo.SetModified(const AValue: boolean);
 begin
   if Modified=AValue then exit;
@@ -2901,6 +2759,77 @@ begin
     Exclude(FFlags, uifSessionModified);
 end;
 
+{ TIdeLazProjectFileList.TIdeLazProjectFileListEnumerator }
+
+function TIdeLazProjectFileList.TIdeLazProjectFileListEnumerator.GetCurrent: TLazProjectFile;
+begin
+  Result := FCurrent;
+end;
+
+constructor TIdeLazProjectFileList.TIdeLazProjectFileListEnumerator.Create(
+  AList: TLazProjectFileList; AData: TUnitInfoList);
+begin
+  FList := AList;
+  FData := ord(AData);
+  FCurrent := nil;
+end;
+
+function TIdeLazProjectFileList.TIdeLazProjectFileListEnumerator.MoveNext: Boolean;
+begin
+  if FCurrent = nil then
+    FCurrent := (FList.Owner as TProject).fFirst[TUnitInfoList(FData)]
+  else
+    FCurrent := FNext;
+  Result := FCurrent <> nil;
+  if Result then
+    FNext := (FCurrent as TUnitInfo).fNext[TUnitInfoList(FData)];
+end;
+
+{ TIdeLazProjectFileList.TIdeLazProjectFileListEnumeration }
+
+constructor TIdeLazProjectFileList.TIdeLazProjectFileListEnumeration.Create(
+  AList: TLazProjectFileList; AData: TUnitInfoList);
+begin
+  TIdeLazProjectFileListEnumerator(FEnumerator).Create(AList, AData);
+end;
+
+function TIdeLazProjectFileList.TIdeLazProjectFileListEnumeration.GetEnumerator: TLazProjectFileListEnumerator;
+begin
+  Result := FEnumerator;
+end;
+
+{ TIdeLazProjectFileList }
+
+function TIdeLazProjectFileList.GetFilesBelongingToProject: TLazProjectFileListEnumeration;
+begin
+  TIdeLazProjectFileListEnumeration(Result).Create(Self, uilPartOfProject);
+end;
+
+function TIdeLazProjectFileList.GetFilesLoaded: TLazProjectFileListEnumeration;
+begin
+  TIdeLazProjectFileListEnumeration(Result).Create(Self, uilLoaded);
+end;
+
+function TIdeLazProjectFileList.GetFilesWithComponent: TLazProjectFileListEnumeration;
+begin
+  TIdeLazProjectFileListEnumeration(Result).Create(Self, uilWithComponent);
+end;
+
+function TIdeLazProjectFileList.GetFilesWithEditorIndex: TLazProjectFileListEnumeration;
+begin
+  TIdeLazProjectFileListEnumeration(Result).Create(Self, uilWithEditorIndex);
+end;
+
+function TIdeLazProjectFileList.GetFilesWithRevertLock: TLazProjectFileListEnumeration;
+begin
+  TIdeLazProjectFileListEnumeration(Result).Create(Self, uilAutoRevertLocked);
+end;
+
+constructor TIdeLazProjectFileList.Create(AnOwner: TLazProject);
+begin
+  FOwner := AnOwner;
+  inherited Create;
+end;
 
 { TProjectIDEOptions }
 
@@ -2981,7 +2910,7 @@ begin
   FPublishOptions:=TPublishProjectOptions.Create(Self);
   FRunParameters:=TRunParamsOptions.Create;
   Title := '';
-  FUnitList := TFPList.Create;  // list of TUnitInfo
+  FUnitList := TIdeLazProjectFileList.Create(Self);  // list of TUnitInfo
   FOtherDefines := TStringList.Create;
   FEnableI18N := False;
   FEnableI18NForLFM := True;
@@ -3978,8 +3907,6 @@ var
 begin
   NewBuf:=CodeToolBoss.CreateFile(Filename);
   AnUnitInfo:=TUnitInfo.Create(NewBuf);
-  if IDEEditorOptions<>nil then
-    AnUnitInfo.DefaultSyntaxHighlighter := FilenameToLazSyntaxHighlighter(NewBuf.Filename);
   Result:=AnUnitInfo;
 end;
 
@@ -4310,14 +4237,14 @@ begin
     MainUnitInfo.Modified:=true;
 end;
 
-function TProject.RemoveCreateFormFromProjectFile(const AName:string):boolean;
+function TProject.RemoveCreateFormFromProjectFile(const AName: string): boolean;
 begin
   Result:=CodeToolBoss.RemoveCreateFormStatement(MainUnitInfo.Source,AName);
   if Result then
     MainUnitInfo.Modified:=true;
 end;
 
-function TProject.FormIsCreatedInProjectFile(const AClassname,AName:string): boolean;
+function TProject.FormIsCreatedInProjectFile(const AClassname,AName: string): boolean;
 var p: integer;
 begin
   Result:=(CodeToolBoss.FindCreateFormStatement(MainUnitInfo.Source,
@@ -4325,14 +4252,13 @@ begin
   if p=0 then ;
 end;
 
-function TProject.IndexOfUnitWithName(const AnUnitName:string; 
-  OnlyProjectUnits:boolean; IgnoreUnit: TUnitInfo):integer;
+function TProject.IndexOfUnitWithName(const AnUnitName: string;
+  OnlyProjectUnits: boolean; IgnoreUnit: TUnitInfo): integer;
 begin
   if AnUnitName='' then exit(-1);
   Result:=UnitCount-1;
   while (Result>=0) do begin
-    if ((OnlyProjectUnits and Units[Result].IsPartOfProject)
-    or (not OnlyProjectUnits))
+    if (Units[Result].IsPartOfProject or not OnlyProjectUnits)
     and (IgnoreUnit<>Units[Result])
     and (Units[Result].Unit_Name<>'')
     then begin
@@ -4345,12 +4271,11 @@ begin
 end;
 
 function TProject.IndexOfUnitWithComponent(AComponent: TComponent;
-  OnlyProjectUnits:boolean; IgnoreUnit: TUnitInfo):integer;
+  OnlyProjectUnits: boolean; IgnoreUnit: TUnitInfo): integer;
 begin
   Result:=UnitCount-1;
   while (Result>=0) do begin
-    if (OnlyProjectUnits and Units[Result].IsPartOfProject) 
-    or (not OnlyProjectUnits)
+    if (Units[Result].IsPartOfProject or not OnlyProjectUnits)
     and (IgnoreUnit<>Units[Result]) then begin
       if Units[Result].Component=AComponent then
         exit;
@@ -4364,8 +4289,7 @@ function TProject.IndexOfUnitWithComponentName(const AComponentName: string;
 begin
   Result:=UnitCount-1;
   while (Result>=0) do begin
-    if ((OnlyProjectUnits and Units[Result].IsPartOfProject)
-    or (not OnlyProjectUnits))
+    if (Units[Result].IsPartOfProject or not OnlyProjectUnits)
     and (IgnoreUnit<>Units[Result]) then begin
       if (CompareText(Units[Result].ComponentName,AComponentName)=0)
       or ((Units[Result].Component<>nil)
@@ -4388,7 +4312,8 @@ begin
 end;
 
 function TProject.GetResourceFile(AnUnitInfo: TUnitInfo; Index:integer): TCodeBuffer;
-var i, LinkIndex: integer;
+var
+  i, LinkIndex: integer;
 begin
   LinkIndex:=-1;
   i:=0;
@@ -4430,7 +4355,7 @@ begin
   LoadSaveFilenameHandler(AFilename,true);
 end;
 
-function TProject.GetMainResourceFilename(AnUnitInfo: TUnitInfo):string;
+function TProject.GetMainResourceFilename(AnUnitInfo: TUnitInfo): string;
 var CodeBuf: TCodeBuffer;
 begin
   CodeBuf:=GetResourceFile(AnUnitInfo,1);
@@ -4554,25 +4479,10 @@ begin
   else Result:='';
 end;
 
-function TProject.GetFirstPartOfProject: TUnitInfo;
-begin
-  Result:=FFirst[uilPartOfProject];
-end;
-
-function TProject.GetFirstLoadedUnit: TUnitInfo;
-begin
-  Result:=fFirst[uilLoaded];
-end;
-
 procedure TProject.EmbeddedObjectModified(Sender: TObject);
 begin
   if ProjResources.Modified then
     Modified := True;
-end;
-
-function TProject.GetFirstAutoRevertLockedUnit: TUnitInfo;
-begin
-  Result:=fFirst[uilAutoRevertLocked];
 end;
 
 function TProject.GetAllEditorsInfo(Index: Integer): TUnitEditorInfo;
@@ -4591,6 +4501,31 @@ begin
   Result := TBaseCompilerOptions(FLazCompilerOptions);
 end;
 
+function TProject.GetFilesBelongingToProject: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+begin
+  Result := FUnitList.FilesBelongingToProject;
+end;
+
+function TProject.GetFilesLoaded: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+begin
+  Result := FUnitList.FilesLoaded;
+end;
+
+function TProject.GetFilesWithComponent: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+begin
+  Result := FUnitList.FilesWithComponent;
+end;
+
+function TProject.GetFilesWithEditorIndex: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+begin
+  Result := FUnitList.FilesWithEditorIndex;
+end;
+
+function TProject.GetFilesWithRevertLock: TIdeLazProjectFileList.TLazProjectFileListEnumeration;
+begin
+  Result := FUnitList.FilesWithRevertLock;
+end;
+
 procedure TProject.ClearBuildModes;
 begin
   ActiveBuildMode:=nil;
@@ -4602,11 +4537,6 @@ end;
 function TProject.GetActiveBuildModeID: string;
 begin
   Result := ActiveBuildMode.Identifier;
-end;
-
-function TProject.GetFirstUnitWithComponent: TUnitInfo;
-begin
-  Result:=fFirst[uilWithComponent];
 end;
 
 function TProject.GetFirstUnitWithEditorIndex: TUnitInfo;
@@ -4810,7 +4740,7 @@ begin
   ExtendPath(SrcPathMacroName,CompilerOptions.SrcPath);
 end;
 
-procedure TProject.GetAutoRevertLockedFiles(var ACodeBufferList: TFPList);
+procedure TProject.GetSourcesChangedOnDisk(var ACodeBufferList: TFPList);
 
   procedure Add(aCode: TCodeBuffer);
   begin
@@ -4825,11 +4755,9 @@ procedure TProject.GetAutoRevertLockedFiles(var ACodeBufferList: TFPList);
 var
   AnUnitInfo: TUnitInfo;
 begin
-  AnUnitInfo:=fFirst[uilAutoRevertLocked];
-  while (AnUnitInfo<>nil) do begin
+  for TLazProjectFile(AnUnitInfo) in FUnitList.FilesWithRevertLock do begin
     Add(AnUnitInfo.Source);
     Add(AnUnitInfo.SourceLFM);
-    AnUnitInfo:=AnUnitInfo.fNext[uilAutoRevertLocked];
   end;
 end;
 
@@ -4840,41 +4768,49 @@ end;
 
 function TProject.HasProjectInfoFileChangedOnDisk: boolean;
 var
-  AnUnitInfo: TUnitInfo;
-  Code: TCodeBuffer;
+  aFilename: String;
 begin
   Result:=false;
   if IsVirtual or Modified then exit;
-  AnUnitInfo:=UnitInfoWithFilename(ProjectInfoFile,[pfsfOnlyEditorFiles]);
-  if (AnUnitInfo<>nil) then begin
-    // user is editing the lpi file in source editor
+  aFilename:=ProjectInfoFile;
+
+  if (fProjectInfoFileBuffer<>nil)
+      and (CompareFilenames(fProjectInfoFileBuffer.Filename,aFilename)=0) then
+  begin
+    if fProjectInfoFileBuffer.FileOnDiskHasChanged then
+    begin
+      // lpi file on disk has changed
+      if FileExistsCached(aFilename)
+          and (fProjectInfoFileDate=FileAgeCached(aFilename)) then
+      begin
+        // ignore this disk change
+        exit;
+      end;
+
+      // Ask to reopen project, even if editing the lpi in the source editor
+      exit(true);
+    end;
+
+    if fProjectInfoFileBuffer.ChangeStep<>fProjectInfoFileBufChangeStamp then
+    begin
+      // e.g. lpi was edited in the source editor -> do not ask to reopen project
+    end;
+
     exit;
   end;
-  AnUnitInfo:=fFirst[uilAutoRevertLocked];
-  while (AnUnitInfo<>nil) do begin
-    if CompareFilenames(AnUnitInfo.Filename,ProjectInfoFile)=0 then begin
-      // revert is locked for this file
-      exit;
-    end;
-    AnUnitInfo:=AnUnitInfo.fNext[uilAutoRevertLocked];
-  end;
 
-  if not FileExistsCached(ProjectInfoFile) then exit;
-  if fProjectInfoFileDate=FileAgeCached(ProjectInfoFile) then exit;
+  if not FileExistsCached(aFilename) then exit;
+  if fProjectInfoFileDate=FileAgeCached(aFilename) then exit;
 
-  // file on disk has changed, check content
-  Code:=CodeToolBoss.LoadFile(ProjectInfoFile,true,true);
-  if (Code<>nil) and (Code=fProjectInfoFileBuffer)
-    and (Code.ChangeStep=fProjectInfoFileBufChangeStamp)
-  then exit;
-
-  //DebugLn(['TProject.HasProjectInfoFileChangedOnDisk ',ProjectInfoFile,' fProjectInfoFileDate=',fProjectInfoFileDate,' ',FileAgeUTF8(ProjectInfoFile)]);
+  //DebugLn(['TProject.HasProjectInfoFileChangedOnDisk ',aFilename,' fProjectInfoFileDate=',fProjectInfoFileDate,' ',FileAgeUTF8(aFilename)]);
   Result:=true;
 end;
 
 procedure TProject.IgnoreProjectInfoFileOnDisk;
 begin
   fProjectInfoFileDate:=FileAgeCached(ProjectInfoFile);
+  if fProjectInfoFileBuffer<>nil then
+    fProjectInfoFileBufChangeStamp:=fProjectInfoFileBuffer.ChangeStep;
 end;
 
 function TProject.FindDependencyByName(const PackageName: string): TPkgDependency;
@@ -5166,12 +5102,10 @@ begin
     DebugLn(['TProject.UpdateUnitComponentDependencies checking properties ...']);
     {$ENDIF}
     // find property dependencies
-    AnUnitInfo:=FirstUnitWithComponent;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in UnitsWithComponent do begin
       Search(AnUnitInfo,AnUnitInfo.Component);
       for i:=AnUnitInfo.Component.ComponentCount-1 downto 0 do
         Search(AnUnitInfo,AnUnitInfo.Component.Components[i]);
-      AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
     end;
     //WriteDebugReportUnitComponentDependencies('P ');
   end;
@@ -5183,8 +5117,7 @@ begin
     DebugLn(['TProject.UpdateUnitComponentDependencies checking designers ...']);
     {$ENDIF}
     // find designer dependencies
-    AnUnitInfo:=FirstUnitWithComponent;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in UnitsWithComponent do begin
       AnUnitInfo.FFlags:=AnUnitInfo.FFlags-
         [uifMarked,uifComponentIndirectlyUsedByDesigner,uifComponentUsedByDesigner];
       if FindRootDesigner(AnUnitInfo.Component)<>nil then begin
@@ -5193,17 +5126,14 @@ begin
         {$ENDIF}
         Include(AnUnitInfo.FFlags,uifComponentUsedByDesigner);
       end;
-      AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
     end;
     // mark all units that are used indirectly by a designer
-    AnUnitInfo:=FirstUnitWithComponent;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in UnitsWithComponent do begin
       if (uifComponentUsedByDesigner in AnUnitInfo.FFlags) then
       begin
         // mark all that use indirectly this designer
         DFSRequiredDesigner(AnUnitInfo,AnUnitInfo);
       end;
-      AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
     end;
     {$IFDEF VerboseTFrame}
     WriteDebugReportUnitComponentDependencies('UUCD ');
@@ -5282,15 +5212,13 @@ begin
       OwnerComponent:=OwnerComponent.Owner;
   end else
     OwnerComponent:=nil;
-  AnUnitInfo:=FirstUnitWithComponent;
-  while AnUnitInfo<>nil do begin
+  for TLazProjectFile(AnUnitInfo) in UnitsWithComponent do begin
     if csDestroying in AnUnitInfo.Component.ComponentState then continue;
     if AnUnitInfo.Component<>OwnerComponent then begin
       Search(AnUnitInfo,AnUnitInfo.Component);
       for i:=AnUnitInfo.Component.ComponentCount-1 downto 0 do
         Search(AnUnitInfo,AnUnitInfo.Component.Components[i]);
     end;
-    AnUnitInfo:=AnUnitInfo.NextUnitWithComponent;
   end;
 end;
 
@@ -5496,24 +5424,6 @@ begin
     end;
   end;
   Result:=mrOk;
-end;
-
-procedure TProject.UpdateAllCustomHighlighter;
-var
-  i: Integer;
-begin
-  if IDEEditorOptions=nil then exit;
-  for i:=0 to UnitCount-1 do
-    Units[i].UpdateHasCustomHighlighter(FilenameToLazSyntaxHighlighter(Units[i].Filename));
-end;
-
-procedure TProject.UpdateAllSyntaxHighlighter;
-var
-  i: Integer;
-begin
-  if IDEEditorOptions=nil then exit;
-  for i:=0 to UnitCount-1 do
-    Units[i].UpdateDefaultHighlighter(FilenameToLazSyntaxHighlighter(Units[i].Filename));
 end;
 
 function TProject.GetPOOutDirectory: string;
@@ -5724,15 +5634,13 @@ begin
       DebugLn(['TProject.SomeDataModified CompilerOptions/BuildModes']);
     Exit;
   end;
-  AnUnitInfo:=FirstPartOfProject;
-  while AnUnitInfo<>nil do begin
+  for TLazProjectFile(AnUnitInfo) in UnitsBelongingToProject do begin
     if AnUnitInfo.Modified then
     begin
       if Verbose then
         DebugLn('TProject.SomeDataModified PartOfProject ',AnUnitInfo.Filename);
       Exit;
     end;
-    AnUnitInfo:=AnUnitInfo.NextPartOfProject;
   end;
   Result:=false;
 end;
@@ -6024,19 +5932,16 @@ begin
     SearchedFilename:=ExtractFilenameOnly(SearchedFilename);
 
   // search in files which are part of the project
-  Result:=FirstPartOfProject;
-  while Result<>nil do begin
+  for TLazProjectFile(Result) in UnitsBelongingToProject do begin
     if FilenameFits(Result.Filename) then exit;
-    Result:=Result.NextPartOfProject;
   end;
   // search in files opened in editor
   if not (siffDoNotCheckOpenFiles in SearchFlags) then begin
-    Result:=FirstUnitWithEditorIndex;
-    while Result<>nil do begin
+    for TLazProjectFile(Result) in UnitsWithEditorIndex do begin
       if FilenameFits(Result.Filename) then exit;
-      Result:=Result.NextUnitWithEditorIndex;
     end;
   end;
+  Result := nil;
 end;
 
 function TProject.FindFile(const AFilename: string;
@@ -6312,8 +6217,7 @@ begin
   end;
 
   if BestUnitInfo=nil then begin
-    AnUnitInfo:=FirstPartOfProject;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in UnitsBelongingToProject do begin
       if FileExistsCached(AnUnitInfo.Filename) then begin
         if (BestUnitInfo=nil)
         or (FilenameHasPascalExt(AnUnitInfo.Filename)
@@ -6322,7 +6226,6 @@ begin
           BestUnitInfo:=AnUnitInfo;
         end;
       end;
-      AnUnitInfo:=AnUnitInfo.NextPartOfProject;
     end;
   end;
   if BestUnitInfo<>nil then begin

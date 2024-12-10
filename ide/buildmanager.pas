@@ -1566,8 +1566,7 @@ begin
     if Result<>mrNo then exit;
 
     // check project files
-    AnUnitInfo:=AProject.FirstPartOfProject;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in AProject.UnitsBelongingToProject do begin
       if EditorUnitInfoModified(AnUnitInfo) then
       begin
         if ConsoleVerbosity>=0 then
@@ -1600,16 +1599,13 @@ begin
           end;
         end;
       end;
-      AnUnitInfo:=AnUnitInfo.NextPartOfProject;
     end;
 
     // check all open editor files in unit/include path (maybe the user forgot
     // to add them to the project)
-    AnUnitInfo:=AProject.FirstUnitWithEditorIndex;
-    while AnUnitInfo<>nil do begin
+    for TLazProjectFile(AnUnitInfo) in AProject.UnitsWithEditorIndex do begin
       if CheckNonProjectEditorFile(AnUnitInfo) then
         exit(mrYes);
-      AnUnitInfo:=AnUnitInfo.NextUnitWithEditorIndex;
     end;
 
     // check project resources
@@ -2164,9 +2160,7 @@ begin
   // update project resource
   if Project1.MainUnitID>=0 then
     Project1.ProjResources.Regenerate(Project1.MainFileName, False, True, TestDir);
-  AnUnitInfo := Project1.FirstPartOfProject;
-  while AnUnitInfo<>nil do
-  begin
+  for TLazProjectFile(AnUnitInfo) in Project1.UnitsBelongingToProject do begin
     if AnUnitInfo.HasResources then begin
       case GetResourceType(AnUnitInfo) of
       rtLRS:
@@ -2180,7 +2174,6 @@ begin
         end;
       end;
     end;
-    AnUnitInfo := AnUnitInfo.NextPartOfProject;
   end;
 end;
 

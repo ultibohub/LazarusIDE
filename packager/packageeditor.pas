@@ -216,6 +216,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
+    procedure FormResize(Sender: TObject);
     procedure ItemsPopupMenuPopup(Sender: TObject);
     procedure ItemsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView;
       Node: TTreeNode; {%H-}State: TCustomDrawState; Stage: TCustomDrawStage;
@@ -1202,13 +1203,6 @@ begin
     DoMoveDependency(-1);
 end;
 
-procedure TPackageEditorForm.OnIdle(Sender: TObject; var Done: Boolean);
-begin
-  if fUpdateLock>0 then exit;
-  IdleConnected:=false;
-  UpdatePending;
-end;
-
 procedure TPackageEditorForm.MoveDownBtnClick(Sender: TObject);
 begin
   if SortAlphabetically then exit;
@@ -1216,6 +1210,13 @@ begin
     DoMoveCurrentFile(1)
   else if Assigned(GetSingleSelectedDependency) then
     DoMoveDependency(1)
+end;
+
+procedure TPackageEditorForm.OnIdle(Sender: TObject; var Done: Boolean);
+begin
+  if fUpdateLock>0 then exit;
+  IdleConnected:=false;
+  UpdatePending;
 end;
 
 procedure TPackageEditorForm.OpenButtonClick(Sender: TObject);
@@ -1531,6 +1532,12 @@ begin
     YesToAll.Free;
     EndUpdate;
   end;
+end;
+
+procedure TPackageEditorForm.FormResize(Sender: TObject);
+begin
+  PropsGroupBox.Constraints.MaxHeight := self.Height - ToolBar.Height - FilterPanel.Height
+    - StatusBar.Height - 20;
 end;
 
 procedure TPackageEditorForm.RevertClick(Sender: TObject);
