@@ -901,7 +901,7 @@ var
 
 begin
   AColor := ColorToRgb(ColorDialog.Color);
-  AQColor.Alpha := $FFFF;
+  AQColor.Alpha := Word(ColorDialog.AlphaChannel) * $0101;
   AQColor.ColorSpec := 1;
   AQColor.Pad := 0;
   ColorRefToTQColor(AColor, AQColor);
@@ -915,6 +915,12 @@ begin
   ATitle := UTF8ToUTF16(ACommonDialog.Title);
   AQColorRet := Default(TQColor);
   AOptions := 0; // here we add possible options from ColorDialog.Options, see QColorDialogColorDialogOptions for possible options.
+  if (cdShowAlphaChannel in ColorDialog.Options) then
+    AOptions := AOptions or QColorDialogShowAlphaChannel;
+  if (cdNoButtons in ColorDialog.Options) then
+    AOptions := AOptions or QColorDialogNoButtons;
+  if (cdDontUseNativeDialog in ColorDialog.Options) then
+    AOptions := AOptions or QColorDialogDontUseNativeDialog;
   QColorDialog_getColor(PQColor(@AQColorRet), PQColor(@AQColor), TQtWSCommonDialog.GetDialogParent(ACommonDialog), @ATitle, AOptions);
 
   ReturnBool := AQColorRet.ColorSpec <> 0;
@@ -923,6 +929,7 @@ begin
   begin
     TQColorToColorRef(AQColorRet, AColor);
     ColorDialog.Color := AColor;
+    ColorDialog.AlphaChannel := AQColorRet.Alpha and $FF;
     ColorDialog.UserChoice := mrOk
   end else
     ColorDialog.UserChoice := mrCancel;
