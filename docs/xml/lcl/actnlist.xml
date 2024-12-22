@@ -2071,6 +2071,37 @@ New value for the Visible property in the linked client control.
 </short>
 </element>
 
+<element name="TActionLink.Update">
+<short>
+Calls the inherited method when Action has been assigned.
+</short>
+<descr>
+<p>
+<var>Update</var> is an overridden <var>Boolean</var> function in TActionLink. 
+It ensures that an Action is assigned in the class instance before calling the 
+inherited method. It addresses an issue in TBasicActionLink.Update for RTL 
+versions prior to 3.3.1 where the Action was not checked prior to calling the 
+Update method. For those FPC versions, the inherited method is <b>not</b> 
+called and the return value is always <b>False</b>.
+</p>
+</descr>
+<notes>
+<note>
+Workaround for RTL TBasicActionLink nil deref issue (fixed in FPC 3.3.1). See 
+issue #41063.
+</note>
+</notes>
+<seealso>
+<link id="#rtl.classes.TBasicActionLink.Action">TBasicActionLink.Action</link>
+<link id="#rtl.classes.TBasicActionLink.Update">TBasicActionLink.Update</link>
+</seealso>
+</element>
+<element name="TActionLink.Update.Result">
+<short>
+<b>True</b> if the Update method for the Action was executed.
+</short>
+</element>
+
 <element name="TActionLink.IsCaptionLinked">
 <short>Is the action's <var>Caption</var> linked to the client?</short>
 <descr/>
