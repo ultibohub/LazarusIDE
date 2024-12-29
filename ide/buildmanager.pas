@@ -35,7 +35,7 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, Types, AVL_Tree, System.UITypes,
+  Classes, SysUtils, Types, AVL_Tree, System.UITypes, StrUtils,
   // LCL
   InterfaceBase, LCLPlatformDef,
   // CodeTools
@@ -154,6 +154,8 @@ type
     function MacroFuncProjSrcPath(const {%H-}Param: string; const {%H-}Data: PtrInt;
                                   var {%H-}Abort: boolean): string;
     function MacroFuncProjUnitPath(const {%H-}Param: string; const {%H-}Data: PtrInt;
+                                   var {%H-}Abort: boolean): string;
+    function MacroFuncProjVer(const {%H-}Param: string; const {%H-}Data: PtrInt;
                                    var {%H-}Abort: boolean): string;
     function MacroFuncRunCmdLine(const {%H-}Param: string; const {%H-}Data: PtrInt;
                                  var {%H-}Abort: boolean): string;
@@ -513,6 +515,8 @@ begin
                       lisProjectSrcPath,@MacroFuncProjSrcPath,[]));
   GlobalMacroList.Add(TTransferMacro.Create('ProjOutDir','',
                       lisProjectOutDir,@MacroFuncProjOutDir,[]));
+  GlobalMacroList.Add(TTransferMacro.Create('ProjVer','',
+                      lisProjectVer,@MacroFuncProjVer,[]));
   GlobalMacroList.Add(TTransferMacro.Create('Env','',
                      lisEnvironmentVariableNameAsParameter, @MacroFuncEnv, []));
   GlobalMacroList.Add(TTransferMacro.Create('MakeExe','',
@@ -584,6 +588,7 @@ begin
   tr('ProjIncPath',lisProjectIncPath);
   tr('ProjSrcPath',lisProjectSrcPath);
   tr('ProjOutDir',lisProjectOutDir);
+  tr('ProjVer',lisProjectVer);
   tr('Env',lisEnvironmentVariableNameAsParameter);
   tr('FPCMsgFile',dlgFilterFPCMessageFile);
   tr('MakeExe',lisMakeExe);
@@ -2287,7 +2292,15 @@ end;
 function TBuildManager.MacroFuncLazVer(const Param: string; const Data: PtrInt;
   var Abort: boolean): string;
 begin
-  Result:=LazarusVersionStr;
+  if Param = '' then exit(LazarusVersionStr)
+  else if CompareText(Param, 'major') = 0 then result := ExtractDelimited(1, LazarusVersionStr, ['.'])
+  else if CompareText(Param, 'minor') = 0 then result := ExtractDelimited(2, LazarusVersionStr, ['.'])
+  else if CompareText(Param, 'rev'  ) = 0 then result := ExtractDelimited(3, LazarusVersionStr, ['.'])
+  else if CompareText(Param, 'build') = 0 then result := ExtractDelimited(4, LazarusVersionStr, ['.'])
+  else exit(''); // invalid parameter
+
+  if result = '' then
+    result := '0';
 end;
 
 function TBuildManager.MacroFuncTargetCPU(const Param: string;
@@ -2571,6 +2584,44 @@ begin
     Result:=Project1.CompilerOptions.GetUnitOutPath(false)
   else
     Result:='';
+end;
+
+function TBuildManager.MacroFuncProjVer(const Param: string;
+  const Data: PtrInt; var Abort: boolean): string;
+const
+  cParamNames: array of string = ('', 'major', 'minor', 'rev', 'build');
+  cParamDefVals: array of string = ('0.0', '0', '0', '0', '0');
+var
+  i: integer;
+begin
+  for i := 0 to high(cParamNames) do
+    if CompareText(Param, cParamNames[i]) = 0 then
+    begin
+      // check the project and whether the version is used
+      result := cParamDefVals[i];
+      if Project1 = nil then exit;
+      if Project1.ProjResources = nil then exit;
+      if Project1.ProjResources.VersionInfo = nil then exit;
+      if Project1.ProjResources.VersionInfo.UseVersionInfo = false then exit;
+
+      // return version or specified number
+      with Project1.ProjResources.VersionInfo do
+        case i of
+          1: exit(IntToStr(MajorVersionNr));
+          2: exit(IntToStr(MinorVersionNr));
+          3: exit(IntToStr(RevisionNr    ));
+          4: exit(IntToStr(BuildNr       ));
+        else
+          // return the full version number, discarding the zero revision and build
+          if BuildNr <> 0 then
+            exit(Format('%d.%d.%d.%d', [MajorVersionNr, MinorVersionNr, RevisionNr, BuildNr]))
+          else if RevisionNr <> 0 then
+            exit(Format('%d.%d.%d'   , [MajorVersionNr, MinorVersionNr, RevisionNr]))
+          else
+            exit(Format('%d.%d'      , [MajorVersionNr, MinorVersionNr]));
+        end;
+    end;
+  result := ''; // invalid parameter
 end;
 
 function TBuildManager.MacroFuncEnv(const Param: string; const Data: PtrInt;

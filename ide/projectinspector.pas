@@ -149,6 +149,7 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure FormDropFiles(Sender: TObject; const FileNames: array of String);
     procedure FormResize(Sender: TObject);
+    procedure FormShow(Sender: TObject);
     procedure ItemsPopupMenuPopup(Sender: TObject);
     procedure ItemsTreeViewAdvancedCustomDrawItem(Sender: TCustomTreeView;
       Node: TTreeNode; {%H-}State: TCustomDrawState; Stage: TCustomDrawStage;
@@ -910,6 +911,11 @@ begin
   PropsGroupBox.Constraints.MaxHeight := self.Height - FilterPanel.Height - ToolBar.Height - 20;
 end;
 
+procedure TProjectInspectorForm.FormShow(Sender: TObject);
+begin
+  UpdateTitle; // update title on dock/undock
+end;
+
 procedure TProjectInspectorForm.ItemsPopupMenuPopup(Sender: TObject);
 
   procedure SetItem(Item: TIDEMenuCommand; AnOnClick: TNotifyEvent;
@@ -1022,19 +1028,26 @@ begin
 
   // i18n for lfm
   CanI18NforLFM:=LazProject.EnableI18N and LazProject.EnableI18NForLFM and (HasLFMCount>0);
-  SetItem(ProjInspMenuEnableI18NForLFM,@EnableI18NForLFMMenuItemClick,CanI18NforLFM,DisabledI18NForLFMCount>0);
-  SetItem(ProjInspMenuDisableI18NForLFM,@DisableI18NForLFMMenuItemClick,CanI18NforLFM,DisabledI18NForLFMCount<HasLFMCount);
+  SetItem(ProjInspMenuEnableI18NForLFM,@EnableI18NForLFMMenuItemClick,
+    CanI18NforLFM,DisabledI18NForLFMCount>0);
+  SetItem(ProjInspMenuDisableI18NForLFM,@DisableI18NForLFMMenuItemClick,
+    CanI18NforLFM,DisabledI18NForLFMCount<HasLFMCount);
 
   // Required packages section
   // undo delete
   SetItem(ProjInspMenuReAddDependency,@ReAddMenuItemClick,CanReAddCount>0);
   // move up/down
-  SetItem(ProjInspMenuMoveDependencyUp,@MoveDependencyUpClick,(SingleSelectedDep<>nil) and (SingleSelectedDep.PrevRequiresDependency<>nil));
-  SetItem(ProjInspMenuMoveDependencyDown,@MoveDependencyDownClick,(SingleSelectedDep<>nil) and (SingleSelectedDep.NextRequiresDependency<>nil));
+  SetItem(ProjInspMenuMoveDependencyUp,@MoveDependencyUpClick,
+    (SingleSelectedDep<>nil) and (SingleSelectedDep.PrevRequiresDependency<>nil), not SortAlphabetically);
+  SetItem(ProjInspMenuMoveDependencyDown,@MoveDependencyDownClick,
+    (SingleSelectedDep<>nil) and (SingleSelectedDep.NextRequiresDependency<>nil), not SortAlphabetically);
   // default and preferred filename
-  SetItem(ProjInspMenuStoreFilenameAsDefaultOfDependencyDown,@SetDependencyDefaultFilenameMenuItemClick,HasValidDep>0);
-  SetItem(ProjInspMenuStoreFilenameAsPreferredOfDependencyDown,@SetDependencyPreferredFilenameMenuItemClick,HasValidDep>0);
-  SetItem(ProjInspMenuClearPreferredFilenameOfDependencyDown,@ClearDependencyFilenameMenuItemClick,CanClearDep>0);
+  SetItem(ProjInspMenuStoreFilenameAsDefaultOfDependencyDown,@SetDependencyDefaultFilenameMenuItemClick,
+    HasValidDep>0);
+  SetItem(ProjInspMenuStoreFilenameAsPreferredOfDependencyDown,@SetDependencyPreferredFilenameMenuItemClick,
+    HasValidDep>0);
+  SetItem(ProjInspMenuClearPreferredFilenameOfDependencyDown,@ClearDependencyFilenameMenuItemClick,
+    CanClearDep>0);
   ProjectInspectorItemsMenuRoot.NotifySubSectionOnShow(Self);
 end;
 
@@ -1803,7 +1816,9 @@ var
 begin
   if not CanUpdate(pefNeedUpdateTitle,Immediately) then exit;
   Icon.Clear;
-  if LazProject=nil then
+  if (LazProject = nil) or
+     (assigned(HostDockSite) and assigned(HostDockSite.Parent)) // is docked
+  then
     Caption:=lisMenuProjectInspector
   else begin
     NewCaption:=LazProject.GetTitle;

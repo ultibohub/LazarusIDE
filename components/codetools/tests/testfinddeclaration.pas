@@ -489,7 +489,8 @@ begin
                     if (iliNeedsAmpersand in IdentItem.Flags)
                        and (Marker = 'completion') // declaration=path.ident does not include the &
                     then
-                      s := '&' + s;
+                      if s[1]<>'&' then
+                        s := '&' + s;
                     l:=length(s);
                     if ((l=length(ExpexctedTerm)) or (ExpexctedTerm[length(ExpexctedTerm)-l]='.'))
                     and (CompareText(s,RightStr(ExpexctedTerm,l))=0)
@@ -1655,8 +1656,11 @@ var
               Fail('[20231230132715] Namespaced unit "'+FullFilename+'" includes missing "'+IncFilename+'"');
             end;
           end else begin
-            FoundFilename:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,IncFilename);
-            if FoundFilename<>'' then continue;
+            FoundFilename:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInDirectory(Dir,IncFilename);
+            if FoundFilename='' then
+              FoundFilename:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,IncFilename);
+            if FoundFilename<>'' then
+              continue;
             if not FilenameIsPascalUnit(IncFilename) then begin
               Fail('[20231230132721] Namespaced unit "'+FullFilename+'" includes missing "'+IncFilename+'"');
             end;

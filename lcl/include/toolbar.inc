@@ -244,6 +244,11 @@ end;
 
 function TToolBar.IsVertical: Boolean;
 begin
+  case FOrientation of
+    tboHorizontal: exit(False);
+    tboVertical:   exit(True);
+  end;
+
   if (Parent is TCoolBar) then
     Exit(TCoolBar(Parent).Vertical);
 
@@ -297,6 +302,13 @@ begin
   if FList = AValue then exit;
   FList := AValue;
   UpdateVisibleBar;
+end;
+
+procedure TToolBar.SetOrientation(AValue: TToolBarOrientation);
+begin
+  if FOrientation = AValue then Exit;
+  FOrientation := AValue;
+  invalidate;
 end;
 
 procedure TToolBar.SetFlat(const AValue: Boolean);
@@ -605,31 +617,26 @@ end;
 procedure TToolBar.CalculatePreferredSize(var PreferredWidth,
   PreferredHeight: integer; WithThemeSpace: Boolean);
 var
-  NewWidth: Integer;
-  NewHeight: Integer;
-  FixedWidth: Boolean;
+  AWidth: Integer;
+  NewWidth, NewHeight: Integer;
 begin
   NewWidth:=0;
   NewHeight:=0;
 
-  FixedWidth:=false;
   if (Parent<>nil)
   and (not Parent.AutoSize)
   and AnchorSideLeft.IsAnchoredToParent(akLeft)
   and AnchorSideRight.IsAnchoredToParent(akRight) then begin
     // the width depends on the parent
     // the width is fixed
-    FixedWidth:=true;
-    WrapButtons(Width, NewWidth, NewHeight, True);
-    PreferredWidth := NewWidth;
-    PreferredHeight := NewHeight;
-    //DebugLn(['TToolBar.CalculatePreferredSize fixed width: ',PreferredWidth,'x',PreferredHeight]);
+    AWidth:=Constraints.MinMaxWidth(Width);
+  end
+  else begin
+    AWidth:=Constraints.MinMaxWidth(Screen.Width);
   end;
-  if not FixedWidth then begin
-    WrapButtons(Screen.Width,NewWidth,NewHeight,true);
-    PreferredWidth := NewWidth;
-    PreferredHeight := NewHeight;
-  end;
+  WrapButtons(AWidth,NewWidth,NewHeight,true);
+  PreferredWidth := NewWidth;
+  PreferredHeight := NewHeight;
   //DebugLn(['TToolBar.CalculatePreferredSize ',DbgSName(Self),' ',PreferredWidth,'x',PreferredHeight,' Count=',ControlCount]);
 end;
 

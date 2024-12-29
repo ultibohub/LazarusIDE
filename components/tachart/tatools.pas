@@ -187,6 +187,7 @@ type
 
   TZoomDirection = (zdLeft, zdUp, zdRight, zdDown);
   TZoomDirectionSet = set of TZoomDirection;
+  TCalculateNewExtentEvent = procedure (ATool: TChartTool; var ANewExtent: TDoubleRect) of object;
 
   { TBasicZoomTool }
 
@@ -200,12 +201,16 @@ type
     FFullZoom: Boolean;
     FLimitToExtent: TZoomDirectionSet;
     FTimer: TCustomTimer;
+    FOnCalculateNewExtent: TCalculateNewExtentEvent;
 
     procedure OnTimer(ASender: TObject);
   protected
+    procedure DoCalculateNewExtent(var ANewExtent: TDoubleRect); virtual;
     procedure DoZoom(ANewExtent: TDoubleRect; AFull: Boolean);
     function IsAnimating: Boolean; inline;
     function IsProportional: Boolean; virtual;
+    property OnCalculateNewExtent: TCalculateNewExtentEvent
+      read FOnCalculateNewExtent write FOnCalculateNewExtent;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -269,6 +274,7 @@ type
       read FRestoreExtentOn write FRestoreExtentOn
       default [zreDragTopLeft, zreDragTopRight, zreDragBottomLeft, zreClick];
     property Transparency;
+    property OnCalculateNewExtent;
   end;
 
   TBasicZoomStepTool = class(TBasicZoomTool)
@@ -295,12 +301,16 @@ type
   TZoomClickTool = class(TBasicZoomStepTool)
   public
     procedure MouseDown(APoint: TPoint); override;
+  published
+    property OnCalculateNewExtent;
   end;
 
   TZoomMouseWheelTool = class(TBasicZoomStepTool)
   public
     procedure MouseWheelDown(APoint: TPoint); override;
     procedure MouseWheelUp(APoint: TPoint); override;
+  published
+    property OnCalculateNewExtent;
   end;
 
   TPanDirection = (pdLeft, pdUp, pdRight, pdDown);
@@ -316,8 +326,12 @@ type
   TBasicPanTool = class(TChartTool)
   strict private
     FLimitToExtent: TPanDirectionSet;
+    FOnCalculateNewExtent: TCalculateNewExtentEvent;
   strict protected
+    procedure DoCalculateNewExtent(var ANewExtent: TDoubleRect); virtual;
     procedure PanBy(AOffset: TPoint);
+    property OnCalculateNewExtent: TCalculateNewExtentEvent
+      read FOnCalculateNewExtent write FOnCalculateNewExtent;
   public
     constructor Create(AOwner: TComponent); override;
   published
@@ -349,6 +363,7 @@ type
     property EscapeCancels;
     property MinDragRadius: Cardinal
       read FMinDragRadius write FMinDragRadius default 0;
+    property OnCalculateNewExtent;
   end;
 
   { TPanClickTool }
@@ -374,6 +389,7 @@ type
     property ActiveCursor default crSizeAll;
     property Interval: Cardinal read FInterval write FInterval default 0;
     property Margins: TChartMargins read FMargins write FMargins;
+    property OnCalculateNewExtent;
   end;
 
   { TPanMouseWheelTool }
@@ -392,6 +408,7 @@ type
     property Step: Cardinal read FStep write FStep default 10;
     property WheelUpDirection: TPanDirection
       read FWheelUpDirection write FWheelUpDirection default pdUp;
+    property OnCalculateNewExtent;
   end;
 
   TChartDistanceMode = (cdmXY, cdmOnlyX, cdmOnlyY);
@@ -1186,6 +1203,15 @@ begin
   inherited Destroy;
 end;
 
+procedure TBasicZoomTool.DoCalculateNewExtent(var ANewExtent: TDoubleRect);
+begin
+  if Assigned(FOnCalculateNewExtent) then
+  begin
+    FOnCalculateNewExtent(Self, ANewExtent);
+    NormalizeRect(ANewExtent);
+  end;
+end;
+
 procedure TBasicZoomTool.DoZoom(ANewExtent: TDoubleRect; AFull: Boolean);
 
   procedure ValidateNewSize(LimitLo, LimitHi: TZoomDirection;
@@ -1278,6 +1304,9 @@ var
   ScaleX, ScaleY: Double;
   AllowProportionalAdjustmentX, AllowProportionalAdjustmentY: Boolean;
 begin
+  // Allow user to adjust the calculated new extent
+  DoCalculateNewExtent(ANewExtent);
+
   if not AFull then
     // perform the actions below even when LimitToExtent is empty - this will
     // correct sub-pixel changes in viewport size (occuring due to limited
@@ -1369,6 +1398,18 @@ begin
   with CalculateNewExtent do begin
     Result.TopLeft := Chart.GraphToImage(a);
     Result.BottomRight := Chart.GraphToImage(b);
+  end;
+  case RatioLimit of
+    zrlFixedX:
+      begin
+        Result.Left := Chart.ClipRect.Left+1;
+        Result.Right := Chart.ClipRect.Right;
+      end;
+    zrlFixedY:
+      begin
+        Result.Top := Chart.ClipRect.Top+1;
+        Result.Bottom := Chart.ClipRect.Bottom;
+      end;
   end;
 end;
 
@@ -1483,6 +1524,7 @@ const
     (zreDragTopLeft, zreClick, zreDragBottomLeft),
     (zreClick, zreClick, zreClick),
     (zreDragTopRight, zreClick, zreDragBottomRight));
+  // Means: "direction relative to mouse-down point"
 var
   dragDir: TRestoreExtentOn;
 begin
@@ -1494,6 +1536,18 @@ begin
 
   with FSelectionRect do
     dragDir := DRAG_DIR[Sign(Right - Left), Sign(Bottom - Top)];
+
+  // More user-friendly drag direction for zoom-in in case of fixed RatioLimit
+  case RatioLimit of
+    zrlNone, zrlProportional: ;
+    zrlFixedX:
+      // drag down (not necessarily right)
+      if dragDir = zreDragBottomLeft then dragdir := zreDragBottomRight;
+    zrlFixedY:
+      // drag right (not necessarily down)
+      if dragDir = zreDragTopRight then dragdir := zreDragBottomRight;
+  end;
+
   if
     (dragDir in RestoreExtentOn) or
     (zreDifferentDrag in RestoreExtentOn) and
@@ -1635,6 +1689,12 @@ begin
   ActiveCursor := crSizeAll;
 end;
 
+procedure TBasicPanTool.DoCalculateNewExtent(var ANewExtent: TDoubleRect);
+begin
+  if Assigned(FOnCalculateNewExtent) then
+    FOnCalculateNewExtent(Self, ANewExtent);
+end;
+
 procedure TBasicPanTool.PanBy(AOffset: TPoint);
 var
   dd: TDoublePoint;
@@ -1655,6 +1715,7 @@ begin
   end;
   ext.a += dd;
   ext.b += dd;
+  DoCalculateNewExtent(ext);
   FChart.LogicalExtent := ext;
 end;
 

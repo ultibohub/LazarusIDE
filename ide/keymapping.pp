@@ -698,6 +698,8 @@ begin
     ecFindNext                : Result:= srkmecFindNext;
     ecFindPrevious            : Result:= srkmecFindPrevious;
     ecFindInFiles             : Result:= srkmecFindInFiles;
+    ecJumpToNextSearchResult  : Result:= srkmecJumpToNextSearchResult;
+    ecJumpToPrevSearchResult  : Result:= srkmecJumpToPrevSearchResult;
     ecReplace                 : Result:= srkmecReplace;
     ecIncrementalFind         : Result:= lisMenuIncrementalFind;
     ecFindProcedureDefinition : Result:= srkmecFindProcedureDefinition;
@@ -1274,6 +1276,8 @@ begin
   ecFindNext:            SetSingle(VK_F3,[],                   VK_L,[XCtrl]);
   ecFindPrevious:        SetSingle(VK_F3,[ssShift]);
   ecFindInFiles:         SetSingle(VK_F,[XCtrl,ssShift]);
+  ecJumpToNextSearchResult:SetSingle(VK_F3,[ssAlt]);
+  ecJumpToPrevSearchResult:SetSingle(VK_F3,[ssAlt,ssShift]);
   ecReplace:             SetCombo(VK_R,[XCtrl],VK_UNKNOWN,[], VK_Q,[XCtrl],VK_A,[]);
   ecIncrementalFind:     SetSingle(VK_E,[XCtrl]);
   ecGotoLineNumber:      SetCombo(VK_G,[XCtrl],VK_UNKNOWN,[], VK_Q,[XCtrl],VK_G,[]);
@@ -1756,6 +1760,8 @@ begin
   ecFindNext:            SetSingle(VK_L,[ssCtrl]);
   ecFindPrevious:        SetSingle(VK_UNKNOWN,[]);
   ecFindInFiles:         SetSingle(VK_UNKNOWN,[]);
+  ecJumpToNextSearchResult:SetSingle(VK_F3,[ssAlt]);
+  ecJumpToPrevSearchResult:SetSingle(VK_F3,[ssAlt,ssShift]);
   ecReplace:             SetCombo(VK_Q,[SSCtrl],VK_A,[]);
   ecIncrementalFind:     SetSingle(VK_UNKNOWN,[]);
   ecGotoLineNumber:      SetCombo(VK_Q,[ssCtrl],VK_G,[]);
@@ -2404,6 +2410,8 @@ begin
   ecFindNext:            SetSingle(VK_G,[ssMeta]);
   ecFindPrevious:        SetSingle(VK_G,[ssShift,ssMeta]);
   ecFindInFiles:         SetSingle(VK_F,[ssMeta,ssShift]);
+  ecJumpToNextSearchResult:SetSingle(VK_F3,[ssAlt]);
+  ecJumpToPrevSearchResult:SetSingle(VK_F3,[ssAlt,ssShift]);
   ecReplace:             SetSingle(VK_UNKNOWN,[]);
   ecIncrementalFind:     SetSingle(VK_E,[ssMeta]);
   ecGotoLineNumber:      SetSingle(VK_L,[ssMeta]);
@@ -2889,17 +2897,6 @@ begin
   AddDefault(C, 'Select cursor up', srkmecSelUp, ecSelUp);
   AddDefault(C, 'Select cursor down', srkmecSelDown, ecSelDown);
 
-  AddDefault(C, 'Copy selection to clipboard', srkmecCopy, ecCopy);
-  AddDefault(C, 'Cut selection to clipboard', srkmecCut, ecCut);
-  AddDefault(C, 'Paste clipboard to current position', srkmecPaste, ecPaste);
-  AddDefault(C, 'Paste clipboard (as columns) to current position', srkmecPasteAsColumns, ecPasteAsColumns);
-  AddDefault(C, 'Copy - Add to Clipboard', srkmecCopyAdd, ecCopyAdd);
-  AddDefault(C, 'Cut - Add to Clipboard', srkmecCutAdd, ecCutAdd);
-  AddDefault(C, 'Copy current line', srkmecCopyCurrentLine, ecCopyCurrentLine);
-  AddDefault(C, 'Copy current line - Add to Clipboard', srkmecCopyAddCurrentLine, ecCopyAddCurrentLine);
-  AddDefault(C, 'Cut current line', srkmecCutCurrentLine, ecCutCurrentLine);
-  AddDefault(C, 'Cut current line - Add to Clipboard', srkmecCutAddCurrentLine, ecCutAddCurrentLine);
-  AddDefault(C, 'Multi paste clipboard to current position', srkmecMultiPaste, ecMultiPaste);
   AddDefault(C, 'Normal selection mode', srkmecNormalSelect, ecNormalSelect);
   AddDefault(C, 'Column selection mode', srkmecColumnSelect, ecColumnSelect);
   AddDefault(C, 'Line selection mode', srkmecLineSelect, ecLineSelect);
@@ -3030,6 +3027,20 @@ begin
   AddDefault(C, 'Insert a GUID',srkmecInsertGUID, ecInsertGUID);
   AddDefault(C, 'Insert full Filename',srkmecInsertFilename, ecInsertFilename);
 
+  // clipboard commands
+  C:=Categories[AddCategory('Clipboard',srkmCatClipboard,IDECmdScopeSrcEditOnly)];
+  AddDefault(C, 'Copy selection to clipboard', srkmecCopy, ecCopy);
+  AddDefault(C, 'Cut selection to clipboard', srkmecCut, ecCut);
+  AddDefault(C, 'Paste clipboard to current position', srkmecPaste, ecPaste);
+  AddDefault(C, 'Paste clipboard (as columns) to current position', srkmecPasteAsColumns, ecPasteAsColumns);
+  AddDefault(C, 'Copy - Add to Clipboard', srkmecCopyAdd, ecCopyAdd);
+  AddDefault(C, 'Cut - Add to Clipboard', srkmecCutAdd, ecCutAdd);
+  AddDefault(C, 'Copy current line', srkmecCopyCurrentLine, ecCopyCurrentLine);
+  AddDefault(C, 'Copy current line - Add to Clipboard', srkmecCopyAddCurrentLine, ecCopyAddCurrentLine);
+  AddDefault(C, 'Cut current line', srkmecCutCurrentLine, ecCutCurrentLine);
+  AddDefault(C, 'Cut current line - Add to Clipboard', srkmecCutAddCurrentLine, ecCutAddCurrentLine);
+  AddDefault(C, 'Multi paste clipboard to current position', srkmecMultiPaste, ecMultiPaste);
+
   // command commands
   C:=Categories[AddCategory('CommandCommands',srkmCatCmdCmd,nil)];
   AddDefault(C, 'Undo', lisUndo, ecUndo);
@@ -3042,6 +3053,8 @@ begin
   AddDefault(C, 'Find next', srkmecFindNext, ecFindNext);
   AddDefault(C, 'Find previous', srkmecFindPrevious, ecFindPrevious);
   AddDefault(C, 'Find in files', srkmecFindInFiles, ecFindInFiles);
+  AddDefault(C, 'Jump to next search result', srkmecJumpToNextSearchResult, ecJumpToNextSearchResult);
+  AddDefault(C, 'Jump to prev search result', srkmecJumpToPrevSearchResult, ecJumpToPrevSearchResult);
   AddDefault(C, 'Replace text', srkmecReplace, ecReplace);
   AddDefault(C, 'Find incremental', lisKMFindIncremental, ecIncrementalFind);
   AddDefault(C, 'Go to line number', srkmecGotoLineNumber, ecGotoLineNumber);
