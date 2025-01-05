@@ -9744,6 +9744,11 @@ msgstr "Файл"
 msgid "File: "
 msgstr "Файл:"
 
+#: lazarusidestrconsts.lisfilealreadyexists
+#, object-pascal-format
+msgid "File \"%s\" already exists."
+msgstr ""
+
 #: lazarusidestrconsts.lisfileextensionofprograms
 msgid "File extension of programs"
 msgstr "Розширення файлів програм"
@@ -10588,9 +10593,43 @@ msgstr "Ідентифікатор"
 msgid "Identifier begins with ..."
 msgstr "Ідентифікатор починається з ..."
 
+#: lazarusidestrconsts.lisidentifiercannotbedotted
+#, object-pascal-format
+msgid "Identifier \"%s\" cannot be dotted"
+msgstr ""
+
+#: lazarusidestrconsts.lisidentifiercannotbeempty
+msgid "Identifier cannot be empty"
+msgstr ""
+
 #: lazarusidestrconsts.lisidentifiercontains
 msgid "Identifier contains ..."
 msgstr "Ідентифікатор містить ..."
+
+#: lazarusidestrconsts.lisidentifierisdeclaredcompilerfunction
+#, object-pascal-format
+msgid "Identifier \"%s\" is a declared compiler function"
+msgstr ""
+
+#: lazarusidestrconsts.lisidentifierisdeclaredcompilerprocedure
+#, object-pascal-format
+msgid "Identifier \"%s\" is a declared compiler procedure"
+msgstr ""
+
+#: lazarusidestrconsts.lisidentifierisinvalid
+#, object-pascal-format
+msgid "Identifier \"%s\" is invalid"
+msgstr ""
+
+#: lazarusidestrconsts.lisidentifierisreservedword
+#, object-pascal-format
+msgid "Identifier \"%s\" is a reserved word"
+msgstr ""
+
+#: lazarusidestrconsts.lisidentifierwasalreadyused
+#, object-pascal-format
+msgid "Identifier \"%s\" was already used"
+msgstr ""
 
 #: lazarusidestrconsts.lisideoptions
 msgid "IDE Options:"
@@ -14718,11 +14757,10 @@ msgstr "%sперевизначити операційну систему про�
 msgid "Override the project subtarget."
 msgstr ""
 
-#: lazarusidestrconsts.lisoverridetheprojectwidgetseteggtkgtk2qtwin32carbond
-#, object-pascal-format, fuzzy, badformat
-#| msgid "%soverride the project widgetset. e.g. gtk gtk2 qt win32 carbon. default: %s"
-msgid "Override the project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s."
-msgstr "%sперевизначити набір віджетів проєкту. напр. gtk gtk2 qt win32 carbon. типовий: %s"
+#: lazarusidestrconsts.lisoverridetheprojectwidgetsetegdefault
+#, object-pascal-format
+msgid "Override the project widgetset. For example: %s. Default: %s."
+msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot
 msgid "'Owner' is already used by TReader/TWriter. Please choose another name."
@@ -16611,6 +16649,14 @@ msgstr "Перейменувати на %s"
 msgid "Rename to lowercase"
 msgstr "Превести в нижній регістр"
 
+#: lazarusidestrconsts.lisrenamingaborted
+msgid "Renaming aborted"
+msgstr ""
+
+#: lazarusidestrconsts.lisrenamingconflict
+msgid "Renaming conflict"
+msgstr ""
+
 #: lazarusidestrconsts.lisreopenproject
 msgid "Reopen project"
 msgstr "Перевідкрити проєкт"
@@ -17926,6 +17972,11 @@ msgstr "ІСР ще збирається."
 #: lazarusidestrconsts.listheidentifierisaunitpleaseusethefilesaveasfunction
 msgid "The identifier is a unit. Please use the File - Save as function to rename a unit."
 msgstr "Ідентифікатор є модулем. Для його перейменування використайте функцію Файл - Зберегти як."
+
+#: lazarusidestrconsts.listheidentifierisaunitproceedanyway
+#, object-pascal-format
+msgid "The identifier is a %s.%sNew file(s) will be created, old can be deleted.%sProceed anyway?"
+msgstr ""
 
 #: lazarusidestrconsts.listhekeyisalreadyassignedtoremovetheoldassignmentand
 #, object-pascal-format

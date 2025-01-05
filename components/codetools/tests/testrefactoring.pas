@@ -43,6 +43,7 @@ type
     procedure TestRenameNestedProgramProcDown;
     procedure TestRenameNestedProgramProcUp;
     procedure TestRenameNestedUnitProcDown;
+    procedure TestRenameTypeAmp;
   end;
 
 implementation
@@ -63,9 +64,8 @@ var
   DeclarationCaretXY: TPoint;
   PascalReferences: TAVLTree;
   OldIdentifier: string;
-  isConflicted: boolean;
 begin
-  if not IsValidIdent(NewIdentifier) then
+  if not IsDottedIdentifier(NewIdentifier) then
     Fail('TCustomTestRefactoring.RenameReferences invalid NewName="'+NewIdentifier+'"');
   // find marker #Rename
   ParseSimpleMarkers(Code);
@@ -123,14 +123,12 @@ begin
       Fail('CodeToolBoss.FindReferencesInFiles failed at '+dbgs(DeclarationCaretXY)+' File='+Code.Filename);
     end;
 
+    // todo: check for conflicts
+
     if not CodeToolBoss.RenameIdentifier(PascalReferences,
-      OldIdentifier, NewIdentifier, DeclCode, @DeclarationCaretXY, isConflicted)
-    then begin
-      if isConflicted then
-        Fail('CodeToolBoss.RenameIdentifier failed as a conflict found')
-      else
-        Fail('CodeToolBoss.RenameIdentifier failed');
-    end;
+      OldIdentifier, NewIdentifier, DeclCode, @DeclarationCaretXY)
+    then
+      Fail('CodeToolBoss.RenameIdentifier failed');
 
   finally
     CodeToolBoss.FreeTreeOfPCodeXYPosition(PascalReferences);
@@ -793,6 +791,36 @@ begin
   'begin',
   'end.',
   '',
+  'end.',
+  '']);
+end;
+
+procedure TTestRefactoring.TestRenameTypeAmp;
+begin
+  StartUnit;
+  Add([
+  'type',
+  '  TFoo{#Rename} = word;',
+  '  TBar = low(TFoo)..high(TFoo);',
+  'implementation',
+  'type',
+  '  TBird = low(TFoo)..high(TFoo);',
+  'end.',
+  '']);
+  RenameReferences('&End');
+  CheckDiff(Code,[
+  'unit test1;',
+  '',
+  '{$mode objfpc}{$H+}',
+  '',
+  'interface',
+  '',
+  'type',
+  '  &End{#Rename} = word;',
+  '  TBar = low(&End)..high(&End);',
+  'implementation',
+  'type',
+  '  TBird = low(&End)..high(&End);',
   'end.',
   '']);
 end;

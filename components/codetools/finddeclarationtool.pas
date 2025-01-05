@@ -676,7 +676,7 @@ type
 type
   TFindSmartFlag = (
     fsfIncludeDirective, // search for include file
-    fsfFindMainDeclaration, // stop if already on a declaration
+    fsfFindMainDeclaration, // stop if already on a declaration, otherwise search previous declaration with same identifier
     fsfSearchSourceName, // if searching for a unit name, return the source name node
     fsfSkipClassForward  // when a forward class was found, jump further to the class
     );
@@ -757,7 +757,9 @@ type
     FCheckingNodeCacheDependencies: boolean;
     FSourcesChangeStep, FFilesChangeStep: int64;
     FInitValuesChangeStep: integer;
+    {$IFDEF EnableFKnownIdentLength}
     FKnownIdentLength:integer;
+    {$ENDIF}
     {$IFDEF DebugPrefix}
     DebugPrefix: string;
     procedure IncPrefix;
@@ -2194,56 +2196,59 @@ var
     NewExprType.Desc:=xtContext;
   end;
 
-  function IdentifierIsUnitOrProjectName(): boolean;
-  //if returned True identifier is an unitname or a project name
+  {$IFDEF EnableFindDeclModulePreflightCheck}
+  function IdentifierIsModuleName: boolean;
+  //if returned True identifier is an unit, program or library name
   var
-    CleanPos, CleanPosAmd, VisitedUses, UnitLen, CandidateLen, i: integer;
+    CleanPos, ExprStartPos, VisitedUses, UnitLen, CandidateLen, i: integer;
     LastUsesNode, Node: TCodeTreeNode;
     SourceName: PChar;
-    ASourceName,AnIdentifier: string;
-    AUnitName,UnitInFilename: string;
-    CleanPosStart:TAtomPosition;
+    ASourceName, AnIdentifier, AUnitName, UnitInFilename: string;
+    CursorAtomStartPos, StartAtom: TAtomPosition;
     LengthToCursor: integer;
   begin
     Result:=False;
     LastUsesNode:=nil;
     SourceName:=nil;
     CleanPos:=CleanCursorPos;
-    if (CleanPos<=0) or (CleanPos>Length(Src)) then Exit;
+    if (CleanPos<=0) or (CleanPos>SrcLen) then Exit;
     MoveCursorToNearestAtom(CleanPos);
     ReadNextAtom;
-    CleanPosStart:=CurPos;
-    if curPos.Flag<>cafWord then begin
+    CursorAtomStartPos:=CurPos;
+    if CurPos.Flag<>cafWord then begin
       ReadPriorAtom;
     end;
-    if curPos.Flag<>cafWord then
+    if CurPos.Flag<>cafWord then
       exit;
     repeat
+      StartAtom:=CurPos;
       ReadPriorAtom;
-      if curPos.Flag<>cafPoint then
-        break;
+      if CurPos.Flag<>cafPoint then break;
       ReadPriorAtom;
-      if not (curPos.Flag in [cafWord,cafNone]) then
-        break;
-    until curPos.StartPos<=1;
-    ReadNextAtom;
-    CleanPosAmd:= CurPos.StartPos;
-    AnIdentifier:=getAtom(CurPos);
+      if CurPos.Flag<>cafWord then
+        exit; // e.g. a[].b  -> can't be a module name
+    until false;
+    MoveCursorToAtomPos(StartAtom);
+
+    ExprStartPos:= CurPos.StartPos;
+    AnIdentifier:=GetAtom(CurPos);
     LengthToCursor:=0;
-    if CurPos.StartPos=CleanPosStart.StartPos then
-      LengthToCursor:=CleanPosStart.EndPos-CleanPosStart.StartPos;
+    if CurPos.StartPos=CursorAtomStartPos.StartPos then
+      LengthToCursor:=CursorAtomStartPos.EndPos-CursorAtomStartPos.StartPos;
     repeat
       ReadNextAtom;
       if CurPos.Flag<>cafPoint then break;
       ReadNextAtom;
       if not (CurPos.Flag in [cafWord,cafNone]) then break;
-      if CurPos.StartPos=CleanPosStart.StartPos then
+      if CurPos.StartPos=CursorAtomStartPos.StartPos then
         LengthToCursor:=length(AnIdentifier) +
-          CleanPosStart.EndPos-CleanPosStart.StartPos + 1; {1 = '.'}
+          CursorAtomStartPos.EndPos-CursorAtomStartPos.StartPos + 1; {1 = '.'}
       AnIdentifier:=AnIdentifier+'.'+getAtom(CurPos);
     until CurPos.EndPos>=SrcLen;
     if Tree<>nil then //was built previously
-      Node:=self.Tree.Root else Exit;
+      Node:=Tree.Root
+    else
+      Exit;
     if (Node<>nil) and (Node.Desc in [ctnProgram, ctnLibrary, ctnUnit]) then begin
       //ctnPackage - Delphi style not ready yet, "requires" and "contains" to be explored
       if (Node.Desc = ctnUnit) then VisitedUses:=0 else VisitedUses:=1;
@@ -2267,8 +2272,8 @@ var
       end;
       AUnitName:=ASourceName;
       unitLen:=Length(ASourceName);
-      moveCursorToCleanPos(CleanPosStart.StartPos);
-      CurPos:=CleanPosStart;
+      moveCursorToCleanPos(CursorAtomStartPos.StartPos);
+      CurPos:=CursorAtomStartPos;
       CandidateLen:=Length(AnIdentifier);
 
       for i:=0 to 2 do begin //check own sourcename and "hidden uses"
@@ -2283,7 +2288,7 @@ var
         unitLen:=Length(ASourceName);
         if SourceName<>nil then begin
           if (candidateLen>=unitLen) and (LengthToCursor<=unitLen) then begin
-            if DottedIdentifierMatchesTo(Pchar(ASourceName),PChar(AnIdentifier))
+            if DottedIdentifierMatches(PChar(ASourceName),PChar(AnIdentifier))
             then begin
               AUnitName:= ASourceName;
               NewPos.Code:=FindUnitSource(AUnitName,'',true);
@@ -2310,7 +2315,7 @@ var
             Node:=Node.NextBrother;
           if (Node<>nil) and (Node.Desc in [ctnInterface,ctnImplementation])
           then begin
-            if Node.EndPos<CleanPosAmd then //if used after "uses"
+            if Node.EndPos<ExprStartPos then //if used after "uses"
               Node:=Node.FirstChild //ctnUsesSection
             else
               Node:=nil;
@@ -2332,9 +2337,9 @@ var
               AUnitName:=ExtractUsedUnitName(Node,@UnitInFilename);
               UnitLen:=length(AUnitName);
               if (CandidateLen>=unitLen) and (LengthToCursor<=unitLen) then begin
-                if DottedIdentifierMatchesTo(PChar(AUnitName),PChar(AnIdentifier))
+                if DottedIdentifierMatches(PChar(AUnitName),PChar(AnIdentifier))
                 then begin
-                  if CleanPosAmd=Node.StartPos then begin //jump to unit
+                  if ExprStartPos=Node.StartPos then begin //jump to unit
                     NewPos.Code:=FindUnitSource(AUnitName,UnitInFilename,true);
                     NewTopLine:=1;
                     NewExprType:=CleanExpressionType;
@@ -2371,6 +2376,7 @@ var
       end;
     end;
   end;
+  {$ENDIF}
 
   {$IFDEF VerboseFindDeclarationFail}
   procedure WriteFailReport;
@@ -2587,9 +2593,47 @@ begin
     Debugln;
     {$ENDIF}
 
-    Result:=IdentifierIsUnitOrProjectName();
-    if Result then
+    {$IFDEF EnableFindDeclModulePreflightCheck}
+    // checking if cursor on a used unitname must be done according to scope rules, preflight is not possible
+    //Result:=IdentifierIsModuleName;
+    //if Result then
+    //  exit;
+    {$ELSE}
+    if (CursorNode.Desc = ctnUseUnitNamespace) then begin
+      NewExprType.Desc:=xtContext;
+      NewExprType.Context.Node:=CursorNode;
+      NewExprType.Context.Tool:=Self;
+      CleanPosToCaret(CursorNode.StartPos, NewPos);
+      NewTopLine := NewPos.Y;
+      BlockTopLine := NewTopLine;
+      CleanPosToCaret(CursorNode.EndPos, NewPos);
+      BlockBottomLine := NewPos.Y;
+      Result := True;
+      Exit;
+    end else if (CursorNode.Desc in [ctnUsesSection,ctnUseUnitClearName]) then begin
+      // in uses section -> jump to unit
+      //DebugLn(['TFindDeclarationTool.FindDeclaration IsUsesSection']);
+      Result:=FindDeclarationInUsesSection(CursorNode,CleanCursorPos,
+                                           NewPos,NewTopLine);
+      BlockTopLine:=NewPos.Y;
+      BlockBottomLine:=NewPos.Y;
+      NewExprType:=CleanExpressionType;
+      {$IFDEF VerboseFindDeclarationFail}
+      if not Result then begin
+        debugln(['TFindDeclarationTool.FindDeclaration cursor in uses and FindDeclarationInUsesSection failed']);
+      end;
+      {$ENDIF}
+      if Result and (fsfSearchSourceName in SearchSmartFlags) then begin
+        Result:=FindSourceName(NewPos.Code);
+        {$IFDEF VerboseFindDeclarationFail}
+        if not Result then begin
+          debugln(['TFindDeclarationTool.FindDeclaration cursor in uses and FindSourceName failed']);
+        end;
+        {$ENDIF}
+      end;
       exit;
+    end;
+    {$ENDIF}
 
     DirectSearch:=false;
     SearchForward:=false;
@@ -3253,27 +3297,13 @@ begin
     RaiseException(20171214184519,'TFindDeclarationTool.FindUnitSource Invalid Data');
   if (Scanner.OnLoadSource=nil) then
     RaiseException(20171214184527,'TFindDeclarationTool.FindUnitSource Invalid Data');
-  // check project source name first
-  if (Tree<>nil) and (Tree.Root<>nil) then begin
-    Node:=Tree.Root.FirstChild;
-    if (Node<>nil) and
-      (Node.Parent.Desc in [ctnProgram, ctnLibrary,ctnPackage]) and
-      (Node.Desc=ctnSrcName) then begin
-      curSrc:= ExtractIdentifierWithPoints(Node.StartPos,false);
-      if (CompareDottedIdentifiers(PChar(curSrc),PChar(AnUnitName))=0)
-        and (Length(curSrc)=Length(AnUnitName)) then
-        Result:=TCodeBuffer(Scanner.OnLoadSource(Self,Scanner.MainFilename,true));
-    end;
-  end;
 
-  if Result=nil then begin  // original code, only units
-    NewUnitName:=AnUnitName;
-    NewInFilename:=AnUnitInFilename;
+  NewUnitName:=RemoveAmpersands(AnUnitName);
+  NewInFilename:=AnUnitInFilename;
 
-    AFilename:=DirectoryCache.FindUnitSourceInCompletePath(
-                            NewUnitName,NewInFilename,false,false,AddedNameSpace);
-    Result:=TCodeBuffer(Scanner.OnLoadSource(Self,AFilename,true));
-  end;
+  AFilename:=DirectoryCache.FindUnitSourceInCompletePath(
+                          NewUnitName,NewInFilename,false,false,AddedNameSpace);
+  Result:=TCodeBuffer(Scanner.OnLoadSource(Self,AFilename,true));
 
   if (Result=nil) and Assigned(OnFindUsedUnit) then begin
     // no unit found
@@ -4273,7 +4303,7 @@ var
   StartPos, EndPos: integer;
   SkipForward: boolean;
   Node: TCodeTreeNode;
-  IdentLen : integer;
+  KnownIdentLen: integer;
 begin
   {$IFDEF CTDEBUG}
   DebugLn('[TFindDeclarationTool.FindDeclarationOfIdentAtParam] Identifier=',
@@ -4282,69 +4312,69 @@ begin
     ' "',dbgstr(copy(Src,Params.ContextNode.StartPos,20)),'"');
   {$ENDIF}
   Result:=false;
+  {$IFDEF EnableFKnownIdentLength}
   FKnownIdentLength:=Params.KnownIdentifierLength;
-  if FKnownIdentLength>0 then
-    IdentLen:=FKnownIdentLength
-  else
-    IdentLen:=DottedIdentifierLength(Params.Identifier);
-  // search in cleaned source
+  {$ENDIF}
+  KnownIdentLen:=Params.KnownIdentifierLength;
+
+  // search in cleaned source for start of term
   MoveCursorToCleanPos(Params.Identifier);
   StartPos:=FindStartOfTerm(CurPos.StartPos,NodeTermInType(Params.ContextNode));
+
+  // search end of term (calls need the params)
   MoveCursorToCleanPos(Params.Identifier);
   ReadNextAtom;
   EndPos:=CurPos.EndPos;
-  if (Params.ContextNode.Desc=ctnIdentifier)
-  and (Params.ContextNode.Parent.Desc=ctnAttribParam) then begin
-    // parameters don't matter for the attribute name
-  end else begin
-    ReadNextAtom;
-    if CurPos.Flag=cafRoundBracketOpen then begin
-      ReadTilBracketClose(true);
-      EndPos:=CurPos.EndPos;
+  if KnownIdentLen>0 then
+    EndPos:=StartPos+KnownIdentLen
+  else begin
+    if (Params.ContextNode.Desc=ctnIdentifier)
+    and (Params.ContextNode.Parent.Desc=ctnAttribParam) then begin
+      // parameters don't matter for the attribute name
+    end else begin
+      ReadNextAtom;
+      if CurPos.Flag=cafRoundBracketOpen then begin
+        ReadTilBracketClose(true);
+        EndPos:=CurPos.EndPos;
+      end;
     end;
   end;
-  if FKnownIdentLength>0 then EndPos:=StartPos+FKnownIdentLength;
+
   {$IFDEF ShowExprEval}
   debugln(['TFindDeclarationTool.FindDeclarationOfIdentAtParam Term=',dbgstr(Src,StartPos,EndPos-StartPos)]);
   {$ENDIF}
   SkipForward:=fdfSkipClassForward in Params.Flags;
-  if FKnownIdentLength=0 then Include(Params.Flags,fdfFindVariable); //KnownLen>0 -> search program/unit name
+  if Params.KnownIdentifierLength=0 then
+    Include(Params.Flags,fdfFindVariable);
+
   ExprType:=FindExpressionTypeOfTerm(StartPos,EndPos,Params,false);
   if (ExprType.Desc=xtContext) then begin
-    if (ExprType.Context.Node.Desc in [ctnProgram ..ctnUnit]) and
-      ((FKnownIdentLength=EndPos-StartPos) or (FKnownIdentLength=0)) then begin
-      if (ExprType.Context.Node.FirstChild<>nil) and
-      (ExprType.Context.Node.FirstChild.Desc=ctnSrcName) then begin
-        ExprType.Context.Node:=ExprType.Context.Node.FirstChild; //switch to ctnSrcName
-        if IdentLen>=FKnownIdentLength then
-          Params.SetResult(ExprType.Context)
-        else
-          Params.SetResult(CleanFindContext);
-      end else
-        Params.SetResult(CleanFindContext);
+    if (ExprType.Context.Node.Desc in [ctnProgram ..ctnUnit]) then
+    begin
+      if (ExprType.Context.Node.FirstChild<>nil)
+          and (ExprType.Context.Node.FirstChild.Desc=ctnSrcName) then
+      begin
+        // switch from ctnSrcName to ctnIdentifier
+        ExprType.Context.Node:=ExprType.Context.Node.FirstChild;
+      end;
     end else begin
       if (ExprType.Context.Node.Desc in [ctnUseUnitNamespace, ctnUseUnitClearName])
-        and (FKnownIdentLength=EndPos-StartPos)  then begin
-        ExprType.Context.Node:=ExprType.Context.Node.Parent; //switch to ctnUseUnit
-      end;
-      if (((ExprType.Context.Node.Desc=ctnUseUnit) and (FKnownIdentLength>0)) or
-          (ExprType.Context.Node.Desc<>ctnUseUnit)) and
-         ((ExprType.Context.Node.StartPos>=0) and
-         (ExprType.Context.Node.StartPos<length(Src))) then
+        and (KnownIdentLen=EndPos-StartPos) then
       begin
-        if IdentLen>=FKnownIdentLength then begin
-          Params.SetResult(ExprType.Context);
-        end else
-          Params.SetResult(CleanFindContext);
-      end else
-       //old code
-        Params.SetResult(ExprType.Context);
+        // switch to ctnUseUnit
+        ExprType.Context.Node:=ExprType.Context.Node.Parent;
+      end;
     end;
+    Params.SetResult(ExprType.Context);
   end else
     Params.SetResult(CleanFindContext);
+
   if SkipForward and (Params.NewNode<>nil) then
+    // skip from forward class to class
     Params.NewCodeTool.FindNonForwardClass(Params);
+
   if (Params.NewNode<>nil) and (Params.NewNode.Desc=ctnProcedure) then begin
+    // switch from proc to prochead
     Node:=Params.NewNode.FirstChild;
     if (Node<>nil) and (Node.Desc=ctnProcedureHead) then
       Params.NewNode:=Node;
@@ -4842,47 +4872,26 @@ var
   //          false if search should continue
   var
     SrcNode: TCodeTreeNode;
-    SrcNameString, IdentifierString: string;
   begin
     Result:=false;
-    if (Tree=nil) or (Tree.Root=nil) then exit;
-    if params.Identifier<>nil then begin
-      if Params.IdentifierTool.IsPCharInSrc(params.Identifier) then  begin
-        Params.IdentifierTool.MoveCursorToCleanPos(params.Identifier);
-        IdentifierString:=ExtractIdentifierWithPoints(curPos.StartPos,false);
-      end else
-        exit;
-    end else
-      IdentifierString:='';
     SrcNode:=Tree.Root;
     MoveCursorToNodeStart(SrcNode);
     ReadNextAtom; // read keyword
-    if (SrcNode.Desc=ctnProgram) and (not UpAtomIs('PROGRAM')) then exit;
-    if (SrcNode.Desc=ctnLibrary) and (not UpAtomIs('LIBRARY')) then exit;
-    if (SrcNode.Desc=ctnPackage) and (not UpAtomIs('PACKAGE')) then exit;
+    if (SrcNode.Desc=ctnProgram) and (not UpAtomIs('PROGRAM')) then
+      exit; // program is the default, this program does not have a source name
     ReadNextAtom; // read name start
-    SrcNameString:=ExtractIdentifierWithPoints(curPos.StartPos,false);
-    if params.Identifier<>nil then begin
-      //SrcNameString:=ExtractIdentifierWithPoints(curPos.StartPos,false);
-      if self.FKnownIdentLength>0 then
-        delete(IdentifierString, FKnownIdentLength+1, length(IdentifierString));
-    end;
-    if (fdfCollect in Flags) or
-    (KeywordFuncLists.CompareIdentifiers(PChar(SrcNameString),
-      PChar(IdentifierString))=0) then
+    if (fdfCollect in Flags)
+        or CompareSrcIdentifiers(CurPos.StartPos,Params.Identifier) then
     begin
-      if (fdfCollect in Flags) or
-        (Length(SrcNameString)<=Length(IdentifierString)) then begin
-        // identifier found
-        {$IFDEF ShowTriedIdentifiers}
-        if not (fdfCollect in Flags) then
-          DebugLn('  Source Name Identifier found="',GetIdentifier(Params.Identifier),'"');
-        {$ENDIF}
-        Params.SetResult(Self,SrcNode,CurPos.StartPos);
-        Result:=CheckResult(true,true);
-        if not (fdfCollect in Flags) then
-          exit;
-      end;
+      // identifier found
+      {$IFDEF ShowTriedIdentifiers}
+      if not (fdfCollect in Flags) then
+        DebugLn('  Source Name Identifier found="',GetIdentifier(Params.Identifier),'"');
+      {$ENDIF}
+      Params.SetResult(Self,SrcNode,CurPos.StartPos);
+      Result:=CheckResult(true,true);
+      if not (fdfCollect in Flags) then
+        exit;
     end;
   end;
   
@@ -6903,8 +6912,10 @@ var
           //Node:=Node.Parent;
           MoveCursorToCleanPos(Node.StartPos);
           AnUnitName:=ExtractIdentifierWithPoints(Node.StartPos,false);
+          {$IFDEF EnableFKnownIdentLength}
           if FKnownIdentLength>0 then
             delete(AnUnitName,FKnownIdentLength+1, length(AnUnitName));
+          {$ENDIF}
           //AnUnitName:=GetDottedIdentifier(@Src[Node.StartPos]); //program, library, package
           NewCodeTool:=FindCodeToolForUsedUnit(AnUnitName, '',false);
           if NewCodeTool=DeclarationTool then begin
@@ -8725,7 +8736,7 @@ begin
   DebugLn(['TFindDeclarationTool.FindIdentifierInUsesSection ',MainFilename,' fdfIgnoreUsedUnits=',fdfIgnoreUsedUnits in Params.Flags]);
   {$ENDIF}
   Result:=false;
-  // first search the identifier in the uses section (not in the interfaces of the units)
+  // first search the identifier in the uses section itself (not in the interfaces of the units)
   if (Params.IdentifierTool=Self) then begin
     Node:=UsesNode.LastChild;
     while Node<>nil do begin
@@ -8740,8 +8751,8 @@ begin
           exit;
         end;
       end else if CompareSrcIdentifiers(Node.StartPos,Params.Identifier) then begin
-        // the searched identifier was a uses AUnitName, point to the identifier in
-        // the uses section
+        // the searched identifier was a uses unitname
+        // -> point to the identifier in the uses section
         // if the unit name has a namespace defined point to the namespace
         Params.SetResult(Self,Node.FirstChild);
         Result:=true;
@@ -9729,7 +9740,10 @@ var
   function ResolveUseUnit(StartUseUnitNode: TCodeTreeNode): TCodeTreeNode;
   // IsStart=true, NextAtomType=vatPoint,
   // StartUseUnitNameNode.Desc=ctnUseUnit
-  // -> Find the longest namespaced used unit (ctnUseUnitNamespace,ctnUseUnitClearName)
+  // The first dotted identifier matches a name in one of the uses sections.
+  // If any uses section or the source name has namespaces the longest fitting wins.
+  // Note: the uses section names hide all identifiers in the used unit interfaces.
+  // -> Find the longest (namespaced) used unit (ctnUseUnitNamespace,ctnUseUnitClearName)
   //    or the source name (ctnIdentifier), that fits the start of the
   //    current identifier a.b.c...
   //
@@ -9750,37 +9764,24 @@ var
 
   var
     UseUnitNode, Node, BestNode: TCodeTreeNode;
-    HasNamespace: Boolean;
-    Count, Level, BestLevel: Integer;
+    Level, BestLevel: Integer;
     p: PChar;
     DottedIdentifier: String;
   begin
     Result:=StartUseUnitNode.FirstChild;
-    //debugln(['ResolveUsenit START ',NextAtomType,' ',StartUseUnitNode.DescAsString,' "',GetIdentifier(@Src[CurAtom.StartPos]),'"']);
-    // find all candidates
-    Count:=0;
-    HasNamespace:=false;
-    UseUnitNode:=StartUseUnitNode;
-    repeat
-      if (UseUnitNode.FirstChild<>nil)
-      and CompareSrcIdentifiers(CurAtom.StartPos,UseUnitNode.StartPos) then begin
-        // found candidate
-        inc(Count);
-        //debugln(['ResolveUsenit candidate found']);
-        if UseUnitNode.FirstChild.Desc=ctnUseUnitNamespace then begin
-          HasNamespace:=true;
-        end;
-      end;
-      UseUnitNode:=GetPrevUseUnit(UseUnitNode);
-    until UseUnitNode=nil;
-    //debugln(['ResolveUsenit CandidateCount=',Count,' HasNamespace=',HasNamespace]);
-    if not HasNamespace then exit;
+    if not HasNameSpaces then exit;
 
+    DottedIdentifier:=GetIdentifier(@Src[CurAtom.StartPos]);
+
+    //debugln(['ResolveUseUnit START ',NextAtomType,' ',StartUseUnitNode.DescAsString,' "',GetIdentifier(@Src[CurAtom.StartPos]),'" Result=',Result.DescAsString]);
+    // find all candidates
+
+    BestNode:=nil;
+    BestLevel:=0;
     // multiple uses start with this identifier -> collect candidates
-    //debugln(['ResolveUsenit collect candidates ...']);
+    //debugln(['ResolveUseUnit collect candidates ...']);
 
     // read a.b.c...
-    DottedIdentifier:=GetIdentifier(@Src[CurAtom.StartPos]);
     MoveCursorToCleanPos(NextAtom.EndPos);
     Level:=1;
     repeat
@@ -9790,12 +9791,10 @@ var
       DottedIdentifier:=DottedIdentifier+'.'+GetAtom;
       ReadNextAtom;
     until CurPos.Flag<>cafPoint;
-    //debugln(['ResolveUsenit DottedIdentifier="',DottedIdentifier,'"']);
+    //debugln(['ResolveUseUnit DottedIdentifier="',DottedIdentifier,'"']);
 
     // find longest dotted unit name in uses and source name
     UseUnitNode:=StartUseUnitNode;
-    BestNode:=nil;
-    BestLevel:=0;
     repeat
       Node:=UseUnitNode.FirstChild; // ctnUseUnitNamespace or ctnUseUnitClearName
       UseUnitNode:=GetPrevUseUnit(UseUnitNode);
@@ -9836,15 +9835,16 @@ var
     if (Tree.Root.Desc in AllSourceTypes)
     and (Tree.Root.FirstChild<>nil)
     and (Tree.Root.FirstChild.Desc=ctnSrcName)
-    and CompareDottedSrcIdentifiers(Tree.Root.FirstChild.StartPos,PChar(DottedIdentifier))
+    and CompareSrcIdentifiers(Tree.Root.FirstChild.StartPos,PChar(DottedIdentifier)) // first identifier fits
     then begin
       // found candidate
+      // -> check the whole DottedIdentifier
       Level:=1;
-      Node:=Tree.Root.FirstChild.FirstChild;
+      Node:=Tree.Root.FirstChild.FirstChild; // child of ctnSrcName
       //debugln(['ResolveUseUnit Candidate SrcName']);
       p:=PChar(DottedIdentifier);
       repeat
-        //debugln('ResolveUseUnit SrcName p=',p,' Node=',ExtractNode(Node,[]));
+        //debugln('ResolveUseUnit SrcName p=',p,' Node=',Node.DescAsString,' "',ExtractNode(Node,[]),'"');
         if (Node.FirstChild=nil) or (Node.NextBrother.Desc<>ctnIdentifier) then begin
           // fits
           //debugln(['ResolveUseUnit FITS Level=',Level,' Best=',BestLevel]);
@@ -9881,7 +9881,10 @@ var
     end;
 
     Result:=BestNode;
-    if Result=nil then exit;
+    if Result=nil then begin
+      // ToDo: search in used interfaces
+      exit(nil);
+    end;
 
     // Result is now a ctnUseUnit
     Result:=Result.FirstChild;
@@ -9933,15 +9936,18 @@ var
     ProcNode: TCodeTreeNode;
     SrcNameNode: TCodeTreeNode;
     Node: TCodeTreeNode;
-    IdentFound: boolean;
     OldFlags: TFindDeclarationFlags;
     ResultNode: TCodeTreeNode;
     IsStart: Boolean;
     Context: TFindContext;
     IsEnd: Boolean;
     SearchForwardToo: Boolean;
-    SrcNameLength, IdentLength, DotsNumber, i:integer;
-    SrcNameString, IdentifierString:string;
+    IdentFound: boolean;
+    {$IFDEF EnableFindDeclModulePreflightCheck}
+    SrcNameLength: integer;
+    {$ENDIF}
+    IdentLength, DotsNumber, i: integer;
+    SrcNameString, IdentifierString: string;
   begin
     // for example  'AnObject[3]'
 
@@ -9951,31 +9957,34 @@ var
 
     // check special identifiers 'Result' and 'Self'
     IdentFound:=false;
-    SrcNameLength:=0;
     IsStart:=ExprType.Desc=xtNone;
     IsEnd:=IsIdentifierEndOfVariable;
     if IsStart then begin
       // start context
       if (StartNode.Desc in AllPascalStatements) then begin
+        {$IFDEF EnableFindDeclModulePreflightCheck}
+        // this breaks scope rules
         SrcNameNode:=StartNode.GetRoot.FirstChild;
         SrcNameString:=ExtractIdentifierWithPoints(SrcNameNode.StartPos,false);
         SrcNameLength:=Length(SrcNameString);
         IdentifierString:=ExtractIdentifierWithPoints(StartPos,false);
+        {$IFDEF EnableFKnownIdentLength}
         if FKnownIdentLength>0 then
           delete(IdentifierString,FKnownIdentLength+1,length(IdentifierString));
+        {$ENDIF}
         IdentLength:=Length(IdentifierString);
         if (SrcNameNode<>nil) and (IdentLength>=SrcNameLength)
-        and DottedIdentifierMatchesTo(PChar(SrcNameString),Pchar(IdentifierString))
+        and DottedIdentifierStartsWith(PChar(SrcNameString),Pchar(IdentifierString))
         then begin
           if IdentLength=SrcNameLength then begin
-            //it is the searched (may be dotted) identifier!
+            // it is the searched (may be dotted) identifier!
             ExprType.Desc:=xtContext;
             ExprType.Context.Tool:=Self;
             ExprType.Context.Node:=SrcNameNode.Parent;
             IdentFound:=true;
             EndPos:=-1;
           end else begin
-            //expression starts from source name identifier
+            // expression starts from source name identifier
             MoveCursorToCleanPos(StartPos);
             DotsNumber:=0;
             i:=1;
@@ -9984,7 +9993,7 @@ var
                 inc(DotsNumber);
               inc(i);
             end;
-             //normal and dotted name fits
+            // normal and dotted name fits
             i:=0;
             repeat
               ReadNextExpressionAtom;
@@ -10004,6 +10013,7 @@ var
             ExprType.Context.Node:=SrcNameNode.Parent; //program/library/package?
           end;
         end else
+        {$ENDIF}
         if CompareSrcIdentifiers(CurAtom.StartPos,'SELF') then begin
           // SELF in a method is the object itself
           // -> check if in a method or nested proc of a method
@@ -10136,6 +10146,9 @@ var
         Params.Flags:=[fdfSearchInAncestors,fdfExceptionOnNotFound,fdfSearchInHelpers]
                       +(fdfGlobals*Params.Flags);
         Params.ContextNode:=Context.Node;
+        if Context.Node=nil then
+          RaiseException(20250101153139,'[TFindDeclarationTool.FindExpressionTypeOfTerm.ResolveIdentifier] internal error');
+
         SearchForwardToo:=false;
         if Context.Node=StartNode then begin
           // there is no special context -> search in parent contexts too
@@ -10148,28 +10161,26 @@ var
         end else begin
           // only search in special context
           Params.Flags:=Params.Flags+[fdfIgnoreUsedUnits];
-          if Assigned(Context.Node)  then begin
-            if (Context.Node.Desc=ctnImplementation) then
-              Params.Flags:=Params.Flags+[fdfSearchInParentNodes];
-            if (Context.Node.Desc=ctnObjCClass) then
-              Exclude(Params.Flags,fdfExceptionOnNotFound); // ObjCClass has predefined identifiers like 'alloc'
-          end;
+          if Context.Node.Desc=ctnImplementation then
+            Params.Flags:=Params.Flags+[fdfSearchInParentNodes];
+          if Context.Node.Desc=ctnObjCClass then
+            Exclude(Params.Flags,fdfExceptionOnNotFound); // ObjCClass has predefined identifiers like 'alloc'
         end;
 
         // check identifier for overloaded procs
-        if Assigned(Context.Node) then begin
-          if (IsEnd and (fdfIgnoreOverloadedProcs in StartFlags))
-          then
-            Include(Params.Flags,fdfIgnoreOverloadedProcs);
-          //debugln(['ResolveIdentifier ',IsEnd,' ',GetAtom(CurAtom),' ',Context.Node.DescAsString,' ',Context.Node.Parent.DescAsString,' ']);
-          if Assigned(Context.Node.Parent) and IsEnd and (Context.Node.Desc=ctnIdentifier)
-          and (Context.Node.Parent.Desc=ctnAttribParam)
-          and ResolveAttribute(Context) then begin
-            exit;
-          end;
+        if (IsEnd and (fdfIgnoreOverloadedProcs in StartFlags))
+        then
+          Include(Params.Flags,fdfIgnoreOverloadedProcs);
+        //debugln(['ResolveIdentifier ',IsEnd,' ',GetAtom(CurAtom),' ',Context.Node.DescAsString,' ',Context.Node.Parent.DescAsString,' ']);
+        if IsEnd and Assigned(Context.Node.Parent) and (Context.Node.Desc=ctnIdentifier)
+            and (Context.Node.Parent.Desc=ctnAttribParam)
+            and ResolveAttribute(Context) then
+        begin
+          exit;
         end;
 
-        Params.SetIdentifier(Self,@Src[CurAtom.StartPos],@CheckSrcIdentifier,FKnownIdentLength);
+        Params.SetIdentifier(Self,@Src[CurAtom.StartPos],@CheckSrcIdentifier
+          {$IFDEF EnableFKnownIdentLength},FKnownIdentLength{$ENDIF});
 
         // search ...
         {$IFDEF ShowExprEval}
@@ -10216,13 +10227,19 @@ var
           if IsStart and (NextAtomType=vatPoint)
           and (Params.NewCodeTool=Self)
           and (Params.NewNode.Desc in [ctnUseUnitClearName,ctnUseUnitNamespace])
-          then begin //??? longest = best, shoud be first caught by order of searching
+          then begin
             // first identifier is a used unit -> find longest fitting unitname
             //debugln(['ResolveIdentifier UseUnit FindLongest... ',Params.NewNode.DescAsString,' ',ExtractNode(Params.NewNode,[])]);
             Params.NewNode:=ResolveUseUnit(Params.NewNode.Parent);
+            // this might return nil!
             //debugln(['ResolveIdentifier UseUnit FoundLongest: ',Params.NewNode.DescAsString,' ',ExtractNode(Params.NewNode,[])]);
           end;
-          ExprType.Context:=CreateFindContext(Params);
+
+          if Params.NewNode<>nil then
+            ExprType.Context:=CreateFindContext(Params)
+          else
+            ExprType.Desc:=xtNone;
+
           Params.Load(OldInput,true);
         end else begin
           // predefined identifier
@@ -12773,7 +12790,9 @@ begin
   FSourcesChangeStep:=CTInvalidChangeStamp64;
   FFilesChangeStep:=CTInvalidChangeStamp64;
   FInitValuesChangeStep:=CTInvalidChangeStamp;
+  {$IFDEF EnableFKnownIdentLength}
   FKnownIdentLength:=0;
+  {$ENDIF}
 end;
 
 procedure TFindDeclarationTool.DoDeleteNodes(StartNode: TCodeTreeNode);
@@ -13197,7 +13216,9 @@ begin
   LastNodeCache:=nil;
   // start with parent of deepest node and end parent of highest
   Node:=StartNode;
-  repeat
+  if Node.Desc in AllNodeCacheDescs then
+    Node:=Node.Parent; // e.g. if start was ctnProcedure, it was not searched inside
+  while Node<>nil do begin
     if (Node.Desc in AllNodeCacheDescs) then begin
       if (Node.Cache=nil) then
         CreateNewNodeCache(Node);
@@ -13218,11 +13239,12 @@ begin
           end;
           {$ENDIF}
           LastNodeCache:=CurNodeCache;
+          if (EndNode=Node) or EndNode.HasAsParent(Node) then break;
         end;
       end;
     end;
     Node:=Node.Parent;
-  until (Node=nil) or (EndNode=Node) or EndNode.HasAsParent(Node);
+  end;
   {$IFDEF ShowNodeCache}
   if BeVerbose then begin
     DebugLn('=========================))))))))))))))))))))))))))))))))');

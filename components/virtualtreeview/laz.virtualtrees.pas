@@ -95,9 +95,6 @@ uses
   StdActns,  // for standard action support
   FPImage, IntfGraphics, LazCanvas,  // for alpha-transparent bitmaps
   GraphType
-  {$ifdef LCLCocoa}
-  ,CocoaGDIObjects // hack: while using buffered drawing, multiply the context
-  {$endif}
   {$ifdef ThemeSupport}
   , Themes , TmSchema
   {$endif ThemeSupport}
@@ -9244,9 +9241,7 @@ procedure TVirtualTreeColumns.PaintHeader(DC: HDC; const R: TRect; HOffset: Inte
 var
   VisibleFixedWidth: Integer;
   RTLOffset: Integer;
-  {$ifdef LCLCocoa}
   sc : Double;
-  {$endif}
 
   procedure PaintFixedArea;
   
@@ -9258,20 +9253,16 @@ var
   end;
 
 begin
+  if Assigned(Header) and Assigned(Header.TreeView) then
+    sc := Header.Treeview.GetCanvasScaleFactor
+  else
+    sc := 1.0;
   // Adjust size of the header bitmap
   with TWithSafeRect(FHeader.Treeview.FHeaderRect) do
   begin
-    FHeaderBitmap.Width := Max(Right, R.Right - R.Left);
-    FHeaderBitmap.Height := Bottom;
-    {$ifdef LCLCocoa}
-    if Assigned(Header) and Assigned(Header.TreeView) then
-      sc := Header.Treeview.GetCanvasScaleFactor
-    else
-      sc := 1.0;
-    FHeaderBitmap.Width := Round(FHeaderBitmap.Width * sc);
-    FHeaderBitmap.Height := Round(FHeaderBitmap.Height * sc);
-    CGContextScaleCTM(TCocoaBitmapContext(FHeaderBitmap.Canvas.Handle).CGContext, sc, sc);
-    {$endif}
+    FHeaderBitmap.Clear;
+    FHeaderBitmap.SetSize(Round(Max(Right, R.Right - R.Left) * sc), Round(Bottom * sc));
+    LCLIntf.SetDeviceScaleRatio(FHeaderBitmap.Canvas.Handle, sc);
   end;
 
   VisibleFixedWidth := GetVisibleFixedWidth;
@@ -9296,15 +9287,7 @@ begin
 
   // Blit the result to target.
   with TWithSafeRect(R) do
-    {$ifdef LCLCocoa}
-    StretchBlt(DC, Left, Top, Right - Left, Bottom - Top,
-      FHeaderBitmap.Canvas.Handle,
-      Left, Top,
-      FHeaderBitmap.Width, FHeaderBitmap.Height,
-      SRCCOPY);
-    {$else}
-    BitBlt(DC, Left, Top, Right - Left, Bottom - Top, FHeaderBitmap.Canvas.Handle, Left, Top, SRCCOPY);
-    {$endif}
+    BitBlt(DC, Left, Top, Round((Right - Left) * sc), Round((Bottom - Top) * sc), FHeaderBitmap.Canvas.Handle, Left, Top, SRCCOPY);
 end;
 
 //----------------------------------------------------------------------------------------------------------------------
@@ -30683,18 +30666,9 @@ var
   CellIsTouchingClientRight: Boolean;
   CellIsInLastColumn: Boolean;
   ColumnIsFixed: Boolean;
-
-  {$ifdef LCLCocoa}
-  sc: Double; // the retina scale. 1.0 for no-retina
-  cg: CGContextRef; // tracking the Context of Bitmap
-  cglast: CGContextRef; // the last Context of Bitmap.
-                        // The scale is applied only when the context changes
-  {$endif}
+  ScaleFactor: double;
 begin
-  {$ifdef LCLCocoa}
-  cglast := nil;
-  sc := GetCanvasScaleFactor;
-  {$endif}
+  ScaleFactor := GetCanvasScaleFactor;
   {$ifdef DEBUG_VTV}Logger.EnterMethod([lcPaint],'PaintTree');{$endif}
   {$ifdef DEBUG_VTV}Logger.Send([lcPaint, lcHeaderOffset],'Window',Window);{$endif}
   {$ifdef DEBUG_VTV}Logger.Send([lcPaint, lcHeaderOffset],'Target',Target);{$endif}
@@ -30737,12 +30711,9 @@ begin
         else
           NodeBitmap.PixelFormat := PixelFormat;
 
-        {$ifdef LCLCocoa}
-        NodeBitmap.Width := Round(PaintWidth*sc);
-        cg := TCocoaBitmapContext(NodeBitmap.Canvas.Handle).CGContext;
-        {$else}
-        NodeBitmap.Width := PaintWidth;
-        {$endif}
+        NodeBitmap.Width := Round(PaintWidth * ScaleFactor);
+        NodeBitmap.Height := 1;
+        LCLIntf.SetDeviceScaleRatio(NodeBitmap.Canvas.Handle, ScaleFactor);
 
         // Make sure the buffer bitmap and target bitmap use the same transformation mode.
         {$ifndef Gtk}
@@ -30861,19 +30832,9 @@ begin
                   if Height < PaintInfo.Node.NodeHeight then
                   begin
                     // Avoid that the VCL copies the bitmap while changing its height.
-                    {$ifdef LCLCocoa}
                     if Height > 0 then SetSize(1,1); // can't go to 0, must keep canvas
-                    SetSize(Round(PaintWidth*sc), Round(PaintInfo.Node.NodeHeight * sc));
-                    cg := TCocoaBitmapContext(NodeBitmap.Canvas.Handle).CGContext;
-                    if cglast <> cg then
-                    begin
-                      CGContextScaleCTM(cg, sc, sc);
-                      cglast := cg;
-                    end;
-                    {$else}
-                    if Height > 0 then SetSize(1,1); // can't go to 0, must keep canvas
-                    SetSize(PaintWidth, PaintInfo.Node.NodeHeight);
-                    {$endif}
+                    SetSize(Round(PaintWidth * ScaleFactor), Round(PaintInfo.Node.NodeHeight * ScaleFactor));
+                    LCLIntf.SetDeviceScaleRatio(NodeBitmap.Canvas.Handle, ScaleFactor);
                     {$ifdef UseSetCanvasOrigin}
                     SetCanvasOrigin(Canvas, Window.Left, 0);
                     {$else}
@@ -31194,25 +31155,9 @@ begin
                 if not (poUnbuffered in PaintOptions) then
                   with TWithSafeRect(TargetRect), NodeBitmap do
                   begin
-                    {$ifdef LCLCocoa}
-                    StretchBlt(
-                      TargetCanvas.Handle,
-                      Left,
-                      Top + YCorrect,
-                      PaintWidth,
-                      PaintInfo.Node.NodeHeight - YCorrect,
-                      Canvas.Handle,
-                      Window.Left,
-                      Round(YCorrect * sc),
-                      NodeBitmap.Width,
-                      Round(PaintInfo.Node.NodeHeight * sc) - Round(YCorrect * sc),
-                      SRCCOPY
-                    );
-                    {$else}
                     BitBlt(TargetCanvas.Handle, Left,
-                     Top {$ifdef ManualClipNeeded} + YCorrect{$endif}, Width, PaintInfo.Node.NodeHeight, Canvas.Handle, Window.Left,
+                     Top {$ifdef ManualClipNeeded} + YCorrect{$endif}, Round(Width * ScaleFactor), Round(PaintInfo.Node.NodeHeight * ScaleFactor), Canvas.Handle, Window.Left,
                      {$ifdef ManualClipNeeded}YCorrect{$else}0{$endif}, SRCCOPY);
-                    {$endif}
                   end;
               end;
             end;
@@ -31253,8 +31198,9 @@ begin
             // Avoid unnecessary copying of bitmap content. This will destroy the DC handle too.
             NodeBitmap.Height := 0;
             NodeBitmap.PixelFormat := pf32Bit;
-            NodeBitmap.Width := TargetRect.Right - TargetRect.Left;
-            NodeBitmap.Height := TargetRect.Bottom - TargetRect.Top;
+            NodeBitmap.Width := Round((TargetRect.Right - TargetRect.Left) * ScaleFactor);
+            NodeBitmap.Height := Round((TargetRect.Bottom - TargetRect.Top) * ScaleFactor);
+            LCLIntf.SetDeviceScaleRatio(NodeBitmap.Canvas.Handle, ScaleFactor);
           end;
 
           {$ifdef DEBUG_VTV}Logger.Send([lcPaintDetails],'NodeBitmap.Handle after changing height to background',NodeBitmap.Handle);{$endif}

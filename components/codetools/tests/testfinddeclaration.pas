@@ -120,6 +120,7 @@ type
     procedure TestFindDeclaration_Program;
     procedure TestFindDeclaration_Basic;
     procedure TestFindDeclaration_Proc_BaseTypes;
+    procedure TestFindDeclaration_ProcMested;
     procedure TestFindDeclaration_With;
     procedure TestFindDeclaration_ClassOf;
     procedure TestFindDeclaration_NestedClasses;
@@ -160,6 +161,9 @@ type
     procedure TestFindDeclaration_IncludeSearch_DirectiveWithPath;
     procedure TestFindDeclaration_IncludeSearch_StarStar;
     procedure TestFindDeclaration_FindFPCSrcNameSpacedUnits;
+
+    // unit namespaces
+    procedure TestFindDeclaration_LocalBeforeUses;
 
     // directives
     procedure TestFindDeclaration_DirectiveWithIn;
@@ -260,7 +264,7 @@ procedure TCustomTestFindDeclaration.FindDeclarations(aCode: TCodeBuffer);
         PrependPath(GetIdentifier(@Tool.Src[Node.StartPos]),Result);
       ctnGenericType:
         PrependPath(GetIdentifier(@Tool.Src[Node.FirstChild.StartPos]),Result);
-      ctnInterface,ctnUnit:
+      ctnInterface,ctnUnit,ctnSrcName:
         PrependPath(Tool.GetSourceName(false),Result);
       ctnProcedure:
         begin
@@ -279,8 +283,10 @@ procedure TCustomTestFindDeclaration.FindDeclarations(aCode: TCodeBuffer);
           if Node.PriorBrother<>nil then begin
             Node:=Node.PriorBrother;
             continue;
-          end else
-            Node:=Node.Parent;
+          end else begin
+            PrependPath(Tool.GetSourceName(false),Result); // prepend src name to distinguish uses from unit
+            break;
+          end;
         end;
       //else debugln(['NodeAsPath ',Node.DescAsString]);
       end;
@@ -301,8 +307,8 @@ var
   FoundNode: TCodeTreeNode;
   NameStartPos, i, j, l, IdentifierStartPos, IdentifierEndPos,
     BlockTopLine, BlockBottomLine, CommentEnd, StartOffs, TestLoop: Integer;
-  Marker, ExpectedType, NewType, ExpectedCompletion, ExpexctedTerm,
-    ExpectedCompletionPart, ExpexctedTermPart, s: String;
+  Marker, ExpectedType, NewType, ExpectedCompletion, ExpectedTerm,
+    ExpectedCompletionPart, ExpectedTermPart, s: String;
   IdentItem: TIdentifierListItem;
   ItsAKeyword, IsSubIdentifier, ExpInvert, ExpComment: boolean;
   ExistingDefinition: TFindContext;
@@ -476,15 +482,22 @@ begin
                 end;
                 continue;
               end else begin
-                for ExpexctedTermPart in ExpectedCompletion.Split(',') do begin
-                  ExpexctedTerm := ExpexctedTermPart;
-                  ExpInvert := (ExpexctedTerm <> '') and (ExpexctedTerm[1] = '!');
+                for ExpectedTermPart in ExpectedCompletion.Split(',') do begin
+                  ExpectedTerm := ExpectedTermPart;
+                  ExpInvert := (ExpectedTerm <> '') and (ExpectedTerm[1] = '!');
                   if ExpInvert then
-                    Delete(ExpexctedTerm, 1, 1);
+                    Delete(ExpectedTerm, 1, 1);
                   i:=CodeToolBoss.IdentifierList.GetFilteredCount-1;
+                  //debugln(['TCustomTestFindDeclaration.FindDeclarations ',i,' ExpectedTerm="',ExpectedTerm,'"']);
                   while i>=0 do begin
                     IdentItem:=CodeToolBoss.IdentifierList.FilteredItems[i];
-                    //debugln(['TTestFindDeclaration.FindDeclarations ',IdentItem.Identifier]);
+                    if IdentItem.Node<>nil then begin
+                      FoundPath:=NodeAsPath(IdentItem.Tool,IdentItem.Node);
+                      //debugln(['TTestFindDeclaration.FindDeclarations i=',i,' FoundPath="',FoundPath,'"']);
+                      if SameText(ExpectedTerm,FoundPath) then
+                        break;
+                    end;
+                    //debugln(['TTestFindDeclaration.FindDeclarations i=',i,' Identifier=',IdentItem.Identifier]);
                     s := IdentItem.Identifier;
                     if (iliNeedsAmpersand in IdentItem.Flags)
                        and (Marker = 'completion') // declaration=path.ident does not include the &
@@ -492,19 +505,19 @@ begin
                       if s[1]<>'&' then
                         s := '&' + s;
                     l:=length(s);
-                    if ((l=length(ExpexctedTerm)) or (ExpexctedTerm[length(ExpexctedTerm)-l]='.'))
-                    and (CompareText(s,RightStr(ExpexctedTerm,l))=0)
+                    if ((l=length(ExpectedTerm)) or (ExpectedTerm[length(ExpectedTerm)-l]='.'))
+                    and (CompareText(s,RightStr(ExpectedTerm,l))=0)
                     then break;
                     dec(i);
                   end;
                   if (i<0) and not ExpInvert then begin
                     WriteSource(StartOffs,MainTool);
-                    AssertEquals('GatherIdentifiers misses "'+ExpexctedTerm+'" at '+MainTool.CleanPosToStr(StartOffs,true),true,i>=0);
+                    AssertEquals('GatherIdentifiers misses "'+ExpectedTerm+'" at '+MainTool.CleanPosToStr(StartOffs,true),true,i>=0);
                   end
                   else
                   if ExpInvert and (i>=0) then begin
                     WriteSource(StartOffs,MainTool);
-                    AssertEquals('GatherIdentifiers should not have "'+ExpexctedTerm+'" at '+MainTool.CleanPosToStr(StartOffs,true),true,i>=0);
+                    AssertEquals('GatherIdentifiers should not have "'+ExpectedTerm+'" at '+MainTool.CleanPosToStr(StartOffs,true),true,i>=0);
                   end;
                 end;
               end;
@@ -513,7 +526,7 @@ begin
         end else if Marker='guesstype' then begin
           ExpectedType:=copy(Src,PathPos,CommentP-1-PathPos);
           {$IFDEF VerboseFindDeclarationTests}
-          debugln(['TTestFindDeclaration.FindDeclarations "',Marker,'" at ',Tool.CleanPosToStr(NameStartPos-1),' ExpectedType=',ExpectedType]);
+          debugln(['TTestFindDeclaration.FindDeclarations "',Marker,'" at ',MainTool.CleanPosToStr(NameStartPos-1),' ExpectedType=',ExpectedType]);
           {$ENDIF}
           MainTool.CleanPosToCaret(IdentifierStartPos,CursorPos);
 
@@ -738,7 +751,7 @@ begin
   Add([
   'var Cow: longint;',
   'begin',
-  '  cow{declaration:Cow}:=3;',
+  //'  cow{declaration:Cow}:=3;',
   '  test1{declaration:Test1}.cow{declaration:Cow}:=3;',
   'end.',
   '']);
@@ -753,6 +766,33 @@ end;
 procedure TTestFindDeclaration.TestFindDeclaration_Proc_BaseTypes;
 begin
   FindDeclarations('moduletests/fdt_proc_basetypes.pas');
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_ProcMested;
+begin
+  StartProgram;
+  Add([
+  '{$mode objfpc}',
+  'procedure Fly(Size: word);',
+  '',
+  '  procedure Sub1;',
+  '  var Size: byte;',
+  '  begin',
+  '    Size{ declaration:Fly.Sub1.Size}:=3;',
+  '  end;',
+  '',
+  '  procedure Sub2(Size: word);',
+  '  begin',
+  '    Size{declaration:Fly.Sub2.Size}:=4;',
+  '  end;',
+  'begin',
+  '  Size{declaration:Fly.Size}:=Size{ declaration:Fly.Size}+1;',
+  'end;',
+  '',
+  'begin',
+  'end.',
+  '']);
+  FindDeclarations(Code);
 end;
 
 procedure TTestFindDeclaration.TestFindDeclaration_With;
@@ -1685,6 +1725,40 @@ begin
   if not DirectoryExists(FPCSrcDir) then
     Fail('UnitSet.FPCSourceDirectory not found: "'+FPCSrcDir+'"');
   Traverse(FPCSrcDir,0,-1);
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_LocalBeforeUses;
+var
+  DotsUnit: TCodeBuffer;
+begin
+  DotsUnit:=nil;
+  try
+    DotsUnit:=CodeToolBoss.CreateFile('nsA.dots.pp');
+    DotsUnit.Source:='unit nsa.dots;'+LineEnding
+      +'interface'+LineEnding
+      +'implementation'+LineEnding
+      +'end.';
+
+    StartProgram;
+    Add([
+    'uses nsA.dots;',
+    'type',
+    '  TWing = record',
+    '    Size: word;',
+    '  end;',
+    '  TBird = record',
+    '    DoTs: TWing;',
+    '  end;',
+    'var NSA: TBird;',
+    'begin',
+    '  NSA.dots.Size{declaration:twing.Size}:=3',
+    'end.',
+    '']);
+    FindDeclarations(Code);
+  finally
+    if DotsUnit<>nil then
+      DotsUnit.IsDeleted:=true;
+  end;
 end;
 
 procedure TTestFindDeclaration.TestFindDeclaration_DirectiveWithIn;

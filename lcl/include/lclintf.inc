@@ -423,6 +423,11 @@ procedure SendCachedLCLMessages;
 begin
 end;
 
+procedure SetDeviceScaleRatio(DC: HDC; const AScaleRatio: double);
+begin
+  WidgetSet.SetDeviceScaleRatio(DC, AScaleRatio);
+end;
+
 function SetCaretRespondToFocus(Handle: hWnd; ShowHideOnFocus: boolean):Boolean;
 begin
   Result := WidgetSet.SetCaretRespondToFocus(Handle,ShowHideOnFocus);

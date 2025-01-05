@@ -57,6 +57,7 @@ type
     fpdefCodeCacheNeedsUpdate,
     fpdefChainNeedsUpdate,
     fpdefCaptionNeedsUpdate,
+    fpdefButtonsNeedUpdate,
     fpdefValueControlsNeedsUpdate,
     fpdefInheritedControlsNeedsUpdate,
     fpdefTopicSettingUp,
@@ -475,8 +476,13 @@ begin
     UpdateCodeCache
   else if fpdefChainNeedsUpdate in FFlags then
     UpdateChain
-  else if fpdefCaptionNeedsUpdate in FFlags then
-    UpdateCaption
+  else if [fpdefButtonsNeedUpdate,fpdefCaptionNeedsUpdate]*FFlags<>[] then
+  begin
+    if fpdefButtonsNeedUpdate in FFlags then
+      UpdateButtons;
+    if fpdefCaptionNeedsUpdate in FFlags then
+      UpdateCaption;
+  end
   else if fpdefValueControlsNeedsUpdate in FFlags then
     UpdateValueControls
   else if fpdefInheritedControlsNeedsUpdate in FFlags then
@@ -986,11 +992,21 @@ procedure TFPDocEditor.UpdateButtons;
 var
   HasEdit: Boolean;
 begin
-  HasEdit:=(PageControl.ActivePage = ShortTabSheet)
-        or (PageControl.ActivePage = DescrTabSheet)
-        or (PageControl.ActivePage = SeeAlsoTabSheet)
-        or (PageControl.ActivePage = ErrorsTabSheet)
-        or (PageControl.ActivePage = TopicSheet);
+  if fUpdateLock>0 then begin
+    Include(FFlags,fpdefButtonsNeedUpdate);
+    exit;
+  end;
+  Exclude(FFlags,fpdefButtonsNeedUpdate);
+
+  HasEdit:=(fChain<>nil) and (fChain.Count>0)
+       and (TCodeHelpElement(fChain[0]).ElementName>'');
+  if HasEdit then
+    HasEdit:=(PageControl.ActivePage = ShortTabSheet)
+          or (PageControl.ActivePage = DescrTabSheet)
+          or (PageControl.ActivePage = SeeAlsoTabSheet)
+          or (PageControl.ActivePage = ErrorsTabSheet)
+          or (PageControl.ActivePage = TopicSheet);
+  //debugln(['TFPDocEditor.UpdateButtons Caption=',Caption,' Chain=',fChain<>nil,' Page=',DbgSName(PageControl.ActivePage),' HasEdit=',HasEdit]);
   BoldFormatButton.Enabled:=HasEdit;
   ItalicFormatButton.Enabled:=HasEdit;
   UnderlineFormatButton.Enabled:=HasEdit;
@@ -999,6 +1015,8 @@ begin
   InsertParagraphSpeedButton.Enabled:=HasEdit;
   InsertRemarkButton.Enabled:=HasEdit;
   InsertVarTagButton.Enabled:=HasEdit;
+  InsertPrintShortSpeedButton.Enabled:=HasEdit;
+  InsertURLTagSpeedButton.Enabled:=HasEdit;
 end;
 
 function TFPDocEditor.GetCurrentUnitName: string;
@@ -1178,7 +1196,7 @@ procedure TFPDocEditor.InvalidateChain;
 begin
   FreeAndNil(fChain);
   FFlags:=FFlags+[fpdefCodeCacheNeedsUpdate,
-      fpdefChainNeedsUpdate,fpdefCaptionNeedsUpdate,
+      fpdefChainNeedsUpdate,fpdefCaptionNeedsUpdate,fpdefButtonsNeedUpdate,
       fpdefValueControlsNeedsUpdate,fpdefInheritedControlsNeedsUpdate];
   IdleConnected:=true;
 end;
@@ -1230,7 +1248,10 @@ begin
   dec(fUpdateLock);
   if fUpdateLock<0 then LazTracer.RaiseGDBException('');
   if fUpdateLock=0 then begin
-    if fpdefCaptionNeedsUpdate in FFlags then UpdateCaption;
+    if fpdefButtonsNeedUpdate in FFlags then
+      UpdateButtons;
+    if fpdefCaptionNeedsUpdate in FFlags then
+      UpdateCaption;
   end;
 end;
 
@@ -1397,6 +1418,7 @@ procedure TFPDocEditor.Loaded;
 begin
   inherited Loaded;
   DescrSynEdit.ControlStyle:=DescrSynEdit.ControlStyle+[];
+  UpdateButtons;
 end;
 
 function TFPDocEditor.WriteNode(Element: TCodeHelpElement;
@@ -1583,9 +1605,9 @@ begin
   if i<0 then exit;
   //DebugLn(['TFPDocEditForm.CopyFromInheritedButtonClick ']);
   if ShortEdit.Text<>'' then begin
-    if IDEQuestionDialog('Confirm replace',
+    if IDEQuestionDialog(lisConfirmReplace,
       GetContextTitle(fChain[0])+' already contains the help:'+LineEnding+ShortEdit.Text,
-      mtConfirmation, [mrYes,'Replace',
+      mtConfirmation, [mrYes, lisReplace,
                        mrCancel]) <> mrYes then exit;
   end;
   LoadGUIValues(fChain[i]);
@@ -1602,7 +1624,7 @@ procedure TFPDocEditor.CreateButtonClick(Sender: TObject);
 begin
   if ((fChain=nil) or (fChain.Count=0))
   or (TCodeHelpElement(fChain[0]).ElementName='') then begin
-    IDEMessageDialog('Invalid Declaration','Please place the editor caret on an identifier. If this is a new unit, please save the file first.',
+    IDEMessageDialog(lisInvalidDeclaration, lisPleasePlaceTheEditorCaretOnAnIdentifierIfThisIsANe,
       mtError,[mbOK]);
     exit;
   end;

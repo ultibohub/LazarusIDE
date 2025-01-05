@@ -52,6 +52,7 @@ resourcestring
   lisBtnRename = '&Rename';
   lisRename2 = 'Rename ...';
   lisReplace = 'Replace';
+  lisConfirmReplace = 'Confirm Replace';
   lisBtnReplace = '&Replace';
   lisBtnDlgReplace = '&Replace ...';
   lisEdit = 'Edit';
@@ -1519,6 +1520,9 @@ resourcestring
 
   // open-dialog filters
   dlgFilterAll = 'All files';
+  lisInvalidDeclaration = 'Invalid Declaration';
+  lisPleasePlaceTheEditorCaretOnAnIdentifierIfThisIsANe = 'Please place the editor caret on an '
+    +'identifier. If this is a new unit, please save the file first.';
   dlgFilterXML = 'XML files';
   dlgFilterHTML = 'HTML files';
   dlgFilterPrograms = 'Programs';
@@ -5405,8 +5409,8 @@ resourcestring
     +'multiple times.';
   lisOverrideTheProjectOperatingSystemEGWin32LinuxDefau = 'Override the '
     +'project operating system. For example: win32 linux. Default: %s.';
-  lisOverrideTheProjectWidgetsetEGGtkGtk2QtWin32CarbonD = 'Override the '
-    +'project widgetset. For example: gtk gtk2 qt win32 carbon. Default: %s.';
+  lisOverrideTheProjectWidgetsetEGDefault = 'Override the project widgetset. ' +
+    'For example: %s. Default: %s.';
   lisOverrideTheProjectCpuEGI386X86_64PowerpcPowerpc_64 = 'Override the '
     +'project CPU. For example: i386 x86_64 powerpc powerpc_64. Default: %s.';
   lisOverrideTheDefaultCompilerEGPpc386Ppcx64PpcppcEtcD = 'Override the '
@@ -5474,12 +5478,10 @@ resourcestring
     +'%sProceed anyway?';
   lisRenamingAborted = 'Renaming aborted';
   lisRenamingConflict = 'Renaming conflict';
-  lisFileAlreadyExists = 'File '
-    + '"%s" already exists';
+  lisFileAlreadyExists = 'File "%s" already exists.';
   lisIdentifierWasAlreadyUsed = 'Identifier '
     + '"%s" was already used';
-  lisIdentifierCannotBeDotted = 'Identifier '
-    + '"%s" cannot be dotted';
+  lisIdentifierCannotBeDotted = 'Identifier "%s" cannot be dotted';
   lisIdentifierCannotBeEmpty = 'Identifier cannot be empty';
   lisIdentifierIsInvalid = 'Identifier '
     + '"%s" is invalid';

@@ -73,6 +73,7 @@ type
     class procedure DestroyHandle(const AWinControl: TWinControl); override;
     class procedure Invalidate(const AWinControl: TWinControl); override;
     class procedure AddControl(const AControl: TControl); override;
+    class function GetCanvasScaleFactor(const AControl: TControl): Double; override;
     class function  GetClientBounds(const AWincontrol: TWinControl; var ARect: TRect): Boolean; override;
     class function  GetClientRect(const AWincontrol: TWinControl; var ARect: TRect): Boolean; override;
     class function GetDesignInteractive(const AWinControl: TWinControl; AClientPos: TPoint): Boolean; override;
@@ -292,6 +293,15 @@ begin
   end;
 end;
 
+class function TQtWSWinControl.GetCanvasScaleFactor(const AControl: TControl
+  ): Double;
+begin
+  Result := 1;
+  if not WSCheckHandleAllocated(TWinControl(AControl), 'GetCanvasScaleFactor') then
+    Exit;
+  Result := QPaintDevice_devicePixelRatioF(QWidget_to_QPaintDevice(TQtWidget(TWinControl(AControl).Handle).Widget));
+end;
+
 class function TQtWSWinControl.GetClientBounds(const AWincontrol: TWinControl;
   var ARect: TRect): Boolean;
 begin
@@ -426,6 +436,9 @@ begin
   if not WSCheckHandleAllocated(AWincontrol, 'PaintTo') or (ADC = 0) then
     Exit;
 
+  if not AWinControl.Visible or not TQtWidget(AWinControl.Handle).getVisible then
+    exit;
+
   Widget := TQtWidget(AWinControl.Handle);
   ARect := Widget.getFrameGeometry;
 
@@ -530,7 +543,7 @@ var
 begin
   if not WSCheckHandleAllocated(AWincontrol, 'SetBounds') then
     Exit;
-  R := Rect(ALeft, ATop, AWidth, AHeight);
+  R := Bounds(ALeft, ATop, AWidth, AHeight);
 
   Box := nil;
   if Assigned(AWinControl.Parent) and
@@ -540,7 +553,7 @@ begin
   if Assigned(Box) and
     (Box.ChildOfComplexWidget = ccwScrollingWinControl) then
   begin
-    R := Rect(ALeft - TQtCustomControl(Box).horizontalScrollBar.getValue,
+    R := Bounds(ALeft - TQtCustomControl(Box).horizontalScrollBar.getValue,
       ATop - TQtCustomControl(Box).verticalScrollBar.getValue, AWidth, AHeight);
   end;
 
@@ -552,7 +565,7 @@ begin
     if Assigned(TQtMainWindow(AForm.Handle).ScrollArea) then
     begin
       Box := TQtMainWindow(AForm.Handle).ScrollArea;
-      R := Rect(ALeft - TQtWindowArea(Box).horizontalScrollBar.getValue,
+      R := Bounds(ALeft - TQtWindowArea(Box).horizontalScrollBar.getValue,
         ATop - TQtWindowArea(Box).verticalScrollBar.getValue, AWidth, AHeight);
     end;
   end;
@@ -565,7 +578,7 @@ begin
   with R do
   begin
     TQtWidget(AWinControl.Handle).move(Left, Top);
-    TQtWidget(AWinControl.Handle).resize(Right, Bottom);
+    TQtWidget(AWinControl.Handle).resize(Right - Left, Bottom - Top);
   end;
   TQtWidget(AWinControl.Handle).EndUpdate;
   {$IFDEF VerboseQtResize}

@@ -868,6 +868,18 @@ begin
   // todo
 end;
 
+procedure TQtWidgetSet.SetDeviceScaleRatio(DC: HDC; const AScaleRatio: double);
+var
+  QtDc: TQtDeviceContext absolute DC;
+begin
+  if IsValidDC(DC) and (QtDC.vImage <> nil) and (QtDC.vImage.Handle <> nil) then
+  begin
+    QPainter_end(QtDC.Widget);
+    QImage_setDevicePixelRatio(QtDC.vImage.Handle, AScaleRatio);
+    QPainter_begin(QtDC.Widget, QtDC.vImage.Handle);
+  end;
+end;
+
 procedure TQtWidgetSet.SetEventHandlerFlags(AHandler: PEventHandler;
   NewFlags: dword);
 var

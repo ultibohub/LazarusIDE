@@ -20,6 +20,7 @@ unit Win32WSDialogs;
 {$I win32defines.inc}
 
 {.$DEFINE VerboseTaskDialog}
+{.$define simulate_vistaf_filedialog_failure}
 
 interface
 
@@ -74,6 +75,13 @@ type
   end;
 
   { TWin32WSOpenDialog }
+{$ifdef simulate_vistaf_filedialog_failure}
+const
+  CLSID_FileOpenDialog                : TGUID = '{DC1C5A9C-E88A-4dde-A5A1-60F82A200000}';
+  CLSID_FileSaveDialog                : TGUID = '{C0B4E2F3-BA21-4773-8DBA-335EC9000000}';
+{$endif simulate_vistaf_filedialog_failure}
+
+type
 
   TWin32WSOpenDialog = class(TWSOpenDialog)
   public
@@ -185,7 +193,7 @@ var
 implementation
 
 uses
-  CommCtrl, TaskDlgEmulation;
+  CommCtrl, TaskDlgEmulation, contnrs;
 
 function SaveApplicationState: TApplicationState;
 begin
@@ -344,16 +352,6 @@ begin
     ACommonDialog.UserChoice := mrOK
   else
     ACommonDialog.UserChoice := mrCancel;
-end;
-
-function CanUseVistaDialogs(const AOpenDialog: TOpenDialog): Boolean;
-begin
-  {$IFnDEF DisableVistaDialogs}
-  Result := (WindowsVersion >= wvVista) and not (ofOldStyleDialog in AOpenDialog.Options);
-
-  {$ELSE}
-  Result := False;
-  {$ENDIF}
 end;
 
 
@@ -727,6 +725,8 @@ begin
     nMaxFile := FileNameBufferLen + 1; // Size in TCHARs
     lpfnHook := Windows.LPOFNHOOKPROC(@OpenFileDialogCallBack);
     Flags := GetFlagsFromOptions(AOpenDialog.Options);
+    if (ofExNoPlacesBar in AOpenDialog.OptionsEx) then
+      FlagsEx := OFN_EX_NOPLACESBAR;
     New(DialogRec);
     // new initializes the filename fields, because ansistring and widestring
     // are automated types.
@@ -779,6 +779,47 @@ end;
 
 { TWin32WSOpenDialog }
 
+var
+  XPStyleFallBackList: TFPObjectList = nil;
+
+procedure MaybeInitXPStyleFallBackList;
+begin
+  if not Assigned(XPStyleFallBackList) then
+    XPStyleFallBackList := TFPObjectList.Create(False); //don't free objects
+end;
+
+procedure FreeXPStyleFallBackList;
+begin
+  if Assigned(XPStyleFallBackList) then
+    FreeAndNil(XPStyleFallBackList);
+end;
+
+function IsXPStyleFallBack(const AOpenDialog: TOpenDialog): Boolean;
+var
+  Idx: Integer;
+begin
+  if not Assigned(XPStyleFallBackList) or not (ofUseXPStyleAsFallBack in AOpenDialog.OptionsEx) then
+    Exit(False);
+  Idx := XPStyleFallBackList.IndexOf(AOpenDialog);
+  Result := (Idx <> -1);
+end;
+
+function IsXPStyleFallBack(const AOpenDialog: TOpenDialog; out Idx: Integer): Boolean;
+begin
+  if not Assigned(XPStyleFallBackList) or not (ofUseXPStyleAsFallBack in AOpenDialog.OptionsEx) then
+    Exit(False);
+  Idx := XPStyleFallBackList.IndexOf(AOpenDialog);
+  Result := (Idx <> -1);
+end;
+
+function CanUseVistaDialogs(const AOpenDialog: TOpenDialog): Boolean;
+begin
+  {$IFnDEF DisableVistaDialogs}
+  Result := (WindowsVersion >= wvVista) and not (ofOldStyleDialog in AOpenDialog.Options);
+  {$ELSE}
+  Result := False;
+  {$ENDIF}
+end;
 
 class procedure TWin32WSOpenDialog.SetupVistaFileDialog(ADialog: IFileDialog; const AOpenDialog: TOpenDialog);
 var
@@ -985,36 +1026,71 @@ end;
 
 class function TWin32WSOpenDialog.CreateHandle(const ACommonDialog: TCommonDialog): THandle;
 var
-  Dialog: IFileOpenDialog;
+  Dialog: IFileDialog; //IFileOpenDialog;
+  HRes: HRESULT;
+  DlgType: TIID;
+  CLS_ID: TGUID;
+  AOpenDialog: TOpenDialog absolute ACommonDialog;
 begin
-  if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+  if CanUseVistaDialogs(AOpenDialog) then
   begin
-    if Succeeded(CoCreateInstance(CLSID_FileOpenDialog, nil, CLSCTX_INPROC_SERVER, IFileOpenDialog, Dialog)) and Assigned(Dialog) then
+    if (ACommonDialog is TSaveDialog) then
+    begin
+      CLS_ID := CLSID_FileSaveDialog;
+      DlgType := IFileSaveDialog;
+    end
+    else
+    begin
+      CLS_ID := CLSID_FileOpenDialog;
+      DlgType := IFileOpenDialog;
+    end;
+    HRes := CoCreateInstance(CLS_ID, nil, CLSCTX_INPROC_SERVER, DlgType, Dialog);
+    if Succeeded(HRes) and Assigned(Dialog) then
     begin
       Dialog._AddRef;
-      SetupVistaFileDialog(Dialog, TOpenDialog(ACommonDialog));
+      SetupVistaFileDialog(Dialog, AOpenDialog);
       Result := THandle(Dialog);
     end
     else
-      Result := INVALID_HANDLE_VALUE;
-  end
+    begin
+      if (ofUseXPStyleAsFallback in AOpenDialog.OptionsEx) then
+      begin
+        MaybeInitXPStyleFallBackList;
+        XPStyleFallbackList.Add(ACommonDialog);
+        //debugln(['TWin32WSOpenDialog.CreateHandle: Added ',DbgSName(AOpenDialog),' to XPStyleFallbackList']);
+        Result := CreateFileDialogHandle(AOpenDialog);
+      end
+      else
+        Result := INVALID_HANDLE_VALUE;
+    end;
+  end//CanUseVistaDialogs
   else
-    Result := CreateFileDialogHandle(TOpenDialog(ACommonDialog));
+    Result := CreateFileDialogHandle(AOpenDialog);
 end;
 
 class procedure TWin32WSOpenDialog.DestroyHandle(const ACommonDialog: TCommonDialog);
 var
   Dialog: IFileDialog;
+  Idx: Integer;
 begin
-  if ACommonDialog.Handle <> 0 then
-    if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+  if (ACommonDialog.Handle <> 0) and (ACommonDialog.Handle <> INVALID_HANDLE_VALUE) then
+  begin
+    if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) and not IsXPStyleFallBack(TOpenDialog(ACommonDialog), Idx) then
     begin
       Dialog := IFileDialog(ACommonDialog.Handle);
       Dialog._Release;
       Dialog := nil;
     end
     else
+    begin
+      if (Idx <> -1) then
+      begin
+        //debugln(['TWin32WSOpenDialog.CreateHandle: Removing ',DbgSName(ACommonDialog),' from XPStyleFallbackList']);
+        XPStyleFallBackList.Delete(Idx);
+      end;
       DestroyFileDialogHandle(ACommonDialog.Handle)
+    end;
+  end;
 end;
 
 class procedure TWin32WSOpenDialog.ShowModal(const ACommonDialog: TCommonDialog);
@@ -1031,7 +1107,7 @@ begin
       lInitialDir := TOpenDialog(ACommonDialog).InitialDir;
       if lInitialDir <> '' then
         SetCurrentDirUTF8(lInitialDir);
-      if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+      if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) and not IsXPStyleFallBack(TOpenDialog(ACommonDialog)) then
       begin
         Dialog := IFileOpenDialog(ACommonDialog.Handle);
         VistaDialogShowModal(Dialog, TOpenDialog(ACommonDialog));
@@ -1063,38 +1139,40 @@ end;
 { TWin32WSSaveDialog }
 
 class function TWin32WSSaveDialog.CreateHandle(const ACommonDialog: TCommonDialog): THandle;
-var
-  Dialog: IFileSaveDialog;
+//var
+//  Dialog: IFileSaveDialog;
 begin
-  if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
-  begin
-    if Succeeded(CoCreateInstance(CLSID_FileSaveDialog, nil, CLSCTX_INPROC_SERVER, IFileSaveDialog, Dialog))
-    and Assigned(Dialog) then
-    begin
-      Dialog._AddRef;
-      TWin32WSOpenDialog.SetupVistaFileDialog(Dialog, TOpenDialog(ACommonDialog));
-      Result := THandle(Dialog);
-    end
-    else
-      Result := INVALID_HANDLE_VALUE;
-  end
-  else
-    Result := CreateFileDialogHandle(TOpenDialog(ACommonDialog));
+  Result := TWin32WSOpenDialog.CreateHandle(ACommonDialog);
+  //if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+  //begin
+  //  if Succeeded(CoCreateInstance(CLSID_FileSaveDialog, nil, CLSCTX_INPROC_SERVER, IFileSaveDialog, Dialog))
+  //  and Assigned(Dialog) then
+  //  begin
+  //    Dialog._AddRef;
+  //    TWin32WSOpenDialog.SetupVistaFileDialog(Dialog, TOpenDialog(ACommonDialog));
+  //    Result := THandle(Dialog);
+  //  end
+  //  else
+  //    Result := INVALID_HANDLE_VALUE;
+  //end
+  //else
+  //  Result := CreateFileDialogHandle(TOpenDialog(ACommonDialog));
 end;
 
 class procedure TWin32WSSaveDialog.DestroyHandle(const ACommonDialog: TCommonDialog);
-var
-  Dialog: IFileDialog;
+//var
+//  Dialog: IFileDialog;
 begin
-  if ACommonDialog.Handle <> 0 then
-    if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
-    begin
-      Dialog := IFileDialog(ACommonDialog.Handle);
-      Dialog._Release;
-      Dialog := nil;
-    end
-    else
-      DestroyFileDialogHandle(ACommonDialog.Handle)
+  TWin32WSOpenDialog.DestroyHandle(ACommonDialog);
+  //if (ACommonDialog.Handle <> 0) and (ACommonDialog.Handle <> INVALID_HANDLE_VALUE) then
+  //  if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+  //  begin
+  //    Dialog := IFileDialog(ACommonDialog.Handle);
+  //    Dialog._Release;
+  //    Dialog := nil;
+  //  end
+  //  else
+  //    DestroyFileDialogHandle(ACommonDialog.Handle)
 end;
 
 class procedure TWin32WSSaveDialog.ShowModal(const ACommonDialog: TCommonDialog);
@@ -1103,7 +1181,7 @@ var
   lOldWorkingDir, lInitialDir: string;
   Dialog: IFileSaveDialog;
 begin
-  if ACommonDialog.Handle <> 0 then
+  if (ACommonDialog.Handle <> 0) and (ACommonDialog.Handle <> INVALID_HANDLE_VALUE) then
   begin
     State := SaveApplicationState;
     lOldWorkingDir := GetCurrentDirUTF8;
@@ -1111,7 +1189,7 @@ begin
       lInitialDir := TSaveDialog(ACommonDialog).InitialDir;
       if lInitialDir <> '' then
         SetCurrentDirUTF8(lInitialDir);
-      if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+      if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) and not IsXPStyleFallBack(TOpenDialog(ACommonDialog)) then
       begin
         Dialog := IFileSaveDialog(ACommonDialog.Handle);
         TWin32WSOpenDialog.VistaDialogShowModal(Dialog, TOpenDialog(ACommonDialog));
@@ -2055,4 +2133,7 @@ initialization
   else
     OpenFileNameSize := SizeOf(OPENFILENAME);
   InitTaskDialogIndirect;
+
+finalization
+  FreeXPStyleFallBackList
 end.
