@@ -399,8 +399,10 @@ begin
   {$ENDIF}
   ScreenDC := GetDC(0);
   try
-    ScreenInfo.PixelsPerInchX := GetDeviceCaps(ScreenDC, LOGPIXELSX);
-    ScreenInfo.PixelsPerInchY := GetDeviceCaps(ScreenDC, LOGPIXELSY);
+    ScreenInfo.PixelsPerInchX := Round(gdk_screen_get_resolution(gdk_screen_get_default));
+    // GetDeviceCaps(ScreenDC, LOGPIXELSX);
+    ScreenInfo.PixelsPerInchY := Round(gdk_screen_get_resolution(gdk_screen_get_default));
+    // GetDeviceCaps(ScreenDC, LOGPIXELSY);
     ScreenInfo.ColorDepth := GetDeviceCaps(ScreenDC, BITSPIXEL);
   finally
     ReleaseDC(0, ScreenDC);
@@ -483,19 +485,15 @@ begin
   if Assigned(FGtk3Application) then
   begin
     FGtk3Application^.quit;
+    {$IFDEF GTK3DEBUGCORE}
     AList := FGtk3Application^.get_windows;
     if Assigned(AList) then
     begin
-      {$IFDEF GTK3DEBUGCORE}
       DebugLn('TGtk3WidgetSet.Gtk3Destroy app Windows list ',dbgs(g_list_length(AList)));
-      {$ENDIF}
       g_list_free(AList);
     end else
-    begin
-      {$IFDEF GTK3DEBUGCORE}
       DebugLn('TGtk3WidgetSet.Gtk3Destroy app Windows list is null ');
-      {$ENDIF}
-    end;
+    {$ENDIF}
     FGtk3Application^.release;
     FGtk3Application^.unref;
     FGtk3Application := nil;

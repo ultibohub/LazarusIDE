@@ -423,9 +423,9 @@ procedure SendCachedLCLMessages;
 begin
 end;
 
-procedure SetDeviceScaleRatio(DC: HDC; const AScaleRatio: double);
+procedure SetCanvasScaleFactor(DC: HDC; const AScaleFactor: double);
 begin
-  WidgetSet.SetDeviceScaleRatio(DC, AScaleRatio);
+  WidgetSet.SetCanvasScaleFactor(DC, AScaleFactor);
 end;
 
 function SetCaretRespondToFocus(Handle: hWnd; ShowHideOnFocus: boolean):Boolean;

@@ -401,8 +401,14 @@ end;
 
 class function TGtk3WSCustomListBox.GetIndexAtXY(
   const ACustomListBox: TCustomListBox; X, Y: integer): integer;
+var
+  Widget: TGtk3ListBox;
 begin
   Result := -1;
+  if not WSCheckHandleAllocated(ACustomListBox, 'GetIndexAtXY') then
+    exit;
+  Widget := TGtk3ListBox(ACustomListBox.Handle);
+  Result := Widget.GetIndexAtXY(X, Y);
 end;
 
 class function  TGtk3WSCustomListBox.GetItemIndex(const ACustomListBox: TCustomListBox): integer;
@@ -417,14 +423,20 @@ class function TGtk3WSCustomListBox.GetItemRect(
   const ACustomListBox: TCustomListBox; Index: integer; var ARect: TRect
   ): boolean;
 begin
+  if not WSCheckHandleAllocated(ACustomListBox, 'GetItemRect') then
+    Exit;
   FillChar(ARect,SizeOf(ARect),0);
-  Result:=false;
+  ARect := TGtk3ListBox(ACustomListBox.Handle).GetItemRect(Index);
+  Result := True;
 end;
 
 class function TGtk3WSCustomListBox.GetScrollWidth(
   const ACustomListBox: TCustomListBox): Integer;
 begin
   Result := 0;
+  if not WSCheckHandleAllocated(ACustomListBox, 'GetScrollWidth') then
+    Exit;
+  Result := TGtk3ListBox(ACustomListBox.Handle).GetScrollWidth;
 end;
 
 class function  TGtk3WSCustomListBox.GetSelCount(const ACustomListBox: TCustomListBox): integer;

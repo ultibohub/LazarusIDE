@@ -213,11 +213,15 @@ type
     FvClipRect: TRect;
     FCurrentPen: TGtk3Pen;
     FBkMode: Integer;
+    FCanvasScaleFactor: double;
+    FXorMode: boolean;
     function GetOffset: TPoint;
+    function GetRasterOp: integer;
     procedure setBrush(AValue: TGtk3Brush);
     procedure SetFont(AValue: TGtk3Font);
     procedure SetOffset(AValue: TPoint);
     procedure setPen(AValue: TGtk3Pen);
+    procedure SetRasterOp(AValue: integer);
     procedure SetvImage(AValue: TGtk3Image);
     function SX(const x: double): Double;
     function SY(const y: double): Double;
@@ -227,9 +231,16 @@ type
     procedure ApplyFont;
     procedure ApplyPen;
     procedure FillAndStroke;
+    procedure SetCanvasScaleFactor(const AValue: double);
+    procedure SetXorMode(var xorSurface: Pcairo_surface_t; AMap: Tcairo_operator_t); // SetRasterOp
+    procedure ApplyXorDrawing(xorSurface: Pcairo_surface_t; AMap: Tcairo_operator_t); // after each paint
+  protected
+    FCairo: Pcairo_t;
+    FXorCairo: PCairo_t;
+    FXorSurface: Pcairo_surface_t;
+    property XorMode: boolean read FXorMode write FXorMode;
   public
     CairoSurface: Pcairo_surface_t;
-    pcr: Pcairo_t;
     Parent: PGtkWidget;
     Window: PGdkWindow;
     ParentPixmap: PGdkPixbuf;
@@ -242,6 +253,7 @@ type
     procedure DeleteObjects;
   public
     procedure drawPixel(x, y: Integer; AColor: TColor);
+    function pcr: Pcairo_t;
     function getPixel(x, y: Integer): TColor;
     procedure drawRect(x1, y1, w, h: Integer; const AFill, ABorder: Boolean);
     procedure drawRoundRect(x, y, w, h, rx, ry: Integer);
@@ -286,8 +298,10 @@ type
     property CurrentPen: TGtk3Pen read FCurrentPen write FCurrentPen;
     property CurrentRegion: TGtk3Region read FCurrentRegion;
     property CurrentTextColor: TColorRef read FCurrentTextColor write FCurrentTextColor;
+    property CanvasScaleFactor: double read FCanvasScaleFactor write SetCanvasScaleFactor;
     property Offset: TPoint read GetOffset write SetOffset;
     property OwnsSurface: Boolean read FOwnsSurface;
+    property RasterOp: integer read GetRasterOp write SetRasterOp; //automatically maps cairo_operator_t to winapi ROP.
     property vBrush: TGtk3Brush read FBrush write setBrush;
     property vClipRect: TRect read FvClipRect write FvClipRect;
     property vFont: TGtk3Font read FFont write SetFont;
@@ -459,6 +473,171 @@ begin
   R := (AColor and $FF) / 255;
   G := ((AColor shr 8) and $FF) / 255;
   B := ((AColor shr 16) and $FF) / 255;
+end;
+
+{Map winapi ROP to Tcairo_operator_t}
+function MapRasterOpToCairo(AValue: Integer): Tcairo_operator_t;
+begin
+  case AValue of
+    BLACKNESS,
+    R2_BLACK:
+      Result := CAIRO_OPERATOR_CLEAR;
+
+    SRCCOPY,
+    R2_COPYPEN:
+      Result := CAIRO_OPERATOR_SOURCE;
+
+    MERGEPAINT,
+    R2_MASKNOTPEN:
+      Result := CAIRO_OPERATOR_OUT;
+
+    SRCAND,
+    R2_MASKPEN:
+      Result := CAIRO_OPERATOR_IN;
+
+    SRCERASE,
+    R2_MASKPENNOT:
+      Result := CAIRO_OPERATOR_OUT;
+
+    R2_MERGENOTPEN:
+      Result := CAIRO_OPERATOR_OVER;
+
+    SRCPAINT,
+    R2_MERGEPEN:
+      Result := CAIRO_OPERATOR_OVER;
+
+    R2_MERGEPENNOT:
+      Result := CAIRO_OPERATOR_OVER;
+
+    R2_NOP:
+      Result := CAIRO_OPERATOR_DEST;
+
+    R2_NOT:
+      Result := CAIRO_OPERATOR_OUT;
+
+    NOTSRCCOPY,
+    R2_NOTCOPYPEN:
+      Result := CAIRO_OPERATOR_SOURCE;
+
+    PATPAINT,
+    R2_NOTMASKPEN:
+      Result := CAIRO_OPERATOR_XOR;
+
+    NOTSRCERASE,
+    R2_NOTMERGEPEN:
+      Result := CAIRO_OPERATOR_CLEAR;
+
+    DSTINVERT,
+    R2_NOTXORPEN:
+      Result := CAIRO_OPERATOR_XOR; //just for testing CAIRO_OPERATOR_DIFFERENCE;
+
+    WHITENESS,
+    R2_WHITE:
+      Result := CAIRO_OPERATOR_SCREEN;
+
+    SRCINVERT,
+    R2_XORPEN:
+      Result := CAIRO_OPERATOR_XOR;
+
+  else
+    Result := CAIRO_OPERATOR_OVER;
+  end;
+end;
+
+{Map cairo_operator_t to winapi ROP}
+function MapCairoRasterOpToRasterOp(AValue: Tcairo_operator_t): Integer;
+begin
+  case AValue of
+    CAIRO_OPERATOR_CLEAR:
+      Result := R2_BLACK;
+
+    CAIRO_OPERATOR_SOURCE:
+      Result := R2_COPYPEN;
+
+    CAIRO_OPERATOR_OVER:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_IN:
+      Result := R2_MASKPEN;
+
+    CAIRO_OPERATOR_OUT:
+      Result := R2_MASKPENNOT;
+
+    CAIRO_OPERATOR_ATOP:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_DEST:
+      Result := R2_NOP;
+
+    CAIRO_OPERATOR_DEST_OVER:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_DEST_IN:
+      Result := R2_MASKPEN;
+
+    CAIRO_OPERATOR_DEST_OUT:
+      Result := R2_MASKPENNOT;
+
+    CAIRO_OPERATOR_DEST_ATOP:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_XOR:
+      Result := R2_XORPEN;
+
+    CAIRO_OPERATOR_ADD:
+      Result := R2_MERGEPEN; // Similar to add-blend effect
+
+    CAIRO_OPERATOR_SATURATE:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_MULTIPLY:
+      Result := R2_MASKPEN;
+
+    CAIRO_OPERATOR_SCREEN:
+      Result := R2_WHITE;
+
+    CAIRO_OPERATOR_OVERLAY:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_DARKEN:
+      Result := R2_MASKPEN;
+
+    CAIRO_OPERATOR_LIGHTEN:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_COLOR_DODGE:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_COLOR_BURN:
+      Result := R2_MASKPEN;
+
+    CAIRO_OPERATOR_HARD_LIGHT:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_SOFT_LIGHT:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_DIFFERENCE:
+      Result := R2_NOTXORPEN;
+
+    CAIRO_OPERATOR_EXCLUSION:
+      Result := R2_XORPEN;
+
+    CAIRO_OPERATOR_HSL_HUE:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_HSL_SATURATION:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_HSL_COLOR:
+      Result := R2_MERGEPEN;
+
+    CAIRO_OPERATOR_HSL_LUMINOSITY:
+      Result := R2_MERGEPEN;
+
+  else
+    Result := R2_NOP; // Default fallback
+  end;
 end;
 
 { TGtk3Cursor }
@@ -720,7 +899,7 @@ begin
     begin
       { in points }
       //sz:=round(96*sz/PANGO_SCALE/72);//round(2.03*sz/PANGO_SCALE);
-      sz := MulDiv(PANGO_PIXELS(sz), 96{Screen.PixelsPerInch}, 72 )
+      sz := MulDiv(PANGO_PIXELS(sz), Round(gdk_screen_get_resolution(gdk_screen_get_default)), 72 );
     end;
 
     fLogFont.lfHeight:=sz;//round(sz/PANGO_SCALE);
@@ -1292,6 +1471,14 @@ begin
   Result := Point(Round(dx), Round(dy));
 end;
 
+function TGtk3DeviceContext.GetRasterOp: integer;
+begin
+  if FXorMode then
+    Result := R2_XORPEN
+  else
+    Result := MapCairoRasterOpToRasterOp(cairo_get_operator(pcr));
+end;
+
 procedure TGtk3DeviceContext.setBrush(AValue: TGtk3Brush);
 begin
   if Assigned(FBrush) then
@@ -1321,6 +1508,85 @@ begin
     FPen.Free;
   FPen := AValue;
 end;
+
+procedure TGtk3DeviceContext.SetRasterOp(AValue: integer);
+var
+  AMap: Tcairo_operator_t;
+begin
+  if MapCairoRasterOpToRasterOp(cairo_get_operator(pcr)) = AValue then
+    exit;
+  if FXorMode and ((AValue <> R2_XORPEN) and (AValue <> R2_NOTXORPEN)) then
+  begin
+    FXorMode := False;
+    ApplyXorDrawing(FXorSurface, cairo_get_operator(FXorCairo));
+    if FXorCairo <> nil then
+    begin
+      cairo_destroy(FXorCairo);
+      FXorCairo := nil;
+    end;
+    if FXorSurface <> nil then
+    begin
+      cairo_surface_destroy(FXorSurface);
+      FXorSurface := nil;
+    end;
+  end;
+  AMap := MapRasterOpToCairo(AValue);
+  if AMap <> CAIRO_OPERATOR_XOR then
+    cairo_set_operator(pcr, MapRasterOpToCairo(AValue))
+  else
+  begin
+    if FXorMode then
+      exit;
+    FXorMode := True;
+    if FXorSurface <> nil then
+    begin
+      if FXorCairo <> nil then
+        cairo_destroy(FXorCairo);
+      FXorCairo := nil;
+      cairo_surface_destroy(FXorSurface);
+      FXorSurface := nil;
+    end;
+    if AValue = R2_NOTXORPEN then
+      AMap := CAIRO_OPERATOR_OVER;
+    SetXorMode(FXorSurface, AMap);
+  end;
+end;
+
+procedure TGtk3DeviceContext.SetXorMode(var xorSurface: Pcairo_surface_t;
+  AMap: Tcairo_operator_t);
+var
+  R: TGdkRectangle;
+begin
+  if xorSurface <> nil  then
+    raise Exception.Create('TGtk3DeviceContext: xorSurface <> nil !');
+
+  gdk_cairo_get_clip_rectangle(FCairo, @R);
+
+  xorSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, R.width, R.height);
+  FXorCairo := cairo_create(xorSurface);
+  cairo_set_source_rgba(FXorCairo, 0, 0, 0, 0);
+  cairo_set_operator(FXorCairo, CAIRO_OPERATOR_CLEAR);
+  cairo_paint(FXorCairo);
+  cairo_set_operator(FXorCairo, AMap);
+end;
+
+procedure TGtk3DeviceContext.ApplyXorDrawing(xorSurface: Pcairo_surface_t;
+  AMap: Tcairo_operator_t);
+var
+  width, height: Integer;
+  AOperator: Tcairo_operator_t;
+begin
+  AOperator := cairo_get_operator(FCairo);
+  cairo_surface_flush(xorSurface);
+  cairo_set_source_surface(FCairo, xorSurface, 0, 0);
+  if aMap = CAIRO_OPERATOR_XOR then
+    cairo_set_operator(FCairo, CAIRO_OPERATOR_DIFFERENCE)
+  else
+    cairo_set_operator(FCairo, CAIRO_OPERATOR_OVER);
+  cairo_paint(FCairo);
+  cairo_set_operator(FCairo, AOperator);
+end;
+
 
 procedure TGtk3DeviceContext.SetvImage(AValue: TGtk3Image);
 begin
@@ -1389,6 +1655,7 @@ var
   w: Double;
 begin
   SetSourceColor(FCurrentPen.Color);
+  (*
   case FCurrentPen.Mode of
     pmBlack: begin
       SetSourceColor(clBlack);
@@ -1400,7 +1667,7 @@ begin
     end;
     pmCopy: cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
     pmXor: cairo_set_operator(pcr, CAIRO_OPERATOR_XOR);
-    pmNotXor: cairo_set_operator(pcr, CAIRO_OPERATOR_XOR);
+    pmNotXor: cairo_set_operator(pcr, CAIRO_OPERATOR_DIFFERENCE);
     {pmNop,
     pmNot,
     pmCopy,
@@ -1416,6 +1683,7 @@ begin
     else
       cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
   end;
+  *)
 
   if FCurrentPen.Cosmetic then
     cairo_set_line_width(pcr, 1.0)
@@ -1456,6 +1724,7 @@ begin
     pjsBevel: cairo_set_line_join(pcr, CAIRO_LINE_JOIN_BEVEL);
     pjsMiter: cairo_set_line_join(pcr, CAIRO_LINE_JOIN_MITER);
   end;
+
 end;
 
 constructor TGtk3DeviceContext.Create(AWidget: PGtkWidget;
@@ -1472,6 +1741,8 @@ begin
      ' FromPaintEvent:',BoolToStr(APaintEvent),' )');
   {$endif}
   inherited Create;
+  FXorSurface := nil;
+  FCanvasScaleFactor := 1;
   FvClipRect := Rect(0, 0, 0, 0);
   Window := nil;
   Parent := nil;
@@ -1501,7 +1772,7 @@ begin
     ACairo := gdk_cairo_create(gdk_get_default_root_window);
     gdk_cairo_get_clip_rectangle(ACairo, @ARect);
     CairoSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ARect.width, ARect.height);
-    pcr := cairo_create(CairoSurface);
+    FCairo := cairo_create(CairoSurface);
 
     ParentPixmap := gdk_pixbuf_get_from_surface(CairoSurface, 0, 0, ARect.width, ARect.height);
     FOwnsSurface := True;
@@ -1515,18 +1786,18 @@ begin
       H := gtk_widget_get_allocated_height(AWidget);
       if W <= 0 then W := 1;
       if H <= 0 then H := 1;
-      pcr := gdk_cairo_create(gtk_widget_get_window(AWidget));
+      FCairo := gdk_cairo_create(gtk_widget_get_window(AWidget));
     end else
     begin
       W := gtk_widget_get_allocated_width(AWidget);
       H := gtk_widget_get_allocated_height(AWidget);
       if W <= 0 then W := 1;
       if H <= 0 then H := 1;
-      pcr := gdk_cairo_create(gtk_widget_get_window(AWidget));
+      FCairo := gdk_cairo_create(gtk_widget_get_window(AWidget));
     end;
   end;
   if not FOwnsSurface then
-    CairoSurface := cairo_get_target(pcr);
+    CairoSurface := cairo_get_target(FCairo);
   CreateObjects;
   (*
   FRopMode := R2_COPYPEN;
@@ -1546,6 +1817,8 @@ begin
      ' FromPaintEvent:',BoolToStr(APaintEvent),' )');
   {$endif}
   inherited Create;
+  FXorSurface := nil;
+  FCanvasScaleFactor := 1;
   FvClipRect := Rect(0, 0, 0, 0);
   Parent := nil;
   ParentPixmap := nil;
@@ -1557,10 +1830,10 @@ begin
   FCurrentTextColor := clBlack;
   //AWindow^.get_geometry(@x, @y, @w, @h);
   // ParentPixmap := gdk_pixbuf_get_from_window(AWindow, x, y, w, h);
-  pcr := gdk_cairo_create(AWindow);
+  FCairo := gdk_cairo_create(AWindow);
   // gdk_cairo_set_source_pixbuf(Widget, ParentPixmap, 0, 0);
-  gdk_cairo_set_source_window(pcr, AWindow, 0, 0);
-  CairoSurface := cairo_get_target(pcr);
+  gdk_cairo_set_source_window(FCairo, AWindow, 0, 0);
+  CairoSurface := cairo_get_target(FCairo);
   CreateObjects;
 end;
 
@@ -1575,6 +1848,8 @@ begin
      ' FromPaintEvent:',BoolToStr(True),' )');
   {$endif}
   inherited Create;
+  FXorSurface := nil;
+  FCanvasScaleFactor := 1;
   FOwnsCairo := False;
   Window := nil;
   Parent := AWidget;
@@ -1584,8 +1859,8 @@ begin
   FCurrentTextColor := clBlack;
   gdk_cairo_get_clip_rectangle(ACairo, @AGdkRect);
   FvClipRect := RectFromGdkRect(AGdkRect);
-  pcr := ACairo;
-  CairoSurface := cairo_get_target(pcr);
+  FCairo := ACairo;
+  CairoSurface := cairo_get_target(FCairo);
   CreateObjects;
 end;
 
@@ -1595,14 +1870,25 @@ begin
     DebugLn('TGtk3DeviceContext.Destroy ',dbgHex(PtrUInt(Self)));
   {$endif}
   DeleteObjects;
-  if FOwnsCairo and (pcr <> nil) then
-    cairo_destroy(pcr);
+
+  if FXorMode then
+    RasterOp := R2_COPYPEN;
+
+  if FOwnsCairo and (FCairo <> nil) then
+    cairo_destroy(FCairo);
+
+  if FXorCairo <> nil then
+  begin
+    //never should happen
+    cairo_destroy(FXorCairo);
+    FXorCairo := nil;
+  end;
   if (ParentPixmap <> nil) then
     g_object_unref(ParentPixmap);
   if FOwnsSurface and (CairoSurface <> nil) then
     cairo_surface_destroy(CairoSurface);
   Parent := nil;
-  pcr := nil;
+  FCairo := nil;
   ParentPixmap := nil;
   CairoSurface := nil;
   Window := nil;
@@ -1625,12 +1911,12 @@ begin
   FPen.Color := clBlack;
   FCurrentPen := FPen;
   FCurrentBrush := FBrush;
-  FFont := TGtk3Font.Create(pcr, Parent);
+  FFont := TGtk3Font.Create(FCairo, Parent);
   FCurrentFont := FFont;
   FvImage := TGtk3Image.Create(nil, 1, 1, 8, CAIRO_FORMAT_ARGB32);
   FCurrentImage := FvImage;
 
-  cairo_get_matrix(pcr, @Matrix);
+  cairo_get_matrix(FCairo, @Matrix);
   // widget with menu or other non-client exclusions have offset in trasform matrix
   fncOrigin:=Point(round(Matrix.x0),round(Matrix.y0));
 end;
@@ -1655,6 +1941,13 @@ begin
   cairo_move_to(pcr, x - PixelOffset, y - PixelOffset);
   cairo_line_to(pcr, x + PixelOffset, y + PixelOffset);
   cairo_stroke(pcr);
+end;
+
+function TGtk3DeviceContext.pcr: Pcairo_t;
+begin
+  Result := FXorCairo;
+  if Result = nil then
+    Result := FCairo;
 end;
 
 function TGtk3DeviceContext.getPixel(x, y: Integer): TColor;
@@ -2147,7 +2440,9 @@ begin
 
   Context:=w^.get_style_context;
   path:=w^.get_path;
-  gtk_style_context_set_path (context, path);
+  //it is wrong to call gtk_style_context_set_path here. Zeljan.
+  //https://docs.gtk.org/gtk3/method.StyleContext.set_path.html
+  //gtk_style_context_set_path (context, path);
   gtk_style_context_set_state(context,(* gtk_widget_path_iter_get_state (path, -1)*) [TGtkStateFlagsIdxMinValue..TGtkStateFlagsIdxMaxValue]);
   gtk_style_context_set_state(context, [GTK_STATE_FLAG_FOCUSED, GTK_STATE_FLAG_PRELIGHT]);
 
@@ -2356,8 +2651,11 @@ end;
 procedure TGtk3DeviceContext.SetImage(AImage: TGtk3Image);
 var
   APixBuf: PGdkPixbuf;
+  AXor: PCairo_t;
 begin
   FCurrentImage := AImage;
+  //See what cairo is destroyed !
+  AXor := FXorCairo;
   cairo_destroy(pcr);
   APixBuf := AImage.Handle;
   if not Gtk3IsGdkPixbuf(APixBuf) then
@@ -2373,12 +2671,13 @@ begin
   *)
   if FOwnsSurface and (CairoSurface <> nil) then
     cairo_surface_destroy(CairoSurface);
+
   CairoSurface := cairo_image_surface_create_for_data(APixBuf^.pixels,
                                                 AImage.Format,
                                                 APixBuf^.get_width,
                                                 APixBuf^.get_height,
                                                 APixBuf^.rowstride);
-  pcr := cairo_create(CairoSurface);
+  FCairo := cairo_create(CairoSurface);
   FOwnsSurface := true;
 end;
 
@@ -2409,6 +2708,18 @@ begin
   cairo_set_antialias(pcr, caa[aamode]);
 end;
 
+procedure TGtk3DeviceContext.SetCanvasScaleFactor(const AValue: double);
+var
+  matrix: Tcairo_matrix_t;
+begin
+  if FCanvasScaleFactor <> AValue then
+  begin
+    FCanvasScaleFactor := AValue;
+    cairo_get_matrix(pcr, @matrix);
+    cairo_matrix_scale(@matrix, FCanvasScaleFactor, FCanvasScaleFactor);
+    cairo_set_matrix(pcr, @matrix);
+  end;
+end;
 
 //various routines for text
 

@@ -1186,6 +1186,13 @@ begin
   end;
 end;
 
+procedure TGtk3WidgetSet.SetCanvasScaleFactor(DC: HDC; const AScaleFactor: double);
+var
+  Gtk3DC: TGtk3DeviceContext absolute DC;
+begin
+  if (Gtk3DC <>  nil) then
+    gtk3DC.CanvasScaleFactor := AScaleFactor;
+end;
 
 //##apiwiz##eps##   // Do not remove, no wizard declaration after this line
 

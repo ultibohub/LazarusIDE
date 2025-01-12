@@ -1191,10 +1191,10 @@ begin
     BlockLength:=64*1024;
     TotalBytesRead := 0;
     repeat
-    SetLength(Buf, TotalBytesRead + BlockLength);
-    BytesRead := FS.Read(Buf[TotalBytesRead+1], BlockLength);
-    TotalBytesRead:=TotalBytesRead+BytesRead;
-    until BytesRead <= BlockLength;
+      SetLength(Buf, TotalBytesRead + BlockLength);
+      BytesRead := FS.Read(Buf[TotalBytesRead+1], BlockLength);
+      TotalBytesRead:=TotalBytesRead+BytesRead;
+    until BytesRead <= 0;
     SetLength(Buf, TotalBytesRead);
   finally
     FS.Free;
@@ -2050,7 +2050,8 @@ begin
     TDbgThread(ThreadToPause) := it.Current;
     if ThreadToPause.FHasExited then begin
       Process.RemoveThread(ThreadToPause.ID); // TODO: postpone ?
-      ThreadToPause.Free;
+      if ThreadToPause <> AThread then
+        ThreadToPause.Free;
     end;
     it.Next;
   end;

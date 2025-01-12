@@ -4029,6 +4029,8 @@ procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
   begin
     aList.Add('lx106');
     aList.Add('lx6');
+    aList.Add('lx7');
+    aList.Add('lx7hf');
   end;
 
   procedure LoongArch64;
@@ -4039,6 +4041,16 @@ procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
   procedure Riscv32;
   begin
     aList.Add('RISCV32');
+    aList.Add('rv32imac');
+    aList.Add('rv32ima');
+    aList.Add('rv32im');
+    aList.Add('rv32i');
+    aList.Add('rv32e');
+    aList.Add('rv32imc');
+    aList.Add('rv32imafdc');
+    aList.Add('rv32imafd');
+    aList.Add('rv32ec');
+    aList.Add('rv32gc');
   end;
 
   procedure Riscv64;

@@ -332,11 +332,27 @@ end;
 
 function TGtk3WidgetSet.CreateCaret(Handle: HWND; Bitmap: hBitmap; width,
   Height: Integer): Boolean;
+var
+  Caret: TGtk3Caret;
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.CreateCaret not implemented ...');
-  {$ENDIF}
-  Result := inherited CreateCaret(Handle, Bitmap, width, Height);
+  Result := False;
+  if Handle = 0 then
+    exit;
+  Widget := TGtk3Widget(Handle);
+  if Widget = nil then
+    exit;
+
+  //if caret already exist for this handle destroy it.
+  DestroyCaret(Handle);
+  GtkWidget := Widget.GetContainerWidget;
+
+  //TODO: TGtk3Caret Bitmap
+  Caret := TGtk3Caret.Create(GtkWidget, Width, Height);
+  Caret.RespondToFocus := True;
+  g_object_set_data(PGObject(GtkWidget), 'gtk3-caret', Caret);
+  Result := True;
 end;
 
 function TGtk3WidgetSet.CreateCompatibleBitmap(DC: HDC; Width, Height: Integer
@@ -531,11 +547,26 @@ begin
 end;
 
 function TGtk3WidgetSet.DestroyCaret(Handle: HWND): Boolean;
+var
+  Caret: TGtk3Caret;
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.DestroyCaret not implemented ...');
-  {$ENDIF}
-  Result:=inherited DestroyCaret(Handle);
+  Result := False;
+  if Handle = 0 then
+    exit;
+  Widget := TGtk3Widget(Handle);
+  if Widget = nil then
+    exit;
+  GtkWidget := Widget.GetContainerWidget;
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if Assigned(Caret) then
+  begin
+    Caret.RespondToFocus := False;
+    Caret.Free;
+    g_object_set_data(PGObject(GtkWidget), 'gtk3-caret', nil);
+    Result := True;
+  end;
 end;
 
 function TGtk3WidgetSet.DestroyCursor(Handle: HCURSOR): Boolean;
@@ -706,12 +737,12 @@ var
         theRect.Bottom := theRect.Top + AP.cY;
         if (Flags and DT_VCENTER) > 0 then
         begin
-          OffsetRect(theRect, 0, ((Rect.Bottom - Rect.Top) - (theRect.Bottom - theRect.Top)) div 2);
+          Types.OffsetRect(theRect, 0, ((Rect.Bottom - Rect.Top) - (theRect.Bottom - theRect.Top)) div 2);
         end
         else
         if (Flags and DT_BOTTOM) > 0 then
         begin
-          OffsetRect(theRect, 0, (Rect.Bottom - Rect.Top) - (theRect.Bottom - theRect.Top));
+          Types.OffsetRect(theRect, 0, (Rect.Bottom - Rect.Top) - (theRect.Bottom - theRect.Top));
         end;
       end;
     end
@@ -760,9 +791,9 @@ var
     if not CalcRect then
       case LeftOffset of
         DT_CENTER:
-          OffsetRect(theRect, (Rect.Right - theRect.Right) div 2, 0);
+          Types.OffsetRect(theRect, (Rect.Right - theRect.Right) div 2, 0);
         DT_RIGHT:
-          OffsetRect(theRect, Rect.Right - theRect.Right, 0);
+          Types.OffsetRect(theRect, Rect.Right - theRect.Right, 0);
       end;
   end;
 
@@ -1749,11 +1780,24 @@ begin
 end;
 
 function TGtk3WidgetSet.HideCaret(hWnd: HWND): Boolean;
+var
+  Caret: TGtk3Caret;
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.HideCaret not implemented ...');
-  {$ENDIF}
-  Result:=inherited HideCaret(hWnd);
+  Result := False;
+  if hWnd = 0 then
+    exit;
+  Widget := TGtk3Widget(hWnd);
+  if Widget = nil then
+    exit;
+  GtkWidget := Widget.GetContainerWidget;
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if Assigned(Caret) then
+  begin
+    Caret.Hide;
+    Result := True;
+  end;
 end;
 
 function TGtk3WidgetSet.GetActiveWindow: HWND;
@@ -1813,20 +1857,45 @@ begin
 end;
 
 function TGtk3WidgetSet.GetCaretPos(var lpPoint: TPoint): Boolean;
+var
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
+  Caret: TGtk3Caret;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.GetCaretPos not implemented ...');
-  {$ENDIF}
-  Result:=inherited GetCaretPos(lpPoint);
+  Result := False;
+  Widget := TGtk3Widget(GetFocus);
+  if Widget = nil then
+    exit;
+  GtkWidget := TGtk3Widget(Widget).getContainerWidget;
+  if not Assigned(GtkWidget) then
+    Exit;
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if not Assigned(Caret) then
+    Exit;
+  lpPoint.X := Caret.PosX;
+  lpPoint.Y := Caret.PosY;
+  Result := True;
 end;
 
 function TGtk3WidgetSet.GetCaretRespondToFocus(handle: HWND;
   var ShowHideOnFocus: boolean): Boolean;
+var
+  GtkWidget: PGtkWidget;
+  Caret: TGtk3Caret;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.GetCaretPosRespondToFocus not implemented ...');
-  {$ENDIF}
-  Result:=inherited GetCaretRespondToFocus(handle, ShowHideOnFocus);
+  Result := False;
+  if Handle = 0 then
+    exit;
+
+  GtkWidget := TGtk3Widget(handle).getContainerWidget;
+  if not Assigned(GtkWidget) then
+    Exit;
+
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if not Assigned(Caret) then
+    Exit;
+  ShowHideOnFocus := Caret.RespondToFocus;
+  Result := True;
 end;
 
 function TGtk3WidgetSet.GetCharABCWidths(DC: HDC; p2, p3: UINT; const ABCStructs
@@ -2085,6 +2154,8 @@ var
   w,w_mm,h,h_mm:gint;
   rr:double;
   pscr:PGdkScreen;
+  aMonitorRect: TGdkRectangle;
+  AMonitor: PGdkMonitor;
 begin
   (*  MONITOR_DPI_TYPE = (
     MDT_EFFECTIVE_DPI = 0,
@@ -2093,19 +2164,10 @@ begin
     MDT_DEFAULT = MDT_EFFECTIVE_DPI);
   TMonitorDpiType = MONITOR_DPI_TYPE;
   *)
-  pscr:=TGdkScreen.get_default;
-  w:=pscr^.get_width;
-  w_mm:=pscr^.get_width_mm;
-  h:=pscr^.get_height;
-  h_mm:=pscr^.get_height_mm;
-
-  dpiX:=round(25.4*w/w_mm);
-  dpiY:=round(25.4*h/h_mm);
-
-  rr:=TGdkScreen.get_default^.get_resolution();
-
-  Result:=0;
-  //Result:=inherited GetDpiForMonitor(hmonitor, dpiType, dpiX, dpiY);
+  // MDT_EFFECTIVE_DPI
+  dpiX := Round(gdk_screen_get_resolution(gdk_screen_get_default));
+  dpiY := dpiX;
+  Result := 0;
 end;
 
 function TGtk3WidgetSet.GetFocus: HWND;
@@ -2348,11 +2410,13 @@ begin
 end;
 
 function TGtk3WidgetSet.GetROP2(DC: HDC): Integer;
+var
+  GtkDC: TGtk3DeviceContext absolute DC;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.GetROP2 not implemented ...');
-  {$ENDIF}
-  Result := inherited GetROP2(DC);
+  Result := R2_COPYPEN;
+  if not IsValidDC(DC) then
+    exit;
+  Result := GtkDC.RasterOp;
 end;
 
 function TGtk3WidgetSet.GetScrollBarSize(Handle: HWND; BarKind: Integer
@@ -3477,28 +3541,56 @@ begin
 end;
 
 function TGtk3WidgetSet.SetCaretPos(X, Y: Integer): Boolean;
+var
+  Widget: TGtk3Widget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SetCaretPos not implemented ...');
-  {$ENDIF}
-  Result:=inherited SetCaretPos(X, Y);
+  Widget := TGtk3Widget(GetFocus);
+  if Widget = nil then
+    exit;
+  Result := SetCaretPosEx(HWND(Widget),X,Y);
 end;
 
 function TGtk3WidgetSet.SetCaretPosEx(Handle: HWnd; X, Y: Integer): Boolean;
+var
+  Caret: TGtk3Caret;
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SetCaretPosEx not implemented ...');
-  {$ENDIF}
-  Result:=inherited SetCaretPosEx(Handle, X, Y);
+  Result := False;
+  if Handle = 0 then
+    exit;
+  Widget := TGtk3Widget(Handle);
+  if Widget = nil then
+    exit;
+  GtkWidget := Widget.GetContainerWidget;
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if Assigned(Caret) then
+  begin
+    Caret.SetPosition(X, Y);
+    Result := True;
+  end;
 end;
 
 function TGtk3WidgetSet.SetCaretRespondToFocus(handle: HWND;
   ShowHideOnFocus: boolean): Boolean;
+var
+  Caret: TGtk3Caret;
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SetCaretRespondToFocus not implemented ...');
-  {$ENDIF}
-  Result:=inherited SetCaretRespondToFocus(handle, ShowHideOnFocus);
+  Result := False;
+  if handle = 0 then
+    exit;
+  Widget := TGtk3Widget(Handle);
+  if Widget = nil then
+    exit;
+  GtkWidget := Widget.GetContainerWidget;
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if Assigned(Caret) then
+  begin
+    Caret.RespondToFocus := ShowHideOnFocus;
+    Result := True;
+  end;
 end;
 
 function TGtk3WidgetSet.SetCursor(ACursor: HCURSOR): HCURSOR;
@@ -3602,11 +3694,14 @@ begin
 end;
 
 function TGtk3WidgetSet.SetROP2(DC: HDC; Mode: Integer): Integer;
+var
+  GtkDC: TGtk3DeviceContext absolute DC;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SetROP2 not implemented ...');
-  {$ENDIF}
-  Result:=inherited SetROP2(DC, Mode);
+  Result := R2_COPYPEN;
+  if not IsValidDC(DC) then
+    exit;
+  Result := GtkDC.RasterOp;
+  GtkDC.RasterOp := Mode;
 end;
 
 function TGtk3WidgetSet.SetScrollInfo(Handle: HWND; SBStyle: Integer;
@@ -3899,11 +3994,24 @@ begin
 end;
 
 function TGtk3WidgetSet.ShowCaret(hWnd: HWND): Boolean;
+var
+  Caret: TGtk3Caret;
+  Widget: TGtk3Widget;
+  GtkWidget: PGtkWidget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.ShowCaret not implemented ...');
-  {$ENDIF}
-  Result:=inherited ShowCaret(hWnd);
+  Result := False;
+  if hWnd = 0 then
+    exit;
+  Widget := TGtk3Widget(hWnd);
+  if Widget = nil then
+    exit;
+  GtkWidget := Widget.GetContainerWidget;
+  Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
+  if Assigned(Caret) then
+  begin
+    Caret.Show;
+    Result := True;
+  end;
 end;
 
 function TGtk3WidgetSet.ShowScrollBar(Handle: HWND; wBar: Integer;
@@ -4001,6 +4109,11 @@ begin
   {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
   DebugLn('WARNING: TGtk3WidgetSet.StretchMaskBlt not implemented ...');
   {$ENDIF}
+  if Assigned(SrcContext.pcr) and SrcContext.OwnsSurface then
+  begin
+    Width := Round(Width / SrcContext.CanvasScaleFactor);
+    Height := Round(Height / SrcContext.CanvasScaleFactor);
+  end;
   ATargetRect := Rect(X, Y, Width + X, Height + Y);
   ASrcRect := Rect(XSrc, YSrc, SrcWidth + XSrc, SrcHeight + YSrc);
 

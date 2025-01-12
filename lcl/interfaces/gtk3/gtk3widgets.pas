@@ -552,7 +552,10 @@ type
   public
     function GetSelCount: Integer;
     function GetSelection: PGtkTreeSelection;
+    function GetItemRect(const AIndex: integer): TRect;
+    function GetIndexAtXY(const X, Y: integer): integer;
     function GetItemSelected(const AIndex: Integer): Boolean;
+    function GetScrollWidth: integer;
     procedure SelectItem(const AIndex: Integer; ASelected: Boolean);
     procedure SetTopIndex(const AIndex: Integer);
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
@@ -893,7 +896,7 @@ function Gtk3WidgetEvent(widget: PGtkWidget; event: PGdkEvent; data: GPointer): 
 
 implementation
 
-uses gtk3int,imglist,lclproc;
+uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int,imglist,lclproc;
 
 const
   GDK_DEFAULT_EVENTS_MASK = [
@@ -2029,6 +2032,10 @@ var
   UTF8Char: TUTF8Char;
   AChar: Char;
   IsArrowKey: Boolean;
+  TempWidget: HWND;
+  {$IFDEF GTK3DEBUGKEYPRESS}
+  Info: PTypeInfo;
+  {$ENDIF}
 begin
   //TODO: finish LCL messaging
   Result := False;
@@ -2036,6 +2043,13 @@ begin
   FillChar(Msg{%H-}, SizeOf(Msg), 0);
   AEventString := AEvent.string_;
 
+  TempWidget := HwndFromGtkWidget(Sender);
+  {$IFDEF GTK3DEBUGKEYPRESS}
+  if TempWidget = 0 then
+    writeln('***** warning: no gtk3widget ! *****')
+  else
+     writeln('GtkEventKey: Gtk3Widget ',dbgsName(TGtk3Widget(TempWidget)));
+  {$ENDIF}
   if gdk_keyval_is_lower(AEvent.keyval) then
     KeyValue := Word(gdk_keyval_to_upper(AEvent.keyval))
   else
@@ -2081,11 +2095,12 @@ begin
   IsArrowKey := (AEventString='') and ((ACharCode = VK_UP) or (ACharCode = VK_DOWN) or (ACharCode = VK_LEFT) or (ACharCode = VK_RIGHT));
 
   {$IFDEF GTK3DEBUGKEYPRESS}
+  Info := TypeInfo(TGdkModifierType);
   if AKeyPress then
-    writeln('EVENT KeyPress: ',dbgsName(LCLObject),' Dump state=',AEvent.state,' keyvalue=',KeyValue,' modifier=',AEvent.Bitfield0.is_modifier,
-    ' KeyValue ',KeyValue,' MODIFIERS ',LCLModifiers,' CharCode ',ACharCode,' EAT ',EatArrowKeys(ACharCode))
+    writeln('EVENT KeyPress: ',dbgsName(LCLObject),' Dump state=',SetToString(Info, LongInt(AEvent.state), True),' keyvalue=',KeyValue,' modifier=',AEvent.Bitfield0.is_modifier,
+    ' KeyValue ',KeyValue,' MODIFIERS ',LCLModifiers,' CharCode ',ACharCode,' EAT ',EatArrowKeys(ACharCode),' Window ? ',Sender^.window = GetWindow)
   else
-    writeln('EVENT KeyRelease: ',dbgsName(LCLObject),' Dump state=',AEvent.state,' keyvalue=',KeyValue,' modifier=',AEvent.Bitfield0.is_modifier,
+    writeln('EVENT KeyRelease: ',dbgsName(LCLObject),' Dump state=',SetToString(Info, LongInt(AEvent.state), True),' keyvalue=',KeyValue,' modifier=',AEvent.Bitfield0.is_modifier,
     ' KeyValue ',KeyValue,' MODIFIERS ',LCLModifiers,' CharCode ',ACharCode,
     ' EAT ',EatArrowKeys(ACharCode));
   {$ENDIF}
@@ -2104,15 +2119,15 @@ begin
     if not CanSendLCLMessage then
       exit;
 
-    if (DeliverMessage(Msg, True) <> 0) or (Msg.CharCode = VK_UNKNOWN) or (IsArrowKey{EatArrowKeys(ACharCode)}) then
+    if (DeliverMessage(Msg, True) <> 0) or (Msg.CharCode = VK_UNKNOWN) then
     begin
       {$IFDEF GTK3DEBUGKEYPRESS}
-      DebugLn('CN_KeyDownMsgs handled ... exiting');
+      writeln('<==== CN_KeyDownMsgs handled ... exiting');
       {$ENDIF}
       if ([wtEntry,wtMemo] * WidgetType <>[]) then
-      exit(false)
+        exit(false)
       else
-      exit(True);
+        exit(True);
     end;
 
     if not CanSendLCLMessage then
@@ -2138,16 +2153,15 @@ begin
     else
     if (DeliverMessage(Msg, True) <> 0) or (Msg.CharCode = 0) then
     begin
-      Result := Msg.CharCode = 0;
+      Result := (Msg.CharCode = 0) or IsArrowKey;
       {$IFDEF GTK3DEBUGKEYPRESS}
-      DebugLn('LM_KeyDownMsgs handled ... exiting ',dbgs(ACharCode),' Result=',dbgs(Result),' AKeyPress=',dbgs(AKeyPress));
+      writeln('<=== LM_KeyDownMsgs handled ... exiting ',dbgs(ACharCode),' Result=',dbgs(Result),' AKeyPress=',dbgs(AKeyPress));
       {$ENDIF}
       exit;
     end;
 
     if not CanSendLCLMessage then
       exit;
-
   end;
 
   if AKeyPress and (length(AEventString) > 0) then
@@ -2162,7 +2176,7 @@ begin
     if Result then
     begin
       {$IFDEF GTK3DEBUGKEYPRESS}
-      DebugLn('LCLObject.IntfUTF8KeyPress handled ... exiting');
+      writeln('LCLObject.IntfUTF8KeyPress handled ... exiting');
       {$ENDIF}
       exit;
     end;
@@ -2178,7 +2192,7 @@ begin
     if not CanSendLCLMessage then
       exit;
 
-    Result := (DeliverMessage(CharMsg, True) <> 0) or (CharMsg.CharCode = VK_UNKNOWN);
+    Result := (DeliverMessage(CharMsg, True) <> 0) or (CharMsg.CharCode = VK_UNKNOWN) or IsArrowKey;
 
     if not CanSendLCLMessage then
       exit;
@@ -2186,7 +2200,7 @@ begin
     if Result then
     begin
       {$IFDEF GTK3DEBUGKEYPRESS}
-      DebugLn('CN_CharMsg handled ... exiting');
+      writeln('<=== CN_CharMsg handled ... exiting');
       {$ENDIF}
       exit;
     end;
@@ -2207,12 +2221,13 @@ begin
   if AKeyPress then
   begin
     {$IFDEF GTK3DEBUGKEYPRESS}
-    if Msg.CharCode in FKeysToEat then
+    if (Msg.CharCode in FKeysToEat) then
     begin
-      DebugLn('EVENT: ******* KeyPress charcode is in keys to eat (FKeysToEat), charcode=',dbgs(Msg.CharCode));
-    end;
+      writeln('EVENT: ******* KeyPress charcode is in keys to eat (FKeysToEat), charcode=',dbgs(Msg.CharCode),' window ? ',Sender^.window = Self.GetWindow);
+    end else
+      writeln('EVENT: KeyPress Result = False Window ? ', Sender^.window = Self.GetWindow);
     {$ENDIF}
-    Result := Msg.CharCode in FKeysToEat;
+    Result := (TempWidget = GetFocus) and (Msg.CharCode in FKeysToEat);
   end;
 end;
 
@@ -2605,6 +2620,8 @@ end;
 
 procedure TGtk3Widget.DestroyWidget;
 begin
+  if IsValidHandle then
+    GTK3WidgetSet.DestroyCaret(HWND(Self));
   if IsValidHandle and FOwnWidget then
   begin
     fOwnWidget:=false;
@@ -5393,6 +5410,12 @@ begin
     TGtk3Widget(AData).DeliverMessage(Msg, False);
 end;
 
+procedure FreeStoreStringList(aData: gpointer); cdecl;
+begin
+  TGtkListStoreStringList(aData).Free;
+end;
+
+
 function TGtk3ListBox.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   AListBox: TCustomListBox;
@@ -5419,6 +5442,8 @@ begin
 
   ItemList := TGtkListStoreStringList.Create(PGtkListStore(PGtkTreeView(FCentralWidget)^.get_model), 0, LCLObject);
   g_object_set_data(PGObject(FCentralWidget),GtkListItemLCLListTag, ItemList);
+  {if we use g_object_set_data_full then access violation occurs, so, revert to g_object_set_data}
+  // g_object_set_data_full(PGObject(FCentralWidget),GtkListItemLCLListTag, ItemList, @FreeStoreStringList);
 
   Renderer := LCLIntfCellRenderer_New();
 
@@ -5509,7 +5534,7 @@ begin
       Result := gtk_tree_path_get_indices(Path)^;
       if Result = 0 then
       begin
-        Selection :=  TreeView^.get_selection;
+        Selection := TreeView^.get_selection;
         if not Selection^.path_is_selected(Path) then
           Result := -1;
       end;
@@ -5607,6 +5632,43 @@ begin
   Result := PGtkTreeView(GetContainerWidget)^.get_selection;
 end;
 
+function TGtk3ListBox.GetItemRect(const AIndex: integer): TRect;
+var
+  AModel: PGtkTreeModel;
+  Iter: TGtkTreeIter;
+  AGdkRect: TGdkRectangle;
+  ACol: TGtkTreeViewColumn;
+begin
+  Result := Rect(0, 0, 0, 0);
+  AModel := PGtkTreeView(getContainerWidget)^.model;
+  if AModel = nil then
+    exit;
+  if AModel^.iter_nth_child(@Iter, nil, AIndex) then
+  begin
+    ACol := gtk_tree_view_get_column(PGtkTreeView(getContainerWidget), 0)^;
+    gtk_tree_view_get_cell_area(PGtkTreeView(getContainerWidget), AModel^.get_path(@Iter), @ACol, @AGdkRect);
+    Result := RectFromGdkRect(AGdkRect);
+  end;
+end;
+
+function TGtk3ListBox.GetIndexAtXY(const X, Y: integer): integer;
+var
+  Path: PGtkTreePath;
+  Column: PGtkTreeViewColumn;
+  CellX, CellY: Integer;
+  Indices: PInteger;
+begin
+  Result := -1;
+  if gtk_tree_view_get_path_at_pos(PGtkTreeView(getContainerWidget), X, Y,
+    @Path, @Column, @CellX, @CellY) then
+  begin
+    Indices := gtk_tree_path_get_indices(Path);
+    if Assigned(Indices) then
+      Result := Indices^;
+    gtk_tree_path_free(Path);
+  end;
+end;
+
 function TGtk3ListBox.GetItemSelected(const AIndex: Integer): Boolean;
 var
   ASelection: PGtkTreeSelection;
@@ -5630,6 +5692,11 @@ begin
 
   if AModel^.iter_nth_child(@Item, nil, AIndex) then
     Result := ASelection^.iter_is_selected(@Item);
+end;
+
+function TGtk3ListBox.GetScrollWidth: integer;
+begin
+  Result := Round(getHorizontalScrollbar^.get_adjustment^.get_upper);
 end;
 
 procedure TGtk3ListBox.SelectItem(const AIndex: Integer; ASelected: Boolean);
@@ -7221,6 +7288,7 @@ begin
   FScrollY := 0;
   FHasPaint := True;
   FUseLayout := False;
+  FKeysToEat := [];
   if FUseLayout then
     FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtCustomControl]
   else
@@ -8298,22 +8366,13 @@ end;
 class procedure TGtk3newColorSelectionDialog.color_to_rgba(clr: TColor; out
   rgba: TgdkRGBA);
 begin
-  clr:=ColorToRgb(clr);
-  rgba.red:=Red(clr)/255;
-  rgba.blue:=Blue(clr)/255;
-  rgba.green:=Green(clr)/255;
-  rgba.alpha:=(clr shl 24)/255;
+  rgba := TColortoTGdkRGBA(clr);
 end;
 
 class function TGtk3newColorSelectionDialog.rgba_to_color(const rgba: TgdkRGBA
   ): TColor;
-var
-  q:array[0..3] of byte absolute Result;
 begin
-  q[0]:= round(255*rgba.red);
-  q[1]:= round(255*rgba.green);
-  q[2]:= round(255*rgba.blue);
-  q[3]:= round(255*rgba.alpha);
+  Result := TGdkRGBAToTColor(rgba);
 end;
 
 
