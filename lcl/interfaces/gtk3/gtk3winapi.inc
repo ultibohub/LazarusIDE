@@ -39,26 +39,7 @@ begin
   PS.hdc := HDC(DC);
 
   if Handle<>0 then
-  begin
     DC.vClipRect := Widget.PaintData.ClipRect^;
-    (*
-    // if current handle has paintdata information,
-    // setup hdc with it
-    //DC.DebugClipRect('BeginPaint: Before');
-    if Widget.PaintData.ClipRegion <> nil then
-    begin
-      //Write('>>> Setting Paint ClipRegion: ');
-      //DebugRegion('PaintData.ClipRegion: ', Widget.PaintData.ClipRegion);
-      DC.setClipRegion(Widget.PaintData.ClipRegion);
-      DC.setClipping(True);
-    end;
-    if Widget.PaintData.ClipRect <> nil then
-    begin
-      New(DC.vClipRect);
-      DC.vClipRect^ := Widget.PaintData.ClipRect^;
-    end;
-    *)
-  end;
 
   Result := PS.hdc;
 end;
@@ -1062,7 +1043,7 @@ function TGtk3WidgetSet.Ellipse(DC: HDC; x1, y1, x2, y2: Integer): Boolean;
 var
   bFill, bBorder: Boolean;
 begin
-  bFill := TGtk3DeviceContext(DC).CurrentBrush.Style <> BS_NULL;
+  bFill := (TGtk3DeviceContext(DC).CurrentBrush.Style <> BS_NULL);
   bBorder := TGtk3DeviceContext(DC).CurrentPen.Style <> psClear;
   TGtk3DeviceContext(DC).drawEllipse(x1, y1, x2 - x1 - 1, y2 - y1 - 1, bFill, bBorder);
   Result := True;
@@ -1599,7 +1580,7 @@ var
       while CurCount > 0 do
       begin
         CharLen := UTF8CodepointSize(CurStr);
-        DevCtx.drawText(CurScreenX, Y, CurStr, CharLen);
+        DevCtx.drawText(CurScreenX, Y, CurStr, CharLen, True);
         inc(CurScreenX, CurDx^);
         inc(CurDx);
         inc(CurStr, CharLen);
@@ -1607,7 +1588,7 @@ var
       end;
     end
     else begin
-      DevCtx.drawText(X, Y, Str, Count);
+      DevCtx.drawText(X, Y, Str, Count, True);
     end;
   end;
 
@@ -1626,7 +1607,7 @@ begin
       cairo_clip(GtkDc.pcr);
     end;
     if Options and ETO_OPAQUE = ETO_OPAQUE then
-      DevCtx.fillRect(Rect, HBRUSH(GtkDC.CurrentBrush));
+      DevCtx.fillRect(Rect, HBRUSH(DevCtx.BgBrush)); // use Color from setBkMode
 
     LineLen := FindLineLen(Str,Count);
     TopY := Y;
@@ -1845,7 +1826,8 @@ function TGtk3WidgetSet.GetBkColor(DC: HDC): TColorRef;
 begin
   Result := 0;
   if IsValidDC(DC) then
-    Result := TGtk3DeviceContext(DC).CurrentBrush.Color;
+    Result := TGtk3DeviceContext(DC).BkColor;
+  //  Result := TGtk3DeviceContext(DC).CurrentBrush.Color;
 end;
 
 function TGtk3WidgetSet.GetCapture: HWND;
@@ -2029,28 +2011,69 @@ begin
   begin
     Widget := TGtk3Widget(hWnd);
     Result := Widget.Context;
-    if Result = 0 then
-      Result := HDC(Gtk3DefaultContext);
+    if (Result = 0) then
+    begin
+      if Gtk3IsGdkWindow(Widget.GetWindow) then
+        Result := HDC(TGtk3DeviceContext.Create(Widget.GetWindow, True))
+      else
+        Result := HDC(TGtk3DeviceContext.Create(Widget.GetContainerWidget, False));
+      TGtk3DeviceContext(Result).CanRelease := True;
+    end;
   end else
     Result := HDC(Gtk3ScreenContext);
 end;
 
 function TGtk3WidgetSet.GetDCOriginRelativeToWindow(PaintDC: HDC;
   WindowHandle: HWND; var OriginDiff: TPoint): boolean;
+var
+  DevCtx: TGtk3DeviceContext absolute PaintDC;
+  DCScreenOrigin: TPoint;
+  WindowScreenOrigin: TPoint;
+  Widget: PGtkWidget;
+  DCWindow: PGdkWindow;
+  // LCLObject: TGtk3Widget;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.GetDCOriginRelativeToWindow not implemented ...');
-  {$ENDIF}
-  Result:=inherited GetDCOriginRelativeToWindow(PaintDC, WindowHandle,
-    OriginDiff);
-end;
+  // writeln('>GetDCOriginRelativeToWindow() ');
+  Result := False;
+  OriginDiff := Point(0, 0);
 
-function TGtk3WidgetSet.GetDesignerDC(WindowHandle: HWND): HDC;
-begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.GetDesignerDC not implemented ...');
-  {$ENDIF}
-  Result:=inherited GetDesignerDC(WindowHandle);
+  if not IsValidDC(PaintDC) then Exit;
+
+  DCScreenOrigin := DevCtx.Offset;
+
+  DCWindow := DevCtx.Window;
+  if (DCWindow = nil) and Assigned(DevCtx.Parent) then
+    DCWindow := DevCtx.Parent^.window;
+  if DCWindow = nil then
+  begin
+    if Assigned(DevCtx.Parent) then
+    begin
+      // LCLObject := TGtk3Widget(HwndFromGtkWidget(DevCtx.Parent));
+    end;
+  end else
+    gdk_window_get_origin(DCWindow, @DCScreenOrigin.X, @DCScreenOrigin.Y);
+
+  Widget := TGtk3Widget(WindowHandle).GetContainerWidget;
+  if Widget = nil then
+  begin
+    // writeln('<Widget is null !...');
+    Exit;
+  end;
+
+  if Gtk3IsGdkWindow(Widget^.window) then
+    gdk_window_get_origin(Widget^.window, @WindowScreenOrigin.X, @WindowScreenOrigin.Y)
+  else
+    exit; // no valid window
+
+  // Calculate the origin difference
+  OriginDiff.X := DCScreenOrigin.X - WindowScreenOrigin.X;
+  OriginDiff.Y := DCScreenOrigin.Y - WindowScreenOrigin.Y;
+
+  // writeln('GetDCOriginRelativeToWindow: OriginDiff x=',OriginDiff.X,' Y=',OriginDiff.Y);
+  Result := True;
+
+  // DebugLn(['TGtk3WidgetSet.GetDCOriginRelativeToWindow DCScreenOrigin=',dbgs(DCScreenOrigin),
+  //   ' WindowScreenOrigin=',dbgs(WindowScreenOrigin), ' OriginDiff=',dbgs(OriginDiff)])
 end;
 
 function TGtk3WidgetSet.GetDeviceCaps(DC: HDC; Index: Integer): Integer;
@@ -2696,6 +2719,19 @@ begin
         gdk_screen_get_monitor_workarea(ascreen, 0, @ARect);
         Result := ARect.height;
       end;
+    SM_CXSIZEFRAME, SM_CYSIZEFRAME,
+    SM_CXFIXEDFRAME, SM_CYFIXEDFRAME: Result := 4; //TODO
+    SM_CYMENU,
+    SM_CXMENUSIZE,
+    SM_CYMENUSIZE,
+    SM_CXMENUCHECK,
+    SM_CYMENUCHECK,
+    SM_CXHSCROLL,
+    SM_CYHSCROLL,
+    SM_CXVSCROLL,
+    SM_CYVSCROLL,
+    SM_CYCAPTION:
+        Result := SystemMetric(nIndex);
 
     SM_CXFULLSCREEN,
     SM_CXSCREEN:
@@ -3425,14 +3461,164 @@ begin
   Result := TGtk3Widget(Handle).ScreenToClient(P);
 end;
 
+{------------------------------------------------------------------------------
+  Function: ScrollWindowEx
+  Params:  hWnd:       handle of window to scroll
+           dx:         horizontal amount to scroll
+           dy:         vertical amount to scroll
+           prcScroll:  pointer to scroll rectangle
+           prcClip:    pointer to clip rectangle
+           hrgnUpdate: handle of update region
+           prcUpdate:  pointer to update rectangle
+           flags:      scrolling flags
+
+  Returns: True if succesfull;
+
+  The ScrollWindowEx function scrolls the content of the specified window's
+  client area.
+ ------------------------------------------------------------------------------}
 function TGtk3WidgetSet.ScrollWindowEx(hWnd: HWND; dx, dy: Integer; prcScroll,
   prcClip: PRect; hrgnUpdate: HRGN; prcUpdate: PRect; flags: UINT): Boolean;
+var
+  Widget: TGtk3Widget absolute HwnD;
+  Region: Pcairo_region_t;
+  GdkWindow: PGdkWindow;
+  ScrollRect, ClipRect: TRect;
+  UpdateRect: Tcairo_rectangle_int_t;
+  cairoRegion: Pcairo_region_t;
+  CurX, CurY: integer;
+  SFlags: string;
+  R: TRect;
+  cr: Pcairo_t;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.ScrollWindowEx not implemented ...');
+  Result := False;
+
+  if not IsValidHandle(hWnd) then
+  begin
+    {$IFDEF DEBUGSCROLLWINDOWEX}
+    writeln('<ScrollWindowEx invalid handle.');
+    {$ENDIF}
+    exit;
+  end;
+
+  if Widget = nil then
+  begin
+    {$IFDEF DEBUGSCROLLWINDOWEX}
+    writeln('<ScrollWindowEx invalid handle widget.');
+    {$ENDIF}
+    Exit;
+  end;
+
+  {$IFDEF DEBUGSCROLLWINDOWEX}
+  //SW_SMOOTHSCROLL = 16;
+  //SW_ERASE = 4;
+  //SW_INVALIDATE = 2;
+  //SW_SCROLLCHILDREN = 1;
+  SFlags := ' ';
+  if Flags and SW_SCROLLCHILDREN <> 0 then
+    SFlags := SFlags + 'SW_SCROLLCHILDREN ';
+  if Flags and SW_INVALIDATE <> 0 then
+    SFlags := SFlags + 'SW_INVALIDATE ';
+  if Flags and SW_ERASE <> 0 then
+    SFlags := SFlags + 'SW_ERASE ';
+  if Flags and SW_SMOOTHSCROLL <> 0 then
+    SFlags := SFlags + 'SW_SMOOTHSCROLL';
+  SFlags := Trim(SFlags);
+  writeln('===>ScrollWindowEx Handle=',dbgHex(hWnd),' dx=',dx,' dy=',dy,' prcS=',prcScroll<>nil,' prC=',prcClip <> nil,' HRGN=',dbgHex(hrgnUpdate),' prcU=',prcUpdate <> nil,' Flags="',SFlags,'" ',dbgsName(Widget.LCLObject));
   {$ENDIF}
-  Result:=inherited ScrollWindowEx(hWnd, dx, dy, prcScroll, prcClip,
-    hrgnUpdate, prcUpdate, flags);
+
+  GdkWindow := gtk_widget_get_window(Widget.getContainerWidget);
+
+  if (GdkWindow <> nil) and not Gtk3IsGdkWindow(GdkWindow) then
+    GdkWindow := nil;
+
+  if Flags and SW_SCROLLCHILDREN <> 0 then
+  begin
+    if GdkWindow = nil then
+    begin
+      {$IFDEF DEBUGSCROLLWINDOWEX}
+      writeln('<ScrollWindowEx invalid GdkWindow.');
+      {$ENDIF}
+      Exit;
+    end;
+
+    // Ensure the widget is realized and visible
+    if not gtk_widget_get_realized(Widget.GetContainerWidget) or not gtk_widget_get_visible(Widget.getContainerWidget) then
+    begin
+      {$IFDEF DEBUGSCROLLWINDOWEX}
+      writeln('<ScrollWindowEx widget not realized or not visible.');
+      {$ENDIF}
+      Exit;
+    end;
+  end;
+
+  if prcScroll <> nil then
+    ScrollRect := prcScroll^
+  else
+    ScrollRect := Rect(0, 0, gtk_widget_get_allocated_width(Widget.getContainerWidget),
+      gtk_widget_get_allocated_height(Widget.getContainerWidget));
+
+  if prcClip <> nil then
+    ClipRect := prcClip^
+  else
+    ClipRect := ScrollRect;
+
+  if hrgnUpdate <> 0 then
+    cairoRegion := TGtk3Region(hrgnUpdate).Handle
+  else
+    cairoRegion := nil;
+
+  if ((Flags and SW_SCROLLCHILDREN) <> 0) then
+  begin
+    gdk_window_scroll(GdkWindow, dx, dy);
+  end else
+  begin
+    if Widget is TGtk3ScrollableWin then
+    begin
+      CurX := (Widget as TGtk3ScrollableWin).ScrollX;
+      CurY := (Widget as TGtk3ScrollableWin).ScrollY;
+      (Widget as TGtk3ScrollableWin).ScrollX := CurX + dx;
+      (Widget as TGtk3ScrollableWin).ScrollY := CurY + dy;
+    end;
+    // with ScrollRect do
+    //  gtk_widget_queue_draw_area(Widget.GetContainerWidget, Left, Top, Width, Height);
+  end;
+
+  if (Flags and SW_ERASE) <> 0 then
+  begin
+    {$IFDEF DEBUGSCROLLWINDOWEX}
+    if cairoRegion <> nil then
+    begin
+      cairo_region_get_extents(cairoRegion, @UpdateRect);
+      R := Bounds(UpdateRect.x, UpdateRect.y, UpdateRect.Width, UpdateRect.Height);
+    end else
+      R := Rect(0, 0, 0, 0);
+    writeln('ClipRect=',dbgs(ClipRect),' ScrollRect=',dbgs(ScrollRect),' R=',dbgs(R));
+    if IsRectEmpty(R) then
+      R := ScrollRect;
+    {$ENDIF}
+    gtk_widget_queue_draw(Widget.Widget);
+  end else
+  if (Flags and SW_INVALIDATE) <> 0 then
+  begin
+    if cairoRegion <> nil then
+    begin
+      cairo_region_get_extents(cairoRegion, @UpdateRect);
+      R := Bounds(UpdateRect.x, UpdateRect.y, UpdateRect.Width, UpdateRect.Height);
+      prcUpdate := @R;
+      gtk_widget_queue_draw_area(Widget.GetContainerWidget, UpdateRect.x, UpdateRect.y, UpdateRect.width, UpdateRect.Height);
+    end else
+    if prcClip <> nil then
+    begin
+      prcUpdate := prcClip;
+      with prcClip^ do
+        gtk_widget_queue_draw_area(Widget.GetContainerWidget, Left, Top, Width, Height);
+    end;
+  end;
+  {$IFDEF DEBUGSCROLLWINDOWEX}
+  writeln('<===ScrollWindowEx.');
+  {$ENDIF}
+  Result := True;
 end;
 
 function TGtk3WidgetSet.SelectClipRGN(DC: hDC; RGN: HRGN): Longint;
@@ -3494,25 +3680,17 @@ begin
   Result := clNone;
   if not IsValidDC(DC) then
     exit;
-  Result := TGtk3DeviceContext(DC).CurrentBrush.Color;
-  TGtk3DeviceContext(DC).CurrentBrush.Color := TColor(ColorToRGB(TColor(Color)));
+  Result := TGtk3DeviceContext(DC).BkColor;
+  TGtk3DeviceContext(DC).BkColor := Color;
 end;
 
 function TGtk3WidgetSet.SetBkMode(DC: HDC; bkMode: Integer): Integer;
 begin
-  {.$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  // DebugLn('WARNING: TGtk3WidgetSet.SetBkMode not implemented ...', dbgs(BkMode));
-  {.$ENDIF}
   Result := 0;
   if not IsValidDC(DC) then
     exit;
   Result := TGtk3DeviceContext(DC).BkMode;
   TGtk3DeviceContext(DC).BkMode := bkMode;
-  // if cairo_pattern_get_type(cairo_get_source(TGtk3DeviceContext(DC).Widget)) = CAIRO_PATTERN_TYPE_SURFACE then
-  //  Result := TRANSPARENT;
-  // we must use TGtk3Brush.Handle = Pcairo_pattern_t
-  // cairo_pattern_get_type(nil).CAIRO_PATTERN_TYPE_SOLID;
-  // cairo_get_source();
 end;
 
 function TGtk3WidgetSet.SetCapture(AHandle: HWND): HWND;
@@ -3874,11 +4052,9 @@ begin
       else
       if SBStyle = SB_VERT then
         TGtk3ScrollableWin(AWidget).VScrollBarPolicy := POLICY[IsScrollbarVis];
-    end else
-      AWidget.Update(nil);
-
+    end;
+    AWidget.Update(nil);
     Adjustment^.changed;
-
   end;
   Result := Round(Adjustment^.value);
 end;
@@ -4159,7 +4335,7 @@ end;
 function TGtk3WidgetSet.TextOut(DC: HDC; X, Y: Integer; Str: PChar; Count: Integer): Boolean;
 begin
   {$IFDEF VerboseGtk3DeviceContext}
-  DebugLn('TGtk3WidgetSet.TextOut X=',dbgs(x),' Y=',dbgs(y),' Text=',dbgs(Str),' Count=',dbgs(Count));
+  DebugLn('TGtk3WidgetSet.TextOut X=',dbgs(x),' Y=',dbgs(y),' Text=',dbgs(Str),' Count=',dbgs(Count),' Text=',StrPas(Str));
   {$ENDIF}
   Result := False;
   if Count <= 0 then
@@ -4167,7 +4343,7 @@ begin
   if IsValidDC(DC) then
   begin
     Result := True;
-    TGtk3DeviceContext(DC).drawText(X, Y, Str, Count);
+    TGtk3DeviceContext(DC).drawText(X, Y, Str, Count, False);
   end;
 end;
 

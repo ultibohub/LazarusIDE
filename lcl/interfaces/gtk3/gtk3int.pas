@@ -26,9 +26,10 @@ uses
   {$ENDIF}
   SysUtils, Classes, types, Math, FPImage,
   // LazUtils
-  LazLoggerBase, LazTracer, LazUTF8, IntegerList, GraphType, LazUtilities,
+  LazTracer, LazUTF8, IntegerList, GraphType, LazUtilities,
   // LCL
   LCLPlatformDef, InterfaceBase, LCLProc, LCLType, LMessages, LCLMessageGlue,
+  LazLogger,
   Controls, Forms, Graphics, GraphUtil, IntfGraphics, StdCtrls, ComCtrls,
   LazGtk3, LazGdk3, LazGlib2, LazGObject2, LazCairo1, LazPango1, LazGio2,
   LazGdkPixbuf2, gtk3widgets, gtk3objects, gtk3procs, gtk3boxes, gtk3caret;
@@ -65,6 +66,7 @@ type
     procedure FreeSysColorBrushes;
   protected
     {shared stuff}
+    FSystemMetricsList: TIntegerList;
     FAppIcon: PGdkPixbuf;
     FStockNullBrush: HBRUSH;
     FStockBlackBrush: HBRUSH;
@@ -131,6 +133,8 @@ type
 
     function CreateTimer(Interval: integer; TimerFunc: TWSTimerProc): TLCLHandle; override;
     function DestroyTimer(TimerHandle: TLCLHandle): boolean; override;
+
+    function SystemMetric(const AIndex: integer): integer;
 
     function IsValidDC(const DC: HDC): Boolean;
     function IsValidGDIObject(const AGdiObject: HGDIOBJ): Boolean;
