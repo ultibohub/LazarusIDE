@@ -2455,7 +2455,7 @@ begin
   fWantTabs := True;
   fTabWidth := 8;
   FOldTopView := 1;
-  FFoldedLinesView.TopLine := 1;
+  FFoldedLinesView.TopViewPos := 1;
   // find / replace
   fTSearch := TSynEditSearch.Create;
   FOptions := SYNEDIT_DEFAULT_OPTIONS;
@@ -2682,6 +2682,7 @@ var
   i: integer;
   p: TList;
 begin
+  Destroying;
   {$IFDEF SynCheckPaintLock}
   if (FPaintLock > 0) then begin
     debugln(['TCustomSynEdit.Destroy: Paintlock=', FPaintLock, ' FInvalidateRect=', dbgs(FInvalidateRect)]);
@@ -4863,8 +4864,11 @@ begin
   fStateFlags := fStateFlags - [sfExplicitTopLine, sfExplicitLeftChar];
   if FCaret.OldCharPos <> FCaret.CharPos then
     Include(fStatusChanges, scCaretX);
-  if FCaret.OldLinePos <> FCaret.LinePos then begin
+  if FCaret.OldLinePos <> FCaret.LinePos then
     Include(fStatusChanges, scCaretY);
+  if (FCaret.OldViewedLineCharPos.Y < 0) or
+     (FCaret.OldViewedLineCharPos.Y <> FCaret.ViewedLineCharPos.y)
+  then begin
     InvalidateGutterLines(FCaret.OldLinePos, FCaret.OldLinePos);
     InvalidateGutterLines(FCaret.LinePos, FCaret.LinePos);
   end;
@@ -5060,12 +5064,16 @@ end;
 
 procedure TCustomSynEdit.SynSetText(const Value: string);
 begin
+  IncStatusChangeLock; // can affect width (via gutter) and caret
   FLines.Text := Value;
+  DecStatusChangeLock;
 end;
 
 procedure TCustomSynEdit.RealSetText(const Value: TCaption);
 begin
+  IncStatusChangeLock; // can affect width (via gutter) and caret
   FLines.Text := Value; // Do not trim
+  DecStatusChangeLock;
 end;
 
 function TCustomSynEdit.CurrentMaxTopView: Integer;
@@ -5430,7 +5438,8 @@ begin
   inherited;
   if WaitingForInitialSize then
     exit;
-  inc(FDoingResizeLock);
+  inc(FDoingResizeLock); // prevent UpdateScrollBars;
+  IncStatusChangeLock;   // defer status events
   FScreenCaret.Lock;
   try
     FLeftGutter.RecalcBounds;
@@ -5441,9 +5450,13 @@ begin
       EnsureCursorPosVisible;
     Exclude(fStateFlags, sfEnsureCursorPosAtResize);
   finally
-    FScreenCaret.UnLock;
-    dec(FDoingResizeLock);
-    UpdateScrollBars;
+    try
+      FScreenCaret.UnLock;
+      dec(FDoingResizeLock);
+      UpdateScrollBars;
+    finally
+      DecStatusChangeLock;
+    end;
   end;
   //debugln('TCustomSynEdit.Resize ',dbgs(Width),',',dbgs(Height),',',dbgs(ClientWidth),',',dbgs(ClientHeight));
   // SetLeftChar(LeftChar);                                                     //mh 2000-10-19
@@ -5740,7 +5753,7 @@ begin
     Required, if "TopView := TopView" or "TopLine := TopLine" is called,
     after ScanRanges (used to be: LineCountChanged / LineTextChanged)
   *)
-  FFoldedLinesView.TopLine := AValue;
+  FFoldedLinesView.TopViewPos := AValue;
 
   if FTextArea.TopLine <> AValue then begin
     if FPaintLock = 0 then

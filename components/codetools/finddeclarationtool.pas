@@ -3312,7 +3312,7 @@ begin
   
   if Result=nil then begin
     // search .ppu
-    NewCompiledUnitname:=AnUnitName+'.ppu';
+    NewCompiledUnitname:=RemoveAmpersands(AnUnitName)+'.ppu';
     CompiledFilename:=DirectoryCache.FindCompiledUnitInCompletePath(
                                                      NewCompiledUnitname,false);
     //debugln(['TFindDeclarationTool.FindUnitSource UnitName=',NewUnitName,' ',NewCompiledUnitname,' CompiledFilename=',CompiledFilename]);
@@ -9574,6 +9574,22 @@ var
     Result:=FlagCanBeForwardDefined;
   end;
 
+  function FindPointedTypeBehind(PointerTypeNode: TCodeTreeNode): TCodeTreeNode;
+  var
+    IdentNode, Node: TCodeTreeNode;
+  begin
+    IdentNode:=PointerTypeNode.FirstChild;
+    Node:=PointerTypeNode.Parent.NextBrother;
+    while Node<>nil do begin
+      if (Node.Desc=ctnTypeDefinition)
+          and CompareSrcIdentifiers(Node.StartPos, IdentNode.StartPos)
+      then
+        exit(Node);
+      Node:=Node.NextBrother; // all remaing types of current type section
+    end;
+    Result:=nil;
+  end;
+
   procedure ResolveTypeLessProperty;
   begin
     if ExprType.Desc<>xtContext then exit;
@@ -9930,7 +9946,7 @@ var
     if Find(Identifier) then exit(true);
     Params.Load(OldInput,false);
   end;
-  
+
   procedure ResolveIdentifier;
   var
     ProcNode: TCodeTreeNode;
@@ -10086,6 +10102,16 @@ var
               exit;
             end;
           end;
+        end;
+      end else if (StartNode.Parent<>nil)
+          and (StartNode.Parent.Desc=ctnPointerType) and (NextAtomType<>vatPoint) then
+      begin
+        Node:=FindPointedTypeBehind(StartNode.Parent);
+        if Node<>nil then begin
+          ExprType.Context.Tool:=Self;
+          ExprType.Context.Node:=Node;
+          ExprType.Desc:=xtContext;
+          exit;
         end;
       end;
     end;
@@ -10362,23 +10388,28 @@ var
         ExprType.Context.Node:=ExprType.Context.Tool.GetInterfaceNode;
       end;
     end
-    else if (ExprType.Context.Node.Desc=ctnUseUnitClearName) then begin
+    else if (NewNode.Desc=ctnUseUnitClearName) then begin
       // uses unit name => interface of used unit
       ResolveUseUnit;
     end
-    else if (ExprType.Context.Node.Desc=ctnClassOfType) then begin
+    else if (NewNode.Desc=ctnClassOfType) then begin
       // 'class of' => jump to the class
-      ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,ExprType.Context.Node.FirstChild);
+      ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,NewNode.FirstChild);
     end
     else if (ExprType.Desc=xtContext)
-    and (ExprType.Context.Node.Desc=ctnPointerType)
-    and (ExprType.Context.Node<>StartNode)
+    and (NewNode.Desc=ctnPointerType)
+    and (NewNode<>StartNode)
     and (cmsAutoderef in Scanner.CompilerModeSwitches) then begin
       // Delphi knows . as shortcut for ^.
       // -> check for pointer type
       // left side of expression has defined a special context
       // => this '.' is a dereference
-      ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,ExprType.Context.Node.FirstChild);
+      NewNode:=FindPointedTypeBehind(NewNode);
+      if NewNode<>nil then begin
+        ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,NewNode);
+      end else begin
+        ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,ExprType.Context.Node.FirstChild);
+      end;
     end;
   end;
 
@@ -10455,8 +10486,9 @@ var
     ExprType.Context.Tool:=Self;
     ExprType.Context.Node:=StartNode;
   end;
-  
+
   procedure ResolveUp;
+  var NodeBehind, PointerTypeNode: TCodeTreeNode;
   begin
     // for example:
     //   1. 'PInt = ^integer'  pointer type
@@ -10488,19 +10520,26 @@ var
         ReadNextAtom;
         RaisePointNotFound(20191003163249);
       end;
-      if (ExprType.Context.Node=nil)
-      or (ExprType.Context.Node.Desc<>ctnPointerType) then begin
+      PointerTypeNode:=ExprType.Context.Node;
+      if (PointerTypeNode=nil)
+      or (PointerTypeNode.Desc<>ctnPointerType) then begin
         MoveCursorToCleanPos(CurAtom.StartPos);
         RaiseExceptionFmt(20170421200550,ctsIllegalQualifier,['^']);
       end;
       ExprType.Desc:=xtContext;
-      ExprType.Context.Node:=ExprType.Context.Node.FirstChild;
+      //first try if this node has a pointed type behind
+      NodeBehind:=FindPointedTypeBehind(PointerTypeNode);
+      if NodeBehind=nil then
+        ExprType.Context.Node:=ExprType.Context.Node.FirstChild
+      else
+        ExprType.Context.Node:=NodeBehind;
     end else if NodeHasParentOfType(ExprType.Context.Node,ctnPointerType) then
     begin
       // this is a pointer type definition
       // -> the default context is ok
     end;
   end;
+
 
   procedure ResolveEdgedBracketOpen;
   { for example:  a[]

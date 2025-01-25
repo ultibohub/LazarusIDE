@@ -254,9 +254,11 @@ type
   TCustomShellListView = class(TCustomListView)
   private
     FAutoSizeColumns: Boolean;
+    FFileSortType: TFileSortType;
     FMask: string;
     FMaskCaseSensitivity: TMaskCaseSensitivity;
     FObjectTypes: TObjectTypes;
+    FOnSortCompare: TFileItemCompareEvent;
     FPopulateDelayed: Boolean;
     FRoot: string;
     FShellTreeView: TCustomShellTreeView;
@@ -265,8 +267,10 @@ type
     FOnAddItem: TAddItemEvent;
     FOnFileAdded: TCSLVFileAddedEvent;
     { Setters and getters }
+    procedure SetFileSortType(AValue: TFileSortType);
     procedure SetMask(const AValue: string);
     procedure SetMaskCaseSensitivity(AValue: TMaskCaseSensitivity);
+    procedure SetOnSortCompare(AValue: TFileItemCompareEvent);
     procedure SetShellTreeView(const Value: TCustomShellTreeView);
     procedure SetRoot(const Value: string);
     procedure SetObjectTypes(const Value: TObjectTypes);
@@ -294,10 +298,12 @@ type
     property Mask: string read FMask write SetMask; // Can be used to conect to other controls
     property MaskCaseSensitivity: TMaskCaseSensitivity read FMaskCaseSensitivity write SetMaskCaseSensitivity default mcsPlatformDefault;
     property ObjectTypes: TObjectTypes read FObjectTypes write SetObjectTypes default [otNonFolders];
+    property FileSortType: TFileSortType read FFileSortType write SetFileSortType default fstNone;
     property Root: string read FRoot write SetRoot;
     property ShellTreeView: TCustomShellTreeView read FShellTreeView write SetShellTreeView;
     property UseBuiltInIcons: Boolean read FUseBuiltinIcons write FUseBuiltInIcons default true;
     property OnAddItem: TAddItemEvent read FOnAddItem write FOnAddItem;
+    property OnSortCompare: TFileItemCompareEvent read FOnSortCompare write SetOnSortCompare;
     { Protected properties which users may want to access, see bug 15374 }
     property Items;
   end;
@@ -352,6 +358,8 @@ type
     property ObjectTypes;
     property Root;
     property ShellTreeView;
+    property FileSortType;
+
     property OnChange;
     property OnClick;
     property OnColumnClick;
@@ -384,6 +392,7 @@ type
     property OnUTF8KeyPress;
     property OnAddItem;
     property OnFileAdded;
+    property OnSortCompare;
   end;
 
   { TShellTreeNode }
@@ -435,6 +444,24 @@ end;
 function DbgS(CS: TMaskCaseSensitivity): String;
 begin
   Result := MaskCaseSensitivityStrings[CS];
+end;
+
+function FileSizeToStr(AFileSize: Int64): String;
+const
+  ONE_KB = 1024;
+  ONE_MB = 1024 * 1024;
+  ONE_GB = 1024 * 1024 * 1024;
+begin
+  if AFileSize < ONE_KB then
+    Result := Format(sShellCtrlsBytes, [IntToStr(AFileSize)])
+  else
+  if AFileSize < ONE_MB then
+    Result := Format(sShellCtrlsKB, [IntToStr(AFileSize div ONE_KB)])
+  else
+  if AFileSize < ONE_GB then
+    Result := Format(sShellCtrlsMB, [IntToStr(AFileSize div ONE_MB)])
+  else
+    Result := Format(sShellCtrlsGB, [Format('%.1n', [AFileSize / ONE_GB])]);
 end;
 
 operator = (const A, B: TMethod): Boolean;
@@ -1705,6 +1732,15 @@ begin
   end;
 end;
 
+procedure TCustomShellListView.SetFileSortType(AValue: TFileSortType);
+begin
+  if FFileSortType=AValue then Exit;
+  FFileSortType:=AValue;
+  Clear;
+  Items.Clear;
+  PopulateWithRoot();
+end;
+
 procedure TCustomShellListView.SetMaskCaseSensitivity(
   AValue: TMaskCaseSensitivity);
 var
@@ -1731,6 +1767,15 @@ begin
     FMask := #0 + FMask;
     SetMask(OldMask);
   end;
+end;
+
+procedure TCustomShellListView.SetOnSortCompare(AValue: TFileItemCompareEvent);
+begin
+  if TMethod(AValue) = TMethod(FOnSortCompare) then Exit;
+  FOnSortCompare:=AValue;
+  Clear;
+  Items.Clear;
+  PopulateWithRoot();
 end;
 
 procedure TCustomShellListView.SetObjectTypes(const Value: TObjectTypes);
@@ -1817,6 +1862,7 @@ var
   i: Integer;
   Files: TStringList;
   NewItem: TListItem;
+  FileItem: TFileItem;
   CurFileName, CurFilePath: string;
   CurFileSize: Int64;
   CanAdd: Boolean;
@@ -1838,34 +1884,37 @@ begin
   Files := TStringList.Create;
   try
     Files.OwnsObjects := True;
-    GetFilesInDirectory(FRoot, Trim(FMask), FObjectTypes, Files, fstNone,
-                        FMaskCaseSensitivity);
+    GetFilesInDirectory(FRoot, Trim(FMask), FObjectTypes, Files, FFileSortType,
+                        FMaskCaseSensitivity, FOnSortCompare);
 
     for i := 0 to Files.Count - 1 do
     begin
+      FileItem := TFileItem(Files.Objects[i]);
       CanAdd := True;
-      with TFileItem(Files.Objects[i]) do DoAddItem(FBasePath, FileInfo, CanAdd);
+      with FileItem do DoAddItem(FBasePath, FileInfo, CanAdd);
       if CanAdd then
       begin
         NewItem := Items.Add;
         if (NewItem is TShellListItem) then
-          TShellListItem(NewItem).FileInfo := TFileItem(Files.Objects[i]).FileInfo;
+          TShellListItem(NewItem).FileInfo := FileItem.FileInfo;
         CurFileName := Files.Strings[i];
         CurFilePath := IncludeTrailingPathDelimiter(FRoot) + CurFileName;
         // First column - Name
         NewItem.Caption := CurFileName;
-        // Second column - Size
-        // The raw size in bytes is stored in the data part of the item
-        CurFileSize := TFileItem(Files.Objects[i]).FFileInfo.Size; // in Bytes. (We already know this, so no need for FileSize(CurFilePath))
-        NewItem.Data := Pointer(PtrInt(CurFileSize));
-        if CurFileSize < 1024 then
-          NewItem.SubItems.Add(Format(sShellCtrlsBytes, [IntToStr(CurFileSize)]))
-        else if CurFileSize < 1024 * 1024 then
-          NewItem.SubItems.Add(Format(sShellCtrlsKB, [IntToStr(CurFileSize div 1024)]))
-        else
-          NewItem.SubItems.Add(Format(sShellCtrlsMB, [IntToStr(CurFileSize div (1024 * 1024))]));
-        // Third column - Type
-        NewItem.SubItems.Add(ExtractFileExt(CurFileName));
+        if not FileItem.IsFolder then
+        begin
+          // Second column - Size, but not for folders
+          // The raw size in bytes is stored in the data part of the item
+          CurFileSize := FileItem.FFileInfo.Size; // in Bytes. (We already know this, so no need for FileSize(CurFilePath))
+          NewItem.Data := Pointer(PtrInt(CurFileSize));
+          NewItem.SubItems.Add(FileSizeToStr(CurFileSize));
+          // Third column - Type, but not folders
+          NewItem.SubItems.Add(ExtractFileExt(CurFileName));
+        end else
+        begin
+          NewItem.SubItems.Add('');                    // Size
+          NewItem.SubItems.Add(sShellCtrlsFolder);     // Type
+        end;
         // Image index
         if FUseBuiltInIcons then
         begin

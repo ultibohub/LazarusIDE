@@ -983,7 +983,7 @@ begin
       AppendPathDelim(EnvironmentOptions.GetParsedLazarusDirectory)+
         GetForcedPathDelims('components/codetools/fpc.errore.msg');
     CodeToolBoss.CompilerDefinesCache.ExtraOptions:=
-                          '-Fr'+CodeToolBoss.DefinePool.EnglishErrorMsgFilename;
+               AnsiQuotedStr('-Fr'+CodeToolBoss.DefinePool.EnglishErrorMsgFilename,'"');
   end;
 end;
 

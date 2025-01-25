@@ -315,9 +315,11 @@ resourceString
   rsDoPaste = 'Paste';
 
   // ShellCtrls
+  sShellCtrlsFolder = 'Folder';
   sShellCtrlsName = 'Name';
   sShellCtrlsSize = 'Size';
   sShellCtrlsType = 'Type';
+  sShellCtrlsGB = '%s GB';
   sShellCtrlsMB = '%s MB';
   sShellCtrlsKB = '%s kB';
   sShellCtrlsBytes = '%s bytes';

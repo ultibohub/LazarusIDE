@@ -1553,6 +1553,15 @@ msgstr "Mauvais type d'identificateur : %s attendu mais %s trouvé"
 msgid "%s bytes"
 msgstr "%s octets"
 
+#: lclstrconsts.sshellctrlsfolder
+msgid "Folder"
+msgstr ""
+
+#: lclstrconsts.sshellctrlsgb
+#, object-pascal-format
+msgid "%s GB"
+msgstr ""
+
 #: lclstrconsts.sshellctrlsinvalidpath
 #, object-pascal-format
 msgctxt "lclstrconsts.sshellctrlsinvalidpath"

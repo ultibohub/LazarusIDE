@@ -206,10 +206,10 @@ begin
   i := 0;
   while i < high(AExpectedPairs)-1 do begin
     AssertEquals(AName+' TxtIdx('+IntToStr( AExpectedPairs[i])+') to ScreenLine[0-based]('+IntToStr( AExpectedPairs[i+1])+') ',
-                 AExpectedPairs[i+1], FoldedView.TextIndexToScreenLine(AExpectedPairs[i]));
+                 AExpectedPairs[i+1], FoldedView.TextToViewIndex(AExpectedPairs[i])-(SynEdit.TopView-1));
     if ADoReverse then
       AssertEquals(AName+' ScreenLine[0-based]('+IntToStr( AExpectedPairs[i+1])+') to TxtIdx('+IntToStr( AExpectedPairs[i])+') [R]',
-                 AExpectedPairs[i], FoldedView.ScreenLineToTextIndex(AExpectedPairs[i+1]));
+                 AExpectedPairs[i], FoldedView.ViewToTextIndex(AExpectedPairs[i+1]+SynEdit.TopView-1));
     inc(i, 2);
   end;
 end;
@@ -221,10 +221,10 @@ begin
   i := 0;
   while i < high(AExpectedPairs)-1 do begin
     AssertEquals(AName+' ScreenLine[0-based]('+IntToStr( AExpectedPairs[i])+') to TxtIdx('+IntToStr( AExpectedPairs[i+1])+') ',
-                 AExpectedPairs[i+1], FoldedView.ScreenLineToTextIndex(AExpectedPairs[i]));
+                 AExpectedPairs[i+1], FoldedView.ViewToTextIndex(AExpectedPairs[i]+SynEdit.TopView-1));
     if ADoReverse then
       AssertEquals(AName+' TxtIdx('+IntToStr( AExpectedPairs[i+1])+') to ScreenLine[0-based]('+IntToStr( AExpectedPairs[i])+') [R]',
-                 AExpectedPairs[i], FoldedView.TextIndexToScreenLine(AExpectedPairs[i+1]));
+                 AExpectedPairs[i], FoldedView.TextToViewIndex(AExpectedPairs[i+1])-(SynEdit.TopView-1));
     inc(i, 2);
   end;
 end;
@@ -299,7 +299,7 @@ end;
 procedure TTestFoldedView.SetLines(AText: array of String);
 begin
   inherited SetLines(AText);
-  FoldedView.TopLine := 1;
+  FoldedView.TopViewPos := 1;
   FoldedView.LinesInWindow := Length(AText) + 2;
 end;
 
@@ -896,7 +896,7 @@ procedure TTestFoldedView.TestFold;
         TstScreenLineToTextIndex('', [-1,-1,  5,-1 ]);    // 0-base => 0-base
        SynEdit.Options := SynEdit.Options + [eoScrollPastEof];
        SynEdit.TopLine := 5; // now the visible TxtIdx=0 line, is just before the screen [-1]
-        AssertEquals('FoldView.topline', 2, FoldedView.TopLine);
+        AssertEquals('FoldView.topline', 2, FoldedView.TopViewPos);
         TstTextIndexToScreenLine('TopLine=2', [0,-1,  4,0 ], True); // 0-base => 0 base
         TstScreenLineToTextIndex('TopLine=2', [-1,0,  4,-1 ]);    // 0-base => 0-base
 
@@ -906,8 +906,8 @@ procedure TTestFoldedView.TestFold;
       ReCreateEdit;
       TstSetText('Text6 Hide 1st line', TestTextHide2(1)); // *** one line at the top
         TstFold('fold //)', 0, 0, 1, False, 0, [1]);
-        AssertEquals('FoldedView.TextIndex 0', 1, FoldedView.TextIndex[0]);
-        AssertEquals('FoldedView.TextIndex -1', -1, FoldedView.TextIndex[-1]);
+        AssertEquals('FoldedView.TextIndex 0', 1, FoldedView.ViewToTextIndex(0));
+        AssertEquals('FoldedView.TextIndex -1', -1, FoldedView.ViewToTextIndex(-1));
 
         TstTxtIndexToViewPos    ('', [1,1 ], True); // 0-base => 1 base
         TstTextIndexToScreenLine('', [1,0 ], True); // 0-base => 0 base

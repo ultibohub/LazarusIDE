@@ -157,7 +157,8 @@ type
     procedure TestFindDeclaration_ArrayMultiDimDot;
     procedure TestFindDeclaration_VarArgsOfType;
     procedure TestFindDeclaration_ProcRef;
-    procedure TestFindDeclaration_PointerForwardVsUses; // todo
+    procedure TestFindDeclaration_PointerForwardVsUses;
+    procedure TestFindDeclaration_AutoDeref;
 
     // ampersands
     procedure TestFindDeclaration_Ampersand;
@@ -1411,8 +1412,6 @@ procedure TTestFindDeclaration.TestFindDeclaration_PointerForwardVsUses;
 var
   Unit2: TCodeBuffer;
 begin
-  exit;
-
   Unit2:=nil;
   try
     Unit2:=CodeToolBoss.CreateFile('unit2.pp');
@@ -1426,14 +1425,57 @@ begin
     Add([
     'uses unit2;',
     'type',
-    '  PBird = ^TBird;',
+    '  PBird = ^TBird{declaration:test1.tbird};',
+    '  [attr]',
     '  TBird = record',
     '    Speed: word;',
     '  end;',
     'var Bird: PBird;',
     'implementation',
     'begin',
-    '  Bird^.Speed{declaration:test1.tbird.Speed}:=3',
+    '  Bird^.Speed{declaration:test1.tbird.Speed}:=3;',
+    'end.',
+    '']);
+    FindDeclarations(Code);
+  finally
+    if Unit2<>nil then
+      Unit2.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_AutoDeref;
+var
+  Unit2: TCodeBuffer;
+begin
+  Unit2:=nil;
+  try
+    Unit2:=CodeToolBoss.CreateFile('unit2.pp');
+    Unit2.Source:='unit unit2;'+LineEnding
+      +'interface'+LineEnding
+      +'type TBird = word;'+LineEnding
+      +'implementation'+LineEnding
+      +'end.';
+
+    StartUnit;
+    Add([
+    '{$ModeSwitch autoderef}',
+    '{$ModeSwitch typehelpers}',
+    'uses unit2;',
+    'type',
+    '  PBird = ^TBird{declaration:test1.tbird};',
+    '  TBird = record',
+    '    Speed: word;',
+    '  end;',
+    '  THelp = type helper for TBird',
+    '    Wing: integer;',
+    '  end;',
+    'var Bird: PBird;',
+    'implementation',
+    'begin',
+    '  Bird^.Speed{declaration:test1.tbird.Speed}:=3;',
+    '  Bird.Speed{declaration:test1.tbird.Speed}:=3;',
+    '  Bird^.Wing{declaration:test1.tHelp.Wing}:=4;',
+    '  Bird.Wing{declaration:test1.tHelp.Wing}:=4;',
     'end.',
     '']);
     FindDeclarations(Code);

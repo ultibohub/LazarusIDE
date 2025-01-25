@@ -43,6 +43,7 @@ type
     property CaretObj: TSynEditCaret read GetCaretObj;
     property TextArea: TLazSynTextArea read FTextArea;
     property MarkupMgr: TSynEditMarkupManager read TestGetMarkupMgr;
+    property TopView;
   end;
 
   { TTestBase }
@@ -657,6 +658,7 @@ end;
 
 procedure TTestBase.SetSynEditWidth(Chars: Integer; PartCharPixel: Integer);
 begin
+  inc(Chars); // wordwrap takes one off again
   FSynEdit.Width := FSynEdit.CharWidth * Chars + PartCharPixel +
     (FSynEdit.Width - (FSynEdit.TextArea.Right - FSynEdit.TextArea.Left));
   AssertEquals('SetSynEditWidth', Chars, SynEdit.CharsInWindow);

@@ -21,68 +21,10 @@ end;
 
 {hook into gtk3 main event loop, used for testing purposes only atm.}
 procedure Gtk3MainEventLoop(AEvent: PGdkEvent; {%H-}AData: gPointer); cdecl;
-var
-  AList: PGList;
-  APt: TPoint;
-  AWindow: HWND;
-  AComboBox: TGtk3ComboBox;
-  AWidget: gpointer;
-  AContext: Pcairo_t;
-  x: Double;
-  y: Double;
-  x2: Double;
-  y2: Double;
-  ARegion: Pcairo_region_t;
 begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('** TGtk3WidgetSet.Gtk3MainEventLoop **');
   {$ENDIF}
-
-  // even this does not work correct
-  (*
-  if (AEvent^.type_ = GDK_CONFIGURE) then
-  begin
-    AWidget := g_object_get_data(AEvent^.configure.window,'lclwidget');
-    if AWidget <> nil then
-    begin
-      if wtWindow in TGtk3Widget(AWidget).WidgetType then
-      begin
-        TGtk3Window(AWidget).Gtk3ActivateWindow(AEvent);
-        DebugLn('** WindowState event ',dbgsName(TGtk3Widget(AWidget).LCLObject),' windowState=',dbgs(TGtk3Window(AWidget).GetWindowState));
-      end else
-        DebugLn('** WindowState event not wtWindow ',dbgsName(TGtk3Widget(AWidget).LCLObject));
-    end else
-      DebugLn('** WindowState event UNKNOWN WINDOW !!!');
-  end;
-  *)
-
-  (*
-  if (AEvent^.type_ = GDK_EXPOSE) then
-  begin
-    AWidget := g_object_get_data(AEvent^.expose.window,'lclwidget');
-    if (AWidget <> nil) then
-    begin
-      ARegion := gdk_window_get_clip_region(AEvent^.expose.window);
-      cairo_region_get_extents(ARegion, @ARect);
-      DebugLn('Gtk3MainEventLoop*** EXPOSED ',dbgsName(TGtk3Widget(AWidget).LCLObject),
-        ' ownswindow ',dbgs(TGtk3Widget(AWidget).GetContainerWidget^.get_has_window),
-        ' window ',dbgHex(PtrUInt(AEvent^.expose.window)),
-        ' extents ',Format('x %d y %d x2 %d y2 %d',[ARect.x, ARect.y, ARect.width, ARect.height]));
-
-      { do not use this otherwise painting is corrupted !!!! testing purposes only
-      AContext := gdk_cairo_create(AEvent^.expose.window);
-      cairo_clip_extents(AContext, @x, @y, @x2, @y2);
-      DebugLn('Gtk3MainEventLoop*** EXPOSED ',dbgsName(TGtk3Widget(AWidget).LCLObject),
-      ' window ',dbgHex(PtrUInt(AEvent^.expose.window)),
-      ' extents ',Format('x %2.2n y %2.2n x2 %2.2n y2 %2.2n',[x, y, x2, y2]));
-      cairo_surface_flush(cairo_get_target(AContext));
-      cairo_surface_mark_dirty(cairo_get_target(AContext));
-      cairo_destroy(AContext);
-      }
-    end;
-  end;
-  *)
-
   gtk_main_do_event(AEvent);
 end;
 
@@ -325,6 +267,12 @@ begin
   g_object_set_property(gtk_settings_get_default,'gtk-button-images',@AValue);
   AValue.unset;
 
+  FOverlayScrolling := True;
+  if GetEnvironmentVariable('GTK_OVERLAY_SCROLLING') = '0' then
+    FOverlayScrolling := False;
+  if FOverlayScrolling then
+    g_object_get(gtk_settings_get_default,'gtk-overlay-scrolling', [@FOverlayScrolling, nil]);
+
   FGlobalCursor := 0;
   FAppIcon := nil;
   FStockNullBrush := 0;
@@ -390,6 +338,43 @@ end;
 function TGtk3WidgetSet.LCLPlatform: TLCLPlatform;
 begin
   Result := lpGtk3;
+end;
+
+//This is the only way to fix missing corner widget in GtkScrolledWindow.
+procedure ApplyCustomScrollbarStyles(const APixels: integer);
+var
+  CssProvider: PGtkCssProvider;
+begin
+  CssProvider := gtk_css_provider_new();
+  gtk_css_provider_load_from_data(CssProvider,
+    PgChar(Format('scrollbar.horizontal { margin-right: %dpx; }' +
+    'scrollbar.vertical { margin-bottom: %dpx; }',[APixels, APixels])),
+    -1, nil);
+
+  gtk_style_context_add_provider_for_screen(
+    gdk_screen_get_default(),
+    PGtkStyleProvider(CssProvider),
+    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+  );
+end;
+
+procedure ApplyCustomSpinButtonCSS;
+var
+  CssProvider: PGtkCssProvider;
+  Screen: PGdkScreen;
+  CSSData: PChar =
+    'spinbutton > entry {' +
+    '    min-width: 2px;' +
+    '    min-height: 16px;' +
+    '}';
+
+begin
+  CssProvider := gtk_css_provider_new();
+  gtk_css_provider_load_from_data(CssProvider, CSSData, -1, nil);
+  Screen := gdk_screen_get_default();
+  gtk_style_context_add_provider_for_screen(Screen,
+    PGtkStyleProvider(CssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(CssProvider);
 end;
 
 procedure TGtk3WidgetSet.AppInit(var ScreenInfo: TScreenInfo);
@@ -478,6 +463,13 @@ begin
 
   scrollBarV^.get_preferred_width(@MinH, @PrefH);
   FSystemMetricsList.Items[SM_CXVSCROLL] := Max(MinH, PrefH);
+
+  //loading distance between scrollbars in corner, since
+  //gtk3 does not have corner widget, we set it via css.
+  if OverlayScrolling then
+    ApplyCustomScrollbarStyles(Max(0, Floor(PrefH / 2) - 1));
+
+  ApplyCustomSpinButtonCSS;
 
   header^.get_preferred_height(@MinH, @PrefH);
   FSystemMetricsList.Items[SM_CYCAPTION] := Max(MinH, PrefH);

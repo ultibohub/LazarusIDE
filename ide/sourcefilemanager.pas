@@ -4930,9 +4930,9 @@ begin
     OldUnitName:='';
   //debugln('ShowSaveFileAsDialog sourceunitname=',OldUnitName);
   if sfskipReferences in Flags then
-    SaveAsFilename:=LowerCase(StringReplace(OldUnitName,'&','',[rfReplaceAll]))
+    SaveAsFilename:=LowerCase(RemoveAmpersands(OldUnitName))
   else
-    SaveAsFilename:=OldUnitName;
+    SaveAsFilename:=RemoveAmpersands(OldUnitName);
   if SaveAsFilename='' then
     SaveAsFilename:=ExtractFileNameOnly(AFilename);
   if SaveAsFilename='' then
@@ -5010,7 +5010,7 @@ begin
       // check unitname
       if (NewFileExt<>'') and IsPascalUnitExt(PChar(NewFileExt)) then begin
         NewUnitName:=ExtractFileNameOnly(NewFilename);
-        // Do not rename the unit if new filename differs from its name only in case
+        // Do not rename the unit if new filename is just the lowercase version
         if LowerCase(OldUnitName)=NewUnitName then
           NewUnitName:=OldUnitName;
         if NewUnitName='' then
@@ -8221,17 +8221,17 @@ begin
     if Assigned(Project1.MainUnitInfo) then begin
       NewProgramName := Project1.MainUnitInfo.ReadUnitNameFromSource(false);
       ANewPath := ExtractFilePath(Project1.MainUnitInfo.Filename);
-      AFileName := StringReplace(NewProgramName,'&','',[rfReplaceAll]);
+      AFileName := RemoveAmpersands(NewProgramName);
     end;
     if AFilename = '' then begin
       NewProgramName := ExtractFileName(Project1.ProjectInfoFile);
       ANewPath := ExtractFilePath(Project1.ProjectInfoFile);
-      AFilename := StringReplace(NewProgramName,'&','',[rfReplaceAll]);
+      AFilename := RemoveAmpersands(NewProgramName);
     end;
     if AFilename = '' then begin
       NewProgramName := Trim(Project1.GetTitle);
       ANewPath := Project1.Directory;
-      AFilename := StringReplace(NewProgramName,'&','',[rfReplaceAll]);
+      AFilename := RemoveAmpersands(NewProgramName);
     end;
     if AFilename = '' then begin
       NewProgramName := 'Project1';

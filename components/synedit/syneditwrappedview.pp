@@ -195,10 +195,14 @@ type
 
   TLazSynEditLineWrapPlugin = class(TLazSynEditPlugin)
   private
+    FCurrentWrapColumn: Integer;
     FCaretWrapPos: TLazSynEditWrapCaretPos;
+    FMinWrapWidth: Integer;
     procedure DoLinesChanged(Sender: TObject);
     procedure DoWidthChanged(Sender: TObject; Changes: TSynStatusChanges);
     function GetWrapColumn: Integer;
+
+    procedure SetMinWrapWidth(AValue: Integer);
 public
     FLineMapView: TSynEditLineMappingView;
     function CreatePageMapNode(AMapTree: TSynLineMapAVLTree
@@ -221,12 +225,16 @@ public
     function CalculateWrapForLine(ALineIdx: IntIdx; AMaxWidth: integer): Integer; inline;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
 
     procedure WrapAll; experimental;
     procedure ValidateAll; experimental;
 
-    property CaretWrapPos: TLazSynEditWrapCaretPos read FCaretWrapPos write FCaretWrapPos;
     property WrapColumn: Integer read GetWrapColumn;
+
+  published
+    property CaretWrapPos: TLazSynEditWrapCaretPos read FCaretWrapPos write FCaretWrapPos;
+    property MinWrapWidth: Integer read FMinWrapWidth write SetMinWrapWidth;
   end;
 
 implementation
@@ -930,13 +938,14 @@ begin
     @ADestPage.FWrappedExtraSums[ALineCount + OldOffset],
     ADestPage.FWrappedExtraSumsCount,
     SrcO2 - SrcO1);
-  assert(ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount, 'TSynWordWrapLineMap.MoveLinesAtEndTo: ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount');
-  if MinLineCount > 0 then
+  if MinLineCount > 0 then begin
+    assert(ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount, 'TSynWordWrapLineMap.MoveLinesAtEndTo: ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount');
     WrapInfoCopyAndAdjustFromTo(
       @FWrappedExtraSums[ASourceStartLine],
       @ADestPage.FWrappedExtraSums[0],
       MinLineCount,
       -SrcO1);
+  end;
   WrapInfoFillFrom(
     @ADestPage.FWrappedExtraSums[MinLineCount],
     ALineCount - MinLineCount + OldOffset,
@@ -1147,9 +1156,13 @@ var
   dummy, NextLineOffs, PrevLineOffs, NextLineDist, PrevLineDist, c: Integer;
   NextPage, PrevPage: TSynEditLineMapPage;
 begin
-  if (FSynWordWrapLineMap.FirstInvalidLine < 0) and
-     (RealCount <= Tree.PageJoinSize)
-  then begin
+  if (FSynWordWrapLineMap.FirstInvalidLine >= 0) then
+    exit;
+  if (RealCount = 0) and (FSize = 0) then begin
+    Tree.FreeNode(Self);
+  end
+  else
+  if (RealCount <= Tree.PageJoinSize) then begin
     NextLineOffs := 0;
     dummy := 0;
     NextPage := Successor(NextLineOffs, dummy);
@@ -1510,6 +1523,7 @@ function TLazSynDisplayWordWrap.GetNextHighlighterToken(out
 var
   PreStart: Integer;
 begin
+  ATokenInfo := Default(TLazSynDisplayTokenInfo);
   If FCurLineLogIdx >= FCurSubLineNextLogStartIdx then begin
     Result := False;
     exit;
@@ -1550,14 +1564,31 @@ end;
 
 procedure TLazSynEditLineWrapPlugin.DoWidthChanged(Sender: TObject;
   Changes: TSynStatusChanges);
+var
+  w: Integer;
 begin
-  FLineMapView.KnownLengthOfLongestLine := WrapColumn;
+  w := WrapColumn;
+  if FCurrentWrapColumn = w then
+    exit;
+  FCurrentWrapColumn := w;
+  FLineMapView.KnownLengthOfLongestLine := w;
   FLineMapView.InvalidateLines(0, FLineMapView.NextLines.Count);
 end;
 
 function TLazSynEditLineWrapPlugin.GetWrapColumn: Integer;
 begin
-  Result := TSynEdit(Editor).CharsInWindow;
+  Result := TSynEdit(Editor).CharsInWindow - 1;
+  if Result < FMinWrapWidth then
+    Result := FMinWrapWidth;
+end;
+
+procedure TLazSynEditLineWrapPlugin.SetMinWrapWidth(AValue: Integer);
+begin
+  if AValue < 1 then
+    AValue := 1;
+  if FMinWrapWidth = AValue then Exit;
+  FMinWrapWidth := AValue;
+  DoWidthChanged(nil, [scCharsInWindow]);
 end;
 
 function TLazSynEditLineWrapPlugin.CreatePageMapNode(AMapTree: TSynLineMapAVLTree): TSynEditLineMapPage;
@@ -1766,15 +1797,30 @@ end;
 function TLazSynEditLineWrapPlugin.LineXYToTextX(ARealLine: IntPos;
   ALineXY: TPhysPoint): Integer;
 var
-  dummy, dummy2: IntIdx;
-  dummy3: integer;
+  ANextLogX, APhysWidth: Integer;
+  ALine: String;
+  APhysCharWidths: TPhysicalCharWidths;
+  dummy: integer;
 begin
   FLineMapView.LogPhysConvertor.CurrentLine := ARealLine;
-  GetSublineBounds(FLineMapView.NextLines.Strings[ARealLine],
+  ALine := FLineMapView.NextLines.Strings[ARealLine];
+  GetSublineBounds(ALine,
     WrapColumn,
     FLineMapView.LogPhysConvertor.CurrentWidthsDirect,
-    ALineXY.y, dummy, dummy2, Result, dummy3
+    ALineXY.y, dummy, ANextLogX, Result, APhysWidth
   );
+
+  if (ALineXY.y > 0) and (ALineXY.X <= 1) and (FCaretWrapPos = wcpEOL) then begin
+    ALineXY.x := 2;
+  end
+  else
+  if (ANextLogX > 0) and (ANextLogX < Length(ALine)) then begin
+    if FCaretWrapPos = wcpEOL then
+      inc(APhysWidth);
+    if ALineXY.X > APhysWidth then
+      ALineXY.x := APhysWidth;
+  end;
+
   Result := Result + ALineXY.x;
 end;
 
@@ -1805,8 +1851,21 @@ begin
   FLineMapView.WrapInfoForViewedXYProc := @GetWrapInfoForViewedXY;
   FLineMapView.AddLinesChangedHandler(@DoLinesChanged);
   TSynEdit(Editor).RegisterStatusChangedHandler(@DoWidthChanged, [scCharsInWindow]);
+  FMinWrapWidth := 1;
   FLineMapView.KnownLengthOfLongestLine := WrapColumn;
   WrapAll;
+end;
+
+destructor TLazSynEditLineWrapPlugin.Destroy;
+begin
+  if Editor <> nil then begin
+    TSynEdit(Editor).UnRegisterStatusChangedHandler(@DoWidthChanged);
+    if (FLineMapView <> nil) and not (csDestroying in Editor.Componentstate) then begin
+      TSynEdit(Editor).TextViewsManager.RemoveSynTextView(FLineMapView, True);
+      TSynEdit(Editor).Invalidate;
+    end;
+   end;
+  inherited Destroy;
 end;
 
 procedure TLazSynEditLineWrapPlugin.WrapAll;

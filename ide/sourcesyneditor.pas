@@ -61,8 +61,8 @@ uses
   SynEditHighlighter, SynEditHighlighterFoldBase, SynHighlighterPas,
   SynEditMarkupHighAll, SynEditKeyCmds, SynEditMarkupIfDef, SynEditMiscProcs,
   SynPluginMultiCaret, SynEditPointClasses,
-  SynEditMarkupFoldColoring, SynEditTextTabExpander, SynEditMouseCmds,
-  etSrcEditMarks, LazarusIDEStrConsts, SourceMarks;
+  SynEditMarkupFoldColoring, SynEditTextTabExpander, SynEditMouseCmds, SynEditWrappedView,
+  etSrcEditMarks, LazarusIDEStrConsts, SourceMarks, SourceSynWrap;
 
 type
 
@@ -249,6 +249,10 @@ type
     property UseRecent: boolean read FUseRecent write FUseRecent;
   end;
 
+  TSrcSynTopLineInfo = record
+    Line, Subline: IntIdx;
+  end;
+
   { TIDESynEditor }
 
   TIDESynEditor = class(TSynEdit)
@@ -258,6 +262,7 @@ type
     FMarkupIdentComplWindow: TSynMarkupIdentComplWindow;
     FShowTopInfo: boolean;
     FFoldView: TSynEditFoldedView;
+    FWrapView: TLazSynSourceEditLineWrapPlugin;
     FTopInfoNestList: TLazSynEditNestedFoldsList;
     FSyncroEdit: TSynPluginSyncroEdit;
     FTemplateEdit: TSynPluginTemplateEdit;
@@ -286,23 +291,32 @@ type
     function GetOnMultiCaretBeforeCommand: TSynMultiCaretBeforeCommand;
     procedure GetTopInfoMarkupForLine(Sender: TObject; {%H-}Line: integer; var Special: boolean;
       aMarkup: TSynSelectedColor);
+    function GetWordWrapEnabled: Boolean;
     procedure SetCaretColor(AValue: TColor);
     procedure SetHighlightUserWordCount(AValue: Integer);
     procedure SetOnMultiCaretBeforeCommand(AValue: TSynMultiCaretBeforeCommand);
     procedure SetShowTopInfo(AValue: boolean);
     procedure SetTopInfoMarkup(AValue: TSynSelectedColor);
     procedure DoHighlightChanged(Sender: TSynEditStrings; {%H-}AIndex, {%H-}ACount : Integer);
+    procedure SetWordWrapCaretWrapPos(AValue: TLazSynEditWrapCaretPos);
+    procedure SetWordWrapEnabled(AValue: Boolean);
+    procedure SetWordWrapMinWidth(AValue: Integer);
     procedure SrcSynCaretChanged(Sender: TObject);
     function  GetHighlighter: TSynCustomFoldHighlighter;
   protected
+    function GetTopLineBeforeFold: TSrcSynTopLineInfo;
+    procedure RestoreTopLineAfterFold(AnInfo: TSrcSynTopLineInfo);
     procedure DoOnStatusChange(Changes: TSynStatusChanges); override;
     function CreateGutter(AOwner : TSynEditBase; ASide: TSynGutterSide;
                           ATextDrawer: TheTextDrawer): TSynGutter; override;
     procedure SetHighlighter(const Value: TSynCustomHighlighter); override;
+    procedure AddLineWrapView;
+    procedure RemoveLineWrapView;
+
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function TextIndexToViewPos(aTextIndex : Integer) : Integer;
+    function TextIndexToViewPos(aTextIndex : Integer) : Integer; // Wrong name: argument is TextPos, not TextIdx
     property IDEGutterMarks: TIDESynGutterMarks read GetIDEGutterMarks;
     property TopView;
     property TextBuffer;
@@ -331,6 +345,10 @@ type
     property  OnMultiCaretBeforeCommand: TSynMultiCaretBeforeCommand read GetOnMultiCaretBeforeCommand write SetOnMultiCaretBeforeCommand;
     property CaretStamp: Int64 read FCaretStamp;
     property CaretColor: TColor read FCaretColor write SetCaretColor;
+
+    property WordWrapEnabled: Boolean read GetWordWrapEnabled write SetWordWrapEnabled;
+    property WordWrapCaretWrapPos: TLazSynEditWrapCaretPos write SetWordWrapCaretWrapPos;
+    property WordWrapMinWidth: Integer write SetWordWrapMinWidth;
   end;
 
   TIDESynHighlighterPasRangeList = class(TSynHighlighterPasRangeList)
@@ -1120,7 +1138,7 @@ begin
     c := TCustomSynEdit(SynEdit).Lines.Count;
     for i := FirstLine to LastLine do
     begin
-      iLine := FoldView.DisplayNumber[i];
+      iLine := FoldView.ViewToTextIndex[i] + 1;
       if (iLine < 0) or (iLine >= c) then break;
       // next line rect
       rcLine.Top := rcLine.Bottom;
@@ -1173,7 +1191,7 @@ begin
     c := TCustomSynEdit(SynEdit).Lines.Count;
     for i := FirstLine to LastLine do
     begin
-      iLine := FoldView.DisplayNumber[i];
+      iLine := FoldView.ViewToTextIndex[i] + 1;
       if (iLine < 0) or (iLine >= c) then break;
       // next line rect
       rcLine.Top := rcLine.Bottom;
@@ -1559,6 +1577,29 @@ begin
     SrcSynCaretChanged(nil);
 end;
 
+procedure TIDESynEditor.SetWordWrapCaretWrapPos(AValue: TLazSynEditWrapCaretPos);
+begin
+  if FWrapView <> nil then
+    FWrapView.CaretWrapPos := AValue;
+end;
+
+procedure TIDESynEditor.SetWordWrapEnabled(AValue: Boolean);
+begin
+  if AValue = WordWrapEnabled then
+    exit;
+
+  if AValue then
+    AddLineWrapView
+  else
+    RemoveLineWrapView;
+end;
+
+procedure TIDESynEditor.SetWordWrapMinWidth(AValue: Integer);
+begin
+  if FWrapView <> nil then
+    FWrapView.MinWrapWidth := AValue;
+end;
+
 procedure TIDESynEditor.SrcSynCaretChanged(Sender: TObject);
   function RealTopLine: Integer;
   begin
@@ -1676,6 +1717,29 @@ begin
     Result := nil;
 end;
 
+function TIDESynEditor.GetTopLineBeforeFold: TSrcSynTopLineInfo;
+var
+  r: TLineRange;
+  tv: Integer;
+begin
+  tv := ToIdx(TopView);
+  Result.Line := TextView.DisplayView.ViewToTextIndexEx(tv, r);
+  Result.Subline := tv - r.Top;
+end;
+
+procedure TIDESynEditor.RestoreTopLineAfterFold(AnInfo: TSrcSynTopLineInfo);
+var
+  tv: Integer;
+begin
+  tv := TextView.TextToViewIndex(AnInfo.Line);
+  if TextView.IsTextIdxVisible(AnInfo.Line) then
+    tv := tv + AnInfo.Subline
+  else
+    tv := tv + 1;
+
+  Topview := ToPos(tv);
+end;
+
 procedure TIDESynEditor.DoOnStatusChange(Changes: TSynStatusChanges);
 begin
   inherited DoOnStatusChange(Changes);
@@ -1692,6 +1756,11 @@ procedure TIDESynEditor.GetTopInfoMarkupForLine(Sender: TObject; Line: integer;
 begin
   Special := True;
   aMarkup.Assign(FTopInfoMarkup);
+end;
+
+function TIDESynEditor.GetWordWrapEnabled: Boolean;
+begin
+  Result := FWrapView <> nil;
 end;
 
 procedure TIDESynEditor.SetCaretColor(AValue: TColor);
@@ -1897,6 +1966,18 @@ begin
   end;
 end;
 
+procedure TIDESynEditor.AddLineWrapView;
+begin
+  if FWrapView <> nil then
+    RemoveLineWrapView;
+  FWrapView := TLazSynSourceEditLineWrapPlugin.Create(Self);
+end;
+
+procedure TIDESynEditor.RemoveLineWrapView;
+begin
+  FreeAndNil(FWrapView);
+end;
+
 constructor TIDESynEditor.Create(AOwner: TComponent);
 var
   MarkupFoldColors: TSynEditMarkupFoldColors;
@@ -1967,6 +2048,7 @@ end;
 
 destructor TIDESynEditor.Destroy;
 begin
+  RemoveLineWrapView;
   UnRegisterMouseActionSearchHandler(@CatchMouseForTopInforLine);
   ViewedTextBuffer.RemoveChangeHandler(senrHighlightChanged, @DoHighlightChanged);
   HighlightUserWordCount := 0;
@@ -2889,11 +2971,13 @@ end;
 procedure TIDESynGutterCodeFolding.UnFoldIfdef(AInclDisabled, AInclEnabled: Boolean);
 var
   i, j, k, y1, y2: Integer;
+  CurTopLine: TSrcSynTopLineInfo;
   FldInf: TSynFoldNodeInfo;
   Tree: TSynMarkupHighIfDefLinesTree;
   IfLineNode: TSynMarkupHighIfDefLinesNodeInfo;
   IsDisabled: Boolean;
 begin
+  CurTopLine := TIDESynEditor(SynEdit).GetTopLineBeforeFold;
   if TSynEdit(SynEdit).SelAvail then begin
     y1 := TSynEdit(SynEdit).BlockBegin.Y;
     y2 := TSynEdit(SynEdit).BlockEnd.Y;
@@ -2930,15 +3014,18 @@ begin
       end; //FoldView.IsFoldedAtTextIndex(i,j)
     end;
   end;
+  TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
 end;
 
 procedure TIDESynGutterCodeFolding.FoldIfdef(AInclTemp: Boolean);
 var
   i, j, k, y1, y2: Integer;
+  CurTopLine: TSrcSynTopLineInfo;
   FldInf: TSynFoldNodeInfo;
   Tree: TSynMarkupHighIfDefLinesTree;
   IfLineNode: TSynMarkupHighIfDefLinesNodeInfo;
 begin
+  CurTopLine := TIDESynEditor(SynEdit).GetTopLineBeforeFold;
   if TSynEdit(SynEdit).SelAvail then begin
     y1 := TSynEdit(SynEdit).BlockBegin.Y;
     y2 := TSynEdit(SynEdit).BlockEnd.Y;
@@ -2969,14 +3056,18 @@ begin
       end;
     end;
   end;
+  TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
 end;
 
 procedure TIDESynGutterCodeFolding.PopClickedUnfoldAll(Sender: TObject);
 var
   i, y1, y2: Integer;
+  CurTopLine: TSrcSynTopLineInfo;
 begin
+  CurTopLine := TIDESynEditor(SynEdit).GetTopLineBeforeFold;
   if not TSynEdit(SynEdit).SelAvail then begin
     FoldView.UnfoldAll;
+    TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
     exit;
   end;
   y1 := TSynEdit(SynEdit).BlockBegin.Y;
@@ -2984,13 +3075,16 @@ begin
   if TSynEdit(SynEdit).BlockEnd.X = 1 then dec(y2);
   for i := y1-1 to y2-1 do
     FoldView.UnFoldAtTextIndex(i);
+  TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
 end;
 
 procedure TIDESynGutterCodeFolding.PopClickedUnfoldComment(Sender: TObject);
 var
   i, j, y1, y2: Integer;
+  CurTopLine: TSrcSynTopLineInfo;
   FldInf: TSynFoldNodeInfo;
 begin
+  CurTopLine := TIDESynEditor(SynEdit).GetTopLineBeforeFold;
   if TSynEdit(SynEdit).SelAvail then begin
     y1 := TSynEdit(SynEdit).BlockBegin.Y;
     y2 := TSynEdit(SynEdit).BlockEnd.Y;
@@ -3016,13 +3110,16 @@ begin
       end;
     end;
   end;
+  TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
 end;
 
 procedure TIDESynGutterCodeFolding.PopClickedFoldComment(Sender: TObject);
 var
   i, j, y1, y2: Integer;
+  CurTopLine: TSrcSynTopLineInfo;
   FldInf: TSynFoldNodeInfo;
 begin
+  CurTopLine := TIDESynEditor(SynEdit).GetTopLineBeforeFold;
   if TSynEdit(SynEdit).SelAvail then begin
     y1 := TSynEdit(SynEdit).BlockBegin.Y;
     y2 := TSynEdit(SynEdit).BlockEnd.Y;
@@ -3046,13 +3143,16 @@ begin
       end;
     end;
   end;
+  TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
 end;
 
 procedure TIDESynGutterCodeFolding.PopClickedHideComment(Sender: TObject);
 var
   i, j, y1, y2: Integer;
+  CurTopLine: TSrcSynTopLineInfo;
   FldInf: TSynFoldNodeInfo;
 begin
+  CurTopLine := TIDESynEditor(SynEdit).GetTopLineBeforeFold;
   if TSynEdit(SynEdit).SelAvail then begin
     y1 := TSynEdit(SynEdit).BlockBegin.Y;
     y2 := TSynEdit(SynEdit).BlockEnd.Y;
@@ -3076,6 +3176,7 @@ begin
       end;
     end;
   end;
+  TIDESynEditor(SynEdit).RestoreTopLineAfterFold(CurTopLine);
 end;
 
 procedure TIDESynGutterCodeFolding.CreatePopUpMenuEntries(var APopUp: TPopupMenu; ALine: Integer);

@@ -720,9 +720,7 @@ resourcestring
   lisReplacementFuncs = 'Replacement functions';
   lisFilesHaveRightEncoding = '*** All found files already have the right encoding ***';
   lisEncodingNumberOfFilesFailed = 'Number of files failed to convert: %d';
-
-  //
-  lisnoname = 'noname';
+  lisnoname = 'noname'; // default unit name, must be a valid identifier
   lisTheDestinationDirectoryDoesNotExist = 'The destination directory%s"%s" does not exist.';
   lisRenameFile = 'Rename file?';
   lisThisLooksLikeAPascalFileItIsRecommendedToUseLowerC = 'This looks like a Pascal file.'
@@ -1661,6 +1659,14 @@ resourcestring
   dlgCodeFoldEnableHide = 'Hide';
   dlgCodeFoldEnableBoth = 'Both';
   dlgCodeFoldPopUpOrder = 'Reverse fold-order in Popup';
+
+  dlgOptWordWrap = 'Word-wrap';
+  dlgOptWordWrapUseWordwrap = 'Use Word-wrap';
+  dlgOptWordWrapDisplayCaretAtWrapPositio = 'Display caret at wrap-position...';
+  dlgOptWordWrapEndOfLine = 'end of line';
+  dlgOptWordWrapStartOfNextLine = 'start of next line';
+  dlgOptWordWrapMinimumLineLength = 'Minimum line length';
+
   dlfMousePredefinedScheme = 'Use predefined scheme';
   dlfNoPredefinedScheme = '< None >';
   dlfMouseSimpleGenericSect = 'General';

@@ -242,6 +242,7 @@ type
     FCairo: Pcairo_t;
     FXorCairo: PCairo_t;
     FXorSurface: Pcairo_surface_t;
+    FLastPenX, FLastPenY: double;
     property XorMode: boolean read FXorMode write FXorMode;
   public
     CairoSurface: Pcairo_surface_t;
@@ -294,6 +295,8 @@ type
     procedure TranslateCairoToDevice;
     procedure Translate(APoint: TPoint);
     procedure set_antialiasing(aamode:boolean);
+    procedure Save;
+    procedure Restore;
     property BkMode: integer read FBkMode write FBkMode;
     property BkColor: TColorRef read GetBkColor write SetBkColor;
     property BgBrush: TGtk3Brush read FBgBrush; {bgBrush is created when SetBk is called, otherwise is nil}
@@ -1510,9 +1513,9 @@ begin
   if Assigned(FBgBrush) then
     FBgBrush.Free;
   FBgBrush := TGtk3Brush.Create;
-  FBgBrush.Style := BS_SOLID;
-  FBgBrush.Color := ColorToRGB(FBkColor);
   FBgBrush.Context := Self;
+  FBgBrush.Style := BS_SOLID;
+  FBgBrush.Color := ColorToRGB(LongInt(FBkColor));
 end;
 
 procedure TGtk3DeviceContext.SetFont(AValue: TGtk3Font);
@@ -1923,6 +1926,8 @@ procedure TGtk3DeviceContext.CreateObjects;
 var
   Matrix: Tcairo_matrix_t;
 begin
+  FLastPenX := 0;
+  FLastPenY := 0;
   FBgBrush := nil; // created on demand
   FBkMode := TRANSPARENT;
   FCurrentImage := nil;
@@ -2346,12 +2351,14 @@ begin
     begin
       ATempBrush := FCurrentBrush;
       CurrentBrush:= TGtk3Brush(ABrush);
-      applyBrush;
-    end;
+    end else
+      ATempBrush := FCurrentBrush;
+
+    applyBrush;
 
     cairo_rectangle(pcr, x + PixelOffset, y + PixelOffset, w - 1, h - 1);
 
-    if (ABrush <> 0) and (CurrentBrush.Style <> BS_NULL) then
+    if (CurrentBrush.Style <> BS_NULL) then
     begin
       cairo_fill_preserve(pcr);
       // must paint border, filling is not enough
@@ -2360,8 +2367,7 @@ begin
       cairo_stroke(pcr);
     end;
 
-    if ABrush <> 0 then
-      CurrentBrush:= ATempBrush;
+    CurrentBrush:= ATempBrush;
     cairo_new_path(pcr);
   finally
     cairo_restore(pcr);
@@ -2597,7 +2603,6 @@ end;
 
 function TGtk3DeviceContext.LineTo(X, Y: Integer): Boolean;
 var
-  FX, FY: Double;
   X0, Y0,dx,dy:integer;
 begin
   if not Assigned(pcr) then
@@ -2607,9 +2612,9 @@ begin
 
   if fCurrentPen.Width<=1 then // optimizations
   begin
-    cairo_get_current_point(pcr, @FX, @FY);
-    X0:=round(FX);
-    Y0:=round(FY);
+    //cairo_get_current_point(pcr, @FX, @FY);
+    X0:=round(FLastPenX);
+    Y0:=round(FLastPenY);
     dx:=X-X0;
     dy:=Y-Y0;
 
@@ -2630,11 +2635,11 @@ begin
       // here is required more Cairo magic
       if (dx>0) then
       begin
-        cairo_move_to(pcr,FX-PixelOffset,FY-PixelOffset);
+        cairo_move_to(pcr,FLastPenX-PixelOffset,FLastPenY-PixelOffset);
         cairo_line_to(pcr,X+2*PixelOffset, Y+2*PixelOffset);
       end else
       begin
-        cairo_move_to(pcr,FX+2*PixelOffset,FY);
+        cairo_move_to(pcr,FLastPenX+2*PixelOffset,FLastPenY);
         cairo_line_to(pcr,X+PixelOffset, Y+PixelOffset);
       end;
     end else
@@ -2661,6 +2666,7 @@ begin
     OldPoint^.Y := Round(dy);
   end;
   cairo_move_to(pcr, X{-PixelOffset}, Y{-PixelOffset});
+  cairo_get_current_point(pcr,@FLastPenX,@FLastPenY);
   Result := True;
 end;
 
@@ -2738,6 +2744,16 @@ const
    caa:array[boolean] of Tcairo_antialias_t = (CAIRO_ANTIALIAS_NONE,CAIRO_ANTIALIAS_DEFAULT);
 begin
   cairo_set_antialias(pcr, caa[aamode]);
+end;
+
+procedure TGtk3DeviceContext.Save;
+begin
+  cairo_save(pcr);
+end;
+
+procedure TGtk3DeviceContext.Restore;
+begin
+  cairo_restore(pcr);
 end;
 
 procedure TGtk3DeviceContext.SetCanvasScaleFactor(const AValue: double);

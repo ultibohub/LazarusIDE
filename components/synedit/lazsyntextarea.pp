@@ -60,6 +60,7 @@ type
     FCharWidthsLen: Integer;
     FCurTxtLineIdx : Integer;
     FCurLineByteLen: Integer;
+    FIsLastViewedSubLine: Boolean;
 
     // Fields for GetNextHighlighterTokenFromView
     // Info about the token (from highlighter)
@@ -99,6 +100,7 @@ type
                                              ): Boolean;
     function  GetNextHighlighterTokenEx(out ATokenInfo: TLazSynDisplayTokenInfoEx): Boolean;
     property  CharWidths: TPhysicalCharWidths read FCharWidths;
+    property  CharWidthsLen: integer read FCharWidthsLen;
     property ForegroundColor: TColor read FForegroundColor write FForegroundColor;
     property BackgroundColor: TColor read FBackgroundColor write FBackgroundColor;
     property SpaceExtraByteCount: Integer read FSpaceExtraByteCount write FSpaceExtraByteCount;
@@ -355,6 +357,7 @@ begin
   FNextMarkupLogPos  := -1;
   FCurMarkupState      := cmPreInit;
   FCurTxtLineIdx     := ARealLine;
+  FIsLastViewedSubLine := FCurLineByteLen >= FCharWidthsLen;
 end;
 
 function TLazSynPaintTokenBreaker.GetNextHighlighterTokenEx(out
@@ -1549,6 +1552,7 @@ var
   CurTextIndex: Integer;    // Current Index in text
   dc: HDC;
   CharWidths: TPhysicalCharWidths;
+  CWLen: Integer;
 
   var
     LineBuffer: PChar;
@@ -1562,7 +1566,7 @@ var
     Attr: TSynSelectedColorMergeResult;
     TxtFlags: Integer;
     tok: TRect;
-    c, i, j, k, e, Len, CWLen: Integer;
+    c, i, j, k, e, Len: Integer;
     pl, pt: PChar;
     TxtLeft: Integer;
     NeedExpansion, NeedTransform: Boolean;
@@ -1688,8 +1692,6 @@ var
       else
         c := 0;
         e := 0;
-
-      CWLen := Length(CharWidths);
 
       // Copy to LineBuffer (and maybe FetoBuf
       if NeedExpansion then begin
@@ -1828,17 +1830,20 @@ var
       CharWidths := nil; // keep refcnt = 1 -- in case they get resized
       FTokenBreaker.SetHighlighterTokensLine(TV + CurLine, CurTextIndex);
       CharWidths := FTokenBreaker.CharWidths;
+      CWLen := FTokenBreaker.CharWidthsLen;
       fMarkupManager.PrepareMarkupForRow(CurTextIndex+1);
 
-      DividerInfo := DisplayView.GetDrawDividerInfo;  // May call HL.SetRange
-      if (DividerInfo.Color <> clNone) and (nRightEdge >= FTextBounds.Left) then
-      begin
-        ypos := rcToken.Bottom - 1;
-        cl := DividerInfo.Color;
-        if cl = clDefault then
-          cl := RightEdgeColor;
-        fTextDrawer.DrawLine(nRightEdge, ypos, FTextBounds.Left - 1, ypos, cl);
-        dec(rcToken.Bottom);
+      if FTokenBreaker.FIsLastViewedSubLine then begin
+        DividerInfo := DisplayView.GetDrawDividerInfo;  // May call HL.SetRange
+        if (DividerInfo.Color <> clNone) and (nRightEdge >= FTextBounds.Left) then
+        begin
+          ypos := rcToken.Bottom - 1;
+          cl := DividerInfo.Color;
+          if cl = clDefault then
+            cl := RightEdgeColor;
+          fTextDrawer.DrawLine(nRightEdge, ypos, FTextBounds.Left - 1, ypos, cl);
+          dec(rcToken.Bottom);
+        end;
       end;
 
       while FTokenBreaker.GetNextHighlighterTokenEx(TokenInfoEx) do begin

@@ -249,6 +249,7 @@ const
 
 
 
+function G_OBJECT_TYPE_NAME(AWidget: PGObject): string;
 
 function Gtk3IsObject(AWidget: PGObject): GBoolean;
 function Gtk3IsButton(AWidget: PGObject): GBoolean;
@@ -272,6 +273,7 @@ function Gtk3IsMenuItem(AWidget: PGObject): GBoolean;
 function Gtk3IsNoteBook(AWidget: PGObject): GBoolean;
 function Gtk3IsRadioMenuItem(AWidget: PGObject): GBoolean;
 
+function Gtk3IsAdjustment(AWidget: PGObject): GBoolean;
 function Gtk3IsHScrollbar(AWidget: PGObject): GBoolean;
 function Gtk3IsVScrollbar(AWidget: PGObject): GBoolean;
 
@@ -541,6 +543,11 @@ begin
   Result := (AWidget <> nil) and  g_type_check_instance_is_a(PGTypeInstance(AWidget), gtk_radio_menu_item_get_type);
 end;
 
+function Gtk3IsAdjustment(AWidget:PGObject):GBoolean;
+begin
+  Result := (AWidget <> nil) and  g_type_check_instance_is_a(PGTypeInstance(AWidget), gtk_adjustment_get_type);
+end;
+
 function Gtk3IsHScrollbar(AWidget: PGObject): GBoolean;
 begin
   Result := (AWidget <> nil) and  g_type_check_instance_is_a(PGTypeInstance(AWidget), gtk_hscrollbar_get_type);
@@ -630,24 +637,26 @@ end;
 function Gtk3TranslateScrollStyle(const SS: TScrollStyle): TGtkScrollStyle;
   function return(Horiz, Vert: TGtkPolicyType): TGtkScrollStyle;
   begin
-    with Result do begin
-	  Horizontal := Horiz;
-	  Vertical := Vert;
-	end;
+    with Result do
+    begin
+	    Horizontal := Horiz;
+	    Vertical := Vert;
+	  end;
   end;
 begin
-  with Result do begin
+  with Result do
+  begin
     Horizontal := GTK_POLICY_AUTOMATIC;
-	Vertical := GTK_POLICY_AUTOMATIC;
+	  Vertical := GTK_POLICY_AUTOMATIC;
   end;
   case SS of
-    ssAutoBoth: return(GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
-    ssAutoHorizontal: return(GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
-    ssAutoVertical: return(GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
-    ssBoth: return(GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
-    ssHorizontal: return(GTK_POLICY_ALWAYS, GTK_POLICY_NEVER);
-    ssNone: return(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
-    ssVertical: return(GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
+    ssAutoBoth: Result := return(GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+    ssAutoHorizontal: Result := return(GTK_POLICY_AUTOMATIC, GTK_POLICY_NEVER);
+    ssAutoVertical: Result := return(GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+    ssBoth: Result := return(GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS);
+    ssHorizontal: Result := return(GTK_POLICY_ALWAYS, GTK_POLICY_NEVER);
+    ssNone: Result := return(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
+    ssVertical: Result := return(GTK_POLICY_NEVER, GTK_POLICY_ALWAYS);
   end;
 end;
 
@@ -1347,5 +1356,12 @@ begin
   g_list_free(TopList);
 end;
 
+function G_OBJECT_TYPE_NAME(AWidget:PGObject):string;
+begin
+  Result := '';
+  if AWidget = nil then
+    exit;
+  Result := g_type_name(PGObject(AWidget)^.g_type_instance.g_class^.g_type);
+end;
 
 end.

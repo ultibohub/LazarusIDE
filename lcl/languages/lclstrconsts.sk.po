@@ -1465,6 +1465,15 @@ msgstr "Zlý typ tokenu: očakávaný bol %s , ale nájdený bol %s"
 msgid "%s bytes"
 msgstr "%s bytov"
 
+#: lclstrconsts.sshellctrlsfolder
+msgid "Folder"
+msgstr ""
+
+#: lclstrconsts.sshellctrlsgb
+#, object-pascal-format
+msgid "%s GB"
+msgstr ""
+
 #: lclstrconsts.sshellctrlsinvalidpath
 #, object-pascal-format
 msgctxt "lclstrconsts.sshellctrlsinvalidpath"
