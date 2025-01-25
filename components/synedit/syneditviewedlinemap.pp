@@ -861,7 +861,9 @@ end;
 procedure TSynLineMapAVLTree.RemoveNode(ANode: TSynEditLineMapPage);
 begin
   if (FInvalidEntryList <> nil) and
-     ( (ANode.FPrevPageWithInvalid <> nil) or (ANode.FNextPageWithInvalid <> nil))
+     ( (ANode.FPrevPageWithInvalid <> nil) or (ANode.FNextPageWithInvalid <> nil) or
+       (FInvalidEntryList.FFirstEntry = ANode)
+     )
   then
     FInvalidEntryList.RemoveFromInvalidList(ANode, rfiForce);
   inherited RemoveNode(ANode);
@@ -874,20 +876,15 @@ var
   CurrentPage: TSynEditLineMapPageHolder;
 begin
   CurrentPage := FindPageForLine(ALineIdx, afmPrev);
-  if not CurrentPage.HasPage then begin
-    CurrentPage := FirstPage;
-    if not CurrentPage.HasPage then begin
-      CurrentPage := FindPageForLine(ALineIdx, afmCreate);
-      if not CurrentPage.HasPage then
-        exit;
-    end;
-  end;
 
   // inherited => moves any node with FStartLine >= AStartLine
   inherited AdjustForLinesInserted(ALineIdx, ALineCount);
 
-// TODO ::::XXXXX   ONLY if inside the page / otherwise call invalidate
-  CurrentPage.AdjustForLinesInserted(ALineIdx, ALineCount, ABytePos);
+  // CurrentPage.StartLine is still the old value
+  if CurrentPage.HasPage then
+    CurrentPage.AdjustForLinesInserted(ALineIdx, ALineCount, ABytePos)
+  else
+    InvalidateLines(ALineIdx, ALineIdx+ALineCount-1);
 end;
 
 procedure TSynLineMapAVLTree.AdjustForLinesDeleted(AStartLine, ALineCount,
@@ -1298,16 +1295,17 @@ var
 begin
   if (not FCurWrapPage.HasPage) or (FCurWrapPage.StartLine > AWrappedLine) or
      (AWrappedLine >= FCurWrapPage.RealEndLine)
-  then begin
+  then
     FCurWrapPage := FLineMappingView.FLineMappingData.FindPageForWrap(AWrappedLine);
-    FCurWrappedLine := AWrappedLine;
-  end;
+  FCurWrappedLine := AWrappedLine;
 
   if FCurWrapPage.HasPage then
     RealIdx := FCurWrapPage.StartLine +
       FCurWrapPage.Page.GetOffsetForWrap(AWrappedLine - FCurWrapPage.StartLine - FCurWrapPage.ViewedCountDifferenceBefore, FCurrentWrapSubline)
-  else
-   RealIdx := AWrappedLine;
+  else begin
+    RealIdx := AWrappedLine;
+    FCurrentWrapSubline := 0;
+  end;
 
   inherited SetHighlighterTokensLine(RealIdx, ARealLine, AStartBytePos, ALineByteLen);
 end;

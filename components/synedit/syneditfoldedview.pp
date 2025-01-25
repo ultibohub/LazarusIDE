@@ -402,8 +402,8 @@ type
 
     function GetFoldClasifications(index : Integer): TFoldNodeClassifications;
     function GetHighLighter: TSynCustomHighlighter;
-    function GetDisplayNumber(index : Integer) : Integer;
-    function GetTextIndex(index : Integer) : Integer;
+    function GetDisplayNumber(index : Integer) : Integer; deprecated 'To be removed in 5.99 / Use DisplayView.ViewToTextIndex';
+    function GetTextIndex(index : Integer) : Integer; deprecated 'To be removed in 5.99 / Use ScreenLineToTextIndex';
     function GetFoldType(index : Integer) : TSynEditFoldLineCapabilities;
     function IsFolded(index : integer) : Boolean;  // TextIndex
     procedure ProcessMySynCommand(Sender: TObject; AfterProcessing: boolean;
@@ -449,29 +449,29 @@ type
     destructor Destroy; override;
     
     // Converting between Folded and Unfolded Lines/Indexes
-    function TextToViewIndex(aTextIndex : TLineIdx) : TLineIdx; override;   (* Convert TextIndex (0-based) to ViewPos (1-based) *)
-    function ViewToTextIndex(aViewIndex : TLineIdx) : TLineIdx; override;     (* Convert ViewPos (1-based) to TextIndex (0-based) *)
+    function TextToViewIndex(aTextIndex : TLineIdx) : TLineIdx; override;   (* Convert TextIndex (0-based) to ViewIndex (0-based) *)
+    function ViewToTextIndex(aViewIndex : TLineIdx) : TLineIdx; override;     (* Convert ViewIndex (0-based) to TextIndex (0-based) *)
     function TextXYToViewXY(APhysTextXY: TPhysPoint): TPhysPoint; override;
     function ViewXYToTextXY(APhysViewXY: TPhysPoint): TPhysPoint; override;
 
-    function InternTextToViewIndex(aTextIndex : TLineIdx) : TLineIdx;           (* Convert TextIndex (0-based) to ViewPos (1-based) *)
-    function InternViewToTextIndex(aViewIndex : TLineIdx) : TLineIdx;             (* Convert ViewPos (1-based) to TextIndex (0-based) *)
+    function InternTextToViewIndex(aTextIndex : TLineIdx) : TLineIdx;           (* Convert TextIndex (0-based) to ViewIndex (0-based) *)
+    function InternViewToTextIndex(aViewIndex : TLineIdx) : TLineIdx;             (* Convert ViewIndex (0-based) to TextIndex (0-based) *)
 
-    function TextIndexToScreenLine(aTextIndex : Integer) : Integer; (* Convert TextIndex (0-based) to Screen (0-based) *)
-    function ScreenLineToTextIndex(aLine : Integer) : Integer;      (* Convert Screen (0-based) to TextIndex (0-based) *)
+    function TextIndexToScreenLine(aTextIndex : Integer) : Integer; deprecated 'To be removed in 5.99 / Use TextToViewIndex(index)-TopView or TextXYToScreenXY'; (* Convert TextIndex (0-based) to Screen (0-based) *)
+    function ScreenLineToTextIndex(aLine : Integer) : Integer; deprecated 'To be removed in 5.99 / Use ViewToTextIndex(index+TopView) or ScreenXYToTextXY'; (* Convert Screen (0-based) to TextIndex (0-based) *)
 
     function AddVisibleOffsetToTextIndex(aTextIndex: TLineIdx; LineOffset: Integer): TLineIdx; override;
     function IsTextIdxVisible(aTextIndex: TLineIdx): Boolean; override;
 
     // Attributes for Visible-Lines-On-screen
     property DisplayNumber[index : Integer] : Integer   (* LineNumber for display in Gutter / result is 1-based *)
-      read GetDisplayNumber;
+      read GetDisplayNumber; deprecated 'To be removed in 5.99 / Use DisplayView.ViewToTextIndex';
     property FoldType[index : Integer] : TSynEditFoldLineCapabilities (* FoldIcon / State *)
       read GetFoldType;
     property FoldClasifications[index : Integer] : TFoldNodeClassifications (* FoldIcon / State *)
       read GetFoldClasifications;
     property TextIndex[index : Integer] : Integer       (* Position in SynTextBuffer / result is 0-based *)
-      read GetTextIndex; // maybe writable
+      read GetTextIndex; deprecated 'To be removed in 5.99 / Use ViewToTextIndex(index+TopView)';
 
     // Define Visible Area
     property TopLine : integer                          (* refers to visible (unfolded) lines / 1-based *)
@@ -3494,9 +3494,7 @@ end;
 (* Lines *)
 function TSynEditFoldedView.GetViewedLines(index : Integer) : String;
 begin
-  if (index < -1) or (index > fLinesInWindow + 1) then
-    exit(NextLines.ViewedLines[ScreenLineToTextIndex(Index)]);
-  Result := NextLines.ViewedLines[fTextIndexList[index+1]];
+  Result := NextLines.ViewedLines[InternViewToTextIndex(index)];
 end;
 
 function TSynEditFoldedView.GetDisplayNumber(index : Integer) : Integer;

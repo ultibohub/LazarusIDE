@@ -221,6 +221,7 @@ public
     function CalculateWrapForLine(ALineIdx: IntIdx; AMaxWidth: integer): Integer; inline;
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
 
     procedure WrapAll; experimental;
     procedure ValidateAll; experimental;
@@ -930,13 +931,14 @@ begin
     @ADestPage.FWrappedExtraSums[ALineCount + OldOffset],
     ADestPage.FWrappedExtraSumsCount,
     SrcO2 - SrcO1);
-  assert(ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount, 'TSynWordWrapLineMap.MoveLinesAtEndTo: ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount');
-  if MinLineCount > 0 then
+  if MinLineCount > 0 then begin
+    assert(ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount, 'TSynWordWrapLineMap.MoveLinesAtEndTo: ASourceStartLine+MinLineCount<=FWrappedExtraSumsCount');
     WrapInfoCopyAndAdjustFromTo(
       @FWrappedExtraSums[ASourceStartLine],
       @ADestPage.FWrappedExtraSums[0],
       MinLineCount,
       -SrcO1);
+  end;
   WrapInfoFillFrom(
     @ADestPage.FWrappedExtraSums[MinLineCount],
     ALineCount - MinLineCount + OldOffset,
@@ -1510,6 +1512,7 @@ function TLazSynDisplayWordWrap.GetNextHighlighterToken(out
 var
   PreStart: Integer;
 begin
+  ATokenInfo := Default(TLazSynDisplayTokenInfo);
   If FCurLineLogIdx >= FCurSubLineNextLogStartIdx then begin
     Result := False;
     exit;
@@ -1557,7 +1560,7 @@ end;
 
 function TLazSynEditLineWrapPlugin.GetWrapColumn: Integer;
 begin
-  Result := TSynEdit(Editor).CharsInWindow;
+  Result := TSynEdit(Editor).CharsInWindow - 1;
 end;
 
 function TLazSynEditLineWrapPlugin.CreatePageMapNode(AMapTree: TSynLineMapAVLTree): TSynEditLineMapPage;
@@ -1807,6 +1810,18 @@ begin
   TSynEdit(Editor).RegisterStatusChangedHandler(@DoWidthChanged, [scCharsInWindow]);
   FLineMapView.KnownLengthOfLongestLine := WrapColumn;
   WrapAll;
+end;
+
+destructor TLazSynEditLineWrapPlugin.Destroy;
+begin
+  if Editor <> nil then begin
+    TSynEdit(Editor).UnRegisterStatusChangedHandler(@DoWidthChanged);
+    if (FLineMapView <> nil) and not (csDestroying in Editor.Componentstate) then begin
+      TSynEdit(Editor).TextViewsManager.RemoveSynTextView(FLineMapView, True);
+      TSynEdit(Editor).Invalidate;
+    end;
+   end;
+  inherited Destroy;
 end;
 
 procedure TLazSynEditLineWrapPlugin.WrapAll;
