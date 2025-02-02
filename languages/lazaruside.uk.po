@@ -10058,6 +10058,10 @@ msgstr "Знайти втрачений модуль"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "Перший"
@@ -20446,6 +20450,10 @@ msgstr "Згорнути під курсором"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "Згорнути до рівня %d"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

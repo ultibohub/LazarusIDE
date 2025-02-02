@@ -42,7 +42,7 @@ unit SynEditKeyCmds;
 interface
 
 uses
-  Classes, Menus, SysUtils, LCLIntf, LCLType, SynEditStrConst;
+  Classes, Menus, SysUtils, LCLIntf, LCLType, LCLProc, SynEditStrConst;
 
 const
   //****************************************************************************
@@ -232,6 +232,7 @@ const
   EcFoldCurrent            = 381;
   EcUnFoldCurrent          = 382;
   EcToggleMarkupWord       = 383;
+  EcFoldToggle             = 384;
 
   ecZoomOut             = 400;
   ecZoomIn              = 401;
@@ -272,13 +273,14 @@ const
   ecTab             = 617;  // Tab key
   ecShiftTab        = 618;  // Shift+Tab key
 
-  ecUpperCase       = 620; // apply to the current or previous word
-  ecLowerCase       = 621;
-  ecToggleCase      = 622;
-  ecTitleCase       = 623;
-  ecUpperCaseBlock  = 625; // apply to current selection, or current char if no selection
-  ecLowerCaseBlock  = 626;
-  ecToggleCaseBlock = 627;
+  // TODO: The following block is not implemented => once it is the ec... must be added to the EditorCommandStrs array
+  ecUpperCase       = 620 unimplemented; // apply to the current or previous word
+  ecLowerCase       = 621 unimplemented;
+  ecToggleCase      = 622 unimplemented;
+  ecTitleCase       = 623 unimplemented;
+  ecUpperCaseBlock  = 625 unimplemented; // apply to current selection, or current char if no selection
+  ecLowerCaseBlock  = 626 unimplemented;
+  ecToggleCaseBlock = 627 unimplemented;
 
   ecMoveLineUp      = 630; // Moves current line (or selection) one line up
   ecMoveLineDown    = 631; // Moves current line (or selection) one line down
@@ -297,8 +299,8 @@ const
   ecBlockIndentMove             = 651;  // Indent selection (indent before column-sel, therefore moving the column-sel)
   ecBlockUnindentMove           = 652;  // Unindent selection (indent before column-sel, therefore moving the column-sel)
 
-  ecGotFocus        = 700;
-  ecLostFocus       = 701;
+  ecGotFocus        = 700 deprecated 'Not used / To be removed in Lazarus 5.99';
+  ecLostFocus       = 701 deprecated 'Not used / To be removed in Lazarus 5.99';
 
   ecUserDefinedFirst  = 900;
   ecUserDefinedLast   = 999;
@@ -425,98 +427,10 @@ procedure RegisterExtraGetEditorCommandValues(AProc: TGetEditorCommandValuesProc
 
 implementation
 
-//=============================================================================
-// This code should move to the menus.pas
-type
-  TMenuKeyCap = (
-    mkcBkSp, mkcTab, mkcEsc, mkcEnter, mkcSpace, mkcPgUp,
-    mkcPgDn, mkcEnd, mkcHome, mkcLeft, mkcUp, mkcRight, mkcDown, 
-    mkcIns, mkcDel, mkcShift, mkcCtrl, mkcAlt);
-
-// this code should be moved to whereever mkcXXX are defined
-const
-  SmkcBkSp = 'BkSp';
-  SmkcTab = 'Tab';
-  SmkcEsc = 'Esc';
-  SmkcEnter = 'Enter';
-  SmkcSpace = 'Space';
-  SmkcPgUp = 'PgUp';
-  SmkcPgDn = 'PgDn';
-  SmkcEnd = 'End';
-  SmkcHome = 'Home';
-  SmkcLeft = 'Left';
-  SmkcUp = 'Up';
-  SmkcRight = 'Right';
-  SmkcDown = 'Down';
-  SmkcIns = 'Ins';
-  SmkcDel = 'Del';
-  SmkcShift = 'Shift+';
-  SmkcCtrl = 'Ctrl+';
-  SmkcAlt = 'Alt+';
-
-// this code should be moved to menus.pas
-  MenuKeyCaps: array[TMenuKeyCap] of ansistring = (
-    SmkcBkSp, SmkcTab, SmkcEsc, SmkcEnter, SmkcSpace, SmkcPgUp,
-    SmkcPgDn, SmkcEnd, SmkcHome, SmkcLeft, SmkcUp, SmkcRight, SmkcDown,
-    SmkcIns, SmkcDel, SmkcShift, SmkcCtrl, SmkcAlt);
-
-function GetSpecialName(ShortCut: TShortCut): string;
-// FOR LAZARUS: ToDo
-{
-var
-  ScanCode: Integer;
-  KeyName: array[0..255] of Char;
-}
-begin
-  Result := '';
-// FOR LAZARUS: ToDo
-{
-  ScanCode := MapVirtualKey(WordRec(ShortCut).Lo, 0) shl 16;
-  if ScanCode <> 0 then
-  begin
-    GetKeyNameText(ScanCode, KeyName, SizeOf(KeyName));
-    GetSpecialName := KeyName;
-  end; }
-end;
-
-function ShortCutToText(ShortCut: TShortCut): string;
-var
-  Name: string;
-begin
-  case WordRec(ShortCut).Lo of
-    $08, $09:
-      Name := MenuKeyCaps[TMenuKeyCap(Ord(mkcBkSp) + WordRec(ShortCut).Lo - $08)];
-    $0D: Name := MenuKeyCaps[mkcEnter];
-    $1B: Name := MenuKeyCaps[mkcEsc];
-    $20..$28:
-      Name := MenuKeyCaps[TMenuKeyCap(Ord(mkcSpace) + WordRec(ShortCut).Lo - $20)];
-    $2D..$2E:
-      Name := MenuKeyCaps[TMenuKeyCap(Ord(mkcIns) + WordRec(ShortCut).Lo - $2D)];
-    $30..$39: Name := Chr(WordRec(ShortCut).Lo - $30 + Ord('0'));
-    $41..$5A: Name := Chr(WordRec(ShortCut).Lo - $41 + Ord('A'));
-    $60..$69: Name := Chr(WordRec(ShortCut).Lo - $60 + Ord('0'));
-    $70..$87: Name := 'F' + IntToStr(WordRec(ShortCut).Lo - $6F);
-  else
-    Name := GetSpecialName(ShortCut);
-  end;
-  if Name <> '' then
-  begin
-    Result := '';
-    if ShortCut and scShift <> 0 then Result := Result + MenuKeyCaps[mkcShift];
-    if ShortCut and scCtrl <> 0 then Result := Result + MenuKeyCaps[mkcCtrl];
-    if ShortCut and scAlt <> 0 then Result := Result + MenuKeyCaps[mkcAlt];
-    Result := Result + Name;
-  end
-  else Result := '';
-end;
-
-//=============================================================================
-
-
 { Command mapping routines }
 
 const
-  EditorCommandStrs: array[0..174] of TIdentMapEntry = (
+  EditorCommandStrs: array[0..179] of TIdentMapEntry = (
     (Value: ecNone; Name: 'ecNone'),
     (Value: ecLeft; Name: 'ecLeft'),
     (Value: ecRight; Name: 'ecRight'),
@@ -612,6 +526,7 @@ const
     (Value: ecCopyAddCurrentLine; Name: 'ecCopyAddCurrentLine'),
     (Value: ecCutCurrentLine; Name: 'ecCutCurrentLine'),
     (Value: ecCutAddCurrentLine; Name: 'ecCutAddCurrentLine'),
+    (Value: ecPasteAsColumns; Name: 'ecPasteAsColumns'),
     (Value: ecMoveLineUp; Name: 'ecMoveLineUp'),
     (Value: ecMoveLineDown; Name: 'ecMoveLineDown'),
     (Value: ecMoveSelectUp; Name: 'ecMoveSelectUp'),
@@ -691,7 +606,11 @@ const
     (Value: EcFoldLevel0; Name: 'EcFoldLevel0'),
     (Value: EcFoldCurrent; Name: 'EcFoldCurrent'),
     (Value: EcUnFoldCurrent; Name: 'EcUnFoldCurrent'),
-    (Value: EcToggleMarkupWord; Name: 'EcToggleMarkupWord')
+    (Value: EcFoldToggle; Name: 'EcFoldToggle'),
+    (Value: EcToggleMarkupWord; Name: 'EcToggleMarkupWord'),
+    (Value: ecZoomOut; Name: 'ecZoomOut'),
+    (Value: ecZoomIn; Name: 'ecZoomIn'),
+    (Value: ecZoomNorm; Name: 'ecZoomNorm')
   );
 
 var
@@ -815,7 +734,7 @@ end;
 function TSynEditKeyStroke.GetDisplayName: string;
 begin
   Result := EditorCommandToCodeString(Command) + ' - ' + ShortCutToText(ShortCut);
-  if ShortCut <> 0 then
+  if ShortCut2 <> 0 then
     Result := Result + ' ' + ShortCutToText(ShortCut2);
   if Result = '' then
     Result := inherited GetDisplayName;

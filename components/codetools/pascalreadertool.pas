@@ -131,6 +131,7 @@ type
         const OnIdentifier: TOnEachPRIdentifier; Data: Pointer; var Abort: boolean); // node and child nodes
     procedure ForEachIdentifier(SkipComments: boolean;
         const OnIdentifier: TOnEachPRIdentifier; Data: Pointer); // whole unit/program
+    function GetNodeNamePath(Node: TCodeTreeNode; WithLineCol: boolean = false; WithFilename: boolean = false): string; // for debugging
 
     // properties
     function ExtractPropType(PropNode: TCodeTreeNode;
@@ -198,6 +199,7 @@ type
                               Parse: boolean = true): TCodeTreeNode;
     function GetProcResultNode(ProcNode: TCodeTreeNode): TCodeTreeNode;
     function NodeIsInAMethod(Node: TCodeTreeNode): boolean;
+    function NodeIsMethodDecl(ProcNode: TCodeTreeNode): boolean;
     function NodeIsMethodBody(ProcNode: TCodeTreeNode): boolean;
     function GetMethodOfBody(Node: TCodeTreeNode): TCodeTreeNode;
     function NodeIsFunction(ProcNode: TCodeTreeNode): boolean;
@@ -399,8 +401,8 @@ var
   NodeExt2: TCodeTreeNodeExtension absolute NodeData2;
 begin
   Result := CompareMethodHeaders(
-    NodeExt1.Txt,TPascalMethodGroup(NodeExt1.Flags),NodeExt1.ExtTxt4,
-    NodeExt2.Txt,TPascalMethodGroup(NodeExt2.Flags),NodeExt2.ExtTxt4);
+    NodeExt1.Txt,TPascalMethodGroup(NodeExt1.Flags),NodeExt1.ResultType,
+    NodeExt2.Txt,TPascalMethodGroup(NodeExt2.Flags),NodeExt2.ResultType);
 end;
 
 
@@ -629,7 +631,7 @@ function TPascalReaderTool.ExtractProcHead(ProcNode: TCodeTreeNode;
   Attr: TProcHeadAttributes): string;
 var
   TheClassName, s: string;
-  IsClassName, IsProcType, IsProcedure, IsFunction, IsOperator: Boolean;
+  IsClassName, IsProcType, IsProcedure, IsFunction, IsOperator, IsGeneric, CanGeneric: Boolean;
   EndPos: Integer;
   ParentNode: TCodeTreeNode;
   OldPos: TAtomPosition;
@@ -685,9 +687,13 @@ begin
   // parse procedure head = start + name + parameterlist + result type ;
   ExtractNextAtom(false,Attr);
   // read procedure start keyword
-  if UpAtomIs('GENERIC') then
+  if (Scanner.CompilerMode in [cmOBJFPC]) and UpAtomIs('GENERIC') then begin
     ExtractNextAtom((phpWithStart in Attr)
                     and not (phpWithoutClassKeyword in Attr),Attr);
+    IsGeneric:=true;
+  end else
+    IsGeneric:=false;
+  CanGeneric:=IsGeneric or (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]);
   if (UpAtomIs('CLASS') or UpAtomIs('STATIC')) then
     ExtractNextAtom((phpWithStart in Attr)
                     and not (phpWithoutClassKeyword in Attr),Attr);
@@ -719,17 +725,10 @@ begin
       // read classname and name
       repeat
         ExtractNextAtom(true,Attr);
-        if Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE] then
-        begin
-          // delphi generics
-          if AtomIsChar('<') then
-          begin
-            //writeln('TPascalReaderTool.ExtractProcHead B ',GetAtom);
-            if not ExtractNextSpecializeParams(not (phpWithoutGenericParams in Attr),Attr) then
-              exit;
-            //writeln('TPascalReaderTool.ExtractProcHead C ',GetAtom);
-            ExtractNextAtom(not (phpWithoutGenericParams in Attr),Attr);
-          end;
+        if CanGeneric and AtomIsChar('<') then begin
+          if not ExtractNextSpecializeParams(not (phpWithoutGenericParams in Attr),Attr) then
+            exit;
+          ExtractNextAtom(not (phpWithoutGenericParams in Attr),Attr);
         end;
         if CurPos.Flag<>cafPoint then break;
         ExtractNextAtom(true,Attr);
@@ -742,7 +741,7 @@ begin
       repeat
         OldPos:=CurPos;
         ReadNextAtom;
-        if (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]) and AtomIsChar('<') then
+        if CanGeneric and AtomIsChar('<') then
         begin
           repeat
             ReadNextAtom;
@@ -754,7 +753,7 @@ begin
         if IsClassName then begin
           // read class name
           ExtractNextAtom(not (phpWithoutClassName in Attr),Attr);
-          if (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]) and AtomIsChar('<') then
+          if CanGeneric and AtomIsChar('<') then
           begin
             if not ExtractNextSpecializeParams(false,Attr) then
               exit;
@@ -768,7 +767,7 @@ begin
         end else begin
           // read name
           ExtractNextAtom(not (phpWithoutName in Attr),Attr);
-          if (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]) and AtomIsChar('<') then
+          if CanGeneric and AtomIsChar('<') then
           begin
             if not ExtractNextSpecializeParams(false,Attr) then
               exit;
@@ -884,29 +883,27 @@ begin
     ctnGenericType:
       begin
         if Result<>'' then Result:='.'+Result;
-        if (Node.Desc = ctnGenericType) then begin
-          // extract generic type param names
-          if WithGenericParams then begin
-            ParamsNode:=Node.FirstChild.NextBrother;
-            Params:='';
-            while ParamsNode<>nil do begin
-              if ParamsNode.Desc=ctnGenericParams then begin
-                ParamNode:=ParamsNode.FirstChild;
-                while ParamNode<>nil do begin
-                  if ParamNode.Desc=ctnGenericParameter then begin
-                    if Params<>'' then
-                      Params:=Params+',';
-                    Params:=Params+GetIdentifier(@Src[ParamNode.StartPos]);
-                  end;
-                  ParamNode:=ParamNode.NextBrother;
+        // extract generic type param names
+        if WithGenericParams then begin
+          ParamsNode:=Node.FirstChild.NextBrother;
+          Params:='';
+          while ParamsNode<>nil do begin
+            if ParamsNode.Desc=ctnGenericParams then begin
+              ParamNode:=ParamsNode.FirstChild;
+              while ParamNode<>nil do begin
+                if ParamNode.Desc=ctnGenericParameter then begin
+                  if Params<>'' then
+                    Params:=Params+',';
+                  Params:=Params+GetIdentifier(@Src[ParamNode.StartPos]);
                 end;
-                Result:='<'+Params+'>'+Result;
+                ParamNode:=ParamNode.NextBrother;
               end;
-              ParamsNode:=ParamsNode.NextBrother;
+              Result:='<'+Params+'>'+Result;
             end;
+            ParamsNode:=ParamsNode.NextBrother;
           end;
-          Result:=GetIdentifier(@Src[Node.FirstChild.StartPos])+Result;
         end;
+        Result:=GetIdentifier(@Src[Node.FirstChild.StartPos])+Result;
         if not WithParents then break;
       end;
     ctnParameterList:
@@ -1040,15 +1037,14 @@ begin
       if (not ((phpIgnoreForwards in Attr)
                and ((Result.SubDesc and ctnsForwardDeclaration)>0)))
       and (not ((phpIgnoreProcsWithBody in Attr)
-            and (FindProcBody(Result)<>nil)))
+               and (FindProcBody(Result)<>nil)))
       and (not InClass or IdentNodeIsInVisibleClassSection(Result, Visibility))
       then
       begin
         CurProcHead:=ExtractProcHeadWithGroup(Result,Attr);
-        //DebugLn(['TPascalReaderTool.FindProcNode B "',CurProcHead,'" =? "',AProcHead,'" Result=',CompareTextIgnoringSpace(CurProcHead,AProcHead,false)]);
-        if (CurProcHead.Name<>'') and
-            SameMethodHeaders(AProcHead, CurProcHead)
-        then
+        //DebugLn(['TPascalReaderTool.FindProcNode B Cur="',dbgs(CurProcHead),'" =? "',dbgs(AProcHead),'" Result=',SameMethodHeaders(AProcHead, CurProcHead)]);
+        if (CurProcHead.Name<>'')
+            and SameMethodHeaders(AProcHead, CurProcHead) then
           exit;
       end;
     end;
@@ -1137,7 +1133,7 @@ begin
     // found itself -> search further
     if Search=cpsUp then exit;
     StartNode:=FindNextNodeOnSameLvl(Result);
-    if StartNode<>nil then debugln(['TPascalReaderTool.FindCorrespondingProcNode StartNode=',CleanPosToStr(StartNode.StartPos),' ',dbgstr(copy(Src,StartNode.StartPos,50))]);
+    //if StartNode<>nil then debugln(['TPascalReaderTool.FindCorrespondingProcNode StartNode=',CleanPosToStr(StartNode.StartPos),' ',dbgstr(copy(Src,StartNode.StartPos,50))]);
     Result:=FindProcNode(StartNode,ProcHead,Attr);
   end;
   if (Search=cpsUp) and (Result<>nil) and (Result.StartPos>ProcNode.StartPos) then
@@ -1312,7 +1308,7 @@ begin
     exit(false);
   end;
   MoveCursorToFirstProcSpecifier(ProcNode);
-  while (CurPos.StartPos<=ProcNode.FirstChild.EndPos) do begin
+  while (CurPos.StartPos<ProcNode.FirstChild.EndPos) do begin
     if CurPos.Flag=cafSemicolon then begin
       ReadNextAtom;
     end else begin
@@ -1529,9 +1525,6 @@ end;
 
 function TPascalReaderTool.GetProcNameIdentifier(ProcNode: TCodeTreeNode): PChar;
 begin
-
-  // ToDo: ppu, dcu
-
   Result:=nil;
   if ProcNode=nil then exit;
   if ProcNode.Desc=ctnProcedure then begin
@@ -2329,6 +2322,69 @@ begin
   end;
 end;
 
+function TPascalReaderTool.GetNodeNamePath(Node: TCodeTreeNode; WithLineCol: boolean;
+  WithFilename: boolean): string;
+
+  function ReadSrc(StartPos, EndPos: integer): string;
+  begin
+    Result:='';
+    if (StartPos<1) or (EndPos>=StartPos) then exit;
+    Result:=ReadRawPascal(@Src[StartPos],@Src[EndPos],Scanner.NestedComments,true);
+  end;
+
+var
+  s: String;
+  StartNode: TCodeTreeNode;
+  OldPos: TAtomPosition;
+  RestoreCurPos: Boolean;
+begin
+  if Node=nil then
+    exit('nil');
+
+  OldPos:=CurPos;
+  RestoreCurPos:=false;
+  StartNode:=Node;
+  Result:='';
+
+  repeat
+    s:='';
+    case Node.Desc of
+    ctnIdentifier:
+      s:=ReadSrc(Node.StartPos,Node.EndPos);
+    ctnTypeDefinition, ctnVarDefinition, ctnConstDefinition:
+      s:=GetIdentifier(@Src[Node.StartPos]);
+    ctnGenericType:
+      s:=ExtractClassName(Node,false,false,true);
+    ctnProcedure:
+      begin
+        RestoreCurPos:=true;
+        s:=ExtractProcName(Node,[]);
+      end;
+    ctnBeginBlock,ctnAsmBlock:
+      s:=NodeDescriptionAsString(Node.Desc);
+    ctnProgram, ctnLibrary, ctnPackage:
+      begin
+        RestoreCurPos:=true;
+        s:=ExtractSourceName;
+      end;
+    end;
+    if s<>'' then begin
+      if Result<>'' then
+        Result:='.'+Result
+      else
+        Result:='['+StartNode.DescAsString+']';
+      Result:=s+Result;
+    end;
+    Node:=Node.Parent;
+  until Node=nil;
+
+  if RestoreCurPos then
+    MoveCursorToAtomPos(OldPos);
+
+  if WithLineCol then
+    Result:=Result+' at '+CleanPosToStr(StartNode.StartPos,WithFilename);
+end;
+
 function TPascalReaderTool.FindVarNode(StartNode: TCodeTreeNode;
   const UpperVarName: string; Visibility: TClassSectionVisibility
   ): TCodeTreeNode;
@@ -2787,10 +2843,11 @@ begin
     else if UpAtomIs('DESTRUCTOR') then
       Result := mgClassDestructor
     else if UpAtomIs('OPERATOR') then
-      Result := mgClassOperator;
-  end else
-  if UpAtomIs('CONSTRUCTOR') then
-    Result := mgConstructor
+      Result := mgClassOperator
+    else
+      Result:=mgMethod;
+  end else if UpAtomIs('CONSTRUCTOR') then
+    Result := mgConstructor;
 end;
 
 function TPascalReaderTool.PositionInSourceName(CleanPos: integer): boolean;
@@ -2859,22 +2916,29 @@ begin
   end;
 end;
 
-function TPascalReaderTool.NodeIsMethodBody(ProcNode: TCodeTreeNode): boolean;
+function TPascalReaderTool.NodeIsMethodDecl(ProcNode: TCodeTreeNode): boolean;
 begin
   Result:=false;
-  if (ProcNode<>nil) and (ProcNode.Desc=ctnProcedure)
-  and (ProcNode.FirstChild<>nil) then begin
-
-    // ToDo: ppu, dcu
-
-    MoveCursorToNodeStart(ProcNode.FirstChild); // ctnProcedureHead
-    ReadNextAtom;
-    if not AtomIsIdentifier then exit;
-    ReadNextAtom;
-    if (CurPos.Flag<>cafPoint) then exit;
-    Result:=true;
+  if (ProcNode=nil) or (ProcNode.Desc<>ctnProcedure) then
     exit;
-  end;
+  if (ProcNode.Parent.Desc in AllClassBaseSections)
+  or (ProcNode.Parent.Desc in AllClasses) then
+    Result:=true;
+end;
+
+function TPascalReaderTool.NodeIsMethodBody(ProcNode: TCodeTreeNode): boolean;
+// does not check if begin/asm block is there, as it should work even
+// if there is a syntax error
+begin
+  Result:=false;
+  if (ProcNode=nil) or (ProcNode.Desc<>ctnProcedure) or (ProcNode.FirstChild=nil) then
+    exit;
+  MoveCursorToNodeStart(ProcNode.FirstChild); // ctnProcedureHead
+  ReadNextAtom;
+  if not AtomIsIdentifier then exit;
+  ReadNextAtom;
+  if (CurPos.Flag<>cafPoint) then exit;
+  Result:=true;
 end;
 
 function TPascalReaderTool.GetMethodOfBody(Node: TCodeTreeNode): TCodeTreeNode;

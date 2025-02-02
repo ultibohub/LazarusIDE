@@ -10204,6 +10204,10 @@ msgstr "欠けているUnitを検索"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "冒頭"
@@ -20701,6 +20705,10 @@ msgstr "カーソルで折りたたみ"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "レベル%dに折りたたみ"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

@@ -337,16 +337,17 @@ class procedure TGtk3WSWinControl.PaintTo(const AWinControl: TWinControl; ADC: H
   X, Y: Integer);
 var
   AWidget: TGtk3Widget;
-  cr: Pcairo_t;
 begin
   if not WSCheckHandleAllocated(AWincontrol, 'PaintTo') or (ADC = 0) then
     Exit;
   AWidget := TGtk3Widget(AWinControl.Handle);
-  cr := TGtk3DeviceContext(ADC).pcr;
-  cairo_save(cr);
-  cairo_translate(cr, X, Y);
-  gtk_widget_draw(AWidget.Widget, cr);
-  cairo_restore(cr);
+  TGtk3DeviceContext(ADC).Save;
+  with TGtk3DeviceContext(ADC) do
+  begin
+    cairo_translate(pcr, X, Y);
+    gtk_widget_draw(AWidget.Widget, pcr);
+  end;
+  TGtk3DeviceContext(ADC).Restore;
 end;
 
 class procedure TGtk3WSWinControl.SetBounds(const AWinControl: TWinControl; const ALeft, ATop, AWidth, AHeight: Integer);
@@ -508,6 +509,7 @@ begin
   DebugLn('TGtk3WSWinControl.ShowHide ',dbgsName(AWinControl));
   {$ENDIF}
   wgt:=TGtk3Widget(AWinControl.Handle);
+  wgt.BeginUpdate;
   wgt.Visible := AWinControl.HandleObjectShouldBeVisible;
   if wgt.Visible then
   begin
@@ -519,6 +521,7 @@ begin
       wgt.GetContainerWidget^.realize;
     end;
   end;
+  wgt.EndUpdate;
 end;
 
 class procedure TGtk3WSWinControl.ScrollBy(const AWinControl: TWinControl;

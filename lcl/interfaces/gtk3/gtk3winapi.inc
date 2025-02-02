@@ -1580,7 +1580,7 @@ var
       while CurCount > 0 do
       begin
         CharLen := UTF8CodepointSize(CurStr);
-        DevCtx.drawText(CurScreenX, Y, CurStr, CharLen, True);
+        DevCtx.drawText(CurScreenX, Y, CurStr, CharLen, (DevCtx.BkMode = OPAQUE) and Assigned(DevCtx.BgBrush));
         inc(CurScreenX, CurDx^);
         inc(CurDx);
         inc(CurStr, CharLen);
@@ -1588,7 +1588,7 @@ var
       end;
     end
     else begin
-      DevCtx.drawText(X, Y, Str, Count, True);
+      DevCtx.drawText(X, Y, Str, Count, (DevCtx.BkMode = OPAQUE) and Assigned(DevCtx.BgBrush));
     end;
   end;
 
@@ -1600,7 +1600,7 @@ begin
 
   if IsValidDC(DC)then
   begin
-    cairo_save(GtkDc.pcr);
+    GtkDC.Save;
     if Options and ETO_CLIPPED = ETO_CLIPPED then
     begin
       cairo_rectangle(GtkDc.pcr, Rect^.Left, Rect^.Top, Rect^.Right - Rect^.Left, Rect^.Bottom - Rect^.Top);
@@ -1642,7 +1642,7 @@ begin
           LineLen := Count;
       end;
     end;
-    cairo_restore(GtkDc.pcr);
+    GtkDC.Restore;
     Result := True;
   end;
 end;
@@ -1710,9 +1710,10 @@ begin
       end;
   end;
 
-  cr := TGtk3DeviceContext(DC).pcr;
-  cairo_save(cr);
+
+  TGtk3DeviceContext(DC).Save;
   try
+    cr := TGtk3DeviceContext(DC).pcr;
     cairo_set_line_width(cr, 1);
     cairo_set_line_cap(cr, Tcairo_line_cap_t.CAIRO_LINE_CAP_ROUND);
     cairo_set_line_join(cr, Tcairo_line_join_t.CAIRO_LINE_JOIN_ROUND);
@@ -1736,7 +1737,7 @@ begin
       InflateRect(ARect, -1, -1);
     end;
   finally
-    cairo_restore(cr);
+    TGtk3DeviceContext(DC).Restore;
   end;
 end;
 
@@ -2779,19 +2780,27 @@ end;
 
 function TGtk3WidgetSet.GetTextExtentPoint(DC: HDC; Str: PChar; Count: Integer;
   var Size: TSize): Boolean;
+var
+  Utf8Str: String;
 begin
   Result := False;
   if not IsValidDC(DC) then
-    exit;
-  if (Count <= 0) or (Str = nil) or (StrPas(Str) = '') then
+    Exit;
+
+  if (Count <= 0) or (Str = nil) or (Str^ = #0) then
   begin
     FillChar(Size, SizeOf(Size), 0);
     Exit;
   end;
-  TGtk3DeviceContext(DC).CurrentFont.Layout^.set_text(Str, Count);
+
+  if not g_utf8_validate(Str, Count, nil) then
+    Utf8Str := UTF8Copy(Utf8Encode(Str), 1, Count)
+  else
+    Utf8Str := UTF8Copy(Str, 1, Count);
+
+  {%H-}TGtk3DeviceContext(DC).CurrentFont.Layout^.set_text(PChar(Utf8Str), -1);
   TGtk3DeviceContext(DC).CurrentFont.Layout^.get_pixel_size(@Size.Cx, @Size.CY);
-  // DebugLn('TGtk3WidgetSet.GetTextExtentPoint pixel size is ',dbgs(Size),
-  //  ' avgcharwidth ',dbgs(ACharWidth div PANGO_SCALE),' avgdigitwidth ',dbgs(ADigitWidth div PANGO_SCALE));
+
   Result := True;
 end;
 
@@ -3390,6 +3399,7 @@ begin
   ACairoRect.width := ARect.Right - ARect.Left;
   ACairoRect.height := ARect.Bottom - ARect.Top;
   Result := cairo_region_contains_rectangle(ACairoRegion, @ACairoRect) <> CAIRO_REGION_OVERLAP_OUT;
+  cairo_region_destroy(ACairoRegion);
 end;
 
 function TGtk3WidgetSet.RegroupMenuItem(hndMenu: HMENU; GroupIndex: integer
@@ -3454,7 +3464,7 @@ begin
   Result := False;
   if not IsValidDC(DC) then
     exit;
-  cairo_restore(TGtk3DeviceContext(DC).pcr);
+  TGtk3DeviceContext(DC).Restore;
   Result := True;
 end;
 
@@ -3475,7 +3485,7 @@ begin
   Result := 0;
   if not IsValidDC(DC) then
     exit;
-  cairo_save(TGtk3DeviceContext(DC).pcr);
+  TGtk3DeviceContext(DC).Save;
   Result := 1;
 end;
 
@@ -4394,18 +4404,10 @@ begin
   begin
     AWidget.Visible := bShow;
   end else
-  (*
-  if wtWindow in AWidget.WidgetType then
-  begin
-    DebugLn('WARNING: TGtk3WidgetSet.ShowScrollBar cannot get scrollbar from ',dbgsName(AWidget.LCLObject),
-    ' bShow ',dbgs(bShow));
-  end else
-  *)
   if wtScrollingWin in AWidget.WidgetType then
   begin
-    // AScrolledWin :=
     if TGtk3ScrollableWin(Handle).GetScrolledWindow = nil then
-      exit;
+      exit(False);
     if wBar in [SB_BOTH, SB_HORZ] then
     begin
       if bShow then
@@ -4433,7 +4435,7 @@ begin
       TGtk3ScrollableWin(AWidget).VScrollBarPolicy := NewPolicy;
     end;
   end else
-    DebugLn('WARNING: TGtk3WidgetSet.ShowScrollBar cannot get scrollbar from ',dbgsName(AWidget.LCLObject));
+    Result := False;
 end;
 
 function TGtk3WidgetSet.ShowWindow(hWnd: HWND; nCmdShow: Integer): Boolean;
@@ -4481,12 +4483,16 @@ begin
   end;
   ATargetRect := Rect(X, Y, Width + X, Height + Y);
   ASrcRect := Rect(XSrc, YSrc, SrcWidth + XSrc, SrcHeight + YSrc);
-
-  if (DestContext.OwnsSurface) and (SrcContext.OwnsSurface)  or (mask<>0) then
+  if (mask<>0) then
     DestContext.drawImage1(@ATargetRect, PgdkPixbuf(SrcContext.CurrentImage.Handle) , @ASrcRect, nil, nil)
   else
-    DestContext.drawSurface(@ATargetRect,SrcContext.CairoSurface , @ASrcRect, nil, nil);
-
+  begin
+    if (cairo_surface_get_type(SrcContext.CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE) and
+      Assigned(SrcContext.CurrentImage) and Assigned(SrcContext.CurrentImage.Handle) then
+        DestContext.drawSurface(@ATargetRect,SrcContext.CairoSurface , @ASrcRect, SrcContext.CurrentImage.Handle, nil, nil)
+    else
+      DestContext.drawSurface(@ATargetRect,SrcContext.CairoSurface , @ASrcRect, nil, nil, nil);
+  end;
   Result := True;
 end;
 
@@ -4522,6 +4528,8 @@ begin
 end;
 
 function TGtk3WidgetSet.TextOut(DC: HDC; X, Y: Integer; Str: PChar; Count: Integer): Boolean;
+var
+  DevCtx: TGtk3DeviceContext absolute DC;
 begin
   {$IFDEF VerboseGtk3DeviceContext}
   DebugLn('TGtk3WidgetSet.TextOut X=',dbgs(x),' Y=',dbgs(y),' Text=',dbgs(Str),' Count=',dbgs(Count),' Text=',StrPas(Str));
@@ -4532,7 +4540,7 @@ begin
   if IsValidDC(DC) then
   begin
     Result := True;
-    TGtk3DeviceContext(DC).drawText(X, Y, Str, Count, False);
+    DevCtx.drawText(X, Y, Str, Count, (DevCtx.BkMode = OPAQUE) and Assigned(DevCtx.BgBrush));
   end;
 end;
 

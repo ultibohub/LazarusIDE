@@ -10475,6 +10475,10 @@ msgstr "חפש יחידות חסרות"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "ראשון"
@@ -21467,6 +21471,10 @@ msgstr "קפל במיקום הסמן"
 #, object-pascal-format, fuzzy, badformat
 msgid "Fold to Level %d"
 msgstr "קפל לרמה d%"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format, fuzzy, badformat

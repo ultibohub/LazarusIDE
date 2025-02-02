@@ -1864,8 +1864,7 @@ when the value is omitted from the set the feature or behavior is disabled.
 </element>
 <element name="TControlStyleType.csAcceptsControls">
 <short>
-Indicates that one can add child controls to this control in the form 
-designer.
+Indicates that one can add child controls to a control.
 </short>
 </element>
 <element name="TControlStyleType.csCaptureMouse">
@@ -14567,13 +14566,15 @@ control.
 </element>
 
 <element name="TControl.FCompStyle">
-<short>Deprecated.</short>
+<short>
+Enables use of the 'IN' operator for component styles.
+</short>
 <descr>
-<remark>
-DEPRECATED. Enables valid use of the <b>'IN'</b> operator (this is a hack for 
-speed). It will be replaced by the use of the widgetset classes. So, don't 
-use it anymore.
-</remark>
+<p>
+Enables valid use of the <b>'IN'</b> operator (this is a hack for speed). It 
+will eventually be replaced by use of the widgetset classes. So, don't use it 
+anymore... even though some existing LCL code still does.
+</p>
 </descr>
 <seealso/>
 </element>

@@ -68,6 +68,7 @@ interface
 { $DEFINE VerboseCPS}
 { $DEFINE VerboseFindDeclarationAndOverload}
 { $DEFINE VerboseFindFileAtCursor}
+{ $DEFINE VerboseFindRefMethodOverrides}
 
 {$IFDEF CTDEBUG}{$DEFINE DebugPrefix}{$ENDIF}
 {$IFDEF ShowTriedIdentifiers}{$DEFINE DebugPrefix}{$ENDIF}
@@ -219,6 +220,7 @@ type
     Tool: TFindDeclarationTool;
   end;
   PFindContext = ^TFindContext;
+  TFindContextArray = array of TFindContext;
   
 const
   CleanFindContext: TFindContext = (Node:nil; Tool:nil);
@@ -439,6 +441,8 @@ type
 
   //----------------------------------------------------------------------------
   // TTypeAliasOrderList is used for comparing type aliases in binary operators
+
+  { TTypeAliasItem }
 
   TTypeAliasItem = class
   public
@@ -705,6 +709,12 @@ type
     foeEnumeratorCurrentExprType // expression type of 'enumerator Current'
     );
 
+  // flags for FindReferences
+  TFindRefsFlag = (
+    frfMethodOverrides // continue search on method overrides
+    );
+  TFindRefsFlags = set of TFindRefsFlag;
+
   TFindFileAtCursorFlag = (
     ffatNone,
     ffatUsedUnit,
@@ -727,7 +737,18 @@ type
 
   //----------------------------------------------------------------------------
 
-  TFindIdentifierInUsesSection_FindMissingFPCUnit = class;
+  TFindIdentifierInUsesSection_FindMissingFPCUnit = class
+  private
+    FUnitName: string;
+    FFound: Boolean;
+    FResults: TStringList;
+    procedure Iterate(const AFilename: string);
+  public
+    constructor Create;
+    destructor Destroy; override;
+    function Find(const AUnitName: string; const ADirectoryCache: TCTDirectoryCache): Boolean;
+    function IsInResults(const AUnitName: string): Boolean;
+  end;
 
   //----------------------------------------------------------------------------
 
@@ -1040,7 +1061,8 @@ type
     function FindExtendedExprOfHelper(HelperNode: TCodeTreeNode): TExpressionType;
 
     function FindReferences(const CursorPos: TCodeXYPosition;
-      SkipComments: boolean; out ListOfPCodeXYPosition: TFPList): boolean;
+      SkipComments: boolean; out ListOfPCodeXYPosition: TFPList;
+      Flags: TFindRefsFlags = []): boolean;
     function FindUnitReferences(UnitCode: TCodeBuffer;
       SkipComments: boolean; out ListOfPCodeXYPosition: TFPList): boolean; // searches unitname of UnitCode
     procedure FindUsedUnitReferences(const CursorPos: TCodeXYPosition;
@@ -1066,6 +1088,7 @@ type
     function FindNthParameterNode(Node: TCodeTreeNode;
                                   ParameterIndex: integer): TCodeTreeNode;
     function GetFirstParameterNode(Node: TCodeTreeNode): TCodeTreeNode;
+    function FindOverridenMethodDecl(ProcNode: TCodeTreeNode): TFindContext;
     function IsParamNodeListCompatibleToExprList(
       TargetExprParamList: TExprTypeList;
       FirstSourceParameterNode: TCodeTreeNode;
@@ -1113,19 +1136,6 @@ type
     property DirectoryCache: TCTDirectoryCache read FDirectoryCache write FDirectoryCache;
 
     property OnRescanFPCDirectoryCache: TNotifyEvent read FOnRescanFPCDirectoryCache write FOnRescanFPCDirectoryCache;
-  end;
-
-  TFindIdentifierInUsesSection_FindMissingFPCUnit = class
-  private
-    FUnitName: string;
-    FFound: Boolean;
-    FResults: TStringList;
-    procedure Iterate(const AFilename: string);
-  public
-    constructor Create;
-    destructor Destroy; override;
-    function Find(const AUnitName: string; const ADirectoryCache: TCTDirectoryCache): Boolean;
-    function IsInResults(const AUnitName: string): Boolean;
   end;
 
 function ExprTypeToString(const ExprType: TExpressionType): string;
@@ -6745,14 +6755,15 @@ end;
   at CursorPos.
 -------------------------------------------------------------------------------}
 function TFindDeclarationTool.FindReferences(const CursorPos: TCodeXYPosition;
-  SkipComments: boolean; out ListOfPCodeXYPosition: TFPList): boolean;
+  SkipComments: boolean; out ListOfPCodeXYPosition: TFPList; Flags: TFindRefsFlags): boolean;
 var
   DeclarationFound: boolean;
   Identifier: string;
   CleanDeclCursorPos: integer;
   DeclarationTool: TFindDeclarationTool;
   DeclarationNode: TCodeTreeNode; // in DeclarationTool
-  AliasDeclarationNode: TCodeTreeNode; // if exists: always in front of DeclarationNode, and in DeclarationTool
+  AliasDeclarationNode: TCodeTreeNode; // if exists: for ProcHead this is the body,
+    // otherwise always in front of DeclarationNode, and in DeclarationTool
   Params: TFindDeclarationParams;
   PosTree: TAVLTree; // tree of PChar positions in Src
   ReferencePos: TCodeXYPosition;
@@ -6760,6 +6771,8 @@ var
   CursorNode: TCodeTreeNode;
   UnitStartFound, Found: Boolean;
   StartPos: integer; // keep this here, it is modified at several places
+  OverrideProcNodes: TCodeTreeNodeArray; // found override methods
+  NotOverrideProcNodes: TCodeTreeNodeArray; // found method with same name, but are not overrides
 
   procedure AddReference(ACleanPos: integer);
   var
@@ -6798,6 +6811,93 @@ var
     and (Node.FirstChild.Desc=ctnProcedureHead) then
       Node:=Node.FirstChild;
   end;
+
+  function ArrayHasNode(const Arr: TCodeTreeNodeArray; Node: TCodeTreeNode): boolean;
+  var
+    i: Integer;
+  begin
+    for i:=0 to length(Arr)-1 do
+      if Arr[i]=Node then exit(true);
+    Result:=false;
+  end;
+
+  function IsDeclarationNode(Node: TCodeTreeNode): boolean;
+  begin
+    UseProcHead(Node);
+    if (Node=DeclarationNode) or (Node=AliasDeclarationNode) then exit(true);
+
+    // check method overrides
+    if Node.Desc=ctnProcedureHead then begin
+      if ArrayHasNode(OverrideProcNodes,Node.Parent) then
+        exit(true);
+    end;
+
+    Result:=false;
+  end;
+
+  function CheckMethodOverride(Tool: TFindDeclarationTool; ProcNode: TCodeTreeNode): boolean;
+  var
+    FoundProcs: TFindContextArray;
+    CurProc: TFindContext;
+    i: Integer;
+    Node: TCodeTreeNode;
+  begin
+    Result:=false;
+    if ProcNode=DeclarationNode.Parent then exit(true);
+    if not NodeIsMethodDecl(ProcNode) then
+      exit;
+    {$IFDEF VerboseFindRefMethodOverrides}
+    debugln(['CheckMethodOverride found method: ',Tool.GetNodeNamePath(ProcNode,true,true)]);
+    {$ENDIF}
+    if not Tool.ProcNodeHasSpecifier(ProcNode,psOverride) then exit;
+
+    FoundProcs:=[];
+    CurProc:=CreateFindContext(Tool,ProcNode);
+    repeat
+      if ArrayHasNode(OverrideProcNodes,CurProc.Node) then begin
+        Result:=true;
+        break;
+      end;
+      if ArrayHasNode(NotOverrideProcNodes,CurProc.Node) then
+        break;
+      System.Insert(CurProc,FoundProcs,length(FoundProcs));
+
+      {$IFDEF VerboseFindRefMethodOverrides}
+      debugln(['CheckMethodOverride searching ancestor of ',CurProc.Tool.GetNodeNamePath(CurProc.Node,true,true)]);
+      {$ENDIF}
+      CurProc:=CurProc.Tool.FindOverridenMethodDecl(CurProc.Node);
+      if CurProc.Node=nil then begin
+        {$IFDEF VerboseFindRefMethodOverrides}
+        debugln(['CheckMethodOverride NOT an override']);
+        {$ENDIF}
+        break;
+      end;
+      {$IFDEF VerboseFindRefMethodOverrides}
+      debugln(['CheckMethodOverride FOUND ancestor: ',CurProc.Tool.GetNodeNamePath(CurProc.Node,true,true)]);
+      {$ENDIF}
+      if CurProc.Node=DeclarationNode.Parent then begin
+        Result:=true;
+        break;
+      end;
+    until false;
+
+    for i:=0 to length(FoundProcs)-1 do begin
+      Node:=FoundProcs[i].Node;
+      if Result then begin
+        System.Insert(Node,OverrideProcNodes,length(OverrideProcNodes));
+        if FoundProcs[i].Tool=Self then begin
+          AddNodeReference(Node); // rename decl of overridden proc
+          Node:=FindCorrespondingProcNode(Node);
+          if Node<>nil then begin
+            System.Insert(Node,OverrideProcNodes,length(OverrideProcNodes));
+            AddNodeReference(Node); // rename body of overridden proc
+          end;
+        end;
+      end else begin
+        System.Insert(Node,NotOverrideProcNodes,length(NotOverrideProcNodes))
+      end;
+    end;
+  end;
   
   procedure ReadIdentifier(IsComment: boolean);
   var
@@ -6809,7 +6909,7 @@ var
     IdentStripped: string;
     aComment: string;
     UnitInFilename: ansistring;
-    Node: TCodeTreeNode;
+    Node, aClassNode, ProcNode: TCodeTreeNode;
     IsDotted: boolean;
     dLen: integer;
   begin
@@ -6863,14 +6963,20 @@ var
     begin
       AddReference(IdentStartPos);
     end else if (DeclarationTool=Self)
-    and ((IdentStartPos=CleanDeclCursorPos) or (CursorNode=AliasDeclarationNode))
+    and ((IdentStartPos=CleanDeclCursorPos) or IsDeclarationNode(CursorNode))
     then begin
       // declaration itself found
       //debugln(['ReadIdentifier declaration itself found, adding ...']);
       AddReference(IdentStartPos)
     end
-    else if CleanPosIsDeclarationIdentifier(IdentStartPos,CursorNode) then
+    else if CleanPosIsDeclarationIdentifier(IdentStartPos,CursorNode) then begin
       // this identifier is another declaration with the same name
+      if (frfMethodOverrides in Flags) and (CursorNode.Desc=ctnProcedureHead) then
+      begin
+        if CheckMethodOverride(Self,CursorNode.Parent) then
+          AddReference(CursorNode.StartPos);
+      end;
+    end
     else begin
       // find declaration
       if Params=nil then
@@ -6885,10 +6991,10 @@ var
                      fdfIgnoreCurContextNode];
       //dLen>0  will force searching from units names first
       Params.ContextNode:=CursorNode;
-      //debugln(copy(Src,Params.ContextNode.StartPos,200));
+      //debugln(['ReadIdentifier "',copy(Src,IdentStartPos,200),'"']);
       Params.SetIdentifier(Self,@Src[IdentStartPos],@CheckSrcIdentifier,dLen);
 
-      // search identifier in comment -> if not found, this is no bug
+      // search identifier also in comments -> if not found, this is no bug
       // => silently ignore
       try
         Found:=FindDeclarationOfIdentAtParam(Params);
@@ -6905,55 +7011,60 @@ var
           raise;
       end;
 
+      if not Found then exit;
       //debugln(' Found=',dbgs(Found));
       Node:=Params.NewNode;
-      if Found and (Node<>nil) {and (Node.Parent<>nil)} then begin
-        if (Node.Desc = ctnSrcName) then begin
-          //Node:=Node.Parent;
-          MoveCursorToCleanPos(Node.StartPos);
-          AnUnitName:=ExtractIdentifierWithPoints(Node.StartPos,false);
-          {$IFDEF EnableFKnownIdentLength}
-          if FKnownIdentLength>0 then
-            delete(AnUnitName,FKnownIdentLength+1, length(AnUnitName));
-          {$ENDIF}
-          //AnUnitName:=GetDottedIdentifier(@Src[Node.StartPos]); //program, library, package
-          NewCodeTool:=FindCodeToolForUsedUnit(AnUnitName, '',false);
-          if NewCodeTool=DeclarationTool then begin
-            AddReference(IdentStartPos);
-            exit;
-          end;
-        end else
-        if ( (Node.Desc=ctnUseUnit) or
-          ((DeclarationNode<>nil) and (Node.Parent<>nil) and (Node.Parent.Desc=ctnUseUnit)) )
-        and (Params.NewCodeTool=Self)
+      if Node=nil then exit;
+
+      if (Node.Desc = ctnSrcName) then begin
+        MoveCursorToCleanPos(Node.StartPos);
+        AnUnitName:=ExtractIdentifierWithPoints(Node.StartPos,false);
+        {$IFDEF EnableFKnownIdentLength}
+        if FKnownIdentLength>0 then
+          delete(AnUnitName,FKnownIdentLength+1, length(AnUnitName));
+        {$ENDIF}
+        //AnUnitName:=GetDottedIdentifier(@Src[Node.StartPos]); //program, library, package
+        NewCodeTool:=FindCodeToolForUsedUnit(AnUnitName, '',false);
+        if NewCodeTool=DeclarationTool then begin
+          AddReference(IdentStartPos);
+          exit;
+        end;
+      end else
+      if ( (Node.Desc=ctnUseUnit) or
+        ((DeclarationNode<>nil) and (Node.Parent<>nil) and (Node.Parent.Desc=ctnUseUnit)) )
+      and (Params.NewCodeTool=Self)
+      then begin
+        // identifier is a unit reference
+        if (DeclarationNode.Desc=ctnSrcName)
+        or ((DeclarationNode.Parent<>nil) and (DeclarationNode.Parent.Desc=ctnSrcName))
         then begin
-          // identifier is a unit reference
-          if (DeclarationNode.Desc=ctnSrcName)
-          or ((DeclarationNode.Parent<>nil) and (DeclarationNode.Parent.Desc=ctnSrcName))
-          then begin
-            // searching a unit reference -> check if it is the same
-            MoveCursorToNodeStart(Node);
-            if ReadNextUsedUnit(UnitNamePos,UnitInFilePos) then begin
-              // cursor is on an used unit -> try to locate it
-              MoveCursorToCleanPos(UnitNamePos.StartPos);
-              ReadNextAtom;
-              AnUnitName:=ExtractUsedUnitNameAtCursor(@UnitInFilename);
-              NewCodeTool:=FindCodeToolForUsedUnit(AnUnitName,UnitInFilename,false);
-              if NewCodeTool=DeclarationTool then begin
-                AddReference(IdentStartPos);
-                exit;
-              end;
+          // searching a unit reference -> check if it is the same
+          MoveCursorToNodeStart(Node);
+          if ReadNextUsedUnit(UnitNamePos,UnitInFilePos) then begin
+            // cursor is on an used unit -> try to locate it
+            MoveCursorToCleanPos(UnitNamePos.StartPos);
+            ReadNextAtom;
+            AnUnitName:=ExtractUsedUnitNameAtCursor(@UnitInFilename);
+            NewCodeTool:=FindCodeToolForUsedUnit(AnUnitName,UnitInFilename,false);
+            if NewCodeTool=DeclarationTool then begin
+              AddReference(IdentStartPos);
+              exit;
             end;
           end;
         end;
+      end;
 
-        UseProcHead(Node);
-        //debugln('Context=',NodePathAsString(Params.NewNode),' FoundPos=',Params.NewCodeTool.CleanPosToStr(Params.NewNode.StartPos,true),' SearchPos=',DeclarationTool.CleanPosToStr(DeclarationNode.StartPos,true));
-        if (Params.NewNode=DeclarationNode)
-        or (Params.NewNode=AliasDeclarationNode) then begin
-          //debugln(['ReadIdentifier reference found, adding ...']);
+      //debugln('Found=',Params.NewCodeTool.GetNodeNamePath(Node,true,true),' Searched=',DeclarationTool.GetNodeNamePath(DeclarationNode,true,true));
+      if IsDeclarationNode(Node) then begin
+        //debugln(['ReadIdentifier reference found, adding ...']);
+        AddReference(IdentStartPos);
+      end else if (frfMethodOverrides in Flags) and (Node.Desc=ctnProcedureHead) then
+      begin
+        {$IFDEF VerboseFindRefMethodOverrides}
+        debugln(['ReadIdentifier identifier is procedure, check overrides...']);
+        {$ENDIF}
+        if CheckMethodOverride(Params.NewCodeTool,Node.Parent) then
           AddReference(IdentStartPos);
-        end;
       end;
     end;
   end;
@@ -7127,7 +7238,7 @@ var
 
     // find alias declaration node
     {$IFDEF VerboseFindReferences}
-    debugln('FindDeclarationNode DeclarationNode=',NodePathAsString(DeclarationNode),' at ',DeclarationTool.CleanPosToStr(DeclarationNode.StartPos));
+    debugln('FindDeclarationNode DeclarationNode=',DeclarationTool.GetNodeNamePath(DeclarationNode),'=',NodePathAsString(DeclarationNode),' at ',DeclarationTool.CleanPosToStr(DeclarationNode.StartPos));
     {$ENDIF}
     AliasDeclarationNode:=nil;
     case DeclarationNode.Desc of
@@ -7159,7 +7270,11 @@ var
         //debugln(['FindDeclarationNode adding alias node ...']);
         AddNodeReference(AliasDeclarationNode);
       end;
-      if AliasDeclarationNode.StartPos>DeclarationNode.StartPos then begin
+      if ((DeclarationNode.Desc=ctnProcedureHead)
+            and (AliasDeclarationNode.StartPos<DeclarationNode.StartPos))
+          or ((DeclarationNode.Desc<>ctnProcedureHead)
+            and (AliasDeclarationNode.StartPos>DeclarationNode.StartPos)) then
+      begin
         Node:=AliasDeclarationNode;
         AliasDeclarationNode:=DeclarationNode;
         DeclarationNode:=Node;
@@ -7174,6 +7289,12 @@ var
     if AliasDeclarationNode=nil then
       debugln(['FindReferences Has no Alias']);
     {$ENDIF}
+
+    if frfMethodOverrides in Flags then begin
+      if (DeclarationNode.Desc<>ctnProcedureHead)
+          or (not NodeIsMethodDecl(DeclarationNode.Parent)) then
+        Exclude(Flags,frfMethodOverrides);
+    end;
 
     // search comment in front of declaration
     //debugln(['FindDeclarationNode search comment in front: ',DeclarationTool=Self,' SkipComments=',SkipComments,' Identifier=',Identifier]);
@@ -7214,7 +7335,7 @@ var
     end;
 
     StartNode:=DeclarationNode;
-    if (AliasDeclarationNode<>nil) then
+    if (AliasDeclarationNode<>nil) and (AliasDeclarationNode.StartPos<StartNode.StartPos) then
       StartNode:=AliasDeclarationNode;
     Node:=StartNode;
     while Node<>nil do begin
@@ -7280,6 +7401,8 @@ begin
   Params:=nil;
   PosTree:=nil;
   DeclarationFound:=false;
+  OverrideProcNodes:=[];
+  NotOverrideProcNodes:=[];
 
   ActivateGlobalWriteLock;
   try
@@ -7784,6 +7907,7 @@ end;
 function TFindDeclarationTool.FindIdentifierInClassOfMethod(
   ProcContextNode: TCodeTreeNode; Params: TFindDeclarationParams): boolean;
 { this function is internally used by FindIdentifierInContext
+  Searches the class, and then searches in class and ancestors
 }
 var
   ClassNameAtom: TAtomPosition;
@@ -9574,7 +9698,8 @@ var
     Result:=FlagCanBeForwardDefined;
   end;
 
-  function FindPointedTypeBehind(PointerTypeNode: TCodeTreeNode): TCodeTreeNode;
+  function FindPointedTypeBehind(Tool: TFindDeclarationTool;
+    PointerTypeNode: TCodeTreeNode): TCodeTreeNode;
   var
     IdentNode, Node: TCodeTreeNode;
   begin
@@ -9582,10 +9707,10 @@ var
     Node:=PointerTypeNode.Parent.NextBrother;
     while Node<>nil do begin
       if (Node.Desc=ctnTypeDefinition)
-          and CompareSrcIdentifiers(Node.StartPos, IdentNode.StartPos)
+          and Tool.CompareSrcIdentifiers(Node.StartPos, IdentNode.StartPos)
       then
         exit(Node);
-      Node:=Node.NextBrother; // all remaing types of current type section
+      Node:=Node.NextBrother;
     end;
     Result:=nil;
   end;
@@ -10106,7 +10231,7 @@ var
       end else if (StartNode.Parent<>nil)
           and (StartNode.Parent.Desc=ctnPointerType) and (NextAtomType<>vatPoint) then
       begin
-        Node:=FindPointedTypeBehind(StartNode.Parent);
+        Node:=FindPointedTypeBehind(Self,StartNode.Parent);
         if Node<>nil then begin
           ExprType.Context.Tool:=Self;
           ExprType.Context.Node:=Node;
@@ -10345,6 +10470,7 @@ var
   procedure ResolveChildren;
   var
     NewNode: TCodeTreeNode;
+    NewTool: TFindDeclarationTool;
   begin
     if (ExprType.Context.Node=nil) then exit;
     {$IFDEF ShowExprEval}
@@ -10361,13 +10487,14 @@ var
     //  ]);
     {$ENDIF}
     NewNode:=ExprType.Context.Node;
+    NewTool:=ExprType.Context.Tool;
     if (NewNode=nil) then exit;
     if (NewNode.Desc in AllUsableSourceTypes)
     or (NewNode.Desc=ctnSrcName)
     or ((NewNode.Desc=ctnIdentifier) and (NewNode.Parent.Desc=ctnSrcName)
       and (NewNode.NextBrother=nil))
     then begin
-      if ExprType.Context.Tool=Self then begin
+      if NewTool=Self then begin
         // unit name of this unit => implementation
         // Note: allowed for programs too
         NewNode:=Tree.Root;
@@ -10394,7 +10521,7 @@ var
     end
     else if (NewNode.Desc=ctnClassOfType) then begin
       // 'class of' => jump to the class
-      ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,NewNode.FirstChild);
+      ExprType.Context:=NewTool.FindBaseTypeOfNode(Params,NewNode.FirstChild);
     end
     else if (ExprType.Desc=xtContext)
     and (NewNode.Desc=ctnPointerType)
@@ -10404,11 +10531,11 @@ var
       // -> check for pointer type
       // left side of expression has defined a special context
       // => this '.' is a dereference
-      NewNode:=FindPointedTypeBehind(NewNode);
+      NewNode:=FindPointedTypeBehind(NewTool,NewNode);
       if NewNode<>nil then begin
-        ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,NewNode);
+        ExprType.Context:=NewTool.FindBaseTypeOfNode(Params,NewNode);
       end else begin
-        ExprType.Context:=ExprType.Context.Tool.FindBaseTypeOfNode(Params,ExprType.Context.Node.FirstChild);
+        ExprType.Context:=NewTool.FindBaseTypeOfNode(Params,NewNode.FirstChild);
       end;
     end;
   end;
@@ -10513,13 +10640,6 @@ var
     if (ExprType.Context.Node<>StartNode) then begin
       // left side of expression has defined a special context
       // => this '^' is a dereference
-      if (not
-          (NextAtomType in [vatSpace,vatPoint,vatAS,vatUP,vatEdgedBracketOpen]))
-      then begin
-        MoveCursorToCleanPos(NextAtom.StartPos);
-        ReadNextAtom;
-        RaisePointNotFound(20191003163249);
-      end;
       PointerTypeNode:=ExprType.Context.Node;
       if (PointerTypeNode=nil)
       or (PointerTypeNode.Desc<>ctnPointerType) then begin
@@ -10528,7 +10648,7 @@ var
       end;
       ExprType.Desc:=xtContext;
       //first try if this node has a pointed type behind
-      NodeBehind:=FindPointedTypeBehind(PointerTypeNode);
+      NodeBehind:=FindPointedTypeBehind(ExprType.Context.Tool,PointerTypeNode);
       if NodeBehind=nil then
         ExprType.Context.Node:=ExprType.Context.Node.FirstChild
       else
@@ -10867,7 +10987,7 @@ var
     Params.Save(OldInput);
     Params.SetIdentifier(Self,@Src[CurPos.StartPos],@CheckSrcIdentifier);
     Params.ContextNode:=ExprType.Context.Node;
-    Params.Flags:=Params.Flags-[fdfSearchInParentNodes]
+    Params.Flags:=Params.Flags-[fdfSearchInParentNodes,fdfIgnoreCurContextNode]
                               +[fdfExceptionOnNotFound,fdfSearchInAncestors];
     ExprType.Context.Tool.FindIdentifierInContext(Params);
     ExprType.Context:=CreateFindContext(Params);
@@ -11776,6 +11896,130 @@ begin
   if Result<>nil then Result:=Result.FirstChild;
 end;
 
+function TFindDeclarationTool.FindOverridenMethodDecl(ProcNode: TCodeTreeNode): TFindContext;
+// expects and returns a ctnProcedure
+var
+  ClassNode, Node, FirstParameterNode: TCodeTreeNode;
+  Params: TFindDeclarationParams;
+  SearchParamTypes: TExprTypeList;
+  AncestorNode: Boolean;
+  Identifier, CurIdentifier: PChar;
+  CurTool: TFindDeclarationTool;
+  CompListSize: Integer;
+  ParamCompatibility: TTypeCompatibility;
+  SearchGroup, FoundGroup: TPascalMethodGroup;
+  ParamCompatibilityList: TTypeCompatibilityList;
+begin
+  Result:=Default(TFindContext);
+  if (ProcNode=nil) or (ProcNode.Desc<>ctnProcedure) then exit;
+  ClassNode:=ProcNode.Parent;
+  if ClassNode.Desc in AllClassBaseSections then
+    ClassNode:=ClassNode.Parent;
+  if not (ClassNode.Desc in AllClasses) then exit;
+  if not ProcNodeHasSpecifier(ProcNode,psOverride) then exit;
+
+  Identifier:=GetProcNameIdentifier(ProcNode);
+  {$IFDEF VerboseFindRefMethodOverrides}
+  debugln(['TFindDeclarationTool.FindOverridenMethodDecl START ',GetNodeNamePath(ProcNode,true),' Identifier="',GetIdentifier(Identifier),'"']);
+  {$ENDIF}
+
+  Params:=TFindDeclarationParams.Create(Self,ClassNode);
+  SearchParamTypes:=nil;
+  ParamCompatibilityList:=nil;
+  try
+    CurTool:=Self;
+    while CurTool.FindAncestorOfClass(ClassNode,Params,true) do begin
+      CurTool:=Params.NewCodeTool;
+      ClassNode:=Params.NewNode;
+      //debugln(['  TFindDeclarationTool.FindOverridenMethodDecl Class=',CurTool.GetNodeNamePath(ClassNode)]);
+
+      Node:=ClassNode.LastChild;
+      while Node<>nil do begin
+        //debugln(['  TFindDeclarationTool.FindOverridenMethodDecl Node=',CurTool.GetNodeNamePath(Node),' ',Node.DescAsString]);
+        if (Node.Desc in AllClassSections)
+        and (Node.FirstChild<>nil) then begin
+          Node:=Node.LastChild;
+          continue;
+        end
+        else if Node.Desc in AllSimpleIdentifierDefinitions then begin
+          if CompareIdentifiers(@CurTool.Src[Node.StartPos],Identifier)=0 then
+            exit;
+        end else if Node.Desc=ctnProperty then begin
+          CurIdentifier:=GetPropertyNameIdentifier(Node);
+          if CompareIdentifiers(CurIdentifier,Identifier)=0 then
+            exit;
+        end else if Node.Desc=ctnProcedure then begin
+          CurIdentifier:=CurTool.GetProcNameIdentifier(Node);
+          //debugln(['  TFindDeclarationTool.FindOverridenMethodDecl PROC "',CurIdentifier,'"']);
+          if CompareIdentifiers(CurIdentifier,Identifier)=0 then begin
+            // found ancestor method with same name
+            {$IFDEF VerboseFindRefMethodOverrides}
+            debugln(['TFindDeclarationTool.FindOverridenMethodDecl Found ',CurTool.GetNodeNamePath(Node,true)]);
+            {$ENDIF}
+            if SearchParamTypes=nil then begin
+              SearchParamTypes:=CreateParamExprListFromProcNode(ProcNode,Params);
+              CompListSize:=SizeOf(TTypeCompatibility)*SearchParamTypes.Count;
+              if CompListSize>0 then
+                GetMem(ParamCompatibilityList,CompListSize);
+            end;
+            FirstParameterNode:=CurTool.GetFirstParameterNode(Node);
+            ParamCompatibility:=
+              CurTool.IsParamExprListCompatibleToNodeList(
+                FirstParameterNode,
+                SearchParamTypes,
+                false,
+                Params,ParamCompatibilityList);
+            if ParamCompatibility=tcExact then begin
+              // param list fits -> end search
+              {$IFDEF VerboseFindRefMethodOverrides}
+              debugln(['TFindDeclarationTool.FindOverridenMethodDecl Found ',CurTool.GetNodeNamePath(Node),' params fits...']);
+              {$ENDIF}
+              if (not CurTool.ProcNodeHasSpecifier(Node,psVirtual))
+                  and (not CurTool.ProcNodeHasSpecifier(Node,psOverride)) then
+                exit;
+              SearchGroup:=ExtractProcedureGroup(ProcNode);
+              FoundGroup:=CurTool.ExtractProcedureGroup(Node);
+              if SearchGroup<>FoundGroup then
+                exit;
+              Result.Tool:=CurTool;
+              Result.Node:=Node;
+              {$IFDEF VerboseFindRefMethodOverrides}
+              debugln(['TFindDeclarationTool.FindOverridenMethodDecl Result=',CurTool.GetNodeNamePath(Node,true)]);
+              {$ENDIF}
+              exit;
+            end else begin
+              {$IFDEF VerboseFindRefMethodOverrides}
+              debugln(['TFindDeclarationTool.FindOverridenMethodDecl Found ',CurTool.GetNodeNamePath(Node,true),', but params do not fit']);
+              {$ENDIF}
+            end;
+          end;
+        end else if Node.Desc=ctnGenericType then begin
+          if (Node.FirstChild<>nil)
+          and (CompareIdentifiers(@Src[Node.FirstChild.StartPos],Identifier)=0) then
+            exit;
+        end;
+        // next
+        if Node.PriorBrother<>nil then
+          Node:=Node.PriorBrother
+        else begin
+          repeat
+            Node:=Node.Parent;
+            if Node=ClassNode then exit;
+          until Node.PriorBrother<>nil;
+          Node:=Node.PriorBrother;
+        end;
+      end;
+
+    end;
+
+  finally
+    if ParamCompatibilityList<>nil then
+      Freemem(ParamCompatibilityList);
+    SearchParamTypes.Free;
+    Params.Free;
+  end;
+end;
+
 function TFindDeclarationTool.CheckSrcIdentifier(
   Params: TFindDeclarationParams;
   const FoundContext: TFindContext): TIdentifierFoundResult;
@@ -12356,7 +12600,7 @@ begin
   {$ENDIF}
 end;
 
-function TFindDeclarationTool.CompatibilityList1IsBetter( List1,
+function TFindDeclarationTool.CompatibilityList1IsBetter(List1,
   List2: TTypeCompatibilityList; ListCount: integer): boolean;
 // List1 and List2 should only contain tcCompatible and tcExact values
 var i: integer;

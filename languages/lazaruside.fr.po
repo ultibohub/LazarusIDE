@@ -9997,6 +9997,10 @@ msgstr "Trouver l'unité manquante"
 msgid "Find option"
 msgstr "Trouver une option"
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "En premier"
@@ -20338,6 +20342,10 @@ msgstr "Replier au curseur"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "Replier au niveau %d"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

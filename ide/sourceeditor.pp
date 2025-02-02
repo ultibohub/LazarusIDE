@@ -2789,6 +2789,7 @@ begin
        (FColors[ahaIdentComplRecent].Foreground <> clNone);
 
     MaxX:=TheForm.ClientWidth;
+    if ItemSelected then MaxX := MaxInt; // Might be hint, then it has more space
     t:=CurrentCompletionType;
     if Manager.ActiveCompletionPlugin<>nil then
     begin
@@ -9034,7 +9035,7 @@ end;
 
 procedure TSourceNotebook.OpenFolderMenuItemClick(Sender: TObject);
 begin
-  OpenDocument(ExtractFilePath(Statusbar.Panels[CStatusPanelFile].Text));
+  SelectInFolder(Statusbar.Panels[CStatusPanelFile].Text);
 end;
 
 procedure TSourceNotebook.ExecuteEditorItemClick(Sender: TObject);
@@ -9064,9 +9065,9 @@ begin
     end;
     W := 0;
     for i := 0 to StatusBar.Panels.Count - 1 do
-      if i <> 5 then
+      if i <> CStatusPanelFile then
         w := w + StatusBar.Panels[i].Width;
-    StatusBar.Panels[5].Width := Max(150, StatusBar.Width - W);
+    StatusBar.Panels[CStatusPanelFile].Width := Max(150, StatusBar.Width - W);
   finally
     StatusBar.EndUpdate;
   end;
@@ -9369,9 +9370,9 @@ begin
       Statusbar.Panels[CStatusPanelSel].Width := 100
     else
       Statusbar.Panels[CStatusPanelSel].Width := 50;
-    Statusbar.Panels[5].Text := PanelFilename;
+    Statusbar.Panels[CStatusPanelFile].Text := PanelFilename;
     if(EditorMacroForRecording.IsRecording(CurEditor)) then
-      Statusbar.Panels[CStatusPanelMacro].Width := IDEImages.ScaledSize(20)
+      Statusbar.Panels[CStatusPanelMacro].Width := 20 * IDEImages.GetScalePercent div 100 //was ScaledSize(20)
     else
       Statusbar.Panels[CStatusPanelMacro].Width := 0;
 

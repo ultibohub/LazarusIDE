@@ -9961,6 +9961,10 @@ msgstr ""
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr ""
@@ -20197,6 +20201,10 @@ msgstr ""
 #: lazarusidestrconsts.srkmecfoldlevel
 #, object-pascal-format
 msgid "Fold to Level %d"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor

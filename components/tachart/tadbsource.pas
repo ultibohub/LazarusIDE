@@ -82,7 +82,7 @@ procedure Register;
 implementation
 
 uses
-  Math, SysUtils, DateUtils, TAMath;
+  Math, SysUtils, DateUtils, LazMethodList, TAMath;
 
 type
 
@@ -146,8 +146,8 @@ procedure TDbChartSource.AfterDraw;
 begin
   inherited AfterDraw;
   try
-    if not FDataLink.Active or (FBookmark = nil) then exit;
     FDataLink.Dataset.EnableControls;
+    if not FDataLink.Active or (FBookmark = nil) then exit;
     FDataLink.DataSet.GotoBookmark(FBookmark);
     FDataLink.DataSet.FreeBookmark(FBookmark);
   finally
@@ -345,7 +345,7 @@ end;
 
 procedure TDbChartSource.SetOnGetItem(AValue: TDbChartSourceGetItemEvent);
 begin
-  if TMethod(FOnGetItem) = TMethod(AValue) then exit;
+  if SameMethod(TMethod(FOnGetItem), TMethod(AValue)) then exit;
   FOnGetItem := AValue;
   Reset;
 end;

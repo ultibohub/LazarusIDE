@@ -68,6 +68,7 @@ type
     FContext: HDC;
     FPaintData: TPaintData;
     FDrawSignal: GULong; // needed by designer
+    FFont: PPangoFontDescription;
     class function WidgetEvent(widget: PGtkWidget; event: PGdkEvent; data: GPointer): gboolean; cdecl; static; {main event filter of widget}
   strict private
     FCentralWidgetRGBA: array [0{GTK_STATE_NORMAL}..4{GTK_STATE_INSENSITIVE}] of TDefaultRGBA;
@@ -85,7 +86,6 @@ type
     function GetVisible: Boolean;
     procedure SetEnabled(AValue: Boolean);
     procedure SetFont(AValue: PPangoFontDescription);
-    procedure SetVisible(AValue: Boolean);
     procedure SetStyleContext({%H-}AValue: PGtkStyleContext);
     class procedure DestroyWidgetEvent({%H-}w: PGtkWidget;{%H-}data:gpointer); cdecl; static;
     class function DrawWidget(AWidget: PGtkWidget; AContext: Pcairo_t; Data: gpointer): gboolean; cdecl; static;
@@ -123,6 +123,7 @@ type
     procedure SetFontColor(AValue: TColor); virtual;
     function GetWidget:PGtkWidget;
     procedure ConnectSizeAllocateSignal(ToWidget: PGtkWidget); virtual;
+    procedure SetVisible(AValue: Boolean); virtual;
   public
     LCLObject: TWinControl;
     LCLWidth: integer; {setted up only TWSControl.SetBounds}
@@ -390,6 +391,8 @@ type
   { TGtk3Container }
 
   TGtk3Container = class(TGtk3Widget)
+  protected
+    procedure SetVisible(AValue: Boolean); override;
   public
     procedure InitializeWidget; override;
     procedure AddChild(AWidget: PGtkWidget; const ALeft, ATop: Integer); virtual;
@@ -641,6 +644,7 @@ type
 
     procedure UpdateItem(AIndex:integer;AItem: TListItem);
     procedure ItemDelete(AIndex: Integer);
+    function  ItemDisplayRect(AIndex: Integer; ASubItem: integer; ACode: TDisplayCode): TRect;
     procedure ItemInsert(AIndex: Integer; AItem: TListItem);
     procedure ItemSetText(AIndex, ASubIndex: Integer; AItem: TListItem; const AText: String);
     procedure ItemSetImage(AIndex, ASubIndex: Integer; AItem: TListItem);
@@ -728,7 +732,7 @@ type
     function GetCellView: PGtkCellView;
     function GetPopupWidget: PGtkWidget;
     function GetButtonWidget: PGtkWidget;
-    function GetCellViewFrame: PGtkWidget;
+    function GetArrowWidget: PGtkWidget;
     procedure InitializeWidget; override;
     property DroppedDown: boolean read GetDroppedDown write SetDroppedDown;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
@@ -865,6 +869,7 @@ type
     procedure UpdateWindowState; // LCL WindowState
     class function decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
   public
+    procedure DoBeforeLCLPaint; override;
     procedure SetBounds(ALeft,ATop,AWidth,AHeight:integer); override;
     destructor Destroy; override;
     procedure Activate; override;
@@ -2079,6 +2084,7 @@ begin
   gtk_grab_add(GetContainerWidget);
 end;
 
+
 function TGtk3Widget.GtkEventKey(Sender: PGtkWidget; Event: PGdkEvent; AKeyPress: Boolean): Boolean;
   cdecl;
 const
@@ -2117,14 +2123,15 @@ begin
   else
      writeln('GtkEventKey: Gtk3Widget ',dbgsName(TGtk3Widget(TempWidget)));
   {$ENDIF}
+
   if gdk_keyval_is_lower(AEvent.keyval) then
     KeyValue := Word(gdk_keyval_to_upper(AEvent.keyval))
   else
     KeyValue := Word(AEvent.keyval);
-
   // state=16 = numlock= on.
 
   LCLModifiers := GtkModifierStateToShiftState(AEvent.state, True);
+
 
   if length(AEventString) = 0 then
   begin
@@ -2155,7 +2162,7 @@ begin
   if AKeyPress and (ACharCode = VK_TAB) then
   begin
     if Sender^.is_focus then
-    Self.LCLObject.SelectNext(Self.LCLObject,true,true);
+      Self.LCLObject.SelectNext(Self.LCLObject,true,true);
     exit;
   end;
 
@@ -2433,6 +2440,9 @@ begin
   if IsWidgetOk then
   begin
     GetContainerWidget^.override_font(AValue);
+    if Assigned(FFont) and (FFont <> AValue) then
+      FFont^.free;
+    FFont := AValue;
   end;
 end;
 
@@ -3489,9 +3499,7 @@ begin
   inherited DoBeforeLCLPaint;
   if not Visible then
     exit;
-
   DC := TGtk3DeviceContext(Context);
-
   NColor := LCLObject.Color;
   if (NColor <> clNone) and (NColor <> clDefault) then
   begin
@@ -4777,6 +4785,19 @@ begin
   Result := True;
 end;
 
+procedure TGtk3Container.SetVisible(AValue: Boolean);
+begin
+  if not AValue then
+  begin
+    if [wtNotebook, wtWindow] * WidgetType = [] then
+    begin
+      Widget^.set_no_show_all(True);
+      Widget^.hide;
+    end;
+  end;
+  inherited SetVisible(AValue);
+end;
+
 procedure TGtk3Container.InitializeWidget;
 begin
   inherited InitializeWidget;
@@ -5049,7 +5070,7 @@ var
   ACurrentPage: gint;
 begin
   Result := False;
-  AWidget := AData;
+  AWidget := PGtkNoteBook(AData);
   if not Gtk3IsWidget(AWidget) then
     exit;
   if g_object_get_data(AWidget,'switch-page-signal-stopped') <> nil then
@@ -7232,6 +7253,36 @@ begin
     gtk_list_store_remove(PGtkListStore(AModel), @Iter);
 end;
 
+function TGtk3ListView.ItemDisplayRect(AIndex: Integer; ASubItem: integer;
+  ACode: TDisplayCode): TRect;
+var
+  AModel: PGtkTreeModel;
+  Iter: TGtkTreeIter;
+  Column: PGtkTreeViewColumn;
+  Path: PGtkTreePath;
+  ItemRect: TGdkRectangle;
+  cell: PGtkCellRenderer;
+  y, x: gint;
+begin
+  Result := Rect(0, 0, 0, 0);
+  if IsTreeView then
+    AModel := PGtkTreeView(getContainerWidget)^.get_model
+  else
+    AModel := PGtkIconView(getContainerWidget)^.get_model;
+  Path := gtk_tree_path_new_from_indices(AIndex, [-1]);
+  try
+    if Self.IsTreeView then
+    begin
+      Column := gtk_tree_view_get_column(PGtkTreeView(GetContainerWidget), ASubItem);
+      gtk_tree_view_get_cell_area(PGtkTreeView(GetContainerWidget), Path, Column, @ItemRect);
+    end else
+      gtk_icon_view_get_cell_rect(PGtkIconView(getContainerWidget), Path, nil, @ItemRect);
+    Result := RectFromGdkRect(ItemRect);
+  finally
+    gtk_tree_path_free(Path);
+  end;
+end;
+
 procedure TGtk3ListView.ItemInsert(AIndex: Integer; AItem: TListItem);
 var
   AModel: PGtkTreeModel;
@@ -7551,19 +7602,20 @@ begin
   Result := nil;
   if not IsWidgetOk then
     exit;
+  // button is of type GtkToggleButton
   if PGtkComboBox(GetContainerWidget)^.priv3^.button <> nil then
     Result := PGtkComboBox(GetContainerWidget)^.priv3^.button;
 end;
 
-function TGtk3ComboBox.GetCellViewFrame: PGtkWidget;
+function TGtk3ComboBox.GetArrowWidget: PGtkWidget;
 begin
   Result := nil;
   if not IsWidgetOk then
     exit;
-  if PGtkComboBox(GetContainerWidget)^.priv3^.cell_view_frame <> nil then
-    Result := PGtkComboBox(GetContainerWidget)^.priv3^.cell_view_frame;
+  // arrow is type is GtkIcon
+  if PGtkComboBox(GetContainerWidget)^.priv3^.arrow <> nil then
+    Result := PGtkComboBox(GetContainerWidget)^.priv3^.arrow;
 end;
-
 
 function TGtk3ComboBox.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
@@ -7646,6 +7698,13 @@ begin
       gtk_cell_layout_set_attributes(PGtkCellLayout(FCentralWidget), renderer, ['text', 0, nil]);
     gtk_cell_layout_set_cell_data_func(PGtkCellLayout(FCentralWidget), renderer,
       @LCLIntfCellRenderer_CellDataFunc, Self, nil);
+
+    if Assigned(PGtkComboBox(Result)^.priv3^.cell_view) then
+      g_object_set_data(PGObject(PGtkComboBox(Result)^.priv3^.cell_view), 'lclwidget', Self);
+    if Assigned(PGtkComboBox(Result)^.priv3^.button) then
+      g_object_set_data(PGObject(PGtkComboBox(Result)^.priv3^.button), 'lclwidget', Self);
+    if Assigned(PGtkComboBox(Result)^.priv3^.arrow) then
+      g_object_set_data(PGObject(PGtkComboBox(Result)^.priv3^.arrow), 'lclwidget', Self);
 
     FCentralWidget := nil;   //FWidget will be returned from getContainerWidget
     // we need cell renderer, but we need f***g GtkEventBox too
@@ -8793,6 +8852,31 @@ begin
   if GDK_DECOR_TITLE in Result then
   if biSystemMenu in icns then
      Include(Result, GDK_DECOR_MENU);
+end;
+
+procedure TGtk3Window.DoBeforeLCLPaint;
+var
+  DC: TGtk3DeviceContext;
+  NColor: TColor;
+begin
+  inherited DoBeforeLCLPaint;
+  if not Visible then
+    exit;
+
+  DC := TGtk3DeviceContext(Context);
+
+  NColor := LCLObject.Color;
+  if (NColor <> clNone) and (NColor <> clDefault) and (NColor <> clForm) then
+  begin
+    DC.CurrentBrush.Color := ColorToRGB(NColor);
+    DC.fillRect(0, 0, LCLObject.Width, LCLObject.Height);
+  end;
+
+  if BorderStyle <> bsNone then
+  begin
+    DC.CurrentPen.Color := ColorToRGB(clBtnShadow); // not sure what color to use here?
+    DC.drawRect(0, 0, LCLObject.Width, LCLObject.Height, False, True);
+  end;
 end;
 
 function TGtk3Window.ShowState(nstate:integer):boolean; // winapi ShowWindow

@@ -89,6 +89,7 @@ type
     FUseBuiltinIcons: Boolean;
     FOnAddItem: TAddItemEvent;
     FOnSortCompare: TFileItemCompareEvent;
+    function CreateRootNode(const APath: String): TTreeNode;
     { Setters and getters }
     function GetPath: string;
     procedure SetFileSortType(const AValue: TFileSortType);
@@ -421,7 +422,8 @@ procedure Register;
 
 implementation
 
-uses WSShellCtrls
+uses
+ WSShellCtrls, LazMethodList
 {$ifdef windows}
   ,Windows, ShellApi
 {$endif};
@@ -464,10 +466,6 @@ begin
     Result := Format(sShellCtrlsGB, [Format('%.1n', [AFileSize / ONE_GB])]);
 end;
 
-operator = (const A, B: TMethod): Boolean;
-begin
-  Result := (A.Code = B.Code) and (A.Data = B.Data);
-end;
 
 { TShellListItem }
 
@@ -600,6 +598,19 @@ begin
     Raise EShellCtrl.Create(sShellTreeViewIncorrectNodeType);
 end;
 
+function TCustomShellTreeView.CreateRootNode(const APath: string): TTreeNode;
+var
+  dirInfo: TSearchRec;
+begin
+  Result := Items.AddChild(nil, APath);
+  TShellTreeNode(Result).SetBasePath('');
+  FindFirstUTF8(APath, faAnyFile, dirInfo);
+  TShellTreeNode(Result).FFileInfo := dirInfo;
+  FindCloseUTF8(dirInfo);
+  Result.HasChildren := True;
+  Result.Expand(False);
+end;
+
 procedure TCustomShellTreeView.SetRoot(const AValue: string);
 var
   RootNode: TTreeNode;
@@ -630,12 +641,7 @@ begin
     //Make FRoot contain fully qualified pathname, we need it later in GetPathFromNode()
     FRoot := ExpandFileNameUtf8(FRoot);
     //Set RootNode.Text to AValue so user can choose if text is fully qualified path or not
-    RootNode := Items.AddChild(nil, AValue);
-    TShellTreeNode(RootNode).FFileInfo.Attr := FileGetAttr(FRoot);
-    TShellTreeNode(RootNode).FFileInfo.Name := FRoot;
-    TShellTreeNode(RootNode).SetBasePath('');
-    RootNode.HasChildren := True;
-    RootNode.Expand(False);
+    RootNode := CreateRootNode(AValue);
   end;
   if Assigned(ShellListView) then
     ShellListView.Root := FRoot;
@@ -659,9 +665,7 @@ begin
       PopulateWithBaseFiles()
     else
     begin
-      RootNode := Items.AddChild(nil, FRoot);
-      RootNode.HasChildren := True;
-      RootNode.Expand(False);
+      RootNode := CreateRootNode(FRoot);
       if ExistsAndIsValid(CurrPath) then
         SetPath(CurrPath);
     end;
@@ -694,7 +698,7 @@ var
   RootNode: TTreeNode;
   CurrPath: String;
 begin
-  if TMethod(AValue) = TMethod(FOnSortCompare) then
+  if SameMethod(TMethod(AValue), TMethod(FOnSortCompare)) then
     Exit;
 
   FOnSortCompare := AValue;
@@ -710,9 +714,7 @@ begin
       PopulateWithBaseFiles()
     else
     begin
-      RootNode := Items.AddChild(nil, FRoot);
-      RootNode.HasChildren := True;
-      RootNode.Expand(False);
+      RootNode := CreateRootNode(FRoot);
       if ExistsAndIsValid(Currpath) then
         SetPath(CurrPath);
     end;
@@ -1771,7 +1773,8 @@ end;
 
 procedure TCustomShellListView.SetOnSortCompare(AValue: TFileItemCompareEvent);
 begin
-  if TMethod(AValue) = TMethod(FOnSortCompare) then Exit;
+  if SameMethod(TMethod(AValue), TMethod(FOnSortCompare)) then
+    Exit;
   FOnSortCompare:=AValue;
   Clear;
   Items.Clear;

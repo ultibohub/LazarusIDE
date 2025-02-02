@@ -10232,6 +10232,10 @@ msgstr "Trova unit mancante"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "Primo"
@@ -20786,6 +20790,10 @@ msgstr "Collassa al cursore"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "Collassa al livello %d"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

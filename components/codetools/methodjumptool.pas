@@ -47,7 +47,6 @@ uses
   FileProcs, CodeTree, CodeToolsStrConsts, PascalParserTool, StdCodeTools,
   KeywordFuncLists, BasicCodeTools, LinkScanner, CodeCache, PascalReaderTool;
 
-
 type
 
   { TMethodJumpingCodeTool }
@@ -92,7 +91,6 @@ type
     procedure WriteCodeTreeNodeExtTree(ExtTree: TAVLTree);
     procedure CalcMemSize(Stats: TCTMemStats); override;
   end;
-
 
 implementation
 
@@ -287,9 +285,13 @@ const
   begin
     Result:=false;
     if SearchForProcNode=nil then exit;
+    if Scanner.CompilerMode=cmOBJFPC then begin
+      Include(SearchForProcAttr,phpWithoutGenericParams);
+      Include(SearchInProcAttr,phpWithoutGenericParams);
+    end;
     SearchedProcHead:=ExtractProcHeadWithGroup(SearchForProcNode,SearchForProcAttr);
     {$IFDEF CTDEBUG}
-    DebugLn('TMethodJumpingCodeTool.FindJumpPoint.FindBestProcNode Searching ',SearchForProcNode.DescAsString,' "',SearchedProcHead.Name,'" ',ProcHeadAttributesToStr(SearchForProcAttr));
+    DebugLn('TMethodJumpingCodeTool.FindJumpPoint.FindBestProcNode Searching ',SearchForProcNode.DescAsString,' "',dbgs(SearchedProcHead),'"');
     {$ENDIF}
     if SearchedProcHead.Name='' then exit;
     ProcNode:=FindProcNode(StartNode,SearchedProcHead,SearchInProcAttr);
@@ -839,8 +841,8 @@ begin
               Txt:=CurProcName;
               Flags:=Ord(ExtractProcedureGroup(ANode));
               if TPascalMethodGroup(Flags)=mgClassOperator then
-                // for class operator the result type is part of the signature
-                ExtTxt4:=ExtractFuncResultType(ANode,Attr);
+                // for class operator the result type is part of the Txt
+                ResultType:=ExtractFuncResultType(ANode,Attr);
             end;
             Result.Add(NewNodeExt);
           end;
@@ -1211,8 +1213,8 @@ begin
       DbgOut('Node=nil');
     DbgOut(' Position=',Dbgs(ANodeExt.Position));
     DbgOut(' Txt="',ANodeExt.Txt,'"');
-    DbgOut(' ExtTxt1="',ANodeExt.ExtTxt1,'"');
-    DbgOut(' ExtTxt2="',ANodeExt.ExtTxt2,'"');
+    DbgOut(' ExtTxt1="',ANodeExt.Code,'"');
+    DbgOut(' ExtTxt2="',ANodeExt.Identifier,'"');
     DebugLn();
     AVLNode:=ExtTree.FindSuccessor(AVLNode);
   end;

@@ -86,6 +86,7 @@ type
     procedure CategoryTreeExpanded(Sender: TObject; Node: TTreeNode);
     procedure CategoryTreeKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     function FilterEditFilterItem(ItemData: Pointer; out Done: Boolean): Boolean;
+    procedure FormClose(Sender: TObject; var CloseAction: TCloseAction);
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormShow(Sender: TObject);
     procedure HelpButtonClick(Sender: TObject);
@@ -321,9 +322,9 @@ procedure TIDEOptionsDialog.CategoryTreeCustomDrawItem(Sender: TCustomTreeView;
 begin
   // make group categories bold
   if Node.Data = nil then // is group category
-    Node.TreeView.Font.Style := [fsBold]
+    Node.TreeView.Canvas.Font.Style := [fsBold]
   else
-    Node.TreeView.Font.Style := [];
+    Node.TreeView.Canvas.Font.Style := [];
 end;
 
 procedure TIDEOptionsDialog.CategoryTreeExpanded(Sender: TObject; Node: TTreeNode);
@@ -357,6 +358,12 @@ begin
   OptEditor:=TAbstractIDEOptionsEditor(ItemData);
   OptEditor.RememberDefaultStyles;
   Result:=OptEditor.ContainsTextInCaption(FilterEdit.Filter);
+end;
+
+procedure TIDEOptionsDialog.FormClose(Sender: TObject; var CloseAction: TCloseAction);
+begin
+  if WindowState <> wsMaximized then
+    IDEDialogLayoutList.SaveLayout(self);
 end;
 
 procedure TIDEOptionsDialog.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -432,12 +439,8 @@ end;
 
 procedure TIDEOptionsDialog.OkButtonClick(Sender: TObject);
 begin
-  if not Apply then
-    Exit;
-  // close
-  if WindowState <> wsMaximized then
-    IDEDialogLayoutList.SaveLayout(Self);
-  ModalResult := mrOk;
+  if Apply then
+    ModalResult := mrOk;
 end;
 
 procedure TIDEOptionsDialog.CancelButtonClick(Sender: TObject);
@@ -447,8 +450,6 @@ begin
   // ToDo: Set build target only for project options.
   MainBuildBoss.SetBuildTargetProject1;
   // close
-  if WindowState <> wsMaximized then
-    IDEDialogLayoutList.SaveLayout(Self);
   ModalResult := mrCancel;
 end;
 

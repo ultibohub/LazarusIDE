@@ -53,6 +53,7 @@ uses
 type
   TCodeTreeNodeDesc = word;
   TCodeTreeNodeSubDesc = word;
+  TCodeTreeNodeDescArray = array of TCodeTreeNodeDesc;
 
 const
   // CodeTreeNodeDescriptors
@@ -320,6 +321,7 @@ type
     procedure ConsistencyCheck;
     procedure WriteDebugReport(const Prefix: string; WithChilds: boolean);
   end;
+  TCodeTreeNodeArray = array of TCodeTreeNode;
 
   { TCodeTree }
 
@@ -352,7 +354,10 @@ type
   public
     Node: TCodeTreeNode;
     Txt: string;
-    ExtTxt1, ExtTxt2, ExtTxt3, ExtTxt4: string;
+    Identifier: string; // the name of the variable or method, was ExtTxt2
+    Code: string; // was ExtTxt1
+    ProcBody: string; // was ExtTxt3
+    ResultType: string; // was ExtTxt4
     Position: integer;
     Data: Pointer;
     Flags: cardinal;
@@ -1180,10 +1185,10 @@ procedure TCodeTreeNodeExtension.Clear;
 begin
   Next:=nil;
   Txt:='';
-  ExtTxt1:='';
-  ExtTxt2:='';
-  ExtTxt3:='';
-  ExtTxt4:='';
+  Code:='';
+  Identifier:='';
+  ProcBody:='';
+  ResultType:='';
   Node:=nil;
   Position:=-1;
   Data:=nil;
@@ -1209,7 +1214,7 @@ begin
     DbgOut('Node=',NodeDescriptionAsString(Node.Desc))
   else
     DbgOut('Node=nil');
-  DbgOut(' Position=',dbgs(Position),' Txt="'+Txt+'" ExtTxt1="'+ExtTxt1+'" ExtTxt2="'+ExtTxt2+'" ExtTxt3="'+ExtTxt3+'" ExtTxt4="'+ExtTxt4+'"');
+  DbgOut(' Position=',dbgs(Position),' Txt="'+Txt+'" ExtTxt1="'+Code+'" ExtTxt2="'+Identifier+'" ExtTxt3="'+ProcBody+'" ExtTxt4="'+ResultType+'"');
   debugln;
 end;
 
@@ -1217,10 +1222,10 @@ function TCodeTreeNodeExtension.CalcMemSize: PtrUInt;
 begin
   Result:=PtrUInt(InstanceSize)
     +MemSizeString(Txt)
-    +MemSizeString(ExtTxt1)
-    +MemSizeString(ExtTxt2)
-    +MemSizeString(ExtTxt3)
-    +MemSizeString(ExtTxt4);
+    +MemSizeString(Code)
+    +MemSizeString(Identifier)
+    +MemSizeString(ProcBody)
+    +MemSizeString(ResultType);
 end;
 
 end.

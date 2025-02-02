@@ -10088,6 +10088,10 @@ msgstr "Hiányzó unit megkeresése"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "Elsőként"
@@ -20480,6 +20484,10 @@ msgstr "Összecsukás a beszúrási jelnél"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "Összecsukás a(z) %d. szinting"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

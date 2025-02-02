@@ -10008,6 +10008,10 @@ msgstr "找到缺少单元"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "第一个"
@@ -20321,6 +20325,10 @@ msgstr "在光标处折叠"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "折叠到层次%d"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

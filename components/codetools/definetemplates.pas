@@ -803,8 +803,6 @@ type
     procedure SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string);
   end;
 
-  TFPCConfigFileState = TPCConfigFileState deprecated 'use TPCConfigFileState'; // Laz 1.9
-
   { TPCConfigFileStateList
     list of TPCConfigFileState }
 
@@ -825,8 +823,6 @@ type
     procedure LoadFromXMLConfig(XMLConfig: TXMLConfig; const Path: string);
     procedure SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string);
   end;
-
-  TFPCConfigFileStateList = TPCConfigFileStateList deprecated 'use TPCConfigFileStateList'; // Laz 1.9
 
   { TPCFPMFileState
     Stores information about a fppkg .fpm file }
@@ -1107,8 +1103,6 @@ type
     property ConfigCaches: TPCTargetConfigCaches read FConfigCaches write SetConfigCaches;
     property TestFilename: string read GetTestFilename write SetTestFilename; // an empty file to test the compiler, will be auto created
     property ExtraOptions: string read GetExtraOptions write SetExtraOptions; // additional compiler options not used as key, e.g. -Fr<language file>
-    function GetFPCVersion(const CompilerFilename, TargetOS, TargetCPU, TargetProcessor: string;
-                           UseCompiledVersionAsDefault: boolean): string; deprecated 'use GetPCVersion'; // 2.0.1 //Ultibo
     function GetPCVersion(const CompilerFilename, TargetOS, TargetCPU, TargetProcessor: string;
                           UseCompiledVersionAsDefault: boolean;
                           out Kind: TPascalCompiler): string; //Ultibo
@@ -1127,8 +1121,6 @@ type
                              out ChangeStamp: integer); //Ultibo
   end;
 
-  TFPCDefinesCache = TCompilerDefinesCache deprecated 'use TCompilerDefinesCache'; // 1.9
-
 function DefineActionNameToAction(const s: string): TDefineAction;
 function DefineTemplateFlagsToString(Flags: TDefineTemplateFlags): string;
 function GetDefaultSrcOSForTargetOS(const TargetOS: string): string;
@@ -1137,8 +1129,6 @@ function GetDefaultSrcCPUForTargetCPU(const TargetCPU: string): string;
 procedure SplitLazarusCPUOSWidgetCombo(const Combination: string;
   out CPU, OS, WidgetSet: string);
 function GetCompiledFPCVersion: integer;
-function GetCompiledTargetOS: string; deprecated 'use FPCAdds';
-function GetCompiledTargetCPU: string; deprecated 'use FPCAdds';
 function GetDefaultCompilerFilename(const TargetCPU: string = ''; Cross: boolean = false): string;
 procedure GetTargetProcessors(const TargetCPU: string; aList: TStrings);
 function GetFPCTargetOS(TargetOS: string): string; // normalize
@@ -3833,16 +3823,6 @@ end;
 function GetCompiledFPCVersion: integer;
 begin
   Result:=FPCVersionToNumber({$I %FPCVERSION%});
-end;
-
-function GetCompiledTargetOS: string;
-begin
-  Result:=FPCAdds.GetCompiledTargetOS;
-end;
-
-function GetCompiledTargetCPU: string;
-begin
-  Result:=FPCAdds.GetCompiledTargetCPU;
 end;
 
 function GetDefaultCompilerFilename(const TargetCPU: string;
@@ -9718,15 +9698,6 @@ begin
   if (SourceCaches<>nil) and (SourceCaches.ChangeStamp<>FSourceCachesSaveStamp)
   then exit;
   Result:=false;
-end;
-
-function TCompilerDefinesCache.GetFPCVersion(const CompilerFilename, TargetOS,
-  TargetCPU, TargetProcessor: string; UseCompiledVersionAsDefault: boolean): string; //Ultibo
-var
-  Kind: TPascalCompiler;
-begin
-  Result:=GetPCVersion(CompilerFilename,TargetOS,TargetCPU,TargetProcessor,UseCompiledVersionAsDefault,Kind); //Ultibo
-  if Kind=pcFPC then ;
 end;
 
 function TCompilerDefinesCache.GetPCVersion(const CompilerFilename, TargetOS,

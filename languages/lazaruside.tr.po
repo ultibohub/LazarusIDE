@@ -9976,6 +9976,10 @@ msgstr "Eksik birimi bul"
 msgid "Find option"
 msgstr "Seçenek bul"
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "İlk"
@@ -20263,6 +20267,10 @@ msgstr "İmlece Katla"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "Katlama seviyesi %d"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format

@@ -10060,6 +10060,10 @@ msgstr "Etsi puuttuva käännösyksikkö"
 msgid "Find option"
 msgstr ""
 
+#: lazarusidestrconsts.lisfindoverridestoo
+msgid "Find overrides too"
+msgstr ""
+
 #: lazarusidestrconsts.lisfirst
 msgid "First"
 msgstr "Ensimmäinen"
@@ -20365,6 +20369,10 @@ msgstr "Laskosta kursorin kohdalta"
 #, object-pascal-format
 msgid "Fold to Level %d"
 msgstr "Laskosta tasolle %d"
+
+#: lazarusidestrconsts.srkmecfoldtoggle
+msgid "Toggle Fold at Cursor"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format
