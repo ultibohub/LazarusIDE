@@ -126,7 +126,7 @@ type
     FAtLineStart: Boolean;
   public
     constructor Create(ABuffer: TSynEditStringList);
-    procedure SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx; out AStartBytePos, ALineByteLen: Integer); override;
+    procedure SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx; out ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen: Integer); override;
     function  GetNextHighlighterToken(out ATokenInfo: TLazSynDisplayTokenInfo): Boolean; override;
     function GetDrawDividerInfo: TSynDividerDrawConfigSetting; override;
     function GetLinesCount: Integer; override;
@@ -386,11 +386,13 @@ begin
 end;
 
 procedure TLazSynDisplayBuffer.SetHighlighterTokensLine(ALine: TLineIdx; out
-  ARealLine: TLineIdx; out AStartBytePos, ALineByteLen: Integer);
+  ARealLine: TLineIdx; out ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen: Integer);
 begin
   CurrentTokenLine := ALine;
   ARealLine := ALine;
+  ASubLineIdx   := 0;
   AStartBytePos := 1;
+  AStartPhysPos := 1;
   ALineByteLen := Length(FBuffer[ARealLine]);
   FAtLineStart := True;
 end;
@@ -398,13 +400,18 @@ end;
 function TLazSynDisplayBuffer.GetNextHighlighterToken(out ATokenInfo: TLazSynDisplayTokenInfo): Boolean;
 begin
   Result := False;
+  ATokenInfo := Default(TLazSynDisplayTokenInfo);
   if not Initialized then exit;
 
   if CurrentTokenHighlighter = nil then begin
+    ATokenInfo.TokenOrigin := dtoAfterText;
     Result := FAtLineStart;
     if not Result then exit;
     ATokenInfo.TokenStart := FBuffer.GetPChar(CurrentTokenLine, ATokenInfo.TokenLength);
+    Result := ATokenInfo.TokenLength > 0;
+    if not Result then exit;
     ATokenInfo.TokenAttr := nil;
+    ATokenInfo.TokenOrigin := dtoVirtualText;
     FAtLineStart := False;
   end
   else begin
@@ -417,12 +424,14 @@ begin
       ATokenInfo.TokenStart := nil;
       ATokenInfo.TokenLength := 0;
       ATokenInfo.TokenAttr := CurrentTokenHighlighter.GetEndOfLineAttribute;
+      ATokenInfo.TokenOrigin := dtoAfterText;
       Result := ATokenInfo.TokenAttr <> nil;
       exit;
     end;
 
     CurrentTokenHighlighter.GetTokenEx(ATokenInfo.TokenStart, ATokenInfo.TokenLength);
     ATokenInfo.TokenAttr := CurrentTokenHighlighter.GetTokenAttribute;
+    ATokenInfo.TokenOrigin := dtoVirtualText;
     CurrentTokenHighlighter.Next;
   end;
 end;

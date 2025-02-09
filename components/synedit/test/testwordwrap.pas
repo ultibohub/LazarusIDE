@@ -1550,6 +1550,7 @@ begin
   (* After "DoTestInit" each node should be filled to the max.
      So the test knows where each node begins
   *)
+  FTree.Free;
   FTree := CreateTree(10, 30, 4); // APageJoinSize, APageSplitSize, APageJoinDistance
 
   For OffsetAtStart := 0 to 3 do
@@ -1748,13 +1749,13 @@ procedure TTestWordWrapPluginBase.InternalCheckLine(AName: String;
   NoTrim: Boolean);
 var
   gotRealLine: TLineIdx;
-  gotStartPos, GotLineLen: Integer;
+  gotStartPos, GotLineLen, gotStartPhys, gotSubLineIdx: Integer;
   gotTokenOk: Boolean;
   gotToken: TLazSynDisplayTokenInfo;
   gotText: PChar;
   s: String;
 begin
-  dsp.SetHighlighterTokensLine(ALine, gotRealLine, gotStartPos, GotLineLen);
+  dsp.SetHighlighterTokensLine(ALine, gotRealLine, gotSubLineIdx, gotStartPos, gotStartPhys, GotLineLen);
   gotTokenOk := dsp.GetNextHighlighterToken(gotToken);
   if gotTokenOk then
     gotText := gotToken.TokenStart
@@ -1805,7 +1806,7 @@ procedure TTestWordWrapPluginBase.CheckLines(AName: String;
 var
   v: TSynEditStringsLinked;
   dsp: TLazSynDisplayView;
-  i, gotStartPos, GotLineLen: Integer;
+  i, gotStartPos, GotLineLen, gotStartPhys, gotSubLineIdx: Integer;
   gotTokenOk: Boolean;
   gotToken: TLazSynDisplayTokenInfo;
   s: String;
@@ -1822,7 +1823,7 @@ begin
       dsp.FinishHighlighterTokens;
       dsp.InitHighlighterTokens(nil);
       for i := 0 to Length(AExpTextStart)-1 do begin
-        dsp.SetHighlighterTokensLine(AStartLine+i, gotRealLine, gotStartPos, GotLineLen);
+        dsp.SetHighlighterTokensLine(AStartLine+i, gotRealLine, gotSubLineIdx, gotStartPos, gotStartPhys, GotLineLen);
         s := '';
         while dsp.GetNextHighlighterToken(gotToken) and (gotToken.TokenLength > 0) do
           s := s + copy(gotToken.TokenStart, 1, gotToken.TokenLength);

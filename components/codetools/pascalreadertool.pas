@@ -291,6 +291,7 @@ type
     function ExtractSourceName: string;
     function GetSourceNamePos(out NamePos: TAtomPosition): boolean;
     function GetSourceName(DoBuildTree: boolean = true): string;
+    function GetSourceNameNode: TCodeTreeNode;
     function GetSourceType: TCodeTreeNodeDesc;
     function PositionInSourceName(CleanPos: integer): boolean;
 
@@ -2351,10 +2352,15 @@ begin
     case Node.Desc of
     ctnIdentifier:
       s:=ReadSrc(Node.StartPos,Node.EndPos);
-    ctnTypeDefinition, ctnVarDefinition, ctnConstDefinition:
+    ctnTypeDefinition, ctnVarDefinition, ctnConstDefinition, ctnLabel, ctnEnumIdentifier:
       s:=GetIdentifier(@Src[Node.StartPos]);
     ctnGenericType:
-      s:=ExtractClassName(Node,false,false,true);
+      s:='generic-'+ExtractClassName(Node,false,false,true);
+    ctnProperty,ctnGlobalProperty:
+      begin
+        RestoreCurPos:=true;
+        s:=ExtractPropName(Node,false)
+      end;
     ctnProcedure:
       begin
         RestoreCurPos:=true;
@@ -2377,6 +2383,8 @@ begin
     end;
     Node:=Node.Parent;
   until Node=nil;
+  if Result='' then
+    Result:='['+StartNode.DescAsString+']';
 
   if RestoreCurPos then
     MoveCursorToAtomPos(OldPos);
@@ -2421,7 +2429,7 @@ begin
         Result:=Result.NextBrother;
         if Result=nil then exit;
       end;
-      if (not (Result.Desc in AllPascalTypes)) then
+      if (not (Result.Desc in AllPascalTypeParts)) then
         Result:=nil;
       exit;
     end;
@@ -2873,13 +2881,15 @@ begin
 end;
 
 function TPascalReaderTool.GetSourceNamePos(out NamePos: TAtomPosition): boolean;
+var
+  Node: TCodeTreeNode;
 begin
   Result:=false;
   NamePos.StartPos:=-1;
-  if Tree.Root=nil then exit;
-  MoveCursorToNodeStart(Tree.Root);
-  ReadNextAtom; // read source type 'program', 'unit' ...
-  if (Tree.Root.Desc=ctnProgram) and (not UpAtomIs('PROGRAM')) then exit;
+  NamePos.EndPos:=-1;
+  Node:=GetSourceNameNode;
+  if Node=nil then exit;
+  MoveCursorToNodeStart(Node);
   ReadNextAtom; // read name
   if not AtomIsIdentifier then exit;
   NamePos:=CurPos;
@@ -2900,6 +2910,17 @@ begin
     BuildTree(lsrSourceName);
   CachedSourceName:=ExtractSourceName;
   Result:=CachedSourceName;
+end;
+
+function TPascalReaderTool.GetSourceNameNode: TCodeTreeNode;
+begin
+  Result:=Tree.Root;
+  if Result=nil then exit;
+  if not (Result.Desc in AllSourceTypes) then
+    exit(nil);
+  Result:=Result.FirstChild;
+  if Result=nil then exit;
+  if Result.Desc<>ctnSrcName then exit(nil);
 end;
 
 function TPascalReaderTool.NodeIsInAMethod(Node: TCodeTreeNode): boolean;
@@ -3690,6 +3711,7 @@ begin
 end;
 
 function TPascalReaderTool.ExtractUsedUnitNameAtCursor(InFilename: PAnsiString): string;
+// after reading CurPos is on atom behind, i.e. comma or semicolon
 begin
   Result:='';
   if InFilename<>nil then
@@ -3697,8 +3719,7 @@ begin
   while CurPos.Flag=cafWord do begin
     if Result<>'' then
       Result:=Result+'.';
-    //Result:=Result+GetAtomIdentifier;
-    Result:=Result+GetAtom;//&-ident allowed - preferred "&begin.&end" over "begin.end"
+    Result:=Result+GetAtom; // read with &
     ReadNextAtom;
     if CurPos.Flag<>cafPoint then break;
     ReadNextAtom;

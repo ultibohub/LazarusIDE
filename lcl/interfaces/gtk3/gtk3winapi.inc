@@ -363,7 +363,6 @@ begin
     AVisual := gdk_window_get_visual(gdk_get_default_root_window);
     ADepth := gdk_visual_get_depth(AVisual);
     ABpp := AVisual^.get_bits_per_rgb;
-    g_object_unref(AVisual);
   end;
   case ADepth of
     1: Format := CAIRO_FORMAT_A1;
@@ -416,8 +415,9 @@ begin
       Result := HICON(TGtk3Image.Create(TGtk3Image(IconInfo^.hbmColor).Handle));
     end else
     begin
-      Result := HCURSOR({%H-}PtrUInt(gdk_cursor_new_from_pixbuf(gdk_display_get_default,
-        TGtk3Image(IconInfo^.hbmColor).Handle, IconInfo^.xHotSpot, IconInfo^.yHotSpot)));
+      Result := HCURSOR(TGtk3Cursor.Create(TGtk3Image(IconInfo^.hbmColor).Handle, IconInfo^.xHotSpot, IconInfo^.yHotSpot));
+        //HCURSOR({%H-}PtrUInt(gdk_cursor_new_from_pixbuf(gdk_display_get_default,
+        // TGtk3Image(IconInfo^.hbmColor).Handle, IconInfo^.xHotSpot, IconInfo^.yHotSpot)));
       // create cursor from pixbuf
      { W := gdk_pixbuf_get_width(TGtk3Image(IconInfo^.hbmColor).Handle);
       H := gdk_pixbuf_get_height(TGtk3Image(IconInfo^.hbmColor).Handle);
@@ -554,18 +554,18 @@ function TGtk3WidgetSet.DestroyCursor(Handle: HCURSOR): Boolean;
 begin
   Result := Handle <> 0;
   if Result then
-    g_object_unref(PGdkCursor(Handle));
-   // gdk_cursor_destroy({%H-}PGdkCursor(Handle));
+    TGtk3Cursor(Handle).Free;
 end;
 
 function TGtk3WidgetSet.DestroyIcon(Handle: HICON): Boolean;
 begin
-  Result := False;
-  if IsValidGDIObject(Handle) then
-  begin
-    TGtk3Image(Handle).Free;
-    Result := True;
-  end;
+ Result := (Handle <> 0) and
+            (
+              (TGtk3Object(Handle) is TGtk3Image) or
+              (TGtk3Object(Handle) is TGtk3Cursor)
+            );
+  if Result then
+    TGtk3Object(Handle).Free;
 end;
 
 function TGtk3WidgetSet.DPtoLP(DC: HDC; var Points; Count: Integer): BOOL;
@@ -960,7 +960,7 @@ begin
     if Count>0 then
       System.Move(Str^,AStr[1],Count);
 
-    if (Flags and DT_EXPANDTABS) <> 0 then
+    if (Count > 0) and ((Flags and DT_EXPANDTABS) <> 0) then
       AStr := StringReplace(AStr, #9, TabString, [rfReplaceAll]);
 
     if (Flags and DT_NOPREFIX) <> DT_NOPREFIX then
@@ -1131,13 +1131,14 @@ var
     AFamilies: PPPangoFontFamily;
     AFaces: PPPangoFontFace;
     ANumFaces: Integer;
+    APangoContext: PPangoContext;
   begin
     AList.Clear;
     SetLength(Faces, 0);
     Result := -1;
     AFamilies := nil;
-
-    pango_context_list_families(gdk_pango_context_get, @AFamilies, @Result);
+    APangoContext := gdk_pango_context_get;
+    pango_context_list_families(APangoContext, @AFamilies, @Result); // valgrid says mem leak
     SetLength(Faces, Result);
     for i := 0 to Result - 1 do
     begin
@@ -1148,10 +1149,14 @@ var
       pango_font_family_list_faces(AFamilies[i], @AFaces, @ANumFaces);
       SetLength(Faces[i].Faces, ANumFaces);
       for j := 0 to ANumFaces - 1 do
+      begin
         Faces[i].Faces[j] := StrPas(pango_font_face_get_face_name(AFaces[j]));
+        g_object_unref(AFaces[j]);
+      end;
       g_free(AFaces);
     end;
     g_free(AFamilies);
+    g_object_unref(APangoContext);
   end;
 
   function Gtk3GetFontFamilies(var List: TStringList;
@@ -1268,6 +1273,9 @@ var
 
     if StylesList.Count > 0  then
       AStyle := GetStyleAt(0);
+
+    //mem leak found by valgrind.
+    pango_font_description_free(Font);
 
     // current pango support in fpc is really poor, we cannot
     // get PangoScript since it's in pango >= 1.4
@@ -2952,6 +2960,7 @@ var
   AWindow: PGtkWindow;
   x, y, aWidth, aHeight: gint;
   Allocation: TGtkAllocation;
+  AGdkWindow: PGdkWindow;
 begin
   Result := 0;
   if IsValidHandle(Handle) then
@@ -2961,18 +2970,34 @@ begin
       AWindow := PGtkWindow(TGtk3Widget(Handle).Widget);
       if not TGtk3Window(Handle).WidgetMapped then
         AWindow := nil;
+
+      if AWindow <> nil then
+        AGdkWindow := AWindow^.get_window
+      else
+        AGdkWindow := nil;
+
     end else
       AWindow := nil;
     if AWindow <> nil then
     begin
-      AWindow^.get_position(@x, @y);
-      AWindow^.get_size(@aWidth, @aHeight);
+      if Assigned(AGdkWindow) then
+      begin
+        AGdkWindow^.get_origin(@x, @y);
+        AGdkWindow^.get_frame_extents(@Allocation);
+        AWidth := Allocation.Width;
+        AHeight := Allocation.Height;
+      end else
+      begin
+        AWindow^.get_position(@x, @y);
+        AWindow^.get_size(@aWidth, @aHeight);
+      end;
       ARect := Bounds(x, Y, AWidth, AHeight);
       Result := 1;
     end else
     begin
       TGtk3Widget(Handle).Widget^.get_allocation(@Allocation);
       ARect := Bounds(Allocation.x, Allocation.y, Allocation.width, Allocation.height);
+      Result := -1;
     end;
   end;
 end;
@@ -4484,7 +4509,7 @@ begin
   ATargetRect := Rect(X, Y, Width + X, Height + Y);
   ASrcRect := Rect(XSrc, YSrc, SrcWidth + XSrc, SrcHeight + YSrc);
   if (mask<>0) then
-    DestContext.drawImage1(@ATargetRect, PgdkPixbuf(SrcContext.CurrentImage.Handle) , @ASrcRect, nil, nil)
+    DestContext.drawImage1(@ATargetRect, SrcContext.CurrentImage.Handle , @ASrcRect, nil, nil)
   else
   begin
     if (cairo_surface_get_type(SrcContext.CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE) and

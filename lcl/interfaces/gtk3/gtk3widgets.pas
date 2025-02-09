@@ -622,7 +622,8 @@ type
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
-    class function selection_changed(ctl:TGtk3ListView):gboolean;cdecl;
+    procedure SetColor(AValue: TColor); override;
+    class function selection_changed(AIconView: PGtkIconView; aData: gPointer):gboolean;cdecl;
   public
     destructor Destroy; override;
     {interface implementation}
@@ -646,13 +647,14 @@ type
     procedure ItemDelete(AIndex: Integer);
     function  ItemDisplayRect(AIndex: Integer; ASubItem: integer; ACode: TDisplayCode): TRect;
     procedure ItemInsert(AIndex: Integer; AItem: TListItem);
+    function ItemPosition(AIndex: integer): TPoint;
     procedure ItemSetText(AIndex, ASubIndex: Integer; AItem: TListItem; const AText: String);
     procedure ItemSetImage(AIndex, ASubIndex: Integer; AItem: TListItem);
     procedure ItemSetState(const AIndex: Integer; const {%H-}AItem: TListItem; const AState: TListItemState;
       const AIsSet: Boolean);
     function ItemGetState(const AIndex: Integer; const {%H-}AItem: TListItem; const AState: TListItemState;
       out AIsSet: Boolean): Boolean;
-
+    procedure ScrollToRow(const ARow: integer);
     procedure UpdateImageCellsSize;
 
     property Images: TFPList read FImages write FImages;
@@ -980,7 +982,7 @@ type
 
 implementation
 
-uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int,imglist,lclproc, LazLogger;
+uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int, gtk3caret, imglist,lclproc, LazLogger;
 
 const
   act_count:integer=0; // application activity - don't touch.
@@ -1961,6 +1963,7 @@ procedure TGtk3Widget.GtkEventFocus(Sender: PGtkWidget; Event: PGdkEvent);
   cdecl;
 var
   Msg: TLMessage;
+  ACaret: TGtk3Caret;
 begin
   {$IF DEFINED(GTK3DEBUGEVENTS) OR DEFINED(GTK3DEBUGFOCUS)}
   DebugLn('TGtk3Widget.GtkEventFocus ',dbgsName(LCLObject),' FocusIn ',dbgs(Event^.focus_change.in_ <> 0));
@@ -1971,6 +1974,17 @@ begin
   else
     Msg.Msg := LM_KILLFOCUS;
   DeliverMessage(Msg);
+  if g_object_get_data(PGObject(getContainerWidget),'gtk3-caret') <> nil then
+  begin
+    ACaret := TGtk3Caret(g_object_get_data(PGObject(getContainerWidget),'gtk3-caret'));
+    if ACaret.RespondToFocus then
+    begin
+      if Msg.Msg = LM_SETFOCUS then
+        ACaret.Show
+      else
+        ACaret.Hide;
+    end;
+  end;
 end;
 
 procedure TGtk3Widget.GtkEventDestroy; cdecl;
@@ -2711,6 +2725,7 @@ var
 begin
   if IsValidHandle then
     GTK3WidgetSet.DestroyCaret(HWND(Self));
+
   if IsValidHandle and FOwnWidget then
   begin
     FOwnWidget:=false;
@@ -3337,10 +3352,10 @@ begin
   if IsWidgetOk then
   begin
     if GetContainerWidget^.get_has_window and Gtk3IsGdkWindow(GetContainerWidget^.window) then
-      SetWindowCursor(GetContainerWidget^.window, ACursor, False, True)
+      SetWindowCursor(GetContainerWidget^.window, HCURSOR(TGtk3Cursor(ACursor).Handle), False, True)
     else
     if Widget^.get_has_window and Gtk3IsGdkWindow(Widget^.window) then
-      SetWindowCursor(Widget^.window, ACursor, False, True)
+      SetWindowCursor(Widget^.window, HCURSOR(TGtk3Cursor(ACursor).Handle), False, True)
     else // fallback for window-less widgets
     if Assigned(self.getParent) then
       Self.getParent.SetCursor(ACursor);
@@ -6745,7 +6760,7 @@ end;
 
 procedure Gtk3WS_ListViewItemSelected(ASelection: PGtkTreeSelection; AData: GPointer); cdecl;
 var
-  AList: PGList;
+  AList, TmpList: PGList;
   Msg: TLMNotify;
   NM: TNMListView;
   Path: PGtkTreePath;
@@ -6757,9 +6772,10 @@ begin
     exit;
   if not Assigned(TGtk3ListView(AData).FPreselectedIndices) then
     exit;
-  //ATreeView := gtk_tree_selection_get_tree_view(ASelection);
+
   AList := gtk_tree_selection_get_selected_rows(ASelection, nil);
-  TGtk3Widget(AData).BeginUpdate; // dissalow entering Gtk3WS_ListViewItemPreSelected
+  TGtk3Widget(AData).BeginUpdate; // Prevents entering Gtk3WS_ListViewItemPreSelected
+
   try
     for i := 0 to TGtk3ListView(AData).FPreselectedIndices.Count - 1 do
     begin
@@ -6771,17 +6787,21 @@ begin
       NM.iItem := {%H-}PtrInt(TGtk3ListView(AData).FPreselectedIndices.Items[i]);
       NM.iSubItem := 0;
       B := False;
-      for j := 0 to g_list_length(AList) - 1 do
+
+      TmpList := AList;
+      while TmpList <> nil do
       begin
-        Path := g_list_nth_data(AList, guint(j));
-        if Path <> nil then
+        Path := PGtkTreePath(TmpList^.data);
+        if Assigned(Path) then
         begin
           Indices := gtk_tree_path_get_indices(Path)^;
           B := Indices = {%H-}PtrInt(TGtk3ListView(AData).FPreselectedIndices.Items[i]);
           if B then
             break;
         end;
+        TmpList := TmpList^.next;
       end;
+
       if not B then
         NM.uOldState := LVIS_SELECTED
       else
@@ -6793,14 +6813,28 @@ begin
   finally
     FreeAndNil(TGtk3ListView(AData).FPreselectedIndices);
     if AList <> nil then
+    begin
+      TmpList := AList;
+      while TmpList <> nil do
+      begin
+        Path := PGtkTreePath(TmpList^.data);
+        if Assigned(Path) then
+          gtk_tree_path_free(Path);
+        TmpList := TmpList^.next;
+      end;
       g_list_free(AList);
+    end;
+
     TGtk3Widget(AData).EndUpdate;
   end;
 end;
 
+type
+  TCustomListViewHack = class(TCustomListView);
+
 function TGtk3ListView.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
-  AListView: TCustomListView;
+  AListView: TCustomListViewHack;
   AScrollStyle: TGtkScrollStyle;
   PtrType: GType;
   TreeModel: PGtkTreeModel;
@@ -6811,14 +6845,12 @@ begin
   FImages := nil;
   FPreselectedIndices := nil;
   FWidgetType := FWidgetType + [wtTreeModel, wtListView, wtScrollingWin];
-  AListView := TCustomListView(LCLObject);
+  AListView := TCustomListViewHack(LCLObject);
   Result := PGtkScrolledWindow(TGtkScrolledWindow.new(nil, nil));
 
   PtrType := G_TYPE_POINTER;
 
-
-
-  if TListView(AListView).ViewStyle in [vsIcon,vsSmallIcon] then
+  if AListView.ViewStyle in [vsIcon,vsSmallIcon] then
   begin
     TreeModel := PGtkTreeModel(gtk_list_store_new(3, [
       G_TYPE_POINTER, // ListItem pointer
@@ -6836,7 +6868,7 @@ begin
     FCentralWidget := TGtkTreeView.new_with_model(TreeModel);
   end;
 
-  FIsTreeView := not (TListView(AListView).ViewStyle in [vsIcon,vsSmallIcon]);
+  FIsTreeView := not (AListView.ViewStyle in [vsIcon,vsSmallIcon]);
 
   FCentralWidget^.set_has_window(True);
   FCentralWidget^.show;
@@ -6844,7 +6876,7 @@ begin
   PGtkScrolledWindow(Result)^.add(FCentralWidget);
   //PGtkScrolledWindow(Result)^.set_focus_child(FCentralWidget);
 
-  AScrollStyle := Gtk3TranslateScrollStyle(TListView(AListView).ScrollBars);
+  AScrollStyle := Gtk3TranslateScrollStyle(AListView.ScrollBars);
   // gtk3 scrolled window hates GTK_POLICY_NONE
   PGtkScrolledWindow(Result)^.set_policy(AScrollStyle.Horizontal, AScrollStyle.Vertical);
   PGtkScrolledWindow(Result)^.set_shadow_type(BorderStyleShadowMap[AListView.BorderStyle]);
@@ -6858,57 +6890,91 @@ begin
     gtk_tree_selection_set_select_function(PGtkTreeView(FCentralWidget)^.get_selection, TGtkTreeSelectionFunc(@Gtk3WS_ListViewItemPreSelected),
       Self, nil);
     g_signal_connect_data(PGtkTreeView(FCentralWidget)^.get_selection, 'changed', TGCallback(@Gtk3WS_ListViewItemSelected), Self, nil, G_CONNECT_DEFAULT);
+
+    PGtkTreeView(FCentralWidget)^.set_headers_visible(AListView.ShowColumnHeaders and (AListView.ViewStyle = vsReport));
+    PGtkTreeView(FCentralWidget)^.resize_children;
+
   end else
   begin
     g_signal_connect_data (PGtkIconView(FCentralWidget), 'selection-changed',
                         TGCallback(@Tgtk3ListView.selection_changed), Self, nil, G_CONNECT_DEFAULT);
   end;
-  // if FIsTreeView then
-  //  PGtkTreeView(FCentralWidget)^.set_search_column(0);
 end;
 
-class function TGtk3ListView.selection_changed(ctl:TGtk3ListView):gboolean;cdecl;
+class function TGtk3ListView.selection_changed(AIconView: PGtkIconView;
+  aData: gPointer): gboolean; cdecl;
 var
-  pl:PGList;
-  pndx:PGint;
-  i,cnt:gint;
-  lv:TListView;
+  pl, tmp: PGList;
+  pndx: PGint;
+  i, cnt: gint;
   Msg: TLMNotify;
   NM: TNMListView;
+  ctl: TGtk3ListView;
 begin
   Result := gtk_false;
-  pl:=PGtkIconView(ctl.FCentralWidget)^.get_selected_items();
+  ctl := TGtk3ListView(aData);
+  pl := PGtkIconView(ctl.GetContainerWidget)^.get_selected_items();
+
   if Assigned(pl) then
   begin
-    pndx:=PGtkTreePath(pl^.data)^.get_indices_with_depth(@cnt);
-    lv:=TListView(ctl.LCLObject);
-    ctl.BeginUpdate;
     try
-      for i:=0 to cnt-1 do
+      tmp := pl;
+      while Assigned(tmp) do
       begin
-        FillChar(Msg{%H-}, SizeOf(Msg), 0);
-        Msg.Msg := CN_NOTIFY;
-        FillChar(NM{%H-}, SizeOf(NM), 0);
-        NM.hdr.hwndfrom := HWND(ctl);
-        NM.hdr.code := LVN_ITEMCHANGED;
-        NM.iItem := {%H-}PtrInt(pndx^);
-        NM.iSubItem := 0;
-        NM.uNewState := LVIS_SELECTED;
-        NM.uChanged := LVIF_STATE;
-        Msg.NMHdr := @NM.hdr;
-        ctl.DeliverMessage(Msg);
-        inc(pndx);
+        pndx := PGtkTreePath(tmp^.data)^.get_indices_with_depth(@cnt);
+        // lv := TListView(ctl.LCLObject);
+        ctl.BeginUpdate;
+        try
+          for i := 0 to cnt - 1 do
+          begin
+            FillChar(Msg{%H-}, SizeOf(Msg), 0);
+            Msg.Msg := CN_NOTIFY;
+            FillChar(NM{%H-}, SizeOf(NM), 0);
+            NM.hdr.hwndfrom := HWND(ctl);
+            NM.hdr.code := LVN_ITEMCHANGED;
+            NM.iItem := {%H-}PtrInt(pndx^);
+            NM.iSubItem := 0;
+            NM.uNewState := LVIS_SELECTED;
+            NM.uChanged := LVIF_STATE;
+            Msg.NMHdr := @NM.hdr;
+            ctl.DeliverMessage(Msg);
+            inc(pndx);
+          end;
+        finally
+          ctl.EndUpdate;
+        end;
+        gtk_tree_path_free(PGtkTreePath(tmp^.data));
+
+        tmp := tmp^.next;
       end;
     finally
-      ctl.EndUpdate;
+      g_list_free(pl);
     end;
   end;
-
 end;
 
 function TGtk3ListView.EatArrowKeys(const AKey: Word): Boolean;
 begin
   Result := False;
+end;
+
+procedure TGtk3ListView.SetColor(AValue: TColor);
+var
+  ADisabledColor, BgColor: TGdkRGBA;
+begin
+
+  BgColor := TColortoTGdkRGBA(ColorToRgb(AValue));
+
+  getContainerWidget^.get_style_context^.get_background_color([GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
+  //override all
+  if AValue = clDefault then
+    gtk_widget_override_background_color(getContainerWidget, GTK_STATE_FLAG_NORMAL, nil)
+  else
+    gtk_widget_override_background_color(getContainerWidget, GTK_STATE_FLAG_NORMAL, @BgColor);
+  //return system highlight color
+  BgColor := TColortoTGdkRGBA(ColorToRgb(clHighlight));
+  gtk_widget_override_background_color(getContainerWidget, [GTK_STATE_FLAG_SELECTED], @BgColor);
+  gtk_widget_override_background_color(getContainerWidget, [GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
 end;
 
 destructor TGtk3ListView.Destroy;
@@ -6951,7 +7017,7 @@ begin
   begin
     for i := FImages.Count - 1 downto 0 do
       if FImages[i] <> nil then
-        TGtk3Object(FImages[i]).Free;
+        g_object_unref(FImages[i]);
     FImages.Clear;
   end;
 end;
@@ -7027,13 +7093,15 @@ begin
       ImageIndex := ListItem.SubItemImages[ColumnIndex-1];
 
   if (ImageIndex > -1) and (ImageIndex <= Images.Count-1) then
-    pb:=TGtk3Image(TBitmap(Images.Items[ImageIndex]).Handle).Handle
+    pb:=TGtk3Image(TBitmap(Images.Items[ImageIndex]).Handle).Handle^.copy
   else
     pb:=nil;
 
   gv.set_instance(pb);
-  PGtkCellRendererPixbuf(cell)^.set_property('pixbuf',@gv)
+  PGtkCellRendererPixbuf(cell)^.set_property('pixbuf',@gv);
 
+  if Assigned(pb) then
+    g_object_unref(pb);
 end;
 
 procedure Gtk3WS_ListViewColumnClicked(column: PGtkTreeViewColumn; AData: GPointer); cdecl;
@@ -7084,6 +7152,9 @@ begin
 
   //store the TColumn in the column data for callbacks
   g_object_set_data(AGtkColumn, PgChar('TListColumn'), gpointer(AColumn));
+
+  g_object_set_data(AGtkColumn, 'pix_renderer', PixRenderer);
+  g_object_set_data(AGtkColumn, 'text_renderer', TextRenderer);
 
   g_signal_connect_data(AGtkColumn,'clicked', TGCallback(@Gtk3WS_ListViewColumnClicked), Self, nil, G_CONNECT_DEFAULT);
   PGtkTreeView(GetContainerWidget)^.insert_column(AGtkColumn, AIndex);
@@ -7290,6 +7361,7 @@ var
   NewIndex: Integer;
   bmp:TBitmap;
   pxb:PGdkPixbuf;
+  w,h: gint;
 begin
   if not IsWidgetOK then
     exit;
@@ -7309,15 +7381,41 @@ begin
   else
   begin
     bmp:=TBitmap.Create;
-    TListView(LCLObject).LargeImages.GetBitmap(AIndex,bmp);
-    pxb:=TGtk3Image(bmp.Handle).Handle;
+    if Assigned(TListView(LCLObject).LargeImages) then
+      TListView(LCLObject).LargeImages.GetBitmap(AIndex,bmp)
+    else
+    begin
+      gtk_icon_size_lookup(Ord(GTK_ICON_SIZE_LARGE_TOOLBAR), @w, @h);
+      bmp.SetSize(w, h);
+    end;
+    pxb:=TGtk3Image(bmp.Handle).Handle^.copy;
     gtk_list_store_insert_with_values(PGtkListStore(AModel), @Iter, NewIndex,
       [0, Pointer(AItem),
        1, PChar(AItem.Caption),
        2, pxb, -1] );
-    fImages.Add(bmp);
+    // list_store takes ownership, so unref and ref again.
+    g_object_unref(pxb);
+    if not Assigned(FImages) then
+      FImages := TFPList.Create;
+    g_object_ref(pxb);
+    FImages.Add(pxb);
+    bmp.Free;
   end;
+end;
 
+function TGtk3ListView.ItemPosition(AIndex: integer): TPoint;
+var
+  x, y: gint;
+begin
+  Result := ItemDisplayRect(AIndex, 0, drBounds).TopLeft;
+  if IsTreeView then
+  begin
+    gtk_tree_view_convert_bin_window_to_widget_coords(
+      PGtkTreeView(GetContainerWidget),
+      Result.x, Result.y, @x, @y);
+    Result.x := x;
+    Result.y := y;
+  end;
 end;
 
 procedure TGtk3ListView.UpdateItem(AIndex:integer;AItem: TListItem);
@@ -7328,6 +7426,7 @@ var
   Iter: TGtkTreeIter;
   bmp:TBitmap;
   pxb:PGdkPixbuf;
+  w,h: gint;
 begin
   if IsTreeView then
   begin
@@ -7340,16 +7439,26 @@ begin
     AModel:=PGtkIconView(GetContainerWidget)^.get_model;
     AModel^.get_iter(@iter,path);
 
-    bmp:=TBitmap.Create;
-    TListView(LCLObject).LargeImages.GetBitmap(AItem.ImageIndex,bmp);
-    pxb:=TGtk3Image(bmp.Handle).Handle;
+    bmp := TBitmap.Create;
+    if Assigned(TCustomListViewHack(LCLObject).LargeImages) then
+      TCustomListViewHack(LCLObject).LargeImages.GetBitmap(AItem.ImageIndex, bmp)
+    else
+    begin
+      gtk_icon_size_lookup(Ord(GTK_ICON_SIZE_LARGE_TOOLBAR), @w, @h);
+      bmp.SetSize(w, h);
+    end;
+    pxb := TGtk3Image(Bmp.Handle).Handle^.copy;
     gtk_list_store_set(PGtkListStore(AModel), @Iter,
       [0, Pointer(AItem),
        1, PChar(AItem.Caption),
        2, pxb, -1] );
-    fImages.Add(bmp);
-
+    g_object_unref(pxb);
+    if not Assigned(FImages) then
+      FImages := TFPList.Create;
+    g_object_ref(pxb);
+    FImages.Add(pxb);
     gtk_tree_path_free(Path);
+    bmp.Free;
   end;
 end;
 
@@ -7434,7 +7543,9 @@ begin
         else
           PGtkTreeView(GetContainerWidget)^.set_cursor(Path, nil, False);
       end else
-        PGtkIconView(GetContainerWidget)^.set_cursor(Path, nil, False);
+      begin
+        PGtkIconView(GetContainerWidget)^.set_cursor(Path, nil, False); // valgrind says leak
+      end;
       if Path <> nil then
         gtk_tree_path_free(Path);
     end;
@@ -7530,6 +7641,18 @@ begin
       Result := True;
     end;
   end;
+end;
+
+procedure TGtk3ListView.ScrollToRow(const ARow: integer);
+var
+  ATreePath: PGtkTreePath;
+begin
+  ATreePath := gtk_tree_path_new_from_indices(ARow, [-1]);
+  if IsTreeView then
+    gtk_tree_view_scroll_to_cell(PGtkTreeView(getContainerWidget), ATreePath, nil, False, 0.0, 0.0)
+  else
+    gtk_icon_view_scroll_to_path(PGtkIconView(getContainerWidget), ATreePath, False, 0.0, 0.0);
+  gtk_tree_path_free(ATreePath);
 end;
 
 procedure TGtk3ListView.UpdateImageCellsSize;
@@ -8752,8 +8875,13 @@ begin
   end;
   {$ENDIF}
 
-  NewSize.cx := AGdkRect^.width;
-  NewSize.cy := AGdkRect^.height;
+  if decoration_flags(TCustomForm(Actl.LCLObject))<>[] then
+    PGtkWIndow(Actl.widget)^.get_size(@newSize.cx, @newsize.cy)
+  else
+  begin
+    NewSize.cx := AGdkRect^.width;
+    NewSize.cy := AGdkRect^.height;
+  end;
 
   //writeln(format('Gkt3SizeAllocate w=%d h=%d',[NewSize.cx,NewSize.cy]));
 
@@ -8976,6 +9104,7 @@ begin
   if not (csDesigning in AForm.ComponentState) then
     UpdateWindowState;
 
+  Result^.Hide; // issue #41412
   //REMOVE THIS, USED TO TRACK MOUSE MOVE OVER WIDGET TO SEE SIZE OF FIXED !
   //g_object_set_data(PGObject(FScrollWin), 'lcldebugscrollwin', Self);
   //g_object_set_data(PGObject(FCentralWidget), 'lcldebugfixed', Self);
@@ -9354,6 +9483,7 @@ begin
   fBox^.pack_start(fCentralWidget, true, true, 0);
 
   PGtkWindow(Result)^.set_can_focus(false);
+  Result^.Hide; // issue #41412
 end;
 
 procedure TGtk3HintWindow.InitializeWidget;

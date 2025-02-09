@@ -373,7 +373,7 @@ type
   public
     constructor Create(AFoldView: TSynEditFoldedView);
     destructor Destroy; override;
-    procedure SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx; out AStartBytePos, ALineByteLen: Integer); override;
+    procedure SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx; out ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen: Integer); override;
     function GetNextHighlighterToken(out ATokenInfo: TLazSynDisplayTokenInfo): Boolean; override;
     function GetLinesCount: Integer; override;
 
@@ -433,7 +433,7 @@ type
     function GetViewedLines(index : Integer) : String; override; // TODO: not used?
     function GetViewedCount: integer; override;
     function GetDisplayView: TLazSynDisplayView; override;
-    procedure InternalGetInfoForViewedXY(AViewedXY: TPhysPoint;
+    procedure InternalGetInfoForViewedXY(AViewedXY: TViewedPoint;
       AFlags: TViewedXYInfoFlags; out AViewedXYInfo: TViewedXYInfo;
       ALogPhysConvertor: TSynLogicalPhysicalConvertor); override;
     procedure DoBlockSelChanged(Sender: TObject; Changes: TSynStatusChanges);
@@ -458,8 +458,8 @@ type
     // Converting between Folded and Unfolded Lines/Indexes
     function TextToViewIndex(aTextIndex : TLineIdx) : TLineIdx; override;   (* Convert TextIndex (0-based) to ViewIndex (0-based) *)
     function ViewToTextIndex(aViewIndex : TLineIdx) : TLineIdx; override;     (* Convert ViewIndex (0-based) to TextIndex (0-based) *)
-    function TextXYToViewXY(APhysTextXY: TPhysPoint): TPhysPoint; override;
-    function ViewXYToTextXY(APhysViewXY: TPhysPoint): TPhysPoint; override;
+    function TextXYToViewXY(APhysTextXY: TPhysPoint): TViewedPoint; override;
+    function ViewXYToTextXY(APhysViewXY: TViewedPoint): TPhysPoint; override;
 
     function InternTextToViewIndex(aTextIndex : TLineIdx) : TLineIdx;           (* Convert TextIndex (0-based) to ViewIndex (0-based) *)
     function InternTextToViewIndexOffset(var aTextIndex : TLineIdx): integer;       (* Offset (subtract) to Convert TextIndex (0-based) to ViewIndex (0-based) *)
@@ -735,12 +735,15 @@ begin
   inherited Destroy;
 end;
 
-procedure TLazSynDisplayFold.SetHighlighterTokensLine(ALine: TLineIdx; out
-  ARealLine: TLineIdx; out AStartBytePos, ALineByteLen: Integer);
+procedure TLazSynDisplayFold.SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx;
+  out ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen: Integer);
 begin
   FLineState := 0;
   CurrentTokenLine := ALine;
-  FLineFlags := FFoldView.FoldType[CurrentTokenLine + 1 - FFoldView.TopViewPos] * [cfCollapsedFold, cfCollapsedHide];
+
+  inherited SetHighlighterTokensLine(FFoldView.InternViewToTextIndex(ALine), ARealLine, ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen);
+
+  FLineFlags := FFoldView.FoldType[CurrentTokenLine - ASubLineIdx + 1 - FFoldView.TopViewPos] * [cfCollapsedFold, cfCollapsedHide];
   FLineFlags2 := FLineFlags;
 
   if not FFoldView.MarkupInfoFoldedCodeLine.IsEnabled then
@@ -752,8 +755,6 @@ begin
     FFoldView.MarkupInfoFoldedCodeLine.SetFrameBoundsLog(1, MaxInt, 0);
     FFoldView.MarkupInfoHiddenCodeLine.SetFrameBoundsLog(1, MaxInt, 0);
   end;
-
-  inherited SetHighlighterTokensLine(FFoldView.InternViewToTextIndex(ALine), ARealLine, AStartBytePos, ALineByteLen);
 end;
 
 function TLazSynDisplayFold.GetNextHighlighterToken(out ATokenInfo: TLazSynDisplayTokenInfo): Boolean;
@@ -773,11 +774,13 @@ begin
   case FLineState of
     LSTATE_BOL, LSTATE_TEXT: begin
         Result := inherited GetNextHighlighterToken(ATokenInfo);
-        if ( (not Result) or (ATokenInfo.TokenStart = nil)) and (FLineFlags <> [])
+        if (ATokenInfo.TokenOrigin = dtoAfterText) and
+           ( (not Result) or (ATokenInfo.TokenStart = nil)) and (FLineFlags <> [])
         then begin
           inc(FLineState, 2); // LSTATE_BOL_GAP(2), if was at bol // LSTATE_GAP(3) otherwise
           ATokenInfo.TokenStart := PChar(MarkSpaces);
           ATokenInfo.TokenLength := 3;
+          ATokenInfo.TokenOrigin := dtoAfterText;
           if Assigned(CurrentTokenHighlighter)
           then EolAttr := CurrentTokenHighlighter.GetEndOfLineAttribute
           else EolAttr := nil;
@@ -798,6 +801,7 @@ begin
         ATokenInfo.TokenStart := PChar(MarkDots);
         ATokenInfo.TokenLength := 3;
         ATokenInfo.TokenAttr := FTokenAttr;
+        ATokenInfo.TokenOrigin := dtoAfterText;
         Result := True;
       end;
     else begin
@@ -3198,7 +3202,7 @@ begin
   Result := inherited ViewToTextIndex(Result);
 end;
 
-function TSynEditFoldedView.TextXYToViewXY(APhysTextXY: TPhysPoint): TPhysPoint;
+function TSynEditFoldedView.TextXYToViewXY(APhysTextXY: TPhysPoint): TViewedPoint;
 var
   offs: Integer;
 begin
@@ -3210,7 +3214,7 @@ begin
   Result.Y := Result.Y - offs;
 end;
 
-function TSynEditFoldedView.ViewXYToTextXY(APhysViewXY: TPhysPoint): TPhysPoint;
+function TSynEditFoldedView.ViewXYToTextXY(APhysViewXY: TViewedPoint): TPhysPoint;
 begin
   APhysViewXY.y := ToPos(InternViewToTextIndex(ToIdx(APhysViewXY.y)));
   Result := inherited ViewXYToTextXY(APhysViewXY);
@@ -3391,7 +3395,7 @@ begin
   Result := FDisplayView;
 end;
 
-procedure TSynEditFoldedView.InternalGetInfoForViewedXY(AViewedXY: TPhysPoint;
+procedure TSynEditFoldedView.InternalGetInfoForViewedXY(AViewedXY: TViewedPoint;
   AFlags: TViewedXYInfoFlags; out AViewedXYInfo: TViewedXYInfo;
   ALogPhysConvertor: TSynLogicalPhysicalConvertor);
 var
@@ -3543,8 +3547,11 @@ begin
   end;
   if TmpViewIdx <> TmpRange.Bottom then
     exclude(NewCapability, cfFoldEnd);
-  if TmpViewIdx <> TmpRange.Top then
+  if TmpViewIdx <> TmpRange.Top then begin
+    if NewCapability * [cfFoldStart, cfHideStart] <> [] then
+      NewCapability := NewCapability + [cfFoldBody];
     NewCapability := NewCapability - [cfFoldStart, cfHideStart];
+  end;
 
   // Add entry for line one above virtual topViewPos
   if (fFoldTypeList[0].Capability <> NewCapability) or
@@ -3570,6 +3577,8 @@ begin
       if ViewIdx > ViewRange.Top then begin
         NewCapability := CurLineCapability;
         NewClassifications := CurLineClassifications;
+        if NewCapability * [cfFoldStart, cfHideStart] <> [] then
+          NewCapability := NewCapability + [cfFoldBody];
         NewCapability := NewCapability - [cfFoldStart, cfHideStart];
         if ViewIdx <> ViewRange.Bottom then
           exclude(NewCapability, cfFoldEnd);

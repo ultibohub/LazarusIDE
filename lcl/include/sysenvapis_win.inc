@@ -354,21 +354,16 @@ begin
 end;
 
 function SelectInFolder(AFullPath: String): Boolean;
-var
-  Process: TProcessUTF8;  // Could as well be just TProcess
 begin
-  if not (FileExists(AFullPath) or DirectoryExists(AFullPath)) then
-    Exit(false);
-  if (AFullPath <> '') and (AFullPath[1] <> '"') then
-    AFullPath := AFullPath.QuotedString('"');
-  Process := TProcessUTF8.Create(Nil);
-  try
-    Process.Executable := 'explorer.exe';
-    Process.Parameters.Add('/select,' + AFullPath);
-    Process.Execute;
-  finally
-    Process.Free;
-  end;
-  Result := True;
+  Result := FileExists(AFullPath) or DirectoryExists(AFullPath);
+  if Result then
+    try
+      // quotes are required even in the absence of spaces
+      // the comma at the end "/select," is required
+      // do not check the return code
+      ExecuteProcess('explorer.exe', '/select,"' + AFullPath + '"');
+    except
+      Result := False;
+    end;
 end;
 

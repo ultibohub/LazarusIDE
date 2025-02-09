@@ -52,7 +52,7 @@ uses
   PPUCodeTools, LFMTrees, DirectivesTree, CodeCompletionTemplater,
   PascalParserTool, CodeToolsConfig, CustomCodeTool, FindDeclarationTool,
   IdentCompletionTool, StdCodeTools, ResourceCodeTool, CodeToolsStructs,
-  CTUnitGraph, ExtractProcTool, SourceLog;
+  CTUnitGraph, ExtractProcTool, SourceLog, ChangeDeclarationTool;
 
 type
   TCodeToolManager = class;
@@ -230,10 +230,12 @@ type
     GlobalValues: TExpressionEvaluator;
     DirectoryCachePool: TCTDirectoryCachePool;
     CompilerDefinesCache: TCompilerDefinesCache;
+    Indenter: TFullyAutomaticBeautifier;
+
     IdentifierList: TIdentifierList;
     IdentifierHistory: TIdentifierHistoryList;
     Positions: TCodeXYPositions;
-    Indenter: TFullyAutomaticBeautifier;
+
     property Beautifier: TBeautifyCodeOptions read GetBeautifier;
 
     constructor Create;
@@ -561,11 +563,6 @@ type
           var ListOfPCodeXYPosition: TFPList;
           var Cache: TFindIdentifierReferenceCache;  // you must free Cache
           const Flags: TFindRefsFlags = []): boolean;
-    function FindUnitReferences(UnitCode, TargetCode: TCodeBuffer;
-          SkipComments: boolean; var ListOfPCodeXYPosition: TFPList): boolean;
-    function FindUsedUnitReferences(Code: TCodeBuffer; X, Y: integer;
-          SkipComments: boolean; out UsedUnitFilename: string;
-          var ListOfPCodeXYPosition: TFPList): boolean;
     function FindReferencesInFiles(Files: TStringList;
           DeclarationCode: TCodeBuffer; const DeclarationCaretXY: TPoint;
           SearchInComments: boolean;
@@ -573,6 +570,21 @@ type
     function RenameIdentifier(TreeOfPCodeXYPosition: TAVLTree;
           const OldIdentifier, NewIdentifier: string;
           DeclarationCode: TCodeBuffer; DeclarationCaretXY: PPoint): boolean;
+
+    // find all references of the source name of a unit, program
+    function FindSourceNameReferences(TargetFilename: string;
+          Files: TStringList; SkipComments: boolean;
+          out ListOfSrcNameRefs: TObjectList; WithDuplicates: boolean = false): boolean;
+    function RenameSourceNameReferences(OldFilename, NewFilename, NewSrcname: string;
+          ListOfSrcNameRefs: TObjectList): boolean;
+
+    // find all references inside UnitCode to TargetCode
+    function FindUnitReferences(UnitCode, TargetCode: TCodeBuffer;
+          SkipComments: boolean; var ListOfPCodeXYPosition: TFPList): boolean;
+    function FindUsedUnitReferences(Code: TCodeBuffer; X, Y: integer;
+          SkipComments: boolean; out UsedUnitFilename: string;
+          var ListOfPCodeXYPosition: TFPList): boolean;
+
     function ReplaceWord(Code: TCodeBuffer; const OldWord, NewWord: string;
           ChangeStrings: boolean): boolean;
     function RemoveIdentifierDefinition(Code: TCodeBuffer; X, Y: integer
@@ -728,7 +740,7 @@ type
     // source name  e.g. 'unit AUnitName;'
     function GetSourceName(Code: TCodeBuffer; SearchMainCode: boolean): string;
     function GetCachedSourceName(Code: TCodeBuffer): string;
-    function RenameSource(Code: TCodeBuffer; const NewName: string): boolean;
+    function RenameSource(Code: TCodeBuffer; const NewName: string; SkipComments: boolean = true): boolean;
     function GetSourceType(Code: TCodeBuffer; SearchMainCode: boolean): string;
 
     // uses sections
@@ -3016,7 +3028,7 @@ begin
         if TreeOfPCodeXYPosition=nil then
           TreeOfPCodeXYPosition:=CreateTreeOfPCodeXYPosition;
         AddListToTreeOfPCodeXYPosition(ListOfPCodeXYPosition,
-                                              TreeOfPCodeXYPosition,true,false);
+                                       TreeOfPCodeXYPosition,true,false);
       end;
     end;
 
@@ -3034,6 +3046,168 @@ begin
       CodeToolBoss.FreeTreeOfPCodeXYPosition(TreeOfPCodeXYPosition);
     Cache.Free;
   end;
+end;
+
+function TCodeToolManager.FindSourceNameReferences(TargetFilename: string; Files: TStringList;
+  SkipComments: boolean; out ListOfSrcNameRefs: TObjectList; WithDuplicates: boolean): boolean;
+var
+  i, j, InFilenameCleanPos: Integer;
+  Filename, Dir, TargetUnitName, InFilename, LocalSrcName: String;
+  Code: TCodeBuffer;
+  Tools, DirCachesSearch, DirCachesSkip: TFPList;
+  DirCache: TCTDirectoryCache;
+  TreeOfPCodeXYPosition: TAVLTree;
+  Refs: TSrcNameRefs;
+  Node, NextNode: TAVLTreeNode;
+  CodeXYPos: PCodeXYPosition;
+begin
+  {$IFDEF VerboseFindSourceNameReferences}
+  debugln(['TCodeToolManager.FindReferencesInFiles TargetFile="',TargetFilename,'" FileCount=',Files.Count,' SkipComments=',SkipComments]);
+  {$ENDIF}
+  Result:=false;
+  ListOfSrcNameRefs:=nil;
+  Tools:=TFPList.Create;
+  DirCachesSearch:=TFPList.Create;
+  DirCachesSkip:=TFPList.Create;
+  try
+    // search in every file
+    for i:=0 to Files.Count-1 do begin
+      Filename:=Files[i];
+      case ExtractFileNameOnly(Filename) of
+      '','.','..': continue; // invalid filename
+      end;
+      {$IFDEF VerboseFindSourceNameReferences}
+      debugln(['TCodeToolManager.FindReferencesInFiles File ',i,'/',Files.Count,' ',Filename]);
+      {$ENDIF}
+      j:=i-1;
+      while (j>=0) and (CompareFilenames(Filename,Files[j])<>0) do dec(j);
+      if j>=0 then continue; // skip duplicate
+
+      if CompareFilenames(TargetFilename,Filename)<>0 then begin
+        // check if directory has target in unitpath
+        Dir:=ExtractFilePath(Filename);
+        DirCache:=DirectoryCachePool.GetCache(Dir,true,false);
+        if DirCachesSkip.IndexOf(DirCache)>=0 then continue;
+        if DirCachesSearch.IndexOf(DirCache)<0 then begin
+          TargetUnitName:=ExtractFileNameOnly(TargetFilename);
+          InFilename:='';
+          if DirCache.FindUnitSourceInCompletePath(TargetUnitName,InFilename,true)<>'' then
+          begin
+            {$IFDEF VerboseFindSourceNameReferences}
+            debugln(['TCodeToolManager.FindReferencesInFiles File ',Filename,', target in unit path']);
+            {$ENDIF}
+            DirCachesSearch.Add(DirCache);
+          end else begin
+            {$IFDEF VerboseFindSourceNameReferences}
+            debugln(['TCodeToolManager.FindReferencesInFiles File ',Filename,', target NOT in unit path, SKIP']);
+            {$ENDIF}
+            DirCachesSkip.Add(DirCache);
+            continue;
+          end;
+        end;
+      end;
+
+      Code:=LoadFile(Filename,true,false);
+      if Code=nil then begin
+        debugln('TCodeToolManager.FindReferencesInFiles unable to load "',Filename,'"');
+        exit;
+      end;
+
+      if not InitCurCodeTool(Code) then exit;
+
+      if Tools.IndexOf(FCurCodeTool)>=0 then continue;
+      Tools.Add(FCurCodeTool);
+
+      // search references
+      TreeOfPCodeXYPosition:=nil;
+      try
+        if not FCurCodeTool.FindSourceNameReferences(TargetFilename,SkipComments,LocalSrcName,
+          InFilenameCleanPos, TreeOfPCodeXYPosition, false)
+        then begin
+          debugln(['TCodeToolManager.FindSourceNameReferences FindSourceNameReferences FAILED in "',Code.Filename,'"']);
+          if TreeOfPCodeXYPosition<>nil then
+            FreeTreeOfPCodeXYPosition(TreeOfPCodeXYPosition);
+          continue;
+        end;
+      except
+        on e: Exception do HandleException(e);
+      end;
+
+      if (TreeOfPCodeXYPosition=nil) or (TreeOfPCodeXYPosition.Count=0) then begin
+        {$IFDEF VerboseFindSourceNameReferences}
+        debugln(['TCodeToolManager.FindSourceNameReferences SrcName="',LocalSrcName,'" Count=0']);
+        {$ENDIF}
+        FreeTreeOfPCodeXYPosition(TreeOfPCodeXYPosition);
+        continue;
+      end;
+      if (not WithDuplicates) and (ListOfSrcNameRefs<>nil) then begin
+        // eliminate duplicates
+        for j:=0 to ListOfSrcNameRefs.Count-1 do begin
+          Refs:=TSrcNameRefs(ListOfSrcNameRefs[j]);
+          if Refs.TreeOfPCodeXYPosition=nil then continue;
+          Node:=TreeOfPCodeXYPosition.FindLowest;
+          while Node<>nil do begin
+            NextNode:=TreeOfPCodeXYPosition.FindSuccessor(Node);
+            CodeXYPos:=PCodeXYPosition(Node.Data);
+            if Refs.TreeOfPCodeXYPosition.Find(CodeXYPos)<>nil then
+              TreeOfPCodeXYPosition.Delete(Node);
+            Node:=NextNode;
+          end;
+        end;
+      end;
+
+      {$IFDEF VerboseFindSourceNameReferences}
+      debugln(['TCodeToolManager.FindSourceNameReferences SrcName="',LocalSrcName,'" Count=',TreeOfPCodeXYPosition.Count]);
+      {$ENDIF}
+      Refs:=TSrcNameRefs.Create;
+      Refs.Tool:=FCurCodeTool;
+      Refs.LocalSrcName:=LocalSrcName;
+      Refs.InFilenameCleanPos:=InFilenameCleanPos;
+      Refs.TreeOfPCodeXYPosition:=TreeOfPCodeXYPosition;
+      if ListOfSrcNameRefs=nil then
+        ListOfSrcNameRefs:=TObjectList.Create(true);
+      ListOfSrcNameRefs.Add(Refs);
+    end;
+  finally
+    DirCachesSearch.Free;
+    DirCachesSkip.Free;
+    Tools.Free;
+  end;
+
+  Result:=true;
+end;
+
+function TCodeToolManager.RenameSourceNameReferences(OldFilename, NewFilename,
+  NewSrcname: string; ListOfSrcNameRefs: TObjectList): boolean;
+var
+  i: Integer;
+  Param: TSrcNameRefs;
+  Tool: TChangeDeclarationTool;
+  NewTargetSrcName, OldTargetUnitName: string;
+begin
+  Result:=true;
+  if (ListOfSrcNameRefs=nil) or (ListOfSrcNameRefs.Count=0) then exit;
+  {$IFDEF VerboseFindSourceNameReferences}
+  debugln(['TCodeToolManager.RenameSourceNameReferences OldFile="',OldFilename,'" NewFile="',NewFilename,'" NewSrcName="',NewSrcname,'" FileCount=',ListOfSrcNameRefs.Count]);
+  {$ENDIF}
+  ClearCurCodeTool;
+  SourceChangeCache.Clear;
+  OldTargetUnitName:=ExtractFileNameOnly(OldFilename);
+  for i:=0 to ListOfSrcNameRefs.Count-1 do begin
+    Param:=TSrcNameRefs(ListOfSrcNameRefs[i]);
+    Tool:=Param.Tool;
+    if Param.NewLocalSrcName='' then begin
+      Param.NewLocalSrcName:=TChangeDeclarationTool.UseOmittedNamespace(
+                         Param.LocalSrcName,OldTargetUnitName,NewSrcName);
+      //debugln(['TCodeToolManager.RenameSourceNameReferences LocalSrcName="',Param.LocalSrcName,'" OldUnitName="',OldTargetUnitName,'" NewUnitName="',NewSrcName,'" NewLocalSrcName="',Param.NewLocalSrcName,'"']);
+    end;
+    if not Tool.RenameSourceNameReferences(OldFilename,NewFilename,
+      Param,SourceChangeCache) then
+    begin
+      debugln(['TCodeToolManager.RenameSourceNameReferences Failed: ',Tool.MainFilename]);
+    end;
+  end;
+  Result:=SourceChangeCache.Apply;
 end;
 
 function TCodeToolManager.RenameIdentifier(TreeOfPCodeXYPosition: TAVLTree; const OldIdentifier,
@@ -3139,8 +3313,9 @@ begin
         @Code.Source[IdentStartPos],PChar(Pointer(NewIdentifier)));
       IdentEndPos:=IdentStartPos+length(OldIdentifier);
 
-      if (UpCase(Code.Source[IdentStartPos])<>UpCase(OldIdentifier[1])) and
-      ((Code.Source[IdentStartPos]='&') or (OldIdentifier[1]='&')) then begin
+      if (UpCase(Code.Source[IdentStartPos])<>UpCase(OldIdentifier[1]))
+          and ((Code.Source[IdentStartPos]='&') or (OldIdentifier[1]='&')) then
+      begin
         if OldIdentifier[1]='&' then
           dec(IdentEndPos)
         else
@@ -5328,18 +5503,41 @@ begin
   {$ENDIF}
 end;
 
-function TCodeToolManager.RenameSource(Code: TCodeBuffer;
-  const NewName: string): boolean;
+function TCodeToolManager.RenameSource(Code: TCodeBuffer; const NewName: string;
+  SkipComments: boolean): boolean;
+var
+  Refs: TSrcNameRefs;
 begin
   Result:=false;
-  {$IFDEF CTDEBUG}
-  DebugLn('TCodeToolManager.RenameSource A ',Code.Filename,' NewName=',NewName);
-  {$ENDIF}
   if not InitCurCodeTool(Code) then exit;
+  SourceChangeCache.Clear;
+
   try
-    Result:=FCurCodeTool.RenameSource(NewName,SourceChangeCache);
+    Refs:=TSrcNameRefs.Create;
+    try
+      Refs.Tool:=FCurCodeTool;
+      if not FCurCodeTool.FindSourceNameReferences(Code.Filename,SkipComments,Refs.LocalSrcName,
+        Refs.InFilenameCleanPos, Refs.TreeOfPCodeXYPosition, false) then
+      begin
+        debugln(['TCodeToolManager.RenameModule FindSourceNameReferences failed: ',Code.Filename]);
+        exit;
+      end;
+      if Refs.TreeOfPCodeXYPosition=nil then exit(true);
+      Refs.NewLocalSrcName:=NewName;
+
+      if not FCurCodeTool.RenameSourceNameReferences(Code.Filename,Code.Filename,
+        Refs,SourceChangeCache) then
+      begin
+        debugln(['TCodeToolManager.RenameModule RenameSourceNameReferences failed: ',Code.Filename]);
+        exit;
+      end;
+
+      Result:=SourceChangeCache.Apply;
+    finally
+      Refs.Free;
+    end;
   except
-    on e: Exception do Result:=HandleException(e);
+    on e: Exception do HandleException(e);
   end;
 end;
 
@@ -6790,7 +6988,7 @@ begin
   if (Filename='') or (System.Pos(PathDelim,Filename)>0) then
     exit;
   Code:=FindFile(Filename);
-  if Code<>nil then
+  if (Code<>nil) and not Code.IsDeleted then
     Result:=Code.Filename;
 end;
 

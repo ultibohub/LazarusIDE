@@ -47,7 +47,7 @@ type
   public
     constructor Create(ATrimer: TSynEditStringTrimmingList);
     procedure FinishHighlighterTokens; override;
-    procedure SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx; out AStartBytePos, ALineByteLen: Integer); override;
+    procedure SetHighlighterTokensLine(ALine: TLineIdx; out ARealLine: TLineIdx; out ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen: Integer); override;
     function  GetNextHighlighterToken(out ATokenInfo: TLazSynDisplayTokenInfo): Boolean; override;
   end;
 
@@ -321,14 +321,14 @@ begin
 end;
 
 procedure TLazSynDisplayTrim.SetHighlighterTokensLine(ALine: TLineIdx; out
-  ARealLine: TLineIdx; out AStartBytePos, ALineByteLen: Integer);
+  ARealLine: TLineIdx; out ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen: Integer);
 begin
   CurrentTokenLine := ALine;
   FAtLineStart := True;
   if (CurrentTokenHighlighter = nil) and (FTrimer.Spaces(CurrentTokenLine) <> '') then begin
     ALineByteLen := Length(FTrimer[CurrentTokenLine]);
   end;
-  inherited SetHighlighterTokensLine(ALine, ARealLine, AStartBytePos, ALineByteLen);
+  inherited SetHighlighterTokensLine(ALine, ARealLine, ASubLineIdx, AStartBytePos, AStartPhysPos, ALineByteLen);
   ALineByteLen := ALineByteLen + length(FTrimer.Spaces(ALine));
 end;
 
@@ -345,6 +345,7 @@ begin
     ATokenInfo.TokenStart := PChar(FTempLineStringForPChar);
     ATokenInfo.TokenLength := length(FTempLineStringForPChar);
     ATokenInfo.TokenAttr := nil;
+    ATokenInfo.TokenOrigin := dtoVirtualText;
     FAtLineStart := False;
     exit;
   end;

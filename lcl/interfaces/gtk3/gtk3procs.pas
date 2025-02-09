@@ -320,6 +320,8 @@ procedure SetGlobalCursor(Cursor: HCURSOR);
 function GetStyleContextSizes(awidget: PGtkWidget; out ABorder, AMargin, APadding: TGtkBorder; out AWidth, AHeight: integer): boolean;
 procedure ListProperties(anObject: PGObject); // helper routine for debugging.
 
+function ConvertRGB24ToARGB32(SrcPixbuf: PGdkPixbuf): PGdkPixbuf;
+
 type
   Charsetstr = string[15];
   PCharSetEncodingRec=^TCharSetEncodingRec;
@@ -349,7 +351,7 @@ function GetStyleWidget(aStyle: TLazGtkStyle): PGtkWidget;
 procedure ReleaseAllStyles;
 
 implementation
-uses LCLProc;
+uses LCLProc, gtk3objects, LazLogger;
 
 function PANGO_PIXELS(d:integer):integer;
 begin
@@ -1344,16 +1346,21 @@ var
   TopList: PGList;
   List: PGList;
   Window: PGdkWindow;
+  ACursorHandle: HCURSOR;
 begin
+  if Cursor > 0 then
+    ACursorHandle := HCURSOR(TGtk3Cursor(Cursor).Handle)
+  else
+    ACursorHandle := 0;
   TopList := gdk_screen_get_toplevel_windows(gdk_screen_get_default);
   if TopList = nil then
     exit;
   List := TopList;
-  while Assigned(List) do begin
+  while Assigned(List) do
+  begin
     Window := List^.Data;
-    if Assigned(Window) then begin
-      SetWindowCursor(Window, Cursor, True, False);
-    end;
+    if Assigned(Window) then
+      SetWindowCursor(Window, ACursorHandle, True, False);
     List := List^.Next;
   end;
   g_list_free(TopList);
@@ -1405,6 +1412,47 @@ begin
                 g_type_name(PGParamSpec(Props[I])^.g_type_instance.g_class^.g_type), ')');
 
   g_free(Props);
+end;
+
+function ConvertRGB24ToARGB32(SrcPixbuf: PGdkPixbuf): PGdkPixbuf;
+var
+  SrcPixels, DestPixels: Pguint8;
+  SrcStride, DestStride, X, Y, Width, Height: Integer;
+  SrcRow, DestRow: Pguint8;
+begin
+  if SrcPixbuf = nil then
+  begin
+    exit(nil);
+  end;
+
+  Width := gdk_pixbuf_get_width(SrcPixbuf);
+  Height := gdk_pixbuf_get_height(SrcPixbuf);
+  SrcStride := gdk_pixbuf_get_rowstride(SrcPixbuf);
+  SrcPixels := gdk_pixbuf_get_pixels(SrcPixbuf);
+
+  Result := gdk_pixbuf_new(GDK_COLORSPACE_RGB, True, 8, Width, Height);
+  if Result = nil then
+  begin
+    DebugLn('ERROR ConvertRGB24ToARGB32: Failed to create destination GdkPixBuf !');
+    Exit(nil);
+  end;
+
+  DestStride := gdk_pixbuf_get_rowstride(Result);
+  DestPixels := gdk_pixbuf_get_pixels(Result);
+
+  for Y := 0 to Height - 1 do
+  begin
+    SrcRow := SrcPixels + (Y * SrcStride);
+    DestRow := DestPixels + (Y * DestStride);
+
+    for X := 0 to Width - 1 do
+    begin
+      DestRow[X * 4 + 0] := SrcRow[X * 3 + 0];
+      DestRow[X * 4 + 1] := SrcRow[X * 3 + 1];
+      DestRow[X * 4 + 2] := SrcRow[X * 3 + 2];
+      DestRow[X * 4 + 3] := $ff;
+    end;
+  end;
 end;
 
 end.

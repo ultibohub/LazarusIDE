@@ -190,6 +190,7 @@ type
     constructor Create(ACur:integer); overload;
     constructor Create(pixbuf:PGdkPixbuf;x,y:gint); overload;
     constructor Create(img:TGtk3Image); overload;
+    constructor Create(ACur: TGdkCursorType); overload;
     destructor Destroy; override;
     property Handle:PGdkCursor read fHandle;
   end;
@@ -248,8 +249,8 @@ type
   public
     CairoSurface: Pcairo_surface_t;
     Parent: PGtkWidget;
-    Window: PGdkWindow;
     ParentPixmap: PGdkPixbuf;
+    Window: PGdkWindow;
     fncOrigin:TPoint; // non-client area offsets surface origin
     constructor Create(AWidget: PGtkWidget; const APaintEvent: Boolean = False); virtual;
     constructor Create(AWindow: PGdkWindow; const APaintEvent: Boolean); virtual;
@@ -655,8 +656,9 @@ end;
 constructor TGtk3Cursor.Create(ACur:integer);
 var gdk_cur: TGdkCursorType;
 begin
+  inherited Create;
   case ACur of
-  crArrow: gdk_cur:=GDK_ARROW;
+    crArrow: gdk_cur:=GDK_ARROW;
   else
     gdk_cur:=GDK_ARROW;
   end;
@@ -664,23 +666,27 @@ begin
   Fhandle:=TGdkCursor.new_for_display(gdk_display_get_default, gdk_cur);
 end;
 
-constructor TGtk3Cursor.Create(pixbuf: PGdkPixbuf;x,y:gint);
+constructor TGtk3Cursor.Create(pixbuf: PGdkPixbuf; x,y:gint);
 begin
-  fHandle:=TGdkCursor.new_from_pixbuf(TGdkDisplay.get_default(),pixbuf,x,y);
+  inherited Create;
+  FHandle := TGdkCursor.new_from_pixbuf(TGdkDisplay.get_default(),pixbuf,x,y);
 end;
 
 constructor TGtk3Cursor.Create(img: TGtk3Image);
-var w,h:gint;
 begin
   inherited Create;
-  w:=img.width;
-  h:=img.height;
-  Create(img.Handle,w,h);
+  FHandle := TGdkCursor.new_from_pixbuf(TGdkDisplay.get_default(),img.Handle, img.Width, img.Height);
+end;
+
+constructor TGtk3Cursor.Create(ACur: TGdkCursorType);
+begin
+  inherited Create;
+  FHandle := gdk_cursor_new(ACur);
 end;
 
 destructor TGtk3Cursor.Destroy;
 begin
-  PGdkCursor(fHandle)^.unref();
+  FHandle^.unref;
   inherited Destroy;
 end;
 
@@ -959,6 +965,7 @@ var
   AttrList: PPangoAttrList;
   Attr: PPangoAttribute;
 begin
+  inherited Create;
   FLogFont := ALogFont;
   FFontName := ALogFont.lfFaceName;
   AContext := gdk_pango_context_get;
@@ -1071,6 +1078,7 @@ begin
   inherited Create;
   ACairo := gdk_cairo_create(gdk_get_default_root_window);
   gdk_cairo_get_clip_rectangle(ACairo, @ARect);
+  cairo_destroy(ACairo);
   ASurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ARect.width, ARect.height);
   try
     FHandle := gdk_pixbuf_get_from_surface(ASurface, 0 ,0, ARect.Width, ARect.Height);
@@ -1124,6 +1132,7 @@ begin
   {$IFDEF VerboseGtk3DeviceContext}
   DebugLn('TGtk3Image.Create 3 AData=',dbgs(AData <> nil),' format=',dbgs(Ord(format)),' w=',dbgs(width),' h=',dbgs(height),' dataowner=',dbgs(ADataOwner));
   {$ENDIF}
+  inherited Create;
   FFormat := format;
   FData := AData;
   FDataOwner := ADataOwner;
@@ -1808,12 +1817,9 @@ begin
   FDCSaveCounter := 0;
   if AWidget = nil then
   begin
-    ACairo := gdk_cairo_create(gdk_get_default_root_window);
-    gdk_cairo_get_clip_rectangle(ACairo, @ARect);
-    cairo_destroy(ACairo);
-    CairoSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, ARect.width, ARect.height);
+    //no need for ParentPixmap, this is Mem DC.
+    CairoSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 10, 10);
     FCairo := cairo_create(CairoSurface);
-    ParentPixmap := gdk_pixbuf_get_from_surface(CairoSurface, 0, 0, ARect.width, ARect.height);
     FOwnsSurface := True;
   end else
   begin
@@ -1841,13 +1847,6 @@ begin
   if not FOwnsSurface then
     CairoSurface := cairo_get_target(FCairo);
   CreateObjects;
-  (*
-  FRopMode := R2_COPYPEN;
-  FOwnPainter := True;
-  CreateObjects;
-  FPenPos.X := 0;
-  FPenPos.Y := 0;
-  *)
 end;
 
 constructor TGtk3DeviceContext.Create(AWindow: PGdkWindow;
@@ -2005,25 +2004,99 @@ end;
 
 function TGtk3DeviceContext.getPixel(x, y: Integer): TColor;
 var
-  pixbuf: PGdkPixbuf;
-  pixels: pointer;
+  APixbuf: PGdkPixbuf;
+  AData: PByte;
+  APixelValue: LongWord;
+  ASurfaceWidth, ASurfaceHeight, ARowStride: Integer;
+  AOutSize: Tcairo_rectangle_int_t;
+  ARegion: Pcairo_region_t;
 begin
   Result := 0;
-  pixbuf := gdk_pixbuf_get_from_surface(CairoSurface, X, Y, 1, 1);
-  if Assigned(pixbuf) then
+
+  if CairoSurface = nil then
+    exit;
+
+  if cairo_surface_get_type(CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE then
   begin
-    pixels := gdk_pixbuf_get_pixels(pixbuf);
-    if Assigned(pixels) then
-      Result := PLongInt(pixels)^ and $FFFFFF; // take first 3 bytes at pixels^
+    ASurfaceWidth := cairo_image_surface_get_width(CairoSurface);
+    ASurfaceHeight := cairo_image_surface_get_height(CairoSurface);
+  end else
+  begin
+    ASurfaceWidth := 0;
+    ASurfaceHeight := 0;
+
+    //Our context have or GtkWidget or GdkWindow available.
+    if Assigned(Self.Parent) then
+    begin
+      ASurfaceWidth := gtk_widget_get_allocated_width(Self.Parent);
+      ASurfaceHeight := gtk_widget_get_allocated_height(Self.Parent);
+    end else
+    if Assigned(Self.Window) then
+    begin
+      //for now we'll use cairo region, it's faster than
+      //calculate client size by calling gdk_window_get_geometry() + gdk_window_get_frame_extents()
+      ARegion := gdk_window_get_clip_region(Self.Window);
+      if ARegion <> nil then
+      begin
+        cairo_region_get_extents(ARegion, @AOutSize);
+        ASurfaceWidth := AOutSize.width;
+        ASurfaceHeight := AOutSize.height;
+        cairo_region_destroy(ARegion);
+      end;
+    end;
   end;
+
+  if (X < 0) or (Y < 0) or (X >= ASurfaceWidth) or (Y >= ASurfaceHeight) then
+  begin
+    DebugLn(Format('ERROR: TGtk3DeviceContext.getPixel: Pixel out of bounds x %d y %d surface width %d height %d !',
+      [x, y, ASurfaceWidth, ASurfaceHeight]));
+    Exit;
+  end;
+
+  if cairo_surface_get_type(CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE then
+  begin
+    cairo_surface_flush(CairoSurface);
+    AData := PByte(cairo_image_surface_get_data(CairoSurface));
+
+    if AData <> nil then
+    begin
+      ARowStride := cairo_image_surface_get_stride(CairoSurface);
+      APixelValue := PLongWord(AData + (Y * ARowStride) + (X * 4))^;
+
+      Result := ((APixelValue and $00FF0000) shr 16) or
+                (APixelValue and $0000FF00) or
+                ((APixelValue and $000000FF) shl 16);
+      exit;
+    end else
+    begin
+      DebugLn('Error: GetPixel for CAIRO_SURFACE_TYPE_IMAGE failed.');
+      exit(0);
+    end;
+  end;
+
+  APixbuf := gdk_pixbuf_get_from_surface(CairoSurface, X, Y, 1, 1);
+  if APixbuf = nil then
+    Exit;
+
+  AData := gdk_pixbuf_get_pixels(APixbuf);
+  ARowStride := gdk_pixbuf_get_rowstride(APixbuf);
+
+  APixelValue := PLongWord(AData)^;
+
+  Result := ((APixelValue and $FF0000) shr 16) or
+            (APixelValue and $00FF00) or
+            ((APixelValue and $0000FF) shl 16);
+
+  g_object_unref(APixbuf);
 end;
+
 
 procedure TGtk3DeviceContext.drawRect(x1, y1, w, h: Integer; const AFill, ABorder: Boolean);
 var
   aOp: Tcairo_operator_t;
 begin
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
-  cairo_rectangle(pcr, x1 + PixelOffset, y1 + PixelOffset, w - PixelOffset, h - PixelOffset);
+  cairo_rectangle(pcr, x1 + PixelOffset, y1 + PixelOffset, w - 2*PixelOffset, h - 2*PixelOffset);
   if AFill then
   begin
     ApplyBrush;
@@ -2167,12 +2240,13 @@ begin
 
   if aPixBuf <> nil then
   begin
+    aPixBuf^.ref;
     //this fixes problem with some images being R & B swapped when blitted onto dest.
     if (cairo_surface_get_type(CairoSurface) <> cairo_surface_get_type(Surface)) and
       (g_object_get_data(aPixBuf,'lcl_color_swap') <> nil) then
     begin
       SwapRedBlueChannels(aPixBuf);
-      gdk_cairo_set_source_pixbuf(pcr, aPixBuf, 0, 0)
+      gdk_cairo_set_source_pixbuf(pcr, aPixBuf, 0, 0);
     end else
     begin
       if g_object_get_data(aPixBuf,'lcl_no_color_swap') <> nil then
@@ -2180,6 +2254,7 @@ begin
       else
         cairo_set_source_surface(pcr, Surface, 0, 0);
     end;
+    aPixBuf^.unref;
   end else
     cairo_set_source_surface(pcr, Surface, 0, 0);
 
@@ -2225,7 +2300,6 @@ begin
   {$ENDIF}
 
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
-
   gdk_cairo_set_source_pixbuf(pcr, Image, 0, 0);
 
   with targetRect^ do
@@ -2504,19 +2578,6 @@ begin
 
   Result:=false;
 
- { if Parent <> nil then
-    Context := Parent^.get_style_context
-  else
-  begin
-    Context:=TGtkStyleContext.new();
-    Context^.add_class('button');
-  end;
-  if Context = nil then
-  begin
-    DebugLn('WARNING: TGtk3WidgetSet.DrawFrameControl on non widget context isn''t implemented.');
-    exit;
-  end;  }
-
   w:=nil;
 
   case uType of
@@ -2558,26 +2619,17 @@ end;
 function TGtk3DeviceContext.drawFocusRect(const aRect: TRect): boolean;
 var
   Context: PGtkStyleContext;
+  UnRefContext: boolean;
 begin
   Result := False;
-
+  UnRefContext := False;
   if Parent <> nil then
     Context := Parent^.get_style_context
   else
   begin
+    UnRefContext := True;
     Context:=TGtkStyleContext.new();
     Context^.add_class('button');
-    //gtk_style_context_get(Context,GTK_STATE_NORMAL,[]);
- { if gtk_widget_get_default_style^.has_context then
-  begin
-    // Context := gtk_widget_get_default_style^.has_context
-    AValue.g_type := G_TYPE_POINTER;
-    AValue.set_pointer(nil);
-    g_object_get_property(gtk_widget_get_default_style,'context',@AValue);
-    Context := AValue.get_pointer;
-    AValue.unset;
-  end else
-    Context := nil;}
   end;
   if Context = nil then
   begin
@@ -2586,7 +2638,8 @@ begin
   end;
   with aRect do
     gtk_render_focus(Context ,pcr, Left, Top, Right - Left, Bottom - Top);
-
+  if UnRefContext then
+    Context^.unref;
   Result := True;
 end;
 
@@ -2598,7 +2651,6 @@ begin
   begin
     AVisual := gdk_window_get_visual(Parent^.get_window);
     Result := gdk_visual_get_bits_per_rgb(AVisual);
-    g_object_unref(AVisual);
   end else
   if (ParentPixmap <> nil) and (Parent = nil) then
   begin
@@ -2607,7 +2659,6 @@ begin
   begin
     AVisual := gdk_window_get_visual(gdk_get_default_root_window);
     Result := gdk_visual_get_bits_per_rgb(AVisual);
-    g_object_unref(AVisual);
   end;
 end;
 
@@ -2627,9 +2678,7 @@ begin
   end;
   AVisual := gdk_window_get_visual(gdk_get_default_root_window);
   if Gtk3IsGdkVisual(AVisual) then
-  begin
     Result := gdk_visual_get_depth(AVisual);
-  end;
 end;
 
 function TGtk3DeviceContext.getDeviceSize: TPoint;
@@ -2741,9 +2790,16 @@ begin
     OldPoint^.X := Round(dx);
     OldPoint^.Y := Round(dy);
   end;
-  cairo_move_to(pcr, X, Y);
-  FLastPenX := X;
-  FLastPenY := Y;
+  dx := X;
+  dy := Y;
+  if CurrentPen.Width > 1 then
+  begin
+    dx := X + PixelOffset;
+    dy := Y + PixelOffset;
+  end;
+  cairo_move_to(pcr, dx, dy);
+  FLastPenX := dx;
+  FLastPenY := dy;
   //TODO: check if we need here cairo_get_current_point or we can assign it like above
   //cairo_get_current_point(pcr,@FLastPenX,@FLastPenY);
   Result := True;

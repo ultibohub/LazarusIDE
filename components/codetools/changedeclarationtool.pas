@@ -33,10 +33,10 @@ unit ChangeDeclarationTool;
 interface
 
 uses
-  Classes, SysUtils, Contnrs, AVL_Tree,
+  Classes, SysUtils, Math, Contnrs, AVL_Tree,
   // Codetools
   CodeAtom, CodeCache, FileProcs, CodeTree, ExtractProcTool, FindDeclarationTool,
-  BasicCodeTools, KeywordFuncLists, LinkScanner, SourceChanger;
+  BasicCodeTools, KeywordFuncLists, LinkScanner, SourceChanger, CustomCodeTool, LazFileUtils;
 
 type
   TChangeParamListAction = (
@@ -65,6 +65,25 @@ type
     constructor CreateChangeDefaultValue(TheIndex: integer; aValue: string);
   end;
 
+  TChangeDeclarationTool = class;
+
+  { TSrcNameRefs - holds the references of a source name in one module }
+
+  TSrcNameRefs = class
+  public
+    Tool: TChangeDeclarationTool;
+    LocalSrcName: string;
+    InFilenameCleanPos: integer;
+    TreeOfPCodeXYPosition: TAVLTree;
+    NewLocalSrcName: string; // for rename
+    destructor Destroy; override;
+  end;
+
+  TReplaceDottedIdentifierParam = record
+    OldNames, NewNames: TStringArray;
+    SameStart, SameEnd: integer;
+  end;
+
   { TChangeDeclarationTool }
 
   TChangeDeclarationTool = class(TExtractCodeTool)
@@ -86,6 +105,14 @@ type
 
     function AddProcModifier(const CursorPos: TCodeXYPosition; aModifier: string;
       SourceChanger: TSourceChangeCache): boolean;
+
+    function InitReplaceDottedIdentifier(const OldDottedIdentifier, NewDottedIdentifier: string;
+      out Param: TReplaceDottedIdentifierParam): boolean;
+    function ReplaceDottedIdentifier(CleanPos: integer; const Param: TReplaceDottedIdentifierParam;
+      SourceChanger: TSourceChangeCache): boolean;
+    class function UseOmittedNamespace(const OldShort, OldFull, NewFull: string): string;
+    function RenameSourceNameReferences(OldTargetFilename, NewTargetFilename: string;
+      Refs: TSrcNameRefs; SourceChanger: TSourceChangeCache): boolean;
   end;
 
 implementation
@@ -1049,6 +1076,288 @@ begin
   end;
 
   Result:=SourceChanger.Apply;
+end;
+
+function TChangeDeclarationTool.InitReplaceDottedIdentifier(const OldDottedIdentifier,
+  NewDottedIdentifier: string; out Param: TReplaceDottedIdentifierParam): boolean;
+var
+  OldCount, NewCount: integer;
+begin
+  Result:=false;
+  Param:=Default(TReplaceDottedIdentifierParam);
+  if not SplitDottedIdentifier(OldDottedIdentifier,Param.OldNames) then exit;
+  if not SplitDottedIdentifier(NewDottedIdentifier,Param.NewNames) then exit;
+
+  OldCount:=length(Param.OldNames);
+  NewCount:=length(Param.NewNames);
+  Param.SameStart:=0;
+  while (Param.SameStart<OldCount)
+      and (Param.SameStart<NewCount)
+      and (CompareIdentifiers(PChar(Param.OldNames[Param.SameStart]),
+                              PChar(Param.NewNames[Param.SameStart]))=0) do
+    inc(Param.SameStart);
+  Param.SameEnd:=0;
+  while (Param.SameEnd<OldCount)
+      and (Param.SameEnd<NewCount)
+      and (CompareIdentifiers(PChar(Param.OldNames[OldCount-Param.SameEnd-1]),
+                              PChar(Param.NewNames[NewCount-Param.SameEnd-1]))=0) do
+    inc(Param.SameEnd);
+  Result:=true;
+end;
+
+function TChangeDeclarationTool.ReplaceDottedIdentifier(CleanPos: integer;
+  const Param: TReplaceDottedIdentifierParam; SourceChanger: TSourceChangeCache): boolean;
+type
+  TItem = record
+    StartPos, EndPos: integer;
+    Name: string;
+    DotPos: integer;
+  end;
+
+var
+  EndPos: integer;
+
+  function Replace(CleanStartPos, CleanEndPos: integer; const NewCode: string): boolean;
+  var
+    StartCodePos, EndCodePos: TCodePosition;
+    OldCode: String;
+  begin
+    Result:=true;
+    CleanPosToCodePos(CleanStartPos,StartCodePos);
+    CleanPosToCodePos(CleanEndPos,EndCodePos);
+    if (StartCodePos.Code<>EndCodePos.Code) or (StartCodePos.P>EndCodePos.P) then
+    begin
+      debugln(['Error: [20250203111039] ReplaceDottedIdentifier dotted identifier spans over multiple files: ',CleanPosToStr(CleanStartPos,true)]);
+      exit(false);
+    end;
+    OldCode:=copy(StartCodePos.Code.Source,StartCodePos.P,EndCodePos.P-StartCodePos.P);
+    {$IFDEF VerboseFindSourceNameReferences}
+    debugln(['ReplaceDottedIdentifier ',CleanPosToStr(CleanStartPos),' OldCode="',OldCode,'" NewCode="',NewCode,'"']);
+    {$ENDIF}
+    if OldCode=NewCode then
+      exit;
+
+    Result:=SourceChanger.ReplaceEx(gtNone,gtNone,1,1,StartCodePos.Code,
+      StartCodePos.P,EndCodePos.P, NewCode);
+  end;
+
+  function GetRange(FromIndex, ToIndex: integer): string;
+  var
+    i: Integer;
+  begin
+    Result:='';
+    for i:=FromIndex to ToIndex do begin
+      if i>FromIndex then
+        Result:=Result+'.';
+      Result:=Result+Param.NewNames[i];
+    end;
+  end;
+
+  function DeleteRange(FromPos, ToPos: integer): boolean;
+  // delete range and spaces around
+  begin
+    while (FromPos>CleanPos) and IsSpaceChar[Src[FromPos-1]] do dec(FromPos);
+    while (ToPos<EndPos) and IsSpaceChar[Src[ToPos]] do inc(ToPos);
+    if FromPos=ToPos then exit;
+    {$IFDEF VerboseFindSourceNameReferences}
+    debugln(['ReplaceDottedIdentifier DeleteRange at ',CleanPosToStr(FromPos),' "',copy(Src,FromPos,ToPos-FromPos),'"']);
+    {$ENDIF}
+    Result:=SourceChanger.DeleteRange(Scanner,FromPos,ToPos,false,true);
+  end;
+
+var
+  Item: TItem;
+  Items: array of TItem;
+  NewCode: String;
+  OldCount, NewCount, i, j, k, p: Integer;
+  HasComments: Boolean;
+begin
+  Result:=false;
+
+  OldCount:=length(Param.OldNames);
+  NewCount:=length(Param.NewNames);
+
+  // parse and collect atoms
+  SetLength(Items{%H-},OldCount);
+  MoveCursorToCleanPos(CleanPos);
+  HasComments:=false;
+  for i:=0 to OldCount-1 do begin
+    ReadNextAtom;
+    Item.StartPos:=CurPos.StartPos;
+    Item.EndPos:=CurPos.EndPos;
+    Item.Name:=GetAtom;
+    Item.DotPos:=0;
+
+    if (i>0) and (Item.StartPos>Items[i-1].DotPos+1) then
+      HasComments:=true;
+    if CompareIdentifiers(PChar(Item.Name),PChar(Param.OldNames[i]))<>0 then begin
+      debugln(['TChangeDeclarationTool.ReplaceDottedIdentifier expected "',Param.OldNames[i],'", but found "',Item.Name,'" at '+CleanPosToStr(CurPos.StartPos,true)]);
+      exit;
+    end;
+    if i<OldCount-1 then begin
+      ReadNextAtom;
+      if CurPos.Flag<>cafPoint then begin
+        debugln(['TChangeDeclarationTool.ReplaceDottedIdentifier expected ., but found "',GetAtom,'" at '+CleanPosToStr(CurPos.StartPos,true)]);
+        exit;
+      end;
+      Item.DotPos:=CurPos.StartPos;
+      if Item.EndPos<Item.DotPos then
+        HasComments:=true;
+    end;
+    Items[i]:=Item;
+  end;
+  EndPos:=CurPos.EndPos;
+
+  if not HasComments then begin
+    // simple replace
+    NewCode:=GetRange(0,NewCount-1);
+    Result:=Replace(CleanPos,EndPos,NewCode);
+    exit;
+  end;
+
+  if OldCount=NewCount then begin
+    // 1:1 matching -> replace each identifier
+    for i:=0 to NewCount-1 do begin
+      if not Replace(Items[i].StartPos,Items[i].EndPos,Param.NewNames[i]) then
+        exit;
+    end;
+    exit(true);
+  end;
+
+  // number of identifiers have changed
+
+  // replace each matching identifier at start
+  i:=0;
+  while i<Param.SameStart do begin
+    if not Replace(Items[i].StartPos,Items[i].EndPos,Param.NewNames[i]) then
+      exit;
+    inc(i);
+  end;
+
+  if i=OldCount then begin
+    // new version is just longer -> append new identifiers
+    NewCode:='.'+GetRange(OldCount,NewCount-1);
+    Result:=Replace(EndPos,EndPos,NewCode);
+    exit;
+  end;
+
+  // replace identifiers at end
+  k:=Min(OldCount-i,NewCount-i);
+  j:=OldCount-1;
+  while (k>0) and (j>=i) do begin
+    if not Replace(Items[j].StartPos,Items[j].EndPos,
+        Param.NewNames[j+(NewCount-OldCount)]) then
+      exit;
+    dec(j);
+    dec(k);
+  end;
+
+  //debugln(['TChangeDeclarationTool.ReplaceDottedIdentifier i=',i,' j=',j]);
+
+  if j<i then begin
+    // insertion: for example  A.B -> A.C.B  or  B.C -> A.B.C
+    p:=Items[i].StartPos;
+    NewCode:=GetRange(i,i+(NewCount-OldCount)-1)+'.';
+    Result:=Replace(p,p,NewCode);
+    exit;
+  end;
+
+  // deletion: for example A.B.C -> A.C  or  A.D.E.C -> A.B.C
+  if Items[j].DotPos>0 then
+    Result:=DeleteRange(Items[i].StartPos,Items[j].DotPos+1)
+  else
+    Result:=DeleteRange(Items[i-1].DotPos,Items[j].EndPos);
+
+  //debugln(['TChangeDeclarationTool.ReplaceDottedIdentifier OldCode="',copy(Src,CleanPos,EndPos-CleanPos),'"']);
+end;
+
+class function TChangeDeclarationTool.UseOmittedNamespace(const OldShort, OldFull, NewFull: string
+  ): string;
+// for example: OldShort=Bar, OldFull=Foo.Bar, NewFull=Foo.Red.Blue, Result=Red.Blue
+var
+  ShortPartCnt, i, OldPartCnt: Integer;
+  OldP, NewP, OldShortP: PChar;
+begin
+  Result:=NewFull;
+  if OldShort=OldFull then exit;
+  OldP:=PChar(OldFull);
+  OldShortP:=PChar(OldShort);
+  if not DottedIdentifierEndsWith(OldP,OldShortP) then exit;
+  ShortPartCnt:=GetDotCountInIdentifier(OldShortP)+1;
+  OldPartCnt:=GetDotCountInIdentifier(OldP)+1;
+
+  NewP:=PChar(NewFull);
+  for i:=1 to OldPartCnt-ShortPartCnt do begin
+    if CompareIdentifiers(OldP,NewP)<>0 then exit;
+    if not SkipDottedIdentifierPart(OldP) then exit;
+    if not SkipDottedIdentifierPart(NewP) then exit;
+  end;
+
+  // NewFull uses the same namespace as OldFull
+  // -> omit the namespace
+  Result:=NewP;
+end;
+
+function TChangeDeclarationTool.RenameSourceNameReferences(OldTargetFilename,
+  NewTargetFilename: string; Refs: TSrcNameRefs; SourceChanger: TSourceChangeCache): boolean;
+var
+  i, p: Integer;
+  Param: TReplaceDottedIdentifierParam;
+  Node: TAVLTreeNode;
+  CodeXYPos: PCodeXYPosition;
+  CodePos: TCodePosition;
+  NewInFilename, NewCode: String;
+begin
+  Result:=false;
+  if Refs=nil then exit;
+
+  if (Refs.InFilenameCleanPos>0) and (OldTargetFilename<>NewTargetFilename) then
+  begin
+    // change IN-filename
+    p:=Refs.InFilenameCleanPos;
+    if (Src[p]='''') and CleanPosToCodePos(p,CodePos) then begin
+      MoveCursorToCleanPos(p);
+      ReadNextAtom;
+      if AtomIsStringConstant then begin
+        i:=CurPos.EndPos-p;
+        NewInFilename:=CreateRelativePath(NewTargetFilename,ExtractFilePath(MainFilename),false,true);
+        NewCode:=StringToPascalConst(NewInFilename);
+        if not SourceChanger.ReplaceEx(gtNone,gtNone,1,1,CodePos.Code,CodePos.P,CodePos.P+i,NewCode) then
+        begin
+          debugln(['Error: [20250204153739] TChangeDeclarationTool.RenameSourceNameReferences failed to replace IN-filename at ',CleanPosToStr(p,true)]);
+        end;
+      end;
+    end;
+  end;
+
+  {$IFDEF VerboseFindSourceNameReferences}
+  debugln(['TChangeDeclarationTool.RenameSourceNameReferences ',Scanner.MainFilename,' ']);
+  {$ENDIF}
+  if (Refs.TreeOfPCodeXYPosition<>nil) and (Refs.TreeOfPCodeXYPosition.Count>0) then begin
+    InitReplaceDottedIdentifier(Refs.LocalSrcName,Refs.NewLocalSrcName,Param);
+    Node:=Refs.TreeOfPCodeXYPosition.FindLowest;
+    while Node<>nil do begin
+      CodeXYPos:=PCodeXYPosition(Node.Data);
+      //debugln(['TChangeDeclarationTool.RenameSourceNameReferences ',dbgs(CodeXYPos^)]);
+      if CaretToCleanPos(CodeXYPos^,p)<>0 then begin
+        debugln(['TChangeDeclarationTool.RenameSourceNameReferences invalid codepos: ',dbgs(CodeXYPos^)]);
+      end else begin
+        ReplaceDottedIdentifier(p,Param,SourceChanger);
+      end;
+      Node:=Refs.TreeOfPCodeXYPosition.FindSuccessor(Node);
+    end;
+  end;
+
+  Result:=true;
+end;
+
+{ TSrcNameRefs }
+
+destructor TSrcNameRefs.Destroy;
+begin
+  if TreeOfPCodeXYPosition<>nil then
+    FreeTreeOfPCodeXYPosition(TreeOfPCodeXYPosition);
+  inherited Destroy;
 end;
 
 end.
