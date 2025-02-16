@@ -17,13 +17,17 @@ type
     cbShowLines: TCheckBox;
     cbMultiSelect: TCheckBox;
     cbShowButtons: TCheckBox;
+    cbHideSelection: TCheckBox;
     cmbExpandSign: TComboBox;
     ImageList1: TImageList;
     Label1: TLabel;
     lbTask: TListBox;
     Panel1: TPanel;
+    Panel2: TPanel;
+    Splitter1: TSplitter;
     TreeView: TTreeView;
     procedure btnToggleEnabledDisabledClick(Sender: TObject);
+    procedure cbHideSelectionChange(Sender: TObject);
     procedure cbMultiSelectChange(Sender: TObject);
     procedure cbShowButtonsChange(Sender: TObject);
     procedure cbShowLinesChange(Sender: TObject);
@@ -52,6 +56,11 @@ type
     procedure BoldTopLevel_CustomDrawItem(Sender: TCustomTreeView;
       Node: TTreeNode; State: TCustomDrawState; var DefaultDraw: Boolean);
 
+    // Nodes as rounded rectangles
+    procedure RoundedRectNodes_AdvancedCustomDrawItem(Sender: TCustomTreeView;
+      Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage;
+      var PaintImages, DefaultDraw: Boolean);
+
     // Selection and hot-tracked lines
     procedure RowSelectHotTrack_AdvancedCustomDrawItem(Sender: TCustomTreeView;
       Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage;
@@ -71,7 +80,6 @@ type
     procedure TopLevelGradient_AdvancedCustomDrawItem(Sender: TCustomTreeView;
       Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage;
       var PaintImages, DefaultDraw: Boolean);
-
   private
     FBackImg, FSelectionImg, FHotTrackImg: TPicture;
     procedure PopulateTree;
@@ -94,19 +102,21 @@ const
   tDefault_HotTrack_NotThemed = 3;
   tTopLevelBold = 4;
   tTopLevelGradient = 5;
-  tRowSelect_HotTrack_Full = 6;
-  tRowSelect_HotTrack_Icon = 7;
-  tRowSelect_HotTrack_Text = 8;
-  tRowSelect_HotTrack_Gradient_Full = 9;
-  tRowSelect_HotTrack_Gradient_Icon = 10;
-  tRowSelect_HotTrack_Gradient_Text = 11;
-  tRowSelect_HotTrack_Gradient_TextOnly = 12;
-  tSelectHotTrack_Image = 13;
-  tBackgroundImage_Themed = 14;
-  tBackgroundImage_NotThemed = 15;
-  tBackgroundImage_Themed_NoHotTrackIcons = 16;
-  tBackgroundGradient_Themed = 17;
-  tBackgroundGradient_NotThemed = 18;
+  tRoundRectNodes = 6;
+  tRowSelect_HotTrack_Themed = 7;
+  tRowSelect_HotTrack_Full = 8;
+  tRowSelect_HotTrack_Icon = 9;
+  tRowSelect_HotTrack_Text = 10;
+  tRowSelect_HotTrack_Gradient_Full = 11;
+  tRowSelect_HotTrack_Gradient_Icon = 12;
+  tRowSelect_HotTrack_Gradient_Text = 13;
+  tRowSelect_HotTrack_Gradient_TextOnly = 14;
+  tSelectHotTrack_Image = 15;
+  tBackgroundImage_Themed = 16;
+  tBackgroundImage_NotThemed = 17;
+  tBackgroundImage_Themed_NoHotTrackIcons = 18;
+  tBackgroundGradient_Themed = 19;
+  tBackgroundGradient_NotThemed = 20;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 begin
@@ -138,6 +148,11 @@ var
 begin
   node := TreeView.Items.GetFirstNode;
   node.Enabled := not node.Enabled;
+end;
+
+procedure TMainForm.cbHideSelectionChange(Sender: TObject);
+begin
+  TreeView.HideSelection := cbHideSelection.Checked;
 end;
 
 procedure TMainForm.cbMultiSelectChange(Sender: TObject);
@@ -234,6 +249,15 @@ begin
         TreeView.OnAdvancedCustomDrawItem := @TopLevelGradient_AdvancedCustomDrawItem;
       end;
 
+    tRoundRectNodes:
+      begin
+        TreeView.Options := TreeView.Options - [tvoThemedDraw] + [tvoHotTrack];
+        TreeView.OnAdvancedCustomDrawItem := @RoundedRectNodes_AdvancedCustomDrawItem;
+      end;
+
+    tRowSelect_HotTrack_Themed:
+      TreeView.Options := TreeView.Options + [tvoRowSelect, tvoHotTrack, tvoThemedDraw];
+
     tRowSelect_HotTrack_Full,
     tRowSelect_HotTrack_Icon,
     tRowSelect_HotTrack_Text:
@@ -312,7 +336,7 @@ begin
   case Stage of
     cdPreErase:
       // Avoid overwriting the gradient with the node background color
-      Sender.Canvas.Brush.Color := clNone;
+      DefaultDraw := false;
     cdPostErase:
       // Set selected and hot-track color as usual
       if ([cdsFocused, cdsSelected] * State <> []) then
@@ -326,7 +350,8 @@ begin
         Sender.Canvas.Brush.Color := clGray;
         Sender.Canvas.Font.Color := clHighlightText;
         Sender.Canvas.Font.Style := [];
-      end;
+      end else
+        Sender.Canvas.Brush.Color := clNone;
   end;
 end;
 
@@ -374,7 +399,10 @@ begin
         Sender.Canvas.Brush.Color := clNone;
         if lbTask.ItemIndex = tBackgroundImage_Themed_NoHotTrackIcons then
           PaintImages := false;
-      end;
+      end
+      else
+        // Prevent drawing of node text background over the image
+        Sender.Canvas.Brush.Color := clNone;
   end;
 end;
 
@@ -386,6 +414,43 @@ begin
     Sender.Canvas.Font.Style := [fsBold]
   else
     Sender.Canvas.Font.Style := [];
+end;
+
+{ Draw nodes as rounded rectangles. }
+procedure TMainForm.RoundedRectNodes_AdvancedCustomDrawItem(Sender: TCustomTreeView;
+  Node: TTreeNode; State: TCustomDrawState; Stage: TCustomDrawStage;
+  var PaintImages, DefaultDraw: Boolean);
+var
+  R: TRect;
+begin
+  if Stage = cdPostErase then
+  begin
+    R := Node.DisplayRect(true);
+    R.Left := Node.DisplayIconLeft;
+    dec(R.Left, 2);
+    inc(R.Top);
+    dec(R.Bottom);
+    if State * [cdsFocused, cdsSelected] <> [] then
+    begin
+      Sender.Canvas.Brush.Color := clRed;
+      Sender.Canvas.Pen.Color := clMaroon;
+    end else
+    if (cdsHot in State) then
+    begin
+      Sender.Canvas.Brush.Color := clMoneyGreen;
+      Sender.Canvas.Pen.Color := clGreen;
+      Sender.Canvas.Font.Style := [];
+    end else
+    begin
+      Sender.Canvas.Brush.Color := clBtnFace;
+      Sender.Canvas.Pen.Color := clSilver;
+    end;
+    Sender.Canvas.RoundRect(R, 12, 12);
+
+    // Avoid default drawing of the node background
+    Sender.Canvas.Brush.Style := bsClear;
+    DefaultDraw := false;
+  end;
 end;
 
 { Full row highlighting. Depending on the selection in the Task radiogroup,

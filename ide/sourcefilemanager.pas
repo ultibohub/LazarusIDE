@@ -2776,7 +2776,7 @@ begin
     AnUnitInfo.FileReadOnly:=false;
 
   // if file is readonly then a simple Save is skipped
-  if (AnUnitInfo.ReadOnly) and ([sfSaveToTestDir,sfSaveAs]*Flags=[]) then
+  if AnUnitInfo.ReadOnly and ([sfSaveToTestDir,sfSaveAs]*Flags=[]) then
     exit(mrOk);
 
   // load old resource file
@@ -4905,7 +4905,8 @@ var
   NewFilename, NewFileExt: string;
   OldUnitName, NewUnitName: string;
   ACaption, AText, APath: string;
-  Filter, AllEditorExt, AllFilter: string;
+  Filter, AllEditorExt, AllFilter, AmpUnitname: string;
+  r: integer;
 begin
   if (AnUnitInfo<>nil) and (AnUnitInfo.OpenEditorInfoCount>0) then
     SrcEdit := TSourceEditor(AnUnitInfo.OpenEditorInfo[0].EditorComponent)
@@ -5019,17 +5020,38 @@ begin
         // Is it a valid name? Ask user.
         if not IsValidUnitName(NewUnitName) then
         begin
+          // it is not valid name -> Ask user
           Result:=IDEQuestionDialogAb(lisInvalidPascalIdentifierCap,
               Format(lisInvalidPascalIdentifierName,[NewUnitName,LineEnding]),
               mtConfirmation, [mrIgnore, lisSave,
                                mrCancel, lisCancel,
-                               mrRetry, lisChooseADifferentName,
+                               mrRetry, lisChooseADifferentName2,
                                mrAbort, lisAbort], not CanAbort);
           if Result=mrRetry then
             continue;
           if Result in [mrCancel,mrAbort] then
             exit;
+        end else if CodeToolBoss.IdentifierHasKeywords(NewUnitName,
+            ExtractFilePath(NewFilename),AmpUnitname)
+        then begin
+          // contains keywords -> Suggest to ampersand it
+          Result:=TaskDlg(lisInvalidPascalIdentifierCap,
+              Format(lisTheNameContainsAPascalKeyword, [NewUnitName]), '',
+              tdiWarning,[mbOk,mbCancel],mbOk,
+                [lisChooseADifferentName2,
+                 Format(lisUseInstead, [StringReplace(AmpUnitname,'&','&&',[rfReplaceAll])]),
+                 Format(lisUseAnyway, [StringReplace(NewUnitName,'&','&&',[rfReplaceAll])])], r);
+          if Result<>mrOk then
+            exit(mrCancel);
+          case r of
+          1: NewUnitName:=AmpUnitname;
+          2: ;
+          else
+            Result:=mrRetry;
+            continue; // retry
+          end;
         end;
+
         // Does the project already have such unit?
         if Project1.IndexOfUnitWithName(NewUnitName,true,AnUnitInfo)>=0 then
         begin
@@ -5832,8 +5854,11 @@ begin
     MainIDE.SetRecentFilesMenu;
 
     // add new path to unit path
-    if AnUnitInfo.IsPartOfProject and FilenameHasPascalExt(NewFilename)
-    and (CompareFilenames(NewFilePath,Project1.Directory)<>0) then begin
+    if AnUnitInfo.IsPartOfProject
+        and FilenameHasPascalExt(NewFilename)
+        and (CompareFilenames(NewFilePath,Project1.Directory)<>0)
+        and (CompareFilenames(NewFilePath,OldFilePath)<>0) then
+    begin
       S:=Project1.CompilerOptions.GetUnitPath(false);
       if SearchDirectoryInMaskedSearchPath(S,NewFilePath)<1 then
         AddPathToBuildModes(NewFilePath, False);
@@ -8490,11 +8515,15 @@ function GatherUnitReferences(Files: TStringList; OldFilename, NewFilename: stri
   var ListOfSrcNameRefs: TObjectList): TModalResult;
 var
   i: Integer;
+  Filename: String;
 begin
   CleanUpFileList(Files);
   for i:=Files.Count-1 downto 0 do begin
-    if (CompareFilenames(Files[i],OldFilename)=0)
-    or (CompareFilenames(Files[i],NewFilename)=0) then
+    Filename:=Files[i];
+    if (CompareFilenames(Filename,OldFilename)=0)
+    or (CompareFilenames(Filename,NewFilename)=0) then
+      Files.Delete(i)
+    else if FilenameIsAbsolute(Filename) and not FileExistsCached(Filename) then
       Files.Delete(i);
   end;
 
@@ -8534,30 +8563,28 @@ begin
   ListOfSrcNameRefs:=nil;
   Files:=TStringList.Create;
   try
-    if OnlyEditorFiles then begin
-      // search only in open files
-      for i:=0 to SourceEditorManagerIntf.UniqueSourceEditorCount-1 do begin
-        aFilename:=SourceEditorManagerIntf.UniqueSourceEditors[i].FileName;
-        if not FilenameIsPascalSource(aFilename) then continue;
-        Files.Add(aFileName);
-      end;
-      // add project's main source file
-      if (Project1<>nil) and (Project1.MainUnitID>=0) then
-        Files.Add(Project1.MainFilename);
-    end else begin
+    // search only in open files
+    for i:=0 to SourceEditorManagerIntf.UniqueSourceEditorCount-1 do begin
+      aFilename:=SourceEditorManagerIntf.UniqueSourceEditors[i].FileName;
+      if not FilenameIsPascalSource(aFilename) then continue;
+      Files.Add(aFileName);
+    end;
+    // add project's main source file
+    if (Project1<>nil) and (Project1.MainUnitID>=0) then
+      Files.Add(Project1.MainFilename);
+    if not OnlyEditorFiles then begin
       // get owners of unit
       OwnerList:=PkgBoss.GetOwnersOfUnit(NewFilename);
-      if OwnerList=nil then exit(mrOk);
-      PkgBoss.ExtendOwnerListWithUsedByOwners(OwnerList);
-      ReverseList(OwnerList);
+      if OwnerList<>nil then begin
+        PkgBoss.ExtendOwnerListWithUsedByOwners(OwnerList);
+        ReverseList(OwnerList);
 
-      // get source files of packages and projects
-      ExtraFiles:=PkgBoss.GetSourceFilesOfOwners(OwnerList);
-      try
-        if ExtraFiles<>nil then
+        // get source files of packages and projects
+        ExtraFiles:=PkgBoss.GetSourceFilesOfOwners(OwnerList);
+        if ExtraFiles<>nil then begin
           Files.AddStrings(ExtraFiles);
-      finally
-        ExtraFiles.Free;
+          ExtraFiles.Free;
+        end;
       end;
     end;
     for i:=Files.Count-1 downto 0 do begin
@@ -8566,6 +8593,7 @@ begin
         Files.Delete(i);
     end;
     //DebugLn(['ReplaceUnitUse ',Files.Text]);
+    if Files.Count=0 then exit(mrOk);
 
     // commit source editor to codetools
     SaveEditorChangesToCodeCache(nil);

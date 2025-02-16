@@ -13,7 +13,7 @@ uses
   Classes, SysUtils, Contnrs, fpcunit, AVL_Tree,
   LazLogger, LazFileUtils, testregistry,
   CodeToolManager, CodeCache, CodeTree, BasicCodeTools, CTUnitGraph,
-  FindDeclarationTool, ChangeDeclarationTool, TestGlobals,
+  FindDeclarationTool, ChangeDeclarationTool, CustomCodeTool, LinkScanner, TestGlobals,
   TestFinddeclaration;
 
 const
@@ -39,8 +39,10 @@ type
   protected
   published
     procedure TestExplodeWith;
-    procedure TestRenameReferences;
 
+    procedure TestIdentifierHasKeywords;
+
+    procedure TestRenameVarReferences;
     procedure TestRenameProcReferences;
     procedure TestRenameProcedureArg;
     procedure TestRenameProcedureArgCaseSensitive;
@@ -423,7 +425,29 @@ begin
   end;
 end;
 
-procedure TTestRefactoring.TestRenameReferences;
+procedure TTestRefactoring.TestIdentifierHasKeywords;
+
+  procedure t(const Identifier: string;
+    cm: TCompilerMode; const ExpectedAmp: string);
+  var
+    AmpIdentifier: string;
+    r: Boolean;
+  begin
+    r:=IdentifierHasKeywords(Identifier, cm, AmpIdentifier);
+    if AmpIdentifier<>ExpectedAmp then
+      Fail('Identifier="'+Identifier+'" cm='+CompilerModeNames[cm]+' expected "'+ExpectedAmp+'", but got "'+AmpIdentifier+'"');
+    AssertEquals('Result',Identifier<>AmpIdentifier,r);
+  end;
+
+begin
+  t('a',cmFPC,'a');
+  t('a.b',cmFPC,'a.b');
+  t('a.&b',cmFPC,'a.&b');
+  t('a.Type',cmFPC,'a.&Type');
+  t('End.Type',cmFPC,'&End.&Type');
+end;
+
+procedure TTestRefactoring.TestRenameVarReferences;
 begin
   StartProgram;
   Add([
@@ -1505,28 +1529,43 @@ begin
 end;
 
 procedure TTestRefactoring.TestRenameProgramName_ToraToraTora;
+var
+  ToraUnit: TCodeBuffer;
 begin
-  Add([
-  'program tora.tora.{comment}tora;',
-  '{$mode objFPC}',
-  'var Toranaga: longint;',
-  'begin',
-  '  Toranaga:=3;',
-  '  tora.tora.tora.Toranaga:=3*Toranaga;',
-  '  tora.{}tora.{comment}tora.{}Toranaga:=3*tora.tora.tora.Toranaga;',
-  'end.',
-  '']);
-  RenameSourceName('Red.Green.Blue','red.green.blue.pas');
-  CheckDiff(Code,[
-  'program Red.Green.{comment}Blue;',
-  '{$mode objFPC}',
-  'var Toranaga: longint;',
-  'begin',
-  '  Toranaga:=3;',
-  '  Red.Green.Blue.Toranaga:=3*Toranaga;',
-  '  Red.{}Green.{comment}Blue.{}Toranaga:=3*Red.Green.Blue.Toranaga;',
-  'end.',
-  '']);
+  ToraUnit:=CodeToolBoss.CreateFile('tora.pas');
+  try
+    ToraUnit.Source:=LinesToStr([
+    'unit Tora;',
+    'interface',
+    'implementation',
+    'end.']);
+
+    Add([
+    'program tora.tora.{comment}tora;',
+    '{$mode objFPC}',
+    'uses tora;',
+    'var Toranaga: longint;',
+    'begin',
+    '  Toranaga:=3;',
+    '  tora.tora.tora.Toranaga:=3*Toranaga;',
+    '  tora.{}tora.{comment}tora.{}Toranaga:=3*tora.tora.tora.Toranaga;',
+    'end.',
+    '']);
+    RenameSourceName('Red.Green.Blue','red.green.blue.pas');
+    CheckDiff(Code,[
+    'program Red.Green.{comment}Blue;',
+    '{$mode objFPC}',
+    'uses tora;',
+    'var Toranaga: longint;',
+    'begin',
+    '  Toranaga:=3;',
+    '  Red.Green.Blue.Toranaga:=3*Toranaga;',
+    '  Red.{}Green.{comment}Blue.{}Toranaga:=3*Red.Green.Blue.Toranaga;',
+    'end.',
+    '']);
+  finally
+    ToraUnit.IsDeleted:=true;
+  end;
 end;
 
 procedure TTestRefactoring.TestRenameUnitName_IncludeUsedTwiceInOneUnit;

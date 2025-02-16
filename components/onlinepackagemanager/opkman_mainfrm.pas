@@ -706,7 +706,7 @@ end;
 
 procedure TMainFrm.tbHelpClick(Sender: TObject);
 begin
-  OpenURL('http://wiki.freepascal.org/Online_Package_Manager');
+  OpenURL('https://wiki.freepascal.org/Online_Package_Manager');
 end;
 
 procedure TMainFrm.tbRefreshClick(Sender: TObject);
@@ -1493,7 +1493,7 @@ begin
   tbOptions.Caption := rsMainFrm_TBOptions_Caption;
   tbOptions.Hint := rsMainFrm_TBOptions_Hint;
   tbHelp.Caption := rsMainFrm_TBHelp_Caption;
-  tbHelp.Hint := rsMainFrm_TBHelp_Hint;
+  tbHelp.Hint := Format(rsMainFrm_TBHelp_Hint, [cHelpPage]);
 
   miFromRepository.Caption := rsMainFrm_VSTHeaderColumn_Repository;
   miFromRepository.Hint := rsMainFrm_VSTHeaderColumn_Repository_Hint;

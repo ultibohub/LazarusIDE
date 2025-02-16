@@ -280,7 +280,7 @@ type
     // initializing single codetool
     function GetCodeToolForSource(Code: TCodeBuffer;
                       GoToMainCode, ExceptionOnError: boolean): TCustomCodeTool;
-    function FindCodeToolForSource(Code: TCodeBuffer): TCustomCodeTool;
+    function FindCodeToolForSource(Code: TCodeBuffer): TCodeTool;
     property CurCodeTool: TCodeTool read FCurCodeTool;
     procedure ClearCurCodeTool;
     function InitCurCodeTool(Code: TCodeBuffer): boolean;
@@ -470,6 +470,8 @@ type
           KeepVerbosityDirectives: boolean = false): string;
     function GetPasDocComments(Code: TCodeBuffer; X, Y: integer;
           out ListOfPCodeXYPosition: TFPList): boolean;
+    function IdentifierHasKeywords(const Identifier, Directory: string;
+          out AmpIdentifier: string): boolean;
 
     // blocks (e.g. begin..end, case..end, try..finally..end, repeat..until)
     function FindBlockCounterPart(Code: TCodeBuffer; X,Y: integer;
@@ -557,7 +559,7 @@ type
     function GatherOverloads(Code: TCodeBuffer; X,Y: integer;
           out Graph: TDeclarationOverloadsGraph): boolean;
 
-    // find references, rename identifier, remove identifier
+    // find references, rename identifier, remove identifier. For unit/program name see FindSourceNameReferences
     function FindReferences(IdentifierCode: TCodeBuffer;
           X, Y: integer; SearchInCode: TCodeBuffer; SkipComments: boolean;
           var ListOfPCodeXYPosition: TFPList;
@@ -3062,7 +3064,7 @@ var
   CodeXYPos: PCodeXYPosition;
 begin
   {$IFDEF VerboseFindSourceNameReferences}
-  debugln(['TCodeToolManager.FindReferencesInFiles TargetFile="',TargetFilename,'" FileCount=',Files.Count,' SkipComments=',SkipComments]);
+  debugln(['TCodeToolManager.FindSourceNameReferences TargetFile="',TargetFilename,'" FileCount=',Files.Count,' SkipComments=',SkipComments]);
   {$ENDIF}
   Result:=false;
   ListOfSrcNameRefs:=nil;
@@ -3077,7 +3079,7 @@ begin
       '','.','..': continue; // invalid filename
       end;
       {$IFDEF VerboseFindSourceNameReferences}
-      debugln(['TCodeToolManager.FindReferencesInFiles File ',i,'/',Files.Count,' ',Filename]);
+      debugln(['TCodeToolManager.FindSourceNameReferences File ',i,'/',Files.Count,' ',Filename]);
       {$ENDIF}
       j:=i-1;
       while (j>=0) and (CompareFilenames(Filename,Files[j])<>0) do dec(j);
@@ -3094,12 +3096,12 @@ begin
           if DirCache.FindUnitSourceInCompletePath(TargetUnitName,InFilename,true)<>'' then
           begin
             {$IFDEF VerboseFindSourceNameReferences}
-            debugln(['TCodeToolManager.FindReferencesInFiles File ',Filename,', target in unit path']);
+            debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', target in unit path']);
             {$ENDIF}
             DirCachesSearch.Add(DirCache);
           end else begin
             {$IFDEF VerboseFindSourceNameReferences}
-            debugln(['TCodeToolManager.FindReferencesInFiles File ',Filename,', target NOT in unit path, SKIP']);
+            debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', target NOT in unit path, SKIP']);
             {$ENDIF}
             DirCachesSkip.Add(DirCache);
             continue;
@@ -3109,7 +3111,7 @@ begin
 
       Code:=LoadFile(Filename,true,false);
       if Code=nil then begin
-        debugln('TCodeToolManager.FindReferencesInFiles unable to load "',Filename,'"');
+        debugln('TCodeToolManager.FindSourceNameReferences unable to load "',Filename,'"');
         exit;
       end;
 
@@ -4206,6 +4208,13 @@ begin
   {$IFDEF CTDEBUG}
   DebugLn('TCodeToolManager.GetPasDocComments END ');
   {$ENDIF}
+end;
+
+function TCodeToolManager.IdentifierHasKeywords(const Identifier, Directory: string; out
+  AmpIdentifier: string): boolean;
+begin
+  Result:=CustomCodeTool.IdentifierHasKeywords(Identifier,
+      GetCompilerModeForDirectory(Directory),AmpIdentifier);
 end;
 
 function TCodeToolManager.FindBlockCounterPart(Code: TCodeBuffer; X,
@@ -6683,7 +6692,7 @@ begin
 end;
 
 function TCodeToolManager.FindCodeToolForSource(Code: TCodeBuffer
-  ): TCustomCodeTool;
+  ): TCodeTool;
 var
   ANode: TAVLTreeNode;
   CurSrc, SearchedSrc: Pointer;
@@ -6697,7 +6706,7 @@ begin
     else if CurSrc<SearchedSrc then
       ANode:=ANode.Right
     else begin
-      Result:=TCustomCodeTool(ANode.Data);
+      Result:=TCodeTool(ANode.Data);
       exit;
     end;
   end;

@@ -139,9 +139,6 @@ type
     procedure ResolveIDEItem(out CurOwner: TObject; out CurProject: TLazProject;
                              out CurPkg: TIDEPackage);
 
-    procedure CreateToDoItem(aTLFile: TTLScannedFile;
-        const aFileName: string; const SComment, EComment: string;
-        const TokenString: string; LineNumber: Integer);
     procedure AddListItem(aTodoItem: TTodoItem);
     
     procedure ScanFile(aFileName : string);
@@ -223,9 +220,7 @@ begin
   if FUpdating then
     Exit;
   LazarusIDE.SaveSourceEditorChangesToCodeCache(nil);
-
   Screen.BeginWaitCursor;
-
   lvTodo.BeginUpdate;
   Units:=nil;
   try
@@ -417,14 +412,6 @@ begin
   UpdateStartFilename;
 end;
 
-procedure TIDETodoWindow.CreateToDoItem(aTLFile: TTLScannedFile;
-  const aFileName: string; const SComment, EComment: string;
-  const TokenString: string; LineNumber: Integer);
-
-begin
-  TToDoListCore.CreateToDoItem(aTLFile, aFileName, SComment, EComment,TokenString, LineNumber);
-end;
-
 procedure TIDETodoWindow.FormCreate(Sender: TObject);
 begin
   FUpdating := False;
@@ -507,7 +494,7 @@ end;
 procedure TIDETodoWindow.acHelpExecute(Sender: TObject);
 begin
   // usual API from IdeHelpIntf don't work
-  OpenURL('http://wiki.freepascal.org/IDE_Window:_ToDo_List');
+  OpenURL('https://wiki.freepascal.org/IDE_Window:_ToDo_List');
 end;
 
 procedure TIDETodoWindow.acExportExecute(Sender: TObject);

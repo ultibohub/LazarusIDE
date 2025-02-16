@@ -174,13 +174,16 @@ type
     procedure TestFindDeclaration_FindFPCSrcNameSpacedUnits;
 
     // unit namespaces and dotted unitnames
-    procedure TestFindDeclaration_NS_Program; // todo
+    procedure TestFindDeclaration_NS_Program;
     procedure TestFindDeclaration_NS_ProgLocalVsUses;
     procedure TestFindDeclaration_NS_UnitIntfVsUses;
     procedure TestFindDeclaration_NS_UnitImplVsIntfUses;
     procedure TestFindDeclaration_NS_UnitImplVsImplUses;
-    procedure TestDirectoyCache_NS_SearchDotted;
-    procedure TestFindDeclaration_NS_SearchDottedUsesInNS;
+    procedure TestDirectoyCache_NS_FN_DottedUses;
+    procedure TestFindDeclaration_NS_FN_DottedUses;
+    procedure TestFindDeclaration_NS_MultiDottedUses;
+    procedure TestFindDeclaration_NS_MultiDottedPrg;
+    procedure TestGatherIdentifier_NS_MultiDottedUses;
 
     // directives
     procedure TestFindDeclaration_Directive_OperatorIn;
@@ -491,6 +494,7 @@ begin
               StartOffs := StartOffs + IdentifierStartPos;
               MainTool.CleanPosToCaret(StartOffs,CursorPos);
 
+              //debugln(['TCustomTestFindDeclaration.FindDeclarations (Loop: '+IntToStr(TestLoop)+') test GatherIdentifiers at ',dbgs(CursorPos)]);
               if not CodeToolBoss.GatherIdentifiers(CursorPos.Code,CursorPos.X,CursorPos.Y)
               then begin
                 if ExpectedCompletion<>'' then begin
@@ -505,14 +509,16 @@ begin
                   if ExpInvert then
                     Delete(ExpectedTerm, 1, 1);
                   i:=CodeToolBoss.IdentifierList.GetFilteredCount-1;
-                  //debugln(['TCustomTestFindDeclaration.FindDeclarations ',i,' ExpectedTerm="',ExpectedTerm,'"']);
+                  //debugln(['TCustomTestFindDeclaration.FindDeclarations Count=',i,' ExpectedTerm="',ExpectedTerm,'" Invert=',ExpInvert]);
                   while i>=0 do begin
                     IdentItem:=CodeToolBoss.IdentifierList.FilteredItems[i];
                     if IdentItem.Node<>nil then begin
                       FoundPath:=NodeAsPath(IdentItem.Tool,IdentItem.Node);
                       //debugln(['TTestFindDeclaration.FindDeclarations i=',i,' FoundPath="',FoundPath,'"']);
-                      if SameText(ExpectedTerm,FoundPath) then
+                      if SameText(ExpectedTerm,FoundPath) then begin
+                        //debugln(['TTestFindDeclaration.FindDeclarations Found i=',i,' FoundPath="',FoundPath,'"']);
                         break;
+                      end;
                     end;
                     //debugln(['TTestFindDeclaration.FindDeclarations i=',i,' Identifier=',IdentItem.Identifier]);
                     s := IdentItem.Identifier;
@@ -521,12 +527,17 @@ begin
                     then
                       if s[1]<>'&' then
                         s := '&' + s;
-                    l:=length(s);
-                    if ((l=length(ExpectedTerm)) or (ExpectedTerm[length(ExpectedTerm)-l]='.'))
-                    and (CompareText(s,RightStr(ExpectedTerm,l))=0)
-                    then break;
+                    if CompareText(s,ExpectedTerm)=0 then break;
+                    if Marker='declaration' then begin
+                      // last identifier is enough
+                      l:=length(s);
+                      if ((l=length(ExpectedTerm)) or (ExpectedTerm[length(ExpectedTerm)-l]='.'))
+                      and (CompareText(s,RightStr(ExpectedTerm,l))=0)
+                      then break;
+                    end;
                     dec(i);
                   end;
+                  //debugln(['TCustomTestFindDeclaration.FindDeclarations i=',i]);
                   if (i<0) and not ExpInvert then begin
                     WriteSource(StartOffs,MainTool);
                     AssertEquals('GatherIdentifiers misses "'+ExpectedTerm+'" at '+MainTool.CleanPosToStr(StartOffs,true),true,i>=0);
@@ -1980,7 +1991,7 @@ begin
   end;
 end;
 
-procedure TTestFindDeclaration.TestDirectoyCache_NS_SearchDotted;
+procedure TTestFindDeclaration.TestDirectoyCache_NS_FN_DottedUses;
 var
   DotsUnit: TCodeBuffer;
   aUnitName, InFile, Filename: String;
@@ -1997,7 +2008,7 @@ begin
   end;
 end;
 
-procedure TTestFindDeclaration.TestFindDeclaration_NS_SearchDottedUsesInNS;
+procedure TTestFindDeclaration.TestFindDeclaration_NS_FN_DottedUses;
 var
   DotsUnit: TCodeBuffer;
 begin
@@ -2023,6 +2034,151 @@ begin
     FindDeclarations(Code);
   finally
     DotsUnit.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_NS_MultiDottedUses;
+var
+  RedGreenUnit, RedGreenBlueUnit, RedGreenBlueGrayUnit: TCodeBuffer;
+begin
+  RedGreenUnit:=CodeToolBoss.CreateFile('red.green.pp');
+  RedGreenBlueUnit:=CodeToolBoss.CreateFile('red.green.blue.pp');
+  RedGreenBlueGrayUnit:=CodeToolBoss.CreateFile('red.green.blue.gray.pp');
+  try
+    RedGreenUnit.Source:=LinesToStr([
+      'unit Red.Green;',
+      'interface',
+      'var Two, Size, Red, Green, Blue, Gray: word;',
+      'implementation',
+      'end.']);
+    RedGreenBlueUnit.Source:=LinesToStr([
+      'unit Red.Green.Blue;',
+      'interface',
+      'var Three, Size, Red, Green, Blue, Gray: word;',
+      'implementation',
+      'end.']);
+    RedGreenBlueGrayUnit.Source:=LinesToStr([
+      'unit Red.Green.Blue.Gray;',
+      'interface',
+      'var One, Size, Red, Green, Blue, Gray: word;',
+      'implementation',
+      'end.']);
+
+    Add([
+    'unit Red;',
+    '{$mode objfpc}{$H+}',
+    'interface',
+    'uses',
+    '  Red.Green,',
+    '  Red.Green.Blue,',
+    '  Red.Green.Blue.Gray;',
+    'var Size: word;',
+    'implementation',
+    'begin',
+    '  Red{declaration:red.red:1}.Size:=1;',
+    '  Red.Green{declaration!:red.red.green:5}.Size:=2;',
+    '  Red{declaration!:red.red:5}.Green.Size:=3;',
+    '  Red.Green.Blue{declaration:red.red.green.blue:6}.Size:=4;',
+    '  Red.Green{declaration!:red.red.green:6}.Blue.Size:=5;',
+    '  Red{declaration!:red.red:6}.Green.Blue.Size:=6;',
+    '  Red.Green.Blue.Gray{declaration:red.red.green.blue.gray:7}.Size:=4;',
+    'end.',
+    '']);
+    FindDeclarations(Code);
+  finally
+    RedGreenUnit.IsDeleted:=true;
+    RedGreenBlueUnit.IsDeleted:=true;
+    RedGreenBlueGrayUnit.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_NS_MultiDottedPrg;
+var
+  RedUnit, RedRedUnit: TCodeBuffer;
+begin
+  RedUnit:=CodeToolBoss.CreateFile('red.pp');
+  RedRedUnit:=CodeToolBoss.CreateFile('red.red.pp');
+  try
+    RedUnit.Source:=LinesToStr([
+      'unit Red;',
+      'interface',
+      'var Red, RedCol: word;',
+      'implementation',
+      'end.']);
+    RedRedUnit.Source:=LinesToStr([
+      'unit Red.Red;',
+      'interface',
+      'var Red, RedCol: word;',
+      'implementation',
+      'end.']);
+
+    Add([
+    'program Red.',
+    '  Red.',
+    '  Red;',
+    '{$mode objfpc}{$H+}',
+    'uses',
+    '  Red,',
+    '  Red.',
+    '    Red;',
+    'var RedCol: word;',
+    'begin',
+    '  Red{declaration!:red.red.red.red:6}.RedCol{declaration!:red.redcol}:=1;',
+    '  Red.Red{declaration!:red.red.red.red.red:8}.RedCol{declaration!:red.red.redcol}:=2;',
+    '  Red{declaration!:red.red.red.red:7}.Red.RedCol:=3;',
+    '  Red.Red.Red{declaration!:red.red.red:3}.RedCol{declaration!:redcol}:=4;',
+    '  Red.Red{declaration!:red.red.red:2}.Red.RedCol:=5;',
+    '  Red{declaration!:red.red.red:1}.Red.Red.RedCol:=6;',
+    'end.',
+    '']);
+    FindDeclarations(Code);
+  finally
+    RedUnit.IsDeleted:=true;
+    RedRedUnit.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestFindDeclaration.TestGatherIdentifier_NS_MultiDottedUses;
+var
+  RedUnit, RedRedUnit: TCodeBuffer;
+begin
+  RedUnit:=CodeToolBoss.CreateFile('red.pp');
+  RedRedUnit:=CodeToolBoss.CreateFile('red.red.pp');
+  try
+    RedUnit.Source:=LinesToStr([
+      'unit Red;',
+      'interface',
+      'var Red, RedCol, Roll: word;',
+      'implementation',
+      'end.']);
+    RedRedUnit.Source:=LinesToStr([
+      'unit Red.Red;',
+      'interface',
+      'var Red, RedCol, Run: word;',
+      'implementation',
+      'end.']);
+
+    Add([
+    'program Red.',
+    '  Red.',
+    '  Red;',
+    '{$mode objfpc}{$H+}',
+    'uses',
+    '  Red,',
+    '  Red.',
+    '    Red;',
+    'var RedCol, Rap: word;',
+    'begin',
+    '  R{completion:Red.Red.Red,Red,Red.Red,RedCol,Rap};',
+    '  Red.R{completion:Red.Red,Red,RedCol,Roll};',
+    '  Red.Red.R{completion:Red,RedCol,Run};',
+    '  Red.Red.Red.R{completion:RedCol,Rap};',
+    'end.',
+    '']);
+    FindDeclarations(Code);
+  finally
+    RedUnit.IsDeleted:=true;
+    RedRedUnit.IsDeleted:=true;
   end;
 end;
 

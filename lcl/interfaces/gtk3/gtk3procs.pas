@@ -733,18 +733,45 @@ end;
 function GdkKeyToLCLKey(AValue: Word): Word;
 begin
   if AValue <= $FF then
-    exit(AValue);
+  begin
+    if (AValue = GDK_KEY_bracketleft) then
+      exit(VK_OEM_4)
+    else
+    if (AValue = GDK_KEY_bracketright) then
+      exit(VK_OEM_6)
+    else
+    if (AValue = GDK_KEY_plus) then
+      exit(VK_OEM_PLUS)
+    else
+    if (AValue = GDK_KEY_comma) then
+      exit(VK_OEM_COMMA)
+    else
+    if (AValue = GDK_KEY_minus) then
+      exit(VK_OEM_MINUS)
+    else
+    if (AValue = GDK_KEY_period) then
+      exit(VK_OEM_PERIOD)
+    else
+    if (AValue >= GDK_KEY_exclam) and (AValue <= GDK_KEY_parenleft)  then
+      exit(AValue + 16)
+    else
+      exit(AValue);
+  end;
   Result := VK_UNKNOWN;
   case AValue of
+    GDK_KEY_KP_0, GDK_KEY_KP_1, GDK_KEY_KP_2,
+    GDK_KEY_KP_3, GDK_KEY_KP_4, GDK_KEY_KP_5,
+    GDK_KEY_KP_6, GDK_KEY_KP_7, GDK_KEY_KP_8,
+    GDK_KEY_KP_9: Result := AValue - GDK_KEY_Home;
     GDK_KEY_Return, GDK_KEY_KP_Enter, GDK_KEY_3270_Enter: Result := VK_RETURN;
     GDK_KEY_Escape: Result := VK_ESCAPE;
     GDK_KEY_Insert: Result := VK_INSERT;
-    GDK_KEY_Delete: Result := VK_DELETE;
+    GDK_KEY_Delete, GDK_KEY_KP_Delete: Result := VK_DELETE;
     GDK_KEY_BackSpace: Result := VK_BACK;
-    GDK_KEY_Home: Result := VK_HOME;
-    GDK_KEY_End: Result := VK_END;
-    GDK_KEY_Page_Up: Result := VK_PRIOR;
-    GDK_KEY_Page_Down: Result := VK_NEXT;
+    GDK_KEY_Home, GDK_KEY_KP_Home: Result := VK_HOME;
+    GDK_KEY_End, GDK_KEY_KP_End: Result := VK_END;
+    GDK_KEY_Page_Up, GDK_KEY_KP_Page_Up: Result := VK_PRIOR;
+    GDK_KEY_Page_Down, GDK_KEY_KP_Page_Down: Result := VK_NEXT;
     GDK_KEY_Left, GDK_KEY_KP_LEFT: Result := VK_LEFT;
     GDK_KEY_Up, GDK_KEY_KP_UP: Result := VK_UP;
     GDK_KEY_Right, GDK_KEY_KP_Right: Result := VK_RIGHT;

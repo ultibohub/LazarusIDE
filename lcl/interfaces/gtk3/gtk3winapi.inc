@@ -2294,8 +2294,19 @@ const
 var
   AKeyMap: PGdkKeymap;
   AModifiers: TGdkModifierType;
+  display: PGdkDisplay;
+  seat: PGdkSeat;
+  device: PGdkDevice;
+  x: gdouble;
 begin
   Result := 0;
+
+  display := gdk_display_get_default();
+  if display = nil then
+    exit;
+  seat := gdk_display_get_default_seat(display);
+  if seat = nil then
+    exit;
 
   case nVirtKey of
     VK_LSHIFT:   nVirtKey := VK_SHIFT;
@@ -2303,45 +2314,18 @@ begin
     VK_LMENU:    nVirtKey := VK_MENU;
   end;
 
-  (*
-  // GdkModifierType
-  GDK_SHIFT_MASK: TGdkModifierType = 1;
-  GDK_LOCK_MASK: TGdkModifierType = 2;
-  GDK_CONTROL_MASK: TGdkModifierType = 4;
-  GDK_MOD1_MASK: TGdkModifierType = 8;
-  GDK_MOD2_MASK: TGdkModifierType = 16;
-  GDK_MOD3_MASK: TGdkModifierType = 32;
-  GDK_MOD4_MASK: TGdkModifierType = 64;
-  GDK_MOD5_MASK: TGdkModifierType = 128;
-  GDK_BUTTON1_MASK: TGdkModifierType = 256;
-  GDK_BUTTON2_MASK: TGdkModifierType = 512;
-  GDK_BUTTON3_MASK: TGdkModifierType = 1024;
-  GDK_BUTTON4_MASK: TGdkModifierType = 2048;
-  GDK_BUTTON5_MASK: TGdkModifierType = 4096;
-  GDK_MODIFIER_RESERVED_13_MASK: TGdkModifierType = 8192;
-  GDK_MODIFIER_RESERVED_14_MASK: TGdkModifierType = 16384;
-  GDK_MODIFIER_RESERVED_15_MASK: TGdkModifierType = 32768;
-  GDK_MODIFIER_RESERVED_16_MASK: TGdkModifierType = 65536;
-  GDK_MODIFIER_RESERVED_17_MASK: TGdkModifierType = 131072;
-  GDK_MODIFIER_RESERVED_18_MASK: TGdkModifierType = 262144;
-  GDK_MODIFIER_RESERVED_19_MASK: TGdkModifierType = 524288;
-  GDK_MODIFIER_RESERVED_20_MASK: TGdkModifierType = 1048576;
-  GDK_MODIFIER_RESERVED_21_MASK: TGdkModifierType = 2097152;
-  GDK_MODIFIER_RESERVED_22_MASK: TGdkModifierType = 4194304;
-  GDK_MODIFIER_RESERVED_23_MASK: TGdkModifierType = 8388608;
-  GDK_MODIFIER_RESERVED_24_MASK: TGdkModifierType = 16777216;
-  GDK_MODIFIER_RESERVED_25_MASK: TGdkModifierType = 33554432;
-  GDK_SUPER_MASK: TGdkModifierType = 67108864;
-  GDK_HYPER_MASK: TGdkModifierType = 134217728;
-  GDK_META_MASK: TGdkModifierType = 268435456;
-  GDK_MODIFIER_RESERVED_29_MASK: TGdkModifierType = 536870912;
-  GDK_RELEASE_MASK: TGdkModifierType = 1073741824;
-  GDK_MODIFIER_MASK: TGdkModifierType = 1543512063;
-  *)
-  // AModifierMask := gdk_keymap_get_modifier_mask(AKeyMap, 0);
+  if Byte(nVirtKey) in [VK_LBUTTON..VK_XBUTTON2] then
+  begin
+    device := gdk_seat_get_pointer(seat);
+    if device = nil then
+      exit;
+    device^.get_state(gdk_screen_get_active_window(gdk_screen_get_default), @x, @AModifiers);
+  end else
+  begin
+    AKeyMap := gdk_keymap_get_for_display(display);
+    AModifiers := TGdkModifierType(AKeyMap^.get_modifier_state);
+  end;
 
-  AKeyMap := TGdkKeymap.get_for_display(gdk_display_get_default);
-  AModifiers := TGdkModifierType(AKeyMap^.get_modifier_state);
   case nVirtKey of
     VK_LBUTTON:
       if GDK_BUTTON1_MASK in AModifiers  then
@@ -2370,10 +2354,6 @@ begin
     VK_LWIN, VK_RWIN:
       if GDK_META_MASK in AModifiers  then
         Result := Result or StateDown;
-   {$ifdef VerboseGtk3WinAPI}
-    else
-      DebugLn('TGtk3WidgetSet.GetKeyState TODO ', DbgSVKCode(Word(nVirtkey)));
-   {$endif}
   end;
 end;
 
@@ -4060,7 +4040,8 @@ var
       SetGDouble(ATarget, ScrollInfo.nPos, HasChanged);
       ATarget := Max(ATarget, Adjustment^.lower);
       ATarget := Min(ATarget, Adjustment^.upper - Max(Adjustment^.page_size - 1, 0));
-      Adjustment^.value := ATarget;
+      if Adjustment^.value <> ATarget then
+        Adjustment^.value := ATarget;
     end;
 
     gtk_adjustment_changed(Adjustment);
@@ -4069,47 +4050,6 @@ var
       [Adjustment^.lower, Adjustment^.upper, Adjustment^.page_size, Adjustment^.value, Adjustment^.page_increment, BoolToStr(AControl.InUpdate, True)]));
     {$ENDIF}
     AControl.EndUpdate;
-  end;
-
-  procedure UpdateAdjustmentOrig;
-  var
-    ATarget: gdouble;
-  begin
-    if (ScrollInfo.FMask and SIF_RANGE) <> 0 then
-    begin
-      ATarget := Adjustment^.lower;
-      SetGDouble(ATarget, ScrollInfo.nMin, HasChanged);
-      Adjustment^.lower := ATarget;
-
-      ATarget := Adjustment^.upper;
-      SetGDouble(ATarget, ScrollInfo.nMax, HasChanged);
-      Adjustment^.upper := ATarget;
-    end;
-
-    if (ScrollInfo.FMask and SIF_PAGE) <> 0 then
-    begin
-      ATarget := Adjustment^.page_size;
-      SetGDouble(ATarget, ScrollInfo.nPage, HasChanged);
-
-      ATarget := Min(Max(ATarget, 0), Adjustment^.upper - Adjustment^.lower + 1);
-      if ATarget > 0 then
-      begin
-        Adjustment^.page_size := ATarget;
-
-        ATarget := Adjustment^.page_increment;
-        SetGDouble(ATarget, Max(1, (Adjustment^.page_size / 6) + 1), HasChanged);
-        Adjustment^.page_increment := ATarget;
-      end;
-    end;
-
-    if (ScrollInfo.FMask and SIF_POS) <> 0 then
-    begin
-      ATarget := Adjustment^.value;
-      SetGDouble(ATarget, ScrollInfo.nPos, HasChanged);
-      ATarget := Max(ATarget, Adjustment^.lower);
-      ATarget := Min(ATarget, Adjustment^.upper - Max(Adjustment^.page_size - 1, 0));
-      Adjustment^.value := ATarget;
-    end;
   end;
 
   procedure HandleRedraw;
@@ -4125,9 +4065,21 @@ var
         ScrollWin^.get_policy(@AHorzPolicy, @AVertPolicy);
         case SBStyle of
           SB_HORZ:
-            ScrollWin^.set_policy(POLICY[IsScrollbarVis], AVertPolicy);
+          begin
+            if AHorzPolicy <> POLICY[IsScrollbarVis] then
+              ScrollWin^.set_policy(POLICY[IsScrollbarVis], AVertPolicy);
+            if Gtk3WidgetSet.OverlayScrolling and ScrollWin^.get_hscrollbar^.get_visible and
+              Gtk3IsGdkWindow(ScrollWin^.get_hscrollbar^.window) then
+                ScrollWin^.get_hscrollbar^.window^.raise_;
+          end;
           SB_VERT:
-            ScrollWin^.set_policy(AHorzPolicy, POLICY[IsScrollbarVis]);
+          begin
+            if AVertPolicy <> POLICY[IsScrollbarVis] then
+              ScrollWin^.set_policy(AHorzPolicy, POLICY[IsScrollbarVis]);
+            if Gtk3WidgetSet.OverlayScrolling and ScrollWin^.get_vscrollbar^.get_visible and
+              Gtk3IsGdkWindow(ScrollWin^.get_vscrollbar^.window) then
+                ScrollWin^.get_vscrollbar^.window^.raise_;
+          end;
         end;
       end;
       TGtk3Widget(Handle).Update(nil);
@@ -4371,11 +4323,66 @@ end;
 
 function TGtk3WidgetSet.SetWindowPos(hWnd: HWND; hWndInsertAfter: HWND; X, Y,
   cx, cy: Integer; uFlags: UINT): Boolean;
+var
+  DisableUpdates: boolean;
+  AGtkWidget: TGtk3Widget absolute hWnd;
+  Alloc: TGtkAllocation;
 begin
-  Result := False;
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SetWindowPos not implemented Handle=',dbgHex(hWnd),' X=',dbgs(X),' Y=',dbgs(Y));
-  {$ENDIF}
+  Result := IsValidHandle(hWnd);
+  if not Result then
+    exit;
+
+  DisableUpdates := (SWP_NOREDRAW and uFlags) <> 0;
+  if DisableUpdates then
+  begin
+    if Gtk3IsGdkWindow(AGtkWidget.Widget^.window) then
+      AGtkWidget.Widget^.window^.freeze_updates;
+  end;
+  try
+    if ((SWP_NOMOVE and uFlags) = 0) and ((SWP_NOSIZE and uFlags) = 0) then
+    begin
+      AGtkWidget.SetBounds(X, Y, CX, CY);
+    end else
+    begin
+      if (SWP_NOMOVE and uFlags) = 0 then
+      begin
+        Alloc.X := X;
+        Alloc.Y := Y;
+        Alloc.width := AGtkWidget.Widget^.get_allocated_width;
+        Alloc.height := AGtkWidget.Widget^.get_allocated_height;
+        AGtkWidget.SetBounds(X, Y, Alloc.Width, Alloc.Height);
+      end;
+
+      if (SWP_NOSIZE and uFlags) = 0 then
+        AGtkWidget.SetBounds(X, Y, CX, CY);
+    end;
+
+    if (SWP_SHOWWINDOW and uFlags) <> 0 then
+      AGtkWidget.ShowAll;
+
+    if (SWP_HIDEWINDOW and uFlags) <> 0 then
+      AGtkWidget.Hide;
+
+    if (SWP_NOZORDER and uFlags) = 0 then
+    begin
+      case hWndInsertAfter of
+        HWND_TOP:
+          begin
+            aGtkWidget.raiseWidget;
+            if (SWP_NOACTIVATE and uFlags) = 0 then
+              aGtkWidget.Activate;
+          end;
+        HWND_BOTTOM: AGtkWidget.lowerWidget;
+        {TODO: HWND_TOPMOST ,HWND_NOTOPMOST}
+      end;
+    end;
+  finally
+    if DisableUpdates then
+    begin
+      if Gtk3IsGdkWindow(AGtkWidget.Widget^.window) then
+        AGtkWidget.Widget^.window^.thaw_updates;
+    end;
+  end;
 end;
 
 function TGtk3WidgetSet.SetWindowRgn(hWnd: HWND; hRgn: HRGN; bRedraw: Boolean

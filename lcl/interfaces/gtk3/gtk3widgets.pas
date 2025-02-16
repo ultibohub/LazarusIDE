@@ -65,6 +65,7 @@ type
   TGtk3Widget = class(TGtk3Object, IUnknown)
   private
     FCairoContext: Pcairo_t;
+    FShape: PGdkPixbuf;
     FContext: HDC;
     FPaintData: TPaintData;
     FDrawSignal: GULong; // needed by designer
@@ -86,6 +87,7 @@ type
     function GetVisible: Boolean;
     procedure SetEnabled(AValue: Boolean);
     procedure SetFont(AValue: PPangoFontDescription);
+    procedure SetShape(AValue: PGdkPixbuf);
     procedure SetStyleContext({%H-}AValue: PGtkStyleContext);
     class procedure DestroyWidgetEvent({%H-}w: PGtkWidget;{%H-}data:gpointer); cdecl; static;
     class function DrawWidget(AWidget: PGtkWidget; AContext: Pcairo_t; Data: gpointer): gboolean; cdecl; static;
@@ -179,6 +181,7 @@ type
 
     procedure SetBounds(ALeft,ATop,AWidth,AHeight:integer); virtual;
     procedure SetLclFont(const AFont:TFont); virtual;
+    procedure SetWindowShape(AShape: PGdkPixBuf; AWindow: PGdkWindow); virtual;
 
     function GetContainerWidget: PGtkWidget; virtual;
     function GetPosition(out APoint: TPoint): Boolean; virtual;
@@ -203,6 +206,7 @@ type
     property FontColor: TColor read GetFontColor write SetFontColor;
     property KeysToEat: TByteSet read FKeysToEat write FKeysToEat;
     property PaintData: TPaintData read FPaintData write FPaintData;
+    property Shape: PGdkPixbuf read FShape write SetShape;
     property StyleContext: PGtkStyleContext read GetStyleContext write SetStyleContext;
     property Text: String read getText write setText;
     property Visible: Boolean read GetVisible write SetVisible;
@@ -1172,7 +1176,6 @@ begin
       end;
 
       if TGtk3Widget(Data).LCLObject is TButtonControl then exit;
-
 
       Result:=TGtk3Widget(Data).GtkEventMouse(Widget , Event);
     end;
@@ -2170,6 +2173,11 @@ begin
 
   // this is just for testing purposes.
   ACharCode := GdkKeyToLCLKey(KeyValue);
+
+  {$IFDEF GTK3DEBUGKEYPRESS}
+  writeln('==== ACharCode=',ACharCode,' KeyValue=',KeyValue);
+  {$ENDIF}
+
   if KeyValue > VK_UNDEFINED then
     KeyValue := ACharCode; // VK_UNKNOWN;
 
@@ -2460,6 +2468,14 @@ begin
   end;
 end;
 
+procedure TGtk3Widget.SetShape(AValue: PGdkPixbuf);
+begin
+  if FShape=AValue then Exit;
+  if FShape <> nil then
+    FShape^.unref;
+  FShape := AValue;
+end;
+
 procedure TGtk3Widget.SetFontColor(AValue: TColor);
 var
   AColor: TGdkRGBA;
@@ -2740,6 +2756,11 @@ begin
     {$ENDIF}
   end;
   FWidget := nil;
+  if Assigned(FShape) then
+  begin
+    FShape^.unref;
+    FShape := nil;
+  end;
 end;
 
 procedure TGtk3Widget.DoBeforeLCLPaint;
@@ -2800,6 +2821,7 @@ begin
   FCairoContext := nil;
   FContext := 0;
   FEnterLeaveTime := 0;
+  FShape := nil;
 
   FWidgetType := [wtWidget];
   FWidget := CreateWidget(FParams);
@@ -3179,6 +3201,34 @@ begin
   FontColor := AFont.Color;
 end;
 
+procedure TGtk3Widget.SetWindowShape(AShape: PGdkPixBuf; AWindow: PGdkWindow);
+var
+  imageSurface: Pcairo_surface_t;
+  ARegion: Pcairo_region_t;
+  ACairoRect: Tcairo_rectangle_int_t;
+begin
+  if (AWindow = nil) or not Gtk3IsGdkWindow(AWindow) then
+    exit;
+  if AShape = nil then
+  begin
+    ACairoRect.x := 0;
+    ACairoRect.y := 0;
+    ACairoRect.width := AWindow^.get_width;
+    ACairoRect.height := AWindow^.get_height;
+    ARegion := cairo_region_create_rectangle(@ACairoRect);
+    gdk_window_shape_combine_region(AWindow, ARegion, 0, 0);
+    cairo_region_destroy(ARegion);
+  end else
+  begin
+    //TODO: check on scaled displays.
+    imageSurface := gdk_cairo_surface_create_from_pixbuf(AShape, 1, AWindow);
+    ARegion := gdk_cairo_region_create_from_surface(imageSurface);
+    gdk_window_shape_combine_region(AWindow, ARegion, 0, 0);
+    cairo_region_destroy(ARegion);
+    cairo_surface_destroy(imageSurface);
+  end;
+end;
+
 function TGtk3Widget.GetContainerWidget: PGtkWidget;
 begin
   if Assigned(FCentralWidget) then
@@ -3405,13 +3455,16 @@ procedure TGtk3Widget.Update(ARect: PRect);
 begin
   if IsWidgetOK then
   begin
-    if (ARect <> nil) and (aRect^.Width > 0) and (ARect^.Height > 0) then
+    if (ARect <> nil) then
     begin
-      with ARect^ do
-        FWidget^.queue_draw_area(Left, Top, Right - Left, Bottom - Top);
-      if FWidget <> GetContainerWidget then
+      if (aRect^.Width > 0) and (ARect^.Height > 0) then
+      begin
         with ARect^ do
-          GetContainerWidget^.queue_draw_area(Left, Top, Right - Left, Bottom - Top);
+          FWidget^.queue_draw_area(Left, Top, Right - Left, Bottom - Top);
+        if FWidget <> GetContainerWidget then
+          with ARect^ do
+            GetContainerWidget^.queue_draw_area(Left, Top, Right - Left, Bottom - Top);
+      end;
     end else
     begin
       //FWidget^.queue_draw;
@@ -7440,8 +7493,11 @@ begin
     AModel^.get_iter(@iter,path);
 
     bmp := TBitmap.Create;
-    if Assigned(TCustomListViewHack(LCLObject).LargeImages) then
+    if (TCustomListViewHack(LCLObject).ViewStyle = vsIcon) and Assigned(TCustomListViewHack(LCLObject).LargeImages) then
       TCustomListViewHack(LCLObject).LargeImages.GetBitmap(AItem.ImageIndex, bmp)
+    else
+    if (TCustomListViewHack(LCLObject).ViewStyle = vsSmallIcon) and Assigned(TCustomListViewHack(LCLObject).SmallImages) then
+      TCustomListViewHack(LCLObject).SmallImages.GetBitmap(AItem.ImageIndex, bmp)
     else
     begin
       gtk_icon_size_lookup(Ord(GTK_ICON_SIZE_LARGE_TOOLBAR), @w, @h);
@@ -9067,7 +9123,8 @@ begin
     gdk_window_set_decorations(Result^.window, decor);
     if AForm.AlphaBlend then
       gtk_widget_set_opacity(Result, TForm(LCLObject).AlphaBlendValue/255);
-
+    if not gtk_window_get_decorated(PGtkWindow(Result)) then
+      gtk_window_set_type_hint(PGtkWindow(Result), GDK_WINDOW_TYPE_HINT_UTILITY);
     FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtWindow];
   end else
   begin
@@ -9248,6 +9305,7 @@ var
   AForm: TCustomForm;
   AMinSize, ANaturalSize: gint;
   Alloc:TGtkAllocation;
+  x, y: gint;
 begin
   AForm := TCustomForm(LCLObject);
   BeginUpdate;
@@ -9320,8 +9378,18 @@ begin
     begin
       //PGtkWindow(Widget)^.set_default_size(AWidth, AHeight);
       PGtkWindow(Widget)^.set_resizable(true);
+      {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGSIZE)}
+      writeln('Window ',dbgsName(LCLObject),' move/size ',dbgs(Bounds(ALeft, ATop, AWidth, AHeight)));
+      {$ENDIF}
       PGtkWindow(Widget)^.resize(AWidth, AHeight);
-      PGtkWindow(Widget)^.move(ALeft, ATop);
+
+      {Must apply transient window origin here. Not sure if this is needed for decorated windows,
+       but non decorated with popupparent must align.}
+      x := 0;
+      y := 0;
+      if not PGtkWindow(Widget)^.get_decorated and (PGtkWindow(Widget)^.transient_for <> nil) then
+        PGtkWindow(Widget)^.transient_for^.window^.get_origin(@x, @y);
+      PGtkWindow(Widget)^.move(ALeft + x, ATop + y);
     end;
   finally
     EndUpdate;

@@ -779,9 +779,6 @@ type
     FCheckingNodeCacheDependencies: boolean;
     FSourcesChangeStep, FFilesChangeStep: int64;
     FInitValuesChangeStep: integer;
-    {$IFDEF EnableFKnownIdentLength}
-    FKnownIdentLength:integer;
-    {$ENDIF}
     {$IFDEF DebugPrefix}
     DebugPrefix: string;
     procedure IncPrefix;
@@ -4108,9 +4105,6 @@ begin
     ' "',dbgstr(copy(Src,Params.ContextNode.StartPos,20)),'"');
   {$ENDIF}
   Result:=false;
-  {$IFDEF EnableFKnownIdentLength}
-  FKnownIdentLength:=Params.KnownIdentifierLength;
-  {$ENDIF}
   KnownIdentLen:=Params.KnownIdentifierLength;
 
   // search in cleaned source for start of term
@@ -6805,10 +6799,6 @@ var
       if (Node.Desc = ctnSrcName) then begin
         MoveCursorToCleanPos(Node.StartPos);
         AnUnitName:=ExtractIdentifierWithPoints(Node.StartPos,false);
-        {$IFDEF EnableFKnownIdentLength}
-        if FKnownIdentLength>0 then
-          delete(AnUnitName,FKnownIdentLength+1, length(AnUnitName));
-        {$ENDIF}
         //AnUnitName:=GetDottedIdentifier(@Src[Node.StartPos]); //program, library, package
         NewCodeTool:=FindCodeToolForUsedUnit(AnUnitName, '',false);
         if NewCodeTool=DeclarationTool then begin
@@ -7239,6 +7229,7 @@ function TFindDeclarationTool.FindSourceNameReferences(const TargetFilename: str
   TreeOfPCodeXYPosition: TAVLTree; SyntaxExceptions: boolean): boolean;
 var
   IsSelf: Boolean; // true = searching references of my program/unit name
+  MySrcName: String;
   LocalSrcNamePos: integer;
   CleanPositions: TIntegerDynArray;
   CleanPosCount: integer;
@@ -7366,6 +7357,22 @@ var
     Result:=true;
   end;
 
+  procedure FindLongestSrcName(const Expr: string;
+    var BestUseName: string; var BestDotCount: integer);
+  var
+    ExprP, SrcNameP: PChar;
+    DotCount: Integer;
+  begin
+    ExprP:=PChar(Expr);
+    SrcNameP:=PChar(MySrcName);
+    if CompareDottedIdentifiers(SrcNameP,ExprP)<>0 then exit;
+    DotCount:=GetDotCountInIdentifier(SrcNameP);
+    if DotCount>BestDotCount then begin
+      BestDotCount:=DotCount;
+      BestUseName:=MySrcName;
+    end;
+  end;
+
   procedure FindLongestUsesName(UseNames: TStringArray; const Expr: string;
     var BestUseName: string; var BestDotCount: integer);
   var
@@ -7420,6 +7427,8 @@ var
       FindLongestUsesName(ImplUseNames,Expr,BestUseName,BestDotCount);
     if (InterfaceUsesNode<>nil) and (InterfaceUsesNode.EndPos<=StartPos) then
       FindLongestUsesName(IntfUseNames,Expr,BestUseName,BestDotCount);
+    FindLongestSrcName(Expr,BestUseName,BestDotCount);
+
     if (BestUseName<>'')
         and (CompareDottedIdentifiers(PChar(BestUseName),PChar(LocalSrcName))<>0) then
     begin
@@ -7488,7 +7497,8 @@ var
     {$IFDEF VerboseFindSourceNameReferences}
     debugln(['  CheckIdentifier Found Node=',GetNodeNamePath(Node,true)]);
     {$ENDIF}
-    if Node.Desc=ctnSrcName then begin
+    if (Node.Desc=ctnSrcName)
+        or ((Node.Desc=ctnIdentifier) and (Node.Parent.Desc=ctnSrcName)) then begin
       if IsSelf then
         AddPos(StartPos);
     end else if Node.Desc in [ctnUseUnitClearName,ctnUseUnitNamespace] then begin
@@ -7705,7 +7715,6 @@ var
 
 var
   NamePos: TAtomPosition;
-  MySrcName: String;
   StartPos, MaxPos: Integer;
 begin
   Result:=false;
@@ -10236,22 +10245,24 @@ var
     end;
   end;
 
-  procedure ResolveMySourceName(SrcNode: TCodeTreeNode);
-  // IsStart=true, NextAtomType=vatPoint,
-  // first identifier resolved to first identifier of source name
-  // Note: this meand no used unit fits
-  // -> check if sourcename is dotted and advance cursor
+  function ResolveMySourceName(SrcNode: TCodeTreeNode): TCodeTreeNode;
+  // IsStart=true, SrcNode.Desc in AllSourceTypes
+  // if EndPos is inside the dotted identifier (in front of the point), return the ctnIdentifier node
+  // otherwise return the AllSourceTypes node
   var
     IdentNode: TCodeTreeNode;
     i: Integer;
   begin
+    Result:=SrcNode;
     SrcNode:=SrcNode.FirstChild;
     if (SrcNode=nil) or (SrcNode.Desc<>ctnSrcName) then exit;
     IdentNode:=SrcNode.FirstChild;
     i:=0;
-    while IdentNode<>nil do begin
+    //debugln(['ResolveMySourceName START']);
+    while (IdentNode<>nil) and (NextAtom.EndPos<EndPos) do begin
       //debugln(['ResolveMySourceName ',CleanPosToStr(IdentNode.StartPos),' Cur=',GetAtom(CurAtom),' Next=',GetAtom(NextAtom)]);
       if IdentNode.Desc=ctnIdentifier then begin
+        Result:=IdentNode;
         if (i=0) then begin
           // first identifier fits -> skip
         end else begin
@@ -10279,11 +10290,17 @@ var
 
       IdentNode:=IdentNode.NextBrother;
     end;
+    //debugln(['ResolveMySourceName Result=',CleanPosToStr(Result.StartPos),' Cur=',GetAtom(CurAtom),' Next=',GetAtom(NextAtom)]);
+    if NextAtom.EndPos<EndPos then begin
+      // For example: Prg.Name.Something  -> return the ctnProgram node
+      Result:=SrcNode;
+    end;
+    //debugln(['ResolveMySourceName Result=',CleanPosToStr(Result.StartPos),' ',Result.DescAsString]);
   end;
 
   function ResolveUseUnit(StartUseUnitNode: TCodeTreeNode): TCodeTreeNode;
   // IsStart=true, NextAtomType=vatPoint,
-  // StartUseUnitNameNode.Desc in [ctnUseUnitNamespace,ctnUseUnitClearName]
+  // StartUseUnitNameNode.Desc in AllSourceTypes+[ctnUseUnitNamespace,ctnUseUnitClearName]
   // The first dotted identifier matches a name in one of the uses sections.
   // If any uses section or the source name has namespaces the longest fitting wins.
   // Note: the uses section names hide all identifiers in the used unit interfaces.
@@ -10345,7 +10362,7 @@ var
       if (Node<>nil)
       and CompareSrcIdentifiers(CurAtom.StartPos,Node.StartPos) then begin
         // found candidate
-        //debugln(['ResolveUseUnit Candidate=',ExtractNode(Node,[])]);
+        //debugln(['ResolveUseUnit Candidate=',ExtractNode(Node.Parent,[])]);
         Level:=1;
         p:=PChar(DottedIdentifier);
         repeat
@@ -10374,22 +10391,25 @@ var
     until UseUnitNode=nil;
     //debugln(['ResolveUseUnit collected candidates Best=',ExtractNode(BestNode,[])]);
 
-    //debugln(['ResolveUseUnit Src=',Tree.Root.DescAsString,' Name=',GetSourceName(false),' DottedIdentifier="',DottedIdentifier,'"']);
+    //debugln(['ResolveUseUnit BEFORE SRC NAME Src=',Tree.Root.DescAsString,' Name=',GetSourceName(false),' DottedIdentifier="',DottedIdentifier,'" BestLevel=',BestLevel]);
     // check source name
+    Node:=Tree.Root.FirstChild;
     if (Tree.Root.Desc in AllSourceTypes)
-    and (Tree.Root.FirstChild<>nil)
-    and (Tree.Root.FirstChild.Desc=ctnSrcName)
-    and CompareSrcIdentifiers(Tree.Root.FirstChild.StartPos,PChar(DottedIdentifier)) // first identifier fits
+    and (Node<>nil)
+    and (Node.Desc=ctnSrcName)
+    and CompareSrcIdentifiers(Node.StartPos,PChar(DottedIdentifier)) // first identifier fits
     then begin
       // found candidate
       // -> check the whole DottedIdentifier
       Level:=1;
-      Node:=Tree.Root.FirstChild.FirstChild; // child of ctnSrcName
-      //debugln(['ResolveUseUnit Candidate SrcName']);
+      Node:=Node.FirstChild; // child of ctnSrcName
+      //debugln(['ResolveUseUnit Candidate SrcName Node=',Node.DescAsString,' ',CleanPosToStr(Node.StartPos)]);
       p:=PChar(DottedIdentifier);
       repeat
-        //debugln('ResolveUseUnit SrcName p=',p,' Node=',Node.DescAsString,' "',ExtractNode(Node,[]),'"');
-        if (Node.FirstChild=nil) or (Node.NextBrother.Desc<>ctnIdentifier) then begin
+        //debugln('ResolveUseUnit SrcName p=',p,' Node=',Node.DescAsString,' ',CleanPosToStr(Node.StartPos),' "',ExtractNode(Node,[]),'"');
+        if not CompareSrcIdentifiers(Node.StartPos,p) then
+          break;
+        if (Node.NextBrother=nil) or (Node.NextBrother.Desc<>ctnIdentifier) then begin
           // fits
           //debugln(['ResolveUseUnit FITS Level=',Level,' Best=',BestLevel]);
           if Level>BestLevel then begin
@@ -10398,14 +10418,16 @@ var
             // move cursor forward
             while (Result.NextBrother<>nil)
             and (NextAtom.EndPos<EndPos) do begin
-              if (Result.NextBrother=nil) then
-                exit(Tree.Root);
               ReadNextExpressionAtom; // read point
               ReadNextExpressionAtom; // read namespace/unitname
               //debugln(['ResolveUseUnit Next ',GetAtom(CurAtom)]);
               Result:=Result.NextBrother;
             end;
-            //debugln(['ResolveUseUnit SrcName fits better']);
+            if NextAtom.EndPos<EndPos then begin
+              // for example: Prg.Name.|  -> return ctnProgram node
+              Result:=Tree.Root;
+            end;
+            //debugln(['ResolveUseUnit SrcName fits best ',CleanPosToStr(Result.StartPos)]);
             exit;
           end;
           break;
@@ -10417,18 +10439,14 @@ var
           inc(p,GetIdentLen(p));
           if p^='.' then inc(p);
           //debugln('ResolveUseUnit SrcName NEXT p=',p,' Node=',ExtractNode(Node,[]));
-          if not CompareSrcIdentifiers(Node.StartPos,p) then
-            break;
           inc(Level);
         end;
       until false;
     end;
 
     Result:=BestNode;
-    if Result=nil then begin
-      // ToDo: search in used interfaces
-      exit(nil);
-    end;
+    if Result=nil then
+      exit;
 
     // Result is now a ctnUseUnit
     Result:=Result.FirstChild;
@@ -10678,8 +10696,7 @@ var
           exit;
         end;
 
-        Params.SetIdentifier(Self,@Src[CurAtom.StartPos],@CheckSrcIdentifier
-          {$IFDEF EnableFKnownIdentLength},FKnownIdentLength{$ENDIF});
+        Params.SetIdentifier(Self,@Src[CurAtom.StartPos],@CheckSrcIdentifier);
 
         // search ...
         {$IFDEF ShowExprEval}
@@ -10724,18 +10741,19 @@ var
             end;
           end;
 
-          if IsStart and (NextAtomType=vatPoint)
+          if IsStart
           and (Params.NewCodeTool=Self) then begin
-            if (Params.NewNode.Desc in AllSourceTypes) then
+            if (Params.NewNode.Desc in AllSourceTypes) then begin
               // first identitifer is source name -> for dotted identifier advance cursor
-              ResolveMySourceName(Params.NewNode)
-            else if (Params.NewNode.Desc in ([ctnUseUnitClearName,ctnUseUnitNamespace]))
+              Params.NewNode:=ResolveMySourceName(Params.NewNode);
+            end
+            else if (Params.NewNode.Desc in AllSourceTypes+[ctnUseUnitClearName,ctnUseUnitNamespace])
             then begin
-              // first identifier is a used unit -> find longest fitting unitname or source name
+              // first identitifer is used unit -> find longest fitting unitname or source name
               //debugln(['ResolveIdentifier UseUnit FindLongest... ',Params.NewNode.DescAsString,' ',ExtractNode(Params.NewNode,[])]);
               Params.NewNode:=ResolveUseUnit(Params.NewNode.Parent);
               // this might return nil!
-              //debugln(['ResolveIdentifier UseUnit FoundLongest: ',Params.NewNode.DescAsString,' ',ExtractNode(Params.NewNode,[])]);
+              //debugln(['ResolveIdentifier UseUnit FoundLongest: ',Params.NewNode.DescAsString,' ',ExtractNode(Params.NewNode.Parent,[])]);
             end;
           end;
 
@@ -13426,9 +13444,6 @@ begin
   FSourcesChangeStep:=CTInvalidChangeStamp64;
   FFilesChangeStep:=CTInvalidChangeStamp64;
   FInitValuesChangeStep:=CTInvalidChangeStamp;
-  {$IFDEF EnableFKnownIdentLength}
-  FKnownIdentLength:=0;
-  {$ENDIF}
 end;
 
 procedure TFindDeclarationTool.DoDeleteNodes(StartNode: TCodeTreeNode);

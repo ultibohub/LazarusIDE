@@ -776,6 +776,9 @@ resourcestring
   lisisAnInvalidProjectNamePleaseChooseAnotherEGProject = '"%s" is an '
     +'invalid project name.%sPlease choose another (e.g. project1.lpi)';
   lisChooseADifferentName = 'Choose a different name';
+  lisChooseADifferentName2 = 'Choose a different name';
+  lisUseInstead = 'Use "%s" instead';
+  lisUseAnyway = 'Use "%s" anyway';
   lisTheProjectInfoFileIsEqualToTheProjectMainSource = 'The project info '
     +'file "%s"%sis equal to the project main source file!';
   lisUnitIdentifierExists = 'Unit identifier exists';
@@ -1083,6 +1086,7 @@ resourcestring
   lisForceRenaming = 'Force renaming';
   lisCancelRenaming = 'Cancel renaming';
   lisInvalidPascalIdentifierCap = 'Invalid Pascal Identifier';
+  lisTheNameContainsAPascalKeyword = 'The name "%s" contains a Pascal keyword.';
   lisInvalidPascalIdentifierName = 'The name "%s" is not a valid Pascal identifier.'
       +'%sUse it anyway?';
 
@@ -1666,6 +1670,11 @@ resourcestring
   dlgOptWordWrapEndOfLine = 'end of line';
   dlgOptWordWrapStartOfNextLine = 'start of next line';
   dlgOptWordWrapMinimumLineLength = 'Minimum line length';
+  dlgOptWordWrapIndent = 'Indent width';
+  dlgOptWordWrapIndentIsOffest = 'Indent relative to text';
+  dlgOptWordWrapIndentMin = 'Minimum indent width';
+  dlgOptWordWrapIndentMax = 'Maximum indent width';
+  dlgOptWordWrapIndentMaxRel = 'Maximum indent width (percent)';
 
   dlfMousePredefinedScheme = 'Use predefined scheme';
   dlfNoPredefinedScheme = '< None >';
@@ -2148,6 +2157,9 @@ resourcestring
   dlgAddHiAttrOutlineLevel8Color  = 'Level  8';
   dlgAddHiAttrOutlineLevel9Color  = 'Level  9';
   dlgAddHiAttrOutlineLevel10Color = 'Level 10';
+  dlgAddHiAttrWrapIndent  = 'Indent';
+  dlgAddHiAttrWrapEol     = 'EOL';
+  dlgAddHiAttrWrapSupLine = 'Sub-line';
   dlgAddHiSpecialVisibleChars     = 'Visualized Special Chars';
   dlgTopInfoHint                  = 'Current Class/Proc Hint';
   dlgCaretColor                   = 'Caret (Text-Cursor)';
@@ -2169,6 +2181,7 @@ resourcestring
   dlgAddHiAttrGroupText     = 'Text';
   dlgAddHiAttrGroupLine     = 'Line';
   dlgAddHiAttrGroupGutter   = 'Gutter';
+  dlgAddHiAttrGroupWrap     = 'Wrapping';
   dlgAddHiAttrGroupSyncroEdit    = 'Syncron Edit';
   dlgAddHiAttrGroupTemplateEdit  = 'Template Edit';
   dlgAddHiAttrGroupIfDef    = 'IfDef';
@@ -3014,7 +3027,6 @@ resourcestring
     +'%s%sRemove the old assignment and assign the key to the new function %s?';
   lisAlternativeKeyOr2KeySequence = 'Alternative key (or 2 key sequence)';
   srkmConflic  = 'Conflict ';
-  lisThereAreNoConflictingKeys = 'There are no conflicting keys.';
   srkmEditForCmd = 'Edit keys of command';
   lisChooseAKey = 'Choose a key ...';
 
@@ -5489,8 +5501,8 @@ resourcestring
   lisRenamingAborted = 'Renaming aborted';
   lisRenamingConflict = 'Renaming conflict';
   lisFileAlreadyExists = 'File "%s" already exists.';
-  lisIdentifierWasAlreadyUsed = 'Identifier '
-    + '"%s" was already used';
+  lisIdentifierIsAlreadyUsed = 'Identifier "%s" is already used';
+  lisIdentifierIsAlreadyUsed2 = 'Identifier "%s" is already used.';
   lisIdentifierCannotBeDotted = 'Identifier "%s" cannot be dotted';
   lisIdentifierCannotBeEmpty = 'Identifier cannot be empty';
   lisIdentifierIsInvalid = 'Identifier '
@@ -5498,9 +5510,9 @@ resourcestring
   lisIdentifierIsReservedWord = 'Identifier '
     + '"%s" is a reserved word';
   lisIdentifierIsDeclaredCompilerProcedure = 'Identifier '
-    + '"%s" is a declared compiler procedure';
+    + '"%s" is a declared compiler procedure.';
   lisIdentifierIsDeclaredCompilerFunction = 'Identifier '
-    + '"%s" is a declared compiler function';
+    + '"%s" is a declared compiler function.';
 
   lisShowUnitsWithInitialization = 'Show units with initialization/finalization sections';
   lisShowUnitsWithInitializationHint = 'These units may initialize global data '
