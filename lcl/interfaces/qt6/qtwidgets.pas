@@ -233,7 +233,7 @@ type
     procedure ShowMinimized;
     procedure ShowMaximized;
     procedure ShowFullScreen;
-    function getActionByIndex(AIndex: Integer): QActionH;
+    function getActionByIndex(AIndex: Integer; AItem: TMenuItem): QActionH;
     function getAutoFillBackground: Boolean;
     function getClientBounds: TRect; virtual;
     function getClientOffset: TPoint; virtual;
@@ -713,6 +713,7 @@ type
     property IsFrameWindow: Boolean read FIsFrameWindow write FIsFrameWindow; {check if our LCLObject is TCustomFrame}
     property FirstPaintEvent: boolean read FFirstPaintEvent write FFirstPaintEvent; {only for x11 - if firstpaintevent arrived we are 100% sure that frame is 100% accurate}
     property MenuBar: TQtMenuBar read FMenuBar;
+    property PopupParent: QWidgetH read FPopupParent;
     property ShowOnTaskBar: Boolean read FShowOnTaskBar;
   public
     function WinIDNeeded: boolean; override;
@@ -2376,7 +2377,17 @@ begin
 end;
 
 procedure TQtWidget.Destroyed; cdecl;
+var
+  Msg: TLMessage;
 begin
+  //QEventDestroy does not trigger in Qt5 and Qt6 so we must finish here.
+  //see issue #41433.
+  if Assigned(LCLObject) then
+  begin
+    FillChar(Msg{%H-}, SizeOf(Msg), #0);
+    Msg.Msg := LM_DESTROY;
+    DeliverMessage(Msg);
+  end;
   Widget := nil;
   Release;
 end;
@@ -2969,15 +2980,15 @@ end;
   Params:  None
   Returns: Nothing
 
-  Note: LCL uses LM_CLOSEQUERY to set the form visibility and if we don�t send this
- message, you won�t be able to show a form twice.
+  Note: LCL uses LM_CLOSEQUERY to set the form visibility and if we don't send this
+ message, you won't be able to show a form twice.
  ------------------------------------------------------------------------------}
 function TQtWidget.SlotClose: Boolean; cdecl;
 var
   Msg : TLMessage;
 begin
   {$ifdef VerboseQt}
-    WriteLn('TQtWidget.SlotClose');
+    WriteLn('TQtWidget.SlotClose ',dbgsName(LCLObject));
   {$endif}
   FillChar(Msg{%H-}, SizeOf(Msg), 0);
 
@@ -3000,7 +3011,7 @@ var
   Msg: TLMessage;
 begin
   {$ifdef VerboseQt}
-    WriteLn('TQtWidget.SlotDestroy');
+  WriteLn('TQtWidget.SlotDestroy ',dbgsName(LCLObject));
   {$endif}
 
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
@@ -4739,14 +4750,42 @@ begin
   QWidget_showFullScreen(Widget);
 end;
 
-function TQtWidget.getActionByIndex(AIndex: Integer): QActionH;
+function TQtWidget.getActionByIndex(AIndex: Integer; AItem: TMenuItem): QActionH;
 var
   ActionList: TPtrIntArray;
+  WStr: WideString;
+  i: Integer;
+  AVariant: QVariantH;
+  AOk: Boolean;
+  AData: QWord;
 begin
   QWidget_actions(Widget, @ActionList);
   if (AIndex >= 0) and (AIndex < Length(ActionList)) then
-    Result := QActionH(ActionList[AIndex])
-  else
+  begin
+    for i := 0 to High(ActionList) do
+    begin
+      if AItem <> nil then
+      begin
+        AVariant := QVariant_Create;
+        try
+          QAction_data(QActionH(ActionList[i]), AVariant);
+          if not QVariant_isNull(AVariant) then
+          begin
+            AOk := False;
+            AData := QVariant_toULongLong(AVariant, @AOk);
+            if AIndex <= TMenuItem(AData).MenuVisibleIndex then
+            begin
+              Result :=  QActionH(ActionList[i]);
+              exit;
+            end;
+          end;
+        finally
+          QVariant_destroy(AVariant);
+        end;
+      end;
+    end;
+    Result := QActionH(ActionList[AIndex]);
+  end else
     Result := nil;
 end;
 
@@ -11201,6 +11240,7 @@ begin
       QObject_disconnect(FLineEdit.Widget, '2returnPressed()', Widget, '1_q_returnPressed()');
       FLineEdit.ChildOfComplexWidget := ccwComboBox;
       FLineEdit.AttachEvents;
+      QComboBox_setCompleter(QComboBoxH(Widget), nil);
     end;
   end;
   Result := FLineEdit;
@@ -13759,8 +13799,13 @@ begin
   if Checkable then
     QListWidgetItem_setCheckState(Item, QtUnChecked)
   else
-  if (ViewStyle = Ord(vsIcon)) and not (FChildOfComplexWidget = ccwComboBox) then
-    QListWidgetItem_setTextAlignment(Item, QtAlignHCenter);
+  if not (FChildOfComplexWidget = ccwComboBox) then
+  begin
+    if (ViewStyle = Ord(vsIcon)) then
+      QListWidgetItem_setTextAlignment(Item, QtAlignHCenter or QtAlignBottom)
+    else
+      QListWidgetItem_setTextAlignment(Item, QtAlignLeft or QtAlignBottom);
+  end;
   QListWidget_insertItem(QListWidgetH(Widget), AIndex, Item);
 end;
 
@@ -16294,6 +16339,10 @@ begin
     FActions.Free;
   end;
 
+  if Assigned(FActionHandle) then
+    QAction_Destroy(FActionHandle);
+  FActionHandle := nil;
+
   inherited Destroy;
 end;
 
@@ -16489,6 +16538,7 @@ end;
 function TQtMenu.insertMenu(AIndex: Integer; AMenu: QMenuH; AItem: TMenuItem): QActionH;
 var
   actionBefore: QActionH;
+  AVariant: QVariantH;
 begin
 
   setHasSubmenu(True);
@@ -16496,12 +16546,15 @@ begin
   if (AItem <> nil) and not AItem.IsLine then
     setActionGroups(AItem);
 
-  actionBefore := getActionByIndex(AIndex);
+  actionBefore := getActionByIndex(AIndex, AItem);
 
   if actionBefore <> nil then
     Result := QMenu_insertMenu(QMenuH(Widget), actionBefore, AMenu)
   else
     Result := QMenu_addMenu(QMenuH(Widget), AMenu);
+  AVariant := QVariant_create(PtrUInt(AItem));
+  QAction_setData(Result, AVariant);
+  QVariant_destroy(AVariant);
 end;
 
 function TQtMenu.getHasSubMenu: boolean;
@@ -16916,7 +16969,7 @@ begin
     setVisible(FVisible);
   end;
   {$ENDIF}
-  actionBefore := getActionByIndex(AIndex);
+  actionBefore := getActionByIndex(AIndex, nil);
   if actionBefore <> nil then
     Result := QMenuBar_insertMenu(QMenuBarH(Widget), actionBefore, AMenu)
   else
