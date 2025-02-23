@@ -198,7 +198,9 @@ msgid "Select text (Line mode)"
 msgstr "Вибрати текст (рядки)"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetfreebookmark
-msgid "Set free bookmark"
+#, fuzzy
+#| msgid "Set free bookmark"
+msgid "Set a free bookmark"
 msgstr "Встановити вільну закладку"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetlinefull
@@ -560,6 +562,10 @@ msgctxt "lazarusidestrconsts.dlgaddhiattrgrouptext"
 msgid "Text"
 msgstr "Текст"
 
+#: lazarusidestrconsts.dlgaddhiattrgroupwrap
+msgid "Wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "Роздільна смужка"
@@ -605,45 +611,10 @@ msgstr "Змінений рядок"
 msgid "Mouse link"
 msgstr "Посилання при наведенні мишки"
 
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel10color
-msgid "Level 10"
-msgstr "Рівень 10"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel1color
-msgid "Level  1"
-msgstr "Рівень 1"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel2color
-msgid "Level  2"
-msgstr "Рівень 2"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel3color
-msgid "Level  3"
-msgstr "Рівень 3"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel4color
-msgid "Level  4"
-msgstr "Рівень 4"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel5color
-msgid "Level  5"
-msgstr "Рівень  5"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel6color
-msgid "Level  6"
-msgstr "Рівень  6"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel7color
-msgid "Level  7"
-msgstr "Рівень  7"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel8color
-msgid "Level  8"
-msgstr "Рівень  8"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel9color
-msgid "Level  9"
-msgstr "Рівень 9"
+#: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
+#, object-pascal-format
+msgid "Level %s"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrrecentlyused
 msgid "Recently used item"
@@ -700,6 +671,21 @@ msgstr "Межа вікна"
 #: lazarusidestrconsts.dlgaddhiattrwordgroup
 msgid "Word-Brackets"
 msgstr "Квадратні дужки"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapeol
+msgid "EOL"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapindent
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapindent"
+msgid "Indent"
+msgstr "Відступ"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapsubline
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
+msgid "Sub-line"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
 msgid "Visualized Special Chars"
@@ -2574,6 +2560,7 @@ msgid "from current unit"
 msgstr "з поточного модуля"
 
 #: lazarusidestrconsts.dlgindentsindentgroupoptions
+msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
 msgid "Indent"
 msgstr "Відступ"
 
@@ -3442,8 +3429,37 @@ msgstr ""
 msgid "end of line"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwraphomeendkey
+msgid "Force default home/end keys to subline start/end"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindent
+msgid "Indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentisoffset
+msgctxt "lazarusidestrconsts.dlgoptwordwrapindentisoffset"
+msgid "Indent relative to text"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmax
+msgid "Maximum indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmaxrel
+msgid "Maximum indent width (percent)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmin
+msgid "Minimum indent width"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapsectionindent
+msgid "Indent settings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapstartofnextline
@@ -11405,94 +11421,6 @@ msgstr "Налаштування зовнішніх інструментів"
 msgid "Find Incremental"
 msgstr "Знайти за зростанням"
 
-#: lazarusidestrconsts.liskmgotomarker0
-msgid "Go to bookmark 0"
-msgstr "Перейти до закладки 0"
-
-#: lazarusidestrconsts.liskmgotomarker1
-msgid "Go to bookmark 1"
-msgstr "Перейти до закладки 1"
-
-#: lazarusidestrconsts.liskmgotomarker2
-msgid "Go to bookmark 2"
-msgstr "Перейти до закладки 2"
-
-#: lazarusidestrconsts.liskmgotomarker3
-msgid "Go to bookmark 3"
-msgstr "Перейти до закладки 3"
-
-#: lazarusidestrconsts.liskmgotomarker4
-msgid "Go to bookmark 4"
-msgstr "Перейти до закладки 4"
-
-#: lazarusidestrconsts.liskmgotomarker5
-msgid "Go to bookmark 5"
-msgstr "Перейти до закладки 5"
-
-#: lazarusidestrconsts.liskmgotomarker6
-msgid "Go to bookmark 6"
-msgstr "Перейти до закладки 6"
-
-#: lazarusidestrconsts.liskmgotomarker7
-msgid "Go to bookmark 7"
-msgstr "Перейти до закладки 7"
-
-#: lazarusidestrconsts.liskmgotomarker8
-msgid "Go to bookmark 8"
-msgstr "Перейти до закладки 8"
-
-#: lazarusidestrconsts.liskmgotomarker9
-msgid "Go to bookmark 9"
-msgstr "Перейти до закладки 9"
-
-#: lazarusidestrconsts.liskmgotosourceeditor1
-msgid "Go to source editor 1"
-msgstr "Перейти до редактора коду 1"
-
-#: lazarusidestrconsts.liskmgotosourceeditor10
-msgid "Go to source editor 10"
-msgstr "Перейти до редактора коду 10"
-
-#: lazarusidestrconsts.liskmgotosourceeditor2
-msgid "Go to source editor 2"
-msgstr "Перейти до редактора коду 2"
-
-#: lazarusidestrconsts.liskmgotosourceeditor3
-msgid "Go to source editor 3"
-msgstr "Перейти до редактора коду 3"
-
-#: lazarusidestrconsts.liskmgotosourceeditor4
-msgid "Go to source editor 4"
-msgstr "Перейти до редактора коду 4"
-
-#: lazarusidestrconsts.liskmgotosourceeditor5
-msgid "Go to source editor 5"
-msgstr "Перейти до редактора коду 5"
-
-#: lazarusidestrconsts.liskmgotosourceeditor6
-msgid "Go to source editor 6"
-msgstr "Перейти до редактора коду 6"
-
-#: lazarusidestrconsts.liskmgotosourceeditor7
-msgid "Go to source editor 7"
-msgstr "Перейти до редактора коду 7"
-
-#: lazarusidestrconsts.liskmgotosourceeditor8
-msgid "Go to source editor 8"
-msgstr "Перейти до редактора коду 8"
-
-#: lazarusidestrconsts.liskmgotosourceeditor9
-msgid "Go to source editor 9"
-msgstr "Перейти до редактора коду 9"
-
-#: lazarusidestrconsts.liskminsertdateandtime
-msgid "Insert date and time"
-msgstr "Вставити дату і час"
-
-#: lazarusidestrconsts.liskminsertusername
-msgid "Insert username"
-msgstr "Вставити назву користувача"
-
 #: lazarusidestrconsts.liskminspect
 msgid "Inspect"
 msgstr "Перевірити"
@@ -11596,80 +11524,6 @@ msgstr "Зберегти проєкт"
 msgid "Save project as"
 msgstr "Зберегти проєкт як"
 
-#: lazarusidestrconsts.liskmselectlineend
-msgctxt "lazarusidestrconsts.liskmselectlineend"
-msgid "Select Line End"
-msgstr "Вибрати кінець рядка"
-
-#: lazarusidestrconsts.liskmselectlinestart
-msgctxt "lazarusidestrconsts.liskmselectlinestart"
-msgid "Select Line Start"
-msgstr "Вибрати початок рядка"
-
-#: lazarusidestrconsts.liskmselectpagebottom
-msgctxt "lazarusidestrconsts.liskmselectpagebottom"
-msgid "Select Page Bottom"
-msgstr "Вибрати низ сторінки"
-
-#: lazarusidestrconsts.liskmselectpagetop
-msgctxt "lazarusidestrconsts.liskmselectpagetop"
-msgid "Select Page Top"
-msgstr "Вибрати верх сторінки"
-
-#: lazarusidestrconsts.liskmselectwordleft
-msgctxt "lazarusidestrconsts.liskmselectwordleft"
-msgid "Select Word Left"
-msgstr "Вибрати слово зліва"
-
-#: lazarusidestrconsts.liskmselectwordright
-msgctxt "lazarusidestrconsts.liskmselectwordright"
-msgid "Select Word Right"
-msgstr "Вибрати слово справа"
-
-#: lazarusidestrconsts.liskmsetfreebookmark
-msgid "Set free Bookmark"
-msgstr "Встановити вільну закладку"
-
-#: lazarusidestrconsts.liskmsetmarker0
-msgid "Set bookmark 0"
-msgstr "Встановити закладку 0"
-
-#: lazarusidestrconsts.liskmsetmarker1
-msgid "Set bookmark 1"
-msgstr "Встановити закладку 1"
-
-#: lazarusidestrconsts.liskmsetmarker2
-msgid "Set bookmark 2"
-msgstr "Встановити закладку 2"
-
-#: lazarusidestrconsts.liskmsetmarker3
-msgid "Set bookmark 3"
-msgstr "Встановити закладку 3"
-
-#: lazarusidestrconsts.liskmsetmarker4
-msgid "Set bookmark 4"
-msgstr "Встановити закладку 4"
-
-#: lazarusidestrconsts.liskmsetmarker5
-msgid "Set bookmark 5"
-msgstr "Встановити закладку 5"
-
-#: lazarusidestrconsts.liskmsetmarker6
-msgid "Set bookmark 6"
-msgstr "Встановити закладку 6"
-
-#: lazarusidestrconsts.liskmsetmarker7
-msgid "Set bookmark 7"
-msgstr "Встановити закладку 7"
-
-#: lazarusidestrconsts.liskmsetmarker8
-msgid "Set bookmark 8"
-msgstr "Встановити закладку 8"
-
-#: lazarusidestrconsts.liskmsetmarker9
-msgid "Set bookmark 9"
-msgstr "Встановити закладку 9"
-
 #: lazarusidestrconsts.liskmstopprogram
 msgid "Stop Program"
 msgstr "Зупинити програму"
@@ -11677,46 +11531,6 @@ msgstr "Зупинити програму"
 #: lazarusidestrconsts.liskmtogglebetweenunitandform
 msgid "Toggle between Unit and Form"
 msgstr "Перемкнути між модулем і формою"
-
-#: lazarusidestrconsts.liskmtogglemarker0
-msgid "Toggle bookmark 0"
-msgstr "Перемкнути закладку 0"
-
-#: lazarusidestrconsts.liskmtogglemarker1
-msgid "Toggle bookmark 1"
-msgstr "Перемкнути закладку 1"
-
-#: lazarusidestrconsts.liskmtogglemarker2
-msgid "Toggle bookmark 2"
-msgstr "Перемкнути закладку 2"
-
-#: lazarusidestrconsts.liskmtogglemarker3
-msgid "Toggle bookmark 3"
-msgstr "Перемкнути закладку 3"
-
-#: lazarusidestrconsts.liskmtogglemarker4
-msgid "Toggle bookmark 4"
-msgstr "Перемкнути закладку 4"
-
-#: lazarusidestrconsts.liskmtogglemarker5
-msgid "Toggle bookmark 5"
-msgstr "Перемкнути закладку 5"
-
-#: lazarusidestrconsts.liskmtogglemarker6
-msgid "Toggle bookmark 6"
-msgstr "Перемкнути закладку 6"
-
-#: lazarusidestrconsts.liskmtogglemarker7
-msgid "Toggle bookmark 7"
-msgstr "Перемкнути закладку 7"
-
-#: lazarusidestrconsts.liskmtogglemarker8
-msgid "Toggle bookmark 8"
-msgstr "Перемкнути закладку 8"
-
-#: lazarusidestrconsts.liskmtogglemarker9
-msgid "Toggle bookmark 9"
-msgstr "Перемкнути закладку 9"
 
 #: lazarusidestrconsts.liskmtoggleviewassembler
 msgctxt "lazarusidestrconsts.liskmtoggleviewassembler"
@@ -18282,10 +18096,6 @@ msgstr "Проєкт записує зневаджувальні символи 
 msgid "%sThere are additional notes for this message on%s"
 msgstr "%sДо цього повідомлення є додаткові зауваження у%s"
 
-#: lazarusidestrconsts.listherearenoconflictingkeys
-msgid "There are no conflicting keys."
-msgstr "Конфліктів клавіш немає."
-
 #: lazarusidestrconsts.listhereareotherfilesinthedirectorywiththesamename
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
@@ -20009,6 +19819,10 @@ msgstr "Команди файлового меню"
 msgid "Text folding commands"
 msgstr "Команди згортання тексту"
 
+#: lazarusidestrconsts.srkmcatlinewrap
+msgid "Line wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.srkmcatmacrorecording
 msgctxt "lazarusidestrconsts.srkmcatmacrorecording"
 msgid "Macros"
@@ -20491,8 +20305,9 @@ msgid "Toggle Fold at Cursor"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
-#, object-pascal-format
-msgid "Go to editor %d"
+#, object-pascal-format, fuzzy
+#| msgid "Go to editor %d"
+msgid "Go to source editor %d"
 msgstr "Перейти до редактора %d"
 
 #: lazarusidestrconsts.srkmecgotoincludedirective
@@ -21102,6 +20917,30 @@ msgstr "Виконати макрос"
 #: lazarusidestrconsts.srkmecsynmacrorecord
 msgid "Record Macro"
 msgstr "Записати макрос"
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellineend
+msgid "Column Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellinestart
+msgid "Column Select to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplineend
+msgid "Move cursor to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplinestart
+msgid "Move cursor to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellineend
+msgid "Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellinestart
+msgid "Select to wrapped line start"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecsynpsyncroedaddcell
 msgid "Add Cell"
@@ -21785,11 +21624,6 @@ msgstr "Тільки для читання"
 #: lazarusidestrconsts.uemrefactor
 msgid "Refactoring"
 msgstr "Переробка коду"
-
-#: lazarusidestrconsts.uemsetfreebookmark
-msgctxt "lazarusidestrconsts.uemsetfreebookmark"
-msgid "Set a Free Bookmark"
-msgstr "Встановити вільну закладку"
 
 #: lazarusidestrconsts.uemshowlinenumbers
 msgid "Show Line Numbers"

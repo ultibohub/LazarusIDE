@@ -332,6 +332,7 @@ begin
   //TODO: TGtk3Caret Bitmap
   Caret := TGtk3Caret.Create(GtkWidget, Width, Height);
   Caret.RespondToFocus := True;
+  Widget.HasCaret := True;
   g_object_set_data(PGObject(GtkWidget), 'gtk3-caret', Caret);
   Result := True;
 end;
@@ -543,6 +544,7 @@ begin
   Caret := TGtk3Caret(g_object_get_data(PGObject(GtkWidget), 'gtk3-caret'));
   if Assigned(Caret) then
   begin
+    Widget.HasCaret := False;
     Caret.RespondToFocus := False;
     Caret.Free;
     g_object_set_data(PGObject(GtkWidget), 'gtk3-caret', nil);
@@ -2481,6 +2483,7 @@ function TGtk3WidgetSet.GetScrollbarVisible(Handle: HWND; SBStyle: Integer
   ): boolean;
 var
   AWidget: TGtk3Widget absolute Handle;
+  HScrollPolicy, VScrollPolicy: TGtkPolicyType;
 begin
   Result := False;
   if not IsValidHandle(Handle) then
@@ -2491,11 +2494,21 @@ begin
   begin
     if wtScrollingWin in AWidget.WidgetType then
     begin
+      TGtk3ScrollableWin(AWidget).getScrolledWindow^.get_policy(@HScrollPolicy, @VScrollPolicy);
       if SBStyle = SB_Horz then
-        Result := Assigned(TGtk3ScrollableWin(AWidget).getHorizontalScrollbar) and (TGtk3ScrollableWin(AWidget).getHorizontalScrollbar^.get_visible)
-      else
+      begin
+        if HScrollPolicy >= GTK_POLICY_NEVER then
+          Result := False
+        else
+          Result := Assigned(TGtk3ScrollableWin(AWidget).getHorizontalScrollbar) and (TGtk3ScrollableWin(AWidget).getHorizontalScrollbar^.get_visible)
+      end else
       if SBStyle = SB_Vert then
-        Result := Assigned(TGtk3ScrollableWin(AWidget).getVerticalScrollbar) and TGtk3ScrollableWin(AWidget).getVerticalScrollbar^.get_visible;
+      begin
+        if VScrollPolicy >= GTK_POLICY_NEVER then
+          Result := False
+        else
+          Result := Assigned(TGtk3ScrollableWin(AWidget).getVerticalScrollbar) and TGtk3ScrollableWin(AWidget).getVerticalScrollbar^.get_visible;
+      end;
     end;
   end;
 end;
@@ -3573,7 +3586,10 @@ begin
   writeln('===>ScrollWindowEx Handle=',dbgHex(hWnd),' dx=',dx,' dy=',dy,' prcS=',prcScroll<>nil,' prC=',prcClip <> nil,' HRGN=',dbgHex(hrgnUpdate),' prcU=',prcUpdate <> nil,' Flags="',SFlags,'" ',dbgsName(Widget.LCLObject));
   {$ENDIF}
 
-  if [wtCustomControl] * Widget.WidgetType <> [] then
+  if [wtLayout] * Widget.WidgetType <> [] then
+    GdkWindow := PGtkLayout(TGtk3CustomControl(hwnd).GetContainerWidget)^.get_bin_window
+  else
+  if [wtCustomControl, wtContainer] * Widget.WidgetType <> [] then
     GdkWindow := TGtk3CustomControl(hwnd).getViewport^.get_view_window
   else
     GdkWindow := gtk_widget_get_window(Widget.getContainerWidget);
@@ -3617,38 +3633,6 @@ begin
     // check
     gdk_window_scroll(GdkWindow, dx, dy);
   end;
-
-  if (Widget is TGtk3CustomControl) then
-  begin
-    if not TGtk3CustomControl(Widget).InUpdate then
-    begin
-      {$IFDEF GTK3DEBUGSCROLL}
-      writeln(Format('> ScrollWindowEx processing dx=%d, dy=%d for control %s',
-                     [dx, dy, dbgsName(Widget.LCLObject),' applying InUpdate lock ...']));
-      {$ENDIF}
-      TGtk3CustomControl(Widget).BeginUpdate;
-      // Get current adjustment values
-      CurX := Round(gtk_adjustment_get_value(TGtk3CustomControl(Widget).GetScrolledWindow^.get_hadjustment));
-      CurY := Round(gtk_adjustment_get_value(TGtk3CustomControl(Widget).GetScrolledWindow^.get_vadjustment));
-
-      // Update adjustments by applying dx and dy
-      if dx <> 0 then
-        gtk_adjustment_set_value(TGtk3CustomControl(Widget).GetScrolledWindow^.get_hadjustment, Max(CurX + dx, 0));
-      if dy <> 0 then
-        gtk_adjustment_set_value(TGtk3CustomControl(Widget).GetScrolledWindow^.get_vadjustment, Max(CurY + dy, 0));
-      {$IFDEF GTK3DEBUGSCROLL}
-      writeln(Format('< ScrollWindowEx updated adjustments to CurX=%d, CurY=%d for control %s ... releasing InUpdate lock...',
-                     [CurX + dx, CurY + dy, dbgsName(Widget.LCLObject)]));
-      {$ENDIF}
-      TGtk3CustomControl(Widget).EndUpdate;
-    end else
-    begin
-      {$IFDEF GTK3DEBUGSCROLL}
-      writeln('=======> ScrollWindowEx: No update to adjustments since InUpdate = True. Now paint can be wrong since offset isn''t updated by dx and dy here...no more ScrollX and ScrollY. TODO');
-      {$ENDIF}
-    end;
-  end;
-
 
   if (Flags and SW_ERASE) <> 0 then
   begin
@@ -3985,7 +3969,7 @@ var
   HasChanged: Boolean;
   ScrollBar: PGtkScrollbar;
   W, H: double;
-  OverlayFactor: integer;
+  //OverlayFactor: integer;
   AControl: TGtk3Widget absolute Handle;
   {$IFDEF GTK3DEBUGSCROLL}
   S: String;
@@ -4010,7 +3994,7 @@ var
 
       ATarget := Adjustment^.upper;
       SetGDouble(ATarget, ScrollInfo.nMax, HasChanged);
-      Adjustment^.upper := ATarget;
+      Adjustment^.upper := ATarget ;
     end;
 
     if (ScrollInfo.FMask and SIF_PAGE) <> 0 then
@@ -4044,6 +4028,21 @@ var
         Adjustment^.value := ATarget;
     end;
 
+    if (ScrollInfo.FMask and SIF_UPDATEPOLICY <> 0) then
+    begin
+      if ScrollInfo.nTrackPos = SB_POLICY_CONTINUOUS then
+      begin
+        //TODO: Set tracking value into control to true and listen value-changed,
+        //there's no more gtk2 gtk_range_set_update_policy.
+      end else
+      if ScrollInfo.nTrackPos = SB_POLICY_DISCONTINUOUS then
+      begin
+       //TODO: Set tracking value to false into control to true and don't listen value-changed
+       //until button is released - then send value
+       //there's no more gtk2 gtk_range_set_update_policy.
+      end;
+    end;
+
     gtk_adjustment_changed(Adjustment);
     {$IFDEF GTK3DEBUGSCROLL}
     DebugLn(Format('Updated Adjustment: lower=%.2f, upper=%.2f, page_size=%.2f, value=%.2f, page_increment=%.2f InUpdate %s',
@@ -4068,17 +4067,27 @@ var
           begin
             if AHorzPolicy <> POLICY[IsScrollbarVis] then
               ScrollWin^.set_policy(POLICY[IsScrollbarVis], AVertPolicy);
-            if Gtk3WidgetSet.OverlayScrolling and ScrollWin^.get_hscrollbar^.get_visible and
-              Gtk3IsGdkWindow(ScrollWin^.get_hscrollbar^.window) then
-                ScrollWin^.get_hscrollbar^.window^.raise_;
+            if Gtk3WidgetSet.OverlayScrolling and ScrollBar^.get_visible and
+              Gtk3IsGdkWindow(ScrollBar^.window) then
+            begin
+              ScrollBar^.set_can_focus(False);
+              ScrollBar^.window^.raise_;
+              if (csDesigning in AControl.LCLObject.ComponentState) then
+                ScrollBar^.sensitive := false;
+            end;
           end;
           SB_VERT:
           begin
             if AVertPolicy <> POLICY[IsScrollbarVis] then
               ScrollWin^.set_policy(AHorzPolicy, POLICY[IsScrollbarVis]);
-            if Gtk3WidgetSet.OverlayScrolling and ScrollWin^.get_vscrollbar^.get_visible and
-              Gtk3IsGdkWindow(ScrollWin^.get_vscrollbar^.window) then
-                ScrollWin^.get_vscrollbar^.window^.raise_;
+            if Gtk3WidgetSet.OverlayScrolling and ScrollBar^.get_visible and
+              Gtk3IsGdkWindow(ScrollBar^.window) then
+            begin
+              ScrollBar^.set_can_focus(False);
+              ScrollBar^.window^.raise_;
+              if (csDesigning in AControl.LCLObject.ComponentState) then
+                ScrollBar^.sensitive := false;
+            end;
           end;
         end;
       end;
@@ -4090,10 +4099,10 @@ begin
   Result := 0;
   if not IsValidHandle(Handle) then Exit;
 
-  if GTK3WidgetSet.OverlayScrolling then
-    OverlayFactor := 2
-  else
-    OverlayFactor := 1;
+  //if GTK3WidgetSet.OverlayScrolling then
+  //  OverlayFactor := 2
+  //else
+  //  OverlayFactor := 1;
   HasChanged := False;
 
   // must implement first
@@ -4125,6 +4134,7 @@ begin
   {$ENDIF}
   ScrollWin := nil;
   ScrollBar := niL;
+  IsScrollWindow := False;
   if [wtScrollBar] * AControl.WidgetType <> [] then
     ScrollBar := PGtkScrollBar(AControl.Widget)
   else
@@ -4133,7 +4143,7 @@ begin
     // TGtk3Window, so we must introduce new function for scrollables
     // to return GtkScrollingWindow, like we have with getViewport.
     ScrollWin := PGtkScrolledWindow(AControl.Widget);
-    if not Assigned(ScrollWin) then Exit;
+    if not Assigned(ScrollWin) or not Gtk3IsScrolledWindow(ScrollWin) then Exit;
     IsScrollWindow := True;
   end;
 
@@ -4144,16 +4154,6 @@ begin
       begin
         Adjustment := gtk_scrolled_window_get_hadjustment(ScrollWin);
         ScrollBar := TGtk3ScrollableWin(AControl).getHorizontalScrollbar;
-        if ((ScrollInfo.fMask and SIF_RANGE) <> 0) and Gtk3IsScrolledWindow(ScrollWin) then
-        begin
-          H := gtk_scrolled_window_get_vadjustment(ScrollWin)^.upper;
-          W := (ScrollInfo.nMax - ScrollInfo.nMin);
-          if Assigned(ScrollBar) then
-            W := W + (gtk_scrolled_window_get_vscrollbar(ScrollWin)^.get_allocated_width * OverlayFactor);
-          W := Max(W, TGtk3ScrollableWin(AControl).getClientRect.Width);
-          //we propose minimum size of container widget now
-          TGtk3ScrollableWin(Handle).GetContainerWidget^.set_size_request(Round(W), Round(H));
-        end;
       end else
         Adjustment := ScrollBar^.adjustment;
     end;
@@ -4163,18 +4163,6 @@ begin
       begin
         Adjustment := gtk_scrolled_window_get_vadjustment(ScrollWin);
         ScrollBar := TGtk3ScrollableWin(AControl).getVerticalScrollbar;
-        if ((ScrollInfo.fMask and SIF_RANGE) <> 0) and Gtk3IsScrolledWindow(ScrollWin) then
-        begin
-          W := gtk_scrolled_window_get_hadjustment(ScrollWin)^.upper;
-          H := (ScrollInfo.nMax - ScrollInfo.nMin);
-          if Assigned(ScrollBar) then
-            H := H + (gtk_scrolled_window_get_hscrollbar(ScrollWin)^.get_allocated_height * OverlayFactor);
-          H := Max(H, TGtk3ScrollAbleWin(Handle).getClientRect.Height);
-          //writeln(Format('VerticalScrollBar: set new size for Container W=%f H=%f viewport W=%d H=%d HScrollHeight=%d nMax=%f',[W, H, TGtk3ScrollableWin(Handle).getViewport^.get_allocated_width, TGtk3ScrollableWin(Handle).getViewport^.get_allocated_height, gtk_scrolled_window_get_hscrollbar(ScrollWin)^.get_allocated_height, adjustment^.get_upper]));
-          //writeln(Format('VBAR min %d max %d Scale %d',[ScrollInfo.nMin, ScrollInfo.nMax, ScrollWin^.scale_factor]));
-          //Test with set_allocation !
-          TGtk3ScrollableWin(AControl).GetContainerWidget^.set_size_request(Round(W), Round(H));
-        end;
       end else
         Adjustment := ScrollBar^.adjustment;
     end;
@@ -4425,7 +4413,6 @@ function TGtk3WidgetSet.ShowScrollBar(Handle: HWND; wBar: Integer;
   bShow: Boolean): Boolean;
 var
   AWidget: TGtk3Widget;
-  // AScrolledWin: PGtkScrolledWindow;
   NewPolicy: TGtkPolicyType;
 begin
   Result := IsValidHandle(Handle);
@@ -4472,9 +4459,6 @@ end;
 
 function TGtk3WidgetSet.ShowWindow(hWnd: HWND; nCmdShow: Integer): Boolean;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.ShowWindow not implemented ...');
-  {$ENDIF}
   Result := IsValidHandle(Hwnd);
   if not result then exit;
   if TObject(hWnd) is TGtk3Window then
@@ -4505,9 +4489,6 @@ var
   ATargetRect, ASrcRect: TRect;
 begin
   Result := False;
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.StretchMaskBlt not implemented ...');
-  {$ENDIF}
   if Assigned(SrcContext.pcr) and SrcContext.OwnsSurface then
   begin
     Width := Round(Width / SrcContext.CanvasScaleFactor);
@@ -4559,7 +4540,8 @@ begin
   end;
 end;
 
-function TGtk3WidgetSet.TextOut(DC: HDC; X, Y: Integer; Str: PChar; Count: Integer): Boolean;
+function TGtk3WidgetSet.TextOut(DC: HDC; X, Y: Integer; Str: Pchar;
+  Count: Integer): Boolean;
 var
   DevCtx: TGtk3DeviceContext absolute DC;
 begin

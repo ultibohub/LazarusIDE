@@ -107,7 +107,7 @@ uses
   LazDebuggerGdbmi, GDBMIDebugger, RunParamsOpts, BaseDebugManager,
   DebugManager, debugger, DebuggerDlg, DebugAttachDialog,
   DbgIntfDebuggerBase, DbgIntfProcess, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
-  idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBackendValueConv, IdeDebuggerBase,
+  idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBase,
   // packager
   PackageSystem, PkgManager, BasePkgManager, LPKCache, LazarusPackageIntf, PackageEditor,
   // source editing
@@ -6028,6 +6028,11 @@ var
 begin
   //DebugLn(['TMainIDE.DoDropFiles: ',length(Filenames), ' files, WindowIndex=', WindowIndex]);
   if Length(FileNames) = 0 then exit;
+
+  // the Drop event comes before the Application activate event or not at all
+  // => invalidate file state
+  InvalidateFileStateCache;
+
   FileList := TStringList.Create;
   FileList.AddStrings(FileNames);
   try
@@ -13052,6 +13057,7 @@ end;
 
 procedure TMainIDE.HandleApplicationActivate(Sender: TObject);
 begin
+  //debugln(['TMainIDE.HandleApplicationActivate ']);
   InvalidateFileStateCache;
   DoCheckFilesOnDisk;
 end;

@@ -193,7 +193,9 @@ msgid "Select text (Line mode)"
 msgstr "选择文本(行模式)"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetfreebookmark
-msgid "Set free bookmark"
+#, fuzzy
+#| msgid "Set free bookmark"
+msgid "Set a free bookmark"
 msgstr "设置自由书签"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetlinefull
@@ -555,6 +557,10 @@ msgctxt "lazarusidestrconsts.dlgaddhiattrgrouptext"
 msgid "Text"
 msgstr "文本"
 
+#: lazarusidestrconsts.dlgaddhiattrgroupwrap
+msgid "Wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "边缝分隔符"
@@ -600,45 +606,10 @@ msgstr "修改的行"
 msgid "Mouse link"
 msgstr "鼠标链接"
 
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel10color
-msgid "Level 10"
-msgstr "等级10"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel1color
-msgid "Level  1"
-msgstr "等级1"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel2color
-msgid "Level  2"
-msgstr "等级2"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel3color
-msgid "Level  3"
-msgstr "等级3"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel4color
-msgid "Level  4"
-msgstr "等级4"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel5color
-msgid "Level  5"
-msgstr "等级5"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel6color
-msgid "Level  6"
-msgstr "等级6"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel7color
-msgid "Level  7"
-msgstr "等级7"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel8color
-msgid "Level  8"
-msgstr "等级8"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel9color
-msgid "Level  9"
-msgstr "等级9"
+#: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
+#, object-pascal-format
+msgid "Level %s"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrrecentlyused
 msgid "Recently used item"
@@ -693,6 +664,21 @@ msgstr "窗口边界"
 #: lazarusidestrconsts.dlgaddhiattrwordgroup
 msgid "Word-Brackets"
 msgstr "单词括号(Word-Brackets)"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapeol
+msgid "EOL"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapindent
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapindent"
+msgid "Indent"
+msgstr "缩进"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapsubline
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
+msgid "Sub-line"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
 msgid "Visualized Special Chars"
@@ -2559,6 +2545,7 @@ msgid "from current unit"
 msgstr "从当前单元"
 
 #: lazarusidestrconsts.dlgindentsindentgroupoptions
+msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
 msgid "Indent"
 msgstr "缩进"
 
@@ -3418,8 +3405,37 @@ msgstr ""
 msgid "end of line"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwraphomeendkey
+msgid "Force default home/end keys to subline start/end"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindent
+msgid "Indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentisoffset
+msgctxt "lazarusidestrconsts.dlgoptwordwrapindentisoffset"
+msgid "Indent relative to text"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmax
+msgid "Maximum indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmaxrel
+msgid "Maximum indent width (percent)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmin
+msgid "Minimum indent width"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapsectionindent
+msgid "Indent settings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapstartofnextline
@@ -11327,94 +11343,6 @@ msgstr "外部工具设置"
 msgid "Find Incremental"
 msgstr "查找增量(Incremental)"
 
-#: lazarusidestrconsts.liskmgotomarker0
-msgid "Go to bookmark 0"
-msgstr "转到书签 0"
-
-#: lazarusidestrconsts.liskmgotomarker1
-msgid "Go to bookmark 1"
-msgstr "转到书签 1"
-
-#: lazarusidestrconsts.liskmgotomarker2
-msgid "Go to bookmark 2"
-msgstr "转到书签 2"
-
-#: lazarusidestrconsts.liskmgotomarker3
-msgid "Go to bookmark 3"
-msgstr "转到书签 3"
-
-#: lazarusidestrconsts.liskmgotomarker4
-msgid "Go to bookmark 4"
-msgstr "转到书签 4"
-
-#: lazarusidestrconsts.liskmgotomarker5
-msgid "Go to bookmark 5"
-msgstr "转到书签 5"
-
-#: lazarusidestrconsts.liskmgotomarker6
-msgid "Go to bookmark 6"
-msgstr "转到书签 6"
-
-#: lazarusidestrconsts.liskmgotomarker7
-msgid "Go to bookmark 7"
-msgstr "转到书签 7"
-
-#: lazarusidestrconsts.liskmgotomarker8
-msgid "Go to bookmark 8"
-msgstr "转到书签 8"
-
-#: lazarusidestrconsts.liskmgotomarker9
-msgid "Go to bookmark 9"
-msgstr "转到书签 9"
-
-#: lazarusidestrconsts.liskmgotosourceeditor1
-msgid "Go to source editor 1"
-msgstr "转到源码编辑器 1"
-
-#: lazarusidestrconsts.liskmgotosourceeditor10
-msgid "Go to source editor 10"
-msgstr "转到源码编辑器 10"
-
-#: lazarusidestrconsts.liskmgotosourceeditor2
-msgid "Go to source editor 2"
-msgstr "转到源码编辑器 2"
-
-#: lazarusidestrconsts.liskmgotosourceeditor3
-msgid "Go to source editor 3"
-msgstr "转到源码编辑器 3"
-
-#: lazarusidestrconsts.liskmgotosourceeditor4
-msgid "Go to source editor 4"
-msgstr "转到源码编辑器 4"
-
-#: lazarusidestrconsts.liskmgotosourceeditor5
-msgid "Go to source editor 5"
-msgstr "转到源码编辑器 5"
-
-#: lazarusidestrconsts.liskmgotosourceeditor6
-msgid "Go to source editor 6"
-msgstr "转到源码编辑器 6"
-
-#: lazarusidestrconsts.liskmgotosourceeditor7
-msgid "Go to source editor 7"
-msgstr "转到源码编辑器 7"
-
-#: lazarusidestrconsts.liskmgotosourceeditor8
-msgid "Go to source editor 8"
-msgstr "转到源码编辑器 8"
-
-#: lazarusidestrconsts.liskmgotosourceeditor9
-msgid "Go to source editor 9"
-msgstr "转到源码编辑器 9"
-
-#: lazarusidestrconsts.liskminsertdateandtime
-msgid "Insert date and time"
-msgstr "插入日期和时间"
-
-#: lazarusidestrconsts.liskminsertusername
-msgid "Insert username"
-msgstr "插入用户名"
-
 #: lazarusidestrconsts.liskminspect
 msgid "Inspect"
 msgstr "查看"
@@ -11514,80 +11442,6 @@ msgstr "保存工程"
 msgid "Save project as"
 msgstr "保存工程为"
 
-#: lazarusidestrconsts.liskmselectlineend
-msgctxt "lazarusidestrconsts.liskmselectlineend"
-msgid "Select Line End"
-msgstr "选择到行尾"
-
-#: lazarusidestrconsts.liskmselectlinestart
-msgctxt "lazarusidestrconsts.liskmselectlinestart"
-msgid "Select Line Start"
-msgstr "选择到行首"
-
-#: lazarusidestrconsts.liskmselectpagebottom
-msgctxt "lazarusidestrconsts.liskmselectpagebottom"
-msgid "Select Page Bottom"
-msgstr "选择到页底部"
-
-#: lazarusidestrconsts.liskmselectpagetop
-msgctxt "lazarusidestrconsts.liskmselectpagetop"
-msgid "Select Page Top"
-msgstr "选择到页顶部"
-
-#: lazarusidestrconsts.liskmselectwordleft
-msgctxt "lazarusidestrconsts.liskmselectwordleft"
-msgid "Select Word Left"
-msgstr "选择单词左"
-
-#: lazarusidestrconsts.liskmselectwordright
-msgctxt "lazarusidestrconsts.liskmselectwordright"
-msgid "Select Word Right"
-msgstr "选择单词右"
-
-#: lazarusidestrconsts.liskmsetfreebookmark
-msgid "Set free Bookmark"
-msgstr "设置自由书签"
-
-#: lazarusidestrconsts.liskmsetmarker0
-msgid "Set bookmark 0"
-msgstr "设置书签0"
-
-#: lazarusidestrconsts.liskmsetmarker1
-msgid "Set bookmark 1"
-msgstr "设置书签1"
-
-#: lazarusidestrconsts.liskmsetmarker2
-msgid "Set bookmark 2"
-msgstr "设置书签2"
-
-#: lazarusidestrconsts.liskmsetmarker3
-msgid "Set bookmark 3"
-msgstr "设置书签3"
-
-#: lazarusidestrconsts.liskmsetmarker4
-msgid "Set bookmark 4"
-msgstr "设置书签4"
-
-#: lazarusidestrconsts.liskmsetmarker5
-msgid "Set bookmark 5"
-msgstr "设置书签5"
-
-#: lazarusidestrconsts.liskmsetmarker6
-msgid "Set bookmark 6"
-msgstr "设置标记6"
-
-#: lazarusidestrconsts.liskmsetmarker7
-msgid "Set bookmark 7"
-msgstr "设置书签7"
-
-#: lazarusidestrconsts.liskmsetmarker8
-msgid "Set bookmark 8"
-msgstr "设置书签8"
-
-#: lazarusidestrconsts.liskmsetmarker9
-msgid "Set bookmark 9"
-msgstr "设置书签9"
-
 #: lazarusidestrconsts.liskmstopprogram
 msgid "Stop Program"
 msgstr "停止程序"
@@ -11595,46 +11449,6 @@ msgstr "停止程序"
 #: lazarusidestrconsts.liskmtogglebetweenunitandform
 msgid "Toggle between Unit and Form"
 msgstr "在单元和窗体间切换"
-
-#: lazarusidestrconsts.liskmtogglemarker0
-msgid "Toggle bookmark 0"
-msgstr "切换书签0"
-
-#: lazarusidestrconsts.liskmtogglemarker1
-msgid "Toggle bookmark 1"
-msgstr "切换书签1"
-
-#: lazarusidestrconsts.liskmtogglemarker2
-msgid "Toggle bookmark 2"
-msgstr "切换书签2"
-
-#: lazarusidestrconsts.liskmtogglemarker3
-msgid "Toggle bookmark 3"
-msgstr "切换书签3"
-
-#: lazarusidestrconsts.liskmtogglemarker4
-msgid "Toggle bookmark 4"
-msgstr "切换书签4"
-
-#: lazarusidestrconsts.liskmtogglemarker5
-msgid "Toggle bookmark 5"
-msgstr "切换书签5"
-
-#: lazarusidestrconsts.liskmtogglemarker6
-msgid "Toggle bookmark 6"
-msgstr "切换书签6"
-
-#: lazarusidestrconsts.liskmtogglemarker7
-msgid "Toggle bookmark 7"
-msgstr "切换书签7"
-
-#: lazarusidestrconsts.liskmtogglemarker8
-msgid "Toggle bookmark 8"
-msgstr "切换书签8"
-
-#: lazarusidestrconsts.liskmtogglemarker9
-msgid "Toggle bookmark 9"
-msgstr "切换书签9"
 
 #: lazarusidestrconsts.liskmtoggleviewassembler
 msgctxt "lazarusidestrconsts.liskmtoggleviewassembler"
@@ -18162,10 +17976,6 @@ msgstr ""
 msgid "%sThere are additional notes for this message on%s"
 msgstr "%s这里有附加的注释 针对这条信息 关于%s"
 
-#: lazarusidestrconsts.listherearenoconflictingkeys
-msgid "There are no conflicting keys."
-msgstr "这里没有冲突的按键(keys)."
-
 #: lazarusidestrconsts.listhereareotherfilesinthedirectorywiththesamename
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
@@ -19884,6 +19694,10 @@ msgstr "文件菜单命令"
 msgid "Text folding commands"
 msgstr "文本折叠命令"
 
+#: lazarusidestrconsts.srkmcatlinewrap
+msgid "Line wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.srkmcatmacrorecording
 msgctxt "lazarusidestrconsts.srkmcatmacrorecording"
 msgid "Macros"
@@ -20366,8 +20180,9 @@ msgid "Toggle Fold at Cursor"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
-#, object-pascal-format
-msgid "Go to editor %d"
+#, object-pascal-format, fuzzy
+#| msgid "Go to editor %d"
+msgid "Go to source editor %d"
 msgstr "转到编辑器%d"
 
 #: lazarusidestrconsts.srkmecgotoincludedirective
@@ -20977,6 +20792,30 @@ msgstr "运行宏命令"
 #: lazarusidestrconsts.srkmecsynmacrorecord
 msgid "Record Macro"
 msgstr "记录宏命令"
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellineend
+msgid "Column Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellinestart
+msgid "Column Select to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplineend
+msgid "Move cursor to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplinestart
+msgid "Move cursor to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellineend
+msgid "Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellinestart
+msgid "Select to wrapped line start"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecsynpsyncroedaddcell
 msgid "Add Cell"
@@ -21660,11 +21499,6 @@ msgstr "只读"
 #: lazarusidestrconsts.uemrefactor
 msgid "Refactoring"
 msgstr "重构"
-
-#: lazarusidestrconsts.uemsetfreebookmark
-msgctxt "lazarusidestrconsts.uemsetfreebookmark"
-msgid "Set a Free Bookmark"
-msgstr "设置一个自由书签"
 
 #: lazarusidestrconsts.uemshowlinenumbers
 msgid "Show Line Numbers"

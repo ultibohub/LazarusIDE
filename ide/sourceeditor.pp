@@ -1833,7 +1833,7 @@ begin
 
       AParent:=RegisterIDEMenuSection(AParent, 'Set Free Bookmark section');
       SrcEditMenuSetFreeBookmark:=RegisterIDEMenuCommand(AParent,
-          'Set a free Bookmark',uemSetFreeBookmark, nil, @ExecuteIdeMenuClick, nil, 'menu_set_free_bookmark');
+          'Set a free Bookmark',lisMenuSetFreeBookmark, nil, @ExecuteIdeMenuClick, nil, 'menu_set_free_bookmark');
 
       AParent:=RegisterIDEMenuSection(AParent, 'Clear Bookmarks section');
       SrcEditMenuClearFileBookmark:=RegisterIDEMenuCommand(AParent,
@@ -5689,15 +5689,18 @@ const
   MarksMode: array[Boolean] of TSynMarksAdjustMode = (smaMoveUp, smaKeep);
 var
   Pt: TPoint;
+  NewLine: String;
 begin
   if not ReadOnly then
   begin
-    if StartLine > 1 then
-      Pt := Point(Length(FEditor.Lines[StartLine - 2]) + 1, StartLine - 1)
-    else
+    if StartLine > 1 then begin
+      Pt := Point(Length(FEditor.Lines[StartLine - 2]) + 1, StartLine - 1);
+      NewLine := LineEnding + NewText;
+    end else begin
       Pt := Point(1, 1);
-    FEditor.SetTextBetweenPoints(Pt, Pt,
-      LineEnding + NewText, [], scamEnd, MarksMode[aKeepMarks]);
+      NewLine := NewText + LineEnding;
+    end;
+    FEditor.SetTextBetweenPoints(Pt, Pt, NewLine, [], scamEnd, MarksMode[aKeepMarks]);
   end;
 end;
 

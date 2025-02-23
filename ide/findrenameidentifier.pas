@@ -45,10 +45,10 @@ uses
   // IdeUtils
   DialogProcs,
   // LazConfig
-  TransferMacros, IDEProcs, SearchPathProcs,
+  TransferMacros, IDEProcs, SearchPathProcs, EnvironmentOpts,
   // IDE
   LazarusIDEStrConsts, MiscOptions, CodeToolsOptions, SearchResultView, CodeHelp, CustomCodeTool,
-  FindDeclarationTool, ChangeDeclarationTool, SourceFileManager, Project;
+  FindDeclarationTool, ChangeDeclarationTool, FileProcs, SourceFileManager, Project;
 
 type
 
@@ -80,6 +80,7 @@ type
     FAllowRename: boolean;
     FIdentifierFilename: string;
     FIdentifierPosition: TPoint;
+    FIsSourceName: boolean;
     FOldIdentifier: string;
     FNewIdentifier: string;
     FConflictUnitNames: TStringList; // already defined identifiers in scope
@@ -91,6 +92,7 @@ type
     procedure SetAllowRename(const AValue: boolean);
     procedure SetIsPrivate(const AValue: boolean);
     procedure SetFiles(const Files:TStringList);
+    procedure SetIsSourceName(const AValue: boolean);
     procedure UpdateRename;
     procedure GatherFiles;
     function NewIdentifierIsConflicted(var ErrMsg: string): boolean;
@@ -108,13 +110,15 @@ type
     property IdentifierPosition: TPoint read FIdentifierPosition;
     property AllowRename: boolean read FAllowRename write SetAllowRename;
     property IsPrivate: boolean read FIsPrivate write SetIsPrivate;
+    property IsSourceName: boolean read FIsSourceName write SetIsSourceName;
   end;
 
 function ShowFindRenameIdentifierDialog(const Filename: string;
   var Position: TPoint;
   AllowRename: boolean; // allow user to disable/enable rename
   SetRenameActive: boolean; // check rename
-  Options: TFindRenameIdentifierOptions): TModalResult;
+  Options: TFindRenameIdentifierOptions;
+  IsSourceName: boolean): TModalResult;
 function DoFindRenameIdentifier(
   AllowRename: boolean; // allow user to disable/enable rename
   SetRenameActive: boolean; // check rename
@@ -149,7 +153,7 @@ implementation
 
 function ShowFindRenameIdentifierDialog(const Filename: string;
   var Position: TPoint; AllowRename: boolean; SetRenameActive: boolean;
-  Options: TFindRenameIdentifierOptions): TModalResult;
+  Options: TFindRenameIdentifierOptions; IsSourceName: boolean): TModalResult;
 var
   FindRenameIdentifierDialog: TFindRenameIdentifierDialog;
 begin
@@ -158,6 +162,7 @@ begin
     FindRenameIdentifierDialog.LoadFromConfig;
     FindRenameIdentifierDialog.SetIdentifier(Filename,Position);
     FindRenameIdentifierDialog.AllowRename:=AllowRename;
+    FindRenameIdentifierDialog.IsSourceName:=IsSourceName;
     FindRenameIdentifierDialog.RenameCheckBox.Checked:=SetRenameActive and AllowRename;
     if Options<>nil then
       FindRenameIdentifierDialog.ShowResultCheckBox.Checked:=Options.RenameShowResult and AllowRename;
@@ -220,7 +225,8 @@ var
 begin
   Result:=mrOk;
   OldRefs:=nil;
-  if CompareFilenames(OldFileName,NewFileName)=0 then exit;
+  if (CompareFilenames(OldFileName,NewFileName)=0)
+      and (ExtractFileName(OldFileName)=ExtractFilename(NewFilename)) then exit;
   anUnitInfo:=nil;
   if Assigned(Project1) then
     anUnitInfo:=Project1.UnitInfoWithFilename(OldFileName);
@@ -443,11 +449,12 @@ var
   ExtraFiles: TStrings;
   Files: TStringList;
   PascalReferences: TObjectList; // list of TSrcNameRefs
-  OldChange, Completed, RenamingFile, IsConflicted: Boolean;
+  OldChange, Completed, MovingFile, RenamingFile, IsConflicted, DoLowercase, Confirm,
+    NewFileCreated: Boolean;
   Graph: TUsesGraph;
   AVLNode: TAVLTreeNode;
   UGUnit: TUGUnit;
-  Identifier, NewFilename, OldFileName, ChangedFileType, SrcNamed, lfmString: string;
+  Identifier, NewFilename, OldFileName, SrcNamed, lfmString, s: string;
   FindRefFlags: TFindRefsFlags;
   Tool: TCodeTool;
   Node: TCodeTreeNode;
@@ -460,7 +467,6 @@ begin
   StartSrcCode:=TCodeBuffer(StartSrcEdit.CodeToolsBuffer);
   StartTopLine:=StartSrcEdit.TopLine;
   RenamingFile:=False;
-  ChangedFileType:='';
 
   // find the main declaration
   StartCaretXY:=StartSrcEdit.CursorTextXY;
@@ -487,11 +493,12 @@ begin
   PascalReferences:=nil;
   ListOfLazFPDocNode:=nil;
   NewFilename:='';
+  NewFileCreated:=false;
   OldRefs:=nil;
   try
     // let user choose the search scope
     Result:=ShowFindRenameIdentifierDialog(DeclCodeXY.Code.Filename,DeclXY,
-      AllowRename,SetRenameActive,nil);
+      AllowRename,SetRenameActive,nil,DeclNode.Desc=ctnSrcName);
     if Result<>mrOk then begin
       debugln('Error: (lazarus) DoFindRenameIdentifier failed: user cancelled dialog');
       exit;
@@ -500,40 +507,60 @@ begin
     Options:=MiscellaneousOptions.FindRenameIdentifierOptions;
     if Options.Rename then begin
       OldFileName:=DeclCodeXY.Code.Filename;
-      NewFilename:=OldFileName;
       if DeclNode.Desc=ctnSrcName then
       begin
         // rename unit/program
-        NewFilename:=ExtractFilePath(OldFileName)+
-          LowerCase(RemoveAmpersands(Options.RenameTo))+
-          ExtractFileExt(OldFileName);
-        RenamingFile:= CompareFileNames(ExtractFilenameOnly(NewFilename),
-          ExtractFilenameOnly(OldFileName))<>0;
-        if RenamingFile and FileExists(NewFilename) then begin
-          IDEMessageDialog(lisRenamingAborted,
-            Format(lisFileAlreadyExists,[NewFilename]),
-            mtError,[mbOK]);
-          exit(mrCancel);
-        end;
-        ChangedFileType:=lowercase(CodeToolBoss.GetSourceType(DeclCodeXY.Code,False));
-        if ChangedFileType='' then
-          RenamingFile:=false
-        else begin
-          case ChangedFileType of
-          'program': SrcNamed:=dlgFoldPasProgram;
-          'library': SrcNamed:=lisPckOptsLibrary;
-          'package': SrcNamed:=lisPackage;
+        DoLowercase:=false;
+        if Options.RenameTo<>lowercase(Options.RenameTo) then begin
+          // new identifier is not lowercase
+          case EnvironmentOptions.CharcaseFileAction of
+          ccfaAsk:
+            begin
+              Confirm:=true;
+              s:=ExtractFileName(OldFileName);
+              if (s=lowercase(s)) and (Identifier<>lowercase(Identifier)) then begin
+                // old unitname was mixed case and old file was lowercase -> keep policy, no need to ask
+                Confirm:=false;
+              end;
+              if Confirm then begin
+                s:=RemoveAmpersands(Options.RenameTo)+ExtractFileExt(OldFileName);
+                Result:=IDEQuestionDialog(lisFileNotLowercase,
+                  Format(lisTheUnitIsNotLowercaseTheFreePascalCompiler,
+                         [s, LineEnding, LineEnding+LineEnding]),
+                  mtConfirmation,[mrYes,mrNo,mrCancel],'');
+                case Result of
+                mrYes: DoLowercase:=true;
+                mrNo: ;
+                else
+                  exit(mrCancel);
+                end;
+              end;
+            end;
+          ccfaAutoRename:
+            // always lower case
+            DoLowercase:=true;
           else
-            SrcNamed:=dlgFoldPasUnit;
+            // use mixed case for filename
           end;
         end;
-        if RenamingFile then begin
-          if (IDEMessageDialog(srkmecRenameIdentifier,
-              Format(lisTheIdentifierIsAUnitProceedAnyway,
-              [SrcNamed,LineEnding,LineEnding]),
-              mtInformation,[mbCancel, mbOK],'') <> mrOK)
-          then
-            exit(mrCancel);
+        if DoLowercase then
+          NewFilename:=ExtractFilePath(OldFileName)+
+            lowercase(RemoveAmpersands(Options.RenameTo)+ExtractFileExt(OldFileName))
+        else
+          NewFilename:=ExtractFilePath(OldFileName)+
+            RemoveAmpersands(Options.RenameTo)+
+            ExtractFileExt(OldFileName);
+
+        // Check if new file already exists (change in case is silently done)
+        MovingFile:=CompareFilenames(ExtractFilePath(OldFileName),ExtractFilePath(NewFilename))<>0;
+        RenamingFile:=MovingFile or (ExtractFileName(NewFilename)<>ExtractFileName(OldFileName));
+        if (MovingFile or not SameText(ExtractFileName(NewFilename),ExtractFileName(OldFileName)))
+            and CodeToolBoss.DirectoryCachePool.FileExists(NewFilename,ctsfcAllCase)
+        then begin
+          IDEMessageDialog(lisRenamingAborted,
+            Format(lisFileAlreadyExists,[FindDiskFilename(NewFilename)]),
+            mtError,[mbOK]);
+          exit(mrCancel);
         end;
       end;
     end;
@@ -651,6 +678,7 @@ begin
           exit(mrCancel);
 
         DeclCodeXY.Code:=CodeToolBoss.LoadFile(NewFilename,false,false);
+        NewFileCreated:=true;
       end;
 
       // rename identifier
@@ -693,12 +721,6 @@ begin
         LazarusIDE.OpenEditorsOnCodeToolChange:=OldChange;
       end;
 
-      if RenamingFile then begin
-        // ToDo
-        //Result:=RenameIdentifier_SaveFile(OldFileName,NewFilename);
-        //if Result<>mrOk then exit;
-      end;
-
       if Options.RenameShowResult then begin
         if OldRefs<>nil then begin
           // re-add the references
@@ -722,7 +744,7 @@ begin
     PascalReferences.Free;
     FreeListObjects(ListOfLazFPDocNode,true);
 
-    if RenamingFile and (Result=mrOK) then
+    if RenamingFile and NewFileCreated then
       // source renamed -> jump to new file
       Result:=LazarusIDE.DoOpenFileAndJumpToPos(NewFilename, DeclXY,
         StartTopLine,-1,-1,[ofOnlyIfExists,ofRegularFile,ofDoNotLoadResource])
@@ -1149,9 +1171,7 @@ begin
       Err:=lisIdentifierCannotBeEmpty
     else
       Err:= format(lisIdentifierIsInvalid,[FNewIdentifier]);
-  end else if not (FNode.Desc in [ctnProgram..ctnUnit,ctnUseUnit,
-      ctnUseUnitNamespace,ctnUseUnitClearName])
-     and (Pos('.',FNewIdentifier)>0) then
+  end else if not IsSourceName and (Pos('.',FNewIdentifier)>0) then
   begin
     ok:=false;
     Err:=Format(lisIdentifierCannotBeDotted,[FNewIdentifier]);
@@ -1173,22 +1193,24 @@ begin
       end;
       ok:=not FTool.StringIsKeyWord(dotPart);
     end;
-    if not ok then
+    if not ok then begin
       Err:=Format(lisIdentifierIsReservedWord,[dotPart]);
+      ok:=true;
+    end;
   end;
 
-  if ok
-  and (CompareDottedIdentifiers(PChar(FNewIdentifier),PChar(FOldIdentifier))<>0)
+  if (Err='')
+      and (CompareDottedIdentifiers(PChar(FNewIdentifier),PChar(FOldIdentifier))<>0)
   then
-    ok:=not NewIdentifierIsConflicted(Err);
+    NewIdentifierIsConflicted(Err);
 
-  Err:=StringReplace(Err,'&','&&',[rfReplaceAll]);
   ButtonPanel1.OKButton.Enabled:=ok;
-  if ok then begin
+  if Err='' then begin
     NewGroupBox.Caption:=lisFRIRenaming;
     NewGroupBox.Font.Style:=NewGroupBox.Font.Style-[fsBold];
   end
   else begin
+    Err:=StringReplace(Err,'&','&&',[rfReplaceAll]);
     NewGroupBox.Caption:=lisFRIRenaming+' - '+ Err;
     NewGroupBox.Font.Style:=NewGroupBox.Font.Style+[fsBold];
   end;
@@ -1237,6 +1259,12 @@ begin
   if Files.Count = 0 then exit;
   if FFiles=nil then FFiles:=TStringList.Create;
   FFiles.Assign(Files);
+end;
+
+procedure TFindRenameIdentifierDialog.SetIsSourceName(const AValue: boolean);
+begin
+  if FIsSourceName=AValue then Exit;
+  FIsSourceName:=AValue;
 end;
 
 procedure TFindRenameIdentifierDialog.FindOrRenameButtonClick(Sender: TObject);
@@ -1511,6 +1539,7 @@ begin
   FNodesDeletedChangeStep:=FTool.NodesDeletedChangeStep;
   NewEdit.Text:=FOldIdentifier;
 end;
+
 procedure TFindRenameIdentifierDialog.GatherFiles;
 var
   StartSrcEdit: TSourceEditorInterface;
@@ -1618,15 +1647,14 @@ function TFindRenameIdentifierDialog.NewIdentifierIsConflicted(var ErrMsg: strin
 var
   i: integer;
   anItem: TIdentifierListItem;
+  CheckUnitName, CheckInFileName, aFilename: String;
 begin
   Result:=false;
   ErrMsg:='';
   if not AllowRename then exit;
   if IsNodeInvalid('TFindRenameIdentifierDialog.NewIdentifierIsConflicted') then exit;
 
-  if (FNode<>nil)
-      and not (FNode.Desc in (AllSourceTypes+[ctnUseUnit,ctnUseUnitNamespace,ctnUseUnitClearName]))
-      and (Pos('.',FNewIdentifier)>0) then
+  if not IsSourceName and (Pos('.',FNewIdentifier)>0) then
   begin
     ErrMsg:=Format(lisIdentifierCannotBeDotted,[FNewIdentifier]);
     exit(true);
@@ -1646,6 +1674,16 @@ begin
     ErrMsg:=Format(lisIdentifierIsAlreadyUsed,[FNewIdentifier]);
     exit;
   end;
+
+  CheckUnitName:=FNewIdentifier;
+  CheckInFileName:='';
+  aFilename:=CodeToolBoss.DirectoryCachePool.FindUnitSourceInCompletePath(
+    ExtractFilePath(IdentifierFilename),CheckUnitName,CheckInFileName,true);
+  if aFilename<>'' then begin
+    ErrMsg:='Matches unit "'+ExtractFileName(aFilename)+'"';
+    exit(true);
+  end;
+
   // checking if there are existing other identifiers conflited with the new
   // will be executed when "Rename all References" button is clicked
 end;

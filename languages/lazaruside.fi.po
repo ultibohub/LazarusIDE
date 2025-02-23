@@ -193,7 +193,9 @@ msgid "Select text (Line mode)"
 msgstr "Valitse teksti (rivimoodi)"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetfreebookmark
-msgid "Set free bookmark"
+#, fuzzy
+#| msgid "Set free bookmark"
+msgid "Set a free bookmark"
 msgstr "Aseta vapaa kirjanmerkki"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetlinefull
@@ -555,6 +557,10 @@ msgctxt "lazarusidestrconsts.dlgaddhiattrgrouptext"
 msgid "Text"
 msgstr "Teksti"
 
+#: lazarusidestrconsts.dlgaddhiattrgroupwrap
+msgid "Wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "Reunapalkin erotin"
@@ -600,44 +606,9 @@ msgstr "Muutettu rivi"
 msgid "Mouse link"
 msgstr "Hiiren linkki"
 
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel10color
-msgid "Level 10"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel1color
-msgid "Level  1"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel2color
-msgid "Level  2"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel3color
-msgid "Level  3"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel4color
-msgid "Level  4"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel5color
-msgid "Level  5"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel6color
-msgid "Level  6"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel7color
-msgid "Level  7"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel8color
-msgid "Level  8"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel9color
-msgid "Level  9"
+#: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
+#, object-pascal-format
+msgid "Level %s"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrrecentlyused
@@ -695,6 +666,21 @@ msgstr ""
 #: lazarusidestrconsts.dlgaddhiattrwordgroup
 msgid "Word-Brackets"
 msgstr "Sana-sulut"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapeol
+msgid "EOL"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapindent
+#, fuzzy
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapindent"
+msgid "Indent"
+msgstr "Sisennys"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapsubline
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
+msgid "Sub-line"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
 msgid "Visualized Special Chars"
@@ -2563,6 +2549,7 @@ msgid "from current unit"
 msgstr ""
 
 #: lazarusidestrconsts.dlgindentsindentgroupoptions
+msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
 msgid "Indent"
 msgstr "Sisennys"
 
@@ -3434,8 +3421,37 @@ msgstr ""
 msgid "end of line"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwraphomeendkey
+msgid "Force default home/end keys to subline start/end"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindent
+msgid "Indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentisoffset
+msgctxt "lazarusidestrconsts.dlgoptwordwrapindentisoffset"
+msgid "Indent relative to text"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmax
+msgid "Maximum indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmaxrel
+msgid "Maximum indent width (percent)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmin
+msgid "Minimum indent width"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapsectionindent
+msgid "Indent settings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapstartofnextline
@@ -11374,94 +11390,6 @@ msgstr "Ulkoisten työkalujen asetukset"
 msgid "Find Incremental"
 msgstr "Etsi kirjain kerrallaan"
 
-#: lazarusidestrconsts.liskmgotomarker0
-msgid "Go to bookmark 0"
-msgstr "Siirry kirjanmerkkiin 0"
-
-#: lazarusidestrconsts.liskmgotomarker1
-msgid "Go to bookmark 1"
-msgstr "Siirry kirjanmerkkiin 1"
-
-#: lazarusidestrconsts.liskmgotomarker2
-msgid "Go to bookmark 2"
-msgstr "Siirry kirjanmerkkiin 2"
-
-#: lazarusidestrconsts.liskmgotomarker3
-msgid "Go to bookmark 3"
-msgstr "Siirry kirjanmerkkiin 3"
-
-#: lazarusidestrconsts.liskmgotomarker4
-msgid "Go to bookmark 4"
-msgstr "Siirry kirjanmerkkiin 4"
-
-#: lazarusidestrconsts.liskmgotomarker5
-msgid "Go to bookmark 5"
-msgstr "Siirry kirjanmerkkiin 5"
-
-#: lazarusidestrconsts.liskmgotomarker6
-msgid "Go to bookmark 6"
-msgstr "Siirry kirjanmerkkiin 6"
-
-#: lazarusidestrconsts.liskmgotomarker7
-msgid "Go to bookmark 7"
-msgstr "Siirry kirjanmerkkiin 7"
-
-#: lazarusidestrconsts.liskmgotomarker8
-msgid "Go to bookmark 8"
-msgstr "Siirry kirjanmerkkiin 8"
-
-#: lazarusidestrconsts.liskmgotomarker9
-msgid "Go to bookmark 9"
-msgstr "Siirry kirjanmerkkiin 9"
-
-#: lazarusidestrconsts.liskmgotosourceeditor1
-msgid "Go to source editor 1"
-msgstr "Siirry editoriin 1"
-
-#: lazarusidestrconsts.liskmgotosourceeditor10
-msgid "Go to source editor 10"
-msgstr "Siirry editoriin 10"
-
-#: lazarusidestrconsts.liskmgotosourceeditor2
-msgid "Go to source editor 2"
-msgstr "Siirry editoriin 2"
-
-#: lazarusidestrconsts.liskmgotosourceeditor3
-msgid "Go to source editor 3"
-msgstr "Siirry editoriin 3"
-
-#: lazarusidestrconsts.liskmgotosourceeditor4
-msgid "Go to source editor 4"
-msgstr "Siirry editoriin 4"
-
-#: lazarusidestrconsts.liskmgotosourceeditor5
-msgid "Go to source editor 5"
-msgstr "Siirry editoriin 5"
-
-#: lazarusidestrconsts.liskmgotosourceeditor6
-msgid "Go to source editor 6"
-msgstr "Siirry editoriin 6"
-
-#: lazarusidestrconsts.liskmgotosourceeditor7
-msgid "Go to source editor 7"
-msgstr "Siirry editoriin 7"
-
-#: lazarusidestrconsts.liskmgotosourceeditor8
-msgid "Go to source editor 8"
-msgstr "Siirry editoriin 8"
-
-#: lazarusidestrconsts.liskmgotosourceeditor9
-msgid "Go to source editor 9"
-msgstr "Siirry editoriin 9"
-
-#: lazarusidestrconsts.liskminsertdateandtime
-msgid "Insert date and time"
-msgstr "Liitä päivämäärä ja aika"
-
-#: lazarusidestrconsts.liskminsertusername
-msgid "Insert username"
-msgstr "Liitä käyttäjänimi"
-
 #: lazarusidestrconsts.liskminspect
 msgid "Inspect"
 msgstr "Tutki"
@@ -11565,80 +11493,6 @@ msgstr "Tallenna projekti"
 msgid "Save project as"
 msgstr "Tallenna projekti nimellä"
 
-#: lazarusidestrconsts.liskmselectlineend
-msgctxt "lazarusidestrconsts.liskmselectlineend"
-msgid "Select Line End"
-msgstr "Valitse rivin loppu"
-
-#: lazarusidestrconsts.liskmselectlinestart
-msgctxt "lazarusidestrconsts.liskmselectlinestart"
-msgid "Select Line Start"
-msgstr "Valitse rivin alku"
-
-#: lazarusidestrconsts.liskmselectpagebottom
-msgctxt "lazarusidestrconsts.liskmselectpagebottom"
-msgid "Select Page Bottom"
-msgstr "Valitse sivun loppu"
-
-#: lazarusidestrconsts.liskmselectpagetop
-msgctxt "lazarusidestrconsts.liskmselectpagetop"
-msgid "Select Page Top"
-msgstr "Valitse sivun alku"
-
-#: lazarusidestrconsts.liskmselectwordleft
-msgctxt "lazarusidestrconsts.liskmselectwordleft"
-msgid "Select Word Left"
-msgstr "Valitse sana vasemmalla"
-
-#: lazarusidestrconsts.liskmselectwordright
-msgctxt "lazarusidestrconsts.liskmselectwordright"
-msgid "Select Word Right"
-msgstr "Valitse sana oikealla"
-
-#: lazarusidestrconsts.liskmsetfreebookmark
-msgid "Set free Bookmark"
-msgstr "Aseta vapaa kirjanmerkki"
-
-#: lazarusidestrconsts.liskmsetmarker0
-msgid "Set bookmark 0"
-msgstr "Aseta kirjanmerkki 0"
-
-#: lazarusidestrconsts.liskmsetmarker1
-msgid "Set bookmark 1"
-msgstr "Aseta kirjanmerkki 1"
-
-#: lazarusidestrconsts.liskmsetmarker2
-msgid "Set bookmark 2"
-msgstr "Aseta kirjanmerkki 2"
-
-#: lazarusidestrconsts.liskmsetmarker3
-msgid "Set bookmark 3"
-msgstr "Aseta kirjanmerkki 3"
-
-#: lazarusidestrconsts.liskmsetmarker4
-msgid "Set bookmark 4"
-msgstr "Aseta kirjanmerkki 4"
-
-#: lazarusidestrconsts.liskmsetmarker5
-msgid "Set bookmark 5"
-msgstr "Aseta kirjanmerkki 5"
-
-#: lazarusidestrconsts.liskmsetmarker6
-msgid "Set bookmark 6"
-msgstr "Aseta kirjanmerkki 6"
-
-#: lazarusidestrconsts.liskmsetmarker7
-msgid "Set bookmark 7"
-msgstr "Aseta kirjanmerkki 7"
-
-#: lazarusidestrconsts.liskmsetmarker8
-msgid "Set bookmark 8"
-msgstr "Aseta kirjanmerkki 8"
-
-#: lazarusidestrconsts.liskmsetmarker9
-msgid "Set bookmark 9"
-msgstr "Aseta kirjanmerkki 9"
-
 #: lazarusidestrconsts.liskmstopprogram
 msgid "Stop Program"
 msgstr "Pysäytä ohjelma"
@@ -11646,46 +11500,6 @@ msgstr "Pysäytä ohjelma"
 #: lazarusidestrconsts.liskmtogglebetweenunitandform
 msgid "Toggle between Unit and Form"
 msgstr "Siirry käännösyksikön ja lomakkeen välillä"
-
-#: lazarusidestrconsts.liskmtogglemarker0
-msgid "Toggle bookmark 0"
-msgstr "Vaihda kirjanmerkki 0"
-
-#: lazarusidestrconsts.liskmtogglemarker1
-msgid "Toggle bookmark 1"
-msgstr "Vaihda kirjanmerkki 1"
-
-#: lazarusidestrconsts.liskmtogglemarker2
-msgid "Toggle bookmark 2"
-msgstr "Vaihda kirjanmerkki 2"
-
-#: lazarusidestrconsts.liskmtogglemarker3
-msgid "Toggle bookmark 3"
-msgstr "Vaihda kirjanmerkki 3"
-
-#: lazarusidestrconsts.liskmtogglemarker4
-msgid "Toggle bookmark 4"
-msgstr "Vaihda kirjanmerkki 4"
-
-#: lazarusidestrconsts.liskmtogglemarker5
-msgid "Toggle bookmark 5"
-msgstr "Vaihda kirjanmerkki 5"
-
-#: lazarusidestrconsts.liskmtogglemarker6
-msgid "Toggle bookmark 6"
-msgstr "Vaihda kirjanmerkki 6"
-
-#: lazarusidestrconsts.liskmtogglemarker7
-msgid "Toggle bookmark 7"
-msgstr "Vaihda kirjanmerkki 7"
-
-#: lazarusidestrconsts.liskmtogglemarker8
-msgid "Toggle bookmark 8"
-msgstr "Vaihda kirjanmerkki 8"
-
-#: lazarusidestrconsts.liskmtogglemarker9
-msgid "Toggle bookmark 9"
-msgstr "Vaihda kirjanmerkki 9"
 
 #: lazarusidestrconsts.liskmtoggleviewassembler
 msgctxt "lazarusidestrconsts.liskmtoggleviewassembler"
@@ -18205,10 +18019,6 @@ msgstr "Projekti kirjoittaa virheenjäljitys symbolit suoritettavaan ohjelmaan. 
 msgid "%sThere are additional notes for this message on%s"
 msgstr "%sLisätietoja tähän viestiin löytyy täältä%s"
 
-#: lazarusidestrconsts.listherearenoconflictingkeys
-msgid "There are no conflicting keys."
-msgstr "Ei ristiriitaisia näppäimiä."
-
 #: lazarusidestrconsts.listhereareotherfilesinthedirectorywiththesamename
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
@@ -19928,6 +19738,10 @@ msgstr "Tiedostovalikon komennot"
 msgid "Text folding commands"
 msgstr "Tekstin laskostuskomennot"
 
+#: lazarusidestrconsts.srkmcatlinewrap
+msgid "Line wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.srkmcatmacrorecording
 msgctxt "lazarusidestrconsts.srkmcatmacrorecording"
 msgid "Macros"
@@ -20410,8 +20224,9 @@ msgid "Toggle Fold at Cursor"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
-#, object-pascal-format
-msgid "Go to editor %d"
+#, object-pascal-format, fuzzy
+#| msgid "Go to editor %d"
+msgid "Go to source editor %d"
 msgstr "Siirry muokkaimeen %d"
 
 #: lazarusidestrconsts.srkmecgotoincludedirective
@@ -21019,6 +20834,30 @@ msgstr "Toista makro"
 #: lazarusidestrconsts.srkmecsynmacrorecord
 msgid "Record Macro"
 msgstr "Nauhoita makro"
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellineend
+msgid "Column Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellinestart
+msgid "Column Select to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplineend
+msgid "Move cursor to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplinestart
+msgid "Move cursor to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellineend
+msgid "Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellinestart
+msgid "Select to wrapped line start"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecsynpsyncroedaddcell
 msgid "Add Cell"
@@ -21701,11 +21540,6 @@ msgstr "Vain luettavissa"
 #: lazarusidestrconsts.uemrefactor
 msgid "Refactoring"
 msgstr "Järjestele uudelleen"
-
-#: lazarusidestrconsts.uemsetfreebookmark
-msgctxt "lazarusidestrconsts.uemsetfreebookmark"
-msgid "Set a Free Bookmark"
-msgstr "Aseta vapaa kirjanmerkki"
 
 #: lazarusidestrconsts.uemshowlinenumbers
 msgid "Show Line Numbers"

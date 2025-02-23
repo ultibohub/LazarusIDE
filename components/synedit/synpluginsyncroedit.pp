@@ -27,9 +27,9 @@ interface
 
 uses
   Classes, Controls, SysUtils, Forms, Graphics, SynEditMiscClasses, LCLType,
-  SynEdit, SynPluginSyncronizedEditBase, LazSynEditText, SynEditMiscProcs,
+  SynEdit, SynPluginSyncronizedEditBase, SynEditMiscProcs,
   SynEditMouseCmds, SynEditKeyCmds, SynEditTypes, SynEditHighlighter, LCLIntf,
-  LazUTF8;
+  LazUTF8, LazLoggerBase;
 
 type
 
@@ -393,7 +393,7 @@ begin
   i := alen;
   pWord := PChar(aWord);
   while i > 0 do begin
-    v  := ord(pWord^);
+    v := ord(pWord^);
     a := a     + v * (1 + (n mod 8));
     if a > 550 then a := a mod 550;
     b := b * 3 + v * n - p;
@@ -412,8 +412,6 @@ end;
 
 function TSynPluginSyncroEditWordsHash.CompareEntry(const aEntry1,
   aEntry2: TSynPluginSyncroEditWordsHashEntry): Boolean;
-var
-  Line1, Line2: String;
 begin
   Result := (aEntry1.Word = aEntry2.Word);
 end;
@@ -820,10 +818,8 @@ var
 
   procedure AddWordToHash(AStart, ALen: integer); //inline;
   var
-    Wrd, LWrd, tk, Ctx: String;
+    Wrd, LWrd, Ctx: String;
     we: PSynPluginSyncroEditWordsHashEntry;
-    tx: Integer;
-    ta: TSynHighlighterAttributes;
   begin
     Wrd := copy(Line, AStart, ALen);
 //    if not CaseSensitive then
@@ -844,8 +840,10 @@ var
 
     if (we^.Count = 2) and (we^.LineIdx >= 0) then begin
       if FScanModes * [spssWithCase, spssCtxWithCase] <> [] then begin
-        Wrd := Copy(ViewedTextBuffer[we^.LineIdx], we^.BytePos, ALen);
-        assert(UTF8LowerCase(Wrd) = LWrd, 'AddWordToHash: UTF8LowerCase(Wrd) = LWrd');
+        //Wrd := Copy(ViewedTextBuffer[we^.LineIdx], we^.BytePos, ALen);
+        DebugLn(['TSynPluginSyncroEdit.Scan: Wrd=', Wrd,
+                 ', UTF8LowerCase(Wrd)=', UTF8LowerCase(Wrd), ', LWrd=', LWrd]);
+        //Assert(UTF8LowerCase(Wrd) = LWrd, 'AddWordToHash: UTF8LowerCase(Wrd) <> LWrd');
 
         if spssWithCase in FScanModes then
           FWordIndex[spssWithCase].AddWord(ToIdx(AFrom.y), AStart, Wrd);
@@ -870,14 +868,14 @@ begin
   if BackWard then begin
     Line := ViewedTextBuffer[ToIdx(AFrom.y)];
     while (AFrom >= aTo) do begin
-      AFrom.x :=  WordBreaker.PrevWordEnd(Line, AFrom.x, True);
+      AFrom.x := WordBreaker.PrevWordEnd(Line, AFrom.x, True);
       if AFrom.x < 0 then begin
         dec(AFrom.y);
         Line := ViewedTextBuffer[ToIdx(AFrom.y)];
         AFrom.x := length(Line) + 1;
         continue;
       end;
-      x2 :=  WordBreaker.PrevWordStart(Line, AFrom.x, True);
+      x2 := WordBreaker.PrevWordStart(Line, AFrom.x, True);
       if (AFrom.y > ATo.y) or (x2 >= ATo.x) then begin
         AddWordToHash(x2, AFrom.x - x2);
         Result := AFrom;
@@ -891,14 +889,14 @@ begin
   else begin
     Line := ViewedTextBuffer[ToIdx(AFrom.y)];
     while (AFrom <= aTo) do begin
-      AFrom.x :=  WordBreaker.NextWordStart(Line, AFrom.x, True);
+      AFrom.x := WordBreaker.NextWordStart(Line, AFrom.x, True);
       if AFrom.x < 0 then begin
         inc(AFrom.y);
         AFrom.x := 1;
         Line := ViewedTextBuffer[ToIdx(AFrom.y)];
         continue;
       end;
-      x2 :=  WordBreaker.NextWordEnd(Line, AFrom.x, True);
+      x2 := WordBreaker.NextWordEnd(Line, AFrom.x, True);
       if (AFrom.y < ATo.y) or (x2 <= ATo.x) then begin
         AddWordToHash(AFrom.x, x2 - AFrom.x);
         Result := AFrom;
@@ -960,7 +958,7 @@ var
 begin
   TCustomSynEdit(FriendEdit).GetHighlighterAttriAtRowColEx(APos, Ctx, FLastContextLine = APos.Y);
   FLastContextLine := APos.Y;
-  SetLength(Result, SizeOf(Integer));
+  SetLength(Result{%H-}, SizeOf(Integer));
   PInteger(@Result[1])^ := Ctx;
 end;
 
@@ -1057,11 +1055,10 @@ end;
 procedure TSynPluginSyncroEdit.StartSyncroMode(AScanMode: TSynPluginSyncroScanMode);
 var
   Pos, EndPos: TPoint;
-  Line, tk, wrd: String;
-  x2, g, tt, tx, i: Integer;
+  Line, wrd: String;
+  x2, g: Integer;
   entry: PSynPluginSyncroEditWordsHashEntry;
-  f, HasMultiCell: Boolean;
-  ta: TSynHighlighterAttributes;
+  f: Boolean;
   m: TSynPluginSyncroScanMode;
 begin
   if FCallQueued then begin

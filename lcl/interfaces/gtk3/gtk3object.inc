@@ -19,12 +19,41 @@ begin
   end;
 end;
 
+function IdleCallback(AData: gpointer): gboolean; cdecl;
+var
+  AWS: TGtk3WidgetSet;
+begin
+  AWS := TGtk3WidgetSet(AData);
+  if AWS.ActivityCounter <= 0 then
+    Application.IntfAppDeactivate;
+  Result := G_SOURCE_REMOVE_;
+end;
+
 {hook into gtk3 main event loop, used for testing purposes only atm.}
 procedure Gtk3MainEventLoop(AEvent: PGdkEvent; {%H-}AData: gPointer); cdecl;
+var
+  AWS: TGtk3WidgetSet;
 begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('** TGtk3WidgetSet.Gtk3MainEventLoop **');
   {$ENDIF}
+  if (AEvent^.type_ = GDK_FOCUS_CHANGE) then
+  begin
+    AWS := TGtk3WidgetSet(AData);
+    if AEvent^.focus_change.in_ <> 0 then
+    begin
+      if AWS.ActivityCounter <= 0 then
+      begin
+        AWS.ActivityCounter := 0;
+        Application.IntfAppActivate;
+      end;
+      inc(AWS.FActivityCounter);
+    end else
+    begin
+      dec(AWS.FActivityCounter);
+      g_idle_add(TGSourceFunc(@IdleCallback), aData);
+    end;
+  end;
   gtk_main_do_event(AEvent);
 end;
 
@@ -236,6 +265,12 @@ var
 begin
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   inherited Create;
+  FDragImageList := nil;
+  FDragImageListIcon := nil;
+  FDragHotSpot := Point(0, 0);
+  FDragImageLock := False;
+
+  FActivityCounter := 0;
   FCSSTheme := TStringList.Create;
   FSystemMetricsList := TIntegerList.Create;
   for i := 0 to SM_LCLHasFormAlphaBlend do
@@ -530,7 +565,8 @@ begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WidgetSet.AppWaitMessage');
   {$ENDIF}
-  gtk_main_iteration;
+  if not g_main_context_pending(nil) then
+    g_main_context_iteration(nil, True);
 end;
 
 procedure TGtk3WidgetSet.AppProcessMessages;
@@ -538,8 +574,8 @@ begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WidgetSet.AppProcessMessages');
   {$ENDIF}
-  while gtk_events_pending do
-    gtk_main_iteration_do(False);
+  while g_main_context_pending(nil) do
+    g_main_context_iteration(nil, False);
 end;
 
 procedure TGtk3WidgetSet.AppTerminate;
@@ -706,7 +742,8 @@ begin
     Result := 0;
 end;
 
-procedure TGtk3WidgetSet.DCSetPixel(CanvasHandle: HDC; X, Y: Integer; AColor: TGraphicsColor);
+procedure TGtk3WidgetSet.DCSetPixel(CanvasHandle: HDC; X, Y: integer;
+  AColor: TGraphicsColor);
 begin
   if IsValidDC(CanvasHandle) then
     TGtk3DeviceContext(CanvasHandle).drawPixel(X, Y, AColor);
@@ -936,5 +973,70 @@ begin
   AFont := TGtk3Font.Create(cr, nil);
   cairo_destroy(cr);
   Result := HFONT(AFont);
+end;
+
+function TGtk3WidgetSet.DragImageList_BeginDrag(APixBuf: PGdkPixbuf;
+  AHotSpot: TPoint): Boolean;
+var
+  w, h: gint;
+begin
+  if FDragImageList = nil then
+  begin
+    FDragImageList := gtk_window_new(GTK_WINDOW_POPUP);
+    W := APixBuf^.get_width;
+    H := APixBuf^.get_height;
+    gtk_window_set_default_size(PGtkWindow(FDragImageList), w, h);
+    gtk_widget_realize(FDragImageList);
+    gdk_window_set_decorations(FDragImageList^.window, []);
+    gdk_window_set_functions(FDragImageList^.window, [GDK_FUNC_RESIZE,GDK_FUNC_CLOSE]);
+
+    FDragImageListIcon := gtk_image_new_from_pixbuf(APixBuf);
+    PGtkWindow(FDragImageList)^.add(FDragImageListIcon);
+    FDragImageListIcon^.show;
+    gtk_widget_show(FDragImageListIcon);
+    // make window transparent outside mask
+    //gdk_window_shape_combine_region();
+    //gdk_window_shape_combine_mask(FDragImageList^.window, APixBuf, 0, 0);
+    FDragHotSpot := AHotSpot;
+  end;
+  Result := FDragImageList <> nil;
+end;
+
+procedure TGtk3WidgetSet.DragImageList_EndDrag;
+begin
+  if FDragImageList <> nil then
+  begin
+    if FDragImageListIcon <> nil then
+      gtk_widget_destroy(FDragImageListIcon);
+    gtk_widget_destroy(FDragImageList);
+    FDragImageList := nil;
+    FDragImageListIcon := nil;
+  end;
+end;
+
+function TGtk3WidgetSet.DragImageList_DragMove(X, Y: Integer): Boolean;
+begin
+  Result := FDragImageList <> nil;
+  if Result then
+  begin
+    if Gtk3IsGdkWindow(FDragImageList^.Window) then
+    begin
+      if FDragImageList^.Window^.is_visible then
+        gdk_window_raise(FDragImageList^.Window);
+      PGtkWindow(FDragImageList)^.move(X - FDragHotSpot.X, Y - FDragHotSpot.Y);
+    end;
+  end;
+end;
+
+function TGtk3WidgetSet.DragImageList_SetVisible(NewVisible: Boolean): Boolean;
+begin
+  Result := FDragImageList <> nil;
+  if Result then
+  begin
+    if NewVisible then
+      FDragImageList^.show_all
+    else
+      FDragImageList^.hide;
+  end;
 end;
 

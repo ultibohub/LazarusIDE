@@ -315,12 +315,6 @@ resourcestring
   lisMenuSortSelection = 'Sort Selection ...';
   lisMenuBeakLinesInSelection = 'Break Lines in Selection';
   lisMenuPasteFromClipboard = 'Paste from clipboard';
-  lisKMSelectWordLeft = 'Select Word Left';
-  lisKMSelectWordRight = 'Select Word Right';
-  lisKMSelectLineStart = 'Select Line Start';
-  lisKMSelectLineEnd = 'Select Line End';
-  lisKMSelectPageTop = 'Select Page Top';
-  lisKMSelectPageBottom = 'Select Page Bottom';
   lisMenuSelect = 'Select';
   lisMenuMultiPaste = 'MultiPaste ...';
   lisMenuSelectAll = 'Select All';
@@ -1669,9 +1663,11 @@ resourcestring
   dlgOptWordWrapDisplayCaretAtWrapPositio = 'Display caret at wrap-position...';
   dlgOptWordWrapEndOfLine = 'end of line';
   dlgOptWordWrapStartOfNextLine = 'start of next line';
+  dlgOptWordWrapHomeEndKey = 'Force default home/end keys to subline start/end';
+  dlgOptWordWrapSectionIndent = 'Indent settings';
   dlgOptWordWrapMinimumLineLength = 'Minimum line length';
   dlgOptWordWrapIndent = 'Indent width';
-  dlgOptWordWrapIndentIsOffest = 'Indent relative to text';
+  dlgOptWordWrapIndentIsOffset = 'Indent relative to text';
   dlgOptWordWrapIndentMin = 'Minimum indent width';
   dlgOptWordWrapIndentMax = 'Maximum indent width';
   dlgOptWordWrapIndentMaxRel = 'Maximum indent width (percent)';
@@ -1742,7 +1738,7 @@ resourcestring
   dlfMouseSimpleButtonAddHistoryPoint  = 'Add history point';
   dlfMouseSimpleButtonHistBack = 'History back';
   dlfMouseSimpleButtonHistForw = 'History forward';
-  dlfMouseSimpleButtonSetFreeBookmark  = 'Set free bookmark';
+  dlfMouseSimpleButtonSetFreeBookmark  = 'Set a free bookmark';
   dlfMouseSimpleButtonZoomReset        = 'Reset zoom';
   dlfMouseSimpleButtonContextMenu      = 'Context Menu';
   dlfMouseSimpleButtonContextMenuDbg   = 'Context Menu (debug)';
@@ -2147,19 +2143,10 @@ resourcestring
   dlgAddHiAttrRecentlyUsed        = 'Recently used item';
   dlgAddHiAttrWindowBorder        = 'Window border';
   dlgAddHiAttrHighlightPrefix     = 'Highlight prefix';
-  dlgAddHiAttrOutlineLevel1Color  = 'Level  1';
-  dlgAddHiAttrOutlineLevel2Color  = 'Level  2';
-  dlgAddHiAttrOutlineLevel3Color  = 'Level  3';
-  dlgAddHiAttrOutlineLevel4Color  = 'Level  4';
-  dlgAddHiAttrOutlineLevel5Color  = 'Level  5';
-  dlgAddHiAttrOutlineLevel6Color  = 'Level  6';
-  dlgAddHiAttrOutlineLevel7Color  = 'Level  7';
-  dlgAddHiAttrOutlineLevel8Color  = 'Level  8';
-  dlgAddHiAttrOutlineLevel9Color  = 'Level  9';
-  dlgAddHiAttrOutlineLevel10Color = 'Level 10';
+  dlgAddHiAttrOutlineLevelColor   = 'Level %s';
   dlgAddHiAttrWrapIndent  = 'Indent';
   dlgAddHiAttrWrapEol     = 'EOL';
-  dlgAddHiAttrWrapSupLine = 'Sub-line';
+  dlgAddHiAttrWrapSubLine = 'Sub-line';
   dlgAddHiSpecialVisibleChars     = 'Visualized Special Chars';
   dlgTopInfoHint                  = 'Current Class/Proc Hint';
   dlgCaretColor                   = 'Caret (Text-Cursor)';
@@ -2902,7 +2889,6 @@ resourcestring
   lisCopyFilename = 'Copy Filename %s';
   uemGotoBookmark = '&Goto Bookmark';
   uemGotoBookmarks = 'Goto Bookmark ...';
-  uemSetFreeBookmark = 'Set a Free Bookmark';
   uemNextBookmark = 'Goto Next Bookmark';
   uemPrevBookmark = 'Goto Previous Bookmark';
   uemBookmarkNUnSetDisabled = 'Bookmark %s';
@@ -3175,36 +3161,6 @@ resourcestring
   srkmecClearAllBookmark      = 'Clear all Bookmarks';
   srkmecPrevBookmark          = 'Previous Bookmark';
   srkmecNextBookmark          = 'Next Bookmark';
-  lisKMGoToMarker0 = 'Go to bookmark 0';
-  lisKMGoToMarker1 = 'Go to bookmark 1';
-  lisKMGoToMarker2 = 'Go to bookmark 2';
-  lisKMGoToMarker3 = 'Go to bookmark 3';
-  lisKMGoToMarker4 = 'Go to bookmark 4';
-  lisKMGoToMarker5 = 'Go to bookmark 5';
-  lisKMGoToMarker6 = 'Go to bookmark 6';
-  lisKMGoToMarker7 = 'Go to bookmark 7';
-  lisKMGoToMarker8 = 'Go to bookmark 8';
-  lisKMGoToMarker9 = 'Go to bookmark 9';
-  lisKMSetMarker0 = 'Set bookmark 0';
-  lisKMSetMarker1 = 'Set bookmark 1';
-  lisKMSetMarker2 = 'Set bookmark 2';
-  lisKMSetMarker3 = 'Set bookmark 3';
-  lisKMSetMarker4 = 'Set bookmark 4';
-  lisKMSetMarker5 = 'Set bookmark 5';
-  lisKMSetMarker6 = 'Set bookmark 6';
-  lisKMSetMarker7 = 'Set bookmark 7';
-  lisKMSetMarker8 = 'Set bookmark 8';
-  lisKMSetMarker9 = 'Set bookmark 9';
-  lisKMToggleMarker0 = 'Toggle bookmark 0';
-  lisKMToggleMarker1 = 'Toggle bookmark 1';
-  lisKMToggleMarker2 = 'Toggle bookmark 2';
-  lisKMToggleMarker3 = 'Toggle bookmark 3';
-  lisKMToggleMarker4 = 'Toggle bookmark 4';
-  lisKMToggleMarker5 = 'Toggle bookmark 5';
-  lisKMToggleMarker6 = 'Toggle bookmark 6';
-  lisKMToggleMarker7 = 'Toggle bookmark 7';
-  lisKMToggleMarker8 = 'Toggle bookmark 8';
-  lisKMToggleMarker9 = 'Toggle bookmark 9';
   srkmecGotoMarker   = 'Go to bookmark %d';
   srkmecSetMarker    = 'Set bookmark %d';
   srkmecToggleMarker = 'Toggle bookmark %d';
@@ -3232,16 +3188,7 @@ resourcestring
   srkmecCopyEditorNewWindow      = 'Copy editor to new window';
   srkmecLockEditor               = 'Lock Editor';
 
-  lisKMGoToSourceEditor1 = 'Go to source editor 1';
-  lisKMGoToSourceEditor2 = 'Go to source editor 2';
-  lisKMGoToSourceEditor3 = 'Go to source editor 3';
-  lisKMGoToSourceEditor4 = 'Go to source editor 4';
-  lisKMGoToSourceEditor5 = 'Go to source editor 5';
-  lisKMGoToSourceEditor6 = 'Go to source editor 6';
-  lisKMGoToSourceEditor7 = 'Go to source editor 7';
-  lisKMGoToSourceEditor8 = 'Go to source editor 8';
-  lisKMGoToSourceEditor9 = 'Go to source editor 9';
-  srkmecGotoEditor            = 'Go to editor %d';
+  srkmecGotoEditor            = 'Go to source editor %d';
   srkmEcFoldLevel             = 'Fold to Level %d';
   srkmecUnFoldAll             = 'Unfold all';
   srkmecFoldCurrent           = 'Fold at Cursor';
@@ -3260,8 +3207,6 @@ resourcestring
   srkmecInsertModifiedLGPLNoticeTranslated = 'Insert modified LGPL notice (translated)';
   srkmecInsertMITNotice          = 'Insert MIT notice';
   srkmecInsertMITNoticeTranslated = 'Insert MIT notice (translated)';
-  lisKMInsertUsername            = 'Insert username';
-  lisKMInsertDateAndTime         = 'Insert date and time';
   srkmecInsertUserName           = 'Insert current username';
   srkmecInsertDateTime           = 'Insert current date and time';
   srkmecInsertChangeLogEntry     = 'Insert ChangeLog entry';
@@ -3408,6 +3353,14 @@ resourcestring
   srkmecSynPSyncroEdAddCellCtxCase   = 'Add Cell (context & case-sensitive)';
   srkmecSynPSyncroEdDelCell          = 'Remove current Cell';
 
+
+  srkmecSynPLineWrapLineStart             = 'Move cursor to wrapped line start';
+  srkmecSynPLineWrapLineEnd               = 'Move cursor to wrapped line end';
+  srkmecSynPLineWrapSelLineStart          = 'Select to wrapped line start';
+  srkmecSynPLineWrapSelLineEnd            = 'Select to wrapped line end';
+  srkmecSynPLineWrapColSelLineStart       = 'Column Select to wrapped line start';
+  srkmecSynPLineWrapColSelLineEnd         = 'Column Select to wrapped line end';
+
   // run menu
   srkmecCompile                   = 'compile program/project';
   srkmecBuild                     = 'build program/project';
@@ -3476,7 +3429,6 @@ resourcestring
   srkmCatSearchReplace  = 'Text search and replace commands';
   srkmCatMarker         = 'Text bookmark commands';
   srkmCatFold           = 'Text folding commands';
-  lisKMSetFreeBookmark = 'Set free Bookmark';
   srkmCatCodeTools      = 'CodeTools commands';
   srkmCatMacroRecording = 'Macros';
   srkmCatTemplateEdit   = 'Template Editing';
@@ -3484,10 +3436,10 @@ resourcestring
   srkmCatSyncroEdit     = 'Syncron Editing';
   srkmCatSyncroEditOff  = 'Syncron Editing (not in Cell)';
   srkmCatSyncroEditSel  = 'Syncron Editing (while selecting)';
+  srkmCatLineWrap       = 'Line wrapping';
 
   srkmCatSrcNoteBook    = 'Source Notebook commands';
   srkmCatFileMenu       = 'File menu commands';
-  lisKMGoToSourceEditor10 = 'Go to source editor 10';
   srkmCatViewMenu       = 'View menu commands';
   lisKMToggleViewObjectInspector = 'Toggle view Object Inspector';
   lisKMToggleViewSourceEditor = 'Toggle view Source Editor';

@@ -191,7 +191,7 @@ msgid "Select text (Line mode)"
 msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetfreebookmark
-msgid "Set free bookmark"
+msgid "Set a free bookmark"
 msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetlinefull
@@ -553,6 +553,10 @@ msgctxt "lazarusidestrconsts.dlgaddhiattrgrouptext"
 msgid "Text"
 msgstr "Text"
 
+#: lazarusidestrconsts.dlgaddhiattrgroupwrap
+msgid "Wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr ""
@@ -598,44 +602,9 @@ msgstr ""
 msgid "Mouse link"
 msgstr ""
 
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel10color
-msgid "Level 10"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel1color
-msgid "Level  1"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel2color
-msgid "Level  2"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel3color
-msgid "Level  3"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel4color
-msgid "Level  4"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel5color
-msgid "Level  5"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel6color
-msgid "Level  6"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel7color
-msgid "Level  7"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel8color
-msgid "Level  8"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel9color
-msgid "Level  9"
+#: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
+#, object-pascal-format
+msgid "Level %s"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrrecentlyused
@@ -690,6 +659,20 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrwordgroup
 msgid "Word-Brackets"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapeol
+msgid "EOL"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapindent
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapindent"
+msgid "Indent"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapsubline
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
+msgid "Sub-line"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
@@ -2629,6 +2612,7 @@ msgid "from current unit"
 msgstr ""
 
 #: lazarusidestrconsts.dlgindentsindentgroupoptions
+msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
 msgid "Indent"
 msgstr ""
 
@@ -3512,8 +3496,37 @@ msgstr ""
 msgid "end of line"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwraphomeendkey
+msgid "Force default home/end keys to subline start/end"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindent
+msgid "Indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentisoffset
+msgctxt "lazarusidestrconsts.dlgoptwordwrapindentisoffset"
+msgid "Indent relative to text"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmax
+msgid "Maximum indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmaxrel
+msgid "Maximum indent width (percent)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmin
+msgid "Minimum indent width"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapsectionindent
+msgid "Indent settings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapstartofnextline
@@ -11536,94 +11549,6 @@ msgstr ""
 msgid "Find Incremental"
 msgstr ""
 
-#: lazarusidestrconsts.liskmgotomarker0
-msgid "Go to bookmark 0"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker1
-msgid "Go to bookmark 1"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker2
-msgid "Go to bookmark 2"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker3
-msgid "Go to bookmark 3"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker4
-msgid "Go to bookmark 4"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker5
-msgid "Go to bookmark 5"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker6
-msgid "Go to bookmark 6"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker7
-msgid "Go to bookmark 7"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker8
-msgid "Go to bookmark 8"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotomarker9
-msgid "Go to bookmark 9"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor1
-msgid "Go to source editor 1"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor10
-msgid "Go to source editor 10"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor2
-msgid "Go to source editor 2"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor3
-msgid "Go to source editor 3"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor4
-msgid "Go to source editor 4"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor5
-msgid "Go to source editor 5"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor6
-msgid "Go to source editor 6"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor7
-msgid "Go to source editor 7"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor8
-msgid "Go to source editor 8"
-msgstr ""
-
-#: lazarusidestrconsts.liskmgotosourceeditor9
-msgid "Go to source editor 9"
-msgstr ""
-
-#: lazarusidestrconsts.liskminsertdateandtime
-msgid "Insert date and time"
-msgstr ""
-
-#: lazarusidestrconsts.liskminsertusername
-msgid "Insert username"
-msgstr ""
-
 #: lazarusidestrconsts.liskminspect
 msgid "Inspect"
 msgstr ""
@@ -11725,132 +11650,12 @@ msgstr ""
 msgid "Save project as"
 msgstr ""
 
-#: lazarusidestrconsts.liskmselectlineend
-#, fuzzy
-msgctxt "lazarusidestrconsts.liskmselectlineend"
-msgid "Select Line End"
-msgstr "Selecciona al final de la línia"
-
-#: lazarusidestrconsts.liskmselectlinestart
-#, fuzzy
-msgctxt "lazarusidestrconsts.liskmselectlinestart"
-msgid "Select Line Start"
-msgstr "Selecciona al començament de la línia"
-
-#: lazarusidestrconsts.liskmselectpagebottom
-#, fuzzy
-msgctxt "lazarusidestrconsts.liskmselectpagebottom"
-msgid "Select Page Bottom"
-msgstr "Selecciona la pàgina inferior"
-
-#: lazarusidestrconsts.liskmselectpagetop
-#, fuzzy
-msgctxt "lazarusidestrconsts.liskmselectpagetop"
-msgid "Select Page Top"
-msgstr "Selecciona la pàgina superior"
-
-#: lazarusidestrconsts.liskmselectwordleft
-#, fuzzy
-msgctxt "lazarusidestrconsts.liskmselectwordleft"
-msgid "Select Word Left"
-msgstr "Selecciona una paraula a l'esquerra"
-
-#: lazarusidestrconsts.liskmselectwordright
-#, fuzzy
-msgctxt "lazarusidestrconsts.liskmselectwordright"
-msgid "Select Word Right"
-msgstr "Selecciona una paraula a la dreta"
-
-#: lazarusidestrconsts.liskmsetfreebookmark
-msgid "Set free Bookmark"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker0
-msgid "Set bookmark 0"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker1
-msgid "Set bookmark 1"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker2
-msgid "Set bookmark 2"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker3
-msgid "Set bookmark 3"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker4
-msgid "Set bookmark 4"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker5
-msgid "Set bookmark 5"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker6
-msgid "Set bookmark 6"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker7
-msgid "Set bookmark 7"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker8
-msgid "Set bookmark 8"
-msgstr ""
-
-#: lazarusidestrconsts.liskmsetmarker9
-msgid "Set bookmark 9"
-msgstr ""
-
 #: lazarusidestrconsts.liskmstopprogram
 msgid "Stop Program"
 msgstr ""
 
 #: lazarusidestrconsts.liskmtogglebetweenunitandform
 msgid "Toggle between Unit and Form"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker0
-msgid "Toggle bookmark 0"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker1
-msgid "Toggle bookmark 1"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker2
-msgid "Toggle bookmark 2"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker3
-msgid "Toggle bookmark 3"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker4
-msgid "Toggle bookmark 4"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker5
-msgid "Toggle bookmark 5"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker6
-msgid "Toggle bookmark 6"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker7
-msgid "Toggle bookmark 7"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker8
-msgid "Toggle bookmark 8"
-msgstr ""
-
-#: lazarusidestrconsts.liskmtogglemarker9
-msgid "Toggle bookmark 9"
 msgstr ""
 
 #: lazarusidestrconsts.liskmtoggleviewassembler
@@ -18647,10 +18452,6 @@ msgstr ""
 msgid "%sThere are additional notes for this message on%s"
 msgstr ""
 
-#: lazarusidestrconsts.listherearenoconflictingkeys
-msgid "There are no conflicting keys."
-msgstr ""
-
 #: lazarusidestrconsts.listhereareotherfilesinthedirectorywiththesamename
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
@@ -20390,6 +20191,10 @@ msgstr "Ordres de menús dels fitxers"
 msgid "Text folding commands"
 msgstr ""
 
+#: lazarusidestrconsts.srkmcatlinewrap
+msgid "Line wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.srkmcatmacrorecording
 msgctxt "lazarusidestrconsts.srkmcatmacrorecording"
 msgid "Macros"
@@ -20904,8 +20709,9 @@ msgid "Toggle Fold at Cursor"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
-#, object-pascal-format
-msgid "Go to editor %d"
+#, object-pascal-format, fuzzy
+#| msgid "Go to editor %d"
+msgid "Go to source editor %d"
 msgstr "Vés a l'editor %d"
 
 #: lazarusidestrconsts.srkmecgotoincludedirective
@@ -21542,6 +21348,30 @@ msgstr ""
 
 #: lazarusidestrconsts.srkmecsynmacrorecord
 msgid "Record Macro"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellineend
+msgid "Column Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellinestart
+msgid "Column Select to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplineend
+msgid "Move cursor to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplinestart
+msgid "Move cursor to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellineend
+msgid "Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellinestart
+msgid "Select to wrapped line start"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecsynpsyncroedaddcell
@@ -22238,13 +22068,6 @@ msgstr "Només lectura"
 #: lazarusidestrconsts.uemrefactor
 msgid "Refactoring"
 msgstr "Torna a factoritzar"
-
-#: lazarusidestrconsts.uemsetfreebookmark
-#, fuzzy
-#| msgid "Set a free Bookmark"
-msgctxt "lazarusidestrconsts.uemsetfreebookmark"
-msgid "Set a Free Bookmark"
-msgstr "Estableix un Marcador lliure"
 
 #: lazarusidestrconsts.uemshowlinenumbers
 msgid "Show Line Numbers"

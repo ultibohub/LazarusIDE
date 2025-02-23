@@ -194,7 +194,7 @@ msgid "Select text (Line mode)"
 msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetfreebookmark
-msgid "Set free bookmark"
+msgid "Set a free bookmark"
 msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetlinefull
@@ -565,6 +565,10 @@ msgctxt "lazarusidestrconsts.dlgaddhiattrgrouptext"
 msgid "Text"
 msgstr "טקסט"
 
+#: lazarusidestrconsts.dlgaddhiattrgroupwrap
+msgid "Wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "קו עזר מפריד"
@@ -610,44 +614,9 @@ msgstr "שורה ששונתה"
 msgid "Mouse link"
 msgstr "קישור לעכבר"
 
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel10color
-msgid "Level 10"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel1color
-msgid "Level  1"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel2color
-msgid "Level  2"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel3color
-msgid "Level  3"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel4color
-msgid "Level  4"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel5color
-msgid "Level  5"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel6color
-msgid "Level  6"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel7color
-msgid "Level  7"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel8color
-msgid "Level  8"
-msgstr ""
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel9color
-msgid "Level  9"
+#: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
+#, object-pascal-format
+msgid "Level %s"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrrecentlyused
@@ -705,6 +674,20 @@ msgstr ""
 #: lazarusidestrconsts.dlgaddhiattrwordgroup
 msgid "Word-Brackets"
 msgstr "סוגרי מילה"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapeol
+msgid "EOL"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapindent
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapindent"
+msgid "Indent"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrwrapsubline
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
+msgid "Sub-line"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
 msgid "Visualized Special Chars"
@@ -2696,6 +2679,7 @@ msgid "from current unit"
 msgstr ""
 
 #: lazarusidestrconsts.dlgindentsindentgroupoptions
+msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
 msgid "Indent"
 msgstr ""
 
@@ -3605,8 +3589,37 @@ msgstr ""
 msgid "end of line"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwraphomeendkey
+msgid "Force default home/end keys to subline start/end"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindent
+msgid "Indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentisoffset
+msgctxt "lazarusidestrconsts.dlgoptwordwrapindentisoffset"
+msgid "Indent relative to text"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmax
+msgid "Maximum indent width"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmaxrel
+msgid "Maximum indent width (percent)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmin
+msgid "Minimum indent width"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapsectionindent
+msgid "Indent settings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapstartofnextline
@@ -11838,114 +11851,6 @@ msgstr "הגדרת כלים חצוניים"
 msgid "Find Incremental"
 msgstr "מצא באופן מתקדם"
 
-#: lazarusidestrconsts.liskmgotomarker0
-#, fuzzy
-#| msgid "Go to marker 0"
-msgid "Go to bookmark 0"
-msgstr "לך לסימן 0"
-
-#: lazarusidestrconsts.liskmgotomarker1
-#, fuzzy
-#| msgid "Go to marker 1"
-msgid "Go to bookmark 1"
-msgstr "לך לסימן 1"
-
-#: lazarusidestrconsts.liskmgotomarker2
-#, fuzzy
-#| msgid "Go to marker 2"
-msgid "Go to bookmark 2"
-msgstr "לך לסימן 2"
-
-#: lazarusidestrconsts.liskmgotomarker3
-#, fuzzy
-#| msgid "Go to marker 3"
-msgid "Go to bookmark 3"
-msgstr "לך לסימן 3"
-
-#: lazarusidestrconsts.liskmgotomarker4
-#, fuzzy
-#| msgid "Go to marker 4"
-msgid "Go to bookmark 4"
-msgstr "לך לסימן 4"
-
-#: lazarusidestrconsts.liskmgotomarker5
-#, fuzzy
-#| msgid "Go to marker 5"
-msgid "Go to bookmark 5"
-msgstr "לך לסימן 5"
-
-#: lazarusidestrconsts.liskmgotomarker6
-#, fuzzy
-#| msgid "Go to marker 6"
-msgid "Go to bookmark 6"
-msgstr "לך לסימן 6"
-
-#: lazarusidestrconsts.liskmgotomarker7
-#, fuzzy
-#| msgid "Go to marker 7"
-msgid "Go to bookmark 7"
-msgstr "לך לסימן 7"
-
-#: lazarusidestrconsts.liskmgotomarker8
-#, fuzzy
-#| msgid "Go to marker 8"
-msgid "Go to bookmark 8"
-msgstr "לך לסימן 8"
-
-#: lazarusidestrconsts.liskmgotomarker9
-#, fuzzy
-#| msgid "Go to marker 9"
-msgid "Go to bookmark 9"
-msgstr "לך לסימן 9"
-
-#: lazarusidestrconsts.liskmgotosourceeditor1
-msgid "Go to source editor 1"
-msgstr "לך לעורך קוד 1"
-
-#: lazarusidestrconsts.liskmgotosourceeditor10
-msgid "Go to source editor 10"
-msgstr "לך לעורך קוד 10"
-
-#: lazarusidestrconsts.liskmgotosourceeditor2
-msgid "Go to source editor 2"
-msgstr "לך לעורך קוד 2"
-
-#: lazarusidestrconsts.liskmgotosourceeditor3
-msgid "Go to source editor 3"
-msgstr "לך לעורך קוד 3"
-
-#: lazarusidestrconsts.liskmgotosourceeditor4
-msgid "Go to source editor 4"
-msgstr "לך לעורך קוד 4"
-
-#: lazarusidestrconsts.liskmgotosourceeditor5
-msgid "Go to source editor 5"
-msgstr "לך לעורך קוד 5"
-
-#: lazarusidestrconsts.liskmgotosourceeditor6
-msgid "Go to source editor 6"
-msgstr "לך לעורך קוד 6"
-
-#: lazarusidestrconsts.liskmgotosourceeditor7
-msgid "Go to source editor 7"
-msgstr "לך לעורך קוד 7"
-
-#: lazarusidestrconsts.liskmgotosourceeditor8
-msgid "Go to source editor 8"
-msgstr "לך לעורך קוד 8"
-
-#: lazarusidestrconsts.liskmgotosourceeditor9
-msgid "Go to source editor 9"
-msgstr "לך לעורך קוד 9"
-
-#: lazarusidestrconsts.liskminsertdateandtime
-msgid "Insert date and time"
-msgstr "הכנס תאריך ושעה"
-
-#: lazarusidestrconsts.liskminsertusername
-msgid "Insert username"
-msgstr "הכנס שם משתמש"
-
 #: lazarusidestrconsts.liskminspect
 msgid "Inspect"
 msgstr "פקח"
@@ -12057,112 +11962,6 @@ msgstr "שמור פרוייקט"
 msgid "Save project as"
 msgstr "שמור פרוייקט כ "
 
-#: lazarusidestrconsts.liskmselectlineend
-#, fuzzy
-#| msgid "Select line end"
-msgctxt "lazarusidestrconsts.liskmselectlineend"
-msgid "Select Line End"
-msgstr "בחר את סוף השורה"
-
-#: lazarusidestrconsts.liskmselectlinestart
-#, fuzzy
-#| msgid "Select line start"
-msgctxt "lazarusidestrconsts.liskmselectlinestart"
-msgid "Select Line Start"
-msgstr "בחר את התחלת השורה"
-
-#: lazarusidestrconsts.liskmselectpagebottom
-#, fuzzy
-#| msgid "Select page bottom"
-msgctxt "lazarusidestrconsts.liskmselectpagebottom"
-msgid "Select Page Bottom"
-msgstr "בחר את תחתית הדף"
-
-#: lazarusidestrconsts.liskmselectpagetop
-#, fuzzy
-#| msgid "Select page top"
-msgctxt "lazarusidestrconsts.liskmselectpagetop"
-msgid "Select Page Top"
-msgstr "בחר את ראש הדף"
-
-#: lazarusidestrconsts.liskmselectwordleft
-#, fuzzy
-#| msgid "Select word left"
-msgctxt "lazarusidestrconsts.liskmselectwordleft"
-msgid "Select Word Left"
-msgstr "בחר את שמאל המילה"
-
-#: lazarusidestrconsts.liskmselectwordright
-#, fuzzy
-#| msgid "Select word right"
-msgctxt "lazarusidestrconsts.liskmselectwordright"
-msgid "Select Word Right"
-msgstr "בחר את ימין המילה"
-
-#: lazarusidestrconsts.liskmsetfreebookmark
-msgid "Set free Bookmark"
-msgstr "קבע סימניה חופשית"
-
-#: lazarusidestrconsts.liskmsetmarker0
-#, fuzzy
-#| msgid "Set marker 0"
-msgid "Set bookmark 0"
-msgstr "קבע סמן 0"
-
-#: lazarusidestrconsts.liskmsetmarker1
-#, fuzzy
-#| msgid "Set marker 1"
-msgid "Set bookmark 1"
-msgstr "קבע סמן 1"
-
-#: lazarusidestrconsts.liskmsetmarker2
-#, fuzzy
-#| msgid "Set marker 2"
-msgid "Set bookmark 2"
-msgstr "קבע סמן 2"
-
-#: lazarusidestrconsts.liskmsetmarker3
-#, fuzzy
-#| msgid "Set marker 3"
-msgid "Set bookmark 3"
-msgstr "קבע סמן 3"
-
-#: lazarusidestrconsts.liskmsetmarker4
-#, fuzzy
-#| msgid "Set marker 4"
-msgid "Set bookmark 4"
-msgstr "קבע סמן 4"
-
-#: lazarusidestrconsts.liskmsetmarker5
-#, fuzzy
-#| msgid "Set marker 5"
-msgid "Set bookmark 5"
-msgstr "קבע סמן 5"
-
-#: lazarusidestrconsts.liskmsetmarker6
-#, fuzzy
-#| msgid "Set marker 6"
-msgid "Set bookmark 6"
-msgstr "קבע סמן 6"
-
-#: lazarusidestrconsts.liskmsetmarker7
-#, fuzzy
-#| msgid "Set marker 7"
-msgid "Set bookmark 7"
-msgstr "קבע סמן 7"
-
-#: lazarusidestrconsts.liskmsetmarker8
-#, fuzzy
-#| msgid "Set marker 8"
-msgid "Set bookmark 8"
-msgstr "קבע סמן 8"
-
-#: lazarusidestrconsts.liskmsetmarker9
-#, fuzzy
-#| msgid "Set marker 9"
-msgid "Set bookmark 9"
-msgstr "קבע סמן 9"
-
 #: lazarusidestrconsts.liskmstopprogram
 #, fuzzy
 #| msgid "Stop program"
@@ -12172,66 +11971,6 @@ msgstr "עצור תכנית"
 #: lazarusidestrconsts.liskmtogglebetweenunitandform
 msgid "Toggle between Unit and Form"
 msgstr "החלף בין יחידה לטופס"
-
-#: lazarusidestrconsts.liskmtogglemarker0
-#, fuzzy
-#| msgid "Toggle marker 0"
-msgid "Toggle bookmark 0"
-msgstr "החלף סמן 0"
-
-#: lazarusidestrconsts.liskmtogglemarker1
-#, fuzzy
-#| msgid "Toggle marker 1"
-msgid "Toggle bookmark 1"
-msgstr "החלף סמן 1"
-
-#: lazarusidestrconsts.liskmtogglemarker2
-#, fuzzy
-#| msgid "Toggle marker 2"
-msgid "Toggle bookmark 2"
-msgstr "החלף סמן 2"
-
-#: lazarusidestrconsts.liskmtogglemarker3
-#, fuzzy
-#| msgid "Toggle marker 3"
-msgid "Toggle bookmark 3"
-msgstr "החלף סמן 3"
-
-#: lazarusidestrconsts.liskmtogglemarker4
-#, fuzzy
-#| msgid "Toggle marker 4"
-msgid "Toggle bookmark 4"
-msgstr "החלף סמן 4"
-
-#: lazarusidestrconsts.liskmtogglemarker5
-#, fuzzy
-#| msgid "Toggle marker 5"
-msgid "Toggle bookmark 5"
-msgstr "החלף סמן 5"
-
-#: lazarusidestrconsts.liskmtogglemarker6
-#, fuzzy
-#| msgid "Toggle marker 6"
-msgid "Toggle bookmark 6"
-msgstr "החלף סמן 6"
-
-#: lazarusidestrconsts.liskmtogglemarker7
-#, fuzzy
-#| msgid "Toggle marker 7"
-msgid "Toggle bookmark 7"
-msgstr "החלף סמן 7"
-
-#: lazarusidestrconsts.liskmtogglemarker8
-#, fuzzy
-#| msgid "Toggle marker 8"
-msgid "Toggle bookmark 8"
-msgstr "החלף סמן 8"
-
-#: lazarusidestrconsts.liskmtogglemarker9
-#, fuzzy
-#| msgid "Toggle marker 9"
-msgid "Toggle bookmark 9"
-msgstr "החלף סמן 9"
 
 #: lazarusidestrconsts.liskmtoggleviewassembler
 #, fuzzy
@@ -19213,10 +18952,6 @@ msgstr ""
 msgid "%sThere are additional notes for this message on%s"
 msgstr ""
 
-#: lazarusidestrconsts.listherearenoconflictingkeys
-msgid "There are no conflicting keys."
-msgstr ""
-
 #: lazarusidestrconsts.listhereareotherfilesinthedirectorywiththesamename
 #, object-pascal-format, fuzzy, badformat
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
@@ -20992,6 +20727,10 @@ msgstr "פקודות של תפריט \"קובץ\""
 msgid "Text folding commands"
 msgstr "פקודות של קיפול טקסט"
 
+#: lazarusidestrconsts.srkmcatlinewrap
+msgid "Line wrapping"
+msgstr ""
+
 #: lazarusidestrconsts.srkmcatmacrorecording
 msgctxt "lazarusidestrconsts.srkmcatmacrorecording"
 msgid "Macros"
@@ -21513,7 +21252,8 @@ msgstr ""
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format, fuzzy, badformat
-msgid "Go to editor %d"
+#| msgid "Go to editor %d"
+msgid "Go to source editor %d"
 msgstr "לך לעורך d%"
 
 #: lazarusidestrconsts.srkmecgotoincludedirective
@@ -22164,6 +21904,30 @@ msgstr ""
 
 #: lazarusidestrconsts.srkmecsynmacrorecord
 msgid "Record Macro"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellineend
+msgid "Column Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellinestart
+msgid "Column Select to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplineend
+msgid "Move cursor to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewraplinestart
+msgid "Move cursor to wrapped line start"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellineend
+msgid "Select to wrapped line end"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellinestart
+msgid "Select to wrapped line start"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecsynpsyncroedaddcell
@@ -22890,13 +22654,6 @@ msgstr "קריאה בלבד"
 #: lazarusidestrconsts.uemrefactor
 msgid "Refactoring"
 msgstr "סידור מחדש"
-
-#: lazarusidestrconsts.uemsetfreebookmark
-#, fuzzy
-#| msgid "Set a free Bookmark"
-msgctxt "lazarusidestrconsts.uemsetfreebookmark"
-msgid "Set a Free Bookmark"
-msgstr "קבע סימניה חופשית"
 
 #: lazarusidestrconsts.uemshowlinenumbers
 msgid "Show Line Numbers"

@@ -263,7 +263,6 @@ begin
   g_list_free(Toplevels);
 end;
 
-
 class procedure TGtk3WSCustomForm.ShowHide(const AWinControl: TWinControl);
 var
   AMask:TGdkEventMask;
@@ -278,7 +277,7 @@ var
 
   procedure CheckAndFixGeometry;
   const
-    WaitDelay: gulong = 3000;
+    WaitDelay: gulong = 4000;
     WaitLoops: integer = 4;
   var
     x, y, w, h: gint;
@@ -306,6 +305,7 @@ var
       g_usleep(WaitDelay);
       g_main_context_iteration(nil, false);
     end;
+
     //Note that here may be still wrong geometry under x11,
     //but LCL should be happy at this point.
   end;
@@ -449,6 +449,11 @@ begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WSCustomForm.SetAllowDropFiles');
   {$ENDIF}
+  if AValue then
+    gtk_drag_dest_set(TGtk3Widget(AForm.Handle).Widget, GTK_DEST_DEFAULT_ALL,
+      @FileDragTarget, 1, [GDK_ACTION_COPY, GDK_ACTION_MOVE])
+  else
+    gtk_drag_dest_unset(TGtk3Widget(AForm.Handle).Widget);
 end;
 
 class procedure TGtk3WSCustomForm.SetBorderIcons(const AForm: TCustomForm;
@@ -470,6 +475,7 @@ begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WSCustomForm.SetFormBorderStyle');
   {$ENDIF}
+  RecreateWnd(AForm);
 end;
 
 class procedure TGtk3WSCustomForm.SetFormStyle(const AForm: TCustomform;

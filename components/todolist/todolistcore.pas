@@ -26,6 +26,10 @@ Modified by Kevin Jesshope <KevinOfOz@gmail.com> 15 Mar 2020
 - Save Owner, Category and normal/alt selection to XMLPropStorage
 - Move (some) non-presentation code to ToDoListCore
 - Add Note type to ToDo and Done types
+
+By Juha Manninen Feb. 2025
+  Require a colon with "done" but not with "#done".
+  Plain "done" or "note" would cause false positives. Issue #41437.
 *)
 
 unit ToDoListCore;
@@ -53,40 +57,28 @@ type
   TTokenStyle = (tsNormal, tsAlternate);
 
 const
-  LIST_INDICATORS : array [TToDoType] of string
-      = ('ToDo', 'Done', 'Note');
-
-  // Value names of the various parts of the todo entry
-  OWNER_PART_NAME = 'Owner';
-  CATEGORY_PART_NAME = 'Category';
-  PRIORITY_PART_NAME = 'Priority';
-  TEXT_PART_NAME = 'Text';
-
+  LIST_INDICATORS : array [TToDoType] of string = ('ToDo', 'Done', 'Note');
 
 type
-  TTLScannedFile = class;
-
   { TTodoItem: Class to hold TODO item information }
 
   TTodoItem = class(TObject)
   private
     FCategory: string;
-    FToDoType:TToDoType;
-    FTokenStyle:TTokenStyle;
+    FToDoType: TToDoType;
+    FTokenStyle: TTokenStyle;
     FFilename: string;
     FLineNumber: integer;
     FOwner: string;
     FPriority: integer;
     FText: string;
-    FTLFile: TTLScannedFile;
     function GetQuotedCategory: string;
     function GetQuotedOwner: string;
     function GetAsComment: string;
     function GetAsString: string;
     function QuotedStr(const aSrc: string; const aQuote: char): string;
+    function Parse(const aTokenString: string; aRequireColon: Boolean): Boolean;
   public
-    constructor Create(aTLFile: TTLScannedFile);
-    property TLFile: TTLScannedFile read FTLFile;
     property Category: string read FCategory write FCategory;
     property QuotedCategory:string read GetQuotedCategory;
     property TokenStyle: TTokenStyle read FTokenStyle write FTokenStyle;
@@ -104,13 +96,24 @@ type
   { TTLScannedFile }
 
   TTLScannedFile = class
-    FItems: TFPList;// list of TTodoItem
   private
+    FItems: TFPList;          // list of TTodoItem
+    FFilename: string;        // Tool.MainFilename
+    FRealFilename: string;    // Can be an include file inside FFilename.
+    FCommentStr: string;      // The comment where a ToDo is extracted.
+    FCodeChangeStep: integer; // Tool.Scanner.ChangeStep
+    FTool: TCodeTool;
+    FCode: TCodeBuffer;
+    FScannedIncFiles: TStringMap;
     function GetCount: integer;
     function GetItems(Index: integer): TTodoItem;
+    procedure CreateToDoItem(const aStartComment, aEndComment: string;
+      aLineNumber: Integer);
+    procedure ScanPascalToDos;
+    procedure ScanToDoFile;
   public
-    Filename: string; // = Tool.MainFilename
-    CodeChangeStep: integer; // = Tool.Scanner.ChangeStep
+    constructor Create(const aFilename: string; aTool: TCodeTool; aCode: TCodeBuffer;
+      aScannedIncFiles: TStringMap);
     destructor Destroy; override;
     procedure Clear;
     procedure Add(aItem: TTodoItem);
@@ -118,29 +121,10 @@ type
     property Items[Index: integer]: TTodoItem read GetItems; default;
   end;
 
-  { TToDoListCore }
-
-  (* implemented as a class of class procedures so the protected methods can be
-     exposed via a class helper for unit testing purposes *)
-
-  TToDoListCore = class(TObject)
-  private
-    class var fScannedIncFiles: TStringMap;
-  protected
-    class procedure ParseToParts(const aTokenString:string;const aParts:TStrings);
-    class procedure AddToDoItemFromParts(const aParts: TStrings;
-      const aTLFile: TTLScannedFile; const aFileName: string;
-      const aLineNumber: integer; const aToDoType: TToDoType;
-      const aTokenStyle: TTokenStyle);
-  public
-    class constructor Create;
-    class destructor Destroy;
-    class procedure CreateToDoItem(aTLFile: TTLScannedFile;
-        const aFileName: string; const aStartComment, aEndComment: string;
-        const aTokenString: string; aLineNumber: Integer);
-    class procedure ExtractToCSV(const aListItems: TListItems; const aFilename: string);
-    class procedure ScanFile(const aFileName: string; const aScannedFiles: TAvlTree);
-  end;
+  function CompareTLScannedFiles(Data1, Data2: Pointer): integer;
+  procedure ExtractToCSV(const aFilename: string; aListItems: TListItems);
+  procedure ScanFile(const aFileName: string;
+    aScannedFiles: TAvlTree; aScannedIncFiles: TStringMap);
 
 
 implementation
@@ -149,260 +133,19 @@ const
   TODO_TOKENS : array [TTokenStyle, TToDoType] of string
       = (('#todo', '#done', '#note'), ('TODO', 'DONE', 'NOTE'));
 
+function CompareTLScannedFiles(Data1, Data2: Pointer): integer;
+begin
+  Result:=CompareFilenames(TTLScannedFile(Data1).FFilename,
+                           TTLScannedFile(Data2).FFilename);
+end;
+
 function CompareAnsiStringWithTLScannedFile(Filename, ScannedFile: Pointer): integer;
 begin
   Result:=CompareFilenames(AnsiString(Filename),
-                           TTLScannedFile(ScannedFile).Filename);
+                           TTLScannedFile(ScannedFile).FFilename);
 end;
 
-{ TToDoListCore }
-
-type
-  TParseState = (psHunting, psGotDash, psOwnerStart, psOwnerContinue, psCategoryStart,
-  psCategoryContinue, psPriority, psText, psAllDone); { NOTE : Continue state must follow Start state }
-
-class constructor TToDoListCore.Create;
-begin
-  fScannedIncFiles := TStringMap.Create(False);
-end;
-
-class destructor TToDoListCore.Destroy;
-begin
-  fScannedIncFiles.Free;
-end;
-
-class procedure TToDoListCore.ParseToParts(const aTokenString: string;
-  const aParts: TStrings);
-
-  function ParseStateToText(const aParseState:TParseState):string;
-  begin
-    case aParseState of
-      psOwnerStart, psOwnerContinue:Result := OWNER_PART_NAME;
-      psCategoryStart,psCategoryContinue:Result := CATEGORY_PART_NAME;
-      psPriority:Result := PRIORITY_PART_NAME;
-      psText:Result := TEXT_PART_NAME;
-      else
-        raise Exception.Create(excInvalidParseState);
-    end;
-  end;
-
-var
-  lParseState:TParseState;
-  i, lPriorityStart, lBytesRemoved: Integer;
-  lTempStr, lStr: string;
-  lpTemp: PChar;
-begin
-  lParseState :=psHunting;
-  i := 1;
-  while i <= Length(aTokenString) do
-    begin
-      case lParseState of
-
-        psHunting:
-          begin
-            case aTokenString[i] of
-              ' ':Inc(i);// look at the next character
-              '-':
-                begin
-                  lParseState:=psGotDash;
-                  Inc(i);
-                end;
-              '0'..'9':
-                begin
-                  lParseState:=psPriority;
-                  lPriorityStart := i;
-                  Inc(i);
-                end;
-              ':':
-                begin
-                  lParseState:=psText;
-                  Inc(i);
-                end;
-              else // Not a special character so it must be the text
-                lParseState := psText;
-            end;
-          end;
-
-        psText:
-          begin
-            aParts.Values[ParseStateToText(lParseState)]:= Trim(Copy(aTokenString, i, MaxInt));
-            lParseState := psAllDone;
-          end;
-
-        psGotDash:
-          begin
-            case LowerCase(aTokenString[i]) of
-              'o':
-                begin
-                  lParseState:=psOwnerStart;
-                  Inc(i);
-                end;
-              'c':
-                begin
-                  lParseState:=psCategoryStart;
-                  Inc(i);
-                end
-              else // invalid so assume rest is text
-                begin
-                  lParseState := psText;
-                  Dec(i); // wind back 1 character so we catch the - in the text
-                end;
-            end;
-          end;
-
-        psPriority:
-          if (aTokenString[i] < '0') or (aTokenString[i] > '9') then
-            begin
-              aParts.Values[ParseStateToText(lParseState)] := Copy(aTokenString, lPriorityStart, i-lPriorityStart);
-              lParseState := psHunting;
-            end
-          else
-            Inc(i);
-
-        psOwnerStart, psCategoryStart:
-          begin
-            case aTokenString[i] of
-              '''':// Got a quote so extract
-                begin
-                  lTempStr := Copy(aTokenString, i, MaxInt);
-                  lpTemp := PChar(lTempStr);
-                  lStr := AnsiExtractQuotedStr(lpTemp, '''');
-                  aParts.Values[ParseStateToText(lParseState)] := lStr;
-                  lBytesRemoved := Length(lTempStr) - Length(lpTemp);
-                  i := i + lBytesRemoved;
-                  lParseState := psHunting;
-                end;
-              else
-                begin
-                  lTempStr := aTokenString[i];
-                  Inc(i);
-                  Assert(Succ(psOwnerStart) = psOwnerContinue, 'Succ(psOwnerStart) is not psOwnerContinue.');
-                  Assert(Succ(psCategoryStart) = psCategoryContinue, 'Succ(psCategoryStart) is not psCategoryContinue.');
-                  inc(lParseState); // Assumes Continue is succ to Start
-                end;
-            end;
-          end;
-
-        psOwnerContinue,psCategoryContinue:
-          begin
-            if (aTokenString[i] = ' ') or (aTokenString[i] = ':') then
-              begin
-                aParts.Values[ParseStateToText(lParseState)] := lTempStr;
-                lParseState:=psHunting;
-              end
-            else
-              begin
-                lTempStr:=lTempStr + aTokenString[i];
-                Inc(i);
-              end;
-          end;
-
-        psAllDone:
-          break;
-
-      end;
-    end;
-end;
-
-class procedure TToDoListCore.AddToDoItemFromParts(const aParts: TStrings;
-  const aTLFile: TTLScannedFile; const aFileName: string;
-  const aLineNumber: integer; const aToDoType: TToDoType;
-  const aTokenStyle: TTokenStyle);
-
-var
-  lNewToDoItem: TTodoItem;
-
-begin
-  lNewToDoItem := TTodoItem.Create(aTLFile);
-  lNewToDoItem.ToDoType    := aToDoType;
-  lNewToDoItem.TokenStyle  := aTokenStyle;
-  lNewToDoItem.LineNumber  := aLineNumber;
-  lNewToDoItem.Filename    := aFileName;
-
-  if aParts.Values[TEXT_PART_NAME] <> '' then
-    lNewToDoItem.Text:=aParts.Values[TEXT_PART_NAME];
-
-  if aParts.Values[OWNER_PART_NAME] <> '' then
-    lNewToDoItem.Owner:=aParts.Values[OWNER_PART_NAME];
-
-  if aParts.Values[CATEGORY_PART_NAME] <> '' then
-    lNewToDoItem.Category:=aParts.Values[CATEGORY_PART_NAME];
-
-  if aParts.Values[PRIORITY_PART_NAME] <> '' then
-    lNewToDoItem.Priority:=StrToInt(aParts.Values[PRIORITY_PART_NAME]);
-
-  if Assigned(aTLFile) then
-    aTLFile.Add(lNewToDoItem);
-end;
-
-class procedure TToDoListCore.CreateToDoItem(aTLFile: TTLScannedFile;
-  const aFileName: string; const aStartComment, aEndComment: string;
-  const aTokenString: string; aLineNumber: Integer);
-
-var
-  lParsingString, lTokenToCheckFor : string;
-  lToDoTokenFound: boolean;
-  lTodoType, lFoundToDoType: TToDoType;
-  lTokenStyle, lFoundTokenStyle: TTokenStyle;
-  lParts: TStringList;
-
-begin
-  //DebugLn(['TToDoListCore.CreateToDoItem aFileName=',aFileName,' LineNumber=',aLineNumber]);
-  // Process each include file only once.
-  if fScannedIncFiles.Contains(aFileName) then Exit;
-  lParsingString:= TextToSingleLine(aTokenString);
-  // Remove the beginning comment chars from input string
-  Delete(lParsingString, 1, Length(aStartComment));
-  // Remove leading and trailing blanks from input
-  lParsingString := Trim(lParsingString);
-  // See if it's a TODO or DONE item
-
-  lToDoTokenFound:=False;
-
-  // Determine token and style
-
-  for lTokenStyle := Low(TTokenStyle) to High(TTokenStyle) do
-    begin
-      for lTodoType := Low(TToDoType) to High (TToDoType) do
-        begin
-          lTokenToCheckFor := TODO_TOKENS[lTokenStyle, lTodoType];
-          if (LazStartsText(lTokenToCheckFor, lParsingString)) // Token match
-            and ( (Length(lParsingString)=Length(lTokenToCheckFor)) // Exact match, no further chars. Should not happen?
-               or not (lParsingString[Length(lTokenToCheckFor)+1] in ['A'..'Z','a'..'z'])
-            ) then // Extra char is not alpha
-            begin
-              lToDoTokenFound := True;
-              lFoundToDoType := lTodoType;
-              lFoundTokenStyle := lTokenStyle;
-              Break;
-            end;
-          if lToDoTokenFound then
-            break;
-        end;
-    end;
-
-  if Not lToDoTokenFound then
-    Exit; // Not a Todo/Done item, leave
-
-  // Remove the ending comment chars from input string
-  if (aEndComment <> '') and LazEndsStr(aEndComment, lParsingString) then
-    SetLength(lParsingString, Length(lParsingString)-Length(aEndComment));
-
-  // Remove the Token
-  Delete(lParsingString, 1, Length(TODO_TOKENS[lFoundTokenStyle, lTodoType]));
-  lParsingString := Trim(lParsingString);
-
-  lParts:=TStringList.Create;
-  try
-    ParseToParts(lParsingString, lParts);
-    AddToDoItemFromParts(lParts, aTLFile, aFileName, aLineNumber, lFoundToDoType, lFoundTokenStyle);
-  finally
-    lParts.Free;
-  end;
-
-end;
-
-class procedure TToDoListCore.ExtractToCSV(const aListItems:TListItems;const aFilename:string);
+procedure ExtractToCSV(const aFilename: string; aListItems: TListItems);
 var
   lCommaList: TStringList;
   i: Integer;
@@ -430,94 +173,50 @@ begin
   end;
 end;
 
-class procedure TToDoListCore.ScanFile(const aFileName: string; const aScannedFiles: TAvlTree);
+procedure ScanFile(const aFileName: string;
+  aScannedFiles: TAvlTree; aScannedIncFiles: TStringMap);
 var
-  FN, Src: String;
+  FN: String;
   AVLNode: TAvlTreeNode;
   Tool: TCodeTool;
   Code: TCodeBuffer;
   CurFile: TTLScannedFile;
-  p: Integer;
-  NestedComment: Boolean;
-  CommentEnd: LongInt;
-  CommentStr: String;
-  CodeXYPosition: TCodeXYPosition;
-  IncFiles: TStringList;
 begin
-  //DebugLn(['TToDoListCore.ScanFile ',aFileName]);
+  //DebugLn(['ScanFile ',aFileName]);
   FN:=TrimFilename(aFileName);
   Code:=CodeToolBoss.LoadFile(FN,true,false);
   if Code=nil then begin
-    debugln(['TToDoListCore.ScanFile failed loading ',FN]);
+    DebugLn(['ScanFile failed loading ',FN]);
     exit;
   end;
-
-  CodeToolBoss.Explore(Code,Tool,false,false); // ignore the result
-
-  if (Tool=nil) or (Tool.Scanner=nil) then begin
-    debugln(['TToDoListCore.ScanFile failed parsing ',Code.Filename]);
-    exit;
-  end;
-
-  Assert(aFileName=Tool.MainFilename, 'TToDoListCore.ScanFile: aFileName <> Tool.MainFilename');
-  AVLNode:=aScannedFiles.FindKey(Pointer(Tool.MainFilename),
-                               @CompareAnsiStringWithTLScannedFile);
-  CurFile:=nil;
-  //DebugLn(['TToDoListCore.ScanFile ',Tool.MainFilename,' AVLNode=',AVLNode<>nil]);
+  Assert(aFilename=Code.Filename, 'ScanFile: aFileName <> Code.Filename');
+  CodeToolBoss.Explore(Code,Tool,false,false); // Parse Pascal code, ignore Result
+  AVLNode:=aScannedFiles.FindKey(Pointer(aFilename),
+                                @CompareAnsiStringWithTLScannedFile);
+  //DebugLn(['ScanFile ',aFilename,' AVLNode=',AVLNode<>nil]);
   if AVLNode<>nil then begin
     CurFile:=TTLScannedFile(AVLNode.Data);
+    Assert(Assigned(CurFile), 'ScanFile: CurFile=Nil');
     // Abort if this file has already been scanned and has not changed
-    if CurFile.CodeChangeStep=Tool.Scanner.ChangeStep then exit;
-  end;
-  //DebugLn(['TToDoListCore.ScanFile SCANNING ... ']);
-
-  // Add file name to list of scanned files
-  if CurFile=nil then begin
-    CurFile:=TTLScannedFile.Create;
-    CurFile.Filename:=Tool.MainFilename;
+    if Assigned(Tool) and (CurFile.FCodeChangeStep=Tool.Scanner.ChangeStep) then
+      exit;
+    CurFile.Clear;       // clear old items
+  end
+  else begin
+    // Add file name to list of scanned files
+    CurFile:=TTLScannedFile.Create(aFilename, Tool, Code, aScannedIncFiles);
     aScannedFiles.Add(CurFile);
   end;
-  // save ChangeStep
-  CurFile.CodeChangeStep:=Tool.Scanner.ChangeStep;
-  //DebugLn(['TToDoListCore.ScanFile saved ChangeStep ',CurFile.CodeChangeStep,' ',Tool.Scanner.ChangeStep]);
-  // clear old items
-  CurFile.Clear;
-  Src:=Tool.Src;
-  p:=1;
-  NestedComment:=CodeToolBoss.GetNestedCommentsFlagForFile(Code.Filename);
-  IncFiles := TStringList.Create;
-  try
-    repeat
-      p:=FindNextComment(Src,p);
-      if p>length(Src) then  // No more comments found, break loop
-        break;
-      if not Tool.CleanPosToCaret(p,CodeXYPosition) then
-      begin
-        ShowMessageFmt(errScanFileFailed, [ExtractFileName(aFileName)]);
-        Exit;
-      end;
-      // Save include file names. Use heuristics, assume name ends with ".inc".
-      FN:=CodeXYPosition.Code.Filename;
-      if FilenameExtIs(FN, 'inc') then
-        IncFiles.Add(FN);
-      // Process a comment
-      CommentEnd:=FindCommentEnd(Src,p,NestedComment);
-      CommentStr:=copy(Src,p,CommentEnd-p);
-      //DebugLn(['TToDoListCore.ScanFile CommentStr="',CommentStr,'"']);
-      if Src[p]='/' then
-        CreateToDoItem(CurFile, FN, '//', '', CommentStr, CodeXYPosition.Y)
-      else if Src[p]='{' then
-        CreateToDoItem(CurFile, FN, '{', '}', CommentStr, CodeXYPosition.Y)
-      else if Src[p]='(' then
-        CreateToDoItem(CurFile, FN, '(*', '*)', CommentStr, CodeXYPosition.Y);
-      p:=CommentEnd;
-    until false;
-    // Copy include file names to fScannedIncFiles
-    for p := 0 to IncFiles.Count-1 do
-      if not fScannedIncFiles.Contains(IncFiles[p]) then
-        fScannedIncFiles.Add(IncFiles[p]);
-  finally
-    IncFiles.Free;
+  if (Tool=nil) or (Tool.Scanner=nil) then begin
+    // Not Pascal. Assume .todo textual file.
+    CurFile.ScanToDoFile;
+  end
+  else begin
+    Assert(aFileName=Tool.MainFilename, 'ScanFile: aFileName <> Tool.MainFilename');
+    // save ChangeStep
+    CurFile.FCodeChangeStep:=Tool.Scanner.ChangeStep;
+    //DebugLn(['ScanFile saved ChangeStep ',CurFile.FCodeChangeStep,' ',Tool.Scanner.ChangeStep]);
+    CurFile.ScanPascalToDos;
   end;
 end;
 
@@ -536,6 +235,81 @@ begin
   Result:=TTodoItem(FItems[Index]);
 end;
 
+procedure TTLScannedFile.CreateToDoItem(const aStartComment, aEndComment: string;
+  aLineNumber: Integer);
+var
+  lParsingString, TheToken: string;
+  lTokenFound: boolean;
+  lTodoType, lFoundToDoType: TToDoType;
+  lTokenStyle, lFoundTokenStyle: TTokenStyle;
+  NewToDoItem: TTodoItem;
+begin
+  //DebugLn(['TTLScannedFile.CreateToDoItem FileName=',FRealFilename,' LineNumber=',aLineNumber]);
+  lParsingString := TextToSingleLine(FCommentStr);
+  // Remove the beginning comment chars from input string
+  if aStartComment <> '' then
+    Delete(lParsingString, 1, Length(aStartComment));
+  // Remove leading and trailing blanks from input
+  lParsingString := Trim(lParsingString);
+
+  // Determine Token and Style
+  lTokenFound := False;
+  for lTokenStyle := Low(TTokenStyle) to High(TTokenStyle) do
+  begin
+    if lTokenFound then Break;
+    for lTodoType := Low(TToDoType) to High(TToDoType) do
+    begin
+      TheToken := TODO_TOKENS[lTokenStyle,lTodoType];
+      if LazStartsText(TheToken, lParsingString) then
+      begin
+        if (Length(lParsingString)=Length(TheToken)) // Don't match with 'ToDoX'
+        or (lParsingString[Length(TheToken)+1] in [#9,' ',':']) then
+        begin
+          lTokenFound := True;       // Token match
+          lFoundToDoType := lTodoType;
+          lFoundTokenStyle := lTokenStyle;
+          Break;
+        end;
+      end;
+    end;
+  end;
+
+  if Not lTokenFound then
+    Exit; // Not a Todo/Done item, leave
+
+  // Remove the ending comment chars from input string
+  if (aEndComment <> '') and LazEndsStr(aEndComment, lParsingString) then
+    SetLength(lParsingString, Length(lParsingString)-Length(aEndComment));
+
+  // Remove the ToDo token
+  Assert(TheToken=TODO_TOKENS[lFoundTokenStyle,lFoundToDoType], 'TTLScannedFile.CreateToDoItem: TheToken');
+  Delete(lParsingString, 1, Length(TheToken));
+  lParsingString := Trim(lParsingString);
+
+  // Require a colon with plain "done" but not with "#done". Prevent false positives.
+  NewToDoItem:=TTodoItem.Create;
+  if NewToDoItem.Parse(lParsingString, lFoundTokenStyle=tsAlternate) then
+  begin
+    NewToDoItem.ToDoType   := lFoundToDoType;
+    NewToDoItem.TokenStyle := lFoundTokenStyle;
+    NewToDoItem.LineNumber := aLineNumber;
+    NewToDoItem.Filename   := FRealFilename;
+    Add(NewToDoItem);            // Add to list.
+  end
+  else
+    NewToDoItem.Free;            // Parsing failed, dispose.
+end;
+
+constructor TTLScannedFile.Create(const aFilename: string; aTool: TCodeTool;
+  aCode: TCodeBuffer; aScannedIncFiles: TStringMap);
+begin
+  inherited Create;
+  FFilename:=aFilename;
+  FTool:=aTool;
+  FCode:=aCode;
+  FScannedIncFiles:=aScannedIncFiles;
+end;
+
 destructor TTLScannedFile.Destroy;
 begin
   Clear;
@@ -546,20 +320,81 @@ procedure TTLScannedFile.Clear;
 var
   i: Integer;
 begin
-  if Assigned(FItems) then
-    begin
-      for i:=0 to FItems.Count-1 do
-        TObject(FItems[i]).Free;
-      FreeAndNil(FItems);
-  end;
+  if FItems=Nil then Exit;
+  for i:=0 to FItems.Count-1 do
+    TObject(FItems[i]).Free;
+  FreeAndNil(FItems);
 end;
 
 procedure TTLScannedFile.Add(aItem: TTodoItem);
 begin
   if not Assigned(FItems) then
     FItems:=TFPList.Create;
-
   FItems.Add(aItem);
+end;
+
+procedure TTLScannedFile.ScanPascalToDos;
+var
+  Src, LocationIncTodo: String;
+  p, CommentEnd: Integer;
+  NestedComment: Boolean;
+  CodePos: TCodeXYPosition;
+begin
+  Src:=FTool.Src;
+  Assert(FCode.Filename=FTool.MainFilename, 'TTLScannedFile.ScanPascalToDos: aCode.Filename<>FTool.MainFilename');
+  p:=1;
+  NestedComment:=CodeToolBoss.GetNestedCommentsFlagForFile(FCode.Filename);
+  repeat
+    p:=FindNextComment(Src,p);
+    if p>length(Src) then  // No more comments found, break loop
+      break;
+    if not FTool.CleanPosToCaret(p,CodePos) then
+    begin
+      ShowMessageFmt(errScanFileFailed, [ExtractFileName(FFilename)]);
+      Exit;
+    end;
+    // Study include file names. Use heuristics, assume name ends with ".inc".
+    FRealFilename:=CodePos.Code.Filename;
+    if FilenameExtIs(FRealFilename, 'inc') then // Filename and location in an include file.
+      LocationIncTodo:=FRealFilename+'_'+IntToStr(CodePos.Y)
+    else
+      LocationIncTodo:='';
+    // Process a comment
+    CommentEnd:=FindCommentEnd(Src,p,NestedComment);
+    FCommentStr:=copy(Src,p,CommentEnd-p);
+    // Process each include file location only once. Units are processed always.
+    if (LocationIncTodo='') or not FScannedIncFiles.Contains(LocationIncTodo) then
+    begin
+      if Src[p]='/' then
+        CreateToDoItem('//', '', CodePos.Y)
+      else if Src[p]='{' then
+        CreateToDoItem('{', '}', CodePos.Y)
+      else if Src[p]='(' then
+        CreateToDoItem('(*', '*)', CodePos.Y);
+      if LocationIncTodo<>'' then    // Store include file location for future.
+        FScannedIncFiles.Add(LocationIncTodo);
+    end;
+    p:=CommentEnd;
+  until false;
+end;
+
+procedure TTLScannedFile.ScanToDoFile;
+var
+  List: TStringList;
+  i: Integer;
+begin
+  List:=TStringList.Create;
+  try
+    List.Text:=FCode.Source;
+    for i:=0 to List.Count-1 do
+    begin
+      FRealFilename:=FCode.Filename;
+      FCommentStr:=List[i];
+      CreateToDoItem('', '', i+1)
+    end;
+  finally
+    List.Free;
+  end;
 end;
 
 { TTodoItem }
@@ -583,16 +418,10 @@ end;
 function TTodoItem.QuotedStr(const aSrc: string; const aQuote: char): string;
 begin
   // Only quote if necessary
-  if (pos(aQuote, aSrc)<>0)
-    or (pos(' ', aSrc)<>0) then
+  if (pos(aQuote, aSrc)<>0) or (pos(' ', aSrc)<>0) then
     Result := AnsiQuotedStr(aSrc, aQuote)
   else
     Result := aSrc;
-end;
-
-constructor TTodoItem.Create(aTLFile: TTLScannedFile);
-begin
-  FTLFile:=aTLFile;
 end;
 
 function TTodoItem.GetQuotedOwner: string;
@@ -610,4 +439,134 @@ begin
   Result := '{ '+AsString+' }';
 end;
 
+type
+  TParseState =
+    (psHunting, psGotDash, psPriority, psText, psAllDone,
+     psOwnerStart, psOwnerContinue, { NOTE: Continue state must follow Start state }
+     psCategoryStart, psCategoryContinue
+    );
+
+function TTodoItem.Parse(const aTokenString: string; aRequireColon: Boolean): Boolean;
+// Parse a string like
+//  "10 -o'Me Myself' -cMyOwnCat : Text for the item goes here."
+// Returns False if the format is invalid, like a colon is missing.
+var
+  lParseState: TParseState;
+  i, lPriorityStart: Integer;
+  HasColon: Boolean;
+  lTempStr, lStr: string;
+  lpTemp: PChar;
+begin
+  lParseState := psHunting;
+  HasColon := False;
+  i := 1;
+  while i <= Length(aTokenString) do
+    case lParseState of
+      psHunting:
+        case aTokenString[i] of
+          ' ': Inc(i);// look at the next character
+          '-':
+            begin
+              lParseState:=psGotDash;
+              Inc(i);
+            end;
+          '0'..'9':
+            begin
+              lParseState:=psPriority;
+              lPriorityStart := i;
+              Inc(i);
+            end;
+          ':':
+            begin
+              HasColon := True;
+              lParseState:=psText;
+              Inc(i);
+            end;
+          else // Not a special character so it must be the text
+            if aRequireColon and not HasColon then
+              Exit(False);
+            lParseState := psText;
+        end;
+
+      psText:
+        begin
+          Text := Trim(Copy(aTokenString, i, MaxInt));
+          lParseState := psAllDone;
+        end;
+
+      psGotDash:
+        case LowerCase(aTokenString[i]) of
+          'o':
+            begin
+              lParseState:=psOwnerStart;
+              Inc(i);
+            end;
+          'c':
+            begin
+              lParseState:=psCategoryStart;
+              Inc(i);
+            end
+          else // invalid so assume rest is text
+            begin
+              if aRequireColon and not HasColon then
+                Exit(False);
+              lParseState := psText;
+              Dec(i); // wind back 1 character so we catch the - in the text
+            end;
+        end;
+
+      psPriority:
+        if aTokenString[i] in ['0'..'9'] then
+          Inc(i)
+        else begin
+          Priority := StrToInt(Copy(aTokenString, lPriorityStart, i-lPriorityStart));
+          lParseState := psHunting;
+        end;
+
+      psOwnerStart, psCategoryStart:
+        case aTokenString[i] of
+          '''':// Got a quote so extract
+            begin
+              lTempStr := Copy(aTokenString, i, MaxInt);
+              lpTemp := PChar(lTempStr);
+              lStr := AnsiExtractQuotedStr(lpTemp, '''');
+              if lParseState = psOwnerStart then
+                Owner := lStr
+              else
+                Category := lStr;
+              i := i + Length(lTempStr) - Length(lpTemp);
+              lParseState := psHunting;
+            end;
+          else
+            begin
+              lTempStr := aTokenString[i];
+              Inc(i);
+              Assert(Succ(psOwnerStart) = psOwnerContinue, 'Succ(psOwnerStart) is not psOwnerContinue.');
+              Assert(Succ(psCategoryStart) = psCategoryContinue, 'Succ(psCategoryStart) is not psCategoryContinue.');
+              inc(lParseState); // Assumes Continue is succ to Start
+            end;
+        end;
+
+      psOwnerContinue,psCategoryContinue:
+        if aTokenString[i] in [#9,' ',':'] then
+        begin
+          if lParseState = psOwnerContinue then
+            Owner := lTempStr
+          else
+            Category := lTempStr;
+          lParseState:=psHunting;
+        end
+        else begin
+          lTempStr:=lTempStr + aTokenString[i];
+          Inc(i);
+        end;
+
+      psAllDone:
+        break;
+
+    end;
+  Result := True;
+end;
+
 end.
+

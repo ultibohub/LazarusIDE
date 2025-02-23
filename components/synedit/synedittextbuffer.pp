@@ -47,7 +47,7 @@ unit SynEditTextBuffer;
 interface
 
 uses
-  Classes, SysUtils, Graphics, LCLProc,
+  Classes, SysUtils, Graphics, LCLProc, LazLoggerBase,
   SynEditTypes, LazSynEditText, SynEditTextBase, SynEditMiscProcs, SynEditMiscClasses,
   SynEditHighlighter;
 
@@ -372,9 +372,9 @@ type
 
 var
   (* Re-usable arrays for the most common cases *)
-  SynEditUndoMarkModifiedOneEmpty:    TSynEditStringFlagsArray; // = [];
-  SynEditUndoMarkModifiedOneSaved:    TSynEditStringFlagsArray; // = [sfSaved];
-  SynEditUndoMarkModifiedOneModified: TSynEditStringFlagsArray; // = [sfModified];
+  SynEditUndoMarkModifiedOneEmpty:    TSynEditStringFlagsArray = nil; // = [];
+  SynEditUndoMarkModifiedOneSaved:    TSynEditStringFlagsArray = nil; // = [sfSaved];
+  SynEditUndoMarkModifiedOneModified: TSynEditStringFlagsArray = nil; // = [sfModified];
 
 
 { TLazSynDisplayBuffer }
@@ -620,6 +620,7 @@ var
 begin
   Result := Caller is TSynEditStringList;
   {$IFDEF SynUndoDebugItems}if Result then debugln(['---  Undo Perform ',DbgSName(self), ' ', dbgs(Self), ' - ', DebugString]);{$ENDIF}
+  WasSaved := nil;
   if Result then begin
     UnSaved := Buffer.CurUndoList.SavedMarkerExists and (not Buffer.CurUndoList.IsTopMarkedAsSaved);
     if Length(FWasSaved) = 1 then begin

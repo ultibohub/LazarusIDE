@@ -39,7 +39,7 @@ uses
   Laz2_XMLCfg, FileUtil, LazUtilities, LazLoggerBase,
   // SynEdit
   SynEditKeyCmds, SynPluginTemplateEdit, SynPluginSyncroEdit,
-  SynPluginMultiCaret, SynEditMouseCmds,
+  SynPluginMultiCaret, SynEditMouseCmds, SynEditWrappedView,
   // IdeIntf
   IDECommands,
   // IdeConfig
@@ -659,11 +659,11 @@ begin
     ecSelectionLowerCase      : Result:= lisMenuLowerCaseSelection;
     ecSelectionSwapCase       : Result:= lisMenuSwapCaseSelection;
     ecSelectionTabs2Spaces    : Result:= srkmecSelectionTabs2Spaces;
-    ecSelectionEnclose        : Result:= lisMenuEncloseSelection;
+    ecSelectionEnclose        : Result:= lisKMEncloseSelection;
     ecSelectionComment        : Result:= lisMenuCommentSelection;
     ecSelectionUncomment      : Result:= lisMenuUncommentSelection;
     ecToggleComment           : Result:= lisMenuToggleComment;
-    ecSelectionEncloseIFDEF   : Result:= lisMenuEncloseInIFDEF;
+    ecSelectionEncloseIFDEF   : Result:= lisEncloseInIFDEF;
     ecSelectionSort           : Result:= lisMenuSortSelection;
     ecSelectionBreakLines     : Result:= lisMenuBeakLinesInSelection;
     ecSelectToBrace           : Result:= lisMenuSelectToBrace;
@@ -2859,6 +2859,7 @@ procedure TKeyCommandRelationList.DefineCommandCategories;
 
 var
   C: TIDECommandCategory;
+  i: integer;
 begin
   Clear;
   // moving
@@ -2916,19 +2917,19 @@ begin
   AddDefault(C, 'Toggle comment', lisMenuToggleComment, ecToggleComment);
   AddDefault(C, 'Sort selection', lisSortSelSortSelection, ecSelectionSort);
   AddDefault(C, 'Break Lines in selection', lisMenuBeakLinesInSelection, ecSelectionBreakLines);
-  AddDefault(C, 'Select word left', lisKMSelectWordLeft, ecSelWordLeft);
-  AddDefault(C, 'Select word right', lisKMSelectWordRight, ecSelWordRight);
+  AddDefault(C, 'Select word left', srkmecSelWordLeft, ecSelWordLeft);
+  AddDefault(C, 'Select word right', srkmecSelWordRight, ecSelWordRight);
   AddDefault(C, 'Select word end left', srkmecSelWordEndLeft, ecSelWordEndLeft);
   AddDefault(C, 'Select word end right', srkmecSelWordEndRight, ecSelWordEndRight);
   AddDefault(C, 'Select half word left', srkmecSelHalfWordLeft, ecSelHalfWordLeft);
   AddDefault(C, 'Select half word right', srkmecSelHalfWordRight, ecSelHalfWordRight);
   AddDefault(C, 'Smart select word left', srkmecSelSmartWordLeft, ecSelSmartWordLeft);
   AddDefault(C, 'Smart select word right', srkmecSelSmartWordRight, ecSelSmartWordRight);
-  AddDefault(C, 'Select line start', lisKMSelectLineStart, ecSelLineStart);
+  AddDefault(C, 'Select line start', srkmecSelLineStart, ecSelLineStart);
   AddDefault(C, 'Select to text start in line', srkmecSelLineTextStart, ecSelLineTextStart);
-  AddDefault(C, 'Select line end', lisKMSelectLineEnd, ecSelLineEnd);
-  AddDefault(C, 'Select page top', lisKMSelectPageTop, ecSelPageTop);
-  AddDefault(C, 'Select page bottom', lisKMSelectPageBottom, ecSelPageBottom);
+  AddDefault(C, 'Select line end', srkmecSelLineEnd, ecSelLineEnd);
+  AddDefault(C, 'Select page top', srkmecSelPageTop, ecSelPageTop);
+  AddDefault(C, 'Select page bottom', srkmecSelPageBottom, ecSelPageBottom);
   AddDefault(C, 'Select to absolute beginning', srkmecSelEditorTop, ecSelEditorTop);
   AddDefault(C, 'Select to absolute end', srkmecSelEditorBottom, ecSelEditorBottom);
   AddDefault(C, 'Select all', lisMenuSelectAll, ecSelectAll);
@@ -3014,8 +3015,8 @@ begin
   AddDefault(C, 'Insert modified LGPL notice translated', srkmecInsertModifiedLGPLNoticeTranslated, ecInsertModifiedLGPLNoticeTranslated);
   AddDefault(C, 'Insert MIT notice', srkmecInsertMITNotice, ecInsertMITNotice);
   AddDefault(C, 'Insert MIT notice translated', srkmecInsertMITNoticeTranslated, ecInsertMITNoticeTranslated);
-  AddDefault(C, 'Insert username', lisKMInsertUsername, ecInsertUserName);
-  AddDefault(C, 'Insert date and time', lisKMInsertDateAndTime, ecInsertDateTime);
+  AddDefault(C, 'Insert username', srkmecInsertUserName, ecInsertUserName);
+  AddDefault(C, 'Insert date and time', srkmecInsertDateTime, ecInsertDateTime);
   AddDefault(C, 'Insert ChangeLog entry', srkmecInsertChangeLogEntry, ecInsertChangeLogEntry);
   AddDefault(C, 'Insert CVS keyword Author', srkmecInsertCVSAuthor, ecInsertCVSAuthor);
   AddDefault(C, 'Insert CVS keyword Date', srkmecInsertCVSDate, ecInsertCVSDate);
@@ -3072,15 +3073,8 @@ begin
 
   // folding
   C:=Categories[AddCategory('Folding',srkmCatFold,IDECmdScopeSrcEditOnly)];
-  AddDefault(C, 'Fold to Level 1',  Format(srkmEcFoldLevel,[1]), EcFoldLevel1);
-  AddDefault(C, 'Fold to Level 2',  Format(srkmEcFoldLevel,[2]), EcFoldLevel2);
-  AddDefault(C, 'Fold to Level 3',  Format(srkmEcFoldLevel,[3]), EcFoldLevel3);
-  AddDefault(C, 'Fold to Level 4',  Format(srkmEcFoldLevel,[4]), EcFoldLevel4);
-  AddDefault(C, 'Fold to Level 5',  Format(srkmEcFoldLevel,[5]), EcFoldLevel5);
-  AddDefault(C, 'Fold to Level 6',  Format(srkmEcFoldLevel,[6]), EcFoldLevel6);
-  AddDefault(C, 'Fold to Level 7',  Format(srkmEcFoldLevel,[7]), EcFoldLevel7);
-  AddDefault(C, 'Fold to Level 8',  Format(srkmEcFoldLevel,[8]), EcFoldLevel8);
-  AddDefault(C, 'Fold to Level 9',  Format(srkmEcFoldLevel,[9]), EcFoldLevel9);
+  for i:=0 to 8 do
+    AddDefault(C, Format('Fold to Level %d', [i+1]),  Format(srkmEcFoldLevel,[i+1]), EcFoldLevel1+i);
   AddDefault(C, 'Unfold all', srkmecUnFoldAll, EcFoldLevel0);
   AddDefault(C, 'Fold at Cursor', srkmecFoldCurrent, EcFoldCurrent);
   AddDefault(C, 'Unfold at Cursor', srkmecUnFoldCurrent, EcUnFoldCurrent);
@@ -3088,43 +3082,21 @@ begin
 
   // marker - without menu items in the IDE bar
   C:=Categories[AddCategory('Marker',srkmCatMarker,IDECmdScopeSrcEditOnly)];
-  AddDefault(C, 'Set free Bookmark', lisKMSetFreeBookmark, ecSetFreeBookmark);
+  AddDefault(C, 'Set free Bookmark', srkmecSetFreeBookmark, ecSetFreeBookmark);
   AddDefault(C, 'Clear Bookmarks for current file', srkmecClearBookmarkForFile, ecClearBookmarkForFile);
   AddDefault(C, 'Clear all Bookmarks', srkmecClearAllBookmark, ecClearAllBookmark);
   AddDefault(C, 'Previous Bookmark', srkmecPrevBookmark, ecPrevBookmark);
   AddDefault(C, 'Next Bookmark', srkmecNextBookmark, ecNextBookmark);
   AddDefault(C, 'Go to Bookmark...', uemGotoBookmarks, ecGotoBookmarks);
-  AddDefault(C, 'Go to marker 0', lisKMGoToMarker0, ecGotoMarker0);
-  AddDefault(C, 'Go to marker 1', lisKMGoToMarker1, ecGotoMarker1);
-  AddDefault(C, 'Go to marker 2', lisKMGoToMarker2, ecGotoMarker2);
-  AddDefault(C, 'Go to marker 3', lisKMGoToMarker3, ecGotoMarker3);
-  AddDefault(C, 'Go to marker 4', lisKMGoToMarker4, ecGotoMarker4);
-  AddDefault(C, 'Go to marker 5', lisKMGoToMarker5, ecGotoMarker5);
-  AddDefault(C, 'Go to marker 6', lisKMGoToMarker6, ecGotoMarker6);
-  AddDefault(C, 'Go to marker 7', lisKMGoToMarker7, ecGotoMarker7);
-  AddDefault(C, 'Go to marker 8', lisKMGoToMarker8, ecGotoMarker8);
-  AddDefault(C, 'Go to marker 9', lisKMGoToMarker9, ecGotoMarker9);
-  AddDefault(C, 'Set marker 0', lisKMSetMarker0, ecSetMarker0);
-  AddDefault(C, 'Set marker 1', lisKMSetMarker1, ecSetMarker1);
-  AddDefault(C, 'Set marker 2', lisKMSetMarker2, ecSetMarker2);
-  AddDefault(C, 'Set marker 3', lisKMSetMarker3, ecSetMarker3);
-  AddDefault(C, 'Set marker 4', lisKMSetMarker4, ecSetMarker4);
-  AddDefault(C, 'Set marker 5', lisKMSetMarker5, ecSetMarker5);
-  AddDefault(C, 'Set marker 6', lisKMSetMarker6, ecSetMarker6);
-  AddDefault(C, 'Set marker 7', lisKMSetMarker7, ecSetMarker7);
-  AddDefault(C, 'Set marker 8', lisKMSetMarker8, ecSetMarker8);
-  AddDefault(C, 'Set marker 9', lisKMSetMarker9, ecSetMarker9);
+
+  for i:=0 to 9 do
+    AddDefault(C, Format('Go to marker %d', [i]), Format(srkmecGotoMarker, [i]), ecGotoMarker0+i);
+  for i:=0 to 9 do
+    AddDefault(C, Format('Set marker %d', [i]), Format(srkmecSetMarker, [i]), ecSetMarker0+i);
+
   AddDefault(C, 'Toggle Bookmark...', uemToggleBookmarks, ecToggleBookmarks);
-  AddDefault(C, 'Toggle marker 0', lisKMToggleMarker0, ecToggleMarker0);
-  AddDefault(C, 'Toggle marker 1', lisKMToggleMarker1, ecToggleMarker1);
-  AddDefault(C, 'Toggle marker 2', lisKMToggleMarker2, ecToggleMarker2);
-  AddDefault(C, 'Toggle marker 3', lisKMToggleMarker3, ecToggleMarker3);
-  AddDefault(C, 'Toggle marker 4', lisKMToggleMarker4, ecToggleMarker4);
-  AddDefault(C, 'Toggle marker 5', lisKMToggleMarker5, ecToggleMarker5);
-  AddDefault(C, 'Toggle marker 6', lisKMToggleMarker6, ecToggleMarker6);
-  AddDefault(C, 'Toggle marker 7', lisKMToggleMarker7, ecToggleMarker7);
-  AddDefault(C, 'Toggle marker 8', lisKMToggleMarker8, ecToggleMarker8);
-  AddDefault(C, 'Toggle marker 9', lisKMToggleMarker9, ecToggleMarker9);
+  for i:=0 to 9 do
+    AddDefault(C, Format('Toggle marker %d', [i]), Format(srkmecToggleMarker, [i]), ecToggleMarker0+i);
 
   // codetools
   C:=Categories[AddCategory(CommandCategoryCodeTools,srkmCatCodeTools,IDECmdScopeSrcEditOnly)];
@@ -3260,6 +3232,15 @@ begin
   AddDefault(C, 'Edit Syncro (sel) Start (Context)', srkmecSynPSyncroEdStartCtx, ecIdePSyncroEdSelStartCtx);
   AddDefault(C, 'Edit Syncro (sel) Start (Context/Case)', srkmecSynPSyncroEdStartCtxCase, ecIdePSyncroEdSelStartCtxCase);
 
+  // Line Wrap
+  C:=Categories[AddCategory('Line Wrap', srkmCatLineWrap, IDECmdScopeSrcEditOnly)];
+  AddDefault(C, 'LineWrap move to subline start', srkmecSynPLineWrapLineStart, ecSynPLineWrapLineStart);
+  AddDefault(C, 'LineWrap move to subline end', srkmecSynPLineWrapLineEnd, ecSynPLineWrapLineEnd);
+  AddDefault(C, 'LineWrap select to subline start', srkmecSynPLineWrapSelLineStart, ecSynPLineWrapSelLineStart);
+  AddDefault(C, 'LineWrap select to subline end', srkmecSynPLineWrapSelLineEnd, ecSynPLineWrapSelLineEnd);
+  AddDefault(C, 'LineWrap col select to subline start', srkmecSynPLineWrapColSelLineStart, ecSynPLineWrapColSelLineStart);
+  AddDefault(C, 'LineWrap col select to subline end', srkmecSynPLineWrapColSelLineEnd, ecSynPLineWrapColSelLineEnd);
+
   // source notebook - without menu items in the IDE bar
   C:=Categories[AddCategory('SourceNotebook',srkmCatSrcNoteBook,IDECmdScopeSrcEditOnly)];
   AddDefault(C, 'Go to next editor', srkmecNextEditor, ecNextEditor);
@@ -3274,16 +3255,9 @@ begin
   AddDefault(C, 'Move editor right', srkmecMoveEditorRight, ecMoveEditorRight);
   AddDefault(C, 'Move editor leftmost', srkmecMoveEditorLeftmost, ecMoveEditorLeftmost);
   AddDefault(C, 'Move editor rightmoust',  srkmecMoveEditorRightmost, ecMoveEditorRightmost);
-  AddDefault(C, 'Go to source editor 1', lisKMGoToSourceEditor1, ecGotoEditor1);
-  AddDefault(C, 'Go to source editor 2', lisKMGoToSourceEditor2, ecGotoEditor2);
-  AddDefault(C, 'Go to source editor 3', lisKMGoToSourceEditor3, ecGotoEditor3);
-  AddDefault(C, 'Go to source editor 4', lisKMGoToSourceEditor4, ecGotoEditor4);
-  AddDefault(C, 'Go to source editor 5', lisKMGoToSourceEditor5, ecGotoEditor5);
-  AddDefault(C, 'Go to source editor 6', lisKMGoToSourceEditor6, ecGotoEditor6);
-  AddDefault(C, 'Go to source editor 7', lisKMGoToSourceEditor7, ecGotoEditor7);
-  AddDefault(C, 'Go to source editor 8', lisKMGoToSourceEditor8, ecGotoEditor8);
-  AddDefault(C, 'Go to source editor 9', lisKMGoToSourceEditor9, ecGotoEditor9);
-  AddDefault(C, 'Go to source editor 10', lisKMGoToSourceEditor10, ecGotoEditor0);
+
+  for i:=0 to 9 do
+    AddDefault(C, Format('Go to source editor %d', [i+1]), Format(srkmecGotoEditor, [i+1]), ecGotoEditor1+i);
 
   AddDefault(C, 'Go to next shared editor', srkmecNextSharedEditor, ecNextSharedEditor);
   AddDefault(C, 'Go to prior shared editor', srkmecPrevSharedEditor, ecPrevSharedEditor);

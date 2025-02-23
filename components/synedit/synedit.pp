@@ -914,7 +914,6 @@ type
     procedure SetSelEnd(const Value: integer); override;
     procedure SetSelStart(const Value: integer); override;
     property TextView : TSynEditStringsLinked read FTheLinesView;
-    property TopView: Integer read GetTopView write SetTopView;  // TopLine converted into Visible(View) lines
     function PasteFromClipboardEx(ClipHelper: TSynClipboardStream; AForceColumnMode: Boolean = False): Boolean;
     function FindNextUnfoldedLine(iLine: integer; Down: boolean): Integer;
     // Todo: Reduce the argument list of Creategutter
@@ -931,6 +930,7 @@ type
     procedure EndUpdate; override;
 
   public
+    property TopView: Integer read GetTopView write SetTopView;  // TopLine converted into Visible(View) lines
     // Caret
     function CaretXPix: Integer; override;
     function CaretYPix: Integer; override;
@@ -2138,6 +2138,7 @@ var
   FInfo: String;
 begin
   if SelAvail then begin
+    FInfo := '';
     if eoFoldedCopyPaste in fOptions2 then
       FInfo := FFoldedLinesView.GetFoldDescription(
         FBlockSelection.FirstLineBytePos.Y - 1, FBlockSelection.FirstLineBytePos.X,
@@ -2151,6 +2152,7 @@ var
   FInfo: String;
 begin
   if SelAvail then begin
+    FInfo := '';
     if eoFoldedCopyPaste in fOptions2 then
       FInfo := FFoldedLinesView.GetFoldDescription(
         FBlockSelection.FirstLineBytePos.Y - 1, FBlockSelection.FirstLineBytePos.X,
@@ -3743,14 +3745,13 @@ function TCustomSynEdit.GetDragHotZoneInfo(x, y: Integer; out HorizFraction,
   VertFraction: Integer): boolean;
 var
   b: TRect;
-  HotWidth, HotHeight: Integer;
+  HotWidth: Integer;
 begin
   HorizFraction := 0;
   VertFraction := 0;
 
   b := FTextArea.Bounds;
   HotWidth  := Min(LineHeight * 11 div 4, (b.Right - b.Left) div 4);
-  HotHeight := Min(LineHeight *  9 div 4, (b.Bottom - b.Top) div 4);
 
   if x < b.Left + HotWidth then
     HorizFraction := (x - (b.Left + HotWidth)) * 256 div HotWidth
@@ -5020,6 +5021,7 @@ begin
     Include(fStateFlags, sfAfterHandleCreatedNeeded);
     inherited CreateHandle;   //SizeOrFontChanged will be called
   end;
+  StatusChanged([scHandleCreated]);
 end;
 
 procedure TCustomSynEdit.SetScrollBars(const Value: TScrollStyle);
@@ -6610,9 +6612,7 @@ procedure TCustomSynEdit.DragDrop(Source: TObject; X, Y: Integer);
 var
   NewCaret: TPoint;
   DropMove: boolean;
-  BB, BE: TPoint;
   DragDropText: string;
-  Adjust: integer;
   FoldInfo: String;
   BlockSel: TSynEditSelection;
   sm: TSynSelectionMode;
@@ -6626,8 +6626,6 @@ begin
       ComputeCaret(X, Y);
       NewCaret := LogicalCaretXY;
       if CheckDragDropAccecpt(NewCaret, Source, DropMove) then begin
-        BB := BlockBegin;
-        BE := BlockEnd;
         InternalBeginUndoBlock;                                                         //mh 2000-11-20
         try
           DragDropText := TCustomSynEdit(Source).SelText;
@@ -10495,10 +10493,10 @@ end;
 
 procedure TCustomSynEdit.DoOnStatusChange(Changes: TSynStatusChanges);
 begin
+  fStatusChanges := [];
   TSynStatusChangedHandlerList(FStatusChangedList).CallStatusChangedHandlers(Self, Changes);
   if Assigned(fOnStatusChange) then
-    fOnStatusChange(Self, fStatusChanges);
-  fStatusChanges := [];
+    fOnStatusChange(Self, Changes);
 end;
 
 procedure TCustomSynEdit.UndoRedoAdded(Sender: TObject);

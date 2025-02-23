@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-02-12 00:40+0300\n"
+"PO-Revision-Date: 2025-02-23 12:44+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -194,7 +194,7 @@ msgid "Select text (Line mode)"
 msgstr "Выделить текст (режим строк)"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetfreebookmark
-msgid "Set free bookmark"
+msgid "Set a free bookmark"
 msgstr "Установить свободную закладку"
 
 #: lazarusidestrconsts.dlfmousesimplebuttonsetlinefull
@@ -556,6 +556,10 @@ msgctxt "lazarusidestrconsts.dlgaddhiattrgrouptext"
 msgid "Text"
 msgstr "Текст"
 
+#: lazarusidestrconsts.dlgaddhiattrgroupwrap
+msgid "Wrapping"
+msgstr "Перенос слов"
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "Линия отделения бокового поля"
@@ -601,45 +605,10 @@ msgstr "Изменённая строка"
 msgid "Mouse link"
 msgstr "Ссылка при наведении мыши"
 
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel10color
-msgid "Level 10"
-msgstr "Уровень 10"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel1color
-msgid "Level  1"
-msgstr "Уровень  1"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel2color
-msgid "Level  2"
-msgstr "Уровень  2"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel3color
-msgid "Level  3"
-msgstr "Уровень  3"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel4color
-msgid "Level  4"
-msgstr "Уровень  4"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel5color
-msgid "Level  5"
-msgstr "Уровень  5"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel6color
-msgid "Level  6"
-msgstr "Уровень  6"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel7color
-msgid "Level  7"
-msgstr "Уровень  7"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel8color
-msgid "Level  8"
-msgstr "Уровень  8"
-
-#: lazarusidestrconsts.dlgaddhiattroutlinelevel9color
-msgid "Level  9"
-msgstr "Уровень  9"
+#: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
+#, object-pascal-format
+msgid "Level %s"
+msgstr "Уровень %s"
 
 #: lazarusidestrconsts.dlgaddhiattrrecentlyused
 msgid "Recently used item"
@@ -694,6 +663,20 @@ msgstr "Граница окна"
 #: lazarusidestrconsts.dlgaddhiattrwordgroup
 msgid "Word-Brackets"
 msgstr "Операторные скобки"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapeol
+msgid "EOL"
+msgstr "Конец строки"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapindent
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapindent"
+msgid "Indent"
+msgstr "Отступ"
+
+#: lazarusidestrconsts.dlgaddhiattrwrapsubline
+msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
+msgid "Sub-line"
+msgstr "Подстрока"
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
 msgid "Visualized Special Chars"
@@ -2558,6 +2541,7 @@ msgid "from current unit"
 msgstr "из текущего модуля"
 
 #: lazarusidestrconsts.dlgindentsindentgroupoptions
+msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
 msgid "Indent"
 msgstr "Отступ"
 
@@ -3285,7 +3269,7 @@ msgstr "Перемещать все курсоры за основным"
 
 #: lazarusidestrconsts.dlgmulticaretoncolumnselection
 msgid "Enable multi-caret for column selection"
-msgstr "Включить несколько курсоров при выделении столбца"
+msgstr "Включить несколько курсоров при выделении столбцов"
 
 #: lazarusidestrconsts.dlgmultipleinstances_alwaysstartnew
 msgid "always start a new instance"
@@ -3417,9 +3401,38 @@ msgstr "В точке переноса отображать курсор в..."
 msgid "end of line"
 msgstr "конце строки"
 
+#: lazarusidestrconsts.dlgoptwordwraphomeendkey
+msgid "Force default home/end keys to subline start/end"
+msgstr "При нажатии Home/End всегда переходить к началу/концу подстроки"
+
+#: lazarusidestrconsts.dlgoptwordwrapindent
+msgid "Indent width"
+msgstr "Ширина отступа"
+
+#: lazarusidestrconsts.dlgoptwordwrapindentisoffset
+msgctxt "lazarusidestrconsts.dlgoptwordwrapindentisoffset"
+msgid "Indent relative to text"
+msgstr "Делать отступ относительно текста"
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmax
+msgid "Maximum indent width"
+msgstr "Максимальная ширина отступа"
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmaxrel
+msgid "Maximum indent width (percent)"
+msgstr "Максимальная ширина отступа (в процентах)"
+
+#: lazarusidestrconsts.dlgoptwordwrapindentmin
+msgid "Minimum indent width"
+msgstr "Минимальная ширина отступа"
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
 msgstr "Минимальная длина строки"
+
+#: lazarusidestrconsts.dlgoptwordwrapsectionindent
+msgid "Indent settings"
+msgstr "Параметры отступа"
 
 #: lazarusidestrconsts.dlgoptwordwrapstartofnextline
 msgid "start of next line"
@@ -11312,94 +11325,6 @@ msgstr "Настройка внешних средств"
 msgid "Find Incremental"
 msgstr "Найти инкрементно"
 
-#: lazarusidestrconsts.liskmgotomarker0
-msgid "Go to bookmark 0"
-msgstr "Перейти к закладке 0"
-
-#: lazarusidestrconsts.liskmgotomarker1
-msgid "Go to bookmark 1"
-msgstr "Перейти к закладке 1"
-
-#: lazarusidestrconsts.liskmgotomarker2
-msgid "Go to bookmark 2"
-msgstr "Перейти к закладке 2"
-
-#: lazarusidestrconsts.liskmgotomarker3
-msgid "Go to bookmark 3"
-msgstr "Перейти к закладке 3"
-
-#: lazarusidestrconsts.liskmgotomarker4
-msgid "Go to bookmark 4"
-msgstr "Перейти к закладке 4"
-
-#: lazarusidestrconsts.liskmgotomarker5
-msgid "Go to bookmark 5"
-msgstr "Перейти к закладке 5"
-
-#: lazarusidestrconsts.liskmgotomarker6
-msgid "Go to bookmark 6"
-msgstr "Перейти к закладке 6"
-
-#: lazarusidestrconsts.liskmgotomarker7
-msgid "Go to bookmark 7"
-msgstr "Перейти к закладке 7"
-
-#: lazarusidestrconsts.liskmgotomarker8
-msgid "Go to bookmark 8"
-msgstr "Перейти к закладке 8"
-
-#: lazarusidestrconsts.liskmgotomarker9
-msgid "Go to bookmark 9"
-msgstr "Перейти к закладке 9"
-
-#: lazarusidestrconsts.liskmgotosourceeditor1
-msgid "Go to source editor 1"
-msgstr "Перейти к редактору исходного кода 1"
-
-#: lazarusidestrconsts.liskmgotosourceeditor10
-msgid "Go to source editor 10"
-msgstr "Перейти к редактору исходного кода 10"
-
-#: lazarusidestrconsts.liskmgotosourceeditor2
-msgid "Go to source editor 2"
-msgstr "Перейти к редактору исходного кода 2"
-
-#: lazarusidestrconsts.liskmgotosourceeditor3
-msgid "Go to source editor 3"
-msgstr "Перейти к редактору исходного кода 3"
-
-#: lazarusidestrconsts.liskmgotosourceeditor4
-msgid "Go to source editor 4"
-msgstr "Перейти к редактору исходного кода 4"
-
-#: lazarusidestrconsts.liskmgotosourceeditor5
-msgid "Go to source editor 5"
-msgstr "Перейти к редактору исходного кода 5"
-
-#: lazarusidestrconsts.liskmgotosourceeditor6
-msgid "Go to source editor 6"
-msgstr "Перейти к редактору исходного кода 6"
-
-#: lazarusidestrconsts.liskmgotosourceeditor7
-msgid "Go to source editor 7"
-msgstr "Перейти к редактору исходного кода 7"
-
-#: lazarusidestrconsts.liskmgotosourceeditor8
-msgid "Go to source editor 8"
-msgstr "Перейти к редактору исходного кода 8"
-
-#: lazarusidestrconsts.liskmgotosourceeditor9
-msgid "Go to source editor 9"
-msgstr "Перейти к редактору исходного кода 9"
-
-#: lazarusidestrconsts.liskminsertdateandtime
-msgid "Insert date and time"
-msgstr "Вставить дату и время"
-
-#: lazarusidestrconsts.liskminsertusername
-msgid "Insert username"
-msgstr "Вставить имя пользователя"
-
 #: lazarusidestrconsts.liskminspect
 msgid "Inspect"
 msgstr "Просмотреть"
@@ -11500,80 +11425,6 @@ msgstr "Сохранить проект"
 msgid "Save project as"
 msgstr "Сохранить проект как"
 
-#: lazarusidestrconsts.liskmselectlineend
-msgctxt "lazarusidestrconsts.liskmselectlineend"
-msgid "Select Line End"
-msgstr "Выделить до конца строки"
-
-#: lazarusidestrconsts.liskmselectlinestart
-msgctxt "lazarusidestrconsts.liskmselectlinestart"
-msgid "Select Line Start"
-msgstr "Выделить до начала строки"
-
-#: lazarusidestrconsts.liskmselectpagebottom
-msgctxt "lazarusidestrconsts.liskmselectpagebottom"
-msgid "Select Page Bottom"
-msgstr "Выделить страницу снизу"
-
-#: lazarusidestrconsts.liskmselectpagetop
-msgctxt "lazarusidestrconsts.liskmselectpagetop"
-msgid "Select Page Top"
-msgstr "Выделить страницу сверху"
-
-#: lazarusidestrconsts.liskmselectwordleft
-msgctxt "lazarusidestrconsts.liskmselectwordleft"
-msgid "Select Word Left"
-msgstr "Выделить слово слева"
-
-#: lazarusidestrconsts.liskmselectwordright
-msgctxt "lazarusidestrconsts.liskmselectwordright"
-msgid "Select Word Right"
-msgstr "Выделить слово справа"
-
-#: lazarusidestrconsts.liskmsetfreebookmark
-msgid "Set free Bookmark"
-msgstr "Установить свободную закладку"
-
-#: lazarusidestrconsts.liskmsetmarker0
-msgid "Set bookmark 0"
-msgstr "Добавить закладку 0"
-
-#: lazarusidestrconsts.liskmsetmarker1
-msgid "Set bookmark 1"
-msgstr "Добавить закладку 1"
-
-#: lazarusidestrconsts.liskmsetmarker2
-msgid "Set bookmark 2"
-msgstr "Добавить закладку 2"
-
-#: lazarusidestrconsts.liskmsetmarker3
-msgid "Set bookmark 3"
-msgstr "Добавить закладку 3"
-
-#: lazarusidestrconsts.liskmsetmarker4
-msgid "Set bookmark 4"
-msgstr "Добавить закладку 4"
-
-#: lazarusidestrconsts.liskmsetmarker5
-msgid "Set bookmark 5"
-msgstr "Добавить закладку 5"
-
-#: lazarusidestrconsts.liskmsetmarker6
-msgid "Set bookmark 6"
-msgstr "Добавить закладку 6"
-
-#: lazarusidestrconsts.liskmsetmarker7
-msgid "Set bookmark 7"
-msgstr "Добавить закладку 7"
-
-#: lazarusidestrconsts.liskmsetmarker8
-msgid "Set bookmark 8"
-msgstr "Добавить закладку 8"
-
-#: lazarusidestrconsts.liskmsetmarker9
-msgid "Set bookmark 9"
-msgstr "Добавить закладку 9"
-
 #: lazarusidestrconsts.liskmstopprogram
 msgid "Stop Program"
 msgstr "Остановить программу"
@@ -11581,46 +11432,6 @@ msgstr "Остановить программу"
 #: lazarusidestrconsts.liskmtogglebetweenunitandform
 msgid "Toggle between Unit and Form"
 msgstr "Переключиться между модулем и формой"
-
-#: lazarusidestrconsts.liskmtogglemarker0
-msgid "Toggle bookmark 0"
-msgstr "Переключить закладку 0"
-
-#: lazarusidestrconsts.liskmtogglemarker1
-msgid "Toggle bookmark 1"
-msgstr "Переключить закладку 1"
-
-#: lazarusidestrconsts.liskmtogglemarker2
-msgid "Toggle bookmark 2"
-msgstr "Переключить закладку 2"
-
-#: lazarusidestrconsts.liskmtogglemarker3
-msgid "Toggle bookmark 3"
-msgstr "Переключить закладку 3"
-
-#: lazarusidestrconsts.liskmtogglemarker4
-msgid "Toggle bookmark 4"
-msgstr "Переключить закладку 4"
-
-#: lazarusidestrconsts.liskmtogglemarker5
-msgid "Toggle bookmark 5"
-msgstr "Переключить закладку 5"
-
-#: lazarusidestrconsts.liskmtogglemarker6
-msgid "Toggle bookmark 6"
-msgstr "Переключить закладку 6"
-
-#: lazarusidestrconsts.liskmtogglemarker7
-msgid "Toggle bookmark 7"
-msgstr "Переключить закладку 7"
-
-#: lazarusidestrconsts.liskmtogglemarker8
-msgid "Toggle bookmark 8"
-msgstr "Переключить закладку 8"
-
-#: lazarusidestrconsts.liskmtogglemarker9
-msgid "Toggle bookmark 9"
-msgstr "Переключить закладку 9"
 
 #: lazarusidestrconsts.liskmtoggleviewassembler
 msgctxt "lazarusidestrconsts.liskmtoggleviewassembler"
@@ -18168,10 +17979,6 @@ msgstr "Проект записывает отладочные символы н
 msgid "%sThere are additional notes for this message on%s"
 msgstr "%sДля данного сообщения найдены дополнительные сведения по адресу%s"
 
-#: lazarusidestrconsts.listherearenoconflictingkeys
-msgid "There are no conflicting keys."
-msgstr "Конфликтующие комбинации клавиш отсутствуют."
-
 #: lazarusidestrconsts.listhereareotherfilesinthedirectorywiththesamename
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
@@ -19881,6 +19688,10 @@ msgstr "Команды меню Файл"
 msgid "Text folding commands"
 msgstr "Команды сворачивания текста"
 
+#: lazarusidestrconsts.srkmcatlinewrap
+msgid "Line wrapping"
+msgstr "Перенос строки"
+
 #: lazarusidestrconsts.srkmcatmacrorecording
 msgctxt "lazarusidestrconsts.srkmcatmacrorecording"
 msgid "Macros"
@@ -20089,67 +19900,67 @@ msgstr "Очистить закладки в текущем файле"
 
 #: lazarusidestrconsts.srkmeccolseldown
 msgid "Column Select Down"
-msgstr "Выделить снизу"
+msgstr "Выделить столбцы снизу"
 
 #: lazarusidestrconsts.srkmeccolseleditorbottom
 msgid "Column Select to absolute end"
-msgstr "Выделить до самого конца"
+msgstr "Выделить столбцы до самого конца"
 
 #: lazarusidestrconsts.srkmeccolseleditortop
 msgid "Column Select to absolute beginning"
-msgstr "Выделить до самого начала"
+msgstr "Выделить столбцы до самого начала"
 
 #: lazarusidestrconsts.srkmeccolselleft
 msgid "Column Select Left"
-msgstr "Выделить слева"
+msgstr "Выделить столбцы слева"
 
 #: lazarusidestrconsts.srkmeccolsellineend
 msgid "Column Select Line End"
-msgstr "Выделить до конца строки"
+msgstr "Выделить столбцы до конца строки"
 
 #: lazarusidestrconsts.srkmeccolsellinestart
 msgid "Column Select Line Start"
-msgstr "Выделить до начала строки"
+msgstr "Выделить столбцы до начала строки"
 
 #: lazarusidestrconsts.srkmeccolsellinetextstart
 msgid "Column Select to text start in line"
-msgstr "Выделить до начала текста в строке"
+msgstr "Выделить столбцы до начала текста в строке"
 
 #: lazarusidestrconsts.srkmeccolselpagebottom
 msgid "Column Select Page Bottom"
-msgstr "Выделить всю страницу снизу"
+msgstr "Выделить столбцы до конца страницы"
 
 #: lazarusidestrconsts.srkmeccolselpagedown
 msgid "Column Select Page Down"
-msgstr "Выделить страницу снизу"
+msgstr "Выделить столбцы страницы снизу"
 
 #: lazarusidestrconsts.srkmeccolselpagetop
 msgid "Column Select Page Top"
-msgstr "Выделить всю страницу сверху"
+msgstr "Выделить столбцы до начала страницы"
 
 #: lazarusidestrconsts.srkmeccolselpageup
 msgid "Column Select Page Up"
-msgstr "Выделить страницу сверху"
+msgstr "Выделить столбцы страницы сверху"
 
 #: lazarusidestrconsts.srkmeccolselright
 msgid "Column Select Right"
-msgstr "Выделить справа"
+msgstr "Выделить столбцы справа"
 
 #: lazarusidestrconsts.srkmeccolselup
 msgid "Column Select Up"
-msgstr "Выделить сверху"
+msgstr "Выделить столбцы сверху"
 
 #: lazarusidestrconsts.srkmeccolselwordleft
 msgid "Column Select Word Left"
-msgstr "Добавить в выделение слово слева"
+msgstr "Выделить столбцы слова слева"
 
 #: lazarusidestrconsts.srkmeccolselwordright
 msgid "Column Select Word Right"
-msgstr "Добавить в выделение слово справа"
+msgstr "Выделить столбцы слова справа"
 
 #: lazarusidestrconsts.srkmeccolumnselect
 msgid "Column selection mode"
-msgstr "Режим выбора столбца"
+msgstr "Режим выбора столбцов"
 
 #: lazarusidestrconsts.srkmeccompile
 msgid "compile program/project"
@@ -20360,8 +20171,8 @@ msgstr "Переключить свёрнутость текста под кур
 
 #: lazarusidestrconsts.srkmecgotoeditor
 #, object-pascal-format
-msgid "Go to editor %d"
-msgstr "Перейти к редактору %d"
+msgid "Go to source editor %d"
+msgstr "Перейти к редактору исходного кода %d"
 
 #: lazarusidestrconsts.srkmecgotoincludedirective
 msgid "Go to include directive of current include file"
@@ -20838,12 +20649,12 @@ msgstr "Выделить слева"
 #: lazarusidestrconsts.srkmecsellineend
 msgctxt "lazarusidestrconsts.srkmecsellineend"
 msgid "Select Line End"
-msgstr "Выделить конец строки"
+msgstr "Выделить до конца строки"
 
 #: lazarusidestrconsts.srkmecsellinestart
 msgctxt "lazarusidestrconsts.srkmecsellinestart"
 msgid "Select Line Start"
-msgstr "Выделить начало строки"
+msgstr "Выделить до начала строки"
 
 #: lazarusidestrconsts.srkmecsellinetextstart
 msgid "Select to text start in line"
@@ -20852,7 +20663,7 @@ msgstr "Выделить до начала текста в строке"
 #: lazarusidestrconsts.srkmecselpagebottom
 msgctxt "lazarusidestrconsts.srkmecselpagebottom"
 msgid "Select Page Bottom"
-msgstr "Выделить низ страницы"
+msgstr "Выделить до конца страницы"
 
 #: lazarusidestrconsts.srkmecselpagedown
 msgid "Select Page Down"
@@ -20869,7 +20680,7 @@ msgstr "Выделить страницу справа"
 #: lazarusidestrconsts.srkmecselpagetop
 msgctxt "lazarusidestrconsts.srkmecselpagetop"
 msgid "Select Page Top"
-msgstr "Выделить верх страницы"
+msgstr "Выделить до начала страницы"
 
 #: lazarusidestrconsts.srkmecselpageup
 msgid "Select Page Up"
@@ -20970,6 +20781,30 @@ msgstr "Воспроизвести макрос"
 #: lazarusidestrconsts.srkmecsynmacrorecord
 msgid "Record Macro"
 msgstr "Записать макрос"
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellineend
+msgid "Column Select to wrapped line end"
+msgstr "Выделить столбцы до конца перенесённой строки"
+
+#: lazarusidestrconsts.srkmecsynplinewrapcolsellinestart
+msgid "Column Select to wrapped line start"
+msgstr "Выделить столбцы до начала перенесённой строки"
+
+#: lazarusidestrconsts.srkmecsynplinewraplineend
+msgid "Move cursor to wrapped line end"
+msgstr "Переместить курсор в конец перенесённой строки"
+
+#: lazarusidestrconsts.srkmecsynplinewraplinestart
+msgid "Move cursor to wrapped line start"
+msgstr "Переместить курсор в начало перенесённой строки"
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellineend
+msgid "Select to wrapped line end"
+msgstr "Выделить до конца перенесённой строки"
+
+#: lazarusidestrconsts.srkmecsynplinewrapsellinestart
+msgid "Select to wrapped line start"
+msgstr "Выделить до начала перенесённой строки"
 
 #: lazarusidestrconsts.srkmecsynpsyncroedaddcell
 msgid "Add Cell"
@@ -21568,11 +21403,11 @@ msgstr "Найти в другом окне"
 
 #: lazarusidestrconsts.uemgotobookmark
 msgid "&Goto Bookmark"
-msgstr "&Перейти по закладке"
+msgstr "&Перейти к закладке"
 
 #: lazarusidestrconsts.uemgotobookmarks
 msgid "Goto Bookmark ..."
-msgstr "Перейти по закладке ..."
+msgstr "Перейти к закладке ..."
 
 #: lazarusidestrconsts.uemhighlighter
 msgid "Highlighter"
@@ -21653,11 +21488,6 @@ msgstr "Только чтение"
 #: lazarusidestrconsts.uemrefactor
 msgid "Refactoring"
 msgstr "Переработка кода"
-
-#: lazarusidestrconsts.uemsetfreebookmark
-msgctxt "lazarusidestrconsts.uemsetfreebookmark"
-msgid "Set a Free Bookmark"
-msgstr "Установить свободную закладку"
 
 #: lazarusidestrconsts.uemshowlinenumbers
 msgid "Show Line Numbers"

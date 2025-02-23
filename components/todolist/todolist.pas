@@ -66,7 +66,7 @@ uses
   LCLType, LclIntf, Forms, Controls, StdCtrls, Dialogs, ComCtrls,
   ActnList, XMLPropStorage, ExtCtrls,
   // LazUtils
-  LazFileUtils, LazFileCache, LazLoggerBase, LazTracer,
+  LazFileUtils, LazFileCache, LazLoggerBase, LazTracer, AvgLvlTree,
   // Codetools
   CodeToolManager, FileProcs,
   // IDEIntf
@@ -129,28 +129,25 @@ type
     FIdleConnected: boolean;
     FLoadingOptions: boolean;
     FStartFilename: String;
+    FOwnerProjPack: TObject;  // Project or package owning the FStartFilename.
     FOnOpenFile  : TOnOpenFile;
     FScannedFiles: TAvlTree;// tree of TTLScannedFile
-
+    FScannedIncFiles: TStringMap;
     procedure SetIDEItem(AValue: string);
     procedure SetIdleConnected(const AValue: boolean);
-    procedure SetStartFilename(const AValue: String);
+    function ProjectOpened(Sender: TObject; AProject: TLazProject): TModalResult;
     procedure UpdateStartFilename;
     procedure ResolveIDEItem(out CurOwner: TObject; out CurProject: TLazProject;
                              out CurPkg: TIDEPackage);
-
     procedure AddListItem(aTodoItem: TTodoItem);
-    
     procedure ScanFile(aFileName : string);
     procedure OnIdle(Sender: TObject; var {%H-}Done: Boolean);
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-
     procedure UpdateTodos(Immediately: boolean = false);
 
     property IDEItem: string read FIDEItem write SetIDEItem; // package name or empty for active project
-    property StartFilename: String read FStartFilename write SetStartFilename; // lpi, lpk or a source file
     property BaseDirectory: string read FBaseDirectory;
     property OnOpenFile: TOnOpenFile read FOnOpenFile write FOnOpenFile;
     property IdleConnected: boolean read FIdleConnected write SetIdleConnected;
@@ -166,31 +163,27 @@ implementation
 const
   DefaultTodoListCfgFile = 'todolistoptions.xml';
 
-function CompareTLScannedFiles(Data1, Data2: Pointer): integer;
-begin
-  Result:=CompareFilenames(TTLScannedFile(Data1).Filename,
-                           TTLScannedFile(Data2).Filename);
-end;
-
 { TIDETodoWindow }
 
 constructor TIDETodoWindow.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  if Name<>ToDoWindowName then RaiseGDBException('');
+  if Name<>ToDoWindowName then
+    RaiseGDBException('');
   ToolBar.Images := IDEImages.Images_16;
   acGoto.ImageIndex := IDEImages.LoadImage('menu_goto_line');
   acRefresh.ImageIndex := IDEImages.LoadImage('laz_refresh');
   acExport.ImageIndex := IDEImages.LoadImage('menu_saveas');
   acHelp.ImageIndex := IDEImages.LoadImage('btn_help');
-
   SaveDialog.Filter:= dlgFilterCsv+'|*.csv';
+  LazarusIDE.AddHandlerOnProjectOpened(@ProjectOpened);
 end;
 
 destructor TIDETodoWindow.Destroy;
 begin
   FScannedFiles.FreeAndClear;
   FreeAndNil(FScannedFiles);
+  FreeAndNil(FScannedIncFiles);
   inherited Destroy;
 end;
 
@@ -198,7 +191,6 @@ procedure TIDETodoWindow.UpdateTodos(Immediately: boolean);
 var
   i: integer;
   St : String;
-  CurOwner: TObject;
   Node: TAvlTreeNode;
   CurFile: TTLScannedFile;
   Units: TStrings;
@@ -210,14 +202,14 @@ begin
     exit;
 
   if not Immediately then
-    begin
-      FUpdateNeeded:=true;
-      IdleConnected:=true;
-      exit;
-    end;
+  begin
+    FUpdateNeeded:=true;
+    IdleConnected:=true;
+    exit;
+  end;
 
   FUpdateNeeded:=false;
-  if FUpdating then
+  if FUpdating or (FOwnerProjPack=nil) then
     Exit;
   LazarusIDE.SaveSourceEditorChangesToCodeCache(nil);
   Screen.BeginWaitCursor;
@@ -228,21 +220,18 @@ begin
     CodeToolBoss.ActivateWriteLock;
 
     FScannedFiles.FreeAndClear;
+    FScannedIncFiles.Clear;
     lvTodo.Items.Clear;
 
-    if StartFilename<>'' then begin
+    if FStartFilename<>'' then begin
       // Find a '.todo' file of the main source
-      St:=ChangeFileExt(StartFilename,'.todo');
+      St:=ChangeFileExt(FStartFilename,'.todo');
       if FileExistsCached(St) then
         ScanFile(St);
       // Scan main source file
-      if FilenameIsPascalUnit(StartFilename) then
-        ScanFile(StartFilename);
+      if FilenameIsPascalUnit(FStartFilename) then
+        ScanFile(FStartFilename);
     end;
-
-    ResolveIDEItem(CurOwner,CurProject,CurPkg);
-    if CurOwner=nil then
-      Exit;
 
     Flags:=[];
     if chkListed.Checked then
@@ -254,7 +243,7 @@ begin
     if chkSourceEditor.Checked then
       Include(Flags, fuooSourceEditor);
 
-    Units:=LazarusIDE.FindUnitsOfOwner(CurOwner,Flags);
+    Units:=LazarusIDE.FindUnitsOfOwner(FOwnerProjPack,Flags);
     for i:=0 to Units.Count-1 do
       ScanFile(Units[i]);
 
@@ -349,33 +338,29 @@ begin
   FLoadingOptions := True;
 end;
 
-//Initialise the todo project and find them
-procedure TIDETodoWindow.SetStartFilename(const AValue: String);
+function TIDETodoWindow.ProjectOpened(Sender: TObject; AProject: TLazProject): TModalResult;
 begin
-  //debugln(['TIDETodoWindow.SetOwnerFilename ',AValue]);
-  if FStartFilename=AValue then
-    exit;
-  FStartFilename:=AValue;
+  Result:=mrOK;
+  IDEItem:='';
   UpdateTodos;
 end;
 
 procedure TIDETodoWindow.UpdateStartFilename;
 var
   NewStartFilename: String;
-  CurObject: TObject;
   CurProject: TLazProject;
   CurPkg: TIDEPackage;
 begin
-  ResolveIDEItem(CurObject,CurProject,CurPkg);
+  ResolveIDEItem(FOwnerProjPack,CurProject,CurPkg);
   NewStartFilename:='';
-  if CurPkg<>nil then begin
-    // package
-    NewStartFilename:=CurPkg.Filename;
-  end else if CurProject<>nil then begin
-    // project
+  if CurPkg<>nil then                   // package
+    NewStartFilename:=CurPkg.Filename
+  else if CurProject<>nil then          // project
     NewStartFilename:=CurProject.ProjectInfoFile;
-  end;
-  StartFilename:=NewStartFilename;
+  if FStartFilename=NewStartFilename then
+    exit;
+  FStartFilename:=NewStartFilename;
+  UpdateTodos;
 end;
 
 procedure TIDETodoWindow.ResolveIDEItem(out CurOwner: TObject;
@@ -384,14 +369,16 @@ begin
   CurOwner:=nil;
   CurProject:=nil;
   CurPkg:=nil;
-  if IsValidIdent(IDEItem,true,true) then begin
+  if IsValidIdent(FIDEItem,true,true) then begin
     // package
-    CurPkg:=PackageEditingInterface.FindPackageWithName(IDEItem);
+    CurPkg:=PackageEditingInterface.FindPackageWithName(FIDEItem);
     CurOwner:=CurPkg;
+    //DebugLn(['TIDETodoWindow.ResolveIDEItem: Found package ', CurPkg.Filename]);
   end else begin
     // project
     CurProject:=LazarusIDE.ActiveProject;
     CurOwner:=CurProject;
+    //DebugLn(['TIDETodoWindow.ResolveIDEItem: Found project ', CurProject.MainFile.Filename]);
   end;
 end;
 
@@ -407,7 +394,7 @@ end;
 
 procedure TIDETodoWindow.SetIDEItem(AValue: string);
 begin
-  if FIDEItem=AValue then exit;
+  //if FIDEItem=AValue then exit;  // No check, trigger update in any case.
   FIDEItem:=AValue;
   UpdateStartFilename;
 end;
@@ -416,6 +403,7 @@ procedure TIDETodoWindow.FormCreate(Sender: TObject);
 begin
   FUpdating := False;
   FScannedFiles := TAvlTree.Create(@CompareTLScannedFiles);
+  FScannedIncFiles := TStringMap.Create(False);
 
   Caption := lisToDoList;
 
@@ -501,7 +489,7 @@ procedure TIDETodoWindow.acExportExecute(Sender: TObject);
 begin
   SaveDialog.FileName:='TodoList_'+FormatDateTime('YYYY_MM_DD',now);
   if SaveDialog.Execute then
-    TToDoListCore.ExtractToCSV(lvTodo.Items, SaveDialog.FileName);
+    ExtractToCSV(SaveDialog.FileName, lvTodo.Items);
 end;
 
 procedure TIDETodoWindow.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -516,7 +504,7 @@ procedure TIDETodoWindow.AddListItem(aTodoItem: TTodoItem);
   begin
     case cboShowWhat.ItemIndex of
       0:Result := True;
-      1..3: Result := (TToDoType(cboShowWhat.ItemIndex - 1) =  aTodoItem.ToDoType);
+      1..3: Result := (TToDoType(cboShowWhat.ItemIndex - 1) = aTodoItem.ToDoType);
       4:Result := aTodoItem.ToDoType in [tdToDo, tdDone];
       5:Result := aTodoItem.ToDoType in [tdToDo, tdNote];
       6:Result := aTodoItem.ToDoType in [tdDone, tdNote];
@@ -530,7 +518,7 @@ var
 begin
   if Assigned(aTodoItem) and ShowThisToDoItem then
   begin
-    //DebugLn(['TfrmTodo.AddListItem ',aTodoItem.Filename,' ',aTodoItem.LineNumber]);
+    //DebugLn(['TIDETodoWindow.AddListItem ',aTodoItem.Filename,' ',aTodoItem.LineNumber]);
     aListitem := lvTodo.Items.Add;
     aListitem.Data := aTodoItem;
     aListItem.Caption := LIST_INDICATORS[aTodoItem.ToDoType];
@@ -548,7 +536,7 @@ end;
 
 procedure TIDETodoWindow.ScanFile(aFileName: string);
 begin
-  TToDoListCore.ScanFile(aFileName, FScannedFiles);
+  ToDoListCore.ScanFile(aFileName, FScannedFiles, FScannedIncFiles);
 end;
 
 procedure TIDETodoWindow.OnIdle(Sender: TObject; var Done: Boolean);

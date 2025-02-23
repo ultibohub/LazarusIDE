@@ -62,7 +62,7 @@ uses
   SynEditMarkupHighAll, SynEditKeyCmds, SynEditMarkupIfDef, SynEditMiscProcs,
   SynPluginMultiCaret, SynEditPointClasses,
   SynEditMarkupFoldColoring, SynEditTextTabExpander, SynEditMouseCmds, SynEditWrappedView,
-  etSrcEditMarks, LazarusIDEStrConsts, SourceMarks, SourceSynWrap;
+  etSrcEditMarks, LazarusIDEStrConsts, SourceMarks;
 
 type
 
@@ -262,7 +262,7 @@ type
     FMarkupIdentComplWindow: TSynMarkupIdentComplWindow;
     FShowTopInfo: boolean;
     FFoldView: TSynEditFoldedView;
-    FWrapView: TLazSynSourceEditLineWrapPlugin;
+    FWrapView: TLazSynEditLineWrapPlugin;
     FTopInfoNestList: TLazSynEditNestedFoldsList;
     FSyncroEdit: TSynPluginSyncroEdit;
     FTemplateEdit: TSynPluginTemplateEdit;
@@ -291,15 +291,16 @@ type
     function GetOnMultiCaretBeforeCommand: TSynMultiCaretBeforeCommand;
     procedure GetTopInfoMarkupForLine(Sender: TObject; {%H-}Line: integer; var Special: boolean;
       aMarkup: TSynSelectedColor);
-    function GetWordWrapEnabled: Boolean;
     procedure SetCaretColor(AValue: TColor);
     procedure SetHighlightUserWordCount(AValue: Integer);
     procedure SetOnMultiCaretBeforeCommand(AValue: TSynMultiCaretBeforeCommand);
     procedure SetShowTopInfo(AValue: boolean);
     procedure SetTopInfoMarkup(AValue: TSynSelectedColor);
     procedure DoHighlightChanged(Sender: TSynEditStrings; {%H-}AIndex, {%H-}ACount : Integer);
+    function GetWordWrapEnabled: Boolean;
     procedure SetWordWrapCaretWrapPos(AValue: TLazSynEditWrapCaretPos);
     procedure SetWordWrapEnabled(AValue: Boolean);
+    procedure SetWordWrapForceHomeEnd(AValue: Boolean);
     procedure SetWordWrapIndent(AValue: Integer);
     procedure SetWordWrapIndentMax(AValue: Integer);
     procedure SetWordWrapIndentMaxRel(AValue: Integer);
@@ -351,9 +352,10 @@ type
     property CaretStamp: Int64 read FCaretStamp;
     property CaretColor: TColor read FCaretColor write SetCaretColor;
 
-    property WrapView: TLazSynSourceEditLineWrapPlugin read FWrapView;
+    property WrapView: TLazSynEditLineWrapPlugin read FWrapView;
     property WordWrapEnabled: Boolean read GetWordWrapEnabled write SetWordWrapEnabled;
     property WordWrapCaretWrapPos: TLazSynEditWrapCaretPos write SetWordWrapCaretWrapPos;
+    property WordWrapForceHomeEnd: Boolean write SetWordWrapForceHomeEnd;
     property WordWrapMinWidth: Integer write SetWordWrapMinWidth;
 
     property WordWrapIndent: Integer write SetWordWrapIndent;
@@ -1589,6 +1591,11 @@ begin
     SrcSynCaretChanged(nil);
 end;
 
+function TIDESynEditor.GetWordWrapEnabled: Boolean;
+begin
+  Result := FWrapView <> nil;
+end;
+
 procedure TIDESynEditor.SetWordWrapCaretWrapPos(AValue: TLazSynEditWrapCaretPos);
 begin
   if FWrapView <> nil then
@@ -1604,6 +1611,12 @@ begin
     AddLineWrapView
   else
     RemoveLineWrapView;
+end;
+
+procedure TIDESynEditor.SetWordWrapForceHomeEnd(AValue: Boolean);
+begin
+  if FWrapView <> nil then
+    FWrapView.OverrideHomeEndKeyDefaults:= AValue;
 end;
 
 procedure TIDESynEditor.SetWordWrapIndent(AValue: Integer);
@@ -1798,11 +1811,6 @@ procedure TIDESynEditor.GetTopInfoMarkupForLine(Sender: TObject; Line: integer;
 begin
   Special := True;
   aMarkup.Assign(FTopInfoMarkup);
-end;
-
-function TIDESynEditor.GetWordWrapEnabled: Boolean;
-begin
-  Result := FWrapView <> nil;
 end;
 
 procedure TIDESynEditor.SetCaretColor(AValue: TColor);
@@ -2012,7 +2020,7 @@ procedure TIDESynEditor.AddLineWrapView;
 begin
   if FWrapView <> nil then
     RemoveLineWrapView;
-  FWrapView := TLazSynSourceEditLineWrapPlugin.Create(Self);
+  FWrapView := TLazSynEditLineWrapPlugin.Create(Self);
 end;
 
 procedure TIDESynEditor.RemoveLineWrapView;
