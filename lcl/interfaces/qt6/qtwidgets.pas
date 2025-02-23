@@ -3494,7 +3494,19 @@ begin
   // Translates a Qt4 Key to a LCL VK_* key
   if KeyMsg.CharCode = 0 then
   begin
-    ACharCode := QtKeyToLCLKey(QKeyEvent_key(QKeyEventH(Event)), Text, QKeyEventH(Event));
+    {$IFDEF HASX11}
+    //key is unicode char, nativeVirtualKey is XKey.
+    if (QKeyEvent_key(QKeyEventH(Event)) >= $100) and (QKeyEvent_key(QKeyEventH(Event)) < $017f) then
+      ACharCode := QtKeyToLCLKey((QKeyEvent_nativeVirtualKey(QKeyEventH(Event)) - $0100) or $0080, Text, QKeyEventH(Event))
+    else
+    if (QKeyEvent_key(QKeyEventH(Event)) >= $0180) and (QKeyEvent_key(QKeyEventH(Event)) <= $024F) then
+      ACharCode := QtKeyToLCLKey((QKeyEvent_nativeVirtualKey(QKeyEventH(Event)) - $0180) or $0080, Text, QKeyEventH(Event))
+    else
+    if (QKeyEvent_key(QKeyEventH(Event)) >= $0400) and (QKeyEvent_key(QKeyEventH(Event)) <= $04ff) then
+      ACharCode := QtKeyToLCLKey((QKeyEvent_key(QKeyEventH(Event)) - $0360), Text, QKeyEventH(Event))
+    else
+    {$ENDIF}
+      ACharCode := QtKeyToLCLKey(QKeyEvent_key(QKeyEventH(Event)), Text, QKeyEventH(Event));
     KeyMsg.CharCode := ACharCode;
   end;
 
@@ -5521,7 +5533,7 @@ end;
 
 function TQtWidget.ProcessArrowKeys: Boolean;
 begin
-  Result := False;
+  Result := Assigned(LCLObject) and (csDesigning in LCLObject.ComponentState);
 end;
 
 class procedure TQtWidget.removeProperty(AObject: QObjectH; APropName: PAnsiChar);
@@ -6242,7 +6254,8 @@ end;
 
 procedure TQtPushButton.PushButtonUnblock(Data: PtrInt);
 begin
-  QObject_blockSignals(QObjectH(Data), False);
+  if QtWidgetSet.IsValidHandle(Data) then
+    QObject_blockSignals(TQtPushButton(Data).Widget, False);
 end;
 
 function TQtPushButton.EventFilter(Sender: QObjectH; Event: QEventH): Boolean;
@@ -6258,7 +6271,7 @@ begin
         (QWidget_focusPolicy(Widget) > QtNoFocus) then
         begin
           QObject_blockSignals(Sender, True);
-          Application.QueueAsyncCall(@PushButtonUnblock, PtrInt(Sender));
+          Application.QueueAsyncCall(@PushButtonUnblock, PtrInt(Self));
         end;
       end;
     else
