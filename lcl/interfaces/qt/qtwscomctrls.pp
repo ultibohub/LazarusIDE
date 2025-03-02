@@ -970,6 +970,7 @@ var
   TWI: QTreeWidgetItemH;
   Bmp: TBitmap;
   ImgListRes: TScaledImageListResolution;
+  AIcon: QIconH;
 begin
   if not WSCheckHandleAllocated(ALV, 'ColumnSetImage') then
     Exit;
@@ -989,7 +990,9 @@ begin
       Bmp := TBitmap.Create;
       try
         ImgListRes.GetBitmap(AImageIndex, Bmp);
-        QTreeWidgetItem_setIcon(TWI, AIndex, TQtImage(Bmp.Handle).AsIcon);
+        AIcon := TQtImage(Bmp.Handle).AsIcon;
+        QTreeWidgetItem_setIcon(TWI, AIndex, AIcon);
+        QIcon_destroy(AIcon);
       finally
         Bmp.Free;
       end;
@@ -1263,6 +1266,7 @@ var
   TWI: QTreeWidgetItemH;
   Bmp: TBitmap;
   ImgListRes: TScaledImageListResolution;
+  AIcon: QIconH;
 begin
   if not WSCheckHandleAllocated(ALV, 'ItemSetImage') then
     Exit;
@@ -1293,10 +1297,12 @@ begin
       Bmp := TBitmap.Create;
       try
         ImgListRes.GetBitmap(AImageIndex, Bmp);
+        AIcon := TQtImage(Bmp.Handle).AsIcon;
         if LWI <> nil then
-          QListWidgetItem_setIcon(LWI, TQtImage(Bmp.Handle).AsIcon)
+          QListWidgetItem_setIcon(LWI, AIcon)
         else
-          QTreeWidgetItem_setIcon(TWI, ASubIndex, TQtImage(Bmp.Handle).AsIcon);
+          QTreeWidgetItem_setIcon(TWI, ASubIndex, AIcon);
+        QIcon_destroy(AIcon);
       finally
         Bmp.Free;
       end;
@@ -1407,6 +1413,7 @@ var
   ImgListRes: TScaledImageListResolution;
   AImgList: TCustomImageList;
   AImgListWidth: Integer;
+  AIcon: QIconH;
 begin
   if not WSCheckHandleAllocated(ALV, 'ItemSetStateImage') then
     Exit;
@@ -1438,10 +1445,12 @@ begin
       Bmp := TBitmap.Create;
       try
         ImgListRes.GetBitmap(AStateImageIndex, Bmp);
+        AIcon := TQtImage(Bmp.Handle).AsIcon;
         if LWI <> nil then
-          QListWidgetItem_setIcon(LWI, TQtImage(Bmp.Handle).AsIcon)
+          QListWidgetItem_setIcon(LWI, AIcon)
         else
-          QTreeWidgetItem_setIcon(TWI, ASubIndex, TQtImage(Bmp.Handle).AsIcon);
+          QTreeWidgetItem_setIcon(TWI, ASubIndex, AIcon);
+        QIcon_destroy(AIcon);
       finally
         Bmp.Free;
       end;
@@ -1719,7 +1728,7 @@ begin
     end;
 
     ChkBoxRect := Rect(0, 0, 0, 0);
-    if QtTreeWidget.Checkable then
+    if QtTreeWidget.Checkable and (ASubItem = 0) then
     begin
       APixelMetric := QStyle_pixelMetric(QApplication_style(), QStylePM_IndicatorWidth, nil, QtTreeWidget.Widget);
       APixelMetric += QStyle_pixelMetric(QApplication_style(), QStylePM_CheckBoxLabelSpacing, nil, QtTreeWidget.Widget);
@@ -2022,6 +2031,7 @@ var
   AAlignment: QtAlignment;
   Bmp: TBitmap;
   ImgListRes: TScaledImageListResolution;
+  AIcon: QIconH;
 begin
   QtTreeWidget := TQtTreeWidget(AList.Handle);
 
@@ -2034,7 +2044,7 @@ begin
       AItem := AList.Items[i];
       Str := AItem{%H-}.Caption;
       Item := QtTreeWidget.topLevelItem(i);
-      QtTreeWidget.setItemText(Item, 0, Str, AlignmentToQtAlignmentMap[AList.Column[0].Alignment]);
+      QtTreeWidget.setItemText(Item, 0, Str, AlignmentToQtAlignmentMap[AList.Column[0].Alignment] or QtAlignVCenter);
       QtTreeWidget.setItemData(Item, 0, AItem);
       if AList.Checkboxes then
       begin
@@ -2057,7 +2067,9 @@ begin
         Bmp := TBitmap.Create;
         try
           ImgListRes.GetBitmap(AItem.ImageIndex, Bmp);
-          QTreeWidgetItem_setIcon(Item, 0, TQtImage(Bmp.Handle).AsIcon);
+          AIcon := TQtImage(Bmp.Handle).AsIcon;
+          QTreeWidgetItem_setIcon(Item, 0, AIcon);
+          QIcon_Destroy(AIcon);
         finally
           Bmp.Free;
         end;
@@ -2071,8 +2083,21 @@ begin
         if (TCustomListViewHack(AList).Columns.Count > 0) and (j + 1 < TCustomListViewHack(AList).Columns.Count) then
           AAlignment := AlignmentToQtAlignmentMap[TCustomListViewHack(AList).Column[j + 1].Alignment];
         Str := AItem{%H-}.Subitems.Strings[j];
-        QtTreeWidget.setItemText(Item, j + 1, Str, AAlignment);
+        QtTreeWidget.setItemText(Item, j + 1, Str, AAlignment or QtAlignVCenter);
         QtTreeWidget.setItemData(Item, j + 1, AItem);
+        if ImgListRes.Valid and (ImgListRes.Count > 0) and (AItem.SubItemImages[j] >= 0) then
+        begin
+          Bmp := TBitmap.Create;
+          try
+            ImgListRes.GetBitmap(AItem.SubItemImages[j], Bmp);
+            AIcon := TQtImage(Bmp.Handle).AsIcon;
+            QTreeWidgetItem_setIcon(Item, j + 1, AIcon);
+            QIcon_destroy(AIcon);
+          finally
+            Bmp.Free;
+          end;
+        end else
+          QTreeWidgetItem_setIcon(Item, j + 1, nil);
       end;
     end;
 
