@@ -4553,13 +4553,8 @@ begin
 end;
 
 function TSynPasSyn.GetToken: string;
-var
-  Len: LongInt;
 begin
-  Len := Run - fTokenPos;
-  SetLength(Result{%H-},Len);
-  if Len>0 then
-    System.Move(fLine[fTokenPos],Result[1],Len);
+  SetString(Result, @fLine[fTokenPos], Run - fTokenPos);
 end;
 
 procedure TSynPasSyn.GetTokenEx(out TokenStart: PChar; out TokenLength: integer);
@@ -5527,7 +5522,7 @@ begin
       dec(FPasStartLevel);
     end;
   end
-  else if IsCollectingNodeInfo and (CollectingNodeInfoList.CountAll > i) then begin
+  else if IsCollectingNodeInfo and (CollectingNodeInfoList.CountAll > {%H-}i) then begin
     nd := CollectingNodeInfoList.LastItemPointer;
     exclude(nd^.FoldAction, sfaMarkup); // not markup able
     nd^.LogXEnd := 0;

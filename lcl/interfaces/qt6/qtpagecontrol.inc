@@ -88,7 +88,8 @@ class procedure TQtWSCustomPage.SetFont(const AWinControl: TWinControl;
 begin
   if not WSCheckHandleAllocated(AWinControl, 'SetFont') then
     Exit;
-  inherited SetFont(AWinControl, AFont);
+  TQtWSWinControl.SetFont(AWinControl, AFont);
+
   UpdateTabFontColor(TCustomPage(AWinControl), AFont);
 end;
 
@@ -125,7 +126,9 @@ begin
           Size.cy := Res.Height;
           QTabWidget_setIconSize(TQtPage(ACustomPage.Handle).getTabWidget, @Size);
         end;
-        TQtPage(ACustomPage.Handle).setIcon(TQtImage(Bmp.Handle).AsIcon);
+        Icon := TQtImage(Bmp.Handle).AsIcon;
+        TQtPage(ACustomPage.Handle).setIcon(Icon);
+        QIcon_destroy(Icon);
         B := True;
       finally
         Bmp.Free;

@@ -7,7 +7,7 @@ interface
 
 uses
   Classes, SysUtils, math, fpcunit,
-  Forms, LCLType, LCLProc, Clipbrd, Controls, LazUTF8,
+  Forms, LCLType, LCLProc, Clipbrd, Controls, LazUTF8, LazLoggerBase,
   SynEdit, SynEditTypes, SynEditPointClasses, SynEditKeyCmds, LazSynTextArea, SynEditMarkup;
 
 type
@@ -577,6 +577,7 @@ var
   i, j, k: Integer;
   s: String;
 begin
+  Result := nil;
   SetLength(Result, length(Lines));
   for i := low(Lines) to high(Lines) do
     Result[i-low(Lines)] := Lines[i];

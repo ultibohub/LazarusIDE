@@ -1634,6 +1634,7 @@ begin
   else
   begin
     aClientRect := AWinControl.Parent.ClientRect;
+    Result := True;
   end;
 end;
 
@@ -1642,6 +1643,11 @@ class procedure TGtk3WSCustomPage.SetBounds(const AWinControl:TWinControl;const
 begin
   //do nothing !
   //inherited SetBounds(AWinControl,ALeft,ATop,AWidth,AHeight);
+  if AWinControl.HandleAllocated then
+  begin
+    TGtk3Page(AWinControl.Handle).LCLWidth := aWidth;
+    TGtk3Page(AWinControl.Handle).LCLWidth := aHeight;
+  end;
 end;
 
 class procedure TGtk3WSCustomPage.SetFont(const AWinControl:TWinControl;const

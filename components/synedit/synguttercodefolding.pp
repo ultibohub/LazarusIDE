@@ -92,7 +92,6 @@ type
     function GetMouseActionsCollapsed: TSynEditMouseActions;
     function GetMouseActionsExpanded: TSynEditMouseActions;
     procedure SetMarkupInfoCurrentFold(AValue: TSynSelectedColor);
-    procedure UpdateInternalColors; override;
     procedure SetMouseActionsCollapsed(const AValue: TSynEditMouseActions);
     procedure SetMouseActionsExpanded(const AValue: TSynEditMouseActions);
     function  FoldTypeForLine(AScreenLine: Integer): TSynEditFoldLineCapability;
@@ -110,6 +109,7 @@ type
     FInnerFoldStart, FInnerFoldEnd, FInnerFoldCaretY: integer;
     procedure UpdateInnerFoldRange;
   protected
+    procedure UpdateInternalColors; override;
     function  PreferedWidth: Integer; override;
     procedure CreatePopUpMenuEntries(var APopUp: TPopupMenu; ALine: Integer); virtual;
     procedure PopClicked(Sender: TObject);
@@ -343,7 +343,7 @@ begin
   R.Bottom := R.Right;
 
   NewImg;
-  DrawNodeSymbol(img.Canvas, R, cfFoldStart, []);  // [-]
+  DrawNodeSymbol({%H-}img.Canvas, R, cfFoldStart, []);  // [-]
   FPopUpImageList.AddMasked(img, img.TransparentColor);
   img.Free;
 

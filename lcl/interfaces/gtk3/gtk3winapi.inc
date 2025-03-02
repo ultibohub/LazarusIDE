@@ -1054,10 +1054,7 @@ end;
 function TGtk3WidgetSet.EnableScrollBar(Wnd: HWND; wSBflags, wArrows: Cardinal
   ): Boolean;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.EnableScrollBar not implemented ...');
-  {$ENDIF}
-  Result := inherited EnableScrollBar(Wnd, wSBflags, wArrows);
+  Result := False;
 end;
 
 function TGtk3WidgetSet.EnableWindow(hWnd: HWND; bEnable: Boolean): Boolean;
@@ -4043,6 +4040,22 @@ var
       end;
     end;
 
+    if SBStyle = SB_VERT then
+    begin
+      if (AControl is TGtk3CustomControl) and Assigned(TGtk3CustomControl(AControl).LCLVAdj) then
+      begin
+        with Adjustment^ do
+          TGtk3CustomControl(AControl).LCLVAdj^.configure(value, lower, upper, step_increment, page_increment, page_size);
+      end;
+    end else
+    if SBStyle = SB_HORZ then
+    begin
+      if (AControl is TGtk3CustomControl) and Assigned(TGtk3CustomControl(AControl).LCLHAdj) then
+      begin
+        with Adjustment^ do
+          TGtk3CustomControl(AControl).LCLHAdj^.configure(value, lower, upper, step_increment, page_increment, page_size);
+      end;
+    end;
     gtk_adjustment_changed(Adjustment);
     {$IFDEF GTK3DEBUGSCROLL}
     DebugLn(Format('Updated Adjustment: lower=%.2f, upper=%.2f, page_size=%.2f, value=%.2f, page_increment=%.2f InUpdate %s',
@@ -4067,11 +4080,10 @@ var
           begin
             if AHorzPolicy <> POLICY[IsScrollbarVis] then
               ScrollWin^.set_policy(POLICY[IsScrollbarVis], AVertPolicy);
-            if Gtk3WidgetSet.OverlayScrolling and ScrollBar^.get_visible and
-              Gtk3IsGdkWindow(ScrollBar^.window) then
+            if Gtk3WidgetSet.OverlayScrolling and Gtk3IsWidget(Scrollbar) and
+              ScrollBar^.get_visible then
             begin
               ScrollBar^.set_can_focus(False);
-              ScrollBar^.window^.raise_;
               if (csDesigning in AControl.LCLObject.ComponentState) then
                 ScrollBar^.sensitive := false;
             end;
@@ -4080,11 +4092,10 @@ var
           begin
             if AVertPolicy <> POLICY[IsScrollbarVis] then
               ScrollWin^.set_policy(AHorzPolicy, POLICY[IsScrollbarVis]);
-            if Gtk3WidgetSet.OverlayScrolling and ScrollBar^.get_visible and
-              Gtk3IsGdkWindow(ScrollBar^.window) then
+            if Gtk3WidgetSet.OverlayScrolling and Gtk3IsWidget(Scrollbar) and
+              ScrollBar^.get_visible then
             begin
               ScrollBar^.set_can_focus(False);
-              ScrollBar^.window^.raise_;
               if (csDesigning in AControl.LCLObject.ComponentState) then
                 ScrollBar^.sensitive := false;
             end;
@@ -4465,7 +4476,10 @@ begin
     Result:=TGtk3Window(hWnd).ShowState(nCmdShow)
   else
   begin
-    TGtk3Widget(hWnd).Show;
+    if nCmdShow = SW_HIDE then
+      TGtk3Widget(hWnd).Hide
+    else
+      TGtk3Widget(hWnd).Show;
     Result:=true;
   end;
 end;

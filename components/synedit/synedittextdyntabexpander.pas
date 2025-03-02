@@ -274,6 +274,7 @@ begin
     l := 0;
     for i := 0 to length(CharWidths)-1 do
       l := l + (CharWidths[i] and PCWMask);
+    Result := '';
     SetLength(Result, l);
 
     l := 1;
@@ -343,7 +344,7 @@ begin
 
   if (ALine = nil) or (not GetHasTabs(ALine)) then begin
     // No tabs in ALine
-    assert(ALineIsTempText or (not StoredHasTab), 'TSynEditStringDynTabExpander.GetMinimumColumnWidths: ALineIsTempText or (not StoredHasTab)');
+    assert(ALineIsTempText or (not {%H-}StoredHasTab), 'TSynEditStringDynTabExpander.GetMinimumColumnWidths: ALineIsTempText or (not StoredHasTab)');
     if (not ALineIsTempText) and (not HasStoredData) then
       TabData.SetLineInfoUnknownEx(AnIndex, False);
     exit;
@@ -604,7 +605,7 @@ begin
     CachedMergeTopIdx := Idx;
 
     MergeMinColumnWidth(NewMergedMinColWidths, CurMinColWidths);
-    if CachedMergeBottomIdx - CachedMergeTopIdx >= MAX_MERGE then
+    if {%H-}CachedMergeBottomIdx - CachedMergeTopIdx >= MAX_MERGE then
       SaveNewMergeCache;
   end;
 
@@ -624,6 +625,7 @@ begin
   LineCnt := Count-1;
   LastLineIdx := Result.FirstLineIdx + Length(Result.ColumnWidths)-1;
   CachedMergeTopIdx := -1;
+  NewMergedMinColWidths := nil;
   While (Idx <= LineCnt) do begin
     inc(Idx);
     if Idx > LineCnt then
@@ -645,8 +647,6 @@ begin
       break;
 
     if CachedMergeTopIdx < 0 then begin
-      NewMergedMinColWidths := nil;
-
       if (Idx > AnIndex) or
          ( Result.ContainsLine(Idx - 1) and Result.IsValidLine(Idx - 1) )
       then begin

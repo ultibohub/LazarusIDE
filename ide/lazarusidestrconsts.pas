@@ -1664,8 +1664,12 @@ resourcestring
   dlgOptWordWrapEndOfLine = 'end of line';
   dlgOptWordWrapStartOfNextLine = 'start of next line';
   dlgOptWordWrapHomeEndKey = 'Force default home/end keys to subline start/end';
-  dlgOptWordWrapSectionIndent = 'Indent settings';
+  dlgOptWordWrapSectionColumn = 'Wrap column settings';
+  dlgOptWordWrapCheckFixedLength = 'Wrap at fixed column';
+  dlgOptWordWrapFixedLineLength = 'Fixed line length';
   dlgOptWordWrapMinimumLineLength = 'Minimum line length';
+  dlgOptWordWrapMaximumLineLength = 'Maximum line length';
+  dlgOptWordWrapSectionIndent = 'Indent settings';
   dlgOptWordWrapIndent = 'Indent width';
   dlgOptWordWrapIndentIsOffset = 'Indent relative to text';
   dlgOptWordWrapIndentMin = 'Minimum indent width';
@@ -6348,6 +6352,10 @@ resourcestring
   dlgIAhadentifierComplEntryKeyword = 'Keyword';
   dlgIAhadentifierComplEntryOther = 'Other';
   dlgIAhadentifierComplEntryEnum = 'Enum';
+  dlgOptDebugBackendSelectDebuggerBackend = 'Select debugger backend';
+  dlgOptDebugBackendEditDebuggerBackend = 'Edit debugger backend';
+  dlgOptDebugBackendTheProjectOptionsHaveBeen = 'The project options have been set to use a '
+    +'different debugger backend';
 
 implementation
 

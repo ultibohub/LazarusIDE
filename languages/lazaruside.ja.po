@@ -3500,6 +3500,18 @@ msgstr "Delphiのデフォルトの設定を使用"
 msgid "Use default Lazarus settings"
 msgstr "Lazarus のデフォルトの設定を使用"
 
+#: lazarusidestrconsts.dlgoptdebugbackendeditdebuggerbackend
+msgid "Edit debugger backend"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptdebugbackendselectdebuggerbackend
+msgid "Select debugger backend"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptdebugbackendtheprojectoptionshavebeen
+msgid "The project options have been set to use a different debugger backend"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptimizationlevels
 msgid "Optimization levels"
 msgstr "最適化レベル"
@@ -3508,12 +3520,20 @@ msgstr "最適化レベル"
 msgid "Word-wrap"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwrapcheckfixedlength
+msgid "Wrap at fixed column"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapdisplaycaretatwrappositio
 msgid "Display caret at wrap-position..."
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapendofline
 msgid "end of line"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapfixedlinelength
+msgid "Fixed line length"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwraphomeendkey
@@ -3541,8 +3561,16 @@ msgstr ""
 msgid "Minimum indent width"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwrapmaximumlinelength
+msgid "Maximum line length"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapsectioncolumn
+msgid "Wrap column settings"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapsectionindent

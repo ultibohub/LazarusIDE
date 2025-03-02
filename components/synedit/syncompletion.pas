@@ -485,16 +485,11 @@ var
 begin
   Result := p^ in ['a'..'z','A'..'Z','0'..'9','_'];
   if Result then exit;
-  if p^ <= #127 then exit;
   i := UTF8CodepointSize(p);
-  SetLength(u, i);
-  // wide chars of UTF-16 <= bytes of UTF-8 string
-  if ConvertUTF8ToUTF16(PWideChar(u), i + 1, p, i, [toInvalidCharToSymbol], L) = trNoError
-  then begin
-    SetLength(u, L - 1);
-    if L > 1 then
-      Result := TCharacter.IsLetterOrDigit(u, 1);
-  end;
+  if i <= 1 then exit;
+  SetLength(u{%H-}, 3); // surrogate and trailing #0
+  if ConvertUTF8ToUTF16(PWideChar(u), 3, p, i, [toInvalidCharToSymbol], L) = trSuccess then
+    Result := TCharacter.IsLetterOrDigit(u, 1);
 end;
 
 { TSynBaseCompletionFormScrollBar }
@@ -1202,7 +1197,7 @@ begin
   inc(FResizeLock);   // prevent DoResize from recalculating NbLinesInWindow
   try
     inherited;
-    FillChar(TextMetric{%H-},SizeOf(TextMetric),0);
+    TextMetric := Default(TTextMetric);
     GetTextMetrics(Canvas.Handle, TextMetric);
     FFontHeight := TextMetric.tmHeight+2;
     SetNblinesInWindow(FNbLinesInWindow);
