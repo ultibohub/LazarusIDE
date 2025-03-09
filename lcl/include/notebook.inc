@@ -11,6 +11,27 @@
  *****************************************************************************
 }
 
+
+function CreateUniquePageName(BaseName: string; OwnerComp: TComponent): string;
+// Inspired by TCustomFormEditor.CreateUniqueComponentName
+var
+  i, j: integer;
+begin
+  Result:=BaseName;
+  if (OwnerComp=nil) or (Result='') then exit;
+  i:=0;
+  while true do begin
+    j:=OwnerComp.ComponentCount-1;
+    while (j>=0) and (CompareText(Result,OwnerComp.Components[j].Name)<>0) do
+      dec(j);
+    if j<0 then exit;
+    inc(i);
+    if BaseName[length(BaseName)] in ['0'..'9'] then
+      BaseName:=BaseName+'_';
+    Result:=BaseName+IntToStr(i);
+  end;
+end;
+
 {******************************************************************************
                                    TUNBPages
  ******************************************************************************}
@@ -72,13 +93,15 @@ var
 begin
   Result := FPageList.Add(AObject);
   NewPage := TPage(AObject);
-  if IsValidIdent(S) then NewPage.Name := S;
+  if IsValidIdent(S) then
+    NewPage.Name := CreateUniquePageName(S, FNotebook.Owner);
   NewPage.Caption := S;
   NewPage.Parent := FNotebook;
   NewPage.Align := alClient;
   NewPage.Visible := False;
   NewPage.ControlStyle := NewPage.ControlStyle + [csNoDesignVisible];
-  if FNotebook.PageIndex = -1 then FNotebook.SetPageIndex(Result);
+  if FNotebook.PageIndex = -1 then
+    FNotebook.SetPageIndex(Result);
 end;
 
 procedure TUNBPages.Clear;
@@ -126,7 +149,8 @@ begin
     RaiseGDBException('TUNBPages.Insert Index out of bounds');
   NewPage := TPage.Create(GetNotebookOwner);
   FPageList.Insert(Index, NewPage);
-  if IsValidIdent(S) then NewPage.Name := S;
+  if IsValidIdent(S) then
+    NewPage.Name := S;
   NewPage.Caption := S;
   NewPage.Parent := FNotebook;
   NewPage.Align := alClient;
@@ -265,7 +289,8 @@ begin
       if Assigned(Items.Objects[Index]) then begin
         DummyDelete(Items[Index]);
         APage := TPage(Items.Objects[Index]);
-        if IsValidIdent(Items[Index]) then APage.Name := Items[Index];
+        if IsValidIdent(Items[Index]) then
+          APage.Name := Items[Index];
         APage.Caption := Items[Index];
         APage.SetParent(Self);
         DummyIndex := DummyPageList.IndexOf(APage);
