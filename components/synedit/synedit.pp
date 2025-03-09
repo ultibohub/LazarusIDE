@@ -142,8 +142,9 @@ uses
   // Gutter
   SynGutterBase, SynGutter,
   SynEditMiscClasses, SynEditHighlighter, LazSynTextArea, SynTextDrawer,
-  SynEditTextBidiChars,
-  SynGutterCodeFolding, SynGutterChanges, SynGutterLineNumber, SynGutterMarks, SynGutterLineOverview;
+  SynEditTextBidiChars, SynGutterCodeFolding, SynGutterChanges, SynGutterLineNumber,
+  SynGutterMarks, SynGutterLineOverview,
+  LazEditMiscProcs;
 
 const
   // SynDefaultFont is determined in InitSynDefaultFont()
@@ -646,9 +647,9 @@ type
     procedure SurrenderPrimarySelection;
     procedure ComputeCaret(X, Y: Integer);
     procedure DoBlockIndent(AColumnIndentOutside: Boolean = False);
-    procedure DoBlockIndentColSel(AnIndentOutside: Boolean = False);
+    procedure DoBlockIndentColSel(AnIndentOutside: Boolean = False; ADeleteAtRightBound: Boolean = False);
     procedure DoBlockUnindent(AColumnIndentOutside: Boolean = False);
-    procedure DoBlockUnindentColSel(AnIndentOutside: Boolean = False);
+    procedure DoBlockUnindentColSel(AnIndentOutside: Boolean = False; ADeleteAtLeftBound: Boolean = False);
     procedure DoHomeKey(aMode: TSynHomeMode = synhmDefault);
     procedure DoEndKey;
     procedure DoTabKey;
@@ -694,7 +695,8 @@ type
     procedure SetBlockIndent(const AValue: integer);
     procedure SetCaretAndSelection(const ptCaret, ptBefore, ptAfter: TPoint;
                                    Mode: TSynSelectionMode = smCurrent;
-                                   MakeSelectionVisible: Boolean = False
+                                   MakeSelectionVisible: Boolean = False;
+                                   AForceSingleLineSelected: Boolean = False
                                    );
     procedure SetGutter(const Value: TSynGutter);
     procedure SetRightGutter(const AValue: TSynGutter);
@@ -1439,12 +1441,13 @@ type
   private
     FCaretPos, FBeginPos, FEndPos: TPoint;
     FBlockMode: TSynSelectionMode;
+    FForceSingleLineSelected: Boolean;
   protected
     function IsEqualContent(AnItem: TSynEditUndoItem): Boolean; override;
     function DebugString: String; override;
   public
     function IsCaretInfo: Boolean; override;
-    constructor Create(CaretPos, BeginPos, EndPos: TPoint; BlockMode: TSynSelectionMode);
+    constructor Create(CaretPos, BeginPos, EndPos: TPoint; BlockMode: TSynSelectionMode; AForceSingleLineSelected: Boolean);
     function PerformUndo(Caller: TObject): Boolean; override;
   end;
 
@@ -1540,12 +1543,13 @@ end;
 { TSynEditUndoSelCaret }
 
 constructor TSynEditUndoSelCaret.Create(CaretPos, BeginPos, EndPos: TPoint;
-  BlockMode: TSynSelectionMode);
+  BlockMode: TSynSelectionMode; AForceSingleLineSelected: Boolean);
 begin
   FCaretPos := CaretPos;
   FBeginPos := BeginPos;
   FEndPos   := EndPos;
   FBlockMode := BlockMode;
+  FForceSingleLineSelected := AForceSingleLineSelected;
   {$IFDEF SynUndoDebugItems}debugln(['---  Undo Insert ',DbgSName(self), ' ', dbgs(Self), ' - ', DebugString]);{$ENDIF}
 end;
 
@@ -1557,7 +1561,8 @@ begin
         and (FBeginPos.y = TSynEditUndoSelCaret(AnItem).FBeginPos.y)
         and (FEndPos.x = TSynEditUndoSelCaret(AnItem).FEndPos.x)
         and (FEndPos.y = TSynEditUndoSelCaret(AnItem).FEndPos.y)
-        and (FBlockMode = TSynEditUndoSelCaret(AnItem).FBlockMode);
+        and (FBlockMode = TSynEditUndoSelCaret(AnItem).FBlockMode)
+        and (FForceSingleLineSelected = TSynEditUndoSelCaret(AnItem).FForceSingleLineSelected);
 end;
 
 function TSynEditUndoSelCaret.DebugString: String;
@@ -1576,9 +1581,9 @@ begin
   if Result then
     {$IFDEF SynUndoDebugItems}debugln(['---  Undo Perform ',DbgSName(self), ' ', dbgs(Self), ' - ', DebugString]);{$ENDIF}
     with TCustomSynEdit(Caller) do begin
-      SetCaretAndSelection(FCaretPos, FBeginPos, FEndPos, FBlockMode, True);
+      SetCaretAndSelection(FCaretPos, FBeginPos, FEndPos, FBlockMode, True, FForceSingleLineSelected);
       FTheLinesView.CurUndoList.AddChange(TSynEditUndoSelCaret.Create(FCaretPos, FBeginPos,
-                                                     FEndPos, FBlockMode));
+                                                     FEndPos, FBlockMode, FForceSingleLineSelected));
     end;
 end;
 
@@ -4814,7 +4819,7 @@ begin
   if SelAvail then
     Result := TSynEditUndoSelCaret.Create(FCaret.LineCharPos,
        FBlockSelection.StartLineBytePos, FBlockSelection.EndLineBytePos,
-       FBlockSelection.ActiveSelectionMode)
+       FBlockSelection.ActiveSelectionMode, FBlockSelection.ForceSingleLineSelected)
   else
     Result := TSynEditUndoCaret.Create(FCaret.LineCharPos);
 end;
@@ -7734,6 +7739,10 @@ begin
         if not ReadOnly then DoBlockIndent(Command = ecBlockIndentMove);
       ecBlockUnindent, ecBlockUnindentMove:
         if not ReadOnly then DoBlockUnindent(Command = ecBlockUnindentMove);
+      ecColumnBlockShiftRight, ecColumnBlockMoveRight:
+        if not ReadOnly then DoBlockIndentColSel(Command = ecColumnBlockMoveRight, True);
+      ecColumnBlockShiftLeft, ecColumnBlockMoveLeft:
+        if not ReadOnly then DoBlockUnindentColSel(Command = ecColumnBlockMoveLeft, True);
       ecNormalSelect,
       ecColumnSelect,
       ecLineSelect:
@@ -8847,8 +8856,8 @@ begin
   DoDecPaintLock(Self);
 end;
 
-procedure TCustomSynEdit.SetCaretAndSelection(const ptCaret, ptBefore,
-  ptAfter: TPoint; Mode: TSynSelectionMode = smCurrent; MakeSelectionVisible: Boolean = False);
+procedure TCustomSynEdit.SetCaretAndSelection(const ptCaret, ptBefore, ptAfter: TPoint;
+  Mode: TSynSelectionMode; MakeSelectionVisible: Boolean; AForceSingleLineSelected: Boolean);
 // caret is physical (screen)
 // Before, After is logical (byte)
 var
@@ -8859,6 +8868,7 @@ begin
   CaretXY := ptCaret;
   SetBlockBegin(ptBefore);
   SetBlockEnd(ptAfter);
+  FBlockSelection.ForceSingleLineSelected := AForceSingleLineSelected;
   if Mode <> smCurrent then
     FBlockSelection.ActiveSelectionMode := Mode;
 
@@ -9031,8 +9041,10 @@ begin
       if i = 0 then i := TabWidth;
     end;
     // i now contains the needed spaces
-    Spaces := CreateTabsAndSpaces(CaretX,i,TabWidth,
-                                  not (eoTabsToSpaces in Options));
+    if eoTabsToSpaces in Options then
+      Spaces := CreateTabsAndSpaces(CaretX,i,TabWidth, 0)
+    else
+      Spaces := CreateTabsAndSpaces(CaretX,i,TabWidth, MaxInt);
 
     if SelAvail and (not FBlockSelection.Persistent) and (eoOverwriteBlock in fOptions2) then begin
       SetSelTextExternal(Spaces);
@@ -9108,7 +9120,7 @@ var
   Spaces, Tabs: String;
 begin
   if SelAvail and (SelectionMode = smColumn) then begin
-    DoBlockIndentColSel(AColumnIndentOutside);
+    DoBlockIndentColSel(AColumnIndentOutside, False);
     exit;
   end;
 
@@ -9154,10 +9166,11 @@ begin
   end;
 end;
 
-procedure TCustomSynEdit.DoBlockIndentColSel(AnIndentOutside: Boolean);
+procedure TCustomSynEdit.DoBlockIndentColSel(AnIndentOutside: Boolean; ADeleteAtRightBound: Boolean
+	  );
 var
   BB,BE, BB2, BE2: TPoint;
-  Len, y, LeftBytePos, RightBytePos: integer;
+  Len, y, LeftBytePos, RightCharPos, RightBytePos, DelPos, DelLen: integer;
   LineStr, TabStr, SpaceStr: String;
   Bounds: array of record
     LeftByte, RightByte: integer;
@@ -9181,16 +9194,18 @@ begin
       Bounds[y-BB.y].LeftByte  := FBlockSelection.ColumnStartBytePos[y];
       Bounds[y-BB.y].RightByte := FBlockSelection.ColumnEndBytePos[y];
     end;
-    FBlockSelection.Clear;
 
     SpaceStr := StringOfChar(#32, FBlockIndent);
     TabStr   := StringOfChar( #9, FBlockTabIndent);
+    RightCharPos := FBlockSelection.ColumnRightCharPos;
+    FBlockSelection.Clear;
       for y := BB.Y to BE.y do begin
         LineStr := FTheLinesView[y - 1];
         LeftBytePos := Bounds[y-BB.y].LeftByte;
         if AnIndentOutside then begin
           Len := CountBackwardWhiteSpace(PChar(LineStr), LeftBytePos-1);
-          RightBytePos := LeftBytePos;
+          if ADeleteAtRightBound then
+            RightBytePos := Bounds[y-BB.y].RightByte;
           LeftBytePos  := LeftBytePos - Len;
           if FBlockIndent = 0 then
             Len := 0;
@@ -9199,7 +9214,7 @@ begin
           if FBlockIndent > 0
           then Len := CountLeadWhiteSpace(PChar(LineStr)+LeftBytePos-1)
           else Len := 0;
-          if (Len > 0) then
+          if ADeleteAtRightBound or (Len > 0) then
             RightBytePos := Bounds[y-BB.y].RightByte;
           if (Len > 0) and (LeftBytePos + Len > RightBytePos) then
             Len := Max(0, RightBytePos - LeftBytePos);
@@ -9209,23 +9224,44 @@ begin
           FTheLinesView.EditInsert(LeftBytePos, y, TabStr+SpaceStr);
         end
         else begin
-          FTheLinesView.EditInsert(LeftBytePos + Len, y, SpaceStr);
+          if SpaceStr <> '' then
+            FTheLinesView.EditInsert(LeftBytePos + Len, y, SpaceStr);
           if TabStr <> '' then
             FTheLinesView.EditInsert(LeftBytePos, y, TabStr);
+        end;
+
+        if ADeleteAtRightBound then begin
+          FInternalCaret.Invalidate;
+          if AnIndentOutside then begin
+            DelPos := RightBytePos + Length(TabStr) + Length(SpaceStr);
+            FInternalCaret.LineBytePos := Point(DelPos, y);
+            DelLen := FInternalCaret.CharPos - RightCharPos;  // Phys-Columns
+            FInternalCaret.CharPos := FInternalCaret.CharPos + DelLen;
+            DelLen := FInternalCaret.BytePos - DelPos;
+          end
+          else begin
+            FInternalCaret.LineCharPos := Point(RightCharPos, y);
+            DelPos := FInternalCaret.BytePos;
+            DelLen := RightBytePos + Length(TabStr) + Length(SpaceStr) - DelPos;
+          end;
+          if DelLen > 0 then
+            FTheLinesView.EditDelete(DelPos, y, DelLen);
         end;
       end;
   finally
     FTrimmedLinesView.ForceTrim; // Otherwise it may reset the block
 
-    if AnIndentOutside then begin
-      BB2.X := BB2.X + Length(TabStr) + Length(SpaceStr);
-      BE2.X := BE2.X + Length(TabStr) + Length(SpaceStr);
-    end
-    else begin
-      if BB2.X > BE2.X then
-        BB2.X := BB2.X + Length(TabStr) + Length(SpaceStr)
-      else
+    if (not ADeleteAtRightBound) or AnIndentOutside then begin
+      if AnIndentOutside then begin
+        BB2.X := BB2.X + Length(TabStr) + Length(SpaceStr);
         BE2.X := BE2.X + Length(TabStr) + Length(SpaceStr);
+      end
+      else begin
+        if BB2.X > BE2.X then
+          BB2.X := BB2.X + Length(TabStr) + Length(SpaceStr)
+        else
+          BE2.X := BE2.X + Length(TabStr) + Length(SpaceStr);
+      end;
     end;
     FBlockSelection.StartLineBytePos := BB2;
     FBlockSelection.EndLineBytePos := BE2;
@@ -9248,7 +9284,7 @@ var
   HasTab: Boolean;
 begin
   if SelAvail and (SelectionMode = smColumn) then begin
-    DoBlockUnindentColSel(AColumnIndentOutside);
+    DoBlockUnindentColSel(AColumnIndentOutside, False);
     exit;
   end;
 
@@ -9362,16 +9398,16 @@ begin
   end;
 end;
 
-procedure TCustomSynEdit.DoBlockUnindentColSel(AnIndentOutside: Boolean);
+procedure TCustomSynEdit.DoBlockUnindentColSel(AnIndentOutside: Boolean;
+	  ADeleteAtLeftBound: Boolean);
 var
   BB,BE, BB2, BE2: TPoint;
-  Len, y, LeftBytePos, TabW, TabDel, CurTabDel, CurTabSpaceAdd,
-    SpaceStartCharPos, CurSpaceSpaceAdd, CurSpaceDel, CurSpaceDelPos: integer;
+  Len, y, LeftBytePos, RightBytePos, RightCharPos, LeftCharPos, TabW: integer;
+  CurSpaceSpaceAdd, CurSpaceDel, CurSpaceDelPos, SpaceStartCharPos: integer;
+  CurTabDel, CurTabDelPhysWidth, CurTabSpaceAdd, TabEndBytePos, TmpCharPos, t: integer;
   LineStr: String;
-  LeftCharPos, RightBytePos, TabEndBytePos: LongInt;
   Bounds: array of record
     LeftByte, RightByte: integer;
-//    LeftChar, RightchByte: integer;
   end;
   LPC: TSynLogicalPhysicalConvertor;
   BbIsRight: Boolean;
@@ -9398,7 +9434,6 @@ begin
   IncPaintLock;
   try
     TabW := TabWidth;
-    TabDel := TabW * FBlockTabIndent;
     BB := BlockBegin;
     BE := BlockEnd;
     BB2 := FBlockSelection.StartLineBytePos;
@@ -9410,80 +9445,100 @@ begin
       Bounds[y-BB.y].LeftByte  := FBlockSelection.ColumnStartBytePos[y];
       Bounds[y-BB.y].RightByte := FBlockSelection.ColumnEndBytePos[y];
     end;
-    FBlockSelection.Clear;
-
 
     LPC := FTheLinesView.LogPhysConvertor;
+    RightCharPos := FBlockSelection.ColumnRightCharPos;
+    FBlockSelection.Clear;
       for y := BB.Y to BE.y do begin
         LineStr := FTheLinesView[y - 1];
         LeftBytePos := Bounds[y-BB.y].LeftByte;
         RightBytePos := Bounds[y-BB.y].RightByte;
-
-        if AnIndentOutside then begin
-          Len := CountBackwardWhiteSpace(PChar(LineStr), LeftBytePos-1);
-          RightBytePos := LeftBytePos;
-          LeftBytePos  := LeftBytePos - Len;
-          //if FBlockIndent = 0 then
-          //  Len := 0;
-        end
-        else begin
-         Len := Min(CountLeadWhiteSpace(PChar(LineStr)+LeftBytePos-1), RightBytePos - LeftBytePos);
-         if Len > Length(LineStr) - LeftBytePos then
-           Len := Length(LineStr) - LeftBytePos;
-        end;
-
-        if Len = 0 then
-          Continue;
-
         CurSpaceDel      := 0;
-        CurSpaceDelPos   := LeftBytePos + Len; // used as end for tab // pretend zero spaces
         CurSpaceSpaceAdd := 0;
         CurTabDel        := 0;
-        CurTabSpaceAdd   := 0;
 
-        if FBlockIndent > 0 then begin
-          //SpaceStartCharPos := LogToPhys(Max(LeftBytePos, CurSpaceDelPos - FBlockIndent));
-          SpaceStartCharPos := Max( LogToPhys(CurSpaceDelPos) - FBlockIndent,
-                                    LogToPhys(LeftBytePos)
-                                  );
-          CurSpaceDelPos    := PhysToLog(SpaceStartCharPos, CurSpaceSpaceAdd);
-          CurSpaceDel := LeftBytePos + Len - CurSpaceDelPos;
-        end;
-
-        if (CurSpaceDel > Len) or
-           ( (CurSpaceDel = Len) and (CurSpaceSpaceAdd = 0) )
-        then begin
-          CurSpaceDelPos   := LeftBytePos;
-          CurSpaceDel      := Len;
-          CurSpaceSpaceAdd := 0;
+        if ADeleteAtLeftBound then begin
+          if AnIndentOutside then begin
+            LeftCharPos := Max(1, LogToPhys(LeftBytePos) - FBlockIndent);
+            if FBlockTabIndent > 0 then
+              LeftCharPos := LeftCharPos - Max(0, FBlockTabIndent-1)*TabW - (LeftCharPos-1) mod TabW;
+            CurSpaceDelPos := PhysToLog(LeftCharPos, CurSpaceSpaceAdd);
+            CurSpaceDel    := LeftBytePos - CurSpaceDelPos;
+          end
+          else begin
+            TmpCharPos := LogToPhys(LeftBytePos) + FBlockIndent;
+            if FBlockTabIndent > 0 then
+              TmpCharPos := TmpCharPos + Max(0, FBlockTabIndent-1)*TabW + (TabW - (TmpCharPos-1) mod TabW);
+            CurSpaceDelPos := LeftBytePos;
+            CurSpaceDel    := PhysToLog(TmpCharPos, CurSpaceSpaceAdd) - CurSpaceDelPos;
+            if CurSpaceDel > RightBytePos - LeftBytePos then begin
+              CurSpaceDel := RightBytePos - LeftBytePos;
+              CurSpaceSpaceAdd := 0;
+            end;
+          end;
         end
 
-        else
-        begin
-          Len := CurSpaceDelPos - LeftBytePos;
-          if TabDel > 0 then begin
-            LeftCharPos := LogToPhys(LeftBytePos);
-            CurTabDel := TabDel - (LeftCharPos-1) mod TabW;
-            if CurTabDel > 0 then begin
-              TabEndBytePos := PhysToLog(LeftCharPos+CurTabDel, CurTabSpaceAdd);
-              CurTabDel := TabEndBytePos - LeftBytePos;
-              if CurTabSpaceAdd > 0 then
-                inc(CurTabDel);
+        else begin
+          if AnIndentOutside then begin
+            Len := CountBackwardWhiteSpace(PChar(LineStr), LeftBytePos-1);
+            RightBytePos := LeftBytePos;
+            LeftBytePos  := LeftBytePos - Len;
+          end
+          else begin
+            Len := Min(CountLeadWhiteSpace(PChar(LineStr)+LeftBytePos-1), RightBytePos - LeftBytePos);
+            if Len > Length(LineStr) - LeftBytePos then
+              Len := Length(LineStr) - LeftBytePos;
+          end;
 
-              if (CurTabDel > Len) or
-                 ( (CurTabDel=Len) and (CurTabSpaceAdd >= CurSpaceSpaceAdd) )
-              then begin
-                CurTabDel        := 0;
-                CurTabSpaceAdd   := 0;
-                CurSpaceDelPos   := LeftBytePos;
-                CurSpaceDel      := Len;
-                CurSpaceSpaceAdd := 0;
+          if Len = 0 then
+            Continue;
+
+          CurSpaceDelPos   := LeftBytePos + Len; // used as end for tab // pretend zero spaces
+
+          (* find spaces to delete *)
+          if FBlockIndent > 0 then begin
+            SpaceStartCharPos := Max( LogToPhys(CurSpaceDelPos) - FBlockIndent,
+                                      LogToPhys(LeftBytePos)
+                                    );
+            CurSpaceDelPos    := PhysToLog(SpaceStartCharPos, CurSpaceSpaceAdd);
+            CurSpaceDel := LeftBytePos + Len - CurSpaceDelPos;
+
+            if (CurSpaceDel > Len) then begin
+              CurSpaceDelPos   := LeftBytePos;
+              CurSpaceDel      := Len;
+              CurSpaceSpaceAdd := 0;
+            end;
+            Len := CurSpaceDelPos - LeftBytePos;
+          end;
+
+          (* find tabs to delete *)
+          if (FBlockTabIndent > 0) and
+             ( (Len > 0) or (CurSpaceSpaceAdd > 0) )
+          then begin
+            (* actual tabs / only at very start of gap *)
+            while (CurTabDel < FBlockTabIndent) and (LineStr[LeftBytePos+CurTabDel] = #9) do
+              inc(CurTabDel);
+
+            (* Take spaces/tab mix instead / ending at a tabstop *)
+            if CurTabDel < FBlockTabIndent then begin
+              LeftCharPos := LogToPhys(LeftBytePos+CurTabDel);
+              CurTabDelPhysWidth := (FBlockTabIndent-CurTabDel)*TabW - (LeftCharPos-1) mod TabW;
+              if CurTabDelPhysWidth > 0 then begin
+                TabEndBytePos := PhysToLog(LeftCharPos+CurTabDelPhysWidth, CurTabSpaceAdd);
+                assert(CurTabSpaceAdd=0, 'TCustomSynEdit.DoBlockUnindentColSel: CurTabSpaceAdd=0');
+                CurTabDel := CurTabDel + TabEndBytePos - (LeftBytePos+CurTabDel);
               end;
-            end
-            else
-              CurTabDel := 0;
+            end;
+
+            if (CurTabDel > Len - CurSpaceDel) then begin
+              CurSpaceSpaceAdd := Max(0, CurSpaceSpaceAdd - Max(0, LogToPhys(LeftBytePos+CurTabDel) - LogToPhys(CurSpaceDelPos)));
+              CurTabDel        := 0;
+              CurSpaceDelPos   := LeftBytePos;
+              CurSpaceDel      := Len;
+            end;
           end;
         end;
+
 
         if CurSpaceDel > 0 then begin
           FTheLinesView.EditDelete(CurSpaceDelPos, y, CurSpaceDel);
@@ -9492,21 +9547,28 @@ begin
         end;
         if CurTabDel > 0 then begin
           FTheLinesView.EditDelete(LeftBytePos, y, CurTabDel);
-          if CurTabSpaceAdd > 0 then
-            FTheLinesView.EditInsert(LeftBytePos, y, StringOfChar(' ', CurTabSpaceAdd));
         end;
 
-        if AnIndentOutside then begin
-          if (y = BB2.y) then
-            BB2.X := BB2.X + CurSpaceSpaceAdd + CurTabSpaceAdd - CurSpaceDel - CurTabDel;
-          if (y = BE2.y) then
-            BE2.X := BE2.X + CurSpaceSpaceAdd + CurTabSpaceAdd - CurSpaceDel - CurTabDel;
-        end
-        else begin
-          if (y = BB2.y) and (BbIsRight) then
-            BB2.X := BB2.X + CurSpaceSpaceAdd + CurTabSpaceAdd - CurSpaceDel - CurTabDel;
-          if (y = BE2.y) and (not BbIsRight) then
-            BE2.X := BE2.X + CurSpaceSpaceAdd + CurTabSpaceAdd - CurSpaceDel - CurTabDel;
+        if ADeleteAtLeftBound then begin
+          RightBytePos := RightBytePos - CurSpaceDel;
+          TmpCharPos := LogToPhys(RightBytePos);
+          t := Max(0, (RightCharPos-TmpCharPos));
+          FTheLinesView.EditInsert(RightBytePos, y, CreateTabsAndSpaces(RightBytePos, t, TabW, FBlockTabIndent));
+        end;
+
+        if (not ADeleteAtLeftBound) or AnIndentOutside then begin
+          if AnIndentOutside then begin
+            if (y = BB2.y) then
+              BB2.X := BB2.X + CurSpaceSpaceAdd - CurSpaceDel - CurTabDel;
+            if (y = BE2.y) then
+              BE2.X := BE2.X + CurSpaceSpaceAdd - CurSpaceDel - CurTabDel;
+          end
+          else begin
+            if (y = BB2.y) and (BbIsRight) then
+              BB2.X := BB2.X + CurSpaceSpaceAdd - CurSpaceDel - CurTabDel;
+            if (y = BE2.y) and (not BbIsRight) then
+              BE2.X := BE2.X + CurSpaceSpaceAdd - CurSpaceDel - CurTabDel;
+          end;
         end;
 
       end;

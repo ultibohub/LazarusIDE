@@ -36,7 +36,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="2">
+    <Units Count="4">
       <Unit0>
         <Filename Value="areaseriesdemo.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -48,6 +48,22 @@
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
       </Unit1>
+      <Unit2>
+        <Filename Value="frmerrorrange.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="ErrorRangeFrame"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+        <UnitName Value="frmErrorRange"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="frmgeneral.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="GeneralFrame"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Frame"/>
+        <UnitName Value="frmGeneral"/>
+      </Unit3>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

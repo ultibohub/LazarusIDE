@@ -1320,7 +1320,7 @@ begin
     end;
   end
   else
-  if (not (GetSkipCheck(skcLastCalled) or GetSkipCheck(skcAll)) ) and
+  if (not GetSkipCheck(skcLastCalled)) and
      (CompareFilenames(LastCalled,CurPrgName)<>0) and
      (CompareFilenames(LastCalled,AltPrgName)<>0) and
      (CompareFilenames(CurPrgName,AltPrgName)<>0) // we can NOT check, if we only have the path inside the PCP
@@ -1474,7 +1474,7 @@ begin
   ShowSetupDialog:=true;
   {$ENDIF}
 
-  SkipAllTests := GetSkipCheck(skcSetup) or GetSkipCheck(skcAll);
+  SkipAllTests := GetSkipCheck(skcSetup);
 
   // check lazarus directory
   if (not ShowSetupDialog)
@@ -5613,7 +5613,11 @@ var
       // ToDo: use UnitResources
       LFMFilename:=ChangeFileExt(UnitFilename,'.lfm');
       if not FileExistsCached(LFMFilename) then
+        begin
         LFMFilename:=ChangeFileExt(UnitFilename,'.dfm');
+        if not FileExistsCached(LFMFilename) then
+          LFMFilename:=ChangeFileExt(UnitFilename,'.fmx');
+        end;  
       if FileExistsCached(LFMFilename) then begin
         // load the lfm file
         ModalResult:=LoadCodeBuffer(LFMCode,LFMFilename,[lbfCheckIfText],true);
@@ -5679,7 +5683,11 @@ var
     // ToDo: use UnitResources
     LFMFilename:=ChangeFileExt(UnitFilename,'.lfm');
     if not FileExistsUTF8(LFMFilename) then
+      begin
       LFMFilename:=ChangeFileExt(UnitFilename,'.dfm');
+      if not FileExistsUTF8(LFMFilename) then
+        LFMFilename:=ChangeFileExt(UnitFilename,'.fmx');
+      end;
     ModalResult:=LoadCodeBuffer(LFMCode,LFMFilename,[lbfCheckIfText],false);
     if ModalResult<>mrOk then begin
       debugln('Error: (lazarus) [TMainIDE.DoFixupComponentReferences] Failed loading ',LFMFilename);
@@ -6123,7 +6131,7 @@ begin
       AnUnitInfo := nil;
       for UEntry in UnitList do
       begin
-        if not UEntry.Selected then continue;
+        if not (vufSelected in UEntry.Flags) then continue;
         AnUnitInfo := Project1.Units[UEntry.ID];
         if AnUnitInfo.OpenEditorInfoCount > 0 then
         begin
@@ -8702,7 +8710,7 @@ begin
     InputHistories.ApplyFileDialogSettings(OpenDialog);
     OpenDialog.Title:=lisSelectDFMFiles;
     OpenDialog.Options:=OpenDialog.Options+[ofAllowMultiSelect];
-    OpenDialog.Filter:=dlgFilterDelphiForm+' (*.dfm)|*.dfm|'+dlgFilterAll+'|'+GetAllFilesMask;
+    OpenDialog.Filter:=dlgFilterDelphiForm+' (*.dfm|*.fmx)|*.dfm|*.fmx|'+dlgFilterAll+'|'+GetAllFilesMask;
     if OpenDialog.Execute and (OpenDialog.Files.Count>0) then begin
       n := 0;
       For I := 0 to OpenDialog.Files.Count-1 do begin
@@ -12542,7 +12550,11 @@ begin
   // ToDo: use UnitResources
   LFMFilename:=ChangeFileExt(AnUnitInfo.Filename, '.lfm');
   if not FileExistsUTF8(LFMFilename) then
+    begin
     LFMFilename:=ChangeFileExt(AnUnitInfo.Filename, '.dfm');
+    if not FileExistsUTF8(LFMFilename) then
+      LFMFilename:=ChangeFileExt(AnUnitInfo.Filename, '.fmx');
+    end;  
   OpenEditorFile(LFMFilename, EditorInfo.PageIndex+1, EditorInfo.WindowID, nil, [], True);
 end;
 
@@ -13004,7 +13016,9 @@ begin
           else if FilenameIsAbsolute(AnUnitInfo.Filename)
             and FilenameIsPascalSource(AnUnitInfo.Filename)
             and ( FileExistsCached(ChangeFileExt(AnUnitInfo.Filename,'.lfm'))
-               or FileExistsCached(ChangeFileExt(AnUnitInfo.Filename,'.dfm')) )
+               or FileExistsCached(ChangeFileExt(AnUnitInfo.Filename,'.dfm'))
+               or FileExistsCached(ChangeFileExt(AnUnitInfo.Filename,'.fmx'))
+                )
           then
             HasResources:=true;
         end;

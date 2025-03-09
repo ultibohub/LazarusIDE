@@ -616,7 +616,7 @@ begin
     OpenDialog.Filter:=dlgFilterAll+' ('+GetAllFilesMask+')|'+GetAllFilesMask
                  +'|'+dlgFilterLazarusUnit+' (*.pas;*.pp)|*.pas;*.pp'
                  +'|'+dlgFilterLazarusInclude+' (*.inc)|*.inc'
-                 +'|'+dlgFilterLazarusForm+' (*.lfm;*.dfm)|*.lfm;*.dfm';
+                 +'|'+dlgFilterLazarusForm+' (*.lfm;*.dfm;*.fmx)|*.lfm;*.dfm;*.fmx';
     if OpenDialog.Execute then
     begin
       InputHistories.StoreFileDialogSettings(OpenDialog);

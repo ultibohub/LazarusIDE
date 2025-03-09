@@ -1650,6 +1650,8 @@ type
     FStringBreakAppend: String;
     FStringBreakEnabled: Boolean;
     FStringBreakPrefix: String;
+    FStringAlignMax: Integer;
+    FStringAlignPattern: String;
     // Scroll
     FScrollOnEditLeftOptions: TSynScrollOnEditLeftOptions;
     FScrollOnEditRightOptions: TSynScrollOnEditRightOptions;
@@ -1770,6 +1772,8 @@ type
     property StringBreakEnabled: Boolean read FStringBreakEnabled write FStringBreakEnabled;
     property StringBreakAppend: String read FStringBreakAppend write FStringBreakAppend;
     property StringBreakPrefix: String read FStringBreakPrefix write FStringBreakPrefix;
+    property StringAlignPattern: String  read FStringAlignPattern write FStringAlignPattern;
+    property StringAlignMax:     Integer read FStringAlignMax write FStringAlignMax;
     // Scroll
     property ScrollOnEditLeftOptions: TSynScrollOnEditLeftOptions
       read FScrollOnEditLeftOptions write FScrollOnEditLeftOptions;
@@ -3610,7 +3614,7 @@ begin
     TheType := lshLFM;
     DefaultCommentType := DefaultCommentTypes{%H-}[TheType];
     SynInstance := LazSyntaxHighlighterClasses{%H-}[TheType].Create(nil);
-    SetBothFilextensions('lfm;dfm;xfm');
+    SetBothFilextensions('lfm;dfm;fmx');
     SampleSource :=
       '{ Lazarus Form Definitions }'#13 + 'object TestForm: TTestForm'#13 +
       '  Left = 273'#13 + '  Top = 103'#13 +
@@ -5547,6 +5551,8 @@ begin
   FStringBreakEnabled := False;
   FStringBreakAppend  := ' +';
   FStringBreakPrefix  := '';
+  FStringAlignPattern  := '';
+  FStringAlignMax      := 0;
 
   FScrollPastEolMode := optScrollPage;
 
@@ -6760,6 +6766,8 @@ begin
       b.StringBreakEnabled := FStringBreakEnabled;
       b.StringBreakAppend  := FStringBreakAppend;
       b.StringBreakPrefix  := FStringBreakPrefix;
+      b.StringAlignPattern := FStringAlignPattern;
+      b.StringAlignMax     := FStringAlignMax;
 
     end;
 

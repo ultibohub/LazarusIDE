@@ -662,7 +662,8 @@ begin
         end;
         FreeAndNil(SM);
       end;
-      if Assigned(ParentNode) and (ParentNode.Index = 0) then ParentNode.Expanded := True;
+      if Assigned(ParentNode) and (ParentNode.Index = 0) then
+        ParentNode.Expanded := True;
       {$IFDEF CHM_DEBUG_TIME}
       DebugLn('CHT Load of TOC end: ',FormatDateTime('hh:nn:ss.zzz', Now));
       {$ENDIF}
@@ -822,7 +823,7 @@ begin
 {$IFDEF TREE_DEBUG}
       WriteLn('CHTR ContentTree changed1 URI: ', URI);
 {$ENDIF}
-      if ((fHtml.MasterFrame <> nil) and (MakeURI(fHtml.CurURL, fChm)  = Uri)) = False then
+      if (fHtml.MasterFrame = nil) or (MakeURI(fHtml.CurURL, fChm) <> Uri) then
       begin
         ActiveTreeView.Tag:=1; // status of request from treeview
         DoLoadUri(Uri);
@@ -834,23 +835,25 @@ begin
 
   ATreeNode := TContentTreeNode(ActiveTreeView.Selected);
 
-  ArootNode:= ATreeNode;
+  ArootNode := ATreeNode;
   fChm := TChmReader(ARootNode.Data);
-    if ATreeNode.Url <> '' then
-    begin
-      Uri := MakeURI(ATreeNode.Url, fChm);
+  if ATreeNode.Url <> '' then
+  begin
+    Uri := MakeURI(ATreeNode.Url, fChm);
 {$IFDEF TREE_DEBUG}
-      WriteLn('CHTR ContentTree changed1 URI: ', URI);
+    WriteLn('CHTR ContentTree changed1 URI: ', URI);
 {$ENDIF}
-      if ((fHtml.MasterFrame <> nil) and (MakeURI(fHtml.CurURL, fChm)  = Uri)) = False then
-      begin
-        if ActiveTreeView = fSearchResults then  FLoadingSearchURL:= True;
-        ActiveTreeView.Tag:=1; // status of request from treeview
-        DoLoadUri(MakeURI(ATreeNode.Url, fChm));
-        ActiveTreeView.Tag:=0;
-        if ActiveTreeView = fSearchResults then  FLoadingSearchURL:= False;
-      end;
+    if (fHtml.MasterFrame = nil) or (MakeURI(fHtml.CurURL, fChm) <> Uri) then
+    begin
+      if ActiveTreeView = fSearchResults then
+        FLoadingSearchURL := True;
+      ActiveTreeView.Tag := 1; // status of request from treeview
+      DoLoadUri(MakeURI(ATreeNode.Url, fChm));
+      ActiveTreeView.Tag := 0;
+      if ActiveTreeView = fSearchResults then
+        FLoadingSearchURL := False;
     end;
+  end;
 end;
 
 procedure TChmContentProvider.TreeViewStopCollapse(Sender: TObject;
@@ -880,10 +883,18 @@ begin
 end;
 
 procedure TChmContentProvider.UpdateTitle;
-var
+{var
   Item: TTreeNode;
-  NewTitle: String;
+  NewTitle: String;  }
 begin
+  // Now show only the first original CHM title.
+  if (Title = '') and (fContentsTree.Items.Count > 0) then
+    Title := fContentsTree.Items.GetFirstNode.Text;
+
+  // When opening LazUtils CHM file, then clicking links for FCL and RTL, the code generated this:
+  //  "(LazUtils) Lazarus Utilities [(FCL) Free Component Library, (RTL) Runtime Library]"
+  // However it never changes again. It only gets updated when a CHM is loaded (ProcFillTOC).
+{
   Item:=nil;
   if fContentsTree.Items.Count > 0 then
     Item := fContentsTree.Items.GetFirstNode;
@@ -904,8 +915,10 @@ begin
     NewTitle := FActiveChmTitle + ' [' + NewTitle + ']'
   else
     NewTitle := FActiveChmTitle;
-  if NewTitle = '' then NewTitle := DefaultCHMContentTitle;
+  if NewTitle = '' then
+    NewTitle := DefaultCHMContentTitle;
   Title := NewTitle;
+}
 end;
 
 procedure TChmContentProvider.SetTitle(const AValue: String);

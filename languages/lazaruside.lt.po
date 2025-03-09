@@ -4377,6 +4377,18 @@ msgstr "Naujoje eilutės pradžioje įterpti priešdėlį"
 msgid "String ''"
 msgstr "Tekstas \""
 
+#: lazarusidestrconsts.dlgstringcontalignalignsecondlineafterfirst
+msgid "Align second line (after first break) with the position of the lowest matching group in the pattern, or the match position of the pattern itself."
+msgstr ""
+
+#: lazarusidestrconsts.dlgstringcontalignalignsecondlineregex
+msgid "Align second line (reg-ex):"
+msgstr ""
+
+#: lazarusidestrconsts.dlgstringcontalignmaxindentforsecondlineifb
+msgid "Max indent for second line if based on reg-ex:"
+msgstr ""
+
 #: lazarusidestrconsts.dlgstringenableautocontinue
 msgid "Extend strings on linebreak"
 msgstr "Laužiant eilutę praplėsti eilutes"
@@ -17300,7 +17312,9 @@ msgid "Select build mode"
 msgstr ""
 
 #: lazarusidestrconsts.lisselectdfmfiles
-msgid "Select Delphi form files (*.dfm)"
+#, fuzzy
+#| msgid "Select Delphi form files (*.dfm)"
+msgid "Select Delphi form files (*.dfm|*.fmx)"
 msgstr "Nurodykite Delphi formos failus (*.dfm)"
 
 #: lazarusidestrconsts.lisselected
@@ -20416,6 +20430,22 @@ msgstr "Stulpelį žymėti žodžiu kairėn"
 msgid "Column Select Word Right"
 msgstr "Stulpelį žymėti žodžiu dešinėn"
 
+#: lazarusidestrconsts.srkmeccolumnblockmoveleft
+msgid "Move column-block left (delete before columns)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmeccolumnblockmoveright
+msgid "Move column-block right (delete after columns)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmeccolumnblockshiftleft
+msgid "Shift column-block left (delete in columns)"
+msgstr ""
+
+#: lazarusidestrconsts.srkmeccolumnblockshiftright
+msgid "Shift column-block right (delete in columns)"
+msgstr ""
+
 #: lazarusidestrconsts.srkmeccolumnselect
 msgid "Column selection mode"
 msgstr "Stulpelių žymėjimo veiksena"
@@ -20434,15 +20464,15 @@ msgid "Copy"
 msgstr "Kopijuoti į iškarpinę"
 
 #: lazarusidestrconsts.srkmeccopyadd
-msgid "Copy (Add to Clipboard)"
+msgid "Copy to clipboard (append)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmeccopyaddcurrentline
-msgid "Copy current line (Add to Clipboard)"
+msgid "Copy current line to clipboard (append)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmeccopycurrentline
-msgid "Copy current line"
+msgid "Copy current line to clipboard"
 msgstr ""
 
 #: lazarusidestrconsts.srkmeccopyeditornewwindow
@@ -20463,15 +20493,15 @@ msgid "Cut"
 msgstr "Iškirpti į iškarpinę"
 
 #: lazarusidestrconsts.srkmeccutadd
-msgid "Cut (Add to Clipboard)"
+msgid "Cut to clipboard (append)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmeccutaddcurrentline
-msgid "Cut current line (Add to Clipboard)"
+msgid "Cut current line to clipboard (append)"
 msgstr ""
 
 #: lazarusidestrconsts.srkmeccutcurrentline
-msgid "Cut current line"
+msgid "Cut current line to clipboard"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecdeletebol

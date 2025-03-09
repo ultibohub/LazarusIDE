@@ -147,7 +147,7 @@ const
      'wii',
      'wasi'
     );
-  FPCOperatingSystemCaptions: array[1..40] of shortstring =( //Ultibo
+  FPCOperatingSystemCaptions: array[1..44] of shortstring =( //Ultibo
      'AIX',
      'Amiga',
      'Android',
@@ -187,7 +187,11 @@ const
      'Win64',
      'WinCE',
      'Wii',
-     'Wasi'
+     'Wasi',
+     'Wasip1',
+     'Wasip1threads',
+     'Wasip2',
+     'Wasix'
     );
 
   FPCOperatingSystemAlternativeNames: array[1..2] of shortstring =(

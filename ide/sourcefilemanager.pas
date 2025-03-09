@@ -188,6 +188,7 @@ type
     fViewUnitEntries: TViewUnitEntries;
     fSelectCaption: String;
   protected
+    function InitialSelection(aFilename: string): Boolean; virtual;
     function Select: TModalResult; //virtual; // Select with a dialog.
     function ActionForFiles: TModalResult; virtual; abstract;
   public
@@ -210,6 +211,7 @@ type
 
   TRenameFilesSelector = class(TProjectUnitFileSelector)
   protected
+    function InitialSelection(aFilename: string): Boolean; override;
     function ActionForFiles: TModalResult; override;
   public
     constructor Create;
@@ -1753,12 +1755,16 @@ begin
   inherited Destroy;
 end;
 
+function TProjectUnitFileSelector.InitialSelection(aFilename: string): Boolean;
+begin
+  Result:=False;
+end;
+
 function TProjectUnitFileSelector.Select: TModalResult;
 var
-  i:integer;
+  i: integer;
   AName: string;
   AnUnitInfo: TUnitInfo;
-  UnitInfos: TFPList;
   UEntry: TViewUnitsEntry;
 Begin
   Result:=mrOK;
@@ -1770,7 +1776,8 @@ Begin
     if (AnUnitInfo.IsPartOfProject) and (i<>Project1.MainUnitID) then
     begin
       AName:=Project1.RemoveProjectPathFromFilename(AnUnitInfo.FileName);
-      fViewUnitEntries.Add(AName,AnUnitInfo.FileName,i,false,false);
+      fViewUnitEntries.Add(AName, AnUnitInfo.FileName, i,
+                  InitialSelection(AName), AnUnitInfo.OpenEditorInfoCount>0);
     end;
   end;
   if ShowViewUnitsDlg(fViewUnitEntries,true,fSelectCaption,piUnit) <> mrOk then
@@ -1779,7 +1786,7 @@ Begin
   fUnitInfos:=TFPList.Create;
   for UEntry in fViewUnitEntries do
   begin
-    if UEntry.Selected then
+    if vufSelected in UEntry.Flags then
     begin
       if UEntry.ID<0 then continue;
       AnUnitInfo:=Project1.Units[UEntry.ID];
@@ -1914,6 +1921,11 @@ begin
   inherited;
 end;
 
+function TRenameFilesSelector.InitialSelection(aFilename: string): Boolean;
+begin                    // Select only units having mixed case filename.
+  Result:=aFilename<>LowerCase(aFilename);
+end;
+
 function TRenameFilesSelector.ActionForFiles: TModalResult;
 var
   i: Integer;
@@ -1928,10 +1940,10 @@ begin
          + AnUnitInfo.Unit_Name + ' is not part of project');
     if AnUnitInfo.Source=nil then
       AnUnitInfo.ReadUnitSource(false,false);
-    // Marked here means to remove old files silently.
-    Result:=RenameUnitLowerCase(AnUnitInfo, false,True);
+    Result:=RenameUnitLowerCase(AnUnitInfo,false,true);
     if Result<>mrOK then exit;
   end;
+  InvalidateFileStateCache;
   ShowMessage(Format(lisDFilesWereRenamedToL, [fUnitInfos.Count]));
 end;
 
@@ -3895,7 +3907,7 @@ begin
                                DlgCaption, ItemType, ActiveUnitInfo.Filename);
     // create list of selected files
     for Entry in UnitList do
-      if Entry.Selected then
+      if vufSelected in Entry.Flags then
         Files.Add(Entry.Filename);
 
   finally
@@ -4952,8 +4964,8 @@ begin
     Filter := dlgFilterLazarusUnit + ' (*.pas;*.pp)|*.pas;*.pp';
     if (SaveAsFileExt='.lpi') then
       Filter:=Filter+ '|' + dlgFilterLazarusProject + ' (*.lpi)|*.lpi';
-    if (SaveAsFileExt='.lfm') or (SaveAsFileExt='.dfm') then
-      Filter:=Filter+ '|' + dlgFilterLazarusForm + ' (*.lfm;*.dfm)|*.lfm;*.dfm';
+    if (SaveAsFileExt='.lfm') or (SaveAsFileExt='.dfm') or (SaveAsFileExt='.fmx') then
+      Filter:=Filter+ '|' + dlgFilterLazarusForm + ' (*.lfm;*.dfm;*.fmx)|*.lfm;*.dfm;*.fmx';
     if (SaveAsFileExt='.lpk') then
       Filter:=Filter+ '|' + dlgFilterLazarusPackage + ' (*.lpk)|*.lpk';
     if (SaveAsFileExt='.lpr') then
@@ -5802,7 +5814,11 @@ begin
     if FilenameHasPascalExt(OldFilename) then begin
       OldLFMFilename:=ChangeFileExt(OldFilename,'.lfm');
       if not FileExistsUTF8(OldLFMFilename) then
+        begin
         OldLFMFilename:=ChangeFileExt(OldFilename,'.dfm');
+        if not FileExistsUTF8(OldLFMFilename) then
+          OldLFMFilename:=ChangeFileExt(OldFilename,'.fmx');
+        end;  
     end;
     if NewUnitName='' then
       NewUnitName:=AnUnitInfo.Unit_Name;
@@ -6089,7 +6105,9 @@ begin
   // check, if a .lfm file is opened in the source editor
   if (LFMUnitInfo=nil)
   or not ( FilenameExtIs(LFMUnitInfo.Filename,'lfm',true) or
-           FilenameExtIs(LFMUnitInfo.Filename,'dfm') ) then
+           FilenameExtIs(LFMUnitInfo.Filename,'dfm') or
+           FilenameExtIs(LFMUnitInfo.Filename,'fmx') 
+           ) then
   begin
     if not Quiet then
     begin
@@ -6897,7 +6915,11 @@ begin
   // ToDo: use UnitResources
   LFMFilename:=ChangeFileExt(AFilename,'.lfm');
   if not FileExistsInIDE(LFMFilename,[]) then
+    begin
     LFMFilename:=ChangeFileExt(AFilename,'.dfm');
+    if not FileExistsInIDE(LFMFilename,[]) then
+      LFMFilename:=ChangeFileExt(AFilename,'.fmx');
+    end;
   if not FileExistsInIDE(LFMFilename,[]) then begin
     DebugLn(['OpenComponent file not found ',LFMFilename]);
     exit(mrCancel);
@@ -7220,7 +7242,14 @@ var
         {$IFDEF VerboseLFMSearch}
         debugln(['  TryLFM CurLFMFilename="',CurLFMFilename,'" does not exist']);
         {$ENDIF}
-        exit;
+        CurLFMFilename:=ChangeFileExt(UnitFilename,'.fmx');
+        if not FileExistsCached(CurLFMFilename) then
+          begin
+          {$IFDEF VerboseLFMSearch}
+          debugln(['  TryLFM CurLFMFilename="',CurLFMFilename,'" does not exist']);
+          {$ENDIF}
+          exit;
+          end;
       end;
     end;
     // load the lfm file
@@ -8141,7 +8170,11 @@ begin
     then begin
       LFMFilename:=ChangeFileExt(AnUnitInfo.Filename,'.lfm');
       if not FileExistsCached(LFMFilename) then
+        begin
         LFMFilename:=ChangeFileExt(AnUnitInfo.Filename,'.dfm');
+        if not FileExistsCached(LFMFilename) then
+          LFMFilename:=ChangeFileExt(AnUnitInfo.Filename,'.fmx');
+        end;  
       AnUnitInfo.HasResources:=FileExistsCached(LFMFilename);
     end;
   end;

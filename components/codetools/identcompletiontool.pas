@@ -214,7 +214,8 @@ type
   
   TIdentifierListContextFlag = (
     ilcfStartInStatement,  // context starts in statements. e.g. between begin..end
-    ilcfStartOfStatement,  // atom is start of statement. e.g. 'A|:=' or 'A|;', does not check if A can be assigned
+    // atom is start of statement. e.g. 'A|:=' or 'A|;', does not check if A can be assigned
+    ilcfStartOfStatement,
     ilcfStartOfOperand,    // atom is start of an operand. e.g. 'A|.B'
     ilcfStartIsSubIdent,   // atom in front is point
     ilcfNeedsEndSemicolon, // after context a semicolon is needed. e.g. 'A| end'
@@ -224,7 +225,9 @@ type
     ilcfIsExpression,      // is expression part of statement. e.g. 'if expr'
     ilcfCanProcDeclaration,// context allows one to declare a procedure/method
     ilcfEndOfLine,         // atom at end of line
-    ilcfDontAllowProcedures// context doesn't allow procedures (e.g. in function parameter, after other operator, in if codition etc. - Delphi mode supports assignment of procedures!)
+    // context doesn't allow procedures (e.g. in function parameter, after other operator,
+    // in if codition etc. - Delphi mode supports assignment of procedures!)
+    ilcfDontAllowProcedures
     );
   TIdentifierListContextFlags = set of TIdentifierListContextFlag;
 
@@ -962,14 +965,13 @@ procedure TIdentifierList.Add(NewItem: TIdentifierListItem);
 var
   AnAVLNode: TAVLTreeNode;
 begin
-  if (ilcfDontAllowProcedures in ContextFlags) and (NewItem.GetDesc = ctnProcedure) and
-     not (NewItem.IsFunction or NewItem.IsConstructor)
-  then
-  begin
+  if (ilcfDontAllowProcedures in ContextFlags) and (NewItem.GetDesc = ctnProcedure)
+  and not (NewItem.IsFunction or NewItem.IsConstructor) then
+  begin                                        // no procedures here
+    //DebugLn(['TIdentifierList.Add: Skipped "',NewItem.Identifier,'"']);
     NewItem.Free;
-    Exit;
+    exit;
   end;
-
   AnAVLNode:=FIdentView.FindKey(NewItem,@CompareIdentListItemsForIdents);
   if AnAVLNode=nil then begin
     if History<>nil then
@@ -1365,12 +1367,9 @@ var
   Node: TCodeTreeNode;
   ProtectedForeignClass: Boolean;
   Lvl: LongInt;
-  NamePos: TAtomPosition;
   HasLowerVisibility: Boolean;
   IsDottedIdent: Boolean;
   PlaceForDotted: string;
-  PlaceForNamespace: string;
-  i: integer;
 begin
   // proceed searching ...
   Result:=ifrProceedSearch;
@@ -1510,8 +1509,17 @@ begin
           end;
         end;
       end;
+
+      if (FoundContext.Node.FirstChild<>nil) and
+      (CurrentIdentifierList.StartContext.Node.StartPos>=FoundContext.Node.FirstChild.StartPos) and
+      (CurrentIdentifierList.StartContext.Node.EndPos<=FoundContext.Node.FirstChild.EndPos)
+      then //inside parameters declaration
+      begin // skip adding itself at function/procedure parameters definition
+        debugln(['TIdentCompletionTool.CollectAllIdentifiers ','skipped "',GetIdentifier(Ident),'"']);
+        exit;
+      end;
     end;
-    
+
   ctnProperty:
     begin
       Ident:=FoundContext.Tool.GetPropertyNameIdentifier(FoundContext.Node);

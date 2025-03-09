@@ -129,7 +129,6 @@ type
     fShowDirHierarchy: Boolean;     // Show directories / files as a tree structure.
     fBranches: TBranchList;         // Items under these nodes can be sorted.
     fExpandAllInitially: Boolean;   // Expand all levels when searched for the first time.
-    fIsFirstTime: Boolean;          // Needed for fExpandAllInitially.
     // First node matching the filter. Will be selected if old selection is hidden.
     fFirstPassedNode: TTreeNode;
     fOnGetImageIndex: TImageIndexEvent;
@@ -137,7 +136,7 @@ type
     procedure SetFilteredTreeview(AValue: TCustomTreeview);
     procedure SetShowDirHierarchy(AValue: Boolean);
     function FilterTree(Node: TTreeNode): Boolean;
-    procedure OnBeforeTreeDestroy(Sender: TObject);
+    procedure BeforeTreeDestroy(Sender: TObject);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
     procedure MoveNext(ASelect: Boolean = False); override;
@@ -701,7 +700,6 @@ begin
   fSelectionList:=TStringList.Create;
   fImageIndexDirectory := -1;
   fExpandAllInitially := False;
-  fIsFirstTime := True;
 end;
 
 destructor TTreeFilterEdit.Destroy;
@@ -717,7 +715,7 @@ begin
   Result := 'btnfiltercancel';
 end;
 
-procedure TTreeFilterEdit.OnBeforeTreeDestroy(Sender: TObject);
+procedure TTreeFilterEdit.BeforeTreeDestroy(Sender: TObject);
 begin
   FreeAndNil(fBranches);
 end;
@@ -728,14 +726,17 @@ begin
   if fFilteredTreeview <> nil then
   begin
     fFilteredTreeview.RemoveFreeNotification(Self);
-    fFilteredTreeview.RemoveHandlerOnBeforeDestruction(@OnBeforeTreeDestroy);
+    fFilteredTreeview.RemoveHandlerOnBeforeDestruction(@BeforeTreeDestroy);
+    if not (csDestroying in ComponentState) then
+      ForceFilter('');
+    FreeAndNil(fBranches);
   end;
   fFilteredTreeview := AValue;
   if fFilteredTreeview <> nil then
   begin
-    InvalidateFilter;
+    InternalSetFilter(Text);
+    fFilteredTreeview.AddHandlerOnBeforeDestruction(@BeforeTreeDestroy);
     fFilteredTreeview.FreeNotification(Self);
-    fFilteredTreeview.AddHandlerOnBeforeDestruction(@OnBeforeTreeDestroy);
   end;
 end;
 
@@ -778,7 +779,8 @@ begin
     // Recursive call for child nodes.
     Node.Visible := FilterTree(Node.GetFirstChild) or Pass;
     if Node.Visible then begin                 // Collapse all when Filter=''.
-      Node.Expanded := (Filter<>'') or fExpandAllInitially;
+      if (Filter<>'') or (fExpandAllInitially and fIsFirstUpdate) then
+        Node.Expanded := True;
       Result := True;
     end;
     Node := Node.GetNextSibling;
@@ -791,8 +793,8 @@ begin
   if (Operation=opRemove) and (FilteredTreeview=AComponent) then
   begin
     IdleConnected:=False;
-    fNeedUpdate:=False;
-    fFilteredTreeview.RemoveHandlerOnBeforeDestruction(@OnBeforeTreeDestroy);
+    fNeedFiltering:=False;
+    fFilteredTreeview.RemoveHandlerOnBeforeDestruction(@BeforeTreeDestroy);
     fFilteredTreeview:=nil;
     FreeAndNil(fBranches);
   end;
@@ -823,11 +825,8 @@ begin
       fBranches[i].ApplyFilter;
   end
   else begin                             // Apply filter for the whole tree.
-    if fExpandAllInitially and fIsFirstTime then
-    begin
+    if fExpandAllInitially and fIsFirstUpdate then
       fFilteredTreeview.FullExpand;
-      fIsFirstTime := False;
-    end;
     FilterTree(fFilteredTreeview.Items.GetFirstNode);
   end;
   fFilteredTreeview.ClearInvisibleSelection;

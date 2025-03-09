@@ -1023,7 +1023,7 @@ resourcestring
   lisClickHereToBrowseTheFileHint = 'Click here to browse the file';
   lisOpenPackageFile = 'Open Package File';
   lisSaveSpace = 'Save ';
-  lisSelectDFMFiles = 'Select Delphi form files (*.dfm)';
+  lisSelectDFMFiles = 'Select Delphi form files (*.dfm|*.fmx)';
   lisChooseLazarusSourceDirectory = 'Choose Lazarus Directory';
   lisChooseCompilerExecutable = 'Choose compiler executable (%s)';
   lisChooseFPCSourceDir = 'Choose FPC source directory';
@@ -1647,6 +1647,11 @@ resourcestring
   dlgStringEnableAutoContinue = 'Extend strings on linebreak';
   dlgStringAutoAppend = 'Append text to close string';
   dlgStringAutoPrefix = 'Prefix string on new line';
+  dlgStringContAlignAlignSecondLineRegEx = 'Align second line (reg-ex):';
+  dlgStringContAlignMaxIndentForSecondLineIfB = 'Max indent for second line if based on reg-ex:';
+  dlgStringContAlignAlignSecondLineAfterFirst = 'Align second line (after first break) with the '
+    +'position of the lowest matching group in the pattern, or the match position of the pattern '
+    +'itself.';
 
   dlgUndoAfterSave = 'Undo after save';
   dlgFindTextatCursor = 'Find text at cursor';
@@ -3105,12 +3110,12 @@ resourcestring
   srkmecCopy                  = 'Copy';
   srkmecPaste                 = 'Paste';
   srkmecPasteAsColumns        = 'Paste (as Columns)';
-  srkmecCopyAdd               = 'Copy (Add to Clipboard)';
-  srkmecCutAdd                = 'Cut (Add to Clipboard)';
-  srkmecCopyCurrentLine       = 'Copy current line';
-  srkmecCopyAddCurrentLine    = 'Copy current line (Add to Clipboard)';
-  srkmecCutCurrentLine        = 'Cut current line';
-  srkmecCutAddCurrentLine     = 'Cut current line (Add to Clipboard)';
+  srkmecCopyAdd               = 'Copy to clipboard (append)';
+  srkmecCutAdd                = 'Cut to clipboard (append)';
+  srkmecCopyCurrentLine       = 'Copy current line to clipboard';
+  srkmecCopyAddCurrentLine    = 'Copy current line to clipboard (append)';
+  srkmecCutCurrentLine        = 'Cut current line to clipboard';
+  srkmecCutAddCurrentLine     = 'Cut current line to clipboard (append)';
   srkmecMoveLineUp            = 'Move line up';
   srkmecMoveLineDown          = 'Move line down';
   srkmecDuplicateLine         = 'Duplicate line (or lines in selection)';
@@ -3132,6 +3137,10 @@ resourcestring
   srkmecBlockUnindent         = 'Unindent line/block';
   srkmecBlockIndentMove       = 'Indent line/block (move columns)';
   srkmecBlockUnindentMove     = 'Unindent line/block (move columns)';
+  srkmecColumnBlockShiftRight = 'Shift column-block right (delete in columns)';
+  srkmecColumnBlockMoveRight  = 'Move column-block right (delete after columns)';
+  srkmecColumnBlockShiftLeft  = 'Shift column-block left (delete in columns)';
+  srkmecColumnBlockMoveLeft   = 'Move column-block left (delete before columns)';
   srkmecPluginMultiCaretSetCaret         = 'Add extra caret';
   srkmecPluginMultiCaretUnsetCaret       = 'Remove extra caret';
   srkmecPluginMultiCaretToggleCaret      = 'Toggle extra caret';

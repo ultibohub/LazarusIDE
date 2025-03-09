@@ -140,6 +140,11 @@ end;
 procedure TListFilterEdit.SetFilteredListbox(const AValue: TCustomListBox);
 begin
   if fFilteredListbox = AValue then Exit;
+  if Assigned(fFilteredListbox) then
+  begin
+    fFilteredListbox.RemoveFreeNotification(Self);
+    ForceFilter('');
+  end;
   fFilteredListbox:=AValue;
   if Assigned(fFilteredListbox) then
   begin
@@ -147,6 +152,7 @@ begin
     fOriginalData.Assign(fFilteredListbox.Items);
     if (fFilteredListbox is TCustomCheckListBox) and not Assigned(fCheckedItems) then
       fCheckedItems:=TStringMap.Create(False);
+    fFilteredListbox.FreeNotification(Self);
   end;
 end;
 
@@ -156,7 +162,7 @@ begin
   if (Operation=opRemove) and (FilteredListbox=AComponent) then
   begin
     IdleConnected:=False;
-    fNeedUpdate:=False;
+    fNeedFiltering:=False;
     fFilteredListbox:=nil;
   end;
 end;
