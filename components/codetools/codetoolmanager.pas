@@ -167,6 +167,8 @@ type
     procedure DoOnGlobalValuesChanged;
     function DoOnFindUsedUnit(SrcTool: TFindDeclarationTool; const TheUnitName,
           TheUnitInFilename: string): TCodeBuffer;
+    function DoOnFindUsedUnit(const SrcFilename, TheUnitName,
+          TheUnitInFilename: string): TCodeBuffer;
     function DoOnGetSrcPathForCompiledUnit(Sender: TObject;
           const AFilename: string): string;
     function DoOnInternalGetMethodName(const AMethod: TMethod;
@@ -3054,7 +3056,7 @@ function TCodeToolManager.FindSourceNameReferences(TargetFilename: string; Files
   SkipComments: boolean; out ListOfSrcNameRefs: TObjectList; WithDuplicates: boolean): boolean;
 var
   i, j, InFilenameCleanPos: Integer;
-  Filename, Dir, TargetUnitName, InFilename, LocalSrcName: String;
+  Filename, Dir, TargetUnitName, InFilename, LocalSrcName, CurUnitName: String;
   Code: TCodeBuffer;
   Tools, DirCachesSearch, DirCachesSkip: TFPList;
   DirCache: TCTDirectoryCache;
@@ -3062,11 +3064,24 @@ var
   Refs: TSrcNameRefs;
   Node, NextNode: TAVLTreeNode;
   CodeXYPos: PCodeXYPosition;
+
+  function CanFindFile(const CurFilename: string): boolean;
+  begin
+    Result:=false;
+    if FilenameIsAbsolute(TargetFilename) then exit;
+    Result:=DoOnFindUsedUnit(CurFilename,TargetUnitName,'')<>nil;
+    {$IFDEF VerboseFindSourceNameReferences}
+    if Result then
+      debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', virtual target in unit path']);
+    {$ENDIF}
+  end;
+
 begin
   {$IFDEF VerboseFindSourceNameReferences}
   debugln(['TCodeToolManager.FindSourceNameReferences TargetFile="',TargetFilename,'" FileCount=',Files.Count,' SkipComments=',SkipComments]);
   {$ENDIF}
   Result:=false;
+  TargetUnitName:=ExtractFileNameOnly(TargetFilename);
   ListOfSrcNameRefs:=nil;
   Tools:=TFPList.Create;
   DirCachesSearch:=TFPList.Create;
@@ -3089,17 +3104,21 @@ begin
         // check if directory has target in unitpath
         Dir:=ExtractFilePath(Filename);
         DirCache:=DirectoryCachePool.GetCache(Dir,true,false);
-        if DirCachesSkip.IndexOf(DirCache)>=0 then continue;
-        if DirCachesSearch.IndexOf(DirCache)<0 then begin
-          TargetUnitName:=ExtractFileNameOnly(TargetFilename);
+        if DirCachesSkip.IndexOf(DirCache)>=0 then begin
+          // this directory does not have target in unit path
+          // check custom search
+          if not CanFindFile(Filename) then
+            continue;
+        end else if DirCachesSearch.IndexOf(DirCache)<0 then begin
+          CurUnitName:=TargetUnitName;
           InFilename:='';
-          if DirCache.FindUnitSourceInCompletePath(TargetUnitName,InFilename,true)<>'' then
+          if DirCache.FindUnitSourceInCompletePath(CurUnitName,InFilename,true)<>'' then
           begin
             {$IFDEF VerboseFindSourceNameReferences}
             debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', target in unit path']);
             {$ENDIF}
             DirCachesSearch.Add(DirCache);
-          end else begin
+          end else if not CanFindFile(Filename) then begin
             {$IFDEF VerboseFindSourceNameReferences}
             debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', target NOT in unit path, SKIP']);
             {$ENDIF}
@@ -5835,9 +5854,9 @@ begin
 end;
 
 function TCodeToolManager.FindLFMFileName(Code: TCodeBuffer): string;
-var LinkIndex: integer;
+var
+  LinkIndex: integer;
   CurCode: TCodeBuffer;
-  Ext: string;
 begin
   Result:='';
   {$IFDEF CTDEBUG}
@@ -5848,12 +5867,8 @@ begin
     LinkIndex:=-1;
     CurCode:=FCurCodeTool.FindNextIncludeInInitialization(LinkIndex);
     while (CurCode<>nil) do begin
-      if UpperCaseStr(ExtractFileExt(CurCode.Filename))='.LRS' then begin
-        Result:=CurCode.Filename;
-        Ext:=ExtractFileExt(Result);
-        Result:=copy(Result,1,length(Result)-length(Ext))+'.lfm';
-        exit;
-      end;
+      if UpperCaseStr(ExtractFileExt(CurCode.Filename))='.LRS' then
+        exit(ChangeFileExt(CurCode.Filename,'.lfm'));
       CurCode:=FCurCodeTool.FindNextIncludeInInitialization(LinkIndex);
     end;
   except
@@ -6403,8 +6418,16 @@ function TCodeToolManager.DoOnFindUsedUnit(SrcTool: TFindDeclarationTool;
   const TheUnitName, TheUnitInFilename: string): TCodeBuffer;
 begin
   if Assigned(OnSearchUsedUnit) then
-    Result:=OnSearchUsedUnit(SrcTool.MainFilename,
-                             TheUnitName,TheUnitInFilename)
+    Result:=OnSearchUsedUnit(SrcTool.MainFilename,TheUnitName,TheUnitInFilename)
+  else
+    Result:=nil;
+end;
+
+function TCodeToolManager.DoOnFindUsedUnit(const SrcFilename, TheUnitName, TheUnitInFilename: string
+  ): TCodeBuffer;
+begin
+  if Assigned(OnSearchUsedUnit) then
+    Result:=OnSearchUsedUnit(SrcFilename,TheUnitName,TheUnitInFilename)
   else
     Result:=nil;
 end;

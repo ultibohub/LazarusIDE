@@ -4006,6 +4006,13 @@ var
   {$IFDEF GTK3DEBUGSCROLL}
   S: String;
   {$ENDIF}
+
+  function NeedsRecalculation(const aMaxValue, aPageSize, aVisibleSize: Integer): Boolean;
+  begin
+    Result := (aMaxValue < aVisibleSize) or ((aMaxValue > aVisibleSize) and
+      (aPageSize < aVisibleSize div 2)) and (aMaxValue >= aPageSize);
+  end;
+
   procedure UpdateAdjustment;
   var
     ATarget: gdouble;
@@ -4027,17 +4034,17 @@ var
       Adjustment^.lower := ATarget;
 
       ATarget := Adjustment^.upper;
-      SetGDouble(ATarget, ScrollInfo.nMax, HasChanged);
-      Adjustment^.upper := ATarget ;
+      SetGDouble(ATarget, ScrollInfo.nMax - ScrollInfo.nMin + 1, HasChanged);
+      Adjustment^.upper := ATarget;
 
       if (AControl is TGtk3ScrollableWin) and (wtContainer in AControl.WidgetType) then
       begin
         //hah
         if SbStyle = SB_VERT then
-          TGtk3ScrollableWin(AControl).GetContainerWidget^.set_size_request(TGtk3ScrollableWin(AControl).GetContainerWidget^.get_allocated_width, Round(ATarget) + 1)
+          TGtk3ScrollableWin(AControl).GetContainerWidget^.set_size_request(TGtk3ScrollableWin(AControl).GetContainerWidget^.get_allocated_width, Round(ATarget))
         else
         if SBStyle = SB_HORZ then
-          TGtk3ScrollableWin(AControl).GetContainerWidget^.set_size_request(Round(ATarget) + 1, TGtk3ScrollableWin(AControl).GetContainerWidget^.get_allocated_height);
+          TGtk3ScrollableWin(AControl).GetContainerWidget^.set_size_request(Round(ATarget), TGtk3ScrollableWin(AControl).GetContainerWidget^.get_allocated_height);
       end else
       if (AControl is TGtk3ScrollableWin) and (wtLayout in AControl.WidgetType) then
       begin
@@ -4075,7 +4082,7 @@ var
       if Adjustment^.upper > Adjustment^.lower then
       begin
         //ATarget := Min(Adjustment^.upper, (ScrollInfo.nPage * Round(Adjustment^.upper)) / ScrollInfo.nMax);
-        ATarget := Min(Max(ATarget, 0), Adjustment^.upper - Adjustment^.lower + 1);
+        ATarget := Min(Max(ATarget, 0), Adjustment^.upper - Adjustment^.lower);
         if ATarget > 0 then
         begin
           Adjustment^.page_size := ATarget;
@@ -4092,7 +4099,7 @@ var
       ATarget := Adjustment^.value;
       SetGDouble(ATarget, ScrollInfo.nPos, HasChanged);
       ATarget := Max(ATarget, Adjustment^.lower);
-      ATarget := Min(ATarget, Adjustment^.upper - Max(Adjustment^.page_size - 1, 0));
+      ATarget := Min(ATarget, Adjustment^.upper - Max(Adjustment^.page_size, 0));
       if Adjustment^.value <> ATarget then
         Adjustment^.value := ATarget;
     end;
@@ -4131,7 +4138,6 @@ var
       end;
     end;
     Adjustment^.thaw_notify;
-    gtk_adjustment_changed(Adjustment);
     {$IFDEF GTK3DEBUGSCROLL}
     DebugLn(Format('Updated Adjustment: lower=%.2f, upper=%.2f, page_size=%.2f, value=%.2f, page_increment=%.2f InUpdate %s',
       [Adjustment^.lower, Adjustment^.upper, Adjustment^.page_size, Adjustment^.value, Adjustment^.page_increment, BoolToStr(AControl.InUpdate, True)]));
@@ -4239,7 +4245,7 @@ begin
 
         R := AControl.getClientRect;
         if ([wtScrollingWinControl] * AControl.WidgetType = []) and
-          (Scrollinfo.nMax - (R.Width - ScrollInfo.nPage) < R.Width) then
+          NeedsRecalculation(ScrollInfo.nMax, ScrollInfo.nPage, R.Width) then
         begin
           HaveLogicalValues := True;
           ChangeLogicalToAbsolute(AControl, ScrollInfo, SB_HORZ, R);
@@ -4257,7 +4263,7 @@ begin
         R := AControl.getClientRect;
 
         if ([wtScrollingWinControl] * AControl.WidgetType = []) and
-          (Scrollinfo.nMax - (R.Height - ScrollInfo.nPage) < R.Height) then
+          NeedsRecalculation(ScrollInfo.nMax, ScrollInfo.nPage, R.Height) then
         begin
           HaveLogicalValues := True;
           ChangeLogicalToAbsolute(AControl, ScrollInfo, SB_VERT, R);

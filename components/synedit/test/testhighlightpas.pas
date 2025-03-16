@@ -17,8 +17,10 @@ type
 
   TTestBaseHighlighterPas = class(TTestBaseHighlighterFoldBase)
   protected
+    FKeepAllModifierAttribs: boolean;
     function PasHighLighter: TSynPasSyn;
     function CreateTheHighLighter: TSynCustomFoldHighlighter; override;
+    procedure InitTighLighterAttr; override;
     procedure EnableFolds(AEnbledTypes: TPascalCodeFoldBlockTypes;
                           AHideTypes: TPascalCodeFoldBlockTypes = [];
                           ANoFoldTypes: TPascalCodeFoldBlockTypes = []
@@ -61,6 +63,7 @@ type
     procedure TestContextForProcModifiers2;
     procedure TestContextForProcModifiersName;
     procedure TestContextForVarModifiers;
+    procedure TestContextForVarModifiers2;
     procedure TestContextForProperties;
     procedure TestContextForProcedure;
     procedure TestContextForProcedureNameAttr;
@@ -77,6 +80,11 @@ type
     procedure TestContextForRecordHelper;
     procedure TestContextForRecordCase;
     procedure TestContextForStatic;
+    procedure TestCaseLabel;
+    procedure TestModifierAttributesForProcedure;
+    procedure TestModifierAttributesForProperty;
+    procedure TestModifierAttributesForVarConstType;
+    procedure TestModifierAttributesForLabel;
     procedure TestCaretAsString;
     procedure TestFoldNodeInfo;
   end;
@@ -90,6 +98,9 @@ const
   TK_Colon   = tkSymbol;
   TK_Equal   = tkSymbol;
   TK_Bracket = tkSymbol;
+
+type
+  TNoMergedTokenAttriIndicator = (PlainAttr);
 
 operator := (a: TtkTokenKind) : TExpTokenInfo;
 begin
@@ -116,6 +127,25 @@ end;
 function TTestBaseHighlighterPas.CreateTheHighLighter: TSynCustomFoldHighlighter;
 begin
   Result := TSynPasSyn.Create(nil);
+end;
+
+procedure TTestBaseHighlighterPas.InitTighLighterAttr;
+begin
+  inherited InitTighLighterAttr;
+
+  if FKeepAllModifierAttribs then exit;
+
+  PasHighLighter.PropertyNameAttr.Clear;
+  PasHighLighter.ProcedureHeaderParamAttr.Clear;
+  PasHighLighter.ProcedureHeaderTypeAttr.Clear;
+  PasHighLighter.ProcedureHeaderValueAttr.Clear;
+  PasHighLighter.ProcedureHeaderResultAttr.Clear;
+  PasHighLighter.DeclarationVarConstNameAttr.Clear;
+  PasHighLighter.DeclarationTypeNameAttr.Clear;
+  PasHighLighter.DeclarationTypeAttr.Clear;
+  PasHighLighter.DeclarationValueAttr.Clear;
+  PasHighLighter.GotoLabelAttr.Clear;
+  PasHighLighter.StructMemberAttr.Clear;
 end;
 
 procedure TTestBaseHighlighterPas.EnableFolds(AEnbledTypes: TPascalCodeFoldBlockTypes;
@@ -888,23 +918,26 @@ begin
        'procedure name; external ''name'' name ''name'';',
        'procedure name; public name ''name'';',
        '  begin end;',
-       'function name: name; external ''name'' name ''name'';',
+       'function name: name; external ''name'' name ''name'';',   // 4
        'function name: name; public name ''name'';',
        '  begin end;',
        '',
-       'type TFoo = class ',
+       'type TFoo = class ',  // 8
        'procedure name; public name: name;',  // just a public field
        'function name: name; public name: name;',  // just a public field
        'end;',
+       '',  // 12
+       'procedure name; external name name;',  // external keyword_NAME const_NAME
+       'procedure name; external foo name name;',  // external foo keyword_NAME const_NAME
        ''
         ]);
 
   for i := 0 to $3F do begin
     AFolds := [];
-    if (i and $20) = 0 then AFolds := [cfbtBeginEnd..cfbtNone] - [cfbtUnitSection, cfbtProcedure, cfbtVarType, cfbtClass, cfbtClassSection];
+    if (i and $20) = 0 then AFolds := [cfbtBeginEnd..cfbtNone] - [cfbtUnitSection, cfbtProcedure, cfbtVarBlock, cfbtClass, cfbtClassSection];
     if (i and $01) = 0 then AFolds := AFolds + [cfbtUnitSection];
     if (i and $02) = 0 then AFolds := AFolds + [cfbtProcedure];
-    if (i and $04) = 0 then AFolds := AFolds + [cfbtVarType];
+    if (i and $04) = 0 then AFolds := AFolds + [cfbtVarBlock];
     if (i and $08) = 0 then AFolds := AFolds + [cfbtClass];
     if (i and $10) = 0 then AFolds := AFolds + [cfbtClassSection];
 
@@ -930,6 +963,14 @@ begin
     CheckTokensForLine('CLASS: function name: name; public name: name;', 10,
       [tkKey, tkSpace, tkIdentifier+p, TK_Colon, tkSpace, tkIdentifier, TK_Semi, tkSpace,
        tkKey, tkSpace, tkIdentifier, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+
+    CheckTokensForLine('procedure name; external name name;', 13,
+      [tkKey, tkSpace, tkIdentifier+p, TK_Semi, tkSpace,
+       tkModifier, tkSpace,  tkModifier, tkSpace, tkIdentifier, TK_Semi]);
+
+    CheckTokensForLine('procedure name; external foo name name;', 14,
+      [tkKey, tkSpace, tkIdentifier+p, TK_Semi, tkSpace,
+       tkModifier, tkSpace, tkIdentifier, tkSpace, tkModifier, tkSpace, tkIdentifier, TK_Semi]);
 
   end;
 end;
@@ -1035,9 +1076,9 @@ begin
 
     for j := 0 to $1F do begin
       AFolds := [];
-      if (j and $10) = 0 then AFolds := [cfbtBeginEnd..cfbtNone] - [cfbtUnitSection, cfbtVarType, cfbtClass, cfbtClassSection];
+      if (j and $10) = 0 then AFolds := [cfbtBeginEnd..cfbtNone] - [cfbtUnitSection, cfbtVarBlock, cfbtClass, cfbtClassSection];
       if (j and $01) = 0 then AFolds := AFolds + [cfbtUnitSection];
-      if (j and $02) = 0 then AFolds := AFolds + [cfbtVarType];
+      if (j and $02) = 0 then AFolds := AFolds + [cfbtVarBlock];
       if (j and $04) = 0 then AFolds := AFolds + [cfbtClass];
       if (j and $08) = 0 then AFolds := AFolds + [cfbtClassSection];
       EnableFolds(AFolds);
@@ -1239,6 +1280,27 @@ begin
 
     end;
   end;
+end;
+
+procedure TTestHighlighterPas.TestContextForVarModifiers2;
+begin
+  ReCreateEdit;
+  EnableFolds([cfbtBeginEnd..cfbtNone]);
+  SetLines
+    ([ 'Unit A; interface',
+       'var',
+       'name: name;  external name name;',   // external const_NAME keyword_NAME const_NAME
+       'name: name;  external foo name name;',   // external const_NAME keyword_NAME const_NAME
+       ''
+    ]);
+
+    CheckTokensForLine('name: name; external name name;', 2,
+      [tkIdentifier, TK_Colon, tkSpace, tkIdentifier, TK_Semi, tkSpace,
+       tkModifier, tkSpace, tkModifier, tkSpace, tkIdentifier, TK_Semi]);
+
+    CheckTokensForLine('name: name; external foo name name;', 3,
+      [tkIdentifier, TK_Colon, tkSpace, tkIdentifier, TK_Semi, tkSpace,
+       tkModifier, tkSpace, tkIdentifier, tkSpace, tkModifier, tkSpace, tkIdentifier, TK_Semi]);
 end;
 
 procedure TTestHighlighterPas.TestContextForProperties;
@@ -1493,21 +1555,22 @@ begin
        '',
        'var',
 {10}   '  Foo: Procedure of object;', // no folding // do not end var block
+       '  Foo: Procedure is nested;', // no folding // do not end var block
        '',
        'type',
        '  TBar= ',
-       '    Function(): Boolean;',  // no folding // do not end type block
-{15}   '',
+{15}   '    Function(): Boolean;',  // no folding // do not end type block
+       '',
        'Procedure a;', // no folding in interface
        '',
        'implementation',
-       '',
-{20}   'var',
+{20}   '',
+       'var',
        '  Foo2: Procedure of object;', // no folding // do not end var block
        '',
        'type',
-       '  TBar2: ',
-{25}   '    Function(): Boolean;',  // no folding // do not end type block
+{25}   '  TBar2: ',
+       '    Function(): Boolean;',  // no folding // do not end type block
        '',
        'Procedure a;', // fold
        'var',
@@ -1531,16 +1594,16 @@ begin
       // fold depth / only for all folds enabled
       CheckFoldOpenCounts('', [ 1, 1, 0,
                                 1 {type}, 1, 0, 0, 0, 0,
-                                1 {var}, 0, 0, 1 {type}, 0, 0, 0,
+                                1 {var}, 0, 0, 0, 1 {type}, 0, 0, 0,
                                 0 {Proc}, 0,
                                 1 {impl}, 0, 1 {var}, 0, 0, 1 {type}, 0, 0, 0,
                                 1 {proc}, 1 {var}, 0, 0, 0, 0, 0
                          ]);
-      AssertEquals('Len var 1 ',   2, PasHighLighter.FoldLineLength(9, 0));
-      AssertEquals('Len type 1 ',  3, PasHighLighter.FoldLineLength(12, 0));
-      AssertEquals('Len var 2 ',   2, PasHighLighter.FoldLineLength(20, 0));
-      AssertEquals('Len type 2 ',  3, PasHighLighter.FoldLineLength(23, 0));
-      AssertEquals('Len var 3 ',   2, PasHighLighter.FoldLineLength(28, 0));
+      AssertEquals('Len var 1 ',   3, PasHighLighter.FoldLineLength(9, 0));
+      AssertEquals('Len type 1 ',  3, PasHighLighter.FoldLineLength(13, 0));
+      AssertEquals('Len var 2 ',   2, PasHighLighter.FoldLineLength(21, 0));
+      AssertEquals('Len type 2 ',  3, PasHighLighter.FoldLineLength(24, 0));
+      AssertEquals('Len var 3 ',   2, PasHighLighter.FoldLineLength(29, 0));
     end;
 
     CheckTokensForLine('IBar.p1',   5, [ tkSpace, tkKey + AtK, tkSpace, tkIdentifier + AtP, tkSymbol ]);
@@ -1548,7 +1611,10 @@ begin
     CheckTokensForLine('foo p of', 10, [ tkSpace, tkIdentifier, tkSymbol, tkSpace,
       tkKey + AtK, tkSpace, tkKey + AtK {of}, tkSpace, tkKey, tkSymbol
       ]);
-    CheckTokensForLine('TBar',     14, [ tkSpace, tkKey + AtK, tkSymbol, tkSymbol, tkSymbol,
+    CheckTokensForLine('foo p is nested', 11, [ tkSpace, tkIdentifier, tkSymbol, tkSpace,
+      tkKey + AtK, tkSpace, tkKey + AtK {of}, tkSpace, tkKey, tkSymbol
+      ]);
+    CheckTokensForLine('TBar',     15, [ tkSpace, tkKey + AtK, tkSymbol, tkSymbol, tkSymbol,
       tkSpace, tkIdentifier + AtI, tkSymbol
       ]);
 
@@ -2106,7 +2172,7 @@ begin
     AFolds := [cfbtBeginEnd..cfbtNone];
     if (i and $01) = 0 then AFolds := AFolds - [cfbtProgram, cfbtUnit];
     if (i and $02) = 0 then AFolds := AFolds - [cfbtUnitSection];
-    if (i and $04) = 0 then AFolds := AFolds - [cfbtVarType, cfbtLocalVarType];
+    if (i and $04) = 0 then AFolds := AFolds - [cfbtVarBlock, cfbtLocalVarBlock];
     if (i and $08) = 0 then AFolds := AFolds - [cfbtClass, cfbtRecord];
     if (i and $10) = 0 then AFolds := AFolds - [cfbtClassSection];
     if (i and $20) = 0 then AFolds := AFolds - [cfbtProcedure];
@@ -2433,7 +2499,7 @@ begin
          'type',
          'TFoo = class {}',
          ' sealed abstract',
-           'a, sealed, abstract: Integer;',
+           'helper, sealed, abstract: Integer;',
            'procedure Foo; abstract;',
           'end;',
          ''
@@ -2461,7 +2527,7 @@ begin
     SetLines
       ([ 'Unit A; interface',
          'type',
-         'TFoo = class(sealed) sealed abstract',
+         'TFoo = class sealed abstract(sealed)',
            'helper, sealed, abstract: Integer;',
            'procedure Foo; abstract;',
           'end;',
@@ -2469,10 +2535,10 @@ begin
       ]);
 
     CheckTokensForLine('class declaration"',  2,
-      [ tkIdentifier, tkSpace, tkSymbol, tkSpace,
-        tkKey {class}, tkSymbol, tkIdentifier, tkSymbol, tkSpace,
-        tkModifier {sealed}, tkSpace,
-        tkModifier {abstract}
+      [ tkIdentifier, tkSpace, TK_Equal, tkSpace,
+        tkKey {class}, tkSpace,
+        tkModifier {sealed}, tkSpace, tkModifier {abstract},
+        tkSymbol, tkIdentifier, tkSymbol
       ]);
     CheckTokensForLine('var in class "',  3,
       [ tkIdentifier, tkSymbol, tkSpace,  tkIdentifier, tkSymbol, tkSpace,  tkIdentifier, tkSymbol,
@@ -3075,8 +3141,8 @@ var
 begin
   for i := 0 to $1F do begin
     AFolds := [];
-    if (i and $10) = 0 then AFolds := [cfbtBeginEnd..cfbtNone] - [cfbtVarType, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection];
-    if (i and $01) = 0 then AFolds := AFolds + [cfbtVarType];
+    if (i and $10) = 0 then AFolds := [cfbtBeginEnd..cfbtNone] - [cfbtVarBlock, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection];
+    if (i and $01) = 0 then AFolds := AFolds + [cfbtVarBlock];
     if (i and $02) = 0 then AFolds := AFolds + [cfbtRecord];
     if (i and $04) = 0 then AFolds := AFolds + [cfbtRecordCase];
     if (i and $08) = 0 then AFolds := AFolds + [cfbtRecordCaseSection];
@@ -3154,7 +3220,7 @@ begin
     CheckTokensForLine('  end;',                 31, [tkSpace, tkKey, TK_Semi]);
 
 
-    if cfbtVarType in AFolds then
+    if cfbtVarBlock in AFolds then
       AssertEquals('Fold-Len type   (1) ',   31, PasHighLighter.FoldLineLength(1, 0));
     if cfbtRecord in AFolds then
       AssertEquals('Fold-Len record (2) ',   29, PasHighLighter.FoldLineLength(2, 0));
@@ -3250,6 +3316,454 @@ begin
   end;
 end;
 
+procedure TTestHighlighterPas.TestCaseLabel;
+begin
+  ReCreateEdit;
+  SetLines
+    ([ 'program a; begin',  // 0
+         'case b of',
+           '1: foo;',    // 2
+           'bar: bar;',
+           'else foo;',
+         'end;',
+         'case b of',
+           '''123'': bar;',  // 7
+           'bar: bar;',
+           'otherwise foo;',
+         'end;',
+       'end;',
+       ''
+    ]);
+
+  PasHighLighter.CaseLabelAttriMatchesElseOtherwise := True;
+  CheckTokensForLine('1: foo;',  2, [tkNumber+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('bar: bar;',  3, [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('else foo;',  4, [tkKey+FCaseLabelAttri, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('end;',  5, [tkKey, TK_Semi]);
+
+  CheckTokensForLine('''123'': foo;',  7, [tkString+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('bar: bar;',  8, [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('else foo;',  9, [tkKey+FCaseLabelAttri, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('end;',  10, [tkKey, TK_Semi]);
+
+
+  PasHighLighter.CaseLabelAttriMatchesElseOtherwise := False;
+  CheckTokensForLine('1: foo;',  2, [tkNumber+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('bar: bar;',  3, [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('else foo;',  4, [tkKey, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('end;',  5, [tkKey, TK_Semi]);
+
+  CheckTokensForLine('''123'': foo;',  7, [tkString+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('bar: bar;',  8, [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('else foo;',  9, [tkKey, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('end;',  10, [tkKey, TK_Semi]);
+
+
+  FCaseLabelAttri.Clear;
+  FCaseLabelAttri := nil;
+  PasHighLighter.CaseLabelAttriMatchesElseOtherwise := True;
+  CheckTokensForLine('1: foo;',  2, [tkNumber, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('bar: bar;',  3, [tkIdentifier, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('else foo;',  4, [tkKey, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('end;',  5, [tkKey, TK_Semi]);
+
+  CheckTokensForLine('''123'': foo;',  7, [tkString, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('bar: bar;',  8, [tkIdentifier, TK_Colon, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('else foo;',  9, [tkKey, tkSpace, tkIdentifier, TK_Semi]);
+  CheckTokensForLine('end;',  10, [tkKey, TK_Semi]);
+
+end;
+
+procedure TTestHighlighterPas.TestModifierAttributesForProcedure;
+var
+  ProcName, ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+begin
+  FKeepAllModifierAttribs := True;
+  ReCreateEdit;
+  SetLines
+    ([ 'Unit A; interface',  // 0
+       'function Foo: integer;',
+       'function Foo: string;',
+       'function Foo(var a:byte;b, b2:string;c:array of boolean): integer;',
+       'function Foo(d:word=2-x;e:boolean=(1=y*2);f:qword=default(qword); g:MySet=[a1..a2]): integer;',
+       'procedure Foo(a:byte;',  //5
+       'b, b2:word);',
+       '',  // 7
+       'procedure name; external &name name name;',  // external const_NAME keyword_NAME const_NAME
+       'procedure name; external foo name name;',    // external const_FOO keyword_NAME const_NAME
+       'procedure name; external name name;',        // external keyword_NAME const_NAME
+       ''
+    ]);
+
+  ProcName  := PasHighLighter.ProcedureHeaderName;
+  ProcParam := PasHighLighter.ProcedureHeaderParamAttr;
+  ProcType  := PasHighLighter.ProcedureHeaderTypeAttr;
+  ProcVal  := PasHighLighter.ProcedureHeaderValueAttr;
+  ProcRes   := PasHighLighter.ProcedureHeaderResultAttr;
+
+  PasHighLighter.DeclaredTypeAttributeMode := tamIdentifierOnly;
+  PasHighLighter.DeclaredValueAttributeMode := tamIdentifierOnly;
+  PasHighLighter.DeclaredValueAttributeMachesStringNum := False;
+
+  CheckTokensForLine('2: function Foo: integer',  1,
+    [tkKey, tkSpace, tkIdentifier+ProcName, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Semi]);
+
+  CheckTokensForLine('3: function Foo: string',  2,
+    [tkKey, tkSpace, tkIdentifier+ProcName, TK_Colon, tkSpace,
+     tkKey, TK_Semi]);
+
+  CheckTokensForLine('4: function Foo(var a:byte;b, b2:string;c:array of boolean): integer;',  3,
+    [tkKey, tkSpace, tkIdentifier+ProcName, TK_Bracket,
+     tkKey, tkSpace, tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Comma, tkSpace, tkIdentifier+ProcParam,  TK_Colon, tkKey, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkKey, tkSpace, tkKey, tkSpace, tkIdentifier+ProcType,
+     TK_Bracket, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Semi]);
+
+  CheckTokensForLine('4: function Foo(d:word=2-x;e:boolean=(1=y*2);f:qword=default(qword); g:MySet=[a1..a2]): integer;',  4,
+    [tkKey, tkSpace, tkIdentifier+ProcName, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType,
+       TK_Equal, tkNumber, tkSymbol, tkIdentifier+ProcVal, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType,
+       TK_Equal, TK_Bracket, tkNumber, tkSymbol, tkIdentifier+ProcVal, tkSymbol, tkNumber, TK_Bracket, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType,
+       TK_Equal, tkIdentifier+ProcVal, TK_Bracket, tkIdentifier+ProcVal, TK_Bracket, TK_Semi,
+     tkSpace,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType,
+       TK_Equal, TK_Bracket, tkIdentifier+ProcVal, tkSymbol, tkIdentifier+ProcVal, TK_Bracket,
+     TK_Bracket, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Semi]);
+
+  CheckTokensForLine('6: procedure Foo(a:byte;',  5,
+    [tkKey, tkSpace, tkIdentifier+ProcName, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Semi]);
+  CheckTokensForLine('7: b, b2:word);',  6,
+    [tkIdentifier+ProcParam, TK_Comma, tkSpace, tkIdentifier+ProcParam, TK_Colon,
+     tkIdentifier+ProcType, TK_Bracket, TK_Semi]);
+
+
+    CheckTokensForLine('procedure name; external name name name;', 8,
+      [tkKey, tkSpace, tkIdentifier+ProcName, TK_Semi, tkSpace,
+       tkModifier, tkSpace, tkIdentifier, tkSpace, tkModifier, tkSpace, tkIdentifier, TK_Semi]);
+
+  //PropName.Clear;
+  //PasHighLighter.DeclaredTypeAttributeMode := tamIdentifierOnly;
+  //PasHighLighter.DeclaredValueAttributeMode := tamIdentifierOnly;
+  //PasHighLighter.DeclaredValueAttributeMachesStringNum := False;
+
+
+end;
+
+procedure TTestHighlighterPas.TestModifierAttributesForProperty;
+var
+  PropName, ProcParam, ProcType, ProcRes: TSynHighlighterAttributesModifier;
+begin
+  FKeepAllModifierAttribs := True;
+  ReCreateEdit;
+  SetLines
+    ([ 'Unit A; interface',  // 0
+       'property Foo: integer read Foo;',
+       'property Foo[a:byte;b:string;c:unit2.word]: unit2.integer read Foo;',
+       ''
+    ]);
+
+  PropName  := PasHighLighter.PropertyNameAttr;
+  ProcParam := PasHighLighter.ProcedureHeaderParamAttr;
+  ProcType  := PasHighLighter.ProcedureHeaderTypeAttr;
+  ProcRes   := PasHighLighter.ProcedureHeaderResultAttr;
+
+  PasHighLighter.DeclaredTypeAttributeMode := tamIdentifierOnly;
+  PasHighLighter.DeclaredValueAttributeMode := tamIdentifierOnly;
+  PasHighLighter.DeclaredValueAttributeMachesStringNum := False;
+
+  CheckTokensForLine('1: unit a: interface;',  0,
+    [tkKey, tkSpace, tkIdentifier, TK_Semi, tkSpace, tkKey]);
+
+  CheckTokensForLine('2:property Foo: integer read Foo;',  1,
+    [tkKey, tkSpace, tkIdentifier+PropName, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, tkSpace,
+     tkKey, tkSpace, tkIdentifier, TK_Semi]);
+
+  CheckTokensForLine('3:property Foo[a:byte;b:string;c:unit2.word]: unit2.integer read Foo;',  2,
+    [tkKey, tkSpace, tkIdentifier+PropName, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkKey, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Dot, tkIdentifier+ProcType,
+     TK_Bracket, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Dot, tkIdentifier+ProcRes, tkSpace,
+     tkKey, tkSpace, tkIdentifier, TK_Semi]);
+
+  PasHighLighter.DeclaredTypeAttributeMode := tamPredefinedNames;
+  CheckTokensForLine('3:property Foo[a:byte;b;string;c:unit2.word]: unit2.integer read Foo;',  2,
+    [tkKey, tkSpace, tkIdentifier+PropName, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkKey+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Dot, tkIdentifier+ProcType,
+     TK_Bracket, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Dot, tkIdentifier+ProcRes, tkSpace,
+     tkKey, tkSpace, tkIdentifier, TK_Semi]);
+
+  PasHighLighter.DeclaredTypeAttributeMode := tamKeywordsAndSymbols;
+  CheckTokensForLine('3:property Foo[a:byte;b;string;c:unit2.word]: unit2.integer read Foo;',  2,
+    [tkKey, tkSpace, tkIdentifier+PropName, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkKey+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Dot+ProcType, tkIdentifier+ProcType,
+     TK_Bracket, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Dot+ProcRes, tkIdentifier+ProcRes, tkSpace+ProcRes{for space....},
+     tkKey, tkSpace, tkIdentifier, TK_Semi]);
+
+
+
+  PropName.Clear;
+  PasHighLighter.DeclaredTypeAttributeMode := tamIdentifierOnly;
+  PasHighLighter.DeclaredValueAttributeMode := tamIdentifierOnly;
+  PasHighLighter.DeclaredValueAttributeMachesStringNum := False;
+
+  CheckTokensForLine('2:property Foo: integer read Foo;',  1,
+    [tkKey, tkSpace, tkIdentifier, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, tkSpace,
+     tkKey, tkSpace, tkIdentifier, TK_Semi]);
+
+  CheckTokensForLine('3:property Foo[a:byte;b;string;c:unit2.word]: unit2.integer read Foo;',  2,
+    [tkKey, tkSpace, tkIdentifier, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkKey, TK_Semi,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Dot, tkIdentifier+ProcType,
+     TK_Bracket, TK_Colon, tkSpace,
+     tkIdentifier+ProcRes, TK_Dot, tkIdentifier+ProcRes, tkSpace,
+     tkKey, tkSpace, tkIdentifier, TK_Semi]);
+
+end;
+
+procedure TTestHighlighterPas.TestModifierAttributesForVarConstType;
+var
+  DeclVarName, DeclTypeName, DeclType, DeclVal, ProcName,
+    ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+  i: Integer;
+begin
+  FKeepAllModifierAttribs := True;
+  ReCreateEdit;
+  SetLines
+    ([ 'Unit A; interface',  // 0
+       'var',
+         'Foo: word deprecated;',  //2
+         'Foo: word = val deprecated;',
+       'type',
+         'Foo= word deprecated;',
+       'const',            // 6
+         'x:function (a:word; b:byte): integer = nil;',            // 7
+       'type',
+         'x=function (): integer deprecated;',             //9
+         'x=function (a:word): integer deprecated;',
+         'x=function (a:word=b): integer deprecated;',
+         'x=function (a:word; b:byte): integer deprecated;',
+       'var',
+         'a:record',  // 14
+           'b:byte;',
+           'c:array of word;',
+         'end;',
+       '',  // 18
+       'name: name;  external name name;',   // external keyword_NAME const_NAME
+       'name: name;  external foo name name;',   // external foo keyword_NAME const_NAME
+       ''
+    ]);
+
+
+  DeclVarName := PasHighLighter.DeclarationVarConstNameAttr;
+  DeclTypeName := PasHighLighter.DeclarationTypeNameAttr;
+  DeclType  := PasHighLighter.DeclarationTypeAttr;
+  DeclVal := PasHighLighter.DeclarationValueAttr;
+
+  ProcName  := PasHighLighter.ProcedureHeaderName;
+  ProcParam := PasHighLighter.ProcedureHeaderParamAttr;
+  ProcType  := PasHighLighter.ProcedureHeaderTypeAttr;
+  ProcVal  := PasHighLighter.ProcedureHeaderValueAttr;
+  ProcRes   := PasHighLighter.ProcedureHeaderResultAttr;
+
+  PasHighLighter.DeclaredTypeAttributeMode := tamKeywords;
+  PasHighLighter.DeclaredValueAttributeMode := tamKeywords;
+  // inside the function, use the proc-attr
+  CheckTokensForLine('8:x:function (a:word; b:byte): integer = nil;', 7,
+    [tkIdentifier+DeclVarName, TK_Colon, tkKey+DeclType, tkSpace, TK_Bracket,
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi, tkSpace, // a:word
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, // b:byte
+     TK_Bracket, TK_Colon, tkSpace,  // ):
+     tkIdentifier+ProcRes, tkSpace,  // integer
+     TK_Equal, tkSpace, tkKey+DeclVal, TK_Semi
+    ]);
+  //type
+  CheckTokensForLine('10:x=function (a:word): integer deprecated;', 9,
+    [tkIdentifier+DeclTypeName, TK_Colon, tkKey+DeclType, tkSpace, TK_Bracket, // x=function (
+     TK_Bracket, TK_Colon, tkSpace,  // ):
+     tkIdentifier+ProcRes, tkSpace,  // integer
+     tkModifier, TK_Semi  // deprecated
+    ]);
+  CheckTokensForLine('11:x=function (a:word): integer deprecated;', 10,
+    [tkIdentifier+DeclTypeName, TK_Colon, tkKey+DeclType, tkSpace, TK_Bracket, // x=function (
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType,   // a:word
+     TK_Bracket, TK_Colon, tkSpace,  // ):
+     tkIdentifier+ProcRes, tkSpace,  // integer
+     tkModifier, TK_Semi  // deprecated
+    ]);
+  CheckTokensForLine('12:x=function (a:word=b): integer deprecated;', 11,
+    [tkIdentifier+DeclTypeName, TK_Colon, tkKey+DeclType, tkSpace, TK_Bracket, // x=function (
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType,   // a:word
+     TK_Equal, tkIdentifier+ProcVal, // =b
+     TK_Bracket, TK_Colon, tkSpace,  // ):
+     tkIdentifier+ProcRes, tkSpace,  // integer
+     tkModifier, TK_Semi  // deprecated
+    ]);
+  CheckTokensForLine('13:x=function (a:word; b:byte): integer deprecated;', 12,
+    [tkIdentifier+DeclTypeName, TK_Colon, tkKey+DeclType, tkSpace, TK_Bracket, // x=function (
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, TK_Semi, tkSpace, // a:word
+     tkIdentifier+ProcParam, TK_Colon, tkIdentifier+ProcType, // b:byte
+     TK_Bracket, TK_Colon, tkSpace,  // ):
+     tkIdentifier+ProcRes, tkSpace,  // integer
+     tkModifier, TK_Semi  // deprecated
+    ]);
+
+  // inside the record, use decl-attr according to record
+// TODO: record and end are not DeclType, because cfbtVarConstTypeExt is missing
+  //CheckTokensForLine('15: a:record', 14,
+  //  [tkIdentifier+DeclVarName, TK_Colon,tkKey+DeclType]);
+  CheckTokensForLine('16: b:byte', 15,
+    [tkIdentifier+DeclVarName, TK_Colon,tkIdentifier+DeclType]);
+  CheckTokensForLine('17: c:array of word', 16,
+    [tkIdentifier+DeclVarName, TK_Colon,tkKey+DeclType, tkSpace,
+     tkKey+DeclType, tkSpace, tkIdentifier+DeclType, TK_Semi]);
+  //CheckTokensForLine('18: end', 17,
+  //  [tkKey+DeclType, TK_Semi]);
+
+
+    CheckTokensForLine('name: name; external name name;', 19,
+      [tkIdentifier+DeclVarName, TK_Colon, tkSpace, tkIdentifier+DeclType, TK_Semi, tkSpace,
+       tkModifier, tkSpace, tkModifier, tkSpace, tkIdentifier, TK_Semi]);
+
+    CheckTokensForLine('name: name; external foo name name;', 20,
+      [tkIdentifier+DeclVarName, TK_Colon, tkSpace, tkIdentifier+DeclType, TK_Semi, tkSpace,
+       tkModifier, tkSpace, tkIdentifier, tkSpace, tkModifier, tkSpace, tkIdentifier, TK_Semi]);
+
+
+  for i := 0 to 1 do begin
+    case i of
+      0: begin
+        PasHighLighter.DeclaredTypeAttributeMode := tamIdentifierOnly;
+        PasHighLighter.DeclaredValueAttributeMode := tamIdentifierOnly;
+        PasHighLighter.DeclaredValueAttributeMachesStringNum := False;
+      end;
+      1: begin
+        PasHighLighter.DeclaredTypeAttributeMode := tamKeywords;
+        PasHighLighter.DeclaredValueAttributeMode := tamKeywords;
+        PasHighLighter.DeclaredValueAttributeMachesStringNum := True;
+      end;
+    end;
+
+    CheckTokensForLine('3: Foo: word; deprecated;',  2,
+      [tkIdentifier+DeclVarName, TK_Colon, tkSpace, tkIdentifier+DeclType,
+       tkSpace, tkModifier, TK_Semi]);
+
+    CheckTokensForLine('4: Foo: word = val; deprecated;',  3,
+      [tkIdentifier+DeclVarName, TK_Colon, tkSpace, tkIdentifier+DeclType,
+       tkSpace, TK_Equal, tkSpace, tkIdentifier+DeclVal,
+       tkSpace, tkModifier, TK_Semi]);
+
+    CheckTokensForLine('6: Foo= word; deprecated;', 5,
+      [tkIdentifier+DeclTypeName, TK_Equal, tkSpace, tkIdentifier+DeclType,
+       tkSpace, tkModifier, TK_Semi]);
+
+  end;
+end;
+
+procedure TTestHighlighterPas.TestModifierAttributesForLabel;
+var
+  GotoLbl: TSynHighlighterAttributes;
+begin
+  FKeepAllModifierAttribs := True;
+  ReCreateEdit;
+  SetLines
+    ([ 'Unit A; interface',  // 0
+       'label lbl1,',
+       'lbl2',
+       ', lbl3 ;',
+       'procedure foo;',  // 4
+       'label lbl4;',
+       'begin',
+       'lbl1:',      // 7
+       '  lbl2:',
+       'foo:=1;',
+       'lbl3:',
+       'if true then',  // 11
+       'lbl3:',
+         'case x of',
+           'abc: ;',
+           'def: lbla: lblb: {} lblc: i:=1;', // 15
+           'xyz: ;',
+           'else  ;',
+           '; lbl:  ;',   // 18
+         'end;',
+       'end;',
+       'repeat',  // 21
+       'lbl:',
+       'until false;',
+       ''
+    ]);
+
+  GotoLbl  := PasHighLighter.GotoLabelAttr;
+
+  CheckTokensForLine('2: label lbl1,', 1,
+    [tkKey, tkSpace, tkIdentifier+GotoLbl, TK_Comma]);
+
+  CheckTokensForLine('3: lbl2', 2,
+    [tkIdentifier+GotoLbl]);
+
+  CheckTokensForLine('4: , lbl3 ;', 3,
+    [TK_Comma, tkSpace, tkIdentifier+GotoLbl, tkSpace, TK_Semi]);
+
+  CheckTokensForLine('6: label lbl4;', 5,
+    [tkKey, tkSpace, tkIdentifier+GotoLbl, TK_Semi]);
+
+  CheckTokensForLine('8: lbl1:', 7,
+    [tkIdentifier+GotoLbl, TK_Colon]);
+
+  CheckTokensForLine('9:   lbl2:', 8,
+    [tkSpace, tkIdentifier+GotoLbl, TK_Colon]);
+
+  CheckTokensForLine('10: foo:=1;', 9,
+    [tkIdentifier, tkSymbol, tkNumber, TK_Semi]);
+
+  CheckTokensForLine('11: lbl3:', 10,
+    [tkIdentifier+GotoLbl, TK_Colon]);
+
+  CheckTokensForLine('13: lbl3:', 12,
+    [tkIdentifier+GotoLbl, TK_Colon]);
+
+  CheckTokensForLine('15: abc: ;', 14,
+    [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace, TK_Semi]);
+
+  CheckTokensForLine('16: def: lbla: lblb: {} lblc: i:=1;', 15,
+    [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace,
+     tkIdentifier+GotoLbl, TK_Colon, tkSpace,
+     tkIdentifier+GotoLbl, TK_Colon, tkSpace, tkComment, tkSpace,
+     tkIdentifier+GotoLbl, TK_Colon, tkSpace,
+     tkIdentifier, tkSymbol, tkNumber, TK_Semi]);
+
+  CheckTokensForLine('17: xyz: ;', 16,
+    [tkIdentifier+FCaseLabelAttri, TK_Colon, tkSpace, TK_Semi]);
+
+  CheckTokensForLine('18: else  ;', 17,
+    [tkKey+FCaseLabelAttri, tkSpace, TK_Semi]);
+
+  CheckTokensForLine('19: ; lbl:  ;', 18,
+    [TK_Semi, tkSpace, tkIdentifier+GotoLbl, TK_Colon, tkSpace, TK_Semi]);
+
+  CheckTokensForLine('23: lbl:', 22,
+    [tkIdentifier+GotoLbl, TK_Colon]);
+
+
+end;
+
 procedure TTestHighlighterPas.TestCaretAsString;
 begin
   ReCreateEdit;
@@ -3259,24 +3773,29 @@ begin
          'a:char=^o;',
          'a:somestring=^o^c;',
          'b:^char=nil;',
+         'c:record A:char; B:^char; end=(a:^c;b:nil);',   // 5
        'type',
-         'c=^char;',         // 6
-         'c=type ^char;',         // 6
+         'c=^char;',         // 7
+         'c=type ^char;',         // 8
+         'f=procedure(a:char=^c);',
+       'const',
+         'f:procedure(a:char=^c) =nil;',
+         'd:record A:char; B:^char; end=(a:^c;b:nil);',  //12
        'implementation',
        'function x(f:^char=^k^c):^v;', // actually the compiler does not allow ^ as pointer for result
        'var',
-         'a:char=^o;',       // 11
-         'b:^char=nil;',     // 12
-       'type',
+         'a:char=^o;',       // 16
+         'b:^char=nil;',     // 17
+       'type',  // 18
          'c=^char;',
        'begin',
          'i:=^f;',
-         'x:=GetTypeData(PropInfo^.PropType{$IFNDEF FPC}^{$ENDIF});', // 17
+         'x:=GetTypeData(PropInfo^.PropType{$IFNDEF FPC}^{$ENDIF});', // 18
          'c:=p^;',
          'c:=p ^;',
          'c:=p(**)^;',
-         'c:=p{} ^;',     // 21
-         'i:=f(1)^;',     // 22
+         'c:=p{} ^;',     // 26
+         'i:=f(1)^;',     // 27
          'i:=f[1]^;',
          'i:=f^^;',
          'c:=p^+^i''e''^a#13^x;',
@@ -3291,50 +3810,76 @@ begin
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkString, tkString, tkSymbol]);
   CheckTokensForLine('b:^char=nil;',   4,
                      [tkIdentifier, tkSymbol, tkSymbol, tkIdentifier, tkSymbol, tkKey, tkSymbol]);
-  CheckTokensForLine('c=^char;',   6,
-                     [tkIdentifier, tkSymbol, tkSymbol, tkIdentifier, tkSymbol]);
-  CheckTokensForLine('c=type ^char;',   7,
-                     [tkIdentifier, tkSymbol, tkKey, tkSpace, tkSymbol, tkIdentifier, tkSymbol]);
+  CheckTokensForLine('c:record A:char; B:^char; end=(a:^c;b:nil);',   5,
+                     [tkIdentifier, tkSymbol, tkKey, tkSpace,
+                        tkIdentifier, TK_Colon, tkIdentifier, TK_Semi, tkSpace,
+                        tkIdentifier, TK_Colon, tkSymbol, tkIdentifier, TK_Semi, tkSpace, tkKey,
+                        TK_Equal, TK_Bracket,
+                        tkIdentifier, TK_Colon, tkString, TK_Semi, tkIdentifier, TK_Colon, tkKey,
+                        TK_Bracket, TK_Semi
+                        ]);
 
-  CheckTokensForLine('function x(f:^char=^k):^v;',   9,
+  CheckTokensForLine('c=^char;',   7,
+                     [tkIdentifier, tkSymbol, tkSymbol, tkIdentifier, tkSymbol]);
+  CheckTokensForLine('c=type ^char;',   8,
+                     [tkIdentifier, tkSymbol, tkKey, tkSpace, tkSymbol, tkIdentifier, tkSymbol]);
+  CheckTokensForLine('f=procedure(a:char=^c);',   9,
+                     [tkIdentifier, tkSymbol, tkKey, TK_Bracket,
+                      tkIdentifier, TK_Colon, tkIdentifier, TK_Equal, tkString, TK_Bracket, TK_Semi]);
+
+  CheckTokensForLine('f:procedure(a:char=^c) =nil;',   11,
+                     [tkIdentifier, tkSymbol, tkKey, TK_Bracket,
+                      tkIdentifier, TK_Colon, tkIdentifier, TK_Equal, tkString, TK_Bracket, tkSpace,
+                      TK_Equal, tkKey, TK_Semi]);
+
+  CheckTokensForLine('CONST d:record A:char; B:^char; end=(a:^c;b:nil);',   12,
+                     [tkIdentifier, tkSymbol, tkKey, tkSpace,
+                        tkIdentifier, TK_Colon, tkIdentifier, TK_Semi, tkSpace,
+                        tkIdentifier, TK_Colon, tkSymbol, tkIdentifier, TK_Semi, tkSpace, tkKey,
+                        TK_Equal, TK_Bracket,
+                        tkIdentifier, TK_Colon, tkString, TK_Semi, tkIdentifier, TK_Colon, tkKey,
+                        TK_Bracket, TK_Semi
+                        ]);
+
+  CheckTokensForLine('function x(f:^char=^k):^v;',   14,
                      [tkKey, tkSpace, tkIdentifier + FAttrProcName, tkSymbol, tkIdentifier,  // function x(f
                       tkSymbol, tkSymbol, tkIdentifier, tkSymbol, tkString,  tkString,  // :^char=^k
                       tkSymbol, tkSymbol, tkSymbol, tkIdentifier, tkSymbol]);          // ):^v;
-  CheckTokensForLine('LOCAL a:char=^o;',   11,
+  CheckTokensForLine('LOCAL a:char=^o;',   16,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkString, tkSymbol]);
-  CheckTokensForLine('LOCAL b:^char=nil;',   12,
+  CheckTokensForLine('LOCAL b:^char=nil;',   17,
                      [tkIdentifier, tkSymbol, tkSymbol, tkIdentifier, tkSymbol, tkKey, tkSymbol]);
-  CheckTokensForLine('LOCAL c=^char;',   14,
+  CheckTokensForLine('LOCAL c=^char;',   19,
                      [tkIdentifier, tkSymbol, tkSymbol, tkIdentifier, tkSymbol]);
-  CheckTokensForLine('i:=^f',   16,
+  CheckTokensForLine('i:=^f',   21,
                      [tkIdentifier, tkSymbol, tkString, tkSymbol]);
 
-  CheckTokensForLine('x:=GetTypeData(PropInfo^.PropType{$IFNDEF FPC}^{$ENDIF});',   17,
+  CheckTokensForLine('x:=GetTypeData(PropInfo^.PropType{$IFNDEF FPC}^{$ENDIF});',   22,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol,    // x:=GetTypeData(
                       tkIdentifier, tkSymbol, tkSymbol, tkIdentifier,    // PropInfo^.PropType
                       tkDirective, tkSymbol, tkDirective, tkSymbol, tkSymbol]);  // {$IFNDEF FPC}^{$ENDIF});
 
-  CheckTokensForLine('c:=p^;',   18,
+  CheckTokensForLine('c:=p^;',   23,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkSymbol]);
-  CheckTokensForLine('c:=p ^;',   19,
+  CheckTokensForLine('c:=p ^;',   24,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSpace, tkSymbol, tkSymbol]);
-  CheckTokensForLine('c:=p(**)^;',   20,
+  CheckTokensForLine('c:=p(**)^;',   25,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkComment, tkSymbol, tkSymbol]);
-  CheckTokensForLine('c:=p{} ^;',   21,
+  CheckTokensForLine('c:=p{} ^;',   26,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkComment, tkSpace, tkSymbol, tkSymbol]);
 
-  CheckTokensForLine('c:=p(1)^;',   22,
+  CheckTokensForLine('c:=p(1)^;',   27,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkNumber, tkSymbol, tkSymbol]);
-  CheckTokensForLine('c:=p[1]^;',   23,
+  CheckTokensForLine('c:=p[1]^;',   28,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkNumber, tkSymbol, tkSymbol]);
-  CheckTokensForLine('c:=p^^;',   24,
+  CheckTokensForLine('c:=p^^;',   29,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkSymbol, tkSymbol]);
 
-  CheckTokensForLine('c:=p^+^i''e''^a#13^x;',   25,
+  CheckTokensForLine('c:=p^+^i''e''^a#13^x;',   30,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkSymbol, // c:=p^+
                       tkString, tkString, tkString, tkString, tkString, tkSymbol  // ^i'e'^a#13^x;
                      ]);
-  CheckTokensForLine('c:=x=^a and ^a=k and(^a^a=z);',   26,
+  CheckTokensForLine('c:=x=^a and ^a=k and(^a^a=z);',   31,
                      [tkIdentifier, tkSymbol, tkIdentifier, tkSymbol, tkString, tkSpace, // c:=x=^a
                       tkKey, tkSpace, tkString, tkSymbol, tkIdentifier, tkSpace, // and ^a=k
                       tkKey, tkSymbol, tkString, tkString, tkSymbol, tkIdentifier,  // and(^a^a=z
@@ -3943,22 +4488,22 @@ begin
                                   [sfaOpen, sfaOpenFold,sfaFold,sfaFoldFold, sfaMultiLine]);
       // Line 2:   type a=integer;                                              # pasminlvl=2 endlvl=2
       CheckNode( 2, [], 0,   0,   0, 4,   2, 3,   2, 3,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaOpen, sfaOneLineOpen, sfaSingleLine]);
       CheckNode( 2, [], 0,   1,   15, 15,   3, 2,   3, 2,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaClose, sfaOneLineClose, sfaCloseForNextLine, sfaSingleLine]);
       // Line 3:   var                                                          # pasminlvl=2 endlvl=3
       CheckNode( 3, [], 0,   0,   0, 3,   2, 3,   2, 3,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaOpen, sfaOpenFold,sfaFold,sfaFoldFold, sfaMultiLine]);
       // Line 4:     b:integer                                                  # pasminlvl=2 endlvl=2
       CheckNode( 4, [], 0,   0,   11, 11,   3, 2,   3, 2,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaClose, sfaCloseFold,sfaFold, sfaCloseForNextLine, sfaMultiLine]);
       // Line 5:   const                                                        # pasminlvl=2 endlvl=3
       CheckNode( 5, [], 0,   0,   0, 5,   2, 3,   2, 3,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaOpen, sfaOpenFold,sfaFold,sfaFoldFold, sfaMultiLine]);
       // Line 6:     c = 1;                                                     # pasminlvl=3 endlvl=3
       // Line 7:     d = 2; {$ifdef a}                                          # pasminlvl=1 endlvl=1
@@ -3966,7 +4511,7 @@ begin
                                   cfbtIfDef, cfbtIfDef,  FOLDGROUP_IFDEF,
                                   [sfaOpen, sfaOpenFold,sfaMarkup,sfaFold,sfaFoldFold, sfaMultiLine]);
       CheckNode( 7, [], 0,   1,   19, 19,   3, 2,   3, 2,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaClose, sfaCloseFold,sfaFold, sfaCloseForNextLine, sfaMultiLine]);
       CheckNode( 7, [], 0,   2,   19, 19,   2, 1,   2, 1,
                                   cfbtUnitSection, cfbtUnitSection,  FOLDGROUP_PASCAL,
@@ -4074,7 +4619,7 @@ begin
                                   [sfaOpen, sfaOpenFold, sfaFold, sfaFoldFold, sfaMultiLine]);
       // Line 2:   type
       CheckNode( 2, [], 0,   0,   0, 4,   2, 3,   2, 3,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaOpen, sfaFold, sfaFoldFold, sfaMultiLine, sfaOpenFold]);
       // Line 3:   TFoo<T: class> = class(TBar<T>)
       CheckNode( 3, [], 0,   0,   17, 22,   3, 4,   3, 4,
@@ -4100,7 +4645,7 @@ begin
                                   cfbtRecord, cfbtRecord,  FOLDGROUP_PASCAL,
                                   [sfaClose, sfaFold, sfaMultiLine, sfaMarkup, sfaCloseFold]);
       CheckNode( 8, [], 0,   1,    4, 4,   3, 2,   3, 2,
-                                  cfbtVarType, cfbtVarType,  FOLDGROUP_PASCAL,
+                                  cfbtVarBlock, cfbtVarBlock,  FOLDGROUP_PASCAL,
                                   [sfaClose, sfaFold, sfaMultiLine, sfaCloseForNextLine, sfaCloseFold]);
       CheckNode( 8, [], 0,   2,    4, 4,   2, 1,   2, 1,
                                   cfbtUnitSection, cfbtUnitSection,  FOLDGROUP_PASCAL,

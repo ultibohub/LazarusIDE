@@ -78,24 +78,24 @@ type
     rsAsm,          // assembler block
     rsProperty,
     rsAtPropertyOrReadWrite, // very first word after property (name of the property) or after read write in property (or after any operator within a property "default 0 + 1" (next token can **not** be read/write/index
+    rsInParamDeclaration, // [OPT] Either in property-index "foo[AIndex:int]" or in procedure param declaration
     rsInterface,
     rsImplementation,   // Program or Implementation
     rsCompilerModeSet,  // there was an explicit {$mode ...
 
     // we need to detect:    type TFoo = procedure; // must not fold
     //                       var  foo: procedure;   // must not fold
-    rsAfterSemiColon,   // very first word after ";"
     rsAfterEqualOrColon,   // very first word after "=" or ":"
+    rsAfterColon,          // [OPT] between ":" and ";" (or block end / or "=") this is a type specification
     rsAfterEqual,          // between "=" and ";" (or block end) // a ^ means ctrl-char, not pointer to type
 
     // Detect if class/object is   type TFoo = class; // forward declaration
     //                                  TBar = class of TFoo;
     // or full class declaration  TFoo = class ... end;
     // Also included after class modifiers "sealed" and "abstract"
-    rsAtClass,
+    rsInClassHeader,      // ends an ")" of inheritance / or goes to first ident after header
+    rsInTypeHelper,       // ends after "for name"
     rsInObjcProtocol,
-    rsAfterClass,
-    rsInTypeHelper,
     rsAfterIdentifierOrValue, // anywhere where a ^ deref can happen "foo^", "foo^^", "foo()^", "foo[]^"
 
     rsAtCaseLabel,
@@ -106,8 +106,6 @@ type
     rsInRaise,            // between raise and either ";" or "at"
     rsVarTypeInSpecification, // between ":"/"=" and ";" in a var or type section (or class members)
                               // var a: Integer; type b = Int64;
-    rsInTypeBlock,
-    rsInConstBlock,
     rsInTypedConst,
     rsSkipAllPasBlocks        // used for: class of ... ;
   );
@@ -117,12 +115,17 @@ type
   // Except, will be kept for: tkSpace, tkComment, tkIDEDirective, tkDirective, tkNull  // maybe in future line break
   TTokenState = (
     tsNone,
+    tsAtBeginOfStatement, // After ";" or begin,do,with,...
+    tsAfterVarConstType,  // Immediately after
+                          // Also sometime after ";" (in declarations) to prevent a type of name public/export/external to be highlighted
+    tsAfterClass,         // after "class" or "record": for "class helper"
     tsAtProcName,         // procedure ___
                           // unit ____    // used for "deprecated" detection / check in tsAfterProcName
                           //    >>> after a procedure/function/... keyword, when the name is expected (not for types)
                           //    >>> renewed after dot "."
     tsAfterProcName,      // procedure NAME
                           // unit NAME    // used for "deprecated" detection
+    tsAfterIs,            // maybe "is nested"
     tsAfterEqualThenType, // TFoo = type
                           //    >>> ONLY if type-helper enabled
     tsAfterAbsolute,      // var x absolute y;
@@ -131,13 +134,80 @@ type
                           // var Foo; public name 'bar';
                           //    after public, export or external: "name" may follow
                           //    >>> KEPT until ONE AFTER the ";" => to prevent next token from being mistaken
+    tsAfterExternalName,  // "external name name" (2nd name is a string constant)
                           //    >>> Also SET BY "var"/"type"/"const" => to prevent next token from being mistaken
     tsAfterCvar,          // cvar;
                           //    >>> KEPT until ONE AFTER the ";" => to prevent next token from being mistaken
     tsAfterTypedConst,    // const foo: ___=___; public;
                           //    >>> typed const can have modifiers
                           //        Set AFTER ";"
-    tsAfterRaise          // After the raise keyword (or "." or operator inside rsInRaise)
+    tsAfterRaise,         // After the raise keyword (or "." or operator inside rsInRaise)
+    tsAfterProperty,      // [OPT] After "property" keyword
+    tsAfterDot            // [OPT] In Code. For member detection
+  );
+
+  (*
+  TTokenStates = set of TTokenState;
+const
+  tsAllAtBeginOfStatement = TTokenStates(
+    tsAtBeginOfStatement,
+    tsAfterVarConstType,
+    tsAfterTypedConst,
+    tsAfterExternal,
+    tsAfterCvar
+  );
+type
+  *)
+
+  (* Some Ranges/TokenStates are only required for specific highlights. If those Attr are not enabled the states are not required
+  *)
+  TRequiredState = (
+    // ranges
+    rrsAfterColon,                   // Only needed ProcedureHeaderTypeAttr or DeclarationType
+    rrsInParamDeclaration,           // ProcedureHeaderParamAttr or ProcedureHeaderTypeAttr
+    // tokenstates
+    rtsAfterProperty,                // Only needed if PropertyNameAttr.IsEnabled
+    rtsAfterDot,                      // StructMemberAttr
+    // extra attrib
+    reaGotoLabel,
+    reaStructMemeber,
+    reaProcName,
+    reaPropertyName,
+    reaProcParam,
+    reaProcType,
+    reaProcValue,
+    reaProcResult,
+    reaDeclVarName,
+    reaDeclTypeName,
+    reaDeclType,
+    reaDeclValue
+  );
+  TRequiredStates = set of TRequiredState;
+
+  (* TTokenExtraAttribs, TTokenTypeDeclExtraAttrib: Not persistent in range
+     Like "FTokenId: TtkTokenKind", used only between "Next();" and "GetToken....();"
+     Can hold extra info, e.g. which merge-attribute(s) to use.
+  *)
+  TTokenExtraAttrib = (
+    //teaCaseLabel,
+    //teaPasDoc...,
+    eaGotoLabel,
+    eaStructMemeber  // identifier after a dot / only in code blocks
+  );
+  TTokenExtraAttribs = set of TTokenExtraAttrib;
+
+  TTokenTypeDeclExtraAttrib = (
+    eaNone,
+    eaProcName,
+    eaPropertyName,
+    eaProcParam,
+    eaProcType,
+    eaProcValue,
+    eaProcResult,
+    eaDeclVarName,
+    eaDeclTypeName,
+    eaDeclType,
+    eaDeclValue
   );
 
 type
@@ -147,8 +217,8 @@ type
     cfbtNestedComment,
     cfbtProcedure,
     cfbtUses,
-    cfbtVarType,
-    cfbtLocalVarType,
+    cfbtVarBlock,        // Var, ResourceString, Label // Config shared with Const/Type-Block
+    cfbtLocalVarBlock,
     cfbtClass,
     cfbtClassSection,
     cfbtUnitSection,
@@ -177,6 +247,14 @@ type
     cfbtCaseElse,     // "else" in case can have multiply statements
     cfbtPackage,
     //cfbtIfThen,
+    cfbtConstBlock,
+    cfbtLocalConstBlock,
+    cfbtClassConstBlock, // in class and record section
+    cfbtTypeBlock,
+    cfbtLocalTypeBlock,
+    cfbtClassTypeBlock, // in class and record section
+    cfbtLabelBlock,
+    cfbtLocalLabelBlock,
     cfbtNone
     );
   TPascalCodeFoldBlockTypes = set of TPascalCodeFoldBlockType;
@@ -185,6 +263,9 @@ type
 const
   cfbtLastPublic = cfbtAnonymousProcedure;
   cfbtFirstPrivate = cfbtCaseElse;
+
+  cfbtVarType      = cfbtVarBlock      deprecated 'use cfbtVarBlock / To be removed in 5.99';
+  cfbtLocalVarType = cfbtLocalVarBlock deprecated 'use cfbtLocalVarBlock / To be removed in 5.99';
 
   CountPascalCodeFoldBlockOffset =
     Pointer(PtrInt(Integer(high(TPascalCodeFoldBlockType))+1));
@@ -201,7 +282,9 @@ const
     ]);
   PascalNoOutlineRanges = TPascalCodeFoldBlockTypes(
     [cfbtProgram,cfbtUnit,cfbtUnitSection, cfbtRegion, //cfbtProcedure,//=need by nested proc?
-      cfbtVarType, cfbtCaseElse,
+      cfbtVarBlock, cfbtConstBlock, cfbtClassConstBlock, cfbtTypeBlock, cfbtClassTypeBlock,
+      cfbtLabelBlock, cfbtLocalLabelBlock,
+      cfbtCaseElse,
       cfbtIfDef, cfbtAnsiComment,cfbtBorCommand,cfbtSlashComment, cfbtNestedComment]);
 
   // restrict cdecl etc to places where they can be.
@@ -209,7 +292,10 @@ const
   ProcModifierAllowed = TPascalCodeFoldBlockTypes(
     [cfbtNone, cfbtProcedure, cfbtProgram, cfbtClass, cfbtClassSection, cfbtRecord,
      cfbtUnitSection, // unitsection, actually interface only
-     cfbtVarType, cfbtLocalVarType]);
+     cfbtVarBlock, cfbtLocalVarBlock,
+     cfbtConstBlock, cfbtLocalConstBlock, cfbtClassConstBlock,
+     cfbtTypeBlock, cfbtLocalTypeBlock, cfbtClassTypeBlock
+    ]);
   ProcModifierAllowedNoVar = TPascalCodeFoldBlockTypes(
     [cfbtNone, cfbtProcedure, cfbtProgram, cfbtClass, cfbtClassSection, cfbtRecord,
      cfbtUnitSection // unitsection, actually interface only
@@ -222,7 +308,11 @@ const
   cfbtEssential = TPascalCodeFoldBlockTypes([
     cfbtClass, cfbtClassSection, cfbtRecord,
     cfbtUnitSection, cfbtProcedure, cfbtProgram, cfbtPackage,
-    cfbtVarType, cfbtLocalVarType, cfbtAsm,
+    cfbtVarBlock, cfbtLocalVarBlock,
+    cfbtConstBlock, cfbtLocalConstBlock, cfbtClassConstBlock,
+    cfbtTypeBlock, cfbtLocalTypeBlock, cfbtClassTypeBlock,
+    cfbtLabelBlock, cfbtLocalLabelBlock,
+    cfbtAsm,
     cfbtAnsiComment, cfbtBorCommand, cfbtSlashComment, cfbtNestedComment,
     cfbtCase, // for case-else
     cfbtTry // only if cfbtExcept
@@ -232,14 +322,85 @@ const
     - [cfbtBeginEnd, cfbtCase, {cfbtTry,} cfbtExcept, cfbtRepeat,
        cfbtCaseElse, cfbtIfThen, cfbtForDo,cfbtWhileDo,cfbtWithDo ]);
 
+  cfbtVarConstType = TPascalCodeFoldBlockTypes([
+    cfbtVarBlock, cfbtLocalVarBlock,
+    cfbtConstBlock, cfbtLocalConstBlock,
+    cfbtTypeBlock, cfbtLocalTypeBlock]);
+
+  cfbtVarConstTypeExt = TPascalCodeFoldBlockTypes([
+    cfbtVarBlock, cfbtLocalVarBlock,
+    cfbtConstBlock, cfbtLocalConstBlock, cfbtClassConstBlock,
+    cfbtTypeBlock, cfbtLocalTypeBlock, cfbtClassTypeBlock]);
+
+  cfbtVarConstTypeLabel = TPascalCodeFoldBlockTypes([
+    cfbtVarBlock, cfbtLocalVarBlock,
+    cfbtConstBlock, cfbtLocalConstBlock,
+    cfbtTypeBlock, cfbtLocalTypeBlock,
+    cfbtLabelBlock, cfbtLocalLabelBlock ]);
+
+  cfbtVarConstTypeLabelExt = TPascalCodeFoldBlockTypes([
+    cfbtVarBlock, cfbtLocalVarBlock,
+    cfbtConstBlock, cfbtLocalConstBlock, cfbtClassConstBlock,
+    cfbtTypeBlock, cfbtLocalTypeBlock, cfbtClassTypeBlock,
+    cfbtLabelBlock, cfbtLocalLabelBlock ]);
+
+  //cfbtClassOrRecord
+
+  PascalFoldTypeConfigMap: Array [TPascalCodeFoldBlockType] of TPascalCodeFoldBlockType =
+    ( cfbtBeginEnd,      // Nested
+      cfbtTopBeginEnd,   // Begin of Procedure
+      cfbtNestedComment,
+      cfbtProcedure,
+      cfbtUses,
+      cfbtVarBlock,        // Var, ResourceString, Label // Config shared with Const/Type-Block
+      cfbtLocalVarBlock,
+      cfbtClass,
+      cfbtClassSection,
+      cfbtUnitSection,
+      cfbtProgram,
+      cfbtUnit,
+      cfbtRecord,
+      cfbtTry,
+      cfbtExcept,
+      cfbtRepeat,
+      cfbtAsm,
+      cfbtCase,
+      cfbtIfDef,        // {$IfDef} directive, this is not counted in the Range-Node
+      cfbtRegion,       // {%Region} user folds, not counted in the Range-Node
+      cfbtAnsiComment,  // (* ... *)
+      cfbtBorCommand,   // { ... }
+      cfbtSlashComment, // //
+      cfbtIfThen,
+      cfbtForDo,
+      cfbtWhileDo,
+      cfbtWithDo,
+      cfbtIfElse,
+      cfbtRecordCase,
+      cfbtRecordCaseSection,
+      cfbtAnonymousProcedure,
+      // Internal type / not configurable
+      cfbtCaseElse,     // "else" in case can have multiply statements
+      cfbtPackage,
+      //cfbtIfThen,
+      cfbtVarBlock,      // cfbtConstBlock,
+      cfbtLocalVarBlock, // cfbtLocalConstBlock,
+      cfbtClassConstBlock,
+      cfbtVarBlock,      // cfbtTypeBlock,
+      cfbtLocalVarBlock, // cfbtLocalTypeBlock,
+      cfbtClassTypeBlock,
+      cfbtVarBlock,      // cfbtLabelBlock,
+      cfbtLocalVarBlock, // cfbtLocalLabelBlock,
+      cfbtNone
+    );
+
   PascalFoldTypeCompatibility: Array [TPascalCodeFoldBlockType] of TPascalCodeFoldBlockType =
     ( cfbtBeginEnd,      // Nested
       cfbtBeginEnd,  // cfbtTopBeginEnd,   // Begin of Procedure
       cfbtNestedComment,
       cfbtProcedure,
       cfbtUses,
-      cfbtVarType,
-      cfbtVarType, // cfbtLocalVarType,
+      cfbtVarBlock,
+      cfbtVarBlock, // cfbtLocalVarBlock,
       cfbtClass,
       cfbtClassSection,
       cfbtUnitSection,
@@ -267,6 +428,14 @@ const
       // Internal type / not configurable
       cfbtCaseElse,
       cfbtPackage,
+      cfbtConstBlock,
+      cfbtConstBlock, // cfbtLocalConstBlock,
+      cfbtConstBlock, // cfbtClassConstBlock,
+      cfbtTypeBlock,
+      cfbtTypeBlock, // cfbtLocalTypeBlock,
+      cfbtTypeBlock, //cfbtClassTypeBlock,
+      cfbtLabelBlock,
+      cfbtLabelBlock, // cfbtLocalLabelBlock,
       cfbtNone
     );
 
@@ -285,6 +454,15 @@ type
     pcmGPC,
     pcmMacPas
     );
+
+  TPascalCompilerModeSwitch = (
+    pcsNestedComments,
+    pcsTypeHelpers,
+    //pcsAdvancedRecords,
+    pcsObjectiveC1,
+    pcsObjectiveC2
+  );
+  TPascalCompilerModeSwitches = set of TPascalCompilerModeSwitch;
 
   TSynPasDividerDrawLocation = (
       pddlUnitSection,
@@ -358,11 +536,10 @@ type
   TSynPasSynRange = class(TSynCustomHighlighterRange)
   private
     FMode: TPascalCompilerMode;
-    FNestedComments: Boolean;
     FBracketNestLevel : Integer;
     FLastLineCodeFoldLevelFix: integer;
+    FModeSwitches: TPascalCompilerModeSwitches;
     FPasFoldFixLevel: Smallint;
-    FTypeHelpers: Boolean;
     FTokenState: TTokenState;
   public
     procedure Clear; override;
@@ -374,8 +551,7 @@ type
     procedure DecLastLineCodeFoldLevelFix;
     procedure DecLastLinePasFoldFix;
     property Mode: TPascalCompilerMode read FMode write FMode;
-    property NestedComments: Boolean read FNestedComments write FNestedComments;
-    property TypeHelpers: Boolean read FTypeHelpers write FTypeHelpers;
+    property ModeSwitches: TPascalCompilerModeSwitches read FModeSwitches write FModeSwitches;
     property BracketNestLevel: integer read FBracketNestLevel write FBracketNestLevel;
     property LastLineCodeFoldLevelFix: integer
       read FLastLineCodeFoldLevelFix write FLastLineCodeFoldLevelFix;
@@ -387,6 +563,13 @@ type
 
   PIdentFuncTableFunc = ^TIdentFuncTableFunc;
   TIdentFuncTableFunc = function: TtkTokenKind of object;
+
+  TSynPasTypeAttributeMode = ( // ProcedureHeaderType/Value and DeclarationType/Value
+    tamIdentifierOnly,    // Apply to Identifier only
+    tamPredefinedNames,   // Apply to Identifier and Keywords like "String"
+    tamKeywords,          // Apply to Identifier and all Keywords ("array", "set")
+    tamKeywordsAndSymbols // Apply even to sympols like ^ or ()
+  );
 
   { TSynPasSyn }
 
@@ -405,6 +588,7 @@ type
     PPSynPasSynCustomTokenInfo = ^PSynPasSynCustomTokenInfo;
     TSynPasSynCustomTokenInfoList = specialize TFPGList<TSynPasSynCustomTokenInfo>;
   private
+    FCaseLabelAttriMatchesElseOtherwise: Boolean;
     FSynCustomTokens: array of TSynPasSynCustomToken;
     FNeedCustomTokenBuild: boolean;
     FCustomTokenInfo: array [byte] of record
@@ -414,21 +598,40 @@ type
     FCustomTokenMarkup: TSynHighlighterAttributesModifier;
     FCustomTokenMergedMarkup: TSynSelectedColorMergeResult;
 
+    FCurIDEDirectiveAttri: TSynSelectedColorMergeResult;
+    FCurCaseLabelAttri: TSynSelectedColorMergeResult;
+    FCurStructMemberExtraAttri: TSynSelectedColorMergeResult;
+    FCurProcTypeDeclExtraAttr: TSynSelectedColorMergeResult;
+    FCurPasDocAttri: TSynSelectedColorMergeResult;
+
     fAsmStart: Boolean;
     FExtendedKeywordsMode: Boolean;
-    FNestedComments: boolean;
     FUsePasDoc, FIsPasDocKey, FIsPasUnknown, FIsPasDocSym, FIsInSlash: Boolean;
     FPasDocWordList: TStringList;
     fPasDocKeyWordAttri: TSynHighlighterAttributesModifier;
     fPasDocSymbolAttri: TSynHighlighterAttributesModifier;
     fPasDocUnknownAttr: TSynHighlighterAttributesModifier;
     FProcedureHeaderNameAttr: TSynHighlighterAttributesModifier;
-    FCurProcedureHeaderNameAttr: TSynSelectedColorMergeResult;
+    FPropertyNameAttr: TSynHighlighterAttributesModifier;
+    FProcedureHeaderParamAttr: TSynHighlighterAttributesModifier;
+    FProcedureHeaderTypeAttr: TSynHighlighterAttributesModifier;
+    FProcedureHeaderValueAttr: TSynHighlighterAttributesModifier;
+    FProcedureHeaderResultAttr: TSynHighlighterAttributesModifier;
+    FDeclarationVarConstNameAttr: TSynHighlighterAttributesModifier;
+    FDeclarationTypeNameAttr: TSynHighlighterAttributesModifier;
+    FDeclarationTypeAttr: TSynHighlighterAttributesModifier;
+    FDeclarationValueAttr: TSynHighlighterAttributesModifier;
+    FGotoLabelAttr: TSynHighlighterAttributes;
+    FStructMemberAttr: TSynHighlighterAttributesModifier;
+    FDeclaredTypeAttributeMode: TSynPasTypeAttributeMode;
+    FDeclaredValueAttributeMachesStringNum: Boolean;
+    FDeclaredValueAttributeMode: TSynPasTypeAttributeMode;
     FStartCodeFoldBlockLevel: integer; // TODO: rename FStartNestedFoldBlockLevel
     FPasStartLevel: Smallint;
     fRange: TRangeStates;
     FOldRange: TRangeStates;
     FTokenState, FNextTokenState: TTokenState;
+    FRequiredStates: TRequiredStates;
     FStringKeywordMode: TSynPasStringMode;
     FStringMultilineMode: TSynPasMultilineStringModes;
     FSynPasRangeInfo: TSynPasRangeInfo;
@@ -438,7 +641,6 @@ type
     fLineLen: integer;
     fLineNumber: Integer;
     fProcTable: array[#0..#255] of TProcTableProc;
-    FTypeHelpers: boolean;
     Run: LongInt;// current parser postion in fLine
     fStringLen: Integer;// current length of hash
     fToIdent: integer;// start of current identifier in fLine
@@ -446,8 +648,10 @@ type
     fTokenPos: Integer;// start of current token in fLine
     FTokenID: TtkTokenKind;
     FTokenHashKey: Integer;
-    FTokenFlags: set of (tfProcName);
+    FTokenExtraAttribs: TTokenExtraAttribs;
+    FTokenTypeDeclExtraAttrib, FLastTokenTypeDeclExtraAttrib: TTokenTypeDeclExtraAttrib;
     FTokenIsCaseLabel: Boolean;
+    FTokenIsValueOrTypeName: Boolean;
     fStringAttri: TSynHighlighterAttributes;
     fNumberAttri: TSynHighlighterAttributes;
     fKeyAttri: TSynHighlighterAttributes;
@@ -456,30 +660,39 @@ type
     fAsmAttri: TSynHighlighterAttributes;
     fCommentAttri: TSynHighlighterAttributes;
     FIDEDirectiveAttri: TSynHighlighterAttributesModifier;
-    FCurIDEDirectiveAttri: TSynSelectedColorMergeResult;
     fIdentifierAttri: TSynHighlighterAttributes;
     fSpaceAttri: TSynHighlighterAttributes;
     FCaseLabelAttri: TSynHighlighterAttributesModifier;
-    FCurCaseLabelAttri: TSynSelectedColorMergeResult;
-    FCurPasDocAttri: TSynSelectedColorMergeResult;
     fDirectiveAttri: TSynHighlighterAttributes;
     FCompilerMode: TPascalCompilerMode;
+    FModeSwitches: TPascalCompilerModeSwitches;
+    FModeSwitchesLoaded: Boolean;
     fD4syntax: boolean;
     // Divider
     FDividerDrawConfig: Array [TSynPasDividerDrawLocation] of TSynDividerDrawConfig;
 
     procedure DoCustomTokenChanged(Sender: TObject);
+    procedure DoReadLfmNestedComments(Reader: TReader);
+    procedure DoReadLfmTypeHelpers(Reader: TReader);
+    function GetNestedComments: boolean; deprecated;
+    function GetTypeHelpers: boolean; deprecated;
     procedure RebuildCustomTokenInfo;
     function  GetCustomTokenCount: integer;
+    procedure SetCaseLabelAttriMatchesElseOtherwise(AValue: Boolean);
     procedure SetCustomTokenCount(AValue: integer);
     function  GetCustomTokens(AnIndex: integer): TSynPasSynCustomToken;
     function GetPasCodeFoldRange: TSynPasSynRange;
     procedure PasDocAttrChanged(Sender: TObject);
     procedure SetCompilerMode(const AValue: TPascalCompilerMode);
+    procedure SetModeSwitches(AValue: TPascalCompilerModeSwitches);
+    procedure SetDeclaredTypeAttributeMode(AValue: TSynPasTypeAttributeMode);
+    procedure SetDeclaredValueAttributeMachesStringNum(AValue: Boolean);
+    procedure SetDeclaredValueAttributeMode(AValue: TSynPasTypeAttributeMode);
     procedure SetExtendedKeywordsMode(const AValue: Boolean);
-    procedure SetNestedComments(const ANestedComments: boolean);
     procedure SetStringKeywordMode(const AValue: TSynPasStringMode);
     procedure SetStringMultilineMode(const AValue: TSynPasMultilineStringModes);
+    procedure SetNestedComments(AValue: boolean); deprecated;
+    procedure SetTypeHelpers(AValue: boolean); deprecated;
     function TextComp(aText: PChar): Boolean;
     function KeyHash: Integer;
     function Func15: TtkTokenKind;
@@ -518,6 +731,7 @@ type
     function Func64: TtkTokenKind;
     function Func65: TtkTokenKind;
     function Func66: TtkTokenKind;
+    function Func67: TtkTokenKind;
     function Func69: TtkTokenKind;
     function Func71: TtkTokenKind;
     function Func72: TtkTokenKind;
@@ -612,9 +826,12 @@ type
     procedure DoubleQuoteProc;
     procedure StringProc_MultiLineDQ;
     procedure SymbolProc;
-    function TypeHelpersIsStored: Boolean;
     procedure UnknownProc;
     procedure SetD4syntax(const Value: boolean);
+
+    function CanApplyExtendedDeclarationAttribute(AMode: TSynPasTypeAttributeMode): boolean; inline;
+    procedure CheckForAdditionalAttributes;
+
     // Divider
     procedure CreateDividerDrawConfig;
     procedure DestroyDividerDrawConfig;
@@ -623,6 +840,7 @@ type
     function KeyCompEx(AText1, AText2: pchar; ALen: Integer): Boolean;
     function GetIdentChars: TSynIdentChars; override;
     function IsFilterStored: boolean; override;                                 //mh 2000-10-08
+    procedure DoDefHighlightChanged; override;
   protected
     procedure DoAfterOperator; inline;
     procedure EndStatement(ACurTfb: TPascalCodeFoldBlockType;
@@ -638,6 +856,8 @@ type
     property PasCodeFoldRange: TSynPasSynRange read GetPasCodeFoldRange;
     function TopPascalCodeFoldBlockType
              (DownIndex: Integer = 0): TPascalCodeFoldBlockType;
+    function HasCompilerModeswitch(AModeSwitch: TPascalCompilerModeSwitch): Boolean; inline;
+    function HasCompilerModeswitch(AModeSwitches: TPascalCompilerModeSwitches): Boolean; inline;
 
     // Open/Close Folds
     procedure GetTokenBounds(out LogX1,LogX2: Integer); override;
@@ -655,6 +875,9 @@ type
     procedure EndPascalCodeFoldBlockLastLine;
     procedure StartCustomCodeFoldBlock(ABlockType: TPascalCodeFoldBlockType);
     procedure EndCustomCodeFoldBlock(ABlockType: TPascalCodeFoldBlockType);
+    function CloseOneFold(ACurTfb: TPascalCodeFoldBlockType; ACloseFold: TPascalCodeFoldBlockType): TPascalCodeFoldBlockType; inline;
+    function CloseOneFold(ACurTfb: TPascalCodeFoldBlockType; ACloseFolds: TPascalCodeFoldBlockTypes): TPascalCodeFoldBlockType; inline;
+    function CloseFolds(ACurTfb: TPascalCodeFoldBlockType; ACloseFolds: TPascalCodeFoldBlockTypes): TPascalCodeFoldBlockType; inline;
     procedure CollectNodeInfo(FinishingABlock: Boolean; ABlockType: Pointer;
       LevelChanged: Boolean); override;
 
@@ -683,14 +906,14 @@ type
     function GetFoldConfigCount: Integer; override;
     function GetFoldConfigInternalCount: Integer; override;
     procedure DoFoldConfigChanged(Sender: TObject); override;
+
+    procedure DefineProperties(Filer: TFiler); override;
   public
     class function GetCapabilities: TSynHighlighterCapabilities; override;
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    procedure Loaded; override;
-    procedure Loading; override;
     function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
       override;
     function GetEol: Boolean; override;
@@ -731,6 +954,9 @@ type
 
     property CustomTokenCount: integer read GetCustomTokenCount write SetCustomTokenCount;
     property CustomTokens[AnIndex: integer]: TSynPasSynCustomToken read GetCustomTokens;
+
+    property NestedComments: boolean read GetNestedComments write SetNestedComments stored False; deprecated 'Use ModeSwitches / Will be removed in 5.99';
+    property TypeHelpers: boolean read GetTypeHelpers write SetTypeHelpers stored False; deprecated 'Use ModeSwitches / Will be removed in 5.99';
   published
     property AsmAttri: TSynHighlighterAttributes read fAsmAttri write fAsmAttri;
     property CommentAttri: TSynHighlighterAttributes read fCommentAttri
@@ -749,15 +975,41 @@ type
       write fStringAttri;
     property SymbolAttri: TSynHighlighterAttributes read fSymbolAttri
       write fSymbolAttri;
-    property ProcedureHeaderName: TSynHighlighterAttributesModifier read FProcedureHeaderNameAttr
-      write FProcedureHeaderNameAttr;
+
+    property ProcedureHeaderName: TSynHighlighterAttributesModifier
+       read FProcedureHeaderNameAttr write FProcedureHeaderNameAttr;
+
+    property PropertyNameAttr: TSynHighlighterAttributesModifier
+       read FPropertyNameAttr write FPropertyNameAttr;
+
+    property ProcedureHeaderParamAttr: TSynHighlighterAttributesModifier
+       read FProcedureHeaderParamAttr write FProcedureHeaderParamAttr;
+    property ProcedureHeaderTypeAttr: TSynHighlighterAttributesModifier
+       read FProcedureHeaderTypeAttr write FProcedureHeaderTypeAttr;
+    property ProcedureHeaderValueAttr: TSynHighlighterAttributesModifier
+       read FProcedureHeaderValueAttr write FProcedureHeaderValueAttr;
+    property ProcedureHeaderResultAttr: TSynHighlighterAttributesModifier
+       read FProcedureHeaderResultAttr write FProcedureHeaderResultAttr;
+
+    property DeclarationVarConstNameAttr: TSynHighlighterAttributesModifier
+       read FDeclarationVarConstNameAttr write FDeclarationVarConstNameAttr;
+    property DeclarationTypeNameAttr: TSynHighlighterAttributesModifier
+       read FDeclarationTypeNameAttr write FDeclarationTypeNameAttr;
+    property DeclarationTypeAttr: TSynHighlighterAttributesModifier
+       read FDeclarationTypeAttr write FDeclarationTypeAttr;
+    property DeclarationValueAttr: TSynHighlighterAttributesModifier
+       read FDeclarationValueAttr write FDeclarationValueAttr;
+    property GotoLabelAttr: TSynHighlighterAttributes
+       read FGotoLabelAttr write FGotoLabelAttr;
+    property StructMemberAttr: TSynHighlighterAttributesModifier
+       read FStructMemberAttr write FStructMemberAttr;
+
     property CaseLabelAttri: TSynHighlighterAttributesModifier read FCaseLabelAttri
       write FCaseLabelAttri;
     property DirectiveAttri: TSynHighlighterAttributes read fDirectiveAttri
       write fDirectiveAttri;
     property CompilerMode: TPascalCompilerMode read FCompilerMode write SetCompilerMode;
-    property NestedComments: boolean read FNestedComments write SetNestedComments;
-    property TypeHelpers: boolean read FTypeHelpers write FTypeHelpers stored TypeHelpersIsStored;
+    property ModeSwitches: TPascalCompilerModeSwitches read FModeSwitches write SetModeSwitches;
     property D4syntax: boolean read FD4syntax write SetD4syntax default true;
     property ExtendedKeywordsMode: Boolean
              read FExtendedKeywordsMode write SetExtendedKeywordsMode default False;
@@ -765,6 +1017,15 @@ type
              read FStringKeywordMode write SetStringKeywordMode default spsmDefault;
     property StringMultilineMode: TSynPasMultilineStringModes
              read FStringMultilineMode write SetStringMultilineMode;
+
+    property CaseLabelAttriMatchesElseOtherwise: Boolean
+       read FCaseLabelAttriMatchesElseOtherwise write SetCaseLabelAttriMatchesElseOtherwise default True;
+    property DeclaredTypeAttributeMode: TSynPasTypeAttributeMode
+       read FDeclaredTypeAttributeMode write SetDeclaredTypeAttributeMode default tamIdentifierOnly;
+    property DeclaredValueAttributeMode: TSynPasTypeAttributeMode
+       read FDeclaredValueAttributeMode write SetDeclaredValueAttributeMode default tamIdentifierOnly;
+    property DeclaredValueAttributeMachesStringNum: Boolean
+       read FDeclaredValueAttributeMachesStringNum write SetDeclaredValueAttributeMachesStringNum default False;
 
     property PasDocKeyWord: TSynHighlighterAttributesModifier read fPasDocKeyWordAttri write fPasDocKeyWordAttri;
     property PasDocSymbol: TSynHighlighterAttributesModifier read fPasDocSymbolAttri write fPasDocSymbolAttri;
@@ -992,6 +1253,7 @@ begin
   fIdentFuncTable[64] := @Func64;
   fIdentFuncTable[65] := @Func65;
   fIdentFuncTable[66] := @Func66;
+  fIdentFuncTable[67] := @Func67;
   fIdentFuncTable[69] := @Func69;
   fIdentFuncTable[71] := @Func71;
   fIdentFuncTable[72] := @Func72;
@@ -1132,14 +1394,51 @@ end;
 
 procedure TSynPasSyn.SetCompilerMode(const AValue: TPascalCompilerMode);
 begin
-  if not(csLoading in ComponentState) then begin
-    NestedComments:=AValue in [pcmFPC,pcmObjFPC]; // NestedComments has to be reset even if CompilerMode doesn't change
-    TypeHelpers := AValue in [pcmDelphi];  // keep in sync with TypeHelpersIsStored / Loaded
+  if (not FModeSwitchesLoaded) or not(csLoading in ComponentState) then begin
+    case AValue of
+      pcmFPC,
+      pcmObjFPC: ModeSwitches := [pcsNestedComments];
+      pcmDelphi: ModeSwitches := [pcsTypeHelpers];
+      //pcmTP: ;
+      //pcmGPC: ;
+      pcmMacPas: ModeSwitches := [pcsObjectiveC1, pcsObjectiveC2];
+    end;
   end;
-  if FCompilerMode=AValue then exit;
+  //if FCompilerMode=AValue then exit;
   FCompilerMode:=AValue;
-  PasCodeFoldRange.Mode:=FCompilerMode;
-  //DebugLn(['TSynPasSyn.SetCompilerMode FCompilerMode=',ord(FCompilerMode),' FNestedComments=',FNestedComments]);
+//  PasCodeFoldRange.Mode:=FCompilerMode;
+end;
+
+procedure TSynPasSyn.SetModeSwitches(AValue: TPascalCompilerModeSwitches);
+begin
+  if (csLoading in ComponentState) then
+    FModeSwitchesLoaded := True;
+
+  FModeSwitches := AValue;
+end;
+
+procedure TSynPasSyn.SetDeclaredTypeAttributeMode(AValue: TSynPasTypeAttributeMode);
+begin
+  if FDeclaredTypeAttributeMode = AValue then Exit;
+  FDeclaredTypeAttributeMode := AValue;
+  FAttributeChangeNeedScan := True;
+  DefHighlightChange(self);
+end;
+
+procedure TSynPasSyn.SetDeclaredValueAttributeMachesStringNum(AValue: Boolean);
+begin
+  if FDeclaredValueAttributeMachesStringNum = AValue then Exit;
+  FDeclaredValueAttributeMachesStringNum := AValue;
+  FAttributeChangeNeedScan := True;
+  DefHighlightChange(self);
+end;
+
+procedure TSynPasSyn.SetDeclaredValueAttributeMode(AValue: TSynPasTypeAttributeMode);
+begin
+  if FDeclaredValueAttributeMode = AValue then Exit;
+  FDeclaredValueAttributeMode := AValue;
+  FAttributeChangeNeedScan := True;
+  DefHighlightChange(self);
 end;
 
 procedure TSynPasSyn.SetExtendedKeywordsMode(const AValue: Boolean);
@@ -1166,6 +1465,22 @@ begin
   DefHighlightChange(self);
 end;
 
+procedure TSynPasSyn.SetNestedComments(AValue: boolean);
+begin
+  if AValue then
+    ModeSwitches := ModeSwitches + [pcsNestedComments]
+  else
+    ModeSwitches := ModeSwitches - [pcsNestedComments];
+end;
+
+procedure TSynPasSyn.SetTypeHelpers(AValue: boolean);
+begin
+  if AValue then
+    ModeSwitches := ModeSwitches + [pcsTypeHelpers]
+  else
+    ModeSwitches := ModeSwitches - [pcsTypeHelpers];
+end;
+
 function TSynPasSyn.GetPasCodeFoldRange: TSynPasSynRange;
 begin
   Result := TSynPasSynRange(CodeFoldRange);
@@ -1176,10 +1491,46 @@ begin
   Result := Length(FSynCustomTokens);
 end;
 
+procedure TSynPasSyn.SetCaseLabelAttriMatchesElseOtherwise(AValue: Boolean);
+begin
+  if FCaseLabelAttriMatchesElseOtherwise = AValue then Exit;
+  FCaseLabelAttriMatchesElseOtherwise := AValue;
+  FAttributeChangeNeedScan := True;
+  DefHighlightChange(self);
+end;
+
 procedure TSynPasSyn.DoCustomTokenChanged(Sender: TObject);
 begin
   FNeedCustomTokenBuild := True;
   FCustomTokenMarkup := nil;
+end;
+
+procedure TSynPasSyn.DoReadLfmNestedComments(Reader: TReader);
+begin
+  if Reader.ReadBoolean then
+    FModeSwitches := FModeSwitches + [pcsNestedComments]
+  else
+    FModeSwitches := FModeSwitches - [pcsNestedComments];
+  FModeSwitchesLoaded := True;
+end;
+
+procedure TSynPasSyn.DoReadLfmTypeHelpers(Reader: TReader);
+begin
+  if Reader.ReadBoolean then
+    FModeSwitches := FModeSwitches + [pcsTypeHelpers]
+  else
+    FModeSwitches := FModeSwitches - [pcsTypeHelpers];
+  FModeSwitchesLoaded := True;
+end;
+
+function TSynPasSyn.GetNestedComments: boolean;
+begin
+  Result := pcsNestedComments in FModeSwitches;
+end;
+
+function TSynPasSyn.GetTypeHelpers: boolean;
+begin
+  Result := pcsTypeHelpers in FModeSwitches;
 end;
 
 procedure TSynPasSyn.RebuildCustomTokenInfo;
@@ -1269,6 +1620,7 @@ var pas : TPascalCodeFoldBlockType;
 begin
   if KeyComp('Do') then begin
     Result := tkKey;
+    FNextTokenState := tsAtBeginOfStatement;
     pas := TopPascalCodeFoldBlockType;
     if pas in [cfbtForDo, cfbtWhileDo, cfbtWithDo] then
     begin
@@ -1305,7 +1657,7 @@ begin
     if not (rsInProcHeader in fRange) then
       fRange := fRange + [rsAfterEqualOrColon]; // Identifier for type expected
     if (tfb = cfbtClass) and
-       (fRange * [rsAfterClass, rsAfterIdentifierOrValue] = [rsAfterClass]) and
+       (fRange * [rsInClassHeader, rsAfterIdentifierOrValue] = [rsInClassHeader]) and
        (PasCodeFoldRange.BracketNestLevel = 0)
     then begin
       // Accidental start of block // End at next semicolon (usually same line)
@@ -1341,32 +1693,28 @@ begin
     if ((fToIdent<2) or (fLine[fToIdent-1]<>'@'))
     then begin
       Result := tkKey;
-      fRange := fRange - [rsAsm, rsAfterClassMembers];
+      fRange := fRange - [rsAsm, rsInClassHeader, rsInTypeHelper, rsInObjcProtocol, rsAfterClassMembers];
+      if FTokenState in [tsAfterExternal, tsAfterExternalName] then
+        FTokenState := tsNone;
       PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
       sl := fStringLen;
       // there may be more than on block ending here
       tfb := TopPascalCodeFoldBlockType;
       fStringLen:=0;
       EndStatement(tfb, [cfbtForDo,cfbtWhileDo,cfbtWithDo,cfbtIfThen,cfbtIfElse]);
-      tfb := TopPascalCodeFoldBlockType;
-      while tfb = cfbtRecordCaseSection do begin // missing ")"?
-        EndPascalCodeFoldBlock;
-        tfb := TopPascalCodeFoldBlockType;
-      end;
-      fStringLen := sl;
 
+      tfb := CloseFolds(TopPascalCodeFoldBlockType, [cfbtRecordCaseSection { missing ")"? },
+                    cfbtClassConstBlock, cfbtClassTypeBlock]);
+      fStringLen := sl;
       if tfb = cfbtRecordCase then begin
-        repeat
-          EndPascalCodeFoldBlock;
-          tfb := TopPascalCodeFoldBlockType;
-        until not (tfb in [cfbtRecordCase, cfbtRecordCaseSection]);
+        tfb := CloseFolds(TopPascalCodeFoldBlockType, [cfbtRecordCase, cfbtRecordCaseSection, cfbtClassConstBlock, cfbtClassTypeBlock]);
         fRange := fRange - [rsAtCaseLabel];
         if TopPascalCodeFoldBlockType = cfbtRecord then begin
           EndPascalCodeFoldBlock;
         end;
         // After type declaration, allow "deprecated"?
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType,
-             cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]
+        if TopPascalCodeFoldBlockType in cfbtVarConstTypeExt +
+           [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]
         then
           fRange := fRange + [rsVarTypeInSpecification];
       end
@@ -1374,13 +1722,9 @@ begin
       if tfb = cfbtRecord then begin
         EndPascalCodeFoldBlock;
         // After type declaration, allow "deprecated"?
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType,
-             cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]
+        if TopPascalCodeFoldBlockType in cfbtVarConstTypeExt + [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]
         then
           fRange := fRange + [rsVarTypeInSpecification];
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType, cfbtClass, cfbtClassSection, cfbtRecord]
-        then
-          fRange := fRange + [rsInTypeBlock];
       end else if tfb = cfbtUnit then begin
         EndPascalCodeFoldBlock;
       end else if tfb = cfbtPackage then begin
@@ -1426,26 +1770,18 @@ begin
         // after class-section either a class OR a record can close with the same "end"
         if tfb = cfbtClass then begin
           EndPascalCodeFoldBlock;
-          fRange := fRange - [rsInObjcProtocol];
         end
         else
         begin
           if tfb = cfbtRecordCase then
-            repeat
-              EndPascalCodeFoldBlock;
-              tfb := TopPascalCodeFoldBlockType;
-            until not (tfb in [cfbtRecordCase, cfbtRecordCaseSection]);
+            tfb := CloseFolds(TopPascalCodeFoldBlockType, [cfbtRecordCase, cfbtRecordCaseSection, cfbtClassConstBlock, cfbtClassTypeBlock]);
           if tfb = cfbtRecord then
             EndPascalCodeFoldBlock;
         end;
         // After type declaration, allow "deprecated"?
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType,
-             cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]
+        if TopPascalCodeFoldBlockType in cfbtVarConstTypeExt + [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]
         then
           fRange := fRange + [rsVarTypeInSpecification];
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType, cfbtClass, cfbtClassSection, cfbtRecord]
-        then
-          fRange := fRange + [rsInTypeBlock];
       end;
     end else begin
       Result := tkKey; // @@end or @end label
@@ -1488,8 +1824,15 @@ begin
 end;
 
 function TSynPasSyn.Func28: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Is') then begin
+    if (fRange * [rsInProcHeader, rsVarTypeInSpecification] = [rsInProcHeader, rsVarTypeInSpecification]) and
+       (PasCodeFoldRange.BracketNestLevel = 0) and
+       (TopPascalCodeFoldBlockType in cfbtVarConstTypeExt)
+    then
+      FNextTokenState := tsAfterIs;
     Result := tkKey;
     DoAfterOperator;
   end
@@ -1500,13 +1843,18 @@ begin
   then begin
     Result := tkKey;
     fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+    if FTokenState = tsAfterProperty then
+      FTokenState := tsNone;
   end
   else if KeyComp('Case') then begin
-    if TopPascalCodeFoldBlockType in PascalStatementBlocks + [cfbtUnitSection] then
-      StartPascalCodeFoldBlock(cfbtCase, True)
-    else
-    if TopPascalCodeFoldBlockType in [cfbtRecord, cfbtRecordCaseSection] then
-      StartPascalCodeFoldBlock(cfbtRecordCase, True); // TODO: only force, if there is case-label highlight // also word-triplet?
+    if TopPascalCodeFoldBlockType in PascalStatementBlocks + [cfbtUnitSection] then begin
+      StartPascalCodeFoldBlock(cfbtCase, True);
+    end
+    else begin
+      tfb := CloseFolds(TopPascalCodeFoldBlockType(), [cfbtClassConstBlock, cfbtClassTypeBlock]);
+      if tfb in [cfbtRecord, cfbtRecordCaseSection] then
+        StartPascalCodeFoldBlock(cfbtRecordCase, True); // TODO: only force, if there is case-label highlight // also word-triplet?
+    end;
     Result := tkKey;
   end
   else
@@ -1521,14 +1869,14 @@ end;
 function TSynPasSyn.Func32: TtkTokenKind;
 begin
   if KeyComp('Label') then begin
-    if (TopPascalCodeFoldBlockType in  [cfbtVarType, cfbtLocalVarType, cfbtNone,
-        cfbtProcedure, cfbtAnonymousProcedure, cfbtProgram, cfbtUnit, cfbtUnitSection])
+    if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
+      EndPascalCodeFoldBlockLastLine;
+    if (TopPascalCodeFoldBlockType in [cfbtNone, cfbtProcedure, cfbtAnonymousProcedure,
+        cfbtProgram, cfbtUnit, cfbtUnitSection])
     then begin
-      if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
-        EndPascalCodeFoldBlockLastLine;
       if TopPascalCodeFoldBlockType in [cfbtProcedure, cfbtAnonymousProcedure]
-      then StartPascalCodeFoldBlock(cfbtLocalVarType)
-      else StartPascalCodeFoldBlock(cfbtVarType);
+      then StartPascalCodeFoldBlock(cfbtLocalLabelBlock)
+      else StartPascalCodeFoldBlock(cfbtLabelBlock);
     end;
     Result := tkKey;
   end
@@ -1555,30 +1903,32 @@ begin
     Result := tkKey;
     fRange := fRange + [rsAsm];
     fAsmStart := True;
-    if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+    if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
       EndPascalCodeFoldBlockLastLine;
     StartPascalCodeFoldBlock(cfbtAsm);
   end
   else
-  if (fRange * [rsAfterClass, rsInObjcProtocol, rsInProcHeader] = [rsAfterClass, rsInObjcProtocol]) and
-     ((CompilerMode = pcmMacPas) or not (rsCompilerModeSet in fRange)) and
+  if (fRange * [rsInObjcProtocol, rsInProcHeader] = [rsInObjcProtocol]) and
+     (FTokenState = tsAfterExternal) and
      KeyComp('name') and
      (PasCodeFoldRange.BracketNestLevel = 0) and
      (TopPascalCodeFoldBlockType in [cfbtClass])
   then
   begin
     Result := tkModifier;
-    fRange := fRange + [rsAtClass];
+    FNextTokenState := tsAfterExternalName;
+    fRange := fRange + [rsInObjcProtocol];
+    FOldRange := FOldRange - [rsInObjcProtocol];
   end
   else
   if (FTokenState = tsAfterExternal) and
      (PasCodeFoldRange.BracketNestLevel = 0) and
-     (fRange * [rsAfterSemiColon, rsAfterEqualOrColon, rsAfterEqual] = []) and
+     (fRange * [rsAfterEqualOrColon, rsAfterEqual] = []) and
      KeyComp('name') // procedure foo; public name 'abc';
   then
   begin
     Result := tkModifier;
-    FNextTokenState := tsAfterExternal; // external 'foo' name 'bar'
+    FNextTokenState := tsAfterExternalName;
   end
   else
     Result := tkIdentifier;
@@ -1588,6 +1938,7 @@ function TSynPasSyn.Func35: TtkTokenKind;
 begin
   if KeyComp('Nil') then begin
     Result := tkKey;
+    FTokenIsValueOrTypeName := True;
     fRange := fRange + [rsAfterIdentifierOrValue];
     FOldRange := FOldRange - [rsAfterIdentifierOrValue];
   end
@@ -1605,20 +1956,21 @@ end;
 
 function TSynPasSyn.Func37: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Begin') then begin
     // if we are in an include file, we may not know the state
     if (fRange * [rsImplementation, rsInterface] = []) then
       Include(fRange, rsImplementation);
+    FNextTokenState := tsAtBeginOfStatement;
     PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
-    if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+    if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
       EndPascalCodeFoldBlockLastLine;
     Result := tkKey;
-    tbf := TopPascalCodeFoldBlockType;
-    if tbf in [cfbtProcedure, cfbtAnonymousProcedure]
+    tfb := TopPascalCodeFoldBlockType;
+    if tfb in [cfbtProcedure, cfbtAnonymousProcedure]
     then StartPascalCodeFoldBlock(cfbtTopBeginEnd, True)
-    else StartPascalCodeFoldBlock(cfbtBeginEnd, tbf in [
+    else StartPascalCodeFoldBlock(cfbtBeginEnd, tfb in [
       cfbtProgram, cfbtUnit, cfbtUnitSection, cfbtPackage,
       cfbtTopBeginEnd, cfbtBeginEnd,
       cfbtTry, cfbtExcept, cfbtAsm,
@@ -1685,35 +2037,37 @@ begin
 end;
 
 function TSynPasSyn.Func41: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Else') then begin
     Result := tkKey;
+    FNextTokenState := tsAtBeginOfStatement;
     // close all parent "else" and "do" // there can only be one else
     EndStatementLastLine(TopPascalCodeFoldBlockType, [cfbtForDo,cfbtWhileDo,cfbtWithDo,cfbtIfElse]);
-    if (TopPascalCodeFoldBlockType in [cfbtIfThen]) then begin
+    tfb := TopPascalCodeFoldBlockType;
+    if (tfb in [cfbtIfThen]) then begin
       EndPascalCodeFoldBlock;
       StartPascalCodeFoldBlock(cfbtIfElse);
     end else
-    if TopPascalCodeFoldBlockType = cfbtCase then begin
+    if tfb = cfbtCase then begin
       FTokenIsCaseLabel := True;
       StartPascalCodeFoldBlock(cfbtCaseElse, True);
     end
   end
   else if KeyComp('Var') then begin
     if (PasCodeFoldRange.BracketNestLevel = 0) then begin
-      if (TopPascalCodeFoldBlockType in
-         [cfbtVarType, cfbtLocalVarType, cfbtNone, cfbtProcedure, cfbtAnonymousProcedure, cfbtProgram,
-          cfbtUnit, cfbtUnitSection])
-      then begin
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
-          EndPascalCodeFoldBlockLastLine;
-        if TopPascalCodeFoldBlockType in [cfbtProcedure, cfbtAnonymousProcedure]
-        then StartPascalCodeFoldBlock(cfbtLocalVarType)
-        else StartPascalCodeFoldBlock(cfbtVarType);
+      tfb := TopPascalCodeFoldBlockType;
+      if tfb in cfbtVarConstTypeLabelExt then begin
+        EndPascalCodeFoldBlockLastLine;
+        tfb := TopPascalCodeFoldBlockType;
       end;
-      fRange := fRange + [rsAfterSemiColon];
-      FOldRange := FOldRange - [rsAfterSemiColon];
-      FNextTokenState := tsAfterExternal;  // prevent a variable of name public/export/external to be highlighted
+      if tfb in [cfbtProcedure, cfbtAnonymousProcedure] then
+        StartPascalCodeFoldBlock(cfbtLocalVarBlock)
+      else
+      if (tfb in [cfbtNone, cfbtProgram, cfbtUnit, cfbtUnitSection]) then
+        StartPascalCodeFoldBlock(cfbtVarBlock);
+      FNextTokenState := tsAfterVarConstType;
     end;
     Result := tkKey;
   end
@@ -1722,12 +2076,12 @@ end;
 
 function TSynPasSyn.Func42: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
-  tbf := TopPascalCodeFoldBlockType;
+  tfb := TopPascalCodeFoldBlockType;
   if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-     (tbf in ProcModifierAllowedNoVar) and
-     ( (rsAfterClassMembers in fRange) or not(tbf in [cfbtClass, cfbtClassSection]) ) and
+     (tfb in ProcModifierAllowedNoVar) and
+     ( (rsAfterClassMembers in fRange) or not(tfb in [cfbtClass, cfbtClassSection, cfbtClassConstBlock, cfbtClassTypeBlock]) ) and
      KeyComp('Alias')
   then begin
     Result := tkModifier;
@@ -1736,7 +2090,7 @@ begin
   else
   if KeyComp('Final') and
      (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader, rsAfterClassMembers] = [rsWasInProcHeader, rsAfterClassMembers]) and
-     (tbf in [cfbtClass, cfbtClassSection]) and
+     (tfb in [cfbtClass, cfbtClassSection]) and
      (PasCodeFoldRange.BracketNestLevel = 0)
   then begin
     Result := tkModifier;
@@ -1757,13 +2111,16 @@ begin
   end
   else
   if (PasCodeFoldRange.BracketNestLevel = 0) and
-     ( (FTokenState = tsAfterTypedConst) or
-       ( not(FTokenState in [tsAfterExternal, tsAfterCvar]) and
-         (fRange * [rsAfterSemiColon, rsInProcHeader, rsWasInProcHeader, rsInTypeBlock, rsInConstBlock] = [rsAfterSemiColon])
-     ) )
-     and
      KeyComp('CVAR') and
-     (TopPascalCodeFoldBlockType() in [cfbtVarType, cfbtLocalVarType])
+     ( ( (FTokenState = tsAfterTypedConst) and
+         (TopPascalCodeFoldBlockType() in [cfbtConstBlock, cfbtLocalConstBlock])
+       )
+       or
+       ( (FTokenState = tsAtBeginOfStatement) and
+         (fRange * [rsInProcHeader, rsWasInProcHeader] = []) and
+         (TopPascalCodeFoldBlockType() in [cfbtVarBlock, cfbtLocalVarBlock])
+       )
+     )
   then begin
     Result := tkModifier;
     FNextTokenState := tsAfterCvar;
@@ -1784,13 +2141,13 @@ end;
 
 function TSynPasSyn.Func46: TtkTokenKind;
 begin
-  if (rsAfterClass in fRange) and KeyComp('Sealed') and
+  if (rsInClassHeader in fRange) and KeyComp('Sealed') and
      (PasCodeFoldRange.BracketNestLevel = 0) and
      (TopPascalCodeFoldBlockType in [cfbtClass])
   then begin
     Result := tkModifier;
-    fRange := fRange + [rsAtClass, rsAfterIdentifierOrValue]; // forward, in case of further class modifiers
-    FOldRange := FOldRange - [rsAfterIdentifierOrValue];
+    fRange := fRange + [rsInClassHeader, rsAfterIdentifierOrValue]; // forward, in case of further class modifiers
+    FOldRange := FOldRange - [rsAfterIdentifierOrValue, rsInClassHeader];
   end
   else
     Result := tkIdentifier;
@@ -1800,6 +2157,7 @@ function TSynPasSyn.Func47: TtkTokenKind;
 begin
   if KeyComp('Then') then begin
     Result := tkKey;
+    FNextTokenState := tsAtBeginOfStatement;
     // in a "case", we need to distinguish a possible follwing "else"
     if (TopPascalCodeFoldBlockType = cfbtIfThen) then
       EndPascalCodeFoldBlock;
@@ -1847,7 +2205,9 @@ begin
     Result := tkKey;
     if (rsAfterEqual in fRange) and (PasCodeFoldRange.BracketNestLevel = 0)
     then begin
-      fRange := fRange + [rsAtClass] - [rsVarTypeInSpecification, rsAfterEqual];
+      FNextTokenState := tsAfterClass;
+      fRange := fRange + [rsInClassHeader] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInClassHeader];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
@@ -1863,7 +2223,8 @@ begin
        not(rsInProcHeader in fRange) and
        (PasCodeFoldRange.BracketNestLevel = 0)
     then begin
-      fRange := fRange + [rsAtClass] - [rsVarTypeInSpecification, rsAfterEqual];
+      fRange := fRange + [rsInClassHeader] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInClassHeader];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
@@ -1879,6 +2240,8 @@ begin
     then begin
       Result := tkKey;
       fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+      if FTokenState = tsAfterProperty then
+        FTokenState := tsNone;
     end
     else
       Result := tkIdentifier;
@@ -1949,15 +2312,17 @@ begin
      KeyComp('Dispid')
   then begin
     Result := tkKey;
-   if rsWasInProcHeader in fRange then
-     FRange := FRange + [rsInProcHeader];
-   if rsProperty in fRange then
-     fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+    if rsWasInProcHeader in fRange then
+      FRange := FRange + [rsInProcHeader];
+    if rsProperty in fRange then begin
+      fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+      if FTokenState = tsAfterProperty then
+        FTokenState := tsNone;
+   end;
   end
   else
   if KeyComp('Generic') then begin
     Result := tkKey;
-    fRange := fRange + [rsInTypeBlock]; // in case it was incorrectly removed
   end
   else
     Result := tkIdentifier;
@@ -1965,18 +2330,18 @@ end;
 
 function TSynPasSyn.Func63: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Public') then begin
-    tbf := TopPascalCodeFoldBlockType;
-    if (tbf in [cfbtClass, cfbtClassSection, cfbtRecord]) and
+    tfb := CloseFolds(TopPascalCodeFoldBlockType, [cfbtClassConstBlock, cfbtClassTypeBlock]);
+    if (tfb in [cfbtClass, cfbtClassSection, cfbtRecord]) and
        (fRange * [rsInProcHeader, rsAfterEqual, rsAfterEqualOrColon, rsVarTypeInSpecification] = []) and
-       (fRange * [rsAfterSemiColon, rsAfterClass] <> [])
+       ( (FTokenState in [tsAtBeginOfStatement, tsAfterVarConstType, tsAfterClass, tsAfterTypedConst]) or (fRange * [rsInClassHeader, rsInObjcProtocol] <> []) )
     then begin
       Result := tkKey;
-      fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification] + [rsAfterSemiColon];
-      FOldRange := FOldRange - [rsAfterSemiColon];
-      if (tbf=cfbtClassSection) then
+      FNextTokenState := tsAtBeginOfStatement;
+      fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification];
+      if (tfb=cfbtClassSection) then
         EndPascalCodeFoldBlockLastLine;
       StartPascalCodeFoldBlock(cfbtClassSection);
     end
@@ -1985,12 +2350,13 @@ begin
     if (PasCodeFoldRange.BracketNestLevel = 0) and
        ( (FTokenState in [tsAfterTypedConst, tsAfterCvar])
          or
-         ( (FTokenState <> tsAfterExternal) and
+         ( (not (FTokenState in [tsAfterExternal, tsAfterExternalName, tsAfterVarConstType])) and
            ( ( (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-               (tbf in ProcModifierAllowed - [cfbtClass, cfbtClassSection, cfbtRecord])
+               (tfb in ProcModifierAllowed - [cfbtClass, cfbtClassSection, cfbtRecord, cfbtClassConstBlock, cfbtClassTypeBlock])
              ) or
-             ( (fRange * [rsAfterSemiColon, rsInProcHeader, rsWasInProcHeader, rsInTypeBlock, rsInConstBlock] = [rsAfterSemiColon]) and
-               (tbf in [cfbtVarType, cfbtLocalVarType])
+             ( (FTokenState in [tsAtBeginOfStatement, tsAfterCvar]) and // Todo: Do we need tsAfterCvar?
+               (fRange * [rsInProcHeader, rsWasInProcHeader] = []) and
+               (tfb in [cfbtVarBlock, cfbtLocalVarBlock])
          ) ) )
        )
     then begin
@@ -2002,10 +2368,13 @@ begin
   end
   else if KeyComp('Record') then begin
     StartPascalCodeFoldBlock(cfbtRecord);
-    fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterEqualOrColon] + [rsAfterSemiColon];
-    FOldRange := FOldRange - [rsAfterSemiColon];
-    if (CompilerMode = pcmDelphi) or (TypeHelpers {and adv_record}) then
-      fRange := fRange + [rsAtClass]; // highlight helper
+    //FNextTokenState := tsAtBeginOfStatement;
+    //if (CompilerMode = pcmDelphi) or (pcsTypeHelpers in FModeSwitches {and adv_record}) then
+    FNextTokenState := tsAfterClass;
+    fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon, rsAfterEqualOrColon];
+    if (CompilerMode = pcmDelphi) or (pcsTypeHelpers in FModeSwitches {and adv_record}) then
+      fRange := fRange + [rsInClassHeader]; // highlight helper
+      FOldRange := FOldRange - [rsInClassHeader];
     Result := tkKey;
   end
   else if KeyComp('Array') then Result := tkKey
@@ -2014,12 +2383,13 @@ begin
     if TopPascalCodeFoldBlockType in PascalStatementBlocks + [cfbtUnitSection] then
       StartPascalCodeFoldBlock(cfbtTry);
     Result := tkKey;
+    FNextTokenState := tsAtBeginOfStatement;
   end
   else
   if (PasCodeFoldRange.BracketNestLevel in [0, 1]) and
      (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
      (TopPascalCodeFoldBlockType in ProcModifierAllowedNoVar) and
-     ( (rsAfterClassMembers in fRange) or not(TopPascalCodeFoldBlockType() in [cfbtClass, cfbtClassSection]) ) and
+     ( (rsAfterClassMembers in fRange) or not(TopPascalCodeFoldBlockType() in [cfbtClass, cfbtClassSection, cfbtClassConstBlock, cfbtClassTypeBlock]) ) and
      KeyComp('Inline')
   then begin
     Result := tkModifier;
@@ -2044,15 +2414,15 @@ begin
   end
   // TODO: "class helper" fold at "class", but "type helper" fold at "helper"
   else if KeyComp('helper') then begin
-    if (rsAtClass in fRange) and (PasCodeFoldRange.BracketNestLevel = 0)
+    if (FTokenState = tsAfterClass) and (PasCodeFoldRange.BracketNestLevel = 0)
     then begin
       Result := tkKey; // tkModifier
-      fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual] + [rsInTypeHelper];
+      fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon] + [rsInTypeHelper];
     end
     else
-    if (FTokenState = tsAfterEqualThenType) and TypeHelpers then begin
+    if (FTokenState = tsAfterEqualThenType) and (pcsTypeHelpers in FModeSwitches) then begin
       Result := tkKey;
-      fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual] + [rsInTypeHelper];
+      fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon] + [rsInTypeHelper];
       StartPascalCodeFoldBlock(cfbtClass); // type helper
     end
     else
@@ -2065,6 +2435,7 @@ function TSynPasSyn.Func65: TtkTokenKind;
 begin
   if KeyComp('Repeat') then begin
     Result := tkKey;
+    FNextTokenState := tsAtBeginOfStatement;
     StartPascalCodeFoldBlock(cfbtRepeat);
    end
    else Result := tkIdentifier;
@@ -2078,33 +2449,42 @@ begin
     tfb := TopPascalCodeFoldBlockType;
     if (PasCodeFoldRange.BracketNestLevel = 0)
        and (tfb in
-        [cfbtVarType, cfbtLocalVarType, cfbtNone, cfbtProcedure, cfbtAnonymousProcedure, cfbtProgram,
+        cfbtVarConstTypeLabelExt + [cfbtNone, cfbtProcedure, cfbtAnonymousProcedure, cfbtProgram,
          cfbtUnit, cfbtUnitSection,
          cfbtClass, cfbtClassSection, cfbtRecord // if inside a type section in class/record
         ])
     then begin
       if (rsAfterEqualOrColon in fRange) then begin
         FOldRange := FOldRange - [rsAfterEqualOrColon];
-        if TypeHelpers then
+        if (pcsTypeHelpers in FModeSwitches) then
           FNextTokenState := tsAfterEqualThenType;
       end
       else begin
-        if tfb in [cfbtVarType, cfbtLocalVarType] then begin
+        // If already in cfbtClassTypeBlock, then keep block going / save the close, open
+        if tfb in cfbtVarConstTypeLabelExt - [cfbtClassTypeBlock] then begin
           EndPascalCodeFoldBlockLastLine;
           tfb := TopPascalCodeFoldBlockType;
         end;
-        if not(tfb in [cfbtClass, cfbtClassSection, cfbtRecord]) then
-          if tfb in [cfbtProcedure, cfbtAnonymousProcedure]
-          then StartPascalCodeFoldBlock(cfbtLocalVarType)
-          else StartPascalCodeFoldBlock(cfbtVarType);
-        fRange := fRange + [rsInTypeBlock, rsAfterSemiColon];
-        FOldRange := FOldRange - [rsAfterSemiColon];
-        FNextTokenState := tsAfterExternal;  // prevent a type of name public/export/external to be highlighted
+        if tfb in [cfbtClass, cfbtClassSection, cfbtRecord]
+        then StartPascalCodeFoldBlock(cfbtClassTypeBlock)
+        else
+        if tfb in [cfbtProcedure, cfbtAnonymousProcedure]
+        then StartPascalCodeFoldBlock(cfbtLocalTypeBlock)
+        else StartPascalCodeFoldBlock(cfbtTypeBlock);
+        FNextTokenState := tsAfterVarConstType;
       end;
     end;
     Result := tkKey;
   end
   else Result := tkIdentifier;
+end;
+
+function TSynPasSyn.Func67: TtkTokenKind;
+begin
+  if (FTokenState = tsAfterIs) and KeyComp('nested') then
+    Result := tkKey
+  else
+    Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func69: TtkTokenKind;
@@ -2120,6 +2500,8 @@ begin
     then begin
       if rsProperty in fRange then begin
         fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+        if FTokenState = tsAfterProperty then
+          FTokenState := tsNone;
         Result := tkKey
       end
       else
@@ -2150,6 +2532,8 @@ begin
 end;
 
 function TSynPasSyn.Func71: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Stdcall') and
      (PasCodeFoldRange.BracketNestLevel in [0, 1]) and
@@ -2161,19 +2545,22 @@ begin
   end
   else if KeyComp('Const') then begin
     if (PasCodeFoldRange.BracketNestLevel = 0) then begin
-      if (TopPascalCodeFoldBlockType in
-         [cfbtVarType, cfbtLocalVarType, cfbtNone, cfbtProcedure, cfbtAnonymousProcedure, cfbtProgram,
-          cfbtUnit, cfbtUnitSection])
-      then begin
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
-          EndPascalCodeFoldBlockLastLine;
-        if TopPascalCodeFoldBlockType in [cfbtProcedure, cfbtAnonymousProcedure]
-        then StartPascalCodeFoldBlock(cfbtLocalVarType)
-        else StartPascalCodeFoldBlock(cfbtVarType);
+      tfb := TopPascalCodeFoldBlockType;
+      // If already in cfbtClassTypeBlock, then keep block going / save the close, open
+      if tfb in cfbtVarConstTypeLabelExt - [cfbtClassConstBlock] then begin
+        EndPascalCodeFoldBlockLastLine;
+        tfb := TopPascalCodeFoldBlockType;
       end;
-      fRange := fRange + [rsAfterSemiColon, rsInConstBlock];
-      FOldRange := FOldRange - [rsAfterSemiColon];
-      FNextTokenState := tsAfterExternal;  // prevent a variable of name public/export/external to be highlighted
+      if tfb in [cfbtClass, cfbtClassSection, cfbtRecord] then
+        StartPascalCodeFoldBlock(cfbtClassConstBlock)
+      else
+      if tfb in [cfbtProcedure, cfbtAnonymousProcedure] then
+        StartPascalCodeFoldBlock(cfbtLocalConstBlock)
+      else
+      if (tfb in [cfbtNone, cfbtProgram, cfbtUnit, cfbtUnitSection]) then
+        StartPascalCodeFoldBlock(cfbtConstBlock);
+
+      FNextTokenState := tsAfterVarConstType;
     end;
     Result := tkKey;
   end
@@ -2185,7 +2572,7 @@ end;
 
 function TSynPasSyn.Func72: TtkTokenKind;
 begin
-  if KeyComp('Static') and (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection]) and
+  if KeyComp('Static') and (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtClassConstBlock, cfbtClassTypeBlock]) and
      (fRange * [rsAfterEqualOrColon, rsInProcHeader, rsProperty] = []) and
      (fRange * [rsAfterClassMembers, rsAfterClassField] <> []) and
      (PasCodeFoldRange.BracketNestLevel = 0)
@@ -2216,6 +2603,8 @@ begin
   begin
     Result := tkKey;
     fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+    if FTokenState = tsAfterProperty then
+      FTokenState := tsNone;
   end
   else
     Result := tkIdentifier;
@@ -2248,7 +2637,7 @@ end;
 
 function TSynPasSyn.Func81: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
   if (fRange * [rsProperty, rsAtPropertyOrReadWrite, rsAfterEqualOrColon] =  [rsProperty]) and
      (PasCodeFoldRange.BracketNestLevel = 0) and
@@ -2256,12 +2645,15 @@ begin
   then begin
     Result := tkKey;
     fRange := fRange + [rsAtPropertyOrReadWrite] - [rsVarTypeInSpecification];
+    if FTokenState = tsAfterProperty then
+      FTokenState := tsNone;
   end
   else if KeyComp('Interface') then begin
     if (rsAfterEqual in fRange) and (PasCodeFoldRange.BracketNestLevel = 0)
     then begin
       // type IFoo = INTERFACE
-      fRange := fRange + [rsAtClass] - [rsVarTypeInSpecification, rsAfterEqual];
+      fRange := fRange + [rsInClassHeader] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInClassHeader];
       StartPascalCodeFoldBlock(cfbtClass);
     end
     else
@@ -2270,7 +2662,7 @@ begin
     begin
       // unit section INTERFACE
       CloseBeginEndBlocksBeforeProc;
-      if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+      if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabel then
         EndPascalCodeFoldBlockLastLine;
       if TopPascalCodeFoldBlockType=cfbtUnitSection then EndPascalCodeFoldBlockLastLine;
       StartPascalCodeFoldBlock(cfbtUnitSection);
@@ -2280,17 +2672,17 @@ begin
     Result := tkKey
   end
   else if KeyComp('Deprecated') then begin
-    tbf := TopPascalCodeFoldBlockType;
-    if ( ( (tbf in [cfbtVarType, cfbtLocalVarType]) and
+    tfb := TopPascalCodeFoldBlockType;
+    if ( ( (tfb in cfbtVarConstType) and
            (FTokenState <> tsAfterAbsolute) and
            (fRange * [rsVarTypeInSpecification, rsAfterEqualOrColon] = [rsVarTypeInSpecification]) ) or
-         ( (tbf in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]) and
+         ( (tfb in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection, cfbtClassConstBlock, cfbtClassTypeBlock]) and
            ( (fRange * [rsAfterClassMembers, rsInProcHeader] = [rsAfterClassMembers]) or
              (fRange * [rsAfterClassMembers, rsAfterEqualOrColon, rsVarTypeInSpecification] = [rsVarTypeInSpecification])
          ) ) or
-         ( (tbf in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
+         ( (tfb in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
            (fRange * [rsInProcHeader] = []) ) or
-         ( (tbf in [cfbtUnit, cfbtNone]) and
+         ( (tfb in [cfbtUnit, cfbtNone]) and
            (fRange * [rsInProcHeader] = []) and (FTokenState = tsAfterProcName) )
        ) and
        ( fRange *[rsAfterEqualOrColon, rsProperty] = [] ) and
@@ -2318,9 +2710,9 @@ begin
   then begin
     Result := tkModifier;
     // type foo = class abstract
-    if (rsAfterClass in fRange) and (TopPascalCodeFoldBlockType = cfbtClass) then begin
-      fRange := fRange + [rsAtClass, rsAfterIdentifierOrValue]; // forward, in case of further class modifiers  end
-      FOldRange := FOldRange - [rsAfterIdentifierOrValue];
+    if (rsInClassHeader in fRange) and (TopPascalCodeFoldBlockType = cfbtClass) then begin
+      fRange := fRange + [rsInClassHeader, rsAfterIdentifierOrValue]; // forward, in case of further class modifiers  end
+      FOldRange := FOldRange - [rsInClassHeader, rsAfterIdentifierOrValue];
     end
     else
     // procedure foo; virtual; abstract;
@@ -2329,13 +2721,15 @@ begin
     else
       Result := tkIdentifier;
   end
-  else if ((CompilerMode = pcmMacPas) or not (rsCompilerModeSet in fRange)) and
-    KeyComp('ObjcClass')
+  else
+  if HasCompilerModeswitch([pcsObjectiveC1, pcsObjectiveC2]) and
+     KeyComp('ObjcClass')
   then begin
     Result := tkKey;
     if (rsAfterEqualOrColon in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
     begin
-      fRange := fRange + [rsAtClass];
+      fRange := fRange + [rsInObjcProtocol] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInObjcProtocol];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
@@ -2389,8 +2783,10 @@ end;
 
 function TSynPasSyn.Func87: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault, spsmStringOnly]) and KeyComp('String') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault, spsmStringOnly]) and KeyComp('String') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
     Result := tkIdentifier;
 end;
@@ -2435,19 +2831,20 @@ begin
     Result := tkKey;
     if (rsAfterEqualOrColon in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
     begin
-      fRange := fRange + [rsAtClass];
+      fRange := fRange + [rsInClassHeader];
+      FOldRange := FOldRange - [rsInClassHeader];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
   else
   if KeyComp('strict') and
-     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) and
+     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtClassConstBlock, cfbtClassTypeBlock]) and
      (fRange * [rsInProcHeader, rsAfterEqual, rsAfterEqualOrColon, rsVarTypeInSpecification] = []) and
-     (fRange * [rsAfterSemiColon, rsAfterClass] <> []) and
+     ( (FTokenState in [tsAtBeginOfStatement, tsAfterVarConstType, tsAfterClass, tsAfterTypedConst]) or (fRange * [rsInClassHeader, rsInObjcProtocol] <> []) ) and
      ScanForClassSection
   then begin
-    fRange := fRange + [rsAfterSemiColon]; // flag for private/proctected (must be next)
-    FOldRange := FOldRange - [rsAfterSemiColon];
+    CloseFolds(TopPascalCodeFoldBlockType, [cfbtClassConstBlock, cfbtClassTypeBlock]);
+    FNextTokenState := tsAtBeginOfStatement; // flag for private/proctected (must be next)
     Result := tkKey;
   end
   else
@@ -2455,19 +2852,22 @@ begin
 end;
 
 function TSynPasSyn.Func91: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Downto') then
     Result := tkKey
   else
   if KeyComp('Private') and
-     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) and
+     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtClassConstBlock, cfbtClassTypeBlock]) and
      (fRange * [rsInProcHeader, rsAfterEqual, rsAfterEqualOrColon, rsVarTypeInSpecification] = []) and
-     (fRange * [rsAfterSemiColon, rsAfterClass] <> [])
+     ( (FTokenState in [tsAtBeginOfStatement, tsAfterVarConstType, tsAfterClass, tsAfterTypedConst]) or (fRange * [rsInClassHeader, rsInObjcProtocol] <> []) )
   then begin
     Result := tkKey;
-    fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification] + [rsAfterSemiColon];
-    FOldRange := FOldRange - [rsAfterSemiColon];
-    if (TopPascalCodeFoldBlockType=cfbtClassSection) then
+    FNextTokenState := tsAtBeginOfStatement;
+    fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification];
+    tfb := CloseFolds(TopPascalCodeFoldBlockType(), [cfbtClassConstBlock, cfbtClassTypeBlock]);
+    if (tfb=cfbtClassSection) then
       EndPascalCodeFoldBlockLastLine;
     StartPascalCodeFoldBlock(cfbtClassSection);
   end
@@ -2513,6 +2913,8 @@ begin
     then begin
       Result := tkKey;
       FOldRange := FOldRange - [rsAtPropertyOrReadWrite];
+      if FTokenState = tsAfterProperty then
+        FTokenState := tsNone;
     end
     else
       Result := tkIdentifier;
@@ -2522,7 +2924,7 @@ end;
 function TSynPasSyn.Func95: TtkTokenKind;
 begin
   if KeyComp('Absolute') and
-     (TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType]) and
+     (TopPascalCodeFoldBlockType in cfbtVarConstType) and
      (fRange * [rsVarTypeInSpecification, rsAfterEqualOrColon, rsProperty] = [rsVarTypeInSpecification]) and
      (PasCodeFoldRange.BracketNestLevel = 0) and
      (FTokenState = tsNone) // FTokenState <> tsAfterAbsolute
@@ -2540,16 +2942,19 @@ begin
 end;
 
 function TSynPasSyn.Func96: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Published') and
-     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) and
+     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtClassConstBlock, cfbtClassTypeBlock]) and
      (fRange * [rsInProcHeader, rsAfterEqual, rsAfterEqualOrColon, rsVarTypeInSpecification] = []) and
-     (fRange * [rsAfterSemiColon, rsAfterClass] <> [])
+     ( (FTokenState in [tsAtBeginOfStatement, tsAfterVarConstType, tsAfterClass, tsAfterTypedConst]) or (fRange * [rsInClassHeader, rsInObjcProtocol] <> []) )
   then begin
     Result := tkKey;
-    fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification] + [rsAfterSemiColon];
-    FOldRange := FOldRange - [rsAfterSemiColon];
-    if (TopPascalCodeFoldBlockType=cfbtClassSection) then
+    FNextTokenState := tsAtBeginOfStatement;
+    fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification];
+    tfb := CloseFolds(TopPascalCodeFoldBlockType(), [cfbtClassConstBlock, cfbtClassTypeBlock]);
+    if (tfb=cfbtClassSection) then
       EndPascalCodeFoldBlockLastLine;
     StartPascalCodeFoldBlock(cfbtClassSection);
   end
@@ -2568,7 +2973,12 @@ end;
 
 function TSynPasSyn.Func97: TtkTokenKind;
 begin
-  if KeyComp('Threadvar') then Result := tkKey
+  if KeyComp('Threadvar') then begin
+    Result := tkKey;
+    if TopPascalCodeFoldBlockType() in cfbtVarConstTypeLabelExt then
+      EndPascalCodeFoldBlockLastLine;
+    StartPascalCodeFoldBlock(cfbtVarBlock);
+  end
   else
   if (rsInObjcProtocol in fRange) and
      KeyComp('required') and
@@ -2584,16 +2994,17 @@ end;
 
 function TSynPasSyn.Func98: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
-  tbf := TopPascalCodeFoldBlockType;
+  tfb := TopPascalCodeFoldBlockType;
   if (PasCodeFoldRange.BracketNestLevel in [0, 1]) and
-     (FTokenState <> tsAfterExternal) and
+     (not(FTokenState in [tsAfterVarConstType, tsAfterExternal, tsAfterExternalName])) and
      ( ( (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-         (tbf in ProcModifierAllowed)
+         (tfb in ProcModifierAllowed)
        ) or
-       ( (fRange * [rsAfterSemiColon, rsInProcHeader, rsWasInProcHeader, rsInTypeBlock, rsInConstBlock] = [rsAfterSemiColon]) and
-         (tbf in [cfbtVarType, cfbtLocalVarType])
+       ( (FTokenState in [tsAtBeginOfStatement, tsAfterTypedConst, tsAfterCvar]) and
+         (fRange * [rsInProcHeader, rsWasInProcHeader] = []) and
+         (tfb in [ cfbtVarBlock, cfbtLocalVarBlock])
        )
      ) and
      KeyComp('Export')
@@ -2615,23 +3026,26 @@ end;
 
 function TSynPasSyn.Func99: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
-  tbf := TopPascalCodeFoldBlockType;
+  tfb := TopPascalCodeFoldBlockType;
   if (PasCodeFoldRange.BracketNestLevel = 0) and
-     (FTokenState <> tsAfterExternal) and
+     (not(FTokenState in [tsAfterVarConstType, tsAfterExternal, tsAfterExternalName])) and
      ( ( (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-         (tbf in ProcModifierAllowed)
+         (tfb in ProcModifierAllowed)
        ) or
-       ( (fRange * [rsAfterSemiColon, rsInProcHeader, rsWasInProcHeader, rsInTypeBlock, rsInConstBlock] = [rsAfterSemiColon]) and
-         (tbf in [cfbtVarType, cfbtLocalVarType])
-       )
+       ( (FTokenState in [tsAtBeginOfStatement, tsAfterTypedConst, tsAfterCvar]) and
+         (fRange * [rsInProcHeader, rsWasInProcHeader] = []) and
+         (tfb in [ cfbtVarBlock, cfbtLocalVarBlock])
+       ) or
+       ( rsInObjcProtocol in fRange )
      ) and
      KeyComp('External')
   then begin
     Result := tkModifier;
+    FOldRange := FOldRange - [rsInObjcProtocol];
     FNextTokenState := tsAfterExternal;
-    if tbf = cfbtProcedure then begin
+    if tfb = cfbtProcedure then begin
       EndPascalCodeFoldBlock(True);
     end;
   end
@@ -2643,7 +3057,7 @@ begin
   if KeyComp('Automated') and // in old times: class section
      (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) and
      (fRange * [rsInProcHeader, rsAfterEqual, rsAfterEqualOrColon, rsVarTypeInSpecification] = []) and
-     (fRange * [rsAfterSemiColon, rsAfterClass] <> [])
+     ( (FTokenState in [tsAtBeginOfStatement, tsAfterTypedConst, tsAfterClass]) or (fRange * [rsInClassHeader] <> []) )
   then
     Result := tkKey
   else
@@ -2657,29 +3071,29 @@ end;
 
 function TSynPasSyn.Func101: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
-  tbf := TopPascalCodeFoldBlockType;
+  tfb := TopPascalCodeFoldBlockType;
   if KeyComp('Register') and
      (PasCodeFoldRange.BracketNestLevel in [0, 1]) and
      (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-     (tbf in ProcModifierAllowed)
+     (tfb in ProcModifierAllowed)
   then begin
     Result := tkModifier;
     FRange := FRange + [rsInProcHeader];
   end
   else
   if KeyComp('Platform') then begin
-    if ( ( (tbf in [cfbtVarType, cfbtLocalVarType]) and
+    if ( ( (tfb in cfbtVarConstType) and
            (FTokenState <> tsAfterAbsolute) and
            (fRange * [rsVarTypeInSpecification, rsAfterEqualOrColon] = [rsVarTypeInSpecification]) ) or
-         ( (tbf in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]) and
+         ( (tfb in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection, cfbtClassConstBlock, cfbtClassTypeBlock]) and
            ( (fRange * [rsAfterClassMembers, rsInProcHeader] = [rsAfterClassMembers]) or
              (fRange * [rsAfterClassMembers, rsAfterEqualOrColon, rsVarTypeInSpecification] = [rsVarTypeInSpecification])
          ) ) or
-         ( (tbf in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
+         ( (tfb in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
            (fRange * [rsInProcHeader] = []) ) or
-         ( (tbf in [cfbtUnit, cfbtNone]) and
+         ( (tfb in [cfbtUnit, cfbtNone]) and
            (fRange * [rsInProcHeader] = []) and (FTokenState = tsAfterProcName) )
        ) and
        ( fRange *[rsAfterEqualOrColon, rsProperty] = [] ) and
@@ -2687,7 +3101,7 @@ begin
     then begin
       Result := tkModifier;
       if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader, rsAfterClassMembers] = [rsWasInProcHeader, rsAfterClassMembers]) and
-         (tbf in [cfbtClass, cfbtClassSection]) and
+         (tfb in [cfbtClass, cfbtClassSection]) and
          (CompilerMode = pcmDelphi)
       then
         FRange := FRange + [rsInProcHeader]; // virtual reintroduce overload can be after virtual
@@ -2697,7 +3111,7 @@ begin
   end
   else
   if FExtendedKeywordsMode and KeyComp('Continue') and
-     (tbf in PascalStatementBlocks) and (fRange * [rsAfterEqualOrColon] = []) and
+     (tfb in PascalStatementBlocks) and (fRange * [rsAfterEqualOrColon] = []) and
      (PasCodeFoldRange.BracketNestLevel = 0)
   then
     Result := tkKey
@@ -2718,7 +3132,7 @@ begin
         PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
         CloseBeginEndBlocksBeforeProc;
 
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+        if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
           EndPascalCodeFoldBlockLastLine;
 
         InClass := TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord];
@@ -2737,7 +3151,7 @@ begin
   if (rsInObjcProtocol in fRange) and
      KeyComp('optional') and
      (PasCodeFoldRange.BracketNestLevel = 0) and
-     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection])
+     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtClassConstBlock, cfbtClassTypeBlock])
   then begin
     Result := tkKey;
     fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification];
@@ -2772,7 +3186,7 @@ begin
         PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
         CloseBeginEndBlocksBeforeProc;
 
-        if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+        if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
           EndPascalCodeFoldBlockLastLine;
 
         InClass := TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord];
@@ -2802,16 +3216,19 @@ begin
 end;
 
 function TSynPasSyn.Func106: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Protected') and
-     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord]) and
+     (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtClassConstBlock, cfbtClassTypeBlock]) and
      (fRange * [rsInProcHeader, rsAfterEqual, rsAfterEqualOrColon, rsVarTypeInSpecification] = []) and
-     (fRange * [rsAfterSemiColon, rsAfterClass] <> [])
+     ( (FTokenState in [tsAtBeginOfStatement, tsAfterVarConstType, tsAfterClass, tsAfterTypedConst]) or (fRange * [rsInClassHeader, rsInObjcProtocol] <> []) )
   then begin
     Result := tkKey;
-    fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification] + [rsAfterSemiColon];
-    FOldRange := FOldRange - [rsAfterSemiColon];
-    if (TopPascalCodeFoldBlockType=cfbtClassSection) then
+    FNextTokenState := tsAtBeginOfStatement;
+    fRange := fRange - [rsAfterClassMembers, rsVarTypeInSpecification];
+    tfb := CloseFolds(TopPascalCodeFoldBlockType(), [cfbtClassConstBlock, cfbtClassTypeBlock]);
+    if (tfb=cfbtClassSection) then
       EndPascalCodeFoldBlockLastLine;
     StartPascalCodeFoldBlock(cfbtClassSection);
   end
@@ -2828,7 +3245,7 @@ begin
     begin
       PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
       CloseBeginEndBlocksBeforeProc;
-      if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+      if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
         EndPascalCodeFoldBlockLastLine;
 
       InClass := TopPascalCodeFoldBlockType in [{cfbtClass,} cfbtClassSection, cfbtRecord]; // only in records
@@ -2879,13 +3296,14 @@ end;
 
 function TSynPasSyn.Func124: TtkTokenKind;
 begin
-  if ((CompilerMode = pcmMacPas) or not (rsCompilerModeSet in fRange)) and
+  if HasCompilerModeswitch([pcsObjectiveC1, pcsObjectiveC2]) and
      KeyComp('ObjcCategory')
   then begin
     Result := tkKey;
     if (rsAfterEqualOrColon in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
     begin
-      fRange := fRange + [rsAtClass] - [rsVarTypeInSpecification, rsAfterEqual];
+      fRange := fRange + [rsInObjcProtocol] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInObjcProtocol];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
@@ -2937,8 +3355,10 @@ end;
 
 function TSynPasSyn.Func128: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault]) and KeyComp('Widestring') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault]) and KeyComp('Widestring') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
     Result := tkIdentifier;
 end;
@@ -2950,7 +3370,8 @@ begin
     Result := tkKey;
     if (rsAfterEqual in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
     begin
-      fRange := fRange + [rsAtClass] - [rsVarTypeInSpecification, rsAfterEqual];
+      fRange := fRange + [rsInClassHeader] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInClassHeader];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
@@ -2960,12 +3381,15 @@ end;
 
 function TSynPasSyn.Func130: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault]) and KeyComp('Ansistring') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault]) and KeyComp('Ansistring') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
   if (PasCodeFoldRange.BracketNestLevel = 0) and
-     (fRange * [rsAfterClassMembers, rsAfterSemiColon, rsAfterEqualOrColon, rsInProcHeader, rsProperty] =
-               [rsAfterClassMembers, rsAfterSemiColon]) and
+     (FTokenState = tsAtBeginOfStatement) and
+     (fRange * [rsAfterClassMembers, rsAfterEqualOrColon, rsInProcHeader, rsProperty] =
+               [rsAfterClassMembers]) and
      KeyComp('Enumerator') and
      (TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord])
   then begin
@@ -2993,11 +3417,16 @@ begin
 end;
 
 function TSynPasSyn.Func133: TtkTokenKind;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Property') then begin
     Result := tkKey;
     fRange := fRange + [rsProperty, rsAtPropertyOrReadWrite];
-    if TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord] then
+    if rtsAfterProperty in FRequiredStates then
+      FNextTokenState := tsAfterProperty;
+    tfb := CloseFolds(TopPascalCodeFoldBlockType, [cfbtClassConstBlock, cfbtClassTypeBlock]);
+    if tfb in [cfbtClass, cfbtClassSection, cfbtRecord] then
       fRange := fRange + [rsAfterClassMembers];
   end
   else
@@ -3009,7 +3438,7 @@ begin
   if KeyComp('Finalization') then begin
     PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
     CloseBeginEndBlocksBeforeProc;
-    if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+    if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabel then
       EndPascalCodeFoldBlockLastLine;
     if TopPascalCodeFoldBlockType=cfbtUnitSection then EndPascalCodeFoldBlockLastLine;
     StartPascalCodeFoldBlock(cfbtUnitSection);
@@ -3045,20 +3474,20 @@ end;
 
 function TSynPasSyn.Func142: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
   if KeyComp('Experimental') then begin
-    tbf := TopPascalCodeFoldBlockType;
-    if ( ( (tbf in [cfbtVarType, cfbtLocalVarType]) and
+    tfb := TopPascalCodeFoldBlockType;
+    if ( ( (tfb in cfbtVarConstType) and
            (FTokenState <> tsAfterAbsolute) and
            (fRange * [rsVarTypeInSpecification, rsAfterEqualOrColon] = [rsVarTypeInSpecification]) ) or
-         ( (tbf in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]) and
+         ( (tfb in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection, cfbtClassConstBlock, cfbtClassTypeBlock]) and
            ( (fRange * [rsAfterClassMembers, rsInProcHeader] = [rsAfterClassMembers]) or
              (fRange * [rsAfterClassMembers, rsAfterEqualOrColon, rsVarTypeInSpecification] = [rsVarTypeInSpecification])
          ) ) or
-         ( (tbf in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
+         ( (tfb in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
            (fRange * [rsInProcHeader] = []) ) or
-         ( (tbf in [cfbtUnit, cfbtNone]) and
+         ( (tfb in [cfbtUnit, cfbtNone]) and
            (fRange * [rsInProcHeader] = []) and (FTokenState = tsAfterProcName) )
        ) and
        ( fRange *[rsAfterEqualOrColon, rsProperty] = [] ) and
@@ -3089,7 +3518,7 @@ begin
       PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
       CloseBeginEndBlocksBeforeProc;
 
-      if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+      if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
         EndPascalCodeFoldBlockLastLine;
 
       InClass := TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord];
@@ -3118,13 +3547,14 @@ end;
 
 function TSynPasSyn.Func144: TtkTokenKind;
 begin
-  if ((CompilerMode = pcmMacPas) or not (rsCompilerModeSet in fRange)) and
+  if HasCompilerModeswitch([pcsObjectiveC1, pcsObjectiveC2]) and
      KeyComp('ObjcProtocol')
   then begin
     Result := tkKey;
     if (rsAfterEqualOrColon in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
     begin
-      fRange := fRange + [rsAtClass, rsInObjcProtocol] - [rsVarTypeInSpecification, rsAfterEqual];
+      fRange := fRange + [rsInObjcProtocol] - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon];
+      FOldRange := FOldRange - [rsInObjcProtocol];
       StartPascalCodeFoldBlock(cfbtClass);
     end;
   end
@@ -3134,20 +3564,20 @@ end;
 
 function TSynPasSyn.Func151: TtkTokenKind;
 var
-  tbf: TPascalCodeFoldBlockType;
+  tfb: TPascalCodeFoldBlockType;
 begin
-  tbf := TopPascalCodeFoldBlockType;
+  tfb := TopPascalCodeFoldBlockType;
   if KeyComp('Unimplemented') then begin
-    if ( ( (tbf in [cfbtVarType, cfbtLocalVarType]) and
+    if ( ( (tfb in cfbtVarConstType) and
            (FTokenState <> tsAfterAbsolute) and
            (fRange * [rsVarTypeInSpecification, rsAfterEqualOrColon] = [rsVarTypeInSpecification]) ) or
-         ( (tbf in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection]) and
+         ( (tfb in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCase, cfbtRecordCaseSection, cfbtClassConstBlock, cfbtClassTypeBlock]) and
            ( (fRange * [rsAfterClassMembers, rsInProcHeader] = [rsAfterClassMembers]) or
              (fRange * [rsAfterClassMembers, rsAfterEqualOrColon, rsVarTypeInSpecification] = [rsVarTypeInSpecification])
          ) ) or
-         ( (tbf in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
+         ( (tfb in [cfbtUnitSection, cfbtProgram, cfbtProcedure]) and
            (fRange * [rsInProcHeader] = []) ) or
-         ( (tbf in [cfbtUnit, cfbtNone]) and
+         ( (tfb in [cfbtUnit, cfbtNone]) and
            (fRange * [rsInProcHeader] = []) and (FTokenState = tsAfterProcName) )
        ) and
        ( fRange *[rsAfterEqualOrColon, rsProperty] = [] ) and
@@ -3169,8 +3599,10 @@ end;
 
 function TSynPasSyn.Func158: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault]) and KeyComp('UnicodeString') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault]) and KeyComp('UnicodeString') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
     Result := tkIdentifier;
 end;
@@ -3184,7 +3616,7 @@ begin
       PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
       CloseBeginEndBlocksBeforeProc;
 
-      if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+      if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabelExt then
         EndPascalCodeFoldBlockLastLine;
 
       InClass := TopPascalCodeFoldBlockType in [cfbtClass, cfbtClassSection, cfbtRecord];
@@ -3201,7 +3633,7 @@ begin
     if KeyComp('Implementation') then begin
       PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
       CloseBeginEndBlocksBeforeProc;
-      if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+      if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabel then
         EndPascalCodeFoldBlockLastLine;
       if TopPascalCodeFoldBlockType=cfbtUnitSection then EndPascalCodeFoldBlockLastLine;
       StartPascalCodeFoldBlock(cfbtUnitSection);
@@ -3214,8 +3646,10 @@ end;
 
 function TSynPasSyn.Func167: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault]) and KeyComp('Shortstring') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault]) and KeyComp('Shortstring') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
   if KeyComp('Ms_abi_default') and
      (PasCodeFoldRange.BracketNestLevel in [0, 1]) and
@@ -3234,7 +3668,7 @@ begin
   if KeyComp('Initialization') then begin
     PasCodeFoldRange.BracketNestLevel := 0; // Reset in case of partial code
     CloseBeginEndBlocksBeforeProc;
-    if TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType] then
+    if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabel then
       EndPascalCodeFoldBlockLastLine;
     if TopPascalCodeFoldBlockType=cfbtUnitSection then EndPascalCodeFoldBlockLastLine;
     StartPascalCodeFoldBlock(cfbtUnitSection);
@@ -3246,16 +3680,20 @@ end;
 
 function TSynPasSyn.Func170: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault]) and KeyComp('UTF8String') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault]) and KeyComp('UTF8String') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
     Result := tkIdentifier;
 end;
 
 function TSynPasSyn.Func181: TtkTokenKind;
 begin
-  if (FStringKeywordMode in [spsmDefault]) and KeyComp('RawByteString') then
-    Result := tkKey
+  if (FStringKeywordMode in [spsmDefault]) and KeyComp('RawByteString') then begin
+    Result := tkKey;
+    FTokenIsValueOrTypeName := True;
+  end
   else
     Result := tkIdentifier;
 end;
@@ -3264,9 +3702,9 @@ function TSynPasSyn.Func191: TtkTokenKind;
 begin
   if KeyComp('Resourcestring') then begin
     Result := tkKey;
-	if TopPascalCodeFoldBlockType = cfbtVarType then
+    if TopPascalCodeFoldBlockType in cfbtVarConstTypeLabel then
       EndPascalCodeFoldBlockLastLine;
-    StartPascalCodeFoldBlock(cfbtVarType);
+    StartPascalCodeFoldBlock(cfbtVarBlock);
   end
   else if KeyComp('Stringresource') then
     Result := tkKey else Result := tkIdentifier;
@@ -3378,6 +3816,7 @@ end;
 constructor TSynPasSyn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
+  FCaseLabelAttriMatchesElseOtherwise := True;;
   FStringKeywordMode := spsmDefault;
   FExtendedKeywordsMode := False;
   CreateDividerDrawConfig;
@@ -3389,7 +3828,7 @@ begin
   AddAttribute(fCommentAttri);
   FIDEDirectiveAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrIDEDirective, SYNS_XML_AttrIDEDirective);
   AddAttribute(FIDEDirectiveAttri);
-  // FCurIDEDirectiveAttri, FCurCaseLabelAttri, FCurProcedureHeaderNameAttr
+  // FCurIDEDirectiveAttri, FCurCaseLabelAttri, FCurProcTypeDeclExtraAttr
   // They are not available through the "Attribute" property (not added via AddAttribute
   // But they are returned via GetTokenAttribute, so they should have a name.
   FCurIDEDirectiveAttri := TSynSelectedColorMergeResult.Create(@SYNS_AttrIDEDirective, SYNS_XML_AttrIDEDirective);
@@ -3411,10 +3850,36 @@ begin
   AddAttribute(fSymbolAttri);
   FProcedureHeaderNameAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrProcedureHeaderName, SYNS_XML_AttrProcedureHeaderName);
   AddAttribute(FProcedureHeaderNameAttr);
+
+  FPropertyNameAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrPropertyName, SYNS_XML_AttrPropertyName);
+  AddAttribute(FPropertyNameAttr);
+  FProcedureHeaderParamAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrProcedureHeaderParam, SYNS_XML_AttrProcedureHeaderParam);
+  AddAttribute(FProcedureHeaderParamAttr);
+  FProcedureHeaderResultAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrProcedureHeaderResult, SYNS_XML_AttrProcedureHeaderResult);
+  AddAttribute(FProcedureHeaderResultAttr);
+  FProcedureHeaderTypeAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrProcedureHeaderType, SYNS_XML_AttrProcedureHeaderType);
+  AddAttribute(FProcedureHeaderTypeAttr);
+  FProcedureHeaderValueAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrProcedureHeaderValue, SYNS_XML_AttrProcedureHeaderValue);
+  AddAttribute(FProcedureHeaderValueAttr);
+  FDeclarationVarConstNameAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrDeclarationVarConstName, SYNS_XML_AttrDeclarationVarConstName);
+  AddAttribute(FDeclarationVarConstNameAttr);
+  FDeclarationTypeNameAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrDeclarationTypeName, SYNS_XML_AttrDeclarationTypeName);
+  AddAttribute(FDeclarationTypeNameAttr);
+  FDeclarationTypeAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrDeclarationType, SYNS_XML_AttrDeclarationType);
+  AddAttribute(FDeclarationTypeAttr);
+  FDeclarationValueAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrDeclarationValue, SYNS_XML_AttrDeclarationValue);
+  AddAttribute(FDeclarationValueAttr);
+  FGotoLabelAttr := TSynHighlighterAttributes.Create(@SYNS_AttrGotoLabel, SYNS_XML_AttrGotoLabel);
+  AddAttribute(FGotoLabelAttr);
+  FStructMemberAttr := TSynHighlighterAttributesModifier.Create(@SYNS_AttrStructMember, SYNS_XML_AttrStructMember);
+  AddAttribute(FStructMemberAttr);
+  FCurStructMemberExtraAttri := TSynSelectedColorMergeResult.Create(@SYNS_AttrStructMember, SYNS_XML_AttrStructMember);
+
+
   FCaseLabelAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrCaseLabel, SYNS_XML_AttrCaseLabel);
   AddAttribute(FCaseLabelAttri);
   FCurCaseLabelAttri := TSynSelectedColorMergeResult.Create(@SYNS_AttrCaseLabel, SYNS_XML_AttrCaseLabel);
-  FCurProcedureHeaderNameAttr := TSynSelectedColorMergeResult.Create(@SYNS_AttrProcedureHeaderName, SYNS_XML_AttrProcedureHeaderName);
+  FCurProcTypeDeclExtraAttr := TSynSelectedColorMergeResult.Create(@SYNS_AttrProcedureHeaderName, SYNS_XML_AttrProcedureHeaderName);
   fDirectiveAttri := TSynHighlighterAttributes.Create(@SYNS_AttrDirective, SYNS_XML_AttrDirective);
   fDirectiveAttri.Style:= [fsItalic];
   AddAttribute(fDirectiveAttri);
@@ -3454,7 +3919,8 @@ begin
   DestroyDividerDrawConfig;
   FreeAndNil(FCurCaseLabelAttri);
   FreeAndNil(FCurIDEDirectiveAttri);
-  FreeAndNil(FCurProcedureHeaderNameAttr);
+  FreeAndNil(FCurProcTypeDeclExtraAttr);
+  FreeAndNil(FCurStructMemberExtraAttri);
   FreeAndNil(FCurPasDocAttri);
   FreeAndNil(FCustomTokenMergedMarkup);
   FreeAndNil(FPasDocWordList);
@@ -3462,19 +3928,6 @@ begin
   for i := 0 to 255 do
     FCustomTokenInfo[i].List.Free;
   inherited Destroy;
-end;
-
-procedure TSynPasSyn.Loaded;
-begin
-  if Byte(FTypeHelpers) = 99 then
-    FTypeHelpers := FCompilerMode in [pcmDelphi];
-  inherited Loaded;
-end;
-
-procedure TSynPasSyn.Loading;
-begin
-  Byte(FTypeHelpers) := 99; // Help detecting, if changed while loading.
-  inherited Loading;
 end;
 
 procedure TSynPasSyn.SetLine(const NewValue: string; LineNumber:Integer);
@@ -3488,6 +3941,7 @@ begin
   fLine:=PChar(Pointer(fLineStr));
   Run := 0;
   FIsInSlash := False;
+  FLastTokenTypeDeclExtraAttrib := eaNone;
   Inherited SetLine(NewValue,LineNumber);
   PasCodeFoldRange.LastLineCodeFoldLevelFix := 0;
   PasCodeFoldRange.PasFoldFixLevel := 0;
@@ -3500,13 +3954,6 @@ begin
   if not IsCollectingNodeInfo then
     Next;
 end; { SetLine }
-
-procedure TSynPasSyn.SetNestedComments(const ANestedComments: boolean);
-begin
-  if FNestedComments = ANestedComments then Exit;
-  FNestedComments := ANestedComments;
-  PasCodeFoldRange.NestedComments:=FNestedComments;
-end;
 
 procedure TSynPasSyn.AddressOpProc;
 begin
@@ -3645,6 +4092,16 @@ begin
 end;
 
 procedure TSynPasSyn.DirectiveProc;
+  procedure ApplyModeSwitch(ASwitch: TPascalCompilerModeSwitch);
+  begin
+    // skip space
+    while (fLine[Run] in [' ',#9,#10,#13]) do inc(Run);
+    if fLine[Run] in ['+', '}'] then
+      ModeSwitches := ModeSwitches + [ASwitch]
+    else
+    if fLine[Run] = '-' then
+      ModeSwitches := ModeSwitches - [ASwitch];
+  end;
 begin
   fTokenID := tkDirective;
   if TextComp('modeswitch') then begin
@@ -3655,24 +4112,25 @@ begin
     if TextComp('nestedcomments') then
     begin
       inc(Run,14);
-      // skip space
-      while (fLine[Run] in [' ',#9,#10,#13]) do inc(Run);
-      if fLine[Run] in ['+', '}'] then
-        NestedComments:=True
-      else
-      if fLine[Run] = '-' then
-        NestedComments:=False;
-    end;
+      ApplyModeSwitch(pcsNestedComments);
+    end
+    else
     if TextComp('typehelpers') then
     begin
       inc(Run,11);
-      // skip space
-      while (fLine[Run] in [' ',#9,#10,#13]) do inc(Run);
-      if fLine[Run] in ['+', '}'] then
-        TypeHelpers := True
-      else
-      if fLine[Run] = '-' then
-        TypeHelpers := False;
+      ApplyModeSwitch(pcsTypeHelpers);
+    end
+    else
+    if TextComp('objectivec1') then
+    begin
+      inc(Run,11);
+      ApplyModeSwitch(pcsObjectiveC1);
+    end
+    else
+    if TextComp('objectivec2') then
+    begin
+      inc(Run,11);
+      ApplyModeSwitch(pcsObjectiveC2);
     end;
   end;
   if TextComp('mode') then begin
@@ -3708,7 +4166,7 @@ begin
         break;
       end;
     '{':
-      if NestedComments then begin
+      if pcsNestedComments in ModeSwitches then begin
         fStringLen := 1;
         StartPascalCodeFoldBlock(cfbtNestedComment);
       end;
@@ -3863,14 +4321,19 @@ begin
 end;
 
 procedure TSynPasSyn.ColonProc;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   fTokenID := tkSymbol;
   inc(Run);
   if fLine[Run] = '=' then
     inc(Run) // ":="
   else begin
+    if (rrsAfterColon in FRequiredStates) and not (rsAtCaseLabel in fRange) then
+      fRange := fRange + [rsAfterColon];
     fRange := fRange + [rsAfterEqualOrColon] - [rsAtCaseLabel];
-    if (TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType, cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCaseSection]) and
+    tfb := TopPascalCodeFoldBlockType;
+    if (tfb in cfbtVarConstTypeExt + [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCaseSection]) and
        ( (rsProperty in fRange) or not(rsAfterClassMembers in fRange) )
     then
       fRange := fRange + [rsVarTypeInSpecification];
@@ -3878,12 +4341,15 @@ begin
     // modifiers "alias: 'foo';"
     if (PasCodeFoldRange.BracketNestLevel = 0) then begin
       if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsInProcHeader]) and
-         (TopPascalCodeFoldBlockType in ProcModifierAllowed)
+         (tfb in ProcModifierAllowed)
       then
         FRange := FRange + [rsInProcHeader]
       else
-      if rsInConstBlock in fRange then
-        fRange := fRange + [rsInTypedConst];
+      if tfb in [cfbtConstBlock, cfbtLocalConstBlock, cfbtClassConstBlock] then
+        fRange := fRange + [rsInTypedConst]
+      else
+      if tfb in PascalStatementBlocks then  // goto label
+        FNextTokenState := tsAtBeginOfStatement;
     end;
   end;
 end;
@@ -3894,8 +4360,12 @@ begin
   inc(Run);
   if fLine[Run] = '=' then begin
     inc(Run);
-    if (rsInTypeBlock in fRange) then // generic TFoo<..>= // no space between > and =
+    // generic TFoo<..>= // no space between > and =
+    if TopPascalCodeFoldBlockType in [cfbtTypeBlock, cfbtLocalTypeBlock, cfbtClassTypeBlock] then begin
       fRange := fRange + [rsAfterEqual, rsAfterEqualOrColon];
+      if PasCodeFoldRange.BracketNestLevel = 0 then
+        fRange := fRange - [rsAfterColon];
+    end;
   end;
   //      DoAfterOperator;
   if fRange * [rsProperty, rsVarTypeInSpecification] = [rsProperty] then
@@ -3981,12 +4451,17 @@ begin
   fTokenID := tkSymbol;
 
   t := TopPascalCodeFoldBlockType;
-  if ( (t in PascalStatementBlocks - [cfbtAsm])  or               //cfbtClass, cfbtClassSection,
-       ( ( (t in [cfbtVarType, cfbtLocalVarType]) or
-           ((t in [cfbtProcedure, cfbtAnonymousProcedure]) and (PasCodeFoldRange.BracketNestLevel > 0))
-         ) and
-         (fRange * [rsInTypeBlock, rsAfterEqual] = [rsAfterEqual])
-     )) and
+  if ( (t in PascalStatementBlocks - [cfbtAsm])                 //cfbtClass, cfbtClassSection,
+       or
+       ( (t in [cfbtVarBlock, cfbtLocalVarBlock, cfbtConstBlock, cfbtLocalConstBlock, cfbtClassConstBlock]) and
+         (rsAfterEqual in fRange)
+       )
+       or
+       ( (t in [cfbtProcedure, cfbtAnonymousProcedure, cfbtTypeBlock, cfbtLocalTypeBlock]) and
+         (PasCodeFoldRange.BracketNestLevel > 0) and
+         (fRange * [rsInProcHeader, rsAfterEqual] = [rsInProcHeader, rsAfterEqual])
+       )
+     ) and
      not(rsAfterIdentifierOrValue in fRange)
   then begin
     if Run<fLineLen then begin
@@ -4047,12 +4522,17 @@ begin
   end;
   if (FTokenState = tsAfterProcName) then begin
     if rsInProcHeader in fRange then
-      FTokenFlags := FTokenFlags + [tfProcName];
+      FTokenTypeDeclExtraAttrib := eaProcName;
     FNextTokenState := tsAtProcName;
   end
   else
   if rsInRaise in fRange then
-    FNextTokenState := tsAfterRaise;
+    FNextTokenState := tsAfterRaise
+  else
+  if (rtsAfterDot in FRequiredStates) and
+     (TopPascalCodeFoldBlockType in PascalStatementBlocks)
+  then
+    FNextTokenState := tsAfterDot;
 end;
 
 procedure TSynPasSyn.AnsiProc;
@@ -4078,8 +4558,9 @@ begin
         break;
       end;
     end
-    else if NestedComments
-    and (fLine[Run] = '(') and (fLine[Run + 1] = '*') then
+    else
+    if (pcsNestedComments in ModeSwitches) and
+       (fLine[Run] = '(') and (fLine[Run + 1] = '*') then
     begin
       fStringLen := 2;
       StartPascalCodeFoldBlock(cfbtNestedComment);
@@ -4099,19 +4580,34 @@ begin
 end;
 
 procedure TSynPasSyn.RoundOpenProc;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   Inc(Run);
   if Run>=fLineLen then begin
     fTokenID:=tkSymbol;
-    if TopPascalCodeFoldBlockType = cfbtRecordCase then begin
+    tfb := TopPascalCodeFoldBlockType;
+    if tfb = cfbtRecordCase then begin
       fStringLen := 1;
       Dec(Run);
       StartPascalCodeFoldBlock(cfbtRecordCaseSection, True); // TODO: only if case-label attr is set
       Inc(Run);
       PasCodeFoldRange.BracketNestLevel := 0
     end
-    else
+    else begin
+      if (FTokenState = tsAfterProcName) and (rrsInParamDeclaration in FRequiredStates) and
+         (PasCodeFoldRange.BracketNestLevel = 0)
+      then
+        fRange := fRange + [rsInParamDeclaration];
+
+      if (tfb in cfbtVarConstTypeExt) then begin
+        FNextTokenState := tsAtBeginOfStatement;
+        if (rsInProcHeader in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
+          fRange := fRange - [rsAfterColon, rsAfterEqual];
+      end;
+
       PasCodeFoldRange.IncBracketNestLevel;
+    end;
     exit;
   end;
 
@@ -4140,16 +4636,33 @@ begin
     else
       begin
         fTokenID := tkSymbol;
-        if TopPascalCodeFoldBlockType = cfbtRecordCase then begin
+        tfb := TopPascalCodeFoldBlockType;
+        if tfb = cfbtRecordCase then begin
           fStringLen := 1;
           Dec(Run);
           StartPascalCodeFoldBlock(cfbtRecordCaseSection, True); // TODO: only if case-label attr is set
           Inc(Run);
           PasCodeFoldRange.BracketNestLevel := 0;
-          fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterEqualOrColon] + [rsAfterSemiColon];
+          FNextTokenState := tsAtBeginOfStatement;
+          fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon, rsAfterEqualOrColon];
         end
-        else
+        else begin
+          if (rrsInParamDeclaration in FRequiredStates) and
+             (PasCodeFoldRange.BracketNestLevel = 0) and
+             ( (FTokenState = tsAfterProcName) or
+               (tfb in cfbtVarConstTypeExt)
+             )
+          then
+            fRange := fRange + [rsInParamDeclaration];
+
+          if (tfb in cfbtVarConstTypeExt) then begin
+            FNextTokenState := tsAtBeginOfStatement;
+            if (rsInProcHeader in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
+              fRange := fRange - [rsAfterColon, rsAfterEqual];
+          end;
+
           PasCodeFoldRange.IncBracketNestLevel;
+        end;
       end;
   end;
 end;
@@ -4171,6 +4684,12 @@ begin
   end
   else
     PasCodeFoldRange.DecBracketNestLevel;
+
+  if (PasCodeFoldRange.BracketNestLevel = 0) then begin
+    if rsInParamDeclaration in fRange then
+      fRange := fRange - [rsAfterEqual, rsAfterColon];
+    fRange := fRange - [rsInParamDeclaration];
+  end;
   inc(Run);
 end;
 
@@ -4182,6 +4701,9 @@ begin
      (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader])
   then
     FOldRange := FOldRange - [rsWasInProcHeader];
+  if (FTokenState = tsAfterProperty) and (rrsInParamDeclaration in FRequiredStates) then
+    fRange := fRange + [rsInParamDeclaration];
+
   PasCodeFoldRange.IncBracketNestLevel;
 end;
 
@@ -4193,22 +4715,33 @@ begin
   FOldRange := FOldRange - [rsAfterIdentifierOrValue];
   PasCodeFoldRange.DecBracketNestLevel;
 
-  if (PasCodeFoldRange.BracketNestLevel = 0) and
-     (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
-     (TopPascalCodeFoldBlockType in ProcModifierAllowed)
-  then
-    FRange := FRange + [rsInProcHeader] - [rsWasInProcHeader]; // rsWasInProcHeader was removed from FOldRange
+  if (PasCodeFoldRange.BracketNestLevel = 0) then begin
+    if rsInParamDeclaration in fRange then
+      fRange := fRange - [rsAfterEqual, rsAfterColon];
+    fRange := fRange - [rsInParamDeclaration];
+    if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsWasInProcHeader]) and
+       (TopPascalCodeFoldBlockType in ProcModifierAllowed)
+    then
+      FRange := FRange + [rsInProcHeader] - [rsWasInProcHeader]; // rsWasInProcHeader was removed from FOldRange
+  end;
 end;
 
 procedure TSynPasSyn.EqualSignProc;
+var
+  tfb: TPascalCodeFoldBlockType;
 begin
   inc(Run);
   fTokenID := tkSymbol;
   fRange := fRange + [rsAfterEqualOrColon, rsAfterEqual];
-  if (TopPascalCodeFoldBlockType in [cfbtVarType, cfbtLocalVarType, cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCaseSection]) and
+  if PasCodeFoldRange.BracketNestLevel = 0 then
+    fRange := fRange - [rsAfterColon];
+  if (TopPascalCodeFoldBlockType in cfbtVarConstTypeExt + [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCaseSection]) and
      not(rsAfterClassMembers in fRange)
-  then
+  then begin
     fRange := fRange + [rsVarTypeInSpecification];
+    if PasCodeFoldRange.BracketNestLevel = 0 then
+      fRange := fRange - [rsInProcHeader];
+  end;
   DoAfterOperator;
 end;
 
@@ -4223,12 +4756,17 @@ begin
   Exclude(fRange, rsSkipAllPasBlocks);
 
   fStringLen := 1;
-  if tfb = cfbtUses then
+  if tfb in [cfbtUses, cfbtLabelBlock, cfbtLocalLabelBlock] then
     EndPascalCodeFoldBlock;
 
-  if (tfb = cfbtClass) and ((rsAfterClass in fRange) or InSkipBlocks) then begin
-    EndPascalCodeFoldBlock(True, True);
-    fRange := fRange - [rsInObjcProtocol];
+  if (PasCodeFoldRange.BracketNestLevel = 0) and
+     ( (fRange * [rsInClassHeader, rsInTypeHelper, rsInObjcProtocol] <> []) or
+       InSkipBlocks
+     )
+  then begin
+    if (tfb = cfbtClass) then
+      EndPascalCodeFoldBlock(True, True);
+    fRange := fRange - [rsInClassHeader, rsInTypeHelper, rsInObjcProtocol];
   end;
 
   EndStatement(tfb, [cfbtForDo,cfbtWhileDo,cfbtWithDo,cfbtIfThen,cfbtIfElse]);
@@ -4238,7 +4776,7 @@ begin
   if (tfb in [cfbtCase, cfbtRecordCase]) then
     fRange := fRange + [rsAtCaseLabel];
 
-  if (tfb in [cfbtClass, cfbtClassSection]) and
+  if (tfb in [cfbtClass, cfbtClassSection, cfbtClassConstBlock, cfbtClassTypeBlock]) and
      (fRange * [rsVarTypeInSpecification, rsAfterClassMembers] = [rsVarTypeInSpecification])
   then
     fRange := fRange + [rsAfterClassField];
@@ -4251,14 +4789,21 @@ begin
     fRange := fRange - [rsProperty, rsInProcHeader];
   end;
 
-  if FTokenState in [tsAfterExternal, tsAfterCvar] then
-    FNextTokenState := FTokenState
+  if FTokenState = tsAfterCvar then
+    FNextTokenState := tsAfterCvar
   else
-  if rsInTypedConst in fRange then
-    FNextTokenState := tsAfterTypedConst;
+  if FTokenState in [tsAfterExternal, tsAfterExternalName] then
+    FNextTokenState := tsAfterVarConstType
+  else
+  if (rsInTypedConst in fRange) and (PasCodeFoldRange.BracketNestLevel = 0) then
+    FNextTokenState := tsAfterTypedConst
+  else
+    FNextTokenState := tsAtBeginOfStatement;
 
-  fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsInTypedConst] + [rsAfterSemiColon];
-  FOldRange := FOldRange - [rsAfterSemiColon];
+  if (tfb in cfbtVarConstTypeExt) and (PasCodeFoldRange.BracketNestLevel > 0) then
+    fRange := fRange - [rsAfterEqual, rsAfterColon]
+  else
+    fRange := fRange - [rsVarTypeInSpecification, rsAfterEqual, rsAfterColon, rsInTypedConst];
 end;
 
 procedure TSynPasSyn.SlashProc;
@@ -4355,8 +4900,6 @@ end;
 procedure TSynPasSyn.StringProc;
 begin
   fTokenID := tkString;
-  if FTokenState = tsAfterExternal then
-    FNextTokenState := tsAfterExternal; // external 'foo' name 'bar'
   Inc(Run);
   while (not (fLine[Run] in [#0, #10, #13])) do begin
     if fLine[Run] = '''' then begin
@@ -4368,11 +4911,13 @@ begin
   end;
 
   // modifiers like "alias" take a string as argument
-  if (PasCodeFoldRange.BracketNestLevel = 0) and
-     (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsInProcHeader]) and
-     (TopPascalCodeFoldBlockType in ProcModifierAllowed)
-  then
-    FRange := FRange + [rsInProcHeader];
+  if (PasCodeFoldRange.BracketNestLevel = 0) then begin
+    if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsInProcHeader]) and
+       (TopPascalCodeFoldBlockType in ProcModifierAllowed)
+    then
+      FRange := FRange + [rsInProcHeader];
+    FOldRange := FOldRange - [rsInObjcProtocol];
+  end;
 end;
 
 procedure TSynPasSyn.DoubleQuoteProc;
@@ -4418,11 +4963,6 @@ begin
     FNextTokenState := tsAfterRaise;
 end;
 
-function TSynPasSyn.TypeHelpersIsStored: Boolean;
-begin
-  Result := FTypeHelpers = (FCompilerMode in [pcmDelphi]);
-end;
-
 procedure TSynPasSyn.UnknownProc;
 begin
   inc(Run);
@@ -4431,20 +4971,211 @@ begin
   fTokenID := tkUnknown;
 end;
 
+function TSynPasSyn.CanApplyExtendedDeclarationAttribute(AMode: TSynPasTypeAttributeMode): boolean;
+begin
+  Result := (FTokenID = tkIdentifier) or
+            ( (FTokenID in [tkNumber, tkString]) and (FDeclaredValueAttributeMachesStringNum) ) or
+            ( FTokenIsValueOrTypeName and (AMode <> tamIdentifierOnly) ) or
+            ( (FTokenID = tkKey) and (AMode in [tamKeywords, tamKeywordsAndSymbols]) ) or
+            ( (FTokenID in [tkSymbol, tkSpace]) and (AMode in [tamKeywordsAndSymbols]) )
+            ;
+end;
+
+procedure TSynPasSyn.CheckForAdditionalAttributes;
+var
+  CustTk: TSynPasSynCustomTokenInfoList;
+  CustTkList: PSynPasSynCustomTokenInfo;
+  i: integer;
+  UpperTk: String;
+  p: pointer;
+  tfb: TPascalCodeFoldBlockType;
+begin
+  if FTokenID in FCustomTokenInfo[FTokenHashKey and 255].MatchTokenKinds then begin
+    CustTk := FCustomTokenInfo[FTokenHashKey and 255].List;
+    if CustTk <> nil then begin
+      UpperTk := '';
+      p := CustTk.List;
+      if p <> nil then begin
+        CustTkList := PPSynPasSynCustomTokenInfo(p)^;
+        for i := 0 to CustTk.Count - 1 do begin
+          if (FTokenID in CustTkList^.MatchTokenKinds) then begin
+            if UpperTk = '' then
+              UpperTk := UpperCase(GetToken);
+            if (UpperTk = CustTkList^.Word) then begin
+              FCustomTokenMarkup := CustTkList^.Token.FMarkup;
+              break;
+            end
+          end;
+          inc(CustTkList);
+        end;
+      end;
+    end;
+  end;
+
+  if (PasCodeFoldRange.BracketNestLevel = 0) then
+    fRange := fRange - [rsInParamDeclaration];
+
+  case FTokenState of
+    tsAtProcName: begin
+        if (reaProcName in FRequiredStates) and (FTokenID = tkIdentifier) and
+           (rsInProcHeader in fRange)
+        then
+          FTokenTypeDeclExtraAttrib := eaProcName;
+        FNextTokenState := tsAfterProcName;
+      end;
+    tsAfterProperty: begin
+        if rsInParamDeclaration in fRange then begin
+          if rsAfterColon in fRange then begin
+            if (reaProcType in FRequiredStates) and (rsAfterColon in FOldRange) and
+               CanApplyExtendedDeclarationAttribute(FDeclaredTypeAttributeMode)
+            then
+              FTokenTypeDeclExtraAttrib := eaProcType;
+          end
+          else
+          if (reaProcParam in FRequiredStates) and (FTokenID = tkIdentifier) then
+            FTokenTypeDeclExtraAttrib := eaProcParam;
+        end
+        else
+        if (PasCodeFoldRange.BracketNestLevel = 0) then begin
+          if (rsAfterColon in fRange) then begin
+            if (reaProcResult in FRequiredStates) and (rsAfterColon in FOldRange) and
+               CanApplyExtendedDeclarationAttribute(FDeclaredTypeAttributeMode)
+            then
+              FTokenTypeDeclExtraAttrib := eaProcResult;
+          end
+          else
+          if (reaPropertyName in FRequiredStates) and (FTokenID = tkIdentifier) then begin
+            FTokenTypeDeclExtraAttrib := eaPropertyName;
+          end;
+        end;
+
+        if (rsProperty in fRange) and
+           ( (PasCodeFoldRange.BracketNestLevel > 0) or
+             (FTokenID <> tkKey)  // not read/write/...
+           )
+        then
+          FNextTokenState := tsAfterProperty;
+      end;
+    tsAfterDot: begin
+      if (reaStructMemeber in FRequiredStates) and (FTokenID = tkIdentifier) then
+        FTokenExtraAttribs := FTokenExtraAttribs + [eaStructMemeber];
+      end;
+    tsNone, tsAtBeginOfStatement, tsAfterVarConstType, tsAfterClass, tsAfterTypedConst, tsAfterEqualThenType: begin
+        // procedure param-list / result
+        tfb := TopPascalCodeFoldBlockType;
+        if (FTokenState in [tsNone, tsAtBeginOfStatement]) and (rsInProcHeader in fRange) and
+           ( (PasCodeFoldRange.BracketNestLevel > 0) or
+             (rsInProcHeader in FOldRange)
+           )
+        then begin
+          if (rsInParamDeclaration in fRange)
+          then begin
+            if rsAfterEqual in fRange then begin
+              if (reaProcValue in FRequiredStates) and (rsAfterEqual in FOldRange) and
+                 CanApplyExtendedDeclarationAttribute(FDeclaredValueAttributeMode)
+              then
+                FTokenTypeDeclExtraAttrib := eaProcValue;
+            end
+            else
+            if rsAfterColon in fRange then begin
+              if (reaProcType in FRequiredStates) and (rsAfterColon in FOldRange) and
+                 CanApplyExtendedDeclarationAttribute(FDeclaredTypeAttributeMode)
+              then
+                FTokenTypeDeclExtraAttrib := eaProcType;
+            end
+            else
+            if (reaProcParam in FRequiredStates) and (FTokenID = tkIdentifier) then
+              FTokenTypeDeclExtraAttrib := eaProcParam;
+          end
+          else
+          if (PasCodeFoldRange.BracketNestLevel = 0) and (rsAfterColon in fRange)
+          then begin
+            if (reaProcResult in FRequiredStates) and (rsAfterColon in FOldRange) and
+               CanApplyExtendedDeclarationAttribute(FDeclaredTypeAttributeMode)
+            then
+              FTokenTypeDeclExtraAttrib := eaProcResult;
+          end
+        end
+
+        // var/const/type
+        else begin
+          if (tfb in cfbtVarConstTypeExt) or
+             ( (tfb in [cfbtClass, cfbtClassSection, cfbtRecord, cfbtRecordCaseSection]) and
+               not(rsAfterClassMembers in fRange)
+             )
+          then begin
+            if rsAfterEqual in fRange then begin
+              if (rsAfterEqual in FOldRange) then begin
+                case tfb of
+                  cfbtTypeBlock, cfbtLocalTypeBlock:
+                    if (reaDeclType in FRequiredStates) and
+                       CanApplyExtendedDeclarationAttribute(FDeclaredTypeAttributeMode)
+                    then
+                      FTokenTypeDeclExtraAttrib := eaDeclType;
+                  otherwise
+                    if (reaDeclValue in FRequiredStates) and
+                       CanApplyExtendedDeclarationAttribute(FDeclaredValueAttributeMode)
+                    then
+                      FTokenTypeDeclExtraAttrib := eaDeclValue;
+                end;
+              end;
+            end
+            else
+            if rsAfterColon in fRange then begin
+              if (reaDeclType in FRequiredStates) and (rsAfterColon in FOldRange) and
+                 CanApplyExtendedDeclarationAttribute(FDeclaredTypeAttributeMode)
+              then
+                FTokenTypeDeclExtraAttrib := eaDeclType;
+            end
+            else
+            if FTokenID = tkIdentifier then
+              case tfb of
+                cfbtTypeBlock, cfbtLocalTypeBlock:
+                  if (reaDeclTypeName in FRequiredStates) then
+                    FTokenTypeDeclExtraAttrib := eaDeclTypeName;
+                otherwise
+                  if (reaDeclVarName in FRequiredStates) and
+                     ( not(rsInTypeHelper in fRange) ) and
+                     ( (fRange * [rsInClassHeader, rsInObjcProtocol] = []) or
+                       (PasCodeFoldRange.BracketNestLevel = 0)
+                     )
+                  then
+                    FTokenTypeDeclExtraAttrib := eaDeclVarName;
+              end;
+          end
+          else
+          // goto-label
+          if (FTokenID = tkIdentifier) and
+             (reaGotoLabel in FRequiredStates) and
+             (PasCodeFoldRange.BracketNestLevel = 0) and
+             ( ( (tfb in PascalStatementBlocks) and
+                 (FTokenState = tsAtBeginOfStatement) and
+                 (not (rsAtCaseLabel in fRange) ) and
+                 (run < fLineLen) and (fLine[run] = ':') and
+                 ( (Run = fLineLen) or (fLine[Run+1] <>'=') )
+               ) or
+               ( (tfb in [cfbtLabelBlock, cfbtLocalLabelBlock]) and
+                 (FTokenState = tsNone)
+               )
+             )
+          then
+            FTokenExtraAttribs := FTokenExtraAttribs + [eaGotoLabel];
+        end;
+      end;
+  end;
+end;
+
 procedure TSynPasSyn.Next;
 var
   IsAtCaseLabel: Boolean;
-  OldNestLevel, i: Integer;
-  CustTk: TSynPasSynCustomTokenInfoList;
-  CustTkList: PSynPasSynCustomTokenInfo;
-  UpperTk: String;
-  p: pointer;
+  OldNestLevel: Integer;
 begin
   fAsmStart := False;
   FIsPasDocKey := False;
   FIsPasDocSym := False;
   FIsPasUnknown := False;
   FTokenIsCaseLabel := False;
+  FTokenIsValueOrTypeName := False;
   fTokenPos := Run;
   FCustomTokenMarkup := nil;
   if Run>=fLineLen then begin
@@ -4473,7 +5204,8 @@ begin
         OldNestLevel := PasCodeFoldRange.BracketNestLevel;
         if (PasCodeFoldRange.BracketNestLevel = 1) then // procedure foo; [attr...]
           FOldRange := FOldRange - [rsWasInProcHeader];
-        FTokenFlags := [];
+        FTokenExtraAttribs := [];
+        FTokenTypeDeclExtraAttrib := eaNone;
         //if rsAtEqual in fRange then
         //  fRange := fRange + [rsAfterEqualOrColon] - [rsAtEqual]
         //else
@@ -4483,36 +5215,25 @@ begin
         FTokenHashKey := 0;
         fProcTable[fLine[Run]];
 
-        if FTokenID in FCustomTokenInfo[FTokenHashKey and 255].MatchTokenKinds then begin
-          CustTk := FCustomTokenInfo[FTokenHashKey and 255].List;
-          if CustTk <> nil then begin
-            UpperTk := '';
-            p := CustTk.List;
-            if p <> nil then begin
-              CustTkList := PPSynPasSynCustomTokenInfo(p)^;
-              for i := 0 to CustTk.Count - 1 do begin
-                if (FTokenID in CustTkList^.MatchTokenKinds) then begin
-                  if UpperTk = '' then
-                    UpperTk := UpperCase(GetToken);
-                  if (UpperTk = CustTkList^.Word) then begin
-                    FCustomTokenMarkup := CustTkList^.Token.FMarkup;
-                    break;
-                  end
-                end;
-                inc(CustTkList);
-              end;
-            end;
-          end;
-        end;
+        //if not (FIsInNextToEOL or IsScanning) then begin
+          CheckForAdditionalAttributes;
+          if FTokenTypeDeclExtraAttrib <> FLastTokenTypeDeclExtraAttrib then begin
+            FLastTokenTypeDeclExtraAttrib := FTokenTypeDeclExtraAttrib;
+            if FTokenID = tkSpace then
+              FTokenTypeDeclExtraAttrib := eaNone;
+          end
+          else
+            FLastTokenTypeDeclExtraAttrib := FTokenTypeDeclExtraAttrib;
+        //end;
 
-        if (FTokenID = tkIdentifier) and (FTokenState = tsAtProcName) then begin
-          if rsInProcHeader in fRange then
-            FTokenFlags := FTokenFlags + [tfProcName];
-          FNextTokenState := tsAfterProcName;
-        end;
+        if not (FTokenID in [tkSpace, tkComment, tkIDEDirective, tkDirective, tkNull]) then begin
+          if (FNextTokenState = tsNone) and (FTokenState in [tsAfterExternal, tsAfterExternalName]) and
+             (FTokenID in [tkIdentifier, tkString, tkKey, tkSymbol])
+          then
+            FNextTokenState := FTokenState;
 
-        if not (FTokenID in [tkSpace, tkComment, tkIDEDirective, tkDirective, tkNull]) then
           FTokenState := FNextTokenState;
+        end;
 
         if (IsAtCaseLabel) and (rsAtCaseLabel in fRange) then begin
           FTokenIsCaseLabel := True;
@@ -4521,35 +5242,21 @@ begin
         end;
 
         if not (FTokenID in [tkSpace, tkComment, tkIDEDirective, tkDirective]) then begin
-          if (PasCodeFoldRange.BracketNestLevel = 0) and
-             (OldNestLevel = 0)
+          if (FTokenID = tkIdentifier) and (rsInTypeHelper in FOldRange) and
+             (PasCodeFoldRange.BracketNestLevel = 0)
           then
-            fRange := fRange - [rsAfterClass];
+            FTokenState := tsAtBeginOfStatement;
+
           if (PasCodeFoldRange.BracketNestLevel > 0) or
              (OldNestLevel > 0)
           then
-            FOldRange := FOldRange - [rsInTypeHelper];
+            FOldRange := FOldRange - [rsInClassHeader, rsInObjcProtocol, rsInTypeHelper];
 
           fRange := fRange -
-            (FOldRange * [rsAfterEqualOrColon, rsAfterSemiColon,
-                          rsAtPropertyOrReadWrite, rsAfterClassField,
-                          rsAfterIdentifierOrValue, rsWasInProcHeader,
-                          rsInTypeHelper]
+            (FOldRange * [rsAfterEqualOrColon, rsAtPropertyOrReadWrite,
+                          rsInClassHeader, rsInObjcProtocol, rsInTypeHelper, rsAfterClassField,
+                          rsAfterIdentifierOrValue, rsWasInProcHeader]
             );
-
-          if (FTokenID = tkIdentifier) and (rsInTypeHelper in FOldRange) then
-            fRange := fRange + [rsAfterSemiColon];
-
-          if rsAtClass in fRange then begin
-            if FOldRange * [rsAtClass, rsAfterClass] <> [] then
-              fRange := fRange + [rsAfterClass] - [rsAtClass]
-            else
-              fRange := fRange + [rsAfterClass];
-          end
-        end
-        else begin
-          if rsAtClass in fRange then
-            fRange := fRange + [rsAfterClass];
         end;
 
         if (FTokenID = tkIdentifier) then
@@ -4621,7 +5328,12 @@ begin
       FCurIDEDirectiveAttri.Merge(FIDEDirectiveAttri);
       Result := FCurIDEDirectiveAttri;
     end;
-    tkIdentifier: Result := fIdentifierAttri;
+    tkIdentifier: begin
+      if eaGotoLabel in FTokenExtraAttribs then
+        Result := FGotoLabelAttr
+      else
+        Result := fIdentifierAttri;
+    end;
     tkKey: Result := fKeyAttri;
     tkModifier: Result := fModifierAttri;
     tkNumber: Result := fNumberAttri;
@@ -4634,7 +5346,11 @@ begin
     Result := nil;
   end;
 
-  if FTokenIsCaseLabel and (tid in [tkIdentifier, tkKey, tkNumber, tkString])
+
+  if FTokenIsCaseLabel and
+    ( (tid in [tkIdentifier, tkNumber, tkString]) or
+      (FCaseLabelAttriMatchesElseOtherwise and (tid = tkKey) )
+    )
   then begin
     FCurCaseLabelAttri.Assign(Result);
     FCurCaseLabelAttri.Merge(FCaseLabelAttri);
@@ -4659,15 +5375,69 @@ begin
     Result := FCurPasDocAttri;
   end;
 
-  if (tid in [tkIdentifier, tkSymbol]) and
-     (fRange * [rsInProcHeader, rsAfterEqualOrColon, rsAfterEqual] = [rsInProcHeader]) and
-     (tfProcName in FTokenFlags) and
-     (FOldRange * [rsAfterEqualOrColon, rsAfterEqual] = []) and
-     (PasCodeFoldRange.BracketNestLevel = 0)
-  then begin
-    FCurProcedureHeaderNameAttr.Assign(Result);
-    FCurProcedureHeaderNameAttr.Merge(FProcedureHeaderNameAttr);
-    Result := FCurProcedureHeaderNameAttr;
+  case FTokenTypeDeclExtraAttrib of
+    eaProcName: begin
+        if (tid in [tkIdentifier, tkSymbol]) and
+           (fRange * [rsInProcHeader, rsAfterEqualOrColon, rsAfterEqual] = [rsInProcHeader]) and
+           (FOldRange * [rsAfterEqualOrColon, rsAfterEqual] = []) and
+           (PasCodeFoldRange.BracketNestLevel = 0)
+        then begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderNameAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+        end;
+      end;
+    eaPropertyName: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FPropertyNameAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaProcParam: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderParamAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaProcType: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderTypeAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaProcValue: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderValueAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaProcResult: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderResultAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaDeclVarName: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationVarConstNameAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaDeclTypeName: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationTypeNameAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaDeclType: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationTypeAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+    eaDeclValue: begin
+          FCurProcTypeDeclExtraAttr.Assign(Result);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationValueAttr);
+          Result := FCurProcTypeDeclExtraAttr;
+      end;
+  end;
+
+  if eaStructMemeber in FTokenExtraAttribs then begin
+    FCurStructMemberExtraAttri.Assign(Result);
+    FCurStructMemberExtraAttri.Merge(FStructMemberAttr);
+    Result := FCurStructMemberExtraAttri;
   end;
 
   if FCustomTokenMarkup <> nil then begin
@@ -4698,7 +5468,8 @@ begin
   // -> update now
   CodeFoldRange.RangeType:=Pointer(PtrUInt(Integer(fRange)));
   PasCodeFoldRange.TokenState := FTokenState;
-  PasCodeFoldRange.TypeHelpers := TypeHelpers;
+  PasCodeFoldRange.Mode := CompilerMode;
+  PasCodeFoldRange.ModeSwitches := ModeSwitches;
   // return a fixed copy of the current CodeFoldRange instance
   Result := inherited GetRange;
 end;
@@ -4708,8 +5479,7 @@ begin
   //DebugLn(['TSynPasSyn.SetRange START']);
   inherited SetRange(Value);
   CompilerMode := PasCodeFoldRange.Mode;
-  NestedComments := PasCodeFoldRange.NestedComments;
-  TypeHelpers := PasCodeFoldRange.TypeHelpers;
+  ModeSwitches := PasCodeFoldRange.ModeSwitches;
   FTokenState := PasCodeFoldRange.TokenState;
   fRange := TRangeStates(Integer(PtrUInt(CodeFoldRange.RangeType)));
   FSynPasRangeInfo := TSynHighlighterPasRangeList(CurrentRanges).PasRangeInfo[LineIndex-1];
@@ -4979,6 +5749,36 @@ begin
   if p >= CountPascalCodeFoldBlockOffset then
     p := p - PtrUInt(CountPascalCodeFoldBlockOffset);
   Result := TPascalCodeFoldBlockType(PtrUInt(p));
+end;
+
+function TSynPasSyn.HasCompilerModeswitch(AModeSwitch: TPascalCompilerModeSwitch): Boolean;
+begin
+  Result := (AModeSwitch in ModeSwitches) or not(rsCompilerModeSet in fRange);
+  if not Result then begin
+    case CompilerMode of
+      pcmObjFPC: Result := AModeSwitch in [pcsNestedComments];
+      //pcmDelphi: ;
+      pcmFPC:    Result := AModeSwitch in [pcsNestedComments];
+      //pcmTP: ;
+      //pcmGPC: ;
+      pcmMacPas: Result := AModeSwitch in [pcsObjectiveC1, pcsObjectiveC2];
+    end;
+  end;
+end;
+
+function TSynPasSyn.HasCompilerModeswitch(AModeSwitches: TPascalCompilerModeSwitches): Boolean;
+begin
+  Result := (AModeSwitches * ModeSwitches <> []) or not(rsCompilerModeSet in fRange);
+  if not Result then begin
+    case CompilerMode of
+      pcmObjFPC: Result := AModeSwitches * [pcsNestedComments] <> [];
+      //pcmDelphi: ;
+      pcmFPC:    Result := AModeSwitches * [pcsNestedComments] <> [];
+      //pcmTP: ;
+      //pcmGPC: ;
+      pcmMacPas: Result := AModeSwitches * [pcsObjectiveC1, pcsObjectiveC2] <> [];
+    end;
+  end;
 end;
 
 procedure TSynPasSyn.GetTokenBounds(out LogX1, LogX2: Integer);
@@ -5320,14 +6120,18 @@ var
   act: TSynFoldActions;
   nd: TSynFoldNodeInfo;
   FoldBlock, BlockEnabled: Boolean;
+  ConfigP: PSynCustomFoldConfig;
 begin
-  BlockEnabled := FFoldConfig[ord(ABlockType)].Enabled;
-  FoldBlock := BlockEnabled and (FFoldConfig[ord(ABlockType)].Modes * [fmFold, fmHide] <> []);
-  //if not FFoldConfig[ord(ABlockType)].Enabled then exit;
+  (* Currently no need to map / only IFDEF / REGION *)
+  //ConfigP := @FFoldConfig[ord(PascalFoldTypeConfigMap[ABlockType])];
+  ConfigP := @FFoldConfig[ord(ABlockType)];
+  BlockEnabled := ConfigP^.Enabled;
+  FoldBlock := BlockEnabled and (ConfigP^.Modes * [fmFold, fmHide] <> []);
+  //if not ConfigP^.Enabled then exit;
   if IsCollectingNodeInfo then begin // exclude subblocks, because they do not increase the foldlevel yet
     act := [sfaOpen, sfaOpenFold];
     if BlockEnabled then
-      act := act + FFoldConfig[ord(ABlockType)].FoldActions;
+      act := act + ConfigP^.FoldActions;
     if not FAtLineStart then
       act := act - [sfaFoldHide];
     DoInitNode(nd{%H-}, False, Pointer(PtrUInt(ABlockType)), act, FoldBlock);
@@ -5348,17 +6152,22 @@ var
   act: TSynFoldActions;
   nd: TSynFoldNodeInfo;
   FoldBlock, BlockEnabled: Boolean;
+  ConfigP: PSynCustomFoldConfig;
 begin
-  FoldBlock := FFoldConfig[ord(ABlockType)].Enabled;
-  //if not FFoldConfig[ord(ABlockType)].Enabled then exit;
+  (* Currently no need to map / only IFDEF / REGION *)
+  //ConfigP := @FFoldConfig[ord(PascalFoldTypeConfigMap[ABlockType])];
+  ConfigP := @FFoldConfig[ord(ABlockType)];
+  // TODO: Why is "FoldBlock" = Enabled? Instead of Modes fmFold,fmHide?
+  FoldBlock := ConfigP^.Enabled;
+  //if not ConfigP^.Enabled then exit;
   if IsCollectingNodeInfo then begin // exclude subblocks, because they do not increase the foldlevel yet
-    BlockEnabled := FFoldConfig[ord(ABlockType)].Enabled;
+    BlockEnabled := ConfigP^.Enabled;
     act := [sfaClose, sfaCloseFold];
     if BlockEnabled then
-      act := act + FFoldConfig[PtrUInt(ABlockType)].FoldActions;
+      act := act + ConfigP^.FoldActions;
     if not FoldBlock then
       act := act - [sfaFold, sfaFoldFold, sfaFoldHide];
-    DoInitNode(nd{%H-}, True, Pointer(PtrUInt(ABlockType)), act, FoldBlock); // + FFoldConfig[ord(ABlockType)].FoldActions);
+    DoInitNode(nd{%H-}, True, Pointer(PtrUInt(ABlockType)), act, FoldBlock); // + ConfigP^.FoldActions);
     CollectingNodeInfoList.Add(nd);
   end;
   //if not FoldBlock then
@@ -5379,6 +6188,38 @@ begin
           FSynPasRangeInfo.MinLevelRegion := FSynPasRangeInfo.EndLevelRegion;
       end;
   end;
+end;
+
+function TSynPasSyn.CloseOneFold(ACurTfb: TPascalCodeFoldBlockType;
+  ACloseFold: TPascalCodeFoldBlockType): TPascalCodeFoldBlockType;
+begin
+  if ACurTfb = ACloseFold then begin
+    EndPascalCodeFoldBlock;
+    Result:= TopPascalCodeFoldBlockType;
+  end
+  else
+    Result := ACurTfb;
+end;
+
+function TSynPasSyn.CloseOneFold(ACurTfb: TPascalCodeFoldBlockType;
+  ACloseFolds: TPascalCodeFoldBlockTypes): TPascalCodeFoldBlockType;
+begin
+  if ACurTfb in ACloseFolds then begin
+    EndPascalCodeFoldBlock;
+    Result:= TopPascalCodeFoldBlockType;
+  end
+  else
+    Result := ACurTfb;
+end;
+
+function TSynPasSyn.CloseFolds(ACurTfb: TPascalCodeFoldBlockType;
+  ACloseFolds: TPascalCodeFoldBlockTypes): TPascalCodeFoldBlockType;
+begin
+  while ACurTfb in ACloseFolds do begin
+    EndPascalCodeFoldBlock;
+    ACurTfb := TopPascalCodeFoldBlockType;
+  end;
+  Result := ACurTfb;
 end;
 
 procedure TSynPasSyn.CollectNodeInfo(FinishingABlock: Boolean;
@@ -5434,24 +6275,26 @@ var
   FoldBlock, BlockEnabled: Boolean;
   act: TSynFoldActions;
   nd: TSynFoldNodeInfo;
+  ConfigP: PSynCustomFoldConfig;
 begin
   if rsSkipAllPasBlocks in fRange then exit(nil);
-  BlockEnabled := FFoldConfig[ord(ABlockType)].Enabled;
+  ConfigP := @FFoldConfig[ord(PascalFoldTypeConfigMap[ABlockType])];
+  BlockEnabled := ConfigP^.Enabled;
   if (not BlockEnabled) and (not ForceDisabled) and
-     (not FFoldConfig[ord(ABlockType)].IsEssential)
+     (not ConfigP^.IsEssential)
   then
     exit(nil);
 
-  FoldBlock := BlockEnabled and (FFoldConfig[ord(ABlockType)].Modes * [fmFold, fmHide] <> []);
+  FoldBlock := BlockEnabled and (ConfigP^.Modes * [fmFold, fmHide] <> []);
   p := 0;
   // TODO: let inherited call CollectNodeInfo
   if IsCollectingNodeInfo then begin // exclude subblocks, because they do not increase the foldlevel yet
     act := [sfaOpen, sfaOpenFold]; //TODO: sfaOpenFold not for cfbtIfThen
     if BlockEnabled then
-      act := act + FFoldConfig[ord(ABlockType)].FoldActions;
+      act := act + ConfigP^.FoldActions;
     if not FAtLineStart then
       act := act - [sfaFoldHide];
-    DoInitNode(nd{%H-}, False, Pointer(PtrUInt(ABlockType)), act, FoldBlock);
+    DoInitNode(nd{%H-}, False, Pointer(PtrUInt(PascalFoldTypeConfigMap[ABlockType])), act, FoldBlock);
     CollectingNodeInfoList.Add(nd);
   end;
   if not FoldBlock then
@@ -5466,26 +6309,29 @@ var
   act: TSynFoldActions;
   BlockType: TPascalCodeFoldBlockType;
   nd: TSynFoldNodeInfo;
+  ConfigP: PSynCustomFoldConfig;
 begin
   Exclude(fRange, rsSkipAllPasBlocks);
   BlockType := TopPascalCodeFoldBlockType;
-  if BlockType in [cfbtVarType, cfbtLocalVarType] then
-    fRange := fRange - [rsInTypeBlock, rsInConstBlock];
-  fRange := fRange - [rsAfterEqual];
+  if not (BlockType in [cfbtAnsiComment, cfbtBorCommand, cfbtSlashComment, cfbtNestedComment,
+                        cfbtIfDef, cfbtRegion]) // cfbtAnonymousProcedure
+  then
+    fRange := fRange - [rsAfterEqual, rsAfterColon];
   DecreaseLevel := TopCodeFoldBlockType < CountPascalCodeFoldBlockOffset;
   // TODO: let inherited call CollectNodeInfo
   if IsCollectingNodeInfo then begin // exclude subblocks, because they do not increase the foldlevel yet
-    BlockEnabled := FFoldConfig[ord(BlockType)].Enabled;
+    ConfigP := @FFoldConfig[ord(PascalFoldTypeConfigMap[BlockType])];
+    BlockEnabled := ConfigP^.Enabled;
     act := [sfaClose, sfaCloseFold];
     if BlockEnabled then
-      act := act + FFoldConfig[ord(BlockType)].FoldActions - [sfaFoldFold, sfaFoldHide]; // TODO: Why filter?
+      act := act + ConfigP^.FoldActions - [sfaFoldFold, sfaFoldHide]; // TODO: Why filter?
     if not DecreaseLevel then
       act := act - [sfaFold, sfaFoldFold, sfaFoldHide];
     if NoMarkup then
       exclude(act, sfaMarkup);
     if UndoInvalidOpen then
       act := act - [sfaMarkup, {sfaFold,} sfaFoldFold, sfaFoldHide, sfaOutline]; // sfaFold affects the EndOffset for the fold-lvl
-    DoInitNode(nd{%H-}, True, Pointer(PtrUInt(BlockType)), act, DecreaseLevel);
+    DoInitNode(nd{%H-}, True, Pointer(PtrUInt(PascalFoldTypeConfigMap[BlockType])), act, DecreaseLevel);
     CollectingNodeInfoList.Add(nd);
   end;
   EndCodeFoldBlock(DecreaseLevel);
@@ -5629,25 +6475,25 @@ begin
       cfbtUses:
         if FDividerDrawConfig[pddlUses].MaxDrawDepth > 0 then
           exit(FDividerDrawConfig[pddlUses].TopSetting);
-      cfbtLocalVarType:
+      cfbtLocalVarBlock, cfbtLocalConstBlock, cfbtLocalTypeBlock:
         if CheckFoldNestLevel(FDividerDrawConfig[pddlVarLocal].MaxDrawDepth - 1,
                               i + 2, [cfbtProcedure], cfbtAll, c) then begin
           if c = 0
           then exit(FDividerDrawConfig[pddlVarLocal].TopSetting)
           else exit(FDividerDrawConfig[pddlVarLocal].NestSetting);
         end;
-      cfbtVarType:
+      cfbtVarBlock, cfbtConstBlock, cfbtTypeBlock, cfbtLabelBlock:
         if FDividerDrawConfig[pddlVarGlobal].MaxDrawDepth > 0 then
           exit(FDividerDrawConfig[pddlVarGlobal].TopSetting);
       cfbtClass, cfbtRecord:
         begin
           if CheckFoldNestLevel(0, i + 1, [cfbtProcedure],
-                                cfbtAll - [cfbtVarType, cfbtLocalVarType], c)
+                                cfbtAll - cfbtVarConstTypeLabel, c)
           then t := pddlStructGlobal
           else t := pddlStructLocal;
           if CheckFoldNestLevel(FDividerDrawConfig[t].MaxDrawDepth - 1,
                                 i + 1, [cfbtClass, cfbtRecord],
-                                cfbtAll - [cfbtVarType, cfbtLocalVarType], c) then begin
+                                cfbtAll - cfbtVarConstTypeLabel, c) then begin
             if c = 0
             then exit(FDividerDrawConfig[t].TopSetting)
             else exit(FDividerDrawConfig[t].NestSetting);
@@ -5697,8 +6543,8 @@ begin
   for i := low(TSynPasDividerDrawLocation) to high(TSynPasDividerDrawLocation) do
   begin
     FDividerDrawConfig[i] := TSynDividerDrawConfig.Create;
-    FDividerDrawConfig[i].OnChange := @DefHighlightChange;
     FDividerDrawConfig[i].MaxDrawDepth := PasDividerDrawLocationDefaults[i];
+    FDividerDrawConfig[i].OnChange := @DefHighlightChange;
   end;
 end;
 
@@ -5797,6 +6643,13 @@ end;
 procedure TSynPasSyn.DoFoldConfigChanged(Sender: TObject);
 begin
   inherited DoFoldConfigChanged(Sender);
+end;
+
+procedure TSynPasSyn.DefineProperties(Filer: TFiler);
+begin
+  inherited DefineProperties(Filer);
+  Filer.DefineProperty('NestedComments', @DoReadLfmNestedComments, nil, False);
+  Filer.DefineProperty('TypeHelpers',    @DoReadLfmTypeHelpers, nil, False);
 end;
 
 function TSynPasSyn.GetDividerDrawConfig(Index: Integer): TSynDividerDrawConfig;
@@ -5951,6 +6804,56 @@ begin
   Result := fDefaultFilter <> fDefaultFilterInitialValue;
 end;
 
+procedure TSynPasSyn.DoDefHighlightChanged;
+begin
+  inherited DoDefHighlightChanged;
+
+  FRequiredStates := [];
+
+  //if fPasDocKeyWordAttri.IsEnabled then begin
+  //end;
+  //if fPasDocSymbolAttri.IsEnabled then begin
+  //end;
+  //if fPasDocUnknownAttr.IsEnabled then begin
+  //end;
+
+  if FProcedureHeaderNameAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaProcName];
+  if FPropertyNameAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaPropertyName, rtsAfterProperty];
+  if FProcedureHeaderParamAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaProcParam, rtsAfterProperty, rrsInParamDeclaration];
+  if FProcedureHeaderTypeAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaProcType, rtsAfterProperty, rrsInParamDeclaration, rrsAfterColon];
+  if FProcedureHeaderValueAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaProcValue];
+  if FProcedureHeaderResultAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaProcResult, rtsAfterProperty, rrsInParamDeclaration];
+
+
+  if FDeclarationVarConstNameAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaDeclVarName, rrsAfterColon];
+  if FDeclarationTypeNameAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaDeclTypeName];
+  if FDeclarationTypeAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaDeclType, rrsAfterColon];
+  if FDeclarationValueAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaDeclValue];
+
+
+  //if FCaseLabelAttri.IsEnabled then
+  //;
+  if FGotoLabelAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaGotoLabel];
+
+
+  if FStructMemberAttr.IsEnabled then
+    FRequiredStates := FRequiredStates + [reaStructMemeber, rtsAfterDot];
+
+
+
+end;
+
 procedure TSynPasSyn.DoAfterOperator;
 begin
   if rsProperty in fRange then
@@ -6066,9 +6969,7 @@ begin
   if Result<>0 then exit;
   Result:=ord(FMode)-ord(TSynPasSynRange(Range).FMode);
   if Result<>0 then exit;
-  Result:=ord(FNestedComments)-ord(TSynPasSynRange(Range).FNestedComments);
-  if Result<>0 then exit;
-  Result:=ord(FTypeHelpers)-ord(TSynPasSynRange(Range).FTypeHelpers);
+  Result:=Integer(FModeSwitches)-Integer(TSynPasSynRange(Range).FModeSwitches);
   if Result<>0 then exit;
   Result := FBracketNestLevel - TSynPasSynRange(Range).FBracketNestLevel;
   if Result<>0 then exit;
@@ -6083,8 +6984,7 @@ begin
     inherited Assign(Src);
     FTokenState:=TSynPasSynRange(Src).FTokenState;
     FMode:=TSynPasSynRange(Src).FMode;
-    FNestedComments:=TSynPasSynRange(Src).FNestedComments;
-    FTypeHelpers := TSynPasSynRange(Src).FTypeHelpers;
+    FModeSwitches:=TSynPasSynRange(Src).FModeSwitches;
     FBracketNestLevel:=TSynPasSynRange(Src).FBracketNestLevel;
     FLastLineCodeFoldLevelFix := TSynPasSynRange(Src).FLastLineCodeFoldLevelFix;
     FPasFoldFixLevel := TSynPasSynRange(Src).FPasFoldFixLevel;
@@ -6104,7 +7004,8 @@ end;
 
 procedure TSynPasSynRange.DecBracketNestLevel;
 begin
-  dec(FBracketNestLevel);
+  if FBracketNestLevel > 0 then
+    dec(FBracketNestLevel);
 end;
 
 procedure TSynPasSynRange.DecLastLineCodeFoldLevelFix;

@@ -531,7 +531,7 @@ type
       AGdkRect: PGdkRectangle; Data: gpointer); cdecl; static; {very important, see note inside method}
 
     class function RangeChangeValue(ARange: PGtkRange; AScrollType: TGtkScrollType;
-      AValue: gdouble; AData: TGtk3Widget): gboolean; cdecl; static;
+      AValue: gdouble; AData: gPointer): gboolean; cdecl; static;
     class procedure RangeValueChanged(range: PGtkRange; data: gpointer); cdecl; static;
   public
     LCLVAdj: PGtkAdjustment; // used to keep LCL values
@@ -906,6 +906,8 @@ type
     function getHorizontalScrollbar: PGtkScrollbar; override;
     function getVerticalScrollbar: PGtkScrollbar; override;
     function GetScrolledWindow: PGtkScrolledWindow; override;
+    procedure InitializeWidget; override;
+    procedure OffsetMousePos(APoint: PPoint); override;
     function ShowState(nstate:integer):boolean; // winapi ShowWindow
     procedure UpdateWindowState; // LCL WindowState
     class function decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
@@ -5797,8 +5799,9 @@ begin
   inherited InitializeWidget;
 end;
 
-class function TGtk3ScrollableWin.RangeChangeValue(ARange: PGtkRange; AScrollType: TGtkScrollType;
-  AValue: gdouble; AData: TGtk3Widget): gboolean; cdecl;
+class function TGtk3ScrollableWin.RangeChangeValue(ARange: PGtkRange;
+  AScrollType: TGtkScrollType; AValue: gdouble; AData: gPointer): gboolean;
+  cdecl;
 var
   Msg: TLMVScroll;
   MaxValue: gdouble;
@@ -5807,7 +5810,7 @@ begin
   Result := gtk_false;
 
   {$IFDEF GTK3DEBUGSCROLL}
-  DebugLn(Format('>TGtk3ScrollableWin.RangeChangeValue Value: %d', [RoundToInt(AValue)]),' IsHScrollBar ',dbgs(PGtkOrientable(ARange)^.get_orientation = GTK_ORIENTATION_HORIZONTAL),' InUpdate=',dbgs(AData.InUpdate));
+  DebugLn(Format('>TGtk3ScrollableWin.RangeChangeValue Value: %d', [Round(AValue)]),' IsHScrollBar ',dbgs(PGtkOrientable(ARange)^.get_orientation = GTK_ORIENTATION_HORIZONTAL),' InUpdate=',dbgs(TGtk3Widget(AData).InUpdate));
   {$ENDIF}
   if PGtkOrientable(ARange)^.get_orientation = GTK_ORIENTATION_HORIZONTAL then
     Msg.Msg := LM_HSCROLL
@@ -5832,10 +5835,10 @@ begin
     else
       SmallPos := High(SmallPos);
     {$note to get this correct we must use TQtWidget.CreateFrom() for scrollbars}
-    ScrollBar := HWND(AData); // HWND({%H-}PtrUInt(ARange));
+    ScrollBar := HWND(TGtk3Widget(AData)); // HWND({%H-}PtrUInt(ARange));
     ScrollCode := Gtk3ScrollTypeToScrollCode(AScrollType);
   end;
-  AData.DeliverMessage(Msg, True);
+  TGtk3Widget(AData).DeliverMessage(Msg, True);
 
   if Msg.Scrollcode = SB_THUMBTRACK then
   begin
@@ -5843,18 +5846,18 @@ begin
     if not (GTK_STATE_FLAG_ACTIVE in StateFlags) then
     begin
       Msg.ScrollCode := SB_THUMBPOSITION;
-      AData.DeliverMessage(Msg, False);
+      TGtk3Widget(AData).DeliverMessage(Msg, False);
       Msg.ScrollCode := SB_ENDSCROLL;
-      AData.DeliverMessage(Msg, False);
+      TGtk3Widget(AData).DeliverMessage(Msg, False);
     end;
   end else
     ARange^.set_state_flags([GTK_STATE_FLAG_ACTIVE], True);
 
-  if ([wtScrollingWinControl, wtWindow, wtHintWindow, wtDialog] * AData.WidgetType <> []) and
+  if ([wtScrollingWinControl, wtWindow, wtHintWindow, wtDialog] * TGtk3Widget(AData).WidgetType <> []) and
   ((Msg.ScrollCode = SB_LINEUP) or (Msg.ScrollCode = SB_LINEDOWN)) then
     Result := gtk_true;
   {$IFDEF GTK3DEBUGSCROLL}
-  DebugLn('<RangeChangeValue: Result=',dbgs(Result),' FuturePos=', dbgs(Msg.Pos),' ScrollCode=',dbgs(Msg.ScrollCode),' InUpdate=',dbgs(AData.InUpdate));
+  DebugLn('<RangeChangeValue: Result=',dbgs(Result),' FuturePos=', dbgs(Msg.Pos),' ScrollCode=',dbgs(Msg.ScrollCode),' InUpdate=',dbgs(TGtk3Widget(AData).InUpdate));
   {$ENDIF}
 end;
 
@@ -8862,7 +8865,6 @@ begin
       end;
 
       Result := Rect(0, 0, AWindow^.get_width - VOffset, AWindow^.get_height - HOffset);
-
     end else
     begin
       //we are not ready, provide at least scrolledwindow size as clientrect for now.
@@ -9592,6 +9594,12 @@ begin
 
   Result := R;
   Types.OffsetRect(Result, -Result.Left, -Result.Top);
+
+  if GTK3WidgetSet.OverlayScrolling and getHorizontalScrollbar^.is_visible then
+    Result.Height := Result.Height - getHorizontalScrollbar^.get_allocated_height;
+  if GTK3WidgetSet.OverlayScrolling and getVerticalScrollbar^.is_visible then
+    Result.Width := Result.Width - getVerticalScrollbar^.get_allocated_width;
+
   {$IFDEF GTK3DEBUGFORMS}
   DebugLn('TGtk3Window.GetClientRect ',dbgsName(LCLObject),' Result ',dbgs(Result),' CentralWidget mapped ? ',dbgs(FCentralWidget^.get_mapped),' Realized ? ',dbgs(FCentralWidget^.get_realized));
   {$ENDIF}
@@ -9719,6 +9727,42 @@ begin
     Result := FScrollWin
   else
     Result := nil;
+end;
+
+procedure TGtk3Window.InitializeWidget;
+begin
+  inherited InitializeWidget;
+  if not IsDesigning then
+  begin
+    g_signal_connect_data(gtk_scrolled_window_get_hscrollbar(GetScrolledWindow), 'change-value',
+      TGCallback(@RangeChangeValue), Self, nil, G_CONNECT_DEFAULT);
+    g_signal_connect_data(gtk_scrolled_window_get_vscrollbar(GetScrolledWindow), 'change-value',
+      TGCallback(@RangeChangeValue), Self, nil, G_CONNECT_DEFAULT);
+
+    g_signal_connect_data(PGtkRange(gtk_scrolled_window_get_hscrollbar(GetScrolledWindow)),'value-changed',
+      TGCallback(@RangeValueChanged), Self, nil, G_CONNECT_DEFAULT);
+    g_signal_connect_data(PGtkRange(gtk_scrolled_window_get_vscrollbar(GetScrolledWindow)),'value-changed',
+      TGCallback(@RangeValueChanged), Self, nil, G_CONNECT_DEFAULT);
+  end;
+end;
+
+procedure TGtk3Window.OffsetMousePos(APoint: PPoint);
+var
+  Hadjustment, Vadjustment: PGtkAdjustment;
+  HValue, VValue: longint;
+begin
+  inherited OffsetMousePos(APoint);
+  // Retrieve adjustments
+  Hadjustment := GetScrolledWindow^.get_hadjustment;
+  Vadjustment := GetScrolledWindow^.get_vadjustment;
+
+  // Get the adjustment values
+  HValue := Round(gtk_adjustment_get_value(Hadjustment));
+  VValue := Round(gtk_adjustment_get_value(Vadjustment));
+
+  // Apply adjustment values to the mouse position
+  Dec(APoint^.x, HValue);
+  Dec(APoint^.y, VValue);
 end;
 
 destructor TGtk3Window.Destroy;

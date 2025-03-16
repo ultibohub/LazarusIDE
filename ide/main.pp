@@ -6441,6 +6441,8 @@ function TMainIDE.CreateNewUniqueFilename(const Prefix, Ext: string;
   NewOwner: TObject; Flags: TSearchIDEFileFlags; TryWithoutNumber: boolean): string;
 
   function FileIsUnique(const ShortFilename: string): boolean;
+  var
+    aUnitName, InFilename: String;
   begin
     Result:=false;
 
@@ -6460,6 +6462,14 @@ function TMainIDE.CreateNewUniqueFilename(const Prefix, Ext: string;
 
     // search file in all loaded projects
     if (siffCheckAllProjects in Flags) then begin
+    end;
+
+    // search in project unit path
+    if FilenameIsPascalUnit(ShortFilename) then begin
+      aUnitName:=ExtractFileNameOnly(ShortFilename);
+      InFilename:='';
+      if CodeToolBoss.DirectoryCachePool.FindUnitSourceInCompletePath(Project1.Directory,
+        aUnitName,InFilename,true)<>'' then exit;
     end;
 
     Result:=true;
@@ -10496,6 +10506,7 @@ function TMainIDE.CodeToolBossSearchUsedUnit(const SrcFilename: string;
   const TheUnitName, TheUnitInFilename: string): TCodeBuffer;
 var
   AnUnitInfo: TUnitInfo;
+  aFilename: String;
 begin
   Result:=nil;
   // check if SrcFilename is project file
@@ -10504,11 +10515,11 @@ begin
   AnUnitInfo:=Project1.ProjectUnitWithFilename(SrcFilename);
   if AnUnitInfo=nil then exit;
   // SrcFilename is a project file
-  // -> search virtual project files
-  AnUnitInfo:=Project1.ProjectUnitWithUnitname(TheUnitName);
-  if AnUnitInfo=nil then exit;
+  // -> search in virtual files
+  aFilename:=CodeToolBoss.DirectoryCachePool.FindVirtualUnit(TheUnitName);
+  if aFilename='' then exit;
   // virtual unit found
-  Result:=AnUnitInfo.Source;
+  Result:=CodeToolBoss.LoadFile(aFilename,false,false);
 end;
 
 procedure TMainIDE.CodeToolBossGetVirtualDirectoryAlias(Sender: TObject;
