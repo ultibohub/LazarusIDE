@@ -43,7 +43,7 @@ uses
   IDEProcs, LazConf,
   // IDE
   EditorOptions, editor_general_options,
-  LazarusIDEStrConsts, SourceMarks;
+  LazarusIDEStrConsts, SourceMarks, SourceSynEditor;
 
 type
 
@@ -1162,8 +1162,6 @@ begin
 end;
 
 procedure TEditorColorOptionsFrame.FillColorElementListBox;
-const
-  NAME_EXTENDED = '(Extended)';
 var
   i, AttriIdx: Integer;
   ParentName: String;
@@ -1178,12 +1176,13 @@ begin
   // Create Groups
   if not FIsEditingDefaults then begin
     ColorElementTree.Items.Add(nil, FCurrentHighlighter.LanguageName + ' ');
-    ColorElementTree.Items.Add(nil, FCurrentHighlighter.LanguageName + ' ' + NAME_EXTENDED).Visible := False;
+    ColorElementTree.Items.Add(nil, FCurrentHighlighter.LanguageName + ' ' + dlgAddHiAttrGroup_Suffix_Extended).Visible := False;
+    ColorElementTree.Items.Add(nil, FCurrentHighlighter.LanguageName + ' ' + dlgAddHiAttrGroup_Suffix_NBrackets).Visible := False;
   end
   else
     ColorElementTree.Items.Add(nil, AdditionalHighlightGroupNames[agnDefault]);
   for j := low(TAhaGroupName) to high(TAhaGroupName) do
-    if not(j in [agnDefault, agnLanguage]) then
+    if not(j in [agnDefault, agnLanguage, agnRegistered]) then
       ColorElementTree.Items.Add(nil, AdditionalHighlightGroupNames[j]).Visible := False;
 
   // Fill Attributes in
@@ -1202,13 +1201,19 @@ begin
             end
             else
             if hafCustomWords in Attr.Features then begin
-              ParentName := FCurrentHighlighter.LanguageName + ' (Custom)';
+              ParentName := FCurrentHighlighter.LanguageName + ' ' + dlgAddHiAttrGroup_Suffix_Custom;
+              ParentNode := ColorElementTree.Items.FindTopLvlNode(ParentName);
+            end
+            else
+            if strlcomp(PChar(Attr.StoredName), PChar(NESTED_BRACKET_STOREDNAME), length(NESTED_BRACKET_STOREDNAME)) = 0
+            then begin
+              ParentName := FCurrentHighlighter.LanguageName + ' ' + dlgAddHiAttrGroup_Suffix_NBrackets;
               ParentNode := ColorElementTree.Items.FindTopLvlNode(ParentName);
             end
             else begin
               ParentName := FCurrentHighlighter.LanguageName;
               if hafAlpha in Attr.Features then begin
-                ParentName := ParentName + ' ' + NAME_EXTENDED;
+                ParentName := ParentName + ' ' + dlgAddHiAttrGroup_Suffix_Extended;
                 ParentNode := ColorElementTree.Items.FindTopLvlNode(ParentName);
               end;
             end;
@@ -1216,7 +1221,7 @@ begin
         else
           begin
             AttriIdx := GetEnumValue(TypeInfo(TAdditionalHilightAttribute), Attr.StoredName);
-            ParentName := AdditionalHighlightGroupNames[Attr.Group];
+            ParentName := Attr.GroupName;
             ParentNode := ColorElementTree.Items.FindTopLvlNode(ParentName);
             if (AttriIdx >= ord(ahaIdentComplWindowEntryVar)) and (AttriIdx <= ord(ahaIdentComplWindowEntryUnknown))
             then begin
@@ -1224,7 +1229,7 @@ begin
                 p := ParentNode;
                 if p = nil then
                   p := ColorElementTree.Items.Add(nil, ParentName);
-                ParentName := ParentName + ' (entry type)';
+                ParentName := ParentName + ' ' + dlgAddHiAttrGroup_Suffix_EntryType;
                 ParentNode := ColorElementTree.Items.AddChild(p, ParentName);
                 ComplWindowEntryParentNode := ParentNode;
               end;

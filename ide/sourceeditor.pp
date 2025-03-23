@@ -295,6 +295,7 @@ type
     procedure EditorActivateSyncro(Sender: TObject);
     procedure EditorDeactivateSyncro(Sender: TObject);
     procedure EditorChangeUpdating({%H-}ASender: TObject; AnUpdating: Boolean);
+    function GetActiveSyntaxHighlighterId: TIdeSyntaxHighlighterID;
     procedure ToggleBreakpoint(ALine: Integer);
     procedure ToggleBreakpointEnabled(ALine: Integer);
     procedure DoShowBreakpointProps(ALine: PtrInt);
@@ -354,6 +355,7 @@ type
     function GetModified: Boolean; override;
     procedure SetModified(const NewValue: Boolean); override;
     procedure SetSyntaxHighlighterId(AHighlighterId: TIdeSyntaxHighlighterID);
+    procedure SetSyntaxHighlighterId(AHighlighterId: TIdeSyntaxHighlighterID; ASkipEditorOpts: boolean);
     procedure SetErrorLine(NewLine: integer);
     procedure SetExecutionLine(NewLine: integer);
     function CheckIdentCompletionValidity: Boolean;
@@ -565,6 +567,8 @@ type
     property SourceNotebook: TSourceNotebook read FSourceNoteBook;
     property SyntaxHighlighterId: TIdeSyntaxHighlighterID
        read fSyntaxHighlighterId write SetSyntaxHighlighterId;
+    property ActiveSyntaxHighlighterId: TIdeSyntaxHighlighterID
+       read GetActiveSyntaxHighlighterId;
     procedure UpdateDefaultDefaultSyntaxHighlighterId(AForce: boolean = False);
     property SyncroLockCount: Integer read FSyncroLockCount;
     function SharedEditorCount: Integer;
@@ -5104,39 +5108,68 @@ begin
   end;
 end;
 
-procedure TSourceEditor.SetSyntaxHighlighterId(
-  AHighlighterId: TIdeSyntaxHighlighterID);
+procedure TSourceEditor.SetSyntaxHighlighterId(AHighlighterId: TIdeSyntaxHighlighterID);
+begin
+  SetSyntaxHighlighterId(AHighlighterId, False);
+end;
+
+procedure TSourceEditor.SetSyntaxHighlighterId(AHighlighterId: TIdeSyntaxHighlighterID;
+  ASkipEditorOpts: boolean);
 var
   HlIsPas, OldHlIsPas: Boolean;
+  tl: TSrcSynTopLineInfo;
 begin
   if (AHighlighterId=fSyntaxHighlighterId)
   and ((FEditor.Highlighter<>nil) = EditorOpts.UseSyntaxHighlight) then exit;
 
-  OldHlIsPas := FEditor.Highlighter is TSynPasSyn;
-  HlIsPas := False;
-  if EditorOpts.UseSyntaxHighlight then begin
-    if AHighlighterId < 0 then begin
-      if FDefaultSyntaxHighlighterId = IdeHighlighterNotSpecifiedId then
-        UpdateDefaultDefaultSyntaxHighlighterId(True);
-      FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[FDefaultSyntaxHighlighterId];
+  if not ASkipEditorOpts then
+    tl := FEditor.GetTopLineBeforeFold;
+  FEditor.BeginUpdate(False);
+  try
+    OldHlIsPas := FEditor.Highlighter is TSynPasSyn;
+    HlIsPas := False;
+    if EditorOpts.UseSyntaxHighlight then begin
+      if AHighlighterId < 0 then begin
+        if FDefaultSyntaxHighlighterId = IdeHighlighterNotSpecifiedId then
+          UpdateDefaultDefaultSyntaxHighlighterId(True);
+        FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[FDefaultSyntaxHighlighterId];
+      end
+      else
+        FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[AHighlighterId];
+      HlIsPas := FEditor.Highlighter is TSynPasSyn;
     end
     else
-      FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[AHighlighterId];
-    HlIsPas := FEditor.Highlighter is TSynPasSyn;
-  end
-  else
-    FEditor.Highlighter:=nil;
+      FEditor.Highlighter:=nil;
 
-  if (OldHlIsPas <>  HlIsPas) then begin
-    if HlIsPas then
-      FEditor.Beautifier := PasBeautifier
+    FSyntaxHighlighterId:=AHighlighterId;
+    if (OldHlIsPas <>  HlIsPas) then begin
+      if HlIsPas then
+        FEditor.Beautifier := PasBeautifier
+      else
+        FEditor.Beautifier := nil; // use default
+
+      if ASkipEditorOpts then
+        exit;
+
+      EditorOpts.GetSynEditSettings(FEditor, nil, ActiveSyntaxHighlighterId);
+      if Visible then
+        UpdateIfDefNodeStates(True);
+    end
+
     else
-      FEditor.Beautifier := nil; // use default
-    EditorOpts.GetSynEditSettings(FEditor, nil);
+    if ASkipEditorOpts then
+      exit
+
+    else
+      EditorOpts.UpdateSynEditSettingsForHighlighter(FEditor, ActiveSyntaxHighlighterId);
+
+    SourceNotebook.UpdateActiveEditColors(FEditor);
+    SourceEditorManager.SendEditorReconfigured(Self);
+  finally
+    FEditor.EndUpdate;
+    if not ASkipEditorOpts then
+      FEditor.RestoreTopLineAfterFold(tl);
   end;
-  FSyntaxHighlighterId:=AHighlighterId;
-  SourceNotebook.UpdateActiveEditColors(FEditor);
-  SourceEditorManager.SendEditorReconfigured(Self);
 end;
 
 procedure TSourceEditor.SetErrorLine(NewLine: integer);
@@ -5188,19 +5221,28 @@ end;
 function TSourceEditor.RefreshEditorSettings: Boolean;
 var
   SimilarEditor: TSynEdit;
+  tl: TSrcSynTopLineInfo;
 Begin
   Result:=true;
-  SetSyntaxHighlighterId(fSyntaxHighlighterId);
+  tl := FEditor.GetTopLineBeforeFold;
+  FEditor.BeginUpdate(False);
+  try
+    SetSyntaxHighlighterId(fSyntaxHighlighterId, True);
 
-  // try to copy settings from an editor to the left
-  SimilarEditor:=nil;
-  if (SourceNotebook.EditorCount>0) and (SourceNotebook.Editors[0]<>Self) then
-    SimilarEditor:=SourceNotebook.Editors[0].EditorComponent;
-  EditorOpts.GetSynEditSettings(FEditor,SimilarEditor);
+    // try to copy settings from an editor to the left
+    SimilarEditor:=nil;
+    if (SourceNotebook.EditorCount>0) and (SourceNotebook.Editors[0]<>Self) then
+      SimilarEditor:=SourceNotebook.Editors[0].EditorComponent;
+    EditorOpts.GetSynEditSettings(FEditor,SimilarEditor, ActiveSyntaxHighlighterId);
 
-  SourceNotebook.UpdateActiveEditColors(FEditor);
-  if Visible then
-    UpdateIfDefNodeStates(True);
+    SourceNotebook.UpdateActiveEditColors(FEditor);
+    if Visible then
+      UpdateIfDefNodeStates(True);
+  finally
+    FEditor.EndUpdate;
+    FEditor.RestoreTopLineAfterFold(tl);
+  end;
+  SourceEditorManager.SendEditorReconfigured(Self);
 end;
 
 function TSourceEditor.AutoCompleteChar(Char: TUTF8Char; var AddChar: boolean;
@@ -5999,6 +6041,13 @@ begin
       FMouseActionPopUpMenu := nil;
     end;
   end;
+end;
+
+function TSourceEditor.GetActiveSyntaxHighlighterId: TIdeSyntaxHighlighterID;
+begin
+  Result := FSyntaxHighlighterId;
+  if Result = IdeHighlighterNotSpecifiedId then
+    Result := FDefaultSyntaxHighlighterId;
 end;
 
 procedure TSourceEditor.ToggleBreakpoint(ALine: Integer);

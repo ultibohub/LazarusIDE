@@ -496,6 +496,11 @@ msgstr "Kod katlama ağacı"
 msgid "Code folding (current)"
 msgstr "Kod katlama (güncel)"
 
+#: lazarusidestrconsts.dlgaddhiattrcustom
+#, object-pascal-format
+msgid "Custom %d"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Varsayılan Metin"
@@ -569,6 +574,22 @@ msgstr "Metin"
 msgid "Wrapping"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
+msgid "(Custom)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_entrytype
+msgid "(entry type)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_extended
+msgid "(Extended)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_nbrackets
+msgid "(Nested Brackets)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "Oluk Ayırıcı"
@@ -612,6 +633,11 @@ msgstr "Değiştirilmiş satır"
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
 msgstr "Fare bağlantısı"
+
+#: lazarusidestrconsts.dlgaddhiattrnestedbracket
+#, object-pascal-format
+msgid "Nested bracket %d"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
 #, object-pascal-format
@@ -3403,6 +3429,10 @@ msgstr "İyileştirilme seviyeleri"
 msgid "Word-wrap"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwrapallhl
+msgid "Select all"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapcheckfixedlength
 msgid "Wrap at fixed column"
 msgstr ""
@@ -3450,6 +3480,10 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapnonehl
+msgid "Clear selection"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapsectioncolumn
@@ -20107,6 +20141,10 @@ msgstr "Sözcüğün başlangıcına sil"
 #: lazarusidestrconsts.srkmecdeleteline
 msgid "Delete current line"
 msgstr "Geçerli satırı sil"
+
+#: lazarusidestrconsts.srkmecdeletelinekeepx
+msgid "Delete current line (keep X pos)"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecdeleteword
 msgid "Delete to end of word"

@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-03-12 18:27+0300\n"
+"PO-Revision-Date: 2025-03-23 22:36+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -487,6 +487,11 @@ msgstr "Дерево сворачиваний кода"
 msgid "Code folding (current)"
 msgstr "Сворачивание кода (текущее)"
 
+#: lazarusidestrconsts.dlgaddhiattrcustom
+#, object-pascal-format
+msgid "Custom %d"
+msgstr "Пользовательский %d"
+
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Текст по умолчанию"
@@ -560,6 +565,22 @@ msgstr "Текст"
 msgid "Wrapping"
 msgstr "Перенос слов"
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
+msgid "(Custom)"
+msgstr "(пользовательские)"
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_entrytype
+msgid "(entry type)"
+msgstr "(тип элемента списка)"
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_extended
+msgid "(Extended)"
+msgstr "(расширенные)"
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_nbrackets
+msgid "(Nested Brackets)"
+msgstr "(вложенные скобки)"
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "Линия отделения бокового поля"
@@ -604,6 +625,11 @@ msgstr "Изменённая строка"
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
 msgstr "Ссылка при наведении мыши"
+
+#: lazarusidestrconsts.dlgaddhiattrnestedbracket
+#, object-pascal-format
+msgid "Nested bracket %d"
+msgstr "Вложенная скобка %d"
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
 #, object-pascal-format
@@ -3405,6 +3431,10 @@ msgstr "Уровни оптимизации"
 msgid "Word-wrap"
 msgstr "Перенос слов"
 
+#: lazarusidestrconsts.dlgoptwordwrapallhl
+msgid "Select all"
+msgstr "Выбрать все"
+
 #: lazarusidestrconsts.dlgoptwordwrapcheckfixedlength
 msgid "Wrap at fixed column"
 msgstr "Переносить на фиксированном столбце"
@@ -3453,6 +3483,10 @@ msgstr "Максимальная длина строки"
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
 msgstr "Минимальная длина строки"
+
+#: lazarusidestrconsts.dlgoptwordwrapnonehl
+msgid "Clear selection"
+msgstr "Снять выбор"
 
 #: lazarusidestrconsts.dlgoptwordwrapsectioncolumn
 msgid "Wrap column settings"
@@ -20135,6 +20169,10 @@ msgstr "Удалить до начала слова"
 #: lazarusidestrconsts.srkmecdeleteline
 msgid "Delete current line"
 msgstr "Удалить текущую строку"
+
+#: lazarusidestrconsts.srkmecdeletelinekeepx
+msgid "Delete current line (keep X pos)"
+msgstr "Удалить текущую строку (сохранить позицию по X)"
 
 #: lazarusidestrconsts.srkmecdeleteword
 msgid "Delete to end of word"

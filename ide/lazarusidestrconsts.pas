@@ -1665,6 +1665,8 @@ resourcestring
 
   dlgOptWordWrap = 'Word-wrap';
   dlgOptWordWrapUseWordwrap = 'Use Word-wrap';
+  dlgOptWordWrapAllHL = 'Select all';
+  dlgOptWordWrapNoneHL = 'Clear selection';
   dlgOptWordWrapDisplayCaretAtWrapPositio = 'Display caret at wrap-position...';
   dlgOptWordWrapEndOfLine = 'end of line';
   dlgOptWordWrapStartOfNextLine = 'start of next line';
@@ -2177,6 +2179,8 @@ resourcestring
   dlgIfDefNodeInactive            = 'Inactive $IFDEF node';
   dlgIfDefNodeActive              = 'Active $IFDEF node';
   dlgIfDefNodeTmpActive           = 'Included mixed state $IFDEF node';
+  dlgAddHiAttrCustom              = 'Custom %d';
+  dlgAddHiAttrNestedBracket       = 'Nested bracket %d';
 
   dbgAsmWindowSourceLine          = 'Source line';
   dbgAsmWindowSourceFunc          = 'Function name';
@@ -2191,6 +2195,11 @@ resourcestring
   dlgAddHiAttrGroupTemplateEdit  = 'Template Edit';
   dlgAddHiAttrGroupIfDef    = 'IfDef';
   dlgAddHiAttrGroupOutlineColors = 'Outline Colors';
+  dlgAddHiAttrGroup_Suffix_Extended  = '(Extended)';
+  dlgAddHiAttrGroup_Suffix_Custom  = '(Custom)';
+  dlgAddHiAttrGroup_Suffix_NBrackets  = '(Nested Brackets)';
+  dlgAddHiAttrGroup_Suffix_EntryType  = '(entry type)';
+
 
   dlgEditAccessCaptionLockedInView            = 'Locked, if text in view';
   dlgEditAccessCaptionUnLockedInSoftView      = 'Unlocked, if text in centered view';
@@ -3110,6 +3119,7 @@ resourcestring
   srkmecDeleteBOL             = 'Delete to beginning of line';
   srkmecDeleteEOL             = 'Delete to end of line';
   srkmecDeleteLine            = 'Delete current line';
+  srkmecDeleteLineKeepX       = 'Delete current line (keep X pos)';
   srkmecClearAll              = 'Delete whole text';
   srkmecLineBreak             = 'Break line and move cursor';
   srkmecInsertLine            = 'Break line, leave cursor';

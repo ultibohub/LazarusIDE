@@ -484,6 +484,11 @@ msgstr ""
 msgid "Code folding (current)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrcustom
+#, object-pascal-format
+msgid "Custom %d"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr ""
@@ -557,6 +562,22 @@ msgstr "Teks"
 msgid "Wrapping"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
+msgid "(Custom)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_entrytype
+msgid "(entry type)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_extended
+msgid "(Extended)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_nbrackets
+msgid "(Nested Brackets)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr ""
@@ -600,6 +621,11 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrnestedbracket
+#, object-pascal-format
+msgid "Nested bracket %d"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
@@ -3510,6 +3536,10 @@ msgstr ""
 msgid "Word-wrap"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwrapallhl
+msgid "Select all"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapcheckfixedlength
 msgid "Wrap at fixed column"
 msgstr ""
@@ -3557,6 +3587,10 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapnonehl
+msgid "Clear selection"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapsectioncolumn
@@ -20833,6 +20867,10 @@ msgstr "Hapus sampai awal kata"
 #: lazarusidestrconsts.srkmecdeleteline
 msgid "Delete current line"
 msgstr "Hapus baris saat ini"
+
+#: lazarusidestrconsts.srkmecdeletelinekeepx
+msgid "Delete current line (keep X pos)"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecdeleteword
 msgid "Delete to end of word"

@@ -492,6 +492,11 @@ msgstr "Plegado del árbol de código"
 msgid "Code folding (current)"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrcustom
+#, object-pascal-format
+msgid "Custom %d"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Texto Predeterminado"
@@ -565,6 +570,22 @@ msgstr "Texto"
 msgid "Wrapping"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
+msgid "(Custom)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_entrytype
+msgid "(entry type)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_extended
+msgid "(Extended)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_suffix_nbrackets
+msgid "(Nested Brackets)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgutterseparator
 msgid "Gutter Separator"
 msgstr "Separador de la columna de marcas"
@@ -609,6 +630,11 @@ msgstr "Línea modificada"
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
 msgstr "Enlace de Ratón"
+
+#: lazarusidestrconsts.dlgaddhiattrnestedbracket
+#, object-pascal-format
+msgid "Nested bracket %d"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
 #, object-pascal-format
@@ -3525,6 +3551,10 @@ msgstr "Niveles de optimización"
 msgid "Word-wrap"
 msgstr ""
 
+#: lazarusidestrconsts.dlgoptwordwrapallhl
+msgid "Select all"
+msgstr ""
+
 #: lazarusidestrconsts.dlgoptwordwrapcheckfixedlength
 msgid "Wrap at fixed column"
 msgstr ""
@@ -3572,6 +3602,10 @@ msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapminimumlinelength
 msgid "Minimum line length"
+msgstr ""
+
+#: lazarusidestrconsts.dlgoptwordwrapnonehl
+msgid "Clear selection"
 msgstr ""
 
 #: lazarusidestrconsts.dlgoptwordwrapsectioncolumn
@@ -20523,6 +20557,10 @@ msgstr "Borrar al principio de la palabra"
 #: lazarusidestrconsts.srkmecdeleteline
 msgid "Delete current line"
 msgstr "Borrar línea actual"
+
+#: lazarusidestrconsts.srkmecdeletelinekeepx
+msgid "Delete current line (keep X pos)"
+msgstr ""
 
 #: lazarusidestrconsts.srkmecdeleteword
 msgid "Delete to end of word"

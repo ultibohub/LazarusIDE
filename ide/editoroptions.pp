@@ -42,7 +42,7 @@ uses
   // RTL, FCL
   Classes, SysUtils, typinfo, fgl, Math, resource,
   // LCL
-  Graphics, LResources, Forms, Dialogs, ComCtrls, LCLType, Controls,
+  Graphics, LResources, Forms, Dialogs, ComCtrls, LCLType, Controls, LCLProc,
   // LazUtils
   FileUtil, LazFileUtils, LazUTF8, LazClasses, Laz2_XMLCfg, LazStringUtils, LazLoggerBase,
   // Synedit
@@ -95,15 +95,6 @@ type
   TLazSynPluginSyncroEditFormSel = class(TForm)    end;
   TLazSynPluginSyncroEditForm = class(TForm)       end;
   TLazSynPluginSyncroEditFormOff = class(TForm)    end;
-
-  TColorSchemeAttributeFeature =
-    ( hafBackColor, hafForeColor, hafFrameColor, hafAlpha, hafPrior,
-      hafStyle, hafStyleMask,
-      hafFrameStyle, hafFrameEdges,
-      hafMarkupFoldColor, // for the MarkupFoldColor module
-      hafCustomWords
-    );
-  TColorSchemeAttributeFeatures = set of TColorSchemeAttributeFeature;
 
 const
   SynEditPreviewIncludeOptions = [eoNoCaret, eoNoSelection];
@@ -331,10 +322,11 @@ type
 
   { TColorSchemeAttribute }
 
-  TColorSchemeAttribute = class(TSynHighlighterLazCustomPasAttribute)
+  TColorSchemeAttribute = class(TSynHighlighterLazCustomPasAttribute, IColorSchemeAttribute)
   private
     FFeatures: TColorSchemeAttributeFeatures;
     FGroup: TAhaGroupName;
+    FRegisteredGroup: integer;
     FMarkupFoldLineAlpha: Byte;
     FMarkupFoldLineColor: TColor;
     FMarkupFoldLineStyle: TSynLineStyle;
@@ -342,10 +334,13 @@ type
     FAlreadyGotSchemeGlobal: Boolean;
     FSchemeGlobalCache: TColorSchemeAttribute;
     FUseSchemeGlobals: Boolean;
+    function GetGroupName: String;
     function GetIsUsingSchemeGlobals: Boolean;
     procedure SetMarkupFoldLineAlpha(AValue: Byte);
     procedure SetMarkupFoldLineColor(AValue: TColor);
     procedure SetMarkupFoldLineStyle(AValue: TSynLineStyle);
+    // IColorSchemeAttribute
+    procedure ApplyTo(aDest: TObject);
   protected
     procedure Init; override;
   public
@@ -363,6 +358,7 @@ type
     procedure SaveToXml(aXMLConfig: TRttiXMLConfig; const aPath: String;
                         Defaults: TColorSchemeAttribute);
     property Group: TAhaGroupName read FGroup write FGroup;
+    property GroupName: String read GetGroupName;
     property IsUsingSchemeGlobals: Boolean read GetIsUsingSchemeGlobals;
     property Features: TColorSchemeAttributeFeatures read FFeatures write FFeatures;
   published
@@ -375,7 +371,7 @@ type
 
   { TColorSchemeLanguage }
 
-  TColorSchemeLanguage = class(TObject)
+  TColorSchemeLanguage = class(TObject, IColorSchemeLanguage)
   private
     FDefaultAttribute: TColorSchemeAttribute;
     FAttributes: TQuickStringlist; // TColorSchemeAttribute
@@ -391,6 +387,9 @@ type
     function GetName: String;
     function DoesSupportGroup(AGroup: TAhaGroupName): boolean;
     function GetSupportsFileExt: Boolean;
+    // IColorSchemeLanguage
+    function GetAttributeIntf(AnIndex: integer): IColorSchemeAttribute;
+    function GetAttributeIntf(const AStoredName: string): IColorSchemeAttribute;
   public
     constructor Create(AGroup: TColorScheme; AIdeHighlighterID: TIdeSyntaxHighlighterID;
       IsSchemeDefault: Boolean);
@@ -426,39 +425,58 @@ type
 
   { TColorScheme }
 
-  TColorScheme = class(TObject)
+  TColorScheme = class(TObject, IColorScheme)
   private type
     TColorSchemesMap = specialize TFPGMapObject<string, TColorSchemeLanguage>;
   private
     FName: String;
     FColorSchemes: TColorSchemesMap; //Array of TColorSchemeLanguage;
     FDefaultColors: TColorSchemeLanguage;
+    function GetColorScheme(Index: integer): TColorSchemeLanguage;
     function GetColorSchemeBySynHl(Index: TSynCustomHighlighter): TColorSchemeLanguage;
+    // IColorScheme
+    function GetName: String;
+    function GetLanguage(AnIndex: Integer): IColorSchemeLanguage;
+    function GetLanguageForHighlighter(AnHiglighter: TObject {TSynCustomHighlighter}): IColorSchemeLanguage;
+    function GetLanguageForHighlighter(AnHighlighterId: TIdeSyntaxHighlighterID): IColorSchemeLanguage;
   public
     constructor Create(const AName: String);
     constructor CreateFromXml(aXMLConfig: TRttiXMLConfig; const AName, aPath: String);
     destructor  Destroy; override;
     procedure Assign(Src: TColorScheme); reintroduce;
+    function Count: integer;
     function GetStoredValuesForScheme: TColorScheme; // The IDE default colors from the resources
     procedure LoadFromXml(aXMLConfig: TRttiXMLConfig; const aPath: String;
                           Defaults: TColorScheme; const aOldPath: String = '');
     procedure SaveToXml(aXMLConfig: TRttiXMLConfig; const aPath: String; Defaults: TColorScheme);
     property  Name: string read FName;
     property  DefaultColors: TColorSchemeLanguage read FDefaultColors;
+    property  ColorScheme[Index: integer]: TColorSchemeLanguage read GetColorScheme;
     property  ColorSchemeBySynHl[Index: TSynCustomHighlighter]: TColorSchemeLanguage read GetColorSchemeBySynHl;
   end;
 
   { TColorSchemeFactory }
 
-  TColorSchemeFactory = class(TObject)
+  TColorSchemeFactory = class(TObject, IColorSchemeList)
   private
     FMappings: TQuickStringlist; // TColorScheme
     function GetColorSchemeGroup(const Index: String): TColorScheme;
     function GetColorSchemeGroupAtPos(Index: Integer): TColorScheme;
+    // IColorSchemeList
+    function GetScheme(AnIndex: Integer): IColorScheme;
+    function GetScheme(AName: String): IColorScheme;
+    function GetCurrentSchemeForHighlighter(AnHiglighter: TObject {TSynCustomHighlighter}): IColorScheme;
+    function GetCurrentSchemeForHighlighter(AnHighlighterId: TIdeSyntaxHighlighterID): IColorScheme;
+    procedure RegisterChangedHandler(AnHandler: TNotifyEvent);
+    procedure UnregisterChangedHandler(AnHandler: TNotifyEvent);
+    function RegisterAttributeGroup(AName: PString): integer; // pointer to resource string
+    procedure InternalAddAttribute(AnAttrGroup: integer; AnHighlighterId: TIdeSyntaxHighlighterID; AStoredName: String; AName: PString;  AFeatures: TColorSchemeAttributeFeatures; ADefaults: TObject = nil);
+    procedure AddAttribute(AnAttrGroup: integer; AnHighlighterId: TIdeSyntaxHighlighterID; AStoredName: String; AName: PString;  AFeatures: TColorSchemeAttributeFeatures; ADefaults: TObject = nil);
   public
     constructor Create;
     destructor  Destroy; override;
     procedure Clear;
+    function Count: integer;
     procedure Assign(Src: TColorSchemeFactory); reintroduce;
     procedure LoadFromXml(aXMLConfig: TRttiXMLConfig; const aPath: String;
       Defaults: TColorSchemeFactory; const aOldPath: String = '');
@@ -1603,6 +1621,7 @@ type
     // Wordwrap
     FWordWrapCaretWrapPos: TLazSynEditWrapCaretPos;
     FWordWrapEnabled: Boolean;
+    FWordWrapHLList: TStringList;
     FWordWrapFixedWidth: boolean;
     FWordWrapForceHomeEnd: Boolean;
     FWordWrapIndent: Integer;
@@ -1676,6 +1695,7 @@ type
     property GutterPartOver: TEditorSynGutterOptions read FGutterPartOver;
     property GutterPartList: TEditorSynGutterOptionsList read FGutterPartList;
     property GutterRightPartList: TEditorSynGutterOptionsList read FGutterRightPartList;
+    property WordWrapHLList: TStringList read FWordWrapHLList;
   published { use RTTIConf}
     // general options
     property MultiLineTab: Boolean read fMultiLineTab write fMultiLineTab default False;
@@ -1878,6 +1898,7 @@ type
     fMultiWinEditAccessOrder: TEditorOptionsEditAccessOrderList;
     // Default values for RttiXmlConfig using published properties.
     FDefaultValues: TEditorOptionsDefaults;
+
     function GetHighlighterList: TEditOptLangList;
     procedure Init;
     function GetCodeTemplateFileNameExpand: String;
@@ -1888,6 +1909,7 @@ type
     class function GetGroupCaption: string; override;
     class function GetInstance: TAbstractIDEOptions; override;
     procedure DoAfterWrite(Restore: boolean); override;
+    procedure DoAfterRead; override;
   public
     constructor Create;
     destructor Destroy; override;
@@ -1909,7 +1931,8 @@ type
     procedure GetHighlighterObjSettings(Syn: TObject); override; // read highlight settings from config file
     procedure GetHighlighterSettings(Syn: TSrcIDEHighlighter); // read highlight settings from config file
     procedure GetSynEditorSettings(ASynEdit: TObject; SimilarEdit: TObject = nil); override;
-    procedure GetSynEditSettings(ASynEdit: TSynEdit; SimilarEdit: TSynEdit = nil); // read synedit settings from config file
+    procedure GetSynEditSettings(ASynEdit: TSynEdit; SimilarEdit: TSynEdit = nil; AHighlighterId: TIdeSyntaxHighlighterID = IdeHighlighterUnknownId); // read synedit settings from config file
+    procedure UpdateSynEditSettingsForHighlighter(ASynEdit: TSynEdit; AHighlighterId: TIdeSyntaxHighlighterID);
     procedure GetSynEditPreviewSettings(APreviewEditor: TObject);
     procedure SetMarkupColor(Syn: TSrcIDEHighlighter;
                              AddHilightAttr: TAdditionalHilightAttribute;
@@ -2055,6 +2078,8 @@ const
 
 var
   DefaultColorSchemeName: String;
+  EdOptsChangedHandlers: TMethodList;
+  RegisteredAttribGroupNames: array of PString;
 
 function FontHeightToSize(Height: Integer): Integer;
 var
@@ -2922,6 +2947,8 @@ begin
       FileList.Free;
     end;
   end;
+  IdeColorSchemeList := Singleton;
+  _IDE_CallOnIdeColorSchemeListCreated;
   Result := Singleton;
 end;
 
@@ -5486,6 +5513,11 @@ begin
   FGutterPartList.Add(FGutterPartSep);
   FGutterPartList.Add(FGutterPartFold);
   FGutterRightPartList.Add(FGutterPartOver);
+
+  FWordWrapHLList := TStringList.Create;
+  FWordWrapHLList.Duplicates := dupIgnore;
+  FWordWrapHLList.Sorted := True;
+  FWordWrapHLList.CaseSensitive := False;
 end;
 
 destructor TEditorOptionsBase.Destroy;
@@ -5494,6 +5526,7 @@ begin
   FreeAndNil(FGutterRightPartList);
   FreeAndNil(FScrollOnEditLeftOptions);
   FreeAndNil(FScrollOnEditRightOptions);
+  FreeAndNil(FWordWrapHLList);
   inherited Destroy;
 end;
 
@@ -5605,6 +5638,15 @@ begin
   if not Restore then
     Save;
   inherited;
+  if EdOptsChangedHandlers <> nil then
+    EdOptsChangedHandlers.CallNotifyEvents(nil);
+end;
+
+procedure TEditorOptions.DoAfterRead;
+begin
+  inherited DoAfterRead;
+  if EdOptsChangedHandlers <> nil then
+    EdOptsChangedHandlers.CallNotifyEvents(nil);
 end;
 
 constructor TEditorOptions.Create;
@@ -5961,6 +6003,10 @@ begin
     for i := IdeHighlighterStartId to HighlighterList.Count - 1 do
       GetHighlighterSettings(HighlighterList.SharedSynInstances[i]);
 
+    //Wordwrap
+    FWordWrapHLList.DelimitedText :=
+      XMLConfig.GetValue('EditorOptions/Misc/WordWrapHighlighters', '');
+
   except
     on E: Exception do
       DebugLn('[TEditorOptions.Load] ERROR: ', e.Message);
@@ -6164,6 +6210,10 @@ begin
 
     FMultiWinEditAccessOrder.SaveToXMLConfig(XMLConfig, 'EditorOptions/MultiWin/');
     UserColorSchemeGroup.SaveToXml(XMLConfig, 'EditorOptions/Color/', ColorSchemeFactory);
+
+    //WordWrap
+    XMLConfig.SetDeleteValue('EditorOptions/Misc/WordWrapHighlighters'
+      , FWordWrapHLList.DelimitedText, '');
 
     InvalidateFileStateCache;
     XMLConfig.Flush;
@@ -6701,7 +6751,8 @@ begin
     APageCtrl.Font.Quality := fqDefault;
 end;
 
-procedure TEditorOptions.GetSynEditSettings(ASynEdit: TSynEdit; SimilarEdit: TSynEdit);
+procedure TEditorOptions.GetSynEditSettings(ASynEdit: TSynEdit; SimilarEdit: TSynEdit;
+  AHighlighterId: TIdeSyntaxHighlighterID);
 // read synedit settings from config file
 // if SimilarEdit is given it is used for speed up
 var
@@ -6718,18 +6769,7 @@ begin
     ASynEdit.Options := fSynEditOptions;
     ASynEdit.Options2 := fSynEditOptions2;
 
-    if eoScrollPastEol in fSynEditOptions then
-    case FScrollPastEolMode of
-      optScrollFixed: ASynEdit.Options2 := ASynEdit.Options2 + [eoScrollPastEolAutoCaret];
-      optScrollPage: begin
-          ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
-          ASynEdit.Options2 := ASynEdit.Options2 + [eoScrollPastEolAddPage, eoScrollPastEolAutoCaret];
-        end;
-      optScrollNone: begin
-          ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
-          ASynEdit.Options2 := ASynEdit.Options2 + [eoScrollPastEolAutoCaret];
-        end;
-    end;
+    UpdateSynEditSettingsForHighlighter(ASynEdit, AHighlighterId);
 
     ASynEdit.BlockIndent := fBlockIndent;
     ASynEdit.BlockTabIndent := FBlockTabIndent;
@@ -6875,7 +6915,6 @@ begin
     ASynEdit.Gutter.Width := fGutterWidth;
 
     if ASynEdit is TIDESynEditor then begin
-      TIDESynEditor(ASynEdit).WordWrapEnabled       := WordWrapEnabled;
       TIDESynEditor(ASynEdit).WordWrapCaretWrapPos  := WordWrapCaretWrapPos;
       TIDESynEditor(ASynEdit).WordWrapForceHomeEnd  := FWordWrapForceHomeEnd;
       TIDESynEditor(ASynEdit).WordWrapMinWidth      := WordWrapMinWidth;
@@ -6888,10 +6927,6 @@ begin
       TIDESynEditor(ASynEdit).WordWrapIndentMin        := WordWrapIndentMin;
       TIDESynEditor(ASynEdit).WordWrapIndentMax        := WordWrapIndentMax;
       TIDESynEditor(ASynEdit).WordWrapIndentMaxRel     := WordWrapIndentMaxRel;
-      if WordWrapEnabled then begin
-        ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
-        ASynEdit.Options2 := ASynEdit.Options2 - [eoScrollPastEolAddPage, eoScrollPastEolAutoCaret];
-      end;
     end;
 
     ASynEdit.RightEdge := fRightMargin;
@@ -6979,6 +7014,36 @@ begin
   end;
 end;
 
+procedure TEditorOptions.UpdateSynEditSettingsForHighlighter(
+  ASynEdit: TSynEdit; AHighlighterId: TIdeSyntaxHighlighterID);
+begin
+  if (ASynEdit is TIDESynEditor) and WordWrapEnabled and ((FWordWrapHLList = nil) or
+    (FWordWrapHLList.Count = 0) or (AHighlighterId = IdeHighlighterUnknownId) or
+    (FWordWrapHLList.IndexOf(HighlighterList.Names[AHighlighterId]) < 0)) then
+  begin
+    TIDESynEditor(ASynEdit).WordWrapEnabled := True;
+    ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
+    ASynEdit.Options2 := ASynEdit.Options2 - [eoScrollPastEolAddPage, eoScrollPastEolAutoCaret];
+  end
+  else
+  begin
+    if ASynEdit is TIDESynEditor then
+      TIDESynEditor(ASynEdit).WordWrapEnabled := False;
+    if eoScrollPastEol in fSynEditOptions then
+    case FScrollPastEolMode of
+      optScrollFixed: ASynEdit.Options2 := ASynEdit.Options2 + [eoScrollPastEolAutoCaret];
+      optScrollPage: begin
+          ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
+          ASynEdit.Options2 := ASynEdit.Options2 + [eoScrollPastEolAddPage, eoScrollPastEolAutoCaret];
+        end;
+      optScrollNone: begin
+          ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
+          ASynEdit.Options2 := ASynEdit.Options2 + [eoScrollPastEolAutoCaret];
+        end;
+    end;
+  end;
+end;
+
 procedure TEditorOptions.GetSynEditPreviewSettings(APreviewEditor: TObject);
 // read synedit setings from config file
 var
@@ -7041,6 +7106,11 @@ begin
   Changed;
 end;
 
+procedure TColorSchemeAttribute.ApplyTo(aDest: TObject);
+begin
+  ApplyTo(aDest as TSynHighlighterAttributes, nil);
+end;
+
 procedure TColorSchemeAttribute.Init;
 begin
   inherited Init;
@@ -7053,6 +7123,14 @@ end;
 function TColorSchemeAttribute.GetIsUsingSchemeGlobals: Boolean;
 begin
   Result := FUseSchemeGlobals and (GetSchemeGlobal <> nil);
+end;
+
+function TColorSchemeAttribute.GetGroupName: String;
+begin
+  if FGroup = agnRegistered then
+    Result := RegisteredAttribGroupNames[FRegisteredGroup]^
+  else
+    Result := AdditionalHighlightGroupNames[Group];
 end;
 
 function TColorSchemeAttribute.GetSchemeGlobal: TColorSchemeAttribute;
@@ -7335,6 +7413,16 @@ end;
 function TColorSchemeLanguage.GetSupportsFileExt: Boolean;
 begin
   Result := (FHighlighter = nil) or not(FHighlighter is TNonSrcIDEHighlighter);
+end;
+
+function TColorSchemeLanguage.GetAttributeIntf(AnIndex: integer): IColorSchemeAttribute;
+begin
+  Result := GetAttributeAtPos(AnIndex);
+end;
+
+function TColorSchemeLanguage.GetAttributeIntf(const AStoredName: string): IColorSchemeAttribute;
+begin
+  Result := GetAttribute(AStoredName);
 end;
 
 function TColorSchemeLanguage.GetStoredValuesForLanguage: TColorSchemeLanguage;
@@ -7912,6 +8000,32 @@ begin
     Result := FColorSchemes[Index.LanguageName];
 end;
 
+function TColorScheme.GetName: String;
+begin
+  Result := FName;
+end;
+
+function TColorScheme.GetLanguage(AnIndex: Integer): IColorSchemeLanguage;
+begin
+  Result := FColorSchemes.Data[AnIndex];
+end;
+
+function TColorScheme.GetLanguageForHighlighter(AnHighlighterId: TIdeSyntaxHighlighterID
+  ): IColorSchemeLanguage;
+begin
+  Result := ColorSchemeBySynHl[HighlighterList.SharedSynInstances[AnHighlighterId]];
+end;
+
+function TColorScheme.GetLanguageForHighlighter(AnHiglighter: TObject): IColorSchemeLanguage;
+begin
+  Result := ColorSchemeBySynHl[AnHiglighter as TSynCustomHighlighter];
+end;
+
+function TColorScheme.GetColorScheme(Index: integer): TColorSchemeLanguage;
+begin
+  Result := FColorSchemes.Data[Index];
+end;
+
 function TColorScheme.GetStoredValuesForScheme: TColorScheme;
 begin
   Result:=ColorSchemeFactory.ColorSchemeGroup[Name];
@@ -7968,6 +8082,11 @@ begin
     l.Assign(Src.FColorSchemes.Data[i]);
     FColorSchemes[Src.FColorSchemes.Keys[i]] := l;
   end;
+end;
+
+function TColorScheme.Count: integer;
+begin
+  Result := FColorSchemes.Count;
 end;
 
 procedure TColorScheme.LoadFromXml(aXMLConfig: TRttiXMLConfig;
@@ -8038,6 +8157,98 @@ begin
   Result := TColorScheme(FMappings.Objects[Index]);
 end;
 
+function TColorSchemeFactory.GetScheme(AnIndex: Integer): IColorScheme;
+begin
+  Result := nil;
+  if EditorOpts <> nil then
+    Result := EditorOpts.UserColorSchemeGroup.ColorSchemeGroupAtPos[AnIndex];
+end;
+
+function TColorSchemeFactory.GetScheme(AName: String): IColorScheme;
+begin
+  Result := nil;
+  if EditorOpts <> nil then
+    Result := EditorOpts.UserColorSchemeGroup.ColorSchemeGroup[AName];
+end;
+
+function TColorSchemeFactory.GetCurrentSchemeForHighlighter(AnHiglighter: TObject): IColorScheme;
+begin
+  Result := nil;
+  if EditorOpts <> nil then
+    Result := EditorOpts.UserColorSchemeGroup.GetColorSchemeGroup(EditorOpts.ReadColorScheme((AnHiglighter as TSynCustomHighlighter).LanguageName));
+end;
+
+function TColorSchemeFactory.GetCurrentSchemeForHighlighter(AnHighlighterId: TIdeSyntaxHighlighterID
+  ): IColorScheme;
+begin
+  Result := nil;
+  if EditorOpts <> nil then
+    Result := EditorOpts.UserColorSchemeGroup.GetColorSchemeGroup(EditorOpts.ReadColorScheme(HighlighterList.Names[AnHighlighterId]));
+end;
+
+procedure TColorSchemeFactory.RegisterChangedHandler(AnHandler: TNotifyEvent);
+begin
+  if EdOptsChangedHandlers = nil then
+    EdOptsChangedHandlers := TMethodList.Create;
+  EdOptsChangedHandlers.Add(TMethod(AnHandler));
+end;
+
+procedure TColorSchemeFactory.UnregisterChangedHandler(AnHandler: TNotifyEvent);
+begin
+  if EdOptsChangedHandlers <> nil then
+    EdOptsChangedHandlers.Remove(TMethod(AnHandler));
+end;
+
+function TColorSchemeFactory.RegisterAttributeGroup(AName: PString): integer;
+begin
+  Result := Length(RegisteredAttribGroupNames);
+  SetLength(RegisteredAttribGroupNames, Result + 1);
+  RegisteredAttribGroupNames[Result] := AName;
+end;
+
+procedure TColorSchemeFactory.InternalAddAttribute(AnAttrGroup: integer;
+  AnHighlighterId: TIdeSyntaxHighlighterID; AStoredName: String; AName: PString;
+  AFeatures: TColorSchemeAttributeFeatures; ADefaults: TObject);
+var
+  h: TSynCustomHighlighter;
+  i: Integer;
+  cs: TColorScheme;
+  csl: TColorSchemeLanguage;
+  csa: TColorSchemeAttribute;
+begin
+  h := HighlighterList.SharedSynInstances[AnHighlighterId];
+  if h = nil then
+    exit;
+
+  for i := 0 to FMappings.Count - 1 do begin
+    cs := ColorSchemeGroupAtPos[i];
+    csl := cs.ColorSchemeBySynHl[h];
+    if csl = nil then
+      continue;
+
+    csa := TColorSchemeAttribute.Create(csl, AName, AStoredName);
+    csa.Clear;
+    if ADefaults <> nil then
+      csa.AssignColors(ADefaults as TSynHighlighterAttributes);
+    csa.InternalSaveDefaultValues;
+
+    csa.FGroup := agnRegistered;
+    csa.FRegisteredGroup := AnAttrGroup;
+    csa.FFeatures := AFeatures;
+
+    csl.FAttributes.AddObject(AStoredName, csa);
+  end;
+end;
+
+procedure TColorSchemeFactory.AddAttribute(AnAttrGroup: integer;
+  AnHighlighterId: TIdeSyntaxHighlighterID; AStoredName: String; AName: PString;
+  AFeatures: TColorSchemeAttributeFeatures; ADefaults: TObject);
+begin
+  InternalAddAttribute(AnAttrGroup, AnHighlighterId, AStoredName, AName, AFeatures, ADefaults);
+  if EditorOpts <> nil then
+    EditorOpts.UserColorSchemeGroup.InternalAddAttribute(AnAttrGroup, AnHighlighterId, AStoredName, AName, AFeatures, ADefaults);
+end;
+
 constructor TColorSchemeFactory.Create;
 begin
   inherited Create;
@@ -8062,6 +8273,11 @@ begin
       TColorScheme(FMappings.Objects[i]).Free;
     FMappings.Clear;
   end;
+end;
+
+function TColorSchemeFactory.Count: integer;
+begin
+  Result := FMappings.Count;
 end;
 
 procedure TColorSchemeFactory.Assign(Src: TColorSchemeFactory);
@@ -8224,7 +8440,10 @@ initialization
   IdeSyntaxHighlighters := HighlighterList;
 
 finalization
+  IdeColorSchemeList := nil;
   ColorSchemeFactory.Free;
   HighlighterList.Free;
+  RegisteredAttribGroupNames := nil;
+  EdOptsChangedHandlers.Free;
 
 end.

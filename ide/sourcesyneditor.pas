@@ -62,6 +62,7 @@ uses
   SynEditMarkupHighAll, SynEditKeyCmds, SynEditMarkupIfDef, SynEditMiscProcs,
   SynPluginMultiCaret, SynEditPointClasses,
   SynEditMarkupFoldColoring, SynEditTextTabExpander, SynEditMouseCmds, SynEditWrappedView,
+  // IDE
   etSrcEditMarks, LazarusIDEStrConsts, SourceMarks;
 
 type
@@ -311,8 +312,6 @@ type
     procedure SrcSynCaretChanged(Sender: TObject);
     function  GetHighlighter: TSynCustomFoldHighlighter;
   protected
-    function GetTopLineBeforeFold: TSrcSynTopLineInfo;
-    procedure RestoreTopLineAfterFold(AnInfo: TSrcSynTopLineInfo);
     procedure DoOnStatusChange(Changes: TSynStatusChanges); override;
     function CreateGutter(AOwner : TSynEditBase; ASide: TSynGutterSide;
                           ATextDrawer: TheTextDrawer): TSynGutter; override;
@@ -324,6 +323,8 @@ type
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     function TextIndexToViewPos(aTextIndex : Integer) : Integer; // Wrong name: argument is TextPos, not TextIdx
+    function GetTopLineBeforeFold: TSrcSynTopLineInfo;
+    procedure RestoreTopLineAfterFold(AnInfo: TSrcSynTopLineInfo);
     property IDEGutterMarks: TIDESynGutterMarks read GetIDEGutterMarks;
     property TopView;
     property TextBuffer;
@@ -582,6 +583,9 @@ type
     property TheLinesView:  TSynEditStrings       read FTheLinesView  write FTheLinesView;
   end;
   {$ENDIF}
+
+const
+  NESTED_BRACKET_STOREDNAME = 'NestedRoundBracket';
 
 implementation
 
@@ -2281,10 +2285,15 @@ begin
   inherited Create(AOwner);
 
   for i := 0 to 9 do begin
-    FCustomAttribs[i] := TSynHighlighterLazCustomPasAttribute.Create('Custom '+IntToStr(i), 'CustomToken_'+IntToStr(i));
+    FCustomAttribs[i] := TSynHighlighterLazCustomPasAttribute.Create(Format(dlgAddHiAttrCustom, [i]), 'CustomToken_'+IntToStr(i));
     AddAttribute(FCustomAttribs[i]);
     FCustomAttribs[i].OnChange := @DoBuildCustomPasAttr;
   end;
+
+  NestedBracketAttribs.BaseName := dlgAddHiAttrNestedBracket;
+  NestedBracketAttribs.BaseStoredName := NESTED_BRACKET_STOREDNAME;
+  for i := 0 to 9 do
+    NestedBracketAttribs.Add;
 end;
 
 procedure TIDESynPasSyn.SetLine(const NewValue: string; LineNumber: Integer);

@@ -2182,6 +2182,8 @@ begin
   FInternalBlockSelection.Lines := FTheLinesView;
   FMarkupManager.Lines := FTheLinesView;
   FTextArea.TheLinesView := FTheLinesView;
+  if FMarkList <> nil then // skip, if in ChangeTextBuffer / senrTextBufferChanged hasn't been sent yet
+    SizeOrFontChanged(True);
 end;
 
 function TCustomSynEdit.GetIsStickySelecting: Boolean;
@@ -7360,16 +7362,19 @@ begin
             FCaret.LineBytePos := WP;
           end;
         end;
-      ecDeleteLine:
+      ecDeleteLine, ecDeleteLineKeepX:
         if not ReadOnly
         then begin
           CY := FCaret.LinePos;
           if (Cy < FTheLinesView.Count) then
-            FTheLinesView.EditLinesDelete(CaretY, 1)
+            FTheLinesView.EditLinesDelete(CY, 1)
           else
           if (Cy = FTheLinesView.Count) and (FTheLinesView[CY-1] <> '') then
             FTheLinesView.EditDelete(1, Cy, length(FTheLinesView[Cy-1]));
-          CaretXY := Point(1, CaretY); // like seen in the Delphi editor
+          if Command = ecDeleteLineKeepX then
+            FCaret.ValidateXPos
+          else
+            CaretXY := Point(1, CY); // like seen in the Delphi editor
         end;
       ecClearAll:
         begin

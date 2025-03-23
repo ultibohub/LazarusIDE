@@ -154,9 +154,9 @@ type
     function getClientOffset: TPoint; virtual;
     function getWidgetPos: TPoint; virtual;
 
-    procedure OffsetMousePos(APoint: PPoint); virtual;
+    procedure OffsetMousePos(const aGlobalX, aGlobalY: double; APoint: PPoint); virtual;
 
-    function ClientToScreen(var P:TPoint):boolean;
+    function ClientToScreen(var P:TPoint):boolean; virtual;
     function ScreenToClient(var P: TPoint): Integer;
 
     function DeliverMessage(var Msg; const AIsInputEvent: Boolean = False): LRESULT; virtual;
@@ -414,12 +414,16 @@ type
   TGtk3Page = class(TGtk3Container)
   private
     FPageLabel: PGtkLabel;
+  strict private
+    class procedure TabSheetLayoutSizeAllocate(AWidget: PGtkWidget;
+      AGdkRect: PGdkRectangle; Data: gpointer); cdecl; static;
   protected
     procedure DoBeforeLCLPaint; override;
     procedure setText(const AValue: String); override;
     function CreateWidget(const Params: TCreateParams):PGtkWidget; override;
     procedure DestroyWidget; override;
   public
+    function ClientToScreen(var P:TPoint):boolean; override;
     function getClientOffset:TPoint; override;
     function getClientRect: TRect; override;
   end;
@@ -536,11 +540,13 @@ type
   public
     LCLVAdj: PGtkAdjustment; // used to keep LCL values
     LCLHAdj: PGtkAdjustment; // used to keep LCL values
+    function ClientToScreen(var P:TPoint):boolean; override;
     procedure DestroyWidget; override;
     {result = true if scrollbar is pressed by mouse, AMouseOver if mouse is over scrollbar pressed or not.}
     class function CheckIfScrollbarPressed(scrollbar: PGtkWidget; out AMouseOver:
        boolean; const ACheckModifier: TGdkModifierTypeIdx): boolean;
     procedure InitializeWidget; override;
+    procedure OffsetMousePos(const aGlobalX, aGlobalY: double; APoint: PPoint); override;
     procedure SetScrollBarsSignalHandlers(const AIsHorizontalScrollBar: boolean);
     function getClientBounds: TRect; override;
     function getViewport: PGtkViewport; virtual;
@@ -721,6 +727,8 @@ type
 
   TGtk3GroupBox = class(TGtk3Bin)
   strict private
+    class procedure GroupBoxLayoutSizeAllocate(AWidget: PGtkWidget;
+      AGdkRect: PGdkRectangle; Data: gpointer); cdecl; static;
     class procedure GroupBoxSizeAllocate(AWidget: PGtkWidget; AGdkRect: PGdkRectangle; Data: gpointer); cdecl; static;
   private
     FGroupBoxType:TGtk3GroupBoxType;
@@ -732,6 +740,7 @@ type
     function getText: String; override;
     procedure setText(const AValue: String); override;
   public
+    function getClientOffset:TPoint; override;
     function getClientRect:TRect; override;
     property GroupBoxType: TGtk3GroupBoxType read FGroupBoxType write FGroupBoxType;
   end;
@@ -848,7 +857,6 @@ type
       function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
     public
       procedure DoBeforeLCLPaint; override;
-      procedure OffsetMousePos(APoint: PPoint); override;
       procedure InitializeWidget; override;
       function getViewport: PGtkViewport; override;
       procedure preferredSize(var PreferredWidth, PreferredHeight: integer; {%H-}WithThemeSpace: Boolean); override;
@@ -907,7 +915,6 @@ type
     function getVerticalScrollbar: PGtkScrollbar; override;
     function GetScrolledWindow: PGtkScrolledWindow; override;
     procedure InitializeWidget; override;
-    procedure OffsetMousePos(APoint: PPoint); override;
     function ShowState(nstate:integer):boolean; // winapi ShowWindow
     procedure UpdateWindowState; // LCL WindowState
     class function decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
@@ -1448,7 +1455,7 @@ begin
   if AState and MK_ALT <> 0 then
     ShiftState := ShiftState + [ssAlt];
 
-  TGtk3Widget(AData).OffsetMousePos(@MappedXY);
+  TGtk3Widget(AData).OffsetMousePos(AEvent^.scroll.x_root, AEvent^.scroll.y_root, @MappedXY);
 
   FillChar(MessE{%H-},SizeOf(MessE),0);
   MessE.Msg := LM_MOUSEWHEEL;
@@ -1687,7 +1694,7 @@ begin
   MousePos.x := X;
   MousePos.y := Y;
 
-  OffsetMousePos(@MousePos);
+  OffsetMousePos(Event^.motion.x_root, Event^.motion.y_root, @MousePos);
 
   Msg.XPos := SmallInt(MousePos.X);
   Msg.YPos := SmallInt(MousePos.Y);
@@ -1983,13 +1990,6 @@ begin
   if KeyValue > VK_UNDEFINED then
     KeyValue := ACharCode; // VK_UNKNOWN;
 
-  if AKeyPress and (ACharCode = VK_TAB) then
-  begin
-    if Sender^.is_focus then
-      Self.LCLObject.SelectNext(Self.LCLObject,true,true);
-    exit;
-  end;
-
   IsArrowKey := (AEventString='') and ((ACharCode = VK_UP) or (ACharCode = VK_DOWN) or (ACharCode = VK_LEFT) or (ACharCode = VK_RIGHT));
 
   {$IFDEF GTK3DEBUGKEYPRESS}
@@ -2156,7 +2156,7 @@ begin
   MousePos.x := Round(Event^.button.x);
   MousePos.y := Round(Event^.button.y);
 
-  OffsetMousePos(@MousePos);
+  OffsetMousePos(Event^.button.x_root, Event^.button.y_root, @MousePos);
 
   Msg.XPos := SmallInt(MousePos.X);
   Msg.YPos := SmallInt(MousePos.Y);
@@ -2884,7 +2884,8 @@ begin
   end;
 end;
 
-procedure TGtk3Widget.OffsetMousePos(APoint: PPoint);
+procedure TGtk3Widget.OffsetMousePos(const aGlobalX, aGlobalY: double;
+  APoint: PPoint);
 begin
   with getClientOffset do
   begin
@@ -3498,6 +3499,23 @@ end;
 
 { TGtk3GroupBox }
 
+class procedure TGtk3GroupBox.GroupBoxLayoutSizeAllocate(
+  AWidget: PGtkWidget; AGdkRect: PGdkRectangle; Data: gpointer); cdecl;
+var
+  HSize,VSize: integer;
+  uWidth, uHeight: guint;
+begin
+  HSize := AGdkRect^.Width;
+  VSize := AGdkRect^.Height;
+
+  PGtkLayout(aWidget)^.get_size(@uWidth, @uHeight);
+  if (uWidth <> HSize) or (uHeight <> VSize) then
+    PGtkLayout(aWidget)^.set_size(HSize, VSize);
+
+  if TGtk3Widget(Data).LCLObject.ClientRectNeedsInterfaceUpdate then
+    TGtk3Widget(Data).LCLObject.DoAdjustClientRectChange;
+end;
+
 function TGtk3GroupBox.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   FHasPaint := True;
@@ -3508,7 +3526,10 @@ begin
   PGtkBin(Result)^.add(FCentralWidget);
   FCentralWidget^.set_has_window(True);
   PGtkFrame(result)^.set_label_align(0.1,0.5);
+  if not (csDesigning in LCLObject.ComponentState) then
+    g_object_set(PGObject(FCentralWidget), 'resize-mode', [GTK_RESIZE_QUEUE, nil]);
   PGtkLayout(FCentralWidget)^.set_size(1, 1);
+  g_signal_connect_data(FCentralWidget,'size-allocate',TGCallback(@GroupBoxLayoutSizeAllocate), Self, nil, G_CONNECT_DEFAULT);
   Result^.show_all;
 end;
 
@@ -3536,6 +3557,18 @@ begin
       {%H-}PGtkFrame(Widget)^.set_label(PgChar({%H-}ReplaceAmpersandsWithUnderscores(AValue)));
     end;
   end;
+end;
+
+function TGtk3GroupBox.getClientOffset: TPoint;
+var
+  Allocation: TGtkAllocation;
+  R: TRect;
+begin
+  Self.Widget^.get_allocation(@Allocation);
+  Result.X := -Allocation.X;
+  Result.Y := -Allocation.Y;
+  R := getClientBounds;
+  Result := Point(Result.x + R.Left, Result.y + R.Top);
 end;
 
 {$IF DEFINED(GTK3DEBUGSIZE) OR DEFINED(GTK3DEBUGGROUPBOX)}
@@ -4945,6 +4978,23 @@ begin
   end;
 end;
 
+class procedure TGtk3Page.TabSheetLayoutSizeAllocate(
+  AWidget: PGtkWidget; AGdkRect: PGdkRectangle; Data: gpointer); cdecl;
+var
+  HSize,VSize: integer;
+  uWidth, uHeight: guint;
+begin
+  HSize := AGdkRect^.Width;
+  VSize := AGdkRect^.Height;
+
+  PGtkLayout(aWidget)^.get_size(@uWidth, @uHeight);
+  if (uWidth <> HSize) or (uHeight <> VSize) then
+    PGtkLayout(aWidget)^.set_size(HSize, VSize);
+
+  if TGtk3Widget(Data).LCLObject.ClientRectNeedsInterfaceUpdate then
+    TGtk3Widget(Data).LCLObject.DoAdjustClientRectChange;
+end;
+
 function TGtk3Page.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   FWidgetType := FWidgetType + [wtLayout];
@@ -4955,9 +5005,14 @@ begin
   FPageLabel^.ref;
   Result := TGtkBox.new(GTK_ORIENTATION_HORIZONTAL, 0);
   FCentralWidget := TGtkLayout.new(nil, nil);
+  FCentralWidget^.set_app_paintable(True);
   PGtkBox(Result)^.pack_start(FCentralWidget, True , True, 0);
   FCentralWidget^.set_has_window(True);
-  // PGtkFixed(FCentralWidget)^.set_can_focus(True);
+  if not (csDesigning in LCLObject.ComponentState) then
+    g_object_set(PGObject(FCentralWidget), 'resize-mode', [GTK_RESIZE_QUEUE, nil]);
+  gtk_layout_set_size(PGtkLayout(FCentralWidget), 1, 1);
+
+  g_signal_connect_data(FCentralWidget,'size-allocate',TGCallback(@TabSheetLayoutSizeAllocate), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 procedure TGtk3Page.DestroyWidget;
@@ -4967,17 +5022,28 @@ begin
   inherited DestroyWidget;
 end;
 
-function TGtk3Page.getClientOffset: TPoint;
+function TGtk3Page.ClientToScreen(var P: TPoint): boolean;
 var
-  Allocation: TGtkAllocation;
-  R: TRect;
+  aParent: PGtkWidget;
+  Alloc, Allocation: TGtkAllocation;
 begin
-  Self.Widget^.get_allocation(@Allocation);
-  Result.X := -Allocation.X;
-  Result.Y := -Allocation.Y;
 
-  R := getClientBounds;
-  Result := Point(Result.x + R.Left, Result.y + R.Top);
+  if Assigned(LCLObject.Parent) then
+    Result := TGtk3Widget(LCLObject.Parent.Handle).ClientToScreen(P)
+  else
+    Result := inherited ClientToScreen(P);
+
+  aParent := gtk_widget_get_parent(Widget);
+  aParent^.get_allocation(@Alloc);
+  Self.Widget^.get_allocation(@Allocation);
+
+  P.X := P.X - (Alloc.X - Allocation.X);
+  P.Y := P.Y - (Alloc.Y - Allocation.Y);
+end;
+
+function TGtk3Page.getClientOffset: TPoint;
+begin
+  Result := Point(0, 0);
 end;
 
 function TGtk3Page.getClientRect: TRect;
@@ -5268,11 +5334,8 @@ begin
   if IsWidgetOK then
   begin
     Gtk3Page := TGtk3Page(ACustomPage.Handle);
-    with PGtkNoteBook(GetContainerWidget)^ do begin
+    with PGtkNoteBook(GetContainerWidget)^ do
       insert_page(Gtk3Page.Widget, Gtk3Page.FPageLabel, AIndex);
-      // Check why this give sometimes: Gtk-WARNING: Negative content width -1 (allocation 1, extents 1x1) while allocating gadget (node notebook, owner GtkNotebook)
-      resize_children;
-    end;
   end;
 end;
 
@@ -5799,6 +5862,41 @@ begin
   inherited InitializeWidget;
 end;
 
+procedure TGtk3ScrollableWin.OffsetMousePos(const aGlobalX, aGlobalY: double;
+  APoint: PPoint);
+var
+  ScrolledWindow: PGtkScrolledWindow;
+  Viewport: PGtkWidget;
+  WinX, WinY: gint;
+  LocalX, LocalY: gint;
+  ClientX, ClientY: gint;
+  aWindow: PGdkWindow;
+begin
+  inherited OffsetMousePos(aGlobalX, aGlobalY, APoint);
+  if [wtCustomControl, wtWindow] * WidgetType = [] then
+    exit;
+  ScrolledWindow := GetScrolledWindow;
+  if not Gtk3IsScrolledWindow(ScrolledWindow) then
+    exit;
+  Viewport := gtk_bin_get_child(PGtkBin(ScrolledWindow));
+  if not Gtk3IsWidget(ViewPort) then
+    exit;
+  aWindow := GetContainerWidget^.get_window;
+  if not Gtk3IsGdkWindow(aWindow) then
+    exit;
+  gdk_window_get_origin(aWindow, @WinX, @WinY);
+  LocalX := Trunc(aGlobalX) - WinX;
+  LocalY := Trunc(aGlobalY) - WinY;
+
+  if gtk_widget_translate_coordinates(GetContainerWidget, Viewport, LocalX, LocalY, @ClientX, @ClientY) then
+  begin
+    // writeln(Format('Mouse clicked at: Global=(%.2f, %.2f), Local=(%d, %d), Client=(%d, %d)',
+    //  [aGlobalX, aGlobalY, LocalX, LocalY, ClientX, ClientY]));
+    aPoint^.X := ClientX;
+    aPoint^.Y := ClientY;
+  end;
+end;
+
 class function TGtk3ScrollableWin.RangeChangeValue(ARange: PGtkRange;
   AScrollType: TGtkScrollType; AValue: gdouble; AData: gPointer): gboolean;
   cdecl;
@@ -5806,20 +5904,27 @@ var
   Msg: TLMVScroll;
   MaxValue: gdouble;
   StateFlags: TGtkStateFlags;
+  ACtl: TGtk3ScrollableWin;
 begin
   Result := gtk_false;
 
   {$IFDEF GTK3DEBUGSCROLL}
   DebugLn(Format('>TGtk3ScrollableWin.RangeChangeValue Value: %d', [Round(AValue)]),' IsHScrollBar ',dbgs(PGtkOrientable(ARange)^.get_orientation = GTK_ORIENTATION_HORIZONTAL),' InUpdate=',dbgs(TGtk3Widget(AData).InUpdate));
   {$ENDIF}
+  ACtl := TGtk3ScrollableWin(aData);
   if PGtkOrientable(ARange)^.get_orientation = GTK_ORIENTATION_HORIZONTAL then
     Msg.Msg := LM_HSCROLL
   else
     Msg.Msg := LM_VSCROLL;
 
   if ARange^.adjustment^.page_size > 0 then
-    MaxValue := ARange^.adjustment^.upper - ARange^.adjustment^.page_size
-  else
+  begin
+    {we must use cached values since gtk3 has it's own meaning about page_size}
+    if Msg.Msg = LM_HSCROLL then
+      MaxValue := ACtl.LCLHAdj^.upper - ACtl.LCLHAdj^.page_size
+    else
+      MaxValue := ACtl.LCLVAdj^.upper - ACtl.LCLVAdj^.page_size;
+  end else
     MaxValue := ARange^.adjustment^.upper;
 
   if (AValue > MaxValue) then
@@ -5922,6 +6027,24 @@ begin
           ', Delta=', Delta:0:2, ', InUpdate=', Control.InUpdate, ' releasing lock ...');
   {$ENDIF}
   Control.EndUpdate;
+end;
+
+function TGtk3ScrollableWin.ClientToScreen(var P: TPoint): boolean;
+var
+  gx, gy, wx, wy: gint;
+begin
+
+  if not Widget^.is_toplevel then
+  begin
+    Result := getContainerWidget^.translate_coordinates(GetContainerWidget^.get_toplevel, P.X, P.Y, @gx, @gy);
+    if Result then
+    begin
+      gdk_window_get_origin(gtk_widget_get_toplevel(GetContainerWidget)^.window, @wx, @wy);
+      P := Point(gx + wx, gy + wy);
+    end else
+      Result := inherited ClientToScreen(P);
+  end else
+    Result := inherited ClientToScreen(P);
 end;
 
 procedure TGtk3ScrollableWin.DestroyWidget;
@@ -8780,25 +8903,6 @@ begin
   end;
 end;
 
-procedure TGtk3CustomControl.OffsetMousePos(APoint: PPoint);
-var
-  Hadjustment, Vadjustment: PGtkAdjustment;
-  HValue, VValue: longint;
-begin
-  inherited OffsetMousePos(APoint);
-  // Retrieve adjustments
-  Hadjustment := GetScrolledWindow^.get_hadjustment;
-  Vadjustment := GetScrolledWindow^.get_vadjustment;
-
-  // Get the adjustment values
-  HValue := Round(gtk_adjustment_get_value(Hadjustment));
-  VValue := Round(gtk_adjustment_get_value(Vadjustment));
-
-  // Apply adjustment values to the mouse position
-  Dec(APoint^.x, HValue);
-  Dec(APoint^.y, VValue);
-end;
-
 procedure TGtk3CustomControl.InitializeWidget;
 begin
   inherited InitializeWidget;
@@ -9744,25 +9848,6 @@ begin
     g_signal_connect_data(PGtkRange(gtk_scrolled_window_get_vscrollbar(GetScrolledWindow)),'value-changed',
       TGCallback(@RangeValueChanged), Self, nil, G_CONNECT_DEFAULT);
   end;
-end;
-
-procedure TGtk3Window.OffsetMousePos(APoint: PPoint);
-var
-  Hadjustment, Vadjustment: PGtkAdjustment;
-  HValue, VValue: longint;
-begin
-  inherited OffsetMousePos(APoint);
-  // Retrieve adjustments
-  Hadjustment := GetScrolledWindow^.get_hadjustment;
-  Vadjustment := GetScrolledWindow^.get_vadjustment;
-
-  // Get the adjustment values
-  HValue := Round(gtk_adjustment_get_value(Hadjustment));
-  VValue := Round(gtk_adjustment_get_value(Vadjustment));
-
-  // Apply adjustment values to the mouse position
-  Dec(APoint^.x, HValue);
-  Dec(APoint^.y, VValue);
 end;
 
 destructor TGtk3Window.Destroy;
