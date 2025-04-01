@@ -771,7 +771,7 @@ type
     FSortColumn: Integer;
     FSortLCLImages: TLCLGlyphs;
     FTabAdvance: TAutoAdvance;
-    FTitleImageList: TImageList;
+    FTitleImageList: TCustomImageList;
     FTitleImageListWidth: Integer;
     FTitleStyle: TTitleStyle;
     FAscImgInd: TImageIndex;
@@ -870,7 +870,7 @@ type
     procedure SetFocusRectVisible(const AValue: Boolean);
     procedure ScrollerDoScroll(Dir: TPoint);
     procedure SetScroller(Dir: TPoint);
-    procedure SetTitleImageList(const AValue: TImageList);
+    procedure SetTitleImageList(const AValue: TCustomImageList);
     procedure SetTitleImageListWidth(const aTitleImageListWidth: Integer);
     procedure SetTitleFont(const AValue: TFont);
     procedure SetTitleStyle(const AValue: TTitleStyle);
@@ -1271,7 +1271,7 @@ type
     property ImageIndexSortAsc: TImageIndex read FAscImgInd write FAscImgInd default -1;
     property ImageIndexSortDesc: TImageIndex read FDescImgInd write FDescImgInd default -1;
     property TabAdvance: TAutoAdvance read FTabAdvance write FTabAdvance default aaRightDown;
-    property TitleImageList: TImageList read FTitleImageList write SetTitleImageList;
+    property TitleImageList: TCustomImageList read FTitleImageList write SetTitleImageList;
     property TitleImageListWidth: Integer read FTitleImageListWidth write SetTitleImageListWidth default 0;
     property InplaceEditor: TWinControl read FEditor;
     property IsCellSelected[aCol,aRow: Integer]: boolean read GetIsCellSelected;
@@ -5902,7 +5902,7 @@ begin
   VisualChange;
 end;
 
-procedure TCustomGrid.SetTitleImageList(const AValue: TImageList);
+procedure TCustomGrid.SetTitleImageList(const AValue: TCustomImageList);
 begin
   if FTitleImageList = AValue then exit;
   FTitleImageList := AValue;
@@ -7847,7 +7847,12 @@ begin
 end;
 
 procedure TCustomGrid.KeyPress(var Key: char);
+const
+  keypressBusy:boolean=false;
 begin
+  if keypressbusy then
+    exit;
+  keypressBusy := true;
   inherited KeyPress(Key);
   if not EditorKey then
     // we are interested in these keys only if they came from the grid
@@ -7862,6 +7867,7 @@ begin
         Key := #0;
       end;
     end;
+  keypressBusy := false;
 end;
 
 { Convert a physical Mouse coordinate into a physical cell coordinate }

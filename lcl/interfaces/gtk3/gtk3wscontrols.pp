@@ -109,6 +109,7 @@ type
     class procedure DefaultWndHandler(const AWinControl: TWinControl; var AMessage); override;
     class procedure Invalidate(const AWinControl: TWinControl); override;
     class procedure PaintTo(const AWinControl: TWinControl; ADC: HDC; X, Y: Integer); override;
+    class procedure Repaint(const AWinControl: TWinControl); override;
     class procedure ShowHide(const AWinControl: TWinControl); override; //TODO: rename to SetVisible(control, visible)
     class procedure ScrollBy(const AWinControl: TWinControl; DeltaX, DeltaY: integer); override;
   end;
@@ -348,6 +349,13 @@ begin
     gtk_widget_draw(AWidget.Widget, pcr);
   end;
   TGtk3DeviceContext(ADC).Restore;
+end;
+
+class procedure TGtk3WSWinControl.Repaint(const AWinControl: TWinControl);
+begin
+  if not WSCheckHandleAllocated(AWinControl, 'Repaint') then
+    Exit;
+  TGtk3Widget(AWinControl.Handle).Repaint(nil);
 end;
 
 class procedure TGtk3WSWinControl.SetBounds(const AWinControl: TWinControl; const ALeft, ATop, AWidth, AHeight: Integer);

@@ -749,7 +749,9 @@ msgid "An icon for error/warning/hint is shown in front of a message. The same i
 msgstr "エラー/警告/ヒント用のアイコンがメッセージの前に表示されます。同じアイコンがいずれの場合にもエディタのガターに現れます。"
 
 #: lazarusidestrconsts.dlgansicommenttab
-msgid "Ansi (* *)"
+#, fuzzy
+#| msgid "Ansi (* *)"
+msgid "ANSI (* *)"
 msgstr "Ansi (* *)"
 
 #: lazarusidestrconsts.dlgapplicationsettings
@@ -803,11 +805,6 @@ msgstr "自動インデント"
 #: lazarusidestrconsts.dlgautoindentlink
 msgid "(Set up smart indent)"
 msgstr "（スマートインデントを設定）"
-
-#: lazarusidestrconsts.dlgautoindenttype
-msgctxt "lazarusidestrconsts.dlgautoindenttype"
-msgid "Auto indent"
-msgstr "自動インデント"
 
 #: lazarusidestrconsts.dlgautoremoveemptymethods
 msgid "Auto remove empty methods"
@@ -866,10 +863,6 @@ msgctxt "lazarusidestrconsts.dlgblockgroupoptions"
 msgid "Selection"
 msgstr "選択"
 
-#: lazarusidestrconsts.dlgblockindent
-msgid "Block indent (spaces)"
-msgstr "ブロックインデント（空白）"
-
 #: lazarusidestrconsts.dlgblockindentkeys
 msgid "Block indent"
 msgstr "ブロックインデント"
@@ -877,6 +870,18 @@ msgstr "ブロックインデント"
 #: lazarusidestrconsts.dlgblockindentlink
 msgid "(edit keys)"
 msgstr "（キーを編集）"
+
+#: lazarusidestrconsts.dlgblockindentspaces
+msgid "Amount of spaces"
+msgstr ""
+
+#: lazarusidestrconsts.dlgblockindenttabs
+msgid "Amount of tabs (tab stops)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgblockindenttabs2spaces
+msgid "Amount of spaces (tab stops)"
+msgstr ""
 
 #: lazarusidestrconsts.dlgblockindenttypecopy
 msgid "Space/tab as prev Line"
@@ -897,10 +902,6 @@ msgstr "タブ、カットオフ"
 #: lazarusidestrconsts.dlgblockindenttypetabspace
 msgid "Tabs, then spaces"
 msgstr "タブ、その後スペース"
-
-#: lazarusidestrconsts.dlgblocktabindent
-msgid "Block indent (tabs)"
-msgstr "インデント（タブ）をブロック"
 
 #: lazarusidestrconsts.dlgbookmarksetscroll
 msgid "Restore scroll position for bookmarks"
@@ -2652,14 +2653,21 @@ msgstr ""
 msgid "from current unit"
 msgstr ""
 
-#: lazarusidestrconsts.dlgindentsindentgroupoptions
-msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
-msgid "Indent"
-msgstr "インデント"
+#: lazarusidestrconsts.dlgindentslineindentgroupoptions
+msgid "Indent (New line)"
+msgstr ""
 
-#: lazarusidestrconsts.dlgindentstabsgroupoptions
-msgid "Tabs"
-msgstr "タブ"
+#: lazarusidestrconsts.dlgindentstabindentgroupoptions
+msgid "Indent (Tab key on Selection)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgindentstabskeyoptions
+msgid "Tab key"
+msgstr ""
+
+#: lazarusidestrconsts.dlgindentstabswidthsoptions
+msgid "Tabs widths (Tab stop position)"
+msgstr ""
 
 #: lazarusidestrconsts.dlginfrontofmethods
 msgid "In front of methods"
@@ -2873,6 +2881,10 @@ msgstr "削除"
 msgid "Delete list \"%s\"?"
 msgstr "リスト\"%s\"を削除しますか？"
 
+#: lazarusidestrconsts.dlgmarkupuserdefineddivedit
+msgid "Edit list"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
 #, fuzzy
 #| msgid "Add Word or Term"
@@ -2890,6 +2902,10 @@ msgstr "単語もしくは用語を削除"
 #| msgid "Toggle Word or Term"
 msgid "Toggle Word or Term by key"
 msgstr "単語もしくは用語をトグル"
+
+#: lazarusidestrconsts.dlgmarkupuserdefineddivselect
+msgid "Create or Select list"
+msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
 msgid "Duplicate Term"
@@ -7526,6 +7542,24 @@ msgstr "コロン"
 msgid "Comma"
 msgstr "コンマ"
 
+#: lazarusidestrconsts.liscodetoolsoptscomment
+#, fuzzy
+msgctxt "lazarusidestrconsts.liscodetoolsoptscomment"
+msgid "Comment"
+msgstr "コメント"
+
+#: lazarusidestrconsts.liscodetoolsoptscommentansi
+msgid "ANSI Comment: (*"
+msgstr ""
+
+#: lazarusidestrconsts.liscodetoolsoptscommentbor
+msgid "Curly Comment: {"
+msgstr ""
+
+#: lazarusidestrconsts.liscodetoolsoptscommentslash
+msgid "Slash Comment: //"
+msgstr ""
+
 #: lazarusidestrconsts.liscodetoolsoptsidentifier
 msgctxt "lazarusidestrconsts.liscodetoolsoptsidentifier"
 msgid "Identifier"
@@ -7561,6 +7595,10 @@ msgstr "セミコロン"
 msgctxt "lazarusidestrconsts.liscodetoolsoptsspace"
 msgid "Space"
 msgstr "空白"
+
+#: lazarusidestrconsts.liscodetoolsoptsstring
+msgid "String"
+msgstr ""
 
 #: lazarusidestrconsts.liscodetoolsoptsstringconst
 msgid "String constant"

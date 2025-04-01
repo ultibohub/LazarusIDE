@@ -27,7 +27,7 @@ begin
   Widget := TGtk3Widget(Handle);
   if Widget <> nil then
   begin
-    GtkWidget := Widget.GetContainerWidget;
+    GtkWidget := Widget.PaintData.PaintWidget;
     if Widget.CairoContext <> nil then
       DC := TGtk3DeviceContext.CreateFromCairo(GtkWidget, Widget.CairoContext)
     else
@@ -4675,17 +4675,7 @@ begin
   Result := False;
   if IsValidHandle(Handle) then
   begin
-    TGtk3Widget(Handle).Update(nil);
-    if TGtk3Widget(Handle).GetContainerWidget^.get_has_window then
-    begin
-      if Gtk3IsGdkWindow(TGtk3Widget(Handle).GetContainerWidget^.window) then
-        TGtk3Widget(Handle).GetContainerWidget^.window^.process_updates(True);
-    end else
-    if TGtk3Widget(Handle).Widget^.get_has_window then
-    begin
-      if Gtk3IsGdkWindow(TGtk3Widget(Handle).Widget^.window) then
-        TGtk3Widget(Handle).Widget^.window^.process_updates(True);
-    end;
+    TGtk3Widget(Handle).Repaint(nil);
     Result := True;
   end;
 end;

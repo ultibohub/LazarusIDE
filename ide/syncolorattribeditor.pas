@@ -258,6 +258,11 @@ begin
     2: FCurHighlightElement.CustomWordTokenKind := tkModifier;
     3: FCurHighlightElement.CustomWordTokenKind := tkNumber;
     4: FCurHighlightElement.CustomWordTokenKind := tkSymbol;
+    5: FCurHighlightElement.CustomWordTokenKind := tkString;
+    6: FCurHighlightElement.CustomWordTokenKind := tkComment;
+    7: FCurHighlightElement.CustomWordTokenKind := tkSlashComment;
+    8: FCurHighlightElement.CustomWordTokenKind := tkAnsiComment;
+    9: FCurHighlightElement.CustomWordTokenKind := tkBorComment;
   end;
 end;
 
@@ -565,12 +570,21 @@ procedure TSynColorAttrEditor.UpdateAll;
               (FCurrentColorScheme.AttributeByEnum[aha] <> nil) and
               (Element.StoredName = FCurrentColorScheme.AttributeByEnum[aha].StoredName);
   end;
+var
+  UsingTempAttr: Boolean;
 begin
-  if (FCurHighlightElement = nil) or UpdatingColor then
-    Exit;
+  if UpdatingColor then
+    exit;
+
   UpdatingColor := True;
   DisableAlign;
   try
+    UsingTempAttr := FCurHighlightElement = nil;
+    if UsingTempAttr then begin
+      FCurHighlightElement := TColorSchemeAttribute.Create(nil, nil, '');
+      FCurHighlightElement.Clear;
+    end;
+
     // Adjust color captions
     ForeGroundUseDefaultCheckBox.Caption := dlgForecolor;
     BackGroundUseDefaultCheckBox.Caption := dlgBackColor;
@@ -790,10 +804,17 @@ begin
       tkModifier:   dropCustomWordKind.ItemIndex := 2;
       tkNumber:     dropCustomWordKind.ItemIndex := 3;
       tkSymbol:     dropCustomWordKind.ItemIndex := 4;
+      tkString:     dropCustomWordKind.ItemIndex := 5;
+      tkComment:    dropCustomWordKind.ItemIndex := 6;
+      tkSlashComment: dropCustomWordKind.ItemIndex := 7;
+      tkAnsiComment:  dropCustomWordKind.ItemIndex := 8;
+      tkBorComment:   dropCustomWordKind.ItemIndex := 9;
     end;
 
     UpdatingColor := False;
   finally
+    if UsingTempAttr then
+      FreeAndNil(FCurHighlightElement);
     EnableAlign;
   end;
   pnlElementAttributesResize(nil);
@@ -870,6 +891,11 @@ begin
   dropCustomWordKind.Items.Add(dlgModifier);
   dropCustomWordKind.Items.Add(lisCodeToolsOptsNumber);
   dropCustomWordKind.Items.Add(lisCodeToolsOptsSymbol);
+  dropCustomWordKind.Items.Add(lisCodeToolsOptsString);
+  dropCustomWordKind.Items.Add(lisCodeToolsOptsComment);
+  dropCustomWordKind.Items.Add(lisCodeToolsOptsCommentSlash);
+  dropCustomWordKind.Items.Add(lisCodeToolsOptsCommentAnsi);
+  dropCustomWordKind.Items.Add(lisCodeToolsOptsCommentBor);
   dropCustomWordKind.ItemIndex := 0;
 
   //Constraints.MinHeight := max(Constraints.MinHeight,

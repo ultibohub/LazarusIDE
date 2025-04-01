@@ -749,7 +749,9 @@ msgid "An icon for error/warning/hint is shown in front of a message. The same i
 msgstr "Se muestra un icono de error/advertencia/sugerencia enfrente de un mensaje. En cualquier caso se muestra el mismo icono en la columna de marcas del editor de código fuente."
 
 #: lazarusidestrconsts.dlgansicommenttab
-msgid "Ansi (* *)"
+#, fuzzy
+#| msgid "Ansi (* *)"
+msgid "ANSI (* *)"
 msgstr "Ansi (* *)"
 
 #: lazarusidestrconsts.dlgapplicationsettings
@@ -801,11 +803,6 @@ msgstr "Sangrado automático"
 #: lazarusidestrconsts.dlgautoindentlink
 msgid "(Set up smart indent)"
 msgstr "(Establecer sangrado inteligente)"
-
-#: lazarusidestrconsts.dlgautoindenttype
-msgctxt "lazarusidestrconsts.dlgautoindenttype"
-msgid "Auto indent"
-msgstr "Sangrado automático"
 
 #: lazarusidestrconsts.dlgautoremoveemptymethods
 msgid "Auto remove empty methods"
@@ -860,10 +857,6 @@ msgctxt "lazarusidestrconsts.dlgblockgroupoptions"
 msgid "Selection"
 msgstr "Selección"
 
-#: lazarusidestrconsts.dlgblockindent
-msgid "Block indent (spaces)"
-msgstr "Sangrado de bloque (espacios)"
-
 #: lazarusidestrconsts.dlgblockindentkeys
 msgid "Block indent"
 msgstr "Sangrado de bloque"
@@ -871,6 +864,18 @@ msgstr "Sangrado de bloque"
 #: lazarusidestrconsts.dlgblockindentlink
 msgid "(edit keys)"
 msgstr "(editar llaves)"
+
+#: lazarusidestrconsts.dlgblockindentspaces
+msgid "Amount of spaces"
+msgstr ""
+
+#: lazarusidestrconsts.dlgblockindenttabs
+msgid "Amount of tabs (tab stops)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgblockindenttabs2spaces
+msgid "Amount of spaces (tab stops)"
+msgstr ""
 
 #: lazarusidestrconsts.dlgblockindenttypecopy
 msgid "Space/tab as prev Line"
@@ -891,10 +896,6 @@ msgstr "Tabulaciones, quitar"
 #: lazarusidestrconsts.dlgblockindenttypetabspace
 msgid "Tabs, then spaces"
 msgstr "Tabulaciones, después espacios"
-
-#: lazarusidestrconsts.dlgblocktabindent
-msgid "Block indent (tabs)"
-msgstr "Sangrado de bloque (tabs)"
 
 #: lazarusidestrconsts.dlgbookmarksetscroll
 msgid "Restore scroll position for bookmarks"
@@ -2657,14 +2658,21 @@ msgstr "desde todas las unidades"
 msgid "from current unit"
 msgstr "desde la unidad actual"
 
-#: lazarusidestrconsts.dlgindentsindentgroupoptions
-msgctxt "lazarusidestrconsts.dlgindentsindentgroupoptions"
-msgid "Indent"
-msgstr "Sangrado"
+#: lazarusidestrconsts.dlgindentslineindentgroupoptions
+msgid "Indent (New line)"
+msgstr ""
 
-#: lazarusidestrconsts.dlgindentstabsgroupoptions
-msgid "Tabs"
-msgstr "Tabulaciónes"
+#: lazarusidestrconsts.dlgindentstabindentgroupoptions
+msgid "Indent (Tab key on Selection)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgindentstabskeyoptions
+msgid "Tab key"
+msgstr ""
+
+#: lazarusidestrconsts.dlgindentstabswidthsoptions
+msgid "Tabs widths (Tab stop position)"
+msgstr ""
 
 #: lazarusidestrconsts.dlginfrontofmethods
 msgid "In front of methods"
@@ -2876,6 +2884,10 @@ msgstr "Borrar"
 msgid "Delete list \"%s\"?"
 msgstr "¿Borrar lista \"%s\"?"
 
+#: lazarusidestrconsts.dlgmarkupuserdefineddivedit
+msgid "Edit list"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmarkupuserdefineddivkeyadd
 #, fuzzy
 #| msgid "Add Word or Term"
@@ -2893,6 +2905,10 @@ msgstr "Eliminar palabra o término"
 #| msgid "Toggle Word or Term"
 msgid "Toggle Word or Term by key"
 msgstr "Cambiar palabra o término"
+
+#: lazarusidestrconsts.dlgmarkupuserdefineddivselect
+msgid "Create or Select list"
+msgstr ""
 
 #: lazarusidestrconsts.dlgmarkupuserdefinedduplicate
 msgid "Duplicate Term"
@@ -7535,6 +7551,24 @@ msgstr "Dos puntos"
 msgid "Comma"
 msgstr "Coma"
 
+#: lazarusidestrconsts.liscodetoolsoptscomment
+#, fuzzy
+msgctxt "lazarusidestrconsts.liscodetoolsoptscomment"
+msgid "Comment"
+msgstr "Comentario"
+
+#: lazarusidestrconsts.liscodetoolsoptscommentansi
+msgid "ANSI Comment: (*"
+msgstr ""
+
+#: lazarusidestrconsts.liscodetoolsoptscommentbor
+msgid "Curly Comment: {"
+msgstr ""
+
+#: lazarusidestrconsts.liscodetoolsoptscommentslash
+msgid "Slash Comment: //"
+msgstr ""
+
 #: lazarusidestrconsts.liscodetoolsoptsidentifier
 msgctxt "lazarusidestrconsts.liscodetoolsoptsidentifier"
 msgid "Identifier"
@@ -7570,6 +7604,10 @@ msgstr "Punto y coma"
 msgctxt "lazarusidestrconsts.liscodetoolsoptsspace"
 msgid "Space"
 msgstr "Espacio"
+
+#: lazarusidestrconsts.liscodetoolsoptsstring
+msgid "String"
+msgstr ""
 
 #: lazarusidestrconsts.liscodetoolsoptsstringconst
 msgid "String constant"

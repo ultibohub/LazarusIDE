@@ -32,7 +32,7 @@ uses
   LazLogger,
   // widgetset
   WSComCtrls, WSLCLClasses, WSControls, WSProc,
-  gtk3widgets;
+  gtk3widgets, gtk3int;
   
 type
   { TGtk3WSCustomPage }
@@ -1142,6 +1142,7 @@ begin
     end;
     if TLVHack(ALV).ViewStyle in [vsSmallIcon, vsIcon] then
       TGtk3ListView(ALV.Handle).setItemWidth(AValue.Width);
+
     for i := 0 to AValue.Count-1 do
     begin
       pixbuf := nil;
@@ -1149,18 +1150,6 @@ begin
       try
         AValue.GetBitmap(i, BitImage);
         pixbuf := TGtk3Image(BitImage.Handle).Handle^.copy;
-
-        if TGtk3ListView(ALV.Handle).IsTreeView and (TLVHack(ALV).Columns.Count > 0) and
-          not TLVHack(ALV).OwnerDraw then
-        begin
-          AColumn := PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget)^.get_column(0);
-          PixRenderer := PGtkCellRenderer(g_object_get_data(PgObject(AColumn), 'pix_renderer'));
-          if Assigned(PixRenderer) then
-          begin
-            PixRenderer^.set_fixed_size(AValue.Width + 2, AValue.Height + 2);
-            AColumn^.queue_resize;
-          end;
-        end;
         TGtk3ListView(ALV.Handle).Images.Add(pixbuf);
       finally
         BitImage.Free;
@@ -1599,13 +1588,24 @@ end;
 
 class procedure TGtk3WSCustomTabControl.UpdateProperties(
   const ATabControl: TCustomTabControl);
+var
+  aPage: PGtkWidget;
+  aLCLPage: TGtk3Page;
+  i: Integer;
 begin
   if ATabControl is TTabControl then
     exit;
-  // inherited UpdateProperties(ATabControl);
-  if not WSCheckHandleAllocated(ATabControl, 'ATabControl') then
-    Exit;
-
+  for i := 0 to PGtkNotebook(TGtk3NoteBook(ATabControl.Handle).GetContainerWidget)^.get_n_pages - 1 do
+  begin
+    aPage := PGtkNotebook(TGtk3NoteBook(ATabControl.Handle).GetContainerWidget)^.get_nth_page(i);
+    aLCLPage := TGtk3Page(HwndFromGtkWidget(aPage));
+    if Assigned(aLCLPage) then
+    begin
+      aLCLPage.CloseButtonVisible := (nboShowCloseButtons in ATabControl.Options);
+      if Assigned(ATabControl.Images) then
+        TGtk3WSCustomPage.UpdateProperties(TCustomPage(aLCLPage.LCLObject));
+    end;
+  end;
   if (nboHidePageListPopup in ATabControl.Options) then
     PGtkNotebook(TGtk3NoteBook(ATabControl.Handle).GetContainerWidget)^.popup_disable
   else
@@ -1665,9 +1665,38 @@ end;
 
 class procedure TGtk3WSCustomPage.UpdateProperties(
   const ACustomPage: TCustomPage);
+
+var
+  ImageList: TCustomImageList;
+  ImageIndex: Integer;
+  Bmp: TBitmap;
+  Res: TScaledImageListResolution;
 begin
-  // inherited UpdateProperties(ACustomPage);
-  DebugLn('TGtk3WSCustomPage.UpdateProperties missing implementation ');
+  if not WSCheckHandleAllocated(ACustomPage, 'UpdateProperties') then
+    Exit;
+
+  ImageList := TCustomTabControl(ACustomPage.Parent).Images;
+
+  if Assigned(ImageList) then
+  begin
+    Res := ImageList.ResolutionForPPI[
+      TCustomTabControl(ACustomPage.Parent).ImagesWidth,
+      TCustomTabControl(ACustomPage.Parent).Font.PixelsPerInch,
+      TCustomTabControl(ACustomPage.Parent).GetCanvasScaleFactor];
+    ImageIndex := TCustomTabControl(ACustomPage.Parent).GetImageIndex(ACustomPage.PageIndex);
+    if (ImageIndex >= 0) and (ImageIndex < Res.Count) then
+    begin
+      Bmp := TBitmap.Create;
+      try
+        Res.GetBitmap(ACustomPage.ImageIndex, Bmp);
+        TGtk3Page(ACustomPage.Handle).setTabImage(Bmp);
+      finally
+        Bmp.Free;
+      end;
+    end else
+      TGtk3Page(ACustomPage.Handle).setTabImage(nil);
+  end else
+    TGtk3Page(ACustomPage.Handle).setTabImage(nil);
 end;
 
 end.

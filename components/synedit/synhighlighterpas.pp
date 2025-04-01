@@ -61,9 +61,16 @@ type
   TSynPasMultilineStringMode  = (spmsmDoubleQuote);
   TSynPasMultilineStringModes = set of TSynPasMultilineStringMode;
 
-  TtkTokenKind = (tkAsm, tkComment, tkIdentifier, tkKey, tkModifier, tkNull, tkNumber,
+  TtkTokenKindEx = (
+    tkAsm, tkComment, tkIdentifier, tkKey, tkModifier, tkNull, tkNumber,
     tkSpace, tkString, tkSymbol, tkDirective, tkIDEDirective,
-    tkUnknown);
+    tkUnknown,
+    // for custom token only
+    tkSlashComment, tkAnsiComment, tkBorComment
+    );
+  TtkTokenKindExs= set of TtkTokenKindEx;
+
+  TtkTokenKind = tkAsm..tkUnknown;
   TtkTokenKinds= set of TtkTokenKind;
 
   TRangeState = (
@@ -498,16 +505,16 @@ type
     procedure DoTokensChanged(Sender: TObject);
   private
     FMarkup: TSynHighlighterAttributesModifier;
-    FMatchTokenKinds: TtkTokenKinds;
+    FMatchTokenKinds: TtkTokenKindExs;
     FTokens: TStrings;
 
-    procedure SetMatchTokenKinds(AValue: TtkTokenKinds);
+    procedure SetMatchTokenKinds(AValue: TtkTokenKindExs);
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property OnMarkupChange: TNotifyEvent read FOnMarkupChange write FOnMarkupChange;
   public
     constructor Create;
     destructor Destroy; override;
-    property MatchTokenKinds: TtkTokenKinds read FMatchTokenKinds write SetMatchTokenKinds;
+    property MatchTokenKinds: TtkTokenKindExs read FMatchTokenKinds write SetMatchTokenKinds;
     property Tokens: TStrings read FTokens;
     property Markup: TSynHighlighterAttributesModifier read FMarkup;
   end;
@@ -581,18 +588,11 @@ type
 
   TSynPasSyn = class(TSynCustomFoldHighlighter)
   private type
-
-    { TSynPasSynCustomTokenInfo }
-
-    TSynPasSynCustomTokenInfo = record
-      MatchTokenKinds: TtkTokenKinds;
-      Word: String;
-      Token: TSynPasSynCustomToken;
-      class operator = (a, b: TSynPasSynCustomTokenInfo): boolean;
+    TSynPasSynCustomTokenInfoListEx = record
+      TokenKind: TtkTokenKindEx;
+      List: TStringList;
     end;
-    PSynPasSynCustomTokenInfo = ^TSynPasSynCustomTokenInfo;
-    PPSynPasSynCustomTokenInfo = ^PSynPasSynCustomTokenInfo;
-    TSynPasSynCustomTokenInfoList = specialize TFPGList<TSynPasSynCustomTokenInfo>;
+    PSynPasSynCustomTokenInfoListEx = ^TSynPasSynCustomTokenInfoListEx;
   private
     FCaseLabelAttriMatchesElseOtherwise: Boolean;
     FNestedBracketAttribs: TSynHighlighterAttributesModifierCollection;
@@ -601,11 +601,12 @@ type
     FSynCustomTokens: array of TSynPasSynCustomToken;
     FNeedCustomTokenBuild: boolean;
     FCustomTokenInfo: array [byte] of record
-      MatchTokenKinds: TtkTokenKinds;
-      List: TSynPasSynCustomTokenInfoList;
+      MatchTokenKinds: TtkTokenKindExs;
+      Lists: array of TSynPasSynCustomTokenInfoListEx;
     end;
-    FCustomTokenMarkup: TSynHighlighterAttributesModifier;
-    FCustomTokenMergedMarkup: TSynSelectedColorMergeResult;
+    FCustomTokenMarkup, FCustomCommentTokenMarkup: TSynHighlighterAttributesModifier;
+    FCustomTokenMarkupSlash, FCustomTokenMarkupAnsi, FCustomTokenMarkupBor: TSynHighlighterAttributesModifier;
+    FCustomTokenMergedMarkup, FCustomCommentTokenMergedMarkup: TSynSelectedColorMergeResult;
 
     FCurIDEDirectiveAttri: TSynSelectedColorMergeResult;
     FCurCaseLabelAttri: TSynSelectedColorMergeResult;
@@ -644,7 +645,7 @@ type
     FStringKeywordMode: TSynPasStringMode;
     FStringMultilineMode: TSynPasMultilineStringModes;
     FSynPasRangeInfo: TSynPasRangeInfo;
-    FAtLineStart: Boolean; // Line had only spaces or comments sofar
+    FAtLineStart, FInString: Boolean; // Line had only spaces or comments sofar
     fLineStr: string;
     fLine: PChar;
     fLineLen: integer;
@@ -831,6 +832,7 @@ type
     procedure SemicolonProc;                                                    //mh 2000-10-08
     procedure SlashProc;
     procedure SlashContinueProc;
+    procedure SlashCommentProc;
     procedure SpaceProc;
     procedure StringProc;
     procedure DoubleQuoteProc;
@@ -840,6 +842,16 @@ type
     procedure SetD4syntax(const Value: boolean);
 
     function CanApplyExtendedDeclarationAttribute(AMode: TSynPasTypeAttributeMode): boolean; inline;
+    function GetCustomSymbolToken(ATokenID: TtkTokenKindEx; ALen: integer;
+             out ACustomMarkup: TSynHighlighterAttributesModifier;
+             APeekOnly: boolean = False
+             ): boolean; inline;
+    function GetCustomTokenAndNext(ATokenID: TtkTokenKindEx; out ACustomMarkup: TSynHighlighterAttributesModifier;
+             APeekOnly: boolean = False
+             ): boolean; inline;
+    function GetCustomToken(ATokenID: TtkTokenKindEx; AnHash: byte; ATokenStart: PChar; ATokenLen: integer;
+             out ACustomMarkup: TSynHighlighterAttributesModifier
+             ): boolean; inline;
     procedure CheckForAdditionalAttributes;
 
     // Divider
@@ -1555,37 +1567,84 @@ begin
 end;
 
 procedure TSynPasSyn.RebuildCustomTokenInfo;
+  function FindList(AnHash: Byte; ATokenKind: TtkTokenKindEx): PSynPasSynCustomTokenInfoListEx;
+  var
+    x: Integer;
+  begin
+    for x := 0 to length(FCustomTokenInfo[AnHash].Lists) - 1 do begin
+      Result := @FCustomTokenInfo[AnHash].Lists[x];
+      if Result^.TokenKind = ATokenKind then
+        exit;
+    end;
+    x := length(FCustomTokenInfo[AnHash].Lists);
+    SetLength(FCustomTokenInfo[AnHash].Lists, x+1);
+    Result := @FCustomTokenInfo[AnHash].Lists[x];
+    Result^.TokenKind := ATokenKind;
+    Result^.List := TStringList.Create;
+    Result^.List.Sorted        := True;
+    Result^.List.CaseSensitive := True;
+    Result^.List.Duplicates    := dupIgnore;
+  end;
+
 var
   i, j, h: Integer;
-  ti: TSynPasSynCustomTokenInfo;
   t: String;
+  mtk: TtkTokenKindExs;
+  tk: TtkTokenKindEx;
+  Lst: PSynPasSynCustomTokenInfoListEx;
 begin
   FNeedCustomTokenBuild := False;
   FCustomTokenMarkup := nil;
+  FCustomCommentTokenMarkup := nil;
+  FCustomTokenMarkupSlash := nil;
+  FCustomTokenMarkupAnsi := nil;
+  FCustomTokenMarkupBor := nil;
   for i := 0 to 255 do begin
-    FreeAndNil(FCustomTokenInfo[i].List);
+    for j := 0 to length(FCustomTokenInfo[i].Lists) - 1 do
+      FreeAndNil(FCustomTokenInfo[i].Lists[j].List);
+    FCustomTokenInfo[i].Lists := nil;
     FCustomTokenInfo[i].MatchTokenKinds := [];
   end;
+
   for i := 0 to Length(FSynCustomTokens) - 1 do begin
+    mtk := FSynCustomTokens[i].MatchTokenKinds;
+    if mtk = [] then
+      continue;
+    if tkComment in mtk then
+      mtk := mtk - [tkComment] + [tkSlashComment, tkAnsiComment, tkBorComment];
+
     for j := 0 to FSynCustomTokens[i].FTokens.Count - 1 do begin
-      if FSynCustomTokens[i].MatchTokenKinds = [] then
-        continue;
       t := FSynCustomTokens[i].FTokens[j];
       if t = '' then
         continue;
+
       fLine    := PChar(t);
       fLineLen := Length(t);
       fToIdent := 0;
       h := KeyHash and 255;
 
-      if FCustomTokenInfo[h].List = nil then
-        FCustomTokenInfo[h].List := TSynPasSynCustomTokenInfoList.Create;
-
-      ti.MatchTokenKinds := FSynCustomTokens[i].MatchTokenKinds;
-      ti.Word := UpperCase(t);
-      ti.Token := FSynCustomTokens[i];
-      FCustomTokenInfo[h].MatchTokenKinds := FCustomTokenInfo[h].MatchTokenKinds + FSynCustomTokens[i].MatchTokenKinds;
-      FCustomTokenInfo[h].List.Add(ti);
+      FCustomTokenInfo[h].MatchTokenKinds := FCustomTokenInfo[h].MatchTokenKinds + mtk;
+      for tk in mtk do begin
+        case tk of
+          tkSlashComment:
+            if t = '*' then begin
+              FCustomTokenMarkupSlash := FSynCustomTokens[i].Markup;
+              continue;
+            end;
+          tkAnsiComment:
+            if t = '*' then begin
+              FCustomTokenMarkupAnsi := FSynCustomTokens[i].Markup;
+              continue;
+            end;
+          tkBorComment:
+            if t = '*' then begin
+              FCustomTokenMarkupBor := FSynCustomTokens[i].Markup;
+              continue;
+            end;
+        end;
+        Lst := FindList(h, tk);
+        Lst^.List.AddObject(UpperCase(t), FSynCustomTokens[i]);
+      end;
     end;
   end;
 end;
@@ -3965,6 +4024,7 @@ begin
   FPasDocWordList := TStringList.Create;
 
   FCustomTokenMergedMarkup := TSynSelectedColorMergeResult.Create;
+  FCustomCommentTokenMergedMarkup := TSynSelectedColorMergeResult.Create;
 
   FNestedBracketAttribs := TSynHighlighterAttributesModifierCollection.Create(Self);
   FNestedBracketAttribs.OnAttributeChange := @DefHighlightChange;
@@ -3986,7 +4046,7 @@ end; { Create }
 
 destructor TSynPasSyn.Destroy;
 var
-  i: Integer;
+  i, j: Integer;
 begin
   DestroyDividerDrawConfig;
   FreeAndNil(FCurCaseLabelAttri);
@@ -3995,10 +4055,12 @@ begin
   FreeAndNil(FCurStructMemberExtraAttri);
   FreeAndNil(FCurPasDocAttri);
   FreeAndNil(FCustomTokenMergedMarkup);
+  FreeAndNil(FCustomCommentTokenMergedMarkup);
   FreeAndNil(FPasDocWordList);
   CustomTokenCount := 0;
   for i := 0 to 255 do
-    FCustomTokenInfo[i].List.Free;
+    for j := 0 to length(FCustomTokenInfo[i].Lists) - 1 do
+      FreeAndNil(FCustomTokenInfo[i].Lists[j].List);
   FNestedBracketMergedMarkup.Free;
   FNestedBracketAttribs.Free;
   inherited Destroy;
@@ -4025,6 +4087,8 @@ begin
   FSynPasRangeInfo.MinLevelRegion := FSynPasRangeInfo.EndLevelRegion;
   fLineNumber := LineNumber;
   FAtLineStart := True;
+  FInString := False;
+  FCustomCommentTokenMarkup := nil;
   if not IsCollectingNodeInfo then
     Next;
 end; { SetLine }
@@ -4116,39 +4180,73 @@ end;
 procedure TSynPasSyn.BorProc;
 var
   p: LongInt;
+  IsInWord, WasInWord, ct: Boolean;
 begin
-  p:=Run;
+  FCustomCommentTokenMarkup := FCustomTokenMarkupBor;
   fTokenID := tkComment;
   if rsIDEDirective in fRange then
     fTokenID := tkIDEDirective;
 
-  if FUsePasDoc and not(rsIDEDirective in fRange) and (fLine[Run] = '@') then begin
-    if CheckPasDoc then
-      exit;
+  if (not (FIsInNextToEOL or IsScanning)) and not(rsIDEDirective in fRange) then begin
+    if FUsePasDoc and (fLine[Run] = '@') then begin
+      if CheckPasDoc then
+        exit;
+    end;
+    if (IsLetterChar[fline[Run]]) and
+       ( (Run = 0) or
+         not((IsLetterChar[fline[Run-1]] or IsUnderScoreOrNumberChar[fline[Run-1]]))
+       )
+    then begin
+      if GetCustomTokenAndNext(tkBorComment, FCustomTokenMarkup) then
+        exit;
+    end;
   end;
 
+  IsInWord := False;
+  WasInWord := (FIsInNextToEOL or IsScanning) or (rsIDEDirective in fRange); // don't run checks
+  p:=Run;
   repeat
     case fLine[p] of
     #0,#10,#13: break;
-    '}':
-      if TopPascalCodeFoldBlockType=cfbtNestedComment then
-      begin
-        Run:=p;
-        EndPascalCodeFoldBlock;
-        p:=Run;
-      end else begin
-        fRange := fRange - [rsBor, rsIDEDirective];
-        Inc(p);
-        if TopPascalCodeFoldBlockType=cfbtBorCommand then
+    '}': begin
+        if (not (FIsInNextToEOL or IsScanning)) and not(rsIDEDirective in fRange) then begin
+          Run := p;
+          ct := GetCustomSymbolToken(tkAnsiComment, 1, FCustomTokenMarkup, Run <> fTokenPos);
+          if ct and (Run <> fTokenPos) then
+            exit;
+        end;
+        if TopPascalCodeFoldBlockType=cfbtNestedComment then
+        begin
+          Run:=p;
           EndPascalCodeFoldBlock;
-        break;
+          p:=Run;
+          if FCustomTokenMarkup <> nil then begin
+            inc(Run);
+            exit;
+          end;
+      end else begin
+          fRange := fRange - [rsBor, rsIDEDirective];
+          Inc(p);
+          if TopPascalCodeFoldBlockType=cfbtBorCommand then
+            EndPascalCodeFoldBlock;
+          break;
+        end;
       end;
     '{':
       if NestedComments then begin
+        Run := p;
+        if (not (FIsInNextToEOL or IsScanning)) and not(rsIDEDirective in fRange) then begin
+          ct := GetCustomSymbolToken(tkAnsiComment, 1, FCustomTokenMarkup, Run <> fTokenPos);
+          if ct and (Run <> fTokenPos) then
+            exit;
+        end;
         fStringLen := 1;
-        Run:=p;
         StartPascalCodeFoldBlock(cfbtNestedComment);
         p:=Run;
+        if FCustomTokenMarkup <> nil then begin
+          inc(Run);
+          exit;
+        end;
       end;
     '@': begin
         if fLine[p+1] = '@' then
@@ -4161,8 +4259,20 @@ begin
           inc(p)
         end;
       end;
+    otherwise begin
+        if (not WasInWord) and IsLetterChar[fline[p]] then begin
+          Run := p;
+          if GetCustomTokenAndNext(tkBorComment, FCustomTokenMarkup, True) then
+            exit;
+        end
+      end;
     end;
     Inc(p);
+
+    if (not (FIsInNextToEOL or IsScanning)) and not(rsIDEDirective in fRange) then begin
+      WasInWord := IsInWord;
+      IsInWord := (IsLetterChar[fline[p]] or IsUnderScoreOrNumberChar[fline[p]]);
+    end;
   until (p>=fLineLen);
   Run:=p;
 end;
@@ -4385,10 +4495,18 @@ begin
       end;
     end
     else begin
+      fTokenID := tkComment;
       fRange := fRange + [rsBor];
       dec(Run);
       StartPascalCodeFoldBlock(cfbtBorCommand);
+
+      FCustomCommentTokenMarkup := FCustomTokenMarkupBor;
+      if not (FIsInNextToEOL or IsScanning) then
+        GetCustomSymbolToken(tkBorComment, 1, FCustomTokenMarkup);
+
       inc(Run);
+      if FCustomTokenMarkup <> nil then
+        exit;
     end;
     if FUsePasDoc and (fLine[Run] = '@') and CheckPasDoc(True) then
       exit;
@@ -4615,21 +4733,45 @@ begin
 end;
 
 procedure TSynPasSyn.AnsiProc;
+var
+  IsInWord, WasInWord, ct: Boolean;
 begin
   fTokenID := tkComment;
-  if FUsePasDoc and (fLine[Run] = '@') then begin
-    if CheckPasDoc then
-      exit;
+  FCustomCommentTokenMarkup := FCustomTokenMarkupAnsi;
+
+  if (not (FIsInNextToEOL or IsScanning)) then begin
+    if FUsePasDoc and (fLine[Run] = '@') then begin
+      if CheckPasDoc then
+        exit;
+    end;
+    if (IsLetterChar[fline[Run]]) and
+       ( (Run = 0) or
+         not((IsLetterChar[fline[Run-1]] or IsUnderScoreOrNumberChar[fline[Run-1]]))
+       )
+    then begin
+      if GetCustomTokenAndNext(tkAnsiComment, FCustomTokenMarkup) then
+        exit;
+    end;
   end;
 
+
+  IsInWord := False;
+  WasInWord := (FIsInNextToEOL or IsScanning); // don't run checks
   repeat
     if fLine[Run]=#0 then
       break
     else if (fLine[Run] = '*') and (fLine[Run + 1] = ')') then
     begin
+      if not (FIsInNextToEOL or IsScanning) then begin
+        ct := GetCustomSymbolToken(tkAnsiComment, 2, FCustomTokenMarkup, Run <> fTokenPos);
+        if ct and (Run <> fTokenPos) then
+          exit;
+      end;
       Inc(Run, 2);
       if TopPascalCodeFoldBlockType=cfbtNestedComment then begin
         EndPascalCodeFoldBlock;
+        if FCustomTokenMarkup <> nil then
+          exit;
       end else begin
         fRange := fRange - [rsAnsi];
         if TopPascalCodeFoldBlockType=cfbtAnsiComment then
@@ -4641,9 +4783,16 @@ begin
     if (pcsNestedComments in ModeSwitches) and
        (fLine[Run] = '(') and (fLine[Run + 1] = '*') then
     begin
+      if not (FIsInNextToEOL or IsScanning) then begin
+        ct := GetCustomSymbolToken(tkAnsiComment, 2, FCustomTokenMarkup, Run <> fTokenPos);
+        if ct and (Run <> fTokenPos) then
+          exit;
+      end;
       fStringLen := 2;
       StartPascalCodeFoldBlock(cfbtNestedComment);
       Inc(Run,2);
+      if FCustomTokenMarkup <> nil then
+        exit;
     end else
     if FUsePasDoc and (fLine[Run] = '@') then begin
       if fLine[Run+1] = '@' then
@@ -4654,7 +4803,17 @@ begin
       Inc(Run);
     end
     else
+    if (not WasInWord) and IsLetterChar[fline[Run]] then begin
+      if GetCustomTokenAndNext(tkAnsiComment, FCustomTokenMarkup, True) then
+        exit;
+    end
+    else
       Inc(Run);
+
+    if not (FIsInNextToEOL or IsScanning) then begin
+      WasInWord := IsInWord;
+      IsInWord := (IsLetterChar[fline[Run]] or IsUnderScoreOrNumberChar[fline[Run]]);
+    end;
   until (Run>=fLineLen) or (fLine[Run] in [#0, #10, #13]);
 end;
 
@@ -4703,7 +4862,14 @@ begin
         fStringLen := 2; // length of "(*"
         Dec(Run);
         StartPascalCodeFoldBlock(cfbtAnsiComment);
+
+        FCustomCommentTokenMarkup := FCustomTokenMarkupAnsi;
+        if not (FIsInNextToEOL or IsScanning) then
+          GetCustomSymbolToken(tkAnsiComment, 2, FCustomTokenMarkup);
+
         Inc(Run, 2);
+        if FCustomTokenMarkup <> nil then
+          exit;
         if not (fLine[Run] in [#0, #10, #13]) then begin
           if FUsePasDoc and (fLine[Run] = '@') and CheckPasDoc(True) then
             exit;
@@ -4814,8 +4980,6 @@ begin
 end;
 
 procedure TSynPasSyn.EqualSignProc;
-var
-  tfb: TPascalCodeFoldBlockType;
 begin
   inc(Run);
   fTokenID := tkSymbol;
@@ -4897,6 +5061,9 @@ end;
 procedure TSynPasSyn.SlashProc;
 begin
   if fLine[Run+1] = '/' then begin
+    FCustomCommentTokenMarkup := FCustomTokenMarkupSlash;
+    FIsInSlash := True;
+
     fTokenID := tkComment;
     if FAtLineStart then begin
       fRange := fRange + [rsSlash];
@@ -4904,19 +5071,16 @@ begin
       if not(TopPascalCodeFoldBlockType = cfbtSlashComment) then
         StartPascalCodeFoldBlock(cfbtSlashComment);
     end;
+
+    if (not (FIsInNextToEOL or IsScanning)) and
+       GetCustomSymbolToken(tkSlashComment, 2, FCustomTokenMarkup)
+    then begin
+      inc(Run, 2);
+      exit;
+    end;
     inc(Run, 2);
-    FIsInSlash := True;
-    while not(fLine[Run] in [#0, #10, #13]) do
-      if FUsePasDoc and (fLine[Run] = '@') then begin
-        if fLine[Run+1] = '@' then
-          inc(Run, 2)
-        else
-        if CheckPasDoc(True) then
-          exit;
-        Inc(Run);
-      end
-      else
-        Inc(Run);
+
+    SlashCommentProc;
   end else begin
     Inc(Run);
     fTokenID := tkSymbol;
@@ -4925,27 +5089,42 @@ begin
 end;
 
 procedure TSynPasSyn.SlashContinueProc;
+var
+  AtSlashOpen: Boolean;
 begin
-  if FIsInSlash and (fLine[Run] = '@') then begin
-    if CheckPasDoc then
-      exit;
+  if FIsInSlash and (not (FIsInNextToEOL or IsScanning)) then begin
+    FCustomCommentTokenMarkup := FCustomTokenMarkupSlash;
+    fTokenID := tkComment;
+
+    if (fLine[Run] = '@') then begin
+      if CheckPasDoc then
+        exit;
+    end;
+    if (IsLetterChar[fline[Run]]) and
+       ( (Run = 0) or
+         not((IsLetterChar[fline[Run-1]] or IsUnderScoreOrNumberChar[fline[Run-1]]))
+       )
+    then begin
+      if GetCustomTokenAndNext(tkSlashComment, FCustomTokenMarkup) then
+        exit;
+    end;
   end;
 
-  if FIsInSlash or ((fLine[Run] = '/') and (fLine[Run + 1] = '/')) then begin
+  AtSlashOpen := (fLine[Run] = '/') and (fLine[Run + 1] = '/') and not FIsInSlash;
+  if FIsInSlash or AtSlashOpen then begin
     FIsInSlash := True;
+    FCustomCommentTokenMarkup := FCustomTokenMarkupSlash;
     // Continue fold block
     fTokenID := tkComment;
-    while not(fLine[Run] in [#0, #10, #13]) do
-      if FUsePasDoc and (fLine[Run] = '@') then begin
-        if fLine[Run+1] = '@' then
-          inc(Run, 2)
-        else
-        if CheckPasDoc(True) then
-          exit;
-        Inc(Run);
-      end
-      else
-        Inc(Run);
+
+    if (not (FIsInNextToEOL or IsScanning)) and AtSlashOpen and
+       GetCustomSymbolToken(tkSlashComment, 2, FCustomTokenMarkup)
+    then begin
+      inc(Run, 2);
+      exit;
+    end;
+
+    SlashCommentProc;
     exit;
   end;
 
@@ -4964,6 +5143,37 @@ begin
 
   if FTokenID = tkUnknown then
     Next;
+end;
+
+procedure TSynPasSyn.SlashCommentProc;
+var
+  IsInWord, WasInWord: Boolean;
+begin
+  IsInWord := False;
+  WasInWord := (FIsInNextToEOL or IsScanning); // don't run checks
+
+  while not(fLine[Run] in [#0, #10, #13]) do begin
+    if FUsePasDoc and (fLine[Run] = '@') then begin
+      if fLine[Run+1] = '@' then
+        inc(Run, 2)
+      else
+      if CheckPasDoc(True) then
+        exit;
+      Inc(Run);
+    end
+    else
+    if (not WasInWord) and IsLetterChar[fline[Run]] then begin
+      if GetCustomTokenAndNext(tkSlashComment, FCustomTokenMarkup, True) then
+        exit;
+    end
+    else
+      Inc(Run);
+
+    if not (FIsInNextToEOL or IsScanning) then begin
+      WasInWord := IsInWord;
+      IsInWord := (IsLetterChar[fline[Run]] or IsUnderScoreOrNumberChar[fline[Run]]);
+    end;
+  end;
 end;
 
 procedure TSynPasSyn.SpaceProc;
@@ -4986,17 +5196,81 @@ begin
 end;
 
 procedure TSynPasSyn.StringProc;
+var
+  IsInWord, WasInWord, ct: Boolean;
 begin
   fTokenID := tkString;
-  Inc(Run);
-  while (not (fLine[Run] in [#0, #10, #13])) do begin
-    if fLine[Run] = '''' then begin
+
+  if FInString then begin
+    if not (FIsInNextToEOL or IsScanning) then begin
+      if (fLine[Run] = '''') and (fLine[Run+1] = '''') and
+         GetCustomSymbolToken(tkString, 2, FCustomTokenMarkup)
+      then begin
+        inc(Run, 2);
+        exit;
+      end;
+
+      if (IsLetterChar[fline[Run]]) and
+         ( (Run = 0) or
+           not((IsLetterChar[fline[Run-1]] or IsUnderScoreOrNumberChar[fline[Run-1]]))
+         )
+      then begin
+        if GetCustomTokenAndNext(tkString, FCustomTokenMarkup) then
+          exit;
+      end;
+    end;
+  end
+  else begin
+    FInString := True;
+    if not (FIsInNextToEOL or IsScanning) and
+      GetCustomSymbolToken(tkString, 1, FCustomTokenMarkup)
+    then begin
       Inc(Run);
-      if (fLine[Run] <> '''') then
-        break;
+      exit;
     end;
     Inc(Run);
   end;
+
+  IsInWord := False;
+  WasInWord := (FIsInNextToEOL or IsScanning); // don't run checks
+  while (not (fLine[Run] in [#0, #10, #13])) do begin
+    if fLine[Run] = '''' then begin
+      if (fLine[Run+1] = '''') then begin
+        // escaped
+        if (not (FIsInNextToEOL or IsScanning)) and
+           GetCustomSymbolToken(tkString, 2, FCustomTokenMarkup, Run <> fTokenPos)
+        then begin
+          if (Run = fTokenPos) then
+            inc(Run, 2);
+          exit
+        end;
+        Inc(Run);
+      end
+      else begin
+        // string end
+        if not (FIsInNextToEOL or IsScanning) then begin
+          ct := GetCustomSymbolToken(tkString, 1, FCustomTokenMarkup, Run <> fTokenPos);
+          if ct and (Run <> fTokenPos) then
+            exit;
+        end;
+        Inc(Run);
+        break;
+      end;
+    end
+    else
+    if (not WasInWord) and IsLetterChar[fline[Run]] then begin
+      if GetCustomTokenAndNext(tkString, FCustomTokenMarkup, True) then
+        exit;
+    end;
+
+    Inc(Run);
+
+    if not (FIsInNextToEOL or IsScanning) then begin
+      WasInWord := IsInWord;
+      IsInWord := (IsLetterChar[fline[Run]] or IsUnderScoreOrNumberChar[fline[Run]]);
+    end;
+  end;
+  FInString := False;
 
   // modifiers like "alias" take a string as argument
   if (PasCodeFoldRange.BracketNestLevel = 0) then begin
@@ -5069,36 +5343,67 @@ begin
             ;
 end;
 
+function TSynPasSyn.GetCustomSymbolToken(ATokenID: TtkTokenKindEx; ALen: integer; out
+  ACustomMarkup: TSynHighlighterAttributesModifier; APeekOnly: boolean): boolean;
+var
+  TempMarkup: TSynHighlighterAttributesModifier;
+begin
+  ACustomMarkup := nil;
+  Result := GetCustomToken(ATokenID, 0, @fLine[Run], ALen, TempMarkup);
+  if Result and (not APeekOnly) then
+    ACustomMarkup := TempMarkup;
+end;
+
+function TSynPasSyn.GetCustomTokenAndNext(ATokenID: TtkTokenKindEx; out
+  ACustomMarkup: TSynHighlighterAttributesModifier; APeekOnly: boolean): boolean;
+var
+  h: Integer;
+  TempTokenMarkup: TSynHighlighterAttributesModifier;
+begin
+  ACustomMarkup := nil;
+  fToIdent := Run;
+  h := KeyHash;
+  Result := fStringLen > 0;
+  if not Result then
+    exit;
+  Result := GetCustomToken(ATokenID, byte(h and 255), @fLine[Run], fStringLen, TempTokenMarkup);
+  if Result and (not APeekOnly) then begin
+    ACustomMarkup := TempTokenMarkup;
+    Run := Run + fStringLen;
+  end;
+end;
+
+function TSynPasSyn.GetCustomToken(ATokenID: TtkTokenKindEx; AnHash: byte; ATokenStart: PChar;
+  ATokenLen: integer; out ACustomMarkup: TSynHighlighterAttributesModifier): boolean;
+var
+  CustTkList: TStringList;
+  i, j: integer;
+  s: string;
+begin
+  Result := False;
+  ACustomMarkup := nil;
+  if ATokenID in FCustomTokenInfo[AnHash].MatchTokenKinds then begin
+    for i := 0 to Length(FCustomTokenInfo[AnHash].Lists) - 1 do
+      if FCustomTokenInfo[AnHash].Lists[i].TokenKind = ATokenID then begin
+        CustTkList := FCustomTokenInfo[AnHash].Lists[i].List;
+        if CustTkList <> nil then begin
+          SetString(s, ATokenStart, ATokenLen);
+          j := CustTkList.IndexOf(UpperCase(s));
+          Result := j >= 0;
+          if Result then
+            ACustomMarkup := TSynPasSynCustomToken(CustTkList.Objects[j]).Markup;
+        end;
+        break;
+      end;
+  end;
+end;
+
 procedure TSynPasSyn.CheckForAdditionalAttributes;
 var
-  CustTk: TSynPasSynCustomTokenInfoList;
-  CustTkList: PSynPasSynCustomTokenInfo;
-  i: integer;
-  UpperTk: String;
-  p: pointer;
   tfb: TPascalCodeFoldBlockType;
 begin
-  if FTokenID in FCustomTokenInfo[FTokenHashKey and 255].MatchTokenKinds then begin
-    CustTk := FCustomTokenInfo[FTokenHashKey and 255].List;
-    if CustTk <> nil then begin
-      UpperTk := '';
-      p := CustTk.List;
-      if p <> nil then begin
-        CustTkList := PPSynPasSynCustomTokenInfo(p)^;
-        for i := 0 to CustTk.Count - 1 do begin
-          if (FTokenID in CustTkList^.MatchTokenKinds) then begin
-            if UpperTk = '' then
-              UpperTk := UpperCase(GetToken);
-            if (UpperTk = CustTkList^.Word) then begin
-              FCustomTokenMarkup := CustTkList^.Token.FMarkup;
-              break;
-            end
-          end;
-          inc(CustTkList);
-        end;
-      end;
-    end;
-  end;
+  if not (FTokenID in [tkString, tkComment]) then
+    GetCustomToken(FTokenID, byte(FTokenHashKey and 255), @fLine[fTokenPos], Run - fTokenPos, FCustomTokenMarkup);
 
   case FTokenState of
     tsAtProcName: begin
@@ -5274,13 +5579,16 @@ begin
         BorProc
       else if rsDirective in fRange then
         DirectiveProc
-      else if rsSlash in fRange then
+      else if (rsSlash in fRange) or FIsInSlash then
         SlashContinueProc
+      else if FInString then
+        StringProc
       else begin
         FNextTokenState := tsNone;
         OldNestLevel := PasCodeFoldRange.BracketNestLevel;
         if (PasCodeFoldRange.BracketNestLevel = 1) then // procedure foo; [attr...]
           FOldRange := FOldRange - [rsWasInProcHeader];
+        FCustomCommentTokenMarkup := nil;
         FTokenExtraAttribs := [];
         FTokenTypeDeclExtraAttrib := eaNone;
         //if rsAtEqual in fRange then
@@ -5543,6 +5851,11 @@ begin
     FCustomTokenMergedMarkup.Merge(FCustomTokenMarkup);
     Result := FCustomTokenMergedMarkup;
   end;
+  if FCustomCommentTokenMarkup <> nil then begin
+    FCustomCommentTokenMergedMarkup.Assign(Result);
+    FCustomCommentTokenMergedMarkup.Merge(FCustomCommentTokenMarkup);
+    Result := FCustomCommentTokenMergedMarkup;
+  end;
 
   if (FTokenID = tkSymbol) and (Run - fTokenPos = 1) and (fLine[fTokenPos] in ['(', ')'])
   then begin
@@ -5599,7 +5912,8 @@ end;
 function TSynPasSyn.GetTokenIsCommentEnd: Boolean;
 begin
   Result := (FTokenID = tkComment) and
-            (FRange * [rsAnsi, rsBor, rsSlash] = []);  // rsIDEDirective
+            (FRange * [rsAnsi, rsBor, rsSlash] = []) and  // rsIDEDirective
+            (not (FIsInSlash and (Run < fLineLen)));
 end;
 
 function TSynPasSyn.GetRange: Pointer;
@@ -7118,15 +7432,6 @@ begin
   FD4syntax := Value;
 end;
 
-{ TSynPasSyn.TSynPasSynCustomTokenInfo }
-
-class operator TSynPasSyn.TSynPasSynCustomTokenInfo. = (a, b: TSynPasSynCustomTokenInfo): boolean;
-begin
-  Result := (a.MatchTokenKinds = b.MatchTokenKinds) and
-            (a.Token = b.Token) and
-            (a.Word = b.Word);
-end;
-
 { TSynFreePascalSyn }
 
 constructor TSynFreePascalSyn.Create(AOwner: TComponent);
@@ -7247,7 +7552,7 @@ begin
     FOnChange(Self);
 end;
 
-procedure TSynPasSynCustomToken.SetMatchTokenKinds(AValue: TtkTokenKinds);
+procedure TSynPasSynCustomToken.SetMatchTokenKinds(AValue: TtkTokenKindExs);
 begin
   if FMatchTokenKinds = AValue then Exit;
   FMatchTokenKinds := AValue;
