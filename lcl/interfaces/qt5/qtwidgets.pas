@@ -18344,6 +18344,14 @@ begin
     @ViewPortEventFilter);
 
   setViewport(FViewPortWidget.Widget);
+
+  if (LCLObject is TScrollingWinControl) then
+  begin
+    if TScrollingWinControl(LCLObject).VertScrollBar.Visible then
+      FViewportWidget.FScrollY := -TScrollingWinControl(LCLObject).VertScrollBar.Position;
+    if TScrollingWinControl(LCLObject).HorzScrollBar.Visible then
+      FViewportWidget.FScrollX := -TScrollingWinControl(LCLObject).HorzScrollBar.Position;
+  end;
 end;
 
 procedure TQtCustomControl.viewportDelete;
@@ -18842,7 +18850,7 @@ begin
     Result := QWidget_create(Parent, QtToolTip or QtFramelessWindowHint)
   else
   {$ENDIF}
-    Result := QWidget_create(Parent, QtTool or QtFramelessWindowHint);
+    Result := QWidget_create(Parent, QtTool or QtFramelessWindowHint {$IFDEF HASX11}or QtBypassWindowManagerHint{$ENDIF});
   FDeleteLater := True;
   FMenuBar := nil;
   {$IFDEF UNIX}
