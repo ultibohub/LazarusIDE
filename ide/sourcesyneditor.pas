@@ -62,6 +62,7 @@ uses
   SynEditMarkupHighAll, SynEditKeyCmds, SynEditMarkupIfDef, SynEditMiscProcs,
   SynPluginMultiCaret, SynEditPointClasses,
   SynEditMarkupFoldColoring, SynEditTextTabExpander, SynEditMouseCmds, SynEditWrappedView,
+  LazEditTextAttributes,
   // IDE
   etSrcEditMarks, LazarusIDEStrConsts, SourceMarks;
 
@@ -132,7 +133,7 @@ type
     procedure DoDisplayViewChanged; override;
     procedure BoundsChanged; override;
   public
-    constructor Create(AOwner: TWinControl; AnOriginalManager: TLazSynSurfaceManager);
+    constructor Create(AOwner: TSynEditBase; AnOriginalManager: TLazSynSurfaceManager);
     destructor Destroy; override;
     procedure  InvalidateLines(FirstTextLine, LastTextLine: TLineIdx; AScreenLineOffset: Integer = 0); override;
     procedure InvalidateTextLines(FirstTextLine, LastTextLine: TLineIdx; AScreenLineOffset: Integer = 0); override;
@@ -383,7 +384,7 @@ type
     procedure DoWordsChanged(Sender: TObject);
     procedure SetCustomWordTokenKind(AValue: TtkTokenKindEx);
   protected
-    procedure AssignFrom(Src: TLazSynCustomTextAttributes); override;
+    procedure AssignColorsFrom(ASource: TLazCustomEditTextAttribute); override;
     procedure DoClear; override;
     procedure Init; override;
   public
@@ -1518,7 +1519,8 @@ begin
   FOriginalManager.SetBounds(t, Left, Bottom, Right);
 end;
 
-constructor TSourceLazSynSurfaceManager.Create(AOwner: TWinControl; AnOriginalManager: TLazSynSurfaceManager);
+constructor TSourceLazSynSurfaceManager.Create(AOwner: TSynEditBase;
+  AnOriginalManager: TLazSynSurfaceManager);
 var
   txt: TLazSynTextArea;
   lgutter, rgutter: TLazSynGutterArea;
@@ -2137,7 +2139,6 @@ var
 begin
   if ImeHandler is LazSynImeSimple then exit;
   Ime := LazSynImeSimple.Create(Self);
-  LazSynImeSimple(Ime).TextDrawer := TextDrawer;
   Ime.InvalidateLinesMethod := @InvalidateLines;
   ImeHandler := Ime;
 end;
@@ -2167,12 +2168,13 @@ begin
   Changed;
 end;
 
-procedure TSynHighlighterLazCustomPasAttribute.AssignFrom(Src: TLazSynCustomTextAttributes);
+procedure TSynHighlighterLazCustomPasAttribute.AssignColorsFrom(
+  ASource: TLazCustomEditTextAttribute);
 begin
-  inherited AssignFrom(Src);
-  if Src is TSynHighlighterLazCustomPasAttribute then begin
-    FCustomWords.Assign(TSynHighlighterLazCustomPasAttribute(Src).FCustomWords);
-    FCustomWordTokenKind := TSynHighlighterLazCustomPasAttribute(Src).FCustomWordTokenKind;
+  inherited AssignColorsFrom(ASource);
+  if ASource is TSynHighlighterLazCustomPasAttribute then begin
+    FCustomWords.Assign(TSynHighlighterLazCustomPasAttribute(ASource).FCustomWords);
+    FCustomWordTokenKind := TSynHighlighterLazCustomPasAttribute(ASource).FCustomWordTokenKind;
   end
   else begin
     FCustomWords.Clear;

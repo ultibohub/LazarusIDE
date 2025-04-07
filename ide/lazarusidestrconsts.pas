@@ -2209,6 +2209,9 @@ resourcestring
   dlgAddHiAttrGroup_Suffix_Custom  = '(Custom)';
   dlgAddHiAttrGroup_Suffix_NBrackets  = '(Nested Brackets)';
   dlgAddHiAttrGroup_Suffix_EntryType  = '(entry type)';
+  dlgAddHiAttrGroup_Comment      = 'Comments';
+  dlgAddHiAttrGroup_ProgHeader   = 'Procedure Header';
+  dlgAddHiAttrGroup_DeclSection  = 'Declaration Blocks';
 
 
   dlgEditAccessCaptionLockedInView            = 'Locked, if text in view';
@@ -3128,8 +3131,8 @@ resourcestring
   srkmecDeleteLastWord        = 'Delete to start of word';
   srkmecDeleteBOL             = 'Delete to beginning of line';
   srkmecDeleteEOL             = 'Delete to end of line';
-  srkmecDeleteLine            = 'Delete current line';
-  srkmecDeleteLineKeepX       = 'Delete current line (keep X pos)';
+  srkmecDeleteLine            = 'Delete current line (keep caret at BOL)';
+  srkmecDeleteLineKeepX       = 'Delete current line (restore caret x-pos)';
   srkmecClearAll              = 'Delete whole text';
   srkmecLineBreak             = 'Break line and move cursor';
   srkmecInsertLine            = 'Break line, leave cursor';

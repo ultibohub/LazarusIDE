@@ -21,7 +21,9 @@ uses
   Classes, SysUtils,
   // LCL
   LCLType, Forms, Dialogs, Buttons, Controls, StdCtrls, ComCtrls, ImgList, Spin,
-  ButtonPanel, ExtCtrls,
+  ButtonPanel, ExtCtrls, TreeStorage,
+  //LazUtils,
+  FileUtil, LazFileUtils,
   // IdeIntf
   PropEdits, ComponentEditors, ObjInspStrConsts, IDEImagesIntf, IDEWindowIntf;
 
@@ -154,6 +156,8 @@ begin
   // dialogs
   dlgOpen.Title := sccsTrEdtOpenDialog;
   dlgSave.Title := sccsTrEdtSaveDialog;
+  dlgSave.Filter := oisFilterXML+'|*.xml|'+oisAllFiles+'|'+GetAllFilesMask+'|';
+  dlgOpen.Filter := dlgSave.Filter;
 
   // button panel
   ButtonPanel.ShowHint := true;
@@ -407,6 +411,8 @@ begin
 end;
 
 procedure TTreeViewItemsEditorForm.tbOpenClick(Sender: TObject);
+var
+  Fn: String;
 
   function ConfirmTreeReplace: boolean;
   begin
@@ -423,8 +429,11 @@ begin
 
   if ConfirmTreeReplace and dlgOpen.Execute then
   begin
-    treEditor.LoadFromFile(dlgOpen.FileName);
-
+    Fn := dlgOpen.FileName;
+    if (CompareFileExt(Fn, 'xml', False) = 0) then
+      TreeLoadFromXML(treEditor, Fn)
+    else
+      treEditor.LoadFromFile(Fn);
     treEditor.FullExpand;
     treEditor.Selected := treEditor.Items.GetFirstNode;
     treEditor.SetFocus;
@@ -433,6 +442,8 @@ begin
 end;
 
 procedure TTreeViewItemsEditorForm.tbSaveClick(Sender: TObject);
+var
+  Fn: String;
 
   function ImagesFound: boolean;
   var
@@ -469,9 +480,21 @@ procedure TTreeViewItemsEditorForm.tbSaveClick(Sender: TObject);
 
 begin
   FinishNodeEditing;
-
-  if ConfirmImagesLoss and dlgSave.Execute and ConfirmFileReplace then
-    treEditor.SaveToFile(dlgSave.FileName);
+  if dlgSave.Execute and ConfirmFileReplace then
+  begin
+    Fn := dlgSave.FileName;
+    if (CompareFileExt(Fn, 'xml', False) = 0) then
+    begin
+      TreeSaveToXML(treEditor, Fn);
+    end
+    else
+    begin
+      if ConfirmImagesLoss then
+        treEditor.SaveToFile(Fn);
+    end;
+  end;
+  //if ConfirmImagesLoss and dlgSave.Execute and ConfirmFileReplace then
+  //  treEditor.SaveToFile(dlgSave.FileName);
 end;
 
 procedure TTreeViewItemsEditorForm.spnIndexChange(Sender: TObject);

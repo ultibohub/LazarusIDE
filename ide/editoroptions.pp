@@ -54,7 +54,7 @@ uses
   SynEditMarkupBracket, SynEditMarkupHighAll, SynEditMarkupWordGroup,
   SynEditMarkupSpecialChar,
   // LazEdit
-  TextMateGrammar,
+  TextMateGrammar, LazEditTextAttributes,
   // SynEdit Highlighters
   SynEditHighlighter, SynEditHighlighterFoldBase, SynHighlighterCPP,
   SynHighlighterHTML, SynHighlighterJava, SynHighlighterLFM, SynHighlighterPas,
@@ -343,13 +343,13 @@ type
     procedure ApplyTo(aDest: TObject);
   protected
     procedure Init; override;
+    procedure AssignColorsFrom(ASource: TLazCustomEditTextAttribute); override;
   public
     constructor Create(ASchemeLang: TColorSchemeLanguage; attribName: PString;
                        const aStoredName: String = '');
     function IsEnabled: boolean; override;
     procedure ApplyTo(aDest: TSynHighlighterAttributes; aDefault: TColorSchemeAttribute = nil);
     procedure Assign(Src: TPersistent); override;
-    procedure AssignColors(Src: TPersistent);
     function Equals(Other: TColorSchemeAttribute): Boolean; reintroduce;
     function GetStoredValuesForAttrib: TColorSchemeAttribute; // The IDE default colors from the resources
     function GetSchemeGlobal: TColorSchemeAttribute;
@@ -7120,6 +7120,19 @@ begin
   FMarkupFoldLineAlpha := 0;
 end;
 
+procedure TColorSchemeAttribute.AssignColorsFrom(ASource: TLazCustomEditTextAttribute);
+var
+  SrcAttr: TColorSchemeAttribute absolute ASource;
+begin
+  inherited AssignColorsFrom(ASource);
+  if ASource is TColorSchemeAttribute then begin
+    FUseSchemeGlobals    := SrcAttr.FUseSchemeGlobals;
+    FMarkupFoldLineColor := SrcAttr.FMarkupFoldLineColor;
+    FMarkupFoldLineStyle := SrcAttr.FMarkupFoldLineStyle;
+    FMarkupFoldLineAlpha := SrcAttr.FMarkupFoldLineAlpha;
+  end;
+end;
+
 function TColorSchemeAttribute.GetIsUsingSchemeGlobals: Boolean;
 begin
   Result := FUseSchemeGlobals and (GetSchemeGlobal <> nil);
@@ -7180,10 +7193,12 @@ begin
     aDest.FrameEdges := Src.FrameEdges;
     aDest.FrameStyle := Src.FrameStyle;
     aDest.Style      := Src.Style;
-    if hafStyleMask in Src.Features then
-      aDest.StyleMask  := Src.StyleMask
-    else
-      aDest.StyleMask  := [low(TFontStyle)..high(TFontStyle)];
+    if aDest is TLazEditTextAttributeModifier then begin
+      if hafStyleMask in Src.Features then
+        aDest.StyleMask  := Src.StyleMask
+      else
+        aDest.StyleMask  := [low(TFontStyle)..high(TFontStyle)];
+    end;
 
     if aDest is TSynHighlighterAttributesModifier then begin
       TSynHighlighterAttributesModifier(aDest).ForeAlpha := Src.ForeAlpha;
@@ -7248,28 +7263,6 @@ begin
     FMarkupFoldLineStyle := SrcAttr.FMarkupFoldLineStyle;
     FMarkupFoldLineAlpha := SrcAttr.FMarkupFoldLineAlpha;
   end;
-end;
-
-procedure TColorSchemeAttribute.AssignColors(Src: TPersistent);
-var
-  SrcAttr: TColorSchemeAttribute;
-  sn, n: String;
-begin
-  BeginUpdate;
-  sn := StoredName;
-  n := ConstName;
-  inherited Assign(Src);
-  StoredName := sn;
-  ConstName := n;
-
-  if Src is TColorSchemeAttribute then begin
-    SrcAttr := TColorSchemeAttribute(Src);
-    FUseSchemeGlobals    := SrcAttr.FUseSchemeGlobals;
-    FMarkupFoldLineColor := SrcAttr.FMarkupFoldLineColor;
-    FMarkupFoldLineStyle := SrcAttr.FMarkupFoldLineStyle;
-    FMarkupFoldLineAlpha := SrcAttr.FMarkupFoldLineAlpha;
-  end;
-  EndUpdate;
 end;
 
 function TColorSchemeAttribute.Equals(Other: TColorSchemeAttribute): Boolean;

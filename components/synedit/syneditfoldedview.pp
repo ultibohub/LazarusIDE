@@ -54,7 +54,7 @@ uses
   // SynEdit
   LazSynEditText, SynEditTypes, SynEditMiscClasses, SynEditMiscProcs,
   SynEditPointClasses, SynEditHighlighter, SynEditHighlighterFoldBase,
-  SynEditKeyCmds;
+  SynEditKeyCmds, LazEditTextAttributes;
 
 type
 
@@ -715,7 +715,7 @@ begin
   inherited Create;
   FFoldView := AFoldView;
   FTokenAttr := TSynHighlighterAttributesModifier.Create(nil);
-  FMarkupLine := TSynSelectedColorMergeResult.Create(nil);
+  FMarkupLine := TSynSelectedColorMergeResult.Create;
 end;
 
 destructor TLazSynDisplayFold.Destroy;
@@ -758,7 +758,7 @@ const
   LSTATE_DOTS      = 4; // In Dots
   LSTATE_EOL       = 5; // at start of EOL
 var
-  EolAttr: TSynHighlighterAttributes;
+  EolAttr: TLazCustomEditTextAttribute;
   MergeStartX, MergeEndX: TLazSynDisplayTokenBound;
 begin
   case FLineState of
@@ -772,7 +772,7 @@ begin
           ATokenInfo.TokenLength := 3;
           ATokenInfo.TokenOrigin := dtoAfterText;
           if Assigned(CurrentTokenHighlighter)
-          then EolAttr := CurrentTokenHighlighter.GetEndOfLineAttribute
+          then EolAttr := CurrentTokenHighlighter.GetEndOfLineAttributeEx
           else EolAttr := nil;
           if EolAttr <> nil then begin
             FTokenAttr.Assign(EolAttr);

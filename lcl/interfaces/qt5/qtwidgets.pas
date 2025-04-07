@@ -107,6 +107,7 @@ type
 
   TQtWidget = class(TQtObject, IUnknown)
   private
+    FDefaultFocusReason: QtFocusReason;
     FInResizeEvent: boolean;
     FWidgetState: TQtWidgetStates;
     FWidgetDefaultFont: TQtFont;
@@ -319,6 +320,7 @@ type
       nil): QPixmapH;
     property ChildOfComplexWidget: TChildOfComplexWidget read FChildOfComplexWidget write FChildOfComplexWidget;
     property Context: HDC read GetContext;
+    property DefaultFocusReason: QtFocusReason read FDefaultFocusReason write FDefaultFocusReason;
     property HasCaret: Boolean read FHasCaret write SetHasCaret;
     property HasPaint: Boolean read FHasPaint write FHasPaint;
     property InResizeEvent: boolean read FInResizeEvent write FInResizeEvent;
@@ -2161,6 +2163,7 @@ end;
 
 procedure TQtWidget.InitializeWidget;
 begin
+  FDefaultFocusReason := QtTabFocusReason;
   FInResizeEvent := False;
   // default states
   FWidgetState := [];
@@ -5164,7 +5167,7 @@ end;
 procedure TQtWidget.setFocus;
 begin
   if getFocusPolicy <> QtNoFocus then
-    QWidget_setFocus(Widget, QtOtherFocusReason) {issue #10155}
+    QWidget_setFocus(Widget, FDefaultFocusReason) {issue #10155}
   else
     QWidget_setFocus(Widget);
 end;
@@ -9342,7 +9345,10 @@ begin
     LMScroll.Msg := LM_VSCROLL;
 
   LMScroll.Pos := p1;
-  LMScroll.ScrollCode := SIF_POS;
+  if getTracking and getSliderDown then
+    LMScroll.ScrollCode := SB_THUMBTRACK
+  else
+    LMScroll.ScrollCode := SB_THUMBPOSITION;
 
   if not InUpdate then
     DeliverMessage(LMScroll);
@@ -9353,8 +9359,14 @@ begin
   begin
     if b and (FChildOfComplexWidget = ccwAbstractScrollArea) and
       not InUpdate and getVisible then
+    begin
+      if p1 = getMin then
+        QAbstractSlider_triggerAction(QAbstractSliderH(Widget),
+          QAbstractSliderSliderToMinimum)
+      else
         QAbstractSlider_triggerAction(QAbstractSliderH(Widget),
           QAbstractSliderSliderToMaximum);
+    end;
   end;
 end;
 
@@ -9393,9 +9405,19 @@ begin
 
   SliderAction := SliderActions[Action];
 
+  if not SliderPressed and not SliderReleased and (SliderAction = QAbstractSliderSliderMove) then
+  begin
+    if LMScroll.Pos = getMin then
+      SliderAction := QAbstractSliderSliderToMinimum
+    else
+    if LMScroll.Pos = getMax then
+      SliderAction := QAbstractSliderSliderToMaximum;
+  end;
+
   case SliderAction of
     QAbstractSliderSliderNoAction:
     begin
+      exit; // issue #41566
       // this is called from mouse release while qt still thinks that
       // slider is pressed, we must update position.issue #14728, #21610
       if getSliderDown then
@@ -9403,6 +9425,7 @@ begin
         LMScroll.ScrollCode := SB_THUMBPOSITION;
         DeliverMessage(LMScroll);
       end;
+
       LMScroll.ScrollCode := SB_ENDSCROLL;
     end;
     QAbstractSliderSliderSingleStepAdd:
@@ -9435,6 +9458,13 @@ begin
       end;
     QAbstractSliderSliderToMinimum:
       begin
+        // send update for SB_THUMBPOSITION
+        if not SliderPressed and not SliderReleased then
+        begin
+          LMScroll.ScrollCode := SB_THUMBPOSITION;
+          DeliverMessage(LMScroll);
+        end;
+
         if LMScroll.Msg = LM_HSCROLL then
           LMScroll.ScrollCode := SB_LEFT
         else
@@ -9445,7 +9475,7 @@ begin
         // issue #21610
         // if we are reaching maximum with eg. mouse wheel
         // and our parent is TScrollingWinControl then update thumbposition.
-        if not getSliderDown then
+        if not SliderPressed and not SliderReleased then
         begin
           LMScroll.ScrollCode := SB_THUMBPOSITION;
           DeliverMessage(LMScroll);
@@ -9458,14 +9488,15 @@ begin
       end;
     QAbstractSliderSliderMove:
       begin
-        if getTracking then
+        if getTracking and getSliderDown then
           LMScroll.ScrollCode := SB_THUMBTRACK
         else
-        if not getSliderDown then
-          LMScroll.ScrollCode := SB_THUMBPOSITION;
+        if not SliderPressed and not SliderReleased then
+          LMScroll.ScrollCode := SB_THUMBPOSITION
+        else
+          exit; //ValueChange will trigger.
       end;
   end;
-
   DeliverMessage(LMScroll);
 end;
 
@@ -9511,8 +9542,10 @@ procedure TQtScrollBar.SlotSliderReleased; cdecl;
 var
   AValue: Integer;
   LMScroll: TLMScroll;
+  SentThumbPosition: boolean;
 begin
   inherited SlotSliderReleased;
+  SentThumbPosition := False;
   if
   {$IFDEF QTSCROLLABLEFORMS}
    ((ChildOfComplexWidget = ccwAbstractScrollArea) and (FOwner <> nil) and
@@ -9543,9 +9576,33 @@ begin
         LMScroll.ScrollCode := SB_THUMBPOSITION
       else
         LMScroll.ScrollCode := SB_THUMBTRACK;
+      SentThumbPosition := LMScroll.ScrollCode = SB_THUMBPOSITION;
       DeliverMessage(LMScroll);
     end;
   end;
+
+  // issue #41566 - must send SB_ENDSCROLL
+  FillChar(LMScroll{%H-}, SizeOf(LMScroll), #0);
+
+  LMScroll.ScrollBar := PtrUInt(Self);
+
+  if QAbstractSlider_orientation(QAbstractSliderH(Widget)) = QtHorizontal then
+    LMScroll.Msg := LM_HSCROLL
+  else
+    LMScroll.Msg := LM_VSCROLL;
+
+  LMScroll.Pos := getSliderPosition;
+
+  if not SentThumbPosition then
+  begin
+    LMScroll.ScrollCode := SB_THUMBPOSITION;
+    DeliverMessage(LMScroll);
+    LMScroll.Result := 0;
+  end;
+  FSliderReleased := False;
+  LMScroll.ScrollCode := SB_ENDSCROLL;
+  DeliverMessage(LMScroll);
+
 end;
 
 function TQtScrollBar.EventFilter(Sender: QObjectH; Event: QEventH): Boolean;
@@ -9769,6 +9826,7 @@ begin
   FCachedSelectionLen := -1;
   FIntValidator := nil;
   FNumbersOnly := False;
+  FDefaultFocusReason := QtOtherFocusReason;
   if AParams.WndParent <> 0 then
     Parent := TQtWidget(AParams.WndParent).GetContainerWidget
   else
@@ -13428,7 +13486,7 @@ begin
                 if (ViewStyle >= 0) and (TCustomListView(LCLObject).ItemIndex = -1) then
                   signalCurrentItemChanged(Item, nil);
               end;
-              QEvent_ignore(Event);
+              QEvent_accept(Event);
               //issue #39852, uncommented works fine with Qt4
               //Result := True;
               exit;
@@ -16412,6 +16470,7 @@ end;
 
 procedure TQtMenu.InitializeWidget;
 begin
+  FDefaultFocusReason := QtTabFocusReason;
   FWidgetState := [];
   ChildOfComplexWidget := ccwNone;
   WidgetColorRole := QPaletteWindow;

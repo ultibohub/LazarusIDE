@@ -41,7 +41,7 @@ unit SynEditTypes;
 
 interface
 uses
-  SysUtils, types, Classes, Controls, LCLType, SynEditKeyCmds;
+  SysUtils, types, Classes, Controls, LCLType, SynEditKeyCmds, LazEditTextAttributes;
 
 const
   TSynSpecialChars = [#128..#255]; // MG: special chars. Meaning depends on system encoding/codepage.
@@ -118,6 +118,7 @@ type
     scInsertMode, scModified, scSelection, scReadOnly,
     scFocus,     // received or lost focus
     scHandleCreated,    // handle created
+    scFontOrStyleChanged,
     scOptions    // some Options were changed (only triggered by some optinos)
    );
   TSynStatusChanges = set of TSynStatusChange;
@@ -220,27 +221,10 @@ type
   TSynVisibleSpecialChar = (vscSpace, vscTabAtFirst, vscTabAtLast);
   TSynVisibleSpecialChars = set of TSynVisibleSpecialChar;
 
-  TSynLineStyle = (
-    slsSolid,  // PS_SOLID pen
-    slsDashed, // PS_DASH pen
-    slsDotted, // PS_DOT
-    slsWaved   // solid wave
-  );
-
-  TSynFrameEdges = (
-    sfeNone,
-    sfeAround,      // frame around
-    sfeBottom,      // bottom part of the frame
-    sfeLeft         // left part of the frame
-  );
-
-  TLazSynBorderSide = (
-    bsLeft,
-    bsTop,
-    bsRight,
-    bsBottom
-  );
-  TLazSynBorderSides = set of TLazSynBorderSide;
+  TSynLineStyle      = TLazTextAttrLineStyle;
+  TSynFrameEdges     = TLazTextAttrFrameEdges;
+  TLazSynBorderSide  = TLazTextAttrBorderSide;
+  TLazSynBorderSides = TLazTextAttrBorderSides;
 
   THookedCommandEvent = procedure(Sender: TObject; AfterProcessing: boolean;
     var Handled: boolean; var Command: TSynEditorCommand;

@@ -52,9 +52,10 @@ unit SynHighlighterPas;
 interface
 
 uses
-  SysUtils, Classes, fgl, Registry, Graphics, SynEditHighlighterFoldBase,
-  SynEditMiscProcs, SynEditTypes, SynEditHighlighter, SynEditTextBase,
-  SynEditStrConst, SynEditMiscClasses, LazLoggerBase, LazEditMiscProcs;
+  SysUtils, Classes, fgl, Registry, Graphics, Generics.Defaults, SynEditHighlighterFoldBase,
+  SynEditMiscProcs, SynEditTypes, SynEditHighlighter, SynEditTextBase, SynEditStrConst,
+  SynEditMiscClasses, LazLoggerBase, LazEditMiscProcs, LazEditHighlighterUtils,
+  LazEditTextAttributes;
 
 type
   TSynPasStringMode = (spsmDefault, spsmStringOnly, spsmNone);
@@ -188,7 +189,11 @@ type
     reaDeclVarName,
     reaDeclTypeName,
     reaDeclType,
-    reaDeclValue
+    reaDeclValue,
+    // other
+    reCommentAnsi,
+    reCommentCurly,
+    reCommentSlash
   );
   TRequiredStates = set of TRequiredState;
 
@@ -552,8 +557,8 @@ type
     procedure SetBracketNestLevel(AValue: integer); inline;
   public
     procedure Clear; override;
-    function Compare(Range: TSynCustomHighlighterRange): integer; override;
-    procedure Assign(Src: TSynCustomHighlighterRange); override;
+    function Compare(Range: TLazHighlighterRange): integer; override;
+    procedure Assign(Src: TLazHighlighterRange); override;
     function MaxFoldLevel: Integer; override;
     procedure ResetBracketNestLevel;
     procedure IncBracketNestLevel;
@@ -595,6 +600,9 @@ type
     PSynPasSynCustomTokenInfoListEx = ^TSynPasSynCustomTokenInfoListEx;
   private
     FCaseLabelAttriMatchesElseOtherwise: Boolean;
+    FCommentAnsiAttri: TSynHighlighterAttributesModifier;
+    FCommentCurlyAttri: TSynHighlighterAttributesModifier;
+    FCommentSlashAttri: TSynHighlighterAttributesModifier;
     FNestedBracketAttribs: TSynHighlighterAttributesModifierCollection;
     FNestedBracketMergedMarkup: TSynSelectedColorMergeResult;
     FHighNestedBracketAttrib: integer;
@@ -605,7 +613,6 @@ type
       Lists: array of TSynPasSynCustomTokenInfoListEx;
     end;
     FCustomTokenMarkup, FCustomCommentTokenMarkup: TSynHighlighterAttributesModifier;
-    FCustomTokenMarkupSlash, FCustomTokenMarkupAnsi, FCustomTokenMarkupBor: TSynHighlighterAttributesModifier;
     FCustomTokenMergedMarkup, FCustomCommentTokenMergedMarkup: TSynSelectedColorMergeResult;
 
     FCurIDEDirectiveAttri: TSynSelectedColorMergeResult;
@@ -645,7 +652,7 @@ type
     FStringKeywordMode: TSynPasStringMode;
     FStringMultilineMode: TSynPasMultilineStringModes;
     FSynPasRangeInfo: TSynPasRangeInfo;
-    FAtLineStart, FInString: Boolean; // Line had only spaces or comments sofar
+    FAtLineStart, FAtSlashStart, FInString: Boolean; // Line had only spaces or comments sofar
     fLineStr: string;
     fLine: PChar;
     fLineLen: integer;
@@ -870,7 +877,7 @@ type
     procedure EndStatementLastLine(ACurTfb: TPascalCodeFoldBlockType;
                            ACloseFolds: TPascalCodeFoldBlockTypes); inline;
     // "Range"
-    function GetRangeClass: TSynCustomHighlighterRangeClass; override;
+    function GetRangeClass: TLazHighlighterRangeClass; override;
     procedure CreateRootCodeFoldBlock; override;
     function CreateRangeList(ALines: TSynEditStringsBase): TSynHighlighterRangeList; override;
     function UpdateRangeInfoAtLine(Index: Integer): Boolean; override; // Returns true if range changed
@@ -944,6 +951,7 @@ type
     function GetToken: string; override;
     procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); override;
     function GetTokenAttribute: TSynHighlighterAttributes; override;
+    function GetTokenAttributeEx: TLazCustomEditTextAttribute; override;
     function GetTokenID: TtkTokenKind;
     function GetTokenKind: integer; override;
     function GetTokenPos: Integer; override;
@@ -987,6 +995,9 @@ type
     property AsmAttri: TSynHighlighterAttributes read fAsmAttri write fAsmAttri;
     property CommentAttri: TSynHighlighterAttributes read fCommentAttri
       write fCommentAttri;
+    property CommentAnsiAttri: TSynHighlighterAttributesModifier read FCommentAnsiAttri write FCommentAnsiAttri;
+    property CommentCurlyAttri: TSynHighlighterAttributesModifier read FCommentCurlyAttri write FCommentCurlyAttri;
+    property CommentSlashAttri: TSynHighlighterAttributesModifier read FCommentSlashAttri write FCommentSlashAttri;
     property IDEDirectiveAttri: TSynHighlighterAttributesModifier read FIDEDirectiveAttri
       write FIDEDirectiveAttri;
     property IdentifierAttri: TSynHighlighterAttributes read fIdentifierAttri
@@ -1596,9 +1607,6 @@ begin
   FNeedCustomTokenBuild := False;
   FCustomTokenMarkup := nil;
   FCustomCommentTokenMarkup := nil;
-  FCustomTokenMarkupSlash := nil;
-  FCustomTokenMarkupAnsi := nil;
-  FCustomTokenMarkupBor := nil;
   for i := 0 to 255 do begin
     for j := 0 to length(FCustomTokenInfo[i].Lists) - 1 do
       FreeAndNil(FCustomTokenInfo[i].Lists[j].List);
@@ -1625,23 +1633,6 @@ begin
 
       FCustomTokenInfo[h].MatchTokenKinds := FCustomTokenInfo[h].MatchTokenKinds + mtk;
       for tk in mtk do begin
-        case tk of
-          tkSlashComment:
-            if t = '*' then begin
-              FCustomTokenMarkupSlash := FSynCustomTokens[i].Markup;
-              continue;
-            end;
-          tkAnsiComment:
-            if t = '*' then begin
-              FCustomTokenMarkupAnsi := FSynCustomTokens[i].Markup;
-              continue;
-            end;
-          tkBorComment:
-            if t = '*' then begin
-              FCustomTokenMarkupBor := FSynCustomTokens[i].Markup;
-              continue;
-            end;
-        end;
         Lst := FindList(h, tk);
         Lst^.List.AddObject(UpperCase(t), FSynCustomTokens[i]);
       end;
@@ -3943,7 +3934,7 @@ end;
 constructor TSynPasSyn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  FCaseLabelAttriMatchesElseOtherwise := True;;
+  FCaseLabelAttriMatchesElseOtherwise := True;
   FStringKeywordMode := spsmDefault;
   FExtendedKeywordsMode := False;
   CreateDividerDrawConfig;
@@ -3953,12 +3944,15 @@ begin
   fCommentAttri := TSynHighlighterAttributes.Create(@SYNS_AttrComment, SYNS_XML_AttrComment);
   fCommentAttri.Style:= [fsItalic];
   AddAttribute(fCommentAttri);
+  FCommentAnsiAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrCommentAnsi, SYNS_XML_AttrCommentAnsi);
+  AddAttribute(FCommentAnsiAttri);
+  FCommentCurlyAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrCommentCurly, SYNS_XML_AttrCommentCurly);
+  AddAttribute(FCommentCurlyAttri);
+  FCommentSlashAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrCommentSlash, SYNS_XML_AttrCommentSlash);
+  AddAttribute(FCommentSlashAttri);
   FIDEDirectiveAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrIDEDirective, SYNS_XML_AttrIDEDirective);
   AddAttribute(FIDEDirectiveAttri);
-  // FCurIDEDirectiveAttri, FCurCaseLabelAttri, FCurProcTypeDeclExtraAttr
-  // They are not available through the "Attribute" property (not added via AddAttribute
-  // But they are returned via GetTokenAttribute, so they should have a name.
-  FCurIDEDirectiveAttri := TSynSelectedColorMergeResult.Create(@SYNS_AttrIDEDirective, SYNS_XML_AttrIDEDirective);
+  FCurIDEDirectiveAttri := TSynSelectedColorMergeResult.Create;
   fIdentifierAttri := TSynHighlighterAttributes.Create(@SYNS_AttrIdentifier, SYNS_XML_AttrIdentifier);
   AddAttribute(fIdentifierAttri);
   fKeyAttri := TSynHighlighterAttributes.Create(@SYNS_AttrReservedWord, SYNS_XML_AttrReservedWord);
@@ -4087,6 +4081,7 @@ begin
   FSynPasRangeInfo.MinLevelRegion := FSynPasRangeInfo.EndLevelRegion;
   fLineNumber := LineNumber;
   FAtLineStart := True;
+  FAtSlashStart := False;
   FInString := False;
   FCustomCommentTokenMarkup := nil;
   if not IsCollectingNodeInfo then
@@ -4182,7 +4177,8 @@ var
   p: LongInt;
   IsInWord, WasInWord, ct: Boolean;
 begin
-  FCustomCommentTokenMarkup := FCustomTokenMarkupBor;
+  if reCommentCurly in FRequiredStates then
+    FCustomCommentTokenMarkup := FCommentCurlyAttri;
   fTokenID := tkComment;
   if rsIDEDirective in fRange then
     fTokenID := tkIDEDirective;
@@ -4500,7 +4496,8 @@ begin
       dec(Run);
       StartPascalCodeFoldBlock(cfbtBorCommand);
 
-      FCustomCommentTokenMarkup := FCustomTokenMarkupBor;
+      if reCommentCurly in FRequiredStates then
+        FCustomCommentTokenMarkup := FCommentCurlyAttri;
       if not (FIsInNextToEOL or IsScanning) then
         GetCustomSymbolToken(tkBorComment, 1, FCustomTokenMarkup);
 
@@ -4737,7 +4734,8 @@ var
   IsInWord, WasInWord, ct: Boolean;
 begin
   fTokenID := tkComment;
-  FCustomCommentTokenMarkup := FCustomTokenMarkupAnsi;
+  if reCommentAnsi in FRequiredStates then
+    FCustomCommentTokenMarkup := FCommentAnsiAttri;
 
   if (not (FIsInNextToEOL or IsScanning)) then begin
     if FUsePasDoc and (fLine[Run] = '@') then begin
@@ -4863,7 +4861,8 @@ begin
         Dec(Run);
         StartPascalCodeFoldBlock(cfbtAnsiComment);
 
-        FCustomCommentTokenMarkup := FCustomTokenMarkupAnsi;
+        if reCommentAnsi in FRequiredStates then
+          FCustomCommentTokenMarkup := FCommentAnsiAttri;
         if not (FIsInNextToEOL or IsScanning) then
           GetCustomSymbolToken(tkAnsiComment, 2, FCustomTokenMarkup);
 
@@ -5061,8 +5060,10 @@ end;
 procedure TSynPasSyn.SlashProc;
 begin
   if fLine[Run+1] = '/' then begin
-    FCustomCommentTokenMarkup := FCustomTokenMarkupSlash;
+    if reCommentSlash in FRequiredStates then
+      FCustomCommentTokenMarkup := FCommentSlashAttri;
     FIsInSlash := True;
+    FAtSlashStart := True;
 
     fTokenID := tkComment;
     if FAtLineStart then begin
@@ -5092,8 +5093,10 @@ procedure TSynPasSyn.SlashContinueProc;
 var
   AtSlashOpen: Boolean;
 begin
+  FAtSlashStart := False;
   if FIsInSlash and (not (FIsInNextToEOL or IsScanning)) then begin
-    FCustomCommentTokenMarkup := FCustomTokenMarkupSlash;
+    if reCommentSlash in FRequiredStates then
+      FCustomCommentTokenMarkup := FCommentSlashAttri;
     fTokenID := tkComment;
 
     if (fLine[Run] = '@') then begin
@@ -5113,7 +5116,8 @@ begin
   AtSlashOpen := (fLine[Run] = '/') and (fLine[Run + 1] = '/') and not FIsInSlash;
   if FIsInSlash or AtSlashOpen then begin
     FIsInSlash := True;
-    FCustomCommentTokenMarkup := FCustomTokenMarkupSlash;
+    if reCommentSlash in FRequiredStates then
+      FCustomCommentTokenMarkup := FCommentSlashAttri;
     // Continue fold block
     fTokenID := tkComment;
 
@@ -5718,20 +5722,23 @@ begin
     Result := fTokenId;
 end;
 
+
 function TSynPasSyn.GetTokenAttribute: TSynHighlighterAttributes;
 var
-  tid: TtkTokenKind;
-  i: Integer;
-  attr: TSynHighlighterAttributesModifier;
+  x1, x2: Integer;
 begin
-  tid := GetTokenID;
-  case tid of
+  case GetTokenID of
     tkAsm: Result := fAsmAttri;
-    tkComment: Result := fCommentAttri;
-    tkIDEDirective: begin
-      FCurIDEDirectiveAttri.Assign(FCommentAttri);
-      FCurIDEDirectiveAttri.Merge(FIDEDirectiveAttri);
-      Result := FCurIDEDirectiveAttri;
+    tkIDEDirective, tkComment: begin
+      Result := fCommentAttri;
+      //x1 := ToPos(fTokenPos);
+      //x2 := ToPos(Run);
+      //FCustomCommentTokenMergedMarkup.SetFrameBoundsLog(x1, x2);
+      //if not GetTokenIsCommentStart(True) then
+      //  x1 := 1;
+      //if (not GetTokenIsCommentEnd) then
+      //  x2 := fLineLen;
+      //Result.SetFrameBoundsLog(x1, x2);
     end;
     tkIdentifier: begin
       if eaGotoLabel in FTokenExtraAttribs then
@@ -5749,9 +5756,48 @@ begin
     tkUnknown: Result := fSymbolAttri;
   else
     Result := nil;
-    exit; // can't merge
+  end;
+end;
+function TSynPasSyn.GetTokenAttributeEx: TLazCustomEditTextAttribute;
+var
+  tid: TtkTokenKind;
+  i, x1, x2: Integer;
+  LeftCol, RightCol: TLazSynDisplayTokenBound;
+  attr: TSynHighlighterAttributesModifier;
+
+  procedure InitMergeRes(AMergeRes: TSynSelectedColorMergeResult; AnAttr: TLazCustomEditTextAttribute);
+  begin
+    if AnAttr is TSynSelectedColorMergeResult then begin
+      AMergeRes.Assign(AnAttr);
+    end
+    else begin
+      AMergeRes.Clear;
+      AMergeRes.Merge(AnAttr, LeftCol, RightCol);
+    end;
+  end;
+begin
+  Result := GetTokenAttribute;
+  if Result = nil then
+    exit;
+
+  tid := GetTokenID;
+
+  x1 := ToPos(fTokenPos);
+  x2 := ToPos(Run);
+  LeftCol.Init(-1, x1);
+  RightCol.Init(-1, x2);
+  if tid in [tkIDEDirective, tkComment] then begin
+    if not GetTokenIsCommentStart(True) then x1 := 1;
+    if (not GetTokenIsCommentEnd)       then x2 := fLineLen;
+    Result.SetFrameBoundsLog(x1, x2);
   end;
 
+
+  if tid = tkIDEDirective then begin
+    FCurIDEDirectiveAttri.Assign(FCommentAttri);
+    FCurIDEDirectiveAttri.Merge(FIDEDirectiveAttri, LeftCol, RightCol);
+    Result := FCurIDEDirectiveAttri;
+  end;
 
   if FTokenIsCaseLabel and
     ( (tid in [tkIdentifier, tkNumber, tkString]) or
@@ -5759,26 +5805,29 @@ begin
     )
   then begin
     FCurCaseLabelAttri.Assign(Result);
-    FCurCaseLabelAttri.Merge(FCaseLabelAttri);
+    FCurCaseLabelAttri.Merge(FCaseLabelAttri, LeftCol, RightCol);
     Result := FCurCaseLabelAttri;
   end;
 
   if FIsPasDocKey then begin
-    FCurPasDocAttri.Assign(Result);
-    FCurPasDocAttri.Merge(fPasDocKeyWordAttri);
+    InitMergeRes(FCurPasDocAttri, Result);
+    FCurPasDocAttri.Merge(fPasDocKeyWordAttri, LeftCol, RightCol);
     Result := FCurPasDocAttri;
+    Result.SetFrameBoundsLog(x1, x2);
   end
   else
   if FIsPasDocSym then begin
-    FCurPasDocAttri.Assign(Result);
-    FCurPasDocAttri.Merge(fPasDocSymbolAttri);
+    InitMergeRes(FCurPasDocAttri, Result);
+    FCurPasDocAttri.Merge(fPasDocSymbolAttri, LeftCol, RightCol);
     Result := FCurPasDocAttri;
+    Result.SetFrameBoundsLog(x1, x2);
   end
   else
   if FIsPasUnknown then begin
-    FCurPasDocAttri.Assign(Result);
-    FCurPasDocAttri.Merge(fPasDocUnknownAttr);
+    InitMergeRes(FCurPasDocAttri, Result);
+    FCurPasDocAttri.Merge(fPasDocUnknownAttr, LeftCol, RightCol);
     Result := FCurPasDocAttri;
+    Result.SetFrameBoundsLog(x1, x2);
   end;
 
   case FTokenTypeDeclExtraAttrib of
@@ -5789,72 +5838,73 @@ begin
            (PasCodeFoldRange.BracketNestLevel = 0)
         then begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderNameAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderNameAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
         end;
       end;
     eaPropertyName: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FPropertyNameAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FPropertyNameAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaProcParam: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderParamAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderParamAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaProcType: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderTypeAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderTypeAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaProcValue: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderValueAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderValueAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaProcResult: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderResultAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FProcedureHeaderResultAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaDeclVarName: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FDeclarationVarConstNameAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationVarConstNameAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaDeclTypeName: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FDeclarationTypeNameAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationTypeNameAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaDeclType: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FDeclarationTypeAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationTypeAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
     eaDeclValue: begin
           FCurProcTypeDeclExtraAttr.Assign(Result);
-          FCurProcTypeDeclExtraAttr.Merge(FDeclarationValueAttr);
+          FCurProcTypeDeclExtraAttr.Merge(FDeclarationValueAttr, LeftCol, RightCol);
           Result := FCurProcTypeDeclExtraAttr;
       end;
   end;
 
   if eaStructMemeber in FTokenExtraAttribs then begin
     FCurStructMemberExtraAttri.Assign(Result);
-    FCurStructMemberExtraAttri.Merge(FStructMemberAttr);
+    FCurStructMemberExtraAttri.Merge(FStructMemberAttr, LeftCol, RightCol);
     Result := FCurStructMemberExtraAttri;
   end;
 
-  if FCustomTokenMarkup <> nil then begin
-    FCustomTokenMergedMarkup.Assign(Result);
-    FCustomTokenMergedMarkup.Merge(FCustomTokenMarkup);
-    Result := FCustomTokenMergedMarkup;
-  end;
   if FCustomCommentTokenMarkup <> nil then begin
-    FCustomCommentTokenMergedMarkup.Assign(Result);
-    FCustomCommentTokenMergedMarkup.Merge(FCustomCommentTokenMarkup);
+    InitMergeRes(FCustomCommentTokenMergedMarkup, Result);
+    FCustomCommentTokenMarkup.SetFrameBoundsLog(x1, x2);
+    FCustomCommentTokenMergedMarkup.Merge(FCustomCommentTokenMarkup, LeftCol, RightCol);
     Result := FCustomCommentTokenMergedMarkup;
+  end;
+  if FCustomTokenMarkup <> nil then begin
+    InitMergeRes(FCustomTokenMergedMarkup, Result);
+    FCustomTokenMergedMarkup.Merge(FCustomTokenMarkup, LeftCol, RightCol);
+    Result := FCustomTokenMergedMarkup;
   end;
 
   if (FTokenID = tkSymbol) and (Run - fTokenPos = 1) and (fLine[fTokenPos] in ['(', ')'])
@@ -5874,6 +5924,7 @@ begin
     end;
   end;
 
+  //Result.SetFrameBoundsLog(-1, -1); // TODO: Textdrawer will do its own bounds, so all frames must be cleared while merging
 end;
 
 function TSynPasSyn.GetTokenKind: integer;
@@ -5903,7 +5954,10 @@ function TSynPasSyn.GetTokenIsCommentStart(AnIgnoreMultiLineSlash: Boolean): Boo
 begin
   if AnIgnoreMultiLineSlash then
     Result := (FTokenID = tkComment) and (fLineLen > 0) and
-              (FOldRange * [rsAnsi, rsBor] = [])  // rsIDEDirective
+              ( (FOldRange * [rsAnsi, rsBor, rsSlash] = []) or  // rsIDEDirective
+                FAtSlashStart or
+                ((rsSlash in fRange) and (fTokenPos = 0) )
+              )
   else
     Result := (FTokenID = tkComment) and (fLineLen > 0) and
               (FOldRange * [rsAnsi, rsBor, rsSlash] = []);
@@ -5912,8 +5966,9 @@ end;
 function TSynPasSyn.GetTokenIsCommentEnd: Boolean;
 begin
   Result := (FTokenID = tkComment) and
-            (FRange * [rsAnsi, rsBor, rsSlash] = []) and  // rsIDEDirective
-            (not (FIsInSlash and (Run < fLineLen)));
+            ( (FRange * [rsAnsi, rsBor, rsSlash] = []) or  // rsIDEDirective
+              ( (rsSlash in fRange) and FIsInSlash and (Run = fLineLen) )
+            );
 end;
 
 function TSynPasSyn.GetRange: Pointer;
@@ -7160,7 +7215,7 @@ begin
           - ord(low(TSynPasDividerDrawLocation)) + 1;
 end;
 
-function TSynPasSyn.GetRangeClass: TSynCustomHighlighterRangeClass;
+function TSynPasSyn.GetRangeClass: TLazHighlighterRangeClass;
 begin
   Result:=TSynPasSynRange;
 end;
@@ -7308,6 +7363,10 @@ begin
   inherited DoDefHighlightChanged;
 
   FRequiredStates := [];
+
+  if FCommentAnsiAttri.IsEnabled then  Include(FRequiredStates, reCommentAnsi);
+  if FCommentCurlyAttri.IsEnabled then Include(FRequiredStates, reCommentCurly);
+  if FCommentSlashAttri.IsEnabled then Include(FRequiredStates, reCommentSlash);
 
   //if fPasDocKeyWordAttri.IsEnabled then begin
   //end;
@@ -7463,27 +7522,12 @@ begin
   FTokenState := tsNone;
 end;
 
-function TSynPasSynRange.Compare(Range: TSynCustomHighlighterRange): integer;
+function TSynPasSynRange.Compare(Range: TLazHighlighterRange): integer;
 begin
-  Result:=inherited Compare(Range);
-  if Result<>0 then exit;
-
-  Result:=ord(FTokenState)-ord(TSynPasSynRange(Range).FTokenState);
-  if Result<>0 then exit;
-  Result:=ord(FMode)-ord(TSynPasSynRange(Range).FMode);
-  if Result<>0 then exit;
-  Result:=Integer(FModeSwitches)-Integer(TSynPasSynRange(Range).FModeSwitches);
-  if Result<>0 then exit;
-  Result := FBracketNestLevel - TSynPasSynRange(Range).FBracketNestLevel;
-  if Result<>0 then exit;
-  Result := FRoundBracketNestLevel - TSynPasSynRange(Range).FRoundBracketNestLevel;
-  if Result<>0 then exit;
-  Result := FLastLineCodeFoldLevelFix - TSynPasSynRange(Range).FLastLineCodeFoldLevelFix;
-  if Result<>0 then exit;
-  Result := FPasFoldFixLevel - TSynPasSynRange(Range).FPasFoldFixLevel;
+  Result := DoCompare(Range, TSynPasSynRange.InstanceSize);
 end;
 
-procedure TSynPasSynRange.Assign(Src: TSynCustomHighlighterRange);
+procedure TSynPasSynRange.Assign(Src: TLazHighlighterRange);
 begin
   if (Src<>nil) and (Src<>TSynCustomHighlighterRange(NullRange)) then begin
     inherited Assign(Src);

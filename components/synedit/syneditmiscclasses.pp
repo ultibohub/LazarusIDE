@@ -52,7 +52,7 @@ uses
   LCLIntf, LCLType, Graphics, Controls, Clipbrd, ImgList,
   // SynEdit
   SynEditHighlighter, SynEditMiscProcs, SynEditTypes, LazSynEditText, SynEditPointClasses, SynEditMouseCmds,
-  SynEditTextBase;
+  SynEditTextBase, LazEditTextAttributes;
 
 const
   SYNEDIT_DEFAULT_MOUSE_OPTIONS = [];
@@ -471,32 +471,13 @@ type
 
   TSynObjectListItemClass = class of TSynObjectListItem;
 
-  TLazSynDisplayTokenBound = record
-    Physical: Integer;      // 1 based - May be in middle of char
-    Logical: Integer;       // 1 based
-    Offset: Integer;        // default 0. MultiWidth (e.g. Tab), if token starts in the middle of char
-  end;
+  TLazSynDisplayTokenBound = TLazEditDisplayTokenBound;
 
   { TSynSelectedColor }
 
   TSynSelectedColor = class(TSynHighlighterAttributesModifier)
-  private
-    // 0 or -1 start/end before/after line // 1 first char
-    FStartX, FEndX: TLazSynDisplayTokenBound;
   protected
-    procedure DoClear; override;
-    procedure AssignFrom(Src: TLazSynCustomTextAttributes); override;
     procedure Init; override;
-  public
-    // boundaries of the frame
-    procedure SetFrameBoundsPhys(AStart, AEnd: Integer);
-    procedure SetFrameBoundsLog(AStart, AEnd: Integer; AStartOffs: Integer = 0; AEndOffs: Integer = 0);
-    property StartX: TLazSynDisplayTokenBound read FStartX write FStartX;
-    property EndX: TLazSynDisplayTokenBound read FEndX write FEndX;
-  public
-    function GetModifiedStyle(aStyle: TFontStyles): TFontStyles; // deprecated;
-    procedure ModifyColors(var AForeground, ABackground, AFrameColor: TColor;
-      var AStyle: TFontStyles; var AFrameStyle: TSynLineStyle); deprecated;
   end;
 
   TSynSelectedColorAlphaEntry = record
@@ -518,7 +499,7 @@ type
 
   { TSynSelectedColorMergeResult }
 
-  TSynSelectedColorMergeResult = class(TSynSelectedColor)
+  TSynSelectedColorMergeResult = class(TLazCustomEditTextAttribute)
   private
     // TSynSelectedColor.Style and StyleMask describe how to modify a style,
     // but PaintLines creates an instance that contains an actual style (without mask)
@@ -535,15 +516,16 @@ type
 
     FMergeInfos: array [TSynSelectedColorEnum] of TSynSelectedColorMergeInfo;
 
-    function IsMatching(ABound1, ABound2: TLazSynDisplayTokenBound): Boolean;
-    function GetFrameSideColors(Side: TLazSynBorderSide): TColor;
+    function IsMatching(const ABound1, ABound2: TLazSynDisplayTokenBound): Boolean;
     function GetFrameSideOrigin(Side: TLazSynBorderSide): TSynFrameEdges;
-    function GetFrameSidePriority(Side: TLazSynBorderSide): integer;
-    function GetFrameSideStyles(Side: TLazSynBorderSide): TSynLineStyle;
-    procedure SetCurrentEndX(AValue: TLazSynDisplayTokenBound);
-    procedure SetCurrentStartX(AValue: TLazSynDisplayTokenBound);
+    procedure SetCurrentEndX(const AValue: TLazSynDisplayTokenBound);
+    procedure SetCurrentStartX(const AValue: TLazSynDisplayTokenBound);
   protected
-    procedure AssignFrom(Src: TLazSynCustomTextAttributes); override;
+    function GetFrameSideColors(Side: TLazSynBorderSide): TColor; override;
+    function GetFrameSidePriority(Side: TLazSynBorderSide): integer; override;
+    function GetFrameSideStyles(Side: TLazSynBorderSide): TSynLineStyle; override;
+
+    procedure AssignFrom(Src: TLazCustomEditTextAttribute); override;
     procedure DoClear; override;
     procedure Init; override;
 
@@ -552,13 +534,11 @@ type
       AColor: TColor; APriority, AnAlpha: Integer);
     function  CalculateInfo(var AnInfo: TSynSelectedColorMergeInfo;
               ANoneColor: TColor; IsFrame: Boolean = False): TColor;
-    property FrameSidePriority[Side: TLazSynBorderSide]: integer read GetFrameSidePriority;
     property FrameSideOrigin[Side: TLazSynBorderSide]: TSynFrameEdges read GetFrameSideOrigin;
   public
+    constructor Create(ACaption: PString; AStoredName: String = ''); overload; deprecated 'use Create without name // To be removed in 5.99';
     destructor Destroy; override;
 
-    property FrameSideColors[Side: TLazSynBorderSide]: TColor read GetFrameSideColors;
-    property FrameSideStyles[Side: TLazSynBorderSide]: TSynLineStyle read GetFrameSideStyles;
     // boundaries for current paint
     property CurrentStartX: TLazSynDisplayTokenBound read FCurrentStartX write SetCurrentStartX;
     property CurrentEndX: TLazSynDisplayTokenBound read FCurrentEndX write SetCurrentEndX;
@@ -566,9 +546,9 @@ type
     procedure InitMergeInfo;    // (called automatically) Set all MergeInfo to the start values. After this was called, ay Changes to the color properties are ignored
     procedure ProcessMergeInfo; // copy the merge result, to the actual color properties
     procedure CleanupMergeInfo; // free the alpha arrays
-    procedure Merge(Other: TSynHighlighterAttributesModifier);
-    procedure Merge(Other: TSynHighlighterAttributesModifier; LeftCol, RightCol: TLazSynDisplayTokenBound);
-    procedure MergeFrames(Other: TSynHighlighterAttributesModifier; LeftCol, RightCol: TLazSynDisplayTokenBound);
+    procedure Merge(Other: TLazCustomEditTextAttribute);
+    procedure Merge(Other: TLazCustomEditTextAttribute; LeftCol, RightCol: TLazSynDisplayTokenBound);
+    procedure MergeFrames(Other: TLazCustomEditTextAttribute; LeftCol, RightCol: TLazSynDisplayTokenBound);
   end;
 
   { TLazSynSurface }
@@ -578,7 +558,7 @@ type
     FBounds: TRect;
     FBoundsChangeList: TMethodList;
     FDisplayView: TLazSynDisplayView;
-    FOwner: TWinControl;
+    FOwner: TSynEditBase;
     function GetHandle: HWND;
     procedure SetDisplayView(AValue: TLazSynDisplayView);
   protected
@@ -586,8 +566,9 @@ type
     procedure DoPaint(ACanvas: TCanvas; AClip: TRect); virtual; abstract;
     procedure DoDisplayViewChanged; virtual;
     property  Handle: HWND read GetHandle;
+    property  Owner: TSynEditBase read FOwner;
   public
-    constructor Create(AOwner: TWinControl);
+    constructor Create(AOwner: TSynEditBase);
     destructor Destroy; override;
     procedure Assign(Src: TLazSynSurface); virtual;
     procedure AddBoundsChangeHandler(AHandler: TNotifyEvent);
@@ -1054,8 +1035,8 @@ end;
 
 { TSynSelectedColorMergeResult }
 
-function TSynSelectedColorMergeResult.IsMatching(ABound1,
-  ABound2: TLazSynDisplayTokenBound): Boolean;
+function TSynSelectedColorMergeResult.IsMatching(const ABound1, ABound2: TLazSynDisplayTokenBound
+  ): Boolean;
 begin
   Result := ( (ABound1.Physical > 0) and
               (ABound1.Physical = ABound2.Physical)
@@ -1074,8 +1055,8 @@ begin
 
   if (FCurrentStartX.Logical >= 0) or (FCurrentStartX.Physical >= 0) then
     case Side of
-      bsLeft:  if not IsMatching(FCurrentStartX, FStartX) then exit(clNone);
-      bsRight: if not IsMatching(FCurrentEndX,   FEndX)   then exit(clNone);
+      bsLeft:  if not IsMatching(FCurrentStartX, StartX) then exit(clNone);
+      bsRight: if not IsMatching(FCurrentEndX,   EndX)   then exit(clNone);
     end;
 
   if (Side in SynFrameEdgeToSides[FrameEdges])
@@ -1101,8 +1082,8 @@ begin
 
   if (FCurrentStartX.Logical >= 0) or (FCurrentStartX.Physical >= 0) then
     case Side of
-      bsLeft:  if not IsMatching(FCurrentStartX, FStartX) then exit(0);
-      bsRight: if not IsMatching(FCurrentEndX,   FEndX)   then exit(0);
+      bsLeft:  if not IsMatching(FCurrentStartX, StartX) then exit(0);
+      bsRight: if not IsMatching(FCurrentEndX,   EndX)   then exit(0);
     end;
 
   if (Side in SynFrameEdgeToSides[FrameEdges])
@@ -1120,29 +1101,29 @@ begin
   else Result := slsSolid;
 end;
 
-procedure TSynSelectedColorMergeResult.SetCurrentEndX(AValue: TLazSynDisplayTokenBound);
+procedure TSynSelectedColorMergeResult.SetCurrentEndX(const AValue: TLazSynDisplayTokenBound);
 begin
   //if FCurrentEndX = AValue then Exit;
   FCurrentEndX := AValue;
-  if not IsMatching(FCurrentEndX, FEndX) then begin
+  if not IsMatching(FCurrentEndX, EndX) then begin
     FFrameSideColors[bsRight] := clNone;
     FMergeInfos[sscFrameRight].BaseColor := clNone;
     FMergeInfos[sscFrameRight].AlphaCount := 0;
   end;
 end;
 
-procedure TSynSelectedColorMergeResult.SetCurrentStartX(AValue: TLazSynDisplayTokenBound);
+procedure TSynSelectedColorMergeResult.SetCurrentStartX(const AValue: TLazSynDisplayTokenBound);
 begin
   //if FCurrentStartX = AValue then Exit;
   FCurrentStartX := AValue;
-  if not IsMatching(FCurrentStartX, FStartX) then begin
+  if not IsMatching(FCurrentStartX, StartX) then begin
     FFrameSideColors[bsLeft] := clNone;
     FMergeInfos[sscFrameLeft].BaseColor := clNone;
     FMergeInfos[sscFrameLeft].AlphaCount := 0;
   end;
 end;
 
-procedure TSynSelectedColorMergeResult.AssignFrom(Src: TLazSynCustomTextAttributes);
+procedure TSynSelectedColorMergeResult.AssignFrom(Src: TLazCustomEditTextAttribute);
 var
   i: TLazSynBorderSide;
   j: TSynSelectedColorEnum;
@@ -1326,6 +1307,11 @@ begin
   end;
 end;
 
+constructor TSynSelectedColorMergeResult.Create(ACaption: PString; AStoredName: String);
+begin
+  Create;
+end;
+
 destructor TSynSelectedColorMergeResult.Destroy;
 begin
   CleanupMergeInfo;
@@ -1388,12 +1374,12 @@ begin
   FMergeInfoInitialized := False;
 end;
 
-procedure TSynSelectedColorMergeResult.Merge(Other: TSynHighlighterAttributesModifier);
+procedure TSynSelectedColorMergeResult.Merge(Other: TLazCustomEditTextAttribute);
 begin
-  Merge(Other, FStartX, FEndX); // always merge frame
+  Merge(Other, StartX, EndX); // always merge frame
 end;
 
-procedure TSynSelectedColorMergeResult.Merge(Other: TSynHighlighterAttributesModifier; LeftCol,
+procedure TSynSelectedColorMergeResult.Merge(Other: TLazCustomEditTextAttribute; LeftCol,
   RightCol: TLazSynDisplayTokenBound);
 var
   sKeep, sSet, sClr, sInv, sInvInv: TFontStyles;
@@ -1441,7 +1427,7 @@ begin
   EndUpdate;
 end;
 
-procedure TSynSelectedColorMergeResult.MergeFrames(Other: TSynHighlighterAttributesModifier; LeftCol,
+procedure TSynSelectedColorMergeResult.MergeFrames(Other: TLazCustomEditTextAttribute; LeftCol,
   RightCol: TLazSynDisplayTokenBound);
 
   //procedure SetSide(ASide: TLazSynBorderSide; ASrc: TSynHighlighterAttributesModifier);
@@ -1466,13 +1452,13 @@ procedure TSynSelectedColorMergeResult.MergeFrames(Other: TSynHighlighterAttribu
   //  FFrameSidePriority[ASide] := ASrc.FramePriority;
   //  FFrameSideOrigin[ASide]   := ASrc.FrameEdges;
   //  if ASide = bsLeft then
-  //    FStartX := LeftCol; // LeftCol has Phys and log ; // ASrc.FStartX;
+  //    StartX := LeftCol; // LeftCol has Phys and log ; // ASrc.StartX;
   //  if ASide = bsRight then
-  //    FEndX := RightCol; // ASrc.FEndX;
+  //    EndX := RightCol; // ASrc.EndX;
   //end;
 
   procedure SetSide(AInfoSide: TSynSelectedColorEnum; ASide: TLazSynBorderSide;
-    ASrc: TSynHighlighterAttributesModifier);
+    ASrc: TLazCustomEditTextAttribute);
   begin
     if (FMergeInfos[AInfoSide].BaseColor <> clNone) and
        ( (ASrc.FramePriority < FMergeInfos[AInfoSide].BasePriority) or
@@ -1496,6 +1482,14 @@ procedure TSynSelectedColorMergeResult.MergeFrames(Other: TSynHighlighterAttribu
       FFrameSideOrigin[ASide] := ASrc.FrameEdges;
   end;
 
+  function HasFrameBound(AnAttr: TLazCustomEditTextAttribute; const ABnd: TLazSynDisplayTokenBound): boolean;
+  begin
+    (* Highlighter Attribs (NON-TSynSelectedColor) did NOT have a StartX/EndX
+       So theire frames would be drawn at any location
+    *)
+    Result := (Other is TSynSelectedColor) or ABnd.HasValue;
+  end;
+
 begin
   if not FFrameSidesInitialized then
     MaybeInitFrameSides;
@@ -1507,12 +1501,12 @@ begin
   case Other.FrameEdges of
     sfeAround: begin
         // UpdateOnly, frame keeps behind individual sites
-        if (not (Other is TSynSelectedColor)) or  // always merge, if it has no startx
-           IsMatching(TSynSelectedColor(Other).StartX, LeftCol)
+        if (not HasFrameBound(Other, Other.StartX)) or
+           IsMatching(Other.StartX, LeftCol)
         then
           SetSide(sscFrameLeft, bsLeft, Other);
-        if  (not (Other is TSynSelectedColor)) or
-           IsMatching(TSynSelectedColor(Other).EndX, RightCol)
+        if (not HasFrameBound(Other, Other.EndX)) or
+           IsMatching(Other.EndX, RightCol)
         then
           SetSide(sscFrameRight, bsRight, Other);
         SetSide(sscFrameBottom, bsBottom, Other);
@@ -1533,38 +1527,6 @@ end;
 
 { TSynSelectedColor }
 
-function TSynSelectedColor.GetModifiedStyle(aStyle : TFontStyles) : TFontStyles;
-begin
-  Result := fsXor(aStyle, Style * fsNot(StyleMask)) // Invert Styles
-            + (Style*StyleMask)                     // Set Styles
-            - (fsNot(Style)*StyleMask);             // Remove Styles
-end;
-
-procedure TSynSelectedColor.ModifyColors(var AForeground, ABackground,
-    AFrameColor: TColor; var AStyle: TFontStyles; var AFrameStyle: TSynLineStyle);
-begin
-  if Foreground <> clNone then AForeground := Foreground;
-  if Background <> clNone then ABackground := Background;
-  if FrameColor <> clNone then
-  begin
-    AFrameColor := FrameColor;
-    AFrameStyle := FrameStyle;
-  end;
-
-  AStyle := GetModifiedStyle(AStyle);
-end;
-
-procedure TSynSelectedColor.AssignFrom(Src: TLazSynCustomTextAttributes);
-begin
-  inherited AssignFrom(Src);
-  if not (Src is TSynSelectedColor) then exit;
-
-  FStartX := TSynSelectedColor(Src).FStartX;
-  FEndX   := TSynSelectedColor(Src).FEndX;
-
-  Changed; {TODO: only if really changed}
-end;
-
 procedure TSynSelectedColor.Init;
 begin
   inherited Init;
@@ -1574,38 +1536,6 @@ begin
   FrameStyle := slsSolid;
   FrameEdges := sfeAround;
   InternalSaveDefaultValues;
-end;
-
-procedure TSynSelectedColor.SetFrameBoundsPhys(AStart, AEnd: Integer);
-begin
-  FStartX.Physical := AStart;
-  FEndX.Physical   := AEnd;
-  FStartX.Logical  := -1;
-  FEndX.Logical    := -1;
-  FStartX.Offset   := 0;
-  FEndX.Offset     := 0;
-end;
-
-procedure TSynSelectedColor.SetFrameBoundsLog(AStart, AEnd: Integer; AStartOffs: Integer;
-  AEndOffs: Integer);
-begin
-  FStartX.Physical := -1;
-  FEndX.Physical   := -1;
-  FStartX.Logical  := AStart;
-  FEndX.Logical    := AEnd;
-  FStartX.Offset   := AStartOffs;
-  FEndX.Offset     := AEndOffs;
-end;
-
-procedure TSynSelectedColor.DoClear;
-begin
-  inherited;
-  FStartX.Physical := -1;
-  FEndX.Physical   := -1;
-  FStartX.Logical  := -1;
-  FEndX.Logical    := -1;
-  FStartX.Offset   := 0;
-  FEndX.Offset     := 0;
 end;
 
 { TLazSynSurface }
@@ -1632,7 +1562,7 @@ begin
   //
 end;
 
-constructor TLazSynSurface.Create(AOwner: TWinControl);
+constructor TLazSynSurface.Create(AOwner: TSynEditBase);
 begin
   FOwner := AOwner;
   FBoundsChangeList := TMethodList.Create;
