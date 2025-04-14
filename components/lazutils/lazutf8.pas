@@ -1125,6 +1125,8 @@ var
   EndBytePos: PChar;
   MaxBytes: PtrInt;
 begin
+  if StartCharIndex < 1 then
+    StartCharIndex := 1; //Copy() does this correction too
   StartBytePos:=UTF8CodepointStart(PChar(s),length(s),StartCharIndex-1);
   if StartBytePos=nil then
     Result:=''
@@ -1188,9 +1190,13 @@ procedure UTF8Insert(const source: String; var s: String; StartCharIndex: PtrInt
 var
   StartBytePos: PChar;
 begin
+  if StartCharIndex < 1 then
+    StartCharIndex := 1;  //Insert() does this correction too
   StartBytePos:=UTF8CodepointStart(PChar(s),length(s),StartCharIndex-1);
   if StartBytePos <> nil then
-    Insert(source, s, StartBytePos-PChar(s)+1);
+    Insert(source, s, StartBytePos-PChar(s)+1)
+  else
+    s := s + source; // StartCharIndex > Utf8Length(s) + 1, consistent with System.Insert
 end;
 
 function UTF8StringReplace(const S, OldPattern, NewPattern: String;

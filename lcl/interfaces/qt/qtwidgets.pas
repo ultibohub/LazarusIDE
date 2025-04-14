@@ -6723,6 +6723,13 @@ begin
   inherited AttachEvents;
   FViewPortEventHook := QObject_hook_create(viewportWidget);
   QObject_hook_hook_events(FViewPortEventHook, @ScrollViewEventFilter);
+  if (LCLObject is TScrollingWinControl) then
+  begin
+    if TScrollingWinControl(LCLObject).VertScrollBar.Visible then
+      FScrollY := -TScrollingWinControl(LCLObject).VertScrollBar.Position;
+    if TScrollingWinControl(LCLObject).HorzScrollBar.Visible then
+      FScrollX := -TScrollingWinControl(LCLObject).HorzScrollBar.Position;
+  end;
 end;
 
 function TQtWindowArea.CanAdjustClientRectOnResize: Boolean;
@@ -16158,7 +16165,7 @@ begin
   for i := 0 to FActions.Count - 1 do
   begin
     Group := TQtActionGroup(FActions.Items[i]);
-    if Group.GroupIndex = AItem.GroupIndex then
+    if (Group.GroupIndex = AItem.GroupIndex) and (Group.Exclusive = AItem.RadioItem) then
     begin
       QAction_setEnabled(TQtMenu(AItem.Handle).actionHandle, AItem.Enabled);
       QAction_setVisible(TQtMenu(AItem.Handle).actionHandle, AItem.Visible);

@@ -768,28 +768,49 @@ begin
 
     EnableFolds(AFolds);
     SetLines
-      ([ 'Unit A; interface',
+      ([ 'Unit A; interface', // 0
          'type',
          'cdecl=function(cdecl:cdecl):cdecl;cdecl;',
          'type',
          'Stdcall=class(cdecl)',
-         'function Stdcall(Stdcall:Stdcall):Stdcall;Stdcall;deprecated;',
+         'function Stdcall(Stdcall:Stdcall):Stdcall;Stdcall;deprecated;',    // 5
          'property cdecl:cdecl read cdecl;',
          'end;',
          '',
          'cdecl=record',
-         'function cdecl(cdecl:cdecl):cdecl;cdecl;deprecated;',
+         'function cdecl(cdecl:cdecl):cdecl;cdecl;deprecated;',    // 10
          'end;',
          '',
          'var',
          'Stdcall:function(cdecl:cdecl):cdecl;cdecl;',
-         'var',
+         'var',                                // 15
          'cdecl:cdecl;',
          '',
          'function Stdcall(cdecl:cdecl):cdecl;cdecl;',
          'var',
-         'cdecl:cdecl deprecated;',
+         'cdecl:cdecl deprecated;',            // 20
          'function Stdcall(cdecl:cdecl):cdecl;cdecl;deprecated;',
+         '',
+         // in []
+         'function Stdcall:cdecl;[cdecl];', // 23
+         'procedure Stdcall; [cdecl];',
+         '',
+
+         // no semicolon
+         'function Stdcall:cdecl cdecl;',   // 26
+         'function Stdcall():cdecl cdecl;',
+         'procedure Stdcall cdecl;',
+         'procedure Stdcall() cdecl;',
+         'function Stdcall:cdecl [cdecl];',  // not a modifire / not currently
+         '',
+         // anonym
+         'implementation', // 32
+         'procedure foo cdecl;',
+         'begin',
+         '  procedure() cdecl begin end();',
+         '  procedure() [cdecl] begin end();',
+         'end',
+         '',
          ''
       ]);
 
@@ -818,7 +839,7 @@ begin
       [ tkIdentifier, TK_Equal, tkKey  // Stdcall=record
       ]);
 
-    CheckTokensForLine('funciton in recorld',  10,
+    CheckTokensForLine('funciton in record',  10,
       [ tkKey, tkSpace, tkIdentifier + FAttrProcName,  // function cdecl
         TK_Bracket, tkIdentifier, TK_Comma, tkIdentifier, TK_Bracket,  // (cdecl:cdecl)
         TK_Colon, tkIdentifier, TK_Semi, tkModifier, TK_Semi, // :cdecl;cdecl;
@@ -852,6 +873,55 @@ begin
         TK_Colon, tkIdentifier,TK_Semi, // :cdecl;
         tkModifier, TK_Semi, // cdecl;
         tkModifier, TK_Semi //deprecated;
+      ]);
+
+
+     CheckTokensForLine('function Stdcall:cdecl;[cdecl];', 23,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, TK_Colon, tkIdentifier, TK_Semi,
+        TK_Bracket, tkModifier, TK_Bracket, TK_Semi
+      ]);
+     CheckTokensForLine('procedure Stdcall; [cdecl];', 24,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, TK_Colon, tkSpace,
+        TK_Bracket, tkModifier, TK_Bracket, TK_Semi
+      ]);
+
+     CheckTokensForLine('function Stdcall:cdecl cdecl;', 26,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, TK_Colon, tkIdentifier, tkSpace,
+        tkModifier, TK_Semi
+      ]);
+     CheckTokensForLine('function Stdcall():cdecl cdecl;', 27,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, TK_Bracket, TK_Bracket, TK_Colon,
+        tkIdentifier, tkSpace,
+        tkModifier, TK_Semi
+      ]);
+     CheckTokensForLine('procedure Stdcall cdecl;', 28,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, tkSpace,
+        tkModifier, TK_Semi
+      ]);
+     CheckTokensForLine('procedure Stdcall() cdecl;', 29,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, TK_Bracket, TK_Bracket, tkSpace,
+        tkModifier, TK_Semi
+      ]);
+     CheckTokensForLine('function Stdcall:cdecl [cdecl];', 30,  // not a modifire / not currently
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, TK_Colon, tkIdentifier, tkSpace,
+        TK_Bracket, tkIdentifier {maybe modifier in future fpc version?}, TK_Bracket, TK_Semi
+      ]);
+     CheckTokensForLine('procedure foo cdecl;', 33,
+      [ tkKey, tkSpace, tkIdentifier + FAttrProcName, tkSpace,
+        tkModifier, TK_Semi
+      ]);
+
+     CheckTokensForLine('  procedure() cdecl begin end();', 35,
+      [ tkSpace, tkKey, TK_Bracket, TK_Bracket, tkSpace,
+        tkModifier,
+        tkSpace, tkKey, tkSpace, tkKey,
+        TK_Bracket, TK_Bracket, TK_Semi
+      ]);
+     CheckTokensForLine('  procedure() [cdecl] begin end();', 36,
+      [ tkSpace, tkKey, TK_Bracket, TK_Bracket, tkSpace,
+        TK_Bracket, tkModifier, TK_Bracket,
+        tkSpace, tkKey, tkSpace, tkKey,
+        TK_Bracket, TK_Bracket, TK_Semi
       ]);
 
 
@@ -1915,15 +1985,17 @@ procedure TTestHighlighterPas.TestContextForDeprecated;
                s+'= array [1..2] of '+s+' '+s+';',  // nameDEPRECATED=array of typeDEPRECATED deprecated;
                s+'= set of '+s+' '+s+';',    // nameDEPRECATED=set of typeDEPRECATED deprecated;
                s+'= class of '+s+' '+s+';',  // nameDEPRECATED=class of typeDEPRECATED deprecated;
-               s+'= procedure '+s+';',
-               s+'= procedure of object '+s+';',
-               s+'= procedure(a:'+s+') '+s+';',
-               s+'= procedure(a:'+s+') of object '+s+';',
-               s+'= function:'+s+' '+s+';',
-               s+'= function:'+s+' of object '+s+';',
-               s+'= function(a:'+s+'):'+s+' '+s+';',
-               s+'= function(a:'+s+'):'+s+' of object '+s+';',
-               s+'= record end '+s+';',  // nameDEPRECATED=packed record deprecated;
+               s+'= procedure '+s+';',              // 8
+               'f= procedure; '+s+';',              // 9
+               'f= procedure '+s+';'+s+';',         // 10
+               'f= procedure of object '+s+';',
+               'f= procedure(a:'+s+') '+s+';',
+               'f= procedure(a:'+s+') of object '+s+';',
+               'f= function:'+s+' '+s+';',
+               'f= function:'+s+' of object '+s+';',
+               'f= function(a:'+s+'):'+s+' '+s+';',
+               'f= function(a:'+s+'):'+s+' of object '+s+';',
+               'f= record end '+s+';',  // nameDEPRECATED=packed record deprecated;
                s+'= packed record end '+s+';',  // nameDEPRECATED=packed record deprecated;
             'end',
             ''
@@ -1940,35 +2012,41 @@ procedure TTestHighlighterPas.TestContextForDeprecated;
         [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey {"of"}, tkSpace, tkIdentifier, tkSpace, tkModifier {the one and only}, tkSymbol]);
       CheckTokensForLine('class of', 7,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey {"of"}, tkSpace, tkIdentifier, tkSpace, tkModifier {the one and only}, tkSymbol]);
+
       CheckTokensForLine('procedure ', 8,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('procedure of object ', 9,
+      CheckTokensForLine('procedure ', 9,
+        [tkIdentifier, tkSymbol, tkSpace, tkKey, TK_Semi, tkSpace, tkModifier {the one and only}, tkSymbol]);
+      CheckTokensForLine('procedure ', 10,
+        [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkModifier, TK_Semi, tkModifier, tkSymbol]);
+
+      CheckTokensForLine('procedure of object ', 11,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey {"of"}, tkSpace, tkKey, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('procedure(a:s) ', 10,
+      CheckTokensForLine('procedure(a:s) ', 12,
         [tkIdentifier, tkSymbol, tkSpace, tkKey,
          TK_Bracket, tkIdentifier, TK_Colon, tkIdentifier, TK_Bracket,
          tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('procedure(a:s) of object ', 11,
+      CheckTokensForLine('procedure(a:s) of object ', 13,
         [tkIdentifier, tkSymbol, tkSpace, tkKey,
          TK_Bracket, tkIdentifier, TK_Colon, tkIdentifier, TK_Bracket,
          tkSpace, tkKey {"of"}, tkSpace, tkKey, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('function', 12,
+      CheckTokensForLine('function', 14,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, TK_Colon, tkIdentifier, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('function of object ', 13,
+      CheckTokensForLine('function of object ', 15,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, TK_Colon, tkIdentifier, tkSpace, tkKey {"of"}, tkSpace, tkKey, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('function(a:s)', 14,
+      CheckTokensForLine('function(a:s)', 16,
         [tkIdentifier, tkSymbol, tkSpace, tkKey,
           TK_Bracket, tkIdentifier, TK_Colon, tkIdentifier, TK_Bracket,
           TK_Colon, tkIdentifier,
           tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('function(a:s) of object ', 15,
+      CheckTokensForLine('function(a:s) of object ', 17,
         [tkIdentifier, tkSymbol, tkSpace, tkKey,
           TK_Bracket, tkIdentifier, TK_Colon, tkIdentifier, TK_Bracket,
           TK_Colon, tkIdentifier,
           tkSpace, tkKey {"of"}, tkSpace, tkKey, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('record end', 16,
+      CheckTokensForLine('record end', 18,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey {"end"}, tkSpace, tkModifier {the one and only}, tkSymbol]);
-      CheckTokensForLine('packed record end', 17,
+      CheckTokensForLine('packed record end', 19,
         [tkIdentifier, tkSymbol, tkSpace, tkKey, tkSpace, tkKey, tkSpace, tkKey {"end"}, tkSpace, tkModifier {the one and only}, tkSymbol]);
 
       if (struct = 'record') or (struct = 'byte;') then

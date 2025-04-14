@@ -445,6 +445,8 @@ type
     function getScrollFrameOffset: Integer;
     function getViewOrigin: TPoint;
     function viewportWidget: QWidgetH;
+    function HBarAllocated: boolean;
+    function VBarAllocated: boolean;
     function horizontalScrollBar: TQtScrollBar;
     procedure InitializeAccessibility; override;
     function verticalScrollBar: TQtScrollBar;
@@ -7020,6 +7022,13 @@ begin
   inherited AttachEvents;
   FViewPortEventHook := QObject_hook_create(viewportWidget);
   QObject_hook_hook_events(FViewPortEventHook, @ScrollViewEventFilter);
+  if (LCLObject is TScrollingWinControl) then
+  begin
+    if TScrollingWinControl(LCLObject).VertScrollBar.Visible then
+      FScrollY := -TScrollingWinControl(LCLObject).VertScrollBar.Position;
+    if TScrollingWinControl(LCLObject).HorzScrollBar.Visible then
+      FScrollX := -TScrollingWinControl(LCLObject).HorzScrollBar.Position;
+  end;
 end;
 
 function TQtWindowArea.CanAdjustClientRectOnResize: Boolean;
@@ -16677,7 +16686,7 @@ begin
   for i := 0 to FActions.Count - 1 do
   begin
     Group := TQtActionGroup(FActions.Items[i]);
-    if Group.GroupIndex = AItem.GroupIndex then
+    if (Group.GroupIndex = AItem.GroupIndex) and (Group.Exclusive = AItem.RadioItem) then
     begin
       QAction_setEnabled(TQtMenu(AItem.Handle).actionHandle, AItem.Enabled);
       QAction_setVisible(TQtMenu(AItem.Handle).actionHandle, AItem.Visible);
@@ -17798,6 +17807,16 @@ end;
 function TQtAbstractScrollArea.viewportWidget: QWidgetH;
 begin
   Result := QAbstractScrollArea_viewport(QAbstractScrollAreaH(Widget));
+end;
+
+function TQtAbstractScrollArea.HBarAllocated: boolean;
+begin
+  Result := FHScrollbar <> nil;
+end;
+
+function TQtAbstractScrollArea.VBarAllocated: boolean;
+begin
+  Result := FVScrollbar <> nil;
 end;
 
 function TQtAbstractScrollArea.getScrollBarsPolicy(AIndex: Boolean
