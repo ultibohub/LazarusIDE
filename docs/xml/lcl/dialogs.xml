@@ -1375,13 +1375,14 @@ For QT-based platforms, it indicates that the entire dialog model is read-only.
 </element>
 <element name="TOpenOption.ofOverwritePrompt">
 <short>
-If selected file exists shows a message, that file will be overwritten.
+If the selected file exists, a message is displayed that the file will be 
+overwritten.
 </short>
 </element>
 <element name="TOpenOption.ofHideReadOnly">
 <short>
-For the Windows platform, it hides the Read Only check box on the dialog. Not 
-used in other widgetsets.
+For the Windows versions prior to Vista, it hides the Read Only check box on 
+the dialog. Not used in other widgetsets.
 </short>
 </element>
 <element name="TOpenOption.ofNoChangeDir">
@@ -1415,8 +1416,8 @@ options prior to executing a dialog.
 </element>
 <element name="TOpenOption.ofCreatePrompt">
 <short>
-Enables a verification prompt when a file or directory needs to be created 
-for a file dialog.
+Windows only: Enables a verification prompt when a file or directory needs to 
+be created for a file dialog.
 </short>
 </element>
 <element name="TOpenOption.ofShareAware">
@@ -1426,67 +1427,83 @@ Includes the OFN_SHAREAWARE flag on the Windows platform.
 </element>
 <element name="TOpenOption.ofNoReadOnlyReturn">
 <short>
-For the Windows platform, it indicates the Read Only check box is not selected 
-for the returned file, the file is writable, and is not in a write-protected 
-directory. In TOpenDialog, an error message is displayed if the selected file 
-does not meet the criteria when ofNoReadOnlyReturn is included in dialog 
-options. See TOpenDialog.CheckFile. In TSaveDialog, it indicates that 
-read-only items cannot be returned by the dialog. This is the default value 
-for a Save dialog. Not used for other widgetsets.
+Indicates that a dialog cannot be used to choose a read-only file. For the 
+<b>Windows</b> platform, TOpenDialog displays an error message if a read-only 
+file is selected - but it does not close the dialog. TSaveDialog will always 
+display an error message if the user selects a read-only file - regardless of 
+the state of this flag. For <b>other</b> platforms, TOpenDiaLog / TSaveDialog 
+use the value to ensure that a file or directory selected with the dialog has 
+write access permissions. A 'File is not writable' error message is displayed 
+if the file or directory is read-only. See TOpenDialog.CheckFile.
 </short>
 </element>
 <element name="TOpenOption.ofNoTestFileCreate">
 <short>
-Includes the OFN_NOTESTFILECREATE flag on the Windows platform.
+For the Windows platform, the OS does not check if the item specified in a 
+TSaveDialog can actually be created. Includes the OFN_NOTESTFILECREATE flag on 
+the Windows platform.
 </short>
 </element>
 <element name="TOpenOption.ofNoNetworkButton">
 <short>
-Disables and hides the Network button on the Windows platform.
+Disables and hides the Network button on the Windows platform. Not used for 
+other platforms.
 </short>
 </element>
 <element name="TOpenOption.ofNoLongNames">
 <short>
 Disables long file names on the Windows platform. Used in classic-style 
 dialogs to force use of file names using the 8.3 format. Explorer-style 
-dialogs ignore this flag and always display long file names.
+dialogs ignore this flag and always display long file names. Not used for 
+other platforms.
 </short>
 </element>
 <element name="TOpenOption.ofOldStyleDialog">
 <short>
-Prevents use of the OFN_EXPLORER and dependent flags in dialogs on the 
-Windows platform. Also controls whether the Read Only check box is visible on 
-native dialogs.
+Windows only: Shows the dialog in the Win9x style.
 </short>
 </element>
 <element name="TOpenOption.ofNoDereferenceLinks">
 <short>
-Do not resolve links while dialog is shown (only on Windows, see 
-OFN_NODEREFERENCELINKS).
+Windows only: When choosing a file shortcut (*.lnk), return the shortcut 
+itself and not the target file.
 </short>
 </element>
 <element name="TOpenOption.ofNoResolveLinks">
-<short>Do not resolve links after Execute.</short>
+<short>
+Do not resolve links after Execute. This value is not explicitly used in any 
+of the widgetset implementations.
+</short>
 </element>
 <element name="TOpenOption.ofEnableIncludeNotify">
 <short>
-Not used in the current LCL version.
+Not used in the current LCL version. Defined for compatibility with Delphi.
 </short>
 </element>
 <element name="TOpenOption.ofEnableSizing">
 <short>Dialog can be resized, e.g. via the mouse.</short>
 </element>
 <element name="TOpenOption.ofDontAddToRecent">
-<short>Do not add the path to the history list.</short>
+<short>
+Windows only: Do not add the path to the history list.
+</short>
 </element>
 <element name="TOpenOption.ofForceShowHidden">
 <short>Show hidden files.</short>
 </element>
 <element name="TOpenOption.ofViewDetail">
-<short>Details are OS and interface dependent.</short>
+<short>
+Indicates that the preview pane should be displayed on the Open dialog box. 
+Used in gtk1, qt4, qt5, and qt6 widgetsets. Note: not implemented for gtk2 and 
+gtk3.
+</short>
 </element>
 <element name="TOpenOption.ofAutoPreview">
-<short>OS and interface dependent.</short>
+<short>
+For Windows Vista (and later versions), indicates that the preview pane should 
+always be displayed on an Open dialog box. Causes the FOS_FORCEPREVIEWPANEON 
+flag to be included for a dialog using the Windows widgetset.
+</short>
 </element>
 
 <element name="TOpenOptions">
@@ -1539,12 +1556,6 @@ Added in LCL version 4.0.
 <element name="TOpenOptionEx.ofHidePinnedPlaces">
 <short>
 Hides items shown by default in the view's navigation pane. (Windows Vista+)
-</short>
-</element>
-<element name="TOpenOptionEx.ofForcePreviewPaneOn">
-<short>
-Indicates an Open dialog should always display the preview pane. (Windows 
-Vista+)
 </short>
 </element>
 <element name="TOpenOptionEx.ofStrictFileTypes">
@@ -1631,8 +1642,7 @@ Allows the dialog to be resized.
 </dd>
 <dt>ofViewDetail</dt>
 <dd>
-Enables the file detail view in the QT4 and QT5 widgetsets. Not implemented 
-for any other platforms in the current LCL version.
+Enables the preview pane on an Open dialog.
 </dd>
 </dl>
 <p>
@@ -2120,8 +2130,7 @@ Allows the dialog to be resized at run-time.
 </dd>
 <dt>ofViewDetail</dt>
 <dd>
-Enables the file detail view in the QT4 and QT5 widgetsets. Not implemented 
-for any other platforms in the current LCL version.
+Enables the preview pane on an Open dialog.
 </dd>
 </dl>
 <p>
