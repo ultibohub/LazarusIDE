@@ -568,6 +568,8 @@ type
   TFpDwarfAtEntryDataReadState = (rfNotRead, rfNotFound, rfError, rfConst, rfValue, rfExpression);
   PFpDwarfAtEntryDataReadState = ^TFpDwarfAtEntryDataReadState;
 
+  TFpDwarfSignInfo = (sgnUnknown, sgnNotAvail, sgnUnsigned, sgnSigned);
+
   { TFpSymbolDwarf }
 
   TFpSymbolDwarf = class(TDbgDwarfSymbolBase)
@@ -577,6 +579,7 @@ type
     function GetNestedTypeInfo: TFpSymbolDwarfType;
     function GetTypeInfo: TFpSymbolDwarfType; inline;
   protected
+    function  GetSignInfo: TFpDwarfSignInfo; virtual;
     function  DoGetNestedTypeInfo: TFpSymbolDwarfType; virtual;
     function  ReadMemberVisibility(out AMemberVisibility: TDbgSymbolMemberVisibility): Boolean;
     function  IsArtificial: Boolean; // usud by formal param and subprogram
@@ -888,8 +891,12 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
   { TFpSymbolDwarfDataEnumMember }
 
   TFpSymbolDwarfDataEnumMember  = class(TFpSymbolDwarfData)
+    FSigned: TFpDwarfSignInfo;
     FOrdinalValue: Int64;
     FOrdinalValueRead, FHasOrdinalValue: Boolean;
+    FCardinalValue: QWord;
+    FCardinalValueRead, FHasCardinalValue: Boolean;
+    function ReadCardinalValue(out AValue: QWord): Boolean;
     procedure ReadOrdinalValue;
   protected
     procedure KindNeeded; override;
@@ -905,9 +912,13 @@ DECL = DW_AT_decl_column, DW_AT_decl_file, DW_AT_decl_line
   TFpSymbolDwarfTypeEnum = class(TFpSymbolDwarfType)
   private
     FMembers: TRefCntObjList;
+    FSigned: TFpDwarfSignInfo;
+    FNstSymForSigned: TFpSymbolDwarf;
     procedure CreateMembers;
   protected
+    function GetSignInfo: TFpDwarfSignInfo; override;
     procedure KindNeeded; override;
+    function DoReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize): Boolean; override;
     function GetNestedSymbolEx(AIndex: Int64; out AnParentTypeSymbol: TFpSymbolDwarfType): TFpSymbol; override;
     function GetNestedSymbolExByName(const AIndex: String; out AnParentTypeSymbol: TFpSymbolDwarfType): TFpSymbol; override;
     function GetNestedSymbolCount: Integer; override;
@@ -1489,7 +1500,7 @@ begin
   end
 
   else
-  if InfoEntry.GoNamedChildEx(ANameInfo, False, fsfIgnoreEnumVals in AFindFlags) then begin
+  if InfoEntry.GoNamedChildEx(ANameInfo, False, fsfIgnoreEnumVals in AFindFlags, True) then begin
     if InfoEntry.IsAddressInStartScope(FAddress) then begin
       // only variables are marked "external", but types not / so we may need all top level
       Result := True;
@@ -2997,27 +3008,37 @@ end;
 
 procedure TFpValueDwarfEnum.InitMemberIndex;
 var
-  v: QWord;
-  v2: Int64;
-  i, j: Integer;
+  MbrVal, NstVal: QWord;
+  i: Integer;
+  Sz: TFpDbgValueSize;
+  Mask: TDBGPtr;
+  nst: TFpSymbol;
 begin
   // TODO: if TypeInfo is a subrange, check against the bounds, then bypass it, and scan all members (avoid subrange scanning members)
   if FMemberValueDone then exit;
   // FTypeSymbol (if not nil) must be same as FTypeSymbol. It may have wrappers like declaration.
-  v := GetAsCardinal;
-  v2 := GetAsInteger;
+  if GetSize(Sz) and not IsZeroSize(Sz) then
+    Mask := BitMask(Sz)
+  else
+    Mask := FULL_BIT_MASK;
+  MbrVal := GetAsCardinal and Mask;
+
   i := FTypeSymbol.NestedSymbolCount - 1;
-  j := -1;
   while i >= 0 do begin
-    if QWord(FTypeSymbol.NestedSymbol[i].OrdinalValue) = v then
-      break;
-    if FTypeSymbol.NestedSymbol[i].OrdinalValue = v2 then
-      j := i;
+    nst := FTypeSymbol.NestedSymbol[i];
+    if nst is TFpSymbolDwarfDataEnumMember then begin
+      if TFpSymbolDwarfDataEnumMember(nst).ReadCardinalValue(NstVal) and
+         ((NstVal and Mask) = MbrVal)
+      then
+        break;
+    end
+    else begin
+      assert(False, 'TFpValueDwarfEnum.InitMemberIndex: False');
+      if nst.HasOrdinalValue and ((QWord(nst.OrdinalValue) and Mask) = MbrVal) then
+        break;
+    end;
     dec(i);
   end;
-  // If the value was not found, then fall back to a signed (possible sign extended) comparison
-  if i < 0 then
-    i := j;
   FMemberIndex := i;
   FMemberValueDone := True;
 end;
@@ -3046,10 +3067,27 @@ begin
 
   if (not GetSize(Size)) or (Size <= 0) or (Size > SizeOf(Result)) then
     Result := inherited GetAsCardinal
-  else
-  if not Context.ReadEnum(OrdOrDataAddr, Size, Result) then begin
-    SetLastError(Context.LastMemError);
-    Result := 0; // TODO: error
+  else begin
+    case TFpSymbolDwarf(FTypeSymbol).GetSignInfo of
+      sgnUnknown, sgnNotAvail: begin
+          if not Context.ReadEnum(OrdOrDataAddr, Size, Result) then begin
+            SetLastError(Context.LastMemError);
+            Result := 0;
+          end
+          else
+            Result := QWord(SignExtend(Result, Size));
+        end;
+      sgnUnsigned:
+        if not Context.ReadUnsignedInt(OrdOrDataAddr, Size, Result) then begin
+          SetLastError(Context.LastMemError);
+          Result := 0;
+        end;
+      sgnSigned:
+        if not Context.ReadSignedInt(OrdOrDataAddr, Size, int64(Result)) then begin
+          SetLastError(Context.LastMemError);
+          Result := 0;
+        end;
+    end;
   end;
 
   FValue := Result;
@@ -3059,9 +3097,7 @@ function TFpValueDwarfEnum.GetAsInteger: Int64;
 var
   Size: TFpDbgValueSize;
 begin
-  Result := GetAsCardinal;
-  if GetSize(Size) then
-    Result := SignExtend(QWord(Result), Size);
+  Result := Int64(GetAsCardinal);
 end;
 
 procedure TFpValueDwarfEnum.SetAsCardinal(AValue: QWord);
@@ -4419,6 +4455,17 @@ function TFpSymbolDwarf.GetTypeInfo: TFpSymbolDwarfType;
 begin
   assert((inherited TypeInfo = nil) or (inherited TypeInfo is TFpSymbolDwarfType), 'TFpSymbolDwarf.GetTypeInfo: (inherited TypeInfo = nil) or (inherited TypeInfo is TFpSymbolDwarfType)');
   Result := TFpSymbolDwarfType(inherited TypeInfo);
+end;
+
+function TFpSymbolDwarf.GetSignInfo: TFpDwarfSignInfo;
+var
+  n: TFpSymbolDwarfType;
+begin
+  n := NestedTypeInfo;
+  if (n <> nil) then
+    Result := n.GetSignInfo
+  else
+    Result := sgnNotAvail;
 end;
 
 function TFpSymbolDwarf.DoGetNestedTypeInfo: TFpSymbolDwarfType;
@@ -5939,11 +5986,62 @@ end;
 
 { TDbgDwarfIdentifierEnumElement }
 
-procedure TFpSymbolDwarfDataEnumMember.ReadOrdinalValue;
+function TFpSymbolDwarfDataEnumMember.ReadCardinalValue(out AValue: QWord): Boolean;
 begin
-  if FOrdinalValueRead then exit;
+  AValue := FCardinalValue;
+  Result := FHasCardinalValue;
+  if FCardinalValueRead then
+    exit;
+
+  FCardinalValueRead := True;
+  FHasCardinalValue := InformationEntry.ReadValue(DW_AT_const_value, FCardinalValue);
+  AValue := FCardinalValue;
+  Result := FHasCardinalValue;
+end;
+
+procedure TFpSymbolDwarfDataEnumMember.ReadOrdinalValue;
+  function GetSignInfo: TFpDwarfSignInfo;
+  var
+    ParentInfo: TDwarfInformationEntry;
+    ParentSym: TFpSymbolDwarf;
+  begin
+    Result := FSigned;
+    if FSigned <> sgnUnknown then
+      exit;
+    ParentInfo := InformationEntry.Clone;
+    ParentInfo.GoParent;
+    ParentSym := TFpSymbolDwarf.CreateSubClass('', ParentInfo);
+    ParentInfo.ReleaseReference;
+    if ParentSym is TFpSymbolDwarfTypeEnum then
+      TFpSymbolDwarfTypeEnum(ParentSym).FNstSymForSigned := Self; // don't create a new member
+
+    Result := ParentSym.GetSignInfo;
+    FSigned := Result;
+
+    ParentSym.ReleaseReference;
+  end;
+var
+  AttrData: TDwarfAttribData;
+begin
+  if FOrdinalValueRead then
+    exit;
+
   FOrdinalValueRead := True;
-  FHasOrdinalValue := InformationEntry.ReadValue(DW_AT_const_value, FOrdinalValue);
+  FHasOrdinalValue := ReadCardinalValue(QWord(FOrdinalValue));
+
+  if FHasOrdinalValue and
+     InformationEntry.GetAttribData(DW_AT_const_value, AttrData) and
+     (AttrData.InformationEntry <> nil)
+  then begin
+    case AttrData.InformationEntry.AttribForm[AttrData.Idx] of
+      DW_FORM_data1: if GetSignInfo in [sgnUnknown, sgnNotAvail, sgnSigned] then
+        FOrdinalValue := SignExtend(QWord(FOrdinalValue), SizeVal(1));
+      DW_FORM_data2: if GetSignInfo in [sgnUnknown, sgnNotAvail, sgnSigned] then
+        FOrdinalValue := SignExtend(QWord(FOrdinalValue), SizeVal(2));
+      DW_FORM_data4: if GetSignInfo in [sgnUnknown, sgnNotAvail, sgnSigned] then
+        FOrdinalValue := SignExtend(QWord(FOrdinalValue), SizeVal(4));
+    end;
+  end;
 end;
 
 procedure TFpSymbolDwarfDataEnumMember.KindNeeded;
@@ -5992,6 +6090,8 @@ begin
     if (Info.AbbrevTag = DW_TAG_enumerator) then begin
       Info2 := Info.Clone;
       sym := TFpSymbolDwarf.CreateSubClass('', Info2);
+      if sym is TFpSymbolDwarfDataEnumMember then
+        TFpSymbolDwarfDataEnumMember(sym).FSigned := FSigned;
       FMembers.Add(sym);
       sym.ReleaseReference;
       Info2.ReleaseReference;
@@ -6000,6 +6100,154 @@ begin
   end;
 
   Info.ReleaseReference;
+end;
+
+function TFpSymbolDwarfTypeEnum.GetSignInfo: TFpDwarfSignInfo;
+var
+  NstType: TFpSymbolDwarfType;
+  InfoEntry: TDwarfInformationEntry;
+  AttrData: TDwarfAttribData;
+  NstSym: TFpSymbolDwarf;
+  Sz: TFpDbgValueSize;
+  MaybeUnsigned: Boolean;
+  Encoding, i, c: Integer;
+  NstVal, SgnMask: QWord;
+  sym: TFpSymbol;
+begin
+  Result := FSigned;
+  if FSigned <> sgnUnknown then
+    exit;
+
+  try
+    FSigned := sgnNotAvail;
+    NstType := NestedTypeInfo;
+    if NstType <> nil then begin
+      case NstType.Kind of
+        skInteger:  FSigned := sgnSigned;
+        skCardinal: FSigned := sgnUnsigned;
+      end;
+      Result := FSigned;
+      if FSigned <> sgnNotAvail then
+        exit;
+    end;
+
+    // GCC writes DW_AT_encoding - even thought it is not allowed here
+    if InformationEntry.ReadValue(DW_AT_encoding, Encoding) then begin
+      debugln(FPDBG_DWARF_VERBOSE, ['TFpSymbolDwarfTypeEnum.InitSigned found DW_AT_encoding']);
+      case Encoding of
+        DW_ATE_signed,   DW_ATE_signed_char:   FSigned := sgnSigned;
+        DW_ATE_unsigned, DW_ATE_unsigned_char: FSigned := sgnUnsigned;
+      end;
+      Result := FSigned;
+      if FSigned <> sgnNotAvail then
+        exit;
+    end;
+
+    // Guess from member data
+    if (FNstSymForSigned <> nil) then begin
+      InfoEntry := FNstSymForSigned.InformationEntry;
+      if (InfoEntry <> nil) and
+         InfoEntry.GetAttribData(DW_AT_const_value, AttrData) and
+         (AttrData.InformationEntry <> nil)
+      then begin
+        case AttrData.InformationEntry.AttribForm[AttrData.Idx] of
+          DW_FORM_sdata: FSigned := sgnSigned; // may be unsigned (llvm), but the enum-member will not sign extend it
+          DW_FORM_udata: FSigned := sgnUnsigned;
+        end;
+      end;
+      Result := FSigned;
+      if FSigned <> sgnNotAvail then
+        exit;
+    end;
+
+    if (FNstSymForSigned <> nil) or (NestedSymbolCount > 0) then begin
+      if ReadSize(nil, Sz) and (not IsZeroSize(Sz)) then begin
+        MaybeUnsigned := True;
+        SgnMask := SignMask(Sz);
+        c := 0;
+        if FNstSymForSigned = nil then
+          c := NestedSymbolCount - 1;
+        for i := 0 to c do begin
+          NstSym := FNstSymForSigned;
+          if NstSym = nil then
+            NstSym := TFpSymbolDwarf(NestedSymbol[i]);
+          if (NstSym <> nil) then begin
+            InfoEntry := NstSym.InformationEntry;
+            if (InfoEntry <> nil) and
+               InfoEntry.GetAttribData(DW_AT_const_value, AttrData) and
+               (AttrData.InformationEntry <> nil)
+            then begin
+              case AttrData.InformationEntry.AttribForm[AttrData.Idx] of
+                DW_FORM_sdata: begin
+                    if TFpSymbolDwarfDataEnumMember(NstSym).ReadCardinalValue(NstVal) then begin
+                      if Int64(NstVal) < 0 then
+                        FSigned := sgnSigned
+                      else
+                      if (NstVal and SgnMask) <> 0 then
+                        FSigned := sgnUnsigned;  // positive value that was not sign extended
+                    end;
+                  end;
+                DW_FORM_udata: FSigned := sgnUnsigned;
+                // If the form is bigger than the size, then use the lead as sign info
+                DW_FORM_data2:
+                  if (SizeToFullBytes(Sz) < 2) then begin
+                    if (NstSym is TFpSymbolDwarfDataEnumMember) and
+                       TFpSymbolDwarfDataEnumMember(NstSym).ReadCardinalValue(NstVal) and
+                       (NstVal and QWord($8000) <> 0)
+                    then
+                      FSigned := sgnSigned;
+                  end
+                  else
+                    MaybeUnsigned := False;
+                DW_FORM_data4:
+                  if (SizeToFullBytes(Sz) < 4) then begin
+                    if (NstSym is TFpSymbolDwarfDataEnumMember) and
+                       TFpSymbolDwarfDataEnumMember(NstSym).ReadCardinalValue(NstVal) and
+                       (NstVal and QWord($80000000) <> 0)
+                    then
+                      FSigned := sgnSigned;
+                  end
+                  else
+                    MaybeUnsigned := False;
+                DW_FORM_data8:
+                  if (SizeToFullBytes(Sz) < 8) then begin
+                    if (NstSym is TFpSymbolDwarfDataEnumMember) and
+                       TFpSymbolDwarfDataEnumMember(NstSym).ReadCardinalValue(NstVal) and
+                       (NstVal and QWord($8000000000000000) <> 0)
+                    then
+                      FSigned := sgnSigned;
+                  end
+                  else
+                    MaybeUnsigned := False;
+                otherwise begin
+                    MaybeUnsigned := False;
+                    break;
+                  end;
+              end;
+            end;
+          end;
+
+          Result := FSigned;
+          if FSigned <> sgnNotAvail then
+            exit;
+          if (not MaybeUnsigned) then
+            break;
+        end;
+      end;
+      if MaybeUnsigned and (FSigned = sgnNotAvail) then begin
+        FSigned := sgnUnsigned;
+        Result := FSigned;
+      end;
+    end;
+  finally
+    if (FMembers <> nil) and (FNstSymForSigned = nil) then begin
+      for i := 0 to FMembers.Count - 1 do begin
+        sym := TFpSymbol(FMembers[i]);
+        if sym is TFpSymbolDwarfDataEnumMember then
+          TFpSymbolDwarfDataEnumMember(sym).FSigned := FSigned;
+      end;
+    end;
+  end;
 end;
 
 function TFpSymbolDwarfTypeEnum.GetTypedValueObject(ATypeCast: Boolean;
@@ -6013,6 +6261,21 @@ end;
 procedure TFpSymbolDwarfTypeEnum.KindNeeded;
 begin
   SetKind(skEnum);
+end;
+
+function TFpSymbolDwarfTypeEnum.DoReadSize(const AValueObj: TFpValue; out ASize: TFpDbgValueSize
+  ): Boolean;
+var
+  n: TFpSymbolDwarfType;
+begin
+  Result := inherited DoReadSize(AValueObj, ASize);
+
+  // Starting with DWARF-5 the size is optional and may be gotten from the embedded type
+  if not Result then begin
+    n := NestedTypeInfo;
+    if n <> nil then
+      Result := n.DoReadSize(AValueObj, ASize);
+  end;
 end;
 
 function TFpSymbolDwarfTypeEnum.GetNestedSymbolEx(AIndex: Int64; out AnParentTypeSymbol: TFpSymbolDwarfType): TFpSymbol;

@@ -379,7 +379,7 @@ type
 
     function GoNamedChild(const ANameInfo: TNameSearchInfo): Boolean;
     // find in enum too // TODO: control search with a flags param, if needed
-    function GoNamedChildEx(const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean = False; ASkipEnumMembers: Boolean = False): Boolean;
+    function GoNamedChildEx(const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean = False; ASkipEnumMembers: Boolean = False; ASkipScopedEnumMembers: Boolean = False): Boolean;
     // GoNamedChildMatchCaseEx will use
     // - UpperName for Hash
     // - LowerName for compare
@@ -2945,33 +2945,19 @@ begin
     if FAbbrev = nil then
       continue;
 
-    if not (dafHasName in FAbbrev^.flags) then begin
-      if FScope.Index >= NextTopLevel then
-        NextTopLevel := FScope.GetNextIndex;
-      Continue;
+    if (dafHasName in FAbbrev^.flags) and
+       ReadValue(DW_AT_name, EntryName)
+    then begin
+      h := objpas.Hash(UTF8UpperCaseFast(EntryName)) and $7fff or $8000;
+      FScope.Current^.NameHash := h;
+      if (FScope.Index >= NextTopLevel) or InEnum then
+        AKNownHashes^[h and KnownNameHashesBitMask] := True;
     end;
-
-    if not ReadValue(DW_AT_name, EntryName) then begin
-      if FScope.Index >= NextTopLevel then
-        NextTopLevel := FScope.GetNextIndex;
-      Continue;
-    end;
-    h := objpas.Hash(UTF8UpperCaseFast(EntryName)) and $7fff or $8000;
-    FScope.Current^.NameHash := h;
-    if (FScope.Index >= NextTopLevel) or InEnum then
-      AKNownHashes^[h and KnownNameHashesBitMask] := True;
 
     if FScope.Index >= NextTopLevel then begin
-      InEnum := False;
-      if FAbbrev^.tag = DW_TAG_enumeration_type then begin
-        InEnum := True;
-        NextTopLevel := FScope.GetNextIndex;
-        Continue;
-      end;
-    end;
-
-    if FScope.Index >= NextTopLevel then
+      InEnum := FAbbrev^.tag = DW_TAG_enumeration_type;
       NextTopLevel := FScope.GetNextIndex;
+    end;
   end;
 end;
 
@@ -3026,9 +3012,8 @@ begin
   end;
 end;
 
-function TDwarfInformationEntry.GoNamedChildEx(
-  const ANameInfo: TNameSearchInfo; ASkipArtificial: Boolean;
-  ASkipEnumMembers: Boolean): Boolean;
+function TDwarfInformationEntry.GoNamedChildEx(const ANameInfo: TNameSearchInfo;
+  ASkipArtificial: Boolean; ASkipEnumMembers: Boolean; ASkipScopedEnumMembers: Boolean): Boolean;
 var
   Val: Integer;
   EntryName: PChar;
@@ -3051,26 +3036,25 @@ begin
           GoNextFast;
           Continue;
         end;
-      end
-      else begin
-        if sc^.NameHash = 0 then begin
-          GoNextFast;
-          Continue;
-        end;
       end;
 
       PrepareAbbrev;
-      if (FAbbrev = nil) or not (dafHasName in FAbbrev^.flags) then begin
+      if (FAbbrev = nil) then begin
         assert(false);
         GoNextFast;
         Continue;
       end;
 
-      if (sc^.NameHash <> ANameInfo.NameHash) and
-         ( ASkipEnumMembers or (FAbbrev^.tag <> DW_TAG_enumeration_type) )
-      then begin
-        GoNextFast;
-        Continue;
+      if ASkipEnumMembers or (FAbbrev^.tag <> DW_TAG_enumeration_type) then begin
+        if not(dafHasName in FAbbrev^.flags) then begin
+          GoNextFast;
+          Continue;
+        end;
+
+        if (sc^.NameHash <> ANameInfo.NameHash) then begin
+          GoNextFast;
+          Continue;
+        end;
       end;
 
       if ASkipArtificial and (dafHasArtifical in FAbbrev^.flags) then begin
@@ -3079,7 +3063,6 @@ begin
           Continue;
         end;
       end;
-
 
       if (sc^.NameHash = ANameInfo.NameHash) then begin
         if not ReadValue(DW_AT_name, EntryName) then begin
@@ -3096,6 +3079,13 @@ begin
       end;
 
       if (not ASkipEnumMembers) and (FAbbrev^.tag = DW_TAG_enumeration_type) then begin
+        if ASkipScopedEnumMembers then begin
+          if ReadValue(DW_AT_enum_class, Val) and (Val <> 0) then begin
+            GoNextFast;
+            Continue;
+          end;
+        end;
+
         assert(not InEnum, 'nested enum');
         InEnum := True;
         ParentScopIdx := ScopeIndex;
@@ -6088,9 +6078,9 @@ begin
   Result := True;
   case AForm of
     DW_FORM_addr:
-      AValue := LocToAddrOrNil(ReadTargetAddressFromDwarfSection(AAttribute));
+      AValue := Int64(LocToAddrOrNil(ReadTargetAddressFromDwarfSection(AAttribute)));
     DW_FORM_ref_addr : begin
-      AValue := LocToAddrOrNil(ReadDwarfSectionOffsetOrLenFromDwarfSection(AAttribute));
+      AValue := Int64(LocToAddrOrNil(ReadDwarfSectionOffsetOrLenFromDwarfSection(AAttribute)));
     end;
     DW_FORM_flag_present: AValue := 1;
     DW_FORM_flag,
@@ -6112,7 +6102,7 @@ begin
     end;
     DW_FORM_sec_offset: begin
       if IsDwarf64 then
-        AValue := PQWord(AAttribute)^
+        AValue := Int64(PQWord(AAttribute)^)
       else
         AValue := PLongWord(AAttribute)^;
     end;

@@ -185,30 +185,30 @@ type
   
   TOpenOption = (
     ofReadOnly,            // Causes the Read Only check box to be selected initially when the dialog box is created. This flag indicates the state of the Read Only check box when the dialog box is closed.
-    ofOverwritePrompt,     // If selected file exists show a message, that file will be overwritten.
-    ofHideReadOnly,        // Hides the Read Only check box.
+    ofOverwritePrompt,     // If selected file exists, show a message that file will be overwritten.
+    ofHideReadOnly,        // Windows only: Hides the Read Only check box (pre-Vista).
     ofNoChangeDir,         // Do not change current directory.
     ofShowHelp,            // Show a help button.
-    ofNoValidate,          // Disable file name validation using OFN_NOVALIDATE on the Windows platform. Allow file names with invalid characters.
+    ofNoValidate,          // Windows only: Disable file name validation. Allow file names with invalid characters.
     ofAllowMultiSelect,    // Allow multi-selection in dialog.
     ofExtensionDifferent,  // Option is set after the dialog is executed (so, don't set it yourself) if DefaultExt<>'' and Extension<>DefaultExt.
     ofPathMustExist,       // Show an error message if selected path does not exist.
     ofFileMustExist,       // Show an error message if selected file does not exist.
-    ofCreatePrompt,        // Enable a verification prompt when a file or directory needs to be created for a file dialog.
+    ofCreatePrompt,        // Windows only: Enable a verification prompt when a file or directory needs to be created for a file dialog.
     ofShareAware,          // Include the OFN_SHAREAWARE flag on the Windows platform.
     ofNoReadOnlyReturn,    // Do not return file names that are read-only.
-    ofNoTestFileCreate,    // Include the OFN_NOTESTFILECREATE flag on the Windows platform.
-    ofNoNetworkButton,     // Disable and hide the Network button on the Windows platform.
-    ofNoLongNames,         // Disable long file names on the Windows platform. Used in classic-style dialogs to force use of file names using the 8.3 format.
-    ofOldStyleDialog,      // Prevents use of the OFN_EXPLORER and dependent flags in dialogs on the Windows platform.
-    ofNoDereferenceLinks,  // Do not resolve links while dialog is shown (only on Windows, see OFN_NODEREFERENCELINKS).
+    ofNoTestFileCreate,    // Windows only: the OS does not check if the item as specified in the TSaveDialog can actually be created.
+    ofNoNetworkButton,     // Windows only: Disable and hide the Network button on the Windows platform.
+    ofNoLongNames,         // Windows only (with ofOldStyleDialog): Disables long file names and force use the 8.3 file names format.
+    ofOldStyleDialog,      // Windows only: Shows the dialog in the old Win9x style.
+    ofNoDereferenceLinks,  // Windows only: When choosing a file shortcut (*.lnk), return the shortcut itself, not the target file.
     ofNoResolveLinks,      // Do not resolve links after Execute.
-    ofEnableIncludeNotify, // Not used in the current LCL version.
+    ofEnableIncludeNotify, // Not used (defined for compatibility with Delphi).
     ofEnableSizing,        // Dialog can be resized, e.g. via the mouse.
-    ofDontAddToRecent,     // Do not add the path to the history list.
+    ofDontAddToRecent,     // Windows only: Do not add the path to the history list.
     ofForceShowHidden,     // Show hidden files.
     ofViewDetail,          // Details are OS and interface dependent.
-    ofAutoPreview          // OS and interface dependent.
+    ofAutoPreview          // Windows Vista+: Indicates to the Open dialog box that the preview pane should always be displayed.
     );
   TOpenOptions = set of TOpenOption;
 
@@ -216,7 +216,6 @@ type
   // Currently just Windows Vista+ (IFileDialog) options
   TOpenOptionEx = (
     ofHidePinnedPlaces,         // Windows Vista+: Hide items shown by default in the view's navigation pane.
-    ofForcePreviewPaneOn,       // Windows Vista+: Indicate to the Open dialog box that the preview pane should always be displayed.
     ofStrictFileTypes,          // Windows Vista+: In the Save dialog, only allow the user to choose a file that has one of the file name extensions specified through Filter property.
     ofPickFolders,              // Windows Vista+: Turns the dialog into a TSelectDirectoryDialog.
     ofOkButtonNeedsInteraction, // Windows Vista+: The OK button will be disabled until the user navigates the view or edits the filename (if applicable).
