@@ -3438,9 +3438,9 @@ begin
   {$POP}
   LockRelease;
   try
-    SetState(dsStop);
     StopAllWorkers;
     FreeDebugThread;
+    SetState(dsStop); // after FreeDebugThread, which does ProcessMessages
   finally
     UnlockRelease;
   end;
@@ -3976,6 +3976,10 @@ begin
   result := False;
   if assigned(FDbgController) then
     FDbgController.NextOnlyStopOnStartLine := TFpDebugDebuggerProperties(GetProperties).NextOnlyStopOnStartLine;
+
+  // don't start new commands while exit event is processed
+  if FDbgController.Event in [deExitProcess] then
+    exit;
 
   if (ACommand in [dcRun, dcStepOver, dcStepInto, dcStepOut, dcStepTo, dcRunTo, dcJumpto,
       dcStepOverInstr, dcStepIntoInstr, dcAttach]) and
