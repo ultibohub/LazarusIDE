@@ -2370,7 +2370,8 @@ begin
 
   SourceEditorManager.InitMacros(GlobalMacroList);
   EditorMacroListViewer.OnKeyMapReloaded := @SourceEditorManager.ReloadEditorOptions;
-  SourceEditorManager.RegisterChangeEvent(semEditorActivate,@PackageEditors.ActiveEditorChanged);
+  // Issue #41555 crash
+  //SourceEditorManager.RegisterChangeEvent(semEditorActivate,@PackageEditors.ActiveEditorChanged);
 end;
 
 procedure TMainIDE.SetupCodeMacros;

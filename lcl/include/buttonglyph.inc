@@ -67,6 +67,7 @@ begin
   FOriginal := TGlyphBitmap.Create(Self);
   FOriginal.OnChange := @GlyphChanged;
   FNumGlyphs := Low(TNumGlyphs);
+  FDrawEffectsEnabled := deeApplication;
   ResetExternalImageIndexes;
 end;
 
@@ -104,7 +105,20 @@ const
     ((gdeNormal, gdeDisabled, gdeNormal, gdeNormal, gdeNormal),
      (gdeNormal, gdeDisabled, gdeShadowed, gdeNormal, gdeHighlighted));
 begin
-  AUseAutoEffects := ThemeServices.GetOption(toUseGlyphEffects);
+  case FDrawEffectsEnabled of
+    deeSystem:
+      AUseAutoEffects := ThemeServices.GetOption(toUseGlyphEffects);
+    deeAlways:
+      AUseAutoEffects := 1;
+    deeNever:
+      AUseAutoEffects := 0;
+    deeApplication:
+      case Application.GlyphDrawEffectsEnabled of
+        gdeSystem: AUseAutoEffects := ThemeServices.GetOption(toUseGlyphEffects);
+        gdeAlways: AUseAutoEffects := 1;
+        gdeNever: AUseAutoEffects := 0;
+      end;
+  end;
   if Assigned(FExternalImages) and CanShow then
   begin
     AImages := FExternalImages;

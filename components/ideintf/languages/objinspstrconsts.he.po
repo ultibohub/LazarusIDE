@@ -636,10 +636,6 @@ msgstr "מאורעות"
 msgid "Favorites"
 msgstr "מועדפים"
 
-#: objinspstrconsts.oisfilterxml
-msgid "XML files"
-msgstr ""
-
 #: objinspstrconsts.oisfinddeclaration
 msgid "Jump to declaration"
 msgstr "קפוץ להצהרה"
@@ -1842,11 +1838,6 @@ msgstr "תצוגת עץ של עורך פריטים"
 msgid "Confirmation"
 msgstr ""
 
-#: objinspstrconsts.sccstredtconfirmationfilereplace
-msgctxt "objinspstrconsts.sccstredtconfirmationfilereplace"
-msgid "The file already exists, replace it?"
-msgstr ""
-
 #: objinspstrconsts.sccstredtconfirmationimagesloss
 msgctxt "objinspstrconsts.sccstredtconfirmationimagesloss"
 msgid "Information about node images cannot be stored in the file. Continue anyway?"
@@ -1918,6 +1909,14 @@ msgstr ""
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
 msgstr "פתח"
+
+#: objinspstrconsts.sccstredtopensavedlgfiltertextfiles
+msgid "Text files (Node captions only)"
+msgstr ""
+
+#: objinspstrconsts.sccstredtopensavedlgfilterxmlfiles
+msgid "XML files (Node captions and properties)"
+msgstr ""
 
 #: objinspstrconsts.sccstredtrename
 msgctxt "objinspstrconsts.sccstredtrename"

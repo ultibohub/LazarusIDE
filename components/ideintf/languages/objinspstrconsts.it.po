@@ -617,10 +617,6 @@ msgstr "Eventi"
 msgid "Favorites"
 msgstr "Favoriti"
 
-#: objinspstrconsts.oisfilterxml
-msgid "XML files"
-msgstr ""
-
 #: objinspstrconsts.oisfinddeclaration
 msgid "Jump to declaration"
 msgstr "Salta alla dichiarazione"
@@ -1782,11 +1778,6 @@ msgstr "Editor voci della Treeview"
 msgid "Confirmation"
 msgstr ""
 
-#: objinspstrconsts.sccstredtconfirmationfilereplace
-msgctxt "objinspstrconsts.sccstredtconfirmationfilereplace"
-msgid "The file already exists, replace it?"
-msgstr ""
-
 #: objinspstrconsts.sccstredtconfirmationimagesloss
 msgctxt "objinspstrconsts.sccstredtconfirmationimagesloss"
 msgid "Information about node images cannot be stored in the file. Continue anyway?"
@@ -1858,6 +1849,14 @@ msgstr ""
 msgctxt "objinspstrconsts.sccstredtopendialog"
 msgid "Open"
 msgstr "Apri"
+
+#: objinspstrconsts.sccstredtopensavedlgfiltertextfiles
+msgid "Text files (Node captions only)"
+msgstr ""
+
+#: objinspstrconsts.sccstredtopensavedlgfilterxmlfiles
+msgid "XML files (Node captions and properties)"
+msgstr ""
 
 #: objinspstrconsts.sccstredtrename
 msgctxt "objinspstrconsts.sccstredtrename"

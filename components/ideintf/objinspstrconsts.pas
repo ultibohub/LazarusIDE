@@ -117,8 +117,9 @@ resourcestring
   sccsTrEdtImageListNotAssigned = '"%s" not assigned';
   sccsTrEdtConfirmationCaption     = 'Confirmation';
   sccsTrEdtConfirmationImagesLoss  = 'Information about node images cannot be stored in the file. Continue anyway?';
-  sccsTrEdtConfirmationFileReplace = 'The file already exists, replace it?';
   sccsTrEdtConfirmationTreeReplace = 'The current tree will be overwritten, continue?';
+  sccsTrEdtOpenSaveDlgFilterXMLFiles = 'XML files (Node captions and properties)';
+  sccsTrEdtOpenSaveDlgFilterTextFiles = 'Text files (Node captions only)';
 
   // ListView Items Editor
   sccsLvEdtCaption         = 'ListView Items Editor';
@@ -532,7 +533,6 @@ resourcestring
 
   // File types
   oisAllFiles = 'All files';
-  oisFilterXML = 'XML files';
 
 implementation
 

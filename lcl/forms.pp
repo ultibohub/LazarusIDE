@@ -1321,6 +1321,7 @@ type
   TIdleEvent = procedure (Sender: TObject; var Done: Boolean) of object;
   TOnUserInputEvent = procedure(Sender: TObject; Msg: Cardinal) of object;
   TDataEvent = procedure (Data: PtrInt) of object;
+  TLogMessageEvent = Procedure (Sender : TObject; EventType : TEventType; Const Msg : String) of Object;
 
   // application hint stuff
   TCMHintShow = record
@@ -1438,6 +1439,12 @@ type
     sbgSystem   // show them depending on OS
   );
 
+  TApplicationGlyphDrawEffectsEnabled = (
+    gdeAlways,   // mouse-over and mouse-down visual feedback: always active
+    gdeNever,    // never active
+    gdeSystem    // depends on theme-services
+  );
+
   TTaskBarBehavior = (
     tbDefault,      // widgetset dependent
     tbMultiButton,  // show buttons for Forms with ShowTaskBar = stDefault
@@ -1491,6 +1498,7 @@ type
     FOnModalBegin: TNotifyEvent;
     FOnModalEnd: TNotifyEvent;
     FScaled: Boolean;
+    FGlyphDrawEffectsEnabled: TApplicationGlyphDrawEffectsEnabled;
     FShowButtonGlyphs: TApplicationShowGlyphs;
     FShowMenuGlyphs: TApplicationShowGlyphs;
     FSmallIconHandle: HICON;
@@ -1519,6 +1527,7 @@ type
     FOnShortcut: TShortcutEvent;
     FOnShowHint: TShowHintEvent;
     FOnUserInput: TOnUserInputEvent;
+    FOnLog: TLogMessageEvent;
     FAsyncCall: TAsyncCallQueues;
     FShowHint: Boolean;
     FShowMainForm: Boolean;
@@ -1590,6 +1599,7 @@ type
     procedure ReleaseComponents;
     procedure DoBeforeFinalization;
     function GetParams(Index: Integer): string; override;
+    Procedure DoLog(EventType : TEventType; const Msg : String); override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -1722,6 +1732,7 @@ type
     property FindGlobalComponentEnabled: Boolean read FFindGlobalComponentEnabled
                                                write FFindGlobalComponentEnabled;
     property Flags: TApplicationFlags read FFlags write SetFlags;
+    property GlyphDrawEffectsEnabled: TApplicationGlyphDrawEffectsEnabled read FGlyphDrawEffectsEnabled write FGlyphDrawEffectsEnabled default gdeSystem;
     //property HelpSystem : IHelpSystem read FHelpSystem;
     property Handle: TLCLHandle read GetHandle write SetHandle; platform;
     property Hint: string read FHint write SetHint;
@@ -1762,6 +1773,7 @@ type
     property OnShortcut: TShortcutEvent read FOnShortcut write FOnShortcut;
     property OnShowHint: TShowHintEvent read FOnShowHint write FOnShowHint;
     property OnUserInput: TOnUserInputEvent read FOnUserInput write FOnUserInput;
+    property OnLog: TLogMessageEvent read FOnLog write FOnLog;
     property OnDestroy: TNotifyEvent read FOnDestroy write FOnDestroy;
     property OnCircularException: TExceptionEvent read FOnCircularException write FOnCircularException;
     property ShowButtonGlyphs: TApplicationShowGlyphs read FShowButtonGlyphs write SetShowButtonGlyphs default sbgAlways;
@@ -1788,6 +1800,7 @@ type
   private
     FCaptureExceptions: Boolean;
     FExceptionDialogType: TApplicationExceptionDlg;
+    FGlyphDrawEffectsEnabled: TApplicationGlyphDrawEffectsEnabled;
     FHelpFile: string;
     FHint: string;
     FHintColor: TColor;
@@ -1823,6 +1836,7 @@ type
     procedure SetExceptionDialog(AValue: TApplicationExceptionDlg);
   protected
     procedure SetCaptureExceptions(const AValue : Boolean);
+    procedure SetGlyphDrawEffectsEnabled(const AValue: TApplicationGlyphDrawEffectsEnabled);
     procedure SetHelpFile(const AValue : string);
     procedure SetHint(const AValue : string);
     procedure SetHintColor(const AValue : TColor);
@@ -1863,6 +1877,8 @@ type
                                         write SetCaptureExceptions default True;
     property ExceptionDialog: TApplicationExceptionDlg read FExceptionDialogType
                                                        write SetExceptionDialog default aedOkCancelDialog;
+    property GlyphDrawEffectsEnabled: TApplicationGlyphDrawEffectsEnabled
+      read FGlyphDrawEffectsEnabled write SetGlyphDrawEffectsEnabled default gdeSystem;
     property HelpFile: string read FHelpFile write SetHelpFile;
     property Hint: string read FHint write SetHint;
     property HintColor: TColor read FHintColor write SetHintColor default DefHintColor;

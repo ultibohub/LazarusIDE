@@ -102,6 +102,11 @@ begin
     Result := Result and FButtonGlyph.CanShow;
 end;
 
+function TCustomBitBtn.GetDrawEffectsEnabled: TGlyphDrawEffectsEnabled;
+begin
+  Result := FButtonGlyph.DrawEffectsEnabled;
+end;
+
 function TCustomBitBtn.GetGlyph : TBitmap;
 begin
   Result := FButtonGlyph.Glyph;
@@ -147,6 +152,12 @@ begin
   else Result := (Kind = bkCustom) and (FButtonGlyph.Glyph <> nil)
     and (not FButtonGlyph.Glyph.Empty)
       and (FButtonGlyph.Glyph.Width>0) and (FButtonGlyph.Glyph.Height>0);
+end;
+
+procedure TCustomBitBtn.SetDrawEffectsEnabled(AValue: TGlyphDrawEffectsEnabled);
+begin
+  FButtonGlyph.DrawEffectsEnabled := AValue;
+  RecreateWnd(Self);
 end;
 
 procedure TCustomBitBtn.SetGlyph(AValue: TBitmap);
