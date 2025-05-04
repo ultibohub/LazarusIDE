@@ -677,6 +677,7 @@ type
     FPreselectedIndices: TFPList;
     FImages: TFPList;
     FIsTreeView: Boolean;
+    FViewStyle: TViewStyle;
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
@@ -718,6 +719,7 @@ type
 
     property Images: TFPList read FImages write FImages;
     property IsTreeView: Boolean read FIsTreeView;
+    property ViewStyle: TViewStyle read FViewStyle;
   end;
 
   { TGtk3Box }
@@ -936,6 +938,7 @@ type
     procedure SetTitle(const AValue: String);
   strict private
     class function WindowMapEvent(awidget:PGtkWindow;AEvent: PGdkEventAny; adata: gpointer): gboolean; cdecl; static; //uses lcl-window-first-map data.
+    class function WindowMoveEvent(awidget: PGtkWindow; AEvent: PGdkEventConfigure; adata: gpointer): gboolean; cdecl; static;
     class procedure WindowSizeAllocate(AWidget: PGtkWidget; AGdkRect: PGdkRectangle; Data: gpointer); cdecl; static;
     class function WindowStateSignal(AWidget: PGtkWidget; AEvent: PGdkEvent; AData: gPointer): gboolean; cdecl; static;
   protected
@@ -1064,6 +1067,9 @@ type
     property DesignContext: HDC read FDesignContext;
   end;
 
+const
+  LISTVIEW_DEFAULT_COLUMN = 1;
+
 implementation
 
 uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int, gtk3caret, imglist,
@@ -1172,6 +1178,8 @@ end;
 {$i gtk3lclnotebook.inc}
 
 class function TGtk3Widget.WidgetEvent(widget: PGtkWidget; event: PGdkEvent; data: GPointer): gboolean; cdecl;
+var
+  AForm: TCustomForm;
 begin
   {$IFDEF GTK3DEBUGCOMBOBOX}
   if (Data <> nil) and (wtComboBox in TGtk3Widget(Data).WidgetType) and
@@ -1211,10 +1219,22 @@ begin
   case event^.type_ of
   GDK_DELETE:
     begin
-      // DebugLn('****** GDK_DELETE FOR ',dbgsName(TGtk3Widget(Data).LCLObject),' main_level=',dbgs(gtk_main_level));
+      //DebugLn('****** GDK_DELETE FOR ',dbgsName(TGtk3Widget(Data).LCLObject),' main_level=',dbgs(gtk_main_level));
       if wtWindow in TGtk3Widget(Data).WidgetType then
       begin
-        TGtk3Window(Data).CloseQuery;
+        // check against wrong gtk3 behaviour about modal windows.
+        if Assigned(TGtk3Window(Data).LCLObject) then
+        begin
+          AForm := TCustomForm(TGtk3Window(Data).LCLObject);
+          if (Application.ModalLevel > 0) then
+          begin
+            if gtk_application_get_active_window(Gtk3WidgetSet.Gtk3Application) <> PGtkWindow(TGtk3Window(Data).Widget) then
+              AForm := nil;
+          end;
+        end else
+          AForm := nil;
+        if (AForm <> nil) then
+          TGtk3Window(Data).CloseQuery;
         // let lcl destroy widget
         Result := True;
       end;
@@ -1524,7 +1544,7 @@ begin
   MessE.UserData := AWinControl;
   MessE.Button := 0;
 
-  NotifyApplicationUserInput(AWinControl, MessE.Msg);
+  NotifyApplicationUserInput(AWinControl, PLMessage(@MessE)^);
   Result := TGtk3Widget(AData).DeliverMessage(MessE) <> 0;
   AEvent^.scroll.send_event := NO_PROPAGATION_TO_PARENT;
 
@@ -1725,7 +1745,7 @@ begin
 
   Msg.Msg := LM_MOUSEMOVE;
 
-  NotifyApplicationUserInput(LCLObject, Msg.Msg);
+  NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
   if Widget^.get_parent <> nil then
     Event^.motion.send_event := NO_PROPAGATION_TO_PARENT;
   DeliverMessage(Msg, True);
@@ -2033,7 +2053,7 @@ begin
     Msg.CharCode := ACharCode;
     Msg.KeyData := PtrInt((KeyValue shl 16) or (LCLModifiers shl 16) or $0001);
 
-    NotifyApplicationUserInput(LCLObject, Msg.Msg);
+    NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
 
     if not CanSendLCLMessage then
       exit;
@@ -2059,7 +2079,7 @@ begin
     Msg.CharCode := ACharCode;
     Msg.KeyData := PtrInt((KeyValue shl 16) or (LCLModifiers shl 16) or $0001);
 
-    NotifyApplicationUserInput(LCLObject, Msg.Msg);
+    NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
 
     if not CanSendLCLMessage then
       exit;
@@ -2106,7 +2126,7 @@ begin
     CharMsg.KeyData := Msg.KeyData;
     AChar := AEventString[1];
     CharMsg.CharCode := Word(AChar);
-    NotifyApplicationUserInput(LCLObject, CharMsg.Msg);
+    NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
 
     if not CanSendLCLMessage then
       exit;
@@ -2127,7 +2147,7 @@ begin
     //Send a LM_(SYS)CHAR
     CharMsg.Msg := LM_CharMsg[IsSysKey];
 
-    NotifyApplicationUserInput(LCLObject, CharMsg.Msg);
+    NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
 
     if not CanSendLCLMessage then
       exit;
@@ -2254,7 +2274,7 @@ begin
   DebugLn('TGtk3Widget.GtkEventMouse ',dbgsName(LCLObject),
     ' msg=',dbgs(msg.Msg), ' point=',dbgs(Msg.XPos),',',dbgs(Msg.YPos));
   {$ENDIF}
-  NotifyApplicationUserInput(LCLObject, Msg.Msg);
+  NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
   Event^.button.send_event := NO_PROPAGATION_TO_PARENT;
 
   if (SavedHandle <> PtrUInt(Self)) or (LCLObject = nil) or (FWidget = nil) then
@@ -2290,13 +2310,16 @@ begin
 end;
 
 procedure TGtk3Widget.SetFont(AValue: PPangoFontDescription);
+var
+  NewFont: PPangoFontDescription;
 begin
   if IsWidgetOk then
   begin
     GetContainerWidget^.override_font(AValue);
-    if Assigned(FFont) and (FFont <> AValue) then
+    NewFont := pango_font_description_copy(AValue); //keep description, otherwise we can easily crash in some circumstances
+    if Assigned(FFont) then
       FFont^.free;
-    FFont := AValue;
+    FFont := NewFont;
   end;
 end;
 
@@ -2530,6 +2553,11 @@ begin
   begin
     FShape^.unref;
     FShape := nil;
+  end;
+  if Assigned(FFont) then
+  begin
+    FFont^.free;
+    FFont := nil;
   end;
 end;
 
@@ -5297,16 +5325,34 @@ var
   Gtk3Page: TGtk3Page;
   AMinSize, ANaturalSize: gint;
   Bmp: TBitmap;
+  ImageIndex:integer;
+  HasIcon: Boolean;
+  IconSize: Types.TSize;
+  TheNotebook:TCustomTabControl;
+  Appi:integer;
 begin
   if IsWidgetOK then
   begin
     Gtk3Page := TGtk3Page(ACustomPage.Handle);
     Gtk3Page.CloseButtonVisible := nboShowCloseButtons in TCustomTabControl(LCLObject).Options;
-    if Assigned(TCustomTabControl(LCLObject).Images) and (ACustomPage.ImageIndex >= 0) and
-      (ACustomPage.ImageIndex < TCustomTabControl(LCLObject).Images.Count) then
+
+    TheNoteBook:=TCustomTabControl(LCLObject);
+    HasIcon:=false;
+    IconSize:=Size(0,0);
+    ImageIndex := TheNoteBook.GetImageIndex(AIndex);
+    Appi:=TheNoteBook.Font.PixelsPerInch;
+    if (TheNoteBook.Images<>nil)
+    and (ImageIndex >= 0)
+    and (ImageIndex < TheNoteBook.Images.Count) then
+    begin
+      // page has valid image
+      IconSize := TheNoteBook.Images.SizeForPPI[TheNoteBook.ImagesWidth, Appi];
+      HasIcon := (IconSize.cx>0) and (IconSize.cy>0);
+    end;
+    if HasIcon then
     begin
       Bmp := TBitmap.Create;
-      TCustomTabControl(LCLObject).Images.GetBitmap(ACustomPage.ImageIndex, Bmp);
+      TCustomTabControl(LCLObject).Images.ResolutionForPPI[IconSize.cx,Appi,1].GetBitmap(ImageIndex, Bmp);
       Gtk3Page.setTabImage(Bmp);
       Bmp.Free;
     end else
@@ -7146,8 +7192,8 @@ begin
   Result := PGtkScrolledWindow(TGtkScrolledWindow.new(nil, nil));
 
   PtrType := G_TYPE_POINTER;
-
-  if AListView.ViewStyle in [vsIcon,vsSmallIcon] then
+  FViewStyle := AListView.ViewStyle;
+  if ViewStyle in [vsIcon,vsSmallIcon] then
   begin
     TreeModel := PGtkTreeModel(gtk_list_store_new(3, [
       G_TYPE_POINTER, // ListItem pointer
@@ -7165,7 +7211,7 @@ begin
     FCentralWidget := TGtkTreeView.new_with_model(TreeModel);
   end;
 
-  FIsTreeView := not (AListView.ViewStyle in [vsIcon,vsSmallIcon]);
+  FIsTreeView := not (ViewStyle in [vsIcon,vsSmallIcon]);
 
   FCentralWidget^.set_has_window(True);
   FCentralWidget^.show;
@@ -9368,10 +9414,30 @@ begin
   Result := gtk_false;
 end;
 
+class function TGtk3Window.WindowMoveEvent(awidget: PGtkWindow; AEvent: PGdkEventConfigure; adata: gpointer): gboolean; cdecl;
+var
+  MoveMsg: TLMMove;
+begin
+  if Gtk3IsGtkWindow(aWidget) then
+  begin
+    with MoveMsg do
+    begin
+      Result := 0;
+      Msg := LM_MOVE;
+      MoveType := Move_SourceIsInterface;
+      XPos := SmallInt(AEvent^.x);
+      YPos := SmallInt(AEvent^.y);
+    end;
+    Result := TGtk3Window(aData).DeliverMessage(MoveMsg) <> 0;
+  end else
+    Result := gtk_false;
+end;
+
 procedure TGtk3Window.ConnectSizeAllocateSignal(ToWidget:PGtkWidget);
 begin
   g_signal_connect_data(ToWidget,'size-allocate',TGCallback(@WindowSizeAllocate), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(ToWidget,'map-event',TGCallback(@WindowMapEvent), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(ToWidget,'configure-event',TGCallback(@WindowMoveEvent), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 class function TGtk3Window.decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
