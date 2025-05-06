@@ -6001,9 +6001,7 @@ end;
 procedure TQtWidget.DestroyWidget;
 begin
   if (Widget <> nil) and FOwnWidget then
-  begin
-    QObject_deleteLater(Widget);
-  end;
+    QObject_Destroy(Widget);
   Widget := nil;
 end;
 
