@@ -3837,6 +3837,9 @@ begin
       SaveWidget := nil;
       SavedLCLControl := PtrUInt(LCLObject);
       if (FChildOfComplexWidget = ccwCustomControl) and (FOwner <> nil) then
+        SaveWidget := Widget
+      else
+      if (FChildOfComplexWidget = ccwComboBox) and (FOwner <> nil) then
         SaveWidget := Widget;
 
       NotifyApplicationUserInput(LCLObject, Msg.Msg);
@@ -6000,9 +6003,7 @@ end;
 procedure TQtWidget.DestroyWidget;
 begin
   if (Widget <> nil) and FOwnWidget then
-  begin
-    QObject_deleteLater(Widget);
-  end;
+    QObject_Destroy(Widget);
   Widget := nil;
 end;
 
@@ -6285,13 +6286,18 @@ begin
   case QEvent_type(Event) of
     QEventMouseButtonRelease:
       begin
-        Result := SlotMouse(Sender, Event);
-        if not QWidget_hasFocus(Widget) and
-        (QMouseEvent_button(QMouseEventH(Event)) = QtLeftButton) and
-        (QWidget_focusPolicy(Widget) > QtNoFocus) then
-        begin
-          QObject_blockSignals(Sender, True);
-          Application.QueueAsyncCall(@PushButtonUnblock, PtrInt(Self));
+        BeginEventProcessing;
+        try
+          Result := SlotMouse(Sender, Event);
+          if not QWidget_hasFocus(Widget) and
+          (QMouseEvent_button(QMouseEventH(Event)) = QtLeftButton) and
+          (QWidget_focusPolicy(Widget) > QtNoFocus) then
+          begin
+            QObject_blockSignals(Sender, True);
+            Application.QueueAsyncCall(@PushButtonUnblock, PtrInt(Self));
+          end;
+        finally
+          EndEventProcessing;
         end;
       end;
     else

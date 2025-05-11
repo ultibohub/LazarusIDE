@@ -2314,7 +2314,7 @@ procedure TEditorSynGutterOptions.ApplyLineColorTo(AGutterPart: TSynGutterPartBa
 begin
   if AGutterPart = nil then exit;
   case FShowLineColor of
-    glcOff:     ;
+    glcOff:     AGutterPart.MarkupInfoCurrentLine.Clear;
     glcOn:      if Attri    <> nil then Attri.ApplyTo(AGutterPart.MarkupInfoCurrentLine);
     glcLineNum: if NumAttri <> nil then NumAttri.ApplyTo(AGutterPart.MarkupInfoCurrentLine);
   end;
@@ -7637,6 +7637,8 @@ begin
     SetGutterColorByClass(ahaModifiedLine,    TSynGutterChanges);
     SetGutterColorByClass(ahaCodeFoldingTree, TSynGutterCodeFolding);
     SetGutterColorByClass(ahaGutterSeparator, TSynGutterSeparator);
+    if assigned(ASynEdit.Gutter.Parts.ByClass[TSynGutterMarks, 0]) then
+      ASynEdit.Gutter.Parts.ByClass[TSynGutterMarks, 0].MarkupInfo.Clear; // always use gutter color for marks
     Attri := AttributeByEnum[ahaCodeFoldingTreeCurrent];
     if Attri <> nil then begin
       if ASynEdit.Gutter.Parts.ByClass[TSynGutterCodeFolding,0] <> nil then
