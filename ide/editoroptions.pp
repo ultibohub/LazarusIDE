@@ -2429,7 +2429,7 @@ procedure TEditorSynGutterOptions.ApplyLineColorTo(AGutterPart: TSynGutterPartBa
 begin
   if AGutterPart = nil then exit;
   case FShowLineColor of
-    glcOff:     ;
+    glcOff:     AGutterPart.MarkupInfoCurrentLine.Clear;
     glcOn:      if Attri    <> nil then Attri.ApplyTo(AGutterPart.MarkupInfoCurrentLine);
     glcLineNum: if NumAttri <> nil then NumAttri.ApplyTo(AGutterPart.MarkupInfoCurrentLine);
   end;
@@ -3442,20 +3442,30 @@ begin
     SynInstance := LazSyntaxHighlighterClasses{%H-}[TheType].Create(nil);
     SetBothFilextensions('pp;pas;inc;lpr;lrs;dpr;dpk;fpd');
     SampleSource :=
-      '{ Comment }'#13 +
+      'program Sample; { Comment with Pasdoc @author someone }'#13 +
       '{$R- compiler directive}'#13 +
+      'type'#13 +
+      '  TMyData = class abstract'#13 +
+      '  public'#13 +
+      '    function GetItem(AnIndex: integer): boolean; virtual; experimental;'#13 +
+      '    property Item[AnIndex: integer]: boolean read GetItem;'#13 +
+      '  end deprecated ''reason'';'#13 +
       'procedure TForm1.Button1Click(Sender: TObject);'#13 +
-      'var  // Delphi Comment'#13 +
+      'label JumpPos;'#13 +
+      'const BREAK_CHAR: char = ^C;'#13 +
+      'var  // Slash Comment'#13 +
       '  Number, I, X: Integer;'#13 +
+      '  Text: String; MoreText: AnsiString;'#13 +
+      '  List: Array of record x,y: Byte; end;'#13 +
       'begin'#13 +
-      '  Number := 12345 * (2 + 9) // << Matching Brackets ;'#13 +
+      '  Number := 12345 * (2 + 9); // << Brackets at caret'#13 +
       '  Caption := ''The number is '' + IntToStr(Number);'#13 +
       '  asm'#13 + '    MOV AX,1234h'#13 +
       '    MOV Number,AX'#13 +
       '  end;'#13 +
       '  {%region /fold}'#13 +
       '  {%endregion}'#13 +
-      '  X := 10;'#13 +
+      '  X := 10 + (Number * (ord(''A'') + (I - Abs(X * (I+(1-((X))))))));'#13 +
       '  inc(X); {$R+} { Search Match, Text Block }'#13 +
       '  for I := 0 to Number do {$R-} { execution point }'#13 +
       '  begin'#13 +
@@ -3468,8 +3478,8 @@ begin
       '      mrOK: inc(X);'#13+
       '      mrCancel, mrIgnore: dec(X);'#13+
       '    end;'#13+
-      '    ListBox1.Items.Add(IntToStr(X));'#13 +
-//{$IFDEF WithSynMarkupIfDef}
+      '    ListBox1.Items.Add(IntToStr(X)); // TODO: more work'#13 +
+//{ $IFDEF WithSynMarkupIfDef}
 //      '    {$IFDEF Foo}' +
 //      '      X := X + 1.0; {$R-} { Error line }'#13 +
 //      '      {$DEFINE a}' +
@@ -3483,18 +3493,23 @@ begin
 //      '      with self do'#13 +
 //      '        X := 10;'#13 +
 //      '    {$ENDIF}' +
-//{$ENDIF}
+//{ $ENDIF}
       '  end;'#13 +
-      'end;'#13 + #13;
-    AddAttrSampleLines[ahaDisabledBreakpoint] := 20;
-    AddAttrSampleLines[ahaEnabledBreakpoint] := 19;
-    AddAttrSampleLines[ahaInvalidBreakpoint] := 21;
-    AddAttrSampleLines[ahaUnknownBreakpoint] := 22;
-    AddAttrSampleLines[ahaErrorLine] := 23;
-    AddAttrSampleLines[ahaExecutionPoint] := 17;
-    AddAttrSampleLines[ahaTextBlock] := 16;
-    AddAttrSampleLines[ahaFoldedCode] := 13;
-    CaretXY := Point(21, 7);
+      'JumpPos:'#13 +
+      'end;'#13+
+      '(* Multiline Ansi-Comment'#13+
+      ' * Foo Bar'#13+
+      ' *)'#13+
+      ''#13 + #13;
+    AddAttrSampleLines[ahaDisabledBreakpoint] := 30;
+    AddAttrSampleLines[ahaEnabledBreakpoint] := 29;
+    AddAttrSampleLines[ahaInvalidBreakpoint] := 31;
+    AddAttrSampleLines[ahaUnknownBreakpoint] := 32;
+    AddAttrSampleLines[ahaErrorLine] := 33;
+    AddAttrSampleLines[ahaExecutionPoint] := 27;
+    AddAttrSampleLines[ahaTextBlock] := 26;
+    AddAttrSampleLines[ahaFoldedCode] := 23;
+    CaretXY := Point(21, 17);
   end;
   Add(NewInfo);
 
@@ -3507,20 +3522,30 @@ begin
     SynInstance := LazSyntaxHighlighterClasses{%H-}[TheType].Create(nil);
     SetBothFilextensions('pp;pas;inc;lpr;lrs;dpr;dpk;fpd');
     SampleSource :=
-      '{ Comment }'#13 +
+      'program Sample; { Comment with Pasdoc @author someone }'#13 +
       '{$R- compiler directive}'#13 +
+      'type'#13 +
+      '  TMyData = class abstract'#13 +
+      '  public'#13 +
+      '    function GetItem(AnIndex: integer): boolean; virtual; experimental;'#13 +
+      '    property Item[AnIndex: integer]: boolean read GetItem;'#13 +
+      '  end deprecated ''reason'';'#13 +
       'procedure TForm1.Button1Click(Sender: TObject);'#13 +
-      'var  // Delphi Comment'#13 +
+      'label JumpPos;'#13 +
+      'const BREAK_CHAR: char = ^C;'#13 +
+      'var  // Slash Comment'#13 +
       '  Number, I, X: Integer;'#13 +
+      '  Text: String; MoreText: AnsiString;'#13 +
+      '  List: Array of record x,y: Byte; end;'#13 +
       'begin'#13 +
-      '  Number := 12345 * (2 + 9) // << Matching Brackets ;'#13 +
+      '  Number := 12345 * (2 + 9); // << Brackets at caret'#13 +
       '  Caption := ''The number is '' + IntToStr(Number);'#13 +
       '  asm'#13 + '    MOV AX,1234h'#13 +
       '    MOV Number,AX'#13 +
       '  end;'#13 +
       '  {%region /fold}'#13 +
       '  {%endregion}'#13 +
-      '  X := 10;'#13 +
+      '  X := 10 + (Number * (ord(''A'') + (I - Abs(X * (I+(1-((X))))))));'#13 +
       '  inc(X); {$R+} { Search Match, Text Block }'#13 +
       '  for I := 0 to Number do {$R-} { execution point }'#13 +
       '  begin'#13 +
@@ -3533,8 +3558,8 @@ begin
       '      mrOK: inc(X);'#13+
       '      mrCancel, mrIgnore: dec(X);'#13+
       '    end;'#13+
-      '    ListBox1.Items.Add(IntToStr(X));'#13 +
-//{$IFDEF WithSynMarkupIfDef}
+      '    ListBox1.Items.Add(IntToStr(X)); // TODO: more work'#13 +
+//{ $IFDEF WithSynMarkupIfDef}
 //      '    {$IFDEF Foo}' +
 //      '      X := X + 1.0; {$R-} { Error line }'#13 +
 //      '      {$DEFINE a}' +
@@ -3548,18 +3573,23 @@ begin
 //      '      with self do'#13 +
 //      '        X := 10;'#13 +
 //      '    {$ENDIF}' +
-//{$ENDIF}
+//{ $ENDIF}
       '  end;'#13 +
-      'end;'#13 + #13;
-    AddAttrSampleLines[ahaDisabledBreakpoint] := 20;
-    AddAttrSampleLines[ahaEnabledBreakpoint] := 19;
-    AddAttrSampleLines[ahaInvalidBreakpoint] := 21;
-    AddAttrSampleLines[ahaUnknownBreakpoint] := 22;
-    AddAttrSampleLines[ahaErrorLine] := 23;
-    AddAttrSampleLines[ahaExecutionPoint] := 17;
-    AddAttrSampleLines[ahaTextBlock] := 16;
-    AddAttrSampleLines[ahaFoldedCode] := 13;
-    CaretXY := Point(21, 7);
+      'JumpPos:'#13 +
+      'end;'#13+
+      '(* Multiline Ansi-Comment'#13+
+      ' * Foo Bar'#13+
+      ' *)'#13+
+      ''#13 + #13;
+    AddAttrSampleLines[ahaDisabledBreakpoint] := 30;
+    AddAttrSampleLines[ahaEnabledBreakpoint] := 29;
+    AddAttrSampleLines[ahaInvalidBreakpoint] := 31;
+    AddAttrSampleLines[ahaUnknownBreakpoint] := 32;
+    AddAttrSampleLines[ahaErrorLine] := 33;
+    AddAttrSampleLines[ahaExecutionPoint] := 27;
+    AddAttrSampleLines[ahaTextBlock] := 26;
+    AddAttrSampleLines[ahaFoldedCode] := 23;
+    CaretXY := Point(21, 17);
   end;
   Add(NewInfo);
 
@@ -6918,21 +6948,6 @@ begin
 
     ASynEdit.Gutter.Width := fGutterWidth;
 
-    if ASynEdit is TIDESynEditor then begin
-      TIDESynEditor(ASynEdit).WordWrapCaretWrapPos  := WordWrapCaretWrapPos;
-      TIDESynEditor(ASynEdit).WordWrapForceHomeEnd  := FWordWrapForceHomeEnd;
-      TIDESynEditor(ASynEdit).WordWrapMinWidth      := WordWrapMinWidth;
-      if WordWrapFixedWidth then
-        TIDESynEditor(ASynEdit).WordWrapMaxWidth      := WordWrapMinWidth
-      else
-        TIDESynEditor(ASynEdit).WordWrapMaxWidth      := WordWrapMaxWidth;
-      TIDESynEditor(ASynEdit).WordWrapIndent           := WordWrapIndent;
-      TIDESynEditor(ASynEdit).WordWrapIndentUseOffset  := WordWrapIndentUseOffset;
-      TIDESynEditor(ASynEdit).WordWrapIndentMin        := WordWrapIndentMin;
-      TIDESynEditor(ASynEdit).WordWrapIndentMax        := WordWrapIndentMax;
-      TIDESynEditor(ASynEdit).WordWrapIndentMaxRel     := WordWrapIndentMaxRel;
-    end;
-
     ASynEdit.RightEdge := fRightMargin;
     if fVisibleRightMargin then
       ASynEdit.Options := ASynEdit.Options - [eoHideRightMargin]
@@ -7028,6 +7043,19 @@ begin
     TIDESynEditor(ASynEdit).WordWrapEnabled := True;
     ASynEdit.Options  := ASynEdit.Options  - [eoScrollPastEol];
     ASynEdit.Options2 := ASynEdit.Options2 - [eoScrollPastEolAddPage, eoScrollPastEolAutoCaret];
+
+    TIDESynEditor(ASynEdit).WordWrapCaretWrapPos  := WordWrapCaretWrapPos;
+    TIDESynEditor(ASynEdit).WordWrapForceHomeEnd  := FWordWrapForceHomeEnd;
+    TIDESynEditor(ASynEdit).WordWrapMinWidth      := WordWrapMinWidth;
+    if WordWrapFixedWidth then
+      TIDESynEditor(ASynEdit).WordWrapMaxWidth      := WordWrapMinWidth
+    else
+      TIDESynEditor(ASynEdit).WordWrapMaxWidth      := WordWrapMaxWidth;
+    TIDESynEditor(ASynEdit).WordWrapIndent           := WordWrapIndent;
+    TIDESynEditor(ASynEdit).WordWrapIndentUseOffset  := WordWrapIndentUseOffset;
+    TIDESynEditor(ASynEdit).WordWrapIndentMin        := WordWrapIndentMin;
+    TIDESynEditor(ASynEdit).WordWrapIndentMax        := WordWrapIndentMax;
+    TIDESynEditor(ASynEdit).WordWrapIndentMaxRel     := WordWrapIndentMaxRel;
   end
   else
   begin
@@ -7886,6 +7914,8 @@ begin
     SetGutterColorByClass(ahaModifiedLine,    TSynGutterChanges);
     SetGutterColorByClass(ahaCodeFoldingTree, TSynGutterCodeFolding);
     SetGutterColorByClass(ahaGutterSeparator, TSynGutterSeparator);
+    if assigned(ASynEdit.Gutter.Parts.ByClass[TSynGutterMarks, 0]) then
+      ASynEdit.Gutter.Parts.ByClass[TSynGutterMarks, 0].MarkupInfo.Clear; // always use gutter color for marks
     Attri := AttributeByEnum[ahaCodeFoldingTreeCurrent];
     if Attri <> nil then begin
       if ASynEdit.Gutter.Parts.ByClass[TSynGutterCodeFolding,0] <> nil then

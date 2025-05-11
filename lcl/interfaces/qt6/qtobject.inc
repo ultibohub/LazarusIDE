@@ -41,7 +41,6 @@ begin
     QGuiApplication_setHighDpiScaleFactorRoundingPolicy(QtHighDpiScaleFactorRoundingPolicy_Round);
     App := QApplication_Create(@argc, argv);
   end;
-  QCoreApplication_setAttribute(QtAA_DontUseNativeDialogs, False);
 
   {$IFDEF QtUseNativeEventLoop}
   FMainTimerID := -1;
@@ -49,6 +48,13 @@ begin
   {$J+}
   QtVersionInt(QtVersionMajor, QtVersionMinor, QtVersionMicro);
   {$J-}
+
+  {$IFDEF DARWIN}
+  if (QtVersionMajor = 6) and (QtVersionMinor < 8) then
+  {$ENDIF}
+    QCoreApplication_setAttribute(QtAA_DontUseNativeDialogs, False);
+
+
   FCachedMenuBarHeight := -1;
   FAppEvenFilterHook := nil;
   {$IFDEF QTUSEFOCUSCHANGEDHOOK}

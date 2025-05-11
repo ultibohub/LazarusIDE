@@ -6009,13 +6009,14 @@ end;
  ------------------------------------------------------------------------------}
 procedure UpdateInnerMenuItem(LCLMenuItem: TMenuItem; MenuItemWidget: PGtkWidget;
   NewShortCut, ShortCutKey2: TShortCut);
-const
-  WidgetDirection : array[boolean] of longint = (GTK_TEXT_DIR_LTR, GTK_TEXT_DIR_RTL);
 
   function UseRTL: Boolean;
   begin
     Result := LCLMenuItem.GetIsRightToLeft;
   end;
+
+const
+  WidgetDirection : array[boolean] of longint = (GTK_TEXT_DIR_LTR, GTK_TEXT_DIR_RTL);
 var
   HBoxWidget: PGtkWidget;
 
@@ -6027,7 +6028,13 @@ var
     if (MenuItemWidget = nil) or (LCLMenuItem = nil) then
       Exit;
     LabelWidget := g_object_get_data(PGObject(MenuItemWidget), 'LCLLabel');
-    Gtk2Widgetset.SetLabelCaption(LabelWidget, LCLMenuItem.Caption);
+    if LCLMenuItem.Default then
+      Gtk2Widgetset.SetLabelCaptionMarkup(LabelWidget,
+          '<b>'+EscapeMarkups(Ampersands2Underscore(LCLMenuItem.Caption))+'</b>',
+          False, False)
+    else
+      Gtk2Widgetset.SetLabelCaption(LabelWidget, LCLMenuItem.Caption);
+
     gtk_widget_set_direction(PGtkWidget(LabelWidget), WidgetDirection[UseRTL]);
   end;
   
@@ -6057,15 +6064,26 @@ var
       if LabelWidget = nil then
       begin
         // create a label for the ShortCut
-        LabelWidget := PGtkLabel(gtk_label_new(PChar(Pointer(s))));
+        LabelWidget := PGtkLabel(gtk_label_new(''));
         g_object_set_data(PGObject(MenuItemWidget), 'LCLShortCutLabel', LabelWidget);
+        gtk_label_set_use_markup(LabelWidget, True);
         gtk_container_add(GTK_CONTAINER(HBoxWidget), PGtkWidget(LabelWidget));
+
+        if LCLMenuItem.Default then
+          gtk_label_set_markup(LabelWidget, PChar('<b>'+EscapeMarkups(s)+'</b>'))
+        else
+          gtk_label_set_text(LabelWidget, PChar(s));
+
         gtk_widget_show(PGtkWidget(LabelWidget));
       end
       else
       begin
-        gtk_label_set_text(LabelWidget, PChar(Pointer(s)));
+        if LCLMenuItem.Default then
+          gtk_label_set_markup(LabelWidget, PChar('<b>'+EscapeMarkups(s)+'</b>'))
+        else
+          gtk_label_set_text(LabelWidget, PChar(s));
       end;
+
       gtk_widget_set_direction(PGtkWidget(LabelWidget), GTK_TEXT_DIR_LTR); //Shortcut always LTR
       if UseRTL then
         gtk_misc_set_alignment(GTK_MISC(LabelWidget), 0.0, 0.5)
@@ -6114,6 +6132,8 @@ var
     gtk_container_add(GTK_CONTAINER(HBoxWidget), PGtkWidget(LabelWidget));
     SetMenuItemLabelText(LCLMenuItem, MenuItemWidget);
     //gtk_accel_label_set_accel_widget(GTK_ACCEL_LABEL(LabelWidget), MenuItemWidget);
+    gtk_label_set_use_underline(LabelWidget, True);
+    gtk_label_set_use_markup(LabelWidget, True);
     gtk_widget_show(PGtkWidget(LabelWidget));
   end;
   
@@ -9166,6 +9186,16 @@ begin
   end;
 end;
 
+function EscapeMarkups(const Str: String): String;
+var
+  s_escaped: Pgchar;
+begin
+  s_escaped := g_markup_escape_text(PChar(Str), Length(Str));
+  //MaxM: maybe #95 but even with the escape it is seen as _ and treated as mnemonic
+  Result := StringReplace(s_escaped, '__', '&#32;', [rfReplaceAll]);
+  g_free(s_escaped);
+end;
+
 {-------------------------------------------------------------------------------
   Creates a new PChar. Deletes escaping ampersands, replaces the first single
   ampersand with an underscore and deletes all other single ampersands.
@@ -9186,28 +9216,32 @@ end;
 -------------------------------------------------------------------------------}
 function Ampersands2Underscore(const ASource: String): String;
 var
-  n: Integer;
+  n, len: Integer;
   FirstFound: Boolean;
+  s: String;
 begin
   //TODO: escape underscores
+  Result := '';
   FirstFound := False;
-  Result := ASource;
   n := 1;
-  while n <= Length(Result) do
+  len := Length(ASource);
+  while n <= len do
   begin
-    if Result[n] = '&' then
-    begin
-      if FirstFound
-      or ( (n < Length(Result)) and (Result[n+1] = '&') ) // got &&
-      then begin
-        Delete(Result, n, 1);
-        if not FirstFound then
-          Inc(n);               // Skip the second & of &&
-      end
-      else begin
-        FirstFound := True;
-        Result[n] := '_';
-      end;
+    case ASource[n] of
+      '_': Result := Result + '__';
+      '&': begin
+          if (n < len) and (ASource[n+1] = '&') then // got &&
+          begin
+            Result := Result + '&';
+            Inc(n);               // Skip the second & of &&
+          end
+          else if not FirstFound then
+          begin
+            Result := Result + '_';
+            FirstFound := True;
+          end;
+        end;
+      else Result := Result + ASource[n];
     end;
     Inc(n);
   end;

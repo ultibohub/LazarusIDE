@@ -3637,6 +3637,7 @@ resourcestring
   lisFRISearchInCommentsToo = 'Search in comments too';
   lisFRISearch = 'Search';
   lisFindOverridesToo = 'Find overrides too';
+  lisIncludeLFMs = 'Including LFM files';
   lisCodeToolsOptsColon       = 'Colon';
   lisCodeToolsOptsSemicolon   = 'Semicolon';
   lisCodeToolsOptsComma       = 'Comma';
@@ -6377,8 +6378,8 @@ resourcestring
   optDispGutterSeparator = 'Separator';
   optDispGutterFolding = 'Folding';
   optDispGutterNoCurrentLineColor = 'No current line color';
-  optDispGutterUseCurrentLineColor = 'Use current line color';
-  optDispGutterUseCurrentLineNumberColor = 'Use current line number color';
+  optDispGutterUseCurrentLineColor = 'Use current line color (gutter: other)';
+  optDispGutterUseCurrentLineNumberColor = 'Use current line number color (gutter: number)';
   dlgMatchWords = 'Match words';
   dlgKeyWord = 'Keyword';
   dlgModifier = 'Modifier';
