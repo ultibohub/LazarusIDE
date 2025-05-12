@@ -331,6 +331,7 @@ begin
        (aTargetController='RPI4B') or
        (aTargetController='RPI400') or
        (aTargetController='RPIZERO2W') or
+       (aTargetController='QEMUVPB') or
        (aTargetController='QEMURPI2B') or
        (aTargetController='QEMURPI3A') or
        (aTargetController='QEMURPI3B') then
@@ -358,7 +359,6 @@ begin
   if (aTargetController='RPIA') or 
      (aTargetController='RPIB') or
      (aTargetController='RPIZERO') or
-     (aTargetController='QEMUVPB') or
      (aTargetController='QEMURPIA') or
      (aTargetController='QEMURPIZERO') then
   begin
@@ -377,6 +377,7 @@ begin
           (aTargetController='RPI4B') or
           (aTargetController='RPI400') or
           (aTargetController='RPIZERO2W') or
+          (aTargetController='QEMUVPB') or
           (aTargetController='QEMURPI2B') or
           (aTargetController='QEMURPI3A') or
           (aTargetController='QEMURPI3B') then
