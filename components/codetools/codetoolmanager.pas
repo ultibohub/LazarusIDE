@@ -395,6 +395,7 @@ type
                           UseCache: boolean = true): string;// value of macro #Namespaces
     function GetNamespacedIncludesForDirectory(const Directory: string;
                           UseCache: boolean = true): string;
+    function IsUnitInUnitPath(const SrcFilename, TargetFileName: string; aCache: TPointerToPointerTree = nil): boolean;
 
     // simple global defines for tests and simple projects
     function GetGlobalDefines(CreateIfNotExists: boolean = true): TDefineTemplate;
@@ -561,7 +562,8 @@ type
     function GatherOverloads(Code: TCodeBuffer; X,Y: integer;
           out Graph: TDeclarationOverloadsGraph): boolean;
 
-    // find references, rename identifier, remove identifier. For unit/program name see FindSourceNameReferences
+    // find references, rename identifier, remove identifier.
+    // For unit/program name see FindSourceNameReferences
     function FindReferences(IdentifierCode: TCodeBuffer;
           X, Y: integer; SearchInCode: TCodeBuffer; SkipComments: boolean;
           var ListOfPCodeXYPosition: TFPList;
@@ -576,22 +578,25 @@ type
           DeclarationCode: TCodeBuffer; DeclarationCaretXY: PPoint): boolean;
     function RenameIdentifierInLFMs(TreeOfPCodeXYPosition: TAVLTree;
           const OldIdentifier, NewIdentifier: string): boolean;
+    function UpdateFindIdentifierRefCache(IdentifierCode: TCodeBuffer; X, Y: integer;
+          var Cache: TFindIdentifierReferenceCache  // you must free Cache
+          ): boolean;
 
     // find all references of the source name of a unit, program
     function FindSourceNameReferences(TargetFilename: string;
           Files: TStringList; SkipComments: boolean;
           out ListOfSrcNameRefs: TObjectList; WithDuplicates: boolean = false): boolean;
-    function SourceHasUnitInUses(Source, UnitCode: TCodeBuffer): boolean;
-    //SourceHasUnitInUses compares Target SourceName with uses name (which might be shorter or different) -> ToDo: check if this function is needed
+    function SourceHasUnitInUses(Code: TCodeBuffer; const TargetUnitFilename: string;
+          CheckImplementation: boolean = true): boolean;
     function RenameSourceNameReferences(OldFilename, NewFilename, NewSrcname: string;
           ListOfSrcNameRefs: TObjectList): boolean;
 
     // find all references inside UnitCode to TargetCode
     function FindUnitReferences(UnitCode, TargetCode: TCodeBuffer;
-          SkipComments: boolean; var ListOfPCodeXYPosition: TFPList): boolean;
+          SkipComments: boolean; var ListOfPCodeXYPosition: TFPList): boolean; deprecated 'use FindSourceNameReferences instead';
     function FindUsedUnitReferences(Code: TCodeBuffer; X, Y: integer;
           SkipComments: boolean; out UsedUnitFilename: string;
-          var ListOfPCodeXYPosition: TFPList): boolean;
+          var ListOfPCodeXYPosition: TFPList): boolean; deprecated 'use FindSourceNameReferences instead';
 
     function ReplaceWord(Code: TCodeBuffer; const OldWord, NewWord: string;
           ChangeStrings: boolean): boolean;
@@ -602,12 +607,12 @@ type
           const WithExpr: string; // if empty: collect Candidates
           Candidates: TStrings): boolean;
     function ChangeParamList(Code: TCodeBuffer;
-       Changes: TObjectList; // list of TChangeParamListItem
-       var ProcPos: TCodeXYPosition; // if it is in this unit the proc declaration is changed and this position is cleared
-       TreeOfPCodeXYPosition: TAVLTree // positions in this unit are processed and removed from the tree
-       ): boolean;
+          Changes: TObjectList; // list of TChangeParamListItem
+          var ProcPos: TCodeXYPosition; // if it is in this unit the proc declaration is changed and this position is cleared
+          TreeOfPCodeXYPosition: TAVLTree // positions in this unit are processed and removed from the tree
+          ): boolean;
     procedure ConvertTreeOf_CodeXYPosToToolCleanPos(TreeOfPCodeXYPosition: TAVLTree;
-      out TreeOfPCodeToolPos: TAVLTree);
+          out TreeOfPCodeToolPos: TAVLTree);
 
     // resourcestring sections
     function GatherResourceStringSections(
@@ -773,9 +778,11 @@ type
     function FindUsedUnitFiles(Code: TCodeBuffer; var MainUsesSection: TStrings
           ): boolean; // only main uses section, if unit not found, returns "unitname" or "unitname in 'filename'"
     function FindUsedUnitFiles(Code: TCodeBuffer; var MainUsesSection,
-          ImplementationUsesSection: TStrings): boolean; // names in the uses section
+          ImplementationUsesSection: TStrings): boolean;
     function FindUsedUnitNames(Code: TCodeBuffer; var MainUsesSection,
-          ImplementationUsesSection: TStrings): boolean; // ignoring 'in'
+          ImplementationUsesSection: TStrings): boolean; // names in the uses section, ignoring 'in'
+    function FindUsedDottedUnitNames(Code: TCodeBuffer; var MainUsesSection,
+          ImplementationUsesSection: TStrings): boolean; deprecated 'use FindUsedUnitNames instead'; // ignoring 'in'
     function FindMissingUnits(Code: TCodeBuffer; var MissingUnits: TStrings;
           FixCase: boolean = false; SearchImplementation: boolean = true): boolean;
     function FindDelphiProjectUnits(Code: TCodeBuffer;
@@ -800,13 +807,18 @@ type
     property OnFindDefineProperty: TOnFindDefineProperty
                                            read FOnFindDefineProperty
                                            write FOnFindDefineProperty;
-    function FindLFMFileName(Code: TCodeBuffer): string;
+    function FindLFMFileName(Code: TCodeBuffer): string; // checks old lrs file first
     function CheckLFM(UnitCode, LFMBuf: TCodeBuffer; out LFMTree: TLFMTree;
           RootMustBeClassInUnit, RootMustBeClassInIntf,
           ObjectsMustExist: boolean): boolean;
     function ParseLFM(LFMBuf: TCodeBuffer; out LFMTree: TLFMTree): boolean;
+    function FindLFMReferences(IdentifierCode: TCodeBuffer;
+          X, Y: integer; PascalCode, LFMCode: TCodeBuffer;
+          var LFMReferences: TCodeXYPositions;
+          var Cache: TFindIdentifierReferenceCache;  // you must free Cache
+          const Flags: TFindRefsFlags = frfAllLFM): boolean;
     function GatherReferencesInLFM(PascalBuffer, LFMBuffer: TCodeBuffer;
-          const Identifier: string; DeclNode: TCodeTreeNode;
+          const Identifier: string; DeclTool: TCodeTool; DeclNode: TCodeTreeNode;
           var LFMReferences: TCodeXYPositions;
           const Flags: TFindRefsFlags): Boolean;
     function FindNextResourceFile(Code: TCodeBuffer;
@@ -1849,6 +1861,62 @@ begin
   end;
 end;
 
+function TCodeToolManager.IsUnitInUnitPath(const SrcFilename, TargetFileName: string;
+  aCache: TPointerToPointerTree): boolean;
+
+  function CanFindFile(const CurFilename: string): boolean;
+  begin
+    Result:=false;
+    if FilenameIsAbsolute(TargetFilename) then exit;
+    Result:=DoOnFindUsedUnit(CurFilename,ExtractFileNameOnly(TargetFileName),'')<>nil;
+    {$IFDEF VerboseFindSourceNameReferences}
+    if Result then
+      debugln(['TCodeToolManager.IsUnitInUnitPath File ',SrcFilename,', virtual target in unit path']);
+    {$ENDIF}
+  end;
+
+var
+  Dir, CurUnitName, InFilename: String;
+  DirCache: TCTDirectoryCache;
+  p: TObject;
+begin
+  Dir:=ExtractFilePath(SrcFilename);
+  DirCache:=DirectoryCachePool.GetCache(Dir,true,false);
+  if DirCache=nil then exit(false);
+  if aCache<>nil then
+    p:=TObject(aCache[DirCache])
+  else
+    p:=nil;
+  if p=DirectoryCachePool then begin
+    // directory has target in unit path
+    Result:=true;
+  end else if p=Self then begin
+    // directory does not have target in unit path
+    // -> check custom search
+    Result:=CanFindFile(SrcFilename);
+  end else begin
+    // directory not yet tested
+    CurUnitName:=ExtractFileNameOnly(TargetFileName);
+    InFilename:='';
+    if DirCache.FindUnitSourceInCompletePath(CurUnitName,InFilename,true)<>'' then
+    begin
+      {$IFDEF VerboseFindSourceNameReferences}
+      debugln(['TCodeToolManager.IsUnitInUnitPath File ',SrcFilename,', target in unit path']);
+      {$ENDIF}
+      if aCache<>nil then
+        aCache.Add(DirCache,DirectoryCachePool);
+      Result:=true;
+    end else if not CanFindFile(SrcFilename) then begin
+      {$IFDEF VerboseFindSourceNameReferences}
+      debugln(['TCodeToolManager.IsUnitInUnitPath File ',SrcFilename,', target NOT in unit path, SKIP']);
+      {$ENDIF}
+      if aCache<>nil then
+        aCache.Add(DirCache,Self);
+      Result:=false;
+    end;
+  end;
+end;
+
 function TCodeToolManager.GetGlobalDefines(CreateIfNotExists: boolean
   ): TDefineTemplate;
 begin
@@ -2845,8 +2913,6 @@ function TCodeToolManager.FindReferences(IdentifierCode: TCodeBuffer; X, Y: inte
   var Cache: TFindIdentifierReferenceCache; const Flags: TFindRefsFlags): boolean;
 var
   CursorPos: TCodeXYPosition;
-  NewTopLine: integer;
-  ImplementationNode: TCodeTreeNode;
 begin
   Result:=false;
   {$IFDEF CTDEBUG}
@@ -2856,70 +2922,13 @@ begin
     debugln(['TCodeToolManager.FindReferences A SearchInCode=',SearchInCode.Filename]);
   {$ENDIF}
   ListOfPCodeXYPosition:=nil;
-  if Cache=nil then
-    Cache:=TFindIdentifierReferenceCache.Create;
-  if (Cache.SourcesChangeStep=SourceCache.ChangeStamp)
-  and (Cache.SourcesChangeStep<>CTInvalidChangeStamp64)
-  and (Cache.FilesChangeStep=FileStateCache.TimeStamp)
-  and (Cache.FilesChangeStep<>CTInvalidChangeStamp64)
-  and (Cache.InitValuesChangeStep=DefineTree.ChangeStep)
-  and (Cache.InitValuesChangeStep<>CTInvalidChangeStamp)
-  and (Cache.IdentifierCode=IdentifierCode) and (Cache.X=X) and (Cache.Y=Y)
-  then begin
-    //debugln(['TCodeToolManager.FindReferences cache valid']);
-    // all sources and values are the same => use cache
-    Result:=true;
-  end else begin
-    //debugln(['TCodeToolManager.FindReferences cache not valid']);
-    //debugln(['TCodeToolManager.FindReferences IdentifierCode=',Cache.IdentifierCode=IdentifierCode,
-    //  ' X=',Cache.X=X,' Y=',Cache.Y=Y,
-    //  ' SourcesChangeStep=',Cache.SourcesChangeStep=SourceCache.ChangeStamp,',',Cache.SourcesChangeStep=CTInvalidChangeStamp64,
-    //  ' FilesChangeStep=',Cache.FilesChangeStep=FileStateCache.TimeStamp,',',Cache.FilesChangeStep=CTInvalidChangeStamp64,
-    //  ' InitValuesChangeStep=',Cache.InitValuesChangeStep=DefineTree.ChangeStep,',',Cache.InitValuesChangeStep=CTInvalidChangeStamp,
-    //  '']);
-    Cache.Clear;
-    Cache.IdentifierCode:=IdentifierCode;
-    Cache.X:=X;
-    Cache.Y:=Y;
-    Cache.SourcesChangeStep:=SourceCache.ChangeStamp;
-    Cache.FilesChangeStep:=FileStateCache.TimeStamp;
-    Cache.InitValuesChangeStep:=DefineTree.ChangeStep;
 
-    if not InitCurCodeTool(IdentifierCode) then exit;
-    CursorPos.X:=X;
-    CursorPos.Y:=Y;
-    CursorPos.Code:=IdentifierCode;
-    try
-      Result:=FCurCodeTool.FindDeclaration(CursorPos,[fsfFindMainDeclaration,fsfSearchSourceName],
-                       Cache.NewTool,Cache.NewNode,Cache.NewPos,NewTopLine);
-    except
-      on e: Exception do HandleException(e);
-    end;
-    if not Result then begin
-      debugln(['TCodeToolManager.FindReferences FCurCodeTool.FindDeclaration failed']);
-      exit;
-    end;
-    // check if scope can be limited
-    if Cache.NewTool<>nil then begin
-      Cache.IsPrivate:=(Cache.NewTool.GetSourceType in [ctnLibrary,ctnProgram]);
-      if not Cache.IsPrivate then begin
-        ImplementationNode:=Cache.NewTool.FindImplementationNode;
-        if (ImplementationNode<>nil)
-        and (Cache.NewNode.StartPos>=ImplementationNode.StartPos) then
-          Cache.IsPrivate:=true;
-      end;
-      if not Cache.IsPrivate then begin
-        if (Cache.NewNode.GetNodeOfTypes([ctnParameterList,ctnClassPrivate])<>nil) then
-          Cache.IsPrivate:=true;
-      end;
-    end;
-  end;
-  if (not Result) or (Cache.NewNode=nil) then begin
+  if not UpdateFindIdentifierRefCache(IdentifierCode,X,Y,Cache)
+      or (Cache.NewNode=nil) then begin
     DebugLn('TCodeToolManager.FindReferences unable to FindDeclaration ',IdentifierCode.Filename,' x=',dbgs(x),' y=',dbgs(y));
     exit;
   end;
   Result:=true;
-  if NewTopLine=0 then ;
   if not InitCurCodeTool(SearchInCode) then exit;
   if Cache.IsPrivate and (FCurCodeTool<>Cache.NewTool) then begin
     {$IFDEF VerboseFindReferences}
@@ -2930,7 +2939,7 @@ begin
 
   CursorPos:=Cache.NewPos;
   {$IF defined(CTDEBUG) or defined(VerboseFindReferences)}
-  DebugLn('TCodeToolManager.FindReferences Searching ',dbgs(FCurCodeTool.Scanner<>nil),' for reference to x=',dbgs(CursorPos.X),' y=',dbgs(CursorPos.Y),' ',CursorPos.Code.Filename);
+  DebugLn('TCodeToolManager.FindReferences Searching "',SearchInCode.Filename,'" for reference to x=',dbgs(CursorPos.X),' y=',dbgs(CursorPos.Y),' ',CursorPos.Code.Filename);
   {$ENDIF}
   try
     Result:=FCurCodeTool.FindReferences(CursorPos,SkipComments,
@@ -3064,10 +3073,10 @@ function TCodeToolManager.FindSourceNameReferences(TargetFilename: string; Files
   SkipComments: boolean; out ListOfSrcNameRefs: TObjectList; WithDuplicates: boolean): boolean;
 var
   i, j, InFilenameCleanPos: Integer;
-  Filename, Dir, TargetUnitName, InFilename, LocalSrcName, CurUnitName: String;
+  Filename, TargetUnitName, InFilename, LocalSrcName, CurUnitName: String;
   Code: TCodeBuffer;
-  Tools, DirCachesSearch, DirCachesSkip: TFPList;
-  DirCache: TCTDirectoryCache;
+  Tools: TFPList;
+  DirCaches: TPointerToPointerTree;
   TreeOfPCodeXYPosition: TAVLTree;
   Refs: TSrcNameRefs;
   Node, NextNode: TAVLTreeNode;
@@ -3092,8 +3101,7 @@ begin
   TargetUnitName:=ExtractFileNameOnly(TargetFilename);
   ListOfSrcNameRefs:=nil;
   Tools:=TFPList.Create;
-  DirCachesSearch:=TFPList.Create;
-  DirCachesSkip:=TFPList.Create;
+  DirCaches:=TPointerToPointerTree.Create;
   try
     // search in every file
     for i:=0 to Files.Count-1 do begin
@@ -3109,31 +3117,9 @@ begin
       if j>=0 then continue; // skip duplicate
 
       if CompareFilenames(TargetFilename,Filename)<>0 then begin
-        // check if directory has target in unitpath
-        Dir:=ExtractFilePath(Filename);
-        DirCache:=DirectoryCachePool.GetCache(Dir,true,false);
-        if DirCachesSkip.IndexOf(DirCache)>=0 then begin
-          // this directory does not have target in unit path
-          // check custom search
-          if not CanFindFile(Filename) then
-            continue;
-        end else if DirCachesSearch.IndexOf(DirCache)<0 then begin
-          CurUnitName:=TargetUnitName;
-          InFilename:='';
-          if DirCache.FindUnitSourceInCompletePath(CurUnitName,InFilename,true)<>'' then
-          begin
-            {$IFDEF VerboseFindSourceNameReferences}
-            debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', target in unit path']);
-            {$ENDIF}
-            DirCachesSearch.Add(DirCache);
-          end else if not CanFindFile(Filename) then begin
-            {$IFDEF VerboseFindSourceNameReferences}
-            debugln(['TCodeToolManager.FindSourceNameReferences File ',Filename,', target NOT in unit path, SKIP']);
-            {$ENDIF}
-            DirCachesSkip.Add(DirCache);
-            continue;
-          end;
-        end;
+        // check if filename has target in unitpath
+        if not IsUnitInUnitPath(Filename,TargetFilename,DirCaches) then
+          continue;
       end;
 
       Code:=LoadFile(Filename,true,false);
@@ -3198,51 +3184,30 @@ begin
       ListOfSrcNameRefs.Add(Refs);
     end;
   finally
-    DirCachesSearch.Free;
-    DirCachesSkip.Free;
+    DirCaches.Free;
     Tools.Free;
   end;
 
   Result:=true;
 end;
 
-function TCodeToolManager.SourceHasUnitInUses(Source, UnitCode: TCodeBuffer
-  ): boolean;
-//function is not applicable for partially qualified unit names,
-// assumed that for units with lfm part it will never happen
-var
-  MainUsesSection, ImplUsesSection : TStrings;
-  TargetUnit: string;
-  i: integer;
+function TCodeToolManager.SourceHasUnitInUses(Code: TCodeBuffer; const TargetUnitFilename: string;
+  CheckImplementation: boolean): boolean;
 begin
   Result:=false;
-  if (Source=nil) or (UnitCode=nil) then exit;
-  if (Source=UnitCode) then exit(true);
-  if UnitCode.Scanner=nil then begin
-    debugln(['Warning: TCodeToolManager.SourceHasUnitInUses target unit was not parsed -> skipped']);
-    exit(false);
+  if (Code=nil) or (TargetUnitFilename='') then exit;
+  {$IFDEF CTDEBUG}
+  DebugLn('TCodeToolManager.SourceHasUnitInUses A "',Code.Filename,'" Target="',TargetUnitFilename,'"');
+  {$ENDIF}
+  if CompareFilenames(Code.Filename,TargetUnitFilename)=0 then exit(true);
+
+  if not InitCurCodeTool(Code) then exit;
+  try
+    Result:=FCurCodeTool.FindUnitFileInAllUsesSections(TargetUnitFilename,CheckImplementation)<>nil;
+  except
+    on e: Exception do HandleException(e);
   end;
-  TargetUnit:=UnitCode.Scanner.SourceName;
-  if TargetUnit='' then begin
-    debugln(['Warning: TCodeToolManager.SourceHasUnitInUses target unitname was not parsed -> skipped']);
-    exit(false);
-  end;
-
-  MainUsesSection:=nil;
-  ImplUsesSection:=nil;
-  FindUsedUnitNames(Source,MainUsesSection, ImplUsesSection); // this returns the names in the uses section, not the actual unitnames
-
-  if MainUsesSection<>nil then
-  for i:=0 to MainUsesSection.Count-1 do
-    if CompareDottedIdentifiers(PChar(MainUsesSection.Names[i]),
-      PChar(TargetUnit))=0 then  exit(true);
-
-  if ImplUsesSection<>nil then
-  for i:=0 to ImplUsesSection.Count-1 do
-    if CompareDottedIdentifiers(PChar(ImplUsesSection.Names[i]),
-      PChar(TargetUnit))=0 then  exit(true);
 end;
-
 
 function TCodeToolManager.RenameSourceNameReferences(OldFilename, NewFilename,
   NewSrcname: string; ListOfSrcNameRefs: TObjectList): boolean;
@@ -3472,6 +3437,77 @@ begin
 
   //DebugLn('TCodeToolManager.RenameIdentifierInLFMs Success');
   Result:=true;
+end;
+
+function TCodeToolManager.UpdateFindIdentifierRefCache(IdentifierCode: TCodeBuffer; X, Y: integer;
+  var Cache: TFindIdentifierReferenceCache): boolean;
+var
+  CursorPos: TCodeXYPosition;
+  NewTopLine: integer;
+  ImplementationNode: TCodeTreeNode;
+begin
+  Result:=false;
+  if Cache=nil then
+    Cache:=TFindIdentifierReferenceCache.Create;
+  if (Cache.SourcesChangeStep=SourceCache.ChangeStamp)
+  and (Cache.SourcesChangeStep<>CTInvalidChangeStamp64)
+  and (Cache.FilesChangeStep=FileStateCache.TimeStamp)
+  and (Cache.FilesChangeStep<>CTInvalidChangeStamp64)
+  and (Cache.InitValuesChangeStep=DefineTree.ChangeStep)
+  and (Cache.InitValuesChangeStep<>CTInvalidChangeStamp)
+  and (Cache.IdentifierCode=IdentifierCode) and (Cache.X=X) and (Cache.Y=Y)
+  then begin
+    //debugln(['TCodeToolManager.FindReferences cache valid']);
+    // all sources and values are the same => use cache
+    Result:=true;
+  end else begin
+    //debugln(['TCodeToolManager.FindReferences cache not valid']);
+    //debugln(['TCodeToolManager.FindReferences IdentifierCode=',Cache.IdentifierCode=IdentifierCode,
+    //  ' X=',Cache.X=X,' Y=',Cache.Y=Y,
+    //  ' SourcesChangeStep=',Cache.SourcesChangeStep=SourceCache.ChangeStamp,',',Cache.SourcesChangeStep=CTInvalidChangeStamp64,
+    //  ' FilesChangeStep=',Cache.FilesChangeStep=FileStateCache.TimeStamp,',',Cache.FilesChangeStep=CTInvalidChangeStamp64,
+    //  ' InitValuesChangeStep=',Cache.InitValuesChangeStep=DefineTree.ChangeStep,',',Cache.InitValuesChangeStep=CTInvalidChangeStamp,
+    //  '']);
+    Cache.Clear;
+    Cache.IdentifierCode:=IdentifierCode;
+    Cache.X:=X;
+    Cache.Y:=Y;
+    Cache.SourcesChangeStep:=SourceCache.ChangeStamp;
+    Cache.FilesChangeStep:=FileStateCache.TimeStamp;
+    Cache.InitValuesChangeStep:=DefineTree.ChangeStep;
+
+    if not InitCurCodeTool(IdentifierCode) then exit;
+    CursorPos.X:=X;
+    CursorPos.Y:=Y;
+    CursorPos.Code:=IdentifierCode;
+    try
+      Result:=FCurCodeTool.FindDeclaration(CursorPos,[fsfFindMainDeclaration,fsfSearchSourceName],
+                       Cache.NewTool,Cache.NewNode,Cache.NewPos,NewTopLine);
+    except
+      on e: Exception do HandleException(e);
+    end;
+    if not Result then begin
+      debugln(['TCodeToolManager.UpdateFindIdentifierRefCache FCurCodeTool.FindDeclaration failed']);
+      exit;
+    end;
+
+    GetIdentifierAt(Cache.NewPos.Code,Cache.NewPos.X,Cache.NewPos.Y,Cache.Identifier);
+
+    // check if scope can be limited
+    if Cache.NewTool<>nil then begin
+      Cache.IsPrivate:=(Cache.NewTool.GetSourceType in [ctnLibrary,ctnProgram]);
+      if not Cache.IsPrivate then begin
+        ImplementationNode:=Cache.NewTool.FindImplementationNode;
+        if (ImplementationNode<>nil)
+        and (Cache.NewNode.StartPos>=ImplementationNode.StartPos) then
+          Cache.IsPrivate:=true;
+      end;
+      if not Cache.IsPrivate then begin
+        if (Cache.NewNode.GetNodeOfTypes([ctnParameterList,ctnClassPrivate])<>nil) then
+          Cache.IsPrivate:=true;
+      end;
+    end;
+  end;
 end;
 
 function TCodeToolManager.ReplaceWord(Code: TCodeBuffer; const OldWord,
@@ -5856,6 +5892,22 @@ begin
   end;
 end;
 
+function TCodeToolManager.FindUsedDottedUnitNames(Code: TCodeBuffer;
+  var MainUsesSection, ImplementationUsesSection: TStrings): boolean;
+begin
+Result:=false;
+{$IFDEF CTDEBUG}
+DebugLn('TCodeToolManager.FindUsedUnitNames A ',Code.Filename);
+{$ENDIF}
+if not InitCurCodeTool(Code) then exit;
+try
+  Result:=FCurCodeTool.FindUsedDottedUnitNames(MainUsesSection,
+                                         ImplementationUsesSection);
+except
+  on e: Exception do Result:=HandleException(e);
+end;
+end;
+
 function TCodeToolManager.FindMissingUnits(Code: TCodeBuffer;
   var MissingUnits: TStrings; FixCase: boolean;
   SearchImplementation: boolean): boolean;
@@ -6018,10 +6070,56 @@ begin
   end;
 end;
 
-function TCodeToolManager.GatherReferencesInLFM(PascalBuffer,
-  LFMBuffer: TCodeBuffer; const Identifier: string;
-  DeclNode: TCodeTreeNode; var LFMReferences: TCodeXYPositions;
-  const Flags: TFindRefsFlags): Boolean;
+function TCodeToolManager.FindLFMReferences(IdentifierCode: TCodeBuffer; X, Y: integer; PascalCode,
+  LFMCode: TCodeBuffer; var LFMReferences: TCodeXYPositions;
+  var Cache: TFindIdentifierReferenceCache; const Flags: TFindRefsFlags): boolean;
+var
+  LFMTree: TLFMTree;
+  RootMustBeClassInUnit, RootMustBeClassInIntf, ObjectsMustExist: Boolean;
+begin
+  Result:=false;
+  {$IFDEF CTDEBUG}
+  DebugLn('TCodeToolManager.FindLFMReferences A ',IdentifierCode.Filename,' x=',dbgs(x),' y=',dbgs(y),' LFM=',LFMCode.Filename)
+  {$ENDIF}
+  if not UpdateFindIdentifierRefCache(IdentifierCode,X,Y,Cache)
+      or (Cache.NewNode=nil) then begin
+    DebugLn('TCodeToolManager.FindLFMReferences unable to FindDeclaration ',IdentifierCode.Filename,' x=',dbgs(x),' y=',dbgs(y));
+    exit;
+  end;
+  Result:=true;
+  if not InitCurCodeTool(PascalCode) then exit;
+  if Cache.IsPrivate and (FCurCodeTool<>Cache.NewTool) then begin
+    {$IFDEF VerboseFindReferences}
+    debugln(['TCodeToolManager.FindLFMReferences identifier is not reachable from unit "',PascalCode.Filename,'" => skipping search']);
+    {$ENDIF}
+    exit(true);
+  end;
+
+  {$IF defined(CTDEBUG) or defined(VerboseFindReferences)}
+  DebugLn('TCodeToolManager.FindLFMReferences Searching "',LFMCode.Filename,'" for reference to ',dbgs(Cache.NewPos));
+  {$ENDIF}
+  RootMustBeClassInUnit:=true;
+  RootMustBeClassInIntf:=true;
+  ObjectsMustExist:=true;
+  try
+    if LFMReferences=nil then
+      LFMReferences:=TCodeXYPositions.Create;
+    Result:=FCurCodeTool.GatherReferencesInLFM(LFMCode, LFMTree,
+      OnFindDefinePropertyForContext,
+      Cache.Identifier, TCodeTool(Cache.NewTool), Cache.NewNode,
+      LFMReferences,
+      Flags, RootMustBeClassInUnit, RootMustBeClassInIntf, ObjectsMustExist);
+  except
+    on e: Exception do HandleException(e);
+  end;
+  {$IFDEF CTDEBUG}
+  DebugLn(['TCodeToolManager.FindLFMReferences END ',Result]);
+  {$ENDIF}
+end;
+
+function TCodeToolManager.GatherReferencesInLFM(PascalBuffer, LFMBuffer: TCodeBuffer;
+  const Identifier: string; DeclTool: TCodeTool; DeclNode: TCodeTreeNode;
+  var LFMReferences: TCodeXYPositions; const Flags: TFindRefsFlags): Boolean;
 var
   LFMTree: TLFMTree;
   RootMustBeClassInUnit,RootMustBeClassInIntf,ObjectsMustExist: Boolean;
@@ -6039,11 +6137,10 @@ begin
   ObjectsMustExist:=true;
   if LFMReferences = nil then
     LFMReferences:=TCodeXYPositions.Create;
-
   try
-    Result:=FCurCodeTool.GatherReferencesInLFM(LFMBuffer,LFMTree,
-      OnFindDefinePropertyForContext, Identifier, DeclNode, LFMReferences,
-      Flags,RootMustBeClassInUnit,RootMustBeClassInIntf,ObjectsMustExist);
+    Result:=FCurCodeTool.GatherReferencesInLFM(LFMBuffer, LFMTree,
+      OnFindDefinePropertyForContext, Identifier, DeclTool, DeclNode, LFMReferences,
+      Flags, RootMustBeClassInUnit, RootMustBeClassInIntf, ObjectsMustExist);
   except
     on e: Exception do HandleException(e);
   end;

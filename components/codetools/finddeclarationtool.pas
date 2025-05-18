@@ -732,6 +732,7 @@ type
   TFindFileAtCursorFlags = set of TFindFileAtCursorFlag;
 const
   DefaultFindFileAtCursorAllowed = [Low(TFindFileAtCursorFlag)..high(TFindFileAtCursorFlag)];
+  frfAllLFM = [frfIncludingLFM,frfIncludingLFMProps];
 
 type
   //----------------------------------------------------------------------------
@@ -789,10 +790,6 @@ type
     function FindDeclarationInUsesSection(UsesNode: TCodeTreeNode;
       CleanPos: integer;
       out NewPos: TCodeXYPosition; out NewTopLine: integer): boolean;
-    function FindUnitFileInUsesSection(UsesNode: TCodeTreeNode;
-      const AFilename: string): TCodeTreeNode;
-    function FindUnitFileInAllUsesSections(const AFilename: string;
-      CheckMain: boolean = true; CheckImplementation: boolean = true): TCodeTreeNode;
     function FindEnumInContext(Params: TFindDeclarationParams): boolean;
     // sub methods for FindIdentifierInContext
     function DoOnIdentifierFound(Params: TFindDeclarationParams;
@@ -996,6 +993,10 @@ type
           out NamePos, InPos: TAtomPosition): boolean;
     function FindUnitInAllUsesSections(const AnUnitName: string;
           out NamePos, InPos: TAtomPosition): boolean;
+    function FindUnitFileInUsesSection(UsesNode: TCodeTreeNode;
+          const AFilename: string): TCodeTreeNode;
+    function FindUnitFileInAllUsesSections(const AFilename: string;
+          CheckMain: boolean = true; CheckImplementation: boolean = true): TCodeTreeNode;
     function GetUnitNameForUsesSection(TargetTool: TFindDeclarationTool): string;
     function IsHiddenUsedUnit(TheUnitName: PChar): boolean;
 
@@ -3025,10 +3026,10 @@ var
     // the change below was to accept '&' in unitname and lack of '&' in filename
     if UnitInFilename<>'' then begin
       if CompareDottedIdentifiers(PChar(ExtractFilename(UnitInFilename)),
-        PChar(TargetShortFilename))<>0 then
+          PChar(TargetShortFilename))<>0 then
         exit;
-    end else if CompareDottedIdentifiers(PChar(AUnitName),
-      PChar(TargetUnitName))<>0 then
+    end else if not DottedIdentifierEndsWith(PChar(TargetUnitName),
+        PChar(AUnitName)) then
       exit;
 
     // search in search paths

@@ -63,6 +63,7 @@ function SpecialCharsToSpaces(const s: string; FixUTF8: boolean): string;
 function ShortDotsLine(const Line: string): string;
 function BeautifyLineXY(const Filename, Line: string; X, Y: integer): string;
 function BreakString(const s: string; MaxLineLength, Indent: integer): string;
+function IntToStrWithSuffix(Value: PtrInt): string;
 
 // Conversions to and from a StringList
 function SplitString(const s: string; Delimiter: char): TStrings;
@@ -899,6 +900,38 @@ begin
     // cut string
     Src:=copy(Src,SplitPos,length(Src)-SplitPos+1);
   until false;
+end;
+
+function IntToStrWithSuffix(Value: PtrInt): string;
+// Like IntToStr but uses a suffix k,M,G,T for big numbers.
+var
+  Neg: Boolean;
+begin
+  if Value=0 then
+    exit('0');
+  Result:='';
+  Neg:=Value<0;
+  if Neg then
+    Value:=-Value;              // Absolute value
+  if Value>=100000 then begin
+    Value:=Value div 1000;
+    Result:='k';
+    if Value>=100000 then begin
+      Value:=Value div 1000;
+      Result:='M';
+      if Value>=100000 then begin
+        Value:=Value div 1000;
+        Result:='G';
+        if Value>=100000 then begin
+          Value:=Value div 1000;
+          Result:='T';
+        end;
+      end;
+    end;
+  end;
+  Result:=IntToStr(Value)+Result;
+  if Neg then
+    Result:='-'+Result;
 end;
 
 function SplitString(const s: string; Delimiter: char): TStrings;

@@ -85,6 +85,10 @@ type
     procedure TestRenameUsedUnit_FN_KeepShort;
     procedure TestRenameUsedUnit_InFilename;
     procedure TestRenameUsedUnit_LongestUnitnameWins;
+
+    // rename also in lfm
+    procedure TestRenameAlsoLFM_Variable;
+    procedure TestRenameAlsoLFM_Event;
   end;
 
 implementation
@@ -96,16 +100,18 @@ procedure TCustomTestRefactoring.RenameReferences(NewIdentifier: string; const F
 var
   Marker: TFDMarker;
   Tool: TCodeTool;
-  DeclX, DeclY, DeclTopLine: integer;
-  DeclCode: TCodeBuffer;
+  DeclX, DeclY, DeclTopLine, i: integer;
+  DeclCode, LFMCode, CurCode: TCodeBuffer;
   Files: TStringList;
   Graph: TUsesGraph;
   Completed: boolean;
   Node: TAVLTreeNode;
   UGUnit: TUGUnit;
   DeclarationCaretXY: TPoint;
-  PascalReferences: TAVLTree;
-  OldIdentifier: string;
+  PascalReferences, LFMTreeOfPCodeXYPosition: TAVLTree;
+  OldIdentifier, LFMFilename: string;
+  LFMFindRefCache: TFindIdentifierReferenceCache;
+  LFMReferences: TCodeXYPositions;
 begin
   if not IsDottedIdentifier(NewIdentifier) then
     Fail('TCustomTestRefactoring.RenameReferences invalid NewName="'+NewIdentifier+'"');
@@ -142,6 +148,9 @@ begin
   Files:=TStringList.Create;
   Graph:=nil;
   PascalReferences:=nil;
+  LFMReferences:=nil;
+  LFMFindRefCache:=nil;
+  LFMTreeOfPCodeXYPosition:=nil;
   try
     Files.Add(DeclCode.Filename);
     if CompareFilenames(DeclCode.Filename,Code.Filename)<>0 then
@@ -163,10 +172,41 @@ begin
     // search pascal source references
     if not CodeToolBoss.FindReferencesInFiles(Files,DeclCode,
         DeclarationCaretXY,true,PascalReferences,Flags) then begin
-      Fail('CodeToolBoss.FindReferencesInFiles failed at '+dbgs(DeclarationCaretXY)+' File='+Code.Filename);
+      Fail('CodeToolBoss.FindReferencesInFiles 20250515155115 failed at '+dbgs(DeclarationCaretXY)+' File='+Code.Filename);
     end;
 
     // todo: check for conflicts
+
+    if frfIncludingLFM in Flags then begin
+      if not CodeToolBoss.UpdateFindIdentifierRefCache(
+             DeclCode,DeclarationCaretXY.X,DeclarationCaretXY.Y,LFMFindRefCache)
+          or (LFMFindRefCache.NewNode=nil) then begin
+        Fail('CodeToolBoss.UpdateFindIdentifierRefCache 20250515155111 failed at '+dbgs(DeclarationCaretXY)+' File='+Code.Filename);
+      end;
+
+      for i:=0 to Files.Count-1 do begin
+        CurCode:=CodeToolBoss.FindFile(Files[i]);
+        if CurCode=nil then
+          Fail('CodeToolBoss.FindReferencesInFiles 20250515144047 source lost: "'+Files[i]+'"');
+        LFMFilename:=ChangeFileExt(CurCode.Filename,'.lfm');
+        LFMCode:=CodeToolBoss.FindFile(LFMFilename);
+        if (LFMCode=nil) or LFMCode.IsDeleted then continue;
+
+        if not CodeToolBoss.FindLFMReferences(LFMFindRefCache.NewPos.Code,LFMFindRefCache.NewPos.X,LFMFindRefCache.NewPos.Y,
+            CurCode,LFMCode,LFMReferences,LFMFindRefCache) then
+          Fail('CodeToolBoss.FindLFMReferences 20250515155330 failed for lfm: "'+LFMCode.Filename+'"');
+      end;
+
+      if (LFMReferences<>nil) and (LFMReferences.Count>0) then begin
+        LFMTreeOfPCodeXYPosition:=CreateTreeOfPCodeXYPosition;
+        for i:=0 to LFMReferences.Count-1 do
+          LFMTreeOfPCodeXYPosition.Add(LFMReferences.Items[i]);
+
+        if not CodeToolBoss.RenameIdentifierInLFMs(LFMTreeOfPCodeXYPosition,
+          OldIdentifier, NewIdentifier) then
+            Fail('TCustomTestRefactoring.RenameReferences in LFM failed');
+      end;
+    end;
 
     if not CodeToolBoss.RenameIdentifier(PascalReferences,
       OldIdentifier, NewIdentifier, DeclCode, @DeclarationCaretXY)
@@ -177,6 +217,8 @@ begin
     CodeToolBoss.FreeTreeOfPCodeXYPosition(PascalReferences);
     Graph.Free;
     Files.Free;
+    LFMFindRefCache.Free;
+    LFMTreeOfPCodeXYPosition.Free;
   end;
 end;
 
@@ -1960,6 +2002,110 @@ begin
     RedUnit.IsDeleted:=true;
     RedGreenUnit.IsDeleted:=true;
     RedGreenBlueUnit.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_Variable;
+var
+  Test1LFM, RedUnit: TCodeBuffer;
+begin
+  RedUnit:=CodeToolBoss.CreateFile('red.pas');
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    RedUnit.Source:='unit Red;'+LineEnding
+      +'interface'+LineEnding
+      +'type'+LineEnding
+      +'  TForm = class'+LineEnding
+      +'  end;'+LineEnding
+      +'  TButton = class'+LineEnding
+      +'  end;'+LineEnding
+      +'implementation'+LineEnding
+      +'end.';
+
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  Left = 353',
+      '  object Button1: TButton',
+      '  end',
+      'end']);
+
+    Add(['unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses red;',
+      'type',
+      '  TForm1 = class(TForm)',
+      '    Button1{#Rename}: TButton;',
+      '  end;',
+      'implementation',
+      'end.']);
+    RenameReferences('OkBtn',frfAllLFM);
+    CheckDiff(Test1LFM,[
+    'object Form1: TForm1',
+    '  Left = 353',
+    '  object OkBtn: TButton',
+    '  end',
+    'end']);
+
+  finally
+    RedUnit.IsDeleted:=true;
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_Event;
+var
+  Test1LFM, RedUnit: TCodeBuffer;
+begin
+  RedUnit:=CodeToolBoss.CreateFile('red.pas');
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    RedUnit.Source:='unit Red;'+LineEnding
+      +'interface'+LineEnding
+      +'type'+LineEnding
+      +'  TForm = class'+LineEnding
+      +'  end;'+LineEnding
+      +'  TButton = class'+LineEnding
+      +'  published'+LineEnding
+      +'    property OnClick: TNotifyEvent;'+LineEnding
+      +'  end;'+LineEnding
+      +'implementation'+LineEnding
+      +'end.';
+
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  Left = 353',
+      '  object Button1: TButton',
+      '    OnClick = Button1Click',
+      '  end',
+      'end']);
+
+    Add(['unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses red;',
+      'type',
+      '  TForm1 = class(TForm)',
+      '    Button1: TButton;',
+      '    procedure Button1Click{#Rename}(Sender: TObject);',
+      '  end;',
+      'implementation',
+      'procedure TForm1.Button1Click(Sender: TObject);',
+      'begin',
+      'end;',
+      'end.']);
+    RenameReferences('OkClicked',frfAllLFM);
+    CheckDiff(Test1LFM,[
+    'object Form1: TForm1',
+    '  Left = 353',
+    '  object Button1: TButton',
+    '    OnClick = OkClicked',
+    '  end',
+    'end']);
+
+  finally
+    RedUnit.IsDeleted:=true;
+    Test1LFM.IsDeleted:=true;
   end;
 end;
 

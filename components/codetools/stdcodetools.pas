@@ -138,6 +138,8 @@ type
                                 SourceChangeCache: TSourceChangeCache): boolean;
     function FindUsedUnitNames(var MainUsesSection,
                                ImplementationUsesSection: TStrings): boolean;
+    function FindUsedDottedUnitNames(var MainUsesSection,
+                               ImplementationUsesSection: TStrings): boolean; deprecated 'use FindUsedUnitNames instead';
     function FindUsedUnitNames(var List: TStringToStringTree): boolean;
     function FindUsedUnitFiles(var MainUsesSection: TStrings): boolean;
     function FindUsedUnitFiles(var MainUsesSection,
@@ -147,7 +149,9 @@ type
                                     UseContainsSection: boolean = false;
                                     IgnoreNormalUnits: boolean = false): boolean;
     function UsesSectionToFilenames(UsesNode: TCodeTreeNode): TStrings;
-    function UsesSectionToUnitnames(UsesNode: TCodeTreeNode): TStrings;
+    function UsesSectionToUnitnames(UsesNode: TCodeTreeNode): TStrings; // as written in uses section
+    function UsesSectionToDottedUnitnames(UsesNode: TCodeTreeNode): TStrings; deprecated 'use UsesSectionToUnitnames instead';
+
     function FindMissingUnits(var MissingUnits: TStrings; FixCase: boolean;
                               SearchImplementation: boolean;
                               SourceChangeCache: TSourceChangeCache): boolean;
@@ -176,9 +180,10 @@ type
           const OnFindDefineProperty: TOnFindDefinePropertyForContext;
           RootMustBeClassInUnit: boolean; RootMustBeClassInIntf: boolean;
           ObjectsMustExist: boolean): boolean;
-    function GatherReferencesInLFM(LFMBuffer: TCodeBuffer; out LFMTree: TLFMTree;
+    function GatherReferencesInLFM(LFMBuffer: TCodeBuffer;
+          out LFMTree: TLFMTree;
           const OnFindDefineProperty: TOnFindDefinePropertyForContext;
-          const Identifier: string; DeclNode: TCodeTreeNode;
+          const Identifier: string; DeclTool: TStandardCodeTool; DeclNode: TCodeTreeNode;
           ListOfReferences: TCodeXYPositions;
           const Flags: TFindRefsFlags; RootMustBeClassInUnit: boolean;
           RootMustBeClassInIntf: boolean; ObjectsMustExist: boolean): boolean;
@@ -1320,6 +1325,29 @@ begin
   Result:=true;
 end;
 
+function TStandardCodeTool.FindUsedDottedUnitNames(var MainUsesSection,
+  ImplementationUsesSection: TStrings): boolean;
+var
+  MainUsesNode, ImplementatioUsesNode: TCodeTreeNode;
+begin
+  MainUsesSection:=nil;
+  ImplementationUsesSection:=nil;
+  // find the uses sections
+  BuildTree(lsrImplementationUsesSectionEnd);
+  MainUsesNode:=FindMainUsesNode;
+  ImplementatioUsesNode:=FindImplementationUsesNode;
+  // create lists
+  try
+    MainUsesSection:=UsesSectionToDottedUnitNames(MainUsesNode);
+    ImplementationUsesSection:=UsesSectionToDottedUnitNames(ImplementatioUsesNode);
+  except
+    FreeAndNil(MainUsesSection);
+    FreeAndNil(ImplementationUsesSection);
+    raise;
+  end;
+  Result:=true;
+end;
+
 function TStandardCodeTool.FindUsedUnitNames(var List: TStringToStringTree
   ): boolean;
   
@@ -1520,6 +1548,24 @@ begin
   while Node<>nil do begin
     // read unit name
     AnUnitName:=ExtractUsedUnitName(Node);
+    if AnUnitName<>'' then
+      Result.Add(AnUnitName);
+    Node:=Node.PriorBrother;
+  end;
+end;
+
+function TStandardCodeTool.UsesSectionToDottedUnitnames(UsesNode: TCodeTreeNode
+  ): TStrings;
+var
+  AnUnitName: string;
+  Node: TCodeTreeNode;
+begin
+  Result:=TStringList.Create;
+  if UsesNode=nil then exit;
+  Node:=UsesNode.LastChild;
+  while Node<>nil do begin
+    // read unit name
+    AnUnitName:=ExtractIdentifierWithPoints(Node.StartPos,false);
     if AnUnitName<>'' then
       Result.Add(AnUnitName);
     Node:=Node.PriorBrother;
@@ -2789,24 +2835,73 @@ begin
   Result:=LFMTree.FirstError=nil;
 end;
 
-function TStandardCodeTool.GatherReferencesInLFM(LFMBuffer: TCodeBuffer;
-  out LFMTree: TLFMTree;
-  const OnFindDefineProperty: TOnFindDefinePropertyForContext;
-  const Identifier: string; DeclNode: TCodeTreeNode;
-  ListOfReferences: TCodeXYPositions;
-  const Flags: TFindRefsFlags;
-  RootMustBeClassInUnit: boolean;
-  RootMustBeClassInIntf: boolean;
+function TStandardCodeTool.GatherReferencesInLFM(LFMBuffer: TCodeBuffer; out LFMTree: TLFMTree;
+  const OnFindDefineProperty: TOnFindDefinePropertyForContext; const Identifier: string;
+  DeclTool: TStandardCodeTool; DeclNode: TCodeTreeNode; ListOfReferences: TCodeXYPositions;
+  const Flags: TFindRefsFlags; RootMustBeClassInUnit: boolean; RootMustBeClassInIntf: boolean;
   ObjectsMustExist: boolean): boolean;
 
 var
   ErrorCount: integer = 0;
   RootContext: TFindContext;
   ARef: TCodeXYPosition;
+  IdentifierPositions: array of integer; // all start positions of Identifier in the LFM
+
+  function FoundReference: string;
+  begin
+    Result:= ExtractFileNameOnly(LFMBuffer.Filename)+
+      ExtractFileExt(LFMBuffer.Filename)+
+      ' ('+IntToStr(ARef.Y)+','+IntToStr(ARef.X)+')';
+  end;
 
   procedure AddReference(const RefPos: TCodeXYPosition);
   begin
     ListOfReferences.Add(RefPos);
+    debugln(FoundReference); // when code stabilized will be commented out
+  end;
+
+  procedure FindCandidates;
+  var
+    s: String;
+    LFMStream: TMemoryStream;
+    Parser: TParser;
+    p: SizeInt;
+  begin
+    IdentifierPositions:=nil;
+    s:=LFMBuffer.Source;
+    if s='' then exit;
+
+    Parser:=nil;
+    LFMStream:=TMemoryStream.Create;
+    try
+      LFMStream.Write(s[1],length(s));
+      LFMStream.Position:=0;
+      Parser := TParser.Create(LFMStream);
+      repeat
+        Parser.NextToken;
+        if Parser.Token=#0 then
+          break
+        else if Parser.TokenSymbolIs(Identifier) then begin
+          p:=Parser.SourcePos+1-Length(Identifier);
+          Insert(p,IdentifierPositions,length(IdentifierPositions));
+        end;
+      until false;
+    finally
+      Parser.Free;
+      LFMStream.Free;
+    end;
+  end;
+
+  function NodeContainsCandidate(Node: TLFMTreeNode): boolean;
+  var
+    i, p: Integer;
+  begin
+    for i:=0 to length(IdentifierPositions)-1 do begin
+      p:=IdentifierPositions[i];
+      if (Node.StartPos<=p) and (Node.EndPos>p) then
+        exit(true);
+    end;
+    Result:=false;
   end;
 
   function CheckLFMObjectValues(LFMObject: TLFMObjectNode;
@@ -3156,6 +3251,8 @@ var
     IdentifierFound: Boolean;
     Caret: TPoint;
   begin
+    if not NodeContainsCandidate(LFMObject) then exit;
+
     // find variable for object
     // find identifier in Lookup Root
     LFMObjectName:=LFMObject.Name;
@@ -3183,8 +3280,6 @@ var
       if ChildContext.Node=DeclNode then begin // = Pascal declaration found
         //debugln(['CheckLFMChildObject matching to "', Identifier,'" found (var/field/property)']);
         Caret:=LFMTree.PositionToCaret(LFMObject.NamePosition);
-        //debugln([ExtractFileNameOnly(LFMBuffer.Filename)+
-        //  ExtractFileExt(LFMBuffer.Filename)+' (', Caret.Y,',',Caret.X,')']);
         ARef.X:=Caret.X;
         ARef.Y:=Caret.Y;
         AddReference(Aref);
@@ -3204,8 +3299,6 @@ var
       // = Pascal declaration found
       //debugln(['CheckLFMChildObject matching to "', Identifier,'" found (type/class)']);
       Caret:=LFMTree.PositionToCaret(LFMObject.TypeNamePosition);
-      //debugln([ExtractFileNameOnly(LFMBuffer.Filename)+
-      //  ExtractFileExt(LFMBuffer.Filename)+' (', Caret.Y,',',Caret.X,')']);
       ARef.X:=Caret.X;
       ARef.Y:=Caret.Y;
       AddReference(Aref);
@@ -3260,16 +3353,21 @@ var
   // ParentContext is the context, where properties are searched.
   //               This can be a class or a property.
   var
-    i: Integer;
+    i, TopLine: Integer;
     CurName: string;
     CurPropertyContext: TFindContext;
     SearchContext: TFindContext;
     PropDeclNode: TCodeTreeNode;
+    AnUnitName: string;
     Caret: TPoint;
+    CodeXYPosition, NewCodeXYPosition: TCodeXYPosition;
+    NewTool: TFindDeclarationTool;
+    NewNode: TCodeTreeNode;
+
   begin
     // find complete property name
     //DebugLn('CheckLFMProperty A LFMProperty Name="',LFMProperty.CompleteName,'" ParentContext=',FindContextToString(ParentContext));
-    PropertyContext:=CleanFindContext;
+    PropertyContext:=CleanFindContext; //out
 
     if LFMProperty.CompleteName='' then begin
       inc(ErrorCount);
@@ -3302,20 +3400,50 @@ var
 
       PropDeclNode:=CurPropertyContext.Node;
       PropertyContext:= CurPropertyContext; //out
-      if (PropDeclNode<>nil) and (PropDeclNode.Desc=ctnProcedure) then
-        PropDeclNode:= PropDeclNode.FirstChild; //->ctnProcedureHead
 
-      if PropDeclNode=DeclNode then begin // = Pascal declaration found
-        //debugln(['CheckLFMProperty matching to "', Identifier,'" found']);
-        if frfIncludingLFMProps in Flags then begin
-          Caret:=LFMTree.PositionToCaret(LFMProperty.NameParts.NamePositions[i]);
-          //debugln([ExtractFileNameOnly(LFMBuffer.Filename)+
-          //  ExtractFileExt(LFMBuffer.Filename)+' (', Caret.Y,',',Caret.X,')']);
-          ARef.X:=Caret.X;
-          ARef.Y:=Caret.Y;
-          AddReference(Aref);
-        end;
+      if not SameText(Identifier,CurName) then
+        break;
+
+      //if PropDeclNode.Desc=ctnProperty then begin
+      //  debugln([PropertyContext.Tool.GetSourceName,': ',
+      //    PropertyContext.Tool.ExtractProperty(PropDeclNode,[])]);
+      //end;
+
+      if PropDeclNode<>DeclNode then begin
+        // the comment below to be removed, for explanation what was observed:
+        // PropDeclNode found in Controls but DeclNode was in StdCtrls
+        // if property from DeclNode is a start to find declaration then this points
+        // at declaration at StdCtrls
+
+        SearchContext.Node:=DeclNode;
+        AnUnitName:=DeclTool.Scanner.SourceName;
+        if AnUnitName = '' then
+        ;
+        SearchContext.Tool:=FindCodeToolForUsedUnit(AnUnitName,'',true);
+        if SearchContext.Tool = nil then
+          break;
+        SearchContext.Tool.MoveCursorToPropName(DeclNode);
+        if not SearchContext.Tool.CleanPosToCaret(SearchContext.Tool.CurPos.StartPos,
+          CodeXYPosition) then
+          break;
+
+        if SearchContext.Tool.FindDeclaration(CodeXYPosition,[],
+          NewTool, NewNode, NewCodeXYPosition, TopLine) then begin
+            if NewNode = PropDeclNode then
+              // debugln('GOT IT');
+              // new declaration node  = PropDeclNode,
+              // so proper declaration found
+        end else
+          break;
       end;
+      //  Pascal declaration found
+      if frfIncludingLFMProps in Flags then begin
+        Caret:=LFMTree.PositionToCaret(LFMProperty.NameParts.NamePositions[i]);
+        ARef.X:=Caret.X;
+        ARef.Y:=Caret.Y;
+        AddReference(Aref);
+      end;
+
       SearchContext:=CurPropertyContext;
     end;
   end;
@@ -3354,7 +3482,7 @@ var
         lfmnObject:
           CheckLFMChildObject(TLFMObjectNode(CurLFMNode),ClassContext,ContextIsDefault);
         lfmnProperty:
-          if not ContextIsDefault then begin
+          if (not ContextIsDefault) and NodeContainsCandidate(CurLFMNode) then begin
             CheckLFMProperty(TLFMPropertyNode(CurLFMNode),ClassContext,PropertyContext);
 
             if (CurLFMNode.FirstChild<>nil) and
@@ -3362,9 +3490,7 @@ var
               Ident:=
                 ExtractContent(LFMBuffer.Source, CurLFMNode.FirstChild.StartPos);
 
-              if ((Ident<>'') and (IsIdentStartChar[Ident[1]])) or
-              ((length(Ident)>1) and (Ident[1]='&') and (IsIdentStartChar[Ident[2]]))
-              then begin
+              if (Ident<>'') and (IsIdentStartChar[Ident[1]]) then begin
                 if CompareIdentifiers(Pchar(Ident),PChar(Identifier))=0 then begin
                   ChildContext:=CleanFindContext;
                   IdentFound:= FindLFMIdentifier(CurLFMNode.FirstChild,
@@ -3432,8 +3558,6 @@ var
                   // = Pascal declaration found and matches to value
                     //debugln(['CheckLFMObjectValues matching to "', Identifier,'" found']);
                     Caret:=LFMTree.PositionToCaret(CurLFMNode.FirstChild.StartPos);
-                    //debugln([ExtractFileNameOnly(LFMBuffer.Filename)+
-                    //  ExtractFileExt(LFMBuffer.Filename)+' (', Caret.Y,',',Caret.X,')']);
                     ARef.X:=Caret.X;
                     ARef.Y:=Caret.Y;
                     AddReference(Aref);
@@ -3459,6 +3583,8 @@ var
   begin
     Result:=false;
 
+    if not NodeContainsCandidate(RootLFMNode) then exit;
+
     //DebugLn('TStandardCodeTool.CheckLFM.CheckLFMRoot checking root ...');
     // get root object node
     if (RootLFMNode=nil) or (not (RootLFMNode is TLFMObjectNode)) then begin
@@ -3478,7 +3604,7 @@ var
     if LookupRootTypeUnitName<>'' then begin
       CurUnitName:=GetSourceName(false);
       if CompareDottedIdentifiers(PChar(CurUnitName), PChar(Identifier))=0 then
-      begin //CompareDottedIdentifiers used, SameText is not '&'-friendly
+      begin
         // unitname fits
       end else if RootMustBeClassInIntf or RootMustBeClassInUnit then begin
         inc(ErrorCount);
@@ -3506,10 +3632,6 @@ var
       if RootClassNode=nil then exit;
     end;
 
-    if RootClassNode=nil then begin //unreachable code but left for now
-      inc(ErrorCount);
-      exit;
-    end;
     (*
     if (DeclNode.Desc=ctnSrcName) and (LookupRootTypeUnitName<>'') and
     (CompareDottedIdentifiers(PChar(Identifier), PChar(LookupRootTypeUnitName))=0)
@@ -3518,26 +3640,20 @@ var
     end;
     *)
     if (DeclNode.Desc<>ctnSrcName) then begin
-      if CompareIdentifiers(PChar(Identifier), PChar(LookupRootLFMNode.TypeName))=0
-      then begin //check object type name
+      if SameText(Identifier, LookupRootLFMNode.TypeName) then begin //check object type name
         if (RootClassNode.Parent=DeclNode) then begin // = Pascal declaration found
           //debugln(['CheckLFMRoot matching to "', Identifier,'" found (type)']);
           Caret:=LFMTree.PositionToCaret(LookupRootLFMNode.TypeNamePosition);
-          //debugln([ExtractFileNameOnly(LFMBuffer.Filename)+
-          //  ExtractFileExt(LFMBuffer.Filename)+' (', Caret.Y,',',Caret.X,')']);
           ARef.X:=Caret.X;
           ARef.Y:=Caret.Y;
           AddReference(Aref);
         end;
       end else
-      if CompareIdentifiers(PChar(Identifier), PChar(LookupRootLFMNode.Name))=0
-      then begin //check object name
-        if (DeclNode.Parent<>nil) and (DeclNode.Desc = ctnVarDefinition)
-        then begin  // = Pascal declaration found
+      if SameText(Identifier, LookupRootLFMNode.Name) then begin //check object name
+        if (DeclNode.Parent<>nil) and (DeclNode.Desc = ctnVarDefinition) then begin
+          // = Pascal declaration found
           //debugln(['CheckLFMRoot matching to "', Identifier,'" found (var)']);
           Caret:=LFMTree.PositionToCaret(LookupRootLFMNode.NamePosition);
-          //debugln([ExtractFileNameOnly(LFMBuffer.Filename)+
-          //  ExtractFileExt(LFMBuffer.Filename)+' (', Caret.Y,',',Caret.X,')']);
           ARef.X:=Caret.X;
           ARef.Y:=Caret.Y;
           AddReference(Aref);
@@ -3552,9 +3668,10 @@ var
   CurRootLFMNode: TLFMTreeNode;
 begin
   Result:=false;
-  LFMTree:=nil;
-  if Pos(lowercase(Identifier),lowercase(LFMBuffer.Source))=0 then
-    exit(true);
+  LFMTree:=nil; // nil the out param
+
+  FindCandidates;
+  if Length(IdentifierPositions)=0 then exit(true);
   // create tree from LFM file
   LFMTree:=DefaultLFMTrees.GetLFMTree(LFMBuffer,true);
   ActivateGlobalWriteLock;

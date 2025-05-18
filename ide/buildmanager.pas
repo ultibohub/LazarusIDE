@@ -559,7 +559,7 @@ procedure TBuildManager.TranslateMacros;
   begin
     Macro:=GlobalMacroList.FindByName(MacroName);
     if Macro=nil then exit;
-    Macro.Description:=Description;
+    Macro.Description:=RemoveAmpersands(Description);
   end;
 
 begin
