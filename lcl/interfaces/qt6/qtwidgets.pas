@@ -6001,9 +6001,15 @@ begin
 end;
 
 procedure TQtWidget.DestroyWidget;
+var
+  ALCLEvent: QLCLMessageEventH;
 begin
   if (Widget <> nil) and FOwnWidget then
-    QObject_Destroy(Widget);
+  begin
+    ALCLEvent := QLCLMessageEvent_create(LCLQt_DestroyWidget, 0,
+          0, 0, 0);
+    QCoreApplication_postEvent(Widget, ALCLEvent, Ord(QtHighEventPriority));
+  end;
   Widget := nil;
 end;
 
@@ -7537,7 +7543,12 @@ begin
     Result := inherited getClientOffset;
   if Assigned(ScrollArea) and Assigned(FMenuBar) and
     (FMenuBar.getVisible) then
+  begin
+    if Assigned(LCLObject) and IsFormDesign(LCLObject) and (LCLObject.Parent <> nil) then
+      // issue #41637
+    else
       inc(Result.Y, FMenuBar.getHeight);
+  end;
   {$ELSE}
   Result:=inherited getClientOffset;
   {$ENDIF}
@@ -7666,8 +7677,13 @@ function TQtMainWindow.GetClientRectFix(): TSize;
 begin
   if Assigned(FMenuBar) and FMenuBar.FVisible and (not IsMdiChild) then
   begin
-    FMenuBar.sizeHint(@Result);
-    if Result.Height<10 then Result.Height:=0;
+    if Assigned(LCLObject) and IsFormDesign(LCLObject) and (LCLObject.Parent <> nil) then
+      Result := TSize.Create(0, 0)
+    else
+    begin
+      FMenuBar.sizeHint(@Result);
+      if Result.Height<10 then Result.Height:=0;
+    end;
   end else
     Result:= TSize.Create(0,0);
 end;
@@ -20288,6 +20304,7 @@ var
   YStep, XStep: integer;
   B: Boolean;
   Bar: TQtScrollBar;
+  ALCLEvent: QLCLMessageEventH;
 
   function FindScrolledParent(AControl: TWinControl): TWinControl;
   begin
@@ -20493,9 +20510,21 @@ begin
       end;
       QEventPaint:
       begin
+        if Assigned(LCLObject) and (LCLObject.Parent <> nil) and Assigned(FMenuBar) and
+          FMenuBar.FVisible then
+        begin
+          QPaintEvent_rect(QPaintEventH(Event), @R);
+          if (R.Width < QWidget_width(FDesignControl)) or
+            (R.Height < QWidget_height(FDesignControl)) then
+          begin
+            ALCLEvent := QLCLMessageEvent_create(LCLQt_DesignerUpdate, 0, 0, 0, 0);
+            QCoreApplication_postEvent(FDesignControl, ALCLEvent, Ord(QtHighEventPriority));
+          end;
+        end;
         SlotDesignControlPaint(Sender, Event);
         Result := True;
       end;
+      LCLQt_DesignerUpdate: QWidget_update(FDesignControl);
       QEventContextMenu: SlotContextMenu(Sender, Event);
     end;
   finally
