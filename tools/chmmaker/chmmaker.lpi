@@ -8,8 +8,79 @@
         <CompatibilityMode Value="True"/>
       </Flags>
       <SessionStorage Value="InIDEConfig"/>
+      <Scaled Value="True"/>
       <ResourceType Value="res"/>
+      <UseXPManifest Value="True"/>
+      <XPManifest>
+        <DpiAware Value="True"/>
+      </XPManifest>
+      <Icon Value="0"/>
     </General>
+    <i18n>
+      <EnableI18N Value="True"/>
+      <OutDir Value="languages"/>
+      <ExcludedIdentifiers Count="51">
+        <Item1 Value="tsitemapeditform.caption"/>
+        <Item2 Value="tsitemapeditform.urllabel.caption"/>
+        <Item3 Value="tsitemapeditform.subitembtn.caption"/>
+        <Item4 Value="tsitemapeditform.afterbtn.caption"/>
+        <Item5 Value="tsitemapeditform.beforebtn.caption"/>
+        <Item6 Value="tsitemapeditform.savebtn.caption"/>
+        <Item7 Value="tsitemapeditform.cancelbtn.caption"/>
+        <Item8 Value="tsitemapeditform.deletebtn.caption"/>
+        <Item9 Value="tsitemapeditform.additemlabel.caption"/>
+        <Item10 Value="tsitemapeditform.descriptionlabel.caption"/>
+        <Item11 Value="tsitemapeditform.locallinklabel.caption"/>
+        <Item12 Value="tsitemapeditform.fontlabel.caption"/>
+        <Item13 Value="tsitemapeditform.sitemapgroupbox.caption"/>
+        <Item14 Value="tsitemapeditform.globalpropertiesgroupbox.caption"/>
+        <Item15 Value="tsitemapeditform.backgroundcolorlabel.caption"/>
+        <Item16 Value="tsitemapeditform.foregroundcolorlabel.caption"/>
+        <Item17 Value="tsitemapeditform.descfromtitlebtn.caption"/>
+        <Item18 Value="tsitemapeditform.folderviewcheck.caption"/>
+        <Item19 Value="taboutform.lbland.caption"/>
+        <Item20 Value="taboutform.lbloperatingsystem.caption"/>
+        <Item21 Value="taboutform.lbltargetcpu.caption"/>
+        <Item22 Value="taboutform.lbltargetos.caption"/>
+        <Item23 Value="taboutform.lblversion.caption"/>
+        <Item24 Value="taboutform.infooperatingsystem.caption"/>
+        <Item25 Value="taboutform.infotargetcpu.caption"/>
+        <Item26 Value="taboutform.infotargetos.caption"/>
+        <Item27 Value="taboutform.infotargetplatform.caption"/>
+        <Item28 Value="taboutform.infoversion.caption"/>
+        <Item29 Value="taboutform.closebtn.caption"/>
+        <Item30 Value="taboutform.caption"/>
+        <Item31 Value="taboutform.lblcreatedwith.caption"/>
+        <Item32 Value="taboutform.lbland.caption"/>
+        <Item33 Value="taboutform.lblfreepascal.caption"/>
+        <Item34 Value="taboutform.lblfreepascal.hint"/>
+        <Item35 Value="taboutform.lbllazarus.caption"/>
+        <Item36 Value="taboutform.lbllazarus.hint"/>
+        <Item37 Value="taboutform.lbltargetplatform.caption"/>
+        <Item38 Value="tchmform.caption"/>
+        <Item39 Value="tchmform.acnew.caption"/>
+        <Item40 Value="tchmform.acopen.caption"/>
+        <Item41 Value="tchmform.acsave.caption"/>
+        <Item42 Value="tchmform.acsaveas.caption"/>
+        <Item43 Value="tchmform.acclose.caption"/>
+        <Item44 Value="tchmform.acquit.caption"/>
+        <Item45 Value="tchmform.accompile.caption"/>
+        <Item46 Value="tchmform.accompileandview.caption"/>
+        <Item47 Value="tchmform.acabout.caption"/>
+        <Item48 Value="tchmform.compileandview.caption"/>
+        <Item49 Value="tchmform.toceditbtn.caption"/>
+        <Item50 Value="tchmform.indexeditbtn.caption"/>
+        <Item51 Value="tchmform.filesgroupbox.caption"/>
+      </ExcludedIdentifiers>
+    </i18n>
+    <VersionInfo>
+      <UseVersionInfo Value="True"/>
+      <AutoIncrementBuild Value="True"/>
+      <MajorVersionNr Value="4"/>
+      <MinorVersionNr Value="1"/>
+      <BuildNr Value="4"/>
+      <StringTable OriginalFilename="chmmaker" ProductName="CHMMaker"/>
+    </VersionInfo>
     <BuildModes Count="1">
       <Item1 Name="default" Default="True"/>
     </BuildModes>
@@ -18,9 +89,6 @@
     </PublishOptions>
     <RunParams>
       <FormatVersion Value="2"/>
-      <Modes Count="1">
-        <Mode0 Name="default"/>
-      </Modes>
     </RunParams>
     <RequiredPackages Count="3">
       <Item1>
@@ -34,17 +102,18 @@
         <MinVersion Major="1" Valid="True"/>
       </Item3>
     </RequiredPackages>
-    <Units Count="3">
+    <Units Count="5">
       <Unit0>
         <Filename Value="chmmaker.lpr"/>
         <IsPartOfProject Value="True"/>
       </Unit0>
       <Unit1>
-        <Filename Value="unit1.pas"/>
+        <Filename Value="chmmain.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="CHMForm"/>
         <HasResources Value="True"/>
         <ResourceBaseClass Value="Form"/>
+        <UnitName Value="CHMMain"/>
       </Unit1>
       <Unit2>
         <Filename Value="chmsitemapeditor.pas"/>
@@ -54,6 +123,19 @@
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="CHMSiteMapEditor"/>
       </Unit2>
+      <Unit3>
+        <Filename Value="chmabout.pas"/>
+        <IsPartOfProject Value="True"/>
+        <ComponentName Value="AboutForm"/>
+        <HasResources Value="True"/>
+        <ResourceBaseClass Value="Form"/>
+        <UnitName Value="chmAbout"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="chmstrconsts.pas"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="CHMStrConsts"/>
+      </Unit4>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
@@ -67,7 +149,6 @@
     <Parsing>
       <SyntaxOptions>
         <CStyleOperator Value="False"/>
-        <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
     <Linking>

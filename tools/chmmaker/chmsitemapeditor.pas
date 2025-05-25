@@ -6,6 +6,7 @@ interface
 
 uses
   Classes, SysUtils, chmsitemap,
+  RegExpr,
   Forms, Controls, Graphics, Dialogs, ComCtrls, ExtCtrls, StdCtrls;
 
 type
@@ -15,30 +16,40 @@ type
   TSitemapEditForm = class(TForm)
     BeforeBtn: TButton;
     AfterBtn: TButton;
+    Bevel1: TBevel;
     DeleteBtn: TButton;
     CancelBtn: TButton;
+    DescriptionEdit: TEdit;
+    FontEdit: TEdit;
+    GlobalPropertiesGroupbox: TGroupBox;
+    FontLabel: TLabel;
+    DescriptionLabel: TLabel;
+    Panel3: TPanel;
+    URLEdit: TEdit;
+    URLLabel: TLabel;
+    Panel1: TPanel;
+    Panel2: TPanel;
     SaveBtn: TButton;
     FolderViewCheck: TCheckBox;
     ForegroundClrBtn: TColorButton;
     BackgroundClrBtn: TColorButton;
-    Label3: TLabel;
-    FontEdit: TLabeledEdit;
-    Label4: TLabel;
-    Label5: TLabel;
+    ForegroundColorLabel: TLabel;
+    BackgroundColorLabel: TLabel;
     SubItemBtn: TButton;
-    Label2: TLabel;
-    URLEdit: TLabeledEdit;
+    AddItemLabel: TLabel;
     LocalCombo: TComboBox;
     DescFromTitleBtn: TButton;
-    GroupBox1: TGroupBox;
-    Label1: TLabel;
-    DescriptionEdit: TLabeledEdit;
+    SitemapGroupBox: TGroupBox;
+    LocalLinkLabel: TLabel;
     SitemapTree: TTreeView;
     procedure AfterBtnClick(Sender: TObject);
     procedure BeforeBtnClick(Sender: TObject);
     procedure CancelBtnClick(Sender: TObject);
     procedure DeleteBtnClick(Sender: TObject);
+    procedure DescFromTitleBtnClick(Sender: TObject);
     procedure DescriptionEditChange(Sender: TObject);
+    procedure FormActivate(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
     procedure LocalComboChange(Sender: TObject);
     procedure LocalComboKeyUp(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
     procedure SaveBtnClick(Sender: TObject);
@@ -50,10 +61,12 @@ type
   private
     FStream: TStream;
     FSiteMapType: TSiteMapType;
+    FActivated: Boolean;
     procedure InitControls;
   public
     procedure LoadFromStream(AStream: TStream);
     function Execute(AStream: TStream; SiteType: TSiteMapType; AvailableLinks: TStrings): Boolean;
+    procedure UpdateLanguage;
   end; 
 
 var
@@ -64,7 +77,7 @@ implementation
 {$R *.lfm}
 
 uses
-  LCLType;
+  LCLType, CHMMain, CHMStrConsts;
 
 type
 
@@ -92,10 +105,64 @@ begin
   SitemapTree.Selected.Delete;
 end;
 
+procedure TSitemapEditForm.DescFromTitleBtnClick(Sender: TObject);
+var
+  iSub: Integer;
+  sFilename: String;
+  oLines: TStringList;
+  oRE: TRegExpr;
+begin
+  if (LocalCombo.ItemIndex = -1) then
+  begin
+    MessageDlg(rsSelectLocalFile, mtError, [mbCancel], 0);
+    Exit;
+  end;
+
+  // Load to StringList and Search for <title>
+  sFilename := CHMForm.CreateAbsoluteProjectFile(LocalCombo.Items[LocalCombo.ItemIndex]);
+  oLines := TStringList.Create();
+  oRE := TRegExpr.Create('(?i)<TITLE>(.*)</TITLE>');
+  try
+    oLines.LoadFromFile(sFilename);
+    for iSub := 0 to oLines.Count - 1 do
+    begin
+      if (oRE.Exec(oLines.Strings[iSub])) then
+      begin
+        DescriptionEdit.Text := oRE.Match[1];
+        Break;
+      end;
+    end;
+  finally
+    oRE.Free();
+    oLines.Free();
+  end;
+end;
+
 procedure TSitemapEditForm.DescriptionEditChange(Sender: TObject);
 begin
   if SitemapTree.Selected = nil then Exit;
   TChmTreeNode(SitemapTree.Selected).Text := DescriptionEdit.Text;
+end;
+
+procedure TSitemapEditForm.FormActivate(Sender: TObject);
+begin
+  if not FActivated then
+  begin
+    FActivated := true;
+    Constraints.MinWidth := Panel3.Width + 2*SitemapGroupBox.BorderSpacing.Around +
+      Panel1.Width + Panel1.BorderSpacing.Left + Panel1.BorderSpacing.Right;
+    Constraints.MinHeight := Panel3.Height + Panel3.BorderSpacing.Top + Panel3.BorderSpacing.Bottom +
+      Panel2.Height + 2*BorderSpacing.Around +
+      SiteMapTree.Constraints.MinHeight + 2*SiteMapTree.BorderSpacing.Around +
+      2*SitemapGroupBox.BorderSpacing.Around;
+    if Width < Constraints.MinWidth then Width := Constraints.MinWidth;
+    if Height < Constraints.MinHeight then Height := Constraints.MinHeight;
+  end;
+end;
+
+procedure TSitemapEditForm.FormCreate(Sender: TObject);
+begin
+  UpdateLanguage;
 end;
 
 procedure TSitemapEditForm.LocalComboChange(Sender: TObject);
@@ -180,7 +247,7 @@ procedure TSitemapEditForm.BeforeBtnClick(Sender: TObject);
 var
   Item: TTreeNode;
 begin
-  Item := SitemapTree.Items.Insert(SitemapTree.Selected, 'Untitled');
+  Item := SitemapTree.Items.Insert(SitemapTree.Selected, rsUntitled);
   Item.Selected := True;
   SitemapTreeSelectionChanged(Sender);
 end;
@@ -189,7 +256,7 @@ procedure TSitemapEditForm.AfterBtnClick(Sender: TObject);
 var
   Item: TTreeNode;
 begin
-  Item := SitemapTree.Items.Add(SitemapTree.Selected, 'Untitled');
+  Item := SitemapTree.Items.Add(SitemapTree.Selected, rsUntitled);
   Item.Selected := True;
   SitemapTreeSelectionChanged(Sender);
 end;
@@ -211,10 +278,12 @@ begin
   
   BeforeBtn.Enabled := Value and (SitemapTree.Selected.Parent = nil) and (SitemapTree.Selected.Index <> 0);
   SubItemBtn.Enabled := Value and (FSiteMapType = stTOC);
-  Label1.Enabled := Value;
+  LocalLinkLabel.Enabled := Value;
   DescFromTitleBtn.Enabled := Value;
+  DescriptionLabel.Enabled := Value;
   DescriptionEdit.Enabled := Value;
   LocalCombo.Enabled := Value;
+  URLLabel.Enabled := Value;
   URLEdit.Enabled := Value;
 
   if Value then begin
@@ -234,7 +303,7 @@ procedure TSitemapEditForm.SubItemBtnClick(Sender: TObject);
 var
   Item : TTreeNode;
 begin
-  Item := SitemapTree.Items.AddChild(SitemapTree.Selected, 'Untitled');
+  Item := SitemapTree.Items.AddChild(SitemapTree.Selected, rsUntitled);
   Item.Selected := True;
   SitemapTreeSelectionChanged(Sender);
 end;
@@ -255,8 +324,8 @@ begin
   FolderViewCheck.Enabled := Value;
   ForegroundClrBtn.Enabled := Value;
   BackgroundClrBtn.Enabled := Value;
-  Label4.Enabled := Value;
-  Label5.Enabled := Value;
+  ForegroundColorLabel.Enabled := Value;
+  BackgroundColorLabel.Enabled := Value;
 end;
 
 procedure TSitemapEditForm.LoadFromStream(AStream: TStream);
@@ -305,13 +374,30 @@ begin
   LoadFromStream(AStream);
   
   LocalCombo.Items.Assign(AvailableLinks);
-  
-  ShowModal;
-  
-  while ModalResult = mrNone do
-    Application.HandleMessage;
-    
-  Result := ModalResult = mrOK;
+
+  Result := ShowModal = mrOK;
+end;
+
+procedure TSitemapEditForm.UpdateLanguage;
+begin
+  Caption := rsSiteMapEditor;
+  SitemapGroupBox.Caption := rsSiteMap;
+  DescriptionLabel.Caption := rsDescription;
+  DescFromTitleBtn.Caption := rsFromTitle;
+  LocalLinkLabel.Caption := rsLocalLink;
+  URLLabel.Caption := rsURL;
+  AddItemLabel.Caption := rsAddItem;
+  BeforeBtn.Caption := rsBefore;
+  AfterBtn.Caption := rsAfter;
+  DeleteBtn.Caption := rsDelete;
+  SubItemBtn.Caption := rsSubItem;
+  GlobalPropertiesGroupbox.Caption := rsGlobalProperties;
+  FontLabel.Caption := rsFont;
+  BackgroundColorLabel.Caption := rsBackgroundColor;
+  ForegroundColorLabel.Caption := rsForegroundColor;
+  FolderViewCheck.Caption := rsUseFolderIcons;
+  SaveBtn.Caption := rsSave;
+  CancelBtn.Caption := rsCancel;
 end;
 
 end.

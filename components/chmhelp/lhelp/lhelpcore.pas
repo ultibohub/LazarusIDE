@@ -233,7 +233,7 @@ begin
     i.Height := Scale96ToForm(128);
     i.Proportional := true;
     i.Picture.Icon.Assign(Application.Icon);
-    i.Picture.Icon.Current := i.Picture.Icon.GetBestIndexForSize(Types.Size(256, 256));
+    i.Picture.Icon.Current := i.Picture.Icon.GetBestIndexForSize(Types.Size(i.Width, i.Height));
     i.BorderSpacing.Around := d6;
     i.Anchors := [akLeft, akTop];
     i.AnchorSideTop.Control := f;
@@ -1194,6 +1194,8 @@ begin
   MiActionsSearch.Enabled:=en;
 
   HomeBttn.Enabled := en;
+  BackBttn.Enabled := en;
+  ForwardBttn.Enabled := en;
   FileMenuCloseItem.Enabled := en;
   ViewMenuContents.Enabled := en;
 

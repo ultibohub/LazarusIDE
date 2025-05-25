@@ -548,6 +548,7 @@ type
     procedure CloseBracket(ALastAddedPart: TFpPascalExpressionPart;
                            APreviousArraySliceList: PFpPascalExpressionPartOperatorArraySlice;
                            AStartChar: PChar; AnEndChar: PChar = nil); override;
+    function ReturnsVariant: boolean; override;
   end;
 
   { TFpPascalExpressionPartOperator }
@@ -2326,6 +2327,21 @@ begin
     Items[i].DoParentIndexBraceClosed(APreviousArraySliceList);
 end;
 
+function TFpPascalExpressionPartBracketIndex.ReturnsVariant: boolean;
+var
+  Itm0: TFpPascalExpressionPart;
+begin
+  Result := inherited ReturnsVariant;
+  if Result then
+    exit;
+
+  Itm0 := Items[0];
+  if Itm0 = nil then
+    exit;
+
+  Result := Itm0.ReturnsVariant;
+end;
+
 { TFpPascalExpressionPartBracketSet }
 
 function TFpPascalExpressionPartBracketSet.DoGetResultValue: TFpValue;
@@ -3231,7 +3247,11 @@ var
           DisplayVal.AddReference;
         end
         else
+        begin
+          AMapExpr.BeginNeedCopy;
           DisplayVal := EvalExression(AMapExpr, ACurrentVal, OrigVal, False, ACurDepth, ACurKeyIdx, ACurKey);
+          AMapExpr.EndNeedCopy;
+        end;
 
         if (DisplayVal <> nil) then begin
           ResIdx := InternalAdd(DisplayVal, ACurDepth, ACurKeyIdx, ACurKey);
