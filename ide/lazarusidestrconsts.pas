@@ -1626,7 +1626,7 @@ resourcestring
   dlgIndentsLineIndentGroupOptions = 'Indent (New line)';
 
   dlgTabWidths         = 'Tab widths';
-  dlgElasticTabs       = 'Elastic tabs';
+  dlgElasticTabs       = 'Elastic tabstops';
   dlgElasticTabsWidths = 'Elastic min Widths';
 
   dlgTabsToSpaces = 'Tabs to spaces';
@@ -2832,6 +2832,7 @@ resourcestring
   lisPLDOnlinePackagesCannotBeDeleted = 'Online packages cannot be deleted';
   lisPESortFilesAlphabetically = 'Sort files alphabetically';
   lisPEShowDirectoryHierarchy = 'Show directory hierarchy';
+  lisPEOffSortForReorder = 'Please disable alphabetical sorting if you need to reorder items manually.';
   lisPEShowPropsPanel = 'Show properties panel';
   lisClearFilter = 'Clear filter';
   dlgCaseSensitive = '&Case sensitive';

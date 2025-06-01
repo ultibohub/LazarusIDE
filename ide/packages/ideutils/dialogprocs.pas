@@ -598,8 +598,12 @@ var
   CurFilename: String;
   Found: Boolean;
 begin
-  if FileName='' then
+  if (Filename='') or not FilenameIsAbsolute(FileName) then
+  begin
+    debugln(['Error: DeleteFileInteractive File="',Filename,'"']);
+    DumpStack;
     exit(mrAbort);  // Serious bug on the calling side, so abort.
+  end;
   CurFilename:=Filename;
   repeat
     Result:=mrOk;
@@ -611,7 +615,7 @@ begin
         repeat
           CurFilename:=Info.Name;
           if (CurFilename='') or (CurFilename='.') or (CurFilename='..') then continue;
-          if SameText(Filename,ShortFilename) then begin
+          if SameText(CurFilename,ShortFilename) then begin
             CurFilename:=Dir+CurFilename;
             Found:=true;
             break;

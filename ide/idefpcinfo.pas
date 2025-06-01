@@ -172,7 +172,7 @@ begin
                         CompilerFilename,CompilerOptions,'','','',true); //Ultibo
     // fpc -i
     ExtraOptions:=Cfg.GetFPCInfoCmdLineOptions(CodeToolBoss.CompilerDefinesCache.ExtraOptions);
-    Params:=Trim('-iTOTP '+ExtraOptions);
+    Params:=Trim('-iWTOTP '+ExtraOptions);
     WorkDir:=GetCurrentDirUTF8;
     sl.Add(CompilerFilename+' '+Params);
     sl.Add('Working directory: '+WorkDir);

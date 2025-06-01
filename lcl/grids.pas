@@ -124,7 +124,9 @@ type
     goScrollToLastRow,   // Allow scrolling to last row (so that last row can be TopRow)
     goEditorParentColor, // Set editor's ParentColor to True
     goEditorParentFont,  // Set editor's ParentFont to True
-    goCopyWithoutTrailingLinebreak  // Copy to clipboard without trailing linebreak
+    goCopyWithoutTrailingLinebreak,  // Copy to clipboard without trailing linebreak
+    goFixedColClick,     // Issue OnClick if clicked on FixedCol area
+    goFixedRowClick      // Issue OnClick if clicked on FixedRow area
   );
   TGridOptions2 = set of TGridOption2;
 
@@ -6530,29 +6532,32 @@ var
   aBorderWidth: Integer;
   aCol, aRow: Longint;
 begin
+  {$ifdef dbgGrid}
+  debugln(['TCustomGrid.MouseToGridZone: X=',X,', Y=',Y,', FGCache.FixedWidth=',FGCache.FixedWidth,', FGCache.FixedHeight=',FGCache.FixedHeight]);
+  {$endif}
   aBorderWidth := GetBorderWidth;
   if FlipX(X)<FGCache.FixedWidth+aBorderWidth then begin
-    // in fixedwidth zone
+    // in fixedwidth zone: either a fixedcol or a fixedcell
     if Y<FGcache.FixedHeight+aBorderWidth then
       Result:= gzFixedCells
-    else begin
-      OffsetToColRow(False, True, Y, aRow, aCol);
-      if (aRow<0) or (RowCount<=FixedRows) then
-        Result := gzInvalid
-      else
-        Result := gzFixedRows;
-    end;
-  end
-  else if Y<FGCache.FixedHeight+aBorderWidth then begin
-    // if fixedheight zone
-    if FlipX(X)<FGCache.FixedWidth+aBorderWidth then
-      Result:=gzFixedCells
     else begin
       OffsetToColRow(True, True, X, aCol, aRow);
       if (aCol<0) or (ColCount<=FixedCols) then
         Result := gzInvalid
       else
         Result := gzFixedCols;
+    end;
+  end
+  else if Y<FGCache.FixedHeight+aBorderWidth then begin
+    // if fixedheight zone: either a fixedrow or a fixedcell
+    if FlipX(X)<FGCache.FixedWidth+aBorderWidth then
+      Result:=gzFixedCells
+    else begin
+      OffsetToColRow(False, True, Y, aRow, aCol);
+      if (aRow<0) or (RowCount<=FixedRows) then
+        Result := gzInvalid
+      else
+        Result := gzFixedRows;
     end;
   end
   else if not FixedGrid then begin
@@ -6565,6 +6570,9 @@ begin
   end
   else
     result := gzInvalid;
+  {$ifdef dbgGrid}
+  debugln(['TCustomGrid.MouseToGridZone: Result=',Dbgs(Result)]);
+  {$endif}
 end;
 
 function TCustomGrid.CellToGridZone(aCol, aRow: Integer): TGridZone;
@@ -6576,13 +6584,13 @@ begin
     if aRow<FFixedRows then
       Result:= gzFixedCells
     else
-      Result:= gzFixedRows
+      Result:= gzFixedCols
   else
   if (aRow<FFixedRows) then
     if aCol<FFixedCols then
       Result:= gzFixedCells
     else
-      Result:= gzFixedCols
+      Result:= gzFixedRows
   else
     Result := gzNormal;
 end;
@@ -6895,35 +6903,40 @@ begin
 
     gzFixedCols:
       begin
-        if (goColSizing in Options) and (FCursorState=gcsColWidthChanging) then begin
-          fGridState:= gsColSizing;
+        if (goRowSizing in Options) and (FCursorState=gcsRowHeightChanging) then begin
+          fGridState:= gsRowSizing;
           FGCache.OldMaxTopLeft := FGCache.MaxTopLeft;
         end
         else begin
-          // ColMoving or Clicking
-          if fGridState<>gsColMoving then begin
-            fGridState:=gsColMoving;
+          // RowMoving or Clicking
+          if fGridState<>gsRowMoving then begin
+            fGridState:=gsRowMoving;
             ResetLastMove;
           end;
 
           if ((goHeaderPushedLook in Options) and
               (FGCache.HotGridZone in FHeaderPushZones)) then
             DoPushCell;
+          if (goFixedColClick in Options2) then
+            FIgnoreClick := False;
         end;
       end;
 
     gzFixedRows:
-      if (goRowSizing in Options) and (FCursorState=gcsRowHeightChanging) then
-        fGridState:= gsRowSizing
-      else begin
-        // RowMoving or Clicking
-        fGridState:=gsRowMoving;
-        ResetLastMove;
-        if ((goHeaderPushedLook in Options) and
-            (FGCache.HotGridZone in FHeaderPushZones)) then
-          DoPushCell;
+      begin
+        if (goColSizing in Options) and (FCursorState=gcsColWidthChanging) then
+          fGridState:= gsColSizing
+        else begin
+          // ColMoving or Clicking
+          fGridState:=gsColMoving;
+          ResetLastMove;
+          if ((goHeaderPushedLook in Options) and
+              (FGCache.HotGridZone in FHeaderPushZones)) then
+            DoPushCell;
+          if (goFixedRowClick in Options2) then
+            FIgnoreClick := False;
+        end;
       end;
-
     gzNormal:
       begin
         LockEditor;
@@ -7899,11 +7912,11 @@ begin
   Gz:=MouseToGridZone(Mouse.x, Mouse.y);
   Result:=MouseToCell(Mouse);
   if gz<>gzNormal then begin
-    if (gz=gzFixedRows)or(gz=gzFixedCells) then begin
+    if (gz=gzFixedCols)or(gz=gzFixedCells) then begin
       Result.x:= fTopLeft.x-1;
       if Result.x<FFixedCols then Result.x:=FFixedCols;
     end;
-    if (gz=gzFixedCols)or(gz=gzFixedCells) then begin
+    if (gz=gzFixedRows)or(gz=gzFixedCells) then begin
       Result.y:=fTopleft.y-1;
       if Result.y<fFixedRows then Result.y:=FFixedRows;
     end;
