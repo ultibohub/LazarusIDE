@@ -2,6 +2,7 @@ unit IdeDebuggerWatchResult;
 
 {$mode objfpc}{$H+}
 {$ModeSwitch typehelpers}
+{$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 
 interface
 
@@ -3320,9 +3321,11 @@ begin
     AnErrSource.FDataArray[i] := Default(_ERROR_DATA);
   end;
 
-  assert(AnOverrideTemplate = nil, 'TGenericWatchResultData.TGenericWatchResultStorage.ImportOverrides: AnOverrideTemplate = nil');
-  //if AnOverrideTemplate = nil then
-  AnOverrideTemplate := _ERROR_CLASS.CreateEmpty;
+  // AnOverrideTemplate is used for any depth of nest level below the array
+  (* TODO: each NestedStorage needs its own *)
+  //assert(AnOverrideTemplate = nil, 'TGenericWatchResultData.TGenericWatchResultStorage.ImportOverrides: AnOverrideTemplate = nil');
+  if AnOverrideTemplate = nil then
+    AnOverrideTemplate := _ERROR_CLASS.CreateEmpty;
 end;
 
 destructor TGenericWatchResultData.TGenericWatchResultStorage.Destroy;
