@@ -108,7 +108,23 @@ type
     end;
     TBuildInfoArray = array of TBuildInfo;
   protected
+    // speed up / don't compute the fail message if not needed
+    class procedure AssertEquals(const AMessage: string; Expected, Actual: Ansistring); overload;
+    class procedure AssertEquals(const AMessage: string; Expected, Actual: integer); overload;
+    class procedure AssertEquals(const AMessage: string; Expected, Actual: int64); overload;
+    class procedure AssertEquals(const AMessage: string; Expected, Actual: QWord); overload;
+    class procedure AssertEquals(const AMessage: string; Expected, Actual: boolean); overload;
+
+    class procedure AssertTrue(const ABaseMsg, AMessage: string; ACond: boolean); overload;
+    class procedure AssertEquals(const ABaseMsg, AMessage: string; Expected, Actual: Ansistring);
+    class procedure AssertEquals(const ABaseMsg, AMessage: string; Expected, Actual: integer);
+    class procedure AssertEquals(const ABaseMsg, AMessage: string; Expected, Actual: int64);
+    class procedure AssertEquals(const ABaseMsg, AMessage: string; Expected, Actual: QWord);
+    class procedure AssertEquals(const ABaseMsg, AMessage: string; Expected, Actual: boolean);
+
+  protected
     class procedure AssertEquals(const AMessage: string; Expected, Actual: TWatchResultDataKind); overload;
+    class procedure AssertEquals(const ABaseMsg, AMessage: string; Expected, Actual: TWatchResultDataKind); overload;
 
     procedure AssertValKind(const AMessage: string; IdeRes: TWatchResultData;
       ExpKind: TWatchResultDataKind);
@@ -311,6 +327,7 @@ type
     procedure TestWatchResPCharOrStringWithArray;
     procedure TestWatchArray;
     procedure TestWatchArrayNested;
+    procedure TestWatchArrayPtrErr; // either ptr or data can be error
     procedure TestWatchStuct;
     procedure TestWatchStuctNested;
     procedure TestWatchArrayStuct;
@@ -368,23 +385,108 @@ end;
 
 { TTestBaseIdeDebuggerWatchResult }
 
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const AMessage: string; Expected,
+  Actual: Ansistring);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const AMessage: string; Expected,
+  Actual: integer);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const AMessage: string; Expected,
+  Actual: int64);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const AMessage: string; Expected,
+  Actual: QWord);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const AMessage: string; Expected,
+  Actual: boolean);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertTrue(const ABaseMsg, AMessage: string;
+  ACond: boolean);
+begin
+  if ACond then exit;
+  inherited AssertTrue(ABaseMsg+AMessage, ACond);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const ABaseMsg, AMessage: string;
+  Expected, Actual: Ansistring);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(ABaseMsg+AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const ABaseMsg, AMessage: string;
+  Expected, Actual: integer);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(ABaseMsg+AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const ABaseMsg, AMessage: string;
+  Expected, Actual: int64);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(ABaseMsg+AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const ABaseMsg, AMessage: string;
+  Expected, Actual: QWord);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(ABaseMsg+AMessage, Expected, Actual);
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const ABaseMsg, AMessage: string;
+  Expected, Actual: boolean);
+begin
+  if Expected = Actual then exit;
+  inherited AssertEquals(ABaseMsg+AMessage, Expected, Actual);
+end;
+
 class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(
   const AMessage: string; Expected, Actual: TWatchResultDataKind);
 begin
+  if Expected = Actual then exit;
   AssertEquals(AMessage, dbgs(Expected), dbgs(Actual));
+end;
+
+class procedure TTestBaseIdeDebuggerWatchResult.AssertEquals(const ABaseMsg, AMessage: string;
+  Expected, Actual: TWatchResultDataKind);
+begin
+  if Expected = Actual then exit;
+  AssertEquals(ABaseMsg + AMessage, dbgs(Expected), dbgs(Actual));
 end;
 
 procedure TTestBaseIdeDebuggerWatchResult.AssertValKind(const AMessage: string;
   IdeRes: TWatchResultData; ExpKind: TWatchResultDataKind);
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
+  AssertTrue(AMessage,': not nil', IdeRes <> nil);
   AssertEquals(AMessage, ExpKind, IdeRes.ValueKind);
 end;
 
 procedure TTestBaseIdeDebuggerWatchResult.AssertTypeName(const AMessage: string;
   IdeRes: TWatchResultData; ExpTypeName: String);
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
+  AssertTrue(AMessage,': not nil', IdeRes <> nil);
   if ExpTypeName <> #1 then
     AssertEquals(AMessage, ExpTypeName, IdeRes.TypeName);
 end;
@@ -396,12 +498,12 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertNumData(const AMessage: string;
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',  ExpKind,    IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Int64',  ExpInt64,   IdeRes.AsInt64);
-  AssertEquals(AMessage + ': QWord',  ExpQW,      IdeRes.AsQWord);
-  AssertEquals(AMessage + ': String', ExpStr,     IdeRes.AsString);
-  AssertEquals(AMessage + ': BSize',  ExpNumByte, IdeRes.ByteSize);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',  ExpKind,    IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Int64',  ExpInt64,   IdeRes.AsInt64);
+  AssertEquals(AMessage, ': QWord',  ExpQW,      IdeRes.AsQWord);
+  AssertEquals(AMessage, ': String', ExpStr,     IdeRes.AsString);
+  AssertEquals(AMessage, ': BSize',  ExpNumByte, IdeRes.ByteSize);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -431,9 +533,9 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertErrData(const AMessage: string;
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind', rdkError, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Err',   ExpErr,   IdeRes.AsString);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind', rdkError, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Err',   ExpErr,   IdeRes.AsString);
 
   if ASaveLoad and not SkipSubTestSave then begin
     t := SaveLoad(IdeRes);
@@ -453,9 +555,9 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPrePrintData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',  rdkPrePrinted, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': String', ExpStr,        IdeRes.AsString);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',  rdkPrePrinted, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': String', ExpStr,        IdeRes.AsString);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -477,10 +579,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPointerData(const AMessage: stri
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     ExpAddr,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', ExpHasDeref,   IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     ExpAddr,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', ExpHasDeref,   IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -503,10 +605,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPointerToPrePrintData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     ExpAddr,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', True,          IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     ExpAddr,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', True,          IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -531,10 +633,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPointerToErrData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     ExpAddr,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', True,          IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     ExpAddr,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', True,          IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -559,10 +661,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPointerToSignedNumData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     ExpAddr,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', True,          IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     ExpAddr,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', True,          IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -587,10 +689,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPtrPointerToErrData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     ExpAddr,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', True,          IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     ExpAddr,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', True,          IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -616,10 +718,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPtrPointerToSignedNumData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     ExpAddr,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', True,          IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     ExpAddr,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', True,          IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -709,10 +811,10 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertPtrArrayOfNumData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkPointerVal, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Addr',     1500,       IdeRes.AsQWord);
-  AssertEquals(AMessage + ': HasDeref', True,          IdeRes.DerefData<>nil);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkPointerVal, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Addr',     1500,       IdeRes.AsQWord);
+  AssertEquals(AMessage, ': HasDeref', True,          IdeRes.DerefData<>nil);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -740,16 +842,16 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertArrayData(
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkArray, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Type',     ord(ExpArrayType),  ord(IdeRes.ArrayType));
-  AssertEquals(AMessage + ': Len',      ExpLength,          IdeRes.Count);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkArray, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Type',     ord(ExpArrayType),  ord(IdeRes.ArrayType));
+  AssertEquals(AMessage, ': Len',      ExpLength,          IdeRes.Count);
   case ExpArrayType of
     datUnknown: ;
     datDynArray:
-      AssertEquals(AMessage + ': Addr', ExpLowIdxOrAddr,  IdeRes.DataAddress);
+      AssertEquals(AMessage, ': Addr', ExpLowIdxOrAddr,  IdeRes.DataAddress);
     datStatArray:
-      AssertEquals(AMessage + ': Low', int64(ExpLowIdxOrAddr),  IdeRes.LowBound);
+      AssertEquals(AMessage, ': Low', int64(ExpLowIdxOrAddr),  IdeRes.LowBound);
   end;
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
@@ -775,22 +877,22 @@ var
   t: TWatchResultData;
   FldData: TWatchResultDataFieldInfo;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertTrue(AMessage+': in range', IdeRes.FieldCount > TestFieldNum);
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertTrue(AMessage, ': in range', IdeRes.FieldCount > TestFieldNum);
 
   FldData := IdeRes.Fields[TestFieldNum];
   if not aOnlyFieldData then
-    AssertTrue(AMessage+': Field not nil', FldData.Field <> nil);
-  AssertTrue(AMessage+': Owner not nil', FldData.Owner <> nil);
+    AssertTrue(AMessage, ': Field not nil', FldData.Field <> nil);
+  AssertTrue(AMessage, ': Owner not nil', FldData.Owner <> nil);
 
-  AssertEquals(AMessage+': Field Name',       ExpName, FldData.FieldName);
-  AssertEquals(AMessage+': Field Visibility', ord(ExpVisibilty), ord(FldData.FieldVisibility));
-  AssertTrue  (AMessage+': Field Flags',      ExpFlags = FldData.FieldFlags);
+  AssertEquals(AMessage, ': Field Name',       ExpName, FldData.FieldName);
+  AssertEquals(AMessage, ': Field Visibility', ord(ExpVisibilty), ord(FldData.FieldVisibility));
+  AssertTrue  (AMessage,': Field Flags',      ExpFlags = FldData.FieldFlags);
 
   if (ExpKind <> rdkUnknown) and
      (not aOnlyFieldData)
   then
-    AssertEquals(AMessage + ': VKind',    ExpKind, FldData.Field.ValueKind);
+    AssertEquals(AMessage, ': VKind',    ExpKind, FldData.Field.ValueKind);
 
   AssertTypeName(AMessage + ': Anch TypeName',   FldData.Owner, ExpAnchTypeName);
   if (not aOnlyFieldData) and
@@ -820,15 +922,15 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertStructData(const AMessage: strin
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkStruct, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Type',     ord(ExpType),  ord(IdeRes.StructType));
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkStruct, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Type',     ord(ExpType),  ord(IdeRes.StructType));
 
   if ExpType in [dstClass, dstInterface] then
-    AssertEquals(AMessage + ': Addr',     ExpAddr,          IdeRes.DataAddress);
+    AssertEquals(AMessage, ': Addr',     ExpAddr,          IdeRes.DataAddress);
 
   if ExpFieldCnt >= 0 then
-    AssertEquals(AMessage + ': Cnt',      ExpFieldCnt,      IdeRes.FieldCount);
+    AssertEquals(AMessage, ': Cnt',      ExpFieldCnt,      IdeRes.FieldCount);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -853,11 +955,11 @@ procedure TTestBaseIdeDebuggerWatchResult.AssertStructAnch(const AMessage: strin
 var
   t: TWatchResultData;
 begin
-  AssertTrue(AMessage+': not nil', IdeRes <> nil);
-  AssertEquals(AMessage + ': VKind',    rdkStruct, IdeRes.ValueKind);
-  AssertEquals(AMessage + ': Type',     ord(ExpType),  ord(IdeRes.StructType));
+  AssertTrue(AMessage, ': not nil', IdeRes <> nil);
+  AssertEquals(AMessage, ': VKind',    rdkStruct, IdeRes.ValueKind);
+  AssertEquals(AMessage, ': Type',     ord(ExpType),  ord(IdeRes.StructType));
 
-  AssertEquals(AMessage + ': Cnt',      ExpDirectFieldCnt,      IdeRes.DirectFieldCount);
+  AssertEquals(AMessage, ': Cnt',      ExpDirectFieldCnt,      IdeRes.DirectFieldCount);
 
   AssertTypeName(AMessage + ': TypeName',  IdeRes, ExpTypeName);
 
@@ -1986,7 +2088,7 @@ begin
       t.Done;
 
     AssertValKind('', Res, rdkArray);
-    AssertArrayData('', Res, aArrType, max(0, aLen), 0, 'TMyArray');
+    AssertArrayData('', Res, aArrType, max(0, aLen), 0, 'TMyArray', False, False);
 
     for i := 0 to aLen-1 do begin
       Res.SetSelectedIndex(i);
@@ -2133,7 +2235,7 @@ begin
       t.Done;
 
     AssertValKind('', Res, rdkArray);
-    AssertArrayData('', Res, datDynArray, aLen, 0, 'TMyArray');
+    AssertArrayData('', Res, datDynArray, aLen, 0, 'TMyArray', False, False);
 
     for i := 0 to aLen-1 do begin
       Res.SetSelectedIndex(i);
@@ -2183,6 +2285,82 @@ begin
       end
     end;
 
+
+
+    if x > 0 then
+      Res.Free
+    else
+      t.Done;
+  end;
+end;
+
+procedure TTestIdeDebuggerWatchResult.TestWatchArrayPtrErr;
+var
+  t: TTestWatchResWrapper;
+  ProtoIntf: IDbgWatchDataIntf;
+  Res: TWatchResultData;
+  i, x, aProtoErr: Integer;
+  ADataErr, aDataErr1, aDataErr2, aDataErr3: integer;
+  aSetProto: Boolean;
+begin
+  for x := 0 to 2 do
+  for aSetProto := low(Boolean) to high(Boolean) do
+  for aProtoErr := 0 to 4 do
+  for aDataErr1 := 0 to 4 do
+  for aDataErr2 := 0 to 4 do
+  for aDataErr3 := 0 to 4 do
+  begin
+    if (not aSetProto) and (aProtoErr > 0) then continue;
+
+    t.Init;
+    ProtoIntf := t.ResIntf.CreateArrayValue(datStatArray, 3, 0);
+    t.ResIntf.SetTypeName('TMyArray');
+
+    if aSetProto then begin
+      if aProtoErr in [0..3] then
+        CreateData(ProtoIntf, cdPtr_ErrNum, (aProtoErr and 1) <> 0, 'TMyProto', 987, 87, 'ZZ'); // value part should be ignored
+      if aProtoErr in [2..4] then
+        ProtoIntf.CreateError('protoerr');
+    end;
+
+    for i := 0 to 2 do begin
+      case i of
+        0: ADataErr := aDataErr1;
+        1: ADataErr := aDataErr2;
+        2: ADataErr := aDataErr3;
+      end;
+
+      ProtoIntf := t.ResIntf.SetNextArrayData;
+      if ADataErr in [0..3] then
+        CreateData(ProtoIntf, cdPtr_ErrNum, (aDataErr and 1) <> 0, 'TMyProto', 200+i, 990+i, 'E'+IntToStr(i));
+      if ADataErr in [2..4] then
+        ProtoIntf.CreateError('dataerr'+IntToStr(i));
+    end;
+
+    Res := t.GetIdeRes;
+    case x of
+      1: Res := SaveLoad(Res);
+      2: Res := Res.CreateCopy;
+    end;
+    if x > 0 then
+      t.Done;
+
+    AssertValKind('', Res, rdkArray);
+    AssertArrayData('', Res, datStatArray, 3, 0, 'TMyArray', False, False);
+
+    for i := 0 to 2 do begin
+      case i of
+        0: ADataErr := aDataErr1;
+        1: ADataErr := aDataErr2;
+        2: ADataErr := aDataErr3;
+      end;
+
+      Res.SetSelectedIndex(i);
+      if ADataErr in [2..4] then
+        AssertErrData('err-'+IntToStr(i), Res.SelectedEntry, 'dataerr'+IntToStr(i))
+      else
+        AssertData(''+IntToStr(i), Res.SelectedEntry, cdPtr_ErrNum, (aDataErr and 1) = 1, 'TMyProto', 200+i, 990+i, 'E'+IntToStr(i));
+    end;
 
 
     if x > 0 then
@@ -2358,7 +2536,7 @@ var
   StrctTyp: TLzDbgStructType;
   aSetProto, aUsePtr, aUseExtraStuct, WithFld, aErr1, aErr2, aErr1b, aErr2b,
   AnAbortErr, AnAbortAnchErr,
-    aNil, aNilb, aOuterErr, aOuterErr2: Boolean;
+  aNil, aNilb, aOuterErr, aOuterErr2, aStructErr: Boolean;
   aEntryType1, aEntryType2: TTestCreateDataKind;
   Res, InnerRes: TWatchResultData;
   AFlags: TCreateStructFlags;
@@ -2374,6 +2552,7 @@ begin
   for WithFld := low(Boolean) to high(Boolean) do
   for aOuterErr := low(Boolean) to high(Boolean) do
   for aOuterErr2 := low(Boolean) to high(Boolean) do
+  for aStructErr := low(Boolean) to high(Boolean) do
   for aEntryType1 := low(TTestCreateDataKind) to high(TTestCreateDataKind) do
   for aEntryType2 := low(TTestCreateDataKind) to high(TTestCreateDataKind) do
   for WithAnch := 0 to 2 do
@@ -2402,7 +2581,7 @@ begin
 //if aNil <> False then continue;
 //if aNilb <> False then continue;
 
-    if (AnAbortAnchErr or AnAbortErr) and not (aOuterErr2) then    // partial fields are not allowed, so the struct MUST be replaced by an error
+    if (AnAbortAnchErr or AnAbortErr) and not (aOuterErr2 or aStructErr) then    // partial fields are not allowed, so the struct MUST be replaced by an error
       continue;
     if AnAbortAnchErr and ( (WithAnch = 0) or (not WithFld) ) then // No abort, if no fields in Anchestor
       continue;
@@ -2417,7 +2596,7 @@ begin
     then
       continue;
     if ( (not WithFld) or (aNil and aNilb) or    // no fields (except maybe in prototype)
-         aOuterErr or aOuterErr2                 // or if fields aren't actually stored
+         aOuterErr or aOuterErr2 or aStructErr   // or if fields aren't actually stored
        ) and
        ( (aEntryType1 > low(TTestCreateDataKind)) or
          (aEntryType2 > low(TTestCreateDataKind)) or
@@ -2431,9 +2610,11 @@ begin
        )
     then
       continue;
+    if aStructErr and (aOuterErr2 or not(aUsePtr or aUseExtraStuct)) then
+      continue;
     if abs(ord(aEntryType1) - ord(aEntryType2)) > 1 then
       continue;
-    if aSetProto and (AnAbortErr or AnAbortAnchErr or aOuterErr2) then // proto should only affect first element added / first element is otherwise used as proto
+    if aSetProto and (AnAbortErr or AnAbortAnchErr or aOuterErr2 or aStructErr) then // proto should only affect first element added / first element is otherwise used as proto
       continue;
 
     t.Init;
@@ -2484,13 +2665,15 @@ begin
         if AnAbortAnchErr then AFlags := AFlags + [csfAbortFieldsAfterAnchestorError];
         CreateStruct(ProtoIntf, StrctTyp, WithFld, WithAnch, WithFld, WithFld,
           aEntryType1, aEntryType2, aErr1b, aErr2b, aNilb, False, AFlags);
+        if aStructErr then
+          ProtoIntf.CreateError('boom2');
         if aOuterErr2 then
           OuterIntf.CreateError('boom2');
       end
       else begin
         // Index 2
         CreateStruct(ProtoIntf, StrctTyp, WithFld, WithAnch, WithFld, WithFld,
-          aEntryType1, aEntryType2, aErr1b, aErr2b, aNilb, False);
+          aEntryType1, aEntryType2, False, False, aNilb, False, [csfSkipAnchestorErr]);
       end;
     end;
 
@@ -2505,7 +2688,7 @@ begin
 
 
     AssertValKind('', Res, rdkArray);
-    AssertArrayData('', Res, datDynArray, ArrayCnt+1, 0, 'TMyArray');
+    AssertArrayData('', Res, datDynArray, ArrayCnt+1, 0, 'TMyArray', False, False);
 
     for i := 0 to ArrayCnt do begin
       Res.SetSelectedIndex(i);
@@ -2539,6 +2722,11 @@ begin
       end
       else if i = 1 then begin
         // Index 1
+        if aStructErr then begin
+          AssertErrData('outer err', InnerRes, 'boom2');
+          continue;
+        end;
+
         AFlags := [];
         if AnAbortErr then AFlags     := AFlags + [csfAbortFieldsAfterError];
         if AnAbortAnchErr then AFlags := AFlags + [csfAbortFieldsAfterAnchestorError];
@@ -2550,7 +2738,7 @@ begin
         // Index 2
         AssertValKind('', InnerRes, rdkStruct);
         AssertStruct('', InnerRes, StrctTyp, WithFld, WithAnch, WithFld, WithFld,
-          aEntryType1, aEntryType2, aErr1b, aErr2b, aNilb, '', False);
+          aEntryType1, aEntryType2, False, False, aNilb, '', False, [csfSkipAnchestorErr]);
       end;
     end;
 
@@ -2689,7 +2877,7 @@ begin
 
 
     AssertValKind('', Res, rdkArray);
-    AssertArrayData('', Res, datDynArray, 2, 0, 'TMyArray');
+    AssertArrayData('', Res, datDynArray, 2, 0, 'TMyArray', False, False);
 
       // [0]
       res.SetSelectedIndex(0);
@@ -2842,7 +3030,7 @@ begin
 
 
     AssertValKind('', Res, rdkArray);
-    AssertArrayData('', Res, datUnknown, 3, 0);
+    AssertArrayData('', Res, datUnknown, 3, 0, #1, False, False);
 
     Res.SetSelectedIndex(0);
     if aVarErr = 0 then begin
@@ -2951,7 +3139,7 @@ begin
       t.Done;
 
     AssertValKind('', Res, rdkArray);
-    AssertArrayData('', Res, datDynArray, 10, 0, 'TMyArray');
+    AssertArrayData('', Res, datDynArray, 10, 0, 'TMyArray', False, False);
 
     Res.SetSelectedIndex(0);
     AssertStructData('idx:0', Res.SelectedEntry, dstClass, 10, -1, ''); // TODO: field cnt

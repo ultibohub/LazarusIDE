@@ -2288,7 +2288,6 @@ var
   Gz: TGridZone;
   ButtonColumn: boolean;
 begin
-
   with FGCache do begin
 
     Gz := MouseToGridZone(X,Y);
@@ -6529,47 +6528,74 @@ end;
 
 function TCustomGrid.MouseToGridZone(X, Y: Integer): TGridZone;
 var
-  aBorderWidth: Integer;
+  aBorderWidth, FlippedX: Integer;
   aCol, aRow: Longint;
+  XMaybeOverFixedCols, YMaybeOverFixedRows: Boolean;
 begin
   {$ifdef dbgGrid}
   debugln(['TCustomGrid.MouseToGridZone: X=',X,', Y=',Y,', FGCache.FixedWidth=',FGCache.FixedWidth,', FGCache.FixedHeight=',FGCache.FixedHeight]);
   {$endif}
-  aBorderWidth := GetBorderWidth;
-  if FlipX(X)<FGCache.FixedWidth+aBorderWidth then begin
+  aBorderWidth:=GetBorderWidth;
+  FlippedX:=FlipX(X);
+  XMaybeOverFixedCols:=(FlippedX<FGCache.FixedWidth+aBorderWidth);
+  YMaybeOverFixedRows:=(Y<FGCache.FixedHeight+aBorderWidth);
+
+  //Always give the same result if a grid is fixed.
+  if FixedGrid then begin
+    if AllowOutBoundEvents then
+      Result := gzFixedCells
+    else begin
+      if XMaybeOverFixedCols and YMaybeOverFixedRows then
+        Result := gzFixedCells
+      else begin // check if we're outside the grid
+        MouseToCell(X,Y,aCol,aRow);
+      if (aRow<0) or (aCol<0)  then
+        Result := gzInvalid
+      else
+        Result := gzFixedCells;
+      end;
+    end;
+    Exit;
+  end;
+
+  if XMaybeOverFixedCols then begin
     // in fixedwidth zone: either a fixedcol or a fixedcell
-    if Y<FGcache.FixedHeight+aBorderWidth then
+    if YMaybeOverFixedRows then
       Result:= gzFixedCells
     else begin
-      OffsetToColRow(True, True, X, aCol, aRow);
-      if (aCol<0) or (ColCount<=FixedCols) then
-        Result := gzInvalid
-      else
-        Result := gzFixedCols;
+      if AllowOutboundEvents then
+        Result := gzFixedCols
+      else begin
+        OffSetToColRow(False, True, Y, aRow, aCol);
+        if (aRow<0) then
+          Result := gzInvalid
+        else
+          Result := gzFixedCols;
+      end;
     end;
-  end
-  else if Y<FGCache.FixedHeight+aBorderWidth then begin
-    // if fixedheight zone: either a fixedrow or a fixedcell
-    if FlipX(X)<FGCache.FixedWidth+aBorderWidth then
-      Result:=gzFixedCells
-    else begin
-      OffsetToColRow(False, True, Y, aRow, aCol);
-      if (aRow<0) or (RowCount<=FixedRows) then
-        Result := gzInvalid
+  end // XMaybeOverFixedCols
+  else begin  // Not in a fixedwidth zone
+    if YMaybeOverFixedRows then
+    begin
+      // maybe in fixedheight zone: either a fixedrow or a fixedcell or outside the gridcells
+      if AllowOutboundEvents then
+        Result := gzFixedRows
+      else begin
+        OffSetToColRow(True, True, X, aCol, aRow);
+        if (aCol<0) then
+          Result := gzInvalid
+        else
+          Result := gzFixedRows;
+      end;
+    end
+    else begin // must be over a normal cell or outside the gridcells
+      MouseToCell(x, y, aCol, aRow);
+      if (aCol<0) or (aRow<0) then
+        result := gzInvalid
       else
-        Result := gzFixedRows;
+        result := gzNormal;
     end;
-  end
-  else if not FixedGrid then begin
-    // in normal cell zone (though, might be outbounds)
-    MouseToCell(x, y, aCol, aRow);
-    if (aCol<0) or (aRow<0) then
-      result := gzInvalid
-    else
-      result := gzNormal;
-  end
-  else
-    result := gzInvalid;
+  end;
   {$ifdef dbgGrid}
   debugln(['TCustomGrid.MouseToGridZone: Result=',Dbgs(Result)]);
   {$endif}
