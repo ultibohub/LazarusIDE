@@ -6321,6 +6321,7 @@ resourcestring
   optDispGutterNoCurrentLineColor = 'No current line color';
   optDispGutterUseCurrentLineColor = 'Use current line color';
   optDispGutterUseCurrentLineNumberColor = 'Use current line number color';
+  lisFailedToSaveMacro = 'Failed to save macro.';
 
 implementation
 
