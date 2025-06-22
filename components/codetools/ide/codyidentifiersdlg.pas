@@ -41,8 +41,8 @@ uses
   // LCL
   Forms, Controls, Dialogs, ButtonPanel, StdCtrls, ExtCtrls, LCLType, Buttons, Menus,
   // IdeIntf
-  PackageIntf, LazIDEIntf, SrcEditorIntf, ProjectIntf,
-  CompOptsIntf, IDEDialogs, IDEMsgIntf, IDEExternToolIntf, ProjPackIntf,
+  PackageIntf, LazIDEIntf, SrcEditorIntf, ProjectIntf, CompOptsIntf, IDEDialogs,
+  IDEMsgIntf, IDEWindowIntf, IDEExternToolIntf, ProjPackIntf,
   // Codetools
   CodeCache, BasicCodeTools, CustomCodeTool, CodeToolManager, UnitDictionary,
   CodeTree, LinkScanner, DefineTemplates, FindDeclarationTool,
@@ -172,7 +172,7 @@ type
     procedure FormClose(Sender: TObject; var {%H-}CloseAction: TCloseAction);
     procedure FormCreate(Sender: TObject);
     procedure HideOtherProjectsCheckBoxChange(Sender: TObject);
-    procedure ItemsListBoxClick(Sender: TObject);
+    procedure ItemsListBoxDblClick(Sender: TObject);
     procedure ItemsListBoxSelectionChange(Sender: TObject; {%H-}User: boolean);
     procedure OnIdle(Sender: TObject; var {%H-}Done: Boolean);
     procedure PopupMenu1Popup(Sender: TObject);
@@ -796,8 +796,8 @@ end;
 constructor TCodyUnitDictionary.Create;
 begin
   inherited Create;
-  FSaveIntervalInS:=60*3; // every 3 minutes
-  FLoadAfterStartInS:=3;
+  FSaveIntervalInS:=cDefSaveIntervalInS;
+  FLoadAfterStartInS:=cDefLoadDelayInS;
   InitCriticalSection(fCritSec);
   fQueuedTools:=TAVLTree.Create;
   CodeToolBoss.AddHandlerToolTreeChanging(@ToolTreeChanged);
@@ -879,49 +879,49 @@ end;
 
 procedure TCodyIdentifiersDlg.DeletePackageClick(Sender: TObject);
 var
-  Identifier: string;
-  UnitFilename: string;
-  GroupName: string;
-  GroupFilename: string;
-  Group: TUDUnitGroup;
-  s: String;
+  lId: TCodyIdentifier;
+  lMsg: string;
+  lGroup: TUDUnitGroup;
 begin
-  if not FindSelectedItem(Identifier, UnitFilename, GroupName, GroupFilename)
-  then exit;
-  if GroupFilename='' then exit;
-  s:=Format(crsReallyDeleteThePackageFromTheDatabaseNoteThisDoe, [#13, #13,
-    #13, GroupFilename]);
-  if IDEMessageDialog(crsDeletePackage, s, mtConfirmation, [mbYes, mbNo], '')<>
-    mrYes
-  then exit;
-  Group:=CodyUnitDictionary.FindGroupWithFilename(GroupFilename);
-  if Group=nil then exit;
-  CodyUnitDictionary.DeleteGroup(Group,true);
+  lId := FindSelectedIdentifier;
+  if lId = nil then exit;
+  if lId.GroupFile = '' then exit;
+
+  // confirm
+  lMsg := Format(crsReallyDeleteThePackageFromTheDatabaseNoteThisDoe,
+    [LineEnding, LineEnding, LineEnding, lId.GroupFile]);
+  if IDEMessageDialog(crsDeletePackage, lMsg, mtConfirmation, mbYesNo) <> mrYes then exit;
+
+  // delete
+  lGroup := CodyUnitDictionary.FindGroupWithFilename(lId.GroupFile);
+  if lGroup = nil then exit;
+  CodyUnitDictionary.DeleteGroup(lGroup, true);
+
   UpdateGeneralInfo;
   UpdateItemsList;
 end;
 
 procedure TCodyIdentifiersDlg.DeleteUnitClick(Sender: TObject);
 var
-  Identifier: string;
-  UnitFilename: string;
-  GroupName: string;
-  GroupFilename: string;
-  CurUnit: TUDUnit;
-  s: String;
+  lId: TCodyIdentifier;
+  lMsg: string;
+  lUnit: TUDUnit;
 begin
-  if not FindSelectedItem(Identifier, UnitFilename, GroupName, GroupFilename)
-  then exit;
-  s:=Format(crsReallyDeleteTheUnitFromTheDatabaseNoteThisDoesNo, [#13, #13,
-    #13, UnitFilename]);
-  if GroupFilename<>'' then
-    s+=#13+Format(crsIn, [GroupFilename]);
-  if IDEMessageDialog(crsDeleteUnit, s, mtConfirmation, [mbYes, mbNo], '')<>
-    mrYes
-  then exit;
-  CurUnit:=CodyUnitDictionary.FindUnitWithFilename(UnitFilename);
-  if CurUnit=nil then exit;
-  CodyUnitDictionary.DeleteUnit(CurUnit,true);
+  lId := FindSelectedIdentifier;
+  if lId = nil then exit;
+
+  // confirm
+  lMsg := Format(crsReallyDeleteTheUnitFromTheDatabaseNoteThisDoesNo,
+    [LineEnding, LineEnding, LineEnding, lId.UnitFile]);
+  if lId.GroupFile <> '' then
+    lMsg := lMsg + LineEnding + Format(crsIn, [lId.GroupFile]);
+  if IDEMessageDialog(crsDeleteUnit, lMsg, mtConfirmation, mbYesNo) <> mrYes then exit;
+
+  // delete
+  lUnit := CodyUnitDictionary.FindUnitWithFilename(lId.UnitFile);
+  if lUnit = nil then exit;
+  CodyUnitDictionary.DeleteUnit(lUnit, true);
+
   UpdateGeneralInfo;
   UpdateItemsList;
 end;
@@ -937,18 +937,23 @@ procedure TCodyIdentifiersDlg.FilterEditKeyDown(Sender: TObject; var Key: Word;
 var
   i: Integer;
 begin
-  i:=ItemsListBox.ItemIndex;
-  case Key of
-  VK_DOWN:
+  if (Key = VK_DOWN) and (Shift = []) then
+  begin
+    i:=ItemsListBox.ItemIndex;
     if i<0 then
       ItemsListBox.ItemIndex:=Min(ItemsListBox.Items.Count-1,0)
     else if i<ItemsListBox.Count-1 then
       ItemsListBox.ItemIndex:=i+1;
-  VK_UP:
+    Key := 0;
+  end
+  else if (Key = VK_UP) and (Shift = []) then
+  begin
+    i:=ItemsListBox.ItemIndex;
     if i<0 then
       ItemsListBox.ItemIndex:=ItemsListBox.Count-1
     else if i>0 then
       ItemsListBox.ItemIndex:=i-1;
+    Key := 0;
   end;
 end;
 
@@ -969,6 +974,7 @@ begin
   CodyOptions.PreferImplementationUsesSection:=
                                         AddToImplementationUsesCheckBox.Checked;
   FreeAndNil(FItems);
+  IDEDialogLayoutList.SaveLayout(self);
 end;
 
 procedure TCodyIdentifiersDlg.FormCreate(Sender: TObject);
@@ -977,7 +983,7 @@ begin
   ButtonPanel1.HelpButton.OnClick:=@ButtonPanel1HelpButtonClick;
   ButtonPanel1.OKButton.Caption:=crsUseIdentifier;
   ButtonPanel1.OKButton.OnClick:=@UseIdentifierClick;
-  FMaxItems:=40;
+  FMaxItems:=cDefMaxListItems;
   FilterEdit.TextHint:=crsFilter;
   FItems:=TObjectList.Create;
   HideOtherProjectsCheckBox.Checked:=true;
@@ -998,6 +1004,7 @@ begin
   ContainsRadioButton.Checked:=false;
   ContainsRadioButton.Caption:=crsContains;
   ContainsRadioButton.Hint:=crsShowOnlyIdentifiersContainingFilterText;
+  IDEDialogLayoutList.ApplyLayout(self, 550, 550);
 end;
 
 procedure TCodyIdentifiersDlg.HideOtherProjectsCheckBoxChange(Sender: TObject);
@@ -1006,10 +1013,17 @@ begin
   IdleConnected:=true;
 end;
 
-procedure TCodyIdentifiersDlg.ItemsListBoxClick(Sender: TObject);
+procedure TCodyIdentifiersDlg.ItemsListBoxDblClick(Sender: TObject);
+var
+  lClickPos: TPoint;
 begin
-  if FItems=nil then exit;
+  // ignore clicks in empty area
+  lClickPos := ItemsListBox.ScreenToClient(Mouse.CursorPos);
+  if ItemsListBox.ItemAtPos(lClickPos, true) < 0 then exit;
 
+  // only if valid identificator is selected
+  if assigned(FindSelectedIdentifier) then
+    UseIdentifierClick(Sender);
 end;
 
 procedure TCodyIdentifiersDlg.ItemsListBoxSelectionChange(Sender: TObject;
@@ -1338,14 +1352,11 @@ begin
 end;
 
 function TCodyIdentifiersDlg.FindSelectedIdentifier: TCodyIdentifier;
-var
-  i: Integer;
 begin
-  Result:=nil;
-  if FItems=nil then exit;
-  i:=ItemsListBox.ItemIndex;
-  if (i<0) or (i>=FItems.Count) then exit;
-  Result:=TCodyIdentifier(FItems[i]);
+  if assigned(FItems) and InRange(ItemsListBox.ItemIndex, 0, FItems.Count - 1) then
+    result := TCodyIdentifier(FItems[ItemsListBox.ItemIndex])
+  else
+    result := nil;
 end;
 
 function TCodyIdentifiersDlg.FindSelectedItem(out Identifier, UnitFilename,
@@ -1353,19 +1364,21 @@ function TCodyIdentifiersDlg.FindSelectedItem(out Identifier, UnitFilename,
 var
   Item: TCodyIdentifier;
 begin
-  Result:=false;
-  Identifier:='';
-  UnitFilename:='';
-  GroupName:='';
-  GroupFilename:='';
-  Item:=FindSelectedIdentifier;
-  if Item=nil then exit;
-  Identifier:=Item.Identifier;
-  UnitFilename:=Item.UnitFile;
-  GroupName:=Item.GroupName;
-  GroupFilename:=Item.GroupFile;
+  Item := FindSelectedIdentifier;
+  result := assigned(Item);
+  if result then
+  begin
+    Identifier    := Item.Identifier;
+    UnitFilename  := Item.UnitFile;
+    GroupName     := Item.GroupName;
+    GroupFilename := Item.GroupFile;
+  end else begin
+    Identifier    := '';
+    UnitFilename  := '';
+    GroupName     := '';
+    GroupFilename := '';
+  end;
   //debugln(['TCodyIdentifiersDlg.FindSelectedItem ',Identifier,' Unit=',UnitFilename,' Pkg=',GroupFilename]);
-  Result:=true;
 end;
 
 function TCodyIdentifiersDlg.Init: boolean;
