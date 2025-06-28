@@ -9,6 +9,7 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
+        <OtherUnitFiles Value="fcl-proc331"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Other>
@@ -55,6 +56,36 @@ Provides an interface to add debuggers to the IDE"/>
       <Item>
         <Filename Value="dbgintfprocess.pas"/>
         <UnitName Value="DbgIntfProcess"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\pipes331.pp"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="Pipes331"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\process331.pp"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="process331"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\processbody.inc"/>
+        <Type Value="Include"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\unix_pipes.inc"/>
+        <Type Value="Include"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\unix_process.inc"/>
+        <Type Value="Include"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\win_pipes.inc"/>
+        <Type Value="Include"/>
+      </Item>
+      <Item>
+        <Filename Value="fcl-proc331\win_process.inc"/>
+        <Type Value="Include"/>
       </Item>
     </Files>
     <i18n>

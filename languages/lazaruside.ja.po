@@ -8835,6 +8835,10 @@ msgstr "%s (デバック中 ...)"
 msgid "Automatic typecast for objects"
 msgstr "オブジェクトの自動型キャスト"
 
+#: lazarusidestrconsts.lisdebuglogcloseoptdescr
+msgid "Close log file between writes. Prevents loss of unsaved data when the IDE crashes. By default, writes are buffered by the OS for performance."
+msgstr ""
+
 #: lazarusidestrconsts.lisdebugoptionsfrmaddexception
 msgid "Add Exception"
 msgstr "例外を追加"
@@ -12943,10 +12947,6 @@ msgstr "保存されたテンプレートが存在"
 #: lazarusidestrconsts.lismenueditorfurthershortcutconflict
 msgid "Further shortcut conflict"
 msgstr "さらなるショートカットキーの衝突"
-
-#: lazarusidestrconsts.lismenueditorgethelptousethiseditor
-msgid "Get help to use this editor"
-msgstr "このエディタを使うためのヘルプを入手"
 
 #: lazarusidestrconsts.lismenueditorgrabkey
 msgid "&Grab key"

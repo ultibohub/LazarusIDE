@@ -28,6 +28,7 @@ const
   csvHeader = 'Type,Description,Priority,Module,Line,Owner,Category';
 
 resourcestring
+  lisTodolistEdit='Edit selected item';
   lisTodolistRefresh='Refresh todo items';
   lisTodoListGotoLine='Goto selected source line';
   lisCTInsertMacro = 'Insert Macro';
@@ -39,6 +40,7 @@ resourcestring
   lisToDoLLine  = 'Line';
   lisToDoLOwner = 'Owner';
   listToDoLCategory = 'Category';
+  lisEdit = 'Edit';
   lisToDoGoto = 'Goto';
   lisToDoExport = 'Export';
   lisOptions = 'Options';
@@ -53,6 +55,7 @@ resourcestring
   lisSourceEditorHint = 'Add units in source editor';
   dlgUnitDepRefresh = 'Refresh';
   lisTDDInsertToDo = 'Insert a ToDo/Done/Note';
+  lisTDDEditToDo = 'Edit the ToDo/Done/Note';
   lisViewToDoList = 'View ToDo List';
   lisToDoList = 'ToDo List';
   lisPkgFileTypeText = 'Text';

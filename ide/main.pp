@@ -62,7 +62,7 @@ uses
   Math, Classes, SysUtils, TypInfo, Types, StrUtils, Contnrs, process, AVL_Tree,
   // LCL
   LCLProc, LCLType, LCLIntf, LMessages, LResources, HelpIntfs, InterfaceBase, LCLPlatformDef,
-  ComCtrls, Forms, Buttons, Menus, Controls, Graphics, ExtCtrls, Dialogs, LclStrConsts,
+  ComCtrls, Forms, Buttons, Menus, Controls, Graphics, ExtCtrls, Dialogs, LclStrConsts, StdCtrls,
   // CodeTools
   FileProcs, FindDeclarationTool, LinkScanner, BasicCodeTools, CodeToolsStructs,
   CodeToolManager, CodeCache, DefineTemplates, KeywordFuncLists, CodeTree,
@@ -193,11 +193,13 @@ type
     procedure HandleApplicationKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure HandleApplicationQueryEndSession(var Cancel: Boolean);
     procedure HandleApplicationEndSession(Sender: TObject);
+    procedure HandleScreenFormAdded(Sender: TObject; Form: TCustomForm);
     procedure HandleScreenChangedForm(Sender: TObject; {%H-}Form: TCustomForm);
     procedure HandleScreenChangedControl(Sender: TObject; LastControl: TControl);
     procedure HandleScreenRemoveForm(Sender: TObject; AForm: TCustomForm);
     procedure HandleRemoteControlTimer(Sender: TObject);
     procedure HandleSelectFrame(Sender: TObject; var AComponentClass: TComponentClass);
+    function FindHelpButton(lParent: TWinControl; out aHelpButton: TControl): boolean;
     procedure ForwardKeyToObjectInspector(Sender: TObject; Key: TUTF8Char);
     procedure OIChangedTimerTimer(Sender: TObject);
     procedure LazInstancesStartNewInstance(const aFiles: TStrings;
@@ -661,6 +663,7 @@ type
     procedure GetLayoutHandler(Sender: TObject; aFormName: string;
             out aBounds: TRect; out DockSibling: string; out DockAlign: TAlign);
   private
+    FFormsForSetupHelpButton: TFPList; // TCustomForm list to search for a help button in idle and assigning it handler
     FDesignerToBeFreed: TFilenameToStringTree; // form file names to be freed on idle.
     FComponentAddedDesigner: TDesigner; // Designer and unit where components were added.
     FComponentAddedUnit: TUnitInfo;
@@ -1136,6 +1139,7 @@ var
     AddCmdLineParamDesc(result, ['--verbose'], lisBeMoreVerboseCanBeGivenMultipleTimes);
     // debug file
     AddCmdLineParamDesc(result, [DebugLogOpt + '<file>'], lisFileWhereDebugOutputIsWritten);
+    AddCmdLineParamDesc(result, [DebugLogCloseLogOpt], lisDebugLogCloseOptDescr);
     // debug groups (sorted)
     lLogGroups := TStringList.Create;
     for i := 0 to DebugLogger.LogGroupList.Count - 1 do
@@ -1736,11 +1740,14 @@ begin
   Application.AddOnKeyDownHandler(@HandleApplicationKeyDown);
   Application.AddOnQueryEndSessionHandler(@HandleApplicationQueryEndSession);
   Application.AddOnEndSessionHandler(@HandleApplicationEndSession);
+  Screen.AddHandlerFormAdded(@HandleScreenFormAdded);
   Screen.AddHandlerRemoveForm(@HandleScreenRemoveForm);
   Screen.AddHandlerActiveFormChanged(@HandleScreenChangedForm);
   Screen.AddHandlerActiveControlChanged(@HandleScreenChangedControl);
   IDEComponentPalette.OnClassSelected := @ComponentPaletteClassSelected;
   IDEWindowCreators.AddLayoutChangedHandler(@LayoutChangeHandler);
+
+  CreateOftenUsedForms;
   SetupIDEWindowsLayout;
   RestoreIDEWindows;
   MainIDEBar.SetupHints;
@@ -1804,6 +1811,7 @@ begin
   FreeThenNil(SourceEditorManagerIntf);
   FreeAndNil(FIdentifierWordCompletionWordList);
   FreeAndNil(FIdentifierWordCompletion);
+  FreeAndNil(FFormsForSetupHelpButton);
 
   // disconnect handlers
   Application.RemoveAllHandlersOfObject(Self);
@@ -12955,6 +12963,8 @@ var
   AnIDesigner: TIDesigner;
   HasResources: Boolean;
   FileItem: PStringToStringItem;
+  lHelpButton: TControl;
+  lContextHelpCommand: TIDECommand;
 begin
   GetDefaultProcessList.FreeStoppedProcesses;
   if (SplashForm<>nil) then FreeThenNil(SplashForm);
@@ -12981,6 +12991,30 @@ begin
       CloseUnitComponent(AnUnitInfo,[]);
     end;
     FreeAndNil(FDesignerToBeFreed);
+  end;
+
+  if Assigned(FFormsForSetupHelpButton) then begin
+    with FFormsForSetupHelpButton do
+      if Count>0 then begin
+        // process in idle one window at a time
+        if FindHelpButton(TWinControl(Extract(First)),lHelpButton) then begin
+          // set click event
+          if lHelpButton.OnClick=nil then
+            lHelpButton.OnClick:=@LazarusHelp.HelpButtonClick;
+          // set shortcut hint
+          if lHelpButton.Hint='' then begin
+            lContextHelpCommand:=IDECommandList.FindIDECommand(ecContextHelp);
+            if Assigned(lContextHelpCommand) then begin
+              with lContextHelpCommand do
+                lHelpButton.Hint:=KeyValuesToCaptionStr(ShortcutA,ShortcutB);
+              lHelpButton.ShowHint:=true;
+            end;
+          end;
+        end;
+        // free empty list
+        if FFormsForSetupHelpButton.Count <= 0 then
+          FreeAndNil(FFormsForSetupHelpButton);
+      end;
   end;
 
   if (FRemoteControlTimer=nil) and EnableRemoteControl then begin
@@ -13106,6 +13140,7 @@ begin
   case Command of
   ecContextHelp, ecEditContextHelp:
     begin
+      Handled:=false;
       ProcessIDECommand(Sender,Command,Handled);
       if Handled then Key:=VK_UNKNOWN;
     end;
@@ -13146,6 +13181,14 @@ begin
   QuitIDE;
 end;
 
+procedure TMainIDE.HandleScreenFormAdded(Sender: TObject; Form: TCustomForm);
+begin
+  if FFormsForSetupHelpButton = nil then
+    FFormsForSetupHelpButton := TFPList.Create;
+  if FFormsForSetupHelpButton.IndexOf(Form) < 0 then
+    FFormsForSetupHelpButton.Add(Form);
+end;
+
 procedure TMainIDE.HandleScreenChangedForm(Sender: TObject; Form: TCustomForm);
 var
   aForm: TForm;
@@ -13174,6 +13217,12 @@ end;
 
 procedure TMainIDE.HandleScreenRemoveForm(Sender: TObject; AForm: TCustomForm);
 begin
+  if assigned(FFormsForSetupHelpButton) then
+  begin
+    FFormsForSetupHelpButton.Remove(AForm);
+    if FFormsForSetupHelpButton.Count <= 0 then
+      FreeAndNil(FFormsForSetupHelpButton);
+  end;
   HiddenWindowsOnRun.Remove(AForm);
   LastActivatedWindows.Remove(AForm);
   if WindowMenuActiveForm=AForm then
@@ -13192,6 +13241,35 @@ end;
 procedure TMainIDE.HandleSelectFrame(Sender: TObject; var AComponentClass: TComponentClass);
 begin
   AComponentClass := DoSelectFrame;
+end;
+
+// Recursive search for 'HelpButton' button
+// aHelpButton undefined if result is false
+function TMainIDE.FindHelpButton(lParent: TWinControl; out aHelpButton: TControl): boolean;
+var
+  c: TControl;
+begin
+  // form in container is processed separately
+  if lParent.ClassName = 'TAnchorDockHostSite' then
+    exit(false);
+  if lParent.ComponentState * [csDesigning, csDesignInstance] <> [] then
+    exit(false);
+
+  for c in lParent.GetEnumeratorControls do
+  begin
+    // recursive call
+    if (c is TWinControl) and FindHelpButton(TWinControl(c), aHelpButton) then
+      exit(true);
+    // case sensitive for speed
+    if c.Name <> 'HelpButton' then
+      continue;
+    // TCustomButton is TButton and TBitBtn
+    if not ((c is TCustomButton) or (c is TToolButton)) then
+      continue;
+    aHelpButton := c;
+    exit(true);
+  end;
+  result := false;
 end;
 
 procedure TMainIDE.ForwardKeyToObjectInspector(Sender: TObject; Key: TUTF8Char);

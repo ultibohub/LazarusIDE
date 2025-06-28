@@ -8737,6 +8737,10 @@ msgstr "%s (depurando ...)"
 msgid "Automatic typecast for objects"
 msgstr "\"Typecast\" automático para objetos"
 
+#: lazarusidestrconsts.lisdebuglogcloseoptdescr
+msgid "Close log file between writes. Prevents loss of unsaved data when the IDE crashes. By default, writes are buffered by the OS for performance."
+msgstr ""
+
 #: lazarusidestrconsts.lisdebugoptionsfrmaddexception
 msgid "Add Exception"
 msgstr "Adicionar Exceção"
@@ -12831,10 +12835,6 @@ msgstr "Encerrando modelos salvos"
 #: lazarusidestrconsts.lismenueditorfurthershortcutconflict
 msgid "Further shortcut conflict"
 msgstr "Outros conflitos de atalho"
-
-#: lazarusidestrconsts.lismenueditorgethelptousethiseditor
-msgid "Get help to use this editor"
-msgstr "Obtenha ajuda para usar este editor"
 
 #: lazarusidestrconsts.lismenueditorgrabkey
 msgid "&Grab key"

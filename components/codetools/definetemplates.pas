@@ -6897,6 +6897,7 @@ begin
        +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerintf;'
        +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerfp;'
        +LazarusSrcDir+'/components/lazdebuggers/lazdebuggerfplldb;'
+       +LazarusSrcDir+'/components/virtualtreeview;'
        +LazarusSrcDir+'/lcl;'
        +LazarusSrcDir+'/lcl/interfaces;'
        +LazarusSrcDir+'/lcl/interfaces/'+WidgetType+';'

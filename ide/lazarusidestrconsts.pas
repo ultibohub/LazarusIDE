@@ -160,6 +160,9 @@ resourcestring
     'directory where Lazarus searches for config template files. Default is "%s".';
   lisFileWhereDebugOutputIsWritten =
     'File where debug output is written to. Default is write to the console.';
+  lisDebugLogCloseOptDescr =
+    'Close log file between writes. Prevents loss of unsaved data when the IDE crashes. '+
+    'By default, writes are buffered by the OS for performance.';
   lisSkipStartupChecks = 'Skip selected checks at startup. Valid options are:';
   lisGroupsForDebugOutput = 'Enable or disable groups of debug output. ' +
     'Valid options are:';
@@ -4868,7 +4871,6 @@ resourcestring
   lisMenuEditorEnterANewShortCutKey2ForS = 'Enter a new ShortCutKey2 for %s';
   lisMenuEditorExistingSavedTemplates = 'Existing saved templates';
   lisMenuEditorFurtherShortcutConflict = 'Further shortcut conflict';
-  lisMenuEditorGetHelpToUseThisEditor = 'Get help to use this editor';
   lisMenuEditorGrabKey = '&Grab key';
   lisMenuEditorInadequateDescription = 'Inadequate Description';
   lisMenuEditorInsertMenuTemplateIntoRootOfS = 'Insert menu template into root of %s';

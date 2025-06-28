@@ -183,6 +183,10 @@ resourcestring
     +'containing filter text';
   crsUseIdentifier = '&Use identifier';
   crsAndMoreIdentifiers = '... and %s more identifiers';
+  crsContextUseIdentifier = 'Use "%s"';
+  crsContextJumpTo = 'Jump to "%s"';
+  crsContextDeleteUnit = 'Delete unit "%s"';
+  crsContextDeletePackage = 'Delete package "%s"';
   crsCodyIdentifierDictionary = 'Identifier Dictionary';
   crsReallyDeleteTheUnitFromTheDatabaseNoteThisDoesNo = 'Really delete the '
     +'unit from the database?%sNote: This does not change the source or any'
@@ -242,6 +246,7 @@ resourcestring
     +'on demand or after this time';
   crsTheDictionaryIsSavedInIntervals = 'The dictionary is saved in intervals';
   crsSaveDictionaryNow = 'Save dictionary now';
+  crsDictionaryMaxListItems = 'Maximum displayed items in the list';
   crsSaveToFile = 'Save to file %s';
   crsConfigureNewIDEWindow = 'Configure new IDE window';
   crsNoteTheNameOfTheFormMustBeAValidPascalIdentifierAn = 'Note: The name of '

@@ -447,6 +447,8 @@ type
 
   TCustomSynEdit = class(TSynEditBase)
     procedure SelAvailChange(Sender: TObject);
+  private type
+    TSynDecPaintLockState = (iplFalse, iplIgnore, iplIgnoreAllowScroll, iplSubLock);
   private
     FImeHandler: LazSynIme;
   {$IFDEF Gtk2IME}
@@ -540,9 +542,10 @@ type
     FRecalcCharsAndLinesLock: Integer;
     FDoingResizeLock: Integer;
     FInvalidateRect: TRect;
-    FIsInDecPaintLock: Boolean;
+    FIsInDecPaintLock: TSynDecPaintLockState;
     FScrollBars: TScrollStyle;
     FOldTopView: Integer;
+    FCachedTopLine: Integer;
     FLastTextChangeStamp: Int64;
     fHighlighter: TSynCustomHighlighter;
     fUndoList: TSynEditUndoList;
@@ -689,7 +692,8 @@ type
     procedure MoveCaretVert(DY: integer; UseScreenLine: Boolean = False);
     procedure PrimarySelectionRequest(const RequestedFormatID: TClipboardFormat;
       Data: TStream);
-    procedure ScanRanges(ATextChanged: Boolean = True);
+    procedure ScanRanges;
+    procedure ScanChangedLines(AChangedLinesStart, AChangedLinesEnd, AChangedLinesDiff: Integer; ATextChanged: Boolean);
     procedure IdleScanRanges(Sender: TObject; var Done: Boolean);
     procedure DoBlockSelectionChanged(Sender: TObject);
     procedure SetBlockIndent(const AValue: integer);
@@ -706,6 +710,7 @@ type
     procedure SetKeystrokes(const Value: TSynEditKeyStrokes);
     procedure SetLastMouseCaret(const AValue: TPoint);
     function  CurrentMaxLeftChar(AIncludeCharsInWin: Boolean = False): Integer;
+
     function  CurrentMaxLineLen: Integer;
     procedure SetLineText(Value: string);
     procedure SetMaxLeftChar(Value: integer);
@@ -1368,6 +1373,11 @@ var
 const
   GutterTextDist = 2; //Pixel
 
+function DbgS(const s: TSynEdit.TSynDecPaintLockState): string; overload;
+begin
+  WriteStr(Result, s);
+end;
+
 type
 
   TSynTextViewsManagerInternal = class(TSynTextViewsManager)
@@ -1984,9 +1994,12 @@ end;
 function TCustomSynEdit.GetTopLine: Integer;
 begin
   if not Assigned(FTextArea) then
-    Result := -1
-  else
-    Result := FTheLinesView.ViewToTextIndex(ToIdx(FTextArea.TopLine)) + 1;
+    exit(-1);
+
+  if FCachedTopLine > 0 then
+    exit(FCachedTopLine);
+  Result := FTheLinesView.ViewToTextIndex(ToIdx(FTextArea.TopViewedLine)) + 1;
+  FCachedTopLine := Result;
 end;
 
 procedure TCustomSynEdit.SetBlockTabIndent(AValue: integer);
@@ -2534,7 +2547,11 @@ end;
 
 procedure TCustomSynEdit.IncPaintLock;
 begin
-  if FIsInDecPaintLock then exit;
+  if FIsInDecPaintLock <> iplFalse then begin
+    if FIsInDecPaintLock = iplSubLock then
+      inc(FPaintLock);
+    exit;
+  end;
   if (PaintLockOwner = nil) then begin
     PaintLockOwner := Self;
     FLines.SendNotification(senrIncOwnedPaintLock, Self);  // DoIncForeignPaintLock
@@ -2546,7 +2563,11 @@ end;
 
 procedure TCustomSynEdit.DecPaintLock;
 begin
-  if FIsInDecPaintLock then exit;
+  if FIsInDecPaintLock <> iplFalse then begin
+    if FIsInDecPaintLock = iplSubLock then
+      dec(FPaintLock);
+    exit;
+  end;
   if FPaintLockOwnerCnt = 1 then
     FLines.EndUpdate(Self);
   dec(FPaintLockOwnerCnt);
@@ -2590,7 +2611,11 @@ end;
 
 procedure TCustomSynEdit.DoIncPaintLock(Sender: TObject);
 begin
-  if FIsInDecPaintLock then exit;
+  if FIsInDecPaintLock <> iplFalse then begin
+    if FIsInDecPaintLock = iplSubLock then
+      inc(FPaintLock);
+    exit;
+  end;
   if FPaintLock = 0 then begin
     SetUpdateState(True, Self);
     FInvalidateRect := Rect(-1, -1, -2, -2);
@@ -2599,7 +2624,7 @@ begin
     FMarkupManager.IncPaintLock;
   end;
   inc(FPaintLock);
-  FFoldedLinesView.Lock; //DecPaintLock triggers ScanRanges, and folds must wait
+  FFoldedLinesView.Lock; //DecPaintLock triggers ScanChangedLines, and folds must wait
   FTrimmedLinesView.Lock; // Lock before caret
   FBlockSelection.Lock;
   FCaret.Lock;
@@ -2608,8 +2633,12 @@ end;
 
 procedure TCustomSynEdit.DoDecPaintLock(Sender: TObject);
 begin
-  if FIsInDecPaintLock then exit;
-  FIsInDecPaintLock := True;
+  if FIsInDecPaintLock <> iplFalse then begin
+    if FIsInDecPaintLock = iplSubLock then
+      dec(FPaintLock);
+    exit;
+  end;
+  FIsInDecPaintLock := iplIgnore;
   try
     if (FUndoBlockAtPaintLock >= FPaintLock) then begin
       if (FUndoBlockAtPaintLock > FPaintLock) then
@@ -2620,11 +2649,13 @@ begin
 
     FCaret.Unlock;            // Maybe after FFoldedLinesView
     FBlockSelection.Unlock;
-    // FTrimmedLinesView sets the highlighter to modified. Until fixed, must be done before ScanRanges
+    // FTrimmedLinesView sets the highlighter to modified. Until fixed, must be done before ScanRanges;
     FTrimmedLinesView.UnLock; // Must be unlocked after caret // May Change lines
 
     if (FPaintLock=1) and (not WaitingForInitialSize) then begin
-      ScanRanges(FLastTextChangeStamp <> TSynEditStringList(FLines).TextChangeStamp);
+      FLines.FlushNotificationCache;
+      ScanChangedLines(FChangedLinesStart, FChangedLinesEnd, FChangedLinesDiff,
+                 FLastTextChangeStamp <> TSynEditStringList(FLines).TextChangeStamp);
       if sfAfterLoadFromFileNeeded in fStateFlags then
         AfterLoadFromFile;
       if FChangedLinesStart > 0 then begin
@@ -2648,33 +2679,70 @@ begin
     *)
 
     Dec(FPaintLock);
-    if (FPaintLock = 0) and (not WaitingForInitialSize) then begin
-      ScrollAfterTopLineChanged;
-      if sfScrollbarChanged in fStateFlags then
-        UpdateScrollbars;
-      // must be past UpdateScrollbars; but before UpdateCaret (for ScrollBar-Auto-show)
-      if sfEnsureCursorPos in fStateFlags then
-        EnsureCursorPosVisible;              // TODO: This may call SetTopLine, change order
-                                             // This does Paintlock, should be before final decrease
-      // Must be after EnsureCursorPosVisible (as it does MoveCaretToVisibleArea)
-      if FCaret.LinePos > Max(FLines.Count, 1) then
-        FCaret.LinePos := Max(FLines.Count, 1);
-      if sfCaretChanged in fStateFlags then
-        UpdateCaret;
-      //if sfScrollbarChanged in fStateFlags then
-      //  UpdateScrollbars;
-      fMarkupHighCaret.CheckState; // Todo: need a global lock, including the markup
-                                   // Todo: Markup can do invalidation, should be before ScrollAfterTopLineChanged;
-    end;
+    (* FIsInDecPaintLock will still prevent/affect some actions:
+       - InvalidateLines/InvalidateGutterLines: keep using "pretend not scrolled offset"
+       - UpdateScrollBars
+       - ScrollAfterTopLineChanged
+    *)
     if (FPaintLock = 0) then begin
-      FMarkupManager.DecPaintLock;
+      if (not WaitingForInitialSize) then begin
+        if sfScrollbarChanged in fStateFlags then begin
+          FIsInDecPaintLock := iplIgnoreAllowScroll;  // Allow UpdateScrollBars
+          UpdateScrollbars;
+          FIsInDecPaintLock := iplIgnore;
+        end;
+
+        (* EnsureCursorPosVisible must be past UpdateScrollbars; but before UpdateCaret (for ScrollBar-Auto-show)
+           - May Change TopView and LeftChar
+        *)
+        if sfEnsureCursorPos in fStateFlags then
+          EnsureCursorPosVisible;
+
+        // Must be after EnsureCursorPosVisible (as it does MoveCaretToVisibleArea)
+        if FCaret.LinePos > Max(FLines.Count, 1) then
+          FCaret.LinePos := Max(FLines.Count, 1);
+        if sfCaretChanged in fStateFlags then
+          UpdateCaret;  // MoveCaretToVisibleArea and ScreenCaret.DisplayPos / ScreenCaret is still locked
+      end;
+
+      // Caret should no longer change. No more need for AutoExtend
       FBlockSelection.AutoExtend := False;
+      (* Markup may depend on Caret pos
+         Markup should not change the caret
+      *)
+      FMarkupManager.DecPaintLock;
+
+      if (not WaitingForInitialSize) then begin
+        FIsInDecPaintLock := iplIgnoreAllowScroll;  // Allow UpdateScrollBars and ScrollAfterTopLineChanged;
+        (* EnsureCursorPosVisible or StatusChanged-events: may have scrolled
+           This should not change the visibility of either scrollbar,
+           so no further update of the Caret needed.
+        *)
+        if sfScrollbarChanged in fStateFlags then
+          UpdateScrollbars;
+
+        ScrollAfterTopLineChanged;
+        (* After ScrollAfterTopLineChanged InvalidateLines now longer must adjust for
+           "pretend not to have scrolled".
+           If ScrollAfterTopLineChanged did not scroll, then it did InvalidateAll
+        *)
+      end;
+
+      (* Call user code.
+         - Allow user code to enter a new PaintLock.
+         - This may call ProcessMessages or trigger Paint by other means. Therefore
+           it must be after ScrollAfterTopLineChanged
+         - This may also change the state of any part of the edit. In this case
+           a new round of work must be started.
+           If this changes Topline, then there will be 2 Scrolls
+      *)
+      FIsInDecPaintLock := iplFalse;
       if fStatusChanges <> [] then
         DoOnStatusChange(fStatusChanges);
     end;
   finally
     FScreenCaret.UnLock;
-    FIsInDecPaintLock := False;
+    FIsInDecPaintLock := iplFalse;
     if FPaintLock = 0 then begin
       SetUpdateState(False, Self);
       if FInvalidateRect.Bottom >= FInvalidateRect.Top then begin
@@ -2702,7 +2770,7 @@ begin
   // block all events during destruction
   inc(FPaintLock);
   FMarkupManager.IncPaintLock;
-  FFoldedLinesView.Lock; //DecPaintLock triggers ScanRanges, and folds must wait
+  FFoldedLinesView.Lock; //DecPaintLock triggers ScanChangedLines, and folds must wait
   FTrimmedLinesView.Lock; // Lock before caret
   FBlockSelection.Lock;
   FCaret.Lock;
@@ -3064,7 +3132,7 @@ begin
         SwapInt(FirstLine, LastLine);
 
       offs := 0;
-      if FPaintLock > 0 then begin
+      if (FPaintLock > 0) or (FIsInDecPaintLock <> iplFalse) then begin
         // pretend we haven't scrolled
         offs := - (FOldTopView - TopView);
       end;
@@ -3093,7 +3161,7 @@ begin
         SwapInt(FirstLine, LastLine);
 
       offs := 0;
-      if FPaintLock > 0 then begin
+      if (FPaintLock > 0) or (FIsInDecPaintLock <> iplFalse) then begin
         // pretend we haven't scrolled
         offs := - (FOldTopView - TopView);
       end;
@@ -4733,7 +4801,7 @@ begin
     if eoFoldedCopyPaste in fOptions2 then begin
       PTxt := ClipHelper.GetTagPointer(synClipTagFold);
       if PTxt <> nil then begin
-        ScanRanges;
+        ScanRanges; // Only update HL. Need HL to provide fold info
         FFoldedLinesView.ApplyFoldDescription(InsStart.Y -1, InsStart.X,
             FInternalBlockSelection.StartLinePos-1, FInternalBlockSelection.StartBytePos,
             PTxt, ClipHelper.GetTagLen(synClipTagFold));
@@ -5000,7 +5068,8 @@ end;
 
 function TCustomSynEdit.WaitingForInitialSize: boolean;
 begin
-  Result := (sfAfterHandleCreatedNeeded in fStateFlags) or AutoSizeDelayed or (not HandleAllocated);
+  Result := ((sfAfterHandleCreatedNeeded in fStateFlags) and AutoSizeDelayed) or
+            (not HandleAllocated);
 end;
 
 procedure TCustomSynEdit.DoHandleInitialSizeFinished;
@@ -5135,6 +5204,7 @@ begin
   if NewTopView <> TopView then begin
     TopView := NewTopView;
   end;
+  FCachedTopLine := Value;
 end;
 
 procedure TCustomSynEdit.ScrollAfterTopLineChanged;
@@ -5142,7 +5212,10 @@ var
   Delta: Integer;
   srect: TRect;
 begin
-  if (sfPainting in fStateFlags) or (fPaintLock <> 0) or WaitingForInitialSize then
+  if (sfPainting in fStateFlags) or
+     (fPaintLock <> 0) or (not (FIsInDecPaintLock in [iplFalse, iplIgnoreAllowScroll])) or
+     WaitingForInitialSize
+  then
     exit;
   Delta := FOldTopView - TopView;
   {$IFDEF SYNSCROLLDEBUG}
@@ -5255,7 +5328,10 @@ procedure TCustomSynEdit.UpdateScrollBars;
 var
   ScrollInfo: TScrollInfo;
 begin
-  if WaitingForInitialSize or (PaintLock <> 0) or (FDoingResizeLock <> 0) then
+  if WaitingForInitialSize or
+     (PaintLock <> 0) or (not (FIsInDecPaintLock in [iplFalse, iplIgnoreAllowScroll])) or
+     (FDoingResizeLock <> 0)
+  then
     Include(fStateFlags, sfScrollbarChanged)
   else begin
     Exclude(fStateFlags, sfScrollbarChanged);
@@ -5620,7 +5696,16 @@ begin
   end;
 end;
 
-procedure TCustomSynEdit.ScanRanges(ATextChanged: Boolean = True);
+procedure TCustomSynEdit.ScanRanges;
+begin
+  if fHighlighter = nil then
+    exit;
+  FHighlighter.CurrentLines := FLines; // Trailing spaces are not needed
+  FHighlighter.ScanRanges;
+end;
+
+procedure TCustomSynEdit.ScanChangedLines(AChangedLinesStart, AChangedLinesEnd,
+  AChangedLinesDiff: Integer; ATextChanged: Boolean);
 begin
   if WaitingForInitialSize then begin
     Application.RemoveOnIdleHandler(@IdleScanRanges); // avoid duplicate add
@@ -5629,20 +5714,18 @@ begin
     exit;
   end;
 //TODO: exit if in paintlock ???
-  if not assigned(FHighlighter) then begin
-    if ATextChanged then begin
-      fMarkupManager.TextChanged(FChangedLinesStart, FChangedLinesEnd, FChangedLinesDiff);
-      // TODO: see TSynEditFoldedView.LineCountChanged, this is only needed, because NeedFixFrom does not always work
-      FFoldedLinesView.FixFoldingAtTextIndex(FChangedLinesStart, FChangedLinesEnd);
-    end;
-    exit;
-  end;
-  FHighlighter.CurrentLines := FLines; // Trailing spaces are not needed
-  FHighlighter.ScanRanges;
+
+  ScanRanges;
 
   // Todo: text may not have changed
-  if ATextChanged then
-    fMarkupManager.TextChanged(FChangedLinesStart, FChangedLinesEnd, FChangedLinesDiff);
+  if ATextChanged then begin
+    fMarkupManager.TextChanged(AChangedLinesStart, AChangedLinesEnd, AChangedLinesDiff);
+
+    if not assigned(FHighlighter) then begin
+      // TODO: see TSynEditFoldedView.LineCountChanged, this is only needed, because NeedFixFrom does not always work
+      FFoldedLinesView.FixFoldingAtTextIndex(AChangedLinesStart, AChangedLinesEnd);
+    end;
+  end;
 end;
 
 procedure TCustomSynEdit.IdleScanRanges(Sender: TObject; var Done: Boolean);
@@ -5662,6 +5745,8 @@ end;
 
 procedure TCustomSynEdit.LineCountChanged(Sender: TSynEditStrings; AIndex,
   ACount: Integer);
+var
+  StartLine: Integer;
 begin
   {$IFDEF SynFoldDebug}debugln(['FOLD-- LineCountChanged Aindex', AIndex, '  ACount=', ACount]);{$ENDIF}
   FBlockSelection.StickyAutoExtend := False;
@@ -5679,19 +5764,21 @@ begin
       FBeautifyEndLineIdx := AIndex;
   end;
 
+  StartLine := ToPos(AIndex);
   if PaintLock>0 then begin
-    // FChangedLinesStart is also given to Markup.TextChanged; but it is not used there
-    if (FChangedLinesStart<1) or (FChangedLinesStart>AIndex+1) then
-      FChangedLinesStart:=AIndex+1;
+    // FChangedLinesStart is also given to Markup.TextChanged
+    if (FChangedLinesStart<1) or (FChangedLinesStart>StartLine) then
+      FChangedLinesStart:=StartLine;
     FChangedLinesEnd := -1; // Invalidate the rest of lines
+    // TODO: review FChangedLinesDiff // Do not allow to reset (accumulate) to zero / just an indicator that theline count changed
     FChangedLinesDiff := FChangedLinesDiff + ACount;
   end else begin
-    ScanRanges;
-    InvalidateLines(AIndex + 1, -1);
-    InvalidateGutterLines(AIndex + 1, -1);
+    ScanChangedLines(StartLine, -1, ACount, True);
+    InvalidateLines(StartLine, -1);
+    InvalidateGutterLines(StartLine, -1);
     if FCaret.LinePos > FLines.Count then FCaret.LinePos := FLines.Count;
   end;
-  if TopLine > AIndex + 1 then
+  if TopLine > StartLine then
     TopLine := TopLine + ACount // will call UpdateScrollBars
   else
     UpdateScrollBars;
@@ -5699,6 +5786,8 @@ end;
 
 procedure TCustomSynEdit.LineTextChanged(Sender: TSynEditStrings; AIndex,
   ACount: Integer);
+var
+  StartLine: Integer;
 begin
   {$IFDEF SynFoldDebug}debugln(['FOLD-- LineTextChanged Aindex', AIndex, '  ACount=', ACount]);{$ENDIF}
   FBlockSelection.StickyAutoExtend := False;
@@ -5708,23 +5797,27 @@ begin
   if (AIndex + ACount - 1 > FBeautifyEndLineIdx) then
     FBeautifyEndLineIdx := AIndex + ACount - 1;
 
+  StartLine := ToPos(AIndex);
   if PaintLock>0 then begin
-    if (FChangedLinesStart<1) or (FChangedLinesStart>AIndex+1) then
-      FChangedLinesStart:=AIndex+1;
-    if (FChangedLinesEnd >= 0) and (FChangedLinesEnd<AIndex+1) then
-      FChangedLinesEnd:=AIndex + 1 + MaX(ACount, 0);  // TODO: why 2 (TWO) extra lines?
+    if (FChangedLinesStart<1) or (FChangedLinesStart>StartLine) then
+      FChangedLinesStart:=StartLine;
+    if (FChangedLinesEnd >= 0) and (FChangedLinesEnd<StartLine) then
+      FChangedLinesEnd:=StartLine + MaX(ACount-1, 0);
   end else begin
-    ScanRanges;
-    InvalidateLines(AIndex + 1, AIndex + ACount);
-    InvalidateGutterLines(AIndex + 1, AIndex + ACount);
+    ScanChangedLines(StartLine, StartLine + max(ACount-1, 0), 0, True);
+    InvalidateLines(StartLine, AIndex + ACount);
+    InvalidateGutterLines(StartLine, AIndex + ACount);
   end;
   UpdateScrollBars;
 end;
 
 procedure TCustomSynEdit.DoHighlightChanged(Sender: TSynEditStrings; AIndex,
   ACount: Integer);
+var
+  StartLine: Integer;
 begin
-  InvalidateLines(AIndex + 1, AIndex + 1 + ACount);
+  StartLine := ToPos(AIndex);
+  InvalidateLines(StartLine, StartLine + ACount - 1);
   InvalidateGutterLines(AIndex + 1, AIndex + 1 + ACount);
   FFoldedLinesView.FixFoldingAtTextIndex(AIndex, AIndex + ACount);
   if FPendingFoldState <> '' then
@@ -5773,9 +5866,10 @@ begin
   //  don't use MinMax here, it will fail in design mode (Lines.Count is zero,
   // but the painting code relies on TopLine >= 1)
   {$IFDEF SYNSCROLLDEBUG}
-  if (fPaintLock = 0) and (not FIsInDecPaintLock) then debugln(['SetTopView outside Paintlock New=',AValue, ' Old=', FFoldedLinesView.TopLine]);
+  if (fPaintLock = 0) and (FIsInDecPaintLock = iplFalse) then debugln(['SetTopView outside Paintlock New=',AValue, ' Old=', FFoldedLinesView.TopLine]);
   if (sfHasScrolled in fStateFlags) then debugln(['SetTopView with sfHasScrolled Value=',AValue, '  FOldTopView=',FOldTopView ]);
   {$ENDIF}
+  FCachedTopLine := -1;
   TSynEditStringList(FLines).SendCachedNotify; // TODO: review
 
   AValue := Min(AValue, CurrentMaxTopView);
@@ -5786,14 +5880,14 @@ begin
 
   (* ToDo: FFoldedLinesView.TopLine := AValue;
     Required, if "TopView := TopView" or "TopLine := TopLine" is called,
-    after ScanRanges (used to be: LineCountChanged / LineTextChanged)
+    after ScanChangedLines/ScanRanges (used to be: LineCountChanged / LineTextChanged)
   *)
   FFoldedLinesView.TopViewPos := AValue;
 
-  if FTextArea.TopLine <> AValue then begin
+  if FTextArea.TopViewedLine <> AValue then begin
     if FPaintLock = 0 then
       FOldTopView := TopView;
-    FTextArea.TopLine := AValue;
+    FTextArea.TopViewedLine := AValue;
     UpdateScrollBars;
     // call MarkupMgr before ScrollAfterTopLineChanged, in case we aren't in a PaintLock
     fMarkupManager.TopLine := TopLine;
@@ -5805,13 +5899,13 @@ begin
     fMarkupManager.TopLine := TopLine;
 
   {$IFDEF SYNSCROLLDEBUG}
-  if (fPaintLock = 0) and (not FIsInDecPaintLock) then debugln('SetTopline outside Paintlock EXIT');
+  if (fPaintLock = 0) and (FIsInDecPaintLock = iplFalse) then debugln('SetTopline outside Paintlock EXIT');
   {$ENDIF}
 end;
 
 function TCustomSynEdit.GetTopView : Integer;
 begin
-  Result := FTextArea.TopLine;
+  Result := FTextArea.TopViewedLine;
 end;
 
 procedure TCustomSynEdit.SetWordBlock(Value: TPoint);
@@ -6691,7 +6785,7 @@ begin
             else
               SetTextBetweenPoints(NewCaret, NewCaret, DragDropText, [setSelect], scamEnd, smaMoveUp, sm);
             if (FoldInfo <> '') and (sm <> smColumn) then begin
-              ScanRanges;
+              ScanRanges; // Only update HL. Need HL to provide fold info
               FFoldedLinesView.ApplyFoldDescription(NewCaret.Y -1, NewCaret.X,
                     FBlockSelection.EndLinePos-1, FBlockSelection.EndBytePos,
                     PChar(FoldInfo), length(FoldInfo));
@@ -6813,7 +6907,7 @@ begin
         fTSearch.ResetIdentChars;
       end;
       RecalcCharExtent;
-      ScanRanges; // Todo: Skip if paintlocked
+      ScanChangedLines(0,0,0, False); // Todo: Skip if paintlocked
       // There may not have been a scan
       if fHighlighter <> nil then
         FHighlighter.CurrentLines := FLines;
@@ -7938,14 +8032,14 @@ end;
 procedure TCustomSynEdit.AfterLoadFromFile;
 begin
   if WaitingForInitialSize or
-     ( (FPaintLock > 0) and not((FPaintLock = 1) and FIsInDecPaintLock) )
+     ( (FPaintLock > 0) and not((FPaintLock = 1) and (FIsInDecPaintLock <> iplFalse)) )
   then begin
     Include(fStateFlags, sfAfterLoadFromFileNeeded);
     exit;
   end;
   Exclude(fStateFlags, sfAfterLoadFromFileNeeded);
   if assigned(FFoldedLinesView) then begin
-    ScanRanges;
+    ScanRanges; // Only update HL. Need HL to provide fold info
     FFoldedLinesView.UnfoldAll;
     FFoldedLinesView.CollapseDefaultFolds;
     if FPendingFoldState <> '' then

@@ -175,7 +175,8 @@ type
     procedure ItemsListBoxDblClick(Sender: TObject);
     procedure ItemsListBoxSelectionChange(Sender: TObject; {%H-}User: boolean);
     procedure OnIdle(Sender: TObject; var {%H-}Done: Boolean);
-    procedure PopupMenu1Popup(Sender: TObject);
+    procedure ItemsListBoxContextPopup(Sender: TObject; MousePos: TPoint;
+      var Handled: Boolean);
     procedure StartsRadioButtonClick(Sender: TObject);
   private
     FDlgAction: TCodyIdentifierDlgAction;
@@ -983,7 +984,7 @@ begin
   ButtonPanel1.HelpButton.OnClick:=@ButtonPanel1HelpButtonClick;
   ButtonPanel1.OKButton.Caption:=crsUseIdentifier;
   ButtonPanel1.OKButton.OnClick:=@UseIdentifierClick;
-  FMaxItems:=cDefMaxListItems;
+  FMaxItems:=CodyOptions.UDMaxListItems;
   FilterEdit.TextHint:=crsFilter;
   FItems:=TObjectList.Create;
   HideOtherProjectsCheckBox.Checked:=true;
@@ -1044,29 +1045,24 @@ begin
   IdleConnected:=false;
 end;
 
-procedure TCodyIdentifiersDlg.PopupMenu1Popup(Sender: TObject);
+procedure TCodyIdentifiersDlg.ItemsListBoxContextPopup(Sender: TObject;
+  MousePos: TPoint; var Handled: Boolean);
 var
-  Identifier: string;
-  UnitFilename: string;
-  GroupName: string;
-  GroupFilename: string;
+  Identifier, UnitFilename, GroupName, GroupFilename: string;
 begin
-  if FindSelectedItem(Identifier, UnitFilename, GroupName, GroupFilename) then
-  begin
-    UseMenuItem.Caption:='Use '+Identifier;
-    UseMenuItem.Enabled:=true;
-    JumpMenuItem.Caption:='Jump to '+Identifier;
-    JumpMenuItem.Enabled:=true;
-    DeleteUnitMenuItem.Caption:='Delete unit '+ExtractFilename(UnitFilename);
-    DeleteUnitMenuItem.Enabled:=true;
-    DeletePackageMenuItem.Caption:='Delete package '+ExtractFilename(GroupFilename);
-    DeletePackageMenuItem.Enabled:=true;
-  end else begin
-    UseMenuItem.Enabled:=false;
-    JumpMenuItem.Enabled:=false;
-    DeleteUnitMenuItem.Enabled:=false;
-    DeletePackageMenuItem.Enabled:=false;
-  end;
+  // when calling the menu from keyboard, the MousePos is (-1;-1)
+  if not InvalidPoint(MousePos) then
+    // select item under mouse
+    ItemsListBox.ItemIndex := ItemsListBox.ItemAtPos(MousePos, true);
+
+  // show popup menu only if valid identificator is selected
+  Handled := not FindSelectedItem(Identifier, UnitFilename, GroupName, GroupFilename);
+  if Handled then exit;
+
+  UseMenuItem          .Caption := Format(crsContextUseIdentifier, [Identifier]);
+  JumpMenuItem         .Caption := Format(crsContextJumpTo       , [Identifier]);
+  DeleteUnitMenuItem   .Caption := Format(crsContextDeleteUnit   , [ExtractFilename(UnitFilename)]);
+  DeletePackageMenuItem.Caption := Format(crsContextDeletePackage, [ExtractFilename(GroupFilename)]);
 end;
 
 procedure TCodyIdentifiersDlg.StartsRadioButtonClick(Sender: TObject);
@@ -1099,6 +1095,7 @@ end;
 
 procedure TCodyIdentifiersDlg.SetMaxItems(AValue: integer);
 begin
+  AValue:=EnsureRange(AValue,cMaxListItemsLow,cMaxListItemsHigh);
   if FMaxItems=AValue then Exit;
   FMaxItems:=AValue;
   UpdateItemsList;
@@ -1139,7 +1136,7 @@ var
           if IdentifierPos(FilterP,PChar(Pointer(Item.Name)))<0 then continue;
         end;
       end;
-      if Found>MaxItems then begin
+      if Found>MaxItems+1 then begin
         inc(Found); // only count, do not check
         continue;
       end;
@@ -1194,7 +1191,7 @@ var
         end;
         if FileExistsCached(Item.DUnit.Filename) then begin
           inc(Found);
-          if Found<MaxItems then begin
+          if Found<=MaxItems then begin
             FItems.Add(TCodyIdentifier.Create(Item.Name,
               Item.DUnit.Name,Item.DUnit.Filename,
               Group.Name,Group.Filename,AddExactMatches));
