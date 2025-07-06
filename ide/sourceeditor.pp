@@ -928,6 +928,7 @@ type
     procedure MoveEditor(OldPageIndex, NewWindowIndex, NewPageIndex: integer);
     procedure AddControlToEditor(aSourceEditor : TSourceEditorInterface; aControl : TControl; aAlign : TAlign); override;
 
+    procedure UpdateCaption;
     procedure UpdateStatusBar;
     function AddStatusPanel(AnOwner: TClass; ATag: PtrUInt = 0): TSourceEditorStatusPanelInterface; override;
     function StatusPanelCount(AnOwner: TClass): integer; override;
@@ -8104,13 +8105,7 @@ begin
     PageIndex := i;
   dec(FFocusLock);
   SourceEditorManager.ActiveSourceWindow := Self;
-  if EditorOpts.ShowFileNameInCaption then
-  begin
-    if ActiveEditor<>nil then
-      Caption := BaseCaption+' - '+ActiveEditor.FileName
-    else
-      Caption := BaseCaption;
-  end;
+  UpdateCaption;
 end;
 
 procedure TSourceNotebook.SetBaseCaption(AValue: String);
@@ -9195,6 +9190,17 @@ begin
   GetActiveSE.IsLocked := not GetActiveSE.IsLocked;
 end;
 }
+procedure TSourceNotebook.UpdateCaption;
+begin
+  if EditorOpts.ShowFileNameInCaption then
+  begin
+    if ActiveEditor<>nil then
+      Caption := BaseCaption+' - '+ActiveEditor.FileName
+    else
+      Caption := BaseCaption;
+  end;
+end;
+
 procedure TSourceNotebook.UpdateStatusBar;
 var
   tempEditor: TSourceEditor;
