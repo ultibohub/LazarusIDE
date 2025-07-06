@@ -1648,6 +1648,7 @@ begin
     LongOptions.Add('opt:');
     LongOptions.Add('compiler:');
     LongOptions.Add('lazarusdir:');
+    LongOptions.Add('lazarus-dir:');
     LongOptions.Add('create-makefile');
     LongOptions.Add('max-process-count:');
     LongOptions.Add('no-write-project');
@@ -1778,7 +1779,9 @@ begin
 
     // lazarusdir
     if HasLongOptIgnoreCase('lazarusdir',FLazarusDirOverride) then
-      PrintInfo('Parameter: --lazarusdir="' + LazarusDirOverride + '"');
+      PrintInfo('Parameter: --lazarusdir="' + LazarusDirOverride + '"')
+    else if HasLongOptIgnoreCase('lazarus-dir',FLazarusDirOverride) then
+      PrintInfo('Parameter: --lazarus-dir="' + LazarusDirOverride + '"');
 
     // language
     if HasLongOptIgnoreCase('language',p) then
@@ -1905,7 +1908,7 @@ begin
   writeln(LanguageOpt,'<Language ID>');
   w(lisOverrideLanguage);
   writeln('');
-  writeln('--lazarusdir=<Lazarus directory>');
+  writeln('--lazarusdir=<directory>, --lazarus-dir=<directory>');
   w(lisLazarusDirOverride);
   writeln('');
   writeln('--max-process-count=<count>');

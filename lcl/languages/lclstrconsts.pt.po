@@ -172,7 +172,9 @@ msgid "Cancel"
 msgstr "Cancelar"
 
 #: lclstrconsts.rscannotfocus
-msgid "Can not focus"
+#, fuzzy
+#| msgid "Can not focus"
+msgid "Cannot focus"
 msgstr "Impossível focar"
 
 #: lclstrconsts.rscanvasdoesnotallowdrawing
@@ -477,10 +479,6 @@ msgstr "Impossível inserir colunas numa grelha sem linhas"
 #: lclstrconsts.rsgridindexoutofrange
 msgid "Grid index out of range."
 msgstr "Índice grade fora de faixa."
-
-#: lclstrconsts.rsgroupindexcannotbelessthanprevious
-msgid "GroupIndex cannot be less than a previous menu item's GroupIndex"
-msgstr "\"GroupIndex\" não pode ser menor que um \"GroupIndex\" anterior dos itens de menu"
 
 #: lclstrconsts.rsgtkfilter
 msgid "Filter:"
@@ -948,10 +946,6 @@ msgstr "Realce Menu"
 msgid "Menu Text"
 msgstr "Texto Menu"
 
-#: lclstrconsts.rsmodified
-msgid "  modified "
-msgstr "  modificado  "
-
 #: lclstrconsts.rsmoneygreencolorcaption
 msgid "Money Green"
 msgstr "Verde dinheiro"
@@ -1249,10 +1243,6 @@ msgstr ""
 msgid "Silver"
 msgstr "Prata"
 
-#: lclstrconsts.rssize
-msgid "  size "
-msgstr "  tamanho  "
-
 #: lclstrconsts.rsskybluecolorcaption
 msgid "Sky Blue"
 msgstr "Azul Celeste"
@@ -1381,7 +1371,9 @@ msgid "Yellow"
 msgstr "Amarelo"
 
 #: lclstrconsts.scannotfocus
-msgid "Cannot focus a disabled or invisible window"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Cannot focus a disabled or invisible window"
+msgid "Cannot focus a disabled or invisible window \"%s\":\"%s\""
 msgstr "Impossível focar uma janela inativa ou invisível"
 
 #: lclstrconsts.sduplicatemenus

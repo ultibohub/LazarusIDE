@@ -230,7 +230,7 @@ resourceString
   sInvalidIndex = 'Invalid ImageList Index';
   sInvalidImageSize = 'Invalid image size';
   sDuplicateMenus = 'Duplicate menus';
-  sCannotFocus = 'Cannot focus a disabled or invisible window';
+  sCannotFocus = 'Cannot focus a disabled or invisible window "%s":"%s"';
   sParentRequired = 'Control "%s" has no parent window.';
   SMaskEditNoMatch = 'The current text does not match the specified mask.';
 
@@ -282,8 +282,6 @@ resourceString
   rsTGA = 'TGA Image Files';
   rsGraphic = 'Graphic';
   rsUnsupportedClipboardFormat = 'Unsupported clipboard format: %s';
-  rsGroupIndexCannotBeLessThanPrevious = 'GroupIndex cannot be less than a '
-    +'previous menu item''s GroupIndex';
   rsIsAlreadyAssociatedWith = '%s is already associated with %s';
   rsCanvasDoesNotAllowDrawing = 'Canvas does not allow drawing';
   rsUnsupportedBitmapFormat = 'Unsupported bitmap format.';
@@ -303,14 +301,12 @@ resourceString
   rsPressOkToIgnoreAndRiskDataCorruptionPressAbortToK = '%s'
     +'%sPress OK to ignore and risk data corruption.'
     +'%sPress Abort to kill the program.';
-  rsCanNotFocus = 'Can not focus';
+  rsCanNotFocus = 'Cannot focus';
   rsListIndexExceedsBounds = 'List index exceeds bounds (%d)';
   rsResourceNotFound = 'Resource %s not found';
   rsCalculator = 'Calculator';
   rsError      = 'Error';
   rsPickDate   = 'Select a date';
-  rsSize = '  size ';
-  rsModified = '  modified ';
   rsDoCopy = 'Copy';
   rsDoPaste = 'Paste';
 

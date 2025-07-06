@@ -123,6 +123,7 @@ type
     procedure TestFindDeclaration_Proc_BaseTypes;
     procedure TestFindDeclaration_ProcNested;
     procedure TestFindDeclaration_With;
+    procedure TestFindDeclaration_WithResult;
     procedure TestFindDeclaration_ClassOf;
     procedure TestFindDeclaration_NestedClasses;
     procedure TestFindDeclaration_NestedAliasClass;
@@ -146,20 +147,20 @@ type
     procedure TestFindDeclaration_GenericsDelphi_MultiGenParams;
 
     procedure TestFindDeclaration_ForIn;
-
     procedure TestFindDeclaration_FileAtCursor;
     procedure TestFindDeclaration_CBlocks;
     procedure TestFindDeclaration_Arrays;
+    procedure TestFindDeclaration_ArrayMultiDimDot;
     procedure TestFindDeclaration_GuessType;
     procedure TestFindDeclaration_Attributes;
     procedure TestFindDeclaration_BracketOpen;
     procedure TestFindDeclaration_AnonymProc;
     procedure TestFindDeclaration_AnonymProc_ExprDot;
-    procedure TestFindDeclaration_ArrayMultiDimDot;
     procedure TestFindDeclaration_VarArgsOfType;
     procedure TestFindDeclaration_ProcRef;
     procedure TestFindDeclaration_PointerForwardVsUses;
     procedure TestFindDeclaration_AutoDeref;
+    procedure TestFindDeclaration_Variant;
 
     // ampersands
     procedure TestFindDeclaration_Ampersand;
@@ -828,6 +829,29 @@ begin
   FindDeclarations('moduletests/fdt_with.pas');
 end;
 
+procedure TTestFindDeclaration.TestFindDeclaration_WithResult;
+begin
+  StartProgram;
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  TBird = record',
+  '    Result: word;',
+  '  end;',
+  'var Bird: TBird;',
+  'function Fly: word;',
+  'begin',
+  '  Result{declaration:Fly}:=1;',
+  '  with Bird do begin',
+  //'    Result{declaration:TBird.Result}:=3;',
+  '  end;',
+  'end;',
+  'begin',
+  'end.',
+  '']);
+  FindDeclarations(Code);
+end;
+
 procedure TTestFindDeclaration.TestFindDeclaration_ClassOf;
 begin
   FindDeclarations('moduletests/fdt_classof.pas');
@@ -1192,6 +1216,24 @@ begin
   FindDeclarations('moduletests/fdt_arrays.pas');
 end;
 
+procedure TTestFindDeclaration.TestFindDeclaration_ArrayMultiDimDot;
+begin
+  StartProgram;
+  Add([
+  'type',
+  '  TmyClass = class',
+  '    Field: integer;',
+  '  end;',
+  '  TArray1 = array of TmyClass;',
+  '  TArray2 = array of TArray1;',
+  'var',
+  '  tmp: TArray2;',
+  'begin',
+  '  tmp[0,0].Field{declaration:tmyclass.field};',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
 procedure TTestFindDeclaration.TestFindDeclaration_GuessType;
 begin
   FindDeclarations('moduletests/fdt_guesstype1.pas');
@@ -1358,24 +1400,6 @@ begin
   FindDeclarations(Code);
 end;
 
-procedure TTestFindDeclaration.TestFindDeclaration_ArrayMultiDimDot;
-begin
-  StartProgram;
-  Add([
-  'type',
-  '  TmyClass = class',
-  '    Field: integer;',
-  '  end;',
-  '  TArray1 = array of TmyClass;',
-  '  TArray2 = array of TArray1;',
-  'var',
-  '  tmp: TArray2;',
-  'begin',
-  '  tmp[0,0].Field{declaration:tmyclass.field};',
-  'end.']);
-  FindDeclarations(Code);
-end;
-
 procedure TTestFindDeclaration.TestFindDeclaration_VarArgsOfType;
 begin
   StartProgram;
@@ -1498,6 +1522,34 @@ begin
     if Unit2<>nil then
       Unit2.IsDeleted:=true;
   end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_Variant;
+begin
+  StartUnit;
+  Add([
+  'type',
+  '  TBird = variant;',
+  '  TOxe = olevariant;',
+  'var',
+  '  Bird: TBird;',
+  '  Oxe: TOxe;',
+  'implementation',
+  'procedure Run(v: Variant);',
+  'begin',
+  'end;',
+  'procedure Run(v: integer);',
+  'begin',
+  'end;',
+  'procedure Pull(o: OLEVariant);',
+  'begin',
+  'end;',
+  'initialization',
+  '  Run{declaration:Run}(Bird);',
+  '  Run{declaration:Run}(Oxe);',
+  '  Pull{declaration:Pull}(Oxe);',
+  'end.']);
+  FindDeclarations(Code);
 end;
 
 procedure TTestFindDeclaration.TestFindDeclaration_Ampersand;

@@ -6,19 +6,18 @@ interface
 
 uses
   Classes, SysUtils,
-  Forms, Controls, StdCtrls, Dialogs, ButtonPanel, CheckLst, Buttons,
+  // LCL
+  Forms, Controls, StdCtrls, Dialogs, Buttons, ButtonPanel, CheckLst, LCLType,
   // IdeIntf
   IDEImagesIntf;
 
 type
-
-  { TGenericCheckListForm }
-
   TGenericCheckListForm = class(TForm)
     ButtonPanel1: TButtonPanel;
     CheckListBox1: TCheckListBox;
     InfoLabel: TLabel;
     procedure CheckListBox1ItemClick(Sender: TObject; {%H-}Index: integer);
+    procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormShow(Sender: TObject);
   private
     fActionBtn: TBitBtn;
@@ -34,7 +33,11 @@ implementation
 
 {$R *.lfm}
 
-{ TGenericCheckListForm }
+constructor TGenericCheckListForm.Create(TheOwner: TComponent);
+begin
+  inherited Create(TheOwner);
+  fDisallowNoneSelected := False;
+end;
 
 constructor TGenericCheckListForm.CreateWithActionButton(aCaption: TCaption;
   aResourceGlyphName: string);
@@ -62,6 +65,18 @@ begin
   UpdateButtons;
 end;
 
+procedure TGenericCheckListForm.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if (Key = VK_RETURN) and (Shift = [ssCtrl]) then
+  begin
+    if ButtonPanel1.OKButton.IsEnabled then
+    begin
+      Key := 0;
+      ModalResult := mrOK;
+    end;
+  end;
+end;
+
 procedure TGenericCheckListForm.UpdateButtons;
 var
   i: Integer;
@@ -78,12 +93,6 @@ begin
     if Assigned(fActionBtn) then fActionBtn.Enabled := False;
     if DisallowNoneSelected then ButtonPanel1.OKButton.Enabled := False;
   end;
-end;
-
-constructor TGenericCheckListForm.Create(TheOwner: TComponent);
-begin
-  inherited Create(TheOwner);
-  fDisallowNoneSelected := False;
 end;
 
 end.

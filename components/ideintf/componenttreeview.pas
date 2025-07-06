@@ -46,6 +46,7 @@ type
   TComponentTreeView = class(TCustomTreeView)
   private
     FComponentList: TBackupComponentList;
+    FIdleConnected: boolean;
     FOnParentAcceptsChild: TCTVParentAcceptsChildEvent;
     FOnSetParent: TCTVSetParentEvent;
     FPropertyEditorHook: TPropertyEditorHook;
@@ -68,7 +69,12 @@ type
     function IterateTree(ANode: TTreeNode; APers: TPersistent): TTreeNode;
     procedure NodeCollapsed(Sender: TObject; Node: TTreeNode);
     procedure NodeExpanded(Sender: TObject; Node: TTreeNode);
+    procedure OnCollectionChanged(Sender: TObject; aColl: TCollection);
+    procedure OnIdle(Sender: TObject; var Done: Boolean);
+    procedure OnPersistentDeleted(APersistent: TPersistent);
+    procedure OnPersistentDeleting(APersistent: TPersistent);
     procedure RestoreExpand(ANode: TTreeNode);
+    procedure SetIdleConnected(const AValue: boolean);
     procedure SetPropertyEditorHook(AValue: TPropertyEditorHook);
     procedure SetSelection(NewSelection: TPersistentSelectionList);
     procedure UpdateCompNode(ANode: TTreeNode);
@@ -85,6 +91,7 @@ type
                               out AnInsertMarkNode: TTreeNode;
                               out AnInsertMarkType: TTreeViewInsertMarkType);
     procedure DoModified;
+    property IdleBuildNodes: boolean read FIdleConnected write SetIdleConnected;
   public
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
@@ -644,7 +651,20 @@ end;
 procedure TComponentTreeView.SetPropertyEditorHook(AValue: TPropertyEditorHook);
 begin
   if FPropertyEditorHook=AValue then exit;
+  if FPropertyEditorHook<>nil then
+  begin
+    FPropertyEditorHook.RemoveHandlerPersistentDeleting(@OnPersistentDeleting);
+    FPropertyEditorHook.RemoveHandlerPersistentDeleted(@OnPersistentDeleted);
+    FPropertyEditorHook.RemoveHandlerCollectionChanged(@OnCollectionChanged);
+  end;
+
   FPropertyEditorHook:=AValue;
+  if FPropertyEditorHook<>nil then
+  begin
+    FPropertyEditorHook.AddHandlerPersistentDeleting(@OnPersistentDeleting);
+    FPropertyEditorHook.AddHandlerPersistentDeleted(@OnPersistentDeleted);
+    FPropertyEditorHook.AddHandlerCollectionChanged(@OnCollectionChanged);
+  end;
 end;
 
 function TComponentTreeView.GetSelection: TPersistentSelectionList;
@@ -674,6 +694,7 @@ destructor TComponentTreeView.Destroy;
 var
   Enumer: TPointerToPointerEnumerator;
 begin
+  IdleBuildNodes:=false;
   Enumer := FRoot2CollapasedMap.GetEnumerator;
   while Enumer.MoveNext do
     FreeAndNil(TObject(Enumer.Current^.Value)); // Free the CollapsedComp TAVLTrees.
@@ -694,6 +715,35 @@ begin
   Assert(Assigned(FCollapsedComps), 'TComponentTreeView.NodeExpanded: FCollapsedComps=Nil.');
   if not FCollapsedComps.Remove(Node.Data) then
     DebugLn(['TComponentTreeView.NodeExpanded: Removing node ', TPersistent(Node.Data), ' failed.']);
+end;
+
+procedure TComponentTreeView.OnCollectionChanged(Sender: TObject; aColl: TCollection);
+var
+  Node: TTreeNode;
+begin
+  Node:=IterateTree(Items.GetFirstNode,aColl);
+  if Node=nil then exit;
+  IdleBuildNodes:=true;
+end;
+
+procedure TComponentTreeView.OnIdle(Sender: TObject; var Done: Boolean);
+begin
+  BuildComponentNodes(true);
+end;
+
+procedure TComponentTreeView.OnPersistentDeleted(APersistent: TPersistent);
+begin
+  OnPersistentDeleting(APersistent);
+end;
+
+procedure TComponentTreeView.OnPersistentDeleting(APersistent: TPersistent);
+var
+  Node: TTreeNode;
+begin
+  Node:=IterateTree(Items.GetFirstNode,APersistent);
+  if Node=nil then exit;
+  Node.Free;
+  IdleBuildNodes:=true;
 end;
 
 function TComponentTreeView.AddOrGetPersNode(AParentNode: TTreeNode;
@@ -753,6 +803,7 @@ var
   RootObject: TPersistent;
   RootNode: TTreeNode;
 begin
+  IdleBuildNodes:=false;
   OnCollapsed:=nil;     // Don't handle these events while the tree builds.
   OnExpanded:=nil;
   BeginUpdate;
@@ -797,6 +848,16 @@ begin
   end;
 end;
 
+procedure TComponentTreeView.SetIdleConnected(const AValue: boolean);
+begin
+  if FIdleConnected=AValue then Exit;
+  if FIdleConnected then
+    Application.RemoveOnIdleHandler(@OnIdle);
+  FIdleConnected:=AValue;
+  if FIdleConnected then
+    Application.AddOnIdleHandler(@OnIdle);
+end;
+
 procedure TComponentTreeView.ChangeNode(ANode: TTreeNode);
 // Change ZOrder of the given node or delete it.
 var
@@ -831,6 +892,7 @@ function TComponentTreeView.IterateTree(ANode: TTreeNode; APers: TPersistent): T
 // Returns the node that was changed.
 begin
   Result := Nil;
+  if ANode=nil then exit;
   if TObject(ANode.Data)=APers then
   begin
     ChangeNode(ANode);

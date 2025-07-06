@@ -3799,7 +3799,7 @@ resourcestring
 
   // code template dialog
   lisCodeTemplAddCodeTemplate = 'Add code template';
-  lisCodeTemplAdd = 'Add template';
+  lisCodeTemplAdd = 'Add template ...';
   lisCodeTemplEditCodeTemplate = 'Edit code template';
   lisCodeTemplAutoCompleteOn = 'Auto complete on';
   lisCodeTemplToken = 'Token:';

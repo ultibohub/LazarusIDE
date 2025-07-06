@@ -677,6 +677,11 @@ msgstr "无效属性值"
 msgid "\"%s\" is not a valid method name."
 msgstr "\"%s\"不是一个有效的方法名称."
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -759,6 +764,10 @@ msgstr "确定(&O)"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "确定"
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
+msgstr ""
 
 #: objinspstrconsts.oisoptions
 msgid "Options"

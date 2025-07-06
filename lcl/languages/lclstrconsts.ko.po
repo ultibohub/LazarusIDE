@@ -175,7 +175,9 @@ msgid "Cancel"
 msgstr "취소"
 
 #: lclstrconsts.rscannotfocus
-msgid "Can not focus"
+#, fuzzy
+#| msgid "Can not focus"
+msgid "Cannot focus"
 msgstr "초점을 맞출 수 없음"
 
 #: lclstrconsts.rscanvasdoesnotallowdrawing
@@ -476,10 +478,6 @@ msgstr "행이 없을 때는 격자에 열을 삽입할 수 없습니다"
 #: lclstrconsts.rsgridindexoutofrange
 msgid "Grid index out of range."
 msgstr "격자 인덱스가 범위를 벗어났습니다."
-
-#: lclstrconsts.rsgroupindexcannotbelessthanprevious
-msgid "GroupIndex cannot be less than a previous menu item's GroupIndex"
-msgstr "GroupIndex는 이전 메뉴 항목의 GroupIndex보다 작을 수 없습니다"
 
 #: lclstrconsts.rsgtkfilter
 msgid "Filter:"
@@ -937,10 +935,6 @@ msgstr "메뉴 강조"
 msgid "Menu Text"
 msgstr "메뉴 텍스트"
 
-#: lclstrconsts.rsmodified
-msgid "  modified "
-msgstr "  수정 날짜 "
-
 #: lclstrconsts.rsmoneygreencolorcaption
 msgid "Money Green"
 msgstr "연두색"
@@ -1242,10 +1236,6 @@ msgstr ""
 msgid "Silver"
 msgstr "은색"
 
-#: lclstrconsts.rssize
-msgid "  size "
-msgstr "  크기 "
-
 #: lclstrconsts.rsskybluecolorcaption
 msgid "Sky Blue"
 msgstr "하늘색"
@@ -1374,7 +1364,9 @@ msgid "Yellow"
 msgstr "노랑"
 
 #: lclstrconsts.scannotfocus
-msgid "Cannot focus a disabled or invisible window"
+#, object-pascal-format, fuzzy, badformat
+#| msgid "Cannot focus a disabled or invisible window"
+msgid "Cannot focus a disabled or invisible window \"%s\":\"%s\""
 msgstr "비활성화되거나 보이지 않는 창에 초점을 맞출 수 없습니다"
 
 #: lclstrconsts.sduplicatemenus

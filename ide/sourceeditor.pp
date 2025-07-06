@@ -684,6 +684,7 @@ type
 
   TSourceNotebook = class(TSourceEditorWindowInterface)
     GoToLineMenuItem: TMenuItem;
+    CopyFullPathMenuItem: TMenuItem;
     OpenFolderMenuItem: TMenuItem;
     StatusPopUpMenu: TPopupMenu;
     StatusBar: TStatusBar;
@@ -691,6 +692,7 @@ type
       {%H-}Shift: TShiftState; {%H-}X, {%H-}Y: Integer);
     procedure FormResize(Sender: TObject);
     procedure GoToLineMenuItemClick(Sender: TObject);
+    procedure CopyFullPathMenuItemClick(Sender: TObject);
     procedure OpenFolderMenuItemClick(Sender: TObject);
     procedure StatusBarClick(Sender: TObject);
     procedure StatusBarDblClick(Sender: TObject);
@@ -946,6 +948,7 @@ type
     procedure MoveEditor(OldPageIndex, NewWindowIndex, NewPageIndex: integer);
     procedure AddControlToEditor(aSourceEditor : TSourceEditorInterface; aControl : TControl; aAlign : TAlign); override;
 
+    procedure UpdateCaption;
     procedure UpdateStatusBar;
     function AddStatusPanel(AnOwner: TClass; ATag: PtrUInt = 0): TSourceEditorStatusPanelInterface; override;
     function StatusPanelCount(AnOwner: TClass): integer; override;
@@ -7694,6 +7697,7 @@ begin
   end;
 
   GoToLineMenuItem.Caption := lisMenuGotoLine;
+  CopyFullPathMenuItem.Caption := uemCopyFilename;
   OpenFolderMenuItem.Caption := lisMenuOpenFolder;
   {$IFDEF VerboseMenuIntf}
   SrcPopupMenu.Items.WriteDebugReport('TSourceNotebook.BuildPopupMenu ');
@@ -7978,8 +7982,7 @@ begin
   {$ENDIF}
 end;
 
-procedure TSourceNotebook.RemoveUpdateEditorPageCaptionHandler(
-  AEvent: TNotifyEvent);
+procedure TSourceNotebook.RemoveUpdateEditorPageCaptionHandler(AEvent: TNotifyEvent);
 begin
   FOnEditorPageCaptionUpdate.Remove(TMethod(AEvent));
 end;
@@ -8238,13 +8241,7 @@ begin
     PageIndex := i;
   dec(FFocusLock);
   SourceEditorManager.ActiveSourceWindow := Self;
-  if EditorOpts.ShowFileNameInCaption then
-  begin
-    if ActiveEditor<>nil then
-      Caption := BaseCaption+' - '+ActiveEditor.FileName
-    else
-      Caption := BaseCaption;
-  end;
+  UpdateCaption;
 end;
 
 procedure TSourceNotebook.SetBaseCaption(AValue: String);
@@ -8887,6 +8884,7 @@ var
 begin
   i := StatusBar.GetPanelIndexAt(MousePos.X, MousePos.Y);
   GoToLineMenuItem.Visible := i=CStatusPanelXY;
+  CopyFullPathMenuItem.Visible := i=CStatusPanelFile;
   OpenFolderMenuItem.Visible := i=CStatusPanelFile;
   if i in [CStatusPanelXY, CStatusPanelFile] then
     StatusPopUpMenu.PopUp
@@ -9122,6 +9120,11 @@ begin
     Manager.GotoLineClicked(nil);
 end;
 
+procedure TSourceNotebook.CopyFullPathMenuItemClick(Sender: TObject);
+begin
+  Clipboard.AsText := Statusbar.Panels[CStatusPanelFile].Text;
+end;
+
 procedure TSourceNotebook.OpenFolderMenuItemClick(Sender: TObject);
 begin
   SelectInFolder(Statusbar.Panels[CStatusPanelFile].Text);
@@ -9330,6 +9333,17 @@ begin
   GetActiveSE.IsLocked := not GetActiveSE.IsLocked;
 end;
 }
+procedure TSourceNotebook.UpdateCaption;
+begin
+  if EditorOpts.ShowFileNameInCaption then
+  begin
+    if ActiveEditor<>nil then
+      Caption := BaseCaption+' - '+ActiveEditor.FileName
+    else
+      Caption := BaseCaption;
+  end;
+end;
+
 procedure TSourceNotebook.UpdateStatusBar;
 var
   tempEditor: TSourceEditor;

@@ -681,6 +681,11 @@ msgstr "Neplatná hodnota vlastnosti"
 msgid "\"%s\" is not a valid method name."
 msgstr "\"%s\" není platné jméno jednotky."
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -763,6 +768,10 @@ msgstr "&OK"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Ok"
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
+msgstr ""
 
 #: objinspstrconsts.oisoptions
 msgid "Options"

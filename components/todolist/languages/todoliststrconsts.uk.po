@@ -57,6 +57,14 @@ msgstr "Використати альтернативні позначки"
 msgid "Standard token is #todo etc. Alternate is without the #"
 msgstr "Стандартні позначки - #todo тощо. Альтернативні - без #"
 
+#: todoliststrconsts.liscoloroptions
+msgid "Color Options"
+msgstr ""
+
+#: todoliststrconsts.liscolors
+msgid "Colors"
+msgstr ""
+
 #: todoliststrconsts.lisctinsertmacro
 msgid "Insert Macro"
 msgstr "Вставити макрос"
@@ -97,9 +105,9 @@ msgstr "Done і Note"
 msgid "Help"
 msgstr "Довідка"
 
-#: todoliststrconsts.lisoptions
-msgid "Options"
-msgstr "Параметри"
+#: todoliststrconsts.lisinclude
+msgid "Include"
+msgstr ""
 
 #: todoliststrconsts.lispackages
 msgid "Packages"
@@ -138,6 +146,10 @@ msgstr ""
 #: todoliststrconsts.listddinserttodo
 msgid "Insert a ToDo/Done/Note"
 msgstr "Вставити ToDo/Done/Note"
+
+#: todoliststrconsts.listodocolorsareattheendofcolorlist
+msgid "ToDo colors are at the end of color list"
+msgstr ""
 
 #: todoliststrconsts.listodoexport
 msgid "Export"

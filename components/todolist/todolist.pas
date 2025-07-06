@@ -65,13 +65,15 @@ uses
   Classes, SysUtils, Math, AVL_Tree,
   // LCL
   LCLType, LclIntf, Forms, Controls, StdCtrls, Dialogs, ComCtrls,
-  ActnList, XMLPropStorage, ExtCtrls,
+  ActnList, XMLPropStorage, ExtCtrls, Menus,
   // LazUtils
-  LazFileUtils, LazFileCache, LazLoggerBase, LazTracer, AvgLvlTree,
+  LazFileUtils, LazStringUtils, LazFileCache, LazLoggerBase, LazTracer, AvgLvlTree,
   // Codetools
   CodeToolManager, FileProcs,
+  // BuildIntf
+  PackageIntf, ProjectIntf,
   // IDEIntf
-  LazIDEIntf, IDEImagesIntf, MenuIntf, PackageIntf, ProjectIntf, SrcEditorIntf,
+  LazIDEIntf, IDEImagesIntf, MenuIntf, SrcEditorIntf, IDEOptEditorIntf,
   // ToDoList
   ToDoListCore, ToDoListStrConsts;
 
@@ -79,7 +81,7 @@ Const
   ToDoWindowName = 'IDETodoWindow';
 
 type
-  TOnEditToDo = procedure(aTodoItem: TTodoItem);
+  TOnEditToDo = procedure(aTodoItem: TTodoItem; aSrcEdit: TSourceEditorInterface);
 
   { TIDETodoWindow }
 
@@ -89,6 +91,7 @@ type
     acRefresh: TAction;
     acExport: TAction;
     acHelp: TAction;
+    acColors: TAction;
     ActionList: TActionList;
     chkListed: TCheckBox;
     chkUsed: TCheckBox;
@@ -98,11 +101,15 @@ type
     lblOptions: TLabel;
     lblShowWhat: TLabel;
     lvTodo: TListView;
+    EditMenuItem: TMenuItem;
     N1: TToolButton;
+    N5: TToolButton;
     pnlOptions: TPanel;
     pnlShowWhat: TPanel;
+    mnuPopup: TPopupMenu;
     SaveDialog: TSaveDialog;
     tbEdit: TToolButton;
+    tbColors: TToolButton;
     ToolBar: TToolBar;
     tbGoto: TToolButton;
     tbRefresh: TToolButton;
@@ -112,6 +119,7 @@ type
     N4: TToolButton;
     tbHelp: TToolButton;
     XMLPropStorage: TXMLPropStorage;
+    procedure acColorsExecute(Sender: TObject);
     procedure acEditExecute(Sender: TObject);
     procedure acExportExecute(Sender: TObject);
     procedure acGotoExecute(Sender: TObject);
@@ -139,9 +147,7 @@ type
     FOwnerProjPack: TObject;  // Project or package owning the FStartFilename.
     FScannedFiles: TAvlTree;// tree of TTLScannedFile
     FScannedIncFiles: TStringMap;
-    FTodoItemToEdit: TTodoItem;
     FOnEditItem: TOnEditToDo;
-    procedure DecideMenuCaption(Sender: TObject; var ACaption, AHint: string);
     procedure GotoTodo(aTodoItem: TTodoItem);
     procedure SetIDEItem(AValue: string);
     procedure SetIdleConnected(const AValue: boolean);
@@ -160,15 +166,12 @@ type
     property IDEItem: string read FIDEItem write SetIDEItem; // package name or empty for active project
     property BaseDirectory: string read FBaseDirectory;
     property IdleConnected: boolean read FIdleConnected write SetIdleConnected;
-    property TodoItemToEdit: TTodoItem read FTodoItemToEdit;
 
     property OnEditItem: TOnEditToDo read FOnEditItem write FOnEditItem;
   end;
 
 var
   IDETodoWindow: TIDETodoWindow;
-  SrcEditMenuCmd: TIDEMenuCommand;     // MenuItem in Source editor popup menu.
-  IdeSourceMenuCmd: TIDEMenuCommand;   // MenuItem in IDE's Source menu.
 
 
 implementation
@@ -190,10 +193,9 @@ begin
   acGoto.ImageIndex := IDEImages.LoadImage('menu_goto_line');
   acRefresh.ImageIndex := IDEImages.LoadImage('laz_refresh');
   acExport.ImageIndex := IDEImages.LoadImage('menu_saveas');
+  acColors.ImageIndex := IDEImages.LoadImage('pastel_colors');
   acHelp.ImageIndex := IDEImages.LoadImage('btn_help');
   SaveDialog.Filter := dlgFilterCsv+'|*.csv';
-  SrcEditMenuCmd.OnRequestCaptionHint := @DecideMenuCaption;
-  IdeSourceMenuCmd.OnRequestCaptionHint := @DecideMenuCaption;
   LazarusIDE.AddHandlerOnProjectOpened(@ProjectOpened);
 end;
 
@@ -205,35 +207,64 @@ begin
   inherited Destroy;
 end;
 
-procedure TIDETodoWindow.DecideMenuCaption(Sender: TObject; var ACaption, AHint: string);
-var
-  ListItem: TListItem;
-  TodoItem: TTodoItem;
-  SrcEdit: TSourceEditorInterface;
-  SrcPos: TPoint;
-  i: Integer;
+procedure TIDETodoWindow.FormCreate(Sender: TObject);
 begin
-  FTodoItemToEdit := nil;
-  ACaption := lisTDDInsertToDo;
-  SrcEdit := SourceEditorManagerIntf.ActiveEditor;
-  if SrcEdit=nil then exit;
-  for i := 0 to lvtodo.Items.Count-1 do
-  begin
-    ListItem := lvtodo.Items[i];
-    TodoItem := TTodoItem(ListItem.Data);
-    SrcPos := SrcEdit.CursorTextXY;
-    if (TodoItem.Filename = SrcEdit.FileName)
-    and (SrcPos.Y = TodoItem.CodePos.Y)
-    and (SrcPos.X > TodoItem.CodePos.X)
-    and (SrcPos.X < TodoItem.CodePos.X + TodoItem.CommentLen) then
+  FUpdating := False;
+  FScannedFiles := TAvlTree.Create(@CompareTLScannedFiles);
+  FScannedIncFiles := TStringMap.Create(False);
+
+  Caption := lisToDoList;
+
+  acEdit.Hint := lisTodolistEdit;
+  acRefresh.Hint := lisTodolistRefresh;
+  acGoto.Hint := listodoListGotoLine;
+  acExport.Hint := rsExportTodoIt;
+  acColors.Hint := lisColorOptions;
+
+  acEdit.Caption := lisEdit;
+  acRefresh.Caption := dlgUnitDepRefresh;
+  acGoto.Caption := lisToDoGoto;
+  acExport.Caption := lisToDoExport;
+  acColors.Caption := lisColors;
+  acHelp.Caption := lisHelp;
+
+  lblOptions.Caption := lisInclude;
+  chkListed.Caption := lisToDoListed;
+  chkListed.Hint := lisToDoListedHint;
+  chkUsed.Caption := lisToDoUsed;
+  chkUsed.Hint := lisToDoUsedHint;
+  chkPackages.Caption := lisPackages;
+  chkPackages.Hint := Format(lisPackagesHint, [lisToDoListed, lisToDoUsed]);
+  chkSourceEditor.Caption := lisSourceEditor;
+  chkSourceEditor.Hint := lisSourceEditorHint;
+
+  with cboShowWhat do
     begin
-      // Editor cursor is inside a ToDo item > change menu item captions.
-      lvTodo.Selected := ListItem;
-      FTodoItemToEdit := TodoItem; // InsertOrEditToDo in ToDoDlg knows what to do.
-      ACaption := lisTDDEditToDo;
-      Break;
+      Items[0] := lisFilterItem0;
+      Items[1] := lisFilterItem1;
+      Items[2] := lisFilterItem2;
+      Items[3] := lisFilterItem3;
+      Items[4] := lisFilterItem4;
+      Items[5] := lisFilterItem5;
+      Items[6] := lisFilterItem6;
+      Hint := lisShowWhatHint;
     end;
+  lblShowWhat.Caption:=lisShowWhat;
+  with lvTodo do
+  begin
+    Column[0].Caption := lisToDoLType;
+    Column[1].Caption := lisToDoLDescription;
+    Column[1].Width   := 700;
+    Column[2].Caption := lisToDoLPriority;
+    Column[3].Caption := lisToDoLFile;
+    Column[4].Caption := lisToDoLLine;
+    Column[5].Caption := lisToDoLOwner;
+    Column[6].Caption := listToDoLCategory;
   end;
+
+  XMLPropStorage.FileName := Concat(AppendPathDelim(LazarusIDE.GetPrimaryConfigPath),
+    DefaultTodoListCfgFile);
+  XMLPropStorage.Active := True;
 end;
 
 procedure TIDETodoWindow.UpdateTodos(Immediately: boolean);
@@ -243,8 +274,6 @@ var
   Node: TAvlTreeNode;
   CurFile: TTLScannedFile;
   Units: TStrings;
-  CurProject: TLazProject;
-  CurPkg: TIDEPackage;
   Flags: TFindUnitsOfOwnerFlags;
 begin
   if FLoadingOptions then
@@ -466,69 +495,21 @@ begin
   UpdateStartFilename;
 end;
 
-procedure TIDETodoWindow.FormCreate(Sender: TObject);
+procedure TIDETodoWindow.acRefreshExecute(Sender: TObject);
 begin
-  FUpdating := False;
-  FScannedFiles := TAvlTree.Create(@CompareTLScannedFiles);
-  FScannedIncFiles := TStringMap.Create(False);
+  UpdateTodos;
+end;
 
-  Caption := lisToDoList;
-
-  acEdit.Hint := lisTodolistEdit;
-  acRefresh.Hint := lisTodolistRefresh;
-  acGoto.Hint := listodoListGotoLine;
-  acExport.Hint := rsExportTodoIt;
-  acEdit.Caption := lisEdit;
-  acRefresh.Caption := dlgUnitDepRefresh;
-  acGoto.Caption := lisToDoGoto;
-  acExport.Caption := lisToDoExport;
-  acHelp.Caption := lisHelp;
-
-  lblOptions.Caption := lisOptions;
-  chkListed.Caption := lisToDoListed;
-  chkListed.Hint := lisToDoListedHint;
-  chkUsed.Caption := lisToDoUsed;
-  chkUsed.Hint := lisToDoUsedHint;
-  chkPackages.Caption := lisPackages;
-  chkPackages.Hint := Format(lisPackagesHint, [lisToDoListed, lisToDoUsed]);
-  chkSourceEditor.Caption := lisSourceEditor;
-  chkSourceEditor.Hint := lisSourceEditorHint;
-
-  with cboShowWhat do
-    begin
-      Items[0] := lisFilterItem0;
-      Items[1] := lisFilterItem1;
-      Items[2] := lisFilterItem2;
-      Items[3] := lisFilterItem3;
-      Items[4] := lisFilterItem4;
-      Items[5] := lisFilterItem5;
-      Items[6] := lisFilterItem6;
-
-      Hint := lisShowWhatHint;
-    end;
-
-  lblShowWhat.Caption:=lisShowWhat;
-
-  with lvTodo do
-  begin
-    Column[0].Caption := lisToDoLType;
-    Column[1].Caption := lisToDoLDescription;
-    Column[1].Width   := 700;
-    Column[2].Caption := lisToDoLPriority;
-    Column[3].Caption := lisToDoLFile;
-    Column[4].Caption := lisToDoLLine;
-    Column[5].Caption := lisToDoLOwner;
-    Column[6].Caption := listToDoLCategory;
-  end;
-
-  XMLPropStorage.FileName := Concat(AppendPathDelim(LazarusIDE.GetPrimaryConfigPath),
-    DefaultTodoListCfgFile);
-  XMLPropStorage.Active := True;
+procedure TIDETodoWindow.acExportExecute(Sender: TObject);
+begin
+  SaveDialog.FileName:='TodoList_'+FormatDateTime('YYYY_MM_DD',now);
+  if SaveDialog.Execute then
+    ExtractToCSV(SaveDialog.FileName, lvTodo.Items);
 end;
 
 procedure TIDETodoWindow.GotoTodo(aTodoItem: TTodoItem);
 begin
-  LazarusIDE.DoOpenFileAndJumpToPos(aTodoItem.Filename, aTodoItem.CodePos,-1,-1,-1,
+  LazarusIDE.DoOpenFileAndJumpToPos(aTodoItem.Filename, aTodoItem.StartPos,-1,-1,-1,
     [ofOnlyIfExists,ofRegularFile,ofVirtualFile,ofDoNotLoadResource]);
 end;
 
@@ -544,9 +525,9 @@ begin
   TodoItem := TTodoItem(ListItem.Data);
   SrcEdit := SourceEditorManagerIntf.ActiveEditor;
   if (SrcEdit=nil) or SrcEdit.ReadOnly then exit;
-  if (TodoItem.Filename<>SrcEdit.FileName) or (TodoItem.CodePos<>SrcEdit.CursorTextXY) then
-    GotoTodo(TodoItem);       // Move to the right place if not there already.
-  OnEditItem(TodoItem);       // Open the dialog for editing.
+  if (TodoItem.Filename<>SrcEdit.FileName) or (TodoItem.StartPos<>SrcEdit.CursorTextXY) then
+    GotoTodo(TodoItem);          // Move to the right place if not there already.
+  OnEditItem(TodoItem, SrcEdit); // Open the dialog for editing.
 end;
 
 procedure TIDETodoWindow.acGotoExecute(Sender: TObject);
@@ -558,22 +539,18 @@ begin
     GotoTodo(TTodoItem(ListItem.Data));
 end;
 
-procedure TIDETodoWindow.acRefreshExecute(Sender: TObject);
+procedure TIDETodoWindow.acColorsExecute(Sender: TObject);
 begin
-  UpdateTodos;
+  { #todo 1 -oJuha : Move to the actual ToDo items in the color settings list. }
+  //LazarusIDE.DoOpenIDEOptions(TEditorColorOptionsFrame, 'Go to end of color options list', [TIDEEditorOptions], []);
+  LazarusIDE.DoOpenIDEOptions(EditorColorOptionsEditorClass,
+    lisToDoColorsAreAtTheEndOfColorList, [TIDEEditorOptions], []);
 end;
 
 procedure TIDETodoWindow.acHelpExecute(Sender: TObject);
 begin
   // usual API from IdeHelpIntf don't work
   OpenURL('https://wiki.freepascal.org/IDE_Window:_ToDo_List');
-end;
-
-procedure TIDETodoWindow.acExportExecute(Sender: TObject);
-begin
-  SaveDialog.FileName:='TodoList_'+FormatDateTime('YYYY_MM_DD',now);
-  if SaveDialog.Execute then
-    ExtractToCSV(SaveDialog.FileName, lvTodo.Items);
 end;
 
 procedure TIDETodoWindow.FormCloseQuery(Sender: TObject; var CanClose: boolean);
@@ -605,13 +582,13 @@ begin
     aListitem := lvTodo.Items.Add;
     aListitem.Data := aTodoItem;
     aListItem.Caption := LIST_INDICATORS[aTodoItem.ToDoType];
-    aListitem.SubItems.Add(aTodoItem.Text);
+    aListitem.SubItems.Add(TextToSingleLine(aTodoItem.Text)); // Join lines if there are many.
     aListitem.SubItems.Add(IntToStr(aTodoItem.Priority));
     aFilename:=aTodoItem.Filename;
     if (BaseDirectory<>'') and FilenameIsAbsolute(aFilename) then
       aFilename:=CreateRelativePath(aFilename,BaseDirectory);
     aListitem.SubItems.Add(aFilename);
-    aListitem.SubItems.Add(IntToStr(aTodoItem.CodePos.Y));
+    aListitem.SubItems.Add(IntToStr(aTodoItem.StartPos.Y));
     aListitem.SubItems.Add(aTodoItem.Owner);
     aListitem.SubItems.Add(aTodoItem.Category);
   end;

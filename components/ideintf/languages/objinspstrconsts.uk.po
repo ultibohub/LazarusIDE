@@ -679,6 +679,11 @@ msgstr "Недопустима величина властивості"
 msgid "\"%s\" is not a valid method name."
 msgstr "\"%s\" не є правильною назвою методу."
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -761,6 +766,10 @@ msgstr "&Гаразд"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Гаразд"
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
+msgstr ""
 
 #: objinspstrconsts.oisoptions
 msgid "Options"

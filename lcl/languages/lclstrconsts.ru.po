@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-01-20 17:09+0300\n"
+"PO-Revision-Date: 2025-07-01 17:58+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -172,8 +172,8 @@ msgid "Cancel"
 msgstr "Отмена"
 
 #: lclstrconsts.rscannotfocus
-msgid "Can not focus"
-msgstr "Не могу принять фокус"
+msgid "Cannot focus"
+msgstr "Невозможно получить фокус"
 
 #: lclstrconsts.rscanvasdoesnotallowdrawing
 msgid "Canvas does not allow drawing"
@@ -463,10 +463,6 @@ msgstr "Невозможно вставить столбцы, если отсу�
 #: lclstrconsts.rsgridindexoutofrange
 msgid "Grid index out of range."
 msgstr "Индекс Grid вне диапазона допустимых значений."
-
-#: lclstrconsts.rsgroupindexcannotbelessthanprevious
-msgid "GroupIndex cannot be less than a previous menu item's GroupIndex"
-msgstr "GroupIndex не может быть меньше GroupIndex для предыдущего элемента меню"
 
 #: lclstrconsts.rsgtkfilter
 msgid "Filter:"
@@ -900,10 +896,6 @@ msgstr "Выделенный пункт меню"
 msgid "Menu Text"
 msgstr "Текст меню"
 
-#: lclstrconsts.rsmodified
-msgid "  modified "
-msgstr "  изменён "
-
 #: lclstrconsts.rsmoneygreencolorcaption
 msgid "Money Green"
 msgstr "Светло-зелёный"
@@ -1151,10 +1143,6 @@ msgstr "Показать подробности"
 msgid "Silver"
 msgstr "Серебристый"
 
-#: lclstrconsts.rssize
-msgid "  size "
-msgstr "  размер "
-
 #: lclstrconsts.rsskybluecolorcaption
 msgid "Sky Blue"
 msgstr "Голубой"
@@ -1281,8 +1269,9 @@ msgid "Yellow"
 msgstr "Жёлтый"
 
 #: lclstrconsts.scannotfocus
-msgid "Cannot focus a disabled or invisible window"
-msgstr "Невозможно перевести фокус в отключённое или невидимое окно"
+#, object-pascal-format
+msgid "Cannot focus a disabled or invisible window \"%s\":\"%s\""
+msgstr "Невозможно перевести фокус в отключённое или невидимое окно \"%s\":\"%s\""
 
 #: lclstrconsts.sduplicatemenus
 msgid "Duplicate menus"

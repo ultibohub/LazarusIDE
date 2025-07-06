@@ -680,6 +680,11 @@ msgstr "Kelvoton ominaisuuden arvo"
 msgid "\"%s\" is not a valid method name."
 msgstr "\"%s\" ei ole sallittu metodin nimi."
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -761,6 +766,10 @@ msgstr ""
 
 #: objinspstrconsts.oisok2
 msgid "Ok"
+msgstr ""
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
 msgstr ""
 
 #: objinspstrconsts.oisoptions

@@ -686,6 +686,11 @@ msgstr "無効なプロパティ値"
 msgid "\"%s\" is not a valid method name."
 msgstr "%s%s%sは有効なメソッド名ではありません。"
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -768,6 +773,10 @@ msgstr "OK(&O)"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Ok"
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
+msgstr ""
 
 #: objinspstrconsts.oisoptions
 msgid "Options"

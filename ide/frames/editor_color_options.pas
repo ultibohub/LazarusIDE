@@ -1635,7 +1635,6 @@ begin
     Items.Free;
   end;
 
-
   UseSyntaxHighlightCheckBox.ImageIndex := IDEImages.LoadImage('laz_highlighter');
   UseSyntaxHighlightCheckBox.Caption := dlgUseHighlight;
   UseSyntaxHighlightCheckBox.Hint := dlgUseSyntaxHighlight;
@@ -1863,4 +1862,6 @@ end;
 
 initialization
   RegisterIDEOptionsEditor(GroupEditor, TEditorColorOptionsFrame, EdtOptionsColors, EdtOptionsDisplay);
+  EditorColorOptionsEditorClass := TEditorColorOptionsFrame;
+
 end.

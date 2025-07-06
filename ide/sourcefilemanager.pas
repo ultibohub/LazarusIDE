@@ -874,16 +874,22 @@ begin
   // read form data
   if FilenameIsPascalUnit(FFilename) then begin
     // this could be a unit with a form
-    //debugln('TFileOpener.OpenResource ',FFilename,' ',OpenFlagsToString(Flags));
+    //debugln(['TFileOpener.OpenResource ',FFilename,' ',OpenFlagsToString(FFlags),
+    //         ', LoadedDesigner=', FNewUnitInfo.LoadedDesigner,
+    //         ', AutoCreateFormsOnOpen=', EnvironmentGuiOpts.AutoCreateFormsOnOpen,
+    //         ', AutoOpenDesignerFormsDisabled=', Project1.AutoOpenDesignerFormsDisabled]);
     if ([ofDoNotLoadResource]*FFlags=[])
     and ( (ofDoLoadResource in FFlags)
        or ((ofProjectLoading in FFlags)
            and FNewUnitInfo.LoadedDesigner
            and (not Project1.AutoOpenDesignerFormsDisabled)
-           and EnvironmentGuiOpts.AutoCreateFormsOnOpen))
+           and EnvironmentGuiOpts.AutoCreateFormsOnOpen
+          )
+        )
     then begin
       // -> try to (re)load the lfm file
-      //debugln(['TFileOpener.OpenResource Loading LFM for ',FNewUnitInfo.Filename,' LoadedDesigner=',FNewUnitInfo.LoadedDesigner]);
+      //debugln(['TFileOpener.OpenResource Loading LFM for ',FNewUnitInfo.Filename,
+      //         ' LoadedDesigner=',FNewUnitInfo.LoadedDesigner]);
       CloseFlags:=[cfSaveDependencies];
       if ofRevert in FFlags then
         Include(CloseFlags,cfCloseDependencies);
@@ -2713,7 +2719,7 @@ var
 begin
   Result:=mrCancel;
   CanAbort:=[sfCanAbort,sfProjectSaving]*Flags<>[];
-  //debugln('SaveEditorFile A PageIndex=',PageIndex,' Flags=',SaveFlagsToString(Flags));
+  //debugln(['SaveEditorFile A AEditor=',AEditor,' Flags=',SaveFlagsToString(Flags)]);
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('SaveEditorFile A');{$ENDIF}
   if not (MainIDE.ToolStatus in [itNone,itDebugger]) then
     exit(mrAbort);
@@ -2777,7 +2783,7 @@ begin
     exit(SaveProject([sfSaveAs]));
 
   // if nothing modified then a simple Save can be skipped
-  //debugln(['SaveEditorFile A ',AnUnitInfo.Filename,' ',AnUnitInfo.NeedsSaveToDisk]);
+  //debugln(['SaveEditorFile A ',AnUnitInfo.Filename,' ',AnUnitInfo.NeedsSaveToDisk(true)]);
   if ([sfSaveToTestDir,sfSaveAs]*Flags=[]) and (not AnUnitInfo.NeedsSaveToDisk(true)) then
   begin
     if AEditor.Modified then
@@ -2883,17 +2889,24 @@ begin
   if sfCheckAmbiguousFiles in Flags then
     MainBuildBoss.CheckAmbiguousSources(DestFilename,false);
 
-  {$IFDEF IDE_DEBUG}
-  debugln(['*** HasResources=',AnUnitInfo.HasResources]);
-  {$ENDIF}
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('SaveEditorFile B');{$ENDIF}
-  // save resource file and lfm file, skip when externally renamed identifiers
-  if ((LRSCode<>nil) or (AnUnitInfo.Component<>nil))
-      and not (sfSkipReferences in Flags) then
+  //debugln(['SaveEditorFile Component=', AnUnitInfo.Component, ', HasResources=', AnUnitInfo.HasResources
+  //         ', LoadedDesigner=', AnUnitInfo.LoadedDesigner]);
+  if not (sfSkipReferences in Flags) then // skip when externally renamed identifiers
   begin
-    Result:=SaveUnitComponent(AnUnitInfo,LRSCode,LFMCode,Flags);
-    if not (Result in [mrIgnore, mrOk]) then
-      exit;
+    // Resource is needed for the check.
+    if (AnUnitInfo.Component=nil)
+    and not AnUnitInfo.LoadedDesigner
+    and not EnvironmentGuiOpts.AutoCreateFormsOnOpen
+    then
+      LoadLFM(AnUnitInfo, [], []);
+    // save resource file and lfm file,
+    if (LRSCode<>nil) or (AnUnitInfo.Component<>nil) then
+    begin
+      Result:=SaveUnitComponent(AnUnitInfo,LRSCode,LFMCode,Flags);
+      if not (Result in [mrIgnore, mrOk]) then
+        exit;
+    end;
   end;
 
   // unset all modified flags
@@ -2903,6 +2916,7 @@ begin
     MainIDE.UpdateSaveMenuItemsAndButtons(not (sfProjectSaving in Flags));
   end;
   TSourceEditor(AEditor).SourceNotebook.UpdateStatusBar;
+  TSourceEditor(AEditor).SourceNotebook.UpdateCaption;
 
   // fix all references
   if not (sfSkipReferences in Flags) then begin
@@ -4111,9 +4125,9 @@ begin
     end;
 
     if ([ofDoNotLoadResource]*Flags=[])
-    and ( (not Project1.AutoOpenDesignerFormsDisabled)
-           and EnvironmentGuiOpts.AutoCreateFormsOnOpen
-           and (SourceEditorManager.ActiveEditor<>nil) )
+    and (not Project1.AutoOpenDesignerFormsDisabled)
+    and EnvironmentGuiOpts.AutoCreateFormsOnOpen
+    and (SourceEditorManager.ActiveEditor<>nil)
     then begin
       // auto open form of active unit
       AnUnitInfo:=Project1.UnitWithEditorComponent(SourceEditorManager.ActiveEditor);
@@ -5416,7 +5430,6 @@ begin
           if HasI18N then
             Grubber:=TLRJGrubber.Create(Writer);
           Writer.OnWriteMethodProperty:=@FormEditor1.WriteMethodPropertyEvent;
-          //DebugLn(['SaveUnitComponent AncestorInstance=',dbgsName(AncestorInstance)]);
           Writer.OnFindAncestor:=@FormEditor1.WriterFindAncestor;
           AncestorUnit:=AnUnitInfo.FindAncestorUnit;
           Ancestor:=nil;
@@ -5647,7 +5660,7 @@ begin
 
   Result:=mrOk;
   {$IFDEF IDE_DEBUG}
-  debugln('SaveUnitComponent G ',LFMCode<>nil);
+  debugln(['SaveUnitComponent G ',LFMCode<>nil]);
   {$ENDIF}
 end;
 

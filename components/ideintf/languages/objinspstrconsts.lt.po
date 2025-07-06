@@ -682,6 +682,11 @@ msgstr "Klaidinga savybės reikšmė"
 msgid "\"%s\" is not a valid method name."
 msgstr "„%s“ nėra tinkamas pavadinimas metodui."
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -764,6 +769,10 @@ msgstr "&Tinka"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Tinka"
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
+msgstr ""
 
 #: objinspstrconsts.oisoptions
 msgid "Options"

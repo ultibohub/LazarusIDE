@@ -2,20 +2,24 @@ object GenericListSelectForm: TGenericListSelectForm
   Left = 389
   Height = 277
   Top = 463
-  Width = 466
+  Width = 437
   Caption = 'GenericCheckListForm'
   ClientHeight = 277
-  ClientWidth = 466
-  OnShow = FormShow
+  ClientWidth = 437
+  KeyPreview = True
   Position = poScreenCenter
-  LCLVersion = '1.9.0.0'
+  LCLVersion = '4.99.0.0'
+  OnKeyDown = FormKeyDown
+  OnShow = FormShow
   object ButtonPanel1: TButtonPanel
     Left = 6
-    Height = 30
-    Top = 241
-    Width = 454
+    Height = 29
+    Top = 242
+    Width = 425
     OKButton.Name = 'OKButton'
+    OKButton.Hint = '[Ctrl+Enter]'
     OKButton.DefaultCaption = True
+    OKButton.ShowHint = True
     HelpButton.Name = 'HelpButton'
     HelpButton.DefaultCaption = True
     HelpButton.Enabled = False
@@ -24,15 +28,15 @@ object GenericListSelectForm: TGenericListSelectForm
     CloseButton.Enabled = False
     CancelButton.Name = 'CancelButton'
     CancelButton.DefaultCaption = True
-    TabOrder = 0
+    TabOrder = 1
     ShowButtons = [pbOK, pbCancel]
     ShowBevel = False
   end
   object InfoLabel: TLabel
     Left = 6
-    Height = 19
+    Height = 1
     Top = 6
-    Width = 454
+    Width = 425
     Align = alTop
     BorderSpacing.Around = 6
     ParentColor = False
@@ -45,14 +49,17 @@ object GenericListSelectForm: TGenericListSelectForm
     AnchorSideRight.Control = Owner
     AnchorSideRight.Side = asrBottom
     Left = 6
-    Height = 200
-    Top = 31
-    Width = 454
+    Height = 218
+    Top = 13
+    Width = 425
     Anchors = [akTop, akLeft, akRight, akBottom]
     BorderSpacing.Around = 6
+    Constraints.MinHeight = 200
+    Constraints.MinWidth = 260
     ItemHeight = 0
-    OnClick = ListBoxClick
+    TabOrder = 0
+    TopIndex = -1
+    OnSelectionChange = ListBoxSelectionChange
     OnDblClick = ListBoxDblClick
-    TabOrder = 1
   end
 end

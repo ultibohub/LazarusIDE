@@ -682,6 +682,11 @@ msgstr "Valor de propiedad inválido"
 msgid "\"%s\" is not a valid method name."
 msgstr "\"%s\" no es un nombre de método válido."
 
+#: objinspstrconsts.oisitems
+#, object-pascal-format
+msgid "items: %s"
+msgstr ""
+
 #: objinspstrconsts.oisitemsselected
 #, object-pascal-format
 msgid "%u items selected"
@@ -764,6 +769,10 @@ msgstr "&Aceptar"
 #: objinspstrconsts.oisok2
 msgid "Ok"
 msgstr "Aceptar"
+
+#: objinspstrconsts.oisonlyonefile
+msgid "Only one file can be opened."
+msgstr ""
 
 #: objinspstrconsts.oisoptions
 msgid "Options"
