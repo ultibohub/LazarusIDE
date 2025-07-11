@@ -661,6 +661,10 @@ end;
   counter-clockwise while negative values mean clockwise direction.
   Zero degrees is at the 3'o clock position.
 
+  But note that in case of an eccentric ellipse these angles are not the
+  same as "real" polar angles, but only correspond to the parameter t in the
+  parametric ellipse equations:  x = a * cos(t);  y = b * sin(t) where
+  a and b denote the half axes of the ellipse.
  ------------------------------------------------------------------------------}
 procedure TCanvas.Arc(ALeft, ATop, ARight, ABottom,
   Angle16Deg, Angle16DegLength: Integer);
@@ -840,19 +844,11 @@ end;
 procedure TCanvas.PolyBezier(const Points: array of TPoint;
   Filled: boolean = False;
   Continuous: boolean = True);
-var NPoints, i: integer;
-  PointArray: ^TPoint;
+var NPoints: integer;
 begin
   NPoints:=High(Points)-Low(Points)+1;
   if NPoints<4 then exit; // Curve must have at least 4 points
-  GetMem(PointArray,SizeOf(TPoint)*NPoints);
-  try
-    for i:=0 to NPoints-1 do
-      PointArray[i]:=Points[i+Low(Points)];
-    PolyBezier(PointArray, NPoints, Filled, Continuous);
-  finally
-    FreeMem(PointArray);
-  end;
+  PolyBezier(@Points[0], NPoints, Filled, Continuous);
 end;
 
 procedure TCanvas.PolyBezier(Points: PPoint; NumPts: Integer;
@@ -1544,6 +1540,9 @@ end;
   Positive values of Angle and AngleLength mean counter-clockwise while negative
   values mean clockwise direction. Zero degrees is at the 3'o clock position.
 
+  But note that in the case of an eccentric ellipse the angles are not "true"
+  polar angles, but only the parameter t of the paramatric ellipse equation
+  (x = a * cos(t), y = b * sin(t), where a and b are the ellipse half axes).
 ------------------------------------------------------------------------------}
 procedure TCanvas.Chord(x1, y1, x2, y2,
   Angle16Deg, Angle16DegLength: Integer);
@@ -1561,7 +1560,7 @@ end;
 
   Use Chord to draw a filled Chord-shape on the canvas. The values sx,sy,
   and ex,ey represent a starting and ending radial-points between which
-  the Arc is draw.
+  the Arc is drawn.
 
 ------------------------------------------------------------------------------}
 procedure TCanvas.Chord(x1, y1, x2, y2, SX, SY, EX, EY: Integer);

@@ -66,7 +66,7 @@ uses
   // Codetools
   CodeToolsStructs, CodeToolManager, FileProcs, CodeCache, CodeTree, FindDeclarationTool,
   // BuildIntf
-  ProjectIntf, PackageIntf, PackageLinkIntf, PackageDependencyIntf,
+  ProjPackIntf, ProjectIntf, PackageIntf, PackageLinkIntf, PackageDependencyIntf,
   // IDEIntf
   IDECommands, IDEDialogs, IDEImagesIntf, LazIDEIntf, ToolBarIntf,
   IdeIntfStrConsts, MenuIntf, FormEditingIntf, SrcEditorIntf, InputHistory,
@@ -1140,7 +1140,7 @@ begin
       if not NodeData.Removed then continue;
       if not (Item is TPkgDependency) then continue;
       Dependency:=TPkgDependency(Item);
-      if TPrjFileCheck.AddingDependency(LazProject,Dependency)<>mrOK then exit;
+      if TPrjFileCheck.AddingDependency(LazProject, Dependency, true)<>mrOK then exit;
       if Assigned(OnReAddDependency) then
         OnReAddDependency(Self,Dependency);
     end;
