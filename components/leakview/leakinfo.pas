@@ -292,8 +292,10 @@ begin
   if s = '' then
     Result := vltEmpty
   else
-  if pos('Thread ', s) = 1 then
-    Result := vltThread
+  if pos('Thread ', s) = 1 then begin
+    Result := vltThread; // in Helgrind this may be a header
+    // TODO: check for Thread 123:
+  end
   else
   if pos('   ', s) = 1 then
     Result := vltTrace  // any sub line. Real traces begin with "by" ar "at"
@@ -422,7 +424,7 @@ var
   SubStr: String;
 begin
   SubStr := Trc[Idx];
-  if (TValgrindParser.ValgrindLineType(SubStr) = vltHeader) and
+  if (TValgrindParser.ValgrindLineType(SubStr) in [vltHeader, vltThread]) and
      ( (Idx < Trc.Count-1) and (TValgrindParser.ValgrindLineType(Trc[Idx+1]) = vltTrace) ) and
      ( (Idx = 0) or (TValgrindParser.ValgrindLineType(Trc[Idx-1]) in [vltNone, vltEmpty, vltThread]) )
   then begin
@@ -826,7 +828,7 @@ begin
     trace.Add(NewLine);
     if (TrcIndex < Trc.Count-1) and (not IsTraceLine(Trcindex+1, True)) and
        (not IsHeaderLine(Trcindex+1)) and
-       (TValgrindParser.ValgrindLineType(Trc[Trcindex+1]) <> vltEmpty)
+       (TValgrindParser.ValgrindLineType(Trc[Trcindex+1]) = vltNone)
     then begin
       // join next line, as there may be a linewrap
       while (length(s) > 0) and (s[length(s)] in [#10,#13]) do delete(s, length(s), 1);

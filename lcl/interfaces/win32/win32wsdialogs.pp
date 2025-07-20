@@ -185,6 +185,9 @@ function UTF8StringToPWideChar(const s: string) : PWideChar;
 function UTF8StringToPAnsiChar(const s: string) : PAnsiChar;
 
 function CanUseVistaDialogs(const AOpenDialog: TOpenDialog): Boolean;
+function IsXPStyleFallBack(const AOpenDialog: TOpenDialog): Boolean;
+function IsXPStyleFallBack(const AOpenDialog: TOpenDialog; out Idx: Integer): Boolean;
+
 
 var
   cOpenDialogAllFiles: string = 'All files';
@@ -1026,7 +1029,7 @@ end;
 
 class function TWin32WSOpenDialog.CreateHandle(const ACommonDialog: TCommonDialog): THandle;
 var
-  Dialog: IFileDialog; //IFileOpenDialog;
+  Dialog: IFileDialog;
   HRes: HRESULT;
   DlgType: TIID;
   CLS_ID: TGUID;
@@ -1034,7 +1037,7 @@ var
 begin
   if CanUseVistaDialogs(AOpenDialog) then
   begin
-    if (ACommonDialog is TSaveDialog) then
+    if (ACommonDialog.FCompStyle = csSaveFileDialog) then
     begin
       CLS_ID := CLSID_FileSaveDialog;
       DlgType := IFileSaveDialog;
@@ -1140,24 +1143,8 @@ end;
 { TWin32WSSaveDialog }
 
 class function TWin32WSSaveDialog.CreateHandle(const ACommonDialog: TCommonDialog): THandle;
-//var
-//  Dialog: IFileSaveDialog;
 begin
   Result := TWin32WSOpenDialog.CreateHandle(ACommonDialog);
-  //if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
-  //begin
-  //  if Succeeded(CoCreateInstance(CLSID_FileSaveDialog, nil, CLSCTX_INPROC_SERVER, IFileSaveDialog, Dialog))
-  //  and Assigned(Dialog) then
-  //  begin
-  //    Dialog._AddRef;
-  //    TWin32WSOpenDialog.SetupVistaFileDialog(Dialog, TOpenDialog(ACommonDialog));
-  //    Result := THandle(Dialog);
-  //  end
-  //  else
-  //    Result := INVALID_HANDLE_VALUE;
-  //end
-  //else
-  //  Result := CreateFileDialogHandle(TOpenDialog(ACommonDialog));
 end;
 
 class procedure TWin32WSSaveDialog.DestroyHandle(const ACommonDialog: TCommonDialog);

@@ -95,6 +95,19 @@ type
     procedure TestRenameAlsoLFM_Variable;
     procedure TestRenameAlsoLFM_Event;
     procedure TestRenameAlsoLFM_SkipBinaryData;
+    procedure TestRenameAlsoLFM_Property;
+    procedure TestRenameAlsoLFM_Property_Typeless;
+    procedure TestRenameAlsoLFM_DottedProperty;
+    procedure TestRenameAlsoLFM_EnumProperty;
+    procedure TestRenameAlsoLFM_SetProperty;
+    procedure TestRenameAlsoLFM_AnonymousSetProperty;
+    procedure TestRenameAlsoLFM_ComponentProperty;
+    // todo: procedure TestRenameAlsoLFM_ComponentProperty_Foreign;  from another root component, e.g. DataModule
+    // todo: procedure TestRenameAlsoLFM_CollectionProperty;
+    procedure TestRenameAlsoLFM_ListProperty;
+    procedure TestRenameAlsoLFM_ComponentClass;
+    procedure TestRenameAlsoLFM_RootComponentClass;
+    procedure TestRenameAlsoLFM_RootComponentName;
   end;
 
 implementation
@@ -450,7 +463,7 @@ begin
       +'implementation'+LineEnding
       +'end.'+LineEnding);
 
-    RenameReferences(NewIdentifier,frfAllLFM);
+    RenameReferences(NewIdentifier,[frfIncludingLFM]);
     CheckDiff(Test1LFM,ExpLFMLines);
 
   finally
@@ -2159,8 +2172,6 @@ begin
 end;
 
 procedure TTestRefactoring.TestRenameAlsoLFM_Event;
-var
-  Test1LFM, RedUnit: TCodeBuffer;
 begin
   TestRenameAlsoLFM(LinesToStr([ // red unit interface
   'type',
@@ -2235,7 +2246,7 @@ begin
       '  end;',
       'implementation',
       'end.']);
-    RenameReferences('OkBtn',frfAllLFM);
+    RenameReferences('OkBtn',[frfIncludingLFM]);
     CheckDiff(Test1LFM,[
     'object Form1: TForm1',
     '  object OkBtn: TButton',
@@ -2248,6 +2259,497 @@ begin
 
   finally
     RedUnit.IsDeleted:=true;
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_Property;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  Checked = False',
+      '  object Button1: TButton',
+      '    Checked = True',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TForm = class(TComponent)',
+      '  published',
+      '    property Checked: boolean;',
+      '  end;',
+      '  TButton = class(TComponent)',
+      '  published',
+      '    property Checked{#Rename}: boolean;',
+      '  end;',
+      '  TForm1 = class(TForm)',
+      '    Button1: TButton;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Activated',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  Checked = False',
+      '  object Button1: TButton',
+      '    Activated = True',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_Property_Typeless;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Checked = True',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TControl = class(TComponent)',
+      '  public',
+      '    property Checked{#Rename}: boolean;',
+      '  end;',
+      '  TButton = class(TControl)',
+      '  published',
+      '    property Checked;',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Button1: TButton;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Activated',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Activated = True',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_DottedProperty;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Prop.Prop = True',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TWing = class(TPersistent)',
+      '  published',
+      '    property Prop{#Rename}: boolean;',
+      '  end;',
+      '  TButton = class(TComponent)',
+      '  published',
+      '    property Prop: TWing;',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Button1: TButton;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Flying',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Prop.Flying = True',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_EnumProperty;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Color = green',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TColor = (red,green{#Rename},blue);',
+      '  TButton = class(TComponent)',
+      '  published',
+      '    property Color: TColor;',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Button1: TButton;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Violet',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Color = Violet',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_SetProperty;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Colors = [red, green]',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TColor = (red,green{#Rename},blue);',
+      '  TColors = set of TColor;',
+      '  TButton = class(TComponent)',
+      '  published',
+      '    property Colors: TColors;',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Button1: TButton;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Violet',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Colors = [red, Violet]',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_AnonymousSetProperty;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Colors = [red, green]',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TColors = set of (red,green{#Rename},blue);',
+      '  TButton = class(TComponent)',
+      '  published',
+      '    property Colors: TColors;',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Button1: TButton;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Violet',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Colors = [red, Violet]',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_ComponentProperty;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Link = Edit1',
+      '  end',
+      '  object Edit1: TEdit',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TButton = class(TComponent)',
+      '  published',
+      '    property Link: TComponent;',
+      '  end;',
+      '  TEdit = class(TComponent)',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Button1: TButton;',
+      '    Edit1{#Rename}: TEdit;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Input1',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Button1: TButton',
+      '    Link = Input1',
+      '  end',
+      '  object Input1: TEdit',
+      '  end',
+      'end']);
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_ListProperty;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Memo1: TMemo',
+      '    Lines.Strings = (',
+      '      ''Memo1''',
+      '      ''Bla''',
+      '    )',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TMemo = class(TComponent)',
+      '  published',
+      '    property Lines: TStrings;',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Memo1{#Rename}: TMemo;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('Input1',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Input1: TMemo',
+      '    Lines.Strings = (',
+      '      ''Memo1''',
+      '      ''Bla''',
+      '    )',
+      '  end',
+      'end']);
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_ComponentClass;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Div1: TDiv',
+      '    object Div2: TDiv',
+      '    end',
+      '  end',
+      '  object Div3: TDiv',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TDiv{#Rename} = class(TComponent)',
+      '  published',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Div1: TDiv;',
+      '    Div2: TDiv;',
+      '    Div3: TDiv;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('TControl',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  object Div1: TControl',
+      '    object Div2: TControl',
+      '    end',
+      '  end',
+      '  object Div3: TControl',
+      '  end',
+      'end']);
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_RootComponentClass;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Div1: TDiv',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TDiv = class(TComponent)',
+      '  published',
+      '  end;',
+      '  TForm1{#Rename} = class(TComponent)',
+      '    Div1: TDiv;',
+      '  end;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('TMyForm',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TMyForm',
+      '  object Div1: TDiv',
+      '  end',
+      'end']);
+  finally
+    Test1LFM.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestRefactoring.TestRenameAlsoLFM_RootComponentName;
+var
+  Test1LFM: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  try
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  object Div1: TDiv',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Classes;',
+      'type',
+      '  TDiv = class(TComponent)',
+      '  published',
+      '  end;',
+      '  TForm1 = class(TComponent)',
+      '    Div1: TDiv;',
+      '  end;',
+      'var Form1{#Rename}: TForm1;',
+      'implementation',
+      'end.']));
+
+    RenameReferences('MyForm',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object MyForm: TForm1',
+      '  object Div1: TDiv',
+      '  end',
+      'end']);
+  finally
     Test1LFM.IsDeleted:=true;
   end;
 end;

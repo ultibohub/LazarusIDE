@@ -5,11 +5,12 @@ unit project_application_options;
 interface
 
 uses
-  Classes, SysUtils, Math,
+  Classes, SysUtils, Math, System.UITypes,
   // LazUtils
   FileUtil,
   // LCL
   LCLType, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls, Buttons, ComCtrls, ExtDlgs,
+  LCLStrConsts,
   // LazControls
   DividerBevel,
   // IdeIntf
@@ -77,7 +78,9 @@ type
     procedure EnableManifest(aEnable: Boolean);
     procedure SetIconFromStream(Value: TStream);
     function GetIconAsStream: TStream;
+    function HasIcon: Boolean;
   public
+    constructor Create(AOwner: TComponent); override;
     function GetTitle: string; override;
     procedure Setup({%H-}ADialog: TAbstractOptionsEditorDialog); override;
     procedure ReadSettings(AOptions: TAbstractIDEOptions); override;
@@ -134,13 +137,29 @@ end;
 
 { TProjectApplicationOptionsFrame }
 
+constructor TProjectApplicationOptionsFrame.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  {$IFDEF DARWIN}
+  SavePictureDialog1.DefaultExt := '.icns';
+  SavePictureDialog1.FilterIndex := 7;
+  {$ELSE}
+  SavePictureDialog1.DefaultExt := '.ico';
+  SavePictureDialog1.FilterIndex := 6;
+  {$ENDIF}
+  OpenPictureDialog1.DefaultExt := SavePictureDialog1.DefaultExt;
+end;
+
+function TProjectApplicationOptionsFrame.HasIcon: Boolean;
+begin
+  Result := (IconImage.Picture.Graphic <> nil) and
+    (not IconImage.Picture.Graphic.Empty);
+end;
+
 procedure TProjectApplicationOptionsFrame.IconImagePictureChanged(Sender: TObject);
 var
-  HasIcon: boolean;
   cx, cy: integer;
 begin
-  HasIcon := (IconImage.Picture.Graphic <> nil) and
-    (not IconImage.Picture.Graphic.Empty);
   IconTrack.Enabled := HasIcon;
   if HasIcon then
   begin
@@ -193,9 +212,66 @@ begin
 end;
 
 procedure TProjectApplicationOptionsFrame.SaveIconButtonClick(Sender: TObject);
+var
+  ext: String;
+
+  procedure SaveAllImages;
+  var
+    savedCurrent: Integer;
+    fn: String;
+    pf: TPixelFormat;
+    w, h: Word;
+    i: Integer;
+  begin
+    savedCurrent := IconImage.Picture.Icon.Current;
+    try
+      fn := ChangeFileExt(SavePictureDialog1.FileName, '');
+      for i := 0 to IconImage.Picture.Icon.Count-1 do
+      begin
+        IconImage.Picture.Icon.Current := i;
+        IconImage.Picture.Icon.GetDescription(i, pf, h, w);  // order h-w is correct
+        IconImage.Picture.SaveToFile(Format('%s_%dx%d.%s', [fn, w, h, ext]));
+      end;
+    finally
+      IconImage.Picture.Icon.Current := savedCurrent;
+    end;
+  end;
+
+var
+  res: TModalResult;
+  selIdx: Integer;
+  info: String;
+  options: array[0..1] of string;
 begin
+  if not HasIcon then
+    exit;
+
   if SavePictureDialog1.Execute then
-    IconImage.Picture.SaveToFile(SavePictureDialog1.FileName);
+  begin
+    ext := ExtractFileExt(SavePictureDialog1.FileName);
+    Delete(ext, 1, 1);
+    // Save as icon
+    try
+      if SameText(ext, 'ico') or SameText(ext, 'icns') or SameText(ext, 'cur') then
+        IconImage.Picture.SaveToFile(SavePictureDialog1.FileName)
+      else
+      begin
+        // Save as another format allowing only a single image per file
+        info := lisMultipleImagesInfo + LineEnding + lisHowToProceed;
+        options[0] := lisSaveOnlyCurrentImageSize;
+        options[1] := lisSaveAllImageSizesToIndividualFiles;
+        res := TaskDlg(rsMtInformation, lisSaveIconToFile, info, tdiQuestion, [mbOK, mbCancel], options, selIdx);
+        if res = mrOK then
+          case selIdx of
+            0: IconImage.Picture.SaveToFile(SavePictureDialog1.FileName);
+            1: SaveAllImages;
+          end;
+      end;
+    except
+      on E: Exception do
+        IDEMessageDialog(rsMtError, E.Message, mtError, [mbCancel]);
+    end;
+  end;
 end;
 
 procedure TProjectApplicationOptionsFrame.UseAppBundleCheckBoxChange(
@@ -234,10 +310,12 @@ begin
     end;
 end;
 
+// NOTE: This creates an instance of TMemoryStream which must be destroyed by
+// the calling routine.
 function TProjectApplicationOptionsFrame.GetIconAsStream: TStream;
 begin
   Result := nil;
-  if not ((IconImage.Picture.Graphic = nil) or IconImage.Picture.Graphic.Empty) then
+  if HasIcon then
   begin
     Result := TMemoryStream.Create;
     IconImage.Picture.Icon.SaveToStream(Result);

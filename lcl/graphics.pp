@@ -1246,6 +1246,7 @@ type
     FUpdateCanvasOnly: Boolean;
     FMasked: Boolean;
     FTransparentPending: Boolean;
+    FTransparentDelayed: Boolean;
 
     procedure CanvasChanging(Sender: TObject);
     procedure CreateCanvas;
@@ -1670,6 +1671,7 @@ type
     procedure SetHandles(ABitmap, AMask: HBITMAP); override;
     procedure Sort;
     function GetBestIndexForSize(ASize: TSize): Integer;
+    function ExportImage(AIndex: Integer; AImageClass: TFPImageBitmapClass): TFPImageBitmap;
 
     property Current: Integer read FCurrent write SetCurrent;
     property Count: Integer read GetCount;

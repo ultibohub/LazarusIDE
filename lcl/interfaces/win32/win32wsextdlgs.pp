@@ -159,7 +159,9 @@ var
   fos: FILEOPENDIALOGOPTIONS;
 begin
   Result := inherited CreateHandle(ACommonDialog);
-  if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
+  if (Result = 0) or (Result = INVALID_HANDLE_VALUE) then
+    Exit;
+  if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) and not IsXPStyleFallBack(TOpenDialog(ACommonDialog)) then
   begin
     Dialog := IFileOpenDialog(Result);
     if Succeeded(Dialog.GetOptions(@fos)) then
@@ -201,16 +203,12 @@ var
   fos: FILEOPENDIALOGOPTIONS;
 begin
   Result := inherited CreateHandle(ACommonDialog);
-  if CanUseVistaDialogs(TOpenDialog(ACommonDialog)) then
-  begin
-    Dialog := IFileSaveDialog(Result);
-    if Succeeded(Dialog.GetOptions(@fos)) then
-    begin
-      fos := fos or FOS_FORCEPREVIEWPANEON;
-      Dialog.SetOptions(fos);
-    end;
-  end
-  else
+  if (Result = 0) or (Result = INVALID_HANDLE_VALUE) then
+    Exit;
+  // According to https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/ne-shobjidl_core-_fileopendialogoptions
+  // FOS_FORCEPREVIEWPANEON has no effect on a save dialog.
+  // So don't bother in that case
+  if (not CanUseVistaDialogs(TOpenDialog(ACommonDialog))) or IsXPStyleFallBack(TOpenDialog(ACommonDialog)) then
     AddPreviewControl(ACommonDialog, LPOPENFILENAME(Result));
 end;
 

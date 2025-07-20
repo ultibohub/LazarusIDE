@@ -14701,6 +14701,10 @@ msgstr "Megnyitás"
 msgid "Open as XML file"
 msgstr "Megnyitás XML fájlként"
 
+#: lazarusidestrconsts.lisopencontexthelpinbrowser
+msgid "Open context help in the browser"
+msgstr ""
+
 #: lazarusidestrconsts.lisopendesigneronopenunit
 msgid "Open designer on open unit"
 msgstr "Tervező megnyitása unit megnyitásakor"
@@ -19208,6 +19212,10 @@ msgstr "Kijelölés eltávolítása"
 
 #: lazarusidestrconsts.lisuninstallthemtoo
 msgid "Uninstall them too"
+msgstr ""
+
+#: lazarusidestrconsts.lisuninstbasepackagesskipped
+msgid "Some packages were not uninstalled because they are needed by the IDE itself."
 msgstr ""
 
 #: lazarusidestrconsts.lisunithaschangedsave

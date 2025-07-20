@@ -14548,6 +14548,10 @@ msgstr "Aç"
 msgid "Open as XML file"
 msgstr "XML dosyası olarak aç"
 
+#: lazarusidestrconsts.lisopencontexthelpinbrowser
+msgid "Open context help in the browser"
+msgstr ""
+
 #: lazarusidestrconsts.lisopendesigneronopenunit
 msgid "Open designer on open unit"
 msgstr "Açık ünitede tasarımcıyı aç"
@@ -19005,6 +19009,10 @@ msgstr "Seçimi kaldır"
 #: lazarusidestrconsts.lisuninstallthemtoo
 msgid "Uninstall them too"
 msgstr "Onları da kaldırın"
+
+#: lazarusidestrconsts.lisuninstbasepackagesskipped
+msgid "Some packages were not uninstalled because they are needed by the IDE itself."
+msgstr ""
 
 #: lazarusidestrconsts.lisunithaschangedsave
 #, object-pascal-format

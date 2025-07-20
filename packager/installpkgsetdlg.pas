@@ -878,11 +878,37 @@ procedure TInstallPkgSetDialog.UpdateButtonStates;
     result := assigned(FilteredBranch) and (FilteredBranch.Items.Count <> Cnt);
   end;
   //
+  function CanUninstall: boolean;
+  var
+    lPackageID: TLazPackageID;
+    lNode: TTreeNode;
+    i: integer;
+  begin
+    if InstallTreeView.Items.SelectionCount <= 0 then
+      exit(false);
+    lPackageID := TLazPackageID.Create;
+    try
+      for i := 0 to InstallTreeView.Items.TopLvlCount - 1 do
+      begin
+        lNode := InstallTreeView.Items.TopLvlItems[i];
+        if not lNode.MultiSelected then
+          continue;
+        if not lPackageID.StringToID(lNode.Text) then
+          continue;
+        if IsBasePkg(lPackageID) then
+          continue;
+        exit(true);
+      end;
+    finally
+      lPackageID.Free;
+    end;
+    result := false;
+  end;
+  //
 begin
   SaveAndRebuildButton.Enabled := ChangesFound;
   SaveAndExitButton   .Enabled := SaveAndRebuildButton.Enabled;
-  UninstallButton     .Enabled := (InstallTreeView.Selected <> nil) and
-                                  not IsBasePkg(InstallTreeView.Selected.Text);
+  UninstallButton     .Enabled := CanUninstall;
   AddToInstallButton  .Enabled := AvailableTreeView.Selected <> nil;
 end;
 
@@ -1289,6 +1315,7 @@ var
   TVNode: TTreeNode;
   PkgName: String;
   FilteredBranch: TTreeFilterBranch;
+  lSomePackagesSkipped: boolean = false;
 begin
   NewSelectedIndex:=-1;
   LastNonSelectedIndex:=-1;
@@ -1311,14 +1338,11 @@ begin
         continue;
       end;
       if IsBasePkg(DelPackageID) then begin
-        MessageDlg(
-          lisUninstallImpossible,
-          Format(lisThePackageCanNotBeUninstalledBecauseItIsNeededByTh, [PkgName]),
-          mtError,
-          [mbCancel],
-          0
-        );
-        exit;
+        if not lSomePackagesSkipped then begin
+          lSomePackagesSkipped := true;
+          MessageDlg(lisUninstallImpossible, lisUninstBasePackagesSkipped, mtInformation, [mbOK], 0);
+        end;
+        continue;
       end;
       // ok => add to deletions
       Deletions.Add(DelPackageID);

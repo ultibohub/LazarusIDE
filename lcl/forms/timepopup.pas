@@ -20,7 +20,8 @@ interface
 
 uses
   Classes, SysUtils, DateUtils, FileUtil, LCLType, Forms, Controls,
-  Graphics, Dialogs, Grids, ExtCtrls, Buttons, StdCtrls, ActnList, WSForms;
+  Graphics, Dialogs, Grids, ExtCtrls, Buttons, StdCtrls, ActnList, WSForms,
+  ButtonPanel, ImgList;
 
 type
   TReturnTimeEvent = procedure (Sender: TObject; const ATime: TDateTime) of object;
@@ -29,21 +30,28 @@ type
   
   TTimePopupForm = class(TForm)
     Bevel1: TBevel;
+    ButtonPanel1: TButtonPanel;
     MainPanel: TPanel;
     HoursGrid: TStringGrid;
     MinutesGrid: TStringGrid;
     MoreLessBtn: TBitBtn;
+    procedure CancelButtonClick(Sender: TObject);
     procedure GridsDblClick(Sender: TObject);
     procedure GridsKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure GridPrepareCanvas(sender: TObject; aCol, aRow: Integer;
       aState: TGridDrawState);
+    procedure HoursGridSelectCell(Sender: TObject; aCol, aRow: Integer;
+      var CanSelect: Boolean);
     procedure MoreLessBtnClick(Sender: TObject);
+    procedure OKButtonClick(Sender: TObject);
   private
     FClosed: Boolean;
     FOnReturnTime: TReturnTimeEvent;
     FSimpleLayout: Boolean;
     FPopupOrigin: TPoint;
     FCaller: TControl;
+    FAMPM: Boolean;
+    FAMPMString: array[0..1] of String;
     procedure ActivateDoubleBuffered;
     procedure CalcGridHeights;
     function GetTime: TDateTime;
@@ -60,15 +68,26 @@ type
 
 procedure ShowTimePopup(const Position: TPoint; ATime: TDateTime; const DoubleBufferedForm: Boolean;
                         const OnReturnTime: TReturnTimeEvent; const OnShowHide: TNotifyEvent = nil;
-                        SimpleLayout: Boolean = True; ACaller: TControl = nil);
+                        SimpleLayout: Boolean = True; ACaller: TControl = nil; AMPM: Boolean = false;
+                        AMString: String = ''; PMString: String = '');
 
 implementation
 
 {$R *.lfm}
 
+type
+  TMoreLess = (mlMore, mlLess);
+
+const
+  MoreLessResNames: array[TMoreLess] of String = (
+    'sortdesc',   // Caption was: >>
+    'sortasc'     // Caption was: <<
+  );
+
 procedure ShowTimePopup(const Position: TPoint; ATime: TDateTime; const DoubleBufferedForm: Boolean;
                         const OnReturnTime: TReturnTimeEvent; const OnShowHide: TNotifyEvent;
-                        SimpleLayout: Boolean; ACaller: TControl);
+                        SimpleLayout: Boolean; ACaller: TControl; AMPM: Boolean;
+                        AMString, PMString: String);
 var
   NewForm: TTimePopupForm;
   P: TPoint;
@@ -77,6 +96,9 @@ begin
   NewForm.FCaller := ACaller;
   NewForm.Initialize(Position, ATime);
   NewForm.FOnReturnTime := OnReturnTime;
+  NewForm.FAMPM := AMPM;
+  NewForm.FAMPMString[0] := AMString;
+  NewForm.FAMPMString[1] := PMString;
   NewForm.OnShow := OnShowHide;
   NewForm.OnHide := OnShowHide;
   if DoubleBufferedForm then
@@ -123,8 +145,12 @@ end;
 
 procedure TTimePopupForm.FormCreate(Sender: TObject);
 begin
+  MoreLessBtn.Images := LCLGlyphs;
+  MoreLessBtn.Caption := '';
   FClosed := False;
   FSimpleLayout := True;
+  FAMPMString[0] := 'am';
+  FAMPMString[1] := 'pm';
   Application.AddOnDeactivateHandler(@FormDeactivate);
   SetLayout(FSimpleLayout);
 end;
@@ -141,6 +167,11 @@ end;
 procedure TTimePopupForm.GridsDblClick(Sender: TObject);
 begin
   ReturnTime;
+end;
+
+procedure TTimePopupForm.CancelButtonClick(Sender: TObject);
+begin
+  Close;
 end;
 
 procedure TTimePopupForm.GridsKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -171,6 +202,12 @@ begin
   (Sender as TStringGrid).Canvas.TextStyle := ts;
 end;
 
+procedure TTimePopupForm.HoursGridSelectCell(Sender: TObject; aCol,
+  aRow: Integer; var CanSelect: Boolean);
+begin
+  if FAMPM and (aCol = 12) then CanSelect := false;
+end;
+
 procedure TTimePopupForm.MoreLessBtnClick(Sender: TObject);
 var
   OldMin: Integer;
@@ -184,7 +221,7 @@ begin
 
     MinutesGrid.Col := OldMin mod 5;
     MinutesGrid.Row := OldMin div 5;
-    MoreLessBtn.Caption := '<<';
+    MoreLessBtn.ImageIndex := LCLGlyphs.GetImageIndex(MoreLessResNames[mlLess]);
   end
   else
   begin
@@ -195,19 +232,77 @@ begin
     SetLayout(True);
     MinutesGrid.Col := (OldMin mod 30) div 5;
     MinutesGrid.Row := OldMin div 30;
-    MoreLessBtn.Caption := '>>';
+    MoreLessBtn.ImageIndex := LCLGlyphs.GetImageIndex(MoreLessResNames[mlMore]);
   end;
 end;
 
+procedure TTimePopupForm.OKButtonClick(Sender: TObject);
+begin
+  ReturnTime;
+end;
+
 procedure TTimePopupForm.SetLayout(SimpleLayout: Boolean);
+
+  function NeededColWidth(AGrid: TCustomGrid; AText: String): Integer;
+  var
+    C: TControlCanvas;
+  begin
+    C := TControlCanvas.Create;
+    try
+      C.Control := AGrid;
+      Result := C.TextWidth(AText) + 2*varCellPadding;
+    finally
+      C.Free;
+    end;
+  end;
+
 var
   r, c: Integer;
+  w, w1, w2, wAMPM: Integer;
+  hr: Integer;
 begin
+  HoursGrid.BeginUpdate;
+  try
+    if FAMPM then
+    begin
+      HoursGrid.ColCount := 12 + 1;
+      HoursGrid.Cells[12, 0] := FAMPMString[0];
+      HoursGrid.Cells[12, 1] := FAMPMString[1];
+      for c := 0 to 11 do
+      begin
+        if c = 0 then hr := 12 else hr := c;
+        HoursGrid.Cells[c, 0] := Format('%2d', [hr]);
+        HoursGrid.Cells[c, 1] := Format('%2d', [hr]);
+      end;
+      w := NeededColWidth(HoursGrid, '000');
+      w1 := NeededColWidth(HoursGrid, FAMPMString[0]);
+      w2 := NeededColWidth(HoursGrid, FAMPMString[1]);
+      if w1 > w2 then wAMPM := w1 else wAMPM := w2;
+      if w > wAMPM then wAMPM := w;
+      HoursGrid.DefaultColWidth := w;
+      HoursGrid.ColWidths[12] := wAMPM;
+      HoursGrid.Constraints.MinWidth := 12*w + wAMPM;
+    end else
+    begin
+      HoursGrid.ColCount := 12;
+      for c := 0 to 11 do
+      begin
+        HoursGrid.Cells[c, 0] := IntToStr(c);
+        HoursGrid.Cells[c, 1] := IntToStr(c + 12);
+      end;
+      w := NeededColWidth(HoursGrid, '000');
+      HoursGrid.DefaultColWidth := w;
+      HoursGrid.Constraints.MinWidth := 12*w;
+    end;
+  finally
+    HoursGrid.EndUpdate;
+  end;
+
   MinutesGrid.BeginUpdate;
   try
   if SimpleLayout then
   begin
-    MoreLessBtn.Caption := '>>';
+    MoreLessBtn.ImageIndex := LCLGlyphs.GetImageIndex(MoreLessResNames[mlMore]);
     MinutesGrid.RowCount := 2;
     MinutesGrid.ColCount := 6;
     for r := 0 to MinutesGrid.RowCount - 1 do
@@ -219,7 +314,7 @@ begin
   end
   else
   begin
-    MoreLessBtn.Caption := '<<';
+    MoreLessBtn.ImageIndex := LCLGlyphs.GetImageIndex(MoreLessResNames[mlLess]);
     MinutesGrid.RowCount := 12;
     MinutesGrid.ColCount := 5;
     for r := 0 to MinutesGrid.RowCount - 1 do

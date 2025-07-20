@@ -14898,6 +14898,10 @@ msgstr "Apri"
 msgid "Open as XML file"
 msgstr "Apri come file XML"
 
+#: lazarusidestrconsts.lisopencontexthelpinbrowser
+msgid "Open context help in the browser"
+msgstr ""
+
 #: lazarusidestrconsts.lisopendesigneronopenunit
 msgid "Open designer on open unit"
 msgstr "Apri il designer quando apri una unit"
@@ -19440,6 +19444,10 @@ msgstr "Disinstalla la selezione"
 
 #: lazarusidestrconsts.lisuninstallthemtoo
 msgid "Uninstall them too"
+msgstr ""
+
+#: lazarusidestrconsts.lisuninstbasepackagesskipped
+msgid "Some packages were not uninstalled because they are needed by the IDE itself."
 msgstr ""
 
 #: lazarusidestrconsts.lisunithaschangedsave
