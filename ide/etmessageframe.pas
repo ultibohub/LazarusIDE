@@ -262,6 +262,8 @@ type
     // select, search
     procedure ToggleSelectedLine(View: TLMsgWndView; LineNumber: integer);
     procedure ExtendSelection(View: TLMsgWndView; LineNumber: integer);
+    procedure ExtendSelByOffset(Offset: integer);
+    procedure MoveWithoutSelecting(Offset: integer);
     function SearchNext(StartView: TLMsgWndView; StartLine: integer;
       SkipStart, Downwards: boolean;
       out View: TLMsgWndView; out LineNumber: integer): boolean;
@@ -1591,10 +1593,8 @@ var
   end;
 
 var
-  i: Integer;
+  i, j, y: Integer;
   View: TLMsgWndView;
-  y: Integer;
-  j: Integer;
   Line: TMessageLine;
   Indent: Integer;
   NodeRect: TRect;
@@ -1824,56 +1824,124 @@ end;
 
 procedure TMessagesCtrl.KeyDown(var Key: Word; Shift: TShiftState);
 begin
-  inherited KeyDown(Key, Shift);
-
-  case Key of
-  VK_RETURN:
+  if (Key = VK_RETURN) and (Shift = []) then
+  begin
+    OpenSelection;
+    Key := 0;
+  end
+  else if (Key = VK_P) and (Shift = [ssCtrl]) then
     begin
-      OpenSelection;
-      Key := VK_UNKNOWN;
-    end;
+      with TMessagesFrame(Owner) do
+        case MessagesCtrl.FilenameStyle of
+          mwfsShort:    FileStyleMenuItemClick(MsgFileStyleRelativeMenuItem);
+          mwfsRelative: FileStyleMenuItemClick(MsgFileStyleFullMenuItem);
+          mwfsFull:     FileStyleMenuItemClick(MsgFileStyleShortMenuItem);
+        end;
+      Key := 0;
+    end
 
-  VK_DOWN:
-    begin
-      SelectNextShown(+1);
-      Key:=VK_UNKNOWN;
-    end;
+  { Clipboard }
 
-  VK_UP:
+  // [Alt+C] - copy the displayed message hint
+  else if (Key = VK_C) and (Shift = [ssAlt]) then
+  begin
+    if assigned(FHintLastView) then
     begin
-      SelectNextShown(-1);
-      Key:=VK_UNKNOWN;
+      Clipboard.AsText := FHintLastView.AsHintString(self.FHintLastLine);
+      Key := 0;
     end;
+  end
 
-  VK_HOME:
-    begin
-      SelectFirst(true,true);
-      Key:=VK_UNKNOWN;
-    end;
+  { Selection }
 
-  VK_END:
-    begin
-      SelectLast(true,true);
-      Key:=VK_UNKNOWN;
-    end;
-
-  VK_PRIOR: // Page Up
-    begin
-      SelectNextShown(-Max(1,ClientHeight div ItemHeight));
-      Key:=VK_UNKNOWN;
-    end;
-
-  VK_NEXT: // Page Down
-    begin
-      SelectNextShown(Max(1,ClientHeight div ItemHeight));
-      Key:=VK_UNKNOWN;
-    end;
-  VK_C:    // Ctrl+'C' -> copy HintData to clipboard
-    if (Shift = [ssCtrl]) and Assigned(FHintLastView) then begin
-      ClipBoard.AsText := FHintLastView.AsHintString(Self.FHintLastLine);
-      Key := VK_UNKNOWN;
-    end;
+  // [Ctrl-A]
+  else if (Key = VK_A) and (Shift = [ssCtrl]) then
+  begin
+    Select(SelectedView,-1,false,false);
+    ExtendSelection(SelectedView,SelectedView.Lines.Count-1);
+    Key := 0;
+  end
+  // [Up]
+  else if (Key = VK_UP) and (Shift = []) then
+  begin
+    SelectNextShown(-1);
+    Key := 0;
+  end
+  else if (Key = VK_UP) and (Shift = [ssShift]) then
+  begin
+    ExtendSelByOffset(-1);
+    Key := 0;
+  end
+  else if (Key = VK_UP) and (Shift = [ssCtrl]) then
+  begin
+    MoveWithoutSelecting(-1);
+    Key := 0;
+  end
+  // [Down]
+  else if (Key = VK_DOWN) and (Shift = []) then
+  begin
+    SelectNextShown(+1);
+    Key := 0;
+  end
+  else if (Key = VK_DOWN) and (Shift = [ssShift]) then
+  begin
+    ExtendSelByOffset(+1);
+    Key := 0;
+  end
+  else if (Key = VK_DOWN) and (Shift = [ssCtrl]) then
+  begin
+    MoveWithoutSelecting(+1);
+    Key := 0;
+  end
+  // [Home]
+  else if (Key = VK_HOME) and (Shift = []) then
+  begin
+    SelectFirst(true, true);
+    Key := 0;
+  end
+  else if (Key = VK_HOME) and (Shift = [ssShift]) then
+  begin
+    ExtendSelection(SelectedView,-1);
+    Key := 0;
+  end
+  // [End]
+  else if (Key = VK_END) and (Shift = []) then
+  begin
+    SelectLast(true, true);
+    Key := 0;
+  end
+  else if (Key = VK_END) and (Shift = [ssShift]) then
+  begin
+    ExtendSelection(SelectedView,SelectedView.Lines.Count-1);
+    Key := 0;
+  end
+  // [PageUp]
+  else if (Key = VK_PRIOR) and (Shift = []) then
+  begin
+    SelectNextShown(-Max(1, ClientHeight div ItemHeight));
+    Key := 0;
+  end
+  else if (Key = VK_PRIOR) and (Shift = [ssShift]) then
+  begin
+    ExtendSelByOffset(-Max(1, ClientHeight div ItemHeight));
+    Key := 0;
+  end
+  // [PageDown]
+  else if (Key = VK_NEXT) and (Shift = []) then
+  begin
+    SelectNextShown(+Max(1, ClientHeight div ItemHeight));
+    Key := 0;
+  end
+  else if (Key = VK_NEXT) and (Shift = [ssShift]) then
+  begin
+    ExtendSelByOffset(+Max(1, ClientHeight div ItemHeight));
+    Key := 0;
   end;
+
+  { Inherited }
+
+  if Key <> 0 then
+    inherited KeyDown(Key, Shift);
 end;
 
 procedure TMessagesCtrl.DoAllViewsStopped;
@@ -2060,19 +2128,53 @@ var
 begin
   BeginUpdate;
   SelectedView:=View;
+  if SelectedView=nil then
+    SelectFirst(true,true);
   Empty:=FSelectedLines.Count=0;
   FSelectedLines.Count:=1; // Delete possible earlier selections except first one.
   if Empty then
     FSelectedLines[0]:=LineNumber  // No earlier selection.
   else if LineNumber<FSelectedLines[0] then
-    for i:=LineNumber to FSelectedLines[0]-1 do
+    for i:=FSelectedLines[0]-1 downto LineNumber do
       FSelectedLines.Add(i)
   else if LineNumber>FSelectedLines[0] then
     for i:=FSelectedLines[0]+1 to LineNumber do
       FSelectedLines.Add(i);
   // if LineNumber=FSelectedLines[0] then do nothing.
+  ScrollToLine(SelectedView,LineNumber,True);
   Invalidate;
   EndUpdate;
+end;
+
+procedure TMessagesCtrl.ExtendSelByOffset(Offset: integer);
+var
+  LineNro: Integer;
+begin
+  Assert(Offset<>0, 'TMessagesCtrl.ExtendSelByOffset: Offset=0');
+  if SelectedView=nil then
+    SelectFirst(true,true);
+  if ( (Offset<0) and (FSelectedLines.Last=-1) )
+  or ( (Offset>0) and (FSelectedLines.Last=SelectedView.Lines.Count-1) ) then
+  begin
+    {$IFDEF VerboseMsgCtrlSelection}
+    debugln(['TMessagesCtrl.ExtendSelByOffset: Cannot extend more. Offset=', Offset,
+             ', Last=', FSelectedLines.Last]);
+    {$ENDIF}
+    Exit;
+  end;
+  LineNro:=FSelectedLines.Last+Offset;  // The last selection + offset.
+  if LineNro<-1 then
+    LineNro:=-1
+  else if LineNro>=SelectedView.Lines.Count then
+    LineNro:=SelectedView.Lines.Count-1;
+  ExtendSelection(SelectedView, LineNro);
+end;
+
+procedure TMessagesCtrl.MoveWithoutSelecting(Offset: integer);
+begin
+{ #todo -oJuha : Move cursor without changing the selection.
+  Cursor position must be indicated somehow in the Paint procedure.
+}
 end;
 
 procedure TMessagesCtrl.Select(View: TLMsgWndView; LineNumber: integer;
@@ -2708,8 +2810,7 @@ begin
     if View.FPaintStamp<>FPaintStamp then continue;
     if (View.fPaintTop>Y) or (View.fPaintBottom<Y) then continue;
     Line:=((Y-View.fPaintTop) div ItemHeight)-1;
-    Result:=true;
-    exit;
+    exit(true);
   end;
   View:=nil;
   Line:=-1;
@@ -2953,6 +3054,7 @@ begin
     end;
 
     MsgFindMenuItem.OnClick:=@FindMenuItemClick;
+    MsgFindMenuItem.MenuItem.ShortCut:=ShortCut(VK_F, [ssCtrl]);
 
     // check selection
     View:=MessagesCtrl.SelectedView;
@@ -3020,37 +3122,48 @@ begin
     MsgFilterHintsWithoutPosMenuItem.Checked:=MessagesCtrl.ActiveFilter.FilterNotesWithoutPos;
     MsgFilterHintsWithoutPosMenuItem.OnClick:=@FilterHintsWithoutPosMenuItemClick;
 
+    // Urgency
     MinUrgency:=MessagesCtrl.ActiveFilter.MinUrgency;
     MsgFilterNoneMenuItem.Checked:=MinUrgency in [mluNone..mluDebug];
     MsgFilterNoneMenuItem.OnClick:=@FilterUrgencyMenuItemClick;
+    MsgFilterNoneMenuItem.MenuItem.ShortCut:=ShortCut(VK_0, [ssCtrl]);
     MsgFilterDebugMenuItem.Checked:=MinUrgency in [mluVerbose3..mluVerbose];
     MsgFilterDebugMenuItem.OnClick:=@FilterUrgencyMenuItemClick;
+    MsgFilterDebugMenuItem.MenuItem.ShortCut:=ShortCut(VK_1, [ssCtrl]);
     MsgFilterVerboseMenuItem.Checked:=MinUrgency=mluHint;
     MsgFilterVerboseMenuItem.OnClick:=@FilterUrgencyMenuItemClick;
+    MsgFilterVerboseMenuItem.MenuItem.ShortCut:=ShortCut(VK_2, [ssCtrl]);
     MsgFilterHintsMenuItem.Checked:=MinUrgency=mluNote;
     MsgFilterHintsMenuItem.OnClick:=@FilterUrgencyMenuItemClick;
+    MsgFilterHintsMenuItem.MenuItem.ShortCut:=ShortCut(VK_3, [ssCtrl]);
     MsgFilterNotesMenuItem.Checked:=MinUrgency in [mluWarning..mluImportant];
     MsgFilterNotesMenuItem.OnClick:=@FilterUrgencyMenuItemClick;
+    MsgFilterNotesMenuItem.MenuItem.ShortCut:=ShortCut(VK_4, [ssCtrl]);
     MsgFilterWarningsMenuItem.Checked:=MinUrgency>=mluError;
     MsgFilterWarningsMenuItem.OnClick:=@FilterUrgencyMenuItemClick;
+    MsgFilterWarningsMenuItem.MenuItem.ShortCut:=ShortCut(VK_5, [ssCtrl]);
 
     // Copying
     MsgCopyMsgMenuItem.Enabled:=HasText;
     MsgCopyMsgMenuItem.OnClick:=@CopyMsgMenuItemClick;
+    MsgCopyMsgMenuItem.MenuItem.ShortCut:=ShortCut(VK_C, [ssCtrl]);
     MsgCopyFilenameMenuItem.Enabled:=HasFilename;
     MsgCopyFilenameMenuItem.OnClick:=@CopyFilenameMenuItemClick;
     MsgCopyAllMenuItem.Enabled:=not Running;
     MsgCopyAllMenuItem.OnClick:=@CopyAllMenuItemClick;
+    MsgCopyAllMenuItem.MenuItem.ShortCut:=ShortCut(VK_C, [ssCtrl, ssShift]);
     MsgCopyShownMenuItem.Enabled:=HasViewContent;
     MsgCopyShownMenuItem.OnClick:=@CopyShownMenuItemClick;
 
     // Saving
     MsgSaveAllToFileMenuItem.Enabled:=not Running;
     MsgSaveAllToFileMenuItem.OnClick:=@SaveAllToFileMenuItemClick;
+    MsgSaveAllToFileMenuItem.MenuItem.ShortCut:=ShortCut(VK_S, [ssCtrl, ssShift]);
     MsgSaveShownToFileMenuItem.Enabled:=HasViewContent;
     MsgSaveShownToFileMenuItem.OnClick:=@SaveShownToFileMenuItemClick;
     MsgHelpMenuItem.Enabled:=HasText;
     MsgHelpMenuItem.OnClick:=@HelpMenuItemClick;
+    MsgHelpMenuItem.MenuItem.ShortCut:=ShortCut(VK_F1, []);
     MsgEditHelpMenuItem.OnClick:=@EditHelpMenuItemClick;
     MsgClearMenuItem.OnClick:=@ClearMenuItemClick;
     MsgClearMenuItem.Enabled:=View<>nil;
@@ -3156,8 +3269,22 @@ end;
 procedure TMessagesFrame.SearchEditKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
-  if (Key=VK_ESCAPE) then
+  if (Key = VK_ESCAPE) and (Shift = []) then
+  begin
     HideSearch;
+    Key := 0;
+  end
+
+  else if (Key = VK_F3) and (Shift = []) then
+  begin
+    MessagesCtrl.SelectNextOccurrence(true);
+    Key := 0;
+  end
+  else if (Key = VK_F3) and (Shift = [ssShift]) then
+  begin
+    MessagesCtrl.SelectNextOccurrence(false);
+    Key := 0;
+  end;
 end;
 
 procedure TMessagesFrame.SearchNextSpeedButtonClick(Sender: TObject);
@@ -3480,6 +3607,7 @@ end;
 
 procedure TMessagesFrame.HideSearch;
 begin
+  MessagesCtrl.SetFocus;
   SearchPanel.Visible:=false;
   MessagesCtrl.SearchText:='';
 end;
@@ -3683,9 +3811,9 @@ begin
   SearchPanel.Visible:=false; // by default the search is hidden
   HideSearchSpeedButton.Hint:=lisHideSearch;
   IDEImages.AssignImage(HideSearchSpeedButton, 'debugger_power');
-  SearchNextSpeedButton.Hint:=lisUDSearchNextOccurrenceOfThisPhrase;
+  SearchNextSpeedButton.Hint:=lisUDSearchNextOccurrenceOfThisPhrase + ' [F3]';
   IDEImages.AssignImage(SearchNextSpeedButton, 'callstack_bottom');
-  SearchPrevSpeedButton.Hint:=lisUDSearchPreviousOccurrenceOfThisPhrase;
+  SearchPrevSpeedButton.Hint:=lisUDSearchPreviousOccurrenceOfThisPhrase + ' [Shift+F3]';
   IDEImages.AssignImage(SearchPrevSpeedButton, 'callstack_top');
   SearchEdit.TextHint:=lisUDSearch;
 end;
