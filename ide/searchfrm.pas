@@ -39,11 +39,12 @@ uses
   SourceLog, BasicCodeTools, FileProcs,
   // LazUtils
   FileUtil, LazFileUtils, LazFileCache, LazTracer, LazUTF8,
+  // BuildIntf
+  ProjectIntf, ProjectGroupIntf,
   // IDEIntf
   IdeIntfStrConsts, IDEWindowIntf, LazIDEIntf, SrcEditorIntf, IDEDialogs,
-  ProjectGroupIntf, ProjectIntf, InputHistory,
   // IdeUtils
-  IdeUtilsPkgStrConsts,
+  IdeUtilsPkgStrConsts, InputHistory,
   // IdeConfig
   SearchPathProcs,
   // IDE
@@ -580,6 +581,7 @@ begin
         RE.Expression:='\b'+SearchFor+'\b'
       else
         RE.Expression:=SearchFor;
+      lCaseMismatchCheckCompleted := True;
     end else begin
       // convert case if necessary
       if not (sesoMatchCase in Flags) then begin

@@ -108,6 +108,10 @@ msgstr "花括号注释"
 msgid "Slash Comment"
 msgstr "斜杠注释"
 
+#: syneditstrconst.syns_attrcommentsym
+msgid "Comment Symbol"
+msgstr ""
+
 #: syneditstrconst.syns_attrcondition
 msgid "Condition"
 msgstr "状态"
@@ -300,6 +304,18 @@ msgstr "命名空间属性名称"
 msgid "Namespace Attribute Value"
 msgstr "命名空间属性值"
 
+#: syneditstrconst.syns_attrnamespacecolon
+msgid "Namespace Colon"
+msgstr ""
+
+#: syneditstrconst.syns_attrnamespaceidentdef
+msgid "Namespace Identifier Definition"
+msgstr ""
+
+#: syneditstrconst.syns_attrnamespaceidentprefix
+msgid "Namespace Identifier Prefix"
+msgstr ""
+
 #: syneditstrconst.syns_attrnewfile
 msgid "Diff New File"
 msgstr "比较新建文件"
@@ -379,6 +395,10 @@ msgstr "过程头值"
 #: syneditstrconst.syns_attrprocessinginstr
 msgid "Processing Instruction"
 msgstr "处理指令"
+
+#: syneditstrconst.syns_attrprocessinginstrsym
+msgid "Processing Instruction Symbol"
+msgstr ""
 
 #: syneditstrconst.syns_attrpropertyname
 msgid "Property name"

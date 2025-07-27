@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-04-04 00:06+0300\n"
+"PO-Revision-Date: 2025-07-24 16:22+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -106,6 +106,10 @@ msgstr "Комментарий с фигурными скобками"
 #: syneditstrconst.syns_attrcommentslash
 msgid "Slash Comment"
 msgstr "Комментарий с косыми чертами"
+
+#: syneditstrconst.syns_attrcommentsym
+msgid "Comment Symbol"
+msgstr "Символ комментария"
 
 #: syneditstrconst.syns_attrcondition
 msgid "Condition"
@@ -299,6 +303,18 @@ msgstr "Имя атрибута пространства имён"
 msgid "Namespace Attribute Value"
 msgstr "Значение атрибута пространства имён"
 
+#: syneditstrconst.syns_attrnamespacecolon
+msgid "Namespace Colon"
+msgstr "Двоеточие пространства имён"
+
+#: syneditstrconst.syns_attrnamespaceidentdef
+msgid "Namespace Identifier Definition"
+msgstr "Идентификатор в объявлении пространства имён"
+
+#: syneditstrconst.syns_attrnamespaceidentprefix
+msgid "Namespace Identifier Prefix"
+msgstr "Идентификатор-префикс пространства имён"
+
 #: syneditstrconst.syns_attrnewfile
 msgid "Diff New File"
 msgstr "Новый файл Diff"
@@ -378,6 +394,10 @@ msgstr "Значение в заголовке процедуры"
 #: syneditstrconst.syns_attrprocessinginstr
 msgid "Processing Instruction"
 msgstr "Инструкция обработки"
+
+#: syneditstrconst.syns_attrprocessinginstrsym
+msgid "Processing Instruction Symbol"
+msgstr "Символ инструкции обработки"
 
 #: syneditstrconst.syns_attrpropertyname
 msgid "Property name"

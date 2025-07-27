@@ -46,9 +46,12 @@ uses
   ListViewFilterEdit, TreeFilterEdit,
   // LazUtils
   LazUTF8, FileUtil,
+  // BuildIntf
+  NewItemIntf, ProjectIntf,
   // IdeIntf
-  IDEWindowIntf, IDEImagesIntf, NewItemIntf, ProjectIntf,
-  IdeIntfStrConsts, LazIDEIntf, IDEDialogs, InputHistory,
+  IDEWindowIntf, IDEImagesIntf, IdeIntfStrConsts, LazIDEIntf, IDEDialogs,
+  // IdeUtils
+  InputHistory,
   // IDE
   LazarusIDEStrConsts, Project, MainIntf;
 
@@ -212,6 +215,9 @@ var
   AnUnitInfo: TUnitInfo;
   InhCompItem: TFileDescInheritedComponent;
 begin
+  if not ButtonPanel.OKButton.IsEnabled then
+    exit;
+
   ANode := ItemsTreeView.Selected;
   if (ANode = nil) or (ANode.Data = nil) or
     (not (TObject(ANode.Data) is TNewIDEItemTemplate)) then
@@ -254,7 +260,12 @@ begin
               ModalResult:=mrNone;
               Exit;
             end;
-            LazarusIDE.DoSaveProject([]);
+            if LazarusIDE.DoSaveProject([]) <> mrOK then
+            begin
+              FNewItem := nil;
+              ModalResult:=mrNone;
+              exit;
+            end;
           end;
           InputHistories.NewProjectType:=FNewItem.Name;
 

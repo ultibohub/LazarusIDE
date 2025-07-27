@@ -3074,7 +3074,7 @@ var
   Ch: Char;
   i, ResLen: Integer;
   SLen, SubLen: SizeInt;
-const
+var
   MaxGrowFactor: array[TEscapeMode] of Cardinal = (3, 4, 5, 5, 5, 3, 0);
 begin
   Result := '';
@@ -3086,7 +3086,7 @@ begin
     emAsciiControlNames: EscapedStrings := @EscapedStringsOfAscii;
     emPercent          : EscapedStrings := @EscapedStringsOfPercent;
     emCustom           : begin
-      if not Assigned(EscapedStrings) then
+      if not Assigned(CustomStrings) then
         Raise EInvalidOp.Create('Utf8EscapeControlChars: CustomStrings cannot be nil when EscapeMode=emCustom.');
       EscapedStrings := CustomStrings;
       MaxGrowFactor[emCustom] := AMaxGrowFactor;

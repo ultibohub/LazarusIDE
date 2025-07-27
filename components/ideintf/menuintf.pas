@@ -691,7 +691,6 @@ begin
     MenuItem.ImageIndex := ImageIndex;
     MenuItem.Enabled := Enabled;
     MenuItem.OnClick := @MenuItemClick;
-    MenuItem.ImageIndex := ImageIndex;
     RealizeVisible;
   end;
 end;

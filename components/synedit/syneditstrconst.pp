@@ -66,6 +66,7 @@ resourcestring
   SYNS_AttrCharacter            =  'Character';
   SYNS_AttrClass                =  'Class';
   SYNS_AttrComment              =  'Comment';
+  SYNS_AttrCommentSym           =  'Comment Symbol';
   SYNS_AttrCommentAnsi          =  'ANSI Comment';
   SYNS_AttrCommentCurly         =  'Curly Comment';
   SYNS_AttrCommentSlash         =  'Slash Comment';
@@ -103,6 +104,9 @@ resourcestring
   SYNS_AttrMiscellaneous        =  'Miscellaneous';
   SYNS_AttrNamespaceAttrName    =  'Namespace Attribute Name';
   SYNS_AttrNamespaceAttrValue   =  'Namespace Attribute Value';
+  SYNS_AttrNamespaceIdentDef    =  'Namespace Identifier Definition';
+  SYNS_AttrNamespaceIdentPrefix =  'Namespace Identifier Prefix';
+  SYNS_AttrNamespaceColon       =  'Namespace Colon';
   SYNS_AttrNonReservedKeyword   =  'Non-reserved keyword';
   SYNS_AttrNull                 =  'Null';
   SYNS_AttrNumber               =  'Number';
@@ -112,6 +116,7 @@ resourcestring
   SYNS_AttrPragma               =  'Pragma';
   SYNS_AttrPreprocessor         =  'Preprocessor';
   SYNS_AttrProcessingInstr      =  'Processing Instruction';
+  SYNS_AttrProcessingInstrSym   =  'Processing Instruction Symbol';
   SYNS_AttrQualifier            =  'Qualifier';
   SYNS_AttrRegister             =  'Register';
   SYNS_AttrReservedWord         =  'Reserved word';
@@ -202,6 +207,7 @@ const
   SYNS_XML_AttrCharacter            =  'Character';
   SYNS_XML_AttrClass                =  'Class';
   SYNS_XML_AttrComment              =  'Comment';
+  SYNS_XML_AttrCommentSym           =  'Comment Symbol';
   SYNS_XML_AttrCommentAnsi          =  'Ansi Comment';
   SYNS_XML_AttrCommentCurly         =  'Curly Comment';
   SYNS_XML_AttrCommentSlash         =  'Slash Comment';
@@ -239,6 +245,9 @@ const
   SYNS_XML_AttrMiscellaneous        =  'Miscellaneous';
   SYNS_XML_AttrNamespaceAttrName    =  'Namespace Attribute Name';
   SYNS_XML_AttrNamespaceAttrValue   =  'Namespace Attribute Value';
+  SYNS_XML_AttrNamespaceIdentDef    =  'Namespace Ident Definition';
+  SYNS_XML_AttrNamespaceIdentPrefix =  'Namespace Ident Prefix';
+  SYNS_XML_AttrNamespaceColon       =  'Namespace Colon';
   SYNS_XML_AttrNonReservedKeyword   =  'Non-reserved keyword';
   SYNS_XML_AttrNull                 =  'Null';
   SYNS_XML_AttrNumber               =  'Number';
@@ -248,6 +257,7 @@ const
   SYNS_XML_AttrPragma               =  'Pragma';
   SYNS_XML_AttrPreprocessor         =  'Preprocessor';
   SYNS_XML_AttrProcessingInstr      =  'Processing Instruction';
+  SYNS_XML_AttrProcessingInstrSym   =  'Processing Instruction Symbol';
   SYNS_XML_AttrQualifier            =  'Qualifier';
   SYNS_XML_AttrRegister             =  'Register';
   SYNS_XML_AttrReservedWord         =  'Reserved word';

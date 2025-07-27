@@ -107,6 +107,10 @@ msgstr ""
 msgid "Slash Comment"
 msgstr ""
 
+#: syneditstrconst.syns_attrcommentsym
+msgid "Comment Symbol"
+msgstr ""
+
 #: syneditstrconst.syns_attrcondition
 msgid "Condition"
 msgstr "Condição"
@@ -299,6 +303,18 @@ msgstr "Nome Atributo \"Namespace\""
 msgid "Namespace Attribute Value"
 msgstr "Valor Atributo \"Namespace\""
 
+#: syneditstrconst.syns_attrnamespacecolon
+msgid "Namespace Colon"
+msgstr ""
+
+#: syneditstrconst.syns_attrnamespaceidentdef
+msgid "Namespace Identifier Definition"
+msgstr ""
+
+#: syneditstrconst.syns_attrnamespaceidentprefix
+msgid "Namespace Identifier Prefix"
+msgstr ""
+
 #: syneditstrconst.syns_attrnewfile
 msgid "Diff New File"
 msgstr "Novo Arquivo \"Diff\""
@@ -378,6 +394,10 @@ msgstr ""
 #: syneditstrconst.syns_attrprocessinginstr
 msgid "Processing Instruction"
 msgstr "Processando Instrução"
+
+#: syneditstrconst.syns_attrprocessinginstrsym
+msgid "Processing Instruction Symbol"
+msgstr ""
 
 #: syneditstrconst.syns_attrpropertyname
 msgid "Property name"
