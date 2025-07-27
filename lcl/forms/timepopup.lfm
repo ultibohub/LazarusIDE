@@ -9,18 +9,18 @@ object TimePopupForm: TTimePopupForm
   Caption = 'TimePopupForm'
   ClientHeight = 185
   ClientWidth = 294
+  PopupMode = pmAuto
+  LCLVersion = '4.99.0.0'
   OnClose = FormClose
   OnCreate = FormCreate
   OnDeactivate = FormDeactivate
-  PopupMode = pmAuto
-  LCLVersion = '1.7'
-  Scaled = True
   object MainPanel: TPanel
     Left = 0
     Height = 185
     Top = 0
     Width = 294
     Align = alClient
+    Anchors = [akTop, akLeft, akRight]
     AutoSize = True
     BevelOuter = bvNone
     BorderWidth = 1
@@ -28,6 +28,7 @@ object TimePopupForm: TTimePopupForm
     ClientHeight = 181
     ClientWidth = 290
     Color = clWindow
+    ParentBackground = False
     ParentColor = False
     TabOrder = 0
     UseDockManager = False
@@ -37,7 +38,6 @@ object TimePopupForm: TTimePopupForm
       Top = 1
       Width = 288
       Align = alTop
-      AutoFillColumns = True
       BorderStyle = bsNone
       Color = clBtnFace
       ColCount = 12
@@ -47,7 +47,7 @@ object TimePopupForm: TTimePopupForm
       FixedCols = 0
       FixedRows = 0
       GridLineWidth = 0
-      Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goDrawFocusSelected, goSmoothScroll, goSelectionActive]
+      Options = [goFixedVertLine, goFixedHorzLine, goDrawFocusSelected, goSmoothScroll, goSelectionActive]
       RowCount = 2
       ScrollBars = ssNone
       TabOrder = 0
@@ -55,6 +55,7 @@ object TimePopupForm: TTimePopupForm
       OnDblClick = GridsDblClick
       OnKeyDown = GridsKeyDown
       OnPrepareCanvas = GridPrepareCanvas
+      OnSelectCell = HoursGridSelectCell
       ColWidths = (
         24
         24
@@ -224,21 +225,41 @@ object TimePopupForm: TTimePopupForm
       BorderSpacing.Top = 7
       Shape = bsTopLine
     end
-    object MoreLessBtn: TBitBtn
-      AnchorSideTop.Control = MinutesGrid
-      AnchorSideTop.Side = asrBottom
-      AnchorSideRight.Control = MainPanel
-      AnchorSideRight.Side = asrBottom
-      Left = 155
-      Height = 22
-      Hint = 'Ctrl + >'
-      Top = 125
-      Width = 134
-      Anchors = [akTop, akLeft, akRight]
-      BorderSpacing.Top = 5
-      Caption = '>>'
-      OnClick = MoreLessBtnClick
+    object ButtonPanel1: TButtonPanel
+      Left = 7
+      Height = 26
+      Top = 126
+      Width = 276
+      Align = alTop
+      OKButton.Name = 'OKButton'
+      OKButton.DefaultCaption = True
+      OKButton.OnClick = OKButtonClick
+      HelpButton.Name = 'HelpButton'
+      HelpButton.DefaultCaption = True
+      CloseButton.Name = 'CloseButton'
+      CloseButton.DefaultCaption = True
+      CancelButton.Name = 'CancelButton'
+      CancelButton.DefaultCaption = True
+      CancelButton.OnClick = CancelButtonClick
       TabOrder = 2
+      ShowButtons = [pbOK, pbCancel]
+      ShowBevel = False
+      object MoreLessBtn: TBitBtn
+        AnchorSideLeft.Control = ButtonPanel1
+        AnchorSideTop.Control = ButtonPanel1
+        AnchorSideRight.Side = asrBottom
+        AnchorSideBottom.Side = asrBottom
+        Left = 0
+        Height = 25
+        Hint = 'Ctrl + >'
+        Top = 0
+        Width = 94
+        AutoSize = True
+        Caption = 'MoreLessBtn'
+        Spacing = 0
+        TabOrder = 4
+        OnClick = MoreLessBtnClick
+      end
     end
   end
 end

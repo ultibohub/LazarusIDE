@@ -748,8 +748,11 @@ type
       function TryParseInput(AInput: String; out ParseResult: TDateTime): Boolean;
     protected
       function GetDefaultGlyphName: string; override;
+      function Is12HourMode: Boolean;
       function UsedFormatSettings: TFormatSettings;
+      function UsedTimeAMString: String;
       function UsedTimeFormat: String;
+      function UsedTimePMString: String;
       function UsedTimeSeparator: Char;
       procedure ButtonClick; override;
       procedure EditDblClick; override;
@@ -960,6 +963,9 @@ implementation
 
 const
   DTEpsilon = Double(1.0)/(24*3600*1000*10); //0.1 millisec (0.000000001157407407);
+
+  DEFAULT_TIMEAMSTRING = 'am';
+  DEFAULT_TIMEPMSTRING = 'pm';
 
 { TEditSpeedButton }
 
@@ -2319,7 +2325,8 @@ begin
   if ATime = NullTime then
     ATime := SysUtils.Time;
   ShowTimePopup(PopupOrigin, ATime, Self.DoubleBuffered,
-    @TimePopupReturnTime, @TimePopupShowHide, FSimpleLayout, self);
+    @TimePopupReturnTime, @TimePopupShowHide, FSimpleLayout, self, Is12HourMode,
+    UsedTimeAMString, UsedTimePMString);
 end;
 
 function TTimeEdit.TryParseInput(AInput: String; out ParseResult: TDateTime): Boolean;
@@ -2351,13 +2358,34 @@ begin
   Result := ResBtnTime;
 end;
 
+function TTimeEdit.Is12HourMode: Boolean;
+var
+  tf: String;
+begin
+  tf := LowerCase(UsedTimeFormat);
+  Result := (pos('am/pm', tf) > 0) or (pos('a/p', tf) > 0) or (pos('ampm', tf) > 0);
+end;
+
 function TTimeEdit.UsedFormatSettings: TFormatSettings;
 begin
   Result := DefaultFormatSettings;
   Result.TimeSeparator := UsedTimeSeparator;
   Result.ShortTimeFormat := UsedTimeFormat;
-  Result.TimeAMString := TimeAMString;
-  Result.TimePMString := TimePMString;
+  Result.TimeAMString := UsedTimeAMString;
+  Result.TimePMString := UsedTimePMString;
+end;
+
+function TTimeEdit.UsedTimeAMString: String;
+begin
+  if (pos('ampm', Lowercase(UsedTimeFormat)) > 0) then
+  begin
+    if TimeAMString = '' then
+      Result := DefaultFormatSettings.TimeAMString
+    else
+      Result := TimeAMString;
+    if Result = '' then Result := DEFAULT_TIMEAMSTRING;
+  end else
+    Result := DEFAULT_TIMEAMSTRING;
 end;
 
 function TTimeEdit.UsedTimeFormat: String;
@@ -2366,6 +2394,19 @@ begin
     Result := DefaultFormatSettings.ShortTimeFormat
   else
     Result := FTimeFormat;
+end;
+
+function TTimeEdit.UsedTimePMString: String;
+begin
+  if (pos('ampm', Lowercase(UsedTimeFormat)) > 0) then
+  begin
+    if TimePMString = '' then
+      Result := DefaultFormatSettings.TimePMString
+    else
+      Result := TimePMString;
+    if Result = '' then Result := DEFAULT_TIMEPMSTRING;
+  end else
+    Result := DEFAULT_TIMEPMSTRING;
 end;
 
 function TTimeEdit.UsedTimeSeparator: Char;
