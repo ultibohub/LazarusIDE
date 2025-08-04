@@ -71,11 +71,20 @@ uses
   Win32Int, Win32Proc;
 
 type
-  TBitBtnAccess = class(TBitBtn)
+  { TCustomBitBtnAccessHelper }
+  // Provides access to protected methods and properties of TCustomBitBtn, without using a typecast hack,
+  // since such a typecast wil raise an EInvalidCast when compiled with -CR {$OBJECTCHECKS ON}
+  TCustomBitBtnAccessHelper = class helper for TCustomBitBtn
+  private
+    function GetFButtonGlyph: TButtonGlyph;
+  public
+    property _FButtonGlyph: TButtonGlyph read GetFButtonGlyph;
   end;
 
-  TCustomBitBtnAccess = class(TCustomBitBtn)
-  end;
+function TCustomBitBtnAccessHelper.GetFButtonGlyph: TButtonGlyph;
+begin
+  Result := FButtonGlyph;
+end;
 
 { TWin32WSBitBtn }
 
@@ -207,7 +216,7 @@ var
     begin
       if (srcWidth <> 0) and (srcHeight <> 0) then
       begin
-        TCustomBitBtnAccess(BitBtn).FButtonGlyph.GetImageIndexAndEffect(AState, BitBtn.Font.PixelsPerInch, 1,
+        BitBtn._FButtonGlyph.GetImageIndexAndEffect(AState, BitBtn.Font.PixelsPerInch, 1,
           AImageRes, AIndex, AEffect);
         TWin32WSCustomImageListResolution.DrawToDC(
           AImageRes.Resolution,
@@ -225,7 +234,7 @@ var
 
       if (srcWidth <> 0) and (srcHeight <> 0) then
       begin
-        TCustomBitBtnAccess(BitBtn).FButtonGlyph.GetImageIndexAndEffect(AState, BitBtn.Font.PixelsPerInch, 1,
+        BitBtn._FButtonGlyph.GetImageIndexAndEffect(AState, BitBtn.Font.PixelsPerInch, 1,
           AImageRes, AIndex, AEffect);
         if UseThemes and not AlphaDraw then
         begin
@@ -305,7 +314,7 @@ begin
 
   if BitBtn.CanShowGlyph(True) then
   begin
-    TCustomBitBtnAccess(BitBtn).FButtonGlyph.GetImageIndexAndEffect(Low(TButtonState), BitBtn.Font.PixelsPerInch, 1,
+    BitBtn._FButtonGlyph.GetImageIndexAndEffect(Low(TButtonState), BitBtn.Font.PixelsPerInch, 1,
       AImageRes, AIndex, AEffect);
     srcWidth := AImageRes.Width;
     srcHeight := AImageRes.Height;
@@ -595,7 +604,7 @@ begin
   begin
     if BitBtn.CanShowGlyph(True) then
     begin
-      TBitBtnAccess(BitBtn).FButtonGlyph.GetImageIndexAndEffect(Low(TButtonState), BitBtn.Font.PixelsPerInch, 1,
+      BitBtn._FButtonGlyph.GetImageIndexAndEffect(Low(TButtonState), BitBtn.Font.PixelsPerInch, 1,
         AImageRes, AIndex, AEffect);
       srcWidth := AImageRes.Width;
       if BitBtn.Spacing = -1 then

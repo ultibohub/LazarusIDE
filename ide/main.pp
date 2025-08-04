@@ -85,7 +85,7 @@ uses
   IDEIntf, ObjectInspector, PropEdits, PropEditUtils, EditorSyntaxHighlighterDef,
   IDECommands, IDEWindowIntf, IDEDialogs, SrcEditorIntf, IDEMsgIntf,
   MenuIntf, LazIDEIntf, IDEOptEditorIntf, IDEImagesIntf, ComponentEditors,
-  IdeIntfStrConsts, ToolBarIntf, SelEdits,
+  IdeIntfStrConsts, ToolBarIntf, SelEdits, ComponentTreeView,
   // IdeUtils
   InputHistory,
   // protocol
@@ -519,10 +519,16 @@ type
     procedure SrcNoteBookCloseQuery(Sender: TObject; var CloseAction: TCloseAction);
 
     // ObjectInspector + PropertyEditorHook event handlers
+  private
+    fOIAnchorEditorMenuItem: TMenuItem;
+    fOITabOrderDlgMenuItem: TMenuItem;
     procedure CreateObjectInspector(aDisableAutoSize: boolean);
     procedure OIOnSelectPersistents(Sender: TObject);
+    procedure OIOnMainPopupMenu(Sender: TObject);
     procedure OIOnShowOptions(Sender: TObject);
     procedure OIOnViewRestricted(Sender: TObject);
+    procedure OIOnViewAnchorEditor(Sender: TObject);
+    procedure OIOnViewTabOrderDlg(Sender: TObject);
     procedure OIOnDestroy(Sender: TObject);
     procedure OIOnAutoShow(Sender: TObject);
     procedure OIRemainingKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
@@ -1892,6 +1898,17 @@ begin
   GlobalDesignHook.SetSelection(ObjectInspector1.Selection);
 end;
 
+procedure TMainIDE.OIOnMainPopupMenu(Sender: TObject);
+var
+  lMenu: TPopupMenu absolute Sender;
+begin
+  // call standard handler
+  ObjectInspector1.MainPopupMenuPopup(Sender);
+
+  fOIAnchorEditorMenuItem.Visible := lMenu.PopupComponent is TComponentTreeView;
+  fOITabOrderDlgMenuItem .Visible := lMenu.PopupComponent is TComponentTreeView;
+end;
+
 procedure TMainIDE.OIOnShowOptions(Sender: TObject);
 begin
   DoOpenIDEOptions(TOIOptionsFrame);
@@ -1931,6 +1948,16 @@ begin
     else
       DoShowRestrictionBrowser;
   end;
+end;
+
+procedure TMainIDE.OIOnViewAnchorEditor(Sender: TObject);
+begin
+  DoViewAnchorEditor;
+end;
+
+procedure TMainIDE.OIOnViewTabOrderDlg(Sender: TObject);
+begin
+  DoViewTabOrderEditor;
 end;
 
 procedure TMainIDE.OIOnDestroy(Sender: TObject);
@@ -9076,7 +9103,9 @@ begin
             Result:=OpenEditorFile(CurUnit.Filename, CurUnit.OpenEditorInfo[0].PageIndex,
                       CurUnit.OpenEditorInfo[0].WindowID, nil, [ofRevert], True);
             // Reload the form file in designer if there is one
-            if Assigned(CurUnit.Component) and (AIgnoreList.IndexOf(CurUnit.SourceLFM)<0) then
+            if Assigned(CurUnit.Component)
+                and (LFMLoaded.IndexOf(CurUnit.SourceLFM)<0)
+                and (AIgnoreList.IndexOf(CurUnit.SourceLFM)<0) then
             begin
               LFMLoaded.Add(CurUnit.SourceLFM);
               LoadLFM(CurUnit,[ofOnlyIfExists,ofRevert],[]);
@@ -12950,6 +12979,23 @@ begin
   except
   end;
   {$ENDIF}
+
+  // Anchor Editor
+  fOIAnchorEditorMenuItem := TMenuItem.Create(ObjectInspector1.MainPopupMenu);
+  fOIAnchorEditorMenuItem.Caption := lisMenuViewAnchorEditor;
+  fOIAnchorEditorMenuItem.OnClick := @OIOnViewAnchorEditor;
+  fOIAnchorEditorMenuItem.ImageIndex := IDEImages.LoadImage('menu_view_anchor_editor');
+  ObjectInspector1.MainPopupMenu.Items.Add(fOIAnchorEditorMenuItem);
+  fOIAnchorEditorMenuItem.MenuIndex := 5;
+  // Tab Order
+  fOITabOrderDlgMenuItem := TMenuItem.Create(ObjectInspector1.MainPopupMenu);
+  fOITabOrderDlgMenuItem.Caption := lisMenuViewTabOrder;
+  fOITabOrderDlgMenuItem.OnClick := @OIOnViewTabOrderDlg;
+  fOITabOrderDlgMenuItem.ImageIndex := IDEImages.LoadImage('tab_order');
+  ObjectInspector1.MainPopupMenu.Items.Add(fOITabOrderDlgMenuItem);
+  fOITabOrderDlgMenuItem.MenuIndex := 6;
+
+  ObjectInspector1.MainPopupMenu.OnPopup := @OIOnMainPopupMenu;
 end;
 
 procedure TMainIDE.HandleApplicationUserInput(Sender: TObject; var Msg: TLMessage);

@@ -3073,7 +3073,7 @@ function TCodeToolManager.FindSourceNameReferences(TargetFilename: string; Files
   SkipComments: boolean; out ListOfSrcNameRefs: TObjectList; WithDuplicates: boolean): boolean;
 var
   i, j, InFilenameCleanPos: Integer;
-  Filename, TargetUnitName, InFilename, LocalSrcName, CurUnitName: String;
+  Filename, TargetUnitName, LocalSrcName: String;
   Code: TCodeBuffer;
   Tools: TFPList;
   DirCaches: TPointerToPointerTree;
@@ -3215,7 +3215,7 @@ var
   i: Integer;
   Param: TSrcNameRefs;
   Tool: TChangeDeclarationTool;
-  NewTargetSrcName, OldTargetUnitName: string;
+  OldTargetUnitName: string;
 begin
   Result:=true;
   if (ListOfSrcNameRefs=nil) or (ListOfSrcNameRefs.Count=0) then exit;
@@ -6276,12 +6276,10 @@ var
   AncestorClassName: String;
 begin
   if Assigned(OnFindDefineProperty) then begin
-    PersistentClassName:=ClassContext.Tool.ExtractClassName(
-                                                       ClassContext.Node,false);
+    PersistentClassName:=ClassContext.Tool.ExtractClassName(ClassContext.Node,false);
     AncestorClassName:='';
     if AncestorClassContext.Tool<>nil then
-     AncestorClassName:=AncestorClassContext.Tool.ExtractClassName(
-                                               AncestorClassContext.Node,false);
+      AncestorClassName:=AncestorClassContext.Tool.ExtractClassName(AncestorClassContext.Node,false);
     OnFindDefineProperty(ClassContext.Tool,
                          PersistentClassName,AncestorClassName,IdentName,
                          IsDefined);

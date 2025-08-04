@@ -2372,7 +2372,7 @@ var
             Params.SetIdentifier(ClassContext.Tool,PChar(Pointer(IdentName)),nil);
             if not CurContext.Tool.FindIdentifierInContext(Params) then
             begin
-              DebugLn(['FindLFMIdentifier ERROR ancestor of '+LFMNode.GetPath+' not found: ',FindContextToString(IdentContext),' IdentName=',IdentName]);
+              //DebugLn(['Note: FindLFMIdentifier ancestor of '+LFMNode.GetPath+' not found: ',FindContextToString(IdentContext),' IdentName=',IdentName]);
               break;
             end;
           until Params.NewNode=nil;
@@ -2855,7 +2855,7 @@ var
   procedure AddReferenceXY(const RefPos: TCodeXYPosition);
   begin
     ListOfReferences.Add(RefPos);
-    debugln(FoundReference); // when code stabilized will be commented out
+    //debugln(FoundReference);
   end;
 
   procedure AddReferenceP(RefPos: integer);
@@ -3266,7 +3266,6 @@ var
     ChildContext: TFindContext;
     ClassContext: TFindContext;
     IdentifierFound: Boolean;
-    Caret: TPoint;
   begin
     if not NodeContainsCandidate(LFMObject) then exit;
 
@@ -3276,7 +3275,7 @@ var
 
     //DebugLn(['CheckChildObject A LFMObjectName="',LFMObjectName,'"']);
     if LFMObjectName='' then begin
-      debugln(['Error: CheckLFMChildObject [20250715122827] object without name ',LFMObject.GetPath]);
+      debugln(['Error: CheckLFMChildObject [20250715122827] object without name ',LFMObject.GetPath,' TypeName="',LFMObject.TypeName,'"']);
       exit;
     end;
     LFMObjectTypeName:=LFMObject.TypeName;
@@ -3478,17 +3477,11 @@ var
   // ParentContext is the context, where properties are searched.
   //               This can be a class or a property.
   var
-    i, TopLine: Integer;
+    i: Integer;
     CurName: string;
     CurPropertyContext: TFindContext;
     SearchContext: TFindContext;
     PropDeclNode: TCodeTreeNode;
-    AnUnitName: string;
-    Caret: TPoint;
-    CodeXYPosition, NewCodeXYPosition: TCodeXYPosition;
-    NewTool: TFindDeclarationTool;
-    NewNode: TCodeTreeNode;
-
   begin
     // find complete property name
     {$IFDEF VerboseCheckLFM}
@@ -3578,7 +3571,6 @@ var
     LookupRootLFMNode: TLFMObjectNode;
     LookupRootTypeName, LookupRootTypeUnitName, CurUnitName: String;
     RootClassNode: TCodeTreeNode;
-    Caret: TPoint;
   begin
     Result:=false;
 

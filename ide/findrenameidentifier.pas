@@ -386,8 +386,6 @@ var
     InFilename, aUnitName, Dir, Filename: string;
     NewCode: TCodeBuffer;
     NewTool: TCodeTool;
-    NamePos: TAtomPosition;
-    CodeXYPos, NewDeclCodeXY: TCodeXYPosition;
   begin
     case DeclNode.Desc of
     ctnUseUnit: ;
@@ -519,7 +517,7 @@ var
 var
   StartSrcEdit: TSourceEditorInterface;
   StartSrcCode, LastCode, Code: TCodeBuffer;
-  DeclTopLine, StartTopLine, i, j, CleanPos: integer;
+  DeclTopLine, StartTopLine, i, j: integer;
   StartCaretXY, DeclXY: TPoint;
   OwnerList, ListOfLazFPDocNode: TFPList;
   ExtraFiles: TStrings;
@@ -531,14 +529,11 @@ var
   Graph: TUsesGraph;
   AVLNode: TAVLTreeNode;
   UGUnit: TUGUnit;
-  Identifier, NewFilename, OldFileName, SrcNamed, PasFilename, s: string;
+  Identifier, NewFilename, OldFileName, PasFilename, s: string;
   FindRefFlags: TFindRefsFlags;
-  Tool: TCodeTool;
-  Node: TCodeTreeNode;
   TreeOfPCodeXYPosition, LFMTreeOfPCodeXYPosition: TAVLTree;
   Refs, OldRefs: TSrcNameRefs;
   AUnitInfo: TUnitInfo;
-  PageIdx,WinID:integer;
 begin
   Result:=mrCancel;
   if not LazarusIDE.BeginCodeTools then exit(mrCancel);
@@ -1457,7 +1452,7 @@ var
   var
     CodeTool: TCodeTool;
     CaretXY: TCodeXYPosition;
-    aTop, amdPos: integer;
+    aTop: integer;
   begin
     X:=0;
     Y:=0;
@@ -1486,7 +1481,6 @@ var
 
   function FindConflict: boolean;
   var
-    aNode: TCodeTreeNode;
     anItem: TIdentifierListItem;
   begin
     anItem:=CodeToolBoss.IdentifierList.FindIdentifier(PChar(FNewIdentifier));
@@ -1507,7 +1501,6 @@ var
 
 var
   Res:TModalResult;
-  isOK: boolean;
   CTB_IdentComplIncludeKeywords: Boolean;
   CTB_CodeCompletionTemplateFileName, AmpIdentifier: string;
   CTB_IdentComplIncludeWords: TIdentComplIncludeWords;
@@ -1652,15 +1645,20 @@ begin
   Options.SearchInComments:=ScopeCommentsCheckBox.Checked;
   Options.Overrides:=ScopeOverridesCheckBox.Checked;
   Options.IncludeLFMs:=ScopeIncludeLFMs.Checked;
-  if ScopeRadioGroup.Enabled then
-    case ScopeRadioGroup.ItemIndex of
-    0: Options.Scope:=frCurrentUnit;
-    1: Options.Scope:=frProject;
-    2: Options.Scope:=frOwnerProjectPackage;
-    else Options.Scope:=frAllOpenProjectsAndPackages;
-    end
-  else
-    Options.Scope:=frCurrentUnit;
+  if IsPrivate then begin
+    // when the identifier is private, the only scope allowed is 'current unit'
+    // -> keep Options.Scope, so that next time renaming a non private identifier the scope is back
+  end else begin
+    if ScopeRadioGroup.Enabled then
+      case ScopeRadioGroup.ItemIndex of
+      0: Options.Scope:=frCurrentUnit;
+      1: Options.Scope:=frProject;
+      2: Options.Scope:=frOwnerProjectPackage;
+      else Options.Scope:=frAllOpenProjectsAndPackages;
+      end
+    else
+      Options.Scope:=frCurrentUnit;
+  end;
 end;
 
 procedure TFindRenameIdentifierDialog.SetIdentifier(const NewIdentifierFilename: string;
@@ -1734,7 +1732,7 @@ var
   StartSrcEdit: TSourceEditorInterface;
   DeclCode, StartSrcCode: TCodeBuffer;
   DeclX, DeclY, DeclTopLine, i: integer;
-  LogCaretXY, DeclarationCaretXY: TPoint;
+  LogCaretXY: TPoint;
   OwnerList: TFPList;
   ExtraFiles: TStrings;
   Files: TStringList;
@@ -1837,7 +1835,6 @@ function TFindRenameIdentifierDialog.NewIdentifierIsConflicted(var ErrMsg: strin
 // will be executed when "Rename all References" button is clicked
 var
   i: integer;
-  anItem: TIdentifierListItem;
   CheckUnitName, CheckInFileName, aFilename: String;
 begin
   Result:=false;

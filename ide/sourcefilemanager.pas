@@ -5896,6 +5896,7 @@ begin
     end;
 
     // rename lfm file
+    LFMCode:=AnUnitInfo.SourceLFM;
     if FilenameIsAbsolute(NewLFMFilename) then begin
       if (LFMCode=nil)
       and (OldLFMFilename<>'')
@@ -5934,6 +5935,7 @@ begin
 
     // set new codebuffer in unitinfo and sourceeditor
     AnUnitInfo.Source:=NewSource;
+    AnUnitInfo.SourceLFM:=LFMCode;
     if AnUnitInfo.IsPartOfProject then
       Project1.Modified:=true
     else
@@ -8314,7 +8316,7 @@ function ShowSaveProjectAsDialog(Flags: TSaveFlags=[]): TModalResult;
 var
   SaveDialog: TSaveDialog;
   NewProgramName: String;
-  NewPath, NewLPIFilename, NewProgramFN: String;
+  NewLPIFilename, NewProgramFN: String;
   AFilename, Ext, AText, ACaption, OldProjectDir: string;
 begin
   if Flags=[] then ;

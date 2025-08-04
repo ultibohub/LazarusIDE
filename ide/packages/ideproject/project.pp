@@ -430,7 +430,7 @@ type
     property Component: TComponent read fComponent write SetComponent;
     property ComponentName: string read fComponentName write fComponentName;
     property ComponentResourceName: string read fComponentResourceName
-                                           write fComponentResourceName;
+                                           write fComponentResourceName; // can differ from ComponentName after a rename and the IDE has not yet (or failed) updated the resource file
     property ComponentTypesToClasses: TStringToPointerTree read FComponentTypesToClasses
       write FComponentTypesToClasses; // classname to TComponentClass, for not registered and ambiguous classes in lfm
     property ComponentVarsToClasses: TStringToPointerTree read FComponentVarsToClasses
@@ -1789,7 +1789,8 @@ procedure TUnitInfo.ClearComponentDependencies;
 begin
   while FFirstRequiredComponent<>nil do FFirstRequiredComponent.Free;
   while FFirstUsedByComponent<>nil do FFirstUsedByComponent.Free;
-  SourceLFM:=nil;
+  if (SourceLFM<>nil) and (not FileExistsCached(SourceLFM.Filename)) then
+    SourceLFM:=nil;
 end;
 
 procedure TUnitInfo.WriteDebugReportUnitComponentDependencies(Prefix: string);
@@ -2169,8 +2170,10 @@ end;
 function TUnitInfo.ComponentLFMOnDiskHasChanged: boolean;
 // Associated LFM resource file on disk has changed since last load/save
 begin
-  if SourceLFM=nil then Exit(false);
-  if SourceLFM.FileOnDiskHasChanged then exit(true);
+  if SourceLFM=nil then
+    Result:=false
+  else
+    Result:=SourceLFM.FileOnDiskHasChanged;
 end;
 
 function TUnitInfo.GetAutoReferenceSourceDir: boolean;
@@ -2191,7 +2194,7 @@ end;
 procedure TUnitInfo.SetTimeStamps;
 begin
   if FSource<>nil then
-    fSourceChangeStep:=FSource.ChangeStep  // Indicates any change is source
+    fSourceChangeStep:=FSource.ChangeStep  // Indicates any change in source
   else
     fSourceChangeStep:=LUInvalidChangeStamp;
 end;
@@ -2458,6 +2461,8 @@ begin
     if (fProject<>nil) and (fProject.MainUnitInfo=Self) then
       fProject.MainSourceFilenameChanged;
   end;
+  // whenever the Source filename changes, nil the SourceLFM
+  SourceLFM:=nil;
 end;
 
 procedure TUnitInfo.SetSourceLFM(const AValue: TCodeBuffer);

@@ -13,9 +13,24 @@
 //  {$C+}
 //  {$DEFINE ASSERT_IS_ON}
 {$ENDIF}
+
 type
-  TWinControlAccess = class(TWinControl);
-  TApplicationAccess = class(TApplication);
+  { TApplicationAccessHelper }
+  // Provides access to protected methods and properties of TWinControl, without using a typecast hack,
+  // since such a typecast wil raise an EInvalidCast when compiled with -CR {$OBJECTCHECKS ON}
+  TApplicationAccessHelper = class helper for TApplication
+  public
+    procedure _ProcessAsyncCallQueue;
+  end;
+
+{ TApplicationAccessHelper }
+
+procedure TApplicationAccessHelper._ProcessAsyncCallQueue;
+begin
+  ProcessAsyncCallQueue;
+end;
+
+
 {*************************************************************}
 {            callback routines                                }
 {*************************************************************}
@@ -239,7 +254,7 @@ begin
     TheControl := ParentForm.ControlAtPos(ParentForm.ScreenToClient(Point), [capfAllowDisabled, capfAllowWinControls,
       capfRecursive, capfHasScrollOffset]);
     if TheControl is TWinControl then
-      Result := TWinControlAccess(TheControl).WindowHandle;
+      Result := TWinControl(TheControl)._WindowHandle;
     if Result = 0 then
     begin
       ParentRect := Rect(ParentForm.Left, ParentForm.Top,
@@ -281,7 +296,7 @@ procedure ClearSiblingRadioButtons(RadioButton: TRadioButton);
 var
   Parent: TWinControl;
   Sibling: TControl;
-  WinControl: TWinControlAccess absolute Sibling;
+  WinControl: TWinControl absolute Sibling;
   LParamFlag: LRESULT;
   i: Integer;
 begin
@@ -293,11 +308,11 @@ begin
     begin
       // Pass previous state through LParam so the event handling can decide
       // when to propagate LM_CHANGE (New State <> Previous State)
-      LParamFlag := Windows.SendMessage(WinControl.WindowHandle, BM_GETCHECK, 0, 0);
+      LParamFlag := Windows.SendMessage(WinControl._WindowHandle, BM_GETCHECK, 0, 0);
       // Pass SKIP_LMCHANGE through LParam if previous state is already unchecked
       if LParamFlag = BST_UNCHECKED then
         LParamFlag := SKIP_LMCHANGE;
-      Windows.SendMessage(WinControl.WindowHandle, BM_SETCHECK,
+      Windows.SendMessage(WinControl._WindowHandle, BM_SETCHECK,
         Windows.WParam(BST_UNCHECKED), Windows.LParam(LParamFlag));
     end;
   end;
@@ -727,9 +742,9 @@ begin
 {$IFDEF DBG_SendPaintMessage}
       DebugLnEnter('> SendPaintMessage call WM_ERASEBKGND for CtrlDC=', dbgs(ControlDC), ' Window=', dbgs(Window), ' WinCtrl=',dbgs(PtrUInt(lWinControl)), ' ', DbgSName(lWinControl));
 {$ENDIF}
-      Include(TWinControlAccess(lWinControl).FWinControlFlags, wcfEraseBackground);
+      lWinControl._FWinControlFlags := lWinControl._FWinControlFlags + [wcfEraseBackground];
       Windows.SendMessage(lWinControl.Handle, WM_ERASEBKGND, Windows.WPARAM(PaintMsg.DC), 0);
-      Exclude(TWinControlAccess(lWinControl).FWinControlFlags, wcfEraseBackground);
+      lWinControl._FWinControlFlags := lWinControl._FWinControlFlags - [wcfEraseBackground];
 {$IFDEF DBG_SendPaintMessage}
       DebugLnExit('< SendPaintMessage back from WM_ERASEBKGND for CtrlDC=', dbgs(ControlDC), ' Window=', dbgs(Window), ' WinCtrl=',dbgs(PtrUInt(lWinControl)), ' ', DbgSName(lWinControl));
 {$ENDIF}
@@ -1732,8 +1747,8 @@ begin
   begin
     if WParam = HTCAPTION  then
       if lWinControl is TCustomForm then
-        if (TWinControlAccess(lWinControl).DragKind = dkDock)
-        and (TWinControlAccess(lWinControl).DragMode = dmAutomatic) then
+        if (lWinControl._DragKind = dkDock)
+        and (lWinControl._DragMode = dmAutomatic) then
           lWinControl.BeginDrag(true);
   end;
   // I see no other way to prevent crash at moment. This message calls WM_CLOSE
@@ -2065,7 +2080,7 @@ begin
         CheckSynchronize;
         TWin32Widgetset(Widgetset).CheckPipeEvents;
         if Assigned(Application) then
-          TApplicationAccess(Application).ProcessAsyncCallQueue;
+          Application._ProcessAsyncCallQueue;
       end;
     WM_ENTERIDLE: Application.Idle(False);
     WM_ACTIVATE:  SetLMessageAndParams(LM_ACTIVATE);

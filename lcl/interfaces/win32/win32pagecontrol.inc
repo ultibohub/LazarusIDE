@@ -9,8 +9,32 @@
 }
 
 type
-  TCustomPageAccess = class(TCustomPage)
+
+  { TCustomPageAccessHelper }
+  // Provides access to protected methods and properties of TCustomPage, without using a typecast hack,
+  // since such a typecast wil raise an EInvalidCast when compiled with -CR {$OBJECTCHECKS ON}
+
+  TCustomPageAccessHelper = class helper for TCustomPage
+  private
+    function _GetFlags: TPageFlags;
+  public
+    function  _FindNextControl(CurrentControl: TWinControl; GoForward,
+                              CheckTabStop, CheckParent: Boolean): TWinControl;
+    property _Flags: TPageFlags read _GetFlags;
   end;
+
+
+function TCustomPageAccessHelper._GetFlags: TPageFlags;
+begin
+  Result := Flags;
+end;
+
+function TCustomPageAccessHelper._FindNextControl(CurrentControl: TWinControl;
+  GoForward, CheckTabStop, CheckParent: Boolean): TWinControl;
+begin
+  Result := FindNextControl(CurrentControl, GoForward, CheckTabStop, CheckParent);
+end;
+
 
 function IsTabControlGroupFocused(const ATabControl: TCustomTabControl): boolean;
 var
@@ -47,7 +71,7 @@ begin
       if Page.IsParentOf(ParentForm.ActiveControl) then Exit;
       AWinControl := nil;
       if Page.CanFocus then
-        AWinControl := TCustomPageAccess(Page).FindNextControl(nil, True, True, False);
+        AWinControl := Page._FindNextControl(nil, True, True, False);
       // if nothing to focus then focus tab control then we can traverse pages by keys
       if AWinControl = nil then
         AWinControl := ATabControl;
@@ -105,6 +129,7 @@ begin
   Result := WindowProc(Window, Msg, WParam, LParam);
 end;
 
+
 { TWin32WSCustomPage }
 
 class function TWin32WSCustomPage.CreateHandle(const AWinControl: TWinControl;
@@ -134,7 +159,7 @@ begin
   // remove tab from pagecontrol only if not pfRemoving is set
   // if pfRemoving is set then Tab has been deleted by RemovePage
   if (AWinControl.Parent <> nil) and (AWinControl.Parent.HandleAllocated) and
-     not (pfRemoving in TCustomPageAccess(AWinControl).Flags) then
+     not (pfRemoving in TCustomPage(AWinControl)._Flags) then
   begin
     PageIndex := TCustomPage(AWinControl).PageIndex;
     RealIndex := TCustomTabControl(AWinControl.Parent).PageToTabIndex(PageIndex);

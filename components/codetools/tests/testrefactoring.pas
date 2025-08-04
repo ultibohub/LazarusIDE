@@ -102,6 +102,7 @@ type
     procedure TestRenameAlsoLFM_SetProperty;
     procedure TestRenameAlsoLFM_AnonymousSetProperty;
     procedure TestRenameAlsoLFM_ComponentProperty;
+    procedure TestRenameAlsoLFM_Property_FromOtherUnit;
     // todo: procedure TestRenameAlsoLFM_ComponentProperty_Foreign;  from another root component, e.g. DataModule
     // todo: procedure TestRenameAlsoLFM_CollectionProperty;
     procedure TestRenameAlsoLFM_ListProperty;
@@ -119,7 +120,7 @@ procedure TCustomTestRefactoring.RenameReferences(NewIdentifier: string; const F
 var
   Marker: TFDMarker;
   Tool: TCodeTool;
-  DeclX, DeclY, DeclTopLine, i: integer;
+  DeclX, DeclY, DeclTopLine, i, BlockTopLine, BlockBottomLine: integer;
   DeclCode, LFMCode, CurCode: TCodeBuffer;
   Files: TStringList;
   Graph: TUsesGraph;
@@ -150,14 +151,15 @@ begin
   if not CodeToolBoss.Explore(Code,Tool,true,false) then
     Fail('CodeToolBoss.Explore failed');
   Code.AbsoluteToLineCol(Marker.NameStartPos,DeclarationCaretXY.Y,DeclarationCaretXY.X);
-  if not CodeToolBoss.FindMainDeclaration(Code,
+  if not CodeToolBoss.FindDeclaration(Code,
     DeclarationCaretXY.X,DeclarationCaretXY.Y,
-    DeclCode,DeclX,DeclY,DeclTopLine) then
+    DeclCode,DeclX,DeclY,DeclTopLine,BlockTopLine,BlockBottomLine,
+    [fsfFindMainDeclaration,fsfSkipPropertyWithoutType]) then
   begin
-    Fail('CodeToolBoss.FindMainDeclaration failed '+dbgs(DeclarationCaretXY)+' File='+Code.Filename);
+    Fail('CodeToolBoss.FindDeclaration failed '+dbgs(DeclarationCaretXY)+' File='+Code.Filename);
   end;
 
-  //debugln(['TCustomTestRefactoring.RenameReferences X=',DeclX,' Y=',DeclY,' "',DeclCode.GetLine(DeclY-1,false),'"']);
+  debugln(['TCustomTestRefactoring.RenameReferences X=',DeclX,' Y=',DeclY,' "',DeclCode.GetLine(DeclY-1,false),'"']);
 
   DeclarationCaretXY:=Point(DeclX,DeclY);
 
@@ -2581,6 +2583,80 @@ begin
   end;
 end;
 
+procedure TTestRefactoring.TestRenameAlsoLFM_Property_FromOtherUnit;
+var
+  Test1LFM: TCodeBuffer;
+  Unit2: TCodeBuffer;
+begin
+  Test1LFM:=CodeToolBoss.CreateFile(ChangeFileExt(Code.Filename,'.lfm'));
+  Unit2:=CodeToolBoss.CreateFile(ExtractFilePath(Code.Filename)+'Unit2.pas');
+
+  try
+    Unit2.Source:=LinesToStr([
+    'unit Unit2;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'type',
+      '  TComponent = class end;',
+      '  TForm2 = class(TComponent)',
+      '    property Checked: boolean;',
+      '  end;',
+      '  TCustomButton = class(TComponent)',
+      '    property Checked: boolean;',
+      '  end;',
+      '  TButton = class(TCustomButton)',
+      '    property Checked stored true;',
+      '  end;',
+      '  TMyButton = class(TButton)',
+      '    property Checked;',
+      '  end;',
+      'implementation',
+      'end.']);
+
+    Test1LFM.Source:=LinesToStr([
+      'object Form1: TForm1',
+      '  Checked = False',
+      '  object Button1: TMyButton',
+      '    Checked = True',
+      '  end',
+      'end']);
+
+    Add(LinesToStr([
+      'unit Test1;',
+      '{$mode objfpc}{$H+}',
+      'interface',
+      'uses Unit2;',
+      'type',
+      '  TForm1 = class(TForm2)',
+      '    Button1: TMyButton;',
+      '    procedure ActivateMe(Sender: TObject);',
+      '  end;',
+      'var',
+      '  Form1: TForm1;',
+      'implementation',
+      'procedure TForm1.ActivateMe(Sender: TObject);',
+      'begin',
+      '  Checked;',
+      '  Button1.Checked{#Rename};',
+      'end;',
+
+      'end.']));
+
+    RenameReferences('Activated',[frfIncludingLFM]);
+    CheckDiff(Test1LFM,[
+      'object Form1: TForm1',
+      '  Checked = False',
+      '  object Button1: TMyButton',
+      '    Activated = True',
+      '  end',
+      'end']);
+
+  finally
+    Test1LFM.IsDeleted:=true;
+    Unit2.IsDeleted:=true;
+  end;
+end;
+
 procedure TTestRefactoring.TestRenameAlsoLFM_ListProperty;
 var
   Test1LFM: TCodeBuffer;
@@ -2626,7 +2702,6 @@ begin
   finally
     Test1LFM.IsDeleted:=true;
   end;
-
 end;
 
 procedure TTestRefactoring.TestRenameAlsoLFM_ComponentClass;
