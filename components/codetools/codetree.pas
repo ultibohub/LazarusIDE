@@ -125,7 +125,7 @@ const
   ctnIdentifier         = 70;
   ctnRangedArrayType    = 71;
   ctnOpenArrayType      = 72;
-  ctnOfConstType        = 73;
+  ctnOfConstType        = 73; // e.g. array of const
   ctnRecordType         = 74;
   ctnRecordCase         = 75; // children: ctnVarDefinition plus 0..n ctnRecordVariant
   ctnRecordVariant      = 76; // children: 0..n ctnVarDefinition plus may be a ctnRecordCase
@@ -175,6 +175,7 @@ const
      [ctnUnit];
   AllCodeSections = AllSourceTypes
      + [ctnInterface, ctnImplementation, ctnInitialization, ctnFinalization];
+  AllMainSections = [ctnProgram,ctnPackage,ctnLibrary,ctnInterface];
   AllClassBaseSections =
      [ctnClassPublic,ctnClassPublished,ctnClassPrivate,ctnClassProtected,
       ctnClassRequired,ctnClassOptional];

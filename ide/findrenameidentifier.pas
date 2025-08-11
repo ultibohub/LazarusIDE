@@ -158,6 +158,7 @@ function GatherLFMsReferences(Files:TStringList;
   DeclNode: TCodeTreeNode;
   var ListOfReferences: TCodeXYPositions;
   const Flags: TFindRefsFlags): TModalResult;
+function DeclarationCanBeInLFM(DeclTool: TCodeTool; DeclNode: TCodeTreeNode): boolean;
 
 implementation
 
@@ -295,6 +296,65 @@ begin
   end;
 end;
 
+procedure CheckDeclOfDesigner(const Identifier: string; DeclTool: TCodeTool; DeclNode: TCodeTreeNode);
+
+  function NodeIsRootClassComponent(aNode: TCodeTreeNode; RootComp: TComponent): boolean;
+  var
+    NodeName: String;
+  begin
+    Result:=false;
+    if aNode.Desc<>ctnTypeDefinition then exit;
+    if not (ANode.Parent.Desc in AllMainSections) then exit;
+    NodeName:=DeclTool.ExtractIdentifier(aNode.StartPos);
+    Result:=SameText(NodeName,RootComp.ClassName);
+  end;
+
+var
+  UnitInfo: TUnitInfo;
+  Node, ParentNode: TCodeTreeNode;
+begin
+  // Note:
+  // When a designer is open, the UnitInfo.Component is the root component
+  // The IDE also opens all needed ancestors and frames.
+
+  UnitInfo:=Project1.UnitInfoWithFilename(DeclTool.MainFilename);
+  if (UnitInfo<>nil) and (UnitInfo.Component<>nil) then begin
+
+    if DeclNode.Desc=ctnProcedureHead then
+      DeclNode:=DeclNode.Parent;
+    ParentNode:=DeclNode.Parent;
+    if DeclNode.Desc=ctnVarDefinition then begin
+      if (ParentNode.Desc in AllMainSections)
+          and SameText(Identifier,UnitInfo.Component.Name) then
+      begin
+        // renaming a designer root component
+        // todo
+        exit;
+      end;
+
+      if (ParentNode.Desc=ctnClassPublished) and (ParentNode.Parent.Desc=ctnClass) then
+      begin
+        Node:=ParentNode.Parent.Parent;
+        if NodeIsRootClassComponent(Node,UnitInfo.Component) then begin
+          // renaming a published field of the designer component class
+          // todo
+        end;
+      end;
+    end else if DeclNode.Desc=ctnProcedure then begin
+      if (ParentNode.Desc=ctnClassPublished) and (ParentNode.Parent.Desc=ctnClass) then
+      begin
+        Node:=ParentNode.Parent.Parent;
+        if NodeIsRootClassComponent(Node,UnitInfo.Component) then begin
+          // renaming a published method of the designer component class
+          // todo
+        end;
+      end;
+    end;
+  end else begin
+    //
+  end;
+end;
+
 function GatherLFMsReferences(Files: TStringList; const Identifier: string; DeclTool: TCodeTool;
   DeclNode: TCodeTreeNode; var ListOfReferences: TCodeXYPositions; const Flags: TFindRefsFlags
   ): TModalResult;
@@ -314,6 +374,8 @@ begin
   DeclFilename:=DeclTool.MainFilename;
   if not FilenameIsPascalUnit(DeclTool.MainFilename) then exit;
 
+  if not DeclarationCanBeInLFM(DeclTool,DeclNode) then exit;
+
   {$IFNDEF EnableFindLFMRefs}
   exit;
   {$ENDIF}
@@ -323,6 +385,10 @@ begin
 
   aCache:=CodeToolsStructs.TPointerToPointerTree.Create;
   try
+    if frfRename in Flags then
+      CheckDeclOfDesigner(Identifier,DeclTool,DeclNode);
+
+    // search in other lfm
     for i:=0 to Files.Count-1 do begin
       UnitInfo:=Project1.UnitInfoWithFilename(Files[i]);
       if UnitInfo=nil then
@@ -358,6 +424,44 @@ begin
     aCache.Free;
   end;
   Result:= mrOK;
+end;
+
+function DeclarationCanBeInLFM(DeclTool: TCodeTool; DeclNode: TCodeTreeNode): boolean;
+begin
+  Result:=false;
+  if DeclNode.HasParentOfType(ctnImplementation) then
+    exit; // cant be referenced in lfm
+  if DeclNode.Desc=ctnProcedureHead then
+    DeclNode:=DeclNode.Parent;
+  case DeclNode.Desc of
+  ctnProperty:
+    ; // even private properties can later be made published -> must be searched
+  ctnVarDefinition:
+    case DeclNode.Parent.Desc of
+    ctnClassPublic: ; // maybe possible due to $RTTI
+    ctnClassPublished: ;
+    else
+      exit; // not a public field, e.g. a parameter or local var
+    end;
+  ctnProcedure:
+    case DeclNode.Parent.Desc of
+    ctnClassPublic: ; // maybe possible due to $RTTI
+    ctnClassPublished: ;
+    ctnClassPrivate,ctnClassProtected,ctnClassRequired,ctnClassOptional:
+      if DeclTool.ProcNodeHasSpecifier(DeclNode,psVirtual)
+          or DeclTool.ProcNodeHasSpecifier(DeclNode,psOverride) then
+        // an override could be published
+      else
+        exit;
+    else
+      exit; // not a method
+    end;
+  ctnTypeDefinition: ;
+  ctnEnumIdentifier: ;
+  else
+    exit;
+  end;
+  Result:=true;
 end;
 
 function DoFindRenameIdentifier(AllowRename: boolean; SetRenameActive: boolean;
@@ -715,6 +819,8 @@ begin
 
     // search pascal source references
     FindRefFlags:=[];
+    if Options.Rename then
+      Include(FindRefFlags,frfRename);
     if Options.Overrides then
       Include(FindRefFlags,frfMethodOverrides);
     if not GatherIdentifierReferences(Files,DeclCodeXY,DeclTool,DeclNode,

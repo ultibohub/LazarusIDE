@@ -12,9 +12,68 @@ uses
   LazMethodList,
   // SynEdit
   SynEditMarks, SynEditMiscClasses, SynEditMouseCmds,
-  LazSynTextArea, SynEditHighlighter, LazEditTextGridPainter;
+  LazSynTextArea, SynEditHighlighter, LazEditTextGridPainter, LazEditTextAttributes;
 
 type
+
+  TSynGutterColorAttributes = class(TLazEditTextAttribute)
+  published
+    property Foreground;
+    property Background;
+    property FrameColor;
+
+    property ForePriority;
+    property BackPriority;
+    property FramePriority;
+
+    property FrameStyle;
+    property FrameEdges;
+
+    property Style;
+    property BoldPriority;
+    property ItalicPriority;
+    property UnderlinePriority;
+    property StrikeOutPriority;
+
+    property OnChange;
+  end;
+
+  { TSynGutterColorAttributesModifier }
+
+  TSynGutterColorAttributesModifier = class(TLazEditTextAttributeModifier)
+  published
+    property Foreground;
+    property Background;
+    property FrameColor;
+
+    property ForePriority;
+    property BackPriority;
+    property FramePriority;
+
+    property FrameStyle;
+    property FrameEdges;
+
+    property Style;
+    property BoldPriority;
+    property ItalicPriority;
+    property UnderlinePriority;
+    property StrikeOutPriority;
+
+    property OnChange;
+  published
+    property BackAlpha;
+    property ForeAlpha;
+    property FrameAlpha;
+
+    property StyleMask;
+  end;
+
+  { TSynGutterDefColorAttributesModifier }
+
+  TSynGutterDefColorAttributesModifier = class(TSynGutterColorAttributesModifier)
+  protected
+    procedure Init; override;
+  end;
 
   TGutterClickEvent = procedure(Sender: TObject; X, Y, Line: integer;
     mark: TSynEditMark) of object;
@@ -34,8 +93,8 @@ type
     FSide: TSynGutterSide;
     FSynEdit: TSynEditBase;
     FTextDrawer: TLazEditTextGridPainter;
-    FColor: TSynSelectedColor;
-    FCurrentLineColor: TSynHighlighterAttributesModifier;
+    FColor: TSynGutterColorAttributesModifier;
+    FCurrentLineColor: TSynGutterColorAttributesModifier;
     FMarkupInfoCurLineMerged: TSynSelectedColorMergeResult;
 
     FLeft, FWidth, FHeight, FTop: Integer;
@@ -58,7 +117,7 @@ type
     function GetMouseActions: TSynEditMouseActions;
     procedure SetAutoSize(const AValue: boolean);
     procedure SetColor(const Value: TColor);
-    procedure SetCurrentLineColor(AValue: TSynHighlighterAttributesModifier);
+    procedure SetCurrentLineColor(AValue: TSynGutterColorAttributesModifier);
     procedure SetGutterParts(const AValue: TSynGutterPartListBase);
     procedure SetLeftOffset(const AValue: integer);
     procedure SetMouseActions(const AValue: TSynEditMouseActions);
@@ -118,7 +177,7 @@ type
     property SynEdit: TSynEditBase read FSynEdit;
     property TextDrawer: TLazEditTextGridPainter read FTextDrawer;
     property Color: TColor read GetColor write SetColor default clBtnFace;
-    property CurrentLineColor: TSynHighlighterAttributesModifier read FCurrentLineColor write SetCurrentLineColor;
+    property CurrentLineColor: TSynGutterColorAttributesModifier read FCurrentLineColor write SetCurrentLineColor;
     property MouseActions: TSynEditMouseActions
       read GetMouseActions write SetMouseActions;
   end;
@@ -170,8 +229,9 @@ type
     FVisible: Boolean;
     FSynEdit: TSynEditBase;
     FGutter: TSynGutterBase;
-    FMarkupInfo, FMarkupInfoInternal: TSynSelectedColor;
-    FMarkupInfoCurrentLine: TSynHighlighterAttributesModifier;
+    FMarkupInfo: TSynGutterColorAttributes;
+    FMarkupInfoInternal: TLazEditTextAttributeModifier;
+    FMarkupInfoCurrentLine: TSynGutterColorAttributesModifier;
     FMarkupInfoCurLineMerged: TSynSelectedColorMergeResult;
     FCursor: TCursor;
     FOnChange: TNotifyEvent;
@@ -184,8 +244,8 @@ type
     function GetGutterParts: TSynGutterPartListBase;
     function GetMouseActions: TSynEditMouseActions;
     procedure SetLeftOffset(AValue: integer);
-    procedure SetMarkupInfo(const AValue: TSynSelectedColor);
-    procedure SetMarkupInfoCurrentLine(AValue: TSynHighlighterAttributesModifier);
+    procedure SetMarkupInfo(const AValue: TSynGutterColorAttributes);
+    procedure SetMarkupInfoCurrentLine(AValue: TSynGutterColorAttributesModifier);
     procedure SetMouseActions(const AValue: TSynEditMouseActions);
     procedure SetRightOffset(AValue: integer);
   protected
@@ -209,7 +269,7 @@ type
     property Gutter: TSynGutterBase read FGutter;
     property SynEdit:TSynEditBase read FSynEdit;
     property GutterArea: TLazSynSurfaceWithText read GetGutterArea;
-    property MarkupInfoInternal: TSynSelectedColor read FMarkupInfoInternal;
+    property MarkupInfoInternal: TLazEditTextAttributeModifier read FMarkupInfoInternal;
     property MarkupInfoCurLineMerged: TSynSelectedColorMergeResult read FMarkupInfoCurLineMerged;
     property CaretRow: integer read GetCaretRow;
   public
@@ -238,8 +298,8 @@ type
       read FOnGutterClick write FOnGutterClick;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property Cursor: TCursor read FCursor write FCursor default crDefault;
-    property MarkupInfo: TSynSelectedColor read FMarkupInfo write SetMarkupInfo;
-    property MarkupInfoCurrentLine: TSynHighlighterAttributesModifier read FMarkupInfoCurrentLine write SetMarkupInfoCurrentLine;
+    property MarkupInfo: TSynGutterColorAttributes read FMarkupInfo write SetMarkupInfo;
+    property MarkupInfoCurrentLine: TSynGutterColorAttributesModifier read FMarkupInfoCurrentLine write SetMarkupInfoCurrentLine;
   published
     property AutoSize: boolean read FAutoSize write SetAutoSize default True;
     property Width: integer read FWidth write SetWidth default 10;
@@ -265,11 +325,11 @@ begin
   FOnResizeHandler := TMethodList.Create;
   FOnChangeHandler := TMethodList.Create;
 
-  FColor := TSynSelectedColor.Create;
-  FColor.OnChange := @DoColorChanged;
+  FColor := TSynGutterDefColorAttributesModifier.Create;
+  FColor.AddChangeHandler(@DoColorChanged);
 
-  FCurrentLineColor := TSynHighlighterAttributesModifier.Create;
-  FCurrentLineColor.OnChange := @DoColorChanged;
+  FCurrentLineColor := TSynGutterColorAttributesModifier.Create;
+  FCurrentLineColor.AddChangeHandler(@DoColorChanged);
   FMarkupInfoCurLineMerged := TSynSelectedColorMergeResult.Create;
 
   inherited Create;
@@ -406,7 +466,7 @@ begin
   FColor.Background := Value;
 end;
 
-procedure TSynGutterBase.SetCurrentLineColor(AValue: TSynHighlighterAttributesModifier);
+procedure TSynGutterBase.SetCurrentLineColor(AValue: TSynGutterColorAttributesModifier);
 begin
   FCurrentLineColor.Assign(AValue);
 end;
@@ -637,6 +697,19 @@ begin
   Result := FSynEdit;
 end;
 
+{ TSynGutterDefColorAttributesModifier }
+
+procedure TSynGutterDefColorAttributesModifier.Init;
+begin
+  inherited Init;
+  Background := clHighLight;
+  Foreground := clHighLightText;
+  FrameColor := clNone;
+  FrameStyle := slsSolid;
+  FrameEdges := sfeAround;
+  InternalSaveDefaultValues;
+end;
+
 { TSynGutterPartBase }
 
 function TSynGutterPartBase.GetGutterParts: TSynGutterPartListBase;
@@ -677,12 +750,12 @@ begin
   Result := Gutter.CaretRow;
 end;
 
-procedure TSynGutterPartBase.SetMarkupInfo(const AValue: TSynSelectedColor);
+procedure TSynGutterPartBase.SetMarkupInfo(const AValue: TSynGutterColorAttributes);
 begin
   FMarkupInfo.Assign(AValue);
 end;
 
-procedure TSynGutterPartBase.SetMarkupInfoCurrentLine(AValue: TSynHighlighterAttributesModifier);
+procedure TSynGutterPartBase.SetMarkupInfoCurrentLine(AValue: TSynGutterColorAttributesModifier);
 begin
   if FMarkupInfoCurrentLine = AValue then Exit;
   FMarkupInfoCurrentLine.Assign(AValue);
@@ -823,17 +896,17 @@ begin
   if (AnOwner = nil) or not(AnOwner is TSynGutterPartListBase) then
     raise Exception.Create('Invalid Owner');
 
-  FMarkupInfo := TSynSelectedColor.Create;
+  FMarkupInfo := TSynGutterColorAttributes.Create;
   FMarkupInfo.Background := clBtnFace;
   FMarkupInfo.Foreground := clNone;
   FMarkupInfo.FrameColor := clNone;
 
-  FMarkupInfoCurrentLine := TSynHighlighterAttributesModifier.Create;
+  FMarkupInfoCurrentLine := TSynGutterDefColorAttributesModifier.Create;
   FMarkupInfoCurrentLine.Background := clNone;
   FMarkupInfoCurrentLine.Foreground := clNone;
   FMarkupInfoCurrentLine.FrameColor := clNone;
 
-  FMarkupInfoInternal := TSynSelectedColor.Create;
+  FMarkupInfoInternal := TLazEditTextAttributeModifier.Create;
   FMarkupInfoCurLineMerged := TSynSelectedColorMergeResult.Create;
 
   FMouseActions := CreateMouseActions;
@@ -844,8 +917,8 @@ begin
   FRightOffset := 0;
   Inherited Create(AnOwner); // Todo: Lock the DoChange from RegisterItem, and call DoChange at the end (after/in autosize)
 
-  FMarkupInfo.OnChange := @DoColorChanged;
-  FMarkupInfoCurrentLine.OnChange := @DoColorChanged;
+  FMarkupInfo.AddChangeHandler(@DoColorChanged);
+  FMarkupInfoCurrentLine.AddChangeHandler(@DoColorChanged);
   UpdateInternalColors;
 end;
 

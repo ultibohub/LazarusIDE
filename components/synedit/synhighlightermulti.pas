@@ -288,7 +288,7 @@ type
     FCurLineIndex, FLineLen: Integer;
     FTokenPos: integer;
     FTokenKind: integer;
-    FTokenAttr: TSynHighlighterAttributes;
+    FTokenAttr: TLazEditTextAttribute;
     FTokenAttrEx: TLazCustomEditTextAttribute;
     FRun: Integer;
     FRunSectionInfo: Array of TRunSectionInfo;
@@ -296,7 +296,7 @@ type
     function GetIdentChars: TSynIdentChars; override;
     function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes; override;
     function GetAttribCount: integer; override;
-    function GetAttribute(idx: integer): TSynHighlighterAttributes; override;
+    function GetAttribute(idx: integer): TLazEditTextAttribute; override;
     function GetSampleSource: string; override;
     procedure SetSampleSource(Value: string); override;
 
@@ -322,7 +322,7 @@ type
     function  GetEol: Boolean; override;
     function  GetToken: string; override;
     procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); override;
-    function  GetTokenAttribute: TSynHighlighterAttributes; override;
+    function  GetTokenAttribute: TLazEditTextAttribute; override;
     function  GetTokenAttributeEx: TLazCustomEditTextAttribute; override;
     function  GetTokenKind: integer; override;
     function  GetTokenPos: Integer; override; // 0-based
@@ -1267,8 +1267,7 @@ begin
     Inc(Result, DefaultHighlighter.AttrCount);
 end;
 
-function TSynMultiSyn.GetAttribute(
-  idx: integer): TSynHighlighterAttributes;
+function TSynMultiSyn.GetAttribute(idx: integer): TLazEditTextAttribute;
 var
   i, j: Integer;
 begin
@@ -1353,7 +1352,7 @@ begin
   end;
 end;
 
-function TSynMultiSyn.GetTokenAttribute: TSynHighlighterAttributes;
+function TSynMultiSyn.GetTokenAttribute: TLazEditTextAttribute;
 begin
   Result := FTokenAttr;
 end;
@@ -1874,7 +1873,7 @@ begin
   FEndExprScanner := TRegExpr.Create;
   fCaseSensitive := True;
   fMarkerAttri := TSynHighlighterAttributes.Create(@SYNS_AttrMarker, SYNS_XML_AttrMarker);
-  fMarkerAttri.OnChange := @MarkerAttriChanged;
+  fMarkerAttri.AddChangeHandler(@MarkerAttriChanged);
   MarkerAttri.Background := clYellow;
   MarkerAttri.Style := [fsBold];
   MarkerAttri.InternalSaveDefaultValues;

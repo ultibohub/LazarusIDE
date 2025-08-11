@@ -98,7 +98,7 @@ var
   HelpResult: TCodeHelpParseResult;
   Caret: TCodeXYPosition;
   CleanPos: LongInt;
-  BaseDir, PropDetails: String;
+  BaseDir: String;
 begin
   FBaseURL:='';
   FHTMLHint:='';
@@ -136,32 +136,18 @@ begin
       exit;
     end;
     if (Item.Tool.Scanner=nil) then exit;
-    //DebugLn(['TFPDocHintProvider.DoUpdateHint Src=',copy(Item.Tool.Src,Node.StartPos,30),' ',Node.DescAsString]);
-    
-    // search the position of the identifier, not the keyword
-    CleanPos:=Node.StartPos;
-    case Node.Desc of
-    ctnProcedure:
-      begin
-        Item.Tool.MoveCursorToProcName(Node,true);
-        CleanPos:=Item.Tool.CurPos.StartPos;
-      end;
-    ctnProperty:
-      begin
-        if Item.Tool.MoveCursorToPropName(Node) then
-          CleanPos:=Item.Tool.CurPos.StartPos;
-      end;
-    end;
+    //DebugLn(['TFPDocHintProvider.DoUpdateHint Src={',copy(Item.Tool.Src,Node.StartPos,30),'} ',Node.DescAsString]);
     
     // get help text
+    CleanPos:=Node.StartPos;
     if (not Item.Tool.CleanPosToCaret(CleanPos,Caret)) then begin
       DebugLn(['TFPDocHintProvider.DoUpdateHint FAILED CleanPosToCaret Tool=',Item.Tool.MainFilename,' CleanPos=',CleanPos,' SrcLen=',Item.Tool.SrcLen]);
       exit;
     end;
     //DebugLn(['TFPDocHintProvider.DoUpdateHint ',Item.Identifier,' ',Item.Tool.MainFilename,' ',Caret.Code.Filename,' ',Caret.X,',',Caret.Y]);
-    HelpResult:=CodeHelpBoss.GetHTMLHint(Caret.Code,Caret.X,Caret.Y,
+    HelpResult:=CodeHelpBoss.GetHTMLHintForNode(Item.Tool,Node,Caret,
                                     [chhoDeclarationHeader,chhoComments],
-                                    FBaseURL,FHTMLHint,PropDetails,CacheWasUsed);
+                                    FBaseURL,FHTMLHint,CacheWasUsed);
     if HelpResult<>chprSuccess then begin
       DebugLn(['TFPDocHintProvider.DoUpdateHint FAILED Identifier=',Item.Identifier]);
       exit;

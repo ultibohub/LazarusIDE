@@ -66,7 +66,8 @@ uses
   SynEdit,
   SynEditHighlighter,
   SynUniHighlighter,
-  synunistrconst;
+  synunistrconst,
+  LazEditTextAttributes;
 
 type
   TNodeText = String;
@@ -111,7 +112,7 @@ type
     ////TL replaced out prefix procedure CreatePanel(out comp: TPanel; Parent: TWinControl; left, top, width, height: integer);
     procedure CreatePanel(var comp: TPanel; Parent: TWinControl; left, top, width, height: integer);
     function GetNodeType(Node: TTreeNode): TNodeType;
-    procedure SetDefaultAttributes(Attr: TSynHighlighterAttributes);
+    procedure SetDefaultAttributes(Attr: TLazEditTextAttribute);
     procedure SetDefaultRangeAttr(R: TSynRange);
     procedure DoAddKeyword(Sender: TObject);
     procedure AddingKeyWord(Node: TTreeNode);
@@ -937,7 +938,7 @@ begin
       memo.Lines.Add(SampleMemo.SelText);
 end;
 
-Procedure TSynUniDesigner.SetDefaultAttributes(Attr:TSynHighlighterAttributes);
+Procedure TSynUniDesigner.SetDefaultAttributes(Attr:TLazEditTextAttribute);
 begin
   Attr.Background:=clWhite;
   Attr.Foreground:=clBlack;

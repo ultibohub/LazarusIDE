@@ -29,7 +29,7 @@ interface
 uses
   SysUtils, Classes, Controls, Graphics, Menus, LCLIntf,
   SynGutterBase, SynEditMiscProcs, SynEditFoldedView, SynEditMouseCmds,
-  SynEditHighlighterFoldBase, SynEditMiscClasses, LazSynEditText, LCLType,
+  SynEditHighlighterFoldBase, SynEditMiscClasses, LazSynEditText, LazEditTextAttributes, LCLType,
   ImgList, Forms;
 
 type
@@ -78,7 +78,8 @@ type
       aCount: Integer);
     procedure DoIncPaintLock(Sender: TObject);
   private
-    FMarkupInfoCurrentFold, FMarkupInfoCurrentFoldInternal: TSynSelectedColor;
+    FMarkupInfoCurrentFold: TSynGutterColorAttributes;
+    FMarkupInfoCurrentFoldInternal: TLazEditTextAttribute;
     FMouseActionsCollapsed: TSynEditMouseInternalActions;
     FMouseActionsExpanded: TSynEditMouseInternalActions;
     FPopUp: TPopupMenu;
@@ -91,7 +92,7 @@ type
     function GetFoldView: TSynEditFoldedView;
     function GetMouseActionsCollapsed: TSynEditMouseActions;
     function GetMouseActionsExpanded: TSynEditMouseActions;
-    procedure SetMarkupInfoCurrentFold(AValue: TSynSelectedColor);
+    procedure SetMarkupInfoCurrentFold(AValue: TSynGutterColorAttributes);
     procedure SetMouseActionsCollapsed(const AValue: TSynEditMouseActions);
     procedure SetMouseActionsExpanded(const AValue: TSynEditMouseActions);
     function  FoldTypeForLine(AScreenLine: Integer): TSynEditFoldLineCapability;
@@ -132,7 +133,7 @@ type
   published
     property MarkupInfo;
     property MarkupInfoCurrentLine;
-    property MarkupInfoCurrentFold: TSynSelectedColor read FMarkupInfoCurrentFold write SetMarkupInfoCurrentFold;
+    property MarkupInfoCurrentFold: TSynGutterColorAttributes read FMarkupInfoCurrentFold write SetMarkupInfoCurrentFold;
     property MouseActionsExpanded: TSynEditMouseActions
       read GetMouseActionsExpanded write SetMouseActionsExpanded;
     property MouseActionsCollapsed: TSynEditMouseActions
@@ -165,7 +166,7 @@ begin
 end;
 
 procedure TSynGutterCodeFolding.SetMarkupInfoCurrentFold(
-  AValue: TSynSelectedColor);
+  AValue: TSynGutterColorAttributes);
 begin
   FMarkupInfoCurrentFold.Assign(AValue);
 end;
@@ -455,8 +456,8 @@ begin
   FReversePopMenuOrder := true;
   FMouseActionsExpanded := TSynEditMouseActionsGutterFoldExpanded.Create(self);
   FMouseActionsCollapsed := TSynEditMouseActionsGutterFoldCollapsed.Create(self);
-  FMarkupInfoCurrentFold := TSynSelectedColor.Create;
-  FMarkupInfoCurrentFoldInternal := TSynSelectedColor.Create;
+  FMarkupInfoCurrentFold := TSynGutterColorAttributes.Create;
+  FMarkupInfoCurrentFoldInternal := TLazEditTextAttribute.Create;
   FInnerFoldCaretY := -1;
   FInnerFoldStart := -1;
 
@@ -470,7 +471,7 @@ begin
   ViewedTextBuffer.AddChangeHandler(senrHighlightChanged, @DoHighlightChanged);
   ViewedTextBuffer.AddNotifyHandler(senrBeforeDecPaintLock, @DoIncPaintLock);
   ViewedTextBuffer.AddNotifyHandler(senrAfterDecPaintLock, @DoDecPaintLock);
-  FMarkupInfoCurrentFold.OnChange := @ColorChanged;
+  FMarkupInfoCurrentFold.AddChangeHandler(@ColorChanged);
   UpdateInternalColors;
 end;
 
@@ -886,7 +887,7 @@ var
   rcCodeFold: TRect;
   tmp: TSynEditFoldLineCapability;
   LineHeight, TextHeight, LineOffset, HalfBoxSize, aRow: Integer;
-  CurMarkUp: TSynSelectedColor;
+  CurMarkUp: TLazEditTextAttribute;
 
   procedure DrawNodeBox(rcCodeFold: TRect; NodeType: TSynEditFoldLineCapability);
   var

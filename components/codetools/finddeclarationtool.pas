@@ -379,7 +379,7 @@ type
   { TExpressionType is used for compatibility check
     A compatibility check is done by comparing two TExpressionType
 
-    if Desc = xtConstSet, SubDesc contains the type of the set
+    if Desc = xtConstSet, SubDesc contains the element type of the set
     if Context.Node<>nil, it contains the corresponding codetree node
     if Desc = xtPointer then SubDesc contains the type e.g. xtChar
   }
@@ -718,7 +718,8 @@ type
   // flags for FindReferences
   TFindRefsFlag = (
     frfMethodOverrides, // continue search on method overrides
-    frfIncludingLFM     // find references in LFM files
+    frfIncludingLFM,    // find references in LFM files
+    frfRename           // for rename
     );
   TFindRefsFlags = set of TFindRefsFlag;
 
@@ -1665,25 +1666,36 @@ function TTypeAliasOrderList.Compare(const Operand1,
   ): TOperand;
 var
   xCompRes: Integer;
+  aLeft, aRight, NewLeft, NewRight: String;
 begin
   // first check if one of the operands is a constant -> if yes, automatically
   // return the other
   // (x := f + 1; should return always type of f)
+  //debugln(['TTypeAliasOrderList.Compare Oper1=',ExprTypeToString(Operand1.Expr),' Oper2=',ExprTypeToString(Operand2.Expr)]);
   if (Operand1.Expr.Desc in xtAllConstTypes) and not (Operand2.Expr.Desc in xtAllConstTypes) then
     Exit(Operand2)
   else
   if (Operand2.Expr.Desc in xtAllConstTypes) and not (Operand1.Expr.Desc in xtAllConstTypes) then
     Exit(Operand1);
 
+  aLeft:=Tool.FindExprTypeAsString(Operand1.Expr, CleanPos, nil);
+  aRight:=Tool.FindExprTypeAsString(Operand2.Expr, CleanPos, nil);
+
   // then compare base types
-  xCompRes := Compare(
-    Tool.FindExprTypeAsString(Operand1.Expr, CleanPos, nil),
-    Tool.FindExprTypeAsString(Operand2.Expr, CleanPos, nil));
+  xCompRes := Compare(aLeft,aRight);
   // if base types are same, compare aliases
-  if xCompRes = 0 then
-    xCompRes := Compare(
-      Tool.FindExprTypeAsString(Operand1.Expr, CleanPos, @Operand1.AliasType),
-      Tool.FindExprTypeAsString(Operand2.Expr, CleanPos, @Operand2.AliasType));
+  if xCompRes = 0 then begin
+    if Operand1.AliasType.Node<>nil then
+      NewLeft:=Tool.FindExprTypeAsString(Operand1.Expr, CleanPos, @Operand1.AliasType)
+    else
+      NewLeft:=aLeft;
+    if Operand2.AliasType.Node<>nil then
+      NewRight:=Tool.FindExprTypeAsString(Operand2.Expr, CleanPos, @Operand2.AliasType)
+    else
+      NewRight:=aRight;
+    if (aLeft<>NewLeft) or (aRight<>NewRight) then
+      xCompRes := Compare(NewLeft,NewRight);
+  end;
   if xCompRes > 0 then
     Result := Operand2
   else
@@ -2217,13 +2229,13 @@ var
     dbgout([' CodePos=',CodePos,' LinkIndex=',LinkIndex]);
     if LinkIndex>=0 then begin
       Link:=Scanner.Links[LinkIndex];
-      dbgout([',CleanedPos=',Link.CleanedPos,',Size=',Scanner.LinkSize(LinkIndex),',SrcPos=',Link.SrcPos,',Kind=',dbgs(Link.Kind),',CodeSame=',Link.Code=Pointer(CursorPos.Code)]);
+      dbgout([',CleanedPos=',Link.CleanedPos,',Size=',Scanner.LinkSize(LinkIndex),',SrcPos=',Link.SrcPos,',Kind=',dbgs(Link.Kind),',CodeSame=',Link.Code=CursorPos.Code]);
     end else begin
       dbgout([' LinkCount=',Scanner.LinkCount]);
       i:=0;
       while (i<Scanner.LinkCount-1) do begin
         Link:=Scanner.Links[i];
-        if Link.Code=Pointer(CursorPos.Code) then begin
+        if Link.Code=CursorPos.Code then begin
           if LinkIndex<0 then
             dbgout([', First Link of Code: ID=',i,',CleanedPos=',Link.CleanedPos,',Size=',Scanner.LinkSize(i),',SrcPos=',Link.SrcPos,',Kind=',dbgs(Link.Kind)]);
           LinkIndex:=i;
@@ -3552,6 +3564,8 @@ begin
 
     if Node.Desc = ctnGenericName then
       Node := Node.Parent;
+    if Node.Desc in AllPascalTypes then
+      Node := Node.Parent;
     case Node.Desc of
     ctnIdentifier:
       if Assigned(Node.Parent) and (Node.Parent.Desc = ctnProcedureHead) then
@@ -3698,9 +3712,6 @@ begin
 
     ctnProcedure,ctnProcedureHead:
       begin
-
-        // ToDo: ppu, dcu files
-
         Result+=ExtractProcHead(Node,
           [phpAddClassName,phpWithStart,phpWithVarModifiers,phpWithParameterNames,
            phpWithDefaultValues,phpWithResultType,phpWithOfObject,phpCommentsToSpace]);
@@ -3709,9 +3720,6 @@ begin
     ctnProperty,ctnGlobalProperty:
       begin
         IdentNode:=Node;
-
-        // ToDo: ppu, dcu files
-
         Result+='property ';
         MoveCursorToNodeStart(IdentNode);
         ReadNextAtom;
@@ -3759,9 +3767,6 @@ begin
     ctnProgram,ctnUnit,ctnPackage,ctnLibrary:
       begin
         IdentNode:=Node;
-
-        // ToDo: ppu, dcu files
-
         MoveCursorToNodeStart(IdentNode);
         ReadNextAtom;
         if (IdentNode.Desc=ctnProgram) and not UpAtomIs('PROGRAM') then begin
@@ -9213,6 +9218,7 @@ begin
   repeat
     // read operand
     CurExprType:=ReadOperandTypeAtCursor(Params,EndPos,CurAliasType);
+    // cursor is now on next atom, i.e. the operator
     {$IFDEF ShowExprEval}
     DebugLn(['[TFindDeclarationTool.FindExpressionResultType] Operand: ',
       ExprTypeToString(CurExprType),' Alias=',FindContextToString(CurAliasType)]);
@@ -9229,8 +9235,7 @@ begin
       StackEntry^.Operand.AliasType:=CleanFindContext;
     StackEntry^.theOperator.StartPos:=-1;
     StackEntry^.OperatorLvl:=5;
-    // read operator
-    ReadNextAtom;
+    // check operator
     {$IFDEF ShowExprEval}
     DebugLn('[TFindDeclarationTool.FindExpressionResultType] Operator: ',
       GetAtom,' CurPos.EndPos=',dbgs(CurPos.EndPos),' EndPos=',dbgs(EndPos));
@@ -11577,8 +11582,6 @@ begin
       // range type -> convert to special expression type
       // for example: type c = 1..3;
 
-      // ToDo: ppu, dcu files
-
       Tool.MoveCursorToNodeStart(Node);
 
       // ToDo: check for cycles
@@ -11587,15 +11590,12 @@ begin
       Params.ContextNode:=Node;
       Result:=Tool.ReadOperandTypeAtCursor(Params,-1,CurAliasType);
       Params.Load(OldInput,true);
-      Result.Context:=CreateFindContext(Tool,Node);
     end;
     
   ctnConstDefinition:
     begin
       // const -> convert to special expression type
       // for example: const a: integer = 3;
-
-      // ToDo: ppu, dcu files
 
       Tool.MoveCursorToNodeStart(Node);
 
@@ -11611,14 +11611,10 @@ begin
       Params.ContextNode:=Node;
       Result:=Tool.ReadOperandTypeAtCursor(Params,-1,CurAliasType);
       Params.Load(OldInput,true);
-      Result.Context:=CreateFindContext(Tool,Node);
     end;
     
   ctnIdentifier:
     begin
-
-      // ToDo: ppu, dcu files
-
       Tool.MoveCursorToNodeStart(Node);
       Tool.ReadNextAtom;
       ConvertIdentifierAtCursor(Tool);
@@ -11626,9 +11622,6 @@ begin
     
   ctnProperty,ctnGlobalProperty:
     begin
-
-      // ToDo: ppu, dcu files
-
       if Tool.MoveCursorToPropType(Node) then
         ConvertIdentifierAtCursor(Tool);
     end;
@@ -11636,15 +11629,11 @@ begin
   ctnConstant:
     begin
       // for example: const a = 3;
-
-      // ToDo: ppu, dcu files
-
       Tool.MoveCursorToNodeStart(Node);
       Params.Save(OldInput);
       Params.ContextNode:=Node;
-      Result:=Tool.ReadOperandTypeAtCursor(Params,-1,CurAliasType);
+      Result:=Tool.ReadOperandTypeAtCursor(Params,Node.EndPos,CurAliasType);
       Params.Load(OldInput,true);
-      Result.Context:=CreateFindContext(Tool,Node);
     end;
   end;
 
@@ -11669,28 +11658,44 @@ var EndPos, SubStartPos: integer;
       RaiseExceptionFmt(20170421200607,ctsStrExpectedButAtomFound,[ctsConstant,GetAtom]);
     end;
   
+  var
+    aNode: TCodeTreeNode;
+    LastAtom: TAtomPosition;
   begin
     // 'set' constant
     SubStartPos:=CurPos.StartPos;
     ReadNextAtom;
-    if not AtomIsChar(']') then begin
-      Result:=ReadOperandTypeAtCursor(Params);
+    if CurPos.Flag=cafEdgedBracketClose then begin
+      // empty set '[]'
+      Result.Desc:=xtNone;
+      ReadNextAtom;
+    end else begin
+      Result:=ReadOperandTypeAtCursor(Params,MaxEndPos);
+      if CurPos.Flag=cafEdgedBracketClose then
+        ReadNextAtom;
+      if (Result.Desc=xtContext) then begin
+        aNode:=Result.Context.Node;
+        if aNode.Desc in [ctnEnumIdentifier,ctnEnumerationType] then begin
+          // [enum] -> search Set of enum
+          LastAtom:=CurPos;
+          aNode:=Result.Context.Tool.FindSetOfEnumerationType(aNode);
+          MoveCursorToAtomPos(LastAtom);
+          if aNode<>nil then begin
+            Result.Context.Node:=aNode;
+            exit;
+          end;
+        end;
+      end;
+
       {$IFDEF ShowExprEval}
       DebugLn('[TFindDeclarationTool.ReadOperandTypeAtCursor] Set of ',
       ExpressionTypeDescNames[Result.Desc]);
       if Result.Desc=xtContext then
         DebugLn('  Result.Context.Node=',Result.Context.Node.DescAsString);
       {$ENDIF}
-    end else begin
-      // empty set '[]'
-      Result.Desc:=xtNone;
     end;
     Result.SubDesc:=Result.Desc;
     Result.Desc:=xtConstSet;
-    MoveCursorToCleanPos(SubStartPos);
-    ReadNextAtom;
-    ReadTilBracketClose(true);
-    MoveCursorToCleanPos(CurPos.EndPos);
   end;
   
   procedure RaiseIdentExpected;
@@ -11706,7 +11711,10 @@ begin
   if AliasType<>nil then
     AliasType^:=CleanFindContext;
 
-  if CurPos.StartPos=CurPos.EndPos then ReadNextAtom;
+  if CurPos.StartPos=CurPos.EndPos then
+    ReadNextAtom;
+  if MaxEndPos<0 then MaxEndPos:=SrcLen;
+
   // read unary operators which have no effect on the type: +, -, not
   while AtomIsChar('+') or AtomIsChar('-') or UpAtomIs('NOT') do
     ReadNextAtom;
@@ -11731,6 +11739,7 @@ begin
     Result:=FindExpressionTypeOfTerm(SubStartPos,EndPos,Params,true,AliasType);
     Params.Flags:=OldFlags;
     MoveCursorToCleanPos(EndPos);
+    ReadNextAtom;
   end
   else if UpAtomIs('NIL') then begin
     Result.Desc:=xtNil;
@@ -11747,6 +11756,7 @@ begin
       Result.Desc:=xtConstString;
     MoveCursorToCleanPos(CurPos.StartPos);
     ReadAsStringConstant;
+    ReadNextAtom;
   end
   else if AtomIsNumber then begin
     // ordinal or real constant
@@ -11754,7 +11764,7 @@ begin
       Result.Desc:=xtConstReal
     else
       Result.Desc:=xtConstOrdInteger;
-    MoveCursorToCleanPos(CurPos.EndPos);
+    ReadNextAtom;
   end
   else if AtomIsChar('@') then begin
     // a simple pointer or a PChar or an event
@@ -11769,6 +11779,7 @@ begin
       Result:=FindExpressionTypeOfTerm(SubStartPos,EndPos,Params,true,AliasType);
       Params.Flags:=OldFlags;
       MoveCursorToCleanPos(EndPos);
+      ReadNextAtom;
     end else begin
       MoveCursorToCleanPos(CurPos.StartPos);
       Result:=ReadOperandTypeAtCursor(Params);
@@ -11959,6 +11970,16 @@ begin
   {$IFDEF CheckNodeTool}
   CheckNodeTool(Node);
   {$ENDIF}
+  if Node.Desc=ctnEnumIdentifier then
+    Node:=Node.Parent;
+  if Node.Desc=ctnEnumerationType then begin
+    // return enum type
+    Result.Desc:=xtContext;
+    Result.Context.Tool:=Self;
+    Result.Context.Node:=Node;
+    exit;
+  end;
+
   MoveCursorToNodeStart(Node);
   ReadNextAtom;
   if CurPos.Flag<>cafEdgedBracketOpen then
@@ -12066,21 +12087,22 @@ begin
                           ['char',ExpressionTypeDescNames[RightOperand.Expr.Desc]]);
       end;
     end else if (Src[BinaryOperator.StartPos] in ['+','-','*'])
-    and (LeftOperand.Expr.Desc=xtContext)
-    and (LeftOperand.Expr.Context.Node<>nil)
-    and (LeftOperand.Expr.Context.Node.Desc=ctnSetType)
+        and (LeftOperand.Expr.Desc=xtContext)
+        and (LeftOperand.Expr.Context.Node<>nil)
+        and (LeftOperand.Expr.Context.Node.Desc=ctnSetType)
     then begin
       Result:=LeftOperand;
     end else begin
       if (LeftOperand.Expr.Desc in xtAllRealTypes)
-      or (RightOperand.Expr.Desc in xtAllRealTypes) then
+          or (RightOperand.Expr.Desc in xtAllRealTypes)
+      then
         Result:=RealTypesOrderList.Compare(LeftOperand, RightOperand, Self, BinaryOperator.EndPos)
       else if (LeftOperand.Expr.Desc=xtPointer)
-      or (RightOperand.Expr.Desc=xtPointer)
-      or ((LeftOperand.Expr.Desc=xtContext)
-        and (LeftOperand.Expr.Context.Node.Desc=ctnPointerType))
-      or ((RightOperand.Expr.Desc=xtContext)
-        and (RightOperand.Expr.Context.Node.Desc=ctnPointerType))
+          or (RightOperand.Expr.Desc=xtPointer)
+          or ((LeftOperand.Expr.Desc=xtContext)
+            and (LeftOperand.Expr.Context.Node.Desc=ctnPointerType))
+          or ((RightOperand.Expr.Desc=xtContext)
+            and (RightOperand.Expr.Context.Node.Desc=ctnPointerType))
       then
         Result.Expr.Desc:=xtPointer
       else
@@ -13196,14 +13218,16 @@ begin
       Result:=tcCompatible
     else if (TargetType.Desc=xtContext) then begin
       TargetNode:=TargetType.Context.Node;
-      if ((TargetNode.Desc in (AllClasses+[ctnProcedure]))
-        and (ExpressionType.Desc=xtNil))
-      or ((TargetNode.Desc in [ctnOpenArrayType,ctnRangedArrayType])
-        and (TargetNode.LastChild<>nil)
-        and (TargetNode.LastChild.Desc=ctnOfConstType)
-        and (ExpressionType.Desc=xtConstSet))
+      if (TargetNode.Desc in (AllClasses+[ctnProcedure]))
+          and (ExpressionType.Desc=xtNil)
       then
         Result:=tcCompatible
+      else if (TargetNode.Desc in [ctnOpenArrayType,ctnRangedArrayType])
+        and (TargetNode.LastChild<>nil)
+        and (TargetNode.LastChild.Desc=ctnOfConstType)
+        and (ExpressionType.Desc=xtConstSet)
+      then
+        Result:=tcCompatible;
     end
     else if (ExpressionType.Desc=xtContext) then begin
       ExprNode:=ExpressionType.Context.Node;
@@ -14246,7 +14270,7 @@ function TFindDeclarationTool.FindForInTypeAsString(TermPos: TAtomPosition;
         debugln(['  ResolveExpr ConstSet Element: ',ExprTypeToString(SubExprType)]);
         {$ENDIF}
         if SubExprType.Desc=xtConstSet then
-          RaiseTermHasNoIterator(20170421211222,SubExprType);
+          RaiseTermHasNoIterator(20170421211223,SubExprType);
         ResolveExpr(SubExprType);
         end;
     else
@@ -15047,7 +15071,8 @@ begin
       Result:=ExpressionTypeDescNames[xtExtended];
     xtConstSet:
       begin
-        // eventually try to find the 'set of ' type
+        DebugLn('TFindDeclarationTool.FindExprTypeAsString ExprType=',
+          ExprTypeToString(ExprType),' Alias=',FindContextToString(AliasType));
         RaiseTermNotSimple(20170421204658);
       end;
     xtConstBoolean:

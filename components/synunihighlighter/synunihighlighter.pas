@@ -53,7 +53,7 @@ uses
   Classes, SysUtils,
   Graphics,
   GraphType, FileUtil,
-  SynEditTypes, SynEditHighlighter;
+  SynEditTypes, SynEditHighlighter, LazEditTextAttributes;
 
 Const
   _Root='Root';
@@ -336,7 +336,7 @@ type
     ////TL Added the following 3 lines... and the implementation procedure
     procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); override; ////TL: Added 2003-06-11
 
-    function GetTokenAttribute: TSynHighlighterAttributes; override;
+    function GetTokenAttribute: TLazEditTextAttribute; override;
     function GetTokenID: Integer;
     function GetTokenKind: integer; override;
     function GetTokenPos: Integer; override;
@@ -1718,7 +1718,7 @@ begin
   Result :=1;// CODE_REVIEW fCurrToken.ID;
 end;
 
-function TSynUniSyn.GetTokenAttribute: TSynHighlighterAttributes;
+function TSynUniSyn.GetTokenAttribute: TLazEditTextAttribute;
 begin
  Result:=fCurrToken.Attr;
 end;
