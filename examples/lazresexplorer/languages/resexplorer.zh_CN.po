@@ -24,13 +24,13 @@ msgstr "所有文件 (*.*)|*.*|可执行文件 (*.exe)|*.exe|DLL (*.dll)|*.dll"
 msgid "All files (*)|*|Shared libraries (*.so)|*.so"
 msgstr "所有文件 (*)|*|共享库 (*.so)|*.so"
 
+#: reconstsunit.sbinary
+msgid "Binary view"
+msgstr ""
+
 #: reconstsunit.sbuilddate
 msgid "Build date: "
 msgstr "构建日期："
-
-#: reconstsunit.scarbonwidgetset
-msgid "Carbon widget set"
-msgstr "Carbon 组件集"
 
 #: reconstsunit.sexit
 msgid "Exit"
@@ -44,17 +44,9 @@ msgstr "文件"
 msgid "FPC version: "
 msgstr "FPC 版本："
 
-#: reconstsunit.sfpguiwidgetset
-msgid "FpGUI widget set"
-msgstr "FpGUI 组件集"
-
-#: reconstsunit.sgtk2widgetset
-msgid "GTK 2 widget set"
-msgstr "GTK 2 组件集"
-
-#: reconstsunit.sgtkwidgetset
-msgid "GTK widget set"
-msgstr "GTK 组件集"
+#: reconstsunit.sheight
+msgid "Height:"
+msgstr ""
 
 #: reconstsunit.shelp
 msgid "Help"
@@ -64,6 +56,15 @@ msgstr "帮助"
 msgid "Image"
 msgstr "图片"
 
+#: reconstsunit.simageindex
+msgid "Image index:"
+msgstr ""
+
+#: reconstsunit.sindexofcount
+#, object-pascal-format
+msgid "%d of %d"
+msgstr ""
+
 #: reconstsunit.slclversion
 msgid "LCL Version: "
 msgstr "LCL 版本："
@@ -72,17 +73,27 @@ msgstr "LCL 版本："
 msgid "This program is free software under GNU GPL 2 license, see COPYING file"
 msgstr "本程序是 GNU GPL 2 许可下的自由软件，参见 COPYING 文件"
 
+#: reconstsunit.snextimage
+msgid "Next image"
+msgstr ""
+
 #: reconstsunit.sopen
 msgid "Open ..."
 msgstr "打开..."
 
 #: reconstsunit.sotherguiwidgetset
-msgid "Other gui"
+#, fuzzy
+#| msgid "Other gui"
+msgid "Other GUI"
 msgstr "其他图形界面"
 
-#: reconstsunit.sqtwidgetset
-msgid "QT widget set"
-msgstr "QT 组件集"
+#: reconstsunit.spixelformat
+msgid "Pixel format:"
+msgstr ""
+
+#: reconstsunit.sprevimage
+msgid "Previous image"
+msgstr ""
 
 #: reconstsunit.sresourceexplorer
 msgid "Resource explorer"
@@ -108,11 +119,12 @@ msgstr "目标 CPU:"
 msgid "Target OS: "
 msgstr "目标操作系统："
 
-#: reconstsunit.swin32_64widgetset
-msgid "Win32/Win64 widget set"
-msgstr "Win32/Win64 组件集"
+#: reconstsunit.swidgetset
+#, object-pascal-format
+msgid "%s widget set"
+msgstr ""
 
-#: reconstsunit.swincewidgetset
-msgid "WinCE widget set"
-msgstr "WinCE 组件集"
+#: reconstsunit.swidth
+msgid "Width:"
+msgstr ""
 

@@ -24,15 +24,15 @@ msgstr ""
 msgid "All files (*)|*|Shared libraries (*.so)|*.so"
 msgstr ""
 
+#: reconstsunit.sbinary
+msgid "Binary view"
+msgstr ""
+
 #: reconstsunit.sbuilddate
 #, fuzzy
 #| msgid "Build date : "
 msgid "Build date: "
 msgstr "Datum sestavení : "
-
-#: reconstsunit.scarbonwidgetset
-msgid "Carbon widget set"
-msgstr "Sada widgetů Carbon"
 
 #: reconstsunit.sexit
 msgid "Exit"
@@ -48,17 +48,9 @@ msgstr "Soubor"
 msgid "FPC version: "
 msgstr "Verze FPC : "
 
-#: reconstsunit.sfpguiwidgetset
-msgid "FpGUI widget set"
-msgstr "Sada widgetů FpGUI"
-
-#: reconstsunit.sgtk2widgetset
-msgid "GTK 2 widget set"
-msgstr "Sada widgetů GTK 2"
-
-#: reconstsunit.sgtkwidgetset
-msgid "GTK widget set"
-msgstr "Sada widgetů GTK"
+#: reconstsunit.sheight
+msgid "Height:"
+msgstr ""
 
 #: reconstsunit.shelp
 msgid "Help"
@@ -68,6 +60,15 @@ msgstr "Nápověda"
 msgid "Image"
 msgstr "Obrázek"
 
+#: reconstsunit.simageindex
+msgid "Image index:"
+msgstr ""
+
+#: reconstsunit.sindexofcount
+#, object-pascal-format
+msgid "%d of %d"
+msgstr ""
+
 #: reconstsunit.slclversion
 msgid "LCL Version: "
 msgstr "Verze LCL: "
@@ -76,6 +77,10 @@ msgstr "Verze LCL: "
 msgid "This program is free software under GNU GPL 2 license, see COPYING file"
 msgstr "Tento program je svobodný software pod licencí GNU GPL 2, podívejte se do souboru COPYING"
 
+#: reconstsunit.snextimage
+msgid "Next image"
+msgstr ""
+
 #: reconstsunit.sopen
 #, fuzzy
 #| msgid "Open..."
@@ -83,12 +88,18 @@ msgid "Open ..."
 msgstr "Otevřít..."
 
 #: reconstsunit.sotherguiwidgetset
-msgid "Other gui"
+#, fuzzy
+#| msgid "Other gui"
+msgid "Other GUI"
 msgstr "Jiné GUI"
 
-#: reconstsunit.sqtwidgetset
-msgid "QT widget set"
-msgstr "Sada widgetů QT"
+#: reconstsunit.spixelformat
+msgid "Pixel format:"
+msgstr ""
+
+#: reconstsunit.sprevimage
+msgid "Previous image"
+msgstr ""
 
 #: reconstsunit.sresourceexplorer
 msgid "Resource explorer"
@@ -120,11 +131,12 @@ msgstr "Cílový CPU : "
 msgid "Target OS: "
 msgstr "Cílový OS : "
 
-#: reconstsunit.swin32_64widgetset
-msgid "Win32/Win64 widget set"
-msgstr "Sada widgetů Win32/Win64"
+#: reconstsunit.swidgetset
+#, object-pascal-format
+msgid "%s widget set"
+msgstr ""
 
-#: reconstsunit.swincewidgetset
-msgid "WinCE widget set"
-msgstr "Sada widgetů WinCE"
+#: reconstsunit.swidth
+msgid "Width:"
+msgstr ""
 

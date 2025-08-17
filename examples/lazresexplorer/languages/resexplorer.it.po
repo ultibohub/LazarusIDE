@@ -25,13 +25,13 @@ msgstr "Tutti i file (*.*)|*.*|File eseguibili (*.exe)|*.exe|DLL (*.dll)|*.dll"
 msgid "All files (*)|*|Shared libraries (*.so)|*.so"
 msgstr "Tutti i file (*)|*|Librerie condivise (*.so)|*.so"
 
+#: reconstsunit.sbinary
+msgid "Binary view"
+msgstr ""
+
 #: reconstsunit.sbuilddate
 msgid "Build date: "
 msgstr "Data di compilazione:"
-
-#: reconstsunit.scarbonwidgetset
-msgid "Carbon widget set"
-msgstr "Set di widget Carbon"
 
 #: reconstsunit.sexit
 msgid "Exit"
@@ -45,17 +45,9 @@ msgstr "File"
 msgid "FPC version: "
 msgstr "Versione FPC: "
 
-#: reconstsunit.sfpguiwidgetset
-msgid "FpGUI widget set"
-msgstr "Set di widget FpGUI"
-
-#: reconstsunit.sgtk2widgetset
-msgid "GTK 2 widget set"
-msgstr "Set di widget GTK 2"
-
-#: reconstsunit.sgtkwidgetset
-msgid "GTK widget set"
-msgstr "Set di widget GTK"
+#: reconstsunit.sheight
+msgid "Height:"
+msgstr ""
 
 #: reconstsunit.shelp
 msgid "Help"
@@ -65,6 +57,15 @@ msgstr "Aiuto"
 msgid "Image"
 msgstr "Immagine"
 
+#: reconstsunit.simageindex
+msgid "Image index:"
+msgstr ""
+
+#: reconstsunit.sindexofcount
+#, object-pascal-format
+msgid "%d of %d"
+msgstr ""
+
 #: reconstsunit.slclversion
 msgid "LCL Version: "
 msgstr "Versione LCL: "
@@ -73,17 +74,27 @@ msgstr "Versione LCL: "
 msgid "This program is free software under GNU GPL 2 license, see COPYING file"
 msgstr "Questo programma è software libero distribuito sotto la licenza GNU GPL 2, vedi file COPYING"
 
+#: reconstsunit.snextimage
+msgid "Next image"
+msgstr ""
+
 #: reconstsunit.sopen
 msgid "Open ..."
 msgstr "Apri ..."
 
 #: reconstsunit.sotherguiwidgetset
-msgid "Other gui"
+#, fuzzy
+#| msgid "Other gui"
+msgid "Other GUI"
 msgstr "Altre gui"
 
-#: reconstsunit.sqtwidgetset
-msgid "QT widget set"
-msgstr "Set di widget QT"
+#: reconstsunit.spixelformat
+msgid "Pixel format:"
+msgstr ""
+
+#: reconstsunit.sprevimage
+msgid "Previous image"
+msgstr ""
 
 #: reconstsunit.sresourceexplorer
 msgid "Resource explorer"
@@ -109,11 +120,12 @@ msgstr "CPU di riferimento: "
 msgid "Target OS: "
 msgstr "SO di riferimento: "
 
-#: reconstsunit.swin32_64widgetset
-msgid "Win32/Win64 widget set"
-msgstr "Set di widget Win32/Win64"
+#: reconstsunit.swidgetset
+#, object-pascal-format
+msgid "%s widget set"
+msgstr ""
 
-#: reconstsunit.swincewidgetset
-msgid "WinCE widget set"
-msgstr "Set di widget WinCE"
+#: reconstsunit.swidth
+msgid "Width:"
+msgstr ""
 

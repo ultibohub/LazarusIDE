@@ -390,6 +390,7 @@ type
     FRaggedRight: Boolean;
     FScrollOpposite: Boolean;
     FShowTabs: Boolean;
+    FSwitchingToPageIndex: integer;
     FStyle: TTabStyle;
     FTabHeight: Smallint;
     FTabPosition: TTabPosition;
@@ -458,13 +459,14 @@ type
                                               write SetActivePageComponent;
     property ActivePage: String read GetActivePage write SetActivePage
                                                       stored IsStoredActivePage;
-  protected //elevated visibility for un/paged
+    property SwitchingToPageIndex: integer read FSwitchingToPageIndex;
+  protected // elevated visibility for un/paged
     function GetPage(AIndex: Integer): TCustomPage; virtual;
     function GetPageCount : integer; virtual;
     procedure InsertPage(APage: TCustomPage; Index: Integer); virtual;
     procedure RemovePage(Index: Integer); virtual;
     procedure MaybeSelectFirstControlOnPage(APage: TCustomPage) virtual;
-  //Delphi compatible properties
+    // Delphi compatible properties
     function CanChange: Boolean; virtual;
     property DisplayRect: TRect read GetDisplayRect;
     property Tabs: TStrings read FAccess write SetPages;
@@ -1635,7 +1637,6 @@ type
     function GetHitTestInfoAt(X, Y: Integer): THitTests;
     function GetItemAt(x,y: integer): TListItem;
 
-
     {GetNearestItem is used to locate a list item from a position specified in
      pixel coordinates relative to the top left corner of the list view.
      It starts looking at the position specified by the Point parameter,
@@ -1648,6 +1649,9 @@ type
      Only items in the state indicated by the States parameter are considered.
      If no item is found Nil is returned.}
     function GetNextItem(StartItem: TListItem; Direction: TSearchDirection; States: TListItemStates): TListItem;
+
+    {Returns True if it has, authoritivly, set AItem to the next selected Item. }
+    function GetNextSelected(LVIndex: integer; var AItem: TListItem): boolean;
 
     procedure ClearSelection;
     procedure SelectAll;

@@ -253,6 +253,7 @@ begin
   FImageListChangeLink.OnChange := @DoImageListChange;
   FImageListChangeLink.OnDestroyResolutionHandle := @DoImageListDestroyResolutionHandle;
   FPageIndex := -1;
+  FSwitchingToPageIndex := -3;
   ControlStyle := []; // do not add csAcceptsControls
   TabPosition := tpTop;
   TabStop := true;
@@ -401,9 +402,7 @@ function TCustomTabControl.PageToTabIndex(AIndex: integer): integer;
 var
   i: integer;
 begin
-(* Map LCL Page into widgetset Tab index.
-  Taken from TWin32WSCustomNotebook.GetPageRealIndex (modified)
-*)
+  // Map LCL Page into widgetset Tab index.
   if (AIndex < 0) or (AIndex >= PageCount) then
     exit(-1);
 
@@ -412,13 +411,13 @@ begin
     exit; //all pages are visible
 
   // it is possible to show pages without visible tabs, but then, no tab index
-  // can be sendet back, issue #21723
+  // can be sent back, issue #21723
   if not Page[AIndex].TabVisible then
     exit(-1);
 
   for i := 0 to AIndex - 1 do begin
     if not Page[i].TabVisible then
-      dec(Result); //exclude invisible page
+      dec(Result); // exclude invisible page
   end;
 end;
 
@@ -426,21 +425,18 @@ function TCustomTabControl.TabToPageIndex(AIndex: integer): integer;
 var
   I: integer;
 begin
-(* Map widgetset Tab index into LCL Page index.
-  Taken from win32 NotebookPageRealToLCLIndex
-*)
+  // Map widgetset Tab index into LCL Page index.
   Result := AIndex;
   if (csDesigning in ComponentState) then
-    exit; //all pages are visible
+    exit; // all pages are visible
   I := 0;
   while (I < PageCount) and (I <= Result) do
   begin
     if not Page[I].TabVisible then
-      Inc(Result); //insert invisible page
+      Inc(Result); // insert invisible page
     Inc(I);
   end;
 end;
-
 
 {------------------------------------------------------------------------------
   method TCustomTabControl DoCloseTabClicked
@@ -1118,6 +1114,7 @@ begin
     case NMHdr^.code of
       TCN_SELCHANGE:
         begin
+          FSwitchingToPageIndex := -7;
           // set the page from the NMHDR^.idfrom
           if (not FAddingPages) and not
              (csDestroyingHandle in ControlState) then
@@ -1126,7 +1123,7 @@ begin
             FPageIndex := PtrInt(NMHDR^.idfrom);
             if FPageIndex >= PageCount then
               FPageIndex := -1;
-            //debugln(['TCustomTabControl.CNNotify ',DbgSName(Self),' A Old=',OldPageIndex,' fPageIndex=',fPageIndex,' FLoadedPageIndex=',FLoadedPageIndex]);
+            //debugln(['TCustomTabControl.CNNotify ',DbgSName(Self),' A Old=',OldPageIndex,' fPageIndex=',fPageIndex]);
             //if PageIndex>=0 then DebugLn(['TCustomTabControl.CNNotify Page=',DbgSName(Page[PageIndex]),' Visible=',Page[PageIndex].Visible]);
             UpdateAllDesignerFlags;
             if ([csLoading,csDestroying]*ComponentState=[]) then
@@ -1140,15 +1137,19 @@ begin
               end;
             end;
           end;
+          //debugln('TCustomTabControl.CNNotify ',DbgSName(Self),' TCN_SELCHANGE ToPage=',IntToStr(FSwitchingToPageIndex));
         end;
       TCN_SELCHANGING:
         begin
-          if CanChangePageIndex and not
-          (csDestroyingHandle in ControlState) then
-            Result := 0
-          else
+          if CanChangePageIndex and not (csDestroyingHandle in ControlState) then
+          begin
+            Result := 0;
+            FSwitchingToPageIndex := NMHdr^.idFrom;
+          end else begin
             Result := 1;
-          //debugln('TCustomTabControl.CNNotify TCN_SELCHANGING Result=',dbgs(Result));
+            FSwitchingToPageIndex := -5;
+          end;
+          //debugln('TCustomTabControl.CNNotify ',DbgSName(Self),' TCN_SELCHANGING ToPage=',IntToStr(FSwitchingToPageIndex),' Result=',dbgs(Result));
         end;
     else
       begin

@@ -16,6 +16,7 @@ type
   private
     FControlsCode: TCodeBuffer;
     FLFMCode: TCodeBuffer;
+    FLFMTree: TLFMTree;
     FUnitCode: TCodeBuffer;
     FSources: TFPList; // list of TCodeBuffer
     procedure CodeToolBossFindDefineProperty(Sender: TObject; const PersistentClassName,
@@ -35,6 +36,8 @@ type
     destructor Destroy; override;
     procedure CheckLFM;
     procedure CheckLFMExpectedError(ErrorType: TLFMErrorType; const CursorPos: TCodeXYPosition; ErrorMsg: string);
+    function CheckHasProperty(const PropertyPath: string): TLFMPropertyNode;
+    function CheckPropertyType(const PropertyPath: string; ValueType: TLFMValueType): TLFMValueNode;
     procedure ParseLFM;
     procedure WriteSource(const CursorPos: TCodeXYPosition);
     property SourceCount: integer read GetSourceCount;
@@ -42,6 +45,7 @@ type
     property ControlsCode: TCodeBuffer read FControlsCode;
     property UnitCode: TCodeBuffer read FUnitCode;
     property LFMCode: TCodeBuffer read FLFMCode;
+    property LFMTree: TLFMTree read FLFMTree;
   end;
 
   { TTestLFMTrees }
@@ -54,6 +58,7 @@ type
     procedure LFM_RootUnitnameWrong;
     procedure LFM_ChildUnitnameWrong;
     procedure LFM_BinaryData;
+    procedure LFM_BinaryData_OddError;
     procedure LFM_Set;
     procedure LFM_List;
     procedure LFM_Collection;
@@ -92,6 +97,7 @@ procedure TCustomTestLFMTrees.SetUp;
 begin
   inherited SetUp;
   CodeToolBoss.OnFindDefineProperty:=@CodeToolBossFindDefineProperty;
+  FLFMTree:=nil;
 end;
 
 procedure TCustomTestLFMTrees.TearDown;
@@ -99,6 +105,7 @@ var
   i: Integer;
   Buf: TCodeBuffer;
 begin
+  FreeAndNil(FLFMTree);
   for i:=0 to FSources.Count-1 do begin
     Buf:=Sources[i];
     Buf.IsDeleted:=true;
@@ -219,90 +226,107 @@ end;
 
 procedure TCustomTestLFMTrees.CheckLFM;
 var
-  LFMTree: TLFMTree;
   LFMErr: TLFMError;
 begin
-  LFMTree:=nil;
-  try
-    if CodeToolBoss.CheckLFM(UnitCode,LFMCode,LFMTree,true,true,true) then
-      exit;
-    WriteSource(CodeXYPosition(CodeToolBoss.ErrorColumn,CodeToolBoss.ErrorLine,CodeToolBoss.ErrorCode));
-    if LFMTree<>nil then begin
-      LFMErr:=LFMTree.FirstError;
-      while LFMErr<>nil do begin
-        writeln('LFM Error: (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
-        LFMErr:=LFMErr.NextError;
-      end;
+  if CodeToolBoss.CheckLFM(UnitCode,LFMCode,FLFMTree,true,true,true) then
+    exit;
+  WriteSource(CodeXYPosition(CodeToolBoss.ErrorColumn,CodeToolBoss.ErrorLine,CodeToolBoss.ErrorCode));
+  if LFMTree<>nil then begin
+    LFMErr:=LFMTree.FirstError;
+    while LFMErr<>nil do begin
+      writeln('LFM Error: (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
+      LFMErr:=LFMErr.NextError;
     end;
-    Fail('CheckLFM error "'+CodeToolBoss.ErrorMessage+'"');
-  finally
-    LFMTree.Free;
   end;
+  Fail('CheckLFM error "'+CodeToolBoss.ErrorMessage+'"');
 end;
 
 procedure TCustomTestLFMTrees.CheckLFMExpectedError(ErrorType: TLFMErrorType;
   const CursorPos: TCodeXYPosition; ErrorMsg: string);
 var
-  LFMTree: TLFMTree;
   LFMErr: TLFMError;
 begin
-  LFMTree:=nil;
-  try
-    if CodeToolBoss.CheckLFM(UnitCode,LFMCode,LFMTree,true,true,true) then begin
-      WriteSource(CursorPos);
-      Fail('TCustomTestLFMTrees.CheckLFMParseError Missing '+LFMErrorTypeNames[ErrorType]+': '+CursorPos.Code.Filename+'('+IntToStr(CursorPos.Y)+','+IntToStr(CursorPos.X)+'): '+ErrorMsg);
-    end;
-    if LFMTree=nil then begin
-      WriteSource(CursorPos);
-      Fail('missing LFMTree');
-    end;
-    LFMErr:=LFMTree.FirstError;
-    while LFMErr<>nil do begin
-      //writeln('LFM Error: (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
-      if (CursorPos.Code=LFMErr.Source)
-          and (CursorPos.X=LFMErr.Caret.X)
-          and (CursorPos.Y=LFMErr.Caret.Y)
-          and (ErrorType=LFMErr.ErrorType)
-          and (LFMErr.ErrorMessage=ErrorMsg) then
-      begin
-        // error found
-        exit;
-      end;
-      LFMErr:=LFMErr.NextError;
-    end;
-
-    writeln('LFM Error Candidates:');
-    LFMErr:=LFMTree.FirstError;
-    while LFMErr<>nil do begin
-      writeln('LFM-Error: ',LFMErr.ErrorType,': (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
-      LFMErr:=LFMErr.NextError;
-    end;
+  if CodeToolBoss.CheckLFM(UnitCode,LFMCode,FLFMTree,true,true,true) then begin
+    WriteSource(CursorPos);
     Fail('TCustomTestLFMTrees.CheckLFMParseError Missing '+LFMErrorTypeNames[ErrorType]+': '+CursorPos.Code.Filename+'('+IntToStr(CursorPos.Y)+','+IntToStr(CursorPos.X)+'): '+ErrorMsg);
-  finally
-    LFMTree.Free;
   end;
+  if LFMTree=nil then begin
+    WriteSource(CursorPos);
+    Fail('missing LFMTree');
+  end;
+  LFMErr:=LFMTree.FirstError;
+  while LFMErr<>nil do begin
+    //writeln('LFM Error: (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
+    if (CursorPos.Code=LFMErr.Source)
+        and (CursorPos.X=LFMErr.Caret.X)
+        and (CursorPos.Y=LFMErr.Caret.Y)
+        and (ErrorType=LFMErr.ErrorType)
+        and (LFMErr.ErrorMessage=ErrorMsg) then
+    begin
+      // error found
+      exit;
+    end;
+    LFMErr:=LFMErr.NextError;
+  end;
+
+  writeln('LFM Error Candidates:');
+  LFMErr:=LFMTree.FirstError;
+  while LFMErr<>nil do begin
+    writeln('LFM-Error: ',LFMErr.ErrorType,': (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
+    LFMErr:=LFMErr.NextError;
+  end;
+  Fail('TCustomTestLFMTrees.CheckLFMParseError Missing '+LFMErrorTypeNames[ErrorType]+': '+CursorPos.Code.Filename+'('+IntToStr(CursorPos.Y)+','+IntToStr(CursorPos.X)+'): '+ErrorMsg);
+end;
+
+function TCustomTestLFMTrees.CheckHasProperty(const PropertyPath: string): TLFMPropertyNode;
+var
+  Node: TLFMTreeNode;
+begin
+  if LFMTree=nil then
+    Fail('CheckHasNode Tree=nil PropertyPath="'+PropertyPath+'"');
+  Result:=LFMTree.FindProperty(PropertyPath);
+  if Result=nil then begin
+    debugln(['TCustomTestLFMTrees.CheckHasNode property candidates:']);
+    Node:=LFMTree.Root;
+    while Node<>nil do begin
+      if Node is TLFMPropertyNode then
+        debugln('  ',TLFMPropertyNode(Node).GetPropertyPath);
+      Node:=Node.Next;
+    end;
+    Fail('CheckHasNode missing PropertyPath="'+PropertyPath+'"');
+  end;
+end;
+
+function TCustomTestLFMTrees.CheckPropertyType(const PropertyPath: string; ValueType: TLFMValueType
+  ): TLFMValueNode;
+var
+  PropNode: TLFMPropertyNode;
+begin
+  Result:=nil;
+  PropNode:=CheckHasProperty(PropertyPath);
+  if PropNode.FirstChild=nil then
+    Fail('Missing value node: "'+PropertyPath+'"');
+  if not (PropNode.FirstChild is TLFMValueNode) then
+    Fail('Expected value node "'+PropertyPath+'", but got '+PropNode.FirstChild.ClassName);
+  Result:=TLFMValueNode(PropNode.FirstChild);
+  if Result.ValueType<>ValueType then
+    Fail('Expected "'+PropertyPath+'" expected value type='+LFMValueTypeNames[ValueType]+', but found '+LFMValueTypeNames[Result.ValueType]);
 end;
 
 procedure TCustomTestLFMTrees.ParseLFM;
 var
-  LFMTree: TLFMTree;
   LFMErr: TLFMError;
 begin
-  LFMTree:=nil;
-  try
-    if CodeToolBoss.ParseLFM(LFMCode,LFMTree) then exit;
-    WriteSource(CodeXYPosition(CodeToolBoss.ErrorColumn,CodeToolBoss.ErrorLine,CodeToolBoss.ErrorCode));
-    if LFMTree<>nil then begin
-      LFMErr:=LFMTree.FirstError;
-      while LFMErr<>nil do begin
-        writeln('LFM Error: (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
-        LFMErr:=LFMErr.NextError;
-      end;
+  if CodeToolBoss.ParseLFM(LFMCode,FLFMTree) then exit;
+  WriteSource(CodeXYPosition(CodeToolBoss.ErrorColumn,CodeToolBoss.ErrorLine,CodeToolBoss.ErrorCode));
+  if LFMTree<>nil then begin
+    LFMErr:=LFMTree.FirstError;
+    while LFMErr<>nil do begin
+      writeln('LFM Error: (',LFMErr.Caret.Y,',',LFMErr.Caret.X,') ',LFMErr.ErrorMessage);
+      LFMErr:=LFMErr.NextError;
     end;
-    Fail('CheckLFM error "'+CodeToolBoss.ErrorMessage+'"');
-  finally
-    LFMTree.Free;
   end;
+  Fail('CheckLFM error "'+CodeToolBoss.ErrorMessage+'"');
 end;
 
 procedure TCustomTestLFMTrees.WriteSource(const CursorPos: TCodeXYPosition);
@@ -410,6 +434,8 @@ end;
 
 procedure TTestLFMTrees.LFM_BinaryData;
 begin
+  // Note: binary is streamed via DefineProperties, so codetools can't know Data
+  // test that at least the binary is parsed, even though it cannot be resolved
   AddControls;
   AddFormUnit(['Button1: TButton']);
   FLFMCode:=AddSource('unit1.lfm',LinesToStr([
@@ -425,6 +451,26 @@ begin
     'end'
     ]));
   CheckLFMExpectedError(lfmeIdentifierNotFound,CodeXYPosition(11,3,FLFMCode),'identifier Data not found in class "TBitmap"');
+end;
+
+procedure TTestLFMTrees.LFM_BinaryData_OddError;
+begin
+  AddControls;
+  AddFormUnit(['Button1: TButton']);
+  FLFMCode:=AddSource('unit1.lfm',LinesToStr([
+    'object Form1: TForm1',
+    '  object Button1: TButton',
+    '    Glyph.Data = {',
+    // the hexnumber has an odd number of digits
+    '      36E040000424D3604000000000000360000002800000010000000100000000100',
+    '      49EE000000000004000064000000640000000000000000000000000000000000',
+    '    }',
+    '    Caption = ''ClickMe''',
+    '    Default = True',
+    '  end',
+    'end'
+    ]));
+  CheckLFMExpectedError(lfmeParseError,CodeXYPosition(72,4,FLFMCode),'binary must have even number of digits');
 end;
 
 procedure TTestLFMTrees.LFM_Set;
@@ -443,24 +489,36 @@ begin
 end;
 
 procedure TTestLFMTrees.LFM_List;
+var
+  Node, StrNode: TLFMValueNode;
 begin
+  // Note: the TStrings.Lines is unknown to codetools
+  // test that at least the list is parsed, even though it cannot be resolved
   AddControls;
   AddFormUnit(['Button1: TButton']);
   FLFMCode:=AddSource('unit1.lfm',LinesToStr([
     'object Form1: TForm1',
     '  object Button1: TButton',
     '    Lines.Strings = (',
-    '      ''Memo1''',
-    '      ''Foo''',
+    '      ''Mem''''o1''',
+    '      ''Foo''+',
+    '      ''Bar''#10''ABC''',
     '    )',
     '  end',
     'end'
     ]));
   CheckLFM;
+  Node:=CheckPropertyType('Form1.Button1.Lines.Strings',lfmvList);
+  StrNode:=Node.FirstChild as TLFMValueNode;
+  AssertEquals('First Line','Mem''o1',StrNode.ReadString);
+  StrNode:=StrNode.NextSibling as TLFMValueNode;
+  AssertEquals('Second Line','FooBar'#10'ABC',StrNode.ReadString);
 end;
 
 procedure TTestLFMTrees.LFM_Collection;
 begin
+  // Note: the TCollectionItem is unknown to codetools
+  // test that at least the collection is parsed, even though it cannot be resolved
   AddControls('controls.pas',true);
   AddFormUnit(['Grid1: TGrid']);
   FLFMCode:=AddSource('unit1.lfm',LinesToStr([

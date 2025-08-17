@@ -13,12 +13,12 @@ msgstr ""
 msgid "All files (*)|*|Shared libraries (*.so)|*.so"
 msgstr ""
 
-#: reconstsunit.sbuilddate
-msgid "Build date: "
+#: reconstsunit.sbinary
+msgid "Binary view"
 msgstr ""
 
-#: reconstsunit.scarbonwidgetset
-msgid "Carbon widget set"
+#: reconstsunit.sbuilddate
+msgid "Build date: "
 msgstr ""
 
 #: reconstsunit.sexit
@@ -33,16 +33,8 @@ msgstr ""
 msgid "FPC version: "
 msgstr ""
 
-#: reconstsunit.sfpguiwidgetset
-msgid "FpGUI widget set"
-msgstr ""
-
-#: reconstsunit.sgtk2widgetset
-msgid "GTK 2 widget set"
-msgstr ""
-
-#: reconstsunit.sgtkwidgetset
-msgid "GTK widget set"
+#: reconstsunit.sheight
+msgid "Height:"
 msgstr ""
 
 #: reconstsunit.shelp
@@ -53,6 +45,15 @@ msgstr ""
 msgid "Image"
 msgstr ""
 
+#: reconstsunit.simageindex
+msgid "Image index:"
+msgstr ""
+
+#: reconstsunit.sindexofcount
+#, object-pascal-format
+msgid "%d of %d"
+msgstr ""
+
 #: reconstsunit.slclversion
 msgid "LCL Version: "
 msgstr ""
@@ -61,16 +62,24 @@ msgstr ""
 msgid "This program is free software under GNU GPL 2 license, see COPYING file"
 msgstr ""
 
+#: reconstsunit.snextimage
+msgid "Next image"
+msgstr ""
+
 #: reconstsunit.sopen
 msgid "Open ..."
 msgstr ""
 
 #: reconstsunit.sotherguiwidgetset
-msgid "Other gui"
+msgid "Other GUI"
 msgstr ""
 
-#: reconstsunit.sqtwidgetset
-msgid "QT widget set"
+#: reconstsunit.spixelformat
+msgid "Pixel format:"
+msgstr ""
+
+#: reconstsunit.sprevimage
+msgid "Previous image"
 msgstr ""
 
 #: reconstsunit.sresourceexplorer
@@ -97,11 +106,12 @@ msgstr ""
 msgid "Target OS: "
 msgstr ""
 
-#: reconstsunit.swin32_64widgetset
-msgid "Win32/Win64 widget set"
+#: reconstsunit.swidgetset
+#, object-pascal-format
+msgid "%s widget set"
 msgstr ""
 
-#: reconstsunit.swincewidgetset
-msgid "WinCE widget set"
+#: reconstsunit.swidth
+msgid "Width:"
 msgstr ""
 

@@ -23,13 +23,13 @@ msgstr "Minden fájl (*.*)|*.*|Futtatható fájlok (*.exe)|*.exe|DLL (*.dll)|*.d
 msgid "All files (*)|*|Shared libraries (*.so)|*.so"
 msgstr "Minden fájl (*)|*|Megosztott függvénytárak (*.so)|*.so"
 
+#: reconstsunit.sbinary
+msgid "Binary view"
+msgstr ""
+
 #: reconstsunit.sbuilddate
 msgid "Build date: "
 msgstr "Építés dátuma: "
-
-#: reconstsunit.scarbonwidgetset
-msgid "Carbon widget set"
-msgstr "Carbon vezérlőkészlet"
 
 #: reconstsunit.sexit
 msgid "Exit"
@@ -43,17 +43,9 @@ msgstr "Fájl"
 msgid "FPC version: "
 msgstr "FPC változat: "
 
-#: reconstsunit.sfpguiwidgetset
-msgid "FpGUI widget set"
-msgstr "FpGUI vezérlőkészlet"
-
-#: reconstsunit.sgtk2widgetset
-msgid "GTK 2 widget set"
-msgstr "GTK 2 vezérlőkészlet"
-
-#: reconstsunit.sgtkwidgetset
-msgid "GTK widget set"
-msgstr "GTK vezérlőkészlet"
+#: reconstsunit.sheight
+msgid "Height:"
+msgstr ""
 
 #: reconstsunit.shelp
 msgid "Help"
@@ -63,6 +55,15 @@ msgstr "Súgó"
 msgid "Image"
 msgstr "Kép"
 
+#: reconstsunit.simageindex
+msgid "Image index:"
+msgstr ""
+
+#: reconstsunit.sindexofcount
+#, object-pascal-format
+msgid "%d of %d"
+msgstr ""
+
 #: reconstsunit.slclversion
 msgid "LCL Version: "
 msgstr "LCL változat:"
@@ -71,17 +72,27 @@ msgstr "LCL változat:"
 msgid "This program is free software under GNU GPL 2 license, see COPYING file"
 msgstr "Ez a program szabad szoftver GNU GPL 2 licenc alatt, lásd a COPYING fájlt!"
 
+#: reconstsunit.snextimage
+msgid "Next image"
+msgstr ""
+
 #: reconstsunit.sopen
 msgid "Open ..."
 msgstr "Megnyitás ..."
 
 #: reconstsunit.sotherguiwidgetset
-msgid "Other gui"
+#, fuzzy
+#| msgid "Other gui"
+msgid "Other GUI"
 msgstr "Egyéb GUI"
 
-#: reconstsunit.sqtwidgetset
-msgid "QT widget set"
-msgstr "QT vezérlőkészlet"
+#: reconstsunit.spixelformat
+msgid "Pixel format:"
+msgstr ""
+
+#: reconstsunit.sprevimage
+msgid "Previous image"
+msgstr ""
 
 #: reconstsunit.sresourceexplorer
 msgid "Resource explorer"
@@ -107,11 +118,12 @@ msgstr "Cél CPU: "
 msgid "Target OS: "
 msgstr "Cél OS: "
 
-#: reconstsunit.swin32_64widgetset
-msgid "Win32/Win64 widget set"
-msgstr "Win32/Win64 vezérlőkészlet"
+#: reconstsunit.swidgetset
+#, object-pascal-format
+msgid "%s widget set"
+msgstr ""
 
-#: reconstsunit.swincewidgetset
-msgid "WinCE widget set"
-msgstr "WinCE vezérlőkészlet"
+#: reconstsunit.swidth
+msgid "Width:"
+msgstr ""
 
