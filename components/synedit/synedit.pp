@@ -1935,7 +1935,10 @@ end;
 
 function TCustomSynEdit.GetFoldState: String;
 begin
-  Result := FFoldedLinesView.GetFoldDescription(0, 0, -1, -1, True);
+  if (FPendingFoldState <> '') then
+    Result := FPendingFoldState
+  else
+    Result := FFoldedLinesView.GetFoldDescription(0, 0, -1, -1, True);
 end;
 
 function TCustomSynEdit.GetHiddenCodeLineColor: TSynHighlighterAttributesModifier;
@@ -2726,6 +2729,7 @@ begin
       FLines.FlushNotificationCache;
       ScanChangedLines(FChangedLinesStart, FChangedLinesEnd, FChangedLinesDiff,
                  FLastTextChangeStamp <> TSynEditStringList(FLines).TextChangeStamp);
+      Exclude(FInDecPaintLockState, dplNoAfterLoadFromFile);
       if sfAfterLoadFromFileNeeded in fStateFlags then
         AfterLoadFromFile;
       if FChangedLinesStart > 0 then begin
@@ -5935,6 +5939,9 @@ begin
   InvalidateLines(StartLine, StartLine + ACount - 1);
   InvalidateGutterLines(AIndex + 1, AIndex + 1 + ACount);
   FFoldedLinesView.FixFoldingAtTextIndex(AIndex, AIndex + ACount);
+  if sfAfterLoadFromFileNeeded in fStateFlags then
+    AfterLoadFromFile
+  else
   if FPendingFoldState <> '' then
     SetFoldState(FPendingFoldState);
 end;
@@ -8152,7 +8159,9 @@ end;
 
 procedure TCustomSynEdit.AfterLoadFromFile;
 begin
-  if WaitingForInitialSize or
+  if ( WaitingForInitialSize and
+       ( (fHighlighter = nil) or (fHighlighter.NeedScan) )
+     ) or
      (FPaintLock > 1) or
      ( (FPaintLock = 1) and
        not(FInDecPaintLockState * [dplNoNewPaintLock, dplNoAfterLoadFromFile] = [dplNoNewPaintLock]) )
@@ -9347,7 +9356,7 @@ end;
 procedure TCustomSynEdit.DestroyWnd;
 begin
   {$IFDEF SynCheckPaintLock}
-  if (FPaintLock > 0) then begin
+  if (FPaintLock > 0) and not(csDestroying in ComponentState) then begin
     debugln(['TCustomSynEdit.DestroyWnd: Paintlock=', FPaintLock, ' FInvalidateRect=', dbgs(FInvalidateRect)]);
     DumpStack;
   end;
