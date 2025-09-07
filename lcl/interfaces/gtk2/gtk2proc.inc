@@ -6745,11 +6745,11 @@ begin
     end;
     if WidthHeightChanged then
     begin
-      // SetWindowSizeAndPosition should be always called in xfwm4, see issue #41219
-      if (TopLevelWindowResizeLocked = 0) or (GTK2WidgetSet.GetWindowManager = 'xfwm4') then
-        SetWindowSizeAndPosition(PGtkWindow(MainWidget), LCLControl);
-      if TopLevelWindowResizeLocked = 0 then
+      if (TopLevelWindowResizeLocked = 0) or
+         (not gtk_window_get_resizable(PGtkWindow(MainWidget))) // #41219
+      then
       begin
+        SetWindowSizeAndPosition(PGtkWindow(MainWidget), LCLControl);
         SetResizeRequest(MainWidget);
       end;
       SetWidgetConstraints(LCLControl);
@@ -7171,13 +7171,11 @@ begin
   // resize
   gtk_window_resize(Window, Width, Height);
   // reposition
-  if LockTopLevelWindowResizeOnNativeCall then
-  begin
-    gtk_window_get_position(Window, @x, @y);
-    if (x <> AWinControl.Left) or (y <> AWinControl.Top) then // for fly-wm + openbox
-      gtk_window_move(Window, AWinControl.Left, AWinControl.Top);
-  end
-  else
+  gtk_window_get_position(Window, @x, @y);
+  // dont move the control if position does not change.
+  // Required for fly-wm + openbox (refer to the LockTopLevelWindowResizeOnNativeCall method)
+  // Additionally, it required for maximized forms running on XCFE with borderless_maximize=off
+  if (x <> AWinControl.Left) or (y <> AWinControl.Top) then
     gtk_window_move(Window, AWinControl.Left, AWinControl.Top);
   // force early resize
   allocation := PGtkWidget(Window)^.allocation;
