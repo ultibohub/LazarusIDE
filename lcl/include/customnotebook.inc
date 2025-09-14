@@ -263,6 +263,7 @@ begin
   // Accessibility
   AccessibleDescription := rsTCustomTabControlAccessibilityDescription;
   AccessibleRole := larTabControl;
+  FWheelSelectPage := False;
 end;
 
 {------------------------------------------------------------------------------
@@ -1144,7 +1145,7 @@ begin
           if CanChangePageIndex and not (csDestroyingHandle in ControlState) then
           begin
             Result := 0;
-            FSwitchingToPageIndex := NMHdr^.idFrom;
+            FSwitchingToPageIndex := PtrInt(NMHdr^.idFrom);
           end else begin
             Result := 1;
             FSwitchingToPageIndex := -5;
