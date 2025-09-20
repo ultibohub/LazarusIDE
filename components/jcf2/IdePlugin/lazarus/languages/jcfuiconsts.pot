@@ -644,6 +644,10 @@ msgstr ""
 msgid "Imbalanced comment action"
 msgstr ""
 
+#: jcfuiconsts.lisindentbeginendblocks
+msgid "Indent Begin...End blocks (GNU style)"
+msgstr ""
+
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
 msgstr ""
@@ -1008,8 +1012,16 @@ msgstr ""
 msgid "Spaces"
 msgstr ""
 
+#: jcfuiconsts.lisspacesspacesafterassign
+msgid "Spaces after assign"
+msgstr ""
+
 #: jcfuiconsts.lisspacesspacesaroundoperators
 msgid "Spaces around &operators"
+msgstr ""
+
+#: jcfuiconsts.lisspacesspacesbeforeassign
+msgid "Spaces before &assign"
 msgstr ""
 
 #: jcfuiconsts.lisspacesspacesbeforecolonin

@@ -68,6 +68,8 @@ type
     fbMoveSpaceToBeforeColon: boolean;
 
     feSpaceForOperator: TTriOptionStyle;
+    feSpaceBeforeAssign: TTriOptionStyle;
+    feSpaceAfterAssign: TTriOptionStyle;
 
   protected
   public
@@ -110,6 +112,8 @@ type
     property UseMaxSpacesInCode: boolean read fbUseMaxSpacesInCode write fbUseMaxSpacesInCode;
 
     property SpaceForOperator: TTriOptionStyle read feSpaceForOperator write feSpaceForOperator;
+    property SpaceBeforeAssign: TTriOptionStyle read feSpaceBeforeAssign write feSpaceBeforeAssign;
+    property SpaceAfterAssign: TTriOptionStyle read feSpaceAfterAssign write feSpaceAfterAssign;
 
     property SpaceBeforeOpenBracketsInFunctionDeclaration: boolean
       read fbSpaceBeforeOpenBracketsInFunctionDeclaration write fbSpaceBeforeOpenBracketsInFunctionDeclaration;
@@ -149,6 +153,8 @@ const
   SET_USE_MAX_SPACES_IN_CODE = 'UseMaxSpacesInCode';
 
   SET_SPACE_FOR_OPERATOR = 'SpaceForOperator';
+  SET_SPACE_BEFORE_ASSIGN = 'SpaceBeforeAssign';
+  SET_SPACE_AFTER_ASSIGN = 'SpaceAfterAssign';
 
   SET_SPACE_BEFORE_OPEN_BRACKETS_IN_FUNCTION_DECLARATION = 'SpaceBeforeOpenBracketsInFunctionDeclaration';
   SET_SPACE_BEFORE_OPEN_BRACKETS_IN_FUNCTION_CALL = 'SpaceBeforeOpenBracketsInFunctionCall';
@@ -194,6 +200,8 @@ begin
   fbUseMaxSpacesInCode := pcStream.Read(SET_USE_MAX_SPACES_IN_CODE, False);
 
   feSpaceForOperator := TTriOptionStyle(pcStream.Read(SET_SPACE_FOR_OPERATOR, Ord(eAlways)));
+  feSpaceBeforeAssign := TTriOptionStyle(pcStream.Read(SET_SPACE_BEFORE_ASSIGN, Ord(feSpaceForOperator)));
+  feSpaceAfterAssign := TTriOptionStyle(pcStream.Read(SET_SPACE_AFTER_ASSIGN, Ord(feSpaceForOperator)));
 
   fbSpaceBeforeOpenBracketsInFunctionDeclaration := pcStream.Read(SET_SPACE_BEFORE_OPEN_BRACKETS_IN_FUNCTION_DECLARATION, False);
   fbSpaceBeforeOpenBracketsInFunctionCall := pcStream.Read(SET_SPACE_BEFORE_OPEN_BRACKETS_IN_FUNCTION_CALL, False);
@@ -232,6 +240,8 @@ begin
   pcOut.Write(SET_USE_MAX_SPACES_IN_CODE, fbUseMaxSpacesInCode);
 
   pcOut.Write(SET_SPACE_FOR_OPERATOR, ord(feSpaceForOperator));
+  pcOut.Write(SET_SPACE_BEFORE_ASSIGN, ord(feSpaceBeforeAssign));
+  pcOut.Write(SET_SPACE_AFTER_ASSIGN, ord(feSpaceAfterAssign));
 
   pcOut.Write(SET_SPACE_BEFORE_OPEN_BRACKETS_IN_FUNCTION_DECLARATION, fbSpaceBeforeOpenBracketsInFunctionDeclaration);
   pcOut.Write(SET_SPACE_BEFORE_OPEN_BRACKETS_IN_FUNCTION_CALL, fbSpaceBeforeOpenBracketsInFunctionCall);

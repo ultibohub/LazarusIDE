@@ -143,6 +143,9 @@ begin
     exit;
   end;
 
+  if (pt.TokenType in AssignmentDirectives) then
+    exit(FormattingSettings.Spaces.SpaceBeforeAssign=eNever);
+
 end;
 
 constructor TNoSpaceBefore.Create;

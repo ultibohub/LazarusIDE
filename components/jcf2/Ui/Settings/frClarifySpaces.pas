@@ -62,6 +62,7 @@ type
     lbSpacesBeforeLabel: TLabel;
     cbMaxSpaces: TCheckBox;
     edtMaxSpacesInCode: TSpinEdit;
+    rgAfterAssign: TRadioGroup;
     rgOperators: TRadioGroup;
     GroupBoxInsertSpaceBeforeBracket: TGroupBox;
     cbInsertSpaceBeforeBracketinFunctionDeclaration: TCheckBox;
@@ -77,6 +78,7 @@ type
     eSpacesBeforeColonRecordField: TSpinEdit;
     lblSpacesBeforeColonRecordField: TLabel;
     cbMoveSpacesToBeforeColon: TCheckBox;
+    rgBeforeAssign: TRadioGroup;
     procedure cbTabsToSpacesClick(Sender: TObject);
     procedure cbSpacesToTabsClick(Sender: TObject);
     procedure cbMaxSpacesClick(Sender: TObject);
@@ -149,6 +151,17 @@ begin
   Label3.Caption := lisSpacesSpacesForTab;
 
   cbMaxSpaces.Caption := lisSpacesMaxSpacesInCode;
+
+  rgBeforeAssign.Caption := lisSpacesSpacesBeforeAssign;
+  rgBeforeAssign.Items[0] := lisSpacesAlways;
+  rgBeforeAssign.Items[1] := lisSpacesLeaveAsIs;
+  rgBeforeAssign.Items[2] := lisSpacesNever;
+
+  rgAfterAssign.Caption := lisSpacesSpacesAfterAssign;
+  rgAfterAssign.Items[0] := lisSpacesAlways;
+  rgAfterAssign.Items[1] := lisSpacesLeaveAsIs;
+  rgAfterAssign.Items[2] := lisSpacesNever;
+
   JCFOptionsFrameDialogs[JCFOptionSpaces] := Self;
 end;
 
@@ -183,6 +196,8 @@ begin
     edtMaxSpacesInCode.Value := MaxSpacesInCode;
 
     rgOperators.ItemIndex := Ord(SpaceForOperator);
+    rgBeforeAssign.ItemIndex := Ord(SpaceBeforeAssign);
+    rgAfterAssign.ItemIndex := Ord(SpaceAfterAssign);
 
     cbInsertSpaceBeforeBracketinFunctionDeclaration.Checked := SpaceBeforeOpenBracketsInFunctionDeclaration;
     cbInsertSpaceBeforeBracketinFunctionCall.Checked := SpaceBeforeOpenBracketsInFunctionCall;
@@ -230,6 +245,8 @@ begin
     MaxSpacesInCode    := edtMaxSpacesInCode.Value;
 
     SpaceForOperator := TTriOptionStyle(rgOperators.ItemIndex);
+    SpaceBeforeAssign := TTriOptionStyle(rgBeforeAssign.ItemIndex);
+    SpaceAfterAssign := TTriOptionStyle(rgAfterAssign.ItemIndex);
 
     SpaceBeforeOpenBracketsInFunctionDeclaration := cbInsertSpaceBeforeBracketinFunctionDeclaration.Checked;
     SpaceBeforeOpenBracketsInFunctionCall := cbInsertSpaceBeforeBracketinFunctionCall.Checked;

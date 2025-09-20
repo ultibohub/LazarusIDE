@@ -658,6 +658,10 @@ msgstr "Uygulama Varsayılanı: "
 msgid "Imbalanced comment action"
 msgstr "Dengesiz yorum eylemi"
 
+#: jcfuiconsts.lisindentbeginendblocks
+msgid "Indent Begin...End blocks (GNU style)"
+msgstr ""
+
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
 msgstr "Blok girinti boşlukları"
@@ -1021,9 +1025,17 @@ msgstr "Sınıf mirasından önce &boşluk"
 msgid "Spaces"
 msgstr "Boşluklar"
 
+#: jcfuiconsts.lisspacesspacesafterassign
+msgid "Spaces after assign"
+msgstr ""
+
 #: jcfuiconsts.lisspacesspacesaroundoperators
 msgid "Spaces around &operators"
 msgstr "&Operatörlerin etrafındaki boşluklar"
+
+#: jcfuiconsts.lisspacesspacesbeforeassign
+msgid "Spaces before &assign"
+msgstr ""
 
 #: jcfuiconsts.lisspacesspacesbeforecolonin
 msgid "Spaces &before colon in"

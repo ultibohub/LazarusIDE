@@ -669,6 +669,10 @@ msgstr ""
 msgid "Imbalanced comment action"
 msgstr ""
 
+#: jcfuiconsts.lisindentbeginendblocks
+msgid "Indent Begin...End blocks (GNU style)"
+msgstr ""
+
 #: jcfuiconsts.lisindentblockindentationspaces
 msgid "Block indentation spaces"
 msgstr "Пробіли відступу в блоках"
@@ -1033,9 +1037,17 @@ msgstr "Пробіл неред нас&лідуванням класу"
 msgid "Spaces"
 msgstr "Пробіли"
 
+#: jcfuiconsts.lisspacesspacesafterassign
+msgid "Spaces after assign"
+msgstr ""
+
 #: jcfuiconsts.lisspacesspacesaroundoperators
 msgid "Spaces around &operators"
 msgstr "Пробіли навколо &операторів"
+
+#: jcfuiconsts.lisspacesspacesbeforeassign
+msgid "Spaces before &assign"
+msgstr ""
 
 #: jcfuiconsts.lisspacesspacesbeforecolonin
 msgid "Spaces &before colon in"
