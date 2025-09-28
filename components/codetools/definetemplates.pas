@@ -6887,6 +6887,7 @@ begin
        +LazarusSrcDir+'/packager/frames;'
        +LazarusSrcDir+'/components/buildintf;'
        +LazarusSrcDir+'/components/ideintf;'
+       +LazarusSrcDir+'/components/lazedit;'
        +LazarusSrcDir+'/components/lazutils;'
        +LazarusSrcDir+'/components/lazcontrols;'
        +LazarusSrcDir+'/components/lazcontrols/design;'
