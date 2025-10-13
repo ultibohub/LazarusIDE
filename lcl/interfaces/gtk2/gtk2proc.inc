@@ -263,39 +263,6 @@ begin
   end;
 end;
 
-
-{------------------------------------------------------------------------------
-  Allocates a new PChar
- ------------------------------------------------------------------------------
-function CreatePChar(const s: string): PChar;
-begin
-  Result:=StrAlloc(length(s) + 1);
-  StrPCopy(Result, s);
-end;
-}
-function FindChar(c: char; p:PChar; Max: integer): integer;
-begin
-  Result:=0;
-  while Result<Max do begin
-    if p[Result]=c then exit;
-    inc(Result);
-  end;
-  Result:=-1;
-end;
-
-{------------------------------------------------------------------------------
-  Find line end
- ------------------------------------------------------------------------------}
-function FindLineLen(p: PChar; Max: integer): integer;
-begin
-  Result:=0;
-  while Result<Max do begin
-    if p[Result] in [#10,#13] then exit;
-    inc(Result);
-  end;
-  Result:=-1;
-end;
-
 function RectFromGdkRect(const AGdkRect: TGdkRectangle): TRect;
 begin
   with AGdkRect do
@@ -1620,7 +1587,6 @@ var
 
 begin
   GC:=TGtkDeviceContext(DC).GC;
-  GDIColor:=nil;
   with TGtkDeviceContext(DC) do
   begin
     case ColorType of
@@ -1628,24 +1594,12 @@ begin
       dccCurrentTextColor: GDIColor:=@CurrentTextColor;
       dccGDIBrushColor   : GDIColor:=@(GetBrush^.GDIBrushColor);
       dccGDIPenColor     : GDIColor:=@(GetPen^.GDIPenColor);
+      else exit;
     end;
-  end;
-  if GDIColor=nil then exit;
-  
-  // FPC bug workaround:
-  // clScrollbar = $80000000 can't be used in case statements
-  if TColor(GDIColor^.ColorRef)=clScrollbar then
-  begin
-    //often have a BK Pixmap
-    if IsSolidBrush then
-      EnsureAsGCValues
-    else
-      EnsureAsColor;//GC's with Pixmaps can't work w/Hatch's (yet)
-    exit;
   end;
 
   case TColor(GDIColor^.ColorRef) of
-    //clScrollbar: see above
+    clScrollbar,
     clInfoBk,
     clMenu,
     clHighlight,

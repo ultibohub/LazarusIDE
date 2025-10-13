@@ -17,11 +17,12 @@ interface
 
 uses
   Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ChatControl,
-  LCLType, StdCtrls, ExtCtrls, Menus, AIClient;
+  LCLType, StdCtrls, ExtCtrls, Menus, LLM.Client;
 
 type
 
   { TAIssistChatForm }
+
   TChatState = (csUnconfigured,csWaiting,csAIThinking);
 
   TAIssistChatForm = class(TForm)
@@ -41,42 +42,43 @@ type
     procedure pmChatPopup(Sender: TObject);
   private
     FChat : TChatControl;
-    FAIClient : TAIClient;
+    FLLMClient : TLLMClient;
     FChatState : TChatState;
     FOnConfigure: TNotifyEvent;
     procedure CheckState;
     procedure ConfigureServer;
     procedure CreateServer;
-    procedure HandleAIAnswer(Sender: TObject; aResponses: TPromptResponseArray);
-    procedure HandleRequestError(Sender: TObject; aErrorData: TAIRequestErrorData);
+    procedure HandlePromptResult(Sender: TObject; aResult: TSendPromptResult);
+    procedure HandleRequestError(aErrorData: TLLMRestStatusInfo);
     procedure SetState(AValue: TChatState);
   public
-    { public declarations }
     property State : TChatState Read FChatState Write SetState;
     property OnConfigure : TNotifyEvent Read FOnConfigure Write FOnConfigure;
   end;
 
-
-
 implementation
 
-uses ClipBrd,StrAIssist, AIssistController;
+uses
+  ClipBrd, StrAIssist, AIssistController;
 
 {$R *.lfm}
 
 { TAIssistChatForm }
 
-procedure TAIssistChatForm.HandleAIAnswer(Sender: TObject; aResponses: TPromptResponseArray);
+procedure TAIssistChatForm.HandlePromptResult(Sender: TObject; aResult: TSendPromptResult);
 begin
   FChat.LeftTyping:=False;
   State:=csWaiting;
-  if Length(aResponses)=0 then
-    FChat.AddText(SErrNoAnswer,tsLeft)
+  if not Aresult.Success then
+    HandleRequestError(aResult.StatusInfo)
   else
-    FChat.AddText(aResponses[0].Response,tsLeft);
+    if Length(aResult.Value)=0 then
+      FChat.AddText(SErrNoAnswer,tsLeft)
+    else
+      FChat.AddText(aResult.Value[0].text,tsLeft);
 end;
 
-procedure TAIssistChatForm.HandleRequestError(Sender: TObject; aErrorData: TAIRequestErrorData);
+procedure TAIssistChatForm.HandleRequestError(aErrorData: TLLMRestStatusInfo);
 
 var
   Msg : TStrings;
@@ -86,12 +88,11 @@ begin
   try
     Msg.Add(SErrorTitle);
     Msg.Add(SErrorIntro);
-    Msg.Add(SErrorInfo,[aErrorData.Error]);
-    Msg.Add(SErrorContext,[aErrorData.Method,aErrorData.URL]);
-    if aErrorData.RequestBody<>'' then
+    Msg.Add(SErrorInfo,[aErrorData.StatusCode]);
+    if aErrorData.ErrorContent<>'' then
       begin
       Msg.Add(SErrorBody);
-      Msg.Add(aErrorData.RequestBody);
+      Msg.Add(SErrorContext,[aErrorData.ErrorContent]);
       end;
     FChat.AddText(Msg.Text,tsLeft);
     FChat.LeftTyping:=False;
@@ -124,8 +125,8 @@ end;
 procedure TAIssistChatForm.CreateServer;
 
 begin
-  FAIClient:=AIController.CreateAIClient;
-  if Assigned(FAIClient) then
+  FLLMClient:=AIController.CreateLLMClient;
+  if Assigned(FLLMClient) then
     ConfigureServer
   else
     FChat.AddText(SErrPleaseConfigure,tsLeft);
@@ -135,7 +136,7 @@ procedure TAIssistChatForm.HandleConfigureClick(Sender: TObject);
 begin
   if Assigned(FOnConfigure) then
     FOnConfigure(Self);
-  FreeAndNil(FAIClient);
+  FreeAndNil(FLLMClient);
   State:=csUnconfigured;
   CreateServer;
 end;
@@ -149,8 +150,8 @@ end;
 procedure TAIssistChatForm.ConfigureServer;
 
 begin
-  FAIClient.OnError:=@HandleRequestError;
-  FAIClient.SynchronizeCallBacks:=True;
+  FLLMClient.UseThreads:=True;
+  FLLMClient.SynchronizeCallBacks:=True;
   State:=csWaiting;
 end;
 
@@ -173,7 +174,7 @@ begin
     end;
   FChat.AddText(S,tsRight);
   FChat.LeftTyping:=True;
-  FAIClient.SendPrompt(@HandleAIAnswer,S);
+  FLLMClient.SendPrompt(S,@HandlePromptResult);
   State:=csAIThinking;
 end;
 
@@ -185,7 +186,7 @@ var
 
 begin
   lPt:=pmChat.PopupPoint;
-  lpt:=FChat.ScreenToClient(lpt);
+  lPt:=FChat.ScreenToClient(lPt);
   Item:=FChat.GetItemAt(lPt.X,lPt.Y);
   if Item<>Nil then
     Clipboard.AsText:=Item.Text;
@@ -199,7 +200,7 @@ var
 
 begin
   lPt:=pmChat.PopupPoint;
-  lpt:=FChat.ScreenToClient(lpt);
+  lPt:=FChat.ScreenToClient(lPt);
   Item:=FChat.GetItemAt(lPt.X,lPt.Y);
   HaveItem:=Item<>Nil;
   MICopy.Enabled:=HaveItem;
