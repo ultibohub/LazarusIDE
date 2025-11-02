@@ -2006,6 +2006,17 @@ begin
   end;
 end;
 
+function TCocoaWidgetSet.PolyBezier(DC: HDC; Points: PPoint; NumPts: Integer;
+  Filled, Continuous: boolean): boolean;
+var
+  ctx: TCocoaContext;
+begin
+  ctx := CheckDC(DC);
+  Result := Assigned(ctx) and Assigned(Points) and (NumPts >= 4);
+  if Result then
+    ctx.PolyBezier(PPointArray(Points)^, NumPts, Filled, Continuous);
+end;
+
 {$push}
 {$rangechecks off}
 function TCocoaWidgetSet.Polygon(DC: HDC; Points: PPoint; NumPts: Integer; Winding: boolean): boolean;
@@ -2914,10 +2925,14 @@ begin
     Result := False;
 end;
 
-function TCocoaWidgetSet.RoundRect(DC: HDC; X1, Y1, X2, Y2: Integer; RX,
-  RY: Integer): Boolean;
+function TCocoaWidgetset.RoundRect(DC: HDC; X1, Y1, X2, Y2, RX, RY: Integer): Boolean;
+var
+  ctx: TCocoaContext;
 begin
-  Result:=inherited RoundRect(DC, X1, Y1, X2, Y2, RX, RY);
+  ctx := CheckDC(DC);
+  Result := Assigned(ctx);
+  if Result then
+    ctx.RoundRect(X1, Y1, X2, Y2, RX, RY);
 end;
 
 //##apiwiz##eps##   // Do not remove, no wizard declaration after this line
