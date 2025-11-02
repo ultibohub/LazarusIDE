@@ -1,16 +1,4 @@
 {
- /***************************************************************************
-                        compiler.pp  -  Lazarus IDE unit
-                        -------------------------------------
-               TCompiler is responsible for configuration and running
-               the Free Pascal Compiler.
-
-
-                   Initial Revision  : Sun Mar 28 23:15:32 CST 1999
-
-
- ***************************************************************************/
-
  ***************************************************************************
  *                                                                         *
  *   This source is free software; you can redistribute it and/or modify   *
@@ -29,6 +17,12 @@
  *   Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1335, USA.   *
  *                                                                         *
  ***************************************************************************
+
+ Abstract:
+   TCompiler is responsible for configuration and running the Free Pascal Compiler.
+
+   Initial Revision  : Sun Mar 28 23:15:32 CST 1999
+   Moved to IdeConfig package in November 2025.
 }
 unit Compiler;
 
@@ -44,11 +38,9 @@ uses
   // Codetools
   DefineTemplates, LinkScanner, CodeToolManager,
   // BuildIntf
-  IDEExternToolIntf, CompOptsIntf,
+  IDEExternToolIntf, CompOptsIntf, ProjectIntf,
   // IdeConfig
-  TransferMacros, IDECmdLine, CompilerOptions,
-  // IDE
-  LazarusIDEStrConsts, Project;
+  TransferMacros, IDECmdLine, CompilerOptions, IdeConfStrConsts;
 
 type
   //TOnCmdLineCreate = procedure(var CmdLine: string; var Abort:boolean) of object;
@@ -62,7 +54,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    function Compile(AProject: TProject;
+    function Compile(AProject: TLazProject;
                      const WorkingDir, CompilerFilename: string; CompilerParams: TStrings;
                      BuildAll, SkipLinking, SkipAssembler, CurrentDirectoryIsTestDir: boolean;
                      const aCompileHint: string): TModalResult;
@@ -275,7 +267,7 @@ end;
 {------------------------------------------------------------------------------
   TCompiler Compile
 ------------------------------------------------------------------------------}
-function TCompiler.Compile(AProject: TProject; const WorkingDir,
+function TCompiler.Compile(AProject: TLazProject; const WorkingDir,
   CompilerFilename: string; CompilerParams: TStrings; BuildAll, SkipLinking,
   SkipAssembler, CurrentDirectoryIsTestDir: boolean; const aCompileHint: string
   ): TModalResult;
@@ -306,15 +298,15 @@ begin
   end;
 
   Title:=lisCompileProject;
-  if AProject.BuildModes.Count>1 then
-    Title+=Format(lisMode, [AProject.ActiveBuildMode.Identifier]);
-  TargetOS:=AProject.CompilerOptions.GetEffectiveTargetOS;
+  if AProject.LazBuildModes.Count>1 then
+    Title+=Format(lisMode, [AProject.ActiveBuildModeID]);
+  TargetOS:=AProject.LazCompilerOptions.GetEffectiveTargetOS;
   if TargetOS<>FPCAdds.GetCompiledTargetOS then
     Title+=Format(lisOS, [TargetOS]);
-  TargetCPU:=AProject.CompilerOptions.GetEffectiveTargetCPU;
+  TargetCPU:=AProject.LazCompilerOptions.GetEffectiveTargetCPU;
   if TargetCPU<>FPCAdds.GetCompiledTargetCPU then
     Title+=Format(lisCPU, [TargetCPU]);
-  TargetFilename:=AProject.CompilerOptions.CreateTargetFilename;
+  TargetFilename:=AProject.LazCompilerOptions.CreateTargetFilename;
   if TargetFilename<>'' then
     Title+=Format(lisTarget2, [TargetFilename]);
 
@@ -340,11 +332,11 @@ begin
     if CompilerKind=pcPas2js then
       SubTool:=SubToolPas2js;
     FPCParser:=TFPCParser(Tool.AddParsers(SubTool));
-    FPCParser.HideHintsSenderNotUsed:=not AProject.CompilerOptions.ShowHintsForSenderNotUsed;
-    FPCParser.HideHintsUnitNotUsedInMainSource:=not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc;
-    if (not AProject.CompilerOptions.ShowHintsForUnusedUnitsInMainSrc)
-    and (AProject.MainFilename<>'') then
-      FPCParser.FilesToIgnoreUnitNotUsed.Add(AProject.MainFilename);
+    FPCParser.HideHintsSenderNotUsed:=not AProject.LazCompilerOptions.ShowHintsForSenderNotUsed;
+    FPCParser.HideHintsUnitNotUsedInMainSource:=not AProject.LazCompilerOptions.ShowHintsForUnusedUnitsInMainSrc;
+    if (not AProject.LazCompilerOptions.ShowHintsForUnusedUnitsInMainSrc)
+    and Assigned(AProject.MainFile) then // was (AProject.MainFilename<>'')
+      FPCParser.FilesToIgnoreUnitNotUsed.Add(AProject.MainFile.Filename);
     Tool.AddParsers(SubToolMake);
     Tool.Execute;
     Tool.WaitForExit;

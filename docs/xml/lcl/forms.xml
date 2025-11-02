@@ -3107,20 +3107,23 @@ constructor prior to exiting from the method.
 <element name="TFrame.Font" link="#lcl.controls.TControl.Font"/>
 
 <element name="TFrame.LCLVersion">
-<short>LCL version number for the frame instance.</short>
+<short>
+LCL version number for the frame instance.
+</short>
 <descr>
 <p>
 The value in <var>LCLVersion</var> is assigned in the Create constructor 
 using the lcl_version constant defined in the <file>lclversion.pas</file> 
-unit. Its value is stored during LCL component streaming if a value has not 
-been assigned to the Parent for the control.
+unit. Its value is stored during LCL component streaming if the ComponentState 
+indicates the TFrame instance was instantiated at design-time 
+(csDesignInstance).
 </p>
 </descr>
 <seealso>
-<link id="TForm.LCLVersion"/>
-<link id="TForm.Create"/>
-<link id="#lcl.controls.TControl.Parent">TControl.Parent</link>
+<link id="TFrame.LCLVersion"/>
+<link id="TFrame.Create"/>
 <link id="#lcl.lclversion.lcl_version">lcl_version</link>
+<link id="#rtl.classes.TComponent.ComponentState">TComponent.ComponentState</link>
 </seealso>
 </element>
 
@@ -9600,9 +9603,20 @@ The LCL version number as a String type.
 </short>
 <descr>
 <p>
-Used to distinguish form streaming content for different versions of the LCL.
+LCLVersion is a String property which written to the LCL streaming mechanism 
+when ComponentState indicates the form instance was created a design-time 
+(csDesignInstance). Used to distinguish form streaming content for different 
+versions of the LCL. The value is assigned in both the Create constructor and 
+the Loaded method. The property is set to the value in the lcl_version 
+constant.
 </p>
 </descr>
+<seealso>
+<link id="TForm.Create"/>
+<link id="TCustomForm.Loaded"/>
+<link id="#lcl.lclversion.lcl_version">lcl_version</link>
+<link id="#rtl.classes.TComponent.ComponentState">TComponent.ComponentState</link>
+</seealso>
 </element>
 
 <element name="TForm.Scaled" link="#lcl.forms.TCustomDesignControl.Scaled"/>
@@ -13574,13 +13588,23 @@ the list of data modules.
 </element>
 
 <element name="TScreen.DataModules">
-<short>Provides indexed access to data modules on the screen.</short>
+<short>
+Provides thread-safe indexed access to data modules on the screen.
+</short>
 <descr>
 <p>
 <var>DataModules</var> is a read-only indexed <var>TDataModule</var> property 
-which provides access to a data module by its ordinal position in the list. 
-Data modules are a non-visual component at run-time, and are provided to 
-maintain compatibility with the Delphi VCL equivalent.
+which provides thread-safe access to a data module by its ordinal position in 
+the list. Data modules are a non-visual component at run-time, and are 
+provided to maintain compatibility with the Delphi VCL equivalent.
+</p>
+<p>
+TScreen maintains an internal TThreadList instance used to access and maintain 
+the TDataModule instances on the screen. Duplicate data modules are not 
+allowed in the list; an exception is raised when adding a specific TDataModule 
+instance if it is already stored in the list. Read and write access to the 
+list are protected using the LockList and UnlockList methods in the list. This 
+provides thread safety needed for Web server or other threaded applications.
 </p>
 <p>
 <var>Index</var> contains the ordinal position in the list for the property 
@@ -13593,9 +13617,14 @@ Use <var>DataModuleCount</var> to get the number of data module instances in
 the property.
 </p>
 </descr>
+<version>
+Modified in LCL version 4.4 to provide thread-safe access to data module 
+instances the list of data modules.
+</version>
 <seealso>
 <link id="TScreen.DataModuleCount"/>
 <link id="#rtl.classes.TDataModule">TDataModule</link>
+<link id="#rtl.classes.TThreadList">TThreadList</link>
 </seealso>
 </element>
 <element name="TScreen.DataModules.Index">

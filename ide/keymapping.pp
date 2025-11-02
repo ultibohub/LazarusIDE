@@ -548,6 +548,7 @@ begin
     ecScrollDown              : Result:= srkmecScrollDown;
     ecScrollLeft              : Result:= srkmecScrollLeft;
     ecScrollRight             : Result:= srkmecScrollRight;
+    ecScrollCurrentLineToCenter          : Result:= srkmecScrollCurrentLineToCenter;
     ecInsertMode              : Result:= srkmecInsertMode;
     ecOverwriteMode           : Result:= srkmecOverwriteMode;
     ecToggleMode              : Result:= srkmecToggleMode;
@@ -2896,6 +2897,7 @@ begin
   AddDefault(C, 'Scroll down one line', srkmecScrollDown, ecScrollDown);
   AddDefault(C, 'Scroll left one char', srkmecScrollLeft, ecScrollLeft);
   AddDefault(C, 'Scroll right one char', srkmecScrollRight, ecScrollRight);
+  AddDefault(C, 'Scroll current line to center', srkmecScrollCurrentLineToCenter, ecScrollCurrentLineToCenter);
 
   // selection
   C:=Categories[AddCategory('Selection',srkmCatSelection, IDECmdScopeSrcEditOnly)];
@@ -4031,7 +4033,7 @@ var
   KeyList: TKeyStrokeList;
   CurRelation: TKeyCommandRelation;
   POUsed: Boolean;
-  SameCmdKey: TSynEditKeyStroke;
+  //SameCmdKey: TSynEditKeyStroke;
 begin
   (* ACommandOffsetOffset
      The IDE defines its own fixed value command-id for plugins.
@@ -4057,12 +4059,13 @@ begin
         if KeyList.FCount < 3 then
           KeyList.Add(Key)
         else begin
-          DebugLn(['TKeyCommandRelationList.AssignTo: WARNING: fourth key for command ',EditorCommandToDescriptionString(Key.Command),':']);
+{          DebugLn(['TKeyCommandRelationList.AssignTo: WARNING: fourth key for command ',EditorCommandToDescriptionString(Key.Command),':']);
           for j:=0 to KeyList.FCount-1 do begin
             SameCmdKey:=KeyList[j];
-            debugln(['  ',j,'/',KeyList.FCount,' ',KeyAndShiftStateToKeyString(SameCmdKey.Key,SameCmdKey.Shift)]);
+            debugln(['  ',j+1,'/',KeyList.FCount,' ',KeyAndShiftStateToKeyString(SameCmdKey.Key,SameCmdKey.Shift)]);
           end;
           debugln(['  ',4,'/',KeyList.FCount,' ',KeyAndShiftStateToKeyString(Key.Key,Key.Shift)]);
+}
           Key.Free; // This deletes the key from TSynEditKeyStrokes container as well.
         end;
       end

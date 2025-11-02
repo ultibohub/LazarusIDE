@@ -32,7 +32,7 @@ uses
   // LCL
   Controls, Dialogs, Graphics, StdCtrls,
   // LazUtils
-  LazFileUtils, LazStringUtils, LazUTF8, LazLoggerBase,
+  LazFileUtils, LazStringUtils, LazUTF8, LazLoggerBase, FPCAdds,
   // CodeTools
   DefineTemplates, CodeToolManager,
   // BuildIntf
@@ -242,18 +242,16 @@ procedure TCompilerConfigTargetFrame.UpdateByTargetOS(aTargetOS: string);
 var
   IsUltibo: Boolean; //Ultibo
 begin
+  //debugln(['UpdateByTargetOS TargetOS=', aTargetOS]);
   if aTargetOS = '' then
   begin
-    aTargetOS := '$(TargetOS)';
-    if not GlobalMacroList.SubstituteStr(aTargetOS) then
-      raise Exception.CreateFmt(lisCannotSubstituteMacroS, [aTargetOS]);
+    aTargetOS := GetCompiledTargetOS;
+    //debugln(['UpdateByTargetOS Substituted TargetOS=', aTargetOS]);
   end;
-
-  if AnsiStartsText('Win', aTargetOS) then
-    chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG)'
+  if StartsText('Win', aTargetOS) then
+    chkWin32GraphicApp.Caption := dlgWindowsGUIApp + ' (-WG)'
   else
-    chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG, '+
-      lisOptionValueIgnored+')';
+    chkWin32GraphicApp.Caption := dlgWindowsGUIApp + ' (-WG, '+lisOptionValueIgnored+')';
 
   // Check Target 
   IsUltibo := Lowercase(aTargetOS) = 'ultibo'; //Ultibo
@@ -402,8 +400,7 @@ begin
   end;
 end; //Ultibo
 
-procedure TCompilerConfigTargetFrame.FillSubTargetComboBox(UseSubTarget: string
-  );
+procedure TCompilerConfigTargetFrame.FillSubTargetComboBox(UseSubTarget: string);
 var
   sl: TStringListUTF8Fast;
   aCache: TFPCUnitSetCache;
@@ -539,7 +536,7 @@ begin
 
     // Target-specific options
     grbTargetOptions.Caption := dlgTargetSpecificOptions;
-    chkWin32GraphicApp.Caption := dlgWin32GUIApp + ' (-WG)';
+    chkWin32GraphicApp.Caption := dlgWindowsGUIApp + ' (-WG)';
     // WidgetSet
     LCLWidgetTypeLabel.Caption := lisSelectAnotherLCLWidgetSet;
 

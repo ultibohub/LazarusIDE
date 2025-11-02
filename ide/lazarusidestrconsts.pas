@@ -405,7 +405,7 @@ resourcestring
   lisPackageOption = 'Package "%s" Option';
   lisAbout2 = 'About %s';
   lisCopySelectedMessagesToClipboard = 'Copy Selected Messages to Clipboard';
-  lisCopyFileNameToClipboard = 'Copy File Name to Clipboard';
+  lisCopyFileNamesToClipboard = 'Copy File Names to Clipboard';
   lisFind = 'Find ...';
   lisAbout = 'About';
   lisRemoveCompilerOptionHideMessage = 'Remove Compiler Option Hide Message';
@@ -2432,7 +2432,7 @@ resourcestring
   dlgExtSymb = 'Use external debug symbols file';
   dlgLinkSmart = 'Link smart';
   dlgPassOptsLinker = 'Pass options to linker with "-k", delimiter is space';
-  dlgWin32GUIApp = 'Win32 gui application';
+  dlgWindowsGUIApp = 'Windows GUI application';
   lisOptionValueIgnored = 'ignored';
   lisCannotSubstituteMacroS = 'Cannot substitute macro "%s".';
   dlgTargetSpecificOptions = 'Target-specific options';
@@ -3166,6 +3166,7 @@ resourcestring
   srkmecScrollDown            = 'Scroll down one line';
   srkmecScrollLeft            = 'Scroll left one char';
   srkmecScrollRight           = 'Scroll right one char';
+  srkmecScrollCurrentLineToCenter = 'Scroll current line to center';
   srkmecInsertMode            = 'Insert Mode';
   srkmecOverwriteMode         = 'Overwrite Mode';
   srkmecToggleMode            = 'Toggle Mode';
@@ -3602,16 +3603,6 @@ resourcestring
     +'want to delete this build profile?';
   lisLazBuildSelectProfilesToBuild = 'Select profiles to build';
 
-
-  // compiler
-  lisCompilerErrorInvalidCompiler = 'Error: invalid compiler: %s';
-  lisCompilerHintYouCanSetTheCompilerPath = 'Hint: you can set the compiler '
-    +'path in Tools -> Options-> Files -> Compiler Path';
-  lisCompileProject = 'Compile Project';
-  lisMode = ', Mode: %s';
-  lisOS = ', OS: %s';
-  lisCPU = ', CPU: %s';
-  lisTarget2 = ', Target: %s';
   lisCompilerNOTELoadingOldCodetoolsOptionsFile = 'NOTE: loading old '
     +'codetools options file: ';
   lisCompilerNOTECodetoolsConfigFileNotFoundUsingDefaults = 'NOTE: codetools '
@@ -5804,7 +5795,7 @@ resourcestring
   lisTheDefaultModeMustBeStoredInProject =
     'The default mode must be stored in project, not in session.';
   lisThereMustBeAtLeastOneBuildMode = 'There must be at least one build mode.';
-  lisDuplicateEntry = 'Duplicate entry';
+  lisBuildModesMustHaveName = 'All build modes must have a name.';
   lisThereIsAlreadyABuildModeWithThisName = 'There is already a build mode with this name.';
   lisAddNewBuildModeCopyingSettingsFrom = 'Add new build mode, copying settings from "%s"';
   lisDeleteMode = 'Delete mode "%s"';

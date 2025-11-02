@@ -65,8 +65,8 @@ end;
          LParam - Long-integer parameter
  Returns: 0 if Msg is handled; non-zero long-integer result otherwise
 
- Passes message on to 'default' handler. This can be a control specific window
- procedure or the default window procedure.
+ Passes message on to 'default' handler. This can be the default window procedure
+ (WndProc) or a specific indexed dynamic method via inherited TObject.Dispatch.
  ------------------------------------------------------------------------------}
 function CallDefaultWindowProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
   LParam: Windows.LParam): LResult;
@@ -2513,6 +2513,7 @@ begin
     WM_UPDATEUISTATE:
       if ThemeServices.ThemesEnabled then
         InvalidateRect(Window, nil, True);
+    WM_DEVICECHANGE: SetLMessageAndParams(LM_DEVICECHANGE, True);
 
     { >= WM_USER }
 
@@ -2659,7 +2660,8 @@ begin
 
   // respond to result of LCL handling the message
   case PLMsg^.Msg of
-    LM_ERASEBKGND, LM_SETCURSOR, LM_RBUTTONUP, LM_CONTEXTMENU:
+    LM_ERASEBKGND, LM_SETCURSOR, LM_RBUTTONUP, LM_CONTEXTMENU,
+    WM_DEVICECHANGE:
       if PLMsg^.Result = 0 then
         WinProcess := True;
 

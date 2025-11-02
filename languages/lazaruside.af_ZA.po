@@ -4585,13 +4585,13 @@ msgstr ""
 msgid "Width:"
 msgstr "Weite:"
 
-#: lazarusidestrconsts.dlgwin32guiapp
-msgid "Win32 gui application"
-msgstr ""
-
 #: lazarusidestrconsts.dlgwindow
 msgctxt "lazarusidestrconsts.dlgwindow"
 msgid "Window"
+msgstr ""
+
+#: lazarusidestrconsts.dlgwindowsguiapp
+msgid "Windows GUI application"
 msgstr ""
 
 #: lazarusidestrconsts.dlgwordexceptions
@@ -7517,10 +7517,6 @@ msgstr ""
 msgid "Compile package twice and check if any unit was compiled again."
 msgstr ""
 
-#: lazarusidestrconsts.liscompileproject
-msgid "Compile Project"
-msgstr ""
-
 #: lazarusidestrconsts.liscompiler
 msgid "Compiler"
 msgstr "Vertaler"
@@ -7535,18 +7531,9 @@ msgstr ""
 msgid "Compiler \"%s\" does not support target %s-%s"
 msgstr ""
 
-#: lazarusidestrconsts.liscompilererrorinvalidcompiler
-#, object-pascal-format
-msgid "Error: invalid compiler: %s"
-msgstr ""
-
 #: lazarusidestrconsts.liscompilerfilename
 msgid "Compiler filename"
 msgstr "Vertaler lêer"
-
-#: lazarusidestrconsts.liscompilerhintyoucansetthecompilerpath
-msgid "Hint: you can set the compiler path in Tools -> Options-> Files -> Compiler Path"
-msgstr ""
 
 #: lazarusidestrconsts.liscompilermessagesfilenotfound
 #, object-pascal-format
@@ -8312,8 +8299,8 @@ msgstr "Kopieer vout"
 msgid "Copy Filename %s"
 msgstr ""
 
-#: lazarusidestrconsts.liscopyfilenametoclipboard
-msgid "Copy File Name to Clipboard"
+#: lazarusidestrconsts.liscopyfilenamestoclipboard
+msgid "Copy File Names to Clipboard"
 msgstr ""
 
 #: lazarusidestrconsts.liscopyfilesfailed
@@ -8369,11 +8356,6 @@ msgstr ""
 #: lazarusidestrconsts.liscpopenunit
 #, object-pascal-format
 msgid "Open Unit %s"
-msgstr ""
-
-#: lazarusidestrconsts.liscpu
-#, object-pascal-format
-msgid ", CPU: %s"
 msgstr ""
 
 #: lazarusidestrconsts.liscreateandedit
@@ -13965,11 +13947,6 @@ msgstr ""
 msgid "WidgetSet change is available only for LCL projects"
 msgstr ""
 
-#: lazarusidestrconsts.lismode
-#, object-pascal-format
-msgid ", Mode: %s"
-msgstr ""
-
 #: lazarusidestrconsts.lismodifiedlgplnotice
 msgid ""
 "<description>\n"
@@ -14674,11 +14651,6 @@ msgstr "Opsies"
 
 #: lazarusidestrconsts.lisoptionvalueignored
 msgid "ignored"
-msgstr ""
-
-#: lazarusidestrconsts.lisos
-#, object-pascal-format
-msgid ", OS: %s"
 msgstr ""
 
 #: lazarusidestrconsts.lisothersourcespathofpackagecontainsdirectorywhichisa
@@ -17717,11 +17689,6 @@ msgstr ""
 
 #: lazarusidestrconsts.listarget
 msgid "Target:"
-msgstr ""
-
-#: lazarusidestrconsts.listarget2
-#, object-pascal-format
-msgid ", Target: %s"
 msgstr ""
 
 #: lazarusidestrconsts.listargetcpu
@@ -20835,6 +20802,10 @@ msgstr ""
 
 #: lazarusidestrconsts.srkmecrunwithoutdebugging
 msgid "run without debugging"
+msgstr ""
+
+#: lazarusidestrconsts.srkmecscrollcurrentlinetocenter
+msgid "Scroll current line to center"
 msgstr ""
 
 #: lazarusidestrconsts.srkmecscrolldown

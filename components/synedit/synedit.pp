@@ -124,7 +124,7 @@ uses
   {$ENDIF}
   Types, SysUtils, Classes,
   // LCL
-  LCLProc, LCLIntf, LCLType, LMessages, LResources, Messages, Controls, Graphics,
+  LCLIntf, LCLType, LMessages, LResources, Messages, Controls, Graphics,
   Forms, StdCtrls, ExtCtrls, Menus, Clipbrd, StdActns,
   // LazUtils
   LazUtilities, LazMethodList, LazLoggerBase, LazTracer, LazUTF8,
@@ -7922,6 +7922,9 @@ begin
           if CaretX < LeftChar then
             CaretX := LeftChar;
         end;
+      ecScrollCurrentLineToCenter: begin
+        TopView := Max(1, FCaret.ViewedLinePos - (LinesInWindow div 2));
+      end;
       ecInsertMode:
         begin
           InsertMode := TRUE;
