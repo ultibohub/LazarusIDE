@@ -1,28 +1,28 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: \n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
-"Content-Transfer-Encoding: 8bit\n"
 "POT-Creation-Date: \n"
 "PO-Revision-Date: \n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
-"X-Generator: Poedit 2.3.1\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: Poedit 3.5\n"
 
 #: ideconfstrconsts.liscompileproject
 msgid "Compile Project"
-msgstr ""
+msgstr "Компиляция проекта"
 
 #: ideconfstrconsts.liscompilererrorinvalidcompiler
 #, object-pascal-format
 msgid "Error: invalid compiler: %s"
-msgstr ""
+msgstr "Ошибка: неверный компилятор: %s"
 
 #: ideconfstrconsts.liscompilerhintyoucansetthecompilerpath
-msgid "Hint: you can set the compiler path in Tools -> Options-> Files -> Compiler Path"
-msgstr ""
+msgid "Hint: you can set the compiler executable in Tools -> Options-> Files -> Compiler executable"
+msgstr "Подсказка: задать исполнимый файл компилятора можно в Сервис -> Параметры -> Файлы -> Исполнимый файл компилятора"
 
 #: ideconfstrconsts.liscomponentnameisapascalkeyword
 #, object-pascal-format
@@ -37,7 +37,7 @@ msgstr "Имя компонента \"%s\" не является коррект�
 #: ideconfstrconsts.liscpu
 #, object-pascal-format
 msgid ", CPU: %s"
-msgstr ""
+msgstr ", процессор: %s"
 
 #: ideconfstrconsts.lisedtdefallpackages
 msgid "All packages"
@@ -113,17 +113,17 @@ msgstr "Fppkg сообщает, что RTL не установлена."
 #: ideconfstrconsts.lismode
 #, object-pascal-format
 msgid ", Mode: %s"
-msgstr ""
+msgstr ", режим: %s"
 
 #: ideconfstrconsts.lisos
 #, object-pascal-format
 msgid ", OS: %s"
-msgstr ""
+msgstr ", ОС: %s"
 
 #: ideconfstrconsts.listarget2
 #, object-pascal-format
 msgid ", Target: %s"
-msgstr ""
+msgstr ", цель: %s"
 
 #: ideconfstrconsts.listmfunctionappendpathdelimiter
 msgid "Function: append path delimiter"

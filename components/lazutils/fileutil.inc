@@ -297,13 +297,17 @@ end;
 type
   TCopyDirTree = class(TFileSearcher)
   private
+    FCopyEmptyDirectories: Boolean;
     FSourceDir: string;
     FTargetDir: string;
     FFlags: TCopyFileFlags;
     FCopyFailedCount: Integer;
   protected
     procedure DoFileFound; override;
-    //procedure DoDirectoryFound; override;
+    procedure DoDirectoryFound; override;
+  public
+    property CopyEmptyDirectories: Boolean read FCopyEmptyDirectories write FCopyEmptyDirectories default False;
+    constructor Create; override;
   end;
 
 procedure TCopyDirTree.DoFileFound;
@@ -315,13 +319,27 @@ begin
   if not CopyFile(FileName, NewLoc, FFlags) then
     Inc(FCopyFailedCount);
 end;
-{
+
 procedure TCopyDirTree.DoDirectoryFound;
+var
+  NewDir: String;
 begin
-  // Directory is already created by the cffCreateDestDirectory flag.
+  // Directory is only created by the cffCreateDestDirectory flag if there actually is a file to copy
+  // if the directory has no files in it, it will by default not be created in the target directory: issue #41883
+  NewDir:=StringReplace(FileName, FSourceDir, FTargetDir, []);
+  if (cffCreateDestDirectory in FFlags) and FCopyEmptyDirectories
+      and (not DirectoryExistsUTF8(NewDir))
+      and (not ForceDirectoriesUTF8(NewDir)) then
+    Inc(FCopyFailedCount);
 end;
-}
-function CopyDirTree(const SourceDir, TargetDir: string; Flags: TCopyFileFlags=[]): Boolean;
+
+constructor TCopyDirTree.Create;
+begin
+  inherited Create;
+  FCopyEmptyDirectories := False;
+end;
+
+function CopyDirTree(const SourceDir, TargetDir: string; Flags: TCopyFileFlags; CopyEmptyDirs: Boolean): Boolean;
 var
   Searcher: TCopyDirTree;
 begin
@@ -333,6 +351,7 @@ begin
     Searcher.FCopyFailedCount:=0;
     Searcher.FSourceDir:=TrimFilename(SetDirSeparators(SourceDir));
     Searcher.FTargetDir:=TrimFilename(SetDirSeparators(TargetDir));
+    Searcher.CopyEmptyDirectories := CopyEmptyDirs;
 
     // Don't even try to copy to a subdirectory of SourceDir.
     //append a pathedelim, otherwise CopyDirTree('/home/user/foo','/home/user/foobar') will fail at this point. Issue #0038644
@@ -366,29 +385,85 @@ begin
   {$ENDIF}
 end;
 
+function ReadFileToBytes(const Filename: string): TBytes;
+// Read and return the contents of a file in one slurp.
+// Note: FileSize() returns 0 for virtual files at least in Unix like systems.
+var
+  Bytes: TBytes;
+  InStream: TFileStream;
+  i, len: Int64;
+begin
+  Result := [];
+  try
+    len := FileSize(Filename);
+    {$IFNDEF CPU64}
+    if len > MaxLongint then
+      len := 0;           // A big file (>2GB) does not fit. Return empty array.
+    {$ENDIF};
+    SetLength(Bytes, len);
+    if Length(Bytes) = 0 then exit;
+    InStream := TFileStream.Create(Filename, fmOpenRead);
+    try
+      {$IF FPC_FULLVERSION>30300}
+      InStream.Read64(Bytes, 0, Length(Bytes));
+      {$ELSE}
+      i := 0;
+      while i < Length(Bytes) do
+      begin
+        InStream.Position := i;
+        if Length(Bytes) - i > MaxLongint then
+          len := MaxLongint
+        else
+          len := Length(Bytes) - i;
+        InStream.Read(Bytes[i], len);
+        Inc(i, len);
+      end;
+      {$ENDIF}
+    finally
+      InStream.Free;
+    end;
+    Result:=Bytes;
+  except
+    // ignore errors, Result will be empty array
+  end;
+end;
+
 function ReadFileToString(const Filename: string): string;
 // Read and return the contents of a text file in one slurp.
 // Note: FileSize() returns 0 for virtual files at least in Unix like systems.
 //       Then use different ways to read contents, eg. TStringList.LoadFromFile();
 var
-  SrcHandle: THandle;
-  ReadCount: LongInt;
   s: String;
+  InStream: TFileStream;
+  i, len: Int64;
 begin
   Result := '';
-  s:='';
   try
-    Setlength(s, FileSize(Filename));
-    if s='' then exit;
-    SrcHandle := FileOpenUTF8(Filename, fmOpenRead or fmShareDenyWrite);
-    if SrcHandle = feInvalidHandle then
-      exit;
+    len := FileSize(Filename);
+    {$IFNDEF CPU64}
+    if len > MaxLongint then
+      len := 0;           // A big file (>2GB) does not fit. Return empty string.
+    {$ENDIF};
+    Setlength(s, len);
+    if Length(s) = 0 then exit;
+    InStream := TFileStream.Create(Filename, fmOpenRead);
     try
-      ReadCount:=FileRead(SrcHandle,s[1],length(s));
-      if ReadCount<length(s) then
-        exit;
+      {$IF FPC_FULLVERSION>30300}
+      InStream.Read64(TBytes(s), 0, Length(s));
+      {$ELSE}
+      i := 0;
+      while i < Length(s) do
+      begin
+        InStream.Position := i;
+        len := Length(s) - i;
+        if len > MaxLongint then
+          len := MaxLongint;
+        InStream.Read(s[i+1], len);
+        Inc(i, len);
+      end;
+      {$ENDIF}
     finally
-      FileClose(SrcHandle);
+      InStream.Free;
     end;
     Result:=s;
   except

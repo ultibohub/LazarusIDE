@@ -3053,6 +3053,7 @@ begin
     itmFileSaveAll.Command:=GetIdeCmdRegToolBtn(ecSaveAll);
     itmFileClose.Command:=GetIdeCmdRegToolBtn(ecClose);
     itmFileCleanDirectory.Command:=GetIdeCmdRegToolBtn(ecCleanDirectory);
+    itmFileRestart.Command:=GetIdeCmdRegToolBtn(ecRestart);
     itmFileQuit.Command:=GetIdeCmdRegToolBtn(ecQuit);
 
     // edit menu
@@ -3696,6 +3697,7 @@ begin
   ecOpen:                     mnuOpenClicked(Self);
   ecOpenUnit:                 DoUseUnitDlg(udOpenUnit);
   ecSaveAll:                  DoSaveAll([sfCheckAmbiguousFiles,sfSaveNonProjectFiles]);
+  ecRestart:                  mnuRestartClicked(Self);
   ecQuit:                     mnuQuitClicked(Self);
   ecRun:
     begin
