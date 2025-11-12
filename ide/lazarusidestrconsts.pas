@@ -3468,18 +3468,16 @@ resourcestring
   lisFocusHint = 'Focus hint';
    
   // Category
-  srkmCatCursorMoving   = 'Cursor moving commands';
-  srkmCatSelection      = 'Text selection commands';
-  srkmCatColSelection   = 'Text column selection commands';
-  srkmCatEditing        = 'Text editing commands';
-  srkmCatClipboard      = 'Clipboard commands';
-  lisKMDeleteLastChar   = 'Delete last char';
-  srkmCatCmdCmd         = 'Command commands';
-  srkmCatMultiCaret     = 'Multi caret commands';
-  srkmCatSearchReplace  = 'Text search and replace commands';
-  srkmCatMarker         = 'Text bookmark commands';
-  srkmCatFold           = 'Text folding commands';
-  srkmCatCodeTools      = 'CodeTools commands';
+  srkmCatCursorMoving   = 'Cursor moving';
+  srkmCatSelection      = 'Text selection';
+  srkmCatColSelection   = 'Text column selection';
+  srkmCatMultiCaret     = 'Multi caret';
+  srkmCatEditing        = 'Text editing';
+  srkmCatClipboard      = 'Clipboard';
+  srkmCatSearchReplace  = 'Text search and replace';
+  srkmCatFold           = 'Text folding';
+  srkmCatMarker         = 'Text bookmarks';
+  srkmCatCodeTools      = 'CodeTools';
   srkmCatMacroRecording = 'Macros';
   srkmCatTemplateEdit   = 'Template Editing';
   srkmCatTemplateEditOff= 'Template Editing (not in Cell)';
@@ -3487,10 +3485,19 @@ resourcestring
   srkmCatSyncroEditOff  = 'Syncron Editing (not in Cell)';
   srkmCatSyncroEditSel  = 'Syncron Editing (while selecting)';
   srkmCatLineWrap       = 'Line wrapping';
+  srkmCatSrcNoteBook    = 'Source Notebooks';
+  srkmCatFileMenu       = 'File menu';
+  srkmCatViewMenu       = 'View menu';
+  srkmCatProjectMenu    = 'Project menu';
+  srkmCatRunMenu        = 'Run menu';
+  srkmCatPackageMenu    = 'Package menu';
+  srkmCatToolMenu       = 'Tools menu';
+  srkmCatHelpMenu       = 'Help menu';
+  lisKeyCatDesigner     = 'Designer';
+  lisKeyCatObjInspector = 'Object Inspector';
+  lisKeyCatCustom       = 'Custom';
 
-  srkmCatSrcNoteBook    = 'Source Notebook commands';
-  srkmCatFileMenu       = 'File menu commands';
-  srkmCatViewMenu       = 'View menu commands';
+  lisKMDeleteLastChar   = 'Delete last char';
   lisKMToggleViewObjectInspector = 'Toggle view Object Inspector';
   lisKMToggleViewSourceEditor = 'Toggle view Source Editor';
   lisKMToggleViewCodeExplorer = 'Toggle view Code Explorer';
@@ -3499,11 +3506,9 @@ resourcestring
   lisKMToggleViewMessages = 'Toggle view Messages';
   lisKMToggleViewSearchResults = 'Toggle view Search Results';
   lisKMToggleViewDebugEvents = 'View Debugger Event Log';
-  srkmCatProjectMenu    = 'Project menu commands';
   lisKMNewProject = 'New project';
   lisKMNewProjectFromFile = 'New project from file';
   lisKMToggleViewIDESpeedButtons = 'Toggle view IDE speed buttons';
-  srkmCatRunMenu        = 'Run menu commands';
   lisKMCompileProjectProgram = 'Compile project/program';
   lisKMBuildProjectProgram = 'Build project/program';
   lisKMQuickCompileNoLinking = 'Quick compile, no linking';
@@ -3514,17 +3519,11 @@ resourcestring
   lisKMRunProgram = 'Run program';
   lisKMPauseProgram = 'Pause program';
   lisKMViewProjectOptions = 'View project options';
-  srkmCatPackageMenu = 'Package menu commands';
-  srkmCatToolMenu       = 'Tools menu commands';
   lisKMExternalToolsSettings = 'External Tools settings';
   lisKMConvertDelphiPackageToLazarusPackage = 'Convert Delphi package to Lazarus package';
-  srkmCarHelpMenu       = 'Help menu commands';
-  lisKeyCatDesigner     = 'Designer commands';
   lisKMCopySelectedComponentsToClipboard = 'Copy selected components';
   lisKMCutSelectedComponentsToClipboard = 'Cut selected components';
   lisKMPasteComponentsFromClipboard = 'Paste Components';
-  lisKeyCatObjInspector = 'Object Inspector commands';
-  lisKeyCatCustom       = 'Custom commands';
 
   // Unit dependencies
   dlgUnitDepRefresh      = 'Refresh';
@@ -4745,15 +4744,7 @@ resourcestring
   lisCoolbarAvailableCommands = 'Available commands';
   lisCoolbarToolbarCommands = 'Toolbar commands';
   // Command root nodes
-  lisCoolbarIDEMainMenu = 'IDE Main Menu';
   lisCoolbarSourceTab = 'Source Tab';
-  lisCoolbarSourceEditor = 'Source Editor';
-  lisCoolbarMessages = 'Messages';
-  lisCoolbarCodeExplorer = 'Code Explorer';
-  lisCoolbarCodeTemplates = 'Code Templates';
-  lisCoolbarDesigner = 'Designer';
-  lisCoolbarPackageEditor = 'Package Editor';
-  lisCoolbarPackageEditorFiles = 'Package Editor Files';
 
   lisCoolbarAddConfigDelete = 'Add/Config/Delete Toolbar(s)';
   lisCoolbarGeneralSettings = 'General Coolbar Settings';

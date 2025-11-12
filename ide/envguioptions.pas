@@ -259,6 +259,7 @@ type
     FSnapToGuideLines: boolean;
     FGuideLineColorLeftTop: TColor;
     FGuideLineColorRightBottom: TColor;
+    FShowNonVisualComponents: boolean;
     FShowComponentCaptions: boolean;
     FShowEditorHints: boolean;
     FAutoCreateFormsOnOpen: boolean;
@@ -339,6 +340,8 @@ type
                                            write FGuideLineColorLeftTop;
     property GuideLineColorRightBottom: TColor read FGuideLineColorRightBottom
                                                write FGuideLineColorRightBottom;
+    property ShowNonVisualComponents: boolean read FShowNonVisualComponents
+                                             write FShowNonVisualComponents;
     property ShowComponentCaptions: boolean  read FShowComponentCaptions
                                             write FShowComponentCaptions;
     property ShowEditorHints: boolean read FShowEditorHints
@@ -1039,6 +1042,7 @@ begin
      DefaultGuideLineColorLeftTop);
   FGuideLineColorRightBottom:=XMLCfg.GetValue(Path+'FormEditor/GuideLineColorRightBottom',
      DefaultGuideLineColorRightBottom);
+  FShowNonVisualComponents:=XMLCfg.GetValue(Path+'FormEditor/ShowNonVisualComponents',true);
   FShowComponentCaptions:=XMLCfg.GetValue(Path+'FormEditor/ShowComponentCaptions',true);
   FShowEditorHints:=XMLCfg.GetValue(Path+'FormEditor/ShowEditorHints',true);
   FAutoCreateFormsOnOpen:=XMLCfg.GetValue(Path+'FormEditor/AutoCreateFormsOnOpen',true);
@@ -1165,6 +1169,7 @@ begin
   XMLCfg.SetDeleteValue(Path+'FormEditor/SnapToGuideLines',FSnapToGuideLines,true);
   XMLCfg.SetDeleteValue(Path+'FormEditor/GuideLineColorLeftTop',FGuideLineColorLeftTop,DefaultGuideLineColorLeftTop);
   XMLCfg.SetDeleteValue(Path+'FormEditor/GuideLineColorRightBottom',FGuideLineColorRightBottom,DefaultGuideLineColorRightBottom);
+  XMLCfg.SetDeleteValue(Path+'FormEditor/ShowNonVisualComponents',FShowNonVisualComponents,true);
   XMLCfg.SetDeleteValue(Path+'FormEditor/ShowComponentCaptions',FShowComponentCaptions,true);
   XMLCfg.SetDeleteValue(Path+'FormEditor/ShowEditorHints',FShowEditorHints,true);
   XMLCfg.SetDeleteValue(Path+'FormEditor/AutoCreateFormsOnOpen',FAutoCreateFormsOnOpen,true);

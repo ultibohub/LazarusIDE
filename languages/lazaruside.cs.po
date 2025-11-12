@@ -8278,16 +8278,6 @@ msgctxt "lazarusidestrconsts.liscoolbarborderstyleitem1"
 msgid "Single"
 msgstr "Jednoduchý"
 
-#: lazarusidestrconsts.liscoolbarcodeexplorer
-msgctxt "lazarusidestrconsts.liscoolbarcodeexplorer"
-msgid "Code Explorer"
-msgstr "Průzkumník kódu"
-
-#: lazarusidestrconsts.liscoolbarcodetemplates
-msgctxt "lazarusidestrconsts.liscoolbarcodetemplates"
-msgid "Code Templates"
-msgstr "Šablony kódu"
-
 #: lazarusidestrconsts.liscoolbarconfigure
 msgid "&Configure"
 msgstr "&Nastavit"
@@ -8299,10 +8289,6 @@ msgstr "Opravdu chcete odstranit vybraný panel nástrojů?"
 #: lazarusidestrconsts.liscoolbardeletewarning
 msgid "There must be at least one toolbar!"
 msgstr "Musí být nejméně jeden nástrojový panel!"
-
-#: lazarusidestrconsts.liscoolbardesigner
-msgid "Designer"
-msgstr "Návrhář"
 
 #: lazarusidestrconsts.liscoolbargeneralsettings
 msgid "General Coolbar Settings"
@@ -8342,15 +8328,6 @@ msgstr "Tlačítko"
 msgid "Grab width"
 msgstr "Šířka uchopení"
 
-#: lazarusidestrconsts.liscoolbaridemainmenu
-msgid "IDE Main Menu"
-msgstr "Hlavní nabídka IDE"
-
-#: lazarusidestrconsts.liscoolbarmessages
-msgctxt "lazarusidestrconsts.liscoolbarmessages"
-msgid "Messages"
-msgstr "Zprávy"
-
 #: lazarusidestrconsts.liscoolbarmoveselecteddown
 msgid "Move selected toolbar item down"
 msgstr "Přesunout vybranou položku nástrojového panelu dolů"
@@ -8363,14 +8340,6 @@ msgstr "Přesunout vybranou položku nástrojového panelu nahoru"
 msgid "IDE CoolBar"
 msgstr "CoolBar IDE"
 
-#: lazarusidestrconsts.liscoolbarpackageeditor
-msgid "Package Editor"
-msgstr "Editor balíčků"
-
-#: lazarusidestrconsts.liscoolbarpackageeditorfiles
-msgid "Package Editor Files"
-msgstr "Soubory editoru balíčků"
-
 #: lazarusidestrconsts.liscoolbarremoveselected
 msgid "Remove selected item from toolbar"
 msgstr "Odstranit vybranou položku z nástrojového panelu"
@@ -8382,11 +8351,6 @@ msgstr "Obnovit výchozí"
 #: lazarusidestrconsts.liscoolbarselecttoolbar
 msgid "Please select a toolbar first!"
 msgstr "Prosím nejdříve vyberte nástrojový panel!"
-
-#: lazarusidestrconsts.liscoolbarsourceeditor
-msgctxt "lazarusidestrconsts.liscoolbarsourceeditor"
-msgid "Source Editor"
-msgstr "Editor zdrojového kódu"
 
 #: lazarusidestrconsts.liscoolbarsourcetab
 msgid "Source Tab"
@@ -11538,15 +11502,24 @@ msgid "Key"
 msgstr "Klávesa"
 
 #: lazarusidestrconsts.liskeycatcustom
-msgid "Custom commands"
+#, fuzzy
+#| msgid "Custom commands"
+msgctxt "lazarusidestrconsts.liskeycatcustom"
+msgid "Custom"
 msgstr "Vlastní příkazy"
 
 #: lazarusidestrconsts.liskeycatdesigner
-msgid "Designer commands"
+#, fuzzy
+#| msgid "Designer commands"
+msgctxt "lazarusidestrconsts.liskeycatdesigner"
+msgid "Designer"
 msgstr "Povely návrháře"
 
 #: lazarusidestrconsts.liskeycatobjinspector
-msgid "Object Inspector commands"
+#, fuzzy
+#| msgid "Object Inspector commands"
+msgctxt "lazarusidestrconsts.liskeycatobjinspector"
+msgid "Object Inspector"
 msgstr "Příkazy inspektoru objektů"
 
 #: lazarusidestrconsts.liskeyor2keysequence
@@ -15419,6 +15392,7 @@ msgid "Auto rebuild when rebuilding all"
 msgstr "Automaticky znovu sestav pokud znovu sestavení všeho"
 
 #: lazarusidestrconsts.lispckoptscustom
+msgctxt "lazarusidestrconsts.lispckoptscustom"
 msgid "Custom"
 msgstr "Vlastní"
 
@@ -20090,41 +20064,50 @@ msgstr "Číslování verze"
 msgid "Show options"
 msgstr ""
 
-#: lazarusidestrconsts.srkmcarhelpmenu
-msgid "Help menu commands"
-msgstr "Příkazy nabídky Nápověda"
-
 #: lazarusidestrconsts.srkmcatclipboard
-msgid "Clipboard commands"
+msgid "Clipboard"
 msgstr ""
 
-#: lazarusidestrconsts.srkmcatcmdcmd
-msgid "Command commands"
-msgstr "Příkazové příkazy"
-
 #: lazarusidestrconsts.srkmcatcodetools
-msgid "CodeTools commands"
+#, fuzzy
+#| msgid "CodeTools commands"
+msgid "CodeTools"
 msgstr "Příkazy CodeTools"
 
 #: lazarusidestrconsts.srkmcatcolselection
-msgid "Text column selection commands"
+#, fuzzy
+#| msgid "Text column selection commands"
+msgid "Text column selection"
 msgstr "Příkazy výběru textových sloupců"
 
 #: lazarusidestrconsts.srkmcatcursormoving
-msgid "Cursor moving commands"
+#, fuzzy
+#| msgid "Cursor moving commands"
+msgid "Cursor moving"
 msgstr "Příkazy přesunu ukazatele"
 
 #: lazarusidestrconsts.srkmcatediting
-msgid "Text editing commands"
+#, fuzzy
+#| msgid "Text editing commands"
+msgid "Text editing"
 msgstr "Příkazy úpravy textu"
 
 #: lazarusidestrconsts.srkmcatfilemenu
-msgid "File menu commands"
+#, fuzzy
+#| msgid "File menu commands"
+msgid "File menu"
 msgstr "Příkazy nabídky Soubor"
 
 #: lazarusidestrconsts.srkmcatfold
-msgid "Text folding commands"
+#, fuzzy
+#| msgid "Text folding commands"
+msgid "Text folding"
 msgstr "Příkazy skládání textu"
+
+#: lazarusidestrconsts.srkmcathelpmenu
+msgctxt "lazarusidestrconsts.srkmcathelpmenu"
+msgid "Help menu"
+msgstr ""
 
 #: lazarusidestrconsts.srkmcatlinewrap
 msgid "Line wrapping"
@@ -20136,35 +20119,51 @@ msgid "Macros"
 msgstr "Makra"
 
 #: lazarusidestrconsts.srkmcatmarker
-msgid "Text bookmark commands"
+#, fuzzy
+#| msgid "Text bookmark commands"
+msgid "Text bookmarks"
 msgstr "Příkazy záložek textu"
 
 #: lazarusidestrconsts.srkmcatmulticaret
-msgid "Multi caret commands"
+#, fuzzy
+#| msgid "Multi caret commands"
+msgid "Multi caret"
 msgstr "Více-vsuvkové příkazy"
 
 #: lazarusidestrconsts.srkmcatpackagemenu
-msgid "Package menu commands"
+#, fuzzy
+#| msgid "Package menu commands"
+msgid "Package menu"
 msgstr "Příkazy nabídky Balíček"
 
 #: lazarusidestrconsts.srkmcatprojectmenu
-msgid "Project menu commands"
+#, fuzzy
+#| msgid "Project menu commands"
+msgid "Project menu"
 msgstr "Příkazy nabídky Projekt"
 
 #: lazarusidestrconsts.srkmcatrunmenu
-msgid "Run menu commands"
+#, fuzzy
+#| msgid "Run menu commands"
+msgid "Run menu"
 msgstr "Příkazy nabídky Spustit"
 
 #: lazarusidestrconsts.srkmcatsearchreplace
-msgid "Text search and replace commands"
+#, fuzzy
+#| msgid "Text search and replace commands"
+msgid "Text search and replace"
 msgstr "Příkazy hledání a nahrazení textu"
 
 #: lazarusidestrconsts.srkmcatselection
-msgid "Text selection commands"
+#, fuzzy
+#| msgid "Text selection commands"
+msgid "Text selection"
 msgstr "Příkazy výběru textu"
 
 #: lazarusidestrconsts.srkmcatsrcnotebook
-msgid "Source Notebook commands"
+#, fuzzy
+#| msgid "Source Notebook commands"
+msgid "Source Notebooks"
 msgstr "Příkazy zdrojového zápisníku"
 
 #: lazarusidestrconsts.srkmcatsyncroedit
@@ -20188,11 +20187,15 @@ msgid "Template Editing (not in Cell)"
 msgstr "Úprava šablony (ne v buňce)"
 
 #: lazarusidestrconsts.srkmcattoolmenu
-msgid "Tools menu commands"
+#, fuzzy
+#| msgid "Tools menu commands"
+msgid "Tools menu"
 msgstr "Příkazy nabídky Nástroje"
 
 #: lazarusidestrconsts.srkmcatviewmenu
-msgid "View menu commands"
+#, fuzzy
+#| msgid "View menu commands"
+msgid "View menu"
 msgstr "Zobrazit příkazy nabídky"
 
 #: lazarusidestrconsts.srkmcommand

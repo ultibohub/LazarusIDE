@@ -8547,19 +8547,6 @@ msgctxt "lazarusidestrconsts.liscoolbarborderstyleitem1"
 msgid "Single"
 msgstr "יחיד"
 
-#: lazarusidestrconsts.liscoolbarcodeexplorer
-#, fuzzy
-msgctxt "lazarusidestrconsts.liscoolbarcodeexplorer"
-msgid "Code Explorer"
-msgstr "סייר קוד"
-
-#: lazarusidestrconsts.liscoolbarcodetemplates
-#, fuzzy
-#| msgid "Code templates"
-msgctxt "lazarusidestrconsts.liscoolbarcodetemplates"
-msgid "Code Templates"
-msgstr "תבניות קוד"
-
 #: lazarusidestrconsts.liscoolbarconfigure
 msgid "&Configure"
 msgstr ""
@@ -8570,10 +8557,6 @@ msgstr ""
 
 #: lazarusidestrconsts.liscoolbardeletewarning
 msgid "There must be at least one toolbar!"
-msgstr ""
-
-#: lazarusidestrconsts.liscoolbardesigner
-msgid "Designer"
 msgstr ""
 
 #: lazarusidestrconsts.liscoolbargeneralsettings
@@ -8616,16 +8599,6 @@ msgstr "לחצן"
 msgid "Grab width"
 msgstr ""
 
-#: lazarusidestrconsts.liscoolbaridemainmenu
-msgid "IDE Main Menu"
-msgstr ""
-
-#: lazarusidestrconsts.liscoolbarmessages
-#, fuzzy
-msgctxt "lazarusidestrconsts.liscoolbarmessages"
-msgid "Messages"
-msgstr "הודעות"
-
 #: lazarusidestrconsts.liscoolbarmoveselecteddown
 msgid "Move selected toolbar item down"
 msgstr ""
@@ -8636,14 +8609,6 @@ msgstr ""
 
 #: lazarusidestrconsts.liscoolbaroptions
 msgid "IDE CoolBar"
-msgstr ""
-
-#: lazarusidestrconsts.liscoolbarpackageeditor
-msgid "Package Editor"
-msgstr ""
-
-#: lazarusidestrconsts.liscoolbarpackageeditorfiles
-msgid "Package Editor Files"
 msgstr ""
 
 #: lazarusidestrconsts.liscoolbarremoveselected
@@ -8657,12 +8622,6 @@ msgstr ""
 #: lazarusidestrconsts.liscoolbarselecttoolbar
 msgid "Please select a toolbar first!"
 msgstr ""
-
-#: lazarusidestrconsts.liscoolbarsourceeditor
-#, fuzzy
-msgctxt "lazarusidestrconsts.liscoolbarsourceeditor"
-msgid "Source Editor"
-msgstr "עורך קוד מקור"
 
 #: lazarusidestrconsts.liscoolbarsourcetab
 msgid "Source Tab"
@@ -11861,15 +11820,24 @@ msgid "Key"
 msgstr "מקש"
 
 #: lazarusidestrconsts.liskeycatcustom
-msgid "Custom commands"
+#, fuzzy
+#| msgid "Custom commands"
+msgctxt "lazarusidestrconsts.liskeycatcustom"
+msgid "Custom"
 msgstr "פקודות מותאמות אישית"
 
 #: lazarusidestrconsts.liskeycatdesigner
-msgid "Designer commands"
+#, fuzzy
+#| msgid "Designer commands"
+msgctxt "lazarusidestrconsts.liskeycatdesigner"
+msgid "Designer"
 msgstr "פקודות מעצב"
 
 #: lazarusidestrconsts.liskeycatobjinspector
-msgid "Object Inspector commands"
+#, fuzzy
+#| msgid "Object Inspector commands"
+msgctxt "lazarusidestrconsts.liskeycatobjinspector"
+msgid "Object Inspector"
 msgstr "פקודות מפקח העצמים"
 
 #: lazarusidestrconsts.liskeyor2keysequence
@@ -15979,6 +15947,7 @@ msgid "Auto rebuild when rebuilding all"
 msgstr "בנה אוטומטית מחדש בבנית הבל מחדש"
 
 #: lazarusidestrconsts.lispckoptscustom
+msgctxt "lazarusidestrconsts.lispckoptscustom"
 msgid "Custom"
 msgstr "מותאם אישית"
 
@@ -20852,41 +20821,50 @@ msgstr "מספור גרסאות"
 msgid "Show options"
 msgstr ""
 
-#: lazarusidestrconsts.srkmcarhelpmenu
-msgid "Help menu commands"
-msgstr "פקודות תפריט עזרה"
-
 #: lazarusidestrconsts.srkmcatclipboard
-msgid "Clipboard commands"
+msgid "Clipboard"
 msgstr ""
 
-#: lazarusidestrconsts.srkmcatcmdcmd
-msgid "Command commands"
-msgstr "פקודות פקודה"
-
 #: lazarusidestrconsts.srkmcatcodetools
-msgid "CodeTools commands"
+#, fuzzy
+#| msgid "CodeTools commands"
+msgid "CodeTools"
 msgstr "פקודות CodeTools"
 
 #: lazarusidestrconsts.srkmcatcolselection
-msgid "Text column selection commands"
+#, fuzzy
+#| msgid "Text column selection commands"
+msgid "Text column selection"
 msgstr "פקודות בחירת עמודת טקסט"
 
 #: lazarusidestrconsts.srkmcatcursormoving
-msgid "Cursor moving commands"
+#, fuzzy
+#| msgid "Cursor moving commands"
+msgid "Cursor moving"
 msgstr "פקודות של תזוזות עכבר"
 
 #: lazarusidestrconsts.srkmcatediting
-msgid "Text editing commands"
+#, fuzzy
+#| msgid "Text editing commands"
+msgid "Text editing"
 msgstr "פקודות של עריכת טקסט"
 
 #: lazarusidestrconsts.srkmcatfilemenu
-msgid "File menu commands"
+#, fuzzy
+#| msgid "File menu commands"
+msgid "File menu"
 msgstr "פקודות של תפריט \"קובץ\""
 
 #: lazarusidestrconsts.srkmcatfold
-msgid "Text folding commands"
+#, fuzzy
+#| msgid "Text folding commands"
+msgid "Text folding"
 msgstr "פקודות של קיפול טקסט"
+
+#: lazarusidestrconsts.srkmcathelpmenu
+msgctxt "lazarusidestrconsts.srkmcathelpmenu"
+msgid "Help menu"
+msgstr ""
 
 #: lazarusidestrconsts.srkmcatlinewrap
 msgid "Line wrapping"
@@ -20900,35 +20878,47 @@ msgstr "מאקרויים"
 #: lazarusidestrconsts.srkmcatmarker
 #, fuzzy
 #| msgid "Text marker commands"
-msgid "Text bookmark commands"
+msgid "Text bookmarks"
 msgstr "פקודות של סימון טקסט"
 
 #: lazarusidestrconsts.srkmcatmulticaret
-msgid "Multi caret commands"
+msgid "Multi caret"
 msgstr ""
 
 #: lazarusidestrconsts.srkmcatpackagemenu
-msgid "Package menu commands"
+#, fuzzy
+#| msgid "Package menu commands"
+msgid "Package menu"
 msgstr "פקודות של תפריט \"חבילה\""
 
 #: lazarusidestrconsts.srkmcatprojectmenu
-msgid "Project menu commands"
+#, fuzzy
+#| msgid "Project menu commands"
+msgid "Project menu"
 msgstr "פקודות של תפריט \"פרוייקט\""
 
 #: lazarusidestrconsts.srkmcatrunmenu
-msgid "Run menu commands"
+#, fuzzy
+#| msgid "Run menu commands"
+msgid "Run menu"
 msgstr "פקודות של תפריט \"הרץ\""
 
 #: lazarusidestrconsts.srkmcatsearchreplace
-msgid "Text search and replace commands"
+#, fuzzy
+#| msgid "Text search and replace commands"
+msgid "Text search and replace"
 msgstr "פקודות של תפריט \"חפש והחלף\""
 
 #: lazarusidestrconsts.srkmcatselection
-msgid "Text selection commands"
+#, fuzzy
+#| msgid "Text selection commands"
+msgid "Text selection"
 msgstr "פקודות של בחירת טקסט"
 
 #: lazarusidestrconsts.srkmcatsrcnotebook
-msgid "Source Notebook commands"
+#, fuzzy
+#| msgid "Source Notebook commands"
+msgid "Source Notebooks"
 msgstr "פקודות של פנקס הקוד"
 
 #: lazarusidestrconsts.srkmcatsyncroedit
@@ -20952,11 +20942,15 @@ msgid "Template Editing (not in Cell)"
 msgstr "עריכת תבנית (לא בתא)"
 
 #: lazarusidestrconsts.srkmcattoolmenu
-msgid "Tools menu commands"
+#, fuzzy
+#| msgid "Tools menu commands"
+msgid "Tools menu"
 msgstr "פקודות של תפריט \"כלים\""
 
 #: lazarusidestrconsts.srkmcatviewmenu
-msgid "View menu commands"
+#, fuzzy
+#| msgid "View menu commands"
+msgid "View menu"
 msgstr "פקודות של תפריט \"הצג\""
 
 #: lazarusidestrconsts.srkmcommand

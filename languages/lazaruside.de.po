@@ -8170,16 +8170,6 @@ msgctxt "lazarusidestrconsts.liscoolbarborderstyleitem1"
 msgid "Single"
 msgstr "Einfach"
 
-#: lazarusidestrconsts.liscoolbarcodeexplorer
-msgctxt "lazarusidestrconsts.liscoolbarcodeexplorer"
-msgid "Code Explorer"
-msgstr "Code-Explorer"
-
-#: lazarusidestrconsts.liscoolbarcodetemplates
-msgctxt "lazarusidestrconsts.liscoolbarcodetemplates"
-msgid "Code Templates"
-msgstr "Quelltextvorlagen"
-
 #: lazarusidestrconsts.liscoolbarconfigure
 msgid "&Configure"
 msgstr "Konfigurieren"
@@ -8191,10 +8181,6 @@ msgstr "Wollen Sie die ausgewählte Symbolleiste wirklich löschen?"
 #: lazarusidestrconsts.liscoolbardeletewarning
 msgid "There must be at least one toolbar!"
 msgstr "Es muß wenigstens eine Symbolleiste geben!"
-
-#: lazarusidestrconsts.liscoolbardesigner
-msgid "Designer"
-msgstr ""
 
 #: lazarusidestrconsts.liscoolbargeneralsettings
 msgid "General Coolbar Settings"
@@ -8234,15 +8220,6 @@ msgstr "Schaltfläche"
 msgid "Grab width"
 msgstr "Griffbreite"
 
-#: lazarusidestrconsts.liscoolbaridemainmenu
-msgid "IDE Main Menu"
-msgstr "IDE-Hauptmenü"
-
-#: lazarusidestrconsts.liscoolbarmessages
-msgctxt "lazarusidestrconsts.liscoolbarmessages"
-msgid "Messages"
-msgstr "Meldungen"
-
 #: lazarusidestrconsts.liscoolbarmoveselecteddown
 msgid "Move selected toolbar item down"
 msgstr "Gewähltes Symbolleisten-Element nach unten verschieben"
@@ -8255,14 +8232,6 @@ msgstr "Gewähltes Symbolleisten-Element nach oben verschieben"
 msgid "IDE CoolBar"
 msgstr "IDE-CoolBar"
 
-#: lazarusidestrconsts.liscoolbarpackageeditor
-msgid "Package Editor"
-msgstr "Package-Editor"
-
-#: lazarusidestrconsts.liscoolbarpackageeditorfiles
-msgid "Package Editor Files"
-msgstr "Package-Editordateien"
-
 #: lazarusidestrconsts.liscoolbarremoveselected
 msgid "Remove selected item from toolbar"
 msgstr "Gewähltes Element aus der Symbolleiste entfernen"
@@ -8274,11 +8243,6 @@ msgstr "Vorgaben wiederherstellen"
 #: lazarusidestrconsts.liscoolbarselecttoolbar
 msgid "Please select a toolbar first!"
 msgstr "Bitte wählen Sie zunächst eine Symbolleiste aus!"
-
-#: lazarusidestrconsts.liscoolbarsourceeditor
-msgctxt "lazarusidestrconsts.liscoolbarsourceeditor"
-msgid "Source Editor"
-msgstr "Quelltexteditor"
 
 #: lazarusidestrconsts.liscoolbarsourcetab
 msgid "Source Tab"
@@ -11369,15 +11333,24 @@ msgid "Key"
 msgstr "Taste"
 
 #: lazarusidestrconsts.liskeycatcustom
-msgid "Custom commands"
+#, fuzzy
+#| msgid "Custom commands"
+msgctxt "lazarusidestrconsts.liskeycatcustom"
+msgid "Custom"
 msgstr "Benutzerdefinierte Anweisungen"
 
 #: lazarusidestrconsts.liskeycatdesigner
-msgid "Designer commands"
+#, fuzzy
+#| msgid "Designer commands"
+msgctxt "lazarusidestrconsts.liskeycatdesigner"
+msgid "Designer"
 msgstr "Designer-Befehle"
 
 #: lazarusidestrconsts.liskeycatobjinspector
-msgid "Object Inspector commands"
+#, fuzzy
+#| msgid "Object Inspector commands"
+msgctxt "lazarusidestrconsts.liskeycatobjinspector"
+msgid "Object Inspector"
 msgstr "Objektinspektorbefehle"
 
 #: lazarusidestrconsts.liskeyor2keysequence
@@ -15169,6 +15142,7 @@ msgid "Auto rebuild when rebuilding all"
 msgstr "Automatisch kompilieren wenn alles kompiliert wird"
 
 #: lazarusidestrconsts.lispckoptscustom
+msgctxt "lazarusidestrconsts.lispckoptscustom"
 msgid "Custom"
 msgstr "Benutzerdefiniert"
 
@@ -19809,41 +19783,50 @@ msgstr "Versionszählung"
 msgid "Show options"
 msgstr ""
 
-#: lazarusidestrconsts.srkmcarhelpmenu
-msgid "Help menu commands"
-msgstr "Befehle aus dem Menü 'Hilfe'"
-
 #: lazarusidestrconsts.srkmcatclipboard
-msgid "Clipboard commands"
+msgid "Clipboard"
 msgstr ""
 
-#: lazarusidestrconsts.srkmcatcmdcmd
-msgid "Command commands"
-msgstr "Kommandoanweisungen"
-
 #: lazarusidestrconsts.srkmcatcodetools
-msgid "CodeTools commands"
+#, fuzzy
+#| msgid "CodeTools commands"
+msgid "CodeTools"
 msgstr "CodeTools-Befehle"
 
 #: lazarusidestrconsts.srkmcatcolselection
-msgid "Text column selection commands"
+#, fuzzy
+#| msgid "Text column selection commands"
+msgid "Text column selection"
 msgstr "Textspaltenauswahlbefehle"
 
 #: lazarusidestrconsts.srkmcatcursormoving
-msgid "Cursor moving commands"
+#, fuzzy
+#| msgid "Cursor moving commands"
+msgid "Cursor moving"
 msgstr "Befehle für die Cursorsteuerung"
 
 #: lazarusidestrconsts.srkmcatediting
-msgid "Text editing commands"
+#, fuzzy
+#| msgid "Text editing commands"
+msgid "Text editing"
 msgstr "Texteditorbefehle"
 
 #: lazarusidestrconsts.srkmcatfilemenu
-msgid "File menu commands"
+#, fuzzy
+#| msgid "File menu commands"
+msgid "File menu"
 msgstr "Befehle aus dem Menü 'Datei'"
 
 #: lazarusidestrconsts.srkmcatfold
-msgid "Text folding commands"
+#, fuzzy
+#| msgid "Text folding commands"
+msgid "Text folding"
 msgstr "Textfaltungs-Befehle"
+
+#: lazarusidestrconsts.srkmcathelpmenu
+msgctxt "lazarusidestrconsts.srkmcathelpmenu"
+msgid "Help menu"
+msgstr ""
 
 #: lazarusidestrconsts.srkmcatlinewrap
 msgid "Line wrapping"
@@ -19855,35 +19838,51 @@ msgid "Macros"
 msgstr "Makros"
 
 #: lazarusidestrconsts.srkmcatmarker
-msgid "Text bookmark commands"
+#, fuzzy
+#| msgid "Text bookmark commands"
+msgid "Text bookmarks"
 msgstr "Lesezeichen-Befehle"
 
 #: lazarusidestrconsts.srkmcatmulticaret
-msgid "Multi caret commands"
+#, fuzzy
+#| msgid "Multi caret commands"
+msgid "Multi caret"
 msgstr "Mehrfachcursor-Befehle"
 
 #: lazarusidestrconsts.srkmcatpackagemenu
-msgid "Package menu commands"
+#, fuzzy
+#| msgid "Package menu commands"
+msgid "Package menu"
 msgstr "Befehle aus dem Menü 'Package'"
 
 #: lazarusidestrconsts.srkmcatprojectmenu
-msgid "Project menu commands"
+#, fuzzy
+#| msgid "Project menu commands"
+msgid "Project menu"
 msgstr "Befehle aus dem Menü 'Projekt'"
 
 #: lazarusidestrconsts.srkmcatrunmenu
-msgid "Run menu commands"
+#, fuzzy
+#| msgid "Run menu commands"
+msgid "Run menu"
 msgstr "Befehle aus dem Menü 'Start'"
 
 #: lazarusidestrconsts.srkmcatsearchreplace
-msgid "Text search and replace commands"
+#, fuzzy
+#| msgid "Text search and replace commands"
+msgid "Text search and replace"
 msgstr "Befehle für Textsuche und -änderung"
 
 #: lazarusidestrconsts.srkmcatselection
-msgid "Text selection commands"
+#, fuzzy
+#| msgid "Text selection commands"
+msgid "Text selection"
 msgstr "Textauswahlbefehle"
 
 #: lazarusidestrconsts.srkmcatsrcnotebook
-msgid "Source Notebook commands"
+#, fuzzy
+#| msgid "Source Notebook commands"
+msgid "Source Notebooks"
 msgstr "Editorbefehle"
 
 #: lazarusidestrconsts.srkmcatsyncroedit
@@ -19907,11 +19906,15 @@ msgid "Template Editing (not in Cell)"
 msgstr "Vorlagenbearbeitung (nicht in Zelle)"
 
 #: lazarusidestrconsts.srkmcattoolmenu
-msgid "Tools menu commands"
+#, fuzzy
+#| msgid "Tools menu commands"
+msgid "Tools menu"
 msgstr "Befehle aus dem Menü 'Werkzeuge'"
 
 #: lazarusidestrconsts.srkmcatviewmenu
-msgid "View menu commands"
+#, fuzzy
+#| msgid "View menu commands"
+msgid "View menu"
 msgstr "Befehle aus dem Menü 'Ansicht'"
 
 #: lazarusidestrconsts.srkmcommand

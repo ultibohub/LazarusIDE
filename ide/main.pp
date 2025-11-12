@@ -3952,6 +3952,7 @@ begin
     OnShowTabOrderEditor:=@DesignerShowTabOrderEditor;
     OnChangeParent:=@DesignerChangeParent;
     ShowEditorHints:=EnvironmentGuiOpts.ShowEditorHints;
+    ShowNonVisualComponents:=EnvironmentGuiOpts.ShowNonVisualComponents;
     ShowComponentCaptions:=EnvironmentGuiOpts.ShowComponentCaptions;
   end;
   if AnUnitInfo<>nil then
@@ -3976,6 +3977,7 @@ begin
         if ADesigner<>nil then
         begin
           ADesigner.ShowEditorHints:=EnvironmentGuiOpts.ShowEditorHints;
+          ADesigner.ShowNonVisualComponents:=EnvironmentGuiOpts.ShowNonVisualComponents;
           ADesigner.ShowComponentCaptions:=EnvironmentGuiOpts.ShowComponentCaptions;
         end;
         CurDesignerForm.Invalidate;
