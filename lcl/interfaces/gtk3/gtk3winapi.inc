@@ -218,18 +218,20 @@ begin
        AStatus := cairo_region_xor(ARegion, RSrc2);
      end;
   end;
-  if (AStatus <> CAIRO_STATUS_SUCCESS) or (ARegion = nil) or cairo_region_is_empty(ARegion) then
-    Result := NullRegion
+  if (AStatus <> CAIRO_STATUS_SUCCESS) or (ARegion = nil) then
+    Result := Error
   else
   begin
-
     cairo_region_destroy(RDest);
     RDest := cairo_region_copy(ARegion);
     TGtk3Region(Dest).Handle := RDest;
-    if cairo_region_num_rectangles(ARegion) > 1 then
-      Result := ComplexRegion
+    if cairo_region_is_empty(RDest) then
+      Result := NullRegion
     else
-      Result := SimpleRegion;
+      if cairo_region_num_rectangles(RDest) > 1 then
+        Result := ComplexRegion
+      else
+        Result := SimpleRegion;
   end;
   {$IFDEF VerboseGtk3DeviceContext}
   if Result <> NullRegion then
@@ -1416,7 +1418,7 @@ begin
   //Self.SelectClipRGN(dc,rgn);
   clip:=Self.CreateEmptyRegion;
   Self.GetClipRGN(dc,clip);
-  Self.CombineRgn(clip,rgn,clip,RGN_AND);
+  Result:=Self.CombineRgn(clip,rgn,clip,RGN_AND);
   Self.SelectClipRGN(dc,clip);
   DeleteObject(clip);
   DeleteObject(rgn);
@@ -1424,17 +1426,20 @@ begin
  { ncorg:=Tgtk3DeviceContext(dc).fncOrigin;
   GetWindowOrgEx(DC, @DCOrigin);
   Result:=inherited IntersectClipRect(dc, Left, Top, Right, Bottom);}
-  Result:=0;
 end;
 
 
-function TGtk3WidgetSet.ExcludeClipRect(dc: hdc; Left, Top, Right,
-  Bottom: Integer): Integer;
+function TGtk3WidgetSet.ExcludeClipRect(dc: hdc; Left, Top, Right, Bottom: Integer): Integer;
+var
+  rgn,clip:HRGN;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.ExcludeClipRect not implemented ...');
-  {$ENDIF}
-  Result:=inherited ExcludeClipRect(dc, Left, Top, Right, Bottom);
+  rgn := CreateRectRgn(Left, Top, Right, Bottom);
+  clip := CreateEmptyRegion;
+  GetClipRGN(dc, clip);
+  Result := CombineRgn(clip, clip, rgn, RGN_DIFF);
+  SelectClipRGN(dc, clip);
+  DeleteObject(clip);
+  DeleteObject(rgn);
 end;
 
 function TGtk3WidgetSet.ExtCreatePen(dwPenStyle, dwWidth: DWord;
@@ -3686,11 +3691,20 @@ end;
 
 function TGtk3WidgetSet.SendMessage(HandleWnd: HWND; Msg: Cardinal;
   wParam: WParam; lParam: LParam): LResult;
+var
+  LMessage: TLMessage;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SendMessage not implemented ...');
-  {$ENDIF}
-  Result := inherited SendMessage(HandleWnd, Msg, wParam, lParam);
+  if IsValidHandle(HandleWnd) then
+  begin
+    FillChar(LMessage, SizeOf(LMessage), 0);
+    LMessage.Msg := Msg;
+    LMessage.WParam := wParam;
+    LMessage.LParam := lParam;
+    TGtk3Widget(HandleWnd).DeliverMessage(LMessage);
+    Result := LMessage.Result;
+  end
+  else
+    Result := 0;
 end;
 
 function TGtk3WidgetSet.SetActiveWindow(Handle: HWND): HWND;
@@ -4367,28 +4381,19 @@ begin
   Result:=inherited SetWindowLong(Handle, Idx, NewLong);
 end;
 
-function TGtk3WidgetSet.SetWindowOrgEx(dc: hdc; NewX, NewY: Integer;
-  OldPoint: PPoint): Boolean;
+function TGtk3WidgetSet.SetWindowOrgEx(dc: hdc; NewX, NewY: Integer; OldPoint: PPoint): Boolean;
 var
   Matrix: Tcairo_matrix_t;
-  //dx, dy: Double;
+  Point: TPoint;
 begin
-  Result := False; // inherited SetWindowOrgEx(dc, NewX, NewY, OldPoint);
-  if IsValidDC(DC) then
+  Result := IsValidDC(DC);
+  if Result then
   begin
-    GetWindowOrgEx(dc, OldPoint);
-    cairo_get_matrix(TGtk3DeviceContext(DC).pcr, @Matrix);
-    //dx := 0;
-    //dy := 0;
-    // cairo_matrix_init_translate(Matrix, -NewX, -NewY);
-    cairo_matrix_translate(@Matrix,
-    	-NewX - TGtk3DeviceContext(DC).fncOrigin.x,
-        -NewY - TGtk3DeviceContext(DC).fncOrigin.Y);
-    cairo_transform(TGtk3DeviceContext(DC).pcr, @Matrix);
-    // cairo_set_matrix(TGtk3DeviceContext(DC).Widget, Matrix);
+    GetWindowOrgEx(dc, @Point);
+    if OldPoint <> nil then
+      OldPoint^ := Point;
+    cairo_translate(TGtk3DeviceContext(DC).pcr, Point.X - NewX, Point.Y - NewY);
     // DebugLn('TGtk3WidgetSet.SetWindowOrgEx NewX=',dbgs(NewX),' NewY=',dbgs(NewY));
-    Result := True;
-
   end;
 end;
 
