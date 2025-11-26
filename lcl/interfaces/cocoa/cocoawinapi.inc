@@ -40,16 +40,26 @@ const
  { crt_Complex   } COMPLEXREGION
   );
 
-function TCocoaWidgetSet.Arc(DC: HDC; Left, Top, Right, Bottom, angle1,
-  angle2: Integer): Boolean;
+function TCocoaWidgetSet.Arc(DC: HDC; Left, Top, Right, Bottom, Angle1,
+  Angle2: Integer): Boolean;
+var
+  ctx: TCocoaContext;
 begin
-  Result:=inherited Arc(DC, Left, Top, Right, Bottom, angle1, angle2);
+  ctx := CheckDC(DC);
+  Result := Assigned(ctx);
+  if Result then
+    ctx.DrawArc(Left, Top, Right, Bottom, Angle1, Angle2, 0)  // 0 --> arc line only
 end;
 
 function TCocoaWidgetSet.AngleChord(DC: HDC; x1, y1, x2, y2, angle1,
   angle2: Integer): Boolean;
+var
+  ctx: TCocoaContext;
 begin
-  Result:=inherited AngleChord(DC, x1, y1, x2, y2, angle1, angle2);
+  ctx := CheckDC(DC);
+  result := Assigned(ctx);
+  if Result then
+    ctx.DrawArc(x1, y1, x2, y2, angle1, angle2, 1);  // 1 --> chord mode
 end;
 
 function TCocoaWidgetSet.BeginPaint(Handle: hWnd; var PS: TPaintStruct): hdc;
@@ -63,6 +73,8 @@ function TCocoaWidgetSet.BitBlt(DestDC: HDC; X, Y, Width, Height: Integer;
 var
   SrcCtx, DestCtx: TCocoaContext;
   Bmp: TCocoaBitmap;
+  ctm: CGAffineTransform;
+  ScaleRatio: CGFloat;
 begin
   SrcCtx := CheckDC(SrcDC);
   DestCtx := CheckDC(DestDC);
@@ -88,7 +100,13 @@ begin
   Width := Min(Width, Bmp.Width);
   Height := Min(Height, Bmp.Height);
 
-  Result := DestCtx.StretchDraw(X, Y, Width, Height,
+  ctm := CGContextGetCTM(TCocoaBitmapContext(SrcCtx).CGContext);
+  if (ctm.a <> 0) then
+    ScaleRatio := ctm.a
+  else
+    ScaleRatio := 1.0;
+
+  Result := DestCtx.StretchDraw(X, Y, Round(Width / ScaleRatio), Round(Height / ScaleRatio),
     TCocoaBitmapContext(SrcCtx), XSrc, YSrc, Width, Height,
     nil, 0, 0, Rop);
 end;
@@ -1099,6 +1117,8 @@ function TCocoaWidgetSet.StretchMaskBlt(DestDC: HDC; X, Y, Width,
   Mask: HBITMAP; XMask, YMask: Integer; Rop: DWORD): Boolean;
 var
   SrcCtx, DestCtx: TCocoaContext;
+  ctm: CGAffineTransform;
+  ScaleRatio: CGFloat;
 begin
   DestCtx := CheckDC(DestDC);
   SrcCtx := CheckDC(SrcDC);
@@ -1114,8 +1134,12 @@ begin
       ', expected TCocoaBitmapContext!');
     Exit;
   end;
-
-  Result := DestCtx.StretchDraw(X, Y, Width, Height,
+  ctm := CGContextGetCTM(TCocoaBitmapContext(SrcCtx).CGContext);
+  if ctm.a <> 0 then
+    ScaleRatio := ctm.a
+  else
+    ScaleRatio := 1.0;
+  Result := DestCtx.StretchDraw(X, Y, Round(Width/ScaleRatio), Round(Height/ScaleRatio),
     TCocoaBitmapContext(SrcCtx), XSrc, YSrc, SrcWidth, SrcHeight,
     TCocoaBitmap(Mask), XMask, YMask, Rop);
 end;
@@ -2109,6 +2133,30 @@ begin
   {$IFDEF VerboseWinAPI}
     DebugLn('TCocoaRegion.PtInRegion Result: ' + DbgS(Result));
   {$ENDIF}
+end;
+
+function TCocoaWidgetSet.Pie(DC: HDC; X1, Y1, X2, Y2, SX, SY, EX, EY: Integer): Boolean;
+var
+  ctx: TCocoaContext;
+  angle1, angle2: Extended;
+begin
+  ctx := CheckDC(DC);
+  Result := Assigned(ctx);
+  if Result then
+  begin
+    Coords2Angles(X1, Y1, X2-X1-1, Y2-Y1-1, SX, SY, EX, EY, angle1, angle2);
+    ctx.DrawArc(X1, Y1, X2, Y2, round(angle1), round(angle2), 2);  // 2 = pie mode
+  end;
+end;
+
+function TCocoaWidgetSet.RadialPie(DC: HDC; X1, Y1, X2, Y2, Angle1, Angle2: Integer): Boolean;
+var
+  ctx: TCocoaContext;
+begin
+  ctx := CheckDC(DC);
+  Result := Assigned(ctx);
+  if Result then
+    ctx.DrawArc(X1, Y1, X2, Y2, Angle1, Angle2, 2);  // 2 = pie mode
 end;
 
 function TCocoaWidgetSet.Rectangle(DC: HDC; X1, Y1, X2, Y2: Integer): Boolean;

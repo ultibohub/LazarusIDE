@@ -661,6 +661,7 @@ var
   ofs : Double; // aprx offset between label and the text (from both sides)
   x   : Double;
   vt  : NSTabViewType;
+  origin: NSPoint;
 begin
   Result:=inherited GetTabRect(ATabControl, AIndex);
   if not Assigned(ATabControl) or not ATabControl.HandleAllocated then Exit;
@@ -698,7 +699,7 @@ begin
       x := x+ofs+w[i];
 
     Result.Left := Round(x);
-    Result.Right := Round(Result.Left + w[idx]);
+    Result.Right := Round(x + w[idx] + ofs);
     Result.Top := tr.Top;
     Result.Bottom := tr.Bottom;
   end
@@ -708,7 +709,7 @@ begin
     for i := 0 to Integer(lTabControl.tabViewItems.count)-1 do
     begin
       lTabPage := lTabControl.tabViewItemAtIndex(i);
-      w[i] := lTabPage.sizeOfLabel(false).height;
+      w[i] := lTabPage.sizeOfLabel(false).width;
       mw := mw + w[i];
     end;
     if (mw = 0) then Exit; // 0 for the total tabs width?
@@ -722,8 +723,11 @@ begin
     Result.Left := tr.Left;
     Result.Right := tr.Right;
     Result.Top := Round(x);
-    Result.Bottom := Round(Result.Top + w[idx]);
+    Result.Bottom := Round(x + w[idx] + ofs);
   end;
+
+  origin:= lTabControl.contentRect.origin;
+  Result.Offset( -Round(origin.x), -Round(origin.y) );
 end;
 
 class procedure TCocoaWSCustomTabControl.SetPageIndex(const ATabControl: TCustomTabControl; const AIndex: integer);

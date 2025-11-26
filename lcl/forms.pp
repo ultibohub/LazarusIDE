@@ -320,6 +320,7 @@ type
     procedure WriteDesignTop(Writer: TWriter);
   protected
     class procedure WSRegisterClass; override;
+    procedure Loaded; override;
     procedure Notification(AComponent: TComponent;
       Operation: TOperation); override;
     procedure SetColor(Value: TColor); override;
@@ -330,6 +331,7 @@ type
     procedure CalculatePreferredSize(var PreferredWidth,
            PreferredHeight: Integer; WithThemeSpace: Boolean); override;
     procedure UpdateOpaque;
+    procedure FixFrameFontsPPI(PPI: Integer);
   public
     constructor Create(AOwner: TComponent); override;
     procedure GetChildren(Proc: TGetChildProc; Root: TComponent); override;
