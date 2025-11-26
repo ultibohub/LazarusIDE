@@ -725,7 +725,7 @@ begin
   // read procedure start keyword
   if (Scanner.CompilerMode in [cmOBJFPC]) and UpAtomIs('GENERIC') then begin
     ExtractNextAtom((phpWithStart in Attr)
-                    and not (phpWithoutClassKeyword in Attr),Attr);
+                    and not (phpWithoutGenericKeyword in Attr),Attr);
     IsGeneric:=true;
   end else
     IsGeneric:=false;
@@ -1130,7 +1130,7 @@ begin
     // in a class definition -> search method body
     if Search=cpsUp then exit;
     StartNode:=ClassNode.GetTopMostNodeOfType(ctnTypeSection);
-    Attr:=Attr-[phpWithoutClassName]+[phpWithoutClassKeyword,phpAddClassName];
+    Attr:=Attr-[phpWithoutClassName]+[phpWithoutClassKeyword,phpWithoutGenericKeyword,phpAddClassName];
   end else if NodeIsMethodBody(ProcNode) then begin
     //debugln('TPascalReaderTool.FindCorrespondingProcNode Method ',ExtractClassNameOfProcNode(ProcNode));
     // in a method body -> search in class
@@ -1150,7 +1150,7 @@ begin
         StartNode:=StartNode.NextBrother;
       end;
     end;
-    Attr:=Attr-[phpAddClassName]+[phpWithoutClassKeyword,phpWithoutClassName];
+    Attr:=Attr-[phpAddClassName]+[phpWithoutClassKeyword,phpWithoutGenericKeyword,phpWithoutClassName];
   end else begin
     //DebugLn('TPascalReaderTool.FindCorrespondingProcNode Normal');
     // else: search on same lvl
@@ -1309,6 +1309,11 @@ begin
   end else if GetProcParamList(ProcNode)<>nil then begin
     // jump behind parameter list
     MoveCursorToCleanPos(GetProcParamList(ProcNode).EndPos);
+    ReadNextAtom;
+  end else if (ProcNode.LastChild<>nil) and (ProcNode.LastChild.Desc=ctnGenericParams)
+  then begin
+    // there was no parameter list, so gen params are the end
+    MoveCursorToCleanPos(ProcNode.LastChild.EndPos);
     ReadNextAtom;
   end else begin
     MoveCursorToNodeStart(ProcNode);
@@ -1775,22 +1780,26 @@ function TPascalReaderTool.ExtractNextSpecializeParams(Add: boolean;
   const Attr: TProcHeadAttributes): boolean;
 // at start: CurPos is at <
 // at end: CurPos is at >
+  type
+    TCharSet = set of char;
+  var
+    c: Boolean;
 
-  function ExtractNextTil(c: char): boolean;
+  function ExtractNextTil(c: TCharSet; DoAdd: boolean): boolean;
   var
     CurC: Char;
   begin
     Result:=false;
     repeat
-      ExtractNextAtom(Add,Attr);
+      ExtractNextAtom(DoAdd,Attr);
       if CurPos.EndPos-CurPos.StartPos=1 then begin
         CurC:=Src[CurPos.StartPos];
-        if CurC=c then
+        if CurC in c then
           exit(true);
         case CurC of
-        '<': if not ExtractNextTil('>') then exit;
-        '(': if not ExtractNextTil(')') then exit;
-        '[': if not ExtractNextTil(']') then exit;
+        '<': if not ExtractNextTil(['>'], DoAdd) then exit;
+        '(': if not ExtractNextTil([')'], DoAdd) then exit;
+        '[': if not ExtractNextTil([']'], DoAdd) then exit;
         ')',']': exit;
         end;
       end else if CurPos.StartPos>SrcLen then
@@ -1799,7 +1808,30 @@ function TPascalReaderTool.ExtractNextSpecializeParams(Add: boolean;
   end;
 
 begin
-  Result:=ExtractNextTil('>');
+  if Attr * [phpWithoutGenericTypeConstraints, phpWithoutGenericConstConstraints] = [] then begin
+    Result:=ExtractNextTil(['>'], Add);
+    exit;
+  end;
+
+  repeat
+    ExtractNextAtom(Add, Attr); // read the opening < or the ;
+    c := (CurPos.Flag = cafWord) and UpAtomIs('CONST');
+    if (phpWithoutGenericConstConstraints in Attr) and c then begin
+      ExtractNextAtom(False, Attr);                // Skip the CONST
+      Result:=ExtractNextTil([':', '>'], Add);     // exctrat the param name(s)
+      if (Result) and (Src[CurPos.StartPos] = ':') then
+        Result:=ExtractNextTil([';', '>'], False); // skip the type
+    end
+    else begin
+      Result:=ExtractNextTil([':', '>'], Add);  // Extract param name(s)
+      if (not Result) or (Src[CurPos.StartPos] = '>') then
+        exit;
+      // at : / start of contstraint
+      Result:=ExtractNextTil([';', '>'], c or not (phpWithoutGenericTypeConstraints in Attr));
+    end;
+    if (not Result) or (Src[CurPos.StartPos] = '>') then
+      exit;
+  until false;
 end;
 
 function TPascalReaderTool.ExtractPropName(PropNode: TCodeTreeNode;

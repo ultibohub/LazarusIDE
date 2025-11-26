@@ -126,10 +126,13 @@ procedure TCustomFrame.SetParent(AParent: TWinControl);
 
 var
   ParentForm: TCustomForm;
+  oldPPI: Integer;
 begin
   if Parent=AParent then exit;
   if Parent<>nil then
     UpdateActionLists(Self,opRemove);
+
+  oldPPI := FDesigntimePPI;
 
   if (Parent=nil) and HandleAllocated then
     DestroyHandle;
@@ -141,7 +144,10 @@ begin
     ParentForm := GetParentForm(Self);
     if Application.Scaled and (ParentForm<>nil) and ParentForm.Scaled
     and (ParentForm.PixelsPerInch<>PixelsPerInch) then
+    begin
+      FixFrameFontsPPI(oldPPI);
       AutoAdjustLayout(lapAutoAdjustForDPI, PixelsPerInch, ParentForm.PixelsPerInch, 0, 0);
+    end;
   end;
 end;
 
@@ -219,6 +225,24 @@ begin
     with GetControlClassDefaultSize do
       SetInitialBounds(0, 0, CX, CY);
 end;
+
+procedure TCustomFrame.FixFrameFontsPPI(PPI: Integer);
+begin
+  DisableAlign;
+  try
+    if Application.Scaled and Scaled then
+      FixDesignFontsPPIWithChildren(PPI);
+  finally
+    EnableAlign;
+  end;
+end;
+
+procedure TCustomFrame.Loaded;
+begin
+  inherited;
+  FixFrameFontsPPI(FDesignTimePPI);
+end;
+
 
 { TFrame }
 

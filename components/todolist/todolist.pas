@@ -93,20 +93,22 @@ type
     acHelp: TAction;
     acColors: TAction;
     ActionList: TActionList;
-    chkListed: TCheckBox;
-    chkUsed: TCheckBox;
-    chkPackages: TCheckBox;
-    chkSourceEditor: TCheckBox;
-    cboShowWhat: TComboBox;
-    lblOptions: TLabel;
-    lblShowWhat: TLabel;
+    lblCount: TLabel;
     lvTodo: TListView;
+    pnlStatistics: TPanel;
     EditMenuItem: TMenuItem;
-    N1: TToolButton;
-    N5: TToolButton;
-    pnlOptions: TPanel;
-    pnlShowWhat: TPanel;
-    mnuPopup: TPopupMenu;
+    ToDoMenuItem: TMenuItem;
+    FixmeMenuItem: TMenuItem;
+    DoneMenuItem: TMenuItem;
+    NoteMenuItem: TMenuItem;
+    ListedFilesMenuItem: TMenuItem;
+    UsedUnitsMenuItem: TMenuItem;
+    EditorFilesMenuItem: TMenuItem;
+    DepPackagesMenuItem: TMenuItem;
+    AllPackagesMenuItem: TMenuItem;
+    mnuList: TPopupMenu;
+    mnuFiles: TPopupMenu;
+    mnuTypes: TPopupMenu;
     SaveDialog: TSaveDialog;
     tbEdit: TToolButton;
     tbColors: TToolButton;
@@ -114,20 +116,24 @@ type
     tbGoto: TToolButton;
     tbRefresh: TToolButton;
     tbExport: TToolButton;
+    N1: TToolButton;
     N2: TToolButton;
     N3: TToolButton;
     N4: TToolButton;
+    N5: TToolButton;
     tbHelp: TToolButton;
+    tbShowTypes: TToolButton;
+    tbShowFiles: TToolButton;
     XMLPropStorage: TXMLPropStorage;
     procedure acColorsExecute(Sender: TObject);
     procedure acEditExecute(Sender: TObject);
     procedure acExportExecute(Sender: TObject);
     procedure acGotoExecute(Sender: TObject);
-    procedure acRefreshExecute(Sender: TObject);
     procedure acHelpExecute(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var {%H-}CanClose: boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word; {%H-}Shift:TShiftState);
+    procedure FormShow(Sender: TObject);
     procedure lvTodoClick(Sender: TObject);
     procedure lvTodoCompare(Sender : TObject; Item1, Item2 : TListItem;
       {%H-}Data : Integer; var Compare : Integer);
@@ -135,26 +141,22 @@ type
     procedure lvTodoKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure lvTodoSelectItem(Sender: TObject; Item: TListItem; Selected: Boolean);
     procedure SaveDialogShow(Sender: TObject);
+    procedure ShowSomethingMenuItemClick(Sender: TObject);
     procedure XMLPropStorageRestoreProperties(Sender: TObject);
     procedure XMLPropStorageRestoringProperties(Sender: TObject);
   private
     FBaseDirectory: string;
     FUpdating, FUpdateNeeded: Boolean;
-    FIDEItem: string;
     FIdleConnected: boolean;
     FLoadingOptions: boolean;
-    FStartFilename: String;
-    FOwnerProjPack: TObject;  // Project or package owning the FStartFilename.
-    FScannedFiles: TAvlTree;// tree of TTLScannedFile
+    FProjPack: TObject;   // Project or package from where to collect ToDo items.
+    FScannedFiles: TAvlTree; // tree of TTLScannedFile
     FScannedIncFiles: TStringMap;
     FOnEditItem: TOnEditToDo;
     procedure GotoTodo(aTodoItem: TTodoItem);
-    procedure SetIDEItem(AValue: string);
+    procedure SetProjPack(AValue: TObject);
     procedure SetIdleConnected(const AValue: boolean);
     function ProjectOpened(Sender: TObject; AProject: TLazProject): TModalResult;
-    procedure UpdateStartFilename;
-    procedure ResolveIDEItem(out CurOwner: TObject; out CurProject: TLazProject;
-                             out CurPkg: TIDEPackage);
     procedure AddListItem(aTodoItem: TTodoItem);
     procedure ScanFile(aFileName : string);
     procedure OnIdle(Sender: TObject; var {%H-}Done: Boolean);
@@ -163,10 +165,9 @@ type
     destructor Destroy; override;
     procedure UpdateTodos(Immediately: boolean = false);
 
-    property IDEItem: string read FIDEItem write SetIDEItem; // package name or empty for active project
+    property ProjPack: TObject read FProjPack write SetProjPack;
     property BaseDirectory: string read FBaseDirectory;
     property IdleConnected: boolean read FIdleConnected write SetIdleConnected;
-
     property OnEditItem: TOnEditToDo read FOnEditItem write FOnEditItem;
   end;
 
@@ -195,6 +196,8 @@ begin
   acExport.ImageIndex := IDEImages.LoadImage('menu_saveas');
   acColors.ImageIndex := IDEImages.LoadImage('pastel_colors');
   acHelp.ImageIndex := IDEImages.LoadImage('btn_help');
+  tbShowTypes.ImageIndex := IDEImages.LoadImage('item_filter');
+  tbShowFiles.ImageIndex := IDEImages.LoadImage('laz_open_unit');
   SaveDialog.Filter := dlgFilterCsv+'|*.csv';
   LazarusIDE.AddHandlerOnProjectOpened(@ProjectOpened);
 end;
@@ -228,28 +231,27 @@ begin
   acColors.Caption := lisColors;
   acHelp.Caption := lisHelp;
 
-  lblOptions.Caption := lisInclude;
-  chkListed.Caption := lisToDoListed;
-  chkListed.Hint := lisToDoListedHint;
-  chkUsed.Caption := lisToDoUsed;
-  chkUsed.Hint := lisToDoUsedHint;
-  chkPackages.Caption := lisPackages;
-  chkPackages.Hint := Format(lisPackagesHint, [lisToDoListed, lisToDoUsed]);
-  chkSourceEditor.Caption := lisSourceEditor;
-  chkSourceEditor.Hint := lisSourceEditorHint;
+  // Show Types
+  tbShowTypes.Caption := lisShowTypes;
+  tbShowTypes.Hint := lisShowTypesHint;
+  ToDoMenuItem.Caption  := lisTodo;
+  FixmeMenuItem.Caption := lisFixMe;
+  DoneMenuItem.Caption  := lisDone;
+  NoteMenuItem.Caption  := lisNote;
 
-  with cboShowWhat do
-    begin
-      Items[0] := lisFilterItem0;
-      Items[1] := lisFilterItem1;
-      Items[2] := lisFilterItem2;
-      Items[3] := lisFilterItem3;
-      Items[4] := lisFilterItem4;
-      Items[5] := lisFilterItem5;
-      Items[6] := lisFilterItem6;
-      Hint := lisShowWhatHint;
-    end;
-  lblShowWhat.Caption:=lisShowWhat;
+  // Show Files
+  tbShowFiles.Caption := lisShowFiles;
+  tbShowFiles.Hint := lisShowFilesHint;
+  ListedFilesMenuItem.Caption := lisToDoListed;
+  //ListedFilesMenuItem.Hint := lisToDoListedHint;         Menu hints don't work!
+  UsedUnitsMenuItem.Caption := lisToDoUsedUnits;
+  //UsedUnitsMenuItem.Hint := lisToDoUsedUnitsHint;
+  EditorFilesMenuItem.Caption := lisSourceEditor;
+  //EditorFilesMenuItem.Hint := lisSourceEditorHint;
+  DepPackagesMenuItem.Caption := lisPackages;
+  //DepPackagesMenuItem.Hint := Format(lisPackagesHint, [lisToDoListed, lisToDoUsedUnits]);
+  //AllPackagesMenuItem.Caption := ;
+  //AllPackagesMenuItem.Hint := ;
   with lvTodo do
   begin
     Column[0].Caption := lisToDoLType;
@@ -259,7 +261,8 @@ begin
     Column[3].Caption := lisToDoLFile;
     Column[4].Caption := lisToDoLLine;
     Column[5].Caption := lisToDoLOwner;
-    Column[6].Caption := listToDoLCategory;
+    Column[6].Caption := lisToDoLIssue;
+    Column[7].Caption := listToDoLCategory;
   end;
 
   XMLPropStorage.FileName := Concat(AppendPathDelim(LazarusIDE.GetPrimaryConfigPath),
@@ -267,10 +270,36 @@ begin
   XMLPropStorage.Active := True;
 end;
 
+procedure TIDETodoWindow.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  if Key = VK_ESCAPE then
+    ModalResult := mrCancel;
+end;
+
+procedure TIDETodoWindow.FormShow(Sender: TObject);
+begin
+  // If no filters are selected, this is most probably the first run.
+  // Then select all. Later they are saved by SessionProperties.
+  if not (ToDoMenuItem.Checked or FixmeMenuItem.Checked or DoneMenuItem.Checked
+  or NoteMenuItem.Checked or ListedFilesMenuItem.Checked or UsedUnitsMenuItem.Checked
+  or EditorFilesMenuItem.Checked or DepPackagesMenuItem.Checked) then
+  begin
+    ToDoMenuItem.Checked := True;
+    FixmeMenuItem.Checked := True;
+    DoneMenuItem.Checked := True;
+    NoteMenuItem.Checked := True;
+    ListedFilesMenuItem.Checked := True;
+    UsedUnitsMenuItem.Checked := True;
+    EditorFilesMenuItem.Checked := True;
+    DepPackagesMenuItem.Checked := True;
+  end;
+  UpdateTodos;
+end;
+
 procedure TIDETodoWindow.UpdateTodos(Immediately: boolean);
 var
   i: integer;
-  St : String;
+  StartFN, St: String;
   Node: TAvlTreeNode;
   CurFile: TTLScannedFile;
   Units: TStrings;
@@ -278,22 +307,21 @@ var
 begin
   if FLoadingOptions then
     exit;
-
   if not Immediately then
   begin
     FUpdateNeeded:=true;
     IdleConnected:=true;
+    lblCount.Caption := '';
     exit;
   end;
-
   FUpdateNeeded:=false;
-  if FUpdating or (FOwnerProjPack=nil) then
+  if FUpdating or (FProjPack=nil) then
     Exit;
   LazarusIDE.SaveSourceEditorChangesToCodeCache(nil);
   Screen.BeginWaitCursor;
   lvTodo.BeginUpdate;
-  Units:=nil;
   try
+    Units:=nil;
     FUpdating:=True;
     CodeToolBoss.ActivateWriteLock;
 
@@ -301,51 +329,54 @@ begin
     FScannedIncFiles.Clear;
     lvTodo.Items.Clear;
 
-    if FStartFilename<>'' then begin
-      // Find a '.todo' file of the main source
-      St:=ChangeFileExt(FStartFilename,'.todo');
-      if FileExistsCached(St) then
-        ScanFile(St);
-      // Scan main source file
-      if FilenameIsPascalUnit(FStartFilename) then
-        ScanFile(FStartFilename);
+    StartFN:='';
+    if FProjPack is TLazProject then begin
+      Caption:=Format(lisToDoListforProject,[TLazProject(FProjPack).MainFile.Unit_Name]);
+      StartFN:=TLazProject(FProjPack).ProjectInfoFile;
+    end
+    else if FProjPack is TIDEPackage then begin
+      Caption:=Format(lisToDoListForPackage,[TIDEPackage(FProjPack).IDAsString]);
+      StartFN:=TIDEPackage(FProjPack).Filename;
     end;
+    Assert(StartFN<>'', 'TIDETodoWindow.UpdateTodos: No StartFN');
+    // Find a '.todo' file of the main source
+    St:=ChangeFileExt(StartFN,'.todo');
+    if FileExistsCached(St) then
+      ScanFile(St);
+    // Scan main source file
+    if FilenameIsPascalUnit(StartFN) then
+      ScanFile(StartFN);
 
     Flags:=[];
-    if chkListed.Checked then
+    if ListedFilesMenuItem.Checked then
       Include(Flags, fuooListed);
-    if chkUsed.Checked then
+    if UsedUnitsMenuItem.Checked then
       Include(Flags, fuooUsed);
-    if chkPackages.Checked then
-      Include(Flags, fuooPackages);
-    if chkSourceEditor.Checked then
+    if EditorFilesMenuItem.Checked then
       Include(Flags, fuooSourceEditor);
+    if DepPackagesMenuItem.Checked then
+      Include(Flags, fuooPackages);
 
-    Units:=LazarusIDE.FindUnitsOfOwner(FOwnerProjPack,Flags);
+    Units:=LazarusIDE.FindUnitsOfOwner(FProjPack,Flags);
     for i:=0 to Units.Count-1 do
       ScanFile(Units[i]);
 
     Node:=FScannedFiles.FindLowest;
     while Node<>nil do
-      begin
-        CurFile:=TTLScannedFile(Node.Data);
-        for i:=0 to CurFile.Count-1 do
-          AddListItem(CurFile[i]);
-        Node:=FScannedFiles.FindSuccessor(Node);
-      end;
+    begin
+      CurFile:=TTLScannedFile(Node.Data);
+      for i:=0 to CurFile.Count-1 do
+        AddListItem(CurFile[i]);
+      Node:=FScannedFiles.FindSuccessor(Node);
+    end;
   finally
     Units.Free;
     CodeToolBoss.DeactivateWriteLock;
     lvTodo.EndUpdate;
+    lblCount.Caption := Format(lisToDoItems, [lvTodo.Items.Count]);
     Screen.EndWaitCursor;
     FUpdating:=False;
   end;
-end;
-
-procedure TIDETodoWindow.FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
-begin
-  if (Key=VK_ESCAPE) then
-    ModalResult:=mrCancel;
 end;
 
 procedure TIDETodoWindow.lvTodoClick(Sender: TObject);
@@ -355,14 +386,23 @@ end;
 
 procedure TIDETodoWindow.lvTodoCompare(Sender : TObject;
   Item1, Item2 : TListItem; Data : Integer; var Compare : Integer);
+
+  function CmpNumeric(aSortCol: integer): integer;
+  var
+    Int1, Int2: Integer;
+  begin
+    if TryStrToInt(Item1.SubItems.Strings[aSortCol-1], Int1)
+    and TryStrToInt(Item2.SubItems.Strings[aSortCol-1], Int2) then
+      Result := CompareValue(Int1, Int2)
+    else
+      Result := 0;
+  end;
+
 var
-  Str1: String;
-  Str2: String;
-  Int1: Integer;
-  Int2: Integer;
+  Str1, Str2: String;
 begin
   Case lvTodo.SortColumn of
-    0, 1, 3, 5, 6 :
+    0, 1, 3, 5, 6, 7 :
       begin
         if lvTodo.SortColumn = 0 then
         begin
@@ -374,22 +414,20 @@ begin
 
             if lvTodo.SortColumn <= Item1.SubItems.Count then
               Str1 := Item1.SubItems.Strings[lvTodo.SortColumn-1]
-            else Str1 := '';
+            else
+              Str1 := '';
 
             if lvTodo.SortColumn <= Item2.SubItems.Count then
               Str2 := Item2.SubItems.Strings[lvTodo.SortColumn-1]
-            else Str2 := '';
+            else
+              Str2 := '';
           end;
         Compare := AnsiCompareText(Str1, Str2);
+        // For the same module name sort by line number.
+        if (Compare = 0) and (lvTodo.SortColumn = 3) then
+          Compare := CmpNumeric(4);
       end;
-    2, 4  :
-      begin
-        if TryStrToInt(Item1.SubItems.Strings[lvTodo.SortColumn-1], Int1)
-        and TryStrToInt(Item2.SubItems.Strings[lvTodo.SortColumn-1], Int2) then
-          Compare := CompareValue(Int1, Int2)
-        else
-          Compare := 0;
-      end;
+    2, 4 : Compare := CmpNumeric(lvTodo.SortColumn);
     else Compare := 0;
   end;
 
@@ -423,6 +461,16 @@ begin
   SaveDialog.InitialDir := GetCurrentDirUTF8;
 end;
 
+procedure TIDETodoWindow.ShowSomethingMenuItemClick(Sender: TObject);
+// Handler used for Show Types and Show Files menu items.
+var
+  mi: TMenuItem;
+begin
+  mi := Sender as TMenuItem;
+  mi.Checked := not mi.Checked;
+  UpdateTodos;
+end;
+
 procedure TIDETodoWindow.XMLPropStorageRestoreProperties(Sender: TObject);
 begin
   FLoadingOptions := False;
@@ -436,46 +484,9 @@ end;
 
 function TIDETodoWindow.ProjectOpened(Sender: TObject; AProject: TLazProject): TModalResult;
 begin
-  Result:=mrOK;
-  IDEItem:='';
+  Result := mrOK;
+  ProjPack := AProject;
   UpdateTodos;
-end;
-
-procedure TIDETodoWindow.UpdateStartFilename;
-var
-  NewStartFilename: String;
-  CurProject: TLazProject;
-  CurPkg: TIDEPackage;
-begin
-  ResolveIDEItem(FOwnerProjPack,CurProject,CurPkg);
-  NewStartFilename:='';
-  if CurPkg<>nil then                   // package
-    NewStartFilename:=CurPkg.Filename
-  else if CurProject<>nil then          // project
-    NewStartFilename:=CurProject.ProjectInfoFile;
-  if FStartFilename=NewStartFilename then
-    exit;
-  FStartFilename:=NewStartFilename;
-  UpdateTodos;
-end;
-
-procedure TIDETodoWindow.ResolveIDEItem(out CurOwner: TObject;
-  out CurProject: TLazProject; out CurPkg: TIDEPackage);
-begin
-  CurOwner:=nil;
-  CurProject:=nil;
-  CurPkg:=nil;
-  if IsValidIdent(FIDEItem,true,true) then begin
-    // package
-    CurPkg:=PackageEditingInterface.FindPackageWithName(FIDEItem);
-    CurOwner:=CurPkg;
-    //DebugLn(['TIDETodoWindow.ResolveIDEItem: Found package ', CurPkg.Filename]);
-  end else begin
-    // project
-    CurProject:=LazarusIDE.ActiveProject;
-    CurOwner:=CurProject;
-    //DebugLn(['TIDETodoWindow.ResolveIDEItem: Found project ', CurProject.MainFile.Filename]);
-  end;
 end;
 
 procedure TIDETodoWindow.SetIdleConnected(const AValue: boolean);
@@ -488,15 +499,10 @@ begin
     Application.RemoveOnIdleHandler(@OnIdle);
 end;
 
-procedure TIDETodoWindow.SetIDEItem(AValue: string);
+procedure TIDETodoWindow.SetProjPack(AValue: TObject);
 begin
-  //if FIDEItem=AValue then exit;  // No check, trigger update in any case.
-  FIDEItem:=AValue;
-  UpdateStartFilename;
-end;
-
-procedure TIDETodoWindow.acRefreshExecute(Sender: TObject);
-begin
+  //if FProjPack=AValue then Exit; // No check, trigger update in any case.
+  FProjPack:=AValue;
   UpdateTodos;
 end;
 
@@ -561,14 +567,13 @@ end;
 procedure TIDETodoWindow.AddListItem(aTodoItem: TTodoItem);
 
   function ShowThisToDoItem: boolean;
-  // Add this ToDoItem based on the cboShowWhat selection
+  // Add this ToDoItem based on the "Show Types" selection
   begin
-    case cboShowWhat.ItemIndex of
-      0:Result := True;
-      1..3: Result := (TToDoType(cboShowWhat.ItemIndex - 1) = aTodoItem.ToDoType);
-      4:Result := aTodoItem.ToDoType in [tdToDo, tdDone];
-      5:Result := aTodoItem.ToDoType in [tdToDo, tdNote];
-      6:Result := aTodoItem.ToDoType in [tdDone, tdNote];
+    case aTodoItem.ToDoType of
+      tdToDo:  Result := ToDoMenuItem.Checked;
+      tdFixme: Result := FixmeMenuItem.Checked;
+      tdDone:  Result := DoneMenuItem.Checked;
+      tdNote:  Result := NoteMenuItem.Checked;
     end;
   end;
 
@@ -576,7 +581,8 @@ var
    aListItem: TListItem;
    aFilename: String;
 begin
-  if Assigned(aTodoItem) and ShowThisToDoItem then
+  Assert(Assigned(aTodoItem), 'TIDETodoWindow.AddListItem: aTodoItem=Nil');
+  if ShowThisToDoItem then
   begin
     //DebugLn(['TIDETodoWindow.AddListItem ',aTodoItem.Filename,' ',aTodoItem.LineNumber]);
     aListitem := lvTodo.Items.Add;
@@ -590,6 +596,7 @@ begin
     aListitem.SubItems.Add(aFilename);
     aListitem.SubItems.Add(IntToStr(aTodoItem.StartPos.Y));
     aListitem.SubItems.Add(aTodoItem.Owner);
+    aListitem.SubItems.Add(aTodoItem.IssueID);
     aListitem.SubItems.Add(aTodoItem.Category);
   end;
 end;

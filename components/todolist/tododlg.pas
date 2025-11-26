@@ -51,18 +51,19 @@ type
   { TTodoDialog }
 
   TTodoDialog = class(TForm)
-    Bevel1: TBevel;
-    Bevel2: TBevel;
     BtnPanel: TButtonPanel;
     chkAlternateTokens: TCheckBox;
     grpboxToDoType: TGroupBox;
     OwnerEdit: TEdit;
     CategoryEdit: TEdit;
     CategoryLabel: TLabel;
+    IssueEdit: TEdit;
+    IssueLabel: TLabel;
     PriorityEdit: TSpinEdit;
     PriorityLabel: TLabel;
     OwnerLabel: TLabel;
     rdoToDo: TRadioButton;
+    rdoFixme: TRadioButton;
     rdoDone: TRadioButton;
     rdoNote: TRadioButton;
     TodoLabel: TLabel;
@@ -123,34 +124,38 @@ begin
 
   // register shortcut for insert todo
   Key := IDEShortCut(VK_T,[ssCtrl,ssShift],VK_UNKNOWN,[]);
-  Cat:=IDECommandList.FindCategoryByName(CommandCategoryTextEditingName);
-  InsertToDoCmd:=RegisterIDECommand(Cat, 'InsertToDo', lisTDDInsertToDo,Key,
+  Cat := IDECommandList.FindCategoryByName(CommandCategoryTextEditingName);
+  InsertToDoCmd := RegisterIDECommand(Cat, 'InsertToDo', lisTDDInsertToDo,Key,
     nil,@InsertOrEditToDo);
 
-  // add a menu item in the source editor
-  SrcEditMenuCmd:=RegisterIDEMenuCommand(SrcEditMenuSectionFirstStatic, 'InsertToDo',
+  // add a menu item in the Source Editor
+  SrcEditMenuCmd := RegisterIDEMenuCommand(SrcEditMenuSectionFirstStatic, 'InsertToDo',
     lisTDDInsertToDo,nil,nil,InsertToDoCmd,'item_todo');
   // add a menu item in the Edit / Insert Text section
-  IdeSourceMenuCmd:=RegisterIDEMenuCommand(itmSourceInsertions,'itmSourceInsertTodo',
+  IdeSourceMenuCmd := RegisterIDEMenuCommand(itmSourceInsertions,'itmSourceInsertTodo',
     lisTDDInsertToDo,nil,nil,InsertToDoCmd,'item_todo');
-  ButtonCmd:=RegisterIDEButtonCommand(InsertToDoCmd);    // toolbutton
-  ButtonCmd.ImageIndex:=IdeSourceMenuCmd.ImageIndex;
+  ButtonCmd := RegisterIDEButtonCommand(InsertToDoCmd);    // toolbutton
+  ButtonCmd.ImageIndex := IdeSourceMenuCmd.ImageIndex;
   SrcEditMenuCmd.OnRequestCaptionHint := @ToDoManager.DecideMenuCaption;
   IdeSourceMenuCmd.OnRequestCaptionHint := @ToDoManager.DecideMenuCaption;
 
   // register shortcut for view todo list
   Key := IDEShortCut(VK_UNKNOWN,[],VK_UNKNOWN,[]);
-  Cat:=IDECommandList.FindCategoryByName(CommandCategoryViewName);
+  Cat := IDECommandList.FindCategoryByName(CommandCategoryViewName);
   ViewToDoListCmd:=RegisterIDECommand(Cat, 'View ToDo list', lisViewToDoList,
     Key,nil,@ViewToDoList);
 
-  // add a menu item in the view menu
-  MenuCmd:=RegisterIDEMenuCommand(itmViewMainWindows, 'ViewToDoList',
+  // add a menu item in the View menu
+  MenuCmd := RegisterIDEMenuCommand(itmViewMainWindows, 'ViewToDoList',
     lisToDoList, nil, nil, ViewToDoListCmd, 'menu_view_todo');
-  ButtonCmd:=RegisterIDEButtonCommand(ViewToDoListCmd);    // toolbutton
-  ButtonCmd.ImageIndex:=MenuCmd.ImageIndex;
+  ButtonCmd := RegisterIDEButtonCommand(ViewToDoListCmd);    // toolbutton
+  ButtonCmd.ImageIndex := MenuCmd.ImageIndex;
 
-  // add a menu item in the package editor
+  // add a menu item in the Project menu
+  RegisterIDEMenuCommand(itmProjectAddRemoveSection, 'ViewProjectToDoList',
+    lisToDoList, nil, nil, ViewToDoListCmd, 'menu_view_todo');
+
+  // add a menu item in the Package Editor
   RegisterIDEMenuCommand(PkgEditMenuSectionMisc, 'ViewPkgToDoList',
     lisToDoList, nil, nil, ViewToDoListCmd, 'menu_view_todo');
 
@@ -163,12 +168,15 @@ var
   Pkg: TIDEPackage;
 begin
   IDEWindowCreators.ShowForm(ToDoWindowName,true);
-  if IDETodoWindow<>nil then begin
-    Pkg:=PackageEditingInterface.GetPackageOfEditorItem(Sender);
-    if Pkg<>nil then
-      IDETodoWindow.IDEItem:=Pkg.Name
-    else
-      IDETodoWindow.IDEItem:='';
+  if IDETodoWindow=nil then exit;
+  Pkg:=PackageEditingInterface.GetPackageOfEditorItem(Sender);
+  if Pkg<>nil then
+    IDETodoWindow.ProjPack:=Pkg
+  else begin
+    if ((Sender as TIDEMenuCommand).Name <> 'ViewToDoList')
+    or (IDETodoWindow.ProjPack = nil) then
+      // Coming from Project menu, or the list was empty. 'ViewToDoList' is View menu.
+      IDETodoWindow.ProjPack:=LazarusIDE.ActiveProject;
   end;
 end;
 
@@ -189,17 +197,19 @@ begin
   aTodoDialog := TTodoDialog.Create(nil);
   aTodoDialog.Caption:=aCaption;
   if Assigned(aTodoItem) then begin
+    aTodoDialog.TodoMemo.Text      := aTodoItem.Text;
+    aTodoDialog.PriorityEdit.Value := aTodoItem.Priority;
+    aTodoDialog.OwnerEdit.Text     := aTodoItem.Owner;
+    aTodoDialog.IssueEdit.Text     := aTodoItem.IssueID;
     aTodoDialog.CategoryEdit.Text  := aTodoItem.Category;
     aTodoDialog.grpboxToDoType.Tag := PtrInt(aTodoItem.ToDoType);
     case aTodoItem.ToDoType of
-      tdToDo: aTodoDialog.rdoToDo.Checked := True;
-      tdDone: aTodoDialog.rdoDone.Checked := True;
-      tdNote: aTodoDialog.rdoNote.Checked := True;
+      tdToDo:  aTodoDialog.rdoToDo.Checked := True;
+      tdFixMe: aTodoDialog.rdoFixme.Checked:= True;
+      tdDone:  aTodoDialog.rdoDone.Checked := True;
+      tdNote:  aTodoDialog.rdoNote.Checked := True;
     end;
     aTodoDialog.chkAlternateTokens.Checked := aTodoItem.TokenStyle=tsAlternate;
-    aTodoDialog.OwnerEdit.Text     := aTodoItem.Owner;
-    aTodoDialog.TodoMemo.Text      := aTodoItem.Text;
-    aTodoDialog.PriorityEdit.Value := aTodoItem.Priority;
   end;
   aTodoDialog.ShowModal;
   Result := aTodoDialog.ModalResult;
@@ -210,15 +220,16 @@ begin
       aTodoItem.CommentType := '{';
       aTodoItem.HasColon := True;
     end;
+    aTodoItem.Text        := aTodoDialog.TodoMemo.Text;
+    aTodoItem.Priority    := aTodoDialog.PriorityEdit.Value;
+    aTodoItem.Owner       := aTodoDialog.OwnerEdit.Text;
+    aTodoItem.IssueID     := aTodoDialog.IssueEdit.Text;
     aTodoItem.Category    := aTodoDialog.CategoryEdit.Text;
     aTodoItem.ToDoType    := TToDoType(aTodoDialog.grpboxToDoType.Tag);
     if aTodoDialog.chkAlternateTokens.Checked then
       aTodoItem.TokenStyle:=tsAlternate
     else
       aTodoItem.TokenStyle:=tsNormal;
-    aTodoItem.Owner       := aTodoDialog.OwnerEdit.Text;
-    aTodoItem.Text        := aTodoDialog.TodoMemo.Text;
-    aTodoItem.Priority    := aTodoDialog.PriorityEdit.Value;
   end;
   aTodoDialog.Free;
 end;
@@ -228,7 +239,7 @@ var
   TodoItem: TTodoItem;
 begin
   TodoItem := nil;
-  if ExecuteTodoDialog(lisTDDInsertToDo, TodoItem) <> mrOK then exit;
+  if ExecuteTodoDialog(lisTDDInsertToDoDlgCaption, TodoItem) <> mrOK then exit;
   try
     if Assigned(TodoItem) then
       aSrcEdit.Selection := TodoItem.AsComment;
@@ -241,7 +252,7 @@ end;
 
 procedure EditToDo(aTodoItem: TTodoItem; aSrcEdit: TSourceEditorInterface);
 begin
-  if ExecuteTodoDialog(lisTDDEditToDo, aTodoItem) <> mrOK then exit;
+  if ExecuteTodoDialog(lisTDDEditToDoDlgCaption, aTodoItem) <> mrOK then exit;
   aSrcEdit.SelectText(aTodoItem.StartPos, aTodoItem.EndPos);
   aSrcEdit.Selection := aTodoItem.AsComment;
   if Assigned(IDETodoWindow) then
@@ -270,12 +281,14 @@ begin
   TodoLabel.Caption:=lisPkgFileTypeText;
   PriorityLabel.Caption:=lisToDoLPriority;
   OwnerLabel.Caption:=lisToDoLOwner;
+  IssueLabel.Caption:=lisToDoLIssue;
   CategoryLabel.Caption:=listToDoLCategory;
   grpboxToDoType.Caption:=lisToDoToDoType;
   grpboxToDoType.Tag:=Ord(tdToDo);
-  rdoToDo.Tag:=Ord(tdToDo);
-  rdoDone.Tag:=Ord(tdDone);
-  rdoNote.Tag:=Ord(tdNote);
+  rdoToDo.Tag :=Ord(tdToDo);
+  rdoFixme.Tag:=Ord(tdFixMe);
+  rdoDone.Tag :=Ord(tdDone);
+  rdoNote.Tag :=Ord(tdNote);
   chkAlternateTokens.Caption:=lisAlternateTokens;
   chkAlternateTokens.Hint:=lisAlternateTokensHint;
   XMLPropStorage.FileName:=Concat(AppendPathDelim(LazarusIDE.GetPrimaryConfigPath),

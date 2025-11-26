@@ -2856,7 +2856,7 @@ begin
         AddKeyWord('Fatal');
         AddKeyWord('FPUType');
         AddKeyWord('FrameworkPath');
-        AddKeyWord('Goto');
+        AddKeyWord('GoTo');
         if Compiler=pcDelphi then
           AddKeyWord('HighCharUnicode');
         AddKeyWord('Hint');
@@ -2967,7 +2967,7 @@ begin
         AddKeyWord('StringChecks');
         if Compiler=pcDelphi then
           AddKeyWord('StrongLinkTypes');
-        AddKeyWord('Syscall');
+        AddKeyWord('SysCall');
         AddKeyWord('TargetSwitch');
         AddKeyWord('ThreadName');
         AddKeyWord('TypedAddress');
@@ -3112,6 +3112,17 @@ begin
           AddKeyWord('DEADSTORE');
           AddKeyWord('FORCENOSTACKFRAME');
           AddKeyWord('USELOADMODIFYSTORE');
+        end else if Directive='apptype' then begin
+          AddKeyWord('CONSOLE');
+          AddKeyWord('GUI');
+          AddKeyWord('TOOL');
+          AddKeyWord('FS');
+        end else if Directive='syscall' then begin
+          AddKeyWord('LEGACY');
+          AddKeyWord('SYSV');
+          AddKeyWord('SYSVBASE');
+          AddKeyWord('BASESYSV');
+          AddKeyWord('R12BASE');
         end;
       end;
       exit;
@@ -3858,7 +3869,7 @@ function TIdentCompletionTool.FindAbstractMethods(
   const CursorPos: TCodeXYPosition; out ListOfPCodeXYPosition: TFPList;
   SkipAbstractsInStartClass: boolean): boolean;
 const
-  ProcAttr = [phpWithoutClassKeyword,phpWithHasDefaultValues];
+  ProcAttr = [phpWithoutClassKeyword,phpWithoutGenericKeyword,phpWithHasDefaultValues];
   FlagIsAbstract = 0;
   FlagIsImplemented = 1;
 var
@@ -4240,7 +4251,7 @@ begin
     if (ANode<>nil) and (ANode.Desc=ctnProcedure) then begin
       try
         FParamTypeList:=Tool.ExtractProcHead(ANode,
-           [phpWithoutClassKeyword,phpWithoutClassName,
+           [phpWithoutClassKeyword,phpWithoutGenericKeyword,phpWithoutClassName,
             phpWithoutName,phpInUpperCase]);
         //debugln('TIdentifierListItem.GetParamTypeList A ',GetIdentifier(Identifier),' ',Tool.MainFilename,' ',dbgs(CurNode.StartPos));
       except
@@ -4264,7 +4275,7 @@ begin
     if (ANode<>nil) and (ANode.Desc=ctnProcedure) then begin
       try
         FParamNameList:=Tool.ExtractProcHead(ANode,
-           [phpWithoutClassKeyword,phpWithoutClassName,
+           [phpWithoutClassKeyword,phpWithoutGenericKeyword,phpWithoutClassName,
             phpWithoutName,phpInUpperCase,phpWithParameterNames]);
         //debugln('TIdentifierListItem.GetParamNameList A ',GetIdentifier(Identifier),' ',Tool.MainFilename,' ',dbgs(CurNode.StartPos));
       except

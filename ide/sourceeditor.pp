@@ -59,8 +59,8 @@ uses
   LinkScanner, CodeTree, SourceChanger, IdentCompletionTool,
   // synedit
   SynEditLines, SynEditStrConst, SynEditTypes, SynEdit, SynEditHighlighter, SynEditAutoComplete,
-  SynEditKeyCmds, SynCompletion, SynEditMiscClasses, SynEditMarkupHighAll, SynEditMarks,
-  SynBeautifier, SynPluginMultiCaret, SynPluginSyncronizedEditBase, SourceSynEditor, SynExportHTML,
+  SynEditKeyCmds, SynCompletion, SynEditMarkupHighAll, SynEditMarks, SynBeautifier,
+  SynPluginMultiCaret, SynPluginSyncronizedEditBase, SourceSynEditor, SynExportHTML,
   SynHighlighterPas, SynEditMarkup, SynEditMarkupIfDef, SynBeautifierPascal,
   SynEditMarkupSpecialLine,
   // IdeIntf
@@ -79,7 +79,7 @@ uses
   LazarusIDEStrConsts, EditorOptions, EnvGuiOptions,
   WordCompletion, FindReplaceDialog, IDEHelpManager, MacroPromptDlg, CodeContextForm,
   SrcEditHintFrm, etMessagesWnd, etSrcEditMarks, CodeMacroPrompt,
-  CodeTemplatesDlg, CodeToolsOptions, editor_general_options, SortSelectionDlg,
+  CodeTemplatesDlg, CodeToolsOptions, SortSelectionDlg,
   EncloseSelectionDlg, EncloseIfDef, InvertAssignTool, SourceEditProcs,
   SourceMarks, SearchFrm, MultiPasteDlg, EditorMacroListViewer,
   EditorToolbarStatic, editortoolbar_options, InputhistoryWithSearchOpt,
@@ -237,8 +237,7 @@ type
 
   TSourceEditor = class(TSourceEditorBase)
   private
-    //FAOwner is normally a TSourceNotebook.  This is set in the Create constructor.
-    FAOwner: TComponent;
+    FAOwner: TSourceNotebook;
     FIsLocked: Boolean;
     FProjectFileUpdatesNeeded: TSrcEditProjectUpdatesNeeded;
     FSharedValues: TSourceEditorSharedValues;
@@ -274,7 +273,6 @@ type
     FOnKeyDown: TKeyEvent;
     FOnKeyUp: TKeyEvent;
 
-    FSourceNoteBook: TSourceNotebook;
     procedure EditorMouseMoved(Sender: TObject; Shift: TShiftState; X,Y:Integer);
     procedure EditorMouseDown(Sender: TObject; Button: TMouseButton;
           Shift: TShiftState; X,Y: Integer);
@@ -320,7 +318,7 @@ type
 
     function GotoLine(Value: Integer): Integer;
 
-    procedure CreateEditor(AOwner: TComponent; AParent: TWinControl; AReturnUpdating: boolean = False);
+    procedure CreateEditor(AOwner: TSourceNotebook; AParent: TWinControl; AReturnUpdating: boolean = False);
     procedure UpdateNoteBook(const ANewNoteBook: TSourceNotebook; ANewPage: TTabSheet);
     procedure SetVisible(Value: boolean);
     procedure UnbindEditor;
@@ -377,7 +375,8 @@ type
     procedure AfterCodeBufferReplace;
     function Close: Boolean;
   public
-    constructor Create(AOwner: TComponent; AParent: TWinControl; ASharedEditor: TSourceEditor = nil; AReturnUpdating: boolean = False);
+    constructor Create(AOwner: TSourceNotebook; AParent: TWinControl;
+      ASharedEditor: TSourceEditor; AReturnUpdating: boolean);
     destructor Destroy; override;
 
     // codebuffer
@@ -558,12 +557,12 @@ type
     property OnMouseWheel: TMouseWheelEvent read FOnMouseWheel write FOnMouseWheel;
     property OnKeyDown: TKeyEvent read FOnKeyDown write FOnKeyDown;
     property OnKeyUp: TKeyEvent read FOnKeyUp write FOnKeyUp;
-    property Owner: TComponent read FAOwner;
+    property Owner: TSourceNotebook read FAOwner;
     property PageName: string read GetPageName write SetPageName;
     property PopupMenu: TPopupMenu read FPopUpMenu write SetPopUpMenu;
     property ReadOnly: Boolean read GetReadOnly write SetReadOnly;
     property Source: TStrings read GetSource write SetSource;
-    property SourceNotebook: TSourceNotebook read FSourceNoteBook;
+    property SourceNotebook: TSourceNotebook read FAOwner;
     property SyntaxHighlighterId: TIdeSyntaxHighlighterID
        read fSyntaxHighlighterId write SetSyntaxHighlighterId;
     property ActiveSyntaxHighlighterId: TIdeSyntaxHighlighterID
@@ -667,7 +666,7 @@ type
   { TSrcEditTabSheet }
 
   TSrcEditTabSheet = class(TTabSheet)
-  protected
+  public
     function IsControlVisible: Boolean; override;
   end;
 
@@ -759,6 +758,7 @@ type
     FHistoryList: TFPList; // list of TSourceEditor page order for when a window closes
     FHistoryDlg: TBrowseEditorTabHistoryDialog;
     FStopBtnIdx: Integer;
+    FNextNumForEditorName: Integer;
     FOnEditorPageCaptionUpdate: TMethodList;
   private
     FUpdateTabAndPageTimer: TTimer;
@@ -3662,7 +3662,7 @@ end;
 { The constructor for @link(TSourceEditor).
   AOwner is the @link(TSourceNotebook)
   and the AParent is usually a page of a @link(TPageControl) }
-constructor TSourceEditor.Create(AOwner: TComponent; AParent: TWinControl;
+constructor TSourceEditor.Create(AOwner: TSourceNotebook; AParent: TWinControl;
   ASharedEditor: TSourceEditor; AReturnUpdating: boolean);
 Begin
   FInEditorChangedUpdating := False;
@@ -3675,11 +3675,6 @@ Begin
 
   inherited Create;
   FAOwner := AOwner;
-  if FAOwner is TSourceNotebook then
-    FSourceNoteBook:=TSourceNotebook(FAOwner)
-  else
-    FSourceNoteBook:=nil;
-
   FSyntaxHighlighterId:=IdeHighlighterNoneID;
   FDefaultSyntaxHighlighterId := IdeHighlighterNotSpecifiedId;
   FErrorLine:=-1;
@@ -3719,7 +3714,7 @@ begin
     UnbindEditor;
     FEditor.Visible:=false;
     FEditor.Parent:=nil;
-    TSourceNotebook(FAOwner).ReleaseEditor(self, True);
+    FAOwner.ReleaseEditor(self, True);
     // free the synedit control after processing the events
     EditorComponent.Owner.RemoveComponent(EditorComponent);
     Application.ReleaseComponent(FEditor);
@@ -3898,8 +3893,8 @@ end;
 {------------------------------F I N D  A G A I N ----------------------------}
 procedure TSourceEditor.FindNextUTF8;
 begin
-  if snIncrementalFind in FSourceNoteBook.States then begin
-    FSourceNoteBook.IncrementalSearch(True, False);
+  if snIncrementalFind in FAOwner.States then begin
+    FAOwner.IncrementalSearch(True, False);
   end
   else if LazFindReplaceDialog.FindText = '' then begin
     StartFindAndReplace(False)
@@ -3916,8 +3911,8 @@ procedure TSourceEditor.FindPrevious;
 var
   SrchOptions: TSynSearchOptions;
 begin
-  if snIncrementalFind in FSourceNoteBook.States then begin
-    FSourceNoteBook.IncrementalSearch(True, True);
+  if snIncrementalFind in FAOwner.States then begin
+    FAOwner.IncrementalSearch(True, True);
   end
   else if LazFindReplaceDialog.FindText = '' then begin
     // TODO: maybe start with default set to backwards direction? But StartFindAndReplace replaces it with input-history
@@ -4031,7 +4026,7 @@ var a,x,y:integer;
   AText:AnsiString;
 begin
   if FAOwner<>nil then
-    TSourceNotebook(FAOwner).UpdateStatusBar;
+    FAOwner.UpdateStatusBar;
 
   CenterCursor(True);
   CenterCursorHoriz(hcmSoftKeepEOL);
@@ -4079,8 +4074,8 @@ end;
 
 function TSourceEditor.Manager: TSourceEditorManager;
 begin
-  if FSourceNoteBook <> nil then
-    Result := FSourceNoteBook.Manager
+  if FAOwner <> nil then
+    Result := FAOwner.Manager
   else
     Result := nil;
 end;
@@ -4120,7 +4115,7 @@ procedure TSourceEditor.DoMultiCaretBeforeCommand(Sender: TObject;
   ACommand: TSynEditorCommand; var AnAction: TSynMultiCaretCommandAction;
   var AFlags: TSynMultiCaretCommandFlags);
 begin
-  if (FSourceNoteBook<>nil) and (snIncrementalFind in FSourceNoteBook.States) then begin
+  if (FAOwner<>nil) and (snIncrementalFind in FAOwner.States) then begin
     AnAction := ccaClearCarets;
   end;
 
@@ -4173,8 +4168,7 @@ begin
   end;
   Manager.HideHint;
 
-  if (FSourceNoteBook<>nil)
-  and (snIncrementalFind in FSourceNoteBook.States) then begin
+  if (FAOwner<>nil) and (snIncrementalFind in FAOwner.States) then begin
     case Command of
     ecChar:
       begin
@@ -4182,24 +4176,23 @@ begin
           if (CodeContextFrm<>nil) then
             CodeContextFrm.Hide;
 
-          FSourceNoteBook.IncrementalSearchStr:='';
+          FAOwner.IncrementalSearchStr:='';
         end else
-          FSourceNoteBook.IncrementalSearchStr:=
-            FSourceNoteBook.IncrementalSearchStr+AChar;
+          FAOwner.IncrementalSearchStr:=FAOwner.IncrementalSearchStr+AChar;
         Command:=ecNone;
       end;
 
     ecDeleteLastChar:
       begin
-        i := length(FSourceNoteBook.IncrementalSearchStr);
-        i := UTF8FindNearestCharStart(PChar(FSourceNoteBook.IncrementalSearchStr), i, i-1);
-        FSourceNoteBook.IncrementalSearchStr:= LeftStr(FSourceNoteBook.IncrementalSearchStr, i);
+        i := length(FAOwner.IncrementalSearchStr);
+        i := UTF8FindNearestCharStart(PChar(FAOwner.IncrementalSearchStr), i, i-1);
+        FAOwner.IncrementalSearchStr:= LeftStr(FAOwner.IncrementalSearchStr, i);
         Command:=ecNone;
       end;
 
     ecLineBreak:
       begin
-        FSourceNoteBook.EndIncrementalFind;
+        FAOwner.EndIncrementalFind;
         Command:=ecNone;
       end;
 
@@ -4207,15 +4200,14 @@ begin
       begin
         s:=Clipboard.AsText;
         s:=copy(s,1,EditorOpts.RightMargin);
-        FSourceNoteBook.IncrementalSearchStr:=
-          FSourceNoteBook.IncrementalSearchStr+s;
+        FAOwner.IncrementalSearchStr:=FAOwner.IncrementalSearchStr+s;
         Command:=ecNone;
       end;
 
     ecScrollUp, ecScrollDown, ecScrollLeft, ecScrollRight: ; // ignore
 
     else
-      FSourceNoteBook.EndIncrementalFind;
+      FAOwner.EndIncrementalFind;
     end;
   end;
 
@@ -4223,7 +4215,7 @@ begin
 
   ecSelEditorTop, ecSelEditorBottom, ecEditorTop, ecEditorBottom:
     begin
-      if (FaOwner<>nil) and (not FEditor.IsInMultiCaretRepeatExecution) then
+      if (FAOwner<>nil) and (not FEditor.IsInMultiCaretRepeatExecution) then
         Manager.AddJumpPointClicked(Self);
     end;
 
@@ -4373,7 +4365,7 @@ Begin
   ecFind:                 StartFindAndReplace(false);
   ecFindNext:             FindNextUTF8;
   ecFindPrevious:         FindPrevious;
-  ecIncrementalFind:      if FSourceNoteBook<>nil then FSourceNoteBook.BeginIncrementalFind;
+  ecIncrementalFind:      if FAOwner<>nil then FAOwner.BeginIncrementalFind;
   ecReplace:              StartFindAndReplace(true);
   ecGotoLineNumber:       ShowGotoLineDialog;
   ecFindNextWordOccurrence: FindNextWordOccurrence(true);
@@ -4452,9 +4444,8 @@ Begin
   else
     begin
       Handled:=false;
-      if FaOwner<>nil then
-        TSourceNotebook(FaOwner).ProcessParentCommand(self,Command,aChar,Data,
-                        Handled);
+      if FAOwner<>nil then
+        FAOwner.ProcessParentCommand(self,Command,aChar,Data,Handled);
     end;
   end;  //case
   if Handled then Command:=ecNone;
@@ -4492,14 +4483,13 @@ begin
     end;
 
   ecStickySelection, ecStickySelectionCol, ecStickySelectionLine, ecStickySelectionStop:
-    FSourceNoteBook.UpdateStatusBar;
+    FAOwner.UpdateStatusBar;
 
   else
     begin
       Handled:=false;
-      if FaOwner<>nil then
-        TSourceNotebook(FaOwner).ParentCommandProcessed(Self,Command,aChar,Data,
-                                                        Handled);
+      if FAOwner<>nil then
+        FAOwner.ParentCommandProcessed(Self,Command,aChar,Data,Handled);
     end;
   end;
   if Handled then Command:=ecNone;
@@ -5408,27 +5398,25 @@ end;
 
 procedure TSourceEditor.UpdateNoteBook(const ANewNoteBook: TSourceNotebook; ANewPage: TTabSheet);
 begin
-  if FSourceNoteBook = ANewNoteBook then exit;
+  if FAOwner = ANewNoteBook then exit;
 
-  FSourceNoteBook := ANewNoteBook;
   FAOwner := ANewNoteBook;
   FPageName := ANewNoteBook.NoteBookPages[ANewNoteBook.NoteBookIndexOfPage(ANewPage)];
 
   EditorComponent.Parent := nil;
   // Change the Owner of the SynEdit
   EditorComponent.Owner.RemoveComponent(EditorComponent);
-  FSourceNoteBook.InsertComponent(EditorComponent);
+  FAOwner.InsertComponent(EditorComponent);
   // And the Parent
   EditorComponent.Parent := ANewPage;
 end;
 
 { AOwner is the TSourceNotebook
   AParent is a page of the TPageControl }
-procedure TSourceEditor.CreateEditor(AOwner: TComponent; AParent: TWinControl;
-  AReturnUpdating: boolean);
+procedure TSourceEditor.CreateEditor(AOwner: TSourceNotebook;
+  AParent: TWinControl; AReturnUpdating: boolean);
 var
   NewName: string;
-  i: integer;
   bmp: TCustomBitmap;
 Begin
   {$IFDEF IDE_DEBUG}
@@ -5436,11 +5424,8 @@ Begin
   {$ENDIF}
   if not assigned(FEditor) then Begin
     FVisible := False;
-    i:=0;
-    repeat
-      inc(i);
-      NewName:='SynEdit'+IntToStr(i);
-    until (AOwner.FindComponent(NewName)=nil);
+    NewName:='SynEdit'+IntToStr(AOwner.FNextNumForEditorName);
+    Inc(AOwner.FNextNumForEditorName);
     FEditor := TIDESynEditor.Create(AOwner);
     FEditor.BeginUpdate;
     with FEditor do begin
@@ -5969,10 +5954,9 @@ var
   SrcEdit: TSourceEditor;
 begin
   debugln(SRCED_PAGES, ['TSourceEditor.EditorEnter ']);
-  if (FSourceNoteBook.FUpdateLock <> 0) or
-     (FSourceNoteBook.FFocusLock <> 0)
-  then exit;
-  if (FSourceNoteBook.PageIndex = PageIndex) then
+  if (FAOwner.FUpdateLock <> 0) or (FAOwner.FFocusLock <> 0) then
+    exit;
+  if (FAOwner.PageIndex = PageIndex) then
     Activate
   else begin
     SrcEdit:=SourceNotebook.GetActiveSE;
@@ -6524,10 +6508,10 @@ end;
 
 procedure TSourceEditor.Activate;
 begin
-  { $note: avoid this if FSourceNoteBook.FUpdateLock > 0 / e.g. debugger calls ProcessMessages, and the internall Index is lost/undone}
-  if (FSourceNoteBook=nil) then exit;
-  if (FSourceNoteBook.FUpdateLock = 0) then
-    FSourceNoteBook.ActiveEditor := Self;
+  { $note: avoid this if FAOwner.FUpdateLock > 0 / e.g. debugger calls ProcessMessages, and the internall Index is lost/undone}
+  if (FAOwner=nil) then exit;
+  if (FAOwner.FUpdateLock = 0) then
+    FAOwner.ActiveEditor := Self;
 end;
 
 procedure TSourceEditor.ActivateHint(const ClientPos: TPoint; const ABaseURL,
@@ -6535,15 +6519,15 @@ procedure TSourceEditor.ActivateHint(const ClientPos: TPoint; const ABaseURL,
 var
   ScreenPos: TPoint;
 begin
-  if SourceNotebook=nil then exit;
+  if FAOwner=nil then exit;
   ScreenPos:=EditorComponent.ClientToScreen(ClientPos);
   Manager.ActivateHint(ScreenPos,ABaseURL,AHint,AAutoShown);
 end;
 
 function TSourceEditor.PageIndex: integer;
 begin
-  if FSourceNoteBook<>nil then
-    Result:=FSourceNoteBook.FindPageWithEditor(Self)
+  if FAOwner<>nil then
+    Result:=FAOwner.FindPageWithEditor(Self)
   else
     Result:=-1;
 end;
@@ -6556,8 +6540,8 @@ end;
 
 function TSourceEditor.IsActiveOnNoteBook: boolean;
 begin
-  if FSourceNoteBook<>nil then
-    Result:=(FSourceNoteBook.GetActiveSE=Self)
+  if FAOwner<>nil then
+    Result:=(FAOwner.GetActiveSE=Self)
   else
     Result:=false;
 end;

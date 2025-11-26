@@ -1492,7 +1492,7 @@ begin
 
   // insert new published method to class
   Beauty:=SourceChangeCache.BeautifyCodeOptions;
-  MethodAttr:=[phpWithStart, phpWithoutClassKeyword, phpWithVarModifiers,
+  MethodAttr:=[phpWithStart, phpWithoutClassKeyword, phpWithoutGenericKeyword, phpWithVarModifiers,
                phpWithParameterNames,phpWithDefaultValues,phpWithResultType];
   MethodDefinition:=TrimCodeSpace(ProcContext.Tool.ExtractProcHead(
                        ProcContext.Node,
@@ -1588,7 +1588,7 @@ begin
   end;
 
   // extract method param list, result type and modifiers
-  MethodAttr:=[phpWithStart, phpWithoutClassKeyword, phpWithVarModifiers,
+  MethodAttr:=[phpWithStart, phpWithoutClassKeyword, phpWithoutGenericKeyword, phpWithVarModifiers,
                phpWithParameterNames,phpWithDefaultValues,phpWithResultType,
                phpWithCallingSpecs];
   MethodDefinition:=TrimCodeSpace(
@@ -1753,6 +1753,7 @@ var
   ProcsCopied: boolean;
   StartNode: TCodeTreeNode;
   OnlyNode: TCodeTreeNode;
+  Attr: TProcHeadAttributes;
 begin
   Result:=true;
   {$IFDEF CTDEBUG}
@@ -1841,10 +1842,13 @@ begin
     // build nice procs
     CurProcNode:=StartProcNode;
     repeat
-      ProcCode:=ExtractProcHead(CurProcNode,[phpWithStart,
-                  phpWithoutClassKeyword,
-                  phpWithVarModifiers,phpWithParameterNames,phpWithResultType,
-                  phpWithCallingSpecs,phpWithAssembler,phpDoNotAddSemicolon, phpWithEmptyParamList]);
+      Attr := [phpWithStart,
+               phpWithoutClassKeyword, phpWithoutGenericTypeConstraints, phpWithoutGenericConstConstraints,
+               phpWithVarModifiers,phpWithParameterNames,phpWithResultType,
+               phpWithCallingSpecs,phpWithAssembler,phpDoNotAddSemicolon, phpWithEmptyParamList];
+      if (CurProcNode.Parent <> nil) and (CurProcNode.Parent.Desc in [ctnProgram, ctnImplementation]) then
+        Attr := Attr - [phpWithoutGenericConstConstraints];
+      ProcCode:=ExtractProcHead(CurProcNode, Attr);
       if ProcCode='' then
         RaiseException(20170421201518,'CompleteForwardProcs: unable to parse forward proc node');
       if ProcCode[length(ProcCode)]<>';' then begin
@@ -2926,7 +2930,7 @@ begin
       // add method declaration
       NewProcCode:=ExtractProcHead(BodyProcNode,ProcAttrCopyBodyToDef+[phpWithCallingSpecs,phpWithEmptyParamList]);
       CleanProcCode:=ExtractProcHead(BodyProcNode,
-                       [phpWithoutClassKeyword,phpWithoutClassName,phpInUpperCase]);
+                       [phpWithoutClassKeyword,phpWithoutGenericKeyword,phpWithoutClassName,phpInUpperCase]);
       AddClassInsertion(CleanProcCode,NewProcCode,ProcName,ncpPrivateProcs);
 
       // apply changes
@@ -3073,7 +3077,7 @@ function TCodeCompletionCodeTool.CompleteProcByCall(CleanCursorPos,
   SourceChangeCache: TSourceChangeCache): boolean;
 // check if 'procname(expr list);'
 const
-  ShortProcFormat = [phpWithoutClassKeyword];
+  ShortProcFormat = [phpWithoutClassKeyword,phpWithoutGenericKeyword];
 
   function CheckProcSyntax(out BeginNode: TCodeTreeNode;
     out ProcNameAtom: TAtomPosition;
@@ -7053,9 +7057,7 @@ var
     ReadNextAtom;
     if AtomIsChar(';') then exit;
     AtomIsIdentifierE;
-    if WordIsPropertySpecifier.DoItCaseInsensitive(Src,CurPos.StartPos,
-      CurPos.EndPos-CurPos.StartPos)
-    then
+    if IsIncomplePartAndWordIsPropSpec then
       exit;
     Parts[SpecParam]:=CurPos;
     ReadNextAtom;
@@ -7165,8 +7167,7 @@ var
         RaiseException(20170421201737,ctsIndexSpecifierRedefined);
       Parts[ppIndexWord]:=CurPos;
       ReadNextAtom;
-      if WordIsPropertySpecifier.DoItCaseInsensitive(Src,CurPos.StartPos,
-        CurPos.EndPos-CurPos.StartPos) then
+      if IsIncomplePartAndWordIsPropSpec then
         RaiseExceptionFmt(20170421201740,ctsIndexParameterExpectedButAtomFound,[GetAtom]);
       Parts[ppIndex].StartPos:=CurPos.StartPos;
       ReadConstant(true,false,[]);
@@ -7183,8 +7184,7 @@ var
         RaiseException(20170421201742,ctsDispidSpecifierRedefined);
       Parts[ppDispidWord]:=CurPos;
       ReadNextAtom;
-      if WordIsPropertySpecifier.DoItCaseInsensitive(Src,CurPos.StartPos,
-        CurPos.EndPos-CurPos.StartPos) then
+      if IsIncomplePartAndWordIsPropSpec then
         RaiseExceptionFmt(20170421201744,ctsDispidParameterExpectedButAtomFound,[GetAtom]);
       Parts[ppDispid].StartPos:=CurPos.StartPos;
       ReadConstant(true,false,[]);
@@ -7214,8 +7214,7 @@ var
           RaiseException(20170421201746,ctsDefaultSpecifierRedefined);
         Parts[ppDefaultWord]:=CurPos;
         ReadNextAtom;
-        if WordIsPropertySpecifier.DoItCaseInsensitive(Src,CurPos.StartPos,
-          CurPos.EndPos-CurPos.StartPos) then
+        if IsIncomplePartAndWordIsPropSpec then
           RaiseExceptionFmt(20170421201748,ctsDefaultParameterExpectedButAtomFound,[GetAtom]);
         Parts[ppDefault].StartPos:=CurPos.StartPos;
         ReadConstant(true,false,[]);
@@ -7231,8 +7230,7 @@ var
         while CurPos.Flag=cafComma do begin
           ReadNextAtom;
           AtomIsIdentifierE;
-          if WordIsPropertySpecifier.DoItCaseInsensitive(Src,CurPos.StartPos,
-            CurPos.EndPos-CurPos.StartPos) then
+          if IsIncomplePartAndWordIsPropSpec then
             RaiseExceptionFmt(20170421201752,ctsIndexParameterExpectedButAtomFound,[GetAtom]);
           ReadNextAtom;
         end;
@@ -8216,7 +8214,7 @@ begin
         exit;
       end;
       ProcCode:=ExtractProcHead(ANode,[phpWithStart,
-                  phpWithoutClassKeyword,
+                  phpWithoutClassKeyword,phpWithoutGenericKeyword,
                   phpWithVarModifiers,phpWithParameterNames,phpWithResultType,
                   phpWithProcModifiers,phpDoNotAddSemicolon,phpWithEmptyParamList]);
       if (ProcCode<>'') and (ProcCode[length(ProcCode)]<>';') then begin
@@ -8813,7 +8811,8 @@ begin
   if (TheNodeExt.Code='') and (TheNodeExt.ProcBody='') then begin
     ANode:=TheNodeExt.Node;
     if (ANode<>nil) and (ANode.Desc=ctnProcedure) then begin
-      ProcCode:=ExtractProcHead(ANode,CreateMethodBodies_ProcAttrBodyDef+[phpWithEmptyParamList]);
+      ProcCode:=ExtractProcHead(ANode,CreateMethodBodies_ProcAttrBodyDef+[phpWithEmptyParamList,
+        phpWithoutGenericTypeConstraints, phpWithoutGenericConstConstraints]);
       //debugln(['CreateCodeForMissingProcBody Definition="',ProcCode,'"']);
       TheNodeExt.ProcBody:=Beauty.BeautifyProc(ProcCode,Indent,true);
       //debugln(['CreateCodeForMissingProcBody Beautified="',TheNodeExt.ProcBody,'"']);
