@@ -193,8 +193,7 @@ type
         ProcSpec: TProcedureSpecifier): boolean;
     function ProcNodeHasParamList(ProcNode: TCodeTreeNode): boolean;
     function ProcNodeHasOfObject(ProcNode: TCodeTreeNode): boolean;
-    function GetProcParamList(ProcNode: TCodeTreeNode;
-                              Parse: boolean = true): TCodeTreeNode;
+    function GetProcParamList(ProcNode: TCodeTreeNode): TCodeTreeNode;
     function GetProcResultNode(ProcNode: TCodeTreeNode): TCodeTreeNode;
     function NodeIsInAMethod(Node: TCodeTreeNode): boolean;
     function NodeIsMethodDecl(ProcNode: TCodeTreeNode): boolean;
@@ -1193,7 +1192,6 @@ begin
     // search alias for parameter
     ProcNode:=FindCorrespondingProcNode(ProcNode,Attr,Search);
     if ProcNode=nil then exit;
-    BuildSubTreeForProcHead(ProcNode);
     Result:=ProcNode;
     while (Result<>nil) do begin
       //debugln(['TPascalReaderTool.FindCorrespondingProcParamNode ',dbgstr(copy(Src,Result.StartPos,20))]);
@@ -1818,16 +1816,17 @@ begin
     c := (CurPos.Flag = cafWord) and UpAtomIs('CONST');
     if (phpWithoutGenericConstConstraints in Attr) and c then begin
       ExtractNextAtom(False, Attr);                // Skip the CONST
-      Result:=ExtractNextTil([':', '>'], Add);     // exctrat the param name(s)
+      Result:=ExtractNextTil([':', ';', '>'], Add);     // exctrat the param name(s)
       if (Result) and (Src[CurPos.StartPos] = ':') then
         Result:=ExtractNextTil([';', '>'], False); // skip the type
     end
     else begin
-      Result:=ExtractNextTil([':', '>'], Add);  // Extract param name(s)
+      Result:=ExtractNextTil([':', ';', '>'], Add);  // Extract param name(s)
       if (not Result) or (Src[CurPos.StartPos] = '>') then
         exit;
       // at : / start of contstraint
-      Result:=ExtractNextTil([';', '>'], c or not (phpWithoutGenericTypeConstraints in Attr));
+      if (Result) and (Src[CurPos.StartPos] = ':') then
+        Result:=ExtractNextTil([';', '>'], c or not (phpWithoutGenericTypeConstraints in Attr));
     end;
     if (not Result) or (Src[CurPos.StartPos] = '>') then
       exit;
@@ -2341,8 +2340,6 @@ var
   Child: TCodeTreeNode;
 begin
   //debugln(['TPascalReaderTool.ForEachIdentifierInNode START ',Node.DescAsString]);
-  if NodeNeedsBuildSubTree(Node) then
-    BuildSubTree(Node);
   if Node.FirstChild<>nil then begin
     EndPos:=Node.StartPos;
     Child:=Node.FirstChild;
@@ -3025,6 +3022,10 @@ begin
   ReadNextAtom;
   if not AtomIsIdentifier then exit;
   ReadNextAtom;
+  if (Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]) and AtomIsChar('<') then begin
+    if not ReadGenericParamList(True, False, [ppDontCreateNodes, ppDontRaiseExceptionOnError]) then
+      exit;
+  end;
   if (CurPos.Flag<>cafPoint) then exit;
   Result:=true;
 end;
@@ -3062,8 +3063,6 @@ begin
   begin
     ProcNode:=ProcNode.FirstChild;
     if ProcNode=nil then exit;
-    if (ProcNode.SubDesc and ctnsNeedJITParsing)>0 then
-      BuildSubTreeForProcHead(ProcNode);
     ProcNode:=ProcNode.FirstChild;
     if (ProcNode=nil) then exit;
     if ProcNode.Desc=ctnParameterList then
@@ -3631,9 +3630,6 @@ begin
       +'internal error: invalid ProcNode');
   end;
   {$ENDIF}
-  if (ProcNode.FirstChild=nil)
-  or ((ProcNode.SubDesc and ctnsNeedJITParsing)>0) then
-    BuildSubTreeForProcHead(ProcNode);
 
   // ToDo: ppu, dcu
 
@@ -3676,8 +3672,7 @@ begin
   Result:=UpAtomIs('OF') and ReadNextUpAtomIs('OBJECT');
 end;
 
-function TPascalReaderTool.GetProcParamList(ProcNode: TCodeTreeNode;
-  Parse: boolean): TCodeTreeNode;
+function TPascalReaderTool.GetProcParamList(ProcNode: TCodeTreeNode): TCodeTreeNode;
 begin
   Result:=ProcNode;
   if Result=nil then exit;
@@ -3686,8 +3681,6 @@ begin
     if Result=nil then exit;
   end;
   if Result.Desc<>ctnProcedureHead then exit(nil);
-  if Parse then
-    BuildSubTreeForProcHead(Result);
   Result:=Result.FirstChild;
   while Result<>nil do begin
     if Result.Desc=ctnParameterList then exit;

@@ -253,7 +253,7 @@ type
     function AtomIsIdentifier: boolean;
     procedure AtomIsIdentifierE; overload;
     function AtomIsIdentifierE(ExceptionOnNotFound: boolean): boolean; overload;
-    procedure AtomIsIdentifierSaveE(id: int64);
+    function AtomIsIdentifierSaveE(id: int64; DontRaise: boolean = False): boolean;
     function AtomIsCustomOperator(AllowIdentifier, ExceptionOnNotFound, SaveE: boolean): boolean;
     function LastAtomIs(BackIndex: integer;
         const AnAtom: shortstring): boolean; // 0=current, 1=prior current, ...
@@ -286,8 +286,10 @@ type
         out EndPos: integer; StopAtLen: integer=0): string;
     function ExtractIdentifierWithPointsOutEndPos( StartPos: integer;
         var Comment: string; out EndPos: integer;  StopAtLen: integer=0): string;
-    procedure CreateChildNode;
+    procedure CreateChildNode(Desc: TCodeTreeNodeDesc = 0);
+    procedure CreateChildNode(Desc: TCodeTreeNodeDesc; EndPos: integer);
     procedure EndChildNode; {$IFDEF UseInline}inline;{$ENDIF}
+    procedure EndChildNode(EndPos: integer); {$IFDEF UseInline}inline;{$ENDIF}
     function DoAtom: boolean; virtual;
 
     // write lock
@@ -474,8 +476,6 @@ end;
 
 procedure TCustomCodeTool.SaveRaiseException(id: int64; const AMessage: string;
   ClearNicePos: boolean);
-var
-  Node: TCodeTreeNode;
 begin
   LastErrorMessage:=AMessage;
   LastErrorCurPos:=CurPos;
@@ -486,16 +486,6 @@ begin
     LastErrorNicePosition.Y:=-1;
   end else begin
     LastErrorNicePosition:=ErrorNicePosition;
-  end;
-
-  Node:=CurNode;
-  while (Node<>nil) do begin
-    if (ctnsNeedJITParsing and Node.SubDesc)>0 then begin
-      SetNodeParserError(Node,AMessage,CurPos.StartPos,
-                         ErrorNicePosition);
-      break;
-    end;
-    Node:=Node.Parent;
   end;
 
   RaiseException(id,AMessage,ClearNicePos);
@@ -632,17 +622,12 @@ begin
     begin
       if (SubDesc and ctnsForwardDeclaration)>0 then Result:=ctsForward;
     end;
-  ctnProcedureHead, ctnBeginBlock:
-    begin
-      if (SubDesc and ctnsNeedJITParsing)>0 then Result:=ctsUnparsed;
-    end;
   ctnClass,ctnObject,ctnRecordType,ctnObjCClass,ctnObjCCategory,ctnObjCProtocol,
   ctnCPPClass,ctnClassInterface,ctnDispinterface,
   ctnTypeHelper,ctnRecordHelper,ctnClassHelper:
     begin
       Result:='';
       if (SubDesc and ctnsForwardDeclaration)>0 then Result:=ctsForward;
-      if (SubDesc and ctnsNeedJITParsing)>0 then Result:=Result+ctsUnparsed;
     end;
   end;
   if (SubDesc and ctnsHasParseError)>0 then Result:=Result+','+ctsHasError;
@@ -848,7 +833,7 @@ begin
   AtomIsIdentifierE();
 end;
 
-procedure TCustomCodeTool.AtomIsIdentifierSaveE(id: int64);
+function TCustomCodeTool.AtomIsIdentifierSaveE(id: int64; DontRaise: boolean): boolean;
 
   procedure SaveRaiseIdentExpectedButEOFFound;
   begin
@@ -856,7 +841,8 @@ procedure TCustomCodeTool.AtomIsIdentifierSaveE(id: int64);
   end;
 
 begin
-  if InternalAtomIsIdentifier then exit;
+  Result := InternalAtomIsIdentifier;
+  if Result or DontRaise then exit;
   if CurPos.StartPos>SrcLen then
     SaveRaiseIdentExpectedButEOFFound
   else
@@ -2504,17 +2490,30 @@ begin
   Result:=true;
 end;
 
-procedure TCustomCodeTool.CreateChildNode;
+procedure TCustomCodeTool.CreateChildNode(Desc: TCodeTreeNodeDesc);
 var NewNode: TCodeTreeNode;
 begin
   NewNode:=TCodeTreeNode.Create;
   Tree.AddNodeAsLastChild(CurNode,NewNode);
   CurNode:=NewNode;
   CurNode.StartPos:=CurPos.StartPos;
+  CurNode.Desc:=Desc;
+end;
+
+procedure TCustomCodeTool.CreateChildNode(Desc: TCodeTreeNodeDesc; EndPos: integer);
+begin
+  CreateChildNode(Desc);
+  CurNode.EndPos:=EndPos;
 end;
 
 procedure TCustomCodeTool.EndChildNode;
 begin
+  CurNode:=CurNode.Parent;
+end;
+
+procedure TCustomCodeTool.EndChildNode(EndPos: integer);
+begin
+  CurNode.EndPos:=EndPos;
   CurNode:=CurNode.Parent;
 end;
 

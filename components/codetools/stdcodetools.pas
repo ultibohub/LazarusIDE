@@ -8118,24 +8118,10 @@ end;
 
 function TStandardCodeTool.Explore(WithStatements: boolean;
   Range: TLinkScannerRange): boolean;
-var
-  Node: TCodeTreeNode;
 begin
   Result:=true;
   BuildTree(Range);
-  Node:=Tree.Root;
-  while Node<>nil do begin
-    case Node.Desc of
-    ctnProcedure,ctnProcedureHead:
-      BuildSubTreeForProcHead(Node);
-    ctnBeginBlock:
-      if WithStatements then
-        BuildSubTreeForBeginBlock(Node);
-    ctnImplementation:
-      if ord(Range)<ord(lsrImplementationStart) then exit;
-    end;
-    Node:=Node.Next;
-  end;
+  if WithStatements then ;
 end;
 
 function TStandardCodeTool.Explore(WithStatements: boolean;

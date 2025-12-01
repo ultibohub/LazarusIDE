@@ -271,7 +271,7 @@ function FindSourceFileImpl(const AFilename, BaseDirectory: string;
 function FindUnitsOfOwnerImpl(TheOwner: TObject; Flags: TFindUnitsOfOwnerFlags): TStrings;
 // project
 function AddActiveUnitToProject: TModalResult;
-procedure AddDefaultRecentProjects;
+procedure AddDefaultRecentProjects; // if recent project list is empty add some examples
 function AddUnitToProject(const AEditor: TSourceEditorInterface): TModalResult;
 function InitNewProject(ProjectDesc: TProjectDescriptor): TModalResult;
 function InitOpenedProjectFile(AFileName: string; Flags: TOpenFlags): TModalResult;
@@ -670,7 +670,7 @@ begin
 
     // restore source editor settings
     DebugBossMgr.DoRestoreDebuggerMarks(AnUnitInfo);
-    NewSrcEdit.SyntaxHighlighterId := AnEditorInfo.CustomSyntaxHighlighter;
+    NewSrcEdit.SetSyntaxHighlighterId(AnEditorInfo.CustomSyntaxHighlighter, True);
     NewSrcEdit.EditorComponent.AfterLoadFromFile;
     try
       NewSrcEdit.EditorComponent.FoldState := FoldState;

@@ -801,8 +801,6 @@ begin
   // for procs: use ctnProcedureHead as parent
   if ParentNode.Desc=ctnProcedure then
     ParentNode:=ParentNode.FirstChild;
-  if (ParentNode.Desc=ctnProcedureHead) and NodeNeedsBuildSubTree(ParentNode) then
-    BuildSubTreeForProcHead(ParentNode);
 
   ParamListNode:=ParentNode.FirstChild;
   if (ParamListNode<>nil) and (ParamListNode.Desc<>ctnParameterList) then
@@ -953,7 +951,6 @@ begin
     if ProcNode.Desc<>ctnProcedure then
       RaiseExceptionAtCleanPos(20180513100346,'AddProcModifier expects a procedure, but found '+ProcNode.DescAsString,CleanPos);
   end;
-  BuildSubTreeForProcHead(ProcNode);
 
   // get new modifier type
   p:=1;

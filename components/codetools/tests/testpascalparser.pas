@@ -70,9 +70,88 @@ type
     procedure TestParseObjectSealedAbstract;
     procedure TestParseProcType_OfObjectDeprecated;
     procedure TestGetProcResultNode;
+    procedure TestVarTypeSectionEndAtGenericProc;
+    procedure TestVarWithClassOf;
   end;
 
+procedure CheckNodeTree(Name: String; Tool: TCodeTool; Test: TTestCase; UnfinishedSource: boolean = False);
+
 implementation
+
+procedure CheckNodeTree(Name: String; Tool: TCodeTool; Test: TTestCase; UnfinishedSource: boolean);
+
+  function NodeToPathName(Node: TCodeTreeNode): String;
+  var
+    n: TCodeTreeNode;
+    i: Integer;
+  begin
+    if Node = Nil then exit(Name);
+    Result := NodeToPathName(Node.Parent);
+    n := Node;
+    i := 0;
+    while n <> nil do begin
+      inc(i);
+      n := n.PriorBrother;
+    end;
+    Result := Format('%s/%d:%s(%d..%d)', [Result, i, NodeDescriptionAsString(Node.Desc), Node.StartPos, Node.EndPos]);
+  end;
+
+  function CheckNode(Node: TCodeTreeNode; MinPos, MaxPos: integer; ParentIsLastSibling: boolean
+    ): TCodeTreeNode;
+  var
+    BrotherEnd: Integer;
+    LastChildNode: TCodeTreeNode;
+  begin
+    Result := nil;
+    if Node = Nil then
+      exit;
+
+    if Node.EndPos > 0 then
+      ParentIsLastSibling := False;
+
+    if Node.PriorBrother <> nil then
+      Test.Fail('FirstChild Node has prior brother: '+NodeToPathName(Node));
+
+    BrotherEnd := 0;
+    repeat
+      if Node.StartPos < MinPos then
+        Test.Fail('Node starts before parent start: '+NodeToPathName(Node));
+      if Node.StartPos < BrotherEnd then
+        Test.Fail('Node starts before prior brother end: '+NodeToPathName(Node));
+      if Node.StartPos > MaxPos then Test.Fail('Node starts after parent end: '+NodeToPathName(Node));
+
+      if not(UnfinishedSource and ParentIsLastSibling and (Node.EndPos=-1)) then
+        if Node.EndPos < MinPos then
+          Test.Fail('Node ends before parent start: '+NodeToPathName(Node));
+      if (MaxPos <> -1) and (Node.EndPos >  MaxPos) then
+        Test.Fail('Node ends after parent ends: '+NodeToPathName(Node));
+
+      if (Node.EndPos >= 0) and (Node.EndPos < Node.StartPos) then
+        Test.Fail('Node ends before its own start: '+NodeToPathName(Node));
+
+      if not (Node.Desc in [
+        ctnClassPublished, ctnClassPublic, // class(base) ; // create class with empty section
+        ctnVariantType,  // typeless proc parameter
+        ctnProcedureHead // e.g. anon proc
+      ]) then
+        if Node.StartPos = Node.EndPos then
+          Test.Fail('Node is empty: '+NodeToPathName(Node));
+
+      LastChildNode := CheckNode(Node.FirstChild, Node.StartPos, Node.EndPos, (Node.NextBrother = nil));
+      if LastChildNode <> Node.LastChild then
+        Test.Fail('Node has wrong lastchild: '+NodeToPathName(Node));
+
+      BrotherEnd := Node.StartPos;
+      Result := Node;
+      Node := Node.NextBrother;
+      if (Node <> nil) and (Node.PriorBrother <> Result) then
+        Test.Fail('Node has wrong prior brother: '+NodeToPathName(Node));
+
+    until Node = nil;
+  end;
+begin
+  CheckNode(Tool.Tree.Root, 0, MaxInt, True);
+end;
 
 { TCustomTestPascalParser }
 
@@ -171,6 +250,7 @@ var
 begin
   Add('end.');
   DoParseModule(Code,Tool);
+  CheckNodeTree(Tool.Scanner.MainFilename, Tool, Self);
 end;
 
 procedure TCustomTestPascalParser.CheckParseError(
@@ -818,6 +898,71 @@ begin
     end;
     Node:=Node.Next;
   end;
+end;
+
+procedure TTestPascalParser.TestVarTypeSectionEndAtGenericProc;
+begin
+  Add([
+  'program Project1;',
+  '{$Mode objfpc}',
+  'var a: integer;',
+  'generic procedure Foo<P>;',
+  'begin',
+  'end;',
+  'begin',
+  'specialize Foo<byte>;',
+  'end.'
+  ]);
+  ParseModule;
+
+  Add([
+  'program Project1;',
+  '{$Mode objfpc}',
+  'const a = 1;',
+  'generic procedure Foo<P>;',
+  'begin',
+  'end;',
+  'begin',
+  'specialize Foo<byte>;',
+  'end.'
+  ]);
+  ParseModule;
+
+  Add([
+  'program Project1;',
+  '{$Mode objfpc}',
+  'type a = integer;',
+  'generic procedure Foo;',
+  'begin',
+  'end;',
+  'begin',
+  'specialize Foo<byte>;',
+  'end.'
+  ]);
+  ParseModule;
+end;
+
+procedure TTestPascalParser.TestVarWithClassOf;
+begin
+  StartProgram;
+  Add([
+  'procedure Foo;',
+  'const c1:  class of TObject = nil;',
+  'type  T1 = class of TObject;',
+  'var   v1:  class of TObject;',
+  'v2:  class of TObject = nil;',
+  'begin',
+  'end;',
+  '',
+  'const c1:  class of TObject = nil;',
+  'type  T1 = class of TObject;',
+  'var   v1:  class of TObject;',
+  'v2:  class of TObject = nil;',
+  'begin',
+  '',
+  'end.'
+  ]);
+  ParseModule;
 end;
 
 initialization

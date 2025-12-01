@@ -1257,6 +1257,8 @@ type
     property SortIndicator: TSortIndicator read FSortIndicator write SetSortIndicator default siNone;
   end;
 
+  TListColumnClass = class of TListColumn;
+
 
   { TListColumns }
 
@@ -1525,6 +1527,7 @@ type
     procedure DestroyWnd; override;
     procedure BeginAutoDrag; override;
 
+    function CreateListColumns: TListColumns; virtual;
     function CreateListItem: TListItem; virtual;
     function CreateListItems: TListItems; virtual;
     function CanEdit(Item: TListItem): Boolean; virtual;
@@ -1565,6 +1568,7 @@ type
       const AFindPosition: TPoint; AFindData: Pointer; AStartIndex: Integer;
       ADirection: TSearchDirection; AWrap: Boolean): Integer; virtual;
 
+    function GetListColumnClass: TListColumnClass; virtual;
   protected
     // Multiselection
     FMultiSelList: TIntegerList;

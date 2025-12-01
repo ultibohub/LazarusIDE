@@ -180,6 +180,8 @@ type
     procedure popDisableAllClick(Sender: TObject);
     procedure popEnableAllClick(Sender: TObject);
     procedure popDeleteAllClick(Sender: TObject);
+  private const
+    MAX_GRID_VALUE_LEN = 4096;
   private
     FQueuedUnLockCommandProcessing: Boolean;
     procedure ApplyPreset(APreset: TWatchDisplayFormatPreset);
@@ -1646,6 +1648,8 @@ begin
             case ResData.ValueKind of
               rdkVariant: ResData := ResData.DerefData;
               rdkConvertRes: ResData := ResData.ConvertedRes;
+              rdkPointerVal: if (ResData.DerefData <> nil) and (ResData.DerefData.ValueKind in [rdkString, rdkWideString, rdkChar]) then
+                ResData := ResData.DerefData;
               //rdkPCharOrString:
               else break;
             end;
@@ -1733,6 +1737,7 @@ begin
           FWatchDlg.FWatchPrinter.FormatFlags := [rpfClearMultiLine];
         FWatchDlg.FWatchPrinter.OnlyValueFormatter := TheWatch.DbgValueFormatter;
         WatchValueStr := FWatchDlg.FWatchPrinter.PrintWatchValue(ResData, DispFormat, TheWatch.Expression);
+        WatchValueStr := LimitTextLength(WatchValueStr, FWatchDlg.MAX_GRID_VALUE_LEN);
         TreeView.NodeText[AVNode, COL_WATCH_VALUE-1] := WatchValueStr;
 
         if ResData.HasDataAddress then begin
@@ -1755,7 +1760,7 @@ begin
           then
             WatchValueStr := Format(drsLen, [AWatchAbleResult.TypeInfo.Len]) + WatchValueStr;
         end;
-        TreeView.NodeText[AVNode, COL_WATCH_VALUE-1] := ClearMultiline(WatchValueStr);
+        TreeView.NodeText[AVNode, COL_WATCH_VALUE-1] := ClearMultiline(WatchValueStr, FWatchDlg.MAX_GRID_VALUE_LEN);
       end;
     end
     else
