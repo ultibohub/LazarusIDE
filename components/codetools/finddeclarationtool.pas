@@ -176,6 +176,7 @@ type
     fdfFindVariable,        // do not search for the base type of a variable,
                             //   instead return the variable declaration
     fdfFunctionResult,      // if function is found, return result type
+    fdfStrictFunctionResult, // really only if function is found, return result type
     fdfEnumIdentifier,      // do not resolve enum to its enum type
     fdfFindChildren,        // search the class of a 'class of', the interface of a unit
     fdfSkipClassForward,    // when a class forward was found search the class
@@ -11765,7 +11766,10 @@ begin
     ReadNextExpressionAtom;
   until CurAtom.EndPos>EndPos;
 
-  if fdfFunctionResult in StartFlags then
+  if (fdfFunctionResult in StartFlags)
+  and ( ((Params.NewNode = nil) or (Params.NewNode.Desc <> ctnTypeDefinition))
+       or not (fdfStrictFunctionResult in StartFlags) )
+  then
     ResolveChildren;
 
   Result:=ExprType;
@@ -12167,6 +12171,10 @@ begin
             if (ParamNode.Parent<>nil)
             and (ParamNode.Parent.Desc=ctnTypeDefinition) then
               Result.Context.Node:=ParamNode.Parent;
+
+          ctnSetType:
+            if (ParamNode.FirstChild<>nil) then
+              Result.Context.Node:=ParamNode.FirstChild;
 
           ctnOpenArrayType:
             // array without explicit range -> open array
@@ -14483,12 +14491,44 @@ function TFindDeclarationTool.FindForInTypeAsString(TermPos: TAtomPosition;
               if Node.Desc=ctnTypeDefinition then
                 Result:=SubExprType.Context.Tool.ExtractIdentifier(Node.StartPos);
             end;
+          ctnEnumIdentifier:
+            begin
+              if (SubExprType.Context.Node.Parent<>nil)
+              and (SubExprType.Context.Node.Parent.Desc=ctnEnumerationType)
+              and (SubExprType.Context.Node.Parent.Parent<>nil)
+              and (SubExprType.Context.Node.Parent.Parent.Desc=ctnTypeDefinition)
+              then
+                Result:=SubExprType.Context.Tool.ExtractIdentifier(
+                  SubExprType.Context.Node.Parent.Parent.StartPos
+                );
+            end;
           ctnSetType:
+            if (SubExprType.Context.Node.FirstChild <> nil)
+            and (SubExprType.Context.Node.FirstChild.Desc = ctnRangeType)
+            and IsNumeric(SubExprType.Context.Tool.ExtractIdentifier(SubExprType.Context.Node.FirstChild.StartPos))
+            then begin
+              Result := 'integer';
+            end
+            else
             if SubExprType.Context.Tool.FindEnumerationTypeOfSetType(
                                     SubExprType.Context.Node,ExprType.Context)
             then begin
-              ExprType.Desc:=xtContext;
-              Result:=FindExprTypeAsString(ExprType,TermPos.StartPos);
+              if (ExprType.Context.Node <> nil)
+              and (ExprType.Context.Node.Desc = ctnEnumerationType)
+              and (ExprType.Context.Node.Parent <> nil)
+              and (ExprType.Context.Node.Parent.Desc = ctnSetType)
+              then begin
+                MoveCursorToCleanPos(SubExprType.Context.Node.Parent.StartPos);
+                ReadNextAtom;
+                ExprType.Desc:=xtContext;
+                Result := '';
+                if CurPos.Flag = cafWord then
+                  Result:=format('low(%s)..high(%s)', [GetAtom, GetAtom]);
+              end
+              else begin
+                ExprType.Desc:=xtContext;
+                Result:=FindExprTypeAsString(ExprType,TermPos.StartPos);
+              end;
             end;
           ctnRangedArrayType,ctnOpenArrayType:
             begin
@@ -14583,7 +14623,7 @@ begin
   TermExprType:=CleanExpressionType;
   Params.ContextNode:=CursorNode;
   Params.Flags:=[fdfSearchInParentNodes,fdfSearchInAncestors,fdfSearchInHelpers,
-                 fdfTopLvlResolving,fdfFunctionResult];
+                 fdfTopLvlResolving,fdfFunctionResult, fdfStrictFunctionResult];
   TermExprType:=FindExpressionResultType(Params,TermPos.StartPos,TermPos.EndPos);
 
   {$IFDEF ShowForInEval}
@@ -14854,7 +14894,7 @@ function TFindDeclarationTool.FindEnumerationTypeOfSetType(
 var
   Params: TFindDeclarationParams;
   p: LongInt;
-  Child: TCodeTreeNode;
+  Child, NewNode: TCodeTreeNode;
   PreDef: Boolean;
 begin
   Result:=false;
@@ -14865,7 +14905,7 @@ begin
   if Child=nil then exit;
   PreDef := (Child.Desc=ctnIdentifier)
   and (PredefinedIdentToExprTypeDesc(@Src[Child.StartPos],Scanner.PascalCompiler)<>xtNone);
-  if (Child.Desc=ctnIdentifier) and not PreDef then begin
+  if (Child.Desc in [ctnIdentifier, ctnRangeType]) and not PreDef then begin
     Params:=TFindDeclarationParams.Create;
     try
       Params.Flags:=fdfDefaultForExpressions;
@@ -14873,16 +14913,21 @@ begin
       p:=Child.StartPos;
       Params.SetIdentifier(Self,@Src[p],nil);
       if not FindIdentifierInContext(Params) then exit;
-      if (Params.NewNode=nil)
-      or (Params.NewNode.Desc<>ctnTypeDefinition)
-      or (Params.NewNode.FirstChild=nil)
-      or (Params.NewNode.FirstChild.Desc<>ctnEnumerationType) then begin
+      NewNode := Params.NewNode;
+      if (NewNode<>nil) and (NewNode.Desc = ctnEnumIdentifier)
+      and (NewNode.Parent<>nil) and (NewNode.Parent.Desc=ctnEnumerationType)
+      then
+        NewNode := NewNode.Parent.Parent;
+      if (NewNode=nil)
+      or (NewNode.Desc<>ctnTypeDefinition)
+      or (NewNode.FirstChild=nil)
+      or not (NewNode.FirstChild.Desc in [ctnEnumerationType, ctnRangeType]) then begin
         MoveCursorToCleanPos(p);
         ReadNextAtom;
         RaiseStringExpectedButAtomFound(20170421200656,ctsEnumerationType);
       end;
       Context.Tool:=Params.NewCodeTool;
-      Context.Node:=Params.NewNode;
+      Context.Node:=NewNode;
       Result:=true;
     finally
       Params.Free;
@@ -15243,7 +15288,18 @@ begin
           and (FindContext.Node.Parent.Desc=ctnTypeDefinition)
           then
             Result:=GetIdentifier(
-                     @FindContext.Tool.Src[FindContext.Node.Parent.StartPos]);
+                     @FindContext.Tool.Src[FindContext.Node.Parent.StartPos])
+          else
+          if (FindContext.Node.Parent<>nil)
+          and (FindContext.Node.Parent.Desc=ctnSetType)
+          and (FindContext.Node.Parent.Parent<>nil)
+          and (FindContext.Node.Parent.Parent.Desc=ctnTypeDefinition)
+          then begin
+            Result:=GetIdentifier(
+                     @FindContext.Tool.Src[FindContext.Node.Parent.Parent.StartPos]);
+            if Result <> '' then
+              Result:=format('low(%s)..high(%s)', [Result, Result]);
+          end;
 
         ctnProperty,ctnGlobalProperty:
           begin

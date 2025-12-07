@@ -154,7 +154,6 @@ type
     mcoAutoOpenFirstError, // when all views stopped, open first error
     mcoSrcEditPopupSelect, // when user right clicks on gutter mark,
                            // scroll and select message of the quickfixes
-    mcoWndStayOnTop,       // use fsStayOnTop
     mcoAlwaysDrawFocused   // draw selected item as focused, even if the window is not
     );
   TMsgCtrlOptions = set of TMsgCtrlOption;
@@ -397,9 +396,9 @@ type
     procedure SrcEditLinesChanged(Sender: TObject);
     procedure TranslateMenuItemClick(Sender: TObject);
     procedure RemoveFilterMsgTypeClick(Sender: TObject);
-    procedure WndStayOnTopMenuItemClick(Sender: TObject);
   private
     FImages: TLCLGlyphs;
+    FMessagesCtrl: TMessagesCtrl;
     function GetAboutView: TLMsgWndView;
     function GetViews(Index: integer): TLMsgWndView;
     procedure HideSearch;
@@ -410,7 +409,6 @@ type
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
   public
-    MessagesCtrl: TMessagesCtrl;
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
     procedure ApplyIDEOptions;
@@ -431,8 +429,7 @@ type
     procedure ApplyMultiSrcChanges(Changes: TETMultiSrcChanges);
     procedure SourceEditorPopup(MarkLine: TSynEditMarkLine;
       const LogicalCaretXY: TPoint);
-    procedure SourceEditorHint(MarkLine: TSynEditMarkLine;
-      var HintStr: string);
+    procedure SourceEditorHint(MarkLine: TSynEditMarkLine; var HintStr: string);
 
     // message lines
     procedure SelectMsgLine(Msg: TMessageLine);
@@ -444,16 +441,27 @@ type
     function AddCustomMessage(TheUrgency: TMessageLineUrgency; Msg: string;
       aFilename: string = ''; LineNumber: integer = 0; Column: integer = 0;
       const ViewCaption: string = CustomViewCaption): TMessageLine;
+
+    property MessagesCtrl: TMessagesCtrl read FMessagesCtrl;
   end;
 
 const
   MessagesMenuRootName = 'Messages';
 var
+  // Generic menu items
   MsgFindMenuItem: TIDEMenuCommand;
+  MsgCopyMenuSection: TIDEMenuSection;
+    MsgCopyFilenameMenuItem: TIDEMenuCommand;
+    MsgCopyMsgMenuItem: TIDEMenuCommand;
+    MsgCopyShownMenuItem: TIDEMenuCommand;
+    MsgCopyAllMenuItem: TIDEMenuCommand;
+  MsgSaveToFileMenuSection: TIDEMenuSection;
+    MsgSaveAllToFileMenuItem: TIDEMenuCommand;
+    MsgSaveShownToFileMenuItem: TIDEMenuCommand;
+  MsgClearMenuItem: TIDEMenuCommand;
+  MsgMoreOptionsMenuItem: TIDEMenuCommand;
+  // FPC message specific menu items
   MsgQuickFixMenuSection: TIDEMenuSection;
-  MsgAboutSection: TIDEMenuSection;
-    MsgAboutToolMenuItem: TIDEMenuCommand;
-    MsgOpenToolOptionsMenuItem: TIDEMenuCommand;
   MsgFilterMsgOfTypeMenuItem: TIDEMenuCommand;
   MsgRemoveCompOptHideMenuSection: TIDEMenuSection;
   MsgRemoveMsgTypeFilterMenuSection: TIDEMenuSection;
@@ -470,26 +478,18 @@ var
   MsgFiltersMenuSection: TIDEMenuSection;
     MsgSelectFilterMenuSection: TIDEMenuSection;
     MsgAddFilterMenuItem: TIDEMenuCommand;
-  MsgCopyMenuSection: TIDEMenuSection;
-    MsgCopyFilenameMenuItem: TIDEMenuCommand;
-    MsgCopyMsgMenuItem: TIDEMenuCommand;
-    MsgCopyShownMenuItem: TIDEMenuCommand;
-    MsgCopyAllMenuItem: TIDEMenuCommand;
-  MsgSaveToFileMenuSection: TIDEMenuSection;
-    MsgSaveAllToFileMenuItem: TIDEMenuCommand;
-    MsgSaveShownToFileMenuItem: TIDEMenuCommand;
   MsgHelpMenuItem: TIDEMenuCommand;
   MsgEditHelpMenuItem: TIDEMenuCommand;
-  MsgClearMenuItem: TIDEMenuCommand;
   MsgOptionsMenuSection: TIDEMenuSection;
-    MsgWndStayOnTopMenuItem: TIDEMenuCommand;
     MsgFilenameStyleMenuSection: TIDEMenuSection;
       MsgFileStyleShortMenuItem: TIDEMenuCommand;
       MsgFileStyleRelativeMenuItem: TIDEMenuCommand;
       MsgFileStyleFullMenuItem: TIDEMenuCommand;
     MsgTranslateMenuItem: TIDEMenuCommand;
     MsgShowIDMenuItem: TIDEMenuCommand;
-    MsgMoreOptionsMenuItem: TIDEMenuCommand;
+  MsgAboutSection: TIDEMenuSection;
+    MsgAboutToolMenuItem: TIDEMenuCommand;
+    MsgOpenToolOptionsMenuItem: TIDEMenuCommand;
 
 procedure RegisterStandardMessagesViewMenuItems;
 
@@ -503,18 +503,36 @@ var
   Parent: TIDEMenuSection;
   Root: TIDEMenuSection;
 begin
-  MessagesMenuRoot := RegisterIDEMenuRoot(MessagesMenuRootName);
+  MessagesMenuRoot:=RegisterIDEMenuRoot(MessagesMenuRootName);
   Root:=MessagesMenuRoot;
-  MsgFindMenuItem := RegisterIDEMenuCommand(Root, 'Find', lisFind);
-  MsgQuickFixMenuSection := RegisterIDEMenuSection(Root, 'Quick Fix');
-  MsgAboutSection:=RegisterIDEMenuSection(Root,'About');
-    Parent:=MsgAboutSection;
+  // Generic menu items
+  MsgFindMenuItem:=RegisterIDEMenuCommand(Root, 'Find', lisFind);
+  MsgCopyMenuSection:=RegisterIDEMenuSection(Root, 'Copy');
+    Parent:=MsgCopyMenuSection;
     Parent.ChildrenAsSubMenu:=true;
-    Parent.Caption:=lisAbout;
-    MsgAboutToolMenuItem:=RegisterIDEMenuCommand(Parent, 'About', lisAbout);
-    MsgOpenToolOptionsMenuItem:=RegisterIDEMenuCommand(Parent, 'Open Tool '
-      +'Options', lisOpenToolOptions);
-  MsgFilterMsgOfTypeMenuItem:=RegisterIDEMenuCommand(Root,'FilterMsgOfType',lisFilterAllMessagesOfCertainType);
+    Parent.Caption:=lisCopy;
+    MsgCopyFilenameMenuItem:=RegisterIDEMenuCommand(Parent, 'Filename',
+      lisCopyFileNamesToClipboard);
+    MsgCopyMsgMenuItem:=RegisterIDEMenuCommand(Parent, 'Selected',
+      lisCopySelectedMessagesToClipboard);
+    MsgCopyShownMenuItem:=RegisterIDEMenuCommand(Parent, 'Shown',
+      lisCopyAllShownMessagesToClipboard);
+    MsgCopyAllMenuItem:=RegisterIDEMenuCommand(Parent, 'All',
+      lisCopyAllOriginalMessagesToClipboard);
+  MsgSaveToFileMenuSection:=RegisterIDEMenuSection(Root, 'Save');
+    Parent:=MsgSaveToFileMenuSection;
+    Parent.ChildrenAsSubMenu:=true;
+    Parent.Caption:=lisSave;
+    MsgSaveShownToFileMenuItem:=RegisterIDEMenuCommand(Parent,
+      'Save Shown Messages to File', lisSaveShownMessagesToFile);
+    MsgSaveAllToFileMenuItem:=RegisterIDEMenuCommand(Parent,
+      'Save All Messages to File', lisSaveAllOriginalMessagesToFile);
+  MsgClearMenuItem := RegisterIDEMenuCommand(Root, 'Clear', lisClear);
+  MsgMoreOptionsMenuItem:=RegisterIDEMenuCommand(Root, 'Options',lisMenuGeneralOptions);
+  // FPC message specific menu items
+  MsgQuickFixMenuSection:=RegisterIDEMenuSection(Root, 'Quick Fix');
+  MsgFilterMsgOfTypeMenuItem:=RegisterIDEMenuCommand(Root,'FilterMsgOfType',
+    lisFilterAllMessagesOfCertainType);
   MsgRemoveCompOptHideMenuSection:=RegisterIDEMenuSection(Root,'RemoveCompOptHideMsg');
     Parent:=MsgRemoveCompOptHideMenuSection;
     Parent.ChildrenAsSubMenu:=true;
@@ -563,33 +581,12 @@ begin
     MsgSelectFilterMenuSection:=RegisterIDEMenuSection(Parent,'Filters');
     MsgAddFilterMenuItem:=RegisterIDEMenuCommand(Parent, 'Add Filter',
       lisAddFilter);
-  MsgCopyMenuSection:=RegisterIDEMenuSection(Root,'Copy');
-    Parent:=MsgCopyMenuSection;
-    Parent.ChildrenAsSubMenu:=true;
-    Parent.Caption:=lisCopy;
-    MsgCopyFilenameMenuItem:=RegisterIDEMenuCommand(Parent, 'Filename',
-      lisCopyFileNamesToClipboard);
-    MsgCopyMsgMenuItem := RegisterIDEMenuCommand(Parent, 'Selected',lisCopySelectedMessagesToClipboard);
-    MsgCopyShownMenuItem := RegisterIDEMenuCommand(Parent, 'Shown', lisCopyAllShownMessagesToClipboard);
-    MsgCopyAllMenuItem:=RegisterIDEMenuCommand(Parent, 'All',
-      lisCopyAllOriginalMessagesToClipboard);
-  MsgSaveToFileMenuSection:=RegisterIDEMenuSection(Root,'Save');
-    Parent:=MsgSaveToFileMenuSection;
-    Parent.ChildrenAsSubMenu:=true;
-    Parent.Caption:=lisSave;
-    MsgSaveShownToFileMenuItem:=RegisterIDEMenuCommand(Parent, 'Save Shown '
-      +'Messages to File', lisSaveShownMessagesToFile);
-    MsgSaveAllToFileMenuItem:=RegisterIDEMenuCommand(Parent, 'Save All '
-      +'Messages to File', lisSaveAllOriginalMessagesToFile);
   MsgHelpMenuItem := RegisterIDEMenuCommand(Root, 'Help for this message',lisHelp);
   MsgEditHelpMenuItem := RegisterIDEMenuCommand(Root, 'Edit help for messages',lisEditHelp);
-  MsgClearMenuItem := RegisterIDEMenuCommand(Root, 'Clear', lisClear);
   MsgOptionsMenuSection:=RegisterIDEMenuSection(Root,'Option Section');
     Parent:=MsgOptionsMenuSection;
     Parent.ChildrenAsSubMenu:=true;
-    Parent.Caption:=lisOptions;
-    MsgWndStayOnTopMenuItem:=RegisterIDEMenuCommand(Parent,
-      'Window stay on top', lisWindowStaysOnTop);
+    Parent.Caption:=lisFpcMessageOptions;
     MsgFilenameStyleMenuSection:=RegisterIDEMenuSection(Parent,'Filename Styles');
       Parent:=MsgFilenameStyleMenuSection;
       Parent.ChildrenAsSubMenu:=true;
@@ -604,8 +601,13 @@ begin
       lisTranslateTheEnglishMessages);
     MsgShowIDMenuItem:=RegisterIDEMenuCommand(Parent, 'ShowID',
       lisShowMessageTypeID);
-    MsgMoreOptionsMenuItem:=RegisterIDEMenuCommand(Parent, 'More Options',
-      lisDlgMore);
+  MsgAboutSection:=RegisterIDEMenuSection(Root,'About');
+    Parent:=MsgAboutSection;
+    Parent.ChildrenAsSubMenu:=true;
+    Parent.Caption:=lisAbout;
+    MsgAboutToolMenuItem:=RegisterIDEMenuCommand(Parent, 'About', lisAbout);
+    MsgOpenToolOptionsMenuItem:=RegisterIDEMenuCommand(Parent, 'Open Tool Options',
+      lisOpenToolOptions);
 end;
 
 {$R *.lfm}
@@ -3341,7 +3343,7 @@ procedure TMessagesFrame.MsgCtrlPopupMenuPopup(Sender: TObject);
     Cnt: Integer;
   begin
     // create one menuitem per filter item
-    Cnt:=MessagesCtrl.ActiveFilter.FilterMsgTypeCount;
+    Cnt:=FMessagesCtrl.ActiveFilter.FilterMsgTypeCount;
     MsgRemoveMsgTypeFilterMenuSection.Visible:=Cnt>0;
     for i:=0 to Cnt-1 do begin
       if i>=MsgRemoveFilterMsgOneTypeMenuSection.Count then begin
@@ -3350,7 +3352,7 @@ procedure TMessagesFrame.MsgCtrlPopupMenuPopup(Sender: TObject);
         Item.OnClick:=@RemoveFilterMsgTypeClick;
       end else
         Item:=MsgRemoveFilterMsgOneTypeMenuSection.Items[i] as TIDEMenuCommand;
-      FilterItem:=MessagesCtrl.ActiveFilter.FilterMsgTypes[i];
+      FilterItem:=FMessagesCtrl.ActiveFilter.FilterMsgTypes[i];
       Item.Caption:=GetMsgPattern(FilterItem.SubTool,FilterItem.MsgID,true,40);
     end;
     // delete old menu items
@@ -3366,9 +3368,9 @@ procedure TMessagesFrame.MsgCtrlPopupMenuPopup(Sender: TObject);
     Item: TIDEMenuCommand;
     Cnt: Integer;
   begin
-    Cnt:=MessagesCtrl.Filters.Count;
+    Cnt:=FMessagesCtrl.Filters.Count;
     for i:=0 to Cnt-1 do begin
-      Filter:=MessagesCtrl.Filters[i];
+      Filter:=FMessagesCtrl.Filters[i];
       if i>=MsgSelectFilterMenuSection.Count then begin
         Item:=RegisterIDEMenuCommand(MsgSelectFilterMenuSection,'MsgSelectFilter'+IntToStr(i),'');
         Item.Tag:=i;
@@ -3376,7 +3378,7 @@ procedure TMessagesFrame.MsgCtrlPopupMenuPopup(Sender: TObject);
       end else
         Item:=MsgSelectFilterMenuSection[i] as TIDEMenuCommand;
       Item.Caption:=Filter.Caption;
-      Item.Checked:=Filter=MessagesCtrl.ActiveFilter;
+      Item.Checked:=Filter=FMessagesCtrl.ActiveFilter;
     end;
     // delete old menu items
     while MsgSelectFilterMenuSection.Count>Cnt do
@@ -3414,10 +3416,11 @@ begin
   Line:=nil;
   HasViewContent:=false;
   Running:=false;
+  debugln(['TMessagesFrame.MsgCtrlPopupMenuPopup ActiveFilter=', FMessagesCtrl.ActiveFilter.ClassName]);
 
   // check all
-  for i:=0 to MessagesCtrl.ViewCount-1 do begin
-    View:=MessagesCtrl.Views[i];
+  for i:=0 to FMessagesCtrl.ViewCount-1 do begin
+    View:=FMessagesCtrl.Views[i];
     if View.HasContent then
       HasViewContent:=true;
     if View.Running then
@@ -3428,7 +3431,7 @@ begin
   MsgFindMenuItem.MenuItem.ShortCut:=ShortCut(VK_F, [ssCtrl]);
 
   // check selection
-  View:=MessagesCtrl.FTextCursorPoint.View;
+  View:=FMessagesCtrl.FTextCursorPoint.View;
   if View<>nil then begin
     for i:=0 to View.FSelectedLines.Count-1 do begin
       LineNumber:=View.FSelectedLines[i];
@@ -3448,7 +3451,7 @@ begin
     end;
   end else begin
     // no line selected => use last visible View
-    View:=MessagesCtrl.GetLastViewWithContent;
+    View:=FMessagesCtrl.GetLastViewWithContent;
   end;
   ToolOptionsCaption:='';
 
@@ -3490,11 +3493,11 @@ begin
     MsgFilterMsgOfTypeMenuItem.Visible:=false;
   end;
   MsgFilterMsgOfTypeMenuItem.OnClick:=@FilterMsgOfTypeMenuItemClick;
-  MsgFilterHintsWithoutPosMenuItem.Checked:=MessagesCtrl.ActiveFilter.FilterNotesWithoutPos;
+  MsgFilterHintsWithoutPosMenuItem.Checked:=FMessagesCtrl.ActiveFilter.FilterNotesWithoutPos;
   MsgFilterHintsWithoutPosMenuItem.OnClick:=@FilterHintsWithoutPosMenuItemClick;
 
   // Urgency
-  MinUrgency:=MessagesCtrl.ActiveFilter.MinUrgency;
+  MinUrgency:=FMessagesCtrl.ActiveFilter.MinUrgency;
   MsgFilterNoneMenuItem    .Checked := MinUrgency in [mluNone..mluDebug];
   MsgFilterDebugMenuItem   .Checked := MinUrgency in [mluVerbose3..mluVerbose];
   MsgFilterVerboseMenuItem .Checked := MinUrgency = mluHint;
@@ -3540,17 +3543,15 @@ begin
   MsgHelpMenuItem         .MenuItem.ShortCut := ShortCut(VK_F1, []);
 
   // Options
-  MsgWndStayOnTopMenuItem     .Checked := mcoWndStayOnTop in MessagesCtrl.Options;
-  MsgFileStyleShortMenuItem   .Checked := MessagesCtrl.FilenameStyle = mwfsShort;
-  MsgFileStyleRelativeMenuItem.Checked := MessagesCtrl.FilenameStyle = mwfsRelative;
-  MsgFileStyleFullMenuItem    .Checked := MessagesCtrl.FilenameStyle = mwfsFull;
-  MsgWndStayOnTopMenuItem     .OnClick := @WndStayOnTopMenuItemClick;
+  MsgFileStyleShortMenuItem   .Checked := FMessagesCtrl.FilenameStyle = mwfsShort;
+  MsgFileStyleRelativeMenuItem.Checked := FMessagesCtrl.FilenameStyle = mwfsRelative;
+  MsgFileStyleFullMenuItem    .Checked := FMessagesCtrl.FilenameStyle = mwfsFull;
   MsgFileStyleShortMenuItem   .OnClick := @FileStyleMenuItemClick;
   MsgFileStyleRelativeMenuItem.OnClick := @FileStyleMenuItemClick;
   MsgFileStyleFullMenuItem    .OnClick := @FileStyleMenuItemClick;
 
-  MsgTranslateMenuItem.Checked := mcoShowTranslated in MessagesCtrl.Options;
-  MsgShowIDMenuItem   .Checked := mcoShowMessageID  in MessagesCtrl.Options;
+  MsgTranslateMenuItem.Checked := mcoShowTranslated in FMessagesCtrl.Options;
+  MsgShowIDMenuItem   .Checked := mcoShowMessageID  in FMessagesCtrl.Options;
   MsgTranslateMenuItem  .OnClick := @TranslateMenuItemClick;
   MsgShowIDMenuItem     .OnClick := @ShowIDMenuItemClick;
   MsgMoreOptionsMenuItem.OnClick := @MoreOptionsMenuItemClick;
@@ -3568,9 +3569,9 @@ var
   Item: TIDEMenuCommand;
 begin
   Item:=Sender as TIDEMenuCommand;
-  Filter:=MessagesCtrl.Filters.GetFilter(Item.Caption,false);
+  Filter:=FMessagesCtrl.Filters.GetFilter(Item.Caption,false);
   if Filter=nil then exit;
-  MessagesCtrl.ActiveFilter:=Filter;
+  FMessagesCtrl.ActiveFilter:=Filter;
 end;
 
 procedure TMessagesFrame.OpenToolsOptionsMenuItemClick(Sender: TObject);
@@ -3618,17 +3619,17 @@ end;
 
 procedure TMessagesFrame.SaveAllToFileMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.SaveToFile(false);
+  FMessagesCtrl.SaveToFile(false);
 end;
 
 procedure TMessagesFrame.SaveShownToFileMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.SaveToFile(true);
+  FMessagesCtrl.SaveToFile(true);
 end;
 
 procedure TMessagesFrame.SearchEditChange(Sender: TObject);
 begin
-  MessagesCtrl.SearchText:=SearchEdit.Text;
+  FMessagesCtrl.SearchText:=SearchEdit.Text;
 end;
 
 procedure TMessagesFrame.SearchEditKeyDown(Sender: TObject; var Key: Word;
@@ -3641,12 +3642,12 @@ begin
   end
   else if (Key in [VK_RETURN, VK_F3]) and (Shift = []) then
   begin
-    MessagesCtrl.NextSearchOccurrence(true);
+    FMessagesCtrl.NextSearchOccurrence(true);
     Key := 0;
   end
   else if (Key in [VK_RETURN, VK_F3]) and (Shift = [ssShift]) then
   begin
-    MessagesCtrl.NextSearchOccurrence(false);
+    FMessagesCtrl.NextSearchOccurrence(false);
     Key := 0;
   end
   // Eat Ctrl-F
@@ -3656,17 +3657,17 @@ end;
 
 procedure TMessagesFrame.SearchNextSpeedButtonClick(Sender: TObject);
 begin
-  MessagesCtrl.NextSearchOccurrence(true);
+  FMessagesCtrl.NextSearchOccurrence(true);
 end;
 
 procedure TMessagesFrame.SearchPrevSpeedButtonClick(Sender: TObject);
 begin
-  MessagesCtrl.NextSearchOccurrence(false);
+  FMessagesCtrl.NextSearchOccurrence(false);
 end;
 
 procedure TMessagesFrame.ShowIDMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.OptionToggle(mcoShowMessageID);
+  FMessagesCtrl.OptionToggle(mcoShowMessageID);
 end;
 
 procedure TMessagesFrame.SrcEditLinesChanged(Sender: TObject);
@@ -3681,45 +3682,40 @@ var
   i: PtrInt;
 begin
   i:=TIDEMenuCommand(Sender).Tag;
-  if i<MessagesCtrl.ActiveFilter.FilterMsgTypeCount then
-    MessagesCtrl.ActiveFilter.DeleteFilterMsgType(i);
+  if i<FMessagesCtrl.ActiveFilter.FilterMsgTypeCount then
+    FMessagesCtrl.ActiveFilter.DeleteFilterMsgType(i);
 end;
 
 procedure TMessagesFrame.TranslateMenuItemClick(Sender: TObject);
 begin
-  EnvironmentGuiOpts.MsgViewShowTranslations:=MessagesCtrl.OptionToggle(mcoShowTranslated);
-end;
-
-procedure TMessagesFrame.WndStayOnTopMenuItemClick(Sender: TObject);
-begin
-  EnvironmentGuiOpts.MsgViewStayOnTop:=MessagesCtrl.OptionToggle(mcoWndStayOnTop);
+  EnvironmentGuiOpts.MsgViewShowTranslations:=FMessagesCtrl.OptionToggle(mcoShowTranslated);
 end;
 
 function TMessagesFrame.GetAboutView: TLMsgWndView;
 begin
-  Result:=MessagesCtrl.FTextCursorPoint.View;
+  Result:=FMessagesCtrl.FTextCursorPoint.View;
   if Result=nil then
-    Result:=MessagesCtrl.GetLastViewWithContent;
+    Result:=FMessagesCtrl.GetLastViewWithContent;
 end;
 
 procedure TMessagesFrame.CopyFilenameMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.CopySelectedToClipboard(true);
+  FMessagesCtrl.CopySelectedToClipboard(true);
 end;
 
 procedure TMessagesFrame.CopyMsgMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.CopySelectedToClipboard(false);
+  FMessagesCtrl.CopySelectedToClipboard(false);
 end;
 
 procedure TMessagesFrame.CopyAllMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.CopyAllToClipboard(false);
+  FMessagesCtrl.CopyAllToClipboard(false);
 end;
 
 procedure TMessagesFrame.CopyShownMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.CopyAllToClipboard(true);
+  FMessagesCtrl.CopyAllToClipboard(true);
 end;
 
 procedure TMessagesFrame.EditHelpMenuItemClick(Sender: TObject);
@@ -3729,12 +3725,12 @@ end;
 
 procedure TMessagesFrame.FileStyleMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.SetFileStyleByMenuCmd(Sender as TIDEMenuCommand);
+  FMessagesCtrl.SetFileStyleByMenuCmd(Sender as TIDEMenuCommand);
 end;
 
 procedure TMessagesFrame.FindMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.StoreSelectedAsSearchStart;
+  FMessagesCtrl.StoreSelectedAsSearchStart;
   SearchPanel.Visible:=true;
   SearchEditChange(Sender);
   SearchEdit.SetFocus;
@@ -3747,16 +3743,16 @@ end;
 
 procedure TMessagesFrame.FilterHintsWithoutPosMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.ActiveFilter.FilterNotesWithoutPos:=not MessagesCtrl.ActiveFilter.FilterNotesWithoutPos;
+  FMessagesCtrl.ActiveFilter.FilterNotesWithoutPos:=not FMessagesCtrl.ActiveFilter.FilterNotesWithoutPos;
 end;
 
 procedure TMessagesFrame.FilterMsgOfTypeMenuItemClick(Sender: TObject);
 var
   Line: TMessageLine;
 begin
-  Line:=MessagesCtrl.GetSelectedMsg;
+  Line:=FMessagesCtrl.GetSelectedMsg;
   if (Line=nil) or (ord(Line.Urgency)>=ord(mluError)) then exit;
-  MessagesCtrl.ActiveFilter.AddFilterMsgType(Line.SubTool,Line.MsgID);
+  FMessagesCtrl.ActiveFilter.AddFilterMsgType(Line.SubTool,Line.MsgID);
 end;
 
 procedure TMessagesFrame.FilterUrgencyMenuItemClick(Sender: TObject);
@@ -3776,7 +3772,7 @@ begin
     MinUrgency:=mluVerbose3
   else {if Sender=MsgFilterNoneMenuItem then}
     MinUrgency:=mluNone;
-  MessagesCtrl.ActiveFilter.MinUrgency:=MinUrgency;
+  FMessagesCtrl.ActiveFilter.MinUrgency:=MinUrgency;
   //debugln(['TMessagesFrame.FilterUrgencyMenuItemClick ',MessageLineUrgencyNames[MinUrgency]]);
 end;
 
@@ -3891,11 +3887,12 @@ var
   NewFilter: TLMsgViewFilter;
   Filters: TLMsgViewFilters;
 begin
-  aCaption:=lisFilter;
-  i:=1;
-  Filters:=MessagesCtrl.Filters;
-  while Filters.GetFilter(aCaption+IntToStr(i),false)<>nil do
+  i:=0;
+  Filters:=FMessagesCtrl.Filters;
+  repeat
     inc(i);
+    aCaption:=lisFilter+IntToStr(i);
+  until Filters.GetFilter(aCaption,false)=nil;
   if not InputQuery(lisCreateFilter, lisCodeToolsDefsName, aCaption) then exit;
   aCaption:=UTF8Trim(aCaption,[]);
   if aCaption='' then exit;
@@ -3905,30 +3902,30 @@ begin
     exit;
   end;
   NewFilter:=Filters.GetFilter(aCaption,true);
-  NewFilter.Assign(MessagesCtrl.ActiveFilter);
-  MessagesCtrl.ActiveFilter:=NewFilter;
+  NewFilter.Assign(FMessagesCtrl.ActiveFilter);
+  FMessagesCtrl.ActiveFilter:=NewFilter;
 end;
 
 procedure TMessagesFrame.ClearFilterMsgTypesMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.ActiveFilter.ClearFilterMsgTypes;
+  FMessagesCtrl.ActiveFilter.ClearFilterMsgTypes;
 end;
 
 procedure TMessagesFrame.ClearMenuItemClick(Sender: TObject);
 begin
-  MessagesCtrl.ClearViews(true);
+  FMessagesCtrl.ClearViews(true);
 end;
 
 function TMessagesFrame.GetViews(Index: integer): TLMsgWndView;
 begin
-  Result:=MessagesCtrl.Views[Index];
+  Result:=FMessagesCtrl.Views[Index];
 end;
 
 procedure TMessagesFrame.HideSearch;
 begin
-  MessagesCtrl.SetFocus;
+  FMessagesCtrl.SetFocus;
   SearchPanel.Visible:=false;
-  MessagesCtrl.SearchText:='';
+  FMessagesCtrl.SearchText:='';
 end;
 
 function TMessagesFrame.GetMsgPattern(SubTool: string; MsgId: integer;
@@ -3946,7 +3943,7 @@ begin
   if Pattern<>'' then
     Result+=' '+Pattern;
   if WithUrgency and (not (Urgency in [mluNone,mluImportant])) then
-    Result:=MessagesCtrl.UrgencyToStr(Urgency)+': '+Result;
+    Result:=FMessagesCtrl.UrgencyToStr(Urgency)+': '+Result;
   if UTF8Length(Result)>MaxLen then
     Result:=UTF8Copy(Result,1,MaxLen)+'...';
 end;
@@ -3956,8 +3953,8 @@ procedure TMessagesFrame.Notification(AComponent: TComponent;
 begin
   inherited Notification(AComponent, Operation);
   if Operation=opRemove then begin
-    if AComponent=MessagesCtrl then
-      MessagesCtrl:=nil;
+    if AComponent=FMessagesCtrl then
+      FMessagesCtrl:=nil;
   end;
 end;
 
@@ -3972,7 +3969,7 @@ var
 begin
   inherited Create(TheOwner);
 
-  MessagesCtrl:=TMessagesCtrl.Create(Self);
+  FMessagesCtrl:=TMessagesCtrl.Create(Self);
   FImages := TLCLGlyphs.Create(Self);
   FImages.Width := 12;
   FImages.Height := 12;
@@ -3985,7 +3982,7 @@ begin
   ImgIDWarning:=FImages.GetImageIndex('state_warning');
   ImgIDError:=FImages.GetImageIndex('state_error');
   ImgIDFatal:=FImages.GetImageIndex('state_fatal');
-  with MessagesCtrl do begin
+  with FMessagesCtrl do begin
     Name:='MessagesCtrl';
     Align:=alClient;
     Parent:=Self;
@@ -4018,7 +4015,7 @@ begin
     Images:=Self.FImages;
     PopupMenu:=MsgCtrlPopupMenu;
   end;
-  MessagesCtrl.SourceMarks:=ExtToolsMarks;
+  FMessagesCtrl.SourceMarks:=ExtToolsMarks;
 
   // search
   SearchPanel.Visible:=false; // by default the search is hidden
@@ -4033,29 +4030,29 @@ end;
 
 destructor TMessagesFrame.Destroy;
 begin
-  MessagesCtrl.BeginUpdate;
+  FMessagesCtrl.BeginUpdate;
   ClearViews(false);
   inherited Destroy;
 end;
 
 procedure TMessagesFrame.ApplyIDEOptions;
 begin
-  MessagesCtrl.ApplyEnvironmentOptions;
+  FMessagesCtrl.ApplyEnvironmentOptions;
 end;
 
 function TMessagesFrame.ViewCount: integer;
 begin
-  Result:=MessagesCtrl.ViewCount;
+  Result:=FMessagesCtrl.ViewCount;
 end;
 
 function TMessagesFrame.GetView(aCaption: string; CreateIfNotExist: boolean): TLMsgWndView;
 begin
-  Result:=MessagesCtrl.GetView(aCaption,CreateIfNotExist);
+  Result:=FMessagesCtrl.GetView(aCaption,CreateIfNotExist);
 end;
 
 function TMessagesFrame.FindUnfinishedView: TLMsgWndView;
 begin
-  Result:=MessagesCtrl.FindUnfinishedView;
+  Result:=FMessagesCtrl.FindUnfinishedView;
 end;
 
 procedure TMessagesFrame.DeleteView(View: TLMsgWndView);
@@ -4065,23 +4062,23 @@ end;
 
 function TMessagesFrame.IndexOfView(View: TLMsgWndView): integer;
 begin
-  Result:=MessagesCtrl.IndexOfView(View);
+  Result:=FMessagesCtrl.IndexOfView(View);
 end;
 
 procedure TMessagesFrame.ClearViews(OnlyFinished: boolean);
 begin
-  MessagesCtrl.ClearViews(OnlyFinished);
+  FMessagesCtrl.ClearViews(OnlyFinished);
 end;
 
 procedure TMessagesFrame.CreateMarksForFile(aSynEdit: TSynEdit;
   aFilename: string; DeleteOld: boolean);
 begin
-  MessagesCtrl.CreateMarksForFile(aSynEdit,aFilename,DeleteOld);
+  FMessagesCtrl.CreateMarksForFile(aSynEdit,aFilename,DeleteOld);
 end;
 
 procedure TMessagesFrame.ApplySrcChanges(Changes: TETSingleSrcChanges);
 begin
-  MessagesCtrl.ApplySrcChanges(Changes);
+  FMessagesCtrl.ApplySrcChanges(Changes);
 end;
 
 procedure TMessagesFrame.ApplyMultiSrcChanges(Changes: TETMultiSrcChanges);
@@ -4130,8 +4127,8 @@ begin
   // create items
   if IDEQuickFixes.Count>0 then begin
     IDEQuickFixes.OnPopupMenu(SrcEditMenuSectionFirstDynamic);
-    if mcoSrcEditPopupSelect in MessagesCtrl.Options then
-      MessagesCtrl.SelectMsgLine(BestMark.MsgLine);
+    if mcoSrcEditPopupSelect in FMessagesCtrl.Options then
+      FMessagesCtrl.SelectMsgLine(BestMark.MsgLine);
   end;
 end;
 
@@ -4148,7 +4145,7 @@ begin
     CurMark:=TETMark(MarkLine[i]);
     if not (CurMark is TETMark) then continue;
     Msg:=CurMark.MsgLine;
-    CurHint:=MessagesCtrl.UrgencyToStr(Msg.Urgency)+': '+Msg.Msg;
+    CurHint:=FMessagesCtrl.UrgencyToStr(Msg.Urgency)+': '+Msg.Msg;
     if HintStr<>'' then
       HintStr:=HintStr+LineEnding;
     HintStr:=HintStr+CurHint;
@@ -4157,19 +4154,19 @@ end;
 
 procedure TMessagesFrame.SelectMsgLine(Msg: TMessageLine);
 begin
-  MessagesCtrl.SelectMsgLine(Msg);
+  FMessagesCtrl.SelectMsgLine(Msg);
 end;
 
 function TMessagesFrame.SelectFirstUrgentMessage(
   aMinUrgency: TMessageLineUrgency; WithSrcPos: boolean): boolean;
 begin
-  Result:=MessagesCtrl.SelectFirstUrgentMessage(aMinUrgency,WithSrcPos);
+  Result:=FMessagesCtrl.SelectFirstUrgentMessage(aMinUrgency,WithSrcPos);
 end;
 
 function TMessagesFrame.SelectNextUrgentMessage(
   aMinUrgency: TMessageLineUrgency; WithSrcPos, Downwards: boolean): boolean;
 begin
-  Result:=MessagesCtrl.SelectNextUrgentMessage(aMinUrgency,WithSrcPos,Downwards);
+  Result:=FMessagesCtrl.SelectNextUrgentMessage(aMinUrgency,WithSrcPos,Downwards);
 end;
 
 procedure TMessagesFrame.ClearCustomMessages(const ViewCaption: string);
@@ -4179,8 +4176,8 @@ begin
   View:=GetView(ViewCaption,false);
   if (View=nil) or (View.Lines.Count=0) then exit;
   View.Lines.Clear;
-  MessagesCtrl.UpdateScrollBar(true);
-  MessagesCtrl.Invalidate;
+  FMessagesCtrl.UpdateScrollBar(true);
+  FMessagesCtrl.Invalidate;
 end;
 
 function TMessagesFrame.AddCustomMessage(TheUrgency: TMessageLineUrgency;
@@ -4197,8 +4194,8 @@ begin
   Result.Urgency:=TheUrgency;
   Result.SetSourcePosition(aFilename,LineNumber,Column);
   View.Lines.Add(Result);
-  MessagesCtrl.UpdateScrollBar(true);
-  MessagesCtrl.Invalidate;
+  FMessagesCtrl.UpdateScrollBar(true);
+  FMessagesCtrl.Invalidate;
 end;
 
 end.

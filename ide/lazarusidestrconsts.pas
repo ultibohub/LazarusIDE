@@ -101,7 +101,6 @@ resourcestring
   lisLess = 'Less';
   lisMore = 'More';
   lisMoreSub = 'More';
-  lisDlgMore = 'More ...';
   lisDefault = 'Default';
   lisClone = 'Clone';
   lisExport = 'Export';
@@ -423,6 +422,7 @@ resourcestring
   lisAddFilter = 'Add Filter ...';
   lisCopyAllShownMessagesToClipboard = 'Copy All Shown Messages to Clipboard';
   lisCopyAllOriginalMessagesToClipboard = 'Copy All/Original Messages to Clipboard';
+  lisFpcMessageOptions = 'FPC Message Options';
   lisCopyItemToClipboard = 'Copy Item to Clipboard';
   lisCopySelectedItemToClipboard = 'Copy Selected Items to Clipboard';
   lisCopyAllItemsToClipboard = 'Copy All Items to Clipboard';
@@ -543,7 +543,6 @@ resourcestring
   lisMenuGeneralOptions = 'Options ...';
   lisMacPreferences = 'Preferences...'; // used only for macOS, instead of lisMenuGeneralOptions
                                         // there should not be space between Preferences and ellipsis
-  lisWindowStaysOnTop = 'Window stays on top';
   lisFilenameStyle = 'Filename Style';
   lisShortNoPath = 'Short, no path';
   lisRelative = 'Relative';
@@ -1335,6 +1334,7 @@ resourcestring
     'before the IDE''s name and other info in the title. Example: project1 - Lazarus.';
 
   // Message window options
+  lisWindowStaysOnTop = 'Window stays on top';
   dlgShowMessagesIcons = 'Show Messages Icons';
   dlgAnIconForErrorWarningHintIsShown = 'An icon for error/warning/hint is shown '
     +'in front of a message. The same icon shows in source editor gutter in any case.';
@@ -4209,8 +4209,8 @@ resourcestring
   lisEdtExtToolProgramfilename = 'Program Filename:';
   lisEdtExtToolParameters = 'Parameters:';
   lisEdtExtToolWorkingDirectory = 'Working Directory:';
-  lisEdtExtToolScanOutputForFreePascalCompilerMessages = 'Scan output for '
-    +'FPC messages';
+  lisEdtExtToolPassOutputToMessages = 'Pass output to Messages window';
+  lisEdtExtToolScanOutputForFreePascalCompilerMessages = 'Scan output for FPC messages';
   lisEdtExtToolScanOutputForMakeMessages = 'Scan output for "make" messages';
   lisShowConsole = 'Show console';
   lisOnlyAvailableOnWindowsRunToolInANewConsole = 'Only available on Windows. '

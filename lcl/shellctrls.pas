@@ -2191,7 +2191,12 @@ begin
       else
         Result := sShellCtrlsFolder;
     cidAttr:
+      {$if defined(UNIX)}
+      // Use permissions for unix-like file systems
+      Result := GetPermissions(GetPathFromItem(AItem));
+      {$else}
       Result := AttrToStr(AItem.FileInfo.Attr);
+      {$endif}
     cidDateModified:
       begin
         if AColumn.Format = '' then
@@ -2266,6 +2271,7 @@ procedure TCustomShellListView.Loaded;
 begin
   inherited Loaded;
   FixColumnIDs;
+  AdjustColWidths;
   PopulateWithRoot;
 end;
 
