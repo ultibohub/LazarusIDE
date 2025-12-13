@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-07-24 16:22+0300\n"
+"PO-Revision-Date: 2025-12-11 22:54+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -71,6 +71,10 @@ msgstr "Секция CDATA"
 msgid "Character"
 msgstr "Символ"
 
+#: syneditstrconst.syns_attrcharset
+msgid "Charset"
+msgstr "Кодировка"
+
 #: syneditstrconst.syns_attrchunkmarker
 msgid "Diff Chunk Marker"
 msgstr "Маркер последовательности Diff"
@@ -90,6 +94,10 @@ msgstr "Число исходных строк последовательнос�
 #: syneditstrconst.syns_attrclass
 msgid "Class"
 msgstr "Класс"
+
+#: syneditstrconst.syns_attrcollation
+msgid "Collation"
+msgstr "Порядок сортировки"
 
 #: syneditstrconst.syns_attrcomment
 msgid "Comment"

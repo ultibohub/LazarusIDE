@@ -73,7 +73,7 @@ type
     function ContentRect({%H-}DC: HDC; Details: TThemedElementDetails; BoundingRect: TRect): TRect; override;
     function HasTransparentParts({%H-}Details: TThemedElementDetails): Boolean; override;
 *)
-    function GetDetailSize(Details: TThemedElementDetails): TSize; override;
+    function GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize; override;
     function GetOption(AOption: TThemeOption): Integer; override;
   end;
 
@@ -210,8 +210,8 @@ begin
     begin
       SetButtonCellToDetails(b, Details);
       CellDrawStart(DC, R, cur, nsr);
-      // don't set backgroundColor for PushButton
-      if (Details.Part<>BP_PUSHBUTTON) and (Details.Part<>BP_CHECKBOX) then
+      // don't set backgroundColor for PushButton, CheckBox and RadioButton
+      if (Details.Part<>BP_PUSHBUTTON) and (Details.Part<>BP_CHECKBOX) and (Details.Part<>BP_RADIOBUTTON) then
         b.setBackgroundColor( NSColor.controlBackgroundColor );
       CellDrawFrame(b, nsr);
       CellDrawEnd(DC, cur);
@@ -729,8 +729,8 @@ begin
   end;
 end;
 
-function TCocoaThemeServices.GetDetailSize(Details: TThemedElementDetails
-  ): TSize;
+function TCocoaThemeServices.GetDetailSizeForPPI(Details: TThemedElementDetails;
+  PPI: Integer): TSize;
 var
   cl : NSCell;
   sz : NSSize;
@@ -741,6 +741,7 @@ begin
     sz:=cl.cellSize;
     Result.cx:=Round(sz.width);
     Result.cy:=Round(sz.height);
+    // FixMe: Is scaling already included?
   end
   else
   if (Details.Element=teHeader) and (Details.Part=HP_HEADERSORTARROW) then
@@ -748,7 +749,7 @@ begin
     Result.cx:=-1; // not supported yet
     Result.cy:=-1;
   end else
-    Result:=inherited GetDetailSize(Details);
+    Result:=inherited GetDetailSizeForPPI(Details, PPI);
 end;
 
 (*
@@ -909,7 +910,7 @@ begin
   useBezel := false;
   if Details.Element = teToolBar then
   begin
-    BtnType := NSToggleButton;  // it usesd to be NSOnOffButton, but NSOnOffButton is not transparent.
+    BtnType := NSToggleButton;  // it used to be NSOnOffButton, but NSOnOffButton is not transparent.
     BezelStyle := BezelToolBar;
     useBezel := true;
   end else if Details.Element = teButton then
@@ -951,6 +952,7 @@ begin
   if ((Details.Element = teToolBar) and (not IsPushed(Details)) and (not IsChecked(Details)))
     or ((Details.Element = teButton) and (Details.Part = BP_PUSHBUTTON) and IsPushed(Details))
     or ((Details.Element = teButton) and (Details.Part = BP_CHECKBOX))
+    or ((Details.Element = teButton) and (Details.Part = BP_RADIOBUTTON))
   then
     // this is "flat" mode. So unpushed state should draw no borders
     btn.setBordered(false)

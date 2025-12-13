@@ -72,7 +72,6 @@ type
     function ThemedControlsEnabled: Boolean; override;
 
     procedure InternalDrawParentBackground({%H-}Window: HWND; {%H-}Target: HDC; {%H-}Bounds: PRect); override;
-    function GetBaseDetailsSize(Details: TThemedElementDetails): TSize;
 
     function GetParamsCount(Details: TThemedElementDetails): Integer; virtual;
 
@@ -81,7 +80,7 @@ type
     function GetGtkStyleParams(DC: HDC; Details: TThemedElementDetails;
       AIndex: Integer): TGtkStyleParams;
   public
-    function GetDetailSize(Details: TThemedElementDetails): TSize; override;
+    function GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize; override;
     function GetStockImage(StockID: LongInt; out Image, Mask: HBitmap): Boolean; override;
     function GetOption(AOption: TThemeOption): Integer; override;
     procedure DrawElement(DC: HDC; Details: TThemedElementDetails;
@@ -217,12 +216,6 @@ procedure TGtk2ThemeServices.InternalDrawParentBackground(Window: HWND;
 begin
   // ToDo: TGtk2ThemeServices.InternalDrawParentBackground: What to do?
 end;
-
-function TGtk2ThemeServices.GetBaseDetailsSize(Details: TThemedElementDetails): TSize;
-begin
-  Result := inherited GetDetailSize(Details);
-end;
-
 
 function TGtk2ThemeServices.GetGtkStyleParams(DC: HDC;
   Details: TThemedElementDetails; AIndex: Integer): TGtkStyleParams;
@@ -509,7 +502,7 @@ begin
           else
             Result.Expander := GTK_EXPANDER_EXPANDED;
 
-          Result.ExpanderSize := GetDetailSize(Details).cx;
+          Result.ExpanderSize := GetDetailSizeForPPI(Details, Screen.PixelsPerInch).cx;
         end
         else
         if Details.Part = TVP_TREEITEM then
@@ -563,7 +556,7 @@ begin
   end;
 end;
 
-function TGtk2ThemeServices.GetDetailSize(Details: TThemedElementDetails): TSize;
+function TGtk2ThemeServices.GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize;
 var
   AValue: TGValue;
 begin
@@ -576,7 +569,7 @@ begin
         gtk_widget_style_get_property(GetStyleWidget(lgsTreeView), 'expander-size', @AValue);
         Result := Size(AValue.data[0].v_int, AValue.data[0].v_int);
       end else
-        Result := GetBaseDetailsSize(Details);
+        Result := inherited GetDetailSizeForPPI(Details, PPI);
     teButton:
       if (Byte(Details.Part) in [BP_CHECKBOX, BP_RADIOBUTTON]) then
       begin
@@ -588,7 +581,7 @@ begin
           gtk_widget_style_get_property(GetStyleWidget(lgsRadioButton),'indicator-size', @AValue);
         Result := Size(AValue.data[0].v_int, AValue.data[0].v_int);
       end else
-        Result := GetBaseDetailsSize(Details);
+        Result := inherited GetDetailSizeForPPI(Details, PPI);
     {$IFDEF LINUX} // fix tbsButtonDrop arrow outside button bounds
     teToolBar:
       if (Details.Part = TP_DROPDOWNBUTTON) then
@@ -596,15 +589,15 @@ begin
         Result.cy := -1;
         Result.cx := 15;
       end else
-        Result := GetBaseDetailsSize(Details);
+        Result := inherited GetDetailSizeForPPI(Details, PPI);
     {$ENDIF}
     teHeader:
       if Details.Part = HP_HEADERSORTARROW then
         Result := Size(-1, -1) // not yet supported
       else
-        Result := GetBaseDetailsSize(Details);
+        Result := inherited GetDetailSizeForPPI(Details, PPI);
     else
-      Result := GetBaseDetailsSize(Details);
+      Result := inherited GetDetailSizeForPPI(Details, PPI);
   end;
 end;
 

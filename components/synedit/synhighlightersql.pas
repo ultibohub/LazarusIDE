@@ -56,18 +56,19 @@ uses
   LCLIntf, LCLType,
   Controls, Graphics,
   SynEditTypes, SynEditHighlighter, SynEditStrConst,
-  SynHighlighterHashEntries, LazEditTextAttributes;
+  SynHighlighterHashEntries, SynEditMiscProcs, LazEditTextAttributes;
 
 type
   TtkTokenKind = (tkComment, tkDatatype, tkDefaultPackage, tkException,         // DJLP 2000-08-11
     tkFunction, tkIdentifier, tkKey, tkNull, tkNumber, tkSpace, tkPLSQL,        // DJLP 2000-08-11
-    tkSQLPlus, tkString, tkSymbol, tkTableName, tkUnknown, tkVariable);         // DJLP 2000-08-11
+    tkSQLPlus, tkString, tkSymbol, tkTableName, tkUnknown, tkVariable,          // DJLP 2000-08-11
+    tkCharSet, tkCollation);
 
   TRangeState = (rsUnknown, rsComment, rsString);
 
   TProcTableProc = procedure of object;
 
-  TSQLDialect = (sqlStandard, sqlInterbase6, sqlMSSQL7, sqlMySQL, sqlOracle,
+  TSQLDialect = (sqlStandard, sqlInterbase6, sqlMSSQL7, sqlMySQL, sqlMySQL5, sqlMySQL8, sqlOracle,
     sqlSybase, sqlIngres, sqlMSSQL2K, sqlPostgres, sqlSQLite,                                           // JJV 2000-11-16
     sqlFirebird25, sqlFirebird30, sqlFirebird40, sqlMSSQL2022);
 
@@ -79,6 +80,9 @@ type
   THashTable = array[Char] of Integer;
 
 type
+
+  { TSynSQLSyn }
+
   TSynSQLSyn = class(TSynCustomHighlighter)
   private
     fRange: TRangeState;
@@ -108,6 +112,8 @@ type
     fSymbolAttri: TSynHighlighterAttributes;
     fTableNameAttri: TSynHighlighterAttributes;
     fVariableAttri: TSynHighlighterAttributes;
+    fCharSetAttri: TSynHighlighterAttributesModifier;
+    fCollationAttri: TSynHighlighterAttributesModifier;
     fIdentifiersPtr: PIdentifierTable;
     fmHashTablePtr: PHashTable;
     function KeyHash(ToHash: PChar): Integer;
@@ -158,6 +164,7 @@ type
     procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); override;
 
     function GetTokenAttribute: TLazEditTextAttribute; override;
+    function GetTokenAttributeEx: TLazCustomEditTextAttribute; override;
     function GetTokenID: TtkTokenKind;
     function GetTokenKind: integer; override;
     function GetTokenPos: Integer; override;
@@ -197,6 +204,8 @@ type
     property TableNames: TStrings read fTableNames write SetTableNames;
     property VariableAttri: TSynHighlighterAttributes read fVariableAttri
       write fVariableAttri;
+    property CharSetAttri: TSynHighlighterAttributesModifier read fCharSetAttri write fCharSetAttri;
+    property CollationAttri: TSynHighlighterAttributesModifier read fCharSetAttri write fCharSetAttri;
     property SQLDialect: TSQLDialect read fDialect write SetDialect;
   end;
 
@@ -1101,6 +1110,9 @@ const
     'TIME_FORMAT,TIME_TO_SEC,TO_DAYS,TRIM,TRUNCATE,UCASE,UNIX_TIMESTAMP,' +
     'UPPER,USER,VERSION,WEEK,WEEKDAY,WHEN,YEARWEEK,YEAR_MONTH';
 
+{$I synhighlightersql_mysql5.inc}
+{$I synhighlightersql_mysql8.inc}
+
 {begin}                                                                         // JJV 2000-11-16
 //---Ingres---------------------------------------------------------------------
   // keywords
@@ -1482,6 +1494,10 @@ begin
   AddAttribute(fTableNameAttri);
   fVariableAttri := TSynHighlighterAttributes.Create(@SYNS_AttrVariable, SYNS_XML_AttrVariable);
   AddAttribute(fVariableAttri);
+  fCharSetAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrCharSet, SYNS_XML_AttrCharSet);
+  AddAttribute(fCharSetAttri);
+  fCollationAttri := TSynHighlighterAttributesModifier.Create(@SYNS_AttrCollation, SYNS_XML_AttrCollation);
+  AddAttribute(fCollationAttri);
   SetAttributesOnChange(@DefHighlightChange);
   MakeMethodTables;
   fDefaultFilter := SYNS_FilterSQL;
@@ -1808,7 +1824,7 @@ var
 begin
   tk := IdentKind(PChar(AKeyword));
   Result := tk in [tkDatatype, tkException, tkFunction, tkKey, tkPLSQL,
-    tkDefaultPackage];
+    tkDefaultPackage, tkCharSet, tkCollation];
 end;
 {end}                                                                           // DJLP 2000-08-09
 
@@ -1891,8 +1907,24 @@ begin
     tkTableName: Result := fTableNameAttri;
     tkVariable: Result := fVariableAttri;
     tkUnknown: Result := fIdentifierAttri;
+    tkCharSet: Result := fDataTypeAttri;
+    tkCollation: Result := fDataTypeAttri;
   else
     Result := nil;
+  end;
+  if Result <> nil then
+    Result.SetFrameBoundsLog(ToPos(fTokenPos), ToPos(Run));
+end;
+
+function TSynSQLSyn.GetTokenAttributeEx: TLazCustomEditTextAttribute;
+begin
+  Result := GetTokenAttribute;
+  if Result = nil then
+    exit;
+
+  case fTokenID of
+    tkCharSet:   MergeModifierToTokenAttribute(Result, fCharSetAttri, ToPos(fTokenPos), ToPos(Run));
+    tkCollation: MergeModifierToTokenAttribute(Result, fCollationAttri, ToPos(fTokenPos), ToPos(Run));
   end;
 end;
 
@@ -2048,6 +2080,22 @@ begin
           @DoAddKeyword);
         EnumerateKeywords(Ord(tkFunction), MySqlFunctions, IdentChars,
           @DoAddKeyword);
+      end;
+    sqlMySQL5:
+      begin
+        EnumerateKeywords(Ord(tkKey),       MySQL5Keywords,   @DoAddKeyword);
+        EnumerateKeywords(Ord(tkDatatype),  MySQL5Types,      @DoAddKeyword);
+        EnumerateKeywords(Ord(tkFunction),  MySQL5Functions,  @DoAddKeyword);
+        EnumerateKeywords(Ord(tkCharSet),   MySQL5Charsets,   @DoAddKeyword);
+        EnumerateKeywords(Ord(tkCollation), MySQL5Collations, @DoAddKeyword);
+      end;
+    sqlMySQL8:
+      begin
+        EnumerateKeywords(Ord(tkKey),       MySQL8Keywords,   @DoAddKeyword);
+        EnumerateKeywords(Ord(tkDatatype),  MySQL8Types,      @DoAddKeyword);
+        EnumerateKeywords(Ord(tkFunction),  MySQL8Functions,  @DoAddKeyword);
+        EnumerateKeywords(Ord(tkCharSet),   MySQL8Charsets,   @DoAddKeyword);
+        EnumerateKeywords(Ord(tkCollation), MySQL8Collations, @DoAddKeyword);
       end;
     sqlOracle:
       begin
