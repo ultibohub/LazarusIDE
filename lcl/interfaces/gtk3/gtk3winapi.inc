@@ -1295,10 +1295,7 @@ var
       pango_font_family_list_faces(AFamilies[i], @AFaces, @ANumFaces);
       SetLength(Faces[i].Faces, ANumFaces);
       for j := 0 to ANumFaces - 1 do
-      begin
         Faces[i].Faces[j] := StrPas(pango_font_face_get_face_name(AFaces[j]));
-        g_object_unref(AFaces[j]);
-      end;
       g_free(AFaces);
     end;
     g_free(AFamilies);
@@ -2788,6 +2785,11 @@ begin
       begin
         Result := 2;
       end;
+
+    SM_CXSMICON,
+    SM_CYSMICON:
+      // small icon size
+      Result := 16;
 
     SM_CXICON,
     SM_CYICON:
@@ -4692,6 +4694,7 @@ var
   DestContext: TGtk3DeviceContext absolute DestDC;
   SrcContext: TGtk3DeviceContext absolute SrcDC;
   ATargetRect, ASrcRect, AMaskRect: TRect;
+  Origin: TPoint;
 begin
   Result := False;
 
@@ -4707,6 +4710,8 @@ begin
   ATargetRect := Rect(X, Y, Width + X, Height + Y);
   ASrcRect := Rect(XSrc, YSrc, SrcWidth + XSrc, SrcHeight + YSrc);
   AMaskRect := Bounds(XMask, YMask, SrcWidth, SrcHeight);
+  GetWindowOrgEx(SrcDC, @Origin);
+  ASrcRect.Offset(SrcContext.fncOrigin.X - Origin.x, SrcContext.fncOrigin.Y - Origin.y);
   if (mask<>0) then
     DestContext.drawImage1(@ATargetRect, SrcContext.CurrentImage.Handle , @ASrcRect, TGtk3Image(mask).Handle, @AMaskRect)
   else

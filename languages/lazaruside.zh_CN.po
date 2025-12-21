@@ -137,6 +137,10 @@ msgstr "转到实现"
 msgid "Jumps to implementation/other block end"
 msgstr "转到实现/其他语句块结尾"
 
+#: lazarusidestrconsts.dlfmousesimplebuttonexternallink
+msgid "Open external (HTTP, file, ...) link"
+msgstr ""
+
 #: lazarusidestrconsts.dlfmousesimplebuttonhistback
 msgid "History back"
 msgstr "历史后退"
@@ -216,6 +220,10 @@ msgstr "选择当前单词"
 #: lazarusidestrconsts.dlfmousesimplebuttonzoomreset
 msgid "Reset zoom"
 msgstr "重置缩放"
+
+#: lazarusidestrconsts.dlfmousesimpledecljumpinclextlink
+msgid "Jump to declaration also opens external links (HTTP, file, ...)"
+msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplediff
 msgid "This page does not represent your current settings. See advanced page. Use this page to reset any advanced changes"
@@ -577,6 +585,10 @@ msgstr "声明块"
 msgid "Procedure Header"
 msgstr "过程头"
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_specializegenericsection
+msgid "Specialize/Generic Blocks"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr "（自定义）"
@@ -714,6 +726,10 @@ msgstr "缩进"
 #: lazarusidestrconsts.dlgaddhiattrwrapsubline
 msgid "Sub-line"
 msgstr "子行"
+
+#: lazarusidestrconsts.dlgaddhiexternallink
+msgid "External (HTTP) link"
+msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
 msgid "Visualized Special Chars"
@@ -3191,6 +3207,10 @@ msgctxt "lazarusidestrconsts.dlgmouseoptnodeall"
 msgid "All"
 msgstr "所有"
 
+#: lazarusidestrconsts.dlgmouseoptnodeextlink
+msgid "External link"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmouseoptnodegutter
 msgctxt "lazarusidestrconsts.dlgmouseoptnodegutter"
 msgid "Gutter"
@@ -3628,6 +3648,10 @@ msgstr "扩展的 Pascal 高亮选项"
 msgid "Highlight flow control statements (break, continue, exit) as keywords"
 msgstr "将流程控制语句（break continue exit）突出显示为关键字"
 
+#: lazarusidestrconsts.dlgpasgenericparamattrmode
+msgid "Extend of initial-value-highlight in Generic/Specialize"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpaskeywordsmarkup
 msgid "Markup (on caret)"
 msgstr "标记 （光标上）"
@@ -3639,6 +3663,30 @@ msgstr "匹配关键字"
 #: lazarusidestrconsts.dlgpaskeywordsoutline
 msgid "Outline"
 msgstr "输出行"
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenandproc
+msgid "Generic and procedure name highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenonly
+msgid "Generic highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodenone
+msgid "Don't apply either highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodeproconly
+msgid "Procedure name highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnamedeclattrmode
+msgid "Generic highlight in procedure names (declaration)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameimplattrmode
+msgid "Generic highlight in procedure names (implementation)"
+msgstr ""
 
 #: lazarusidestrconsts.dlgpassoptslinker
 msgid "Pass options to linker with \"-k\", delimiter is space"
@@ -7452,14 +7500,6 @@ msgstr "字符串常数"
 msgid "Symbol"
 msgstr "符号"
 
-#: lazarusidestrconsts.liscoexecuteafter
-msgid "Execute after"
-msgstr "执行后"
-
-#: lazarusidestrconsts.liscoexecutebefore
-msgid "Execute before"
-msgstr "执行前"
-
 #: lazarusidestrconsts.liscollapse
 msgid "Collapse"
 msgstr "折叠"
@@ -9356,21 +9396,9 @@ msgstr "宏命令"
 msgid "Parameters:"
 msgstr "参数:"
 
-#: lazarusidestrconsts.lisedtexttoolpassoutputtomessages
-msgid "Pass output to Messages window"
-msgstr ""
-
 #: lazarusidestrconsts.lisedtexttoolprogramfilename
 msgid "Program Filename:"
 msgstr "程序文件名:"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputforfreepascalcompilermessages
-msgid "Scan output for FPC messages"
-msgstr "扫描输出对于FPC消息"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputformakemessages
-msgid "Scan output for \"make\" messages"
-msgstr "扫描输出对于\"make\"消息"
 
 #: lazarusidestrconsts.lisedtexttooltitleandfilenamerequired
 msgid "Title and Filename required"

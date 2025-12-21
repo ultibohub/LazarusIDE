@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-12-11 22:54+0300\n"
+"PO-Revision-Date: 2025-12-21 22:24+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -210,6 +210,14 @@ msgstr "Форма"
 #: syneditstrconst.syns_attrfunction
 msgid "Function"
 msgstr "Функция"
+
+#: syneditstrconst.syns_attrgenericconstraint
+msgid "Generic param constraint"
+msgstr "Ограничение параметра в Generic"
+
+#: syneditstrconst.syns_attrgenericparam
+msgid "Generic param name"
+msgstr "Имя параметра в Generic"
 
 #: syneditstrconst.syns_attrgotolabel
 msgid "Goto Label"
@@ -467,6 +475,10 @@ msgstr "Селектор"
 msgid "Space"
 msgstr "Фон"
 
+#: syneditstrconst.syns_attrspecializeparam
+msgid "Specialize param"
+msgstr "Параметр в Specialize"
+
 #: syneditstrconst.syns_attrspecialvariable
 msgid "Special variable"
 msgstr "Специальная переменная"
@@ -627,6 +639,18 @@ msgstr "Прокрутка (поле обзора)"
 #: syneditstrconst.syns_emcpasteselection
 msgid "Quick Paste Selection"
 msgstr "Быстрая вставка выделенного"
+
+#: syneditstrconst.syns_emcpluginextlinkcopyexternallink
+msgid "Copy external link"
+msgstr "Копировать внешнюю ссылку"
+
+#: syneditstrconst.syns_emcpluginextlinkopenexternallink
+msgid "Open external link"
+msgstr "Открыть внешнюю ссылку"
+
+#: syneditstrconst.syns_emcpluginextlinkselectexternallink
+msgid "Select external link"
+msgstr "Выделить внешнюю ссылку"
 
 #: syneditstrconst.syns_emcpluginmulticaretselectiontocarets
 msgid "Set carets at EOL in selected lines"

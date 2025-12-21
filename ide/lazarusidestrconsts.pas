@@ -1715,6 +1715,7 @@ resourcestring
   dlfMouseSimpleTextSect = 'Text';
   dlfMouseSimpleTextSectDrag = 'Drag selection (copy/paste)';
   dlfMouseSimpleRightMoveCaret = 'Right button click includes caret move';
+  dlfMouseSimpleDeclJumpInclExtLink = 'Jump to declaration also opens external links (HTTP, file, ...)';
   dlfMouseSimpleTextSectMidLabel = 'Middle Button';
   dlfMouseSimpleTextSectWheelLabel = 'Wheel';
   dlfMouseSimpleTextSectRightLabel = 'Right Button';
@@ -1767,6 +1768,7 @@ resourcestring
   dlfMouseSimpleButtonPaste            = 'Paste';
   dlfMouseSimpleButtonDeclaration      = 'Jumps to implementation';
   dlfMouseSimpleButtonDeclarationBlock = 'Jumps to implementation/other block end';
+  dlfMouseSimpleButtonExternalLink     = 'Open external (HTTP, file, ...) link';
   dlfMouseSimpleButtonAddHistoryPoint  = 'Add history point';
   dlfMouseSimpleButtonHistBack = 'History back';
   dlfMouseSimpleButtonHistForw = 'History forward';
@@ -1801,6 +1803,7 @@ resourcestring
   dlgMouseOptNodeAll = 'All';
   dlgMouseOptNodeMain = 'Text';
   dlgMouseOptNodeSelect = 'Selection';
+  dlgMouseOptNodeExtLink = 'External link';
   dlgMouseOptNodeGutter = 'Gutter';
   dlgMouseOptNodeGutterFold = 'Fold Tree';
   dlgMouseOptNodeGutterFoldCol = 'Collapsed [+]';
@@ -2000,11 +2003,18 @@ resourcestring
   dlgPasCaseLabelForOtherwise = 'Color otherwise/else as case-label';
   dlgPasDeclaredTypeAttrMode = 'Extend of type-highlight in declarations';
   dlgPasDeclaredTypeValueMode = 'Extend of initial-value-highlight in declarations';
+  dlgPasGenericParamAttrMode = 'Extend of initial-value-highlight in Generic/Specialize';
   dlgPasDeclaredTypeValueModeLiteral = 'Include literals (Number, String) in initial-value-highlight in declarations';
   dlgPasDeclaredTypeAttrModeIdent = 'Identifier only';
   dlgPasDeclaredTypeAttrModeNames = 'Identifier and built-in (types/values)';
   dlgPasDeclaredTypeAttrModeKeywords = 'Identifier, built-in and keywords';
   dlgPasDeclaredTypeAttrModeKeyAndSym = 'All, including symbols';
+  dlgPasProcNameDeclAttrMode = 'Generic highlight in procedure names (declaration)';
+  dlgPasProcNameImplAttrMode = 'Generic highlight in procedure names (implementation)';
+  dlgPasProcNameAttrModeGenOnly = 'Generic highlight only';
+  dlgPasProcNameAttrModeGenAndProc = 'Generic and procedure name highlight';
+  dlgPasProcNameAttrModeProcOnly = 'Procedure name highlight only';
+  dlgPasProcNameAttrModeNone = 'Don''t apply either highlight';
 
   dlgPasStringKeywords = 'Highlight "String" types as keyword';
   dlgPasStringKeywordsOptDefault = 'Default';
@@ -2181,6 +2191,7 @@ resourcestring
   dlgAddHiAttrWrapIndent  = 'Indent';
   dlgAddHiAttrWrapEol     = 'EOL';
   dlgAddHiAttrWrapSubLine = 'Sub-line';
+  dlgAddHiExternalLink     = 'External (HTTP) link';
   dlgAddHiSpecialVisibleChars     = 'Visualized Special Chars';
   dlgTopInfoHint                  = 'Current Class/Proc Hint';
   dlgCaretColor                   = 'Caret (Text-Cursor)';
@@ -2216,6 +2227,7 @@ resourcestring
   dlgAddHiAttrGroup_Comment      = 'Comments';
   dlgAddHiAttrGroup_ProgHeader   = 'Procedure Header';
   dlgAddHiAttrGroup_DeclSection  = 'Declaration Blocks';
+  dlgAddHiAttrGroup_SpecializeGenericSection  = 'Specialize/Generic Blocks';
 
 
   dlgEditAccessCaptionLockedInView            = 'Locked, if text in view';
@@ -2498,8 +2510,6 @@ resourcestring
   lisCOCallOn = 'Call on:';
   dlgCOCreateMakefile = 'Create Makefile';
   lisEnabledOnlyForPackages = 'Enabled only for packages.';
-  lisCOExecuteAfter = 'Execute after';
-  lisCOExecuteBefore = 'Execute before';
   lisCOCommand = 'Command:';
   lisBrowseAndSelectACompiler = 'Browse and select a compiler (e.g. ppcx64';
   lisCOScanForFPCMessages = 'Scan for FPC messages';
@@ -4209,9 +4219,6 @@ resourcestring
   lisEdtExtToolProgramfilename = 'Program Filename:';
   lisEdtExtToolParameters = 'Parameters:';
   lisEdtExtToolWorkingDirectory = 'Working Directory:';
-  lisEdtExtToolPassOutputToMessages = 'Pass output to Messages window';
-  lisEdtExtToolScanOutputForFreePascalCompilerMessages = 'Scan output for FPC messages';
-  lisEdtExtToolScanOutputForMakeMessages = 'Scan output for "make" messages';
   lisShowConsole = 'Show console';
   lisOnlyAvailableOnWindowsRunToolInANewConsole = 'Only available on Windows. '
     +'Run tool in a new console.';

@@ -139,6 +139,10 @@ msgstr "Zur Implementierung springen"
 msgid "Jumps to implementation/other block end"
 msgstr ""
 
+#: lazarusidestrconsts.dlfmousesimplebuttonexternallink
+msgid "Open external (HTTP, file, ...) link"
+msgstr ""
+
 #: lazarusidestrconsts.dlfmousesimplebuttonhistback
 msgid "History back"
 msgstr "Historie zurück"
@@ -220,6 +224,10 @@ msgstr "Aktuelles Wort markieren"
 #: lazarusidestrconsts.dlfmousesimplebuttonzoomreset
 msgid "Reset zoom"
 msgstr "Zoom zurücksetzen"
+
+#: lazarusidestrconsts.dlfmousesimpledecljumpinclextlink
+msgid "Jump to declaration also opens external links (HTTP, file, ...)"
+msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplediff
 msgid "This page does not represent your current settings. See advanced page. Use this page to reset any advanced changes"
@@ -581,6 +589,10 @@ msgstr ""
 msgid "Procedure Header"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_specializegenericsection
+msgid "Specialize/Generic Blocks"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr ""
@@ -721,6 +733,10 @@ msgstr "Einrückung"
 #: lazarusidestrconsts.dlgaddhiattrwrapsubline
 msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
 msgid "Sub-line"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiexternallink
+msgid "External (HTTP) link"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
@@ -3206,6 +3222,10 @@ msgctxt "lazarusidestrconsts.dlgmouseoptnodeall"
 msgid "All"
 msgstr "Alle"
 
+#: lazarusidestrconsts.dlgmouseoptnodeextlink
+msgid "External link"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmouseoptnodegutter
 msgctxt "lazarusidestrconsts.dlgmouseoptnodegutter"
 msgid "Gutter"
@@ -3646,6 +3666,10 @@ msgstr ""
 msgid "Highlight flow control statements (break, continue, exit) as keywords"
 msgstr "Steueranweisungen wie Schlüsselworte hervorheben"
 
+#: lazarusidestrconsts.dlgpasgenericparamattrmode
+msgid "Extend of initial-value-highlight in Generic/Specialize"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpaskeywordsmarkup
 msgid "Markup (on caret)"
 msgstr "Auszeichnung (am Cursor)"
@@ -3657,6 +3681,30 @@ msgstr "Passende Schlüsselwörter"
 #: lazarusidestrconsts.dlgpaskeywordsoutline
 msgid "Outline"
 msgstr "Außenlinie"
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenandproc
+msgid "Generic and procedure name highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenonly
+msgid "Generic highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodenone
+msgid "Don't apply either highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodeproconly
+msgid "Procedure name highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnamedeclattrmode
+msgid "Generic highlight in procedure names (declaration)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameimplattrmode
+msgid "Generic highlight in procedure names (implementation)"
+msgstr ""
 
 #: lazarusidestrconsts.dlgpassoptslinker
 msgid "Pass options to linker with \"-k\", delimiter is space"
@@ -7476,14 +7524,6 @@ msgstr "Stringkonstante"
 msgid "Symbol"
 msgstr "Symbol"
 
-#: lazarusidestrconsts.liscoexecuteafter
-msgid "Execute after"
-msgstr "Nachher ausführen"
-
-#: lazarusidestrconsts.liscoexecutebefore
-msgid "Execute before"
-msgstr "Vorher ausführen"
-
 #: lazarusidestrconsts.liscollapse
 msgid "Collapse"
 msgstr ""
@@ -9378,21 +9418,9 @@ msgstr "Makros"
 msgid "Parameters:"
 msgstr "Parameter:"
 
-#: lazarusidestrconsts.lisedtexttoolpassoutputtomessages
-msgid "Pass output to Messages window"
-msgstr ""
-
 #: lazarusidestrconsts.lisedtexttoolprogramfilename
 msgid "Program Filename:"
 msgstr "Programmdateiname:"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputforfreepascalcompilermessages
-msgid "Scan output for FPC messages"
-msgstr "Ausgabe nach Free Pascal-Compilermeldungen durchsuchen"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputformakemessages
-msgid "Scan output for \"make\" messages"
-msgstr "Ausgabe nach Make-Meldungen durchsuchen"
 
 #: lazarusidestrconsts.lisedtexttooltitleandfilenamerequired
 msgid "Title and Filename required"

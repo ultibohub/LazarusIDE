@@ -8,6 +8,7 @@ unit CocoaThemes;
 
 {$mode objfpc}{$H+}
 {$modeswitch objectivec1}
+{$interfaces corba}
 
 interface
 
@@ -23,14 +24,20 @@ uses
   customdrawndrawers,
   // widgetset
   CocoaUtils, CocoaGDIObjects, CocoaConst;
-  
+
 type
+
+  { ICocoaThemeObserver }
+
+  ICocoaThemeObserver = Interface
+    procedure onThemeChanged;
+  end;
+
   { TCocoaThemeServices }
 
   TCocoaThemeServices = class(TThemeServices)
   private
   protected
-    callback     : NSObject;
     BtnCell      : NSButtonCell;
     hdrCell      : NSTableHeaderCell;
     function SetButtonCellType(btn: NSButtonCell; Details: TThemedElementDetails): Boolean;
@@ -75,14 +82,17 @@ type
 *)
     function GetDetailSizeForPPI(Details: TThemedElementDetails; PPI: Integer): TSize; override;
     function GetOption(AOption: TThemeOption): Integer; override;
+  private
+    _observers: TFPList;
+    procedure doDarwinThemeChangedNotify;
+  public
+    class procedure addObserver( const observer: ICocoaThemeObserver );
+    class procedure removeObserver( const observer: ICocoaThemeObserver );
+    class procedure darwinThemeChangedNotify;
+    class function isDark: Boolean;
   end;
 
 implementation
-
-type
-  TCocoaThemeCallback = objcclass(NSObject)
-    procedure notifySysColorsChanged(notification: NSNotification); message 'notifySysColorsChanged:';
-  end;
 
 type
   TCocoaContextAccess = class(TCocoaContext);
@@ -550,19 +560,14 @@ begin
   BtnCell := NSButtonCell.alloc.initTextCell(NSSTR_EMPTY);
   BezelToolBar := NSSmallSquareBezelStyle; // can be resized at any size
   BezelButton := NSSmallSquareBezelStyle;
-
-  callback := TCocoaThemeCallback.alloc.init;
-  NSNotificationCenter(NSNotificationCenter.defaultCenter).addObserver_selector_name_object(
-    callback, ObjCSelector('notifySysColorsChanged:'), NSSystemColorsDidChangeNotification, nil
-  );
+  _observers := TFPList.Create;
 end;
 
 destructor TCocoaThemeServices.Destroy;
 begin
-  NSNotificationCenter(NSNotificationCenter.defaultCenter).removeObserver(callback);
-  callback.release;
   if (HdrCell<>nil) then hdrCell.Release;
   if (BtnCell<>nil) then BtnCell.Release;
+  _observers.Free;
   inherited Destroy;
 end;
 
@@ -845,6 +850,18 @@ begin
   end;
 end;
 
+class procedure TCocoaThemeServices.addObserver(
+  const observer: ICocoaThemeObserver);
+begin
+  TCocoaThemeServices(ThemeServices)._observers.Add( observer );
+end;
+
+class procedure TCocoaThemeServices.removeObserver(
+  const observer: ICocoaThemeObserver);
+begin
+  TCocoaThemeServices(ThemeServices)._observers.Remove( observer );
+end;
+
 (*
 {------------------------------------------------------------------------------
   Method:  TCarbonThemeServices.InternalDrawParentBackground
@@ -994,13 +1011,35 @@ begin
   CGContextRestoreGState(dst.ctx.lclCGContext);
 end;
 
-{ TCocoaThemeCallback }
-
-procedure TCocoaThemeCallback.notifySysColorsChanged(notification: NSNotification);
+procedure TCocoaThemeServices.doDarwinThemeChangedNotify;
+var
+  i: Integer;
 begin
-  ThemeServices.UpdateThemes;
+  self.UpdateThemes;
   Graphics.UpdateHandleObjects;
-  ThemeServices.IntfDoOnThemeChange;
+  self.IntfDoOnThemeChange;
+
+  for i:= 0 to _observers.Count-1 do begin
+    ICocoaThemeObserver(_observers[i]).onThemeChanged;
+  end;
+end;
+
+class procedure TCocoaThemeServices.darwinThemeChangedNotify;
+begin
+  TCocoaThemeServices(ThemeServices).doDarwinThemeChangedNotify;
+end;
+
+class function TCocoaThemeServices.isDark: Boolean;
+var
+  appearanceName: NSString;
+begin
+  Result:= False;
+  if not NSApp.respondsToSelector( ObjCSelector('effectiveAppearance') ) then
+    Exit;
+  if not Assigned(NSApp.effectiveAppearance) then
+    Exit;
+  appearanceName:= NSApp.effectiveAppearance.Name;
+  Result:= appearanceName.isEqualToString(NSSTR_DARK_NAME) or appearanceName.isEqualToString(NSSTR_DARK_NAME_VIBRANT);
 end;
 
 end.

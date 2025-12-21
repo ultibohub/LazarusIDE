@@ -41,20 +41,23 @@ uses
   {$IFDEF IDE_MEM_CHECK}
   MemCheck,
   {$ENDIF}
-  Classes, SysUtils, contnrs,
+  Classes, SysUtils, Contnrs,
   // LCL
   LCLType, Controls, Forms, StdCtrls, Dialogs, LCLProc, ButtonPanel, EditBtn,
+  CheckLst,
   // LazUtils
   FileUtil, LazFileUtils, LazUTF8, LazConfigStorage,
   // Codetools
   FileProcs,
+  // BuilldIntf
+  IDEExternToolIntf, BuildStrConsts,
   // IdeIntf
-  IdeIntfStrConsts, IDEExternToolIntf, PropEdits, IDEDialogs, IDECommands,
-  IDEUtils, IDEMsgIntf,
+  IdeIntfStrConsts, PropEdits, IDEDialogs, IDECommands, IDEUtils,
+  IDEMsgIntf, MenuIntf, SrcEditorIntf, LazIDEIntf,
   // IdeConfig
   TransferMacros, EnvironmentOpts,
   // IDE
-  LazarusIDEStrConsts, KeyMapping, ExtTools;
+  LazarusIDEStrConsts, ExtTools, KeyMapping, EditorOptions;
 
 const
   ExternalToolOptionsVersion = 3;
@@ -123,6 +126,7 @@ type
   private
     fItems: TObjectList; // list of TExternalUserTool
     function GetItems(Index: integer): TExternalUserTool; inline;
+    procedure mnuExternalUserToolClick(Sender: TObject);
   public
     constructor Create; override;
     destructor Destroy; override;
@@ -137,6 +141,8 @@ type
     procedure Move(CurIndex, NewIndex: integer);
     // run
     function Run(Index: integer; {%H-}ShowAbort: boolean): TModalResult;
+    function DoRun(Index: integer; ShowAbort: Boolean): TModalResult;
+    procedure UpdateInMenu;
     // load/save
     function Load(Config: TConfigStorage): TModalResult;
     function Load(Config: TConfigStorage; const Path: string): TModalResult; override;
@@ -154,23 +160,22 @@ type
 
   TExternalToolOptionDlg = class(TForm)
     ButtonPanel: TButtonPanel;
+    ParsersCheckListBox: TCheckListBox;
+    ParsersLabel: TLabel;
+    ParserDefaultCheckbox: TCheckBox;
+    TitleEdit: TEdit;
+    TitleLabel: TLabel;
     FileNameEdit: TFileNameEdit;
     FilenameLabel: TLabel;
-    HideWindowCheckBox: TCheckBox;
     KeyGroupBox: TGroupBox;
     MacrosGroupbox: TGroupbox;
     MacrosInsertButton: TButton;
     MacrosListbox: TListbox;
     MemoParameters: TMemo;
-    OptionsGroupBox: TGroupBox;
     ParametersLabel: TLabel;
-    ScannersButton: TButton;
-    ScanOutputDefaultCheckBox: TCheckBox;
-    ScanOutputForFPCMessagesCheckBox: TCheckBox;
-    ScanOutputForMakeMessagesCheckBox: TCheckBox;
+    OptionsGroupBox: TGroupBox;
     ShowConsoleCheckBox: TCheckBox;
-    TitleEdit: TEdit;
-    TitleLabel: TLabel;
+    HideWindowCheckBox: TCheckBox;
     WorkingDirEdit: TDirectoryEdit;
     WorkingDirLabel: TLabel;
     procedure FormCreate(Sender: TObject);
@@ -179,54 +184,127 @@ type
     procedure MacrosListboxClick(Sender: TObject);
     procedure MacrosListboxDblClick(Sender: TObject);
     procedure OKButtonClick(Sender: TObject);
+    procedure ParserDefaultCheckboxChange(Sender: TObject);
     procedure ShowConsoleCheckBoxChange(Sender: TObject);
   private
     fAllKeys: TKeyCommandRelationList;
     fOptions: TExternalUserTool;
     fTransferMacros: TTransferMacroList;
-    fScanners: TStrings;
     fKeyBox: TShortCutGrabBox;
     procedure FillMacroList;
     function KeyConflicts(Key:word; Shift:TShiftState): TModalResult;
     procedure LoadFromOptions;
     procedure SaveToOptions;
     procedure UpdateButtons;
-    function ScannersToString(List: TStrings): string;
     procedure SetComboBox(AComboBox: TComboBox; const AValue: string);
     procedure SetOptions(TheOptions: TExternalUserTool);
     procedure SetTransferMacros(TransferMacroList: TTransferMacroList);
   public
     property Options: TExternalUserTool read fOptions write SetOptions;
-    property MacroList: TTransferMacroList
-           read fTransferMacros write SetTransferMacros;
+    property MacroList: TTransferMacroList read fTransferMacros write SetTransferMacros;
   end;
 
 
-function ShowExtToolOptionDlg(TransferMacroList: TTransferMacroList;
-  ExternalToolMenuItem: TExternalUserTool;
-  AllKeys: TKeyCommandRelationList):TModalResult;
+function ShowExtToolOptionDlg(ExternalToolMenuItem: TExternalUserTool): TModalResult;
 
 implementation
 
 {$R *.lfm}
 
-function ShowExtToolOptionDlg(TransferMacroList: TTransferMacroList;
-  ExternalToolMenuItem: TExternalUserTool;
-  AllKeys: TKeyCommandRelationList):TModalResult;
+function ShowExtToolOptionDlg(ExternalToolMenuItem: TExternalUserTool): TModalResult;
 var
   ExternalToolOptionDlg: TExternalToolOptionDlg;
 begin
   Result:=mrCancel;
   ExternalToolOptionDlg:=TExternalToolOptionDlg.Create(nil);
   try
-    ExternalToolOptionDlg.fAllKeys:=AllKeys;
+    ExternalToolOptionDlg.fAllKeys:=EditorOpts.KeyMap;
     ExternalToolOptionDlg.Options:=ExternalToolMenuItem;
-    ExternalToolOptionDlg.MacroList:=TransferMacroList;
+    ExternalToolOptionDlg.MacroList:=GlobalMacroList;
     Result:=ExternalToolOptionDlg.ShowModal;
     if Result=mrOk then
       ExternalToolMenuItem.Assign(ExternalToolOptionDlg.Options);
   finally
     ExternalToolOptionDlg.Free;
+  end;
+end;
+{
+function ScannersToString(List: TStrings): string;
+var
+  i: Integer;
+begin
+  if (List=nil) or (List.Count=0) then begin
+    Result:='none';
+  end else begin
+    Result:='';
+    for i:=0 to List.Count-1 do begin
+      if Result<>'' then
+        Result:=Result+',';
+      Result:=Result+List[i];
+      if length(Result)>20 then begin
+        Result:=copy(Result,1,20);
+        break;
+      end;
+    end;
+  end;
+end;
+}
+procedure ReadParsers(ToolOpts: TExternalUserTool; CbDef: TCheckBox; CLB: TCheckListBox);
+var
+  l: TFPList;
+  i, j: Integer;
+  ParserClass: TExtToolParserClass;
+begin
+  l:=TFPList.Create;
+  try
+    // add registered parsers
+    for i:=0 to ExternalToolList.ParserCount-1 do
+    begin
+      ParserClass:=ExternalToolList.Parsers[i];
+      j:=0;
+      while (j<l.Count)
+      and (TExtToolParserClass(l[j]).Priority>=ParserClass.Priority) do
+        inc(j);
+      l.Insert(j,ParserClass);
+    end;
+    CLB.Clear;
+    for i:=0 to l.Count-1 do
+    begin
+      ParserClass:=TExtToolParserClass(l[i]);
+      if ParserClass.GetParserName<>SubToolDefault then begin
+        j:=CLB.Items.Add(ParserClass.GetLocalizedParserName);
+        CLB.Checked[j]:=ToolOpts.HasParser[ParserClass.GetParserName];
+      end;
+    end;
+    CbDef.Checked:=ToolOpts.HasParser[SubToolDefault];
+  finally
+    l.Free;
+  end;
+end;
+
+procedure WriteParsers(ToolOpts: TExternalUserTool; CbDef: TCheckBox; CLB: TCheckListBox);
+var
+  sl: TStringList;
+  i, j: Integer;
+begin
+  sl:=TStringList.Create;
+  try
+    if CbDef.Checked then
+      sl.Add(SubToolDefault);
+    for i:=0 to CLB.Items.Count-1 do
+      if CLB.Checked[i] then begin
+        j:=ExternalToolList.ParserCount-1;
+        while (j>=0)
+        and (CLB.Items[i]<>ExternalToolList.Parsers[j].GetLocalizedParserName) do
+          dec(j);
+        Assert(j>=0, 'j<0'); //if j>=0 then
+        sl.Add(ExternalToolList.Parsers[j].GetParserName);
+        //else
+        //  sl.Add(CLB.Items[i]); // not registered parser
+      end;
+    ToolOpts.Parsers:=sl;
+  finally
+    sl.Free;
   end;
 end;
 
@@ -425,18 +503,7 @@ begin
   Config.GetValue('EnvironmentOverrides/',FEnvironmentOverrides);
   ShowConsole:=Config.GetValue('ShowConsole/Value',false);
   HideWindow:=Config.GetValue('HideWindow/Value',true);
-{
-  if CfgVersion<3 then
-  begin
-    if Config.GetValue('ScanOutputForFPCMessages/Value',false) then
-      FParsers.Add(SubToolFPC);
-    if Config.GetValue('ScanOutputForMakeMessages/Value',false) then
-      FParsers.Add(SubToolMake);
-    if Config.GetValue('ShowAllOutput/Value',false) then
-      FParsers.Add(SubToolDefault);
-  end else  }
-    Config.GetValue('Scanners/',FParsers);
-
+  Config.GetValue('Scanners/',FParsers);
   Modified:=false;
   Result:=mrOk;
 end;
@@ -569,6 +636,13 @@ begin
   end;
 end;
 
+function TExternalUserTools.DoRun(Index: integer; ShowAbort: Boolean): TModalResult;
+begin
+  SourceEditorManagerIntf.ClearErrorLines;
+  Result:=Run(Index,ShowAbort);
+  LazarusIDE.DoCheckFilesOnDisk;
+end;
+
 function TExternalUserTools.Load(Config: TConfigStorage): TModalResult;
 var
   i: integer;
@@ -677,6 +751,53 @@ begin
   end;
 end;
 
+procedure TExternalUserTools.UpdateInMenu;
+// Creates a TMenuItem for each custom external tool.
+var
+  ToolCount: integer;
+  Section: TIDEMenuSection;
+  CurMenuItem: TIDEMenuItem;
+  i: Integer;
+  ExtTool: TExternalUserTool;
+begin
+  ToolCount:=Count;
+  Section:=itmCustomTools;
+  //Section.BeginUpdate;
+  try
+    // add enough menuitems
+    while Section.Count-1<ToolCount do
+      RegisterIDEMenuCommand(Section.GetPath,
+                          'itmToolCustomExt'+IntToStr(Section.Count),'');
+    // delete unneeded menuitems
+    while Section.Count-1>ToolCount do
+      Section[Section.Count-1].Free;
+
+    // set caption and command
+    for i:=0 to ToolCount-1 do begin
+      CurMenuItem:=itmCustomTools[i+1]; // Note: the first menu item is the "Configure"
+      ExtTool:=Items[i];
+      CurMenuItem.Caption:=ExtTool.Title;
+      if CurMenuItem is TIDEMenuCommand then
+        TIDEMenuCommand(CurMenuItem).Command:=
+          EditorOpts.KeyMap.FindIDECommand(ecExtToolFirst+i);
+      CurMenuItem.OnClick:=@mnuExternalUserToolClick;
+    end;
+  finally
+    //Section.EndUpdate;
+  end;
+end;
+
+procedure TExternalUserTools.mnuExternalUserToolClick(Sender: TObject);
+// Handler for clicking on a menuitem for a custom external tool.
+var
+  Index: integer;
+begin
+  if not (Sender is TIDEMenuItem) then exit;
+  Index:=itmCustomTools.IndexOf(TIDEMenuItem(Sender))-1;
+  if (Index<0) or (Index>=Count) then exit;
+  DoRun(Index,false);
+end;
+
 { TExternalToolOptionDlg }
 
 procedure TExternalToolOptionDlg.LoadFromOptions;
@@ -687,12 +808,10 @@ begin
   WorkingDirEdit.Text:=fOptions.WorkingDirectory;
   fKeyBox.Key:=fOptions.Key;
   fKeyBox.ShiftState:=fOptions.Shift;
-  ScanOutputDefaultCheckBox.Checked:=fOptions.HasParser[SubToolDefault];
-  ScanOutputForFPCMessagesCheckBox.Checked:=fOptions.HasParser[SubToolFPC];
-  ScanOutputForMakeMessagesCheckBox.Checked:=fOptions.HasParser[SubToolMake];
   ShowConsoleCheckBox.Checked:=FOptions.ShowConsole;
   HideWindowCheckBox.Checked:=FOptions.HideWindow;
-  fScanners.Assign(fOptions.Parsers);
+  ParserDefaultCheckbox.Checked:=fOptions.HasParser[SubToolDefault];
+  ReadParsers(fOptions, ParserDefaultCheckbox, ParsersCheckListBox);
   UpdateButtons;
 end;
 
@@ -706,43 +825,20 @@ begin
   fOptions.Shift:=fKeyBox.ShiftState;
   FOptions.ShowConsole:=ShowConsoleCheckBox.Checked;
   FOptions.HideWindow:=HideWindowCheckBox.Checked;
-  fOptions.HasParser[SubToolDefault]:=ScanOutputDefaultCheckBox.Checked;
-  fOptions.HasParser[SubToolFPC]:=ScanOutputForFPCMessagesCheckBox.Checked;
-  fOptions.HasParser[SubToolMake]:=ScanOutputForMakeMessagesCheckBox.Checked;
+  fOptions.HasParser[SubToolDefault]:=ParserDefaultCheckbox.Checked;
+  WriteParsers(fOptions, ParserDefaultCheckbox, ParsersCheckListBox);
 end;
 
 procedure TExternalToolOptionDlg.UpdateButtons;
 begin
-  ScannersButton.Visible:=false;
   {$IFDEF Windows}
   HideWindowCheckBox.Visible:=true;
   ShowConsoleCheckBox.Visible:=true;
   {$ENDIF}
 end;
 
-function TExternalToolOptionDlg.ScannersToString(List: TStrings): string;
-var
-  i: Integer;
-begin
-  if (List=nil) or (List.Count=0) then begin
-    Result:='none';
-  end else begin
-    Result:='';
-    for i:=0 to List.Count-1 do begin
-      if Result<>'' then
-        Result:=Result+',';
-      Result:=Result+List[i];
-      if length(Result)>20 then begin
-        Result:=copy(Result,1,20);
-        break;
-      end;
-    end;
-  end;
-end;
-
 procedure TExternalToolOptionDlg.FormCreate(Sender: TObject);
 begin
-  fScanners:=TStringList.Create;
   Caption:=lisEdtExtToolEditTool;
   TitleLabel.Caption:=dlgPOTitle;
   FilenameLabel.Caption:=lisEdtExtToolProgramfilename;
@@ -755,35 +851,21 @@ begin
   ParametersLabel.Caption:=lisEdtExtToolParameters;
   WorkingDirLabel.Caption:=lisEdtExtToolWorkingDirectory;
   OptionsGroupBox.Caption:=RemoveAmpersands(lisLazBuildOptions);
-
-  with ScanOutputDefaultCheckBox do
-    Caption:=lisEdtExtToolPassOutputToMessages;
-  with ScanOutputForFPCMessagesCheckBox do
-    Caption:=lisEdtExtToolScanOutputForFreePascalCompilerMessages;
-  with ScanOutputForMakeMessagesCheckBox do
-    Caption:=lisEdtExtToolScanOutputForMakeMessages;
+  ParserDefaultCheckbox.Caption:=lisShowAllOutputLines;
+  ParsersLabel.Caption:=lisParsers;
   ShowConsoleCheckBox.Caption:=lisShowConsole;
   ShowConsoleCheckBox.Hint:=lisOnlyAvailableOnWindowsRunToolInANewConsole;
   HideWindowCheckBox.Caption:=lisHideWindow;
   HideWindowCheckBox.Hint:=lisOnlyAvailableOnWindowsRunTheToolHidden;
-
-  with KeyGroupBox do
-    Caption:=lisEdtExtToolKey;
-
+  KeyGroupBox.Caption:=lisEdtExtToolKey;
   fKeyBox:=TShortCutGrabBox.Create(Self);
   with fKeyBox do begin
     Name:='fKeyBox';
     Align:=alClient;
-    BorderSpacing.Around:=6;
     Parent:=KeyGroupBox;
   end;
-
-  with MacrosGroupbox do
-    Caption:=lisEdtExtToolMacros;
-
-  with MacrosInsertButton do
-    Caption:=lisAdd;
-    
+  MacrosGroupbox.Caption:=lisEdtExtToolMacros;
+  MacrosInsertButton.Caption:=lisAdd;
   ButtonPanel.OKButton.Caption:=lisBtnOk;
   ButtonPanel.HelpButton.Caption:=lisMenuHelp;
   ButtonPanel.CancelButton.Caption:=lisCancel;
@@ -794,7 +876,6 @@ end;
 procedure TExternalToolOptionDlg.FormDestroy(Sender: TObject);
 begin
   FreeAndNil(fOptions);
-  FreeAndNil(fScanners);
 end;
 
 procedure TExternalToolOptionDlg.SetOptions(TheOptions: TExternalUserTool);
@@ -804,8 +885,7 @@ begin
   LoadFromOptions;
 end;
 
-procedure TExternalToolOptionDlg.SetTransferMacros(
-  TransferMacroList: TTransferMacroList);
+procedure TExternalToolOptionDlg.SetTransferMacros(TransferMacroList: TTransferMacroList);
 begin
   if fTransferMacros=TransferMacroList then exit;
   fTransferMacros:=TransferMacroList;
@@ -820,13 +900,12 @@ begin
   MacrosListbox.Items.Clear;
   if fTransferMacros<>nil then begin
     for i:=0 to fTransferMacros.Count-1 do begin
-      if fTransferMacros[i].MacroFunction=nil then begin
+      if fTransferMacros[i].MacroFunction=nil then
         MacrosListbox.Items.Add('$('+fTransferMacros[i].Name+') - '
-                    +fTransferMacros[i].Description);
-      end else begin
+                                    +fTransferMacros[i].Description)
+      else
         MacrosListbox.Items.Add('$'+fTransferMacros[i].Name+'() - '
-                    +fTransferMacros[i].Description);
-      end;
+                                   +fTransferMacros[i].Description);
     end;
   end;
   MacrosListbox.Items.EndUpdate;
@@ -948,6 +1027,11 @@ begin
                   mtError, [mbCancel]);
     ModalResult:=mrNone;
   end;
+end;
+
+procedure TExternalToolOptionDlg.ParserDefaultCheckboxChange(Sender: TObject);
+begin
+  ParsersCheckListBox.Enabled:=not (Sender as TCheckBox).Checked;
 end;
 
 procedure TExternalToolOptionDlg.ShowConsoleCheckBoxChange(Sender: TObject);

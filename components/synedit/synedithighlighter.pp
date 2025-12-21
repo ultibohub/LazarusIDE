@@ -45,64 +45,10 @@ type
   TSynHighlighterRangeList = TLazHighlighterLineRangeList deprecated 'use TLazHighlighterLineRangeList or TLazHighlighterLineRangeShiftList / to be removed in 5.99';
 
   TLazSynCustomTextAttributes = TLazEditTextAttribute deprecated 'use TLazEditTextAttribute // to be removed in 5.99';
-  TSynHighlighterAttributes = class(TLazEditTextAttribute)
-  published
-    property Foreground;
-    property Background;
-    property FrameColor;
-
-    property ForePriority;
-    property BackPriority;
-    property FramePriority;
-
-    property FrameStyle;
-    property FrameEdges;
-
-    property Style;
-    property BoldPriority;
-    property ItalicPriority;
-    property UnderlinePriority;
-    property StrikeOutPriority;
-
-    property OnChange;
-  end;
-  TSynHighlighterAttributesModifier = class(TLazEditTextAttributeModifier)
-  published
-    property Foreground;
-    property Background;
-    property FrameColor;
-
-    property ForePriority;
-    property BackPriority;
-    property FramePriority;
-
-    property FrameStyle;
-    property FrameEdges;
-
-    property Style;
-    property BoldPriority;
-    property ItalicPriority;
-    property UnderlinePriority;
-    property StrikeOutPriority;
-
-    property OnChange;
-  published
-    property BackAlpha;
-    property ForeAlpha;
-    property FrameAlpha;
-
-    property StyleMask;
-  end;
-
-  TSynHighlighterAttributes_Eol = class(TSynHighlighterAttributes)
-  published
-    property ExtendPastEol;
-  end;
-
-  TSynHighlighterAttributesModifier_Eol = class(TSynHighlighterAttributesModifier)
-  published
-    property ExtendPastEol;
-  end;
+  TSynHighlighterAttributes = TLazEditHighlighterAttributes;
+  TSynHighlighterAttributesModifier = TLazEditHighlighterAttributesModifier;
+  TSynHighlighterAttributes_Eol = TLazEditHighlighterAttributes_Eol;
+  TSynHighlighterAttributesModifier_Eol = TLazEditHighlighterAttributesModifier_Eol;
 
   { TSynHighlighterAttributesHelper }
 
@@ -192,17 +138,6 @@ type
     property OnChange: TNotifyEvent read fOnChange write fOnChange;
   end;
 
-  { TSynEditLinesList }
-
-  TSynEditLinesList=class(TFPList)
-  private
-    function GetSynString(Index: Integer): TSynEditStringsBase;
-    procedure PutSynStrings(Index: Integer; const AValue: TSynEditStringsBase);
-  public
-    property Items[Index: Integer]: TSynEditStringsBase
-             read GetSynString write PutSynStrings; default;
-  end;
-
   { TSynCustomHighlighter }
 
   TSynCustomHighlighter = class(TLazEditCustomHighlighter)
@@ -210,9 +145,6 @@ type
     fAttributes: TObjectList;
     fAttrChangeHooks: TMethodList;
     FCapabilities: TSynHighlighterCapabilities;
-    FKnownLines: TSynEditLinesList;
-    FCurrentLines: TSynEditStringsBase;
-    FCurrentRanges: TLazHighlighterLineRangeList;
     FDrawDividerLevel: Integer;
     FLineIndex: Integer;
     FLineText: String;
@@ -220,11 +152,11 @@ type
     fEnabled: Boolean;
     fWordBreakChars: TSynIdentChars;
     FIsScanning: Boolean;
-    function GetKnownRanges(Index: Integer): TLazHighlighterLineRangeList;
+    function GetKnownLines: TLazEditHighlighterAttachedLines; deprecated;
     procedure SetDrawDividerLevel(const AValue: Integer); deprecated;
     procedure SetEnabled(const Value: boolean);                                 //DDH 2001-10-23
   protected
-    FAttributeChangeNeedScan: Boolean;
+    FAttributeChangeNeedScan: Boolean deprecated 'use SendRescanNeededNotification // to be removed in 5.99';
     fDefaultFilter: string;
     fDefaultFilterInitialValue: string;
     fUpdateChange: boolean;                                                     //mh 2001-09-13
@@ -245,27 +177,26 @@ type
     procedure SetAttributesOnChange(AEvent: TNotifyEvent);
     procedure SetDefaultFilter(Value: string); virtual;
     procedure SetSampleSource(Value: string); virtual;
-    function GetRangeIdentifier: Pointer; virtual;
-    function CreateRangeList(ALines: TSynEditStringsBase): TLazHighlighterLineRangeList; virtual;
-    procedure AfterAttachedToRangeList(ARangeList: TLazHighlighterLineRangeList); virtual;
-    procedure BeforeDetachedFromRangeList(ARangeList: TLazHighlighterLineRangeList); virtual;
+    procedure AfterAttachedToRangeList(ARangeList: TLazHighlighterLineRangeList); virtual; deprecated 'use DoAttachedToLines // to be removed in 5.99';
+    procedure BeforeDetachedFromRangeList(ARangeList: TLazHighlighterLineRangeList); virtual; deprecated 'use DoDetachingFromLines // to be removed in 5.99';
     function UpdateRangeInfoAtLine(Index: Integer): Boolean; virtual; // Returns true if range changed
     // code fold - only valid if hcCodeFolding in Capabilities
-    procedure SetCurrentLines(const AValue: TSynEditStringsBase); virtual; // todo remove virtual
-    procedure DoCurrentLinesChanged; virtual;
-    property CurrentRanges: TLazHighlighterLineRangeList read FCurrentRanges;
     function GetDrawDivider(Index: integer): TSynDividerDrawConfigSetting; virtual;
     function GetDividerDrawConfig(Index: Integer): TSynDividerDrawConfig; virtual;
     function GetDividerDrawConfigCount: Integer; virtual;
     function PerformScan(StartIndex, EndIndex: Integer; ForceEndIndex: Boolean = False): Integer; virtual;
     property IsScanning: Boolean read FIsScanning;
-    property KnownRanges[Index: Integer]: TLazHighlighterLineRangeList read GetKnownRanges;
-    property KnownLines: TSynEditLinesList read FKnownLines;
+    property KnownLines: TLazEditHighlighterAttachedLines read GetKnownLines; deprecated 'use AttachedLines // to be removed in 5.99';
     property CurrentLineText: string read FLineText;
+    procedure SendRescanNeededNotification; reintroduce; // deprecated 'to be removed in 5.99' // only needed to force a call to fAttrChangeHooks
+    procedure SendAttributeChangeNotification; reintroduce; // deprecated 'to be removed in 5.99'
     procedure DoDefHighlightChanged; virtual;
+    procedure DoEndUpdate; override;
+    procedure DoAttachedToLines(Lines: TLazEditStringsBase; ARangeList: TLazHighlighterLineRangeList); override;
+    procedure DoDetachingFromLines(Lines: TLazEditStringsBase; ARangeList: TLazHighlighterLineRangeList); override;
   public
     procedure DefHighlightChange(Sender: TObject);
-    property  AttributeChangeNeedScan: Boolean read FAttributeChangeNeedScan;
+    property  AttributeChangeNeedScan: Boolean read FAttributeChangeNeedScan; deprecated 'use SendRescanNeededNotification // to be removed in 5.99';
     class function GetCapabilities: TSynHighlighterCapabilities; virtual;
     class function GetLanguageName: string; virtual;
   public
@@ -276,10 +207,6 @@ type
     function AddSpecialAttribute(const aCaption: PString;
                      const aStoredName: String = ''): TLazEditTextAttribute;
     procedure Assign(Source: TPersistent); override;
-    procedure BeginUpdate;
-    procedure EndUpdate;
-    procedure AttachToLines(Lines: TSynEditStringsBase);
-    procedure DetachFromLines(Lines: TSynEditStringsBase);
   public
     function GetEol: Boolean; virtual; abstract;
     function GetRange: Pointer; virtual;
@@ -297,8 +224,6 @@ type
       read GetDrawDivider;
     property DrawDividerLevel: Integer read FDrawDividerLevel write SetDrawDividerLevel; deprecated;
   public
-    property CurrentLines: TSynEditStringsBase read FCurrentLines write SetCurrentLines;
-
     procedure StartAtLineIndex(LineNumber:Integer); virtual; // 0 based
     procedure ContinueNextLine; // To be called at EOL; does not read the range
 
@@ -324,8 +249,8 @@ type
     function SaveToRegistry(RootKey: HKEY; Key: string): boolean; virtual;
     function LoadFromFile(AFileName: String): boolean;                          //DDH 10/16/01
     function SaveToFile(AFileName: String): boolean;                            //DDH 10/16/01
-    procedure HookAttrChangeEvent(ANotifyEvent: TNotifyEvent);
-    procedure UnhookAttrChangeEvent(ANotifyEvent: TNotifyEvent);
+    procedure HookAttrChangeEvent(ANotifyEvent: TNotifyEvent);  deprecated 'use senrHighlightRescanNeeded // to be removed in 5.99';
+    procedure UnhookAttrChangeEvent(ANotifyEvent: TNotifyEvent);  deprecated 'use senrHighlightRescanNeeded // to be removed in 5.99';
     property IdentChars: TSynIdentChars read GetIdentChars;
     property WordBreakChars: TSynIdentChars read fWordBreakChars write SetWordBreakChars;
     property LanguageName: string read GetInstanceLanguageName;
@@ -761,24 +686,11 @@ begin
   if Value and $8 <> 0 then StyleMask:= StyleMask + [fsStrikeout];
 end;
 
-{ TSynEditLinesList }
-
-function TSynEditLinesList.GetSynString(Index: Integer): TSynEditStringsBase;
-begin
-  Result := TSynEditStringsBase(inherited Items[Index]);
-end;
-
-procedure TSynEditLinesList.PutSynStrings(Index: Integer; const AValue: TSynEditStringsBase);
-begin
-  inherited Items[Index] := AValue;
-end;
-
 { TSynCustomHighlighter }
 
 constructor TSynCustomHighlighter.Create(AOwner: TComponent);
 begin
   FCapabilities:=GetCapabilities;
-  FKnownLines := TSynEditLinesList.Create;
   inherited Create(AOwner);
   fWordBreakChars := TSynWordBreakChars;
   fAttributes := TObjectList.Create(False);
@@ -793,23 +705,6 @@ begin
   fAttributes.Free;
   fAttrChangeHooks.Free;
   inherited Destroy;
-  FreeAndNil(FKnownLines);
-end;
-
-procedure TSynCustomHighlighter.BeginUpdate;
-begin
-  Inc(fUpdateCount);
-end;
-
-procedure TSynCustomHighlighter.EndUpdate;
-begin
-  if fUpdateCount > 0 then begin
-    Dec(fUpdateCount);
-    if (fUpdateCount = 0) and fUpdateChange then begin
-      fUpdateChange := FALSE;
-      DefHighlightChange(Self);
-    end;
-  end;
 end;
 
 procedure TSynCustomHighlighter.FreeHighlighterAttributes;
@@ -965,9 +860,11 @@ end;
 
 procedure TSynCustomHighlighter.DefHighlightChange(Sender: TObject);
 begin
-  if fUpdateCount > 0 then
+  if IsUpdating then
     fUpdateChange := TRUE
   else begin
+    inherited SendAttributeChangeNotification;
+    if FAttributeChangeNeedScan then inherited SendRescanNeededNotification;
     fAttrChangeHooks.CallNotifyEvents(self);
     FAttributeChangeNeedScan := False;
     DoDefHighlightChanged;
@@ -1084,7 +981,7 @@ begin
   end
   else begin
 //    assert((CurrentRanges.NeedsReScanStartIndex < 0) or ({IsScanning and} (LineNumber <= CurrentRanges.NeedsReScanStartIndex)), 'TSynCustomHighlighter.StartAtLineIndex: (CurrentRanges.NeedsReScanStartIndex < 0) or (IsScanning and (LineNumber <= CurrentRanges.NeedsReScanStartIndex))');
-    SetRange(FCurrentRanges[LineNumber - 1]);
+    SetRange(CurrentRanges[LineNumber - 1]);
   end;
   SetLine(CurrentLines[LineNumber], LineNumber);
 end;
@@ -1130,16 +1027,6 @@ procedure TSynCustomHighlighter.SetSampleSource(Value: string);
 begin
 end;
 
-function TSynCustomHighlighter.GetRangeIdentifier: Pointer;
-begin
-  Result := self;
-end;
-
-function TSynCustomHighlighter.CreateRangeList(ALines: TSynEditStringsBase): TLazHighlighterLineRangeList;
-begin
-  Result := TLazHighlighterLineRangeShiftList.Create;
-end;
-
 procedure TSynCustomHighlighter.AfterAttachedToRangeList(ARangeList: TLazHighlighterLineRangeList);
 begin  // empty base
 end;
@@ -1158,9 +1045,9 @@ var
   r: Pointer;
 begin
   r := GetRange;
-  Result := r <> FCurrentRanges[Index];
+  Result := r <> CurrentRanges[Index];
   if Result then
-    FCurrentRanges[Index] := r;
+    CurrentRanges[Index] := r;
 end;
 
 procedure TSynCustomHighlighter.ScanRanges;
@@ -1251,9 +1138,45 @@ begin
   end;
 end;
 
+procedure TSynCustomHighlighter.SendRescanNeededNotification;
+begin
+  //inherited SendRescanNeededNotification;
+  FAttributeChangeNeedScan := True;
+  DefHighlightChange(nil); // will call SendRescanNeededNotification;
+end;
+
+procedure TSynCustomHighlighter.SendAttributeChangeNotification;
+begin
+  //inherited SendAttributeChangeNotification;
+  DefHighlightChange(nil); // will call SendAttributeChangeNotification;
+end;
+
 procedure TSynCustomHighlighter.DoDefHighlightChanged;
 begin
   //
+end;
+
+procedure TSynCustomHighlighter.DoEndUpdate;
+begin
+  inherited DoEndUpdate;
+  if fUpdateChange then begin
+    fUpdateChange := FALSE;
+    DefHighlightChange(Self);
+  end;
+end;
+
+procedure TSynCustomHighlighter.DoAttachedToLines(Lines: TLazEditStringsBase;
+  ARangeList: TLazHighlighterLineRangeList);
+begin
+  inherited DoAttachedToLines(Lines, ARangeList);
+  AfterAttachedToRangeList(ARangeList); // RefCount already increased
+end;
+
+procedure TSynCustomHighlighter.DoDetachingFromLines(Lines: TLazEditStringsBase;
+  ARangeList: TLazHighlighterLineRangeList);
+begin
+  BeforeDetachedFromRangeList(ARangeList); // RefCount already decreased
+  inherited DoDetachingFromLines(Lines, ARangeList);
 end;
 
 procedure TSynCustomHighlighter.ScanAllRanges;
@@ -1274,58 +1197,6 @@ begin
   end;
 end;
 
-procedure TSynCustomHighlighter.SetCurrentLines(const AValue: TSynEditStringsBase);
-begin
-  if AValue = FCurrentLines then
-    exit;
-  FCurrentLines := AValue;
-  if FCurrentLines <> nil
-  then FCurrentRanges := TLazHighlighterLineRangeList(AValue.Ranges[GetRangeIdentifier])
-  else FCurrentRanges := nil;
-  DoCurrentLinesChanged;
-end;
-
-procedure TSynCustomHighlighter.DoCurrentLinesChanged;
-begin
-  //
-end;
-
-procedure TSynCustomHighlighter.AttachToLines(Lines: TSynEditStringsBase);
-var
-  r: TLazHighlighterLineRangeList;
-begin
-  r := TLazHighlighterLineRangeList(Lines.Ranges[GetRangeIdentifier]);
-  if assigned(r) then
-    r.IncRefCount
-  else begin
-    FKnownLines.Add(Lines);
-    r := CreateRangeList(Lines);
-    Lines.Ranges[GetRangeIdentifier] := r;
-    r.InvalidateAll;
-  end;
-  AfterAttachedToRangeList(r); // RefCount already increased
-  FCurrentLines := nil;
-end;
-
-procedure TSynCustomHighlighter.DetachFromLines(Lines: TSynEditStringsBase);
-var
-  r: TLazHighlighterLineRangeList;
-begin
-  r := TLazHighlighterLineRangeList(Lines.Ranges[GetRangeIdentifier]);
-  if not assigned(r) then exit;
-  r.DecRefCount;
-  BeforeDetachedFromRangeList(r); // RefCount already decreased
-  if r.RefCount = 0 then begin
-    Lines.Ranges[GetRangeIdentifier] := nil;
-    if FCurrentRanges = r then begin
-      FCurrentRanges := nil;
-      FCurrentLines := nil;
-    end;
-    r.Free;
-  end;
-  FKnownLines.Remove(Lines);
-end;
-
 procedure TSynCustomHighlighter.SetDrawDividerLevel(const AValue: Integer);
 begin
   if FDrawDividerLevel = AValue then exit;
@@ -1333,9 +1204,9 @@ begin
   //DefHighlightChange(Self);
 end;
 
-function TSynCustomHighlighter.GetKnownRanges(Index: Integer): TLazHighlighterLineRangeList;
+function TSynCustomHighlighter.GetKnownLines: TLazEditHighlighterAttachedLines;
 begin
-  Result := TLazHighlighterLineRangeList(KnownLines[Index].Ranges[GetRangeIdentifier]);
+  Result := AttachedLines;
 end;
 
 function TSynCustomHighlighter.GetInstanceLanguageName: string;

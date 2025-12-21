@@ -138,6 +138,10 @@ msgstr "Ugrás a kidolgozáshoz"
 msgid "Jumps to implementation/other block end"
 msgstr "Ugrás a kidolgozáshoz/blokk másik végéhez"
 
+#: lazarusidestrconsts.dlfmousesimplebuttonexternallink
+msgid "Open external (HTTP, file, ...) link"
+msgstr ""
+
 #: lazarusidestrconsts.dlfmousesimplebuttonhistback
 msgid "History back"
 msgstr "Előzmények közt vissza"
@@ -219,6 +223,10 @@ msgstr "Aktuális szó kijelölése"
 #: lazarusidestrconsts.dlfmousesimplebuttonzoomreset
 msgid "Reset zoom"
 msgstr "Nagyítás alapállapotra"
+
+#: lazarusidestrconsts.dlfmousesimpledecljumpinclextlink
+msgid "Jump to declaration also opens external links (HTTP, file, ...)"
+msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplediff
 msgid "This page does not represent your current settings. See advanced page. Use this page to reset any advanced changes"
@@ -580,6 +588,10 @@ msgstr ""
 msgid "Procedure Header"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_specializegenericsection
+msgid "Specialize/Generic Blocks"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr ""
@@ -720,6 +732,10 @@ msgstr "Behúzás"
 #: lazarusidestrconsts.dlgaddhiattrwrapsubline
 msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
 msgid "Sub-line"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiexternallink
+msgid "External (HTTP) link"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
@@ -3233,6 +3249,10 @@ msgctxt "lazarusidestrconsts.dlgmouseoptnodeall"
 msgid "All"
 msgstr "Mind"
 
+#: lazarusidestrconsts.dlgmouseoptnodeextlink
+msgid "External link"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmouseoptnodegutter
 msgctxt "lazarusidestrconsts.dlgmouseoptnodegutter"
 msgid "Gutter"
@@ -3673,6 +3693,10 @@ msgstr ""
 msgid "Highlight flow control statements (break, continue, exit) as keywords"
 msgstr "Vezérlő állományok kiemelése mint a kulcsszavaké"
 
+#: lazarusidestrconsts.dlgpasgenericparamattrmode
+msgid "Extend of initial-value-highlight in Generic/Specialize"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpaskeywordsmarkup
 msgid "Markup (on caret)"
 msgstr "Kiemelés (a beszúrási jelnél)"
@@ -3684,6 +3708,30 @@ msgstr "Összetartozó kulcsszavak"
 #: lazarusidestrconsts.dlgpaskeywordsoutline
 msgid "Outline"
 msgstr "Körvonal"
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenandproc
+msgid "Generic and procedure name highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenonly
+msgid "Generic highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodenone
+msgid "Don't apply either highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodeproconly
+msgid "Procedure name highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnamedeclattrmode
+msgid "Generic highlight in procedure names (declaration)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameimplattrmode
+msgid "Generic highlight in procedure names (implementation)"
+msgstr ""
 
 #: lazarusidestrconsts.dlgpassoptslinker
 msgid "Pass options to linker with \"-k\", delimiter is space"
@@ -7542,14 +7590,6 @@ msgstr "Szöveg konstans"
 msgid "Symbol"
 msgstr "Szimbólum"
 
-#: lazarusidestrconsts.liscoexecuteafter
-msgid "Execute after"
-msgstr "Utólag végrehajtandó"
-
-#: lazarusidestrconsts.liscoexecutebefore
-msgid "Execute before"
-msgstr "Előzőleg végrehajtandó"
-
 #: lazarusidestrconsts.liscollapse
 msgid "Collapse"
 msgstr ""
@@ -9455,21 +9495,9 @@ msgstr "Makrók"
 msgid "Parameters:"
 msgstr "Paraméterek:"
 
-#: lazarusidestrconsts.lisedtexttoolpassoutputtomessages
-msgid "Pass output to Messages window"
-msgstr ""
-
 #: lazarusidestrconsts.lisedtexttoolprogramfilename
 msgid "Program Filename:"
 msgstr "Program fájlnév:"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputforfreepascalcompilermessages
-msgid "Scan output for FPC messages"
-msgstr "FPC üzenetek keresése a kimenetben"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputformakemessages
-msgid "Scan output for \"make\" messages"
-msgstr "\"make\" üzenetek keresése a kimenetben"
 
 #: lazarusidestrconsts.lisedtexttooltitleandfilenamerequired
 msgid "Title and Filename required"

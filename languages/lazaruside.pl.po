@@ -139,6 +139,10 @@ msgstr "Przekok do implementacji"
 msgid "Jumps to implementation/other block end"
 msgstr "Przeskok do implementacji/drugiego końca bloku"
 
+#: lazarusidestrconsts.dlfmousesimplebuttonexternallink
+msgid "Open external (HTTP, file, ...) link"
+msgstr ""
+
 #: lazarusidestrconsts.dlfmousesimplebuttonhistback
 msgid "History back"
 msgstr "Wstecz w historii"
@@ -221,6 +225,10 @@ msgstr "Wybierz bieżące słowo"
 #: lazarusidestrconsts.dlfmousesimplebuttonzoomreset
 msgid "Reset zoom"
 msgstr "Przywróć powiększenie"
+
+#: lazarusidestrconsts.dlfmousesimpledecljumpinclextlink
+msgid "Jump to declaration also opens external links (HTTP, file, ...)"
+msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplediff
 msgid "This page does not represent your current settings. See advanced page. Use this page to reset any advanced changes"
@@ -590,6 +598,10 @@ msgstr ""
 msgid "Procedure Header"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_specializegenericsection
+msgid "Specialize/Generic Blocks"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr ""
@@ -736,6 +748,10 @@ msgstr "Wcięcia"
 #: lazarusidestrconsts.dlgaddhiattrwrapsubline
 msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
 msgid "Sub-line"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiexternallink
+msgid "External (HTTP) link"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
@@ -3312,6 +3328,10 @@ msgctxt "lazarusidestrconsts.dlgmouseoptnodeall"
 msgid "All"
 msgstr "Wszystko"
 
+#: lazarusidestrconsts.dlgmouseoptnodeextlink
+msgid "External link"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmouseoptnodegutter
 msgctxt "lazarusidestrconsts.dlgmouseoptnodegutter"
 msgid "Gutter"
@@ -3759,6 +3779,10 @@ msgstr ""
 msgid "Highlight flow control statements (break, continue, exit) as keywords"
 msgstr ""
 
+#: lazarusidestrconsts.dlgpasgenericparamattrmode
+msgid "Extend of initial-value-highlight in Generic/Specialize"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpaskeywordsmarkup
 #, fuzzy
 msgid "Markup (on caret)"
@@ -3770,6 +3794,30 @@ msgstr "Odpowiednie słowa kluczowe"
 
 #: lazarusidestrconsts.dlgpaskeywordsoutline
 msgid "Outline"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenandproc
+msgid "Generic and procedure name highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenonly
+msgid "Generic highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodenone
+msgid "Don't apply either highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodeproconly
+msgid "Procedure name highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnamedeclattrmode
+msgid "Generic highlight in procedure names (declaration)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameimplattrmode
+msgid "Generic highlight in procedure names (implementation)"
 msgstr ""
 
 #: lazarusidestrconsts.dlgpassoptslinker
@@ -7648,14 +7696,6 @@ msgstr "Stała łańcuchowa"
 msgid "Symbol"
 msgstr "Symbol"
 
-#: lazarusidestrconsts.liscoexecuteafter
-msgid "Execute after"
-msgstr "Wykonaj po"
-
-#: lazarusidestrconsts.liscoexecutebefore
-msgid "Execute before"
-msgstr "Wykonaj przed"
-
 #: lazarusidestrconsts.liscollapse
 msgid "Collapse"
 msgstr ""
@@ -9573,21 +9613,9 @@ msgstr "Makra"
 msgid "Parameters:"
 msgstr "Parametry:"
 
-#: lazarusidestrconsts.lisedtexttoolpassoutputtomessages
-msgid "Pass output to Messages window"
-msgstr ""
-
 #: lazarusidestrconsts.lisedtexttoolprogramfilename
 msgid "Program Filename:"
 msgstr "Nazwa pliku programu:"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputforfreepascalcompilermessages
-msgid "Scan output for FPC messages"
-msgstr "Przeszukuj komunikaty z FPC"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputformakemessages
-msgid "Scan output for \"make\" messages"
-msgstr "Przeszukuj wyjście komunikatów make"
 
 #: lazarusidestrconsts.lisedtexttooltitleandfilenamerequired
 msgid "Title and Filename required"

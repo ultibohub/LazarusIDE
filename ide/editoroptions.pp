@@ -56,15 +56,14 @@ uses
   // LazEdit
   TextMateGrammar, LazEditTextAttributes,
   // SynEdit Highlighters
-  SynEditHighlighter, SynEditHighlighterFoldBase, SynHighlighterCPP,
-  SynHighlighterHTML, SynHighlighterJava, SynHighlighterLFM, SynHighlighterPas,
-  SynHighlighterPerl, SynHighlighterPHP, SynHighlighterSQL, SynHighlighterCss,
-  SynHighlighterPython, SynHighlighterUNIXShellScript, SynHighlighterXML,
-  SynHighlighterJScript, SynHighlighterDiff, SynHighlighterBat,
+  SynEditHighlighter, SynEditHighlighterFoldBase, SynHighlighterCPP, SynHighlighterHTML,
+  SynHighlighterJava, SynHighlighterLFM, SynHighlighterPas, SynHighlighterPerl, SynHighlighterPHP,
+  SynHighlighterSQL, SynHighlighterCss, SynHighlighterPython, SynHighlighterUNIXShellScript,
+  SynHighlighterXML, SynHighlighterJScript, SynHighlighterDiff, SynHighlighterBat,
   SynHighlighterIni, SynHighlighterPo, SynHighlighterPike, SynPluginMultiCaret,
-  SynEditMarkupFoldColoring, SynEditMarkup, SynGutterLineOverview,
-  SynBeautifierPascal, SynEditTextDynTabExpander, SynEditTextTabExpander,
-  SynTextMateSyn, SynEditStrConst, SynHighlighterPosition, SynGutterMarks, SynEditWrappedView,
+  SynEditMarkupFoldColoring, SynEditMarkup, SynGutterLineOverview, SynBeautifierPascal,
+  SynEditTextDynTabExpander, SynEditTextTabExpander, SynTextMateSyn, SynEditStrConst,
+  SynHighlighterPosition, SynGutterMarks, SynEditWrappedView, SynPluginExternalLink,
   // codetools
   LinkScanner, CodeToolManager,
   // BuildIntf
@@ -135,7 +134,8 @@ const
     '', '', '',     // ahaIdentComplWindowEntryText, ahaIdentComplWindowEntryTempl, ahaIdentComplWindowEntryKeyword,
     '',             // ahaIdentComplWindowEntryUnknown,
     '', '', '', '', '', '', '', '', '', '', // ahaOutlineLevel1Color..ahaOutlineLevel10Color
-    '', '', '' // ahaWrapIndend, ahaWrapEol, ahaWrapSubLine
+    '', '', '', // ahaWrapIndend, ahaWrapEol, ahaWrapSubLine
+    ''         // ahaExternalLink
   );
 
   ahaGroupMap: array[TAdditionalHilightAttribute] of TAhaGroupName = (
@@ -217,7 +217,8 @@ const
     { ahaOutlineLevel10Color } agnOutlineColors,
     { ahaWrapIndend  } agnWrap,
     { ahaWrapEol     } agnWrap,
-    { ahaWrapSubLine } agnWrap
+    { ahaWrapSubLine } agnWrap,
+    { ahaExternalLink } agnText
 
   );
   ahaSupportedFeatures: array[TAdditionalHilightAttribute] of TColorSchemeAttributeFeatures =
@@ -300,7 +301,8 @@ const
     { ahaFoldLevel10Color }   [hafBackColor, hafForeColor, hafFrameColor, hafAlpha, hafPrior, hafFrameStyle, hafFrameEdges, hafStyle, hafStyleMask, hafMarkupFoldColor],
     { ahaWrapIndend  } [hafBackColor, hafFrameColor {, hafAlpha, hafPrior}],
     { ahaWrapEol     } [hafBackColor {, hafAlpha, hafPrior}],
-    { ahaWrapSubLine } [hafBackColor, hafForeColor, hafFrameColor, hafAlpha, hafPrior, hafFrameStyle, hafFrameEdges, hafStyle, hafStyleMask]
+    { ahaWrapSubLine } [hafBackColor, hafForeColor, hafFrameColor, hafAlpha, hafPrior, hafFrameStyle, hafFrameEdges, hafStyle, hafStyleMask],
+    { ahaExternalLink }  [hafBackColor, hafForeColor, hafFrameColor, hafAlpha, hafPrior, hafFrameStyle, hafFrameEdges, hafStyle, hafStyleMask]
   );
 
 const
@@ -963,6 +965,7 @@ deprecated 'NONOONONONONONOONON only create ONE ????';
     mbaPaste,
     mbaDeclarationJump,
     mbaDeclarationOrBlockJump,
+    mbaOpenExternalLink,
     mbaAddHistoryPoint,
     mbaHistoryBack, mbaHistoryForw,
     mbaSetFreeBookmark,
@@ -1010,6 +1013,7 @@ type
     FUserSchemes: TQuickStringlist;
   private
     FCustomSavedActions: Boolean;
+    FDeclarationJumpIncludesExtLink: Boolean;
     FGutterActionsChanges: TSynEditMouseActions;
     FMainActions, FSelActions, FTextActions: TSynEditMouseActions;
     FSelectOnLineNumbers: Boolean;
@@ -1018,6 +1022,7 @@ type
     FGutterActionsFold, FGutterActionsFoldExp, FGutterActionsFoldCol: TSynEditMouseActions;
     FGutterActionsLines: TSynEditMouseActions;
     FGutterActionsOverView, FGutterActionsOverViewMarks: TSynEditMouseActions;
+    FExtLinkActions: TSynEditMouseActions;
     FSelectedUserScheme: String;
     // left multi click
     FTextDoubleLeftClick: TMouseOptButtonAction;
@@ -1138,6 +1143,7 @@ type
     property GutterActionsChanges: TSynEditMouseActions read FGutterActionsChanges;
     property GutterActionsOverView: TSynEditMouseActions read FGutterActionsOverView;
     property GutterActionsOverViewMarks: TSynEditMouseActions read FGutterActionsOverViewMarks;
+    property ExtLinkActions: TSynEditMouseActions read FExtLinkActions;
   published
     property GutterLeft: TMouseOptGutterLeftType read FGutterLeft write FGutterLeft
              default moglUpClickAndSelect;
@@ -1146,6 +1152,8 @@ type
     property TextDrag: Boolean read FTextDrag write FTextDrag
              default True;
     property TextRightMoveCaret: Boolean read FTextRightMoveCaret  write FTextRightMoveCaret
+             default False;
+    property DeclarationJumpIncludesExtLink: Boolean read FDeclarationJumpIncludesExtLink write FDeclarationJumpIncludesExtLink
              default False;
     // left multi click
     property TextDoubleLeftClick: TMouseOptButtonAction read FTextDoubleLeftClick write FTextDoubleLeftClick
@@ -1595,6 +1603,12 @@ type
     property ByClass[AIndex: TSynGutterPartBaseClass]: TEditorSynGutterOptions read GetByClass;
   end;
 
+  TProcHeaderNameMode = (
+    pnmGenericOnly,
+    pnmGenericAndProcName,
+    pnmProcNameOnly,
+    pnmPlain
+  );
   { TEditorOptionsBase }
 
   TEditorOptionsBase = class(TIDEEditorOptions)
@@ -1654,6 +1668,9 @@ type
     FDeclaredTypeAttributeMode: TSynPasTypeAttributeMode;
     FDeclaredValueAttributeMachesStringNum: Boolean;
     FDeclaredValueAttributeMode: TSynPasTypeAttributeMode;
+    FGenericParamAttrMode: TSynPasTypeAttributeMode;
+    FProcHeaderNameDeclMode: TProcHeaderNameMode;
+    FProcHeaderNameImplMode: TProcHeaderNameMode;
     // Multi window
     fCtrlMiddleTabClickClosesOthers: Boolean;
     fMiddleTabClickClosesOthersModifier: TShiftState;
@@ -1763,6 +1780,12 @@ type
        read FDeclaredValueAttributeMode write FDeclaredValueAttributeMode default tamIdentifierOnly;
     property DeclaredValueAttributeMachesStringNum: Boolean
        read FDeclaredValueAttributeMachesStringNum write FDeclaredValueAttributeMachesStringNum default False;
+    property GenericParamAttrMode: TSynPasTypeAttributeMode
+       read FGenericParamAttrMode write FGenericParamAttrMode default tamIdentifierOnly;
+    property ProcHeaderNameDeclMode: TProcHeaderNameMode
+       read FProcHeaderNameDeclMode write FProcHeaderNameDeclMode default pnmGenericOnly;
+    property ProcHeaderNameImplMode: TProcHeaderNameMode
+       read FProcHeaderNameImplMode write FProcHeaderNameImplMode default pnmProcNameOnly;
     // Multi window
     property CtrlMiddleTabClickClosesOthers: Boolean
       read fCtrlMiddleTabClickClosesOthers write fCtrlMiddleTabClickClosesOthers stored False default True;
@@ -3154,6 +3177,8 @@ begin
   AdditionalHighlightAttributes[ahaWrapEol]     := dlgAddHiAttrWrapEol;
   AdditionalHighlightAttributes[ahaWrapSubLine] := dlgAddHiAttrWrapSubLine;
 
+  AdditionalHighlightAttributes[ahaExternalLink] := dlgAddHiExternalLink;
+
   AdditionalHighlightGroupNames[agnDefault]      := dlgAddHiAttrGroupDefault;
   AdditionalHighlightGroupNames[agnText]         := dlgAddHiAttrGroupText;
   AdditionalHighlightGroupNames[agnLine]         := dlgAddHiAttrGroupLine;
@@ -3446,43 +3471,53 @@ begin
     SynInstance := LazSyntaxHighlighterClasses{%H-}[TheType].Create(nil);
     SetBothFilextensions('pp;pas;inc;lpr;lrs;dpr;dpk;fpd');
     SampleSource :=
-      'program Sample; { Comment with Pasdoc @author someone }'#13 +
-      '{$R- compiler directive}'#13 +
-      'type'#13 +
-      '  TMyData = class abstract'#13 +
-      '  public'#13 +
-      '    function GetItem(AnIndex: integer): boolean; virtual; experimental;'#13 +
-      '    property Item[AnIndex: integer]: boolean read GetItem;'#13 +
-      '  end deprecated ''reason'';'#13 +
-      'procedure TForm1.Button1Click(Sender: TObject);'#13 +
-      'label JumpPos;'#13 +
-      'const BREAK_CHAR: char = ^C;'#13 +
-      'var  // Slash Comment'#13 +
-      '  Number, I, X: Integer;'#13 +
-      '  Text: String; MoreText: AnsiString;'#13 +
-      '  List: Array of record x,y: Byte; end;'#13 +
-      'begin'#13 +
-      '  Number := 12345 * (2 + 9); // << Brackets at caret'#13 +
-      '  Caption := ''The number is '' + IntToStr(Number);'#13 +
-      '  asm'#13 + '    MOV AX,1234h'#13 +
-      '    MOV Number,AX'#13 +
-      '  end;'#13 +
-      '  {%region /fold}'#13 +
-      '  {%endregion}'#13 +
-      '  X := 10 + (Number * (ord(''A'') + (I - Abs(X * (I+(1-((X))))))));'#13 +
-      '  inc(X); {$R+} { Selected text }'#13 +
-      '  for I := 0 to Number do {$R-} { execution point }'#13 +
-      '  begin'#13 +
-      '    Inc(X, 2); {$R+} { Enabled breakpoint }'#13 +
-      '    Dec(X, 3); {$R+} { Disabled breakpoint }'#13 +
-      '    {$R-} // { Invalid breakpoint }'#13 +
-      '    WriteLN(X); {$R-} { Unknown breakpoint }'#13 +
-      '    X := X + 1.0; {$R-} { Error line }'#13 +
-      '    case ModalResult of'#13+
-      '      mrOK: inc(X);'#13+
-      '      mrCancel, mrIgnore: dec(X);'#13+
-      '    end;'#13+
-      '    ListBox1.Items.Add(IntToStr(X)); // TODO: more work'#13 +
+  'program Sample; { Comment with Pasdoc @author someone }'#13+
+  '{$mode objfpc}{$R- compiler directive}'#13+
+  'type'#13+
+  '  TMyData = class abstract'#13+
+  '  public'#13+
+  '    function GetItem(AnIndex: integer = -1): boolean; virtual; abstract; experimental;'#13+
+  '    generic procedure Test<Param1>(foo: Param1);'#13+
+  '    property Item[AnIndex: integer]: boolean read GetItem;'#13+
+  '  end deprecated ''reason'';'#13+
+  '  generic TProc<A: specialize TGen<byte>> = procedure (foo: A); cdecl;'#13+
+  ''#13+
+  '  generic TSomeGeneric<Param1; Param2: TConstrain; const Val: word> = class(specialize TFoo<Param2>)'#13+
+  '  end;'#13+
+  ''#13+
+  'procedure TForm1.Button1Click(Sender: TObject);'#13+
+  'label JumpPos;'#13+
+  'const BREAK_CHAR: char = ^C;'#13+
+  'var  // Slash Comment'#13+
+  '  Number, I, X: Integer;'#13+
+  '  MyVar: System.integer = 2 * (1 + 5);'#13+
+  '  Text: String; MoreText: AnsiString;'#13+
+  '  List: Array of record x,y: Byte; end;'#13+
+  'begin'#13+
+  '  Number := 12345 * (2 + 9); // << Brackets at caret'#13+
+  '  Caption := ''The number is '' + IntToStr(Number);'#13+
+  '  asm'#13+
+  '    MOV AX,1234h'#13+
+  '    MOV Number,AX'#13+
+  '  end;'#13+
+  '  {%region /fold}'#13+
+  '  {%endregion}'#13+
+  '  X := 10 + (Number * (ord(''A'') + (I - Abs(X * (I+(1-((X))))))));'#13+
+  '  inc(X); {$R+} { Selected text }'#13+
+  '  for I := 0 to Number do {$R-} { execution point }'#13+
+  '  begin'#13+
+  '    Inc(X, 2); {$R+} { Enabled breakpoint }'#13+
+  '    Dec(X, 3); {$R+} { Disabled breakpoint }'#13+
+  '    {$R-} // { Invalid breakpoint }'#13+
+  '    WriteLN(X); {$R-} { Unknown breakpoint }'#13+
+  '    X := X + 1.0; {$R-} { Error line }'#13+
+  '    case ModalResult o'#13+
+  '      mrOK: inc(X)'#13+
+  '      mrCancel, mrIgnore: dec(X)'#13+
+  '    end'#13+
+  '    ListBox1.Items.Add(IntToStr(X)); // TODO: more work'#13+
+      '    // A multiline'#13 +
+      '    // comment'#13 +
 //{ $IFDEF WithSynMarkupIfDef}
 //      '    {$IFDEF Foo}' +
 //      '      X := X + 1.0; {$R-} { Error line }'#13 +
@@ -3498,22 +3533,33 @@ begin
 //      '        X := 10;'#13 +
 //      '    {$ENDIF}' +
 //{ $ENDIF}
-      '  end;'#13 +
-      'JumpPos:'#13 +
-      'end;'#13+
-      '(* Multiline Ansi-Comment'#13+
-      ' * Foo Bar'#13+
-      ' *)'#13+
-      ''#13 + #13;
-    AddAttrSampleLines[ahaDisabledBreakpoint] := 30;
-    AddAttrSampleLines[ahaEnabledBreakpoint] := 29;
-    AddAttrSampleLines[ahaInvalidBreakpoint] := 31;
-    AddAttrSampleLines[ahaUnknownBreakpoint] := 32;
-    AddAttrSampleLines[ahaErrorLine] := 33;
-    AddAttrSampleLines[ahaExecutionPoint] := 27;
-    AddAttrSampleLines[ahaTextBlock] := 26;
-    AddAttrSampleLines[ahaFoldedCode] := 23;
-    CaretXY := Point(21, 17);
+  '  end;'#13+
+  'JumpPos:'#13+
+  'end;'#13+
+  '(* Multiline Ansi-Comment'#13+
+  '* Foo Bar'#13+
+  '*)'#13+
+  ''#13+
+  'generic procedure TMyData.Test<Param1>(foo: Param1);'#13+
+  'begin {} end;'#13+
+  ''#13+
+  '{$Mode delphi}'#13+
+  'procedure TGenClass<ABC>.Something<XYZ>(a: XYZ);'#13+
+  'begin {} end;'#13+
+  ''#13+
+  '{  Multiline Curly-Comment'#13+
+  'Foo Bar'#13+
+  '}'#13+
+  ''#13 + #13;
+    AddAttrSampleLines[ahaDisabledBreakpoint] := 37;
+    AddAttrSampleLines[ahaEnabledBreakpoint] := 36;
+    AddAttrSampleLines[ahaInvalidBreakpoint] := 38;
+    AddAttrSampleLines[ahaUnknownBreakpoint] := 39;
+    AddAttrSampleLines[ahaErrorLine] := 40;
+    AddAttrSampleLines[ahaExecutionPoint] := 34;
+    AddAttrSampleLines[ahaTextBlock] := 33;
+    AddAttrSampleLines[ahaFoldedCode] := 30;
+    CaretXY := Point(21, 24);
   end;
   Add(NewInfo);
 
@@ -3526,43 +3572,53 @@ begin
     SynInstance := LazSyntaxHighlighterClasses{%H-}[TheType].Create(nil);
     SetBothFilextensions('pp;pas;inc;lpr;lrs;dpr;dpk;fpd');
     SampleSource :=
-      'program Sample; { Comment with Pasdoc @author someone }'#13 +
-      '{$R- compiler directive}'#13 +
-      'type'#13 +
-      '  TMyData = class abstract'#13 +
-      '  public'#13 +
-      '    function GetItem(AnIndex: integer): boolean; virtual; experimental;'#13 +
-      '    property Item[AnIndex: integer]: boolean read GetItem;'#13 +
-      '  end deprecated ''reason'';'#13 +
-      'procedure TForm1.Button1Click(Sender: TObject);'#13 +
-      'label JumpPos;'#13 +
-      'const BREAK_CHAR: char = ^C;'#13 +
-      'var  // Slash Comment'#13 +
-      '  Number, I, X: Integer;'#13 +
-      '  Text: String; MoreText: AnsiString;'#13 +
-      '  List: Array of record x,y: Byte; end;'#13 +
-      'begin'#13 +
-      '  Number := 12345 * (2 + 9); // << Brackets at caret'#13 +
-      '  Caption := ''The number is '' + IntToStr(Number);'#13 +
-      '  asm'#13 + '    MOV AX,1234h'#13 +
-      '    MOV Number,AX'#13 +
-      '  end;'#13 +
-      '  {%region /fold}'#13 +
-      '  {%endregion}'#13 +
-      '  X := 10 + (Number * (ord(''A'') + (I - Abs(X * (I+(1-((X))))))));'#13 +
-      '  inc(X); {$R+} { Selected text }'#13 +
-      '  for I := 0 to Number do {$R-} { execution point }'#13 +
-      '  begin'#13 +
-      '    Inc(X, 2); {$R+} { Enabled breakpoint }'#13 +
-      '    Dec(X, 3); {$R+} { Disabled breakpoint }'#13 +
-      '    {$R-} // { Invalid breakpoint }'#13 +
-      '    WriteLN(X); {$R-} { Unknown breakpoint }'#13 +
-      '    X := X + 1.0; {$R-} { Error line }'#13 +
-      '    case ModalResult of'#13+
-      '      mrOK: inc(X);'#13+
-      '      mrCancel, mrIgnore: dec(X);'#13+
-      '    end;'#13+
-      '    ListBox1.Items.Add(IntToStr(X)); // TODO: more work'#13 +
+  'program Sample; { Comment with Pasdoc @author someone }'#13+
+  '{$mode objfpc}{$R- compiler directive}'#13+
+  'type'#13+
+  '  TMyData = class abstract'#13+
+  '  public'#13+
+  '    function GetItem(AnIndex: integer = -1): boolean; virtual; abstract; experimental;'#13+
+  '    generic procedure Test<Param1>(foo: Param1);'#13+
+  '    property Item[AnIndex: integer]: boolean read GetItem;'#13+
+  '  end deprecated ''reason'';'#13+
+  '  generic TProc<A: specialize TGen<byte>> = procedure (foo: A); cdecl;'#13+
+  ''#13+
+  '  generic TSomeGeneric<Param1; Param2: TConstrain; const Val: word> = class(specialize TFoo<Param2>)'#13+
+  '  end;'#13+
+  ''#13+
+  'procedure TForm1.Button1Click(Sender: TObject);'#13+
+  'label JumpPos;'#13+
+  'const BREAK_CHAR: char = ^C;'#13+
+  'var  // Slash Comment'#13+
+  '  Number, I, X: Integer;'#13+
+  '  MyVar: System.integer = 2 * (1 + 5);'#13+
+  '  Text: String; MoreText: AnsiString;'#13+
+  '  List: Array of record x,y: Byte; end;'#13+
+  'begin'#13+
+  '  Number := 12345 * (2 + 9); // << Brackets at caret'#13+
+  '  Caption := ''The number is '' + IntToStr(Number);'#13+
+  '  asm'#13+
+  '    MOV AX,1234h'#13+
+  '    MOV Number,AX'#13+
+  '  end;'#13+
+  '  {%region /fold}'#13+
+  '  {%endregion}'#13+
+  '  X := 10 + (Number * (ord(''A'') + (I - Abs(X * (I+(1-((X))))))));'#13+
+  '  inc(X); {$R+} { Selected text }'#13+
+  '  for I := 0 to Number do {$R-} { execution point }'#13+
+  '  begin'#13+
+  '    Inc(X, 2); {$R+} { Enabled breakpoint }'#13+
+  '    Dec(X, 3); {$R+} { Disabled breakpoint }'#13+
+  '    {$R-} // { Invalid breakpoint }'#13+
+  '    WriteLN(X); {$R-} { Unknown breakpoint }'#13+
+  '    X := X + 1.0; {$R-} { Error line }'#13+
+  '    case ModalResult o'#13+
+  '      mrOK: inc(X)'#13+
+  '      mrCancel, mrIgnore: dec(X)'#13+
+  '    end'#13+
+  '    ListBox1.Items.Add(IntToStr(X)); // TODO: more work'#13+
+      '    // A multiline'#13 +
+      '    // comment'#13 +
 //{ $IFDEF WithSynMarkupIfDef}
 //      '    {$IFDEF Foo}' +
 //      '      X := X + 1.0; {$R-} { Error line }'#13 +
@@ -3578,22 +3634,33 @@ begin
 //      '        X := 10;'#13 +
 //      '    {$ENDIF}' +
 //{ $ENDIF}
-      '  end;'#13 +
-      'JumpPos:'#13 +
-      'end;'#13+
-      '(* Multiline Ansi-Comment'#13+
-      ' * Foo Bar'#13+
-      ' *)'#13+
-      ''#13 + #13;
-    AddAttrSampleLines[ahaDisabledBreakpoint] := 30;
-    AddAttrSampleLines[ahaEnabledBreakpoint] := 29;
-    AddAttrSampleLines[ahaInvalidBreakpoint] := 31;
-    AddAttrSampleLines[ahaUnknownBreakpoint] := 32;
-    AddAttrSampleLines[ahaErrorLine] := 33;
-    AddAttrSampleLines[ahaExecutionPoint] := 27;
-    AddAttrSampleLines[ahaTextBlock] := 26;
-    AddAttrSampleLines[ahaFoldedCode] := 23;
-    CaretXY := Point(21, 17);
+  '  end;'#13+
+  'JumpPos:'#13+
+  'end;'#13+
+  '(* Multiline Ansi-Comment'#13+
+  '* Foo Bar'#13+
+  '*)'#13+
+  ''#13+
+  'generic procedure TMyData.Test<Param1>(foo: Param1);'#13+
+  'begin {} end;'#13+
+  ''#13+
+  '{$Mode delphi}'#13+
+  'procedure TGenClass<ABC>.Something<XYZ>(a: XYZ);'#13+
+  'begin {} end;'#13+
+  ''#13+
+  '{  Multiline Curly-Comment'#13+
+  'Foo Bar'#13+
+  '}'#13+
+  ''#13 + #13;
+    AddAttrSampleLines[ahaDisabledBreakpoint] := 37;
+    AddAttrSampleLines[ahaEnabledBreakpoint] := 36;
+    AddAttrSampleLines[ahaInvalidBreakpoint] := 38;
+    AddAttrSampleLines[ahaUnknownBreakpoint] := 39;
+    AddAttrSampleLines[ahaErrorLine] := 40;
+    AddAttrSampleLines[ahaExecutionPoint] := 34;
+    AddAttrSampleLines[ahaTextBlock] := 33;
+    AddAttrSampleLines[ahaFoldedCode] := 30;
+    CaretXY := Point(21, 24);
   end;
   Add(NewInfo);
 
@@ -4364,6 +4431,7 @@ begin
   FGutterActionsChanges := TSynEditMouseActions.Create(nil);
   FGutterActionsOverView:= TSynEditMouseActions.Create(nil);
   FGutterActionsOverViewMarks:= TSynEditMouseActions.Create(nil);
+  FExtLinkActions       := TSynEditMouseActions.Create(nil);
   FUserSchemes := TQuickStringlist.Create;
   FVersion := 0;
 end;
@@ -4383,6 +4451,7 @@ begin
   FGutterActionsChanges.Free;
   FGutterActionsOverView.Free;
   FGutterActionsOverViewMarks.Free;
+  FExtLinkActions.Free;
   inherited Destroy;
 end;
 
@@ -4461,6 +4530,7 @@ begin
   FTextShiftExtra2Click := mbaNone;
 
   FTextRightMoveCaret  := False;
+  FDeclarationJumpIncludesExtLink := False;
   FTextDrag            := True;
   FSelectOnLineNumbers := True;
 end;
@@ -4622,7 +4692,11 @@ procedure TEditorMouseOptions.ResetTextToDefault;
             AddCommand(emcMouseLink,        False, AButton, AClickCount, ADir,    AShift, AShiftMask);
             if AnAction = mbaDeclarationOrBlockJump then
               AddCommand(emcSynEditCommand, True,  AButton, AClickCount, ADir,    AShift, AShiftMask, ecFindBlockOtherEnd, 1);
+            if DeclarationJumpIncludesExtLink then
+              FExtLinkActions.AddCommand(emcPluginExternalLinkDefaultOpen, False, AButton, AClickCount, ADir,    AShift, AShiftMask);
           end;
+        mbaOpenExternalLink:
+          FExtLinkActions.AddCommand(emcPluginExternalLinkDefaultOpen, False, AButton, AClickCount, ADir,    AShift, AShiftMask);
         mbaAddHistoryPoint:
           AddCommand(emcSynEditCommand,     True,  AButton, AClickCount, ADir, AShift, AShiftMask, ecAddJumpPoint);
         mbaHistoryBack:
@@ -4708,6 +4782,7 @@ begin
   FMainActions.Clear;
   FSelActions.Clear;
   FTextActions.Clear;
+  FExtLinkActions.Clear;
 
   // Left Btn
   ModKeys := [ssShift];
@@ -4888,6 +4963,7 @@ begin
   FGutterActionsChanges.Assign(Src.GutterActionsChanges);
   FGutterActionsOverView.Assign(Src.GutterActionsOverView);
   FGutterActionsOverViewMarks.Assign(Src.GutterActionsOverViewMarks);
+  FExtLinkActions.Assign      (Src.ExtLinkActions);
 end;
 
 procedure TEditorMouseOptions.SetTextCtrlLeftClick(AValue: TMouseOptButtonActionOld);
@@ -4918,6 +4994,7 @@ begin
   FSelectOnLineNumbers  := Src.SelectOnLineNumbers;
   FTextDrag             := Src.TextDrag;
   FTextRightMoveCaret   := Src.TextRightMoveCaret;
+  FDeclarationJumpIncludesExtLink := Src.DeclarationJumpIncludesExtLink;
   FSelectedUserScheme   := Src.FSelectedUserScheme;
 
     // left multi click
@@ -5032,7 +5109,8 @@ begin
     Temp.GutterActionsLines.Equals  (self.GutterActionsLines) and
     Temp.GutterActionsChanges.Equals(Self.GutterActionsChanges) and
     Temp.GutterActionsOverView.Equals(Self.GutterActionsOverView) and
-    Temp.GutterActionsOverViewMarks.Equals(Self.GutterActionsOverViewMarks);
+    Temp.GutterActionsOverViewMarks.Equals(Self.GutterActionsOverViewMarks) and
+    Temp.ExtLinkActions.Equals      (Self.ExtLinkActions);
   Temp.Free;
 end;
 
@@ -5148,6 +5226,7 @@ begin
     LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterLineChange/', GutterActionsChanges);
     LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverView/',   GutterActionsOverView);
     LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverViewMarks/',   GutterActionsOverViewMarks);
+    LoadFromXmlMouseAct(aXMLConfig, aPath + 'ExtLinkActions/',   ExtLinkActions);
 
     if Version < 1 then begin
       try
@@ -5211,6 +5290,7 @@ begin
     SaveMouseAct(aPath + 'GutterLineChange/', GutterActionsChanges);
     SaveMouseAct(aPath + 'GutterOverView/',   GutterActionsOverView);
     SaveMouseAct(aPath + 'GutterOverViewMarks/',GutterActionsOverViewMarks);
+    SaveMouseAct(aPath + 'ExtLinkActions/',ExtLinkActions);
   end else begin
     // clear unused entries
     aXMLConfig.DeletePath(aPath + 'Main');
@@ -5236,6 +5316,7 @@ begin
   LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterLineChange/', GutterActionsChanges,         True);
   LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverView/',   GutterActionsOverView,        True);
   LoadFromXmlMouseAct(aXMLConfig, aPath + 'GutterOverViewMarks/',GutterActionsOverViewMarks, True);
+  LoadFromXmlMouseAct(aXMLConfig, aPath + 'ExtLinkActions/',ExtLinkActions, True);
 end;
 
 procedure TEditorMouseOptions.ExportToXml(aXMLConfig: TRttiXMLConfig; aPath: String);
@@ -5269,6 +5350,7 @@ begin
   SaveMouseAct(aPath + 'GutterLineChange/', GutterActionsChanges);
   SaveMouseAct(aPath + 'GutterOverView/',   GutterActionsOverView);
   SaveMouseAct(aPath + 'GutterOverViewMarks/',GutterActionsOverViewMarks);
+  SaveMouseAct(aPath + 'ExtLinkActions/',ExtLinkActions);
   MAct.Free;
 end;
 
@@ -5594,7 +5676,10 @@ begin
   FCaseLabelAttriMatchesElseOtherwise := True;
   FDeclaredTypeAttributeMode := tamIdentifierOnly;
   FDeclaredValueAttributeMode := tamIdentifierOnly;
+  FGenericParamAttrMode := tamIdentifierOnly;
   FDeclaredValueAttributeMachesStringNum := False;
+  FProcHeaderNameDeclMode := pnmGenericOnly;
+  FProcHeaderNameImplMode := pnmProcNameOnly;
   // Multi window
   fCtrlMiddleTabClickClosesOthers := True;
   fMiddleTabClickClosesOthersModifier := [ssCtrl];
@@ -6675,16 +6760,35 @@ end;
 procedure TEditorOptions.GetHighlighterSettings(Syn: TSrcIDEHighlighter);
 // read highlight settings from config file
 begin
-  ReadHighlighterSettings(Syn, '');
-  ReadHighlighterFoldSettings(Syn);
-  ReadHighlighterDivDrawSettings(Syn);
-  if Syn is TSynPasSyn then begin
-    TSynPasSyn(Syn).ExtendedKeywordsMode := PasExtendedKeywordsMode;
-    TSynPasSyn(Syn).StringKeywordMode := PasStringKeywordMode;
-    TSynPasSyn(Syn).CaseLabelAttriMatchesElseOtherwise    := FCaseLabelAttriMatchesElseOtherwise;
-    TSynPasSyn(Syn).DeclaredTypeAttributeMode             := FDeclaredTypeAttributeMode;
-    TSynPasSyn(Syn).DeclaredValueAttributeMode            := FDeclaredValueAttributeMode;
-    TSynPasSyn(Syn).DeclaredValueAttributeMachesStringNum := FDeclaredValueAttributeMachesStringNum;
+  syn.BeginUpdate;
+  try
+    ReadHighlighterSettings(Syn, '');
+    ReadHighlighterFoldSettings(Syn);
+    ReadHighlighterDivDrawSettings(Syn);
+    if Syn is TSynPasSyn then begin
+      TSynPasSyn(Syn).ExtendedKeywordsMode := PasExtendedKeywordsMode;
+      TSynPasSyn(Syn).StringKeywordMode := PasStringKeywordMode;
+      TSynPasSyn(Syn).CaseLabelAttriMatchesElseOtherwise    := FCaseLabelAttriMatchesElseOtherwise;
+      TSynPasSyn(Syn).DeclaredTypeAttributeMode             := FDeclaredTypeAttributeMode;
+      TSynPasSyn(Syn).DeclaredValueAttributeMode            := FDeclaredValueAttributeMode;
+      TSynPasSyn(Syn).DeclaredValueAttributeMachesStringNum := FDeclaredValueAttributeMachesStringNum;
+      TSynPasSyn(Syn).GenericConstraintAttributeMode        := FGenericParamAttrMode;
+      TSynPasSyn(Syn).SpecializeParamAttributeMode          := FGenericParamAttrMode;
+      case FProcHeaderNameDeclMode of
+        pnmGenericOnly:        TSynPasSyn(Syn).ProcNameIntfAttributeMode := [pamDots];
+        pnmGenericAndProcName: TSynPasSyn(Syn).ProcNameIntfAttributeMode := [pamDots, pamGenParamKeyword, pamGenParamSym, pamGenParamSeparator];
+        pnmProcNameOnly:       TSynPasSyn(Syn).ProcNameIntfAttributeMode := [pamSupressGenParamAttr, pamDots, pamGenParamKeyword, pamGenParamSym, pamGenParamSeparator];
+        pnmPlain:              TSynPasSyn(Syn).ProcNameIntfAttributeMode := [pamSupressGenParamAttr, pamDots];
+      end;
+      case FProcHeaderNameImplMode of
+        pnmGenericOnly:        TSynPasSyn(Syn).ProcNameImplAttributeMode := [pamDots];
+        pnmGenericAndProcName: TSynPasSyn(Syn).ProcNameImplAttributeMode := [pamDots, pamGenParamKeyword, pamGenParamSym, pamGenParamSeparator];
+        pnmProcNameOnly:       TSynPasSyn(Syn).ProcNameImplAttributeMode := [pamSupressGenParamAttr, pamDots, pamGenParamKeyword, pamGenParamSym, pamGenParamSeparator];
+        pnmPlain:              TSynPasSyn(Syn).ProcNameImplAttributeMode := [pamSupressGenParamAttr, pamDots];
+      end;
+    end;
+  finally
+    Syn.EndUpdate;
   end;
 end;
 
@@ -6761,12 +6865,14 @@ end;
 
 procedure TEditorOptions.ApplyFontSettingsTo(ASynEdit: TSynEdit);
 begin
+  ASynEdit.Font.BeginUpdate;
   ASynEdit.Font.Size := fEditorFontSize;// set size before name for XLFD !
   ASynEdit.Font.Name := fEditorFont;
   if fDisableAntialiasing then
     ASynEdit.Font.Quality := fqNonAntialiased
   else
     ASynEdit.Font.Quality := fqDefault;
+  ASynEdit.Font.EndUpdate;
 end;
 
 procedure TEditorOptions.ApplyTabFontSettingsTo(APageCtrl: TPageControl);
@@ -6908,9 +7014,11 @@ begin
         end;
 
         mw.MarkupInfo.Assign(TermsConf.ColorAttr);
+        mw.Terms.IncChangeNotifyLock;
         mw.Clear;
         mw.Terms.Assign(TermsConf);
         mw.RestoreLocalChanges;
+        mw.Terms.DecChangeNotifyLock;
         if TermsConf.AddTermCmd <> nil then
           mw.AddTermCmd := TermsConf.AddTermCmd.Command;
         if TermsConf.RemoveTermCmd <> nil then
@@ -7014,6 +7122,8 @@ begin
       ASynEdit.RightGutter.LineOverviewPart.MouseActions.Assign(FUserMouseSettings.GutterActionsOverView);
       ASynEdit.RightGutter.LineOverviewPart.MouseActionsForMarks.Assign(FUserMouseSettings.GutterActionsOverViewMarks);
     end;
+    if (ASynEdit is TIDESynEditor) and (TIDESynEditor(ASynEdit).ExternalHttpLink <> nil) then
+      TIDESynEditor(ASynEdit).ExternalHttpLink.MouseActions.Assign(fUserMouseSettings.ExtLinkActions);
 
     GutterPartList.Sort;
     for i := 0 to GutterPartList.Count - 1 do begin
@@ -7254,6 +7364,7 @@ begin
         TSynHighlighterLazCustomPasAttribute(aDest).CustomWords.Assign(CustomWords);
         TSynHighlighterLazCustomPasAttribute(aDest).CustomWordTokenKind := CustomWordTokenKind;
       end;
+      if aDest.StoredName = '' then aDest.StoredName := Src.StoredName;
     end;
 
     if hafPrior in Src.AttrFeatures then begin
@@ -7892,6 +8003,11 @@ begin
         TIDESynEditor(aSynEdit).WrapView.MarkupInfoWrapIndent.FrameEdges := sfeLeft;
         SetMarkupColor(ahaWrapEol,     TIDESynEditor(aSynEdit).WrapView.MarkupInfoWrapEol);
         SetMarkupColor(ahaWrapSubLine, TIDESynEditor(aSynEdit).WrapView.MarkupInfoWrapSubLine);
+      end;
+
+      if TIDESynEditor(ASynEdit).ExternalHttpLink <> nil then begin
+        SetMarkupColor(ahaExternalLink, TIDESynEditor(ASynEdit).ExternalHttpLink.MarkupInfo);
+        //TIDESynEditor(ASynEdit).ExternalHttpLink
       end;
     end;
     SetMarkupColorByClass(ahaHighlightWord, TSynEditMarkupHighlightAllCaret);

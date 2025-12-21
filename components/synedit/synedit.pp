@@ -224,6 +224,8 @@ type
     sfGutterResized,
     sfAfterLoadFromFileNeeded,
     sfAfterHandleCreatedNeeded,
+    sfRecalcCharExtentNeeded,
+    sfRecalcCharsAndLinesInWinNeeded,
     sfMarkupMgrWaitingForHandle, // MarkupManager is locked until handle gets created
     // Mouse-states
     sfLeftGutterClick, sfRightGutterClick,
@@ -905,11 +907,12 @@ type
     function GetSelectedColor : TSynHighlighterAttributesModifier; override;
     function GetTextViewsManager: TSynTextViewsManager; override;
     procedure FontChanged(Sender: TObject); override;
-    procedure HighlighterAttrChanged(Sender: TObject);
     Procedure LineCountChanged(Sender: TSynEditStrings; AIndex, ACount : Integer);
     Procedure LineTextChanged(Sender: TSynEditStrings; AIndex, ACount : Integer);
     procedure SizeOrFontChanged(bFont: boolean);
     procedure DoHighlightChanged(Sender: TSynEditStrings; AIndex, ACount : Integer);
+    procedure DoHighlightAttribChanged(Sender: TObject);
+    procedure DoHighlightRescanNeeded(Sender: TObject);
     procedure ListCleared(Sender: TObject);
     procedure FoldChanged(Sender: TSynEditStrings; aIndex, aCount: Integer);
     function  GetTopView : Integer;
@@ -1684,16 +1687,21 @@ end;
 
 procedure TSynEditMouseGlobalActions.InitForOptions(AnOptions: TSynEditorMouseOptions);
 begin
-  // Normal wheel: scroll dependent on visible scroll-bars
-  AddCommand(emcWheelScrollDown,       False,  mbXWheelDown, ccAny, cdDown, [], []);
-  AddCommand(emcWheelScrollUp,         False,  mbXWheelUp, ccAny, cdDown, [], []);
+  BeginUpdate;
+  try
+    // Normal wheel: scroll dependent on visible scroll-bars
+    AddCommand(emcWheelScrollDown,       False,  mbXWheelDown, ccAny, cdDown, [], []);
+    AddCommand(emcWheelScrollUp,         False,  mbXWheelUp, ccAny, cdDown, [], []);
 
-  AddCommand(emcWheelHorizScrollDown,       False,  mbXWheelLeft, ccAny, cdDown, [], []);
-  AddCommand(emcWheelHorizScrollUp,         False,  mbXWheelRight, ccAny, cdDown, [], []);
+    AddCommand(emcWheelHorizScrollDown,       False,  mbXWheelLeft, ccAny, cdDown, [], []);
+    AddCommand(emcWheelHorizScrollUp,         False,  mbXWheelRight, ccAny, cdDown, [], []);
 
-  if emCtrlWheelZoom in AnOptions then begin
-    AddCommand(emcWheelZoomOut,        False,  mbXWheelDown, ccAny, cdDown, [ssCtrl], [ssCtrl]);
-    AddCommand(emcWheelZoomIn,         False,  mbXWheelUp,   ccAny, cdDown, [ssCtrl], [ssCtrl]);
+    if emCtrlWheelZoom in AnOptions then begin
+      AddCommand(emcWheelZoomOut,        False,  mbXWheelDown, ccAny, cdDown, [ssCtrl], [ssCtrl]);
+      AddCommand(emcWheelZoomIn,         False,  mbXWheelUp,   ccAny, cdDown, [ssCtrl], [ssCtrl]);
+    end;
+  finally
+    EndUpdate;
   end;
 end;
 
@@ -1703,48 +1711,58 @@ procedure TSynEditMouseTextActions.InitForOptions(AnOptions: TSynEditorMouseOpti
 var
   rmc: Boolean;
 begin
-  Clear;
-  rmc := (emRightMouseMovesCursor in AnOptions);
-  //// eoRightMouseMovesCursor
-  //if (eoRightMouseMovesCursor in ChangedOptions) then begin
-  //  for i := FMouseActions.Count-1 downto 0 do
-  //    if FMouseActions[i].Button = mbXRight then
-  //      FMouseActions[i].MoveCaret := (eoRightMouseMovesCursor in fOptions);
-  //end;
+  BeginUpdate;
+  try
+    Clear;
+    rmc := (emRightMouseMovesCursor in AnOptions);
+    //// eoRightMouseMovesCursor
+    //if (eoRightMouseMovesCursor in ChangedOptions) then begin
+    //  for i := FMouseActions.Count-1 downto 0 do
+    //    if FMouseActions[i].Button = mbXRight then
+    //      FMouseActions[i].MoveCaret := (eoRightMouseMovesCursor in fOptions);
+    //end;
 
-  AddCommand(emcStartSelections,       True,  mbXLeft, ccSingle, cdDown, [],        [ssShift, ssAlt], emcoSelectionStart);
-  AddCommand(emcStartSelections,       True,  mbXLeft, ccSingle, cdDown, [ssShift], [ssShift, ssAlt], emcoSelectionContinue);
-  if (emAltSetsColumnMode in AnOptions) then begin
-    AddCommand(emcStartColumnSelections, True,  mbXLeft, ccSingle, cdDown, [ssAlt],          [ssShift, ssAlt], emcoSelectionStart);
-    AddCommand(emcStartColumnSelections, True,  mbXLeft, ccSingle, cdDown, [ssShift, ssAlt], [ssShift, ssAlt], emcoSelectionContinue);
+    AddCommand(emcStartSelections,       True,  mbXLeft, ccSingle, cdDown, [],        [ssShift, ssAlt], emcoSelectionStart);
+    AddCommand(emcStartSelections,       True,  mbXLeft, ccSingle, cdDown, [ssShift], [ssShift, ssAlt], emcoSelectionContinue);
+    if (emAltSetsColumnMode in AnOptions) then begin
+      AddCommand(emcStartColumnSelections, True,  mbXLeft, ccSingle, cdDown, [ssAlt],          [ssShift, ssAlt], emcoSelectionStart);
+      AddCommand(emcStartColumnSelections, True,  mbXLeft, ccSingle, cdDown, [ssShift, ssAlt], [ssShift, ssAlt], emcoSelectionContinue);
+    end;
+    if (emShowCtrlMouseLinks in AnOptions) then
+      AddCommand(emcMouseLink,             False, mbXLeft, ccSingle, cdUp, [SYNEDIT_LINK_MODIFIER], [ssShift, ssAlt, ssCtrl] + [SYNEDIT_LINK_MODIFIER]);
+
+    if (emDoubleClickSelectsLine in AnOptions) then begin
+      AddCommand(emcSelectLine,            True,  mbXLeft, ccDouble, cdDown, [], []);
+      AddCommand(emcSelectPara,            True,  mbXLeft, ccTriple, cdDown, [], []);
+    end
+    else begin
+      AddCommand(emcSelectWord,            True,  mbXLeft, ccDouble, cdDown, [], []);
+      AddCommand(emcSelectLine,            True,  mbXLeft, ccTriple, cdDown, [], []);
+    end;
+    AddCommand(emcSelectPara,            True,  mbXLeft, ccQuad,   cdDown, [], []);
+
+    AddCommand(emcContextMenu,           rmc,   mbXRight, ccSingle, cdUp, [], [], emcoSelectionCaretMoveNever);
+
+    AddCommand(emcPasteSelection,        True,  mbXMiddle, ccSingle, cdDown, [], []);
+  finally
+    EndUpdate;
   end;
-  if (emShowCtrlMouseLinks in AnOptions) then
-    AddCommand(emcMouseLink,             False, mbXLeft, ccSingle, cdUp, [SYNEDIT_LINK_MODIFIER], [ssShift, ssAlt, ssCtrl] + [SYNEDIT_LINK_MODIFIER]);
-
-  if (emDoubleClickSelectsLine in AnOptions) then begin
-    AddCommand(emcSelectLine,            True,  mbXLeft, ccDouble, cdDown, [], []);
-    AddCommand(emcSelectPara,            True,  mbXLeft, ccTriple, cdDown, [], []);
-  end
-  else begin
-    AddCommand(emcSelectWord,            True,  mbXLeft, ccDouble, cdDown, [], []);
-    AddCommand(emcSelectLine,            True,  mbXLeft, ccTriple, cdDown, [], []);
-  end;
-  AddCommand(emcSelectPara,            True,  mbXLeft, ccQuad,   cdDown, [], []);
-
-  AddCommand(emcContextMenu,           rmc,   mbXRight, ccSingle, cdUp, [], [], emcoSelectionCaretMoveNever);
-
-  AddCommand(emcPasteSelection,        True,  mbXMiddle, ccSingle, cdDown, [], []);
 end;
 
 { TSynEditMouseSelActions }
 
 procedure TSynEditMouseSelActions.InitForOptions(AnOptions: TSynEditorMouseOptions);
 begin
-  Clear;
-  //rmc := (eoRightMouseMovesCursor in AnOptions);
+  BeginUpdate;
+  try
+    Clear;
+    //rmc := (eoRightMouseMovesCursor in AnOptions);
 
-  if (emDragDropEditing in AnOptions) then
-    AddCommand(emcStartDragMove, False, mbXLeft, ccSingle, cdDown, [], [ssShift]);
+    if (emDragDropEditing in AnOptions) then
+      AddCommand(emcStartDragMove, False, mbXLeft, ccSingle, cdDown, [], [ssShift]);
+  finally
+    EndUpdate;
+  end;
 end;
 
 { THookedCommandHandlerEntry }
@@ -2313,6 +2331,8 @@ procedure TCustomSynEdit.SetTabViewClass(AValue: TSynEditStringTabExpanderClass
 var
   i: Integer;
 begin
+  if FTabbedLinesView.ClassType = AValue then
+    exit;
   i := FTextViewsManager.IndexOf(FTabbedLinesView);
   FTextViewsManager.RemoveSynTextView(FTabbedLinesView);
   FTabbedLinesView.Free;
@@ -2401,6 +2421,9 @@ begin
     AddChangeHandler(senrLineCount, @LineCountChanged);
     AddChangeHandler(senrLineChange, @LineTextChanged);
     AddChangeHandler(senrHighlightChanged, @DoHighlightChanged);
+
+    AddNotifyHandler(senrHighlightAttribChanged, @DoHighlightAttribChanged);
+    AddNotifyHandler(senrHighlightRescanNeeded, @DoHighlightRescanNeeded);
     AddNotifyHandler(senrCleared, @ListCleared);
     AddNotifyHandler(senrUndoRedoAdded, @Self.UndoRedoAdded);
     AddNotifyHandler(senrModifiedChanged, @ModifiedChanged);
@@ -2466,6 +2489,12 @@ begin
   FHookedKeyTranslationList := TSynHookedKeyTranslationList.Create;
   FUndoRedoItemHandlerList := TSynUndoRedoItemHandlerList.Create;
   FMouseLastCaretHandlerList := TSynEditMouseLastCaretEventList.Create;
+
+  FMouseActions     := TSynEditMouseGlobalActions.Create(Self);
+  FMouseSelActions  := TSynEditMouseSelActions.Create(Self);
+  FMouseTextActions := TSynEditMouseTextActions.Create(Self);
+  FMouseActionSearchHandlerList := TSynEditMouseActionSearchList.Create;
+  FMouseActionExecHandlerList  := TSynEditMouseActionExecList.Create;
 
   // needed before setting color
   fMarkupHighCaret := TSynEditMarkupHighlightAllCaret.Create(self);
@@ -2546,9 +2575,8 @@ begin
   FPaintArea.DisplayView := FTheLinesView.DisplayView;
 
   Color := clWhite;
+  Font.OnChange := @FontChanged; // already set by inherited
   Font.Assign(fFontDummy);
-  Font.OnChange := @FontChanged;
-  FontChanged(nil);
   ParentFont := False;
   ParentColor := False;
   TabStop := True;
@@ -2563,12 +2591,6 @@ begin
   if assigned(Owner) and not (csLoading in Owner.ComponentState) then begin
     SetDefaultKeystrokes;
   end;
-
-  FMouseActions     := TSynEditMouseGlobalActions.Create(Self);
-  FMouseSelActions  := TSynEditMouseSelActions.Create(Self);
-  FMouseTextActions := TSynEditMouseTextActions.Create(Self);
-  FMouseActionSearchHandlerList := TSynEditMouseActionSearchList.Create;
-  FMouseActionExecHandlerList  := TSynEditMouseActionExecList.Create;
 
   fWantTabs := True;
   fTabWidth := 8;
@@ -2742,6 +2764,9 @@ begin
     FTrimmedLinesView.UnLock; // Must be unlocked after caret // May Change lines
 
     if (FPaintLock=1) and (not WaitingForInitialSize) then begin
+      if sfRecalcCharExtentNeeded in fStateFlags then
+        RecalcCharExtent;
+
       FLines.FlushNotificationCache;
       ScanChangedLines(FChangedLinesStart, FChangedLinesEnd, FChangedLinesDiff,
                  FLastTextChangeStamp <> TSynEditStringList(FLines).TextChangeStamp);
@@ -5225,26 +5250,41 @@ begin
 end;
 
 procedure TCustomSynEdit.DoHandleInitialSizeFinished;
+var
+  p: Integer;
 begin
   Exclude(fStateFlags, sfAfterHandleCreatedNeeded);
   Application.RemoveOnIdleHandler(@IdleScanRanges);
   fStateFlags := fStateFlags - [sfHorizScrollbarVisible, sfVertScrollbarVisible];
-  UpdateScrollBars; // just set sfScrollbarChanged
 
+  IncStatusChangeLock;
   inc(FDoingResizeLock);
+  inc(FRecalcCharsAndLinesLock);
+  Exclude(fStateFlags, sfRecalcCharsAndLinesInWinNeeded);
   try
-  FLeftGutter.RecalcBounds;
-  FRightGutter.RecalcBounds;
+    if sfRecalcCharExtentNeeded in fStateFlags then begin
+      p := FPaintLock;
+      FPaintLock := 0; // force, so gutter has correct text size
+      RecalcCharExtent;
+      FPaintLock := p;
+    end;
+
+    UpdateScrollBars; // just set sfScrollbarChanged
+    FLeftGutter.RecalcBounds;
+    FRightGutter.RecalcBounds;
   finally
     dec(FDoingResizeLock);
-    if sfGutterResized in fStateFlags then begin
+    dec(FRecalcCharsAndLinesLock);
+
+    if (fStateFlags * [sfRecalcCharsAndLinesInWinNeeded, sfGutterResized] <> []) then begin
       Exclude(fStateFlags, sfGutterResized);
-      RecalcCharsAndLinesInWin(False);
+      RecalcCharsAndLinesInWin(sfRecalcCharsAndLinesInWinNeeded in fStateFlags);
       UpdateScrollBars;
     end
     else
     if sfScrollbarChanged in fStateFlags then
       UpdateScrollBars;
+    DecStatusChangeLock;
   end;
 
   if (sfMarkupMgrWaitingForHandle in fStateFlags) then begin
@@ -6010,6 +6050,24 @@ begin
   else
   if FPendingFoldState <> '' then
     SetFoldState(FPendingFoldState);
+end;
+
+procedure TCustomSynEdit.DoHighlightAttribChanged(Sender: TObject);
+begin
+  RecalcCharExtent;
+  Invalidate;
+  if fHighlighter.AttributeChangeNeedScan then
+    DoHighlightRescanNeeded(Sender);
+end;
+
+procedure TCustomSynEdit.DoHighlightRescanNeeded(Sender: TObject);
+begin
+  if WaitingForInitialSize or (FPaintLock > 0) then
+    exit;
+
+  FHighlighter.CurrentLines := FTheLinesView;
+  FHighlighter.ScanAllRanges;
+  fMarkupManager.TextChanged(1, FTheLinesView.Count, 0);
 end;
 
 procedure TCustomSynEdit.ListCleared(Sender: TObject);
@@ -7069,7 +7127,6 @@ procedure TCustomSynEdit.RemoveHooksFromHighlighter;
 begin
   if not Assigned(fHighlighter) then
     exit;
-  fHighlighter.UnhookAttrChangeEvent(@HighlighterAttrChanged);
   fHighlighter.DetachFromLines(FLines);
   fHighlighter.RemoveFreeNotification(self);
 end;
@@ -7080,8 +7137,6 @@ begin
     FPendingFoldState := '';
     RemoveHooksFromHighlighter;
     if Assigned(Value) then begin
-      Value.HookAttrChangeEvent(
-        @HighlighterAttrChanged);
       Value.FreeNotification(Self);
       Value.AttachToLines(FLines);
     end;
@@ -9096,8 +9151,11 @@ procedure TCustomSynEdit.RecalcCharsAndLinesInWin(CheckCaret: Boolean);
 var
   l, r: Integer;
 begin
-  if FRecalcCharsAndLinesLock > 0 then
+  if FRecalcCharsAndLinesLock > 0 then begin
+    include(fStateFlags, sfRecalcCharsAndLinesInWinNeeded);
     exit;
+  end;
+  exclude(fStateFlags, sfRecalcCharsAndLinesInWinNeeded);
 
   IncStatusChangeLock;
   try
@@ -9274,6 +9332,15 @@ procedure TCustomSynEdit.RecalcCharExtent;
 var
   i: Integer;
 begin
+  if WaitingForInitialSize or
+     (FPaintLock > 1) or
+     ( (FPaintLock = 1) and not(dplNoNewPaintLock in FInDecPaintLockState)) // in DoDecPaintLock
+  then begin
+    Include(fStateFlags, sfRecalcCharExtentNeeded);
+    exit;
+  end;
+  Exclude(fStateFlags, sfRecalcCharExtentNeeded);
+
   (* Highlighter or Font changed *)
   IncStatusChangeLock;
   try
@@ -9318,18 +9385,6 @@ begin
     UpdateScrollBars;
   finally
     DecStatusChangeLock;
-  end;
-end;
-
-procedure TCustomSynEdit.HighlighterAttrChanged(Sender: TObject);
-begin
-  RecalcCharExtent;
-  Invalidate;
-  // TODO: obey paintlock
-  if fHighlighter.AttributeChangeNeedScan then begin
-    FHighlighter.CurrentLines := FTheLinesView;
-    FHighlighter.ScanAllRanges;
-    fMarkupManager.TextChanged(1, FTheLinesView.Count, 0);
   end;
 end;
 

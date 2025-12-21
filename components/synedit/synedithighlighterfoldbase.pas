@@ -764,7 +764,10 @@ end;
 
 procedure TLazSynFoldNodeInfoList.SetLine(ALine: TLineIdx);
 begin
-  if (FLine = ALine) or (ALine < 0) then exit;
+  if (FValid and (FLine = ALine)) or
+     (ALine < 0)
+  then
+    exit;
   ClearData;
   FLine := ALine;
   FHighLighter.InitFoldNodeInfo(Self, FLine);
@@ -2051,8 +2054,7 @@ end;
 
 procedure TSynCustomFoldHighlighter.DoFoldConfigChanged(Sender: TObject);
 begin
-  FAttributeChangeNeedScan := True;
-  DefHighlightChange(self);
+  SendRescanNeededNotification;
 end;
 
 procedure TSynCustomFoldHighlighter.ClearFoldNodeList;
@@ -2104,11 +2106,13 @@ procedure TSynCustomFoldHighlighter.InitFoldNodeInfo(AList: TLazSynFoldNodeInfoL
 begin
   FIsCollectingNodeInfo := True;
   try
-    FCollectingNodeInfoList := TLazSynFoldNodeInfoList(AList);
+    assert(FCollectingNodeInfoList = nil, 'TSynCustomFoldHighlighter.InitFoldNodeInfo: FCollectingNodeInfoList = nil');
+    FCollectingNodeInfoList := AList;
     StartAtLineIndex(Line);
     ScanFoldNodeInfo();
   finally
     FIsCollectingNodeInfo := False;
+    FCollectingNodeInfoList := nil;
   end;
 end;
 

@@ -145,6 +145,9 @@ resourcestring
   SYNS_AttrDeclarationTypeName     = 'Declaration block (Type) name';
   SYNS_AttrDeclarationType         = 'Declaration block type';
   SYNS_AttrDeclarationValue        = 'Declaration block value';
+  SYNS_AttrSpecializeParam         = 'Specialize param';
+  SYNS_AttrGenericParam            = 'Generic param name';
+  SYNS_AttrGenericConstraint       = 'Generic param constraint';
   SYNS_AttrGotoLabel               = 'Goto Label';
   SYNS_AttrStructMember            = 'Structure member';
   SYNS_AttrCaseLabel            =  'Case label';
@@ -288,6 +291,9 @@ const
   SYNS_XML_AttrDeclarationTypeName     = 'Declaration block Type name';
   SYNS_XML_AttrDeclarationType         = 'Declaration block type';
   SYNS_XML_AttrDeclarationValue        = 'Declaration block value';
+  SYNS_XML_AttrSpecializeParam         = 'Specialize param';
+  SYNS_XML_AttrGenericParam            = 'Generic param name';
+  SYNS_XML_AttrGenericConstraint       = 'Generic param constraint';
   SYNS_XML_AttrGotoLabel               = 'Goto Label';
   SYNS_XML_AttrStructMember            = 'Structure member';
   SYNS_XML_AttrCaseLabel            =  'Case label';
@@ -454,6 +460,11 @@ resourcestring
   SYNS_Paste = '&Paste';
   SYNS_Delete = '&Delete';
   SYNS_SelectAll = 'Select &all';
+
+  // Plugin External Link
+  SYNS_emcPluginExtLinkOpenExternalLink = 'Open external link';
+  SYNS_emcPluginExtLinkCopyExternalLink = 'Copy external link';
+  SYNS_emcPluginExtLinkSelectExternalLink = 'Select external link';
 
 implementation
 

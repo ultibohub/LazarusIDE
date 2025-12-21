@@ -138,6 +138,10 @@ msgstr "Salta a la implementación"
 msgid "Jumps to implementation/other block end"
 msgstr "Salta a la implementación/final bloque"
 
+#: lazarusidestrconsts.dlfmousesimplebuttonexternallink
+msgid "Open external (HTTP, file, ...) link"
+msgstr ""
+
 #: lazarusidestrconsts.dlfmousesimplebuttonhistback
 msgid "History back"
 msgstr "Retroceder en el historial"
@@ -219,6 +223,10 @@ msgstr "Seleccionar palabra actual"
 #: lazarusidestrconsts.dlfmousesimplebuttonzoomreset
 msgid "Reset zoom"
 msgstr "Resetear zoom"
+
+#: lazarusidestrconsts.dlfmousesimpledecljumpinclextlink
+msgid "Jump to declaration also opens external links (HTTP, file, ...)"
+msgstr ""
 
 #: lazarusidestrconsts.dlfmousesimplediff
 msgid "This page does not represent your current settings. See advanced page. Use this page to reset any advanced changes"
@@ -582,6 +590,10 @@ msgstr ""
 msgid "Procedure Header"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_specializegenericsection
+msgid "Specialize/Generic Blocks"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr ""
@@ -722,6 +734,10 @@ msgstr "Sangrado"
 #: lazarusidestrconsts.dlgaddhiattrwrapsubline
 msgctxt "lazarusidestrconsts.dlgaddhiattrwrapsubline"
 msgid "Sub-line"
+msgstr ""
+
+#: lazarusidestrconsts.dlgaddhiexternallink
+msgid "External (HTTP) link"
 msgstr ""
 
 #: lazarusidestrconsts.dlgaddhispecialvisiblechars
@@ -3302,6 +3318,10 @@ msgctxt "lazarusidestrconsts.dlgmouseoptnodeall"
 msgid "All"
 msgstr "Todo"
 
+#: lazarusidestrconsts.dlgmouseoptnodeextlink
+msgid "External link"
+msgstr ""
+
 #: lazarusidestrconsts.dlgmouseoptnodegutter
 msgctxt "lazarusidestrconsts.dlgmouseoptnodegutter"
 msgid "Gutter"
@@ -3756,6 +3776,10 @@ msgstr ""
 msgid "Highlight flow control statements (break, continue, exit) as keywords"
 msgstr "Resaltar sentencias de control como palabras clave"
 
+#: lazarusidestrconsts.dlgpasgenericparamattrmode
+msgid "Extend of initial-value-highlight in Generic/Specialize"
+msgstr ""
+
 #: lazarusidestrconsts.dlgpaskeywordsmarkup
 #, fuzzy
 msgid "Markup (on caret)"
@@ -3768,6 +3792,30 @@ msgstr "Palabras clave coincidentes"
 #: lazarusidestrconsts.dlgpaskeywordsoutline
 msgid "Outline"
 msgstr "Contorno"
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenandproc
+msgid "Generic and procedure name highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodegenonly
+msgid "Generic highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodenone
+msgid "Don't apply either highlight"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameattrmodeproconly
+msgid "Procedure name highlight only"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnamedeclattrmode
+msgid "Generic highlight in procedure names (declaration)"
+msgstr ""
+
+#: lazarusidestrconsts.dlgpasprocnameimplattrmode
+msgid "Generic highlight in procedure names (implementation)"
+msgstr ""
 
 #: lazarusidestrconsts.dlgpassoptslinker
 msgid "Pass options to linker with \"-k\", delimiter is space"
@@ -7660,14 +7708,6 @@ msgstr "Constante de cadena"
 msgid "Symbol"
 msgstr "Símbolo"
 
-#: lazarusidestrconsts.liscoexecuteafter
-msgid "Execute after"
-msgstr "Ejecutar después de"
-
-#: lazarusidestrconsts.liscoexecutebefore
-msgid "Execute before"
-msgstr "Ejecutar antes de"
-
 #: lazarusidestrconsts.liscollapse
 msgid "Collapse"
 msgstr "Colapsar"
@@ -9592,23 +9632,9 @@ msgstr "Macros"
 msgid "Parameters:"
 msgstr "Parámetros:"
 
-#: lazarusidestrconsts.lisedtexttoolpassoutputtomessages
-msgid "Pass output to Messages window"
-msgstr ""
-
 #: lazarusidestrconsts.lisedtexttoolprogramfilename
 msgid "Program Filename:"
 msgstr "Nombre de archivo del programa:"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputforfreepascalcompilermessages
-#, fuzzy
-#| msgid "Scan output for Free Pascal Compiler messages"
-msgid "Scan output for FPC messages"
-msgstr "Escanear salida de mensajes del Compilador Free Pascal"
-
-#: lazarusidestrconsts.lisedtexttoolscanoutputformakemessages
-msgid "Scan output for \"make\" messages"
-msgstr "Escanear salida de mensajes de \"make\""
 
 #: lazarusidestrconsts.lisedtexttooltitleandfilenamerequired
 msgid "Title and Filename required"

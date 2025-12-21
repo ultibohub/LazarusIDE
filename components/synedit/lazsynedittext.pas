@@ -33,8 +33,8 @@ unit LazSynEditText;
 interface
 
 uses
-  Classes, SysUtils, Graphics, LCLProc, SynEditTypes, SynEditMiscProcs,
-  SynEditHighlighter, SynEditKeyCmds, SynEditTextBase, LazEditTextAttributes, LazEditLineItemLists;
+  Classes, SysUtils, Graphics, LCLProc, SynEditTypes, SynEditMiscProcs, SynEditHighlighter,
+  SynEditKeyCmds, SynEditTextBase, LazEditTextAttributes, LazEditLineItemLists, LazEditHighlighter;
 
 type
   TSynEditStrings = class;
@@ -60,6 +60,8 @@ type
                            senrCleared,
                            senrUndoRedoAdded,
                            senrModifiedChanged,  // The modified flag was changed
+                           senrHighlightAttribChanged, // An attrib changed / font sizing (e.g. bold) may have changed
+                           senrHighlightRescanNeeded,  // The highlighter needs to have Scan... called
                            // Paintlocks are managed by SynEdit, but need distribution to shared edits
                            senrIncOwnedPaintLock, // Inform other SynEdits (ForeignPaintLock)
                            senrDecOwnedPaintLock,
@@ -278,7 +280,7 @@ type
 
   { TSynEditStrings }
 
-  TSynEditStrings = class(TSynEditStringsBase)
+  TSynEditStrings = class(TLazEditStringsBase)
   private
     FSenderUpdateCount: Integer;
     FLogPhysConvertor :TSynLogicalPhysicalConvertor;
@@ -331,6 +333,8 @@ type
     procedure InsertStrings(Index: integer; NewStrings: TStrings); virtual; abstract;
 
     procedure SendHighlightChanged(aIndex, aCount: Integer); override;
+    procedure SendHighlightAttributeChanged; override;
+    procedure SendHighlightRescanNeeded; override;
     procedure SendNotification(AReason: TSynEditNotifyReason;
                 ASender: TSynEditStrings; aIndex, aCount: Integer); virtual; abstract; overload;
     procedure SendNotification(AReason: TSynEditNotifyReason;
@@ -1121,6 +1125,16 @@ end;
 procedure TSynEditStrings.SendHighlightChanged(aIndex, aCount: Integer);
 begin
   SendNotification(senrHighlightChanged, Self, aIndex, aCount);
+end;
+
+procedure TSynEditStrings.SendHighlightAttributeChanged;
+begin
+  SendNotification(senrHighlightAttribChanged, Self);
+end;
+
+procedure TSynEditStrings.SendHighlightRescanNeeded;
+begin
+  SendNotification(senrHighlightRescanNeeded, Self);
 end;
 
 function TSynEditStrings.LogicPosAddChars(const ALine: String; ALogicalPos, ACount: integer;

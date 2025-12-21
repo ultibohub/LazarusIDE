@@ -214,6 +214,14 @@ msgstr "Форма"
 msgid "Function"
 msgstr "Функція"
 
+#: syneditstrconst.syns_attrgenericconstraint
+msgid "Generic param constraint"
+msgstr ""
+
+#: syneditstrconst.syns_attrgenericparam
+msgid "Generic param name"
+msgstr ""
+
 #: syneditstrconst.syns_attrgotolabel
 msgid "Goto Label"
 msgstr ""
@@ -470,6 +478,10 @@ msgstr "Селектор"
 msgid "Space"
 msgstr "Пробіл"
 
+#: syneditstrconst.syns_attrspecializeparam
+msgid "Specialize param"
+msgstr ""
+
 #: syneditstrconst.syns_attrspecialvariable
 msgid "Special variable"
 msgstr "Спеціальна змінна"
@@ -630,6 +642,18 @@ msgstr "Прокрутка (поле огляду)"
 #: syneditstrconst.syns_emcpasteselection
 msgid "Quick Paste Selection"
 msgstr "Швидкий Вибір Вставки"
+
+#: syneditstrconst.syns_emcpluginextlinkcopyexternallink
+msgid "Copy external link"
+msgstr ""
+
+#: syneditstrconst.syns_emcpluginextlinkopenexternallink
+msgid "Open external link"
+msgstr ""
+
+#: syneditstrconst.syns_emcpluginextlinkselectexternallink
+msgid "Select external link"
+msgstr ""
 
 #: syneditstrconst.syns_emcpluginmulticaretselectiontocarets
 msgid "Set carets at EOL in selected lines"

@@ -23,19 +23,138 @@ unit LazEditHighlighter;
 interface
 
 uses
-  Classes,
+  Classes, fgl,
   // LazEdit
-  LazEditTextAttributes;
+  LazEditTextAttributes, LazEditLineItemLists, LazEditHighlighterUtils, LazClasses;
 
 type
+
+  TLazEditHighlighterAttributes = class(TLazEditTextAttribute)
+  published
+    property Foreground;
+    property Background;
+    property FrameColor;
+
+    property ForePriority;
+    property BackPriority;
+    property FramePriority;
+
+    property FrameStyle;
+    property FrameEdges;
+
+    property Style;
+    property BoldPriority;
+    property ItalicPriority;
+    property UnderlinePriority;
+    property StrikeOutPriority;
+
+    property OnChange;
+  end;
+  TLazEditHighlighterAttributesClass = class of TLazEditHighlighterAttributes;
+
+  TLazEditHighlighterAttributesModifier = class(TLazEditTextAttributeModifier)
+  published
+    property Foreground;
+    property Background;
+    property FrameColor;
+
+    property ForePriority;
+    property BackPriority;
+    property FramePriority;
+
+    property FrameStyle;
+    property FrameEdges;
+
+    property Style;
+    property BoldPriority;
+    property ItalicPriority;
+    property UnderlinePriority;
+    property StrikeOutPriority;
+
+    property OnChange;
+  published
+    property BackAlpha;
+    property ForeAlpha;
+    property FrameAlpha;
+
+    property StyleMask;
+  end;
+  TLazEditHighlighterAttributesModifierClass = class of TLazEditHighlighterAttributesModifier;
+
+  TLazEditHighlighterAttributes_Eol = class(TLazEditHighlighterAttributes)
+  published
+    property ExtendPastEol;
+  end;
+
+  TLazEditHighlighterAttributesModifier_Eol = class(TLazEditHighlighterAttributesModifier)
+  published
+    property ExtendPastEol;
+  end;
+
+  { TLazEditStringsBase }
+
+  TLazEditStringsBase = class(specialize TFreeNotifyingGeneric<TStrings>)
+  protected
+    function GetRange(Index: Pointer): TLazEditLineItems; virtual; abstract;
+    procedure PutRange(Index: Pointer; const ARange: TLazEditLineItems); virtual; abstract;
+  public
+    destructor Destroy; override;
+    procedure SendHighlightChanged(aIndex, aCount: Integer); virtual; abstract;
+    procedure SendHighlightAttributeChanged; virtual; abstract;
+    procedure SendHighlightRescanNeeded; virtual; abstract;
+    function  GetPChar(ALineIndex: Integer): PChar;                                       // experimental
+    function  GetPChar(ALineIndex: Integer; out ALen: Integer): PChar; virtual; abstract; // experimental
+    property Ranges[Index: Pointer]: TLazEditLineItems read GetRange write PutRange;
+  end;
+
+  TLazEditHighlighterAttachedLines = specialize TFPGList<TLazEditStringsBase>;
 
   { TLazEditCustomHighlighter }
 
   TLazEditCustomHighlighter = class(TLazEditAttributeOwner)
+  private type
+    TLazEditHlUpdateFlag = (ufAttribChanged, ufRescanNeeded);
+    TLazEditHlUpdateFlags = set of TLazEditHlUpdateFlag;
   strict private
+    FUpdateLock: integer;
+    FUpdateFlags: TLazEditHlUpdateFlags;
+
+    FAttachedLines: TLazEditHighlighterAttachedLines;
+    FCurrentLines: TLazEditStringsBase;
+    FCurrentRanges: TLazHighlighterLineRangeList;
+    FRangesChangeStamp: QWord;
+
     FTokenAttributeMergeResult: TLazEditTextAttributeMergeResult;
     FTokenAttributeList: TLazCustomEditTextAttributeArray;
+
+    function GetIsUpdating: boolean; inline;
+    procedure InternalEndUpdate;
+
+    procedure SetCurrentLines(AValue: TLazEditStringsBase);
+    procedure DoAttachedLinesFreed(Sender: TObject);
   protected
+    procedure DoBeginUpdate; virtual;
+    procedure DoEndUpdate; virtual;
+
+  protected
+    (* ------------------ *
+     * Lines / RangesList *
+     * ------------------ *)
+    function GetRangeIdentifier: Pointer; virtual;
+    function CreateRangeList(ALines: TLazEditStringsBase): TLazHighlighterLineRangeList; virtual;
+    procedure DoAttachedToLines(Lines: TLazEditStringsBase; ARangeList: TLazHighlighterLineRangeList); virtual;
+    procedure DoDetachingFromLines(Lines: TLazEditStringsBase; ARangeList: TLazHighlighterLineRangeList); virtual;
+    procedure DoCurrentLinesChanged; virtual;
+    procedure SendRescanNeededNotification;
+
+    property AttachedLines: TLazEditHighlighterAttachedLines read FAttachedLines;
+    property CurrentRanges: TLazHighlighterLineRangeList read FCurrentRanges;
+
+  protected
+    (* ------------------ *
+     * Token / Attributes *
+     * ------------------ *)
+    procedure SendAttributeChangeNotification;
     procedure MergeModifierToTokenAttribute(
       var ACurrentResultAttrib: TLazCustomEditTextAttribute;
       AModifierAttrib: TLazCustomEditTextAttribute;
@@ -44,7 +163,24 @@ type
       ASkipResultBounds: boolean = False
     );
   public
+    constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    procedure BeginUpdate; inline;
+    procedure EndUpdate; inline;
+    property IsUpdating: boolean read GetIsUpdating;
+
+    (* ------------------ *
+     * Lines / RangesList *
+     * ------------------ *)
+
+    procedure AttachToLines(ALines: TLazEditStringsBase);
+    procedure DetachFromLines(ALines: TLazEditStringsBase);
+    property CurrentLines: TLazEditStringsBase read FCurrentLines write SetCurrentLines;
+
+  public
+    (* ------------------ *
+     * Token / Attributes *
+     * ------------------ *)
 
     function GetTokenPos: Integer; virtual; abstract; // 0-based
     function GetTokenLen: Integer; virtual; abstract;
@@ -65,7 +201,128 @@ type
 
 implementation
 
+{ TLazEditStringsBase }
+
+destructor TLazEditStringsBase.Destroy;
+begin
+  inherited Destroy;
+  DoDestroy;
+end;
+
+function TLazEditStringsBase.GetPChar(ALineIndex: Integer): PChar;
+var
+  l: Integer;
+begin
+  Result := GetPChar(ALineIndex, l);
+end;
+
 { TLazEditCustomHighlighter }
+
+procedure TLazEditCustomHighlighter.DoAttachedLinesFreed(Sender: TObject);
+begin
+  FAttachedLines.Remove(TLazEditStringsBase(Sender));
+end;
+
+procedure TLazEditCustomHighlighter.DoBeginUpdate;
+begin
+  //
+end;
+
+procedure TLazEditCustomHighlighter.DoEndUpdate;
+begin
+  //
+end;
+
+procedure TLazEditCustomHighlighter.SetCurrentLines(AValue: TLazEditStringsBase);
+begin
+  if AValue = FCurrentLines then
+    exit;
+
+  FCurrentLines := AValue;
+
+  if FCurrentLines <> nil then begin
+    FCurrentRanges := TLazHighlighterLineRangeList(AValue.Ranges[GetRangeIdentifier]);
+    CurrentRanges.ValidatedChangeStamp := FRangesChangeStamp;
+  end
+  else
+    FCurrentRanges := nil;
+  DoCurrentLinesChanged;
+end;
+
+function TLazEditCustomHighlighter.GetIsUpdating: boolean;
+begin
+  Result := FUpdateLock > 0;
+end;
+
+procedure TLazEditCustomHighlighter.InternalEndUpdate;
+begin
+  DoEndUpdate;
+  if ufAttribChanged in FUpdateFlags then SendAttributeChangeNotification;
+  if ufRescanNeeded in FUpdateFlags then SendRescanNeededNotification;
+  FUpdateFlags := [];
+end;
+
+function TLazEditCustomHighlighter.GetRangeIdentifier: Pointer;
+begin
+  Result := self;
+end;
+
+function TLazEditCustomHighlighter.CreateRangeList(ALines: TLazEditStringsBase
+  ): TLazHighlighterLineRangeList;
+begin
+  Result := TLazHighlighterLineRangeShiftList.Create;
+end;
+
+procedure TLazEditCustomHighlighter.DoAttachedToLines(Lines: TLazEditStringsBase;
+  ARangeList: TLazHighlighterLineRangeList);
+begin
+  //
+end;
+
+procedure TLazEditCustomHighlighter.DoDetachingFromLines(Lines: TLazEditStringsBase;
+  ARangeList: TLazHighlighterLineRangeList);
+begin
+  //
+end;
+
+procedure TLazEditCustomHighlighter.DoCurrentLinesChanged;
+begin
+  //
+end;
+
+procedure TLazEditCustomHighlighter.SendRescanNeededNotification;
+var
+  i: Integer;
+begin
+  if IsUpdating then begin
+    Include(FUpdateFlags, ufRescanNeeded);
+    exit;
+  end;
+  Exclude(FUpdateFlags, ufRescanNeeded);
+
+  {$PUSH}{$R-}{$Q-}
+  inc(FRangesChangeStamp);
+  {$POP}
+  if CurrentRanges <> nil then
+    CurrentRanges.ValidatedChangeStamp := FRangesChangeStamp;
+
+  for i := 0 to AttachedLines.Count - 1 do
+    AttachedLines[i].SendHighlightRescanNeeded;
+end;
+
+procedure TLazEditCustomHighlighter.SendAttributeChangeNotification;
+var
+  i: Integer;
+begin
+  if IsUpdating then begin
+    Include(FUpdateFlags, ufAttribChanged);
+    exit;
+  end;
+  Exclude(FUpdateFlags, ufAttribChanged);
+
+  for i := 0 to AttachedLines.Count - 1 do
+    AttachedLines[i].SendHighlightAttributeChanged;
+end;
 
 procedure TLazEditCustomHighlighter.MergeModifierToTokenAttribute(
   var ACurrentResultAttrib: TLazCustomEditTextAttribute;
@@ -108,10 +365,77 @@ begin
   FTokenAttributeMergeResult.Merge(AModifierAttrib);
 end;
 
+constructor TLazEditCustomHighlighter.Create(AOwner: TComponent);
+begin
+  FAttachedLines := TLazEditHighlighterAttachedLines.Create;
+  inherited Create(AOwner);
+end;
+
 destructor TLazEditCustomHighlighter.Destroy;
 begin
   inherited Destroy;
   FTokenAttributeMergeResult.Free;
+  FAttachedLines.Free;
+end;
+
+procedure TLazEditCustomHighlighter.BeginUpdate;
+begin
+  if FUpdateLock = 0 then
+    DoBeginUpdate;
+  inc(FUpdateLock);
+end;
+
+procedure TLazEditCustomHighlighter.EndUpdate;
+begin
+  if FUpdateLock = 0 then begin
+    assert(False, 'TLazEditCustomHighlighter.EndUpdate: UpdateLock > 0');
+    exit;
+  end;
+
+  dec(FUpdateLock);
+  if FUpdateLock = 0 then
+    InternalEndUpdate;
+end;
+
+procedure TLazEditCustomHighlighter.AttachToLines(ALines: TLazEditStringsBase);
+var
+  r: TLazHighlighterLineRangeList;
+begin
+  r := TLazHighlighterLineRangeList(ALines.Ranges[GetRangeIdentifier]);
+  if assigned(r) then
+    r.IncRefCount
+  else begin
+    r := CreateRangeList(ALines);
+    ALines.Ranges[GetRangeIdentifier] := r;
+    r.InvalidateAll;
+    r.ValidatedChangeStamp := FRangesChangeStamp;
+    FAttachedLines.Add(ALines);
+    ALines.AddFreeNotification(@DoAttachedLinesFreed);
+  end;
+  DoAttachedToLines(ALines, r);
+  FCurrentLines := nil;
+end;
+
+procedure TLazEditCustomHighlighter.DetachFromLines(ALines: TLazEditStringsBase);
+var
+  r: TLazHighlighterLineRangeList;
+begin
+  r := TLazHighlighterLineRangeList(ALines.Ranges[GetRangeIdentifier]);
+  if not assigned(r) then
+    exit;
+
+  r.DecRefCount;
+  DoDetachingFromLines(ALines, r);
+  if r.RefCount = 0 then begin
+    ALines.Ranges[GetRangeIdentifier] := nil;
+    if FCurrentRanges = r then begin
+      FCurrentRanges := nil;
+      FCurrentLines := nil;
+    end;
+    r.Free;
+    FAttachedLines.Remove(ALines);
+    ALines.RemoveFreeNotification(@DoAttachedLinesFreed);
+  end;
 end;
 
 function TLazEditCustomHighlighter.GetTokenAttributeEx: TLazCustomEditTextAttribute;
