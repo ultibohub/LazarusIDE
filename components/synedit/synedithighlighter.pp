@@ -140,15 +140,11 @@ type
 
   { TSynCustomHighlighter }
 
-  TSynCustomHighlighter = class(TLazEditCustomHighlighter)
+  TSynCustomHighlighter = class(TLazEditCustomRangesHighlighter)
   private
-    fAttributes: TObjectList;
     fAttrChangeHooks: TMethodList;
     FCapabilities: TSynHighlighterCapabilities;
     FDrawDividerLevel: Integer;
-    FLineIndex: Integer;
-    FLineText: String;
-    fUpdateCount: integer;                                                      //mh 2001-09-13
     fEnabled: Boolean;
     fWordBreakChars: TSynIdentChars;
     FIsScanning: Boolean;
@@ -156,17 +152,11 @@ type
     procedure SetDrawDividerLevel(const AValue: Integer); deprecated;
     procedure SetEnabled(const Value: boolean);                                 //DDH 2001-10-23
   protected
-    FAttributeChangeNeedScan: Boolean deprecated 'use SendRescanNeededNotification // to be removed in 5.99';
+    FAttributeChangeNeedScan: Boolean deprecated 'use RequestFullRescan // to be removed in 5.99';
     fDefaultFilter: string;
     fDefaultFilterInitialValue: string;
     fUpdateChange: boolean;                                                     //mh 2001-09-13
-    FIsInNextToEOL: Boolean;
     function GetInstanceLanguageName: string; virtual;
-    procedure AddAttribute(AAttrib: TLazEditTextAttribute); override;
-    procedure RemoveAttribute(AAttrib: TLazEditTextAttribute); override;
-    procedure FreeHighlighterAttributes;                                        //mh 2001-09-13
-    function GetAttribCount: integer; virtual;
-    function GetAttribute(idx: integer): TLazEditTextAttribute; virtual;
     function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
       virtual; abstract;
     function GetDefaultFilter: string; virtual;
@@ -187,8 +177,7 @@ type
     function PerformScan(StartIndex, EndIndex: Integer; ForceEndIndex: Boolean = False): Integer; virtual;
     property IsScanning: Boolean read FIsScanning;
     property KnownLines: TLazEditHighlighterAttachedLines read GetKnownLines; deprecated 'use AttachedLines // to be removed in 5.99';
-    property CurrentLineText: string read FLineText;
-    procedure SendRescanNeededNotification; reintroduce; // deprecated 'to be removed in 5.99' // only needed to force a call to fAttrChangeHooks
+    procedure RequestFullRescan; reintroduce; // deprecated 'to be removed in 5.99' // only needed to force a call to fAttrChangeHooks
     procedure SendAttributeChangeNotification; reintroduce; // deprecated 'to be removed in 5.99'
     procedure DoDefHighlightChanged; virtual;
     procedure DoEndUpdate; override;
@@ -196,7 +185,7 @@ type
     procedure DoDetachingFromLines(Lines: TLazEditStringsBase; ARangeList: TLazHighlighterLineRangeList); override;
   public
     procedure DefHighlightChange(Sender: TObject);
-    property  AttributeChangeNeedScan: Boolean read FAttributeChangeNeedScan; deprecated 'use SendRescanNeededNotification // to be removed in 5.99';
+    property  AttributeChangeNeedScan: Boolean read FAttributeChangeNeedScan; deprecated 'use RequestFullRescan // to be removed in 5.99';
     class function GetCapabilities: TSynHighlighterCapabilities; virtual;
     class function GetLanguageName: string; virtual;
   public
@@ -208,25 +197,16 @@ type
                      const aStoredName: String = ''): TLazEditTextAttribute;
     procedure Assign(Source: TPersistent); override;
   public
-    function GetEol: Boolean; virtual; abstract;
-    function GetRange: Pointer; virtual;
-    function GetToken: String; virtual; abstract;
-    procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); virtual; abstract;
-    function GetTokenKind: integer; virtual; abstract;
+    procedure InitForScaningLine; override;
+    function GetRange: Pointer; override;
     //function GetTokenPos: Integer; override; // 0-based
     function GetTokenLen: Integer; override;
     function IsKeyword(const AKeyword: string): boolean; virtual;               // DJLP 2000-08-09
-    procedure Next; virtual; abstract;
-    procedure NextToEol;
-    function  NextToLogX(ALogX: IntPos): boolean;
 
     property DrawDivider[Index: integer]: TSynDividerDrawConfigSetting
       read GetDrawDivider;
     property DrawDividerLevel: Integer read FDrawDividerLevel write SetDrawDividerLevel; deprecated;
   public
-    procedure StartAtLineIndex(LineNumber:Integer); virtual; // 0 based
-    procedure ContinueNextLine; // To be called at EOL; does not read the range
-
     procedure ScanRanges;
     (* IdleScanRanges
        Scan in small chunks during OnIdle; Return True, if more work avail
@@ -236,12 +216,9 @@ type
     function  IdleScanRanges: Boolean; virtual; experimental;
     function NeedScan: Boolean;
     procedure ScanAllRanges;
-    procedure SetRange(Value: Pointer); virtual;
-    procedure ResetRange; virtual;
     procedure SetLine(const NewValue: String;
                       LineNumber:Integer // 0 based
-                      ); virtual;
-    property  LineIndex: Integer read FLineIndex;
+                      ); virtual; deprecated 'Use InitForScaningLine // to be removed in 5.99';
   public
     function UseUserSettings(settingIndex: integer): boolean; virtual;
     procedure EnumUserSettings(Settings: TStrings); virtual;
@@ -255,8 +232,6 @@ type
     property WordBreakChars: TSynIdentChars read fWordBreakChars write SetWordBreakChars;
     property LanguageName: string read GetInstanceLanguageName;
   public
-    property AttrCount: integer read GetAttribCount;
-    property Attribute[idx: integer]: TLazEditTextAttribute read GetAttribute;
     property Capabilities: TSynHighlighterCapabilities read FCapabilities;
     property SampleSource: string read GetSampleSource write SetSampleSource;
     // The below should be depricated and moved to those HL that actually implement them.
@@ -693,7 +668,6 @@ begin
   FCapabilities:=GetCapabilities;
   inherited Create(AOwner);
   fWordBreakChars := TSynWordBreakChars;
-  fAttributes := TObjectList.Create(False);
   fAttrChangeHooks := TMethodList.Create;
   fDefaultFilter := '';
   fDefaultFilterInitialValue := '';
@@ -701,21 +675,8 @@ end;
 
 destructor TSynCustomHighlighter.Destroy;
 begin
-  FreeHighlighterAttributes;
-  fAttributes.Free;
   fAttrChangeHooks.Free;
   inherited Destroy;
-end;
-
-procedure TSynCustomHighlighter.FreeHighlighterAttributes;
-var
-  i: integer;
-begin
-  if fAttributes <> nil then begin
-    for i := fAttributes.Count - 1 downto 0 do
-      TLazEditTextAttribute(fAttributes[i]).Free;
-    fAttributes.Clear;
-  end;
 end;
 
 procedure TSynCustomHighlighter.Assign(Source: TPersistent);
@@ -748,6 +709,12 @@ begin
     Enabled := Src.Enabled;
   end else
     inherited Assign(Source);
+end;
+
+procedure TSynCustomHighlighter.InitForScaningLine;
+begin
+  SetLine(CurrentLineText, LineIndex);
+  inherited InitForScaningLine;
 end;
 
 procedure TSynCustomHighlighter.EnumUserSettings(Settings: TStrings);
@@ -834,16 +801,6 @@ begin
   end;
 end;
 
-procedure TSynCustomHighlighter.AddAttribute(AAttrib: TLazEditTextAttribute);
-begin
-  fAttributes.Add(AAttrib);
-end;
-
-procedure TSynCustomHighlighter.RemoveAttribute(AAttrib: TLazEditTextAttribute);
-begin
-  fAttributes.Remove(AAttrib);
-end;
-
 function TSynCustomHighlighter.AddSpecialAttribute(const aCaption: string;
   const aStoredName: String): TLazEditTextAttribute;
 begin
@@ -864,23 +821,11 @@ begin
     fUpdateChange := TRUE
   else begin
     inherited SendAttributeChangeNotification;
-    if FAttributeChangeNeedScan then inherited SendRescanNeededNotification;
+    if FAttributeChangeNeedScan then inherited RequestFullRescan;
     fAttrChangeHooks.CallNotifyEvents(self);
     FAttributeChangeNeedScan := False;
     DoDefHighlightChanged;
   end;
-end;
-
-function TSynCustomHighlighter.GetAttribCount: integer;
-begin
-  Result := fAttributes.Count;
-end;
-
-function TSynCustomHighlighter.GetAttribute(idx: integer): TLazEditTextAttribute;
-begin
-  Result := nil;
-  if (idx >= 0) and (idx < fAttributes.Count) then
-    Result := TLazEditTextAttribute(fAttributes[idx]);
 end;
 
 class function TSynCustomHighlighter.GetCapabilities: TSynHighlighterCapabilities;
@@ -945,57 +890,12 @@ begin
 end;
 {end}                                                                           // DJLP 2000-08-09
 
-procedure TSynCustomHighlighter.NextToEol;
-begin
-  FIsInNextToEOL := True;
-  while not GetEol do Next;
-  FIsInNextToEOL := False;
-end;
-
-function TSynCustomHighlighter.NextToLogX(ALogX: IntPos): boolean;
-var
-  Start: Integer;
-begin
-  Result := False;
-  while not GetEol do begin
-    Start := ToPos(GetTokenPos);
-    if Start > ALogX then
-      exit;
-    if ALogX < Start + GetTokenLen then
-      exit(True);
-    Next;
-  end;
-end;
-
-procedure TSynCustomHighlighter.ContinueNextLine;
-begin
-  inc(FLineIndex);
-  SetLine(CurrentLines[FLineIndex], FLineIndex);
-end;
-
-procedure TSynCustomHighlighter.StartAtLineIndex(LineNumber: Integer);
-begin
-  FLineIndex := LineNumber;
-  if LineNumber = 0 then begin
-    ResetRange;
-  end
-  else begin
-//    assert((CurrentRanges.NeedsReScanStartIndex < 0) or ({IsScanning and} (LineNumber <= CurrentRanges.NeedsReScanStartIndex)), 'TSynCustomHighlighter.StartAtLineIndex: (CurrentRanges.NeedsReScanStartIndex < 0) or (IsScanning and (LineNumber <= CurrentRanges.NeedsReScanStartIndex))');
-    SetRange(CurrentRanges[LineNumber - 1]);
-  end;
-  SetLine(CurrentLines[LineNumber], LineNumber);
-end;
-
-procedure TSynCustomHighlighter.ResetRange;
-begin
-end;
-
 procedure TSynCustomHighlighter.SetLine(const NewValue: String; LineNumber: Integer);
 begin
-  // Keep a copy of the line text, since some highlighters just use a PChar pointer to it.
-  FLineText := NewValue;
-  FIsInNextToEOL := False;
-  FLineIndex := LineNumber;
+  if LineIndex <> LineNumber then begin
+    //debugln(['TSynCustomHighlighter.SetLine - outdated call / deprecated']);
+    SetAlternativeLineTextForGetTokens(NewValue, LineNumber);
+  end;
 end;
 
 procedure TSynCustomHighlighter.SetAttributesOnChange(AEvent: TNotifyEvent);
@@ -1005,17 +905,11 @@ var
   i: integer;
   Attri: TLazEditTextAttribute;
 begin
-  for i := fAttributes.Count - 1 downto 0 do begin
-    Attri := TLazEditTextAttribute(fAttributes[i]);
-    if Attri <> nil then begin
-      Attri.AddChangeHandler(AEvent);
-      Attri.InternalSaveDefaultValues;
-    end;
+  for i := AttrCount - 1 downto 0 do begin
+    Attri := Attribute[i];
+    Attri.AddChangeHandler(AEvent);
+    Attri.InternalSaveDefaultValues;
   end;
-end;
-
-procedure TSynCustomHighlighter.SetRange(Value: Pointer);
-begin
 end;
 
 procedure TSynCustomHighlighter.SetDefaultFilter(Value: string);
@@ -1138,11 +1032,11 @@ begin
   end;
 end;
 
-procedure TSynCustomHighlighter.SendRescanNeededNotification;
+procedure TSynCustomHighlighter.RequestFullRescan;
 begin
-  //inherited SendRescanNeededNotification;
+  //inherited RequestFullRescan;
   FAttributeChangeNeedScan := True;
-  DefHighlightChange(nil); // will call SendRescanNeededNotification;
+  DefHighlightChange(nil); // will call RequestFullRescan;
 end;
 
 procedure TSynCustomHighlighter.SendAttributeChangeNotification;

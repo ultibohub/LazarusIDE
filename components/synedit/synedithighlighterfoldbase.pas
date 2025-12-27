@@ -532,9 +532,7 @@ type
 
     procedure SetRange(Value: Pointer); override;
     procedure ResetRange; override;
-    procedure SetLine(const NewValue: String;
-                      LineNumber:Integer // 0 based
-                      ); override;
+    procedure InitForScaningLine; override;
     procedure DoCurrentLinesChanged; override;
     function PerformScan(StartIndex, EndIndex: Integer; ForceEndIndex: Boolean =
       False): Integer; override;
@@ -1874,8 +1872,7 @@ begin
     FCodeFoldRange.FoldRoot := FRootCodeFoldBlock;
 end;
 
-procedure TSynCustomFoldHighlighter.SetLine(const NewValue: String;
-  LineNumber: Integer);
+procedure TSynCustomFoldHighlighter.InitForScaningLine;
 begin
   inherited;
   FCodeFoldRange.MinimumCodeFoldBlockLevel := FCodeFoldRange.FCodeFoldStackSize;
@@ -2054,7 +2051,7 @@ end;
 
 procedure TSynCustomFoldHighlighter.DoFoldConfigChanged(Sender: TObject);
 begin
-  SendRescanNeededNotification;
+  RequestFullRescan;
 end;
 
 procedure TSynCustomFoldHighlighter.ClearFoldNodeList;

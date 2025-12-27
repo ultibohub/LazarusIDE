@@ -39,6 +39,7 @@ Type
     fCalculatedHeight : LongInt;
     FIsSelecting: Boolean;
     FSelectionStart: TSelectionPoint;
+    FlastCalcWidth : Longint;
     function GetColor(AIndex: Integer): TColor;
     function GetDocument: TMarkDownDocument;
     function GetInteger(AIndex: Integer): Integer;
@@ -54,17 +55,18 @@ Type
   protected
     procedure DoMarkdownChanged(Sender : TObject); virtual;
     procedure ParseMarkDown; virtual;
-    procedure CalcLayout; virtual;
     procedure Click; override;
     procedure KeyDown(var Key: Word; Shift: TShiftState); override;
     procedure MouseDown(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
     procedure MouseMove(Shift: TShiftState; X, Y: Integer); override;
     procedure MouseUp(Button: TMouseButton; Shift: TShiftState; X, Y: Integer); override;
+    procedure Resize; override;
     property Document : TMarkDownDocument Read GetDocument;
   Public
     constructor Create(AOwner: TComponent); override;
     destructor destroy; override;
     procedure Paint; override;
+    procedure CalcLayout; virtual;
     procedure ClearSelection;
     function GetSelectionText: String;
     procedure CopySelectionToClipBoard;
@@ -81,7 +83,9 @@ Type
     property BulletChar2 : string index 3 read GetString write SetString;
     property BulletChar3 : string index 4 read GetString write SetString;
     Property BlockQuoteIndent : Integer index 1 read GetInteger Write SetInteger;
-    Property ImageMargin : integer index 3 read GetInteger Write SetInteger;
+    property ParagraphSpacing : Integer index 2 read GetInteger Write SetInteger;
+    property ExtraIndent : Integer index 3 read GetInteger Write SetInteger;
+    Property ImageMargin : integer index 4 read GetInteger Write SetInteger;
     property OnGetImage : TMarkdownImageEvent read GetOnGetImage Write SetOnGetImage;
     property OnOpenURL : TOpenURLEvent Read FOnOpenURL Write FOnOpenURL;
     property SelectionColor: TColor read GetSelectionColor write SetSelectionColor;
@@ -192,7 +196,9 @@ begin
   Case aIndex of
     0 : Result:=FRenderer.BaseFontSize;
     1 : Result:=FRenderer.BlockQuoteIndent;
-    2 : Result:=FRenderer.ImageMargin;
+    2 : Result:=FRenderer.ParagraphSpacing;
+    3 : Result:=FRenderer.ExtraIndent;
+    4 : Result:=FRenderer.ImageMargin;
   end;
 end;
 
@@ -220,7 +226,9 @@ begin
   Case aIndex of
     0 : FRenderer.BaseFontSize:=aValue;
     1 : FRenderer.BlockQuoteIndent:=aValue;
-    2 : FRenderer.ImageMargin:=aValue;
+    2 : FRenderer.ParagraphSpacing:=aValue;
+    3 : FRenderer.ExtraIndent:=aValue;
+    4 : FRenderer.ImageMargin:=aValue;
   end;
 end;
 
@@ -264,9 +272,10 @@ end;
 procedure TCustomMarkDownControl.CalcLayout;
 
 begin
+  FlastCalcWidth:=Width;
+  FRenderer.BGColor:=Self.Color;
   FRenderer.CalculateLayout(Canvas,Width,FCalculatedWidth,fCalculatedHeight);
   Height:=FCalculatedHeight;
-//  Repaint;
 end;
 
 procedure TCustomMarkDownControl.Click;
@@ -360,6 +369,13 @@ begin
   begin
     FIsSelecting := False;
   end;
+end;
+
+procedure TCustomMarkDownControl.Resize;
+begin
+  inherited Resize;
+  if Width<>FlastCalcWidth then
+    CalcLayout;
 end;
 
 procedure TCustomMarkDownControl.ClearSelection;

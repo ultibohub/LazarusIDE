@@ -25,7 +25,7 @@ unit markdown.canvasrender;
 interface
 
 uses
-  SysUtils, Classes, Contnrs, Graphics, Types, MarkDown.Elements, MarkDown.Parser, MarkDown.Render, LazUTF8;
+  SysUtils, Classes, Contnrs, Graphics, Types, MarkDown.Elements, MarkDown.Parser, MarkDown.Render, Markdown.HTMLEntities, LazUTF8;
 
 type
   TLayoutItemKind = (
@@ -33,9 +33,10 @@ type
     likHR,
     likRect,
     likLine,
-    likImage
+    likImage,
+    likBackground
   );
-  TFontContextItem = (fcMono,fcCode,fcQuote,fcHyperLink);
+  TFontContextItem = (fcMono,fcCode,fcFencedCode,fcQuote,fcHyperLink);
   TFontContext = set of TFontContextItem;
 
   { Selection support types }
@@ -45,9 +46,11 @@ type
   end;
 
   { TLayoutItem }
-
+  TColorKind = (ckForeground,ckBackground);
   TLayoutItem = class
   private
+    FBGColor: TColor;
+    FColor: TColor;
     FContext: TFontContext;
     FDeltaX: LongInt;
     FDeltaY: LongInt;
@@ -65,11 +68,15 @@ type
     FSelectionEnd: LongInt;
     FSelectionStartChar: Integer;
     FSelectionEndChar: Integer;
+  protected
+    function GetColor(aKind : TColorKind; aDefault : TColor) : TColor;
   public
     constructor Create(aKind : TLayoutItemKind; aX,aY : Longint);
     property Kind: TLayoutItemKind read FKind;
     property X: LongInt read FX write FX;
     property Y: LongInt read FY write FY;
+    property BGColor : TColor Read FBGColor Write FBGColor;
+    property Color : TColor Read FColor Write FColor;
     property DeltaX: LongInt read FDeltaX write FDeltaX;
     property DeltaY: LongInt read FDeltaY write FDeltaY;
     property Width: LongInt read FWidth write FWidth;
@@ -157,44 +164,44 @@ type
     FBlockQuoteIndent: Integer;
     FBulletLevel: Integer;
     FBullets: Array[1..BulletCount] of string;
-    fCanvas: TCanvas;
-    fDocument: TMarkDownDocument;
-    fHyperLinkColor: TColor;
+    FCanvas: TCanvas;
+    FDocument: TMarkDownDocument;
+    FHyperLinkColor: TColor;
     FImageMargin: integer;
     FOnGetImage: TMarkdownImageEvent;
-    fParser: TMarkDownParser;
+    FParser: TMarkDownParser;
     FLists : TLayoutLists;
-    fCalculatedWidth: LongInt;
-    fCalculatedHeight: LongInt;
+    FCalculatedWidth: LongInt;
+    FCalculatedHeight: LongInt;
 
-    fLineWidth: LongInt;
+    FLineWidth: LongInt;
     FLayout : TLayoutData;
-    fParagraphSpacing: LongInt;
-    fIndentStep: LongInt;
-    fFontName: utf8string;
-    fMonoFontName: utf8string;
-    fBaseFontSize: LongInt;
-    fTargetDPI: LongInt;
+    FParagraphSpacing: LongInt;
+    FExtraIndent: LongInt;
+    FFontName: utf8string;
+    FMonoFontName: utf8string;
+    FBaseFontSize: LongInt;
+    FTargetDPI: LongInt;
 
     // Colors
-    fBGCodeColor: TColor;
-    fFontCodeColor: TColor;
-    fBGMarkColor: TColor;
-    fFontMarkColor: TColor;
-    fBGColor: TColor;
-    fFontColor: TColor;
-    fFontQuoteColor: TColor;
+    FBGCodeColor: TColor;
+    FFontCodeColor: TColor;
+    FBGMarkColor: TColor;
+    FFontMarkColor: TColor;
+    FBGColor: TColor;
+    FFontColor: TColor;
+    FFontQuoteColor: TColor;
     FNextLineIndent : Integer;
     FImageCache : TFPObjectHashTable;
 
     // Selection support
     FSelectionColor: TColor;
-
+    FHTMLEntities : TFPStringHashTable;
+  Protected
     // Selection methods
     procedure ClearAllSelections;
     procedure ApplySelection(const aStartPoint, aEndPoint: TSelectionPoint);
     function CalculateCharXPosition(aItem: TLayoutItem; aCharIndex: Integer): LongInt;
-    procedure DrawItemSelection(aCanvas: TCanvas; aItem: TLayoutItem; const aLeftPosition, aTopPosition: LongInt);
 
     // Layout management
     procedure Clear;
@@ -218,19 +225,24 @@ type
       const aFontStyle: TFontStyles; const aContext : TFontContext): LongInt;
     function MeasureTextHeight(const aCanvas: TCanvas; const aFontSize: LongInt; const aFontStyle: TFontStyles;
       const aContext : TFontContext): LongInt;
+    function GetTextColor(aContext: TFontContext): TColor; virtual;
+    function GetTextBGColor(aContext: TFontContext): TColor; virtual;
 
     // Text layout
+    procedure CollectHTMLEntities;
+    function ResolveEntities(const aText: String): String; virtual;
     procedure FlushTextRun(const aCanvas: TCanvas; const aText: utf8string; const aFontSize: LongInt;
       const aFontStyle: TFontStyles; const aLinkHref: utf8string; const aContext : TFontContext;
-      const aDryRun: boolean);
+      const aDryRun: boolean); virtual;
     procedure LayoutTextWrapped(const aCanvas: TCanvas; const aText: utf8string; const aFontSize: LongInt;
       const aFontStyle: TFontStyles; const aLinkHref: utf8string; const aContext : TFontContext;
-      const aPreserveWhitespace, aDryRun: boolean);
-    function LayoutImage(aImageURL: UTF8String): Boolean;
-
-    // Block rendering
+      const aPreserveWhitespace, aDryRun: boolean); virtual;
+    function LayoutImage(aImageURL: UTF8String): Boolean; virtual;
     procedure RenderTextNode(aTextNode: TMarkDownTextNode; aFontSize: LongInt; aFontStyle: TFontStyles; const aContext : TFontContext);
+
+    // Actual drawing
     procedure DrawLayoutItem(aCanvas: TCanvas; aItem: TLayoutItem; const aLeftPosition, aTopPosition: LongInt);
+    procedure DrawItemSelection(aCanvas: TCanvas; aItem: TLayoutItem; const aLeftPosition, aTopPosition: LongInt);
 
     // Utility
     function GetNodeFontStyle(aTextNode: TMarkDownTextNode): TFontStyles;
@@ -245,7 +257,7 @@ type
     function CreateLayoutItem(aKind : TLayoutItemKind; aX,aY : Longint) : TLayoutItem; inline;
     Property BulletLevel : Integer Read FBulletLevel;
     Property CalculatedBlockQuoteIndent : Integer Read FCalculatedBlockQuoteIndent;
-
+    Property Layout : TLayoutData read FLayout;
   public
     constructor Create(aOwner: TComponent); override;
     destructor Destroy; override;
@@ -268,27 +280,29 @@ type
     function HitTestText(const aX, aY: LongInt): TSelectionPoint;
 
     // Properties
-    property CalculatedWidth: LongInt read fCalculatedWidth;
-    property CalculatedHeight: LongInt read fCalculatedHeight;
-    Property Document : TMarkdownDocument Read fDocument;
-    property TargetDPI: LongInt read fTargetDPI write fTargetDPI;
-    property FontName: utf8string read fFontName write fFontName;
-    property MonoFontName: utf8string read fMonoFontName write fMonoFontName;
+    property CalculatedWidth: LongInt read FCalculatedWidth;
+    property CalculatedHeight: LongInt read FCalculatedHeight;
+    Property Document : TMarkdownDocument Read FDocument;
+    property TargetDPI: LongInt read FTargetDPI write FTargetDPI;
+    property FontName: utf8string read FFontName write FFontName;
+    property MonoFontName: utf8string read FMonoFontName write FMonoFontName;
 
-    property FontHyperLinkColor: TColor read fHyperLinkColor write fHyperLinkColor;
-    property BGCodeColor: TColor read fBGCodeColor write fBGCodeColor;
-    property FontCodeColor: TColor read fFontCodeColor write fFontCodeColor;
-    property BGMarkColor: TColor read fBGMarkColor write fBGMarkColor;
-    property FontMarkColor: TColor read fFontMarkColor write fFontMarkColor;
+    property FontHyperLinkColor: TColor read FHyperLinkColor write FHyperLinkColor;
+    property BGCodeColor: TColor read FBGCodeColor write FBGCodeColor;
+    property FontCodeColor: TColor read FFontCodeColor write FFontCodeColor;
+    property BGMarkColor: TColor read FBGMarkColor write FBGMarkColor;
+    property FontMarkColor: TColor read FFontMarkColor write FFontMarkColor;
 
-    property BGColor: TColor read fBGColor write fBGColor;
-    property FontColor: TColor read fFontColor write fFontColor;
-    property FontQuoteColor: TColor read fFontQuoteColor write fFontQuoteColor;
-    property BaseFontSize: LongInt read fBaseFontSize write fBaseFontSize;
+    property BGColor: TColor read FBGColor write FBGColor;
+    property FontColor: TColor read FFontColor write FFontColor;
+    property FontQuoteColor: TColor read FFontQuoteColor write FFontQuoteColor;
+    property BaseFontSize: LongInt read FBaseFontSize write FBaseFontSize;
     property BulletChar1 : string Index 1 Read GetBulletChar Write SetBulletChar;
     property BulletChar2 : string Index 2 read GetBulletChar Write SetBulletChar;
     property BulletChar3 : string Index 3 read GetBulletChar Write SetBulletChar;
     Property BlockQuoteIndent : Integer Read FBlockQuoteIndent Write FBlockQuoteIndent;
+    Property ParagraphSpacing : Integer Read FParagraphSpacing Write FParagraphSpacing;
+    Property ExtraIndent : Integer Read FExtraIndent Write FExtraIndent;
     Property ImageMargin : integer read FImageMargin Write FImageMargin;
     Property OnGetImage : TMarkdownImageEvent Read FOnGetImage Write FOnGetImage;
     property SelectionColor: TColor read FSelectionColor write FSelectionColor;
@@ -303,6 +317,9 @@ type
   protected
     // Helper methods for canvas rendering
     function DIP(aSize : integer) : Integer;
+    procedure Indent(aSize : Integer);
+    procedure Undent(aSize : Integer);
+    function LayoutData : TLayoutData;
     function CreateLayoutItem(aKind : TLayoutItemKind; aX,aY : Longint) : TLayoutItem; inline;
     function MeasureTextHeight(const aFontSize: LongInt; const aFontStyle: TFontStyles; const aContext : TFontContext): LongInt;
     function MeasureTextWidth(const aText: utf8string; const aFontSize: LongInt; const aFontStyle: TFontStyles;
@@ -310,6 +327,7 @@ type
     procedure LayoutText(const aText: utf8string; const aFontSize: LongInt; const aFontStyle: TFontStyles; const aLinkHref: utf8string;
       const aContext: TFontContext); inline;
     procedure SetCurrentY(aValue: Integer);
+    function GetCurrentY : Integer;
     procedure NewLine; inline;
     procedure ParagraphBreak; inline;
     procedure MaybeStartParagraph; inline;
@@ -472,9 +490,24 @@ const
 
 { TLayoutItem }
 
+function TLayoutItem.GetColor(aKind: TColorKind; aDefault: TColor): TColor;
+begin
+  case aKind of
+    ckBackground : Result:=FBGColor;
+    ckForeground : Result:=FColor;
+  else
+    Result:=clNone;
+  end;
+  if Result=clNone then
+    Result:=aDefault;
+end;
+
 constructor TLayoutItem.Create(aKind: TLayoutItemKind; aX, aY: Longint);
 begin
   FKind:=aKind;
+  FColor:=clNone;
+  FBGColor:=clNone;
+
   FX:=aX;
   FY:=aY;
   FIsSelected:=False;
@@ -539,6 +572,7 @@ constructor TMarkDownCanvasRenderer.Create(aOwner: TComponent);
 
 begin
   inherited Create(aOwner);
+  FHTMLEntities:=TFPStringHashTable.Create;
   FImageCache:=TFPObjectHashTable.Create(True);
   FBullets[1]:='•';
   FBullets[2]:='◦';
@@ -552,12 +586,12 @@ begin
 
   // Initialize default values
   fParagraphSpacing:=10;
-  fIndentStep:=20;
+  fExtraIndent:=0;
   fTargetDPI:=96;
   fFontName:='Sans Serif';
   fMonoFontName:='Monospace';
 
-  fBGCodeColor:=clInfoBk;
+  BGCodeColor:=RGBToColor(253,245,227);
   fFontCodeColor:=clInfoText;
   fBGMarkColor:=clYellow;
   fFontMarkColor:=clBlack;
@@ -575,6 +609,7 @@ end;
 
 destructor TMarkDownCanvasRenderer.Destroy;
 begin
+  FreeAndNil(FHTMLEntities);
   FreeAndNil(FImageCache);
   FreeAndNil(FLists.Items);
   FreeAndNil(FLists.LinkRects);
@@ -582,6 +617,7 @@ begin
   FreeAndNil(fParser);
   inherited Destroy;
 end;
+
 
 procedure TMarkDownCanvasRenderer.ClearAllSelections;
 var
@@ -911,6 +947,8 @@ procedure TMarkDownCanvasRenderer.ApplyFont(const aCanvas: TCanvas; const aFontS
   end;
 
 begin
+  // We do not apply color, it has no influence on measurement.
+  // Color is set explicitly when drawing.
   if fcMono in aContext then
     SetFontName(fMonoFontName)
   else
@@ -919,14 +957,6 @@ begin
     aCanvas.Font.Size:=aFontSize;
   if aCanvas.Font.Style<>aFontStyle then
     aCanvas.Font.Style:=aFontStyle;
-  if fcHyperLink in aContext then
-    aCanvas.Font.Color:=fHyperLinkColor
-  else if fcQuote in aContext then
-    aCanvas.Font.Color:=fFontQuoteColor
-  else if fcCode in aContext then
-    aCanvas.Font.Color:=fFontCodeColor
-  else
-    aCanvas.Font.Color:=fFontColor;
 end;
 
 
@@ -965,6 +995,28 @@ begin
   Result:=Height;
 end;
 
+function TMarkDownCanvasRenderer.GetTextColor(aContext : TFontContext) : TColor;
+
+begin
+  if fcHyperLink in aContext then
+    result:=FontHyperLinkColor
+  else if fcQuote in aContext then
+    Result:=fFontQuoteColor
+  else if ([fcCode,fcFencedCode]*aContext)<>[] then
+    Result:=FontCodeColor
+  else
+    Result:=FontColor;
+end;
+
+function TMarkDownCanvasRenderer.GetTextBGColor(aContext : TFontContext) : TColor;
+
+begin
+  if fcFencedCode in aContext then
+    Result:=BGCodeColor
+  else
+    Result:=BGColor;
+end;
+
 procedure TMarkDownCanvasRenderer.FlushTextRun(const aCanvas: TCanvas; const aText: utf8string;
   const aFontSize: LongInt; const aFontStyle: TFontStyles; const aLinkHref: utf8string;
   const aContext : TFontContext; const aDryRun: boolean);
@@ -987,6 +1039,9 @@ begin
     lX:=FLayout.CurrentIndent + FLayout.LineX;
     lY:=FLayout.LineY + FLayout.LineAboveExtra + BaselineShift;
     Item:=FLists.Items.NewItem(TLayoutItemKind.likText,lX,lY);
+
+    item.BGColor:=GetTextBGColor(aContext);
+    item.color:=GetTextColor(aContext);
     Item.Width:=lWidth;
     Item.Height:=lHeight;
     Item.Text:=aText;
@@ -1137,7 +1192,7 @@ begin
   if aText='' then
     exit;
   lText:=aText;
-  TextHeight:=MeasureTextHeight(aCanvas, aFontSize, aFontStyle, aContext);
+  TextHeight:=MeasureTextHeight(aCanvas,aFontSize, aFontStyle, aContext);
   if TextHeight>FLayout.LineHeight then
     FLayout.LineHeight:=TextHeight;
   lLength:=length(lText);
@@ -1258,26 +1313,27 @@ begin
      begin
      if aItem.IsSelected then
        aCanvas.Brush.Style:=bsClear
-     else if fcCode in aItem.Context then
-       begin
-       // Draw a rectangle over complete line.
-       aCanvas.Brush.Color:=fBGCodeColor;
-       aCanvas.Pen.Style:=psClear;
-       aCanvas.Rectangle(lX,ly,FLayout.MaxWidth,ly+aItem.Height+1);
-       end
+     else if ([fcCode,fcFencedCode] * aItem.Context)<>[] then
+       aCanvas.Brush.Color:=aItem.GetColor(ckBackground,BGCodeColor)
      else
-       aCanvas.Brush.Color:=fBGColor;
+       aCanvas.Brush.Color:=aItem.GetColor(ckBackground,BGColor);
      with aItem do
        begin
        ApplyFont(aCanvas, FontSize, FontStyle, Context);
+       aCanvas.Font.Color:=aItem.GetColor(ckForeground,GetTextColor(aItem.Context));
        aCanvas.TextOut(lX,lY, Text);
        end;
      end;
-   TLayoutItemKind.likRect:
+   TLayoutItemKind.likRect,
+   TLayoutItemKind.likBackground:
      begin
-     aCanvas.Pen.Color:=clBlack;
+     aCanvas.Pen.Style:=psSolid;
+     if aItem.Kind=TLayoutItemKind.likRect then
+       aCanvas.Pen.Color:=clBlack
+     else
+       aCanvas.Pen.Color:=aItem.GetColor(ckBackground,BGColor);
      aCanvas.Pen.Width:=1;
-     aCanvas.Brush.Color:=BGColor;
+     aCanvas.Brush.Color:=aItem.GetColor(ckBackGround,BGColor);
      aCanvas.Rectangle(lX,LY,lX+aItem.Width,lY+aItem.Height);
      end;
    TLayoutItemKind.likLine:
@@ -1396,7 +1452,7 @@ begin
   LineDelta:=FLayout.LineHeight-lImage.Height;
   if LineDelta<0 then
     LineDelta:=0;
-  lItem:=CreateLayoutItem(likImage,FLayout.LineX+ImageMargin,FLayout.LineY+lineDelta);
+  lItem:=CreateLayoutItem(likImage,FLayout.LineX+ImageMargin+FLayout.CurrentIndent,FLayout.LineY+lineDelta);
   lItem.Width:=lImage.Width;
   lItem.Height:=lImage.Height;
   lItem.URL:=aImageURL;
@@ -1409,18 +1465,78 @@ begin
     FLayout.LineHeight:=lImage.Height;
 end;
 
+procedure TMarkDownCanvasRenderer.CollectHTMLEntities;
+var
+  Ent : THTMLEntityDef;
+begin
+  for ent in EntityDefList do
+    FHTMLEntities.Add(ent.e,Utf8Encode(ent.u));
+end;
+
+function TMarkDownCanvasRenderer.ResolveEntities(const aText: String): String;
+
+
+  procedure copytoresult(aEnd,aStart : Integer);
+  begin
+    Result:=Result+Copy(aText,aStart,aEnd-aStart+1);
+  end;
+
+var
+  lend,lPrev,lNext,lUnicode : Integer;
+  lUChar : UnicodeChar;
+  lEnt,lUTF8 : String;
+
+begin
+  if FHTMLEntities.Count=0 then
+    CollectHTMLEntities;
+  lPrev:=1;
+  lNext:=Pos('&',aText,1);
+  if lNext=0 then
+    Exit(aText);
+  Result:='';
+  While lNext>0 do
+    begin
+    lUTF8:='';
+    CopyToResult(lNext-1,lPrev);
+    lEnd:=Pos(';',aText,lNext+1);
+    lEnt:=Copy(aText,lNext+1,lEnd-lNext-1);
+    if (lEnt<>'') then
+      begin
+      if lEnt[1]<>'#' then
+        lUTF8:=FHTMLEntities.Items[LowerCase(lEnt)]
+      else if TryStrToInt(Copy(lEnt,2,Length(lEnt)-1),lUnicode) then
+        begin
+        if (lUnicode=0) or (lUnicode>65535) then
+          lUChar:=#$FFFD
+        else
+          lUChar:=UnicodeChar(lUnicode);
+        lUTF8:=Utf8Encode(lUChar);
+        end;
+      lNext:=lEnd;
+      end;
+    if lUTF8='' then
+      Result:=Result+lEnt+';'
+    else
+      Result:=Result+lUTF8;
+    lPrev:=lNext+1;
+    lNext:=Pos('&',aText,lPrev);
+    end;
+  CopyToResult(Length(aText),lPrev+1);
+end;
+
 procedure TMarkDownCanvasRenderer.RenderTextNode(aTextNode: TMarkDownTextNode; aFontSize: LongInt;
   aFontStyle: TFontStyles; const aContext : TFontContext);
 var
+  lItem : TLayoutItem;
   fontStyle: TFontStyles;
-  linkHref: utf8string;
+  lText,linkHref: utf8string;
   lContext : TFontContext;
   Alt : string;
 begin
   if not assigned(aTextNode) then exit;
   lContext:=aContext;
   fontStyle:=aFontStyle + GetNodeFontStyle(aTextNode);
-
+  lText:=ResolveEntities(aTextNode.NodeText);
   linkHref:='';
   if aTextNode.Kind = nkCode then
     lContext:=lContext+[fcMono,fcCode];
@@ -1428,26 +1544,30 @@ begin
     nkCode,
     nkText:
       begin
-      if fcCode in lContext then
+      if fcFencedCode in lContext then
         begin
-        FlushTextRun(fCanvas, aTextNode.NodeText, aFontSize, fontStyle, '', lContext, False);
+        lItem:=FLists.Items.NewItem(likBackground,FLayout.LineX,FLayout.LineY);
+        lItem.BGColor:=GetTextBGColor([fcFencedCode]);
+        lItem.Width:=FLayout.MaxWidth-LItem.X;
+        FlushTextRun(fCanvas, lText, aFontSize, fontStyle, '', lContext, False);
         NewLine(fCanvas);
+        lItem.Height:=FLayout.LineY-lItem.Y;
         end
       else
-        LayoutTextWrapped(fCanvas, aTextNode.NodeText, aFontSize, fontStyle, linkHref, lContext, false, False);
+        LayoutTextWrapped(fCanvas, lText, aFontSize, fontStyle, linkHref, lContext, false, False);
       end;
     nkLineBreak:
       NewLine(fCanvas);
     nkURI, nkEmail:
       begin
       linkHref:=aTextNode.Attrs['href'];
-      LayoutTextWrapped(fCanvas, aTextNode.NodeText, aFontSize, fontStyle + [fsUnderline], linkHref,
+      LayoutTextWrapped(fCanvas, lText, aFontSize, fontStyle + [fsUnderline], linkHref,
         lContext+[fcHyperLink], False, False);
       end;
     nkImg:
       if Not LayoutImage(aTextNode.Attrs['src']) then
         begin
-        Alt:=aTextNode.Attrs['alt'];
+        Alt:=ResolveEntities(aTextNode.Attrs['alt']);
         if Alt='' then
           Alt:='img';
         LayoutTextWrapped(fCanvas, '['+Alt+']', aFontSize, fontStyle, '', lContext+[fcQuote], False, False);
@@ -1468,6 +1588,7 @@ end;
 
 procedure TMarkDownCanvasRenderer.Indent(aSize: integer);
 begin
+  inc(aSize,fExtraIndent);
   if FLayout.LineX>0 then
     FNextLineIndent:=FNextLineIndent+aSize
   else
@@ -1481,6 +1602,7 @@ end;
 
 procedure TMarkDownCanvasRenderer.Undent(aSize: integer);
 begin
+  inc(aSize,fExtraIndent);
   FLayout.CurrentIndent:=FLayout.CurrentIndent-aSize;
   if FLayout.CurrentIndent<0 then
     FLayout.CurrentIndent:=0;
@@ -1552,6 +1674,21 @@ begin
   Result:=CanvasRenderer.DIP(aSize);
 end;
 
+procedure TCanvasMarkDownBlockRenderer.Indent(aSize: Integer);
+begin
+  CanvasRenderer.Indent(aSize);
+end;
+
+procedure TCanvasMarkDownBlockRenderer.Undent(aSize: Integer);
+begin
+ CanvasRenderer.Undent(aSize);
+end;
+
+function TCanvasMarkDownBlockRenderer.LayoutData: TLayoutData;
+begin
+  Result:=CanvasRenderer.Layout;
+end;
+
 function TCanvasMarkDownBlockRenderer.CreateLayoutItem(aKind: TLayoutItemKind; aX, aY: Longint): TLayoutItem;
 begin
   Result:=CanvasRenderer.CreateLayoutItem(aKind, aX, aY);
@@ -1578,6 +1715,11 @@ end;
 procedure TCanvasMarkDownBlockRenderer.SetCurrentY(aValue: Integer);
 begin
   CanvasRenderer.SetCurrentY(aValue);
+end;
+
+function TCanvasMarkDownBlockRenderer.GetCurrentY: Integer;
+begin
+  Result:=CanvasRenderer.FLayout.Liney;
 end;
 
 procedure TCanvasMarkDownBlockRenderer.NewLine;
@@ -1740,7 +1882,7 @@ end;
 procedure TCanvasMarkDownCodeBlockRenderer.DoRender(aBlock: TMarkDownBlock);
 begin
   if not assigned(aBlock) then exit;
-
+  ParagraphBreak;
   // Render code with monospace font
   Renderer.RenderChildren(aBlock as TMarkDownContainerBlock);
   ParagraphBreak;
@@ -2144,7 +2286,7 @@ begin
     if (Parent is TCanvasMarkDownQuoteBlockRenderer) then
       Include(FontContext,fcQuote);
     if (Parent is TCanvasMarkdownCodeBlockRenderer) then
-      FontContext:=FontContext+[fcMono,fcCode];
+      FontContext:=FontContext+[fcMono,fcFencedCode];
     end;
   for i:=0 to lTextBlock.Nodes.Count - 1 do
   begin

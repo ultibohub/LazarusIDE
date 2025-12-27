@@ -44,8 +44,21 @@ object MainChatForm: TMainChatForm
       LeftTextColor = clBlack
       RightTextColor = clBlack
       ItemSpacing = 8
-      ItemPadding = 8
+      ItemPadding = 24
       ItemMargin = 4
+      BaseFontSize = 10
+      MonoFontName = 'Monospace'
+      FontCodeColor = clInfoText
+      FontQuoteColor = clWindowFrame
+      HyperLinkColor = 13391121
+      BGCodeColor = clInfoBk
+      BulletChar1 = '•'
+      BulletChar2 = '◦'
+      BulletChar3 = '▪'
+      BlockQuoteIndent = 40
+      ExtraIndent = 0
+      ParagraphSpacing = 12
+      ImageMargin = 2
       Align = alClient
       ClientHeight = 470
       ClientWidth = 1070
@@ -93,10 +106,10 @@ object MainChatForm: TMainChatForm
       OnClick = handlePrompt
     end
     object cbLeft: TCheckBox
-      Left = 936
-      Height = 23
-      Top = 104
-      Width = 94
+      Left = 938
+      Height = 22
+      Top = 105
+      Width = 92
       Anchors = [akRight, akBottom]
       Caption = 'Add to Left'
       TabOrder = 2
@@ -111,10 +124,10 @@ object MainChatForm: TMainChatForm
       OnClick = Button2Click
     end
     object cbCtrlSelects: TCheckBox
-      Left = 936
-      Height = 23
-      Top = 75
-      Width = 132
+      Left = 941
+      Height = 22
+      Top = 76
+      Width = 127
       Anchors = [akRight, akBottom]
       Caption = 'CTRL-Click selects'
       TabOrder = 4

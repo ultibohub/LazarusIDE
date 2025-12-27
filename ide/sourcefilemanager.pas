@@ -370,9 +370,8 @@ implementation
 function CreateSrcEditPageName(const AnUnitName, AFilename: string;
   IgnoreEditor: TSourceEditor): string;
 begin
-  //Result := StringReplace(AnUnitName, '&', '', [rfReplaceAll]);
   Result := AnUnitName;
-  if Result='' then
+  if (Result='') or (FilenameExtIs(AFilename, '.lpr')) then
     Result:=ExtractFileName(AFilename);
   Result:=SourceEditorManager.FindUniquePageName(Result,IgnoreEditor);
 end;
@@ -617,9 +616,8 @@ begin
     FWindowIndex := SourceEditorManager.IndexOfSourceWindow(SrcNotebook);
   end
   else
-  if (FWindowIndex >= SourceEditorManager.SourceWindowCount) then begin
-    SrcNotebook := SourceEditorManager.NewSourceWindow;
-  end
+  if (FWindowIndex >= SourceEditorManager.SourceWindowCount) then
+    SrcNotebook := SourceEditorManager.NewSourceWindow
   else
     SrcNotebook := SourceEditorManager.SourceWindows[FWindowIndex];
 
@@ -656,9 +654,9 @@ begin
       NewErrorLine:=NewSrcEdit.ErrorLine;
       NewExecutionLine:=NewSrcEdit.ExecutionLine;
       NewSrcEdit.EditorComponent.BeginUpdate;
-      if NewSrcEdit.CodeBuffer=AnUnitInfo.Source then begin
-        AnUnitInfo.Source.AssignTo(NewSrcEdit.EditorComponent.Lines,true);
-      end else
+      if NewSrcEdit.CodeBuffer=AnUnitInfo.Source then
+        AnUnitInfo.Source.AssignTo(NewSrcEdit.EditorComponent.Lines,true)
+      else
         NewSrcEdit.CodeBuffer:=AnUnitInfo.Source;
       AnUnitInfo.ClearModifieds;
       //DebugLn(['TFileOpener.OpenFileInSourceEditor NewCaretXY=',dbgs(NewCaretXY),' NewTopLine=',NewTopLine]);
@@ -2179,13 +2177,11 @@ begin
     AEditor := SourceEditorManager.SourceEditors[i];
     AnUnitInfo := Project1.UnitWithEditorComponent(AEditor);
     if AnUnitInfo=nil then continue;
-    if FilenameIsPascalUnit(AnUnitInfo.Filename) then begin
-      SourceName:=CodeToolBoss.GetCachedSourceName(AnUnitInfo.Source);
-      if SourceName<>'' then
-        AnUnitInfo.ReadUnitNameFromSource(true);
-    end else
-      SourceName:='';
-    PageName:=CreateSrcEditPageName(SourceName, AnUnitInfo.Filename, AEditor);
+    if FilenameIsPascalUnit(AnUnitInfo.Filename) then
+      SourceName := CodeToolBoss.GetCachedSourceName(AnUnitInfo.Source)
+    else
+      SourceName := '';
+    PageName := CreateSrcEditPageName(SourceName, AnUnitInfo.Filename, AEditor);
     //debugln([i,': UpdateSourceNames ',AnUnitInfo.Filename]);
     AEditor.PageName := PageName;
   end;
@@ -2336,12 +2332,9 @@ begin
   SaveEditorChangesToCodeCache(nil);
 
   // convert macros in filename
-  if nfConvertMacros in NewFlags then begin
-    if not GlobalMacroList.SubstituteStr(NewFilename) then begin
-      Result:=mrCancel;
-      exit;
-    end;
-  end;
+  if nfConvertMacros in NewFlags then
+    if not GlobalMacroList.SubstituteStr(NewFilename) then
+      exit(mrCancel);
 
   if NewOwner is TProject then
     AProject:=TProject(NewOwner)
@@ -8094,7 +8087,7 @@ begin
   Project1.ActiveWindowIndexAtStart := SourceEditorManager.ActiveSourceWindowIndex;
 
   // update source notebook page names
-  UpdateSourceNames;
+  //UpdateSourceNames;
 
   // find mainunit
   GetMainUnit(MainUnitInfo, MainUnitSrcEdit);

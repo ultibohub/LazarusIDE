@@ -1089,6 +1089,7 @@ begin
     {$ENDIF}
     CodeToolBoss.CompilerDefinesCache.ConfigCaches.Clear;
     CodeToolBoss.CompilerDefinesCache.SourceCaches.Clear;
+    CodeToolBoss.SourceCache.ClearIncludedBy_FPCNamespaced('*');
   end;
   if ResetBuildTarget then
     SetBuildTarget('','','','','',smsfsSkip,true); //Ultibo
