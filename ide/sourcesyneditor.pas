@@ -62,7 +62,7 @@ uses
   SynEditMarkupHighAll, SynEditKeyCmds, SynEditMarkupIfDef, SynEditMiscProcs,
   SynPluginMultiCaret, SynEditPointClasses,
   SynEditMarkupFoldColoring, SynEditTextTabExpander, SynEditMouseCmds, SynEditWrappedView,
-  SynPluginExternalLink, LazEditTextAttributes,
+  SynPluginExternalLink, SynPluginAutoBraces, LazEditTextAttributes,
   // IDE
   etSrcEditMarks, LazarusIDEStrConsts, SourceMarks, LazEditTextGridPainter;
 
@@ -262,6 +262,7 @@ type
     FCaretColor: TColor;
     FCaretStamp: Int64;
     FExternalHttpLink: TSynPluginExternalLink;
+    FAutoBraces: TSynPluginAutoBraces;
     FMarkupIdentComplWindow: TSynMarkupIdentComplWindow;
     FShowTopInfo: boolean;
     FFoldView: TSynEditFoldedView;
@@ -357,6 +358,7 @@ type
     property CaretColor: TColor read FCaretColor write SetCaretColor;
 
     property ExternalHttpLink: TSynPluginExternalLink read FExternalHttpLink;
+    property AutoBraces: TSynPluginAutoBraces read FAutoBraces;
     property WrapView: TLazSynEditLineWrapPlugin read FWrapView;
     property WordWrapEnabled: Boolean read GetWordWrapEnabled write SetWordWrapEnabled;
     property WordWrapCaretWrapPos: TLazSynEditWrapCaretPos write SetWordWrapCaretWrapPos;
@@ -411,7 +413,7 @@ type
     function CreateRangeList({%H-}ALines: TSynEditStringsBase): TSynHighlighterRangeList; override;
     function StartCodeFoldBlock(ABlockType: Pointer = nil;
       IncreaseLevel: Boolean = true; ForceDisabled: Boolean = False
-      ): TSynCustomCodeFoldBlock; override;
+      ): Boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
     //procedure DefHighlightChange(Sender: TObject);
@@ -2146,6 +2148,7 @@ begin
   MarkupCaret.ScanMode := smsmASyncForceAll;
 
   FExternalHttpLink := TSynPluginExternalLink.Create(Self);
+  FAutoBraces := TSynPluginAutoBraces.Create(Self);
 
   {$IFDEF WithSynDebugGutter}
   TIDESynGutter(RightGutter).DebugGutter.TheLinesView := ViewedTextBuffer;
@@ -2304,8 +2307,8 @@ begin
   TIDESynHighlighterPasRangeList(Result).FFinalizationLine := -1;
 end;
 
-function TIDESynPasSyn.StartCodeFoldBlock(ABlockType: Pointer;
-  IncreaseLevel: Boolean; ForceDisabled: Boolean): TSynCustomCodeFoldBlock;
+function TIDESynPasSyn.StartCodeFoldBlock(ABlockType: Pointer; IncreaseLevel: Boolean;
+  ForceDisabled: Boolean): Boolean;
 begin
   if (ABlockType = Pointer(PtrUInt(cfbtUnitSection))) or
      (ABlockType = Pointer(PtrUInt(cfbtUnitSection)) + {%H-}PtrUInt(CountPascalCodeFoldBlockOffset))

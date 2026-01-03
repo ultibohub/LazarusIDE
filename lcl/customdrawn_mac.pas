@@ -34,12 +34,10 @@ type
     // ===================================
     // Common Controls Tab
     // ===================================
-    (*
     // TCDToolBar
     procedure DrawToolBarItem(ADest: TCanvas; ASize: TSize;
       ACurItem: TCDToolBarItem; AX, AY: Integer;
       AState: TCDControlState; AStateEx: TCDToolBarStateEx); override;
-    *)
   end;
 
 implementation
@@ -182,21 +180,13 @@ procedure TCDDrawerMac.DrawButton(ADest: TFPCustomCanvas; ADestPos: TPoint; ASiz
 begin
   DrawMacSquareButton(ADest, ADestPos, ASize, AState, AStateEx);
 end;
-                    (*
+
 procedure TCDDrawerMac.DrawToolBarItem(ADest: TCanvas; ASize: TSize;
   ACurItem: TCDToolBarItem; AX, AY: Integer; AState: TCDControlState;
   AStateEx: TCDToolBarStateEx);
 var
   lX, lY1, lY2, lEffWidth: Integer;
-
-  procedure DrawToolBarItemBorder();
-  begin
-    ADest.Pen.Style := psSolid;
-    ADest.Pen.Color := $AFAFAF;
-    ADest.Brush.Style := bsClear;
-    ADest.Rectangle(Bounds(AX, AY, ASize.cx, ASize.cy));
-  end;
-
+  color: TColor;
 begin
   // tikDivider is centralized, tikSeparator is left-aligned
   case ACurItem.Kind of
@@ -234,22 +224,21 @@ begin
       Exit;
     end;
 
-    if csfSunken in AState then
+    if [csfSunken,csfMouseOver,csfOn] * AState <> [] then
     begin
-      ADest.GradientFill(Bounds(AX, AY, ASize.CX, ASize.CY),
-        $C4C4C4, $DBDBDB, gdVertical);
-      DrawToolBarItemBorder();
-    end
-    else if csfMouseOver in AState then
-    begin
-      ADest.GradientFill(Bounds(AX, AY, ASize.CX, ASize.CY),
-        $E3E3E3, $F7F7F7, gdVertical);
-      DrawToolBarItemBorder();
+      if csfSunken in AState then begin
+        color:= clGradientActiveCaption;
+      end else begin
+        color:= cl3DLight;
+      end;
+      ADest.Pen.Color:= color;
+      ADest.Brush.Color:= color;
+      ADest.RoundRect( Bounds(AX, AY, ASize.CX, ASize.CY), 10, 10 );
     end;
   end;
   end;
 end;
-            *)
+
 initialization
   RegisterDrawer(TCDDrawerMac.Create, dsMacOSX);
 end.

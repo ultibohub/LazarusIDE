@@ -122,12 +122,22 @@ function TPreProcessorExpressionTokeniser.TryConsumeFixedSymbol: boolean;
 var
   leLoop:  TPreProcessorSymbol;
   lbFound: boolean;
+  C : Char;
 begin
   Result := False;
 
   for leLoop := low(SYMBOL_DATA) to high(SYMBOL_DATA) do
   begin
     lbFound := StartsWith(SYMBOL_DATA[leLoop]);
+    if lbFound and (leLoop in [ eDefined, eDeclared, eAnd, eOr, eNot, eTrue, eFalse]) then
+      begin
+      // DEFINED etc. can be part of an identifier.
+      // So, check that the next character is not part of a possible identifier.
+      // e.g. StartsWith("And") matches "Android" but should not match eAnd...
+      C:=fsExpr[fiCurrentIndex+Length(SYMBOL_DATA[leLoop])];
+      if CharIsWordCharOrDigit(C) then
+        lbFound:=False;
+      end;
 
     if lbFound then
     begin

@@ -31,7 +31,8 @@ interface
 
 uses
   SysUtils, Classes, math, LCLType, SynEditTextBase, SynEditHighlighter,
-  SynEditHighlighterFoldBase, LazEditHighlighterUtils, LazEditHighlighter, LazListClasses;
+  SynEditHighlighterFoldBase, LazEditHighlighterUtils, LazEditHighlighter, LazEditTypes,
+  LazListClasses;
 
 type
 
@@ -61,7 +62,15 @@ type
   end;
 
 
+  { TSynCustomXmlHighlighter }
+
   TSynCustomXmlHighlighter = class(TSynCustomFoldHighlighter)
+  private const
+    XML_BRACKET_KIND_TOKEN_COUNT = 6;
+    XML_BRACKET_KIND_TOKENS: array [Boolean, 0..XML_BRACKET_KIND_TOKEN_COUNT-1] of string =
+      ( ('>', ')', ']', '}', '''', '"'),
+        ('<', '(', '[', '{', '''', '"')
+      );
   private
     FXmlRangeInfo: TSynXmlRangeInfo;
     FXmlRangeInfoChanged: Boolean;
@@ -71,13 +80,18 @@ type
     function  CreateRangeList(ALines: TLazEditStringsBase): TLazHighlighterLineRangeList; override;
     function  UpdateRangeInfoAtLine(Index: Integer): Boolean; override; // Returns true if range changed
 
-    function  StartXmlCodeFoldBlock(ABlockType: Integer): TSynCustomCodeFoldBlock;
+    function  StartXmlCodeFoldBlock(ABlockType: Integer): Boolean;
     function  StartXmlNodeCodeFoldBlock(ABlockType: Integer; OpenPos: Integer;
-                                        AName: String): TSynCustomCodeFoldBlock;
+                                        AName: String): Boolean;
     procedure EndXmlCodeFoldBlock;
     procedure EndXmlNodeCodeFoldBlock(ClosePos: Integer = -1; AName: String = '');
+    function GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean): String; override;
   public
     procedure InitForScaningLine; override;
+    function BracketKindCount: integer; override;
+    function GetBracketContextAt(const ALineIdx: TLineIdx; const ALogX: IntPos;
+      const AByteLen: Integer; const AKind: integer; var AFlags: TLazEditBracketInfoFlags; out
+      AContext, ANestLevel: Integer; var InternalInfo: PtrUInt): Boolean; override;
   end;
 
 implementation
@@ -114,7 +128,32 @@ begin
   FXmlRangeInfoClosePos := 0;
 end;
 
-function TSynCustomXmlHighlighter.StartXmlCodeFoldBlock(ABlockType: Integer): TSynCustomCodeFoldBlock;
+function TSynCustomXmlHighlighter.BracketKindCount: integer;
+begin
+  Result := XML_BRACKET_KIND_TOKEN_COUNT;
+end;
+
+function TSynCustomXmlHighlighter.GetBracketContextAt(const ALineIdx: TLineIdx;
+  const ALogX: IntPos; const AByteLen: Integer; const AKind: integer;
+  var AFlags: TLazEditBracketInfoFlags; out AContext, ANestLevel: Integer;
+  var InternalInfo: PtrUInt): Boolean;
+begin
+  if LineIndex <> ALineIdx then
+    StartAtLineIndex(ALineIdx);
+  NextToLogX(ALogX, True);
+
+  AContext := GetTokenKind;
+  ANestLevel := 0;
+  AFlags := AFlags + [bfUnknownNestLevel];
+  Result := True;
+
+  if AKind <> 0 then
+    AFlags := AFlags + [bfNoLanguageContext];
+  if AKind >= 4 then
+    AFlags := AFlags + [bfSingleLine, bfUniform, bfNotNestable] - [bfOpen];
+end;
+
+function TSynCustomXmlHighlighter.StartXmlCodeFoldBlock(ABlockType: Integer): Boolean;
 var
   FoldBlock: Boolean;
   p: PtrInt;
@@ -126,8 +165,8 @@ begin
   Result := StartCodeFoldBlock(p + Pointer(PtrInt(ABlockType)), FoldBlock);
 end;
 
-function TSynCustomXmlHighlighter.StartXmlNodeCodeFoldBlock(ABlockType: Integer;
-  OpenPos: Integer; AName: String): TSynCustomCodeFoldBlock;
+function TSynCustomXmlHighlighter.StartXmlNodeCodeFoldBlock(ABlockType: Integer; OpenPos: Integer;
+  AName: String): Boolean;
 var
   i: Integer;
 begin
@@ -225,6 +264,13 @@ begin
       dec(FXmlRangeInfoOpenPos);
     EndXmlCodeFoldBlock;
   end;
+end;
+
+function TSynCustomXmlHighlighter.GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean
+  ): String;
+begin
+  Result := XML_BRACKET_KIND_TOKENS[AnOpeningToken, AnIndex]
+
 end;
 
 { TSynHighlighterXmlRangeList }

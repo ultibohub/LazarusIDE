@@ -48,8 +48,8 @@ unit SynHighlighterHTML;
 interface
 
 uses
-  SysUtils, Classes, Math, Graphics, SynEditTypes, SynEditHighlighter,
-  SynEditHighlighterXMLBase, SynEditHighlighterFoldBase, SynEditStrConst, LazEditTextAttributes;
+  SysUtils, Classes, Math, Graphics, SynEditTypes, SynEditHighlighter, SynEditHighlighterXMLBase,
+  SynEditHighlighterFoldBase, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter;
 
 const
   MAX_ESCAPEAMPS = 109;
@@ -422,9 +422,9 @@ type
     procedure CreateRootCodeFoldBlock; override;
     function GetFoldConfigInstance(Index: Integer): TSynCustomFoldConfig; override;
 
-    function StartHtmlCodeFoldBlock(ABlockType: THtmlCodeFoldBlockType): TSynCustomCodeFoldBlock;
+    function StartHtmlCodeFoldBlock(ABlockType: THtmlCodeFoldBlockType): Boolean;
     function StartHtmlNodeCodeFoldBlock(ABlockType: THtmlCodeFoldBlockType;
-                                   OpenPos: Integer; AName: String): TSynCustomCodeFoldBlock;
+                                   OpenPos: Integer; AName: String): Boolean;
     procedure EndHtmlNodeCodeFoldBlock(ClosePos: Integer = -1; AName: String = '');
     function TopHtmlCodeFoldBlockType(DownIndex: Integer = 0): THtmlCodeFoldBlockType;
 
@@ -448,6 +448,9 @@ type
     procedure Next; override;
     procedure SetRange(Value: Pointer); override;
     procedure ReSetRange; override;
+    function GetBracketContextAt(const ALineIdx: TLineIdx; const ALogX: IntPos;
+      const AByteLen: Integer; const AKind: integer; var AFlags: TLazEditBracketInfoFlags; out
+      AContext, ANestLevel: Integer; var InternalInfo: PtrUInt): Boolean; override;
     property IdentChars;
   published
     property AndAttri: TSynHighlighterAttributes index attribAnd read fAndAttri write SetAttribute;
@@ -2759,6 +2762,17 @@ begin
   fAndCode := -1;
 end;
 
+function TSynHTMLSyn.GetBracketContextAt(const ALineIdx: TLineIdx; const ALogX: IntPos;
+  const AByteLen: Integer; const AKind: integer; var AFlags: TLazEditBracketInfoFlags; out
+  AContext, ANestLevel: Integer; var InternalInfo: PtrUInt): Boolean;
+begin
+  if (AKind = 0) { <> } and (fTokenID in [tkText, tkComment]) then
+    exit(False);
+
+  Result := inherited GetBracketContextAt(ALineIdx, ALogX, AByteLen, AKind, AFlags, AContext,
+    ANestLevel, InternalInfo);
+end;
+
 function TSynHTMLSyn.GetIdentChars: TSynIdentChars;
 begin
   Result := ['0'..'9', 'a'..'z', 'A'..'Z'];
@@ -2780,15 +2794,15 @@ begin
   end;
 end;
 
-function TSynHTMLSyn.StartHtmlCodeFoldBlock(ABlockType: THtmlCodeFoldBlockType): TSynCustomCodeFoldBlock;
+function TSynHTMLSyn.StartHtmlCodeFoldBlock(ABlockType: THtmlCodeFoldBlockType): Boolean;
 begin
   Result := inherited StartXmlCodeFoldBlock(ord(ABlockType));
 end;
 
 function TSynHTMLSyn.StartHtmlNodeCodeFoldBlock(ABlockType: THtmlCodeFoldBlockType;
-  OpenPos: Integer; AName: String): TSynCustomCodeFoldBlock;
+  OpenPos: Integer; AName: String): Boolean;
 begin
-  if not FFoldConfig[ord(cfbtHtmlNode)].Enabled then exit(nil);
+  if not FFoldConfig[ord(cfbtHtmlNode)].Enabled then exit(False);
   Result := inherited StartXmlNodeCodeFoldBlock(ord(ABlockType), OpenPos, AName);
 end;
 

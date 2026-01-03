@@ -58,7 +58,7 @@ interface
 uses
   Classes, SysUtils, Graphics, SynEditTypes, SynEditHighlighter, SynEditHighlighterFoldBase,
   SynEditHighlighterXMLBase, SynEditStrConst, SynEditMiscClasses, SynEditMiscProcs,
-  LazEditTextAttributes;
+  LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkAttribute, tkAttrValue, tkCDATA,
@@ -212,9 +212,9 @@ type
     // folding
     procedure CreateRootCodeFoldBlock; override;
 
-    function StartXmlCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType): TSynCustomCodeFoldBlock;
+    function StartXmlCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType): Boolean;
     function StartXmlNodeCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType;
-                                   OpenPos: Integer; AName: String): TSynCustomCodeFoldBlock;
+                                   OpenPos: Integer; AName: String): Boolean;
     procedure EndXmlNodeCodeFoldBlock(ClosePos: Integer = -1; AName: String = '');
     function TopXmlCodeFoldBlockType(DownIndex: Integer = 0): TXmlCodeFoldBlockType;
 
@@ -240,6 +240,9 @@ type
     procedure Next; override;
     procedure SetRange(Value: Pointer); override;
     procedure ReSetRange; override;
+    function GetBracketContextAt(const ALineIdx: TLineIdx; const ALogX: IntPos;
+      const AByteLen: Integer; const AKind: integer; var AFlags: TLazEditBracketInfoFlags; out
+      AContext, ANestLevel: Integer; var InternalInfo: PtrUInt): Boolean; override;
     property IdentChars;
   published
     property ElementAttri: TSynHighlighterAttributes index attribElement read fElementAttri write SetAttribute;
@@ -1112,6 +1115,20 @@ begin
   fRangeFlags := [];
 end;
 
+function TSynXMLSyn.GetBracketContextAt(const ALineIdx: TLineIdx; const ALogX: IntPos;
+  const AByteLen: Integer; const AKind: integer; var AFlags: TLazEditBracketInfoFlags; out
+  AContext, ANestLevel: Integer; var InternalInfo: PtrUInt): Boolean;
+begin
+  if (AKind = 0) { <> } and (fTokenID in [tkText, tkComment]) then
+    exit(False);
+
+  Result := inherited GetBracketContextAt(ALineIdx, ALogX, AByteLen, AKind, AFlags, AContext,
+    ANestLevel, InternalInfo);
+
+  if AContext = ord(tkEqual) then
+    AContext := ord(tkSymbol);
+end;
+
 function TSynXMLSyn.GetIdentChars: TSynIdentChars;
 begin
   Result := ['0'..'9', 'a'..'z', 'A'..'Z', '_', '.', '-'] + TSynSpecialChars;
@@ -1150,15 +1167,15 @@ begin
   RootCodeFoldBlock.InitRootBlockType(Pointer(PtrInt(cfbtXmlNone)));
 end;
 
-function TSynXMLSyn.StartXmlCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType): TSynCustomCodeFoldBlock;
+function TSynXMLSyn.StartXmlCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType): Boolean;
 begin
   Result := inherited StartXmlCodeFoldBlock(ord(ABlockType));
 end;
 
-function TSynXMLSyn.StartXmlNodeCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType;
-  OpenPos: Integer; AName: String): TSynCustomCodeFoldBlock;
+function TSynXMLSyn.StartXmlNodeCodeFoldBlock(ABlockType: TXmlCodeFoldBlockType; OpenPos: Integer;
+  AName: String): Boolean;
 begin
-  if not FFoldConfig[ord(cfbtXmlNode)].Enabled then exit(nil);
+  if not FFoldConfig[ord(cfbtXmlNode)].Enabled then exit(False);
   Result := inherited StartXmlNodeCodeFoldBlock(ord(ABlockType), OpenPos, AName);
 end;
 

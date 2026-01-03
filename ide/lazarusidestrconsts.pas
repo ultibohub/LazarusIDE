@@ -1873,6 +1873,7 @@ resourcestring
   dlgMultiCaretMode = 'Navigation keys move all carets';
   dlgMultiCaretDelSkipCr = 'Skip delete key at EOL (do not join lines)';
   dlgColorLink = '(Edit Color)';
+  dlgColorLink2 = '(Color)';
   dlgEditMaxLength = '(Edit Max Length)';
   dlgKeyLink = '(Edit Key)';
   dlgBracketHighlight = 'Bracket highlight';
@@ -1993,6 +1994,7 @@ resourcestring
   dlgMarkupGroup = 'Highlight all occurrences of Word under Caret';
   dlgBracketMatchGroup = 'Matching bracket and quote pairs';
   dlgPasExtHighlightGroup = 'Extended Pascal Highlight Options';
+  dlgPasParamTypes = 'Types and values in declarations and params';
   dlgPasKeywordsMatches = 'Matching Keywords';
   dlgPasKeywordsMarkup = 'Markup (on caret)';
   dlgPasKeywordsOutline = 'Outline';
@@ -2001,9 +2003,9 @@ resourcestring
   dlgMarkupOutlineWarnNoColor = 'Warning: There are no colors configured for the selected language';
   dlgPasExtKeywords = 'Highlight flow control statements (break, continue, exit) as keywords';
   dlgPasCaseLabelForOtherwise = 'Color otherwise/else as case-label';
-  dlgPasDeclaredTypeAttrMode = 'Extend of type-highlight in declarations';
-  dlgPasDeclaredTypeValueMode = 'Extend of initial-value-highlight in declarations';
-  dlgPasGenericParamAttrMode = 'Extend of initial-value-highlight in Generic/Specialize';
+  dlgPasDeclaredTypeAttrMode = 'Extent of type-highlight in declarations';
+  dlgPasDeclaredTypeValueMode = 'Extent of initial-value-highlight in declarations';
+  dlgPasGenericParamAttrMode = 'Extent of highlight in Generic-Constraint and Specialize-param';
   dlgPasDeclaredTypeValueModeLiteral = 'Include literals (Number, String) in initial-value-highlight in declarations';
   dlgPasDeclaredTypeAttrModeIdent = 'Identifier only';
   dlgPasDeclaredTypeAttrModeNames = 'Identifier and built-in (types/values)';
@@ -2040,7 +2042,8 @@ resourcestring
   lisCompletionLongLineHintTypeFullLeft = 'Extend far left';
   dlgIncludeIdentifiersContainingPrefix = 'Include identifiers containing prefix';
   lisAutomaticFeatures = 'Completion and Hints';
-  lisAutoMarkup = 'Markup and Matches';
+  lisPascalHighlightOpts = 'Pascal highlight';
+  lisAutoMarkup = 'Pairs/Matches and Structure';
   dlgUseIconsInCompletionBox = 'Icons in code completion box';
   dlgIncludeWordsToIdentCompl = 'Include words';
   dlgIncludeWordsToIdentCompl_IncludeFromAllUnits = 'from all units';
@@ -2048,6 +2051,14 @@ resourcestring
   dlgIncludeWordsToIdentCompl_DontInclude = 'don''t include';
   dlgIncludeKeywordsToIdentCompl = 'Include all keywords and operators';
   dlgIncludeCodeTemplatesToIdentCompl = 'Include code templates';
+  dlgOptAutoBraceBevel = 'Automatic completion of braces and quotes';
+  dlgOptAutoBraceOpen = 'Automatically complete opening braces/quotes';
+  dlgOptAutoBraceClose = 'Skip over existing closing braces/quotes';
+  dlgOptAutoBraceFilter = 'Filter';
+  dlgOptAutoBraceFilterHint = 'Only act on listed braces/quotes.' +
+                              ' Tokens with more than one char must be space separated.' +
+                              ' Single char tokens can be non-separated, but only at' +
+                              ' the begin of the filter.';
 
   dlgMarkupUserDefined = 'User defined markup';
   dlgMarkupUserDefinedDivSelect = 'Create or Select list';
