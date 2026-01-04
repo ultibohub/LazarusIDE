@@ -1768,7 +1768,7 @@ begin
       PrintInfo('Parameter: --cpu=' + CPUOverride);
 
     // processor //Ultibo
-    if HasLongOptIgnoreCase('processor',FProcessorOverride) then begin //Ultibo
+    if HasOpt_GetValue('processor',FProcessorOverride) then begin //Ultibo
       if ConsoleVerbosity>=0 then //Ultibo
         writeln('Parameter: processor=',ProcessorOverride); //Ultibo
     end; //Ultibo
