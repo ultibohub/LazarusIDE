@@ -1540,8 +1540,9 @@ begin
   // Build all projects/packages specified by the user...
   // except packages to be added the IDE install list.
   for i:=0 to Files.Count-1 do
-    if not BuildFile(Files[i]) then
-      PrintErrorAndHalt(ErrorBuildFailed, 'Building failed: "' + Files[i] + '"');
+    if Length(Files[i]) > 0 then 
+      if not BuildFile(Files[i]) then
+        PrintErrorAndHalt(ErrorBuildFailed, 'Building failed: "' + Files[i] + '"');
 
   // Add user-requested packages to IDE install list:
   case PackageAction of
