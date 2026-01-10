@@ -36,6 +36,7 @@ type
     _identifier: String;
     _priority: NSInteger;
     _navigational: Boolean;
+    _appValidates: Boolean;
   protected
     procedure toClassConfig( const pItemConfig: PCocoaConfigToolBarItemBase );
   public
@@ -316,6 +317,10 @@ var
   defaultArray: NSArray;
   allowedArray: NSArray;
 begin
+  Result:= nil;
+  if toolBarConfig.identifier.IsEmpty then
+    Exit;
+
   toolBar:= TCocoaToolBar.alloc.initWithIdentifier(
     StrToNSString(toolBarConfig.identifier) );
   toolBar.lclSetConfig( @toolBarConfig );
@@ -591,6 +596,7 @@ begin
   _identifier:= pItemConfig^.identifier;
   _priority:= pItemConfig^.priority;
   _navigational:= pItemConfig^.navigational;
+  _appValidates:= pItemConfig^.appValidates;
 end;
 
 procedure TCocoaConfigToolBarItemClassBase.setItemAttribs(
@@ -598,6 +604,8 @@ procedure TCocoaConfigToolBarItemClassBase.setItemAttribs(
 begin
   item.setVisibilityPriority( _priority );
   item.setNavigational( _navigational );
+  if _appValidates then
+    item.setAutovalidates( False );
 end;
 
 function TCocoaConfigToolBarItemClassBase.identifier: NSString;

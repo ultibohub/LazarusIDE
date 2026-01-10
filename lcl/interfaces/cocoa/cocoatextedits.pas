@@ -458,7 +458,8 @@ type
   end;
 {$ENDIF}
 
-// these constants are missing from CocoaAll for some reason
+// they have already been added to Cocoa_Extra;
+// they are kept here just for historical compatibility.
 const
   NSTextAlignmentLeft      = 0;
   NSTextAlignmentRight     = {$ifdef USE_IOS_VALUES}2{$else}1{$endif}; // it's 2 for iOS and family
@@ -789,16 +790,6 @@ begin
   else Result := nil;
 end;
 
-function ReverseColor(clr: NSColor): NSColor;
-var
-  r,g,b: byte;
-begin
-  r := $FF xor byte(Round(clr.redComponent * 255));
-  g := $FF xor byte(Round(clr.greenComponent * 255));
-  b := $FF xor byte(Round(clr.blueComponent * 255));
-  Result := NSColor.colorWithDeviceRed_green_blue_alpha(r / 255, g / 255, b / 255, 1);
-end;
-
 function TCocoaFieldEditor.becomeFirstResponder: LCLObjCBoolean;
 begin
   if goingReadOnly then Result := false
@@ -817,10 +808,8 @@ var
 begin
   if not Assigned(delegate) then Exit;
   if not (NSObject(delegate).isKindOfClass(NSTextField)) then Exit;
-  clr := NSTextField(delegate).backgroundColor.colorUsingColorSpace(NSColorSpace.deviceRGBColorSpace);
-
-  if Assigned(clr) then
-    setInsertionPointColor(ReverseColor(clr));
+  clr := NSTextField(delegate).textColor;
+  self.setInsertionPointColor(clr);
 end;
 
 procedure TCocoaFieldEditor.cut(sender: id);

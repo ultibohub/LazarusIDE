@@ -23,7 +23,7 @@ unit LazEditHighlighter;
 interface
 
 uses
-  Classes, fgl, SysUtils,
+  Classes, fgl, SysUtils, math,
   // LazEdit
   LazEditTextAttributes, LazEditLineItemLists, LazEditHighlighterUtils, LazClasses, LazEditTypes,
   LazEditMiscProcs;
@@ -143,7 +143,9 @@ type
     FAttachedLines: TLazEditHighlighterAttachedLines;
     FCurrentLines: TLazEditStringsBase;
 
+  private
     FLineIndex: TLineIdx;
+  strict private
     FLineText: String;
     FLinePtr: Pchar;
     F_IsInNextToEOL: Boolean;
@@ -178,12 +180,13 @@ type
     (* ------------------ *
      * Current Line       *
      * ------------------ *)
-    procedure InitForScaningLine; virtual;
+    procedure InitForScanningLine; virtual;
     property  CurrentLineText: string read FLineText;
     property  LinePtr: Pchar read FLinePtr;
 
     property FIsInNextToEOL: Boolean read F_IsInNextToEOL;  deprecated 'use IsInNextToEOL / to be removed in 5.99';
     property IsInNextToEOL: Boolean read F_IsInNextToEOL write F_IsInNextToEOL;
+
   protected
     (* ------------------ *
      * Token / Attributes *
@@ -234,6 +237,13 @@ type
     function GetEol: Boolean; virtual; abstract;
 
     (* ------------------ *
+     * Scan               *
+     * ------------------ *)
+    function PrepareLines(AMinimumRequiredLineIdx: IntIdx; AMaxTime: integer = 0): boolean; virtual; // true = all done
+    procedure MarkUnprepared(AFirstLineIdx: IntIdx = 0; ALastLineIdx: IntIdx = -1); virtual;
+    function FirstUnpreparedLine: IntIdx; virtual;
+
+    (* ------------------ *
      * Token / Attributes *
      * ------------------ *)
 
@@ -272,6 +282,7 @@ type
   strict private
     FCurrentRanges: TLazHighlighterLineRangeList;
     FRangesChangeStamp: QWord;
+    FIsScanning: Boolean;
 
   private
     procedure SetCurrentLines(AValue: TLazEditStringsBase); override;
@@ -293,6 +304,13 @@ type
 
     property CurrentRanges: TLazHighlighterLineRangeList read FCurrentRanges;
 
+    (* ------------------ *
+     * Scan               *
+     * ------------------ *)
+    function UpdateRangeInfoAtEOL: Boolean; virtual; // Returns true if range changed
+    function UpdateRangeInfoAtLine(Index: Integer): Boolean; virtual; deprecated 'use UpdateRangeInfoAtEOL / to be removed in 5.99';
+    // DoPrepareLines: Result := LastScannedLine + 1 // aka next line to be scanned
+    function DoPrepareLines(AFirstLineIdx: IntIdx; AMinimumRequiredLineIdx: IntIdx = -1; AMaxTime: integer = 0): integer; virtual;
   public
     (* ------------------ *
      * Scan               *
@@ -301,6 +319,11 @@ type
     function  GetRange: Pointer; virtual; abstract;
     procedure SetRange(Value: Pointer); virtual; abstract;
     procedure ResetRange; virtual; abstract;
+
+    function PrepareLines(AMinimumRequiredLineIdx: IntIdx = -1; AMaxTime: integer = 0): boolean; override;
+    procedure MarkUnprepared(AFirstLineIdx: IntIdx = 0; ALastLineIdx: IntIdx = - 1); override;
+    function FirstUnpreparedLine: IntIdx; override;
+    property IsScanning: Boolean read FIsScanning;
 
     (* ------------------ *
      * Lines / RangesList *
@@ -347,7 +370,7 @@ end;
 
 procedure TLazEditCustomHighlighter.DoStartAtLine;
 begin
-  InitForScaningLine;
+  InitForScanningLine;
 end;
 
 procedure TLazEditCustomHighlighter.DoBeginUpdate;
@@ -411,7 +434,7 @@ begin
   SendRescanNeededNotification;
 end;
 
-procedure TLazEditCustomHighlighter.InitForScaningLine;
+procedure TLazEditCustomHighlighter.InitForScanningLine;
 begin
   //
 end;
@@ -533,7 +556,7 @@ begin
   F_IsInNextToEOL := False;
 
   DoStartAtLine;
-  InitForScaningLine;
+  InitForScanningLine;
 end;
 
 procedure TLazEditCustomHighlighter.ContinueNextLine;
@@ -543,7 +566,7 @@ begin
   FLinePtr := PChar(FLineText);
   F_IsInNextToEOL := False;
 
-  InitForScaningLine;
+  InitForScanningLine;
 end;
 
 procedure TLazEditCustomHighlighter.SetAlternativeLineTextForGetTokens(const AnInjectedText: String;
@@ -555,7 +578,7 @@ begin
   F_IsInNextToEOL := False;
 
   DoStartAtLine;
-  InitForScaningLine;
+  InitForScanningLine;
 end;
 
 procedure TLazEditCustomHighlighter.NextToEol;
@@ -589,6 +612,22 @@ begin
       exit(True);
     Next;
   end;
+end;
+
+function TLazEditCustomHighlighter.PrepareLines(AMinimumRequiredLineIdx: IntIdx; AMaxTime: integer
+  ): boolean;
+begin
+  Result := True;
+end;
+
+procedure TLazEditCustomHighlighter.MarkUnprepared(AFirstLineIdx: IntIdx; ALastLineIdx: IntIdx);
+begin
+  //
+end;
+
+function TLazEditCustomHighlighter.FirstUnpreparedLine: IntIdx;
+begin
+  Result := -1;
 end;
 
 function TLazEditCustomHighlighter.GetTokenAttributeEx: TLazCustomEditTextAttribute;
@@ -712,6 +751,108 @@ procedure TLazEditCustomRangesHighlighter.DoDetachingFromLines(Lines: TLazEditSt
   ARangeList: TLazHighlighterLineRangeList);
 begin
   //
+end;
+
+function TLazEditCustomRangesHighlighter.UpdateRangeInfoAtEOL: Boolean;
+var
+  NewRange: Pointer;
+begin
+// TOOD: separat update / compare
+  NewRange := GetRange;
+  Result := NewRange <> CurrentRanges[LineIndex];
+  if Result then
+    CurrentRanges[LineIndex] := NewRange;
+end;
+
+function TLazEditCustomRangesHighlighter.UpdateRangeInfoAtLine(Index: Integer): Boolean;
+var
+  i: TLineIdx;
+begin
+  i := FLineIndex;
+  FLineIndex := Index;
+  Result := UpdateRangeInfoAtEOL;
+  FLineIndex := i;
+end;
+
+function TLazEditCustomRangesHighlighter.DoPrepareLines(AFirstLineIdx: IntIdx;
+  AMinimumRequiredLineIdx: IntIdx; AMaxTime: integer): integer;
+var
+  EndTime: QWord;
+begin
+  Result := CurrentRanges.Count;
+  if AFirstLineIdx >= Result then
+    exit;
+
+  if AMinimumRequiredLineIdx < 0 then
+    AMinimumRequiredLineIdx := CurrentRanges.LastInvalidLine;
+  if (AMinimumRequiredLineIdx >= Result) then
+    AMinimumRequiredLineIdx := Result - 1;
+
+  if AMaxTime > 0 then
+    EndTime := GetTickCount64 + AMaxTime;
+
+  StartAtLineIndex(AFirstLineIdx);
+  NextToEol;
+  while UpdateRangeInfoAtEOL or (LineIndex < AMinimumRequiredLineIdx) do begin
+    if (LineIndex = Result-1) or
+       (AMaxTime > 0) and (GetTickCount64 >= EndTime)
+    then
+      break;
+    ContinueNextLine;
+    NextToEol;
+  end;
+
+  Result := LineIndex + 1;
+end;
+
+function TLazEditCustomRangesHighlighter.PrepareLines(AMinimumRequiredLineIdx: IntIdx;
+  AMaxTime: integer): boolean;
+var
+  FirstInvalidLineIdx, LastScannedLineIdx: IntIdx;
+begin
+  Result := True; // all scanned
+
+  FirstInvalidLineIdx := CurrentRanges.FirstInvalidLine;
+  if (FirstInvalidLineIdx < 0) or
+     ( (AMinimumRequiredLineIdx >= 0) and (AMinimumRequiredLineIdx < FirstInvalidLineIdx) )
+  then
+    exit;
+
+  FIsScanning := True;
+  try
+    LastScannedLineIdx :=  DoPrepareLines(FirstInvalidLineIdx, AMinimumRequiredLineIdx, AMaxTime);
+  finally
+    FIsScanning := False;
+  end;
+
+  FirstInvalidLineIdx := CurrentRanges.UnsentValidationStartLine;
+  Result := (LastScannedLineIdx  > CurrentRanges.LastInvalidLine) or
+            (LastScannedLineIdx >= CurrentRanges.Count);
+  if Result then
+    CurrentRanges.ValidateAll
+  else
+    CurrentRanges.UpdateFirstInvalidLine(LastScannedLineIdx);
+
+  if Result or (AMaxTime <= 0) or
+     ( (AMinimumRequiredLineIdx >= 0) and (LastScannedLineIdx >= AMinimumRequiredLineIdx) )
+  then begin
+    if (LastScannedLineIdx >= CurrentRanges.Count) then
+      LastScannedLineIdx := CurrentRanges.Count;
+    CurrentLines.SendHighlightChanged(FirstInvalidLineIdx, Max(0, LastScannedLineIdx - FirstInvalidLineIdx));
+  end;
+end;
+
+procedure TLazEditCustomRangesHighlighter.MarkUnprepared(AFirstLineIdx: IntIdx;
+  ALastLineIdx: IntIdx);
+begin
+  if AFirstLineIdx < AFirstLineIdx then
+    ALastLineIdx := CurrentRanges.Count -1;
+  CurrentRanges.Invalidate(AFirstLineIdx, ALastLineIdx);
+end;
+
+function TLazEditCustomRangesHighlighter.FirstUnpreparedLine: IntIdx;
+begin
+  Result := CurrentRanges.FirstInvalidLine;
 end;
 
 procedure TLazEditCustomRangesHighlighter.AttachToLines(ALines: TLazEditStringsBase);

@@ -53,6 +53,8 @@ Type
     function Get(Index: Integer): String; Override;
     function GetCount: Integer; Override;
     function GetObject(Index: Integer): TObject; Override;
+    function IndexOf(const S: string): Integer; override;
+    function IndexOf(const S: string; aStart : Integer): Integer; override;
     procedure Put(Index: integer; const S: string); override;
     procedure PutObject(Index: Integer; AObject: TObject); Override;
     procedure SetCapacity(NewCapacity: Integer); override;
@@ -62,6 +64,8 @@ Type
     procedure SetSorted(Val: Boolean); Virtual;
     function SaveData(AIndex: Integer): Pointer; virtual;
     procedure RestoreData(AIndex: Integer; AData: Pointer); virtual;
+
+    function IsVirtualListBox: Boolean;
   public
     constructor Create(List : HWND; TheOwner: TWinControl);
     function Add(const S: string): Integer; override;

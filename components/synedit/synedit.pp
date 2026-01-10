@@ -722,7 +722,9 @@ type
       Data: TStream);
     procedure ScanRanges;
     procedure ScanChangedLines(AChangedLinesStart, AChangedLinesEnd, AChangedLinesDiff: Integer; ATextChanged: Boolean);
-    procedure IdleScanRanges(Sender: TObject; var Done: Boolean);
+    procedure IdleScanRanges(AnEditorId: TLazEditEditorId; ATaskId: TLazEditTaskId;
+      AMaxTime: integer; var AData: Pointer; var ADone: boolean;
+      var APriorities: TTLazEditTaskPriorities);
     procedure DoBlockSelectionChanged(Sender: TObject);
     procedure SetBlockIndent(const AValue: integer);
     procedure SetCaretAndSelection(const ptCaret, ptBefore, ptAfter: TPoint;
@@ -2915,7 +2917,7 @@ var
 begin
   Destroying;
   inc(FPaintLock); // block all events during destruction
-  Application.RemoveOnIdleHandler(@IdleScanRanges);
+  GlobalASyncRunner.RemoveTask(@IdleScanRanges, Self);
   SurrenderPrimarySelection;
   Highlighter := nil;
   Beautifier:=nil;
@@ -5273,7 +5275,7 @@ var
   p: Integer;
 begin
   Exclude(fStateFlags, sfAfterHandleCreatedNeeded);
-  Application.RemoveOnIdleHandler(@IdleScanRanges);
+  GlobalASyncRunner.RemoveTask(@IdleScanRanges, Self);
   fStateFlags := fStateFlags - [sfHorizScrollbarVisible, sfVertScrollbarVisible];
 
   IncStatusChangeLock;
@@ -5952,16 +5954,15 @@ begin
   if fHighlighter = nil then
     exit;
   FHighlighter.CurrentLines := FLines; // Trailing spaces are not needed
-  FHighlighter.ScanRanges;
+  FHighlighter.PrepareLines;
 end;
 
 procedure TCustomSynEdit.ScanChangedLines(AChangedLinesStart, AChangedLinesEnd,
   AChangedLinesDiff: Integer; ATextChanged: Boolean);
 begin
   if WaitingForInitialSize then begin
-    Application.RemoveOnIdleHandler(@IdleScanRanges); // avoid duplicate add
     if assigned(FHighlighter) then
-      Application.AddOnIdleHandler(@IdleScanRanges, False);
+      GlobalASyncRunner.AddOrReplaceTask(@IdleScanRanges, Self, [tpPaintText]);
     exit;
   end;
 //TODO: exit if in paintlock ???
@@ -5979,19 +5980,16 @@ begin
   end;
 end;
 
-procedure TCustomSynEdit.IdleScanRanges(Sender: TObject; var Done: Boolean);
+procedure TCustomSynEdit.IdleScanRanges(AnEditorId: TLazEditEditorId; ATaskId: TLazEditTaskId;
+  AMaxTime: integer; var AData: Pointer; var ADone: boolean;
+  var APriorities: TTLazEditTaskPriorities);
 begin
-  Application.RemoveOnIdleHandler(@IdleScanRanges);
+  ADone := True;
   if not assigned(FHighlighter) then
     exit;
 
   FHighlighter.CurrentLines := FLines; // Trailing spaces are not needed
-  if not FHighlighter.IdleScanRanges{%H-} then
-    exit;
-
-  // Move to the end; give others a change too
-  Application.AddOnIdleHandler(@IdleScanRanges, False);
-  Done := False;
+  ADone := fHighlighter.PrepareLines(-1, AMaxTime);
 end;
 
 procedure TCustomSynEdit.LineCountChanged(Sender: TSynEditStrings; AIndex,
@@ -6071,11 +6069,13 @@ begin
   InvalidateLines(StartLine, StartLine + ACount - 1);
   InvalidateGutterLines(AIndex + 1, AIndex + 1 + ACount);
   FFoldedLinesView.FixFoldingAtTextIndex(AIndex, AIndex + ACount);
-  if sfAfterLoadFromFileNeeded in fStateFlags then
-    AfterLoadFromFile
-  else
-  if FPendingFoldState <> '' then
-    SetFoldState(FPendingFoldState);
+  if (Highlighter = nil) or (Highlighter.FirstUnpreparedLine < 0) then begin
+    if sfAfterLoadFromFileNeeded in fStateFlags then
+      AfterLoadFromFile
+    else
+    if FPendingFoldState <> '' then
+      SetFoldState(FPendingFoldState);
+  end;
 end;
 
 procedure TCustomSynEdit.DoHighlightAttribChanged(Sender: TObject);
@@ -6092,7 +6092,8 @@ begin
     exit;
 
   FHighlighter.CurrentLines := FTheLinesView;
-  FHighlighter.ScanAllRanges;
+  // TODO: if not visible // needs handling when it becomes visible
+  FHighlighter.PrepareLines;
   fMarkupManager.TextChanged(1, FTheLinesView.Count, 0);
 end;
 
@@ -6501,7 +6502,7 @@ procedure TCustomSynEdit.SetFoldState(const AValue: String);
 begin
   if assigned(fHighlighter) then begin
     fHighlighter.CurrentLines := FTheLinesView;
-    if fHighlighter.NeedScan then begin
+    if fHighlighter.FirstUnpreparedLine >= 0 then begin
       FPendingFoldState := AValue;
       exit;
     end;
@@ -8313,7 +8314,7 @@ end;
 procedure TCustomSynEdit.AfterLoadFromFile;
 begin
   if ( WaitingForInitialSize and
-       ( (fHighlighter = nil) or (fHighlighter.NeedScan) )
+       ( (fHighlighter = nil) or (fHighlighter.FirstUnpreparedLine >= 0) )
      ) or
      (FPaintLock > 1) or
      ( (FPaintLock = 1) and

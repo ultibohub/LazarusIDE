@@ -35,6 +35,7 @@ type
     identifier: String;
     priority: NSInteger;
     navigational: Boolean;
+    appValidates: Boolean;
   end;
 
   { TCocoaConfigToolBarItemWithUI }
@@ -174,6 +175,7 @@ type
   end;
 
   TCocoaConfigReadOnlyComboBox = record
+    minWidth: Integer;
     item: TCocoaConfigReadOnlyComboBoxItem;
   end;
 

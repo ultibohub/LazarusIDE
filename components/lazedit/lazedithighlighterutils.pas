@@ -24,7 +24,7 @@ interface
 
 uses
   Classes, SysUtils, fgl, Math, LazClasses, LazListClasses, LazListClassesBase,
-  LazEditLineItemLists, Generics.Collections, Generics.Defaults;
+  LazEditLineItemLists, LazEditTypes, Generics.Collections, Generics.Defaults;
 
 type
 
@@ -84,11 +84,11 @@ type
       TBase = TLazHighlighterLineRangeList;
     end;
   strict private
-    FFirstInvalidLine: Integer;
-    FLastInvalidLine: Integer;
+    FFirstInvalidLine: IntIdx;
+    FLastInvalidLine: IntIdx;
     FValidatedChangeStamp: QWord;
     FRefCount: Integer;
-    FUnsentValidationStartLine: Integer;
+    FUnsentValidationStartLine: IntIdx;
     procedure SetValidatedChangeStamp(AValue: QWord);
   protected
     procedure LineTextChanged(AIndex: Integer; ACount: Integer = 1); virtual; deprecated 'use TextChanged / to be removed in 5.99';
@@ -99,24 +99,25 @@ type
     procedure Insert(AnIndex, ACount: Integer); override;
     procedure Delete(AnIndex, ACount: Integer); override;
   protected
-    procedure Invalidate(AFrom, ATo: integer); inline;
     function GetRange(AnIndex: Integer): Pointer; virtual; abstract;
     procedure SetRange(AnIndex: Integer; const AValue: Pointer); virtual; abstract;
   public
     constructor Create;
 
+    procedure Invalidate(AFrom, ATo: integer); inline;
     procedure InvalidateAll;
     procedure ValidateAll;
-    procedure UpdateFirstInvalidLine(ANewFirstInvalidLine: Integer);
+    procedure UpdateFirstInvalidLine(ANewFirstInvalidLine: IntIdx);
+    procedure UpdateUnsentValidationStartLine(ANewUnsentValidationStartLine: IntIdx);
 
     procedure IncRefCount;
     procedure DecRefCount;
     property RefCount: Integer read FRefCount;
 
     property ValidatedChangeStamp: QWord read FValidatedChangeStamp write SetValidatedChangeStamp;
-    property FirstInvalidLine: Integer read FFirstInvalidLine;
-    property LastInvalidLine: Integer read FLastInvalidLine;
-    property UnsentValidationStartLine: Integer read FUnsentValidationStartLine;
+    property FirstInvalidLine: IntIdx read FFirstInvalidLine;
+    property LastInvalidLine: IntIdx read FLastInvalidLine;
+    property UnsentValidationStartLine: IntIdx read FUnsentValidationStartLine;
 
     property Range[AnIndex: Integer]: Pointer read GetRange write SetRange; default;
   public
@@ -337,7 +338,7 @@ procedure TLazHighlighterLineRangeList.SetValidatedChangeStamp(AValue: QWord);
 begin
   if FValidatedChangeStamp = AValue then Exit;
   FValidatedChangeStamp := AValue;
-  //InvalidateAll;
+  InvalidateAll;
 end;
 
 procedure TLazHighlighterLineRangeList.LineTextChanged(AIndex: Integer; ACount: Integer);
@@ -403,12 +404,23 @@ begin
   FUnsentValidationStartLine :=-1;
 end;
 
-procedure TLazHighlighterLineRangeList.UpdateFirstInvalidLine(ANewFirstInvalidLine: Integer);
+procedure TLazHighlighterLineRangeList.UpdateFirstInvalidLine(ANewFirstInvalidLine: IntIdx);
 begin
   if ANewFirstInvalidLine > FLastInvalidLine then
     ValidateAll
   else
     FFirstInvalidLine := ANewFirstInvalidLine;
+end;
+
+procedure TLazHighlighterLineRangeList.UpdateUnsentValidationStartLine(
+  ANewUnsentValidationStartLine: IntIdx);
+begin
+  if (ANewUnsentValidationStartLine < 0) and
+     (FUnsentValidationStartLine >= 0)
+  then
+    FUnsentValidationStartLine := 0
+  else
+    FUnsentValidationStartLine := ANewUnsentValidationStartLine;
 end;
 
 procedure TLazHighlighterLineRangeList.IncRefCount;

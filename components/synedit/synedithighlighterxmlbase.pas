@@ -78,7 +78,7 @@ type
     FXmlRangeInfoClosePos: integer;
   protected
     function  CreateRangeList(ALines: TLazEditStringsBase): TLazHighlighterLineRangeList; override;
-    function  UpdateRangeInfoAtLine(Index: Integer): Boolean; override; // Returns true if range changed
+    function  UpdateRangeInfoAtEOL: Boolean; override; // Returns true if range changed
 
     function  StartXmlCodeFoldBlock(ABlockType: Integer): Boolean;
     function  StartXmlNodeCodeFoldBlock(ABlockType: Integer; OpenPos: Integer;
@@ -87,7 +87,7 @@ type
     procedure EndXmlNodeCodeFoldBlock(ClosePos: Integer = -1; AName: String = '');
     function GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean): String; override;
   public
-    procedure InitForScaningLine; override;
+    procedure InitForScanningLine; override;
     function BracketKindCount: integer; override;
     function GetBracketContextAt(const ALineIdx: TLineIdx; const ALogX: IntPos;
       const AByteLen: Integer; const AKind: integer; var AFlags: TLazEditBracketInfoFlags; out
@@ -101,11 +101,11 @@ begin
   Result := TSynHighlighterXmlRangeList.Create;
 end;
 
-function TSynCustomXmlHighlighter.UpdateRangeInfoAtLine(Index: Integer): Boolean;
+function TSynCustomXmlHighlighter.UpdateRangeInfoAtEOL: Boolean;
 var
   InfoOpenLenChanged, InfoCloseLenChanged: Boolean;
 begin
-  Result := inherited UpdateRangeInfoAtLine(Index);
+  Result := inherited UpdateRangeInfoAtEOL;
   InfoOpenLenChanged := Length(FXmlRangeInfo.ElementOpenList) <> FXmlRangeInfoOpenPos;
   InfoCloseLenChanged := Length(FXmlRangeInfo.ElementCloseList) <> FXmlRangeInfoClosePos;
   if FXmlRangeInfoChanged or InfoOpenLenChanged or InfoCloseLenChanged then begin
@@ -119,7 +119,7 @@ begin
   end;
 end;
 
-procedure TSynCustomXmlHighlighter.InitForScaningLine;
+procedure TSynCustomXmlHighlighter.InitForScanningLine;
 begin
   inherited;
   FXmlRangeInfo := TSynHighlighterXmlRangeList(CurrentRanges).XmlRangeInfo[LineIndex]; // From this line, not from the previous line
