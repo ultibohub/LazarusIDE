@@ -1,26 +1,42 @@
 object FileBrowserForm: TFileBrowserForm
-  Left = 523
+  Left = 537
   Height = 467
-  Top = 120
-  Width = 377
-  ActiveControl = TV
+  Top = 311
+  Width = 345
+  ActiveControl = Panel1
   Caption = 'File Browser'
   ClientHeight = 467
-  ClientWidth = 377
+  ClientWidth = 345
   LCLVersion = '4.99.0.0'
   OnActivate = FormActivate
   OnCreate = FormCreate
   OnShow = FormShow
+  object TV: TTreeView
+    Left = 0
+    Height = 185
+    Top = 65
+    Width = 345
+    Align = alTop
+    HideSelection = False
+    Images = ilTreeview
+    ReadOnly = True
+    ScrollBars = ssAutoBoth
+    TabOrder = 0
+    Options = [tvoAutoItemHeight, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips]
+    OnDblClick = TVDblClick
+    OnExpanded = TVExpanded
+    OnSelectionChanged = TVSelectionChanged
+  end
   object Panel1: TPanel
     Left = 0
     Height = 42
     Top = 0
-    Width = 377
+    Width = 345
     Align = alTop
     BevelOuter = bvNone
     ClientHeight = 42
-    ClientWidth = 377
-    TabOrder = 0
+    ClientWidth = 345
+    TabOrder = 1
     object cbHidden: TCheckBox
       AnchorSideTop.Control = btnReload
       AnchorSideBottom.Control = btnReload
@@ -32,7 +48,7 @@ object FileBrowserForm: TFileBrowserForm
       Anchors = [akTop, akLeft, akBottom]
       AutoSize = False
       Caption = 'Show hidden files'
-      TabOrder = 2
+      TabOrder = 0
       OnChange = cbHiddenChange
     end
     object btnConfigure: TButton
@@ -41,7 +57,7 @@ object FileBrowserForm: TFileBrowserForm
       Top = 7
       Width = 90
       Caption = 'Configure'
-      TabOrder = 0
+      TabOrder = 1
       OnClick = btnConfigureClick
     end
     object btnReload: TButton
@@ -50,7 +66,7 @@ object FileBrowserForm: TFileBrowserForm
       Top = 7
       Width = 90
       Caption = 'Reload'
-      TabOrder = 1
+      TabOrder = 2
       OnClick = btnReloadClick
     end
   end
@@ -58,62 +74,57 @@ object FileBrowserForm: TFileBrowserForm
     Cursor = crVSplit
     Left = 0
     Height = 5
-    Top = 227
-    Width = 377
+    Top = 250
+    Width = 345
     Align = alTop
     ResizeAnchor = akTop
   end
   object pnlFiles: TPanel
     Left = 0
-    Height = 235
-    Top = 232
-    Width = 377
+    Height = 212
+    Top = 255
+    Width = 345
     Align = alClient
     BevelOuter = bvNone
     Caption = 'pnlFiles'
-    ClientHeight = 235
-    ClientWidth = 377
+    ClientHeight = 212
+    ClientWidth = 345
     TabOrder = 3
     object cbFilePanel: TFilterComboBox
       Left = 0
-      Height = 32
+      Height = 23
       Top = 0
-      Width = 377
+      Width = 345
       Align = alTop
       TabOrder = 0
       OnChange = cbFilePanelChange
       OnSelect = cbFilePanelSelect
     end
-    object LV: TShellListView
+    object FileListBox: TFileListBox
       Left = 0
-      Height = 203
-      Top = 32
-      Width = 377
+      Height = 189
+      Top = 23
+      Width = 345
       Align = alClient
-      Color = clDefault
+      Directory = '/home/graemeg'
+      FileType = [ftArchive, ftNormal]
+      ItemHeight = 0
       TabOrder = 1
-      ShellTreeView = TV
-      OnDblClick = LVDblClick
-      OnKeyPress = LVKeyPress
-      OnSelectItem = LVSelectItem
+      OnDblClick = FileListBoxDblClick
+      OnKeyPress = FileListBoxKeyPress
     end
   end
-  object TV: TShellTreeView
+  object cbTreeFilter: TFilterComboBox
     Left = 0
-    Height = 185
+    Height = 23
     Top = 42
-    Width = 377
+    Width = 345
     Align = alTop
-    HideSelection = False
-    HotTrack = True
-    ScrollBars = ssAutoBoth
-    TabOrder = 1
-    Options = [tvoAutoItemHeight, tvoHotTrack, tvoKeepCollapsedNodes, tvoReadOnly, tvoShowButtons, tvoShowLines, tvoShowRoot, tvoToolTips]
-    ShellListView = LV
-    OnSelectionChanged = TVSelectionChanged
+    TabOrder = 4
+    OnChange = cbTreeFilterChange
+    OnSelect = cbTreeFilterChange
   end
   object ilTreeview: TImageList
-    Scaled = True
     Left = 88
     Top = 107
     Bitmap = {

@@ -1916,7 +1916,6 @@ begin
   begin
     FMask := AValue;
     Clear;
-    Items.Clear;
     PopulateWithRoot();
   end;
 end;
@@ -1926,7 +1925,6 @@ begin
   if FFileSortType=AValue then Exit;
   FFileSortType:=AValue;
   Clear;
-  Items.Clear;
   PopulateWithRoot();
 end;
 
@@ -1964,7 +1962,6 @@ begin
     Exit;
   FOnSortCompare:=AValue;
   Clear;
-  Items.Clear;
   PopulateWithRoot();
 end;
 
@@ -2001,7 +1998,6 @@ begin
     BeginUpdate;
     try
       Clear;
-      Items.Clear;
       PopulateWithRoot();
     finally
       EndUpdate;
@@ -2436,6 +2432,7 @@ end;
 
 procedure TCustomShellListView.AdjustColWidths;
 var
+  clientWid: Integer;
   colWidth: Integer;
   sumOfWidths: Integer;
   widthAvail: Integer;
@@ -2445,22 +2442,26 @@ var
   nCol: Integer;
   colWidths: array of Integer = nil;
   weightName: Integer;
-  canv: TControlCanvas;
+  bmp: Graphics.TBitmap;
   fmt: String;
 begin
   if Self.Columns.Count < 3 then
     Exit;
   if (Column[0].Width <> 0) and (not AutoSizeColumns) then
     Exit;
+  if Parent = nil then
+    Exit;
 
   SetLength(colWidths, ColumnCount);  // all colWidths are initialized with 0
-  widthAvail := ClientWidth;   // Width to be distributed
+  clientWid := ClientWidth;
+  widthAvail := clientWid;     // Width to be distributed
   nCol := ColumnCount;         // number of columns to receive  distributed space
 
   // Calculate fixed width of date column, if available.
-  canv := TControlCanvas.Create;
+  bmp := Graphics.TBitmap.Create;
   try
-    canv.Control := Self;
+    bmp.SetSize(1,1);
+    bmp.Canvas.Font.Assign(Font);
     testDate := EncodeDate(2000,12,29) + EncodeTime(12,0,0,0);
     for c := 0 to ColumnCount-1 do
     begin
@@ -2471,17 +2472,17 @@ begin
           fmt := DateColumnFormat
         else
           fmt := col.Format;
-        colWidths[c] := canv.TextWidth(FormatDateTime(fmt, testDate) + 'MM');   //'MM' to simulate the cell padding
+        colWidths[c] := bmp.Canvas.TextWidth(FormatDateTime(fmt, testDate) + 'MM');   //'MM' to simulate the cell padding
         dec(widthAvail, colWidths[c]);
         dec(nCol);
       end;
     end;
   finally
-    canv.Free;
+    bmp.Free;
   end;
 
   // If the space available is small, alloc a larger percentage to the secondary fields
-  if ClientWidth < 400 then
+  if clientWid < 400 then
     weightName := 2
   else
     weightName := 4;
@@ -2491,12 +2492,11 @@ begin
   sumOfWidths := 0;
   for c := 0 to ColumnCount-1 do
   begin
-    col := TShellListColumn(Column[c]);
     if colWidths[c] = 0 then
       colWidths[c] := colWidth;
     inc(sumOfWidths, colWidths[c]);
   end;
-  inc(colWidths[0], ClientWidth - sumOfWidths); // distribute remaining space
+  inc(colWidths[0], clientWid - sumOfWidths); // distribute remaining space
 
   // Apply calculated colwidths to Columns
   BeginUpdate;
