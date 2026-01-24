@@ -70,10 +70,7 @@ type
     procedure SetTextAttri(AValue: TSynHighlighterAttributes);
   protected
     function GetIdentChars: TSynIdentChars; override;
-    function IsFilterStored: boolean; override;                                 //mh 2000-10-08
     function GetPositionTokensSize(ItemCount: integer): integer;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
   public
     class function GetLanguageName: string; override;
   public
@@ -137,21 +134,10 @@ begin
   Result := ['_', '0'..'9', 'a'..'z', 'A'..'Z'];
 end;
 
-function TSynPositionHighlighter.IsFilterStored: boolean;
-begin
-  Result:=true;
-end;
-
 function TSynPositionHighlighter.GetPositionTokensSize(ItemCount: integer
   ): integer;
 begin
   Result:=SizeOf(integer)+SizeOf(TPositionToken)*ItemCount;
-end;
-
-function TSynPositionHighlighter.GetDefaultAttribute(Index: integer
-  ): TSynHighlighterAttributes;
-begin
-  Result:=nil;
 end;
 
 class function TSynPositionHighlighter.GetLanguageName: string;
@@ -167,8 +153,6 @@ begin
   fTextAttri := TSynHighlighterAttributes.Create(@SYNS_AttrText, SYNS_XML_AttrText);
   AddAttribute(fTextAttri);
   SetAttributesOnChange(@DefHighlightChange);
-
-  fDefaultFilter := '';
 end;
 
 destructor TSynPositionHighlighter.Destroy;

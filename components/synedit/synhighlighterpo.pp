@@ -89,13 +89,14 @@ type
     function GetIdentChars: TSynIdentChars; override;
     function GetSampleSource: String; override;
     function GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean): String; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
     function IsKeyword(const AKeyword: string): boolean; override;
   public
     constructor Create(AOwner: TComponent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetTokenID: TtkTokenKind;
     procedure InitForScanningLine; override;
@@ -184,7 +185,6 @@ begin
 
   SetAttributesOnChange(@DefHighlightChange);
 
-  fDefaultFilter      := SYNS_FilterPo;
   MakeMethodTables;
 end; { Create }
 
@@ -363,13 +363,14 @@ begin
 
 end;
 
-function TSynPoSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynPoSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_STRING: Result := fStringAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcString: Result := fStringAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
   else
     Result := nil;
   end;
@@ -461,6 +462,11 @@ end;
 function TSynPoSyn.GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean): String;
 begin
   Result := PO_BRACKET_KIND_TOKENS[AnOpeningToken, AnIndex]
+end;
+
+function TSynPoSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterPo;
 end;
 
 function TSynPoSyn.IsKeyword(const AKeyword: string): boolean;

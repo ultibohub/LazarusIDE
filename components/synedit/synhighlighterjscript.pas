@@ -55,7 +55,7 @@ uses
   Graphics,
   SynEditTypes,
   SynEditHighlighter,  SynEditHighlighterFoldBase,
-  SysUtils, Classes, SynEditStrConst, LazEditTextAttributes;
+  SysUtils, Classes, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkComment, tkIdentifier, tkKey, tkNull, tkNumber, tkSpace,
@@ -273,7 +273,6 @@ type
   protected
     function GetIdentChars: TSynIdentChars; override;
     function GetSampleSource: String; override;
-    function IsFilterStored: Boolean; override;
 
     // Open/Close Folds
     //procedure GetTokenBounds(out LogX1,LogX2: Integer); override;
@@ -287,12 +286,13 @@ type
                    AIsFold: Boolean); override;
 
     function  CurrentJScriptCodeFoldBlockType: TJScriptFoldBlockType;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetTokenID: TtkTokenKind;
@@ -1555,8 +1555,6 @@ begin
   SetAttributesOnChange(@DefHighlightChange);
   InitIdent;
   MakeMethodTables;
-  fDefaultFilterInitialValue := SYNS_FilterJScript;
-  fDefaultFilter := fDefaultFilterInitialValue;
   fRange := rsUnknown;
 end;
 
@@ -1818,15 +1816,16 @@ begin
     FAtLineStart := False;
 end;
 
-function TSynJScriptSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynJScriptSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_IDENTIFIER: Result := fIdentifierAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_STRING: Result := fStringAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
-    SYN_ATTR_SYMBOL: Result := fSymbolAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcIdentifier: Result := fIdentifierAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcString: Result := fStringAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
+    tcSymbol: Result := fSymbolAttri;
   else
     Result := nil;
   end;
@@ -1912,11 +1911,6 @@ begin
   Result := TSynValidStringChars;
 end;
 
-function TSynJScriptSyn.IsFilterStored: Boolean;
-begin
-  Result := fDefaultFilter <> fDefaultFilterInitialValue;
-end;
-
 function TSynJScriptSyn.StartJScriptCodeFoldBlock(ABlockType: TJScriptFoldBlockType;
   OnlyEnabled: Boolean): Boolean;
 begin
@@ -1946,6 +1940,11 @@ begin
   p := TopCodeFoldBlockType(0);
   if p <> nil then
     result := TJScriptFoldBlockType(PtrUInt(p));
+end;
+
+function TSynJScriptSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterJScript;
 end;
 
 class function TSynJScriptSyn.GetLanguageName: string;

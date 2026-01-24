@@ -2116,6 +2116,9 @@ begin
   //DebugLn(Values.AsString);
   FMacrosOn:=(Values.Variables['MACROS']<>'0');
   if Src='' then exit;
+
+  Values.Variables['CODETOOLS'] := '1';   // Predefined symbol.
+
   // begin scanning
   AddLink(SrcPos,Code);
   LastTokenType:=lsttNone;
@@ -3922,6 +3925,7 @@ function TLinkScanner.IncludeDirective: boolean;
 // filename can be 'filename with spaces'
 var
   IncFilename: string;
+  c: Char;
 begin
   Result:=false;
   if StoreDirectives then
@@ -3945,12 +3949,12 @@ begin
     AddLink(CommentEndPos,Code);
   end else begin
     IncFilename:=Trim(copy(Src,SrcPos,CommentInnerEndPos-SrcPos));
-    if (IncFilename<>'') and (IncFilename[1]='''') then begin
-      if (IncFilename[length(IncFilename)]='''') then
-        IncFilename:=copy(IncFilename,2,length(IncFilename)-2)
-      else begin
-        SrcPos:=CommentInnerEndPos;
-        RaiseException(20170422130149,'missing ''');
+    if IncFilename<>'' then begin
+      c:=IncFilename[1];
+      if c in ['"',''''] then begin
+        System.Delete(IncFilename,1,1);
+        if (IncFilename<>'') and (IncFilename[length(IncFilename)]=c) then
+          System.Delete(IncFilename,length(IncFilename),1);
       end;
     end;
     ForcePathDelims(IncFilename);
@@ -4099,42 +4103,8 @@ var
   begin
     AnyCase:=Values.IsDefined('PAS2JS');
 
-    if HasPathDelims then begin
-      // find an include file with a path e.g. 'foo/bar.inc'
-      // -> search in 'foo/', do not search in include path
-      Dir:=ExtractFilePath(SrcFilename);
-      if Dir='' then begin
-        // searching in virtual directory is not yet supported
-        exit(false);
-      end;
-
-      Dir:=ResolveDots(Dir+ExtractFilePath(RelFilename));
-      RelFilename:=ExtractFileName(RelFilename);
-      FoundFilename:=DirectoryCachePool.FindIncludeFileInDirectory(Dir,RelFilename,AnyCase);
-      if FoundFilename<>'' then begin
-        {$IFDEF VerboseIncludeSearch}
-        DebugLn('TLinkScanner.Search Filename="',RelFilename,'" Found="',FoundFilename,'"');
-        {$ENDIF}
-        NewCode:=FOnLoadSource(Self,FoundFilename,true);
-        if (NewCode<>nil) then
-          exit(true);
-      end;
-      exit(false);
-    end;
-
-    // search in dir of unit
-    Dir:=ExtractFilePath(FMainSourceFilename);
-    FoundFilename:=DirectoryCachePool.FindIncludeFileInDirectory(Dir,RelFilename,AnyCase);
-    if FoundFilename<>'' then begin
-      {$IFDEF VerboseIncludeSearch}
-      DebugLn('TLinkScanner.Search Filename="',RelFilename,'" Found="',FoundFilename,'"');
-      {$ENDIF}
-      NewCode:=FOnLoadSource(Self,FoundFilename,true);
-      if (NewCode<>nil) then
-        exit(true);
-    end;
-
     // search in include path
+    Dir:=ExtractFilePath(FMainSourceFilename);
     FoundFilename:=DirectoryCachePool.FindIncludeFileInCompletePath(Dir,RelFilename,AnyCase);
     if FoundFilename<>'' then begin
       {$IFDEF VerboseIncludeSearch}
@@ -4146,7 +4116,7 @@ var
     end;
 
     if not HasPathDelims then begin
-      // search the include file in directories defines in fpc.cfg (by -Fi option)
+      // if unit is in fpc sources, use some heuristics
       if FilenameIsAbsolute(Dir)
           and Values.IsDefined('FPC')
           and OnFindIncFileInFPCSrcDir(Self,RelFilename,FoundFilename) then
@@ -4176,11 +4146,14 @@ begin
   {$ENDIF}
   NewCode:=nil;
 
+  if AFilename='' then exit(false);
+
   // beware of 'dir/file.inc'
   HasPathDelims:=(System.Pos('/',AFilename)>0) or (System.Pos('\',AFilename)>0);
   if HasPathDelims then
     ForcePathDelims(AFilename);
   AFilename:=ResolveDots(AFilename);
+  if AFilename='' then exit(false);
 
   if not Assigned(FOnLoadSource) then begin
     NewCode:=nil;

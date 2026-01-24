@@ -53,7 +53,7 @@ uses
   SysUtils, Classes,
   LCLIntf, LCLType,
   Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, SynEditStrConst, LazEditTextAttributes;
+  SynEditTypes, SynEditHighlighter, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkComment, tkIdentifier, tkKey, tkNull, tkNumber, tkSpace,
@@ -282,12 +282,13 @@ type
   protected
     function GetIdentChars: TSynIdentChars; override;
     function GetSampleSource: String; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetTokenID: TtkTokenKind;
@@ -1842,7 +1843,6 @@ begin
   SetAttributesOnChange(@DefHighlightChange);
   InitIdent;
   MakeMethodTables;
-  fDefaultFilter := SYNS_FilterCSS;
   fRange := [];
 end;
 
@@ -2074,16 +2074,17 @@ begin
     FProcTable[LinePtr[Run]]();
 end;
 
-function TSynCssSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynCssSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT   : Result := FCommentAttri;
-    SYN_ATTR_IDENTIFIER: Result := FIdentifierAttri;
-    SYN_ATTR_KEYWORD   : Result := FKeyAttri;
-    SYN_ATTR_STRING    : Result := FStringAttri;
-    SYN_ATTR_WHITESPACE: Result := FSpaceAttri;
-    SYN_ATTR_SYMBOL    : Result := FSymbolAttri;
-    SYN_ATTR_NUMBER    : Result := fNumberAttri;
+  case ATkClass of
+    tcComment   : Result := FCommentAttri;
+    tcIdentifier: Result := FIdentifierAttri;
+    tcKeyword   : Result := FKeyAttri;
+    tcString    : Result := FStringAttri;
+    tcWhiteSpace: Result := FSpaceAttri;
+    tcSymbol    : Result := FSymbolAttri;
+    tcNumber    : Result := fNumberAttri;
   else
     Result := nil;
   end;
@@ -2175,6 +2176,11 @@ begin
     '  font-family: "Arial";'#13#10 +
     '  font-size: 12pt;'#13#10 +
     '}';
+end;
+
+function TSynCssSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterCSS;
 end;
 
 function TSynCssSyn.KeyHash2(ToHash: PChar): Integer;

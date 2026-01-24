@@ -50,7 +50,7 @@ interface
 
 uses
   SysUtils, Classes, FileUtil, Graphics, SynEditTypes, SynEditHighlighter,
-  SynEditHighlighterFoldBase, SynEditStrConst, LazEditTextAttributes;
+  SynEditHighlighterFoldBase, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkComment, tkIdentifier, tkKey, tkNull, tkNumber, tkSpace,
@@ -134,13 +134,14 @@ type
     function GetFoldConfigInstance(Index: Integer): TSynCustomFoldConfig; override;
     function GetFoldConfigCount: Integer; override;
     function GetFoldConfigInternalCount: Integer; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetTokenID: TtkTokenKind;
@@ -288,7 +289,6 @@ begin
   AddAttribute(fSymbolAttri);
   SetAttributesOnChange(@DefHighlightChange);
   MakeMethodTables;
-  fDefaultFilter := SYNS_FilterLFM;
   fRange := rsUnknown;
 end;
 
@@ -528,16 +528,17 @@ begin
     fProcTable[LinePtr[Run]]();
 end;
 
-function TSynLFMSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynLFMSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_IDENTIFIER: Result := fIdentifierAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_STRING: Result := fStringAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
-    SYN_ATTR_SYMBOL: Result := fSymbolAttri;
-    SYN_ATTR_NUMBER: Result := fNumberAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcIdentifier: Result := fIdentifierAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcString: Result := fStringAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
+    tcSymbol: Result := fSymbolAttri;
+    tcNumber: Result := fNumberAttri;
   else
     Result := nil;
   end;
@@ -678,6 +679,11 @@ function TSynLFMSyn.GetFoldConfigInternalCount: Integer;
 begin
   // include cfbtLfmNone
   Result := ord(high(TLfmCodeFoldBlockType)) - ord(low(TLfmCodeFoldBlockType)) + 1;
+end;
+
+function TSynLFMSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterLFM;
 end;
 
 initialization

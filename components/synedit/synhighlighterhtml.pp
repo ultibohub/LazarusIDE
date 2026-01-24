@@ -430,12 +430,13 @@ type
 
     function GetFoldConfigCount: Integer; override;
     function GetFoldConfigInternalCount: Integer; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetTokenID: TtkTokenKind;
@@ -2297,7 +2298,6 @@ begin
   InitIdent;
   MakeMethodTables;
   fRange := rsText;
-  fDefaultFilter := SYNS_FilterHTML;
 end;
 
 procedure TSynHTMLSyn.InitForScanningLine;
@@ -2675,13 +2675,14 @@ begin
   end;
 end;
 
-function TSynHTMLSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynHTMLSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_IDENTIFIER: Result := fIdentifierAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcIdentifier: Result := fIdentifierAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
     else Result := nil;
   end;
 end;
@@ -2827,6 +2828,11 @@ function TSynHTMLSyn.GetFoldConfigInternalCount: Integer;
 begin
   // include cfbtHtmlNone;
   Result := ord(high(THtmlCodeFoldBlockType)) - ord(low(THtmlCodeFoldBlockType)) + 1;
+end;
+
+function TSynHTMLSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterHTML;
 end;
 
 class function TSynHTMLSyn.GetLanguageName: string;

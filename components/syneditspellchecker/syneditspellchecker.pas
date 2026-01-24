@@ -2,13 +2,14 @@
   This source is only used to compile and install the package.
  }
 
-unit aissist;
+unit SynEditSpellChecker;
 
 {$warn 5023 off : no warning about unused units}
 interface
 
 uses
-  aiclient, fpasyncwebclient, LazarusPackageIntf;
+  SynSpellCheckPlugin, SynASpellDef, SynSpellDictionary, SynSpellCheckWordBreaker, 
+  LazarusPackageIntf;
 
 implementation
 
@@ -17,5 +18,5 @@ begin
 end;
 
 initialization
-  RegisterPackage('aissist', @Register);
+  RegisterPackage('SynEditSpellChecker', @Register);
 end.

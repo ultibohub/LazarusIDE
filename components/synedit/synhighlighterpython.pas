@@ -51,7 +51,7 @@ interface
 uses
   IniFiles, //THashedStringList
   LCLIntf, LCLType,
-  SynEditHighlighter, SynEditTypes, SynEditStrConst, LazEditTextAttributes,
+  SynEditHighlighter, SynEditTypes, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter,
   Graphics, SysUtils, Classes;
 
 const
@@ -144,13 +144,14 @@ type
     property Keywords: TStringlist read FKeywords;
     property TokenID: TtkTokenKind read FTokenID;
 
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetTokenID: TtkTokenKind;
@@ -365,6 +366,11 @@ begin
   else
     Result := tkIdentifier;
 end;
+
+function TSynPythonSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterPython;
+end;
   
 procedure TSynPythonSyn.MakeMethodTables;
 var
@@ -448,7 +454,6 @@ begin
   AddAttribute(fErrorAttri);
   SetAttributesOnChange(@DefHighlightChange);
   MakeMethodTables;
-  fDefaultFilter := SYNS_FilterPython;
 end; { Create }
 
 destructor TSynPythonSyn.Destroy;
@@ -571,7 +576,8 @@ const
   HEXCHARS = ['a' .. 'f', 'A' .. 'F'] + INTCHARS;
   OCTCHARS = ['0' .. '7'];
   HEXINDICATOR = ['x', 'X'];
-  LONGINDICATOR = ['l', 'L'];
+  OCTINDICATOR = ['o', 'O'];
+  //LONGINDICATOR = ['l', 'L'];
   IMAGINARYINDICATOR = ['j', 'J'];
   EXPONENTINDICATOR = ['e', 'E'];
   EXPONENTSIGN = ['+', '-'];
@@ -623,22 +629,23 @@ var
           Inc (Run);
           fTokenID := tkHex;
           State := nsHex;
+        // 0o17
+        end else if temp in OCTINDICATOR then begin
+          Inc (Run);
+          fTokenID := tkOct;
+          State := nsOct;
         // 0.45
         end else if temp = DOT then begin
           Inc (Run);
           State := nsDotFound;
           fTokenID := tkFloat;
         end else if temp in INTCHARS then begin
+          (* Before 3.0 (2008) this may have been octal
+             Now it is float (must have decimal dot, otherwise it is invalid)
+           *)
           Inc (Run);
-          // 0123 or 0123.45
-          if temp in OCTCHARS then begin
-            fTokenID := tkOct;
-            State := nsOct;
-          // 0899.45
-          end else begin
-            fTokenID := tkFloat;
-            State := nsFloatNeeded;
-          end; // if
+          fTokenID := tkFloat;
+          State := nsFloatNeeded;
         end; // if
       end; // ZERO
     end; // case
@@ -759,10 +766,10 @@ var
     // 0x123ABC
     if temp in HEXCHARS then begin
       Result := True;
-    // 0x123ABCL
-    end else if temp in LONGINDICATOR then begin
-      Inc (Run);
-      Result := False;
+    //// 0x123ABCL
+    //end else if temp in LONGINDICATOR then begin
+    //  Inc (Run);
+    //  Result := False;
     // 0x123.45: Error!
     end else if temp = DOT then begin
       Result := False;
@@ -780,16 +787,12 @@ var
   function CheckOct: Boolean;
   begin
     // 012345
-    if temp in INTCHARS then begin
-      if not (temp in OCTCHARS) then begin
-        State := nsFloatNeeded;
-        fTokenID := tkFloat;
-      end; // if
+    if temp in OCTCHARS then begin
       Result := True;
-    // 012345L
-    end else if temp in LONGINDICATOR then begin
-      Inc (Run);
-      Result := False;
+    //// 012345L
+    //end else if temp in LONGINDICATOR then begin
+    //  Inc (Run);
+    //  Result := False;
     // 0123e4
     end else if temp in EXPONENTINDICATOR then begin
       Result := HandleExponent;
@@ -1162,14 +1165,16 @@ begin
   end;
 end;
 
-function TSynPythonSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynPythonSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
-    SYN_ATTR_SYMBOL: Result := fSymbolAttri;
-    SYN_ATTR_NUMBER: Result := fNumberAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcIdentifier: Result := fIdentifierAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
+    tcString: Result := fSymbolAttri;
+    tcNumber: Result := fNumberAttri;
   else
     Result := nil;
   end;

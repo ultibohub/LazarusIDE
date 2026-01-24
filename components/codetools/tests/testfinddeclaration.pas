@@ -209,7 +209,12 @@ type
     // unit/include search
     procedure TestFindDeclaration_UnitSearch_CurrentDir;
     procedure TestFindDeclaration_UnitSearch_StarStar;
+    procedure TestFindDeclaration_IncludeSearch_MixedLowerUpper;
+    procedure TestFindDeclaration_IncludeSearch_FirstUnitDir;
+    procedure TestFindDeclaration_IncludeSearch_DefaultExt;
+    procedure TestFindDeclaration_IncludeSearch_FileWithPath;
     procedure TestFindDeclaration_IncludeSearch_DirectiveWithPath;
+    procedure TestFindDeclaration_IncludeSearch_Quotes;
     procedure TestFindDeclaration_IncludeSearch_StarStar;
     procedure TestFindDeclaration_FindFPCSrcNameSpacedUnits;
 
@@ -2194,8 +2199,117 @@ begin
   end;
 end;
 
-procedure TTestFindDeclaration.
-  TestFindDeclaration_IncludeSearch_DirectiveWithPath;
+procedure TTestFindDeclaration.TestFindDeclaration_IncludeSearch_MixedLowerUpper;
+var
+  MixedInc, LowerInc, UpperInc: TCodeBuffer;
+  Tool: TCodeTool;
+begin
+  MixedInc:=CodeToolBoss.CreateFile('miXed.Inc');
+  LowerInc:=CodeToolBoss.CreateFile('lower.inc');
+  UpperInc:=CodeToolBoss.CreateFile('UPPER.INC');
+  try
+    MixedInc.Source:='const cMixed = 1;';
+    LowerInc.Source:='const cLower = 2;';
+    UpperInc.Source:='const cUpper = 3;';
+
+    Add([
+    'unit Red;',
+    'interface',
+    '{$I miXed.Inc}', // test search exact
+    '{$I Lower.INC}', // test search lowercase
+    '{$I Upper.inc}', // test search uppercase
+    'implementation',
+    'end.']);
+    if not CodeToolBoss.Explore(Code,Tool,true) then begin
+      debugln('Error: '+CodeToolBoss.ErrorDbgMsg);
+      Fail('Explore failed: '+CodeToolBoss.ErrorMessage);
+    end;
+  finally
+    MixedInc.IsDeleted:=true;
+    LowerInc.IsDeleted:=true;
+    UpperInc.IsDeleted:=true;
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_IncludeSearch_FirstUnitDir;
+var
+  UnitCode: TCodeBuffer;
+  Dir, IncDir, IncPath, IncFile, ExpFile: String;
+  IncDef: TDefineTemplate;
+begin
+  UnitCode:=CodeToolBoss.LoadFile(ExpandFileName('moduletests/incsearch/Inc_UnitBeforePath.pas'),true,true);
+  if UnitCode=nil then
+    Fail('20260123134128');
+
+  Dir:=ExtractFilePath(UnitCode.Filename);
+  IncDir:=Dir+'inc';
+  // test CodeToolBoss.AddIncludePath
+  IncDef:=CodeToolBoss.AddIncludePath('TestFindDeclaration_IncludeSearch_FirstUnitDir',Dir,IncDir);
+  try
+    IncPath:=CodeToolBoss.GetIncludePathForDirectory(Dir,true);
+    AssertEquals('include path',';'+IncDir,IncPath);
+
+    // test search in module directory before include path
+    IncFile:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,'Inc_UnitBeforePath.inc');
+    ExpFile:=Dir+'Inc_UnitBeforePath.inc';
+    AssertEquals('include file',ExpFile,IncFile);
+  finally
+    CodeToolBoss.DefineTree.RemoveDefineTemplate(IncDef);
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_IncludeSearch_DefaultExt;
+var
+  Dir, IncDir, IncPath, IncFile, ExpFile: String;
+  IncDef: TDefineTemplate;
+begin
+  Dir:=ExpandFileName('moduletests/incsearch/');
+  IncDir:=Dir+'inc';
+  // test CodeToolBoss.AddIncludePath
+  IncDef:=CodeToolBoss.AddIncludePath('TestFindDeclaration_IncludeSearch_DefaultExt',Dir,IncDir);
+  try
+    IncPath:=CodeToolBoss.GetIncludePathForDirectory(Dir,true);
+    AssertEquals('include path',';'+IncDir,IncPath);
+
+    // test search with default extension
+    IncFile:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,'IncFileDefaultExt');
+    ExpFile:=Dir+'IncFileDefaultExt.inc';
+    AssertEquals('include file',ExpFile,IncFile);
+  finally
+    CodeToolBoss.DefineTree.RemoveDefineTemplate(IncDef);
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_IncludeSearch_FileWithPath;
+var
+  Dir, IncDir, IncPath, IncFile, ExpFile, Found: String;
+  IncDef: TDefineTemplate;
+begin
+  Dir:=ExpandFileName('moduletests/incsearch/');
+  IncDir:=Dir+'inc'+PathDelim;
+  // test CodeToolBoss.AddIncludePath
+  IncDef:=CodeToolBoss.AddIncludePath('TestFindDeclaration_IncludeSearch_FileWithPath',Dir,IncDir);
+  try
+    IncPath:=CodeToolBoss.GetIncludePathForDirectory(Dir,true);
+    AssertEquals('include path',';'+IncDir,IncPath);
+
+    // test searching an include file with path relative to module directory
+    IncFile:=SetDirSeparators('inc/sub/IncFileWithPath.inc');
+    Found:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,IncFile);
+    ExpFile:=Dir+IncFile;
+    AssertEquals('20260123150229 include file with path relative to folder',ExpFile,Found);
+
+    // test searching an include file with path relative to include path
+    IncFile:=SetDirSeparators('sub/IncFileWithPath.inc');
+    Found:=CodeToolBoss.DirectoryCachePool.FindIncludeFileInCompletePath(Dir,IncFile);
+    ExpFile:=IncDir+IncFile;
+    AssertEquals('20260123150232 include file with path relative to include path',ExpFile,Found);
+  finally
+    CodeToolBoss.DefineTree.RemoveDefineTemplate(IncDef);
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_IncludeSearch_DirectiveWithPath;
 var
   aFilename: String;
   StarCode: TCodeBuffer;
@@ -2203,9 +2317,34 @@ var
 begin
   aFilename:=ExpandFileNameUTF8(SetDirSeparators('moduletests/star/star.main.pas'));
   StarCode:=CodeToolBoss.LoadFile(aFilename,true,false);
-  if not CodeToolBoss.Explore(STarCode,Tool,true) then begin
+  if not CodeToolBoss.Explore(StarCode,Tool,true) then begin
     debugln('Error: '+CodeToolBoss.ErrorDbgMsg);
     Fail('Explore failed: '+CodeToolBoss.ErrorMessage);
+  end;
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_IncludeSearch_Quotes;
+var
+  MixedInc: TCodeBuffer;
+  Tool: TCodeTool;
+begin
+  MixedInc:=CodeToolBoss.CreateFile('miXed.Inc');
+  try
+    MixedInc.Source:='const cMixed = 1;';
+
+    Add([
+    'unit Red;',
+    'interface',
+    '{$I "miXed.Inc"}', // test search exact
+    '{$I ''miXed.Inc''}', // test search exact
+    'implementation',
+    'end.']);
+    if not CodeToolBoss.Explore(Code,Tool,true) then begin
+      debugln('Error: '+CodeToolBoss.ErrorDbgMsg);
+      Fail('Explore failed: '+CodeToolBoss.ErrorMessage);
+    end;
+  finally
+    MixedInc.IsDeleted:=true;
   end;
 end;
 

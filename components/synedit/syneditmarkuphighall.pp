@@ -334,7 +334,7 @@ type
     procedure DoFoldChanged(Sender: TSynEditStrings; AnIndex, aCount: Integer);
     procedure SetScanOffScreenLimit(AValue: integer);
 
-    procedure ScheduleAsync;
+    procedure ScheduleAsync(AnSearchInVisibleLines: boolean); // TODO: Add option to search visible lines in async too
     procedure RemoveAsync;
     Procedure InvalidateMatches(AFirstLine, ALastLine, ALineDiffCount: Integer);
     procedure AssertGapsValid;
@@ -342,16 +342,24 @@ type
       AMaxTime: integer; var AData: Pointer; var ADone: boolean;
       var APriorities: TTLazEditTaskPriorities);
     function ValidateFillGaps: boolean;
-    Procedure ValidateMatches(SkipPaint: Boolean = False);
 
   protected
+    Procedure ValidateMatches(SkipPaint: Boolean = False);
     procedure BeginSendingInvalidation; override;
     procedure EndSendingInvalidation; override;
     procedure SendMatchLineInvalidation(AStartIndex, AnEndIndex: Integer); override;
     procedure SetLines(const AValue: TSynEditStringsLinked); override;
+    (* LimitedValidationStartLine / LimitedValidationEndLine
+       - Do not validate lines outside the limit. Not even on-screen lines
+       - Removal of invalid existing matches will not be affected
+       - If the limit changes ValidateMatches must be called.
+    *)
+    function  LimitedValidationStartLine: IntPos; virtual;
+    function  LimitedValidationEndLine: IntPos; virtual;
     function  HasSearchData: Boolean; virtual; abstract;
     function HasDisplayAbleMatches: Boolean; override;
     function  SearchStringMaxLines: Integer; virtual; abstract;
+    function GetASyncPriority(AnSearchInVisibleLines: boolean): TTLazEditTaskPriorities; virtual;
     procedure FindInitialize;  virtual; abstract;
     function  FindMatches(AStartPoint, AnEndPoint: TPoint;
                           var AnIndex: Integer;
@@ -3110,7 +3118,7 @@ begin
       ValidateMatches(not FNeedValidatePaint)
     else
     if smfNeedAsync in FFlags then
-      ScheduleAsync;
+      ScheduleAsync(False);
   end;
 end;
 
@@ -3181,11 +3189,11 @@ begin
   ValidateMatches(True); // Should only need to extend off screen
 end;
 
-procedure TSynEditMarkupHighlightAllBase.ScheduleAsync;
+procedure TSynEditMarkupHighlightAllBase.ScheduleAsync(AnSearchInVisibleLines: boolean);
 begin
   if FHasAsyncScheduled then
     exit;
-  GlobalASyncRunner.AddOrReplaceTask(@DoAsyncScan, SynEdit, [tpPaintExtra]);
+  GlobalASyncRunner.AddOrReplaceTask(@DoAsyncScan, SynEdit, GetASyncPriority(AnSearchInVisibleLines));
   FHasAsyncScheduled := True;
 end;
 
@@ -3332,7 +3340,7 @@ var
   end;
 
 var
-  TopScreenLine, LastScreenLine, LastScreenLineAdj: Integer;
+  TopScreenLine, LastScreenLine, LastScreenLineAdj, LimitStart, LimitEnd: Integer;
   ExtStartLine, ExtEndLine, ExtEndLineAdj: integer;
   CurrentGapIdx, CntASync, Lim: Integer;
   CurrentGap: TSynMarkupHighAllValidRange;
@@ -3343,8 +3351,13 @@ begin
   FindInitialize;
 
   TopScreenLine := TopLine;
+  LimitStart := LimitedValidationStartLine;
+  if (LimitStart > TopScreenLine) then TopScreenLine := LimitStart;
+
   LastTextLine   := SynEdit.Lines.Count;
   LastScreenLine := SynEdit.PartialBottomLine;
+  LimitEnd := LimitedValidationStartLine;
+  if (LimitEnd > 0) and (LimitEnd < LastScreenLine) then LastScreenLine := LimitEnd;
   OffsetForMultiLine := SearchStringMaxLines - 1;
   if OffsetForMultiLine < 0 then
     OffsetForMultiLine := DEFAULT_MULTILINE_SEARCH_OFFS;
@@ -3354,6 +3367,7 @@ begin
   CurrentGapIdx := FValidRanges.FindGapFor(Point(1, TopScreenLine), True);
   if CurrentGapIdx >= 0 then begin
     LastScreenLineAdj := LastScreenLine + OffsetForMultiLine + AVOID_GAP_MAX_OFFS;
+    if (LimitEnd > 0) and (LastScreenLineAdj > LimitEnd) then LastScreenLineAdj := LimitEnd;
 
     CurrentGap := FValidRanges.Gap[CurrentGapIdx];
     if CurrentGap.StartPoint.y < Max(1, TopScreenLine - OffsetForMultiLine - AVOID_GAP_MAX_OFFS) then begin
@@ -3396,6 +3410,7 @@ begin
       ExtStartLine := 1
     else
       ExtStartLine := TopScreenLine - FScanOffScreenLimit;
+    if ExtStartLine < LimitStart then ExtStartLine := LimitStart;
     ExtStartPoint := point(1, ExtStartLine);
     if (FScanOffScreenLimit = -1) or (FScanOffScreenLimit >= high(LastScreenLine) - 2 - LastScreenLine) then
       ExtEndLine := high(LastScreenLine) - 2
@@ -3406,6 +3421,10 @@ begin
     if ExtEndLineAdj < ExtEndLine then
       ExtEndLineAdj := high(ExtEndLineAdj);
     {$POP}
+    if LimitEnd > 0 then begin
+      if ExtEndLine > LimitEnd    then ExtEndLine := LimitEnd;
+      if ExtEndLineAdj > LimitEnd then ExtEndLineAdj := LimitEnd;
+    end;
 
     CurrentGapIdx := FValidRanges.FindGapFor(ExtStartPoint, True);
     if CurrentGapIdx >= 0 then begin
@@ -3583,7 +3602,7 @@ begin
     if not ValidateFillGaps then begin
       if SkipPaint then
         Include(FFlags, smfAsyncSkipPaint);
-      ScheduleAsync;
+      ScheduleAsync(False);
     end
     else if FOverViewGutterPart <> nil then
       FOverViewGutterPart.ReCalc;
@@ -3644,10 +3663,29 @@ begin
     Lines.AddChangeHandler(senrLineMappingChanged, @DoFoldChanged);
 end;
 
+function TSynEditMarkupHighlightAllBase.LimitedValidationStartLine: IntPos;
+begin
+  Result := 0; // no limit
+end;
+
+function TSynEditMarkupHighlightAllBase.LimitedValidationEndLine: IntPos;
+begin
+  Result := 0; // no limit
+end;
+
 function TSynEditMarkupHighlightAllBase.HasDisplayAbleMatches: Boolean;
 begin
   Result := (inherited HasDisplayAbleMatches) and
             ( (not HideSingleMatch) or (Matches.Count > 1) );
+end;
+
+function TSynEditMarkupHighlightAllBase.GetASyncPriority(AnSearchInVisibleLines: boolean
+  ): TTLazEditTaskPriorities;
+begin
+  if AnSearchInVisibleLines then
+    Result := [tpPaintExtra]
+  else
+    Result := [tpPaintOverview];
 end;
 
 procedure TSynEditMarkupHighlightAllBase.DoTextChanged(StartLine, EndLine,

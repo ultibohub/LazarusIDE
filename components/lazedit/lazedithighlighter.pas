@@ -109,8 +109,6 @@ type
   end;
 
 
-  TLazEditHighlighterAttachedLines = specialize TFPGList<TLazEditStringsBase>;
-
   TLazEditBracketInfoFlag = (
     bfOpen,              // If absent, then close
     bfUniform,           // no open/close, e.g. quote
@@ -123,12 +121,56 @@ type
   );
   TLazEditBracketInfoFlags = set of TLazEditBracketInfoFlag;
 
+  (* TLazEditTokenClass, TLazEditTokenDetails
+     - This info is optional for Highlighters to provide.
+     - TLazEditTokenDetails: absence of a detail is only meaningful if the detail
+                             appears in the mask.
+                           Otherwise, it simple mean: no info available on the detail.
+     - GetTokenDetailsMask: A HL may provide different masks for different tokens.
+     - GetTokenClassAttribute[Ex]: may ignore details
+  *)
+  TLazEditTokenClass = (
+    tcUnknown,
+    tcWhiteSpace,
+    tcSymbol,
+    tcDirective,
+    tcNumber,
+    tcString,
+    tcComment,
+    tcIdentifier,
+    tcKeyword,
+    tcVariable,
+    tcHeader,
+    tcError,
+    tcEmbedded
+  );
+  TLazEditTokenDetail = (
+    // tcWhiteSpace
+    tdFunctionalSpace, // e.g. indent in Python
+    // tcIdentifier, tcKeyword
+    tdKnownWord,    // Word is defined in the language (e.g. Keyword "begin", or non-keyword "stdcall", "break")
+    tdReservedWord, // Usually any Keyword, hardcoded in the language
+    // tcSymbol
+    tdBracket,
+    // tcSymbol, tcIdentifier, tcKeyword
+    tdOperator,
+    tdAssignment, // can be together with tdOperator: either both, or not known which
+    // tcString, tcComment
+    tdMultiLine
+  );
+  TLazEditTokenDetails = set of TLazEditTokenDetail;
+
+  TCharSet=set of char;
+
   { TLazEditCustomHighlighter }
+  {$WriteableConst off}
 
   TLazEditCustomHighlighter = class(TLazEditAttributeOwner)
   private type
     TLazEditHlUpdateFlag = (ufAttribChanged, ufRescanNeeded);
     TLazEditHlUpdateFlags = set of TLazEditHlUpdateFlag;
+  protected type
+    TLazEditHighlighterAttachedLines = specialize TFPGList<TLazEditStringsBase>;
   private const
     BRACKET_KIND_TOKEN_COUNT = 5;
     BRACKET_KIND_TOKEN_QUOTE_START = 3;
@@ -136,6 +178,8 @@ type
       ( (')', ']', '}', '"', ''''),
         ('(', '[', '{', '"', '''')
       );
+    IDENTIFIER_CHARS = TCharSet(['A'..'Z', 'a'..'z', '0'..'9', '_']);
+    WORD_BREAK_CHARS = TCharSet([#32..#127] - IDENTIFIER_CHARS - ['#', '$']);
   strict private
     FUpdateLock: integer;
     FUpdateFlags: TLazEditHlUpdateFlags;
@@ -153,9 +197,14 @@ type
     FTokenAttributeMergeResult: TLazEditTextAttributeMergeResult;
     FTokenAttributeList: TLazCustomEditTextAttributeArray;
 
+    FDefaultFileFilterMask: string;
+
     function GetIsUpdating: boolean; inline;
     procedure InternalEndUpdate;
 
+    function IsFilterFilterMaskStored: Boolean;
+  protected
+    function __OLD_FileFilterDefaultMask: string; virtual; deprecated 'to be removed in 5.99';
   private
     procedure SetCurrentLines(AValue: TLazEditStringsBase); virtual;
     procedure DoAttachedLinesFreed(Sender: TObject);
@@ -200,15 +249,28 @@ type
       ASkipResultBounds: boolean = False
     );
 
+    function GetDrawDivider(Index: integer): TLazEditDividerDrawConfigSetting; virtual;
+    function GetDividerDrawConfig(Index: Integer): TLazEditDividerDrawConfig; virtual;
+    function GetDividerDrawConfigCount: Integer; virtual;
+
     (* ------------------ *
      * Brackets           *
      * ------------------ *)
     // *** CurrentLines may NOT be set for BracketKinds ***
     function GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean): String; virtual;
-
+  protected
+    (* ------------------ *
+     * Language info      *
+     * ------------------ *)
+    function GetInstanceLanguageName: string; virtual;
+    function GetInitialDefaultFileFilterMask: string; virtual;
+    function GetIdentChars: TCharSet; virtual;
+    function GetSampleSource: string; virtual;
+    function GetWordBreakChars: TCharSet; virtual;
   public
-    constructor Create(AOwner: TComponent); override;
+    constructor Create(AnOwner: TComponent); override;
     destructor Destroy; override;
+    procedure Assign(ASource: TPersistent); override;
 
     procedure BeginUpdate; inline;
     procedure EndUpdate; inline;
@@ -252,6 +314,9 @@ type
     function GetTokenPos: Integer; virtual; abstract; // 0-based
     function GetTokenLen: Integer; virtual; abstract;
     procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); virtual; abstract;
+    function GetTokenClass: TLazEditTokenClass; virtual;
+    function GetTokenDetails: TLazEditTokenDetails; virtual;
+    function GetTokenDetailsMask: TLazEditTokenDetails; virtual;
     (* GetTokenAttribute / GetEndOfLineAttribute
        The base attribute
      * GetTokenAttributeEx / GetEndOfLineAttributeEx
@@ -262,7 +327,16 @@ type
     function GetTokenAttributeList: TLazCustomEditTextAttributeArray;
     function GetEndOfLineAttribute: TLazEditTextAttribute; virtual; // valid after line was scanned to EOL
     function GetEndOfLineAttributeEx: TLazCustomEditTextAttribute; virtual; // valid after line was scanned to EOL
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass; ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; virtual;
+    function GetTokenClassAttributeEx(ATkClass: TLazEditTokenClass; ATkDetails: TLazEditTokenDetails = []): TLazCustomEditTextAttribute; virtual;
 
+    (* ------------------ *
+     * Divider            *
+     * ------------------ *)
+    property DrawDivider[Index: integer]: TLazEditDividerDrawConfigSetting read GetDrawDivider;
+    property DividerDrawConfig[Index: Integer]: TLazEditDividerDrawConfig
+      read GetDividerDrawConfig;
+    property DividerDrawConfigCount: Integer read GetDividerDrawConfigCount;
     (* ------------------ *
      * Brackets           *
      * ------------------ *)
@@ -274,6 +348,18 @@ type
                                  ): Boolean; virtual;
     function BracketKindCount: integer; virtual;
     property BracketKinds[AnIndex: integer; AnOpeningToken: boolean] : String read GetBracketKinds;
+    (* ------------------ *
+     * Language info      *
+     * ------------------ *)
+    function IsKeyword(const AKeyword: string): boolean; virtual;
+    class function GetLanguageName: string; virtual;
+    property LanguageName: string read GetInstanceLanguageName;
+    property IdentChars: TCharSet read GetIdentChars;
+    property WordBreakChars: TCharSet read GetWordBreakChars;
+    property SampleSource: string read GetSampleSource;
+  published
+    property DefaultFilter: string read FDefaultFileFilterMask write FDefaultFileFilterMask stored IsFilterFilterMaskStored;
+
   end;
 
   { TLazEditCustomRangesHighlighter }
@@ -332,7 +418,8 @@ type
     procedure DetachFromLines(ALines: TLazEditStringsBase); override; final;
   end;
 
-
+var
+  UnknownLanguageName: String = 'no name'; // User app can set their default here
 
 implementation
 
@@ -406,6 +493,27 @@ begin
   if ufAttribChanged in FUpdateFlags then SendAttributeChangeNotification;
   if ufRescanNeeded in FUpdateFlags then RequestFullRescan;
   FUpdateFlags := [];
+end;
+
+function TLazEditCustomHighlighter.IsFilterFilterMaskStored: Boolean;
+begin
+  Result := FDefaultFileFilterMask <> GetInitialDefaultFileFilterMask;
+
+  // set by old code, instead of overriding GetInitialDefaultFileFilterMask;
+  if (GetInitialDefaultFileFilterMask = '') and
+     (__OLD_FileFilterDefaultMask <> '')
+  then
+    Result := FDefaultFileFilterMask <> __OLD_FileFilterDefaultMask;
+end;
+
+function TLazEditCustomHighlighter.__OLD_FileFilterDefaultMask: string;
+begin
+  Result := '';
+end;
+
+class function TLazEditCustomHighlighter.GetLanguageName: string;
+begin
+  Result := UnknownLanguageName;
 end;
 
 procedure TLazEditCustomHighlighter.DoAttachedToLines(Lines: TLazEditStringsBase);
@@ -494,16 +602,59 @@ begin
   FTokenAttributeMergeResult.Merge(AModifierAttrib);
 end;
 
+function TLazEditCustomHighlighter.GetDrawDivider(Index: integer
+  ): TLazEditDividerDrawConfigSetting;
+begin
+  Result := SynEmptyDividerDrawConfigSetting;
+end;
+
+function TLazEditCustomHighlighter.GetDividerDrawConfig(Index: Integer): TLazEditDividerDrawConfig;
+begin
+  Result := nil;
+end;
+
+function TLazEditCustomHighlighter.GetDividerDrawConfigCount: Integer;
+begin
+  Result := 0;
+end;
+
 function TLazEditCustomHighlighter.GetBracketKinds(AnIndex: integer; AnOpeningToken: boolean
   ): String;
 begin
   Result := BRACKET_KIND_TOKENS[AnOpeningToken, AnIndex]
 end;
 
-constructor TLazEditCustomHighlighter.Create(AOwner: TComponent);
+function TLazEditCustomHighlighter.GetInstanceLanguageName: string;
+begin
+  Result := GetLanguageName;
+end;
+
+function TLazEditCustomHighlighter.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := '';
+end;
+
+function TLazEditCustomHighlighter.GetIdentChars: TCharSet;
+begin
+  Result := IDENTIFIER_CHARS;
+end;
+
+function TLazEditCustomHighlighter.GetSampleSource: string;
+begin
+  Result := '';
+end;
+
+function TLazEditCustomHighlighter.GetWordBreakChars: TCharSet;
+begin
+  Result := WORD_BREAK_CHARS;
+end;
+
+constructor TLazEditCustomHighlighter.Create(AnOwner: TComponent);
 begin
   FAttachedLines := TLazEditHighlighterAttachedLines.Create;
-  inherited Create(AOwner);
+  if FDefaultFileFilterMask = '' then // TODO: remove if condition in 5.99
+    FDefaultFileFilterMask := GetInitialDefaultFileFilterMask;
+  inherited Create(AnOwner);
 end;
 
 destructor TLazEditCustomHighlighter.Destroy;
@@ -511,6 +662,23 @@ begin
   inherited Destroy;
   FTokenAttributeMergeResult.Free;
   FAttachedLines.Free;
+end;
+
+procedure TLazEditCustomHighlighter.Assign(ASource: TPersistent);
+var
+  Src: TLazEditCustomHighlighter absolute ASource;
+  i: Integer;
+begin
+  inherited Assign(ASource);
+  AssignAttributesByName(Src);
+
+  if not (ASource is TLazEditCustomHighlighter) then exit;
+
+  if ASource.ClassType = ClassType then
+    for i := 0 to DividerDrawConfigCount - 1 do
+      DividerDrawConfig[i].Assign(Src.DividerDrawConfig[i]);
+
+  FDefaultFileFilterMask := Src.FDefaultFileFilterMask;
 end;
 
 procedure TLazEditCustomHighlighter.BeginUpdate;
@@ -601,7 +769,7 @@ begin
   ALogX := ToIdx(ALogX);
   if ARestartLineIfNeeded then begin
     if GetEol or (GetTokenPos > ALogX) then
-      StartAtLineIndex(FLineIndex); // TODO: avaid re-fetching CurrentLineText
+      StartAtLineIndex(FLineIndex); // TODO: avoid re-fetching CurrentLineText
   end;
 
   while not GetEol do begin
@@ -628,6 +796,33 @@ end;
 function TLazEditCustomHighlighter.FirstUnpreparedLine: IntIdx;
 begin
   Result := -1;
+end;
+
+function TLazEditCustomHighlighter.GetTokenClass: TLazEditTokenClass;
+var
+  a: TLazEditTextAttribute;
+begin
+  Result := tcUnknown;
+
+  a := GetTokenAttribute;
+  if a = nil then
+    exit;
+
+  for Result in TLazEditTokenClass do
+    if a = GetTokenClassAttribute(Result) then
+      exit;
+
+  Result := tcUnknown;
+end;
+
+function TLazEditCustomHighlighter.GetTokenDetails: TLazEditTokenDetails;
+begin
+  Result := [];
+end;
+
+function TLazEditCustomHighlighter.GetTokenDetailsMask: TLazEditTokenDetails;
+begin
+  Result := [];
 end;
 
 function TLazEditCustomHighlighter.GetTokenAttributeEx: TLazCustomEditTextAttribute;
@@ -669,6 +864,18 @@ begin
   Result := GetEndOfLineAttribute;
 end;
 
+function TLazEditCustomHighlighter.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
+begin
+  Result := nil;
+end;
+
+function TLazEditCustomHighlighter.GetTokenClassAttributeEx(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazCustomEditTextAttribute;
+begin
+  Result := GetTokenClassAttributeEx(ATkClass, ATkDetails);
+end;
+
 function TLazEditCustomHighlighter.GetBracketContextAt(const ALineIdx: TLineIdx;
   const ALogX: IntPos; const AByteLen: Integer; const AKind: integer;
   var AFlags: TLazEditBracketInfoFlags; out AContext, ANestLevel: Integer;
@@ -690,6 +897,11 @@ end;
 function TLazEditCustomHighlighter.BracketKindCount: integer;
 begin
   Result := BRACKET_KIND_TOKEN_COUNT;
+end;
+
+function TLazEditCustomHighlighter.IsKeyword(const AKeyword: string): boolean;
+begin
+  Result := False;
 end;
 
 { TLazEditCustomRangesHighlighter }
@@ -757,7 +969,7 @@ function TLazEditCustomRangesHighlighter.UpdateRangeInfoAtEOL: Boolean;
 var
   NewRange: Pointer;
 begin
-// TOOD: separat update / compare
+// TOOD: separate update / compare
   NewRange := GetRange;
   Result := NewRange <> CurrentRanges[LineIndex];
   if Result then

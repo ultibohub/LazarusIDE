@@ -56,7 +56,7 @@ uses
   LCLIntf, LCLType,
   Controls, Graphics,
   SynEditTypes, SynEditHighlighter, SynEditStrConst,
-  SynHighlighterHashEntries, SynEditMiscProcs, LazEditTextAttributes;
+  SynHighlighterHashEntries, SynEditMiscProcs, LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkComment, tkDatatype, tkDefaultPackage, tkException,         // DJLP 2000-08-11
@@ -171,14 +171,15 @@ type
   protected
     function GetIdentChars: TSynIdentChars; override;
     function GetSampleSource : String; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure Assign(Source: TPersistent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetToken: string; override;
@@ -1507,7 +1508,6 @@ begin
   AddAttribute(fCollationAttri);
   SetAttributesOnChange(@DefHighlightChange);
   MakeMethodTables;
-  fDefaultFilter := SYNS_FilterSQL;
   fRange := rsUnknown;
   fDialect := sqlStandard;
   SQLDialect := sqlSybase;
@@ -1880,18 +1880,18 @@ begin
   end;
 end;
 
-function TSynSQLSyn.GetDefaultAttribute(Index: integer):
-  TSynHighlighterAttributes;
+function TSynSQLSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_IDENTIFIER: Result := fIdentifierAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_STRING: Result := fStringAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
-    SYN_ATTR_SYMBOL: Result := fSymbolAttri;
-    SYN_ATTR_NUMBER: Result := fNumberAttri;
-    SYN_ATTR_VARIABLE: Result := fVariableAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcIdentifier: Result := fIdentifierAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcString: Result := fStringAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
+    tcSymbol: Result := fSymbolAttri;
+    tcNumber: Result := fNumberAttri;
+    tcVariable: Result := fVariableAttri;
   else
     Result := nil;
   end;
@@ -2321,6 +2321,11 @@ begin
         '  SELECT SCOPE_IDENTITY()'#13#10 +
         'GO';
   end;
+end;
+
+function TSynSQLSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterSQL;
 end;
 
 initialization

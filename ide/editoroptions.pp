@@ -54,7 +54,7 @@ uses
   SynEditMarkupBracket, SynEditMarkupHighAll, SynEditMarkupWordGroup,
   SynEditMarkupSpecialChar,
   // LazEdit
-  TextMateGrammar, LazEditTextAttributes,
+  TextMateGrammar, LazEditTextAttributes, LazEditHighlighterUtils,
   // SynEdit Highlighters
   SynEditHighlighter, SynEditHighlighterFoldBase, SynHighlighterCPP, SynHighlighterHTML,
   SynHighlighterJava, SynHighlighterLFM, SynHighlighterPas, SynHighlighterPerl, SynHighlighterPHP,
@@ -64,7 +64,7 @@ uses
   SynEditMarkupFoldColoring, SynEditMarkup, SynGutterLineOverview, SynBeautifierPascal,
   SynEditTextDynTabExpander, SynEditTextTabExpander, SynTextMateSyn, SynEditStrConst,
   SynHighlighterPosition, SynGutterMarks, SynEditWrappedView, SynPluginExternalLink,
-  SynPluginAutoBraces,
+  SynPluginAutoBraces, SynHighlighterMarkdown,
   // codetools
   LinkScanner, CodeToolManager,
   // BuildIntf
@@ -344,6 +344,7 @@ type
     FUseSchemeGlobals: Boolean;
     function GetGroupName: String;
     function GetIsUsingSchemeGlobals: Boolean;
+    function GetMarkupAllOverviewColor: TColor;
     procedure SetMarkupAllOverviewColor(AValue: TColor);
     procedure SetMarkupFoldLineAlpha(AValue: Byte);
     procedure SetMarkupFoldLineColor(AValue: TColor);
@@ -505,8 +506,6 @@ type
   private
 //    fTextAttri: TSynHighlighterAttributes;
     FPos: Integer;
-  protected
-    function GetDefaultAttribute({%H-}Index: integer): TSynHighlighterAttributes; override;
   public
     class function GetLanguageName: string; override;
     procedure ResetRange; override;
@@ -578,7 +577,8 @@ const
       (Count: 0; Info: nil), // Ini
       (Count: 0; Info: nil), // Bat
       (Count: 0; Info: nil), // PO
-      (Count: 0; Info: nil)  // Pike
+      (Count: 0; Info: nil), // Pike
+      (Count: 0; Info: nil)  // Markdown
     );
 
 type
@@ -791,7 +791,8 @@ const
       (Count:  0; HasMarkup: False; Info: nil), // Bat
       (Count:  0; HasMarkup: False; Info: nil), // Ini
       (Count:  0; HasMarkup: False; Info: nil), // PO
-      (Count:  0; HasMarkup: False; Info: nil)  // Pike
+      (Count:  0; HasMarkup: False; Info: nil), // Pike
+      (Count:  0; HasMarkup: False; Info: nil)  // Markdown
     );
 
 const
@@ -831,7 +832,7 @@ const
     (nil, TIDESynTextSyn, TIDESynFreePasSyn, TIDESynPasSyn, TSynLFMSyn, TSynXMLSyn,
     TSynHTMLSyn, TSynCPPSyn, TSynPerlSyn, TSynJavaSyn, TSynUNIXShellScriptSyn,
     TSynPythonSyn, TSynPHPSyn, TSynSQLSyn,TSynCssSyn, TSynJScriptSyn, TSynDiffSyn,
-    TSynBatSyn, TSynIniSyn, TSynPoSyn, TSynPikeSyn) deprecated 'for internal use only';
+    TSynBatSyn, TSynIniSyn, TSynPoSyn, TSynPikeSyn, TSynMarkdownSyn) deprecated 'for internal use only';
 
 { Comments }
 const
@@ -856,7 +857,8 @@ const
     comtNone,  // Bat
     comtNone,  // Ini
     comtNone,  // po
-    comtCPP    // lshPike
+    comtCPP,   // lshPike
+    comtNone   // markdown
     ) deprecated 'for internal use only';
 
 const
@@ -4214,6 +4216,27 @@ begin
   end;
   Add(NewInfo);
 
+  // create info for markdown
+  NewInfo := TEditOptLanguageInfo.Create;
+  NewInfo.TheType := lshMarkdown;
+  NewInfo.DefaultCommentType := DefaultCommentTypes{%H-}[NewInfo.TheType];
+  NewInfo.SynInstance := LazSyntaxHighlighterClasses{%H-}[NewInfo.TheType].Create(nil);
+  NewInfo.SetBothFilextensions('md');
+  NewInfo.SampleSource := '### Header'+#13#10+
+                          'Example line'+#13#10+
+                          'Example line'+#13#10+
+                          '```'+#13#10+
+                          'text'+#13#10+
+                          '```'+#13#10+
+                          'Example'+#13#10;
+  with NewInfo do
+  begin
+    AddAttrSampleLines[ahaTextBlock] := 2;
+    MappedAttributes := TStringList.Create;
+    CaretXY := Point(1,1);
+  end;
+  Add(NewInfo);
+
   // create info for asm Window
   // TODO: move to debugger package
   NewInfo := TEditOptLanguageInfo.Create;
@@ -6694,7 +6717,7 @@ end;
 procedure TEditorOptions.ReadHighlighterDivDrawSettings(Syn: TSrcIDEHighlighter);
 var
   TheInfo: TEditorOptionsDividerRecord;
-  Conf: TSynDividerDrawConfig;
+  Conf: TLazEditDividerDrawConfig;
   ConfName: String;
   Path: String;
   i, h: Integer;
@@ -6736,7 +6759,7 @@ var
   DefSyn: TSrcIDEHighlighter;
   i, h:   Integer;
   Path:   String;
-  Conf, DefConf: TSynDividerDrawConfig;
+  Conf, DefConf: TLazEditDividerDrawConfig;
   TheInfo: TEditorOptionsDividerRecord;
   ConfName: String;
 begin
@@ -7301,6 +7324,11 @@ end;
 function TColorSchemeAttribute.GetIsUsingSchemeGlobals: Boolean;
 begin
   Result := FUseSchemeGlobals and (GetSchemeGlobal <> nil);
+end;
+
+function TColorSchemeAttribute.GetMarkupAllOverviewColor: TColor;
+begin
+  Result := FMarkupAllOverviewColor;
 end;
 
 procedure TColorSchemeAttribute.SetMarkupAllOverviewColor(AValue: TColor);
@@ -8588,12 +8616,6 @@ begin
   FPos := 0;
 end;
 
-function TIDESynTextSyn.GetDefaultAttribute(Index: integer
-  ): TSynHighlighterAttributes;
-begin
-  Result := nil;
-end;
-
 class function TIDESynTextSyn.GetLanguageName: string;
 begin
   Result := 'Plain Text';
@@ -8607,7 +8629,6 @@ end;
 constructor TIDESynTextSyn.Create(AOwner: TComponent);
 begin
   inherited Create(AOwner);
-  fDefaultFilter := '';
 end;
 
 function TIDESynTextSyn.GetEol: Boolean;

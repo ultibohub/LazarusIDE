@@ -157,7 +157,6 @@ type
     procedure SetRange(Value: Pointer); override;
     procedure ResetRange; override;
 
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes; override;
     class function GetLanguageName: string; override;
   protected
     // folding
@@ -562,7 +561,6 @@ begin
 
   SetAttributesOnChange(@DefHighlightChange);
   MakeMethodTables;
-  fDefaultFilter := '';
   fRange := rsUnknown;
 end;
 
@@ -697,11 +695,6 @@ procedure TSynDiffSyn.ResetRange;
 begin
   inherited;
   fRange := rsUnknown;
-end;
-
-function TSynDiffSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-begin
-  Result := nil;
 end;
 
 class function TSynDiffSyn.GetLanguageName: string;

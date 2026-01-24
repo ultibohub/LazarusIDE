@@ -797,7 +797,7 @@ type
     FModeSwitchesLoaded: Boolean;
     fD4syntax: boolean;
     // Divider
-    FDividerDrawConfig: Array [TSynPasDividerDrawLocation] of TSynDividerDrawConfig;
+    FDividerDrawConfig: Array [TSynPasDividerDrawLocation] of TLazEditDividerDrawConfig;
 
     procedure DoCustomTokenChanged(Sender: TObject);
     procedure DoReadLfmNestedComments(Reader: TReader);
@@ -1022,7 +1022,6 @@ type
     function KeyCompU(const AnUpperKey: string): Boolean; // Only a..z / Key must be already uppercase
     function KeyCompEx(AText1, AText2: pchar; ALen: Integer): Boolean;
     function GetIdentChars: TSynIdentChars; override;
-    function IsFilterStored: boolean; override;                                 //mh 2000-10-08
     procedure DoDefHighlightChanged; override;
   protected
     procedure DoAfterOperator; inline;
@@ -1081,8 +1080,8 @@ type
                                      AIncludeDisabled: Boolean = False): integer; // TODO deprecated; // foldable nodes
 
     // Divider
-    function GetDrawDivider(Index: integer): TSynDividerDrawConfigSetting; override;
-    function GetDividerDrawConfig(Index: Integer): TSynDividerDrawConfig; override;
+    function GetDrawDivider(Index: integer): TLazEditDividerDrawConfigSetting; override;
+    function GetDividerDrawConfig(Index: Integer): TLazEditDividerDrawConfig; override;
     function GetDividerDrawConfigCount: Integer; override;
 
     // Fold Config
@@ -1094,14 +1093,13 @@ type
     procedure DoFoldConfigChanged(Sender: TObject); override;
 
     procedure DefineProperties(Filer: TFiler); override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetCapabilities: TSynHighlighterCapabilities; override;
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
-    function GetDefaultAttribute(Index: integer): TLazEditHighlighterAttributes;
-      override;
     function GetEol: Boolean; override;
     function GetRange: Pointer; override;
     function GetToken: string; override;
@@ -1112,6 +1110,10 @@ type
     function GetTokenKind: integer; override;
     function GetTokenPos: Integer; override;
     function GetTokenLen: Integer; override;
+    function GetTokenClass: TLazEditTokenClass; override;
+    function GetTokenDetails: TLazEditTokenDetails; override;
+    function GetTokenDetailsMask: TLazEditTokenDetails; override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass; ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetTokenIsComment: Boolean;
     function GetTokenIsCommentStart(AnIgnoreMultiLineSlash: Boolean = False): Boolean;
     function GetTokenIsCommentEnd: Boolean;
@@ -2730,15 +2732,17 @@ begin
       Result := tkIdentifier;
   end
   else if KeyCompU('RECORD') then begin
-    StartPascalCodeFoldBlock(cfbtRecord);
-    //FNextTokenState := tsAtBeginOfStatement;
-    //if HasRangeCompilerModeswitch(pcsTypeHelpers) {and adv_record} then
-    FNextTokenState := tsAfterClass;
-    fRange := fRange - [rsInTypeSpecification, rsAfterEqual, rsProperty, rsInPropertyNameOrIndex,
-                        rsInProcHeader, rsInProcName, rsInParamDeclaration];
-    if HasRangeCompilerModeswitch(pcsTypeHelpers) {and adv_record} then
-      fRange := fRange + [rsInClassHeader]; // highlight helper
-      FOldRange := FOldRange - [rsInClassHeader];
+    if not(rsInGenericConstraint in fRange) then begin
+      StartPascalCodeFoldBlock(cfbtRecord);
+      //FNextTokenState := tsAtBeginOfStatement;
+      //if HasRangeCompilerModeswitch(pcsTypeHelpers) {and adv_record} then
+      FNextTokenState := tsAfterClass;
+      fRange := fRange - [rsInTypeSpecification, rsAfterEqual, rsProperty, rsInPropertyNameOrIndex,
+                          rsInProcHeader, rsInProcName, rsInParamDeclaration];
+      if HasRangeCompilerModeswitch(pcsTypeHelpers) {and adv_record} then
+        fRange := fRange + [rsInClassHeader]; // highlight helper
+        FOldRange := FOldRange - [rsInClassHeader];
+    end;
     Result := tkKey;
   end
   else if KeyCompU('ARRAY') then Result := tkKey
@@ -4305,8 +4309,6 @@ begin
   MakeMethodTables;
   fRange := [];
   fAsmStart := False;
-  fDefaultFilterInitialValue := SYNS_FilterPascal;
-  fDefaultFilter := fDefaultFilterInitialValue;
 end; { Create }
 
 destructor TSynPasSyn.Destroy;
@@ -6234,17 +6236,18 @@ begin
   IsInNextToEOL := True;
 end;
 
-function TSynPasSyn.GetDefaultAttribute(Index: integer): TLazEditHighlighterAttributes;
+function TSynPasSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT:    Result := FPasAttributes[attribComment];
-    SYN_ATTR_IDENTIFIER: Result := FPasAttributes[attribIdentifier];
-    SYN_ATTR_KEYWORD:    Result := FPasAttributes[attribKey];
-    SYN_ATTR_STRING:     Result := FPasAttributes[attribString];
-    SYN_ATTR_WHITESPACE: Result := FPasAttributes[attribSpace];
-    SYN_ATTR_NUMBER:     Result := FPasAttributes[attribNumber];
-    SYN_ATTR_DIRECTIVE:  Result := FPasAttributes[attribDirective];
-    SYN_ATTR_ASM:        Result := FPasAttributes[attribAsm];
+  case ATkClass of
+    tcComment:    Result := FPasAttributes[attribComment];
+    tcIdentifier: Result := FPasAttributes[attribIdentifier];
+    tcKeyword:    Result := FPasAttributes[attribKey];
+    tcString:     Result := FPasAttributes[attribString];
+    tcWhiteSpace: Result := FPasAttributes[attribSpace];
+    tcNumber:     Result := FPasAttributes[attribNumber];
+    tcDirective:  Result := FPasAttributes[attribDirective];
+    tcEmbedded:   Result := FPasAttributes[attribAsm];
   else
     Result := nil;
   end;
@@ -6500,6 +6503,51 @@ end;
 function TSynPasSyn.GetTokenLen: Integer;
 begin
   Result := Run-fTokenPos;
+end;
+
+function TSynPasSyn.GetTokenClass: TLazEditTokenClass;
+begin
+  Result := tcUnknown;
+  case FTokenID of
+    tkAsm:          Result := tcEmbedded;
+    tkComment:      Result := tcComment;
+    tkIdentifier:   Result := tcIdentifier;
+    tkKey:          Result := tcKeyword;
+    tkModifier:     Result := tcKeyword;
+    tkNull:         Result := tcUnknown;
+    tkNumber:       Result := tcNumber;
+    tkSpace:        Result := tcWhiteSpace;
+    tkString:       Result := tcString;
+    tkSymbol:       Result := tcSymbol;
+    tkDirective:    Result := tcDirective;
+    tkIDEDirective: Result := tcDirective;
+    tkUnknown:      Result := tcUnknown;
+  end;
+end;
+
+function TSynPasSyn.GetTokenDetails: TLazEditTokenDetails;
+begin
+  Result := [];
+  case FTokenID of
+    //tkAsm:          Result := [];
+    //tkComment:      Result := [];
+    //tkIdentifier:   Result := [];
+    tkKey:          Result := [tdKnownWord];
+    tkModifier:     Result := [tdKnownWord];
+    //tkNull:         Result := [];
+    //tkNumber:       Result := [];
+    //tkSpace:        Result := [];
+    //tkString:       Result := [];
+    //tkSymbol:       Result := [];
+    //tkDirective:    Result := [];
+    //tkIDEDirective: Result := [];
+    //tkUnknown:      Result := [];
+  end;
+end;
+
+function TSynPasSyn.GetTokenDetailsMask: TLazEditTokenDetails;
+begin
+  Result := GetTokenDetails;
 end;
 
 function TSynPasSyn.GetTokenIsComment: Boolean;
@@ -7679,7 +7727,7 @@ begin
   end;
 end;
 
-function TSynPasSyn.GetDrawDivider(Index: integer): TSynDividerDrawConfigSetting;
+function TSynPasSyn.GetDrawDivider(Index: integer): TLazEditDividerDrawConfigSetting;
   function CheckFoldNestLevel(MaxDepth, StartLvl: Integer;
     CountTypes, SkipTypes: TPascalCodeFoldBlockTypes;
     out ResultLvl: Integer): Boolean;
@@ -7815,7 +7863,7 @@ var
 begin
   for i := low(TSynPasDividerDrawLocation) to high(TSynPasDividerDrawLocation) do
   begin
-    FDividerDrawConfig[i] := TSynDividerDrawConfig.Create;
+    FDividerDrawConfig[i] := TLazEditDividerDrawConfig.Create;
     FDividerDrawConfig[i].MaxDrawDepth := PasDividerDrawLocationDefaults[i];
     FDividerDrawConfig[i].OnChange := @DefHighlightChange;
   end;
@@ -7933,7 +7981,12 @@ begin
   Filer.DefineProperty('TypeHelpers',    @DoReadLfmTypeHelpers, nil, False);
 end;
 
-function TSynPasSyn.GetDividerDrawConfig(Index: Integer): TSynDividerDrawConfig;
+function TSynPasSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterPascal;
+end;
+
+function TSynPasSyn.GetDividerDrawConfig(Index: Integer): TLazEditDividerDrawConfig;
 begin
   Result := FDividerDrawConfig[TSynPasDividerDrawLocation(Index)];
 end;
@@ -8077,12 +8130,6 @@ end;
 class function TSynPasSyn.GetCapabilities: TSynHighlighterCapabilities;
 begin
   Result := inherited GetCapabilities + [hcUserSettings];
-end;
-
-{begin}                                                                         //mh 2000-10-08
-function TSynPasSyn.IsFilterStored: boolean;
-begin
-  Result := fDefaultFilter <> fDefaultFilterInitialValue;
 end;
 
 procedure TSynPasSyn.DoDefHighlightChanged;

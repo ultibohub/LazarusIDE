@@ -51,7 +51,7 @@ interface
 uses
   Classes,
   Graphics,
-  SynEditTypes, SynEditHighlighter, SynEditStrConst, LazEditTextAttributes;
+  SynEditTypes, SynEditHighlighter, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkComment, tkText, tkSection, tkKey, tkNull, tkNumber,
@@ -110,12 +110,13 @@ type
     {General Stuff}
     function GetIdentChars: TSynIdentChars; override;
     function GetSampleSource: String; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetTokenID: TtkTokenKind;
     procedure InitForScanningLine; override;
@@ -197,7 +198,6 @@ begin
   AddAttribute(fSymbolAttri);
   SetAttributesOnChange(@DefHighlightChange);
 
-  fDefaultFilter      := SYNS_FilterINI;
   FCommentTypes := [ictSemicolon];
   MakeMethodTables;
 end; { Create }
@@ -381,15 +381,17 @@ begin
   fProcTable[LinePtr[Run]];
 end;
 
-function TSynIniSyn.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
+function TSynIniSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_KEYWORD: Result := fKeyAttri;
-    SYN_ATTR_STRING: Result := fStringAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
-    SYN_ATTR_SYMBOL: Result := fSymbolAttri;
-    SYN_ATTR_NUMBER: Result := fNumberAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcKeyword: Result := fKeyAttri;
+    tcString: Result := fStringAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
+    tcSymbol: Result := fSymbolAttri;
+    tcNumber: Result := fNumberAttri;
+    tcHeader: Result := fSectionAttri;
   else
     Result := nil;
   end;
@@ -462,6 +464,11 @@ begin
             'Key=value'#13#10+
             'String="Arial"'#13#10+
             'Number=123456';
+end;
+
+function TSynIniSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterINI;
 end;
 
 initialization

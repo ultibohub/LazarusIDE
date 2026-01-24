@@ -88,89 +88,50 @@ const
     of the requested type.
     This list does *not* aim to be complete. It may be replaced in future.
   }
-  SYN_ATTR_COMMENT           =   0;
-  SYN_ATTR_IDENTIFIER        =   1;
-  SYN_ATTR_KEYWORD           =   2;
-  SYN_ATTR_STRING            =   3;
-  SYN_ATTR_WHITESPACE        =   4;
-  SYN_ATTR_SYMBOL            =   5;
-  SYN_ATTR_NUMBER            =   6;
-  SYN_ATTR_DIRECTIVE         =   7;
-  SYN_ATTR_ASM               =   8;
-  SYN_ATTR_VARIABLE          =   9;
+  SYN_ATTR_COMMENT           =   0 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_IDENTIFIER        =   1 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_KEYWORD           =   2 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_STRING            =   3 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_WHITESPACE        =   4 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_SYMBOL            =   5 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_NUMBER            =   6 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_DIRECTIVE         =   7 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_ASM               =   8 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
+  SYN_ATTR_VARIABLE          =   9 deprecated 'Use TLazEditTokenClass / to be removed in 5.99';
 
 type
 
-  TSynDividerDrawConfigSetting = Record
-    Color: TColor;
-  end;
-
-const
-  SynEmptyDividerDrawConfigSetting: TSynDividerDrawConfigSetting =
-    ( Color: clNone );
-
-type
-  { TSynDividerDrawConfig }
-
-  TSynDividerDrawConfig = class
-  private
-    FDepth: Integer;
-    FTopSetting, FNestSetting: TSynDividerDrawConfigSetting;
-    fOnChange: TNotifyEvent;
-    function GetNestColor: TColor; virtual;
-    function GetTopColor: TColor; virtual;
-    procedure SetNestColor(const AValue: TColor); virtual;
-    procedure SetTopColor(const AValue: TColor); virtual;
-  protected
-    function GetMaxDrawDepth: Integer; virtual;
-    procedure SetMaxDrawDepth(AValue: Integer); virtual;
-    procedure Changed;
-  public
-    // Do not use to set values, or you skip the change notification
-    property TopSetting: TSynDividerDrawConfigSetting read FTopSetting;
-    property NestSetting: TSynDividerDrawConfigSetting read FNestSetting;
-  public
-    constructor Create;
-    procedure Assign(Src: TSynDividerDrawConfig); virtual;
-    property MaxDrawDepth: Integer read GetMaxDrawDepth write SetMaxDrawDepth;
-    property TopColor: TColor read GetTopColor write SetTopColor;
-    property NestColor: TColor read GetNestColor write SetNestColor;
-    property OnChange: TNotifyEvent read fOnChange write fOnChange;
-  end;
+  TSynDividerDrawConfigSetting = TLazEditDividerDrawConfigSetting;
+  TSynDividerDrawConfig = TLazEditDividerDrawConfig;
 
   { TSynCustomHighlighter }
 
   TSynCustomHighlighter = class(TLazEditCustomRangesHighlighter)
   private
     fAttrChangeHooks: TMethodList;
-    FCapabilities: TSynHighlighterCapabilities;
-    FDrawDividerLevel: Integer;
-    fEnabled: Boolean;
-    fWordBreakChars: TSynIdentChars;
+    FCapabilities: TSynHighlighterCapabilities deprecated;
+    FDrawDividerLevel: Integer deprecated;
+    fEnabled: Boolean deprecated;
+    fWordBreakChars: TSynIdentChars deprecated;
     function GetKnownLines: TLazEditHighlighterAttachedLines; deprecated;
     procedure SetDrawDividerLevel(const AValue: Integer); deprecated;
     procedure SetEnabled(const Value: boolean);                                 //DDH 2001-10-23
   protected
     FAttributeChangeNeedScan: Boolean deprecated 'use RequestFullRescan // to be removed in 5.99';
-    fDefaultFilter: string;
-    fDefaultFilterInitialValue: string;
+    fDefaultFilter: string deprecated 'Use GetInitialDefaultFileFilterMask / to be removed in 5.99';
+    fDefaultFilterInitialValue: string deprecated 'Use GetInitialDefaultFileFilterMask / to be removed in 5.99';
     fUpdateChange: boolean;                                                     //mh 2001-09-13
-    function GetInstanceLanguageName: string; virtual;
     function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      virtual; abstract;
-    function GetDefaultFilter: string; virtual;
-    function GetIdentChars: TSynIdentChars; virtual;
+      virtual; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
+    function GetDefaultFilter: string; virtual; deprecated'to be removed in 5.99';
     procedure SetWordBreakChars(AChars: TSynIdentChars); virtual;
-    function GetSampleSource: string; virtual;
-    function IsFilterStored: boolean; virtual;
-    procedure SetDefaultFilter(Value: string); virtual;
+    function IsFilterStored: boolean; virtual; deprecated'to be removed in 5.99';
+    function __OLD_FileFilterDefaultMask: string; override; deprecated'to be removed in 5.99';
+    procedure SetDefaultFilter(Value: string); virtual; deprecated'to be removed in 5.99';
     procedure SetSampleSource(Value: string); virtual;
     procedure AfterAttachedToRangeList(ARangeList: TLazHighlighterLineRangeList); virtual; deprecated 'use DoAttachedToLines // to be removed in 5.99';
     procedure BeforeDetachedFromRangeList(ARangeList: TLazHighlighterLineRangeList); virtual; deprecated 'use DoDetachingFromLines // to be removed in 5.99';
     // code fold - only valid if hcCodeFolding in Capabilities
-    function GetDrawDivider(Index: integer): TSynDividerDrawConfigSetting; virtual;
-    function GetDividerDrawConfig(Index: Integer): TSynDividerDrawConfig; virtual;
-    function GetDividerDrawConfigCount: Integer; virtual;
     function PerformScan(StartIndex, EndIndex: Integer; ForceEndIndex: Boolean = False): Integer; virtual;  deprecated 'use DoPrepareLines / to be removed in 5.99';
     property KnownLines: TLazEditHighlighterAttachedLines read GetKnownLines; deprecated 'use AttachedLines // to be removed in 5.99';
     procedure RequestFullRescan; reintroduce; // deprecated 'to be removed in 5.99' // only needed to force a call to fAttrChangeHooks
@@ -183,7 +144,6 @@ type
     procedure DefHighlightChange(Sender: TObject);
     property  AttributeChangeNeedScan: Boolean read FAttributeChangeNeedScan; deprecated 'use RequestFullRescan // to be removed in 5.99';
     class function GetCapabilities: TSynHighlighterCapabilities; virtual;
-    class function GetLanguageName: string; virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -199,10 +159,8 @@ type
     procedure ResetRange; override; deprecated;
     //function GetTokenPos: Integer; override; // 0-based
     function GetTokenLen: Integer; override;
-    function IsKeyword(const AKeyword: string): boolean; virtual;               // DJLP 2000-08-09
+    function GetTokenClass: TLazEditTokenClass; override; deprecated 'Sub-class needs to implement this';
 
-    property DrawDivider[Index: integer]: TSynDividerDrawConfigSetting
-      read GetDrawDivider;
     property DrawDividerLevel: Integer read FDrawDividerLevel write SetDrawDividerLevel; deprecated;
   public
     procedure ScanRanges; deprecated 'use PrepareLines / to be removed in 5.99';
@@ -226,33 +184,26 @@ type
     function SaveToFile(AFileName: String): boolean;                            //DDH 10/16/01
     procedure HookAttrChangeEvent(ANotifyEvent: TNotifyEvent);  deprecated 'use senrHighlightRescanNeeded // to be removed in 5.99';
     procedure UnhookAttrChangeEvent(ANotifyEvent: TNotifyEvent);  deprecated 'use senrHighlightRescanNeeded // to be removed in 5.99';
-    property IdentChars: TSynIdentChars read GetIdentChars;
-    property WordBreakChars: TSynIdentChars read fWordBreakChars write SetWordBreakChars;
-    property LanguageName: string read GetInstanceLanguageName;
+    property WordBreakChars: TSynIdentChars read fWordBreakChars write SetWordBreakChars;  deprecated 'to become read-only in 5.99';
   public
-    property Capabilities: TSynHighlighterCapabilities read FCapabilities;
-    property SampleSource: string read GetSampleSource write SetSampleSource;
+    property Capabilities: TSynHighlighterCapabilities read FCapabilities;  deprecated 'to be removed in 5.99 / no replacement';
+    property SampleSource: string read GetSampleSource write SetSampleSource; deprecated 'to become read-only in 5.99';
     // The below should be depricated and moved to those HL that actually implement them.
     property CommentAttribute: TSynHighlighterAttributes
-      index SYN_ATTR_COMMENT read GetDefaultAttribute;
+      index SYN_ATTR_COMMENT read GetDefaultAttribute; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
     property IdentifierAttribute: TSynHighlighterAttributes
-      index SYN_ATTR_IDENTIFIER read GetDefaultAttribute;
+      index SYN_ATTR_IDENTIFIER read GetDefaultAttribute; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
     property KeywordAttribute: TSynHighlighterAttributes
-      index SYN_ATTR_KEYWORD read GetDefaultAttribute;
+      index SYN_ATTR_KEYWORD read GetDefaultAttribute; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
     property StringAttribute: TSynHighlighterAttributes
-      index SYN_ATTR_STRING read GetDefaultAttribute;
+      index SYN_ATTR_STRING read GetDefaultAttribute; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
     property SymbolAttribute: TSynHighlighterAttributes                         //mh 2001-09-13
-      index SYN_ATTR_SYMBOL read GetDefaultAttribute;
+      index SYN_ATTR_SYMBOL read GetDefaultAttribute; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
     property WhitespaceAttribute: TSynHighlighterAttributes
-      index SYN_ATTR_WHITESPACE read GetDefaultAttribute;
-
-    property DividerDrawConfig[Index: Integer]: TSynDividerDrawConfig
-      read GetDividerDrawConfig;
-    property DividerDrawConfigCount: Integer read GetDividerDrawConfigCount;
+      index SYN_ATTR_WHITESPACE read GetDefaultAttribute; deprecated 'Use GetTokenClassAttribute / to be removed in 5.99';
   published
-    property DefaultFilter: string read GetDefaultFilter write SetDefaultFilter
-      stored IsFilterStored;
     property Enabled: boolean read fEnabled write SetEnabled default TRUE;      //DDH 2001-10-23
+        deprecated 'to be removed in 5.99 / no replacement - was never implemented';
   end;
 
   TSynCustomHighlighterClass = class of TSynCustomHighlighter;
@@ -667,8 +618,10 @@ begin
   inherited Create(AOwner);
   fWordBreakChars := TSynWordBreakChars;
   fAttrChangeHooks := TMethodList.Create;
-  fDefaultFilter := '';
-  fDefaultFilterInitialValue := '';
+  if (fDefaultFilter = '') and
+     (TMethod(@GetDefaultFilter).Code <> pointer(@TSynCustomHighlighter.GetDefaultFilter))
+  then
+    fDefaultFilter := GetDefaultFilter;
 end;
 
 destructor TSynCustomHighlighter.Destroy;
@@ -680,30 +633,14 @@ end;
 procedure TSynCustomHighlighter.Assign(Source: TPersistent);
 var
   Src: TSynCustomHighlighter;
-  i, j: integer;
-  SrcAttri: TLazEditTextAttribute;
-  StoredName: String;
+  i: integer;
 begin
   if Source is TSynCustomHighlighter then begin
     Src := TSynCustomHighlighter(Source);
-    for i := 0 to AttrCount - 1 do begin
-      // assign first attribute with the same name
-      StoredName := Attribute[i].StoredName;
-      for j := 0 to Src.AttrCount - 1 do begin
-        SrcAttri := Src.Attribute[j];
-        if StoredName = SrcAttri.StoredName then begin
-          Attribute[i].Assign(SrcAttri);
-          continue;
-        end;
-      end;
-    end;
-    for i := 0 to DividerDrawConfigCount - 1 do
-      DividerDrawConfig[i].Assign(Src.DividerDrawConfig[i]);
     // assign the sample source text only if same or descendant class
     if Src is ClassType then
       SampleSource := Src.SampleSource;
     fWordBreakChars := Src.WordBreakChars;
-    DefaultFilter := Src.DefaultFilter;
     Enabled := Src.Enabled;
   end else
     inherited Assign(Source);
@@ -836,11 +773,6 @@ begin
   Result := fDefaultFilter;
 end;
 
-function TSynCustomHighlighter.GetIdentChars: TSynIdentChars;
-begin
-  Result := ['_', 'A'..'Z', 'a'..'z', '0'..'9'];
-end;
-
 function TSynCustomHighlighter.GetTokenLen: Integer;
 var
   x: PChar;
@@ -848,17 +780,33 @@ begin
   GetTokenEx(x, Result);
 end;
 
+function TSynCustomHighlighter.GetTokenClass: TLazEditTokenClass;
+var
+  a: TLazEditTextAttribute;
+begin
+  Result := inherited GetTokenClass;
+  if Result <> tcUnknown then
+    exit;
+  a := GetTokenAttribute;
+  if a = nil then
+    exit;
+
+  if      a = GetDefaultAttribute(SYN_ATTR_COMMENT) then    Result := tcComment
+  else if a = GetDefaultAttribute(SYN_ATTR_IDENTIFIER) then Result := tcIdentifier
+  else if a = GetDefaultAttribute(SYN_ATTR_KEYWORD) then    Result := tcKeyword
+  else if a = GetDefaultAttribute(SYN_ATTR_STRING) then     Result := tcString
+  else if a = GetDefaultAttribute(SYN_ATTR_WHITESPACE) then Result := tcWhiteSpace
+  else if a = GetDefaultAttribute(SYN_ATTR_SYMBOL) then     Result := tcSymbol
+  else if a = GetDefaultAttribute(SYN_ATTR_NUMBER) then     Result := tcNumber
+  else if a = GetDefaultAttribute(SYN_ATTR_DIRECTIVE) then  Result := tcDirective
+  else if a = GetDefaultAttribute(SYN_ATTR_ASM) then        Result := tcEmbedded
+  else if a = GetDefaultAttribute(SYN_ATTR_VARIABLE) then   Result := tcVariable
+  ;
+end;
+
 procedure TSynCustomHighlighter.SetWordBreakChars(AChars: TSynIdentChars);
 begin
   fWordBreakChars := AChars;
-end;
-
-class function TSynCustomHighlighter.GetLanguageName: string;
-begin
-{$IFDEF SYN_DEVELOPMENT_CHECKS}
-  raise Exception.CreateFmt('%s.GetLanguageName not implemented', [ClassName]);
-{$ENDIF}
-  Result := '<Unknown>';
 end;
 
 function TSynCustomHighlighter.GetRange: Pointer;
@@ -876,11 +824,6 @@ begin
   //
 end;
 
-function TSynCustomHighlighter.GetSampleSource: string;
-begin
-  Result := '';
-end;
-
 procedure TSynCustomHighlighter.HookAttrChangeEvent(ANotifyEvent: TNotifyEvent);
 begin
   fAttrChangeHooks.Add(TMethod(ANotifyEvent));
@@ -891,12 +834,12 @@ begin
   Result := TRUE;
 end;
 
-{begin}                                                                         // DJLP 2000-08-09
-function TSynCustomHighlighter.IsKeyword(const AKeyword: string): boolean;
+function TSynCustomHighlighter.__OLD_FileFilterDefaultMask: string;
 begin
-  Result := FALSE;
+  // set by old code, instead of overriding GetInitialDefaultFileFilterMask;
+  Result := FDefaultFilterInitialValue;
+  if FDefaultFilter <> '' then Result := FDefaultFilter;
 end;
-{end}                                                                           // DJLP 2000-08-09
 
 procedure TSynCustomHighlighter.SetLine(const NewValue: String; LineNumber: Integer);
 begin
@@ -1023,82 +966,21 @@ begin
   Result := AttachedLines;
 end;
 
-function TSynCustomHighlighter.GetInstanceLanguageName: string;
+function TSynCustomHighlighter.GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
 begin
-  Result := GetLanguageName;
-end;
-
-function TSynCustomHighlighter.GetDrawDivider(Index: integer): TSynDividerDrawConfigSetting;
-begin
-  result := SynEmptyDividerDrawConfigSetting;
-end;
-
-function TSynCustomHighlighter.GetDividerDrawConfig(Index: Integer): TSynDividerDrawConfig;
-begin
-  Result := nil;
-end;
-
-function TSynCustomHighlighter.GetDividerDrawConfigCount: Integer;
-begin
-  Result := 0;
-end;
-
-{ TSynDividerDrawConfig }
-
-function TSynDividerDrawConfig.GetNestColor: TColor;
-begin
-  Result := FNestSetting.Color;
-end;
-
-function TSynDividerDrawConfig.GetTopColor: TColor;
-begin
-  Result := FTopSetting.Color;
-end;
-
-procedure TSynDividerDrawConfig.SetNestColor(const AValue: TColor);
-begin
-  if AValue = FNestSetting.Color then exit;
-  FNestSetting.Color := AValue;
-  Changed;
-end;
-
-procedure TSynDividerDrawConfig.SetTopColor(const AValue: TColor);
-begin
-  if AValue = FTopSetting.Color then exit;
-  FTopSetting.Color := AValue;
-  Changed;
-end;
-
-function TSynDividerDrawConfig.GetMaxDrawDepth: Integer;
-begin
-  Result := FDepth;
-end;
-
-procedure TSynDividerDrawConfig.SetMaxDrawDepth(AValue: Integer);
-begin
-  if FDepth = AValue then exit;
-  FDepth := AValue;
-  Changed;
-end;
-
-procedure TSynDividerDrawConfig.Changed;
-begin
-  if Assigned(fOnChange) then
-    fOnChange(Self);
-end;
-
-constructor TSynDividerDrawConfig.Create;
-begin
-  inherited;
-  FDepth := 0;
-  FTopSetting.Color := clDefault;
-  FNestSetting.Color := clDefault;
-end;
-
-procedure TSynDividerDrawConfig.Assign(Src: TSynDividerDrawConfig);
-begin
-  fOnChange := src.fOnChange;
-  FDepth := Src.FDepth;
+  case Index of
+    SYN_ATTR_COMMENT:    Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcComment));
+    SYN_ATTR_IDENTIFIER: Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcIdentifier));
+    SYN_ATTR_KEYWORD:    Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcKeyword));
+    SYN_ATTR_STRING:     Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcString));
+    SYN_ATTR_WHITESPACE: Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcWhiteSpace));
+    SYN_ATTR_SYMBOL:     Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcSymbol));
+    SYN_ATTR_NUMBER:     Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcNumber));
+    SYN_ATTR_DIRECTIVE:  Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcDirective));
+    SYN_ATTR_ASM:        Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcEmbedded));
+    SYN_ATTR_VARIABLE:   Result := TSynHighlighterAttributes(GetTokenClassAttribute(tcVariable));
+    otherwise Result := nil;
+  end;
 end;
 
 initialization

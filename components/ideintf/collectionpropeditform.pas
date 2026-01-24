@@ -46,11 +46,10 @@ type
     procedure SelectInObjectInspector(ForceUpdate: Boolean);
     procedure SelectionChanged(NewOwnerPersistent: TPersistent);
     procedure Modified;
-  protected
     procedure UpdateCaption;
-    procedure PersistentAdded({%H-}APersistent: TPersistent; {%H-}Select: boolean);
     procedure ComponentRenamed(AComponent: TComponent);
     procedure GlobalSetSelection(const ASelection: TPersistentSelectionList);
+    procedure PersistentAdded({%H-}APersistent: TPersistent; {%H-}Select: boolean);
     procedure PersistentDeleting(APersistent: TPersistent);
     procedure RefreshPropertyValues;
   public
@@ -111,11 +110,13 @@ begin
 end;
 
 procedure TCollectionPropertyEditorForm.actAddExecute(Sender: TObject);
+var
+  lItem: TCollectionItem;
 begin
   if Collection = nil then Exit;
-  Collection.Add;
-
-  FillCollectionListBox;
+  lItem := Collection.Add;
+  // notify about addition (this also call its own handler)
+  GlobalDesignHook.PersistentAdded(lItem, true);
   if CollectionListBox.Items.Count > 0 then
     CollectionListBox.ItemIndex := CollectionListBox.Items.Count - 1;
   SelectInObjectInspector(True);
@@ -212,8 +213,7 @@ procedure TCollectionPropertyEditorForm.UpdateCaption;
 var
   NewCaption: String;
 begin
-  //I think to match Delphi this should be formatted like
-  //"Editing ComponentName.PropertyName[Index]"
+  //To match Delphi formatting: "Editing ComponentName.PropertyName[Index]"
   if OwnerPersistent is TComponent then
     NewCaption := TComponent(OwnerPersistent).Name
   else
@@ -242,12 +242,6 @@ begin
   actMoveDown.Enabled := (I >= 0) and (I < CollectionListBox.Items.Count - 1);
 end;
 
-procedure TCollectionPropertyEditorForm.PersistentAdded(APersistent: TPersistent; Select: boolean);
-begin
-  //DebugLn('*** TCollectionPropertyEditorForm.PersistentAdded called ***');
-  FillCollectionListBox;
-end;
-
 procedure TCollectionPropertyEditorForm.ComponentRenamed(AComponent: TComponent);
 begin
   //DebugLn('*** TCollectionPropertyEditorForm.ComponentRenamed called ***');
@@ -267,16 +261,29 @@ begin
   SelectionChanged(ASelection[0]);
 end;
 
+procedure TCollectionPropertyEditorForm.PersistentAdded(APersistent: TPersistent; Select: boolean);
+begin
+  //DebugLn(['TCollectionPropertyEditorForm.PersistentAdded: APersistent=', APersistent, ', Select=', Select]);
+  FillCollectionListBox;
+  if OwnerPersistent is TControl then
+    TControl(OwnerPersistent).Update;
+end;
+
 procedure TCollectionPropertyEditorForm.PersistentDeleting(APersistent: TPersistent);
 begin
-  // For some reason this is called only when the whole collection is deleted,
-  // for example when changing to another project. Thus clear the whole collection.
-  DebugLn(['TCollectionPropertyEditorForm.PersistentDeleting: APersistent=', APersistent,
-           ', OwnerPersistent=', OwnerPersistent]);
-  SetCollection(nil, nil, '');
-  Hide;
-  UpdateButtons;
-  UpdateCaption;
+  //DebugLn(['TCollectionPropertyEditorForm.PersistentDeleting: APersistent=', APersistent,
+  //         ', OwnerPersistent=', OwnerPersistent]);
+  if APersistent = OwnerPersistent then
+    // The whole collection is deleted, like when changing to another project.
+    SetCollection(nil, nil, '')
+  else if APersistent is TCollectionItem then
+  begin
+    if TCollectionItem(APersistent).Collection = Collection then
+    begin
+      TCollectionItem(APersistent).Collection := nil;
+      PersistentAdded(APersistent, False); // Update like when item was added.
+    end;
+  end;
 end;
 
 procedure TCollectionPropertyEditorForm.RefreshPropertyValues;

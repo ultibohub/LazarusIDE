@@ -44,7 +44,7 @@ uses
   SysUtils, Classes,
   LCLIntf, LCLType, LazUTF8,
   Controls, Graphics,
-  SynEditTypes, SynEditHighlighter, SynEditStrConst, LazEditTextAttributes;
+  SynEditTypes, SynEditHighlighter, SynEditStrConst, LazEditTextAttributes, LazEditHighlighter;
 
 type
   TtkTokenKind = (tkBrace, tkBracket, tkNull, tkSpace, tkText, tkComment,
@@ -102,12 +102,13 @@ type
   protected
     function GetIdentChars: TSynIdentChars; override;
     function GetSampleSource : String; override;
+    function GetInitialDefaultFileFilterMask: string; override;
   public
     class function GetLanguageName: string; override;
   public
     constructor Create(AOwner: TComponent); override;
-    function GetDefaultAttribute(Index: integer): TSynHighlighterAttributes;
-      override;
+    function GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+      ATkDetails: TLazEditTokenDetails = []): TLazEditTextAttribute; override;
     function GetEol: Boolean; override;
     function GetTokenID: TtkTokenKind;
     procedure InitForScanningLine; override;
@@ -180,7 +181,6 @@ begin
 
   //*************************
   SetAttributesOnChange(@DefHighlightChange);
-  fDefaultFilter                := SYNS_FilterTeX;
   MakeMethodTables;
 end;  { Create }
 
@@ -306,12 +306,12 @@ begin
   fProcTable[LinePtr[Run]]();
 end;  { Next }
 
-function TSynTeXSyn.GetDefaultAttribute(Index: integer):
-TSynHighlighterAttributes;
+function TSynTeXSyn.GetTokenClassAttribute(ATkClass: TLazEditTokenClass;
+  ATkDetails: TLazEditTokenDetails): TLazEditTextAttribute;
 begin
-  case Index of
-    SYN_ATTR_COMMENT: Result := fCommentAttri;
-    SYN_ATTR_WHITESPACE: Result := fSpaceAttri;
+  case ATkClass of
+    tcComment: Result := fCommentAttri;
+    tcWhiteSpace: Result := fSpaceAttri;
     else Result := nil;
   end;
 end;
@@ -319,7 +319,7 @@ end;
 function TSynTeXSyn.GetEol: Boolean;
 begin
   Result := fTokenId = tkNull;
-end;  { GetDefaultAttribute }
+end;
 
 function TSynTeXSyn.GetToken: String;
 var
@@ -396,6 +396,11 @@ begin
           '\begin{document}'+#13#10+
           'Here is a formula: $ (2x + 3)*5y $'+#13#10+
           '\end{document}';
+end;
+
+function TSynTeXSyn.GetInitialDefaultFileFilterMask: string;
+begin
+  Result := SYNS_FilterTeX;
 end;
 
 initialization
