@@ -153,16 +153,21 @@ type
     // todo: test impl uses unit name hides unit intf identifier
     procedure TestFindDeclaration_Proc_BaseTypes;
     procedure TestFindDeclaration_ProcNested;
+    procedure TestFindDeclaration_ExceptOnDotted;
+
     procedure TestFindDeclaration_ResultType;
     procedure TestFindDeclaration_ResultField;
     procedure TestFindDeclaration_With;
     procedure TestFindDeclaration_WithResult; // todo
     procedure TestFindDeclaration_DelphiNoImplResultType; // todo
+
     procedure TestFindDeclaration_WithSelfFPC;
     procedure TestFindDeclaration_WithSelfDelphi; // todo
+
     procedure TestFindDeclaration_ClassOf;
     procedure TestFindDeclaration_NestedClasses;
     procedure TestFindDeclaration_NestedAliasClass;
+
     procedure TestFindDeclaration_ClassHelper;
     procedure TestFindDeclaration_TypeHelper;
 
@@ -200,6 +205,7 @@ type
     procedure TestFindDeclaration_GenericsDelphi_FuncParam;
     procedure TestFindDeclaration_GenericsDelphi_PublicProcType;
     procedure TestFindDeclaration_GenericsDelphi_MultiGenParams;
+    procedure TestFindDeclaration_GenericsDelphi_MethodConstraints;
 
     // ampersands
     procedure TestFindDeclaration_Ampersand;
@@ -1098,6 +1104,35 @@ begin
   FindDeclarations(Code);
 end;
 
+procedure TTestFindDeclaration.TestFindDeclaration_ExceptOnDotted;
+begin
+  StartProgram;
+  Add([
+  '{$mode objfpc}',
+  'type',
+  '  TBird = class',
+  '  type',
+  '    TWing = class',
+  '    type',
+  '      EFeather = class end;',
+  '    end;',
+  '  end;',
+  'procedure Fly(Size: word);',
+  'var Bird: TBird;',
+  'begin',
+  '  try',
+  '  except',
+  '    on E: TBird.TWing{declaration:TBird.TWing}.EFeather{declaration:TBird.TWing.EFeather} do ;',
+  '  end;',
+  '  Bird.TWing{declaration:TBird.TWing};',
+  'end;',
+  '',
+  'begin',
+  'end.',
+  '']);
+  FindDeclarations(Code);
+end;
+
 procedure TTestFindDeclaration.TestFindDeclaration_ResultType;
 begin
   StartProgram;
@@ -1506,6 +1541,23 @@ begin
   'begin',
   '  One.Fly;',
   '  Two.Fly;',
+  'end.']);
+  FindDeclarations(Code);
+end;
+
+procedure TTestFindDeclaration.TestFindDeclaration_GenericsDelphi_MethodConstraints;
+begin
+  StartProgram;
+  Add([
+  '{$mode delphi}',
+  'type',
+  '  TBird = class',
+  '    class procedure Fly<Component:class,constructor>(aSpeed: word);',
+  '  end;',
+  'class procedure TBird.Fly<Component:class,constructor>(aSpeed: word);',
+  'begin',
+  'end;',
+  'begin',
   'end.']);
   FindDeclarations(Code);
 end;

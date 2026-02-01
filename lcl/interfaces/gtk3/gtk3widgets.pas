@@ -80,12 +80,14 @@ type
     FHasCaret: boolean;
     FOwner: PGtkWidget;
     FProps: TStringList;
+    FPostMessages: TThreadList;
     FWidgetMapped: boolean;
     FWidgetRGBA: array [0{GTK_STATE_NORMAL}..4{GTK_STATE_INSENSITIVE}] of TDefaultRGBA;
     function CanSendLCLMessage: Boolean;
     function GetCairoContext: Pcairo_t;
     function GetEnabled: Boolean;
     function GetFont: PPangoFontDescription;
+    function GetPostMessages: TThreadList;
     function GetStyleContext: PGtkStyleContext;
     function GetVisible: Boolean;
     procedure SetEnabled(AValue: Boolean);
@@ -215,6 +217,7 @@ type
     property HasCaret: boolean read FHasCaret write FHasCaret;
     property KeysToEat: TByteSet read FKeysToEat write FKeysToEat;
     property PaintData: TPaintData read FPaintData write FPaintData;
+    property PostMessages: TThreadList read GetPostMessages;
     property Shape: PGdkPixbuf read FShape write SetShape;
     property StyleContext: PGtkStyleContext read GetStyleContext write SetStyleContext;
     property Text: String read getText write setText;
@@ -985,6 +988,7 @@ type
     procedure ConnectSizeAllocateSignal(ToWidget: PGtkWidget); override;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
+    function GetWindowFunction(AForm: TCustomForm): TGdkWMFunction;
     function getText: String; override;
     procedure setText(const AValue: String); override;
   public
@@ -996,6 +1000,7 @@ type
     function GetScrolledWindow: PGtkScrolledWindow; override;
     procedure InitializeWidget; override;
     function ShowState(nstate:integer):boolean; // winapi ShowWindow
+    procedure UpdateWindowFunctions; virtual;
     procedure UpdateWindowState; // LCL WindowState
     class function decoration_flags(Aform: TCustomForm): TGdkWMDecoration;
   public
@@ -1019,6 +1024,8 @@ type
   TGtk3HintWindow = class(TGtk3Window)
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
+  public
+    procedure InitializeWidget; override;
   end;
 
   { TGtk3Dialog }
@@ -2469,6 +2476,19 @@ begin
   end;
 end;
 
+function TGtk3Widget.GetPostMessages: TThreadList;
+var
+  LList: TThreadList;
+begin
+  if FPostMessages = nil then
+  begin
+    LList := TThreadList.Create;
+    LList := TThreadList(InterlockedCompareExchange(Pointer(FPostMessages), Pointer(LList), nil));
+    LList.Free;
+  end;
+  Result := FPostMessages;
+end;
+
 function TGtk3Widget.CanSendLCLMessage: Boolean;
 begin
   Result := IsWidgetOk and (LCLObject <> nil);
@@ -2593,8 +2613,24 @@ end;
 
 procedure TGtk3Widget.DestroyWidget;
 var
+  AList: TList;
   ATemp: PGtkWidget;
+  I: Integer;
 begin
+  if FPostMessages <> nil then
+  try
+    AList := FPostMessages.LockList;
+    try
+      for I := 0 to AList.Count - 1 do
+        g_idle_remove_by_data(AList[I]);
+      AList.Clear;
+    finally
+      FPostMessages.UnlockList;
+    end;
+  finally
+    FreeAndNil(FPostMessages);
+  end;
+
   if HasCaret and IsValidHandle then
     GTK3WidgetSet.DestroyCaret(HWND(Self));
 
@@ -2834,7 +2870,8 @@ begin
 
   if (FCentralWidget <> nil) and (FCentralWidget <> FWidget) then
   begin
-    FCentralWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
+    if not gtk_widget_get_realized(FCentralWidget) then // THintWindow
+      FCentralWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
     g_signal_connect_data(FCentralWidget, 'event', TGCallback(@WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
     for i := GTK_STATE_NORMAL to GTK_STATE_INSENSITIVE do
     begin
@@ -9757,6 +9794,21 @@ begin
   Result:=true
 end;
 
+procedure TGtk3Window.UpdateWindowFunctions;
+var
+  LWindow: PGdkWindow;
+begin
+  if Gtk3IsGtkWindow(Widget) then
+  begin
+    LWindow := Widget^.window;
+    if LWindow <> nil then
+    begin
+      LWindow^.set_decorations(decoration_flags(TCustomForm(LCLObject)));
+      LWindow^.set_functions(GetWindowFunction(TCustomForm(LCLObject))); // required for Fly DM
+    end;
+  end;
+end;
+
 procedure TGtk3Window.UpdateWindowState; // LCL WindowState
 const
   ShowCommands: array[TWindowState] of Integer =
@@ -9842,9 +9894,7 @@ begin
 
   gtk_widget_realize(Result);
 
-  if wtHintWindow in FWidgetType then
-    PGtkWindow(Result)^.show_all
-  else
+  if not (wtHintWindow in FWidgetType) then
   begin
     if not Assigned(LCLObject.Parent) then
       gdk_window_set_decorations(Result^.window, decor);
@@ -9858,6 +9908,38 @@ end;
 function TGtk3Window.EatArrowKeys(const AKey: Word): Boolean;
 begin
   Result := False;
+end;
+
+function TGtk3Window.GetWindowFunction(AForm: TCustomForm): TGdkWMFunction;
+var
+  LBorderIcons: TBorderIcons;
+  LBorderStyle: TFormBorderStyle;
+begin
+  if csDesigning in AForm.ComponentState then
+    LBorderStyle := bsSizeable
+  else
+    LBorderStyle := AForm.BorderStyle;
+
+  LBorderIcons := AForm.BorderIcons;
+  if not (LBorderStyle in [bsSizeable]) then
+    Exclude(LBorderIcons, biMaximize);
+  if not (LBorderStyle in [bsSizeable, bsSingle]) then
+    Exclude(LBorderIcons, biMinimize);
+
+  Result := [GDK_FUNC_MOVE];
+  if (LBorderStyle in [bsNone, bsSizeable, bsSizeToolWin]) then
+    Include(Result, GDK_FUNC_RESIZE);
+  if biSystemMenu in LBorderIcons then
+    Include(Result, GDK_FUNC_CLOSE);
+  if biMinimize in LBorderIcons then
+    Include(Result, GDK_FUNC_MINIMIZE);
+  if biMaximize in LBorderIcons then
+    Include(Result, GDK_FUNC_MAXIMIZE);
+
+  if (AForm.Constraints.MinWidth  > 0) and (AForm.Constraints.MinWidth  = AForm.Constraints.MaxWidth) and
+     (AForm.Constraints.MinHeight > 0) and (AForm.Constraints.MinHeight = AForm.Constraints.MaxHeight)
+  then
+    Exclude(Result, GDK_FUNC_RESIZE);
 end;
 
 function TGtk3Window.getText: String;
@@ -10127,6 +10209,8 @@ begin
       TGCallback(@RangeValueChanged), Self, nil, G_CONNECT_DEFAULT);
     g_signal_connect_data(PGtkRange(gtk_scrolled_window_get_vscrollbar(GetScrolledWindow)),'value-changed',
       TGCallback(@RangeValueChanged), Self, nil, G_CONNECT_DEFAULT);
+
+    UpdateWindowFunctions;
   end;
 end;
 
@@ -10247,6 +10331,14 @@ begin
   FHasPaint := True;
   FWidgetType := [wtHintWindow];
   Result := inherited CreateWidget(Params);
+end;
+
+procedure TGtk3HintWindow.InitializeWidget;
+begin
+  inherited InitializeWidget;
+  if GTK3WidgetSet.IsWayland then // ref.to #42033, X11 not need this (it lead to incorrect positioning)
+    PGtkWindow(Widget)^.set_transient_for(GetActiveGtkWindow);
+  PGtkWindow(Widget)^.show_all;
 end;
 
 { TGtk3Dialog }

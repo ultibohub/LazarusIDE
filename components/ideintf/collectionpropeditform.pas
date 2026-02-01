@@ -82,7 +82,6 @@ begin
   actMoveDown.ImageIndex := IDEImages.LoadImage('arrow_down');
   actMoveUp.ShortCut := scCtrl or VK_UP;
   actMoveDown.ShortCut := scCtrl or VK_DOWN;
-
   actAdd.Hint := oiColEditAdd;
   actDel.Hint := oiColEditDelete;
   actMoveUp.Hint := oiColEditUp;
@@ -207,6 +206,8 @@ begin
   FillCollectionListBox;
   SelectInObjectInspector(False);
   Modified;
+  if OwnerPersistent is TControl then
+    TControl(OwnerPersistent).Update;
 end;
 
 procedure TCollectionPropertyEditorForm.UpdateCaption;

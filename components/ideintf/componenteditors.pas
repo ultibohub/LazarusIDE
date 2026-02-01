@@ -1052,24 +1052,6 @@ begin
   Result:=TCustomPage(GetComponent);
 end;
 
-
-function EditStringGrid(AStringGrid: TStringGrid): Boolean;
-var
-  StringGridEditorDlg: TStringGridEditorDlg;
-begin
-  StringGridEditorDlg := TStringGridEditorDlg.Create(Application);
-  try
-    StringGridEditorDlg.LoadFromGrid(AStringGrid);
-    if StringGridEditorDlg.ShowModal = mrOk then
-    begin
-      StringGridEditorDlg.SaveToGrid;
-    end;
-    Result := StringGridEditorDlg.Modified;
-  finally
-    StringGridEditorDlg.Free;
-  end;
-end;
-
 { TUntabbedNotebookComponentEditor }
 
 const
@@ -1205,30 +1187,55 @@ begin
   Result:=TPage(GetComponent);
 end;
 
+function EditStringGrid(AStringGrid: TStringGrid): Boolean;
+var
+  EditDlg: TStringGridEditorDlg;
+begin
+  EditDlg := TStringGridEditorDlg.Create(Application);
+  try
+    EditDlg.LoadFromGrid(AStringGrid);
+    if EditDlg.ShowModal = mrOk then
+      EditDlg.SaveToGrid;
+    Result := EditDlg.Modified;
+  finally
+    EditDlg.Free;
+  end;
+end;
+
 { TStringGridComponentEditor }
 
 procedure TStringGridComponentEditor.ExecuteVerb(Index: Integer);
 var
   Hook: TPropertyEditorHook;
+  Grid: TStringGrid;
 begin
-  if Index = 0 then
-  begin
-    GetHook(Hook);
-    if EditStringGrid(GetComponent as TStringGrid) then
+  Grid := GetComponent as TStringGrid;
+  GetHook(Hook);
+  case Index of
+    0: begin
+      if EditStringGrid(Grid) then
+        if Assigned(Hook) then
+          Hook.Modified(Self);
+    end;
+    1: begin
+      EditCollection(GetComponent as TStringGrid, Grid.Columns, 'Columns');
       if Assigned(Hook) then
         Hook.Modified(Self);
+    end;
   end;
 end;
 
 function TStringGridComponentEditor.GetVerb(Index: Integer): string;
 begin
-  if Index = 0 then Result := sccsSGEdt
-  else Result := '';
+  case Index of
+    0: Result := sccsSGEdt;
+    1: Result := sccsLvColEdt;
+  end;
 end;
 
 function TStringGridComponentEditor.GetVerbCount: Integer;
 begin
-  Result := 1;
+  Result := 2;
 end;
 
 { TCheckListBoxComponentEditor }
@@ -1418,20 +1425,14 @@ end;
 
 function TCommonDialogComponentEditor.GetVerb(Index: integer): string;
 begin
-  case Index of
-    0:Result:=oisTestDialog;
-  else
-    Result:=inherited GetVerb(Index);
-  end;
+  Assert(Index = 0, 'TCommonDialogComponentEditor.GetVerb');
+  Result:=oisTestDialog;
 end;
 
 procedure TCommonDialogComponentEditor.ExecuteVerb(Index: integer);
 begin
-  case Index of
-    0:TestDialog;
-  else
-    inherited ExecuteVerb(Index);
-  end;
+  Assert(Index = 0, 'TCommonDialogComponentEditor.ExecuteVerb');
+  TestDialog;
 end;
 
 { TTaskDialogComponentEditor }
@@ -1448,20 +1449,13 @@ end;
 
 function TTaskDialogComponentEditor.GetVerb(Index: integer): string;
 begin
-  case Index of
-    0:Result:=oisTestDialog;
-  else
-    Result:=inherited GetVerb(Index);
-  end;
+  Assert(Index = 0, 'TTaskDialogComponentEditor.GetVerb');
+  Result:=oisTestDialog;
 end;
 
 procedure TTaskDialogComponentEditor.ExecuteVerb(Index: Integer);
 begin
-  case Index of
-    0: TestDialog;
-  else
-    inherited ExecuteVerb(Index);
-  end;
+  TestDialog;
 end;
 
 //------------------------------------------------------------------------------

@@ -3496,38 +3496,12 @@ begin
     if CreateNodes then
       CurNode.Desc:=ctnVarDefinition;
     ReadNextAtom;
-    if ExceptionOnError then
-      AtomIsIdentifierSaveE(20180411194142)
-    else if not AtomIsIdentifier then
-      exit;
-    if CreateNodes then begin
-      // ctnIdentifier for the type
-      CreateChildNode;
-      CurNode.Desc:=ctnIdentifier;
-      CurNode.EndPos:=CurPos.EndPos;
-    end;
-    ReadNextAtom;
+    ReadTypeReference(CreateNodes);
   end;
-  if CurPos.Flag=cafPoint then begin
-    // for example: on Unit.Exception do ;
-    // or: on E:Unit.Exception do ;
-    ReadNextAtom;
-    if ExceptionOnError then
-      AtomIsIdentifierSaveE(20180411194146)
-    else if not AtomIsIdentifier then
-      exit;
-    if CreateNodes then begin
-      CurNode.EndPos:=CurPos.EndPos;
-    end;
-    ReadNextAtom;
-  end;
+
   if CreateNodes then begin
-    if CurNode.Desc=ctnIdentifier then begin
-      // close the type
-      CurNode.Parent.EndPos:=CurNode.EndPos;
-      EndChildNode;
-    end;
-    // close ctnVarDefinition or ctnOnIdentifier
+    // close ctnVarDefinition or ctnIdentifier
+    CurNode.EndPos:=CurPos.StartPos;
     EndChildNode;
   end;
   // read 'do'
@@ -3546,7 +3520,7 @@ begin
     CurNode.EndPos:=CurPos.EndPos;
     EndChildNode; // ctnOnStatement
     CurNode.EndPos:=CurPos.EndPos;
-    EndChildNode; // ctnOnVariable
+    EndChildNode; // ctnOnBlock
   end;
   NeedUndo:=false;
   if CurPos.Flag=cafSemicolon then begin
@@ -4325,6 +4299,7 @@ function TPascalParserTool.ReadGenericParamList(Must, AllowConstraints: boolean;
   <name>=type;  // this is the only case where >= are two operators
   <name,name> = type;  // delphi style
   <T1: record; T2,T3: class; T4: constructor; T5: name> = type
+  Fly<S: class, constructor>()
 }
 begin
   Result := False;
@@ -4362,32 +4337,36 @@ begin
       end else if AtomIsChar('>') then begin
         break;
       end else if AllowConstraints and (CurPos.Flag=cafColon) then begin
-        // read constraints
-        ReadNextAtom;
-        if CurPos.Flag<>cafNone then begin
-          CreateChildNode(ctnGenericConstraint, ParserFlags);
-        end;
+        // read constraints: keyword(s) or types
+        repeat
+          ReadNextAtom;
+          if CurPos.Flag<>cafNone then begin
+            CreateChildNode(ctnGenericConstraint, ParserFlags);
+          end;
 
-        if UpAtomIs('RECORD') or UpAtomIs('CLASS') or UpAtomIs('CONSTRUCTOR')
-        then begin
-          // keyword
-        end else begin
-          ReadTypeReference(ParserFlags, False, False, [], True);
-          UndoReadNextAtom;
-        end;
-        EndChildNode(CurPos.EndPos, ParserFlags);
-        if not (ppDontCreateNodes in ParserFlags) then
-          CurNode.EndPos:=CurPos.EndPos;
+          if UpAtomIs('RECORD') or UpAtomIs('CLASS') or UpAtomIs('CONSTRUCTOR')
+          then begin
+            // keyword
+          end else begin
+            ReadTypeReference(ParserFlags, False, False, [], True);
+            UndoReadNextAtom;
+          end;
+          EndChildNode(CurPos.EndPos, ParserFlags);
+          if not (ppDontCreateNodes in ParserFlags) then
+            CurNode.EndPos:=CurPos.EndPos;
 
-        ReadNextAtom;
+          ReadNextAtom;
+        until CurPos.Flag<>cafComma;
+
         if AtomIs('>=') then begin
           // this is the rare case where >= are two separate atoms
           dec(CurPos.EndPos);
           break; // reached >
         end
-        else
-          if AtomIsChar('>') then break;
-        if not (CurPos.Flag=cafSemicolon) then begin
+        else if AtomIsChar('>') then
+          break;
+
+        if CurPos.Flag<>cafSemicolon then begin
           SaveRaiseCharExpectedButAtomFound(20170421195740,'>', ParserFlags);
           exit;
         end;
@@ -4543,8 +4522,9 @@ function TPascalParserTool.ReadTypeReference(ParserFlags: TPascalParserFlags; Ex
     TFoo.specialize atype<char>.subtype
 }
 
-  var
-    LastEnd: Integer;
+var
+  LastEnd: Integer;
+
   procedure Next; inline;
   begin
     LastEnd := CurPos.EndPos;
@@ -4561,7 +4541,7 @@ begin
   Result := False;
   ParserFlagsSpecialize := ParserFlags;
   if ForceCreateSpecializeSubNodes then
-    exclude(ParserFlagsSpecialize, ppDontCreateNodes);
+    Exclude(ParserFlagsSpecialize, ppDontCreateNodes);
   if (Scanner.CompilerMode=cmOBJFPC) and UpAtomIs('SPECIALIZE') then begin
     (* If ForceCreateSpecializeSubNodes then the specialize can be closed.
        The surrounding node of the caller can handle multiple specialize children

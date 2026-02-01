@@ -40,8 +40,7 @@ end;
 
 procedure TStatusPanels.Update(Item: TCollectionItem);
 begin
-  // Don't invalidate the whole statusbar. There is an improved
-  // TStatusBar.InvalidatePanel.
+  // Don't invalidate the whole statusbar. There is an improved TStatusBar.InvalidatePanel.
   //FStatusBar.Invalidate;
 end;
 

@@ -335,16 +335,13 @@ var
   AListView: TListView;
 begin
   AListView := GetComponent as TListView;
+  GetHook(Hook);
   case Index of
-    0: 
-    begin
-      GetHook(Hook);
+    0: begin
       if EditListView(AListView) then
         if Assigned(Hook) then Hook.Modified(Self);
     end;
-    1:
-    begin
-      GetHook(Hook);
+    1: begin
       EditCollection(AListView, AListView.Columns, 'Columns');
       if Assigned(Hook) then Hook.Modified(Self);
     end;
@@ -353,12 +350,9 @@ end;
 
 function TListViewComponentEditor.GetVerb(Index: Integer): string;
 begin
-  Result := '';
   case Index of
     0: Result := sccsLvEdt;
     1: Result := sccsLvColEdt;
-    else
-      Result := '';
   end;
 end;
 

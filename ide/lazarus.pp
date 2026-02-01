@@ -53,7 +53,7 @@ uses
   {$IF defined(Unix) and not defined(OPENBSD)}
   clocale,
   {$IFEND}
-  {$IFDEF DARWIN}
+  {$IFDEF LCLCocoa}
   CocoaConfig,
   {$ENDIF}
   SysUtils,
@@ -137,7 +137,7 @@ begin
   Application.{%H-}MainFormOnTaskBar := False;
   {$ENDIF}
 
-  {$IFDEF DARWIN}
+  {$IFDEF LCLCocoa}
   CocoaConfigFileDialog.open.accessoryView.showsFilePackagesSwitch:= True;
   CocoaConfigFileDialog.save.allowsFilePackagesContents:= True;
   CocoaConfigFileDialog.selectDirectory.allowsFilePackagesContents:= True;

@@ -167,7 +167,7 @@ type
 
   TLazEditCustomHighlighter = class(TLazEditAttributeOwner)
   private type
-    TLazEditHlUpdateFlag = (ufAttribChanged, ufRescanNeeded);
+    TLazEditHlUpdateFlag = (ufConfigChanged, ufAttribChanged, ufRescanNeeded);
     TLazEditHlUpdateFlags = set of TLazEditHlUpdateFlag;
   protected type
     TLazEditHighlighterAttachedLines = specialize TFPGList<TLazEditStringsBase>;
@@ -241,6 +241,9 @@ type
      * Token / Attributes *
      * ------------------ *)
     procedure SendAttributeChangeNotification;
+    procedure DoConfigChanged; virtual;
+    procedure DefHighlightChange(Sender: TObject);
+
     procedure MergeModifierToTokenAttribute(
       var ACurrentResultAttrib: TLazCustomEditTextAttribute;
       AModifierAttrib: TLazCustomEditTextAttribute;
@@ -275,6 +278,8 @@ type
     procedure BeginUpdate; inline;
     procedure EndUpdate; inline;
     property IsUpdating: boolean read GetIsUpdating;
+
+    procedure ConfigChanged;
 
     (* ------------------ *
      * Lines / RangesList *
@@ -312,7 +317,7 @@ type
     function GetTokenKind: integer; virtual; abstract;
     function GetToken: String; virtual; abstract;
     function GetTokenPos: Integer; virtual; abstract; // 0-based
-    function GetTokenLen: Integer; virtual; abstract;
+    function GetTokenLen: Integer; virtual;
     procedure GetTokenEx(out TokenStart: PChar; out TokenLength: integer); virtual; abstract;
     function GetTokenClass: TLazEditTokenClass; virtual;
     function GetTokenDetails: TLazEditTokenDetails; virtual;
@@ -490,6 +495,7 @@ end;
 procedure TLazEditCustomHighlighter.InternalEndUpdate;
 begin
   DoEndUpdate;
+  if ufConfigChanged in FUpdateFlags then ConfigChanged;
   if ufAttribChanged in FUpdateFlags then SendAttributeChangeNotification;
   if ufRescanNeeded in FUpdateFlags then RequestFullRescan;
   FUpdateFlags := [];
@@ -559,6 +565,16 @@ begin
 
   for i := 0 to AttachedLines.Count - 1 do
     AttachedLines[i].SendHighlightAttributeChanged;
+end;
+
+procedure TLazEditCustomHighlighter.DoConfigChanged;
+begin
+  //
+end;
+
+procedure TLazEditCustomHighlighter.DefHighlightChange(Sender: TObject);
+begin
+  ConfigChanged;
 end;
 
 procedure TLazEditCustomHighlighter.MergeModifierToTokenAttribute(
@@ -700,6 +716,18 @@ begin
     InternalEndUpdate;
 end;
 
+procedure TLazEditCustomHighlighter.ConfigChanged;
+begin
+  if IsUpdating then begin
+    Include(FUpdateFlags, ufConfigChanged);
+    exit;
+  end;
+
+  Exclude(FUpdateFlags, ufConfigChanged);
+  DoConfigChanged;
+  SendAttributeChangeNotification;
+end;
+
 procedure TLazEditCustomHighlighter.AttachToLines(ALines: TLazEditStringsBase);
 begin
   FAttachedLines.Add(ALines);
@@ -796,6 +824,13 @@ end;
 function TLazEditCustomHighlighter.FirstUnpreparedLine: IntIdx;
 begin
   Result := -1;
+end;
+
+function TLazEditCustomHighlighter.GetTokenLen: Integer;
+var
+  p: PChar;
+begin
+  GetTokenEx(p, Result);
 end;
 
 function TLazEditCustomHighlighter.GetTokenClass: TLazEditTokenClass;

@@ -6398,6 +6398,7 @@ resourcestring
   dlgSrcEdColorMemberColorIsAppliedToAny = '"Member" color is applied to any identifier behind a '
     +'dot ".".';
   lisFailedToSaveMacro = 'Failed to save macro.';
+  SynSpellOptMouseWheelChangesTabs = 'Mouse-wheel changes tabs';
 
 implementation
 

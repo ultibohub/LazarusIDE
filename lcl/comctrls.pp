@@ -94,6 +94,8 @@ type
     property Width: Integer read FWidth write SetWidth;
   end;
 
+  { TStatusPanels }
+
   TStatusPanels = class(TCollection)
   private
     FStatusBar: TStatusBar;
@@ -171,6 +173,8 @@ type
     function GetPanelIndexAt(X, Y: Integer): Integer;
     function SizeGripEnabled: Boolean;
     function UpdatingStatusBar: boolean;
+    procedure Update; override;
+  public
     property Canvas: TCanvas read FCanvas;
   published
     property Action;
@@ -1269,20 +1273,19 @@ type
     FItemNeedsUpdate: TCollectionItem;
     FNeedsUpdate: boolean;
     function GetItem(const AIndex: Integer): TListColumn;
-    procedure WSCreateColumns;
     procedure SetItem(const AIndex: Integer; const AValue: TListColumn);
     procedure DoFinalizeWnd;
+    procedure WSRecreateColumns;
   protected
     function GetOwner: TPersistent; override;
   public
     constructor Create(AOwner: TCustomListView);
     destructor Destroy; override;
-    procedure Update(Item: TCollectionItem); override;
     function Add: TListColumn;
-    property Owner: TCustomListView read FOwner;
-    property Items[const AIndex: Integer]: TListColumn
-                                            read GetItem write SetItem; default;
     procedure Assign(Source: TPersistent); override;
+    procedure Update(Item: TCollectionItem); override;
+    property Owner: TCustomListView read FOwner;
+    property Items[const AIndex: Integer]: TListColumn read GetItem write SetItem; default;
   end;
 
 
@@ -1518,7 +1521,6 @@ type
     //called by TListItems
     procedure ItemDeleted(const AItem: TListItem);
     procedure ItemInserted(const AItem: TListItem);
-
   protected
     class procedure WSRegisterClass; override;
     class function GetControlClassDefaultSize: TSize; override;
@@ -1526,6 +1528,7 @@ type
     procedure FinalizeWnd; override;
     procedure DestroyWnd; override;
     procedure BeginAutoDrag; override;
+    procedure Update; override;
 
     function CreateListColumns: TListColumns; virtual;
     function CreateListItem: TListItem; virtual;

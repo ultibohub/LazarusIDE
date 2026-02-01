@@ -2373,6 +2373,8 @@ var
   seat: PGdkSeat;
   device: PGdkDevice;
   x: gdouble;
+  window: PGdkWindow;
+  windowWidget: PGtkWindow;
 begin
   Result := 0;
 
@@ -2394,7 +2396,16 @@ begin
     device := gdk_seat_get_pointer(seat);
     if device = nil then
       exit;
-    device^.get_state(gdk_screen_get_active_window(gdk_screen_get_default), @x, @AModifiers);
+    window := gdk_screen_get_active_window(gdk_screen_get_default);
+    if window = nil then // gdk_screen_get_active_window may not be implemented
+    begin
+      windowWidget := GetActiveGtkWindow;
+      if windowWidget <> nil then
+        window := windowWidget^.window;
+    end;
+    if window = nil then
+      Exit;
+    device^.get_state(window, @x, @AModifiers);
   end else
   begin
     AKeyMap := gdk_keymap_get_for_display(display);
@@ -3383,6 +3394,7 @@ begin
       AMessage.Msg := AMsg.Msg;
       AMessage.WParam := AMsg.AwParam;
       AMessage.LParam := AMsg.AlParam;
+      TGtk3Widget(AMsg.Handle).PostMessages.Remove(user_data);
       TGtk3Widget(AMsg.Handle).DeliverMessage(AMessage);
     end;
     g_idle_remove_by_data(user_data);
@@ -3406,6 +3418,7 @@ begin
     AEvent^.AwParam := wParam;
     AEvent^.AlParam := lParam;
     AEvent^.Result := 0;
+    TGtk3Widget(Handle).PostMessages.Add(AEvent);
     g_idle_add(@Gtk3ProcessPostMessage, AEvent);
     if GetCurrentThreadId <> MainThreadID then
     begin
