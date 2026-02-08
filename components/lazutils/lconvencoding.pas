@@ -100,6 +100,7 @@ const
   UTF32LEBOM = #$FE#$FF#0#0;
 
 function GuessEncoding(const s: string): string;
+function GuessPascalEncoding(const s: string): string;
 
 {
   Note: Conversions to UTF8 will always set the target's codepage to CP_UTF8
@@ -320,23 +321,18 @@ end;
 
 function GetDefaultTextEncoding: string;
 begin
-  if EncodingValid then begin
-    Result:=DefaultTextEncoding;
-    exit;
-  end;
-
+  if EncodingValid then
+    exit(DefaultTextEncoding);
   {$IFDEF Windows}
   Result:=GetWindowsEncoding;
   {$ELSE}
-  {$IFDEF Darwin}
-  Result:=EncodingUTF8;
-  {$ELSE}
-  Result:=GetUnixEncoding;
+    {$IFDEF Darwin}
+    Result:=EncodingUTF8;
+    {$ELSE}
+    Result:=GetUnixEncoding;
+    {$ENDIF}
   {$ENDIF}
-  {$ENDIF}
-
   Result:=NormalizeEncoding(Result);
-
   DefaultTextEncoding:=Result;
   EncodingValid:=true;
 end;
@@ -2866,7 +2862,7 @@ begin
   List.Add('UCS-2BE');
 end;
 
-function GuessEncoding(const s: string): string;
+function GuessEncoding_sub(const s: string; IsPascal: boolean): string;
 
   function CompareI(p1, p2: PChar; Count: integer): boolean;
   var
@@ -2927,31 +2923,34 @@ begin
   p:=PChar(s);
 
   // try UTF-8 BOM (Byte Order Mark)
-  if CompareI(p,UTF8BOM,3) then begin
-    Result:=EncodingUTF8BOM;
-    exit;
-  end;
+  if CompareI(p,UTF8BOM,3) then
+    exit(EncodingUTF8BOM);
 
   // try ucs-2le BOM FF FE (ToDo: nowadays this BOM is UTF16LE)
-  if (p^=#$FF) and (p[1]=#$FE) then begin
-    Result:=EncodingUCS2LE;
-    exit;
-  end;
+  if (p^=#$FF) and (p[1]=#$FE) then
+    exit(EncodingUCS2LE);
 
   // try ucs-2be BOM FE FF (ToDo: nowadays this BOM is UTF16BE)
-  if (p^=#$FE) and (p[1]=#$FF) then begin
-    Result:=EncodingUCS2BE;
-    exit;
-  end;
+  if (p^=#$FE) and (p[1]=#$FF) then
+    exit(EncodingUCS2BE);
 
-  // try {%encoding eee}
-  if CompareI(p,'{%encoding ',11) then begin
-    inc(p,length('{%encoding '));
-    while (p^ in [' ',#9]) do inc(p);
-    EndPos:=p;
-    while not (EndPos^ in ['}',' ',#9,#0]) do inc(EndPos);
-    Result:=NormalizeEncoding(copy(s,p-PChar(s)+1,EndPos-p));
-    exit;
+  if IsPascal then begin
+    // Check directives that use a Pascal comment syntax.
+    // skip possible {%mainunit ...} in front of {%encoding ...}
+    if CompareI(p,'{%mainunit ',11) then begin
+      inc(p,length('{%mainunit '));
+      while not (p^ in ['}',#0]) do inc(p);
+      if p^='}' then inc(p);
+      while (p^ in [' ',#9,#10,#13]) do inc(p);
+    end;
+    // try {%encoding eee}
+    if CompareI(p,'{%encoding ',11) then begin
+      inc(p,length('{%encoding '));
+      while (p^ in [' ',#9]) do inc(p);
+      EndPos:=p;
+      while not (EndPos^ in ['}',' ',#9,#0]) do inc(EndPos);
+      exit(NormalizeEncoding(copy(s,p-PChar(s)+1,EndPos-p)));
+    end;
   end;
 
   // try UTF-8 (this includes ASCII)
@@ -2959,10 +2958,8 @@ begin
   repeat
     if ord(p^)<128 then begin
       // ASCII
-      if (p^=#0) and (p-PChar(s)>=l) then begin
-        Result:=EncodingUTF8;
-        exit;
-      end;
+      if (p^=#0) and (p-PChar(s)>=l) then
+        exit(EncodingUTF8);
       inc(p);
     end else begin
       i:=UTF8CodepointStrictSize(p);
@@ -2988,6 +2985,15 @@ begin
   end;
 end;
 
+function GuessEncoding(const s: string): string;
+begin
+  Result:=GuessEncoding_sub(s, false);
+end;
+
+function GuessPascalEncoding(const s: string): string;
+begin
+  Result:=GuessEncoding_sub(s, true);
+end;
 
 function ConvertEncodingFromUTF8(const s, ToEncoding: string; out Encoded: boolean;
   SetTargetCodePage: boolean = false): string;

@@ -1,0 +1,155 @@
+object DockBackupFrm: TDockBackupFrm
+  Left = 0
+  Height = 531
+  Top = 0
+  Width = 693
+  Caption = 'Backup'
+  ClientHeight = 531
+  ClientWidth = 693
+  Position = poScreenCenter
+  LCLVersion = '4.99.0.0'
+  OnCreate = FormCreate
+  object Panel2: TPanel
+    Left = 0
+    Height = 531
+    Top = 0
+    Width = 693
+    Align = alClient
+    BevelOuter = bvNone
+    ClientHeight = 531
+    ClientWidth = 693
+    TabOrder = 0
+    object Panel4: TPanel
+      Left = 0
+      Height = 33
+      Top = 498
+      Width = 693
+      Align = alBottom
+      ClientHeight = 33
+      ClientWidth = 693
+      TabOrder = 0
+      object lblStatus: TLabel
+        AnchorSideTop.Control = Panel4
+        AnchorSideTop.Side = asrCenter
+        Left = 8
+        Height = 18
+        Top = 7
+        Width = 53
+        Caption = 'lblStatus'
+      end
+    end
+    object Splitter1: TSplitter
+      Left = 260
+      Height = 498
+      Top = 0
+      Width = 5
+    end
+    object Panel3: TPanel
+      Left = 0
+      Height = 498
+      Top = 0
+      Width = 260
+      Align = alLeft
+      BevelOuter = bvNone
+      ClientHeight = 498
+      ClientWidth = 260
+      TabOrder = 2
+      object ListBox1: TListBox
+        Left = 5
+        Height = 248
+        Top = 60
+        Width = 255
+        Align = alClient
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        BorderSpacing.Bottom = 5
+        ItemHeight = 0
+        TabOrder = 0
+        TopIndex = -1
+        OnSelectionChange = ListBox1SelectionChange
+      end
+      object btnRestore: TBitBtn
+        AnchorSideLeft.Control = Panel3
+        AnchorSideTop.Control = ListBox1
+        AnchorSideTop.Side = asrBottom
+        Left = 5
+        Height = 50
+        Top = 313
+        Width = 255
+        Align = alBottom
+        Anchors = [akLeft, akRight]
+        BorderSpacing.Left = 5
+        BorderSpacing.Bottom = 5
+        Caption = 'Restore selected layout'
+        TabOrder = 1
+        OnClick = btnRestoreClick
+      end
+      object btnBackup: TBitBtn
+        AnchorSideLeft.Control = Panel3
+        AnchorSideTop.Control = Panel3
+        AnchorSideBottom.Control = ListBox1
+        Left = 5
+        Height = 50
+        Top = 5
+        Width = 255
+        Align = alTop
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 5
+        Caption = 'Backup current layout'
+        TabOrder = 2
+        OnClick = btnBackupClick
+      end
+      object btnDefault: TBitBtn
+        AnchorSideLeft.Control = Panel3
+        AnchorSideTop.Control = ListBox1
+        AnchorSideTop.Side = asrBottom
+        Left = 5
+        Height = 50
+        Top = 442
+        Width = 255
+        Align = alBottom
+        Anchors = [akLeft, akRight]
+        BorderSpacing.Left = 5
+        BorderSpacing.Top = 24
+        BorderSpacing.Bottom = 6
+        Caption = 'Restore default layout'
+        TabOrder = 3
+        OnClick = btnDefaultClick
+      end
+      object btnDelete: TBitBtn
+        AnchorSideLeft.Control = Panel3
+        AnchorSideTop.Control = ListBox1
+        AnchorSideTop.Side = asrBottom
+        Left = 5
+        Height = 50
+        Top = 368
+        Width = 255
+        Align = alBottom
+        Anchors = [akLeft, akRight]
+        BorderSpacing.Left = 5
+        BorderSpacing.Bottom = 6
+        Caption = 'Delete selected layout'
+        TabOrder = 4
+        OnClick = btnDeleteClick
+      end
+    end
+    object Memo1: TMemo
+      AnchorSideTop.Control = Panel2
+      AnchorSideRight.Control = Panel2
+      AnchorSideRight.Side = asrBottom
+      AnchorSideBottom.Control = Panel4
+      Left = 265
+      Height = 486
+      Top = 5
+      Width = 423
+      Align = alClient
+      BorderSpacing.Top = 5
+      BorderSpacing.Right = 5
+      BorderSpacing.Bottom = 7
+      ReadOnly = True
+      ScrollBars = ssAutoBoth
+      TabOrder = 3
+      WordWrap = False
+    end
+  end
+end
