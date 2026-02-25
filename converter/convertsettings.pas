@@ -497,6 +497,14 @@ begin
   TheMap:=fReplaceUnits;
   LoadStringToStringTree('UnitReplacements/', TheMap);
   // Add default values for configuration if ConfigStorage doesn't have them
+  // Remove the first part of dotted unit names.
+  MapReplacement('^Data\.(.+)',         '$1');
+  MapReplacement('^System\.(.+)',       '$1');
+  MapReplacement('^Vcl\.(.+)',          '$1');
+  MapReplacement('^Vcl\.Imaging\.(.+)', '$1');
+  MapReplacement('^Vcl\.Samples\.(.+)', '$1');
+  MapReplacement('^Winapi\.(.+)',       '$1');         // Windows units.
+  // Windows specifig types need special treatment.
   MapReplacement('Windows',             'LCLIntf, LCLType, LMessages');
   MapReplacement('WinTypes',            'LCLIntf, LCLType, LMessages');
   MapReplacement('WinProcs',            'LCLIntf, LCLType, LMessages');
@@ -544,7 +552,7 @@ begin
   // Add default values for configuration if ConfigStorage doesn't have them
   MapReplacement('TFlowPanel',        'TPanel');
   MapReplacement('TGridPanel',        'TPanel');
-  MapReplacement('TRichEdit',         'TMemo'); // or TRichMemo from CRC.
+  MapReplacement('TRichEdit',         'TRichMemo');
   MapReplacement('TDBRichEdit',       'TDBMemo');
   MapReplacement('TApplicationEvents','TApplicationProperties');
   MapReplacement('TPNGObject',        'TPortableNetworkGraphic');
