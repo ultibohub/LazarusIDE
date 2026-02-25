@@ -5,10 +5,10 @@ unit frmConfigFileBrowser;
 interface
 
 uses
-  // IdeIntf
-  Classes, SysUtils, Forms, Controls, StdCtrls,
-  Dialogs, FileCtrl, ComCtrls, ExtCtrls,  EditBtn,
-  IDEOptionsIntf, IDEOptEditorIntf, IDEUtils, IDEDialogs;
+  SysUtils,
+  StdCtrls, Dialogs,  EditBtn, Spin,
+  IDEOptionsIntf, IDEOptEditorIntf, LazIDEIntf,
+  FileBrowserTypes, CtrlFileBrowser;
 
 type
 
@@ -17,6 +17,8 @@ type
   TFileBrowserOptionsFrame = class(TAbstractIDEOptionsEditor)
     CBShowDirectoriesBeforeFiles: TCheckBox;
     CBShowFilesInline: TCheckBox;
+    cbHiddenFiles: TCheckBox;
+    cbFollowSymlinks: TCheckBox;
     CBSyncCurrentEditor: TCheckBox;
     CBMatchOnlyFilename: TCheckBox;
     CBUseAbsoluteFilenames: TCheckBox;
@@ -28,19 +30,20 @@ type
     GBStartDir1: TGroupBox;
     GBSearch: TGroupBox;
     GBFileTree: TGroupBox;
+    lbMinSearchLen: TLabel;
     RBLastDir: TRadioButton;
     RBRootFileSystemRoot: TRadioButton;
     RBRootUserDir: TRadioButton;
     RBThisDir: TRadioButton;
     RBRootThisDir: TRadioButton;
     RBUseProjectDir: TRadioButton;
-    RBRootUseProjectDir: TRadioButton;
+    RBRootProjectDir: TRadioButton;
+    seMinSearchLen: TSpinEdit;
     procedure CBShowFilesInlineChange(Sender: TObject);
     procedure CBUseLettersChange(Sender: TObject);
   private
     procedure CheckDirsBeforeFiles;
     procedure CheckPartial;
-
   public
     function GetTitle: String; override;
     procedure Setup({%H-}ADialog: TAbstractOptionsEditorDialog); override;
@@ -51,8 +54,6 @@ type
   end;
 
 implementation
-
-uses lazIDEIntf, filebrowsertypes, ctrlfilebrowser;
 
 {$R *.lfm}
 
@@ -89,17 +90,14 @@ begin
 end;
 
 procedure TFileBrowserOptionsFrame.Setup(ADialog: TAbstractOptionsEditorDialog);
-
 begin
-  //
+  CBUseAbsoluteFilenames.Enabled:=False;   // fsoAbsolutePaths flag is removed.
 end;
-
 
 procedure TFileBrowserOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);
 var
   C : TFileBrowserController;
   RB: TRadioButton;
-
 begin
   C:=LazarusIDE.OwningComponent.FindComponent('IDEFileBrowserController') as TFileBrowserController;
   if not Assigned(C) then
@@ -119,15 +117,17 @@ begin
     rdCustomDir: RB  := RBRootThisDir;
   end;
   RB.Checked := True;
-  if C.RootDir=rdCustomDir then
-    DERootDir.Directory:=C.CustomRootDir;
+  DERootDir.Directory:=C.CustomRootDir;
+  cbHiddenFiles.Checked:=C.HiddenFiles;
+  cbFollowSymlinks.Checked:=C.FollowSymlinks;
   CBShowFilesInline.Checked:=C.FilesInTree;
   CBShowDirectoriesBeforeFiles.Checked:=C.DirectoriesBeforeFiles;
   CBSyncCurrentEditor.Checked:=C.SyncCurrentEditor;
-  CBUseAbsoluteFilenames.Checked:=fsoAbsolutePaths in C.SearchOptions;
+  //CBUseAbsoluteFilenames.Checked:=fsoAbsolutePaths in C.SearchOptions;
   CBMatchOnlyFilename.Checked:=fsoMatchOnlyFileName in C.SearchOptions;
   CBUseLetters.Checked:=fsoUseLetters in C.SearchOptions;
   CBPartialMatch.Checked:=fsoMatchPartial in C.SearchOptions;
+  seMinSearchLen.Value:=C.MinSearchLen;
   CheckDirsBeforeFiles;
 end;
 
@@ -137,12 +137,10 @@ var
   SD : TStartDir;
   RD : TRootDir;
   SO : TFileSearchOptions;
-  lRootDir: String;
 begin
   C:=LazarusIDE.OwningComponent.FindComponent('IDEFileBrowserController') as TFileBrowserController;
   if not Assigned(C) then
     exit;
-  lRootDir:=C.GetResolvedRootDir;
   if RBUseProjectDir.Checked then
     SD:=sdProjectDir
   else if RBLastDir.Checked then
@@ -155,7 +153,7 @@ begin
   else
     C.CustomStartDir:='';
 
-  if RBRootUseProjectDir.Checked then
+  if RBRootProjectDir.Checked then
     RD:=rdProjectDir
   else if RBRootFileSystemRoot.Checked then
     RD:=rdRootDir
@@ -163,26 +161,23 @@ begin
     RD:=rdUserDir
   else
     RD:=rdCustomDir;
+  C.CustomRootDir:=DERootDir.Directory;
   C.RootDir:=rD;
-  if rD=rdCustomDir then
-    C.CustomRootDir:=DERootDir.Directory
-  else
-    C.CustomRootDir:='';
-  C.FilesInTree:=CBShowFilesInline.Checked;
+  C.HiddenFiles:=cbHiddenFiles.Checked;
+  C.FollowSymlinks:=cbFollowSymlinks.Checked;
   C.SyncCurrentEditor:=CBSyncCurrentEditor.Checked;
+  C.FilesInTree:=CBShowFilesInline.Checked;
   SO:=[];
-  if CBUseAbsoluteFilenames.Checked then
-    Include(SO,fsoAbsolutePaths);
+  //if CBUseAbsoluteFilenames.Checked then
+  //  Include(SO,fsoAbsolutePaths);
   if CBMatchOnlyFilename.Checked then
     Include(SO,fsoMatchOnlyFileName);
   if CBUseLetters.Checked then
     Include(SO,fsoUseLetters);
   if CBpartialMatch.Checked then
     Include(SO,fsoMatchPartial);
+  C.MinSearchLen:=seMinSearchLen.Value;
   C.SearchOptions:=SO;
-  // Re-index
-  if lRootDir<>C.GetResolvedRootDir then
-    C.IndexRootDir;
   C.WriteConfig;
 end;
 

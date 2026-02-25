@@ -9,7 +9,6 @@ uses
 
 type
   TStartDir = (sdProjectDir, sdLastOpened, sdCustomDir);
-
   TRootDir = (rdProjectDir, rdUserDir, rdRootDir, rdCustomDir);
 
   EFileEntry = Class(Exception);
@@ -17,7 +16,7 @@ type
   TEntryType = (etDirectory,etFile,etSymlink);
   TEntryTypes = Set of TEntryType;
 
-  TReadEntryOption = (reoHidden,reoRecurse);
+  TReadEntryOption = (reoHiddenFiles, reoRecurse, reoFollowSymlinks);
   TReadEntryOptions = Set of TReadEntryOption;
 
 Const
@@ -85,8 +84,8 @@ Type
   end;
   TFileEntryArray = Array of TFileEntry;
 
-  TTreeDoneEvent = procedure (Sender : TThread; aTree : TDirectoryEntry) of object;
-  TTreeErrorEvent = procedure (Sender : TThread; const aError : String) of object;
+  TTreeDoneEvent = procedure (Sender: TThread) of object;
+  TTreeErrorEvent = procedure (Sender: TThread; const aError: String) of object;
 
   { TTreeCreatorThread }
 
@@ -94,17 +93,25 @@ Type
   Private
     FRootDir : String;
     FOptions : TReadEntryOptions;
+    FFileList : TStrings;
     FOnDone : TTreeDoneEvent;
+    FOnCancelled : TTreeDoneEvent;
     FOnError : TTreeErrorEvent;
     FNode : TDirectoryEntry;
     FError : String;
-  Protected
+    FStartTime: TDateTime;
+  //Protected
+    procedure AddFileNodes(aNode: TFileSystemEntry; aDir: String);
     procedure FillNode(N: TDirectoryEntry);
     procedure DoDone;
+    procedure DoCancelled;
     procedure DoError;
   Public
-    constructor Create(aRootDir: String; aOptions: TReadEntryOptions; aOnDone: TTreeDoneEvent; aOnError : TTreeErrorEvent);
-    procedure execute; override;
+    constructor Create(aRootDir: String; aOptions: TReadEntryOptions; aFileList: TStrings;
+      aOnDone: TTreeDoneEvent; aOnCancelled: TTreeDoneEvent; aOnError : TTreeErrorEvent);
+    procedure Execute; override;
+    property RootDir: String read FRootDir;
+    property StartTime: TDateTime read FStartTime;
   end;
 
 
@@ -116,28 +123,41 @@ const
   DefaultSyncCurrentEditor = False;
   DefaultSplitterPos = 150;
 
-  SConfigFile         = 'idebrowserwin.xml';
-  KeyStartDir         = 'StartDir';
-  KeyRootDir          = 'RootDir';
-  KeyCustomStartDir   = 'CustomDir';
-  KeyCustomRootDir    = 'CustomRootDir';
-  KeySplitterPos      = 'SplitterPos';
-  KeyFilesInTree      = 'FilesInTree';
-  KeyDirectoriesBeforeFiles     = 'DirectoriesBeforeFiles';
+  SConfigFile       = 'idebrowserwin.xml';
+  KeyStartDir       = 'StartDir';
+  KeyRootDir        = 'RootDir';
+  KeyCustomStartDir = 'CustomDir';
+  KeyCustomRootDir  = 'CustomRootDir';
+  KeySplitterPos    = 'SplitterPos';
+  KeyFilesInTree    = 'FilesInTree';
+  KeyDirectoriesBeforeFiles = 'DirectoriesBeforeFiles';
+  KeyHiddenFiles    = 'HiddenFiles';
+  KeyFollowSymlinks = 'FollowSymlinks';
   KeySyncCurrentEditor = 'SyncCurrentEditor';
   KeySearchMatchOnlyFilename = 'MatchOnlyFileNames';
-  KeySearchAbsoluteFilenames = 'AbsoluteFileNames';
-  KeySearchLetters = 'SearchLetters';
-  KeyMatchPartial = 'MatchPartial';
+  //KeySearchAbsoluteFilenames = 'AbsoluteFileNames';
+  KeySearchLetters  = 'SearchLetters';
+  KeyMatchPartial   = 'MatchPartial';
+  KeyMinSearchLen   = 'MinSearchLen';
 
   SViewFilebrowser = 'File browser';
+
+var
+  FCritSec: TRTLCriticalSection;
 
 resourcestring
   SFileBrowserIDEMenuCaption = 'File Browser';
   SFileSearcherIDEMenuCaption = 'File Searcher';
+  SFilesFound = 'Collected %d files in directory "%s", in %s.';
+  SFilesCancelled = 'Cancelled after collecting %d files in directory "%s", in %s.';
   SErrSearching = 'Error searching for files in directory "%s": %s';
-  SFilesFound = 'Collected %d files in directory "%s"';
   SSearchingFiles = 'Start collecting files in directory "%s"';
+  // File Searcher
+  SWarnTermTooShort = 'Search term too short (min %d characters)';
+  SWarnControllerNotAssigned = 'Controller not assigned';
+  SWarnBuildingIndex = 'Building file index, please wait';
+  SWarnNoMatch = 'No files match your search term';
+
 
 implementation
 
@@ -247,61 +267,62 @@ var
   Entry : TFileSystemEntry;
   CurrentDir: string;
   LinkTarget : RawByteString;
-  isHidden : Boolean;
   isType : TEntryType;
-
+  FileAttr: longint;
 begin
   Clear;
   CurrentDir:=IncludeTrailingPathDelimiter(AbsolutePath);
-  CurrentDir:=CurrentDir;
-  if SysUtils.FindFirst(CurrentDir+AllFilesMask,faAnyFile or faSymLink, Info) <> 0 then
+  FileAttr:=faAnyFile;
+  if reoFollowSymlinks in aOptions then
+    FileAttr:=FileAttr or faSymLink;
+  if SysUtils.FindFirst(CurrentDir+AllFilesMask, FileAttr, Info) <> 0 then
      Exit;
   Try
-      repeat
-        With Info do
+    repeat
+      if (Info.Name = '') or (Info.Name = '.') or (Info.Name = '..') then
+        Continue;           // check if special dir
+      if ((faHidden and Info.Attr)<>0) and Not (reoHiddenFiles in aOptions) then
+        Continue;
+      if (faDirectory and Info.Attr) <> 0 then
+        isType:=etDirectory
+      else if (faSymLink and Info.Attr) <> 0 then
+        isType:=etSymlink
+      else
+        isType:=etFile;
+      Entry:=Nil;
+      case IsType of
+        etFile : Entry:=TFileEntry.Create(Self,Info.Name);
+        etDirectory :
           begin
-          if Name = '' then
-            Continue;
-          // check if special dir
-          if ((Name = '.') or (Name = '..')) then
-            Continue;
-          isHidden:=((faHidden and Attr)<>0);
-          if isHidden and Not (reoHidden in aOptions) then
-            Continue;
-
-          if ((faDirectory and Attr) <> 0) then
-            isType:=etDirectory
-          else if ((faSymLink and Attr) <> 0) then
-            isType:=etSymlink
-          else
-            isType:=etFile;
-          case IsType of
-            etFile : Entry:=TFileEntry.Create(Self,Name);
-            etDirectory : Entry:=TDirectoryEntry.Create(Self,Name);
-            etSymlink :
-              begin
-              try
-              if not FileGetSymLinkTarget(CurrentDir+Name,LinkTarget) then
-                LinkTarget:='<?>';
-              except
-                // We get an exception in 3.2.2
-                LinkTarget:='<?>';
-              end;
-              Entry:=TSymLinkEntry.Create(Self,Name,LinkTarget);
-              end;
-          else
-            Entry:=Nil;
+            // Some Unix dirs cause a recursive loop. Skip them. Should be configurable.
+            if (CurrentDir='/')
+            and ((Info.Name='dev') or (Info.Name='sys') or (Info.Name='proc')) then
+              Continue;
+            Entry:=TDirectoryEntry.Create(Self,Info.Name);
           end;
-          if Assigned(Entry) then
-            AddEntry(Entry);
-          if reoRecurse in aOptions then
-            Entry.ReadEntries(aOptions);
-          // We found at least one entry, so exit.
+        etSymlink :
+          begin
+            Assert(reoFollowSymlinks in aOptions, 'TDirectoryEntry.ReadEntries: No reoFollowSymlinks');
+            try
+              if not FileGetSymLinkTarget(CurrentDir+Info.Name,LinkTarget) then
+                LinkTarget:='<?>';
+            except
+              // We get an exception in 3.2.2
+              LinkTarget:='<?>';
+            end;
+            Entry:=TSymLinkEntry.Create(Self,Info.Name,LinkTarget);
           end;
-        until SysUtils.FindNext(Info) <> 0;
-    finally
-      SysUtils.FindClose(Info);
-    end;
+      end;
+      if Assigned(Entry) then
+        AddEntry(Entry);
+      // reoRecurse is never added to Options.(?)
+      Assert(not (reoRecurse in aOptions), 'ReadEntries: reoRecurse after all!');
+      //if reoRecurse in aOptions then
+      //  Entry.ReadEntries(aOptions);
+    until SysUtils.FindNext(Info) <> 0;
+  finally
+    SysUtils.FindClose(Info);
+  end;
 end;
 
 class function TDirectoryEntry.EntryType: TEntryType;
@@ -387,22 +408,43 @@ end;
 
 { TTreeCreatorThread }
 
-constructor TTreeCreatorThread.Create(aRootDir: String;
-  aOptions: TReadEntryOptions; aOnDone: TTreeDoneEvent;
-  aOnError: TTreeErrorEvent);
+constructor TTreeCreatorThread.Create(aRootDir: String; aOptions: TReadEntryOptions;
+  aFileList: TStrings; aOnDone: TTreeDoneEvent;
+  aOnCancelled: TTreeDoneEvent; aOnError: TTreeErrorEvent);
 begin
   FRootDir:=aRootDir;
   FOptions:=aOptions;
+  FFileList:=aFileList;
   FOnDone:=aOnDone;
+  FOnCancelled:=aOnCancelled;
   FOnError:=aOnError;
   Inherited Create(false);
+  FreeOnTerminate:=True;
+  FStartTime:=Now;
+end;
+
+procedure TTreeCreatorThread.AddFileNodes(aNode : TFileSystemEntry; aDir : String);
+var
+  FN : String;
+  I : Integer;
+begin
+  FN:=aDir;
+  if FN<>'' then
+    FN:=IncludeTrailingPathDelimiter(FN);
+  FN:=FN+aNode.Name;
+  case aNode.EntryType of
+    etFile,
+    etSymlink:
+      FFileList.AddObject(FN, aNode);
+    etDirectory:
+      For I:=0 to ANode.EntryCount-1 do
+        AddFileNodes(ANode.Entries[I], FN);
+  end;
 end;
 
 procedure TTreeCreatorThread.FillNode(N : TDirectoryEntry);
-
 var
   i : integer;
-
 begin
   N.ReadEntries(FOptions);
   For I:=0 to N.EntryCount-1 do
@@ -416,21 +458,24 @@ end;
 
 procedure TTreeCreatorThread.DoDone;
 begin
-  FOnDone(Self,FNode);
-  // Caller is responsible for freeing now...
-  FNode:=Nil;
+  if FOnDOne=nil then exit;
+  FOnDone(Self);
+end;
+
+procedure TTreeCreatorThread.DoCancelled;
+begin
+  if FOnCancelled=nil then exit;
+  FOnCancelled(Self);
 end;
 
 procedure TTreeCreatorThread.DoError;
 begin
-  if assigned(FonError) then
-    FOnError(Self,FError);
+  if FonError=nil then exit;
+  FOnError(Self,FError);
 end;
 
-procedure TTreeCreatorThread.execute;
-
+procedure TTreeCreatorThread.Execute;
 begin
-
   FNode:=TDirectoryEntry.Create(Nil,FRootDir);
   try
     Try
@@ -444,11 +489,20 @@ begin
         Terminate;
         end;
     end;
-    if Not Terminated then
-      begin
-      if Assigned(FOnDOne) then
+    if Terminated then
+    begin
+      if Assigned(FOnCancelled) and (FError='') then
+        Synchronize(@DoCancelled);
+    end
+    else begin
+      // Critical section
+      EnterCriticalsection(FCritSec);
+      FFileList.Clear;
+      AddFileNodes(FNode, '');
+      LeaveCriticalSection(FCritSec);
+      if Assigned(FOnDone) then
         Synchronize(@DoDone);
-      end;
+    end;
   finally
     FNode.Free;
   end;

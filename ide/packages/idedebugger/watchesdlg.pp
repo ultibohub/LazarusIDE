@@ -72,7 +72,7 @@ type
 
   { TWatchesDlg }
 
-  TWatchesDlg = class(TDebuggerDlg)
+  TWatchesDlg = class(TDebuggerDlg, IIdeDbgDragDropWatchSource)
     actDeleteAll: TAction;
     actDeleteSelected: TAction;
     actDisableAll: TAction;
@@ -163,6 +163,7 @@ type
     procedure FormShow(Sender: TObject);
     procedure tbWordWrapClick(Sender: TObject);
     procedure tvWatchesChange(Sender: TBaseVirtualTree; Node: PVirtualNode);
+    procedure MoveWatchToBelow(var AWatch: TIdeWatch; var AWatchNode: PVirtualNode; ADestNode: PVirtualNode);
     procedure tvWatchesDragDrop(Sender: TBaseVirtualTree; Source: TObject;
       DataObject: IDataObject; Formats: TFormatArray; Shift: TShiftState;
       const Pt: TPoint; var Effect: LongWord; Mode: TDropMode);
@@ -184,13 +185,20 @@ type
     MAX_GRID_VALUE_LEN = 4096;
   private
     FQueuedUnLockCommandProcessing: Boolean;
+    FSelectedForDrag: TNodeArray;
+
     procedure ApplyPreset(APreset: TWatchDisplayFormatPreset);
     procedure DoFormatPresetClickedIde(Sender: TObject);
     procedure DoFormatPresetClickedProject(Sender: TObject);
     procedure DoUnLockCommandProcessing(Data: PtrInt);
     function GetWatches: TIdeWatches;
     procedure ContextChanged(Sender: TObject);
+    procedure SnapshotAnyChanged(Sender: TObject);
     procedure SnapshotChanged(Sender: TObject);
+
+    function DragWatchCount(ASender: TObject): integer;
+    procedure DragWatchInit(ASender: TObject; AnIndex: integer; AWatch: TIdeWatch);
+    procedure DragWatchDone(ASender: TObject);
   private
     FInSetup: integer;
     FWatchTreeMgr: TDbgTreeViewWatchValueMgr;
@@ -244,6 +252,8 @@ type
 
     function WatchAbleResultFromNode(AVNode: PVirtualNode): IWatchAbleResultIntf; override;
     function WatchAbleResultFromObject(AWatchAble: TObject): IWatchAbleResultIntf; override;
+    function GetTrackingIdFor(AWatchAble: TObject): string; override;
+    function HasWatchAbleForTrackingId(ATrackingId: string): boolean; override;
 
     function GetFieldAsText(Nd: PVirtualNode; AWatchAble: TObject;
       AWatchAbleResult: IWatchAbleResultIntf; AField: TTreeViewDataToTextField;
@@ -306,6 +316,7 @@ begin
   ThreadsNotification.OnCurrent   := @ContextChanged;
   CallstackNotification.OnCurrent := @ContextChanged;
   SnapshotNotification.OnCurrent  := @SnapshotChanged;
+  SnapshotNotification.OnChange   := @SnapshotAnyChanged;
 
   ActionList1.Images := IDEImages.Images_16;
   ToolBar1.Images := IDEImages.Images_16;
@@ -598,6 +609,37 @@ begin
   UpdateInspectPane;
 end;
 
+procedure TWatchesDlg.MoveWatchToBelow(var AWatch: TIdeWatch; var AWatchNode: PVirtualNode;
+  ADestNode: PVirtualNode);
+var
+  ADestWatch: TIdeWatch;
+  NewIdx: Integer;
+begin
+  if AWatch = nil then
+    AWatch := TIdeWatch(tvWatches.NodeItem[AWatchNode])
+  else
+  if AWatchNode = nil then
+    AWatchNode := tvWatches.FindNodeForItem(AWatch);
+
+  assert((AWatch<>nil) and (AWatchNode<>nil), 'TWatchesDlg.MoveWatchToBelow: (AWatch<>nil) and (AWatchNode<>nil)');
+
+  if ADestNode = nil then begin
+    // move to top
+    tvWatches.MoveTo(AWatchNode, PVirtualNode(nil), amAddChildFirst, False);
+    AWatch.Index := 0;
+  end
+  else begin
+    ADestWatch := TIdeWatch(tvWatches.NodeItem[ADestNode]);
+    assert(ADestWatch <> nil, 'TWatchesDlg.MoveWatchToBelow: ADestWatch <> nil');
+    NewIdx := ADestWatch.Index;
+    if NewIdx < AWatch.Index then
+      inc(NewIdx);
+
+    tvWatches.MoveTo(AWatchNode, ADestNode, amInsertAfter, False);
+    AWatch.Index := NewIdx;
+  end;
+end;
+
 procedure TWatchesDlg.tvWatchesNodeDblClick(Sender: TBaseVirtualTree;
   const HitInfo: THitInfo);
 begin
@@ -613,98 +655,78 @@ procedure TWatchesDlg.tvWatchesDragDrop(Sender: TBaseVirtualTree;
   Shift: TShiftState; const Pt: TPoint; var Effect: LongWord; Mode: TDropMode);
 var
   s: String;
-  NewWatch: TCurrentWatch;
   Nodes: TNodeArray;
   Target, N, NTarget, NewNode: PVirtualNode;
-  AWatch, ASourceWatch, ATargetWatch: TIdeWatch;
-  NewIdx: Integer;
+  AWatch, ASourceWatch: TIdeWatch;
+  IDrag: IIdeDbgDragDropWatchSource;
+  i: Integer;
 begin
+  Target := tvWatches.DropTargetNode;
+
+  if Target <> nil then begin
+    NTarget := tvWatches.NodeParent[Target];
+    while NTarget <> nil do begin
+      Target := NTarget;
+      NTarget := tvWatches.NodeParent[Target];
+    end;
+  end;
+  if (Mode = dmAbove) and (Target <> nil) then
+    Target := tvWatches.GetPreviousSiblingNoInit(Target);
+
   if Source = tvWatches then begin
     if (not (FWatchesInView is TCurrentWatches)) or (GetSelectedSnapshot <> nil) then
       exit;
 
-    Nodes := tvWatches.GetSortedSelection(True);
-    Target := tvWatches.GetNodeAt(Pt);
     if (Target = nil) then
       exit;
 
-    if Mode = dmAbove then begin
-      // Insert above
-      if tvWatches.Selected[Target] then begin
-        NTarget := tvWatches.GetPreviousSiblingNoInit(Target);
-        while (NTarget <> nil) and tvWatches.Selected[NTarget] do begin
-          Target := NTarget;
-          NTarget := tvWatches.GetPreviousSiblingNoInit(Target);
-        end;
-      end;
-      if Target <> nil then
-        Target := tvWatches.GetPreviousSiblingNoInit(Target);
-    end
-    else
-    if tvWatches.Selected[Target] then begin
-      // Insert below
-      NTarget := tvWatches.GetNextSiblingNoInit(Target);
-      while (NTarget <> nil) and tvWatches.Selected[NTarget] do begin
-        Target := NTarget;
-        NTarget := tvWatches.GetNextSiblingNoInit(Target);
-      end;
-    end;
-    if Target = nil then
-      NTarget := tvWatches.GetFirstChildNoInit(nil)
-    else
-      NTarget := tvWatches.GetNextSiblingNoInit(Target);
+    Nodes := tvWatches.GetSortedSelection(True);
+    if Length(Nodes) = 0 then
+      exit;
 
     BeginUpdate;
     try
-
-    for N in Nodes do begin
-      if tvWatches.NodeParent[N] = nil then begin
-        // Move top/outer node
-        if (N = Target) or (N = NTarget) then
-          continue; // already in place
-
-        AWatch := TIdeWatch(tvWatches.NodeItem[N]);
-        NewNode := N;
-      end
-      else begin
-        // Copy child node
-        ASourceWatch := TIdeWatch(tvWatches.NodeItem[N]);
-        assert(ASourceWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: ASourceWatch <> nil');
-        if ASourceWatch = nil then
-          Continue;
-
-        AWatch := FWatchesInView.Add(ASourceWatch.Expression);
-        AWatch.Assign(ASourceWatch);
-
-        NewNode := tvWatches.FindNodeForItem(AWatch);
-      end;
-
       if Target = nil then
-        tvWatches.MoveTo(NewNode, Target, amAddChildFirst, False)
+        NTarget := tvWatches.GetFirstChildNoInit(nil)
       else
-        tvWatches.MoveTo(NewNode, Target, amInsertAfter, False);
+        NTarget := tvWatches.GetNextSiblingNoInit(Target);
 
-      assert(AWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: AWatch <> nil');
-      if AWatch = nil then
-        Continue;
-      NewIdx := 0;
-      if Target <> nil then begin
-        ATargetWatch := TIdeWatch(tvWatches.NodeItem[Target]);
-        assert(ATargetWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: ATargetWatch <> nil');
-        if ATargetWatch <> nil then begin
-          NewIdx := ATargetWatch.Index;
-          if NewIdx < AWatch.Index then
-            inc(NewIdx);
+      for N in Nodes do begin
+        if tvWatches.NodeParent[N] = nil then begin
+          // Move top/outer node
+          if (N = Target) or (N = NTarget) then begin
+            // already in place
+            if (N = NTarget) then begin
+              Target := NTarget;
+              NTarget := tvWatches.GetNextSiblingNoInit(Target);
+            end;
+            continue;
+          end;
+
+          AWatch := TCurrentWatch(tvWatches.NodeItem[N]);
+          NewNode := N;
+        end
+        else begin
+          // Copy child node
+          ASourceWatch := TIdeWatch(tvWatches.NodeItem[N]);
+          assert(ASourceWatch <> nil, 'TWatchesDlg.tvWatchesDragDrop: ASourceWatch <> nil');
+          if ASourceWatch = nil then
+            Continue;
+
+          AWatch := FWatchesInView.Add(ASourceWatch.Expression);
+          AWatch.Assign(ASourceWatch);
+
+          NewNode := tvWatches.FindNodeForItem(AWatch);
         end;
+
+        MoveWatchToBelow(AWatch, NewNode, Target);
+        AWatch.DisplayName := '';
+
+        Target := NewNode;
+        NTarget := tvWatches.GetNextSiblingNoInit(Target);
       end;
-      AWatch.Index := NewIdx;
-      AWatch.DisplayName := '';
 
-      Target := NewNode;
-      NTarget := tvWatches.GetNextSiblingNoInit(Target);
-    end;
-
-    DebugBoss.Watches.DoModified;
+      DebugBoss.Watches.DoModified;
     finally
       EndUpdate;
     end;
@@ -712,20 +734,71 @@ begin
     exit;
   end;
 
+  if Source.GetInterface(IIdeDbgDragDropWatchSource, IDrag) or
+     ( (Source is TComponent) and
+       TComponent(Source).Owner.GetInterface(IIdeDbgDragDropWatchSource, IDrag)
+     )
+  then begin
+    for i := 0 to IDrag.DragWatchCount(Source) - 1 do begin
+      BeginUpdate;
+      try
+        DebugBoss.Watches.CurrentWatches.BeginUpdate;
+        AWatch := DebugBoss.Watches.CurrentWatches.Add('');
+        AWatch.Enabled       := True;
+        AWatch.DisplayFormat := DefaultWatchDisplayFormat;
+        if EnvironmentDebugOpts.DebuggerAutoSetInstanceFromClass then
+          AWatch.EvaluateFlags := [defClassAutoCast];
+        IDrag.DragWatchInit(Source, i, AWatch);
+        DebugBoss.Watches.CurrentWatches.EndUpdate;
+
+        if (GetSelectedSnapshot <> nil) then begin
+          // The watch is not in the snapshot. Force displaying it to provide feedback.
+          // It will be cleared of the list on the next change of snapshot.
+          FWatchTreeMgr.AddWatchData(AWatch);
+        end
+        else
+        if tvWatches.DropTargetNode <> nil then begin
+          NewNode := nil;
+          MoveWatchToBelow(AWatch, NewNode, Target);
+          Target := NewNode;
+        end;
+      finally
+        EndUpdate;
+      end;
+    end;
+    IDrag.DragWatchDone(Source);
+    exit;
+  end;
+
+
   s := '';
   if (Source is TSynEdit) then s := TSynEdit(Source).SelText;
   if (Source is TCustomEdit) then s := TCustomEdit(Source).SelText;
 
   if s <> '' then begin
-    DebugBoss.Watches.CurrentWatches.BeginUpdate;
+
+    BeginUpdate;
     try
-      NewWatch := DebugBoss.Watches.CurrentWatches.Add(s);
-      NewWatch.DisplayFormat := DefaultWatchDisplayFormat;
-      NewWatch.Enabled       := True;
+      DebugBoss.Watches.CurrentWatches.BeginUpdate;
+      AWatch := DebugBoss.Watches.CurrentWatches.Add(s);
+      AWatch.DisplayFormat := DefaultWatchDisplayFormat;
+      AWatch.Enabled       := True;
       if EnvironmentDebugOpts.DebuggerAutoSetInstanceFromClass then
-        NewWatch.EvaluateFlags := [defClassAutoCast];
-    finally
+        AWatch.EvaluateFlags := [defClassAutoCast];
       DebugBoss.Watches.CurrentWatches.EndUpdate;
+
+      if (GetSelectedSnapshot <> nil) then begin
+        // The watch is not in the snapshot. Force displaying it to provide feedback.
+        // It will be cleared of the list on the next change of snapshot.
+        FWatchTreeMgr.AddWatchData(AWatch);
+      end
+      else
+      if tvWatches.DropTargetNode <> nil then begin
+        NewNode := nil;
+        MoveWatchToBelow(AWatch, NewNode, Target);
+      end;
+    finally
+      EndUpdate;
     end;
   end;
 end;
@@ -735,7 +808,12 @@ procedure TWatchesDlg.tvWatchesDragOver(Sender: TBaseVirtualTree;
   Mode: TDropMode; var Effect: LongWord; var Accept: Boolean);
 var
   N, Target: PVirtualNode;
+  IDrag: IIdeDbgDragDropWatchSource;
 begin
+  Accept := (Mode in [dmAbove, dmBelow]) and
+            (tvWatches.DropTargetNode <> nil);
+  if not Accept then
+    exit;
   Accept := ( (Source is TSynEdit) and (TSynEdit(Source).SelAvail) ) or
             ( (Source is TCustomEdit) and (TCustomEdit(Source).SelText <> '') ) or
             ( (Source = tvWatches) and (tvWatches.SelectedCount > 0) and
@@ -743,18 +821,32 @@ begin
             )
             ;
 
-  if Accept and (Source = tvWatches) then begin
-    Target := tvWatches.GetNodeAt(Pt);
-    Accept := (Target <> nil) and (tvWatches.NodeParent[Target] = nil);
-    if Accept then
-      case Mode of
-        dmAbove: ;
-        dmBelow: Accept := not tvWatches.Expanded[Target];
-        else     Accept := false;
-      end;
-    if not Accept then
-      exit;
+  if (not Accept) and (
+      Source.GetInterface(IIdeDbgDragDropWatchSource, IDrag) or
+      ( (Source is TComponent) and
+        TComponent(Source).Owner.GetInterface(IIdeDbgDragDropWatchSource, IDrag) )
+  )
+  then begin
+    Accept := IDrag.DragWatchCount(Source) > 0;
+    IDrag.DragWatchDone(Source);
+  end;
 
+  if Accept then begin
+    case Mode of
+      dmAbove: Accept := (tvWatches.NodeParent[tvWatches.DropTargetNode] = nil);
+      dmBelow: begin
+          Target := tvWatches.GetNextVisibleNoInit(tvWatches.DropTargetNode);
+          Accept := (Target = nil) or
+                    (tvWatches.NodeParent[Target] = nil)
+        end;
+    end;
+  end;
+
+  if Accept and (Source = tvWatches) then begin
+    // TODO: if one single continuous selected block
+    //Accept := not tvWatches.Selected[tvWatches.DropTargetNode];
+    //if not Accept then
+    //  exit;
 
     for N in tvWatches.SelectedNodes(True) do begin
       if tvWatches.NodeItem[N] = nil then begin
@@ -860,6 +952,12 @@ begin
   DebugLn(DBG_DATA_MONITORS, ['DebugDataWindow: TWatchesDlg.ContextChanged ',  DbgSName(Sender), '  Upd:', IsUpdating]);
   if (DebugBoss <> nil) and (DebugBoss.State in [dsPause, dsInternalPause]) then
     UpdateAll;
+end;
+
+procedure TWatchesDlg.SnapshotAnyChanged(Sender: TObject);
+begin
+  if SnapshotManager.Snapshots.Count = 0 then
+    FWatchTreeMgr.ClearOutdatedTrackingIdData;
 end;
 
 procedure TWatchesDlg.actEnableSelectedExecute(Sender: TObject);
@@ -1046,6 +1144,27 @@ begin
   finally
     EndUpdate;
   end;
+end;
+
+function TWatchesDlg.DragWatchCount(ASender: TObject): integer;
+begin
+  if ASender <> tvWatches then exit(0);
+  FSelectedForDrag := tvWatches.GetSortedSelection(True);
+  Result := Length(FSelectedForDrag);
+end;
+
+procedure TWatchesDlg.DragWatchInit(ASender: TObject; AnIndex: integer; AWatch: TIdeWatch);
+var
+  SrcLocal: TIdeWatch;
+begin
+  SrcLocal := TIdeWatch(tvWatches.NodeItem[FSelectedForDrag[AnIndex]]);
+  AWatch.Assign(SrcLocal);
+  AWatch.DisplayName := '';
+end;
+
+procedure TWatchesDlg.DragWatchDone(ASender: TObject);
+begin
+  FSelectedForDrag := nil;
 end;
 
 function TWatchesDlg.GetWatches: TIdeWatches;
@@ -1613,6 +1732,32 @@ begin
   if AWatchAble = nil then exit(nil);
 
   Result := TIdeWatch(AWatchAble).Values[FWatchDlg.GetThreadId, FWatchDlg.GetStackframe];
+end;
+
+function TDbgTreeViewWatchValueMgr.GetTrackingIdFor(AWatchAble: TObject): string;
+begin
+  Result := TIdeWatch(AWatchAble).TrackingID;
+end;
+
+function TDbgTreeViewWatchValueMgr.HasWatchAbleForTrackingId(ATrackingId: string): boolean;
+var
+  i: Integer;
+  s: string;
+begin
+  Result := False;
+  if FWatchDlg.FWatchesInView = nil then
+    exit;
+  for i := 0 to FWatchDlg.FWatchesInView.Count - 1 do begin
+    s := FWatchDlg.FWatchesInView[i].TrackingID;
+    if s = '' then continue;
+    if ( (Length(s) = Length(ATrackingId)) or
+         ( (Length(s) < Length(ATrackingId)) and
+         (ATrackingId[Length(s)+1] = #1) )
+       ) and
+       (StrLComp(PChar(ATrackingId), PChar(s), Length(s)) = 0)
+    then
+      exit(True);
+  end;
 end;
 
 function TDbgTreeViewWatchValueMgr.GetFieldAsText(Nd: PVirtualNode;

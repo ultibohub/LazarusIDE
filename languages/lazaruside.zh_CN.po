@@ -4529,6 +4529,15 @@ msgstr "切换为调试桌面"
 msgid "Current Class/Proc Hint"
 msgstr "当前 Class/Proc 提示"
 
+#: lazarusidestrconsts.dlgtranslateusing
+#, object-pascal-format
+msgid "Translate using \"%s\""
+msgstr ""
+
+#: lazarusidestrconsts.dlgtranslatewithhint
+msgid "Translate (select messages file in Tools -> Options -> Environment -> Files)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgtrimspacetypecaption
 msgid "Trim spaces style"
 msgstr "缩减空格样式"
@@ -18521,10 +18530,6 @@ msgstr "顶部空间相等"
 #, object-pascal-format
 msgid "Total Pages: %s"
 msgstr "总页数:%s"
-
-#: lazarusidestrconsts.listranslatetheenglishmessages
-msgid "Translate the English Messages"
-msgstr "翻译英文信息"
 
 #: lazarusidestrconsts.listreeneedsrefresh
 msgid "Tree needs refresh"

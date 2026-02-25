@@ -13486,6 +13486,9 @@ function TFindDeclarationTool.IsBaseCompatible(const TargetType,
 // test if ExpressionType can be assigned to TargetType
 // both expression types must be base types
 var TargetNode, ExprNode: TCodeTreeNode;
+  ExprOfElement: TExpressionType;
+  ExprParams: TFindDeclarationParams;
+  s: string;
 begin
   {$IFDEF ShowExprEval}
   DebugLn('[TFindDeclarationTool.IsBaseCompatible] START ',
@@ -13508,6 +13511,7 @@ begin
       begin
         TargetNode:=TargetType.Context.Node;
         ExprNode:=ExpressionType.Context.Node;
+
         {$IFDEF ShowExprEval}
         DebugLn('[TFindDeclarationTool.IsBaseCompatible] C ',
         ' TargetContext="',copy(TargetType.Context.Tool.Src,TargetType.Context.Node.StartPos,20),'"',
@@ -13539,13 +13543,30 @@ begin
           end;
         end else begin
           // different context type
-          
+          if (TargetNode.Desc=ctnOpenArrayType) and (ExprNode.Desc<>ctnOpenArrayType) then begin
+          // switch TargetNode to node of declaration of an array element type
+            try
+              ExprParams:= TFindDeclarationParams.Create(Params);
+              ExprParams.SetIdentifier(Self,nil,nil);
+              ExprParams.ContextNode:= TargetNode;
+              ExprOfElement:=
+                FindExpressionTypeOfTerm(TargetNode.FirstChild.StartPos,-1,ExprParams,false);
+              if ExprOfElement.Desc=xtContext then
+                TargetNode:=ExprOfElement.Context.Node
+              else
+                exit;
+            finally
+              ExprParams.Free;
+            end;
+
+            if TargetNode = ExprNode then
+              Result:=tcExact;
+          end;
         end;
       end;
     else
       Result:=tcExact;
     end;
-    
   end else if ((TargetType.Desc=xtPointer)
       and (ExpressionType.Desc=xtContext)
       and (ExpressionType.Context.Node.Desc in AllClasses))
@@ -13578,16 +13599,54 @@ begin
         Result:=tcCompatible
       else if (TargetNode.Desc in [ctnOpenArrayType,ctnRangedArrayType])
         and (TargetNode.LastChild<>nil)
-        and (TargetNode.LastChild.Desc=ctnOfConstType)
+        and (TargetNode.LastChild.Desc in [ctnOfConstType, ctnIdentifier])
         and (ExpressionType.Desc=xtConstSet)
       then
-        Result:=tcCompatible;
-    end
-    else if (ExpressionType.Desc=xtContext) then begin
-      ExprNode:=ExpressionType.Context.Node;
-      if (TargetType.Desc=xtFile) and (ExprNode.Desc=ctnFileType)
-      then
         Result:=tcCompatible
+      else if (TargetNode.Desc=ctnProcedureType)
+        and (TargetNode.FirstChild.FirstChild<>nil)
+        and (TargetNode.FirstChild.FirstChild.Desc=ctnIdentifier) //simple type
+        and (ExpressionType.Desc = xtPointer)
+      then
+      begin
+        //if ExpressionType.Context.Node<>nil then
+        //  debugln(GetIdentifier(@ExpressionType.Context.Tool.src
+        //  [ExpressionType.Context.Node.StartPos]));
+
+        try
+          ExprParams:= TFindDeclarationParams.Create(Params);
+          ExprParams.SetIdentifier(Self, @ExpressionType.Context.Tool.src
+            [ExpressionType.Context.Node.StartPos],nil);
+          ExprParams.Flags:=fdfDefaultForExpressions;
+          ExprParams.ContextNode:=ExpressionType.Context.Node;
+
+          ExprOfElement:=CleanExpressionType;
+          FindDeclarationOfIdentAtParam(ExprParams,ExprOfElement);
+
+          if ExprOfElement.Desc=xtContext then
+            ExprNode:=ExprOfElement.Context.Node
+          else
+            exit;
+        finally
+          ExprParams.Free;
+        end;
+
+        ExprNode:= ExprOfElement.Context.Tool.GetProcResultNode(ExprNode);
+        if (ExprNode<>nil) then begin  // result type identifier found
+          s:= GetIdentifier(@ExprOfElement.Context.Tool.Src[ExprNode.StartPos]);
+          //debugln(['Type of function result = ',s]);
+
+          if CompareIdentifiers(
+            @TargetType.Context.Tool.Src[TargetNode.FirstChild.FirstChild.StartPos],
+            PChar(s))=0 then
+          Result:=tcCompatible;
+        end;
+      end else begin
+        ExprNode:=ExpressionType.Context.Node;
+        if (TargetType.Desc=xtFile) and (ExprNode.Desc=ctnFileType)
+        then
+          Result:=tcCompatible
+      end;
     end;
   end;
   {$IFDEF ShowExprEval}

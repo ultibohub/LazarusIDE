@@ -5,8 +5,12 @@ unit frmFileSearcher;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, ButtonPanel, ExtCtrls, StdCtrls, FileCtrl, Buttons, filebrowsertypes,
-  ctrlfilebrowser,Types, Masks;
+  Classes, SysUtils, Types,
+  Masks, LazUTF8, LazLoggerBase,
+  LCLType, Forms, Controls, Graphics, Dialogs, ButtonPanel, ExtCtrls, StdCtrls,
+  FileCtrl, Buttons,
+  LazIDEIntf, IDEWindowIntf,
+  FileBrowserTypes, CtrlFileBrowser;
 
 type
 
@@ -17,6 +21,7 @@ type
     cbFilter: TFilterComboBox;
     edtSearch: TEdit;
     Label1: TLabel;
+    lbStatus: TLabel;
     LBFiles: TListBox;
     SBConfigure: TSpeedButton;
     procedure cbFilterChange(Sender: TObject);
@@ -24,7 +29,9 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure LBFilesDblClick(Sender: TObject);
-    procedure LBFilesDrawItem(Control: TWinControl; Index: Integer; ARect: TRect; State: TOwnerDrawState);
+    procedure LBFilesDrawItem(Control: TWinControl; Index: Integer;
+      ARect: TRect; State: TOwnerDrawState);
+    procedure LBFilesSelectionChange(Sender: TObject; User: boolean);
     procedure SBConfigureClick(Sender: TObject);
   private
     FMask : TMaskList;
@@ -48,19 +55,9 @@ var
 
 implementation
 
-uses LazUTF8, LCLType, LazIDEIntf;
-
 {$R *.lfm}
 
-resourcestring
-  SWarnTermTooShort = 'Search term too short (min 2 characters)';
-  SWarnControllerNotAssigned = 'Controller not assigned';
-  SWarnBuildingIndex = 'Building file index, please wait';
-  SWarnNoMatch = 'No files match your search term';
-
-
 { TFileSearcherForm }
-
 
 procedure TFileSearcherForm.edtSearchChange(Sender: TObject);
 begin
@@ -68,7 +65,6 @@ begin
 end;
 
 procedure TFileSearcherForm.DisableListBox(const aMsg : String);
-
 begin
   FResults.Clear;
   LBFiles.Items.BeginUpdate;
@@ -83,27 +79,25 @@ begin
 end;
 
 function TFileSearcherForm.CheckLength: Boolean;
-
 begin
-  ShowMessage('"'+edtSearch.Text+'": '+IntToStr(Length(edtSearch.Text)));
-  Result:=(UTF8Length(edtSearch.Text)>=2);
+  //DebugLn(['"', edtSearch.Text, '": ', Length(edtSearch.Text)]);
+  Result:=UTF8Length(edtSearch.Text) >= FController.MinSearchLen;
   if not Result then
-    DisableListBox(SWarnTermTooShort);
+    DisableListBox(Format(SWarnTermTooShort, [FController.MinSearchLen]));
 end;
 
 procedure TFileSearcherForm.DoFilter;
-
 var
   lMatchOptions : TFilenameMatchOptions;
   Idx : Integer;
   lMatch : TFileSearchMatch;
-
 begin
   if Not Assigned(FController) then
     begin
     DisableListBox(SWarnControllerNotAssigned);
     exit;
     end;
+  //debugln(['TFileSearcherForm.DoFilter Calling CheckLength']);
   if not CheckLength then
     exit;
 
@@ -118,7 +112,7 @@ begin
   LBFiles.Items.BeginUpdate;
   try
     LBFiles.Items.Clear;
-    FController.FindFiles(edtSearch.Text,FResults,lMatchOptions,FMask);
+    FController.FindFiles(edtSearch.Text, FResults, lMatchOptions, FMask);
     for Idx:=0 to FResults.Count-1 do
       begin
       lMatch:=FResults[Idx];
@@ -127,6 +121,7 @@ begin
   finally
     LBFiles.Items.EndUpdate;
   end;
+  lbStatus.Caption:=Format('%d / %d matches', [FResults.Count, FController.FileCount]);;
   if LBFiles.Items.Count>0 then
     LBFiles.Enabled:=True
   else
@@ -136,14 +131,13 @@ end;
 procedure TFileSearcherForm.HandleIndexingDone(Sender: TObject);
 begin
   edtSearch.Enabled:=True;
+  //debugln(['TFileSearcherForm.HandleIndexingDone Calling CheckLength. edtSearch=', edtSearch.Text]);
   CheckLength;
 end;
 
 function TFileSearcherForm.GetSelectedItems: TFileEntryArray;
-
 var
   Idx,I: Integer;
-
 begin
   Result:=[];
   SetLength(Result,LBFiles.SelCount);
@@ -165,81 +159,96 @@ begin
 end;
 
 procedure TFileSearcherForm.FormCreate(Sender: TObject);
-
 begin
-  FController:=LazarusIDE.OwningComponent.FindComponent('IDEFileBrowserController') as TFileBrowserController;
+  IDEDialogLayoutList.ApplyLayout(Self,600,450);
   if cbFilter.Mask<>'' then
     FMask:=TMaskList.Create(cbFilter.Mask);
   FResults:=TFileSearchResults.Create;
+  FController:=LazarusIDE.OwningComponent.FindComponent('IDEFileBrowserController') as TFileBrowserController;
+  edtSearch.Hint:=Format('Search term, at least %d char', [FController.MinSearchLen]);
+  edtSearch.TextHint:=edtSearch.Hint;
+  bpFileSearch.OKButton.Enabled:=False;
   FController.AddOnIndexingFinishedEvent(@HandleIndexingDone);
   if FController.FillingTree then
-    begin
+  begin
     DisableListBox(SWarnBuildingIndex);
     edtSearch.Enabled:=False;
-    end
-  else
+  end
+  else begin
+    //debugln(['TFileSearcherForm.FormCreate Calling CheckLength']);
     CheckLength;
+  end;
  end;
 
 procedure TFileSearcherForm.FormDestroy(Sender: TObject);
 begin
   FController.RemoveOnIndexingFinishedEvent(@HandleIndexingDone);
-    FreeAndNil(FMask);
+  FreeAndNil(FMask);
   FreeAndNil(FResults);
+  IDEDialogLayoutList.SaveLayout(Self);
 end;
 
 procedure TFileSearcherForm.LBFilesDblClick(Sender: TObject);
 begin
-  Modalresult:=mrOK;
+  ModalResult:=mrOK;
 end;
 
-procedure TFileSearcherForm.LBFilesDrawItem(Control: TWinControl; Index: Integer; ARect: TRect; State: TOwnerDrawState);
+procedure TFileSearcherForm.LBFilesSelectionChange(Sender: TObject; User: boolean);
+begin
+  bpFileSearch.OKButton.Enabled:=(Sender as TListBox).ItemIndex>=0;
+end;
 
+procedure TFileSearcherForm.LBFilesDrawItem(Control: TWinControl; Index: Integer;
+  ARect: TRect; State: TOwnerDrawState);
 Var
-  W,L : Integer;
+  TernW, StartW : Integer;
+  FN, Term, Start : String;
   lRect : TRect;
   C : TColor;
-  S,Term : String;
   lCanvas : TCanvas;
   lMatch : TFileSearchMatch;
   lPositions : TMatchPositionArray;
   lPos : TMatchPosition;
-
 begin
   lCanvas:=LBFiles.Canvas;
   if Index>=FResults.Count then
     begin
     lPositions:=[];
     if Index<LBFiles.Items.Count then
-      S:=LBFiles.Items[index]
+      FN:=LBFiles.Items[index]
     else
-      S:='';
+      FN:='';
     end
   else
     begin
     lMatch:=fResults[Index];
-    S:=lMatch.FileName;
+    FN:=lMatch.FileName;
     lPositions:=lMatch.MatchPositions;
     end;
   lRect:=aRect;
-  if not (odSelected in State) then
-    begin
+  if odSelected in State then begin
+    lCanvas.Brush.Color:=clHighlight;
+    lCanvas.FillRect(ARect);
+    lCanvas.Brush.Color:=clBackground;
+  end
+  else begin
     c:=lCanvas.Brush.Color;
     lCanvas.Brush.Color:=clHighlight;
     for lPos in lPositions do
       begin
-      Term:=Copy(S,lPos.Pos,lPos.Len);
-      W:=lCanvas.TextWidth(Term);
-      L:=lCanvas.TextWidth(Copy(S,1,lPos.Pos-1));
-      lRect.Left:=aRect.Left+L;
-      lRect.Right:=aRect.Left+L+W;
+      Start:=Copy(FN, 1, lPos.Pos-1);
+      Term:=Copy(FN, lPos.Pos, lPos.Len);
+      StartW:=lCanvas.TextWidth(Start);
+      TernW:=lCanvas.TextWidth(Term);
+      lRect.Left:=aRect.Left+StartW;
+      lRect.Right:=aRect.Left+StartW+TernW;
       if lrect.Right>aRect.Right then
         lrect.Right:=aRect.Right;
       lCanvas.FillRect(lRect);
       end;
     lCanvas.Brush.Color:=C;
-    end;
-  lCanvas.TextRect(aRect,aRect.Left,aRect.Top,S);
+  end;
+  lCanvas.TextRect(aRect, aRect.Left, aRect.Top, FN);
 end;
 
 procedure TFileSearcherForm.SBConfigureClick(Sender: TObject);

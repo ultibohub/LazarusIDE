@@ -147,12 +147,14 @@ end;
 
 class function TGtk3WSWinControl.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): TLCLHandle;
+var
+  Gtk3WinControlPanel: TGtk3WinControlPanel;
 begin
-  // For now default to the old creation routines
   {$IFDEF GTK3DEBUGCORE}
-  DebugLn('TGtk3WSWinControl.CreateHandle');
+  DebugLn('TGtk3WSWinControl.CreateHandle for ', DbgsName(AWinControl));
   {$ENDIF}
-  Result := 0;
+  Gtk3WinControlPanel := TGtk3WinControlPanel.Create(AWinControl, AParams);
+  Result := TLCLHandle(Gtk3WinControlPanel);
 end;
 
 class procedure TGtk3WSWinControl.DestroyHandle(const AWinControl: TWinControl);
@@ -524,7 +526,8 @@ begin
     // and everything just on time.
     if not (wtScrollingWin in wgt.WidgetType) then
     begin
-      wgt.GetContainerWidget^.realize;
+      if Gtk3IsGtkWindow(wgt.GetContainerWidget^.get_toplevel) then
+        wgt.GetContainerWidget^.realize;
     end;
   end;
   wgt.EndUpdate;

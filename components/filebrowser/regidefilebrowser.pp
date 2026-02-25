@@ -7,16 +7,14 @@ interface
 uses
   Classes, SysUtils,
   LazLoggerBase,
-  Controls, Forms,
-  LazIDEIntf, MenuIntf, IDECommands, IDEWindowIntf, BaseIDEIntf,
+  LCLType, Controls, Forms,
+  LazIDEIntf, MenuIntf, IDECommands, IDEWindowIntf,
   IDEOptionsIntf, IDEOptEditorIntf,
-  frmFileBrowser, ctrlfilebrowser, frmconfigfilebrowser;
+  frmFileBrowser, CtrlFileBrowser, frmConfigFileBrowser, frmFileSearcher, FileBrowserTypes;
 
 procedure Register;
 
 implementation
-
-uses lcltype,frmfilesearcher,filebrowsertypes;
 
 var
   FileBrowserOptionsFrameID: integer = 2000;
@@ -28,13 +26,9 @@ begin
 end;
 
 procedure ShowFileSearcher(Sender: TObject);
-
 var
   Entries : TFileEntryArray;
-
-var
   C: TFileBrowserController;
-
 begin
   Entries:=[];
   With TFileSearcherForm.Create(Application) do
@@ -54,10 +48,8 @@ end;
 
 
 procedure CreateFileBrowser(Sender: TObject; aFormName: string; var AForm: TCustomForm; DoDisableAutoSizing: boolean);
-
 var
   C: TFileBrowserController;
-
 begin
   // sanity check to avoid clashing with another package that has registered a window with the same name
   if CompareText(aFormName,'FileBrowser')<>0 then begin
@@ -68,32 +60,29 @@ begin
   IDEWindowCreators.CreateForm(AForm,TFileBrowserForm,true,C);
   AForm.Name:=aFormName;
   FileBrowserForm:=AForm as TFileBrowserForm;
-  C.ConfigWindow(FileBrowserForm);
-  FileBrowserForm.ShowFiles;
+  // OnIdle handler calls ConfigBrowser if the windows existed then.
+  if C.IdleHandlerWasCalled then  // Apparently it didn't.
+    C.ConfigBrowser;
   if not DoDisableAutoSizing then
     AForm.EnableAutoSizing;
 end;
 
 
 procedure CreateController;
-
 var
   C: TFileBrowserController;
-
 begin
   C := LazarusIDE.OwningComponent.FindComponent('IDEFileBrowserController') as TFileBrowserController;
   if (C = nil) then
     begin
     C := TFileBrowserController.Create(LazarusIDE.OwningComponent);
     C.Name:='IDEFileBrowserController';
-    if C.GetResolvedRootDir<>'' then
-      C.IndexRootDir;
+    C.Init;  // This enables an OnIdle handler which then reads data.
     end;
   C.ConfigFrame:=TFileBrowserOptionsFrame;
 end;
 
 procedure Register;
-
 var
   CmdCatViewMenu: TIDECommandCategory;
   ViewFileBrowserCommand: TIDECommand;
@@ -128,7 +117,6 @@ begin
   // add IDE options frame
   FileBrowserOptionsFrameID:=RegisterIDEOptionsEditor(GroupEnvironment,TFileBrowserOptionsFrame,
                                               FileBrowserOptionsFrameID)^.Index;
-
 end;
 
 end.

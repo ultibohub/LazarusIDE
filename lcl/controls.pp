@@ -3355,16 +3355,18 @@ end;
 function FindLCLControl(const ScreenPos: TPoint): TControl;
 var
   AWinControl: TWinControl;
-  ClientPos: TPoint;
+  clientPos: TPoint;
+  flags: TControlAtPosFlags;
 begin
   Result := nil;
   // find wincontrol at mouse cursor
   AWinControl := FindLCLWindow(ScreenPos);
   if AWinControl = nil then Exit;
   // find control at mouse cursor
-  ClientPos := AWinControl.ScreenToClient(ScreenPos);
-  Result := AWinControl.ControlAtPos(ClientPos,
-                        [capfAllowDisabled, capfAllowWinControls, capfRecursive]);
+  clientPos := AWinControl.ScreenToClient(ScreenPos);
+  clientPos.Offset(AWinControl.GetClientScrollOffset());
+  flags := [capfAllowDisabled, capfAllowWinControls, capfRecursive, capfHasScrollOffset];
+  Result := AWinControl.ControlAtPos(clientPos, flags);
   if Result = nil then
     Result := AWinControl;
 end;
@@ -3429,18 +3431,21 @@ const
 var
   WinControl: TWinControl;
   Control: TControl;
+  clientPos: TPoint;
+  flags: TControlAtPosFlags;
 begin
   Result := nil;
   WinControl := FindLCLWindow(Position, AllowDisabled);
-  if Assigned(WinControl) then
-  begin
-    Result := WinControl;
-    Control := WinControl.ControlAtPos(WinControl.ScreenToClient(Position),
-                        [capfAllowWinControls, capfRecursive] + DisabledFlag[AllowDisabled]);
-    //debugln(['FindControlAtPosition ',dbgs(Position),' ',DbgSName(WinControl),' ',dbgs(WinControl.ScreenToClient(Position)),' ',DbgSName(Control)]);
-    if Assigned(Control) then
-      Result := Control;
-  end;
+  if WinControl = nil then Exit;
+  Result := WinControl;
+  clientPos := WinControl.ScreenToClient(Position);
+  clientPos.Offset(WinControl.GetClientScrollOffset());
+  flags := [capfAllowWinControls, capfRecursive, capfHasScrollOffset]
+          + DisabledFlag[AllowDisabled];
+  Control := WinControl.ControlAtPos(clientPos, flags);
+  //debugln(['FindControlAtPosition ',dbgs(Position),' ',DbgSName(WinControl),' ',dbgs(WinControl.ScreenToClient(Position)),' ',DbgSName(Control)]);
+  if Assigned(Control) then
+    Result := Control;
 end;
 
 {------------------------------------------------------------------------------

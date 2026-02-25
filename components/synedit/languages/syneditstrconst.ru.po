@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2025-12-21 22:24+0300\n"
+"PO-Revision-Date: 2026-02-10 23:07+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -94,6 +94,10 @@ msgstr "Число исходных строк последовательнос�
 #: syneditstrconst.syns_attrclass
 msgid "Class"
 msgstr "Класс"
+
+#: syneditstrconst.syns_attrclientkeyword
+msgid "Keyword (Client)"
+msgstr "Ключевое слово (клиента)"
 
 #: syneditstrconst.syns_attrcollation
 msgid "Collation"

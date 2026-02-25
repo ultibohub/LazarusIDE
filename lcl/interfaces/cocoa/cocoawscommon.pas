@@ -334,8 +334,6 @@ var
   lView: NSView;
   pt: NSPoint;
   cr: TRect;
-  es: NSScrollView;
-  r: NSRect;
 begin
   if Owner.isKindOfClass(NSWindow) then
   begin
@@ -364,14 +362,8 @@ begin
     PtForChildCtrls.x := PtForChildCtrls.x + cr.Left;
     PtForChildCtrls.y := PtForChildCtrls.y + cr.Top;
 
-    es := NSView(Owner).enclosingScrollView;
-    if Assigned(es) and (es.documentView = NSView(Owner)) then begin
-      r := es.documentVisibleRect;
-      if NSView(Owner).isFlipped then
-        r.origin.y := (es.documentView.frame.size.height - r.size.height - r.origin.y);
-      inc(PtForChildCtrls.y, Round(r.origin.y));
-      inc(PtForChildCtrls.x, Round(r.origin.x));
-    end;
+    if Target is TScrollingWinControl then
+      lclOffsetWithEnclosingScrollView(NSView(Owner), PtForChildCtrls.x, PtForChildCtrls.y);
 
   end else
   begin
@@ -916,6 +908,23 @@ var
                                // srchPt - is the one to use for each chidlren (clPt<>srchPt for TScrollBox)
   menuHandled : Boolean;
   mc: Integer; // modal counter
+
+  function shouldBypassCocoa: Boolean;
+  var
+    ret: id;
+  begin
+    Result:= False;
+    if NOT Assigned(Target) then
+      Exit;
+    if NOT (csDesigning in Target.ComponentState) then
+      Exit;
+    Result:= True;
+    if NOT Owner.respondsToSelector( ObjcSelector('lclBypassCocoa:') ) then
+      Exit;
+    ret:= Owner.performSelector_withObject( ObjcSelector('lclBypassCocoa:'), Event );
+    Result:= NSNumber(ret).boolValue;
+  end;
+
 begin
   if Assigned(Owner) and not NSObjectIsLCLEnabled(Owner) then
   begin
@@ -926,7 +935,7 @@ begin
   // If LCL control is provided and it's in designing state.
   // The default resolution: Notify LCL about event, but don't let Cocoa
   // do anything with it. (Result=true)
-  Result := Assigned(Target) and (csDesigning in Target.ComponentState);
+  Result := shouldBypassCocoa();
 
   lCaptureControlCallback := GetCaptureControlCallback();
   //Str := (Format('MouseUpDownEvent Target=%s Self=%x CaptureControlCallback=%x', [Target.name, PtrUInt(Self), PtrUInt(lCaptureControlCallback)]));

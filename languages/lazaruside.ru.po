@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-02-03 16:23+0300\n"
+"PO-Revision-Date: 2026-02-09 22:43+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -4515,6 +4515,15 @@ msgstr "Переключить режим отладочного рабочег�
 #: lazarusidestrconsts.dlgtopinfohint
 msgid "Current Class/Proc Hint"
 msgstr "Подсказка о текущих классе/процедуре"
+
+#: lazarusidestrconsts.dlgtranslateusing
+#, object-pascal-format
+msgid "Translate using \"%s\""
+msgstr "Переводить с использованием \"%s\""
+
+#: lazarusidestrconsts.dlgtranslatewithhint
+msgid "Translate (select messages file in Tools -> Options -> Environment -> Files)"
+msgstr "Переводить (выберите языковой файл компилятора в диалоге Сервис -> Параметры -> Окружение -> Файлы)"
 
 #: lazarusidestrconsts.dlgtrimspacetypecaption
 msgid "Trim spaces style"
@@ -18484,10 +18493,6 @@ msgstr "Равномерно по верхним краям"
 #, object-pascal-format
 msgid "Total Pages: %s"
 msgstr "Всего вкладок: %s"
-
-#: lazarusidestrconsts.listranslatetheenglishmessages
-msgid "Translate the English Messages"
-msgstr "Переводить сообщения с английского"
 
 #: lazarusidestrconsts.listreeneedsrefresh
 msgid "Tree needs refresh"

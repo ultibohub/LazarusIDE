@@ -4572,6 +4572,15 @@ msgstr "Alternar como área de trabalho de depuração"
 msgid "Current Class/Proc Hint"
 msgstr "Dica Classe/Proc atual"
 
+#: lazarusidestrconsts.dlgtranslateusing
+#, object-pascal-format
+msgid "Translate using \"%s\""
+msgstr ""
+
+#: lazarusidestrconsts.dlgtranslatewithhint
+msgid "Translate (select messages file in Tools -> Options -> Environment -> Files)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgtrimspacetypecaption
 msgid "Trim spaces style"
 msgstr "Estilo de remoção de espaços"
@@ -18729,10 +18738,6 @@ msgstr "Justificar acima"
 #, object-pascal-format
 msgid "Total Pages: %s"
 msgstr "Páginas totais: %s"
-
-#: lazarusidestrconsts.listranslatetheenglishmessages
-msgid "Translate the English Messages"
-msgstr "Traduzir as mensagens em inglês"
 
 #: lazarusidestrconsts.listreeneedsrefresh
 msgid "Tree needs refresh"

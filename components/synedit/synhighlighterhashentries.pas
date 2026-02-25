@@ -56,24 +56,25 @@ type
     keywords that have the same hashvalue are stored in a single-linked list,
     with the Next property pointing to the next entry. The entries are ordered
     over the keyword length. }
-  TSynHashEntry = class(TObject)
+
+  { TSynHashEntryBase }
+
+  TSynHashEntryBase = class(TObject)
   protected
     { Points to the next keyword entry with the same hashvalue. }
-    fNext: TSynHashEntry;
+    fNext: TSynHashEntryBase;
     { Length of the keyword. }
     fKeyLen: integer;
     { The keyword itself. }
     fKeyword: string;
-    { Keyword token kind, has to be typecasted to the real token kind type. }
-    fKind: integer;
   public
     { Adds a keyword entry with the same hashvalue. Depending on the length of
       the two keywords it might return Self and store NewEntry in the Next
       pointer, or return NewEntry and make the Next property of NewEntry point
       to Self. This way the order of keyword length is preserved. }
-    function AddEntry(NewEntry: TSynHashEntry): TSynHashEntry; virtual;
+    function AddEntry(var NewEntry: TSynHashEntryBase; NoException: boolean = False): TSynHashEntryBase; virtual;
     { Creates a keyword entry for the given keyword and token kind. }
-    constructor Create(const AKey: string; AKind: integer);
+    constructor Create(const AKey: string);
     { Destroys the keyword entry and all other keyword entries Next points to. }
     destructor Destroy; override;
   public
@@ -81,31 +82,58 @@ type
     property Keyword: string read fKeyword;
     { Length of the keyword. }
     property KeywordLen: integer read fKeyLen;
+    { Points to the next keyword entry with the same hashvalue. }
+    property Next: TSynHashEntryBase read fNext;
+  end;
+
+  { TGenSynHashEntryBase }
+
+  generic TGenSynHashEntryBase<T> = class(TSynHashEntryBase)
+  private
+    function GetNext: T; inline;
+  public
+    property Next: T read GetNext;
+  end;
+
+
+  generic TGenSynHashEntry<T> = class(specialize TGenSynHashEntryBase<T>)
+  protected
+    { Keyword token kind, has to be typecasted to the real token kind type. }
+    fKind: integer;
+  public
+    constructor Create(const AKey: string; AKind: integer);
     { Keyword token kind, has to be typecasted to the real token kind type. }
     property Kind: integer read fKind;
-    { Points to the next keyword entry with the same hashvalue. }
-    property Next: TSynHashEntry read fNext;
   end;
+
+  TSynHashEntry = class;
+  TSynHashEntry = class(specialize TGenSynHashEntry<TSynHashEntry>);
 
   { A list of keyword entries, stored as single-linked lists under the hashvalue
     of the keyword. }
-  TSynHashEntryList = class(TList)
+
+  { TGenSynHashEntryList }
+
+  generic TGenSynHashEntryList<HE: TSynHashEntryBase> = class(TList)
   protected
     { Returns the first keyword entry for a given hashcalue, or nil. }
-    function Get(HashKey: Integer): TSynHashEntry;
+    function Get(HashKey: Integer): HE;
     { Adds a keyword entry under its hashvalue. Will grow the list count when
       necessary, so the maximum hashvalue should be limited outside. The correct
       order of keyword entries is maintained. }
-    procedure Put(HashKey: Integer; Entry: TSynHashEntry);
+    procedure Put(HashKey: Integer; Entry: HE);
   public
     { Clears the list and frees all contained keyword entries. }
     procedure Clear; override;
   public
+    function FindOnAdd(HashKey: Integer; Entry: HE): HE;
     { Type-safe access to the first keyword entry for a hashvalue. }
-    property Items[Index: integer]: TSynHashEntry read Get write Put; default;
+    property Items[Index: integer]: HE read Get write Put; default;
   end;
 
-  { Procedural type for adding keyword entries to a TSynHashEntryList when
+  TSynHashEntryList = specialize TGenSynHashEntryList<TSynHashEntry>;
+
+  { Procedural type for adding keyword entries to a TGenSynHashEntryList when
     iterating over all the keywords contained in a string. }
   TEnumerateKeywordEvent = procedure(AKeyword: string; AKind: integer)
     of object;
@@ -159,69 +187,103 @@ begin
   end;
 end;
 
-{ TSynHashEntry }
+{ TSynHashEntryBase }
 
-constructor TSynHashEntry.Create(const AKey: string; AKind: integer);
+constructor TSynHashEntryBase.Create(const AKey: string);
 begin
   inherited Create;
   fKeyLen := Length(AKey);
   fKeyword := AKey;
-  fKind := AKind;
 end;
 
-destructor TSynHashEntry.Destroy;
+destructor TSynHashEntryBase.Destroy;
 begin
   fNext.Free;
   inherited Destroy;
 end;
 
-function TSynHashEntry.AddEntry(NewEntry: TSynHashEntry): TSynHashEntry;
+function TSynHashEntryBase.AddEntry(var NewEntry: TSynHashEntryBase; NoException: boolean
+  ): TSynHashEntryBase;
 begin
   Result := Self;
   if Assigned(NewEntry) then begin
-    if CompareText(NewEntry.Keyword, fKeyword) = 0 then
-      raise Exception.CreateFmt('Keyword "%s" already in list', [fKeyword]);
+    if CompareText(NewEntry.Keyword, fKeyword) = 0 then begin
+      if not NoException then
+        raise Exception.CreateFmt('Keyword "%s" already in list', [fKeyword]);
+      NewEntry := Self;
+      exit;
+    end;
     if NewEntry.fKeyLen < fKeyLen then begin
       NewEntry.fNext := Self;
       Result := NewEntry;
     end else if Assigned(fNext) then
-      fNext := fNext.AddEntry(NewEntry)
+      fNext := fNext.AddEntry(NewEntry, NoException)
     else
       fNext := NewEntry;
   end;
 end;
 
-{ TSynHashEntryList }
+{ TGenSynHashEntryBase }
 
-procedure TSynHashEntryList.Clear;
+function TGenSynHashEntryBase.GetNext: T;
+begin
+  Result := T(fNext);
+end;
+
+{ TGenSynHashEntry }
+
+constructor TGenSynHashEntry.Create(const AKey: string; AKind: integer);
+begin
+  inherited Create(AKey);
+  fKind := AKind;
+end;
+
+{ TGenSynHashEntryList }
+
+procedure TGenSynHashEntryList.Clear;
 var
   i: integer;
 begin
   for i := 0 to Count - 1 do
-    TSynHashEntry(Items[i]).Free;
+    HE(Items[i]).Free;
   inherited Clear;
 end;
 
-function TSynHashEntryList.Get(HashKey: Integer): TSynHashEntry;
-begin
-  if (HashKey >= 0) and (HashKey < Count) then
-    Result := TSynHashEntry(inherited Items[HashKey])
-  else
-    Result := nil;
-end;
-
-procedure TSynHashEntryList.Put(HashKey: Integer; Entry: TSynHashEntry);
+function TGenSynHashEntryList.FindOnAdd(HashKey: Integer; Entry: HE): HE;
 var
-  ListEntry: TSynHashEntry;
+  ListEntry: TSynHashEntryBase;
 begin
+  Result := Entry;
   if HashKey >= Count then
     Count := HashKey + 1;
-  ListEntry := TSynHashEntry(inherited Items[HashKey]);
+  ListEntry := TSynHashEntryBase(inherited Items[HashKey]);
   // if there is already a hashentry for this hashvalue let it decide
   // where to put the new entry in its single linked list
   if Assigned(ListEntry) then
-    Entry := ListEntry.AddEntry(Entry);
-  inherited Items[HashKey] := Entry;
+    Entry := HE(ListEntry.AddEntry(TSynHashEntryBase(Result), True));
+  inherited Items[HashKey] := Pointer(Entry);
+end;
+
+function TGenSynHashEntryList.Get(HashKey: Integer): HE;
+begin
+  if (HashKey >= 0) and (HashKey < Count) then
+    Result := HE(inherited Items[HashKey])
+  else
+    Result := HE(nil);
+end;
+
+procedure TGenSynHashEntryList.Put(HashKey: Integer; Entry: HE);
+var
+  ListEntry: TSynHashEntryBase;
+begin
+  if HashKey >= Count then
+    Count := HashKey + 1;
+  ListEntry := TSynHashEntryBase(inherited Items[HashKey]);
+  // if there is already a hashentry for this hashvalue let it decide
+  // where to put the new entry in its single linked list
+  if Assigned(ListEntry) then
+    Entry := HE(ListEntry.AddEntry(TSynHashEntryBase(Entry)));
+  inherited Items[HashKey] := Pointer(Entry);
 end;
 
 end.

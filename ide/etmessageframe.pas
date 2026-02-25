@@ -44,10 +44,8 @@ uses
   ProjectIntf, PackageIntf, CompOptsIntf, IDEExternToolIntf,
   // IDEIntf
   IDEImagesIntf, MenuIntf, IDECommands, IDEDialogs, LazIDEIntf, IdeIntfStrConsts,
-  // IdeUtils
-  IdeUtilsPkgStrConsts,
   // IdeConfig
-  EnvironmentOpts, IDEOptionDefs, CompilerOptions,
+  EnvironmentOpts, IDEOptionDefs, CompilerOptions, IdeConfStrConsts,
   // IDE
   LazarusIDEStrConsts, HelpFPCMessages, etSrcEditMarks,
   MsgWnd_Options, etQuickFixes, ExtTools, EnvGuiOptions;
@@ -549,7 +547,8 @@ begin
       MsgFileStyleRelativeMenuItem:=RegisterIDEMenuCommand(Parent,'Relative',lisRelative);
       MsgFileStyleFullMenuItem:=RegisterIDEMenuCommand(Parent,'Full',lisFull);
     Parent:=MsgFpcOptionsMenuSection;
-    MsgTranslateMenuItem:=RegisterIDEMenuCommand(Parent,'Translate',lisTranslateTheEnglishMessages);
+    // Translate Caption will be updated later.
+    MsgTranslateMenuItem:=RegisterIDEMenuCommand(Parent,'Translate','Translate');
     MsgShowIDMenuItem:=RegisterIDEMenuCommand(Parent,'ShowID',lisShowMessageTypeID);
   // FPC message filters etc., will be hidden for non-FPC messages.
   MsgQuickFixMenuSection:=RegisterIDEMenuSection(Root,'Quick Fix');
@@ -3445,7 +3444,7 @@ begin
   HasFilename:=false;
   MsgType:='';
   CanFilterMsgType:=false;
-  FpcMsg:=False;
+  FpcMsg:=false;
   Line:=nil;
   HasContent:=FMessagesCtrl.ViewsHaveContent;
   Running:=FMessagesCtrl.ViewsAreRunning;
@@ -3509,10 +3508,19 @@ begin
   MsgFileStyleShortMenuItem   .OnClick := @FileStyleMenuItemClick;
   MsgFileStyleRelativeMenuItem.OnClick := @FileStyleMenuItemClick;
   MsgFileStyleFullMenuItem    .OnClick := @FileStyleMenuItemClick;
+  MsgShowIDMenuItem.Checked := mcoShowMessageID  in FMessagesCtrl.Options;
+  MsgShowIDMenuItem.OnClick := @ShowIDMenuItemClick;
   MsgTranslateMenuItem.Checked := mcoShowTranslated in FMessagesCtrl.Options;
-  MsgShowIDMenuItem   .Checked := mcoShowMessageID  in FMessagesCtrl.Options;
+  // Update Translation Caption based on the selected messages file.
+  ToolCaption := EnvironmentOptions.CompilerMessagesFilename;
+  if ToolCaption <> '' then
+    MsgTranslateMenuItem.Caption := Format(dlgTranslateUsing,[ExtractFileName(ToolCaption)])
+  else begin
+    MsgTranslateMenuItem.Checked := false;
+    MsgTranslateMenuItem.Enabled := false;
+    MsgTranslateMenuItem.Caption := dlgTranslateWithHint;
+  end;
   MsgTranslateMenuItem.OnClick := @TranslateMenuItemClick;
-  MsgShowIDMenuItem   .OnClick := @ShowIDMenuItemClick;
 
   // FPC specific menu items.
   ShowHideFpcMenuItems(FpcMsg);

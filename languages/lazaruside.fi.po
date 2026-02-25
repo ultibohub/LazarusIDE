@@ -4565,6 +4565,15 @@ msgstr "Vaihda debug-työpöydäksi"
 msgid "Current Class/Proc Hint"
 msgstr "Nykyisen luokan/metodin vihje"
 
+#: lazarusidestrconsts.dlgtranslateusing
+#, object-pascal-format
+msgid "Translate using \"%s\""
+msgstr ""
+
+#: lazarusidestrconsts.dlgtranslatewithhint
+msgid "Translate (select messages file in Tools -> Options -> Environment -> Files)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgtrimspacetypecaption
 msgid "Trim spaces style"
 msgstr "Välilyöntien siistimistyyli"
@@ -18582,10 +18591,6 @@ msgstr "Tasaa välit ylhäällä"
 #, object-pascal-format
 msgid "Total Pages: %s"
 msgstr "Sivuja yhteensä: %s"
-
-#: lazarusidestrconsts.listranslatetheenglishmessages
-msgid "Translate the English Messages"
-msgstr "Käännä englanninkieliset viestit"
 
 #: lazarusidestrconsts.listreeneedsrefresh
 msgid "Tree needs refresh"

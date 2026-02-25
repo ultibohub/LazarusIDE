@@ -73,6 +73,7 @@ type
     class function MoveTabFocus(aWidget: PGtkWidget;
       aDirection: TGtkDirectionType; aData: gPointer): gBoolean; cdecl; static;
     class function WidgetEvent(widget: PGtkWidget; event: PGdkEvent; data: GPointer): gboolean; cdecl; static; {main event filter of widget}
+    class function WidgetFocusIn(AWidget: PGtkWidget; Event: PGdkEventFocus; AData: gpointer): gboolean; cdecl; static;
   strict private
     FCentralWidgetRGBA: array [0{GTK_STATE_NORMAL}..4{GTK_STATE_INSENSITIVE}] of TDefaultRGBA;
     FEnterLeaveTime: Cardinal;
@@ -440,6 +441,7 @@ type
     function getClientOffset:TPoint; override;
     function getClientRect: TRect; override;
     procedure setTabImage(aBitmap: TBitmap);
+    procedure SetLabelAngle(const ATabPosition: TTabPosition);
     property CloseButtonVisible: boolean read GetCloseButtonVisible write SetCloseButtonVisible;
   end;
 
@@ -794,6 +796,18 @@ type
     property BorderStyle: TBorderStyle read FBorderStyle write SetBorderStyle;
   end;
 
+  { TGtk3WinControlPanel }
+  // A lightweight GtkLayout-based container for pure TWinControl subclasses
+  // that act as transparent structural containers without custom painting.
+  // Unlike TGtk3CustomControl, this has no GtkScrolledWindow overhead,
+  // no wtScrollingWin flag (so ShowHide immediately realizes the GtkLayout),
+  // and uses TGtk3Widget.getClientRect (get_allocation based) for reliable
+  // client-rect queries at any point after SetBounds.
+  TGtk3WinControlPanel = class(TGtk3Panel)
+  protected
+    function CreateWidget(const {%H-}Params: TCreateParams): PGtkWidget; override;
+  end;
+
   { TGtk3GroupBox }
 
   TGtk3GroupBox = class(TGtk3Bin)
@@ -828,6 +842,8 @@ type
   strict private
     class procedure ComboSizeAllocate(AWidget: PGtkWidget; AGdkRect: PGdkRectangle; Data: gpointer); cdecl; static;
     class procedure ComboBoxChanged({%H-}ACombo: PGtkComboBox; AData: gpointer); cdecl; static;
+    class procedure EntryChanged({%H-}AEntry: PGtkEntry; AData: gpointer); cdecl; static;
+    class function EntryFocusIn(AEntry: PGtkWidget; Event: PGdkEventFocus; AData: gpointer): gboolean; cdecl; static;
     class procedure NotifySignal(AObject: PGObject; pspec: PGParamSpec; AData: GPointer); cdecl; static;
   protected
     procedure ConnectSizeAllocateSignal(ToWidget:PGtkWidget);override;
@@ -978,6 +994,8 @@ type
     procedure SetIcon(AValue: PGdkPixBuf);
     procedure SetSkipTaskBarHint(AValue: Boolean);
     procedure SetTitle(const AValue: String);
+    class procedure TrackWindowActivate(AObject: PGObject; APSpec: PGParamSpec;
+      Data: gpointer); cdecl; static;
   strict private
     class function WindowMapEvent(awidget:PGtkWindow;AEvent: PGdkEventAny; adata: gpointer): gboolean; cdecl; static; //uses lcl-window-first-map data.
     class function WindowMoveEvent(awidget: PGtkWindow; AEvent: PGdkEventConfigure; adata: gpointer): gboolean; cdecl; static;
@@ -1008,7 +1026,6 @@ type
     procedure SetBounds(ALeft,ATop,AWidth,AHeight:integer); override;
     destructor Destroy; override;
     procedure Activate; override;
-    procedure ActivateWindow(AEvent: PGdkEvent);
     function CloseQuery: Boolean;
     function GetWindow: PGdkWindow; override;
     function GetMenuBar: PGtkMenuBar;
@@ -1414,11 +1431,6 @@ begin
     end;
   GDK_VISIBILITY_NOTIFY:
     begin
-      // ONLY HERE WE CAN CATCH Activate/Deactivate but problem is that
-      // PGtkWindow does not update active property properly
-      // so PGtkWindow(Widget)^.is_active returns TRUE even if window isn't active anymore
-      if wtWindow in TGtk3Widget(Data).WidgetType then
-        TGtk3Window(Data).ActivateWindow(Event);
       // Result := TGtk3Widget(Data).GtkEventShowHide(Widget, Event);
       // DebugLn('****** GDK_VISIBILITY_NOTIFY FOR ' + dbgsName(TGtk3Widget(Data).LCLObject));
     end;
@@ -1662,10 +1674,16 @@ begin
   begin
     Msg.Width := Word(NewSize.cx);
     Msg.Height := Word(NewSize.cy);
+
+    {Guard against layout loops.}
+    if (ACtl.WidgetType * [wtWindow, wtDialog] = []) and
+       (Msg.Width = Word(ACtl.LCLObject.Width)) and
+       (Msg.Height = Word(ACtl.LCLObject.Height)) then
+      exit;
   end else
   begin
-    Msg.Width := ACtl.LCLObject.Width;//Word(NewSize.cx);
-    Msg.Height := ACtl.LCLObject.Height;//Word(NewSize.cy);
+    Msg.Width := ACtl.LCLObject.Width;
+    Msg.Height := ACtl.LCLObject.Height;
   end;
 
   ACtl.DeliverMessage(Msg);
@@ -1713,6 +1731,7 @@ end;
 function TGtk3SplitterSide.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   Result:=TGtkScrolledWindow.new(nil, nil);
+  PGtkScrolledWindow(Result)^.set_policy(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
 end;
 
 { TGtk3Paned }
@@ -1924,6 +1943,16 @@ begin
   end;
 
   DeliverMessage(Msg);
+end;
+
+
+class function TGtk3Widget.WidgetFocusIn(AWidget: PGtkWidget;
+  Event: PGdkEventFocus; AData: gpointer): gboolean; cdecl;
+begin
+  Result := False;
+  if AData = nil then
+    Exit;
+  TGtk3Widget(AData).GtkEventFocus(AWidget, PGdkEvent(Event));
 end;
 
 procedure TGtk3Widget.GtkEventDestroy; cdecl;
@@ -2173,7 +2202,8 @@ begin
       exit;
   end;
 
-  if AKeyPress and (length(AEventString) > 0) then
+  if AKeyPress and (length(AEventString) > 0) and
+    not (Sender^.is_toplevel and (PGtkWindow(Sender)^.get_focus <> nil)) then
   begin
     UTF8Char := AEventString;
     // TODO: If not IsControlKey
@@ -2802,8 +2832,40 @@ class function TGtk3Widget.MoveTabFocus(aWidget: PGtkWidget;
   aDirection: TGtkDirectionType; aData: gPointer): gBoolean; cdecl;
 var
   aForm: TCustomForm;
+  AParent: PGtkWidget;
+  AToplevel: PGtkWidget;
 begin
   Result := gtk_true;  // we are usually toplevel here
+
+  {If the window does not yet have GTK focus, this 'focus' signal is fired
+  by gtk_window_show -> gtk_window_move_focus during window map, not by a
+  real Tab keypress.
+  Returning gtk_true here would block GTK's class handler
+  and leave priv->focus_widget = nil, AND calling PerformTab would silently
+  move ActiveControl away from the LCL-intended control (e.g. from
+  TextToFindComboBox to the next control in TabOrder).
+  Let GTK's class handler
+  run instead so it sets priv->focus_widget naturally via gtk_container_focus.}
+  AToplevel := aWidget^.get_toplevel;
+  if (AToplevel <> nil) and Gtk3IsGtkWindow(ATopLevel) and
+     not gtk_window_has_toplevel_focus(PGtkWindow(AToplevel)) then
+  begin
+    Result := gtk_false;
+    Exit;
+  end;
+  {Issue #42065: During a tab page switch the GTK class handler
+  calls child_focus() on the new page,
+  which fires focus on child widgets. Suppress PerformTab here
+  to prevent the LCL from wrapping to the wrong control.
+  Start from aWidget itself: if focus fires on the GtkNotebook directly
+  (not a descendant), the flag stored on it is found immediately.}
+  AParent := aWidget;
+  while AParent <> nil do
+  begin
+    if g_object_get_data(AParent, 'lcl-tab-switch-active') <> nil then
+      exit;
+    AParent := AParent^.get_parent;
+  end;
   aForm := GetParentForm(TGtk3Widget(aData).LCLObject);
   if Assigned(aForm.ActiveControl) then
     aForm.ActiveControl.PerformTab(aDirection = GTK_DIR_TAB_FORWARD);
@@ -2846,6 +2908,13 @@ begin
     FWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
   g_signal_connect_data(FWidget, 'destroy', TGCallback(@DestroyWidgetEvent), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(FWidget, 'event', TGCallback(@WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
+
+  if FWidgetType * [wtWindow, wtDialog, wtHintWindow] = [] then
+  begin
+    g_signal_connect_data(FWidget, 'focus-in-event', TGCallback(@WidgetFocusIn), Self, nil, G_CONNECT_DEFAULT);
+    if FWidget <> GetContainerWidget then
+      g_signal_connect_data(GetContainerWidget, 'focus-in-event', TGCallback(@WidgetFocusIn), Self, nil, G_CONNECT_DEFAULT);
+  end;
 
   g_signal_connect_data(GetContainerWidget, 'enter-notify-event', TGCallback(@MouseEnterNotify), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(getContainerWidget, 'leave-notify-event', TGCallback(@MouseLeaveNotify), Self, nil, G_CONNECT_DEFAULT);
@@ -2995,42 +3064,32 @@ end;
 
 function TGtk3Widget.ClientToScreen(var P: TPoint): boolean;
 var
-  TempAlloc: TGtkAllocation;
-  Pt: TPoint;
-  w,tw:PgtkWidget;
   x,y:integer;
-  gw:PgdkWindow;
+  gw:PGdkWindow;
+  tw:PGtkWidget;
 begin
   Result := False;
-  Pt := Point(0, 0);
-
   if not IsWidgetOk then
   begin
     DebugLn('TGtk3Widget.ClientToScreen invalid widget ...');
     exit;
   end;
 
-  { most usable source
-    https://stackoverflow.com/questions/2088962/how-do-you-find-the-absolute-position-of-a-gtk-widget-in-a-window
-  }
-
-  w:=fWidget;
-  tw:=w^.get_toplevel;
-  gw:=tw^.window;
-  while Assigned(w) {and (w<>tw)} do
+  // https://stackoverflow.com/questions/2088962/how-do-you-find-the-absolute-position-of-a-gtk-widget-in-a-window
+  tw := FWidget^.get_toplevel;
+  Result := GetContainerWidget^.translate_coordinates(tw, 0, 0, @x, @y);
+  if Result then
   begin
-    w^.get_allocation(@TempAlloc);
-    pt.X:=pt.X+TempAlloc.X;
-    pt.Y:=pt.Y+TempAlloc.Y;
-    w:=w^.parent;
+    p.x+=x;
+    p.y+=y;
+    gw := tw^.get_window;
+    if gw <> nil then
+    begin
+      gw^.get_origin(@x,@y); // required for X11
+      p.x+=x;
+      p.y+=y;
+    end;
   end;
-
-  gw^.get_origin(@x,@y);
-  pt.x+=x;
-  pt.y+=y;
-  p:=pt;
-  Result:=true;
-
 end;
 
 function TGtk3Widget.ScreenToClient(var P: TPoint): Integer;
@@ -3131,6 +3190,7 @@ procedure TGtk3Widget.SetBounds(ALeft,ATop,AWidth,AHeight:integer);
 var
   ARect: TGdkRectangle;
   Alloc: TGtkAllocation;
+  CurW, CurH: gint;
 begin
   if (Widget=nil) then
     exit;
@@ -3157,15 +3217,31 @@ begin
 
   BeginUpdate;
   try
-    {fixes gtk3 assertion}
-    if not Widget^.get_realized then
+    {Only realize if the entire widget hierarchy is rooted at a GtkWindow.
+     GTK3 realize walks ancestors recursively; any unanchored ancestor
+     (one without a GtkWindow at the root) triggers the assertion
+     widget->priv->anchored || GTK_IS_INVISIBLE. Checking get_parent <> nil
+     is insufficient because only the root-level anchoring matters.}
+    if not Widget^.get_realized and Gtk3IsGtkWindow(Widget^.get_toplevel) then
       Widget^.realize;
 
-    //this should be removed in future.
-    Widget^.set_size_request(AWidth,AHeight);
+    //call set_size_request ONLY if something actually changed.
+    Widget^.get_size_request(@CurW, @CurH);
+    if (CurW <> AWidth) or (CurH <> AHeight) then
+      Widget^.set_size_request(AWidth,AHeight);
 
-    if Gtk3IsContainer(Widget) then // according to the gtk3 docs only GtkContainer should call this
-      Widget^.size_allocate(@ARect);
+    {size_allocate only makes sense on a realized container; calling it on
+     an unrealized one triggers internal GTK3 CSS layout with whatever tiny
+     garbage allocation GTK assigned, producing size >= 0 assertions.}
+    if Gtk3IsContainer(Widget) and Widget^.get_realized then
+    begin
+      {Skip size_allocate on any container when the allocation is a tiny
+       placeholder (width or height < 2px).}
+      if (ARect.width < 2) or (ARect.height < 2) then
+        //skip
+      else
+        Widget^.size_allocate(@ARect);
+    end;
 
     if Widget^.get_visible then
       Widget^.set_allocation(@Alloc);
@@ -3173,8 +3249,12 @@ begin
     if LCLObject.Parent <> nil then
       Move(ALeft, ATop);
 
-    // we must trigger get_preferred_width after changing size
-    Widget^.queue_resize;
+    {Do NOT call Widget^.queue_resize here.
+     queue_resize propagates up the parent chain to the top-level GtkWindow,
+     causing WindowSizeAllocate to fire (with InUpdate=false, since queue_resize
+     only schedules the re-layout for the next GTK frame). WindowSizeAllocate
+     then delivers LM_SIZE to LCL, which re-layouts and calls SetBounds again,
+     which calls queue_resize again -> infinite loop.}
     if [wtCustomControl, wtScrollingWinControl] * WidgetType <> [] then
     begin
       if Gtk3IsGdkWindow(Widget^.get_window) then
@@ -3492,12 +3572,27 @@ begin
 end;
 
 procedure TGtk3Widget.SetFocus;
+var
+  TopLevel: PGtkWidget;
+  FocusWidget: PGtkWidget;
 begin
-  if GetContainerWidget^.can_focus then
+  if GetContainerWidget^.can_focus and GetContainerWidget^.get_mapped then
     GetContainerWidget^.grab_focus
   else
-  if FWidget^.can_focus then
-    FWidget^.grab_focus;
+  if FWidget^.can_focus and FWidget^.get_mapped then
+    FWidget^.grab_focus
+  else
+  begin
+    TopLevel := FWidget^.get_toplevel;
+    if Gtk3IsGtkWindow(TopLevel) and not TopLevel^.get_mapped then
+    begin
+      if GetContainerWidget^.can_focus then
+        FocusWidget := GetContainerWidget
+      else
+        FocusWidget := FWidget;
+      PGtkWindow(TopLevel)^.set_focus(FocusWidget);
+    end;
+  end;
 end;
 
 procedure TGtk3Widget.SetParent(AParent: TGtk3Widget; const ALeft, ATop: Integer
@@ -3815,6 +3910,16 @@ begin
   FText := AValue;
   if Self.Visible then
     Widget^.queue_draw;
+end;
+
+{ TGtk3WinControlPanel }
+
+function TGtk3WinControlPanel.CreateWidget(const Params: TCreateParams): PGtkWidget;
+begin
+  Result := inherited CreateWidget(Params);
+  //Pure structural container - suppress LCL paint events.
+  //Drawing is handled by child controls.
+  FHasPaint := False;
 end;
 
 { TGtk3GroupBox }
@@ -5260,6 +5365,9 @@ begin
 
   g_signal_connect_data(FCentralWidget,'size-allocate',TGCallback(@TabSheetLayoutSizeAllocate), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(FCloseButton, 'clicked', TGCallback(@TabCloseClicked), Self, nil, G_CONNECT_DEFAULT);
+  //Set label angle to match parent notebook's tab position - vertical for LEFT/RIGHT
+  if Assigned(LCLObject.Parent) then
+    SetLabelAngle(TCustomTabControl(LCLObject.Parent).TabPosition);
 end;
 
 procedure TGtk3Page.DestroyWidget;
@@ -5347,6 +5455,18 @@ begin
   end;
 end;
 
+procedure TGtk3Page.SetLabelAngle(const ATabPosition: TTabPosition);
+begin
+  if not Assigned(FPageLabel) then
+    exit;
+  case ATabPosition of
+    tpLeft:   FPageLabel^.set_angle(90.0);
+    tpRight:  FPageLabel^.set_angle(270.0);
+  else
+    FPageLabel^.set_angle(0.0);
+  end;
+end;
+
 { TGtk3NoteBook }
 
 function NotebookPageRealToLCLIndex(const ATabControl: TCustomTabControl; AIndex: integer): integer;
@@ -5363,12 +5483,49 @@ begin
   end;
 end;
 
-// function GtkNotebookAfterSwitchPage(widget: PGtkWidget; pagenum: integer; data: gPointer): GBoolean; cdecl;
+//Issue 42065:Called via g_idle_add after GtkNotebookAfterSwitchPage returns.
+//AData is FCentralWidget (GtkLayout) of the notebook; the flag and target
+//focus widget are stored on it via g_object_set_data. FCentralWidget was
+//g_object_ref'd before g_idle_add so its memory is valid here even if the
+//widget was destroyed. Always unref at the end.
+function Gtk3FocusAfterTabSwitch(AData: Pointer): gboolean; cdecl;
+var
+  ACentralWidget: PGtkWidget;
+  W: PGtkWidget;
+begin
+  Result := False;
+  ACentralWidget := PGtkWidget(AData);
+  if ACentralWidget = nil then
+    exit;
+  try
+    //Always clear in-progress flag first so MoveTabFocus is re-enabled.
+    if not Gtk3IsWidget(ACentralWidget) then
+      exit;
+    g_object_set_data(ACentralWidget, 'lcl-tab-switch-active', nil);
+    W := PGtkWidget(g_object_get_data(ACentralWidget, 'lcl-tab-focus-widget'));
+    g_object_set_data(ACentralWidget, 'lcl-tab-focus-widget', nil);
+    if W = nil then
+      exit;
+    if not (W^.get_realized and W^.get_visible) then
+      exit;
+    if W^.has_focus then
+      exit;
+    W^.grab_focus;
+  finally
+    g_object_unref(PGObject(ACentralWidget));
+  end;
+end;
+
 procedure GtkNotebookAfterSwitchPage(widget: PGtkWidget; {%H-}page: PGtkWidget; pagenum: integer; data: gPointer); cdecl;
 var
   Mess: TLMNotify;
   NMHdr: tagNMHDR;
   LCLPageIndex: Integer;
+  ATabCtl: TCustomTabControl;
+  AParentForm: TCustomForm;
+  Pg: TCustomPage;
+  ACtl: TWinControl;
+  W: PGtkWidget;
 begin
   if widget=nil then ;
   if TGtk3Widget(Data).InUpdate then
@@ -5389,38 +5546,80 @@ begin
   NMHdr.idFrom := LCLPageIndex;
   Mess.NMHdr := @NMHdr;
   TGtk3Widget(Data).DeliverMessage(Mess);
+  {Issue #42065:Capture the target widget NOW synchronously before GTK3's post-switch-page
+   processing can move focus to the notebook and override ActiveControl.}
+  W := nil;
+  ATabCtl := TCustomTabControl(TGtk3NoteBook(Data).LCLObject);
+  AParentForm := GetParentForm(ATabCtl);
+  if Assigned(AParentForm) and (AParentForm.ActiveControl is TWinControl) then
+  begin
+    if ATabCtl.PageIndex >= 0 then
+      Pg := ATabCtl.Page[ATabCtl.PageIndex]
+    else
+      Pg := nil;
+    if Assigned(Pg) then
+    begin
+      ACtl := TWinControl(AParentForm.ActiveControl);
+      if Pg.ContainsControl(ACtl) and ACtl.HandleAllocated and not (ACtl is TCustomPage) then
+        W := TGtk3Widget(ACtl.Handle).GetContainerWidget;
+    end;
+  end;
+  {Issue #42065: Always set flag and idle regardless of W: suppresses MoveTabFocus->PerformTab
+   during the GTK class handler AND during WMSetFocus's inherited delegation.
+   Without this, a second visit to an empty tab leaves ActiveControl outside the
+   TabControl, and on the return switch the flag is absent -> MoveTabFocus fires
+   and corrupts focus before MaybeSelectFirstControlOnPage can correct it.
+   Gtk3FocusAfterTabSwitch handles W=nil correctly (clears flag and exits).}
+  g_object_set_data(TGtk3NoteBook(Data).FCentralWidget,
+    'lcl-tab-switch-active', Pointer(1));
+  g_object_set_data(TGtk3NoteBook(Data).FCentralWidget,
+    'lcl-tab-focus-widget', W);
+  //g_object_ref so FCentralWidget stays valid until Gtk3FocusAfterTabSwitch
+  //fires; the idle handler always calls g_object_unref in its finally block.
+  g_object_ref(PGObject(TGtk3NoteBook(Data).FCentralWidget));
+  g_idle_add(@Gtk3FocusAfterTabSwitch, TGtk3NoteBook(Data).FCentralWidget);
 end;
 
 function BackNoteBookSignal(AData: Pointer): gboolean; cdecl;
 var
   AWidget: PGtkNotebook;
+  {$IFDEF GTK3DEBUGNOTEBOOK}
   APageNum: PtrInt;
+  {$ENDIF}
   ACurrentPage: gint;
 begin
   Result := False;
   AWidget := PGtkNoteBook(AData);
-  if not Gtk3IsWidget(AWidget) then
-    exit;
-  if g_object_get_data(AWidget,'switch-page-signal-stopped') <> nil then
-  begin
-    Result := True;
-    APageNum := {%H-}PtrInt(g_object_get_data(AWidget,'switch-page-signal-stopped'));
-    ACurrentPage := AWidget^.get_current_page;
-    g_object_set_data(AWidget,'switch-page-signal-stopped', nil);
-    {$IFDEF GTK3DEBUGNOTEBOOK}
-    DebugLn('BackNoteBookSignal back notebook switch-page signal currpage=',dbgs(AWidget^.get_current_page),' blockedPage ',dbgs(APageNum));
-    {$ENDIF}
-    if ACurrentPage<0 then ;
-    // must hook into notebook^.priv to unlock APageNum
-    // AWidget^.set_current_page(AWidget^.get_current_page);
-    // g_object_thaw_notify(AWidget^.get_nth_page(AWidget^.get_current_page));
-    // PGtkFixed(AWidget^.get_nth_page(AWidget^.get_current_page))^.
-    // g_signal_emit_by_name(AWidget,'switch-page',[AWidget^.get_nth_page(APageNum), APageNum, gPointer(HwndFromGtkWidget(AWidget)), nil{AWidget, True, gPointer(HwndFromGtkWidget(AWidget))}]);
-    // AWidget^.notify('page');
-    // g_signal_stop_emission_by_name(AWidget, 'switch-page');
-    // g_signal_emit_by_name(AWidget,'switch-page',[G_TYPE_NONE, AWidget, AWidget^.get_nth_page(AWidget^.get_current_page), AWidget^.get_current_page, gPointer(HwndFromGtkWidget(AWidget))]);
+  //AWidget was g_object_ref'd before g_idle_add so its memory is valid here
+  //even if the GTK widget was destroyed before the idle fired. Always unref.
+  try
+    if not Gtk3IsWidget(AWidget) then
+      exit;
+    if g_object_get_data(AWidget,'switch-page-signal-stopped') <> nil then
+    begin
+      Result := True;
+      {$IFDEF GTK3DEBUGNOTEBOOK}
+      APageNum := {%H-}PtrInt(g_object_get_data(AWidget,'switch-page-signal-stopped'));
+      {$ENDIF}
+      ACurrentPage := AWidget^.get_current_page;
+      g_object_set_data(AWidget,'switch-page-signal-stopped', nil);
+      {$IFDEF GTK3DEBUGNOTEBOOK}
+      DebugLn('BackNoteBookSignal back notebook switch-page signal currpage=',dbgs(AWidget^.get_current_page),' blockedPage ',dbgs(APageNum));
+      {$ENDIF}
+      if ACurrentPage<0 then ;
+      // must hook into notebook^.priv to unlock APageNum
+      // AWidget^.set_current_page(AWidget^.get_current_page);
+      // g_object_thaw_notify(AWidget^.get_nth_page(AWidget^.get_current_page));
+      // PGtkFixed(AWidget^.get_nth_page(AWidget^.get_current_page))^.
+      // g_signal_emit_by_name(AWidget,'switch-page',[AWidget^.get_nth_page(APageNum), APageNum, gPointer(HwndFromGtkWidget(AWidget)), nil{AWidget, True, gPointer(HwndFromGtkWidget(AWidget))}]);
+      // AWidget^.notify('page');
+      // g_signal_stop_emission_by_name(AWidget, 'switch-page');
+      // g_signal_emit_by_name(AWidget,'switch-page',[G_TYPE_NONE, AWidget, AWidget^.get_nth_page(AWidget^.get_current_page), AWidget^.get_current_page, gPointer(HwndFromGtkWidget(AWidget))]);
+    end;
+    g_idle_remove_by_data(AData);
+  finally
+    g_object_unref(PGObject(AWidget));
   end;
-  g_idle_remove_by_data(AData);
 end;
 
 procedure GtkNotebookSwitchPage(widget: PGtkWidget; {%H-}page: PGtkWidget; pagenum: integer; data: gPointer); cdecl;
@@ -5460,6 +5659,7 @@ begin
     g_object_set_data(Widget,'switch-page-signal-stopped', {%H-}GPointer(pageNum));
     g_signal_stop_emission_by_name(PGObject(Widget), 'switch-page');
     // GtkNotebookAfterSwitchPage(Widget, page, pagenum, data);
+    g_object_ref(PGObject(Widget));
     g_idle_add(@BackNoteBookSignal, Widget);
     Exit;
   end;
@@ -5484,7 +5684,6 @@ begin
   Alloc.Height := Params.Height;
 
   g_signal_connect_data(FCentralWidget,'switch-page', TGCallback(@GtkNotebookSwitchPage), Self, nil, G_CONNECT_DEFAULT);
-  // this one triggers after above switch-page
   g_signal_connect_data(FCentralWidget,'switch-page', TGCallback(@GtkNotebookAfterSwitchPage), Self, nil, G_CONNECT_DEFAULT);
   PGtkNotebook(Result)^.set_scrollable(True);
 
@@ -5501,16 +5700,17 @@ end;
 
 function TGtk3NoteBook.GetTabSize(AWinControl:TWinControl):integer;
 var
-  AWidget: PGtkWidget;
-  Alloc:TGtkAllocation;
-  APage:PGtkWidget;
-  APageAlloc:TGtkAllocation;
   R:TRect;
 begin
   Result := 0;
   if not WidgetMapped then
-    Result := DefaultClientRect.Height
-  else
+  begin
+    if not IsRectEmpty(FDefaultClientRect) then
+      if PGtkNotebook(GetContainerWidget)^.tab_pos in [GTK_POS_LEFT, GTK_POS_RIGHT] then
+        Result := LCLObject.Width - FDefaultClientRect.Width
+      else
+        Result := LCLObject.Height - FDefaultClientRect.Height;
+  end else
   begin
     R := getClientRect;
     if PGtkNotebook(GetContainerWidget)^.tab_pos in [GTK_POS_TOP, GTK_POS_BOTTOM] then
@@ -5525,7 +5725,6 @@ var
   AAlloc: TGtkAllocation;
   ACurrentPage: gint;
   APage: PGtkWidget;
-  ATabSheet:HWND;
 begin
   Result := Rect(0, 0, 0, 0);
   ACurrentPage := -1;
@@ -5538,6 +5737,11 @@ begin
   end else
   if PGtkNoteBook(GetContainerWidget)^.get_n_pages = 0 then
   begin
+    if not IsRectEmpty(FDefaultClientRect) then
+    begin
+      Result := FDefaultClientRect;
+      exit;
+    end;
     GetContainerWidget^.get_allocation(@AAlloc);
     Result := RectFromGtkAllocation(AAlloc);
     Types.OffsetRect(Result, -Result.Left, -Result.Top);
@@ -5547,10 +5751,8 @@ begin
     if (ACurrentPage >= 0) then
     begin
       APage := PGtkNoteBook(GetContainerWidget)^.get_nth_page(ACurrentPage);
-      ATabSheet := HwndFromGtkWidget(APage);
-      if (ATabSheet <> 0) and TGtk3Widget(ATabSheet).WidgetMapped then
-        APage^.get_allocation(@AAlloc)
-      else
+      APage^.get_allocation(@AAlloc);
+      if AAlloc.width <= 1 then
         GetContainerWidget^.get_allocation(@AAlloc);
       Result := RectFromGtkAllocation(AAlloc);
       Types.OffsetRect(Result, -Result.Left, -Result.Top);
@@ -5673,9 +5875,20 @@ const
     { tpLeft   } GTK_POS_LEFT,
     { tpRight  } GTK_POS_RIGHT
   );
+var
+  i: Integer;
+  APage: TCustomPage;
 begin
-  if IsWidgetOK then
-    PGtkNoteBook(GetContainerWidget)^.set_tab_pos(GtkPositionTypeMap[ATabPosition]);
+  if not IsWidgetOK then
+    exit;
+  PGtkNoteBook(GetContainerWidget)^.set_tab_pos(GtkPositionTypeMap[ATabPosition]);
+  //Update label angle on all existing pages so text is vertical for LEFT/RIGHT tabs
+  for i := 0 to TCustomTabControl(LCLObject).PageCount - 1 do
+  begin
+    APage := TCustomTabControl(LCLObject).Page[i];
+    if APage.HandleAllocated then
+      TGtk3Page(APage.Handle).SetLabelAngle(ATabPosition);
+  end;
 end;
 
 procedure TGtk3NoteBook.SetTabLabelText(AChild: TCustomPage; const AText: String);
@@ -6207,6 +6420,21 @@ begin
   else
     Msg.Msg := LM_VSCROLL;
 
+  {Convert pixel position back to logical if Adjustment was pixel-converted by
+   ChangeLogicalToAbsolute. LCLVAdj/LCLHAdj stores original logical values when
+   conversion was applied.}
+  if Msg.Msg = LM_HSCROLL then
+  begin
+    if Assigned(ACtl.LCLHAdj) and (ACtl.LCLHAdj^.upper > 0) and
+       (ARange^.adjustment^.upper > ACtl.LCLHAdj^.upper + 0.5) then
+      AValue := AValue * ACtl.LCLHAdj^.upper / ARange^.adjustment^.upper;
+  end else
+  begin
+    if Assigned(ACtl.LCLVAdj) and (ACtl.LCLVAdj^.upper > 0) and
+       (ARange^.adjustment^.upper > ACtl.LCLVAdj^.upper + 0.5) then
+      AValue := AValue * ACtl.LCLVAdj^.upper / ARange^.adjustment^.upper;
+  end;
+
   if ARange^.adjustment^.page_size > 0 then
   begin
     {we must use cached values since gtk3 has it's own meaning about page_size}
@@ -6229,7 +6457,7 @@ begin
       SmallPos := Pos
     else
       SmallPos := High(SmallPos);
-    {$note to get this correct we must use TQtWidget.CreateFrom() for scrollbars}
+    {$note to get this correct we must use TGtk3Widget.CreateFrom() for scrollbars}
     ScrollBar := HWND(TGtk3Widget(AData)); // HWND({%H-}PtrUInt(ARange));
     ScrollCode := Gtk3ScrollTypeToScrollCode(AScrollType);
   end;
@@ -6305,6 +6533,19 @@ begin
       Msg.ScrollCode := SB_THUMBTRACK
     else
       Msg.ScrollCode := SB_THUMBPOSITION;
+
+    //Convert pixel position back to logical if needed
+    if Msg.Msg = LM_VSCROLL then
+    begin
+      if Assigned(Control.LCLVAdj) and (Control.LCLVAdj^.upper > 0) and
+         (Adjustment^.upper > Control.LCLVAdj^.upper + 0.5) then
+        CurrentValue := CurrentValue * Control.LCLVAdj^.upper / Adjustment^.upper;
+    end else
+    begin
+      if Assigned(Control.LCLHAdj) and (Control.LCLHAdj^.upper > 0) and
+         (Adjustment^.upper > Control.LCLHAdj^.upper + 0.5) then
+        CurrentValue := CurrentValue * Control.LCLHAdj^.upper / Adjustment^.upper;
+    end;
 
     Msg.Pos := Round(CurrentValue);
     Msg.ScrollBar := HWND(Control);
@@ -8439,10 +8680,16 @@ begin
     ItemList := TGtkListStoreStringList.Create(PGtkListStore(PGtkComboBox(Result)^.get_model), 0, LCLObject);
     g_object_set_data(PGObject(Result), GtkListItemLCLListTag, ItemList);
 
-    PGtkComboBox(Result)^.set_entry_text_column(0);
     // do not allow combo button to get focus, entry should take focus
     if PGtkComboBox(Result)^.priv3^.button <> nil then
       PGtkComboBox(Result)^.priv3^.button^.set_can_focus(False);
+
+    // Set up text column so GTK fills the entry on item selection and installs
+    // GtkEntryCompletion. GTK also installs an internal
+    // gtk_combo_box_entry_contents_changed handler that calls set_active(true)
+    // whenever entry text changes and not active, clearing the entry text.
+    // That internal handler is disconnected in InitializeWidget.
+    PGtkComboBox(Result)^.set_entry_text_column(0);
 
     bs := Self.LCLObject.Caption;
     pos := 0;
@@ -8618,12 +8865,11 @@ begin
 
   BeginUpdate;
   try
-    {fixes gtk3 assertion}
-    if not Widget^.get_realized then
+    if not Widget^.get_realized and Gtk3IsGtkWindow(Widget^.get_toplevel) then
       Widget^.realize;
 
-
-    Widget^.size_allocate(@ARect);
+    if Widget^.get_realized then
+      Widget^.size_allocate(@ARect);
 
     if Widget^.get_visible then
       Widget^.set_allocation(@Alloc);
@@ -8636,27 +8882,78 @@ begin
 end;
 
 procedure TGtk3ComboBox.SetFocus;
+var
+  AChild: PGtkWidget;
+  TopLevel: PGtkWidget;
+  AWalk: PGtkWidget;
+  FocusMsg: TLMessage;
 begin
   {$IFDEF GTK3DEBUGFOCUS}
   DebugLn('TGtk3ComboBox.SetFocus LCLObject ',dbgsName(LCLObject),' WidgetOK ',dbgs(IsWidgetOK),
   ' FWidget <> GetContainerWidget ',dbgs(FWidget <> GetContainerWidget));
   {$ENDIF}
-  if Assigned(LCLObject) then
+  if not Assigned(LCLObject) then
   begin
-    if IsWidgetOK then
-    begin
-      if PGtkComboBox(FWidget)^.has_entry then
-        FWidget^.grab_focus
-      else
-      if GetButtonWidget <> nil then
-        GetButtonWidget^.grab_focus;
-    end else
-      inherited SetFocus;
-  end else
     inherited SetFocus;
+    Exit;
+  end;
+  if not IsWidgetOK then
+  begin
+    inherited SetFocus;
+    Exit;
+  end;
+  if PGtkComboBox(FWidget)^.has_entry then
+  begin
+    // Entry combo: focus must go to the GtkEntry child.
+    // GtkComboBox itself has can_focus=False; grab_focus on it is a no-op.
+    AChild := PGtkComboBox(FWidget)^.get_child;
+    if AChild^.get_mapped then
+    begin
+      AChild^.grab_focus;
+      // grab_focus emits focus-in-event SIGNAL directly on the entry — not
+      // through the GDK event loop — so WidgetEvent never fires and LM_SETFOCUS
+      // is never delivered automatically. Deliver it explicitly so that
+      // TWinControl.WndProc -> Form.SetFocusedControl is called, giving the
+      // combo the LCL focus ring and updating ActiveControl.
+      FillChar(FocusMsg{%H-}, SizeOf(FocusMsg), #0);
+      FocusMsg.Msg := LM_SETFOCUS;
+      DeliverMessage(FocusMsg);
+    end else
+    begin
+      // Entry not mapped yet. Use gtk_window_set_focus as
+      // pending focus so GTK delivers focus-in to the entry when the window
+      // gains its first focus-in event.
+      // EXCEPTION: during a notebook tab-switch the "lcl-tab-switch-active"
+      // flag is set on an ancestor notebook. In that case skip - the
+      // Gtk3FocusAfterTabSwitch idle will call grab_focus after the page shows.
+      // Pre-setting priv->focus_widget here would cause that idle's grab_focus
+      // to hit GTK's old = new no-op guard and the entry would never get focus-in.
+      AWalk := FWidget^.get_parent;
+      while AWalk <> nil do
+      begin
+        if g_object_get_data(AWalk, 'lcl-tab-switch-active') <> nil then
+          Exit;  // tab-switch: idle handles it
+        AWalk := AWalk^.get_parent;
+      end;
+      TopLevel := FWidget^.get_toplevel;
+      if Gtk3IsGtkWindow(TopLevel) then
+        PGtkWindow(TopLevel)^.set_focus(AChild);
+    end;
+  end
+  else
+  begin
+    // Non-entry combo: grab_focus forwards internally to the button (can_focus=True
+    // by default). The button's 'event' signal cannot be connected (invalid for
+    // GtkCssGadget type), so WidgetEvent never fires for button focus-in and
+    // LM_SETFOCUS is never delivered automatically. Deliver it explicitly.
+    FWidget^.grab_focus;
+    FillChar(FocusMsg{%H-}, SizeOf(FocusMsg), #0);
+    FocusMsg.Msg := LM_SETFOCUS;
+    DeliverMessage(FocusMsg);
+  end;
 end;
 
-class procedure TGtk3ComboBox.ComboBoxChanged({%H-}ACombo: PGtkComboBox; AData: gpointer); cdecl;
+class procedure TGtk3ComboBox.ComboBoxChanged(ACombo: PGtkComboBox; AData: gpointer); cdecl;
 var
   Msg: TLMessage;
 begin
@@ -8664,15 +8961,50 @@ begin
   begin
     if TGtk3Widget(AData).InUpdate then
       Exit;
-    FillChar(Msg{%H-}, SizeOf(Msg), #0);
-    Msg.Msg := LM_CHANGED;
-    TGtk3Widget(AData).DeliverMessage(Msg);
+    if not PGtkComboBox(ACombo)^.has_entry then
+    begin
+      FillChar(Msg{%H-}, SizeOf(Msg), #0);
+      Msg.Msg := LM_CHANGED;
+      TGtk3Widget(AData).DeliverMessage(Msg);
+    end;
   end;
 end;
 
+class procedure TGtk3ComboBox.EntryChanged(AEntry: PGtkEntry; AData: gpointer); cdecl;
+var
+  Msg: TLMessage;
+begin
+  if AData = nil then
+    Exit;
+  if TGtk3Widget(AData).InUpdate then
+    Exit;
+  FillChar(Msg{%H-}, SizeOf(Msg), #0);
+  Msg.Msg := LM_CHANGED;
+  TGtk3Widget(AData).DeliverMessage(Msg);
+end;
+
+
+class function TGtk3ComboBox.EntryFocusIn(AEntry: PGtkWidget;
+  Event: PGdkEventFocus; AData: gpointer): gboolean; cdecl;
+begin
+  Result := False;
+  if AData = nil then
+    Exit;
+  TGtk3Widget(AData).GtkEventFocus(AEntry, PGdkEvent(Event));
+end;
+
 function GtkPopupCloseUp(AData: Pointer): gboolean; cdecl;
+var
+  FocusMsg: TLMessage;
 begin
   LCLSendCloseUpMsg(TGtk3Widget(AData).LCLObject);
+  if not PGtkComboBox(TGtk3Widget(AData).Widget)^.has_entry then
+  begin
+    TGtk3Widget(AData).Widget^.grab_focus;
+    FillChar(FocusMsg{%H-}, SizeOf(FocusMsg), #0);
+    FocusMsg.Msg := LM_SETFOCUS;
+    TGtk3Widget(AData).DeliverMessage(FocusMsg);
+  end;
   Result := False;// stop the timer
 end;
 
@@ -8718,6 +9050,17 @@ begin
   begin
     g_object_set_data(PGtkComboBox(FWidget)^.get_child, 'lclwidget', Self);
     g_signal_connect_data(PGtkComboBox(FWidget)^.get_child, 'event', TGCallback(@WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
+    // Catch focus-in-event SIGNAL emitted directly by gtk_widget_map/send_focus_change
+    // - not through GDK event loop, so WidgetEvent never fires for this case.
+    g_signal_connect_data(PGtkComboBox(FWidget)^.get_child, 'focus-in-event', TGCallback(@EntryFocusIn), Self, nil, G_CONNECT_DEFAULT);
+    // Forward entry text changes as LM_CHANGED.
+    g_signal_connect_data(PGtkComboBox(FWidget)^.get_child, 'changed', TGCallback(@EntryChanged), Self, nil, G_CONNECT_DEFAULT);
+    // Disconnect GTK's internal gtk_combo_box_entry_contents_changed, which was
+    // installed by set_entry_text_column (in CreateWidget) with the combo widget
+    // as data. That handler calls set_active(true) whenever entry text changes and
+    // not active, which clears the entry text via gtk_entry_set_text().
+    g_signal_handlers_disconnect_matched(PGObject(PGtkComboBox(FWidget)^.get_child),
+      [G_SIGNAL_MATCH_DATA], 0, 0, nil, nil, FWidget);
   end;
   if GetCellView <> nil then
   begin
@@ -9823,6 +10166,29 @@ begin
   ShowState(ShowCommands[TCustomForm(LCLObject).WindowState]);
 end;
 
+class procedure TGtk3Window.TrackWindowActivate(AObject: PGObject; APSpec: PGParamSpec; Data: gpointer); cdecl;
+var
+  IsActive: gboolean;
+  MsgActivate: TLMActivate;
+  AIsActivated: Boolean;
+begin
+  g_object_get(AObject, 'is-active', [@IsActive, nil]);
+
+  FillChar(MsgActivate{%H-}, SizeOf(MsgActivate), #0);
+  AIsActivated := TCustomForm(TGtk3Window(Data).LCLObject).Active;
+  if (IsActive = AIsActivated) or (TGtk3Window(Data).LCLObject.Parent <> nil) then
+    exit;
+
+  MsgActivate.Msg := LM_ACTIVATE;
+  if IsActive then
+    MsgActivate.Active := WA_ACTIVE
+  else
+    MsgActivate.Active := WA_INACTIVE;
+  MsgActivate.ActiveWindow := HWND(TGtk3Window(Data).LCLObject.Handle);
+
+  TGtk3Window(Data).DeliverMessage(MsgActivate);
+end;
+
 function TGtk3Window.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   AForm: TCustomForm;
@@ -9865,6 +10231,7 @@ begin
   end else
   begin
     Result := PGtkScrolledWindow(TGtkScrolledWindow.new(nil, nil));
+    PGtkScrolledWindow(Result)^.set_policy(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
     FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtCustomControl]
   end;
   Text := Params.Caption;
@@ -9888,6 +10255,8 @@ begin
 
   g_signal_connect_data(Result,'window-state-event', TGCallback(@WindowStateSignal), Self, nil, G_CONNECT_DEFAULT);
 
+  g_signal_connect_data(Result, 'notify::is-active', TGCallback(@TrackWindowActivate), Self, nil, G_CONNECT_DEFAULT);
+
   g_object_set(PGObject(FCentralWidget), 'resize-mode', [GTK_RESIZE_QUEUE, nil]);
   gtk_layout_set_size(PGtkLayout(FCentralWidget), 1, 1);
 
@@ -9898,7 +10267,14 @@ begin
   with PGtkScrolledWindow(FScrollWin)^.get_hadjustment^ do
     LCLHAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
 
-  gtk_widget_realize(Result);
+  {Embedded forms (LCLObject.Parent <> nil) create a GtkScrolledWindow as
+   their root widget; it has no parent yet at this point, so calling
+   gtk_widget_realize on it fires widget->priv->anchored assertion (cca 20 times
+   with anchordocked, once per dock panel).
+   Only realize top-level GtkWindows here, embedded GtkScrolledWindows will be realized automatically when they
+   are added to their parent widget tree.}
+  if not Assigned(LCLObject.Parent) then
+    gtk_widget_realize(Result);
 
   if not (wtHintWindow in FWidgetType) then
   begin
@@ -10084,9 +10460,9 @@ var
   AHints: TGdkWindowHints;
   AFixedWidthHeight: Boolean;
   AForm: TCustomForm;
-  AMinSize, ANaturalSize: gint;
   Alloc:TGtkAllocation;
   x, y: gint;
+  CurW, CurH: gint;
 begin
   AForm := TCustomForm(LCLObject);
   BeginUpdate;
@@ -10095,16 +10471,37 @@ begin
   ARect.width := AWidth;
   ARect.Height := AHeight;
   try
-    {fixes gtk3 assertion}
-    Widget^.get_preferred_width(@AMinSize, @ANaturalSize);
-    Widget^.get_preferred_height(@AMinSize, @ANaturalSize);
     Widget^.get_allocation(@Alloc);
     {$IFDEF GTK3DEBUGFORMS}
     with Alloc do
-      DebugLn(Format('TGtk3Window.setBounds(%d, %d, %d, %d) Natural w=%d h=%d alloc x %d y %d w %d h %d',[ALeft, ATop ,AWidth, AHeight, ANaturalSize, ANaturalSize2, x, y, width, height]));
+      DebugLn(Format('TGtk3Window.setBounds(%d, %d, %d, %d) alloc x %d y %d w %d h %d',[ALeft, ATop ,AWidth, AHeight, x, y, width, height]));
     {$ENDIF}
+    if not Gtk3IsGtkWindow(fWidget) then
+    begin
 
-    Widget^.size_allocate(@ARect);
+      //Embedded form - root widget is GtkScrolledWindow in parent's GtkLayout.
+      //Only update if changed: set_size_request triggers queue_resize internally.
+      Widget^.get_size_request(@CurW, @CurH);
+      if (CurW <> AWidth) or (CurH <> AHeight) then
+        Widget^.set_size_request(AWidth, AHeight);
+
+      {Update position tracking in the parent GtkLayout so repositioning
+       survives the next parent layout pass (GtkLayout uses child->x/y from
+       gtk_layout_move, not from size_allocate's x/y).}
+      if Gtk3IsLayout(Widget^.get_parent) then
+      begin
+        x := 0;
+        y := 0;
+        if Gtk3IsGdkWindow(PGtkLayout(Widget^.get_parent)^.get_bin_window) then
+          PGtkLayout(Widget^.get_parent)^.get_bin_window^.get_position(@x, @y);
+        PGtkLayout(Widget^.get_parent)^.move(Widget, ALeft - x, ATop - y);
+      end else
+      if Gtk3IsFixed(Widget^.get_parent) then
+        PGtkFixed(Widget^.get_parent)^.move(Widget, ALeft, ATop);
+    end;
+
+    if Gtk3IsGtkWindow(fWidget) or ((ARect.width >= 2) and (ARect.height >= 2)) then
+      Widget^.size_allocate(@ARect);
     if Gtk3IsGtkWindow(fWidget)
         and not (csDesigning in AForm.ComponentState) {and (AForm.Parent = nil) and (AForm.ParentWindow = 0)} then
     begin
@@ -10240,39 +10637,6 @@ begin
       PGtkWindow(FWidget)^.present;
       PGtkWindow(FWidget)^.activate;
     end;
-  end;
-end;
-
-procedure TGtk3Window.ActivateWindow(AEvent: PGdkEvent);
-var
-  MsgActivate: TLMActivate;
-  FIsActivated: Boolean;
-begin
-  if not Gtk3IsGtkWindow(FWidget) then exit;
-
-  //gtk3 does not handle activate/deactivate at all
-  //even cannot catch it via GDK_FOCUS event ?!?
-  FillChar(MsgActivate{%H-}, SizeOf(MsgActivate), #0);
-  MsgActivate.Msg := LM_ACTIVATE;
-
-  if (AEvent <> nil) and PGtkWindow(Widget)^.is_active then
-    MsgActivate.Active := WA_ACTIVE
-  else
-    MsgActivate.Active := WA_INACTIVE;
-  MsgActivate.ActiveWindow := HWND(Self);
-
-  // DebugLn('TGtk3Window.ActivateWindow ',dbgsName(LCLObject),' Active ',dbgs(PGtkWindow(Widget)^.is_active),
-  // ' CustomFormActive ',dbgs(TCustomForm(LCLObject).Active));
-  FIsActivated := TCustomForm(LCLObject).Active;
-  {do not send activate if form is already activated,
-   also do not send activate if TCustomForm.Parent is assigned
-   since it's form embedded into another control or form}
-  if (Boolean(MsgActivate.Active) = FIsActivated) or (LCLObject.Parent <> nil) then
-  else
-  begin
-    // DebugLn('TGtk3Window.ActivateWindow Active ',dbgs(MsgActivate.Active = WA_ACTIVE),
-    //  ' Message delivery to lcl ',dbgs(MsgActivate.Active));
-    DeliverMessage(MsgActivate);
   end;
 end;
 

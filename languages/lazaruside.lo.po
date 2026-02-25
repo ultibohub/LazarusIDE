@@ -4522,6 +4522,15 @@ msgstr "ສະລັບເປັນ debug desktop"
 msgid "Current Class/Proc Hint"
 msgstr "ຄຳແນະນຳ Class/Proc ປັດຈຸບັນ"
 
+#: lazarusidestrconsts.dlgtranslateusing
+#, object-pascal-format
+msgid "Translate using \"%s\""
+msgstr ""
+
+#: lazarusidestrconsts.dlgtranslatewithhint
+msgid "Translate (select messages file in Tools -> Options -> Environment -> Files)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgtrimspacetypecaption
 msgid "Trim spaces style"
 msgstr "ຮູບແບບການຕັດຍະຫວ່າງ"
@@ -18498,10 +18507,6 @@ msgstr "ໄລຍະຫ່າງດ້ານເທິງເທົ່າກັນ
 #, object-pascal-format
 msgid "Total Pages: %s"
 msgstr "ໜ້າທັງໝົດ: %s"
-
-#: lazarusidestrconsts.listranslatetheenglishmessages
-msgid "Translate the English Messages"
-msgstr "ແປຂໍ້ຄວາມພາສາອັງກິດ"
 
 #: lazarusidestrconsts.listreeneedsrefresh
 msgid "Tree needs refresh"

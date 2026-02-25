@@ -156,14 +156,32 @@ begin
   begin
     LStream := TMemoryStream.Create;
     try
-      LData^.OnRequest(TClipboardFormat(LFormat), LStream);
-      selection^.set_(LFormat, 8, LStream.Memory, LStream.Size);
+      {Fix for paste from TSynEdit and similar}
+      if (LFormat = TGdkAtom.intern('UTF8_STRING', False)) or
+         (LFormat = TGdkAtom.intern('COMPOUND_TEXT', False)) or
+         (LFormat = TGdkAtom.intern('STRING', False)) or
+         (LFormat = TGdkAtom.intern('TEXT', False)) then
+      begin
+        LData^.OnRequest(TClipboardFormat(TGdkAtom.intern('text/plain', False)), LStream);
+        if LStream.Size > 0 then
+          selection^.set_text(PChar(LStream.Memory), LStream.Size);
+      end
+      else
+      begin
+        LData^.OnRequest(TClipboardFormat(LFormat), LStream);
+        selection^.set_(LFormat, 8, LStream.Memory, LStream.Size);
+      end;
     finally
       LStream.Free;
     end;
   end
   else
     selection^.set_(LFormat, 8, nil, 0);
+end;
+
+function TGtk3WidgetSet.ClipboardFormatNeedsNullByte(const AFormat: TPredefinedClipboardFormat): Boolean;
+begin
+  Result := False;
 end;
 
 function TGtk3WidgetSet.ClipboardFormatToMimeType(FormatID: TClipboardFormat): string;
@@ -236,6 +254,8 @@ var
   pclp:PGtkClipboard;
   pcname:PgdkAtom;
   i:integer;
+  LExtraCount: Integer;
+  LTotalCount: Integer;
 begin
   pcname:=GetClipboardAtom(ClipboardType);
   if pcname = nil then exit(False);
@@ -248,16 +268,44 @@ begin
     exit(false);
   end;
 
+  {Add UTF8_STRING, COMPOUND_TEXT, STRING, TEXT when text/plain is present,
+   so native GTK3 controls can find a text target via gtk_clipboard_request_text().
+   This mirrors the GTK2 widgetset behaviour and now paste from eg TSynEdit
+   works fine.}
+  LExtraCount := 0;
+  for i := 0 to FormatCount - 1 do
+    if PGdkAtom(Formats[i]) = TGdkAtom.intern('text/plain', False) then
+    begin
+      LExtraCount := 4;
+      Break;
+    end;
+  LTotalCount := FormatCount + LExtraCount;
+
   New(data);
   data^.OnRequest := OnRequestProc;
   data^.ClipboardType := ClipboardType;
-  data^.FormatCount := FormatCount;
-  data^.Formats := AllocMem(FormatCount * SizeOf(TGtkTargetEntry));
+  data^.FormatCount := LTotalCount;
+  data^.Formats := AllocMem(LTotalCount * SizeOf(TGtkTargetEntry));
   for i := 0 to FormatCount - 1 do
   begin
     data^.Formats[i].info := i;
     data^.Formats[i].flags := 0;
     data^.Formats[i].target := gdk_atom_name(PGdkAtom(Formats[i])^);
+  end;
+  if LExtraCount > 0 then
+  begin
+    data^.Formats[FormatCount + 0].info := FormatCount;
+    data^.Formats[FormatCount + 0].flags := 0;
+    data^.Formats[FormatCount + 0].target := g_strdup('UTF8_STRING');
+    data^.Formats[FormatCount + 1].info := FormatCount + 1;
+    data^.Formats[FormatCount + 1].flags := 0;
+    data^.Formats[FormatCount + 1].target := g_strdup('COMPOUND_TEXT');
+    data^.Formats[FormatCount + 2].info := FormatCount + 2;
+    data^.Formats[FormatCount + 2].flags := 0;
+    data^.Formats[FormatCount + 2].target := g_strdup('STRING');
+    data^.Formats[FormatCount + 3].info := FormatCount + 3;
+    data^.Formats[FormatCount + 3].flags := 0;
+    data^.Formats[FormatCount + 3].target := g_strdup('TEXT');
   end;
   FClipboardData[ClipboardType] := data;
   Result := pclp^.set_with_data(data^.Formats, data^.FormatCount,
@@ -2463,11 +2511,9 @@ begin
 
   with MonitorRect do
     lpmi^.rcMonitor := Bounds(x, y, width, height);
-  // there is no way to determine workarea in gtk
   gdk_screen_get_monitor_workarea(gdk_screen_get_default, Monitor, @MonitorWorkArea);
   with MonitorWorkArea do
     lpmi^.rcWork := Bounds(x, y, width, height);
-  lpmi^.rcWork := lpmi^.rcMonitor;
   if Monitor = gdk_screen_get_primary_monitor(gdk_screen_get_default) then
     lpmi^.dwFlags := MONITORINFOF_PRIMARY
   else
@@ -2996,12 +3042,27 @@ begin
   Result:=inherited GetWindowExtEx(DC, Size);
 end;
 
+type
+  TGtk3WidgetAccess = class(TGtk3Widget);
+
 function TGtk3WidgetSet.GetWindowLong(Handle: HWND; int: Integer): PtrInt;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.GetWindowLong not implemented ...');
-  {$ENDIF}
-  Result:=inherited GetWindowLong(Handle, int);
+  Result := 0;
+  if Handle <> 0 then
+    case int of
+      GWL_HWNDPARENT:
+        Result := PtrInt(TGtk3WidgetAccess(Handle).getParent);
+      GWL_STYLE:
+        Result := TGtk3WidgetAccess(Handle).FParams.Style;
+      GWL_EXSTYLE:
+        Result := TGtk3WidgetAccess(Handle).FParams.ExStyle;
+      GWL_USERDATA:
+        Result := {%H-}PtrInt(TGtk3WidgetAccess(Handle).Widget^.get_data('Userdata'));
+      GWL_HINSTANCE:
+        Result := {%H-}PtrInt(TGtk3WidgetAccess(Handle).Widget^.get_data('HInstance'));
+      GWL_ID:
+        Result := {%H-}PtrInt(TGtk3WidgetAccess(Handle).Widget^.get_data('Id'));
+    end; //case
 end;
 
 function TGtk3WidgetSet.GetWindowOrgEx(dc: hdc; P: PPoint): Integer;
@@ -4116,6 +4177,7 @@ var
   //OverlayFactor: integer;
   AControl: TGtk3Widget absolute Handle;
   R: TRect;
+  LLogicalMin, LLogicalMax, LLogicalPage, LLogicalPos: Integer;
   {$IFDEF GTK3DEBUGSCROLL}
   S: String;
   {$ENDIF}
@@ -4241,8 +4303,13 @@ var
     begin
       if (AControl is TGtk3ScrollableWin) and Assigned(TGtk3ScrollableWin(AControl).LCLVAdj) then
       begin
-        with Adjustment^ do
-          TGtk3ScrollableWin(AControl).LCLVAdj^.configure(value, lower, upper, step_increment, page_increment, page_size);
+        if HaveLogicalValues then
+          TGtk3ScrollableWin(AControl).LCLVAdj^.configure(LLogicalPos, LLogicalMin,
+            LLogicalMax - LLogicalMin, 1, LLogicalPage, LLogicalPage)
+        else
+          with Adjustment^ do
+            TGtk3ScrollableWin(AControl).LCLVAdj^.configure(value, lower, upper,
+              step_increment, page_increment, page_size);
         g_object_set_data(Adjustment,'lcl-have-adjust', gPointer(1));
       end;
     end else
@@ -4250,8 +4317,13 @@ var
     begin
       if (AControl is TGtk3ScrollableWin) and Assigned(TGtk3ScrollableWin(AControl).LCLHAdj) then
       begin
-        with Adjustment^ do
-          TGtk3ScrollableWin(AControl).LCLHAdj^.configure(value, lower, upper, step_increment, page_increment, page_size);
+        if HaveLogicalValues then
+          TGtk3ScrollableWin(AControl).LCLHAdj^.configure(LLogicalPos, LLogicalMin,
+            LLogicalMax - LLogicalMin, 1, LLogicalPage, LLogicalPage)
+        else
+          with Adjustment^ do
+            TGtk3ScrollableWin(AControl).LCLHAdj^.configure(value, lower, upper,
+              step_increment, page_increment, page_size);
         g_object_set_data(Adjustment,'lcl-have-adjust', gPointer(1));
       end;
     end;
@@ -4319,6 +4391,10 @@ begin
 
   HasChanged := False;
   HaveLogicalValues := False;
+  LLogicalMin := 0;
+  LLogicalMax := 0;
+  LLogicalPage := 0;
+  LLogicalPos := 0;
 
   {$IFDEF GTK3DEBUGSCROLL}
   S := '';
@@ -4368,6 +4444,10 @@ begin
         if ([wtScrollingWinControl] * AControl.WidgetType = []) and
           NeedsRecalculation(ScrollInfo.nMax, ScrollInfo.nPage, R.Width) then
         begin
+          LLogicalMin := ScrollInfo.nMin;
+          LLogicalMax := ScrollInfo.nMax;
+          LLogicalPage := ScrollInfo.nPage;
+          LLogicalPos := ScrollInfo.nPos;
           HaveLogicalValues := True;
           ChangeLogicalToAbsolute(AControl, ScrollInfo, SB_HORZ, R);
         end;
@@ -4386,6 +4466,10 @@ begin
         if ([wtScrollingWinControl] * AControl.WidgetType = []) and
           NeedsRecalculation(ScrollInfo.nMax, ScrollInfo.nPage, R.Height) then
         begin
+          LLogicalMin := ScrollInfo.nMin;
+          LLogicalMax := ScrollInfo.nMax;
+          LLogicalPage := ScrollInfo.nPage;
+          LLogicalPos := ScrollInfo.nPos;
           HaveLogicalValues := True;
           ChangeLogicalToAbsolute(AControl, ScrollInfo, SB_VERT, R);
         end;
@@ -4505,10 +4589,20 @@ end;
 function TGtk3WidgetSet.SetWindowLong(Handle: HWND; Idx: Integer;
   NewLong: PtrInt): PtrInt;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.SetWindowLong not implemented ...');
-  {$ENDIF}
-  Result:=inherited SetWindowLong(Handle, Idx, NewLong);
+  Result := 0;
+  if Handle <> 0 then
+    case Idx of
+      GWL_STYLE:
+        TGtk3WidgetAccess(Handle).FParams.Style := NewLong;
+      GWL_EXSTYLE:
+        TGtk3WidgetAccess(Handle).FParams.ExStyle := NewLong;
+      GWL_USERDATA:
+        TGtk3WidgetAccess(Handle).Widget^.set_data('Userdata', {%H-}gpointer(NewLong));
+      GWL_ID:
+        TGtk3WidgetAccess(Handle).Widget^.set_data('Id', {%H-}gpointer(NewLong));
+      GWL_HINSTANCE:
+        TGtk3WidgetAccess(Handle).Widget^.set_data('HInstance', {%H-}gpointer(NewLong));
+    end;
 end;
 
 function TGtk3WidgetSet.SetWindowOrgEx(dc: hdc; NewX, NewY: Integer; OldPoint: PPoint): Boolean;
@@ -4601,7 +4695,7 @@ begin
   else
     PCR := TGtk3Region(hRgn).Handle;
   gtk_widget_shape_combine_region(TGtk3Widget(hWnd).Widget, PCR);
-  if bRedraw then
+  if bRedraw and Gtk3IsGtkWindow(TGtk3Widget(hWnd).Widget^.get_toplevel) then
     TGtk3Widget(hWnd).Widget^.realize;
   Result:=1;
 end;

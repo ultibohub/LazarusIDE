@@ -61,7 +61,7 @@ type
 
   { TLocalsDlg }
 
-  TLocalsDlg = class(TDebuggerDlg)
+  TLocalsDlg = class(TDebuggerDlg, IIdeDbgDragDropWatchSource)
     actInspect: TAction;
     actEvaluate: TAction;
     actCopyName: TAction;
@@ -122,6 +122,8 @@ type
     FPowerImgIdx, FPowerImgIdxGrey: Integer;
     FWatchPrinter: TWatchResultPrinter;
     FLocolsTreeMgr: TDbgTreeViewLocalsValueMgr;
+    FSelectedForDrag: TNodeArray;
+
 
     FUpdateFlags: set of (ufNeedUpdating);
     function GetSelected: TLocalsValue; // The focused Selected Node
@@ -131,12 +133,17 @@ type
       ResultText: String; ResultDBGType: TDBGType);
 
     procedure ClearTree(OnlyClearNodeData: boolean = False);
+    procedure LocalsAnyChanged(Sender: TObject);
     procedure LocalsChanged(Sender: TObject);
     procedure SubLocalChanged(Sender: TObject);
     function  GetThreadId: Integer;
     function  GetSelectedThreads(Snap: TSnapshot): TIdeThreads;
     function GetStackframe: Integer;
     function  GetSelectedSnapshot: TSnapshot;
+
+    function DragWatchCount(ASender: TObject): integer;
+    procedure DragWatchInit(ASender: TObject; AnIndex: integer; AWatch: TIdeWatch);
+    procedure DragWatchDone(ASender: TObject);
   protected
     procedure DoBeginUpdate; override;
     procedure DoEndUpdate; override;
@@ -161,6 +168,7 @@ type
   protected
     function WatchAbleResultFromNode(AVNode: PVirtualNode): IWatchAbleResultIntf; override;
     function WatchAbleResultFromObject(AWatchAble: TObject): IWatchAbleResultIntf; override;
+    function GetTrackingIdFor(AWatchAble: TObject): string; override;
 
     function GetFieldAsText(Nd: PVirtualNode; AWatchAble: TObject;
       AWatchAbleResult: IWatchAbleResultIntf; AField: TTreeViewDataToTextField;
@@ -339,6 +347,7 @@ begin
   ThreadsNotification.OnCurrent   := @LocalsChanged;
   CallstackNotification.OnCurrent := @LocalsChanged;
   SnapshotNotification.OnCurrent  := @LocalsChanged;
+  SnapshotNotification.OnChange   := @LocalsAnyChanged;
   FWatchPrinter := TWatchResultPrinter.Create;
   FWatchPrinter.FormatFlags := [rpfClearMultiLine];
   FLocolsTreeMgr := TDbgTreeViewLocalsValueMgr.Create(vtLocals);
@@ -754,6 +763,26 @@ begin
   then Result := SnapshotManager.SelectedEntry;
 end;
 
+function TLocalsDlg.DragWatchCount(ASender: TObject): integer;
+begin
+  if ASender <> vtLocals then exit(0);
+  FSelectedForDrag := vtLocals.GetSortedSelection(True);
+  Result := Length(FSelectedForDrag);
+end;
+
+procedure TLocalsDlg.DragWatchInit(ASender: TObject; AnIndex: integer; AWatch: TIdeWatch);
+var
+  SrcLocal: TIdeLocalsValue;
+begin
+  SrcLocal := TIdeLocalsValue(vtLocals.NodeItem[FSelectedForDrag[AnIndex]]);
+  AWatch.Expression := SrcLocal.Name;
+end;
+
+procedure TLocalsDlg.DragWatchDone(ASender: TObject);
+begin
+  FSelectedForDrag := nil;
+end;
+
 procedure TLocalsDlg.DoBeginUpdate;
 begin
   inherited DoBeginUpdate;
@@ -842,6 +871,12 @@ begin
     vtLocals.Clear;
 end;
 
+procedure TLocalsDlg.LocalsAnyChanged(Sender: TObject);
+begin
+  if SnapshotManager.Snapshots.Count = 0 then
+    FLocolsTreeMgr.ClearOutdatedTrackingIdData;
+end;
+
 { TDbgTreeViewLocalsValueMgr }
 
 function TDbgTreeViewLocalsValueMgr.WatchAbleResultFromNode(AVNode: PVirtualNode
@@ -854,6 +889,11 @@ function TDbgTreeViewLocalsValueMgr.WatchAbleResultFromObject(
   AWatchAble: TObject): IWatchAbleResultIntf;
 begin
   Result := TIdeLocalsValue(AWatchAble);
+end;
+
+function TDbgTreeViewLocalsValueMgr.GetTrackingIdFor(AWatchAble: TObject): string;
+begin
+  Result := TIdeLocalsValue(AWatchAble).Name;
 end;
 
 function TDbgTreeViewLocalsValueMgr.GetFieldAsText(Nd: PVirtualNode;

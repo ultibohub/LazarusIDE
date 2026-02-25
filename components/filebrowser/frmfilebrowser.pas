@@ -5,6 +5,7 @@ unit frmFileBrowser;
 interface
 
 uses
+  {$IFDEF MSWINDOWS} Windows, {$ENDIF}
   Classes, SysUtils,
   // LCL
   LCLType, Forms, Controls, Dialogs, FileCtrl, ComCtrls, StdCtrls, ExtCtrls,
@@ -38,6 +39,7 @@ type
     procedure FileListBoxDblClick(Sender: TObject);
     procedure cbFilePanelChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure TVDblClick(Sender: TObject);
     procedure TVExpanded(Sender: TObject; Node: TTreeNode);
@@ -71,6 +73,7 @@ type
     procedure SetFilesIntree(AValue: Boolean);
     procedure SetRootDir(const Value: string);
     procedure InitializeTreeview;
+    procedure SetShowHidden(AValue: Boolean);
     procedure SetTreeFileMask(AValue: String);
     function ShowEntry(aEntry: TFilesystemEntry): boolean;
     {$IFDEF MSWINDOWS}
@@ -89,7 +92,7 @@ type
     { Directory the treeview starts from }
     property RootDirectory: string read FRootDir write SetRootDir;
     { Must we show hidden directories - not working on unix type systems }
-    property ShowHidden: Boolean read FShowHidden write FShowHidden default False;
+    property ShowHidden: Boolean read FShowHidden write SetShowHidden default False;
     { Called when user double-clicks file name }
     property OnOpenFile: TOpenFileEvent read FOnOpenFile write FOnOpenFile;
     { Called when user clicks configure button }
@@ -111,11 +114,6 @@ var
 implementation
 
 {$R frmfilebrowser.lfm}
-
-{$IFDEF MSWINDOWS}
-uses
-  Windows;
-{$ENDIF}
 
 const
   cFilter = 'All Files (' + AllFilesMask + ')|' + AllFilesMask +
@@ -187,10 +185,6 @@ end;
 procedure TFileBrowserForm.cbHiddenChange(Sender: TObject);
 begin
   ShowHidden := cbHidden.Checked;
-  if ShowHidden then
-    FileListBox.FileType := FileListBox.FileType + [ftHidden]
-  else
-    FileListBox.FileType := FileListBox.FileType - [ftHidden];
 end;
 
 procedure TFileBrowserForm.cbTreeFilterChange(Sender: TObject);
@@ -207,7 +201,6 @@ end;
 procedure TFileBrowserForm.cbFilePanelChange(Sender: TObject);
 begin
   FileListBox.Mask := cbFilePanel.Text;
-
 end;
 
 procedure TFileBrowserForm.FormCreate(Sender: TObject);
@@ -216,6 +209,11 @@ begin
   InitializeTreeview;
   cbFilePanel.Filter := cFilter;
   cbTreeFilter.Filter := cFilter;
+end;
+
+procedure TFileBrowserForm.FormDestroy(Sender: TObject);
+begin
+  FreeAndNil(FRoot);
 end;
 
 procedure TFileBrowserForm.FormShow(Sender: TObject);
@@ -242,9 +240,9 @@ end;
 function TFileBrowserForm.ShowEntry(aEntry : TFilesystemEntry) : boolean;
 
 begin
-  Result:=(aEntry.EntryType=etDirectory);
+  Result:=(aEntry.EntryType=etDirectory) ;
   if Not Result then
-    Result:=(FSelectedMask=Nil) or FSelectedMask.Matches(aEntry.Name);
+    Result:=FFilesInTree and ((FSelectedMask=Nil) or FSelectedMask.Matches(aEntry.Name));
 end;
 
 procedure TFileBrowserForm.AddEntries(Node: TTreeNode);
@@ -289,7 +287,7 @@ begin
     Include(lTypes,etFile);
   rOptions:=[];
   if ShowHidden then
-    Include(rOptions,reoHidden);
+    Include(rOptions,reoHiddenFiles);
   if NodeEntry.HasEntries(ShowHidden,lTypes) and (NodeEntry.EntryCount=0) then
     NodeEntry.ReadEntries(rOptions);
   if DirectoriesBeforeFiles then
@@ -439,8 +437,20 @@ begin
   TV.Items.Clear;
   pnlFiles.Visible:=not FilesInTree;
   Splitter1.Visible:=Not FilesInTree;
+  cbTreeFilter.Visible:=FilesInTree;
   if FilesInTree then
-    TV.Align:=alClient;
+    TV.Align:=alClient
+end;
+
+procedure TFileBrowserForm.SetShowHidden(AValue: Boolean);
+begin
+  if FShowHidden=AValue then Exit;
+  FShowHidden:=AValue;
+  if ShowHidden then
+    FileListBox.FileType := FileListBox.FileType + [ftHidden]
+  else
+    FileListBox.FileType := FileListBox.FileType - [ftHidden];
+  InitializeTreeview;
 end;
 
 procedure TFileBrowserForm.SetTreeFileMask(AValue: String);
@@ -470,8 +480,7 @@ begin
   Dir:=RootDirectory;
   if Dir='' then
     Dir:=PathDelim;
-  if Assigned(FRoot) then
-    FreeAndNil(FRoot);
+  FreeAndNil(FRoot);
   FRoot:=TDirectoryEntry.Create(Nil,ExcludeTrailingPathDelimiter(Dir));
   { Remove the path delimiter unless this is root. }
   if (Dir<>PathDelim) and (Dir[length(Dir)] = PathDelim) then
@@ -495,24 +504,17 @@ begin
 end;
 
 procedure TFileBrowserForm.ConfigNode(aNode : TTreeNode; aEntry : TFileSystemEntry);
-
 var
   Idx : Integer;
-
 begin
   aNode.Data:=aEntry;
-  Case aEntry.EntryType of
-    etDirectory : Idx:=0;
-    etFile : Idx:=1;
-    etSymlink : Idx:=2;
-  end;
+  Idx:=Ord(aEntry.EntryType);
   aNode.ImageIndex:=Idx;
   aNode.SelectedIndex:=Idx;
   aNode.HasChildren:=aEntry.HasEntries(ShowHidden);
 end;
 
 function TFileBrowserForm.AddNode(aSibling : TTreeNode; aEntry : TFileSystemEntry) : TTreeNode;
-
 begin
   Result:=TV.Items.Add(nil, aEntry.Name);
   ConfigNode(Result,aEntry);

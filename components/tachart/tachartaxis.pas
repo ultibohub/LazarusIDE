@@ -131,6 +131,7 @@ type
     FWrappedTitle: String;
     FZPosition: TChartDistance;
 
+    function GetDrawer: IChartDrawer;
     function GetMarks: TChartAxisMarks; inline;
     function GetRealTitle: String;
     function GetValue(AIndex: Integer): TChartValueText; inline;
@@ -193,6 +194,7 @@ type
     property TitlePolygon: TPointArray read FTitlePolygon;
     property Value[AIndex: Integer]: TChartValueText read GetValue;
     property ValueCount: Integer read GetValueCount;
+    property Drawer: IChartDrawer read GetDrawer;
   published
     property Alignment default calLeft;
     property Arrow;
@@ -786,6 +788,11 @@ begin
   Result := TChartAxisMarks(inherited Marks);
 end{%H-}; // to silence the compiler warning of impossible inherited inside inline proc
 
+function TChartAxis.GetDrawer: IChartDrawer;
+begin
+  Result := FHelper.FDrawer;
+end;
+
 function TChartAxis.GetOrthogonalAxis: TChartAxis;
 begin
   Result := nil;
@@ -1120,7 +1127,7 @@ begin
   FHelper.FClipRect := AClipRect;
   FHelper.FDrawer := ADrawer;
   FHelper.FTransf := ATransf;
-  FHelper.FZOffset.Y := Min(ZPosition, AMaxZPosition);
+  FHelper.FZOffset.Y := ADrawer.Scale(Min(ZPosition, AMaxZPosition));
   FHelper.FZOffset.X := -FHelper.FZOffset.Y;
   FHelper.FAtDataOnly := AtDataOnly;
   FHelper.FMaxForMarks := NegInfinity;
@@ -1453,7 +1460,7 @@ begin
     if axis.IsDefaultPosition then
       Result[axis.Alignment] += Max(0,
         g^.FSize + g^.FTitleSize + g^.FMargin +
-        ALIGN_TO_ZDIR[axis.Alignment] * Min(axis.ZPosition, ADepth));
+        ALIGN_TO_ZDIR[axis.Alignment] * Min(axis.Drawer.Scale(axis.ZPosition), ADepth));
   end;
   ai := 0;
   for i := 0 to High(FGroups) do begin

@@ -41,20 +41,20 @@ uses
   // RTL+FCL
   Classes, SysUtils, TypInfo, Math, AVL_Tree,
   // LCL
-  LCLIntf, LCLType, LResources, LCLMemManager, Controls, Graphics,
+  LCLIntf, LCLType, LResources, Controls, Graphics,
   Forms, Menus, Dialogs,
   // LazUtils
   FileUtil, LazFileUtils, LazFileCache, CompWriterPas, LazLoggerBase, LazTracer,
-  LazUTF8, AvgLvlTree,
+  LazMemManager, LazUTF8, AvgLvlTree,
   // Codetools
   CodeCache, CodeTree, CodeToolManager, FindDeclarationTool,
   // BuildIntf
-  ComponentReg, ProjPackIntf, ProjectIntf,
+  ComponentReg, ProjPackIntf, ProjectIntf, UnitResourceIntf,
   // IDEIntf
   PropEdits, PropEditUtils, ObjectInspector, FormEditingIntf,
-  UnitResources, IDEOptEditorIntf, IDEDialogs, ComponentEditors,
-  // IdeUtils
-  IdeUtilsPkgStrConsts,
+  IDEOptEditorIntf, IDEDialogs, ComponentEditors,
+  // IdeConfig
+  IdeConfStrConsts,
   // IdeProject
   IdeProjectStrConsts,
   // IDE

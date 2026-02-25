@@ -33,7 +33,7 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, contnrs, IniFiles,
+  Classes, SysUtils, Contnrs, IniFiles, System.UITypes,
   // LCL
   Forms, Controls, Dialogs,
   // CodeTools
@@ -44,14 +44,16 @@ uses
   // BuildIntf
   PackageIntf, ProjectIntf, ComponentReg, IDEExternToolIntf,
   // IDEIntf
-  IDEDialogs, LazIDEIntf, IDEOptEditorIntf, EditorSyntaxHighlighterDef,
-  // IdeUtils
-  IdeUtilsPkgStrConsts,
+  IDEDialogs, LazIDEIntf,
   // IdeConfig
-  IDEProcs, SearchPathProcs, ParsedCompilerOpts, CompilerOptions, ProjPackCommon,
+  IDEProcs, DialogProcs, SearchPathProcs, ParsedCompilerOpts, CompilerOptions,
+  ProjPackCommon, IdeConfStrConsts,
+  // IdeProject
+  Project,
+  // IdePackager
+  PackageDefs, EditablePackage, PackageSystem,
   // IDE
-  DialogProcs, Project, PackageDefs, EditablePackage, PackageSystem, PackageEditor,
-  BasePkgManager, LazarusIDEStrConsts, SourceFileManager,
+  LazarusIDEStrConsts, SourceFileManager, PackageEditor, BasePkgManager,
   // Converter
   ConverterTypes, ConvertSettings, ConvCodeTool, MissingUnits, MissingPropertiesDlg,
   UsedUnits;
@@ -632,8 +634,6 @@ begin
     if not fOwnerConverter.fSettings.SameDfmFile then
       Result:=LoadCodeBuffer(fLFMBuffer,LfmFilename,
                              [lbfCheckIfText,lbfUpdateFromDisk],true);
-    if fUnitInfo<>nil then
-      Result:=LoadLFM(fUnitInfo,fLFMBuffer,[ofOnlyIfExists],[]);
   end;
 end;
 
@@ -1483,7 +1483,7 @@ begin
     for i:=0 to Cnt-1 do begin
       Package:=PackageGraph.Packages[i];
       if Package.IsVirtual then
-        continue; // skip unsaved package
+        Continue;   // Skip unsaved package.
       if PackageGraph.LazarusBasePackages.IndexOf(Package)>=0 then
         Continue;   // Skip base packages.
       SearchPath:=Package.CompilerOptions.GetParsedPath(pcosUnitPath,icoNone,false)
@@ -1583,7 +1583,6 @@ begin
   if LazProject.MainUnitInfo=nil then begin
     // add .lpr file to project as main unit
     MainUnitInfo:=TUnitInfo.Create(fMainUnitConverter.fPascalBuffer);
-    Assert(Assigned(IDEEditorOptions), 'TConvertDelphiProject.CreateMainSourceFile: IDEEditorOptions is Nil.');
     MainUnitInfo.IsPartOfProject:=true;
     LazProject.AddFile(MainUnitInfo,false);
     LazProject.MainFileID:=0;

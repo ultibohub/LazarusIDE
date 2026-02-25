@@ -2480,15 +2480,22 @@ begin
 
   applyBrush;
 
-  cairo_rectangle(pcr, x + PixelOffset, y + PixelOffset, w - 1, h - 1);
-
-  if (CurrentBrush.Style <> BS_NULL) then
+  if (w = 1) or (h = 1) then // #42049
   begin
-    cairo_fill_preserve(pcr); // Preserve path for border
-    // Must paint border, filling is not enough
-    SetSourceColor(FCurrentBrush.Color);
-    cairo_set_line_width(pcr, 1);
-    cairo_stroke(pcr);
+    cairo_rectangle(pcr, x + PixelOffset, y + PixelOffset, w, h);
+    cairo_fill(pcr);
+  end
+  else // original solution, ref.to #36374
+  begin
+    cairo_rectangle(pcr, x + PixelOffset, y + PixelOffset, w - 1, h - 1);
+    if (CurrentBrush.Style <> BS_NULL) then
+    begin
+      cairo_fill_preserve(pcr); // Preserve path for border
+      // Must paint border, filling is not enough
+      SetSourceColor(FCurrentBrush.Color);
+      cairo_set_line_width(pcr, 1);
+      cairo_stroke(pcr);
+    end;
   end;
   CurrentBrush := ATempBrush;
 end;
@@ -2739,13 +2746,14 @@ var
 begin
   if not Assigned(pcr) then
     exit(False);
+
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
   ApplyPen;
 
-
   if fCurrentPen.Width<=1 then // optimizations
   begin
-    cairo_get_current_point(pcr, @FLastPenX, @FLastPenY);
+   { if (cairo_has_current_point(pcr)<>0) then
+      cairo_get_current_point(pcr, @FLastPenX, @FLastPenY);}
     X0:=round(FLastPenX);
     Y0:=round(FLastPenY);
     dx:=X-X0;
@@ -2805,6 +2813,8 @@ begin
   end else
     cairo_line_to(pcr,X+PixelOffset, Y+PixelOffset);
 
+  if cairo_has_current_point(pcr)<>0 then
+    cairo_get_current_point(pcr, @fLastPenX, @fLastPenY);
   cairo_stroke_preserve(pcr);
   Result := True;
 end;
@@ -2816,11 +2826,19 @@ var
 begin
   if not Assigned(pcr) then
     exit(False);
+
   if OldPoint <> nil then
   begin
-    cairo_get_current_point(pcr, @dx, @dy);
-    OldPoint^.X := Round(dx);
-    OldPoint^.Y := Round(dy);
+    if cairo_has_current_point(pcr)<>0 then
+    begin
+      cairo_get_current_point(pcr, @dx, @dy);
+      OldPoint^.X := Round(dx);
+      OldPoint^.Y := Round(dy);
+    end else
+    begin
+      OldPoint^.X := Round(fLastPenX);
+      OldPoint^.Y := Round(fLastPenY);
+    end;
   end;
   dx := X;
   dy := Y;
@@ -2833,7 +2851,8 @@ begin
   FLastPenX := dx;
   FLastPenY := dy;
   //TODO: check if we need here cairo_get_current_point or we can assign it like above
-  //cairo_get_current_point(pcr,@FLastPenX,@FLastPenY);
+  if cairo_has_current_point(pcr)<>0 then
+    cairo_get_current_point(pcr, @fLastPenX, @fLastPenY);
   Result := True;
 end;
 

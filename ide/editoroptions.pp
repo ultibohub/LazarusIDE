@@ -36,11 +36,15 @@ unit EditorOptions;
   {$ENDIF}
 {$ENDIF}
 
+{$IFDEF LCLNoGui}
+  {$ERROR needs gui}
+{$ENDIF}
+
 interface
 
 uses
   // RTL, FCL
-  Classes, SysUtils, typinfo, fgl, Math, resource,
+  Classes, SysUtils, typinfo, fgl, resource,
   // LCL
   Graphics, LResources, Forms, Dialogs, ComCtrls, LCLType, Controls, LCLProc,
   // LazUtils
@@ -8465,6 +8469,8 @@ begin
     cs := ColorSchemeGroupAtPos[i];
     csl := cs.ColorSchemeBySynHl[h];
     if csl = nil then
+      continue;
+    if csl.FAttributes.IndexOf(AStoredName)>=0 then
       continue;
 
     csa := TColorSchemeAttribute.Create(csl, AName, AStoredName);

@@ -7861,8 +7861,16 @@ begin
       if not FEditorKey and (Shift = [ssModifier]) then
         doPasteFromClipboard;
     VK_X:
-      if not FEditorKey and (Shift = [ssShift]) then
+      if not FEditorKey and (Shift = [ssModifier]) then
         doCutToClipboard;
+    VK_INSERT:
+      if not FEditorKey then
+      begin
+        if (Shift = [ssModifier]) then
+          doCopyToClipboard
+        else if (Shift = [ssShift]) then
+          doPasteFromClipboard;
+      end;
     VK_DELETE:
       if not FEditorKey and EditingAllowed(FCol) and
          not (csDesigning in ComponentState) then begin

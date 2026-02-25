@@ -244,6 +244,7 @@ type
     FImageIndex: TImageIndex;
     FOnHide: TNotifyEvent;
     FOnShow: TNotifyEvent;
+    FLastFocusedControl: TWinControl;
     procedure SetImageIndex(const AValue: TImageIndex);
     procedure SetTabVisible(const AValue: Boolean);
   protected
@@ -460,6 +461,7 @@ type
     procedure UpdateTabProperties; virtual;
     class function GetControlClassDefaultSize: TSize; override;
     procedure Notification(AComponent: TComponent; Operation: TOperation); override;
+    procedure WMSetFocus(var Message: TLMSetFocus); message LM_SETFOCUS;
     property ActivePageComponent: TCustomPage read GetActivePageComponent
                                               write SetActivePageComponent;
     property ActivePage: String read GetActivePage write SetActivePage
@@ -1639,6 +1641,7 @@ type
     function CustomSort(ASortProc: TLVCompare; AOptionalParam: PtrInt): Boolean;
     procedure BeginUpdate;
     procedure Clear;
+    procedure FastClear;
     procedure EndUpdate;
     procedure Repaint; override;
     function FindCaption(StartIndex: Integer; Value: string;
@@ -3437,6 +3440,10 @@ type
   );
 
   THideSelectionMode = (hsmGray, hsmHide);
+
+  TOnDragOverTreeView = function(Sender, Source: TObject; X, Y: Integer;
+      out TargetTVNode: TTreeNode; out TargetTVType: TTreeViewInsertMarkType
+      ): boolean of object;
 
   TCustomTreeView = class(TCustomControl)
   private

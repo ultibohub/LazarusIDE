@@ -540,7 +540,6 @@ resourcestring
   lisShortNoPath = 'Short, no path';
   lisRelative = 'Relative';
   lisFull = 'Full';
-  lisTranslateTheEnglishMessages = 'Translate the English Messages';
   lisShowMessageTypeID = 'Show Message Type ID';
   lisToolStoppedWithExitCodeUseContextMenuToGetMoreInfo = 'tool stopped with '
     +'exit code %s. Use context menu to get more information.';
@@ -2661,6 +2660,8 @@ resourcestring
   
   // custom messages
   dlgCompilerMessage = 'Compiler messages';
+  dlgTranslateWithHint = 'Translate (select messages file in Tools -> Options -> Environment -> Files)';
+  dlgTranslateUsing = 'Translate using "%s"';
 
   // project options dialog
   dlgProjectOptionsFor = 'Options for Project: %s';
