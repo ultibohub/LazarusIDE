@@ -126,7 +126,7 @@ begin
   //cbTranslate.Enabled:=EnvironmentOptions.CompilerMessagesFilename<>'';
   //lisTranslateTheEnglishMessages;
   FPCMsgFilePool.GetMsgFileNames(EnvironmentOptions.GetParsedCompilerFilename,
-                                 '','', EnglishFN, TranslationFN);
+                                 '','','', EnglishFN, TranslationFN); //Ultibo
   //debugln(['TCompilerMessagesOptionsFrame.ReadSettings EnglishFN=', EnglishFN,
   //         ', TranslationFN=', TranslationFN]);
   try
