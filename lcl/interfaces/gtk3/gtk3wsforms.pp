@@ -247,7 +247,6 @@ end;
 
 class procedure TGtk3WSCustomForm.ShowHide(const AWinControl: TWinControl);
 var
-  //AMask:TGdkEventMask;
   AForm, OtherForm: TCustomForm;
   AWindow, ATransient: PGtkWindow;
   i: Integer;
@@ -260,37 +259,63 @@ var
   procedure CheckAndFixGeometry;
   const
     WaitDelay: gulong = 4000;
-    WaitLoops: integer = 4;
   var
     x, y, w, h: gint;
+    IsBorderLess: Boolean;
+    TargetOpacity: Double;
+    GdkDisplay: PGdkDisplay;
+    IsX11: Boolean;
   begin
-    AWindow^.window^.get_geometry(@x, @y, @w, @h);
-    x := 0; // we don't use result of get_geometry
-    y := 0;
-    if (AWindow^.transient_for <> nil) and not AWindow^.get_decorated then
+    GdkDisplay := gdk_window_get_display(AWindow^.window);
+    IsX11 := not Gtk3WidgetSet.IsWayland;
+    IsBorderLess := (AForm.BorderStyle = bsNone) or (not AWindow^.get_decorated);
+
+    if not IsX11 then
     begin
+      AWindow^.show_all;
+      gdk_display_flush(GdkDisplay);
+      exit;
+    end;
+
+    if IsBorderLess then
+    begin
+      if AForm.AlphaBlend then
+        TargetOpacity := AForm.AlphaBlendValue / 255.0
+      else
+        TargetOpacity := 1.0;
+
+      gdk_window_set_opacity(AWindow^.window, 0.0);
+      AWindow^.show_all;
+    end;
+
+    AWindow^.window^.get_geometry(@x, @y, @w, @h);
+    x := 0;
+    y := 0;
+
+    if (AWindow^.transient_for <> nil) and not AWindow^.get_decorated then
       if Assigned(AForm.PopupParent) or (AForm.PopupMode = pmAuto) then
         AWindow^.transient_for^.window^.get_origin(@x, @y);
-    end else
-    begin
-      x := 0;
-      y := 0;
-    end;
 
     with AWinControl do
       AWindow^.window^.move_resize(Left + x, Top + y, Width, Height);
 
-    AWindow^.window^.process_updates(True);
-    //Give a little breath to WM.
-    for x := 0 to WaitLoops - 1 do
+    gdk_display_sync(GdkDisplay);
+
+    if IsBorderLess then
     begin
       g_usleep(WaitDelay);
-      g_main_context_iteration(nil, false);
+      g_main_context_iteration(nil, False);
+      gdk_window_set_opacity(AWindow^.window, TargetOpacity);
+      gdk_window_invalidate_rect(AWindow^.window, nil, True);
     end;
 
-    //Note that here may be still wrong geometry under x11,
-    //but LCL should be happy at this point.
+    AWindow^.window^.process_updates(True);
+
+    if not IsBorderLess then
+      AWindow^.show_all;
   end;
+
+
 begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WSCustomForm.ShowHide handleAllocated=',dbgs(AWinControl.HandleAllocated));
@@ -400,16 +425,33 @@ begin
 
     //See issue #41412
     CheckAndFixGeometry;
-    AWindow^.show_all;
-    //AMask := AWindow^.window^.get_events;
+
     AWindow^.window^.set_events(GDK_ALL_EVENTS_MASK);
     if not IsFormDesign(AForm) then
-      AWindow^.present;
+    begin
+      //If LM_NCHITTEST=true, do not attack WM
+      if not AWindow^.window^.get_pass_through then
+        AWindow^.present_with_time(Gtk3WidgetSet.LastUserEventTime);
+
+      if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
+        and not AWindow^.window^.get_pass_through then
+      begin
+        //wayland, add grab
+        //TODO: gdk_display_device_is_grabbed
+        gtk_device_grab_add(PGtkWidget(AWindow),
+          gdk_seat_get_keyboard(gdk_display_get_default_seat(gdk_display_get_default)), False);
+      end;
+    end;
   end else
   begin
     if not IsFormDesign(AForm) and
       ((fsModal in AForm.FormState) or (AForm.BorderStyle = bsNone)) then
     begin
+      //wayland, remove grab
+      if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
+        and not AWindow^.window^.get_pass_through then
+          gtk_device_grab_remove(PGtkWidget(AWindow),
+            gdk_seat_get_keyboard(gdk_display_get_default_seat(gdk_display_get_default)));
       if AWindow^.transient_for <> nil then
       begin
         if (fsModal in AForm.FormState) and Gtk3IsGdkWindow(AWindow^.transient_for^.window) then

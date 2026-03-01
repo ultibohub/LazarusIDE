@@ -86,10 +86,6 @@ type
     class procedure PanelUpdate(const AStatusBar: TStatusBar; PanelIndex: integer); override;
     class procedure SetPanelText(const AStatusBar: TStatusBar; PanelIndex: integer); override;
     class procedure Update(const AStatusBar: TStatusBar); override;
-    class procedure GetPreferredSize(const {%H-}AWinControl: TWinControl;
-                        var {%H-}PreferredWidth, PreferredHeight: integer;
-                        {%H-}WithThemeSpace: Boolean); override;
-
     class procedure SetSizeGrip(const AStatusBar: TStatusBar; {%H-}SizeGrip: Boolean); override;
     class procedure SetText(const AWinControl: TWinControl; const AText: String); override;
   end;
@@ -1280,8 +1276,7 @@ class procedure TGtk3WSStatusBar.PanelUpdate(const AStatusBar: TStatusBar;
 begin
   if not WSCheckHandleAllocated(AStatusBar, 'PanelUpdate') then
     Exit;
-  // inherited PanelUpdate(AStatusBar, PanelIndex);
-  writeln('WARNING: TGtk3WSStatusBar.PanelUpdate PanelIndex=',PanelIndex,' NOT IMPLEMENTED YET.');
+  TGtk3StatusBar(AStatusBar.Handle).PanelUpdate(AStatusBar, PanelIndex);
 end;
 
 class procedure TGtk3WSStatusBar.SetPanelText(const AStatusBar: TStatusBar;
@@ -1297,27 +1292,17 @@ end;
 
 class procedure TGtk3WSStatusBar.Update(const AStatusBar: TStatusBar);
 begin
-  // inherited Update(AStatusBar);
   if not WSCheckHandleAllocated(AStatusBar, 'Update') then
     Exit;
-  //writeln('TGtk3WSStatusBar.Update ');
   TGtk3StatusBar(AStatusBar.Handle).UpdateStatusBar(AStatusBar);
-end;
-
-class procedure TGtk3WSStatusBar.GetPreferredSize(
-  const AWinControl: TWinControl; var PreferredWidth, PreferredHeight: integer;
-  WithThemeSpace: Boolean);
-begin
-  inherited GetPreferredSize(AWinControl, PreferredWidth, PreferredHeight,
-    WithThemeSpace);
 end;
 
 class procedure TGtk3WSStatusBar.SetSizeGrip(const AStatusBar: TStatusBar;
   SizeGrip: Boolean);
 begin
- if not WSCheckHandleAllocated(AStatusBar, 'SetSizeGrip') then
+  if not WSCheckHandleAllocated(AStatusBar, 'SetSizeGrip') then
     Exit;
-  // inherited SetSizeGrip(AStatusBar, SizeGrip);
+  TGtk3StatusBar(AStatusBar.Handle).SetSizeGrip(SizeGrip);
 end;
 
 class procedure TGtk3WSStatusBar.SetText(const AWinControl: TWinControl;
@@ -1714,7 +1699,7 @@ begin
   if AWinControl.HandleAllocated then
   begin
     TGtk3Page(AWinControl.Handle).LCLWidth := aWidth;
-    TGtk3Page(AWinControl.Handle).LCLWidth := aHeight;
+    TGtk3Page(AWinControl.Handle).LCLHeight := aHeight;
   end;
 end;
 

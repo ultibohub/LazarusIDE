@@ -37,25 +37,19 @@ unit BasePkgManager;
 
 interface
 
-{$I ide.inc}
-
 uses
-{$IFDEF IDE_MEM_CHECK}
+  {$IFDEF IDE_MEM_CHECK}
   MemCheck,
-{$ENDIF}
-  TypInfo, Classes, SysUtils,
-  // LazUtils
-  LazFileUtils, LazLoggerBase,
-  // LCL
-  Forms, ComCtrls,
+  {$ENDIF}
+  TypInfo, Classes, SysUtils, System.UITypes,
   // BuildIntf
-  PackageIntf, BaseIDEIntf,
-  // IdeIntf
-  MenuIntf, IdeIntfStrConsts,
+  PackageIntf, ProjectIntf, BaseIDEIntf,
   // IdeConfig
-  EnvironmentOpts, CompilerOptions,
-  // IDE
-  LazarusIDEStrConsts, PackageDefs, EditablePackage, PackageSystem, Project;
+  CompilerOptions,
+  // IdeProject
+  //Project,
+  // IdePackager
+  PackageDefs;
 
 type
   { TBasePkgManager }
@@ -65,21 +59,20 @@ type
     // initialization and menu
     constructor Create(TheOwner: TComponent); override;
     destructor Destroy; override;
-    
+
     procedure ConnectMainBarEvents; virtual; abstract;
     procedure ConnectSourceNotebookEvents; virtual; abstract;
     procedure SetupMainBarShortCuts; virtual; abstract;
     procedure SetRecentPackagesMenu; virtual; abstract;
     procedure SaveSettings; virtual; abstract;
     procedure ProcessCommand(Command: word; var Handled: boolean); virtual; abstract;
-    procedure OnSourceEditorPopupMenu(const AddMenuItemProc: TAddMenuItemProc); virtual; abstract;
     procedure TranslateResourceStrings; virtual; abstract;
 
     // files
     function GetDefaultSaveDirectoryForFile(const Filename: string): string; virtual; abstract;
     function OnRenameFile(const OldFilename, NewFilename: string;
                           IsPartOfProject: boolean): TModalResult; virtual; abstract;
-    function FindIncludeFileInProjectDependencies(Project1: TProject;
+    function FindIncludeFileInProjectDependencies(AProject: TLazProject;
                           const Filename: string): string; virtual; abstract;
     function SearchFile(const AFilename: string;
                         SearchFlags: TSearchIDEFileFlags;
@@ -90,16 +83,16 @@ type
                      RequiredUnitname: string): TModalResult; virtual; abstract;
 
     // project
-    function OpenProjectDependencies(AProject: TProject;
+    function OpenProjectDependencies(AProject: TLazProject;
                        ReportMissing: boolean): TModalResult; virtual; abstract;
-    function AddProjectDependency(AProject: TProject; APackage: TLazPackage;
+    function AddProjectDependency(AProject: TLazProject; APackage: TLazPackage;
                                   OnlyTestIfPossible: boolean = false): TModalResult; virtual; abstract;
-    function AddProjectDependency(AProject: TProject;
+    function AddProjectDependency(AProject: TLazProject;
                                   ADependency: TPkgDependency): TModalResult; virtual; abstract;
-    function AddProjectDependencies(AProject: TProject; const Packages: string;
+    function AddProjectDependencies(AProject: TLazProject; const Packages: string;
                                   OnlyTestIfPossible: boolean = false): TModalResult; virtual; abstract;
-    function CheckProjectHasInstalledPackages(AProject: TProject; Interactive: boolean): TModalResult; virtual; abstract;
-    function CanOpenDesignerForm(AnUnitInfo: TUnitInfo; 
+    function CheckProjectHasInstalledPackages(AProject: TLazProject; Interactive: boolean): TModalResult; virtual; abstract;
+    function CanOpenDesignerForm(AnUnitInfo: TLazProjectFile;
                                  Interactive: boolean): TModalResult; virtual; abstract;
     function ProjectInspectorAddDependency(Sender: TObject;
                   ADependency: TPkgDependency): TModalResult; virtual; abstract;
@@ -109,26 +102,21 @@ type
                   ADependency: TPkgDependency): TModalResult; virtual; abstract;
     procedure ProjectInspectorDragDropTreeView(Sender, Source: TObject;
       X, Y: Integer); virtual; abstract;
-    function ProjectInspectorDragOverTreeView(Sender, Source: TObject;
-      X, Y: Integer; out TargetTVNode: TTreeNode;
-      out TargetTVType: TTreeViewInsertMarkType): boolean; virtual; abstract;
     procedure ProjectInspectorCopyMoveFiles(Sender: TObject); virtual; abstract;
 
     // package editors
-    function CanClosePackageEditor(APackage: TEditablePackage): TModalResult; virtual; abstract;
     function CanCloseAllPackageEditors: TModalResult; virtual; abstract;
     function DoNewPackage: TModalResult; virtual; abstract;
-    function DoOpenPackage(APackage: TEditablePackage; Flags: TPkgOpenFlags;
+    function DoOpenPackage(APackage: TLazPackage; Flags: TPkgOpenFlags;
                            ShowAbort: boolean): TModalResult; virtual; abstract;
-    function DoSavePackage(APackage: TEditablePackage;
+    function DoSavePackage(APackage: TLazPackage;
                           Flags: TPkgSaveFlags): TModalResult; virtual; abstract;
 
-    function DoClosePackageEditor(APackage: TEditablePackage): TModalResult; virtual; abstract;
+    function DoClosePackageEditor(APackage: TLazPackage): TModalResult; virtual; abstract;
     function DoCloseAllPackageEditors: TModalResult; virtual; abstract;
     function AddPackageDependency(APackage: TLazPackage; const ReqPackage: string;
                                   OnlyTestIfPossible: boolean = false): TModalResult; virtual; abstract;
     function ApplyDependency(CurDependency: TPkgDependency): TModalResult; virtual; abstract;
-    function IsPackageEditorForm(AForm: TCustomForm): boolean; virtual; abstract;
     procedure OpenHiddenModifiedPackages; virtual; abstract;
 
     // package graph
@@ -140,7 +128,7 @@ type
     procedure LazarusSrcDirChanged; virtual; abstract;
 
     // package compilation
-    function DoCompileProjectDependencies(AProject: TProject;
+    function DoCompileProjectDependencies(AProject: TLazProject;
                       Flags: TPkgCompileFlags): TModalResult; virtual; abstract;
 
     // package installation
@@ -156,7 +144,7 @@ type
                                     Proc: TGetStrProc); virtual; abstract;
     function FindUsableComponent(CurRoot: TPersistent;
                   const ComponentPath: string): TComponent; virtual; abstract;
-    function FindReferencedRootComponent(CurRoot: TPersistent; 
+    function FindReferencedRootComponent(CurRoot: TPersistent;
          const ComponentName: string): TComponent; virtual; abstract;
 
     procedure IDEComponentPaletteOpenPackage(Sender: TObject); virtual; abstract;
@@ -165,14 +153,9 @@ type
 
 var
   PkgBoss: TBasePkgManager;
-  
+
 function PkgSaveFlagsToString(Flags: TPkgSaveFlags): string;
 function PkgOpenFlagsToString(Flags: TPkgOpenFlags): string;
-
-procedure GetDescriptionOfDependencyOwner(Dependency: TPkgDependency;
-                                          out Description: string);
-procedure GetDirectoryOfDependencyOwner(Dependency: TPkgDependency;
-                                        out Directory: string);
 
 
 implementation
@@ -207,49 +190,6 @@ begin
     Result:=Result+s;
   end;
   Result:='['+Result+']';
-end;
-
-procedure GetDescriptionOfDependencyOwner(Dependency: TPkgDependency;
-  out Description: string);
-var
-  DepOwner: TObject;
-begin
-  DepOwner:=Dependency.Owner;
-  if (DepOwner<>nil) then begin
-    if DepOwner is TLazPackage then begin
-      Description:=Format(lisPkgMangPackage, [TLazPackage(DepOwner).IDAsString]);
-    end else if DepOwner is TProject then begin
-      Description:=Format(lisPkgMangProject, [ExtractFileNameOnly(TProject(
-        DepOwner).ProjectInfoFile)]);
-    end else if (DepOwner=PkgBoss) or (DepOwner=PackageGraph) then begin
-      Description:=lisLazarus;
-    end else begin
-      Description:=dbgsName(DepOwner)
-    end;
-  end else begin
-    Description:=Format(lisPkgMangDependencyWithoutOwner, [Dependency.AsString]);
-  end;
-end;
-
-procedure GetDirectoryOfDependencyOwner(Dependency: TPkgDependency;
-  out Directory: string);
-var
-  DepOwner: TObject;
-begin
-  DepOwner:=Dependency.Owner;
-  if (DepOwner<>nil) then begin
-    if DepOwner is TLazPackage then begin
-      Directory:=TLazPackage(DepOwner).Directory;
-    end else if DepOwner is TProject then begin
-      Directory:=TProject(DepOwner).Directory;
-    end else if DepOwner=PkgBoss then begin
-      Directory:=EnvironmentOptions.GetParsedLazarusDirectory;
-    end else begin
-      Directory:=''
-    end;
-  end else begin
-    Directory:=''
-  end;
 end;
 
 { TBasePkgManager }

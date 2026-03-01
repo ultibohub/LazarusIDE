@@ -2036,6 +2036,7 @@ begin
   if Handle = 0 then
     Exit(False);
   ARect := TGtk3Widget(handle).getClientBounds;
+  Types.OffsetRect(ARect, -ARect.Left, -ARect.Top);
   Result := True;
 end;
 
@@ -2956,6 +2957,7 @@ var
   APangoMetrics: PPangoFontMetrics;
   aRect: TPangoRectangle;
   APangoWeight: TPangoWeight;
+  lineH: Integer;
 begin
   Result := False;
   if IsValidDC(DC) then
@@ -2994,6 +2996,20 @@ begin
     pango_layout_set_text(AFont.Layout, 'W', 1);
     pango_layout_get_pixel_size(AFont.Layout, @aRect.width, @aRect.height);
     TM.tmMaxCharWidth := Max(TM.tmMaxCharWidth,aRect.width);
+
+    //Internal leading: gap from top of logical area to top of ink e.g. space
+    //above capital H.
+    //ink_rect.y is in Pango units, positive = below the
+    //logical top, i.e. there IS a gap: that gap is the internal leading.
+    pango_layout_set_text(AFont.Layout, 'H', 1);
+    pango_layout_get_extents(AFont.Layout, @aRect, nil);
+    TM.tmInternalLeading := Max(0, PANGO_PIXELS(aRect.y));
+
+    //External leading: extra spacing above/below the cell that the font
+    //designer reserved for line gaps.  Compare pixel line height of H to
+    //the cell height (ascent + descent) already stored in TM.tmHeight.
+    pango_layout_get_pixel_size(AFont.Layout, nil, @lineH);
+    TM.tmExternalLeading := Max(0, lineH - TM.tmHeight);
 
     APangoWeight := AFont.Handle^.get_weight;
 
@@ -3125,21 +3141,42 @@ begin
     begin
       if Assigned(AGdkWindow) then
       begin
+        // get_origin gives the screen position of the GDK client window.
+        // On Wayland this is always 0,0 - no global screen coordinates.
         AGdkWindow^.get_origin(@x, @y);
-        AGdkWindow^.get_frame_extents(@Allocation);
-        AWidth := Allocation.Width;
-        AHeight := Allocation.Height;
+        if IsWayland then
+          AWindow^.get_size(@aWidth, @aHeight)
+        else
+        begin
+          AGdkWindow^.get_frame_extents(@Allocation);
+          aWidth := Allocation.Width;
+          aHeight := Allocation.Height;
+        end;
       end else
       begin
-        AWindow^.get_position(@x, @y);
+        // Window not yet realized/mapped - best effort fallback
+        if IsWayland then
+        begin
+          x := 0;
+          y := 0;
+        end else
+          AWindow^.get_position(@x, @y);
         AWindow^.get_size(@aWidth, @aHeight);
       end;
-      ARect := Bounds(x, Y, AWidth, AHeight);
+      ARect := Bounds(x, y, aWidth, aHeight);
       Result := 1;
     end else
     begin
       TGtk3Widget(Handle).Widget^.get_allocation(@Allocation);
-      ARect := Bounds(Allocation.x, Allocation.y, Allocation.width, Allocation.height);
+      AGdkWindow := TGtk3Widget(Handle).Widget^.get_window;
+      if AGdkWindow <> nil then
+      begin
+        AGdkWindow^.get_origin(@x, @y);
+        ARect := Bounds(x + Allocation.x, y + Allocation.y,
+          Allocation.width, Allocation.height);
+      end else
+        ARect := Bounds(Allocation.x, Allocation.y,
+          Allocation.width, Allocation.height);
       Result := -1;
     end;
   end;
@@ -4340,8 +4377,8 @@ var
 
   procedure HandleRedraw;
   var
-    AHorzPolicy:TGtkPolicyType;
-    AVertPolicy:TGtkPolicyType;
+    AHorzPolicy: TGtkPolicyType;
+    AVertPolicy: TGtkPolicyType;
   begin
     if bRedraw then
     begin
@@ -4351,7 +4388,8 @@ var
         case SBStyle of
           SB_HORZ:
           begin
-            if AHorzPolicy <> POLICY[IsScrollbarVis] then
+            if (AHorzPolicy <> POLICY[IsScrollbarVis]) and
+              PGtkWidget(ScrollWin)^.get_mapped then
               ScrollWin^.set_policy(POLICY[IsScrollbarVis], AVertPolicy);
             if Gtk3WidgetSet.OverlayScrolling and Gtk3IsWidget(Scrollbar) and
               ScrollBar^.get_visible then
@@ -4366,7 +4404,8 @@ var
           end;
           SB_VERT:
           begin
-            if AVertPolicy <> POLICY[IsScrollbarVis] then
+            if (AVertPolicy <> POLICY[IsScrollbarVis]) and
+              PGtkWidget(ScrollWin)^.get_mapped then
               ScrollWin^.set_policy(AHorzPolicy, POLICY[IsScrollbarVis]);
             if Gtk3WidgetSet.OverlayScrolling and Gtk3IsWidget(Scrollbar) and
               ScrollBar^.get_visible then
@@ -4512,7 +4551,7 @@ begin
   if ((ScrollInfo.fMask and (SIF_RANGE or SIF_PAGE)) <> 0) and
      ((SBStyle=SB_HORZ) or (SBStyle=SB_VERT))
   then begin
-    if (Adjustment^.lower >= (Adjustment^.upper-Max(adjustment^.page_size-1,0)))
+    if (Adjustment^.lower >= (Adjustment^.upper-Max(adjustment^.page_size,0)))
     then begin
       if (ScrollInfo.fMask and SIF_DISABLENOSCROLL) = 0 then
         IsScrollbarVis := False
