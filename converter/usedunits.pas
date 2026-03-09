@@ -31,18 +31,18 @@ unit UsedUnits;
 interface
 
 uses
-  Classes, SysUtils, AVL_Tree,
-  // LCL
-  Forms, Controls,
+  Classes, SysUtils, AVL_Tree, System.UITypes,
   // LazUtils
   LazFileUtils, AvgLvlTree,
   // codetools
   StdCodeTools, CodeTree, CodeAtom, CodeCache,
   LinkScanner, KeywordFuncLists, SourceChanger, CodeToolsStrConsts,
-  // IDE + IdeIntf
-  LazarusIDEStrConsts, IDEExternToolIntf,
+  // BuildIntf
+  IDEExternToolIntf,
+  // IDE
+  {!} LazarusIDEStrConsts,
   // Converter
-  ConverterTypes, ConvCodeTool, ConvertSettings, ReplaceNamesUnit;
+  ConvertBase, ConverterTypes, ReplaceNamesUnit;
 
 type
 
@@ -117,10 +117,8 @@ type
 
   { TUsedUnitsTool }
 
-  TUsedUnitsTool = class
+  TUsedUnitsTool = class(TUsedUnitsToolBase)
   private
-    fCTLink: TCodeToolLink;
-    fFilename: string;
     fIsMainFile: Boolean;                 // Main project / package file.
     fIsConsoleApp: Boolean;
     fMainUsedUnits: TUsedUnits;
@@ -141,7 +139,6 @@ type
     function MaybeAddPackageDep(aUnitName: string): Boolean;
     function AddThreadSupport: TModalResult;
   public
-    property Filename: string read fFilename;
     property IsMainFile: Boolean read fIsMainFile write fIsMainFile;
     property IsConsoleApp: Boolean read fIsConsoleApp write fIsConsoleApp;
     property MainUsedUnits: TUsedUnits read fMainUsedUnits;
@@ -256,7 +253,7 @@ begin
             if CodeTool.CleanPosToCaret(UnitNameAtom.StartPos, CaretPos) then
               Settings.AddLogLine(mluNote,
                 Format(lisConvDelphiFixedUnitCase, [OldUnitName, NewUnitName]),
-                fOwnerTool.fFilename, CaretPos.Y, CaretPos.X);
+                fOwnerTool.Filename, CaretPos.Y, CaretPos.X);
           end;
           // Report Windows specific units as missing if target is CrossPlatform.
           //  Needed if work-platform is Windows.
@@ -319,7 +316,7 @@ begin
         fUnitsToRenameVals.AddStrings(sl);
         fCTLink.Settings.AddLogLine(mluNote,
           Format(lisConvDelphiReplacedUnitInUsesSection, [AOldName, ANewName]),
-          fOwnerTool.fFilename);
+          fOwnerTool.Filename);
       end;
     finally
       sl.Free;
@@ -333,7 +330,7 @@ begin
       fUnitsToRemove.Add(AOldName);
     fCTLink.Settings.AddLogLine(mluNote,
       Format(lisConvDelphiRemovedUnitFromUsesSection, [AOldName]),
-      fOwnerTool.fFilename);
+      fOwnerTool.Filename);
   end;
 end;
 
@@ -523,7 +520,7 @@ function TMainUsedUnits.UsesSectionNode: TCodeTreeNode;
 var
   IsPackage: Boolean;
 begin
-  IsPackage := FilenameExtIn(fOwnerTool.fFilename,['.dpk','.lpk'],True);
+  IsPackage := FilenameExtIn(fOwnerTool.Filename,['.dpk','.lpk'],True);
   Result:=fCTLink.CodeTool.FindMainUsesNode(IsPackage);
 end;
 
@@ -564,12 +561,10 @@ end;
 
 constructor TUsedUnitsTool.Create(ACTLink: TCodeToolLink; AFilename: string);
 begin
-  inherited Create;
-  fCTLink:=ACTLink;
-  fFilename:=AFilename;
+  inherited Create(ACTLink, AFilename);
   fIsMainFile:=False;
   fIsConsoleApp:=False;
-  fCTLink.CodeTool.BuildTree(lsrEnd);
+  ACTLink.CodeTool.BuildTree(lsrEnd);
   // These will read uses sections while creating.
   fMainUsedUnits:=TMainUsedUnits.Create(ACTLink, Self);
   fImplUsedUnits:=TImplUsedUnits.Create(ACTLink, Self);
@@ -603,12 +598,12 @@ begin
     and (not fImplUsedUnits.fExistingUnits.Find('interfaces', i) ) then
       fMainUsedUnits.fUnitsToAddForLCL.Add('Interfaces');
   end;
-  UnitUpdater:=TNameUpdater.Create(fCTLink.Settings.ReplaceUnits);
+  UnitUpdater:=TNameUpdater.Create(CTLink.Settings.ReplaceUnits);
   try
     MapToEdit:=Nil;
-    if fCTLink.Settings.UnitsReplaceMode=rlInteractive then
+    if CTLink.Settings.UnitsReplaceMode=rlInteractive then
       MapToEdit:=TStringToStringTree.Create(false);
-    fCTLink.CodeTool.BuildTree(lsrEnd);
+    CTLink.CodeTool.BuildTree(lsrEnd);
     if not (fMainUsedUnits.FindMissingUnits and
             fImplUsedUnits.FindMissingUnits) then
       exit(mrCancel);
@@ -619,7 +614,7 @@ begin
     if Assigned(MapToEdit) and (MapToEdit.Tree.Count>0) then begin
       // Edit, then remove or replace units.
       Result:=EditMap(MapToEdit, Format(lisConvDelphiUnitsToReplaceIn,
-                                        [ExtractFileName(fFilename)]));
+                                        [ExtractFileName(Filename)]));
       if Result<>mrOK then exit;
       // Iterate the map and rename / remove.
       Node:=MapToEdit.Tree.FindLowest;
@@ -661,7 +656,7 @@ var
 begin
   Result := False;
   s:='';
-  if fCTLink.CodeTool.DirectoryCache.FindUnitSourceInCompletePath(aUnitName,s,True) = '' then
+  if CTLink.CodeTool.DirectoryCache.FindUnitSourceInCompletePath(aUnitName,s,True) = '' then
     if Assigned(fOnCheckPackageDependency) then
       Result := fOnCheckPackageDependency(aUnitName);
 end;
@@ -672,7 +667,7 @@ var
   i: Integer;
 begin
   Result:=mrCancel;
-  with fCTLink do begin
+  with CTLink do begin
     // Fix case
     if not CodeTool.ReplaceUsedUnits(fMainUsedUnits.fUnitsToFixCase, SrcCache) then exit;
     fMainUsedUnits.fUnitsToFixCase.Clear;
@@ -786,18 +781,18 @@ begin
   Result:=not ( fMainUsedUnits.fExistingUnits.Find(aUnitName, x)
              or fImplUsedUnits.fExistingUnits.Find(aUnitName, x) );
   if not Result then Exit;
-  Result:=fCTLink.CodeTool.AddUnitToSpecificUsesSection(
-                 fMainUsedUnits.fUsesSection, aUnitName, '', fCTLink.SrcCache);
+  Result:=CTLink.CodeTool.AddUnitToSpecificUsesSection(
+                 fMainUsedUnits.fUsesSection, aUnitName, '', CTLink.SrcCache);
   if not Result then Exit;
-  Result:=fCTLink.SrcCache.Apply;
+  Result:=CTLink.SrcCache.Apply;
   if not Result then Exit;
   // Make sure the same unit will not be added again later.
   RemoveFromAdded(fMainUsedUnits.fUnitsToAdd);
   RemoveFromAdded(fImplUsedUnits.fUnitsToAdd);
   RemoveFromAdded(fMainUsedUnits.fUnitsToAddForLCL);
   RemoveFromAdded(fImplUsedUnits.fUnitsToAddForLCL);
-  fCTLink.Settings.AddLogLine(mluNote,
-    Format(lisConvDelphiAddedUnitToUsesSection, [aUnitName]), fFilename);
+  CTLink.Settings.AddLogLine(mluNote,
+    Format(lisConvDelphiAddedUnitToUsesSection, [aUnitName]), Filename);
 end;
 
 function TUsedUnitsTool.AddUnitIfNeeded(aUnitName: string): Boolean;
@@ -806,8 +801,8 @@ begin
   if Result then
   begin
     fMainUsedUnits.fUnitsToAdd.Add(aUnitName);
-    fCTLink.Settings.AddLogLine(mluNote,
-      Format(lisConvDelphiAddedUnitToUsesSection, [aUnitName]), fFilename);
+    CTLink.Settings.AddLogLine(mluNote,
+      Format(lisConvDelphiAddedUnitToUsesSection, [aUnitName]), Filename);
     MaybeAddPackageDep(aUnitName);
   end;
 end;
@@ -822,7 +817,7 @@ begin
   Result:=mrCancel;
   if not ( fMainUsedUnits.fExistingUnits.Find('cthreads', i) or
            fImplUsedUnits.fExistingUnits.Find('cthreads', i) ) then
-    with fCTLink, SrcCache.BeautifyCodeOptions do
+    with CTLink, SrcCache.BeautifyCodeOptions do
     try
       OldPolicy:=UsesInsertPolicy;
       UsesInsertPolicy:=uipFirst;

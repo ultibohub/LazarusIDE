@@ -93,11 +93,39 @@ begin
   end;
 end;
 
+procedure LCLGtkFrameSizeAllocate(widget: PGtkWidget; allocation: PGtkAllocation); cdecl;
+var
+  ParentClass: PGtkWidgetClass;
+  labelWidget: PGtkWidget;
+  labelMinH: gint;
+begin
+  //Guard: skip tiny allocations that would cause GTK cascade loops.
+  //We only use the label widget's minimum height - no CSS context calls,
+  //which can assert/crash when the style context is not yet initialized.
+  if allocation^.height < 2 then
+    Exit;
+
+  labelWidget := PGtkFrame(widget)^.get_label_widget;
+  if Assigned(labelWidget) and Gtk3IsWidget(labelWidget) and labelWidget^.get_visible then
+  begin
+    labelMinH := 0;
+    gtk_widget_get_preferred_height(labelWidget, @labelMinH, nil);
+    if (labelMinH > 0) and (allocation^.height < labelMinH) then
+      Exit;
+  end;
+
+  ParentClass := PGtkWidgetClass(g_type_class_peek_parent(widget^.g_type_instance.g_class));
+  if not Assigned(ParentClass) or not Assigned(ParentClass^.size_allocate) then
+    Exit;
+  ParentClass^.size_allocate(widget, allocation);
+end;
+
 procedure LCLGtkFrameClassInit(klass: PGTypeClass; {%H-}data: Pointer); cdecl;
 var
   AWidgetClass: PGtkWidgetClass;
 begin
   AWidgetClass := PGtkWidgetClass(klass);
+  //AWidgetClass^.size_allocate := @LCLGtkFrameSizeAllocate;
   AWidgetClass^.get_preferred_width := @LCLGtkFrameGetPreferredWidth;
   AWidgetClass^.get_preferred_height := @LCLGtkFrameGetPreferredHeight;
 end;

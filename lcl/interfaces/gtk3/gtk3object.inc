@@ -120,6 +120,12 @@ begin
   GTK3WidgetSet := nil;
   WakeMainThread := nil;
 
+  if FDockImage <> nil then
+  begin
+    gtk_widget_destroy(FDockImage);
+    FDockImage := nil;
+  end;
+
   if Assigned(FAppIcon) then
     FAppIcon^.unref;
   FAppIcon := nil;
@@ -314,6 +320,8 @@ var
 begin
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   inherited Create;
+  FDockImage := nil;
+
   FDragImageList := nil;
   FDragImageListIcon := nil;
   FDragHotSpot := Point(0, 0);
@@ -626,6 +634,9 @@ begin
   {$ENDIF}
   while g_main_context_pending(nil) do
     g_main_context_iteration(nil, False);
+  {$IFDEF GTK3USEDEFERREDRESIZING}
+  Gtk3DrainResizeQueue;
+  {$ENDIF GTK3USEDEFERREDRESIZING}
   if IsMultiThread then
     CheckSynchronize; //ref.to issue #27662
 end;
@@ -1099,5 +1110,11 @@ begin
     else
       FDragImageList^.hide;
   end;
+end;
+
+
+function TGtk3WidgetSet.CreateThemeServices: TThemeServices;
+begin
+  Result := TGTK3ThemeServices.Create;
 end;
 

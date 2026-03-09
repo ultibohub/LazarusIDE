@@ -4938,6 +4938,10 @@ var
       HelperKind:=fdhlkDelphiHelper;
     Helpers:=Params.GetHelpers(HelperKind);
     if Helpers=nil then exit;
+    if (StartContextNode.Desc=ctnEnumIdentifier)
+    and (StartContextNode.Parent.Desc=ctnEnumerationType) then
+      StartContextNode:=StartContextNode.Parent;
+
     if not Helpers.IterateFromClassNode(StartContextNode,Self,
       HelperContext,HelperIterator) then exit;
     //debugln(['SearchInHelpers START at least one helper found, iterating...']);
@@ -5370,9 +5374,13 @@ begin
 
   // find class helper functions
   SearchInHelpersInTheEnd := False;
-  if (fdfSearchInHelpers in Flags)
-    and (ContextNode.Desc in [ctnClass,ctnRecordType,ctnTypeType,ctnObjCClass,ctnEnumerationType,ctnRangedArrayType,ctnOpenArrayType])
-    and (ContextNode.Parent<>nil) and (ContextNode.Parent.Desc in [ctnTypeDefinition, ctnGenericType])
+  if (fdfSearchInHelpers in Flags) and (
+    (ContextNode.Desc in [ctnClass,ctnRecordType,ctnTypeType,ctnObjCClass,
+                          ctnEnumerationType,ctnRangedArrayType,ctnOpenArrayType])
+    and (ContextNode.Parent<>nil)
+    and (ContextNode.Parent.Desc in [ctnTypeDefinition, ctnGenericType])
+    or ((ContextNode.Desc=ctnEnumIdentifier) and (ContextNode.Parent.Desc=ctnEnumerationType))
+  )
   then begin
     if (fdfSearchInHelpersInTheEnd in Flags) then
       SearchInHelpersInTheEnd := True
@@ -6860,7 +6868,13 @@ var
   function IsDeclarationNode(Node: TCodeTreeNode): boolean;
   begin
     UseProcHead(Node);
-    if (Node=DeclarationNode) or (Node=AliasDeclarationNode) then exit(true);
+    if (Node=DeclarationNode) or (Node=AliasDeclarationNode) or
+    // forward class (ident = class)
+    ( (Node.Desc=ctnTypeDefinition) and
+      (Node.FirstChild.Desc=ctnClass) and
+      (Node.FirstChild=Node.LastChild) )
+    then
+      exit(true);
 
     // check method overrides
     if Node.Desc=ctnProcedureHead then begin
@@ -11375,7 +11389,12 @@ var
       end else if ExprType.Context.Node.Desc in AllPointContexts then begin
         // ok, allowed
         break;
-      end else begin
+      end else if (ExprType.Context.Node.Desc=ctnEnumIdentifier) and
+        (ExprType.Context.Node.Parent.Desc=ctnEnumerationType) then begin
+        // enum can have a helper to type so "enum1. " is ok
+        break;
+      end
+      else begin
         // not allowed
         //debugln(['ResolvePoint ',ExprTypeToString(ExprType)]);
         MoveCursorToCleanPos(CurAtom.StartPos);
@@ -13579,7 +13598,7 @@ begin
     if ((TargetType.Desc in xtAllRealTypes)
       and (ExpressionType.Desc in xtAllRealConvertibles))
     or ((TargetType.Desc in xtAllStringTypes)
-      and (ExpressionType.Desc in xtAllStringConvertibles))
+      and (ExpressionType.Desc in (xtAllStringConvertibles+[xtChar])))
     or ((TargetType.Desc in xtAllWideStringTypes)
       and (ExpressionType.Desc in xtAllWideStringCompatibleTypes))
     or ((TargetType.Desc in xtAllIntegerTypes)
@@ -13604,20 +13623,27 @@ begin
       then
         Result:=tcCompatible
       else if (TargetNode.Desc=ctnProcedureType)
-        and (TargetNode.FirstChild.FirstChild<>nil)
-        and (TargetNode.FirstChild.FirstChild.Desc=ctnIdentifier) //simple type
-        and (ExpressionType.Desc = xtPointer)
+        and ((TargetNode.FirstChild.FirstChild=nil) // only reference to procedure
+          or (TargetNode.FirstChild.FirstChild.Desc=ctnIdentifier) // simple type of func result
+        )
+        and (ExpressionType.Desc in [xtPointer, xtNil])
       then
       begin
         //if ExpressionType.Context.Node<>nil then
         //  debugln(GetIdentifier(@ExpressionType.Context.Tool.src
         //  [ExpressionType.Context.Node.StartPos]));
 
+        if TargetNode.FirstChild.FirstChild=nil then
+        begin // reference to procedure matches
+          Result:=tcCompatible;
+          exit;
+        end;
+
         try
           ExprParams:= TFindDeclarationParams.Create(Params);
+          ExprParams.Flags:=fdfDefaultForExpressions;
           ExprParams.SetIdentifier(Self, @ExpressionType.Context.Tool.src
             [ExpressionType.Context.Node.StartPos],nil);
-          ExprParams.Flags:=fdfDefaultForExpressions;
           ExprParams.ContextNode:=ExpressionType.Context.Node;
 
           ExprOfElement:=CleanExpressionType;

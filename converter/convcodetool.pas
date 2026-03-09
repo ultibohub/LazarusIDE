@@ -40,38 +40,14 @@ uses
   LinkScanner, CodeCache, SourceChanger,
   // LazUtils
   LazFileUtils, AvgLvlTree,
-  // IdeIntf
+  // BuildIntf
   IDEExternToolIntf,
   // IDE
-  LazarusIDEStrConsts,
+  {!} LazarusIDEStrConsts,
   // Converter
-  ConverterTypes, ConvertSettings, ReplaceNamesUnit, ReplaceFuncsUnit;
+  ConvertBase, ConverterTypes, ReplaceNamesUnit, ReplaceFuncsUnit;
 
 type
-
-  { TCodeToolLink }
-
-  TCodeToolLink = class
-  private
-  protected
-    fCodeTool: TCodeTool;
-    fCode: TCodeBuffer;
-    fSrcCache: TSourceChangeCache;
-    fAskAboutError: boolean;
-    fSettings: TConvertSettings;          // Conversion settings.
-    procedure InitCodeTool;
-  public
-    constructor Create(ACode: TCodeBuffer);
-    destructor Destroy; override;
-    procedure ResetMainScanner;
-    function DummyReplacements: Boolean;
-  public
-    property CodeTool: TCodeTool read fCodeTool;
-    property Code: TCodeBuffer read fCode;
-    property SrcCache: TSourceChangeCache read fSrcCache;
-    property AskAboutError: boolean read fAskAboutError write fAskAboutError;
-    property Settings: TConvertSettings read fSettings write fSettings;
-  end;
 
   { TConvDelphiCodeTool }
 
@@ -111,69 +87,6 @@ type
 
 
 implementation
-
-{ TCodeToolLink }
-
-constructor TCodeToolLink.Create(ACode: TCodeBuffer);
-begin
-  inherited Create;
-  fCode:=ACode;
-  fAskAboutError:=True;
-  InitCodeTool;
-end;
-
-destructor TCodeToolLink.Destroy;
-begin
-  inherited Destroy;
-end;
-
-procedure TCodeToolLink.InitCodeTool;
-begin
-  // Initialize codetools. (Copied from TCodeToolManager.)
-  fCodeTool:=nil;
-  fSrcCache:=nil;
-  if not CodeToolBoss.InitCurCodeTool(fCode) then exit;
-  fCodeTool:=CodeToolBoss.CurCodeTool;
-  fSrcCache:=CodeToolBoss.SourceChangeCache;
-  ResetMainScanner;
-  fCodeTool.Scanner.IgnoreMissingIncludeFiles:=True;
-end;
-
-procedure TCodeToolLink.ResetMainScanner;
-begin
-  fSrcCache.MainScanner:=fCodeTool.Scanner;
-end;
-
-function TCodeToolLink.DummyReplacements: Boolean;
-// If Codetools cannot parse the code, do dummy replacement for all reserved words:
-//  '.'+ReservedWord -> '.&'+ReservedWord, needed for OleVariant.
-// Most Codetools functions cannot be used because the code is invalid,
-//  but TSourceChangeCache.ReplaceEx works.
-var
-  p, AStart: Integer;
-  Src: string;
-  LastWasPoint: Boolean;
-begin
-  p:=1;
-  LastWasPoint:=false;
-  Src:=fCode.Source;
-  repeat
-    ReadRawNextPascalAtom(Src,p,AStart,false);
-    if p>length(Src) then break;
-    // Reserved words are in WordIsKeyWord list in CodeTools.
-    if LastWasPoint and WordIsKeyWord.DoIdentifier(@Src[AStart]) then
-    begin
-      // '.'+ReservedWord was found
-      if not fSrcCache.ReplaceEx(gtNone,gtNone,1,1,fCode,AStart,AStart,'&') then
-        Exit(False);
-    end;
-    LastWasPoint:=Src[AStart]='.';
-  until false;
-  // Apply the changes in buffer
-  if not fSrcCache.Apply then
-    Exit(False);
-  Result:=True;
-end;
 
 { TConvDelphiCodeTool }
 
@@ -270,8 +183,8 @@ begin
         SrcCache.Replace(gtNone, gtNone, NamePos.StartPos, NamePos.EndPos, DiskNm);
         if not SrcCache.Apply then exit;
         if CodeTool.CleanPosToCaret(NamePos.StartPos, CaretPos) then
-          fSettings.AddLogLine(mluNote,
-            Format(lisConvFixedUnitName, [UnitNm, DiskNm]), fCode.Filename,
+          Settings.AddLogLine(mluNote,
+            Format(lisConvFixedUnitName, [UnitNm, DiskNm]), Code.Filename,
             CaretPos.Y, CaretPos.X);
       end;
     end;
@@ -303,8 +216,8 @@ begin
     SrcCache.Replace(gtEmptyLine, gtEmptyLine, InsPos, InsPos, s);
     if not SrcCache.Apply then exit;
     if CodeTool.CleanPosToCaret(InsPos, CaretPos) then
-      fSettings.AddLogLine(mluNote, lisConvAddedModeDelphiModifier,
-                           fCode.Filename, CaretPos.Y, CaretPos.X);
+      Settings.AddLogLine(mluNote, lisConvAddedModeDelphiModifier,
+                          Code.Filename, CaretPos.Y, CaretPos.X);
     CodeTool.BuildTree(lsrEnd);   // changing mode requires rescan
   end;
   Result:=true;
@@ -530,7 +443,7 @@ begin
         NewFunc:=InsertParams2Replacement(FuncInfo);
         // Separate function body
         NewFunc:=NewFunc+FuncInfo.InclEmptyBrackets+FuncInfo.InclSemiColon;
-        if fSettings.FuncReplaceComment then
+        if Settings.FuncReplaceComment then
           NewFunc:=NewFunc+Format(lisConvConvertedFrom, [FuncInfo.FuncName]);
         Comment:=GetComment(FuncInfo.ReplFunc, PossibleCommentPos);
         if Comment<>'' then            // Possible comment from the configuration
@@ -544,8 +457,8 @@ begin
         if not SrcCache.Replace(gtNone, gtNone,
                             FuncInfo.StartPos, FuncInfo.EndPos, NewFunc) then exit;
         if CodeTool.CleanPosToCaret(FuncInfo.StartPos, CaretPos) then
-          fSettings.AddLogLine(mluNote,
-            Format(lisConvReplacedCall, [s, NewFunc]), fCode.Filename,
+          Settings.AddLogLine(mluNote,
+            Format(lisConvReplacedCall, [s, NewFunc]), Code.Filename,
             CaretPos.Y, CaretPos.X);
         // Add the required unit name to uses section if needed.
         if Assigned(AddUnitEvent) and (FuncInfo.UnitName<>'') then

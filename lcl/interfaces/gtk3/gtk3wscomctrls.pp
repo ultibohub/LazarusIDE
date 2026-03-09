@@ -83,6 +83,7 @@ type
   TGtk3WSStatusBar = class(TWSStatusBar)
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLHandle; override;
+    class procedure GetPreferredSize(const AWinControl: TWinControl; var PreferredWidth, PreferredHeight: integer; WithThemeSpace: Boolean); override;
     class procedure PanelUpdate(const AStatusBar: TStatusBar; PanelIndex: integer); override;
     class procedure SetPanelText(const AStatusBar: TStatusBar; PanelIndex: integer); override;
     class procedure Update(const AStatusBar: TStatusBar); override;
@@ -158,6 +159,7 @@ type
     class function GetViewOrigin(const ALV: TCustomListView): TPoint; override;
     class function GetVisibleRowCount(const ALV: TCustomListView): Integer; override;
 
+    class procedure SelectAll(const ALV: TCustomListView; const AIsSet: Boolean); override;
     class procedure SetAllocBy(const ALV: TCustomListView; const {%H-}AValue: Integer); override;
     class procedure SetDefaultItemHeight(const ALV: TCustomListView; const {%H-}AValue: Integer); override;
     class procedure SetHotTrackStyles(const ALV: TCustomListView; const {%H-}AValue: TListHotTrackStyles); override;
@@ -970,14 +972,22 @@ end;
 
 class procedure TGtk3WSCustomListView.BeginUpdate(const ALV: TCustomListView);
 begin
-  // inherited BeginUpdate(ALV);
-  DebugLn('TGtk3WSCustomListView.BeginUpdate ');
+  if not WSCheckHandleAllocated(ALV, 'BeginUpdate') then
+    Exit;
+  //we use gtk2 trick here ...
+  {$warning TODO surpress signalling in TGtk3ListView if lcl_gtkwidget_in_update is <> nil
+   so it won't trigger selection changes etc.}
+  g_object_set_data(PGObject(TGtk3Widget(ALV.Handle).Widget), 'lcl_gtkwidget_in_update', ALV);
+  g_object_freeze_notify(TGtk3Widget(ALV.Handle).Widget);
 end;
 
 class procedure TGtk3WSCustomListView.EndUpdate(const ALV: TCustomListView);
 begin
-  // inherited EndUpdate(ALV);
-  DebugLn('TGtk3WSCustomListView.EndUpdate ');
+  if not WSCheckHandleAllocated(ALV, 'EndUpdate') then
+    Exit;
+  g_object_set_data(PGObject(TGtk3Widget(ALV.Handle).Widget), 'lcl_gtkwidget_in_update', nil);
+  g_object_thaw_notify(TGtk3Widget(ALV.Handle).Widget);
+  gtk_widget_queue_draw(TGtk3ListView(ALV.Handle).GetContainerWidget);
 end;
 
 class function TGtk3WSCustomListView.GetBoundingRect(const ALV: TCustomListView
@@ -989,17 +999,37 @@ begin
     Result := TGtk3ListView(ALV.handle).getClientBounds;
 end;
 
-class function TGtk3WSCustomListView.GetDropTarget(const ALV: TCustomListView
-  ): Integer;
+class function TGtk3WSCustomListView.GetDropTarget(const ALV: TCustomListView): Integer;
+var
+  Widget: PGtkWidget;
+  Path: PGtkTreePath;
+  Indices: Pgint;
 begin
-  DebugLn('TGtk3WSCustomListView.GetDropTarget ');
   Result := -1;
+  if not WSCheckHandleAllocated(ALV, 'GetDropTarget') then
+    Exit;
+
+  Widget := TGtk3ListView(ALV.Handle).GetContainerWidget;
+  Path := nil;
+
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+    gtk_tree_view_get_drag_dest_row(PGtkTreeView(Widget), @Path, nil)
+  else
+    gtk_icon_view_get_drag_dest_item(PGtkIconView(Widget), @Path, nil);
+
+  if Path <> nil then
+  begin
+    Indices := gtk_tree_path_get_indices(Path);
+    if Indices <> nil then
+      Result := Indices^;
+    gtk_tree_path_free(Path);
+  end;
 end;
 
 class function TGtk3WSCustomListView.GetHoverTime(const ALV: TCustomListView
   ): Integer;
 begin
-  DebugLn('TGtk3WSCustomListView.GetHoverTime ');
+  //gtk3 does not have such property, only hover-selection which is boolean
   Result := 0;
 end;
 
@@ -1041,30 +1071,98 @@ end;
 
 class function TGtk3WSCustomListView.GetSelCount(const ALV: TCustomListView
   ): Integer;
+var
+  ATreeView: PGtkTreeView;
+  AIconView: PGtkIconView;
+  ASelection: PGtkTreeSelection;
+  ASelectedList: PGList;
 begin
-  DebugLn('TGtk3WSCustomListView.GetSelCount ');
   Result := 0;
+  if not WSCheckHandleAllocated(ALV, 'GetSelCount') then
+    Exit;
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+  begin
+    ATreeView := PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    ASelection := gtk_tree_view_get_selection(ATreeView);
+    if Assigned(ASelection) then
+      Result := gtk_tree_selection_count_selected_rows(ASelection);
+  end else
+  begin
+    AIconView := PGtkIconView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    ASelectedList := gtk_icon_view_get_selected_items(AIconView);
+    if ASelectedList <> nil then
+    begin
+      Result := g_list_length(ASelectedList);
+      g_list_free_full(ASelectedList, TGDestroyNotify(@gtk_tree_path_free));
+    end;
+  end;
 end;
 
-class function TGtk3WSCustomListView.GetSelection(const ALV: TCustomListView
-  ): Integer;
+class function TGtk3WSCustomListView.GetSelection(const ALV: TCustomListView): Integer;
+var
+  ATreeView: PGtkTreeView;
+  AIconView: PGtkIconView;
+  Path: PGtkTreePath;
+  Indices: Pgint;
 begin
-  DebugLn('TGtk3WSCustomListView.GetSelection ');
   Result := -1;
+  if not WSCheckHandleAllocated(ALV, 'GetSelection') then
+    Exit;
+
+  Path := nil;
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+  begin
+    ATreeView := PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    gtk_tree_view_get_cursor(ATreeView, @Path, nil);
+  end else
+  begin
+    AIconView := PGtkIconView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    gtk_icon_view_get_cursor(AIconView, @Path, nil);
+  end;
+
+  if Path <> nil then
+  begin
+    Indices := gtk_tree_path_get_indices(Path);
+    if Indices <> nil then
+      Result := Indices^;
+    gtk_tree_path_free(Path);
+  end;
 end;
 
-class function TGtk3WSCustomListView.GetTopItem(const ALV: TCustomListView
-  ): Integer;
+class function TGtk3WSCustomListView.GetTopItem(const ALV: TCustomListView): Integer;
+var
+  ATreeView: PGtkTreeView;
+  AIconView: PGtkIconView;
+  StartPath: PGtkTreePath;
+  Indices: Pgint;
 begin
-  DebugLn('TGtk3WSCustomListView.GetTopItem ');
   Result := 0;
+  if not WSCheckHandleAllocated(ALV, 'GetTopItem') then
+    Exit;
+
+  StartPath := nil;
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+  begin
+    ATreeView := PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    gtk_tree_view_get_visible_range(ATreeView, @StartPath, nil);
+  end else
+  begin
+    AIconView := PGtkIconView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    gtk_icon_view_get_visible_range(AIconView, @StartPath, nil);
+  end;
+
+  if StartPath <> nil then
+  begin
+    Indices := gtk_tree_path_get_indices(StartPath);
+    if Indices <> nil then
+      Result := Indices^;
+    gtk_tree_path_free(StartPath);
+  end;
 end;
 
 class function TGtk3WSCustomListView.GetViewOrigin(const ALV: TCustomListView
   ): TPoint;
 begin
-  // DebugLn('TGtk3WSCustomListView.GetViewOrigin ');
-
   Result := Point(0, 0);
   if ALV.HandleAllocated then
   begin
@@ -1073,19 +1171,79 @@ begin
   end;
 end;
 
-class function TGtk3WSCustomListView.GetVisibleRowCount(
-  const ALV: TCustomListView): Integer;
+class function TGtk3WSCustomListView.GetVisibleRowCount(const ALV: TCustomListView): Integer;
+var
+  ATreeView: PGtkTreeView;
+  AIconView: PGtkIconView;
+  StartPath, EndPath: PGtkTreePath;
+  StartIndices, EndIndices: Pgint;
 begin
-  DebugLn('TGtk3WSCustomListView.GetVisibleRowCount ');
   Result := 0;
-  // Result:=inherited GetVisibleRowCount(ALV);
+  if not WSCheckHandleAllocated(ALV, 'GetVisibleRowCount') then
+    Exit;
+
+  StartPath := nil;
+  EndPath := nil;
+
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+  begin
+    ATreeView := PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    if gtk_tree_view_get_visible_range(ATreeView, @StartPath, @EndPath) then
+    begin
+      StartIndices := gtk_tree_path_get_indices(StartPath);
+      EndIndices := gtk_tree_path_get_indices(EndPath);
+
+      if (StartIndices <> nil) and (EndIndices <> nil) then
+        Result := EndIndices^ - StartIndices^ + 1;
+    end;
+  end else
+  begin
+    AIconView := PGtkIconView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    if gtk_icon_view_get_visible_range(AIconView, @StartPath, @EndPath) then
+    begin
+      StartIndices := gtk_tree_path_get_indices(StartPath);
+      EndIndices := gtk_tree_path_get_indices(EndPath);
+
+      if (StartIndices <> nil) and (EndIndices <> nil) then
+        Result := EndIndices^ - StartIndices^ + 1;
+    end;
+  end;
+  if StartPath <> nil then
+    gtk_tree_path_free(StartPath);
+  if EndPath <> nil then
+    gtk_tree_path_free(EndPath);
+end;
+
+class procedure TGtk3WSCustomListView.SelectAll(const ALV: TCustomListView; const AIsSet: Boolean);
+var
+  ATreeView: PGtkTreeView;
+  AIconView: PGtkIconView;
+  Selection: PGtkTreeSelection;
+begin
+  if not WSCheckHandleAllocated(ALV, 'SelectAll') then
+    Exit;
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+  begin
+    ATreeView := PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    Selection := gtk_tree_view_get_selection(ATreeView);
+    if AIsSet then
+      gtk_tree_selection_select_all(Selection)
+    else
+      gtk_tree_selection_unselect_all(Selection);
+  end else
+  begin
+    AIconView := PGtkIconView(TGtk3ListView(ALV.Handle).GetContainerWidget);
+    if AIsSet then
+      gtk_icon_view_select_all(AIconView)
+    else
+      gtk_icon_view_unselect_all(AIconView);
+  end;
 end;
 
 class procedure TGtk3WSCustomListView.SetAllocBy(const ALV: TCustomListView;
   const AValue: Integer);
 begin
-  // DebugLn('TGtk3WSCustomListView.SetAllocBy ');
-  // inherited SetAllocBy(ALV, AValue);
+  //
 end;
 
 class procedure TGtk3WSCustomListView.SetDefaultItemHeight(
@@ -1098,18 +1256,29 @@ begin
     PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget)^.set_fixed_height_mode(AValue > 0);
 end;
 
-class procedure TGtk3WSCustomListView.SetHotTrackStyles(
-  const ALV: TCustomListView; const AValue: TListHotTrackStyles);
+class procedure TGtk3WSCustomListView.SetHotTrackStyles(const ALV: TCustomListView; const AValue: TListHotTrackStyles);
+var
+  Widget: PGtkWidget;
+  IsHotTrack: Boolean;
 begin
-  // DebugLn('TGtk3WSCustomListView.SetHotTrackStyles ');
-  // inherited SetHotTrackStyles(ALV, AValue);
+  if not WSCheckHandleAllocated(ALV, 'SetHotTrackStyles') then
+    Exit;
+
+  Widget := TGtk3ListView(ALV.Handle).GetContainerWidget;
+
+  //gtk3 only supports htHandPoint.
+  IsHotTrack := AValue <> [];
+
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+    g_object_set(PGObject(Widget), 'hover-selection', [IsHotTrack, nil])
+  else
+    g_object_set(PGObject(Widget), 'hover-selection', [IsHotTrack, nil]);
 end;
 
 class procedure TGtk3WSCustomListView.SetHoverTime(const ALV: TCustomListView;
   const AValue: Integer);
 begin
-  // DebugLn('TGtk3WSCustomListView.SetHoverTime ');
-  // inherited SetHoverTime(ALV, AValue);
+  // not available in gtk3
 end;
 
 class procedure TGtk3WSCustomListView.SetImageList(const ALV: TCustomListView;
@@ -1165,30 +1334,43 @@ begin
   end;
 end;
 
-class procedure TGtk3WSCustomListView.SetItemsCount(const ALV: TCustomListView;
-  const Avalue: Integer);
+class procedure TGtk3WSCustomListView.SetItemsCount(const ALV: TCustomListView; const AValue: Integer);
 var
-  model:PGtkTreeModel;
-  i:integer;
-  ptv:PgtkTreeView;
-  iter:TGtkTreeIter;
+  AModel: PGtkTreeModel;
+  I: Integer;
+  Widget: PGtkWidget;
+  Iter: TGtkTreeIter;
 begin
-  if not WSCheckHandleAllocated(ALV, 'SetItemsCount')
-  then Exit;
+  if not WSCheckHandleAllocated(ALV, 'SetItemsCount') then
+    Exit;
 
-  ptv:=PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget);
-  model:=ptv^.get_model();
+  Widget := TGtk3ListView(ALV.Handle).GetContainerWidget;
 
-  g_object_ref(PGobject(model));
-  gtk_tree_view_set_model(PGtkTreeView(ptv), nil);
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+    AModel := gtk_tree_view_get_model(PGtkTreeView(Widget))
+  else
+    AModel := gtk_icon_view_get_model(PGtkIconView(Widget));
 
-  gtk_list_store_clear(PgtkListStore(model));
-  for i:=0 to AValue-1 do
-   gtk_list_store_append(PgtkListStore(model),@iter);
+  if AModel = nil then
+    Exit;
 
-  gtk_tree_view_set_model(PGtkTreeView(ptv), model);
-  g_object_unref(PGobject(model));
+  g_object_ref(PGObject(AModel));
 
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+    gtk_tree_view_set_model(PGtkTreeView(Widget), nil)
+  else
+    gtk_icon_view_set_model(PGtkIconView(Widget), nil);
+
+  gtk_list_store_clear(PGtkListStore(AModel));
+  for I := 0 to AValue - 1 do
+    gtk_list_store_append(PGtkListStore(AModel), @Iter);
+
+  if TGtk3ListView(ALV.Handle).IsTreeView then
+    gtk_tree_view_set_model(PGtkTreeView(Widget), AModel)
+  else
+    gtk_icon_view_set_model(PGtkIconView(Widget), AModel);
+
+  g_object_unref(PGObject(AModel));
 end;
 
 class procedure TGtk3WSCustomListView.SetProperty(const ALV: TCustomListView;
@@ -1196,7 +1378,6 @@ class procedure TGtk3WSCustomListView.SetProperty(const ALV: TCustomListView;
 begin
   if not WSCheckHandleAllocated(ALV, 'SetProperty') then
     Exit;
-  // DebugLn('TGtk3WSCustomListView.SetProperty ');
   SetPropertyInternal(ALV, AProp, AIsSet);
 end;
 
@@ -1218,8 +1399,6 @@ var
 begin
   if not WSCheckHandleAllocated(ALV, 'SetScrollBars') then
     Exit;
-  // DebugLn('TGtk3WSCustomListView.SetScrollbars ');
-  // inherited SetScrollBars(ALV, AValue);
   SS := Gtk3TranslateScrollStyle(AValue);
   TGtk3ListView(ALV.Handle).GetScrolledWindow^.set_policy(SS.Horizontal, SS.Vertical);
 end;
@@ -1232,22 +1411,35 @@ begin
     Exit;
   if TGtk3ListView(ALV.Handle).GetContainerWidget^.get_realized then
     TGtk3ListView(ALV.Handle).GetContainerWidget^.queue_draw;
-  // DebugLn('TGtk3WSCustomListView.SetSort ');
-  // inherited SetSort(ALV, AType, AColumn, ASortDirection);
 end;
 
 class procedure TGtk3WSCustomListView.SetViewOrigin(const ALV: TCustomListView;
   const AValue: TPoint);
+var
+  Widget: PGtkWidget;
+  HAdjustment, VAdjustment: PGtkAdjustment;
 begin
   if not WSCheckHandleAllocated(ALV, 'SetViewOrigin') then
     Exit;
-  if not TGtk3ListView(ALV.Handle).GetContainerWidget^.get_realized then
-    exit;
-  // DebugLn('TGtk3WSCustomListView.SetViewOrigin ');
+  Widget := TGtk3ListView(ALV.Handle).GetContainerWidget;
+
+  if not gtk_widget_get_realized(Widget) then
+    Exit;
+
   if TGtk3ListView(ALV.Handle).IsTreeView then
-    PGtkTreeView(TGtk3ListView(ALV.Handle).GetContainerWidget)^.scroll_to_point(AValue.X, AValue.Y);
-  // TODO: else
-  //  PGtkIconView(TGtk3ListView(ALV.Handle).GetContainerWidget)^.scroll_to_path();
+  begin
+    gtk_tree_view_scroll_to_point(PGtkTreeView(Widget), AValue.X, AValue.Y);
+  end else
+  begin
+    HAdjustment := gtk_scrollable_get_hadjustment(PGtkScrollable(Widget));
+    VAdjustment := gtk_scrollable_get_vadjustment(PGtkScrollable(Widget));
+
+    if HAdjustment <> nil then
+      gtk_adjustment_set_value(HAdjustment, AValue.X);
+
+    if VAdjustment <> nil then
+      gtk_adjustment_set_value(VAdjustment, AValue.Y);
+  end;
 end;
 
 class procedure TGtk3WSCustomListView.SetViewStyle(const ALV: TCustomListView;
@@ -1269,6 +1461,25 @@ var
 begin
   AStatusBar := TGtk3StatusBar.Create(AWinControl, AParams);
   Result := TLCLHandle(AStatusBar);
+end;
+
+class procedure TGtk3WSStatusBar.GetPreferredSize(const AWinControl: TWinControl;
+  var PreferredWidth, PreferredHeight: integer; WithThemeSpace: Boolean);
+var
+  ABar: TGtk3StatusBar;
+  nat_h: gint;
+begin
+  PreferredWidth := 0;
+  PreferredHeight := 0;
+  if not WSCheckHandleAllocated(AWinControl, 'GetPreferredSize') then
+    Exit;
+  ABar := TGtk3StatusBar(AWinControl.Handle);
+  if not Assigned(ABar.GetBox) then
+    Exit;
+  nat_h := 0;
+  gtk_widget_get_preferred_height(ABar.GetBox, @PreferredHeight, @nat_h);
+  if nat_h > PreferredHeight then
+    PreferredHeight := nat_h;
 end;
 
 class procedure TGtk3WSStatusBar.PanelUpdate(const AStatusBar: TStatusBar;
@@ -1334,6 +1545,9 @@ var
   Alloc:TGtkAllocation;
   abox:PGtkBox;
   AWindow:PGtkWindow;
+  Context: PGtkStyleContext;
+  State: TGtkStateFlags;
+  Border, Padding: TGtkBorder;
 begin
   Result := Rect(0, 0, 0, 0);
   AWindow := TGtkWindow.new(GTK_WINDOW_TOPLEVEL);
@@ -1387,10 +1601,21 @@ begin
   AWindow^.realize;
   AWindow^.show_all;
   APage^.get_allocation(@Alloc);
+
+  Context := gtk_widget_get_style_context(PGtkWidget(ANoteBook));
+  State := gtk_style_context_get_state(Context);
+
+  gtk_style_context_get_border(Context, State, @Border);
+  gtk_style_context_get_padding(Context, State, @Padding);
+
   Result := Bounds(0, 0, Alloc.Width, Alloc.Height);
+  Result.Width := Alloc.Width - (Border.left + Border.right + Padding.left + Padding.right);
+  Result.Height := Alloc.Height - (Border.top + Border.bottom + Padding.top + Padding.bottom);
+  {$IFDEF GTK3DEBUGLAYOUT}
+  writeln('===MeasureClientRect: ',dbgsName(AWinControl),' Result=',dbgs(Result),' B.top=',Border.Top,' B.B=',Border.bottom,' Pad T=',Padding.top,' Pad B=',Padding.bottom);
+  {$ENDIF}
   AWindow^.set_visible(false);
   AWindow^.destroy_;
-
 end;
 
 {used when handle of TCustomTabControl isn't allocated or TGt3Widget(Handle).WidgetMapped = false}
@@ -1514,6 +1739,7 @@ var
   i: integer;
   AList: PGList;
   Allocation: TGtkAllocation;
+  gx, gy: gint;
   ARect: TRect;
 begin
   Result:=-1;
@@ -1533,7 +1759,10 @@ begin
         if TabWidget <> nil then
         begin
           gtk_widget_get_allocation(TabWidget, @Allocation);
-          ARect := RectFromGdkRect(Allocation);
+          gx := 0;
+          gy := 0;
+          TabWidget^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @gx, @gy);
+          ARect := Rect(gx, gy, gx + Allocation.width, gy + Allocation.height);
           if PtInRect(ARect, AClientPos) then
           begin
             Result := I;
@@ -1556,7 +1785,7 @@ var
   Count: guint;
   AList: PGList;
   Allocation: TGtkAllocation;
-  X, Y: gint;
+  gx, gy: gint;
 begin
   Result := inherited;
   if (ATabControl is TTabControl) then
@@ -1576,18 +1805,10 @@ begin
       if TabWidget <> nil then
       begin
         gtk_widget_get_allocation(TabWidget, @Allocation);
-        Result := RectFromGdkRect(Allocation);
-        gtk_widget_get_allocation(NoteBookWidget, @Allocation);
-        Y := Allocation.y;
-        X := Allocation.x;
-        if Y <= 0 then
-          exit;
-        case ATabControl.TabPosition of
-          tpTop, tpBottom:
-              OffsetRect(Result, 0, -Y);
-          tpLeft, tpRight:
-            OffsetRect(Result, -X, -Y);
-        end;
+        gx := 0;
+        gy := 0;
+        TabWidget^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @gx, @gy);
+        Result := Rect(gx, gy, gx + Allocation.width, gy + Allocation.height);
       end;
     end;
   finally

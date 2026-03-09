@@ -73,6 +73,7 @@ type
     function Get(szbuf:integer;pbuf:pointer):integer; override;
     destructor Destroy; override;
     procedure UpdateLogFont;
+    function IsMonospace: boolean;
     property FontName: String read FFontName write FFontName;
     property Handle: PPangoFontDescription read FHandle;
     property Layout: PPangoLayout read FLayout;
@@ -541,7 +542,7 @@ begin
 
     DSTINVERT,
     R2_NOTXORPEN:
-      Result := CAIRO_OPERATOR_XOR; //just for testing CAIRO_OPERATOR_DIFFERENCE;
+      Result := CAIRO_OPERATOR_DIFFERENCE; //Issue #42089
 
     WHITENESS,
     R2_WHITE:
@@ -932,6 +933,28 @@ begin
   end;
 end;
 
+function TGtk3Font.IsMonospace: boolean;
+var
+  TempLayout: PPangoLayout;
+  w1, w2, h: gint;
+begin
+  Result := False;
+  if not Assigned(FLayout) then
+    exit;
+  TempLayout := pango_layout_copy(FLayout);
+  try
+    pango_layout_set_text(TempLayout, 'i', -1);
+    pango_layout_get_size(TempLayout, @w1, @h);
+
+    pango_layout_set_text(TempLayout, 'm', -1);
+    pango_layout_get_size(TempLayout, @w2, @h);
+
+    Result := (w1 = w2) and (w1 > 0);
+  finally
+    g_object_unref(TempLayout);
+  end;
+end;
+
 constructor TGtk3Font.Create(ACairo: Pcairo_t; AWidget: PGtkWidget);
 var
   AContext: PPangoContext;
@@ -1178,7 +1201,12 @@ begin
     finally
       cairo_surface_destroy(ASurface);
     end;
-    gdk_pixbuf_fill(FHandle, 0);
+    // gdk_pixbuf_get_from_surface can return nil (e.g. format quirks, memory).
+    // Fall back to a plain zeroed pixbuf so FHandle is never nil after construction.
+    if FHandle = nil then
+      FHandle := gdk_pixbuf_new(GDK_COLORSPACE_RGB, True, 8, w, h);
+    if FHandle <> nil then
+      gdk_pixbuf_fill(FHandle, 0);
   end else
     FHandle := TGdkPixbuf.new_from_data(AData, GDK_COLORSPACE_RGB, format=CAIRO_FORMAT_ARGB32, 8, width, height, 0, nil, nil);
 end;
@@ -1211,7 +1239,10 @@ begin
     finally
       cairo_surface_destroy(ASurface);
     end;
-    gdk_pixbuf_fill(FHandle, 0);
+    if FHandle = nil then
+      FHandle := gdk_pixbuf_new(GDK_COLORSPACE_RGB, True, 8, w, h);
+    if FHandle <> nil then
+      gdk_pixbuf_fill(FHandle, 0);
   end else
   begin
     FHandle := TGdkPixbuf.new_from_data(AData, GDK_COLORSPACE_RGB, format=CAIRO_FORMAT_ARGB32, 8, width, height, bytesPerLine, nil, nil);
@@ -2478,8 +2509,10 @@ begin
   {$ifdef VerboseGtk3DeviceContext}
   //DebugLn('TGtk3DeviceContext.fillRect ',Format('x %d y %d w %d h %d',[x, y, w, h]));
   {$endif}
+
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
 
+  cairo_stroke(pcr);  //issue #42082 flush thick-pen accumulated sub-paths with pen colour
   if ABrush <> 0 then
   begin
     ATempBrush := FCurrentBrush;
@@ -2756,7 +2789,6 @@ var
 begin
   if not Assigned(pcr) then
     exit(False);
-
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
   ApplyPen;
 
@@ -2825,7 +2857,11 @@ begin
 
   if cairo_has_current_point(pcr)<>0 then
     cairo_get_current_point(pcr, @fLastPenX, @fLastPenY);
-  cairo_stroke_preserve(pcr);
+  //issue #42082, stroke with pens width <= 1
+  if fCurrentPen.Width <= 1 then
+    cairo_stroke(pcr)
+  else
+    cairo_stroke_preserve(pcr);
   Result := True;
 end;
 

@@ -45,9 +45,12 @@ uses
   IdeIntfStrConsts, LazIDEIntf, IDEMsgIntf, PackageLinkIntf, PackageIntf, IDEExternToolIntf,
   // IdeConfig
   DialogProcs, SearchPathProcs,
+  // IdePackager
+  PackageDefs, PackageLinks, PackageSystem, BasePkgManager,
+  // IdeProject
+  Project,
   // IDE
-  PackageDefs, Project, LazarusIDEStrConsts,
-  etFPCMsgParser, PackageLinks, PackageSystem, BasePkgManager;
+  LazarusIDEStrConsts, etFPCMsgParser;
 
 type
   TFindUnitDialog = class;

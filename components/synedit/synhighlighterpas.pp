@@ -84,6 +84,7 @@ type
     rsSlash,        // // : Only if it's from the "start of line" (ignore lead whitespace). Used for calling SlashCommentProc 
     rsIDEDirective, // {%
     rsDirective,    // {$
+    rsBacktickString,
     rsAsm,          // assembler block
     rsProperty,
     rsInPropertyNameOrIndex, // Set by "property" kept until "read/write/...": property NAME [IDX: TTYPE]: TTYPE read ...
@@ -210,6 +211,10 @@ type
     reCommentAnsi,
     reCommentCurly,
     reCommentSlash,
+    reStringSingle,
+    reStringHash,
+    reStringCaret,
+    reStringBacktick,
     reCommentSubTokens   // generate stand-alone tokens for each comment (and nested comment) open/close
   );
   TRequiredStates = set of TRequiredState;
@@ -690,6 +695,10 @@ type
       attribCommentAnsi,
       attribCommentCurly,
       attribCommentSlash,
+      attribStringSingle,
+      attribStringHash,
+      attribStringCaret,
+      attribStringBacktick,
       attribIDEDirective,
       attribProcedureHeaderName,
       attribPropertyName,
@@ -729,10 +738,10 @@ type
     tkeGenParamLow  = tkeGenParamOpen;
     tkeGenParamHigh = tkeGenParamComma;
 
-    PAS_BRACKET_KIND_TOKEN_COUNT = 8;
+    PAS_BRACKET_KIND_TOKEN_COUNT = 9;
     PAS_BRACKET_KIND_TOKENS: array [Boolean, 0..PAS_BRACKET_KIND_TOKEN_COUNT-1] of string =
-      ( (')', ']', '}', '>', '*)', '''', '''''', '"'),
-        ('(', '[', '{', '<', '(*', '''', '''''', '"')
+      ( (')', ']', '}', '>', '*)', '''', '''''', '"', '`'),
+        ('(', '[', '{', '<', '(*', '''', '''''', '"', '`')
       );
 
   private type
@@ -969,6 +978,8 @@ type
     procedure AnsiProc;
     procedure BorProc;
     procedure BraceOpenProc;
+    procedure BacktickProc;
+    procedure BacktickContinueProc;
     procedure ColonProc;
     procedure GreaterProc;
     procedure CRProc;
@@ -1167,6 +1178,10 @@ type
     property NumberAttri: TLazEditHighlighterAttributes                         index attribNumber                  read GetAttribute write SetAttribute;
     property SpaceAttri: TLazEditHighlighterAttributes                          index attribSpace                   read GetAttribute write SetAttribute;
     property StringAttri: TLazEditHighlighterAttributes_Eol                     index attribString                  read GetAttribute_Eol write SetAttribute;
+    property StringSingleAttri: TLazEditHighlighterAttributesModifier_Eol       index attribStringSingle            read GetAttribute_ModEol write SetAttribute;
+    property StringHashAttri: TLazEditHighlighterAttributesModifier_Eol         index attribStringHash              read GetAttribute_ModEol write SetAttribute;
+    property StringCaretAttri: TLazEditHighlighterAttributesModifier_Eol        index attribStringCaret             read GetAttribute_ModEol write SetAttribute;
+    property StringBacktickAttri: TLazEditHighlighterAttributesModifier_Eol     index attribStringBacktick          read GetAttribute_ModEol write SetAttribute;
     property SymbolAttri: TLazEditHighlighterAttributes                         index attribSymbol                  read GetAttribute write SetAttribute;
 
     property PropertyNameAttr: TLazEditHighlighterAttributesModifier            index attribPropertyName            read GetAttribute_Mod write SetAttribute;
@@ -4208,7 +4223,8 @@ begin
         fProcTable[I] := @IdentProc;
       '^': fProcTable[I] := @CaretProc;
       '{': fProcTable[I] := @BraceOpenProc;
-      '}', '!', '('..'/', ':'..'@', '[', ']', '\', '`', '~':
+      '`': fProcTable[I] := @BacktickProc;
+      '}', '!', '('..'/', ':'..'@', '[', ']', '\', '~':
         begin
           case I of
             ',': fProcTable[I] := @CommaProc;
@@ -4264,6 +4280,13 @@ begin
   CreateAttribute(attribNumber, TLazEditHighlighterAttributes, @SYNS_AttrNumber, SYNS_XML_AttrNumber);
   CreateAttribute(attribSpace, TLazEditHighlighterAttributes, @SYNS_AttrSpace, SYNS_XML_AttrSpace);
   CreateAttribute(attribString, TLazEditHighlighterAttributes_Eol, @SYNS_AttrString, SYNS_XML_AttrString);
+  CreateAttribute(attribStringSingle, TLazEditHighlighterAttributesModifier_Eol, @SYNS_AttrStringSingle, SYNS_XML_AttrStringSingle);
+  CreateAttribute(attribStringHash, TLazEditHighlighterAttributesModifier_Eol, @SYNS_AttrStringHash, SYNS_XML_AttrStringHash);
+  CreateAttribute(attribStringCaret, TLazEditHighlighterAttributesModifier_Eol, @SYNS_AttrStringCaret, SYNS_XML_AttrStringCaret);
+  CreateAttribute(attribStringBacktick, TLazEditHighlighterAttributesModifier_Eol, @SYNS_AttrStringBacktick, SYNS_XML_AttrStringBacktick, [lafPastEOL]);
+  FPasAttributesMod[attribStringBacktick].Features:= [lafPastEOL];
+
+
   CreateAttribute(attribSymbol, TLazEditHighlighterAttributes, @SYNS_AttrSymbol, SYNS_XML_AttrSymbol);
   CreateAttribute(attribProcedureHeaderName, TLazEditHighlighterAttributesModifier, @SYNS_AttrProcedureHeaderName, SYNS_XML_AttrProcedureHeaderName);
 
@@ -4362,6 +4385,8 @@ end;
 procedure TSynPasSyn.AsciiCharProc;
 begin
   fTokenID := tkString;
+  if reStringHash in FRequiredStates then
+    FCustomCommentTokenMarkup := FPasAttributesMod[attribStringHash];
   inc(Run);
   case LinePtr[Run] of
     '%':
@@ -4828,6 +4853,104 @@ begin
   end;
 end;
 
+procedure TSynPasSyn.BacktickProc;
+begin
+  FTokenID := tkString;
+  Include(fRange, rsBacktickString);
+  if reStringBacktick in FRequiredStates then
+    FCustomCommentTokenMarkup := FPasAttributesMod[attribStringBacktick];
+
+  if not (IsInNextToEOL or IsScanning) and
+    GetCustomSymbolToken(tkString, 1, FCustomTokenMarkup)
+  then begin
+    Inc(Run);
+    Include(FTokenExtraAttribs, eaPartTokenNotAtEnd);
+    exit;
+  end;
+  Inc(Run);
+
+  BacktickContinueProc;
+end;
+
+procedure TSynPasSyn.BacktickContinueProc;
+var
+  IsInWord, WasInWord, ct: Boolean;
+begin
+  fTokenID := tkString;
+  Include(FOldRange, rsBacktickString); // for the closing tick
+  if reStringBacktick in FRequiredStates then
+    FCustomCommentTokenMarkup := FPasAttributesMod[attribStringBacktick];
+
+  if not (IsInNextToEOL or IsScanning) and (Run = fTokenPos)then begin
+    if (IsLetterChar[LinePtr[Run]]) and
+       ( (Run = 0) or
+         not((IsLetterChar[LinePtr[Run-1]] or IsUnderScoreOrNumberChar[LinePtr[Run-1]]))
+       )
+    then begin
+      if GetCustomTokenAndNext(tkString, FCustomTokenMarkup) then begin
+        Include(FTokenExtraAttribs, eaPartTokenNotAtEnd);
+        exit;
+      end;
+    end;
+  end;
+
+  IsInWord := False;
+  WasInWord := (IsInNextToEOL or IsScanning); // don't run checks
+  while (not (LinePtr[Run] in [#0{, #10, #13}])) do begin
+    if LinePtr[Run] = '`' then begin
+      if (LinePtr[Run+1] = '`') then begin
+        // escaped
+        if (not (IsInNextToEOL or IsScanning)) and
+           GetCustomSymbolToken(tkString, 2, FCustomTokenMarkup, Run <> fTokenPos)
+        then begin
+          if (Run = fTokenPos) then
+            inc(Run, 2);
+          Include(FTokenExtraAttribs, eaPartTokenNotAtEnd);
+          exit;
+        end;
+        Inc(Run);
+      end
+      else begin
+        // string end
+        if not (IsInNextToEOL or IsScanning) then begin
+          ct := GetCustomSymbolToken(tkString, 1, FCustomTokenMarkup, Run <> fTokenPos);
+          if ct and (Run <> fTokenPos) then begin
+            Include(FTokenExtraAttribs, eaPartTokenNotAtEnd);
+            exit;
+          end;
+        end;
+        Inc(Run);
+        Exclude(fRange, rsBacktickString);
+
+        // modifiers like "alias" take a string as argument
+        if (PasCodeFoldRange.BracketNestLevel = 0) then begin
+          if (fRange * [rsInProcHeader, rsProperty, rsAfterEqualOrColon, rsWasInProcHeader] = [rsInProcHeader]) and
+             (TopPascalCodeFoldBlockType in ProcModifierAllowed)
+          then
+            FRange := FRange + [rsInProcHeader];
+          FOldRange := FOldRange - [rsInObjcProtocol];
+        end;
+
+        exit;
+      end;
+    end
+    else
+    if (not WasInWord) and IsLetterChar[LinePtr[Run]] then begin
+      if GetCustomTokenAndNext(tkString, FCustomTokenMarkup, True) then begin
+        Include(FTokenExtraAttribs, eaPartTokenNotAtEnd);
+        exit;
+      end;
+    end;
+
+    Inc(Run);
+
+    if not (IsInNextToEOL or IsScanning) then begin
+      WasInWord := IsInWord;
+      IsInWord := (IsLetterChar[LinePtr[Run]] or IsUnderScoreOrNumberChar[LinePtr[Run]]);
+    end;
+  end;
+end;
+
 procedure TSynPasSyn.ColonProc;
 var
   tfb: TPascalCodeFoldBlockType;
@@ -5036,6 +5159,8 @@ begin
       end;
       inc(Run);
     end;
+    if reStringCaret in FRequiredStates then
+      FCustomCommentTokenMarkup := FPasAttributesMod[attribStringCaret];
     fTokenID := tkString;
   end
   else begin
@@ -5627,6 +5752,8 @@ var
   IsInWord, WasInWord, ct: Boolean;
 begin
   fTokenID := tkString;
+  if reStringSingle in FRequiredStates then
+    FCustomCommentTokenMarkup := FPasAttributesMod[attribStringSingle];
 
   if FInString then begin
     if not (IsInNextToEOL or IsScanning) then begin
@@ -6097,6 +6224,8 @@ begin
   end;
   if rsAnsiMultiDQ in fRange then
     StringProc_MultiLineDQ()
+  else if (rsBacktickString in fRange) then
+    BacktickContinueProc
   else
   case LinePtr[Run] of
      #0: NullProc;
@@ -6650,6 +6779,11 @@ begin
     end;
   end
   else
+  if fRange * [rsBacktickString] <> [] then begin
+    if lafPastEOL in FPasAttributesMod[attribStringBacktick].Features then
+      Result := Merge(FPasAttributes[attribString], FPasAttributesMod[attribStringBacktick]);
+  end
+  else
   if fRange * [rsAnsiMultiDQ] <> [] then begin
     if lafPastEOL in FPasAttributes[attribString].Features then
       Result := FPasAttributes[attribString];
@@ -6699,6 +6833,7 @@ const
   KIND_STRING_BOUND = ord(high(TtkTokenKindEx)) + 1;
   KIND_ANSI_BOUND   = ord(high(TtkTokenKindEx)) + 2;
   KIND_BOR_BOUND    = ord(high(TtkTokenKindEx)) + 3;
+  KIND_BACKTICK_STRING_BOUND = ord(high(TtkTokenKindEx)) + 4;
 var
   LogIdx: Integer;
 begin
@@ -6761,7 +6896,7 @@ begin
          AFlags := AFlags + [bfUnknownNestLevel];
        end;
     5: begin // ''
-         if FTokenID = tkString then begin
+         if (FTokenID = tkString) and not (rsBacktickString in (FOldRange+fRange)) then begin
            AFlags := AFlags + [bfNotNestable, bfSingleLine] - [bfNoLanguageContext, bfUnknownNestLevel, bfUniform];
            AContext := KIND_STRING_BOUND;
            if  IsOpeningString(LogIdx) then
@@ -6786,6 +6921,23 @@ begin
        end;
     7: begin // ""
          AFlags := AFlags + [bfUniform, bfNotNestable, bfNoLanguageContext] - [bfOpen, bfSingleLine];
+       end;
+    8: begin // ` backtick
+         if (FTokenID = tkString) and (rsBacktickString in (FOldRange+fRange)) then begin
+           AFlags := AFlags + [bfNotNestable, bfSingleLine] - [bfNoLanguageContext, bfUnknownNestLevel, bfUniform];
+           AContext := KIND_BACKTICK_STRING_BOUND;
+           if  IsOpeningString(LogIdx) then
+             AFlags := AFlags + [bfOpen]  // string start
+           else
+           if  IsClosinngString(LogIdx) then
+             AFlags := AFlags - [bfOpen]  // string end
+           else
+             exit(false);                 // middle of string, escaped '' will be called with different AKind
+         end
+         else begin
+           // outside of string
+           AFlags := AFlags + [bfUniform, bfNotNestable] - [bfOpen];
+         end;
        end;
   end;
 end;
@@ -8143,6 +8295,11 @@ begin
   if FPasAttributesMod[attribCommentAnsi].IsEnabled then  Include(FRequiredStates, reCommentAnsi);
   if FPasAttributesMod[attribCommentCurly].IsEnabled then Include(FRequiredStates, reCommentCurly);
   if FPasAttributesMod[attribCommentSlash].IsEnabled then Include(FRequiredStates, reCommentSlash);
+
+  if FPasAttributesMod[attribStringSingle].IsEnabled then Include(FRequiredStates, reStringSingle);
+  if FPasAttributesMod[attribStringHash].IsEnabled then Include(FRequiredStates, reStringHash);
+  if FPasAttributesMod[attribStringCaret].IsEnabled then Include(FRequiredStates, reStringCaret);
+  if FPasAttributesMod[attribStringBacktick].IsEnabled then Include(FRequiredStates, reStringBacktick);
 
   //if FPasAttributesMod[attribPasDocKeyWord].IsEnabled then begin
   //end;

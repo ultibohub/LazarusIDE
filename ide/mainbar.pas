@@ -435,9 +435,6 @@ end;
 procedure TMainIDEBar.DoSetMainIDEHeight(const AIDEIsMaximized: Boolean; ANewHeight: Integer);
 begin
   if not Showing then Exit;
-
-  //DebugLn(['TMainIDEBar.DoSetMainIDEHeight: IDEStarted=', LazarusIDE.IDEStarted]);
-
   DisableAutoSizing{$IFDEF DebugDisableAutoSizing}('TMainIDEBar.DoSetMainIDEHeight'){$ENDIF};
   try
     if Assigned(IDEDockMaster) and not(IDEDockDisabled) then //Ultibo
@@ -457,13 +454,14 @@ begin
         if ANewHeight <= 0 then
           ANewHeight := CalcMainIDEHeight;
         Inc(ANewHeight, CalcNonClientHeight);
+        {$IFnDEF LCLGtk3}
         if ANewHeight <> Constraints.MaxHeight then
         begin
           Constraints.MaxHeight := ANewHeight;
           Constraints.MinHeight := ANewHeight;
-          ClientHeight := ANewHeight; // <- Value is -28 when issue #34377 happens.
-        end else if ClientHeight <> ANewHeight then
-          ClientHeight := ANewHeight;
+        end;
+        {$ENDIF}
+        ClientHeight := ANewHeight;
       end else
       if Constraints.MaxHeight <> 0 then
       begin

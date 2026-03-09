@@ -303,8 +303,9 @@ begin
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WSWinControl.GetPreferredSize');
   {$ENDIF}
-  PreferredWidth := 0;
-  PreferredHeight := 0;
+  if not WSCheckHandleAllocated(AWinControl, 'GetPreferredSize') then
+    Exit;
+  TGtk3Widget(AWinControl.Handle).preferredSize(PreferredWidth, PreferredHeight, WithThemeSpace);
 end;
 
 class function TGtk3WSWinControl.GetDefaultClientRect(

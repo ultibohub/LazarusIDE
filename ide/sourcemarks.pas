@@ -40,7 +40,7 @@ interface
 uses
   Classes, SysUtils, AVL_Tree,
   // LCL
-  Graphics, Controls,
+  Graphics, Controls, ImgList,
   // LazUtils
   LazMethodList, LazTracer, LazUtilities,
   // SynEdit
@@ -48,7 +48,7 @@ uses
   // IdeIntf
   MenuIntf, SrcEditorIntf, IDEExternToolIntf, IDEImagesIntf,
   // IDE
-  etSrcEditMarks, ImgList;
+  etSrcEditMarks;
   
 type
   TAdditionalHilightAttribute =

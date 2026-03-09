@@ -588,6 +588,10 @@ msgstr ""
 msgid "Specialize/Generic Blocks"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_string
+msgid "Strings"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr ""
@@ -7982,10 +7986,6 @@ msgstr ""
 msgid "Delphi Name"
 msgstr ""
 
-#: lazarusidestrconsts.lisconvdelphipackagenameexists
-msgid "Package name exists"
-msgstr ""
-
 #: lazarusidestrconsts.lisconvdelphipackagerequired
 #, object-pascal-format
 msgid "Package %s is required but not installed in Lazarus! Install it later."
@@ -8011,9 +8011,9 @@ msgctxt "lazarusidestrconsts.lisconvdelphireplacedunitinusessection"
 msgid "Replaced unit \"%s\" with \"%s\" in uses section."
 msgstr ""
 
-#: lazarusidestrconsts.lisconvdelphithereisalreadyapackagewiththenamepleaseclosethispa
+#: lazarusidestrconsts.lisconvdelphithereisalreadyapackage
 #, object-pascal-format
-msgid "There is already a package with the name \"%s\"%sPlease close this package first."
+msgid "There is already a package with the name \"%s\""
 msgstr ""
 
 #: lazarusidestrconsts.lisconvdelphiunitnameexistsinlcl

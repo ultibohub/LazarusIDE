@@ -51,25 +51,25 @@ uses
   // IdeIntf
   IDEDialogs, PropEdits, IDEMsgIntf, LazIDEIntf, MenuIntf, IDEWindowIntf, FormEditingIntf,
   IdeIntfStrConsts, ObjectInspector, SrcEditorIntf, EditorSyntaxHighlighterDef,
-  UnitResources,
   // IdeUtils
   InputHistory,
   // IdeConfig
   EnvironmentOpts, SearchPathProcs, TransferMacros, RecentListProcs,
   IDEProcs, DialogProcs, ParsedCompilerOpts, CompilerOptions, IdeConfStrConsts,
   // IdePackager
-  IdePackagerStrConsts, PackageDefs, PackageSystem,
+  IdePackagerStrConsts, PackageDefs, PackageSystem, BasePkgManager,
   // IdeProject
   IdeProjectStrConsts, Project, ProjectDefs,
+  // Converter
+  ConvCodeTool,
   // IDE
   IDEProtocol, LazarusIDEStrConsts, NewDialog,
   NewProjectDlg, MainBase, MainBar, MainIntf,
   ProjectInspector, SourceSynEditor, SourceEditor,
   EditorOptions, CustomFormEditor, ControlSelection,
   FormEditor, EmptyMethodsDlg, BaseDebugManager, BuildManager,
-  EditorMacroListViewer, BuildModesManager, ViewUnit_Dlg, CheckLFMDlg,
-  etMessagesWnd, DebugManager, EnvGuiOptions, ConvCodeTool,
-  BasePkgManager, Designer, DesignerProcs;
+  EditorMacroListViewer, BuildModesManager, ViewUnit_Dlg, CheckerLFM,
+  etMessagesWnd, DebugManager, EnvGuiOptions, Designer, DesignerProcs;
 
 type
 
@@ -6681,7 +6681,7 @@ begin
         end;
 
         if NewComponent<>nil then
-          AnUnitInfo.ResourceBaseClass:=GetComponentBaseClass(NewComponent.ClassType);
+          AnUnitInfo.ResourceBaseClass:=ComponentBaseClassFunc(NewComponent.ClassType);
 
         Project1.InvalidateUnitComponentDesignerDependencies;
         AnUnitInfo.Component:=NewComponent;

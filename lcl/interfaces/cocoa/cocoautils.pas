@@ -11,10 +11,6 @@ uses
   SysUtils, Types, LCLType, LCLProc,
   Graphics, GraphType;
 
-var
-  // post message/send message string. Created by TCocoaWidgetSet
-  NSMessageWnd, NSMessageMsg, NSMessageWParam, NSMessageLParam, NSMessageResult: NSString;
-
 type
   { NSLCLDebugExtension }
 
@@ -22,51 +18,135 @@ type
     function lclClassName: shortstring; message 'lclClassName';
   end;
 
-const
-  NSNullRect : NSRect = (origin:(x:0; y:0); size:(width:0; height:0));
+  { TCocoaTypeUtil }
 
-function StringArrayFromLCLToNS(const lclArray: TStringArray): NSArray;
-function UrlArrayFromLCLToNS(const lclArray: TStringArray): NSArray;
+  TCocoaTypeUtil = class
+  public
+    class function toAlignment( lclAlignment: TAlignment ): NSTextAlignment;
 
-procedure hideAllSubviews( parent: NSView );
+    class function toDateTime(const aDateTime : TDateTime): NSDate; overload;
+    class function toDateTime(const aDateTime: NSDate): TDateTime; overload;
 
-function GetNSSize(width, height: CGFloat): NSSize; inline;
+    class function toPoint(APt: TPoint; ParentHeight: Double): NSPoint; overload;
+    class function toPoint(APt: NSPoint; ParentHeight: Double): TPoint; overload;
 
-function GetNSPoint(x,y: single): NSPoint; inline;
-function LCLToNSPoint(APt: TPoint; ParentHeight: Single): NSPoint;
-function NSPointToLCL(APt: NSPoint; ParentHeight: Single): TPoint;
+    class function toRect(const R: TRect): CGRect; overload;
+    class function toRect(const c: CGRect): TRect; overload;
+    class function toSortedRect(X1, Y1, X2, Y2: Integer): CGRect;
 
-function GetCGRect(x1, y1, x2, y2: Integer): CGRect; inline;
-function GetCGRectSorted(X1, Y1, X2, Y2: Integer): CGRect;
-function RectToCGRect(const R: TRect): CGRect;
-function CGRectToRect(const c: CGRect): TRect;
+    class procedure toRect(const ns: NSRect; ParentHeight: Double; out lcl: TRect); overload;
+    class procedure toRect(const lcl: TRect; ParentHeight: Double; out ns: NSRect); overload;
 
-function GetNSRect(x, y, width, height: Integer): NSRect; inline;
-function RectToNSRect(const r: TRect): NSRect;
-function NSRectToRect(const NS: NSRect): TRect;
+    class function toRect(const params: TCreateParams): NSRect; overload;
+  end;
 
-procedure NSToLCLRect(const ns: NSRect; ParentHeight: Single; out lcl: TRect);
-procedure LCLToNSRect(const lcl: TRect; ParentHeight: Single; out ns: NSRect);
+  { TCocoaCollectionUtil }
 
-function GetScreenPointFromEvent(const event: NSEvent): NSPoint;
-procedure lclOffsetWithEnclosingScrollView( const view: NSView; var x: Integer; var y: Integer );
+  TCocoaCollectionUtil = class
+  public
+    class function stringArrayToNSArray(const lclArray: TStringArray): NSArray;
+    class function urlArrayToNSArray(const lclArray: TStringArray): NSArray;
+  end;
 
-function ScreenPointFromLCLToNS(const lclPoint: TPoint): NSPoint;
-function ScreenPointFromNSToLCL(const cocoaPoint: NSPoint): TPoint;
-function ScreenRectFromLCLToNS(const lclRect: TRect): NSRect;
-function ScreenRectFromNSToLCL(const cocoaRect: NSRect): TRect;
+  { TCocoaStringUtil }
 
-function NSPrimaryScreen: NSScreen;
-function NSPrimaryScreenFrame: NSRect;
-function NSGlobalScreenFrame: NSRect;
-function NSGlobalScreenLCLFrame: NSRect;
-function NSGlobalScreenBottom: CGFloat;
+  TCocoaStringUtil = class
+  public
+    class function removeLineBreak(const str: NSString): NSString;
+    // The function removes single '&' and '(...)', and replaced '&&' with '&'
+    // (removing LCL (Windows) specific caption convention
+    class function removeAcceleration(const str: String): String;
+    class function getNSStringObject( const aString: id ) : NSString;
+  end;
 
-function IndexToHMonitor(i: NSUInteger): HMonitor;
-function HMonitorToIndex(h: HMonitor): NSUInteger;
-function getScreenFromHMonitor(h: HMonitor): NSScreen;
+  { TCocoaKeyUtil }
 
-function CreateParamsToNSRect(const params: TCreateParams): NSRect;
+  TCocoaKeyUtil = class
+  private
+  const
+    kVK_SubMenu = $6E;
+  public
+    class function codeToString(AKey: Word): NSString;
+    class function codeToVK(AKey: Word): Word;
+    class function charToVK(achar: unichar): Word;
+    class function getRawKeyChar(ev: NSEvent): System.WideChar;
+  end;
+
+  { TCocoaControlUtil }
+
+  TCocoaControlUtil = class
+  public
+    class procedure setStringValue(const c: NSControl; const S: String); inline;
+    class function getStringValue(const c: NSControl): String; inline;
+    class function toMacOSTitle(const ATitle: String): NSString;
+    class procedure moveCaretToTheEnd(const c: NSControl);
+    class function getNSWindow(const obj: NSObject): NSWindow;
+    class procedure hideAllSubviews( const parent: NSView );
+    class procedure addLayoutDelta(const layout: TRect; var frame: TRect);
+    class procedure subLayoutDelta(const layout: TRect; var frame: TRect);
+    class procedure lclOffsetWithEnclosingScrollView(
+      const view: NSView;
+      var x: Integer;
+      var y: Integer );
+  end;
+
+  { TCocoaColorUtil }
+
+  TCocoaColorUtil = class
+  public
+    class procedure getRGBValue(cl: TColorRef; var r,g,b: Single); inline;
+    class function toColorRef(r,g,b: Single): TColorRef; inline;
+    // extract ColorRef from NSColor in RGB colorspace
+    class function toColorRefWithRGBColor(const Color: NSColor): TColorRef; inline;
+    // extract ColorRef from any NSColor
+    class function toColorRefWithAnyColor(const Color: NSColor): TColorRef;
+    class procedure toColorAlpha(const Color: NSColor;var lclColor: TColor;var Alpha: Byte);
+    class function toColor(const Color: TColorRef): NSColor; inline; overload;
+    class function toColor(const Color: TColorRef; const Alpha: Byte): NSColor; overload;
+    // convert to known NSColor or nil
+    class function sysIndexToColor(nIndex: Integer): NSColor;
+  end;
+
+  { TCocoaImageUtil }
+
+  TCocoaImageUtil = class
+    class procedure fillStandardDescription(
+      out Desc: TRawImageDescription );
+    class function copyAndRotateImage(
+      const src: NSImage;
+      const degrees: Double ): NSImage;
+    class function copyAndRotateCursor(
+      const src: NSCursor;
+      const degrees: Double ): NSCursor;
+  end;
+
+  { TCocoaThemeUtil }
+
+  TCocoaThemeUtil = class
+  public
+    class function isDark: Boolean;
+  end;
+
+  { TCocoaScreenUtil }
+
+  TCocoaScreenUtil = class
+    class function getScreenPoint(const event: NSEvent): NSPoint;
+
+    class function toCocoa(const lclPoint: TPoint): NSPoint; overload;
+    class function toLCL(const cocoaPoint: NSPoint): TPoint; overload;
+    class function toCocoa(const lclRect: TRect): NSRect; overload;
+    class function toLCL(const cocoaRect: NSRect): TRect; overload;
+
+    class function primaryScreen: NSScreen;
+    class function primaryScreenFrame: NSRect;
+    class function globalScreenFrame: NSRect;
+    class function globalScreenLCLFrame: NSRect;
+    class function globalScreenBottom: CGFloat;
+
+    class function indexToHMonitor(i: NSUInteger): HMonitor;
+    class function HMonitorToIndex(h: HMonitor): NSUInteger;
+    class function getScreenFromHMonitor(h: HMonitor): NSScreen;
+  end;
 
 function NSStringUtf8(s: PChar; len: Integer = -1): NSString;
 function NSStringUtf8(const s: String): NSString;
@@ -75,104 +155,168 @@ function StrToNSStr(const s: string; AutoRelease: Boolean = true): NSString; inl
 function NSStringToString(ns: NSString): String;
 function NSStringToUnicodeString(ns: NSString): UnicodeString;
 
-function NSStringRemoveLineBreak(const str: NSString): NSString;
-function StringRemoveAcceleration(const str: String): String;
-
-function GetNSObjectWindow(obj: NSObject): NSWindow;
-
-function getNSStringObject( const aString: id ) : NSString;
-
-procedure SetNSText(text: NSText; const s: String); inline;
-function GetNSText(text: NSText): string; inline;
-
-procedure SetNSControlValue(c: NSControl; const S: String); inline;
-function GetNSControlValue(c: NSControl): String; inline;
-procedure NSControlMoveCaretToTheEnd(c: NSControl);
-
-procedure ColorToRGBFloat(cl: TColorRef; var r,g,b: Single); inline;
-function RGBToColorFloat(r,g,b: Single): TColorRef; inline;
-// extract ColorRef from NSColor in RGB colorspace
-function NSColorToRGB(const Color: NSColor): TColorRef; inline;
-// extract ColorRef from any NSColor
-function NSColorToColorRef(const Color: NSColor): TColorRef;
-procedure NSColorToColorAlpha(const Color: NSColor;var lclColor: TColor;var Alpha: Byte);
-function ColorToNSColor(const Color: TColorRef): NSColor; inline;
-function ColorAlphaToNSColor(const Color: TColorRef; const Alpha: Byte): NSColor;
-// convert to known NSColor or nil
-function SysColorToNSColor(nIndex: Integer): NSColor;
-
-// "dark" is not a good reference, as Apple might add more and more themes
-function IsDarkPossible: Boolean; inline;
-
-// returns if the application appearance is set to dark
-function IsAppDark: Boolean;
-
-// returns if the window appearance is set to dark
-function IsWinDark(win: NSWindow): Boolean;
-
-// Returns the appearance object that is active on the current thread.
-// returns true, if currently drawn (Painted) UI control is in Dark theme.
-function IsPaintDark: Boolean;
-
-// returns true, if Appear is assigned and bears name of Dark theme
-function IsAppearDark(Appear: NSAppearance): Boolean; inline;
-
-// weak-referenced NSAppearnceClass. Returns nil on any OS prior to 10.13
-function NSAppearanceClass: pobjc_class;
-
 const
   DEFAULT_CFSTRING_ENCODING = kCFStringEncodingUTF8;
 
 function CFStringToStr(AString: CFStringRef; Encoding: CFStringEncoding = DEFAULT_CFSTRING_ENCODING): String;
 function CFStringToString(AString: CFStringRef): String; inline;
 
-function VirtualKeyCodeToMacString(AKey: Word): NSString;
-
-procedure FillStandardDescription(out Desc: TRawImageDescription);
-
 procedure CreateCFString(const S: String; out AString: CFStringRef);
 procedure CreateCFString(const Data: CFDataRef; Encoding: CFStringEncoding; out AString: CFStringRef);
 procedure FreeCFString(var AString: CFStringRef);
-function CFStringToData(AString: CFStringRef; Encoding: CFStringEncoding = DEFAULT_CFSTRING_ENCODING): CFDataRef;
-
-function GetCurrentEventTime: double;
-function GetMacOSXVersion: Integer;
-
-function DateTimeToNSDate(const aDateTime : TDateTime): NSDate;
-function NSDateToDateTime(const aDateTime: NSDate): TDateTime;
-
-// The function removes single '&' and '(...)', and replaced '&&' with '&'
-// (removing LCL (Windows) specific caption convention
-function ControlTitleToStr(const ATitle: string): String; inline;
-// The returned NSString doesn't require a release
-// (it would happen in NSAutoRelease pool)
-function ControlTitleToNSStr(const ATitle: string): NSString;
-
-procedure AddLayoutToFrame(const layout: TRect; var frame: TRect);
-procedure SubLayoutFromFrame(const layout: TRect; var frame: TRect);
-
-// MacOSX Virtual Key Codes missing from MacOSAll.Events.pas
-const
-  kVK_SubMenu = $6E;
-
-function MacCodeToVK(AKey: Word): Word;
-
-function MacCharToVK(achar: unichar): Word;
-
-procedure ApplicationWillShowModal;
-
-const
-  // Shift, Control, Alt and Command
-  KeysModifiers = NSShiftKeyMask or NSControlKeyMask or NSAlternateKeyMask or NSCommandKeyMask;
-
-function NSEventRawKeyChar(ev: NSEvent): System.WideChar;
-
-function AllocImageRotatedByDegrees(src: NSImage; degrees: double): NSImage;
-function AllocCursorFromCursorByDegrees(src: NSCursor; degrees: double): NSCursor;
 
 implementation
 
-function StringArrayFromLCLToNS( const lclArray: TStringArray ): NSArray;
+{ NSLCLDebugExtension }
+
+function NSLCLDebugExtension.lclClassName: shortstring;
+begin
+  Result := NSStringToString(self.className);
+end;
+
+{ TCocoaTypeUtil }
+
+class function TCocoaTypeUtil.toPoint(APt: TPoint; ParentHeight: Double): NSPoint;
+begin
+  Result.X := APt.X;
+  Result.Y := ParentHeight - APt.Y;
+end;
+
+class function TCocoaTypeUtil.toPoint(APt: NSPoint; ParentHeight: Double): TPoint;
+begin
+  Result.X := Round(APt.X);
+  Result.Y := Round(ParentHeight - APt.Y);
+end;
+
+class function TCocoaTypeUtil.toSortedRect(X1, Y1, X2, Y2: Integer): CGRect;
+begin
+  if X1 <= X2 then
+  begin
+    Result.origin.x := X1;
+    Result.size.width := X2 - X1;
+  end
+  else
+  begin
+    Result.origin.x := X2;
+    Result.size.width := X1 - X2;
+  end;
+
+  if Y1 <= Y2 then
+  begin
+    Result.origin.y := Y1;
+    Result.size.height := Y2 - Y1;
+  end
+  else
+  begin
+    Result.origin.y := Y2;
+    Result.size.height := Y1 - Y2;
+  end;
+end;
+
+class function TCocoaTypeUtil.toRect(const R: TRect): CGRect;
+begin
+  with R do
+    Result := NSMakeRect(Left, Top, Width, Height);
+end;
+
+class function TCocoaTypeUtil.toRect(const c: CGRect): TRect;
+begin
+  if CGRectIsEmpty(c) <> 0 then
+    Result := Rect(0,0,0,0)
+  else if CGRectIsInfinite(c) <> 0 then
+    Result:= Rect(Low(Integer), Low(Integer), High(Integer), High(Integer))
+  else begin
+  Result.Left := Round(c.origin.x);
+  Result.Top := Round(c.origin.y);
+  Result.Right := Round(c.origin.x + c.size.width);
+  Result.Bottom := Round(c.origin.y + c.size.height);
+end;
+end;
+
+class procedure TCocoaTypeUtil.toRect(const ns: NSRect; ParentHeight: Double; out lcl: TRect);
+begin
+  lcl.Left := Round(ns.origin.x);
+  lcl.Top := Round(ParentHeight - ns.size.height - ns.origin.y);
+  lcl.Right := Round(ns.origin.x + ns.size.width);
+  lcl.Bottom := Round(lcl.Top + ns.size.height);
+end;
+
+class procedure TCocoaTypeUtil.toRect(const lcl: TRect; ParentHeight: Double; out ns: NSRect);
+begin
+  ns.origin.x:=lcl.left;
+  ns.origin.y:=ParentHeight-lcl.bottom;
+  ns.size.width:=lcl.Right-lcl.Left;
+  ns.size.height:=lcl.Bottom-lcl.Top;
+end;
+
+class function TCocoaTypeUtil.toDateTime(const aDateTime : TDateTime): NSDate;
+{var
+  ti : NSTimeInterval;
+begin
+  ti := (aDateTime - EncodeDate(2001, 1, 1)) * SecsPerDay;
+  ti := ti - double(NSTimeZone.localTimeZone.secondsFromGMT);
+  Result := NSDate.dateWithTimeIntervalSinceReferenceDate(ti);}
+var
+  cmp : NSDateComponents;
+  y,m,d: Word;
+  h,s,z: Word;
+begin
+  cmp := NSDateComponents.alloc.init;
+  DecodeDate(ADateTime, y,m,d);
+  cmp.setYear(y);
+  cmp.setMonth(m);
+  cmp.setDay(d);
+  DecodeTime(ADateTime, h, m, s,z);
+  cmp.setHour(h);
+  cmp.setMinute(m);
+  cmp.setSecond(s);
+  Result := NSCalendar.currentCalendar.dateFromComponents(cmp);
+  cmp.release;
+end;
+
+class function TCocoaTypeUtil.toDateTime(const aDateTime: NSDate): TDateTime;
+var
+  cmp : NSDateComponents;
+  mn : TdateTime;
+const
+  convFlag = NSYearCalendarUnit
+  or NSMonthCalendarUnit
+  or NSDayCalendarUnit
+  or NSHourCalendarUnit
+  or NSMinuteCalendarUnit
+  or NSSecondCalendarUnit;
+begin
+  if aDateTime = nil then
+  begin
+    Result:= 0.0;
+    Exit;
+  end;
+  cmp := NSCalendar.currentCalendar.components_fromDate(convFlag, aDateTime);
+  TryEncodeDate(cmp.year, cmp.month, cmp.day, Result);
+  TryEncodeTime(cmp.hour, cmp.minute, cmp.second, 0, mn);
+  Result := Result + mn;
+end;
+
+class function TCocoaTypeUtil.toAlignment( lclAlignment: TAlignment ): NSTextAlignment;
+begin
+  case lclAlignment of
+    taRightJustify:
+      Result := NSTextAlignmentRight;
+    taCenter:
+      Result := NSTextAlignmentCenter;
+  else
+    Result:= NSTextAlignmentLeft;
+  end;
+end;
+
+class function TCocoaTypeUtil.toRect(const params: TCreateParams): NSRect;
+begin
+  with params do Result:=NSMakeRect(X,Y,Width,Height);
+end;
+
+{ TCocoaCollectionUtil }
+
+class function TCocoaCollectionUtil.stringArrayToNSArray( const lclArray: TStringArray ): NSArray;
 var
   cocoaArray: NSMutableArray;
   i: Integer;
@@ -189,7 +333,7 @@ begin
   Result:= cocoaArray;
 end;
 
-function UrlArrayFromLCLToNS(const lclArray:TStringArray): NSArray;
+class function TCocoaCollectionUtil.urlArrayToNSArray(const lclArray:TStringArray): NSArray;
 var
   cocoaArray: NSMutableArray;
   cocoaUrl: NSUrl;
@@ -210,44 +354,49 @@ begin
   Result:= cocoaArray;
 end;
 
-procedure hideAllSubviews( parent: NSView );
+{ TCocoaStringUtil }
+
+class function TCocoaStringUtil.removeLineBreak(const str: NSString): NSString;
+begin
+  Result:= str.stringByReplacingOccurrencesOfString_withString( NSSTR_LINE_FEED, NSString.string_ );
+  Result:= Result.stringByReplacingOccurrencesOfString_withString( NSSTR_CARRIAGE_RETURN, NSString.string_ );
+  Result:= Result.stringByReplacingOccurrencesOfString_withString( NSSTR_LINE_SEPARATOR, NSString.string_ );
+  Result:= Result.stringByReplacingOccurrencesOfString_withString( NSSTR_PARAGRAPH_SEPARATOR, NSString.string_ );
+end;
+
+class function TCocoaStringUtil.removeAcceleration(const str: String): String;
 var
-  view: NSView;
+  posAmp: Integer;
+  posRight: Integer;
+  posLeft: Integer;
 begin
-  for view in parent.subviews do
-    view.setHidden( True );
+  Result:= str;
+  posAmp:= DeleteAmpersands(Result);
+  if posAmp < 0 then
+    Exit;
+
+  posRight:= str.IndexOf( ')' );
+  if (posRight<0) or (posRight<posAmp) then
+    Exit;
+
+  posLeft:= str.IndexOf( '(' );
+  if (posLeft<0) or (posLeft>posAmp) then
+    Exit;
+
+  Result:= str.Substring(0,posLeft).Trim;
 end;
 
-procedure ApplicationWillShowModal;
+class function TCocoaStringUtil.getNSStringObject( const aString: id ) : NSString;
 begin
-  // Any place that would attempt to use Cocoa-native modality.
-  // should call this routine, prior to the call
-  // This is a workaround for AppKit drawing approaches
-
-  // hack: it's assumed that an implicit transaction is running at the moment
-  //       for versions 10.7 and later it's possible to add an end-transacion
-  //       block. But since blocks are not yet, if official FPC release
-  //       the approach is not used
-  //
-  //       the code takes care of all modal windows
-  //
-  //       The hack is commented out, as it doesn't work on some machines
-
-  //if NSAppkitversionNumber >= NSAppKitVersionNumber10_12 then
-    //NSAnimationContext.endGrouping;
-
-  // If transaction is not terminated by calling "endGrouping"
-  // the typical error shown is:
-  //
-  //  *** Terminating app due to uncaught exception 'NSGenericException',
-  //  reason: '-[NSApplication runModalForWindow:] may not be invoked
-  //  inside of transaction begin/commit pair, or inside of transaction
-  //  commit (usually this means it was invoked inside of a view's -drawRect: method.)'
-  //  terminating with uncaught exception of type NSException
-  //  abort() called
+  if aString.isKindOfClass( NSAttributedString ) then
+    Result:= NSAttributedString( aString ).string_
+  else
+    Result:= NSString( aString );
 end;
 
-function MacCodeToVK(AKey: Word): Word;
+{ TCocoaKeyUtil }
+
+class function TCocoaKeyUtil.codeToVK(AKey: Word): Word;
 begin
   case AKey of
     kVK_ANSI_A : Result :=  VK_A;
@@ -398,12 +547,12 @@ begin
   end;
 end;
 
-function MacCharToVK(achar: unichar): Word;
+class function TCocoaKeyUtil.charToVK(achar: unichar): Word;
 var
   ch : AnsiChar;
 begin
   // only handle printable characters here in Ansi range
-  // all other should be taken care of in MacCodeToVk
+  // all other should be taken care of in codeToVK
   if (achar < 32) or (achar>127) then begin
     Result := VK_UNKNOWN;
     Exit;
@@ -429,19 +578,178 @@ begin
   end;
 end;
 
-procedure ColorToRGBFloat(cl: TColorRef; var r,g,b: Single); inline;
+class function TCocoaKeyUtil.getRawKeyChar(ev: NSEvent): System.WideChar;
+var
+  m : NSString;
+begin
+  m := ev.charactersIgnoringModifiers;
+  if m.length <> 1 then
+    Result := #0
+  else
+    Result := System.WideChar(m.characterAtIndex(0));
+end;
+
+class function TCocoaKeyUtil.codeToString(AKey: Word): NSString;
+type
+  WideChar = System.WideChar;
+var
+  w : WideChar;
+begin
+  w:=#0;
+  case AKey of
+  VK_MULTIPLY  : w := '*';
+  VK_ADD, VK_OEM_PLUS       : w := '+';
+  VK_SUBTRACT, VK_OEM_MINUS : w := '-';
+  VK_OEM_COMMA : w := ',';
+  VK_OEM_PERIOD: w := '.';
+  VK_OEM_1     : w := ';';
+  VK_OEM_2     : w := '/';
+  VK_OEM_3     : w := '`';
+  VK_OEM_4     : w := '[';
+  VK_OEM_5     : w := '\';
+  VK_OEM_6     : w := ']';
+  VK_OEM_7     : w := '''';
+  VK_BACK      : w := WideChar(NSBackspaceCharacter);
+  VK_CLEAR     : w := WideChar(NSClearDisplayFunctionKey);
+  VK_PAUSE     : w := WideChar(NSPauseFunctionKey);
+  VK_PRIOR     : w := WideChar(NSPageUpFunctionKey);
+  VK_NEXT      : w := WideChar(NSPageDownFunctionKey);
+  VK_END       : w := WideChar(NSEndFunctionKey);
+  VK_HOME      : w := WideChar(NSHomeFunctionKey);
+  VK_LEFT      : w := WideChar(NSLeftArrowFunctionKey);
+  VK_UP        : w := WideChar(NSUpArrowFunctionKey);
+  VK_RIGHT     : w := WideChar(NSRightArrowFunctionKey);
+  VK_DOWN      : w := WideChar(NSDownArrowFunctionKey);
+  VK_SELECT    : w := WideChar(NSSelectFunctionKey);
+  VK_PRINT     : w := WideChar(NSPrintFunctionKey);
+  VK_EXECUTE   : w := WideChar(NSExecuteFunctionKey);
+  VK_INSERT    : w := WideChar(NSInsertFunctionKey);
+  VK_DELETE    : w := WideChar(NSDeleteCharacter);
+  VK_HELP      : w := WideChar(NSHelpFunctionKey);
+  VK_SCROLL    : w := WideChar(NSScrollLockFunctionKey);
+  VK_F1..VK_F24: w := WideChar(NSF1FunctionKey + AKey - VK_F1);
+  VK_A..VK_Z   : w := WideChar(Ord('a') + AKey - VK_A);
+  else
+    w := WideChar(AKey and $ff);
+  end;
+  if w<>#0
+    then Result:=NSString.stringWithCharacters_length(@w, 1)
+    else Result:=NSString.string_;
+end;
+
+{ TCocoaControlUtil }
+
+class procedure TCocoaControlUtil.hideAllSubviews( const parent: NSView );
+var
+  view: NSView;
+begin
+  for view in parent.subviews do
+    view.setHidden( True );
+end;
+
+class function TCocoaControlUtil.getNSWindow(const obj: NSObject): NSWindow;
+begin
+  Result := nil;
+  if not Assigned(obj) then Exit;
+  if obj.isKindOfClass_(NSWindow) then
+    Result := NSWindow(obj)
+  else if obj.isKindOfClass_(NSView) then
+    Result := NSView(obj).window;
+end;
+
+class procedure TCocoaControlUtil.setStringValue(const c: NSControl; const S: String); inline;
+var
+  ns: NSString;
+begin
+  if Assigned(c) then
+  begin
+    ns := NSStringUtf8(S);
+    c.setStringValue(ns);
+    ns.release;
+  end;
+end;
+
+class function TCocoaControlUtil.getStringValue(const c: NSControl): String; inline;
+begin
+  if Assigned(c) then
+    Result := NSStringToString(c.stringValue)
+  else
+    Result := '';
+end;
+
+class procedure TCocoaControlUtil.moveCaretToTheEnd(const c: NSControl);
+var
+  range: NSRange;
+begin
+  if c.currentEditor <> nil then begin
+    range.location:= NSUIntegerMax;
+    range.length:= 0;
+    c.currentEditor.setSelectedRange( range );
+  end;
+end;
+
+class function TCocoaControlUtil.toMacOSTitle(const ATitle: string): NSString;
+var
+  t: String;
+begin
+  t:= TCocoaStringUtil.removeAcceleration(ATitle);
+  if t = '' then
+    Result:= NSString.string_ // empty string
+  else
+    Result:= NSString.stringWithUTF8String( @t[1] );
+end;
+
+class procedure TCocoaControlUtil.addLayoutDelta(const layout: TRect; var frame: TRect);
+begin
+  inc(frame.Left, layout.Left);
+  inc(frame.Top, layout.Top);
+  inc(frame.Right, layout.Right);
+  inc(frame.Bottom, layout.Bottom);
+end;
+
+class procedure TCocoaControlUtil.subLayoutDelta(const layout: TRect; var frame: TRect);
+begin
+  dec(frame.Left, layout.Left);
+  dec(frame.Top, layout.Top);
+  dec(frame.Right, layout.Right);
+  dec(frame.Bottom, layout.Bottom);
+end;
+
+class procedure TCocoaControlUtil.lclOffsetWithEnclosingScrollView(
+  const view: NSView;
+  var x: Integer;
+  var y: Integer );
+var
+  es: NSScrollView;
+  r: NSRect;
+begin
+  es:= view.enclosingScrollView;
+  if NOT Assigned(es) then
+    Exit;
+  if es.documentView <> view then
+    Exit;
+  r:= es.documentVisibleRect;
+  if NOT view.isFlipped then
+    r.origin.y:= es.documentView.frame.size.height - r.size.height - r.origin.y;
+  inc( x, Round(r.origin.x) );
+  inc( y, Round(r.origin.y) );
+end;
+
+{ TCocoaColorUtil }
+
+class procedure TCocoaColorUtil.getRGBValue(cl: TColorRef; var r,g,b: Single); inline;
 begin
   R:=(cl and $FF) / $FF;
   G:=((cl shr 8) and $FF) / $FF;
   B:=((cl shr 16) and $FF) / $FF;
 end;
 
-function RGBToColorFloat(r,g,b: Single): TColorRef; inline;
+class function TCocoaColorUtil.toColorRef(r,g,b: Single): TColorRef; inline;
 begin
   Result:=(Round(b*$FF) shl 16) or (Round(g*$FF) shl 8) or Round(r*$FF);
 end;
 
-function NSColorToRGB(const Color: NSColor): TColorRef; inline;
+class function TCocoaColorUtil.toColorRefWithRGBColor(const Color: NSColor): TColorRef; inline;
 var
   alpha: CGFloat;
 begin
@@ -449,12 +757,12 @@ begin
   // Thus RGB needs to be multiplied by it.
   alpha := Color.alphaComponent;
   with Color do
-    Result := RGBToColorFloat(redComponent*alpha, greenComponent*alpha, blueComponent*alpha);
+    Result := toColorRef(redComponent*alpha, greenComponent*alpha, blueComponent*alpha);
 end;
 
-function NSColorToColorRef(const Color: NSColor): TColorRef;
+class function TCocoaColorUtil.toColorRefWithAnyColor(const Color: NSColor): TColorRef;
 
-function AverageColor(Color1, Color2: TColorRef): TColorRef; inline;
+ function AverageColor(Color1, Color2: TColorRef): TColorRef; inline;
   begin
     if Color1 = Color2 then
       Result := Color1
@@ -482,7 +790,7 @@ begin
     else
     begin
       // compute an average color of the top left 2x2 rectangle
-      ImageRep := PatternColor.patternImage.bestRepresentationForRect_context_hints(NSNullRect, nil, nil);
+      ImageRep := PatternColor.patternImage.bestRepresentationForRect_context_hints(NSZeroRect, nil, nil);
       if (ImageRep = nil) or not ImageRep.isKindOfClass(NSBitmapImageRep) then
         Result := 0
       else
@@ -495,9 +803,9 @@ begin
             if Assigned(RGBColor) then
             begin
               if (x = 0) and (y = 0) then
-                Result := NSColorToRGB(RGBColor)
+                Result := toColorRefWithRGBColor(RGBColor)
               else
-                Result := AverageColor(Result, NSColorToRGB(RGBColor))
+                Result := AverageColor(Result, toColorRefWithRGBColor(RGBColor))
             end
             else
             begin
@@ -509,11 +817,11 @@ begin
     end;
   end
   else
-    Result := NSColorToRGB(RGBColor);
+    Result := toColorRefWithRGBColor(RGBColor);
   LocalPool.release;
 end;
 
-procedure NSColorToColorAlpha(const Color: NSColor; var lclColor: TColor;
+class procedure TCocoaColorUtil.toColorAlpha(const Color: NSColor; var lclColor: TColor;
   var Alpha: Byte);
 begin
   lclColor:= ((Round(Color.blueComponent*$FF)) shl 16) +
@@ -522,7 +830,7 @@ begin
   alpha:= Round(Color.alphaComponent*$FF);
 end;
 
-function ColorToNSColor(const Color: TColorRef): NSColor; inline;
+class function TCocoaColorUtil.toColor(const Color: TColorRef): NSColor; inline;
 begin
   Result := NSColor.colorWithDeviceRed_green_blue_alpha(
     (Color and $FF) / $FF,
@@ -530,7 +838,7 @@ begin
     ((Color shr 16) and $FF) / $FF, 1);
 end;
 
-function ColorAlphaToNSColor(const Color: TColorRef; const Alpha: Byte): NSColor;
+class function TCocoaColorUtil.toColor(const Color: TColorRef; const Alpha: Byte): NSColor;
 begin
   Result := NSColor.colorWithDeviceRed_green_blue_alpha(
     (Color and $FF) / $FF,
@@ -539,7 +847,7 @@ begin
     Alpha / $FF );
 end;
 
-function SysColorToNSColor(nIndex: Integer): NSColor;
+class function TCocoaColorUtil.sysIndexToColor(nIndex: Integer): NSColor;
 const
   ToolTipBack     = $C9FCF9;
   ToolTipBack1010 = $EDEDED;
@@ -618,227 +926,143 @@ begin
     begin
       if NSAppKitVersionNumber >= NSAppKitVersionNumber10_14 then
       begin
-        if IsPaintDark then
-          Result := ColorToNSColor(ToolTipBack1014Dark)
+        if TCocoaThemeUtil.isDark then
+          Result := toColor(ToolTipBack1014Dark)
         else
-          Result := ColorToNSColor(ToolTipBack1014);
+          Result := toColor(ToolTipBack1014);
       end else if NSAppKitVersionNumber >= NSAppKitVersionNumber10_10 then
-        Result := ColorToNSColor(ToolTipBack1010)
+        Result := toColor(ToolTipBack1010)
       else
-        Result := ColorToNSColor(ToolTipBack);
+        Result := toColor(ToolTipBack);
     end;
   else
     Result := nil;
   end;
 end;
 
+{ TCocoaImageUtil }
+
+{------------------------------------------------------------------------------
+  Name:    FillStandardDescription
+  Params:  Desc - Raw image description
+
+  Fills the raw image description with standard Cocoa internal image storing
+  description
+ ------------------------------------------------------------------------------}
+class procedure TCocoaImageUtil.fillStandardDescription(out Desc: TRawImageDescription);
+begin
+  Desc.Init;
+
+  Desc.Format := ricfRGBA;
+// Width and Height skipped
+  Desc.PaletteColorCount := 0;
+
+  Desc.BitOrder := riboReversedBits;
+  Desc.ByteOrder := riboMSBFirst;
+  Desc.LineEnd := rileDQWordBoundary; // 128bit aligned
+
+  Desc.LineOrder := riloTopToBottom;
+  Desc.BitsPerPixel := 32;
+  Desc.Depth := 32;
+
+  // 8-8-8-8 mode, $AARRGGBB
+  Desc.RedPrec := 8;
+  Desc.GreenPrec := 8;
+  Desc.BluePrec := 8;
+  Desc.AlphaPrec := 8;
+
+  Desc.AlphaShift := 24;
+  Desc.RedShift   := 16;
+  Desc.GreenShift := 08;
+  Desc.BlueShift  := 00;
+
+  Desc.MaskBitOrder := riboReversedBits;
+  Desc.MaskBitsPerPixel := 1;
+  Desc.MaskLineEnd := rileByteBoundary;
+  Desc.MaskShift := 0;
+end;
+
+class function TCocoaImageUtil.copyAndRotateImage(
+  const src: NSImage;
+  const degrees: Double ): NSImage;
 var
-  _NSAppearanceClass : pobjc_class = nil;
-  _NSAppearanceClassRead: Boolean = false;
-
-function NSAppearanceClass: pobjc_class;
+  imageBounds : NSRect;
+  pathBounds  : NSBezierPath;
+  transform   : NSAffineTransform;
+  rotatedBounds : NSRect;
+  rotatedImage   : NSImage;
 begin
-  if not _NSAppearanceClassRead then
+  if not Assigned(src) then
   begin
-    _NSAppearanceClass := objc_getClass('NSAppearance');
-    _NSAppearanceClassRead := true;
+    Result := nil;
+    Exit;
   end;
-  Result := _NSAppearanceClass;
+
+  // src: https://stackoverflow.com/questions/31699235/rotate-nsimage-in-swift-cocoa-mac-osx
+
+  imageBounds.size := src.size;
+  pathBounds := NSBezierPath.bezierPathWithRect(imageBounds);
+  transform := NSAffineTransform.alloc.init;
+  transform.rotatebyDegrees(degrees);
+  pathBounds.transformUsingAffineTransform(transform);
+  rotatedBounds := NSMakeRect(NSZeroPoint.x, NSZeroPoint.y, src.size.width, src.size.height );
+  rotatedImage := NSImage(NSImage.alloc).initWithSize(rotatedBounds.size);
+
+  //Center the image within the rotated bounds
+  imageBounds.origin.x := NSMidX(rotatedBounds) - (NSWidth(imageBounds) / 2);
+  imageBounds.origin.y := NSMidY(rotatedBounds) - (NSHeight(imageBounds) / 2);
+  transform.release;
+
+  // Start a new transform
+  transform := NSAffineTransform.alloc.init;
+  // Move coordinate system to the center (since we want to rotate around the center)
+  transform.translateXBy_yBy(rotatedBounds.size.width / 2, rotatedBounds.size.width / 2);
+  transform.rotateByDegrees(degrees);
+  // Move the coordinate system bak to normal
+  transform.translateXBy_yBy(-rotatedBounds.size.width / 2, -rotatedBounds.size.height / 2);
+  // Draw the original image, rotated, into the new image
+  rotatedImage.lockFocus;
+  transform.concat();
+  src.drawInRect_fromRect_operation_fraction(imageBounds, NSZeroRect, NSCompositeCopy, 1.0);
+  rotatedImage.unlockFocus();
+  Result := rotatedImage;
+
+  transform.release;
 end;
 
-function IsAppearDark(Appear: NSAppearance): Boolean; inline;
-begin
-  Result := Assigned(Appear)
-            and (
-            Appear.name.isEqualToString(NSSTR_DARK_NAME)
-            or
-            Appear.name.isEqualToString(NSSTR_DARK_NAME_VIBRANT)
-            )
-end;
-
-function IsDarkPossible: Boolean; inline;
-begin
-  Result := NSAppKitVersionNumber > NSAppKitVersionNumber10_12;
-end;
-
-function IsAppDark: Boolean;
+class function TCocoaImageUtil.copyAndRotateCursor(
+  const src: NSCursor;
+  const degrees: Double ): NSCursor;
 var
-  Appear: NSAppearance;
+  img : NSImage;
 begin
-  if not isDarkPossible then
-  begin
-    Result := false;
-    Exit;
-  end;
-  if (not NSApplication(NSApp).respondsToSelector(ObjCSelector('effectiveAppearance'))) then begin
-    Result := false;
-    Exit;
-  end;
-
-  Result := IsAppearDark(NSApplication(NSApp).effectiveAppearance);
+  img := copyAndRotateImage(src.image, degrees);
+  //todo: a better hotspot detection
+  Result := NSCursor.alloc.initWithImage_hotSpot(
+    img,
+    NSMakePoint(img.size.height / 2, img.size.width / 2)
+  );
+  img.release;
 end;
 
-function IsWinDark(win: NSWindow): Boolean;
-begin
-  if not Assigned(win) or not isDarkPossible then
-  begin
-    Result := false;
-    Exit;
-  end;
-  if (not win.respondsToSelector(ObjCSelector('effectiveAppearance'))) then begin
-    Result := false;
-    Exit;
-  end;
+{ TCocoaThemeUtil }
 
-  Result := IsAppearDark(win.effectiveAppearance);
-end;
-
-function IsPaintDark: Boolean;
+class function TCocoaThemeUtil.isDark: Boolean;
 var
-  cls : pobjc_class;
+  appearanceName: NSString;
 begin
-  cls := NSAppearanceClass;
-  if not Assigned(cls) then Exit;
-  Result := IsAppearDark(objc_msgSend(cls, ObjCSelector('currentAppearance')));
+  Result:= False;
+  if not NSApp.respondsToSelector( ObjCSelector('effectiveAppearance') ) then
+    Exit;
+  if not Assigned(NSApp.effectiveAppearance) then
+    Exit;
+  appearanceName:= NSApp.effectiveAppearance.Name;
+  Result:= appearanceName.isEqualToString(NSSTR_DARK_NAME) or appearanceName.isEqualToString(NSSTR_DARK_NAME_VIBRANT);
 end;
 
-function CFStringToString(AString: CFStringRef): String;
-begin
-  result:=CFStringToStr(AString);
-end;
+{ TCocoaScreenUtil }
 
-function GetNSObjectWindow(obj: NSObject): NSWindow;
-begin
-  Result := nil;
-  if not Assigned(obj) then Exit;
-  if obj.isKindOfClass_(NSWindow) then
-    Result := NSWindow(obj)
-  else if obj.isKindOfClass_(NSView) then
-    Result := NSView(obj).window;
-end;
-
-function GetNSSize(width, height: CGFloat): NSSize; inline;
-begin
-  Result.height := height;
-  Result.width := width;
-end;
-
-function GetNSPoint(x, y: single): NSPoint;
-begin
-  Result.x := x;
-  Result.y := y;
-end;
-
-function LCLToNSPoint(APt: TPoint; ParentHeight: Single): NSPoint;
-begin
-  Result.X := APt.X;
-  Result.Y := ParentHeight - APt.Y;
-end;
-
-function NSPointToLCL(APt: NSPoint; ParentHeight: Single): TPoint;
-begin
-  Result.X := Round(APt.X);
-  Result.Y := Round(ParentHeight - APt.Y);
-end;
-
-function GetNSRect(x, y, width, height: Integer): NSRect;
-begin
-  with Result do
-  begin
-    origin.x := x;
-    origin.y := y;
-    size.width := width;
-    size.height := height;
-  end;
-end;
-
-function GetCGRect(x1, y1, x2, y2: Integer): CGRect;
-begin
-  with Result do
-  begin
-    origin.x := x1;
-    origin.y := y1;
-    size.width := x2 - x1;
-    size.height := y2 - y1;
-  end;
-end;
-
-function GetCGRectSorted(X1, Y1, X2, Y2: Integer): CGRect;
-begin
-  if X1 <= X2 then
-  begin
-    Result.origin.x := X1;
-    Result.size.width := X2 - X1;
-  end
-  else
-  begin
-    Result.origin.x := X2;
-    Result.size.width := X1 - X2;
-  end;
-
-  if Y1 <= Y2 then
-  begin
-    Result.origin.y := Y1;
-    Result.size.height := Y2 - Y1;
-  end
-  else
-  begin
-    Result.origin.y := Y2;
-    Result.size.height := Y1 - Y2;
-  end;
-end;
-
-function RectToCGRect(const R: TRect): CGRect;
-begin
-  with R do
-    Result := GetCGRect(Left, Top, Right, Bottom);
-end;
-
-function CGRectToRect(const c: CGRect): TRect;
-begin
-  if CGRectIsEmpty(c) <> 0 then
-    Result := Rect(0,0,0,0)
-  else if CGRectIsInfinite(c) <> 0 then
-    Result:= Rect(Low(Integer), Low(Integer), High(Integer), High(Integer))
-  else begin
-  Result.Left := Round(c.origin.x);
-  Result.Top := Round(c.origin.y);
-  Result.Right := Round(c.origin.x + c.size.width);
-  Result.Bottom := Round(c.origin.y + c.size.height);
-end;
-end;
-
-function RectToNSRect(const r: TRect): NSRect;
-begin
-  with R do
-    Result := GetNSRect(Left, Top, Right - Left, Bottom - Top);
-end;
-
-function NSRectToRect(const NS: NSRect): TRect;
-begin
-  Result.Left := Round(ns.origin.x);
-  Result.Top := Round(ns.origin.y);
-  Result.Right := Round(ns.origin.x + ns.size.width);
-  Result.Bottom := Round(ns.origin.y + ns.size.height);
-end;
-
-procedure NSToLCLRect(const ns: NSRect; ParentHeight: Single; out lcl: TRect);
-begin
-  lcl.Left := Round(ns.origin.x);
-  lcl.Top := Round(ParentHeight - ns.size.height - ns.origin.y);
-  lcl.Right := Round(ns.origin.x + ns.size.width);
-  lcl.Bottom := Round(lcl.Top + ns.size.height);
-end;
-
-procedure LCLToNSRect(const lcl: TRect; ParentHeight: Single; out ns: NSRect);
-begin
-  ns.origin.x:=lcl.left;
-  ns.origin.y:=ParentHeight-lcl.bottom;
-  ns.size.width:=lcl.Right-lcl.Left;
-  ns.size.height:=lcl.Bottom-lcl.Top;
-end;
-
-function GetScreenPointFromEvent(const event: NSEvent): NSPoint;
+class function TCocoaScreenUtil.getScreenPoint(const event: NSEvent): NSPoint;
 var
   rect: NSRect;
 begin
@@ -851,31 +1075,31 @@ begin
   Result:= rect.origin;
 end;
 
-function ScreenPointFromLCLToNS(const lclPoint: TPoint): NSPoint;
+class function TCocoaScreenUtil.toCocoa(const lclPoint: TPoint): NSPoint;
 begin
   Result.x:= lclPoint.x;
-  Result.y:= NSGlobalScreenBottom - lclPoint.y;
+  Result.y:= globalScreenBottom - lclPoint.y;
 end;
 
-function ScreenPointFromNSToLCL(const cocoaPoint: NSPoint): TPoint;
+class function TCocoaScreenUtil.toLCL(const cocoaPoint: NSPoint): TPoint;
 begin
   Result.x:= Round( cocoaPoint.x );
-  Result.y:= Round( NSGlobalScreenBottom - cocoaPoint.y );
+  Result.y:= Round( globalScreenBottom - cocoaPoint.y );
 end;
 
-function ScreenRectFromLCLToNS(const lclRect: TRect): NSRect;
+class function TCocoaScreenUtil.toCocoa(const lclRect: TRect): NSRect;
 begin
   Result.origin.x:= lclRect.left;
-  Result.origin.y:= NSGlobalScreenBottom - lclRect.bottom;
+  Result.origin.y:= globalScreenBottom - lclRect.bottom;
   Result.size.width:= lclRect.Right - lclRect.Left;
   Result.size.height:= lclRect.Bottom - lclRect.Top;
 end;
 
-function ScreenRectFromNSToLCL(const cocoaRect: NSRect): TRect;
+class function TCocoaScreenUtil.toLCL(const cocoaRect: NSRect): TRect;
 var
   bottom: CGFloat;
 begin
-  bottom:= NSGlobalScreenBottom;
+  bottom:= globalScreenBottom;
   Result.Left:= Round( cocoaRect.origin.x );
   Result.Top:= Round( bottom - NSMaxY(cocoaRect) );
   Result.Right:= Round( cocoaRect.origin.x + cocoaRect.size.width );
@@ -883,19 +1107,19 @@ begin
 end;
 
 // primary display
-function NSPrimaryScreen: NSScreen;
+class function TCocoaScreenUtil.primaryScreen: NSScreen;
 begin
   Result := NSScreen(NSScreen.screens.objectAtIndex(0));
 end;
 
 // the frame of primary display
-function NSPrimaryScreenFrame: NSRect;
+class function TCocoaScreenUtil.primaryScreenFrame: NSRect;
 begin
-  Result := NSPrimaryScreen.frame;
+  Result := primaryScreen.frame;
 end;
 
 // the frame of global full virtual display, in LCL coordinate (left,bottom)
-function NSGlobalScreenFrame: NSRect;
+class function TCocoaScreenUtil.globalScreenFrame: NSRect;
 var
   globalFrame: NSRect;
   screen: NSScreen;
@@ -908,39 +1132,39 @@ begin
 end;
 
 // the frame of global full virtual display, in LCL coordinate (left,top)
-function NSGlobalScreenLCLFrame: NSRect;
+class function TCocoaScreenUtil.globalScreenLCLFrame: NSRect;
 begin
-  Result:= NSGlobalScreenFrame;
-  Result.origin.y:= NSPrimaryScreenFrame.size.height - NSMaxY(Result);
+  Result:= globalScreenFrame;
+  Result.origin.y:= primaryScreenFrame.size.height - NSMaxY(Result);
 end;
 
 // the bottom of global full virtual display
 // for cocoa window/screen to lcl coordinate
-function NSGlobalScreenBottom: CGFloat;
+class function TCocoaScreenUtil.globalScreenBottom: CGFloat;
 begin
-  Result:= NSMaxY( NSGlobalScreenFrame );
+  Result:= NSMaxY( globalScreenFrame );
 end;
 
-// According to the documentation of NSScreen.screen It's recommended
-// not to cache NSScreen objects stored in the array. As those might change.
-// However, according to the same documentation, the objects can change
+// according to the documentation of NSScreen.screen, it's recommended
+// NOT to cache NSScreen objects stored in the array, as those might change.
+// however, according to the same documentation, the objects can change
 // only with a notificatio sent out. BUT while using a macincloud (remote desktop)
 // services, it was identified that NSScreen object CAN change without any notification.
-// So, instead of passing NSScreen as HMonitor, only INDEX+1 in NSScreen.screen
+// so, instead of passing NSScreen as HMonitor, only INDEX+1 in NSScreen.screen
 // is used.
-function IndexToHMonitor(i: NSUInteger): HMonitor;
+class function TCocoaScreenUtil.indexToHMonitor(i: NSUInteger): HMonitor;
 begin
   if i = NSIntegerMax then Result := 0
   else Result := i + 1;
 end;
 
-function HMonitorToIndex(h: HMonitor): NSUInteger;
+class function TCocoaScreenUtil.HMonitorToIndex(h: HMonitor): NSUInteger;
 begin
   if h = 0 then Result := NSIntegerMax
   else Result := NSUInteger(h)-1;
 end;
 
-function getScreenFromHMonitor(h: HMonitor): NSScreen;
+class function TCocoaScreenUtil.getScreenFromHMonitor(h: HMonitor): NSScreen;
 var
   index: NSUInteger;
 begin
@@ -951,9 +1175,11 @@ begin
   Result:= NSScreen( NSScreen.screens.objectAtIndex(index) );
 end;
 
-function CreateParamsToNSRect(const params: TCreateParams): NSRect;
+{ standalone functions }
+
+function CFStringToString(AString: CFStringRef): String;
 begin
-  with params do Result:=GetNSRect(X,Y,Width,Height);
+  result:=CFStringToStr(AString);
 end;
 
 function NSStringUtf8(s: PChar; len: Integer = -1): NSString;
@@ -1016,191 +1242,6 @@ function NSStringToUnicodeString(ns: NSString): UnicodeString;
 begin
   SetLength(Result, ns.length);
   ns.getCharacters_range(unicharPtr(Result), NSMakeRange(0, ns.length));
-end;
-
-function NSStringRemoveLineBreak(const str: NSString): NSString;
-begin
-  Result:= str.stringByReplacingOccurrencesOfString_withString( NSSTR_LINE_FEED, NSString.string_ );
-  Result:= Result.stringByReplacingOccurrencesOfString_withString( NSSTR_CARRIAGE_RETURN, NSString.string_ );
-  Result:= Result.stringByReplacingOccurrencesOfString_withString( NSSTR_LINE_SEPARATOR, NSString.string_ );
-  Result:= Result.stringByReplacingOccurrencesOfString_withString( NSSTR_PARAGRAPH_SEPARATOR, NSString.string_ );
-end;
-
-function StringRemoveAcceleration(const str: String): String;
-var
-  posAmp: Integer;
-  posRight: Integer;
-  posLeft: Integer;
-begin
-  Result:= str;
-  posAmp:= DeleteAmpersands(Result);
-  if posAmp < 0 then
-    Exit;
-
-  posRight:= str.IndexOf( ')' );
-  if (posRight<0) or (posRight<posAmp) then
-    Exit;
-
-  posLeft:= str.IndexOf( '(' );
-  if (posLeft<0) or (posLeft>posAmp) then
-    Exit;
-
-  Result:= str.Substring(0,posLeft).Trim;
-end;
-
-function getNSStringObject( const aString: id ) : NSString;
-begin
-  if aString.isKindOfClass( NSAttributedString ) then
-    Result:= NSAttributedString( aString ).string_
-  else
-    Result:= NSString( aString );
-end;
-
-procedure SetNSText(text: NSText; const s: String); inline;
-var
-  ns: NSString;
-begin
-  if Assigned(text) then
-  begin
-    ns := NSStringUTF8(s);
-    text.setString(ns);
-    ns.release;
-    if Assigned(text.undoManager) then
-      text.undoManager.removeAllActions;
-  end;
-end;
-
-function GetNSText(text: NSText): string; inline;
-begin
-  if Assigned(text) then
-    Result := NSStringToString(text.string_)
-  else
-    Result := '';
-end;
-
-procedure SetNSControlValue(c: NSControl; const S: String); inline;
-var
-  ns: NSString;
-begin
-  if Assigned(c) then
-  begin
-    ns := NSStringUtf8(S);
-    c.setStringValue(ns);
-    ns.release;
-  end;
-end;
-
-function GetNSControlValue(c: NSControl): String; inline;
-begin
-  if Assigned(c) then
-    Result := NSStringToString(c.stringValue)
-  else
-    Result := '';
-end;
-
-procedure NSControlMoveCaretToTheEnd(c: NSControl);
-var
-  range: NSRange;
-begin
-  if c.currentEditor <> nil then begin
-    range.location:= NSUIntegerMax;
-    range.length:= 0;
-    c.currentEditor.setSelectedRange( range );
-  end;
-end;
-
-{ NSLCLDebugExtension }
-
-function NSLCLDebugExtension.lclClassName: shortstring;
-begin
-  Result := NSStringToString(self.className);
-end;
-
-function VirtualKeyCodeToMacString(AKey: Word): NSString;
-type
-  WideChar = System.WideChar;
-var
-  w : WideChar;
-begin
-  w:=#0;
-  case AKey of
-  VK_MULTIPLY  : w := '*';
-  VK_ADD, VK_OEM_PLUS       : w := '+';
-  VK_SUBTRACT, VK_OEM_MINUS : w := '-';
-  VK_OEM_COMMA : w := ',';
-  VK_OEM_PERIOD: w := '.';
-  VK_OEM_1     : w := ';';
-  VK_OEM_2     : w := '/';
-  VK_OEM_3     : w := '`';
-  VK_OEM_4     : w := '[';
-  VK_OEM_5     : w := '\';
-  VK_OEM_6     : w := ']';
-  VK_OEM_7     : w := '''';
-  VK_BACK      : w := WideChar(NSBackspaceCharacter);
-  VK_CLEAR     : w := WideChar(NSClearDisplayFunctionKey);
-  VK_PAUSE     : w := WideChar(NSPauseFunctionKey);
-  VK_PRIOR     : w := WideChar(NSPageUpFunctionKey);
-  VK_NEXT      : w := WideChar(NSPageDownFunctionKey);
-  VK_END       : w := WideChar(NSEndFunctionKey);
-  VK_HOME      : w := WideChar(NSHomeFunctionKey);
-  VK_LEFT      : w := WideChar(NSLeftArrowFunctionKey);
-  VK_UP        : w := WideChar(NSUpArrowFunctionKey);
-  VK_RIGHT     : w := WideChar(NSRightArrowFunctionKey);
-  VK_DOWN      : w := WideChar(NSDownArrowFunctionKey);
-  VK_SELECT    : w := WideChar(NSSelectFunctionKey);
-  VK_PRINT     : w := WideChar(NSPrintFunctionKey);
-  VK_EXECUTE   : w := WideChar(NSExecuteFunctionKey);
-  VK_INSERT    : w := WideChar(NSInsertFunctionKey);
-  VK_DELETE    : w := WideChar(NSDeleteCharacter);
-  VK_HELP      : w := WideChar(NSHelpFunctionKey);
-  VK_SCROLL    : w := WideChar(NSScrollLockFunctionKey);
-  VK_F1..VK_F24: w := WideChar(NSF1FunctionKey + AKey - VK_F1);
-  VK_A..VK_Z   : w := WideChar(Ord('a') + AKey - VK_A);
-  else
-    w := WideChar(AKey and $ff);
-  end;
-  if w<>#0
-    then Result:=NSString.stringWithCharacters_length(@w, 1)
-    else Result:=NSString.string_;
-end;
-{------------------------------------------------------------------------------
-  Name:    FillStandardDescription
-  Params:  Desc - Raw image description
-
-  Fills the raw image description with standard Cocoa internal image storing
-  description
- ------------------------------------------------------------------------------}
-procedure FillStandardDescription(out Desc: TRawImageDescription);
-begin
-  Desc.Init;
-
-  Desc.Format := ricfRGBA;
-// Width and Height skipped
-  Desc.PaletteColorCount := 0;
-
-  Desc.BitOrder := riboReversedBits;
-  Desc.ByteOrder := riboMSBFirst;
-  Desc.LineEnd := rileDQWordBoundary; // 128bit aligned
-
-  Desc.LineOrder := riloTopToBottom;
-  Desc.BitsPerPixel := 32;
-  Desc.Depth := 32;
-
-  // 8-8-8-8 mode, $AARRGGBB
-  Desc.RedPrec := 8;
-  Desc.GreenPrec := 8;
-  Desc.BluePrec := 8;
-  Desc.AlphaPrec := 8;
-
-  Desc.AlphaShift := 24;
-  Desc.RedShift   := 16;
-  Desc.GreenShift := 08;
-  Desc.BlueShift  := 00;
-
-  Desc.MaskBitOrder := riboReversedBits;
-  Desc.MaskBitsPerPixel := 1;
-  Desc.MaskLineEnd := rileByteBoundary;
-  Desc.MaskShift := 0;
 end;
 
 {------------------------------------------------------------------------------
@@ -1275,236 +1316,6 @@ begin
   if StrSize > 0 then
     CFStringGetBytes(AString, StrRange, Encoding,
       Ord('?'), False, @Result[1], StrSize, StrSize);
-end;
-
-{------------------------------------------------------------------------------
-  Name:    CFStringToData
-  Params:  AString  - Core Foundation string ref
-           Encoding - Result data encoding format
-  Returns: CFDataRef
-
-  Converts Core Foundation string to data
- ------------------------------------------------------------------------------}
-function CFStringToData(AString: CFStringRef; Encoding: CFStringEncoding): CFDataRef;
-var
-  S: String;
-begin
-  Result := nil;
-  if AString = nil then Exit;
-  S := CFStringToStr(AString, Encoding);
-
-  if Length(S) > 0 then
-    Result := CFDataCreate(nil, @S[1], Length(S))
-  else
-    Result := CFDataCreate(nil, nil, 0);
-end;
-
-function GetCurrentEventTime: double;
-// returns seconds since system startup
-begin
-  Result := AbsoluteToDuration(UpTime) / 1000.0;
-end;
-
-function GetMacOSXVersion: Integer;
-var
-  lVersionNSStr: NSString;
-  lVersionStr: string;
-  lParser: TStringList;
-  lMajor: integer = 0;
-  lMinor: integer = 0;
-  lFix: integer = 0;
-begin
-  Result := 0;
-  lVersionNSStr := NSProcessInfo.processInfo.operatingSystemVersionString;
-  lVersionStr := NSStringToString(lVersionNSStr);
-  lParser := TStringList.Create;
-  try
-    lParser.Delimiter := ' ';
-    lParser.DelimitedText := lVersionStr;
-    if lParser.Count >= 2 then
-    begin
-      lVersionStr := lParser.Strings[1];
-      lParser.Delimiter := '.';
-      lParser.DelimitedText := lVersionStr;
-      if lParser.Count = 3 then
-      begin
-        TryStrToInt(lParser.Strings[0], lMajor);
-        TryStrToInt(lParser.Strings[1], lMinor);
-        TryStrToInt(lParser.Strings[2], lFix);
-      end;
-    end;
-  finally
-    lParser.Free;
-  end;
-  Result := lMajor*$10000 + lMinor*$100 + lFix;
-end;
-
-function DateTimeToNSDate(const aDateTime : TDateTime): NSDate;
-{var
-  ti : NSTimeInterval;
-begin
-  ti := (aDateTime - EncodeDate(2001, 1, 1)) * SecsPerDay;
-  ti := ti - double(NSTimeZone.localTimeZone.secondsFromGMT);
-  Result := NSDate.dateWithTimeIntervalSinceReferenceDate(ti);}
-var
-  cmp : NSDateComponents;
-  y,m,d: Word;
-  h,s,z: Word;
-begin
-  cmp := NSDateComponents.alloc.init;
-  DecodeDate(ADateTime, y,m,d);
-  cmp.setYear(y);
-  cmp.setMonth(m);
-  cmp.setDay(d);
-  DecodeTime(ADateTime, h, m, s,z);
-  cmp.setHour(h);
-  cmp.setMinute(m);
-  cmp.setSecond(s);
-  Result := NSCalendar.currentCalendar.dateFromComponents(cmp);
-  cmp.release;
-end;
-
-function NSDateToDateTime(const aDateTime: NSDate): TDateTime;
-var
-  cmp : NSDateComponents;
-  mn : TdateTime;
-const
-  convFlag = NSYearCalendarUnit
-  or NSMonthCalendarUnit
-  or NSDayCalendarUnit
-  or NSHourCalendarUnit
-  or NSMinuteCalendarUnit
-  or NSSecondCalendarUnit;
-begin
-  if aDateTime = nil then
-  begin
-    Result:= 0.0;
-    Exit;
-  end;
-  cmp := NSCalendar.currentCalendar.components_fromDate(convFlag, aDateTime);
-  TryEncodeDate(cmp.year, cmp.month, cmp.day, Result);
-  TryEncodeTime(cmp.hour, cmp.minute, cmp.second, 0, mn);
-  Result := Result + mn;
-end;
-
-function ControlTitleToStr(const ATitle: string): String;
-begin
-  Result:= StringRemoveAcceleration(ATitle);
-end;
-
-function ControlTitleToNSStr(const ATitle: string): NSString;
-var
-  t: string;
-begin
-  t := ControlTitleToStr(ATitle);
-  if t = '' then Result:=NSString.string_ // empty string
-  else Result := NSString.stringWithUTF8String( @t[1] );
-end;
-
-procedure AddLayoutToFrame(const layout: TRect; var frame: TRect);
-begin
-  inc(frame.Left, layout.Left);
-  inc(frame.Top, layout.Top);
-  inc(frame.Right, layout.Right);
-  inc(frame.Bottom, layout.Bottom);
-end;
-
-procedure SubLayoutFromFrame(const layout: TRect; var frame: TRect);
-begin
-  dec(frame.Left, layout.Left);
-  dec(frame.Top, layout.Top);
-  dec(frame.Right, layout.Right);
-  dec(frame.Bottom, layout.Bottom);
-end;
-
-function NSEventRawKeyChar(ev: NSEvent): System.WideChar;
-var
-  m : NSString;
-begin
-  m := ev.charactersIgnoringModifiers;
-  if m.length <> 1 then
-    Result := #0
-  else
-    Result := System.WideChar(m.characterAtIndex(0));
-end;
-
-function AllocImageRotatedByDegrees(src: NSImage; degrees: double): NSImage;
-var
-  imageBounds : NSRect;
-  pathBounds  : NSBezierPath;
-  transform   : NSAffineTransform;
-  rotatedBounds : NSRect;
-  rotatedImage   : NSImage;
-begin
-  if not Assigned(src) then
-  begin
-    Result := nil;
-    Exit;
-  end;
-
-  // src: https://stackoverflow.com/questions/31699235/rotate-nsimage-in-swift-cocoa-mac-osx
-
-  imageBounds.size := src.size;
-  pathBounds := NSBezierPath.bezierPathWithRect(imageBounds);
-  transform := NSAffineTransform.alloc.init;
-  transform.rotatebyDegrees(degrees);
-  pathBounds.transformUsingAffineTransform(transform);
-  rotatedBounds := NSMakeRect(NSZeroPoint.x, NSZeroPoint.y, src.size.width, src.size.height );
-  rotatedImage := NSImage(NSImage.alloc).initWithSize(rotatedBounds.size);
-
-  //Center the image within the rotated bounds
-  imageBounds.origin.x := NSMidX(rotatedBounds) - (NSWidth(imageBounds) / 2);
-  imageBounds.origin.y := NSMidY(rotatedBounds) - (NSHeight(imageBounds) / 2);
-  transform.release;
-
-  // Start a new transform
-  transform := NSAffineTransform.alloc.init;
-  // Move coordinate system to the center (since we want to rotate around the center)
-  transform.translateXBy_yBy(rotatedBounds.size.width / 2, rotatedBounds.size.width / 2);
-  transform.rotateByDegrees(degrees);
-  // Move the coordinate system bak to normal
-  transform.translateXBy_yBy(-rotatedBounds.size.width / 2, -rotatedBounds.size.height / 2);
-  // Draw the original image, rotated, into the new image
-  rotatedImage.lockFocus;
-  transform.concat();
-  src.drawInRect_fromRect_operation_fraction(imageBounds, NSZeroRect, NSCompositeCopy, 1.0);
-  rotatedImage.unlockFocus();
-  Result := rotatedImage;
-
-  transform.release;
-end;
-
-function AllocCursorFromCursorByDegrees(src: NSCursor; degrees: double): NSCursor;
-var
-  img : NSImage;
-begin
-  img := AllocImageRotatedByDegrees(src.image, degrees);
-  //todo: a better hotspot detection
-  Result := NSCursor.alloc.initWithImage_hotSpot(
-    img,
-    NSMakePoint(img.size.height / 2, img.size.width / 2)
-  );
-  img.release;
-end;
-
-procedure lclOffsetWithEnclosingScrollView(
-  const view: NSView;
-  var x: Integer;
-  var y: Integer );
-var
-  es: NSScrollView;
-  r: NSRect;
-begin
-  es:= view.enclosingScrollView;
-  if NOT Assigned(es) then
-    Exit;
-  if es.documentView <> view then
-    Exit;
-  r:= es.documentVisibleRect;
-  if NOT view.isFlipped then
-    r.origin.y:= es.documentView.frame.size.height - r.size.height - r.origin.y;
-  inc( x, Round(r.origin.x) );
-  inc( y, Round(r.origin.y) );
 end;
 
 end.

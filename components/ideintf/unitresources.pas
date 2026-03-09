@@ -25,7 +25,9 @@ uses
   // LazUtils
   LazMemManager,
   // BuildIntf
-  UnitResourceIntf, ProjPackIntf;
+  UnitResourceIntf, ProjPackIntf,
+  // IdeIntf
+  FormEditingIntf;
 
 type
   { TCustomLFMUnitResourceFileFormat }
@@ -43,13 +45,9 @@ type
     class function FindComponentClass(aClassName: string): TComponentClass; override;
   end;
 
-function GetComponentBaseClass(aClass: TClass): TPFComponentBaseClass;
 
 
 implementation
-
-uses
-  FormEditingIntf;
 
 function GetComponentBaseClass(aClass: TClass): TPFComponentBaseClass;
 begin
@@ -130,6 +128,9 @@ begin
   else
     Result:=nil;
 end;
+
+initialization
+  ComponentBaseClassFunc := @GetComponentBaseClass;
 
 end.
 

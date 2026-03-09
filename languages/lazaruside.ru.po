@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-02-09 22:43+0300\n"
+"PO-Revision-Date: 2026-03-06 01:56+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -10,7 +10,7 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "X-Poedit-Bookmarks: -1,-1,-1,-1,-1,-1,-1,3325,-1,-1\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.6\n"
 
 #: lazarusidestrconsts.cocoamfstbicommand
 msgid "Command"
@@ -588,6 +588,10 @@ msgstr "Заголовок процедуры"
 #: lazarusidestrconsts.dlgaddhiattrgroup_specializegenericsection
 msgid "Specialize/Generic Blocks"
 msgstr "Блоки Specialize/Generic"
+
+#: lazarusidestrconsts.dlgaddhiattrgroup_string
+msgid "Strings"
+msgstr "Строки"
 
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
@@ -7959,10 +7963,6 @@ msgstr "%s(%s,%s) отсутствует включаемый файл"
 msgid "Delphi Name"
 msgstr "Имя Delphi"
 
-#: lazarusidestrconsts.lisconvdelphipackagenameexists
-msgid "Package name exists"
-msgstr "Имя пакета уже существует"
-
 #: lazarusidestrconsts.lisconvdelphipackagerequired
 #, object-pascal-format
 msgid "Package %s is required but not installed in Lazarus! Install it later."
@@ -7988,10 +7988,10 @@ msgctxt "lazarusidestrconsts.lisconvdelphireplacedunitinusessection"
 msgid "Replaced unit \"%s\" with \"%s\" in uses section."
 msgstr "Модуль \"%s\" в выражении Uses заменён на \"%s\"."
 
-#: lazarusidestrconsts.lisconvdelphithereisalreadyapackagewiththenamepleaseclosethispa
+#: lazarusidestrconsts.lisconvdelphithereisalreadyapackage
 #, object-pascal-format
-msgid "There is already a package with the name \"%s\"%sPlease close this package first."
-msgstr "Пакет с именем \"%s\" уже имеется.%sСначала закройте его."
+msgid "There is already a package with the name \"%s\""
+msgstr "Пакет с именем \"%s\" уже имеется"
 
 #: lazarusidestrconsts.lisconvdelphiunitnameexistsinlcl
 msgid "Unitname exists in LCL"

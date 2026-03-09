@@ -38,7 +38,7 @@ uses
 // To get as little as posible circles,
 // uncomment only when needed for registration
 ////////////////////////////////////////////////////
-  Classes, Graphics, Controls, Forms, LCLType, LCLProc,
+  Classes, Graphics, Controls, Forms, LCLType, LCLProc, LMessages,
 ////////////////////////////////////////////////////
   WSLCLClasses, WSControls, WSForms, WSProc,
   LazGtk3, LazGdk3, LazGLib2, gtk3widgets, gtk3int, gtk3objects;
@@ -82,6 +82,8 @@ type
   published
     class function  CreateHandle(const AWinControl: TWinControl;
       const AParams: TCreateParams): TLCLHandle; override;
+    class function  GetDefaultClientRect(const AWinControl: TWinControl;
+      const aLeft, aTop, aWidth, aHeight: integer; var aClientRect: TRect): boolean; override;
     class procedure SetBounds(const AWinControl: TWinControl; const ALeft, ATop, AWidth, AHeight: Integer); override;
     class procedure ShowHide(const AWinControl: TWinControl); override;
 
@@ -128,6 +130,7 @@ type
   published
     class function  CreateHandle(const AWinControl: TWinControl;
       const AParams: TCreateParams): TLCLHandle; override;
+    class procedure ShowHide(const AWinControl: TWinControl); override;
   end;
 
   { TWSScreen }
@@ -155,6 +158,36 @@ begin
 end;
 
 { TGtk3WSCustomForm }
+
+class function TGtk3WSCustomForm.GetDefaultClientRect(
+  const AWinControl: TWinControl; const aLeft, aTop, aWidth, aHeight: integer;
+  var aClientRect: TRect): boolean;
+var
+  AWindow: TGtk3Window;
+  Alloc: TGtkAllocation;
+  MenuH: Integer;
+begin
+  Result := False;
+  if AWinControl.HandleAllocated then
+  begin
+    AWindow := TGtk3Window(AWinControl.Handle);
+    AWindow.GetContainerWidget^.get_allocation(@Alloc);
+    if (Alloc.width > 1) or (Alloc.height > 1) then
+      exit;
+  end;
+  aClientRect := Rect(0, 0, aWidth, aHeight);
+  if (AWinControl is TCustomForm) and (TCustomForm(AWinControl).Menu <> nil) then
+  begin
+    MenuH := Gtk3WidgetSet.GetSystemMetrics(SM_CYMENU);
+    if MenuH > 0 then
+    begin
+      Dec(aClientRect.Bottom, MenuH);
+      if aClientRect.Bottom < 0 then
+        aClientRect.Bottom := 0;
+    end;
+  end;
+  Result := True;
+end;
 
 class function TGtk3WSCustomForm.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): TLCLHandle;
@@ -273,6 +306,11 @@ var
     if not IsX11 then
     begin
       AWindow^.show_all;
+      {On Wayland the surface is created at show_all time, so we must apply opacity now.
+       gtk_widget_set_opacity called in CreateWidget may not persist for popup
+       surfaces because the wl_surface doesn't exist until mapping.}
+      if AForm.AlphaBlend then
+        PGtkWidget(AWindow)^.set_opacity(AForm.AlphaBlendValue / 255.0);
       gdk_display_flush(GdkDisplay);
       exit;
     end;
@@ -511,8 +549,8 @@ class procedure TGtk3WSCustomForm.SetFormStyle(const AForm: TCustomform;
 begin
   if not WSCheckHandleAllocated(AForm, 'SetFormStyle') then
     Exit;
-  {$IFDEF GTK3DEBUGCORE}
-  DebugLn('TGtk3WSCustomForm.SetFormStyle');
+  {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGFORMS)}
+  DebugLn('TGtk3WSCustomForm.SetFormStyle: NOT IMPLEMENTED !');
   {$ENDIF}
 end;
     
@@ -534,7 +572,7 @@ var
 begin
   if not WSCheckHandleAllocated(AForm, 'SetShowInTaskbar') then
     Exit;
-  {$IFDEF GTK3DEBUGCORE}
+  {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGFORMS)}
   DebugLn('TGtk3WSCustomForm.SetShowInTaskbar');
   {$ENDIF}
   if (AForm.Parent <> nil) or
@@ -553,8 +591,8 @@ class procedure TGtk3WSCustomForm.SetZPosition(const AWinControl: TWinControl; c
 begin
   if not WSCheckHandleAllocated(AWinControl, 'SetZPosition') then
     Exit;
-  {$IFDEF GTK3DEBUGCORE}
-  DebugLn('TGtk3WSCustomForm.SetZPosition');
+  {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGFORMS)}
+  DebugLn('TGtk3WSCustomForm.SetZPosition: NOT IMPLEMENTED');
   {$ENDIF}
 end;
 
@@ -656,6 +694,43 @@ class function TGtk3WSHintWindow.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): TLCLHandle;
 begin
   Result := TLCLHandle(TGtk3HintWindow.Create(AWinControl, AParams));
+end;
+
+class procedure TGtk3WSHintWindow.ShowHide(const AWinControl: TWinControl);
+var
+  AWidget: PGtkWidget;
+  procedure SetPassThroughRecursive(AGdkWindow: PGdkWindow);
+  var
+    AChildren: PGList;
+    AItem: PGList;
+  begin
+    if not Gtk3IsGdkWindow(AGdkWindow) then
+      exit;
+    AGdkWindow^.set_pass_through(True);
+    AChildren := AGdkWindow^.get_children;
+    AItem := AChildren;
+    while AItem <> nil do
+    begin
+      SetPassThroughRecursive(PGdkWindow(AItem^.data));
+      AItem := AItem^.next;
+    end;
+    g_list_free(AChildren);
+  end;
+begin
+  if AWinControl.HandleObjectShouldBeVisible then
+  begin
+    AWidget := TGtk3HintWindow(AWinControl.Handle).Widget;
+    if GTK3WidgetSet.IsWayland then // ref.to #42033, X11 not need this (it lead to incorrect positioning)
+      PGtkWindow(AWidget)^.set_transient_for(GetActiveGtkWindow);
+
+    AWidget^.show_all;
+
+    if Gtk3IsGdkWindow(AWidget^.window) and
+      (AWinControl.Perform(LM_NCHITTEST, 0, 0) = HTTRANSPARENT) then
+    SetPassThroughRecursive(AWidget^.window);
+  end else
+    TGtk3HintWindow(AWinControl.Handle).Hide;
+
 end;
 
 end.

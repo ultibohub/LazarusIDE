@@ -75,10 +75,13 @@ uses
   // IdeConfig
   EnvironmentOpts, IDEOptionDefs, TransferMacros, IDEProcs, DialogProcs,
   ProjectBuildMode,
+  // IdePackager
+  PackageDefs, BasePkgManager,
+  // IdeProject
+  Project,
   // IDE
-  LazarusIDEStrConsts, MainBase, MainBar, Project,
-  BuildManager, AddToProjectDlg, EnvGuiOptions,
-  BasePkgManager, ProjPackChecks, ProjPackEditing, ProjPackFilePropGui, PackageDefs,
+  LazarusIDEStrConsts, MainBase, MainBar, BuildManager, AddToProjectDlg, EnvGuiOptions,
+  ProjPackChecks, ProjPackEditing, ProjPackFilePropGui,
   AddPkgDependencyDlg, AddFPMakeDependencyDlg;
 
 const

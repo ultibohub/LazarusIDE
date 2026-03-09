@@ -42,10 +42,13 @@ uses
   // IdeConfig
   EnvironmentOpts, TransferMacros, SearchPathProcs, ProjectBuildMode,
   ParsedCompilerOpts, CompilerOptions, IdeConfStrConsts,
+  // IdePackager
+  BasePkgManager, PackageDefs,
+  // IdeProject
+  Project,
   // IDE
-  MainBase, MainBar, BasePkgManager, PackageDefs, Project,
-  BaseBuildManager, Compiler_ModeMatrix, BuildModeDiffDlg, GenericCheckList,
-  LazarusIDEStrConsts;
+  MainBase, MainBar, BaseBuildManager, Compiler_ModeMatrix, BuildModeDiffDlg,
+  GenericCheckList, LazarusIDEStrConsts;
 
 type
 

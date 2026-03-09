@@ -109,7 +109,10 @@ begin
 
   AControl := TGtk3Widget(HwndFromGtkWidget(widget));
   if not Assigned(AControl) then
+  begin
+    nat_height^ := min_h;  // nat must be >= min per GTK contract
     Exit;
+  end;
 
   //Keep min_height from the parent class: it encodes the CSS minimum for the
   //tab bar. Resetting it to 0 allowed GTK3 to hand us allocations smaller
@@ -126,6 +129,7 @@ var
   ParentClass: PGtkWidgetClass;
   min_h: gint;
   ClampedAlloc: TGtkAllocation;
+  AControl: TGtk3Widget;
 begin
   ParentClass := PGtkWidgetClass(g_type_class_peek_parent(widget^.g_type_instance.g_class));
   if not Assigned(ParentClass) or not Assigned(ParentClass^.size_allocate) then
@@ -148,6 +152,20 @@ begin
   //has real dimensions.
   if (min_h > 0) and (ClampedAlloc.height <= min_h) then
     Exit;
+
+  //Guard against GtkLayout stale over-allocation breaking the resize loop.
+  AControl := TGtk3Widget(HwndFromGtkWidget(widget));
+  if Assigned(AControl) and (AControl.LCLHeight > 0) and
+     (ClampedAlloc.height > AControl.LCLHeight) then
+    ClampedAlloc.height := Max(AControl.LCLHeight, min_h);
+
+  {$IFDEF GTK3DEBUGLAYOUT}
+  if Assigned(AControl) and Assigned(AControl.LCLObject) then
+    writeln(Format('LCLGtkNotebookSizeAllocate [%s]  in w=%d h=%d  min_h=%d  clamped h=%d',
+      [dbgsName(AControl.LCLObject), allocation^.width, allocation^.height,
+       min_h, ClampedAlloc.height]));
+  {$ENDIF}
+
   ParentClass^.size_allocate(widget, @ClampedAlloc);
 end;
 
@@ -217,7 +235,4 @@ function LCLGtkNotebookNew: PGtkNotebook;
 begin                                                         {in gtk3 this is default}
   Result := PGtkNotebook(g_object_new(LCLGtkNotebookGetType(),'show-tabs',[gboolean(True), nil]));
 end;
-
-
-
 

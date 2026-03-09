@@ -65,9 +65,9 @@ uses
   // IdeProject
   Project,
   // IdePackager
-  PackageSystem, PackageDefs,
+  PackageSystem, PackageDefs, BasePkgManager,
   // IDE
-  LazarusIDEStrConsts, etFPCMsgParser, BasePkgManager;
+  LazarusIDEStrConsts, etFPCMsgParser;
 
 
 type

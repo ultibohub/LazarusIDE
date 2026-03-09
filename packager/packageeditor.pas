@@ -53,9 +53,11 @@ uses
   InputHistory,
   // IdeConfig
   EnvironmentOpts, SearchPathProcs, ParsedCompilerOpts, CompilerOptions, DialogProcs,
+  // IdePackager
+  PackageSystem, PackageDefs, EditablePackage,
   // IDE
-  MainBase, LazarusIDEStrConsts, IDEDefs, EditablePackage, EnvGuiOptions,
-  PackageSystem, PackageDefs, AddToPackageDlg, AddPkgDependencyDlg, ComponentPalette,
+  MainBase, LazarusIDEStrConsts, IDEDefs, EnvGuiOptions,
+  AddToPackageDlg, AddPkgDependencyDlg, ComponentPalette,
   AddFPMakeDependencyDlg, ProjPackChecks, PkgVirtualUnitEditor, CleanPkgDeps,
   MissingPkgFilesDlg, ProjPackFilePropGui, ProjPackEditing, BasePkgManager;
   
@@ -422,17 +424,16 @@ type
     function IndexOfPackage(const PkgName: string): integer;
     function FindEditor(Pkg: TLazPackage): TPackageEditorForm; overload;
     function FindEditor(const PkgName: string): TPackageEditorForm; overload;
-    function CreateEditor(Pkg: TEditablePackage; DoDisableAutoSizing: boolean
+    function CreateEditor(Pkg: TLazPackage; DoDisableAutoSizing: boolean
       ): TPackageEditorForm;
-    function OpenEditor(Pkg: TEditablePackage; BringToFront: boolean
-      ): TPackageEditorForm;
+    function OpenEditor(Pkg: TLazPackage; BringToFront: boolean): TPackageEditorForm;
     function OpenFile(Sender: TObject; const Filename: string): TModalResult;
     function OpenPkgFile(Sender: TObject; PkgFile: TPkgFile): TModalResult;
     function OpenDependency(Sender: TObject;
                             Dependency: TPkgDependency): TModalResult;
     procedure DoFreeEditor(Pkg: TEditablePackage);
     function CreateNewFile(Sender: TObject; Params: TAddToPkgResult): TModalResult;
-    function SavePackage(APackage: TEditablePackage; SaveAs: boolean): TModalResult;
+    function SavePackage(APackage: TLazPackage; SaveAs: boolean): TModalResult;
     function RevertPackage(APackage: TLazPackage): TModalResult;
     function PublishPackage(APackage: TLazPackage): TModalResult;
     function CompilePackage(APackage: TLazPackage;
@@ -3653,7 +3654,7 @@ begin
     Result:=nil;
 end;
 
-function TPackageEditors.CreateEditor(Pkg: TEditablePackage;
+function TPackageEditors.CreateEditor(Pkg: TLazPackage;
   DoDisableAutoSizing: boolean): TPackageEditorForm;
 begin
   Result:=FindEditor(Pkg);
@@ -3671,14 +3672,14 @@ begin
     Result.DisableAutoSizing;
     {$ENDIF}
     Result.Create(LazarusIDE.OwningComponent);
-    Result.LazPackage:=Pkg;
+    Result.LazPackage:=TEditablePackage(Pkg);
     FItems.Add(Result);
     if not DoDisableAutoSizing then
       Result.EnableAutoSizing{$IFDEF DebugDisableAutoSizing}('TPackageEditors.OpenEditor'){$ENDIF};
   end;
 end;
 
-function TPackageEditors.OpenEditor(Pkg: TEditablePackage; BringToFront: boolean
+function TPackageEditors.OpenEditor(Pkg: TLazPackage; BringToFront: boolean
   ): TPackageEditorForm;
 begin
   Result:=CreateEditor(Pkg,true);
@@ -3752,11 +3753,11 @@ begin
     Result:=mrCancel;
 end;
 
-function TPackageEditors.SavePackage(APackage: TEditablePackage;
-  SaveAs: boolean): TModalResult;
+function TPackageEditors.SavePackage(APackage: TLazPackage; SaveAs: boolean
+  ): TModalResult;
 begin
   if Assigned(OnSavePackage) then
-    Result:=OnSavePackage(Self,APackage,SaveAs)
+    Result:=OnSavePackage(Self, TEditablePackage(APackage), SaveAs)
   else
     Result:=mrCancel;
 end;

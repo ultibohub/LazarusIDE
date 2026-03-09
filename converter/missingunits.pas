@@ -21,8 +21,7 @@
   Author: Juha Manninen
   
   Abstract:
-    A form asking the user what to do with missing units
-    in uses section. Used by ConvertDelphi unit.
+    A form asking the user what to do with missing units in uses section.
 }
 unit MissingUnits;
 
@@ -39,8 +38,14 @@ uses
   DefineTemplates,
   // IdeIntf
   IDEImagesIntf,
-   // IDE
-  PackageDefs, Project, LazarusIDEStrConsts;
+  // IdeConfig
+  IdeConfStrConsts,
+  // IdePackager
+  PackageDefs,
+  // IDE
+  LazarusIDEStrConsts,
+  // Converter
+  ConvertBase, UsedUnits;
 
 type
 

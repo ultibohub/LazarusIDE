@@ -588,6 +588,10 @@ msgstr "ຫົວຂໍ້ໂປຣຊີເຢີ"
 msgid "Specialize/Generic Blocks"
 msgstr ""
 
+#: lazarusidestrconsts.dlgaddhiattrgroup_string
+msgid "Strings"
+msgstr ""
+
 #: lazarusidestrconsts.dlgaddhiattrgroup_suffix_custom
 msgid "(Custom)"
 msgstr "(ກຳນົດເອງ)"
@@ -7970,10 +7974,6 @@ msgstr "%s(%s,%s) ຂາດຟາຍລ໌ include"
 msgid "Delphi Name"
 msgstr "ຊື່ Delphi"
 
-#: lazarusidestrconsts.lisconvdelphipackagenameexists
-msgid "Package name exists"
-msgstr "ຊື່ແພັກເກດມີຢູ່ແລ້ວ"
-
 #: lazarusidestrconsts.lisconvdelphipackagerequired
 #, object-pascal-format
 msgid "Package %s is required but not installed in Lazarus! Install it later."
@@ -7999,10 +7999,10 @@ msgctxt "lazarusidestrconsts.lisconvdelphireplacedunitinusessection"
 msgid "Replaced unit \"%s\" with \"%s\" in uses section."
 msgstr "ແທນທີ່ຢູນິດ \"%s\" ດ້ວຍ \"%s\" ໃນພາກ uses."
 
-#: lazarusidestrconsts.lisconvdelphithereisalreadyapackagewiththenamepleaseclosethispa
+#: lazarusidestrconsts.lisconvdelphithereisalreadyapackage
 #, object-pascal-format
-msgid "There is already a package with the name \"%s\"%sPlease close this package first."
-msgstr "ມີແພັກເກດທີ່ມີຊື່ \"%s\" ຢູ່ແລ້ວ%sກະລຸນາປິດແພັກເກດນີ້ກ່ອນ."
+msgid "There is already a package with the name \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lisconvdelphiunitnameexistsinlcl
 msgid "Unitname exists in LCL"

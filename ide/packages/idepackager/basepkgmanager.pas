@@ -46,8 +46,6 @@ uses
   PackageIntf, ProjectIntf, BaseIDEIntf,
   // IdeConfig
   CompilerOptions,
-  // IdeProject
-  //Project,
   // IdePackager
   PackageDefs;
 

@@ -83,7 +83,6 @@ begin
   {$endif}
   // Result:=inherited ClientToScreen(Handle, P);
   Result := False;
-  P := Point(0, 0);
   if IsValidHandle(Handle) then
     Result := TGtk3Widget(Handle).ClientToScreen(P);
   {$ifdef VerboseGtk3WinApi}
@@ -3177,7 +3176,7 @@ begin
       end else
         ARect := Bounds(Allocation.x, Allocation.y,
           Allocation.width, Allocation.height);
-      Result := -1;
+      Result := 1;
     end;
   end;
 end;
@@ -3934,7 +3933,7 @@ begin
   if Handle <> 0 then
   begin
     if wtWindow in TGtk3Widget(Handle).WidgetType then
-      PGtkWindow(TGtk3Window(Handle).Widget)^.present;
+      PGtkWindow(TGtk3Window(Handle).Widget)^.present_with_time(LastUserEventTime);
   end;
 end;
 
@@ -4215,6 +4214,7 @@ var
   AControl: TGtk3Widget absolute Handle;
   R: TRect;
   LLogicalMin, LLogicalMax, LLogicalPage, LLogicalPos: Integer;
+  APolicyH, APolicyV: TGtkPolicyType;
   {$IFDEF GTK3DEBUGSCROLL}
   S: String;
   {$ENDIF}
@@ -4248,8 +4248,9 @@ var
           if HaveLogicalValues and (ScrollInfo.nPage = ScrollInfo.nMax) and (ScrollInfo.nMax > 0) then
             PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.set_size(uWidth, ScrollInfo.nMax)
           else
-            PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.set_size(uWidth, Round(adjustment^.upper) + 1 { GetSystemMetrics(SM_CYVSCROLL)});
+            PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.set_size(uWidth, Round(adjustment^.upper + 0.5)); //eg TTreeView
           PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.queue_resize;
+          TGtk3ScrollableWin(AControl).LCLObject.InvalidateClientRectCache(False);
         end;
       end else
       if SBStyle = SB_HORZ then
@@ -4259,8 +4260,9 @@ var
           if HaveLogicalValues and (ScrollInfo.nPage = ScrollInfo.nMax) and (ScrollInfo.nMax > 0) then
             PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.set_size(ScrollInfo.nMax, uHeight)
           else
-            PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.set_size(Round(adjustment^.upper) + 1 {GetSystemMetrics(SM_CYVSCROLL)}, uHeight);
+            PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.set_size(Round(adjustment^.upper + 0.5), uHeight);
           PGtkLayout(TGtk3ScrollableWin(AControl).GetContainerWidget)^.queue_resize;
+          TGtk3ScrollableWin(AControl).LCLObject.InvalidateClientRectCache(False);
         end;
       end;
     end;
@@ -4406,7 +4408,19 @@ var
           begin
             if (AVertPolicy <> POLICY[IsScrollbarVis]) and
               PGtkWidget(ScrollWin)^.get_mapped then
+            begin
+              {$IFDEF GTK3DEBUGSCROLLEDWIN}
+              if wtScrollingWinControl in AControl.WidgetType then
+                writeln(Format('SCROLLBAR DEBUG %s SB_VERT IsVis=%s nMin=%d nMax=%d nPage=%d adj.upper=%.1f adj.page=%.1f CW_h=%d Widget_h=%d LCL_h=%d',
+                  [dbgsName(AControl.LCLObject), BoolToStr(IsScrollbarVis,True),
+                   ScrollInfo.nMin, ScrollInfo.nMax, ScrollInfo.nPage,
+                   Adjustment^.upper, Adjustment^.page_size,
+                   AControl.GetContainerWidget^.get_allocated_height,
+                   AControl.Widget^.get_allocated_height,
+                   AControl.LCLObject.Height]));
+              {$ENDIF}
               ScrollWin^.set_policy(AHorzPolicy, POLICY[IsScrollbarVis]);
+            end;
             if Gtk3WidgetSet.OverlayScrolling and Gtk3IsWidget(Scrollbar) and
               ScrollBar^.get_visible then
             begin
@@ -4561,6 +4575,56 @@ begin
     end;
   end;
 
+  // When range=0 (nothing to scroll) and policy is AUTOMATIC, force NEVER to
+  // prevent GTK cascade on tiny allocations.
+  // Store lcl-auto-v/lcl-auto-h flag so we can restore AUTOMATIC when
+  // range becomes non-zero again. Only touches AUTOMATIC policy - NEVER/ALWAYS
+  // set explicitly via ShowScrollBar are preserved.
+  if IsScrollWindow and Assigned(ScrollWin) and
+    ((ScrollInfo.fMask and (SIF_RANGE or SIF_PAGE)) <> 0) then
+  begin
+    APolicyH := GTK_POLICY_AUTOMATIC;
+    APolicyV := GTK_POLICY_AUTOMATIC;
+    ScrollWin^.get_policy(@APolicyH, @APolicyV);
+    case SBStyle of
+      SB_VERT:
+      begin
+        if not IsScrollbarVis then
+        begin
+          if APolicyV = GTK_POLICY_AUTOMATIC then
+          begin
+            g_object_set_data(PGObject(ScrollWin), PGChar('lcl-auto-v'), gPointer(1));
+            ScrollWin^.set_policy(APolicyH, GTK_POLICY_NEVER);
+          end;
+        end else
+        begin
+          if g_object_get_data(PGObject(ScrollWin), PGChar('lcl-auto-v')) <> nil then
+          begin
+            g_object_set_data(PGObject(ScrollWin), PGChar('lcl-auto-v'), nil);
+            ScrollWin^.set_policy(APolicyH, GTK_POLICY_AUTOMATIC);
+          end;
+        end;
+      end;
+      SB_HORZ:
+      begin
+        if not IsScrollbarVis then
+        begin
+          if APolicyH = GTK_POLICY_AUTOMATIC then
+          begin
+            g_object_set_data(PGObject(ScrollWin), PGChar('lcl-auto-h'), gPointer(1));
+            ScrollWin^.set_policy(GTK_POLICY_NEVER, APolicyV);
+          end;
+        end else
+        begin
+          if g_object_get_data(PGObject(ScrollWin), PGChar('lcl-auto-h')) <> nil then
+          begin
+            g_object_set_data(PGObject(ScrollWin), PGChar('lcl-auto-h'), nil);
+            ScrollWin^.set_policy(GTK_POLICY_AUTOMATIC, APolicyV);
+          end;
+        end;
+      end;
+    end;
+  end;
 
   Result := Round(Adjustment^.value);
   if Result < 0 then

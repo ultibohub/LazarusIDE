@@ -56,9 +56,11 @@ uses
   // IdeConfig
   IdeConfStrConsts,
   // IdeProject
-  IdeProjectStrConsts,
+  IdeProjectStrConsts, Project,
+  // IdePackager
+  PackageDefs,
   // IDE
-  LazarusIDEStrConsts, EditorOptions, EnvGuiOptions, Project, MainIntf, PackageDefs,
+  LazarusIDEStrConsts, EditorOptions, EnvGuiOptions, MainIntf,
   // Designer
   CustomNonFormDesigner, NonControlDesigner, FrameDesigner, ControlSelection,
   JITForms, DesignerProcs;

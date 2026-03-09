@@ -1,3 +1,29 @@
+{
+ ***************************************************************************
+ *                                                                         *
+ *   This source is free software; you can redistribute it and/or modify   *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation; either version 2 of the License, or     *
+ *   (at your option) any later version.                                   *
+ *                                                                         *
+ *   This code is distributed in the hope that it will be useful, but      *
+ *   WITHOUT ANY WARRANTY; without even the implied warranty of            *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU     *
+ *   General Public License for more details.                              *
+ *                                                                         *
+ *   A copy of the GNU General Public License is available on the World    *
+ *   Wide Web at <http://www.gnu.org/copyleft/gpl.html>. You can also      *
+ *   obtain it by writing to the Free Software Foundation,                 *
+ *   Inc., 51 Franklin Street - Fifth Floor, Boston, MA 02110-1335, USA.   *
+ *                                                                         *
+ ***************************************************************************
+
+  Author: Juha Manninen
+
+  Abstract:
+    Take care of replacing Delphi function calls with a fallback function.
+    Part of Delphi converter.
+}
 unit ReplaceFuncsUnit;
 
 {$mode objfpc}{$H+}
@@ -7,14 +33,14 @@ interface
 uses
   Classes, SysUtils, RegExpr,
   // LCL
-  Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  Buttons, ButtonPanel, Grids, CheckLst, Menus, StdCtrls,
-  // LazUtils
-  FileUtil,
+  Forms, Controls, Graphics, Dialogs, ExtCtrls, ButtonPanel, Grids, CheckLst,
+  Menus, StdCtrls,
   // IdePackager
   IdePackagerStrConsts,
-  // IDE, converter
-  IdeIntfStrConsts, LazarusIDEStrConsts, ConverterTypes;
+  // IDE
+  IdeIntfStrConsts, LazarusIDEStrConsts,
+  // converter
+  ConverterTypes;
 
 type
 

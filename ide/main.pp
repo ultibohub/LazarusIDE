@@ -84,8 +84,8 @@ uses
   // IDE interface
   IDEIntf, ObjectInspector, PropEdits, PropEditUtils, EditorSyntaxHighlighterDef,
   IDECommands, IDEWindowIntf, IDEDialogs, SrcEditorIntf, IDEMsgIntf,
-  MenuIntf, LazIDEIntf, IDEOptEditorIntf, IDEImagesIntf, ComponentEditors,
-  IdeIntfStrConsts, ToolBarIntf, SelEdits, ComponentTreeView,
+  MenuIntf, LazIDEIntf, EditorOptionsIntf, IDEOptEditorIntf, IDEImagesIntf,
+  IdeIntfStrConsts, ToolBarIntf, SelEdits, ComponentEditors, ComponentTreeView,
   // LazEdit
   LazEditTextAttributes,
   // protocol
@@ -118,7 +118,7 @@ uses
   SourceEditProcs, ViewUnit_dlg, FPDocEditWindow,
   etQuickFixes, etMessageFrame, etMessagesWnd,
   // converter
-  ChgEncodingDlg, ConvertDelphi, MissingPropertiesDlg, LazXMLForms,
+  ChgEncodingDlg, ConvertMainPlugin, ConvMissingProp, LazXMLForms,
   // IdeUtils
   InputHistory, IdeUtilsPkg, IdeUtilsPkgStrConsts,
   // IdeConfig
@@ -982,8 +982,6 @@ type
 
     // conversion
     function DoConvertDFMtoLFM: TModalResult;
-    function DoConvertDelphiProject(const DelphiFilename: string): TModalResult;
-    function DoConvertDelphiPackage(const DelphiFilename: string): TModalResult;
 
     // message view
     function GetSelectedCompilerMessage: TMessageLine; override;
@@ -4964,97 +4962,21 @@ begin
 end;
 
 procedure TMainIDE.mnuToolConvertDelphiUnitClicked(Sender: TObject);
-var
-  OpenDialog: TIDEOpenDialog;
-  OldChange: Boolean;
-  Converter: TConvertDelphiUnit;
 begin
-  OpenDialog:=IDEOpenDialogClass.Create(nil);
-  try
-    InputHistories.ApplyFileDialogSettings(OpenDialog);
-    OpenDialog.Title:=lisChooseDelphiUnit;
-    OpenDialog.Options:=OpenDialog.Options+[ofPathMustExist,ofFileMustExist,ofAllowMultiSelect];
-    OpenDialog.Filter:=dlgFilterDelphiUnit+' (*.pas)|*.pas|'+
-                       dlgFilterAll+' ('+GetAllFilesMask+')|' + GetAllFilesMask;
-    if InputHistories.LastConvertDelphiUnit<>'' then begin
-      OpenDialog.InitialDir:=ExtractFilePath(InputHistories.LastConvertDelphiUnit);
-      OpenDialog.Filename  :=ExtractFileName(InputHistories.LastConvertDelphiUnit);
-    end;
-    if OpenDialog.Execute and (OpenDialog.Files.Count>0) then begin
-      InputHistories.LastConvertDelphiUnit:=OpenDialog.Files[0];
-      OldChange:=OpenEditorsOnCodeToolChange;
-      OpenEditorsOnCodeToolChange:=true;
-      Converter:=TConvertDelphiUnit.Create(OpenDialog.Files);
-      try
-        if Converter.Convert=mrOK then
-          UpdateRecentFilesEnv;
-      finally
-        Converter.Free;
-        OpenEditorsOnCodeToolChange:=OldChange;
-      end;
-    end;
-    InputHistories.StoreFileDialogSettings(OpenDialog);
-  finally
-    OpenDialog.Free;
-  end;
+  if RunConvertUnit=mrOK then
+    UpdateRecentFilesEnv;
 end;
 
 procedure TMainIDE.mnuToolConvertDelphiProjectClicked(Sender: TObject);
-var
-  OpenDialog: TIDEOpenDialog;
-  AFilename: string;
 begin
-  OpenDialog:=IDEOpenDialogClass.Create(nil);
-  try
-    InputHistories.ApplyFileDialogSettings(OpenDialog);
-    OpenDialog.Title:=lisChooseDelphiProject;
-    OpenDialog.Options:=OpenDialog.Options+[ofPathMustExist,ofFileMustExist];
-    OpenDialog.Filter:=dlgFilterDelphiProject+' (*.dpr)|*.dpr|'+
-                       dlgFilterLazarusProject+' (*.lpr)|*.lpr|'+
-                       dlgFilterAll+' ('+GetAllFilesMask+')|' + GetAllFilesMask;
-    if InputHistories.LastConvertDelphiProject<>'' then begin
-      OpenDialog.InitialDir:=ExtractFilePath(InputHistories.LastConvertDelphiProject);
-      OpenDialog.Filename  :=ExtractFileName(InputHistories.LastConvertDelphiProject);
-    end;
-    if OpenDialog.Execute then begin
-      AFilename:=CleanAndExpandFilename(OpenDialog.Filename);
-      if FileExistsUTF8(AFilename) then
-        DoConvertDelphiProject(AFilename);
-      UpdateRecentFilesEnv;
-    end;
-    InputHistories.StoreFileDialogSettings(OpenDialog);
-  finally
-    OpenDialog.Free;
-  end;
+  if RunConvertProject=mrOK then
+    UpdateRecentFilesEnv;
 end;
 
 procedure TMainIDE.mnuToolConvertDelphiPackageClicked(Sender: TObject);
-var
-  OpenDialog: TIDEOpenDialog;
-  AFilename: string;
 begin
-  OpenDialog:=IDEOpenDialogClass.Create(nil);
-  try
-    InputHistories.ApplyFileDialogSettings(OpenDialog);
-    OpenDialog.Title:=lisChooseDelphiPackage;
-    OpenDialog.Options:=OpenDialog.Options+[ofPathMustExist,ofFileMustExist];
-    OpenDialog.Filter:=dlgFilterDelphiPackage+' (*.dpk)|*.dpk|'+
-                       dlgFilterAll+' ('+GetAllFilesMask+')|' + GetAllFilesMask;
-    if InputHistories.LastConvertDelphiPackage<>'' then begin
-      OpenDialog.InitialDir:=ExtractFilePath(InputHistories.LastConvertDelphiPackage);
-      OpenDialog.Filename  :=ExtractFileName(InputHistories.LastConvertDelphiPackage);
-    end;
-    if OpenDialog.Execute then begin
-      AFilename:=CleanAndExpandFilename(OpenDialog.Filename);
-      //debugln('TMainIDE.mnuToolConvertDelphiProjectClicked A ',AFilename);
-      if FileExistsUTF8(AFilename) then
-        DoConvertDelphiPackage(AFilename);
-      UpdateRecentFilesEnv;
-    end;
-    InputHistories.StoreFileDialogSettings(OpenDialog);
-  finally
-    OpenDialog.Free;
-  end;
+  if RunConvertPackage=mrOK then
+    UpdateRecentFilesEnv;
 end;
 
 procedure TMainIDE.mnuToolConvertEncodingClicked(Sender: TObject);
@@ -8761,40 +8683,6 @@ begin
     OpenDialog.Free;
   end;
   DoCheckFilesOnDisk;
-end;
-
-function TMainIDE.DoConvertDelphiProject(const DelphiFilename: string): TModalResult;
-var
-  OldChange: Boolean;
-  Converter: TConvertDelphiProject;
-begin
-  InputHistories.LastConvertDelphiProject:=DelphiFilename;
-  OldChange:=OpenEditorsOnCodeToolChange;
-  OpenEditorsOnCodeToolChange:=true;
-  Converter := TConvertDelphiProject.Create(DelphiFilename);
-  try
-    Result:=Converter.Convert;
-  finally
-    Converter.Free;
-    OpenEditorsOnCodeToolChange:=OldChange;
-  end;
-end;
-
-function TMainIDE.DoConvertDelphiPackage(const DelphiFilename: string): TModalResult;
-var
-  OldChange: Boolean;
-  Converter: TConvertDelphiPackage;
-begin
-  InputHistories.LastConvertDelphiPackage:=DelphiFilename;
-  OldChange:=OpenEditorsOnCodeToolChange;
-  OpenEditorsOnCodeToolChange:=true;
-  Converter := TConvertDelphiPackage.Create(DelphiFilename);
-  try
-    Result:=Converter.Convert;
-  finally
-    Converter.Free;
-    OpenEditorsOnCodeToolChange:=OldChange;
-  end;
 end;
 
 function TMainIDE.PrepareForCompile: TModalResult;

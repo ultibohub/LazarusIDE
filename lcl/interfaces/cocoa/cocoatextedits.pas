@@ -29,7 +29,7 @@ interface
 uses
   Types, Classes, SysUtils,
   Math, // needed for MinDouble, MaxDouble
-  LCLType,
+  LCLType, Graphics, Controls,
   MacOSAll, CocoaAll, CocoaConfig, CocoaUtils, CocoaGDIObjects,
   CocoaPrivate, CocoaCallback;
 
@@ -187,6 +187,42 @@ type
     procedure mouseDragged(event: NSEvent); override;
     procedure mouseMoved(event: NSEvent); override;
     procedure scrollWheel(event: NSEvent); override;
+  end;
+
+  { TCocoaTextControlUtil }
+
+  TCocoaTextControlUtil = class
+  public
+    class procedure setStringValue(
+      const text: NSText;
+      const s: String );
+    class function getStringValue(
+      const text: NSText ): String;
+    class function setLCLFont(
+      const textField: NSTextField;
+      const lclFont: TFont ): Boolean; overload;
+    class function setLCLFont(
+      const textField: NSTextField;
+      const lclControl: TObject ): Boolean; overload;
+    class procedure setWordWrap(
+      const textView: NSTextView;
+      const scrollView: NSScrollView;
+      const wordWrap: Boolean );
+    class procedure setAllignment(
+      const textView: NSTextView;
+      const align: TAlignment );
+    class procedure setAllignment(
+      const textField: NSTextField;
+      const align: TAlignment );
+    class procedure setBorderStyle(
+      const textField: NSTextField;
+      const borderStyle: TBorderStyle );
+    class procedure setTextHint(
+      const textField: NSTextField;
+      const str: String ); overload;
+    class procedure setTextHint(
+      const obj: NSObject;
+      const str: String ); overload;
   end;
 
 type
@@ -701,7 +737,7 @@ begin
 
   ctx := TCocoaContext.Create(NSGraphicsContext.currentContext);
   try
-    ctxRect:= NSRectToRect( bounds );
+    ctxRect:= TCocoaTypeUtil.toRect( bounds );
     ctx.InitDraw( ctxRect.Width, ctxRect.Height );
     combobox.callback.ComboBoxDrawItem(itemIndex, ctx, ctxRect, isHighlighted, false);
   finally
@@ -972,6 +1008,156 @@ begin
     inherited scrollWheel(event);
 end;
 
+{ TCocoaTextControlUtil }
+
+class procedure TCocoaTextControlUtil.setStringValue(
+  const text: NSText;
+  const s: String );
+var
+  ns: NSString;
+begin
+  if Assigned(text) then
+  begin
+    ns := NSStringUTF8(s);
+    text.setString(ns);
+    ns.release;
+    if Assigned(text.undoManager) then
+      text.undoManager.removeAllActions;
+  end;
+end;
+
+class function TCocoaTextControlUtil.getStringValue( const text: NSText ): String;
+begin
+  if Assigned(text) then
+    Result := NSStringToString(text.string_)
+  else
+    Result := '';
+end;
+
+class function TCocoaTextControlUtil.setLCLFont(
+  const textField: NSTextField;
+  const lclFont: TFont): Boolean;
+var
+  cocoaFont: NSFont;
+  cocoaColor: NSColor;
+  tempFont: TFont;
+begin
+  Result:= False;
+
+  tempFont:= TFont( lclFont.CopyFont );
+  tempFont.Color:= clDefault;
+  if NOT tempFont.isDefault then begin
+    cocoaFont:= TCocoaFont(lclFont.Reference.Handle).Font;
+    textField.setFont( cocoaFont );
+    Result:= True;
+  end;
+
+  if lclFont.Color <> clDefault then begin
+    cocoaColor:= TCocoaColorUtil.toColor(ColorToRGB(lclFont.Color));
+    textField.setTextColor( cocoaColor );
+  end;
+end;
+
+class function TCocoaTextControlUtil.setLCLFont(
+  const textField: NSTextField;
+  const lclControl: TObject): Boolean;
+begin
+  Result:= False;
+  if NOT Assigned(lclControl) then
+    Exit;
+  if NOT (lclControl is TControl) then
+    Exit;
+  Result:= TCocoaTextControlUtil.setLCLFont( textField, TControl(lclControl).Font );
+end;
+
+class procedure TCocoaTextControlUtil.setWordWrap(
+  const textView: NSTextView;
+  const scrollView: NSScrollView;
+  const wordWrap: Boolean);
+var
+  layoutSize: NSSize;
+begin
+  if wordWrap then
+  begin
+    layoutSize := scrollView.contentSize();
+    layoutSize := NSMakeSize(layoutSize.width, CGFloat_Max);
+    textView.textContainer.setContainerSize(layoutSize);
+    textView.textContainer.setWidthTracksTextView(True);
+    textView.setHorizontallyResizable(false);
+    textView.setAutoresizingMask(NSViewWidthSizable);
+    layoutSize.height:=textView.frame.size.height;
+    textView.setFrameSize(layoutSize);
+  end
+  else
+  begin
+    textView.textContainer.setWidthTracksTextView(False);
+    layoutSize := NSMakeSize(CGFloat_Max, CGFloat_Max);
+    textView.textContainer.setContainerSize(layoutSize);
+    textView.textContainer.setWidthTracksTextView(False);
+    textView.setHorizontallyResizable(true);
+    textView.setAutoresizingMask(0);
+  end;
+  textView.sizeToFit;
+end;
+
+class procedure TCocoaTextControlUtil.setAllignment(
+  const textView: NSTextView;
+  const align: TAlignment);
+begin
+  if NOT Assigned(textView) then
+    Exit;
+  //todo: for bidi modes, there's "NSTextAlignmentNatural"
+  textView.setAlignment( TCocoaTypeUtil.toAlignment(align) );
+end;
+
+class procedure TCocoaTextControlUtil.setAllignment(
+  const textField: NSTextField;
+  const align: TAlignment);
+begin
+  if NOT Assigned(textField) then
+    Exit;
+  //todo: for bidi modes, there's "NSTextAlignmentNatural"
+  textField.setAlignment( TCocoaTypeUtil.toAlignment(align) );
+end;
+
+class procedure TCocoaTextControlUtil.setBorderStyle(
+  const textField: NSTextField;
+  const borderStyle: TBorderStyle );
+begin
+  if not Assigned(textField) then
+    Exit;
+  {$ifdef BOOLFIX}
+  textField.setBezeled_(Ord(borderStyle <> bsNone));
+  {$else}
+  textField.setBezeled(borderStyle <> bsNone);
+  {$endif}
+end;
+
+class procedure TCocoaTextControlUtil.setTextHint(
+  const textField: NSTextField;
+  const str: String);
+var
+  ns : NSString;
+begin
+  if not Assigned(textField) then Exit;
+  if str <> '' then begin
+    ns := NSStringUtf8(str);
+    textField.setPlaceholderString(ns);
+    ns.release;
+  end else begin
+    textField.setPlaceholderString(nil);
+  end;
+end;
+
+class procedure TCocoaTextControlUtil.setTextHint(
+  const obj: NSObject;
+  const str: String );
+begin
+  if not Assigned(obj) or not obj.isKindOfClass(NSTextField) then
+    Exit;
+  TCocoaTextControlUtil.setTextHint( NSTextField(obj), str );
+end;
+
 { TCocoaTextField }
 
 function TCocoaTextField.acceptsFirstResponder: LCLObjCBoolean;
@@ -1004,7 +1190,7 @@ var
   newString: NSString;   // need not release
 begin
   Result:= true;
-  newString:= NSStringRemoveLineBreak( replacementString );
+  newString:= TCocoaStringUtil.removeLineBreak( replacementString );
   if newString.length <> replacementString.length then
   begin
     // only handled if there is line-break in replacementString
@@ -2262,13 +2448,13 @@ begin
   svHeight := GetNSViewSuperViewHeight(Self);
   if Assigned(superview) and NOT superview.isFlipped then
   begin
-    LCLToNSRect(lRect, svHeight, ns);
-    LCLToNSRect(lStepperRect, svHeight, lStepperNS);
+    TCocoaTypeUtil.toRect(lRect, svHeight, ns);
+    TCocoaTypeUtil.toRect(lStepperRect, svHeight, lStepperNS);
   end
   else
   begin
-    ns := RectToNSRect(lRect);
-    lStepperNS := RectToNSRect(lStepperRect);
+    ns := TCocoaTypeUtil.toRect(lRect);
+    lStepperNS := TCocoaTypeUtil.toRect(lStepperRect);
   end;
   {$IFDEF COCOA_DEBUG_SETBOUNDS}
   WriteLn(Format('LCLViewExtension.lclSetFrame: %s Bounds=%s height=%d ns_pos=%d %d ns_size=%d %d',

@@ -64,23 +64,25 @@ uses
   IDECommands, MenuIntf, IDEWindowIntf, LazIDEIntf, IDEMsgIntf, SrcEditorIntf,
   IdeIntfStrConsts, ComponentEditors, PropEdits, IDEDialogs,
   // IdeUtils
-  InputHistory,
+  InputHistory, IDETranslations,
   // IdeConfig
   EnvironmentOpts, IDEOptionDefs, ModeMatrixOpts, RecentListProcs, SearchPathProcs,
   TransferMacros, IDECmdLine, IDEProcs, DialogProcs,
   ParsedCompilerOpts, CompilerOptions, IdeConfStrConsts,
   // IdePackager
-  IdePackagerStrConsts,
+  IdePackagerStrConsts, BasePkgManager, PackageDefs, EditablePackage,
+  PackageLinks, PackageSystem,
+  // IdeProject
+  Project,
   // FCL registration
   LazarusPackageIntf,
   // IDE
-  LazarusIDEStrConsts, MiscOptions, Project, ProjPackEditing,
-  AddToPackageDlg, PackageDefs, EditablePackage, PackageLinks, PackageSystem,
+  LazarusIDEStrConsts, MiscOptions, AddToPackageDlg, ProjPackEditing,
   OpenInstalledPkgDlg, PkgGraphExplorer, BrokenDependenciesDlg,
-  IDETranslations, BuildLazDialog, NewDialog, FindInFilesDlg,
-  ProjectInspector, PackageEditor, SourceEditor, ProjPackChecks, AddFileToAPackageDlg,
+  BuildLazDialog, NewDialog, FindInFilesDlg, ProjectInspector,
+  PackageEditor, SourceEditor, ProjPackChecks, AddFileToAPackageDlg,
   PublishModuleDlg, PkgLinksDlg, InterPkgConflictFiles, InstallPkgSetDlg,
-  ConfirmPkgListDlg, NewPkgComponentDlg, BaseBuildManager, BasePkgManager,
+  ConfirmPkgListDlg, NewPkgComponentDlg, BaseBuildManager,
   MainBar, MainIntf, MainBase;
 
 type

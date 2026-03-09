@@ -26,7 +26,7 @@ uses
   {$ENDIF}
   Classes, SysUtils, Controls, StdCtrls, Graphics,
   LazGtk3, LazGdk3, LazGLib2, LazGObject2, LazGdkPixbuf2, LazPango1, Lazcairo1,
-  LCLType, InterfaceBase;
+  LCLType, LMessages, InterfaceBase;
 
 type
   GType = TGType;
@@ -93,6 +93,32 @@ type
   end;
 
 const
+  GDK_DEFAULT_EVENTS_MASK = [
+    GDK_EXPOSURE_MASK, {2}
+    GDK_POINTER_MOTION_MASK, {4}
+    GDK_POINTER_MOTION_HINT_MASK, {8}
+    GDK_BUTTON_MOTION_MASK, {16}
+    GDK_BUTTON1_MOTION_MASK, {32}
+    GDK_BUTTON2_MOTION_MASK, {64}
+    GDK_BUTTON3_MOTION_MASK, {128}
+    GDK_BUTTON_PRESS_MASK, {256}
+    GDK_BUTTON_RELEASE_MASK, {512}
+    GDK_KEY_PRESS_MASK, {1024}
+    GDK_KEY_RELEASE_MASK, {2048}
+    GDK_ENTER_NOTIFY_MASK, {4096}
+    GDK_LEAVE_NOTIFY_MASK, {8192}
+    GDK_FOCUS_CHANGE_MASK, {16384}
+    GDK_STRUCTURE_MASK, {32768}
+    GDK_PROPERTY_CHANGE_MASK, {65536}
+    GDK_VISIBILITY_NOTIFY_MASK, {131072}
+    GDK_PROXIMITY_IN_MASK, {262144}
+    GDK_PROXIMITY_OUT_MASK, {524288}
+    GDK_SUBSTRUCTURE_MASK, {1048576}
+    GDK_SCROLL_MASK, {2097152}
+    GDK_TOUCH_MASK {4194304}
+ // GDK_SMOOTH_SCROLL_MASK {8388608} //there is a bug in GTK3, see https://stackoverflow.com/questions/11775161/gtk3-get-mouse-scroll-direction
+  ];
+
   SysColorMap: array [0..MAX_SYS_COLORS] of DWORD = (
     $C0C0C0,     {COLOR_SCROLLBAR}
     $808000,     {COLOR_BACKGROUND}
@@ -344,12 +370,33 @@ var
   StandardStyles: array[TLazGtkStyle] of PStyleObject;
   Styles: TStrings;
 
+{$IFDEF GTK3USEDEFERREDRESIZING}
+  {Resize notification queues - filled by size-allocate signal handlers,
+   drained by Gtk3DrainResizeQueue called from AppProcessMessages.
+   No lock needed: GTK signal handlers always run on the main thread.
+   Will be an option to synchronous LM_SIZE/resize() which is
+   default atm.}
+  FWidgetsResized:    TFPList; // outer widgets  -> Phase 2 LM_SIZE
+  FFixWidgetsResized: TFPList; // client widgets -> Phase 3 DoAdjustClientRectChange
+  FPendingOuterSizes: TFPList; // pending GTK outer (FWidget) allocations for Phase 2
+  { True while Gtk3DrainResizeQueue is executing - prevents re-entrant drains
+    triggered by SetBounds -> size_allocate -> signal handlers during delivery. }
+  Gtk3DrainInProgress: Boolean;
+
+procedure Gtk3SaveSizeNotification(ALCLObject: TWinControl);
+procedure Gtk3SaveClientSizeNotification(ALCLObject: TWinControl);
+procedure Gtk3StorePendingOuterSize(ACtl: TWinControl; AW, AH: Integer);
+function  Gtk3TakePendingOuterSize(ACtl: TWinControl; out AW, AH: Integer): Boolean;
+procedure Gtk3RemoveFromResizeQueue(ALCLObject: TWinControl);
+procedure Gtk3DrainResizeQueue;
+{$ENDIF GTK3USEDEFERREDRESIZING}
 
 
-  procedure AddCharsetEncoding(CharSet: Byte; CharSetReg, CharSetCod: CharSetStr;
-    ToEnum:boolean=true; CrPart:boolean=false; CcPart:boolean=false);
-  procedure ClearCharsetEncodings;
-  procedure CreateDefaultCharsetEncodings;
+
+procedure AddCharsetEncoding(CharSet: Byte; CharSetReg, CharSetCod: CharSetStr;
+  ToEnum:boolean=true; CrPart:boolean=false; CcPart:boolean=false);
+procedure ClearCharsetEncodings;
+procedure CreateDefaultCharsetEncodings;
 
 function PANGO_PIXELS(d:integer):integer; inline;
 function GetStyleWidget(aStyle: TLazGtkStyle): PGtkWidget;
@@ -360,12 +407,122 @@ function AppendPangoFontFaceSuffixes(AFamilyName: string; AStretch: TPangoStretc
 function PangoFontHasItalicFace(AContext: PPangoContext; const AFamilyName: String): Boolean;
 function GetPangoFontDefaultStretch(const AFamilyName: string): TPangoStretch;
 
+function GdkEventToStr(AEvent: TGdkEventType): String;
+function GtkModifierStateToShiftState(AState: TGdkModifierType;
+    AIsKeyEvent: Boolean): Cardinal;
+
+{Returns True when the left mouse button (Button1) is currently held down.
+ Intended to detect whether the user is actively drag-resizing a window frame.
+ Uses GDK seat pointer query - no X11/Xlib headers needed. On the X11 GDK
+ backend, gdk_device_get_state calls XQueryPointer internally, which returns
+ the real button state even during a WM pointer grab (drag-resize).
+ AWidget may be any realized GtkWidget or GtkWindow cast to PGtkWidget;
+ pass nil to query against the default root window.}
+function Gtk3IsPointerButtonDown(AWidget: PGtkWidget): Boolean;
+
 implementation
-uses LCLProc, gtk3objects, LazLogger;
+uses LCLProc, gtk3objects, gtk3widgets, LazLogger;
 
 function PANGO_PIXELS(d:integer):integer;
 begin
   Result:=((d + 512) shr 10);
+end;
+
+function Gtk3IsPointerButtonDown(AWidget: PGtkWidget): Boolean;
+var
+  display: PGdkDisplay;
+  seat: PGdkSeat;
+  pointer: PGdkDevice;
+  gdkwin: PGdkWindow;
+  mask: TGdkModifierType;
+begin
+  Result := False;
+  display := gdk_display_get_default;
+  if not Assigned(display) then
+    exit;
+  seat := gdk_display_get_default_seat(display);
+  if not Assigned(seat) then
+    exit;
+  pointer := gdk_seat_get_pointer(seat);
+  if not Assigned(pointer) then
+    exit;
+  gdkwin := nil;
+  if Assigned(AWidget) and gtk_widget_get_realized(AWidget) then
+    gdkwin := gtk_widget_get_window(AWidget);
+  if gdkwin = nil then
+    gdkwin := gdk_get_default_root_window;
+  mask := [];
+  gdk_device_get_state(pointer, gdkwin, nil, @mask);
+  {x11 gtk_grab_get_current = nil, wayland gtk_grab_get_current returns widget, so wayland IS accurrate.
+  gdk_display_device_is_grabbed(display, pointer) returns false in both cases :( }
+  Result := GDK_BUTTON1_MASK in mask;
+end;
+
+function GdkEventToStr(AEvent: TGdkEventType): String;
+begin
+  Result := 'GDK_NOTHING';
+  case AEvent of
+    GDK_DELETE: Result := 'GDK_DELETE';
+    GDK_DESTROY: Result := 'GDK_DESTROY';
+    GDK_EXPOSE: Result := 'GDK_EXPOSE';
+    GDK_MOTION_NOTIFY: Result := 'GDK_MOTION_NOTIFY';
+    GDK_BUTTON_PRESS: Result := 'GDK_BUTTON_PRESS';
+    GDK_2BUTTON_PRESS: Result := 'GDK_2BUTTON_PRESS';
+    GDK_3BUTTON_PRESS: Result := 'GDK_3BUTTON_PRESS';
+    GDK_BUTTON_RELEASE: Result := 'GDK_BUTTON_RELEASE';
+    GDK_KEY_PRESS: Result := 'GDK_KEY_PRESS';
+    GDK_KEY_RELEASE: Result := 'GDK_KEY_RELEASE';
+    GDK_ENTER_NOTIFY: Result := 'GDK_ENTER_NOTIFY';
+    GDK_LEAVE_NOTIFY: Result := 'GDK_LEAVE_NOTIFY';
+    GDK_FOCUS_CHANGE: Result := 'GDK_FOCUS_CHANGE';
+    GDK_CONFIGURE: Result := 'GDK_CONFIGURE';
+    GDK_MAP: Result := 'GDK_MAP';
+    GDK_UNMAP: Result := 'GDK_UNMAP';
+    GDK_PROPERTY_NOTIFY: Result := 'GDK_PROPERTY_NOTIFY';
+    GDK_SELECTION_CLEAR: Result := 'GDK_SELECTION_CLEAR';
+    GDK_SELECTION_REQUEST: Result := 'GDK_SELECTION_REQUEST';
+    GDK_SELECTION_NOTIFY: Result := 'GDK_SELECTION_NOTIFY';
+    GDK_PROXIMITY_IN: Result := 'GDK_PROXIMITY_IN';
+    GDK_PROXIMITY_OUT: Result := 'GDK_PROXIMITY_OUT';
+    GDK_DRAG_ENTER: Result := 'GDK_DRAG_ENTER';
+    GDK_DRAG_LEAVE: Result := 'GDK_DRAG_LEAVE';
+    GDK_DRAG_MOTION_: Result := 'GDK_DRAG_MOTION_';
+    GDK_DRAG_STATUS_: Result := 'GDK_DRAG_STATUS_';
+    GDK_DROP_START: Result := 'GDK_DROP_START';
+    GDK_DROP_FINISHED: Result := 'GDK_DROP_FINISHED';
+    GDK_CLIENT_EVENT: Result := 'GDK_CLIENT_EVENT';
+    GDK_VISIBILITY_NOTIFY: Result := 'GDK_VISIBILITY_NOTIFY';
+    GDK_SCROLL: Result := 'GDK_SCROLL';
+    GDK_WINDOW_STATE: Result := 'GDK_WINDOW_STATE';
+    GDK_SETTING: Result := 'GDK_SETTING';
+    GDK_OWNER_CHANGE: Result := 'GDK_OWNER_CHANGE';
+    GDK_GRAB_BROKEN: Result := 'GDK_GRAB_BROKEN';
+    GDK_DAMAGE: Result := 'GDK_DAMAGE';
+    GDK_TOUCH_BEGIN: Result := 'GDK_TOUCH_BEGIN';
+    GDK_TOUCH_UPDATE: Result := 'GDK_TOUCH_UPDATE';
+    GDK_TOUCH_END: Result := 'GDK_TOUCH_END';
+    GDK_TOUCH_CANCEL: Result := 'GDK_TOUCH_CANCEL';
+    GDK_EVENT_LAST: Result := 'GDK_EVENT_LAST';
+    else
+      Result := 'UNKNOWN GDK EVENT';
+  end;
+end;
+
+function GtkModifierStateToShiftState(AState: TGdkModifierType;
+    AIsKeyEvent: Boolean): Cardinal;
+begin
+  Result := 0;
+  if GDK_SHIFT_MASK in AState  then
+    Result := Result or MK_SHIFT;
+  if GDK_CONTROL_MASK in AState  then
+    Result := Result or MK_CONTROL;
+  if GDK_MOD1_MASK in AState  then
+  begin
+    if AIsKeyEvent then
+      Result := Result or KF_ALTDOWN
+    else
+      Result := Result or MK_ALT;
+  end;
 end;
 
 procedure ExtractPangoFontFaceSuffixes(var AFontName: string; out AStretch: TPangoStretch; out AWeight: TPangoWeight);
@@ -1583,5 +1740,189 @@ begin
     end;
   end;
 end;
+
+{$IFDEF GTK3USEDEFERREDRESIZING}
+procedure Gtk3SaveSizeNotification(ALCLObject: TWinControl);
+begin
+  if FWidgetsResized.IndexOf(ALCLObject) < 0 then
+    FWidgetsResized.Add(ALCLObject);
+end;
+
+procedure Gtk3SaveClientSizeNotification(ALCLObject: TWinControl);
+begin
+  if FFixWidgetsResized.IndexOf(ALCLObject) < 0 then
+    FFixWidgetsResized.Add(ALCLObject);
+end;
+
+type
+  PGtk3PendingSize = ^TGtk3PendingSize;
+  TGtk3PendingSize = record
+    Ctrl: Pointer;  // TWinControl (raw pointer, avoids circular unit dep)
+    W, H: Integer;
+  end;
+
+procedure Gtk3StorePendingOuterSize(ACtl: TWinControl; AW, AH: Integer);
+var
+  I: Integer;
+  P: PGtk3PendingSize;
+begin
+  for I := 0 to FPendingOuterSizes.Count - 1 do
+  begin
+    P := PGtk3PendingSize(FPendingOuterSizes[I]);
+    if P^.Ctrl = Pointer(ACtl) then
+    begin
+      P^.W := AW;
+      P^.H := AH;
+      Exit;
+    end;
+  end;
+  New(P);
+  P^.Ctrl := Pointer(ACtl);
+  P^.W := AW;
+  P^.H := AH;
+  FPendingOuterSizes.Add(P);
+end;
+
+function Gtk3TakePendingOuterSize(ACtl: TWinControl; out AW, AH: Integer): Boolean;
+var
+  I: Integer;
+  P: PGtk3PendingSize;
+begin
+  Result := False;
+  AW := 0;
+  AH := 0;
+  for I := 0 to FPendingOuterSizes.Count - 1 do
+  begin
+    P := PGtk3PendingSize(FPendingOuterSizes[I]);
+    if P^.Ctrl = Pointer(ACtl) then
+    begin
+      AW := P^.W;
+      AH := P^.H;
+      FPendingOuterSizes.Delete(I);
+      Dispose(P);
+      Result := True;
+      Exit;
+    end;
+  end;
+end;
+
+procedure Gtk3RemoveFromResizeQueue(ALCLObject: TWinControl);
+var
+  I: Integer;
+  P: PGtk3PendingSize;
+begin
+  // Called from TGtk3Widget.DestroyWidget to prevent the drain from accessing
+  // a freed TWinControl. The control may be destroyed between the time its
+  // size-allocate signal queued an entry and the next AppProcessMessages call.
+  FWidgetsResized.Remove(ALCLObject);
+  FFixWidgetsResized.Remove(ALCLObject);
+  for I := FPendingOuterSizes.Count - 1 downto 0 do
+  begin
+    P := PGtk3PendingSize(FPendingOuterSizes[I]);
+    if P^.Ctrl = Pointer(ALCLObject) then
+    begin
+      FPendingOuterSizes.Delete(I);
+      Dispose(P);
+      Break;
+    end;
+  end;
+end;
+
+procedure Gtk3DrainResizeQueue;
+var
+  I: Integer;
+  ACtl: TWinControl;
+  SizeMsg: TLMSize;
+  MainList, FixList: TFPList;
+  PW, PH: Integer;
+begin
+  if Gtk3DrainInProgress then Exit;
+  if (FWidgetsResized.Count = 0) and (FFixWidgetsResized.Count = 0) then Exit;
+  // Snapshot and clear before processing to handle re-entrant additions cleanly.
+  Gtk3DrainInProgress := True;
+  MainList := TFPList.Create;
+  FixList  := TFPList.Create;
+  try
+    MainList.Assign(FWidgetsResized);
+    FixList.Assign(FFixWidgetsResized);
+    FWidgetsResized.Clear;
+    FFixWidgetsResized.Clear;
+
+    // Phase 1: Invalidate client rect caches for layout/client widgets.
+    for I := 0 to FixList.Count - 1 do
+    begin
+      ACtl := TWinControl(FixList[I]);
+      if Assigned(ACtl) and ACtl.HandleAllocated then
+      begin
+        if TGtk3Widget(ACtl.Handle).InUpdate then Continue;
+        ACtl.InvalidateClientRectCache(False);
+      end;
+    end;
+
+    // Phase 2: Deliver LM_SIZE for outer/main widgets.
+    // LM_SIZE -> WMSize -> SetBounds -> AlignControls.
+    // Skip controls that are currently inside BeginUpdate/EndUpdate (InUpdate=True)
+    // — they are already being processed by SetBounds; delivering LM_SIZE again
+    // would cause a redundant re-layout.
+    for I := 0 to MainList.Count - 1 do
+    begin
+      ACtl := TWinControl(MainList[I]);
+      if Assigned(ACtl) and ACtl.HandleAllocated then
+      begin
+        if TGtk3Widget(ACtl.Handle).InUpdate then Continue;
+        FillChar(SizeMsg{%H-}, SizeOf(SizeMsg), 0);
+        SizeMsg.Msg      := LM_SIZE;
+        SizeMsg.SizeType := SIZE_RESTORED or Size_SourceIsInterface;
+        if Gtk3TakePendingOuterSize(ACtl, PW, PH) then
+        begin
+          SizeMsg.Width  := Word(PW);
+          SizeMsg.Height := Word(PH);
+        end else
+        begin
+          SizeMsg.Width  := Word(ACtl.Width);
+          SizeMsg.Height := Word(ACtl.Height);
+        end;
+        ACtl.WindowProc(TLMessage(SizeMsg));
+      end;
+    end;
+
+    // Phase 3: DoAdjustClientRectChange for layout/client widgets (after LM_SIZE).
+    // Skip controls that are also in MainList — for those, DoAdjustClientRectChange
+    // is already triggered via WMSize -> AlignControls. Skipping avoids a duplicate
+    // Resize/LayoutButtons call.
+    for I := 0 to FixList.Count - 1 do
+    begin
+      ACtl := TWinControl(FixList[I]);
+      if Assigned(ACtl) and ACtl.HandleAllocated then
+      begin
+        if MainList.IndexOf(ACtl) >= 0 then Continue;
+        if TGtk3Widget(ACtl.Handle).InUpdate then Continue;
+        ACtl.DoAdjustClientRectChange(False);
+      end;
+    end;
+
+  finally
+    MainList.Free;
+    FixList.Free;
+    Gtk3DrainInProgress := False;
+  end;
+end;
+
+
+initialization
+  FWidgetsResized    := TFPList.Create;
+  FFixWidgetsResized := TFPList.Create;
+  FPendingOuterSizes := TFPList.Create;
+
+finalization
+  FreeAndNil(FWidgetsResized);
+  FreeAndNil(FFixWidgetsResized);
+  while FPendingOuterSizes.Count > 0 do
+  begin
+    Dispose(PGtk3PendingSize(FPendingOuterSizes[0]));
+    FPendingOuterSizes.Delete(0);
+  end;
+  FreeAndNil(FPendingOuterSizes);
+{$ENDIF GTK3USEDEFERREDRESIZING}
 
 end.
