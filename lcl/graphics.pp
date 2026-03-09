@@ -58,7 +58,7 @@ type
   PColor = System.UITypes.PColor;
   TColor = TGraphicsColor;
 
-  {$IF FPC_FULLVERSION>=30300}
+  {$IF FPC_FULLVERSION>=30203}
   TFontPitch = System.UITypes.TFontPitch;
   TFontName = System.UITypes.TFontName;
   TFontDataName = System.UITypes.TFontDataName;
@@ -91,7 +91,7 @@ type
   end;
 
 const
-  {$IF FPC_FULLVERSION>=30300}
+  {$IF FPC_FULLVERSION>=30203}
   fpDefault = System.UITypes.fpDefault;
   fpVariable = System.UITypes.fpVariable;
   fpFixed = System.UITypes.fpFixed;

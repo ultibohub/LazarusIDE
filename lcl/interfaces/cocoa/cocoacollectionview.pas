@@ -11,7 +11,7 @@ uses
   Classes, SysUtils,
   MacOSAll, CocoaAll,
   CocoaPrivate, Cocoa_Extra, CocoaCallback, CocoaConfig, CocoaConst, CocoaUtils,
-  CocoaListView, CocoaTextEdits,
+  CocoaListView, CocoaTextEdits, CocoaGDIObjects,
   LCLType, Controls, ComCtrls, StdCtrls, ImgList, Forms;
 
 type
@@ -850,6 +850,7 @@ end;
 procedure TCocoaCollectionView.updateItemLayout(item: TCocoaCollectionItem);
 begin
   self.styleHandler.onUpdateItemLayout( item );
+  TCocoaTextControlUtil.setLCLFont( item.textField, lclGetTarget );
 end;
 
 procedure TCocoaCollectionView.redrawVisibleItems;
@@ -1149,7 +1150,7 @@ begin
       end
   end;
 
-  Result:= NSRectToRect( frame );
+  Result:= TCocoaTypeUtil.toRect( frame );
 end;
 
 procedure TCocoaWSListView_CollectionViewHandler.ItemExchange(
