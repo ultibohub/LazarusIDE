@@ -13,7 +13,7 @@ uses
   StdCtrls,
   CocoaAll, CocoaInt, CocoaConfig, CocoaPrivate, CocoaCallback, CocoaUtils,
   CocoaCustomControl, CocoaScrollers, CocoaWSScrollers, CocoaFullControlEdit,
-  CocoaGDIObjects, CocoaCursor, CocoaCaret, cocoa_extra;
+  CocoaWindows, CocoaGDIObjects, CocoaCursor, CocoaCaret, cocoa_extra;
 
 type
   { TLCLCommonCallback }
@@ -363,7 +363,7 @@ begin
     PtForChildCtrls.y := PtForChildCtrls.y + cr.Top;
 
     if Target is TScrollingWinControl then
-      TCocoaControlUtil.lclOffsetWithEnclosingScrollView(NSView(Owner), PtForChildCtrls.x, PtForChildCtrls.y);
+      TCocoaViewUtil.lclOffsetWithEnclosingScrollView(NSView(Owner), PtForChildCtrls.x, PtForChildCtrls.y);
 
   end else
   begin
@@ -379,7 +379,7 @@ var
   f: NSRect;
   lWindow: NSWindow;
 begin
-  lWindow := NSWindow(TCocoaControlUtil.getNSWindow(Owner));
+  lWindow := NSWindow(TCocoaWindowUtil.getWindow(Owner));
   if lWindow <> nil then
   begin
     f := lWindow.frame;
@@ -926,7 +926,7 @@ var
   end;
 
 begin
-  if Assigned(Owner) and not NSObjectIsLCLEnabled(Owner) then
+  if Assigned(Owner) and not TCocoaViewUtil.isLCLEnabled(Owner) then
   begin
     Result := True; // Cocoa should not handle the message.
     Exit;           // LCL should not get the notification either, as the control is disabled.
@@ -1098,7 +1098,7 @@ begin
   if not NSApp.isActive then
     exit;
 
-  if Assigned(Owner) and not NSObjectIsLCLEnabled(Owner) then
+  if Assigned(Owner) and not TCocoaViewUtil.isLCLEnabled(Owner) then
     exit;           // LCL should get the notification either.
 
   // If LCL control is provided and it's in designing state.
@@ -1127,7 +1127,7 @@ begin
     end
     else
     begin
-      if Event.window<>GetCocoaWindowAtPos(TCocoaScreenUtil.getScreenPoint(Event)) then
+      if Event.window<>TCocoaWindowUtil.getWindowAtPos(TCocoaScreenUtil.getScreenPoint(Event)) then
         exit;
 
       rect:=Target.BoundsRect;
@@ -1219,7 +1219,7 @@ begin
 
   if Assigned(Target)
     and not (csDesigning in Target.ComponentState)
-    and not NSObjectIsLCLEnabled(Owner) then
+    and not TCocoaViewUtil.isLCLEnabled(Owner) then
     Exit;
 
   MousePos := Event.locationInWindow;

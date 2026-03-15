@@ -173,6 +173,8 @@ type
       ATest: TChartAxisHitTests = ALL_CHARTAXIS_HITTESTS): TChartAxisHitTests; virtual;
     function GetLabeledAxisRect: TRect;
     procedure Draw;
+    procedure DrawGrid;
+    procedure DrawAxisLine;
     procedure DrawTitle(ASize: Integer);
     function GetChart: TCustomChart; inline;
     function GetOrthogonalAxis: TChartAxis;
@@ -304,7 +306,7 @@ implementation
 
 uses
   LResources, Math, LazMethodList, PropEdits,
-  TAChartStrConsts, TAGeometry, TAMath;
+  TAChartStrConsts, TAGeometry, TAMath, TATextElements;
 
 var
   VIdentityTransform: TChartAxisTransformations;
@@ -503,6 +505,7 @@ begin
   TickLength := DEF_TICK_LENGTH;
   TickWidth := DEF_TICK_WIDTH;
   FTitle := TChartAxisTitle.Create(ACollection.Owner as TCustomChart);
+  FTitle.LabelFont.Orientation := FONT_VERTICAL;  // default alignment is calLeft --> vertical title
   FMarginsForMarks := true;
   FMarks.SetInsideDir(1, 0);
   FOrthogonalAxisIndex := -1;
@@ -663,6 +666,23 @@ begin
 end;
 
 procedure TChartAxis.Draw;
+begin
+  DrawGrid;
+  DrawAxisLine;
+end;
+
+procedure TChartAxis.DrawAxisLine;
+var
+  fixedCoord: Integer;
+begin
+  if not Visible then exit;
+  fixedCoord := TChartAxisMargins(FAxisRect)[Alignment];
+  FHelper.BeginDrawing;
+  FHelper.DrawAxisLine(AxisPen, fixedCoord);
+  FHelper.EndDrawing;
+end;
+
+procedure TChartAxis.DrawGrid;
 
   procedure DrawMinors(AFixedCoord: Integer; AMin, AMax: Double);
   const
@@ -687,7 +707,7 @@ procedure TChartAxis.Draw;
           isFlipped := (AMin < AMax) and (trMin > trMax);
           FValueMin := Max(trMin, FValueMin);
           FValueMax := Min(trMax, FValueMax);
-          if (not isFlipped and (FValueMax <= FValueMin)) or 
+          if (not isFlipped and (FValueMax <= FValueMin)) or
              (isFlipped and (FValueMax >= FValueMin))
           then
             continue;
@@ -911,7 +931,7 @@ end;
 function TChartAxis.IsWordwrappedTitle: Boolean;
 begin
   Result := Title.Wordwrap and (
-    ((FAlignment in [calLeft, calRight]) and (abs(Title.LabelFont.Orientation) = 900)) or
+    ((FAlignment in [calLeft, calRight]) and (abs(Title.LabelFont.Orientation) = FONT_VERTICAL)) or
     ((FAlignment in [calTop, calBottom]) and (Title.LabelFont.Orientation = 0)) );
 end;
 
@@ -936,12 +956,15 @@ var
   v: Boolean;
   d: IChartDrawer;
 
-  function TitleSize: Integer;
+  function TitleSize(out ATextLength: Integer): Integer;
   begin
     if not Title.Visible or (Title.Caption = '') then exit(0);
     // Workaround for issue #19780, fix after upgrade to FPC 2.6.
     with Title.MeasureLabel(d, GetRealTitle) do
+    begin
+      ATextLength := IfThen(v, cy, cx);
       Result := IfThen(v, cx, cy);
+    end;
     if Title.DistanceToCenter then
       Result := Result div 2;
     Result += d.Scale(Title.Distance);
@@ -965,8 +988,27 @@ var
     end;
   end;
 
+  function CalcTitlePosition(AMin, AMax, ATextLength: Integer): Integer;
+  var
+    delta: Integer;
+    inv: Boolean;
+  begin
+    delta := ATextLength div 2 + 1 + Drawer.Scale(Title.AnchorDistance);
+    AMin := AMin + delta;
+    AMax := AMax - delta;
+    if not v then inv := Inverted xor GetChart.IsRightToLeft else inv := Inverted;
+    case Title.Anchor of
+      ctaStart:
+        Result := IfThen(v xor inv, AMax, AMin);
+      ctaCenter:
+        Result := (AMax + AMin) div 2;
+      ctaEnd:
+        Result := IfThen(v xor inv, AMin, AMax);
+    end;
+  end;
+
 var
-  sz, rmin, rmax, c, i, j, minc, maxc, mini, maxi: Integer;
+  sz, rmin, rmax, c, i, j, minc, maxc, mini, maxi, txtLen: Integer;
   minorValues: TChartValueTextArray;
   pv: Double = NaN;
   cv: Double;
@@ -1014,7 +1056,7 @@ begin
 
   with AMeasureData do begin
     FSize := Max(sz, FSize);
-    FTitleSize := Max(TitleSize, FTitleSize);
+    FTitleSize := Max(TitleSize(txtLen), FTitleSize);
     FMargin := Max(Margin, FMargin);
   end;
 
@@ -1023,13 +1065,13 @@ begin
     UpdateFirstLast(maxc, maxi, rmin, rmax);
   end;
   if not Title.PositionOnMarks then
-    FTitlePos := (rmin + rmax) div 2
+    FTitlePos := CalcTitlePosition(rmin, rmax, txtLen)
   else if minc < MaxInt then begin
     c := FHelper.GraphToImage(FHelper.FMaxForMarks);
     if c < maxc then maxc := c;
     c := FHelper.GraphToImage(FHelper.FMinForMarks);
     if c > minc then minc := c;
-    FTitlePos := (maxc + minc) div 2
+    FTitlePos := CalcTitlePosition(minc, maxc, txtLen);
   end else
     FTitlePos := MaxInt;
 
@@ -1141,11 +1183,28 @@ begin
   FAlignment := AValue;
   // Define the "inside" direction of an axis such that rotated labels with
   // rotation center at the text start or end never reach into the chart.
+  // Rotate the title of left/right axes by 90 degrees.
   case FAlignment of
-    calBottom: FMarks.SetInsideDir(0, +1);
-    calTop   : FMarks.SetInsideDir(0, -1);
-    calLeft  : FMarks.SetInsideDir(+1, 0);
-    calRight : FMarks.SetInsideDir(-1, 0);
+    calBottom:
+      begin
+        FMarks.SetInsideDir(0, +1);
+        FTitle.LabelFont.Orientation := 0;
+      end;
+    calTop:
+      begin
+        FMarks.SetInsideDir(0, -1);
+        FTitle.LabelFont.Orientation := 0;
+      end;
+    calLeft:
+      begin
+        FMarks.SetInsideDir(+1, 0);
+        FTitle.LabelFont.Orientation := FONT_VERTICAL;
+      end;
+    calRight:
+      begin
+        FMarks.SetInsideDir(-1, 0);
+        FTitle.LabelFont.Orientation := FONT_VERTICAL;
+      end;
   end;
   StyleChanged(Self);
 end;
@@ -1372,12 +1431,29 @@ begin
 end;
 
 procedure TChartAxisList.Draw(ACurrentZ: Integer; var AIndex: Integer);
+var
+  idx: Integer;
 begin
+  // step 1: draw all grids
+  idx := AIndex;
+  while idx < FZOrder.Count do
+    with TChartAxis(FZOrder[idx]) do begin
+      if ACurrentZ < ZPosition then break;
+      try
+        DrawGrid;
+      except
+        Visible := false;
+        raise;
+      end;
+      idx += 1;
+    end;
+
+  // step 2: draw all axis lines and axis titles.
   while AIndex < FZOrder.Count do
     with TChartAxis(FZOrder[AIndex]) do begin
       if ACurrentZ < ZPosition then break;
       try
-        Draw;
+        DrawAxisLine;
         DrawTitle(FGroups[FGroupIndex].FTitleSize);
       except
         Visible := false;

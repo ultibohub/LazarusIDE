@@ -22,7 +22,7 @@ unit Gtk3Widgets;
 interface
 
 uses
-  Classes, SysUtils, types, math,
+  Classes, SysUtils, StrUtils, types, math,
   // LCL
   Controls, StdCtrls, ExtCtrls, Buttons, ComCtrls, Graphics, Dialogs, Forms, Menus, ExtDlgs,
   Spin, CheckLst, PairSplitter, LCLType, LMessages, LCLMessageGlue, LCLIntf,
@@ -472,11 +472,17 @@ type
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
+    procedure OffsetMousePos(const aGlobalX, aGlobalY: double; APoint: PPoint); override;
+    function ClientToScreen(var P: TPoint): Boolean; override;
+    function ScreenToClient(var P: TPoint): Integer; override;
     function GtkEventMouse(Sender: PGtkWidget; Event: PGdkEvent): Boolean; override; cdecl;
+    function GtkEventMouseMove(Sender: PGtkWidget; Event: PGdkEvent): Boolean; override; cdecl;
     procedure InitializeWidget; override;
     function GetTabSize(AWinControl: TWinControl): integer; {returns size of tab. Height if orientation is top/bottom, width if orientation is left/right}
     function getClientRect: TRect; override;
     function getPagesCount: integer;
+    function GetTabIndexAtPos(const AWidgetPos: TPoint; out APageIndex: integer
+      ): TWinControl;
     procedure InsertPage(ACustomPage: TCustomPage; AIndex: Integer);
     procedure MovePage(ACustomPage: TCustomPage; ANewIndex: Integer);
     procedure RemovePage(AIndex: Integer);
@@ -580,6 +586,8 @@ type
     class function RangeChangeValue(ARange: PGtkRange; AScrollType: TGtkScrollType;
       AValue: gdouble; AData: gPointer): gboolean; cdecl; static;
     class procedure RangeValueChanged(range: PGtkRange; data: gpointer); cdecl; static;
+
+    procedure SetColor(AValue: TColor); override;
   public
     LCLVAdj: PGtkAdjustment; // used to keep LCL values
     LCLHAdj: PGtkAdjustment; // used to keep LCL values
@@ -659,7 +667,6 @@ type
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
-    procedure SetColor(AValue: TColor); override;
   public
     procedure InitializeWidget; override;
     function getHorizontalScrollbar: PGtkScrollbar; override;
@@ -715,7 +722,6 @@ type
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
-    procedure SetColor(AValue: TColor); override;
     class function selection_changed(AIconView: PGtkIconView; aData: gPointer):gboolean; cdecl; static;
   public
     destructor Destroy; override;
@@ -1225,6 +1231,8 @@ uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int, gtk3caret, imglist,
 class function TGtk3Widget.WidgetEvent(widget: PGtkWidget; event: PGdkEvent; data: GPointer): gboolean; cdecl;
 var
   AForm: TCustomForm;
+  AFocusedWidget: PGtkWidget;
+  AFocusedLCL: TGtk3Widget;
 begin
   {$IFDEF GTK3DEBUGCOMBOBOX}
   if (Data <> nil) and (wtComboBox in TGtk3Widget(Data).WidgetType) and
@@ -1364,13 +1372,40 @@ begin
     end;
   GDK_KEY_PRESS:
     begin
-      if Widget^.has_focus or Widget^.is_toplevel then
-        Result := TGtk3Widget(Data).GtkEventKey(Widget, Event, True);
+      if Widget^.has_focus then
+        Result := TGtk3Widget(Data).GtkEventKey(Widget, Event, True)
+      else if Widget^.is_toplevel then
+      begin
+        AFocusedWidget := PGtkWindow(Widget)^.get_focus;
+        AFocusedLCL := nil;
+        if Assigned(AFocusedWidget) and (AFocusedWidget <> Widget) then
+        begin
+          AFocusedLCL := TGtk3Widget(HwndFromGtkWidget(AFocusedWidget));
+          if Assigned(AFocusedLCL) and (AFocusedLCL = TGtk3Widget(Data)) then
+            AFocusedLCL := nil;
+        end;
+        // Only fire from window level when no focused LCL child exists.
+        if not Assigned(AFocusedLCL) then
+          Result := TGtk3Widget(Data).GtkEventKey(Widget, Event, True);
+      end;
     end;
   GDK_KEY_RELEASE:
     begin
-      if Widget^.has_focus or Widget^.is_toplevel then // or (Widget = TGtk3Widget(data).GetContainerWidget) then
-        Result := TGtk3Widget(Data).GtkEventKey(Widget, Event, False);
+      if Widget^.has_focus then
+        Result := TGtk3Widget(Data).GtkEventKey(Widget, Event, False)
+      else if Widget^.is_toplevel then
+      begin
+        AFocusedWidget := PGtkWindow(Widget)^.get_focus;
+        AFocusedLCL := nil;
+        if Assigned(AFocusedWidget) and (AFocusedWidget <> Widget) then
+        begin
+          AFocusedLCL := TGtk3Widget(HwndFromGtkWidget(AFocusedWidget));
+          if Assigned(AFocusedLCL) and (AFocusedLCL = TGtk3Widget(Data)) then
+            AFocusedLCL := nil;
+        end;
+        if not Assigned(AFocusedLCL) then
+          Result := TGtk3Widget(Data).GtkEventKey(Widget, Event, False);
+      end;
     end;
   GDK_ENTER_NOTIFY:
     begin
@@ -2175,11 +2210,8 @@ begin
     if not CanSendLCLMessage then
       exit;
 
-    {$warning workaround for GtkTreeView key bindings.Must find out what LCL does with
-     this keys.}
-    if {IsArrowKey and} ([wtListBox,wtListView,wtEntry,wtMemo,wtComboBox] * WidgetType <> []) then
-    // let gtk3 select cell for now. Must check what LCL does with arrow keys
-    // since gtk3 becomes crazy after delivery of this message
+    if IsArrowKey and ([wtListBox,wtListView,wtEntry,wtMemo,wtComboBox] * WidgetType <> []) then
+    // skip LM_KEYDOWN for arrow keys on native controls only
     else
     if (DeliverMessage(Msg, True) <> 0) or (Msg.CharCode = 0) then
     begin
@@ -2273,6 +2305,7 @@ var
   MousePos: TPoint;
   MButton: guint;
   SavedHandle: PtrUInt;
+  AParentControl: TWinControl;
 begin
   Result := gtk_false;
   {$IF DEFINED(GTK3DEBUGEVENTS) OR DEFINED(GTK3DEBUGMOUSE)}
@@ -2386,6 +2419,21 @@ begin
       exit;
 
     Result := DeliverMessage(MsgPopup, True) <> 0;
+
+    // If still not handled and we are not a notebook (notebooks have their own
+    // ActiveSheet.PopupMenu special path in the override), propagate
+    // LM_CONTEXTMENU up the LCL parent chain - mirrors DefWindowProc / Qt.
+    if not Result and not (wtNotebook in WidgetType) and Assigned(LCLObject) then
+    begin
+      AParentControl := LCLObject.Parent;
+      while Assigned(AParentControl) and (MsgPopup.Result = 0) do
+      begin
+        MsgPopup.Result := 0;
+        AParentControl.Dispatch(TLMessage(MsgPopup));
+        AParentControl := AParentControl.Parent;
+      end;
+      Result := MsgPopup.Result <> 0;
+    end;
   end;
 
   if wtPanel in WidgetType then
@@ -3255,30 +3303,83 @@ begin
     {size_allocate only makes sense on a realized container; calling it on
      an unrealized one triggers internal GTK3 CSS layout with whatever tiny
      garbage allocation GTK assigned, producing size >= 0 assertions.}
+    {$IFDEF GTK3DEBUGHEIGHTZERO}
+    if (AHeight <= 5) and Assigned(LCLObject) then
+      writeln(Format('SetBounds H=%d: %s IsContainer=%s realized=%s mapped=%s child_vis=%s has_win=%s widget_type=%s',
+        [AHeight,
+         LCLObject.Name + ':' + LCLObject.ClassName,
+         BoolToStr(Gtk3IsContainer(Widget), True),
+         BoolToStr(Widget^.get_realized, True),
+         BoolToStr(Widget^.get_mapped, True),
+         BoolToStr(Widget^.get_child_visible, True),
+         BoolToStr(Widget^.get_has_window, True),
+         g_type_name(Widget^.g_type_instance.g_class^.g_type)]));
+    {$ENDIF}
     if Gtk3IsContainer(Widget) and Widget^.get_realized then
     begin
       {Skip size_allocate on any container when the allocation is a tiny
        placeholder (width or height < 2px).}
       if (ARect.width < 2) or (ARect.height < 2) then
-        //skip
+      begin
+        { Collapse: mark widget as not child-visible so the parent container
+          (GtkLayout) unmaps it and recursively hides all descendant GdkWindows.
+          We treat h=1 the same as h=0 because LCL's AlignControls often
+          allocates a 1px minimum to alBottom controls whose Height was set to 0
+          (integer arithmetic leftover), which would otherwise cause GTK to
+          inflate the widget to its preferred height (~42px for a TListBox). }
+        if (ARect.width = 0) or (ARect.height <= 1) then
+        begin
+          {$IFDEF GTK3DEBUGHEIGHTZERO}
+          if Assigned(LCLObject) then
+            writeln(Format('SetBounds H=%d: calling set_child_visible(False) for %s (was child_vis=%s)',
+              [ARect.height,
+               LCLObject.Name + ':' + LCLObject.ClassName,
+               BoolToStr(Widget^.get_child_visible, True)]));
+          {$ENDIF}
+          Widget^.set_child_visible(False);
+          {$IFDEF GTK3DEBUGHEIGHTZERO}
+          if Assigned(LCLObject) then
+            writeln(Format('SetBounds H=%d: after set_child_visible(False): mapped=%s',
+              [ARect.height, BoolToStr(Widget^.get_mapped, True)]));
+          {$ENDIF}
+        end;
+      end
       else
+      begin
+        { Restore child-visibility if it was suppressed by a prior collapse. }
+        if not Widget^.get_child_visible then
+        begin
+          {$IFDEF GTK3DEBUGHEIGHTZERO}
+          if Assigned(LCLObject) then
+            writeln(Format('SetBounds H>0: restoring set_child_visible(True) for %s h=%d',
+              [LCLObject.Name + ':' + LCLObject.ClassName, AHeight]));
+          {$ENDIF}
+          Widget^.set_child_visible(True);
+        end;
         Widget^.size_allocate(@ARect);
-    end;
+      end;
+    end
+    {$IFDEF GTK3DEBUGHEIGHTZERO}
+    else if (AHeight <= 1) and Assigned(LCLObject) then
+      writeln(Format('SetBounds H=%d: SKIPPED set_child_visible (IsContainer=%s realized=%s)',
+        [AHeight, BoolToStr(Gtk3IsContainer(Widget), True), BoolToStr(Widget^.get_realized, True)]))
+    {$ENDIF}
+    ;
 
     if Widget^.get_visible then
       Widget^.set_allocation(@Alloc);
 
     Widget^.get_size_request(@CurW, @CurH);
     if (CurW <> AWidth) or (CurH <> AHeight) then
+    begin
+      {$IFDEF GTK3DEBUGHEIGHTZERO}
+      if (AHeight = 0) and Assigned(LCLObject) then
+        writeln(Format('SetBounds H=0: set_size_request(%d,%d) for %s',
+          [AWidth, AHeight, LCLObject.Name + ':' + LCLObject.ClassName]));
+      {$ENDIF}
       Widget^.set_size_request(AWidth, AHeight);
+    end;
     Move(ALeft, ATop);
-
-    {Removed: process_updates(True) for wtCustomControl/wtScrollingWinControl.
-     Forcing synchronous GTK rendering on every SetBounds call during drag
-     resize blocks each mouse-move event behind a full GTK render+layout flush
-     and also prematurely fires deferred size-allocate signals from the previous
-     resize cycle (causing spurious DoAdjustClientRectChange). GTK's own
-     queue_draw/queue_resize mechanism correctly batches repaints to idle.}
   finally
     EndUpdate;
   end;
@@ -5864,6 +5965,11 @@ begin
     g_object_set(PGObject(FCentralWidget), 'resize-mode', [GTK_RESIZE_QUEUE, nil]);
   gtk_layout_set_size(PGtkLayout(FCentralWidget), 1, 1);
 
+  g_object_set_data(FPageBox,'lclwidget', Self);
+  g_object_set_data(FPageLabel,'lclwidget', Self);
+  g_object_set_data(FImageWidget,'lclwidget', Self);
+  g_object_set_data(FCloseButton,'lclwidget', Self);
+
   g_signal_connect_data(FCloseButton, 'clicked', TGCallback(@TabCloseClicked), Self, nil, G_CONNECT_DEFAULT);
   //Set label angle to match parent notebook's tab position - vertical for LEFT/RIGHT
   if Assigned(LCLObject.Parent) then
@@ -6237,6 +6343,9 @@ var
   P: TPoint;
   PM: TPopupMenu;
   MsgUp: TLMMouse;
+  NoteBookWidget: PGtkNotebook;
+  ContentPage: PGtkWidget;
+  cx, cy: gint;
 begin
   // Fix for GDK_BUTTON_RELEASE: if we already synthesised LM_RBUTTONUP from
   // the press handler, consume the real release (which may arrive if the gesture
@@ -6272,17 +6381,270 @@ begin
 
     if not Result then
     begin
+      //Synthesise LM_RBUTTONUP with LCL-client coords (same convention as
+      //OffsetMousePos override). Subtract the content-area offset so that
+      //IndexOfPageAt(X,Y) in NotebookMouseUp receives the same coordinate
+      //space that GetTabIndexAtPos class function expects.
+      NoteBookWidget := PGtkNotebook(GetContainerWidget);
+      cx := 0;
+      cy := 0;
+      if (NoteBookWidget <> nil) and (NoteBookWidget^.get_n_pages > 0) then
+      begin
+        ContentPage := NoteBookWidget^.get_nth_page(NoteBookWidget^.get_current_page);
+        if Assigned(ContentPage) then
+          ContentPage^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @cx, @cy);
+      end;
       FillChar(MsgUp{%H-}, SizeOf(MsgUp), 0);
       MsgUp.Msg := LM_RBUTTONUP;
       MsgUp.Keys := MK_RBUTTON;
-      MsgUp.XPos := SmallInt(Round(Event^.button.x));
-      MsgUp.YPos := SmallInt(Round(Event^.button.y));
+      MsgUp.XPos := SmallInt(Round(Event^.button.x) - cx);
+      MsgUp.YPos := SmallInt(Round(Event^.button.y) - cy);
       FRightClickUpPending := True;
       DeliverMessage(MsgUp, True);
       FRightClickUpPending := False;
     end;
 
     Result := True;
+  end;
+end;
+
+function TGtk3NoteBook.GetTabIndexAtPos(const AWidgetPos: TPoint; out APageIndex: integer): TWinControl;
+var
+  NoteBookWidget: PGtkNotebook;
+  TabWidget, PageWidget: PGtkWidget;
+  i: integer;
+  AList: PGList;
+  Allocation: TGtkAllocation;
+  gx, gy: gint;
+  ARect: TRect;
+  APageHandle: HWND;
+begin
+  Result := nil;
+  APageIndex := -1;
+  NoteBookWidget := PGtkNotebook(GetContainerWidget);
+  if (NotebookWidget=nil) then
+    exit;
+  Result := nil;
+  AList := NoteBookWidget^.get_children;
+  try
+    for i := 0 to g_list_length(AList) - 1 do
+    begin
+      PageWidget := NoteBookWidget^.get_nth_page(i);
+      if (PageWidget<>nil) then
+      begin
+        TabWidget := NoteBookWidget^.get_tab_label(PageWidget);
+        if TabWidget <> nil then
+        begin
+          gtk_widget_get_allocation(TabWidget, @Allocation);
+          gx := 0;
+          gy := 0;
+          TabWidget^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @gx, @gy);
+          ARect := Rect(gx, gy, gx + Allocation.width, gy + Allocation.height);
+          if PtInRect(ARect, AWidgetPos) then
+          begin
+            APageHandle := HwndFromGtkWidget(TabWidget);
+            if APageHandle > 0 then
+              Result := TGtk3Page(APageHandle).LCLObject;
+            APageIndex := I;
+            break;
+          end;
+        end;
+      end;
+    end;
+  finally
+    if AList <> nil then
+      g_list_free(Alist);
+  end;
+end;
+
+procedure TGtk3NoteBook.OffsetMousePos(const aGlobalX, aGlobalY: double; APoint: PPoint);
+var
+  NoteBookWidget: PGtkNotebook;
+  ContentPage: PGtkWidget;
+  cx, cy: gint;
+begin
+  inherited;
+  // Subtract content area origin so that delivered mouse event coords are in
+  // LCL-client space (origin = content area top-left), matching what
+  // ScreenToClient returns.
+  NoteBookWidget := PGtkNotebook(GetContainerWidget);
+  if (NoteBookWidget <> nil) and (NoteBookWidget^.get_n_pages > 0) then
+  begin
+    ContentPage := NoteBookWidget^.get_nth_page(NoteBookWidget^.get_current_page);
+    if Assigned(ContentPage) then
+    begin
+      cx := 0;
+      cy := 0;
+      ContentPage^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @cx, @cy);
+      dec(APoint^.X, cx);
+      dec(APoint^.Y, cy);
+    end;
+  end;
+end;
+
+function TGtk3NoteBook.ClientToScreen(var P: TPoint): Boolean;
+var
+  NoteBookWidget: PGtkNotebook;
+  ContentPage: PGtkWidget;
+  cx, cy: gint;
+begin
+  Result := inherited ClientToScreen(P);
+  //Shift by content-area origin so that P=(0,0) maps to the screen position
+  //of the tab content area below the tab bar, not the notebook widget top-left.
+  //This makes GetClientOrigin return the correct value, which in turn makes
+  //TControl.ScreenToClient (used by FindControlAtPosition and NotebookShowTabHint)
+  //produce true LCL-client coords instead of widget-local coords.
+  NoteBookWidget := PGtkNotebook(GetContainerWidget);
+  if (NoteBookWidget <> nil) and (NoteBookWidget^.get_n_pages > 0) then
+  begin
+    ContentPage := NoteBookWidget^.get_nth_page(NoteBookWidget^.get_current_page);
+    if Assigned(ContentPage) then
+    begin
+      cx := 0;
+      cy := 0;
+      ContentPage^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @cx, @cy);
+      inc(P.X, cx);
+      inc(P.Y, cy);
+    end;
+  end;
+end;
+
+function TGtk3NoteBook.ScreenToClient(var P: TPoint): Integer;
+var
+  NoteBookWidget: PGtkNotebook;
+  ContentPage: PGtkWidget;
+  cx, cy: gint;
+  {$IFDEF GTK3DEBUGHINTS}
+  PBefore: TPoint;
+  {$ENDIF}
+begin
+  {$IFDEF GTK3DEBUGHINTS}
+  PBefore := P;
+  {$ENDIF}
+  Result := inherited ScreenToClient(P);
+  //Subtract content-area origin so coords are in LCL-client space
+  //(origin = content area top-left, below tab bar), same as OffsetMousePos.
+  //NotebookShowTabHint calls IndexOfPageAt(ScreenToClient(Mouse.CursorPos))
+  //which then calls GetTabIndexAtPos; GetTabIndexAtPos adds cy back to convert
+  //LCL-client => widget-local for tab label hit-testing.
+  NoteBookWidget := PGtkNotebook(GetContainerWidget);
+  if (NoteBookWidget <> nil) and (NoteBookWidget^.get_n_pages > 0) then
+  begin
+    ContentPage := NoteBookWidget^.get_nth_page(NoteBookWidget^.get_current_page);
+    if Assigned(ContentPage) then
+    begin
+      cx := 0;
+      cy := 0;
+      ContentPage^.translate_coordinates(PGtkWidget(NoteBookWidget), 0, 0, @cx, @cy);
+      dec(P.X, cx);
+      dec(P.Y, cy);
+    end;
+  end;
+  {$IFDEF GTK3DEBUGHINTS}
+  writeln('TGtk3NoteBook.ScreenToClient: screenIn=',PBefore.X,',',PBefore.Y,
+    ' cx=',cx,' cy=',cy,' clientOut=',P.X,',',P.Y);
+  {$ENDIF}
+end;
+
+function TGtk3NoteBook.GtkEventMouseMove(Sender: PGtkWidget; Event: PGdkEvent
+  ): Boolean; cdecl;
+var
+  Msg: TLMMouseMove;
+  MousePos, WidgetPos: TPoint;
+  ADisplay: PGdkDisplay;
+  ASeat: PGdkSeat;
+  ADevice: PGdkDevice;
+  X, Y: gint;
+  AMask: TGdkModifierType;
+  ATabIndex, HoveredIdx: integer;
+  ATabSheet, HoveredPage: TWinControl;
+  {$IFDEF GTK3DEBUGEVENTS}
+  R: TRect;
+  {$ENDIF}
+begin
+  Result := False;
+
+  {$IFDEF GTK3DEBUGEVENTS}
+  R := GetClientBounds;
+  DebugLn(['GtkEventMouseMove: ',dbgsName(LCLObject),' Send=',dbgs(Event^.motion.send_event),
+  ' state=',dbgs(LongInt(event^.motion.state)),
+  ' x=',dbgs(Round(event^.motion.x)),
+  ' y=',dbgs(Round(event^.motion.y)),
+  ' x_root=',dbgs(Round(event^.motion.x_root)),
+  ' y_root=',dbgs(Round(event^.motion.y_root)),
+  ' STOP PROCESSING ? ',dbgs(Event^.motion.send_event = NO_PROPAGATION_TO_PARENT),
+  ' GtkBounds ',dbgs(R),' LCLBounds ',dbgs(LCLObject.BoundsRect),' W=',dbgs(LCLObject.Width)]
+  );
+  {$ENDIF}
+
+  FillChar(Msg{%H-}, SizeOf(Msg), #0);
+
+  if Event^.motion.send_event = NO_PROPAGATION_TO_PARENT then
+  begin
+    //Event propagated up from a child (e.g. SynEdit) with NO_PROPAGATION flag.
+    //Only notify when cursor is actually over a tab label so the hint mechanism
+    //can start the hint timer for TPageControl. Ignore content-area events.
+    WidgetPos := Point(Round(Event^.motion.x), Round(Event^.motion.y));
+    HoveredPage := GetTabIndexAtPos(WidgetPos, HoveredIdx);
+    if Assigned(HoveredPage) then
+    begin
+      Msg.Msg := LM_MOUSEMOVE;
+      Msg.XPos := SmallInt(WidgetPos.X);
+      Msg.YPos := SmallInt(WidgetPos.Y);
+      NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
+    end;
+    Exit;
+  end;
+
+  //we use GDK_POINTER_MOTION_HINT_MASK, so we cannot trust Event^.motion position
+  if Event^.motion.is_hint = 1 then
+  begin
+    ADisplay := gtk_widget_get_display(Sender);
+    ASeat := gdk_display_get_default_seat(ADisplay);
+    ADevice := gdk_seat_get_pointer(ASeat);
+    gdk_window_get_device_position(Event^.motion.window, ADevice, @X, @Y, @AMask);
+  end else
+  begin
+    X := Round(Event^.motion.x);
+    Y := Round(Event^.motion.y);
+    AMask := Event^.motion.state;
+  end;
+
+  MousePos.x := X;
+  MousePos.y := Y;
+
+  OffsetMousePos(Event^.motion.x_root, Event^.motion.y_root, @MousePos);
+
+  Msg.XPos := SmallInt(MousePos.X);
+  Msg.YPos := SmallInt(MousePos.Y);
+
+  if Mouse.CursorPos=MousePos then exit;
+
+  Msg.Keys := GdkModifierStateToLCL(aMask, False);
+
+  Msg.Msg := LM_MOUSEMOVE;
+
+  //Use pre-OffsetMousePos widget-local coords for the instance method which
+  //compares against GTK tab-label allocations (also in widget-local space).
+  ATabSheet := GetTabIndexAtPos(Point(X, Y), ATabIndex);
+  {$IFDEF GTK3DEBUGHINTS}
+  writeln('GtkEventMouseMove NoteBook: X=',X,' Y=',Y,
+    ' MousePos=',MousePos.X,',',MousePos.Y,
+    ' ATabIndex=',ATabIndex,' ATabSheet=',DbgSName(ATabSheet),
+    ' NoteBook=',DbgSName(LCLObject));
+  {$ENDIF}
+  if Assigned(ATabSheet) then
+  begin
+    NotifyApplicationUserInput(ATabSheet, PLMessage(@Msg)^);
+    if Widget^.get_parent <> nil then
+      Event^.motion.send_event := NO_PROPAGATION_TO_PARENT;
+    TGtk3Page(ATabSheet.Handle).DeliverMessage(Msg, True);
+  end else
+  begin
+    NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
+    if Widget^.get_parent <> nil then
+      Event^.motion.send_event := NO_PROPAGATION_TO_PARENT;
+    DeliverMessage(Msg, True);
   end;
 end;
 
@@ -7510,6 +7872,63 @@ begin
   Control.EndUpdate;
 end;
 
+procedure TGtk3ScrollableWin.SetColor(AValue: TColor);
+var
+  ADisabledColor, BgColor: TGdkRGBA;
+  AContainerWidget: PGtkWidget;
+  AOldProvider: PGtkCssProvider;
+  ANewProvider: PGtkCssProvider;
+  ACSS: AnsiString;
+begin
+  if [wtCustomControl, wtScrollingWinControl, wtWindow, wtHintWindow] * WidgetType <> [] then
+  begin
+    inherited SetColor(AValue);
+  end else
+  begin
+    AContainerWidget := getContainerWidget;
+    BgColor := TColortoTGdkRGBA(ColorToRgb(AValue));
+
+    AContainerWidget^.get_style_context^.get_background_color([GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
+    //override all
+    if AValue = clDefault then
+      gtk_widget_override_background_color(AContainerWidget, GTK_STATE_FLAG_NORMAL, nil)
+    else
+      gtk_widget_override_background_color(AContainerWidget, GTK_STATE_FLAG_NORMAL, @BgColor);
+    //return system highlight color
+    BgColor := TColortoTGdkRGBA(ColorToRgb(clHighlight));
+    gtk_widget_override_background_color(AContainerWidget, [GTK_STATE_FLAG_SELECTED], @BgColor);
+    gtk_widget_override_background_color(AContainerWidget, [GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
+
+    {GtkTextView (our TMemo) text selection is rendered internally via the CSS
+     "text selection" node, gtk_widget_override_background_color with GTK_STATE_FLAG_SELECTED has
+     no effect on it. Apply a CSS provider to restore the highlight color.}
+    if wtMemo in WidgetType then
+    begin
+      AOldProvider := PGtkCssProvider(
+        g_object_get_data(PGObject(AContainerWidget), 'lcl-sel-css'));
+      if Assigned(AOldProvider) then
+      begin
+        gtk_style_context_remove_provider(AContainerWidget^.get_style_context,
+          PGtkStyleProvider(AOldProvider));
+        g_object_unref(gpointer(AOldProvider));
+        g_object_set_data(PGObject(AContainerWidget), 'lcl-sel-css', nil);
+      end;
+      if AValue <> clDefault then
+      begin
+        //BgColor already holds clHighlight at this point
+        ACSS := Format('textview text selection { background-color: #%02x%02x%02x; }',
+          [Round(BgColor.red * 255), Round(BgColor.green * 255), Round(BgColor.blue * 255)]);
+        ANewProvider := gtk_css_provider_new;
+        gtk_css_provider_load_from_data(ANewProvider, PChar(ACSS), -1, nil);
+        gtk_style_context_add_provider(AContainerWidget^.get_style_context,
+          PGtkStyleProvider(ANewProvider),
+          GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+        g_object_set_data(PGObject(AContainerWidget), 'lcl-sel-css', ANewProvider);
+      end;
+    end;
+  end;
+end;
+
 function TGtk3ScrollableWin.ClientToScreen(var P: TPoint): boolean;
 var
   gx, gy: gint;
@@ -8084,6 +8503,12 @@ begin
 
 
   Result := LCLGtkScrolledWindowNew;
+  {$IFDEF GTK3DEBUGHEIGHTZERO}
+  writeln(Format('TGtk3ListBox.CreateWidget: LCLGtkScrolledWindowNew → %p type=%s lcl=%s',
+    [PGtkWidget(Result),
+     g_type_name(PGtkWidget(Result)^.g_type_instance.g_class^.g_type),
+     IfThen(Assigned(LCLObject), LCLObject.Name + ':' + LCLObject.ClassName, 'nil')]));
+  {$ENDIF}
   Result^.show;
 
   ListStore := gtk_list_store_new (2, [G_TYPE_STRING, G_TYPE_POINTER, nil]);
@@ -8120,6 +8545,7 @@ begin
   PGtkScrolledWindow(Result)^.get_vscrollbar^.set_can_focus(False);
   PGtkScrolledWindow(Result)^.get_hscrollbar^.set_can_focus(False);
   PGtkScrolledWindow(Result)^.set_policy(GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC);
+
   FListBoxStyle := AListBox.Style;
   if FListBoxStyle <> lbOwnerDrawVariable then
   begin
@@ -8132,25 +8558,6 @@ end;
 function TGtk3ListBox.EatArrowKeys(const AKey: Word): Boolean;
 begin
   Result := False;
-end;
-
-procedure TGtk3ListBox.SetColor(AValue: TColor);
-var
-  ADisabledColor, BgColor: TGdkRGBA;
-begin
-
-  BgColor := TColortoTGdkRGBA(ColorToRgb(AValue));
-
-  getContainerWidget^.get_style_context^.get_background_color([GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
-  //override all
-  if AValue = clDefault then
-    gtk_widget_override_background_color(getContainerWidget, GTK_STATE_FLAG_NORMAL, nil)
-  else
-    gtk_widget_override_background_color(getContainerWidget, GTK_STATE_FLAG_NORMAL, @BgColor);
-  //return system highlight color
-  BgColor := TColortoTGdkRGBA(ColorToRgb(clHighlight));
-  gtk_widget_override_background_color(getContainerWidget, [GTK_STATE_FLAG_SELECTED], @BgColor);
-  gtk_widget_override_background_color(getContainerWidget, [GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
 end;
 
 procedure TGtk3ListBox.InitializeWidget;
@@ -8784,25 +9191,6 @@ end;
 function TGtk3ListView.EatArrowKeys(const AKey: Word): Boolean;
 begin
   Result := False;
-end;
-
-procedure TGtk3ListView.SetColor(AValue: TColor);
-var
-  ADisabledColor, BgColor: TGdkRGBA;
-begin
-
-  BgColor := TColortoTGdkRGBA(ColorToRgb(AValue));
-
-  getContainerWidget^.get_style_context^.get_background_color([GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
-  //override all
-  if AValue = clDefault then
-    gtk_widget_override_background_color(getContainerWidget, GTK_STATE_FLAG_NORMAL, nil)
-  else
-    gtk_widget_override_background_color(getContainerWidget, GTK_STATE_FLAG_NORMAL, @BgColor);
-  //return system highlight color
-  BgColor := TColortoTGdkRGBA(ColorToRgb(clHighlight));
-  gtk_widget_override_background_color(getContainerWidget, [GTK_STATE_FLAG_SELECTED], @BgColor);
-  gtk_widget_override_background_color(getContainerWidget, [GTK_STATE_FLAG_INSENSITIVE], @ADisabledColor);
 end;
 
 destructor TGtk3ListView.Destroy;
@@ -10519,6 +10907,18 @@ begin
     LCLVAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
   with PGtkScrolledWindow(Result)^.get_hadjustment^ do
     LCLHAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
+
+  // Disconnect GtkLayout's bin_window from BOTH scroll adjustments for pure TCustomControl
+  // TGtk3ScrollingWinControl.CreateWidget reconnects both after this call,
+  // because TScrollBox children placed via gtk_layout_put at document
+  // coordinates NEED the bin_window to move when the user scrolls.
+  //
+  // gtk_adjustment_new returns a floating GObject; set_[hv]adjustment sinks it.
+  // Do NOT unref - GtkLayout takes ownership.
+  PGtkScrollable(FCentralWidget)^.set_hadjustment(
+    gtk_adjustment_new(0, 0, 1, 1, 1, 0));
+  PGtkScrollable(FCentralWidget)^.set_vadjustment(
+    gtk_adjustment_new(0, 0, 1, 1, 1, 0));
 end;
 
 function TGtk3CustomControl.EatArrowKeys(const AKey: Word): Boolean;
@@ -10820,6 +11220,13 @@ begin
   FHasPaint := True;
   Result := inherited CreateWidget(Params);
   Include(FWidgetType, wtScrollingWinControl);
+  // TGtk3CustomControl disconnects adjustments, so LCL can easy manage
+  // TCustomControl. TScrollingWinControl is different beast, so
+  // back adjustments into game.
+  PGtkScrollable(FCentralWidget)^.set_hadjustment(
+    gtk_scrolled_window_get_hadjustment(PGtkScrolledWindow(Result)));
+  PGtkScrollable(FCentralWidget)^.set_vadjustment(
+    gtk_scrolled_window_get_vadjustment(PGtkScrolledWindow(Result)));
 end;
 
 { TGtk3Window }
@@ -12394,6 +12801,9 @@ begin
   {$IFDEF GTK3DEBUGDESIGNER}
   writeln('>BringDesignerToFront ');
   {$ENDIF}
+  if Gtk3IsLayout(getContainerWidget) and Gtk3IsGdkWindow(PGtkLayout(getContainerWidget)^.get_bin_window) then
+    PGtkLayout(getContainerWidget)^.get_bin_window^.raise_
+  else
   if Gtk3IsGdkWindow(getContainerWidget^.window) then
     getContainerWidget^.window^.raise_;
   {$IFDEF GTK3DEBUGDESIGNER}
