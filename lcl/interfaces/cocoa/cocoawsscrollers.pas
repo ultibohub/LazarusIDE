@@ -7,9 +7,29 @@ interface
 
 uses
   Classes, SysUtils, LCLType, Controls, Forms,
-  CocoaAll, CocoaPrivate, CocoaCustomControl, CocoaScrollers, CocoaUtils;
+  CocoaAll, CocoaPrivate, CocoaCustomControl, CocoaScrollers;
 
 type
+
+  { TCocoaWSScrollerUtil }
+
+  TCocoaWSScrollerUtil = class
+  public
+    class function embedInScrollView(
+      const AView: NSView;
+      const AReleaseView: Boolean = True ): TCocoaScrollView;
+    class function embedInManualScrollView(
+      const AView: NSView ): TCocoaManualScrollView;
+    class function embedInManualScrollHost(
+      const AView: TCocoaManualScrollView ): TCocoaManualScrollHost;
+
+    class procedure asyncAdjustSize(const control: TWinControl);
+  end;
+
+implementation
+
+type
+
   { TASyncLCLControlAdjustSizer }
 
   TASyncLCLControlAdjustSizer = class
@@ -21,18 +41,14 @@ type
     procedure adjustSize(control: TWinControl);
   end;
 
-function EmbedInScrollView(AView: NSView; AReleaseView: Boolean = true): TCocoaScrollView;
-function EmbedInManualScrollView(AView: NSView): TCocoaManualScrollView;
-function EmbedInManualScrollHost(AView: TCocoaManualScrollView): TCocoaManualScrollHost;
-
-procedure LCLScrollViewAdjustSize(control: TWinControl);
-
 var
   ASyncLCLControlAdjustSizer: TASyncLCLControlAdjustSizer;
 
-implementation
+{ TCocoaWSScrollerUtil }
 
-function EmbedInScrollView(AView: NSView; AReleaseView: Boolean): TCocoaScrollView;
+class function TCocoaWSScrollerUtil.embedInScrollView(
+  const AView: NSView;
+  const AReleaseView: Boolean ): TCocoaScrollView;
 var
   r: TRect;
   p: NSView;
@@ -57,10 +73,11 @@ begin
   AView.setHidden(false);
   {$endif}
   if AReleaseView then AView.release;
-  SetViewDefaults(Result);
+  TCocoaViewUtil.setDefaultMargin(Result);
 end;
 
-function EmbedInManualScrollView(AView: NSView): TCocoaManualScrollView;
+class function TCocoaWSScrollerUtil.embedInManualScrollView(
+  const AView: NSView ): TCocoaManualScrollView;
 var
   r: TRect;
   p: NSView;
@@ -90,13 +107,13 @@ begin
   AView.setHidden(false);
   {$endif}
   AView.release;
-  SetViewDefaults(Result);
+  TCocoaViewUtil.setDefaultMargin(Result);
   if AView.isKindOfClass(TCocoaCustomControl) then
     TCocoaCustomControl(AView).auxMouseByParent := true;
 end;
 
-function EmbedInManualScrollHost(AView: TCocoaManualScrollView
-  ): TCocoaManualScrollHost;
+class function TCocoaWSScrollerUtil.embedInManualScrollHost(
+  const AView: TCocoaManualScrollView ): TCocoaManualScrollHost;
 var
   r: TRect;
   p: NSView;
@@ -124,10 +141,11 @@ begin
   {$else}
   AView.setHidden(false);
   {$endif}
-  SetViewDefaults(Result);
+  TCocoaViewUtil.setDefaultMargin(Result);
 end;
 
-procedure LCLScrollViewAdjustSize(control: TWinControl);
+class procedure TCocoaWSScrollerUtil.asyncAdjustSize(
+  const control: TWinControl);
 begin
   if NSScroller.preferredScrollerStyle = NSScrollerStyleOverlay then
     Exit;

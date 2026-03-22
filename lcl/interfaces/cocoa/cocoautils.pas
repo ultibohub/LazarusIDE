@@ -9,13 +9,21 @@ uses
   classes,
   MacOSAll, CocoaAll, Cocoa_Extra, CocoaConst,
   SysUtils, Types, LCLType, LCLProc,
-  Graphics, GraphType;
+  Menus, Graphics, GraphType;
 
 type
   { NSLCLDebugExtension }
 
   NSLCLDebugExtension = objccategory(NSObject)
     function lclClassName: shortstring; message 'lclClassName';
+  end;
+
+  { TCocoaApplicationUtil }
+
+  TCocoaApplicationUtil = class
+  public
+    class function isMainThread: Boolean;
+    class procedure wakeupEventLoop;
   end;
 
   { TCocoaTypeUtil }
@@ -40,6 +48,21 @@ type
     class function toRect(const params: TCreateParams): NSRect; overload;
   end;
 
+  { TCocoaNumberUtil }
+
+  TCocoaNumberUtil = class
+  public
+    class function toInt(
+      const obj: NSObject;
+      const defaultValue: Integer = 0 ): Integer;
+    class function toDouble(
+      const obj: NSObject;
+      const defaultValue: Double = 0 ): Double;
+    class function toBoolean(
+      const obj: NSObject;
+      const defaultValue: Boolean = False ): Boolean;
+  end;
+
   { TCocoaCollectionUtil }
 
   TCocoaCollectionUtil = class
@@ -56,38 +79,24 @@ type
     // The function removes single '&' and '(...)', and replaced '&&' with '&'
     // (removing LCL (Windows) specific caption convention
     class function removeAcceleration(const str: String): String;
+    class function getAcceleration(const aTitle: String): Word;
     class function getNSStringObject( const aString: id ) : NSString;
   end;
 
   { TCocoaKeyUtil }
 
   TCocoaKeyUtil = class
-  private
-  const
-    kVK_SubMenu = $6E;
   public
     class function codeToString(AKey: Word): NSString;
     class function codeToVK(AKey: Word): Word;
     class function charToVK(achar: unichar): Word;
     class function getRawKeyChar(ev: NSEvent): System.WideChar;
-  end;
 
-  { TCocoaControlUtil }
-
-  TCocoaControlUtil = class
-  public
-    class procedure setStringValue(const c: NSControl; const S: String); inline;
-    class function getStringValue(const c: NSControl): String; inline;
-    class function toMacOSTitle(const ATitle: String): NSString;
-    class procedure moveCaretToTheEnd(const c: NSControl);
-    class function getNSWindow(const obj: NSObject): NSWindow;
-    class procedure hideAllSubviews( const parent: NSView );
-    class procedure addLayoutDelta(const layout: TRect; var frame: TRect);
-    class procedure subLayoutDelta(const layout: TRect; var frame: TRect);
-    class procedure lclOffsetWithEnclosingScrollView(
-      const view: NSView;
-      var x: Integer;
-      var y: Integer );
+    // the returned "Key" should not be released, as it's not memory owned
+    class procedure toKeyEquivalent(
+      const AShortCut: TShortcut;
+      out Key: NSString;
+      out shiftKeyMask: NSUInteger );
   end;
 
   { TCocoaColorUtil }
@@ -146,6 +155,7 @@ type
     class function indexToHMonitor(i: NSUInteger): HMonitor;
     class function HMonitorToIndex(h: HMonitor): NSUInteger;
     class function getScreenFromHMonitor(h: HMonitor): NSScreen;
+    class function getHMonitor(screenPoint: TPoint; dwFlags: DWord): HMONITOR;
   end;
 
 function NSStringUtf8(s: PChar; len: Integer = -1): NSString;
@@ -172,6 +182,26 @@ implementation
 function NSLCLDebugExtension.lclClassName: shortstring;
 begin
   Result := NSStringToString(self.className);
+end;
+
+{ TCocoaApplicationUtil }
+
+class function TCocoaApplicationUtil.isMainThread: Boolean;
+begin
+  Result := NSThread.currentThread.isMainThread;
+end;
+
+class procedure TCocoaApplicationUtil.wakeupEventLoop;
+var
+  ev: NSevent;
+begin
+  ev := NSEvent.otherEventWithType_location_modifierFlags_timestamp_windowNumber_context_subtype_data1_data2(
+          NSApplicationDefined,
+          NSZeroPoint,
+          0, 0, 0, nil,
+          LazarusApplicationDefinedSubtypeWakeup,
+          0, 0);
+  NSApp.postEvent_atStart(ev, false);
 end;
 
 { TCocoaTypeUtil }
@@ -314,6 +344,38 @@ begin
   with params do Result:=NSMakeRect(X,Y,Width,Height);
 end;
 
+{ TCocoaNumberUtil }
+
+class function TCocoaNumberUtil.toInt(
+  const obj: NSObject;
+  const defaultValue: Integer ): Integer;
+begin
+  if (obj = nil) or (not obj.isKindOfClass(NSNumber)) then
+    Result:= defaultValue
+  else
+    Result:= NSNumber(obj).integerValue;
+end;
+
+class function TCocoaNumberUtil.toDouble(
+  const obj: NSObject;
+  const defaultValue: Double ): Double;
+begin
+  if (obj = nil) or (not obj.isKindOfClass(NSNumber)) then
+    Result:= defaultValue
+  else
+    Result:= NSNumber(obj).doubleValue;
+end;
+
+class function TCocoaNumberUtil.toBoolean(
+  const obj: NSObject;
+  const defaultValue: Boolean ): Boolean;
+begin
+  if (obj = nil) or (not obj.isKindOfClass(NSNumber)) then
+    Result:= defaultValue
+  else
+    Result:= NSNumber(obj).boolValue;
+end;
+
 { TCocoaCollectionUtil }
 
 class function TCocoaCollectionUtil.stringArrayToNSArray( const lclArray: TStringArray ): NSArray;
@@ -384,6 +446,21 @@ begin
     Exit;
 
   Result:= str.Substring(0,posLeft).Trim;
+end;
+
+class function TCocoaStringUtil.getAcceleration(const aTitle: String): Word;
+var
+  i: Integer;
+  hotkeyChar: Char;
+begin
+  Result:= 0;
+  i:= aTitle.IndexOf( cHotkeyPrefix );
+  if (i<0) or (i>=aTitle.Length-1) then
+    Exit;
+
+  hotkeyChar:= aTitle.Chars[i+1];
+  if hotkeyChar <> cHotkeyPrefix then
+    Result:= Word( UpCase(hotkeyChar) );
 end;
 
 class function TCocoaStringUtil.getNSStringObject( const aString: id ) : NSString;
@@ -589,6 +666,37 @@ begin
     Result := System.WideChar(m.characterAtIndex(0));
 end;
 
+class procedure TCocoaKeyUtil.toKeyEquivalent(
+  const AShortCut: TShortcut;
+  out Key: NSString;
+  out shiftKeyMask: NSUInteger);
+var
+  w: word;
+  s: TShiftState;
+begin
+  ShortCutToKey(AShortCut, w, s);
+  key := TCocoaKeyUtil.codeToString(w);
+  shiftKeyMask := 0;
+  if ssShift in s then
+    ShiftKeyMask := ShiftKeyMask + NSShiftKeyMask;
+  if ssAlt in s then
+    ShiftKeyMask := ShiftKeyMask + NSAlternateKeyMask;
+  if ssCtrl in s then
+    ShiftKeyMask := ShiftKeyMask + NSControlKeyMask;
+  if ssMeta in s then
+    ShiftKeyMask := ShiftKeyMask + NSCommandKeyMask;
+
+  // as a key , +/= is a rare case, both + and = are used as primary keys.
+  // ‘Shift+=’ for ‘+’
+  // ‘=’ for ‘='
+  if key.isEqualToString(NSSTR_KEY_PLUS) then begin
+    if (ShiftKeyMask and NSShiftKeyMask)=0 then
+      key := NSSTR_KEY_EQUALS
+    else
+      ShiftKeyMask := ShiftKeyMask - NSShiftKeyMask;
+  end;
+end;
+
 class function TCocoaKeyUtil.codeToString(AKey: Word): NSString;
 type
   WideChar = System.WideChar;
@@ -635,104 +743,6 @@ begin
   if w<>#0
     then Result:=NSString.stringWithCharacters_length(@w, 1)
     else Result:=NSString.string_;
-end;
-
-{ TCocoaControlUtil }
-
-class procedure TCocoaControlUtil.hideAllSubviews( const parent: NSView );
-var
-  view: NSView;
-begin
-  for view in parent.subviews do
-    view.setHidden( True );
-end;
-
-class function TCocoaControlUtil.getNSWindow(const obj: NSObject): NSWindow;
-begin
-  Result := nil;
-  if not Assigned(obj) then Exit;
-  if obj.isKindOfClass_(NSWindow) then
-    Result := NSWindow(obj)
-  else if obj.isKindOfClass_(NSView) then
-    Result := NSView(obj).window;
-end;
-
-class procedure TCocoaControlUtil.setStringValue(const c: NSControl; const S: String); inline;
-var
-  ns: NSString;
-begin
-  if Assigned(c) then
-  begin
-    ns := NSStringUtf8(S);
-    c.setStringValue(ns);
-    ns.release;
-  end;
-end;
-
-class function TCocoaControlUtil.getStringValue(const c: NSControl): String; inline;
-begin
-  if Assigned(c) then
-    Result := NSStringToString(c.stringValue)
-  else
-    Result := '';
-end;
-
-class procedure TCocoaControlUtil.moveCaretToTheEnd(const c: NSControl);
-var
-  range: NSRange;
-begin
-  if c.currentEditor <> nil then begin
-    range.location:= NSUIntegerMax;
-    range.length:= 0;
-    c.currentEditor.setSelectedRange( range );
-  end;
-end;
-
-class function TCocoaControlUtil.toMacOSTitle(const ATitle: string): NSString;
-var
-  t: String;
-begin
-  t:= TCocoaStringUtil.removeAcceleration(ATitle);
-  if t = '' then
-    Result:= NSString.string_ // empty string
-  else
-    Result:= NSString.stringWithUTF8String( @t[1] );
-end;
-
-class procedure TCocoaControlUtil.addLayoutDelta(const layout: TRect; var frame: TRect);
-begin
-  inc(frame.Left, layout.Left);
-  inc(frame.Top, layout.Top);
-  inc(frame.Right, layout.Right);
-  inc(frame.Bottom, layout.Bottom);
-end;
-
-class procedure TCocoaControlUtil.subLayoutDelta(const layout: TRect; var frame: TRect);
-begin
-  dec(frame.Left, layout.Left);
-  dec(frame.Top, layout.Top);
-  dec(frame.Right, layout.Right);
-  dec(frame.Bottom, layout.Bottom);
-end;
-
-class procedure TCocoaControlUtil.lclOffsetWithEnclosingScrollView(
-  const view: NSView;
-  var x: Integer;
-  var y: Integer );
-var
-  es: NSScrollView;
-  r: NSRect;
-begin
-  es:= view.enclosingScrollView;
-  if NOT Assigned(es) then
-    Exit;
-  if es.documentView <> view then
-    Exit;
-  r:= es.documentVisibleRect;
-  if NOT view.isFlipped then
-    r.origin.y:= es.documentView.frame.size.height - r.size.height - r.origin.y;
-  inc( x, Round(r.origin.x) );
-  inc( y, Round(r.origin.y) );
 end;
 
 { TCocoaColorUtil }
@@ -1173,6 +1183,31 @@ begin
   if index>=NSScreen.screens.count then
     Exit;
   Result:= NSScreen( NSScreen.screens.objectAtIndex(index) );
+end;
+
+class function TCocoaScreenUtil.getHMonitor(
+  screenPoint: TPoint;
+  dwFlags: DWord ): HMONITOR;
+var
+  point: NSPoint;
+  screen: NSScreen;
+  i: Integer;
+begin
+  Result:= 0;
+  point:= TCocoaScreenUtil.toCocoa( screenPoint );
+  if point.y>=1 then         // NSPointInRect is (upper,left) inside
+    point.y:= point.y-1;     // (lower,right) outside
+
+  for i := 0 to NSScreen.screens.count - 1 do begin
+    screen:= NSScreen( NSScreen.screens.objectAtIndex(i) );
+    if NSPointInRect(point, screen.frame) then begin
+      Result:= TCocoaScreenUtil.indexToHMonitor( i );
+      Exit;
+    end;
+  end;
+
+  if dwFlags<>MONITOR_DEFAULTTONULL then
+    Result:= TCocoaScreenUtil.indexToHMonitor( 0 );
 end;
 
 { standalone functions }

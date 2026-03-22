@@ -10,7 +10,7 @@ interface
 uses
   Forms, SysUtils,
   Menus,
-  CocoaAll, Cocoa_Extra, CocoaConst;
+  CocoaAll, Cocoa_Extra, CocoaConst, CocoaUtils;
 
 type
   TCocoaConfigToolBarItemClassAbstract = class
@@ -199,11 +199,28 @@ type
 
   TCocoaConfigReadOnlyComboBox = record
     minWidth: Integer;
+    roundSize: Integer;
+    buttonWidth: Integer;
     item: TCocoaConfigReadOnlyComboBoxItem;
   end;
 
   TCocoaConfigComboBox = record
+    minHeight: Integer;
+    maxHeight: Integer;
     readOnly: TCocoaConfigReadOnlyComboBox;
+  end;
+
+type
+  TCocoaConfigSpinEdit = record
+    stepperDefaultWidth: Integer;
+  end;
+
+  TCocoaConfigStatusBar = record
+    defaultHeight: Integer;
+  end;
+
+  TCocoaConfigProgressIndicator = record
+    smallHeight: Integer;
   end;
 
 type
@@ -433,12 +450,10 @@ end;
 function TCocoaConfigFocusRing.getStrategy(
   AClassName: NSString): Strategy;
 var
-  valueObject: NSNumber;
+  number: Integer;
 begin
-  Result:= TCocoaConfigFocusRing.Strategy.default;
-  valueObject:= NSNumber( _strategies.valueForKey(AClassName) );
-  if Assigned(valueObject) then
-    Result:= TCocoaConfigFocusRing.Strategy(valueObject.intValue);
+  number:= TCocoaNumberUtil.toInt( _strategies.valueForKey(AClassName) );
+  Result:= TCocoaConfigFocusRing.Strategy( number );
 end;
 
 function getCocoaScrollerDefaultKnobColor: NSColor;

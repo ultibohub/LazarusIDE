@@ -211,6 +211,15 @@ type
     function stringValue: NSString; message 'stringValue';
   end;
 
+  { TCocoaWindowUtil }
+
+  TCocoaWindowUtil = class
+  public
+    class function getWindow(const obj: NSObject): NSWindow;
+    class function getWindowAtPos(const p: NSPoint): NSWindow;
+    class function showWindow(hWnd: HWND; nCmdShow: Integer): Boolean;
+  end;
+
 implementation
 
 { TCocoaDesignOverlay }
@@ -522,6 +531,107 @@ end;
 function TCocoaWindowContent.stringValue: NSString;
 begin
   Result := _stringValue;
+end;
+
+{ TCocoaWindowUtil }
+
+class function TCocoaWindowUtil.getWindow(const obj: NSObject): NSWindow;
+begin
+  Result := nil;
+  if not Assigned(obj) then Exit;
+  if obj.isKindOfClass_(NSWindow) then
+    Result := NSWindow(obj)
+  else if obj.isKindOfClass_(NSView) then
+    Result := NSView(obj).window;
+end;
+
+// ensure that gets the correct window at mouse pos
+// 1. in Z-Order
+// 2. on the active Space
+// 3. in current App
+// 4. is visible window
+// 5. is not the misc window like Menu Bar
+class function TCocoaWindowUtil.getWindowAtPos(const p: NSPoint): NSWindow;
+var
+  windowNumber: NSInteger;
+  windowNumbers: NSArray;
+  window: NSWindow;
+begin
+  Result := nil;
+
+  // ensure 1
+  windowNumber := NSWindow.windowNumberAtPoint_belowWindowWithWindowNumber(p,0);
+  windowNumbers := NSWindow.windowNumbersWithOptions(0);
+
+  // ensure 2, 3, 4
+  if not windowNumbers.containsObject(NSNumber.numberWithInt(windowNumber)) then
+    exit;
+
+  // ensure 5
+  window := NSApp.windowWithWindowNumber(windowNumber);
+  if Assigned(window) and (window.isKindOfClass(TCocoaWindow) or window.isKindOfClass(TCocoaPanel)) then
+    Result := window;
+end;
+
+{------------------------------------------------------------------------------
+  function ShowWindow(hWnd: HWND; nCmdShow: Integer): Boolean;
+
+  nCmdShow:
+    SW_SHOWNORMAL, SW_MINIMIZE, SW_SHOWMAXIMIZED, SW_SHOWFULLSCREEN
+------------------------------------------------------------------------------}
+class function TCocoaWindowUtil.showWindow(
+  hWnd: HWND;
+  nCmdShow: Integer ): Boolean;
+var
+  win: NSWindow;
+  lCocoaWin: TCocoaWindow = nil;
+  lWinContent: TCocoaWindowContent = nil;
+  disableFS : Boolean;
+begin
+  Result:=true;
+  {$ifdef VerboseCocoaWinAPI}
+    DebugLn('TCocoaWidgetSet.ShowWindow');
+  {$endif}
+
+  // for regular controls (non-window or embedded window, acting as a control)
+  if (not NSObject(hWnd).isKindOfClass(TCocoaWindowContent)) or (TCocoaWindowContent(hWnd).isembedded) then
+  begin
+    NSObject(hWnd).lclSetVisible(nCmdSHow <> SW_HIDE);
+    Exit;
+  end;
+
+  // for windows
+  lWinContent := TCocoaWindowContent(hWnd);
+
+  //todo: should it be lclOwnWindow?
+  if Assigned(lWinContent.fswin) then
+    win := lWinContent.fswin
+  else
+    win := NSWindow(lWinContent.window);
+
+  disableFS := false;
+  if win.isKindOfClass(TCocoaWindow) then
+  begin
+    lCocoaWin := TCocoaWindow(win);
+    disableFS := Assigned(lCocoaWin) and (lCocoaWin.lclIsFullScreen) and (nCmdShow <> SW_SHOWFULLSCREEN);
+  end;
+
+  if disableFS and Assigned(lCocoaWin) then
+    lCocoaWin.lclSwitchFullScreen(false);
+
+  case nCmdShow of
+    SW_SHOW, SW_SHOWNORMAL:
+      win.orderFront(nil);
+    SW_HIDE:
+      win.orderOut(nil);
+    SW_MINIMIZE:
+      win.miniaturize(nil);
+    SW_MAXIMIZE:
+      if NOT win.isZoomed then win.zoom(nil);
+    SW_SHOWFULLSCREEN:
+      if Assigned(lCocoaWin) then
+        lCocoaWin.lclSwitchFullScreen(true);
+  end;
 end;
 
 { TCocoaPanel }

@@ -41,6 +41,9 @@ const
   NSTextAlignmentJustified = 3;
   NSTextAlignmentNatural   = 4;
 
+const
+  kVK_SubMenu = $6E;
+
 type
   NSImageScaling = NSUInteger;
 const // NSImageScaling values
@@ -417,6 +420,13 @@ type
     {$endif}
   end;
 
+  NSViewControlSizeExt = objccategory external (NSView)
+    function controlSize: Integer; message 'controlSize';
+    procedure setControlSize(ASize: Integer); message 'setControlSize:';
+    function cell: id; message 'cell';
+    procedure setFont(afont: NSFont); message 'setFont:';
+  end;
+
   NSLayoutConstraint = objcclass external (NSObject)
     function isActive: Boolean; message 'isActive';
     procedure setActive(Active: Boolean); message 'setActive:';
@@ -701,9 +711,6 @@ const
   NSWindowTabbingModeAutomatic  = 0; // The system automatically prefers to tab this window when appropriate
   NSWindowTabbingModePreferred  = 1; // The window explicitly should prefer to tab when shown
   NSWindowTabbingModeDisallowed = 2; // The window explicitly should not prefer to tab when shown
-
-const
-  NSKeyCodeTab  = 48;
 
 { NSTableView Animation Options }
 

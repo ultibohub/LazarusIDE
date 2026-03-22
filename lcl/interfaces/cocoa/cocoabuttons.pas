@@ -24,19 +24,8 @@ interface
 
 uses
   Types, Classes, SysUtils, Graphics, Controls,
-  MacOSAll, CocoaAll, CocoaConst, CocoaWSCommon, CocoaPrivate, CocoaCallback;
-
-
-const
-  // these heights were received from Xcode interface builder,
-  // where the height cannot be changed for a button control the actual size
-  // of the button (the difference between top pixel and bottom pixel,
-  // is less than frame size also
-
-  PUSHBTN_REG_HEIGHT   = 20;
-  PUSHBTN_SMALL_HEIGHT = 17;
-  PUSHBTN_MINI_HEIGHT  = 14;
-
+  MacOSAll, CocoaAll,
+  CocoaConst, CocoaPrivate, CocoaCallback, CocoaUtils;
 
 type
 
@@ -46,7 +35,6 @@ type
     procedure ButtonClick;
     procedure GetAllowMixedState(var allowed: Boolean);
   end;
-
 
   { TCocoaButton }
 
@@ -92,8 +80,12 @@ type
     procedure setState(astate: NSInteger); override;
   end;
 
+  { TCocoaButtonNeedFocusRing }
+
   TCocoaButtonNeedFocusRing = objcclass(TCocoaButton)
   end;
+
+  { IStepperCallback }
 
   IStepperCallback = interface(ICommonCallback)
     procedure BeforeChange(var Allowed: Boolean);
@@ -122,11 +114,20 @@ type
     procedure lclClearCallback; override;
   end;
 
-function adjustButtonSizeIfNecessary( button: NSButton; aSize: NSSize ): NSSize;
+  { TCocoaButtonUtil }
+
+  TCocoaButtonUtil = class
+  public
+    class function adjustSizeIfNecessary(
+      const button: NSButton;
+      const aSize: NSSize ): NSSize;
+  end;
 
 implementation
 
-function adjustButtonSizeIfNecessary(button: NSButton; aSize: NSSize): NSSize;
+class function TCocoaButtonUtil.adjustSizeIfNecessary(
+  const button: NSButton;
+  const aSize: NSSize): NSSize;
 begin
   Result:= aSize;
   if button.bezelStyle = NSRegularSquareBezelStyle then begin
@@ -286,14 +287,14 @@ begin
   }
   Size.width:= r.Width;
   Size.height:= r.Height;
-  Size:= adjustButtonSizeIfNecessary( self, Size );
+  Size:= TCocoaButtonUtil.adjustSizeIfNecessary( self, Size );
 
   newFrame:= r;
   newFrame.Width:= Round( Size.width );
   newFrame.Height:= Round( Size.height );
 
   if (miniHeight<>0) or (smallHeight<>0) then
-    SetNSControlSize(Self,newFrame.Bottom-newFrame.Top,miniHeight, smallHeight, adjustFontToControlSize);
+    TCocoaViewUtil.setSize(Self,newFrame.Bottom-newFrame.Top,miniHeight, smallHeight, adjustFontToControlSize);
   inherited lclSetFrame(newFrame);
 end;
 
@@ -396,7 +397,7 @@ begin
   begin
     setTarget(Self);
     setAction(objcselector('actionButtonClick:'));
-    UpdateControlFocusRing( self, TWinControl(lclGetTarget) );
+    TCocoaViewUtil.updateFocusRing( self, TWinControl(lclGetTarget) );
   //  todo: find a way to release notifications below
   //  NSNotificationCenter.defaultCenter.addObserver_selector_name_object(Self, objcselector('boundsDidChange:'), NSViewBoundsDidChangeNotification, Result);
   //  NSNotificationCenter.defaultCenter.addObserver_selector_name_object(Self, objcselector('frameDidChange:'), NSViewFrameDidChangeNotification, Result);
@@ -414,7 +415,7 @@ procedure TCocoaButton.drawRect(dirtyRect: NSRect);
 var ctx: NSGraphicsContext;
 begin
   inherited drawRect(dirtyRect);
-  if CheckMainThread and Assigned(callback) then
+  if TCocoaApplicationUtil.isMainThread and Assigned(callback) then
     callback.Draw(NSGraphicsContext.currentContext, bounds, dirtyRect);
 end;
 
