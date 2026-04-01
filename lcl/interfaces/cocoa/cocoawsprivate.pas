@@ -1,4 +1,4 @@
-unit CocoaWSCommon;
+unit CocoaWSPrivate;
 
 {$mode objfpc}{$H+}
 {$modeswitch objectivec1}
@@ -11,7 +11,7 @@ uses
   Types, Classes, Controls, SysUtils,
   WSControls, LCLType, LCLMessageGlue, LMessages, LCLProc, LCLIntf, Graphics, Forms,
   CocoaAll,
-  CocoaPrivate, CocoaWSService, CocoaCallback, CocoaGDIObjects,
+  CocoaPrivate, CocoaWSService, CocoaGDIObjects,
   CocoaCursor, CocoaCaret, CocoaConfig, CocoaUtils, Cocoa_Extra,
   CocoaWSCustomControl;
 
@@ -99,14 +99,14 @@ begin
   if not AWinControl.HandleAllocated then
     Exit;
 
-  if Assigned(CocoaWidgetSetState) and (AWinControl.Handle = CocoaWidgetSetState.CaptureControl) then
+  if Assigned(CocoaWidgetSetState) and (AWinControl.Handle = CocoaWidgetSetState.captureControl) then
     CocoaWidgetSetState.releaseCapture;
 
   obj := NSObject(AWinControl.Handle);
   Callback := obj.lclGetCallback;
 
   if Focused(AWinControl) and Assigned(Callback) then
-    Callback.ResignFirstResponder;   // dont' call LCLSendKillFocusMsg
+    TCocoaLCLMessageUtil.ResignFirstResponder(obj);   // dont' call LCLSendKillFocusMsg
   LCLSendDestroyMsg( AWinControl );
 
   if obj.isKindOfClass_(NSView) then
@@ -120,10 +120,11 @@ begin
   if obj.isKindOfClass_(NSWindow) then
     NSWindow(obj).close;
 
+  TCocoaCaretUtil.destroyCaret( obj.lclContentView );
+
   // destroy the callback
   if Assigned(Callback) then
   begin
-    if Callback.HasCaret then DestroyCaret(nil);
     CallbackObject := Callback.GetCallbackObject;
     Callback.RemoveTarget;
     Callback := nil;
@@ -132,7 +133,7 @@ begin
     // and is performing a self destruction. Thus there might be a code performing
     // even after DestroyHandle() was called. The destruction needs to be delayed
     // until after the event processing is done
-    CocoaWidgetSetService.addToBeReleasedLCLObjects(CallbackObject);
+    CocoaWidgetSetBaseService.addToBeReleasedLCLObjects(CallbackObject);
   end;
   obj.release;
 end;
