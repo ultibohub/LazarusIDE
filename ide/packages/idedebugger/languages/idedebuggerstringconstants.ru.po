@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.6\n"
 
 #: idedebuggerstringconstants.arrnavautohide
 msgid "Hide automatically"
@@ -27,6 +27,18 @@ msgstr "- Добавить новую группу -"
 #: idedebuggerstringconstants.breakviewheadernogroup
 msgid "No group"
 msgstr "Не в группе"
+
+#: idedebuggerstringconstants.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr "Целевая строка ссылки"
+
+#: idedebuggerstringconstants.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr "Имя функции"
+
+#: idedebuggerstringconstants.dbgasmwindowsourceline
+msgid "Source line"
+msgstr "Строка исходного кода"
 
 #: idedebuggerstringconstants.dbgbreakgroupdlgcaption
 msgctxt "lazarusidestrconsts.dbgbreakgroupdlgcaption"
@@ -125,6 +137,36 @@ msgstr "Имя:"
 #: idedebuggerstringconstants.dbgoptfrmpleasechoosetheformattert
 msgid "Please choose the formatter to add."
 msgstr "Выберите средство форматирования для добавления."
+
+#: idedebuggerstringconstants.dbgwatchcolordisabled
+msgctxt "idedebuggerstringconstants.dbgwatchcolordisabled"
+msgid "Disabled"
+msgstr "Отключённые"
+
+#: idedebuggerstringconstants.dbgwatchcolorellipsis
+msgid "Ellipsis"
+msgstr "Многоточия"
+
+#: idedebuggerstringconstants.dbgwatchcolorerror
+msgctxt "idedebuggerstringconstants.dbgwatchcolorerror"
+msgid "Error"
+msgstr "Ошибки"
+
+#: idedebuggerstringconstants.dbgwatchcolorevaluating
+msgid "Evaluating"
+msgstr "Вычисляющиеся"
+
+#: idedebuggerstringconstants.dbgwatchcolors
+msgid "Watches/Locals"
+msgstr "Наблюдения / локальные переменные"
+
+#: idedebuggerstringconstants.dbgwatchcolorunknown
+msgid "Unknown"
+msgstr "Неизвестные"
+
+#: idedebuggerstringconstants.dbgwatchfoundstackframe
+msgid "Stack frame (found)"
+msgstr "Фреймы стека (найденные)"
 
 #: idedebuggerstringconstants.dispformatarrayhidelenifless
 msgctxt "idedebuggerstringconstants.dispformatarrayhidelenifless"
@@ -644,6 +686,22 @@ msgstr "Предустановки"
 msgctxt "idedebuggerstringconstants.dispformattargetwatches"
 msgid "Watches"
 msgstr "Наблюдения"
+
+#: idedebuggerstringconstants.dlgaddhiattrdefault
+msgid "Default Text"
+msgstr "Текст по умолчанию"
+
+#: idedebuggerstringconstants.dlgaddhiattrlinehighlight
+msgid "Current line highlight"
+msgstr "Подсветка текущей строки"
+
+#: idedebuggerstringconstants.dlgaddhiattrmouselink
+msgid "Mouse link"
+msgstr "Ссылка при наведении мыши"
+
+#: idedebuggerstringconstants.dlgaddhiattrtextblock
+msgid "Selected text"
+msgstr "Выделенный текст"
 
 #: idedebuggerstringconstants.dlgbackconvoptaction
 msgctxt "idedebuggerstringconstants.dlgbackconvoptaction"
@@ -1676,6 +1734,10 @@ msgstr "Максимум %d"
 msgid "&Break"
 msgstr "&Остановить"
 
+#: idedebuggerstringconstants.lismenucontinuelaststep
+msgid "Continue last Step"
+msgstr "Продолжить с последнего шага"
+
 #: idedebuggerstringconstants.lismenuhelp
 msgid "&Help"
 msgstr "&Справка"
@@ -1796,6 +1858,18 @@ msgstr "Регистры"
 #: idedebuggerstringconstants.lisrepeatcount
 msgid "Repeat Count:"
 msgstr "Число повторов:"
+
+#: idedebuggerstringconstants.lissearchparent
+msgid "Search Stack:"
+msgstr "Стек поиска:"
+
+#: idedebuggerstringconstants.lissearchparenterr
+msgid "Invalid limit for \"Search Stack\"."
+msgstr "Предел для стека поиска некорректен."
+
+#: idedebuggerstringconstants.lissearchparenthint
+msgid "MaxCount:NamePattern"
+msgstr "ПределКоличества:ШаблонИмени"
 
 #: idedebuggerstringconstants.lissourcebreakpoint
 msgid "&Source Breakpoint ..."

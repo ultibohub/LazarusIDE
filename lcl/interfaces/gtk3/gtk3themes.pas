@@ -23,7 +23,8 @@ interface
 uses
   Types, Classes, SysUtils, LazCairo1, LazGtk3, LazGdk3, LazGObject2, LazGLib2,
   Themes, TmSchema,
-  LazPango1, LazPangoCairo1, LCLType;
+  LazPango1, LazPangoCairo1, LCLType,
+  LazUTF8;
 
 type
 
@@ -57,7 +58,7 @@ type
   end;
 
 implementation
-uses LazGdkPixbuf2, Graphics, LazLogger, Math, gtk3procs, gtk3objects;
+uses LazGdkPixbuf2, Graphics, LazLogger, Math, gtk3procs, gtk3objects, gtk3int, LCLIntf;
 
 function RgbaToCSS(const C: TGdkRGBA): string;
 begin
@@ -271,25 +272,36 @@ function TGTK3ThemeServices.GetDetailSizeForPPI(Details: TThemedElementDetails;
 var
   AValue: TGValue;
   Context: PGtkStyleContext;
+  min_width, min_height: gint;
 begin
   Result := Size(0, 0);
   if Details.Element = teButton then
   begin
-      if (Byte(Details.Part) in [BP_CHECKBOX, BP_RADIOBUTTON]) then
-      begin
-        Context := GetStyleWidget(lgsCheckBox)^.get_style_context;
-        FillChar(AValue, SizeOf(TGValue), 0);
-        g_value_init(@AValue, G_TYPE_INT);
-        // 'indicator-size' is a widget style property, not a CSS property.
-        // Use gtk_style_context_get_style_property to avoid GTK warning.
-        gtk_style_context_get_style_property(Context, 'indicator-size', @AValue);
-        Result := Size(AValue.get_int, AValue.get_int);
-        g_value_unset(@AValue);
-        // Fall back to 16px if the theme does not register indicator-size.
-        if (Result.cx <= 0) or (Result.cy <= 0) then
-          Result := Size(16, 16);
-      end else
-        Result := inherited;
+    if (Byte(Details.Part) in [BP_CHECKBOX, BP_RADIOBUTTON]) then
+    begin
+      if Byte(Details.Part) = BP_CHECKBOX then
+        Context := GetStyleWidget(lgsCheckBox)^.get_style_context
+      else
+        Context := GetStyleWidget(lgsRadioButton)^.get_style_context;
+
+      gtk_style_context_save(Context);
+
+      if Byte(Details.Part) = BP_CHECKBOX then
+        gtk_style_context_add_class(Context, 'check')
+      else
+        gtk_style_context_add_class(Context, 'radio');
+
+      gtk_style_context_get(Context, gtk_style_context_get_state(Context),
+        ['min-width', @min_width, 'min-height', @min_height, nil]);
+
+      if (min_width <= 0) or (min_height <= 0) then
+        Result := Size(16, 16)
+      else
+        Result := Size(min_width, min_height);
+      gtk_style_context_restore(Context);
+
+    end else
+      Result := inherited;
   end else
   if Details.Element = teTreeview then
   begin
@@ -445,7 +457,7 @@ var
   Context: PGtkStyleContext;
   Provider: PGtkCssProvider;
   CSS: string;
-  Pos: gint;
+  APos: gint;
   BaseBg, BaseFg, SelBg, SelFg, InsBg, InsFg: TGdkRGBA;
 begin
   if AScreen = nil then
@@ -459,17 +471,21 @@ begin
   gtk_widget_path_iter_set_object_name(Path, 0, AClassName);
   gtk_widget_path_iter_add_class(Path, 0, 'toggle');
   gtk_widget_path_iter_set_state(Path, 0, State);
-  Pos := gtk_widget_path_append_type(Path, G_TYPE_NONE);
-  gtk_widget_path_iter_set_object_name(Path, Pos, IndicatorName);
-  gtk_widget_path_iter_add_class(Path, Pos, IndicatorName);
-  gtk_widget_path_iter_set_state(Path, Pos, State);
+  APos := gtk_widget_path_append_type(Path, G_TYPE_NONE);
+  gtk_widget_path_iter_set_object_name(Path, APos, IndicatorName);
+  gtk_widget_path_iter_add_class(Path, APos, IndicatorName);
+  gtk_widget_path_iter_set_state(Path, APos, State);
   gtk_style_context_set_path(Context, Path);
   gtk_style_context_add_class(Context, IndicatorName);
   gtk_style_context_set_state(Context, State);
   gtk_widget_path_unref(Path);
 
+  if Pos('BREEZE', UpperCase(Gtk3WidgetSet.GetThemeName)) = 0 then
+    exit(Context);
+
   {$note could not find the way to draw proper checkbox and radio,
-   so use this CSS hack for now. Željan}
+   so use this CSS hack for now. Željan.
+   This fix below belongs to Breeze theme only}
   CSS := Format(
 
   '%0:s { ' +
@@ -584,12 +600,6 @@ begin
      (Details.Part in [BP_CHECKBOX, BP_RADIOBUTTON]) and
      IsHot(Details) then
     Include(Result, GTK_STATE_FLAG_FOCUSED);
-
-  // specific states
-  {when toolbar = flat, toolbar buttons should be flat too.}
-  if (Details.Element = teToolBar) and
-     (Details.State in [TS_HOT, TS_DISABLED]) then
-    Include(Result, GTK_STATE_FLAG_DROP_ACTIVE);
 
   // define orientations
   if ((Details.Element = teRebar) and (Details.Part = RP_GRIPPER)) or
@@ -822,6 +832,8 @@ begin
               G_TYPE_NONE, 'toolbutton', nil,
               gtk_button_get_type, 'button', 'toolbutton',
               State, AScreen);
+            if Details.State in [1, 4] then
+              gtk_style_context_add_class(Context, 'flat');
             gtk_render_background(Context, Cr, X, Y, Width, Height);
             gtk_render_frame(Context, Cr, X, Y, Width, Height);
             if GTK_STATE_FLAG_FOCUSED in State then
@@ -833,6 +845,8 @@ begin
             // Arrow-only area: button background/frame + pan-down-symbolic icon.
             Context := MakeCtx3(gtk_toolbar_get_type, 'toolbar', nil, G_TYPE_NONE, 'toolbutton', nil,
               gtk_button_get_type, 'button', 'toolbutton', State, AScreen);
+            if Details.State in [1, 4] then
+              gtk_style_context_add_class(Context, 'flat');
             gtk_render_background(Context, Cr, X, Y, Width, Height);
             gtk_render_frame(Context, Cr, X, Y, Width, Height);
             ArrowSz := Min(Width, Height) div 2;
@@ -1225,11 +1239,19 @@ var
   Context: PGtkStyleContext;
   FontDesc: PPangoFontDescription;
   GtkDC: TGtk3DeviceContext absolute DC;
+  SafeS: String;
 begin
   Context := GetElementDetails(Details);
   gtk_style_context_set_state(Context, GetControlState(Details));
   Layout := pango_cairo_create_layout(GtkDc.pcr);
-  pango_layout_set_text(Layout, PChar(S), -1);
+  if g_utf8_validate(PChar(S), Length(S), nil) then
+    pango_layout_set_text(Layout, PChar(S), Length(S))
+  else
+  begin
+    SafeS := S;
+    UTF8FixBroken(SafeS);
+    pango_layout_set_text(Layout, PChar(SafeS), Length(SafeS));
+  end;
 
   FontDesc := GtkDC.CurrentFont.Handle;
   pango_layout_set_font_description(Layout, FontDesc);

@@ -22,6 +22,18 @@ msgstr ""
 msgid "No group"
 msgstr ""
 
+#: idedebuggerstringconstants.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgasmwindowsourceline
+msgid "Source line"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgbreakgroupdlgcaption
 msgctxt "lazarusidestrconsts.dbgbreakgroupdlgcaption"
 msgid "Select Groups"
@@ -118,6 +130,38 @@ msgstr ""
 
 #: idedebuggerstringconstants.dbgoptfrmpleasechoosetheformattert
 msgid "Please choose the formatter to add."
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolordisabled
+#, fuzzy
+msgctxt "idedebuggerstringconstants.dbgwatchcolordisabled"
+msgid "Disabled"
+msgstr "Ausgeschaltet"
+
+#: idedebuggerstringconstants.dbgwatchcolorellipsis
+msgid "Ellipsis"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorerror
+#, fuzzy
+msgctxt "idedebuggerstringconstants.dbgwatchcolorerror"
+msgid "Error"
+msgstr "Fehler"
+
+#: idedebuggerstringconstants.dbgwatchcolorevaluating
+msgid "Evaluating"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolors
+msgid "Watches/Locals"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorunknown
+msgid "Unknown"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchfoundstackframe
+msgid "Stack frame (found)"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatarrayhidelenifless
@@ -649,6 +693,22 @@ msgstr ""
 msgctxt "idedebuggerstringconstants.dispformattargetwatches"
 msgid "Watches"
 msgstr "Liste der überwachten Ausdrücke"
+
+#: idedebuggerstringconstants.dlgaddhiattrdefault
+msgid "Default Text"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrlinehighlight
+msgid "Current line highlight"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrmouselink
+msgid "Mouse link"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrtextblock
+msgid "Selected text"
+msgstr ""
 
 #: idedebuggerstringconstants.dlgbackconvoptaction
 #, fuzzy
@@ -1688,6 +1748,10 @@ msgstr "Max %d"
 msgid "&Break"
 msgstr ""
 
+#: idedebuggerstringconstants.lismenucontinuelaststep
+msgid "Continue last Step"
+msgstr ""
+
 #: idedebuggerstringconstants.lismenuhelp
 msgid "&Help"
 msgstr "&Hilfe"
@@ -1808,6 +1872,18 @@ msgstr "Register"
 #: idedebuggerstringconstants.lisrepeatcount
 msgid "Repeat Count:"
 msgstr "Wiederholungen:"
+
+#: idedebuggerstringconstants.lissearchparent
+msgid "Search Stack:"
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparenterr
+msgid "Invalid limit for \"Search Stack\"."
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparenthint
+msgid "MaxCount:NamePattern"
+msgstr ""
 
 #: idedebuggerstringconstants.lissourcebreakpoint
 msgid "&Source Breakpoint ..."

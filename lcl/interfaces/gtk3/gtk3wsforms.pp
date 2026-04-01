@@ -288,12 +288,13 @@ var
   ShouldBeVisible: Boolean;
   AGtk3Widget: TGtk3Widget;
   OtherGtk3Window: TGtk3Window;
+  LCLCanFocus: boolean;
 
   procedure CheckAndFixGeometry;
   const
     WaitDelay: gulong = 4000;
   var
-    x, y, w, h: gint;
+    x, y: gint;
     IsBorderLess: Boolean;
     TargetOpacity: Double;
     GdkDisplay: PGdkDisplay;
@@ -305,12 +306,33 @@ var
 
     if not IsX11 then
     begin
+      if AWindow^.get_window_type = GTK_WINDOW_POPUP then
+        if (AWinControl.Width > 0) and (AWinControl.Height > 0) then
+          PGtkWidget(AWindow)^.set_size_request(AWinControl.Width, AWinControl.Height);
       AWindow^.show_all;
       {On Wayland the surface is created at show_all time, so we must apply opacity now.
        gtk_widget_set_opacity called in CreateWidget may not persist for popup
        surfaces because the wl_surface doesn't exist until mapping.}
       if AForm.AlphaBlend then
         PGtkWidget(AWindow)^.set_opacity(AForm.AlphaBlendValue / 255.0);
+      gdk_display_flush(GdkDisplay);
+      exit;
+    end;
+
+    if AWindow^.get_window_type = GTK_WINDOW_POPUP then
+    begin
+      if (AWinControl.Width > 0) and (AWinControl.Height > 0) then
+        PGtkWidget(AWindow)^.set_size_request(AWinControl.Width, AWinControl.Height);
+      AWindow^.show_all;
+      x := 0;
+      y := 0;
+      if (AWindow^.transient_for <> nil) and not AWindow^.get_decorated then
+        if Assigned(AForm.PopupParent) or (AForm.PopupMode = pmAuto) then
+          AWindow^.transient_for^.window^.get_origin(@x, @y);
+      with AWinControl do
+        AWindow^.window^.move_resize(Left + x, Top + y, Width, Height);
+      if AForm.AlphaBlend then
+        gdk_window_set_opacity(AWindow^.window, AForm.AlphaBlendValue / 255.0);
       gdk_display_flush(GdkDisplay);
       exit;
     end;
@@ -323,28 +345,27 @@ var
         TargetOpacity := 1.0;
 
       gdk_window_set_opacity(AWindow^.window, 0.0);
+      if (AWinControl.Width > 0) and (AWinControl.Height > 0) and
+         (AWindow^.get_window_type = GTK_WINDOW_POPUP) then
+        PGtkWidget(AWindow)^.set_size_request(AWinControl.Width, AWinControl.Height);
       AWindow^.show_all;
     end;
 
-    AWindow^.window^.get_geometry(@x, @y, @w, @h);
-    x := 0;
-    y := 0;
-
-    if (AWindow^.transient_for <> nil) and not AWindow^.get_decorated then
-      if Assigned(AForm.PopupParent) or (AForm.PopupMode = pmAuto) then
-        AWindow^.transient_for^.window^.get_origin(@x, @y);
-
     with AWinControl do
-      AWindow^.window^.move_resize(Left + x, Top + y, Width, Height);
+      AWindow^.window^.move_resize(Left, Top, Width, Height);
 
-    gdk_display_sync(GdkDisplay);
+    gdk_display_flush(GdkDisplay);
 
     if IsBorderLess then
     begin
-      g_usleep(WaitDelay);
-      g_main_context_iteration(nil, False);
+      if LCLCanFocus then
+      begin
+        g_usleep(WaitDelay);
+        g_main_context_iteration(nil, False);
+      end;
       gdk_window_set_opacity(AWindow^.window, TargetOpacity);
       gdk_window_invalidate_rect(AWindow^.window, nil, True);
+      gdk_display_flush(GdkDisplay);
     end;
 
     AWindow^.window^.process_updates(True);
@@ -378,8 +399,9 @@ begin
   //use this if pure SetCapture(0) does not work under wayland.
   ReleaseInputGrab;
   {$ENDIF}
-
-  Gtk3WidgetSet.SetCapture(0);
+  LCLCanFocus := not (csNoFocus in AForm.ControlStyle);
+  if AForm.BorderStyle <> bsNone then
+    Gtk3WidgetSet.SetCapture(0);
 
   if ShouldBeVisible and not IsFormDesign(AForm) and (AForm.Parent = nil) then
   begin
@@ -468,11 +490,11 @@ begin
     if not IsFormDesign(AForm) then
     begin
       //If LM_NCHITTEST=true, do not attack WM
-      if not AWindow^.window^.get_pass_through then
+      if not AWindow^.window^.get_pass_through and (AForm.BorderStyle <> bsNone) then
         AWindow^.present_with_time(Gtk3WidgetSet.LastUserEventTime);
 
       if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
-        and not AWindow^.window^.get_pass_through then
+        and not AWindow^.window^.get_pass_through and LCLCanFocus then
       begin
         //wayland, add grab
         //TODO: gdk_display_device_is_grabbed
@@ -485,16 +507,19 @@ begin
     if not IsFormDesign(AForm) and
       ((fsModal in AForm.FormState) or (AForm.BorderStyle = bsNone)) then
     begin
-      //wayland, remove grab
-      if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
-        and not AWindow^.window^.get_pass_through then
-          gtk_device_grab_remove(PGtkWidget(AWindow),
-            gdk_seat_get_keyboard(gdk_display_get_default_seat(gdk_display_get_default)));
-      if AWindow^.transient_for <> nil then
+      if AWindow <> nil then
       begin
-        if (fsModal in AForm.FormState) and Gtk3IsGdkWindow(AWindow^.transient_for^.window) then
-          gdk_window_remove_filter(AWindow^.transient_for^.window, TGdkFilterFunc(@ModalFilter), AGtk3Widget);
-        AWindow^.set_transient_for(nil);
+        //wayland, remove grab
+        if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
+          and not AWindow^.window^.get_pass_through and LCLCanFocus then
+            gtk_device_grab_remove(PGtkWidget(AWindow),
+              gdk_seat_get_keyboard(gdk_display_get_default_seat(gdk_display_get_default)));
+        if AWindow^.transient_for <> nil then
+        begin
+          if (fsModal in AForm.FormState) and Gtk3IsGdkWindow(AWindow^.transient_for^.window) then
+            gdk_window_remove_filter(AWindow^.transient_for^.window, TGdkFilterFunc(@ModalFilter), AGtk3Widget);
+          AWindow^.set_transient_for(nil);
+        end;
       end;
     end;
   end;

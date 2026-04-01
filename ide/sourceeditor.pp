@@ -1057,7 +1057,7 @@ type
     function  UniqueSourceEditorCount: integer; override;
     // Settings
     function  GetEditorControlSettings(EditControl: TControl): boolean; override;
-    function GetHighlighterSettings(Highlighter: TLazEditCustomRangesHighlighter
+    function GetHighlighterSettings(Highlighter: TLazEditCustomHighlighter
       ): boolean; override;
   private
     // Completion Plugins
@@ -2794,7 +2794,7 @@ function TSourceEditCompletion.SynCompletionPaintItem(const AKey: string;
 var
   MaxX: Integer;
   t: TCompletionType;
-  hl: TSynCustomHighlighter;
+  hl: TSrcIDEHighlighter;
 begin
   try
     with ACanvas do begin
@@ -5123,10 +5123,10 @@ begin
       if AHighlighterId < 0 then begin
         if FDefaultSyntaxHighlighterId = IdeHighlighterNotSpecifiedId then
           UpdateDefaultDefaultSyntaxHighlighterId(True);
-        FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[FDefaultSyntaxHighlighterId];
+        FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[FDefaultSyntaxHighlighterId] as TSynCustomHighlighter;
       end
       else
-        FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[AHighlighterId];
+        FEditor.Highlighter:=EditorOpts.HighlighterList.SharedSynInstances[AHighlighterId] as TSynCustomHighlighter;
       HlIsPas := FEditor.Highlighter is TSynPasSyn;
     end
     else
@@ -10415,12 +10415,12 @@ begin
   end;
 end;
 
-function TSourceEditorManagerBase.GetHighlighterSettings(Highlighter: TLazEditCustomRangesHighlighter
+function TSourceEditorManagerBase.GetHighlighterSettings(Highlighter: TLazEditCustomHighlighter
   ): boolean;
 begin
   Result:=true;
-  if Highlighter is TSynCustomHighlighter then begin
-    EditorOpts.GetHighlighterSettings(TSynCustomHighlighter(Highlighter));
+  if Highlighter is TSrcIDEHighlighter then begin
+    EditorOpts.GetHighlighterSettings(TSrcIDEHighlighter(Highlighter));
     Result:=true;
   end else begin
     Result:=false;

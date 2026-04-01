@@ -29,6 +29,18 @@ msgstr "- 添加新组 -"
 msgid "No group"
 msgstr "无组"
 
+#: idedebuggerstringconstants.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr "链接目标行"
+
+#: idedebuggerstringconstants.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr "函数名称"
+
+#: idedebuggerstringconstants.dbgasmwindowsourceline
+msgid "Source line"
+msgstr "源代码行"
+
 #: idedebuggerstringconstants.dbgbreakgroupdlgcaption
 msgctxt "lazarusidestrconsts.dbgbreakgroupdlgcaption"
 msgid "Select Groups"
@@ -125,6 +137,38 @@ msgstr ""
 
 #: idedebuggerstringconstants.dbgoptfrmpleasechoosetheformattert
 msgid "Please choose the formatter to add."
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolordisabled
+#, fuzzy
+msgctxt "idedebuggerstringconstants.dbgwatchcolordisabled"
+msgid "Disabled"
+msgstr "禁用"
+
+#: idedebuggerstringconstants.dbgwatchcolorellipsis
+msgid "Ellipsis"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorerror
+#, fuzzy
+msgctxt "idedebuggerstringconstants.dbgwatchcolorerror"
+msgid "Error"
+msgstr "错误"
+
+#: idedebuggerstringconstants.dbgwatchcolorevaluating
+msgid "Evaluating"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolors
+msgid "Watches/Locals"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorunknown
+msgid "Unknown"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchfoundstackframe
+msgid "Stack frame (found)"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatarrayhidelenifless
@@ -645,6 +689,22 @@ msgstr "预设"
 msgctxt "idedebuggerstringconstants.dispformattargetwatches"
 msgid "Watches"
 msgstr "监视点"
+
+#: idedebuggerstringconstants.dlgaddhiattrdefault
+msgid "Default Text"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrlinehighlight
+msgid "Current line highlight"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrmouselink
+msgid "Mouse link"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrtextblock
+msgid "Selected text"
+msgstr ""
 
 #: idedebuggerstringconstants.dlgbackconvoptaction
 msgctxt "idedebuggerstringconstants.dlgbackconvoptaction"
@@ -1671,6 +1731,10 @@ msgstr "最大 %d"
 msgid "&Break"
 msgstr "中断(&B)"
 
+#: idedebuggerstringconstants.lismenucontinuelaststep
+msgid "Continue last Step"
+msgstr ""
+
 #: idedebuggerstringconstants.lismenuhelp
 msgid "&Help"
 msgstr "帮助(&H)"
@@ -1793,6 +1857,18 @@ msgstr "寄存器"
 #: idedebuggerstringconstants.lisrepeatcount
 msgid "Repeat Count:"
 msgstr "重复次数："
+
+#: idedebuggerstringconstants.lissearchparent
+msgid "Search Stack:"
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparenterr
+msgid "Invalid limit for \"Search Stack\"."
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparenthint
+msgid "MaxCount:NamePattern"
+msgstr ""
 
 #: idedebuggerstringconstants.lissourcebreakpoint
 msgid "&Source Breakpoint ..."

@@ -46,19 +46,10 @@ type
  TSynSpellIdeEventsHandler = class
   procedure DoNewEditor(Sender: TObject);
   procedure DoEditorConf(Sender: TObject);
-  procedure DoRegisterAttribs(Sender: TObject);
 end;
 
 var
   SpellErrorAttrib: TSynSelectedColor;
-
-procedure Register;
-begin
-  syn_spell_options.Register; // load config
-  SourceEditorManagerIntf.RegisterChangeEvent(semEditorCreate, @TSynSpellIdeEventsHandler(nil).DoNewEditor);
-  SourceEditorManagerIntf.RegisterChangeEvent(semEditorCloned, @TSynSpellIdeEventsHandler(nil).DoNewEditor);
-  SourceEditorManagerIntf.RegisterChangeEvent(semEditorReConfigured, @TSynSpellIdeEventsHandler(nil).DoEditorConf);
-end;
 
 procedure RegisterAttribs;
 var
@@ -75,13 +66,23 @@ begin
   // Register colors before the IDE loads them
   AttribGroupIdx := IdeColorSchemeList.RegisterAttributeGroup(@SynSpellOptSpellChecking);
   for i := 0 to IdeSyntaxHighlighters.Count - 1 do
-    IdeColorSchemeList.AddAttribute(AttribGroupIdx, i, 'SynSpellerMarkupError',
-      @AttribNameSpellError, [hafBackColor..hafFrameEdges, hafMarkupAllOverview], SpellErrorAttrib);
+    if not (IdeSyntaxHighlighters.SharedInstances[i] is TNonSrcIDEHighlighter) then
+      IdeColorSchemeList.AddAttribute(AttribGroupIdx, i, 'SynSpellerMarkupError',
+        @AttribNameSpellError, [hafBackColor..hafFrameEdges, hafMarkupAllOverview], SpellErrorAttrib);
 end;
 
 procedure FreeAttribs;
 begin
   SpellErrorAttrib.Free;
+end;
+
+procedure Register;
+begin
+  RegisterAttribs;
+  syn_spell_options.Register; // load config
+  SourceEditorManagerIntf.RegisterChangeEvent(semEditorCreate, @TSynSpellIdeEventsHandler(nil).DoNewEditor);
+  SourceEditorManagerIntf.RegisterChangeEvent(semEditorCloned, @TSynSpellIdeEventsHandler(nil).DoNewEditor);
+  SourceEditorManagerIntf.RegisterChangeEvent(semEditorReConfigured, @TSynSpellIdeEventsHandler(nil).DoEditorConf);
 end;
 
 function TheDictionary: TSynSpellDictionaryASpell;
@@ -149,14 +150,6 @@ procedure TSynSpellIdeEventsHandler.DoEditorConf(Sender: TObject);
 begin
   ApplySettings(TSourceEditorInterface(Sender));
 end;
-
-procedure TSynSpellIdeEventsHandler.DoRegisterAttribs(Sender: TObject);
-begin
-  RegisterAttribs;
-end;
-
-initialization
-  RegisterOnIdeColorSchemeListCreated(@TSynSpellIdeEventsHandler(nil).DoRegisterAttribs);
 
 finalization
   FreeAttribs;

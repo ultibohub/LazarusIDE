@@ -780,14 +780,14 @@ function TTreeFilterEdit.FilterTree(Node: TTreeNode): Boolean;
 // Filter all tree branches recursively, setting Node.Visible as needed.
 // Returns True if Node or its siblings or child nodes have visible items.
 var
-  PassCapt, PassEvent, Done: Boolean;
+  PassCapt, PassEvent, ChildPass, Done: Boolean;
 begin
   Result := False;
-  PassCapt := False;
-  PassEvent := False;
-  Done := False;
   while Node<>nil do
   begin
+    PassCapt := False;
+    PassEvent := False;
+    Done := False;
     // Filter with event handler if there is one.
     if Assigned(fOnFilterNode) then
       PassEvent := fOnFilterNode(Node, Done);
@@ -795,17 +795,22 @@ begin
     if not (PassEvent or Done) then
       PassEvent := {PassEvent or} DoFilterEvents(Node.Text, Node.Data, Done);
     // Filter by node's caption text.
-    PassCapt := DoDefaultFilterItem(Node.Text, Node.Data);
+    if not Done then
+      PassCapt := DoDefaultFilterItem(Node.Text, Node.Data);
     if (PassCapt or PassEvent) and (fFirstPassedNode=Nil) then
       fFirstPassedNode:=Node;
+    //DebugLn(['FilterTree: Pass Caption/Event=',PassCapt,'/',PassEvent, ', Done=', Done,
+    //  ', IsFirstUpdate=', fIsFirstUpdate, ', ShowChildrenOfMatch=', fShowChildrenOfMatch,
+    //  ', ExpandAllInitially=', fExpandAllInitially, ', Filter="', Filter, '", Node=',Node.Text]);
     // ShowChildrenOfMatch affects only if the Node.Text matched.
     if PassCapt and fShowChildrenOfMatch and (Filter<>'') then
       Result := ShowAllChildren(Node)
     else begin
       // Recursive call for child nodes.
-      Node.Visible := FilterTree(Node.GetFirstChild) or PassCapt or PassEvent;
+      ChildPass := FilterTree(Node.GetFirstChild);
+      Node.Visible := ChildPass or PassCapt or PassEvent;
       if Node.Visible then begin
-        if (Filter<>'') or (fExpandAllInitially and fIsFirstUpdate) then
+        if ChildPass or (fExpandAllInitially and fIsFirstUpdate) then
           Node.Expanded := True;
         Result := True;
       end;

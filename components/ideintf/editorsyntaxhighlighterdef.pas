@@ -8,11 +8,11 @@ interface
 uses
   Classes, SysUtils,
   // LazUtils
-  LazMethodList,
+  LazMethodList, LazStringUtils,
   // LCL
   Graphics,
   // LazEdit
-  LazEditHighlighter;
+  LazEditHighlighter, LazEditTextAttributes;
 
 type
   TLazSyntaxHighlighter =
@@ -23,6 +23,21 @@ type
 
   TIdeSyntaxHighlighterID = type integer;
 
+  { TIdeHighlighterInfo }
+
+  TIdeHighlighterInfo = object
+    FileExtensions: String; // divided by semicolon, e.g. 'pas;pp;inc'
+    DefaultFileExtensions: string;
+    SampleSource: String;
+    MappedAttributes: TStringList;
+    DefaultCommentType: TCommentType;
+    CaretXY: TPoint;
+    NotForSourceEdit: boolean;
+    procedure Init;
+  end;
+
+  TNonSrcIDEHighlighter = class(TLazEditCustomHighlighter); // Hold colors, not related to SourceEditor
+
   { TIdeSyntaxHighlighterList }
 
   TIdeSyntaxHighlighterList = interface ['{266257FF-38B5-4071-AC90-97F6738B6F8F}']
@@ -31,7 +46,7 @@ type
     function GetCount: integer;
     function GetCaptions(AnID: TIdeSyntaxHighlighterID): String;
     function GetNames(AnID: TIdeSyntaxHighlighterID): String;
-    function GetSharedInstances(AnID: TIdeSyntaxHighlighterID): TObject;
+    function GetSharedInstances(AnID: TIdeSyntaxHighlighterID): TLazEditCustomHighlighter;
     function GetSynHlClasses(AnID: TIdeSyntaxHighlighterID): TClass;
 
     function GetIdForLazSyntaxHighlighter(AnHighlighterType: TLazSyntaxHighlighter): TIdeSyntaxHighlighterID;
@@ -43,7 +58,7 @@ type
     property Captions       [AnID: TIdeSyntaxHighlighterID]: String  read GetCaptions;
     property Names          [AnID: TIdeSyntaxHighlighterID]: String  read GetNames;
     property SynHlClasses   [AnID: TIdeSyntaxHighlighterID]: TClass  read GetSynHlClasses;     // class of TSynCustomHighlighter
-    property SharedInstances[AnID: TIdeSyntaxHighlighterID]: TObject read GetSharedInstances; // TSynCustomHighlighter
+    property SharedInstances[AnID: TIdeSyntaxHighlighterID]: TLazEditCustomHighlighter read GetSharedInstances; // TSynCustomHighlighter
   end;
 
 const
@@ -92,8 +107,25 @@ type
     );
   TColorSchemeAttributeFeatures = set of TColorSchemeAttributeFeature;
 
+  { TIdeCustomHighlighterAttributes }
+
+  TIdeCustomHighlighterAttributes = class(TLazEditHighlighterAttributes)
+  private
+    FAttrFeatures: TColorSchemeAttributeFeatures;
+  public
+    property AttrFeatures: TColorSchemeAttributeFeatures read FAttrFeatures write FAttrFeatures;
+  end;
+  TIdeCustomHighlighterAttributesModifier = class(TLazEditHighlighterAttributesModifier)
+  private
+    FAttrFeatures: TColorSchemeAttributeFeatures;
+  public
+    property AttrFeatures: TColorSchemeAttributeFeatures read FAttrFeatures write FAttrFeatures;
+  end;
+
+
   IColorSchemeAttribute = interface ['{2572547D-217A-4A83-A910-0D808ECF3317}']
-    procedure ApplyTo(aDest: TObject);
+    procedure ApplyTo(aDest: TObject); deprecated 'Use ApplyTo(TLazEditTextAttribute) // to be removed in 5.99';
+    procedure ApplyTo(aDest: TLazEditTextAttribute);
     function GetMarkupAllOverviewColor: TColor;
 
     property MarkupAllOverviewColor: TColor read GetMarkupAllOverviewColor; // hafMarkupAllOverview
@@ -110,7 +142,7 @@ type
     function GetName: String;
     function Count: integer;
     function GetLanguage(AnIndex: Integer): IColorSchemeLanguage;
-    function GetLanguageForHighlighter(AnHiglighter: TLazEditCustomRangesHighlighter): IColorSchemeLanguage;
+    function GetLanguageForHighlighter(AnHiglighter: TLazEditCustomHighlighter): IColorSchemeLanguage;
     function GetLanguageForHighlighter(AnHighlighterId: TIdeSyntaxHighlighterID): IColorSchemeLanguage;
   end;
 
@@ -118,22 +150,24 @@ type
     function Count: integer;
     function GetScheme(AnIndex: Integer): IColorScheme;
     function GetScheme(AName: String): IColorScheme;
-    function GetCurrentSchemeForHighlighter(AnHiglighter: TObject): IColorScheme;
+    function GetCurrentSchemeForHighlighter(AnHiglighter: TObject): IColorScheme; deprecated 'Use GetCurrentSchemeForHighlighter(TLazEditCustomHighlighter) // to be removed in 5.99';
+    function GetCurrentSchemeForHighlighter(AnHiglighter: TLazEditCustomHighlighter): IColorScheme;
     function GetCurrentSchemeForHighlighter(AnHighlighterId: TIdeSyntaxHighlighterID): IColorScheme;
 
     procedure RegisterChangedHandler(AnHandler: TNotifyEvent);
     procedure UnregisterChangedHandler(AnHandler: TNotifyEvent);
 
     function RegisterAttributeGroup(AName: PString): integer; // pointer to resource string
-    procedure AddAttribute(AnAttrGroup: integer; AnHighlighterId: TIdeSyntaxHighlighterID; AStoredName: String; AName: PString;  AFeatures: TColorSchemeAttributeFeatures; ADefaults: TObject = nil);
+    procedure AddAttribute(AnAttrGroup: integer; AnHighlighterId: TIdeSyntaxHighlighterID; AStoredName: String; AName: PString;  AFeatures: TColorSchemeAttributeFeatures; ADefaults: TLazCustomEditTextAttribute = nil);
+    function AddHighlighter(AnHighlighter: TLazEditCustomHighlighter; AnIdeInfo: TIdeHighlighterInfo): TIdeSyntaxHighlighterID;
   end;
 
 var
   IdeSyntaxHighlighters: TIdeSyntaxHighlighterList;
   IdeColorSchemeList: IColorSchemeList;
 
-procedure RegisterOnIdeColorSchemeListCreated(AnHandler: TNotifyEvent);
-procedure _IDE_CallOnIdeColorSchemeListCreated;
+procedure RegisterOnIdeColorSchemeListCreated(AnHandler: TNotifyEvent); deprecated 'AddAttribute can be called in package registration // to be removed in 5.99';
+procedure _IDE_CallOnIdeColorSchemeListCreated;  deprecated 'AddAttribute can be called in package registration // to be removed in 5.99';
 
 
 implementation
@@ -168,6 +202,18 @@ begin
     exit;
   OnIdeColorSchemeListCreated.CallNotifyEvents(nil);
   FreeAndNil(OnIdeColorSchemeListCreated);
+end;
+
+{ TIdeHighlighterInfo }
+
+procedure TIdeHighlighterInfo.Init;
+begin
+  FileExtensions        := '';
+  DefaultFileExtensions := '';
+  SampleSource          := '';
+  DefaultCommentType    := comtNone;
+  MappedAttributes      := nil;
+  CaretXY               := Point(1,1);
 end;
 
 finalization

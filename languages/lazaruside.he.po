@@ -30,18 +30,6 @@ msgstr ""
 msgid "Search Instantly"
 msgstr ""
 
-#: lazarusidestrconsts.dbgasmwindowlinktarget
-msgid "Link target line"
-msgstr ""
-
-#: lazarusidestrconsts.dbgasmwindowsourcefunc
-msgid "Function name"
-msgstr ""
-
-#: lazarusidestrconsts.dbgasmwindowsourceline
-msgid "Source line"
-msgstr ""
-
 #: lazarusidestrconsts.dbgeventbreakaddressbreakpoint
 #, object-pascal-format
 msgid "Address Breakpoint %s"
@@ -2034,11 +2022,6 @@ msgstr "יחידת דלפי"
 #: lazarusidestrconsts.dlgfilterexecutable
 msgctxt "lazarusidestrconsts.dlgfilterexecutable"
 msgid "Executable"
-msgstr ""
-
-#: lazarusidestrconsts.dlgfilterfpcmessagefile
-msgctxt "lazarusidestrconsts.dlgfilterfpcmessagefile"
-msgid "FPC message file"
 msgstr ""
 
 #: lazarusidestrconsts.dlgfilterfppkgconfigurationfile
@@ -6399,10 +6382,6 @@ msgstr ""
 msgid "Compare files (not for creating patches)"
 msgstr ""
 
-#: lazarusidestrconsts.liscaptionofactivebuildmode
-msgid "Caption of active build mode"
-msgstr ""
-
 #: lazarusidestrconsts.liscbpfiles
 #, object-pascal-format
 msgid "%s (%s files)"
@@ -7963,10 +7942,6 @@ msgctxt "lazarusidestrconsts.liscommandlineparameters"
 msgid "Command line parameters"
 msgstr "פרמטרים של שורת הפקודה"
 
-#: lazarusidestrconsts.liscommandlineparamsofprogram
-msgid "Command line parameters of program"
-msgstr "פרמטרים של שורת הפקודה של התוכנה"
-
 #: lazarusidestrconsts.liscompile
 msgctxt "lazarusidestrconsts.liscompile"
 msgid "Compile"
@@ -8001,10 +7976,6 @@ msgstr ""
 #, object-pascal-format
 msgid "Compiler \"%s\" does not support target %s-%s"
 msgstr "מהדר  \"%s\"  לא תומך ביעד %s-%s"
-
-#: lazarusidestrconsts.liscompilerfilename
-msgid "Compiler filename"
-msgstr "שם הקובץ של המהדר"
 
 #: lazarusidestrconsts.liscompilermessagesfilenotfound
 #, object-pascal-format
@@ -8099,10 +8070,6 @@ msgstr "מצב"
 msgctxt "lazarusidestrconsts.lisconditionals"
 msgid "Conditionals"
 msgstr "התניות"
-
-#: lazarusidestrconsts.lisconfigdirectory
-msgid "Lazarus config directory"
-msgstr "ספריית הגדרות לזרוס"
 
 #: lazarusidestrconsts.lisconfigfileofadditions
 msgid "Config file of additions:"
@@ -10015,10 +9982,6 @@ msgstr "הקידוד של הקובץ s%s%s% בדיסק sהוא %. הקידוד �
 msgid "Enter new name for Macro \"%s\""
 msgstr ""
 
-#: lazarusidestrconsts.lisenvironmentvariablenameasparameter
-msgid "Environment variable, name as parameter"
-msgstr "משתנה סביבה, תן שם כמו לפרמטר"
-
 #: lazarusidestrconsts.lisenvoptdlginvaliddebuggerfilename
 msgid "Invalid debugger filename"
 msgstr "שם קובץ לא חוקי של מנפה השגיאות"
@@ -10410,10 +10373,6 @@ msgstr ""
 msgid "File \"%s\" already exists."
 msgstr ""
 
-#: lazarusidestrconsts.lisfileextensionofprograms
-msgid "File extension of programs"
-msgstr "קובץ הרחבה של תכניות"
-
 #: lazarusidestrconsts.lisfilefilter
 msgid "File filter"
 msgstr "מסנן קבצים"
@@ -10737,10 +10696,6 @@ msgstr ""
 msgid "Found version %s, expected %s"
 msgstr ""
 
-#: lazarusidestrconsts.lisfpcfullversioneg20701
-msgid "FPC version as one number (e.g. 20701)"
-msgstr ""
-
 #: lazarusidestrconsts.lisfpcmessagefile2
 msgid "FPC message file:"
 msgstr ""
@@ -10770,10 +10725,6 @@ msgstr "גירסה ישנה מדי של FPC"
 #: lazarusidestrconsts.lisfpcversion
 msgid "FPC Version: "
 msgstr "גירסת FPC:"
-
-#: lazarusidestrconsts.lisfpcversioneg222
-msgid "FPC Version (e.g. 2.2.2)"
-msgstr "גירסת FPC (למשל 2.2.2)"
 
 #: lazarusidestrconsts.lisfpdoceditor
 #, fuzzy
@@ -10912,12 +10863,6 @@ msgstr ""
 #: lazarusidestrconsts.lisfreepascalprefix
 msgid "Free Pascal compiler prefix"
 msgstr ""
-
-#: lazarusidestrconsts.lisfreepascalsourcedirectory
-#, fuzzy
-#| msgid "Freepascal source directory"
-msgid "Free Pascal source directory"
-msgstr "ספריית קוד המקור של Freepascal"
 
 #: lazarusidestrconsts.lisfrforwardsearch
 msgid "Forwar&d search"
@@ -11232,10 +11177,6 @@ msgstr ""
 #: lazarusidestrconsts.liside
 msgid "IDE"
 msgstr "IDE"
-
-#: lazarusidestrconsts.lisidebuildoptions
-msgid "IDE build options"
-msgstr "אפשרויות הבניה של ה IDE "
 
 #: lazarusidestrconsts.lisidecaptioncustomhint
 msgid "Additional info to display in the IDE title"
@@ -12311,17 +12252,9 @@ msgstr ""
 msgid "Launching application invalid"
 msgstr "טעינת היישום לא חוקית"
 
-#: lazarusidestrconsts.lislaunchingcmdline
-msgid "Launching target command line"
-msgstr "טעינת שורת הפקודה המיועדת"
-
 #: lazarusidestrconsts.lislazarusdefault
 msgid "Lazarus Default"
 msgstr ""
-
-#: lazarusidestrconsts.lislazarusdirectory
-msgid "Lazarus directory"
-msgstr "הספרייה של לזרוס"
 
 #: lazarusidestrconsts.lislazarusdirhint
 #, object-pascal-format
@@ -12342,14 +12275,6 @@ msgstr "לזרוס IDE v%s"
 #: lazarusidestrconsts.lislazaruside
 msgid "Lazarus IDE"
 msgstr "לזארוס IDE"
-
-#: lazarusidestrconsts.lislazaruslanguageid
-msgid "Lazarus language ID (e.g. en, de, br, fi)"
-msgstr "מזהה השפה של לזרוס (למשל: en, de, br,fi, he)"
-
-#: lazarusidestrconsts.lislazaruslanguagename
-msgid "Lazarus language name (e.g. english, deutsch)"
-msgstr "שם השפה של לזרוס (למשל english, deutsch, hebrew)"
 
 #: lazarusidestrconsts.lislazarusoptionsprojectfilename
 msgid "lazarus [options] <project-filename>"
@@ -12526,16 +12451,6 @@ msgstr "עדכן את מידע התיקון בדיאלוג \"About Lazarus\""
 msgctxt "lazarusidestrconsts.lislazcleanupbuildall"
 msgid "Clean Up + Build all"
 msgstr "נקה ובנה הכל"
-
-#: lazarusidestrconsts.lislazver
-msgid "Lazarus Version (e.g. 1.2.4)"
-msgstr ""
-
-#: lazarusidestrconsts.lislclwidgettype
-#, fuzzy
-#| msgid "LCL Widget Type"
-msgid "LCL &widget type"
-msgstr "עצם מסוג LCL"
 
 #: lazarusidestrconsts.lisldaddlinktoinherited
 msgid "Add link to inherited"
@@ -12766,10 +12681,6 @@ msgstr ""
 msgctxt "lazarusidestrconsts.lismakecurrent"
 msgid "Current"
 msgstr "נוכחי"
-
-#: lazarusidestrconsts.lismakeexe
-msgid "Make Executable"
-msgstr "קובץ ריצה של Make"
 
 #: lazarusidestrconsts.lismakenotfound
 msgid "Make not found"
@@ -14888,10 +14799,6 @@ msgstr "שם"
 msgid "Name conflict"
 msgstr "התנגשות בין שמות"
 
-#: lazarusidestrconsts.lisnameofactivebuildmode
-msgid "Name of active build mode"
-msgstr ""
-
 #: lazarusidestrconsts.lisnameofnewprocedure
 msgid "Name of new procedure"
 msgstr "שם הפרוצדורה החדשה"
@@ -14976,12 +14883,6 @@ msgstr ""
 #: lazarusidestrconsts.lisnewpage
 msgid "New page"
 msgstr ""
-
-#: lazarusidestrconsts.lisnewproject
-#, fuzzy
-#| msgid "%s - (new project)"
-msgid "(new project)"
-msgstr "פרוייקט חדש - s%"
 
 #: lazarusidestrconsts.lisnewrecordedmacrosnottobesaved
 msgid "New recorded macros. Not to be saved"
@@ -15472,10 +15373,6 @@ msgstr ""
 msgid "output directory of %s contains Pascal unit source \"%s\""
 msgstr ""
 
-#: lazarusidestrconsts.lisoutputfilenameofproject
-msgid "Output filename of project"
-msgstr ""
-
 #: lazarusidestrconsts.lisoverridelanguage
 #, fuzzy
 #| msgid "Override language. For example --language=de. For possible values see files in the languages directory."
@@ -15695,14 +15592,6 @@ msgstr "נתיב חיפוש:"
 #: lazarusidestrconsts.lispathisnodirectory
 msgid "is not a directory"
 msgstr ""
-
-#: lazarusidestrconsts.lispathoftheinstantfpccache
-msgid "path of the instantfpc cache"
-msgstr ""
-
-#: lazarusidestrconsts.lispathofthemakeutility
-msgid "Path of the make utility"
-msgstr "נתיב של שרותי make"
 
 #: lazarusidestrconsts.lispathtoinstance
 msgid "Path to failed Instance:"
@@ -16890,10 +16779,6 @@ msgstr "מלה קודמת"
 msgid "Primary config directory where Lazarus stores its config files. Default is \"%s\"."
 msgstr "הספרייה הראשית בה לזרוס שומר את קבצי ההגדורת שלו. ברירת המחדל היא "
 
-#: lazarusidestrconsts.lisprimaryconfigpath
-msgid "Primary config path"
-msgstr ""
-
 #: lazarusidestrconsts.lisprior
 #, object-pascal-format
 msgid "prior %s"
@@ -17070,19 +16955,6 @@ msgstr "הפרויקט השתנה"
 msgid "Project changed on disk"
 msgstr "הפרוייקט השתנה על הדיסק"
 
-#: lazarusidestrconsts.lisprojectdirectory
-msgctxt "lazarusidestrconsts.lisprojectdirectory"
-msgid "Project directory"
-msgstr "תיקיית הפרויקט"
-
-#: lazarusidestrconsts.lisprojectfilename
-msgid "Project filename"
-msgstr "שם הקובץ של הפרויקט"
-
-#: lazarusidestrconsts.lisprojectincpath
-msgid "Project Include Path"
-msgstr "פרוייקט כולל נתיב"
-
 #: lazarusidestrconsts.lisprojectinfofiledetected
 msgid "Project info file detected"
 msgstr "התגלה קובץ המידע של הפרויקט"
@@ -17100,21 +16972,9 @@ msgctxt "lazarusidestrconsts.lisprojectmacro"
 msgid "Project"
 msgstr ""
 
-#: lazarusidestrconsts.lisprojectmacroproperties
-msgid "Project macro properties"
-msgstr "מאקרו תכונות הפרויקט"
-
-#: lazarusidestrconsts.lisprojectnamespaces
-msgid "Project Namespaces"
-msgstr ""
-
 #: lazarusidestrconsts.lisprojectoption
 msgid "Project Option"
 msgstr ""
-
-#: lazarusidestrconsts.lisprojectoutdir
-msgid "Project Output directory (e.g. the ppu directory)"
-msgstr "תיקיית הפלט של הפרוייקט (למשל תיקיית ה ppu)"
 
 #: lazarusidestrconsts.lisprojectoutputdirectory
 msgid "Project output directory"
@@ -17166,21 +17026,9 @@ msgstr ""
 msgid "%0:s%0:s In file '%1:s' at line %2:d:%0:s%3:s"
 msgstr ""
 
-#: lazarusidestrconsts.lisprojectsrcpath
-msgid "Project Src Path"
-msgstr "נתיב קוד המקור של הפרויקט"
-
 #: lazarusidestrconsts.lisprojectunit
 msgid "project unit"
 msgstr "יחידת הפרוייקט"
-
-#: lazarusidestrconsts.lisprojectunitpath
-msgid "Project Unit Path"
-msgstr "נתיב יחידות הפרויקט"
-
-#: lazarusidestrconsts.lisprojectver
-msgid "Project version"
-msgstr ""
 
 #: lazarusidestrconsts.lisprojectwizard
 msgid "Project Wizard"
@@ -17276,10 +17124,6 @@ msgstr ""
 #: lazarusidestrconsts.lispublishmodulenote
 msgid "Files belonging to project / package will be included automatically."
 msgstr ""
-
-#: lazarusidestrconsts.lispublishprojdir
-msgid "Publish project directory"
-msgstr "פרסם את ספריית הפרויקט"
 
 #: lazarusidestrconsts.lispublishproject
 msgid "Publish Project"
@@ -17973,10 +17817,6 @@ msgstr ""
 msgid "Secondary config directory where Lazarus searches for config template files. Default is \"%s\"."
 msgstr "תיקיית הגדרות משנית, המיקום בו לזרוס יחפש את תבנית קבצי ההגדרות . ברירת המחדל היא "
 
-#: lazarusidestrconsts.lissecondaryconfigpath
-msgid "Secondary config path"
-msgstr ""
-
 #: lazarusidestrconsts.lissecondtest
 msgid "&Second test"
 msgstr ""
@@ -18120,10 +17960,6 @@ msgstr "(קבע זיהוי ברירת מחדל)"
 #: lazarusidestrconsts.lisshort
 msgid "Short:"
 msgstr "קצר:"
-
-#: lazarusidestrconsts.lisshortformoftargetcpuparamtargetosparamsubtargetpar
-msgid "Short form of $TargetCPU(Param)-$TargetOS(Param)-$SubTarget(Param). Subtarget is omitted if empty."
-msgstr ""
 
 #: lazarusidestrconsts.lisshortnopath
 msgid "Short, no path"
@@ -18465,11 +18301,6 @@ msgstr "נתיב למקור"
 msgid "Space equally"
 msgstr "רווח במידה שווה"
 
-#: lazarusidestrconsts.lissrcos
-#, fuzzy
-msgid "Src OS"
-msgstr "מערכת הפעלה של הקוד"
-
 #: lazarusidestrconsts.lisssearching
 msgid "Searching"
 msgstr "מחפש"
@@ -18534,10 +18365,6 @@ msgstr "תת שגרה"
 #: lazarusidestrconsts.lissubprocedureonsamelevel
 msgid "Sub Procedure on same level"
 msgstr "תת שגרה באותה רמה"
-
-#: lazarusidestrconsts.lissubtarget
-msgid "Subtarget"
-msgstr ""
 
 #: lazarusidestrconsts.lissuccess
 msgid "Success"
@@ -18655,10 +18482,6 @@ msgstr ""
 msgid "Target:"
 msgstr ""
 
-#: lazarusidestrconsts.listargetcpu
-msgid "Target CPU"
-msgstr "מעבד היעד"
-
 #: lazarusidestrconsts.listargetfilenameemptyuseunitoutputdirectory
 msgid "Target file name: (-o, empty = use unit output directory)"
 msgstr "שם קובץ המטרה: (ריק = השתמש בתיקיית הפלט של היחידה)"
@@ -18667,22 +18490,9 @@ msgstr "שם קובץ המטרה: (ריק = השתמש בתיקיית הפלט �
 msgid "Target file name (-o):"
 msgstr "שם קובץ היעד (-o):"
 
-#: lazarusidestrconsts.listargetfilenameofproject
-msgid "Target filename of project"
-msgstr "קובץ המטרה של הפרוייקט"
-
-#: lazarusidestrconsts.listargetfilenameplusparams
-msgid "Target filename + params"
-msgstr "שם קובץ המטרה והפרמטרים שלו"
-
 #: lazarusidestrconsts.listargetisreadonly
 msgid "Target is read only"
 msgstr ""
-
-#: lazarusidestrconsts.listargetos
-msgctxt "lazarusidestrconsts.listargetos"
-msgid "Target OS"
-msgstr "מערכת ההפעלה המיועדת"
 
 #: lazarusidestrconsts.listemplateeditparamcell
 msgid "Editable Cell"
@@ -18697,10 +18507,6 @@ msgstr "מכניס תא בר עריכה, עם ערך ברירת מחדל, (Sync=
 #: lazarusidestrconsts.listemplatefile
 msgid "Template file"
 msgstr ""
-
-#: lazarusidestrconsts.listestdirectory
-msgid "Test directory"
-msgstr "תיקיית ביקורת"
 
 #: lazarusidestrconsts.listesturl
 msgid "Test URL"
@@ -20279,10 +20085,6 @@ msgstr ""
 #, object-pascal-format
 msgid "Toggle on list \"%s\""
 msgstr ""
-
-#: lazarusidestrconsts.lisusershomedirectory
-msgid "User's home directory"
-msgstr "תיקיית הבית של המשתמש"
 
 #: lazarusidestrconsts.lisuseunit
 #, fuzzy

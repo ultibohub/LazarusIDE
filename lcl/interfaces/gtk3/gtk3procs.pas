@@ -421,7 +421,7 @@ function GtkModifierStateToShiftState(AState: TGdkModifierType;
 function Gtk3IsPointerButtonDown(AWidget: PGtkWidget): Boolean;
 
 implementation
-uses LCLProc, gtk3objects, gtk3widgets, LazLogger;
+uses LCLProc, gtk3objects, gtk3widgets, gtk3int, LazLogger;
 
 function PANGO_PIXELS(d:integer):integer;
 begin
@@ -1561,7 +1561,7 @@ begin
     // Override any old default cursor
     g_object_steal_data(PGObject(AWindow), 'havesavedcursor'); // OK?
     g_object_steal_data(PGObject(AWindow), 'savedcursor');
-    gdk_window_set_cursor(AWindow, nil);
+    gdk_window_set_cursor(AWindow, Cursor);
     Exit;
   end;
   if Cursor <> nil then
@@ -1619,6 +1619,20 @@ begin
     SetWindowCursor(AWindow, Cursor, ASetDefault);
 end;
 
+//Callback connected to 'grab-broken-event' on the drag source widget before
+//gdk_seat_grab() is called. GTK's default grab-broken-event handler calls
+//gtk_grab_remove() when the widget's GDK grab is broken, which would destroy
+//LCL's drag event routing. Returning TRUE suppresses the default handler.
+function Gtk3DragGrabBrokenCB(AWidget: PGtkWidget; AEvent: PGdkEventGrabBroken;
+  AData: gpointer): gboolean; cdecl;
+begin
+  {$IFDEF GTK3DEBUGDRAGCURSOR}
+  DebugLn('Gtk3DragGrabBrokenCB: suppressing grab-broken-event, grab_window=',
+    IntToStr(PtrUInt(AEvent^.grab_window)));
+  {$ENDIF}
+  Result := True;
+end;
+
 {------------------------------------------------------------------------------
   procedure: SetGlobalCursor
   Params:  ACursor: HCursor
@@ -1633,7 +1647,16 @@ var
   List: PGList;
   Window: PGdkWindow;
   ACursorHandle: HCURSOR;
+  AGdkCursor: PGdkCursor;
+  ADisplay: PGdkDisplay;
+  ASeat: PGdkSeat;
+  APointer, Device: PGdkDevice;
+  AChild, ADeepestWin, ARootWin: PGdkWindow;
+  AX, AY: gint;
+  AGrabWidget: PGtkWidget;
+  AGrabWindow: PGdkWindow;
 begin
+  ASeat := nil;
   if Cursor > 0 then
     ACursorHandle := HCURSOR(TGtk3Cursor(Cursor).Handle)
   else
@@ -1650,6 +1673,105 @@ begin
     List := List^.Next;
   end;
   g_list_free(TopList);
+
+  //gdk_window_get_children only returns native windows, GTK3 non-native
+  //GDK windows (e.g. GtkLayout^bin_window) are invisible to that traversal.
+  //So we walk the full GDK window tree.
+  AGdkCursor := PGdkCursor(ACursorHandle);
+  ADisplay := gdk_display_get_default;
+  if Assigned(ADisplay) then
+  begin
+    ASeat := gdk_display_get_default_seat(ADisplay);
+    if Assigned(ASeat) then
+    begin
+      APointer := gdk_seat_get_pointer(ASeat);
+      if Assigned(APointer) then
+      begin
+        AX := 0;
+        AY := 0;
+        ARootWin := gdk_get_default_root_window;
+        ADeepestWin := ARootWin;
+        AChild := gdk_window_get_device_position(ADeepestWin, APointer, @AX, @AY, nil);
+        while Assigned(AChild) do
+        begin
+          ADeepestWin := AChild;
+          AChild := gdk_window_get_device_position(ADeepestWin, APointer, @AX, @AY, nil);
+        end;
+        if ADeepestWin <> ARootWin then
+          gdk_window_set_cursor(ADeepestWin, AGdkCursor);
+      end;
+    end;
+  end;
+
+  {During LCL drag-drop, GDK creates an implicit device grab on the button-press
+   window with owner_events=FALSE. While the pointer is over another window,
+   GDK sets window_under_pointer=NULL and never calls update_cursor().}
+  AGrabWidget := gtk_grab_get_current;
+  {$IFDEF GTK3DEBUGDRAGCURSOR}
+  DebugLn('SetGlobalCursor grab section: gtk_grab_get_current=',IntToStr(PtrUInt(AGrabWidget)),
+    ' Gtk3WidgetSet.FDragGrabWidget=',IntToStr(PtrUInt(Gtk3WidgetSet.FDragGrabWidget)),
+    ' SeatGrabActive=',IntToStr(Ord(Gtk3WidgetSet.FDragSeatGrabActive)),
+    ' cursor=',IntToStr(PtrUInt(AGdkCursor)));
+  {$ENDIF}
+  if not Assigned(AGrabWidget) then
+    AGrabWidget := Gtk3WidgetSet.FDragGrabWidget;
+  if Assigned(AGrabWidget) then
+  begin
+    if not Assigned(ASeat) then
+    begin
+      ADisplay := gdk_display_get_default;
+      if Assigned(ADisplay) then
+        ASeat := gdk_display_get_default_seat(ADisplay);
+    end;
+    if Assigned(ASeat) then
+    begin
+      {Use a small invisible IPC popup window as the grab target (matching
+       GTK3 native DnD pattern). owner_events=True so events route normally
+       to Source/Sender, so LCL drag-over logic stays intact. The IPC window
+       is NOT an ancestor of any application widget, so GDK's find_grab_cursor()
+       returns the IPC window's cursor, so visible cursor changes correctly.
+       With owner_events=False on the toplevel, GDK routes all events to the
+       toplevel which caused LCL to think drag ended prematurely.}
+      if not Assigned(Gtk3WidgetSet.FDragIPCWidget) then
+      begin
+        Gtk3WidgetSet.FDragIPCWidget := PGtkWidget(gtk_window_new(GTK_WINDOW_POPUP));
+        gtk_window_move(PGtkWindow(Gtk3WidgetSet.FDragIPCWidget), -99, -99);
+        gtk_window_resize(PGtkWindow(Gtk3WidgetSet.FDragIPCWidget), 1, 1);
+        gtk_widget_show(Gtk3WidgetSet.FDragIPCWidget);
+        gtk_widget_realize(Gtk3WidgetSet.FDragIPCWidget);
+      end;
+      AGrabWindow := Gtk3WidgetSet.FDragIPCWidget^.window;
+      if Gtk3IsGdkWindow(AGrabWindow) then
+      begin
+        if not Gtk3WidgetSet.FDragSeatGrabActive then
+        begin
+          Gtk3WidgetSet.FDragGrabWidget := AGrabWidget;
+          Gtk3WidgetSet.FDragGrabBrokenHandlerID := g_signal_connect_data(
+            PGObject(Gtk3WidgetSet.FDragGrabWidget), 'grab-broken-event',
+            TGCallback(@Gtk3DragGrabBrokenCB), nil, nil, G_CONNECT_DEFAULT);
+          {$IFDEF GTK3DEBUGDRAGCURSOR}
+          DebugLn('SetGlobalCursor: connected grab-broken-event handlerID=',
+            IntToStr(Gtk3WidgetSet.FDragGrabBrokenHandlerID));
+          {$ENDIF}
+        end;
+        {$IFDEF GTK3DEBUGDRAGCURSOR}
+        DebugLn('SetGlobalCursor: gdk_seat_grab result=',
+          IntToStr(Ord(gdk_seat_grab(ASeat, AGrabWindow,
+          GDK_SEAT_CAPABILITY_ALL_POINTING,
+          True,  // owner_events=True: events route normally, no synthetic releases
+          AGdkCursor,
+          nil, nil, nil))));
+        {$ELSE}
+        gdk_seat_grab(ASeat, AGrabWindow,
+          GDK_SEAT_CAPABILITY_ALL_POINTING,
+          True,  // owner_events=True: events route normally, no synthetic releases
+          AGdkCursor,
+          nil, nil, nil);
+        {$ENDIF}
+        Gtk3WidgetSet.FDragSeatGrabActive := True;
+      end;
+    end;
+  end;
 end;
 
 function G_OBJECT_TYPE_NAME(AWidget:PGObject):string;

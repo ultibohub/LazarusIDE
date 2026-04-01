@@ -38,7 +38,7 @@ uses
   SynEditMarkupSpecialLine, SynEditMarkup, SynCompletion,
   // IdeIntf
   IDEOptionsIntf, IDEOptEditorIntf, IDEImagesIntf, IDEUtils,
-  EditorSyntaxHighlighterDef, LazEditTextAttributes,
+  EditorSyntaxHighlighterDef, LazEditTextAttributes, LazEditHighlighter,
   // IdeConfig
   IDEProcs, LazConf,
   // IDE
@@ -592,7 +592,7 @@ begin
   Attri := nil;
   ColorPreview.GetHighlighterAttriAtRowCol(XY, Token, Attri);
 
-  if (not InGutter) and (not ColorPreview.Highlighter.GetEol) then begin
+  if (not InGutter) and (ColorPreview.Highlighter <> nil) and (not ColorPreview.Highlighter.GetEol) then begin
     AttriList := ColorPreview.Highlighter.GetTokenAttributeList;
 
     ColorPreview.MarkupManager.BeginMarkup;
@@ -665,7 +665,7 @@ begin
     Attri := TLazEditTextAttribute(AttriList[Length(AttriList) - 1]);
 
   if Attri = nil then
-    Attri := FCurrentHighlighter.WhitespaceAttribute;
+    Attri := FCurrentHighlighter.GetTokenClassAttribute(tcWhiteSpace);
   if FMouseDownAttr = nil then
     FMouseDownAttr := Attri;
 
@@ -1608,8 +1608,10 @@ begin
       PreviewEdits[a].BeginUpdate;
     try
       for a := Low(PreviewEdits) to High(PreviewEdits) do begin
-        if UseSyntaxHighlightCheckBox.Down then
-          PreviewEdits[a].Highlighter := FCurrentHighlighter
+        if UseSyntaxHighlightCheckBox.Down
+        and (FCurrentHighlighter is TSynCustomHighlighter)
+        then
+          PreviewEdits[a].Highlighter := FCurrentHighlighter as TSynCustomHighlighter
         else
           PreviewEdits[a].Highlighter := nil;
         PreviewEdits[a].Lines.Text := EditorOpts.HighlighterList[CurLanguageID].SampleSource;

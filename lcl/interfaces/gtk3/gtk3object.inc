@@ -45,16 +45,6 @@ begin
   end;
 end;
 
-function IdleCallback(AData: gpointer): gboolean; cdecl;
-var
-  AWS: TGtk3WidgetSet;
-begin
-  AWS := TGtk3WidgetSet(AData);
-  if AWS.ActivityCounter <= 0 then
-    Application.IntfAppDeactivate;
-  Result := G_SOURCE_REMOVE_;
-end;
-
 {hook into gtk3 main event loop, used for testing purposes only atm.}
 procedure Gtk3MainEventLoop(AEvent: PGdkEvent; {%H-}AData: gPointer); cdecl;
 var
@@ -71,22 +61,16 @@ begin
     ETime := gdk_event_get_time(AEvent);
     if ETime <> 0 then
       AWS.LastUserEventTime := ETime;
-  end else
-  if (AEvent^.type_ = GDK_FOCUS_CHANGE) then
+  end;
+  if AEvent^.type_ = GDK_FOCUS_CHANGE then
   begin
-    if AEvent^.focus_change.in_ <> 0 then
-    begin
-      if AWS.ActivityCounter <= 0 then
-      begin
-        AWS.ActivityCounter := 0;
-        Application.IntfAppActivate;
-      end;
-      inc(AWS.FActivityCounter);
-    end else
-    begin
-      dec(AWS.FActivityCounter);
-      g_idle_add(TGSourceFunc(@IdleCallback), aData);
-    end;
+    {$IFDEF GTK3DEBUGACTIVATION}
+    DebugLn(['[', GetTickCount64, '] GDK_FOCUS_CHANGE in=', AEvent^.focus_change.in_,
+      ' AppActive=', Assigned(Application) and Application.Active]);
+    {$ENDIF}
+    if (AEvent^.focus_change.in_ <> 0) and
+       Assigned(Application) and not Application.Active and not Application.Terminated then
+      Application.IntfAppActivate;
   end;
   gtk_main_do_event(AEvent);
 end;
@@ -124,6 +108,12 @@ begin
   begin
     gtk_widget_destroy(FDockImage);
     FDockImage := nil;
+  end;
+
+  if FDragIPCWidget <> nil then
+  begin
+    gtk_widget_destroy(FDragIPCWidget);
+    FDragIPCWidget := nil;
   end;
 
   if Assigned(FAppIcon) then
@@ -575,17 +565,35 @@ var
   ACSSProvider: PGtkCssProvider;
   ASettings: PGtkSettings;
   AValue: TGValue;
+  EnvTheme: string;
 begin
-  ASettings := gtk_settings_get_default;
-  FillByte(AValue{%H-}, SizeOf(AValue), 0);
-  AValue.init(G_TYPE_STRING);
-  ASettings^.get_property('gtk-theme-name', @AValue);
-  FThemeName := AValue.get_string;
-  AValue.unset;
-  ACSSProvider := gtk_css_provider_get_named(PGChar(FThemeName), '');
+  ACSSProvider := nil;
+  EnvTheme := GetEnvironmentVariable('GTK_THEME');
+
+  if EnvTheme <> '' then
+  begin
+    FThemeName := EnvTheme;
+    ACSSProvider := gtk_css_provider_get_named(PGChar(FThemeName), nil);
+  end;
+
   if not Assigned(ACSSProvider) then
+  begin
+    ASettings := gtk_settings_get_default;
+    FillByte(AValue{%H-}, SizeOf(AValue), 0);
+    AValue.init(G_TYPE_STRING);
+    g_object_get_property(PGObject(ASettings), 'gtk-theme-name', @AValue);
+    FThemeName := AValue.get_string;
+    AValue.unset;
+
+    ACSSProvider := gtk_css_provider_get_named(PGChar(FThemeName), nil);
+  end;
+
+  if not Assigned(ACSSProvider) then
+  begin
+    DebugLn('WARNING: Could not load any GTK3 theme CSS.');
     exit;
-  {$note from here we must parse css and get eg tooltip background-color and color etc.}
+  end;
+
   FCSSTheme.Text := gtk_css_provider_to_string(ACSSProvider);
 end;
 
@@ -759,10 +767,38 @@ end;
 function TGtk3WidgetSet.CreateStandardCursor(ACursor: SmallInt): HCURSOR;
 var
   CursorValue: TGdkCursorType;
+  CursorName: string;
+  NamedHandle: PGdkCursor;
 begin
   Result := 0;
   if ACursor < crLow then Exit;
   if ACursor > crHigh then Exit;
+
+  //Try CSS/theme named cursors first for types not in the GDK legacy enum.
+  CursorName := '';
+  case TCursor(ACursor) of
+    crNo:        CursorName := 'not-allowed';
+    crNoDrop:    CursorName := 'no-drop';
+    //crDrag:      CursorName := 'move'; we use LCL cursor to be compat with other ws.
+    crMultiDrag: CursorName := 'copy';
+    crSQLWait:   CursorName := 'wait';
+    crAppStart:  CursorName := 'progress';
+    crHourGlass: CursorName := 'wait';
+    crHSplit:    CursorName := 'col-resize';
+    crVSplit:    CursorName := 'row-resize';
+    crSizeAll:   CursorName := 'all-scroll';
+  end;
+  if CursorName <> '' then
+  begin
+    NamedHandle := gdk_cursor_new_from_name(gdk_display_get_default, PChar(CursorName));
+    if NamedHandle <> nil then
+    begin
+      Result := HCURSOR(TGtk3Cursor.Create(NamedHandle));
+      exit;
+    end;
+  end;
+
+  CursorValue := GDK_CURSOR_IS_PIXMAP;
   case TCursor(ACursor) of
     crDefault:  CursorValue := GDK_LEFT_PTR;
     crArrow:    CursorValue := GDK_Arrow;
@@ -781,19 +817,16 @@ begin
     crSizeS:    CursorValue := GDK_BOTTOM_SIDE;
     crSizeSE:   CursorValue := GDK_BOTTOM_RIGHT_CORNER;
     crUpArrow:  CursorValue := GDK_LEFT_PTR;
-    crHourGlass:CursorValue := GDK_WATCH;
-    crHSplit:   CursorValue := GDK_SB_H_DOUBLE_ARROW;
-    crVSplit:   CursorValue := GDK_SB_V_DOUBLE_ARROW;
-    crAppStart: CursorValue := GDK_LEFT_PTR;
+    crHourGlass:CursorValue := GDK_WATCH; // fallback if 'wait' not in theme
+    crHSplit:   CursorValue := GDK_SB_H_DOUBLE_ARROW; // fallback if 'col-resize' not in theme
+    crVSplit:   CursorValue := GDK_SB_V_DOUBLE_ARROW; // fallback if 'row-resize' not in theme
+    crAppStart: CursorValue := GDK_WATCH; // fallback if 'progress' not in theme
     crHelp:     CursorValue := GDK_QUESTION_ARROW;
     crHandPoint:CursorValue := GDK_Hand2;
-    crSizeAll:  CursorValue := GDK_FLEUR;
-  else
-    CursorValue := GDK_CURSOR_IS_PIXMAP;
+    crSizeAll:  CursorValue := GDK_FLEUR; // fallback if 'all-scroll' not in theme
   end;
   if CursorValue <> GDK_CURSOR_IS_PIXMAP then
     Result := HCURSOR(TGtk3Cursor.Create(CursorValue));
-    // HCURSOR({%H-}PtrUInt(gdk_cursor_new(CursorValue)));
 end;
 
 function TGtk3WidgetSet.DCGetPixel(CanvasHandle: HDC; X, Y: integer): TGraphicsColor;

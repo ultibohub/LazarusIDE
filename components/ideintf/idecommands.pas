@@ -282,6 +282,7 @@ const
   ecRunParameters           = ecFirstLazarus + 417;
   ecRunToCursor             = ecFirstLazarus + 418;
   ecRunWithDebugging        = ecFirstLazarus + 419;
+  ecContinueLastStep        = ecFirstLazarus + 420;
 
   ecBuildFile               = ecFirstLazarus + 431;
   ecRunFile                 = ecFirstLazarus + 432;
@@ -2028,7 +2029,7 @@ begin
 end;
 
 const
-  IDEEditorCommandStrs: array[0..344] of TIdentMapEntry = ( //Ultibo
+  IDEEditorCommandStrs: array[0..345] of TIdentMapEntry = ( //Ultibo
   // search
     (Value: ecFind;                                   Name: 'ecFind'),
     (Value: ecFindAgain;                              Name: 'ecFindAgain'),
@@ -2262,6 +2263,7 @@ const
     (Value: ecAddWatch;                               Name: 'ecAddWatch'),
     (Value: ecShowExecutionPoint;                     Name: 'ecShowExecutionPoint'),
     (Value: ecStepOut;                                Name: 'ecStepOut'),
+    (Value: ecContinueLastStep;                       Name: 'ecContinueLastStep'),
     (Value: ecStepIntoInstr;                          Name: 'ecStepIntoInstr'),
     (Value: ecStepOverInstr;                          Name: 'ecStepOverInstr'),
     (Value: ecStepIntoContext;                        Name: 'ecStepIntoContext'),

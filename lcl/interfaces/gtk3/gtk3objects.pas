@@ -66,6 +66,8 @@ type
     FLogFont: TLogFont;
     FFontName: String;
     FHandle: PPangoFontDescription;
+    FInternalLeading: Integer; //pango logical top to ink top offset
+    FMetricsHeight: Integer; //tmAscent+tmDescent from pango_context_get_metrics, no line spacing
   public
     constructor Create(ACairo: Pcairo_t; AWidget: PGtkWidget = nil);
     constructor Create(ALogFont: TLogFont; const ALongFontName: String);
@@ -192,6 +194,7 @@ type
     constructor Create(pixbuf:PGdkPixbuf;x,y:gint); overload;
     constructor Create(img:TGtk3Image); overload;
     constructor Create(ACur: TGdkCursorType); overload;
+    constructor Create(AHandle: PGdkCursor); overload;
     destructor Destroy; override;
     property Handle:PGdkCursor read fHandle;
   end;
@@ -214,12 +217,21 @@ type
     FCurrentRegion: TGtk3Region;
     FOwnsCairo: Boolean;
     FOwnsSurface: Boolean;
+    FBackTarget: PCairo_t;
+    FBackOriginX: Integer;
+    FBackOriginY: Integer;
     FPen: TGtk3Pen;
     FvClipRect: TRect;
     FCurrentPen: TGtk3Pen;
     FBkMode: integer;
     FCanvasScaleFactor: double;
     FXorMode: boolean;
+    //Accumulated clip region, mirrors what we set via SetClipRegion/ResetClip.
+    //Needed because gdk_cairo_get_clip_rectangle returns only the bounding box,
+    //causing ExcludeClipRect accumulation to lose intermediate holes.
+    FClipRegion: Pcairo_region_t;
+    //Per-save-level stack so cairo_save/cairo_restore keeps FClipRegion in sync.
+    FClipStack: TFPList;
     function GetBkColor:TColorRef;
     function GetOffset: TPoint;
     function GetRasterOp: integer;
@@ -312,6 +324,7 @@ type
     property CurrentRegion: TGtk3Region read FCurrentRegion;
     property CurrentTextColor: TColorRef read FCurrentTextColor write FCurrentTextColor;
     property CanvasScaleFactor: double read FCanvasScaleFactor write SetCanvasScaleFactor;
+    property ClipRegion: Pcairo_region_t read FClipRegion;
     property Offset: TPoint read GetOffset write SetOffset;
     property OwnsSurface: Boolean read FOwnsSurface;
     property RasterOp: integer read GetRasterOp write SetRasterOp; //automatically maps cairo_operator_t to winapi ROP.
@@ -686,9 +699,16 @@ begin
   FHandle := gdk_cursor_new(ACur);
 end;
 
+constructor TGtk3Cursor.Create(AHandle: PGdkCursor);
+begin
+  inherited Create;
+  FHandle := AHandle;
+end;
+
 destructor TGtk3Cursor.Destroy;
 begin
-  FHandle^.unref;
+  if FHandle <> nil then
+    FHandle^.unref;
   inherited Destroy;
 end;
 
@@ -959,6 +979,9 @@ constructor TGtk3Font.Create(ACairo: Pcairo_t; AWidget: PGtkWidget);
 var
   AContext: PPangoContext;
   AOwnsContext: Boolean;
+  ADpi: gdouble;
+  inkRect: TPangoRectangle;
+  APangoMetrics: PPangoFontMetrics;
 begin
   inherited Create;
   AOwnsContext := not Gtk3IsWidget(AWidget);
@@ -969,6 +992,10 @@ begin
   end else
   begin
     AContext := pango_cairo_create_context(ACairo);
+    //Set resolution to the actual screen DPI so compatible DCs match widget DCs.
+    ADpi := gdk_screen_get_resolution(gdk_screen_get_default);
+    if ADpi <= 0 then ADpi := 96;
+    pango_cairo_context_set_resolution(AContext, ADpi);
     //DebugLn('TGtk3Font.Create AContext created from pango cairo ....');
   end;
   FHandle := pango_font_description_copy(pango_context_get_font_description(AContext));
@@ -986,6 +1013,22 @@ begin
   end;
 
   FLayout^.set_font_description(FHandle);
+
+  FLayout^.set_text('H', 1);
+  pango_layout_get_extents(FLayout, @inkRect, nil);
+  FInternalLeading := Max(0, PANGO_PIXELS(inkRect.y));
+  FLayout^.set_text('', 0);
+
+  APangoMetrics := pango_context_get_metrics(FLayout^.get_context, FHandle, nil);
+  if APangoMetrics <> nil then
+  begin
+    FMetricsHeight := PANGO_PIXELS(pango_font_metrics_get_ascent(APangoMetrics))
+                    + PANGO_PIXELS(pango_font_metrics_get_descent(APangoMetrics))
+                    - FInternalLeading;
+    pango_font_metrics_unref(APangoMetrics);
+  end else
+    FMetricsHeight := 0;
+
   //DebugLn('TGtk3Font.Create1 ',FFontName);
   if AOwnsContext then
     g_object_unref(AContext);
@@ -1000,6 +1043,8 @@ var
   Family: string;
   Stretch: TPangoStretch;
   Weight: TPangoWeight;
+  inkRect: TPangoRectangle;
+  APangoMetrics: PPangoFontMetrics;
 begin
   inherited Create;
   FLogFont := ALogFont;
@@ -1052,6 +1097,23 @@ begin
     pango_layout_set_attributes(FLayout, AttrList);
     pango_attr_list_unref(AttrList);
   end;
+
+  //compute internal leading
+  FLayout^.set_text('H', 1);
+  pango_layout_get_extents(FLayout, @inkRect, nil);
+  FInternalLeading := Max(0, PANGO_PIXELS(inkRect.y));
+  FLayout^.set_text('', 0);
+
+  APangoMetrics := pango_context_get_metrics(FLayout^.get_context, FHandle, nil);
+  if APangoMetrics <> nil then
+  begin
+    FMetricsHeight := PANGO_PIXELS(pango_font_metrics_get_ascent(APangoMetrics))
+                    + PANGO_PIXELS(pango_font_metrics_get_descent(APangoMetrics))
+                    - FInternalLeading;
+    pango_font_metrics_unref(APangoMetrics);
+  end else
+    FMetricsHeight := 0;
+
   g_object_unref(AContext);
 end;
 
@@ -1246,13 +1308,6 @@ begin
   end else
   begin
     FHandle := TGdkPixbuf.new_from_data(AData, GDK_COLORSPACE_RGB, format=CAIRO_FORMAT_ARGB32, 8, width, height, bytesPerLine, nil, nil);
-    if (format = CAIRO_FORMAT_ARGB32) then
-    begin
-      if IsPixelDataEmpty(AData, Height, BytesPerLine) then
-        g_object_set_data(FHandle,'lcl_color_swap', Self)
-      else
-        g_object_set_data(FHandle,'lcl_no_color_swap', Self);
-    end;
   end;
 end;
 
@@ -1941,6 +1996,8 @@ constructor TGtk3DeviceContext.CreateFromCairo(AWidget: PGtkWidget;
   ACairo: PCairo_t);
 var
   AGdkRect: TGdkRectangle;
+  W, H: Integer;
+  ACanvasScale: gint;
 begin
   {$ifdef VerboseGtk3DeviceContext}
     DebugLn('TGtk3DeviceContext.CreateFromCairo (',
@@ -1957,12 +2014,37 @@ begin
   ParentPixmap := nil;
   CairoSurface := nil;
   FOwnsSurface := False;
+  FBackTarget := nil;
+  FBackOriginX := 0;
+  FBackOriginY := 0;
   FCurrentTextColor := clBlack;
   FBkColor := clWhite;
   gdk_cairo_get_clip_rectangle(ACairo, @AGdkRect);
   FvClipRect := RectFromGdkRect(AGdkRect);
   FCairo := ACairo;
   CairoSurface := cairo_get_target(FCairo);
+
+  if cairo_surface_get_type(CairoSurface) in
+     [CAIRO_SURFACE_TYPE_XLIB, CAIRO_SURFACE_TYPE_XCB] then
+  begin
+    ACanvasScale := gtk_widget_get_scale_factor(AWidget);
+    W := AGdkRect.width;
+    H := AGdkRect.height;
+    if (W <= 0) and (AWidget <> nil) then W := AWidget^.get_allocated_width;
+    if (H <= 0) and (AWidget <> nil) then H := AWidget^.get_allocated_height;
+    if W <= 0 then W := 1;
+    if H <= 0 then H := 1;
+    FBackTarget  := ACairo;
+    FBackOriginX := AGdkRect.x;
+    FBackOriginY := AGdkRect.y;
+    CairoSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, W * ACanvasScale, H * ACanvasScale);
+    cairo_surface_set_device_scale(CairoSurface, ACanvasScale, ACanvasScale);
+    FCairo       := cairo_create(CairoSurface);
+    cairo_translate(FCairo, -FBackOriginX, -FBackOriginY);
+    FOwnsCairo   := True;
+    FOwnsSurface := True;
+  end;
+
   CreateObjects;
 end;
 
@@ -1978,6 +2060,17 @@ begin
 
   if FDCSaveCounter > 0 then
     DebugLn('WARNING: TGtk3DeviceContext: Unpaired Cairo save/restore calls. Current count = ',dbgs(FDCSaveCounter),', but should be 0.');
+
+  if FBackTarget <> nil then
+  begin
+    cairo_surface_flush(CairoSurface);
+    cairo_save(FBackTarget);
+    cairo_set_source_surface(FBackTarget, CairoSurface, FBackOriginX, FBackOriginY);
+    cairo_set_operator(FBackTarget, CAIRO_OPERATOR_OVER);
+    cairo_paint(FBackTarget);
+    cairo_restore(FBackTarget);
+    FBackTarget := nil;
+  end;
 
   if FOwnsCairo and (FCairo <> nil) then
     cairo_destroy(FCairo);
@@ -2010,6 +2103,8 @@ begin
   FLastPenY := 0;
   FBgBrush := nil; // created on demand
   FBkMode := TRANSPARENT;
+  FClipRegion := nil;
+  FClipStack := TFPList.Create;
   FCurrentImage := nil;
   FCurrentRegion := nil;
   FBrush := TGtk3Brush.Create;
@@ -2032,6 +2127,8 @@ begin
 end;
 
 procedure TGtk3DeviceContext.DeleteObjects;
+var
+  i: Integer;
 begin
   if Assigned(FBrush) then
     FreeAndNil(FBrush);
@@ -2043,6 +2140,19 @@ begin
     FreeAndNil(FvImage);
   if Assigned(FBgBrush) then
     FreeAndNil(FBgBrush);
+  if FClipRegion <> nil then
+  begin
+    cairo_region_destroy(FClipRegion);
+    FClipRegion := nil;
+  end;
+  if Assigned(FClipStack) then
+  begin
+    for i := 0 to FClipStack.Count - 1 do
+      if FClipStack[i] <> nil then
+        cairo_region_destroy(Pcairo_region_t(FClipStack[i]));
+    FClipStack.Clear;
+    FreeAndNil(FClipStack);
+  end;
 end;
 
 procedure TGtk3DeviceContext.drawPixel(x, y: Integer; AColor: TColor);
@@ -2148,38 +2258,70 @@ procedure TGtk3DeviceContext.drawText(x, y: Integer; AText: PChar; ALen: Integer
   const ABgFilled: Boolean);
 var
   R, G, B: Double;
-  gColor: TGdkColor;
-  Attr: PPangoAttribute;
-  AttrList: PPangoAttrList;
   ornt: Integer;
+  tw: gint;
+  OldStr: PChar;
+  SafeStr: String;
+  OldDPI: gdouble;
+  IsVectorSurface: Boolean;
+  AFontOpts: Pcairo_font_options_t;
 begin
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
 
-  cairo_move_to(pcr, x, y);
+  IsVectorSurface := cairo_surface_get_type(cairo_get_target(pcr)) in
+    [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
+     CAIRO_SURFACE_TYPE_SCRIPT];
+  OldDPI := 0;
+  if IsVectorSurface then
+  begin
+    AFontOpts := cairo_font_options_create;
+    cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_NONE);
+    pango_cairo_context_set_font_options(FCurrentFont.Layout^.get_context, AFontOpts);
+    cairo_font_options_destroy(AFontOpts);
+    OldDPI := pango_cairo_context_get_resolution(FCurrentFont.Layout^.get_context);
+    pango_cairo_context_set_resolution(FCurrentFont.Layout^.get_context, 72.0);
+    FCurrentFont.Layout^.context_changed;
+  end;
 
   ornt := Self.FCurrentFont.FLogFont.lfOrientation;
   if ornt <> 0 then
     cairo_rotate(pcr, -Pi * (ornt / 10) / 180);
 
-  ColorToCairoRGB(ColorToRgb(TColor(CurrentTextColor)), R, G, B);
-  cairo_set_source_rgb(pcr, R, G, B);
-
-  FCurrentFont.Layout^.set_text(AText, ALen);
+  //Skip set_text when unchanged, g_utf8_validate guards Pango
+  //only broken input allocates.
+  OldStr := pango_layout_get_text(FCurrentFont.Layout);
+  if (Integer(StrLen(OldStr)) <> ALen) or
+     ((ALen > 0) and (CompareByte(AText^, OldStr^, ALen) <> 0)) then
+  begin
+    if g_utf8_validate(AText, ALen, nil) then
+      FCurrentFont.Layout^.set_text(AText, ALen)
+    else
+    begin
+      SafeStr := Copy(AText, 1, ALen);
+      UTF8FixBroken(SafeStr);
+      FCurrentFont.Layout^.set_text(PChar(SafeStr), Length(SafeStr));
+    end;
+  end;
 
   if ABgFilled then
   begin
-    gColor := TColorToTGDKColor(FBgBrush.Color);
-    AttrList := pango_attr_list_new;
-    Attr := pango_attr_background_new(gColor.red, gColor.green, gColor.blue);
-    pango_attr_list_insert(AttrList, Attr);
-    FCurrentFont.Layout^.set_attributes(AttrList);
-    pango_attr_list_unref(AttrList);
+    FCurrentFont.Layout^.get_pixel_size(@tw, nil);
+    ColorToCairoRGB(ColorToRgb(TColor(FBgBrush.Color)), R, G, B);
+    cairo_set_source_rgb(pcr, R, G, B);
+    cairo_rectangle(pcr, x, y, tw, FCurrentFont.FMetricsHeight + FCurrentFont.FInternalLeading);
+    cairo_fill(pcr);
   end;
 
+  cairo_move_to(pcr, x, y);
+  ColorToCairoRGB(ColorToRgb(TColor(CurrentTextColor)), R, G, B);
+  cairo_set_source_rgb(pcr, R, G, B);
   pango_cairo_show_layout(pcr, FCurrentFont.Layout);
 
-  if ABgFilled then
-    FCurrentFont.Layout^.set_attributes(nil);
+  if IsVectorSurface then
+  begin
+    pango_cairo_context_set_resolution(FCurrentFont.Layout^.get_context, OldDPI);
+    FCurrentFont.Layout^.context_changed;
+  end;
 
   if ornt <> 0 then
     cairo_rotate(pcr, Pi * (ornt / 10) / 180);
@@ -2273,26 +2415,11 @@ begin
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
 
   with targetRect^ do
-    cairo_rectangle(pcr, Left + PixelOffset, Top + PixelOffset, Right - Left, Bottom - Top);
+    cairo_rectangle(pcr, Left, Top, Right - Left, Bottom - Top);
 
-  if aPixBuf <> nil then
-  begin
-    aPixBuf^.ref;
-    //this fixes problem with some images being R & B swapped when blitted onto dest.
-    if (cairo_surface_get_type(CairoSurface) <> cairo_surface_get_type(Surface)) and
-      (g_object_get_data(aPixBuf,'lcl_color_swap') <> nil) then
-    begin
-      SwapRedBlueChannels(aPixBuf);
-      gdk_cairo_set_source_pixbuf(pcr, aPixBuf, 0, 0);
-    end else
-    begin
-      if g_object_get_data(aPixBuf,'lcl_no_color_swap') <> nil then
-        gdk_cairo_set_source_pixbuf(pcr, aPixBuf, 0, 0)
-      else
-        cairo_set_source_surface(pcr, Surface, 0, 0);
-    end;
-    aPixBuf^.unref;
-  end else
+  if (aPixBuf <> nil) and (Surface = nil) then
+    gdk_cairo_set_source_pixbuf(pcr, aPixBuf, 0, 0)
+  else
     cairo_set_source_surface(pcr, Surface, 0, 0);
 
   cairo_matrix_init_identity(@M);
@@ -2303,6 +2430,11 @@ begin
   );
   cairo_matrix_translate(@M, -targetRect^.Left, -targetRect^.Top);
   cairo_pattern_set_matrix(cairo_get_source(pcr), @M);
+
+  //Use NEAREST filter for 1:1 scale to prevent bilinear blur
+  if ((sourceRect^.Right - sourceRect^.Left) = (targetRect^.Right - targetRect^.Left)) and
+     ((sourceRect^.Bottom - sourceRect^.Top) = (targetRect^.Bottom - targetRect^.Top)) then
+    cairo_pattern_set_filter(cairo_get_source(pcr), CAIRO_FILTER_NEAREST);
 
   cairo_clip(pcr);
   cairo_paint(pcr);
@@ -2322,8 +2454,9 @@ begin
   gdk_cairo_set_source_pixbuf(pcr, Image, 0, 0);
 
   with targetRect^ do
-    cairo_rectangle(pcr, Left + PixelOffset, Top + PixelOffset, Right - Left, Bottom - Top);
+    cairo_rectangle(pcr, Left, Top, Right - Left, Bottom - Top);
 
+  cairo_pattern_set_filter(cairo_get_source(pcr), CAIRO_FILTER_NEAREST);
   cairo_paint(pcr);
 end;
 
@@ -2342,8 +2475,9 @@ begin
   cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
   gdk_cairo_set_source_pixbuf(pcr, Image, 0, 0);
 
+  //No PixelOffset for image rendering - causes sub-pixel blur at integer coords
   with targetRect^ do
-    cairo_rectangle(pcr, Left + PixelOffset, Top + PixelOffset, Right - Left, Bottom - Top);
+    cairo_rectangle(pcr, Left, Top, Right - Left, Bottom - Top);
 
   cairo_matrix_init_identity(@M);
   cairo_matrix_translate(@M, SourceRect^.Left, SourceRect^.Top);
@@ -2354,6 +2488,11 @@ begin
   cairo_matrix_translate(@M, -targetRect^.Left, -targetRect^.Top);
 
   cairo_pattern_set_matrix(cairo_get_source(pcr), @M);
+
+  //Use NEAREST filter for 1:1 scale to prevent bilinear blur
+  if ((sourceRect^.Right - sourceRect^.Left) = (targetRect^.Right - targetRect^.Left)) and
+     ((sourceRect^.Bottom - sourceRect^.Top) = (targetRect^.Bottom - targetRect^.Top)) then
+    cairo_pattern_set_filter(cairo_get_source(pcr), CAIRO_FILTER_NEAREST);
 
   cairo_clip(pcr);
   cairo_paint(pcr);
@@ -2910,6 +3049,10 @@ begin
     cairo_reset_clip(pcr);
     gdk_cairo_region(pcr, ARgn.FHandle);
     cairo_clip(pcr);
+    //Mirror the clip region so GetClipRGN can return the exact region
+    if FClipRegion <> nil then
+      cairo_region_destroy(FClipRegion);
+    FClipRegion := cairo_region_copy(ARgn.FHandle);
   end;
 end;
 
@@ -2924,29 +3067,43 @@ end;
 procedure TGtk3DeviceContext.SetImage(AImage: TGtk3Image);
 var
   APixBuf: PGdkPixbuf;
+  ATempCr: Pcairo_t;
 begin
   FCurrentImage := AImage;
-  cairo_destroy(pcr);
+  if FXorMode then
+  begin
+    if FXorCairo <> nil then
+    begin
+      cairo_destroy(FXorCairo);
+      FXorCairo := nil;
+    end;
+    if FXorSurface <> nil then
+    begin
+      cairo_surface_destroy(FXorSurface);
+      FXorSurface := nil;
+    end;
+    FXorMode := False;
+  end;
+  cairo_destroy(FCairo);
+  FCairo := nil;
   APixBuf := AImage.Handle;
   if not Gtk3IsGdkPixbuf(APixBuf) then
   begin
     DebugLn('ERROR: TGtk3DeviceContext.SetImage image handle isn''t PGdkPixbuf.');
     exit;
   end;
-  (*
-  DebugLn('TGtk3DeviceContext.SetImage w=',dbgs(APixBuf^.width),' h=',dbgs(APixBuf^.height),
-  ' RowStride ',dbgs(APixBuf^.rowstride),' BPS=',dbgs(APixBuf^.get_bits_per_sample),
-  ' BLEN ',dbgs(APixbuf^.get_byte_length),' channels ',dbgs(APixBuf^.get_n_channels),
-  ' ALPHA ',dbgs(APixbuf^.get_has_alpha));
-  *)
+
   if FOwnsSurface and (CairoSurface <> nil) then
     cairo_surface_destroy(CairoSurface);
 
-  CairoSurface := cairo_image_surface_create_for_data(APixBuf^.pixels,
-                                                AImage.Format,
-                                                APixBuf^.get_width,
-                                                APixBuf^.get_height,
-                                                APixBuf^.rowstride);
+  CairoSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+                    APixBuf^.get_width, APixBuf^.get_height);
+  ATempCr := cairo_create(CairoSurface);
+  gdk_cairo_set_source_pixbuf(ATempCr, APixBuf, 0, 0);
+  cairo_pattern_set_filter(cairo_get_source(ATempCr), CAIRO_FILTER_NEAREST);
+  cairo_paint(ATempCr);
+  cairo_destroy(ATempCr);
+
   FCairo := cairo_create(CairoSurface);
   FOwnsSurface := true;
 end;
@@ -2955,7 +3112,14 @@ function TGtk3DeviceContext.ResetClip: Integer;
 begin
   Result := NullRegion;
   if Assigned(pcr) then
+  begin
     cairo_reset_clip(pcr);
+    if FClipRegion <> nil then
+    begin
+      cairo_region_destroy(FClipRegion);
+      FClipRegion := nil;
+    end;
+  end;
 end;
 
 procedure TGtk3DeviceContext.TranslateCairoToDevice;
@@ -2981,15 +3145,31 @@ end;
 procedure TGtk3DeviceContext.Save;
 begin
   cairo_save(pcr);
+  //Push current FClipRegion so Restore can bring it back
+  if FClipRegion <> nil then
+    FClipStack.Add(cairo_region_copy(FClipRegion))
+  else
+    FClipStack.Add(nil);
   inc(FDCSaveCounter);
 end;
 
 procedure TGtk3DeviceContext.Restore;
+var
+  Saved: Pcairo_region_t;
 begin
   dec(FDCSaveCounter);
   cairo_restore(pcr);
   if FDCSaveCounter < 0 then
     DebugLn('WARNING: TGtk3DeviceContext: Cairo restore called without save.');
+  //Pop saved FClipRegion
+  if FClipStack.Count > 0 then
+  begin
+    Saved := Pcairo_region_t(FClipStack.Last);
+    FClipStack.Delete(FClipStack.Count - 1);
+    if FClipRegion <> nil then
+      cairo_region_destroy(FClipRegion);
+    FClipRegion := Saved; //may be nil = no explicit clip
+  end;
 end;
 
 procedure TGtk3DeviceContext.SetCanvasScaleFactor(const AValue: double);
@@ -3067,6 +3247,7 @@ var
   NewStr : PChar;
   AMetrics: PPangoFontMetrics;
   {ACharWidth,}ATextWidth,ATextHeight: gint;
+  SafeStr: String;
 begin
   if lbearing<>nil then
     lbearing^:=0;
@@ -3077,7 +3258,14 @@ begin
     NewStr := RemoveAmpersands(Str, StrLength)
   else
     NewStr := Str;
-  TheFont.Layout^.set_text(NewStr, StrLength);
+  if g_utf8_validate(NewStr, StrLength, nil) then
+    TheFont.Layout^.set_text(NewStr, StrLength)
+  else
+  begin
+    SafeStr := NewStr;
+    UTF8FixBroken(SafeStr);
+    TheFont.Layout^.set_text(PChar(SafeStr), Length(SafeStr));
+  end;
   // TheFont.Layout^.get_extents(@AInkRect, @ALogicalRect);
 
   AMetrics := pango_context_get_metrics(TheFont.Layout^.get_context, TheFont.Handle, TheFont.Layout^.get_context^.get_language);

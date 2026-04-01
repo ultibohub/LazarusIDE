@@ -64,6 +64,12 @@ type
     FIsWayland: boolean;
     FActivityCounter: integer;
     FLastUserEventTime: guint32;
+    FAppFocusTimerID: guint;
+    FLastFocusIn: PGtkWidget;
+    FLastFocusOut: PGtkWidget;
+    {$IFDEF UNIX}
+    FX11PollTimerID: guint;
+    {$ENDIF}
     FMainPoll: PGPollFD;
     FGtk3Application: PGtkApplication;
     FDefaultAppFontName: String;
@@ -116,6 +122,11 @@ type
     function CreateThemeServices: TThemeServices; override;
 
   public
+    // LCL drag cursor state. Used by SetGlobalCursor in gtk3procs and ReleaseCapture.
+    FDragIPCWidget: PGtkWidget;
+    FDragSeatGrabActive: Boolean;
+    FDragGrabWidget: PGtkWidget;
+    FDragGrabBrokenHandlerID: gulong;
     function IsWayland: boolean;
     function CreateDCForWidget(AWidget: PGtkWidget; AWindow: PGdkWindow; cr: Pcairo_t): HDC;
     procedure AddWindow(AWindow: PGtkWindow);
@@ -179,7 +190,13 @@ type
     function IsValidHandle(const AHandle: HWND): Boolean;
 
     property ActivityCounter: integer read FActivityCounter write FActivityCounter;
+    property AppFocusTimerID: guint read FAppFocusTimerID write FAppFocusTimerID;
     property AppIcon: PGdkPixbuf read FAppIcon;
+    property LastFocusIn: PGtkWidget read FLastFocusIn write FLastFocusIn;
+    property LastFocusOut: PGtkWidget read FLastFocusOut write FLastFocusOut;
+    {$IFDEF UNIX}
+    property X11PollTimerID: guint read FX11PollTimerID write FX11PollTimerID;
+    {$ENDIF}
     property DefaultAppFontName: String read FDefaultAppFontName;
     property Gtk3Application: PGtkApplication read FGtk3Application;
     property LastUserEventTime: guint32 read FLastUserEventTime write FLastUserEventTime;
@@ -202,7 +219,7 @@ function HwndFromGtkWidget(AWidget: PGtkWidget): HWND;
 implementation
 
 uses
-  gtk3boxes, gtk3caret, gtk3themes,
+  LazPangoCairo1, gtk3boxes, gtk3caret, gtk3themes,
   {%H-}Gtk3WSFactory{%H-};
 
 {------------------------------------------------------------------------------
@@ -220,7 +237,7 @@ begin
 //  Desc.PaletteColorCount := 0;
 
   Desc.BitOrder := riboReversedBits;
-  Desc.ByteOrder := riboLSBFirst;
+  Desc.ByteOrder := DefaultByteOrder;
   Desc.LineOrder := riloTopToBottom;
 
   Desc.BitsPerPixel := 32;
@@ -288,6 +305,7 @@ function TGtk3WidgetSet.GetLCLCapability(ACapability: TLCLCapability): PtrUInt;
 begin
   case ACapability of
   lcTextHint: Result := LCL_CAPABILITY_YES;
+  lcCanDrawOutsideOnPaint: Result := LCL_CAPABILITY_NO;
   else
     Result := inherited GetLCLCapability(ACapability);
   end;

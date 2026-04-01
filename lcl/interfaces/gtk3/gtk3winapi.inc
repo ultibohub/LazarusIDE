@@ -1745,36 +1745,54 @@ function TGtk3WidgetSet.ExtTextOut(DC: HDC; X, Y: Integer; Options: Longint;
 var
   GtkDC: TGtk3DeviceContext absolute DC;
   ScrX, CharLen: LongInt;
+  IsVectorSurf: Boolean;
 begin
   Result := False;
   {$IFDEF VerboseGtk3DeviceContext}
   DebugLn(Format('TGtk3WidgetSet.ExtTextOut x=%d y=%d Text=%s count=%d ',[X, Y, String(Str), Count]));
   {$ENDIF}
   if not IsValidDC(DC) then exit;
-  GtkDC.Save;
-  if Options and ETO_CLIPPED = ETO_CLIPPED then
+  //Only save/restore Cairo state when we need to modify it, reduce overhead
+  if (Options and ETO_CLIPPED = ETO_CLIPPED) or (Dx <> nil) then
   begin
-    cairo_rectangle(GtkDc.pcr, Rect^.Left, Rect^.Top, Rect^.Right-Rect^.Left, Rect^.Bottom-Rect^.Top);
-    cairo_clip(GtkDc.pcr);
-  end;
-  if Options and ETO_OPAQUE = ETO_OPAQUE then
-    GtkDC.fillRect(Rect, HBRUSH(GtkDC.BgBrush)); // use Color from setBkMode
-  if Dx <> nil then
-  begin
-    ScrX := X;
-    while Count > 0 do
+    GtkDC.Save;
+    if Options and ETO_CLIPPED = ETO_CLIPPED then
     begin
-      CharLen := UTF8CodepointSize(Str);
-      GtkDC.drawText(ScrX,Y,Str,CharLen, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
-      inc(ScrX, Dx^);
-      inc(Dx);
-      inc(Str, CharLen);
-      dec(Count, CharLen);
+      cairo_rectangle(GtkDc.pcr, Rect^.Left, Rect^.Top, Rect^.Right-Rect^.Left, Rect^.Bottom-Rect^.Top);
+      cairo_clip(GtkDc.pcr);
     end;
-  end
-  else
+    if Options and ETO_OPAQUE = ETO_OPAQUE then
+      GtkDC.fillRect(Rect, HBRUSH(GtkDC.BgBrush));
+    if Dx <> nil then
+    begin
+      IsVectorSurf := cairo_surface_get_type(cairo_get_target(GtkDC.pcr)) in
+        [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
+         CAIRO_SURFACE_TYPE_SCRIPT];
+      if IsVectorSurf then
+        GtkDC.drawText(X, Y, Str, Count, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush))
+      else
+      begin
+        ScrX := X;
+        while Count > 0 do
+        begin
+          CharLen := UTF8CodepointSize(Str);
+          GtkDC.drawText(ScrX,Y,Str,CharLen, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
+          inc(ScrX, Dx^);
+          inc(Dx);
+          inc(Str, CharLen);
+          dec(Count, CharLen);
+        end;
+      end;
+    end
+    else
+      GtkDC.drawText(X,Y,Str,Count, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
+    GtkDC.Restore;
+  end else
+  begin
+    if Options and ETO_OPAQUE = ETO_OPAQUE then
+      GtkDC.fillRect(Rect, HBRUSH(GtkDC.BgBrush));
     GtkDC.drawText(X,Y,Str,Count, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
-  GtkDC.Restore;
+  end;
   Result := True;
 end;
 
@@ -2053,24 +2071,37 @@ end;
 function TGtk3WidgetSet.GetClipBox(DC: hDC; lpRect: PRect): Longint;
 var
   GtkDC: TGtk3DeviceContext absolute DC;
-  cr: Pcairo_t;
-  //Pt: TPoint;
   ARect: TGdkRectangle;
+  CRRect: Tcairo_rectangle_int_t;
 begin
-  //{$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  //DebugLn('WARNING: TGtk3WidgetSet.GetClipBox not implemented ...');
-  //{$ENDIF}
   Result := NULLREGION;
   if lpRect <> nil then
     lpRect^ := Rect(0,0,0,0);
 
   if not IsValidDC(DC) then
-    Result := ERROR;
-
-  if Result <> ERROR then
   begin
-    cr := GtkDC.pcr;
-    if gdk_cairo_get_clip_rectangle(cr, @ARect) then
+    Result := ERROR;
+    exit;
+  end;
+
+  //We prefer FClipRegion, which is actually exact accumulated region
+  //from SetClipRegion/ExcludeClipRect over gdk_cairo_get_clip_rectangle
+  //which returns only the bounding box.
+  if GtkDC.ClipRegion <> nil then
+  begin
+    cairo_region_get_extents(GtkDC.ClipRegion, @CRRect);
+    if (CRRect.width > 0) and (CRRect.height > 0) then
+    begin
+      lpRect^ := Rect(CRRect.x, CRRect.y, CRRect.x + CRRect.width, CRRect.y + CRRect.height);
+      if cairo_region_num_rectangles(GtkDC.ClipRegion) = 1 then
+        Result := SimpleRegion
+      else
+        Result := ComplexRegion;
+    end;
+  end
+  else
+  begin
+    if gdk_cairo_get_clip_rectangle(GtkDC.pcr, @ARect) then
     begin
       lpRect^ := RectFromGdkRect(ARect);
       Result := SimpleRegion;
@@ -2080,23 +2111,29 @@ end;
 
 function TGtk3WidgetSet.GetClipRGN(DC: hDC; RGN: hRGN): Longint;
 var
+  GtkDC: TGtk3DeviceContext absolute DC;
   ARect: TGdkRectangle;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  // DebugLn('WARNING: TGtk3WidgetSet.GetClipRgn not implemented ...');
-  {$ENDIF}
   Result := -1;
   if not IsValidDC(DC) or (RGN = 0) then
     exit;
-  gdk_cairo_get_clip_rectangle(TGtk3DeviceContext(DC).pcr, @ARect);
-  // DebugLn('GetClipRgn ',dbgs(TGtk3Region(RGN).GetExtents),' clipRect ',dbgs(RectFromGdkRect(ARect)));
-  if IsRectEmpty(RectFromGdkRect(ARect)) then
-    exit(0)
-  else
+  if GtkDC.ClipRegion <> nil then
   begin
     cairo_region_destroy(TGtk3Region(RGN).Handle);
-    TGtk3Region(RGN).Handle := cairo_region_create_rectangle(Pcairo_rectangle_int_t(@ARect));
+    TGtk3Region(RGN).Handle := cairo_region_copy(GtkDC.ClipRegion);
     Result := 1;
+  end
+  else
+  begin
+    gdk_cairo_get_clip_rectangle(GtkDC.pcr, @ARect);
+    if IsRectEmpty(RectFromGdkRect(ARect)) then
+      exit(0)
+    else
+    begin
+      cairo_region_destroy(TGtk3Region(RGN).Handle);
+      TGtk3Region(RGN).Handle := cairo_region_create_rectangle(Pcairo_rectangle_int_t(@ARect));
+      Result := 1;
+    end;
   end;
 end;
 
@@ -2263,8 +2300,16 @@ begin
 
     LOGPIXELSX, LOGPIXELSY : { Logical pixels per inch in X and Y }
     begin
-      pscr := TGdkScreen.get_default;
-      Result := round(pscr^.get_resolution);
+      if IsValidDC(DC) and
+         (cairo_surface_get_type(cairo_get_target(TGtk3DeviceContext(DC).pcr)) in
+          [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
+           CAIRO_SURFACE_TYPE_SCRIPT]) then
+        Result := 72
+      else
+      begin
+        pscr := TGdkScreen.get_default;
+        Result := round(pscr^.get_resolution);
+      end;
     end;
   end;
 
@@ -2914,10 +2959,105 @@ begin
     Result := TColorRef(TGtk3DeviceContext(DC).CurrentTextColor);
 end;
 
+function TGtk3WidgetSet.GetTextExtentExPoint(DC: HDC; Str: PChar;
+  Count, MaxWidth: Integer; MaxCount, PartialWidths: PInteger;
+  var Size: TSize): Boolean;
+var
+  Layout: PPangoLayout;
+  Utf8Len: PtrInt;
+  Iter: PPangoLayoutIter;
+  CharRect: TPangoRectangle;
+  Accu, PixWidth: gint;
+  I: PtrInt;
+  OldStr: PChar;
+  SafeStr: String;
+  AFontOpts: Pcairo_font_options_t;
+begin
+  Result := False;
+  if not IsValidDC(DC) then
+    Exit;
+
+  Size.cx := 0;
+  Size.cy := 0;
+  if MaxCount <> nil then
+    MaxCount^ := 0;
+
+  if (Count <= 0) or (Str = nil) or (Str^ = #0) then
+    Exit(True);
+
+  Layout := {%H-}TGtk3DeviceContext(DC).CurrentFont.Layout;
+  OldStr := pango_layout_get_text(Layout);
+  if (Integer(StrLen(OldStr)) <> Count) or
+     ((Count > 0) and (CompareByte(Str^, OldStr^, Count) <> 0)) then
+  begin
+    if g_utf8_validate(Str, Count, nil) then
+      Layout^.set_text(Str, Count)
+    else
+    begin
+      SafeStr := Copy(Str, 1, Count);
+      UTF8FixBroken(SafeStr);
+      Layout^.set_text(PChar(SafeStr), Length(SafeStr));
+    end;
+  end;
+  if cairo_surface_get_type(cairo_get_target(TGtk3DeviceContext(DC).pcr)) in
+     [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
+      CAIRO_SURFACE_TYPE_SCRIPT] then
+  begin
+    AFontOpts := cairo_font_options_create;
+    cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_NONE);
+    cairo_set_font_options(TGtk3DeviceContext(DC).pcr, AFontOpts);
+    cairo_font_options_destroy(AFontOpts);
+    pango_cairo_update_layout(TGtk3DeviceContext(DC).pcr, Layout);
+  end;
+  Layout^.get_pixel_size(@Size.cx, @Size.cy);
+
+  OldStr := pango_layout_get_text(Layout);
+  Utf8Len := UTF8Length(OldStr, StrLen(OldStr));
+
+  if (PartialWidths = nil) and (MaxCount = nil) then
+    Exit(True);
+
+  if (PartialWidths = nil) and (MaxCount <> nil) then
+  begin
+    if Size.cx <= MaxWidth then
+    begin
+      MaxCount^ := Utf8Len;
+      Exit(True);
+    end;
+  end;
+
+  Accu := 0;
+  I := 0;
+  Iter := Layout^.get_iter;
+  repeat
+    pango_layout_iter_get_char_extents(Iter, @CharRect);
+    Inc(Accu, CharRect.width);
+    PixWidth := (Accu + (PANGO_SCALE div 2)) div PANGO_SCALE;
+
+    if MaxCount <> nil then
+    begin
+      if PixWidth > MaxWidth then
+        Break;
+      MaxCount^ := I + 1;
+    end;
+    if PartialWidths <> nil then
+      PartialWidths[I] := PixWidth;
+
+    Inc(I);
+  until not pango_layout_iter_next_char(Iter);
+  pango_layout_iter_free(Iter);
+
+  Result := True;
+end;
+
 function TGtk3WidgetSet.GetTextExtentPoint(DC: HDC; Str: PChar; Count: Integer;
   var Size: TSize): Boolean;
 var
-  Utf8Str: String;
+  Layout: PPangoLayout;
+  OldStr: PChar;
+  SafeStr: String;
+  PangoLogRect: TPangoRectangle;
+  AFontOpts: Pcairo_font_options_t;
 begin
   Result := False;
   if not IsValidDC(DC) then
@@ -2929,13 +3069,32 @@ begin
     Exit;
   end;
 
-  if not g_utf8_validate(Str, Count, nil) then
-    Utf8Str := UTF8Copy(Utf8Encode(Str), 1, Count)
-  else
-    Utf8Str := UTF8Copy(Str, 1, Count);
-
-  {%H-}TGtk3DeviceContext(DC).CurrentFont.Layout^.set_text(PChar(Utf8Str), -1);
-  TGtk3DeviceContext(DC).CurrentFont.Layout^.get_pixel_size(@Size.Cx, @Size.CY);
+  Layout := {%H-}TGtk3DeviceContext(DC).CurrentFont.Layout;
+  OldStr := pango_layout_get_text(Layout);
+  if (Integer(StrLen(OldStr)) <> Count) or
+     ((Count > 0) and (CompareByte(Str^, OldStr^, Count) <> 0)) then
+  begin
+    if g_utf8_validate(Str, Count, nil) then
+      Layout^.set_text(Str, Count)
+    else
+    begin
+      SafeStr := Copy(Str, 1, Count);
+      UTF8FixBroken(SafeStr);
+      Layout^.set_text(PChar(SafeStr), Length(SafeStr));
+    end;
+  end;
+  if cairo_surface_get_type(cairo_get_target(TGtk3DeviceContext(DC).pcr)) in
+     [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
+      CAIRO_SURFACE_TYPE_SCRIPT] then
+  begin
+    AFontOpts := cairo_font_options_create;
+    cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_NONE);
+    cairo_set_font_options(TGtk3DeviceContext(DC).pcr, AFontOpts);
+    cairo_font_options_destroy(AFontOpts);
+    pango_cairo_update_layout(TGtk3DeviceContext(DC).pcr, Layout);
+    Layout^.get_pixel_size(@Size.Cx, @Size.CY);
+  end else
+    Layout^.get_pixel_size(@Size.Cx, @Size.CY);
 
   Result := True;
 end;
@@ -2957,6 +3116,7 @@ var
   aRect: TPangoRectangle;
   APangoWeight: TPangoWeight;
   lineH: Integer;
+  AFontOpts: Pcairo_font_options_t;
 begin
   Result := False;
   if IsValidDC(DC) then
@@ -2964,6 +3124,16 @@ begin
     //TODO add metrics to cache of font, so if we have valid metrics just return.
     //or create metrics when font is created (like qt uses)
     AFont := TGtk3DeviceContext(DC).CurrentFont;
+    if cairo_surface_get_type(cairo_get_target(TGtk3DeviceContext(DC).pcr)) in
+       [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
+      CAIRO_SURFACE_TYPE_SCRIPT] then
+    begin
+      AFontOpts := cairo_font_options_create;
+      cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_NONE);
+      cairo_set_font_options(TGtk3DeviceContext(DC).pcr, AFontOpts);
+      cairo_font_options_destroy(AFontOpts);
+      pango_cairo_update_layout(TGtk3DeviceContext(DC).pcr, AFont.Layout);
+    end;
 
     APangoMetrics := pango_context_get_metrics(AFont.Layout^.get_context,
       AFont.Handle, AFont.Layout^.get_context^.get_language);
@@ -2996,17 +3166,12 @@ begin
     pango_layout_get_pixel_size(AFont.Layout, @aRect.width, @aRect.height);
     TM.tmMaxCharWidth := Max(TM.tmMaxCharWidth,aRect.width);
 
-    //Internal leading: gap from top of logical area to top of ink e.g. space
-    //above capital H.
-    //ink_rect.y is in Pango units, positive = below the
-    //logical top, i.e. there IS a gap: that gap is the internal leading.
+    //tmInternalLeading=0 matches GTK2. Non-zero breaks TFont.Height round-trips.
     pango_layout_set_text(AFont.Layout, 'H', 1);
     pango_layout_get_extents(AFont.Layout, @aRect, nil);
-    TM.tmInternalLeading := Max(0, PANGO_PIXELS(aRect.y));
+    TM.tmInternalLeading := 0;
 
-    //External leading: extra spacing above/below the cell that the font
-    //designer reserved for line gaps.  Compare pixel line height of H to
-    //the cell height (ascent + descent) already stored in TM.tmHeight.
+    //External leading, line gap reserved by font designer.Compare pixel line height of H to tmHeight.
     pango_layout_get_pixel_size(AFont.Layout, nil, @lineH);
     TM.tmExternalLeading := Max(0, lineH - TM.tmHeight);
 
@@ -3357,6 +3522,51 @@ begin
   Result:=HMONITOR(nmon+1);
 end;
 
+function TGtk3WidgetSet.MonitorFromRect(lprcScreenCoords: PRect; dwFlags: DWord): HMONITOR;
+var
+  Display: PGdkDisplay;
+  Monitor: PGdkMonitor;
+  nMonitors, i: gint;
+  TargetRect, MonitorRect, Intersection: TGdkRectangle;
+  MaxArea, CurrentArea: Integer;
+  BestMonitor: Integer;
+begin
+
+  if lprcScreenCoords = nil then
+  begin
+    Result := HMONITOR(1);
+    Exit;
+  end;
+
+  Display := gdk_display_get_default;
+  nMonitors := gdk_display_get_n_monitors(Display);
+
+  TargetRect.x := lprcScreenCoords^.Left;
+  TargetRect.y := lprcScreenCoords^.Top;
+  TargetRect.width := lprcScreenCoords^.Width;
+  TargetRect.height := lprcScreenCoords^.Height;
+
+  MaxArea := -1;
+  BestMonitor := 0;
+
+  for i := 0 to nMonitors - 1 do
+  begin
+    Monitor := gdk_display_get_monitor(Display, i);
+    gdk_monitor_get_geometry(Monitor, @MonitorRect);
+
+    if gdk_rectangle_intersect(@TargetRect, @MonitorRect, @Intersection) then
+    begin
+      CurrentArea := Intersection.width * Intersection.height;
+      if CurrentArea > MaxArea then
+      begin
+        MaxArea := CurrentArea;
+        BestMonitor := i;
+      end;
+    end;
+  end;
+  Result := HMONITOR(BestMonitor + 1);
+end;
+
 function TGtk3WidgetSet.MonitorFromWindow(hWnd: HWND; dwFlags: DWord): HMONITOR;
 var
   pscr:PGdkScreen;
@@ -3621,7 +3831,8 @@ end;
 function TGtk3WidgetSet.ReleaseCapture: Boolean;
 var
   AWidget: TGtk3Widget;
-  aCurrentGrab:PGtkWidget;
+  aCurrentGrab: PGtkWidget;
+  ASeat: PGdkSeat;
 begin
   {$IFDEF VerboseGtk3WinApi}
   DebugLn('TGtk3WidgetSet.ReleaseCapture');
@@ -3633,6 +3844,22 @@ begin
     aCurrentGrab := gtk_grab_get_current;
     if aCurrentGrab <> nil then
       gtk_grab_remove(aCurrentGrab);
+    //If SetGlobalCursor called gdk_seat_grab during drag to update the cursor,
+    //disconnect the grab-broken-event suppression handler and release the grab.
+    if FDragSeatGrabActive then
+    begin
+      if Assigned(FDragGrabWidget) and (FDragGrabBrokenHandlerID <> 0) then
+      begin
+        g_signal_handler_disconnect(PGObject(FDragGrabWidget),
+          FDragGrabBrokenHandlerID);
+        FDragGrabBrokenHandlerID := 0;
+        FDragGrabWidget := nil;
+      end;
+      ASeat := gdk_display_get_default_seat(gdk_display_get_default);
+      if Assigned(ASeat) then
+        gdk_seat_ungrab(ASeat);
+      FDragSeatGrabActive := False;
+    end;
   end;
 end;
 
@@ -3654,7 +3881,8 @@ begin
     exit;
   if Gtk3IsObject(TGtk3Widget(Handle).Widget) then
     g_object_set_data(TGtk3Widget(Handle).Widget, Str, nil);
-  if TGtk3Widget(Handle).GetContainerWidget <> TGtk3Widget(Handle).Widget then
+  if (TGtk3Widget(Handle).Widget <> nil) and
+     (TGtk3Widget(Handle).GetContainerWidget <> TGtk3Widget(Handle).Widget) then
   begin
     if Gtk3IsObject(TGtk3Widget(Handle).GetContainerWidget) then
       g_object_set_data(TGtk3Widget(Handle).GetContainerWidget, Str, nil);
@@ -3994,9 +4222,6 @@ end;
 
 function TGtk3WidgetSet.SetCursor(ACursor: HCURSOR): HCURSOR;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  // DebugLn('WARNING: TGtk3WidgetSet.SetCursor not implemented ...');
-  {$ENDIF}
   Result := FGlobalCursor;
   if ACursor = FGlobalCursor then Exit;
   if ACursor = Screen.Cursors[crDefault]
@@ -4861,6 +5086,8 @@ var
   SrcContext: TGtk3DeviceContext absolute SrcDC;
   ATargetRect, ASrcRect, AMaskRect: TRect;
   Origin: TPoint;
+  FreshSrcPixbuf: PGdkPixbuf;
+  SrcW, SrcH: Integer;
 begin
   Result := False;
 
@@ -4878,16 +5105,25 @@ begin
   AMaskRect := Bounds(XMask, YMask, SrcWidth, SrcHeight);
   GetWindowOrgEx(SrcDC, @Origin);
   ASrcRect.Offset(SrcContext.fncOrigin.X - Origin.x, SrcContext.fncOrigin.Y - Origin.y);
-  if (mask<>0) then
-    DestContext.drawImage1(@ATargetRect, SrcContext.CurrentImage.Handle , @ASrcRect, TGtk3Image(mask).Handle, @AMaskRect)
-  else
+  if (mask <> 0) then
   begin
-    if (cairo_surface_get_type(SrcContext.CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE) and
-      Assigned(SrcContext.CurrentImage) and Assigned(SrcContext.CurrentImage.Handle) then
-        DestContext.drawSurface(@ATargetRect,SrcContext.CairoSurface , @ASrcRect, SrcContext.CurrentImage.Handle, nil, nil)
-    else
-      DestContext.drawSurface(@ATargetRect,SrcContext.CairoSurface , @ASrcRect, nil, nil, nil);
-  end;
+    FreshSrcPixbuf := nil;
+    if Assigned(SrcContext.CairoSurface) and
+       (cairo_surface_get_type(SrcContext.CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE) then
+    begin
+      SrcW := cairo_image_surface_get_width(SrcContext.CairoSurface);
+      SrcH := cairo_image_surface_get_height(SrcContext.CairoSurface);
+      FreshSrcPixbuf := gdk_pixbuf_get_from_surface(SrcContext.CairoSurface, 0, 0, SrcW, SrcH);
+    end;
+    if FreshSrcPixbuf = nil then
+      FreshSrcPixbuf := SrcContext.CurrentImage.Handle;  // fallback
+    DestContext.drawImage1(@ATargetRect, FreshSrcPixbuf, @ASrcRect,
+      TGtk3Image(mask).Handle, @AMaskRect);
+    if FreshSrcPixbuf <> SrcContext.CurrentImage.Handle then
+      g_object_unref(FreshSrcPixbuf);
+  end else
+    DestContext.drawSurface(@ATargetRect, SrcContext.CairoSurface, @ASrcRect, nil, nil, nil);
+
   {$ifdef VerboseGtk3DeviceContext}
     DebugLn('Trace:< [TGtk3WidgetSet.StretchMaskBlt]');
   {$endif}

@@ -74,11 +74,14 @@ uses
   IdeDebuggerBackendValueConv, Debugger, BaseDebugManager,
   IdeDebuggerValueFormatter, IdeDebuggerDisplayFormats,
   // IdeConfig
-  LazConf, CompilerOptions,
+  LazConf, CompilerOptions, BaseBuildManager,
+  // IdeProject
+  ProjectDefs, Project, RunParamOptions,
+  // IdeDebugger
+  ProjectDebugLink, IdeDebuggerExcludedRoutines,
   // IDE
-  SourceEditor, ProjectDefs, Project, ProjectDebugLink, MemViewerDlg, IdeDebuggerExcludedRoutines,
-  LazarusIDEStrConsts, MainBar, MainIntf, MainBase, BaseBuildManager, SourceMarks,
-  DebugEventsForm, EnvGuiOptions, RunParamsOpts, RunParamOptions;
+  DebugEventsForm, LazarusIDEStrConsts, SourceEditor, SourceMarks, MemViewerDlg,
+  MainBar, MainIntf, MainBase, EnvGuiOptions, RunParamsOpts;
 
 type
 
@@ -253,6 +256,7 @@ type
     function DoStepIntoInstrProject: TModalResult; override;
     function DoStepOverInstrProject: TModalResult; override;
     function DoStepOutProject: TModalResult; override;
+    function DoContinueLastStep: TModalResult; override;
     function DoStepToCursor: TModalResult; override;
     function DoRunToCursor: TModalResult; override;
     function DoStopProject: TModalResult; override;
@@ -2160,6 +2164,8 @@ begin
   FDisassembler := TIDEDisassembler.Create;
   FRegisters := TIdeRegistersMonitor.Create;
 
+  FWatches.Debugger := Self;
+
   FCallStackNotification := TCallStackNotification.Create;
   FCallStackNotification.AddReference;
   FCallStack.AddNotification(FCallStackNotification);
@@ -2412,6 +2418,8 @@ begin
     itmRunMenuStepOver.Enabled     := CanRunOrCont and (dcStepOver in AvailCommands);
     // Step out
     itmRunMenuStepOut.Enabled      := CanRunOrCont and (dcStepOut in AvailCommands) and (CurState = dsPause);
+    // continue last step
+    itmRunMenuContinueLastStep.Enabled := CanRunOrCont and (dcContinueLastStep in AvailCommands) and (CurState = dsPause);
     // Step to cursor
     itmRunMenuStepToCursor.Enabled := CanRunOrCont and (dcStepTo in AvailCommands);
     // Run to cursor
@@ -2740,7 +2748,7 @@ var
   NewWorkingDir: String;
   NewDebuggerClass: TDebuggerClass;
   DbgCfg: TDebuggerPropertiesConfig;
-  AMode: TRunParamsOptionsMode;
+  AMode: TAbstractRunParamsOptionsMode;
 begin
 {$ifdef VerboseDebugger}
   DebugLn('[TDebugManager.DoInitDebugger] A');
@@ -3066,6 +3074,22 @@ begin
   Result := mrOk;
 end;
 
+function TDebugManager.DoContinueLastStep: TModalResult;
+begin
+  Result := mrCancel;
+  if (MainIDE.ToolStatus <> itDebugger) or (FDebugger = nil) or Destroying
+  then Exit;
+  if not(dcContinueLastStep in FDebugger.Commands) then begin
+    Result := mrAbort;
+    Exit;
+  end;
+
+  FStepping:=True;
+  FAsmStepping := False;
+  FDebugger.ContinueLastStep;
+  Result := mrOk;
+end;
+
 function TDebugManager.DoStopProject: TModalResult;
 begin
   Result := mrCancel;
@@ -3139,6 +3163,7 @@ begin
                          end;
     ecStepOut:           if CanRun and (dcStepOut in AvailCommands) then DoStepOutProject;
     ecStepToCursor:      if CanRun and (dcStepTo  in AvailCommands) then DoStepToCursor;
+    ecContinueLastStep:  if CanRun and (dcContinueLastStep  in AvailCommands) then DoContinueLastStep;
     ecRunToCursor:       if CanRun and (dcRunTo   in AvailCommands) then DoRunToCursor;
     ecStopProgram:       DoStopProject;
     ecResetDebugger:     ResetDebugger;

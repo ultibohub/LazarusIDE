@@ -125,44 +125,47 @@ begin
   end;
 end;
 
-
 procedure TGtk3WidgetSet.DrawGrid(DC: HDC; const R: TRect; DX, DY: Integer);
 var
-  x, y: Integer;
   gc: TGdkRGBA;
   GtkDC: TGtk3DeviceContext absolute DC;
-  DotSize: integer;
+  DotSize: Integer;
+  DashArray: array[0..1] of Double;
+  y: Integer;
 begin
   if not IsValidDC(DC) then
+    exit;
+  if (DX < 1) or (DY < 1) or (R.Right <= R.Left) or (R.Bottom <= R.Top) then
     exit;
 
   gc := TColortoTGdkRGBA(ColorToRGB(GtkDC.CurrentPen.Color));
   DotSize := Max(1, GtkDC.CurrentPen.Width);
 
   GtkDC.Save;
-
   GtkDC.Translate(GtkDC.ScrollbarsOffset);
   cairo_set_source_rgb(GtkDC.pcr, gc.red, gc.green, gc.blue);
-
   cairo_set_antialias(GtkDC.pcr, CAIRO_ANTIALIAS_NONE);
+  cairo_set_line_width(GtkDC.pcr, DotSize);
+  cairo_set_line_cap(GtkDC.pcr, CAIRO_LINE_CAP_BUTT);
+
+  if DotSize < DX then
+  begin
+    DashArray[0] := DotSize;
+    DashArray[1] := DX - DotSize;
+    cairo_set_dash(GtkDC.pcr, @DashArray[0], 2, 0);
+  end;
 
   y := R.Top;
   while y < R.Bottom do
   begin
-    x := R.Left;
-    while x < R.Right do
-    begin
-      cairo_rectangle(GtkDC.pcr, x, y, DotSize, DotSize);
-      x := x + DX;
-    end;
+    cairo_move_to(GtkDC.pcr, R.Left, y + DotSize * 0.5);
+    cairo_line_to(GtkDC.pcr, R.Right, y + DotSize * 0.5);
     y := y + DY;
   end;
+  cairo_stroke(GtkDC.pcr);
 
-  cairo_fill(GtkDC.pcr);
-  cairo_new_path(GtkDC.pcr);
   GtkDC.Restore;
 end;
-
 
 {------------------------------------------------------------------------------
   function TGtk3WidgetSet.ExtUTF8Out(DC: HDC; X, Y: Integer; Options: Longint;
@@ -226,6 +229,9 @@ var
   x,y:integer;
   src,dst,SrcRowPtr,DstRowPtr:pbyte;
   ridx,gidx,bidx,aidx:byte;
+  Src1BitStride, MaskStride: PtrUInt;
+  MaskPtr: PByte;
+  ColorBit, MaskBit: Boolean;
 begin
   Result := False;
   ABitmap := 0;
@@ -257,7 +263,51 @@ begin
 
     if desc.BitsPerPixel = 1 then
     begin
-      DbgS('Bit depth not implemented '+inttostr(desc.BitsPerPixel));
+      //Expand 1-bit monochrome to 32-bit RGBA for GdkPixbuf compatibility.
+      //GdkPixbuf has no sub-byte pixel format support.
+      Src1BitStride := GetBytesPerLine(Desc.Width, 1, Desc.LineEnd);
+      ARowStride := PtrUInt(Desc.Width) * 4;
+      FreeMem(NewData);
+      NewData := AllocMem(ARowStride * Desc.Height);
+      MaskStride := 0;
+      if (ARawImage.Mask <> nil) and (ARawImage.MaskSize > 0) then
+        MaskStride := GetBytesPerLine(Desc.Width, 1, Desc.MaskLineEnd);
+      SrcRowPtr := ARawImage.Data;
+      DstRowPtr := NewData;
+      for y := 0 to Integer(Desc.Height) - 1 do
+      begin
+        Src := SrcRowPtr;
+        Dst := DstRowPtr;
+        for x := 0 to Integer(Desc.Width) - 1 do
+        begin
+          if Desc.BitOrder = riboReversedBits then
+            ColorBit := (Src[x shr 3] and ($80 shr (x and 7))) <> 0
+          else
+            ColorBit := (Src[x shr 3] and (1 shl (x and 7))) <> 0;
+          MaskBit := False;
+          if MaskStride > 0 then
+          begin
+            MaskPtr := PByte(ARawImage.Mask) + PtrUInt(y) * MaskStride;
+            if Desc.MaskBitOrder = riboReversedBits then
+              MaskBit := (MaskPtr[x shr 3] and ($80 shr (x and 7))) <> 0
+            else
+              MaskBit := (MaskPtr[x shr 3] and (1 shl (x and 7))) <> 0;
+          end;
+          if MaskBit then
+          begin
+            Dst[0] := 0; Dst[1] := 0; Dst[2] := 0; Dst[3] := 0;
+          end else if ColorBit then
+          begin
+            Dst[0] := 255; Dst[1] := 255; Dst[2] := 255; Dst[3] := 255;
+          end else
+          begin
+            Dst[0] := 0; Dst[1] := 0; Dst[2] := 0; Dst[3] := 255;
+          end;
+          Inc(Dst, 4);
+        end;
+        Inc(SrcRowPtr, Src1BitStride);
+        Inc(DstRowPtr, ARowStride);
+      end;
     end
     else if desc.BitsPerPixel = 8 then
     begin
@@ -296,7 +346,6 @@ begin
     if (Ridx <> 0) or (Gidx <> 1) or (Bidx <> 2) or (AIdx <> 3) then
     begin
       // put components in right order
-
       DstRowPtr := NewData;
       SrcRowPtr := ArawImage.Data;
       y := Desc.Height;
@@ -310,7 +359,10 @@ begin
           Dst[0] := Src[Ridx];
           Dst[1] := Src[Gidx];
           Dst[2] := Src[Bidx];
-          Dst[3] := Src[Aidx] ;
+          if Desc.AlphaPrec > 0 then
+            Dst[3] := Src[Aidx]
+          else
+            Dst[3] := $FF;
 
           Inc(Src, 4);
           Inc(Dst, 4);
@@ -322,6 +374,27 @@ begin
       end;
     end else begin
       System.Move(ArawImage.Data^, NewData^, ArawImage.DataSize);
+      {If source has no alpha channel, fill alpha bytes to fully opaque.
+       After the move, data is in RGBA order (this branch: Ridx=0,Gidx=1,Bidx=2,Aidx=3),
+       so alpha is already at byte 3 - but if AlphaPrec=0 it may be 0 because of padding.}
+      if (Desc.AlphaPrec = 0) and (Desc.BitsPerPixel = 32) then
+      begin
+        DstRowPtr := NewData;
+        y := Desc.Height;
+        while y > 0 do
+        begin
+          Dst := DstRowPtr;
+          x := Desc.Width;
+          while x > 0 do
+          begin
+            Dst[3] := $FF;
+            Inc(Dst, 4);
+            Dec(x);
+          end;
+          Inc(DstRowPtr, ARowstride);
+          Dec(y);
+        end;
+      end;
     end;
 
   end
@@ -330,14 +403,15 @@ begin
 
   // this is only a rough implementation, there is no check against bitsperpixel
   case Desc.BitsPerPixel of
-    1: ImageFormat := CAIRO_FORMAT_A1;
+    1: ImageFormat := CAIRO_FORMAT_ARGB32;
     8: ImageFormat := CAIRO_FORMAT_A8;
     24: ImageFormat := CAIRO_FORMAT_RGB24;
     32: ImageFormat := CAIRO_FORMAT_ARGB32;
   else
     Exit(False);
   end;
-  ARowStride := GetBytesPerLine(Desc.Width, Desc.BitsPerPixel, rileDWordBoundary);
+  if NewData = nil then
+    ARowStride := GetBytesPerLine(Desc.Width, Desc.BitsPerPixel, rileDWordBoundary);
   ABitmap := HBitmap(TGtk3Image.Create(NewData, Desc.Width, Desc.Height, ARowStride, ImageFormat,
                      {not ASkipMask}true));  // Using ASkipMask for DataOwner param prevents a crash later.
   Result := ABitmap <> 0;
@@ -349,16 +423,24 @@ begin
 
   if (ARawImage.Mask <> nil) and (ARawImage.MaskSize > 0) then
   begin
-    NewData := GetMem(ARawImage.MaskSize*8);
-    FillChar(NewData^,  ARawImage.MaskSize*8,$00);
-    //Move(ARawImage.Mask^, NewData^, ARawImage.MaskSize*8);
-  end
-  else
+    //Compute correct 1-bit mask row stride matching the description
+    ARowStride := GetBytesPerLine(Desc.Width, 1, Desc.MaskLineEnd);
+    //Allocate and copy only the actual 1-bit mask data
+    NewData := GetMem(ARowStride * Desc.Height);
+    if ARowStride * PtrUInt(Desc.Height) <= ARawImage.MaskSize then
+      Move(ARawImage.Mask^, NewData^, ARowStride * Desc.Height)
+    else
+      FillChar(NewData^, ARowStride * Desc.Height, $00);
+    //Store as width=1, height=H, rowstride=MaskRowStride RGBA pixbuf.
+    //numBytes = ARowStride * H = exact 1-bit data size, so RawImage_FromBitmap
+    //copies the right amount and GetMask_Generic reads correct bit values.
+    AMask := HBitmap(TGtk3Image.Create(NewData, 1, Desc.Height, ARowStride, CAIRO_FORMAT_ARGB32, True));
+  end else
+  begin
     NewData := nil;
-
-
-  ARowStride := GetBytesPerLine(Desc.Width, {Desc.BitsPerPixel}8, rilebyteBoundary);
-  AMask := HBitmap(TGtk3Image.Create(NewData, Desc.Width, Desc.Height, ARowStride, CAIRO_FORMAT_A8, True));
+    ARowStride := GetBytesPerLine(Desc.Width, 1, rilebyteBoundary);
+    AMask := HBitmap(TGtk3Image.Create(nil, Desc.Width, Desc.Height, ARowStride, CAIRO_FORMAT_A8, True));
+  end;
 
 end;
 
@@ -399,7 +481,7 @@ begin
   ADesc.Height := Image.Height;
 
   ADesc.BitOrder := riboReversedBits;
-  ADesc.ByteOrder := riboLSBFirst;
+  ADesc.ByteOrder := DefaultByteOrder;
   ADesc.LineOrder := riloTopToBottom;
   ADesc.LineEnd := rileDWordBoundary;
 
@@ -546,7 +628,7 @@ begin
     ADesc.Depth := 32;
     ADesc.BitsPerPixel := 32;
     ADesc.LineEnd := rileDWordBoundary;
-    ADesc.ByteOrder := riboLSBFirst;
+    ADesc.ByteOrder := DefaultByteOrder;
 
     ADesc.RedPrec := 8;
     ADesc.RedShift := 0;
@@ -566,7 +648,7 @@ begin
     ADesc.Depth := Depth;
     ADesc.BitsPerPixel := 32;
     ADesc.LineEnd := rileDWordBoundary;
-    ADesc.ByteOrder := riboLSBFirst;
+    ADesc.ByteOrder := DefaultByteOrder;
     ADesc.MaskBitsPerPixel := 0;
     ADesc.MaskShift := 0;
     ADesc.MaskLineEnd := rileByteBoundary;
@@ -639,7 +721,7 @@ begin
     ADesc.Depth := 32;
     ADesc.BitsPerPixel := 32;
     ADesc.LineEnd := rileDWordBoundary;
-    ADesc.ByteOrder := riboLSBFirst;
+    ADesc.ByteOrder := DefaultByteOrder;
 
     ADesc.RedPrec := 8;
     ADesc.RedShift := 0;
@@ -779,9 +861,14 @@ begin
     ADesc.BitsPerPixel := 32
   else
   if ADesc.BitsPerPixel > 1 then
-    ADesc.BitsPerPixel := 8;
-  if (riqfMask in AFlags) then
-    RawImage_DescriptionFromDrawable(ADesc, nil, riqfAlpha in AFlags);
+    ADesc.BitsPerPixel := 8
+  else
+  if ADesc.BitsPerPixel = 32 then
+  begin
+    ADesc.Depth := 32;
+    ADesc.AlphaPrec := 8;
+    ADesc.AlphaShift := 24;
+  end;
 end;
 
 {------------------------------------------------------------------------------
@@ -1324,12 +1411,9 @@ end;
 
 function TGtk3WidgetSet.IsDesignerDC(WindowHandle: HWND; DC: HDC): Boolean;
 begin
-  Result := False;
-  {Seem that this below is ok only if we are widgetset which cannot paint outside of paint event.
   Result := IsValidHandle(WindowHandle) and (TGtk3Widget(WindowHandle) is TGtk3DesignWidget);
   if Result then
     Result := TGtk3DesignWidget(WindowHandle).DesignContext = DC;
-  }
 end;
 
 function TGtk3WidgetSet.ReleaseDesignerDC(Window: HWND; DC: HDC): Integer;

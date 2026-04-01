@@ -41,6 +41,7 @@ resourcestring
   lisMenuStepIntoContext = 'Step Into (Context)';
   lisMenuStepOverContext = 'Step Over (Context)';
   lisMenuStepOut = 'Step O&ut';
+  lisMenuContinueLastStep = 'Continue last Step';
   lisMenuStepToCursor = 'Step over to &Cursor';
 
   //
@@ -95,6 +96,9 @@ resourcestring
   lisWatchPropert = 'Watch Properties';
   lisExpression = 'Expression:';
   lisRepeatCount = 'Repeat Count:';
+  lisSearchParent = 'Search Stack:';
+  lisSearchParentHint = 'MaxCount:NamePattern';
+  lisSearchParentErr = 'Invalid limit for "Search Stack".';
   lisDigits = 'Digits:';
   lisAllowFunctio = 'Allow Function Calls';
   lisStyle = 'Style';
@@ -160,6 +164,14 @@ resourcestring
   lisLocalsDlgCopyNameValue = 'Co&py Name and Value'; // Registers
 
   lisWatchToWatchPoint = 'Create &Data/Watch Breakpoint ...';
+
+  DbgWatchColors = 'Watches/Locals';
+  DbgWatchColorError = 'Error';
+  DbgWatchColorEllipsis = 'Ellipsis';
+  DbgWatchColorDisabled = 'Disabled';
+  DbgWatchColorEvaluating = 'Evaluating';
+  DbgWatchColorUnknown = 'Unknown';
+  DbgWatchFoundStackFrame = 'Stack frame (found)';
 
   // Mem viewer
   liswlMemView = 'Memory';
@@ -329,6 +341,14 @@ resourcestring
   rsAttachTo = 'Attach to';
   rsEnterPID = 'Enter PID';
   dlgUnitDepRefresh      = 'Refresh';
+
+  dlgAddHiAttrDefault             = 'Default Text';
+  dlgAddHiAttrTextBlock           = 'Selected text';
+  dlgAddHiAttrMouseLink           = 'Mouse link';
+  dlgAddHiAttrLineHighlight       = 'Current line highlight';
+  dbgAsmWindowSourceLine          = 'Source line';
+  dbgAsmWindowSourceFunc          = 'Function name';
+  dbgAsmWindowLinkTarget          = 'Link target line';
 
   //Disassembler dialog
   lisDisAssAssembler = 'Assembler';

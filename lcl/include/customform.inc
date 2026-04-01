@@ -3313,6 +3313,18 @@ begin
     TWSCustomFormClass(WidgetSetClass).ArrangeIcons(Self);
 end;
 
+procedure TCustomForm.ConstrainedResize(var MinWidth, MinHeight,
+  MaxWidth, MaxHeight: TConstraintSize);
+begin
+  if not Assigned(HostDockSite) then
+    inherited ConstrainedResize(MinWidth, MinHeight, MaxWidth, MaxHeight)
+  else begin
+    MinWidth  := 0;
+    MinHeight := 0;
+    inherited ConstrainedResize(MinWidth, MinHeight, MaxWidth, MaxHeight);
+  end;
+end;
+
 //==============================================================================
 
 { TFormPropertyStorage }

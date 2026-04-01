@@ -30,7 +30,9 @@ implementation
 
 procedure Register;
 begin
+  RegisterUnit('IdeDebuggerUtils', @IdeDebuggerUtils.Register);
   RegisterUnit('IdeDebugger_ValConv_Options', @IdeDebugger_ValConv_Options.Register);
+  RegisterUnit('AssemblerDlg', @AssemblerDlg.Register);
   RegisterUnit('IdeDebugger_ValFormatter_Options', @IdeDebugger_ValFormatter_Options.Register);
   RegisterUnit('IdeDebugger_DisplayFormat_Options', @IdeDebugger_DisplayFormat_Options.Register);
   RegisterUnit('IdeDbgExcludedRoutinesSettingsFrame', @IdeDbgExcludedRoutinesSettingsFrame.Register

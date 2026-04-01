@@ -505,7 +505,6 @@ begin
   TickLength := DEF_TICK_LENGTH;
   TickWidth := DEF_TICK_WIDTH;
   FTitle := TChartAxisTitle.Create(ACollection.Owner as TCustomChart);
-  FTitle.LabelFont.Orientation := FONT_VERTICAL;  // default alignment is calLeft --> vertical title
   FMarginsForMarks := true;
   FMarks.SetInsideDir(1, 0);
   FOrthogonalAxisIndex := -1;
@@ -929,10 +928,17 @@ begin
 end;
 
 function TChartAxis.IsWordwrappedTitle: Boolean;
+var
+  angle: Single;
 begin
-  Result := Title.Wordwrap and (
-    ((FAlignment in [calLeft, calRight]) and (abs(Title.LabelFont.Orientation) = FONT_VERTICAL)) or
-    ((FAlignment in [calTop, calBottom]) and (Title.LabelFont.Orientation = 0)) );
+  Result := Title.Wordwrap;
+  if Result and (Title.FixedSize <= 0) then
+  begin
+    angle := DegNormalize(Title.LabelFont.Orientation * 0.1);
+    Result :=
+      ((FAlignment in [calLeft, calRight]) and ((angle = 90) or (angle = 270))) or
+      ((FAlignment in [calTop, calBottom]) and ((angle =  0) or (angle = 180)));
+  end;
 end;
 
 function TChartAxis.MakeValuesInRangeParams(
@@ -1012,6 +1018,7 @@ var
   minorValues: TChartValueTextArray;
   pv: Double = NaN;
   cv: Double;
+  R: TRect;
 begin
   if not Visible then exit;
   v := IsVertical;
@@ -1051,14 +1058,34 @@ begin
     end;
   end;
 
-  if Title.Visible and IsWordwrappedTitle then
-    WordwrapTitle(d, AClipRect);
-
+  R := AClipRect;
   with AMeasureData do begin
     FSize := Max(sz, FSize);
-    FTitleSize := Max(TitleSize(txtLen), FTitleSize);
-    FMargin := Max(Margin, FMargin);
+    if Title.FixedSize <= 0 then
+      FTitleSize := Max(TitleSize(txtLen), FTitleSize)
+    else
+    begin
+      FTitleSize := Title.FixedSize;
+      case Alignment of
+        calLeft:
+          if Title.LabelFont.Orientation = 0 then
+            R.Right := R.Left + FTitleSize;
+        calRight:
+          if Title.labelFont.Orientation = 0 then
+            R.Left := R.Right - FTitleSize;
+        calBottom:
+          if Title.LabelFont.Orientation in [900, -900, 2700] then
+            R.Top := R.Bottom - FTitleSize;
+        calTop:
+          if Title.labelFont.Orientation in [900, -900, 2700] then
+            R.Bottom := R.Top + FTitleSize;
+      end;
+    end;
+    FMargin := Max(d.Scale(Margin), FMargin);
   end;
+
+  if Title.Visible and IsWordwrappedTitle then
+    WordwrapTitle(d, R);
 
   if minc < MaxInt then begin
     UpdateFirstLast(minc, mini, rmin, rmax);
@@ -1183,28 +1210,11 @@ begin
   FAlignment := AValue;
   // Define the "inside" direction of an axis such that rotated labels with
   // rotation center at the text start or end never reach into the chart.
-  // Rotate the title of left/right axes by 90 degrees.
   case FAlignment of
-    calBottom:
-      begin
-        FMarks.SetInsideDir(0, +1);
-        FTitle.LabelFont.Orientation := 0;
-      end;
-    calTop:
-      begin
-        FMarks.SetInsideDir(0, -1);
-        FTitle.LabelFont.Orientation := 0;
-      end;
-    calLeft:
-      begin
-        FMarks.SetInsideDir(+1, 0);
-        FTitle.LabelFont.Orientation := FONT_VERTICAL;
-      end;
-    calRight:
-      begin
-        FMarks.SetInsideDir(-1, 0);
-        FTitle.LabelFont.Orientation := FONT_VERTICAL;
-      end;
+    calBottom: FMarks.SetInsideDir(0, +1);
+    calTop   : FMarks.SetInsideDir(0, -1);
+    calLeft  : FMarks.SetInsideDir(+1, 0);
+    calRight : FMarks.SetInsideDir(-1, 0);
   end;
   StyleChanged(Self);
 end;
@@ -1391,14 +1401,26 @@ end;
 }
 
 procedure TChartAxis.WordwrapTitle(ADrawer: IChartDrawer; AClipRect: TRect);
+
+  function GetWrapLength: Integer;
+  var
+    angle: single;
+  begin
+    angle := DegNormalize(Title.LabelFont.Orientation * 0.1);
+    if (angle = 90) or (angle = 270) then
+      Result := AClipRect.Height
+    else
+    if (angle = 0) or (angle = 180) then
+      Result := AClipRect.Width
+    else
+      Result := -1;
+  end;
+
 var
   w: Integer;
 begin
-  if Alignment in [calLeft, calRight] then
-    w := AClipRect.Height
-  else if Alignment in [calBottom, calTop] then
-    w := AClipRect.Width
-  else
+  w := GetWrapLength;
+  if w = -1 then
   begin
     FWrappedTitle := Title.Caption;
     exit;

@@ -1508,6 +1508,7 @@ type
     FHasNumValue: (nvNone, nvUnsigned, nvSigned);
     FTypeInfo: TGDBType;
     FValidity: TDebuggerDataState;
+    FErrorKind: TLzDbgErrorKind;
     FTypeInfoAutoDestroy: Boolean;
     FLockFlag: Boolean;
     function GetTypeInfo: TGDBType;
@@ -9489,6 +9490,7 @@ begin
   CmdClr := TGDBMIDebuggerCommandExcludedRoutineClearAll.Create(Self);
   CmdClr.AddReference;
   QueueCommand(CmdClr);
+  CmdClr.ReleaseReference;
 end;
 
 procedure TGDBMIDebuggerBase.UpdateExcludedRoutines(AForce: Boolean);
@@ -9511,6 +9513,7 @@ begin
       CmdSet := TGDBMIDebuggerCommandExcludedRoutineSet.Create(Self, FMirroredExcludedRoutines[i]);
       CmdSet.AddReference;
       QueueCommand(CmdSet);
+      CmdSet.ReleaseReference;
     end;
   end;
 end;
@@ -14758,10 +14761,35 @@ var
   end;
 
   procedure ParseLastError;
+    function RemoveQuoted(s: string): string;
+    var
+      i: integer;
+      p1, p2: PChar;
+    begin
+      Result := s;
+      i := pos('"', Result);
+      if i < 1 then exit;
+      UniqueString(Result);
+      p2 := @Result[i];
+      p1 := p2+1;
+      repeat
+        while not (p1^ in ['"', #0]) do inc(p1);
+        if p1^ = #0 then break;
+        inc(p1);
+        while not (p1^ in ['"', #0]) do begin
+          p2^ := p1^;
+          inc(p1);
+          inc(p2);
+        end;
+      until p1^ = #0;
+      SetLength(Result, p2 - @Result[1]);
+    end;
   var
     ResultList: TGDBMINameValueList;
+    t: String;
   begin
     FHasNumValue := nvNone;
+    FErrorKind := dekUnknown;
     if (dcsCanceled in SeenStates)
     then begin
       FTextValue := '<Canceled>';
@@ -14770,8 +14798,16 @@ var
     end;
     ResultList := TGDBMINameValueList.Create(LastExecResult.Values);
     FTextValue := ResultList.Values['msg'];
-    if FTextValue = ''
-    then  FTextValue := '<Error>';
+    if FTextValue <> '' then begin
+      t := LowerCase(RemoveQuoted(FTextValue));
+      if (pos('no symbol ', t) > 0) and (pos(' context', t) > 0) then FErrorKind := dekIdentNotFound
+      else
+      if (pos(' has no component named ', t) > 0) then FErrorKind := dekMemberNotFound
+      else
+      if (pos('invalid number', t) > 0) and (pos(' context ', t) > 0) then FErrorKind := dekParser;
+    end
+    else
+      FTextValue := '<Error>';
     FreeAndNil(ResultList);
     FValidity := ddsError;
   end;
@@ -14941,6 +14977,10 @@ begin
     if FWatchValue <> nil then begin
       FWatchValue.BeginUpdate;
       repeat
+        if FValidity = ddsError then begin
+          FWatchValue.ResData.CreateError(FTextValue, FErrorKind);
+          break;
+        end;
         if (defMemDump in FEvalFlags) then begin
           FWatchValue.ResData.CreateMemDump(FMemDumpValue);
           FWatchValue.ResData.SetDataAddress(FAddr);
@@ -15072,6 +15112,7 @@ begin
   FEvalFlags := [];
   FTypeInfoAutoDestroy := True;
   FValidity := ddsValid;
+  FErrorKind := dekUnknown;
   FLockFlag := False;
 end;
 

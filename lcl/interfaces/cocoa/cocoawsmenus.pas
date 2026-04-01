@@ -33,8 +33,7 @@ uses
   // Widgetset
   WSMenus,
   // LCL Cocoa
-  CocoaPrivate, CocoaConfig, CocoaInt, CocoaMenus, CocoaWSCommon,
-  CocoaGDIObjects, CocoaUtils;
+  CocoaPrivate, CocoaConfig, CocoaMenus, CocoaCommonCallback, CocoaUtils;
 
 type
 
@@ -53,7 +52,6 @@ type
 
   TCocoaWSMenuItem = class(TWSMenuItem)
   private
-    class procedure Do_SetCheck(const ANSMenuItem: NSMenuItem; const Checked: boolean);
     // used from the MenuMadness example
     class function NSMenuCheckmark: NSImage;
     class function NSMenuRadio: NSImage;
@@ -92,10 +90,6 @@ type
   published
     class procedure Popup(const APopupMenu: TPopupMenu; const X, Y: Integer); override;
   end;
-
-procedure NSMenuItemSetBitmap(item: TMenuItem; mn: NSMenuItem; bmp: TBitmap);
-
-function AllocCocoaMenu(const atitle: string = ''): TCocoaMenu;
 
 implementation
 
@@ -151,13 +145,6 @@ begin
 end;
 
 { TCocoaWSMenuItem }
-
-class procedure TCocoaWSMenuItem.Do_SetCheck(const ANSMenuItem: NSMenuItem; const Checked: boolean);
-const
-  menustate : array [Boolean] of NSInteger = (NSOffState, NSOnState);
-begin
-  ANSMenuItem.setState( menustate[Checked] );
-end;
 
 // used from the MenuMadness example
 class function TCocoaWSMenuItem.NSMenuCheckmark: NSImage;
@@ -270,7 +257,7 @@ begin
   end
   else
   begin
-    item := LCLMenuItemInit(TCocoaMenuItem.alloc, AMenuItem);
+    item := TCocoaMenuItemUtil.init(TCocoaMenuItem.alloc, AMenuItem);
     TCocoaMenuItem(item).FMenuItemTarget := AMenuItem;
 
     if AMenuItem.IsInMenuBar then
@@ -295,10 +282,10 @@ begin
     else
       item.setOnStateImage(NSMenuCheckmark);
 
-    Do_SetCheck(item, AMenuItem.Checked);
+    TCocoaMenuItemUtil.setCheck(item, AMenuItem.Checked);
 
     if AMenuItem.HasIcon and ((AMenuItem.ImageIndex>=0) or (AMenuItem.HasBitmap)) then
-      NSMenuItemSetBitmap(AMenuItem, item, AMenuItem.Bitmap);
+      TCocoaMenuItemUtil.setBitmap(AMenuItem, item, AMenuItem.Bitmap);
   end;
 
   Result:=HMENU(item);
@@ -385,7 +372,7 @@ var
   ShiftState: NSUInteger;
   ns: NSString;
 begin
-  ShortcutToKeyEquivalent(ShortCutK1, ns, ShiftState);
+  TCocoaKeyUtil.toKeyEquivalent(ShortCutK1, ns, ShiftState);
   TCocoaMenuItem(AMenuItem.Handle).setKeyEquivalentModifierMask(ShiftState);
   TCocoaMenuItem(AMenuItem.Handle).setKeyEquivalent(ns);
 end;
@@ -427,7 +414,7 @@ begin
   lHandle := NSMenuItem(AMenuItem.Handle);
   Result := Result and lHandle.isKindOfClass_(TCocoaMenuItem);
   if not Result then Exit;
-  TCocoaWSMenuItem.Do_SetCheck(lHandle, Checked);
+  TCocoaMenuItemUtil.setCheck(lHandle, Checked);
   lCocoaHandle.UncheckSiblings(True);
 end;
 
@@ -475,44 +462,13 @@ begin
   NSMenuItem(AMenuItem.Handle).setState( menustate[RadioItem] );
 end;
 
-procedure NSMenuItemSetBitmap(item: TMenuItem; mn: NSMenuItem; bmp: TBitmap);
-var
-  image: NSImage;
-  imageWidth: Integer;
-  size: NSSize;
-  list: TCustomImageList;
-begin
-  if not Assigned(mn) then Exit;
-  if not Assigned(bmp) or (bmp.Handle = 0) then begin
-    mn.setImage(nil);
-    Exit;
-  end;
-
-  image:= TCocoaBitmap(bmp.Handle).Image;
-  size:= image.size;
-  item.GetImageList(list, imageWidth);
-  if imageWidth = 0 then
-    imageWidth:= Round(size.width);
-  if Round(size.width) = imageWidth then begin
-    mn.setImage(image);
-    Exit;
-  end;
-
-  size.width:= imageWidth;
-  size.height:= imageWidth;
-  image:= image.copy;
-  image.setSize(size);
-  mn.setImage(image);
-  image.release;
-end;
-
 class procedure TCocoaWSMenuItem.UpdateMenuIcon(const AMenuItem: TMenuItem;
   const HasIcon: Boolean; const AIcon: TBitmap);
 begin
   if not Assigned(AMenuItem) or (AMenuItem.Handle=0) then Exit;
 
   if NSObject(AMenuItem.Handle).isKindOfClass(NSMenuItem) then
-    NSMenuItemSetBitmap(AMenuItem, NSMenuItem(AMenuItem.Handle), AIcon);
+    TCocoaMenuItemUtil.setBitmap(AMenuItem, NSMenuItem(AMenuItem.Handle), AIcon);
 end;
 
 { TCocoaWSPopupMenu }
@@ -538,7 +494,7 @@ begin
 
   menu := TCocoaMenu(APopupMenu.Handle);
   point:= TPoint.Create( x, y );
-  screen:= TCocoaScreenUtil.getScreenFromHMonitor( CocoaWidgetSet.MonitorFromPoint(point, MONITOR_DEFAULTTONULL) );
+  screen:= TCocoaScreenUtil.getScreenFromHMonitor( TCocoaScreenUtil.getHMonitor(point, MONITOR_DEFAULTTONULL) );
 
   mouseY:= TCocoaScreenUtil.globalScreenBottom - y;
   if Assigned(screen) then begin

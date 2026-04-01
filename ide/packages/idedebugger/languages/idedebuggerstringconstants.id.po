@@ -22,6 +22,18 @@ msgstr ""
 msgid "No group"
 msgstr ""
 
+#: idedebuggerstringconstants.dbgasmwindowlinktarget
+msgid "Link target line"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgasmwindowsourcefunc
+msgid "Function name"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgasmwindowsourceline
+msgid "Source line"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgbreakgroupdlgcaption
 msgid "Select Groups"
 msgstr ""
@@ -117,6 +129,37 @@ msgstr ""
 
 #: idedebuggerstringconstants.dbgoptfrmpleasechoosetheformattert
 msgid "Please choose the formatter to add."
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolordisabled
+msgctxt "idedebuggerstringconstants.dbgwatchcolordisabled"
+msgid "Disabled"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorellipsis
+msgid "Ellipsis"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorerror
+#, fuzzy
+msgctxt "idedebuggerstringconstants.dbgwatchcolorerror"
+msgid "Error"
+msgstr "Salah"
+
+#: idedebuggerstringconstants.dbgwatchcolorevaluating
+msgid "Evaluating"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolors
+msgid "Watches/Locals"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchcolorunknown
+msgid "Unknown"
+msgstr ""
+
+#: idedebuggerstringconstants.dbgwatchfoundstackframe
+msgid "Stack frame (found)"
 msgstr ""
 
 #: idedebuggerstringconstants.dispformatarrayhidelenifless
@@ -644,6 +687,22 @@ msgctxt "idedebuggerstringconstants.dispformattargetwatches"
 msgid "Watches"
 msgstr ""
 
+#: idedebuggerstringconstants.dlgaddhiattrdefault
+msgid "Default Text"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrlinehighlight
+msgid "Current line highlight"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrmouselink
+msgid "Mouse link"
+msgstr ""
+
+#: idedebuggerstringconstants.dlgaddhiattrtextblock
+msgid "Selected text"
+msgstr ""
+
 #: idedebuggerstringconstants.dlgbackconvoptaction
 msgctxt "idedebuggerstringconstants.dlgbackconvoptaction"
 msgid "Action"
@@ -1072,6 +1131,7 @@ msgid "Auto continue after:"
 msgstr ""
 
 #: idedebuggerstringconstants.lisbpsdisabled
+msgctxt "idedebuggerstringconstants.lisbpsdisabled"
 msgid "Disabled"
 msgstr ""
 
@@ -1667,6 +1727,10 @@ msgstr ""
 msgid "&Break"
 msgstr ""
 
+#: idedebuggerstringconstants.lismenucontinuelaststep
+msgid "Continue last Step"
+msgstr ""
+
 #: idedebuggerstringconstants.lismenuhelp
 msgid "&Help"
 msgstr "&Panduan"
@@ -1790,6 +1854,18 @@ msgstr ""
 
 #: idedebuggerstringconstants.lisrepeatcount
 msgid "Repeat Count:"
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparent
+msgid "Search Stack:"
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparenterr
+msgid "Invalid limit for \"Search Stack\"."
+msgstr ""
+
+#: idedebuggerstringconstants.lissearchparenthint
+msgid "MaxCount:NamePattern"
 msgstr ""
 
 #: idedebuggerstringconstants.lissourcebreakpoint

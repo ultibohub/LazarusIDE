@@ -5,7 +5,8 @@ unit IdeDebuggerUtils;
 interface
 
 uses
-  Classes, SysUtils, Math, LazMethodList;
+  Classes, SysUtils, Math, LazMethodList, EditorSyntaxHighlighterDef, SrcEditorIntf,
+  EditorOptionsIntf, LazEditTextAttributes, Graphics, RegExpr, IdeDebuggerStringConstants;
 
 type
 
@@ -25,6 +26,34 @@ type
 
   TQuoteTextOpt = (qtMultiLine);
   TQuoteTextOpts = set of TQuoteTextOpt;
+
+  { TIdeDbgWatchesHighlighter }
+
+  TIdeDbgWatchesHighlighter = class(TNonSrcIDEHighlighter)
+  private
+    FAttrDisabled: TIdeCustomHighlighterAttributes;
+    FAttrEllipsis: TIdeCustomHighlighterAttributes;
+    FAttrError: TIdeCustomHighlighterAttributes;
+    FAttrEvaluating: TIdeCustomHighlighterAttributes;
+    FAttrFoundStackFrame: TIdeCustomHighlighterAttributes;
+    FAttrUnknown: TIdeCustomHighlighterAttributes;
+  public
+    constructor Create(AOwner: TComponent); override;
+    class function GetLanguageName: string; override;
+    property AttrError: TIdeCustomHighlighterAttributes      read FAttrError;
+    property AttrEllipsis: TIdeCustomHighlighterAttributes   read FAttrEllipsis;
+    property AttrDisabled: TIdeCustomHighlighterAttributes   read FAttrDisabled;
+    property AttrEvaluating: TIdeCustomHighlighterAttributes read FAttrEvaluating;
+    property AttrUnknown: TIdeCustomHighlighterAttributes    read FAttrUnknown;
+    property AttrFoundStackFrame: TIdeCustomHighlighterAttributes  read FAttrFoundStackFrame;
+  end;
+
+  TWatchParentSearchLimit = record
+    MaxCnt: integer;
+    NamePattern: string;
+  end;
+
+function ParseWatchParentSearchLimit(s: string): TWatchParentSearchLimit;
 
 function HexDigicCount(ANum: QWord; AByteSize: Integer = 0; AForceAddr: Boolean = False): integer;
 function QuoteText(AText: Utf8String; AnOpts: TQuoteTextOpts = []): UTf8String;
@@ -48,7 +77,85 @@ function LimitTextLength(const AValue: ansistring; AMaxChars: integer): ansistri
 function GetExpressionForArrayElement(AnArrayExpression: AnsiString; AnIndex: String): AnsiString; overload;
 function GetExpressionForArrayElement(AnArrayExpression: AnsiString; AnIndex: Int64): AnsiString; overload;
 
+procedure Register;
+
+var
+  WatchesColorsHL: TIdeDbgWatchesHighlighter;
+
 implementation
+
+{ TIdeDbgWatchesHighlighter }
+
+constructor TIdeDbgWatchesHighlighter.Create(AOwner: TComponent);
+  function InitAttr(ACaption: PString; AStoredName: String; AColor: TColor): TIdeCustomHighlighterAttributes;
+  begin
+    Result := TIdeCustomHighlighterAttributes.Create(ACaption, AStoredName);
+    Result.Foreground   := AColor;
+    Result.AttrFeatures := [hafForeColor];
+    Result.InternalSaveDefaultValues;
+    AddAttribute(Result);
+  end;
+begin
+  inherited Create(AOwner);
+  FreeHighlighterAttributes;
+
+  FAttrError      := InitAttr(@DbgWatchColorError,      'WatchValueError',    clRed);
+  FAttrEllipsis   := InitAttr(@DbgWatchColorEllipsis,   'WatchValueEllipsis', clGray);
+  FAttrDisabled   := InitAttr(@DbgWatchColorDisabled,   'WatchValueDisabled', clDkGray);
+  FAttrEvaluating := InitAttr(@DbgWatchColorEvaluating, 'WatchValueEval',     clDkGray);
+  FAttrUnknown    := InitAttr(@DbgWatchColorUnknown,    'WatchValueUnknown',  clDkGray);
+  FAttrFoundStackFrame  := InitAttr(@DbgWatchFoundStackFrame,  'WatchValueFoundStackFrame',  clFuchsia);
+end;
+
+class function TIdeDbgWatchesHighlighter.GetLanguageName: string;
+begin
+  Result := DbgWatchColors;
+end;
+
+procedure Register;
+var
+  Info: TIdeHighlighterInfo;
+  i: TIdeSyntaxHighlighterID;
+begin
+  // create info for asm Window
+  Info.Init;
+  with Info do
+  begin
+    SampleSource := '-';
+  end;
+
+  i := IdeColorSchemeList.AddHighlighter(TIdeDbgWatchesHighlighter.Create(nil), Info);
+  WatchesColorsHL := TIdeDbgWatchesHighlighter(IdeSyntaxHighlighters.SharedInstances[i]);
+end;
+
+function ParseWatchParentSearchLimit(s: string): TWatchParentSearchLimit;
+var
+  i: SizeInt;
+begin
+  Result := Default(TWatchParentSearchLimit);
+  Result.MaxCnt := -1;
+  if s = '' then
+    exit;
+
+  i := Pos(':', s);
+  if i > 0 then begin
+    Result.MaxCnt := StrToIntDef(copy(s,1,i-1), -1);
+    Result.NamePattern := copy(s, i+1, Length(s));
+  end
+  else
+  if s[1] in ['0'..'9'] then begin
+    Result.MaxCnt := StrToIntDef(s, -1);
+  end
+  else begin
+    Result.MaxCnt := 5;
+    Result.NamePattern := s;
+  end;
+  if Result.NamePattern  <> '' then begin
+    Result.NamePattern := QuoteRegExprMetaChars(Result.NamePattern);
+    Result.NamePattern := StringReplace(Result.NamePattern, '\*', '.*', [rfReplaceAll]);
+    Result.NamePattern := '^'+StringReplace(Result.NamePattern, '\?', '.', [rfReplaceAll])+'$';
+  end;
+end;
 
 function HexDigicCount(ANum: QWord; AByteSize: Integer = 0; AForceAddr: Boolean = False): integer;
 begin
