@@ -26,7 +26,9 @@ unit TestBasicCodetools;
 interface
 
 uses
-  fpcunit, testregistry, contnrs, Classes, SysUtils,
+  Classes, SysUtils, contnrs,
+  // FPCUnit
+  FPCUnit, TestRegistry,
   // LazUtils
   LazStringUtils, LazConfigStorage,
   // CodeTools
@@ -97,7 +99,7 @@ procedure TTestBasicCodeTools.TestFindLineEndOrCodeInFrontOfPosition;
 var
   e: String;
 begin
-  //writeln('TTestBasicCodeTools.TestFindLineEndOrCodeInFrontOfPosition ');
+  //debugln('TTestBasicCodeTools.TestFindLineEndOrCodeInFrontOfPosition ');
   e:=#13#10; // use windows line endings, they are more complicated
   t(' $'+e+'|a:=1;');
   t('a$'+e+'// comment'+e+' { comment } '+e+'|');
@@ -267,7 +269,7 @@ procedure TTestBasicCodeTools.TestReIndent;
   begin
     ActualSrc:=ReIndent(Src,OldIndent,OldTabWidth, NewIndentStep, NewTabWidth);
     if ExpectedSrc=ActualSrc then exit;
-    writeln(dbgsDiff(ExpectedSrc,ActualSrc));
+    debugln(dbgsDiff(ExpectedSrc,ActualSrc));
     AssertEquals('"'+DbgStr(Src)+'"',true,false);
   end;
 
@@ -292,7 +294,7 @@ procedure TTestBasicCodeTools.TestSimpleFormat;
   begin
     Actual:=SimpleFormat(Fmt,Args);
     if Expected=Actual then exit;
-    writeln(dbgsDiff(Expected,Actual));
+    debugln(dbgsDiff(Expected,Actual));
     AssertEquals('"'+DbgStr(Fmt)+'"('+dbgs(High(Args)-Low(Args)+1)+')',true,false);
   end;
 
@@ -744,7 +746,7 @@ procedure TTestBasicCodeTools.TestDateToCfgStr;
   begin
     Actual:=LazConfigStorage.DateToCfgStr(Date,aFormat);
     if Actual<>Expected then begin
-      writeln(dbgsDiff(Expected,Actual));
+      debugln(dbgsDiff(Expected,Actual));
       AssertEquals('DateToCfgStr failed: Format="'+aFormat+'"',Expected,Actual);
       exit;
     end;

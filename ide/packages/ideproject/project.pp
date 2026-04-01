@@ -58,15 +58,14 @@ uses
   BaseIDEIntf, ProjPackIntf, ProjectIntf, PackageIntf, MacroIntf, MacroDefIntf,
   CompOptsIntf, IDEOptionsIntf, LazMsgWorker, UnitResourceIntf,
   // IDEIntf
-  EditorSyntaxHighlighterDef, SrcEditorIntf, IDEOptEditorIntf,
-  // IdeUtils
-  InputHistory,
+  EditorSyntaxHighlighterDef, SrcEditorIntf,
   // IdeConfig
   EnvironmentOpts, LazConf, TransferMacros, SearchPathProcs, IdeXmlConfigProcs,
   IDECmdLine, IDEProcs, CompOptsModes, ProjectBuildMode, ModeMatrixOpts,
-  ParsedCompilerOpts, CompilerOptions, EditDefineTree, ProjPackCommon, IdeConfStrConsts,
+  ParsedCompilerOpts, CompilerOptions, EditDefineTree, ProjPackCommon,
+  RecentListProcs, IdeConfStrConsts,
   // IdePackager
-  IdePackagerStrConsts, PackageDefs, PackageSystem,
+  IdePackagerStrConsts, PackageDefs,
   // IdeProject
   RunParamOptions, ProjectResources, ProjectIcon, ProjectDefs, IdeProjectStrConsts;
 
@@ -674,7 +673,7 @@ type
     FFirstRemovedDependency: TPkgDependency;
     FFirstRequiredDependency: TPkgDependency;
     FJumpHistory: TProjectJumpHistory;
-    FLastCompilerFileDate: integer;
+    FLastCompilerFileDate: int64;
     FLastCompilerFilename: string;
     FLastCompilerParams: TStrings;
     fLastReadLPIFileDate: TDateTime;
@@ -696,14 +695,14 @@ type
     fProjectInfoFile: String;  // the lpi filename
     fProjectInfoFileBuffer: TCodeBuffer;
     fProjectInfoFileBufChangeStamp: integer;
-    fProjectInfoFileDate: LongInt;
+    fProjectInfoFileDate: int64;
     FPublishOptions: TPublishProjectOptions;
     FRevertLockCount: integer;
     FSessionModifiedBackup: boolean;
     FSessionStorePathDelim: TPathDelimSwitch;
     FSkipCheckLCLInterfaces: boolean;
     FSourceDirectories: TFileReferenceList;
-    FStateFileDate: longint;
+    FStateFileDate: int64;
     FStateFlags: TLazProjectStateFlags;
     FStorePathDelim: TPathDelimSwitch;
     FUnitList: TIdeLazProjectFileList;  // list of _all_ units (TUnitInfo)
@@ -954,13 +953,12 @@ type
     procedure ReaddRemovedDependency(Dependency: TPkgDependency);
     procedure MoveRequiredDependencyUp(Dependency: TPkgDependency);
     procedure MoveRequiredDependencyDown(Dependency: TPkgDependency);
-    function Requires(APackage: TLazPackage; SearchRecursively: boolean): boolean;
+    //function Requires(APackage: TLazPackage; SearchRecursively: boolean): boolean;
     procedure GetAllRequiredPackages(var List: TFPList;
                ReqFlags: TPkgIntfRequiredFlags = [];
                MinPolicy: TPackageUpdatePolicy = low(TPackageUpdatePolicy));
     procedure AddPackageDependency(const PackageName: string); override;
-    function RemovePackageDependency(const PackageName: string): boolean;
-      override;
+    function RemovePackageDependency(const PackageName: string): boolean; override;
     
     // unit dependencies
     procedure LockUnitComponentDependencies;
@@ -1025,7 +1023,7 @@ type
     property IDAsWord: string read GetIDAsWord;
     property IDEOptions: TProjectIDEOptions read GetIDEOptions;
     property JumpHistory: TProjectJumpHistory read FJumpHistory write FJumpHistory;
-    property LastCompilerFileDate: integer read FLastCompilerFileDate
+    property LastCompilerFileDate: int64 read FLastCompilerFileDate
                                           write FLastCompilerFileDate;
     property LastCompilerFilename: string read FLastCompilerFilename
                                           write FLastCompilerFilename;
@@ -1056,7 +1054,7 @@ type
     property RunParameterOptions: TRunParamsOptions read GetRunParameterOptions;
     property HistoryLists: THistoryLists read FHistoryLists;
     property SourceDirectories: TFileReferenceList read GetSourceDirectories;
-    property StateFileDate: longint read FStateFileDate write FStateFileDate;
+    property StateFileDate: int64 read FStateFileDate write FStateFileDate;
     property StateFlags: TLazProjectStateFlags read FStateFlags write FStateFlags;
     property SessionStorePathDelim: TPathDelimSwitch read FSessionStorePathDelim write FSessionStorePathDelim;
     property StorePathDelim: TPathDelimSwitch read FStorePathDelim write SetStorePathDelim;
@@ -2822,7 +2820,7 @@ begin
   FI18NExcludedIdentifiers := TStringList.Create;
   FI18NExcludedOriginals := TStringList.Create;
 
-  FResources := TProjectResources.Create(Self);
+  FResources := TProjectResources.Create;
   ProjResources.OnModified := @EmbeddedObjectModified;
 
   FHistoryLists := THistoryLists.Create;
@@ -4852,7 +4850,7 @@ begin
   IncreaseCompilerParseStamp;
   EndUpdate;
 end;
-
+{
 function TProject.Requires(APackage: TLazPackage; SearchRecursively: boolean): boolean;
 begin
   if SearchRecursively then
@@ -4862,7 +4860,7 @@ begin
     Result:=FindCompatibleDependencyInList(FFirstRequiredDependency,pddRequires,
                                            APackage)<>nil;
 end;
-
+}
 procedure TProject.GetAllRequiredPackages(var List: TFPList;
   ReqFlags: TPkgIntfRequiredFlags; MinPolicy: TPackageUpdatePolicy);
 var
@@ -5265,7 +5263,7 @@ function TProject.LoadStateFile(IgnoreErrors: boolean): TModalResult;
 var
   XMLConfig: TXMLConfig;
   StateFile: String;
-  CurStateFileAge: Integer;
+  CurStateFileAge: int64;
 begin
   StateFile:=GetStateFilename;
   if (not FilenameIsAbsolute(StateFile)) or (not FileExistsUTF8(StateFile)) then
@@ -5319,7 +5317,7 @@ function TProject.SaveStateFile(const CompilerFilename: string;
 var
   XMLConfig: TXMLConfig;
   StateFile: String;
-  CompilerFileDate: Integer;
+  CompilerFileDate: int64;
 begin
   StateFile:=GetStateFilename;
   if not FilenameIsAbsolute(StateFile) then exit(mrOk);
@@ -6131,8 +6129,9 @@ begin
   BestUnitInfo:=nil;
 
   if (MainUnitID>=0) then begin
-    if Requires(PackageGraph.LCLPackage,true)
-    and (Flags*[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,pfMainUnitHasScaledStatement]<>[])
+    if (PackageGraphInterface.FindLCLDependency(FFirstRequiredDependency)<>nil)
+    and (Flags*[pfMainUnitHasCreateFormStatements,pfMainUnitHasTitleStatement,
+                pfMainUnitHasScaledStatement]<>[])
     then begin
       // this is a probably a LCL project where the main source only contains
       // automatic code
@@ -6999,11 +6998,6 @@ begin
   UsedByPropPath:=SrcPath;
   RequiresPropPath:=DestPath;
 end;
-
-
-initialization
-  RegisterIDEOptionsGroup(GroupProject, TProjectIDEOptions);
-  RegisterIDEOptionsGroup(GroupCompiler, TProjectCompilerOptions);
 
 end.
 

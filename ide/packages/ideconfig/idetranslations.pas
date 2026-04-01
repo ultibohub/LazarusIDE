@@ -38,7 +38,7 @@ uses
   // Codetools
   FileProcs, CodeToolManager, DirectoryCacher, CodeCache,
   // IdeUtils
-  IdeUtilsPkgStrConsts;  { IDE Language (Human, not computer) }
+  IdeConfStrConsts;  { IDE Language (Human, not computer) }
 
 type
   { TLazarusTranslation }
@@ -69,7 +69,7 @@ type
   end;
 
   PPOFile = ^TPOFile;
-  
+
 // translate all resource strings
 procedure TranslateResourceStrings(const LazarusDir, CustomLang: string);
 

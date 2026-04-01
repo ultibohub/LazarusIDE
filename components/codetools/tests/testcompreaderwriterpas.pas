@@ -28,10 +28,15 @@ unit TestCompReaderWriterPas;
 interface
 
 uses
-  Classes, SysUtils, typinfo, LazLoggerBase, LazUTF8, LazLogger, CompWriterPas,
-  LazPasReadUtil, fpcunit, testregistry, CodeToolManager, LinkScanner,
-  CodeToolsStructs, TestStdCodetools,
-  variants;
+  Classes, SysUtils, variants, typinfo,
+  // FPCUnit
+  TestRegistry,
+  // LazUtils
+  LazUTF8, LazLoggerBase, LazPasReadUtil, CompWriterPas,
+  // CodeTools
+  CodeToolManager, LinkScanner, CodeToolsStructs,
+  // (project)
+  TestStdCodetools;
 
 // Tests =======================================================================
 const
@@ -488,14 +493,25 @@ type
 
 implementation
 
-type
-  TAccessComp = class(TComponent);
-
 function CreateRootName(aComponent: TComponent): string;
 begin
   Result:=aComponent.ClassName;
   Delete(Result,1,1);
   Result:=Result+'1';
+end;
+
+{ TComponentAccessHelper }
+
+type
+  // helper for accessing protected methods
+  TComponentAccessHelper = class helper for TComponent
+  public
+    procedure _SetInline(Value: Boolean);
+  end;
+
+procedure TComponentAccessHelper._SetInline(Value: Boolean);
+begin
+  SetInline(Value);
 end;
 
 { TSimpleControlWithInterface }
@@ -927,7 +943,7 @@ begin
   if Result<>'' then
     FStream.Read(Result[1],length(Result));
   {$IFDEF VerboseCompWriterPas}
-  writeln('TTestCompReaderWriterPas.WriteDescendant "',Result,'"');
+  debugln('TTestCompReaderWriterPas.WriteDescendant "',Result,'"');
   {$ENDIF}
 end;
 
@@ -950,8 +966,8 @@ begin
   if cwpoNoSelf in Writer.Options then
     ExpS:=ExpS+'end;'+LineEnding;
   ExpS:=ExpS+CSPDefaultSignatureEnd+LineEnding;
-  //writeln('TTestCompReaderWriterPas.TestWriteDescendant ACTUAL=',Actual);
-  //writeln('TTestCompReaderWriterPas.TestWriteDescendant EXP=',ExpS);
+  //debugln('TTestCompReaderWriterPas.TestWriteDescendant ACTUAL=',Actual);
+  //debugln('TTestCompReaderWriterPas.TestWriteDescendant EXP=',ExpS);
   CheckDiff(Msg,ExpS,Actual);
   AssertEquals(Msg+' NeedAccessClass',NeedAccessClass,Writer.NeedAccessClass);
 end;
@@ -1029,7 +1045,9 @@ begin
       SetOfEnum:=[];
       DefSetOfEnum:=[red];
       SetOfEnumRg:=[];
+      {$PUSH}{$R-}
       DefSetOfEnumRg:=[red];
+      {$POP}
       SetOfBool:=[];
       DefSetOfBool:=[true];
       MyInt:={%H-}TMyInt(0);
@@ -1121,7 +1139,9 @@ begin
       SetOfEnum:=[];
       DefSetOfEnum:=[red];
       SetOfEnumRg:=[];
+      {$PUSH}{$R-}
       DefSetOfEnumRg:=[red];
+      {$POP}
       SetOfBool:=[];
       DefSetOfBool:=[true];
       MyInt:=low(TMyInt);
@@ -1218,7 +1238,9 @@ begin
       SetOfEnum:=[low(SetOfEnum)..high(SetOfEnum)];
       DefSetOfEnum:=[red];
       SetOfEnumRg:=[low(SetOfEnumRg)..high(SetOfEnumRg)];
+      {$PUSH}{$R-}
       DefSetOfEnumRg:=[red];
+      {$POP}
       SetOfBool:=[low(Boolean)..high(Boolean)];
       DefSetOfBool:=[true];
       MyInt:=high(TMyInt);
@@ -1877,7 +1899,7 @@ begin
       Parent:=aRoot;
     end;
     Frame1:=TSimpleControl.Create(aRoot);
-    TAccessComp(TComponent(Frame1)).SetInline(true);
+    Frame1._SetInline(true); // access via TComponentAccessHelper
     InitFrame(Frame1);
     with Frame1 do begin
       Name:='Frame1';
@@ -1944,7 +1966,7 @@ procedure TTestCompReaderWriterPas.TestAncestorWithInline;
       end;
       // add a frame
       Frame1:=TSimpleControl.Create(Form);
-      TAccessComp(TComponent(Frame1)).SetInline(true);
+      Frame1._SetInline(true); // access via TComponentAccessHelper
       InitFrame(Frame1);
       with Frame1 do begin
         Name:='Frame1';
@@ -2055,7 +2077,7 @@ procedure TTestCompReaderWriterPas.TestInlineDescendant;
       end;
       // add a frame
       Frame1:=TSimpleControl.Create(Form);
-      TAccessComp(TComponent(Frame1)).SetInline(true);
+      Frame1._SetInline(true); // access via TComponentAccessHelper
       InitFrame(Frame1);
       with Frame1 do begin
         Name:='Frame1';

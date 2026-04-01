@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, testregistry, TestBase, Forms, LazLoggerBase,
   TestHighlightFoldBase, SynEdit, SynEditTypes, SynHighlighterPas,
-  SynEditHighlighterFoldBase, SynEditHighlighter, LazEditTextAttributes;
+  SynEditHighlighterFoldBase, LazEditTextAttributes, LazEditHighlighter;
 
 type
 
@@ -45,8 +45,8 @@ type
 
   TTestHighlighterPas = class(TTestBaseHighlighterPas)
   protected
-    FAttrProcName: TSynHighlighterAttributesModifier;
-    FCaseLabelAttri: TSynHighlighterAttributesModifier;
+    FAttrProcName: TLazEditHighlighterAttributesModifier;
+    FCaseLabelAttri: TLazEditHighlighterAttributesModifier;
     procedure ReCreateEdit; override;
 
     function TestTextFoldInfo1: TStringArray;
@@ -169,6 +169,10 @@ begin
   PasHighLighter.DeclarationValueAttr.Clear;
   PasHighLighter.GotoLabelAttr.Clear;
   PasHighLighter.StructMemberAttr.Clear;
+  PasHighLighter.StringBacktickAttri.Clear;
+  PasHighLighter.StringSingleAttri.Clear;
+  PasHighLighter.StringCaretAttri.Clear;
+  PasHighLighter.StringHashAttri.Clear;
 end;
 
 procedure TTestBaseHighlighterPas.EnableFolds(AEnbledTypes: TPascalCodeFoldBlockTypes;
@@ -1000,7 +1004,7 @@ end;
 
 procedure TTestHighlighterPas.TestContextForProcModifiersName;
 var
-  p: TSynHighlighterAttributesModifier;
+  p: TLazEditHighlighterAttributesModifier;
   AFolds: TPascalCodeFoldBlockTypes;
   i: Integer;
 begin
@@ -2028,7 +2032,7 @@ end;
 
 procedure TTestHighlighterPas.TestContextForInterface;
 var
-  AtP, AtI, AtK: TSynHighlighterAttributes;
+  AtP, AtI, AtK: TLazEditHighlighterAttributes;
   AFolds: TPascalCodeFoldBlockTypes;
   i: Integer;
 begin
@@ -2912,7 +2916,7 @@ var
   AFolds: TPascalCodeFoldBlockTypes;
   i, j, k: Integer;
   n, s, s2: String;
-  h: TSynHighlighterAttributesModifier;
+  h: TLazEditHighlighterAttributesModifier;
   _e1, _e2: TtkTokenKindEx;
 begin
   ReCreateEdit;
@@ -3775,7 +3779,7 @@ end;
 
 procedure TTestHighlighterPas.TestModifierAttributesForProcedure;
 var
-  ProcName, ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+  ProcName, ProcParam, ProcType, ProcVal, ProcRes: TLazEditHighlighterAttributesModifier;
   t: Integer;
   s1: String;
 begin
@@ -3873,7 +3877,7 @@ end;
 
 procedure TTestHighlighterPas.TestModifierAttributesForProperty;
 var
-  PropName, ProcParam, ProcType, ProcRes: TSynHighlighterAttributesModifier;
+  PropName, ProcParam, ProcType, ProcRes: TLazEditHighlighterAttributesModifier;
   t: Integer;
   s1: String;
 begin
@@ -3967,7 +3971,7 @@ end;
 procedure TTestHighlighterPas.TestModifierAttributesForVarConstType;
 var
   DeclVarName, DeclTypeName, DeclType, DeclVal, ProcName,
-    ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+    ProcParam, ProcType, ProcVal, ProcRes: TLazEditHighlighterAttributesModifier;
   t, i: Integer;
   s1,s2,s3,s4: String;
 begin
@@ -4176,7 +4180,7 @@ end;
 procedure TTestHighlighterPas.TestModifierAttributesWithAnonProcedure;
 var
   DeclVarName, DeclTypeName, DeclType, DeclVal, ProcName,
-    ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+    ProcParam, ProcType, ProcVal, ProcRes: TLazEditHighlighterAttributesModifier;
   x: String;
 begin
   x := 'end; procedure test; begin'; // in case the anon function closed the named function
@@ -4314,7 +4318,7 @@ end;
 
 procedure TTestHighlighterPas.TestModifierAttributesForLabel;
 var
-  GotoLbl: TSynHighlighterAttributes;
+  GotoLbl: TLazEditHighlighterAttributes;
 begin
   FKeepAllModifierAttribs := True;
   FKeepGenericModifierAttribs := False;
@@ -4404,7 +4408,7 @@ end;
 procedure TTestHighlighterPas.TestModifierAttributesForGenericObjFpc;
 var
   pam1, pam2: TProcNameAttrbuteModes;
-  GP, GC, SP, ProcName, ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+  GP, GC, SP, ProcName, ProcParam, ProcType, ProcVal, ProcRes: TLazEditHighlighterAttributesModifier;
   __O, __C: TExpTokenInfo;
   __gP, __gC, __gCK, __sP, __sPK: TExpTokenInfo;
   __pN, __pd, __pG, __pC, __pCK, __pB, __ps, __p_: TExpTokenInfo;
@@ -4603,7 +4607,7 @@ end;
 procedure TTestHighlighterPas.TestModifierAttributesForGenericDelphi;
 var
   pam1, pam2: TProcNameAttrbuteModes;
-  GP, GC, SP, ProcName, ProcParam, ProcType, ProcVal, ProcRes: TSynHighlighterAttributesModifier;
+  GP, GC, SP, ProcName, ProcParam, ProcType, ProcVal, ProcRes: TLazEditHighlighterAttributesModifier;
   __O, __C: TExpTokenInfo;
   __gP, __gC, __gCK, __sP, __sPK: TExpTokenInfo;
   __pN, __pd, __pG, __pC, __pCK, __pB, __ps, __p_: TExpTokenInfo;

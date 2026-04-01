@@ -5584,6 +5584,14 @@ msgstr "A kijelölt elemeket mindig fókuszálva rajzolja"
 msgid "Always ignore"
 msgstr "Tiltás mindig"
 
+#: lazarusidestrconsts.lisalwaysopensymlink
+msgid "Always Open Symlink"
+msgstr ""
+
+#: lazarusidestrconsts.lisalwaysopentarget
+msgid "Always Open Target"
+msgstr ""
+
 #: lazarusidestrconsts.lisamacrowiththisnamealreadyexists
 msgid "A macro with this name already exists."
 msgstr "Egy makró már létezik ezzel a névvel."
@@ -5830,6 +5838,10 @@ msgstr "Biztonsági mentés sikertelen"
 #: lazarusidestrconsts.lisbackuphint
 msgid "Creates a Backup directory under project directory"
 msgstr "A Backup könyvtár létrehozása a projekt könyvtárában"
+
+#: lazarusidestrconsts.lisbasepkg
+msgid "Base package, cannot be uninstalled"
+msgstr ""
 
 #: lazarusidestrconsts.lisbddchangingthepackagenameorversionbreaksdependencies
 #, object-pascal-format
@@ -9027,9 +9039,17 @@ msgstr "Elválasztás pontosvesszővel."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Delphi kompatibilis erőforrások. Ajánlott."
 
+#: lazarusidestrconsts.lisdesigntimeonlypkg
+msgid "Designtime-only package"
+msgstr ""
+
 #: lazarusidestrconsts.lisdesigntimepackagesaddcomponentsandmenuitemstotheid
 msgid "\"Design time\" packages add components and menu items to the IDE. They can be used by projects but are not compiled into the project. The compiler will not find units of this package when compiling the project."
 msgstr "A \"tervezési\" csomagok komponenseket és menübejegyzéseket adnak az IDE-hez. A projektek használhatják őket, de nem lesznek beléjük építve. A fordító nem fogja megtalálni ezen csomagok unit-jait a projekt fordításakor."
+
+#: lazarusidestrconsts.lisdesigntimeruntimepkg
+msgid "Designtime/runtime package"
+msgstr ""
 
 #: lazarusidestrconsts.lisdesktops
 msgid "Desktops ..."
@@ -9996,6 +10016,17 @@ msgstr "Nem sikerült hozzáadni %d egyedi erőforrást"
 #, object-pascal-format
 msgid "Failed to create Application Bundle for \"%s\""
 msgstr "Nem sikerült létrehozni az alkalmazásköteget ehhez: %s"
+
+#: lazarusidestrconsts.lisfailedtocreatetheconfigurationdirectory
+#, object-pascal-format
+msgid ""
+"Failed to create the configuration directory:\n"
+"%s\n"
+"\n"
+"The path may contain reserved characters or you may not have permissions.\n"
+"\n"
+"It can be specified by the command line parameter \"--pcp\" or in the file \"lazarus.cfg\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisfailedtoloadfoldstat
 msgid "Failed to load fold state"
@@ -12068,6 +12099,10 @@ msgctxt "lazarusidestrconsts.lislazcleanupbuildall"
 msgid "Clean Up + Build all"
 msgstr "Tisztítás és minden építése"
 
+#: lazarusidestrconsts.lislazpkg
+msgid "Package distributed with Lazarus"
+msgstr ""
+
 #: lazarusidestrconsts.lisldaddlinktoinherited
 msgid "Add link to inherited"
 msgstr "Hivatkozás hozzáadása az öröklötthöz"
@@ -12124,6 +12159,10 @@ msgstr "Bal oldalak egy vonalban"
 #: lazarusidestrconsts.lisleftspaceequally
 msgid "Left space equally"
 msgstr "Bal oldali távolságok egyenlően"
+
+#: lazarusidestrconsts.lislegend
+msgid "Legend"
+msgstr ""
 
 #: lazarusidestrconsts.lisless
 msgctxt "lazarusidestrconsts.lisless"
@@ -15927,6 +15966,10 @@ msgctxt "lazarusidestrconsts.lispkgmgrremove"
 msgid "remove"
 msgstr "eltávolítás"
 
+#: lazarusidestrconsts.lispkgoverlayinfo
+msgid "Additional information is indicated by the following overlays:"
+msgstr ""
+
 #: lazarusidestrconsts.lispkgselectapackage
 msgid "Select a package"
 msgstr "Válasszon egy csomagot"
@@ -15943,6 +15986,14 @@ msgstr "A projekt felülbírálja a következő csomagok kimeneti könyvtárát.
 #: lazarusidestrconsts.lispkgthisfileisnotinanyloadedpackage
 msgid "This file is not in any loaded package."
 msgstr "Ez a fájl nincs benne egyik betöltött csomagban sem."
+
+#: lazarusidestrconsts.lispkgtobeinstalled
+msgid "Package will be installed with next IDE rebuild"
+msgstr ""
+
+#: lazarusidestrconsts.lispkgtobeuninstalled
+msgid "Package will be uninstalled with next IDE rebuild (unless needed by an installed package)"
+msgstr ""
 
 #: lazarusidestrconsts.lispkgunabletoreadpackagefileerror
 #, object-pascal-format
@@ -19395,6 +19446,14 @@ msgstr "Amikor egy unit átnevezésre kerül frissítse a hivatkozásokat"
 msgid "When enabled the current options are saved to the template which is used when creating new projects"
 msgstr "Amikor engedélyezve van az aktuális beállítások a sablonba lesznek mentve, amely új projektek létrehozásakor használatos"
 
+#: lazarusidestrconsts.liswhenopeningasymlinkfileopenthetargetfilethesymlink
+msgid "When opening a symlink file, open the target file, the symlink file, or ask"
+msgstr ""
+
+#: lazarusidestrconsts.liswhenopeningsymlink
+msgid "When opening a Symlink"
+msgstr ""
+
 #: lazarusidestrconsts.liswhenthereisonlyonepossiblecompletionitemuseitimmed
 msgid "When there is only one possible completion item use it immediately, without showing the completion box"
 msgstr "Ha csak egy lehetséges kiegészítés van az azonnal be lesz illesztve, a kiegészítés doboz megjelenítése nélkül"
@@ -19626,6 +19685,10 @@ msgstr "Csomópontok"
 #: lazarusidestrconsts.lvlgraphshapestraight
 msgid "Straight"
 msgstr "Egyenes"
+
+#: lazarusidestrconsts.lvlgraphshowrequiredpkg
+msgid "Required packages"
+msgstr ""
 
 #: lazarusidestrconsts.lvlgraphsplitmergeathighe
 msgid "Merge at highest"
@@ -21822,6 +21885,10 @@ msgstr "Csomag-fa beállításai"
 #: lazarusidestrconsts.unitdepoptionsforunit
 msgid "Options for Unit graph"
 msgstr "Unit-fa beállítása"
+
+#: lazarusidestrconsts.updatelvlgraph
+msgid "Update graph"
+msgstr ""
 
 #: lazarusidestrconsts.versioninfotitle
 msgid "Version Info"

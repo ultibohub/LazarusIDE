@@ -58,6 +58,13 @@ type
     deFailed);
   TFPDCompareStepInfo = (dcsiNewLine, dcsiSameLine, dcsiNoLineInfo, dcsiZeroLine);
 
+  TFpHandleUserDebugEvent = (
+    udeReRaiseWin32ThreadNameException,
+    udeReRaiseExternalWatchPoint,
+    udeKeepExternalWatchPointData
+  );
+  TFpHandleUserDebugEvents = set of TFpHandleUserDebugEvent;
+
   TGDbgRegisterValueList = specialize TFPGObjectList<TDbgRegisterValue>;
 
   { TDbgRegisterValueList }
@@ -229,6 +236,7 @@ type
 
   { TDbgThread }
   TFpInternalBreakpoint = class;
+  TFpInternalWatchpoint  = class;
 
   TDbgThread = class(TObject)
   private
@@ -255,6 +263,7 @@ type
     FStoreStepSrcLineNo: integer;
     FStoreStepFuncAddr: TDBGPtr;
     FStackBeforeAlloc: TDBGPtr;
+    FHitExternalWatchPoint: boolean; // a WatchPoint was triggered that was never requested by FpDebug (probably set be the user code)
 
     procedure StoreHasBreakpointInfoForAddress(AnAddr: TDBGPtr); inline;
     procedure ClearHasBreakpointInfoForAddressMismatch(AKeepOnlyForAddr: TDBGPtr); inline;
@@ -291,7 +300,7 @@ type
     function CheckForHardcodeBreakPoint(AnAddr: TDBGPtr): boolean;
     procedure BeforeContinue; virtual;
     procedure ApplyWatchPoints(AWatchPointData: TFpWatchPointData); virtual;
-    function DetectHardwareWatchpoint: Pointer; virtual;
+    function DetectHardwareWatchpoint: TFpInternalWatchpoint; virtual;
     // This function changes the value of a register in the debugee.
     procedure SetRegisterValue(AName: string; AValue: QWord); virtual; abstract;
 
@@ -878,6 +887,7 @@ type
     FProcessConfig: TDbgProcessConfig;
     FConfig: TDbgConfig;
     FGlobalCache: TFpDbgDataCache;
+    FHandleUserDebugEvents: TFpHandleUserDebugEvents;
     function DoGetCfiFrameBase(AContext: TFpDbgLocationContext; out AnError: TFpError): TDBGPtr;
     function DoGetFrameBase(AContext: TFpDbgLocationContext; out AnError: TFpError): TDBGPtr;
     function GetDisassembler: TDbgAsmDecoder;
@@ -891,7 +901,7 @@ type
     FCurrentBreakpoint: TFpInternalBreakpoint;  // set if we are executing the code at the break
                                          // if the singlestep is done, set the break again
     FCurrentBreakpointList: TFpInternalBreakpointArray; // further current breakpoint
-    FCurrentWatchpoint: Pointer;         // Indicates the owner
+    FCurrentWatchpoint: TFpInternalWatchpoint;         // Indicates the owner
     FReEnableBreakStep: Boolean;         // Set when we are reenabling a breakpoint
                                          // We need a single step, so the IP is after the break to set
 
@@ -1037,7 +1047,7 @@ type
     property ExitCode: DWord read FExitCode;
     property CurrentBreakpoint: TFpInternalBreakpoint read FCurrentBreakpoint;
     property CurrentBreakpointList: TFpInternalBreakpointArray read FCurrentBreakpointList; experimental; // need getter
-    property CurrentWatchpoint: Pointer read FCurrentWatchpoint;
+    property CurrentWatchpoint: TFpInternalWatchpoint read FCurrentWatchpoint;
     property PauseRequested: boolean read GetPauseRequested write SetPauseRequested;
     function GetAndClearPauseRequested: Boolean;
 
@@ -1053,6 +1063,7 @@ type
     property ThreadMap: TThreadMap read FThreadMap;
     property Config: TDbgConfig read FConfig;
     property GlobalCache: TFpDbgDataCache read FGlobalCache write FGlobalCache;
+    property HandleUserDebugEvents: TFpHandleUserDebugEvents read FHandleUserDebugEvents write FHandleUserDebugEvents;
   end;
   TDbgProcessClass = class of TDbgProcess;
 
@@ -1062,8 +1073,8 @@ type
   private
     FChanged: Boolean;
   public
-    function AddOwnedWatchpoint(AnOwner: Pointer; AnAddr: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind): boolean; virtual;
-    function RemoveOwnedWatchpoint(AnOwner: Pointer): boolean; virtual;
+    function AddOwnedWatchpoint(AnOwner: TFpInternalWatchpoint; AnAddr: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind): boolean; virtual;
+    function RemoveOwnedWatchpoint(AnOwner: TFpInternalWatchpoint): boolean; virtual;
     property Changed: Boolean read FChanged write FChanged;
   end;
 
@@ -1072,17 +1083,17 @@ type
   TFpIntelWatchPointData = class(TFpWatchPointData)
   private
     // For Intel: Dr0..Dr3
-    FOwners: array [0..3] of Pointer;
+    FOwners: array [0..3] of TFpInternalWatchpoint;
     FDr03: array [0..3] of TDBGPtr;
     FDr7: DWord;
     function GetDr03(AnIndex: Integer): TDBGPtr; inline;
-    function GetOwner(AnIndex: Integer): Pointer; inline;
+    function GetOwner(AnIndex: Integer): TFpInternalWatchpoint; inline;
   public
-    function AddOwnedWatchpoint(AnOwner: Pointer; AnAddr: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind): boolean; override;
-    function RemoveOwnedWatchpoint(AnOwner: Pointer): boolean; override;
+    function AddOwnedWatchpoint(AnOwner: TFpInternalWatchpoint; AnAddr: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind): boolean; override;
+    function RemoveOwnedWatchpoint(AnOwner: TFpInternalWatchpoint): boolean; override;
     property Dr03[AnIndex: Integer]: TDBGPtr read GetDr03;
     property Dr7: DWord read FDr7;
-    property Owner[AnIndex: Integer]: Pointer read GetOwner;
+    property Owner[AnIndex: Integer]: TFpInternalWatchpoint read GetOwner;
   end;
 
   { TOSDbgClasses }
@@ -2954,8 +2965,18 @@ begin
     // Determine the address where the execution has stopped
     CurrentAddr:=AThread.GetInstructionPointerRegisterValue;
     FCurrentWatchpoint:=AThread.DetectHardwareWatchpoint;
-    if (FCurrentWatchpoint <> nil) and (FWatchPointList.IndexOf(TFpInternalWatchpoint(FCurrentWatchpoint)) < 0) then
-      FCurrentWatchpoint := Pointer(-1);
+    if (FCurrentWatchpoint <> nil) and (FWatchPointList.IndexOf(TFpInternalWatchpoint(FCurrentWatchpoint)) < 0) then begin
+      FCurrentWatchpoint := nil;
+      // TODO: different codes for "hit int3" and "ended single step"
+      (* Stopped at a WatchPoint that has been removed in the meantime.
+         - If we hit an int3 (set by debugger, or user placed in code) then no data
+           was changed.
+         - The only "false positive" is, if we had a read WatchPoint on the
+           address of the code. Then we would now skip the int3.
+       *)
+      if not AThread.NextIsSingleStep then
+        Result := deInternalContinue; // if there is a breakpoint, then this will be set back to deBreakpoint;
+    end;
     FCurrentBreakpoint:=nil;
     FCurrentBreakpointList := nil;
     AThread.NextIsSingleStep:=false;
@@ -3872,6 +3893,7 @@ begin
   FNoSymbolAtCurrentInstructionPtr := False;
 
   FPausedAtHardcodeBreakPoint := False;
+  FHitExternalWatchPoint := False;
   ClearHasBreakpointInfoForAddress;
 end;
 
@@ -3880,7 +3902,7 @@ begin
   //
 end;
 
-function TDbgThread.DetectHardwareWatchpoint: Pointer;
+function TDbgThread.DetectHardwareWatchpoint: TFpInternalWatchpoint;
 begin
   result := nil;
 end;
@@ -4082,13 +4104,13 @@ end;
 
 { TFpWatchPointData }
 
-function TFpWatchPointData.AddOwnedWatchpoint(AnOwner: Pointer;
+function TFpWatchPointData.AddOwnedWatchpoint(AnOwner: TFpInternalWatchpoint;
   AnAddr: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind): boolean;
 begin
   Result := False;
 end;
 
-function TFpWatchPointData.RemoveOwnedWatchpoint(AnOwner: Pointer): boolean;
+function TFpWatchPointData.RemoveOwnedWatchpoint(AnOwner: TFpInternalWatchpoint): boolean;
 begin
   Result := True;
 end;
@@ -4100,12 +4122,12 @@ begin
   Result := FDr03[AnIndex];
 end;
 
-function TFpIntelWatchPointData.GetOwner(AnIndex: Integer): Pointer;
+function TFpIntelWatchPointData.GetOwner(AnIndex: Integer): TFpInternalWatchpoint;
 begin
   Result := FOwners[AnIndex];
 end;
 
-function TFpIntelWatchPointData.AddOwnedWatchpoint(AnOwner: Pointer;
+function TFpIntelWatchPointData.AddOwnedWatchpoint(AnOwner: TFpInternalWatchpoint;
   AnAddr: TDBGPtr; ASize: Cardinal; AReadWrite: TDBGWatchPointKind): boolean;
 var
   SizeBits, ModeBits: DWord;
@@ -4140,7 +4162,7 @@ begin
   end;
 end;
 
-function TFpIntelWatchPointData.RemoveOwnedWatchpoint(AnOwner: Pointer
+function TFpIntelWatchPointData.RemoveOwnedWatchpoint(AnOwner: TFpInternalWatchpoint
   ): boolean;
 var
   idx: Integer;

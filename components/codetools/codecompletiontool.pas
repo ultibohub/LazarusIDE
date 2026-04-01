@@ -1303,7 +1303,7 @@ begin
       while Assigned(VarNode) and not Assigned(VarTypeNode) do
       begin
         if (VarNode.Desc = ctnVarDefinition) and Assigned(VarNode.LastChild) and
-           (VarNode.LastChild.Desc = ctnIdentifier) and
+           (VarNode.LastChild.Desc in [ctnIdentifier, ctnOpenArrayType, ctnRangedArrayType]) and
            (CompareTextIgnoringSpace(VariableType,ExtractNode(VarNode.LastChild,[phpCommentsToSpace]),False) = 0)
         then
           VarTypeNode := VarNode;
@@ -1443,7 +1443,7 @@ begin
   if GetIdentLen(AnUnitName)=0 then exit;
   if CompareDottedIdentifiers(AnUnitName,'System')=0 then exit;
   if (CompareDottedIdentifiers(AnUnitName,'ObjPas')=0)
-  and (Scanner.CompilerMode in [cmDELPHI,cmOBJFPC])
+  and (Scanner.CompilerMode in [cmDELPHI,cmOBJFPC]) //  cmDELPHIUNICODE ?
   and (Scanner.PascalCompiler=pcFPC) then
     exit;
   if (CompareDottedIdentifiers(AnUnitName,'MacPas')=0)
@@ -2521,12 +2521,157 @@ function TCodeCompletionCodeTool.CompleteIdentifierByParameter(CleanCursorPos,
     then
       RaiseException(20170421201617,'CompleteIdentifierByParameter.AddProcedure JumpToMethod failed');
   end;
+type
+  OverloadedProc = record
+    Tool: TFindDeclarationTool;
+    ProcNode: TCodeTreeNode;
+    ParamNode: TCodeTreeNode;
+    PTypeName: PChar;
+    ProceedArray: string;
+  end;
+
+  ArrOfOverloadedProc = array of OverloadedProc;
+
+  procedure CheckIfArray(var rec: OverloadedProc);
+  var
+    s: string;
+  begin
+    rec.ProceedArray:='';
+    if rec.PTypeName = nil then exit;
+    s:='';
+    rec.Tool.MoveCursorToCleanPos(rec.PTypeName);
+    rec.Tool.ReadNextAtom;
+    if rec.Tool.UpAtomIs('ARRAY') then
+      s:=rec.Tool.GetAtom;
+    if s<>'' then begin
+      rec.Tool.ReadNextAtom;
+      if rec.Tool.UpAtomIs('OF') then begin
+        s:=s+' '+rec.Tool.GetAtom;
+        rec.Tool.ReadNextAtom;
+        if rec.Tool.CurPos.Flag = cafWord then begin
+          if rec.Tool.UpAtomIs('CONST') then exit; // "array of const" not supported (yet)
+          s:=s+' '+rec.Tool.GetAtom;
+          rec.Tool.ReadNextAtom;
+          if rec.Tool.CurPos.Flag = cafPoint then begin
+            repeat // fully qualified identifier possible
+              if rec.Tool.CurPos.Flag = cafPoint then
+                s:=s+'.'
+              else
+                break;
+              rec.Tool.ReadNextAtom;
+              if rec.Tool.CurPos.Flag = cafWord then
+                s:=s+rec.Tool.GetAtom;
+              rec.Tool.ReadNextAtom;
+              if rec.Tool.CurPos.Flag in [cafSemicolon, cafRoundBracketClose] then
+              begin
+                rec.ProceedArray:=s;
+                break;
+              end;
+            until false;
+          end else begin
+            rec.ProceedArray:=s;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  procedure SetTypeName(var rec: OverloadedProc;  N: integer);
+  var
+    i: integer;
+    Node: TCodeTreeNode;
+  begin
+    with rec do begin
+      PTypeName:=nil;
+      ParamNode:=nil;
+      ProceedArray:='';
+      if ProcNode=nil then exit;
+      if (ProcNode.FirstChild=nil) then exit;
+      if (ProcNode.FirstChild.FirstChild=nil) then exit;
+      if (ProcNode.FirstChild.ChildCount<N+1) then exit;
+      i:=0;
+      Node:=ProcNode.FirstChild.FirstChild;
+      while (Node<>nil) and (i<N) do begin
+        Node:=Node.NextBrother;
+        inc(i);
+      end;
+
+      rec.Tool.MoveCursorToNodeStart(Node);
+      i:=0;
+      repeat
+        rec.Tool.ReadNextAtom;
+        if rec.Tool.CurPos.Flag = cafColon then begin // type name starts after
+          rec.Tool.ReadNextAtom;
+          i:=rec.Tool.CurPos.StartPos;
+          break;
+        end;
+        if (rec.Tool.CurPos.Flag = cafSemicolon) or
+        (rec.Tool.CurPos.EndPos>=rec.Tool.SrcLen) then //failure
+          break;
+      until false;
+
+      if (i>0) and IsIdentStartChar[Tool.Src[i]] then begin
+        PTypeName:=@Tool.Src[i];
+        ParamNode:=Node;
+      end else begin
+        PTypeName:=nil;
+        ParamNode:=Node;
+      end;
+    end;
+    CheckIfArray(rec);
+  end;
+
+  function GetCommonTypeForParameter(var arr: ArrOfOverloadedProc;
+    out ParamNode: TCodeTreeNode; out ATool: TFindDeclarationTool): string;
+  var
+    i:integer;
+  begin
+    Result:='';
+    ParamNode:=nil;
+    ATool:=nil;
+    i:=0;
+    while i<=high(arr) do begin
+      if (arr[i].PTypeName<>nil) and (Result='') then begin
+        if arr[i].ProceedArray<>'' then
+          Result:=arr[i].ProceedArray
+        else
+          Result:=GetIdentifier(arr[i].PTypeName, true, true);  // "SourceName.ClassName.TypeName" possible
+        ParamNode:=arr[i].ParamNode;
+        ATool:=arr[i].Tool;
+      end;
+      if Result<>'' then begin
+        inc(i);
+        while i<=high(arr) do begin
+          if (arr[i].ProceedArray<>'') then begin
+            if CompareTextIgnoringSpace(Result, arr[i].ProceedArray, false)<>0 then
+            begin
+              //different type names at N-th - parameter detected (open arrays expected)
+              Result:='';
+              ParamNode:=nil;
+              ATool:=nil;
+              exit;
+            end;
+          end else
+          if (arr[i].PTypeName<>nil) and
+          (CompareDottedIdentifiers(arr[i].PTypeName, PChar(Result))<>0) then begin
+            //different type names at N-th - parameter detected
+            Result:='';
+            ParamNode:=nil;
+            ATool:=nil;
+            exit;
+          end;
+          inc(i);
+        end;
+      end;
+      inc(i);
+    end;
+  end;
 
 var
   VarNameRange, ProcNameAtom: TAtomPosition;
-  ParameterIndex: integer;
+  ParameterIndex, i, APos: integer;
   Params: TFindDeclarationParams;
-  ParameterNode: TCodeTreeNode;
+  ParameterNode, ANode: TCodeTreeNode;
   TypeNode: TCodeTreeNode;
   NewType: String;
   IgnorePos: TCodePosition;
@@ -2535,12 +2680,15 @@ var
   ExprType: TExpressionType;
   Context: TFindContext;
   HasAtOperator: Boolean;
-  TypeTool: TFindDeclarationTool;
+  TypeTool, ATool: TFindDeclarationTool;
   AliasType: TFindContext;
   Identifier: String;
+  CodeXYPos: TCodeXYPosition;
+  FPL: TFPList;
+  ProcArray: ArrOfOverloadedProc;
 begin
   Result:=false;
-
+  ProcArray:=nil;
   {$IFDEF CTDEBUG}
   DebugLn('  CompleteIdentifierByParameter: A');
   {$ENDIF}
@@ -2621,7 +2769,6 @@ begin
     if Assigned(Context.Tool) and Assigned(Context.Node) then
     begin
       // find declaration of parameter list
-      // ToDo: search in all overloads for the best fit
       Params.ContextNode:=Context.Node;
       Params.SetIdentifier(Self,@Src[ProcNameAtom.StartPos],nil);
       Params.Flags:=fdfDefaultForExpressions+[fdfFindVariable];
@@ -2636,7 +2783,31 @@ begin
         debugln(['TCodeCompletionCodeTool.CompleteIdentifierByParameter searching ',GetIdentifier(Params.Identifier),' [',dbgs(Params.Flags),'] in ',FindContextToString(Context)]);
         {$ENDIF}
         if not Context.Tool.FindIdentifierInContext(Params) then exit;
+
+        // gather overloaded procs
+        FPL:=nil;
+        if not Params.NewCodeTool.CleanPosToCaret(
+          Params.NewNode.FirstChild.StartPos,CodeXYPos) then
+        exit;
+        if not Context.Tool.FindDeclarationAndOverload(CodeXYPos,FPL,
+          [fdlfWithoutEmptyProperties]) then
+        exit;
+        if FPL<>nil then
+          for i:=0 to FPL.Count-1 do begin
+            CodeXYPos:=TCodeXYPosition(FPL[i]^);
+            ATool:= FindCodeToolForUsedUnit(CodeXYPos.Code.Scanner.SourceName,
+              CodeXYPos.Code.Filename,false);
+            if ATool<>nil then begin
+              SetLength(ProcArray, Length(ProcArray)+1);
+              ATool.CaretToCleanPos(CodeXYPos,Apos);
+              ANode:=ATool.FindDeepestNodeAtPos(APos,false);
+              ProcArray[high(ProcArray)].Tool:=Atool;
+              ProcArray[high(ProcArray)].ProcNode:=ANode;
+              SetTypeName(ProcArray[high(ProcArray)],ParameterIndex);  // get N-th parameter type name
+            end;
+          end;
       finally
+        FreeListOfPCodeXYPosition(FPL);
         ClearIgnoreErrorAfter;
       end;
     end else
@@ -2665,23 +2836,9 @@ begin
       except
       end;
     end;
-    ParameterNode:=Params.NewCodeTool.FindNthParameterNode(Params.NewNode,
-                                                           ParameterIndex);
-    if (ParameterNode=nil)
-    and (Params.NewNode.Desc in [ctnProperty,ctnProcedure]) then begin
-      DebugLn(['  CompleteIdentifierByParameter Procedure has less than ',ParameterIndex+1,' parameters']);
-      exit;
-    end;
+    NewType:= GetCommonTypeForParameter(ProcArray, ParameterNode, TypeTool);
     if ParameterNode=nil then exit;
-    //DebugLn('TCodeCompletionCodeTool.CompleteIdentifierByParameter ParameterNode=',ParameterNode.DescAsString,' ',copy(Params.NewCodeTool.Src,ParameterNode.StartPos,50));
-    TypeTool:=Params.NewCodeTool;
     TypeNode:=FindTypeNodeOfDefinition(ParameterNode);
-    if TypeNode=nil then begin
-      DebugLn('  CompleteIdentifierByParameter Parameter has no type');
-      exit;
-    end;
-    // default: copy the type
-    NewType:=TypeTool.ExtractCode(TypeNode.StartPos,TypeNode.EndPos,[]);
 
     // search type
     Params.Clear;
@@ -2696,7 +2853,7 @@ begin
     TypeTool:=ExprType.Context.Tool;
     TypeNode:=ExprType.Context.Node;
     if HasAtOperator
-    or ((Scanner.CompilerMode=cmDelphi) and (ExprType.Desc=xtContext) // procedures in delphi mode without @
+    or ((Scanner.CompilerMode in [cmDELPHI, cmDELPHIUNICODE]) and (ExprType.Desc=xtContext) // procedures in delphi mode without @
         and (TypeNode<>nil) and (TypeNode.Desc in AllProcTypes)) then
     begin
       debugln(['TCodeCompletionCodeTool.CompleteIdentifierByParameter HasAtOperator ExprType=',ExprTypeToString(ExprType)]);
@@ -7581,7 +7738,8 @@ var
             begin
               ProcBody:=
                 'procedure '
-                +ExtractClassName(PropNode.Parent.Parent,false,true,Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE])+'.'+AccessParam
+                +ExtractClassName(PropNode.Parent.Parent,false,true,
+                Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE])+'.'+AccessParam
                 +'('+AccessVariableNameParam+':'+PropType+');'
                 +BeautifyCodeOpts.LineEnd
                 +'begin'+BeautifyCodeOpts.LineEnd
@@ -9195,7 +9353,8 @@ begin
     {$IF defined(CTDEBUG) or defined(VerboseCreateMissingClassProcBodies)}
     DebugLn('TCodeCompletionCodeTool.CreateMissingClassProcBodies Gather existing method declarations ... ');
     {$ENDIF}
-    TheClassName:=ExtractClassName(CodeCompleteClassNode,false,true,Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]);
+    TheClassName:=ExtractClassName(CodeCompleteClassNode,false,true,
+      Scanner.CompilerMode in [cmDELPHI,cmDELPHIUNICODE]);
 
     // check for double defined methods in ClassProcs
     CheckForDoubleDefinedMethods;

@@ -58,13 +58,6 @@ type
   TPkgFile = class;
   TPkgDependency = class;
 
-  TPackageUpdatePolicy = (
-    pupManually,
-    pupOnRebuildingAll,
-    pupAsNeeded
-    );
-  TPackageUpdatePolicies = set of TPackageUpdatePolicy;
-
   TGetAllRequiredPackagesEvent =
     procedure(APackage: TLazPackage; // if not nil then ignore FirstDependency and do not add APackage to Result
               FirstDependency: TPkgDependency;
@@ -80,7 +73,7 @@ type
 
 
   { TPkgComponent }
-  
+
   TPkgComponent = class(TRegisteredComponent)
   private
     FPkgFile: TPkgFile;
@@ -109,7 +102,7 @@ type
     pffReportedAsRemoved // file has been reported as removed
     );
   TPkgFileFlags = set of TPkgFileFlag;
-  
+
   { TPkgFile }
 
   TPkgFile = class(TLazPackageFile)
@@ -181,10 +174,10 @@ type
     property HasRegisterProc: boolean read GetHasRegisterProc write SetHasRegisterProc;
     property LazPackage: TLazPackage read FPackage;
   end;
-  
-  
+
+
   { TPkgUnitsTree - Tree of TPkgFile sorted for unitnames }
-  
+
   TPkgUnitsTree = class(TAVLTree)
   private
     FLazPackage: TLazPackage;
@@ -194,16 +187,16 @@ type
     constructor Create(ThePackage: TLazPackage);
     property LazPackage: TLazPackage read FLazPackage write FLazPackage;
   end;
-  
-  
+
+
   { TPkgDependency }
-  
+
   TPkgMarkerFlag = (
     pmfVisited,
     pmfMarked
     );
   TPkgMarkerFlags = set of TPkgMarkerFlag;
-  
+
   TPkgDependencyDirection = (
     pddRequires,
     pddUsedBy
@@ -558,6 +551,7 @@ type
     function GetDirectory: string; override;
     function GetDefineTemplates: TProjPackDefineTemplates;
     function GetFileCount: integer; override;
+    function GetHasEditor: boolean; virtual;
     function GetPkgFiles(Index: integer): TLazPackageFile; override;
     function GetDirectoryExpanded: string; override;
     function GetModified: boolean; override;
@@ -593,6 +587,8 @@ type
     procedure CheckInnerDependencies;
     function IsMakingSense: boolean;
     procedure ConsistencyCheck;
+    procedure PushEditor; virtual;
+    procedure PopEditor; virtual;
     // paths, define templates
     function ExtendUnitSearchPath(NewUnitPaths: string): boolean;
     function ExtendIncSearchPath(NewIncPaths: string): boolean;
@@ -719,6 +715,7 @@ type
     property FirstUsedByDependency: TPkgDependency read FFirstUsedByDependency;
     property Flags: TLazPackageFlags read FFlags write SetFlags;
     property HoldPackageCount: integer read FHoldPackageCount;
+    property HasEditor: boolean read GetHasEditor;
     property IconFile: string read FIconFile write SetIconFile;
     property IDEOptions: TPackageIDEOptions read GetIDEOptions;
     property Installed: TPackageInstallType read FInstalled write SetInstalled;
@@ -752,12 +749,11 @@ type
   end;
 
   PLazPackage = ^TLazPackage;
+  TLazPackageClass = class of TLazPackage;
 
 
 const
   LazPkgXMLFileVersion = 5;
-  AutoUpdateNames: array[TPackageUpdatePolicy] of string = (
-    'Manually', 'OnRebuildingAll', 'AsNeeded');
 
 var
   // All TPkgDependency are added to this AVL tree (sorted for names, not version!)
@@ -2302,6 +2298,11 @@ begin
   Result:=FFiles.Count;
 end;
 
+function TLazPackage.GetHasEditor: boolean;
+begin
+  Result:=False;
+end;
+
 function TLazPackage.GetPkgFiles(Index: integer): TLazPackageFile;
 begin
   Result:=GetFiles(Index);
@@ -2355,6 +2356,16 @@ procedure TLazPackage.SetAutoInstall(AValue: TPackageInstallType);
 begin
   if FAutoInstall=AValue then exit;
   FAutoInstall:=AValue;
+end;
+
+procedure TLazPackage.PushEditor;
+begin
+  ;  // Do nothing.
+end;
+
+procedure TLazPackage.PopEditor;
+begin
+  ;  // Do nothing.
 end;
 
 procedure TLazPackage.SetAutoUpdate(const AValue: TPackageUpdatePolicy);
@@ -3391,7 +3402,8 @@ begin
     Code:=CodeToolBoss.LoadFile(aFilename,true,false);
     if Code<>nil then begin
       NewUnitName:=CodeToolBoss.GetSourceName(Code,false);
-      if NewUnitName='' then NewUnitName:=ExtractFileNameOnly(aFilename);
+      if NewUnitName='' then
+        NewUnitName:=ExtractFileNameOnly(aFilename);
       if FindUsedUnit(NewUnitName)=nil then
         Include(NewFlags,pffAddToPkgUsesSection);
       if CodeToolBoss.HasInterfaceRegisterProc(Code) then

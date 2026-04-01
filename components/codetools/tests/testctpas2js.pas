@@ -12,9 +12,15 @@ unit TestCTPas2js;
 interface
 
 uses
-  Classes, SysUtils, CodeToolManager, FileProcs, DefineTemplates, LinkScanner,
-  CodeCache, ExprEval, TestGlobals, LazLogger, LazFileUtils, LazUTF8, fpcunit,
-  testregistry, TestFindDeclaration;
+  Classes, SysUtils,
+  // FPCUnit
+  TestRegistry,
+  // LazUtils
+  LazUTF8, LazLoggerBase, LazFileUtils,
+  // CodeTools
+  CodeToolManager, DefineTemplates, LinkScanner, CodeCache, ExprEval, FileProcs,
+  // (project)
+  TestGlobals, TestFindDeclaration;
 
 type
 
@@ -235,7 +241,7 @@ begin
       write('*');
       Line:=LeftStr(Line,CursorPos.X-1)+'|'+copy(Line,CursorPos.X,length(Line));
     end;
-    writeln(Format('%:4d: ',[i]),Line);
+    debugln(Format('%:4d: ',[i]),Line);
   end;
 end;
 

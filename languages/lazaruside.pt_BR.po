@@ -5577,6 +5577,14 @@ msgstr "Sempre desenhar itens selecionados focados"
 msgid "Always ignore"
 msgstr "Sempre ignorar"
 
+#: lazarusidestrconsts.lisalwaysopensymlink
+msgid "Always Open Symlink"
+msgstr ""
+
+#: lazarusidestrconsts.lisalwaysopentarget
+msgid "Always Open Target"
+msgstr ""
+
 #: lazarusidestrconsts.lisamacrowiththisnamealreadyexists
 msgid "A macro with this name already exists."
 msgstr "Uma macro com este nome já existe."
@@ -5845,6 +5853,10 @@ msgstr "Arquivo cópia de segurança falhou"
 #: lazarusidestrconsts.lisbackuphint
 msgid "Creates a Backup directory under project directory"
 msgstr "Cria um diretório de cópia de segurança sob o diretório do projeto"
+
+#: lazarusidestrconsts.lisbasepkg
+msgid "Base package, cannot be uninstalled"
+msgstr ""
 
 #: lazarusidestrconsts.lisbddchangingthepackagenameorversionbreaksdependencies
 #, object-pascal-format
@@ -9039,9 +9051,17 @@ msgstr "Delimitador é ponto-e-vírgula"
 msgid "Delphi compatible resources. Recommended."
 msgstr "Recursos compatíveis com Delphi. Recomendado."
 
+#: lazarusidestrconsts.lisdesigntimeonlypkg
+msgid "Designtime-only package"
+msgstr ""
+
 #: lazarusidestrconsts.lisdesigntimepackagesaddcomponentsandmenuitemstotheid
 msgid "\"Design time\" packages add components and menu items to the IDE. They can be used by projects but are not compiled into the project. The compiler will not find units of this package when compiling the project."
 msgstr "Pacotes de \"Tempo de projeto\" adicionam componentes e itens de menu à IDE. Eles podem ser usados por projetos, mas não são compilados no projeto. O compilador não encontrará as unidades deste pacote ao compilar o projeto."
+
+#: lazarusidestrconsts.lisdesigntimeruntimepkg
+msgid "Designtime/runtime package"
+msgstr ""
 
 #: lazarusidestrconsts.lisdesktops
 msgid "Desktops ..."
@@ -10010,6 +10030,17 @@ msgstr "Falha ao adicionar %d recurso(s) não únicos"
 #, object-pascal-format
 msgid "Failed to create Application Bundle for \"%s\""
 msgstr "Falha ao criar aplicação inclusa para \"%s\""
+
+#: lazarusidestrconsts.lisfailedtocreatetheconfigurationdirectory
+#, object-pascal-format
+msgid ""
+"Failed to create the configuration directory:\n"
+"%s\n"
+"\n"
+"The path may contain reserved characters or you may not have permissions.\n"
+"\n"
+"It can be specified by the command line parameter \"--pcp\" or in the file \"lazarus.cfg\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisfailedtoloadfoldstat
 msgid "Failed to load fold state"
@@ -12081,6 +12112,10 @@ msgctxt "lazarusidestrconsts.lislazcleanupbuildall"
 msgid "Clean Up + Build all"
 msgstr "Limpar + Construir tudo"
 
+#: lazarusidestrconsts.lislazpkg
+msgid "Package distributed with Lazarus"
+msgstr ""
+
 #: lazarusidestrconsts.lisldaddlinktoinherited
 msgid "Add link to inherited"
 msgstr "Adicionar vínculo ao herdado"
@@ -12142,6 +12177,10 @@ msgstr "Lados Esquerdos"
 #: lazarusidestrconsts.lisleftspaceequally
 msgid "Left space equally"
 msgstr "Justificar a esquerda"
+
+#: lazarusidestrconsts.lislegend
+msgid "Legend"
+msgstr ""
 
 #: lazarusidestrconsts.lisless
 msgctxt "lazarusidestrconsts.lisless"
@@ -15938,6 +15977,10 @@ msgctxt "lazarusidestrconsts.lispkgmgrremove"
 msgid "remove"
 msgstr "remover"
 
+#: lazarusidestrconsts.lispkgoverlayinfo
+msgid "Additional information is indicated by the following overlays:"
+msgstr ""
+
 #: lazarusidestrconsts.lispkgselectapackage
 msgid "Select a package"
 msgstr "Selecione um pacote"
@@ -15954,6 +15997,14 @@ msgstr "O projeto sobrepõe o diretório de saída dos seguintes pacotes.%sVeja 
 #: lazarusidestrconsts.lispkgthisfileisnotinanyloadedpackage
 msgid "This file is not in any loaded package."
 msgstr "O arquivo não está em nenhum pacote carregado."
+
+#: lazarusidestrconsts.lispkgtobeinstalled
+msgid "Package will be installed with next IDE rebuild"
+msgstr ""
+
+#: lazarusidestrconsts.lispkgtobeuninstalled
+msgid "Package will be uninstalled with next IDE rebuild (unless needed by an installed package)"
+msgstr ""
 
 #: lazarusidestrconsts.lispkgunabletoreadpackagefileerror
 #, object-pascal-format
@@ -19422,6 +19473,14 @@ msgstr "Quando uma unidade for renomeada, atualizar referências"
 msgid "When enabled the current options are saved to the template which is used when creating new projects"
 msgstr "Quando ativo, as opções atuais são salvas para um modelo, que é usado ao criar novos projetos"
 
+#: lazarusidestrconsts.liswhenopeningasymlinkfileopenthetargetfilethesymlink
+msgid "When opening a symlink file, open the target file, the symlink file, or ask"
+msgstr ""
+
+#: lazarusidestrconsts.liswhenopeningsymlink
+msgid "When opening a Symlink"
+msgstr ""
+
 #: lazarusidestrconsts.liswhenthereisonlyonepossiblecompletionitemuseitimmed
 msgid "When there is only one possible completion item use it immediately, without showing the completion box"
 msgstr "Quando há somente um item de complementação possível usá-lo imediatamente, sem exibir a caixa de complementação"
@@ -19653,6 +19712,10 @@ msgstr "Nós"
 #: lazarusidestrconsts.lvlgraphshapestraight
 msgid "Straight"
 msgstr "Retilínea"
+
+#: lazarusidestrconsts.lvlgraphshowrequiredpkg
+msgid "Required packages"
+msgstr ""
 
 #: lazarusidestrconsts.lvlgraphsplitmergeathighe
 msgid "Merge at highest"
@@ -21853,6 +21916,10 @@ msgstr "Opções para o gráfico de pacotes"
 #: lazarusidestrconsts.unitdepoptionsforunit
 msgid "Options for Unit graph"
 msgstr "Opções para o gráfico de unidades"
+
+#: lazarusidestrconsts.updatelvlgraph
+msgid "Update graph"
+msgstr ""
 
 #: lazarusidestrconsts.versioninfotitle
 msgid "Version Info"

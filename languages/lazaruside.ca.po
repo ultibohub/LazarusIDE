@@ -5697,6 +5697,14 @@ msgstr ""
 msgid "Always ignore"
 msgstr ""
 
+#: lazarusidestrconsts.lisalwaysopensymlink
+msgid "Always Open Symlink"
+msgstr ""
+
+#: lazarusidestrconsts.lisalwaysopentarget
+msgid "Always Open Target"
+msgstr ""
+
 #: lazarusidestrconsts.lisamacrowiththisnamealreadyexists
 msgid "A macro with this name already exists."
 msgstr ""
@@ -5935,6 +5943,10 @@ msgstr "Ha fallat la còpia de seguretat"
 
 #: lazarusidestrconsts.lisbackuphint
 msgid "Creates a Backup directory under project directory"
+msgstr ""
+
+#: lazarusidestrconsts.lisbasepkg
+msgid "Base package, cannot be uninstalled"
 msgstr ""
 
 #: lazarusidestrconsts.lisbddchangingthepackagenameorversionbreaksdependencies
@@ -9142,8 +9154,16 @@ msgstr ""
 msgid "Delphi compatible resources. Recommended."
 msgstr ""
 
+#: lazarusidestrconsts.lisdesigntimeonlypkg
+msgid "Designtime-only package"
+msgstr ""
+
 #: lazarusidestrconsts.lisdesigntimepackagesaddcomponentsandmenuitemstotheid
 msgid "\"Design time\" packages add components and menu items to the IDE. They can be used by projects but are not compiled into the project. The compiler will not find units of this package when compiling the project."
+msgstr ""
+
+#: lazarusidestrconsts.lisdesigntimeruntimepkg
+msgid "Designtime/runtime package"
 msgstr ""
 
 #: lazarusidestrconsts.lisdesktops
@@ -10103,6 +10123,17 @@ msgstr ""
 #: lazarusidestrconsts.lisfailedtocreateapplicationbundlefor
 #, object-pascal-format
 msgid "Failed to create Application Bundle for \"%s\""
+msgstr ""
+
+#: lazarusidestrconsts.lisfailedtocreatetheconfigurationdirectory
+#, object-pascal-format
+msgid ""
+"Failed to create the configuration directory:\n"
+"%s\n"
+"\n"
+"The path may contain reserved characters or you may not have permissions.\n"
+"\n"
+"It can be specified by the command line parameter \"--pcp\" or in the file \"lazarus.cfg\"."
 msgstr ""
 
 #: lazarusidestrconsts.lisfailedtoloadfoldstat
@@ -12107,6 +12138,10 @@ msgctxt "lazarusidestrconsts.lislazcleanupbuildall"
 msgid "Clean Up + Build all"
 msgstr ""
 
+#: lazarusidestrconsts.lislazpkg
+msgid "Package distributed with Lazarus"
+msgstr ""
+
 #: lazarusidestrconsts.lisldaddlinktoinherited
 msgid "Add link to inherited"
 msgstr ""
@@ -12163,6 +12198,10 @@ msgstr "Costats esquerres"
 #: lazarusidestrconsts.lisleftspaceequally
 msgid "Left space equally"
 msgstr "Iguala l'espai esquerra"
+
+#: lazarusidestrconsts.lislegend
+msgid "Legend"
+msgstr ""
 
 #: lazarusidestrconsts.lisless
 msgctxt "lazarusidestrconsts.lisless"
@@ -16166,6 +16205,10 @@ msgctxt "lazarusidestrconsts.lispkgmgrremove"
 msgid "remove"
 msgstr ""
 
+#: lazarusidestrconsts.lispkgoverlayinfo
+msgid "Additional information is indicated by the following overlays:"
+msgstr ""
+
 #: lazarusidestrconsts.lispkgselectapackage
 msgid "Select a package"
 msgstr ""
@@ -16182,6 +16225,14 @@ msgstr ""
 #: lazarusidestrconsts.lispkgthisfileisnotinanyloadedpackage
 msgid "This file is not in any loaded package."
 msgstr "Aquest fitxer no és cap paquet carregat."
+
+#: lazarusidestrconsts.lispkgtobeinstalled
+msgid "Package will be installed with next IDE rebuild"
+msgstr ""
+
+#: lazarusidestrconsts.lispkgtobeuninstalled
+msgid "Package will be uninstalled with next IDE rebuild (unless needed by an installed package)"
+msgstr ""
 
 #: lazarusidestrconsts.lispkgunabletoreadpackagefileerror
 #, object-pascal-format
@@ -19672,6 +19723,14 @@ msgstr ""
 msgid "When enabled the current options are saved to the template which is used when creating new projects"
 msgstr ""
 
+#: lazarusidestrconsts.liswhenopeningasymlinkfileopenthetargetfilethesymlink
+msgid "When opening a symlink file, open the target file, the symlink file, or ask"
+msgstr ""
+
+#: lazarusidestrconsts.liswhenopeningsymlink
+msgid "When opening a Symlink"
+msgstr ""
+
 #: lazarusidestrconsts.liswhenthereisonlyonepossiblecompletionitemuseitimmed
 msgid "When there is only one possible completion item use it immediately, without showing the completion box"
 msgstr ""
@@ -19905,6 +19964,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lvlgraphshapestraight
 msgid "Straight"
+msgstr ""
+
+#: lazarusidestrconsts.lvlgraphshowrequiredpkg
+msgid "Required packages"
 msgstr ""
 
 #: lazarusidestrconsts.lvlgraphsplitmergeathighe
@@ -22147,6 +22210,10 @@ msgstr ""
 
 #: lazarusidestrconsts.unitdepoptionsforunit
 msgid "Options for Unit graph"
+msgstr ""
+
+#: lazarusidestrconsts.updatelvlgraph
+msgid "Update graph"
 msgstr ""
 
 #: lazarusidestrconsts.versioninfotitle

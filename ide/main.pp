@@ -59,7 +59,7 @@ uses
   MemCheck,
 {$ENDIF}
   // fpc packages
-  Math, Classes, SysUtils, TypInfo, Types, StrUtils, Contnrs, process, AVL_Tree,
+  Math, Classes, SysUtils, TypInfo, Types, StrUtils, Contnrs, process, AVL_Tree, System.UITypes,
   // LCL
   LCLProc, LCLType, LCLIntf, LMessages, LResources, HelpIntfs, InterfaceBase, LCLPlatformDef,
   ComCtrls, Forms, Buttons, Menus, Controls, Graphics, ExtCtrls, Dialogs, LclStrConsts, StdCtrls,
@@ -76,11 +76,11 @@ uses
   {$IFDEF LCLWin} Win32Proc, {$ENDIF}
   {$IFDEF LCLCocoa} CocoaConfig, CocoaIDEFormConfig,{$ENDIF}
   // SynEdit
-  SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynEditHighlighter, SynHighlighterPas,
+  SynEdit, AllSynEdit, SynEditKeyCmds, SynEditMarks, SynHighlighterPas,
   SynEditTypes,
   // BuildIntf
-  BaseIDEIntf, MacroIntf, NewItemIntf, IDEExternToolIntf, LazMsgWorker,
-  PackageIntf, ProjectIntf, CompOptsIntf, IDEOptionsIntf, ComponentReg,
+  BaseIDEIntf, MacroIntf, NewItemIntf, IDEExternToolIntf, LazMsgWorker, ComponentReg,
+  PackageIntf, ProjectIntf, ProjectResourcesIntf, CompOptsIntf, IDEOptionsIntf,
   // IDE interface
   IDEIntf, ObjectInspector, PropEdits, PropEditUtils, EditorSyntaxHighlighterDef,
   IDECommands, IDEWindowIntf, IDEDialogs, SrcEditorIntf, IDEMsgIntf,
@@ -92,7 +92,7 @@ uses
   IDEProtocol,
   // compile
   ParsedCompilerOpts, CompilerOptions, CheckCompilerOpts, BuildProjectDlg,
-  BuildModesManager, ApplicationBundle, ExtTools, ExtToolsIDE,
+  BuildModesManager, ExtTools, ExtToolsIDE,
   // projects
   ProjectResources, Project, ProjectDefs, NewProjectDlg, PublishModuleDlg,
   ProjectInspector, PackageDefs, EditablePackage, ProjectDescriptorTypes,
@@ -111,7 +111,7 @@ uses
   DbgIntfDebuggerBase, DbgIntfProcess, LazDebuggerIntf, LazDebuggerIntfBaseTypes,
   idedebuggerpackage, FpDebugValueConvertors, IdeDebuggerBase,
   // packager
-  PackageSystem, PkgManager, BasePkgManager, LPKCache, LazarusPackageIntf, PackageEditor,
+  PkgManager, LazarusPackageIntf, PackageEditor,
   // source editing
   SourceEditor, CodeToolsOptions, IDEOptionDefs,
   CodeToolsDefines, DiffDialog, UnitInfoDlg, EditorOptions,
@@ -123,9 +123,9 @@ uses
   InputHistory, IdeUtilsPkg, IdeUtilsPkgStrConsts,
   // IdeConfig
   LazConf, EnvironmentOpts, TransferMacros, IDECmdLine, IDEGuiCmdLine,
-  IDEProcs, IdeConfStrConsts,
+  IDEProcs, ApplicationBundle, IdeConfStrConsts,
   // IdePackager,
-  IdePackager, IdePackagerStrConsts,
+  IdePackager, IdePackagerStrConsts, PackageSystem, BasePkgManager, LPKCache,
   // IdeProject,
   IdeProject, RunParamOptions,
   // environment option frames
@@ -1619,7 +1619,14 @@ begin
   FEnvOptsCfgExisted := FileExistsCached(EnvironmentOptions.GetDefaultConfigFilename);
 
   // load options
-  CreatePrimaryConfigPath;
+  if not CreatePrimaryConfigPath then
+  begin
+    IDEQuestionDialog(lisIncorrectConfigurationDirectoryFound,
+      Format(lisFailedToCreateTheConfigurationDirectory, [GetPrimaryConfigPath]),
+      mtError, [mrOK, lisQuit]);
+    Application.Terminate;
+    exit;
+  end;
   StartProtocol;
   LoadGlobalOptions;
   if Application.Terminated then exit;

@@ -44,15 +44,13 @@ uses
   CompOptsIntf, IDEOptionsIntf, PackageDependencyIntf,
   // IdeConfig
   LazConf, IDECmdLine, TransferMacros, EnvironmentOpts, ParsedCompilerOpts,
-  CompilerOptions, ModeMatrixOpts, BaseBuildManager,
-  // IdeUtils
-  IDETranslations,
+  CompilerOptions, ModeMatrixOpts, BaseBuildManager, ApplicationBundle, IDETranslations,
   // IdePackager
   IdePackagerStrConsts, PackageDefs, PackageLinks, PackageSystem,
   // IdeProject
   Project,
   // IDE
-  InitialSetupProc, ExtToolsConsole, ApplicationBundle, LazarusIDEStrConsts, MiscOptions,
+  InitialSetupProc, ExtToolsConsole, LazarusIDEStrConsts, MiscOptions,
   InterPkgConflictFiles, BuildLazDialog, BuildProfileManager, BuildManager, ColorTTY;
 
 type

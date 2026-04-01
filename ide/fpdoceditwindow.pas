@@ -35,8 +35,7 @@ uses
   // LazUtils
   Laz2_DOM, Laz2_XMLRead, LazUtilities, LazStringUtils, LazTracer,
   // LCL
-  LResources, StdCtrls, Buttons, ComCtrls, Controls, Dialogs,
-  ExtCtrls, Forms, Graphics, LCLType,
+  StdCtrls, Buttons, ComCtrls, Controls, Dialogs, ExtCtrls, Forms, Graphics, LCLType,
   // Synedit
   SynEdit, SynHighlighterXML, SynEditFoldedView, SynEditWrappedView,
   // Codetools
@@ -1357,14 +1356,19 @@ begin
       DebugLn(['TFPDocEditor.Save failed: chain not valid']);
   end else if (fChain[0].FPDocFile <> nil) then
   begin
-    Values:=GetGUIValues;
-    if WriteNode(fChain[0],Values,true) then
-    begin
-      // write succeeded
-      if fChain.DocFile=TopicDocFile then
-        TopicChanged:=false;
-    end else begin
-      DebugLn(['TFPDocEditor.Save WriteNode FAILED']);
+    Include(FFlags,fpdefWriting);
+    try
+      Values:=GetGUIValues;
+      if WriteNode(fChain[0],Values,true) then
+      begin
+        // write succeeded
+        if fChain.DocFile=TopicDocFile then
+          TopicChanged:=false;
+      end else begin
+        DebugLn(['TFPDocEditor.Save WriteNode FAILED']);
+      end;
+    finally
+      Exclude(FFlags,fpdefWriting);
     end;
   end;
   if TopicChanged then begin

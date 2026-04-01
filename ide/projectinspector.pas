@@ -67,9 +67,10 @@ uses
   CodeToolsStructs, CodeToolManager, FileProcs, CodeCache, CodeTree, FindDeclarationTool,
   // BuildIntf
   ProjPackIntf, ProjectIntf, PackageIntf, PackageLinkIntf, PackageDependencyIntf,
+  IDEOptionsIntf, IDEExternToolIntf,
   // IDEIntf
-  IDECommands, IDEDialogs, IDEImagesIntf, LazIDEIntf, ToolBarIntf,
-  IdeIntfStrConsts, MenuIntf, FormEditingIntf, SrcEditorIntf,
+  IDECommands, IDEDialogs, IDEImagesIntf, LazIDEIntf, ToolBarIntf, IDEMsgIntf,
+  IdeIntfStrConsts, MenuIntf, FormEditingIntf, SrcEditorIntf, IDEOptEditorIntf,
   // IdeUtils
   InputHistory,
   // IdeConfig
@@ -78,7 +79,7 @@ uses
   // IdePackager
   PackageDefs, BasePkgManager,
   // IdeProject
-  Project,
+  Project, ProjectIcon, ProjectUserResources,
   // IDE
   LazarusIDEStrConsts, MainBase, MainBar, BuildManager, AddToProjectDlg, EnvGuiOptions,
   ProjPackChecks, ProjPackEditing, ProjPackFilePropGui,
@@ -522,6 +523,23 @@ begin
   ProjInspAddMenuFPMakeDependency:=RegisterIDEMenuCommand(AParent,'Add fpmake dependency',lisProjAddNewFPMakeRequirement);
 end;
 
+procedure LoadProjectMainIcon2Stream(AStream: TMemoryStream);
+var
+  Icon: TIcon;
+begin
+  Icon := TIcon.Create;
+  try
+    Icon.LoadFromResourceName(HInstance, 'MAINICONPROJECT');
+    Icon.SaveToStream(AStream);
+  finally
+    Icon.Free;
+  end;
+end;
+
+procedure AddProjectIDEMessage(Urgency: TMessageLineUrgency; Msg: string);
+begin
+  AddIDEMessage(Urgency, Msg);
+end;
 
 { TProjectInspectorForm }
 
@@ -2136,6 +2154,12 @@ begin
   DropdownMenu := TBuildModeMenu.Create(Self);
   Style := tbsDropDown;
 end;
+
+initialization
+  ProjectIcon.OnLoadProjectMainIcon := @LoadProjectMainIcon2Stream;
+  ProjectUserResources.OnAddIDEMessage := @AddProjectIDEMessage;
+  RegisterIDEOptionsGroup(GroupProject, TProjectIDEOptions);
+  RegisterIDEOptionsGroup(GroupCompiler, TProjectCompilerOptions);
 
 end.
 

@@ -8,25 +8,11 @@ interface
 
 uses
   Classes, SysUtils, Types, LCLType, LCLProc,
-  Forms, Menus, GraphType,
-  LCLIntf, IntfGraphics,
+  Forms, Menus,
   MacOSAll, CocoaAll,
-  CocoaGDIObjects, CocoaMenus, CocoaConst, CocoaUtils, Cocoa_Extra;
+  CocoaGDIObjects, CocoaMenus, CocoaConst, CocoaUtils;
 
 type
-
-  { TCocoaWidgetSetState }
-
-  TCocoaWidgetSetState = class
-  public
-    KeyWindow: NSWindow;
-    KillingFocus: Boolean;
-    CaptureControl: HWND;
-    SendingScrollWheelCount: Integer;
-  public
-    procedure releaseCapture;
-    function isSendingScrollWheelFromInterface: Boolean;
-  end;
 
   { TCocoaWidgetSetGDIObject }
 
@@ -56,9 +42,9 @@ type
     destructor Destroy; override;
   end;
 
-  { TCocoaWidgetSetService }
+  { TCocoaWidgetSetBaseService }
 
-  TCocoaWidgetSetService = class
+  TCocoaWidgetSetBaseService = class
 
   // on MacOS, the system notifies the APP to open the files by calling
   // TAppDelegate.application_openFiles(). for example, double-click
@@ -105,17 +91,6 @@ type
     destructor Destroy; override;
   end;
 
-  { TCocoaWidgetSetGDIService }
-
-  TCocoaWidgetSetGDIService = class
-  public
-    function fillLCLImageDescription(out ADesc: TRawImageDescription; ABitmap: TCocoaBitmap): Boolean;
-    function createLCLRawImage(out ARawImage: TRawImage; ABitmap, AMask: TCocoaBitmap; ARect: PRect = nil): Boolean;
-    function getCocoaBitmapType(ADesc: TRawImageDescription; out bmpType: TCocoaBitmapType): Boolean;
-    function getPixelData(AImage: CGImageRef; out bitmapByteCount: PtrUInt): Pointer;
-    function create32BitAlphaCocoaBitmap(ABitmap, AMask: TCocoaBitmap): TCocoaBitmap;
-  end;
-
   { TCocoaWidgetSetMenuService }
 
   TCocoaWidgetSetMenuService = class
@@ -135,24 +110,10 @@ type
   end;
 
 var
-  CocoaWidgetSetState: TCocoaWidgetSetState;
-  CocoaWidgetSetService: TCocoaWidgetSetService;
-  CocoaWidgetSetGDIService: TCocoaWidgetSetGDIService;
+  CocoaWidgetSetBaseService: TCocoaWidgetSetBaseService;
   CocoaWidgetSetMenuService: TCocoaWidgetSetMenuService;
 
 implementation
-
-{ TCocoaWidgetSetState }
-
-procedure TCocoaWidgetSetState.releaseCapture;
-begin
-  self.CaptureControl:= 0;
-end;
-
-function TCocoaWidgetSetState.isSendingScrollWheelFromInterface: Boolean;
-begin
-  Result:= self.SendingScrollWheelCount > 0;
-end;
 
 { TCocoaWidgetSetGDIObject }
 
@@ -160,7 +121,6 @@ procedure TCocoaWidgetSetGDIObject.initStockItems;
 var
   LogBrush: TLogBrush;
   logPen: TLogPen;
-  pool: NSAutoreleasePool;
 begin
   FillChar(LogBrush, SizeOf(TLogBrush),0);
   LogBrush.lbStyle := BS_NULL;
@@ -194,9 +154,7 @@ begin
   self.blackPen := HPen(TCocoaPen.Create(LogPen, True));
 
   self.systemFont := HFont(TCocoaFont.CreateDefault(True));
-  pool := NSAutoreleasePool.alloc.init;
   self.fixedFont := HFont(TCocoaFont.Create(NSFont.userFixedPitchFontOfSize(0), True));
-  pool.release;
 end;
 
 procedure TCocoaWidgetSetGDIObject.freeStockItems;
@@ -205,7 +163,7 @@ procedure TCocoaWidgetSetGDIObject.freeStockItems;
   begin
     if h <> 0 then
       TCocoaGDIObject(h).Global := False;
-      CocoaWidgetSetService.deleteObject(h);
+      CocoaWidgetSetBaseService.deleteObject(h);
     h := 0;
   end;
 
@@ -254,14 +212,14 @@ begin
   self.freeSysColorBrushes;
 end;
 
-{ TCocoaWidgetSetService }
+{ TCocoaWidgetSetBaseService }
 
-procedure TCocoaWidgetSetService.setReadyDropFiles;
+procedure TCocoaWidgetSetBaseService.setReadyDropFiles;
 begin
   _readyDropFiles:= True;
 end;
 
-procedure TCocoaWidgetSetService.dropWaitingFiles;
+procedure TCocoaWidgetSetBaseService.dropWaitingFiles;
 var
   lFiles: array of string;
   lNSStr: NSString;
@@ -283,21 +241,21 @@ begin
   _waitingDropFiles.removeAllObjects;
 end;
 
-procedure TCocoaWidgetSetService.tryDropFiles(const filenames: NSArray);
+procedure TCocoaWidgetSetBaseService.tryDropFiles(const filenames: NSArray);
 begin
   _waitingDropFiles.addObjectsFromArray(filenames);
   if _readyDropFiles then
     dropWaitingFiles;
 end;
 
-procedure TCocoaWidgetSetService.addToBeReleasedLCLObjects(const obj: TObject);
+procedure TCocoaWidgetSetBaseService.addToBeReleasedLCLObjects(const obj: TObject);
 begin
   // let's try to find an object. Do not add a duplicate
   if (_waitingReleasedLCLObjects.IndexOf(Obj)>=0) then Exit;
   _waitingReleasedLCLObjects.Add(obj);
 end;
 
-procedure TCocoaWidgetSetService.releaseWaitingLCLObjects(const fromIdx: integer);
+procedure TCocoaWidgetSetBaseService.releaseWaitingLCLObjects(const fromIdx: integer);
 var
   i  : integer;
 begin
@@ -309,19 +267,19 @@ begin
   _waitingReleasedLCLObjects.Pack;
 end;
 
-function TCocoaWidgetSetService.countWaitingReleasedLCLObjects: Integer;
+function TCocoaWidgetSetBaseService.countWaitingReleasedLCLObjects: Integer;
 begin
   Result := _waitingReleasedLCLObjects.Count;
 end;
 
-procedure TCocoaWidgetSetService.initAutoreleaseMainPool;
+procedure TCocoaWidgetSetBaseService.initAutoreleaseMainPool;
 begin
   // MacOSX 10.6 reports a lot of warnings during initialization process
   // adding the autorelease pool for the whole Cocoa widgetset
   _autoreleaseMainPool:= NSAutoreleasePool.alloc.init;
 end;
 
-procedure TCocoaWidgetSetService.finalAutoreleaseMainPool;
+procedure TCocoaWidgetSetBaseService.finalAutoreleaseMainPool;
 begin
   if Assigned(_autoreleaseMainPool) then begin
     _autoreleaseMainPool.release;
@@ -329,7 +287,7 @@ begin
   end;
 end;
 
-function TCocoaWidgetSetService.deleteObject(GDIObject: HGDIOBJ): Boolean;
+function TCocoaWidgetSetBaseService.deleteObject(GDIObject: HGDIOBJ): Boolean;
 const
   SName = 'TCocoaWidgetSetService.deleteObject';
 var
@@ -339,7 +297,7 @@ begin
   if GDIObject = 0 then
     Exit(True);
 
-  gdi := CheckGDIOBJ(GdiObject);
+  gdi := TCocoaGDIUtil.checkGDIOBJ(GdiObject);
 
   if not Assigned(gdi) then
   begin
@@ -364,363 +322,22 @@ begin
   Result := True;
 end;
 
-procedure TCocoaWidgetSetService.OnWakeMainThread(Sender: TObject);
+procedure TCocoaWidgetSetBaseService.OnWakeMainThread(Sender: TObject);
 begin
   NSApp.performSelectorOnMainThread_withObject_waitUntilDone(
        ObjCSelector('lclSyncCheck:'), nil, false);
 end;
 
-constructor TCocoaWidgetSetService.Create;
+constructor TCocoaWidgetSetBaseService.Create;
 begin
   _waitingDropFiles:= NSMutableArray.new;
   _waitingReleasedLCLObjects := TList.Create;
 end;
 
-destructor TCocoaWidgetSetService.Destroy;
+destructor TCocoaWidgetSetBaseService.Destroy;
 begin
   _waitingDropFiles.release;
   _waitingReleasedLCLObjects.Free;
-end;
-
-{ TCocoaWidgetSetGDIService }
-
-{------------------------------------------------------------------------------
-  Method:  TCocoaWidgetSetGDIService.fillLCLImageDescription
-
-  Creates a rawimage description for a cocoabitmap
- ------------------------------------------------------------------------------}
-function TCocoaWidgetSetGDIService.fillLCLImageDescription(out
-  ADesc: TRawImageDescription; ABitmap: TCocoaBitmap): Boolean;
-var
-  Prec, Shift: Byte;
-  BPR: Integer;
-begin
-  ADesc.Init;
-
-  case ABitmap.BitmapType of
-    cbtMono, cbtGray: ADesc.Format := ricfGray;
-  else
-    ADesc.Format := ricfRGBA;
-  end;
-
-  ADesc.Width := Round(ABitmap.image.size.width);
-  ADesc.Height := Round(ABitmap.image.size.Height);
-
-  //ADesc.PaletteColorCount := 0;
-
-  ADesc.BitOrder := riboReversedBits;
-  ADesc.ByteOrder := riboMSBFirst;
-
-  BPR := ABitmap.BytesPerRow;
-  if BPR and $F = 0 then ADesc.LineEnd := rileDQWordBoundary     // 128bit aligned
-  else if BPR and $7 = 0 then ADesc.LineEnd := rileQWordBoundary //  64bit aligned
-  else if BPR and $3 = 0 then ADesc.LineEnd := rileWordBoundary  //  32bit aligned
-  else if BPR and $1 = 0 then ADesc.LineEnd := rileByteBoundary  //   8bit aligned
-  else ADesc.LineEnd := rileTight;
-
-  ADesc.LineOrder := riloTopToBottom;
-  ADesc.BitsPerPixel := ABitmap.BitsPerPixel;
-
-  ADesc.MaskBitOrder := riboReversedBits;
-  ADesc.MaskBitsPerPixel := 1;
-  ADesc.MaskLineEnd := rileByteBoundary;
-  // ADesc.MaskShift := 0;
-
-  ADesc.Depth := ABitmap.Depth;
-  Prec := ABitmap.BitsPerSample;
-
-  ADesc.RedPrec := Prec;
-  ADesc.GreenPrec := Prec;
-  ADesc.BluePrec := Prec;
-
-  // gray or mono
-  if ADesc.Format = ricfGray then begin
-    Result := true;
-    Exit;
-  end;
-
-  // alpha
-  if ABitmap.BitmapType in [cbtARGB, cbtRGBA] then
-    ADesc.AlphaPrec := Prec;
-
-  case ABitmap.BitmapType of
-    cbtRGB: begin
-      Shift := 24 - Prec;
-      ADesc.RedShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.GreenShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.BlueShift := Shift;
-    end;
-    cbtARGB: begin
-      Shift := 32 - Prec;
-      ADesc.AlphaShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.RedShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.GreenShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.BlueShift := Shift;
-    end;
-    cbtRGBA: begin
-      Shift := 32 - Prec;
-      ADesc.RedShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.GreenShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.BlueShift := Shift;
-      Dec(Shift, Prec);
-      ADesc.AlphaShift := Shift;
-    end;
-  end;
-
-  Result := True;
-end;
-
-{------------------------------------------------------------------------------
-  Method:  TCocoaWidgetSetGDIService.createLCLRawImage
-
-  Creates a rawimage description for a cocoabitmap
- ------------------------------------------------------------------------------}
-function TCocoaWidgetSetGDIService.createLCLRawImage(out
-  ARawImage: TRawImage; ABitmap, AMask: TCocoaBitmap; ARect: PRect): Boolean;
-var
-  lBitmapData: PByte;
-begin
-  FillChar(ARawImage, SizeOf(ARawImage), 0);
-  fillLCLImageDescription(ARawImage.Description, ABitmap);
-
-  ARawImage.DataSize := ABitmap.DataSize;
-  ReAllocMem(ARawImage.Data, ARawImage.DataSize);
-  lBitmapData := ABitmap.GetNonPreMultipliedData();
-  if ARawImage.DataSize > 0 then
-    System.Move(lBitmapData^, ARawImage.Data^, ARawImage.DataSize);
-
-  Result := True;
-
-  if AMask = nil then
-  begin
-    ARawImage.Description.MaskBitsPerPixel := 0;
-    Exit;
-  end;
-
-  if AMask.Depth > 1
-  then begin
-    DebugLn('[WARNING] RawImage_FromCocoaBitmap: AMask.Depth > 1');
-    Exit;
-  end;
-
-  ARawImage.MaskSize := AMask.DataSize;
-  ReAllocMem(ARawImage.Mask, ARawImage.MaskSize);
-  if ARawImage.MaskSize > 0 then
-    System.Move(AMask.Data^, ARawImage.Mask^, ARawImage.MaskSize);
-end;
-
-function TCocoaWidgetSetGDIService.getCocoaBitmapType(
-  ADesc: TRawImageDescription; out bmpType: TCocoaBitmapType): Boolean;
-begin
-  Result := False;
-
-  if ADesc.Format = ricfGray
-  then
-  begin
-    if ADesc.Depth = 1 then bmpType := cbtMono
-    else bmpType := cbtGray;
-  end
-  else if ADesc.Depth = 1
-  then bmpType := cbtMono
-  else if ADesc.AlphaPrec <> 0
-  then begin
-    if ADesc.ByteOrder = riboMSBFirst
-    then begin
-      if  (ADesc.AlphaShift = 24)
-      and (ADesc.RedShift   = 16)
-      and (ADesc.GreenShift = 8 )
-      and (ADesc.BlueShift  = 0 )
-      then bmpType := cbtARGB
-      else
-      if  (ADesc.AlphaShift = 24)
-      and (ADesc.RedShift   = 0 )
-      and (ADesc.GreenShift = 8 )
-      and (ADesc.BlueShift  = 16)
-      then bmpType := cbtABGR
-      else
-      if  (ADesc.AlphaShift = 0 )
-      and (ADesc.RedShift   = 24)
-      and (ADesc.GreenShift = 16)
-      and (ADesc.BlueShift  = 8 )
-      then bmpType := cbtRGBA
-      else
-      if  (ADesc.AlphaShift = 0 )
-      and (ADesc.RedShift   = 8 )
-      and (ADesc.GreenShift = 16)
-      and (ADesc.BlueShift  = 24)
-      then bmpType := cbtBGRA
-      else Exit;
-    end
-    else begin
-      if  (ADesc.AlphaShift = 0 )
-      and (ADesc.RedShift   = 8 )
-      and (ADesc.GreenShift = 16)
-      and (ADesc.BlueShift  = 24)
-      then bmpType := cbtARGB
-      else
-      if  (ADesc.AlphaShift = 0 )
-      and (ADesc.RedShift   = 24)
-      and (ADesc.GreenShift = 16)
-      and (ADesc.BlueShift  = 8 )
-      then bmpType := cbtABGR
-      else
-      if  (ADesc.AlphaShift = 24)
-      and (ADesc.RedShift   = 0 )
-      and (ADesc.GreenShift = 8 )
-      and (ADesc.BlueShift  = 16)
-      then bmpType := cbtRGBA
-      else
-      if  (ADesc.AlphaShift = 24)
-      and (ADesc.RedShift   = 16)
-      and (ADesc.GreenShift = 8 )
-      and (ADesc.BlueShift  = 0 )
-      then bmpType := cbtBGRA
-      else Exit;
-    end;
-  end
-  else begin
-    bmpType := cbtRGB;
-  end;
-
-  Result := True;
-end;
-
-{------------------------------------------------------------------------------
-  Method:  TCocoaWidgetSetGDIService.getPixelData
-
-  Used by RawImage_FromDevice. Copies the data from a CGImageRef into a local
-  buffer.
-
-  The buffer is created using GetMem, and the caller is responsible for using
-  FreeMem to free the returned pointer.
-
-  This function throws exceptions in case of errors and may return a nil pointer.
- ------------------------------------------------------------------------------}
-function TCocoaWidgetSetGDIService.getPixelData(AImage: CGImageRef; out
-  bitmapByteCount: PtrUInt): Pointer;
-var
-  bitmapData: Pointer;
-  context: CGContextRef = nil;
-  colorSpace: CGColorSpaceRef;
-  bitmapBytesPerRow, pixelsWide, pixelsHigh: PtrUInt;
-  imageRect: CGRect;
-begin
-  Result := nil;
-
-   // Get image width, height. The entire image is used.
-  pixelsWide := CGImageGetWidth(AImage);
-  pixelsHigh := CGImageGetHeight(AImage);
-  imageRect.origin.x := 0.0;
-  imageRect.origin.y := 0.0;
-  imageRect.size.width := pixelsWide;
-  imageRect.size.height := pixelsHigh;
-
-  // The target format is fixed in ARGB, DQWord alignment, with 32-bits depth and
-  // 8-bits per channel, the default image format on the LCL
-  bitmapBytesPerRow   := ((pixelsWide * 4) + $F) and not PtrUInt($F);
-  bitmapByteCount     := (bitmapBytesPerRow * pixelsHigh);
-
-  // Use the generic RGB color space.
-  colorSpace := CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
-  if (colorSpace = nil) then
-    raise Exception.Create('Unable to create CGColorSpaceRef');
-
-  // Allocate memory for image data. This is the destination in memory
-  // where any drawing to the bitmap context will be rendered.
-  bitmapData := System.GetMem( bitmapByteCount );
-  if (bitmapData = nil) then
-    raise Exception.Create('Unable to allocate memory');
-
-  { Creates the bitmap context.
-
-    Regardless of what the source image format is, it will be converted
-    over to the format specified here by CGBitmapContextCreate. }
-  context := CGBitmapContextCreate(bitmapData,
-                                   pixelsWide,
-                                   pixelsHigh,
-                                   8,      // bits per component
-                                   bitmapBytesPerRow,
-                                   colorSpace,
-                                   kCGImageAlphaNoneSkipFirst); // The function fails with kCGImageAlphaFirst
-  if (context = nil) then
-  begin
-    System.FreeMem(bitmapData);
-    raise Exception.Create('Unable to create CGContextRef');
-  end;
-
-  // Draw the image to the bitmap context. Once we draw, the memory
-  // allocated for the context for rendering will then contain the
-  // raw image data in the specified color space.
-  CGContextDrawImage(context, imageRect, AImage);
-
-  // Now we can get a pointer to the image data associated with the context.
-  // ToDo: Verify if we should copy this data to a new buffer
-  Result := CGBitmapContextGetData(context);
-
-  { Clean-up }
-  CGColorSpaceRelease(colorSpace);
-  CGContextRelease(context);
-end;
-
-function TCocoaWidgetSetGDIService.create32BitAlphaCocoaBitmap(ABitmap,
-  AMask: TCocoaBitmap): TCocoaBitmap;
-var
-  ARawImage: TRawImage;
-  Desc: TRawImageDescription absolute ARawimage.Description;
-
-  ImgHandle, ImgMaskHandle: HBitmap;
-  ImagePtr: PRawImage;
-  DevImage: TRawImage;
-  DevDesc: TRawImageDescription;
-  SrcImage, DstImage: TLazIntfImage;
-  W, H: Integer;
-begin
-  Result := nil;
-
-  if not LCLIntf.RawImage_FromBitmap(ARawImage, HBITMAP(ABitmap), HBITMAP(AMask)) then
-    Exit;
-
-  ImgMaskHandle := 0;
-
-  W := Desc.Width;
-  if W < 1 then W := 1;
-  H := Desc.Height;
-  if H < 1 then H := 1;
-
-  QueryDescription(DevDesc, [riqfRGB, riqfAlpha], W, H);
-
-  if DevDesc.IsEqual(Desc)
-  then begin
-    // image is compatible, so use it
-    DstImage := nil;
-    ImagePtr := @ARawImage;
-  end
-  else begin
-    // create compatible copy
-    SrcImage := TLazIntfImage.Create(ARawImage, False);
-    DstImage := TLazIntfImage.Create(0,0,[]);
-    DstImage.DataDescription := DevDesc;
-    DstImage.CopyPixels(SrcImage);
-    SrcImage.Free;
-    DstImage.GetRawImage(DevImage);
-    ImagePtr := @DevImage;
-  end;
-
-  try
-    if not LCLIntf.RawImage_CreateBitmaps(ImagePtr^, ImgHandle, ImgMaskHandle, True) then Exit;
-
-    Result := TCocoaBitmap(ImgHandle);
-  finally
-    ARawImage.FreeData;
-    DstImage.Free;
-  end;
 end;
 
 { TCocoaWidgetSetMenuService }
@@ -808,16 +425,12 @@ begin
 end;
 
 initialization
-  CocoaWidgetSetState:= TCocoaWidgetSetState.Create;
-  CocoaWidgetSetGDIService:= TCocoaWidgetSetGDIService.Create;
-  CocoaWidgetSetService:= TCocoaWidgetSetService.Create;
+  CocoaWidgetSetBaseService:= TCocoaWidgetSetBaseService.Create;
   CocoaWidgetSetMenuService:= TCocoaWidgetSetMenuService.Create;
 
 finalization
   FreeAndNil( CocoaWidgetSetMenuService );
-  FreeAndNil( CocoaWidgetSetService );
-  FreeAndNil( CocoaWidgetSetGDIService );
-  FreeAndNil( CocoaWidgetSetState );
+  FreeAndNil( CocoaWidgetSetBaseService );
 
 end.
 

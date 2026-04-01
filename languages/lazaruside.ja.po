@@ -5686,6 +5686,14 @@ msgstr "選択されているアイテムを常にフォーカスするように
 msgid "Always ignore"
 msgstr "常に無視"
 
+#: lazarusidestrconsts.lisalwaysopensymlink
+msgid "Always Open Symlink"
+msgstr ""
+
+#: lazarusidestrconsts.lisalwaysopentarget
+msgid "Always Open Target"
+msgstr ""
+
 #: lazarusidestrconsts.lisamacrowiththisnamealreadyexists
 msgid "A macro with this name already exists."
 msgstr "この名前のマクロが既に存在します"
@@ -5932,6 +5940,10 @@ msgstr "バックアップファイル失敗"
 #: lazarusidestrconsts.lisbackuphint
 msgid "Creates a Backup directory under project directory"
 msgstr "バックアップディレクトリをプロジェクトディレクトリ内に作成"
+
+#: lazarusidestrconsts.lisbasepkg
+msgid "Base package, cannot be uninstalled"
+msgstr ""
 
 #: lazarusidestrconsts.lisbddchangingthepackagenameorversionbreaksdependencies
 #, object-pascal-format
@@ -9135,11 +9147,19 @@ msgstr "区切り文字はセミコロン"
 msgid "Delphi compatible resources. Recommended."
 msgstr "Delphiと互換性のあるリソース。推奨。"
 
+#: lazarusidestrconsts.lisdesigntimeonlypkg
+msgid "Designtime-only package"
+msgstr ""
+
 #: lazarusidestrconsts.lisdesigntimepackagesaddcomponentsandmenuitemstotheid
 #, fuzzy
 #| msgid "\"Design time\" packages add components and menu items to the IDE. They can be used by projects, but are not compiled into the project. The compiler will not find units of this package when compiling the project."
 msgid "\"Design time\" packages add components and menu items to the IDE. They can be used by projects but are not compiled into the project. The compiler will not find units of this package when compiling the project."
 msgstr "\"設計時\"パッケージはコンポーネントとメニューアイテムをIDEに追加します。プロジェクトはそれらを使用できますがプロジェクト内に束ねる(compiled into)ことはできません。コンパイラはプロジェクトをコンパイルする際にこのパッケージのユニットを見つけないでしょう。"
+
+#: lazarusidestrconsts.lisdesigntimeruntimepkg
+msgid "Designtime/runtime package"
+msgstr ""
 
 #: lazarusidestrconsts.lisdesktops
 msgid "Desktops ..."
@@ -10108,6 +10128,17 @@ msgstr "唯一のリソースでない%dを追加するのに失敗しました"
 #, object-pascal-format
 msgid "Failed to create Application Bundle for \"%s\""
 msgstr "\"%s\"についてのアプリケーションバンドルの作成に失敗"
+
+#: lazarusidestrconsts.lisfailedtocreatetheconfigurationdirectory
+#, object-pascal-format
+msgid ""
+"Failed to create the configuration directory:\n"
+"%s\n"
+"\n"
+"The path may contain reserved characters or you may not have permissions.\n"
+"\n"
+"It can be specified by the command line parameter \"--pcp\" or in the file \"lazarus.cfg\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisfailedtoloadfoldstat
 msgid "Failed to load fold state"
@@ -12175,6 +12206,10 @@ msgctxt "lazarusidestrconsts.lislazcleanupbuildall"
 msgid "Clean Up + Build all"
 msgstr "清掃 + すべて構築"
 
+#: lazarusidestrconsts.lislazpkg
+msgid "Package distributed with Lazarus"
+msgstr ""
+
 #: lazarusidestrconsts.lisldaddlinktoinherited
 msgid "Add link to inherited"
 msgstr "継承へのリンクを挿入"
@@ -12231,6 +12266,10 @@ msgstr "左側"
 #: lazarusidestrconsts.lisleftspaceequally
 msgid "Left space equally"
 msgstr "左側の間隔を均等に"
+
+#: lazarusidestrconsts.lislegend
+msgid "Legend"
+msgstr ""
 
 #: lazarusidestrconsts.lisless
 msgctxt "lazarusidestrconsts.lisless"
@@ -16090,6 +16129,10 @@ msgctxt "lazarusidestrconsts.lispkgmgrremove"
 msgid "remove"
 msgstr "削除"
 
+#: lazarusidestrconsts.lispkgoverlayinfo
+msgid "Additional information is indicated by the following overlays:"
+msgstr ""
+
 #: lazarusidestrconsts.lispkgselectapackage
 msgid "Select a package"
 msgstr "パッケージを選択してください"
@@ -16108,6 +16151,14 @@ msgstr "このプロジェクトは引き続くパッケージの出力ディレ
 #: lazarusidestrconsts.lispkgthisfileisnotinanyloadedpackage
 msgid "This file is not in any loaded package."
 msgstr "このファイルは読み込まれたどのパッケージにもありません。"
+
+#: lazarusidestrconsts.lispkgtobeinstalled
+msgid "Package will be installed with next IDE rebuild"
+msgstr ""
+
+#: lazarusidestrconsts.lispkgtobeuninstalled
+msgid "Package will be uninstalled with next IDE rebuild (unless needed by an installed package)"
+msgstr ""
 
 #: lazarusidestrconsts.lispkgunabletoreadpackagefileerror
 #, object-pascal-format
@@ -19606,6 +19657,14 @@ msgstr "ユニットが名称変更されたとき、参照を更新"
 msgid "When enabled the current options are saved to the template which is used when creating new projects"
 msgstr "許可されるとき、現在のオプションはテンプレートに保存されます。そして、新しいプロジェクトをつくるとき、それが使われます"
 
+#: lazarusidestrconsts.liswhenopeningasymlinkfileopenthetargetfilethesymlink
+msgid "When opening a symlink file, open the target file, the symlink file, or ask"
+msgstr ""
+
+#: lazarusidestrconsts.liswhenopeningsymlink
+msgid "When opening a Symlink"
+msgstr ""
+
 #: lazarusidestrconsts.liswhenthereisonlyonepossiblecompletionitemuseitimmed
 msgid "When there is only one possible completion item use it immediately, without showing the completion box"
 msgstr "すぐに使用できる補完項目が一つだけの時、それを補完ボックスを見せることなく直ちに用いる。"
@@ -19838,6 +19897,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lvlgraphshapestraight
 msgid "Straight"
+msgstr ""
+
+#: lazarusidestrconsts.lvlgraphshowrequiredpkg
+msgid "Required packages"
 msgstr ""
 
 #: lazarusidestrconsts.lvlgraphsplitmergeathighe
@@ -22027,6 +22090,10 @@ msgstr ""
 
 #: lazarusidestrconsts.unitdepoptionsforunit
 msgid "Options for Unit graph"
+msgstr ""
+
+#: lazarusidestrconsts.updatelvlgraph
+msgid "Update graph"
 msgstr ""
 
 #: lazarusidestrconsts.versioninfotitle

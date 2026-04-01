@@ -7293,6 +7293,7 @@ begin
   BuildTreeAndGetCleanPos(trTillCursor,lsrEnd,CursorPos,CleanCursorPos,
                           [btSetIgnoreErrorPos]);
   StartNode:=FindDeepestNodeAtPos(CleanCursorPos,true);
+  if StartNode=nil then exit;
   if CleanPosIsInComment(CleanCursorPos,StartNode.StartPos,CommentStart,CommentEnd) then begin
     {$IFDEF VerboseCompleteBlock}
     debugln(['TStandardCodeTool.CompleteBlock cursor (',CursorPos.Y,',',CursorPos.X,') cleanpos=[',CleanPosToStr(CleanCursorPos),'] in comment Start=[',CleanPosToStr(CommentStart),'] End=[',CleanPosToStr(CommentEnd),']']);
@@ -7796,7 +7797,7 @@ var
     AFilename:=OldFilename;
     if ExtractFileExt(AFilename)='' then begin
       // add default extension
-      if (Scanner.CompilerMode=cmDELPHI) then
+      if (Scanner.CompilerMode in [cmDELPHI, cmDELPHIUNICODE]) then
         AFilename:=AFilename+'.pas'
       else
         AFilename:=AFilename+'.pp';

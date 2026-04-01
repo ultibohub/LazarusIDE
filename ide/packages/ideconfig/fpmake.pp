@@ -3,7 +3,7 @@
 
    fpmake.pp for IdeConfig 1.0
 
-   This file was generated on 20.03.2026
+   This file was generated on 22.03.2026
 }
 
 {$ifndef ALLPACKAGES} 
@@ -48,6 +48,7 @@ begin
     P.IncludePath.Add('include/$(OS)');
     P.UnitPath.Add('.');
     T:=P.Targets.AddUnit('ideconfig.pas');
+    t.Dependencies.AddUnit('applicationbundle');
     t.Dependencies.AddUnit('basebuildmanager');
     t.Dependencies.AddUnit('compiler');
     t.Dependencies.AddUnit('compileroptions');
@@ -67,6 +68,7 @@ begin
     t.Dependencies.AddUnit('ideguicmdline');
     t.Dependencies.AddUnit('ideoptiondefs');
     t.Dependencies.AddUnit('ideprocs');
+    t.Dependencies.AddUnit('idetranslations');
     t.Dependencies.AddUnit('idexmlconfigprocs');
     t.Dependencies.AddUnit('lazconf');
     t.Dependencies.AddUnit('modematrixopts');
@@ -78,6 +80,7 @@ begin
     t.Dependencies.AddUnit('toolbaroptionsbase');
     t.Dependencies.AddUnit('transfermacros');
 
+    T:=P.Targets.AddUnit('applicationbundle.pas');
     T:=P.Targets.AddUnit('basebuildmanager.pas');
     T:=P.Targets.AddUnit('compiler.pp');
     T:=P.Targets.AddUnit('compileroptions.pp');
@@ -97,6 +100,7 @@ begin
     T:=P.Targets.AddUnit('ideguicmdline.pas');
     T:=P.Targets.AddUnit('ideoptiondefs.pas');
     T:=P.Targets.AddUnit('ideprocs.pp');
+    T:=P.Targets.AddUnit('idetranslations.pas');
     T:=P.Targets.AddUnit('idexmlconfigprocs.pas');
     T:=P.Targets.AddUnit('lazconf.pp');
     T:=P.Targets.AddUnit('modematrixopts.pas');

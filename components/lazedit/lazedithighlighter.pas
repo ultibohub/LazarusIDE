@@ -179,7 +179,7 @@ type
         ('(', '[', '{', '"', '''')
       );
     IDENTIFIER_CHARS = TCharSet(['A'..'Z', 'a'..'z', '0'..'9', '_']);
-    WORD_BREAK_CHARS = TCharSet([#32..#127] - IDENTIFIER_CHARS - ['#', '$']);
+    WORD_BREAK_CHARS = TCharSet([#33..#127] - IDENTIFIER_CHARS - ['#', '$']);
   strict private
     FUpdateLock: integer;
     FUpdateFlags: TLazEditHlUpdateFlags;
@@ -366,6 +366,8 @@ type
     property DefaultFilter: string read FDefaultFileFilterMask write FDefaultFileFilterMask stored IsFilterFilterMaskStored;
 
   end;
+
+  TLazEditCustomHighlighterClass = class of TLazEditCustomHighlighter;
 
   { TLazEditCustomRangesHighlighter }
 

@@ -54,17 +54,13 @@ uses
   // BuildIntf
   IDEExternToolIntf, MacroDefIntf, ProjectIntf, CompOptsIntf, LazMsgWorker,
   FppkgIntf, PackageDependencyIntf, PackageLinkIntf, PackageIntf, ComponentReg,
-  // IDEIntf
-  LazIDEIntf,
   // Package registration
   LazarusPackageIntf,
-  // IdeUtils
-  IDETranslations,
   // IdeConfig
   EnvironmentOpts, LazConf, TransferMacros, IDEProcs, DialogProcs, SearchPathProcs,
-  ParsedCompilerOpts, CompilerOptions, FppkgHelper, IdeConfStrConsts,
+  ParsedCompilerOpts, CompilerOptions, FppkgHelper, IdeConfStrConsts, IDETranslations,
   // IdePackager
-  IdePackagerStrConsts, PackageLinks, PackageDefs, PkgSysBasePkgs, EditablePackage;
+  IdePackagerStrConsts, PackageLinks, PackageDefs, PkgSysBasePkgs;
 
 const
   MakefileCompileVersion = 2;
@@ -105,28 +101,30 @@ type
                         aMsg, aSrcFilename: string; aLineNumber, aColumn: integer;
                         aViewCaption: string): TMessageLine of object;
   TPkgAddedEvent = procedure(APackage: TLazPackage) of object;
+  TPkgBeforeCompileEvent = function(aPkgList: TFPList): TModalResult of object;
+  TPkgBuildingEvent = function(APackage: TIDEPackage): TModalResult of object;
   TPkgDeleteEvent = procedure(APackage: TLazPackage) of object;
-  TPkgUninstall = function(APackage: TLazPackage;
-                    Flags: TPkgUninstallFlags; ShowAbort: boolean): TModalResult of object;
-  TPkgTranslate = procedure(APackage: TLazPackage) of object;
+  TPkgUninstallEvent = function(APackage: TLazPackage;
+          Flags: TPkgUninstallFlags; ShowAbort: boolean): TModalResult of object;
+  TPkgTranslateEvent = procedure(APackage: TLazPackage) of object;
   TDependencyModifiedEvent = procedure(ADependency: TPkgDependency) of object;
   TPkgGraphEndUpdateEvent = procedure(Sender: TObject; GraphChanged: boolean) of object;
   TFindFPCUnitEvent = procedure(const AUnitName, Directory: string;
                                 var Filename: string) of object;
   TPkgDeleteAmbiguousFiles = function(const Filename: string): TModalResult of object;
-  TOnBeforeCompilePackages = function(aPkgList: TFPList): TModalResult of object;
   TOnCheckInterPkgFiles = function(IDEObject: TObject; PkgList: TFPList;
     out FilesChanged: boolean): boolean of object;
   TSrcEditFileIsModifiedEvent = function(const SrcFilename: string): boolean of object;
+  TMainTitleChangeEvent = function(const ATitle: string): boolean of object;
 
   { TLazPkgGraphBuildItem }
 
   TLazPkgGraphBuildItem = class(TComponent)
   private
-    FLazPackage: TEditablePackage;
+    FLazPackage: TLazPackage;
     fTools: TFPList; // list of TExternalTools
     function GetTools(Index: integer): TAbstractExternalTool;
-    procedure SetLazPackage(AValue: TEditablePackage);
+    procedure SetLazPackage(AValue: TLazPackage);
   protected
     procedure Notification(AComponent: TComponent; Operation: TOperation);
       override;
@@ -140,7 +138,7 @@ type
     function GetFirstOrDummy: TAbstractExternalTool;
     function GetLastOrDummy: TAbstractExternalTool;
     property Tools[Index: integer]: TAbstractExternalTool read GetTools; default;
-    property LazPackage: TEditablePackage read FLazPackage write SetLazPackage;
+    property LazPackage: TLazPackage read FLazPackage write SetLazPackage;
   end;
 
   { TLazPkgGraphExtToolData }
@@ -214,7 +212,8 @@ type
     FLazControlsPackage: TLazPackage;
     // Events
     FOnAddPackage: TPkgAddedEvent;
-    FOnBeforeCompilePackages: TOnBeforeCompilePackages;
+    FOnBeforeCompilepackages: TPkgBeforeCompileEvent;
+    FOnPackageBuilding: TPkgBuildingEvent;
     FOnBeginUpdate: TNotifyEvent;
     FOnChangePackageName: TPkgChangeNameEvent;
     FOnCheckInterPkgFiles: TOnCheckInterPkgFiles;
@@ -224,8 +223,10 @@ type
     FOnEndUpdate: TPkgGraphEndUpdateEvent;
     FOnShowMessage: TShowMsgEvent;
     FOnSrcEditFileIsModified: TSrcEditFileIsModifiedEvent;
-    FOnTranslatePackage: TPkgTranslate;
-    FOnUninstallPackage: TPkgUninstall;
+    FOnTranslatePackage: TPkgTranslateEvent;
+    FOnUninstallPackage: TPkgUninstallEvent;
+    FOnMainTitleChange: TMainTitleChangeEvent;
+    //
     FQuietRegistration: boolean;
     FRegistrationFile: TPkgFile;
     FRegistrationPackage: TLazPackage;
@@ -239,9 +240,10 @@ type
     FHasCompiledFpmakePackages: Boolean;
     FVerbosity: TPkgVerbosityFlags;
     FFindFileCache: TLazPackageGraphFileCache;
-    function CreateDefaultPackage: TEditablePackage;
+    FNewPackageClass: TLazPackageClass;
+    function CreateDefaultPackage: TLazPackage;
     function GetCount: Integer;
-    function GetPackages(Index: integer): TEditablePackage;
+    function GetPackages(Index: integer): TLazPackage;
     procedure DoDependencyChanged(Dependency: TPkgDependency);
     procedure SetRegistrationPackage(const AValue: TLazPackage);
     procedure UpdateBrokenDependenciesToPackage(APackage: TLazPackage);
@@ -343,11 +345,12 @@ type
     function FindPackageWithID(PkgID: TLazPackageID): TLazPackage;
     function FindPackageWithIDMask(PkgIDMask: TLazPackageID): TLazPackage;
     function FindPackageProvidingName(FirstDependency: TPkgDependency;
-                 const Name: string): TLazPackage;
+                                      const Name: string): TLazPackage;
     function FindDependencyRecursively(FirstDependency: TPkgDependency;
                                        PkgID: TLazPackageID): TPkgDependency;
     function FindDependencyRecursively(FirstDependency: TPkgDependency;
                                        const PkgName: string): TPkgDependency;
+    function FindLCLDependency(FirstDependency: TPkgDependencyID): TPkgDependencyID; override;
     function FindConflictRecursively(FirstDependency: TPkgDependency;
                                      PkgID: TLazPackageID): TPkgDependency;
     function FindRuntimePkgOnlyRecursively(FirstDependency: TPkgDependency
@@ -399,7 +402,7 @@ type
     procedure ConsistencyCheck;
   public
     // packages handling
-    function CreateNewPackage(const Prefix: string): TEditablePackage;
+    function CreateNewPackage(const Prefix: string): TLazPackage;
     procedure AddPackage(APackage: TLazPackage);
     procedure ReplacePackage(var OldPackage: TLazPackage; NewPackage: TLazPackage);
     procedure ClosePackage(APackage: TLazPackage);
@@ -413,10 +416,10 @@ type
                                 IgnoreErrors, ShowAbort: boolean): TModalResult;
     procedure SetFlagDependenciesNeedBuild(Pkg: TLazPackage);
     function CheckCompileNeedDueToFPCUnits(TheOwner: TObject;
-                          StateFileAge: longint; var Note: string): boolean;
+                          StateFileAge: int64; var Note: string): boolean;
     function CheckCompileNeedDueToDependencies(TheOwner: TObject;
                          FirstDependency: TPkgDependency;
-                         SkipDesignTimePackages: boolean; StateFileAge: longint;
+                         SkipDesignTimePackages: boolean; StateFileAge: int64;
                          var Note: string): TModalResult;
     function CheckIfPackageNeedsCompilation(APackage: TLazPackage;
                     SkipDesignTimePackages, GroupCompile: boolean;
@@ -490,9 +493,10 @@ type
     property QuietRegistration: boolean read FQuietRegistration
                                         write FQuietRegistration;
     property ErrorMsg: string read FErrorMsg write FErrorMsg;
-    property Packages[Index: integer]: TEditablePackage read GetPackages; default; // see Count for the number
+    property Packages[Index: integer]: TLazPackage read GetPackages; default; // see Count for the number
     property UpdateLock: integer read FUpdateLock;
     property Verbosity: TPkgVerbosityFlags read FVerbosity write FVerbosity;
+    property NewPackageClass: TLazPackageClass read FNewPackageClass write FNewPackageClass;
 
     // base packages
     property SrcBasePackages: TStringListUTF8Fast read FSrcBasePackages;
@@ -517,8 +521,10 @@ type
 
     // events
     property OnAddPackage: TPkgAddedEvent read FOnAddPackage write FOnAddPackage;
-    property OnBeforeCompilePackages: TOnBeforeCompilePackages read
+    property OnBeforeCompilePackages: TpkgBeforeCompileEvent read
                         FOnBeforeCompilePackages write FOnBeforeCompilePackages;
+    property OnPackageBuilding: TPkgBuildingEvent read FOnPackageBuilding
+                                                 write FOnPackageBuilding;
     property OnBeginUpdate: TNotifyEvent read FOnBeginUpdate write FOnBeginUpdate;
     property OnChangePackageName: TPkgChangeNameEvent read FOnChangePackageName
                                                      write FOnChangePackageName;
@@ -534,11 +540,12 @@ type
     property OnShowMessage: TShowMsgEvent read FOnShowMessage write FOnShowMessage;
     property OnSrcEditFileIsModified: TSrcEditFileIsModifiedEvent read FOnSrcEditFileIsModified
                                                  write FOnSrcEditFileIsModified;
-    property OnTranslatePackage: TPkgTranslate read FOnTranslatePackage
-                                               write FOnTranslatePackage;
-    property OnUninstallPackage: TPkgUninstall read FOnUninstallPackage
-                                               write FOnUninstallPackage;
-
+    property OnTranslatePackage: TPkgTranslateEvent read FOnTranslatePackage
+                                                   write FOnTranslatePackage;
+    property OnUninstallPackage: TPkgUninstallEvent read FOnUninstallPackage
+                                                   write FOnUninstallPackage;
+    property OnMainTitleChange: TMainTitleChangeEvent read FOnMainTitleChange
+                                                     write FOnMainTitleChange;
     // set during calling Register procedures
     property RegistrationFile: TPkgFile read FRegistrationFile;
     property RegistrationPackage: TLazPackage read FRegistrationPackage
@@ -937,7 +944,7 @@ begin
   Result:=TAbstractExternalTool(fTools[Index]);
 end;
 
-procedure TLazPkgGraphBuildItem.SetLazPackage(AValue: TEditablePackage);
+procedure TLazPkgGraphBuildItem.SetLazPackage(AValue: TLazPackage);
 begin
   if FLazPackage=AValue then Exit;
   if FLazPackage<>nil then
@@ -1018,9 +1025,9 @@ begin
   if Assigned(OnDependencyModified) then OnDependencyModified(Dependency);
 end;
 
-function TLazPackageGraph.GetPackages(Index: integer): TEditablePackage;
+function TLazPackageGraph.GetPackages(Index: integer): TLazPackage;
 begin
-  Result:=TEditablePackage(FItems[Index]);
+  Result:=TLazPackage(FItems[Index]);
 end;
 
 procedure TLazPackageGraph.SetRegistrationPackage(const AValue: TLazPackage);
@@ -1084,7 +1091,7 @@ begin
       PkgLink.LPKFileDate:=FileDateToDateTimeDef(FileAgeUTF8(AFilename));
       PkgLink.LPKFileDateValid:=true;
       XMLConfig:=TXMLConfig.Create(nil);
-      NewPackage:=TEditablePackage.Create;
+      NewPackage:=NewPackageClass.Create;
       NewPackage.BeginUpdate('TLazPackageGraph.OpenDependencyWithPackageLink');
       NewPackage.Filename:=AFilename;
       NewPackage.OnModifySilently := @PkgModify;
@@ -1203,6 +1210,7 @@ begin
   FItems:=TFPList.Create;
   FLazarusBasePackages:=TFPList.Create;
   FSrcBasePackages:=TStringListUTF8Fast.Create;
+  FNewPackageClass:=TLazPackage;   // Will be changed by the IDE.
   if GlobalMacroList<>nil then begin
     GlobalMacroList.Add(TTransferMacro.Create('PkgDir','',
       lisPkgMacroPackageDirectoryParameterIsPackageID, @MacroFunctionPkgDir, []));
@@ -1534,12 +1542,12 @@ end;
 function TLazPackageGraph.FindNodeOfDependency(Dependency: TPkgDependency;
   Flags: TFindPackageFlags): TAVLTreeNode;
 var
-  CurPkg: TEditablePackage;
+  CurPkg: TLazPackage;
 begin
   // search in all packages with the same name
   Result:=FindLowestPkgNodeByName(Dependency.PackageName);
   while Result<>nil do begin
-    CurPkg:=TEditablePackage(Result.Data);
+    CurPkg:=TLazPackage(Result.Data);
     // check version
     if (not (fpfIgnoreVersion in Flags))
     and (not Dependency.IsCompatible(CurPkg)) then begin
@@ -1555,7 +1563,7 @@ begin
     if (fpfSearchInAutoInstallPckgs in Flags)
     and (CurPkg.AutoInstall<>pitNope) then exit;
     // check packages with opened editor
-    if (fpfSearchInPckgsWithEditor in Flags) and (CurPkg.Editor<>nil) then exit;
+    if (fpfSearchInPckgsWithEditor in Flags) and CurPkg.HasEditor then exit;
     // search next package node with same name
     Result:=FindNextSameName(Result);
   end;
@@ -1702,6 +1710,12 @@ begin
   if FirstDependency=nil then exit(nil);
   MarkAllPackagesAsNotVisited;
   Result:=Find(FirstDependency);
+end;
+
+function TLazPackageGraph.FindLCLDependency(FirstDependency: TPkgDependencyID
+  ): TPkgDependencyID;
+begin
+  Result:=FindDependencyRecursively(TPkgDependency(FirstDependency), LCLPackage);
 end;
 
 function TLazPackageGraph.FindConflictRecursively(
@@ -1974,10 +1988,10 @@ begin
   end;
 end;
 
-function TLazPackageGraph.CreateNewPackage(const Prefix: string): TEditablePackage;
+function TLazPackageGraph.CreateNewPackage(const Prefix: string): TLazPackage;
 begin
   BeginUpdate(true);
-  Result:=TEditablePackage.CreateAndClear;
+  Result:=NewPackageClass.CreateAndClear;
   Result.OnModifySilently:=@PkgModify;
   Result.Name:=CreateUniquePkgName(Prefix,nil);
   AddPackage(Result);
@@ -2229,9 +2243,9 @@ begin
   end;
 end;
 
-function TLazPackageGraph.CreateDefaultPackage: TEditablePackage;
+function TLazPackageGraph.CreateDefaultPackage: TLazPackage;
 begin
-  Result:=TEditablePackage.CreateAndClear;
+  Result:=NewPackageClass.CreateAndClear;
   with Result do begin
     Missing:=true;
     UserReadOnly:=true;
@@ -2384,7 +2398,6 @@ procedure TLazPackageGraph.ReplacePackage(var OldPackage: TLazPackage;
 var
   OldInstalled: TPackageInstallType;
   OldAutoInstall: TPackageInstallType;
-  OldEditor: TBasePackageEditor;
   i: Integer;
 begin
   if pvPkgSearch in Verbosity then
@@ -2398,10 +2411,7 @@ begin
   // save flags
   OldInstalled:=OldPackage.Installed;
   OldAutoInstall:=OldPackage.AutoInstall;
-  Assert(OldPackage is TEditablePackage, 'TLazPackageGraph.ReplacePackage: OldPackage is not TEditablePackage');
-  OldEditor:=TEditablePackage(OldPackage).Editor;
-  if OldEditor<>nil then
-    OldEditor.LazPackage:=nil;
+  OldPackage.PushEditor;
   // migrate components
   for i:=0 to OldPackage.FileCount-1 do
     MoveInstalledComponents(OldPackage.Files[i]);
@@ -2415,8 +2425,7 @@ begin
   NewPackage.AutoInstall:=OldAutoInstall;
   // add package to graph
   AddPackage(NewPackage);
-  if OldEditor<>nil then
-    OldEditor.LazPackage:=TEditablePackage(NewPackage);
+  NewPackage.PopEditor;
   EndUpdate;
 end;
 
@@ -3462,7 +3471,7 @@ begin
 end;
 
 function TLazPackageGraph.CheckCompileNeedDueToFPCUnits(TheOwner: TObject;
-  StateFileAge: longint; var Note: string): boolean;
+  StateFileAge: int64; var Note: string): boolean;
 var
   AProject: TLazProject;
   Pkg: TLazPackage;
@@ -3535,8 +3544,8 @@ begin
         if ConsoleVerbosity>=0 then
           debugln(['Hint: (lazarus) global unit "',Filename,'" is newer than state file of package ',ID]);
         Note+='Global unit "'+Filename+'" is newer than state file of '+ID+':'+LineEnding
-          +'  Unit age='+FileAgeToStr(FileAgeCached(Filename))+LineEnding
-          +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding;
+          +'  Unit age='+UniversalFileAgeToLocalStr(FileAgeCached(Filename))+LineEnding
+          +'  State file age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding;
         exit(true);
       end;
     end;
@@ -3547,7 +3556,7 @@ end;
 
 function TLazPackageGraph.CheckCompileNeedDueToDependencies(TheOwner: TObject;
   FirstDependency: TPkgDependency; SkipDesignTimePackages: boolean;
-  StateFileAge: longint; var Note: string): TModalResult;
+  StateFileAge: int64; var Note: string): TModalResult;
 
   function GetOwnerID: string;
   begin
@@ -3606,8 +3615,8 @@ begin
         if StateFileAge<RequiredPackage.LastCompile[o].StateFileDate then begin
           DebugLn('Hint: (lazarus) State file of ',RequiredPackage.IDAsString,' is newer than state file of ',GetOwnerID);
           Note+='State file of '+RequiredPackage.IDAsString+' is newer than state file of '+GetOwnerID+LineEnding
-            +'  '+RequiredPackage.IDAsString+'='+FileAgeToStr(RequiredPackage.LastCompile[o].StateFileDate)+LineEnding
-            +'  '+GetOwnerID+'='+FileAgeToStr(StateFileAge)+LineEnding;
+            +'  '+RequiredPackage.IDAsString+'='+UniversalFileAgeToLocalStr(RequiredPackage.LastCompile[o].StateFileDate)+LineEnding
+            +'  '+GetOwnerID+'='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding;
           exit;
         end;
         // check output state file of required package
@@ -3620,12 +3629,12 @@ begin
           and FileExistsCached(OtherStateFile)
           and (FileAgeCached(OtherStateFile)>StateFileAge) then begin
             DebugLn('Hint: (lazarus) State file of ',RequiredPackage.IDAsString,' "',OtherStateFile,'" (',
-                FileAgeToStr(FileAgeCached(OtherStateFile)),')'
-              ,' is newer than state file ',GetOwnerID,'(',FileAgeToStr(StateFileAge),')');
+                UniversalFileAgeToLocalStr(FileAgeCached(OtherStateFile)),')'
+              ,' is newer than state file ',GetOwnerID,'(',UniversalFileAgeToLocalStr(StateFileAge),')');
             Note+='State file of used package is newer than state file:'+LineEnding
               +'  Used package '+RequiredPackage.IDAsString+', file="'+OtherStateFile+'", '
-              +' age='+FileAgeToStr(FileAgeCached(OtherStateFile))+LineEnding
-              +'  package '+GetOwnerID+', age='+FileAgeToStr(StateFileAge)+LineEnding;
+              +' age='+UniversalFileAgeToLocalStr(FileAgeCached(OtherStateFile))+LineEnding
+              +'  package '+GetOwnerID+', age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding;
             Result:=mrYes;
             exit;
           end;
@@ -3943,8 +3952,8 @@ begin
       DebugLn('  File="',CompilerFilename,'"');
       DebugLn('  State file="',Stats.StateFileName,'"');
       Note+='Compiler file "'+CompilerFilename+'" changed:'+LineEnding
-        +'  Old='+UniversalFileAgeToStr(Stats.CompilerFileDate)+LineEnding
-        +'  Now='+UniversalFileAgeToStr(FileAgeCached(CompilerFilename))+LineEnding
+        +'  Old='+UniversalFileAgeToLocalStr(Stats.CompilerFileDate)+LineEnding
+        +'  Now='+UniversalFileAgeToLocalStr(FileAgeCached(CompilerFilename))+LineEnding
         +'  State file="'+Stats.StateFileName+'"'+LineEnding;
       exit(mrYes);
     end;
@@ -3960,9 +3969,9 @@ begin
       if StateFileAge<FileAgeCached(SrcFilename) then begin
         DebugLn('Hint: (lazarus) source disk file modified of ',APackage.IDAsString,': ',SrcFilename);
         Note+='Source file "'+SrcFilename+'" modified:'+LineEnding
-          +'  Source file age='+FileAgeToStr(FileAgeCached(SrcFilename))+LineEnding
+          +'  Source file age='+UniversalFileAgeToLocalStr(FileAgeCached(SrcFilename))+LineEnding
           +'  State file="'+Stats.StateFileName+'"'+LineEnding
-          +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding;
+          +'  State file age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding;
         exit(mrYes);
       end;
       if SrcEditFileIsModified(SrcFilename) then begin
@@ -4011,9 +4020,9 @@ begin
       DebugLn('Hint: (lazarus) State file older than lpk ',APackage.IDAsString);
       DebugLn('  State file="',Stats.StateFileName,'"');
       Note+='State file older than lpk:'+LineEnding
-        +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding
+        +'  State file age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding
         +'  State file="'+Stats.StateFileName+'"'+LineEnding
-        +'  LPK age='+FileAgeToStr(FileAgeCached(APackage.Filename))+LineEnding;
+        +'  LPK age='+UniversalFileAgeToLocalStr(FileAgeCached(APackage.Filename))+LineEnding;
       exit(mrYes);
     end;
     for i:=0 to APackage.FileCount-1 do begin
@@ -4029,9 +4038,9 @@ begin
         DebugLn('Hint: (lazarus) Source file has changed ',APackage.IDAsString,' ',CurFile.Filename);
         DebugLn('  State file="',Stats.StateFileName,'"');
         Note+='State file older than source "'+AFilename+'"'+LineEnding
-          +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding
+          +'  State file age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding
           +'  State file="'+Stats.StateFileName+'"'+LineEnding
-          +'  Src file age='+FileAgeToStr(FileAgeCached(AFilename))+LineEnding;
+          +'  Src file age='+UniversalFileAgeToLocalStr(FileAgeCached(AFilename))+LineEnding;
         exit(mrYes);
       end;
       if FilenameIsPascalUnit(AFilename) then begin
@@ -4041,9 +4050,9 @@ begin
           DebugLn('Hint: (lazarus) LFM has changed ',APackage.IDAsString,' ',LFMFilename);
           DebugLn('  State file="',Stats.StateFileName,'"');
           Note+='State file older than resource "'+LFMFilename+'"'+LineEnding
-            +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding
+            +'  State file age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding
             +'  State file="'+Stats.StateFileName+'"'+LineEnding
-            +'  Resource file age='+FileAgeToStr(FileAgeCached(LFMFilename))+LineEnding;
+            +'  Resource file age='+UniversalFileAgeToLocalStr(FileAgeCached(LFMFilename))+LineEnding;
           exit(mrYes);
         end;
       end;
@@ -4063,7 +4072,8 @@ function TLazPackageGraph.LoadPackageCompiledStateFile(APackage: TLazPackage;
   ): TModalResult;
 var
   Stats: TPkgLastCompileStats;
-  StateFileAge, MakefileVersion: LongInt;
+  StateFileAge: int64;
+  MakefileVersion: LongInt;
   XMLConfig: TXMLConfig;
   MakefileValue, Params: String;
 begin
@@ -4222,7 +4232,7 @@ begin
             CurPkg:=TLazPackage(PkgList[i]);
             if CurPkg.AutoUpdate=pupManually then continue;
             BuildItem:=TLazPkgGraphBuildItem.Create(nil);
-            BuildItem.LazPackage:=TEditablePackage(CurPkg);
+            BuildItem.LazPackage:=CurPkg;
             BuildItems.Add(BuildItem);
             Result:=CompilePackage(CurPkg,Flags,false,BuildItem);
             if Result<>mrOk then exit;
@@ -4498,8 +4508,8 @@ begin
     CompilerParams:=nil;
     CmdLineParams:=nil;
     try
-      if (BuildItem=nil) and (LazarusIDE<>nil) then
-        LazarusIDE.MainBarSubTitle:=APackage.Name;
+      if (BuildItem=nil) and Assigned(OnMainTitleChange) then
+        OnMainTitleChange(APackage.Name); //LazarusIDE.MainBarSubTitle:=APackage.Name;
 
       if pcfGroupCompile in Flags then
         SetFlagDependenciesNeedBuild(APackage);
@@ -4538,9 +4548,13 @@ begin
       end;
 
       // create fpmake.pp
-      if ((pcfCreateFpmakeFile in Flags)
-      or (APackage.GetActiveBuildMethod = bmFPMake)
-      or ((APackage.CompilerOptions.CreateMakefileOnBuild) and (APackage.BuildMethod in [bmBoth, bmFPMake]) and Assigned(FppkgInterface))) then begin
+      if ( (pcfCreateFpmakeFile in Flags)
+        or (APackage.GetActiveBuildMethod = bmFPMake)
+        or ( (APackage.CompilerOptions.CreateMakefileOnBuild)
+         and (APackage.BuildMethod in [bmBoth, bmFPMake])
+         and Assigned(FppkgInterface)
+        )
+      ) then begin
         Result:=WriteFpmake(APackage,pcfCreateFpmakeFile in Flags);
         if Result<>mrOk then begin
           DebugLn('Error: (lazarus) [TLazPackageGraph.CompilePackage] DoWriteFpmakeFile failed: ',APackage.IDAsString);
@@ -4568,9 +4582,9 @@ begin
         end;
       end;
 
-      if Assigned(LazarusIDE) then
+      if Assigned(OnPackageBuilding) then
       begin
-        Result := LazarusIDE.DoCallPackageBuildingHandler(APackage);
+        Result := OnPackageBuilding(APackage); //LazarusIDE.DoCallPackageBuildingHandler(APackage);
         if Result<>mrOK then
           Exit;
       end;
@@ -4714,8 +4728,8 @@ begin
       if CmdLineParams<>CompilerParams then
         CmdLineParams.Free;
       CompilerParams.Free;
-      if (BuildItem=nil) and (LazarusIDE<>nil) then
-        LazarusIDE.MainBarSubTitle:='';
+      if (BuildItem=nil) and Assigned(OnMainTitleChange) then
+        OnMainTitleChange(''); //LazarusIDE.MainBarSubTitle:='';
     end;
   finally
     PackageGraph.EndUpdate;
@@ -4737,8 +4751,8 @@ begin
   BeginUpdate(false);
   try
     try
-      if (BuildItem=nil) and (LazarusIDE<>nil) then
-        LazarusIDE.MainBarSubTitle:=APackageName;
+      if (BuildItem=nil) and Assigned(OnMainTitleChange) then
+        OnMainTitleChange(APackageName); //LazarusIDE.MainBarSubTitle:=APackageName;
 
       // create external tool to run the compiler
       //DebugLn('TLazPackageGraph.CompilePackageFPMake');
@@ -4774,8 +4788,8 @@ begin
       end;
       Result:=mrOk;
     finally
-      if (BuildItem=nil) and (LazarusIDE<>nil) then
-        LazarusIDE.MainBarSubTitle:='';
+      if (BuildItem=nil) and Assigned(OnMainTitleChange) then
+        OnMainTitleChange(''); //LazarusIDE.MainBarSubTitle:='';
     end;
   finally
     PackageGraph.EndUpdate;
@@ -6172,12 +6186,9 @@ begin
   Result:=true;
   // check if package is open, installed or will be installed
   if (APackage.Installed<>pitNope) or (APackage.AutoInstall<>pitNope)
-  or APackage.Modified
-  or ( (APackage is TEditablePackage) and (TEditablePackage(APackage).Editor<>nil) )
-  or (APackage.HoldPackageCount>0) then
-  begin
+  or APackage.Modified or APackage.HasEditor or (APackage.HoldPackageCount>0)
+  then
     exit;
-  end;
   // check if used by project
   ADependency:=APackage.FirstUsedByDependency;
   while ADependency<>nil do begin
@@ -6583,7 +6594,7 @@ end;
 procedure TLazPackageGraph.OpenInstalledDependency(Dependency: TPkgDependency;
   InstallType: TPackageInstallType; var Quiet: boolean);
 var
-  BrokenPackage: TEditablePackage;
+  BrokenPackage: TLazPackage;
   CurResult: TModalResult;
   IsBasePkg: Boolean;
 begin
@@ -6592,7 +6603,7 @@ begin
     // a valid lpk file of the installed package can not be found
     IsBasePkg:=IsCompiledInBasePackage(Dependency.PackageName);
     // -> create a broken package
-    BrokenPackage:=TEditablePackage.CreateAndClear;
+    BrokenPackage:=NewPackageClass.CreateAndClear;
     with BrokenPackage do begin
       BeginUpdate('TLazPackageGraph.OpenInstalledDependency');
       try
@@ -6712,7 +6723,7 @@ end;
 procedure TLazPackageGraph.IteratePackages(Flags: TFindPackageFlags;
   Event: TIteratePackagesEvent);
 var
-  CurPkg: TEditablePackage;
+  CurPkg: TLazPackage;
   i: Integer;
 begin
   // iterate opened packages
@@ -6723,7 +6734,7 @@ begin
     // check autoinstall packages
     or ((fpfSearchInAutoInstallPckgs in Flags) and (CurPkg.AutoInstall<>pitNope))
     // check packages with opened editor
-    or ((fpfSearchInPckgsWithEditor in Flags) and (CurPkg.Editor<>nil))
+    or ((fpfSearchInPckgsWithEditor in Flags) and CurPkg.HasEditor)
     then begin
       Event(CurPkg);
     end;
@@ -6738,17 +6749,17 @@ procedure TLazPackageGraph.IteratePackagesSorted(Flags: TFindPackageFlags;
   Event: TIteratePackagesEvent);
 var
   ANode: TAVLTreeNode;
-  CurPkg: TEditablePackage;
+  CurPkg: TLazPackage;
 begin
   ANode:=FTree.FindLowest;
   while ANode<>nil do begin
-    CurPkg:=TEditablePackage(ANode.Data);
+    CurPkg:=TLazPackage(ANode.Data);
     // check installed packages
     if ((fpfSearchInInstalledPckgs in Flags) and (CurPkg.Installed<>pitNope))
     // check autoinstall packages
     or ((fpfSearchInAutoInstallPckgs in Flags) and (CurPkg.AutoInstall<>pitNope))
     // check packages with opened editor
-    or ((fpfSearchInPckgsWithEditor in Flags) and (CurPkg.Editor<>nil))
+    or ((fpfSearchInPckgsWithEditor in Flags) and CurPkg.HasEditor)
     then
       Event(CurPkg);
     ANode:=FTree.FindSuccessor(ANode);

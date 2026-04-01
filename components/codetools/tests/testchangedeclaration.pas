@@ -5,10 +5,15 @@ unit TestChangeDeclaration;
 interface
 
 uses
-  Classes, SysUtils,
-  LazLogger, LazFileUtils, fpcunit, testregistry, AVL_Tree,
+  Classes, SysUtils, AVL_Tree,
+  // FPCUnit
+  TestRegistry,
+  // LazUtils
+  LazLoggerBase, LazFileUtils,
+  // CodeTools
   CodeToolManager, CodeCache, PascalParserTool,
-  TestFinddeclaration, TestStdCodetools;
+  // (project)
+  TestStdCodetools;
 
 type
 
@@ -55,11 +60,11 @@ procedure TTestChangeDeclaration.TestCTAddProcedureModifier;
         then
           Fail('ExtractProcedureHeader failed: '+CodeToolBoss.ErrorMessage);
         if ProcHead<>Expected then begin
-          writeln('Test ProcCode="',ProcCode,'"');
+          debugln('Test ProcCode="',ProcCode,'"');
           Src:=Code.Source;
-          writeln('SrcSTART:======================');
-          writeln(Src);
-          writeln('SrcEND:========================');
+          debugln('SrcSTART:======================');
+          debugln(Src);
+          debugln('SrcEND:========================');
           AssertEquals('ProcHead',Expected,ProcHead);
         end;
       end;

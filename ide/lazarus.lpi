@@ -607,11 +607,6 @@
         <UnitName Value="SourceFileManager"/>
       </Unit>
       <Unit>
-        <Filename Value="../packager/lpkcache.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="LPKCache"/>
-      </Unit>
-      <Unit>
         <Filename Value="frames/editor_general_options.pas"/>
         <IsPartOfProject Value="True"/>
         <ComponentName Value="EditorGeneralOptionsFrame"/>
@@ -759,7 +754,7 @@
       <Unit>
         <Filename Value="lfmunitresource.pas"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="lfmUnitResource"/>
+        <UnitName Value="LfmUnitResource"/>
       </Unit>
       <Unit>
         <Filename Value="sourcemarks.pas"/>
@@ -821,11 +816,6 @@
         <Filename Value="buildmanager.pas"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="BuildManager"/>
-      </Unit>
-      <Unit>
-        <Filename Value="basebuildmanager.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="BaseBuildManager"/>
       </Unit>
       <Unit>
         <Filename Value="buildlazdialog.pas"/>
@@ -1040,6 +1030,7 @@
       <Unit>
         <Filename Value="macropromptdlg.pas"/>
         <IsPartOfProject Value="True"/>
+        <UnitName Value="MacroPromptDlg"/>
       </Unit>
       <Unit>
         <Filename Value="ide.pas"/>
@@ -1127,11 +1118,6 @@
         <Filename Value="fpdocselectinherited.pas"/>
         <IsPartOfProject Value="True"/>
         <HasResources Value="True"/>
-      </Unit>
-      <Unit>
-        <Filename Value="applicationbundle.pas"/>
-        <IsPartOfProject Value="True"/>
-        <UnitName Value="ApplicationBundle"/>
       </Unit>
       <Unit>
         <Filename Value="msgvieweditor.pas"/>

@@ -167,7 +167,7 @@ type
     procedure EndSingleStepOverBreakPoint;
     procedure SetSingleStep;
     procedure ApplyWatchPoints(AWatchPointData: TFpWatchPointData); override;
-    function DetectHardwareWatchpoint: Pointer; override;
+    function DetectHardwareWatchpoint: TFpInternalWatchpoint; override;
     procedure BeforeContinue; override;
     function ResetInstructionPointerAfterBreakpoint: boolean; override;
     function ReadThreadState: boolean;
@@ -183,6 +183,7 @@ type
     procedure SetStackPointerRegisterValue(AValue: TDbgPtr); override;
     function GetStackPointerRegisterValue: TDbgPtr; override;
     property Process;
+    property HitExternalWatchPoint: boolean read FHitExternalWatchPoint;
   end;
 
   TDbgWinThreadNameInternal = class(TLinkListItem)
@@ -1032,10 +1033,12 @@ var
   EventThread, t: TDbgThread;
   WinEventThread: TDbgWinThread absolute EventThread;
   WinAThread: TDbgWinThread absolute AThread;
-  HasExceptionCleared, EventThreadNeedsTempBrkRemove: Boolean;
+  HasExceptionCleared, EventThreadNeedsTempBrkRemove, RaiseSingleStep: Boolean;
 begin
   debugln(FPDBG_WINDOWS, ['TDbgWinProcess.Continue ',SingleStep, ' # ', ' # ',DbgSTime]);
   HasExceptionCleared := (WinAThread <> nil) and WinAThread.FHasExceptionCleared;
+  RaiseSingleStep := (udeReRaiseExternalWatchPoint in HandleUserDebugEvents) and
+    (WinAThread <> nil) and WinAThread.HitExternalWatchPoint;
 
   if assigned(AThread) and not FThreadMap.HasId(AThread.ID) then begin
     AThread := nil;
@@ -1106,11 +1109,16 @@ begin
   else
   if MDebugEvent.dwDebugEventCode = EXCEPTION_DEBUG_EVENT then
     case MDebugEvent.Exception.ExceptionRecord.ExceptionCode of
-     EXCEPTION_BREAKPOINT, STATUS_WX86_BREAKPOINT,
-     EXCEPTION_SINGLE_STEP, STATUS_WX86_SINGLE_STEP: begin
-       result := Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_CONTINUE);
-     end
-    else
+      EXCEPTION_SINGLE_STEP, STATUS_WX86_SINGLE_STEP: begin
+        if RaiseSingleStep then
+          result := Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_EXCEPTION_NOT_HANDLED)
+        else
+          result := Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_CONTINUE);
+      end;
+      EXCEPTION_BREAKPOINT, STATUS_WX86_BREAKPOINT: begin
+        result := Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_CONTINUE);
+      end;
+    otherwise
       result := Windows.ContinueDebugEvent(MDebugEvent.dwProcessId, MDebugEvent.dwThreadId, DBG_EXCEPTION_NOT_HANDLED);
     end
   else
@@ -1582,12 +1590,16 @@ begin
               t := AThread;
               with MDebugEvent.Exception.ExceptionRecord do begin
                 if (NumberParameters >= 3) and
-                   ((ExceptionInformation[0] and $ffffffff) = $1000) and
-                   (TThreadID(ExceptionInformation[2]) <> 0) and
-                   (TThreadID(ExceptionInformation[2]) <> TThreadID(-1))
+                   ((ExceptionInformation[0] and $ffffffff) = $1000)
                 then begin
-                  if not GetThread(Integer(ExceptionInformation[2]), t) then
-                    t := nil;
+                  if not(udeReRaiseWin32ThreadNameException in HandleUserDebugEvents) then
+                    AThread.ClearExceptionSignal;
+                  if (TThreadID(ExceptionInformation[2]) <> 0) and
+                     (TThreadID(ExceptionInformation[2]) <> TThreadID(-1))
+                  then begin
+                    if not GetThread(Integer(ExceptionInformation[2]), t) then
+                      t := nil;
+                  end;
                 end;
               end;
               if t <> nil then begin
@@ -2265,6 +2277,10 @@ end;
 
 procedure TDbgWinThread.ApplyWatchPoints(AWatchPointData: TFpWatchPointData);
 begin
+  if (udeKeepExternalWatchPointData in Process.HandleUserDebugEvents) and
+     (TFpIntelWatchPointData(AWatchPointData).Dr7 = 0)
+  then
+    exit;
   if FCurrentContext = nil then
     if not ReadThreadState then
       exit;
@@ -2295,7 +2311,7 @@ DebugLn(DBG_VERBOSE, '### WATCH ADDED   dr0 %x  dr1 %x  dr2 %x  dr3 %x      dr7 
   FThreadContextChanged:=true;
 end;
 
-function TDbgWinThread.DetectHardwareWatchpoint: Pointer;
+function TDbgWinThread.DetectHardwareWatchpoint: TFpInternalWatchpoint;
 var
   Dr6: DWORD64;
   wd: TFpIntelWatchPointData;
@@ -2322,7 +2338,7 @@ begin
   else if dr6 and 4 = 4 then result := wd.Owner[2]
   else if dr6 and 8 = 8 then result := wd.Owner[3];
   if (Result = nil) and ((dr6 and 15) <> 0) then
-    Result := Pointer(-1); // not owned watchpoint
+    FHitExternalWatchPoint := True; // not set by the debugger
 end;
 
 procedure TDbgWinThread.BeforeContinue;

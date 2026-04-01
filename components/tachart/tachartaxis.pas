@@ -765,7 +765,7 @@ var
   p: TPoint;
   d: Integer;
 begin
-  if not Visible or (ASize = 0) or (FTitlePos = MaxInt) then exit;
+  if not Visible or not Title.Visible or (ASize = 0) or (FTitlePos = MaxInt) then exit;
   if Title.DistanceToCenter then
     d := Title.Distance
   else
@@ -1065,7 +1065,7 @@ begin
       FTitleSize := Max(TitleSize(txtLen), FTitleSize)
     else
     begin
-      FTitleSize := Title.FixedSize;
+      FTitleSize := Drawer.Scale(Title.FixedSize);
       case Alignment of
         calLeft:
           if Title.LabelFont.Orientation = 0 then

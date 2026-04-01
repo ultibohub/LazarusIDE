@@ -1392,6 +1392,8 @@ resourcestring
   dlgCharCaseFileAct = 'Save As - auto rename Pascal files lower case';
   dlgAmbigFileAct = 'Ambiguous file action:';
   dlgEnvAsk = 'Ask';
+  lisAlwaysOpenTarget = 'Always Open Target';
+  lisAlwaysOpenSymlink = 'Always Open Symlink';
   dlgAutoDel = 'Auto delete file';
   dlgAutoRen = 'Auto rename file lowercase';
   dlgnoAutomaticRenaming = 'No automatic renaming';
@@ -4645,6 +4647,14 @@ resourcestring
     +'the size of the IDE and may even make it unstable.'
     +'%sHint: If you want to use a package in your project, use the "Add to project" menu item.';
   lisInstallItILikeTheFat = 'Install it, I like the fat';
+  lisPkgToBeInstalled = 'Package will be installed with next IDE rebuild';
+  lisPkgToBeUninstalled = 'Package will be uninstalled with next IDE rebuild ' +
+    '(unless needed by an installed package)';
+  lisDesignTimeRunTimePkg = 'Designtime/runtime package';
+  lisPkgOverlayInfo = 'Additional information is indicated by the following overlays:';
+  lisBasePkg = 'Base package, cannot be uninstalled';
+  lisLazPkg = 'Package distributed with Lazarus';
+  lisDesigntimeOnlyPkg = 'Designtime-only package';
 
   // package options dialog
   lisPckOptsUsage = 'Usage';
@@ -5005,6 +5015,7 @@ resourcestring
   lisPackageInfo = 'Package info';
   lisSaveAndRebuildIDE = 'Rebuild IDE';
   lisSaveAndExitDialog = 'Only Save';
+  lisLegend = 'Legend';
   lisAlignment = 'Alignment';
   lisHorizontal = 'Horizontal';
   lisNoChange = 'No change';
@@ -6074,6 +6085,9 @@ resourcestring
   lisUpdateOtherProcedureSignaturesWhenOnlyLetterCaseHa = 'Update other '
     +'procedure signatures when only letter case has changed';
   lisTemplateFile = 'Template file';
+  lisFailedToCreateTheConfigurationDirectory = 'Failed to create the configuration directory:' + LineEnding + '%s'
+    + LineEnding + LineEnding + 'The path may contain reserved characters or you may not have permissions.'
+    + LineEnding + LineEnding + 'It can be specified by the command line parameter "--pcp" or in the file "lazarus.cfg".';
   lisIncorrectConfigurationDirectoryFound = 'Incorrect configuration directory found';
   lisIDEConficurationFoundMayBelongToOtherLazarus = 'Welcome to Lazarus.%0:s'
     + 'The IDE configuration found was previously used by another '
@@ -6208,6 +6222,8 @@ resourcestring
   LvlGraphOptLimitRelativ = 'Limit relative to node-count for height of levels.%0s'
     +'Limit = min(3, val*sqrt(NodeCount))';
   ShowOptions = 'Show options';
+  UpdateLvlGraph = 'Update graph';
+  LvlGraphShowRequiredPkg = 'Required packages';
   UnitDepOptionsForPackage = 'Options for Package graph';
   UnitDepOptionsForUnit = 'Options for Unit graph';
   LvlGraphReduceBackedges = 'Reduce backedges';
@@ -6349,6 +6365,9 @@ resourcestring
     +'dot ".".';
   lisFailedToSaveMacro = 'Failed to save macro.';
   SynSpellOptMouseWheelChangesTabs = 'Mouse-wheel changes tabs';
+  lisWhenOpeningASymlinkFileOpenTheTargetFileTheSymlink = 'When opening a symlink file, open the '
+    +'target file, the symlink file, or ask';
+  lisWhenOpeningSymlink = 'When opening a Symlink';
 
 implementation
 

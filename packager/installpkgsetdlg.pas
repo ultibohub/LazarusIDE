@@ -40,7 +40,7 @@ uses
   Classes, SysUtils, Contnrs, AVL_Tree,
   // LCL
   LCLType, Forms, Controls, Graphics, Dialogs, StdCtrls, Buttons,
-  ExtCtrls, ComCtrls, ImgList,
+  ExtCtrls, ComCtrls, ImgList, Themes, Menus,
   // LazControls
   TreeFilterEdit,
   // Codetools
@@ -57,10 +57,12 @@ uses
   IdeConfStrConsts,
   // IdeProject
   IdeProjectStrConsts,
+  // IdePackager
+  PackageDefs, PackageSystem, LPKCache, PackageLinks,
   // IdeConfig
   LazConf,
   // IDE
-  LazarusIDEStrConsts, PackageDefs, PackageSystem, LPKCache, PackageLinks;
+  LazarusIDEStrConsts;
 
 type
 
@@ -70,25 +72,36 @@ type
     AddToInstallButton: TBitBtn;
     AvailableTreeView: TTreeView;
     AvailablePkgGroupBox: TGroupBox;
+    LegendButton: TButton;
+    legBasePackage: TMenuItem;
+    legDesignPackage: TMenuItem;
+    legInstallPackage: TMenuItem;
+    legUninstallPackage: TMenuItem;
+    legLazarusPackage: TMenuItem;
+    legRunDesignPackage: TMenuItem;
+    legOverlays: TMenuItem;
+    MoreButton: TButton;
+    ImportMenuItem: TMenuItem;
+    ExportMenuItem: TMenuItem;
     MiddleBevel: TBevel;
     HelpButton: TBitBtn;
     CancelButton: TBitBtn;
-    ExportButton: TButton;
     BtnPanel: TPanel;
     InstallTreeView: TTreeView;
     AvailableFilterEdit: TTreeFilterEdit;
     LPKParsingTimer: TTimer;
     NoteLabel: TLabel;
     Panel1: TPanel;
-    Panel2: TPanel;
     PkgInfoMemo: TMemo;
     PkgInfoGroupBox: TGroupBox;
-    ImportButton: TButton;
     PkgInfoMemoLicense: TMemo;
+    MorePopupMenu: TPopupMenu;
+    LegendPopupMenu: TPopupMenu;
     SaveAndExitButton: TBitBtn;
     InstallPkgGroupBox: TGroupBox;
     SaveAndRebuildButton: TBitBtn;
     InstalledFilterEdit: TTreeFilterEdit;
+    Separator1: TMenuItem;
     Splitter1: TSplitter;
     Splitter2: TSplitter;
     UninstallButton: TBitBtn;
@@ -101,6 +114,7 @@ type
     procedure FormKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure InstallTreeViewKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure LegendButtonClick(Sender: TObject);
     procedure LPKParsingTimerTimer(Sender: TObject);
     procedure OnAllLPKParsed(Sender: TObject);
     procedure OnIdle(Sender: TObject; var {%H-}Done: Boolean);
@@ -108,8 +122,9 @@ type
       Node: TTreeNode; {%H-}State: TCustomDrawState; Stage: TCustomDrawStage;
       var PaintImages, {%H-}DefaultDraw: Boolean);
     procedure AvailableTreeViewSelectionChanged(Sender: TObject);
-    procedure ExportButtonClick(Sender: TObject);
-    procedure ImportButtonClick(Sender: TObject);
+    procedure ExportMenuItemClick(Sender: TObject);
+    procedure ImportMenuItemClick(Sender: TObject);
+    procedure MoreButtonClick(Sender: TObject);
     procedure SaveAndRebuildButtonClick(Sender: TObject);
     procedure InstallPkgSetDialogCreate(Sender: TObject);
     procedure InstallPkgSetDialogDestroy(Sender: TObject);
@@ -134,7 +149,7 @@ type
     ImgIndexCirclePackage: integer;
     ImgIndexMissingPackage: integer;
     ImgIndexAvailableOnline: integer;
-    ImgIndexOverlayUnknown: integer;
+    ImgIndexUnknown: integer;
     ImgIndexOverlayBasePackage: integer;
     ImgIndexOverlayFPCPackage: integer;
     ImgIndexOverlayLazarusPackage: integer;
@@ -156,6 +171,8 @@ type
     function NewInstalledPackagesContains(APackageID: TLazPackageID): boolean;
     function IndexOfNewInstalledPackageID(APackageID: TLazPackageID): integer;
     function IndexOfNewInstalledPkgByName(const APackageName: string): integer;
+    procedure ExportPackageList;
+    procedure ImportPackageList;
     procedure SavePackageListToFile(const AFilename: string);
     procedure LoadPackageListFromFile(const AFilename: string);
     function ExtractNameFromPkgID(ID: string): string;
@@ -231,8 +248,6 @@ begin
   Self                .Caption := lisInstallUninstallPackages;
   NoteLabel           .Caption := lisIDECompileAndRestart;
   AvailablePkgGroupBox.Caption := lisAvailableForInstallation;
-  ExportButton        .Caption := lisExport;
-  ImportButton        .Caption := lisImport;
   UninstallButton     .Caption := lisUninstallSelection;
   InstallPkgGroupBox  .Caption := lisPckEditInstall;
   AddToInstallButton  .Caption := lisInstallSelection;
@@ -241,11 +256,16 @@ begin
   SaveAndExitButton   .Caption := lisSaveAndExitDialog;
   CancelButton        .Caption := lisCancel;
   HelpButton          .Caption := lisMenuHelp;
+  LegendButton        .Caption := lisLegend;
+  ImportMenuItem      .Caption := lisImportPackageListXml;
+  ExportMenuItem      .Caption := lisExportPackageListXml;
 
   { Images }
 
   InstallTreeView  .Images := IDEImages.Images_16;
   AvailableTreeView.Images := IDEImages.Images_16;
+  MorePopupMenu    .Images := IDEImages.Images_16;
+  LegendPopupMenu  .Images := IDEImages.Images_16;
 
   IDEImages.AssignImage(AddToInstallButton, 'arrow__darkgreen_left');
   IDEImages.AssignImage(UninstallButton   , 'arrow__darkred_right');
@@ -257,12 +277,30 @@ begin
   ImgIndexCirclePackage            := IDEImages.LoadImage('pkg_package_circle');
   ImgIndexMissingPackage           := IDEImages.LoadImage('pkg_conflict');
   ImgIndexAvailableOnline          := IDEImages.LoadImage('pkg_install');
-  ImgIndexOverlayUnknown           := IDEImages.LoadImage('state_unknown');
+  ImgIndexUnknown                  := IDEImages.LoadImage('state_unknown');
   ImgIndexOverlayBasePackage       := IDEImages.LoadImage('pkg_core_overlay');
   ImgIndexOverlayFPCPackage        := IDEImages.LoadImage('pkg_fpc_overlay');
   ImgIndexOverlayLazarusPackage    := IDEImages.LoadImage('pkg_lazarus_overlay');
   ImgIndexOverlayDesignTimePackage := IDEImages.LoadImage('pkg_design_overlay');
   ImgIndexOverlayRunTimePackage    := IDEImages.LoadImage('pkg_runtime_overlay');
+  ImportMenuItem.ImageIndex        := IDEImages.LoadImage('pkg_import');
+  ExportMenuItem.ImageIndex        := IDEImages.LoadImage('pkg_export');
+
+  { Icon legend }
+
+  legInstallPackage   .Caption := lisPkgToBeInstalled;
+  legUninstallPackage .Caption := lisPkgToBeUninstalled;
+  legRunDesignPackage .Caption := lisDesignTimeRunTimePkg;
+  legOverlays         .Caption := lisPkgOverlayInfo;
+  legBasePackage      .Caption := lisBasePkg;
+  legLazarusPackage   .Caption := lisLazPkg;
+  legDesignPackage    .Caption := lisDesignTimeOnlyPkg;
+  legInstallPackage   .ImageIndex := ImgIndexInstallPackage;
+  legUninstallPackage .ImageIndex := ImgIndexUninstallPackage;
+  legRunDesignPackage .ImageIndex := ImgIndexPackage;
+  legBasePackage      .ImageIndex := ImgIndexOverlayBasePackage;
+  legLazarusPackage   .ImageIndex := ImgIndexOverlayLazarusPackage;
+  legDesignPackage    .ImageIndex := ImgIndexOverlayDesignTimePackage;
 
   {}
 
@@ -288,7 +326,6 @@ begin
   InstalledFilterEdit.ResetFilter;    // (filter) - TextHint is shown after this.
   AvailableFilterEdit.ResetFilter;
   SetControlsWidthOnMax([UninstallButton, AddToInstallButton]);
-  SetControlsWidthOnMax([ImportButton, ExportButton]);
 end;
 
 procedure TInstallPkgSetDialog.SaveAndRebuildButtonClick(Sender: TObject);
@@ -306,7 +343,12 @@ begin
   UpdatePackageInfo(AvailableTreeView);
 end;
 
-procedure TInstallPkgSetDialog.ExportButtonClick(Sender: TObject);
+procedure TInstallPkgSetDialog.ExportMenuItemClick(Sender: TObject);
+begin
+  ExportPackageList;
+end;
+
+procedure TInstallPkgSetDialog.ExportPackageList;
 var
   SaveDialog: TSaveDialog;
   AFilename: string;
@@ -330,7 +372,12 @@ begin
   end;
 end;
 
-procedure TInstallPkgSetDialog.ImportButtonClick(Sender: TObject);
+procedure TInstallPkgSetDialog.ImportMenuItemClick(Sender: TObject);
+begin
+  ImportPackageList;
+end;
+
+procedure TInstallPkgSetDialog.ImportPackageList;
 var
   OpenDialog: TOpenDialog;
   AFilename: string;
@@ -418,12 +465,12 @@ begin
   // import and export
   else if (Key = VK_E) and (Shift = [ssCtrl]) then
   begin
-    ExportButtonClick(Sender);
+    ExportPackageList;
     Key := 0;
   end
   else if (Key = VK_I) and (Shift = [ssCtrl]) then
   begin
-    ImportButtonClick(Sender);
+    ImportPackageList;
     Key := 0;
   end
   // scroll description
@@ -458,10 +505,26 @@ begin
   end;
 end;
 
+procedure TInstallPkgSetDialog.LegendButtonClick(Sender: TObject);
+var
+  P: TPoint;
+begin
+  P := LegendButton.ClientToScreen(Point(0, 0));
+  LegendPopupMenu.Popup(P.X + LegendButton.Width, P.Y);
+end;
+
 procedure TInstallPkgSetDialog.LPKParsingTimerTimer(Sender: TObject);
 begin
   UpdateNewInstalledPackages;
   UpdateAvailablePackages;
+end;
+
+procedure TInstallPkgSetDialog.MoreButtonClick(Sender: TObject);
+var
+  P: TPoint;
+begin
+  P := MoreButton.ClientToScreen(Point(0, 0));
+  MorePopupMenu.Popup(P.X + MoreButton.Width, P.Y);
 end;
 
 procedure TInstallPkgSetDialog.OnAllLPKParsed(Sender: TObject);
@@ -497,23 +560,25 @@ var
   Unknown: Boolean;
   PackageLink: TPackageLink;
   ImagesRes: TScaledImageListResolution;
+  Details: TThemedElementDetails;
 begin
   Tree:=Sender as TTreeView;
   if Stage=cdPostPaint then begin
     LPKInfoCache.EnterCritSection;
     try
       Info:=LPKInfoCache.FindPkgInfoWithIDAsString(Node.Text);
-      if Info=nil then exit;
-      PkgName:=Info.ID.Name;
-      Unknown:=not (Info.LPKParsed in [lpkiParsed,lpkiParsedError]);
-      InLazSrc:=Info.InLazSrc;
-      IsBase:=Info.Base;
-      PkgType:=Info.PkgType;
-      Installed:=Info.Installed;
+      Unknown:=(Info=nil) or (not (Info.LPKParsed in [lpkiParsed,lpkiParsedError]));
+      if Info<>nil then begin
+        PkgName:=Info.ID.Name;
+        InLazSrc:=Info.InLazSrc;
+        IsBase:=Info.Base;
+        PkgType:=Info.PkgType;
+        Installed:=Info.Installed;
+      end;
     finally
       LPKInfoCache.LeaveCritSection;
     end;
-    if Sender = InstallTreeView then
+    if (Sender = InstallTreeView) or (Info = nil) then
       PackageLink := nil
     else
       PackageLink := FindOnlinePackageLink(Info.ID.Name);
@@ -526,19 +591,29 @@ begin
     x:=Node.DisplayIconLeft+1;
     y:=(NodeRect.Top+NodeRect.Bottom-ImagesRes.Height) div 2;
     // draw image
-    ImgIndex:=GetPkgImgIndex(Installed,PackageInInstallList(PkgName), PackageLink <> nil);
-    ImagesRes.Draw(CurCanvas,x,y,ImgIndex);
-    // draw overlays
-    if InLazSrc then
-      ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayLazarusPackage);
-    if IsBase then
-      ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayBasePackage);
-    if PkgType=lptRunTimeOnly then
-      ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayRuntimePackage);
-    if PkgType=lptDesignTime then
-      ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayDesigntimePackage);
     if Unknown then
-      ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayUnknown);
+      ImagesRes.Draw(CurCanvas,x,y,ImgIndexUnknown)
+    else begin
+      ImgIndex:=GetPkgImgIndex(Installed,PackageInInstallList(PkgName), PackageLink <> nil);
+      ImagesRes.Draw(CurCanvas,x,y,ImgIndex);
+      // draw overlays
+      if InLazSrc then
+        ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayLazarusPackage);
+      if IsBase then
+        ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayBasePackage);
+      if PkgType=lptRunTimeOnly then
+        ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayRuntimePackage);
+      if PkgType=lptDesignTime then
+        ImagesRes.Draw(CurCanvas,x,y,ImgIndexOverlayDesigntimePackage);
+      // draw base package nodes as disabled
+      if IsBase and not (cdsSelected in State) then begin
+        NodeRect := Node.DisplayRect(True);
+        NodeRect.Offset(Scale96ToFont(2), 0);
+        Details := ThemeServices.GetElementDetails(ttItemDisabled);
+        CurCanvas.FillRect(NodeRect); // paint over the original text
+        ThemeServices.DrawText(CurCanvas, Details, Node.Text, NodeRect, DT_LEFT or DT_VCENTER or DT_SINGLELINE or DT_NOPREFIX, 0);
+      end;
+    end;
   end;
   PaintImages:=false;
 end;

@@ -49,10 +49,11 @@ uses
   // RTL, FCL
   TypInfo, Math, Classes, SysUtils, Contnrs, AVL_Tree,
   // LCL
-  Forms, Controls, Dialogs, Menus, ComCtrls, LResources,
+  Forms, Controls, Dialogs, Menus, ComCtrls,
   // LazUtils
   LazUTF8, Laz2_XMLCfg, LazTracer, LazUtilities, LazStringUtils,
-  LazFileUtils, LazFileCache, StringHashList, AvgLvlTree, ObjectLists, Translations,
+  LazFileUtils, LazFileCache, StringHashList, AvgLvlTree, ObjectLists,
+  Translations, ProjResProc,
   // Codetools
   CodeToolsConfig, CodeToolManager, CodeCache, BasicCodeTools,
   FileProcs, CodeTree, CTUnitGraph,
@@ -64,11 +65,11 @@ uses
   IDECommands, MenuIntf, IDEWindowIntf, LazIDEIntf, IDEMsgIntf, SrcEditorIntf,
   IdeIntfStrConsts, ComponentEditors, PropEdits, IDEDialogs,
   // IdeUtils
-  InputHistory, IDETranslations,
+  InputHistory,
   // IdeConfig
   EnvironmentOpts, IDEOptionDefs, ModeMatrixOpts, RecentListProcs, SearchPathProcs,
   TransferMacros, IDECmdLine, IDEProcs, DialogProcs, BaseBuildManager,
-  ParsedCompilerOpts, CompilerOptions, IdeConfStrConsts,
+  ParsedCompilerOpts, CompilerOptions, IdeConfStrConsts, IDETranslations,
   // IdePackager
   IdePackagerStrConsts, BasePkgManager, PackageDefs, EditablePackage,
   PackageLinks, PackageSystem,
@@ -148,6 +149,7 @@ type
     function ShowMessageHandler(aUrgency: TMessageLineUrgency;
                          aMsg, aSrcFilename: string; aLineNumber, aColumn: integer;
                          aViewCaption: string): TMessageLine;
+    function MainTitleChanged(const ATitle: string): boolean;
     // menu
     procedure MainIDEitmPkgOpenPackageFileClick(Sender: TObject);
     procedure MainIDEitmPkgPkgGraphClick(Sender: TObject);
@@ -1100,6 +1102,11 @@ function TPkgManager.ShowMessageHandler(aUrgency: TMessageLineUrgency;
 begin
   Assert(Assigned(IDEMessagesWindow), 'TPkgManager.ShowMessageHandler: IDEMessagesWindow=Nil');
   Result:=IDEMessagesWindow.AddCustomMessage(aUrgency, aMsg, aSrcFilename, aLineNumber, aColumn, aViewCaption);
+end;
+
+function TPkgManager.MainTitleChanged(const ATitle: string): boolean;
+begin
+  LazarusIDE.MainBarSubTitle:=ATitle;
 end;
 
 function TPkgManager.PackageGraphExplorerUninstallPackage(Sender: TObject;
@@ -2944,8 +2951,10 @@ begin
   // package graph
   PackageGraph:=TLazPackageGraph.Create;
   PackageGraphInterface:=PackageGraph;
+  PackageGraph.NewPackageClass:=TEditablePackage;
   PackageGraph.OnAddPackage:=@PackageGraphAddPackage;
   PackageGraph.OnBeforeCompilePackages:=@DoBeforeCompilePackages;
+  PackageGraph.OnPackageBuilding:=@LazarusIDE.DoCallPackageBuildingHandler;
   PackageGraph.OnBeginUpdate:=@PackageGraphBeginUpdate;
   PackageGraph.OnChangePackageName:=@PackageGraphChangePackageName;
   PackageGraph.OnCheckInterPkgFiles:=@PackageGraphCheckInterPkgFiles;
@@ -2957,6 +2966,7 @@ begin
   PackageGraph.OnUninstallPackage:=@DoUninstallPackage;
   PackageGraph.OnSrcEditFileIsModified:=@PackageGraphSrcEditFileIsModified;
   PackageGraph.OnShowMessage:=@ShowMessageHandler;
+  PackageGraph.OnMainTitleChange:=@MainTitleChanged;
 
   // package editors
   PackageEditors:=TPackageEditors.Create;
@@ -3504,7 +3514,7 @@ end;
 
 function TPkgManager.DoNewPackage: TModalResult;
 var
-  NewPackage: TEditablePackage;
+  NewPackage: TLazPackage;
 begin
   Result:=mrCancel;
   // create a new package with standard dependencies
@@ -3704,7 +3714,7 @@ var
   APackage: TEditablePackage;
 begin
   for i:=0 to PackageGraph.Count-1 do begin
-    APackage:=PackageGraph.Packages[i];
+    APackage:=PackageGraph.Packages[i] as TEditablePackage;
     if (APackage.Editor=nil) and APackage.Modified
     and (APackage.UserIgnoreChangeStamp<>APackage.ChangeStamp) then begin
       PackageEditors.OpenEditor(APackage,false);
@@ -5328,7 +5338,7 @@ begin
   if APackage=nil then begin
     // create new package
     // create a new package with standard dependencies
-    APackage:=PackageGraph.CreateNewPackage(constNewPackageName);
+    APackage:=PackageGraph.CreateNewPackage(constNewPackageName) as TEditablePackage;
     PackageGraph.AddDependencyToPackage(APackage,
                   PackageGraph.IDEIntfPackage.CreateDependencyWithOwner(APackage));
     APackage.Modified:=false;
@@ -6642,7 +6652,7 @@ begin
       AllSaved:=true;
       i:=0;
       while i<PackageGraph.Count do begin
-        CurPackage:=PackageGraph[i];
+        CurPackage:=PackageGraph[i] as TEditablePackage;
         if CurPackage.Modified and (not CurPackage.ReadOnly)
         and (not (lpfSkipSaving in CurPackage.Flags)) then begin
           Result:=DoSavePackage(CurPackage,Flags);
@@ -6659,7 +6669,7 @@ begin
   finally
     // clear all lpfSkipSaving flags
     for i:=0 to PackageGraph.Count-1 do begin
-      CurPackage:=PackageGraph[i];
+      CurPackage:=TEditablePackage(PackageGraph[i]);
       CurPackage.Flags:=CurPackage.Flags-[lpfSkipSaving];
     end;
   end;

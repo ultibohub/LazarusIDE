@@ -36,10 +36,10 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, Types, Math, AVL_Tree,
+  Classes, SysUtils, Types, Math, fgl, AVL_Tree,
   // LCL
   Forms, Controls, ExtCtrls, ComCtrls, StdCtrls, Buttons, Dialogs, Menus,
-  Clipbrd, CheckLst,
+  Clipbrd, CheckLst, Graphics,
   // CodeTools
   CodeToolManager, DefineTemplates, CTUnitGraph, CTUnitGroupGraph,
   FileProcs, CodeCache, AvgLvlTree,
@@ -47,7 +47,7 @@ uses
   LazLoggerBase, LazFileUtils, LazFileCache, LazStringUtils, LazUTF8, LvlGraphCtrl,
   // IDE interface
   LazIDEIntf, ProjectIntf, IDEWindowIntf, PackageIntf, SrcEditorIntf, IDEImagesIntf,
-  IDEMsgIntf, IDEExternToolIntf, IDECommands, IDEDialogs,
+  IDEMsgIntf, IDEExternToolIntf, IDECommands, IDEDialogs, laz.VirtualTrees,
   // IDE
   IDEOptionDefs, LazarusIDEStrConsts, UnusedUnitsDlg, DependencyGraphOptions,
   MainIntf, EnvironmentOpts;
@@ -141,7 +141,8 @@ type
     udwNeedUpdateAllUnitsTreeView, // rebuild AllUnitsTreeView
     udwNeedUpdateAllUnitsTVSearch, // update search in AllUnitsTreeView
     udwNeedUpdateSelUnitsTreeView, // rebuild SelUnitsTreeView
-    udwNeedUpdateSelUnitsTVSearch // update search in SelUnitsTreeView
+    udwNeedUpdateSelUnitsTVSearch, // update search in SelUnitsTreeView
+    udwUpdatingSelection           // ignore event on selection change
     );
   TUDWFlags = set of TUDWFlag;
 
@@ -156,11 +157,13 @@ type
     AllUnitsShowDirsSpeedButton: TSpeedButton;
     AllUnitsShowGroupNodesSpeedButton: TSpeedButton;
     AllUnitsTreeView: TTreeView; // Node.Data is TUDNode
+    btnUpdateGraph: TButton;
+    chkShowRequiredPkg: TCheckBox;
     GraphPopupMenu: TPopupMenu;
     GraphOptsMenuItem: TMenuItem;
     PopupMenu1: TPopupMenu;
-    UnitGraphFilter: TCheckListBox;
     MainPageControl: TPageControl;
+    UnitGraphFilter: TLazVirtualStringTree;
     UnitGraphOptionSplitter: TSplitter;
     UnitGraphOptionPanel: TPanel;
     UnitGraphPanel: TPanel;
@@ -196,6 +199,8 @@ type
     procedure AllUnitsSearchPrevSpeedButtonClick(Sender: TObject);
     procedure AllUnitsShowDirsSpeedButtonClick(Sender: TObject);
     procedure AllUnitsShowGroupNodesSpeedButtonClick(Sender: TObject);
+    procedure btnUpdateGraphClick(Sender: TObject);
+    procedure chkShowRequiredPkgChange(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure GraphOptsMenuItemClick(Sender: TObject);
@@ -203,8 +208,13 @@ type
     procedure SelUnitsTreeViewExpanding(Sender: TObject; Node: TTreeNode;
       var AllowExpansion: Boolean);
     procedure Timer1Timer(Sender: TObject);
-    procedure UnitGraphFilterItemClick(Sender: TObject; {%H-}Index: integer);
-    procedure UnitGraphFilterSelectionChange(Sender: TObject; User: boolean);
+    procedure UnitGraphFilterAddToSelection(Sender: TBaseVirtualTree; Node: PVirtualNode);
+    procedure UnitGraphFilterChecked(Sender: TBaseVirtualTree; Node: PVirtualNode);
+    procedure UnitGraphFilterCompareNodes(Sender: TBaseVirtualTree; Node1, Node2: PVirtualNode;
+      Column: TColumnIndex; var Result: Integer);
+    procedure UnitGraphFilterFreeNode(Sender: TBaseVirtualTree; Node: PVirtualNode);
+    procedure UnitGraphFilterGetText(Sender: TBaseVirtualTree; Node: PVirtualNode;
+      Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
     procedure UnitsLvlGraphMouseDown(Sender: TObject; Button: TMouseButton;
       Shift: TShiftState; X, Y: Integer);
     procedure UnitsLvlGraphSelectionChanged(Sender: TObject);
@@ -230,7 +240,18 @@ type
     procedure UnitsTVOpenFileMenuItemClick(Sender: TObject);
     procedure UnitsTVPopupMenuPopup(Sender: TObject);
     procedure UnitsTVUnusedUnitsMenuItemClick(Sender: TObject);
+  private type
+
+    { TUnitNodeMap }
+
+    TUnitNodeMap = class(specialize TFPGMap<string, PVirtualNode>)
+    protected
+      function GetKeyData(const AKey: String): PVirtualNode; inline;
+    public
+      property KeyData[const AKey: String]: PVirtualNode read GetKeyData; default;
+    end;
   private
+    FUnitNodeMap: TUnitNodeMap;
     FPackageGraphOpts: TLvlGraphOptions;
     FUnitGraphOpts: TLvlGraphOptions;
     FCurrentUnit: TUGUnit;
@@ -314,8 +335,9 @@ type
     procedure CreateUsesGraph(out TheUsesGraph: TUsesGraph; out TheGroups: TUGGroups);
   public
     GroupsLvlGraph: TLvlGraphControl; // Nodes.Data are TUGGroup of Groups
-    UnitsLvlGraph: TLvlGraphControl; // Nodes.Data are Units in Groups
+    UnitsLvlGraph: TLvlGraphControl; // Nodes.Data are either: Units in Groups or TUGGroup
   public
+    destructor Destroy; override;
     property IdleConnected: boolean read FIdleConnected write SetIdleConnected;
     property UsesGraph: TUsesGraph read FUsesGraph;
     property Groups: TUGGroups read FGroups;
@@ -558,6 +580,18 @@ begin
   Result:=ChildNodes.Count;
 end;
 
+{ TUnitDependenciesWindow.TUnitNodeMap }
+
+function TUnitDependenciesWindow.TUnitNodeMap.GetKeyData(const AKey: String): PVirtualNode;
+var
+  I: Integer;
+begin
+  I := IndexOf(AKey);
+  if I >= 0 then
+    Result := Data[I]
+  else
+    Result := nil;
+end;
 { TUnitDependenciesWindow }
 
 procedure TUnitDependenciesWindow.FormCreate(Sender: TObject);
@@ -582,6 +616,11 @@ begin
   Caption:=lisMenuViewUnitDependencies;
   RefreshButton.Caption:=dlgUnitDepRefresh;
   GraphOptsMenuItem.Caption := ShowOptions;
+  btnUpdateGraph.Caption := UpdateLvlGraph;
+  chkShowRequiredPkg.Caption := LvlGraphShowRequiredPkg;
+
+  UnitGraphFilter.Colors.UnfocusedSelectionColor := UnitGraphFilter.Colors.FocusedSelectionColor;
+  UnitGraphFilter.Colors.UnfocusedSelectionBorderColor := UnitGraphFilter.Colors.FocusedSelectionBorderColor;
 
   MainPageControl.ActivePage:=UnitsTabSheet;
 
@@ -628,6 +667,17 @@ procedure TUnitDependenciesWindow.AllUnitsShowGroupNodesSpeedButtonClick(Sender:
 begin
   Include(FFlags,udwNeedUpdateAllUnitsTreeView);
   IdleConnected:=true;
+end;
+
+procedure TUnitDependenciesWindow.btnUpdateGraphClick(Sender: TObject);
+begin
+  UpdateUnitsLvlGraph;
+  btnUpdateGraph.Visible := False;
+end;
+
+procedure TUnitDependenciesWindow.chkShowRequiredPkgChange(Sender: TObject);
+begin
+  UpdateUnitsLvlGraph;
 end;
 
 procedure TUnitDependenciesWindow.FormShow(Sender: TObject);
@@ -690,22 +740,79 @@ begin
   StatsLabel.Caption:=Format(lisUDScanningUnits, [IntToStr(Cnt)]);
 end;
 
-procedure TUnitDependenciesWindow.UnitGraphFilterItemClick(Sender: TObject;
-  Index: integer);
+procedure TUnitDependenciesWindow.UnitGraphFilterAddToSelection(Sender: TBaseVirtualTree;
+  Node: PVirtualNode);
+var
+  i: Integer;
+  GraphNode: TLvlGraphNode;
+  TextNode: PVirtualNode;
 begin
-  UpdateUnitsLvlGraph;
+  if (udwUpdatingSelection in FFlags) or (FUnitNodeMap = nil) or
+     (UnitGraphFilter.UpdateCount > 0)
+  then
+    exit;
+  Include(FFlags, udwUpdatingSelection);
+  UnitsLvlGraph.BeginUpdate;
+  try
+    for i := 0 to UnitsLvlGraph.Graph.NodeCount - 1 do begin
+      GraphNode := UnitsLvlGraph.Graph.Nodes[i];
+      TextNode := FUnitNodeMap[GraphNode.Caption];
+      if TextNode <> nil then
+        GraphNode.Selected := UnitGraphFilter.Selected[TextNode];
+    end;
+  finally
+    UnitsLvlGraph.EndUpdate;
+    Exclude(FFlags, udwUpdatingSelection);
+  end;
 end;
 
-procedure TUnitDependenciesWindow.UnitGraphFilterSelectionChange(
-  Sender: TObject; User: boolean);
+procedure TUnitDependenciesWindow.UnitGraphFilterChecked(Sender: TBaseVirtualTree;
+  Node: PVirtualNode);
 var
-  n: TLvlGraphNode;
+  n: PVirtualNode;
+  cs: laz.VirtualTrees.TCheckState;
 begin
-  if not User then
+  if UnitGraphFilter.UpdateCount > 0 then
     exit;
-  n := UnitsLvlGraph.Graph.GetNode(UnitGraphFilter.GetSelectedText, False);
-  if n <> nil then
-    UnitsLvlGraph.SelectedNode := n;
+  if Node <> nil then begin
+    UnitGraphFilter.BeginUpdate;
+    cs := UnitGraphFilter.CheckState[Node];
+    n := UnitGraphFilter.GetFirstSelected;
+    while n <> nil do begin
+      if n <> Node then
+        UnitGraphFilter.CheckState[n] := cs;
+      n := UnitGraphFilter.GetNextSelected(n);
+    end;
+    UnitGraphFilter.EndUpdate;
+  end;
+
+  btnUpdateGraph.Visible := True;
+end;
+
+procedure TUnitDependenciesWindow.UnitGraphFilterCompareNodes(Sender: TBaseVirtualTree; Node1,
+  Node2: PVirtualNode; Column: TColumnIndex; var Result: Integer);
+begin
+  Result := CompareText(
+    PAnsiString(UnitGraphFilter.GetNodeData(Node1))^,
+    PAnsiString(UnitGraphFilter.GetNodeData(Node2))^
+  );
+end;
+
+procedure TUnitDependenciesWindow.UnitGraphFilterFreeNode(Sender: TBaseVirtualTree;
+  Node: PVirtualNode);
+var
+  p: Pointer;
+begin
+  p := UnitGraphFilter.GetNodeData(Node);
+  if FUnitNodeMap <> nil then
+    FUnitNodeMap.Remove(PAnsiString(p)^);
+  PAnsiString(p)^ := '';
+end;
+
+procedure TUnitDependenciesWindow.UnitGraphFilterGetText(Sender: TBaseVirtualTree;
+  Node: PVirtualNode; Column: TColumnIndex; TextType: TVSTTextType; var CellText: String);
+begin
+  CellText := PAnsiString(UnitGraphFilter.GetNodeData(Node))^;
 end;
 
 procedure TUnitDependenciesWindow.UnitsLvlGraphMouseDown(Sender: TObject;
@@ -716,7 +823,9 @@ var
 begin
   GraphNode:=UnitsLvlGraph.GetNodeAt(X,Y);
   if (Button=mbLeft) and (ssDouble in Shift) then begin
-    if (GraphNode<>nil) and (GraphNode.Data<>nil) then begin
+    if (GraphNode<>nil) and (GraphNode.Data<>nil) and
+       (TObject(GraphNode.Data) is TUGUnit)
+    then begin
       UGUnit:=TUGUnit(GraphNode.Data);
       LazarusIDE.DoOpenEditorFile(UGUnit.Filename,-1,-1,[ofAddToRecent]);
     end;
@@ -725,22 +834,31 @@ end;
 
 procedure TUnitDependenciesWindow.UnitsLvlGraphSelectionChanged(Sender: TObject);
 var
-  GraphNode: TLvlGraphNode;
-  UGUnit: TUGUnit;
   i: Integer;
+  GraphNode: TLvlGraphNode;
+  TextNode: PVirtualNode;
 begin
-  GraphNode:=UnitsLvlGraph.Graph.FirstSelected;
-  if GraphNode <> nil then begin
-    i := UnitGraphFilter.Items.IndexOf(TUGUnit(GraphNode.Data).TheUnitName);
-    if i >= 0 then
-      UnitGraphFilter.ItemIndex := i;
-  end;
-  while GraphNode<>nil do begin
-    UGUnit:=TUGUnit(GraphNode.Data);
-    if UGUnit<>nil then begin
-
+  if (udwUpdatingSelection in FFlags) or (FUnitNodeMap = nil) then
+    exit;
+  Include(FFlags, udwUpdatingSelection);
+  UnitGraphFilter.BeginUpdate;
+  try
+    (* Unchecked nodes may not be in the graph. If they are they will get re-selected if needed *)
+    TextNode := UnitGraphFilter.GetFirstChecked(csUncheckedNormal);
+    while TextNode <> nil do begin
+      UnitGraphFilter.Selected[TextNode] := False;
+      TextNode := UnitGraphFilter.GetNextChecked(TextNode, csUncheckedNormal);
     end;
-    GraphNode:=GraphNode.NextSelected;
+
+    for i := 0 to UnitsLvlGraph.Graph.NodeCount - 1 do begin
+      GraphNode := UnitsLvlGraph.Graph.Nodes[i];
+      TextNode := FUnitNodeMap[GraphNode.Caption];
+      if TextNode <> nil then
+        UnitGraphFilter.Selected[TextNode] := GraphNode.Selected;
+    end;
+  finally
+    UnitGraphFilter.EndUpdate;
+    Exclude(FFlags, udwUpdatingSelection);
   end;
 end;
 
@@ -1862,6 +1980,10 @@ begin
     OnSelectionChanged:=@GroupsLvlGraphSelectionChanged;
     Images:=IDEImages.Images_16;
     PopupMenu := GraphPopupMenu;
+    EdgeStyle.BackColor := $5870FF;
+    EdgeStyle.BackHighlightColor := clRed;
+    EdgeStyle.BackNodeSelectedColor := clFuchsia;
+    EdgeStyle.NodeSelectedColor := clBlue;
   end;
 
   GroupsSplitter.Top:=GroupsLvlGraph.Height;
@@ -1879,6 +2001,10 @@ begin
     OnMouseDown:=@UnitsLvlGraphMouseDown;
     Images:=IDEImages.Images_16;
     PopupMenu := GraphPopupMenu;
+    EdgeStyle.BackColor := $5870FF;
+    EdgeStyle.BackHighlightColor := clRed;
+    EdgeStyle.BackNodeSelectedColor := clFuchsia;
+    EdgeStyle.NodeSelectedColor := clBlue;
   end;
 end;
 
@@ -2045,13 +2171,55 @@ procedure TUnitDependenciesWindow.UpdateUnitsLvlGraph;
   end;
 
 var
+  NewUnitNodeMap: TUnitNodeMap;
+
+  function FindOrCreateTextNode(AName: string; out ANode: PVirtualNode; AnWithCheckbox: Boolean = True): boolean;
+  var
+    i: Integer;
+    c: String;
+  begin
+    Result := True;
+    ANode := nil;
+    if FUnitNodeMap <> nil then begin
+      i := FUnitNodeMap.IndexOf(AName);
+      if i >= 0 then begin
+        ANode := FUnitNodeMap.Data[i];
+        FUnitNodeMap.Delete(i);
+      end;
+    end;
+
+    if (ANode = nil) then begin
+      ANode :=  NewUnitNodeMap[AName];
+      if (ANode <> nil) then begin
+        if AnWithCheckbox then
+          Result := UnitGraphFilter.CheckState[ANode] = csCheckedNormal;
+        exit;
+      end;
+
+      c := AName;
+      ANode := UnitGraphFilter.AddChild(nil, pointer(c));
+      Pointer(c) := nil;
+      if AnWithCheckbox then begin
+        UnitGraphFilter.CheckType[ANode] := ctCheckBox;
+        UnitGraphFilter.CheckState[ANode] := csCheckedNormal;
+      end;
+    end
+    else
+      Result := UnitGraphFilter.CheckState[ANode] = csCheckedNormal;
+
+    NewUnitNodeMap.Add(AName, ANode);
+  end;
+
+const
+  ZWSPACE = #$E2#$80#$8B;
+var
   GraphGroup: TLvlGraphNode;
   NewUnits: TFilenameToPointerTree;
-  UnitGroup: TUGGroup;
+  UnitGroup, RequiredGroup: TUGGroup;
   AVLNode: TAVLTreeNode;
   GroupUnit: TUDUnit;
   i, j: Integer;
-  HasChanged: Boolean;
+  HasChanged, ShowRequiredPkg: Boolean;
   Graph: TLvlGraph;
   CurUses: TUDUses;
   SourceGraphNode: TLvlGraphNode;
@@ -2060,10 +2228,16 @@ var
   UsedUnit: TUDUnit;
   Pkg: TIDEPackage;
   c: String;
+  nd: PVirtualNode;
+  m: TUnitNodeMap;
+
 begin
   Exclude(FFlags,udwNeedUpdateUnitsLvlGraph);
   NewGroups:=TStringToPointerTree.Create(false);
   NewUnits:=TFilenameToPointerTree.Create(false);
+
+  UnitsLvlGraph.BeginUpdate;
+  UnitGraphFilter.BeginUpdate;
   try
     // fetch new list of units
     GraphGroup:=GroupsLvlGraph.Graph.FirstSelected;
@@ -2095,6 +2269,7 @@ begin
       StartParsing;
 
     // check if something changed
+    ShowRequiredPkg := chkShowRequiredPkg.Checked;
     Graph:=UnitsLvlGraph.Graph;
     HasChanged:=false;
     i:=0;
@@ -2113,25 +2288,15 @@ begin
     if not HasChanged then exit;
 
     // units changed -> update level graph of units
-    UnitsLvlGraph.BeginUpdate;
+    NewUnitNodeMap := TUnitNodeMap.Create;
     Graph.Clear;
-    for j := 0 to UnitGraphFilter.Count - 1 do
-      UnitGraphFilter.Items.Objects[j] := TObject(1);
     AVLNode:=NewUnits.Tree.FindLowest;
     while AVLNode<>nil do begin
       GroupUnit:=TUDUnit(NewUnits.GetNodeData(AVLNode)^.Value);
       c := UnitToCaption(GroupUnit);
-      j := UnitGraphFilter.Items.IndexOf(c);
-      if (j >= 0) then begin
-        UnitGraphFilter.Items.Objects[j] := nil;
-        if (not UnitGraphFilter.Checked[j]) then begin
-          AVLNode:=NewUnits.Tree.FindSuccessor(AVLNode);
-          Continue;
-        end;
-      end
-      else begin
-        j := UnitGraphFilter.Items.Add(c);
-        UnitGraphFilter.Checked[j] := True;
+      if not FindOrCreateTextNode(c, nd) then begin
+        AVLNode:=NewUnits.Tree.FindSuccessor(AVLNode);
+        Continue;
       end;
       SourceGraphNode:=Graph.GetNode(c,true);
       SourceGraphNode.Data:=GroupUnit;
@@ -2146,21 +2311,21 @@ begin
         for i:=0 to GroupUnit.UsesUnits.Count-1 do begin
           CurUses:=TUDUses(GroupUnit.UsesUnits[i]);
           UsedUnit:=TUDUnit(CurUses.UsesUnit);
-          if UsedUnit.Group=nil then continue;
-          if not NewGroups.Contains(UsedUnit.Group.Name) then continue;
-          c := UnitToCaption(UsedUnit);
-          j := UnitGraphFilter.Items.IndexOf(c);
-          if (j >= 0) then begin
-            UnitGraphFilter.Items.Objects[j] := nil;
-            if (not UnitGraphFilter.Checked[j]) then begin
-              AVLNode:=NewUnits.Tree.FindSuccessor(AVLNode);
-              Continue;
+          RequiredGroup := UsedUnit.Group;
+          if RequiredGroup=nil then continue;
+          if not NewGroups.Contains(RequiredGroup.Name) then begin
+            if ShowRequiredPkg then begin
+              FindOrCreateTextNode(ZWSPACE+RequiredGroup.Name, nd, False);
+              TargetGraphNode:=Graph.GetNode(ZWSPACE+RequiredGroup.Name,true);
+              TargetGraphNode.Data:=RequiredGroup;
+              TargetGraphNode.ImageIndex := fImgIndexPackage;
+              Graph.GetEdge(SourceGraphNode,TargetGraphNode,true);
             end;
-          end
-          else begin
-            j := UnitGraphFilter.Items.Add(c);
-            UnitGraphFilter.Checked[j] := True;
+            continue;
           end;
+          c := UnitToCaption(UsedUnit);
+          if not FindOrCreateTextNode(c, nd) then
+            Continue;
           TargetGraphNode:=Graph.GetNode(c,true);
           TargetGraphNode.Data:=UsedUnit;
           TargetGraphNode.ImageIndex := fImgIndexUnit;
@@ -2175,15 +2340,20 @@ begin
       end;
       AVLNode:=NewUnits.Tree.FindSuccessor(AVLNode);
     end;
-    j := UnitGraphFilter.Count - 1;
-    while j >= 0 do begin
-      if UnitGraphFilter.Items.Objects[j] <> nil then
-        UnitGraphFilter.Items.Delete(j);
-      dec(j);
+
+    if FUnitNodeMap <> nil then begin
+      m := FUnitNodeMap;
+      FUnitNodeMap := nil;
+      for i := 0 to m.Count - 1 do
+        UnitGraphFilter.DeleteNode(m.Data[i]);
+      m.Destroy;
     end;
 
-    UnitsLvlGraph.EndUpdate;
+    FUnitNodeMap := NewUnitNodeMap;
+    UnitGraphFilter.SortTree(0, sdAscending);
   finally
+    UnitsLvlGraph.EndUpdate;
+    UnitGraphFilter.EndUpdate;
     NewGroups.Free;
     NewUnits.Free;
   end;
@@ -2543,6 +2713,13 @@ begin
   if not TUDUses.InheritsFrom(TheUsesGraph.UsesClass) then
     RaiseCatchableException('');
   TheUsesGraph.UsesClass:=TUDUses;
+end;
+
+destructor TUnitDependenciesWindow.Destroy;
+begin
+  Include(FFlags, udwUpdatingSelection);
+  inherited Destroy;
+  FUnitNodeMap.Free;
 end;
 
 end.

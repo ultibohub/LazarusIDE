@@ -32,12 +32,11 @@ unit SourceFileManager;
 interface
 
 uses
-  Classes, SysUtils, TypInfo, Math, fpjson, AVL_Tree, Contnrs,
+  Classes, SysUtils, TypInfo, Math, fpjson, AVL_Tree, Contnrs, System.UITypes,
   // LCL
-  Controls, Forms, Dialogs, LCLIntf, LCLType, LclStrConsts,
-  LResources,
+  Controls, Forms, Dialogs, LCLIntf, LCLType, LclStrConsts, LResources,
   // LazUtils
-  LConvEncoding, LazFileCache, FileUtil, LazFileUtils, LazLoggerBase,
+  LConvEncoding, LazFileCache, FileUtil, LazFileUtils, LazLoggerBase, ProjResProc,
   LazUtilities, LazStringUtils, LazMemManager, LazUTF8, LazTracer, AvgLvlTree,
   // Codetools
   {$IFDEF IDE_MEM_CHECK}
@@ -46,8 +45,8 @@ uses
   BasicCodeTools, CodeToolsStructs, CodeToolManager, FileProcs, DefineTemplates,
   CodeCache, CodeTree, FindDeclarationTool, KeywordFuncLists, DirectoryCacher,
   // BuildIntf
-  NewItemIntf, ProjPackIntf, ProjectIntf, PackageIntf, PackageDependencyIntf,
-  IDEExternToolIntf, ComponentReg, BaseIDEIntf, UnitResourceIntf,
+  NewItemIntf, ProjPackIntf, ProjectIntf, ProjectResourcesIntf, PackageIntf,
+  PackageDependencyIntf, IDEExternToolIntf, ComponentReg, BaseIDEIntf, UnitResourceIntf,
   // IdeIntf
   IDEDialogs, PropEdits, IDEMsgIntf, LazIDEIntf, MenuIntf, IDEWindowIntf, FormEditingIntf,
   IdeIntfStrConsts, ObjectInspector, SrcEditorIntf, EditorSyntaxHighlighterDef,
@@ -1197,7 +1196,7 @@ function TFileOpener.ResolvePossibleSymlink: TModalResult;
 // Compiler never resolves symlinks, files in compiler search path must not be resolved.
 // If there already is an editor with a "physical" target of a symlink, use it.
 var
-  SPath, Target: String;  // Search path and target file for the symlink.
+  SPath, Target, aFilePath, aTargetPath: String;  // Search path and target file for the symlink.
 begin
   Result := mrOK;
   if ofProjectLoading in FFlags then Exit; // Use the given name when project loads.
@@ -1206,14 +1205,18 @@ begin
   // ToDo: Check if there is an editor with a symlink for this "physical" file.
 
   SPath := CodeToolBoss.GetCompleteSrcPathForDirectory('');
+
   // Check if symlink is found in search path or in editor.
-  if (SearchDirectoryInMaskedSearchPath(SPath, ExtractFilePath(FFileName)) > 0)
+  aFilePath:=ExtractFilePath(FFileName);
+  if (SearchDirectoryInMaskedSearchPath(SPath, aFilePath) > 0)
   or Assigned(SourceEditorManager.SourceEditorIntfWithFilename(FFileName))
   then
     Exit;       // Symlink found -> use it.
+
   // Check if "physical" target for a symlink is found in search path or in editor.
-  if ((ExtractFilePath(FFileName)<>ExtractFilePath(Target))
-      and (SearchDirectoryInMaskedSearchPath(SPath, ExtractFilePath(Target)) > 0))
+  aTargetPath:=ExtractFilePath(Target);
+  if ((aFilePath<>aTargetPath)
+      and (SearchDirectoryInMaskedSearchPath(SPath, aTargetPath) > 0))
   or Assigned(SourceEditorManager.SourceEditorIntfWithFilename(Target))
   then          // Target found -> use Target name.
     FFileName := Target
@@ -2316,7 +2319,7 @@ var
   LFMCode: TCodeBuffer;
   AProject: TProject;
   LRSFilename: String;
-  ResType: TResourceType;
+  ResType: TProjResourceType;
   SrcNoteBook: TSourceNotebook;
   AShareEditor: TSourceEditor;
   DisableAutoSize: Boolean;
@@ -5507,7 +5510,7 @@ var
   UnitOwners: TFPList;
   LRSFilename: String;
   PropPath: String;
-  ResType: TResourceType;
+  ResType: TProjResourceType;
 begin
   Result:=mrCancel;
 
@@ -6343,7 +6346,7 @@ function LoadResourceFile(AnUnitInfo: TUnitInfo; var LFMCode, LRSCode: TCodeBuff
 var
   LFMFilename: string;
   LRSFilename: String;
-  ResType: TResourceType;
+  ResType: TProjResourceType;
 begin
   LFMCode:=nil;
   LRSCode:=nil;

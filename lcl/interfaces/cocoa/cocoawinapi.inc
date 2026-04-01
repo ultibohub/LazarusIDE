@@ -45,7 +45,7 @@ function TCocoaWidgetSet.Arc(DC: HDC; Left, Top, Right, Bottom, Angle1,
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
     ctx.DrawArc(Left, Top, Right, Bottom, Angle1, Angle2, 0)  // 0 --> arc line only
@@ -56,7 +56,7 @@ function TCocoaWidgetSet.AngleChord(DC: HDC; x1, y1, x2, y2, angle1,
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   result := Assigned(ctx);
   if Result then
     ctx.DrawArc(x1, y1, x2, y2, angle1, angle2, 1);  // 1 --> chord mode
@@ -76,8 +76,8 @@ var
   ctm: CGAffineTransform;
   ScaleRatio: CGFloat;
 begin
-  SrcCtx := CheckDC(SrcDC);
-  DestCtx := CheckDC(DestDC);
+  SrcCtx := TCocoaGDIUtil.checkDC(SrcDC);
+  DestCtx := TCocoaGDIUtil.checkDC(DestDC);
 
   Result := Assigned(SrcCtx) and Assigned(DestCtx);
 
@@ -216,11 +216,11 @@ const
   function SendMouseWheel(barFlag: Integer): LRESULT;
   begin
     Result:= 0;
-    inc( CocoaWidgetSetState.SendingScrollWheelCount );
+    CocoaWidgetSetState.lclBeginSendingScrollWheel;
     try
       Result:= CallMouseWheelHandler( barFlag );
     finally
-      dec( CocoaWidgetSetState.SendingScrollWheelCount );
+      CocoaWidgetSetState.lclEndSendingScrollWheel;
     end;
   end;
 
@@ -415,7 +415,7 @@ function TCocoaWidgetSet.CreateCaret(Handle: HWND; Bitmap: hBitmap; Width,
 begin
   Result := (Handle <> 0);
   if Result then
-    Result := CocoaCaret.CreateCaret(NSView(Handle).lclContentView, Bitmap, Width, Height)
+    Result := TCocoaCaretUtil.createCaret(NSView(Handle).lclContentView, Bitmap, Width, Height)
 end;
 
 function TCocoaWidgetSet.CreateCompatibleBitmap(DC: HDC; Width, Height: Integer): HBITMAP;
@@ -458,7 +458,7 @@ begin
   Result := 0;
   if IconInfo^.hbmColor = 0 then Exit;
 
-  ABitmap := CocoaWidgetSetGDIService.create32BitAlphaCocoaBitmap(TCocoaBitmap(IconInfo^.hbmColor), TCocoaBitmap(IconInfo^.hbmMask));
+  ABitmap := TCocoaGDIUtil.create32BitAlphaCocoaBitmap(TCocoaBitmap(IconInfo^.hbmColor), TCocoaBitmap(IconInfo^.hbmMask));
 
   if IconInfo^.fIcon then
     Result := HICON(ABitmap)
@@ -502,12 +502,12 @@ end;
 
 function TCocoaWidgetSet.DeleteObject(GDIObject: HGDIOBJ): Boolean;
 begin
-  Result := CocoaWidgetSetService.deleteObject(GDIObject);
+  Result := CocoaWidgetSetBaseService.deleteObject(GDIObject);
 end;
 
 function TCocoaWidgetSet.DestroyCaret(Handle: HWND): Boolean;
 begin
-  Result := CocoaCaret.DestroyCaret( NSView(Handle).lclContentView );
+  Result := TCocoaCaretUtil.destroyCaret( NSView(Handle).lclContentView );
 end;
 
 function TCocoaWidgetSet.DestroyIcon(Handle: HICON): Boolean;
@@ -529,7 +529,7 @@ var
   P: PPoint;
 begin
   Result := False;
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then Exit;
   P := @Points;
   with ctx.GetLogicalOffset do
@@ -552,7 +552,7 @@ var
   r: TRect;
 begin
 
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
   begin
@@ -585,7 +585,7 @@ var
   ctx: TCocoaContext;
 begin
   Result := false;
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then
     Exit;
 
@@ -598,7 +598,7 @@ function TCocoaWidgetSet.Ellipse(DC: HDC; x1, y1, x2, y2: Integer): Boolean;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
     ctx.Ellipse(x1, y1, x2, y2);
@@ -626,7 +626,7 @@ begin
     end;
     obj.lclSetEnabled(bEnable);
 
-    if (CocoaWidgetSetState.CaptureControl <> 0)
+    if (CocoaWidgetSetState.captureControl <> 0)
       and (not bEnable)
       and (obj.isKindOfClass(NSView))
       and TCocoaViewUtil.isLCLEnabled(NSView(obj)) then
@@ -803,7 +803,7 @@ function TCocoaWidgetSet.ExtSelectClipRGN(dc: hdc; rgn: hrgn; Mode: Longint): In
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
     Result := CocoaRegionTypeToWin32Map[ctx.SetClipRegion(TCocoaRegion(rgn), CocoaCombineMode(Mode))]
   else
@@ -821,7 +821,7 @@ function TCocoaWidgetSet.ExtTextOut(DC: HDC; X, Y: Integer; Options: Longint;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Assigned(ctx) then
     ctx.TextOut(X, Y, Options, Rect, Str, Count, Dx);
@@ -832,8 +832,8 @@ var
   ctx: TCocoaContext;
   br: TCocoaGDIObject;
 begin
-  ctx := CheckDC(DC);
-  br := CheckGDIOBJ(Brush);
+  ctx := TCocoaGDIUtil.checkDC(DC);
+  br := TCocoaGDIUtil.checkGDIOBJ(Brush);
   Result := Assigned(ctx) and (not Assigned(br) or (br is TCocoaBrush));
   if not Result then Exit;
 
@@ -849,8 +849,8 @@ var
   br: TCocoaGDIObject;
   I: Integer;
 begin
-  ctx := CheckDC(DC);
-  br := CheckGDIOBJ(hbr);
+  ctx := TCocoaGDIUtil.checkDC(DC);
+  br := TCocoaGDIUtil.checkGDIOBJ(hbr);
   Result := Assigned(ctx) and (not Assigned(br) or (br is TCocoaBrush));
   if not Result then Exit;
 
@@ -888,7 +888,7 @@ begin
   if FrameWidth <= 0 then
     Exit;
 
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then
     Exit;
 
@@ -910,7 +910,7 @@ function TCocoaWidgetSet.FrameRect(DC: HDC; const ARect: TRect; hBr: HBRUSH): In
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
   begin
     ctx.FrameRect(ARect, TCocoaBrush(hBr));
@@ -934,7 +934,7 @@ function TCocoaWidgetSet.GetBkColor(DC: HDC): TColorRef;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
     Result := ctx.BkColor
   else
@@ -943,12 +943,12 @@ end;
 
 function TCocoaWidgetSet.GetCapture: HWND;
 begin
-  Result:= CocoaWidgetSetState.CaptureControl;
+  Result:= CocoaWidgetSetState.captureControl;
 end;
 
 function TCocoaWidgetSet.GetCaretPos(var lpPoint: TPoint): Boolean;
 begin
-  Result := CocoaCaret.GetCaretPos(lpPoint);
+  Result := TCocoaCaretUtil.getCaretPos(lpPoint);
 end;
 
 function TCocoaWidgetSet.GetCaretRespondToFocus(handle: HWND;
@@ -984,8 +984,8 @@ var
   ctm: CGAffineTransform;
   ScaleRatio: CGFloat;
 begin
-  DestCtx := CheckDC(DestDC);
-  SrcCtx := CheckDC(SrcDC);
+  DestCtx := TCocoaGDIUtil.checkDC(DestDC);
+  SrcCtx := TCocoaGDIUtil.checkDC(SrcDC);
 
   Result := Assigned(DestCtx) and Assigned(SrcCtx);
 
@@ -1097,7 +1097,7 @@ function TCocoaWidgetSet.GetClipBox(DC: hDC; lpRect: PRect): Longint;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) and Assigned(lpRect) then
   begin
     lpRect^ := ctx.GetClipRect;
@@ -1111,7 +1111,7 @@ function TCocoaWidgetSet.GetClipRGN(DC: hDC; RGN: hRGN): Longint;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) and (RGN <> 0) then
     Result := CocoaRegionTypeToWin32Map[ctx.CopyClipRegion(TCocoaRegion(RGN))]
   else
@@ -1158,7 +1158,7 @@ var
 begin
   Result := 0;
 
-  AObject := CheckGDIObj(GDIObj);
+  AObject := TCocoaGDIUtil.checkGDIOBJ(GDIObj);
 
   if AObject is TCocoaBitmap then
   begin
@@ -1359,7 +1359,7 @@ begin
     then lView := nil
     else lView := NSView(Handle).lclContentView;
 
-  Result := CocoaCaret.HideCaret(lView);
+  Result := TCocoaCaretUtil.hideCaret(lView);
 end;
 
 function TCocoaWidgetSet.InvalidateRect(aHandle: HWND; Rect: pRect; bErase: Boolean): Boolean;
@@ -1456,7 +1456,7 @@ function TCocoaWidgetSet.GetROP2(DC: HDC): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
     Result := ctx.ROP2
   else
@@ -1481,7 +1481,7 @@ function TCocoaWidgetSet.SetROP2(DC: HDC; Mode: Integer): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
   begin
     Result := ctx.ROP2;
@@ -1742,7 +1742,7 @@ begin
     end;
 
     // if frame changed, another ScrollBar has been updated
-    if NOT CocoaWidgetSetState.isSendingScrollWheelFromInterface then begin
+    if NOT CocoaWidgetSetState.isLCLSendingScrollWheel then begin
       if ScrollInfo.fMask and SIF_ALL > 0 then
         sc.applyScrollInfo(SBStyle, ScrollInfo);
     end;
@@ -1825,7 +1825,7 @@ function TCocoaWidgetSet.LineTo(DC: HDC; X, Y: Integer): Boolean;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
     ctx.LineTo(X, Y);
@@ -1837,7 +1837,7 @@ var
   P: PPoint;
 begin
   Result := False;
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then Exit;
   P := @Points;
   with ctx.GetLogicalOffset do
@@ -1868,7 +1868,7 @@ function TCocoaWidgetSet.MoveToEx(DC: HDC; X, Y: Integer; OldPoint: PPoint): Boo
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
   begin
@@ -1883,7 +1883,7 @@ function TCocoaWidgetSet.PolyBezier(DC: HDC; Points: PPoint; NumPts: Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx) and Assigned(Points) and (NumPts >= 4);
   if Result then
     ctx.PolyBezier(PPointArray(Points)^, NumPts, Filled, Continuous);
@@ -1895,7 +1895,7 @@ function TCocoaWidgetSet.Polygon(DC: HDC; Points: PPoint; NumPts: Integer; Windi
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx) and Assigned(Points) and (NumPts >= 2);
   if Result then
     ctx.Polygon(PPointArray(Points)^, NumPts, Winding);
@@ -1905,7 +1905,7 @@ function TCocoaWidgetSet.Polyline(DC: HDC; Points: PPoint; NumPts: Integer): boo
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx) and Assigned(Points) and (NumPts > 0);
   if Result then
     ctx.Polyline(PPointArray(Points)^, NumPts);
@@ -1925,7 +1925,7 @@ type
 
 procedure TLCLEventMessage.lclRunEvent(sender: id);
 begin
-  res := NSObject(handle).lclDeliverMessage(msg, wp, lp);
+  res := TCocoaLCLMessageUtil.deliverMessage(NSObject(handle), msg, wp, lp);
   if releaseAfterRun then self.release;
 end;
 
@@ -1988,7 +1988,7 @@ var
   ctx: TCocoaContext;
   angle1, angle2: Extended;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
   begin
@@ -2001,7 +2001,7 @@ function TCocoaWidgetSet.RadialPie(DC: HDC; X1, Y1, X2, Y2, Angle1, Angle2: Inte
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
     ctx.DrawArc(X1, Y1, X2, Y2, Angle1, Angle2, 2);  // 2 = pie mode
@@ -2011,7 +2011,7 @@ function TCocoaWidgetSet.Rectangle(DC: HDC; X1, Y1, X2, Y2: Integer): Boolean;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
   begin
@@ -2063,17 +2063,17 @@ var
   lCallback: ICommonCallback;
 begin
   if hWnd = 0 then
-    Result := HDC(ScreenContext)
+    Result := HDC(CocoaDefaultGDIObject.screenContext)
   else
   begin
     lCallback := NSObject(hWnd).lclGetCallback;
     if lCallback <> nil then
-      ctx := lCallback.GetContext;
+      ctx := TCocoaContext( lCallback.GetContext );
 
     if ctx = nil then
     begin
-      ctx := TCocoaContext.Create(DefaultContext.ctx);
-      ctx.InitDraw(DefaultContext.size.cx, DefaultContext.size.cy);
+      ctx := TCocoaContext.Create(CocoaDefaultGDIObject.context.ctx);
+      ctx.InitDraw(CocoaDefaultGDIObject.context.size.cx, CocoaDefaultGDIObject.context.size.cy);
     end;
     Result := HDC(ctx);
   end;
@@ -2095,7 +2095,7 @@ function TCocoaWidgetSet.GetDeviceCaps(DC: HDC; Index: Integer): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then
     Exit(0);
 
@@ -2143,7 +2143,7 @@ function TCocoaWidgetSet.GetDeviceSize(DC: HDC; var P: TPoint): Boolean;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
     with ctx.Size do
@@ -2164,12 +2164,12 @@ var
   lclobj : TObject;
 begin
   Result := 0;
-  if CocoaWidgetSetState.KillingFocus then
+  if CocoaWidgetSetState.killingFocus then
     Exit;
 
   win := NSApp.keyWindow;
   if not Assigned(win) then
-    win := CocoaWidgetSetState.KeyWindow;
+    win := CocoaWidgetSetState.currentKeyWindow;
   if not Assigned(win) then
     Exit;
 
@@ -2284,8 +2284,8 @@ begin
   {$ENDIF}
   Result := 0;
 
-  dc:=CheckDC(ADC);
-  gdi:=CheckGDIOBJ(GDIObj);
+  dc:=TCocoaGDIUtil.checkDC(ADC);
+  gdi:=TCocoaGDIUtil.checkGDIOBJ(GDIObj);
   if not Assigned(dc) then Exit;
   if not Assigned(gdi) then Exit;
 
@@ -2361,7 +2361,7 @@ function TCocoaWidgetSet.SetBKColor(DC: HDC; Color: TColorRef): TColorRef;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
   begin
     Result := ctx.BkColor;
@@ -2375,7 +2375,7 @@ function TCocoaWidgetSet.SetBkMode(DC: HDC; bkMode: Integer): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
   begin
     Result := ctx.BkMode;
@@ -2387,18 +2387,18 @@ end;
 
 function TCocoaWidgetSet.SetCapture(AHandle: HWND): HWND;
 begin
-  Result := CocoaWidgetSetState.CaptureControl;
-  CocoaWidgetSetState.CaptureControl := AHandle;
+  Result := CocoaWidgetSetState.captureControl;
+  CocoaWidgetSetState.captureControl := AHandle;
 end;
 
 function TCocoaWidgetSet.SetCaretPos(X, Y: Integer): Boolean;
 begin
-  Result := CocoaCaret.SetCaretPos(X, Y);
+  Result := TCocoaCaretUtil.setCaretPos(X, Y);
 end;
 
 function TCocoaWidgetSet.SetCaretPosEx(Handle: HWnd; X, Y: Integer): Boolean;
 begin
-  Result := CocoaCaret.SetCaretPos(X, Y);
+  Result := TCocoaCaretUtil.setCaretPos(X, Y);
 end;
 
 function TCocoaWidgetSet.SetCaretRespondToFocus(handle: HWND;
@@ -2413,7 +2413,7 @@ var
   ctx : TCocoaContext;
   R: TRect;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx) and (ARect.Right > ARect.Left) and (ARect.Bottom > ARect.Top);
 
   if not Result then Exit;
@@ -2436,10 +2436,10 @@ var
   ctx: TCocoaContext;
 begin
   Result := 0;
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then
     Exit;
-  if (ctx <> DefaultContext) and (ctx<>ScreenContext) and (not ctx.isControlDC) then
+  if (ctx <> CocoaDefaultGDIObject.context) and (ctx<>CocoaDefaultGDIObject.screenContext) and (not ctx.isControlDC) then
     ctx.Free;
   Result := 1;
 end;
@@ -2448,7 +2448,7 @@ function TCocoaWidgetSet.GetWindowOrgEx(dc: hdc; P: PPoint): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(dc);
+  ctx := TCocoaGDIUtil.checkDC(dc);
   if not Assigned(ctx) then
     Exit(0);
   if Assigned(P) then
@@ -2557,7 +2557,7 @@ function TCocoaWidgetSet.SetTextColor(DC: HDC; Color: TColorRef): TColorRef;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
   begin
     Result := TColorRef(ctx.TextColor);
@@ -2573,7 +2573,7 @@ var
   ctx: TCocoaContext;
 begin
   Result := False;
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then Exit;
 
   if Assigned(OldPoint) then
@@ -2588,7 +2588,7 @@ var
   ctx: TCocoaContext;
 begin
   Result := False;
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then Exit;
 
   if Assigned(OldPoint) then
@@ -2605,7 +2605,7 @@ begin
   if (Handle = 0) then lView := nil
   else lView := NSView(Handle).lclContentView;
 
-  Result := CocoaCaret.ShowCaret(lView)
+  Result := TCocoaCaretUtil.showCaret(lView)
 end;
 
 {------------------------------------------------------------------------------
@@ -2676,7 +2676,7 @@ function TCocoaWidgetSet.GetTextColor(DC: HDC) : TColorRef;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
     Result := ColorToRGB(ctx.TextColor)
   else
@@ -2700,7 +2700,7 @@ begin
   {$IFDEF VerboseWinAPI}
     DebugLn('[TCocoaWidgetSet.GetTextExtentPoint] DC: %x Str: %s Count: %d', [DC, Str, Count]);
   {$ENDIF}
-  ctx:=CheckDC(DC);
+  ctx:=TCocoaGDIUtil.checkDC(DC);
   if not Assigned(ctx) then Exit(False);
   Result := ctx.GetTextExtentPoint(Str, Count, Size);
   {$IFDEF VerboseWinAPI}
@@ -2721,7 +2721,7 @@ function TCocoaWidgetSet.GetTextMetrics(DC: HDC; var TM: TTextMetric): Boolean;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx) and ctx.GetTextMetrics(TM);
 end;
 
@@ -2729,7 +2729,7 @@ function TCocoaWidgetSet.GetViewPortOrgEx(DC: HDC; P: PPoint): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(dc);
+  ctx := TCocoaGDIUtil.checkDC(dc);
   if not Assigned(ctx) then
     Exit(0);
   if Assigned(P) then
@@ -2746,7 +2746,7 @@ function TCocoaWidgetSet.SaveDC(DC: HDC): Integer;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
     Result := ctx.SaveDC
   else
@@ -2814,7 +2814,7 @@ function TCocoaWidgetSet.RestoreDC(DC: HDC; SavedDC: Integer): Boolean;
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   if Assigned(ctx) then
     Result := ctx.RestoreDC(SavedDC)
   else
@@ -2825,7 +2825,7 @@ function TCocoaWidgetset.RoundRect(DC: HDC; X1, Y1, X2, Y2, RX, RY: Integer): Bo
 var
   ctx: TCocoaContext;
 begin
-  ctx := CheckDC(DC);
+  ctx := TCocoaGDIUtil.checkDC(DC);
   Result := Assigned(ctx);
   if Result then
     ctx.RoundRect(X1, Y1, X2, Y2, RX, RY);

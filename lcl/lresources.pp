@@ -15,8 +15,7 @@
     A lazarus resource is an ansistring, with a name and a valuetype. Both, name
     and valuetype, are ansistrings as well.
     Lazarus resources are normally included via an include directive in the
-    initialization part of a unit. To create such include files use the
-    BinaryToLazarusResourceCode procedure.
+    initialization part of a unit.
     To create a LRS file from an LFM file use the LFMtoLRSfile function which
     transforms the LFM text to binary format and stores it as Lazarus resource
     include file.
@@ -37,7 +36,8 @@ uses
   // LCL
   LCLStrConsts,
   // LazUtils
-  LazConfigStorage, FPCAdds, DynQueue, LazUTF8, LazLoggerBase, LazTracer, LazUtilities;
+  LazConfigStorage, FPCAdds, DynQueue, LazUTF8, LazLoggerBase, LazTracer,
+  LazUtilities, ProjResProc;
 
 {$DEFINE UseLRS}
 {$DEFINE UseRES}
@@ -47,7 +47,6 @@ const
     'This is an automatically generated lazarus resource file';
 type
   TFilerSignature = array[1..4] of Char;
-
 
   { TLResourceList }
 
@@ -345,64 +344,6 @@ type
     property Count: integer read FCount write SetCount;
   end;
   
-  { TUTF8Parser }
-
-  TUTF8Parser = class(TObject)
-  private
-    fStream : TStream;
-    fBuf : pchar;
-    fBufLen : integer; // read
-    fPos : integer;
-    fLineStart : integer; // column = fPos - fLineStart + 1
-    fFloatType : char;
-    fSourceLine : integer;
-    fToken : char;
-    fEofReached : boolean;
-    fLastTokenStr : string;
-    function GetTokenName(aTok : char) : string;
-    procedure LoadBuffer;
-    procedure CheckLoadBuffer; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    procedure ProcessChar; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    function IsNumber : boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    function IsHexNum : boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    function IsAlpha : boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    function IsAlphaNum : boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    function GetHexValue(c : char) : byte; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-    function GetAlphaNum : string;
-    procedure HandleNewLine;
-    procedure SkipSpaces;
-    procedure SkipWhitespace;
-    procedure HandleEof;
-    procedure HandleAlphaNum;
-    procedure HandleNumber;
-    procedure HandleHexNumber;
-    function HandleQuotedString: string;
-    function HandleDecimalString: string;
-    procedure HandleString;
-    procedure HandleMinus;
-    procedure HandleUnknown;
-  public
-    constructor Create(Stream: TStream);
-    destructor Destroy; override;
-    procedure CheckToken(T: Char);
-    procedure CheckTokenSymbol(const S: string);
-    procedure Error(const Ident: string);
-    procedure ErrorFmt(const Ident: string; const Args: array of const);
-    procedure ErrorStr(const Message: string);
-    procedure HexToBinary(Stream: TStream);
-    function NextToken: Char;
-    function SourcePos: Longint;
-    function TokenComponentIdent: string;
-    function TokenFloat: Extended;
-    function TokenInt: Int64;
-    function TokenString: string;
-    function TokenSymbolIs(const S: string): Boolean;
-    property FloatType: Char read fFloatType;
-    property SourceLine: Integer read fSourceLine;
-    function SourceColumn: integer;
-    property Token: Char read fToken;
-  end deprecated 'use Classes.TParser instead';
-
   { TCustomLazComponentQueue
     A queue to stream components, used for multithreading or network.
     The function ConvertComponentAsString converts a component to binary format
@@ -509,12 +450,13 @@ procedure LoadComponentFromConfig(Config: TConfigStorage; const Path: string;
                                  TheOwner: TComponent = nil;
                                  Parent: TComponent = nil);
 
-
 function CompareComponents(Component1, Component2: TComponent): boolean;
 function CompareMemStreams(Stream1, Stream2: TCustomMemoryStream): boolean;
 
 procedure BinaryToLazarusResourceCode(BinStream, ResStream: TStream;
-  const ResourceName, ResourceType: String);
+  const ResourceName, ResourceType: String); // Deprecated in Lazarus 4.99 in March 2026
+  deprecated 'Use BinaryToLazarusResourceCode from unit ProjectResources instead.';
+
 function LFMtoLRSfile(const LFMfilename: string): boolean;// true on success
 function LFMtoLRSstream(LFMStream, LRSStream: TStream): boolean;// true on success
 function FindLFMClassName(LFMStream: TStream):AnsiString;
@@ -558,7 +500,6 @@ procedure ConvertEndianBigDoubleToLRSExtended(BigEndianDouble,
                                               LRSExtended: Pointer);
                                               
 procedure ConvertLEDoubleToLRSExtended(LEDouble, LRSExtended: Pointer);
-
 
 function ReadLRSShortInt(s: TStream): shortint;
 function ReadLRSByte(s: TStream): byte;
@@ -612,8 +553,6 @@ procedure Register;
 implementation
 
 const
-  LineEnd: ShortString = LineEnding;
-
   Res32bitHeader: array[0..31] of byte = (
     0,0,0,0,
     32,0,0,0,
@@ -625,12 +564,7 @@ const
     0,0,0,0
     );
 
-var
-  ByteToStr: array[char] of shortstring;
-  ByteToStrValid: boolean=false;
-  
 type
-
   { TDefineRectPropertyClass }
 
   TDefineRectPropertyClass = class
@@ -647,8 +581,7 @@ type
     components, that are read from a stream, on the fly. }
 
   TReaderUniqueNamer = class
-    procedure OnSetName(Reader: TReader; Component: TComponent;
-                        var Name: string);
+    procedure OnSetName(Reader: TReader; Component: TComponent; var Name: string);
   end;
 
 { TPropertiesToSkip }
@@ -842,16 +775,6 @@ begin
   finally
     PropDef.Free;
   end;
-end;
-
-procedure InitByteToStr;
-var
-  c: Char;
-begin
-  if ByteToStrValid then exit;
-  for c:=Low(char) to High(char) do
-    ByteToStr[c]:=IntToStr(ord(c));
-  ByteToStrValid:=true;
 end;
 
 function GetClassNameFromLRSStream(s: TStream; out IsInherited: Boolean
@@ -1162,183 +1085,10 @@ begin
   Result:=true;
 end;
 
-procedure BinaryToLazarusResourceCode(BinStream,ResStream:TStream;
+procedure BinaryToLazarusResourceCode(BinStream, ResStream:TStream;
   const ResourceName, ResourceType: String);
-{ example ResStream:
-  LazarusResources.Add('ResourceName','ResourceType',
-    #123#45#34#78#18#72#45#34#78#18#72#72##45#34#78#45#34#78#184#34#78#145#34#78
-    +#83#187#6#78#83
-  );
-}
-const
-  ReadBufSize = 4096;
-  WriteBufSize = 4096;
-var
-  s, Indent: string;
-  x: integer;
-  c: char;
-  RangeString, NewRangeString: boolean;
-  RightMargin, CurLine: integer;
-  WriteBufStart, Writebuf: PChar;
-  WriteBufPos: Integer;
-  ReadBufStart, ReadBuf: PChar;
-  ReadBufPos, ReadBufLen: integer;
-  MinCharCount: Integer;
-  
-  procedure FillReadBuf;
-  begin
-    ReadBuf:=ReadBufStart;
-    ReadBufPos:=0;
-    ReadBufLen:=BinStream.Read(ReadBuf^,ReadBufSize);
-  end;
-  
-  procedure InitReadBuf;
-  begin
-    GetMem(ReadBufStart,ReadBufSize);
-    FillReadBuf;
-  end;
-
-  function ReadChar(var c: char): boolean;
-  begin
-    if ReadBufPos>=ReadBufLen then begin
-      FillReadBuf;
-      if ReadBufLen=0 then begin
-        Result:=false;
-        exit;
-      end;
-    end;
-    c:=ReadBuf^;
-    inc(ReadBuf);
-    inc(ReadBufPos);
-    Result:=true;
-  end;
-
-  procedure InitWriteBuf;
-  begin
-    GetMem(WriteBufStart,WriteBufSize);
-    WriteBuf:=WriteBufStart;
-    WriteBufPos:=0;
-  end;
-
-  procedure FlushWriteBuf;
-  begin
-    if WriteBufPos>0 then begin
-      ResStream.Write(WriteBufStart^,WriteBufPos);
-      WriteBuf:=WriteBufStart;
-      WriteBufPos:=0;
-    end;
-  end;
-  
-  procedure WriteChar(c: char);
-  begin
-    WriteBuf^:=c;
-    inc(WriteBufPos);
-    inc(WriteBuf);
-    if WriteBufPos>=WriteBufSize then
-      FlushWriteBuf;
-  end;
-  
-  procedure WriteString(const s: string);
-  var
-    i: Integer;
-  begin
-    for i:=1 to length(s) do WriteChar(s[i]);
-  end;
-
-  procedure WriteShortString(const s: string);
-  var
-    i: Integer;
-  begin
-    for i:=1 to length(s) do WriteChar(s[i]);
-  end;
-
 begin
-  // fpc is not optimized for building a constant string out of thousands of
-  // lines. It needs huge amounts of memory and becomes very slow. Therefore big
-  // files are split into several strings.
-
-  InitReadBuf;
-  InitWriteBuf;
-  InitByteToStr;
-
-  Indent:='';
-  s:=Indent+'LazarusResources.Add('''+ResourceName+''','''+ResourceType+''',['+LineEnd;
-  WriteString(s);
-  Indent:='  '+Indent;
-  WriteString(Indent);
-  x:=length(Indent);
-  RangeString:=false;
-  CurLine:=1;
-  RightMargin:=80;
-  if ReadBufLen>0 then begin
-    while ReadChar(c) do begin
-      NewRangeString:=(ord(c)>=32) and (ord(c)<127);
-      // check if new char fits into line or if a new line must be started
-      if NewRangeString then begin
-        if RangeString then
-          MinCharCount:=2 // char plus '
-        else
-          MinCharCount:=3; // ' plus char plus '
-        if c='''' then inc(MinCharCount);
-      end else begin
-        MinCharCount:=1+length(ByteToStr[c]); // # plus number
-        if RangeString then
-          inc(MinCharCount); // plus ' for ending last string constant
-      end;
-      if x+MinCharCount>RightMargin then begin
-        // break line
-        if RangeString then begin
-          // end string constant
-          WriteChar('''');
-        end;
-        // write line ending
-        WriteShortString(LineEnd);
-        x:=0;
-        inc(CurLine);
-        // write indention
-        WriteString(Indent);
-        inc(x,length(Indent));
-        // write operator
-        if (CurLine and 63)<>1 then
-          WriteChar('+')
-        else
-          WriteChar(',');
-        inc(x);
-        RangeString:=false;
-      end;
-      // write converted byte
-      if RangeString<>NewRangeString then begin
-        WriteChar('''');
-        inc(x);
-      end;
-      if NewRangeString then begin
-        WriteChar(c);
-        inc(x);
-        if c='''' then begin
-          WriteChar(c);
-          inc(x);
-        end;
-      end else begin
-        WriteChar('#');
-        inc(x);
-        WriteShortString(ByteToStr[c]);
-        inc(x,length(ByteToStr[c]));
-      end;
-      // next
-      RangeString:=NewRangeString;
-    end;
-    if RangeString then begin
-      WriteChar('''');
-    end;
-  end else begin
-    WriteShortString('''''');
-  end;
-  Indent:=copy(Indent,3,length(Indent)-2);
-  s:=LineEnd+Indent+']);'+LineEnd;
-  WriteString(s);
-  FlushWriteBuf;
-  FreeMem(ReadBufStart);
-  FreeMem(WriteBufStart);
+  ProjResProc.BinaryToLazarusResourceCode(BinStream, ResStream, ResourceName, ResourceType);
 end;
 
 function FindLFMClassName(LFMStream:TStream):ansistring;
@@ -5449,448 +5199,6 @@ function TLazarusResourceStream.Write(const Buffer; Count: Longint): Longint;
 begin
   Result := 0;
   raise EStreamError.Create(SCantWriteResourceStreamError);
-end;
-
-const
-  ParseBufSize     = 4096;
-  LastSpecialToken = 5;
-
-  TokNames : array[0..LastSpecialToken] of string =
-  (
-    'EOF',
-    'Symbol',
-    'String',
-    'Integer',
-    'Float',
-    'WideString'
-  );
-
-function TUTF8Parser.GetTokenName(aTok: char): string;
-begin
-  if ord(aTok) <= LastSpecialToken then
-    Result:=TokNames[ord(aTok)]
-  else Result:=aTok;
-end;
-
-procedure TUTF8Parser.LoadBuffer;
-var newread : integer;
-begin
-  newread:=fStream.Read(fBuf[0],ParseBufSize);
-  fBuf[newread]:=#0;
-  fLineStart:=fLineStart-fPos; // column = fPos - fLineStart + 1
-  fPos:=0;
-  fBufLen:=newread;
-  fEofReached:=newread=0;
-end;
-
-procedure TUTF8Parser.CheckLoadBuffer; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  if fBuf[fPos]<>#0 then exit;
-  if fPos<fBufLen then begin
-    // skip #0
-    repeat
-      inc(fPos);
-      if fBuf[fPos]<>#0 then exit;
-    until (fPos=fBufLen);
-  end;
-  LoadBuffer;
-end;
-
-procedure TUTF8Parser.ProcessChar; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  fLastTokenStr:=fLastTokenStr+fBuf[fPos];
-  inc(fPos);
-  CheckLoadBuffer;
-end;
-
-function TUTF8Parser.IsNumber: boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  Result:=fBuf[fPos] in ['0'..'9'];
-end;
-
-function TUTF8Parser.IsHexNum: boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  Result:=fBuf[fPos] in ['0'..'9','A'..'F','a'..'f'];
-end;
-
-function TUTF8Parser.IsAlpha: boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  Result:=fBuf[fPos] in ['_','A'..'Z','a'..'z'];
-end;
-
-function TUTF8Parser.IsAlphaNum: boolean; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  Result:=IsAlpha or IsNumber;
-end;
-
-function TUTF8Parser.GetHexValue(c: char): byte; {$ifdef CLASSESINLINE} inline; {$endif CLASSESINLINE}
-begin
-  case c of
-    '0'..'9' : Result:=ord(c)-$30;
-    'A'..'F' : Result:=ord(c)-$37; //-$41+$0A
-    'a'..'f' : Result:=ord(c)-$57; //-$61+$0A
-  end;
-end;
-
-function TUTF8Parser.GetAlphaNum: string;
-begin
-  if not IsAlpha then
-    ErrorFmt(SParExpected,[GetTokenName(toSymbol)]);
-  Result:='';
-  while IsAlphaNum do
-  begin
-    Result:=Result+fBuf[fPos];
-    inc(fPos);
-    CheckLoadBuffer;
-  end;
-end;
-
-procedure TUTF8Parser.HandleNewLine;
-begin
-  if fBuf[fPos]=#13 then //CR
-  begin
-    inc(fPos);
-    CheckLoadBuffer;
-    if fBuf[fPos]=#10 then inc(fPos); //CR LF
-  end
-  else
-    inc(fPos); //LF
-  CheckLoadBuffer;
-  inc(fSourceLine);
-  fLineStart:=fPos;
-end;
-
-procedure TUTF8Parser.SkipSpaces;
-begin
-  while fBuf[fPos] in [' ',#9] do begin
-    inc(fPos);
-    CheckLoadBuffer;
-  end;
-end;
-
-procedure TUTF8Parser.SkipWhitespace;
-begin
-  while true do
-  begin
-    case fBuf[fPos] of
-      ' ',#9  : SkipSpaces;
-      #10,#13 : HandleNewLine
-      else break;
-    end;
-  end;
-end;
-
-procedure TUTF8Parser.HandleEof;
-begin
-  fToken:=toEOF;
-  fLastTokenStr:='';
-end;
-
-procedure TUTF8Parser.HandleAlphaNum;
-begin
-  fLastTokenStr:=GetAlphaNum;
-  fToken:=toSymbol;
-end;
-
-procedure TUTF8Parser.HandleNumber;
-type
-  floatPunct = (fpDot,fpE);
-  floatPuncts = set of floatPunct;
-var
-  allowed : floatPuncts;
-begin
-  fLastTokenStr:='';
-  while IsNumber do
-    ProcessChar;
-  fToken:=toInteger;
-  if (fBuf[fPos] in ['.','e','E']) then
-  begin
-    fToken:=toFloat;
-    allowed:=[fpDot,fpE];
-    while (fBuf[fPos] in ['.','e','E','0'..'9']) do
-    begin
-      case fBuf[fPos] of
-        '.'     : if fpDot in allowed then Exclude(allowed,fpDot) else break;
-        'E','e' : if fpE in allowed then
-                  begin
-                    allowed:=[];
-                    ProcessChar;
-                    if (fBuf[fPos] in ['+','-']) then ProcessChar;
-                    if not (fBuf[fPos] in ['0'..'9']) then
-                      ErrorFmt(SParInvalidFloat,[fLastTokenStr+fBuf[fPos]]);
-                  end
-                  else break;
-      end;
-      ProcessChar;
-    end;
-  end;
-  if (fBuf[fPos] in ['s','S','d','D','c','C']) then //single, date, currency
-  begin
-    fFloatType:=fBuf[fPos];
-    inc(fPos);
-    CheckLoadBuffer;
-    fToken:=toFloat;
-  end
-  else fFloatType:=#0;
-end;
-
-procedure TUTF8Parser.HandleHexNumber;
-var valid : boolean;
-begin
-  fLastTokenStr:='$';
-  inc(fPos);
-  CheckLoadBuffer;
-  valid:=false;
-  while IsHexNum do
-  begin
-    valid:=true;
-    ProcessChar;
-  end;
-  if not valid then
-    ErrorFmt(SParInvalidInteger,[fLastTokenStr]);
-  fToken:=toInteger;
-end;
-
-function TUTF8Parser.HandleQuotedString: string;
-begin
-  Result:='';
-  inc(fPos);
-  CheckLoadBuffer;
-  while true do
-  begin
-    case fBuf[fPos] of
-      #0     : ErrorStr(SParUnterminatedString);
-      #13,#10 : ErrorStr(SParUnterminatedString);
-      ''''   : begin
-                 inc(fPos);
-                 CheckLoadBuffer;
-                 if fBuf[fPos]<>'''' then exit;
-               end;
-    end;
-    Result:=Result+fBuf[fPos];
-    inc(fPos);
-    CheckLoadBuffer;
-  end;
-end;
-
-function TUTF8Parser.HandleDecimalString: string;
-var
-  i: integer;
-begin
-  Result:='';
-  inc(fPos);
-  CheckLoadBuffer;
-  while IsNumber do
-  begin
-    Result:=Result+fBuf[fPos];
-    inc(fPos);
-    CheckLoadBuffer;
-  end;
-  if not TryStrToInt(Result,i) then
-    i:=0;
-  Result:=UnicodeToUTF8(i); // widestring
-end;
-
-procedure TUTF8Parser.HandleString;
-var
-  IsWideString: Boolean;
-begin
-  fLastTokenStr:='';
-  IsWideString := false;
-  while true do begin
-    case fBuf[fPos] of
-      '''' : fLastTokenStr:=fLastTokenStr+HandleQuotedString;
-      '#'  : begin
-               fLastTokenStr:=fLastTokenStr+HandleDecimalString;
-               IsWideString:=true;
-             end;
-      else break;
-    end;
-  end;
-  if IsWideString then
-    fToken:=Classes.toWString
-  else
-    fToken:=Classes.toString;
-end;
-
-procedure TUTF8Parser.HandleMinus;
-begin
-  inc(fPos);
-  CheckLoadBuffer;
-  if IsNumber then
-  begin
-    HandleNumber;
-    fLastTokenStr:='-'+fLastTokenStr;
-  end
-  else
-  begin
-    fToken:='-';
-    fLastTokenStr:=fToken;
-  end;
-end;
-
-procedure TUTF8Parser.HandleUnknown;
-begin
-  fToken:=fBuf[fPos];
-  fLastTokenStr:=fToken;
-  inc(fPos);
-  CheckLoadBuffer;
-end;
-
-constructor TUTF8Parser.Create(Stream: TStream);
-begin
-  fStream:=Stream;
-  fBuf:=GetMem(ParseBufSize+1);
-  fBufLen:=0;
-  fPos:=0;
-  fLineStart:=0;
-  fSourceLine:=1;
-  fEofReached:=false;
-  fLastTokenStr:='';
-  fFloatType:=#0;
-  fToken:=#0;
-  LoadBuffer;
-  NextToken;
-end;
-
-destructor TUTF8Parser.Destroy;
-begin
-  fStream.Position:=SourcePos;
-  FreeMem(fBuf);
-end;
-
-procedure TUTF8Parser.CheckToken(T: Char);
-begin
-  if fToken<>T then
-    ErrorFmt(SParWrongTokenType,[GetTokenName(T),GetTokenName(fToken)]);
-end;
-
-procedure TUTF8Parser.CheckTokenSymbol(const S: string);
-begin
-  CheckToken(toSymbol);
-  if CompareText(fLastTokenStr,S)<>0 then
-    ErrorFmt(SParWrongTokenSymbol,[s,fLastTokenStr]);
-end;
-
-procedure TUTF8Parser.Error(const Ident: string);
-begin
-  ErrorStr(Ident);
-end;
-
-procedure TUTF8Parser.ErrorFmt(const Ident: string; const Args: array of const);
-begin
-  ErrorStr(Format(Ident,Args));
-end;
-
-procedure TUTF8Parser.ErrorStr(const Message: string);
-begin
-  debugln(['TUTF8Parser.ErrorStr Message="',Message,'" at y=',SourceLine,',x=',SourceColumn]);
-  raise EParserError.CreateFmt(Message+SParLocInfo,[SourceLine,SourceColumn,SourcePos]);
-end;
-
-procedure TUTF8Parser.HexToBinary(Stream: TStream);
-var outbuf : array[0..ParseBufSize-1] of byte;
-    b : byte;
-    i : integer;
-begin
-  i:=0;
-  SkipWhitespace;
-  while IsHexNum do
-  begin
-    b:=(GetHexValue(fBuf[fPos]) shl 4);
-    inc(fPos);
-    CheckLoadBuffer;
-    if not IsHexNum then
-      Error(SParUnterminatedBinValue);
-    b:=b or GetHexValue(fBuf[fPos]);
-    inc(fPos);
-    CheckLoadBuffer;
-    outbuf[i]:=b;
-    inc(i);
-    if i>=ParseBufSize then
-    begin
-      Stream.WriteBuffer(outbuf[0],i);
-      i:=0;
-    end;
-    SkipWhitespace;
-  end;
-  if i>0 then
-    Stream.WriteBuffer(outbuf[0],i);
-  NextToken;
-end;
-
-function TUTF8Parser.NextToken: Char;
-
-begin
-  SkipWhiteSpace;
-  if fEofReached then
-    HandleEof
-  else
-    case fBuf[fPos] of
-      '_','A'..'Z','a'..'z' : HandleAlphaNum;
-      '$'                   : HandleHexNumber;
-      '-'                   : HandleMinus;
-      '0'..'9'              : HandleNumber;
-      '''','#'              : HandleString
-      else
-        HandleUnknown;
-    end;
-  Result:=fToken;
-end;
-
-function TUTF8Parser.SourcePos: Longint;
-begin
-  Result:=fStream.Position-fBufLen+fPos;
-end;
-
-function TUTF8Parser.TokenComponentIdent: string;
-begin
-  if fToken<>toSymbol then
-    ErrorFmt(SParExpected,[GetTokenName(toSymbol)]);
-  CheckLoadBuffer;
-  while fBuf[fPos]='.' do
-  begin
-    ProcessChar;
-    fLastTokenStr:=fLastTokenStr+GetAlphaNum;
-  end;
-  Result:=fLastTokenStr;
-end;
-
-function TUTF8Parser.TokenFloat: Extended;
-
-var errcode : word;
-
-begin
-  Val(fLastTokenStr,Result,errcode);
-  if errcode<>0 then
-    ErrorFmt(SParInvalidFloat,[fLastTokenStr]);
-end;
-
-function TUTF8Parser.TokenInt: Int64;
-begin
-  if not TryStrToInt64(fLastTokenStr,Result) then
-    Result:=Int64(StrToQWord(fLastTokenStr)); //second chance for malformed files
-end;
-
-function TUTF8Parser.TokenString: string;
-begin
-  case fToken of
-    toFloat : if fFloatType<>#0 then
-                Result:=fLastTokenStr+fFloatType
-              else Result:=fLastTokenStr
-    else
-      Result:=fLastTokenStr;
-  end;
-end;
-
-function TUTF8Parser.TokenSymbolIs(const S: string): Boolean;
-begin
-  Result:=(fToken=toSymbol) and (CompareText(fLastTokenStr,S)=0);
-end;
-
-function TUTF8Parser.SourceColumn: integer;
-begin
-  Result:=fPos-fLineStart+1;
 end;
 
 //------------------------------------------------------------------------------

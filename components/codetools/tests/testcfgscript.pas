@@ -13,8 +13,11 @@ unit TestCfgScript;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, FileProcs,
-  CodeToolsCfgScript;
+  Classes, SysUtils,
+  // FPCUnit
+  FPCUnit, TestRegistry,
+  // CodeTools
+  CodeToolsCfgScript, FileProcs;
 
 type
 
@@ -46,9 +49,9 @@ begin
     if Vars<>nil then
       Engine.Variables.Assign(Vars^);
     if not Engine.Execute(Script) then begin
-      writeln('Script failed to run:');
+      debugln('Script failed to run:');
       for i:=0 to Engine.ErrorCount-1 do
-        writeln(Engine.GetErrorStr(i));
+        debugln(Engine.GetErrorStr(i));
       AssertEquals('Syntax error in script "'+Script+'"',true,false);
     end else begin
       ScriptResult:=Engine.Variables['Result'];
@@ -74,7 +77,7 @@ begin
     if Engine.Execute(Script) then begin
       AssertEquals('Syntax error in script not recognized: "'+Script+'"',true,false);
     end else begin
-      //writeln('TTestCodetoolsCfgScript.TestSyntaxError ',Engine.Errors[0].Msg);
+      //debugln('TTestCodetoolsCfgScript.TestSyntaxError ',Engine.Errors[0].Msg);
       AssertEquals(Script,ExpectedError,Engine.Errors[0].Msg);
     end;
   finally

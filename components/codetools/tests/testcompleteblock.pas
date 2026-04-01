@@ -18,8 +18,13 @@ unit TestCompleteBlock;
 interface
 
 uses
-  Classes, SysUtils, fpcunit, testregistry, FileProcs,
-  CodeToolManager, CodeCache, CustomCodeTool, TestStdCodetools, TestGlobals;
+  Classes, SysUtils,
+  // FPCUnit
+  TestRegistry,
+  // CodeTools
+  CodeToolManager, CodeCache, CustomCodeTool, FileProcs,
+  // (project)
+  TestStdCodetools, TestGlobals;
 
 type
 
@@ -58,7 +63,7 @@ procedure TTestCodetoolsCompleteBlock.TestCompleteBlocks;
 
   procedure CompareComplete(a,b,c: string);
   begin
-    writeln('CompareComplete ',a,',',b,',',c);
+    debugln('CompareComplete ',a,',',b,',',c);
   end;
 
 begin

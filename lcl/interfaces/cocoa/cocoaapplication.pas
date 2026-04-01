@@ -11,8 +11,8 @@ uses
   Controls, Forms,
   InterfaceBase,
   MacOSAll, CocoaAll,
-  CocoaWSService, CocoaConst, CocoaConfig, CocoaPrivate, CocoaCallback,
-  CocoaThemes, CocoaCursor, CocoaMenus, CocoaWindows, CocoaUtils, Cocoa_Extra;
+  CocoaPrivate, CocoaWSService, CocoaEvent, CocoaConst, CocoaConfig,
+  CocoaWindows, CocoaMenus, CocoaThemes, CocoaCursor, CocoaUtils, Cocoa_Extra;
 
 type
 
@@ -23,44 +23,41 @@ type
   TCocoaApplication = objcclass(NSApplication)
   private
     _isInSandbox: Boolean;
-  public
-    aloop : TApplicationMainLoop;
+    _lclMainLoop: TApplicationMainLoop;
+    _onOpenURLObserver: TCocoaAppOnOpenURLNotify;
     // Sandboxing
     {$ifdef COCOAPPRUNNING_OVERRIDEPROPERTY}
-    isrun : Boolean;
-    Stopped : Boolean;
+    _isRunning : Boolean;
+    _stopped : Boolean;
     {$endif}
-
-    // Store state of key modifiers so that we can emulate keyup/keydown
-    // of keys like control, option, command, caps lock, shift
-    PrevKeyModifiers : NSUInteger;
-    SavedKeyModifiers : NSUInteger;
+  private
+    procedure onOpenURL( const url: NSURL );
+      message 'lclOnOpenURL:';
+    procedure lclSyncCheck(arg: id);
+      message 'lclSyncCheck:';
+  public
+    procedure sendEvent(theEvent: NSEvent); override;
+    function nextEventMatchingMask_untilDate_inMode_dequeue(mask: NSUInteger; expiration: NSDate; mode: NSString; deqFlag: LCLObjCBoolean): NSEvent; override;
+    procedure observeValueForKeyPath_ofObject_change_context(keyPath: NSString;
+      object_: id; change: NSDictionary; context_: pointer); override;
 
     {$ifdef COCOALOOPOVERRIDE}
     procedure run; override;
     {$endif}
-    procedure sendEvent(theEvent: NSEvent); override;
-    function nextEventMatchingMask_untilDate_inMode_dequeue(mask: NSUInteger; expiration: NSDate; mode: NSString; deqFlag: LCLObjCBoolean): NSEvent; override;
 
-    procedure lclSyncCheck(arg: id); message 'lclSyncCheck:';
     {$ifdef COCOAPPRUNNING_OVERRIDEPROPERTY}
     function isRunning: objc.ObjCBOOL; override;
     procedure stop(sender: id); override;
     {$endif}
-
-    procedure observeValueForKeyPath_ofObject_change_context(keyPath: NSString;
-      object_: id; change: NSDictionary; context_: pointer); override;
-
-    procedure onOpenURL( const url: NSURL ); message 'lclOnOpenURL:';
-
-    function isInSandbox: Boolean; message 'lclIsInSandbox';
-  private
-    _onOpenURLObserver: TCocoaAppOnOpenURLNotify;
   public
+    function isInSandbox: Boolean; message 'lclIsInSandbox';
+    function hasLCLMainLoop: Boolean; message 'lclHasLCLMainLoop';
+    procedure setLCLMainLoop( const mainLoop: TApplicationMainLoop );
+      message 'lclSetLCLMainLoop:';
     procedure setOpenURLObserver( const onOpenURLObserver: TCocoaAppOnOpenURLNotify );
       message 'lclSetOpenURLObserver:';
   public
-    class function initApplication: TCocoaApplication;
+    class function createApplication: TCocoaApplication;
       message 'lclInitApplication';
   end;
 
@@ -107,7 +104,7 @@ begin
     end;
   end;
   if filenames.count > 0 then
-    CocoaWidgetSetService.tryDropFiles(filenames);
+    CocoaWidgetSetBaseService.tryDropFiles(filenames);
   filenames.release;
 end;
 
@@ -129,6 +126,8 @@ var
   style: TFormStyle;
   i: Integer;
 begin
+  TCocoaEventTapUtil.enableTap;
+
   windows := NSApp.orderedWindows;
   for i:= windows.count-1 downto 0 do begin
     window:= NSWindow( windows.objectAtIndex(i) );
@@ -161,6 +160,8 @@ var
   state: TFormState;
   i: Integer;
 begin
+  TCocoaEventTapUtil.disableTap;
+
   // no window in this space
   if NSWindow.windowNumbersWithOptions(0).count = 0 then
     Exit;
@@ -246,31 +247,27 @@ var
   Cancel: Boolean;
   Reason: NSAppleEventDescriptor;
 begin
-  Cancel := False;
+  Cancel:= False;
   // Check if it's a system-wide event
-  Reason := event.attributeDescriptorForKeyword(kEventParamReason);
-  if (Reason <> nil) and
-     ((Reason.typeCodeValue = kAEQuitAll) or
+  Reason := event.paramDescriptorForKeyword(kEventParamReason);
+  if (Reason = nil) or
+     (((Reason.typeCodeValue = kAEQuitAll) or
       (reason.typeCodeValue = kAEReallyLogOut) or
       (reason.typeCodeValue = kAERestart) or
-      (reason.typeCodeValue = kAEShutDown)) then
+      (reason.typeCodeValue = kAEShutDown))) then
   begin
     Application.IntfQueryEndSession(Cancel);
     if not Cancel then
       Application.IntfEndSession;
   end;
-  // Try to quit
-  if not Cancel then
-  begin
-    if Assigned(CocoaConfigApplication.events.onQuitApp) then
-      CocoaConfigApplication.events.onQuitApp(PtrInt(nil))
-    else if Assigned(Application.MainForm) then
-      Application.MainForm.Close
-    else
+
+  if NOT Cancel then begin
+    if NOT Application.Terminated then
       Application.Terminate;
     if Assigned(WakeMainThread) then
       WakeMainThread(nil);
   end;
+
   // Let caller know if the shutdown was cancelled
   if (not Application.Terminated) and (replyEvent.descriptorType <> typeNull) then
     replyEvent.setParamDescriptor_forKeyword(NSAppleEventDescriptor.descriptorWithInt32(userCanceledErr), keyErrorNumber);
@@ -281,12 +278,12 @@ end;
 {$ifdef COCOALOOPOVERRIDE}
 procedure TCocoaApplication.run;
 begin
-  CocoaWidgetSetService.finalAutoreleaseMainPool;   // MainPool Stage 1 final
-  CocoaWidgetSetService.initAutoreleaseMainPool;    // MainPool Stage 2 init
+  CocoaWidgetSetBaseService.finalAutoreleaseMainPool;   // MainPool Stage 1 final
+  CocoaWidgetSetBaseService.initAutoreleaseMainPool;    // MainPool Stage 2 init
   {$ifdef COCOAPPRUNNING_SETINTPROPERTY}
   setValue_forKey(NSNumber.numberWithBool(true), NSSTR('_running'));
   {$endif}
-  aloop();
+  _lclMainLoop();
 end;
 {$endif}
 
@@ -355,7 +352,7 @@ begin
   {$ifdef COCOALOOPNATIVE}
   try
   {$endif}
-  idx := CocoaWidgetSetService.countWaitingReleasedLCLObjects;
+  idx := CocoaWidgetSetBaseService.countWaitingReleasedLCLObjects;
   win := theEvent.window;
   if not Assigned(win) then win := self.keyWindow;
 
@@ -372,16 +369,16 @@ begin
         NSKeyDown:
           // when NSKeyDown, always reset CocoaOnlyState
           if responder.conformsToProtocol(objcprotocol(NSTextInputClientProtocol)) then
-            cb.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText
+            CocoaWidgetSetState.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText
           else
-            cb.CocoaOnlyState := false;
+            CocoaWidgetSetState.CocoaOnlyState := false;
         NSKeyUp:
           // when NSKeyUp, reset CocoaOnlyState only if it's false (last KeyDown set)
           // keep true if CocoaOnlyState=true
-          if not cb.CocoaOnlyState then
+          if not CocoaWidgetSetState.CocoaOnlyState then
           begin
             if responder.conformsToProtocol(objcprotocol(NSTextInputClientProtocol)) then
-              cb.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText;
+              CocoaWidgetSetState.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText;
           end;
       end;
     end;
@@ -400,7 +397,7 @@ begin
           else
             wnd := nil;
 
-          if cb.IsCocoaOnlyState then
+          if CocoaWidgetSetState.CocoaOnlyState then
           begin
             // in IME state
             inherited sendEvent(theEvent);
@@ -414,9 +411,9 @@ begin
               inherited sendEvent(theEvent);
             // retest IME state
             if responder.conformsToProtocol(objcprotocol(NSTextInputClientProtocol)) then
-              cb.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText;
+              CocoaWidgetSetState.CocoaOnlyState := NSTextInputClientProtocol(responder).hasMarkedText;
             // if in IME state, pass KeyEvAfter
-            if not cb.CocoaOnlyState then
+            if not CocoaWidgetSetState.CocoaOnlyState then
               cb.KeyEvAfter;
           end;
         finally
@@ -436,7 +433,7 @@ begin
 
   finally
 
-    CocoaWidgetSetService.releaseWaitingLCLObjects(idx);
+    CocoaWidgetSetBaseService.releaseWaitingLCLObjects(idx);
 
   end;
   {$ifdef COCOALOOPNATIVE}
@@ -468,7 +465,7 @@ function TCocoaApplication.nextEventMatchingMask_untilDate_inMode_dequeue(
 var
   cb : ICommonCallback;
 begin
-  PrevKeyModifiers  := SavedKeyModifiers;
+  CocoaWidgetSetState.prevKeyModifiers  := CocoaWidgetSetState.savedKeyModifiers;
 
   {$ifdef COCOALOOPHIJACK}
   if not isrun and Assigned(aloop) then begin
@@ -513,7 +510,7 @@ begin
     Exit;
   end;
 
-  SavedKeyModifiers := Result.modifierFlags;
+  CocoaWidgetSetState.savedKeyModifiers := Result.modifierFlags;
 
   if ((mode = NSEventTrackingRunLoopMode) or mode.isEqualToString(NSEventTrackingRunLoopMode))
     and Assigned(TrackedControl)
@@ -561,12 +558,12 @@ end;
 {$ifdef COCOAPPRUNNING_OVERRIDEPROPERTY}
 function TCocoaApplication.isRunning: objc.ObjCBOOL;
 begin
-  Result:=not Stopped;
+  Result:=not _stopped;
 end;
 
 procedure TCocoaApplication.stop(sender: id);
 begin
-  Stopped := true;
+  _stopped := true;
   inherited stop(sender);
 end;
 {$endif}
@@ -597,6 +594,16 @@ begin
   Result:= _isInSandbox;
 end;
 
+function TCocoaApplication.hasLCLMainLoop: Boolean;
+begin
+  Result:= Assigned( _lclMainLoop );
+end;
+
+procedure TCocoaApplication.setLCLMainLoop( const mainLoop: TApplicationMainLoop );
+begin
+  _lclMainLoop:= mainLoop;
+end;
+
 procedure TCocoaApplication.setOpenURLObserver( const onOpenURLObserver: TCocoaAppOnOpenURLNotify);
 begin
   _onOpenURLObserver:= onOpenURLObserver;
@@ -610,26 +617,23 @@ end;
 // If principle class is not specified, then TCocoaApplication is used.
 // You should always specify either TCocoaApplication or
 // a class derived from TCocoaApplication, in order for LCL to fucntion properly
-class function TCocoaApplication.initApplication: TCocoaApplication;
+class function TCocoaApplication.createApplication: TCocoaApplication;
 var
-  bun : NSBundle;
-  appDelegate: TAppDelegate;
-  lDict: NSDictionary;
+  bundle : NSBundle;
+  dict: NSDictionary;
 begin
-  bun := NSBundle.mainBundle;
-  if Assigned(bun) and Assigned(bun.principalClass) then
-    Result := TCocoaApplication(NSObject(bun.principalClass).sharedApplication)
+  bundle := NSBundle.mainBundle;
+  if Assigned(bundle) and Assigned(bundle.principalClass) then
+    Result := TCocoaApplication(NSObject(bundle.principalClass).sharedApplication)
   else
     Result := TCocoaApplication(TCocoaApplication.sharedApplication);
 
-  appDelegate:= TAppDelegate.new;
-  Result.setDelegate( NSApplicationDelegateProtocol(appDelegate) );
-  appDelegate.release;
+  Result.setDelegate( NSApplicationDelegateProtocol(TAppDelegate.new) );
 
-  lDict := NSProcessInfo.processInfo.environment;
-  Result._isInSandbox := lDict.valueForKey(NSStr('APP_SANDBOX_CONTAINER_ID')) <> nil;
+  dict := NSProcessInfo.processInfo.environment;
+  Result._isInSandbox := dict.valueForKey(NSStr('APP_SANDBOX_CONTAINER_ID')) <> nil;
 
-  WakeMainThread:= @CocoaWidgetSetService.OnWakeMainThread;
+  WakeMainThread:= @CocoaWidgetSetBaseService.OnWakeMainThread;
 end;
 
 end.

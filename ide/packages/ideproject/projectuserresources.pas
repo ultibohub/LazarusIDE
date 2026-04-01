@@ -42,12 +42,12 @@ uses
   LazFileUtils, LazUTF8, Laz2_XMLCfg, LazLoggerBase,
   // BuildIntf
   ProjectResourcesIntf, MacroIntf, IDEExternToolIntf,
-  // IdeIntf
-  IDEMsgIntf,
   // IDE
   IdeProjectStrConsts;
 
 type
+  TAddIDEMessageEvent = procedure(Urgency: TMessageLineUrgency; Msg: string);
+
   TUserResourceType = (
     rtIcon,    // maps to RT_GROUP_ICON
     rtCursor,  // maps to RT_GROUP_CURSOR
@@ -94,8 +94,8 @@ type
 
     function UpdateResources(AResources: TAbstractProjectResources;
                              const MainFilename: string): Boolean; override;
-    procedure WriteToProjectFile(AConfig: {TXMLConfig}TObject; const Path: String); override;
-    procedure ReadFromProjectFile(AConfig: {TXMLConfig}TObject; const Path: String); override;
+    procedure WriteToProjectFile(AConfig: TXMLConfig; const Path: String); override;
+    procedure ReadFromProjectFile(AConfig: TXMLConfig; const Path: String); override;
     property List: TResourceList read FList;
   end;
 
@@ -108,7 +108,11 @@ const
  { rtRCData } 'RCDATA'
   );
 
-  function StrToResourceType(const AStr: String): TUserResourceType;
+var
+  OnAddIDEMessage: TAddIDEMessageEvent;
+
+function StrToResourceType(const AStr: String): TUserResourceType;
+
 
 implementation
 
@@ -191,8 +195,8 @@ begin
       Stream.Free;
     end;
   end
-  else
-    AddIDEMessage(mluError,Format(lisFileNotFound2, [Filename]));
+  else if Assigned(OnAddIDEMessage) then
+    OnAddIDEMessage(mluError, Format(lisFileNotFound2,[Filename]));
 end;
 
 function TResourceItem.GetRealFileName(const ProjectDirectory: String): String;
@@ -254,21 +258,21 @@ begin
   end;
 end;
 
-procedure TProjectUserResources.WriteToProjectFile(AConfig: TObject; const Path: String);
+procedure TProjectUserResources.WriteToProjectFile(AConfig: TXMLConfig; const Path: String);
 var
   I: Integer;
 begin
-  TXMLConfig(AConfig).SetDeleteValue(Path+'General/Resources/Count', List.Count, 0);
+  AConfig.SetDeleteValue(Path+'General/Resources/Count', List.Count, 0);
   for I := 0 to List.Count - 1 do
     List[I]^.WriteToProjectFile(TXMLConfig(AConfig), Path + 'General/Resources/Resource_' + IntToStr(I) + '/')
 end;
 
-procedure TProjectUserResources.ReadFromProjectFile(AConfig: TObject; const Path: String);
+procedure TProjectUserResources.ReadFromProjectFile(AConfig: TXMLConfig; const Path: String);
 var
   I, Count: Integer;
 begin
   List.Clear;
-  Count := TXMLConfig(AConfig).GetValue(Path+'General/Resources/Count', 0);
+  Count := AConfig.GetValue(Path+'General/Resources/Count', 0);
   for I := 0 to Count - 1 do
     List.AddItem^.ReadFromProjectFile(TXMLConfig(AConfig), Path + 'General/Resources/Resource_' + IntToStr(I) + '/')
 end;

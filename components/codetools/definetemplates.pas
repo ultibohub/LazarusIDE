@@ -111,7 +111,7 @@ const
   VirtualTempDir='TEMPORARYDIRECTORY';
   
   // FPC operating systems and processor types
-  FPCOperatingSystemNames: array[1..44] of shortstring =( //Ultibo
+  FPCOperatingSystemNames: array[1..45] of shortstring =( //Ultibo
      'linux',
      'win32','win64','wince',
      'darwin','macos',
@@ -149,9 +149,10 @@ const
      'wasip1',
      'wasip1threads',
      'wasip2',
-     'wasix'
+     'wasix',
+     'zxspectrum'
     );
-  FPCOperatingSystemCaptions: array[1..44] of shortstring =( //Ultibo
+  FPCOperatingSystemCaptions: array[1..45] of shortstring =( //Ultibo
      'AIX',
      'Amiga',
      'Android',
@@ -195,7 +196,8 @@ const
      'Wasip1',
      'Wasip1threads',
      'Wasip2',
-     'Wasix'
+     'Wasix',
+     'ZXSpectrum'
     );
 
   FPCOperatingSystemAlternativeNames: array[1..2] of shortstring =(
@@ -204,7 +206,7 @@ const
   FPCOperatingSystemAlternative2Names: array[1..2] of shortstring =(
       'bsd', 'linux' // see GetDefaultSrcOS2ForTargetOS
     );
-  FPCProcessorNames: array[1..18] of shortstring =(
+  FPCProcessorNames: array[1..19] of shortstring =(
       'aarch64',
       'arm',
       'avr',
@@ -222,7 +224,8 @@ const
       'riscv32',
       'riscv64',
       'xtensa',
-      'wasm32'
+      'wasm32',
+      'z80'
     );
   FPCControllerNames: array[1..15] of shortstring =(  //Ultibo
       'RPIA',
@@ -885,7 +888,7 @@ type
     WorkingDir: string;
     // values
     Kind: TPascalCompiler;
-    CompilerDate: longint;
+    CompilerDate: int64;
     RealCompiler: string; // when Compiler is fpc.exe, this is the real compiler (e.g. ppc386.exe)
     RealCompilerDate: longint;
     RealTargetOS: string;

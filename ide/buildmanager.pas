@@ -35,7 +35,7 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, Types, AVL_Tree, System.UITypes, StrUtils,
+  Classes, SysUtils, AVL_Tree, System.UITypes,
   // LCL
   InterfaceBase, LCLPlatformDef,
   // CodeTools
@@ -43,11 +43,11 @@ uses
   FileProcs, CodeToolsCfgScript, LinkScanner,
   // LazUtils
   FPCAdds, LConvEncoding, FileUtil, LazFileUtils, LazFileCache, LazUTF8,
-  Laz2_XMLCfg, LazUtilities, LazStringUtils, LazMethodList, LazVersion,
+  Laz2_XMLCfg, LazUtilities, LazMethodList, LazVersion,
   AvgLvlTree,
   // BuildIntf
-  BaseIDEIntf, IDEOptionsIntf, ProjectIntf, MacroIntf, PublishModuleIntf,
-  IDEExternToolIntf, CompOptsIntf, MacroDefIntf,
+  BaseIDEIntf, IDEOptionsIntf, ProjectIntf, ProjectResourcesIntf,
+  PublishModuleIntf, IDEExternToolIntf, CompOptsIntf, MacroDefIntf,
   // IDEIntf
   IDEDialogs, LazIDEIntf, IDEMsgIntf, SrcEditorIntf,
   // IdeUtils
@@ -56,13 +56,14 @@ uses
   LazConf, EnvironmentOpts, ModeMatrixOpts, TransferMacros, IdeConfStrConsts,
   IDEProcs, DialogProcs, etMakeMsgParser, etFPCMsgFilePool, EditDefineTree,
   ParsedCompilerOpts, CompilerOptions, Compiler, SearchPathProcs, BaseBuildManager,
+  ApplicationBundle,
   // IdePackager
   IdePackagerStrConsts, PackageDefs, PackageSystem,
   // IdeProject
   Project, ProjectResources, ProjectIcon,
   // IDE
   LazarusIDEStrConsts, LfmUnitResource, MiscOptions, etFPCMsgParser, etPas2jsMsgParser,
-  FPCSrcScan, ApplicationBundle, IdeTransferMacros, ExtTools;
+  FPCSrcScan, IdeTransferMacros, ExtTools;
 
 type
 
@@ -138,17 +139,14 @@ type
                     out NeedBuildAllFlag: boolean; var Note: string): TModalResult;
     function CheckAmbiguousSources(const AFilename: string;
                                    Compiling: boolean): TModalResult; override;
-    function DeleteAmbiguousFiles(const Filename:string
-                                  ): TModalResult; override;
+    function DeleteAmbiguousFiles(const Filename:string): TModalResult; override;
     function CheckUnitPathForAmbiguousPascalFiles(const BaseDir, TheUnitPath,
-                                    CompiledExt, ContextDescription: string
-                                    ): TModalResult; override;
+                CompiledExt, ContextDescription: string): TModalResult; override;
     function CreateProjectApplicationBundle: Boolean; override;
     function BackupFileForWrite(const Filename: string): TModalResult; override;
 
-    function GetResourceType(AnUnitInfo: TUnitInfo): TResourceType;
-    function FindLRSFilename(AnUnitInfo: TUnitInfo;
-                             UseDefaultIfNotFound: boolean): string;
+    function GetResourceType(AnUnitInfo: TUnitInfo): TProjResourceType;
+    function FindLRSFilename(AnUnitInfo: TUnitInfo; UseDefaultIfNotFound: boolean): string;
     function GetDefaultLRSFilename(AnUnitInfo: TUnitInfo): string;
     function UpdateLRSFromLFM(AnUnitInfo: TUnitInfo; ShowAbort: boolean): TModalResult;
     function UpdateProjectAutomaticFiles(TestDir: string): TModalResult; override;
@@ -191,12 +189,12 @@ function CompareUnitNameAndUnitFile(UnitName: PChar; UnitFile: PUnitFile): integ
 begin
   Result:=CompareIdentifiers(PChar(UnitName),PChar(UnitFile^.FileUnitName));
 end;
-
+{
 procedure OnCompilerParseStampIncreased;
 begin
   CodeToolBoss.DefineTree.ClearCache;
 end;
-
+}
 { TBuildManager }
 
 constructor TBuildManager.Create(AOwner: TComponent);
@@ -995,8 +993,8 @@ var
         if ConsoleVerbosity>=0 then
           DebugLn(DbgCap,'Editor unit in project''s unit path has changed ',AProject.IDAsString,' ',AnUnitInfo.Filename);
         Note+='Editor unit "'+AnUnitInfo.Filename+'" in project''s unit search path is newer than state file:'+LineEnding
-          +'  File age="'+FileAgeToStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
-          +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+          +'  File age="'+UniversalFileAgeToLocalStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
+          +'  State file age="'+UniversalFileAgeToLocalStr(StateFileAge)+'"'+LineEnding
           +'  State file='+StateFilename+LineEnding;
         exit(true);
       end;
@@ -1008,8 +1006,8 @@ var
       if ConsoleVerbosity>=0 then
         DebugLn(DbgCap,'Editor file in project''s include path has changed ',AProject.IDAsString,' ',AnUnitInfo.Filename);
       Note+='Editor file "'+AnUnitInfo.Filename+'" in project''s include search path is newer than state file:'+LineEnding
-        +'  File age="'+FileAgeToStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
-        +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+        +'  File age="'+UniversalFileAgeToLocalStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
+        +'  State file age="'+UniversalFileAgeToLocalStr(StateFileAge)+'"'+LineEnding
         +'  State file='+StateFilename+LineEnding;
       exit(true);
     end;
@@ -1079,8 +1077,8 @@ begin
       if ConsoleVerbosity>=0 then
         DebugLn(DbgCap,'SrcFile outdated ',AProject.IDAsString);
       Note+='Source file "'+SrcFilename+'" of '+AProject.IDAsString+' outdated:'+LineEnding
-        +'  Source age='+FileAgeToStr(FileAgeCached(SrcFilename))+LineEnding
-        +'  State file age='+FileAgeToStr(StateFileAge)+LineEnding
+        +'  Source age='+UniversalFileAgeToLocalStr(FileAgeCached(SrcFilename))+LineEnding
+        +'  State file age='+UniversalFileAgeToLocalStr(StateFileAge)+LineEnding
         +'  State file='+StateFilename+LineEnding;
       exit(mrYes);
     end;
@@ -1112,8 +1110,8 @@ begin
         DebugLn('  File="',CompilerFilename,'"');
       end;
       Note+='Compiler file "'+CompilerFilename+'" for '+AProject.IDAsString+' changed:'+LineEnding
-        +'  Old="'+FileAgeToStr(AProject.LastCompilerFileDate)+'"'+LineEnding
-        +'  Now="'+FileAgeToStr(FileAgeCached(CompilerFilename))+'"'+LineEnding
+        +'  Old="'+UniversalFileAgeToLocalStr(AProject.LastCompilerFileDate)+'"'+LineEnding
+        +'  Now="'+UniversalFileAgeToLocalStr(FileAgeCached(CompilerFilename))+'"'+LineEnding
         +'  State file='+StateFilename+LineEnding;
       exit(mrYes);
     end;
@@ -1164,8 +1162,8 @@ begin
           if ConsoleVerbosity>=0 then
             DebugLn(DbgCap,'Src has changed ',AProject.IDAsString,' ',AnUnitInfo.Filename);
           Note+='File "'+AnUnitInfo.Filename+'" of '+AProject.IDAsString+' is newer than state file:'+LineEnding
-            +'  File age="'+FileAgeToStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
-            +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+            +'  File age="'+UniversalFileAgeToLocalStr(FileAgeCached(AnUnitInfo.Filename))+'"'+LineEnding
+            +'  State file age="'+UniversalFileAgeToLocalStr(StateFileAge)+'"'+LineEnding
             +'  State file='+StateFilename+LineEnding;
           exit(mrYes);
         end;
@@ -1176,8 +1174,8 @@ begin
             if ConsoleVerbosity>=0 then
               DebugLn(DbgCap,'LFM has changed ',AProject.IDAsString,' ',LFMFilename);
             Note+='File "'+LFMFilename+'" of '+AProject.IDAsString+' is newer than state file:'+LineEnding
-              +'  File age="'+FileAgeToStr(FileAgeCached(LFMFilename))+'"'+LineEnding
-              +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+              +'  File age="'+UniversalFileAgeToLocalStr(FileAgeCached(LFMFilename))+'"'+LineEnding
+              +'  State file age="'+UniversalFileAgeToLocalStr(StateFileAge)+'"'+LineEnding
               +'  State file='+StateFilename+LineEnding;
             exit(mrYes);
           end;
@@ -1202,8 +1200,8 @@ begin
         debugln([DbgCap,'icon has changed ',
           AProject.IDAsString,' "',IcoRes.IcoFileName,'"']);
       Note+='Project''s ico file "'+IcoRes.IcoFileName+'" is newer than state file:'+LineEnding
-        +'  File age="'+FileAgeToStr(FileAgeCached(IcoRes.IcoFileName))+'"'+LineEnding
-        +'  State file age="'+FileAgeToStr(StateFileAge)+'"'+LineEnding
+        +'  File age="'+UniversalFileAgeToLocalStr(FileAgeCached(IcoRes.IcoFileName))+'"'+LineEnding
+        +'  State file age="'+UniversalFileAgeToLocalStr(StateFileAge)+'"'+LineEnding
         +'  State file='+StateFilename+LineEnding;
       exit(mrYes);
     end;
@@ -1512,11 +1510,11 @@ var
   TargetExeName: string;
 begin
   Result := False;
-  if Project1.MainUnitInfo = nil then
+  if LazProject1.MainFile = nil then
     Exit;
-  TargetExeName := Project1.CompilerOptions.CreateTargetFilename;
+  TargetExeName := LazProject1.LazCompilerOptions.CreateTargetFilename;
 
-  if not (CreateApplicationBundle(TargetExeName, Project1.GetTitle, True, Project1) in
+  if not (CreateApplicationBundle(TargetExeName, LazProject1.GetTitle, True, Project1) in
     [mrOk, mrIgnore]) then
     Exit;
   if not (CreateAppBundleSymbolicLink(TargetExeName, True) in [mrOk, mrIgnore]) then
@@ -1537,8 +1535,8 @@ begin
   BackupFilename:='';
   if not (FileExistsUTF8(Filename)) then exit;
   // check if file in lpi
-  IsPartOfProject:=(Project1<>nil)
-               and (Project1.FindFile(Filename,[pfsfOnlyProjectFiles])<>nil);
+  IsPartOfProject:=(LazProject1<>nil)
+               and (LazProject1.FindFile(Filename,[pfsfOnlyProjectFiles])<>nil);
   // check if file in source directory of project
   if (not IsPartOfProject) and (Project1<>nil)
     and (SearchDirectoryInMaskedSearchPath(Project1.SourceDirectories.CreateSearchPathFromAllFiles,
@@ -1664,7 +1662,7 @@ begin
   until Result <> mrRetry;
 end;
 
-function TBuildManager.GetResourceType(AnUnitInfo: TUnitInfo): TResourceType;
+function TBuildManager.GetResourceType(AnUnitInfo: TUnitInfo): TProjResourceType;
 begin
   if AnUnitInfo.Source = nil then
     AnUnitInfo.Source := CodeToolBoss.LoadFile(AnUnitInfo.Filename, True, False);

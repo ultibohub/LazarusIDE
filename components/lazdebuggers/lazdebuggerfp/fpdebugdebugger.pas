@@ -39,6 +39,7 @@ uses
   FpDebugDebuggerUtils, FpDebugDebuggerWorkThreads, FpDebugDebuggerBase,
   LazDebuggerIntf, LazDebuggerIntfExcludedRoutines,
   // FpDebug
+  {$ifdef windows} FpDbgWinClasses,  {$endif windows}
   {$IFDEF FPDEBUG_THREAD_CHECK} FpDbgCommon, {$ENDIF}
   FpDbgClasses, FpDbgInfo, FpErrorMessages, FpPascalBuilder, FpdMemoryTools,
   FpPascalParser, FPDbgController, FpDbgDwarfDataClasses, FpDbgDwarfFreePascal,
@@ -4309,6 +4310,8 @@ begin
       FDbgController.CurrentProcess.Config.FileOverwriteStdErr := FileOverwriteStdErr;
 
       FDbgController.CurrentProcess.Config.BreakpointSearchMaxLines := TFpDebugDebuggerProperties(GetProperties).BreakpointSearchMaxLines;
+      FDbgController.CurrentProcess.HandleUserDebugEvents :=
+        TFpDebugDebuggerProperties(GetProperties).HandleUserDebugEvents;
 
       FWorkQueue.Clear;
       FWorkQueue.ThreadCount := 1;

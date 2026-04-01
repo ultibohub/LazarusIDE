@@ -31,7 +31,7 @@ uses
   {$ifdef Unix}
   BaseUnix, Unix,
   {$endif}
-  Types, Classes, SysUtils, Math,
+  Types, Classes, SysUtils, Math, System.UITypes,
   {$IfNDef GTK2_2}
     {$IfDef HasX}
      XLib, xatom, X, gdk2x,
@@ -102,7 +102,7 @@ type
 
     FRCFilename: string;
     FRCFileParsed: boolean;
-    FRCFileAge: integer;
+    FRCFileAge: int64;
     FGTKToolTips: PGtkToolTips;
 
     FLogHandlerID: guint; // ID returend by set_handler

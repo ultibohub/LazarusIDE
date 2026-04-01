@@ -1561,37 +1561,45 @@ end;
 
 function TGtk3WidgetSet.IntersectClipRect(dc: hdc; Left, Top, Right,Bottom: Integer): Integer;
 var
-  rgn,clip:HRGN;
+  GtkDC: TGtk3DeviceContext absolute DC;
 begin
-  {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
-  DebugLn('WARNING: TGtk3WidgetSet.ExcludeClipRect not implemented ...');
-  {$ENDIF}
-  rgn:=Self.CreateRectRgn(Left,Top,Right,Bottom);
-  //Self.SelectClipRGN(dc,rgn);
-  clip:=Self.CreateEmptyRegion;
-  Self.GetClipRGN(dc,clip);
-  Result:=Self.CombineRgn(clip,rgn,clip,RGN_AND);
-  Self.SelectClipRGN(dc,clip);
-  DeleteObject(clip);
-  DeleteObject(rgn);
-  // fail Self.ExtSelectClipRGN(dc,rgn,RGN_AND);
- { ncorg:=Tgtk3DeviceContext(dc).fncOrigin;
-  GetWindowOrgEx(DC, @DCOrigin);
-  Result:=inherited IntersectClipRect(dc, Left, Top, Right, Bottom);}
+  Result := ERROR;
+  if not IsValidDC(DC) then
+    exit;
+  //Use cairo_clip directly, it intersects with the existing clip.
+  //Apply WindowOrg to convert logical coords to device coords.
+  cairo_rectangle(GtkDC.pcr,
+    Left - GtkDC.WindowOrg.X, Top - GtkDC.WindowOrg.Y,
+    Right - Left, Bottom - Top);
+  cairo_clip(GtkDC.pcr);
+  Result := SimpleRegion;
 end;
 
 
 function TGtk3WidgetSet.ExcludeClipRect(dc: hdc; Left, Top, Right, Bottom: Integer): Integer;
 var
-  rgn,clip:HRGN;
+  GtkDC: TGtk3DeviceContext absolute DC;
+  AClip: TGdkRectangle;
+  SavedRule: Tcairo_fill_rule_t;
+  ox, oy: Integer;
 begin
-  rgn := CreateRectRgn(Left, Top, Right, Bottom);
-  clip := CreateEmptyRegion;
-  GetClipRGN(dc, clip);
-  Result := CombineRgn(clip, clip, rgn, RGN_DIFF);
-  SelectClipRGN(dc, clip);
-  DeleteObject(clip);
-  DeleteObject(rgn);
+  Result := ERROR;
+  if not IsValidDC(DC) then
+    exit;
+  {Exclude a rect from the current clip using even-odd fill rule.
+   outer path (current clip bounds) + inner path (excluded area).
+   Even-odd rule: area inside odd number of paths = clipped IN,
+   area inside even number (= both outer and inner) = clipped OUT. zeljan}
+  ox := GtkDC.WindowOrg.X;
+  oy := GtkDC.WindowOrg.Y;
+  gdk_cairo_get_clip_rectangle(GtkDC.pcr, @AClip);
+  SavedRule := cairo_get_fill_rule(GtkDC.pcr);
+  cairo_set_fill_rule(GtkDC.pcr, CAIRO_FILL_RULE_EVEN_ODD);
+  cairo_rectangle(GtkDC.pcr, AClip.x, AClip.y, AClip.width, AClip.height);
+  cairo_rectangle(GtkDC.pcr, Left - ox, Top - oy, Right - Left, Bottom - Top);
+  cairo_clip(GtkDC.pcr);
+  cairo_set_fill_rule(GtkDC.pcr, SavedRule);
+  Result := SimpleRegion;
 end;
 
 function TGtk3WidgetSet.ExtCreatePen(dwPenStyle, dwWidth: DWord;
@@ -1634,10 +1642,16 @@ begin
 
   if (dwPenStyle and PS_STYLE_MASK) = PS_USERSTYLE then
   begin
-    //TODO: APen.setDashPattern
+    if (dwStyleCount > 0) and Assigned(lpStyle) then
+    begin
+      SetLength(APen.Dashes, dwStyleCount);
+      Move(lpStyle^, APen.Dashes[0], dwStyleCount * SizeOf(DWord));
+    end;
   end;
 
-  APen.Color := TColor(lplb.lbColor);  // ColorToRGB() ?
+  APen.Color := TColor(lplb.lbColor);
+  APen.ExtPenStyle := dwPenStyle;
+  APen.ExtPenBrush := lplb;
   APen.LogPen.lopnColor := lplb.lbColor;
   APen.LogPen.lopnStyle := (dwPenStyle and PS_STYLE_MASK) or (dwPenStyle and PS_JOIN_MASK) or (dwPenStyle and PS_ENDCAP_MASK);
   APen.LogPen.lopnWidth.X := dwWidth;
@@ -1758,7 +1772,8 @@ begin
     GtkDC.Save;
     if Options and ETO_CLIPPED = ETO_CLIPPED then
     begin
-      cairo_rectangle(GtkDc.pcr, Rect^.Left, Rect^.Top, Rect^.Right-Rect^.Left, Rect^.Bottom-Rect^.Top);
+      cairo_rectangle(GtkDc.pcr, Rect^.Left - GtkDC.WindowOrg.X, Rect^.Top - GtkDC.WindowOrg.Y,
+        Rect^.Right - Rect^.Left, Rect^.Bottom - Rect^.Top);
       cairo_clip(GtkDc.pcr);
     end;
     if Options and ETO_OPAQUE = ETO_OPAQUE then
@@ -1902,7 +1917,9 @@ begin
   if not IsValidDC(DC) then
     exit;
   cr := TGtk3DeviceContext(DC).pcr;
-  cairo_rectangle(cr, ARect.Left+PixelOffset, ARect.Top+PixelOffset, ARect.Right-ARect.Left-1, ARect.Bottom-ARect.Top-1);
+  cairo_rectangle(cr, ARect.Left - TGtk3DeviceContext(DC).WindowOrg.X + PixelOffset,
+    ARect.Top - TGtk3DeviceContext(DC).WindowOrg.Y + PixelOffset,
+    ARect.Right - ARect.Left - 1, ARect.Bottom - ARect.Top - 1);
   if IsValidGDIObject(hBr) then
     TGtk3DeviceContext(DC).SetSourceColor(TGtk3Brush(HBR).Color);
   cairo_set_line_width(cr, 1);
@@ -3246,35 +3263,20 @@ begin
 end;
 
 function TGtk3WidgetSet.GetWindowOrgEx(dc: hdc; P: PPoint): Integer;
-var
-  Matrix: Tcairo_matrix_t;
-  dx, dy: Double;
-  OrigX, OrigY: LongInt;
 begin
   {$IFDEF GTK3DEBUGNOTIMPLEMENTED}
   // DebugLn('WARNING: TGtk3WidgetSet.GetWindowOrgEx not implemented ...');
   {$ENDIF}
   Result := 0;
-  if not IsValidDC(DC) and (P <> nil) then
+  if not IsValidDC(DC) then
   begin
     {$ifdef VerboseGtk3WinAPI}
-      DebugLn('Trace: < [WinAPI GetWindowOrgEx] No valid DC or P is nil');
+      DebugLn('Trace: < [WinAPI GetWindowOrgEx] No valid DC');
     {$endif}
     exit;
   end;
-  cairo_get_matrix(TGtk3DeviceContext(DC).pcr, @Matrix);
-  dx := 0;
-  dy := 0;
-  cairo_matrix_transform_point(@Matrix, @dx, @dy);
   if P <> nil then
-  begin
-    OrigX := TGtk3DeviceContext(DC).fncOrigin.X;
-    OrigY := TGtk3DeviceContext(DC).fncOrigin.Y;
-    //DebugLn('GetWindowOrgEx POINT ',Format('OrigX=%d, OrigY=%d, dx=%d, dy=%d',
-    //                                       [OrigX, OrigY, Trunc(dx), Trunc(dy)]));
-    P^.X := OrigX-Trunc(dx);
-    P^.Y := OrigY-Trunc(dy);
-  end;
+    P^ := TGtk3DeviceContext(DC).WindowOrg;
   Result := 1;
 end;
 
@@ -3291,10 +3293,7 @@ begin
     if [wtWindow, wtHintWindow] * TGtk3Widget(Handle).WidgetType <> [] then
     begin
       AWindow := PGtkWindow(TGtk3Widget(Handle).Widget);
-      if not TGtk3Window(Handle).WidgetMapped then
-        AWindow := nil;
-
-      if AWindow <> nil then
+      if TGtk3Window(Handle).WidgetMapped then
         AGdkWindow := AWindow^.get_window
       else
         AGdkWindow := nil;
@@ -3373,8 +3372,13 @@ begin
     aWidget:= TGtk3Widget(Handle).Widget;
     if aWidget<>nil then
     begin
-      Width := aWidget^.get_allocated_width;
-      Height := aWidget^.get_allocated_Height;
+      if Gtk3WidgetSet.IsWayland and Gtk3IsGtkWindow(aWidget) then
+        PGtkWindow(aWidget)^.get_size(@Width, @Height)
+      else
+      begin
+        Width := aWidget^.get_allocated_width;
+        Height := aWidget^.get_allocated_Height;
+      end;
       Result := True;
     end;
   end;
@@ -3810,8 +3814,10 @@ begin
     ACairoRegion := gdk_window_get_visible_region(TGtk3DeviceContext(DC).Parent^.window);
   end else
     ACairoRegion := gdk_window_get_visible_region(gdk_get_default_root_window);
-  ACairoRect.x := ARect.Left;
-  ACairoRect.y := ARect.Top;
+  ACairoRect.x := ARect.Left - TGtk3DeviceContext(DC).WindowOrg.X
+    - TGtk3DeviceContext(DC).ScrollbarsOffset.X;
+  ACairoRect.y := ARect.Top - TGtk3DeviceContext(DC).WindowOrg.Y
+    - TGtk3DeviceContext(DC).ScrollbarsOffset.Y;
   ACairoRect.width := ARect.Right - ARect.Left;
   ACairoRect.height := ARect.Bottom - ARect.Top;
   Result := cairo_region_contains_rectangle(ACairoRegion, @ACairoRect) <> CAIRO_REGION_OVERLAP_OUT;
@@ -4153,17 +4159,18 @@ begin
   if Result <> AHandle then
   begin
     if Result <> 0 then
-      ReleaseCapture;
-    if IsValidHandle(AHandle) then
     begin
-      TGtk3Widget(AHandle).SetCapture;
-      Message.Msg := 0;
-      FillChar(Message, SizeOf(Message), 0);
-      Message.msg := LM_CAPTURECHANGED;
-      Message.wParam := 0;
-      Message.lParam := PtrInt(Result);
-      LCLMessageGlue.DeliverMessage(TGtk3Widget(AHandle).LCLObject, Message);
+      ReleaseCapture;
+      if IsValidHandle(Result) then
+      begin
+        FillChar(Message{%H-}, SizeOf(Message), 0);
+        Message.msg := LM_CAPTURECHANGED;
+        Message.lParam := PtrInt(AHandle);
+        LCLMessageGlue.DeliverMessage(TGtk3Widget(Result).LCLObject, Message);
+      end;
     end;
+    if IsValidHandle(AHandle) then
+      TGtk3Widget(AHandle).SetCapture;
   end;
 end;
 
@@ -4572,7 +4579,8 @@ var
           SB_HORZ:
           begin
             if (AHorzPolicy <> POLICY[IsScrollbarVis]) and
-              PGtkWidget(ScrollWin)^.get_mapped then
+              PGtkWidget(ScrollWin)^.get_mapped and
+              not ((AHorzPolicy = GTK_POLICY_NEVER) and IsScrollbarVis) then
               ScrollWin^.set_policy(POLICY[IsScrollbarVis], AVertPolicy);
             if Gtk3WidgetSet.OverlayScrolling and Gtk3IsWidget(Scrollbar) and
               ScrollBar^.get_visible then
@@ -4890,17 +4898,13 @@ begin
 end;
 
 function TGtk3WidgetSet.SetWindowOrgEx(dc: hdc; NewX, NewY: Integer; OldPoint: PPoint): Boolean;
-var
-  Matrix: Tcairo_matrix_t;
-  Point: TPoint;
 begin
   Result := IsValidDC(DC);
   if Result then
   begin
-    GetWindowOrgEx(dc, @Point);
     if OldPoint <> nil then
-      OldPoint^ := Point;
-    cairo_translate(TGtk3DeviceContext(DC).pcr, Point.X - NewX, Point.Y - NewY);
+      OldPoint^ := TGtk3DeviceContext(DC).WindowOrg;
+    TGtk3DeviceContext(DC).WindowOrg := Point(NewX, NewY);
     // DebugLn('TGtk3WidgetSet.SetWindowOrgEx NewX=',dbgs(NewX),' NewY=',dbgs(NewY));
   end;
 end;
@@ -5122,7 +5126,15 @@ begin
     if FreshSrcPixbuf <> SrcContext.CurrentImage.Handle then
       g_object_unref(FreshSrcPixbuf);
   end else
-    DestContext.drawSurface(@ATargetRect, SrcContext.CairoSurface, @ASrcRect, nil, nil, nil);
+  begin
+    case Rop of
+      SRCAND, SRCPAINT, SRCINVERT, DSTINVERT,
+      NOTSRCCOPY, SRCERASE, NOTSRCERASE, MERGEPAINT:
+        DestContext.ApplyBitBltROP(SrcContext.CairoSurface, ATargetRect, ASrcRect, Rop);
+    else
+      DestContext.drawSurface(@ATargetRect, SrcContext.CairoSurface, @ASrcRect, nil, nil, nil);
+    end;
+  end;
 
   {$ifdef VerboseGtk3DeviceContext}
     DebugLn('Trace:< [TGtk3WidgetSet.StretchMaskBlt]');

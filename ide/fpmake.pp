@@ -210,7 +210,6 @@ begin
     P.Sources.AddSrc('abstractsmethodsdlg.pas');
     P.Sources.AddSrc('addprofiledialog.pas');
     P.Sources.AddSrc('addtoprojectdlg.pas');
-    P.Sources.AddSrc('applicationbundle.pas');
     P.Sources.AddSrc('basedebugmanager.pas');
     P.Sources.AddSrc('buildfiledlg.pas');
     P.Sources.AddSrc('buildlazdialog.pas');
@@ -324,7 +323,6 @@ begin
     P.Sources.AddSrc('ideoptiondefs.pas');
     P.Sources.AddSrc('ideoptionsdlg.pas');
     P.Sources.AddSrc('ideprotocol.pas');
-    P.Sources.AddSrc('idetranslations.pas');
     P.Sources.AddSrc('idewindowhelp.pas');
     P.Sources.AddSrc('imexportcompileropts.pas');
     P.Sources.AddSrc('infobuild.pp');
