@@ -574,11 +574,18 @@ begin
   end;
 
   if (ahtLine in ATest) and IsPointInRect(APoint, Rline) then
-    Include(Result, ahtLine)
-  else
-  if (ahtLabels in ATest) and IsPointInside(APoint) then
-    Include(Result, ahtLabels)
-  else
+    Include(Result, ahtLine);
+
+  if (ahtLabels in ATest) then
+  begin
+    for t in FMarkValues do
+      if IsPointInPolygon(APoint, t.FPolygon) then
+      begin
+        Include(Result, ahtLabels);
+        break;
+      end;
+  end;
+
   if (ahtGrid in ATest) then
   begin
     R := Rax;
@@ -612,7 +619,7 @@ begin
     end;
   end;
 
-  if Result = [] then
+  if (Result = []) and not IsPointInside(APoint) then
     exit;
 
   if [ahtAxisStart, ahtAxisCenter, ahtAxisEnd] * ATest <> [] then
@@ -740,7 +747,9 @@ begin
   pv := SafeNaN;
   ppv := SafeNaN;
   FHelper.BeginDrawing;
-  for t in FMarkValues do begin
+  for i := 0 to High(FMarkValues) do
+  begin
+    t := FMarkValues[i];
     trV := FHelper.FAxisTransf(t.FValue);
     if GridCentered then
     begin
@@ -753,6 +762,7 @@ begin
       FHelper.DrawMark(fixedCoord, trV, t.FText);
       DrawMinors(fixedCoord, pv, t.FValue);
     end;
+    FMarkValues[i].FPolygon := FHelper.FCurrLabelPoly;
     pv := t.FValue;    // "previous t.FValue"
     prevTrV := trV;    // "previous transformed t.FValue"
   end;

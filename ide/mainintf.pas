@@ -74,8 +74,10 @@ uses
   InputHistory,
   // IdeConfig
   LazConf,
+  // IdeProject
+  Project,
   // IDE
-  LazarusIDEStrConsts, Project, BuildLazDialog, ProgressDlg, IDEDefs, PackageDefs;
+  LazarusIDEStrConsts, BuildLazDialog, ProgressDlg, IDEDefs, EditableProject, PackageDefs;
 
 type
   // The IDE is at anytime in a specific state:
@@ -143,10 +145,10 @@ type
     procedure UpdateControlState; virtual; abstract; //Ultibo
 
     procedure GetCurrentUnitInfo(out ActiveSourceEditor: TSourceEditorInterface;
-                              out ActiveUnitInfo: TUnitInfo); virtual; abstract;
+                              out ActiveUnitInfo: TEditableUnitInfo); virtual; abstract;
     procedure GetUnitInfoForDesigner(ADesigner: TIDesigner;
                               out ActiveSourceEditor: TSourceEditorInterface;
-                              out ActiveUnitInfo: TUnitInfo); virtual; abstract;
+                              out ActiveUnitInfo: TEditableUnitInfo); virtual; abstract;
 
     procedure DoCommand(EditorCommand: integer); virtual; abstract;
 
@@ -183,25 +185,25 @@ type
                                Flags: TJumpToCodePosFlags = [jfFocusEditor]): TModalResult; virtual; abstract;
     function DoJumpToCodePosition(
                         ActiveSrcEdit: TSourceEditorInterface;
-                        ActiveUnitInfo: TUnitInfo;
+                        ActiveUnitInfo: TEditableUnitInfo;
                         NewSource: TCodeBuffer; NewX, NewY, NewTopLine: integer;
                         AddJumpPoint: boolean;
                         MarkLine: Boolean = False): TModalResult; overload;
     function DoJumpToCodePosition(
                         ActiveSrcEdit: TSourceEditorInterface;
-                        ActiveUnitInfo: TUnitInfo;
+                        ActiveUnitInfo: TEditableUnitInfo;
                         NewSource: TCodeBuffer; NewX, NewY, NewTopLine: integer;
                         Flags: TJumpToCodePosFlags = [jfFocusEditor]): TModalResult; overload;
     function DoJumpToCodePosition(
                         ActiveSrcEdit: TSourceEditorInterface;
-                        ActiveUnitInfo: TUnitInfo;
+                        ActiveUnitInfo: TEditableUnitInfo;
                         NewSource: TCodeBuffer; NewX, NewY, NewTopLine,
                         BlockTopLine, BlockBottomLine: integer;
                         AddJumpPoint: boolean;
                         MarkLine: Boolean = False): TModalResult; overload;
     function DoJumpToCodePosition(
                         ActiveSrcEdit: TSourceEditorInterface;
-                        ActiveUnitInfo: TUnitInfo;
+                        ActiveUnitInfo: TEditableUnitInfo;
                         NewSource: TCodeBuffer; NewX, NewY, NewTopLine,
                         BlockTopLine, BlockBottomLine: integer;
                         Flags: TJumpToCodePosFlags = [jfFocusEditor]): TModalResult; virtual; abstract; overload;
@@ -389,7 +391,7 @@ begin
 end;
 
 function TMainIDEInterface.DoJumpToCodePosition(
-  ActiveSrcEdit: TSourceEditorInterface; ActiveUnitInfo: TUnitInfo;
+  ActiveSrcEdit: TSourceEditorInterface; ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer; NewX, NewY, NewTopLine, BlockTopLine,
   BlockBottomLine: integer; AddJumpPoint: boolean; MarkLine: Boolean
   ): TModalResult;
@@ -404,7 +406,7 @@ begin
 end;
 
 function TMainIDEInterface.DoJumpToCodePosition(
-  ActiveSrcEdit: TSourceEditorInterface; ActiveUnitInfo: TUnitInfo;
+  ActiveSrcEdit: TSourceEditorInterface; ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer; NewX, NewY, NewTopLine: integer;
   AddJumpPoint: boolean; MarkLine: Boolean): TModalResult;
 begin
@@ -413,7 +415,7 @@ begin
 end;
 
 function TMainIDEInterface.DoJumpToCodePosition(
-  ActiveSrcEdit: TSourceEditorInterface; ActiveUnitInfo: TUnitInfo;
+  ActiveSrcEdit: TSourceEditorInterface; ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer; NewX, NewY, NewTopLine: integer;
   Flags: TJumpToCodePosFlags): TModalResult;
 begin

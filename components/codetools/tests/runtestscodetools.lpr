@@ -42,7 +42,7 @@ uses
   // BuildIntf
   MacroIntf,
   // CodeTools
-  CodeToolManager, CodeToolsConfig,
+  CodeToolManager, CodeToolsConfig, DefineTemplates,
   // (test suites)
   TestCfgScript, TestCTH2Pas, TestCTXMLFixFragments,
   TestBasicCodetools, TestCTRangeScan, TestPascalParser, TestMethodJumpTool,
@@ -81,8 +81,6 @@ type
   end;
 
 { Utils }
-
-// TODO: refactor this in Lazarus packages
 
 var
   MyMacroConf: TMacroConfig;
@@ -174,29 +172,6 @@ begin
   end;
 end;
 
-function ReadFPCPathsFromIdeOpts(aLazDir: string; out aFPCSrc, aFPCExe: string): boolean;
-begin
-  result := false;
-  aFPCSrc := '';
-  aFPCExe := '';
-  try
-    try
-      if LoadIdeEnvOpt(aLazDir) = nil then
-        exit;
-      // first check the existence of the original value, then read the parsed value
-      if EnvironmentOptions.FPCSourceDirectory <> '' then
-        aFPCSrc := EnvironmentOptions.GetParsedFPCSourceDirectory;
-      if EnvironmentOptions.CompilerFilename <> '' then
-        aFPCExe := EnvironmentOptions.GetParsedCompilerFilename;
-      result := true;
-    finally
-      FreeIdeEnvOpt;
-    end;
-  except
-    // ignore
-  end;
-end;
-
 { TCTTestRunner }
 
 procedure TCTTestRunner.DummyLog(Sender: TObject; S: string; var Handled: Boolean);
@@ -254,16 +229,17 @@ function TCTTestRunner.ParseOptions: Boolean;
 const
   cLazarusSrcDir = '..\..\..'; // only current installation
 var
-  lFPCSrc, lFPCExe: string;
+  aBaseDir: string;
 begin
   Result:=inherited ParseOptions;
 
-  // do not initialize anything and do not pollute the help output
-  if HasOption('h','help') then
+  // do not initialize anything and do not pollute the output
+  if HasOption('h','help') or HasOption('l', 'list') then
     exit;
 
   // CodeTools (tests) assume a working folder "components\codetools\tests"
-  SetCurrentDirUTF8(ExtractFileDir(ParamStrUTF8(0)));
+  aBaseDir:=ExtractFileDir(ParamStrUTF8(0));
+  SetCurrentDirUTF8(aBaseDir);
 
   if Options=nil then
     Options:=TCodeToolsOptions.Create;
@@ -280,31 +256,54 @@ begin
   if HasOption('machine') then
     FMachine := GetOptionValue('machine');
 
-  // assume that the test executable is always inside the Lazarus folder
+  // assume that the test executable is inside the Lazarus folder
   if Options.LazarusSrcDir='' then
-    Options.LazarusSrcDir:=ExpandFileNameUTF8(cLazarusSrcDir,ExtractFileDir(ParamStrUTF8(0)));
+    Options.LazarusSrcDir:=ExpandFileNameUTF8(cLazarusSrcDir,aBaseDir);
+  if not DirectoryExists(Options.LazarusSrcDir) then
+    raise Exception.Create('Missing LazarusSrcDir "'+Options.LazarusSrcDir+'"');
 
-  // read paths from Lazarus configuration if not specified
-  if (Options.FPCSrcDir='') or (Options.FPCPath='') then
-    ReadFPCPathsFromIdeOpts(Options.LazarusSrcDir, lFPCSrc, lFPCExe); // ignore error
+  CodeToolBoss.Init(Options,[ctopSetVariables,ctopLoadCaches]);
+
+  if (Options.FPCSrcDir='') or (Options.FPCPath='') then begin
+    // read FPC path an/or FPCSrcDir from Lazarus configuration
+    // Important: may contain macros like $(FPCVer), which queries codetools,
+    //            so this must be queried after ctopSetVariables
+    try
+      if LoadIdeEnvOpt(Options.LazarusSrcDir)<>nil then begin
+        // first check the existence of the original value, then read the parsed value
+        if (Options.FPCPath='') and (EnvironmentOptions.CompilerFilename <> '') then
+          // Note: may contain macros like $(LazarusDir)
+          Options.FPCPath := EnvironmentOptions.GetParsedCompilerFilename;
+
+        if (Options.FPCPath='') or not FileExists(Options.FPCPath) then begin
+          writeln('Error: The environment variable "PP" is not assigned. File not found: "',Options.FPCPath,'"');
+          halt(1);
+        end;
+
+        // now there is a fpc path, which can be used to resolve macros in FPCSrcDir
+
+        if (Options.FPCSrcDir='') and (EnvironmentOptions.FPCSourceDirectory <> '') then begin
+          // Note: may contain macros like $(FPCVer), which queries codetools
+          Options.FPCSrcDir := EnvironmentOptions.GetParsedFPCSourceDirectory;
+          CodeToolBoss.GlobalValues.Variables[ExternalMacroStart+'FPCSrcDir']:=Options.FPCSrcDir;
+        end;
+      end;
+    finally
+      FreeIdeEnvOpt;
+    end;
+  end;
 
   // FPC source path
-  if Options.FPCSrcDir='' then
-    Options.FPCSrcDir:=lFPCSrc;
   if Options.FPCSrcDir='' then begin
     writeln('Error: The environment variable "','FPCDIR','" is not assigned');
     halt(1);
   end;
-  if not DirectoryExistsUTF8(Options.FPCSrcDir) then begin
+  if not DirectoryExists(Options.FPCSrcDir) then begin
     writeln('Error: FPC source folder "',Options.FPCSrcDir,'" does not exist');
     halt(1);
   end;
 
-  // FPC file name (replace the current value obtained from the $PATH environment variable)
-  if (GetEnvironmentVariableUTF8('PP')='') and (lFPCExe<>'') then
-    Options.FPCPath:=lFPCExe;
-
-  CodeToolBoss.Init(Options);
+  CodeToolBoss.Init(Options,[ctopScanFPCSrc..ctopAddDefines]);
 
   // save the options and the FPC unit links results.
   Options.SaveToFile(ConfigFilename);
@@ -325,6 +324,7 @@ begin
   writeln('  --verbose           Display debug output of tests');
   writeln('  --submitter=<name>  Name of submitter of the test results');
   writeln('  --machine=<name>    Name of the machine the test runs on');
+  writeln('  ',fmparam,'=<filemask>, e.g. ''bug32252.pas'', or ''bug32*.pas''');
   writeln;
   writeln('Environment variables:');
   writeln('  LAZARUSDIR=<dir>    Path to Lazarus sources, default is the current IDE installation');

@@ -1055,7 +1055,7 @@ begin
       SetOfMyInt:=[];
       DefSetOfMyInt:=[2];
       MyChar:={%H-}TMyChar(0);
-      DefMyChar:=succ(MyChar);
+      DefMyChar:=low(MyChar);
       SetOfMyChar:=[];
       DefSetOfMyChar:=[#4];
       Event:=nil;

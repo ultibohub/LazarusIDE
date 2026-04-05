@@ -2153,7 +2153,7 @@ function TFindDeclarationTool.FindDeclaration(const CursorPos: TCodeXYPosition;
   NewPos: TCodeXYPosition; out NewTopLine, BlockTopLine,
   BlockBottomLine: integer): boolean;
 var
-  CleanCursorPos, iCleanCursorPos: integer;
+  CleanCursorPos: integer;
   CursorNode, ClassNode, iDefaultResultNode, iResultTypeNode: TCodeTreeNode;
   DirectSearch, SkipChecks, SearchForward, PredefinedResult: boolean;
 
@@ -7049,9 +7049,8 @@ var
     end;
   end;
 
-  function IdentifierIsDefaultSelfReference(p: integer;
-    CurrentNode: TCodeTreeNode;
-    CurrentTool: TFindDeclarationTool;
+  function IdentifierIsDefaultSelfReference(
+    aTool: TFindDeclarationTool; aNode: TCodeTreeNode; p: integer;
     FirstAttempt: boolean = false): boolean;
   var
     NewExprType: TExpressionType;
@@ -7060,40 +7059,41 @@ var
   begin
     Result:=false;
     TrueSelf:=false;
-    if not MaybeSelf(CurrentNode,p,@iDefaultResultNode,@iDefaultResultTypeNode,
+    if not aTool.MaybeSelf(aNode,p,@iDefaultResultNode,@iDefaultResultTypeNode,
       FirstAttempt) then exit;
     if iDefaultResultTypeNode=nil then exit;
-    if not CleanPosToCaret(p,TmpPos) then exit;
+    if not aTool.CleanPosToCaret(p,TmpPos) then exit;
 
-    Result:=FindDeclaration(TmpPos, DefaultFindSmartFlags, NewExprType, NewPos,
+    Result:=aTool.FindDeclaration(TmpPos, DefaultFindSmartFlags, NewExprType, NewPos,
       NewTopLine);
 
     Result:= TrueSelf; // set by FindDeclaration
   end;
 
-  function IdentifierIsDefaultResultReference(p: integer;
-    CurrentNode: TCodeTreeNode): boolean;
+  function IdentifierIsDefaultResultReference(
+    aTool: TFindDeclarationTool; aNode: TCodeTreeNode; p: integer): boolean;
   var
     NewExprType: TExpressionType;
     NewPos,TmpPos:TCodeXYPosition;
-    NewTopLine, FoundDeclarationAt: integer;
+    NewTopLine: integer;
   begin
     Result:=false;
     TruePredefinedResult:=false;
 
-    if not MaybePredefinedResult(CurrentNode,p,@DefaultResultNode,
+    if not aTool.MaybePredefinedResult(aNode,p,@DefaultResultNode,
         @DefaultResultTypeNode) then exit;
-    if not CleanPosToCaret(p,TmpPos) then exit;
+    if not aTool.CleanPosToCaret(p,TmpPos) then exit;
 
-    Result:=FindDeclaration(TmpPos, DefaultFindSmartFlags, NewExprType, NewPos,
+    Result:=aTool.FindDeclaration(TmpPos, DefaultFindSmartFlags, NewExprType, NewPos,
       NewTopLine);
 
     Result:= TruePredefinedResult; // set by FindDeclaration
 
-    if Result and (iDefaultResultNode<>nil) and // iDefaultResultNode set at first TruePredefinedResult
-    NodeIsFunction(DefaultResultNode.Parent) and
-    DefaultResultNode.Parent.HasAsParent(iDefaultResultNode.Parent) then
-    begin // nested function cannot use outer function's predefined Result
+    if Result and (iDefaultResultNode<>nil)  // iDefaultResultNode set at first TruePredefinedResult
+        and aTool.NodeIsFunction(DefaultResultNode.Parent)
+        and DefaultResultNode.Parent.HasAsParent(iDefaultResultNode.Parent) then
+    begin
+      // nested function cannot use outer function's predefined Result
       Result:=false;
     end;
   end;
@@ -7162,15 +7162,16 @@ var
     begin
       AddReference(IdentStartPos);
     end else
-    if (DeclarationTool=Self) and FirstPredefinedResult  and
-    (CursorNode.Desc=ctnBeginBlock) and
-    IdentifierIsDefaultResultReference(IdentStartPos,CursorNode) then begin
+    if (DeclarationTool=Self) and FirstPredefinedResult
+        and (CursorNode.Desc=ctnBeginBlock)
+        and IdentifierIsDefaultResultReference(Self,CursorNode,IdentStartPos) then
+    begin
       // predefined Result itself found, any occurence must be tested
       AddReference(IdentStartPos);
     end else
-    if (DeclarationTool=Self) and FirstTrueSelf  and
-    (CursorNode.Desc=ctnBeginBlock) and
-    IdentifierIsDefaultSelfReference(IdentStartPos,CursorNode, Self) then begin
+    if (DeclarationTool=Self) and FirstTrueSelf and (CursorNode.Desc=ctnBeginBlock)
+        and IdentifierIsDefaultSelfReference(Self,CursorNode,IdentStartPos) then
+    begin
       // predefined Self itself found, any occurence must be tested
       AddReference(IdentStartPos);
     end else
@@ -7446,14 +7447,13 @@ var
     FirstTrueSelf:=false;
     FirstPredefinedResult:=false;
 
-    if IdentifierIsDefaultSelfReference(CleanDeclCursorPos, DeclarationNode,
-      DeclarationTool, true)
+    if IdentifierIsDefaultSelfReference(DeclarationTool, DeclarationNode, CleanDeclCursorPos, true)
     then begin
       FirstTrueSelf:=true;
       Identifier:='Self';
       AddReference(CleanDeclCursorPos);
     end else
-    if IdentifierIsDefaultResultReference(CleanDeclCursorPos, DeclarationNode)
+    if IdentifierIsDefaultResultReference(DeclarationTool,DeclarationNode,CleanDeclCursorPos)
     then begin
       FirstPredefinedResult:=true;
       iDefaultResultNode:=DefaultResultNode;
@@ -11146,7 +11146,6 @@ var
   var
     ProcNode: TCodeTreeNode;
     Node: TCodeTreeNode;
-    OldFlags: TFindDeclarationFlags;
     ResultNode: TCodeTreeNode;
     IsStart: Boolean;
     Context: TFindContext;
@@ -11235,17 +11234,6 @@ var
         if Node<>nil then begin
           ExprType.Context.Tool:=Self;
           ExprType.Context.Node:=Node;
-          ExprType.Desc:=xtContext;
-          exit;
-        end;
-      end else if (StartNode.Desc=ctnVarDefinition) and
-        (StartNode.Parent<>nil) and (StartNode.Parent.Desc=ctnVarSection) and
-        (StartNode.FirstChild.Desc=ctnIdentifier) and
-        (StartNode.Parent.Parent.Desc = ctnProcedure)
-      then begin // maybe just a local declaration
-        if StartNode.FirstChild.FirstChild=nil then begin // generics excluded
-          ExprType.Context.Tool:=Self;
-          ExprType.Context.Node:=StartNode.FirstChild;
           ExprType.Desc:=xtContext;
           exit;
         end;
@@ -11571,11 +11559,6 @@ var
   end;
 
   procedure ResolvePoint;
-  var
-    CurDesc: TExpressionTypeDesc;
-    CurTool: TFindDeclarationTool;
-    CurNodeDesc: TCodeTreeNodeDesc;
-    CurNodeStart: Integer;
   begin
     // for example 'A.B'
     if (ExprType.Context.Node=nil) then
@@ -11590,47 +11573,28 @@ var
       ReadNextAtom;
       RaiseIdentExpected(20191003163224);
     end;
-    CurDesc := ExprType.Desc;
-    CurTool := ExprType.Context.Tool;
-    CurNodeDesc := ExprType.Context.Node.Desc;
-    CurNodeStart := ExprType.Context.Node.StartPos-1;
-    repeat
-      if (CurDesc = ExprType.Desc) and
-         (CurTool = ExprType.Context.Tool) and
-         (CurNodeDesc = ExprType.Context.Node.Desc) and
-         (CurNodeStart = ExprType.Context.Node.StartPos)
-      then
-        break;
-      CurDesc := ExprType.Desc;
-      CurTool := ExprType.Context.Tool;
-      CurNodeDesc := ExprType.Context.Node.Desc;
-      CurNodeStart := ExprType.Context.Node.StartPos;
 
-      ResolveChildren;
-      if ExprType.Desc in xtAllTypeHelperTypes then begin
-        // Lazarus supports record helpers for basic types (string) as well (with TYPEHELPERS modeswitch!).
-        break;
-      end else if (ExprType.Context.Node=nil) then begin
-        MoveCursorToCleanPos(CurAtom.StartPos);
-        ReadNextAtom;
-        RaiseIllegalQualifierFound(20191003163056);
-        break;
-      end else if ExprType.Context.Node.Desc in AllPointContexts then begin
-        // ok, allowed
-        break;
-      end else if (ExprType.Context.Node.Desc=ctnEnumIdentifier) and
-        (ExprType.Context.Node.Parent.Desc=ctnEnumerationType) then begin
-        // enum can have a helper to type so "enum1. " is ok
-        break;
-      end
-      else begin
-        // not allowed
-        //debugln(['ResolvePoint ',ExprTypeToString(ExprType)]);
-        MoveCursorToCleanPos(CurAtom.StartPos);
-        ReadNextAtom;
-        RaiseIllegalQualifierFound(20191003163059);
-      end;
-    until False;
+    ResolveChildren;
+
+    if ExprType.Desc in xtAllTypeHelperTypes then begin
+      // helper type
+    end else if (ExprType.Context.Node=nil) then begin
+      MoveCursorToCleanPos(CurAtom.StartPos);
+      ReadNextAtom;
+      RaiseIllegalQualifierFound(20191003163056);
+    end else if ExprType.Context.Node.Desc in AllPointContexts then begin
+      // ok, allowed
+    end else if (ExprType.Context.Node.Desc=ctnEnumIdentifier) and
+      (ExprType.Context.Node.Parent.Desc=ctnEnumerationType) then begin
+      // enum can have a helper to type so "enum1. " is ok
+    end
+    else begin
+      // not allowed
+      //debugln(['ResolvePoint ',ExprTypeToString(ExprType)]);
+      MoveCursorToCleanPos(CurAtom.StartPos);
+      ReadNextAtom;
+      RaiseIllegalQualifierFound(20191003163059);
+    end;
   end;
 
   procedure ResolveAs;
@@ -14809,7 +14773,7 @@ var
   EdgedBracketsStartPos : integer;
   SetNode, ClassNode, ExprClassNode: TCodeTreeNode;
   SetTool: TFindDeclarationTool;
-  AliasType: TFindContext;
+  AliasType, ProcContext: TFindContext;
 begin
   //debugln(['TFindDeclarationTool.FindTermTypeAsString START']);
   {$IFDEF CheckNodeTool}CheckNodeTool(Params.ContextNode);{$ENDIF}
@@ -14848,6 +14812,8 @@ begin
     end;
   end;
 
+  ProcContext:=CleanFindContext;
+
   // check if TermPos is @Name and a pointer (= ^Name) can be found
   if IsTermNamedPointer(TermPos,ExprType) then begin
     // pointer type
@@ -14858,6 +14824,21 @@ begin
                   +Params.Flags*[fdfOverrideStringTypesWithFirstParamType];
     ExprType:=FindExpressionResultType(Params,TermPos.StartPos,TermPos.EndPos,
                                        @AliasType);
+
+    if (Params.NewNode<>nil) and (Params.NewNode.Desc=ctnProcedure)  then begin
+      // a type (in parameters or result) known at proc header can be redeclared,
+      // needed checking if not
+
+      ProcContext.Node:=Params.NewNode;
+      ProcContext.Tool:=Params.NewCodeTool;
+
+      DebugLn(['proc header start = ',Params.NewNode.FirstChild.StartPos]);
+      if AliasType.Node<>nil then
+      DebugLn(['alias node desc = ', AliasType.Node.Desc,' ',
+        GetIdentifier(@AliasType.Tool.Src[AliasType.Node.FirstChild.StartPos],true,true)]);
+    end;
+
+
     if (ExprType.Desc=xtContext) and
     (ExprType.Context.Node.Desc=ctnProcedureType) and
     (ExprType.Context.Node.FirstChild.FirstChild<>nil) and
@@ -14870,6 +14851,8 @@ begin
 
       AliasType.Node:=ExprType.Context.Node.FirstChild.FirstChild;
     end;
+
+
   end;
 
   if AliasType.Node<>nil then begin

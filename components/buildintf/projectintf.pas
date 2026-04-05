@@ -54,6 +54,29 @@ const
   ProjDescNameEmpty = 'Empty';
 
 type
+  TLazProjectFile = class;
+
+  { TLazUnitEditorInfo }
+{
+  TLazUnitEditorInfo = class
+  private
+  protected
+    FUnitInfo: TLazProjectFile;
+  public
+    constructor Create(aUnitInfo: TLazProjectFile);
+  end;
+}
+  { TUnitEditorInfoList }
+{
+  TLazUnitEditorInfoList = class
+  private
+  protected
+    FList: TFPList;
+    FUnitInfo: TLazProjectFile;
+  public
+    constructor Create(aUnitInfo: TLazProjectFile);
+  end;
+}
   { TLazProjectFile }
 
   TLazProjectFile = class(TIDEOwnedFile)
@@ -66,7 +89,8 @@ type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure SetSourceText(const SourceText: string; Beautify: boolean = false); virtual; abstract; // sets corresponding codetool buffer and source editor, clears undo history
+    // sets corresponding codetool buffer and source editor, clears undo history
+    procedure SetSourceText(const SourceText: string; Beautify: boolean = false); virtual; abstract;
     function GetSourceText: string; virtual; abstract;
     procedure ClearModifieds; virtual; abstract;
   public
@@ -1741,6 +1765,17 @@ begin
   LUIncreaseChangeStamp(FSessionChangeStamp);
 end;
 
+{
+constructor TLazUnitEditorInfo.Create(aUnitInfo: TLazProjectFile);
+begin
+  FUnitInfo:=aUnitInfo;
+end;
+
+constructor TLazUnitEditorInfoList.Create(aUnitInfo: TLazProjectFile);
+begin
+  FUnitInfo:=aUnitInfo;
+end;
+}
 { TLazProjectFile }
 
 procedure TLazProjectFile.SetIsPartOfProject(const AValue: boolean);

@@ -82,7 +82,7 @@ uses
   Project, ProjectIcon, ProjectUserResources,
   // IDE
   LazarusIDEStrConsts, MainBase, MainBar, BuildManager, AddToProjectDlg, EnvGuiOptions,
-  ProjPackChecks, ProjPackEditing, ProjPackFilePropGui,
+  ProjPackChecks, ProjPackEditing, ProjPackFilePropGui, EditableProject,
   AddPkgDependencyDlg, AddFPMakeDependencyDlg;
 
 const
@@ -541,6 +541,11 @@ begin
   AddIDEMessage(Urgency, Msg);
 end;
 
+function HasDesigner(APersistent: TPersistent): boolean;
+begin
+  Result:=Assigned(FindRootDesigner(APersistent));
+end;
+
 { TProjectInspectorForm }
 
 // inline
@@ -766,7 +771,7 @@ begin
   if NewUnit<>nil then begin
     if NewUnit.IsPartOfProject then Exit(mrIgnore);
   end else begin
-    NewUnit:=TUnitInfo.Create(nil);
+    NewUnit:=TEditableUnitInfo.Create(nil);
     NewUnit.Filename:=aFilename;
     if LazProject.AutoCreateForms and FilenameIsPascalUnit(NewUnit.Filename)
     and (pfMainUnitHasCreateFormStatements in LazProject.Flags) then
@@ -2156,6 +2161,7 @@ begin
 end;
 
 initialization
+  Project.OnHasDesigner := @HasDesigner;
   ProjectIcon.OnLoadProjectMainIcon := @LoadProjectMainIcon2Stream;
   ProjectUserResources.OnAddIDEMessage := @AddProjectIDEMessage;
   RegisterIDEOptionsGroup(GroupProject, TProjectIDEOptions);

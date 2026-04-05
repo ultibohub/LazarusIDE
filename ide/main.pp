@@ -175,7 +175,7 @@ uses
   FindRenameIdentifier, AbstractsMethodsDlg, EmptyMethodsDlg, UnusedUnitsDlg,
   UseUnitDlg, FindOverloadsDlg, EditorFileManager, CleanDirDlg, CodeContextForm,
   AboutFrm, CompatibilityRestrictions, RestrictionBrowser, ProjectWizardDlg,
-  CodeExplOpts, EditorMacroListViewer,
+  CodeExplOpts, EditorMacroListViewer, EditableProject,
   SourceFileManager, EditorToolbarStatic, IDEInstances,
   WordCompletion, EnvGuiOptions, EnvDebuggerOptions, IdeDebuggerValueFormatter, ProjectDebugLink,
   // main ide
@@ -675,7 +675,7 @@ type
     FFormsForSetupHelpButton: TFPList; // TCustomForm list to search for a help button in idle and assigning it handler
     FDesignerToBeFreed: TFilenameToStringTree; // form file names to be freed on idle.
     FComponentAddedDesigner: TDesigner; // Designer and unit where components were added.
-    FComponentAddedUnit: TUnitInfo;
+    FComponentAddedUnit: TEditableUnitInfo;
     FRemoteControlTimer: TTimer;
     FRemoteControlFileAge: int64;
     FRenamingComponents: TFPList; // list of TComponents currently renaming
@@ -882,27 +882,27 @@ type
                                 StartPos, {%H-}EndPos: integer): boolean;
 
     // useful information methods
-    procedure GetUnit(SourceEditor: TSourceEditor; out UnitInfo: TUnitInfo);
+    procedure GetUnit(SourceEditor: TSourceEditor; out UnitInfo: TEditableUnitInfo);
     procedure GetCurrentUnit(out ActiveSourceEditor: TSourceEditor;
-                             out ActiveUnitInfo: TUnitInfo); override;
-    procedure GetDesignerUnit(ADesigner: TDesigner;
-          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo); override;
+                             out ActiveUnitInfo: TEditableUnitInfo); override;
+    procedure GetDesignerUnit(ADesigner: TDesigner; out ActiveSourceEditor: TSourceEditor;
+                              out ActiveUnitInfo: TEditableUnitInfo); override;
     function GetProjectFileForProjectEditor(AEditor: TSourceEditorInterface): TLazProjectFile; override;
     function GetDesignerForProjectEditor(AEditor: TSourceEditorInterface;
                               LoadForm: boolean): TIDesigner; override;
     function GetDesignerWithProjectFile(AFile: TLazProjectFile;
                              LoadForm: boolean): TIDesigner; override;
-    function GetDesignerFormOfSource(AnUnitInfo: TUnitInfo;
+    function GetDesignerFormOfSource(AnUnitInfo: TEditableUnitInfo;
                                      LoadForm: boolean): TCustomForm;
     function GetUnitFileOfLFM(LFMFilename: string): string;
     function GetProjectFileWithRootComponent(AComponent: TComponent): TLazProjectFile; override;
     function GetProjectFileWithDesigner(ADesigner: TIDesigner): TLazProjectFile; override;
     procedure GetObjectInspectorUnit(
-          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo); override;
+          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo); override;
     procedure GetUnitWithForm(AForm: TCustomForm;
-          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo); override;
+          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo); override;
     procedure GetUnitWithPersistent(APersistent: TPersistent;
-          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo); override;
+          out ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo); override;
     function GetAncestorUnit(AnUnitInfo: TUnitInfo): TUnitInfo;
     function GetAncestorLookupRoot(AnUnitInfo: TUnitInfo): TComponent;
     procedure UpdateSaveMenuItemsAndButtons(UpdateSaveAll: boolean); override;
@@ -943,7 +943,7 @@ type
                                Flags: TJumpToCodePosFlags = [jfFocusEditor]): TModalResult; override;
     function DoJumpToCodePosition(
                         ActiveSrcEdit: TSourceEditorInterface;
-                        ActiveUnitInfo: TUnitInfo;
+                        ActiveUnitInfo: TEditableUnitInfo;
                         NewSource: TCodeBuffer; NewX, NewY, NewTopLine,
                         BlockTopLine, BlockBottomLine: integer;
                         Flags: TJumpToCodePosFlags = [jfFocusEditor]): TModalResult; override;
@@ -2077,7 +2077,7 @@ end;
 procedure TMainIDE.PropHookGetMethods(TypeData: PTypeData; Proc: TGetStrProc);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[ctfSwitchToFormSource])
@@ -2096,7 +2096,7 @@ procedure TMainIDE.PropHookGetCompatibleMethods(InstProp: PInstProp;
   const Proc: TGetStrProc);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   CTResult: Boolean;
 begin
   if (InstProp^.Instance=nil) or (InstProp^.PropInfo=nil) then begin
@@ -2128,7 +2128,7 @@ function TMainIDE.PropHookCompatibleMethodExists(const AMethodName: String;
   IdentIsMethod: boolean): boolean;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   if (InstProp^.Instance=nil) or (InstProp^.PropInfo=nil) then begin
     debugln(['TMainIDE.PropHookCompatibleMethodExists not a TPersistent property']);
@@ -3382,7 +3382,7 @@ var
   AllEditorMask: String;
   AllMask: String;
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   OpenDialog:=IDEOpenDialogClass.Create(nil);
   try
@@ -3467,9 +3467,9 @@ end;
 procedure TMainIDE.mnuOpenFileAtCursorClicked(Sender: TObject);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
-  GetCurrentUnit(ActiveSrcEdit,ActiveUnitInfo);
+  GetCurrentUnit(ActiveSrcEdit, ActiveUnitInfo);
   OpenFileAtCursor(ActiveSrcEdit, ActiveUnitInfo);
 end;
 
@@ -3514,7 +3514,7 @@ end;
 procedure TMainIDE.mnuExportHtml(Sender: TObject);
 var
   SrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   Filename: string;
   SaveDialog: TSaveDialog;
 begin
@@ -3659,7 +3659,7 @@ procedure TMainIDE.ProcessIDECommand(Sender: TObject;
 
 var
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   IDECmd: TIDECommand;
   s: String;
 begin
@@ -3881,7 +3881,7 @@ procedure TMainIDE.SrcNoteBookClickLink(Sender: TObject;
   Button: TMouseButton; Shift: TShiftstate; X, Y: Integer);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(ActiveSrcEdit,ActiveUnitInfo);
   if ActiveSrcEdit=nil then exit;
@@ -4098,7 +4098,7 @@ end;
 procedure TMainIDE.UpdateFileCommands(Sender: TObject);
 var
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(ASrcEdit,AnUnitInfo);
   if not UpdateFileCommandsStamp.Changed(ASrcEdit) then
@@ -4119,7 +4119,7 @@ end;
 procedure TMainIDE.UpdateEditorCommands(Sender: TObject);
 var
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   Editable, SelEditable: Boolean;
   SelAvail, DesignerCanCopy: Boolean;
   SrcEditorActive, DsgEditorActive: Boolean;
@@ -4274,7 +4274,7 @@ end;
 procedure TMainIDE.UpdateEditorTabCommands(Sender: TObject);
 var
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 
   {$IFnDEF SingleSrcWindow}
   function ToWindow(WinForFind: Boolean = False): Boolean;
@@ -4340,7 +4340,7 @@ end;
 procedure TMainIDE.UpdateProjectCommands(Sender: TObject);
 var
   ASrcEdit: TSourceEditor;
-  AUnitInfo: TUnitInfo;
+  AUnitInfo: TEditableUnitInfo;
   ACmd: TIDECommand;
   AHint: string;
 begin
@@ -4371,7 +4371,7 @@ end;
 procedure TMainIDE.UpdatePackageCommands(Sender: TObject);
 var
   ASrcEdit: TSourceEditor;
-  AUnitInfo: TUnitInfo;
+  AUnitInfo: TEditableUnitInfo;
   PkgFile: TPkgFile;
   CanOpenPkgOfFile, CanAddCurFile: Boolean;
   AllowPackages: Boolean; //Ultibo
@@ -4806,7 +4806,7 @@ end;
 procedure TMainIDE.mnuRunProjectClicked(Sender: TObject);
 var
   SrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(SrcEdit,AnUnitInfo);
   if (AnUnitInfo<>nil) and AnUnitInfo.RunFileIfActive then
@@ -4907,7 +4907,7 @@ end;
 procedure TMainIDE.mnuRunParametersClicked(Sender: TObject);
 begin
   if Project1=nil then exit;
-  if ShowRunParamsOptsDlg(Project1.RunParameterOptions, Project1.HistoryLists)=mrOK then
+  if ShowRunParamsOptsDlg(Project1.RunParameterOptions, EditableProject1.HistoryLists)=mrOK then
   begin
     Project1.Modified:=true;
     Project1.SessionModified:=true;
@@ -4969,7 +4969,7 @@ end;
 procedure TMainIDE.mnuToolCheckLFMClicked(Sender: TObject);
 var
   LFMSrcEdit: TSourceEditor;
-  LFMUnitInfo: TUnitInfo;
+  LFMUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(LFMSrcEdit,LFMUnitInfo);
   CheckLFMInEditor(LFMUnitInfo, false);
@@ -5632,7 +5632,7 @@ var
     UnitCode, LFMCode: TCodeBuffer;
     ModalResult: TModalResult;
     UnitFilename: String;
-    RefUnitInfo: TUnitInfo;
+    RefUnitInfo: TEditableUnitInfo;
   begin
     Result:=mrCancel;
 
@@ -5656,10 +5656,10 @@ var
       exit(mrCancel);
     end;
 
-    RefUnitInfo:=Project1.UnitInfoWithFilename(UnitFilename);
+    RefUnitInfo:=TEditableUnitInfo(Project1.UnitInfoWithFilename(UnitFilename));
     // create unit info
     if RefUnitInfo=nil then begin
-      RefUnitInfo:=TUnitInfo.Create(nil);
+      RefUnitInfo:=TEditableUnitInfo.Create(nil);
       RefUnitInfo.Filename:=UnitFilename;
       Project1.AddFile(RefUnitInfo,false);
     end;
@@ -5838,7 +5838,7 @@ end;
 procedure TMainIDE.UpdateSaveMenuItemsAndButtons(UpdateSaveAll: boolean);
 var
   SrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(SrcEdit,AnUnitInfo);
   // menu items
@@ -5874,7 +5874,7 @@ begin
   begin
     DesignerForm := FormEditor1.GetDesignerForm(AUnitInfo.Component);
     if DesignerForm <> nil then
-      AUnitInfo.ComponentState := GetWindowState(DesignerForm);
+      TEditableUnitInfo(AUnitInfo).ComponentState := GetWindowState(DesignerForm);
   end;
 end;
 
@@ -6080,7 +6080,7 @@ const
 var
   UnitList: TViewUnitEntries;
   AForm: TCustomForm;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   UEntry: TViewUnitsEntry;
 begin
   if Project1=nil then exit(mrCancel);
@@ -6094,7 +6094,7 @@ begin
       for UEntry in UnitList do
       begin
         if not (vufSelected in UEntry.Flags) then continue;
-        AnUnitInfo := Project1.Units[UEntry.ID];
+        AnUnitInfo := EditableProject1.Units[UEntry.ID];
         if AnUnitInfo.OpenEditorInfoCount > 0 then
         begin
           SourceEditorManager.ActiveEditor :=
@@ -6124,8 +6124,8 @@ begin
 end;
 
 procedure TMainIDE.DoViewUnitInfo;
-var ActiveSrcEdit:TSourceEditor;
-  ActiveUnitInfo:TUnitInfo;
+var ActiveSrcEdit: TSourceEditor;
+  ActiveUnitInfo: TEditableUnitInfo;
   ShortUnitName, AFilename, FileDir: string;
   ClearIncludedByFile: boolean;
   DlgResult: TModalResult;
@@ -6480,7 +6480,7 @@ end;
 function TMainIDE.DoOpenFileAndJumpToIdentifier(const AFilename,
   AnIdentifier: string; PageIndex, WindowIndex: integer; Flags: TOpenFlags): TModalResult;
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   ActiveSrcEdit: TSourceEditor;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
@@ -6506,7 +6506,7 @@ function TMainIDE.DoOpenFileAndJumpToPos(const AFilename: string;
   BlockBottomLine: integer; PageIndex, WindowIndex: integer; Flags: TOpenFlags
   ): TModalResult;
 var
-  ActiveUnitInfo, OldActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo, OldActiveUnitInfo: TEditableUnitInfo;
   ActiveSrcEdit, OldActiveSrcEdit: TSourceEditor;
 begin
   GetCurrentUnit(OldActiveSrcEdit,OldActiveUnitInfo);
@@ -6526,11 +6526,11 @@ end;
 
 function TMainIDE.DoRevertEditorFile(const Filename: string): TModalResult;
 var
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   Result:=mrCancel;
   if (Project1=nil) then exit;
-  AnUnitInfo:=Project1.UnitInfoWithFilename(Filename,[]);
+  AnUnitInfo:=TEditableUnitInfo(Project1.UnitInfoWithFilename(Filename,[]));
   if (AnUnitInfo<>nil) and (AnUnitInfo.OpenEditorInfoCount > 0) then
     Result:=OpenEditorFile(AnUnitInfo.Filename,
                            AnUnitInfo.OpenEditorInfo[0].PageIndex,
@@ -6543,7 +6543,7 @@ function TMainIDE.CreateProjectObject(ProjectDesc,
 var
   NeedsEndUpdate, ok: Boolean;
 begin
-  Result:=TProject.Create(ProjectDesc);
+  Result:=TEditableProject.Create(ProjectDesc);
   // custom initialization
   Result.BeginUpdate(true);
   NeedsEndUpdate:=true;
@@ -6555,7 +6555,7 @@ begin
       Result.Free;
       Result:=nil;
       if FallbackProjectDesc=nil then exit;
-      Result:=TProject.Create(FallbackProjectDesc);
+      Result:=TEditableProject.Create(FallbackProjectDesc);
       Result.BeginUpdate(true);
       NeedsEndUpdate:=true;
       FallbackProjectDesc.InitProject(Result);
@@ -7457,7 +7457,7 @@ end;
 procedure TMainIDE.DoCompile;
 var
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(ASrcEdit,AnUnitInfo);
   if Assigned(AnUnitInfo) and AnUnitInfo.BuildFileIfActive then
@@ -8335,7 +8335,7 @@ end;
 function TMainIDE.DoBuildFile(ShowAbort: Boolean; Filename: string): TModalResult;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   DirectiveList: TStringList;
   BuildWorkingDir: String;
   BuildCommand: String;
@@ -8437,7 +8437,7 @@ end;
 function TMainIDE.DoRunFile(Filename: string): TModalResult;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   FirstLine: String;
   HasShebang: Boolean;
   RunFlags: TIDEDirRunFlags;
@@ -8555,7 +8555,7 @@ end;
 function TMainIDE.DoConfigureBuildFile: TModalResult;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   DirectiveList: TStringList;
   CodeResult: Boolean;
   BuildFileDialog: TBuildFileDialog;
@@ -8702,7 +8702,7 @@ end;
 
 function TMainIDE.PrepareForCompile: TModalResult;
 var
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   i: Integer;
 begin
   Result:=mrOk;
@@ -8723,8 +8723,8 @@ begin
     MainBuildBoss.RescanCompilerDefines(false,false,false,false);
 
   // Let a user fix any invalid LFM files before compiling
-  for i:=0 to Project1.AllEditorsInfoCount-1 do begin
-    AnUnitInfo:=Project1.AllEditorsInfo[i].UnitInfo;
+  for i:=0 to EditableProject1.AllEditorsInfoCount-1 do begin
+    AnUnitInfo:=EditableProject1.AllEditorsInfo[i].UnitInfo;
     if AnUnitInfo.HasErrorInLFM then begin
       Result:=LoadLFM(AnUnitInfo, [ofOnlyIfExists], []);
       if Result<>mrOk then exit;
@@ -8737,8 +8737,8 @@ end;
 
 function TMainIDE.DoCheckSyntax: TModalResult;
 var
-  ActiveUnitInfo:TUnitInfo;
-  ActiveSrcEdit:TSourceEditor;
+  ActiveUnitInfo: TEditableUnitInfo;
+  ActiveSrcEdit: TSourceEditor;
   NewCode: TCodeBuffer;
   NewX, NewY, NewTopLine: integer;
   ErrorMsg: string;
@@ -8769,26 +8769,26 @@ end;
 
 //-----------------------------------------------------------------------------
 
-procedure TMainIDE.GetUnit(SourceEditor: TSourceEditor; out UnitInfo: TUnitInfo);
+procedure TMainIDE.GetUnit(SourceEditor: TSourceEditor; out UnitInfo: TEditableUnitInfo);
 begin
   if SourceEditor=nil then
     UnitInfo:=nil
   else
-    UnitInfo := Project1.UnitWithEditorComponent(SourceEditor);
+    UnitInfo := EditableProject1.UnitWithEditorComponent(SourceEditor);
 end;
 
-procedure TMainIDE.GetCurrentUnit(out ActiveSourceEditor:TSourceEditor;
-  out ActiveUnitInfo:TUnitInfo);
+procedure TMainIDE.GetCurrentUnit(out ActiveSourceEditor: TSourceEditor;
+  out ActiveUnitInfo: TEditableUnitInfo);
 begin
   ActiveSourceEditor := SourceEditorManager.ActiveEditor;
   if ActiveSourceEditor=nil then
     ActiveUnitInfo:=nil
   else
-    ActiveUnitInfo := Project1.UnitWithEditorComponent(ActiveSourceEditor);
+    ActiveUnitInfo := EditableProject1.UnitWithEditorComponent(ActiveSourceEditor);
 end;
 
 procedure TMainIDE.GetDesignerUnit(ADesigner: TDesigner; out
-  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo);
+  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo);
 begin
   ActiveSourceEditor:=nil;
   ActiveUnitInfo:=nil;
@@ -8800,7 +8800,7 @@ end;
 function TMainIDE.GetProjectFileForProjectEditor(AEditor: TSourceEditorInterface
   ): TLazProjectFile;
 begin
-  Result := Project1.UnitWithEditorComponent(AEditor);
+  Result := EditableProject1.UnitWithEditorComponent(AEditor);
 end;
 
 function TMainIDE.GetDesignerForProjectEditor(AEditor: TSourceEditorInterface;
@@ -8808,9 +8808,9 @@ function TMainIDE.GetDesignerForProjectEditor(AEditor: TSourceEditorInterface;
 var
   AProjectFile: TLazProjectFile;
 begin
-  AProjectFile := Project1.UnitWithEditorComponent(AEditor);
+  AProjectFile := EditableProject1.UnitWithEditorComponent(AEditor);
   if AProjectFile <> nil then
-    Result := GetDesignerWithProjectFile(Project1.UnitWithEditorComponent(AEditor),LoadForm)
+    Result := GetDesignerWithProjectFile(AProjectFile, LoadForm)
   else
     Result := nil;
 end;
@@ -8818,10 +8818,10 @@ end;
 function TMainIDE.GetDesignerWithProjectFile(AFile: TLazProjectFile;
   LoadForm: boolean): TIDesigner;
 var
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   AForm: TCustomForm;
 begin
-  AnUnitInfo:=AFile as TUnitInfo;
+  AnUnitInfo:=AFile as TEditableUnitInfo;
   AForm:=GetDesignerFormOfSource(AnUnitInfo,LoadForm);
   if AForm<>nil then
     Result:=AForm.Designer
@@ -8830,7 +8830,7 @@ begin
 end;
 
 procedure TMainIDE.GetObjectInspectorUnit(out
-  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo);
+  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo);
 begin
   ActiveSourceEditor:=nil;
   ActiveUnitInfo:=nil;
@@ -8842,7 +8842,7 @@ begin
 end;
 
 procedure TMainIDE.GetUnitWithForm(AForm: TCustomForm; out
-  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo);
+  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo);
 var
   AComponent: TComponent;
 begin
@@ -8859,7 +8859,7 @@ begin
 end;
 
 procedure TMainIDE.GetUnitWithPersistent(APersistent: TPersistent; out
-  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TUnitInfo);
+  ActiveSourceEditor: TSourceEditor; out ActiveUnitInfo: TEditableUnitInfo);
 begin
   ActiveSourceEditor:=nil;
   ActiveUnitInfo:=nil;
@@ -8879,7 +8879,7 @@ var
   BufferList, AIgnoreList, LFMLoaded: TFPList; // list of TCodeBuffer
   APackageList: TStringList; // list of alternative lpkfilename and TLazPackage
   i: integer;
-  CurUnit: TUnitInfo;
+  CurUnit: TEditableUnitInfo;
   CurCode: TCodeBuffer;
   CurPackage: TEditablePackage;
   Reload: TModalResult;
@@ -8930,7 +8930,7 @@ begin
       for i:=0 to BufferList.Count-1 do begin
         CurCode:=TCodeBuffer(BufferList[i]);
 
-        CurUnit:=Project1.UnitInfoWithFilename(CurCode.Filename);
+        CurUnit:=TEditableUnitInfo(Project1.UnitInfoWithFilename(CurCode.Filename));
         if CurUnit=nil then continue;
 
         if (Reload=mrOk)
@@ -8970,7 +8970,7 @@ begin
       for i:=0 to BufferList.Count-1 do begin
         CurCode:=TCodeBuffer(BufferList[i]);
         if LFMLoaded.IndexOf(CurCode)>=0 then continue;
-        CurUnit:=Project1.UnitInfoWithLFMFilename(CurCode.Filename);
+        CurUnit:=TEditableUnitInfo(Project1.UnitInfoWithLFMFilename(CurCode.Filename));
         if (CurUnit=nil) or (CurUnit.Component=nil) then continue;
         // designer form
         if (Reload=mrOk)
@@ -9151,7 +9151,7 @@ end;
 
 procedure TMainIDE.CloseUnmodifiedDesigners;
 var
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   if Project1=nil then exit;
   for TLazProjectFile(AnUnitInfo) in Project1.UnitsWithComponent do begin
@@ -9592,7 +9592,7 @@ end;
 procedure TMainIDE.DoShowDesignerFormOfSrc(AEditor: TSourceEditorInterface;
   out AForm: TCustomForm);
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   UnitCodeBuf: TCodeBuffer;
   aFilename: String;
 begin
@@ -9610,7 +9610,7 @@ begin
       UnitCodeBuf:=CodeToolBoss.GetMainCode(ActiveUnitInfo.Source);
       if (UnitCodeBuf<>nil) and (UnitCodeBuf<>ActiveUnitInfo.Source) then begin
         // unit found
-        ActiveUnitInfo:=Project1.ProjectUnitWithFilename(UnitCodeBuf.Filename);
+        ActiveUnitInfo:=TEditableUnitInfo(Project1.ProjectUnitWithFilename(UnitCodeBuf.Filename));
         if (ActiveUnitInfo=nil) or (ActiveUnitInfo.OpenEditorInfoCount=0) then begin
           // open unit in source editor and load form
           DoOpenEditorFile(UnitCodeBuf.Filename,-1,-1,
@@ -9646,7 +9646,7 @@ procedure TMainIDE.DoShowMethod(AEditor: TSourceEditorInterface;
   const AMethodName: String);
 var
   //ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
   AClassName: string;
@@ -9671,7 +9671,7 @@ begin
   if IsValidIdentPair(AMethodName,AnInheritedClassName,AInheritedMethodName)
   then begin
     AEditor:=nil;
-    ActiveUnitInfo:=Project1.UnitWithComponentClassName(AnInheritedClassName);
+    ActiveUnitInfo:=TEditableUnitInfo(Project1.UnitWithComponentClassName(AnInheritedClassName));
     if ActiveUnitInfo=nil then begin
       IDEMessageDialog(lisMethodClassNotFound,
         Format(lisClassOfMethodNotFound, ['"', AnInheritedClassName, '"', '"',
@@ -9698,7 +9698,7 @@ end;
 
 procedure TMainIDE.DoShowSourceOfActiveDesignerForm;
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   ActiveSourceEditor: TSourceEditor;
 begin
   if SourceEditorManager.SourceEditorCount = 0 then exit;
@@ -9736,7 +9736,7 @@ begin
     if (ifsPartOfProject in NeededFlags) and AnUnitInfo.IsPartOfProject then
       Include(ResultFlags,ifsPartOfProject);
     // open in editor
-    if (ifsOpenInEditor in NeededFlags) and (AnUnitInfo.OpenEditorInfoCount > 0) then
+    if (ifsOpenInEditor in NeededFlags) and AnUnitInfo.HasOpenEditors then
       Include(ResultFlags,ifsOpenInEditor);
   end else if FileExistsUTF8(AFilename) then begin
     // readonly
@@ -9753,7 +9753,7 @@ var
   TopLine: integer;
   SrcEdit: TSourceEditor;
   OpenFlags: TOpenFlags;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   AnEditorInfo: TUnitEditorInfo;
 begin
   Result:=false;
@@ -9798,7 +9798,7 @@ begin
     // open the file in the source editor
     AnUnitInfo := nil;
     if Project1<>nil then
-      AnUnitInfo:=Project1.UnitInfoWithFilename(SearchedFilename);
+      AnUnitInfo:=TEditableUnitInfo(Project1.UnitInfoWithFilename(SearchedFilename));
     AnEditorInfo := nil;
     if AnUnitInfo <> nil then
       AnEditorInfo := GetAvailableUnitEditorInfo(AnUnitInfo, LogCaretXY);
@@ -9860,7 +9860,7 @@ var
   LogCaretXY, JumpPointCaretXY: TPoint;
   OpenFlags: TOpenFlags;
   SrcEdit, JumpPointEditor: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   AnEditorInfo: TUnitEditorInfo;
   JumpPointTopLine: Integer;
 begin
@@ -9886,7 +9886,7 @@ begin
       // open the file in the source editor
       AnUnitInfo := nil;
       if Project1<>nil then
-        AnUnitInfo := Project1.UnitInfoWithFilename(SearchedFilename);
+        AnUnitInfo := TEditableUnitInfo(Project1.UnitInfoWithFilename(SearchedFilename));
       AnEditorInfo := nil;
       if AnUnitInfo <> nil then
         AnEditorInfo := GetAvailableUnitEditorInfo(AnUnitInfo, LogCaretXY);
@@ -10128,10 +10128,10 @@ procedure TMainIDE.DesignerModified(Sender: TObject);
 var
   SrcEdit: TSourceEditor;
   CurDesigner: TDesigner absolute Sender;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   if dfDestroyingForm in CurDesigner.Flags then Exit;
-  AnUnitInfo := Project1.UnitWithComponent(CurDesigner.LookupRoot);
+  AnUnitInfo := TEditableUnitInfo(Project1.UnitWithComponent(CurDesigner.LookupRoot));
   if AnUnitInfo <> nil then
   begin
     AnUnitInfo.Modified := True;
@@ -10204,7 +10204,7 @@ end;
 procedure TMainIDE.CodeExplorerGetDirectivesTree(Sender: TObject;
   var ADirectivesTool: TDirectivesTool);
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   ActiveSrcEdit: TSourceEditor;
 begin
   ADirectivesTool:=nil;
@@ -10228,7 +10228,7 @@ procedure TMainIDE.CodeToolNeedsExternalChanges(Manager: TCodeToolManager;
   var Abort: boolean);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   if Manager<>CodeToolBoss then exit;
   ActiveSrcEdit:=nil;
@@ -10313,7 +10313,7 @@ end;
 function TMainIDE.BeginCodeTools: boolean;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   ActiveSrcEdit:=nil;
   Result:=BeginCodeTool(nil,ActiveSrcEdit,ActiveUnitInfo,
@@ -10362,7 +10362,7 @@ procedure TMainIDE.AfterCodeToolBossApplyChanges(Manager: TCodeToolManager);
 var
   i: Integer;
   SrcBuf: TCodeBuffer;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   MsgResult: TModalResult;
 begin
   if Manager<>CodeToolBoss then exit;
@@ -10370,7 +10370,7 @@ begin
     SrcBuf:=CodeToolBoss.SourceChangeCache.BuffersToModify[i];
     AnUnitInfo:=nil;
     if Project1<>nil then
-      AnUnitInfo:=Project1.UnitInfoWithFilename(SrcBuf.Filename);
+      AnUnitInfo:=TEditableUnitInfo(Project1.UnitInfoWithFilename(SrcBuf.Filename));
     if AnUnitInfo<>nil then
       AnUnitInfo.Modified:=true;
 
@@ -10661,7 +10661,7 @@ begin
 end;
 
 function TMainIDE.DoJumpToCodePosition(ActiveSrcEdit: TSourceEditorInterface;
-  ActiveUnitInfo: TUnitInfo; NewSource: TCodeBuffer; NewX, NewY, NewTopLine,
+  ActiveUnitInfo: TEditableUnitInfo; NewSource: TCodeBuffer; NewX, NewY, NewTopLine,
   BlockTopLine, BlockBottomLine: integer; Flags: TJumpToCodePosFlags
   ): TModalResult;
 var
@@ -10698,15 +10698,14 @@ begin
     if (ActiveUnitInfo = nil) or (NewSource<>ActiveUnitInfo.Source)
     then begin
       // jump to other file -> open it
-      ActiveUnitInfo := Project1.UnitInfoWithFilename(NewSource.Filename);
+      ActiveUnitInfo := TEditableUnitInfo(Project1.UnitInfoWithFilename(NewSource.Filename));
       if (ActiveUnitInfo = nil) and (Project1.IsVirtual) and (jfSearchVirtualFullPath in Flags)
       then begin
         STB := AppendPathDelim(GetTestBuildDirectory);
         FNStart := copy(NewSource.Filename, 1, length(STB));
         if AnsiCompareText(FNStart, STB) = 0 then
-          ActiveUnitInfo := Project1.UnitInfoWithFilename(
-                                  copy(NewSource.Filename, 1+length(STB), MaxInt),
-                                  [pfsfOnlyVirtualFiles]);
+          ActiveUnitInfo := TEditableUnitInfo(Project1.UnitInfoWithFilename(
+            copy(NewSource.Filename, 1+length(STB), MaxInt), [pfsfOnlyVirtualFiles]));
       end;
 
       AnEditorInfo := nil;
@@ -10783,7 +10782,7 @@ var
   var
     AnUnitInfo: TUnitInfo;
   begin
-    AnUnitInfo := Project1.UnitWithEditorComponent(SaveEditor);
+    AnUnitInfo := EditableProject1.UnitWithEditorComponent(SaveEditor);
     if (AnUnitInfo<>nil) and SaveEditor.NeedsUpdateCodeBuffer then
       Result:=true
     else
@@ -10861,7 +10860,7 @@ end;
 
 procedure TMainIDE.DoJumpToOtherProcedureSection;
 var ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
   RevertableJump: boolean;
@@ -10893,7 +10892,7 @@ var
   OpenFlags: TOpenFlags;
   ErrorFilename: string;
   ErrorTopLine: integer;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   AnEditorInfo: TUnitEditorInfo;
 begin
   if (Screen.GetCurrentModalForm<>nil) or (CodeToolBoss.ErrorMessage='') then
@@ -10918,7 +10917,7 @@ begin
     if CodeToolBoss.ErrorCode.IsVirtual then
       Include(OpenFlags,ofVirtualFile);
 
-    AnUnitInfo := Project1.UnitInfoWithFilename(ErrorFilename);
+    AnUnitInfo := TEditableUnitInfo(Project1.UnitInfoWithFilename(ErrorFilename));
     AnEditorInfo := nil;
     ActiveSrcEdit := nil;
     if AnUnitInfo <> nil then
@@ -10948,7 +10947,7 @@ end;
 procedure TMainIDE.DoFindDeclarationAtCursor;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(ActiveSrcEdit,ActiveUnitInfo);
   if ActiveSrcEdit=nil then exit;
@@ -10959,7 +10958,7 @@ end;
 procedure TMainIDE.DoFindDeclarationAtCaret(const LogCaretXY: TPoint);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource, BodySource: TCodeBuffer;
   NewX, NewY, NewTopLine, BodyX, BodyY, BodyTopLine, NewCleanPos,
     BlockTopLine, BlockBottomLine: integer;
@@ -11035,7 +11034,7 @@ end;
 function TMainIDE.DoFindUsedUnitReferences: boolean;
 var
   SrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   LogCaretXY: Classes.TPoint;
   ListOfPCodeXYPosition: TFPList;
   UsedUnitFilename: string;
@@ -11146,7 +11145,7 @@ end;
 function TMainIDE.DoInitIdentCompletion(JumpToError: boolean): boolean;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   LogCaretXY: TPoint;
   CodePos:integer;
 begin
@@ -11183,7 +11182,7 @@ end;
 function TMainIDE.DoShowCodeContext(JumpToError: boolean): boolean;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[]) then exit(false);
@@ -11205,7 +11204,7 @@ end;
 
 procedure TMainIDE.DoGoToPascalBlockOtherEnd;
 var ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine: integer;
 begin
@@ -11228,7 +11227,7 @@ end;
 
 procedure TMainIDE.DoGoToPascalBlockStart;
 var ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine: integer;
   Flags: TJumpToCodePosFlags;
@@ -11258,7 +11257,7 @@ end;
 procedure TMainIDE.SelectCodeBlock;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   OldX, OldY,
   NewX, NewY, NewX2, NewY2, NewTopLine, NewTopLine2: integer;
@@ -11311,7 +11310,7 @@ end;
 
 procedure TMainIDE.DoJumpToGuessedUnclosedBlock(FindNextUTF8: boolean);
 var ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   StartX, StartY, NewX, NewY, NewTopLine: integer;
 begin
@@ -11373,7 +11372,7 @@ end;
 
 procedure TMainIDE.DoGotoIncludeDirective;
 var ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine: integer;
 begin
@@ -11397,7 +11396,7 @@ end;
 function TMainIDE.DoDiff: TModalResult;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   DiffText: string;
   NewDiffFilename: String;
 begin
@@ -11432,7 +11431,7 @@ end;
 procedure TMainIDE.DoCompleteCodeAtCursor(Interactive: Boolean);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
   OldChange, CCRes: Boolean;
@@ -11469,7 +11468,7 @@ end;
 procedure TMainIDE.DoExtractProcFromSelection;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   BlockBegin: TPoint;
   BlockEnd: TPoint;
   NewSource: TCodeBuffer;
@@ -11530,14 +11529,14 @@ procedure TMainIDE.SrcNotebookEditorActived(Sender: TObject);
 // It is also changed when a component is dropped on designer form.
 var
   ASrcEdit: TSourceEditor;
-  UnitInfo: TUnitInfo;
+  UnitInfo: TEditableUnitInfo;
 begin
   ASrcEdit := SourceEditorManager.SenderToEditor(Sender);
   if ASrcEdit=nil then exit;
   {$IFDEF VerboseIDEDisplayState}
   debugln(['TMainIDE.SrcNotebookEditorActived']);
   {$ENDIF}
-  UnitInfo := Project1.GetAndUpdateVisibleUnit(ASrcEdit,
+  UnitInfo := EditableProject1.GetAndUpdateVisibleUnit(ASrcEdit,
                                                ASrcEdit.SourceNotebook.WindowID);
   if UnitInfo = nil then Exit;
   UpdateSaveMenuItemsAndButtons(false);
@@ -11547,9 +11546,9 @@ end;
 
 procedure TMainIDE.SrcNotebookEditorPlaceBookmark(Sender: TObject; var Mark: TSynEditMark);
 var
-  UnitInfo: TUnitInfo;
+  UnitInfo: TEditableUnitInfo;
 begin
-  UnitInfo := Project1.UnitWithEditorComponent(TSourceEditor(Sender));
+  UnitInfo := EditableProject1.UnitWithEditorComponent(TSourceEditor(Sender));
   if (Mark is TSynEditBookMark) and (TSynEditBookMark(Mark).TopLeftMark <> nil) then
     UnitInfo.AddBookmark(Mark.Column, Mark.Line,
       TSynEditBookMark(Mark).Column, TSynEditBookMark(Mark).Line, Mark.BookmarkNumber)
@@ -11559,9 +11558,9 @@ end;
 
 procedure TMainIDE.SrcNotebookEditorClearBookmark(Sender: TObject; var Mark: TSynEditMark);
 var
-  UnitInfo: TUnitInfo;
+  UnitInfo: TEditableUnitInfo;
 begin
-  UnitInfo := Project1.UnitWithEditorComponent(TSourceEditor(Sender));
+  UnitInfo := EditableProject1.UnitWithEditorComponent(TSourceEditor(Sender));
   UnitInfo.DeleteBookmark(Mark.BookmarkNumber);
 end;
 
@@ -11569,12 +11568,12 @@ procedure TMainIDE.SrcNotebookEditorClearBookmarkId(Sender: TObject;
   ID: Integer);
 var
   i: Integer;
-  UInfo: TUnitInfo;
+  UInfo: TEditableUnitInfo;
 begin
   if ID = -1 then begin
     for i in TBookmarkNumRange do begin
       //b := Project1.Bookmarks[i];
-      UInfo := TUnitInfo(Project1.Bookmarks.UnitInfoForBookmarkWithIndex(i));
+      UInfo := TEditableUnitInfo(EditableProject1.Bookmarks.UnitInfoForBookmarkWithIndex(i));
       if UInfo <> nil then begin
         if UInfo.OpenEditorInfoCount > 0 then
           TSourceEditor(UInfo.OpenEditorInfo[0].EditorComponent).EditorComponent.ClearBookMark(i)
@@ -11584,7 +11583,7 @@ begin
     end;
   end
   else begin
-    UInfo := TUnitInfo(Project1.Bookmarks.UnitInfoForBookmarkWithIndex(Id));
+    UInfo := TEditableUnitInfo(EditableProject1.Bookmarks.UnitInfoForBookmarkWithIndex(Id));
     if UInfo <> nil then begin
       if UInfo.OpenEditorInfoCount > 0 then
         TSourceEditor(UInfo.OpenEditorInfo[0].EditorComponent).EditorComponent.ClearBookMark(Id)
@@ -11604,11 +11603,11 @@ var
   OldX, OldY: integer;
   NewXY: TPoint;
   SetMark: Boolean;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 Begin
   if ID < 0 then begin
     ID := 0;
-    while (ID <= 9) and (Project1.Bookmarks.BookmarkWithID(ID) <> nil) do
+    while (ID <= 9) and (EditableProject1.Bookmarks.BookmarkWithID(ID) <> nil) do
       inc(ID);
     if ID > 9 then exit;
   end;
@@ -11617,7 +11616,7 @@ Begin
 
   SetMark:=true;
   OldEdit := nil;
-  AnUnitInfo := TUnitInfo(Project1.Bookmarks.UnitInfoForBookmarkWithIndex(ID));
+  AnUnitInfo := TEditableUnitInfo(EditableProject1.Bookmarks.UnitInfoForBookmarkWithIndex(ID));
   if (AnUnitInfo <> nil) and (AnUnitInfo.OpenEditorInfoCount > 0) then
     OldEdit := TSourceEditor(AnUnitInfo.OpenEditorInfo[0].EditorComponent);
   if (OldEdit<>nil) and OldEdit.EditorComponent.GetBookMark(ID,OldX{%H-},OldY{%H-}) then
@@ -11653,13 +11652,13 @@ var
 
   function GetSrcEdit(AMark: TProjectBookmark): TSourceEditor;
   var
-    UInf: TUnitInfo;
+    UInf: TEditableUnitInfo;
     i, j: Integer;
   begin
     if AMark.UnitInfo is TSourceEditor
     then Result := TSourceEditor(AMark.UnitInfo)
     else begin        // find the nearest open View
-      UInf := TUnitInfo(AMark.UnitInfo);
+      UInf := TEditableUnitInfo(AMark.UnitInfo);
       Result := TSourceEditor(UInf.OpenEditorInfo[0].EditorComponent);
       j := 0;
       while (j < UInf.OpenEditorInfoCount) and
@@ -11719,14 +11718,14 @@ var
   AnEditor: TSourceEditor;
   i: Integer;
   CurPos, CurFound: TProjectBookmark;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   AnEditorInfo: TUnitEditorInfo;
   NewXY: TPoint;
 begin
   AnEditor := SourceEditorManager.SenderToEditor(Sender);
   if ID < 0 then begin
     // ID < 0  => next/prev
-    if Project1.BookMarks.Count = 0 then exit;
+    if EditableProject1.BookMarks.Count = 0 then exit;
     if AnEditor = nil then exit;
 
     CurWin := SourceEditorManager.IndexOfSourceWindow(AnEditor.SourceNotebook);
@@ -11737,27 +11736,27 @@ begin
     try
       CurFound := nil;
       i := 0;
-      while (i < Project1.Bookmarks.Count) and
-            ( (GetSrcEdit(Project1.Bookmarks[i]) = nil) or
-              (CompareBookmarkEditorPos(CurPos, Project1.Bookmarks[i]) = 0) )
+      while (i < EditableProject1.Bookmarks.Count) and
+            ( (GetSrcEdit(EditableProject1.Bookmarks[i]) = nil) or
+              (CompareBookmarkEditorPos(CurPos, EditableProject1.Bookmarks[i]) = 0) )
       do
         inc(i);
-      if i >= Project1.Bookmarks.Count then
+      if i >= EditableProject1.Bookmarks.Count then
         exit; // all on the same line
 
-      CurFound := Project1.Bookmarks[i];
+      CurFound := EditableProject1.Bookmarks[i];
       inc(i);
-      while (i < Project1.Bookmarks.Count) do begin
-        if (GetSrcEdit(Project1.Bookmarks[i]) <> nil) then begin
-          if (CompareBookmarkEditorPos(CurPos, Project1.Bookmarks[i]) <> 0) then begin
+      while (i < EditableProject1.Bookmarks.Count) do begin
+        if (GetSrcEdit(EditableProject1.Bookmarks[i]) <> nil) then begin
+          if (CompareBookmarkEditorPos(CurPos, EditableProject1.Bookmarks[i]) <> 0) then begin
             if (not Backward) and
-               (CompareBookmarkEditorPos(Project1.Bookmarks[i], CurFound) > 0)
+               (CompareBookmarkEditorPos(EditableProject1.Bookmarks[i], CurFound) > 0)
             then
-              CurFound := Project1.Bookmarks[i];
+              CurFound := EditableProject1.Bookmarks[i];
             if (Backward) and
-               (CompareBookmarkEditorPos(Project1.Bookmarks[i], CurFound) < 0)
+               (CompareBookmarkEditorPos(EditableProject1.Bookmarks[i], CurFound) < 0)
             then
-              CurFound := Project1.Bookmarks[i];
+              CurFound := EditableProject1.Bookmarks[i];
           end;
         end;
         inc(i);
@@ -11775,9 +11774,9 @@ begin
   else begin
     AnEditor := nil;
     AnEditorInfo := nil;
-    AnUnitInfo := TUnitInfo(Project1.Bookmarks.UnitInfoForBookmarkWithIndex(ID));
+    AnUnitInfo := TEditableUnitInfo(EditableProject1.Bookmarks.UnitInfoForBookmarkWithIndex(ID));
     if (AnUnitInfo <> nil) and (AnUnitInfo.OpenEditorInfoCount > 0) then begin
-      NewXY := Project1.Bookmarks.BookmarkWithID(ID).CursorPos;
+      NewXY := EditableProject1.Bookmarks.BookmarkWithID(ID).CursorPos;
       AnEditorInfo := GetAvailableUnitEditorInfo(AnUnitInfo, NewXY);
     end;
     if AnEditorInfo <> nil then
@@ -11819,14 +11818,14 @@ var
   SrcEdit: TSourceEditor;
 begin
   SrcEdit := TSourceEditor(Sender);
-  p :=Project1.EditorInfoWithEditorComponent(SrcEdit);
+  p :=EditableProject1.EditorInfoWithEditorComponent(SrcEdit);
   if (p = nil) then begin
     if (sepuNewShared in AnUpdates) then begin
       // attach to UnitInfo
       i := 0;
       while (i < SrcEdit.SharedEditorCount) and (SrcEdit.SharedEditors[i] = SrcEdit) do
         inc(i);
-      p := Project1.EditorInfoWithEditorComponent(SrcEdit.SharedEditors[i]);
+      p := EditableProject1.EditorInfoWithEditorComponent(SrcEdit.SharedEditors[i]);
       p := p.UnitInfo.GetClosedOrNewEditorInfo;
       p.EditorComponent := SrcEdit;
     end
@@ -11857,7 +11856,7 @@ var
   p: TUnitEditorInfo;
 begin
   SrcEditor := TSourceEditor(Sender);
-  p :=Project1.EditorInfoWithEditorComponent(SrcEditor);
+  p :=EditableProject1.EditorInfoWithEditorComponent(SrcEditor);
   if (p <> nil) then
     p.EditorComponent := nil; // Set EditorIndex := -1
   inc(BookmarksStamp); // Editor may have had bookmarks
@@ -11968,7 +11967,7 @@ procedure TMainIDE.SrcNotebookShowHintForSource(SrcEdit: TSourceEditor;
   end;
 
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   BaseURL, SmartHintStr, Expression: String;
   HasHint: Boolean;
   Opts: TWatcheEvaluateFlags;
@@ -12108,7 +12107,7 @@ procedure TMainIDE.DesignerCloseQuery(Sender: TObject);
 var
   ADesigner: TDesigner;
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   ADesigner:=TDesigner(Sender);
   GetDesignerUnit(ADesigner,ASrcEdit,AnUnitInfo);
@@ -12138,7 +12137,7 @@ procedure TMainIDE.DesignerRenameComponent(ADesigner: TDesigner;
   AComponent: TComponent; const NewName: string);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   BossResult: boolean;
   OldName: String;
   OldClassName: String;
@@ -12169,7 +12168,7 @@ var
         lisTheUnitItselfHasAlreadyTheNamePascalIdentifiersMus, [AName]));
     if ActiveUnitInfo.IsPartOfProject then begin
       // check if component name already exists in project
-      i:=Project1.IndexOfUnitWithComponentName(AName,true,ActiveUnitInfo);
+      i:=EditableProject1.IndexOfUnitWithComponentName(AName,true,ActiveUnitInfo);
       if i>=0 then
         raise Exception.Create(Format(lisThereIsAlreadyAFormWithTheName, [AName]));
       // check if pascal identifier already exists in the units
@@ -12207,13 +12206,13 @@ var
     Simulate: boolean);
   var
     UsedByDependency: TUnitComponentDependency;
-    DependingUnit: TUnitInfo;
+    DependingUnit: TEditableUnitInfo;
     InheritedComponent: TComponent;
     DependingDesigner: TCustomForm;
   begin
     UsedByDependency:=ActiveUnitInfo.FirstUsedByComponent;
     while UsedByDependency<>nil do begin
-      DependingUnit:=UsedByDependency.UsedByUnit;
+      DependingUnit:=TEditableUnitInfo(UsedByDependency.UsedByUnit);
       if (DependingUnit.Component<>nil)
       and (DependingUnit.Component.ClassParent=RenamedUnit.Component.ClassType)
       then begin
@@ -12357,7 +12356,7 @@ begin
 
   ActiveSrcEdit:=nil;
   BeginCodeTool(ADesigner,ActiveSrcEdit,ActiveUnitInfo,[ctfSwitchToFormSource]);
-  ActiveUnitInfo:=Project1.UnitWithComponent(ADesigner.LookupRoot);
+  ActiveUnitInfo:=TEditableUnitInfo(Project1.UnitWithComponent(ADesigner.LookupRoot));
 
   OldName:=AComponent.Name;
   OldClassName:=AComponent.ClassName;
@@ -12433,7 +12432,7 @@ procedure TMainIDE.DesignerViewLFM(Sender: TObject);
 var
   ADesigner: TDesigner;
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   EditorInfo: TUnitEditorInfo;
   LFMFilename: String;
 begin
@@ -12466,7 +12465,7 @@ var
   XMLConfig: TXMLConfig;
   ADesigner: TDesigner;
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
 begin
   ADesigner:=TDesigner(Sender);
   GetDesignerUnit(ADesigner,ASrcEdit,AnUnitInfo);
@@ -12537,35 +12536,35 @@ procedure TMainIDE.SrcNoteBookAddJumpPoint(ACaretXY: TPoint;
   ATopLine: integer; AEditor: TSourceEditor; DeleteForwardHistory: boolean);
 {off $DEFINE VerboseJumpHistory}
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewJumpPoint: TProjectJumpHistoryPosition;
 begin
   {$IFDEF VerboseJumpHistory}
   debugln('');
   debugln('[TMainIDE.SrcNoteBookAddJumpPoint] A Line=',ACaretXY.Y,' Col=',ACaretXY.X,' DeleteForwardHistory=',DeleteForwardHistory,' Count=',Project1.JumpHistory.Count,',HistoryIndex=',Project1.JumpHistory.HistoryIndex);
   {$ENDIF}
-  ActiveUnitInfo:=Project1.UnitWithEditorComponent(AEditor);
+  ActiveUnitInfo:=EditableProject1.UnitWithEditorComponent(AEditor);
   if (ActiveUnitInfo=nil) then exit;
   NewJumpPoint:=TProjectJumpHistoryPosition.Create(ActiveUnitInfo.Filename,
     ACaretXY,ATopLine);
   {$IFDEF VerboseJumpHistory}
-  //Project1.JumpHistory.WriteDebugReport;
+  //EditableProject1.JumpHistory.WriteDebugReport;
   {$ENDIF}
-  Project1.JumpHistory.InsertSmart(Project1.JumpHistory.HistoryIndex+1, NewJumpPoint);
+  EditableProject1.JumpHistory.InsertSmart(EditableProject1.JumpHistory.HistoryIndex+1, NewJumpPoint);
   {$IFDEF VerboseJumpHistory}
   debugln('[TMainIDE.SrcNoteBookAddJumpPoint] B INSERTED');
-  Project1.JumpHistory.WriteDebugReport;
+  EditableProject1.JumpHistory.WriteDebugReport;
   {$ENDIF}
-  if DeleteForwardHistory then Project1.JumpHistory.DeleteForwardHistory;
+  if DeleteForwardHistory then EditableProject1.JumpHistory.DeleteForwardHistory;
   {$IFDEF VerboseJumpHistory}
   debugln('[TMainIDE.SrcNoteBookAddJumpPoint] END Line=',ACaretXY.Y,',DeleteForwardHistory=',DeleteForwardHistory,' Count=',Project1.JumpHistory.Count,',HistoryIndex=',Project1.JumpHistory.HistoryIndex);
-  Project1.JumpHistory.WriteDebugReport;
+  EditableProject1.JumpHistory.WriteDebugReport;
   {$ENDIF}
 end;
 
 procedure TMainIDE.SrcNotebookDeleteLastJumPoint(Sender: TObject);
 begin
-  Project1.JumpHistory.DeleteLast;
+  EditableProject1.JumpHistory.DeleteLast;
 end;
 
 procedure TMainIDE.SrcNotebookJumpToHistoryPoint(out NewCaretXY: TPoint; out
@@ -12589,7 +12588,7 @@ procedure TMainIDE.SrcNotebookJumpToHistoryPoint(out NewCaretXY: TPoint; out
 }
 var DestIndex, UnitIndex: integer;
   ASrcEdit: TSourceEditor;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   DestJumpPoint: TProjectJumpHistoryPosition;
   CursorPoint, NewJumpPoint: TProjectJumpHistoryPosition;
   JumpHistory : TProjectJumpHistory;
@@ -12599,7 +12598,7 @@ begin
   NewCaretXY.Y:=-1;
   NewCaretXY.X:=-1;
   NewTopLine:=-1;
-  JumpHistory:=Project1.JumpHistory;
+  JumpHistory:=EditableProject1.JumpHistory;
 
   {$IFDEF VerboseJumpHistory}
   debugln('');
@@ -12654,13 +12653,13 @@ begin
     {$IFDEF VerboseJumpHistory}
     debugln(' DestIndex=',DestIndex,' UnitIndex=',UnitIndex);
     {$ENDIF}
-    if (UnitIndex >= 0) and (Project1.Units[UnitIndex].OpenEditorInfoCount > 0)
+    if (UnitIndex >= 0) and (EditableProject1.Units[UnitIndex].OpenEditorInfoCount > 0)
     and ((CursorPoint=nil) or not DestJumpPoint.IsSimilar(CursorPoint)) then
     begin
       JumpHistory.HistoryIndex:=DestIndex;
       NewCaretXY:=DestJumpPoint.CaretXY;
       NewTopLine:=DestJumpPoint.TopLine;
-      AnEditorInfo := GetAvailableUnitEditorInfo(Project1.Units[UnitIndex], NewCaretXY);
+      AnEditorInfo := GetAvailableUnitEditorInfo(EditableProject1.Units[UnitIndex], NewCaretXY);
       if AnEditorInfo <> nil then
         DestEditor:=TSourceEditor(AnEditorInfo.EditorComponent);
       {$IFDEF VerboseJumpHistory}
@@ -12687,7 +12686,7 @@ end;
 procedure TMainIDE.SrcNoteBookMouseLink(Sender: TObject; X, Y: Integer;
   var AllowMouseLink: Boolean);
 var
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
   SrcEdit: TSourceEditor;
@@ -12712,7 +12711,7 @@ end;
 procedure TMainIDE.SrcNotebookReadOnlyChanged(Sender: TObject);
 var
   ActiveSourceEditor: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   GetCurrentUnit(ActiveSourceEditor,ActiveUnitInfo);
   ActiveUnitInfo.UserReadOnly:=ActiveSourceEditor.ReadOnly;
@@ -12849,7 +12848,7 @@ procedure TMainIDE.HandleApplicationIdle(Sender: TObject; var Done: Boolean);
 var
   SrcEdit: TSourceEditor;
   Ancestor: TComponent;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   AnIDesigner: TIDesigner;
   HasResources: Boolean;
   FileItem: PStringToStringItem;
@@ -12875,7 +12874,7 @@ begin
   if Assigned(FDesignerToBeFreed) then begin
     for FileItem in FDesignerToBeFreed do begin
       if Project1=nil then break;
-      AnUnitInfo:=Project1.UnitInfoWithFilename(FileItem^.Name);
+      AnUnitInfo:=TEditableUnitInfo(Project1.UnitInfoWithFilename(FileItem^.Name));
       if AnUnitInfo=nil then continue;
       if AnUnitInfo.Component=nil then continue;
       CloseUnitComponent(AnUnitInfo,[]);
@@ -13277,7 +13276,7 @@ function TMainIDE.ProjInspectorAddUnitToProject(Sender: TObject;
   AnUnitInfo: TUnitInfo): TModalresult;
 var
   ActiveSourceEditor: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   Result:=mrOk;
   AnUnitInfo.IsPartOfProject:=true;
@@ -13445,7 +13444,7 @@ begin
   Result := FOIHelpProvider;
 end;
 
-function TMainIDE.GetDesignerFormOfSource(AnUnitInfo: TUnitInfo; LoadForm: boolean
+function TMainIDE.GetDesignerFormOfSource(AnUnitInfo: TEditableUnitInfo; LoadForm: boolean
   ): TCustomForm;
 begin
   Result:=nil;
@@ -13523,7 +13522,7 @@ function TMainIDE.PropHookMethodExists(const AMethodName: String; TypeData: PTyp
   var MethodIsCompatible,MethodIsPublished,IdentIsMethod: boolean): boolean;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 begin
   ActiveSrcEdit:=nil;
   if not BeginCodeTool(ActiveSrcEdit,ActiveUnitInfo,[ctfSwitchToFormSource]) then
@@ -13562,7 +13561,7 @@ function TMainIDE.PropHookCreateMethod(const AMethodName: ShortString;
 {$ENDIF}
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
 
   function GetInheritedMethodPath: string;
   var
@@ -13778,7 +13777,7 @@ end;
 procedure TMainIDE.PropHookShowMethod(const AMethodName: String);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   NewSource: TCodeBuffer;
   NewX, NewY, NewTopLine, BlockTopLine, BlockBottomLine: integer;
   AClassName, AnInheritedClassName: string;
@@ -13790,7 +13789,7 @@ begin
   if IsValidIdentPair(AMethodName, AnInheritedClassName, AInheritedMethodName) then
   begin
     ActiveSrcEdit:=nil;
-    ActiveUnitInfo:=Project1.UnitWithComponentClassName(AnInheritedClassName);
+    ActiveUnitInfo:=TEditableUnitInfo(Project1.UnitWithComponentClassName(AnInheritedClassName));
     if ActiveUnitInfo=nil then begin
       IDEMessageDialog(lisMethodClassNotFound,
         Format(lisClassOfMethodNotFound, [AnInheritedClassName, AInheritedMethodName]),
@@ -13865,7 +13864,7 @@ end;
 procedure TMainIDE.PropHookRenameMethod(const CurName, NewName: String);
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   BossResult: boolean;
   ErrorMsg: String;
   OldChange: Boolean;
@@ -13913,7 +13912,7 @@ function TMainIDE.PropHookBeforeAddPersistent(Sender: TObject;
   APersistentClass: TPersistentClass; AParent: TPersistent): boolean;
 var
   ActiveSrcEdit: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   Code: TCodeBuffer;
   Tool: TCodeTool;
 begin
@@ -14033,7 +14032,7 @@ end;
 procedure TMainIDE.PropHookPersistentDeleting(APersistent: TPersistent);
 var
   Comp: TComponent;
-  UnitInfo: TUnitInfo;
+  UnitInfo: TEditableUnitInfo;
   SrcEdit: TSourceEditor;
   OwnerClassName: string;
   CurDesigner: TDesigner;
@@ -14480,7 +14479,7 @@ end;
 procedure TMainIDE.DoCommand(ACommand: integer);
 var
   ActiveSourceEditor: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   AForm: TCustomForm;
 begin
   // todo: if focus is really on a designer or the source editor
@@ -14508,7 +14507,7 @@ procedure TMainIDE.DoSourceEditorCommand(EditorCommand: integer;
 var
   CurFocusControl: TWinControl;
   ActiveSourceEditor: TSourceEditor;
-  ActiveUnitInfo: TUnitInfo;
+  ActiveUnitInfo: TEditableUnitInfo;
   H: HWND;
 begin
   CurFocusControl:=Nil;

@@ -63,7 +63,7 @@ uses
   Project, ProjectResources, ProjectIcon,
   // IDE
   LazarusIDEStrConsts, LfmUnitResource, MiscOptions, etFPCMsgParser, etPas2jsMsgParser,
-  FPCSrcScan, IdeTransferMacros, ExtTools;
+  EditableProject, FPCSrcScan, IdeTransferMacros, ExtTools;
 
 type
 
@@ -958,7 +958,7 @@ var
   StateFilename: String;
   StateFileAge: LongInt;
 
-  function EditorUnitInfoModified(AnUnitInfo: TUnitInfo): boolean;
+  function EditorUnitInfoModified(AnUnitInfo: TEditableUnitInfo): boolean;
   var
     EditComp: TSourceEditorInterface;
   begin
@@ -969,7 +969,7 @@ var
     Result:=(EditComp<>nil) and EditComp.Modified;
   end;
 
-  function CheckNonProjectEditorFile(AnUnitInfo: TUnitInfo): boolean;
+  function CheckNonProjectEditorFile(AnUnitInfo: TEditableUnitInfo): boolean;
   begin
     Result:=false;
     if AnUnitInfo.IsPartOfProject or AnUnitInfo.IsVirtual then exit;
@@ -1015,7 +1015,7 @@ var
 
 var
   CompilerFilename, SrcFilename, LFMFilename, aTargetFilename: string;
-  AnUnitInfo: TUnitInfo;
+  AnUnitInfo: TEditableUnitInfo;
   IcoRes: TProjectIcon;
   CompilerParams: TStrings;
 begin
@@ -1064,7 +1064,7 @@ begin
     StateFileAge:=FileAgeCached(StateFilename);
 
     // check main source file
-    AnUnitInfo:=AProject.MainUnitInfo;
+    AnUnitInfo:=TEditableUnitInfo(AProject.MainUnitInfo);
     if EditorUnitInfoModified(AnUnitInfo) then
     begin
       if ConsoleVerbosity>=0 then
