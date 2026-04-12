@@ -2502,6 +2502,26 @@ begin
         {$ENDIF}
       end;
       exit;
+    end else begin
+      if (cmsResult in Scanner.CompilerModeSwitches) and  // self.Scanner includes *.inc file
+      (CursorNode.Desc  = ctnVarDefinition) and
+      (CursorNode.FirstChild<>nil) and
+      not CursorNode.HasParentOfType(ctnParameterList) and
+      NodeIsInsideFunction(CursorNode) and
+      (CompareIdentifiers(PChar('Result'),PChar(@Src[CursorNode.StartPos]))=0)
+      then begin
+      // var Result declared inside a function, search for Result type is enabled,
+      // <Ctrl>+[lmb] jumps to type of variable Result
+        NewExprType.Desc := xtContext;
+        NewExprType.Context.Node := CursorNode.FirstChild;
+        NewExprType.Context.Tool := Self;
+        CleanPosToCaret(CursorNode.FirstChild.StartPos, NewPos);
+        NewTopLine := NewPos.Y;
+        BlockTopLine := NewTopLine;
+        BlockBottomLine := NewPos.Y;
+        Result := True;
+        exit;
+      end;
     end;
 
     PredefinedResult:=MaybePredefinedResult(CursorNode,CleanCursorPos,

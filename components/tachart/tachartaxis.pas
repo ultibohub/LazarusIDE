@@ -177,6 +177,9 @@ type
     procedure DrawAxisLine;
     procedure DrawTitle(ASize: Integer);
     function GetChart: TCustomChart; inline;
+    function GetIndexOfFirstVisibleMark: Integer;
+    function GetIndexOfLastVisibleMark: Integer;
+    function GetMarkIndexAt(APoint: TPoint): Integer;
     function GetOrthogonalAxis: TChartAxis;
     function GetTransform: TChartAxisTransformations;
     function IsDefaultPosition: Boolean;
@@ -528,6 +531,7 @@ var
   dist, loc: Integer;
   p, prev: Integer;
   pt: Double;
+  idx: Integer;
   t: TChartValueText;
 begin
   Result := [];
@@ -578,12 +582,9 @@ begin
 
   if (ahtLabels in ATest) then
   begin
-    for t in FMarkValues do
-      if IsPointInPolygon(APoint, t.FPolygon) then
-      begin
-        Include(Result, ahtLabels);
-        break;
-      end;
+    idx := GetMarkIndexAt(APoint);
+    if idx > -1 then
+      Include(Result, ahtLabels);
   end;
 
   if (ahtGrid in ATest) then
@@ -810,6 +811,40 @@ begin
   if not Visible then Result := Result + ', ' + rsHidden;
   if IsFlipped then Result := Result + ', ' + rsInverted;
   Result := Result + FormatIfNotEmpty(' (%s)', Title.Caption);
+end;
+
+function TChartAxis.GetIndexOfFirstVisibleMark: Integer;
+var
+  coord: Integer;
+begin
+  for Result := 0 to High(FMarkValues) do begin
+    coord := FHelper.GraphToImage(FMarkValues[Result].FValue);
+    if FHelper.IsInClipRange(coord) then
+      exit;
+  end;
+  Result := -1;
+end;
+
+function TChartAxis.GetIndexOfLastVisibleMark: Integer;
+var
+  coord: Integer;
+begin
+  for Result := High(FMarkValues) downto 0 do begin
+    coord := FHelper.GraphToImage(FMarkValues[Result].FValue);
+    if FHelper.IsInClipRange(coord) then
+      exit;
+  end;
+  Result := -1;
+end;
+
+function TChartAxis.GetMarkIndexAt(APoint: TPoint): Integer;
+var
+  t: TChartValueText;
+begin
+  for Result := 0 to High(FMarkValues) do
+    if IsPointInPolygon(APoint, FMarkValues[Result].FPolygon) then
+      exit;
+  Result := -1;
 end;
 
 function TChartAxis.GetMarks: TChartAxisMarks;

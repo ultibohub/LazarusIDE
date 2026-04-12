@@ -10,7 +10,7 @@ uses
   LazLoggerBase, LazUtilities,
   // BuildIntf
   IDEExternToolIntf,
-  // IDE
+  // IdeConfig
   ExtTools;
 
 type

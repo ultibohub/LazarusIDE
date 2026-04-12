@@ -106,8 +106,6 @@ resourcestring
   lisExportSub = 'Export >>';
   lisImport = 'Import';
   lisDlgImport = 'Import ...';
-  lisSuccess = 'Success';
-  lisAborted = 'Aborted';
 
   lisExportHtml = 'Export as HTML ...';
   lisMoveFiles = 'Move Files';
@@ -2528,12 +2526,6 @@ resourcestring
   lisFatal = 'Fatal';
   lisPanic = 'Panic';
   lisHideSearch = 'Hide Search';
-  lisInvalidMacrosInExternalTool = 'Invalid macros "%s" in external tool "%s"';
-  lisCanNotExecute = 'cannot execute "%s"';
-  lisMissingDirectory = 'missing directory "%s"';
-  lisUnableToExecute = 'unable to execute: %s';
-  lisUnableToReadProcessExitStatus = 'unable to read process ExitStatus';
-  lisFreeingBufferLines = 'freeing buffer lines: %s';
   lisCompilerMessagesFileNotFound = 'Compiler messages file not found:%s%s';
   lisFppkgConfigurationFileNotFound = 'Fppkg configuration file not found:%s%s';
   lisUnableToOpen = 'Unable to open "%s"';
@@ -3822,14 +3814,6 @@ resourcestring
   lisUnableToFindAResourceStringSectionInThisOrAnyOfThe = 'Unable to find a '
     +'ResourceString section in this or any of the used units.';
 
-  lisFailedToResolveMacros = 'failed to resolve macros';
-  lisToolHasNoExecutable = 'tool "%s" has no executable';
-  lisCanNotFindExecutable = 'cannot find executable "%s"';
-  lisMissingExecutable = 'missing executable "%s"';
-  lisExecutableIsADirectory = 'executable "%s" is a directory';
-  lisExecutableLacksThePermissionToRun = 'executable "%s" lacks the permission to run';
-  lisParser = 'parser "%s": %s';
-  lisInvalidMacrosIn = 'Invalid macros in "%s"';
   lisAllBlocksLooksOk = 'All blocks look ok.';
   lisTheApplicationBundleWasCreatedFor = 'The Application Bundle was created for "%s"';
 
@@ -5458,6 +5442,8 @@ resourcestring
     +'%sProceed anyway?';
   lisRenamingAborted = 'Renaming aborted';
   lisRenamingConflict = 'Renaming conflict';
+  lisDesignerHasUnsavedChanges = 'Designer has unsaved changes';
+  lisOverwriteDesignerChangesAnyway = 'Unsaved designer changes for file "%s" will be lost. Overwrite anyway?';
   lisFileAlreadyExists = 'File "%s" already exists.';
   lisIdentifierIsAlreadyUsed = 'Identifier "%s" is already used';
   lisIdentifierIsAlreadyUsed2 = 'Identifier "%s" is already used.';
@@ -6112,7 +6098,6 @@ resourcestring
     ;
   lisUpdateInfo = 'Update info';
 
-  lisExitCode = 'Exit code %s';
   lisCanTFindAValidPpu = 'Can''t find a valid %s.ppu';
   lisCannotFind = 'Cannot find %s';
   lisUsedBy = ' used by %s';

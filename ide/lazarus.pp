@@ -59,7 +59,7 @@ uses
   SysUtils,
   Interfaces,
   IDEInstances,//keep IDEInstances up so that it will be initialized soon
-  Forms, LazUtilities, LazLoggerBase,
+  Forms, LazUtilities, LazLoggerBase, ColorTTY,
   IDEOptionsIntf,
   LazConf, IDEGuiCmdLine,
   Splash,
@@ -96,8 +96,7 @@ uses
     //AnchorDockingDsgn, //Ultibo
     DockedFormEditor,
   {$ENDIF}
-  MainBase,
-  ColorTTY;
+  MainBase;
 
 {$I revision.inc}
 {$R lazarus.res}

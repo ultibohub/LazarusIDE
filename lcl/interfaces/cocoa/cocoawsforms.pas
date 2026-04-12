@@ -33,8 +33,9 @@ uses
   MacOSAll, CocoaAll,
   CocoaWSService, CocoaWSModalService, CocoaConfig, CocoaPrivate,
   CocoaCommonCallback, CocoaWSPrivate,
-  CocoaGDIObjects, CocoaWindows, CocoaToolBar, CocoaCustomControl, CocoaScrollers,
-  CocoaWSScrollers, CocoaUtils, CocoaMenus, Cocoa_Extra;
+  CocoaGDIObjects, CocoaWindows, CocoaToolBar, CocoaCustomControl,
+  CocoaScrolling,
+  CocoaUtils, CocoaMenus, Cocoa_Extra;
 
 type
   { TLCLWindowCallback }
@@ -66,14 +67,6 @@ type
     function HasDefaultControl: Boolean;
 
     property Enabled: Boolean read GetEnabled write SetEnabled;
-  end;
-
-  { TCocoaWSScrollingWinControl }
-
-  TCocoaWSScrollingWinControl = class(TWSScrollingWinControl)
-  published
-    class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLHandle; override;
-    class procedure SetBorderStyle(const AWinControl: TWinControl; const ABorderStyle: TBorderStyle); override;
   end;
 
   { TCocoaWSCustomForm }
@@ -540,41 +533,6 @@ begin
     Result := False;
 end;
 
-{ TCocoaWSScrollingWinControl}
-
-class function  TCocoaWSScrollingWinControl.CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLHandle;
-var
-  scrollcon: TCocoaScrollView;
-  docview: TCocoaCustomControl;
-  lcl : TLCLCommonCallback;
-begin
-  scrollcon:= TCocoaScrollView.alloc.lclInitWithCreateParams(AParams);
-  TCocoaScrollUtil.setBorderStyle(scrollcon, TScrollingWinControl(AWincontrol).BorderStyle);
-  scrollcon.setDrawsBackground(false); // everything is covered anyway
-  scrollcon.setBackgroundColor(NSColor.windowBackgroundColor);
-  scrollcon.setAutohidesScrollers(True);
-  scrollcon.isCustomRange := true;
-
-  docview:= TCocoaCustomControl.alloc.init;
-  docview.setFrameSize( scrollcon.contentSize );
-  scrollcon.setDocumentView(docview);
-
-  lcl := TLCLCommonCallback.Create(docview, AWinControl, scrollcon);
-  lcl.BlockCocoaUpDown := true;
-  scrollcon.callback := lcl;
-  docview.callback := lcl;
-
-  Result := TLCLHandle(scrollcon);
-end;
-
-class procedure TCocoaWSScrollingWinControl.SetBorderStyle(
-  const AWinControl: TWinControl; const ABorderStyle: TBorderStyle);
-begin
-  if not Assigned(AWinControl) or not AWincontrol.HandleAllocated then Exit;
-  TCocoaScrollUtil.setBorderStyle( NSScrollView(AWinControl.Handle), ABorderStyle);
-end;
-
-
 { TCocoaWSCustomForm }
 
 procedure ArrangeTabOrder(const AWinControl: TWinControl);
@@ -888,7 +846,7 @@ begin
       {$endif}
     end;
 
-    cnt.callback.IsOpaque:=true;
+    cb.IsOpaque:=true;
     cnt.wincallback := TCocoaWindow(win).callback;
     win.setContentView(cnt);
 
@@ -908,7 +866,7 @@ begin
       //cnt.setAutoresizingMask(NSViewMaxXMargin or NSViewMinYMargin);
       if cnt.window <> nil then
          cnt.window.setAcceptsMouseMovedEvents(True);
-      cnt.callback.IsOpaque:=true;
+      cb.IsOpaque:=true;
       //  todo: We have to find a way to remove the following notifications save before cnt will be released
       //  NSNotificationCenter.defaultCenter.addObserver_selector_name_object(cnt, objcselector('didBecomeKeyNotification:'), NSWindowDidBecomeKeyNotification, cnt.window);
       //  NSNotificationCenter.defaultCenter.addObserver_selector_name_object(cnt, objcselector('didResignKeyNotification:'), NSWindowDidResignKeyNotification, cnt.window);

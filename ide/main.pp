@@ -94,7 +94,7 @@ uses
   ParsedCompilerOpts, CompilerOptions, CheckCompilerOpts, BuildProjectDlg,
   BuildModesManager, ExtTools, ExtToolsIDE,
   // projects
-  ProjectResources, Project, ProjectDefs, NewProjectDlg, PublishModuleDlg,
+  ProjectResources, Project, ProjectDefs, IdeBookmark, NewProjectDlg, PublishModuleDlg,
   ProjectInspector, PackageDefs, EditablePackage, ProjectDescriptorTypes,
   // help manager
   IDEContextHelpEdit, IDEHelpIntf, IdeDebuggerWatchValueIntf, IDEHelpManager,
@@ -166,7 +166,7 @@ uses
   IdeOptionsDlg, EditDefineTree, KeyMapping,
   IDETranslations, ExtToolDialog, ExtToolEditDlg, JumpHistoryView,
   DesktopManager, DiskDiffsDialog, BuildLazDialog, BuildProfileManager,
-  BuildManager, CheckCompOptsForNewUnitDlg, MiscOptions,
+  BuildManager, IdeBuildManager, CheckCompOptsForNewUnitDlg, MiscOptions,
   InputhistoryWithSearchOpt, UnitDependencies, IDEFPCInfo, IDEInfoDlg,
   IDEInfoNeedBuild, ProcessList, IdeDebuggerOpts, IdeDebuggerWatchResPrinter,
   IdeDebuggerWatchResult, InitialSetupDlgs, InitialSetupProc, NewDialog,
@@ -445,6 +445,9 @@ type
     function IDEQuestionDialogHandler(const aCaption, aMsg: string;
                                  DlgType: TMsgDlgType; Buttons: array of const;
                                  const HelpKeyword: string): Integer;
+    function ShowMessageHandler(aUrgency: TMessageLineUrgency;
+                         aMsg, aSrcFilename: string; aLineNumber, aColumn: integer;
+                         aViewCaption: string): TMessageLine;
     procedure LayoutChangeHandler(Sender: TObject);
     procedure ToolBarOptionsClick(Sender: TObject);
   public
@@ -1608,7 +1611,7 @@ begin
   FWaitForClose := False;
   SetupDialogs;
 
-  MainBuildBoss:=TBuildManager.Create(nil);
+  MainBuildBoss:=TIdeBuildManager.Create(nil);
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.Create BUILD MANAGER');{$ENDIF}
   // setup macros before loading options
   MainBuildBoss.SetupTransferMacros;
@@ -2285,6 +2288,7 @@ begin
   StoreIDEFileDialog:=@StoreIDEFileDialogHandler;
   LazMessageWorker:=@IDEMessageDialogHandler;
   LazQuestionWorker:=@IDEQuestionDialogHandler;
+  LazMsgWorker.OnShowMessage:=@ShowMessageHandler;
   TestCompilerOptions:=@CompilerOptionsDialogTest;
   CheckCompOptsAndMainSrcForNewUnitEvent:=@CheckForNewUnit;
 end;
@@ -3860,6 +3864,14 @@ function TMainIDE.IDEQuestionDialogHandler(const aCaption, aMsg: string;
 begin
   Result:=QuestionDlg{ !!! DO NOT REPLACE WITH IDEQuestionDialog }
             (aCaption,aMsg,DlgType,Buttons,HelpKeyword);
+end;
+
+function TMainIDE.ShowMessageHandler(aUrgency: TMessageLineUrgency;
+  aMsg, aSrcFilename: string; aLineNumber, aColumn: integer; aViewCaption: string
+  ): TMessageLine;
+begin
+  Assert(Assigned(IDEMessagesWindow), 'TMainIDE.ShowMessageHandler: IDEMessagesWindow=Nil');
+  Result:=IDEMessagesWindow.AddCustomMessage(aUrgency, aMsg, aSrcFilename, aLineNumber, aColumn, aViewCaption);
 end;
 
 procedure TMainIDE.ExecuteIDEShortCutHandler(Sender: TObject; var Key: word;
@@ -10139,6 +10151,7 @@ begin
     begin
       SrcEdit := TSourceEditor(AnUnitInfo.OpenEditorInfo[0].EditorComponent);
       SrcEdit.Modified := True;
+      SrcEdit.ModifiedDesign := True;
       {$IFDEF VerboseDesignerModified}
       DumpStack;
       {$ENDIF}
@@ -11655,30 +11668,32 @@ var
     UInf: TEditableUnitInfo;
     i, j: Integer;
   begin
-    if AMark.UnitInfo is TSourceEditor
-    then Result := TSourceEditor(AMark.UnitInfo)
-    else begin        // find the nearest open View
-      UInf := TEditableUnitInfo(AMark.UnitInfo);
-      Result := TSourceEditor(UInf.OpenEditorInfo[0].EditorComponent);
-      j := 0;
-      while (j < UInf.OpenEditorInfoCount) and
-            (Result.IsLocked) and (not Result.IsCaretOnScreen(AMark.CursorPos))
-      do begin
-        inc(j);
-        if j < UInf.OpenEditorInfoCount then
-          Result := TSourceEditor(UInf.OpenEditorInfo[j].EditorComponent);
-      end;
-      if j >= UInf.OpenEditorInfoCount then
-        exit(nil);
-      for i := j + 1 to UInf.OpenEditorInfoCount - 1 do
-      begin
-        if (not Backward) and
-           (GetWinForEdit(Result) > GetWinForEdit(TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent)) )
-        then Result := TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent);
-        if (Backward) and
-           (GetWinForEdit(Result) < GetWinForEdit(TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent)) )
-        then Result := TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent);
-      end;
+    Result := TSourceEditor(AMark.GetStoredSourceEditor);
+    if Assigned(Result) then begin
+      debugln(['GetSrcEdit: Found SourceEditor in AMark.UnitInfo. ', Result.FileName]);
+      exit;
+    end;
+    // find the nearest open View
+    UInf := TEditableUnitInfo(AMark.UnitInfo);
+    Result := TSourceEditor(UInf.OpenEditorInfo[0].EditorComponent);
+    j := 0;
+    while (j < UInf.OpenEditorInfoCount) and
+          (Result.IsLocked) and (not Result.IsCaretOnScreen(AMark.CursorPos))
+    do begin
+      inc(j);
+      if j < UInf.OpenEditorInfoCount then
+        Result := TSourceEditor(UInf.OpenEditorInfo[j].EditorComponent);
+    end;
+    if j >= UInf.OpenEditorInfoCount then
+      exit(nil);
+    for i := j + 1 to UInf.OpenEditorInfoCount - 1 do
+    begin
+      if (not Backward) and
+         (GetWinForEdit(Result) > GetWinForEdit(TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent)) )
+      then Result := TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent);
+      if (Backward) and
+         (GetWinForEdit(Result) < GetWinForEdit(TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent)) )
+      then Result := TSourceEditor(UInf.OpenEditorInfo[i].EditorComponent);
     end;
   end;
 

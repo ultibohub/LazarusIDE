@@ -5191,10 +5191,6 @@ msgstr "Änderungen verwerfen?"
 msgid "Abort all loading"
 msgstr "Alle Ladevorgänge abbrechen"
 
-#: lazarusidestrconsts.lisaborted
-msgid "Aborted"
-msgstr "Abgebrochen"
-
 #: lazarusidestrconsts.lisabortloadingproject
 msgid "Abort loading project"
 msgstr "Das Laden des Projekts abbrechen"
@@ -6013,20 +6009,10 @@ msgstr "Kann die Datei \"%s\" nicht anlegen"
 msgid "Cannot delete last mode."
 msgstr "Der letzte Modus kann nicht gelöscht werden."
 
-#: lazarusidestrconsts.liscannotexecute
-#, object-pascal-format
-msgid "cannot execute \"%s\""
-msgstr "kann \"%s\" nicht ausführen"
-
 #: lazarusidestrconsts.liscannotfind
 #, object-pascal-format
 msgid "Cannot find %s"
 msgstr "Kann %s nicht finden"
-
-#: lazarusidestrconsts.liscannotfindexecutable
-#, object-pascal-format
-msgid "cannot find executable \"%s\""
-msgstr "kann ausführbare Datei \"%s\" nicht finden"
 
 #: lazarusidestrconsts.liscannotfindlazarusstarter
 #, object-pascal-format
@@ -8938,6 +8924,10 @@ msgstr "Trenner ist Semikolon."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Delphi-kompatible Ressourcen. Empfohlen."
 
+#: lazarusidestrconsts.lisdesignerhasunsavedchanges
+msgid "Designer has unsaved changes"
+msgstr ""
+
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr "Nur-Entwurfszeit-Package"
@@ -9753,16 +9743,6 @@ msgstr "%s zur Laufzeit ausgenommen"
 msgid "Excludes for * and ** in unit and include search paths"
 msgstr ""
 
-#: lazarusidestrconsts.lisexecutableisadirectory
-#, object-pascal-format
-msgid "executable \"%s\" is a directory"
-msgstr "ausführbare Datei \"%s\" ist ein Verzeichnis"
-
-#: lazarusidestrconsts.lisexecutablelacksthepermissiontorun
-#, object-pascal-format
-msgid "executable \"%s\" lacks the permission to run"
-msgstr ""
-
 #: lazarusidestrconsts.lisexecuteafter
 msgid "Execute After"
 msgstr "Ausführen nach"
@@ -9784,11 +9764,6 @@ msgstr ""
 msgctxt "lazarusidestrconsts.lisexit"
 msgid "Exit"
 msgstr "Beenden"
-
-#: lazarusidestrconsts.lisexitcode
-#, object-pascal-format
-msgid "Exit code %s"
-msgstr ""
 
 #: lazarusidestrconsts.lisexpand
 msgid "Expand"
@@ -9915,10 +9890,6 @@ msgstr ""
 #: lazarusidestrconsts.lisfailedtoloadfoldstat
 msgid "Failed to load fold state"
 msgstr "Laden des Status des Faltens fehlgeschlagen"
-
-#: lazarusidestrconsts.lisfailedtoresolvemacros
-msgid "failed to resolve macros"
-msgstr ""
 
 #: lazarusidestrconsts.lisfailedtosavefile
 msgid "Failed to save file."
@@ -10404,11 +10375,6 @@ msgstr "Frame"
 #: lazarusidestrconsts.lisfrbackwardsearch
 msgid "&Backward search"
 msgstr "&Rückwärts suchen"
-
-#: lazarusidestrconsts.lisfreeingbufferlines
-#, object-pascal-format
-msgid "freeing buffer lines: %s"
-msgstr ""
 
 #: lazarusidestrconsts.lisfreepascalcompilermessages
 msgid "Free Pascal Compiler messages"
@@ -11201,16 +11167,6 @@ msgstr "Ungültiger Filter"
 #, object-pascal-format
 msgid "Invalid line, column in message%s%s"
 msgstr "Ungültige Zeile, Spalte in Nachricht %s%s"
-
-#: lazarusidestrconsts.lisinvalidmacrosin
-#, object-pascal-format
-msgid "Invalid macros in \"%s\""
-msgstr "Ungültige Makros in \"%s\""
-
-#: lazarusidestrconsts.lisinvalidmacrosinexternaltool
-#, object-pascal-format
-msgid "Invalid macros \"%s\" in external tool \"%s\""
-msgstr "Ungültige Makros \"%s\" in externem Werkzeug \"%s\""
 
 #: lazarusidestrconsts.lisinvalidmacrothemacromustbeapascalidentifie
 #, object-pascal-format
@@ -13654,19 +13610,9 @@ msgstr "Nachrichtenfenster"
 msgid "Method class not found"
 msgstr "Methodenklasse nicht gefunden"
 
-#: lazarusidestrconsts.lismissingdirectory
-#, object-pascal-format
-msgid "missing directory \"%s\""
-msgstr "fehlendes Verzeichnis \"%s\""
-
 #: lazarusidestrconsts.lismissingevents
 msgid "Missing Events"
 msgstr "Fehlende Events"
-
-#: lazarusidestrconsts.lismissingexecutable
-#, object-pascal-format
-msgid "missing executable \"%s\""
-msgstr "fehlende ausführbare Datei \"%s\""
 
 #: lazarusidestrconsts.lismissingidentifiers
 msgid "Missing identifiers"
@@ -14647,6 +14593,11 @@ msgstr ""
 msgid "Override the project widgetset. For example: %s. Default: %s."
 msgstr ""
 
+#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
+#, object-pascal-format
+msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
+msgstr ""
+
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot
 msgid "'Owner' is already used by TReader/TWriter. Please choose another name."
 msgstr "»Owner« wird bereits vom TReader/TWriter verwendet. Bitte wählen sie einen anderen Namen."
@@ -14734,11 +14685,6 @@ msgstr ""
 #: lazarusidestrconsts.lisparsed
 msgid ", parsed "
 msgstr ", analysiert "
-
-#: lazarusidestrconsts.lisparser
-#, object-pascal-format
-msgid "parser \"%s\": %s"
-msgstr "Parser \"%s\": %s"
 
 #: lazarusidestrconsts.lisparsers
 msgid "Parsers:"
@@ -17448,10 +17394,6 @@ msgstr "Unterprozedur"
 msgid "Sub Procedure on same level"
 msgstr "Unterprozedur derselben Stufe"
 
-#: lazarusidestrconsts.lissuccess
-msgid "Success"
-msgstr "Erfolg"
-
 #: lazarusidestrconsts.lissuccessfullyexported
 #, object-pascal-format
 msgid "Successfully exported to \"%s\"."
@@ -18262,11 +18204,6 @@ msgstr "Pfad:"
 msgid "Toolbar Configuration"
 msgstr "Symbolleisten-Konfiguration"
 
-#: lazarusidestrconsts.listoolhasnoexecutable
-#, object-pascal-format
-msgid "tool \"%s\" has no executable"
-msgstr "Werkzeug \"%s\" hat keine ausführbare Datei"
-
 #: lazarusidestrconsts.listoolheaderfailed
 msgid "Tool Header: Failed"
 msgstr ""
@@ -18665,11 +18602,6 @@ msgstr "Temporärer lfm-Puffer kann nicht erzeugt werden."
 msgid "Unable to delete ambiguous file \"%s\""
 msgstr "Kann die unklare Datei \"%s\" nicht löschen"
 
-#: lazarusidestrconsts.lisunabletoexecute
-#, object-pascal-format
-msgid "unable to execute: %s"
-msgstr "kann %s nicht ausführen"
-
 #: lazarusidestrconsts.lisunabletofindaresourcestringsectioninthisoranyofthe
 msgid "Unable to find a ResourceString section in this or any of the used units."
 msgstr "Kann in dieser oder den anderen benutzten Units keinen ResourceString-Abschnitt finden"
@@ -18749,10 +18681,6 @@ msgstr "Designer kann nicht geöffnet werden.%sDie Klasse %s stammt nicht von ei
 #, object-pascal-format
 msgid "Unable to read %s"
 msgstr "Kann %s nicht lesen"
-
-#: lazarusidestrconsts.lisunabletoreadprocessexitstatus
-msgid "unable to read process ExitStatus"
-msgstr ""
 
 #: lazarusidestrconsts.lisunabletoremoveoldbackupfile
 #, object-pascal-format

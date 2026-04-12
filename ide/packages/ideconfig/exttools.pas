@@ -35,16 +35,14 @@ interface
 
 uses
   // RTL + FCL
-  Classes, SysUtils, Math, process, Pipes, AVL_Tree, System.UITypes,
+  Classes, SysUtils, Math, Process, Pipes, AVL_Tree, System.UITypes,
   // LazUtils
   FileUtil, LazFileUtils, LazUtilities, LazLoggerBase, UTF8Process, LazUTF8,
   AvgLvlTree,
   // BuildIntf
   IDEExternToolIntf, BaseIDEIntf, MacroIntf, LazMsgWorker,
   // IdeConfig
-  TransferMacros, IdeConfStrConsts,
-  // IDE
-  LazarusIDEStrConsts;
+  TransferMacros, IdeConfStrConsts;
 
 type
   TLMVToolState = (

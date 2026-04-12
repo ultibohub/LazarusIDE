@@ -56,14 +56,14 @@ uses
   LazConf, EnvironmentOpts, ModeMatrixOpts, TransferMacros, IdeConfStrConsts,
   IDEProcs, DialogProcs, etMakeMsgParser, etFPCMsgFilePool, EditDefineTree,
   ParsedCompilerOpts, CompilerOptions, Compiler, SearchPathProcs, BaseBuildManager,
-  ApplicationBundle,
+  ApplicationBundle, ExtTools,
   // IdePackager
   IdePackagerStrConsts, PackageDefs, PackageSystem,
   // IdeProject
   Project, ProjectResources, ProjectIcon,
   // IDE
   LazarusIDEStrConsts, LfmUnitResource, MiscOptions, etFPCMsgParser, etPas2jsMsgParser,
-  EditableProject, FPCSrcScan, IdeTransferMacros, ExtTools;
+  FPCSrcScan, IdeTransferMacros;
 
 type
 
@@ -105,6 +105,7 @@ type
     procedure GetMatrixOutputDirectoryOverride(Sender: TObject;
       var OutDir: string; Types: TBuildMatrixGroupTypes);
     function GetModeMatrixTarget(Sender: TObject): string;
+    function EditorUnitInfoModified(AnUnitInfo: TUnitInfo): boolean; virtual;
     function EnvironmentOptionsIsGlobalMode(const Identifier: string): boolean;
   public
     constructor Create(AOwner: TComponent); override;
@@ -951,6 +952,11 @@ begin
   end;
 end;
 
+function TBuildManager.EditorUnitInfoModified(AnUnitInfo: TUnitInfo): boolean;
+begin
+  Result:=false;
+end;
+
 function TBuildManager.DoCheckIfProjectNeedsCompilation(AProject: TProject;
   out NeedBuildAllFlag: boolean; var Note: string): TModalResult;
 var
@@ -958,18 +964,7 @@ var
   StateFilename: String;
   StateFileAge: LongInt;
 
-  function EditorUnitInfoModified(AnUnitInfo: TEditableUnitInfo): boolean;
-  var
-    EditComp: TSourceEditorInterface;
-  begin
-    Result:=false;
-    if AnUnitInfo=nil then exit;
-    if AnUnitInfo.EditorInfoCount=0 then exit;
-    EditComp:=AnUnitInfo.EditorInfo[0].EditorComponent;
-    Result:=(EditComp<>nil) and EditComp.Modified;
-  end;
-
-  function CheckNonProjectEditorFile(AnUnitInfo: TEditableUnitInfo): boolean;
+  function CheckNonProjectEditorFile(AnUnitInfo: TUnitInfo): boolean;
   begin
     Result:=false;
     if AnUnitInfo.IsPartOfProject or AnUnitInfo.IsVirtual then exit;
@@ -1015,7 +1010,7 @@ var
 
 var
   CompilerFilename, SrcFilename, LFMFilename, aTargetFilename: string;
-  AnUnitInfo: TEditableUnitInfo;
+  AnUnitInfo: TUnitInfo;
   IcoRes: TProjectIcon;
   CompilerParams: TStrings;
 begin
@@ -1064,7 +1059,7 @@ begin
     StateFileAge:=FileAgeCached(StateFilename);
 
     // check main source file
-    AnUnitInfo:=TEditableUnitInfo(AProject.MainUnitInfo);
+    AnUnitInfo:=AProject.MainUnitInfo;
     if EditorUnitInfoModified(AnUnitInfo) then
     begin
       if ConsoleVerbosity>=0 then

@@ -377,10 +377,6 @@ begin
 
   if not DeclarationCanBeInLFM(DeclTool,DeclNode) then exit;
 
-  {$IFNDEF EnableFindLFMRefs}
-  exit;
-  {$ENDIF}
-
   debugln(['GatherLFMsReferences Files.Count=',Files.Count]);
   // Note: this only supports lfm, not other form formats like dfm or fmx
 
@@ -665,8 +661,13 @@ begin
     exit(mrCancel);
   end;
   DeclTool:=CodeToolBoss.FindCodeToolForSource(StartSrcCode);
-  if DeclTool=nil then
-    exit(mrCancel);
+  if DeclTool=nil then begin
+    if StartSrcCode.LastIncludedByFile<>'' then
+      DeclTool:=CodeToolBoss.FindCodeToolForSource(
+        CodeToolBoss.FindFile(StartSrcCode.LastIncludedByFile));
+    if DeclTool=nil then
+      exit(mrCancel);
+  end;
   Kind:=friDeclaration;
   if DeclTool.TruePredefinedResult or DeclTool.TrueSelf then begin  // stay where you are
     DeclCodeXY.X:=StartCaretXY.X;
@@ -968,7 +969,21 @@ begin
                   CloseEditorFile(AUnitInfo.EditorInfo[j].EditorComponent,[cfQuiet,
                     cfCloseDependencies]);
 
-              //force dumb saving
+              // save or skip saving in lfm,
+              // dialog to skip saving is opened if there are pending designer changes
+
+              if AUnitInfo.EditorInfo[0].EditorComponent.ModifiedDesign then begin
+                if IDEMessageDialog(lisDesignerHasUnsavedChanges,
+                  Format(lisOverwriteDesignerChangesAnyway,[Code.Filename]),
+                  mtWarning, [mbYes, mbNo]) <> mrYes then
+                begin
+                  debugln('Changes by a designer detected, lfm file left unsaved');
+                  //the project will be inconsistent but possibly valuable work
+                  //via designer will be preserved
+                  continue;
+                end;
+              end;
+
               ReloadUnitComponent(AUnitInfo);
 
             end;
@@ -1753,12 +1768,9 @@ begin
   ShowResultCheckBox.Checked:=Options.RenameShowResult;
   ScopeCommentsCheckBox.Checked:=Options.SearchInComments;
   ScopeOverridesCheckBox.Checked:=Options.Overrides;
-  {$IFDEF EnableFindLFMRefs}
+
   ScopeIncludeLFMs.Checked:=Options.IncludeLFMs;
-  {$ELSE}
-  ScopeIncludeLFMs.Checked:=false;
-  ScopeIncludeLFMs.Visible:=false;
-  {$ENDIF}
+
   case Options.Scope of
   frCurrentUnit: ScopeRadioGroup.ItemIndex:=0;
   frProject: ScopeRadioGroup.ItemIndex:=1;

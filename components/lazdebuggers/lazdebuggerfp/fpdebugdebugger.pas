@@ -231,14 +231,6 @@ type
       bplStepOut  // Step out of Pop/Catches
     );
     TBreakPointLocs = set of TBreakPointLoc;
-    TExceptStepState = (esNone,
-      esStoppedAtRaise,  // Enter dsPause, next step is "stop to finally"
-      esIgnoredRaise,    // Keep dsRun, stop at finally/except *IF* outside current stepping frame
-      esStepToFinally,
-      esStepSehFinallyProloque,
-      esSteppingFpcSpecialHandler,
-      esAtWSehExcept
-    );
 
     { TFrameList }
 
@@ -309,7 +301,7 @@ type
     procedure ThreadProcessLoopCycle(var AFinishLoopAndSendEvents: boolean;
       var AnEventType: TFPDEvent; var ACurCommand: TDbgControllerCmd; var AnIsFinished: boolean);
     function  BreakpointHit(var &continue: boolean; const Breakpoint: TFpDbgBreakpoint): boolean;
-    procedure UserCommandRequested(var ACommand: TDBGCommand; IsContinueLastStep: Boolean);
+    procedure UserCommandRequested(var ACommand: TDBGCommand; ALastCommand: TDBGCommand);
 
 //    procedure ClearState;
   end;
@@ -368,6 +360,7 @@ type
     procedure DoThreadDebugOutput(Sender: TObject; ProcessId,
       ThreadId: Integer; AMessage: String);
     function GetClassInstanceName(AnAddr: TDBGPtr): string;
+    procedure DoReadAnsiString;
     function ReadAnsiString(AnAddr: TDbgPtr): string;
     procedure HandleSoftwareException(out AnExceptionLocation: TDBGLocationRec; var continue: boolean);
     // HandleBreakError: Default handler for range-check etc
@@ -444,12 +437,12 @@ type
     function AddBreak(const AFuncName: String; ALib: TDbgLibrary = nil; AnEnabled: Boolean = True): TFpDbgBreakpoint; overload;
     function ReadData(const AAdress: TDbgPtr; const ASize: Cardinal; out AData): Boolean; inline;
     function ReadData(const AAdress: TDbgPtr; const ASize: Cardinal; out AData; out ABytesRead: Cardinal): Boolean; inline;
-    function ReadAddress(const AAdress: TDbgPtr; out AData: TDBGPtr): Boolean;
     function SetStackFrameForBasePtr(ABasePtr: TDBGPtr; ASearchAssert: boolean = False;
       CurAddr: TDBGPtr = 0): TDBGPtr;
     function  FindSymbolScope(AThreadId, AStackFrame: Integer): TFpDbgSymbolScope; inline;
     procedure StopAllWorkers(AWait: Boolean = False);
     function IsPausedAndValid: boolean; // ready for eval watches/stack....
+    function GetExceptionState: TExceptStepState; override;
 
     procedure DoProcessMessages;
     property DebugInfo: TDbgInfo read GetDebugInfo;
@@ -2813,8 +2806,8 @@ begin
       end;
     False:
       begin
-        FDebugger.EnterPause(AnExceptionLocation);
         FState := esStoppedAtRaise;
+        FDebugger.EnterPause(AnExceptionLocation);
       end;
   end;
 end;
@@ -3501,11 +3494,13 @@ begin
 end;
 
 procedure TFpDebugExceptionStepping.UserCommandRequested(var ACommand: TDBGCommand;
-  IsContinueLastStep: Boolean);
+  ALastCommand: TDBGCommand);
 var
   st: TExceptStepState;
 begin
   // This only runs if the debugloop is paused
+  if ACommand <> dcContinueLastStep then
+    ALastCommand := ACommand;
   st := FState;
   FState := esNone;
   DisableBreaks([bplPopExcept, bplCatches, bplReRaise,
@@ -3519,7 +3514,7 @@ begin
     {$ENDIF}
     bplStepOut]);
 
-  if ACommand in [dcStepInto, dcStepOver, dcStepOut, dcStepTo, dcRunTo, dcStepOverInstr{, dcStepIntoInstr}] then
+  if ALastCommand in [dcStepInto, dcStepOver, dcStepOut, dcStepTo, dcRunTo, dcStepOverInstr{, dcStepIntoInstr}] then
     EnableBreaks([bplReRaise
       {$IFDEF MSWINDOWS}
       {$IFDEF WIN64} , bplRtlRestoreContext, bplFpcSpecific {$ENDIF}
@@ -3528,12 +3523,12 @@ begin
       {$ENDIF}
       ]);
 
-  if IsContinueLastStep then
+  if ACommand = dcContinueLastStep then
     exit;
 
   case st of
     esStoppedAtRaise: begin
-      if ACommand in [dcStepInto, dcStepOver, dcStepOut, dcStepTo, dcRunTo] then begin
+      if ALastCommand in [dcStepInto, dcStepOver, dcStepOut, dcStepTo, dcRunTo] then begin
         FState := esStepToFinally;
         ACommand := dcRun;
         FDebugger.FDbgController.&ContinueRun;
@@ -3846,26 +3841,26 @@ begin
   end;
 end;
 
-function TFpDebugDebugger.ReadAnsiString(AnAddr: TDbgPtr): string;
+procedure TFpDebugDebugger.DoReadAnsiString;
 var
   StrAddr: TDBGPtr;
-  len: TDBGPtr;
 begin
-  result := '';
-  if not ReadAddress(AnAddr, StrAddr) then
+  FCacheFileName := '';
+  if not FDbgController.CurrentProcess.ReadAddress(FCacheLocation, StrAddr) then
     Exit;
-  if StrAddr = 0 then
-    exit;
-  ReadAddress(StrAddr-DBGPTRSIZE[FDbgController.CurrentProcess.Mode], len);
-  // len > max len ....
-  if (len = 0) or (len > MaxInt) then // MaxInt: not a valid string
-    exit;
-  if len > 16 * 1024 then
-    len := 16 * 1024; // reading exception name/msg
 
-  setlength(result, len);
-  if not ReadData(StrAddr, len, result[1]) then
-    result := '';
+  FpDbgDwarfFreePascal.ReadAnsiStringFromTarget(FDbgController.CurrentProcess, StrAddr, FCacheFileName);
+end;
+
+function TFpDebugDebugger.ReadAnsiString(AnAddr: TDbgPtr): string;
+begin
+  FCacheLocation := AnAddr;
+  if ThreadID = FWorkerThreadId then
+    DoReadAnsiString
+  else
+    ExecuteInDebugThread(@DoReadAnsiString);
+
+  result := FCacheFileName;
 end;
 
 procedure TFpDebugDebugger.HandleSoftwareException(out
@@ -4363,7 +4358,7 @@ begin
      not(FLastStepCommand in [dcStepOver, dcStepInto, dcStepOut, dcStepTo, dcRunTo, dcJumpto, dcStepOverInstr, dcStepIntoInstr])
   then
     FLastStepCommand := Cmd;
-  FExceptionStepper.UserCommandRequested(FLastStepCommand, Cmd = dcContinueLastStep);
+  FExceptionStepper.UserCommandRequested(Cmd, FLastStepCommand);
   case Cmd of
     dcRun:
       begin
@@ -4778,25 +4773,6 @@ begin
   ABytesRead := FCacheBytesRead;
 end;
 
-function TFpDebugDebugger.ReadAddress(const AAdress: TDbgPtr; out AData: TDBGPtr): Boolean;
-var
-  dw: DWord;
-  qw: QWord;
-begin
-  case FDbgController.CurrentProcess.Mode of
-    dm32:
-      begin
-        result := ReadData(AAdress, sizeof(dw), dw);
-        AData:=dw;
-      end;
-    dm64:
-      begin
-        result := ReadData(AAdress, sizeof(qw), qw);
-        AData:=qw;
-      end;
-  end;
-end;
-
 function TFpDebugDebugger.SetStackFrameForBasePtr(ABasePtr: TDBGPtr;
   ASearchAssert: boolean; CurAddr: TDBGPtr): TDBGPtr;
 const
@@ -4885,6 +4861,11 @@ begin
   Result := (State in [dsPause, dsInternalPause]) and
             (FDbgController <> nil) and
             (FDbgController.CurrentProcess <> nil);
+end;
+
+function TFpDebugDebugger.GetExceptionState: TExceptStepState;
+begin
+  Result := FExceptionStepper.FState;
 end;
 
 procedure TFpDebugDebugger.DoProcessMessages;
