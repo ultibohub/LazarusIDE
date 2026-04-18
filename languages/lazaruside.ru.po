@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-04-10 23:04+0300\n"
+"PO-Revision-Date: 2026-04-16 23:11+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -7560,11 +7560,6 @@ msgstr "Собрать пакет дважды и проверить, компи
 msgid "Compiler"
 msgstr "Компилятор"
 
-#: lazarusidestrconsts.liscompilercfgismissing
-#, object-pascal-format
-msgid "%s is missing."
-msgstr "%s отсутствует."
-
 #: lazarusidestrconsts.liscompilerdoesnotsupporttarget
 #, object-pascal-format
 msgid "Compiler \"%s\" does not support target %s-%s"
@@ -7888,14 +7883,10 @@ msgstr "*** Преобразование вновь обнаруженных ф�
 msgid "*** Converting unit files belonging to project/package ***"
 msgstr "*** Преобразование файлов модулей, принадлежащих проекту/пакету ***"
 
-#: lazarusidestrconsts.lisconvdelphierror
+#: lazarusidestrconsts.lisconvdelphiconvertingunit
 #, object-pascal-format
-msgid "Error=\"%s\""
-msgstr "Ошибка=\"%s\""
-
-#: lazarusidestrconsts.lisconvdelphiexceptionduringconversion
-msgid "Exception happened during unit conversion. Continuing with form files of already converted units..."
-msgstr "Во время преобразования модулей возникло исключение. Работа продолжается с файлами форм уже преобразованных модулей..."
+msgid "Converting unit \"%s\""
+msgstr "Преобразование модуля \"%s\""
 
 #: lazarusidestrconsts.lisconvdelphifailedconvertingunit
 msgid "Failed converting unit"
@@ -9011,11 +9002,6 @@ msgstr "Каталог: "
 msgid "Directory \"%s\" not found."
 msgstr "Каталог \"%s\" не найден."
 
-#: lazarusidestrconsts.lisdirectorynotfound2
-#, object-pascal-format
-msgid "directory %s not found"
-msgstr "каталог %s не найден"
-
 #: lazarusidestrconsts.lisdirectorywheretheideputsthepofiles
 msgid "Directory where the IDE puts the .po files"
 msgstr "Каталог, в котором IDE размещает файлы PO"
@@ -9953,14 +9939,6 @@ msgstr "Файл \"%s\" был изменён. Сохранить?"
 msgid "File has no project"
 msgstr "Файл не имеет проекта"
 
-#: lazarusidestrconsts.lisfileisdirectory
-msgid "File is directory"
-msgstr "Файл является каталогом"
-
-#: lazarusidestrconsts.lisfileisnotanexecutable
-msgid "File is not an executable"
-msgstr "Файл не является исполнимым"
-
 #: lazarusidestrconsts.lisfileisvirtual
 #, object-pascal-format
 msgid "File \"%s\" is virtual."
@@ -9969,19 +9947,6 @@ msgstr "Файл \"%s\" является виртуальным."
 #: lazarusidestrconsts.lisfilenamestyle
 msgid "Filename Style"
 msgstr "Стиль имени файла"
-
-#: lazarusidestrconsts.lisfilenotfound
-msgid "File not found"
-msgstr "Файл не найден"
-
-#: lazarusidestrconsts.lisfilenotfound3
-#, object-pascal-format
-msgid "file %s not found"
-msgstr "файл %s не найден"
-
-#: lazarusidestrconsts.lisfilenotfound4
-msgid "file not found"
-msgstr "файл не найден"
 
 #: lazarusidestrconsts.lisfilenotfound5
 #, object-pascal-format
@@ -10208,11 +10173,6 @@ msgstr "Ошибка форматирования"
 #: lazarusidestrconsts.lisforwindows
 msgid "For Windows"
 msgstr "Для Windows"
-
-#: lazarusidestrconsts.lisfoundversionexpected
-#, object-pascal-format
-msgid "Found version %s, expected %s"
-msgstr "Найдена версия %s, хотя ожидалась %s"
 
 #: lazarusidestrconsts.lisfpcmessagefile2
 msgid "FPC message file:"
@@ -11229,11 +11189,6 @@ msgstr "Неверный каталог публикации"
 msgid "Invalid selection"
 msgstr "Неверное выделение"
 
-#: lazarusidestrconsts.lisinvalidversionin
-#, object-pascal-format
-msgid "invalid version in %s"
-msgstr "в файле %s указана некорректная версия"
-
 #: lazarusidestrconsts.lisisalreadypartoftheproject
 #, object-pascal-format
 msgid "%s is already part of the Project."
@@ -11248,10 +11203,6 @@ msgstr "\"%s\" не является корректным именем прое�
 #, object-pascal-format
 msgid "%s is a %s.%sThis circular dependency is not allowed."
 msgstr "%s является %s.%sТакой порочный круг зависимостей недопустим."
-
-#: lazarusidestrconsts.lisisddirectorynotfound
-msgid "directory not found"
-msgstr "каталог не найден"
 
 #: lazarusidestrconsts.lisissues
 msgid "Issues"
@@ -15898,11 +15849,6 @@ msgstr "%s (положение вне границ исходного кода)"
 msgid "ppu in wrong directory=%s."
 msgstr "PPU в неверном каталоге=%s."
 
-#: lazarusidestrconsts.lisppunotfoundcheckyourfpccfg
-#, object-pascal-format
-msgid "%s.ppu not found. Check your fpc.cfg."
-msgstr "%s.ppu не найден. Проверьте файл fpc.cfg."
-
 #: lazarusidestrconsts.lisprecedingword
 msgid "Preceding word"
 msgstr "Предыдущее слово"
@@ -17496,10 +17442,6 @@ msgstr "Переключаться на вкладку 'Избранное' ин
 msgid "Syntax mode"
 msgstr "Режим синтаксиса"
 
-#: lazarusidestrconsts.lissystemppunotfoundcheckyourfpccfg
-msgid "system.ppu not found. Check your fpc.cfg."
-msgstr "не найден system.ppu. Проверьте, что файл fpc.cfg корректен."
-
 #: lazarusidestrconsts.listab
 msgid "Tab"
 msgstr "Таб"
@@ -18044,11 +17986,6 @@ msgstr "Модуль с именем \"%s\" уже имеется. Иденти�
 #, object-pascal-format
 msgid "There is a unit with the name \"%s\" in the project.%sPlease choose a different name"
 msgstr "Модуль с именем \"%s\" уже имеется в проекте.%sВыберите другое имя"
-
-#: lazarusidestrconsts.listhereisnofpcexeinthedirectoryofusuallythemakeexecu
-#, object-pascal-format
-msgid "There is no fpc.exe in the directory of %s. Usually the make executable is installed together with the FPC compiler."
-msgstr "В каталоге с %s отсутствует fpc.exe. Обычно исполнимый файл make установлен вместе с компилятором FPC."
 
 #: lazarusidestrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
 #, object-pascal-format
@@ -18685,11 +18622,6 @@ msgstr "Невозможно определить изменения в реда
 msgid "Unable to get source for designer."
 msgstr "Невозможно получить исходный код для редактора форм."
 
-#: lazarusidestrconsts.lisunabletoloadfile2
-#, object-pascal-format
-msgid "unable to load file %s: %s"
-msgstr "невозможно загрузить файл %s: %s"
-
 #: lazarusidestrconsts.lisunabletoloadpackage
 #, object-pascal-format
 msgid "Unable to load package \"%s\""
@@ -18896,14 +18828,6 @@ msgstr "Не найдены модули в файле %s"
 #, object-pascal-format
 msgid "Unused units of %s"
 msgstr "Неиспользуемые модули в %s"
-
-#: lazarusidestrconsts.lisunusualcompilerfilenameusuallyitstartswithfpcppcor
-msgid "Unusual compiler file name. Usually it starts with fpc, ppc or ppcross."
-msgstr "Необычное имя файла компилятора. Как правило, оно начинается с fpc, ppc либо ppcross."
-
-#: lazarusidestrconsts.lisunusualpas2jscompilerfilenameusuallyitstartswithpa
-msgid "Unusual pas2js compiler file name. Usually it starts with pas2js."
-msgstr "Необычное имя файла компилятора pas2js. Как правило, оно начинается с pas2js."
 
 #: lazarusidestrconsts.lisup
 msgctxt "lazarusidestrconsts.lisup"
@@ -19247,11 +19171,6 @@ msgstr "Не удалось записать файл сведений о про
 #: lazarusidestrconsts.liswritewhatpackagefilesares
 msgid "Write what package files are searched and found."
 msgstr "Вывести ищущиеся и найденные файлы пакетов."
-
-#: lazarusidestrconsts.liswrongversionin
-#, object-pascal-format
-msgid "wrong version in %s: %s"
-msgstr "некорректная версия в %s: %s"
 
 #: lazarusidestrconsts.lisyoucandisablethisforindividualformsviathepackageed
 msgid "You can disable this for individual forms via the package editor"

@@ -607,15 +607,12 @@ resourcestring
   lisConvDelphiConversionReady = 'Conversion Ready.';
   lisConvDelphiConversionAborted = 'Conversion Aborted.';
   lisConvDelphiBeginCodeToolsFailed = 'BeginCodeTools failed!';
-  lisConvDelphiError = 'Error="%s"';
+  lisConvDelphiConvertingUnit = 'Converting unit "%s"';
   lisConvDelphiFailedConvertingUnit = 'Failed converting unit';
   lisConvDelphiFailedToConvertUnit = 'Failed to convert unit "%s"';
-  lisConvDelphiExceptionDuringConversion = 'Exception happened during unit conversion.'
-    +' Continuing with form files of already converted units...';
   lisConvDelphiUnitnameExistsInLCL = 'Unitname exists in LCL';
   lisConvDelphiUnitWithNameExistsInLCL = 'LCL already has a unit with name %s.'
     +' Delete local file %s?';
-  //lisConvDelphiPackageNameExists = 'Package name already exists';
   lisConvDelphiProjOmittedUnit = 'Omitted unit %s from project';
   lisConvDelphiAddedPackageDependency = 'Added Package %s as a dependency.';
   lisConvDelphiPackageRequired = 'Package %s is required but not installed in Lazarus! Install it later.';
@@ -4074,7 +4071,6 @@ resourcestring
     +'%0:sYou may then hit "Stop", or "Reset debugger" to terminate the debug session.';
   lisExecutionStopped = 'Execution stopped';
   lisExecutionStoppedExitCode = 'Execution stopped with exit-code %1:d ($%2:s)';
-  lisFileNotFound = 'File not found';
   lisDisableOptionXg = 'Disable Option -Xg?';
   lisTheProjectWritesTheDebugSymbolsToAnExternalFileThe = 'The project writes '
     +'the debug symbols to an external file. The "%s" supports only symbols '
@@ -5878,29 +5874,10 @@ resourcestring
     +'target specific compiler like "%s". Please give the full file path.';
   lisTheMakeExecutableTypicallyHasTheName = 'The "make" executable typically '
     +'has the name "%s". It is needed for building the IDE. Please give the full file path.';
-  lisFoundVersionExpected = 'Found version %s, expected %s';
-  lisInvalidVersionIn = 'invalid version in %s';
-  lisWrongVersionIn = 'wrong version in %s: %s';
   lisFPCSources = 'FPC sources';
   lisConfigureLazarusIDE = 'Configure Lazarus IDE (Ultibo Edition)'; //'Configure Lazarus IDE'; //Ultibo
-  lisFileIsNotAnExecutable = 'File is not an executable';
-  lisUnusualPas2jsCompilerFileNameUsuallyItStartsWithPa = 'Unusual pas2js '
-    +'compiler file name. Usually it starts with pas2js.';
-  lisThereIsNoFpcExeInTheDirectoryOfUsuallyTheMakeExecu = 'There is no fpc.exe'
-    +' in the directory of %s. Usually the make executable is installed '
-    +'together with the FPC compiler.';
-  lisUnusualCompilerFileNameUsuallyItStartsWithFpcPpcOr = 'Unusual compiler '
-    +'file name. Usually it starts with fpc, ppc or ppcross.';
-  lisCompilerCfgIsMissing = '%s is missing.';
-  lisSystemPpuNotFoundCheckYourFpcCfg = 'system.ppu not found. Check your fpc.cfg.';
   lisWelcomeToLazarusIDE = 'Welcome to Lazarus IDE (Ultibo Edition) %s'; //'Welcome to Lazarus IDE %s'; //Ultibo
   lisStartIDE = 'Start IDE';
-  lisUnableToLoadFile2 = 'unable to load file %s: %s';
-  lisDirectoryNotFound2 = 'directory %s not found';
-  lisFileNotFound3 = 'file %s not found';
-  lisFileNotFound4 = 'file not found';
-  lisPpuNotFoundCheckYourFpcCfg = '%s.ppu not found. Check your fpc.cfg.';
-  lisISDDirectoryNotFound = 'directory not found';
 
   lisCleanUpAndBuildProject = 'Clean up and build project';
   // Many Build Modes
@@ -5924,7 +5901,6 @@ resourcestring
   lisDiscardChangesCreateNewProject = 'Discard changes, create new project';
   lisDoYouStillWantToQuit = 'Do you still want to quit?';
   lisDiscardChangesAndQuit = 'Discard changes and quit';
-  lisFileIsDirectory = 'File is directory';
   lisPathIsNoDirectory = 'is not a directory';
   lisUnableToCreateNewFileBecauseThereIsAlreadyADirecto = 'Unable to create '
     +'new file because there is already a directory with this name.';

@@ -253,6 +253,7 @@ type
 
   TDBGWatchPointKind = (
     wpkWrite,
+    wpkWriteChange,
     wpkRead,
     wpkReadWrite,
     wkpExec
@@ -789,6 +790,7 @@ type
   protected
   public
     procedure RequestData(ARegisters: TRegisters); virtual;
+    procedure TriggerInvalidateRegisterValues;
     property  CurrentRegistersList: TRegistersList read GetCurrentRegistersList;
     property  Monitor: TRegistersMonitor read GetMonitor write SetMonitor;
   end;
@@ -805,6 +807,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure InvalidateRegisterValues; virtual;
     property RegistersList: TRegistersList read FRegistersList;
     property Supplier: TRegisterSupplier read GetSupplier write SetSupplier;
   end;
@@ -2529,6 +2532,11 @@ begin
   ReleaseRefAndNil(FRegistersList);
 end;
 
+procedure TRegistersMonitor.InvalidateRegisterValues;
+begin
+  //
+end;
+
 { TDebuggerDataHandler }
 
 procedure TDebuggerDataHandler.DoStateEnterPause;
@@ -2604,6 +2612,12 @@ end;
 procedure TRegisterSupplier.RequestData(ARegisters: TRegisters);
 begin
   ARegisters.SetDataValidity(ddsInvalid);
+end;
+
+procedure TRegisterSupplier.TriggerInvalidateRegisterValues;
+begin
+  if Monitor <> nil then
+    Monitor.InvalidateRegisterValues;
 end;
 
 { TRegisterDisplayValue }

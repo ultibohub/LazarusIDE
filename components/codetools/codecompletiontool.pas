@@ -1888,7 +1888,7 @@ var
   Params: TFindDeclarationParams;
   ExprType: TExpressionType;
   MissingUnit, NewName: String;
-  ResExprContext {, OrigExprContext}: TFindContext;
+  ResExprContext, OrigExprContext : TFindContext;
   ProcNode, ClassNode: TCodeTreeNode;
   CCOptions: TCodeCreationDlgResult;
   AddSourceName: boolean;
@@ -1954,17 +1954,17 @@ begin
       Params.Flags := [fdfSearchInAncestors..fdfIgnoreCurContextNode,fdfTypeType,fdfSearchInHelpers];
       if FindIdentifierInContext(Params) then
       begin
-        ResExprContext:=Params.NewCodeTool.FindBaseTypeOfNode(
-          Params,Params.NewNode);
-        //OrigExprContext:=ExprType.Context.Tool.FindBaseTypeOfNode(
-        //  Params,ExprType.Context.Node);
+        ResExprContext:=Params.NewCodeTool.FindBaseTypeOfNode(Params,Params.NewNode);
+        OrigExprContext:=ExprType.Context.Tool.FindBaseTypeOfNode(
+          Params,ExprType.Context.Node);
 
         // check if declaration isn't shadowed
         Params.SetIdentifier(Self, PChar(NewType),nil);
         Params.ContextNode := CursorNode;
         Params.Flags := fdfDefaultForExpressions;
         if FindIdentifierInContext(Params) then begin
-          AddSourceName:=true;
+          AddSourceName:= (ResExprContext.Node<>ExprType.Context.Node) and
+                          (ResExprContext.Tool<>OrigExprContext.Tool);
           if ((Params.NewNode.Desc=ctnTypeDefinition) and
           (ExprType.Context.Node.Desc=ctnTypeDefinition) and
           (Params.NewNode=ExprType.Context.Node))
@@ -2708,9 +2708,9 @@ type
 
 var
   VarNameRange, ProcNameAtom: TAtomPosition;
-  ParameterIndex, i, j, APos: integer;
+  ParameterIndex, i, j: integer;
   Params: TFindDeclarationParams;
-  ParameterNode, ANode: TCodeTreeNode;
+  ParameterNode: TCodeTreeNode;
   TypeNode: TCodeTreeNode;
   NewType: String;
   IgnorePos: TCodePosition;
@@ -2719,8 +2719,8 @@ var
   ExprType: TExpressionType;
   Context: TFindContext;
   HasAtOperator: Boolean;
-  TypeTool, ATool: TFindDeclarationTool;
-  AliasType: TFindContext;
+  StartTypeTool, TypeTool: TFindDeclarationTool;
+  AliasType, aFindContext: TFindContext;
   Identifier: String;
   CodeXYPos: TCodeXYPosition;
   FPL: TFPList;
@@ -2836,25 +2836,19 @@ begin
         if not Params.NewCodeTool.CleanPosToCaret(
           Params.NewNode.FirstChild.StartPos,CodeXYPos) then
         exit;
-        if not Context.Tool.FindDeclarationAndOverload(CodeXYPos,FPL,
-          [fdlfWithoutEmptyProperties]) then
-        exit;
+        if not Context.Tool.FindDeclarationAndOverloadNodes(CodeXYPos,FPL,
+            [fdlfWithoutEmptyProperties]) then
+          exit;
         if FPL<>nil then
           for i:=0 to FPL.Count-1 do begin
-            CodeXYPos:=TCodeXYPosition(FPL[i]^);
-            ATool:= FindCodeToolForUsedUnit(CodeXYPos.Code.Scanner.SourceName,
-              CodeXYPos.Code.Filename,false);
-            if ATool<>nil then begin
-              SetLength(ProcArray, Length(ProcArray)+1);
-              ATool.CaretToCleanPos(CodeXYPos,Apos);
-              ANode:=ATool.FindDeepestNodeAtPos(APos,false);
-              ProcArray[high(ProcArray)].Tool:=Atool;
-              ProcArray[high(ProcArray)].ProcNode:=ANode;
-              SetTypeName(ProcArray[high(ProcArray)],ParameterIndex);  // get N-th parameter type name
-            end;
+            aFindContext:=PFindContext(FPL[i])^;
+            SetLength(ProcArray, Length(ProcArray)+1);
+            ProcArray[high(ProcArray)].Tool:=aFindContext.Tool;
+            ProcArray[high(ProcArray)].ProcNode:=aFindContext.Node;
+            SetTypeName(ProcArray[high(ProcArray)],ParameterIndex);  // get N-th parameter type name
           end;
       finally
-        FreeListOfPCodeXYPosition(FPL);
+        FreeListOfPFindContext(FPL);
         ClearIgnoreErrorAfter;
       end;
     end else
@@ -2920,7 +2914,7 @@ begin
           QualifiedPrefix:=AliasType.Tool.ExtractSourceName
         else
           QualifiedPrefix:=Params.NewCodeTool.ExtractSourceName;
-        NewType:=GetCommonTypeForParameter(ProcArray, ParameterNode, TypeTool,
+        NewType:=GetCommonTypeForParameter(ProcArray, ParameterNode, StartTypeTool,
                                            ParamIsArray, QualifiedPrefix, false);
       end;
     end else
@@ -2928,9 +2922,12 @@ begin
       Params.SetIdentifier(Self, PChar(NewType),nil);
       Params.ContextNode := CursorNode;
       Params.Flags := fdfDefaultForExpressions;
-      if FindIdentifierInContext(Params) then begin // shadowed, use prefix
-        QualifiedPrefix:=Params.NewCodeTool.ExtractSourceName;
-        NewType:=GetCommonTypeForParameter(ProcArray, ParameterNode, TypeTool,
+      if FindIdentifierInContext(Params) then begin
+        if TypeTool=Params.NewCodeTool then
+          QualifiedPrefix:='' // not shadowed
+        else
+          QualifiedPrefix:=Params.NewCodeTool.ExtractSourceName;
+        NewType:=GetCommonTypeForParameter(ProcArray, ParameterNode, StartTypeTool,
                                            ParamIsArray, QualifiedPrefix,false);
       end;
     end;
@@ -3229,20 +3226,37 @@ var
   ParamNames: TStringToStringTree;
   
   function CreateParamName(ExprStartPos, ExprEndPos: integer;
-    const ParamType: string): string;
+    const ParamType: string; out IsArraySlice: boolean): string;
   var
     i: Integer;
+    // out IsArraySlice:  boolean  // allow e.g. varname[3..7] to detect an array slice
   begin
     Result:='';
+    IsArraySlice:=false;
     // use the last identifier of expression as name
     MoveCursorToCleanPos(ExprStartPos);
     repeat
       ReadNextAtom;
-      if AtomIsIdentifier then
-        Result:=GetAtom
-      else
+      if (Result='') and AtomIsIdentifier then begin
+        Result:=GetAtom;
+        ReadNextAtom;
+        if AtomIs('[') then
+        begin
+          ReadNextAtom; // low
+          ReadNextAtom;
+          if not AtomIs('..') then break;
+          ReadNextAtom; // high
+          ReadNextAtom;
+          if AtomIs(']') then begin
+            IsArraySlice:=true;
+            break;
+          end;
+          Result:='';
+        end;
+      end else
         Result:='';
     until CurPos.EndPos>=ExprEndPos;
+
     // otherwise use ParamType
     if Result='' then
       Result:=ParamType;
@@ -3272,6 +3286,7 @@ var
   ExprEndPos: LongInt;
   Params: TFindDeclarationParams;
   ParamName: String;
+  IsArraySlice: boolean;
   // create param list without brackets
   {$IFDEF EnableCodeCompleteTemplates}
   Colon : String;
@@ -3312,7 +3327,8 @@ begin
       ParamExprType:=ExprList.Items[i];
       ParamType:=FindExprTypeAsString(ParamExprType,ExprStartPos);
       // create a nice parameter name
-      ParamName:=CreateParamName(ExprStartPos,ExprEndPos,ParamType);
+      ParamName:=CreateParamName(ExprStartPos,ExprEndPos,ParamType, IsArraySlice);
+      if IsArraySlice then ParamType:= 'array of '+ParamType;
       //DebugLn(['TCodeCompletionCodeTool.CreateParamListFromStatement ',i,' ',ParamName,':',ParamType]);
       if Result<>'' then begin
         Result:=Result+';';

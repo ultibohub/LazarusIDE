@@ -1806,7 +1806,7 @@ begin
     begin
       FXorSnapshot := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, R.width, R.height);
       TempCairo := cairo_create(FXorSnapshot);
-      cairo_set_source_surface(TempCairo, cairo_get_target(FCairo), -R.x, -R.y);
+      cairo_set_source_surface(TempCairo, cairo_get_target(FCairo), -R.x-Self.fncOrigin.X, -R.y-Self.fncOrigin.Y);
       cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
       cairo_paint(TempCairo);
       cairo_destroy(TempCairo);
@@ -2542,7 +2542,7 @@ function TGtk3DeviceContext.getPixel(x, y: Integer): TColor;
 var
   APixbuf: PGdkPixbuf;
   AData: PByte;
-  APixelValue: Longword;
+  APixelValue: Longint;
   ASurfaceWidth, ASurfaceHeight, ARowStride: Integer;
   AOutSize: Tcairo_rectangle_int_t;
   ARegion: Pcairo_region_t;
@@ -2580,7 +2580,7 @@ begin
   end else
   if st=CAIRO_SURFACE_TYPE_IMAGE then
   begin
-    pixels := cairo_image_surface_get_data(CAirosurface);
+    pixels := cairo_image_surface_get_data(CairoSurface);
     if Assigned(pixels) then
     begin
      stride := cairo_image_surface_get_stride(CairoSurface);
@@ -2592,7 +2592,6 @@ begin
   Result := ((APixelValue and $FF0000) shr 16) or
               (APixelValue and $00FF00) or
               ((APixelValue and $0000FF) shl 16);
-
 end;
 
 
@@ -3075,6 +3074,7 @@ begin
       // Must paint border, filling is not enough
       SetSourceColor(FCurrentBrush.Color);
       cairo_set_line_width(pcr, 1);
+      cairo_set_dash(pcr, nil, 0, 0);
       cairo_stroke(pcr);
     end;
   end;

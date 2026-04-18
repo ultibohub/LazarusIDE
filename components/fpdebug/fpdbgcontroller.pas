@@ -374,7 +374,7 @@ type
                                   // Returned value indicated, if the debugger should continue running.
                                   // I.e., the current Command (e.g. Stepping) will be kept for continuation, if possible.
                                   // Returned value may be ignored (treated as "False") where indicated.
-         const Breakpoint: TFpDbgBreakpoint; // Break or Watch, if avail
+         const Breakpoint: TFpDbgBreakpointBase; // Break or Watch, if avail
          AnEventType: TFPDEvent;             // reason: See below
          AMoreHitEventsPending: Boolean      // The debugger stopped for more than one reason.
                                              // There will be further calls to OnHitBreakpointEvent
@@ -1862,6 +1862,8 @@ begin
   if MaybeDetach then
     exit;
 
+  FCurrentProcess.ProcessBreakpointUpdates;
+
   // Do not clear callstack of threads: TDbgControllerCallRoutineCmd is considered remaining in pause.
   // TODO: if the IP of another thread changes, send notifications
   if (FCommand = nil) or not (FCommand is TDbgControllerCallRoutineCmd) then
@@ -2059,6 +2061,7 @@ begin
       FreeAndNil(FCommand);
 
   until AExit or (InterLockedExchangeAdd(FPauseRequest, 0) = 1);
+  FCurrentProcess.ProcessBreakpointUpdates;
 end;
 
 procedure TDbgController.SendEvents(out continue: boolean);
