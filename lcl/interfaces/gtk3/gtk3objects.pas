@@ -203,6 +203,34 @@ type
     property Handle:PGdkCursor read fHandle;
   end;
 
+  TCairoLastApplied = (claNone, claPen, claBrush, claFontColor);
+
+  PGtk3DCSavedState = ^TGtk3DCSavedState;
+  TGtk3DCSavedState = record
+    PenColor: TColor;
+    PenWidth: Integer;
+    PenStyle: TFPPenStyle;
+    PenMode: TPenMode;
+    PenCosmetic: Boolean;
+    PenEndCap: TPenEndCap;
+    PenJoinStyle: TPenJoinStyle;
+    PenIsExtPen: Boolean;
+    PenLogPen: TLogPen;
+    PenExtPenStyle: DWord;
+    PenExtPenBrush: TLogBrush;
+    PenDashes: array of DWord;
+    BrushColor: TColor;
+    BrushStyle: LongWord;
+    BrushLogBrush: TLogBrush;
+    FontObj: TGtk3Font;
+    BkColor: TColorRef;
+    BkMode: Integer;
+    LastApplied: TCairoLastApplied;
+    TextColor: TColorRef;
+    XorMode: Boolean;
+    XorROP: Integer;
+  end;
+
   { TGtk3DeviceContext }
 
   TGtk3DeviceContext = class (TGtk3Object)
@@ -238,6 +266,10 @@ type
     FClipRegion: Pcairo_region_t;
     //Per-save-level stack so cairo_save/cairo_restore keeps FClipRegion in sync.
     FClipStack: TFPList;
+    FLastApplied: TCairoLastApplied;
+    FSavedStateStack: TFPList;
+    FScratchPen: TGtk3Pen;
+    FScratchBrush: TGtk3Brush;
     function GetBkColor:TColorRef;
     function GetOffset: TPoint;
     function GetRasterOp: integer;
@@ -253,6 +285,7 @@ type
     function SX2(const x: double): Double;
     function SY2(const y: double): Double;
     procedure EnsureDefaultOperator;
+    procedure FlushPendingXor;
     procedure ApplyBrush;
     procedure ApplyFont;
     procedure ApplyPen;
@@ -288,6 +321,7 @@ type
     procedure drawRect(x1, y1, w, h: Integer; const AFill, ABorder: Boolean);
     procedure drawRoundRect(x, y, w, h, rx, ry: Integer);
     procedure drawText(x, y: Integer; AText: PChar; ALen: Integer; const ABgFilled: boolean);
+    procedure ApplyFontQualityToLayout(ALayout: PPangoLayout);
     procedure drawEllipse(x, y, w, h: Integer; AFill, ABorder: Boolean);
     procedure drawSurface(targetRect: PRect; Surface: Pcairo_surface_t; sourceRect: PRect;
       aPixBuf: PGdkPixBuf; mask: PGdkPixBuf; maskRect: PRect);
@@ -1729,7 +1763,7 @@ procedure TGtk3DeviceContext.SetRasterOp(AValue: integer);
 var
   AMap: Tcairo_operator_t;
 begin
-  if MapCairoRasterOpToRasterOp(cairo_get_operator(pcr)) = AValue then
+  if (not FXorMode) and (MapCairoRasterOpToRasterOp(cairo_get_operator(pcr)) = AValue) then
     exit;
   if FXorMode and ((AValue <> R2_XORPEN) and (AValue <> R2_NOTXORPEN)) then
   begin
@@ -1782,14 +1816,18 @@ procedure TGtk3DeviceContext.SetXorMode(var xorSurface: Pcairo_surface_t;
 var
   R: TGdkRectangle;
   TempCairo: Pcairo_t;
+  BackMatrix: Tcairo_matrix_t;
 begin
   if xorSurface <> nil  then
     raise Exception.Create('TGtk3DeviceContext: xorSurface <> nil !');
 
   if FBackTarget <> nil then
   begin
+    cairo_get_matrix(FBackTarget, @BackMatrix);
     cairo_save(FCairo);
-    cairo_set_source_surface(FCairo, cairo_get_target(FBackTarget), FBackOriginX, FBackOriginY);
+    cairo_set_source_surface(FCairo, cairo_get_target(FBackTarget),
+      FBackOriginX - Round(BackMatrix.x0),
+      FBackOriginY - Round(BackMatrix.y0));
     cairo_set_operator(FCairo, CAIRO_OPERATOR_DEST_OVER);
     cairo_paint(FCairo);
     cairo_restore(FCairo);
@@ -1918,6 +1956,9 @@ begin
     cairo_rectangle(FCairo, R.x, R.y, SrcW, SrcH);
     cairo_fill(FCairo);
     cairo_restore(FCairo);
+
+    if (Parent = nil) and (Window <> nil) then
+      gdk_window_invalidate_rect(Window, @R, False);
   end;
 
   cairo_surface_destroy(TempSurface);
@@ -2137,8 +2178,36 @@ begin
     cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
 end;
 
+procedure TGtk3DeviceContext.FlushPendingXor;
+begin
+  if not FXorMode then
+    Exit;
+  FXorMode := False;
+  if FXorROP = R2_NOTXORPEN then
+    ApplyXorDrawing(FXorSurface, CAIRO_OPERATOR_DIFFERENCE)
+  else
+    ApplyXorDrawing(FXorSurface, CAIRO_OPERATOR_XOR);
+  if FXorCairo <> nil then
+  begin
+    cairo_destroy(FXorCairo);
+    FXorCairo := nil;
+  end;
+  if FXorSurface <> nil then
+  begin
+    cairo_surface_destroy(FXorSurface);
+    FXorSurface := nil;
+  end;
+  if FXorSnapshot <> nil then
+  begin
+    cairo_surface_destroy(FXorSnapshot);
+    FXorSnapshot := nil;
+  end;
+  cairo_set_operator(pcr, CAIRO_OPERATOR_OVER);
+end;
+
 procedure TGtk3DeviceContext.ApplyBrush;
 begin
+  FLastApplied := claBrush;
   SetSourceColor(FCurrentBrush.Color);
   if Self.FCurrentBrush.Style<>0 then
   begin
@@ -2178,6 +2247,7 @@ var
   cap: Tcairo_line_cap_t;
   w: Double;
 begin
+  FLastApplied := claPen;
   SetSourceColor(FCurrentPen.Color);
   case FCurrentPen.Mode of
     pmBlack: begin
@@ -2459,6 +2529,12 @@ begin
   FBkMode := TRANSPARENT;
   FClipRegion := nil;
   FClipStack := TFPList.Create;
+  FSavedStateStack := TFPList.Create;
+  FLastApplied := claNone;
+  FScratchPen := TGtk3Pen.Create;
+  FScratchPen.Context := Self;
+  FScratchBrush := TGtk3Brush.Create;
+  FScratchBrush.Context := Self;
   FCurrentImage := nil;
   FCurrentRegion := nil;
   FBrush := TGtk3Brush.Create;
@@ -2490,6 +2566,10 @@ begin
     FreeAndNil(FPen);
   if Assigned(FFont) then
     FreeAndNil(FFont);
+  if Assigned(FScratchPen) then
+    FreeAndNil(FScratchPen);
+  if Assigned(FScratchBrush) then
+    FreeAndNil(FScratchBrush);
   if Assigned(FvImage) then
     FreeAndNil(FvImage);
   if Assigned(FBgBrush) then
@@ -2513,6 +2593,14 @@ begin
     end;
     FClipStack.Clear;
     FreeAndNil(FClipStack);
+  end;
+  if Assigned(FSavedStateStack) then
+  begin
+    for i := 0 to FSavedStateStack.Count - 1 do
+      if FSavedStateStack[i] <> nil then
+        Dispose(PGtk3DCSavedState(FSavedStateStack[i]));
+    FSavedStateStack.Clear;
+    FreeAndNil(FSavedStateStack);
   end;
 end;
 
@@ -2621,6 +2709,50 @@ begin
   RoundRect(x, y, w, h, rx, ry);
 end;
 
+procedure TGtk3DeviceContext.ApplyFontQualityToLayout(ALayout: PPangoLayout);
+var
+  AFontOpts: Pcairo_font_options_t;
+  APangoContext: PPangoContext;
+begin
+  if not Assigned(ALayout) or not Assigned(FCurrentFont) then
+    Exit;
+  APangoContext := ALayout^.get_context;
+  AFontOpts := cairo_font_options_create;
+  case FCurrentFont.FLogFont.lfQuality of
+    DRAFT_QUALITY:
+    begin
+      cairo_font_options_set_antialias(AFontOpts, CAIRO_ANTIALIAS_FAST);
+      cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_SLIGHT);
+    end;
+    PROOF_QUALITY:
+    begin
+      cairo_font_options_set_antialias(AFontOpts, CAIRO_ANTIALIAS_GRAY);
+      cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_FULL);
+    end;
+    NONANTIALIASED_QUALITY:
+    begin
+      cairo_font_options_set_antialias(AFontOpts, CAIRO_ANTIALIAS_NONE);
+      cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_FULL);
+    end;
+    ANTIALIASED_QUALITY:
+    begin
+      cairo_font_options_set_antialias(AFontOpts, CAIRO_ANTIALIAS_DEFAULT);
+      cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_DEFAULT);
+    end;
+    CLEARTYPE_QUALITY, CLEARTYPE_NATURAL_QUALITY:
+    begin
+      cairo_font_options_set_antialias(AFontOpts, CAIRO_ANTIALIAS_SUBPIXEL);
+      cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_SLIGHT);
+    end;
+  else
+    cairo_font_options_set_antialias(AFontOpts, CAIRO_ANTIALIAS_DEFAULT);
+    cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_DEFAULT);
+  end;
+  pango_cairo_context_set_font_options(APangoContext, AFontOpts);
+  cairo_font_options_destroy(AFontOpts);
+  ALayout^.context_changed;
+end;
+
 procedure TGtk3DeviceContext.drawText(x, y: Integer; AText: PChar; ALen: Integer;
   const ABgFilled: Boolean);
 var
@@ -2632,23 +2764,33 @@ var
   OldDPI: gdouble;
   IsVectorSurface: Boolean;
   AFontOpts: Pcairo_font_options_t;
+  APangoContext: PPangoContext;
+  SavedXorMode: Boolean;
+  SavedXorROP: Integer;
+  XorAMap: Tcairo_operator_t;
 begin
+  SavedXorMode := FXorMode;
+  SavedXorROP := FXorROP;
+  FlushPendingXor;
   EnsureDefaultOperator;
 
   IsVectorSurface := cairo_surface_get_type(cairo_get_target(pcr)) in
     [CAIRO_SURFACE_TYPE_PDF, CAIRO_SURFACE_TYPE_PS, CAIRO_SURFACE_TYPE_SVG,
      CAIRO_SURFACE_TYPE_SCRIPT];
   OldDPI := 0;
+  APangoContext := FCurrentFont.Layout^.get_context;
   if IsVectorSurface then
   begin
     AFontOpts := cairo_font_options_create;
     cairo_font_options_set_hint_style(AFontOpts, CAIRO_HINT_STYLE_NONE);
-    pango_cairo_context_set_font_options(FCurrentFont.Layout^.get_context, AFontOpts);
+    pango_cairo_context_set_font_options(APangoContext, AFontOpts);
     cairo_font_options_destroy(AFontOpts);
-    OldDPI := pango_cairo_context_get_resolution(FCurrentFont.Layout^.get_context);
-    pango_cairo_context_set_resolution(FCurrentFont.Layout^.get_context, 72.0);
+    OldDPI := pango_cairo_context_get_resolution(APangoContext);
+    pango_cairo_context_set_resolution(APangoContext, 72.0);
     FCurrentFont.Layout^.context_changed;
-  end;
+  end
+  else
+    ApplyFontQualityToLayout(FCurrentFont.Layout);
 
   ornt := Self.FCurrentFont.FLogFont.lfOrientation;
 
@@ -2707,6 +2849,19 @@ begin
   begin
     pango_cairo_context_set_resolution(FCurrentFont.Layout^.get_context, OldDPI);
     FCurrentFont.Layout^.context_changed;
+  end;
+
+  FLastApplied := claFontColor;
+
+  if SavedXorMode then
+  begin
+    FXorROP := SavedXorROP;
+    if SavedXorROP = R2_NOTXORPEN then
+      XorAMap := CAIRO_OPERATOR_DIFFERENCE
+    else
+      XorAMap := CAIRO_OPERATOR_XOR;
+    FXorMode := True;
+    SetXorMode(FXorSurface, XorAMap);
   end;
 end;
 
@@ -3339,11 +3494,21 @@ begin
   if FXorMode then
   begin
     cairo_new_path(pcr);
-    cairo_move_to(pcr, FLastPenX, FLastPenY);
-    cairo_line_to(pcr, X + PixelOffset, Y + PixelOffset);
-    cairo_stroke(pcr);
-    FLastPenX := X + PixelOffset;
-    FLastPenY := Y + PixelOffset;
+    if fCurrentPen.Width <= 1 then
+    begin
+      cairo_move_to(pcr, FLastPenX + PixelOffset, FLastPenY + PixelOffset);
+      cairo_line_to(pcr, X + PixelOffset, Y + PixelOffset);
+      cairo_stroke(pcr);
+      FLastPenX := X;
+      FLastPenY := Y;
+    end else
+    begin
+      cairo_move_to(pcr, FLastPenX, FLastPenY);
+      cairo_line_to(pcr, X + PixelOffset, Y + PixelOffset);
+      cairo_stroke(pcr);
+      FLastPenX := X + PixelOffset;
+      FLastPenY := Y + PixelOffset;
+    end;
     Result := True;
     Exit;
   end;
@@ -3406,10 +3571,16 @@ begin
         cairo_line_to(pcr,X+PixelOffset, Y+PixelOffset);
       end;
     end else
+    begin
+      cairo_move_to(pcr, FLastPenX, FLastPenY);
       cairo_line_to(pcr,X+PixelOffset, Y+PixelOffset);
+    end;
 
   end else
+  begin
+    cairo_move_to(pcr, FLastPenX, FLastPenY);
     cairo_line_to(pcr,X+PixelOffset, Y+PixelOffset);
+  end;
 
   if cairo_has_current_point(pcr)<>0 then
     cairo_get_current_point(pcr, @fLastPenX, @fLastPenY);
@@ -3578,6 +3749,8 @@ begin
 end;
 
 procedure TGtk3DeviceContext.Save;
+var
+  SavedState: PGtk3DCSavedState;
 begin
   cairo_save(pcr);
   //Push current FClipRegion so Restore can bring it back
@@ -3588,12 +3761,40 @@ begin
   //Push WindowOrg so Restore brings it back, SetWindowOrgEx no longer uses cairo_translate
   FClipStack.Add({%H-}Pointer(PtrInt(WindowOrg.X)));
   FClipStack.Add({%H-}Pointer(PtrInt(WindowOrg.Y)));
+  New(SavedState);
+  SavedState^.PenColor := FCurrentPen.FColor;
+  SavedState^.PenWidth := FCurrentPen.FWidth;
+  SavedState^.PenStyle := FCurrentPen.FStyle;
+  SavedState^.PenMode := FCurrentPen.FPenMode;
+  SavedState^.PenCosmetic := FCurrentPen.FCosmetic;
+  SavedState^.PenEndCap := FCurrentPen.FEndCap;
+  SavedState^.PenJoinStyle := FCurrentPen.FJoinStyle;
+  SavedState^.PenIsExtPen := FCurrentPen.FIsExtPen;
+  SavedState^.PenLogPen := FCurrentPen.LogPen;
+  SavedState^.PenExtPenStyle := FCurrentPen.ExtPenStyle;
+  SavedState^.PenExtPenBrush := FCurrentPen.ExtPenBrush;
+  SetLength(SavedState^.PenDashes, Length(FCurrentPen.Dashes));
+  if Length(FCurrentPen.Dashes) > 0 then
+    Move(FCurrentPen.Dashes[0], SavedState^.PenDashes[0],
+      Length(FCurrentPen.Dashes) * SizeOf(DWord));
+  SavedState^.BrushColor := FCurrentBrush.FColor;
+  SavedState^.BrushStyle := FCurrentBrush.FStyle;
+  SavedState^.BrushLogBrush := FCurrentBrush.LogBrush;
+  SavedState^.FontObj := FCurrentFont;
+  SavedState^.BkColor := FBkColor;
+  SavedState^.BkMode := FBkMode;
+  SavedState^.LastApplied := FLastApplied;
+  SavedState^.TextColor := FCurrentTextColor;
+  SavedState^.XorMode := FXorMode;
+  SavedState^.XorROP := FXorROP;
+  FSavedStateStack.Add(SavedState);
   inc(FDCSaveCounter);
 end;
 
 procedure TGtk3DeviceContext.Restore;
 var
   Saved: Pcairo_region_t;
+  SavedState: PGtk3DCSavedState;
 begin
   dec(FDCSaveCounter);
   cairo_restore(pcr);
@@ -3615,6 +3816,53 @@ begin
     if FClipRegion <> nil then
       cairo_region_destroy(FClipRegion);
     FClipRegion := Saved; //may be nil = no explicit clip
+  end;
+  if FSavedStateStack.Count > 0 then
+  begin
+    SavedState := PGtk3DCSavedState(FSavedStateStack.Last);
+    FSavedStateStack.Delete(FSavedStateStack.Count - 1);
+    FScratchPen.FColor := SavedState^.PenColor;
+    FScratchPen.FWidth := SavedState^.PenWidth;
+    FScratchPen.FStyle := SavedState^.PenStyle;
+    FScratchPen.FPenMode := SavedState^.PenMode;
+    FScratchPen.FCosmetic := SavedState^.PenCosmetic;
+    FScratchPen.FEndCap := SavedState^.PenEndCap;
+    FScratchPen.FJoinStyle := SavedState^.PenJoinStyle;
+    FScratchPen.FIsExtPen := SavedState^.PenIsExtPen;
+    FScratchPen.LogPen := SavedState^.PenLogPen;
+    FScratchPen.ExtPenStyle := SavedState^.PenExtPenStyle;
+    FScratchPen.ExtPenBrush := SavedState^.PenExtPenBrush;
+    SetLength(FScratchPen.Dashes, Length(SavedState^.PenDashes));
+    if Length(SavedState^.PenDashes) > 0 then
+      Move(SavedState^.PenDashes[0], FScratchPen.Dashes[0],
+        Length(SavedState^.PenDashes) * SizeOf(DWord));
+    FCurrentPen := FScratchPen;
+    FScratchBrush.FColor := SavedState^.BrushColor;
+    FScratchBrush.FStyle := SavedState^.BrushStyle;
+    FScratchBrush.LogBrush := SavedState^.BrushLogBrush;
+    FCurrentBrush := FScratchBrush;
+    FCurrentFont := SavedState^.FontObj;
+    SetBkColor(SavedState^.BkColor);
+    FBkMode := SavedState^.BkMode;
+    FCurrentTextColor := SavedState^.TextColor;
+    FLastApplied := SavedState^.LastApplied;
+    if FXorMode and (not SavedState^.XorMode) then
+      FlushPendingXor;
+    if (not FXorMode) and SavedState^.XorMode then
+    begin
+      FXorROP := SavedState^.XorROP;
+      FXorMode := True;
+      if SavedState^.XorROP = R2_NOTXORPEN then
+        SetXorMode(FXorSurface, CAIRO_OPERATOR_DIFFERENCE)
+      else
+        SetXorMode(FXorSurface, CAIRO_OPERATOR_XOR);
+    end;
+    case FLastApplied of
+      claPen: ApplyPen;
+      claBrush: ApplyBrush;
+      claFontColor: SetSourceColor(TColor(FCurrentTextColor));
+    end;
+    Dispose(SavedState);
   end;
 end;
 

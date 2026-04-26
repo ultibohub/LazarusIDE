@@ -28,12 +28,14 @@ uses
   Classes, SysUtils, math,
   // LCL
   LCLType, StdCtrls, Controls, Graphics, ImgList,
+  // LazUtils
+  LazStringUtils,
   // LazControls
   DividerBevel,
   // SynEdit
   SynEdit, SynHighlighterPas, SynPluginMultiCaret, SynEditTypes,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, IDEUtils, SrcEditorIntf,
+  IDEOptionsIntf, IDEOptEditorIntf, IDEIntfUtils, SrcEditorIntf,
   // IDE
   EditorOptions, LazarusIDEStrConsts, SourceMarks;
 

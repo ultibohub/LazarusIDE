@@ -31,6 +31,35 @@ uses
 
 type
 
+  { TCocoaKeyEventState }
+
+  TCocoaKeyEventState = record
+    keyCode: Word;                  // LCL Key Code
+    charCode: Word;                 // Ascii char, when possible (xx_(SYS)CHAR)
+    keyData: PtrInt;                // Modifiers (ctrl, alt, mouse buttons...)
+    utf8Character: TUTF8Char;       // char to send via IntfUtf8KeyPress
+    shouldSendCharMessage: Boolean; // Should we send char?
+    isSysKey: Boolean;              // Is alt (option) key down?
+    isKeyDown : Boolean;
+    handled: Boolean;
+
+    // Store state of key modifiers so that we can emulate keyup/keydown
+    // of keys like control, option, command, caps lock, shift
+    prevModifiers : NSUInteger;
+    savedModifiers : NSUInteger;
+  end;
+
+  { TCocoaMouseEventState }
+
+  TCocoaMouseEventState = record
+    isLastWheelHorz: Boolean;
+    lastDownUpTime: NSTimeInterval; // the last processed mouse Event
+    lastMouseWithForce: Boolean;
+
+    // todo: this should be a threadvar
+    trackedControl: NSObject;
+  end;
+
   { TCocoaWidgetSetState }
 
   TCocoaWidgetSetState = class
@@ -38,18 +67,13 @@ type
     _lclSendingScrollWheelCount: Integer;
     _isCocoaOnlyState: Boolean;
   public
+    keyEvent: TCocoaKeyEventState;
+    mouseEvent: TCocoaMouseEventState;
+
     currentKeyWindow: NSWindow;
     killingFocus: Boolean;
 
-    captureControl: HWND;
-
-    // todo: this should be a threadvar
-    trackedControl: NSObject;
-
-    // Store state of key modifiers so that we can emulate keyup/keydown
-    // of keys like control, option, command, caps lock, shift
-    prevKeyModifiers : NSUInteger;
-    savedKeyModifiers : NSUInteger;
+    lclCaptureControl: HWND;
 
     {$ifdef COCOALOOPHIJACK}
     // The flag is set to true once hi-jacked loop is finished (at the end of app)
@@ -168,9 +192,10 @@ type
     class procedure SendOnChange( const control: NSObject );
     class procedure SendOnTextChanged( const control: NSObject );
 
-    class procedure InputClientInsertText(
+    class function IntfUTF8KeyPress(
       const control: NSObject;
-      const utf8: string);
+      const str: string;
+      const isSysKey: Boolean ): Boolean;
   end;
 
   { LCLObjectExtension }
@@ -255,7 +280,7 @@ type
 
 procedure TCocoaWidgetSetState.releaseCapture;
 begin
-  self.captureControl:= 0;
+  self.lclCaptureControl:= 0;
 end;
 
 procedure TCocoaWidgetSetState.lclBeginSendingScrollWheel;
@@ -643,26 +668,29 @@ begin
   SendSimpleMessage(target, CM_TEXTCHANGED);
 end;
 
-class procedure TCocoaLCLMessageUtil.InputClientInsertText(
+class function TCocoaLCLMessageUtil.IntfUTF8KeyPress(
   const control: NSObject;
-  const utf8: string );
+  const str: String;
+  const isSysKey: Boolean ): Boolean;
 var
   target: TWinControl;
   i : integer;
   c : integer;
   ch : TUTF8Char;
 begin
+  Result:= False;
   target:= TWinControl( control.lclGetTarget );
   if NOT Assigned(target) then
     Exit;
 
-  if (utf8 = '') then Exit;
+  if (str = '') then
+    Exit;
+
   i:=1;
-  while (i<=length(utf8)) do
-  begin
-    c := Utf8CodePointLen(@utf8[i], length(utf8)-i+1, false);
-    ch := Copy(utf8, i, c);
-    target.IntfUTF8KeyPress(ch, 1, false);
+  while (i<=length(str)) do begin
+    c := Utf8CodePointLen(@str[i], length(str)-i+1, False);
+    ch := Copy(str, i, c);
+    Result:= target.IntfUTF8KeyPress(ch, 1, isSysKey);
     inc(i, c);
   end;
 end;

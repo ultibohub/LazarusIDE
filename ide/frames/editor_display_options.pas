@@ -28,12 +28,14 @@ uses
   Classes, SysUtils,
   // LCL
   Graphics, Dialogs, StdCtrls, Spin, LCLType, Controls, Buttons, ExtCtrls,
+  // LazUtils
+  LazStringUtils,
   // SynEdit
   SynEdit, SynEditMouseCmds, SynGutterLineNumber, SynGutterLineOverview,
   SynGutter, SynEditTypes, SynGutterBase, SynGutterMarks, SynGutterChanges,
   SynGutterCodeFolding,
   // IdeIntf
-  IDEOptionsIntf, IDEOptEditorIntf, IDEUtils, IDEImagesIntf,
+  IDEOptionsIntf, IDEOptEditorIntf, IDEIntfUtils, IDEImagesIntf,
   // IDE
   EditorOptions, LazarusIDEStrConsts, editor_general_options,
   editor_color_options, codetools_linesplitting_options, SourceSynEditor,

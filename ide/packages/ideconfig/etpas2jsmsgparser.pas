@@ -31,8 +31,12 @@ interface
 
 uses
   Classes, SysUtils,
-  IDEExternToolIntf, LazFileUtils,
-  etFPCMsgFilePool, etFPCMsgParser, EnvironmentOpts;
+  // LazUtils
+  LazFileUtils,
+  // BuildIntf
+  IDEExternToolIntf,
+  // IdeConfig
+  etFPCMsgFilePool, EnvironmentOpts, etFPCMsgParser;
 
 type
 

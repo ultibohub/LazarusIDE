@@ -28,7 +28,7 @@ uses
   Classes, SysUtils, LCLType, LCLProc, Controls, StdCtrls, ComCtrls, LMessages,
   Graphics, LazUTF8,
   LazGObject2, LazGtk3, LazGdk3, LazGLib2, Gtk3Procs, LazCairo1,
-  LazPango1, LazLogger;
+  LazPango1, LazPangoCairo1, LazLogger;
   
 type
   PLCLIntfCellRenderer = ^TLCLIntfCellRenderer;
@@ -419,9 +419,9 @@ begin
     g_object_unref(APangoLayout);
 
     if Assigned(minimum_size) then
-      minimum_size^ := aCombo^.get_allocated_width - W - xpad;
+      minimum_size^ := 1;
     if Assigned(natural_size) then
-      natural_size^ := aCombo^.get_allocated_width - W - xpad;
+      natural_size^ := APangoWidth + 2 * xpad;
 
     //sometimes only way to have properly sized and painted csDropDownList and owner drawn for combos on modal windows.
     //leave this commented code here, I need it for testing various cases.
@@ -591,6 +591,56 @@ begin
   end;
 end;
 
+function TryRenderComboCellCentered(cell: PGtkCellRenderer; cr: Pcairo_t;
+  Widget: PGtkWidget; cell_area: PGdkRectangle): Boolean;
+var
+  Lw: TGtk3Widget;
+  AText: string;
+  Layout: PPangoLayout;
+  TextW, TextH, XPad, YPad: gint;
+  Ctx: PGtkStyleContext;
+  Combo: TCustomCombobox;
+  ComboWidget: PGtkComboBox;
+  ComboAlloc, CellViewAlloc: TGtkAllocation;
+  TargetY: gint;
+begin
+  Result := False;
+  Lw := TGtk3Widget(g_object_get_data(PGObject(cell), 'lclwidget'));
+  if not Assigned(Lw) then exit;
+  if not (Lw.LCLObject is TCustomCombobox) then exit;
+  if Lw.Widget = nil then exit;
+  ComboWidget := PGtkComboBox(Lw.Widget);
+  if (ComboWidget^.priv3^.cell_view = nil) or
+     (Widget <> PGtkWidget(ComboWidget^.priv3^.cell_view)) then
+    exit;
+  Combo := TCustomCombobox(Lw.LCLObject);
+  if Combo.Style.IsOwnerDrawn then exit;
+  if [csDestroying, csLoading] * Combo.ComponentState <> [] then exit;
+  if not Widget^.get_realized then exit;
+  if (Combo.ItemIndex >= 0) and (Combo.ItemIndex < Combo.Items.Count) then
+    AText := Combo.Items[Combo.ItemIndex]
+  else
+    AText := '';
+  Layout := Widget^.create_pango_layout(Pgchar(AText));
+  if Layout = nil then exit;
+  try
+    pango_layout_get_pixel_size(Layout, @TextW, @TextH);
+    cell^.get_padding(@XPad, @YPad);
+    Ctx := Widget^.get_style_context;
+    if Ctx = nil then exit;
+    PGtkWidget(ComboWidget)^.get_allocation(@ComboAlloc);
+    Widget^.get_allocation(@CellViewAlloc);
+    TargetY := (ComboAlloc.height - TextH) div 2 - (CellViewAlloc.y - ComboAlloc.y);
+    gtk_render_layout(Ctx, cr,
+      cell_area^.x + XPad,
+      TargetY,
+      Layout);
+    Result := True;
+  finally
+    g_object_unref(Layout);
+  end;
+end;
+
 procedure LCLIntfCellRenderer_Render(cell: PGtkCellRenderer; cr: Pcairo_t;
   Widget: PGtkWidget; background_area: PGdkRectangle; cell_area: PGdkRectangle;
   flags: TGtkCellRendererState); cdecl;
@@ -716,7 +766,15 @@ begin
   // do default draw only if we are not customdrawn.
   if (ColumnIndex > -1) or ((ColumnIndex < 0) and (AWinControl = nil)) then
   begin
-    CellClass^.DefaultGtkRender(cell, cr, Widget, background_area, cell_area, flags);
+    //For non-owner drawn csDropDownList combobox, render text vertically
+    //centered in cell_area ourselves - GTK3 default cell rendering
+    //positions text incorrectly when combo is shrunk below theme minimum.
+    if (ColumnIndex < 0) and TryRenderComboCellCentered(cell, cr, Widget, cell_area) then
+    begin
+      // done; skip default rendering
+    end
+    else
+      CellClass^.DefaultGtkRender(cell, cr, Widget, background_area, cell_area, flags);
   end;
   
   if ColumnIndex < 0 then  // is a listbox or combobox

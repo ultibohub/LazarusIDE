@@ -70,20 +70,20 @@ uses
   EnvironmentOpts, IDEOptionDefs, ModeMatrixOpts, RecentListProcs, SearchPathProcs,
   TransferMacros, IDECmdLine, IDEProcs, DialogProcs, BaseBuildManager,
   ParsedCompilerOpts, CompilerOptions, IdeConfStrConsts, IDETranslations,
+  MiscOptions, IdeBuilder,
   // IdePackager
   IdePackagerStrConsts, BasePkgManager, PackageDefs, EditablePackage,
-  PackageLinks, PackageSystem,
+  PackageLinks, PackageSystem, InterPkgConflictFiles,
   // IdeProject
   Project,
   // FCL registration
   LazarusPackageIntf,
   // IDE
-  MainBar, MainIntf, MainBase,
-  LazarusIDEStrConsts, MiscOptions, AddToPackageDlg, ProjPackEditing,
+  MainBar, MainIntf, MainBase, LazarusIDEStrConsts, AddToPackageDlg, ProjPackEditing,
   OpenInstalledPkgDlg, PkgGraphExplorer, BrokenDependenciesDlg,
   BuildLazDialog, NewDialog, FindInFilesDlg, ProjectInspector, EditableProject,
   PackageEditor, SourceEditor, ProjPackChecks, AddFileToAPackageDlg, PublishModuleDlg,
-  PkgLinksDlg, InstallPkgSetDlg, ConfirmPkgListDlg, InterPkgConflictFiles,
+  PkgLinksDlg, InstallPkgSetDlg, ConfirmPkgListDlg,
   {$IFDEF EnableCheckInterPkgFiles}
   InterPkgConflictFileDlg,  // This adds a GUI for InterPkgConflictFiles.
   {$ENDIF}
@@ -150,7 +150,6 @@ type
     procedure PackageGraphEndUpdate(Sender: TObject; GraphChanged: boolean);
     procedure PackageGraphFindFPCUnit(const AUnitName, Directory: string;
                                       var Filename: string);
-    function MainTitleChanged(const ATitle: string): boolean;
     // menu
     procedure MainIDEitmPkgOpenPackageFileClick(Sender: TObject);
     procedure MainIDEitmPkgPkgGraphClick(Sender: TObject);
@@ -1095,11 +1094,6 @@ begin
     RaiseGDBException(Directory);
   //DebugLn('TPkgManager.PackageGraphFindFPCUnit "',Directory,'"');
   Filename:=CodeToolBoss.DirectoryCachePool.FindUnitInUnitLinks(Directory, AUnitName);
-end;
-
-function TPkgManager.MainTitleChanged(const ATitle: string): boolean;
-begin
-  LazarusIDE.MainBarSubTitle:=ATitle;
 end;
 
 function TPkgManager.PackageGraphExplorerUninstallPackage(Sender: TObject;
@@ -2585,7 +2579,7 @@ var
         exit(true);
       end;
     end else if SrcProject<>nil then begin
-      OldProjFile:=SrcProject.UnitInfoWithFilename(OldFilename,[pfsfOnlyProjectFiles]);
+      OldProjFile:=TUnitInfo(SrcProject.UnitInfoWithFilename(OldFilename,[pfsfOnlyProjectFiles]));
       if OldProjFile=nil then begin
         {$IFDEF VerbosePkgEditDrag}
         debugln(['MoveOrCopyFile old file not in lpi: "',OldFilename,'"']);
@@ -2958,7 +2952,6 @@ begin
   PackageGraph.OnTranslatePackage:=@DoTranslatePackage;
   PackageGraph.OnUninstallPackage:=@DoUninstallPackage;
   PackageGraph.OnSrcEditFileIsModified:=@PackageGraphSrcEditFileIsModified;
-  PackageGraph.OnMainTitleChange:=@MainTitleChanged;
 
   // package editors
   PackageEditors:=TPackageEditors.Create;

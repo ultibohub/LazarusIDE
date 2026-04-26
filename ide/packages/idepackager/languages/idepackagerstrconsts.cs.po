@@ -23,6 +23,11 @@ msgstr "%s v %s"
 msgid "Deleting of file \"%s\" failed."
 msgstr "Odstranění souboru \"%s\" selhalo."
 
+#: idepackagerstrconsts.lisduplicateunitin
+#, object-pascal-format
+msgid "Duplicate unit \"%s\" in \"%s\""
+msgstr "Zdvojená jednotka \"%s\" v \"%s\""
+
 #: idepackagerstrconsts.lisexecutingcommandafter
 msgid "Executing command after"
 msgstr "Vykonávání příkazu po"
@@ -59,6 +64,11 @@ msgstr "Rozšířit cestu pro hledání jednotek balíčku \"%s\" s%s\"%s\"?"
 msgid "Creating Makefile for package %s"
 msgstr "Vytvořit Makefile pro balíček %s"
 
+#: idepackagerstrconsts.lisignoreall
+msgctxt "idepackagerstrconsts.lisignoreall"
+msgid "Ignore all"
+msgstr ""
+
 #: idepackagerstrconsts.lispassingcompilerdefinetwicewithdifferentvalues
 #, object-pascal-format
 msgid "passing compiler define \"%s\" twice with different values"
@@ -81,10 +91,6 @@ msgstr "(fpmake)"
 #: idepackagerstrconsts.lispckoptspackageoptions
 msgid "Package Options"
 msgstr "Nastavení balíčku"
-
-#: idepackagerstrconsts.lispignoreall
-msgid "Ignore all"
-msgstr ""
 
 #: idepackagerstrconsts.lispkgdefscompiledsrcpathaddition
 msgid "CompiledSrcPath addition"

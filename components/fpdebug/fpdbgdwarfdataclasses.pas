@@ -53,13 +53,13 @@ uses
   FpDbgLoader, FpImgReaderBase, FpdMemoryTools, FpErrorMessages, DbgIntfBaseTypes;
 
 type
-  TDwarfSection = (dsAbbrev, dsARanges, dsFrame,  dsInfo, dsLine, dsLoc, dsMacinfo, dsPubNames, dsPubTypes, dsRanges, dsStr);
+  TDwarfSection = (dsAbbrev, dsARanges, dsFrame,  dsInfo, dsLine, dsLoc, dsMacinfo, dsPubNames, dsPubTypes, dsRanges, dsStr, dsLineStr);
 
 const
   DWARF_SECTION_NAME: array[TDwarfSection] of String = (
     '.debug_abbrev', '.debug_aranges', '.debug_frame', '.debug_info',
     '.debug_line', '.debug_loc', '.debug_macinfo', '.debug_pubnames',
-    '.debug_pubtypes', '.debug_ranges', '.debug_str'
+    '.debug_pubtypes', '.debug_ranges', '.debug_str', '.debug_line_str'
   );
 
 type
@@ -128,10 +128,31 @@ type
     Info: TDwarfLNPInfoHeader;
   end;
 
+  PDwarfLNPHeader32_v5 = ^TDwarfLNPHeader32_v5;
+  TDwarfLNPHeader32_v5 = record
+    UnitLength: LongWord;
+    Version: Word;
+    AddressSize: byte;
+    SegmentSelectorSize: byte;
+    HeaderLength: LongWord;
+    Info: TDwarfLNPInfoHeader;
+  end;
+
   PDwarfLNPHeader64 = ^TDwarfLNPHeader64;
   TDwarfLNPHeader64 = record
     Signature: LongWord;
     UnitLength: QWord;
+    Version: Word;
+    HeaderLength: QWord;
+    Info: TDwarfLNPInfoHeader;
+  end;
+
+  PDwarfLNPHeader64_v5 = ^TDwarfLNPHeader64_v5;
+  TDwarfLNPHeader64_v5 = record
+    Signature: LongWord;
+    UnitLength: QWord;
+    AddressSize: byte;
+    SegmentSelectorSize: byte;
     Version: Word;
     HeaderLength: QWord;
     Info: TDwarfLNPInfoHeader;
@@ -1089,6 +1110,8 @@ begin
       end;
     DW_FORM_ref_sig8 : Inc(AEntryData, 8);
     DW_FORM_strp,
+    DW_FORM_line_strp,  // DWARF-5
+    DW_FORM_strp_sup,   // DWARF-5
     DW_FORM_sec_offset: begin
         if IsDwarf64 then
           Inc(AEntryData, 8)
@@ -1117,6 +1140,23 @@ begin
         Result := SkipEntryDataForForm(AEntryData, AForm, AddrSize, IsDwarf64, Version);
       end;
     DW_FORM_flag_present: ; // No data
+    // DWARF-5
+    DW_FORM_ref_sup4: Inc(AEntryData, 4);
+    DW_FORM_ref_sup8: Inc(AEntryData, 8);
+    DW_FORM_data16:   Inc(AEntryData, 16);
+    DW_FORM_implicit_const: ; // no inc => the value is in the attrib-spec (after the form)
+    DW_FORM_loclistx,
+    DW_FORM_rnglistx: ULEB128toOrdinal(AEntryData);
+    DW_FORM_strx:     ULEB128toOrdinal(AEntryData);
+    DW_FORM_strx1:    inc(AEntryData, 1);
+    DW_FORM_strx2:    inc(AEntryData, 2);
+    DW_FORM_strx3:    inc(AEntryData, 3);
+    DW_FORM_strx4:    inc(AEntryData, 4);
+    DW_FORM_addrx:    ULEB128toOrdinal(AEntryData);
+    DW_FORM_addrx1:   inc(AEntryData, 1);
+    DW_FORM_addrx2:   inc(AEntryData, 2);
+    DW_FORM_addrx3:   inc(AEntryData, 3);
+    DW_FORM_addrx4:   inc(AEntryData, 4);
   else begin
       DebugLn(FPDBG_DWARF_WARNINGS, ['Error: Unknown Form: ', AForm]);
       Result := False;
@@ -1697,6 +1737,8 @@ begin
         Include(f, dafHasAbstractOrigin);
 
       form := ULEB128toOrdinal(pbyte(AnAbbrevDataPtr));
+      if form = DW_FORM_implicit_const then
+        SLEB128toOrdinal(pbyte(AnAbbrevDataPtr)); // read the implicit constant
       if form > DW_FORM_MAX then begin
         DebugLn(FPDBG_DWARF_WARNINGS, ['Unknown FW_FORM: ', form, ' found. Aborting']);
         exit;
@@ -4484,8 +4526,8 @@ var
     p: Pointer;
     Instructions: TDwarfCallFrameInformationInstructions;
   begin
-    if Version > 4 then
-      DebugLn(FPDBG_DWARF_WARNINGS, ['Unsupported DWARF CFI version (' +IntToStr(Version)+ '). Only versions 1-4 are supported.']);
+    if Version > 5 then
+      DebugLn(FPDBG_DWARF_WARNINGS, ['Unsupported DWARF CFI version (' +IntToStr(Version)+ '). Only versions 1-5 are supported.']);
 
     Result := TDwarfCIE.Create(Version, String(Augmentation));
     p := Augmentation;
@@ -5194,8 +5236,8 @@ end;
 
 procedure TDwarfLineInfoStateMachine.SetFileName(AIndex: Cardinal);
 begin
-  if (Aindex > 0) and (AIndex <= FOwner.FLineInfo.FileNames.Count)
-  then FFileName := FOwner.FLineInfo.FileNames[AIndex - 1]
+  if (Aindex >= 0) and (AIndex < FOwner.FLineInfo.FileNames.Count)
+  then FFileName := FOwner.FLineInfo.FileNames[AIndex]
   else FFileName := Format('Unknown fileindex(%u)', [AIndex]);
 end;
 
@@ -5551,9 +5593,174 @@ end;
 
 constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwarfDebugFile; ADataOffset: QWord; ALength: QWord; AVersion: Word; AAbbrevOffset: QWord; AAddressSize: Byte; AIsDwarf64: Boolean);
   procedure FillLineInfo(AData: Pointer);
+    function CheckOldFpc322: boolean;
+    var
+      s: String;
+      i: SizeInt;
+    begin
+      Result := False;
+      s := LowerCase(FProducer);
+      i := Pos('free pascal ',  s);
+      if i > 0 then begin
+        s := copy(s, i+12,5);
+        Result := (Length(s) = 5) and (
+          (s[1] = '2') or                                   // fpc 2.x
+          ( (s[1] = '3') and (s[3] in ['0', '1']) ) or      // fpc 3.0 / 3.1
+          ( (s[1] = '3') and (s[3] = '2') and (s[5] in ['0', '1', '2']) ) // fpc 3.2.[012]]
+        );
+      end;
+    end;
+
+    var
+      FileDirFormatEncoding: array of
+        record
+          ContentType, Form: Cardinal;
+        end;
+    procedure ReadFileDirFormatEncoding(var AData: Pointer);
+    var
+      Cnt: Byte;
+      i: Integer;
+    begin
+      Cnt := PByte(AData)^;
+      Inc(PByte(AData));
+      SetLength(FileDirFormatEncoding, Cnt);
+      i := 0;
+      while Cnt > 0 do begin
+        FileDirFormatEncoding[i].ContentType := ULEB128toOrdinal(AData);
+        FileDirFormatEncoding[i].Form        := ULEB128toOrdinal(AData);
+        inc(i);
+        dec(Cnt);
+      end;
+    end;
+
+    function ReadDirectoryList(var AData: Pointer): boolean;
+    var
+      Cnt: Byte;
+      r: Boolean;
+      s: AnsiString;
+      i: Integer;
+    begin
+      Result := False;
+      ReadFileDirFormatEncoding(AData);
+      Cnt := PByte(AData)^;
+      Inc(PByte(AData));
+      while Cnt > 0 do begin
+        r := False;
+        for i := 0 to high(FileDirFormatEncoding) do begin
+          if FileDirFormatEncoding[i].ContentType = DW_LNCT_path then begin
+            if r then begin
+              debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList duplicate path: ', FileDirFormatEncoding[i].Form, ' @ ',i]);
+              exit;
+            end;
+            if not ReadValue(AData, FileDirFormatEncoding[i].Form, s) then begin
+              debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList failed ReadValue: ', FileDirFormatEncoding[i].Form, ' @ ',i]);
+              exit;
+            end;
+            r := True;
+            FLineInfo.Directories.Add(AppendPathDelim(s));
+          end
+          else
+          if (FileDirFormatEncoding[i].ContentType <> DW_LNCT_size) and
+             (FileDirFormatEncoding[i].ContentType <> DW_LNCT_timestamp)
+          then begin
+            debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList unknown content type: ', FileDirFormatEncoding[i].ContentType]);
+            exit;
+          end;
+          if not SkipEntryDataForForm(AData, FileDirFormatEncoding[i].Form, FLineInfo.AddrSize, FIsDwarf64, FVersion) then begin
+            debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList failed skip: ', FileDirFormatEncoding[i].Form]);
+            exit;
+          end;
+        end;
+        if not r then begin
+          debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList did not find path info']);
+          exit;
+        end;
+        dec(Cnt);
+      end;
+      Result := True;
+    end;
+
+    function ReadFileList(var AData: Pointer): boolean;
+    var
+      Cnt: Byte;
+      r, r2: Boolean;
+      s, s2, p: AnsiString;
+      idx: Cardinal;
+      i: Integer;
+    begin
+      Result := False;
+      ReadFileDirFormatEncoding(AData);
+
+      p := FCompDir;
+      if FLineInfo.Directories.Count > 0 then
+        p := FLineInfo.Directories[0];
+      Cnt := PByte(AData)^;
+      Inc(PByte(AData));
+      while Cnt > 0 do begin
+        r := False;
+        r2 := False;
+        for i := 0 to high(FileDirFormatEncoding) do begin
+          if FileDirFormatEncoding[i].ContentType = DW_LNCT_path then begin
+            if r then begin
+              debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList duplicate path: ', FileDirFormatEncoding[i].Form, ' @ ',i]);
+              exit;
+            end;
+            if not ReadValue(AData, FileDirFormatEncoding[i].Form, s) then begin
+              debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList failed ReadValue: ', FileDirFormatEncoding[i].Form, ' @ ',i]);
+              exit;
+            end;
+            r := True;
+          end
+          else
+          if FileDirFormatEncoding[i].ContentType = DW_LNCT_directory_index then begin
+            if r2 then begin
+              debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList duplicate idx: ', FileDirFormatEncoding[i].Form, ' @ ',i]);
+              exit;
+            end;
+            if not ReadValue(AData, FileDirFormatEncoding[i].Form, idx) then begin
+              debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList failed ReadValue: ', FileDirFormatEncoding[i].Form, ' @ ',i]);
+              exit;
+            end;
+            r2 := True;
+          end
+          else
+          if (FileDirFormatEncoding[i].ContentType <> DW_LNCT_size) and
+             (FileDirFormatEncoding[i].ContentType <> DW_LNCT_timestamp)
+          then begin
+            debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList unknown content type: ', FileDirFormatEncoding[i].ContentType]);
+            exit;
+          end;
+          if not SkipEntryDataForForm(AData, FileDirFormatEncoding[i].Form, FLineInfo.AddrSize, FIsDwarf64, FVersion) then begin
+            debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList failed skip: ', FileDirFormatEncoding[i].Form]);
+            exit;
+          end;
+        end;
+        if not (r and r2) then begin
+          debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList did not find path info']);
+          exit;
+        end;
+
+        if idx < FLineInfo.Directories.Count then begin
+          S2 := FLineInfo.Directories[idx] + S;
+          S := CreateAbsolutePath(S2, p);
+          if (idx = 0) and (not FileExistsUTF8(S)) and (FLineInfo.FileNames.Count > 0) then // https://gitlab.com/freepascal.org/fpc/source/-/issues/37658 https://bugs.freepascal.org/view.php?id=37658
+            S := S2;
+        end
+        else begin
+          debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList unknown dir ', idx]);
+          S := Format('Unknown dir(%u)', [idx]) + DirectorySeparator + S;
+        end;
+        FLineInfo.FileNames.Add(s);
+        dec(Cnt);
+      end;
+      Result := True;
+    end;
+
   var
     LNP32: PDwarfLNPHeader32 absolute AData;
+    LNP32_v5: PDwarfLNPHeader32_v5 absolute AData;
     LNP64: PDwarfLNPHeader64 absolute AData;
+    LNP64_v5: PDwarfLNPHeader64_v5 absolute AData;
     Info: PDwarfLNPInfoHeader;
 
     UnitLength: QWord;
@@ -5567,6 +5774,8 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     i: SizeInt;
   begin
     FLineInfo.Header := AData;
+    FLineInfo.AddrSize := FAddressSize;
+
     if LNP64^.Signature = DWARF_HEADER64_SIGNATURE
     then begin
       if FVersion < 3 then
@@ -5574,19 +5783,33 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
       UnitLength := LNP64^.UnitLength;
       FLineInfo.DataEnd := Pointer(@LNP64^.Version) + UnitLength;
       Version := LNP64^.Version;
-      HeaderLength := LNP64^.HeaderLength;
-      Info := @LNP64^.Info;
+      if FVersion < 5 then begin
+        HeaderLength := LNP64^.HeaderLength;
+        Info := @LNP64^.Info;
+      end
+      else begin
+        FLineInfo.AddrSize := LNP64_v5^.AddressSize;
+        HeaderLength := LNP64_v5^.HeaderLength;
+        Info := @LNP64_v5^.Info;
+      end;
     end
     else begin
       UnitLength := LNP32^.UnitLength;
       FLineInfo.DataEnd := Pointer(@LNP32^.Version) + UnitLength;
       Version := LNP32^.Version;
-      HeaderLength := LNP32^.HeaderLength;
-      Info := @LNP32^.Info;
+      if FVersion < 5 then begin
+        HeaderLength := LNP32^.HeaderLength;
+        Info := @LNP32^.Info;
+      end
+      else begin
+        FLineInfo.AddrSize := LNP32_v5^.AddressSize;
+        HeaderLength := LNP32_v5^.HeaderLength;
+        Info := @LNP32_v5^.Info;
+      end;
     end;
-    if Version=0 then ;
-    FLineInfo.Addr64 := FAddressSize = 8;
-    FLineInfo.AddrSize := FAddressSize;
+    FLineInfo.Addr64 := FLineInfo.AddrSize = 8;
+
+
     FLineInfo.DataStart := PByte(Info) + HeaderLength;
     FLineInfo.Version := Version;
 
@@ -5594,19 +5817,10 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     FLineInfo.MinimumInstructionLength := Info^.MinimumInstructionLength;
     FLineInfo.MaximumInstructionLength := 1;
     if Version >= 4 then begin
-      // Older FreePascal writes an incorrect header
-      oldFpc := False;
-      s := LowerCase(FProducer);
-      i := Pos('free pascal ',  s);
-      if i > 0 then begin
-        s := copy(s, i+12,5);
-        oldFpc := (Length(s) = 5) and (
-          (s[1] = '2') or                                   // fpc 2.x
-          ( (s[1] = '3') and (s[3] in ['0', '1']) ) or      // fpc 3.0 / 3.1
-          ( (s[1] = '3') and (s[3] = '2') and (s[5] in ['0', '1', '2']) ) // fpc 3.2.[012]]
-        );
-      end;
-      if not oldFpc then begin
+      (* Version 4 up, has an extra field => adjust the pointer
+         Except for older FPC, which erroneously did not add the field
+      *)
+      if (FVersion <> 4) or not CheckOldFpc322 then begin
         inc(PByte(Info)); // All fields move by 1 byte // Dwarf-4 has a new field
         FLineInfo.MaximumInstructionLength := Info^.MinimumInstructionLength;
       end;
@@ -5621,41 +5835,50 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
 
     // directories & filenames
     FLineInfo.Directories := TStringList.Create;
-    FLineInfo.Directories.Add(''); // current dir
+    FLineInfo.FileNames := TStringList.Create;
+
     Name := PChar(@Info^.StandardOpcodeLengths);
     Inc(Name, Info^.OpcodeBase-1);
+    if FVersion < 5 then begin
+      FLineInfo.Directories.Add(''); // current dir
 
-    // directories
-    while Name^ <> #0 do
-    begin
-      S := String(Name);
-      Inc(pb, Length(S)+1);
-      FLineInfo.Directories.Add(S + DirectorySeparator); // AppendPathDelim();
-    end;
-    Inc(Name);
+      // directories
+      while Name^ <> #0 do
+      begin
+        S := String(Name);
+        Inc(pb, Length(S)+1);
+        FLineInfo.Directories.Add(S + DirectorySeparator); // AppendPathDelim();
+      end;
+      Inc(Name);
 
-    // filenames
-    FLineInfo.FileNames := TStringList.Create;
-    while Name^ <> #0 do
-    begin
-      S := String(Name);
-      Inc(pb, Length(S)+1);
-      //diridx
-      diridx := ULEB128toOrdinal(pb);
-      if diridx < FLineInfo.Directories.Count then begin
-        S2 := FLineInfo.Directories[diridx] + S;
-        S := CreateAbsolutePath(S2, FCompDir);
-        if (diridx = 0) and (not FileExistsUTF8(S)) and (FLineInfo.FileNames.Count > 0) then // https://gitlab.com/freepascal.org/fpc/source/-/issues/37658 https://bugs.freepascal.org/view.php?id=37658
-          S := S2;
-      end
-      else
-        S := Format('Unknown dir(%u)', [diridx]) + DirectorySeparator + S;
-      FLineInfo.FileNames.Add(S);
-      //last modified
-      ULEB128toOrdinal(pb);
-      //length
-      ULEB128toOrdinal(pb);
+      // filenames
+      FLineInfo.FileNames.Add(AppendPathDelim(FCompDir) + FileName);
+      while Name^ <> #0 do
+      begin
+        S := String(Name);
+        Inc(pb, Length(S)+1);
+        //diridx
+        diridx := ULEB128toOrdinal(pb);
+        if diridx < FLineInfo.Directories.Count then begin
+          S2 := FLineInfo.Directories[diridx] + S;
+          S := CreateAbsolutePath(S2, FCompDir);
+          if (diridx = 0) and (not FileExistsUTF8(S)) and (FLineInfo.FileNames.Count > 0) then // https://gitlab.com/freepascal.org/fpc/source/-/issues/37658 https://bugs.freepascal.org/view.php?id=37658
+            S := S2;
+        end
+        else
+          S := Format('Unknown dir(%u)', [diridx]) + DirectorySeparator + S;
+        FLineInfo.FileNames.Add(S);
+        //last modified
+        ULEB128toOrdinal(pb);
+        //length
+        ULEB128toOrdinal(pb);
+      end;
+    end
+    else begin
+      ReadDirectoryList(Pointer(Name));
+      ReadFileList(Pointer(Name));
     end;
+
 
     FLineInfo.StateMachine := TDwarfLineInfoStateMachine.Create(Self, FLineInfo.DataStart, FLineInfo.DataEnd);
     FLineInfo.StateMachines := TFPObjectList.Create(True);
@@ -6218,6 +6441,12 @@ begin
       else
         AValue := pchar(PtrUInt(FDebugFile^.Sections[dsStr].RawData)+PDWord(AAttribute)^);
     end;
+    DW_FORM_line_strp:   begin
+      if IsDwarf64 then
+        AValue := pchar(PtrUInt(FDebugFile^.Sections[dsLineStr].RawData)+PQWord(AAttribute)^)
+      else
+        AValue := pchar(PtrUInt(FDebugFile^.Sections[dsLineStr].RawData)+PDWord(AAttribute)^);
+    end;
   else
     Result := False;
   end;
@@ -6281,6 +6510,12 @@ begin
       else
         AValue := pchar(PtrUInt(FDebugFile^.Sections[dsStr].RawData)+PDWord(AAttribute)^);
     end;
+    DW_FORM_line_strp:   begin
+      if IsDwarf64 then
+        AValue := pchar(PtrUInt(FDebugFile^.Sections[dsLineStr].RawData)+PQWord(AAttribute)^)
+      else
+        AValue := pchar(PtrUInt(FDebugFile^.Sections[dsLineStr].RawData)+PDWord(AAttribute)^);
+    end;
   else
     Result := False;
   end;
@@ -6314,11 +6549,21 @@ begin
       Result := AnFormString;
       Size := 0;
       if Result then begin
-        mx := FDebugFile^.Sections[dsInfo].RawData +FDebugFile^.Sections[dsInfo].Size;
         if AForm = DW_FORM_strp then begin
-          AAttribute := FDebugFile^.Sections[dsStr].RawData+PDWord(AAttribute)^;
+          if IsDwarf64
+          then AAttribute := FDebugFile^.Sections[dsStr].RawData+PQWord(AAttribute)^
+          else AAttribute := FDebugFile^.Sections[dsStr].RawData+PDWord(AAttribute)^;
           mx := FDebugFile^.Sections[dsStr].RawData +FDebugFile^.Sections[dsStr].Size;
-        end;
+        end
+        else
+        if AForm = DW_FORM_line_strp then begin
+          if IsDwarf64
+          then AAttribute := FDebugFile^.Sections[dsLineStr].RawData+PQWord(AAttribute)^
+          else AAttribute := FDebugFile^.Sections[dsLineStr].RawData+PDWord(AAttribute)^;
+          mx := FDebugFile^.Sections[dsLineStr].RawData +FDebugFile^.Sections[dsStr].Size;
+        end
+        else
+          mx := FDebugFile^.Sections[dsInfo].RawData +FDebugFile^.Sections[dsInfo].Size;
         i := AAttribute;
         while (PByte(i)^ <> 0) and (i < mx) do Inc(i);
         if i = mx then begin

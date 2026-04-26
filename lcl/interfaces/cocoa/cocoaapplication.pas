@@ -400,10 +400,68 @@ type
 function TCocoaApplication.nextEventMatchingMask_untilDate_inMode_dequeue(
   mask: NSUInteger; expiration: NSDate; mode: NSString; deqFlag: LCLObjCBoolean
   ): NSEvent;
-var
-  cb : ICommonCallback;
+
+  function callAppHighestHandler( const event: NSEvent ): NSEvent;
+  begin
+    {
+      Monitors from NSEvent.addLocalMonitorForEvents aren't called until
+      NSApplication.sendEvent, so it's not early enough to capture the tracking
+      run loop behavior below or to prevent key events going into KeyEvBefore, and
+      Application.OnUserInput doesn't allow filtering messages.
+      see also !351
+    }
+    Result:= event;
+    if NOT Assigned(Result) then
+      Exit;
+    if NOT Assigned(CocoaConfigApplication.events.highestHandler) then
+      Exit;
+    if CocoaConfigApplication.events.highestHandler(Result) then
+      Result:= nil;
+  end;
+
+  function processWakeupEvent( const event: NSEvent ): NSEvent;
+  begin
+    Result:= event;
+    if (Result.type_=NSApplicationDefined) and (Result.subtype=LazarusApplicationDefinedSubtypeWakeup) then
+      Result:= nil;
+  end;
+
+  function processTrackingMode( const event: NSEvent ): NSEvent;
+  var
+    trackedControl: NSObject;
+    cb : ICommonCallback;
+  begin
+    Result:= event;
+    trackedControl:= CocoaWidgetSetState.mouseEvent.trackedControl;
+
+    if NOT Assigned(trackedControl) then
+      Exit;
+
+    if (mode<>NSEventTrackingRunLoopMode) and NOT mode.isEqualToString(NSEventTrackingRunLoopMode) then
+      Exit;
+
+    if Result.type_ = NSLeftMouseUp then begin
+      //todo: send callback!
+      CocoaWidgetSetState.mouseEvent.trackedControl:= nil;
+      Exit;
+    end;
+
+    if NOT isMouseMoveEvent(Result.type_) then
+      Exit;
+
+    cb:= trackedControl.lclGetCallback;
+    if NOT Assigned(cb) then
+      Exit;
+
+    // if the mouse event was handled by LCL - just don't return it back to Cocoa
+    // i.e. needed for LCL to handle MouseMove events during DragAndDrop
+    // Cocoa should not process the mouseMove at this time!
+    if cb.MouseMove(Result) then
+      Result:= nil;
+  end;
+
 begin
-  CocoaWidgetSetState.prevKeyModifiers  := CocoaWidgetSetState.savedKeyModifiers;
+  CocoaWidgetSetState.keyEvent.prevModifiers:= CocoaWidgetSetState.keyEvent.savedModifiers;
 
   {$ifdef COCOALOOPHIJACK}
   if not isrun and Assigned(aloop) then begin
@@ -425,52 +483,22 @@ begin
     expiration, mode, deqFlag);
   {$endif}
 
-  {
-    Monitors from NSEvent.addLocalMonitorForEvents aren't called until
-    NSApplication.sendEvent, so it's not early enough to capture the tracking
-    run loop behavior below or to prevent key events going into KeyEvBefore, and
-    Application.OnUserInput doesn't allow filtering messages.
-    see also !351
-  }
-  if Assigned(Result) and Assigned(CocoaConfigApplication.events.highestHandler) then begin
-    if CocoaConfigApplication.events.highestHandler(Result) then
-      Exit;
-  end;
+  Result:= callAppHighestHandler( Result );
+  if NOT Assigned(Result) then
+    Exit;
 
-  if (Result.type_=NSApplicationDefined) and (Result.subtype=LazarusApplicationDefinedSubtypeWakeup) then
-    Result:= nil;
+  Result:= processWakeupEvent( Result );
 
-  if not Assigned(Result) then
-  begin
+  if NOT Assigned(Result) then begin
     {$ifdef COCOALOOPNATIVE}
     if Assigned(Application) then Application.Idle(true);
     {$endif}
     Exit;
   end;
 
-  CocoaWidgetSetState.savedKeyModifiers := Result.modifierFlags;
+  CocoaWidgetSetState.keyEvent.savedModifiers := Result.modifierFlags;
 
-  if ((mode = NSEventTrackingRunLoopMode) or mode.isEqualToString(NSEventTrackingRunLoopMode))
-    and Assigned(CocoaWidgetSetState.trackedControl)
-  then
-  begin
-    if Result.type_ = NSLeftMouseUp then
-    begin
-      //todo: send callback!
-      CocoaWidgetSetState.trackedControl := nil;
-    end
-    else
-    if isMouseMoveEvent(Result.type_) then
-    begin
-      cb := CocoaWidgetSetState.trackedControl.lclGetCallback;
-      if Assigned(cb) then begin
-        // if the mouse event was handled by LCL - just don't return it back to Cocoa
-        // i.e. needed for LCL to handle MouseMove events during DragAndDrop
-        // Cocoa should not process the mouseMove at this time!
-        if cb.MouseMove(Result) then Result := nil;
-      end;
-    end;
-  end;
+  Result:= processTrackingMode( Result );
 end;
 
 procedure TCocoaApplication.lclSyncCheck(arg: id);

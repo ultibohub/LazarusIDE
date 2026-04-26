@@ -4,6 +4,7 @@ procedure LCLGtkButtonGetPreferredWidth(widget: PGtkWidget; min_width, nat_width
 var
   AControl: TGtk3Widget;
   ParentClass: PGtkWidgetClass;
+  LCLW: Integer;
 begin
   if not Assigned(min_width) or not Assigned(nat_width) then
   begin
@@ -24,27 +25,25 @@ begin
     Exit;
   end;
 
-  // Call parent class implementation
   ParentClass^.get_preferred_width(widget, min_width, nat_width);
 
   AControl := TGtk3Widget(HwndFromGtkWidget(widget));
-  if not Assigned(AControl) then
-  begin
-    DebugLn('Error: cannot get TGtk3Widget for widget parameter.');
+  if not Assigned(AControl) or not Assigned(AControl.LCLObject) then
     Exit;
-  end;
 
   if AControl.LCLObject.AutoSize then
-    exit;
-  // Custom width handling
-  if AControl.LCLWidth = 0 then
+    Exit;
+
+  if AControl.LCLWidth > 0 then
+    LCLW := AControl.LCLWidth
+  else
+    LCLW := AControl.LCLObject.Width;
+
+  if LCLW > 0 then
   begin
-    min_width^ := Max(min_width^ div 2, AControl.LCLObject.Width);
-    nat_width^ := Max(min_width^, AControl.LCLObject.Width);
-  end else
-  begin
-    min_width^ := Max(min_width^ div 2, AControl.LCLWidth);
-    nat_width^ := Max(min_width^, AControl.LCLWidth);
+    if min_width^ > LCLW then
+      min_width^ := LCLW;
+    nat_width^ := LCLW;
   end;
 end;
 
@@ -52,6 +51,7 @@ procedure LCLGtkButtonGetPreferredHeight(widget: PGtkWidget; min_height, nat_hei
 var
   AControl: TGtk3Widget;
   ParentClass: PGtkWidgetClass;
+  LCLH: Integer;
 begin
   if not Assigned(min_height) or not Assigned(nat_height) then
   begin
@@ -72,28 +72,25 @@ begin
     Exit;
   end;
 
-  // Call parent class implementation
   ParentClass^.get_preferred_height(widget, min_height, nat_height);
 
   AControl := TGtk3Widget(HwndFromGtkWidget(widget));
-  if not Assigned(AControl) then
-  begin
-    DebugLn('Error: cannot get TGtk3Widget for widget parameter.');
+  if not Assigned(AControl) or not Assigned(AControl.LCLObject) then
     Exit;
-  end;
 
   if AControl.LCLObject.AutoSize then
-    exit;
+    Exit;
 
-  // Custom height handling
-  if AControl.LCLHeight = 0 then
+  if AControl.LCLHeight > 0 then
+    LCLH := AControl.LCLHeight
+  else
+    LCLH := AControl.LCLObject.Height;
+
+  if LCLH > 0 then
   begin
-    min_height^ := Max(min_height^ div 2, AControl.LCLObject.Height);
-    nat_height^ := Max(min_height^, AControl.LCLObject.Height);
-  end else
-  begin
-    min_height^ := Max(min_height^ div 2, AControl.LCLHeight);
-    nat_height^ := Max(min_height^, AControl.LCLHeight);
+    if min_height^ > LCLH then
+      min_height^ := LCLH;
+    nat_height^ := LCLH;
   end;
 end;
 

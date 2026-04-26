@@ -789,23 +789,11 @@ resourcestring
   lisCleanUpLazbuild = 'Clean up + lazbuild';
   lisLazbuild = 'lazbuild';
   lisCompileNormally = 'Compile normally';
-  lisTheUnitExistsTwiceInTheUnitPathOfThe = 'The unit %s exists twice in the '
-    +'unit path of the %s:';
-  lisHintCheckIfTwoPackagesContainAUnitWithTheSameName = 'Hint: Check if two '
-    +'packages contain a unit with the same name.';
-  lisIgnoreAll = 'Ignore all';
-  lisUnableToRemoveOldBackupFile = 'Unable to remove old backup file "%s"!';
-  lisRenameFileFailed = 'Rename file failed';
-  lisBackupFileFailed = 'Backup file failed';
-  lisUnableToBackupFileTo = 'Unable to backup file "%s" to "%s"!';
   lisFileNotLowercase = 'File not lowercase';
   lisTheUnitIsNotLowercaseTheFreePascalCompiler = 'The unit filename "%s" is not lowercase.'
     +'%sThe Free Pascal compiler does not search for all cases.'
     +' It is recommended to use lowercase filename.'
     +'%sRename file lowercase?';
-  lisDeleteAmbiguousFile = 'Delete ambiguous file?';
-  lisAmbiguousFileFoundThisFileCanBeMistakenWithDelete = 'Ambiguous file '
-    +'found: "%s"%sThis file can be mistaken with "%s"%sDelete the ambiguous file?';
   lisLazarusEditorV = 'Lazarus IDE (Ultibo Edition) v%s'; //'Lazarus IDE v%s'; //Ultibo
   liscompiling = '%s (compiling ...)';
   lisdebugging = '%s (debugging ...)';
@@ -818,8 +806,6 @@ resourcestring
     +' options. If this file belongs to Lazarus, make sure compiling clean.'
     +' If the file belongs to FPC then check fpc.cfg.'
     +' If unsure, check Project -> CompilerOptions -> Test';
-  lisNOTECouldNotCreateDefineTemplateForFreePascal = 'NOTE: Could not create '
-    +'Define Template for Free Pascal Sources';
   lisClassNotFound = 'Class not found';
   lisClassNotFoundAt = 'Class %s not found at %s(%s,%s)';
   lisRemoveUses = 'Remove uses "%s"';
@@ -842,8 +828,6 @@ resourcestring
   lisUnableToConvertToEncoding = 'Unable to convert to encoding "%s"';
   lisSavingFileAsLoosesCharactersAtLineColumn = 'Saving file "%s" as "%s" '
     +'looses characters at line %s, column %s.';
-  lisNOTECouldNotCreateDefineTemplateForLazarusSources = 'NOTE: Could not '
-    +'create Define Template for Lazarus Sources';
   lisOwnerIsAlreadyUsedByTReaderTWriterPleaseChooseAnot = '''Owner'' is '
     +'already used by TReader/TWriter. Please choose another name.';
   lisDuplicateNameAComponentNamedAlreadyExistsInTheInhe = 'Duplicate name: A '
@@ -1127,7 +1111,6 @@ resourcestring
     +'SOFTWARE.';
 
   // Options dialog groups
-  dlgGroupEnvironment = 'Environment';
   dlgGroupEditor = 'Editor';
   dlgGroupCodetools = 'Codetools';
   dlgGroupCodeExplorer = 'Code Explorer';
@@ -2517,16 +2500,12 @@ resourcestring
     +'This typically means your %s has wrong unit paths. Or your installation is broken.';
   dlgCCOTestRTLUnits = 'Test: Checking RTL units ...';
   dlgCCOTestCompilerDate = 'Test: Checking compiler date ...';
-  lisThereIsNoFreePascalCompilerEGFpcOrPpcCpuConfigured = 'There is no Free '
-    +'Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project '
-    +'options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s';
   lisFatal = 'Fatal';
   lisPanic = 'Panic';
   lisHideSearch = 'Hide Search';
   lisCompilerMessagesFileNotFound = 'Compiler messages file not found:%s%s';
   lisFppkgConfigurationFileNotFound = 'Fppkg configuration file not found:%s%s';
   lisUnableToOpen = 'Unable to open "%s"';
-  lisCompilerDoesNotSupportTarget = 'Compiler "%s" does not support target %s-%s';
   lisInvalidMode = 'Invalid mode %s';
   lisTheProjectCompilerOptionsAndTheDirectivesInTheMain = 'The project '
     +'compiler options and the directives in the main source differ. For the '
@@ -3501,11 +3480,6 @@ resourcestring
     +'%s%s';
   lisConfirmBuildAllProfiles = 'Lazarus will be rebuilt with the following profiles:%sContinue?';
   lisNoBuildProfilesSelected = 'No profiles are selected to be built.';
-  lisCleanLazarusSource = 'Clean Lazarus Source';
-  lisBuildIDE = 'Build IDE';
-  lisMakeNotFound = 'Make not found';
-  lisTheProgramMakeWasNotFoundThisToolIsNeededToBuildLa = 'The program "make" '
-    +'was not found.%sThis tool is needed to build Lazarus.';
   lisIDE = 'IDE';
   lisConfigureBuildLazarus = 'Configure "Build Lazarus"';
   lisLazBuildOptions = '&Options:';
@@ -3537,13 +3511,6 @@ resourcestring
     +'"automatic" clean up mode';
   lisLazBuildManageProfiles ='Manage Build Profiles';
   lisLazBuildProfile ='&Profile to build';
-  lisLazBuildErrorWritingFile = 'Error writing file';
-  lisLazBuildUnableToWriteFile = 'Unable to write file "%s":%s';
-  lisLazBuildNormalIDE = 'Normal IDE';
-  lisLazBuildDebugIDE = 'Debug IDE';
-  lisLazBuildOptimizedIDE = 'Optimized IDE';
-  lisLazCleanUpBuildAll = 'Clean Up + Build all';
-
   lisLazBuildABOChooseOutputDir = 'Choose output directory of the IDE executable ';
   lisLazBuildDefines = '&Defines';
   lisLazBuildEditDefines = 'Edit Defines';
@@ -3981,18 +3948,10 @@ resourcestring
 
   // file checks
   lisCanNotCreateFile = 'Cannot create file "%s"';
-  lisErrorDeletingFile = 'Error deleting file';
   lisInvalidMask = 'Invalid Mask';
   lisTheFileMaskIsNotAValidRegularExpression = 'The file mask "%s" is not a '
     +'valid regular expression.';
   lisTheFileMaskIsInvalid = 'The file mask "%s" is invalid.';
-  lisUnableToDeleteAmbiguousFile = 'Unable to delete ambiguous file "%s"';
-  lisErrorRenamingFile = 'Error renaming file';
-  lisUnableToRenameAmbiguousFileTo = 'Unable to rename ambiguous file "%s"%sto "%s"';
-  lisAmbiguousFileFound = 'Ambiguous file found';
-  lisThereIsAFileWithTheSameNameAndASimilarExtension = 'There is a file with '
-    +'the same name and a similar extension on disk%sFile: %s%sAmbiguous '
-    +'File: %s%sDelete ambiguous file?';
 
   // add to project dialog
   lisProjAddInvalidMinMaxVersion = 'Invalid Min-Max version';
@@ -5483,11 +5442,6 @@ resourcestring
   lisCEStyleGroup = 'Style';
   lisCEOtherGroup = 'Other';
   lisCEWrongIndentation = 'Wrong indentation';
-  lisTheProjectUsesTargetOSAndCPUTheSystemPpuForThisTar = 'The project uses '
-    +'target OS=%s and CPU=%s.'
-    +'%sThe system.ppu for this target was not found in the FPC binary directories.'
-    +'%sMake sure fpc is installed correctly '
-    +'for this target and the fpc.cfg contains the right directories.';
   lisFailedToLoadFoldStat = 'Failed to load fold state';
   lisUppercaseString = 'uppercase string';
   lisUppercaseStringGivenAsParameter = 'Uppercase string given as parameter.';
@@ -5672,11 +5626,6 @@ resourcestring
     +'identifiers=%s/%s lines=%s bytes=%s';
   lisScanning2 = '%s. Scanning ...';
   lisShowGlyphsFor = 'Show Glyphs for';
-  lisBuildingLazarusFailed = 'Building Lazarus failed';
-  lisThisSetOfOptionsToBuildLazarusIsNotSupportedByThis = 'This set of '
-    +'options to build Lazarus is not supported by this installation.%sThe '
-    +'directory "%s" is not writable.%sSee the Lazarus website for other '
-    +'ways to install Lazarus.';
   lisSelected = 'Selected';
   lisSelectedAndChildControls = 'Selected and child controls';
 
@@ -6074,29 +6023,6 @@ resourcestring
     ;
   lisUpdateInfo = 'Update info';
 
-  lisCanTFindAValidPpu = 'Can''t find a valid %s.ppu';
-  lisCannotFind = 'Cannot find %s';
-  lisUsedBy = ' used by %s';
-  lisCleanUpPackage = 'Clean up package "%s".';
-  lisPpuInWrongDirectory = 'ppu in wrong directory=%s.';
-  lisPackageNeedsAnOutputDirectory = 'Package needs an output directory.';
-  lisMakeSureAllPpuFilesOfAPackageAreInItsOutputDirecto = 'Make sure all ppu '
-    +'files of a package are in its output directory.';
-  lisCheckSearchPathPackageTryACleanRebuildCheckImpleme = '. Check search path of'
-    +' package %s, try a clean rebuild, check implementation uses sections.';
-  lisCheckIfPackageIsInTheDependencies = '. Check if package %s is in the '
-    +'dependencies';
-  lisCheckIfPackageCreatesPpuCheckNothingDeletesThisFil = '. Check if package '
-    +'%s creates %s.ppu, check nothing deletes this file and check that no two'
-    +' packages have access to the unit source.';
-  lisEnableFlagUseUnitOfUnitInPackage = '. Enable flag "Use Unit" of unit %s in package %s';
-  lisOfTheProjectInspector = ' of the Project Inspector';
-  lisOfPackage = ' of package %s';
-  lisCompileWithVdForMoreDetailsCheckForDuplicates = 'Compile with -vd '
-    +'for more details. Check for duplicates.';
-  lisIncompatiblePpu = ', incompatible ppu=%s';
-  lisPackage3 = ', package %s';
-  lisMultiplePack = ', multiple packages: ';
   lisQuickFixError = 'QuickFix error';
   lisPositionOutsideOfSource = '%s (position outside of source)';
   lisHideMessageByInsertingWarnOffToUnit = 'Hide message by inserting {$warn %'
@@ -6123,7 +6049,6 @@ resourcestring
   synfMatchActionButtonOfMouseDown = 'Match action button of mouse down';
   synfMatchActionModifiersOfMouseDown = 'Match action modifiers of mouse down';
   synfContinueWithNextMouseUpAction = 'Continue with next mouse up action';
-  lisDuplicateUnitIn = 'Duplicate unit "%s" in "%s"';
 
   lismpMultiPaste = 'MultiPaste';
   lismpPasteOptions = 'Paste &options';

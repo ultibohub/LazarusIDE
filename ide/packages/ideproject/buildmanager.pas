@@ -36,34 +36,25 @@ interface
 uses
   // RTL + FCL
   Classes, SysUtils, AVL_Tree, System.UITypes,
-  // LCL
-  InterfaceBase, LCLPlatformDef,
   // CodeTools
-  ExprEval, BasicCodeTools, CodeToolManager, DefineTemplates, CodeCache,
-  FileProcs, CodeToolsCfgScript, LinkScanner,
+  BasicCodeTools, CodeToolManager, DefineTemplates, CodeToolsCfgScript, LinkScanner,
+  FileProcs,
   // LazUtils
-  FPCAdds, LConvEncoding, FileUtil, LazFileUtils, LazFileCache, LazUTF8,
-  Laz2_XMLCfg, LazUtilities, LazMethodList, LazVersion,
-  AvgLvlTree,
+  FPCAdds, FileUtil, LazFileUtils, LazFileCache, LazUTF8,
+  Laz2_XMLCfg, LazUtilities, LazVersion, AvgLvlTree,
   // BuildIntf
-  BaseIDEIntf, IDEOptionsIntf, ProjectIntf, ProjectResourcesIntf,
+  BaseIDEIntf, IDEOptionsIntf, ProjectIntf, ProjectResourcesIntf, LazMsgWorker,
   PublishModuleIntf, IDEExternToolIntf, CompOptsIntf, MacroDefIntf,
-  // IDEIntf
-  IDEDialogs, LazIDEIntf, IDEMsgIntf, SrcEditorIntf,
-  // IdeUtils
-  InputHistory,
   // IdeConfig
   LazConf, EnvironmentOpts, ModeMatrixOpts, TransferMacros, IdeConfStrConsts,
   IDEProcs, DialogProcs, etMakeMsgParser, etFPCMsgFilePool, EditDefineTree,
   ParsedCompilerOpts, CompilerOptions, Compiler, SearchPathProcs, BaseBuildManager,
-  ApplicationBundle, ExtTools,
+  ApplicationBundle, ExtTools, MiscOptions, etFPCMsgParser, etPas2jsMsgParser,
+  ResourceConvertProc,
   // IdePackager
   IdePackagerStrConsts, PackageDefs, PackageSystem,
   // IdeProject
-  Project, ProjectResources, ProjectIcon,
-  // IDE
-  LazarusIDEStrConsts, LfmUnitResource, MiscOptions, etFPCMsgParser, etPas2jsMsgParser,
-  FPCSrcScan, IdeTransferMacros;
+  Project, ProjectResources, ProjectIcon;
 
 type
 
@@ -74,8 +65,6 @@ type
     FUnitSetCache: TFPCUnitSetCache;
     fBuildLazExtraOptions: string; // last build lazarus extra options
     FUnitSetChangeStamp: integer;
-    FFPCSrcScans: TFPCSrcScans;
-    procedure DoOnRescanFPCDirectoryCache(Sender: TObject);
     function GetBuildTarget: TProject;
     function MacroFuncBuildModeCaption(const {%H-}Param: string; const {%H-}Data: PtrInt;
                              var {%H-}Abort: boolean): string;
@@ -107,13 +96,14 @@ type
     function GetModeMatrixTarget(Sender: TObject): string;
     function EditorUnitInfoModified(AnUnitInfo: TUnitInfo): boolean; virtual;
     function EnvironmentOptionsIsGlobalMode(const Identifier: string): boolean;
+    procedure MaybeAddIgnorePath(const aPath: string); virtual;
+    procedure ScanFPCSource(Directory: string); virtual;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
     procedure SetupTransferMacros; override;
     procedure SetupExternalTools(aToolsClass: TExternalToolsClass);
     procedure SetupCompilerInterface;
-    procedure SetupInputHistories(aInputHist: TInputHistories);
     procedure EnvOptsChanged;
 
     function GetBuildMacroOverride(const MacroName: string): string; override;
@@ -159,16 +149,12 @@ type
     procedure SetBuildTargetProject1(Quiet: boolean; ScanFPCSrc: TScanModeFPCSources = smsfsBackground); overload;
     procedure SetBuildTargetIDE(aQuiet: boolean = false); override;
     function BuildTargetIDEIsDefault: boolean; override;
-
-    property FPCSrcScans: TFPCSrcScans read FFPCSrcScans;
     property BuildTarget: TProject read GetBuildTarget; // TProject or nil
   end;
 
 var
   MainBuildBoss: TBuildManager = nil;
   TheCompiler: TCompiler = nil;
-
-procedure RunBootHandlers(ht: TLazarusIDEBootHandlerType); external name 'ideintf_LazIDEIntf_RunBootHandlers';
 
 
 implementation
@@ -210,7 +196,6 @@ begin
   GetBuildMacroValues:=@GetBuildMacroValuesHandler;
   OnAppendCustomOption:=@AppendMatrixCustomOption;
   OnGetMatrixOutputDirectoryOverride:=@GetMatrixOutputDirectoryOverride;
-  CodeToolBoss.OnRescanFPCDirectoryCache:=@DoOnRescanFPCDirectoryCache;
 end;
 
 destructor TBuildManager.Destroy;
@@ -220,16 +205,8 @@ begin
   GetBuildMacroValues:=nil;
   OnAppendCustomOption:=nil;
   OnBackupFileInteractive:=nil;
-
-  FreeAndNil(FFPCSrcScans);
   LazConfMacroFunc:=nil;
-  FreeAndNil(InputHistories);
   FreeAndNil(DefaultCfgVars);
-
-  if SameMethod(TMethod(CodeToolBoss.OnRescanFPCDirectoryCache),
-                TMethod(@DoOnRescanFPCDirectoryCache)) then
-    CodeToolBoss.OnRescanFPCDirectoryCache:=nil;
-
   inherited Destroy;
   MainBuildBoss:=nil;
 end;
@@ -246,9 +223,6 @@ begin
                       lisIDEBuildOptions, @MacroFuncIDEBuildOptions, []));
   GlobalMacroList.Add(TTransferMacro.Create('ProjPublishDir','',
                       lisPublishProjDir,@MacroFuncProjPublishDir,[]));
-  // Can be done in inherited method later.
-  TIdeTransferMarcros.InitMacros(GlobalMacroList);
-  RunBootHandlers(libhTransferMacrosCreated);
 end;
 
 function TBuildManager.MacroFuncBuildModeCaption(const Param: string; const Data: PtrInt;
@@ -331,8 +305,8 @@ end;
 procedure TBuildManager.WriteError(const Msg: string);
 begin
   DebugLn(Msg,' [TBuildManager.WriteError]');
-  if IDEMessagesWindow<>nil then
-    IDEMessagesWindow.AddCustomMessage(mluError,Msg);
+  if Assigned(OnShowMessage) then
+    OnShowMessage(mluError,Msg);
 end;
 
 procedure TBuildManager.SetupExternalTools(aToolsClass: TExternalToolsClass);
@@ -357,12 +331,6 @@ procedure TBuildManager.SetupCompilerInterface;
 begin
   TheCompiler := TCompiler.Create;
   TheCompiler.OnWriteError := @WriteError;
-end;
-
-procedure TBuildManager.SetupInputHistories(aInputHist: TInputHistories);
-begin
-  aInputHist.SetLazarusDefaultFilename;
-  aInputHist.Load;
 end;
 
 procedure TBuildManager.EnvOptsChanged;
@@ -498,11 +466,8 @@ begin
       end;
     end;
   end;
-  if LazarusIDE<>nil then
-    if not LazarusIDE.CallHandlerGetFPCFrontEndParams(Self,Result) then begin
-      debugln(['Warning: TBuildManager.GetFPCFrontEndOptions: LazarusIDE.CallHandlerGetFPCFrontEndParams failed Result="',Result,'"']);
-    end;
-  Result:=UTF8Trim(Result);
+  //Result:=UTF8Trim(Result);
+  Assert(Result=UTF8Trim(Result), 'TBuildManager.GetFPCFrontEndOptions: Trim Result.');
 end;
 
 function TBuildManager.GetProjectPublishDir: string;
@@ -616,14 +581,14 @@ procedure TBuildManager.RescanCompilerDefines(ResetBuildTarget,
       if Cfg.RealCompiler='' then begin
         if ConsoleVerbosity>=0 then
           debugln(['Error: (lazarus) [PPUFilesAndCompilerMatch] Compiler=',Cfg.Compiler,' RealComp=',Cfg.RealCompiler,' InPath=',Cfg.RealTargetCPUCompiler]);
-        IDEMessageDialog(lisCCOErrorCaption, Format(
+        LazMessageWorker(lisCCOErrorCaption, Format(
           lisCompilerDoesNotSupportTarget, [Cfg.Compiler, Cfg.TargetCPU, Cfg.TargetOS]),
           mtError,[mbOk]);
         exit(false);
       end;
       Filename:=GetPhysicalFilenameCached(Cfg.RealCompiler,true);
       if (Filename='') then begin
-        IDEMessageDialog('Error','Compiler executable is missing: '+Cfg.RealCompiler,
+        LazMessageWorker('Error','Compiler executable is missing: '+Cfg.RealCompiler,
           mtError,[mbOk]);
         exit(false);
       end;
@@ -634,13 +599,10 @@ procedure TBuildManager.RescanCompilerDefines(ResetBuildTarget,
 var
   TargetOS, TargetCPU, TargetProcessor, Subtarget, FPCOptions: string; //Ultibo
   CompilerFilename: String;
-  FPCSrcDir: string;
+  FPCSrcDir, AsyncScanFPCSrcDir: string;
   ADefTempl: TDefineTemplate;
   FPCSrcCache: TFPCSourceCache;
   NeedUpdateFPCSrcCache: Boolean;
-  IgnorePath: String;
-  MsgResult: TModalResult;
-  AsyncScanFPCSrcDir: String;
   UnitSetChanged: Boolean;
   HasTemplate: Boolean;
   CompilerErrorMsg: string;
@@ -734,7 +696,7 @@ begin
     debugln('Warning: (lazarus) [TBuildManager.RescanCompilerDefines]: invalid compiler:');
     debugln(Msg);
     if not Quiet then begin
-      IDEMessageDialog(lisCCOErrorCaption, Format(
+      LazMessageWorker(lisCCOErrorCaption, Format(
         lisThereIsNoFreePascalCompilerEGFpcOrPpcCpuConfigured, [ExeExt,
         LineEnding, Msg]), mtError, [mbOk]);
     end;
@@ -758,7 +720,7 @@ begin
   NeedUpdateFPCSrcCache:=false;
   //debugln(['TBuildManager.RescanCompilerDefines ',DirectoryExistsUTF8(FPCSrcDir),' ',(not WaitTillDone),' ',(not HasGUI)]);
   AsyncScanFPCSrcDir:='';
-  if DirectoryExistsUTF8(FPCSrcDir) and ((not WaitTillDone) or (not HasGUI)) then
+  if DirectoryExistsUTF8(FPCSrcDir) and not (WaitTillDone and HasGUI) then
   begin
     // FPC sources are not needed
     // => disable scan
@@ -852,16 +814,8 @@ begin
   end;
 
   CodeToolBoss.DefineTree.ClearCache;
-
-  if AsyncScanFPCSrcDir<>'' then begin
-    // start scanning the fpc source directory in the background
-    {$IFDEF VerboseFPCSrcScan}
-    debugln(['TBuildManager.RescanCompilerDefines scanning fpc sources:',AsyncScanFPCSrcDir]);
-    {$ENDIF}
-    if FPCSrcScans=nil then
-      FFPCSrcScans:=TFPCSrcScans.Create(Self);
-    FPCSrcScans.Scan(AsyncScanFPCSrcDir);
-  end;
+  if AsyncScanFPCSrcDir<>'' then
+    ScanFPCSource(AsyncScanFPCSrcDir);
 
   if not Quiet then begin
     // check for common installation mistakes
@@ -869,21 +823,14 @@ begin
     if (UnitSetCache.GetCompilerKind=pcFPC) then begin
       // check if at least one fpc config is there
       if (UnitSetCache.GetFirstFPCCfg='') then begin
-        IgnorePath:='MissingFPCCfg_'+TargetOS+'-'+TargetCPU;
+        WorkDir:='MissingFPCCfg_'+TargetOS+'-'+TargetCPU;
         if Subtarget<>'' then
-          IgnorePath+='-'+Subtarget;
-        if (InputHistories<>nil) and (InputHistories.Ignores.Find(IgnorePath)=nil)
-        then begin
-          MsgResult:=IDEMessageDialog(lisCCOWarningCaption,
-            lisTheCurrentFPCHasNoConfigFileItWillProbablyMissSome,
-            mtWarning,[mbOk,mbIgnore]);
-          if MsgResult=mrIgnore then
-            InputHistories.Ignores.Add(IgnorePath,iiidIDERestart);
-        end;
+          WorkDir+='-'+Subtarget;
+        MaybeAddIgnorePath(WorkDir);
       end;
       if not FoundSystemPPU then begin
         // system.ppu is missing
-        IDEMessageDialog(lisCCOErrorCaption,
+        LazMessageWorker(lisCCOErrorCaption,
           Format(lisTheProjectUsesTargetOSAndCPUTheSystemPpuForThisTar,
                  [TargetOS, TargetCPU, LineEnding, LineEnding]),
           mtError,[mbOk]);
@@ -1220,21 +1167,6 @@ begin
   Result:=mrNo;
 end;
 
-procedure TBuildManager.DoOnRescanFPCDirectoryCache(Sender: TObject);
-var
-  Files: TStringList;
-  FPCSrcDir: string;
-begin
-  FPCSrcDir := EnvironmentOptions.GetParsedFPCSourceDirectory;
-  Files := GatherFilesInFPCSources(FPCSrcDir, nil);
-  if Files<>nil then
-    try
-      ApplyFPCSrcFiles(FPCSrcDir, Files);
-    finally
-      Files.Free;
-    end;
-end;
-
 function TBuildManager.GetBuildTarget: TProject;
 begin
   Result := TProject(FBuildTarget);
@@ -1246,7 +1178,7 @@ function TBuildManager.CheckAmbiguousSources(const AFilename: string;
   function DeleteAmbiguousFile(const AmbiguousFilename: string): TModalResult;
   begin
     if not DeleteFileUTF8(AmbiguousFilename) then begin
-      Result:=IDEMessageDialog(lisErrorDeletingFile,
+      Result:=LazMessageWorker(lisErrorDeletingFile,
        Format(lisUnableToDeleteAmbiguousFile, [AmbiguousFilename]),
        mtError,[mbOk,mbAbort]);
     end else
@@ -1260,7 +1192,7 @@ function TBuildManager.CheckAmbiguousSources(const AFilename: string;
     NewFilename:=AmbiguousFilename+'.ambiguous';
     if not RenameFileUTF8(AmbiguousFilename,NewFilename) then
     begin
-      Result:=IDEMessageDialog(lisErrorRenamingFile,
+      Result:=LazMessageWorker(lisErrorRenamingFile,
        Format(lisUnableToRenameAmbiguousFileTo,[AmbiguousFilename,LineEnding,NewFilename]),
        mtError,[mbOk,mbAbort]);
     end else
@@ -1271,9 +1203,10 @@ function TBuildManager.CheckAmbiguousSources(const AFilename: string;
   begin
     Result:=mrOk;
     if Compiling then begin
-      IDEMessagesWindow.AddCustomMessage(mluError,
-        Format('ambiguous file found: "%s". Source file is: "%s"',
-               [AmbiguousFilename, AFilename]));
+      if Assigned(OnShowMessage) then
+        OnShowMessage(mluError,
+                      Format('ambiguous file found: "%s". Source file is: "%s"',
+                             [AmbiguousFilename, AFilename]));
     end;
   end;
 
@@ -1289,7 +1222,7 @@ function TBuildManager.CheckAmbiguousSources(const AFilename: string;
     case EnvironmentOptions.AmbiguousFileAction of
     afaAsk:
       begin
-        Result:=IDEMessageDialog(lisAmbiguousFileFound,
+        Result:=LazMessageWorker(lisAmbiguousFileFound,
           Format(lisThereIsAFileWithTheSameNameAndASimilarExtension,
                  [LineEnding, AFilename, LineEnding, AmbiguousFilename, LineEnding+LineEnding]),
           mtWarning,[mbYes,mbIgnore,mbAbort]);
@@ -1370,7 +1303,7 @@ begin
 
           CurFilename:=ADirectory+FileInfo.Name;
           if EnvironmentOptions.AmbiguousFileAction=afaAsk then begin
-            if IDEMessageDialog(lisDeleteAmbiguousFile,
+            if LazMessageWorker(lisDeleteAmbiguousFile,
               Format(lisAmbiguousFileFoundThisFileCanBeMistakenWithDelete,
                      [CurFilename, LineEnding, ShortFilename, LineEnding+LineEnding]),
               mtConfirmation,[mbYes,mbNo])<>mrYes
@@ -1468,7 +1401,7 @@ begin
         if ConsoleVerbosity>=0 then
           DebugLn(['Note: (lazarus) [TBuildManager.CheckUnitPathForAmbiguousPascalFiles] CurUnitName="',CurUnitName,'" CurFilename="',CurFilename,'" OtherUnitName="',PUnitFile(ANode.Data)^.FileUnitName,'" OtherFilename="',PUnitFile(ANode.Data)^.Filename,'"']);
         // pascal unit exists twice
-        Result:=IDEQuestionDialog(lisAmbiguousUnitFound,
+        Result:=LazQuestionWorker(lisAmbiguousUnitFound,
           Format(lisTheUnitExistsTwiceInTheUnitPathOfThe,[CurUnitName,ContextDescription])
           +LineEnding
           +LineEnding
@@ -1583,7 +1516,7 @@ begin
         if not DeleteFileUTF8(BackupFilename) then begin
           ACaption:=lisDeleteFileFailed;
           AText:=Format(lisUnableToRemoveOldBackupFile,[BackupFilename]);
-          Result:=IDEMessageDialog(ACaption,AText,mtError,[mbAbort,mbRetry,mbIgnore]);
+          Result:=LazMessageWorker(ACaption,AText,mtError,[mbAbort,mbRetry,mbIgnore]);
           if Result=mrAbort then exit;
           if Result=mrIgnore then Result:=mrOk;
         end;
@@ -1614,7 +1547,7 @@ begin
             if not DeleteFileUTF8(CounterFilename) then begin
               ACaption:=lisDeleteFileFailed;
               AText:=Format(lisUnableToRemoveOldBackupFile,[CounterFilename]);
-              Result:=IDEMessageDialog(ACaption,AText,mtError,[mbAbort,mbRetry,mbIgnore]);
+              Result:=LazMessageWorker(ACaption,AText,mtError,[mbAbort,mbRetry,mbIgnore]);
               if Result=mrAbort then exit;
               if Result=mrIgnore then Result:=mrOk;
             end;
@@ -1631,7 +1564,7 @@ begin
             ACaption:=lisRenameFileFailed;
             AText:=Format(lisUnableToRenameFileTo,
                      [BackupFilename+IntToStr(i), BackupFilename+IntToStr(i+1)]);
-            Result:=IDEMessageDialog(ACaption,AText,mtError,
+            Result:=LazMessageWorker(ACaption,AText,mtError,
                                [mbAbort,mbRetry,mbIgnore]);
             if Result=mrAbort then exit;
             if Result=mrIgnore then Result:=mrOk;
@@ -1648,7 +1581,7 @@ begin
     begin
       ACaption := lisBackupFileFailed;
       AText := Format(lisUnableToBackupFileTo, [Filename, BackupFilename]);
-      Result := IDEMessageDialog(ACaption,AText,mterror,[mbabort,mbretry,mbignore]);
+      Result := LazMessageWorker(ACaption,AText,mterror,[mbabort,mbretry,mbignore]);
       if Result = mrAbort then exit;
       if Result = mrIgnore then Result := mrOk;
     end
@@ -2073,6 +2006,16 @@ begin
   if Project1.BuildModes=nil then exit;
   // do not save enabled states of session modes
   Result:=not Project1.BuildModes.IsSessionMode(Identifier);
+end;
+
+procedure TBuildManager.MaybeAddIgnorePath(const aPath: string);
+begin
+  ;
+end;
+
+procedure TBuildManager.ScanFPCSource(Directory: string);
+begin
+  ;
 end;
 
 procedure TBuildManager.SetBuildTarget(const TargetOS, TargetCPU, TargetProcessor, Subtarget,

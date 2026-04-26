@@ -2325,11 +2325,6 @@ msgstr "Virheenjäljitin"
 msgid "Editor"
 msgstr "Editori"
 
-#: lazarusidestrconsts.dlggroupenvironment
-msgctxt "lazarusidestrconsts.dlggroupenvironment"
-msgid "Environment"
-msgstr "Käyttöympäristö"
-
 #: lazarusidestrconsts.dlggroupundo
 msgid "Group Undo"
 msgstr "Kumoa ryhmänä"
@@ -5583,15 +5578,6 @@ msgstr ""
 msgid "A macro with this name already exists."
 msgstr "Tämän niminen makro on jo olemassa."
 
-#: lazarusidestrconsts.lisambiguousfilefound
-msgid "Ambiguous file found"
-msgstr "Ristiriitainen tiedosto löytyi"
-
-#: lazarusidestrconsts.lisambiguousfilefoundthisfilecanbemistakenwithdelete
-#, object-pascal-format
-msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
-msgstr "Ristiriitainen tiedosto löytyi: \"%s\"%smikä voi sekoittua tähän: \"%s\"%sPoistetaanko?"
-
 #: lazarusidestrconsts.lisanchorbottomtobottomside
 msgid "Anchor bottom side to bottom side of sibling. Use BorderSpacing to set a distance. BorderSpacing of sibling is ignored."
 msgstr "Ankkuroi alareuna sisarusten alareunaan. Käytä BorderSpacing välimatkan säätämiseen. Sisarusten BorderSpacing ei vaikuta."
@@ -5818,10 +5804,6 @@ msgstr "Projektin koontamoodit:"
 msgid "Make backup of changed files"
 msgstr "Tee varmuuskopio muuttuneista tiedostoista"
 
-#: lazarusidestrconsts.lisbackupfilefailed
-msgid "Backup file failed"
-msgstr "Varmuuskopiointi epäonnistui"
-
 #: lazarusidestrconsts.lisbackuphint
 msgid "Creates a Backup directory under project directory"
 msgstr "Luo varmuushakemiston projektihakemiston alle"
@@ -5982,10 +5964,6 @@ msgstr "Kokoa"
 msgid "Build Date"
 msgstr ""
 
-#: lazarusidestrconsts.lisbuildide
-msgid "Build IDE"
-msgstr "Kokoa IDE"
-
 #: lazarusidestrconsts.lisbuildidewithpackages
 #, fuzzy
 #| msgid "build IDE with packages"
@@ -5995,10 +5973,6 @@ msgstr "kokoa IDE paketteineen"
 #: lazarusidestrconsts.lisbuilding
 msgid "Building"
 msgstr "Kokoaminen"
-
-#: lazarusidestrconsts.lisbuildinglazarusfailed
-msgid "Building Lazarus failed"
-msgstr "Lazaruksen kokoaminen epäonnistui"
 
 #: lazarusidestrconsts.lisbuildmode
 #, object-pascal-format
@@ -6078,11 +6052,6 @@ msgstr "Ei voi luoda tiedostoa \"%s\""
 msgid "Cannot delete last mode."
 msgstr ""
 
-#: lazarusidestrconsts.liscannotfind
-#, object-pascal-format
-msgid "Cannot find %s"
-msgstr "Ei löydy %s"
-
 #: lazarusidestrconsts.liscannotfindlazarusstarter
 #, object-pascal-format
 msgid "Cannot find Lazarus starter:%s%s"
@@ -6110,11 +6079,6 @@ msgstr "Kääntäjää ei voi testata virheenjäljityksen tai käännöksen aika
 #: lazarusidestrconsts.liscanonlychangetheclassoftcomponents
 msgid "Can only change the class of TComponents."
 msgstr "Vain TComponent:sta periytyvän luokka voidaan vaihtaa."
-
-#: lazarusidestrconsts.liscantfindavalidppu
-#, object-pascal-format
-msgid "Can't find a valid %s.ppu"
-msgstr "Ei löydy kelvollista %s.ppu"
 
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
@@ -6612,16 +6576,6 @@ msgstr ""
 msgid "Check for disk file changes via content rather than timestamp"
 msgstr "Tarkista tiedoston muutos sisällön eikä aikaleiman perusteella"
 
-#: lazarusidestrconsts.lischeckifpackagecreatesppuchecknothingdeletesthisfil
-#, object-pascal-format
-msgid ". Check if package %s creates %s.ppu, check nothing deletes this file and check that no two packages have access to the unit source."
-msgstr ". Tarkista luoko paketti %s %s.ppu:n, tarkista ettei mikään poista tätä tiedostoa ja tarkista ettei usealla paketilla ole oikeutta käännösyksikköön."
-
-#: lazarusidestrconsts.lischeckifpackageisinthedependencies
-#, object-pascal-format
-msgid ". Check if package %s is in the dependencies"
-msgstr ". Tarkista onko riippuvuus pakettiin %s määritelty"
-
 #: lazarusidestrconsts.lischeckifthenexttokeninsourceisanendandifnotreturnsl
 msgid "Check if the next token in source is an \"end\" and if not return \"LineEnding + end; + LineEnding\"."
 msgstr "tarkista onko lähdekoodin seuraava tunnus 'end'. Jos ei, palauta rivinloppu + end; + rivinloppu."
@@ -6629,11 +6583,6 @@ msgstr "tarkista onko lähdekoodin seuraava tunnus 'end'. Jos ei, palauta rivinl
 #: lazarusidestrconsts.lischeckoptions
 msgid "Check options"
 msgstr "Tarkista asetukset"
-
-#: lazarusidestrconsts.lischecksearchpathpackagetryacleanrebuildcheckimpleme
-#, object-pascal-format
-msgid ". Check search path of package %s, try a clean rebuild, check implementation uses sections."
-msgstr ". Tarkista paketin %s hakupolku, yritä puhdasta uudelleen käännöstä, tarkista toteutuksen uses lauseet."
 
 #: lazarusidestrconsts.lischeckthenexttokeninsourceandaddasemicolonifneeded
 msgid "Check the next token in source and add a semicolon if needed."
@@ -6837,10 +6786,6 @@ msgstr "Yksinkertainen kielioppi (kuten * eikä .*)"
 msgid "&Clean all"
 msgstr "Siivoa kaikki"
 
-#: lazarusidestrconsts.liscleanlazarussource
-msgid "Clean Lazarus Source"
-msgstr "Siivoa Lazaruksen lähdekoodi"
-
 #: lazarusidestrconsts.liscleanonlyonce
 #, fuzzy
 #| msgid "Switch after building to automatically"
@@ -6863,11 +6808,6 @@ msgstr ""
 #: lazarusidestrconsts.liscleanupmode
 msgid "Clean up mode"
 msgstr ""
-
-#: lazarusidestrconsts.liscleanuppackage
-#, object-pascal-format
-msgid "Clean up package \"%s\"."
-msgstr "Siivoa paketti \"%s\"."
 
 #: lazarusidestrconsts.liscleanupunitpath
 msgid "Clean up unit path?"
@@ -7655,11 +7595,6 @@ msgstr ""
 msgid "Compiler"
 msgstr "Kääntäjä"
 
-#: lazarusidestrconsts.liscompilerdoesnotsupporttarget
-#, object-pascal-format
-msgid "Compiler \"%s\" does not support target %s-%s"
-msgstr "Kääntäjä \"%s\" ei tue kohdetta %s-%s"
-
 #: lazarusidestrconsts.liscompilermessagesfilenotfound
 #, object-pascal-format
 msgid "Compiler messages file not found:%s%s"
@@ -7681,10 +7616,6 @@ msgstr "Käännä"
 #: lazarusidestrconsts.liscompilewithprojectsettings
 msgid "Compile with project settings"
 msgstr ""
-
-#: lazarusidestrconsts.liscompilewithvdformoredetailscheckforduplicates
-msgid "Compile with -vd for more details. Check for duplicates."
-msgstr "Käännä -vd option kanssa lisätietoa varten. Tarkista duplikaatit."
 
 #: lazarusidestrconsts.liscompiling
 #, object-pascal-format
@@ -8948,10 +8879,6 @@ msgstr "&Poista kaikki"
 msgid "Delete all these files?"
 msgstr "Poistetaanko kaikki nämä tiedostot?"
 
-#: lazarusidestrconsts.lisdeleteambiguousfile
-msgid "Delete ambiguous file?"
-msgstr "Poista ristiriitainen tiedosto"
-
 #: lazarusidestrconsts.lisdeletemacro
 #, object-pascal-format
 msgid "Delete macro \"%s\"?"
@@ -9368,11 +9295,6 @@ msgstr "Päällekkäiset lähdekoodit. Poista yksi tai varmista että hakupolut 
 msgid "Duplicate Unit"
 msgstr "Päällekkäinen käännösyksikkö"
 
-#: lazarusidestrconsts.lisduplicateunitin
-#, object-pascal-format
-msgid "Duplicate unit \"%s\" in \"%s\""
-msgstr "Päällekkäinen käännösyksikkö \"%s\" \"%s\":ssa"
-
 #: lazarusidestrconsts.lisdynpkgamounttoscrollin
 msgid "Amount to scroll in"
 msgstr ""
@@ -9552,11 +9474,6 @@ msgstr ""
 msgid "Enabled only for packages."
 msgstr "Sallittu vain paketeille."
 
-#: lazarusidestrconsts.lisenableflaguseunitofunitinpackage
-#, object-pascal-format
-msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
-msgstr ". Salli lippu \"Käytä käännösyksikköä\" %s paketissa %s"
-
 #: lazarusidestrconsts.lisenablei18nforlfm
 msgid "Enable I18N for LFM"
 msgstr "Salli I18N LFM:ssa"
@@ -9645,10 +9562,6 @@ msgstr "Virhe: "
 #: lazarusidestrconsts.liserrorcreatingfile
 msgid "Error creating file"
 msgstr "Virhe luotaessa tiedostoa"
-
-#: lazarusidestrconsts.liserrordeletingfile
-msgid "Error deleting file"
-msgstr "Virhe tuhottaessa tiedostoa"
 
 #: lazarusidestrconsts.liserrorin
 #, object-pascal-format
@@ -9748,10 +9661,6 @@ msgstr "Virhe luettaessa XML"
 #, object-pascal-format
 msgid "Error reading xml file \"%s\"%s%s"
 msgstr "Virhe luettaessa xml-tiedostosta \"%s\"%s%s"
-
-#: lazarusidestrconsts.liserrorrenamingfile
-msgid "Error renaming file"
-msgstr "Virhe uudelleennimettäessä tiedostoa"
 
 #: lazarusidestrconsts.liserrors
 msgctxt "lazarusidestrconsts.liserrors"
@@ -10674,10 +10583,6 @@ msgstr "Vihje: oletusarvo voidaan määritellä ehtolauseessa."
 msgid "A hint at property's name shows its description."
 msgstr "Ominaisuuden nimen vihje näyttää sen selityksen."
 
-#: lazarusidestrconsts.lishintcheckiftwopackagescontainaunitwiththesamename
-msgid "Hint: Check if two packages contain a unit with the same name."
-msgstr "Vihje: Tarkista sisältääkö kaksi pakettia käännösyksikön samalla nimellä."
-
 #: lazarusidestrconsts.lishintclickonshowoptionstofindoutwhereinheritedpaths
 msgid "Hint: Click on \"Show Options\" to find out where inherited paths are coming from."
 msgstr "Vihje: Klikkaa \"Näytä asetukset\" nähdäksesi mistä periytyvät polut tulevat."
@@ -10981,11 +10886,6 @@ msgstr "Include polut"
 #: lazarusidestrconsts.lisincluderecursive
 msgid "Include, recursive"
 msgstr ""
-
-#: lazarusidestrconsts.lisincompatibleppu
-#, object-pascal-format
-msgid ", incompatible ppu=%s"
-msgstr ", ei-yhteensopiva ppu=%s"
 
 #: lazarusidestrconsts.lisincorrectconfigurationdirectoryfound
 msgid "Incorrect configuration directory found"
@@ -11798,10 +11698,6 @@ msgstr "Varmista ennen kokoamista"
 msgid "Confirm deletion"
 msgstr "Varmista poistaminen"
 
-#: lazarusidestrconsts.lislazbuilddebugide
-msgid "Debug IDE"
-msgstr "Virheenjäljitys-IDE"
-
 #: lazarusidestrconsts.lislazbuilddefines
 #, fuzzy
 #| msgid "Defines"
@@ -11820,11 +11716,6 @@ msgstr "Muokkaa määritteitä"
 #: lazarusidestrconsts.lislazbuildeditlistofdefineswhichcanbeusedbyanyprofile
 msgid "Edit list of defines which can be used by any profile"
 msgstr "Muokkaa määrite-luetteloa, mitä voidaan käyttää kaikille profiileille"
-
-#: lazarusidestrconsts.lislazbuilderrorwritingfile
-msgctxt "lazarusidestrconsts.lislazbuilderrorwritingfile"
-msgid "Error writing file"
-msgstr "Virhe kirjoitettaessa tiedostoa"
 
 #: lazarusidestrconsts.lislazbuildisnoninteractiveabortingnow
 #, object-pascal-format
@@ -11850,14 +11741,6 @@ msgstr "Lisää uusi profiili"
 #: lazarusidestrconsts.lislazbuildnewprofinfo
 msgid "Current build options will be associated with:"
 msgstr "Nykyiset koonta-asetukset liitetään:"
-
-#: lazarusidestrconsts.lislazbuildnormalide
-msgid "Normal IDE"
-msgstr "Normaali IDE"
-
-#: lazarusidestrconsts.lislazbuildoptimizedide
-msgid "Optimized IDE"
-msgstr "Optimoitu IDE"
 
 #: lazarusidestrconsts.lislazbuildoptions
 #, fuzzy
@@ -11921,11 +11804,6 @@ msgstr "Kohdehakemisto:"
 msgid "Target OS:"
 msgstr "Kohdekäyttöjärjestelmä"
 
-#: lazarusidestrconsts.lislazbuildunabletowritefile
-#, object-pascal-format
-msgid "Unable to write file \"%s\":%s"
-msgstr "Tiedoston \"%s\":%s tallennus epäonnistui"
-
 #: lazarusidestrconsts.lislazbuildupdaterevinc
 msgid "Update revision.inc"
 msgstr "Päivitä revision.inc"
@@ -11933,10 +11811,6 @@ msgstr "Päivitä revision.inc"
 #: lazarusidestrconsts.lislazbuildupdaterevisioninfoinaboutlazarusdialog
 msgid "Update revision info in \"About Lazarus\" dialog"
 msgstr "Päivitä revisiokenttä \"Tietoja Lazaruksesta\" ikkunassa"
-
-#: lazarusidestrconsts.lislazcleanupbuildall
-msgid "Clean Up + Build all"
-msgstr "Siivoa + kokoa kaikki"
 
 #: lazarusidestrconsts.lislazpkg
 msgid "Package distributed with Lazarus"
@@ -12156,10 +12030,6 @@ msgctxt "lazarusidestrconsts.lismakecurrent"
 msgid "Current"
 msgstr "Nykyinen"
 
-#: lazarusidestrconsts.lismakenotfound
-msgid "Make not found"
-msgstr "Make ei löydy"
-
 #: lazarusidestrconsts.lismakeresourcestring
 msgid "Make ResourceString"
 msgstr "Tee resurssiteksti"
@@ -12229,10 +12099,6 @@ msgstr "Tekstivakio lähdekoodissa"
 #: lazarusidestrconsts.lismakeresstrstringswithsamevalue
 msgid "Strings with same value:"
 msgstr "Tekstit missä sama arvo:"
-
-#: lazarusidestrconsts.lismakesureallppufilesofapackageareinitsoutputdirecto
-msgid "Make sure all ppu files of a package are in its output directory."
-msgstr "Varmista että paketin kaikki ppu tiedostot ovat käännöshakemistossa."
 
 #: lazarusidestrconsts.lismanagesourceeditors
 msgid "Manage Source Editors ..."
@@ -14040,10 +13906,6 @@ msgstr "Viestin värit"
 msgid "Multiple directories are separated with semicolons"
 msgstr "Hakemistot erotetaan puolipisteellä"
 
-#: lazarusidestrconsts.lismultiplepack
-msgid ", multiple packages: "
-msgstr ", monta pakettia: "
-
 #: lazarusidestrconsts.lismvsavemessagestofiletxt
 msgid "Save messages to file (*.txt)"
 msgstr "Tallenna viestit tiedostoon (*.txt)"
@@ -14276,14 +14138,6 @@ msgctxt "lazarusidestrconsts.lisnotebooktabpostop"
 msgid "Top"
 msgstr "Ylhäällä"
 
-#: lazarusidestrconsts.lisnotecouldnotcreatedefinetemplateforfreepascal
-msgid "NOTE: Could not create Define Template for Free Pascal Sources"
-msgstr "Huom.: Ei voi luoda määritemallinetta Free Pascal -koodille"
-
-#: lazarusidestrconsts.lisnotecouldnotcreatedefinetemplateforlazarussources
-msgid "NOTE: Could not create Define Template for Lazarus Sources"
-msgstr "Huom.: Ei voi luoda määritemallinetta Lazarus-koodille"
-
 #: lazarusidestrconsts.lisnotemplateselected
 msgid "no template selected"
 msgstr "Mallinetta ei ole valittu"
@@ -14332,15 +14186,6 @@ msgstr "objektipolut"
 #: lazarusidestrconsts.lisofeswitchtoobjectinspectorfavoritestab
 msgid "Switch to Object Inspector Favorites tab"
 msgstr "Siirry muokkaimen suosikit-lehdelle"
-
-#: lazarusidestrconsts.lisofpackage
-#, object-pascal-format
-msgid " of package %s"
-msgstr " paketin %s"
-
-#: lazarusidestrconsts.lisoftheprojectinspector
-msgid " of the Project Inspector"
-msgstr "Projektinhallinnan"
 
 #: lazarusidestrconsts.lisoifaddtofavoriteproperties
 msgid "Add to favorite properties"
@@ -14674,11 +14519,6 @@ msgstr "Paketti"
 msgid "package %s"
 msgstr "Paketti %s"
 
-#: lazarusidestrconsts.lispackage3
-#, object-pascal-format
-msgid ", package %s"
-msgstr ", paketti %s"
-
 #: lazarusidestrconsts.lispackageinfo
 msgid "Package info"
 msgstr "Paketin tietoja"
@@ -14695,10 +14535,6 @@ msgstr "Paketin nimi alkaa ..."
 #: lazarusidestrconsts.lispackagenamecontains
 msgid "Package name contains ..."
 msgstr "Paketin nimi sisältää ..."
-
-#: lazarusidestrconsts.lispackageneedsanoutputdirectory
-msgid "Package needs an output directory."
-msgstr "Paketti tarvitsee käännöshakemiston."
 
 #: lazarusidestrconsts.lispackageneedsinstallation
 msgid "Package needs installation"
@@ -15929,11 +15765,6 @@ msgstr "Sijainti"
 msgid "%s (position outside of source)"
 msgstr "%s (sijainti lähdekoodin ulkopuolella)"
 
-#: lazarusidestrconsts.lisppuinwrongdirectory
-#, object-pascal-format
-msgid "ppu in wrong directory=%s."
-msgstr "ppu väärässä hakemistossa=%s."
-
 #: lazarusidestrconsts.lisprecedingword
 msgid "Preceding word"
 msgstr "Edeltävä sana"
@@ -16484,10 +16315,6 @@ msgstr "Nimeä uudelleen ..."
 #: lazarusidestrconsts.lisrenamefile
 msgid "Rename file?"
 msgstr "Muutetaanko tiedoston nimi?"
-
-#: lazarusidestrconsts.lisrenamefilefailed
-msgid "Rename file failed"
-msgstr "Tiedoston uudelleennimeäminen epäonnistui"
 
 #: lazarusidestrconsts.lisrenameshowresult
 msgid "Show list of renamed Identifiers"
@@ -17923,11 +17750,6 @@ msgstr ""
 msgid "The path of \"make\" is not correct: \"%s\""
 msgstr "\"make\" komennon polku on väärin: \"%s\""
 
-#: lazarusidestrconsts.listheprogrammakewasnotfoundthistoolisneededtobuildla
-#, object-pascal-format
-msgid "The program \"make\" was not found.%sThis tool is needed to build Lazarus."
-msgstr "\"make\" ohjelmaa ei löydy.%sSe tarvitaan Lazaruksen kokoamiseen."
-
 #: lazarusidestrconsts.listheprojectcompileroptionsandthedirectivesinthemain
 msgid "The project compiler options and the directives in the main source differ. For the new unit the mode and string type of the project options are used:"
 msgstr "Projektin kääntäjän asetukset ja pää-lähdekoodissa olevat ohjeet eroavat. Uudelle käännösyksikölle käytetään projektin asetusten moodia ja string-tyyppiä:"
@@ -17986,11 +17808,6 @@ msgstr "Projekti pitää tallentaa ennen kokoamista%sJos asetat testihakemiston 
 msgid "The project uses FPC resources which require at least FPC 2.4"
 msgstr "Projekti käyttää FPC resursseja, mitkä vaativat vähintään FPC 2.4:n"
 
-#: lazarusidestrconsts.listheprojectusestargetosandcputhesystemppuforthistar
-#, object-pascal-format
-msgid "The project uses target OS=%s and CPU=%s.%sThe system.ppu for this target was not found in the FPC binary directories.%sMake sure fpc is installed correctly for this target and the fpc.cfg contains the right directories."
-msgstr "Projektin kohdekäyttöjärjestelmä=%s ja CPU=%s.%sKohteelle ei löydy system.ppu tiedostoa FPC:n binaari-hakemistoista.%sVarmista että fpc on asennettu oikein tälle kohteelle ja että fpc.cfg:ssa on oikeat hakemistot."
-
 #: lazarusidestrconsts.listheprojectwritesthedebugsymbolstoanexternalfilethe
 #, object-pascal-format
 msgid "The project writes the debug symbols to an external file. The \"%s\" supports only symbols within the executable."
@@ -18010,11 +17827,6 @@ msgstr "%sLisätietoja tähän viestiin löytyy täältä%s"
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
 msgstr "Kansiossa on muitakin saman nimisiä tiedostoja,%sne eroavat ainoastaan kirjaimien koon perusteella:%s%s%sPoistetaanko ne?"
-
-#: lazarusidestrconsts.listhereisafilewiththesamenameandasimilarextension
-#, object-pascal-format
-msgid "There is a file with the same name and a similar extension on disk%sFile: %s%sAmbiguous File: %s%sDelete ambiguous file?"
-msgstr "Löytyy samanniminen tiedosto samantapaisella tiedostopäätteellä%sTiedosto: %s%sRistiriitainen tiedosto: %s%sPoistetaanko?"
 
 #: lazarusidestrconsts.listhereisalreadyabuildmodewiththisname
 msgid "There is already a build mode with this name."
@@ -18073,11 +17885,6 @@ msgstr "Käännösyksikkö nimellä \"%s\" on jo olemassa. Pascal-tunnisteiden p
 #, object-pascal-format
 msgid "There is a unit with the name \"%s\" in the project.%sPlease choose a different name"
 msgstr "Projektissa on käännösyksikkö nimeltään \"%s\".%sValitse toinen nimi"
-
-#: lazarusidestrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
-#, object-pascal-format
-msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
-msgstr ""
 
 #: lazarusidestrconsts.listheremustbeatleastonebuildmode
 msgid "There must be at least one build mode."
@@ -18153,11 +17960,6 @@ msgstr "Käännösyksikkö \"%s\" on jo olemassa."
 msgid "The unit belongs to package %s."
 msgstr "Käännösyksikkö kuuluu pakettiin %s."
 
-#: lazarusidestrconsts.listheunitexiststwiceintheunitpathofthe
-#, object-pascal-format
-msgid "The unit %s exists twice in the unit path of the %s:"
-msgstr "Käännösyksikkö %s löytyy %s:n kahdesta eri hakupolusta:"
-
 #: lazarusidestrconsts.listheunithasthisname
 msgid "The unit has this name"
 msgstr "Käännösyksiköllä on tämä nimi"
@@ -18223,11 +18025,6 @@ msgstr "Tällä projektilla ei ole päätiedostoa"
 #: lazarusidestrconsts.listhisprojecthasonlythedefaultbuildmode
 msgid "This project has only the default build mode."
 msgstr "Projektilla on vain oletus koontamoodi."
-
-#: lazarusidestrconsts.listhissetofoptionstobuildlazarusisnotsupportedbythis
-#, object-pascal-format
-msgid "This set of options to build Lazarus is not supported by this installation.%sThe directory \"%s\" is not writable.%sSee the Lazarus website for other ways to install Lazarus."
-msgstr "Asennus ei tue näitä valintoja Lazaruksen kokoamiseksi%sHakemisto \"%s\" ei ole kirjoitettava.%sKatso Lazaruksen web-sivulta muita ohjeita Lazaruksen asentamiseen."
 
 #: lazarusidestrconsts.listhisstatementcannotbeextractedpleaseselectsomecode
 #, object-pascal-format
@@ -18605,11 +18402,6 @@ msgstr "Riippuvuuden %s lisääminen ei onnistu, koska se synnyttäisi kehäriip
 msgid "Unable to add %s to project because there is already a unit with the same name in the Project."
 msgstr "%s:n lisääminen projektiin ei onnistu, koska projektissa on jo samanniminen tiedosto."
 
-#: lazarusidestrconsts.lisunabletobackupfileto
-#, object-pascal-format
-msgid "Unable to backup file \"%s\" to \"%s\"!"
-msgstr "Ei voida tehdä varmuuskopiota tiedostosta \"%s\" tiedostoon \"%s\"!"
-
 #: lazarusidestrconsts.lisunabletochangeclassofto
 #, object-pascal-format
 msgid "%s%sUnable to change class of %s to %s"
@@ -18661,11 +18453,6 @@ msgstr "Tiedoston luominen ei onnistu, koska samanniminen hakemisto on jo olemas
 #: lazarusidestrconsts.lisunabletocreatetemporarylfmbuffer
 msgid "Unable to create temporary lfm buffer."
 msgstr "Väliaikaisen lfm bufferin luominen ei onnistu."
-
-#: lazarusidestrconsts.lisunabletodeleteambiguousfile
-#, object-pascal-format
-msgid "Unable to delete ambiguous file \"%s\""
-msgstr "Ristiriitaisen tiedoston \"%s\" poistaminen ei onnistu"
 
 #: lazarusidestrconsts.lisunabletofindaresourcestringsectioninthisoranyofthe
 msgid "Unable to find a ResourceString section in this or any of the used units."
@@ -18742,11 +18529,6 @@ msgstr "Lomake-editorin avaaminen ei onnistu.%sLuokka %s ei periydy sopivasta lu
 msgid "Unable to read %s"
 msgstr "%s:n lukeminen ei onnistu"
 
-#: lazarusidestrconsts.lisunabletoremoveoldbackupfile
-#, object-pascal-format
-msgid "Unable to remove old backup file \"%s\"!"
-msgstr "Vanhan varmuuskopion \"%s\" poisto ei onnistu!"
-
 #: lazarusidestrconsts.lisunabletoremoveprojectscaledfromsource
 #, object-pascal-format
 msgid "Unable to remove project scaled from source.%s%s"
@@ -18756,11 +18538,6 @@ msgstr ""
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "Projektin otsikon %s%s poisto ei onnistu!"
-
-#: lazarusidestrconsts.lisunabletorenameambiguousfileto
-#, object-pascal-format
-msgid "Unable to rename ambiguous file \"%s\"%sto \"%s\""
-msgstr "Ristiriitaisen tiedoston \"%s\"%s nimeäminen \"%s\":ksi ei onnistu"
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."
@@ -18995,11 +18772,6 @@ msgstr "Käytä CheckBox:ia Boolean tyypille"
 #: lazarusidestrconsts.lisusecommentsincustomoptions
 msgid "Use comments in custom options"
 msgstr "Käytä kommentteja mukautetuissa asetuksissa"
-
-#: lazarusidestrconsts.lisusedby
-#, object-pascal-format
-msgid " used by %s"
-msgstr " %s käyttää"
 
 #: lazarusidestrconsts.lisusedesigntimepackages
 msgid "Use design time packages"

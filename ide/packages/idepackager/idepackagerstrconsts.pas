@@ -81,7 +81,7 @@ resourcestring
   lisPkgMacroPackageNameParameterIsPackageID = 'Package name. Parameter is package ID, e.g. "Name" or "Name 1.0"';
   lisPkgMacroPackageOutputDirectoryParameterIsPackageID = 'Package output directory. Parameter is package ID, e.g. "Name" or "Name 1.0"';
 
-  lispIgnoreAll = 'Ignore all';
+  lisIgnoreAll = 'Ignore all';
 
   // package system
   lisPkgSysInvalidUnitname = 'Invalid Unitname: %s';
@@ -125,7 +125,6 @@ resourcestring
     +'%sA broken dummy package was created.';
   lisSkipTheseWarnings = 'Skip these warnings';
 
-
   lisExecutingCommandBefore = 'Executing command before';
   lisExecutingCommandAfter = 'Executing command after';
 
@@ -144,6 +143,7 @@ resourcestring
   lisPkgMangUnableToDeleteOldStateFileForPackage = 'Unable to delete old '
     +'state file "%s"%sfor package %s.';
   lisPkgSysRegisterProcedureIsNil = 'Register procedure is nil';
+  lisDuplicateUnitIn = 'Duplicate unit "%s" in "%s"';
 
 implementation
 

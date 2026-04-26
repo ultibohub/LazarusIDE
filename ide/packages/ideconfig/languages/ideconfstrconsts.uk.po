@@ -9,6 +9,10 @@ msgstr ""
 msgid "FPC message file"
 msgstr "Файл повідомлень FPC"
 
+#: ideconfstrconsts.dlggroupenvironment
+msgid "Environment"
+msgstr "Середовище"
+
 #: ideconfstrconsts.lisaborted
 msgid "Aborted"
 msgstr "Перервано"
@@ -18,15 +22,46 @@ msgstr "Перервано"
 msgid "A file \"%s\" already exists.%sReplace it?"
 msgstr "Файл \"%s\" вже існує.%s Замінити?"
 
+#: ideconfstrconsts.lisambiguousfilefound
+msgid "Ambiguous file found"
+msgstr "Знайдено двозначний файл"
+
+#: ideconfstrconsts.lisambiguousfilefoundthisfilecanbemistakenwithdelete
+#, object-pascal-format
+msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
+msgstr "Знайдено двозначний файл: \"%s\"%sЙого можна сплутати з \"%s\"%sВидалити цей файл?"
+
+#: ideconfstrconsts.lisbackupfilefailed
+msgid "Backup file failed"
+msgstr "Резервування не вдалося"
+
+#: ideconfstrconsts.lisbuildide
+msgid "Build IDE"
+msgstr "Зібрати ІСР"
+
+#: ideconfstrconsts.lisbuildinglazarusfailed
+msgid "Building Lazarus failed"
+msgstr "Не вдалось зібрати Lazarus"
+
 #: ideconfstrconsts.liscannotexecute
 #, object-pascal-format
 msgid "cannot execute \"%s\""
 msgstr "неможливо виконати \"%s\""
 
+#: ideconfstrconsts.liscannotfind
+#, object-pascal-format
+msgid "Cannot find %s"
+msgstr "Не вдалось знайти %s"
+
 #: ideconfstrconsts.liscannotfindexecutable
 #, object-pascal-format
 msgid "cannot find executable \"%s\""
 msgstr "не вдалось знайти виконуваний файл \"%s\""
+
+#: ideconfstrconsts.liscantfindavalidppu
+#, object-pascal-format
+msgid "Can't find a valid %s.ppu"
+msgstr "Неможливо знайти правильний %s.ppu"
 
 #: ideconfstrconsts.liscaptionofactivebuildmode
 msgid "Caption of active build mode"
@@ -35,6 +70,30 @@ msgstr ""
 #: ideconfstrconsts.lisccoerrorcaption
 msgid "Error"
 msgstr "Помилка"
+
+#: ideconfstrconsts.lischeckifpackagecreatesppuchecknothingdeletesthisfil
+#, object-pascal-format
+msgid ". Check if package %s creates %s.ppu, check nothing deletes this file and check that no two packages have access to the unit source."
+msgstr ". Перевірте, що пакунок %s створює %s.ppu і цей файл ніщо не видаляє. Також переконайтесь, що два пакунки одночасно не мають доступу до сирців модуля."
+
+#: ideconfstrconsts.lischeckifpackageisinthedependencies
+#, object-pascal-format
+msgid ". Check if package %s is in the dependencies"
+msgstr ". Перевірте, чи є пакунок %s у списку залежностей"
+
+#: ideconfstrconsts.lischecksearchpathpackagetryacleanrebuildcheckimpleme
+#, object-pascal-format
+msgid ". Check search path of package %s, try a clean rebuild, check implementation uses sections."
+msgstr ". Перевірте список шляхів пошуку пакунка %s, спробуйте перезібрати з очищенням, перевірте вирази Uses у секціях Implementation."
+
+#: ideconfstrconsts.liscleanlazarussource
+msgid "Clean Lazarus Source"
+msgstr "Очистити коди Lazarus"
+
+#: ideconfstrconsts.liscleanuppackage
+#, object-pascal-format
+msgid "Clean up package \"%s\"."
+msgstr "Очистити пакунок \"%s\"."
 
 #: ideconfstrconsts.liscodetoolsdefswriteerror
 msgid "Write error"
@@ -53,6 +112,11 @@ msgstr "Компіляція проєкту"
 msgid "%s is missing."
 msgstr "%s відсутній."
 
+#: ideconfstrconsts.liscompilerdoesnotsupporttarget
+#, object-pascal-format
+msgid "Compiler \"%s\" does not support target %s-%s"
+msgstr "Компілятор \"%s\" не підтримує ціль %s-%s"
+
 #: ideconfstrconsts.liscompilererrorinvalidcompiler
 #, object-pascal-format
 msgid "Error: invalid compiler: %s"
@@ -67,6 +131,10 @@ msgstr "Назва файлу компілятора"
 #| msgid "Hint: you can set the compiler path in Tools -> Options-> Files -> Compiler Path"
 msgid "Hint: you can set the compiler executable in Tools -> Options-> Files -> Compiler executable"
 msgstr "Довідка: Ви можете задати шлях до компілятора в Інструменти->Параметри->Файли->Шлях до компілятора"
+
+#: ideconfstrconsts.liscompilewithvdformoredetailscheckforduplicates
+msgid "Compile with -vd for more details. Check for duplicates."
+msgstr "Для деталізації компілювати з -vd. Перевірка дублів."
 
 #: ideconfstrconsts.liscomponentnameisapascalkeyword
 #, object-pascal-format
@@ -86,6 +154,10 @@ msgstr "Тека конфігурації Lazarus"
 #, object-pascal-format
 msgid ", CPU: %s"
 msgstr ", ЦП: %s"
+
+#: ideconfstrconsts.lisdeleteambiguousfile
+msgid "Delete ambiguous file?"
+msgstr "Видалити файл з неоднозначною назвою?"
 
 #: ideconfstrconsts.lisdeletefilefailed
 msgid "Delete file failed"
@@ -144,6 +216,11 @@ msgstr ""
 msgid "use LineInfo unit"
 msgstr ""
 
+#: ideconfstrconsts.lisenableflaguseunitofunitinpackage
+#, object-pascal-format
+msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
+msgstr ". Встановіть прапорець \"Використовувати модуль\" для модуля %s у пакунку %s"
+
 #: ideconfstrconsts.lisendlessloopinmacros
 msgid "Endless loop in macros"
 msgstr ""
@@ -156,10 +233,18 @@ msgstr "Змінна оточення, назва як параметр"
 msgid "Directory not found"
 msgstr "Теки не існує"
 
+#: ideconfstrconsts.liserrordeletingfile
+msgid "Error deleting file"
+msgstr "Помилка видалення файлу"
+
 #: ideconfstrconsts.liserrorloadingfrom
 #, object-pascal-format
 msgid "Error loading %s from%s%s%s%s"
 msgstr "Помилка завантаження %s з%s%s%s%s"
+
+#: ideconfstrconsts.liserrorrenamingfile
+msgid "Error renaming file"
+msgstr "Помилка перейменування файлу"
 
 #: ideconfstrconsts.liserrorsavingto
 #, object-pascal-format
@@ -268,6 +353,10 @@ msgstr "вивільнення рядків буфера: %s"
 msgid "Free Pascal source directory"
 msgstr "Тека сирців Free Pascal"
 
+#: ideconfstrconsts.lishintcheckiftwopackagescontainaunitwiththesamename
+msgid "Hint: Check if two packages contain a unit with the same name."
+msgstr "Порада: перевірте чи два пакунки містять модуль з однією назвою."
+
 #: ideconfstrconsts.lisidebuildoptions
 msgid "IDE build options"
 msgstr "Параметри збирання ІСР"
@@ -275,6 +364,11 @@ msgstr "Параметри збирання ІСР"
 #: ideconfstrconsts.lisignoreandcontinue
 msgid "Ignore and continue"
 msgstr "Знехтувати і продовжити"
+
+#: ideconfstrconsts.lisincompatibleppu
+#, object-pascal-format
+msgid ", incompatible ppu=%s"
+msgstr ", несумісний PPU=%s"
 
 #: ideconfstrconsts.lisinvalidmacrosin
 #, object-pascal-format
@@ -311,6 +405,31 @@ msgstr "Мова графічної оболонки Lazarus (напр. en, uk, 
 msgid "Lazarus language name (e.g. english, deutsch)"
 msgstr "Назва мови для Lazarus (напр. english, deutsch, ukrainain)"
 
+#: ideconfstrconsts.lislazbuilddebugide
+msgid "Debug IDE"
+msgstr "Зневадження ІСР"
+
+#: ideconfstrconsts.lislazbuilderrorwritingfile
+msgid "Error writing file"
+msgstr "Помилка запису файлу"
+
+#: ideconfstrconsts.lislazbuildnormalide
+msgid "Normal IDE"
+msgstr "Звичайне ІСР"
+
+#: ideconfstrconsts.lislazbuildoptimizedide
+msgid "Optimized IDE"
+msgstr "Оптимізований ІСР"
+
+#: ideconfstrconsts.lislazbuildunabletowritefile
+#, object-pascal-format
+msgid "Unable to write file \"%s\":%s"
+msgstr "Неможливо записати файл \"%s\":%s"
+
+#: ideconfstrconsts.lislazcleanupbuildall
+msgid "Clean Up + Build all"
+msgstr "Очистити + Зібрати все"
+
 #: ideconfstrconsts.lislazver
 msgid "Lazarus Version (e.g. 1.2.4)"
 msgstr "Версія Lazarus (наприклад, 1.2.4)"
@@ -324,6 +443,14 @@ msgstr "Тип LCL widget"
 #: ideconfstrconsts.lismakeexe
 msgid "Make Executable"
 msgstr "Створити виконуваний"
+
+#: ideconfstrconsts.lismakenotfound
+msgid "Make not found"
+msgstr "Make не знайдено"
+
+#: ideconfstrconsts.lismakesureallppufilesofapackageareinitsoutputdirecto
+msgid "Make sure all ppu files of a package are in its output directory."
+msgstr "Пакунку необхідна вихідна тека."
 
 #: ideconfstrconsts.lismissingdirectory
 #, object-pascal-format
@@ -340,6 +467,10 @@ msgstr "відсутній виконуваний файл \"%s\""
 msgid ", Mode: %s"
 msgstr ", Режим: %s"
 
+#: ideconfstrconsts.lismultiplepack
+msgid ", multiple packages: "
+msgstr ", декілька пакунків:"
+
 #: ideconfstrconsts.lisnameofactivebuildmode
 msgid "Name of active build mode"
 msgstr "Назва активного режиму збирання"
@@ -347,6 +478,14 @@ msgstr "Назва активного режиму збирання"
 #: ideconfstrconsts.lisnewproject
 msgid "(new project)"
 msgstr "(новий проєкт)"
+
+#: ideconfstrconsts.lisnotecouldnotcreatedefinetemplateforfreepascal
+msgid "NOTE: Could not create Define Template for Free Pascal Sources"
+msgstr "ЗАУВАЖЕННЯ: Неможливо створити означений шаблон для текстів Free Pascal"
+
+#: ideconfstrconsts.lisnotecouldnotcreatedefinetemplateforlazarussources
+msgid "NOTE: Could not create Define Template for Lazarus Sources"
+msgstr "ЗАУВАЖЕННЯ: Неможливо створити означений шаблон для текстів Lazarus"
 
 #: ideconfstrconsts.lisnotimplemented
 msgid "Not implemented"
@@ -356,6 +495,15 @@ msgstr "Не реалізовано"
 #, object-pascal-format
 msgid "Not implemented yet:%s%s"
 msgstr "Ще не реалізовано:%s%s"
+
+#: ideconfstrconsts.lisofpackage
+#, object-pascal-format
+msgid " of package %s"
+msgstr " пакунка %s"
+
+#: ideconfstrconsts.lisoftheprojectinspector
+msgid " of the Project Inspector"
+msgstr " в інспекторі проєкту"
 
 #: ideconfstrconsts.lisok
 msgid "OK"
@@ -386,6 +534,15 @@ msgstr "Переписати файл?"
 msgid "Overwrite file on disk"
 msgstr "Переписати файл на диску"
 
+#: ideconfstrconsts.lispackage3
+#, object-pascal-format
+msgid ", package %s"
+msgstr ", пакунок %s"
+
+#: ideconfstrconsts.lispackageneedsanoutputdirectory
+msgid "Package needs an output directory."
+msgstr "Пакунку необхідна вихідна тека."
+
 #: ideconfstrconsts.lisparser
 #, object-pascal-format
 msgid "parser \"%s\": %s"
@@ -407,6 +564,11 @@ msgstr "Неможливо створити теку"
 #, object-pascal-format
 msgid "Unable to delete file \"%s\"."
 msgstr "Неможливо видалити файл \"%s\"."
+
+#: ideconfstrconsts.lisppuinwrongdirectory
+#, object-pascal-format
+msgid "ppu in wrong directory=%s."
+msgstr "PPU у неправильній теці=%s."
 
 #: ideconfstrconsts.lisppunotfoundcheckyourfpccfg
 #, object-pascal-format
@@ -460,6 +622,10 @@ msgstr "Тека публікації проєкту"
 #: ideconfstrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Помилка читання"
+
+#: ideconfstrconsts.lisrenamefilefailed
+msgid "Rename file failed"
+msgstr "Не вдалося змінити назву файла"
 
 #: ideconfstrconsts.lissecondaryconfigpath
 msgid "Secondary config path"
@@ -530,10 +696,40 @@ msgstr "Тека \"%s\" недоступна для запису."
 msgid "The file \"%s\" is a symlink.%sOpen \"%s\" instead?"
 msgstr "Файл \"%s\" є символьним посиланням.%sВідкрити замість нього \"%s\"?"
 
+#: ideconfstrconsts.listheprogrammakewasnotfound
+#, object-pascal-format
+msgid "The program \"make\" was not found.%sIt is needed to build Lazarus."
+msgstr ""
+
+#: ideconfstrconsts.listheprojectusestargetosandcputhesystemppuforthistar
+#, object-pascal-format
+msgid "The project uses target OS=%s and CPU=%s.%sThe system.ppu for this target was not found in the FPC binary directories.%sMake sure fpc is installed correctly for this target and the fpc.cfg contains the right directories."
+msgstr "Проєкт використовує цільову ОС=%s та ЦП=%s.%ssystem.ppu для цієї цілі не було знайдено у теках бінарників. %sПереконайтесь, що fpc для цієї цілі встановлено правильно і в fpc.cfg вказано правильні теки."
+
+#: ideconfstrconsts.listhereisafilewiththesamenameandasimilarextension
+#, object-pascal-format
+msgid "There is a file with the same name and a similar extension on disk%sFile: %s%sAmbiguous File: %s%sDelete ambiguous file?"
+msgstr "На диску є файл з такою самою назвою і схожим розширенням%sФайл: %s%sСхожий файл: %s%sВидалити схожий файл?"
+
 #: ideconfstrconsts.listhereisnofpcexeinthedirectoryofusuallythemakeexecu
 #, object-pascal-format
 msgid "There is no fpc.exe in the directory of %s. Usually the make executable is installed together with the FPC compiler."
 msgstr "У теці з %s немає fpc.exe. Зазвичай виконуваний файл make встановлюється разом з компілятором FPC."
+
+#: ideconfstrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
+#, object-pascal-format
+msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
+msgstr "У параметрах проєкту немає компілятора Free Pascal (наприклад, fpc%0:s або ppc<cpu>%0:s). CodeTools не працюватиме належним чином.%1:s%1:sПовідомлення про помилку:%1:s%2:s"
+
+#: ideconfstrconsts.listheunitexiststwiceintheunitpathofthe
+#, object-pascal-format
+msgid "The unit %s exists twice in the unit path of the %s:"
+msgstr "Модуль %s існує двічі в шляху модулів %s:"
+
+#: ideconfstrconsts.listhissetofoptionstobuildlazarusisnotsupportedbythis
+#, object-pascal-format
+msgid "This set of options to build Lazarus is not supported by this installation.%sThe directory \"%s\" is not writable.%sSee the Lazarus website for other ways to install Lazarus."
+msgstr "Цей набір параметрів для збирання Lazarus не підтримується встановленням.%sТека \"%s\" недоступна для запису.%sДивіться сайт Lazarus для інших способів встановлення."
 
 #: ideconfstrconsts.listmfunctionappendpathdelimiter
 msgid "Function: append path delimiter"
@@ -573,6 +769,11 @@ msgstr "(невідомий макрос: %s)"
 msgid "tool \"%s\" has no executable"
 msgstr "засіб \"%s\" не має виконуваного файлу"
 
+#: ideconfstrconsts.lisunabletobackupfileto
+#, object-pascal-format
+msgid "Unable to backup file \"%s\" to \"%s\"!"
+msgstr "Неможливо зберегти резервний файл \"%s\" як \"%s\"!"
+
 #: ideconfstrconsts.lisunabletocopyfile
 msgid "Unable to copy file"
 msgstr "Неможливо скопіювати файл"
@@ -606,6 +807,11 @@ msgstr "Неможливо створити файл%s\"%s\""
 msgid "Unable to create link \"%s\" with target \"%s\""
 msgstr "Неможливо створити посилання \"%s\" з ціллю \"%s\""
 
+#: ideconfstrconsts.lisunabletodeleteambiguousfile
+#, object-pascal-format
+msgid "Unable to delete ambiguous file \"%s\""
+msgstr "Неможливо видалити двозначний файл \"%s\""
+
 #: ideconfstrconsts.lisunabletoexecute
 #, object-pascal-format
 msgid "unable to execute: %s"
@@ -633,6 +839,16 @@ msgstr "Неможливо прочитати файл \"%s\"%sПомилка: %
 #: ideconfstrconsts.lisunabletoreadprocessexitstatus
 msgid "unable to read process ExitStatus"
 msgstr "неможливо прочитати код завершення процесу"
+
+#: ideconfstrconsts.lisunabletoremoveoldbackupfile
+#, object-pascal-format
+msgid "Unable to remove old backup file \"%s\"!"
+msgstr "Неможливо стерти старий резервний файл \"%s\"!"
+
+#: ideconfstrconsts.lisunabletorenameambiguousfileto
+#, object-pascal-format
+msgid "Unable to rename ambiguous file \"%s\"%sto \"%s\""
+msgstr "Неможливо змінити назву двозначного файлу \"%s\"%sна \"%s\""
 
 #: ideconfstrconsts.lisunabletorenamefile
 msgid "Unable to rename file"
@@ -684,6 +900,11 @@ msgstr "Незвичайна назва компілятора. Зазвичай
 #: ideconfstrconsts.lisunusualpas2jscompilerfilenameusuallyitstartswithpa
 msgid "Unusual pas2js compiler file name. Usually it starts with pas2js."
 msgstr "Незвична назва файлу компілятора pas2js. Зазвичай вона починається з pas2js."
+
+#: ideconfstrconsts.lisusedby
+#, object-pascal-format
+msgid " used by %s"
+msgstr ", використаний в %s"
 
 #: ideconfstrconsts.lisusershomedirectory
 msgid "User's home directory"

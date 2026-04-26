@@ -9,6 +9,10 @@ msgstr ""
 msgid "FPC message file"
 msgstr "„FPC“ pranešimo failas"
 
+#: ideconfstrconsts.dlggroupenvironment
+msgid "Environment"
+msgstr "Aplinka"
+
 #: ideconfstrconsts.lisaborted
 msgid "Aborted"
 msgstr "Nutraukta"
@@ -18,15 +22,46 @@ msgstr "Nutraukta"
 msgid "A file \"%s\" already exists.%sReplace it?"
 msgstr "Failas „%s“ jau egzistuoja.%sPerrašyti?"
 
+#: ideconfstrconsts.lisambiguousfilefound
+msgid "Ambiguous file found"
+msgstr "Rastas neaiškus failas"
+
+#: ideconfstrconsts.lisambiguousfilefoundthisfilecanbemistakenwithdelete
+#, object-pascal-format
+msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
+msgstr "Rastas neaiškus failas: „%s“%sŠis failas gali būti supainiotas su „%s“%sIštrinti neaiškųjį failą?"
+
+#: ideconfstrconsts.lisbackupfilefailed
+msgid "Backup file failed"
+msgstr "Nepavyko padaryti failo atsarginę kopiją"
+
+#: ideconfstrconsts.lisbuildide
+msgid "Build IDE"
+msgstr "Daryti IKA"
+
+#: ideconfstrconsts.lisbuildinglazarusfailed
+msgid "Building Lazarus failed"
+msgstr "Lazarus darymas nepavyko"
+
 #: ideconfstrconsts.liscannotexecute
 #, object-pascal-format
 msgid "cannot execute \"%s\""
 msgstr "nepavyksta paleisti „%s“"
 
+#: ideconfstrconsts.liscannotfind
+#, object-pascal-format
+msgid "Cannot find %s"
+msgstr "Nepavyko rasti „%s“"
+
 #: ideconfstrconsts.liscannotfindexecutable
 #, object-pascal-format
 msgid "cannot find executable \"%s\""
 msgstr "nepavyko rasti vykdomojo failo „%s“"
+
+#: ideconfstrconsts.liscantfindavalidppu
+#, object-pascal-format
+msgid "Can't find a valid %s.ppu"
+msgstr "Nepavyko rasti tinkamo „%s.ppu“"
 
 #: ideconfstrconsts.liscaptionofactivebuildmode
 msgid "Caption of active build mode"
@@ -35,6 +70,30 @@ msgstr ""
 #: ideconfstrconsts.lisccoerrorcaption
 msgid "Error"
 msgstr "Klaida"
+
+#: ideconfstrconsts.lischeckifpackagecreatesppuchecknothingdeletesthisfil
+#, object-pascal-format
+msgid ". Check if package %s creates %s.ppu, check nothing deletes this file and check that no two packages have access to the unit source."
+msgstr ". Patikrinit ar paketas „%s“ kuria „%s.ppu“, ar niekas netrina šio failo, du paketai neturi prieigos prie modulio pirminio kodo."
+
+#: ideconfstrconsts.lischeckifpackageisinthedependencies
+#, object-pascal-format
+msgid ". Check if package %s is in the dependencies"
+msgstr ". Patikrinkit ar paketas „%s“ yra priklausomybių sąraše"
+
+#: ideconfstrconsts.lischecksearchpathpackagetryacleanrebuildcheckimpleme
+#, object-pascal-format
+msgid ". Check search path of package %s, try a clean rebuild, check implementation uses sections."
+msgstr ". Patikrinkit paketo „%s“ paieškos kelią, bandykite išvalyti ir daryti iš naujo, patikrinkite „uses“ sekcijas „implementation“ skyriuje."
+
+#: ideconfstrconsts.liscleanlazarussource
+msgid "Clean Lazarus Source"
+msgstr "Apvalyti Lazarus aplankus"
+
+#: ideconfstrconsts.liscleanuppackage
+#, object-pascal-format
+msgid "Clean up package \"%s\"."
+msgstr "Apvalyti paketą „%s“."
 
 #: ideconfstrconsts.liscodetoolsdefswriteerror
 msgid "Write error"
@@ -53,6 +112,11 @@ msgstr "Kompiliuoti projektą"
 msgid "%s is missing."
 msgstr ""
 
+#: ideconfstrconsts.liscompilerdoesnotsupporttarget
+#, object-pascal-format
+msgid "Compiler \"%s\" does not support target %s-%s"
+msgstr "„%s“ kompiliatorius nepalaiko paskirties %s-%s"
+
 #: ideconfstrconsts.liscompilererrorinvalidcompiler
 #, object-pascal-format
 msgid "Error: invalid compiler: %s"
@@ -67,6 +131,10 @@ msgstr "Kompiliatoriaus failo pavadinimas"
 #| msgid "Hint: you can set the compiler path in Tools -> Options-> Files -> Compiler Path"
 msgid "Hint: you can set the compiler executable in Tools -> Options-> Files -> Compiler executable"
 msgstr "Užuomina: kompiliatoriaus programą galite nurodyti „Aplinka -> Parinktys -> Failai -> Kompiliatoriaus programa“."
+
+#: ideconfstrconsts.liscompilewithvdformoredetailscheckforduplicates
+msgid "Compile with -vd for more details. Check for duplicates."
+msgstr "Kompiliuokite naudodami raktą „-vd“, tuo būdų sužinosite daugiau informacijos. Patikrinkite ar nėra dublikatų."
 
 #: ideconfstrconsts.liscomponentnameisapascalkeyword
 #, object-pascal-format
@@ -86,6 +154,10 @@ msgstr "Lazarus nustatymų aplankas"
 #, object-pascal-format
 msgid ", CPU: %s"
 msgstr ", procesorius: %s"
+
+#: ideconfstrconsts.lisdeleteambiguousfile
+msgid "Delete ambiguous file?"
+msgstr "Ištrinti neaiškųjį failą?"
 
 #: ideconfstrconsts.lisdeletefilefailed
 msgid "Delete file failed"
@@ -144,6 +216,11 @@ msgstr ""
 msgid "use LineInfo unit"
 msgstr ""
 
+#: ideconfstrconsts.lisenableflaguseunitofunitinpackage
+#, object-pascal-format, fuzzy, badformat
+msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
+msgstr ". Įgalinkit paketo „%1:s“ modulio „%0:s“ žymę „Naudoti modulį“"
+
 #: ideconfstrconsts.lisendlessloopinmacros
 msgid "Endless loop in macros"
 msgstr ""
@@ -156,10 +233,18 @@ msgstr "Aplinkos kintamasis, pavadinimas – tai jo parametras"
 msgid "Directory not found"
 msgstr "Aplankas nerastas"
 
+#: ideconfstrconsts.liserrordeletingfile
+msgid "Error deleting file"
+msgstr "Nepavyko ištrinti failą"
+
 #: ideconfstrconsts.liserrorloadingfrom
 #, object-pascal-format
 msgid "Error loading %s from%s%s%s%s"
 msgstr "Įvyko klaida %s įkeliant iš %s%s%s%s"
+
+#: ideconfstrconsts.liserrorrenamingfile
+msgid "Error renaming file"
+msgstr "Nepavyko pervadinti failą"
 
 #: ideconfstrconsts.liserrorsavingto
 #, object-pascal-format
@@ -268,6 +353,10 @@ msgstr "valomos buferio eilutės: %s"
 msgid "Free Pascal source directory"
 msgstr "Free Pascal pirminio kodo aplankas"
 
+#: ideconfstrconsts.lishintcheckiftwopackagescontainaunitwiththesamename
+msgid "Hint: Check if two packages contain a unit with the same name."
+msgstr "Užuomina: Tikrinti ar du paketai turi modulius tuo pačiu pavadinimu."
+
 #: ideconfstrconsts.lisidebuildoptions
 msgid "IDE build options"
 msgstr "IKA darymo parinktys"
@@ -275,6 +364,11 @@ msgstr "IKA darymo parinktys"
 #: ideconfstrconsts.lisignoreandcontinue
 msgid "Ignore and continue"
 msgstr "Nepaisyti ir tęsti"
+
+#: ideconfstrconsts.lisincompatibleppu
+#, object-pascal-format
+msgid ", incompatible ppu=%s"
+msgstr ", nesuderinamas ppu=%s"
 
 #: ideconfstrconsts.lisinvalidmacrosin
 #, object-pascal-format
@@ -311,6 +405,31 @@ msgstr "Lazarus kalbos ID (t.y. en, de, lt, …)"
 msgid "Lazarus language name (e.g. english, deutsch)"
 msgstr "Lazarus kalbos pavadinimas (t.y. anglų, vokiečių, lietuvių, …)"
 
+#: ideconfstrconsts.lislazbuilddebugide
+msgid "Debug IDE"
+msgstr "Derinama IKA"
+
+#: ideconfstrconsts.lislazbuilderrorwritingfile
+msgid "Error writing file"
+msgstr "Klaida rašant į failą"
+
+#: ideconfstrconsts.lislazbuildnormalide
+msgid "Normal IDE"
+msgstr "Įprasta IKA"
+
+#: ideconfstrconsts.lislazbuildoptimizedide
+msgid "Optimized IDE"
+msgstr "Optimizuota IKA"
+
+#: ideconfstrconsts.lislazbuildunabletowritefile
+#, object-pascal-format
+msgid "Unable to write file \"%s\":%s"
+msgstr "Nepavyko rašyti į failą „%s“:%s"
+
+#: ideconfstrconsts.lislazcleanupbuildall
+msgid "Clean Up + Build all"
+msgstr "Išvalyti + Daryti viską"
+
 #: ideconfstrconsts.lislazver
 msgid "Lazarus Version (e.g. 1.2.4)"
 msgstr "„Lazarus“ laida (pvz. 1.6.4)"
@@ -324,6 +443,14 @@ msgstr "LCL valdiklių tipas"
 #: ideconfstrconsts.lismakeexe
 msgid "Make Executable"
 msgstr "Daryti vykdomąjį failą"
+
+#: ideconfstrconsts.lismakenotfound
+msgid "Make not found"
+msgstr "Nerastas Make"
+
+#: ideconfstrconsts.lismakesureallppufilesofapackageareinitsoutputdirecto
+msgid "Make sure all ppu files of a package are in its output directory."
+msgstr "Pasirūpinkite, kad visi paketo „ppu“ failai būtų jo išvesties aplanke."
 
 #: ideconfstrconsts.lismissingdirectory
 #, object-pascal-format
@@ -340,6 +467,10 @@ msgstr "trūkstamas vykdomasis failas „%s“"
 msgid ", Mode: %s"
 msgstr ", Režimas: %s"
 
+#: ideconfstrconsts.lismultiplepack
+msgid ", multiple packages: "
+msgstr ", daugelis paketų:"
+
 #: ideconfstrconsts.lisnameofactivebuildmode
 msgid "Name of active build mode"
 msgstr "Dabartinio darymo režimo pavadinimas"
@@ -347,6 +478,14 @@ msgstr "Dabartinio darymo režimo pavadinimas"
 #: ideconfstrconsts.lisnewproject
 msgid "(new project)"
 msgstr "(naujas projektas)"
+
+#: ideconfstrconsts.lisnotecouldnotcreatedefinetemplateforfreepascal
+msgid "NOTE: Could not create Define Template for Free Pascal Sources"
+msgstr "Pastaba: nepavyko sukurti „Define“ šablono, skirto Free Pascal pirminiam kodui"
+
+#: ideconfstrconsts.lisnotecouldnotcreatedefinetemplateforlazarussources
+msgid "NOTE: Could not create Define Template for Lazarus Sources"
+msgstr "Pastaba: nepavyko sukurti „Define“ šablono, skirto Lazarus pirminiam kodui"
 
 #: ideconfstrconsts.lisnotimplemented
 msgid "Not implemented"
@@ -356,6 +495,15 @@ msgstr "Neįgyvendinta"
 #, object-pascal-format
 msgid "Not implemented yet:%s%s"
 msgstr "Dar neįgyvendinta:%s%s"
+
+#: ideconfstrconsts.lisofpackage
+#, object-pascal-format
+msgid " of package %s"
+msgstr " paketo „%s“"
+
+#: ideconfstrconsts.lisoftheprojectinspector
+msgid " of the Project Inspector"
+msgstr " projekto inspektoriaus"
 
 #: ideconfstrconsts.lisok
 msgid "OK"
@@ -386,6 +534,15 @@ msgstr "Perrašyti failą?"
 msgid "Overwrite file on disk"
 msgstr "Perrašyti failą diske"
 
+#: ideconfstrconsts.lispackage3
+#, object-pascal-format
+msgid ", package %s"
+msgstr ", paketas „%s“"
+
+#: ideconfstrconsts.lispackageneedsanoutputdirectory
+msgid "Package needs an output directory."
+msgstr "Paketui reikia išvesties aplanko."
+
 #: ideconfstrconsts.lisparser
 #, object-pascal-format
 msgid "parser \"%s\": %s"
@@ -407,6 +564,11 @@ msgstr "Nepavyko sukurti aplanką"
 #, object-pascal-format
 msgid "Unable to delete file \"%s\"."
 msgstr "Nepavyko ištrinti failą „%s“."
+
+#: ideconfstrconsts.lisppuinwrongdirectory
+#, object-pascal-format
+msgid "ppu in wrong directory=%s."
+msgstr "„ppu“ ne tame aplanke „%s“."
 
 #: ideconfstrconsts.lisppunotfoundcheckyourfpccfg
 #, object-pascal-format
@@ -460,6 +622,10 @@ msgstr "Skelbiamo projekto aplankas"
 #: ideconfstrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Skaitymo klaida"
+
+#: ideconfstrconsts.lisrenamefilefailed
+msgid "Rename file failed"
+msgstr "Nepavyko pervadinti failą"
 
 #: ideconfstrconsts.lissecondaryconfigpath
 msgid "Secondary config path"
@@ -530,10 +696,40 @@ msgstr "Aplanke „%s“ rašyti draudžiama."
 msgid "The file \"%s\" is a symlink.%sOpen \"%s\" instead?"
 msgstr "Failas „%s“ yra simbolinė nuoroda.%sAr vietoj jo atverti „%s“?"
 
+#: ideconfstrconsts.listheprogrammakewasnotfound
+#, object-pascal-format
+msgid "The program \"make\" was not found.%sIt is needed to build Lazarus."
+msgstr ""
+
+#: ideconfstrconsts.listheprojectusestargetosandcputhesystemppuforthistar
+#, object-pascal-format
+msgid "The project uses target OS=%s and CPU=%s.%sThe system.ppu for this target was not found in the FPC binary directories.%sMake sure fpc is installed correctly for this target and the fpc.cfg contains the right directories."
+msgstr "Projekto paskirties operacinė sistema yra „%s“, procesorius – „%s“.%s„FPC“ dvejetainių failų aplankuose nepavyko rasti šiai paskirčiai skirto „system.ppu“ failo. %s Pasirūpinkite kad šios paskirties tipui būtų tinkamai įdiegtas „FPC“, bei faile „fpc.cfg“ būtų įrašyti tinkamų aplankų pavadinimai."
+
+#: ideconfstrconsts.listhereisafilewiththesamenameandasimilarextension
+#, object-pascal-format
+msgid "There is a file with the same name and a similar extension on disk%sFile: %s%sAmbiguous File: %s%sDelete ambiguous file?"
+msgstr "Rastas kitas failas tokiu pat pavadinimu bei panašiu plėtiniu.%sFailas: %s%sNeaiškusis failas: %s%sPašalinti neaiškųjį failą?"
+
 #: ideconfstrconsts.listhereisnofpcexeinthedirectoryofusuallythemakeexecu
 #, object-pascal-format
 msgid "There is no fpc.exe in the directory of %s. Usually the make executable is installed together with the FPC compiler."
 msgstr "„%s“ aplanke nėra failo „fpc.exe“. Įprastai darymo vykdomasis failas būna įdiegiamas kartu su FPC kompiliatoriumi."
+
+#: ideconfstrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
+#, object-pascal-format
+msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
+msgstr ""
+
+#: ideconfstrconsts.listheunitexiststwiceintheunitpathofthe
+#, object-pascal-format
+msgid "The unit %s exists twice in the unit path of the %s:"
+msgstr "Modulis %s dubliuojasi %s modulių kelyje:"
+
+#: ideconfstrconsts.listhissetofoptionstobuildlazarusisnotsupportedbythis
+#, object-pascal-format
+msgid "This set of options to build Lazarus is not supported by this installation.%sThe directory \"%s\" is not writable.%sSee the Lazarus website for other ways to install Lazarus."
+msgstr "Šis „Lazarus“ nepalaiko šių „Lazarus“ darymo parinkčių grupės.%sĮ aplanką „%s“ rašyti draudžiama.%sKitų būdų kaip įdiegti „Lazarus“ sužinosite „Lazarus“ tinklapyje."
 
 #: ideconfstrconsts.listmfunctionappendpathdelimiter
 msgid "Function: append path delimiter"
@@ -573,6 +769,11 @@ msgstr "(nežinoma makrokomanda: %s)"
 msgid "tool \"%s\" has no executable"
 msgstr "įrankis „%s“ neturi vykdomojo failo"
 
+#: ideconfstrconsts.lisunabletobackupfileto
+#, object-pascal-format
+msgid "Unable to backup file \"%s\" to \"%s\"!"
+msgstr "Nepavyko padaryti failo „%s“ atsarginę kopiją į „%s“!"
+
 #: ideconfstrconsts.lisunabletocopyfile
 msgid "Unable to copy file"
 msgstr "Nepavyko kopijuoti failą"
@@ -606,6 +807,11 @@ msgstr "Nepavyko sukurti failą%s„%s“"
 msgid "Unable to create link \"%s\" with target \"%s\""
 msgstr "Nepavyko sukurti saito „%s“, kurio paskirtis „%s“"
 
+#: ideconfstrconsts.lisunabletodeleteambiguousfile
+#, object-pascal-format
+msgid "Unable to delete ambiguous file \"%s\""
+msgstr "Nepavyko ištrinti neaiškųjį failą „%s“"
+
 #: ideconfstrconsts.lisunabletoexecute
 #, object-pascal-format
 msgid "unable to execute: %s"
@@ -633,6 +839,16 @@ msgstr "Nepavyko skaityti iš failo „%s“.%sKlaida: %s"
 #: ideconfstrconsts.lisunabletoreadprocessexitstatus
 msgid "unable to read process ExitStatus"
 msgstr "nepavyko skaityti proceso „ExitStatus“"
+
+#: ideconfstrconsts.lisunabletoremoveoldbackupfile
+#, object-pascal-format
+msgid "Unable to remove old backup file \"%s\"!"
+msgstr "Nepavyko ištrinti seną atsarginės kopijos failą „%s“!"
+
+#: ideconfstrconsts.lisunabletorenameambiguousfileto
+#, object-pascal-format
+msgid "Unable to rename ambiguous file \"%s\"%sto \"%s\""
+msgstr "Nepavyko neaiškųjį failą „%s“%spervadinti į „%s“"
 
 #: ideconfstrconsts.lisunabletorenamefile
 msgid "Unable to rename file"
@@ -684,6 +900,11 @@ msgstr "Neįprastas kompiliatoriaus failo pavadinimas. Įprastai jis prasideda �
 #: ideconfstrconsts.lisunusualpas2jscompilerfilenameusuallyitstartswithpa
 msgid "Unusual pas2js compiler file name. Usually it starts with pas2js."
 msgstr ""
+
+#: ideconfstrconsts.lisusedby
+#, object-pascal-format
+msgid " used by %s"
+msgstr " naudoja „%s“"
 
 #: ideconfstrconsts.lisusershomedirectory
 msgid "User's home directory"

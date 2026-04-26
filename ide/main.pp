@@ -61,7 +61,7 @@ uses
   // fpc packages
   Math, Classes, SysUtils, TypInfo, Types, StrUtils, Contnrs, process, AVL_Tree, System.UITypes,
   // LCL
-  LCLProc, LCLType, LCLIntf, LMessages, LResources, HelpIntfs, InterfaceBase, LCLPlatformDef,
+  LCLProc, LCLType, LCLIntf, LMessages, LResources, HelpIntfs, InterfaceBase,
   ComCtrls, Forms, Buttons, Menus, Controls, Graphics, ExtCtrls, Dialogs, LclStrConsts, StdCtrls,
   // CodeTools
   FileProcs, FindDeclarationTool, LinkScanner, BasicCodeTools, CodeToolsStructs,
@@ -69,9 +69,9 @@ uses
   StdCodeTools, EventCodeTool, CodeCreationDlg, IdentCompletionTool,
   // LazUtils
   // use lazutf8, lazfileutils and lazfilecache after FileProcs and FileUtil
-  FileUtil, LazFileUtils, LazUtilities, LazUTF8, UTF8Process,
+  FileUtil, LazFileUtils, LazUtilities, LazUTF8, UTF8Process, ProjResProc,
   LConvEncoding, Laz2_XMLCfg, LazLoggerBase, LazLogger, LazFileCache, AvgLvlTree,
-  GraphType, LazStringUtils, LazTracer,
+  GraphType, LazStringUtils, LazVersion, LazTracer,
   LCLExceptionStacktrace,
   {$IFDEF LCLWin} Win32Proc, {$ENDIF}
   {$IFDEF LCLCocoa} CocoaConfig, CocoaIDEFormConfig,{$ENDIF}
@@ -123,7 +123,8 @@ uses
   InputHistory, IdeUtilsPkg, IdeUtilsPkgStrConsts,
   // IdeConfig
   LazConf, EnvironmentOpts, TransferMacros, IDECmdLine, IDEGuiCmdLine,
-  IDEProcs, ApplicationBundle, InitialSetupProc, IdeConfStrConsts,
+  IDEProcs, ApplicationBundle, InitialSetupProc, MiscOptions, IdeBuilder,
+  FindProjPackUnit, IdeConfStrConsts,
   // IdePackager,
   IdePackager, IdePackagerStrConsts, PackageSystem, BasePkgManager, LPKCache,
   // IdeProject,
@@ -165,8 +166,8 @@ uses
   CodeTemplatesDlg, CodeBrowser, FindUnitDlg, InspectChksumChangedDlg,
   IdeOptionsDlg, EditDefineTree, KeyMapping,
   IDETranslations, ExtToolDialog, ExtToolEditDlg, JumpHistoryView,
-  DesktopManager, DiskDiffsDialog, BuildLazDialog, BuildProfileManager,
-  BuildManager, IdeBuildManager, CheckCompOptsForNewUnitDlg, MiscOptions,
+  DesktopManager, DiskDiffsDialog, BuildLazDialog,
+  BuildManager, IdeBuildManager, CheckCompOptsForNewUnitDlg,
   InputhistoryWithSearchOpt, UnitDependencies, IDEFPCInfo, IDEInfoDlg,
   IDEInfoNeedBuild, ProcessList, IdeDebuggerOpts, IdeDebuggerWatchResPrinter,
   IdeDebuggerWatchResult, InitialSetupDlgs, NewDialog,
@@ -204,6 +205,7 @@ type
     procedure HandleSelectFrame(Sender: TObject; var AComponentClass: TComponentClass);
     function FindHelpButton(lParent: TWinControl; out aHelpButton: TControl): boolean;
     procedure ForwardKeyToObjectInspector(Sender: TObject; Key: TUTF8Char);
+    procedure MainTitleChanged(const ATitle: string);
     procedure OIChangedTimerTimer(Sender: TObject);
     procedure LazInstancesStartNewInstance(const aFiles: TStrings;
       var Result: TStartNewInstanceResult; var outSourceWindowHandle: HWND);
@@ -912,7 +914,7 @@ type
 
     // useful file methods
     function FindUnitFile(const AFilename: string; TheOwner: TObject = nil;
-                          Flags: TFindUnitFileFlags = []): string; override;
+                          IgnoreUninstallPkgs: boolean = false): string; override;
     function FindSourceFile(const AFilename, BaseDirectory: string;
                             Flags: TFindSourceFlags): string; override;
     function DoCheckFilesOnDisk(Instantaneous: boolean = false): TModalResult; override;
@@ -1464,7 +1466,7 @@ begin
   Assert(InputHistories = nil, 'TMainIDE.LoadGlobalOptions: InputHistories is already assigned.');
   InputHistoriesSO := TInputHistoriesWithSearchOpt.Create;
   InputHistories := InputHistoriesSO;
-  MainBuildBoss.SetupInputHistories(InputHistories);
+  TIdeBuildManager(MainBuildBoss).SetupInputHistories(InputHistories);
 
   CreateDirUTF8(GetProjectSessionsConfigPath);
   RunBootHandlers(libhEnvironmentOptionsLoaded);
@@ -1878,6 +1880,7 @@ begin
     DebugLn('Hint: (lazarus) [TMainIDE.Destroy] B  -> inherited Destroy... ',ClassName);
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.Destroy B ');{$ENDIF}
   FreeThenNil(MainBuildBoss);
+  FreeAndNil(InputHistories);
   inherited Destroy;
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TMainIDE.Destroy C ');{$ENDIF}
 
@@ -2289,6 +2292,8 @@ begin
   LazMessageWorker:=@IDEMessageDialogHandler;
   LazQuestionWorker:=@IDEQuestionDialogHandler;
   LazMsgWorker.OnShowMessage:=@ShowMessageHandler;
+  LazMsgWorker.OnMainTitleChange:=@MainTitleChanged;
+  LazMsgWorker.OnSaveAllEditorChanges:=@SaveAllEditorChanges;
   TestCompilerOptions:=@CompilerOptionsDialogTest;
   CheckCompOptsAndMainSrcForNewUnitEvent:=@CheckForNewUnit;
 end;
@@ -5067,8 +5072,8 @@ begin
     fBuilder:=TLazarusBuilder.Create;    // Will be freed in the very end.
   MainBuildBoss.SetBuildTargetIDE;
   try
-    DlgResult:=fBuilder.ShowConfigBuildLazDlg(MiscellaneousOptions.BuildLazProfiles,
-                                              ToolStatus in [itDebugger,itBuilder]);
+    DlgResult:=ShowConfigBuildLazDlg(fBuilder, MiscellaneousOptions.BuildLazProfiles,
+                                     ToolStatus in [itDebugger,itBuilder]);
   finally
     MainBuildBoss.SetBuildTargetProject1(true);
   end;
@@ -9799,7 +9804,7 @@ begin
     SearchedFilename := ExtractFileName(Filename);
     Include(OpenFlags,ofVirtualFile);
   end else begin
-    SearchedFilename := FindUnitFile(Filename);
+    SearchedFilename := FindUnitFile(Filename, Project1);
     if not FilenameIsAbsolute(SearchedFilename) then
       Include(OpenFlags,ofVirtualFile);
   end;
@@ -9886,7 +9891,7 @@ begin
       SearchedFilename := ExtractFileName(AFilename);
       Include(OpenFlags,ofVirtualFile);
     end else begin
-      SearchedFilename := FindUnitFile(AFilename);
+      SearchedFilename := FindUnitFile(AFilename, Project1);
     end;
     if SearchedFilename<>'' then begin
       JumpPointEditor := SourceEditorManager.ActiveEditor;
@@ -9995,9 +10000,9 @@ begin
 end;
 
 function TMainIDE.FindUnitFile(const AFilename: string; TheOwner: TObject;
-  Flags: TFindUnitFileFlags): string;
+  IgnoreUninstallPkgs: boolean): string;
 begin
-  Result:=FindUnitFileImpl(AFilename, TheOwner, Flags);
+  Result:=FindProjPackUnitFile(AFilename, TheOwner, IgnoreUninstallPkgs);
 end;
 
 {------------------------------------------------------------------------------
@@ -13202,6 +13207,11 @@ begin
     dsForm: DisplayState := dsInspector2;
   else
   end;
+end;
+
+procedure TMainIDE.MainTitleChanged(const ATitle: string);
+begin
+  LazarusIDE.MainBarSubTitle:=ATitle;
 end;
 
 procedure TMainIDE.OIChangedTimerTimer(Sender: TObject);

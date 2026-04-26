@@ -183,6 +183,10 @@
         <UnitName Value="IdeIntfStrConsts"/>
       </Item>
       <Item>
+        <Filename Value="ideintfutils.pas"/>
+        <UnitName Value="IdeIntfUtils"/>
+      </Item>
+      <Item>
         <Filename Value="idemsgintf.pas"/>
         <UnitName Value="IDEMsgIntf"/>
       </Item>
@@ -196,7 +200,7 @@
       </Item>
       <Item>
         <Filename Value="ideutils.pas"/>
-        <UnitName Value="IDEUtils"/>
+        <UnitName Value="ideutils"/>
       </Item>
       <Item>
         <Filename Value="idewindowintf.pas"/>

@@ -41,17 +41,19 @@ interface
 uses
   SysUtils, AVL_Tree,
   // LCL
-  Forms, Controls, StdCtrls, ExtCtrls, ButtonPanel, TextTools,
+  Forms, Controls, StdCtrls, ExtCtrls, ButtonPanel,
   // LazUtils
-  LazLoggerBase,
+  LazStringUtils, LazLoggerBase,
   // Codetools
   BasicCodeTools,
   // SynEdit
   SynEdit,
   // IdeIntf
   IDEWindowIntf, LazEditHighlighter,
+  // IdeConfig
+  MiscOptions,
   // IDE
-  LazarusIDEStrConsts, EditorOptions, MiscOptions, SourceMarks;
+  LazarusIDEStrConsts, EditorOptions, SourceMarks;
   
 type
   TSortSelDlgState = (
@@ -515,8 +517,8 @@ begin
 end;
 
 initialization
-  TextTools.ShowSortSelectionDialogFunc:=@ShowSortSelectionDialogBase;
-  TextTools.SortTextFunc:=@SortText;
+  ShowSortSelectionDialogFunc:=@ShowSortSelectionDialogBase;
+  SortTextFunc:=@SortText;
 
 end.
 

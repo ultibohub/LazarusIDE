@@ -33,13 +33,13 @@ uses
   // LCL
   StdCtrls, Dialogs, Controls, Spin,
   // LazUtils
-  FileUtil, LazFileUtils,
+  FileUtil, LazFileUtils, LazStringUtils,
   // CodeTools
   CodeToolManager, DefineTemplates,
   // BuildIntf
   IDEOptionsIntf,
   // IdeIntf
-  IDEOptEditorIntf, IDEDialogs, IDEUtils,
+  IDEOptEditorIntf, IDEDialogs, IDEIntfUtils,
   // IdeUtils
   InputHistory,
   // IdeConfig

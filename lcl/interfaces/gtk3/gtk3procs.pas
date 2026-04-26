@@ -344,6 +344,17 @@ function GdkKeyToLCLKey(AValue: Word): Word;
 function GdkModifierStateToLCL(AState: TGdkModifierType; const AIsKeyEvent: Boolean): PtrInt;
 function GdkModifierStateToShiftState(AState: TGdkModifierType): TShiftState;
 
+type
+  TGtk3KeyCodeInfo = record
+    VKey1: Byte; //primary VK code for this hardware keycode
+    VKey2: Byte; //secondary VK code (numpad keys with numlock)
+    Flags: Byte; //EXTFLAG/MULTIFLAG bits
+  end;
+
+procedure InitGtk3KeyboardTables;
+procedure DoneGtk3KeyboardTables;
+function Gtk3HwKeyToVKey(AHwKeyCode: guint16): Word;
+
 procedure SetWindowCursor(AWindow: PGdkWindow; ACursor: HCursor;
   ARecursive: Boolean; ASetDefault: Boolean);
 procedure SetGlobalCursor(Cursor: HCURSOR);
@@ -369,6 +380,9 @@ var
   CharSetEncodingList: TList;
   StandardStyles: array[TLazGtkStyle] of PStyleObject;
   Styles: TStrings;
+  Gtk3KeyCodeInfo: array[Byte] of TGtk3KeyCodeInfo;
+  Gtk3Keymap: PGdkKeymap;
+  Gtk3KeymapSignalID: gulong;
 
 {$IFDEF GTK3USEDEFERREDRESIZING}
   {Resize notification queues - filled by size-allocate signal handlers,
@@ -966,6 +980,241 @@ begin
   end;
 end;
 
+procedure Gtk3KeymapChangedCB(AKeymap: PGdkKeymap; AData: gpointer); cdecl; forward;
+
+//Map well-known keysym to VK code. Returns VK_UNKNOWN if not recognized.
+function Gtk3FindVKeyForKeySym(AKeySym: guint): Byte;
+var
+  ByteKey: Byte;
+begin
+  Result := VK_UNKNOWN;
+  //Some xkb layouts report keysyms as Unicode in 0x01000000..0x0110FFFF range
+  //(form: 0x01000000 | codepoint). Convert basic Latin Unicode back to the
+  //legacy 32..255 keysym range so the case below matches.
+  if (AKeySym >= $01000020) and (AKeySym <= $010000FF) then
+    AKeySym := AKeySym and $FF;
+  case AKeySym of
+    32..255:
+    begin
+      ByteKey := Byte(AKeySym);
+      case Chr(ByteKey) of
+        '0'..'9': Result := ByteKey;
+        ' ':      Result := ByteKey;
+        'a'..'z': Result := ByteKey - Ord('a') + Ord('A');
+        '+': Result := VK_OEM_PLUS;
+        ',': Result := VK_OEM_COMMA;
+        '-': Result := VK_OEM_MINUS;
+        '.': Result := VK_OEM_PERIOD;
+        ';': Result := VK_OEM_1;
+        '/': Result := VK_OEM_2;
+        '`': Result := VK_OEM_3;
+        '[': Result := VK_OEM_4;
+        '\': Result := VK_OEM_5;
+        ']': Result := VK_OEM_6;
+        '''': Result := VK_OEM_7;
+        '#': Result := VK_OEM_7;
+      end;
+    end;
+    GDK_KEY_Tab,
+    GDK_KEY_ISO_Left_Tab,
+    GDK_KEY_KP_Tab: Result := VK_TAB;
+    GDK_KEY_Return: Result := VK_RETURN;
+    GDK_KEY_KP_Enter: Result := VK_RETURN;
+    GDK_KEY_BackSpace: Result := VK_BACK;
+    GDK_KEY_Escape: Result := VK_ESCAPE;
+    GDK_KEY_Clear: Result := VK_CLEAR;
+    GDK_KEY_Pause: Result := VK_PAUSE;
+    GDK_KEY_Scroll_Lock: Result := VK_SCROLL;
+    GDK_KEY_Sys_Req: Result := VK_SNAPSHOT;
+    GDK_KEY_Caps_Lock: Result := VK_CAPITAL;
+    GDK_KEY_Num_Lock: Result := VK_NUMLOCK;
+    GDK_KEY_Insert: Result := VK_INSERT;
+    GDK_KEY_Delete: Result := VK_DELETE;
+    GDK_KEY_Home: Result := VK_HOME;
+    GDK_KEY_End: Result := VK_END;
+    GDK_KEY_Page_Up: Result := VK_PRIOR;
+    GDK_KEY_Page_Down: Result := VK_NEXT;
+    GDK_KEY_Left: Result := VK_LEFT;
+    GDK_KEY_Up: Result := VK_UP;
+    GDK_KEY_Right: Result := VK_RIGHT;
+    GDK_KEY_Down: Result := VK_DOWN;
+    GDK_KEY_Shift_L,
+    GDK_KEY_Shift_R: Result := VK_SHIFT;
+    GDK_KEY_Control_L,
+    GDK_KEY_Control_R: Result := VK_CONTROL;
+    GDK_KEY_Alt_L,
+    GDK_KEY_Alt_R: Result := VK_MENU;
+    GDK_KEY_Super_L: Result := VK_LWIN;
+    GDK_KEY_Super_R: Result := VK_RWIN;
+    GDK_KEY_Menu: Result := VK_APPS;
+    GDK_KEY_F1..GDK_KEY_F24: Result := VK_F1 + (AKeySym - GDK_KEY_F1);
+    //Numpad keys are intentionally omitted here. GdkKeyToLCLKey handles them
+    //via keyval so NumLock state is respected (VK_HOME vs VK_NUMPAD7 etc.)
+    GDK_KEY_3270_BackTab: Result := VK_TAB;
+    GDK_KEY_3270_Enter: Result := VK_RETURN;
+  end;
+end;
+
+procedure InitGtk3KeyboardTables;
+const
+  VK_FIRST_OEM = $92;
+var
+  NewKeymap: PGdkKeymap;
+  KeymapKeys: PGdkKeymapKey;
+  KeyVals: Pguint;
+  KeySymCount: gint;
+  KeyCode: Byte;
+  m: Integer;
+  VKey, FreeVK: Byte;
+  AlreadyClaimed: Boolean;
+
+  procedure NextFreeVK(var AFreeVK: Byte);
+  begin
+    case AFreeVK of
+      $96: AFreeVK := $E1;
+      $E1: AFreeVK := $E3;
+      $E4: AFreeVK := $E6;
+      $E6: AFreeVK := $E9;
+      $F5: AFreeVK := $88;
+      $8F: AFreeVK := $97;
+      $9F: AFreeVK := $D8;
+      $DA: AFreeVK := $E5;
+      $E5: AFreeVK := $E8;
+      $E8: AFreeVK := $FF;
+      $FF: AFreeVK := $FF;
+    else
+      Inc(AFreeVK);
+    end;
+  end;
+
+  //Returns True if VKey can be shared by multiple physical keys (modifiers etc.)
+  function VKeyIsShared(AVKey: Byte): Boolean;
+  begin
+    case AVKey of
+      VK_SHIFT, VK_CONTROL, VK_MENU,
+      VK_TAB, VK_RETURN, VK_BACK, VK_ESCAPE,
+      VK_HOME, VK_END, VK_INSERT, VK_DELETE,
+      VK_LEFT, VK_RIGHT, VK_UP, VK_DOWN,
+      VK_PRIOR, VK_NEXT,
+      VK_NUMLOCK, VK_SCROLL, VK_CAPITAL: Result := True;
+    else
+      Result := False;
+    end;
+  end;
+
+  //Returns True if VKey already has a keycode assigned (for non-shared VKs only).
+  function VKeyInUse(AVKey: Byte): Boolean;
+  var
+    kc: Integer;
+  begin
+    if VKeyIsShared(AVKey) then
+      exit(False);
+    for kc := 0 to 255 do
+      if Gtk3KeyCodeInfo[kc].VKey1 = AVKey then
+        exit(True);
+    Result := False;
+  end;
+
+begin
+  NewKeymap := gdk_keymap_get_for_display(gdk_display_get_default);
+  if NewKeymap = nil then
+    exit;
+  if NewKeymap <> Gtk3Keymap then
+  begin
+    if (Gtk3Keymap <> nil) and (Gtk3KeymapSignalID <> 0) then
+    begin
+      g_signal_handler_disconnect(PGObject(Gtk3Keymap), Gtk3KeymapSignalID);
+      Gtk3KeymapSignalID := 0;
+    end;
+    Gtk3Keymap := NewKeymap;
+    Gtk3KeymapSignalID := g_signal_connect_data(PGObject(Gtk3Keymap),
+      'keys-changed', TGCallback(@Gtk3KeymapChangedCB), nil, nil, G_CONNECT_DEFAULT);
+  end;
+
+  FillChar(Gtk3KeyCodeInfo, SizeOf(Gtk3KeyCodeInfo), 0);
+
+  FreeVK := VK_FIRST_OEM;
+  KeymapKeys := nil;
+  KeyVals := nil;
+  for KeyCode := 1 to 255 do
+  begin
+    KeymapKeys := nil;
+    KeyVals := nil;
+    KeySymCount := 0;
+    if not gdk_keymap_get_entries_for_keycode(Gtk3Keymap, KeyCode,
+        @KeymapKeys, @KeyVals, @KeySymCount) then
+      continue;
+    if (KeySymCount <= 0) or (KeyVals = nil) then
+    begin
+      g_free(KeymapKeys);
+      g_free(KeyVals);
+      continue;
+    end;
+    try
+      //skip keycodes where no keysym is defined at any level
+      if KeyVals[0] = 0 then
+      begin
+        m := 1;
+        while (m < KeySymCount) and (KeyVals[m] = 0) do
+          Inc(m);
+        if m >= KeySymCount then
+          Continue;
+      end;
+
+      //Scan level-0 keysyms across all xkb groups (multi-layout support).
+      VKey := VK_UNKNOWN;
+      for m := 0 to KeySymCount - 1 do
+      begin
+        if KeyVals[m] = 0 then Continue;
+        if KeymapKeys[m].level <> 0 then Continue;
+        VKey := Gtk3FindVKeyForKeySym(KeyVals[m]);
+        if VKey <> VK_UNKNOWN then Break;
+      end;
+
+      //no known VK: assign a free OEM slot unless it is a numpad/modifier keysym
+      //that the fallback GdkKeyToLCLKey handles correctly via the keyval.
+      if (VKey = VK_UNKNOWN) and (KeyVals[0] <> 0) and
+         not ((KeyVals[0] >= GDK_KEY_KP_Space) and (KeyVals[0] <= GDK_KEY_KP_9)) then
+      begin
+        VKey := FreeVK;
+        NextFreeVK(FreeVK);
+      end;
+
+      if VKey <> VK_UNKNOWN then
+        Gtk3KeyCodeInfo[KeyCode].VKey1 := VKey;
+    finally
+      g_free(KeymapKeys);
+      g_free(KeyVals);
+    end;
+  end;
+end;
+
+procedure DoneGtk3KeyboardTables;
+begin
+  if (Gtk3Keymap <> nil) and (Gtk3KeymapSignalID <> 0) then
+  begin
+    g_signal_handler_disconnect(PGObject(Gtk3Keymap), Gtk3KeymapSignalID);
+    Gtk3KeymapSignalID := 0;
+  end;
+  Gtk3Keymap := nil;
+  FillChar(Gtk3KeyCodeInfo, SizeOf(Gtk3KeyCodeInfo), 0);
+end;
+
+procedure Gtk3KeymapChangedCB(AKeymap: PGdkKeymap; AData: gpointer); cdecl;
+begin
+  InitGtk3KeyboardTables;
+end;
+
+//Returns VK code for hardware keycode, or VK_UNKNOWN if not in table.
+function Gtk3HwKeyToVKey(AHwKeyCode: guint16): Word;
+begin
+  if (AHwKeyCode = 0) or (AHwKeyCode > 255) then
+    exit(VK_UNKNOWN);
+  Result := Gtk3KeyCodeInfo[AHwKeyCode].VKey1;
+  if Result = 0 then
+    Result := VK_UNKNOWN;
+end;
+
 function GdkKeyToLCLKey(AValue: Word): Word;
 begin
   if AValue <= $FF then
@@ -1180,181 +1429,181 @@ begin
   FillChar(Result^, SizeOf(TStyleObject), 0);
 end;
 
-{.-$DEFINE VerboseUpdateSysColorMap}
-procedure UpdateSysColorMap(Widget: PGtkWidget; Lgs: TLazGtkStyle);
-{$IFDEF VerboseUpdateSysColorMap}
-  function GdkColorAsString(c: TgdkColor): string;
-  begin
-    Result:='LCL='+DbgS(TGDKColorToTColor(c))
-             +' Pixel='+DbgS(c.Pixel)
-             +' Red='+DbgS(c.Red)
-             +' Green='+DbgS(c.Green)
-             +' Blue='+DbgS(c.Blue)
-             ;
-  end;
-{$ENDIF}
+function CompositeRGBAOverBg(const AFg, ABg: TGdkRGBA): TColor;
 var
-  MainStyle: PGtkStyle;
+  A, R, G, B: Double;
+begin
+  A := AFg.alpha;
+  if A >= 1 then
+  begin
+    Result := TGdkRGBAToTColor(AFg);
+    exit;
+  end;
+  if A <= 0 then
+  begin
+    Result := TGdkRGBAToTColor(ABg);
+    exit;
+  end;
+  R := AFg.red   * A + ABg.red   * (1 - A);
+  G := AFg.green * A + ABg.green * (1 - A);
+  B := AFg.blue  * A + ABg.blue  * (1 - A);
+  Result := Trunc(R * $FF) or (Trunc(G * $FF) shl 8) or (Trunc(B * $FF) shl 16);
+end;
+
+function LookupThemeRGBA(ACtx: PGtkStyleContext; const AName: string;
+  const ADefault: TGdkRGBA): TGdkRGBA;
+begin
+  Result := ADefault;
+  if ACtx = nil then
+    exit;
+  if gtk_style_context_lookup_color(ACtx, PChar(AName), @Result) then
+    exit;
+  if AName.StartsWith('theme_') then
+    gtk_style_context_lookup_color(ACtx, PChar(AName.Substring(6)), @Result);
+end;
+
+function LookupThemeColor(ACtx: PGtkStyleContext; const AName: string;
+  ADefault: TColor; const ABgName: string = 'theme_bg_color'): TColor;
+var
+  ARGBA, ABgRGBA, AWhite: TGdkRGBA;
+  AFound: Boolean;
+begin
+  Result := ADefault;
+  if ACtx = nil then exit;
+  ARGBA.red := 0; ARGBA.green := 0; ARGBA.blue := 0; ARGBA.alpha := 0;
+  AFound := gtk_style_context_lookup_color(ACtx, PChar(AName), @ARGBA);
+  if (not AFound) and AName.StartsWith('theme_') then
+    AFound := gtk_style_context_lookup_color(ACtx, PChar(AName.Substring(6)), @ARGBA);
+  if AFound and (ARGBA.alpha > 0) then
+  begin
+    AWhite.red := 1; AWhite.green := 1; AWhite.blue := 1; AWhite.alpha := 1;
+    if ABgName = '' then
+      ABgRGBA := AWhite
+    else
+      ABgRGBA := LookupThemeRGBA(ACtx, ABgName, AWhite);
+    Result := CompositeRGBAOverBg(ARGBA, ABgRGBA);
+  end;
+end;
+
+function GetLabelFgColor(AState: TGtkStateFlags; ADefault: TColor;
+  const ABgName: string = 'theme_bg_color'): TColor;
+var
+  AWin, AButton, AChild, ATarget: PGtkWidget;
+  ACtx: PGtkStyleContext;
+  ARGBA, ABgRGBA, AWhite: TGdkRGBA;
+begin
+  Result := ADefault;
+  AWin := PGtkWidget(gtk_offscreen_window_new());
+  if AWin = nil then
+    exit;
+  AButton := PGtkWidget(gtk_button_new_with_label('x'));
+  if AButton <> nil then
+  begin
+    gtk_container_add(PGtkContainer(AWin), AButton);
+    if GTK_STATE_FLAG_INSENSITIVE in AState then
+      gtk_widget_set_sensitive(AButton, False);
+    gtk_widget_show_all(AWin);
+    gtk_widget_realize(AWin);
+    gtk_widget_realize(AButton);
+
+    AChild := gtk_bin_get_child(PGtkBin(AButton));
+    if AChild <> nil then
+      ATarget := AChild
+    else
+      ATarget := AButton;
+
+    ACtx := ATarget^.get_style_context;
+    if ACtx <> nil then
+    begin
+      ARGBA.red := 0; ARGBA.green := 0; ARGBA.blue := 0; ARGBA.alpha := 0;
+      gtk_style_context_get_color(ACtx, AState, @ARGBA);
+      if ARGBA.alpha > 0 then
+      begin
+        AWhite.red := 1; AWhite.green := 1; AWhite.blue := 1; AWhite.alpha := 1;
+        ABgRGBA := LookupThemeRGBA(ACtx, ABgName, AWhite);
+        Result := CompositeRGBAOverBg(ARGBA, ABgRGBA);
+      end;
+    end;
+  end;
+  gtk_widget_destroy(AWin);
+end;
+
+procedure UpdateSysColorMap(Widget: PGtkWidget; Lgs: TLazGtkStyle);
+var
+  ACtx: PGtkStyleContext;
+  ARGBA: TGdkRGBA;
 begin
   if Widget = nil then exit;
   if not (Lgs in [lgsButton, lgsCheckbox, lgsRadiobutton, lgsWindow, lgsMenuBar, lgsMenuitem,
     lgsVerticalScrollbar, lgsHorizontalScrollbar, lgsTooltip, lgsMemo, lgsFrame]) then exit;
 
-  {$IFDEF NoStyle}
-  exit;
-  {$ENDIF}
-  //DebugLn('UpdateSysColorMap ',GetWidgetDebugReport(Widget));
-  // gtk_widget_set_rc_style(Widget);
-  MainStyle := Widget^.get_style;
-  if MainStyle = nil then exit;
-  with MainStyle^ do
-  begin
-    {$IFDEF VerboseUpdateSysColorMap}
-    if rc_style<>nil then
-    begin
-      with rc_style^ do
+  ACtx := Widget^.get_style_context;
+  if ACtx = nil then exit;
+
+  case Lgs of
+    lgsWindow:
       begin
-        DebugLn('rc_style:');
-        DebugLn(' FG GTK_STATE_NORMAL ',GdkColorAsString(fg[GTK_STATE_NORMAL]));
-        DebugLn(' FG GTK_STATE_ACTIVE ',GdkColorAsString(fg[GTK_STATE_ACTIVE]));
-        DebugLn(' FG GTK_STATE_PRELIGHT ',GdkColorAsString(fg[GTK_STATE_PRELIGHT]));
-        DebugLn(' FG GTK_STATE_SELECTED ',GdkColorAsString(fg[GTK_STATE_SELECTED]));
-        DebugLn(' FG GTK_STATE_INSENSITIVE ',GdkColorAsString(fg[GTK_STATE_INSENSITIVE]));
-        DebugLn('');
-        DebugLn(' BG GTK_STATE_NORMAL ',GdkColorAsString(bg[GTK_STATE_NORMAL]));
-        DebugLn(' BG GTK_STATE_ACTIVE ',GdkColorAsString(bg[GTK_STATE_ACTIVE]));
-        DebugLn(' BG GTK_STATE_PRELIGHT ',GdkColorAsString(bg[GTK_STATE_PRELIGHT]));
-        DebugLn(' BG GTK_STATE_SELECTED ',GdkColorAsString(bg[GTK_STATE_SELECTED]));
-        DebugLn(' BG GTK_STATE_INSENSITIVE ',GdkColorAsString(bg[GTK_STATE_INSENSITIVE]));
-        DebugLn('');
-        DebugLn(' TEXT GTK_STATE_NORMAL ',GdkColorAsString(text[GTK_STATE_NORMAL]));
-        DebugLn(' TEXT GTK_STATE_ACTIVE ',GdkColorAsString(text[GTK_STATE_ACTIVE]));
-        DebugLn(' TEXT GTK_STATE_PRELIGHT ',GdkColorAsString(text[GTK_STATE_PRELIGHT]));
-        DebugLn(' TEXT GTK_STATE_SELECTED ',GdkColorAsString(text[GTK_STATE_SELECTED]));
-        DebugLn(' TEXT GTK_STATE_INSENSITIVE ',GdkColorAsString(text[GTK_STATE_INSENSITIVE]));
-        DebugLn('');
+        SysColorMap[COLOR_BACKGROUND] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_BACKGROUND], '');
+        SysColorMap[COLOR_FORM] := SysColorMap[COLOR_BACKGROUND];
+        SysColorMap[COLOR_APPWORKSPACE] := SysColorMap[COLOR_BACKGROUND];
+        SysColorMap[COLOR_WINDOW] := LookupThemeColor(ACtx, 'theme_base_color', SysColorMap[COLOR_WINDOW], '');
+        SysColorMap[COLOR_WINDOWTEXT] := LookupThemeColor(ACtx, 'theme_text_color', SysColorMap[COLOR_WINDOWTEXT], 'theme_base_color');
+        SysColorMap[COLOR_WINDOWFRAME] := LookupThemeColor(ACtx, 'borders', SysColorMap[COLOR_WINDOWFRAME], 'theme_bg_color');
+        SysColorMap[COLOR_ACTIVEBORDER] := SysColorMap[COLOR_WINDOWFRAME];
+        SysColorMap[COLOR_INACTIVEBORDER] := SysColorMap[COLOR_WINDOWFRAME];
+        ARGBA.red := 0; ARGBA.green := 0; ARGBA.blue := 0; ARGBA.alpha := 0;
+        if not gtk_style_context_lookup_color(ACtx, 'insensitive_fg_color', @ARGBA) then
+          SysColorMap[COLOR_GRAYTEXT] := GetLabelFgColor([GTK_STATE_FLAG_INSENSITIVE], SysColorMap[COLOR_GRAYTEXT], 'theme_bg_color')
+        else
+          SysColorMap[COLOR_GRAYTEXT] := LookupThemeColor(ACtx, 'insensitive_fg_color', SysColorMap[COLOR_GRAYTEXT], 'theme_bg_color');
+        SysColorMap[COLOR_HIGHLIGHT] := LookupThemeColor(ACtx, 'theme_selected_bg_color', SysColorMap[COLOR_HIGHLIGHT], 'theme_bg_color');
+        SysColorMap[COLOR_HIGHLIGHTTEXT] := LookupThemeColor(ACtx, 'theme_selected_fg_color', SysColorMap[COLOR_HIGHLIGHTTEXT], 'theme_selected_bg_color');
+        SysColorMap[COLOR_HOTLIGHT] := SysColorMap[COLOR_HIGHLIGHT];
+        SysColorMap[COLOR_ACTIVECAPTION] := SysColorMap[COLOR_HIGHLIGHT];
+        SysColorMap[COLOR_CAPTIONTEXT] := SysColorMap[COLOR_HIGHLIGHTTEXT];
+        SysColorMap[COLOR_INACTIVECAPTION] := LookupThemeColor(ACtx, 'theme_unfocused_bg_color', SysColorMap[COLOR_INACTIVECAPTION], '');
+        SysColorMap[COLOR_INACTIVECAPTIONTEXT] := LookupThemeColor(ACtx, 'theme_unfocused_fg_color', SysColorMap[COLOR_INACTIVECAPTIONTEXT], 'theme_unfocused_bg_color');
+        SysColorMap[COLOR_GRADIENTACTIVECAPTION] := SysColorMap[COLOR_ACTIVECAPTION];
+        SysColorMap[COLOR_GRADIENTINACTIVECAPTION] := SysColorMap[COLOR_INACTIVECAPTION];
       end;
-    end;
-
-    DebugLn('MainStyle:');
-    DebugLn(' FG GTK_STATE_NORMAL ',GdkColorAsString(fg[GTK_STATE_NORMAL]));
-    DebugLn(' FG GTK_STATE_ACTIVE ',GdkColorAsString(fg[GTK_STATE_ACTIVE]));
-    DebugLn(' FG GTK_STATE_PRELIGHT ',GdkColorAsString(fg[GTK_STATE_PRELIGHT]));
-    DebugLn(' FG GTK_STATE_SELECTED ',GdkColorAsString(fg[GTK_STATE_SELECTED]));
-    DebugLn(' FG GTK_STATE_INSENSITIVE ',GdkColorAsString(fg[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' BG GTK_STATE_NORMAL ',GdkColorAsString(bg[GTK_STATE_NORMAL]));
-    DebugLn(' BG GTK_STATE_ACTIVE ',GdkColorAsString(bg[GTK_STATE_ACTIVE]));
-    DebugLn(' BG GTK_STATE_PRELIGHT ',GdkColorAsString(bg[GTK_STATE_PRELIGHT]));
-    DebugLn(' BG GTK_STATE_SELECTED ',GdkColorAsString(bg[GTK_STATE_SELECTED]));
-    DebugLn(' BG GTK_STATE_INSENSITIVE ',GdkColorAsString(bg[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' TEXT GTK_STATE_NORMAL ',GdkColorAsString(text[GTK_STATE_NORMAL]));
-    DebugLn(' TEXT GTK_STATE_ACTIVE ',GdkColorAsString(text[GTK_STATE_ACTIVE]));
-    DebugLn(' TEXT GTK_STATE_PRELIGHT ',GdkColorAsString(text[GTK_STATE_PRELIGHT]));
-    DebugLn(' TEXT GTK_STATE_SELECTED ',GdkColorAsString(text[GTK_STATE_SELECTED]));
-    DebugLn(' TEXT GTK_STATE_INSENSITIVE ',GdkColorAsString(text[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' LIGHT GTK_STATE_NORMAL ',GdkColorAsString(light[GTK_STATE_NORMAL]));
-    DebugLn(' LIGHT GTK_STATE_ACTIVE ',GdkColorAsString(light[GTK_STATE_ACTIVE]));
-    DebugLn(' LIGHT GTK_STATE_PRELIGHT ',GdkColorAsString(light[GTK_STATE_PRELIGHT]));
-    DebugLn(' LIGHT GTK_STATE_SELECTED ',GdkColorAsString(light[GTK_STATE_SELECTED]));
-    DebugLn(' LIGHT GTK_STATE_INSENSITIVE ',GdkColorAsString(light[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' DARK GTK_STATE_NORMAL ',GdkColorAsString(dark[GTK_STATE_NORMAL]));
-    DebugLn(' DARK GTK_STATE_ACTIVE ',GdkColorAsString(dark[GTK_STATE_ACTIVE]));
-    DebugLn(' DARK GTK_STATE_PRELIGHT ',GdkColorAsString(dark[GTK_STATE_PRELIGHT]));
-    DebugLn(' DARK GTK_STATE_SELECTED ',GdkColorAsString(dark[GTK_STATE_SELECTED]));
-    DebugLn(' DARK GTK_STATE_INSENSITIVE ',GdkColorAsString(dark[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' MID GTK_STATE_NORMAL ',GdkColorAsString(mid[GTK_STATE_NORMAL]));
-    DebugLn(' MID GTK_STATE_ACTIVE ',GdkColorAsString(mid[GTK_STATE_ACTIVE]));
-    DebugLn(' MID GTK_STATE_PRELIGHT ',GdkColorAsString(mid[GTK_STATE_PRELIGHT]));
-    DebugLn(' MID GTK_STATE_SELECTED ',GdkColorAsString(mid[GTK_STATE_SELECTED]));
-    DebugLn(' MID GTK_STATE_INSENSITIVE ',GdkColorAsString(mid[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' BASE GTK_STATE_NORMAL ',GdkColorAsString(base[GTK_STATE_NORMAL]));
-    DebugLn(' BASE GTK_STATE_ACTIVE ',GdkColorAsString(base[GTK_STATE_ACTIVE]));
-    DebugLn(' BASE GTK_STATE_PRELIGHT ',GdkColorAsString(base[GTK_STATE_PRELIGHT]));
-    DebugLn(' BASE GTK_STATE_SELECTED ',GdkColorAsString(base[GTK_STATE_SELECTED]));
-    DebugLn(' BASE GTK_STATE_INSENSITIVE ',GdkColorAsString(base[GTK_STATE_INSENSITIVE]));
-    DebugLn('');
-    DebugLn(' BLACK ',GdkColorAsString(black));
-    DebugLn(' WHITE ',GdkColorAsString(white));
-    {$ENDIF}
-
-    {$IFNDEF DisableGtkSysColors}
-    // this map is taken from this research:
-    // http://www.endolith.com/wordpress/2008/08/03/wine-colors/
-    case Lgs of
-      lgsButton:
-        begin
-          SysColorMap[COLOR_ACTIVEBORDER] := TGDKColorToTColor(bg[GTK_STATE_INSENSITIVE]);
-          SysColorMap[COLOR_INACTIVEBORDER] := TGDKColorToTColor(bg[GTK_STATE_INSENSITIVE]);
-          SysColorMap[COLOR_WINDOWFRAME] := TGDKColorToTColor(mid[GTK_STATE_SELECTED]);
-
-          SysColorMap[COLOR_BTNFACE] := TGDKColorToTColor(bg[GTK_STATE_INSENSITIVE]);
-          SysColorMap[COLOR_BTNSHADOW] := TGDKColorToTColor(dark[GTK_STATE_INSENSITIVE]);
-          SysColorMap[COLOR_BTNTEXT] := TGDKColorToTColor(fg[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_BTNHIGHLIGHT] := TGDKColorToTColor(light[GTK_STATE_INSENSITIVE]);
-          SysColorMap[COLOR_3DDKSHADOW] := TGDKColorToTColor(black);
-          SysColorMap[COLOR_3DLIGHT] := TGDKColorToTColor(bg[GTK_STATE_INSENSITIVE]);
-        end;
-      lgsMemo:
-        begin
-          SysColorMap[COLOR_HIGHLIGHT] := TGDKColorToTColor(base[GTK_STATE_SELECTED]);
-          SysColorMap[COLOR_HIGHLIGHTTEXT] := TGDKColorToTColor(fg[GTK_STATE_SELECTED]);
-          SysColorMap[COLOR_WINDOW] := TGDKColorToTColor(base[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_WINDOWTEXT] := TGDKColorToTColor(text[GTK_STATE_NORMAL]);
-        end;
-      lgsFrame:
-        begin
-          SysColorMap[COLOR_BACKGROUND] := TGDKColorToTColor(bg[GTK_STATE_NORMAL]);
-        end;
-      lgsWindow:
-        begin
-          // colors which can be only retrieved from the window manager (metacity)
-          SysColorMap[COLOR_ACTIVECAPTION] := TGDKColorToTColor(dark[GTK_STATE_SELECTED]);
-          SysColorMap[COLOR_INACTIVECAPTION] := TGDKColorToTColor(dark[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_GRADIENTACTIVECAPTION] := TGDKColorToTColor(light[GTK_STATE_SELECTED]);
-          SysColorMap[COLOR_GRADIENTINACTIVECAPTION] := TGDKColorToTColor(base[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_CAPTIONTEXT] := TGDKColorToTColor(white);
-          SysColorMap[COLOR_INACTIVECAPTIONTEXT] := TGDKColorToTColor(white);
-          // others
-          SysColorMap[COLOR_APPWORKSPACE] := TGDKColorToTColor(base[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_GRAYTEXT] := TGDKColorToTColor(fg[GTK_STATE_INSENSITIVE]);
-          (*
-          SysColorMap[COLOR_HIGHLIGHT] := TGDKColorToTColor(base[GTK_STATE_SELECTED]);
-          SysColorMap[COLOR_HIGHLIGHTTEXT] := TGDKColorToTColor(fg[GTK_STATE_SELECTED]);
-          SysColorMap[COLOR_WINDOW] := TGDKColorToTColor(base[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_WINDOWTEXT] := TGDKColorToTColor(text[GTK_STATE_NORMAL]);
-          *)
-          SysColorMap[COLOR_HOTLIGHT] := TGDKColorToTColor(light[GTK_STATE_NORMAL]);
-          // SysColorMap[COLOR_BACKGROUND] := TGDKColorToTColor(bg[GTK_STATE_PRELIGHT]);
-          SysColorMap[COLOR_FORM] := TGDKColorToTColor(bg[GTK_STATE_NORMAL]);
-        end;
-      lgsMenuBar:
-        begin
-          SysColorMap[COLOR_MENUBAR] := TGDKColorToTColor(bg[GTK_STATE_NORMAL]);
-        end;
-      lgsMenuitem:
-        begin
-          SysColorMap[COLOR_MENU] := TGDKColorToTColor(light[GTK_STATE_ACTIVE]);
-          SysColorMap[COLOR_MENUTEXT] := TGDKColorToTColor(fg[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_MENUHILIGHT] := TGDKColorToTColor(bg[GTK_STATE_PRELIGHT]);
-        end;
-      lgsVerticalScrollbar,
-      lgsHorizontalScrollbar:
-        begin
-          SysColorMap[COLOR_SCROLLBAR] := TGDKColorToTColor(bg[GTK_STATE_ACTIVE]);
-        end;
-      lgsTooltip:
-        begin
-          SysColorMap[COLOR_INFOTEXT] := TGDKColorToTColor(fg[GTK_STATE_NORMAL]);
-          SysColorMap[COLOR_INFOBK] := TGDKColorToTColor(bg[GTK_STATE_NORMAL]);
-        end;
-    end;
-    {$ENDIF}
+    lgsButton:
+      begin
+        SysColorMap[COLOR_BTNFACE] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_BTNFACE], '');
+        SysColorMap[COLOR_BTNTEXT] := LookupThemeColor(ACtx, 'theme_fg_color', SysColorMap[COLOR_BTNTEXT], 'theme_bg_color');
+        SysColorMap[COLOR_BTNSHADOW] := DecColor(SysColorMap[COLOR_BTNFACE], 60);
+        SysColorMap[COLOR_BTNHIGHLIGHT] := IncColor(SysColorMap[COLOR_BTNFACE], 40);
+        SysColorMap[COLOR_3DDKSHADOW] := DecColor(SysColorMap[COLOR_BTNFACE], 120);
+        SysColorMap[COLOR_3DLIGHT] := IncColor(SysColorMap[COLOR_BTNFACE], 20);
+      end;
+    lgsMemo:
+      begin
+        SysColorMap[COLOR_WINDOW] := LookupThemeColor(ACtx, 'theme_base_color', SysColorMap[COLOR_WINDOW], '');
+        SysColorMap[COLOR_WINDOWTEXT] := LookupThemeColor(ACtx, 'theme_text_color', SysColorMap[COLOR_WINDOWTEXT], 'theme_base_color');
+      end;
+    lgsFrame:
+      begin
+        SysColorMap[COLOR_BACKGROUND] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_BACKGROUND], '');
+      end;
+    lgsMenuBar:
+      begin
+        SysColorMap[COLOR_MENUBAR] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_MENUBAR], '');
+      end;
+    lgsMenuitem:
+      begin
+        SysColorMap[COLOR_MENU] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_MENU], '');
+        SysColorMap[COLOR_MENUTEXT] := LookupThemeColor(ACtx, 'theme_fg_color', SysColorMap[COLOR_MENUTEXT], 'theme_bg_color');
+        SysColorMap[COLOR_MENUHILIGHT] := LookupThemeColor(ACtx, 'theme_selected_bg_color', SysColorMap[COLOR_MENUHILIGHT], 'theme_bg_color');
+      end;
+    lgsVerticalScrollbar,
+    lgsHorizontalScrollbar:
+      begin
+        SysColorMap[COLOR_SCROLLBAR] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_SCROLLBAR], '');
+      end;
+    lgsTooltip:
+      begin
+        SysColorMap[COLOR_INFOBK] := LookupThemeColor(ACtx, 'theme_tooltip_bg_color', SysColorMap[COLOR_INFOBK], '');
+        SysColorMap[COLOR_INFOTEXT] := LookupThemeColor(ACtx, 'theme_tooltip_fg_color', SysColorMap[COLOR_INFOTEXT], 'theme_tooltip_bg_color');
+      end;
   end;
 end;
 
@@ -1711,10 +1960,14 @@ begin
   DebugLn('SetGlobalCursor grab section: gtk_grab_get_current=',IntToStr(PtrUInt(AGrabWidget)),
     ' Gtk3WidgetSet.FDragGrabWidget=',IntToStr(PtrUInt(Gtk3WidgetSet.FDragGrabWidget)),
     ' SeatGrabActive=',IntToStr(Ord(Gtk3WidgetSet.FDragSeatGrabActive)),
+    ' FLCLCaptureWidget=',IntToStr(PtrUInt(Gtk3WidgetSet.FLCLCaptureWidget)),
     ' cursor=',IntToStr(PtrUInt(AGdkCursor)));
   {$ENDIF}
   if not Assigned(AGrabWidget) then
     AGrabWidget := Gtk3WidgetSet.FDragGrabWidget;
+  if Assigned(AGrabWidget) and (AGrabWidget <> Gtk3WidgetSet.FLCLCaptureWidget) and
+    not Gtk3WidgetSet.FDragSeatGrabActive then
+    AGrabWidget := nil;
   if Assigned(AGrabWidget) then
   begin
     if not Assigned(ASeat) then
@@ -1864,6 +2117,27 @@ begin
 end;
 
 {$IFDEF GTK3USEDEFERREDRESIZING}
+function Gtk3LCLDepth(ACtrl: TWinControl): Integer;
+var
+  C: TWinControl;
+begin
+  Result := 0;
+  C := ACtrl;
+  while (C <> nil) and (C.Parent <> nil) do
+  begin
+    Inc(Result);
+    C := C.Parent;
+  end;
+end;
+
+function Gtk3CompareLCLDepth(Item1, Item2: Pointer): Integer;
+begin
+  //Sort ascending by LCL parent depth so root-most controls are processed first
+  //This matches GTK2 deferred resize semantics: parent LM_SIZE
+  //runs AlignControls before children receive their own LM_SIZE
+  Result := Gtk3LCLDepth(TWinControl(Item1)) - Gtk3LCLDepth(TWinControl(Item2));
+end;
+
 procedure Gtk3SaveSizeNotification(ALCLObject: TWinControl);
 begin
   if FWidgetsResized.IndexOf(ALCLObject) < 0 then
@@ -1969,6 +2243,10 @@ begin
     FixList.Assign(FFixWidgetsResized);
     FWidgetsResized.Clear;
     FFixWidgetsResized.Clear;
+
+    //Parent-first order. Matches GTK2 deferred semantics.
+    MainList.Sort(@Gtk3CompareLCLDepth);
+    FixList.Sort(@Gtk3CompareLCLDepth);
 
     // Phase 1: Invalidate client rect caches for layout/client widgets.
     for I := 0 to FixList.Count - 1 do

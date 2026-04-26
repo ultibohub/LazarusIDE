@@ -23,6 +23,11 @@ msgstr "%s itt: %s"
 msgid "Deleting of file \"%s\" failed."
 msgstr "A(z) \"%s\" fájl törlése sikertelen."
 
+#: idepackagerstrconsts.lisduplicateunitin
+#, object-pascal-format
+msgid "Duplicate unit \"%s\" in \"%s\""
+msgstr "Ismétlődő unit \"%s\" itt: \"%s\""
+
 #: idepackagerstrconsts.lisexecutingcommandafter
 msgid "Executing command after"
 msgstr "Utólag végrehajtandó művelet futtatása"
@@ -59,6 +64,11 @@ msgstr "Kibővíti a(z) \"%s\" csomag unit keresési útvonalát ezzel:%s\"%s\"?
 msgid "Creating Makefile for package %s"
 msgstr "Makefile létrehozása a következő csomaghoz: %s"
 
+#: idepackagerstrconsts.lisignoreall
+msgctxt "idepackagerstrconsts.lisignoreall"
+msgid "Ignore all"
+msgstr ""
+
 #: idepackagerstrconsts.lispassingcompilerdefinetwicewithdifferentvalues
 #, object-pascal-format
 msgid "passing compiler define \"%s\" twice with different values"
@@ -81,10 +91,6 @@ msgstr "(fpmake)"
 #: idepackagerstrconsts.lispckoptspackageoptions
 msgid "Package Options"
 msgstr "Csomag beállításai"
-
-#: idepackagerstrconsts.lispignoreall
-msgid "Ignore all"
-msgstr ""
 
 #: idepackagerstrconsts.lispkgdefscompiledsrcpathaddition
 msgid "CompiledSrcPath addition"

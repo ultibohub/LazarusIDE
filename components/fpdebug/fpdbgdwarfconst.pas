@@ -195,6 +195,7 @@ const
   // -- DWARF 4 --
   DW_AT_data_bit_offset      = $6b  ;    // constant // block, constant, reference
   DW_AT_enum_class           = $6d  ;
+  DW_AT_linkage_name         = $6E  ;    // string
   // ---  ---
   DW_AT_lo_user              = $2000;    // ---
   DW_AT_hi_user              = $3fff;    // ---
@@ -227,9 +228,29 @@ const
   DW_FORM_sec_offset   = $17; // lineptr, loclistptr, macptr, rangelistptr
   DW_FORM_exprloc      = $18; // exprloc
   DW_FORM_flag_present = $19; // flag
-  DW_FORM_ref_sig8     = $20; // reference
+  // -- DWARF 5 --
+  DW_FORM_ref_sup4       = $1C;
+  DW_FORM_strp_sup       = $1D;
+  DW_FORM_data16         = $1E;
+  DW_FORM_line_strp      = $1F;
+  DW_FORM_ref_sig8       = $20; // reference
+  DW_FORM_implicit_const = $21;
+  DW_FORM_loclistx       = $22;
+  DW_FORM_rnglistx       = $23;
+  DW_FORM_ref_sup8       = $24;
+  DW_FORM_strx           = $1A;
+  DW_FORM_strx1          = $25;
+  DW_FORM_strx2          = $26;
+  DW_FORM_strx3          = $27;
+  DW_FORM_strx4          = $28;
+  DW_FORM_addrx          = $1B;
+  DW_FORM_addrx1         = $29;
+  DW_FORM_addrx2         = $2A;
+  DW_FORM_addrx3         = $2B;
+  DW_FORM_addrx4         = $2C;
 
-  DW_FORM_MAX  = $20;    //
+
+  DW_FORM_MAX  = $2C;    //
 
 
   { DWARF operation encodings }
@@ -605,7 +626,26 @@ const
   // ---  ---
   DW_CFA_lo_user              = $1c;
   DW_CFA_hi_user              = $3f;
-  
+
+  (* DWARF-5 *)
+  DW_UT_compile           = 1;
+  DW_UT_type              = 2;
+  DW_UT_partial           = 3;
+  DW_UT_skeleton          = 4;
+  DW_UT_split_compile     = 5;
+  DW_UT_split_type        = 6;
+  DW_UT_lo_user           = $80;
+  DW_UT_hi_user           = $ff;
+
+  DW_LNCT_path            = 1;
+  DW_LNCT_directory_index = 2;
+  DW_LNCT_timestamp       = 3;
+  DW_LNCT_size            = 4;
+  DW_LNCT_MD5             = 5;
+  DW_LNCT_lo_user         = $2000;
+  DW_LNCT_hi_user         = $3fff;
+
+
 function DwarfTagToString(AValue: Integer): String;
 function DwarfChildrenToString(AValue: Integer): String;
 function DwarfAttributeToString(AValue: Integer): String;

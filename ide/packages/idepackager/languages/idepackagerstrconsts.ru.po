@@ -29,6 +29,11 @@ msgstr "%s в %s"
 msgid "Deleting of file \"%s\" failed."
 msgstr "Не удалось удалить файл \"%s\"."
 
+#: idepackagerstrconsts.lisduplicateunitin
+#, object-pascal-format
+msgid "Duplicate unit \"%s\" in \"%s\""
+msgstr "Дублирующийся модуль \"%s\" в \"%s\""
+
 #: idepackagerstrconsts.lisexecutingcommandafter
 msgid "Executing command after"
 msgstr "Выполнить команду после"
@@ -65,6 +70,12 @@ msgstr "Дополнить список путей поиска модулей �
 msgid "Creating Makefile for package %s"
 msgstr "Создание Makefile для пакета %s"
 
+#: idepackagerstrconsts.lisignoreall
+#, fuzzy
+msgctxt "idepackagerstrconsts.lisignoreall"
+msgid "Ignore all"
+msgstr "Игнорировать все"
+
 #: idepackagerstrconsts.lispassingcompilerdefinetwicewithdifferentvalues
 #, object-pascal-format
 msgid "passing compiler define \"%s\" twice with different values"
@@ -87,10 +98,6 @@ msgstr "(fpmake)"
 #: idepackagerstrconsts.lispckoptspackageoptions
 msgid "Package Options"
 msgstr "Параметры пакета"
-
-#: idepackagerstrconsts.lispignoreall
-msgid "Ignore all"
-msgstr "Игнорировать все"
 
 #: idepackagerstrconsts.lispkgdefscompiledsrcpathaddition
 msgid "CompiledSrcPath addition"

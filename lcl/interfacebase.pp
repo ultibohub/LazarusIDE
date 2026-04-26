@@ -239,7 +239,7 @@ begin
   if (WidgetSet<>nil) and (WidgetSet.LCLPlatform<>lpNoGUI) then
     Result:=WidgetSet.LCLPlatform
   else
-    Result:=BuildLCLWidgetType;
+    Result:=GetBuildLCLWidgetType;
 end;
 
 function GetLCLWidgetTypeName: string;
@@ -357,6 +357,7 @@ end;
 {$I intfbaselcl.inc}
 
 initialization
+  LazVersion.OnLCLWidgetType := @GetDefaultLCLWidgetType;
   LazVersion.OnLCLWidgetTypeName := @GetLCLWidgetTypeName;
 
 end.

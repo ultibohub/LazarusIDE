@@ -29,13 +29,13 @@ uses
   // LCL
   Forms, StdCtrls, Dialogs, Controls, ExtCtrls, Spin,
   // LazUtils
-  FileUtil, LazUTF8, LazLoggerBase, Translations, LazFileCache,
+  FileUtil, LazFileCache, LazStringUtils, LazUTF8, LazLoggerBase, Translations,
   // LazControls
   DividerBevel,
   // BuildIntf
   IDEOptionsIntf,
   // IdeIntf
-  IdeIntfStrConsts, IDEOptEditorIntf, IDEWindowIntf, IDEUtils, IDEDialogs,
+  IdeIntfStrConsts, IDEOptEditorIntf, IDEWindowIntf, IDEIntfUtils, IDEDialogs,
   // IdeUtils
   InputHistory,
   // IdeConfig

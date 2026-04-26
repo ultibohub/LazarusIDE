@@ -39,16 +39,14 @@ uses
   DirectoryCacher, BasicCodeTools, DefineTemplates, SourceLog, LinkScanner,
   // LazUtils
   LConvEncoding, LazUTF8, FileUtil, LazFileUtils, LazFileCache,
-  LazUtilities, AvgLvlTree,
+  LazStringUtils, LazUtilities, AvgLvlTree,
   // BuildIntf
-  IDEExternToolIntf, PackageIntf, ProjectIntf, MacroIntf,
-  // IDEIntf
-  LazIDEIntf, IDEUtils,
+  IDEExternToolIntf, PackageIntf, ProjectIntf, MacroIntf, LazMsgWorker,
   // IdeConfig
-  EnvironmentOpts, LazConf, IDECmdLine, SearchPathProcs,
-  etMakeMsgParser, etFPCMsgFilePool,
+  EnvironmentOpts, LazConf, SearchPathProcs, etMakeMsgParser, etFPCMsgFilePool,
+  FindProjPackUnit, IdeConfStrConsts;
   // IDE
-  LazarusIDEStrConsts;
+  //LazarusIDEStrConsts;
 
 const
   FPCMsgIDCompiling = 3104;
@@ -481,6 +479,20 @@ begin
        or FileIsInPath(Filename,LazDir+'designer');
 end;
 
+function LocalGetIDEObject(ToolData: TIDEExternalToolData): TObject;
+// Modified from TExternalToolsIDE.GetIDEObject
+begin
+  Result:=nil;
+  if ToolData=nil then exit;
+  if ToolData.Kind=IDEToolCompileProject then
+    Result:=LazProject1
+  else if ToolData.Kind=IDEToolCompilePackage then
+    Result:=PackageEditingInterface.FindPackageWithName(ToolData.ModuleName)
+  //else if ToolData.Kind=IDEToolCompileIDE then begin
+  //  Result:=nil;  // Return nil here.
+  //end;
+end;
+
 procedure RegisterFPCParser;
 begin
   ExternalToolList.RegisterParser(TIDEFPCParser);
@@ -757,7 +769,7 @@ begin
     TestBuildDir:=AppendPathDelim(ResolveDots(Tool.Process.CurrentDirectory));
     if VirtualProjectFiles=nil then
       VirtualProjectFiles:=TFilenameToPointerTree.Create(true);
-    aProject:=LazarusIDE.ActiveProject;
+    aProject:=LazProject1;
     for i:=0 to aProject.FileCount-1 do begin
       aProjFile:=aProject.Files[i];
       if aProjFile.IsPartOfProject and (not FilenameIsAbsolute(aProjFile.Filename)) then
@@ -1617,7 +1629,8 @@ procedure TIDEFPCParser.ImproveMsgUnitNotFound(aPhase: TExtToolParserSyncPhase;
     {$IFDEF VerboseFPCMsgUnitNotFound}
     debugln(['TIDEFPCParser.ImproveMsgUnitNotFound File=',CodeBuf.Filename]);
     {$ENDIF}
-    LazarusIDE.SaveSourceEditorChangesToCodeCache(nil);
+    if Assigned(OnSaveAllEditorChanges) then
+      OnSaveAllEditorChanges;
     if not CodeToolBoss.FindUnitInAllUsesSections(CodeBuf,MissingUnitname,NamePos,InPos)
     then begin
       DebugLn('TIDEFPCParser.ImproveMsgUnitNotFound FindUnitInAllUsesSections failed due to syntax errors or '+MissingUnitname+' is not used in '+CodeBuf.Filename);
@@ -1811,13 +1824,13 @@ begin
     if NewFilename='' then begin
       TheOwner:=nil;
       if Tool.Data is TIDEExternalToolData then begin
-        TheOwner:=ExternalToolList.GetIDEObject(TIDEExternalToolData(Tool.Data));
+        TheOwner:=LocalGetIDEObject(TIDEExternalToolData(Tool.Data));
       end else if Tool.Data=nil then begin
         {$IFDEF VerboseFPCMsgUnitNotFound}
         debugln(['TIDEFPCParser.ImproveMsgUnitNotFound Tool.Data=nil, ProcDir=',Tool.Process.CurrentDirectory]);
         {$ENDIF}
       end;
-      NewFilename:=LazarusIDE.FindUnitFile(UsedByUnit,TheOwner);
+      NewFilename:=FindProjPackUnitFile(UsedByUnit,TheOwner);
       if NewFilename='' then begin
         {$IFDEF VerboseFPCMsgUnitNotFound}
         debugln(['TIDEFPCParser.ImproveMsgUnitNotFound unit not found: ',UsedByUnit]);
@@ -2901,8 +2914,8 @@ begin
         and (fIncludePathValidForWorkerDir=MsgWorkerDir) then begin
           // include path is valid and in worker thread
           // -> search file (todo: needs a thread safe function for star directories)
-          aFilename:=FileUtil.SearchFileInPath(aFilename,MsgWorkerDir,fIncludePath,';',
-                                 [FileUtil.sffSearchLoUpCase,sffFile]);
+          aFilename:=SearchFileInPath(aFilename,MsgWorkerDir,fIncludePath,';',
+                                      [sffSearchLoUpCase,sffFile]);
           if aFilename<>'' then
             MsgLine.Filename:=aFilename;
         end;

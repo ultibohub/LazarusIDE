@@ -6556,7 +6556,7 @@ function TQtBitBtn.EventFilter(Sender: QObjectH; Event: QEventH): Boolean;
   function PaintBtn: Boolean;
   var
     APainter: QPainterH;
-    R: TRect;
+    R, R4: TRect;
     R2: TRect;
     R3: TRect;
     BMargin, HMargin, VMargin, SHorz, SVert: Integer;
@@ -6569,6 +6569,8 @@ function TQtBitBtn.EventFilter(Sender: QObjectH; Event: QEventH): Boolean;
     ContentSize: TSize;
     IconDistance: Integer;
     IconMargin: Integer;
+    F: Double;
+    NewW, NewH: Integer;
   begin
     Result := False;
     if (FIcon = nil) then
@@ -6585,6 +6587,7 @@ function TQtBitBtn.EventFilter(Sender: QObjectH; Event: QEventH): Boolean;
 
     // now we paint icon & text
     APainter := QPainter_create(QWidget_to_QPaintDevice(Widget));
+    QPainter_setRenderHint(APainter, QPainterSmoothPixmapTransform);
     {$IFDEF USEQT4COMPATIBILEPAINTER}
     QPainter_setRenderHint(APainter, QPainterQt4CompatiblePainting);
     {$ENDIF}
@@ -6702,8 +6705,29 @@ function TQtBitBtn.EventFilter(Sender: QObjectH; Event: QEventH): Boolean;
           if FGlyphLayout = 3 then
             dec(R.Bottom, CenterOffset);
         end;
-
-        QIcon_paint(FIcon, APainter, @R, IconAlign, IconMode);
+        {QIcon.paint scales the icon to fit the passed rect even at
+         devicePixelRatio > 1 (logical coords not respected for icon sizing),
+         so the glyph is drawn oversized. Qt6 handles this correctly.
+         Shrink R to logical size (R / DPR) while keeping the icon anchored
+         to the side IconAlign would place it on.}
+        F := QPaintDevice_devicePixelRatioF(QPaintEngine_paintDevice(QPainter_paintEngine(APainter)));
+        R4 := R;
+        if F > 1.0 then
+        begin
+          NewW := Round((R.Right - R.Left) / F);
+          NewH := Round((R.Bottom - R.Top) / F);
+          if (IconAlign and QtAlignRight) <> 0 then
+            R4.Left := R.Right - NewW
+          else if (IconAlign and QtAlignHCenter) <> 0 then
+            R4.Left := R.Left + ((R.Right - R.Left) - NewW) div 2;
+          R4.Right := R4.Left + NewW;
+          if (IconAlign and QtAlignBottom) <> 0 then
+            R4.Top := R.Bottom - NewH
+          else if (IconAlign and QtAlignVCenter) <> 0 then
+            R4.Top := R.Top + ((R.Bottom - R.Top) - NewH) div 2;
+          R4.Bottom := R4.Top + NewH;
+        end;
+        QIcon_paint(FIcon, APainter, @R4, IconAlign, IconMode);
 
         R := R2;
         if FGlyphLayout = 0 then
@@ -8739,24 +8763,59 @@ var
   LeftMargin: Integer;
   TopMargin: Integer;
   RightMargin: Integer;
-  BottomMargin, AStyleMetric: Integer;
+  BottomMargin: Integer;
+  AOption: QStyleOptionGroupBoxH;
+  AContentsRect, AWidgetRect, ALabelRect: TRect;
+  ATitle: WideString;
 begin
   if ALayout = nil then
     exit;
   QWidget_getContentsMargins(AWidget,@LeftMargin, @TopMargin, @RightMargin, @BottomMargin);
 
-  AStyleMetric := QStyle_pixelMetric(QApplication_style(), QStyleSE_DockWidgetTitleBarText, nil, Widget);
-
-  {issue #37576}
-  {if (AStyle = 'fusion') or (AStyle = 'gtk2') or
-    (AStyle = 'qt5ct-style') then}
-  if AStyleMetric = 0 then
-  else
   if (getText = '') then
-    TopMargin := BottomMargin;
+    TopMargin := BottomMargin
+  else
+  begin
+    ATitle := getText;
+    AOption := QStyleOptionGroupBox_create();
+    try
+      QStyleOption_initFrom(AOption, AWidget);
+      QStyleOptionGroupBox_setText(AOption, @ATitle);
+      QWidget_rect(AWidget, @AWidgetRect);
+      AContentsRect := AWidgetRect;
+      ALabelRect := AWidgetRect;
+      QStyle_subControlRect(QApplication_style(), @AContentsRect,
+        QStyleCC_GroupBox, AOption, QStyleSC_GroupBoxContents, AWidget);
+      QStyle_subControlRect(QApplication_style(), @ALabelRect,
+        QStyleCC_GroupBox, AOption, QStyleSC_GroupBoxLabel, AWidget);
+      if (ALabelRect.Bottom > 0) and (ALabelRect.Bottom < TopMargin) then
+        TopMargin := ALabelRect.Bottom;
+      if AContentsRect.Left > 0 then
+        LeftMargin := AContentsRect.Left;
+      if AWidgetRect.Right - AContentsRect.Right > 0 then
+        RightMargin := AWidgetRect.Right - AContentsRect.Right;
+      BottomMargin := AWidgetRect.Bottom - AContentsRect.Bottom;
+      if BottomMargin < 0 then
+        BottomMargin := 0;
+      {Fusion adds extra decorative bottom padding. Move content 2 px down
+       and clamp bottom to 0 so the visible gap at bottom disappears.}
+      if SameText(QtWidgetSet.StyleName, 'fusion') then
+      begin
+        BottomMargin := 0;
+        Inc(TopMargin, 2);
+      end;
+    finally
+      QStyleOptionGroupBox_destroy(AOption);
+    end;
+  end;
 
   QLayout_setContentsMargins(ALayout, LeftMargin, TopMargin, RightMargin, BottomMargin);
+  QLayout_setSpacing(ALayout, 0);
   QLayout_invalidate(ALayout);
+  QLayout_activate(ALayout);
+
+  if LCLObject <> nil then
+    LCLObject.InvalidateClientRectCache(True);
 
   if (LCLObject <> nil) and testAttribute(QtWA_Mapped) then
   begin
@@ -8764,7 +8823,6 @@ begin
     DebugLn('TQtGroupBox.setLayoutThemeMargins: ',dbgsName(LCLObject),' casp: ',dbgs(caspComputingBounds in LCLObject.AutoSizePhases),' mapped ',dbgs(testAttribute(QtWA_Mapped)));
     {$ENDIF}
     LCLObject.DoAdjustClientRectChange(False);
-    LCLObject.InvalidateClientRectCache(True);
   end;
 end;
 
@@ -8810,9 +8868,11 @@ begin
   {we set QtNoFocus by default, since we don't want
   FCentralWidget grabs focus on mouse click}
   QWidget_setFocusPolicy(FCentralWidget, QtNoFocus);
+  QWidget_setContentsMargins(FCentralWidget, 0, 0, 0, 0);
 
   Layout := QVBoxLayout_create(Result);
   QLayout_addWidget(Layout, FCentralWidget);
+  QLayout_setSpacing(Layout, 0);
   QWidget_setLayout(Result, QLayoutH(Layout));
   QWidget_setAttribute(Result, QtWA_LayoutOnEntireRect, True);
 end;
@@ -8915,8 +8975,6 @@ var
   T: Integer;
   aRight: Integer;
   B: Integer;
-  AStyleOption: QStyleOptionGroupBoxH;
-  APixelMetric: Integer;
 begin
   QWidget_contentsRect(Widget, @R);
   if Assigned(FCentralWidget) then
@@ -8938,18 +8996,11 @@ begin
       R1.Top := 0;
       R1.Right := R1.Right - R.Left;
       R1.Bottom := R1.Bottom - R.Top;
-      QWidget_getContentsMargins(Widget,@L, @T, @aRight, @B);
-      AStyleOption := QStyleOptionGroupBox_create;
-      APixelMetric := QStyle_pixelMetric(QApplication_style(), QStylePM_DefaultChildMargin, AStyleOption, Widget);
-      if APixelMetric = 4 then
-        APixelMetric := 9
-      else
-        APixelMetric := 0;
-      QStyleOptionGroupBox_destroy(AStyleOption);
-      inc(Result.Bottom, APixelMetric);
+      QWidget_getContentsMargins(Widget, @L, @T, @aRight, @B);
+      Result := R1;
       {$IFDEF VerboseQtResize}
       DebugLn('>>>>>>>>>>> TQtGroupBox.getClientBounds(',dbgsName(LCLObject),') setting clientBounds was ',dbgs(R),' changed to ',dbgs(R1),' from result ',dbgs(Result));
-      DebugLn('    MARGINS ARE ',Format('l %d t %d r %d b %d',[L, T, ARight, B]),' APixelMetric=',dbgs(APixelMetric));
+      DebugLn('    MARGINS ARE ',Format('l %d t %d r %d b %d',[L, T, ARight, B]));
       {$ENDIF}
       exit;
     end;
@@ -8967,26 +9018,17 @@ end;
 procedure TQtGroupBox.preferredSize(var PreferredWidth,
   PreferredHeight: integer; WithThemeSpace: Boolean);
 var
-  L, T, R, B: Integer;
-  ASize: TSize;
+  AFontH: Integer;
+  AFontMetrics: QFontMetricsH;
 begin
-  if WithThemeSpace then
-    QWidget_getContentsMargins(Widget,@L, @T, @R, @B)
-  else
-  begin
-    L := 0;
-    T := 0;
-    R := 0;
-    B := 0;
+  AFontMetrics := QFontMetrics_Create(QWidget_font(Widget));
+  try
+    AFontH := QFontMetrics_height(AFontMetrics);
+  finally
+    QFontMetrics_Destroy(AFontMetrics);
   end;
-  QGroupBox_minimumSizeHint(QGroupBoxH(Widget), @ASize);
-  PreferredWidth := ASize.cx + L + R;
-  PreferredHeight := ASize.cy + B + T;
-  {$IFDEF VerboseQtResize}
-  DebugLn('TQtGroupBox.preferredSize(',dbgsName(LCLObject),' PrefW=',dbgs(PreferredWidth),
-    ' PrefH=',dbgs(PreferredHeight),' Mapped ? ',dbgs(testAttribute(QtWA_Mapped)),
-    ' SizeHint ',dbgs(ASize),' casp ',dbgs(caspComputingBounds in LCLObject.AutoSizePhases));
-  {$ENDIF}
+  PreferredWidth := 0;
+  PreferredHeight := AFontH + 2;
 end;
 
 procedure TQtGroupBox.setText(const W: WideString);

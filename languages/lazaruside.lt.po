@@ -2401,11 +2401,6 @@ msgstr "Derintuvė"
 msgid "Editor"
 msgstr "Rengyklė"
 
-#: lazarusidestrconsts.dlggroupenvironment
-msgctxt "lazarusidestrconsts.dlggroupenvironment"
-msgid "Environment"
-msgstr "Aplinka"
-
 #: lazarusidestrconsts.dlggroupundo
 msgid "Group Undo"
 msgstr "Grupinis grąžinimas"
@@ -5697,15 +5692,6 @@ msgstr ""
 msgid "A macro with this name already exists."
 msgstr "Jau yra makrokomanda tokiu pat pavadinimu."
 
-#: lazarusidestrconsts.lisambiguousfilefound
-msgid "Ambiguous file found"
-msgstr "Rastas neaiškus failas"
-
-#: lazarusidestrconsts.lisambiguousfilefoundthisfilecanbemistakenwithdelete
-#, object-pascal-format
-msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
-msgstr "Rastas neaiškus failas: „%s“%sŠis failas gali būti supainiotas su „%s“%sIštrinti neaiškųjį failą?"
-
 #: lazarusidestrconsts.lisanchorbottomtobottomside
 msgid "Anchor bottom side to bottom side of sibling. Use BorderSpacing to set a distance. BorderSpacing of sibling is ignored."
 msgstr "Apatinį kraštą pririšti prie kaimyno apatinio krašto. Atstumą lemia kraštinės plotis. Kaimyno kratinės plotis ignoruojamas."
@@ -5934,10 +5920,6 @@ msgstr "Galimos projekto darymo veiksenos:"
 msgid "Make backup of changed files"
 msgstr "Daryti pakitusių failų rezervines kopijas"
 
-#: lazarusidestrconsts.lisbackupfilefailed
-msgid "Backup file failed"
-msgstr "Nepavyko padaryti failo atsarginę kopiją"
-
 #: lazarusidestrconsts.lisbackuphint
 msgid "Creates a Backup directory under project directory"
 msgstr "Projekto aplanke bus sukurtas aplankas atsarginėms kopijoms"
@@ -6100,10 +6082,6 @@ msgstr "Daryti"
 msgid "Build Date"
 msgstr ""
 
-#: lazarusidestrconsts.lisbuildide
-msgid "Build IDE"
-msgstr "Daryti IKA"
-
 #: lazarusidestrconsts.lisbuildidewithpackages
 #, fuzzy
 #| msgid "build IDE with packages"
@@ -6113,10 +6091,6 @@ msgstr "kartu su IKA daryti ir paketus"
 #: lazarusidestrconsts.lisbuilding
 msgid "Building"
 msgstr "Daroma"
-
-#: lazarusidestrconsts.lisbuildinglazarusfailed
-msgid "Building Lazarus failed"
-msgstr "Lazarus darymas nepavyko"
 
 #: lazarusidestrconsts.lisbuildmode
 #, object-pascal-format
@@ -6196,11 +6170,6 @@ msgstr "Nepavyksta sukurti failą „%s“"
 msgid "Cannot delete last mode."
 msgstr ""
 
-#: lazarusidestrconsts.liscannotfind
-#, object-pascal-format
-msgid "Cannot find %s"
-msgstr "Nepavyko rasti „%s“"
-
 #: lazarusidestrconsts.liscannotfindlazarusstarter
 #, object-pascal-format
 msgid "Cannot find Lazarus starter:%s%s"
@@ -6228,11 +6197,6 @@ msgstr "Derinimo ar kompiliavimo metu negalima patikrinti kompiliatoriaus."
 #: lazarusidestrconsts.liscanonlychangetheclassoftcomponents
 msgid "Can only change the class of TComponents."
 msgstr "Galima keisti tik TComponent-ų klasę."
-
-#: lazarusidestrconsts.liscantfindavalidppu
-#, object-pascal-format
-msgid "Can't find a valid %s.ppu"
-msgstr "Nepavyko rasti tinkamo „%s.ppu“"
 
 #: lazarusidestrconsts.liscaptioncomparefiles
 msgid "Compare files (not for creating patches)"
@@ -6732,17 +6696,6 @@ msgctxt "lazarusidestrconsts.lischeckfordiskfilechangesviacontent"
 msgid "Check for disk file changes via content rather than timestamp"
 msgstr "Ar pakito failas diske spręsti pagal pakitusį jo turinį, o ne datą"
 
-#: lazarusidestrconsts.lischeckifpackagecreatesppuchecknothingdeletesthisfil
-#, object-pascal-format
-msgid ". Check if package %s creates %s.ppu, check nothing deletes this file and check that no two packages have access to the unit source."
-msgstr ". Patikrinit ar paketas „%s“ kuria „%s.ppu“, ar niekas netrina šio failo, du paketai neturi prieigos prie modulio pirminio kodo."
-
-#: lazarusidestrconsts.lischeckifpackageisinthedependencies
-#, object-pascal-format
-msgctxt "lazarusidestrconsts.lischeckifpackageisinthedependencies"
-msgid ". Check if package %s is in the dependencies"
-msgstr ". Patikrinkit ar paketas „%s“ yra priklausomybių sąraše"
-
 #: lazarusidestrconsts.lischeckifthenexttokeninsourceisanendandifnotreturnsl
 msgid "Check if the next token in source is an \"end\" and if not return \"LineEnding + end; + LineEnding\"."
 msgstr "Tikrina ar tolimesnė leksema yra „end“, jei ne tai grąžina „LineEnding + end; + LineEnding“."
@@ -6750,12 +6703,6 @@ msgstr "Tikrina ar tolimesnė leksema yra „end“, jei ne tai grąžina „Lin
 #: lazarusidestrconsts.lischeckoptions
 msgid "Check options"
 msgstr "Tikrinimo parinktys"
-
-#: lazarusidestrconsts.lischecksearchpathpackagetryacleanrebuildcheckimpleme
-#, object-pascal-format
-msgctxt "lazarusidestrconsts.lischecksearchpathpackagetryacleanrebuildcheckimpleme"
-msgid ". Check search path of package %s, try a clean rebuild, check implementation uses sections."
-msgstr ". Patikrinkit paketo „%s“ paieškos kelią, bandykite išvalyti ir daryti iš naujo, patikrinkite „uses“ sekcijas „implementation“ skyriuje."
 
 #: lazarusidestrconsts.lischeckthenexttokeninsourceandaddasemicolonifneeded
 msgid "Check the next token in source and add a semicolon if needed."
@@ -6959,10 +6906,6 @@ msgstr "Paprasta sintaksė (pvz.: * vietoje .*)"
 msgid "&Clean all"
 msgstr "Visiškas apvalymas"
 
-#: lazarusidestrconsts.liscleanlazarussource
-msgid "Clean Lazarus Source"
-msgstr "Apvalyti Lazarus aplankus"
-
 #: lazarusidestrconsts.liscleanonlyonce
 #, fuzzy
 #| msgid "Switch after building to automatically"
@@ -6985,11 +6928,6 @@ msgstr ""
 #: lazarusidestrconsts.liscleanupmode
 msgid "Clean up mode"
 msgstr ""
-
-#: lazarusidestrconsts.liscleanuppackage
-#, object-pascal-format
-msgid "Clean up package \"%s\"."
-msgstr "Apvalyti paketą „%s“."
 
 #: lazarusidestrconsts.liscleanupunitpath
 msgid "Clean up unit path?"
@@ -7783,11 +7721,6 @@ msgstr ""
 msgid "Compiler"
 msgstr "Kompiliatorius"
 
-#: lazarusidestrconsts.liscompilerdoesnotsupporttarget
-#, object-pascal-format
-msgid "Compiler \"%s\" does not support target %s-%s"
-msgstr "„%s“ kompiliatorius nepalaiko paskirties %s-%s"
-
 #: lazarusidestrconsts.liscompilermessagesfilenotfound
 #, object-pascal-format
 msgid "Compiler messages file not found:%s%s"
@@ -7809,10 +7742,6 @@ msgstr "Kompiliuojama"
 #: lazarusidestrconsts.liscompilewithprojectsettings
 msgid "Compile with project settings"
 msgstr ""
-
-#: lazarusidestrconsts.liscompilewithvdformoredetailscheckforduplicates
-msgid "Compile with -vd for more details. Check for duplicates."
-msgstr "Kompiliuokite naudodami raktą „-vd“, tuo būdų sužinosite daugiau informacijos. Patikrinkite ar nėra dublikatų."
 
 #: lazarusidestrconsts.liscompiling
 #, object-pascal-format
@@ -9084,10 +9013,6 @@ msgstr "&Pašalinti visus"
 msgid "Delete all these files?"
 msgstr "Pašalinti visus šiuos failus?"
 
-#: lazarusidestrconsts.lisdeleteambiguousfile
-msgid "Delete ambiguous file?"
-msgstr "Ištrinti neaiškųjį failą?"
-
 #: lazarusidestrconsts.lisdeletemacro
 #, object-pascal-format
 msgid "Delete macro \"%s\"?"
@@ -9511,11 +9436,6 @@ msgstr "Dubliuojasi pirminiai kodai. Kažkurį reikia pašalinti arba užtikrint
 msgid "Duplicate Unit"
 msgstr "Modulis dubliuojais"
 
-#: lazarusidestrconsts.lisduplicateunitin
-#, object-pascal-format, fuzzy, badformat
-msgid "Duplicate unit \"%s\" in \"%s\""
-msgstr "„%1:s“ rastas modulio „%0:s“ dublikatas"
-
 #: lazarusidestrconsts.lisdynpkgamounttoscrollin
 msgid "Amount to scroll in"
 msgstr ""
@@ -9698,11 +9618,6 @@ msgstr ""
 msgid "Enabled only for packages."
 msgstr "Įgalinti tik paketams."
 
-#: lazarusidestrconsts.lisenableflaguseunitofunitinpackage
-#, object-pascal-format, fuzzy, badformat
-msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
-msgstr ". Įgalinkit paketo „%1:s“ modulio „%0:s“ žymę „Naudoti modulį“"
-
 #: lazarusidestrconsts.lisenablei18nforlfm
 msgid "Enable I18N for LFM"
 msgstr "„LFM“-ui įgalinti internacionalizaciją"
@@ -9791,10 +9706,6 @@ msgstr "Klaida: "
 #: lazarusidestrconsts.liserrorcreatingfile
 msgid "Error creating file"
 msgstr "Klaida kuriant failą"
-
-#: lazarusidestrconsts.liserrordeletingfile
-msgid "Error deleting file"
-msgstr "Nepavyko ištrinti failą"
 
 #: lazarusidestrconsts.liserrorin
 #, object-pascal-format
@@ -9894,10 +9805,6 @@ msgstr "Klaida skaitant XML"
 #, object-pascal-format
 msgid "Error reading xml file \"%s\"%s%s"
 msgstr "Įvyko klaida skaitant XML failą „%s“%s%s"
-
-#: lazarusidestrconsts.liserrorrenamingfile
-msgid "Error renaming file"
-msgstr "Nepavyko pervadinti failą"
 
 #: lazarusidestrconsts.liserrors
 msgctxt "lazarusidestrconsts.liserrors"
@@ -10841,10 +10748,6 @@ msgstr "Užuomina: numatytąją vertę galima apibrėžti sąlygose"
 msgid "A hint at property's name shows its description."
 msgstr "Ties savybe rodomas sufleris pateiks jos aprašymą."
 
-#: lazarusidestrconsts.lishintcheckiftwopackagescontainaunitwiththesamename
-msgid "Hint: Check if two packages contain a unit with the same name."
-msgstr "Užuomina: Tikrinti ar du paketai turi modulius tuo pačiu pavadinimu."
-
 #: lazarusidestrconsts.lishintclickonshowoptionstofindoutwhereinheritedpaths
 msgid "Hint: Click on \"Show Options\" to find out where inherited paths are coming from."
 msgstr "Patarimas: spustelėjus „Rodyti parinktis“ kur veda paveldėti keliai."
@@ -11149,11 +11052,6 @@ msgstr "Įterpimo keliai"
 #: lazarusidestrconsts.lisincluderecursive
 msgid "Include, recursive"
 msgstr ""
-
-#: lazarusidestrconsts.lisincompatibleppu
-#, object-pascal-format
-msgid ", incompatible ppu=%s"
-msgstr ", nesuderinamas ppu=%s"
 
 #: lazarusidestrconsts.lisincorrectconfigurationdirectoryfound
 msgid "Incorrect configuration directory found"
@@ -11998,10 +11896,6 @@ msgstr "Prieš darant reikalauti patvirtinimo"
 msgid "Confirm deletion"
 msgstr "Trynimo patvirtinimas"
 
-#: lazarusidestrconsts.lislazbuilddebugide
-msgid "Debug IDE"
-msgstr "Derinama IKA"
-
 #: lazarusidestrconsts.lislazbuilddefines
 #, fuzzy
 #| msgid "Defines"
@@ -12020,11 +11914,6 @@ msgstr "Keisti apibrėžtis"
 #: lazarusidestrconsts.lislazbuildeditlistofdefineswhichcanbeusedbyanyprofile
 msgid "Edit list of defines which can be used by any profile"
 msgstr "Keisti apibrėžčių sąrašą. Jas galima naudoti bet kokiame profilyje"
-
-#: lazarusidestrconsts.lislazbuilderrorwritingfile
-msgctxt "lazarusidestrconsts.lislazbuilderrorwritingfile"
-msgid "Error writing file"
-msgstr "Klaida rašant į failą"
 
 #: lazarusidestrconsts.lislazbuildisnoninteractiveabortingnow
 #, object-pascal-format
@@ -12050,14 +11939,6 @@ msgstr "Įdėti naują profilį"
 #: lazarusidestrconsts.lislazbuildnewprofinfo
 msgid "Current build options will be associated with:"
 msgstr "Veikiamosios darymo parinktys bus susietos su:"
-
-#: lazarusidestrconsts.lislazbuildnormalide
-msgid "Normal IDE"
-msgstr "Įprasta IKA"
-
-#: lazarusidestrconsts.lislazbuildoptimizedide
-msgid "Optimized IDE"
-msgstr "Optimizuota IKA"
 
 #: lazarusidestrconsts.lislazbuildoptions
 #, fuzzy
@@ -12123,11 +12004,6 @@ msgstr "Daryti aplanke:"
 msgid "Target OS:"
 msgstr "Skirtas OS:"
 
-#: lazarusidestrconsts.lislazbuildunabletowritefile
-#, object-pascal-format
-msgid "Unable to write file \"%s\":%s"
-msgstr "Nepavyko rašyti į failą „%s“:%s"
-
 #: lazarusidestrconsts.lislazbuildupdaterevinc
 msgctxt "lazarusidestrconsts.lislazbuildupdaterevinc"
 msgid "Update revision.inc"
@@ -12136,11 +12012,6 @@ msgstr "Naujinti „revision.inc“"
 #: lazarusidestrconsts.lislazbuildupdaterevisioninfoinaboutlazarusdialog
 msgid "Update revision info in \"About Lazarus\" dialog"
 msgstr "Naujinti dialoge „Apie Lazarus“ pateikiamą informaciją apie laidą"
-
-#: lazarusidestrconsts.lislazcleanupbuildall
-msgctxt "lazarusidestrconsts.lislazcleanupbuildall"
-msgid "Clean Up + Build all"
-msgstr "Išvalyti + Daryti viską"
 
 #: lazarusidestrconsts.lislazpkg
 msgid "Package distributed with Lazarus"
@@ -12383,10 +12254,6 @@ msgctxt "lazarusidestrconsts.lismakecurrent"
 msgid "Current"
 msgstr "Veikiamasis"
 
-#: lazarusidestrconsts.lismakenotfound
-msgid "Make not found"
-msgstr "Nerastas Make"
-
 #: lazarusidestrconsts.lismakeresourcestring
 msgid "Make ResourceString"
 msgstr "Kurti išteklių eilutę"
@@ -12456,10 +12323,6 @@ msgstr "Teksto konstanta pirminiame kode"
 #: lazarusidestrconsts.lismakeresstrstringswithsamevalue
 msgid "Strings with same value:"
 msgstr "Eilutės su tokia pat verte:"
-
-#: lazarusidestrconsts.lismakesureallppufilesofapackageareinitsoutputdirecto
-msgid "Make sure all ppu files of a package are in its output directory."
-msgstr "Pasirūpinkite, kad visi paketo „ppu“ failai būtų jo išvesties aplanke."
 
 #: lazarusidestrconsts.lismanagesourceeditors
 msgid "Manage Source Editors ..."
@@ -14335,10 +14198,6 @@ msgstr "Spalvos pranešimuose"
 msgid "Multiple directories are separated with semicolons"
 msgstr "Aplankai atskiriami dvitaškiais"
 
-#: lazarusidestrconsts.lismultiplepack
-msgid ", multiple packages: "
-msgstr ", daugelis paketų:"
-
 #: lazarusidestrconsts.lismvsavemessagestofiletxt
 msgid "Save messages to file (*.txt)"
 msgstr "Įrašyti pranešimus faile (*.txt)"
@@ -14571,14 +14430,6 @@ msgctxt "lazarusidestrconsts.lisnotebooktabpostop"
 msgid "Top"
 msgstr "Viršun"
 
-#: lazarusidestrconsts.lisnotecouldnotcreatedefinetemplateforfreepascal
-msgid "NOTE: Could not create Define Template for Free Pascal Sources"
-msgstr "Pastaba: nepavyko sukurti „Define“ šablono, skirto Free Pascal pirminiam kodui"
-
-#: lazarusidestrconsts.lisnotecouldnotcreatedefinetemplateforlazarussources
-msgid "NOTE: Could not create Define Template for Lazarus Sources"
-msgstr "Pastaba: nepavyko sukurti „Define“ šablono, skirto Lazarus pirminiam kodui"
-
 #: lazarusidestrconsts.lisnotemplateselected
 msgid "no template selected"
 msgstr "šablonas nepažymėtas"
@@ -14627,15 +14478,6 @@ msgstr "kelias iki objekto"
 #: lazarusidestrconsts.lisofeswitchtoobjectinspectorfavoritestab
 msgid "Switch to Object Inspector Favorites tab"
 msgstr "Pereiti į objektų inspektoriaus kortelę „Mėgiamiausi“"
-
-#: lazarusidestrconsts.lisofpackage
-#, object-pascal-format
-msgid " of package %s"
-msgstr " paketo „%s“"
-
-#: lazarusidestrconsts.lisoftheprojectinspector
-msgid " of the Project Inspector"
-msgstr " projekto inspektoriaus"
 
 #: lazarusidestrconsts.lisoifaddtofavoriteproperties
 msgid "Add to favorite properties"
@@ -14973,11 +14815,6 @@ msgstr "Paketas"
 msgid "package %s"
 msgstr "paketas %s"
 
-#: lazarusidestrconsts.lispackage3
-#, object-pascal-format
-msgid ", package %s"
-msgstr ", paketas „%s“"
-
 #: lazarusidestrconsts.lispackageinfo
 msgid "Package info"
 msgstr "Informacija apie paketą"
@@ -14994,10 +14831,6 @@ msgstr "Paketo pavadinimas prasideda…"
 #: lazarusidestrconsts.lispackagenamecontains
 msgid "Package name contains ..."
 msgstr "Paketo pavadinime yra…"
-
-#: lazarusidestrconsts.lispackageneedsanoutputdirectory
-msgid "Package needs an output directory."
-msgstr "Paketui reikia išvesties aplanko."
 
 #: lazarusidestrconsts.lispackageneedsinstallation
 msgid "Package needs installation"
@@ -16237,11 +16070,6 @@ msgstr "Pozicija"
 msgid "%s (position outside of source)"
 msgstr "%s (pozicija už pirminio kodo ribų)"
 
-#: lazarusidestrconsts.lisppuinwrongdirectory
-#, object-pascal-format
-msgid "ppu in wrong directory=%s."
-msgstr "„ppu“ ne tame aplanke „%s“."
-
 #: lazarusidestrconsts.lisprecedingword
 msgid "Preceding word"
 msgstr "Pirmesnis žodis"
@@ -16798,10 +16626,6 @@ msgstr "Pervadinti…"
 #: lazarusidestrconsts.lisrenamefile
 msgid "Rename file?"
 msgstr "Pervadinti failą?"
-
-#: lazarusidestrconsts.lisrenamefilefailed
-msgid "Rename file failed"
-msgstr "Nepavyko pervadinti failą"
 
 #: lazarusidestrconsts.lisrenameshowresult
 msgid "Show list of renamed Identifiers"
@@ -18280,11 +18104,6 @@ msgstr ""
 msgid "The path of \"make\" is not correct: \"%s\""
 msgstr "„make“ adresas nėra tinkamas: „%s“"
 
-#: lazarusidestrconsts.listheprogrammakewasnotfoundthistoolisneededtobuildla
-#, object-pascal-format
-msgid "The program \"make\" was not found.%sThis tool is needed to build Lazarus."
-msgstr "Nerasta programa „make“.%sŠi programa reikalinga Lazarus darymui."
-
 #: lazarusidestrconsts.listheprojectcompileroptionsandthedirectivesinthemain
 msgid "The project compiler options and the directives in the main source differ. For the new unit the mode and string type of the project options are used:"
 msgstr "Skiriasi projekto kompiliatoriaus parinktys ir direktyvos pagrindiniame pirminiame kode. Naujame projekte bus naudojami projekto parinkčių veiksena ir eilutės tipas:"
@@ -18343,11 +18162,6 @@ msgstr "Prieš darymą projektas turi būti įrašytas%sAplinkos parinktyse pari
 msgid "The project uses FPC resources which require at least FPC 2.4"
 msgstr ""
 
-#: lazarusidestrconsts.listheprojectusestargetosandcputhesystemppuforthistar
-#, object-pascal-format
-msgid "The project uses target OS=%s and CPU=%s.%sThe system.ppu for this target was not found in the FPC binary directories.%sMake sure fpc is installed correctly for this target and the fpc.cfg contains the right directories."
-msgstr "Projekto paskirties operacinė sistema yra „%s“, procesorius – „%s“.%s„FPC“ dvejetainių failų aplankuose nepavyko rasti šiai paskirčiai skirto „system.ppu“ failo. %s Pasirūpinkite kad šios paskirties tipui būtų tinkamai įdiegtas „FPC“, bei faile „fpc.cfg“ būtų įrašyti tinkamų aplankų pavadinimai."
-
 #: lazarusidestrconsts.listheprojectwritesthedebugsymbolstoanexternalfilethe
 #, object-pascal-format
 msgid "The project writes the debug symbols to an external file. The \"%s\" supports only symbols within the executable."
@@ -18367,11 +18181,6 @@ msgstr "%sPapildomų pastabų apie šį pranešimą rasite adresu%s"
 #, object-pascal-format
 msgid "There are other files in the directory with the same name,%swhich only differ in case:%s%s%sDelete them?"
 msgstr "Aplanke yra failų, kurių pavadinimai%sskiriasi tik raidžių lygiais:%s%s%sJuos ištrinti?"
-
-#: lazarusidestrconsts.listhereisafilewiththesamenameandasimilarextension
-#, object-pascal-format
-msgid "There is a file with the same name and a similar extension on disk%sFile: %s%sAmbiguous File: %s%sDelete ambiguous file?"
-msgstr "Rastas kitas failas tokiu pat pavadinimu bei panašiu plėtiniu.%sFailas: %s%sNeaiškusis failas: %s%sPašalinti neaiškųjį failą?"
 
 #: lazarusidestrconsts.listhereisalreadyabuildmodewiththisname
 msgid "There is already a build mode with this name."
@@ -18430,11 +18239,6 @@ msgstr "Modulis tokiu pavadinimu „%s“ jau yra. Paskalio identifikatoriai tur
 #, object-pascal-format
 msgid "There is a unit with the name \"%s\" in the project.%sPlease choose a different name"
 msgstr "Projekte jau yra modulis „%s“ tokiu pat pavadinimu.%sParinkite kitokį pavadinimą."
-
-#: lazarusidestrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
-#, object-pascal-format
-msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
-msgstr ""
 
 #: lazarusidestrconsts.listheremustbeatleastonebuildmode
 msgid "There must be at least one build mode."
@@ -18510,11 +18314,6 @@ msgstr "Modulis „%s“ jau egzistuoja."
 msgid "The unit belongs to package %s."
 msgstr "Modulis priklauso paketui „%s“."
 
-#: lazarusidestrconsts.listheunitexiststwiceintheunitpathofthe
-#, object-pascal-format
-msgid "The unit %s exists twice in the unit path of the %s:"
-msgstr "Modulis %s dubliuojasi %s modulių kelyje:"
-
 #: lazarusidestrconsts.listheunithasthisname
 msgid "The unit has this name"
 msgstr "Modulio pavadinimas yra šis"
@@ -18582,11 +18381,6 @@ msgstr "Projekte nėra pagrindinio pirminio kodo"
 #: lazarusidestrconsts.listhisprojecthasonlythedefaultbuildmode
 msgid "This project has only the default build mode."
 msgstr "Projekte yra tik numatytoji darymo veiksena."
-
-#: lazarusidestrconsts.listhissetofoptionstobuildlazarusisnotsupportedbythis
-#, object-pascal-format
-msgid "This set of options to build Lazarus is not supported by this installation.%sThe directory \"%s\" is not writable.%sSee the Lazarus website for other ways to install Lazarus."
-msgstr "Šis „Lazarus“ nepalaiko šių „Lazarus“ darymo parinkčių grupės.%sĮ aplanką „%s“ rašyti draudžiama.%sKitų būdų kaip įdiegti „Lazarus“ sužinosite „Lazarus“ tinklapyje."
 
 #: lazarusidestrconsts.listhisstatementcannotbeextractedpleaseselectsomecode
 #, object-pascal-format
@@ -18972,11 +18766,6 @@ msgstr "Neina pridėti priklausomybės „%s“, nes nes tai sukurs priklausomyb
 msgid "Unable to add %s to project because there is already a unit with the same name in the Project."
 msgstr "Nepavyko %s įdėti į projektą, nes projekte jau yra modulis tokiu pat pavadinimu."
 
-#: lazarusidestrconsts.lisunabletobackupfileto
-#, object-pascal-format
-msgid "Unable to backup file \"%s\" to \"%s\"!"
-msgstr "Nepavyko padaryti failo „%s“ atsarginę kopiją į „%s“!"
-
 #: lazarusidestrconsts.lisunabletochangeclassofto
 #, object-pascal-format
 msgid "%s%sUnable to change class of %s to %s"
@@ -19030,11 +18819,6 @@ msgstr "Nepavyko sukurti naujo failo, nes egzistuoja aplankas tokiu pat pavadini
 #: lazarusidestrconsts.lisunabletocreatetemporarylfmbuffer
 msgid "Unable to create temporary lfm buffer."
 msgstr "Nepavyko sukurti laikino lfm buferio."
-
-#: lazarusidestrconsts.lisunabletodeleteambiguousfile
-#, object-pascal-format
-msgid "Unable to delete ambiguous file \"%s\""
-msgstr "Nepavyko ištrinti neaiškųjį failą „%s“"
 
 #: lazarusidestrconsts.lisunabletofindaresourcestringsectioninthisoranyofthe
 msgid "Unable to find a ResourceString section in this or any of the used units."
@@ -19112,11 +18896,6 @@ msgstr "Konstruktorių atverti neis.%s Klasė %s nepaveldi vizualinės klasės, 
 msgid "Unable to read %s"
 msgstr "Nepavyksta skaityti %s"
 
-#: lazarusidestrconsts.lisunabletoremoveoldbackupfile
-#, object-pascal-format
-msgid "Unable to remove old backup file \"%s\"!"
-msgstr "Nepavyko ištrinti seną atsarginės kopijos failą „%s“!"
-
 #: lazarusidestrconsts.lisunabletoremoveprojectscaledfromsource
 #, object-pascal-format
 msgid "Unable to remove project scaled from source.%s%s"
@@ -19126,11 +18905,6 @@ msgstr "Pirminiame kode nepavyko pašalinti projekto mastelio.%s%s"
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "Pirminiame kode nepavyko pašalinti projekto antraštės.%s%s"
-
-#: lazarusidestrconsts.lisunabletorenameambiguousfileto
-#, object-pascal-format
-msgid "Unable to rename ambiguous file \"%s\"%sto \"%s\""
-msgstr "Nepavyko neaiškųjį failą „%s“%spervadinti į „%s“"
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."
@@ -19365,11 +19139,6 @@ msgstr "„Boolean“ vertėms naudoti žymimąjį langelį"
 #: lazarusidestrconsts.lisusecommentsincustomoptions
 msgid "Use comments in custom options"
 msgstr "Papildytose parinktyse naudoti komentarus"
-
-#: lazarusidestrconsts.lisusedby
-#, object-pascal-format
-msgid " used by %s"
-msgstr " naudoja „%s“"
 
 #: lazarusidestrconsts.lisusedesigntimepackages
 msgid "Use design time packages"

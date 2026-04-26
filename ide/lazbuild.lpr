@@ -31,12 +31,9 @@ uses
   cthreads,
   {$ENDIF}
   Classes, SysUtils, Math, CustApp, System.UITypes,
-  Interfaces, // this includes the NoGUI widgetset
   // LazUtils
   Masks, LConvEncoding, FileUtil, LazFileUtils, LazLoggerBase, LazUtilities,
-  LazUTF8, Laz2_XMLCfg, LazStringUtils, FPCAdds,
-  // LCL
-  LCLPlatformDef,
+  LazUTF8, Laz2_XMLCfg, LazStringUtils, LazVersion, FPCAdds, ColorTTY,
   // Codetools
   CodeCache, CodeToolManager, DefineTemplates, FileProcs,
   // BuildIntf
@@ -45,14 +42,13 @@ uses
   // IdeConfig
   LazConf, IDECmdLine, TransferMacros, EnvironmentOpts, ParsedCompilerOpts,
   CompilerOptions, ModeMatrixOpts, BaseBuildManager, ApplicationBundle,
-  IDETranslations, ExtToolsConsole, InitialSetupProc,
+  IDETranslations, ExtToolsConsole, InitialSetupProc, MiscOptions, IdeBuilder,
   // IdePackager
-  IdePackagerStrConsts, PackageDefs, PackageLinks, PackageSystem,
+  IdePackagerStrConsts, PackageDefs, PackageLinks, PackageSystem, InterPkgConflictFiles,
   // IdeProject
-  Project,
+  Project, BuildManager,
   // IDE
-  LazarusIDEStrConsts, MiscOptions,
-  InterPkgConflictFiles, BuildLazDialog, BuildProfileManager, BuildManager, ColorTTY;
+  LazarusIDEStrConsts;
 
 type
   TPkgAction = (

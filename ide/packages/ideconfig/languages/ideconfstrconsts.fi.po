@@ -9,6 +9,10 @@ msgstr ""
 msgid "FPC message file"
 msgstr "FPC viestitiedosto"
 
+#: ideconfstrconsts.dlggroupenvironment
+msgid "Environment"
+msgstr "Käyttöympäristö"
+
 #: ideconfstrconsts.lisaborted
 msgid "Aborted"
 msgstr "Keskeytetty "
@@ -18,15 +22,46 @@ msgstr "Keskeytetty "
 msgid "A file \"%s\" already exists.%sReplace it?"
 msgstr "Tiedosto \"%s\" on jo olemassa.%sKorvataanko se? "
 
+#: ideconfstrconsts.lisambiguousfilefound
+msgid "Ambiguous file found"
+msgstr "Ristiriitainen tiedosto löytyi"
+
+#: ideconfstrconsts.lisambiguousfilefoundthisfilecanbemistakenwithdelete
+#, object-pascal-format
+msgid "Ambiguous file found: \"%s\"%sThis file can be mistaken with \"%s\"%sDelete the ambiguous file?"
+msgstr "Ristiriitainen tiedosto löytyi: \"%s\"%smikä voi sekoittua tähän: \"%s\"%sPoistetaanko?"
+
+#: ideconfstrconsts.lisbackupfilefailed
+msgid "Backup file failed"
+msgstr "Varmuuskopiointi epäonnistui"
+
+#: ideconfstrconsts.lisbuildide
+msgid "Build IDE"
+msgstr "Kokoa IDE"
+
+#: ideconfstrconsts.lisbuildinglazarusfailed
+msgid "Building Lazarus failed"
+msgstr "Lazaruksen kokoaminen epäonnistui"
+
 #: ideconfstrconsts.liscannotexecute
 #, object-pascal-format
 msgid "cannot execute \"%s\""
 msgstr "ei voi suorittaa \"%s\""
 
+#: ideconfstrconsts.liscannotfind
+#, object-pascal-format
+msgid "Cannot find %s"
+msgstr "Ei löydy %s"
+
 #: ideconfstrconsts.liscannotfindexecutable
 #, object-pascal-format
 msgid "cannot find executable \"%s\""
 msgstr "ei löydy ohjelmaa \"%s\""
+
+#: ideconfstrconsts.liscantfindavalidppu
+#, object-pascal-format
+msgid "Can't find a valid %s.ppu"
+msgstr "Ei löydy kelvollista %s.ppu"
 
 #: ideconfstrconsts.liscaptionofactivebuildmode
 msgid "Caption of active build mode"
@@ -35,6 +70,30 @@ msgstr ""
 #: ideconfstrconsts.lisccoerrorcaption
 msgid "Error"
 msgstr "Virhe"
+
+#: ideconfstrconsts.lischeckifpackagecreatesppuchecknothingdeletesthisfil
+#, object-pascal-format
+msgid ". Check if package %s creates %s.ppu, check nothing deletes this file and check that no two packages have access to the unit source."
+msgstr ". Tarkista luoko paketti %s %s.ppu:n, tarkista ettei mikään poista tätä tiedostoa ja tarkista ettei usealla paketilla ole oikeutta käännösyksikköön."
+
+#: ideconfstrconsts.lischeckifpackageisinthedependencies
+#, object-pascal-format
+msgid ". Check if package %s is in the dependencies"
+msgstr ". Tarkista onko riippuvuus pakettiin %s määritelty"
+
+#: ideconfstrconsts.lischecksearchpathpackagetryacleanrebuildcheckimpleme
+#, object-pascal-format
+msgid ". Check search path of package %s, try a clean rebuild, check implementation uses sections."
+msgstr ". Tarkista paketin %s hakupolku, yritä puhdasta uudelleen käännöstä, tarkista toteutuksen uses lauseet."
+
+#: ideconfstrconsts.liscleanlazarussource
+msgid "Clean Lazarus Source"
+msgstr "Siivoa Lazaruksen lähdekoodi"
+
+#: ideconfstrconsts.liscleanuppackage
+#, object-pascal-format
+msgid "Clean up package \"%s\"."
+msgstr "Siivoa paketti \"%s\"."
 
 #: ideconfstrconsts.liscodetoolsdefswriteerror
 msgid "Write error"
@@ -53,6 +112,11 @@ msgstr "Käännä projekti"
 msgid "%s is missing."
 msgstr ""
 
+#: ideconfstrconsts.liscompilerdoesnotsupporttarget
+#, object-pascal-format
+msgid "Compiler \"%s\" does not support target %s-%s"
+msgstr "Kääntäjä \"%s\" ei tue kohdetta %s-%s"
+
 #: ideconfstrconsts.liscompilererrorinvalidcompiler
 #, object-pascal-format
 msgid "Error: invalid compiler: %s"
@@ -67,6 +131,10 @@ msgstr "Kääntäjän tiedostonimi"
 #| msgid "Hint: you can set the compiler path in Tools -> Options-> Files -> Compiler Path"
 msgid "Hint: you can set the compiler executable in Tools -> Options-> Files -> Compiler executable"
 msgstr "Vihje: voit asettaa kääntäjän hakupolun valikosta Työkalut -> Asetukset -> Tiedostot -> Kääntäjän polku"
+
+#: ideconfstrconsts.liscompilewithvdformoredetailscheckforduplicates
+msgid "Compile with -vd for more details. Check for duplicates."
+msgstr "Käännä -vd option kanssa lisätietoa varten. Tarkista duplikaatit."
 
 #: ideconfstrconsts.liscomponentnameisapascalkeyword
 #, object-pascal-format
@@ -86,6 +154,10 @@ msgstr "Lazaruksen asetushakemisto"
 #, object-pascal-format
 msgid ", CPU: %s"
 msgstr ""
+
+#: ideconfstrconsts.lisdeleteambiguousfile
+msgid "Delete ambiguous file?"
+msgstr "Poista ristiriitainen tiedosto"
 
 #: ideconfstrconsts.lisdeletefilefailed
 msgid "Delete file failed"
@@ -144,6 +216,11 @@ msgstr ""
 msgid "use LineInfo unit"
 msgstr ""
 
+#: ideconfstrconsts.lisenableflaguseunitofunitinpackage
+#, object-pascal-format
+msgid ". Enable flag \"Use Unit\" of unit %s in package %s"
+msgstr ". Salli lippu \"Käytä käännösyksikköä\" %s paketissa %s"
+
 #: ideconfstrconsts.lisendlessloopinmacros
 msgid "Endless loop in macros"
 msgstr ""
@@ -156,10 +233,18 @@ msgstr "Ympäristömuuttuja, nimi parametrina"
 msgid "Directory not found"
 msgstr "Kansiota ei löytynyt"
 
+#: ideconfstrconsts.liserrordeletingfile
+msgid "Error deleting file"
+msgstr "Virhe tuhottaessa tiedostoa"
+
 #: ideconfstrconsts.liserrorloadingfrom
 #, object-pascal-format
 msgid "Error loading %s from%s%s%s%s"
 msgstr "Virhe ladattaessa %s täältä:%s%s%s%s"
+
+#: ideconfstrconsts.liserrorrenamingfile
+msgid "Error renaming file"
+msgstr "Virhe uudelleennimettäessä tiedostoa"
 
 #: ideconfstrconsts.liserrorsavingto
 #, object-pascal-format
@@ -268,6 +353,10 @@ msgstr "vapauttaa puskurin rivit: %s"
 msgid "Free Pascal source directory"
 msgstr "Free Pascal -lähdehakemisto"
 
+#: ideconfstrconsts.lishintcheckiftwopackagescontainaunitwiththesamename
+msgid "Hint: Check if two packages contain a unit with the same name."
+msgstr "Vihje: Tarkista sisältääkö kaksi pakettia käännösyksikön samalla nimellä."
+
 #: ideconfstrconsts.lisidebuildoptions
 msgid "IDE build options"
 msgstr "IDEn kokoamisen asetukset"
@@ -275,6 +364,11 @@ msgstr "IDEn kokoamisen asetukset"
 #: ideconfstrconsts.lisignoreandcontinue
 msgid "Ignore and continue"
 msgstr "Jätä huomiotta ja jatka"
+
+#: ideconfstrconsts.lisincompatibleppu
+#, object-pascal-format
+msgid ", incompatible ppu=%s"
+msgstr ", ei-yhteensopiva ppu=%s"
 
 #: ideconfstrconsts.lisinvalidmacrosin
 #, object-pascal-format
@@ -311,6 +405,31 @@ msgstr "Lazarus kieli-ID (esim. en, de, br, fi)"
 msgid "Lazarus language name (e.g. english, deutsch)"
 msgstr "Lazarus kieli-nimi (esim. english, deutsch)"
 
+#: ideconfstrconsts.lislazbuilddebugide
+msgid "Debug IDE"
+msgstr "Virheenjäljitys-IDE"
+
+#: ideconfstrconsts.lislazbuilderrorwritingfile
+msgid "Error writing file"
+msgstr "Virhe kirjoitettaessa tiedostoa"
+
+#: ideconfstrconsts.lislazbuildnormalide
+msgid "Normal IDE"
+msgstr "Normaali IDE"
+
+#: ideconfstrconsts.lislazbuildoptimizedide
+msgid "Optimized IDE"
+msgstr "Optimoitu IDE"
+
+#: ideconfstrconsts.lislazbuildunabletowritefile
+#, object-pascal-format
+msgid "Unable to write file \"%s\":%s"
+msgstr "Tiedoston \"%s\":%s tallennus epäonnistui"
+
+#: ideconfstrconsts.lislazcleanupbuildall
+msgid "Clean Up + Build all"
+msgstr "Siivoa + kokoa kaikki"
+
 #: ideconfstrconsts.lislazver
 msgid "Lazarus Version (e.g. 1.2.4)"
 msgstr "Lazarus Versio (esim. 1.2.4)"
@@ -324,6 +443,14 @@ msgstr "LCL-käyttöliittymäkirjasto"
 #: ideconfstrconsts.lismakeexe
 msgid "Make Executable"
 msgstr "Make-ohjelma"
+
+#: ideconfstrconsts.lismakenotfound
+msgid "Make not found"
+msgstr "Make ei löydy"
+
+#: ideconfstrconsts.lismakesureallppufilesofapackageareinitsoutputdirecto
+msgid "Make sure all ppu files of a package are in its output directory."
+msgstr "Varmista että paketin kaikki ppu tiedostot ovat käännöshakemistossa."
 
 #: ideconfstrconsts.lismissingdirectory
 #, object-pascal-format
@@ -340,6 +467,10 @@ msgstr "puuttuva ohjelma \"%s\""
 msgid ", Mode: %s"
 msgstr ", Moodi: %s"
 
+#: ideconfstrconsts.lismultiplepack
+msgid ", multiple packages: "
+msgstr ", monta pakettia: "
+
 #: ideconfstrconsts.lisnameofactivebuildmode
 msgid "Name of active build mode"
 msgstr "Aktiivisen koontamoodin nimi"
@@ -347,6 +478,14 @@ msgstr "Aktiivisen koontamoodin nimi"
 #: ideconfstrconsts.lisnewproject
 msgid "(new project)"
 msgstr "(uusi projekti)"
+
+#: ideconfstrconsts.lisnotecouldnotcreatedefinetemplateforfreepascal
+msgid "NOTE: Could not create Define Template for Free Pascal Sources"
+msgstr "Huom.: Ei voi luoda määritemallinetta Free Pascal -koodille"
+
+#: ideconfstrconsts.lisnotecouldnotcreatedefinetemplateforlazarussources
+msgid "NOTE: Could not create Define Template for Lazarus Sources"
+msgstr "Huom.: Ei voi luoda määritemallinetta Lazarus-koodille"
 
 #: ideconfstrconsts.lisnotimplemented
 msgid "Not implemented"
@@ -356,6 +495,15 @@ msgstr "Ei toteutettu"
 #, object-pascal-format
 msgid "Not implemented yet:%s%s"
 msgstr "Ei toteutettu vielä:%s%s"
+
+#: ideconfstrconsts.lisofpackage
+#, object-pascal-format
+msgid " of package %s"
+msgstr " paketin %s"
+
+#: ideconfstrconsts.lisoftheprojectinspector
+msgid " of the Project Inspector"
+msgstr "Projektinhallinnan"
 
 #: ideconfstrconsts.lisok
 msgid "OK"
@@ -386,6 +534,15 @@ msgstr "Korvataanko tiedosto?"
 msgid "Overwrite file on disk"
 msgstr "Korvaa tällä tiedostolla"
 
+#: ideconfstrconsts.lispackage3
+#, object-pascal-format
+msgid ", package %s"
+msgstr ", paketti %s"
+
+#: ideconfstrconsts.lispackageneedsanoutputdirectory
+msgid "Package needs an output directory."
+msgstr "Paketti tarvitsee käännöshakemiston."
+
 #: ideconfstrconsts.lisparser
 #, object-pascal-format
 msgid "parser \"%s\": %s"
@@ -407,6 +564,11 @@ msgstr "Kansion luonti epäonnistui"
 #, object-pascal-format
 msgid "Unable to delete file \"%s\"."
 msgstr "Tiedoston \"%s\" poistaminen ei onnistu."
+
+#: ideconfstrconsts.lisppuinwrongdirectory
+#, object-pascal-format
+msgid "ppu in wrong directory=%s."
+msgstr "ppu väärässä hakemistossa=%s."
 
 #: ideconfstrconsts.lisppunotfoundcheckyourfpccfg
 #, object-pascal-format
@@ -460,6 +622,10 @@ msgstr "Julkaistavan projektin hakemisto"
 #: ideconfstrconsts.lisreaderror
 msgid "Read Error"
 msgstr "Lukuvirhe"
+
+#: ideconfstrconsts.lisrenamefilefailed
+msgid "Rename file failed"
+msgstr "Tiedoston uudelleennimeäminen epäonnistui"
 
 #: ideconfstrconsts.lissecondaryconfigpath
 msgid "Secondary config path"
@@ -530,10 +696,40 @@ msgstr "Hakemistoon \"%s\" ei voi kirjoittaa."
 msgid "The file \"%s\" is a symlink.%sOpen \"%s\" instead?"
 msgstr "Tiedosto \"%s\" symbolinen linkki.%sAvataanko \"%s\" sen sijaan?"
 
+#: ideconfstrconsts.listheprogrammakewasnotfound
+#, object-pascal-format
+msgid "The program \"make\" was not found.%sIt is needed to build Lazarus."
+msgstr ""
+
+#: ideconfstrconsts.listheprojectusestargetosandcputhesystemppuforthistar
+#, object-pascal-format
+msgid "The project uses target OS=%s and CPU=%s.%sThe system.ppu for this target was not found in the FPC binary directories.%sMake sure fpc is installed correctly for this target and the fpc.cfg contains the right directories."
+msgstr "Projektin kohdekäyttöjärjestelmä=%s ja CPU=%s.%sKohteelle ei löydy system.ppu tiedostoa FPC:n binaari-hakemistoista.%sVarmista että fpc on asennettu oikein tälle kohteelle ja että fpc.cfg:ssa on oikeat hakemistot."
+
+#: ideconfstrconsts.listhereisafilewiththesamenameandasimilarextension
+#, object-pascal-format
+msgid "There is a file with the same name and a similar extension on disk%sFile: %s%sAmbiguous File: %s%sDelete ambiguous file?"
+msgstr "Löytyy samanniminen tiedosto samantapaisella tiedostopäätteellä%sTiedosto: %s%sRistiriitainen tiedosto: %s%sPoistetaanko?"
+
 #: ideconfstrconsts.listhereisnofpcexeinthedirectoryofusuallythemakeexecu
 #, object-pascal-format
 msgid "There is no fpc.exe in the directory of %s. Usually the make executable is installed together with the FPC compiler."
 msgstr "fpc.exe ei ole %s:n hakemistossa. Yleensä make ohjelma asennetaan yhdessä FPC:n kanssa."
+
+#: ideconfstrconsts.listhereisnofreepascalcompileregfpcorppccpuconfigured
+#, object-pascal-format
+msgid "There is no Free Pascal Compiler (e. g. fpc%0:s or ppc<cpu>%0:s) configured in the project options. CodeTools will not work properly.%1:s%1:sError message:%1:s%2:s"
+msgstr ""
+
+#: ideconfstrconsts.listheunitexiststwiceintheunitpathofthe
+#, object-pascal-format
+msgid "The unit %s exists twice in the unit path of the %s:"
+msgstr "Käännösyksikkö %s löytyy %s:n kahdesta eri hakupolusta:"
+
+#: ideconfstrconsts.listhissetofoptionstobuildlazarusisnotsupportedbythis
+#, object-pascal-format
+msgid "This set of options to build Lazarus is not supported by this installation.%sThe directory \"%s\" is not writable.%sSee the Lazarus website for other ways to install Lazarus."
+msgstr "Asennus ei tue näitä valintoja Lazaruksen kokoamiseksi%sHakemisto \"%s\" ei ole kirjoitettava.%sKatso Lazaruksen web-sivulta muita ohjeita Lazaruksen asentamiseen."
 
 #: ideconfstrconsts.listmfunctionappendpathdelimiter
 msgid "Function: append path delimiter"
@@ -573,6 +769,11 @@ msgstr "(tuntematon makro: %s)"
 msgid "tool \"%s\" has no executable"
 msgstr "työkalulla \"%s\" ei ole suoritettavaa ohjelmaa"
 
+#: ideconfstrconsts.lisunabletobackupfileto
+#, object-pascal-format
+msgid "Unable to backup file \"%s\" to \"%s\"!"
+msgstr "Ei voida tehdä varmuuskopiota tiedostosta \"%s\" tiedostoon \"%s\"!"
+
 #: ideconfstrconsts.lisunabletocopyfile
 msgid "Unable to copy file"
 msgstr "Tiedoston kopiointi ei onnistunut"
@@ -606,6 +807,11 @@ msgstr "Tiedoston%s\"%s\" luominen ei onnistu"
 msgid "Unable to create link \"%s\" with target \"%s\""
 msgstr "Linkin \"%s\" luominen kohteeseen \"%s\" ei onnistu"
 
+#: ideconfstrconsts.lisunabletodeleteambiguousfile
+#, object-pascal-format
+msgid "Unable to delete ambiguous file \"%s\""
+msgstr "Ristiriitaisen tiedoston \"%s\" poistaminen ei onnistu"
+
 #: ideconfstrconsts.lisunabletoexecute
 #, object-pascal-format
 msgid "unable to execute: %s"
@@ -633,6 +839,16 @@ msgstr "Tiedoston \"%s\" lukeminen ei onnistu%sVirhe: %s"
 #: ideconfstrconsts.lisunabletoreadprocessexitstatus
 msgid "unable to read process ExitStatus"
 msgstr "Prosessin ExitStatus lukeminen ei onnistu"
+
+#: ideconfstrconsts.lisunabletoremoveoldbackupfile
+#, object-pascal-format
+msgid "Unable to remove old backup file \"%s\"!"
+msgstr "Vanhan varmuuskopion \"%s\" poisto ei onnistu!"
+
+#: ideconfstrconsts.lisunabletorenameambiguousfileto
+#, object-pascal-format
+msgid "Unable to rename ambiguous file \"%s\"%sto \"%s\""
+msgstr "Ristiriitaisen tiedoston \"%s\"%s nimeäminen \"%s\":ksi ei onnistu"
 
 #: ideconfstrconsts.lisunabletorenamefile
 msgid "Unable to rename file"
@@ -684,6 +900,11 @@ msgstr "Epätavallinen kääntäjän nimi. Yleensä se alkaa fpc, ppc tai ppcros
 #: ideconfstrconsts.lisunusualpas2jscompilerfilenameusuallyitstartswithpa
 msgid "Unusual pas2js compiler file name. Usually it starts with pas2js."
 msgstr "Epätavallinen pas2js kääntäjän nimi. Yleensä se alkaa pas2js."
+
+#: ideconfstrconsts.lisusedby
+#, object-pascal-format
+msgid " used by %s"
+msgstr " %s käyttää"
 
 #: ideconfstrconsts.lisusershomedirectory
 msgid "User's home directory"
