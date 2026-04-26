@@ -28,6 +28,10 @@ EnableISX=true
 #define IDEWidgetSet GetEnv('IDE_WidgetSet')
 #define OutputFileName GetEnv('OutputFileName')
 #define CHMHELPFILES GetEnv('CHMHELPFILES')
+#define CurrentYear GetDateTimeString('yyyy','','')
+#define AppAuthor "Lazarus Team"
+#define AppURL "https://www.lazarus-ide.org/"
+
 [Setup]
 AllowNoIcons=yes
 AppName={#AppName}
@@ -35,10 +39,10 @@ AppName={#AppName}
 AppId={code:GetAppId}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
-AppPublisher=Lazarus Team
-AppPublisherURL=https://www.lazarus-ide.org/
-AppSupportURL=https://www.lazarus-ide.org/
-AppUpdatesURL=https://www.lazarus-ide.org/
+AppPublisher={#AppAuthor}
+AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}
+AppUpdatesURL={#AppURL}
 #if FPCTargetCPU=="x86_64"
 ArchitecturesInstallIn64BitMode=x64
 ArchitecturesAllowed=x64
@@ -55,6 +59,7 @@ LZMADictionarySize=131072
 LZMAUseSeparateProcess=yes
 LZMANumFastBytes=270
 SolidCompression=yes
+VersionInfoDescription={#AppName} Installer
 VersionInfoVersion={#FileVersion}
 VersionInfoTextVersion={#AppVersion}-{#SetupDate}
 ShowLanguageDialog=yes
@@ -72,7 +77,7 @@ UsePreviousLanguage=no
 UninstallDisplayIcon={app}\lazarus.exe
 DisableWelcomePage=no
 DisableDirPage=no
-
+AppCopyright=1999-{#CurrentYear} {#AppAuthor}
 
 [Tasks]
 Name: desktopicon; Description: {cm:CreateDesktopIcon}; GroupDescription: {cm:AdditionalIcons}; Flags: unchecked
@@ -309,24 +314,24 @@ Root: HKCU; Subkey: Software\Classes\.pp; ValueType: String; ValueData: Lazarus.
 
 [Languages]
 Name: default; MessagesFile: lazarus.def.isl
-Name: ca; MessagesFile: compiler:Languages\Catalan.isl
-Name: cs; MessagesFile: compiler:Languages\Czech.isl
-Name: de; MessagesFile: lazarus.de.isl
-Name: es; MessagesFile: lazarus.es.isl
-Name: fi; MessagesFile: compiler:Languages\Finnish.isl
-Name: fr; MessagesFile: lazarus.fr.isl
-Name: hu; MessagesFile: compiler:Languages\Hungarian.isl
-Name: it; MessagesFile: compiler:Languages\Italian.isl
-Name: nl; MessagesFile: compiler:Languages\Dutch.isl
-Name: no; MessagesFile: compiler:Languages\Norwegian.isl
-Name: pl; MessagesFile: compiler:Languages\Polish.isl
-Name: pt; MessagesFile: compiler:Languages\Portuguese.isl
-Name: pt_BR; MessagesFile: lazarus.pt_BR.isl
-Name: ru; MessagesFile: lazarus.ru.isl
+Name: ca;      MessagesFile: compiler:Languages\Catalan.isl
+Name: cs;      MessagesFile: compiler:Languages\Czech.isl
+Name: de;      MessagesFile: lazarus.de.isl
+Name: es;      MessagesFile: lazarus.es.isl
+Name: fi;      MessagesFile: compiler:Languages\Finnish.isl
+Name: fr;      MessagesFile: lazarus.fr.isl
+Name: hu;      MessagesFile: lazarus.hu.isl
+Name: it;      MessagesFile: lazarus.it.isl
+Name: nl;      MessagesFile: compiler:Languages\Dutch.isl
+Name: no;      MessagesFile: compiler:Languages\Norwegian.isl
+Name: pl;      MessagesFile: compiler:Languages\Polish.isl
+Name: pt;      MessagesFile: compiler:Languages\Portuguese.isl
+Name: pt_BR;   MessagesFile: lazarus.pt_BR.isl
+Name: ru;      MessagesFile: lazarus.ru.isl
 ;Slovak.isl not avail with latest inno setup
 ;Name: sk; MessagesFile: compiler:Languages\Slovak.isl
-Name: sl; MessagesFile: compiler:Languages\Slovenian.isl
-Name: zh_CN; MessagesFile: lazarus.zh_CN.isl
+Name: sl;      MessagesFile: compiler:Languages\Slovenian.isl
+Name: zh_CN;   MessagesFile: lazarus.zh_CN.isl
 
 [Code]
 type
