@@ -693,10 +693,8 @@ function AddBitOffset(const AnAddr: TFpDbgMemLocation; ABitOffset: Int64
 begin
   {$PUSH}{$R-}{$Q-}
   Result := AnAddr;
-  Result.Address := AnAddr.Address + ABitOffset div 8;
-  if (ABitOffset < 0) and ((ABitOffset and 7) <> 0) then
-    Result.Address := Result.Address - 1; // Going to ADD some bits back
-                                          // E.g. b=-1 means (b and 7) = 7 and that means adding 7 bits, instead of substracting 1
+  ABitOffset := ABitOffset + AnAddr.BitOffset;
+  Result.Address := AnAddr.Address + (ABitOffset - 7) div 8;
   Result.BitOffset := ABitOffset and 7;
   {$POP}
 end;
