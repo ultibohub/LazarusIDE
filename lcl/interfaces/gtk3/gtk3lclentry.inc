@@ -35,14 +35,27 @@ begin
     Exit;
   end;
 
-  // we pass our width , no matter autosize is on or off.
-
   APango := pango_layout_new(Widget^.get_pango_context);
   APango^.set_text('W', 1);
   APango^.get_size(min_width, nat_width);
   APango^.unref;
-  min_width^ := PANGO_PIXELS(min_width^) * 2 + 2; //borders 2px.
+  min_width^ := PANGO_PIXELS(min_width^) * 2 + 2;
   nat_width^ := min_width^;
+
+  if Assigned(AControl.LCLObject.Constraints) then
+    with AControl.LCLObject.Constraints do
+    begin
+      if MaxWidth > 0 then
+      begin
+        if min_width^ > MaxWidth then min_width^ := MaxWidth;
+        if nat_width^ > MaxWidth then nat_width^ := MaxWidth;
+      end;
+      if MinWidth > 0 then
+      begin
+        if min_width^ < MinWidth then min_width^ := MinWidth;
+        if nat_width^ < MinWidth then nat_width^ := MinWidth;
+      end;
+    end;
 end;
 
 procedure LCLGtkEntryGetPreferredHeight(widget: PGtkWidget; min_height, nat_height: Pgint); cdecl;
@@ -79,19 +92,29 @@ begin
     Exit;
   end;
 
-  // we respect ws height if autosize is true.
-  if AControl.LCLObject.AutoSize then
-    exit;
-
-  if AControl.LCLHeight = 0 then
+  if not AControl.LCLObject.AutoSize then
   begin
-    min_height^ := Max(min_height^ div 2, AControl.LCLObject.Height);
-    nat_height^ := Max(min_height^, AControl.LCLObject.Height);
-  end else
-  begin
-    min_height^ := Max(min_height^ div 2, AControl.LCLHeight);
-    nat_height^ := Max(min_height^, AControl.LCLHeight);
+    if AControl.LCLHeight > 0 then
+      nat_height^ := AControl.LCLHeight
+    else if AControl.LCLObject.Height > 0 then
+      nat_height^ := AControl.LCLObject.Height;
   end;
+
+  if Assigned(AControl.LCLObject.Constraints) then
+    with AControl.LCLObject.Constraints do
+    begin
+      if MaxHeight > 0 then
+      begin
+        if min_height^ > MaxHeight then min_height^ := MaxHeight;
+        if nat_height^ > MaxHeight then nat_height^ := MaxHeight;
+      end;
+      if MinHeight > 0 then
+      begin
+        if min_height^ < MinHeight then min_height^ := MinHeight;
+        if nat_height^ < MinHeight then nat_height^ := MinHeight;
+      end;
+    end;
+  if nat_height^ < min_height^ then nat_height^ := min_height^;
 end;
 
 procedure LCLGtkEntryClassInit(klass: PGTypeClass; {%H-}data: Pointer); cdecl;

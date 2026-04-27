@@ -1713,6 +1713,15 @@ begin
 
   if not Assigned(ACtl.LCLObject) then exit;
 
+  if Assigned(ACtl.LCLObject.Constraints) then
+    with ACtl.LCLObject.Constraints do
+    begin
+      if (MaxWidth > 0)  and (NewSize.cx > MaxWidth)  then NewSize.cx := MaxWidth;
+      if (MaxHeight > 0) and (NewSize.cy > MaxHeight) then NewSize.cy := MaxHeight;
+      if (MinWidth > 0)  and (NewSize.cx < MinWidth)  then NewSize.cx := MinWidth;
+      if (MinHeight > 0) and (NewSize.cy < MinHeight) then NewSize.cy := MinHeight;
+    end;
+
   // do not loop with LCL  !
   if not (csDesigning in ACtl.LCLObject.ComponentState) then
   begin
@@ -5421,6 +5430,22 @@ begin
   NewSize.cx := AGdkRect^.width;
   NewSize.cy := AGdkRect^.height;
 
+  if Assigned(ACtl.LCLObject.Constraints) then
+    with ACtl.LCLObject.Constraints do
+    begin
+      if (MaxWidth > 0)  and (NewSize.cx > MaxWidth)  then NewSize.cx := MaxWidth;
+      if (MaxHeight > 0) and (NewSize.cy > MaxHeight) then NewSize.cy := MaxHeight;
+      if (MinWidth > 0)  and (NewSize.cx < MinWidth)  then NewSize.cx := MinWidth;
+      if (MinHeight > 0) and (NewSize.cy < MinHeight) then NewSize.cy := MinHeight;
+    end;
+  if (NewSize.cx <> AGdkRect^.width) or (NewSize.cy <> AGdkRect^.height) then
+  begin
+    AGdkRect^.width := NewSize.cx;
+    AGdkRect^.height := NewSize.cy;
+    Alloc.width := NewSize.cx;
+    Alloc.height := NewSize.cy;
+    AWidget^.set_size_request(NewSize.cx, NewSize.cy);
+  end;
 
   if not (csDesigning in ACtl.LCLObject.ComponentState) then
   begin

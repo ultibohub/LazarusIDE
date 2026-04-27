@@ -36,20 +36,37 @@ begin
     if (AControl.LCLWidth > 0) and (nat_width^ > AControl.LCLWidth) then
       nat_width^ := AControl.LCLWidth;
     min_width^ := 1;
-    Exit;
-  end;
-
-  if AControl.LCLWidth > 0 then
-    LCLW := AControl.LCLWidth
+  end
   else
-    LCLW := AControl.LCLObject.Width;
-
-  if LCLW > 0 then
   begin
-    if min_width^ > LCLW then
-      min_width^ := LCLW;
-    nat_width^ := LCLW;
+    if AControl.LCLWidth > 0 then
+      LCLW := AControl.LCLWidth
+    else
+      LCLW := AControl.LCLObject.Width;
+
+    if LCLW > 0 then
+    begin
+      if min_width^ > LCLW then
+        min_width^ := LCLW;
+      nat_width^ := LCLW;
+    end;
   end;
+
+  if Assigned(AControl.LCLObject.Constraints) then
+    with AControl.LCLObject.Constraints do
+    begin
+      if MaxWidth > 0 then
+      begin
+        if min_width^ > MaxWidth then min_width^ := MaxWidth;
+        if nat_width^ > MaxWidth then nat_width^ := MaxWidth;
+      end;
+      if MinWidth > 0 then
+      begin
+        if min_width^ < MinWidth then min_width^ := MinWidth;
+        if nat_width^ < MinWidth then nat_width^ := MinWidth;
+      end;
+    end;
+  if nat_width^ < min_width^ then nat_width^ := min_width^;
 end;
 
 procedure LCLGtkButtonGetPreferredHeight(widget: PGtkWidget; min_height, nat_height: Pgint); cdecl;
@@ -83,20 +100,36 @@ begin
   if not Assigned(AControl) or not Assigned(AControl.LCLObject) then
     Exit;
 
-  if AControl.LCLObject.AutoSize then
-    Exit;
-
-  if AControl.LCLHeight > 0 then
-    LCLH := AControl.LCLHeight
-  else
-    LCLH := AControl.LCLObject.Height;
-
-  if LCLH > 0 then
+  if not AControl.LCLObject.AutoSize then
   begin
-    if min_height^ > LCLH then
-      min_height^ := LCLH;
-    nat_height^ := LCLH;
+    if AControl.LCLHeight > 0 then
+      LCLH := AControl.LCLHeight
+    else
+      LCLH := AControl.LCLObject.Height;
+
+    if LCLH > 0 then
+    begin
+      if min_height^ > LCLH then
+        min_height^ := LCLH;
+      nat_height^ := LCLH;
+    end;
   end;
+
+  if Assigned(AControl.LCLObject.Constraints) then
+    with AControl.LCLObject.Constraints do
+    begin
+      if MaxHeight > 0 then
+      begin
+        if min_height^ > MaxHeight then min_height^ := MaxHeight;
+        if nat_height^ > MaxHeight then nat_height^ := MaxHeight;
+      end;
+      if MinHeight > 0 then
+      begin
+        if min_height^ < MinHeight then min_height^ := MinHeight;
+        if nat_height^ < MinHeight then nat_height^ := MinHeight;
+      end;
+    end;
+  if nat_height^ < min_height^ then nat_height^ := min_height^;
 end;
 
 var
