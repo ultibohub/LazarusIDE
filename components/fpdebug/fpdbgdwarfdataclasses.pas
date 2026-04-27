@@ -2777,6 +2777,57 @@ begin
           EntryP := FStack.Peek;
           EntryP^.MType := mlfConstantDeref;
       end;
+      // dwarf 5
+      // dwarf 6
+      DW_OP_offset: begin
+          if not AssertMinCount(2) then exit;
+          Entry  := FStack.Pop;          // constant offset
+          EntryP := FStack.PeekForDeref; // the address
+          if (EntryP^.MType = mlfConstantDeref) and
+             (Entry.Address < SizeOf(TDbgPtr)) // includes negative // SHL does not make sense, as it pretends there would be data
+          {$PUSH}{$R-}{$Q-}
+          then begin
+            EntryP^.Address := EntryP^.Address shr (Entry.Address * 8);
+          end
+          else
+          if (EntryP^.MType in [mlfTargetMem, mlfSelfMem]) then begin
+            EntryP^.Address := Entry.Address+EntryP^.Address;
+          end
+          {$POP}
+          else begin
+            SetError(fpErrLocationParser);
+            exit;
+          end;
+      end;
+      DW_OP_bit_offset: begin
+          if not AssertMinCount(2) then exit;
+          Entry  := FStack.Pop;          // constant offset
+          EntryP := FStack.PeekForDeref; // the address
+          if (EntryP^.MType = mlfConstantDeref) and
+             (Entry.Address < SizeOf(TDbgPtr)*8) // includes negative // SHL does not make sense, as it pretends there would be data
+          {$PUSH}{$R-}{$Q-}
+          then begin
+            EntryP^.Address := EntryP^.Address shr (Entry.Address);
+          end
+          else
+          if (EntryP^.MType in [mlfTargetMem, mlfSelfMem]) then begin
+            EntryP^ := AddBitOffset(EntryP^, Entry.Address);
+          end
+          {$POP}
+          else
+          if (EntryP^.MType = mlfTargetRegister) and (abs(Int64(Entry.Address)) < 64) then begin
+            x := EntryP^.BitOffset + Int64(Entry.Address);
+            if (x < 0) or (x >= 64) then begin
+              SetError(fpErrLocationParser);
+              exit;
+            end;
+            EntryP^.BitOffset := x;
+          end
+          else begin
+            SetError(fpErrLocationParser);
+            exit;
+          end;
+      end;
 
       else
         begin

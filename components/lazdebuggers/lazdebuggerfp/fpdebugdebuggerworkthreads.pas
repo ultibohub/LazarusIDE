@@ -1247,6 +1247,8 @@ begin
         if PasExpr2.Valid then begin
           APasExpr.Free;
           APasExpr := PasExpr2;
+          if FAllowFunctions and (dfEvalFunctionCalls in FDebugger.EnabledFeatures) then
+            APasExpr.OnFunctionCall  := @DoWatchFunctionCall;
           ResValue := APasExpr.ResultValue;
         end
         else
@@ -1285,6 +1287,8 @@ begin
       WatchResConv.MaxTotalConv := TFpDebugDebuggerProperties(FDebugger.GetProperties).MemLimits.MaxTotalConversionCnt;
       WatchResConv.ExtraDepth := defExtraDepth in FWatchValue.EvaluateFlags;
       WatchResConv.FirstIndexOffs := FWatchValue.FirstIndexOffs;
+      if FAllowFunctions and (dfEvalFunctionCalls in FDebugger.EnabledFeatures) then
+        WatchResConv.OnResolveProperty := @APasExpr.ResolveProperty;
       if not (defSkipValConv in AnEvalFlags) then begin
         if (FWatchValue.GetDbgValConverter <> nil) and
            (FWatchValue.GetDbgValConverter.GetConverter.GetObject is TFpDbgValueConverter)

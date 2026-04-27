@@ -108,7 +108,8 @@ type
   TFpValueFlag = (
     vfVariant,
     vfArrayOfVariant,
-    vfArrayUpperBoundLimit // can not get members past upper bound
+    vfArrayUpperBoundLimit, // can not get members past upper bound
+    vfProperty
   );
   TFpValueFlags = set of TFpValueFlag;
 
@@ -253,6 +254,8 @@ type
     property MemberCount: Integer read GetMemberCount;
     property Member[AIndex: Int64]: TFpValue read GetMember;
     property MemberByName[AIndex: String]: TFpValue read GetMemberByName; // Includes inheritance
+    property MemberCountEx[const AIndex: array of Int64]: Integer read GetMemberCountEx;
+    property MemberEx[const AIndex: array of Int64]: TFpValue read GetMemberEx;
     //  For Arrays (TODO pointers) only, the values stored in the array
     property IndexTypeCount: Integer read GetIndexTypeCount;
     property IndexType[AIndex: Integer]: TFpSymbol read GetIndexType;
@@ -273,7 +276,7 @@ type
   TFpValueListIntf = interface ['{BA5A7076-9854-4B33-83AD-D14041EA27F8}']
     function GetItems(AnIndex: Integer): TFpValue;
     function Count: Integer;
-    property Items[AnIndex: Integer]: TFpValue read GetItems;
+    property Items[AnIndex: Integer]: TFpValue read GetItems; default;
   end;
 
   TFpValueList = class(specialize TFPGList<TFpValue>, TFpValueListIntf)
@@ -281,7 +284,7 @@ type
     function GetItems(AnIndex: Integer): TFpValue;
   public
     function Count: integer;
-    property Items[AnIndex: Integer]: TFpValue read GetItems;
+    property Items[AnIndex: Integer]: TFpValue read GetItems; default;
   end;
 
   { TFpValueConstWithType }
