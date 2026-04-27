@@ -101,6 +101,7 @@ type
     
     class function GetItemHeight(const ACustomComboBox: TCustomComboBox): Integer; override;
     class procedure SetItemHeight(const ACustomComboBox: TCustomComboBox; const AItemHeight: Integer); override;
+    class procedure SetTextHint(const ACustomComboBox: TCustomComboBox; const ATextHint: string); override;
   end;
   TGtk3WSCustomComboBoxClass = class of TGtk3WSCustomComboBox;
 
@@ -704,6 +705,13 @@ end;
 
 class procedure TGtk3WSCustomComboBox.SetItemHeight(const ACustomComboBox: TCustomComboBox; const AItemHeight: Integer);
 begin
+end;
+
+class procedure TGtk3WSCustomComboBox.SetTextHint(const ACustomComboBox: TCustomComboBox; const ATextHint: string);
+begin
+  if not WSCheckHandleAllocated(ACustomComboBox, 'SetTextHint') then
+    Exit;
+  TGtk3ComboBox(ACustomComboBox.Handle).SetTextHint(ATextHint);
 end;
 
 { TGtk3WSCustomEdit }

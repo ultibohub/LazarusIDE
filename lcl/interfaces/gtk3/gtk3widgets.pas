@@ -964,6 +964,7 @@ type
     procedure SetSelStart(const ANewStart: integer);
     procedure SetSelLength(const ANewLength: integer);
     procedure InitializeWidget; override;
+    procedure SetTextHint(const AHint: string);
     property DroppedDown: boolean read GetDroppedDown write SetDroppedDown;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
   end;
@@ -10828,6 +10829,18 @@ begin
   if PGtkComboBox(Widget)^.has_entry then
   begin
     PGtkEntry(PGtkComboBox(Widget)^.get_child)^.set_max_length(AMaxLength);
+  end;
+end;
+
+procedure TGtk3ComboBox.SetTextHint(const AHint: string);
+var
+  Child: PGtkWidget;
+begin
+  if PGtkComboBox(Widget)^.has_entry then
+  begin
+    Child := PGtkComboBox(Widget)^.get_child;
+    if Gtk3IsEntry(Child) then
+      PGtkEntry(Child)^.set_placeholder_text(PgChar(AHint));
   end;
 end;
 
