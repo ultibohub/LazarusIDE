@@ -1266,7 +1266,7 @@ const
 implementation
 
 uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int, gtk3caret, imglist,
-  uriparser, lclproc, LazLogger;
+  uriparser, lclproc, LazLogger, WSControls;
 
 {$i gtk3lclcombobox.inc}
 {$i gtk3lclentry.inc}
@@ -5584,7 +5584,31 @@ begin
 end;
 
 function disableMouseButtonEvent(widget: PGtkWidget; event: PGdkEvent; user_data: gpointer): gboolean; cdecl;
+var
+  AWinCtl: TWinControl;
+  WSClass: TWSWinControlClass;
+  Pt: TPoint;
 begin
+  if event^.type_ in [GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE] then
+  begin
+    if Assigned(TGtk3Widget(user_data).LCLObject) and
+       (TGtk3Widget(user_data).LCLObject is TWinControl) then
+    begin
+      AWinCtl := TWinControl(TGtk3Widget(user_data).LCLObject);
+      WSClass := TWSWinControlClass(AWinCtl.WidgetSetClass);
+      if Assigned(WSClass) then
+      begin
+        Pt.X := Round(event^.button.x);
+        Pt.Y := Round(event^.button.y);
+        TGtk3Widget(user_data).OffsetMousePos(event^.button.x_root, event^.button.y_root, @Pt);
+        if WSClass.GetDesignInteractive(AWinCtl, Pt) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      end;
+    end;
+  end;
   Result := TGtk3Widget(user_data).GtkEventMouse(Widget, Event);
   if event^.type_ in [GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE] then
     Result := True;

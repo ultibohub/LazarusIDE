@@ -71,6 +71,7 @@ type
     class function GetNotebookMinTabWidth(const AWinControl: TWinControl): integer; override;
     class function GetTabIndexAtPos(const ATabControl: TCustomTabControl; const AClientPos: TPoint): integer; override;
     class function GetTabRect(const ATabControl: TCustomTabControl; const AIndex: Integer): TRect; override;
+    class function GetDesignInteractive(const AWinControl: TWinControl; AClientPos: TPoint): Boolean; override;
     class procedure SetPageIndex(const ATabControl: TCustomTabControl; const AIndex: integer); override;
     class procedure SetTabCaption(const ATabControl: TCustomTabControl; const AChild: TCustomPage; const AText: string); override;
     class procedure SetTabPosition(const ATabControl: TCustomTabControl; const ATabPosition: TTabPosition); override;
@@ -1857,6 +1858,20 @@ begin
     if AList <> nil then
       g_list_free(Alist);
   end;
+end;
+
+class function TGtk3WSCustomTabControl.GetDesignInteractive(
+  const AWinControl: TWinControl; AClientPos: TPoint): Boolean;
+var
+  TabIndex: Integer;
+  ATabControl: TCustomTabControl;
+begin
+  Result := False;
+  if not WSCheckHandleAllocated(AWinControl, 'GetDesignInteractive') then
+    Exit;
+  ATabControl := TCustomTabControl(AWinControl);
+  TabIndex := GetTabIndexAtPos(ATabControl, AClientPos);
+  Result := (TabIndex >= 0) and (ATabControl.PageIndex <> TabIndex);
 end;
 
 class function TGtk3WSCustomTabControl.GetTabRect(
