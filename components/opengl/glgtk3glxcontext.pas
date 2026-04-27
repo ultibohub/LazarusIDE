@@ -1,3 +1,10 @@
+{
+ *****************************************************************************
+  See the file COPYING.modifiedLGPL.txt, included in this distribution,
+  for details about the license.
+ *****************************************************************************
+}
+
 unit GLGtk3GlxContext;
 
 {$mode objfpc}
