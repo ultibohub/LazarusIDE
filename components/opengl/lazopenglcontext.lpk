@@ -31,7 +31,7 @@ end;"/>
     </CompilerOptions>
     <Description Value="Simple cross-platform OpenGL viewer control"/>
     <Version Release="1"/>
-    <Files Count="6">
+    <Files Count="7">
       <Item1>
         <Filename Value="openglcontext.pas"/>
         <HasRegisterProc Value="True"/>
@@ -62,6 +62,11 @@ end;"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="GLCocoaNSContext"/>
       </Item6>
+      <Item7>
+        <Filename Value="glgtk3glxcontext.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="GLGtk3GlxContext"/>
+      </Item7>
     </Files>
     <RequiredPkgs Count="2">
       <Item1>
