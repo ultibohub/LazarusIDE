@@ -14255,6 +14255,10 @@ function TGtk3GLArea.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   FWidgetType := [wtWidget, wtGLArea];
   Result := TGtkGLArea.new;
+  if IsDesigning then
+    FHasPaint := True
+  else if Assigned(LCLObject) and not (csNoFocus in LCLObject.ControlStyle) then
+    Result^.set_can_focus(True);
 end;
 
 { TGtk3DesignWidget }
