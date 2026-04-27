@@ -395,6 +395,7 @@ type
     function GetTrackBarOrientation: TTrackBarOrientation;
     procedure SetScalePos(AValue: TTrackBarScalePos);
     procedure SetTickMarks(AValue: TTickMark; ATickStyle: TTickStyle);
+    procedure SetShowSelRange(AValue: Boolean);
     property Reversed: Boolean read GetReversed write SetReversed;
   end;
 
@@ -2836,6 +2837,23 @@ begin
     gtk_style_context_add_provider(gtk_widget_get_style_context(ATargetWidget),
                                    PGtkStyleProvider(Provider),
                                    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(Provider);
+  end else
+  if wtTrackBar in WidgetType then
+  begin
+    if AValue = clDefault then
+      CSSData := 'trough { background: initial; }'
+    else
+    begin
+      RGBA := ColorToRGB(AValue);
+      CSSData := Format('trough { background: #%.2x%.2x%.2x; }',
+        [Red(RGBA), Green(RGBA), Blue(RGBA)]);
+    end;
+    Provider := gtk_css_provider_new();
+    gtk_css_provider_load_from_data(Provider, PChar(CSSData), -1, nil);
+    gtk_style_context_add_provider(gtk_widget_get_style_context(FWidget),
+                                   PGtkStyleProvider(Provider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
     g_object_unref(Provider);
   end else
   begin
@@ -6175,6 +6193,12 @@ procedure TGtk3Range.InitializeWidget;
 begin
   inherited InitializeWidget;
   g_signal_connect_data(GetContainerWidget, 'value-changed', TGCallback(@RangeChanged), Self, nil, G_CONNECT_DEFAULT);
+  if IsDesigning then
+  begin
+    g_signal_connect_data(GetContainerWidget, 'button-press-event', TGCallback(@disableMouseButtonEvent), Self, nil, G_CONNECT_DEFAULT);
+    g_signal_connect_data(GetContainerWidget, 'button-release-event', TGCallback(@disableMouseButtonEvent), Self, nil, G_CONNECT_DEFAULT);
+    g_signal_connect_data(GetContainerWidget, 'motion-notify-event', TGCallback(@motionNotifyEvent), Self, nil, G_CONNECT_DEFAULT);
+  end;
 end;
 
 procedure TGtk3Range.SetStep(AStep: Integer; APageSize: Integer);
@@ -6233,39 +6257,62 @@ begin
     PGtkScale(Widget)^.set_value_pos(TGtkPositionType(AValue));
 end;
 
+procedure TGtk3TrackBar.SetShowSelRange(AValue: Boolean);
+begin
+  if IsWidgetOK then
+    PGtkScale(Widget)^.set_has_origin(AValue);
+end;
+
 procedure TGtk3TrackBar.SetTickMarks(AValue: TTickMark; ATickStyle: TTickStyle);
 var
-  i,cnt,fldw: Integer;
-  Track:TCustomTrackbar;
+  i, freq, cnt, fldw: Integer;
+  Track: TCustomTrackbar;
+  AddMarks: Boolean;
 const
   tick_map:array[TTrackBarOrientation,0..1] of TGtkPositionType =
     ((GTK_POS_TOP,GTK_POS_BOTTOM), // trHorizontal
      (GTK_POS_LEFT,GTK_POS_RIGHT) // trVertical
     );
+
+  procedure AddMark(AVal: Integer);
+  begin
+    if AValue in [tmBoth, tmTopLeft] then
+      PGtkScale(Widget)^.add_mark(gDouble(AVal), tick_map[Track.Orientation, 0], nil);
+    if AValue in [tmBoth, tmBottomRight] then
+      PGtkScale(Widget)^.add_mark(gDouble(AVal), tick_map[Track.Orientation, 1], nil);
+  end;
+
 begin
   if IsWidgetOK then
   begin
     PGtkScale(Widget)^.set_draw_value(ATickStyle <> tsNone);
-    if ATickStyle = tsNone then
-      PGtkScale(Widget)^.clear_marks
-    else
+    PGtkScale(Widget)^.clear_marks;
+    if ATickStyle <> tsNone then
     begin
-      PGtkScale(Widget)^.clear_marks;
-      Track:=TCustomTrackbar(LCLObject);
-      cnt:=round(abs(Track.max-Track.min)/Track.LineSize);
-      // highly-dense marks just enlarge GtkScale automatically
-      // it is up to user concent to do this
-      if Track.Orientation=trHorizontal then
-        fldw:=Track.Width
+      Track := TCustomTrackbar(LCLObject);
+      if Track.Frequency > 0 then
+        freq := Track.Frequency
       else
-        fldw:=Track.Height;
-      if cnt*Track.LineSize<fldw then
-      for i := Track.Min to Track.Max do
+        freq := 1;
+      cnt := round(abs(Track.Max - Track.Min) / freq);
+      if Track.Orientation = trHorizontal then
+        fldw := Track.Width
+      else
+        fldw := Track.Height;
+      AddMarks := cnt * freq < fldw;
+      if AddMarks then
       begin
-        if AValue in [tmBoth, tmTopLeft] then
-          PGtkScale(Widget)^.add_mark(gDouble(i), tick_map[Track.Orientation,0], nil);
-        if AValue in [tmBoth, tmBottomRight] then
-          PGtkScale(Widget)^.add_mark(gDouble(i), tick_map[Track.Orientation,1], nil);
+        i := Track.Min;
+        while i <= Track.Max do
+        begin
+          AddMark(i);
+          Inc(i, freq);
+        end;
+      end
+      else
+      begin
+        AddMark(Track.Min);
+        AddMark(Track.Max);
       end;
     end;
   end;

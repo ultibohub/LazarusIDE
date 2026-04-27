@@ -274,6 +274,7 @@ begin
   ATrack.SetStep(ATrackBar.Frequency, ATrackBar.PageSize);
   ATrack.SetScalePos(ATrackBar.ScalePos);
   ATrack.SetTickMarks(ATrackbar.TickMarks, ATrackBar.TickStyle);
+  ATrack.SetShowSelRange(ATrackBar.ShowSelRange);
   ATrack.Reversed := ATrackBar.Reversed;
   ATrack.EndUpdate;
 end;
