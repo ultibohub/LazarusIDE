@@ -4850,9 +4850,7 @@ end;
 function TGtk3WinControlPanel.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   Result := inherited CreateWidget(Params);
-  //Pure structural container - suppress LCL paint events.
-  //Drawing is handled by child controls.
-  FHasPaint := False;
+  FHasPaint := True;
 end;
 
 { TGtk3GroupBox }
@@ -14254,11 +14252,17 @@ end;
 function TGtk3GLArea.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   FWidgetType := [wtWidget, wtGLArea];
-  Result := TGtkGLArea.new;
   if IsDesigning then
-    FHasPaint := True
-  else if Assigned(LCLObject) and not (csNoFocus in LCLObject.ControlStyle) then
-    Result^.set_can_focus(True);
+  begin
+    Result := PGtkWidget(TGtkDrawingArea.new);
+    FHasPaint := True;
+  end
+  else
+  begin
+    Result := TGtkGLArea.new;
+    if Assigned(LCLObject) and not (csNoFocus in LCLObject.ControlStyle) then
+      Result^.set_can_focus(True);
+  end;
 end;
 
 { TGtk3DesignWidget }
