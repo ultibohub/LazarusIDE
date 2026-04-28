@@ -694,7 +694,9 @@ begin
   {$PUSH}{$R-}{$Q-}
   Result := AnAddr;
   ABitOffset := ABitOffset + AnAddr.BitOffset;
-  Result.Address := AnAddr.Address + (ABitOffset - 7) div 8;
+  if ABitOffset < 0
+  then Result.Address := AnAddr.Address + (ABitOffset - 7) div 8
+  else Result.Address := AnAddr.Address + ABitOffset div 8;
   Result.BitOffset := ABitOffset and 7;
   {$POP}
 end;
