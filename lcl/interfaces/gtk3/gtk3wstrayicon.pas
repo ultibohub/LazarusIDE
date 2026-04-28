@@ -94,14 +94,14 @@ begin
     GlobalIconPath := IconThemePath + FIconName + '.' + IconType;
     gdk_pixbuf_save(GlobalIcon, PChar(GlobalIconPath), IconType, nil, [nil]);
     if GlobalAppIndicator <> nil then
-        app_indicator_set_icon(GlobalAppIndicator, PChar(FIconName));
+        app_indicator_set_icon(GlobalAppIndicator, PChar(GlobalIconPath));
   end
   else
     FIconName := FName + '-' + IntToHex({%H-}IntPtr(GlobalIcon), SizeOf(GlobalIcon) * 2);
   { Only the first created AppIndicator is functional }
   if GlobalAppIndicator = nil then
     { It seems that icons can only come from files :( }
-    GlobalAppIndicator := app_indicator_new_with_path(PChar(FName), PChar(FIconName),
+    GlobalAppIndicator := app_indicator_new_with_path(PChar(FName), PChar(GlobalIconPath),
       APP_INDICATOR_CATEGORY_APPLICATION_STATUS, PChar(IconThemePath));
   Update;
   {$ifdef DEBUGAPPIND}
@@ -138,7 +138,7 @@ begin
     GlobalIconPath := IconThemePath + FIconName + '.' + IconType;
     gdk_pixbuf_save(GlobalIcon, PChar(GlobalIconPath), IconType, nil, [nil]);
     { Again it seems that icons can only come from files }
-    app_indicator_set_icon(GlobalAppIndicator, PChar(FIconName));
+    app_indicator_set_icon(GlobalAppIndicator, PChar(GlobalIconPath));
   end;
   { It seems to me you can only set the menu once for an AppIndicator }
   if (app_indicator_get_menu(GlobalAppIndicator) = nil) and (FTrayIcon.PopUpMenu <> nil) then
