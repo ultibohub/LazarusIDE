@@ -2258,7 +2258,8 @@ begin
 
   if length(AEventString) = 0 then
   begin
-    if KeyValue = GDK_KEY_Alt_L then
+    if (KeyValue = GDK_KEY_Alt_L) or (KeyValue = GDK_KEY_Alt_R) or
+       (KeyValue = GDK_KEY_ISO_Level3_Shift) then
       LCLModifiers := LCLModifiers or KF_ALTDOWN
     else
     if (KeyValue = GDK_KEY_Control_L) or (KeyValue = GDK_KEY_Control_R)  then
@@ -2266,7 +2267,6 @@ begin
     else
     if (KeyValue = GDK_KEY_Shift_L) or (KeyValue = GDK_KEY_Shift_R) then
       LCLModifiers := LCLModifiers or MK_SHIFT;
-    // writeln('MODIFIERS BY KEYS ',LCLModifiers);
   end;
 
   IsSysKey := LCLModifiers and KF_ALTDOWN <> 0;
@@ -2283,6 +2283,9 @@ begin
   ACharCode := Gtk3HwKeyToVKey(AEvent.hardware_keycode);
   if ACharCode = VK_UNKNOWN then
     ACharCode := GdkKeyToLCLKey(KeyValue);
+
+  if (ACharCode <> VK_UNKNOWN) and (ACharCode <= 255) then
+    Gtk3WidgetSet.FGtk3KeyStates[ACharCode] := AKeyPress;
 
   if (KeyValue >= GDK_KEY_exclam) and (KeyValue <= GDK_KEY_parenleft) and
      (ACharCode >= VK_0) and (ACharCode <= VK_9) and

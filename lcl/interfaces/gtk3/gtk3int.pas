@@ -122,6 +122,7 @@ type
     function CreateThemeServices: TThemeServices; override;
 
   public
+    FGtk3KeyStates: array[Byte] of Boolean;
     // LCL drag cursor state. Used by SetGlobalCursor in gtk3procs and ReleaseCapture.
     FDragIPCWidget: PGtkWidget;
     FDragSeatGrabActive: Boolean;

@@ -2663,6 +2663,9 @@ begin
     VK_LMENU:    nVirtKey := VK_MENU;
   end;
 
+  if (Byte(nVirtKey) >= VK_BACK) and FGtk3KeyStates[Byte(nVirtKey)] then
+    Exit(StateDown);
+
   if Byte(nVirtKey) in [VK_LBUTTON..VK_XBUTTON2] then
   begin
     device := gdk_seat_get_pointer(seat);
