@@ -12787,12 +12787,7 @@ end;
 
 procedure TMainIDE.MainTitleChanged(const ATitle: string);
 begin
-  if LazarusIDE.MainBarSubTitle=ATitle then
-    Result:=false
-  else begin
-    Result:=true;
-    LazarusIDE.MainBarSubTitle:=ATitle;
-  end;
+  LazarusIDE.MainBarSubTitle:=ATitle;
 end;
 
 procedure TMainIDE.OIChangedTimerTimer(Sender: TObject);
