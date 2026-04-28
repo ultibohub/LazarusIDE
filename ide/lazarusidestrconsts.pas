@@ -895,7 +895,7 @@ resourcestring
     'configuration tool.';
   lisFppkgFpcmkcfgNeeded = 'An up-to-date version is needed to create the ' +
     'configuration files.';
-  lisFppkgFpcmkcfgTooOld = 'The fpcmkcfg configuration tool it too old [%s].';
+  lisFppkgFpcmkcfgTooOld = 'The fpcmkcfg configuration tool is too old [%s].';
   lisFppkgFpcmkcfgProbTooOld = 'It is probably too old to create the configuration files.';
   lisFppkgFpcmkcfgMissing = 'Could not find the fpcmkcfg configuration tool, ' +
     'which is needed to create the configuration files.';
