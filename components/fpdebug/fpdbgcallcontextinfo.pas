@@ -36,6 +36,8 @@ type
   { TFpSymbolDwarfFunctionResult }
 
   TFpSymbolDwarfFunctionResult = class(TFpSymbolDwarfDataWithLocation)
+  private
+    FDataCache: array of byte;
   protected
     function GetValueAddress(AValueObj: TFpValueDwarf; out AnAddress: TFpDbgMemLocation): Boolean; override;
     procedure Init; override;
@@ -43,6 +45,7 @@ type
     constructor Create(const AName: String;
                        const AAddress: TFpDbgMemLocation;
                        ATypeSymbol: TFpSymbol); overload;
+    procedure ReadDataToCache(AValueObj: TFpValueDwarf);
     property NewAddress: TFpDbgMemLocation write SetAddress;
   end;
 
@@ -169,6 +172,28 @@ begin
   Init;
 end;
 
+procedure TFpSymbolDwarfFunctionResult.ReadDataToCache(AValueObj: TFpValueDwarf);
+var
+  Size: TFpDbgValueSize;
+  t: TFpSymbolDwarfType;
+  m: TFpDbgMemLocation;
+begin
+  t := TypeInfo;
+  if not t.ReadSize(AValueObj, Size) then
+    exit;
+
+  m := Address;
+  if not IsTargetOrRegNotNil(m) then
+    exit;
+
+  SetLength(FDataCache, SizeToFullBytes(Size));
+
+  if not AValueObj.Context.ReadMemory(m, Size, pointer(FDataCache)) then
+    exit;
+
+  SetAddress(SelfLoc(Pointer(FDataCache)));
+end;
+
 { TFpDbgInfoCallContext }
 
 function TFpDbgInfoCallContext.AllocStack(ASize: Integer): TDbgPtr;
@@ -237,10 +262,10 @@ begin
   ParamSymbol := TFpSymbolDwarfFunctionResult.Create(AName, ParameterMemLocation, ASymbolType);
   try
     Result := ParamSymbol.Value;
+    TFpValueDwarf(Result).Context := Self;
   finally
     ParamSymbol.ReleaseReference;
   end;
-  TFpValueDwarf(Result).Context := Self;
 end;
 
 function TFpDbgInfoCallContext.InternalCreateParamSymbol(AParamIndex: Integer;
@@ -499,6 +524,7 @@ begin
   if AName = '' then
     AName := ASymbolType.Name;
   Result := InternalCreateParamSymbol(AParamIndex, ASymbolType.TypeInfo, AName);
+  TFpSymbolDwarfFunctionResult(Result.DbgSymbol).ReadDataToCache(TFpValueDwarf(Result));
 end;
 
 function TFpDbgInfoCallContext.AddParam(AParamSymbolType: TFpSymbol; AValue: TFpValue): Boolean;
