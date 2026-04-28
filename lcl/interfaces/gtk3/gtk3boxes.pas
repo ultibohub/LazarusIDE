@@ -337,7 +337,20 @@ var
   mainList,ChildList:PgList;
 begin
   if is_pango_markup then
-    gtk_message_dialog_set_markup(PGtkMessageDialog(Dialog), PGChar(msg))
+  begin
+    gtk_message_dialog_set_markup(PGtkMessageDialog(Dialog), PGChar(msg));
+    ma := PGtkMessageDialog(Dialog)^.get_message_area();
+    MainList := gtk_container_get_children(PGtkContainer(ma));
+    ChildList := MainList;
+    while Assigned(ChildList) do
+    begin
+      if g_type_check_instance_is_a(ChildList^.Data, gtk_label_get_type) then
+        gtk_label_set_selectable(PGtkLabel(ChildList^.Data), True);
+      ChildList := ChildList^.next;
+    end;
+    if Assigned(MainList) then
+      g_list_free(MainList);
+  end
   else
   begin
     ma:=PGtkMessageDialog(Dialog)^.get_message_area();
@@ -345,9 +358,9 @@ begin
     if Assigned(MainList) then
     begin
       PGtkLabel(MainList^.data)^.set_label(PGChar(msg));
+      gtk_label_set_selectable(PGtkLabel(MainList^.data), True);
       g_list_free(MainList);
     end;
-
   end;
 end;
 
