@@ -10193,8 +10193,9 @@ msgid "It is probably too old to create the configuration files."
 msgstr "ມັນອາດຈະເກົ່າເກີນໄປທີ່ຈະສ້າງໄຟລ໌ການຕັ້ງຄ່າ."
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
-#, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+#, object-pascal-format, fuzzy
+#| msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr "ເຄື່ອງມືການຕັ້ງຄ່າ fpcmkcfg ເກົ່າເກີນໄປ [%s]."
 
 #: lazarusidestrconsts.lisfppkginstallationpath

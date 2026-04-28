@@ -10160,7 +10160,7 @@ msgstr ""
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
 #, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr ""
 
 #: lazarusidestrconsts.lisfppkginstallationpath
