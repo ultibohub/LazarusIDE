@@ -1247,6 +1247,11 @@ type
   { TGtk3DesignWidget }
 
   TGtk3DesignWidget = class(TGtk3Window)
+  private
+    class function Gtk3DrawDesignerBg(AWidget: PGtkWidget; AContext: Pcairo_t;
+      AData: gpointer): gboolean; cdecl; static;
+    class function Gtk3DrawDesigner(AWidget: PGtkWidget; AContext: Pcairo_t;
+      Data: gpointer): gboolean; cdecl; static;
   protected
     FDesignContext: HDC;
     procedure BringDesignerToFront;
@@ -14323,7 +14328,35 @@ begin
   end;
 end;
 
-function Gtk3DrawDesigner(AWidget: PGtkWidget; AContext: Pcairo_t; Data: gpointer): gboolean; cdecl;
+class function TGtk3DesignWidget.Gtk3DrawDesignerBg(AWidget: PGtkWidget;
+  AContext: Pcairo_t; AData: gpointer): gboolean; cdecl;
+var
+  This: TGtk3DesignWidget;
+  NColor: TColor;
+  RGB: LongInt;
+  W, H: gint;
+begin
+  Result := False;
+  if AData = nil then exit;
+  This := TGtk3DesignWidget(AData);
+  if This.LCLObject = nil then
+    exit;
+  if not This.Visible then
+    exit;
+  NColor := This.LCLObject.Color;
+  if (NColor = clNone) or (NColor = clDefault) or (NColor = clForm) then
+    exit;
+  RGB := ColorToRGB(NColor);
+  W := AWidget^.get_allocated_width;
+  H := AWidget^.get_allocated_height;
+  cairo_save(AContext);
+  cairo_set_source_rgb(AContext, Red(RGB) / 255.0, Green(RGB) / 255.0, Blue(RGB) / 255.0);
+  cairo_rectangle(AContext, 0, 0, W, H);
+  cairo_fill(AContext);
+  cairo_restore(AContext);
+end;
+
+class function TGtk3DesignWidget.Gtk3DrawDesigner(AWidget: PGtkWidget; AContext: Pcairo_t; Data: gpointer): gboolean; cdecl;
 var
   ARect: TGdkRectangle;
 begin
@@ -14373,8 +14406,9 @@ procedure TGtk3DesignWidget.InitializeWidget;
 begin
   inherited InitializeWidget;
   g_signal_handler_disconnect(getContainerWidget, FDrawSignal);
-  //we must run after default gtk draw of control.
-  g_signal_connect_data(getContainerWidget,'draw', TGCallback(@Gtk3DrawDesigner), Self, nil, [G_CONNECT_AFTER]);
+  //connect background draw before, so it won't repaint over forms children.
+  g_signal_connect_data(getContainerWidget, 'draw', TGCallback(@TGtk3DesignWidget.Gtk3DrawDesignerBg), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(getContainerWidget, 'draw', TGCallback(@TGtk3DesignWidget.Gtk3DrawDesigner), Self, nil, [G_CONNECT_AFTER]);
   BringDesignerToFront;
 end;
 
@@ -14439,7 +14473,6 @@ begin
 
       end;
 
-      //DoBeforeLCLPaint;
       {$IFDEF GTK3DEBUGDESIGNER}
       writeln('>TGtk3DesignWidget.Paint DC=',dbgHex(Msg.DC),' offset=',dbgs(P),' surface=',cairo_surface_get_type(cairo_get_target(AContext)));
       {$ENDIF}
