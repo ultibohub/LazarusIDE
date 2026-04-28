@@ -33,13 +33,9 @@ var
   angle: Double;
 begin
   if (Parent = nil) or (not Parent.HandleAllocated) then Exit;
-  if WordWrap then
-  begin
-    if WidthIsAnchored then
-      AWidth:=Width
-    else
-      AWidth:=FWordwrapTextLength;
-  end else
+  if WidthIsAnchored and WordWrap then
+    AWidth:=Width
+  else
     AWidth:=cMaxLabelSize;
   AWidth:=Constraints.MinMaxWidth(AWidth);
   CalculateSize(AWidth,PreferredWidth,PreferredHeight);
@@ -215,8 +211,6 @@ begin
     InvalidatePreferredSize;
     AdjustSize;
   end;
-  if not AutoSize then
-    FWordwrapTextlength := AWidth;
 end;
 
 function TCustomLabel.CanTab: boolean;
@@ -232,7 +226,6 @@ begin
     SetInitialBounds(0, 0, CX, CY);
   FShowAccelChar := True;
   FInternalSetBounds := False;
-  FWordWrapTextLength := Width;
   AutoSize := True;
   // Accessibility
   AccessibleRole := larLabel;
@@ -281,7 +274,6 @@ begin
   begin
     FWordWrap := Value;
     Invalidate;
-    FWordWrapTextLength := Width;
     UpdateSize;
   end;
 end;

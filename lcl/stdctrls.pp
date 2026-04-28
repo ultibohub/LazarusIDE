@@ -1578,7 +1578,6 @@ type
     FWordWrap: Boolean;
     FLayout: TTextLayout;
     FInternalSetBounds: Boolean;
-    FWordWrapTextLength: Integer;
     procedure SetAlignment(Value: TAlignment);
     procedure SetOptimalFill(const AValue: Boolean);
   protected
@@ -1617,7 +1616,6 @@ type
     property ShowAccelChar: Boolean read FShowAccelChar write SetShowAccelChar default true;
     property Transparent: boolean read GetTransparent write SetTransparent default true;
     property WordWrap: Boolean read FWordWrap write SetWordWrap default false;
-    property WordWrapTextLength: Integer read FWordWrapTextlength write FWordWrapTextLength;
     property OptimalFill: Boolean read FOptimalFill write SetOptimalFill default false;
   public
     constructor Create(TheOwner: TComponent); override;
