@@ -1181,6 +1181,10 @@ begin
 
   if ANestLvl > 0 then begin
     s := AResValue.TypeName;
+    if (s='') then case AResValue.ValueKind of
+      rdkFunction:  s := 'function';
+      rdkProcedure: s := 'procedure';
+    end;
   end
   else begin
     s := AResValue.AsDesc;
