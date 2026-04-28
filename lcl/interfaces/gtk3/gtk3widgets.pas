@@ -437,6 +437,9 @@ type
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
+    class function Gtk3CalendarBtnPress(AWidget: PGtkWidget; AEvent: PGdkEvent;
+      AData: gpointer): gboolean; cdecl; static;
+    procedure InitializeWidget; override;
     procedure GetDate(out AYear, AMonth, ADay: LongWord);
     procedure SetDate(const AYear, AMonth, ADay: LongWord);
     procedure SetDisplayOptions(const ADisplayOptions: TGtkCalendarDisplayOptions);
@@ -6438,6 +6441,35 @@ procedure TGtk3Calendar.SetDisplayOptions(
 begin
   if IsWidgetOK then
     PGtkCalendar(GetContainerWidget)^.set_display_options(ADisplayOptions);
+end;
+
+class function TGtk3Calendar.Gtk3CalendarBtnPress(AWidget: PGtkWidget;
+  AEvent: PGdkEvent; AData: gpointer): gboolean; cdecl;
+var
+  Inst: TGtk3Calendar;
+  Msg: TLMMouse;
+begin
+  Result := False;
+  if (AData = nil) or (AEvent = nil) then
+    exit;
+  if AEvent^.type_ <> GDK_2BUTTON_PRESS then
+    exit;
+  if AEvent^.button.button <> 1 then
+    exit;
+  Inst := TGtk3Calendar(AData);
+  if not Inst.IsWidgetOk then
+    exit;
+  FillChar(Msg{%H-}, SizeOf(Msg), #0);
+  Msg.Msg := LM_LBUTTONDBLCLK;
+  Msg.Keys := MK_LBUTTON;
+  Inst.DeliverMessage(Msg);
+end;
+
+procedure TGtk3Calendar.InitializeWidget;
+begin
+  inherited InitializeWidget;
+  g_signal_connect_data(GetContainerWidget, 'button-press-event',
+    TGCallback(@Gtk3CalendarBtnPress), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 { TGtk3StaticText }

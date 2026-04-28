@@ -89,32 +89,6 @@ var
   *)
 begin
   Result := TLCLHandle(TGtk3Calendar.Create(AWinControl, AParams));
-  (*
-  FrameWidget := gtk_frame_new(nil);
-  CalendarWidget := gtk_calendar_new();
-  gtk_container_add(PGtkContainer(FrameWidget), CalendarWidget);
-  gtk_widget_show_all(FrameWidget);
-  // if we don't request it - we have a SIGFPE sometimes
-  gtk_widget_size_request(CalendarWidget, @Requisition);
-
-  Result := TLCLHandle({%H-}PtrUInt(FrameWidget));
-  {$IFDEF DebugLCLComponents}
-  DebugGtkWidgets.MarkCreated(FrameWidget, dbgsName(AWinControl));
-  {$ENDIF}
-
-  WidgetInfo := CreateWidgetInfo(FrameWidget, AWinControl, AParams);
-  WidgetInfo^.CoreWidget := CalendarWidget;
-  SetMainWidget(FrameWidget, CalendarWidget);
-
-  Allocation.X := AParams.X;
-  Allocation.Y := AParams.Y;
-  Allocation.Width := AParams.Width;
-  Allocation.Height := AParams.Height;
-  gtk_widget_size_allocate({%H-}PGtkWidget(Result), @Allocation);
-
-  Set_RC_Name(AWinControl, FrameWidget);
-  SetCallBacks(FrameWidget, WidgetInfo);
-  *)
 end;
 
 class function TGtk3WSCustomCalendar.GetDateTime(const ACalendar: TCustomCalendar): TDateTime;
