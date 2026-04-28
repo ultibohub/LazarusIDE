@@ -45,8 +45,6 @@ const
 
 type
 
-  TFpPascalExpressionPartList= class;
-
   TFpPascalExpression = class;
   TFpPascalExpressionPart = class;
   TFpPascalExpressionPartContainer = class;
@@ -77,7 +75,7 @@ type
   TFpPascalParserGetIntrinsicForIdentProc = function(AnExpression: TFpPascalExpression; AStart: PChar; ALen: Integer): TFpPascalExpressionPartIntrinsicBase of object;
 
   TFpPascalParserCallFunctionProc = function (AnExpressionPart: TFpPascalExpressionPart;
-    AFunctionValue: TFpValue; ASelfValue: TFpValue; AParams: TFpPascalExpressionPartList;
+    AFunctionValue: TFpValue; ASelfValue: TFpValue; AParams: TFpValueListIntf;
     out AResult: TFpValue; var AnError: TFpError): boolean of object;
 
   { TFpPascalExpressionSharedData }
@@ -191,23 +189,6 @@ type
     property SharedData: TFpPascalExpressionSharedData read FSharedData;
   end;
 
-
-  { TFpPascalExpressionPartList }
-
-  TFpPascalExpressionPartList = class(TStrings)
-  public // TStrings
-    procedure Clear; override;
-    procedure Delete(Index: Integer); override;
-    procedure Insert(Index: Integer; const S: string); override;
-  protected // TStrings
-    function Get(Index: Integer): string; override;
-    //function GetCount: Integer; virtual; abstract;
-  protected
-    function GetItems(AIndex: Integer): TFpPascalExpressionPart; virtual; abstract;
-  public
-    //property Count: Integer read GetCount;
-    property Items[AIndex: Integer]: TFpPascalExpressionPart read GetItems;
-  end;
 
   TFindInParentsFlag = (fipIncludeBracketFunction);
   TFindInParentsFlags = set of TFindInParentsFlag;
@@ -904,15 +885,15 @@ type
 
   { TFpPascalExpressionPartListForwarder }
 
-  TFpPascalExpressionPartListForwarder = class(TFpPascalExpressionPartList)
+  TFpPascalExpressionPartListForwarder = class(TObject, TFpValueListIntf)
   private
     FExpressionPart: TFpPascalExpressionPartContainer;
     FListOffset, FCount: Integer;
   protected
-    function GetCount: Integer; override;
-    function GetItems(AIndex: Integer): TFpPascalExpressionPart; override;
+    function GetItems(AIndex: Integer): TFpValue;
   public
     constructor Create(AnExpressionPart: TFpPascalExpressionPartContainer; AListOffset, ACount: Integer);
+    function Count: Integer;
   end;
 
   {%region  DebugSymbol }
@@ -1171,37 +1152,16 @@ begin
     ATarget.SetLastError(ASrc.LastError);
 end;
 
-procedure TFpPascalExpressionPartList.Clear;
-begin
-  assert(False, 'TFpPascalExpressionPartList.Clear: False');
-end;
-
-procedure TFpPascalExpressionPartList.Delete(Index: Integer);
-begin
-  assert(False, 'TFpPascalExpressionPartList.Delete: False');
-end;
-
-procedure TFpPascalExpressionPartList.Insert(Index: Integer; const S: string);
-begin
-  assert(False, 'TFpPascalExpressionPartList.Insert: False');
-end;
-
-function TFpPascalExpressionPartList.Get(Index: Integer): string;
-begin
-  Result := Items[Index].GetText();
-end;
-
 { TFpPascalExpressionPartListForwarder }
 
-function TFpPascalExpressionPartListForwarder.GetCount: Integer;
+function TFpPascalExpressionPartListForwarder.Count: Integer;
 begin
   Result := FCount;
 end;
 
-function TFpPascalExpressionPartListForwarder.GetItems(AIndex: Integer
-  ): TFpPascalExpressionPart;
+function TFpPascalExpressionPartListForwarder.GetItems(AIndex: Integer): TFpValue;
 begin
-  Result := FExpressionPart.Items[AIndex + FListOffset];
+  Result := FExpressionPart.Items[AIndex + FListOffset].ResultValue;
 end;
 
 constructor TFpPascalExpressionPartListForwarder.Create(

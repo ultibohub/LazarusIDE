@@ -35,13 +35,14 @@ unit FpDbgInfo;
 
 *)
 {$mode objfpc}{$H+}
+{$Interfaces CORBA}
 {$TYPEDADDRESS on}
 {$IFDEF INLINE_OFF}{$INLINE OFF}{$ENDIF}
 
 interface
 
 uses
-  Classes, SysUtils, DbgIntfBaseTypes, FpDbgLoader, FpdMemoryTools, FpErrorMessages,
+  Classes, SysUtils, fgl, DbgIntfBaseTypes, FpDbgLoader, FpdMemoryTools, FpErrorMessages,
   {$ifdef FORCE_LAZLOGGER_DUMMY} LazLoggerDummy {$else} LazLoggerBase {$endif}, LazClasses, FpDbgCommon,
   // Register all image reader classes
   FpImgReaderWinPE, FpImgReaderElf, FpImgReaderMacho, LazDebuggerIntfFloatTypes;
@@ -265,6 +266,22 @@ type
     property LastError: TFpError read GetLastError;
     procedure SetLastError(ALastError: TFpError);
     procedure ResetError;
+  end;
+
+  { TFpValueList }
+
+  TFpValueListIntf = interface ['{BA5A7076-9854-4B33-83AD-D14041EA27F8}']
+    function GetItems(AnIndex: Integer): TFpValue;
+    function Count: Integer;
+    property Items[AnIndex: Integer]: TFpValue read GetItems;
+  end;
+
+  TFpValueList = class(specialize TFPGList<TFpValue>, TFpValueListIntf)
+  protected
+    function GetItems(AnIndex: Integer): TFpValue;
+  public
+    function Count: integer;
+    property Items[AnIndex: Integer]: TFpValue read GetItems;
   end;
 
   { TFpValueConstWithType }
@@ -1381,6 +1398,18 @@ end;
 procedure TFpValue.SetAsString(AValue: AnsiString);
 begin
   SetLastError(CreateError(fpErrChangeVariableNotSupported));
+end;
+
+{ TFpValueList }
+
+function TFpValueList.GetItems(AnIndex: Integer): TFpValue;
+begin
+  Result := inherited Items[AnIndex];
+end;
+
+function TFpValueList.Count: integer;
+begin
+  Result := inherited Count;
 end;
 
 { TFpValueConstWithType }
