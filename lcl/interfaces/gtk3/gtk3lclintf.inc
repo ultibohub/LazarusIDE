@@ -947,22 +947,6 @@ begin
     ReAllocMem(ARawImage.Mask, ARawImage.MaskSize);
     if ARawImage.MaskSize > 0 then
     begin
-      (*
-      InvertPixels := False;
-      if WorkImage <> nil then
-      begin
-        Px := QImage_pixel(WorkImage.Handle, 0, 0);
-        InvertPixels :=
-          not QImage_hasAlphaChannel(WorkMask.Handle) and
-          not QImage_hasAlphaChannel(WorkImage.Handle) and
-          // invert only if WorkImage is RGB32 fmt and allGray
-          (WorkImage.getFormat = QImageFormat_RGB32) and
-          QImage_allGray(WorkImage.Handle) and
-          ((Px = 0) or (Px = $FF))
-      end;
-      if InvertPixels then
-        WorkMask.invertPixels(QImageInvertRGB);
-        *)
       if (WorkMask.bits<>nil) and (ARawImage.Mask<>nil) then
       Move(WorkMask.bits^, ARawImage.Mask^, ARawImage.MaskSize);
       // if InvertPixels then
@@ -976,73 +960,6 @@ begin
     WorkMask.Free;
 
   Result := True;
-
-  (*
-  {$IFDEF VerboseRawImage}
-  DebugLn('TGtk3WidgetSet.GetRawImageFromBitmap A');
-  {$ENDIF}
-  ARawImage.Init;
-
-  if not IsValidGDIObject(ABitmap)
-  then begin
-    DebugLn('WARNING: [TGtk3WidgetSet.RawImage_FromBitmap] invalid Bitmap!');
-    exit;
-  end;
-  if (AMask <> 0) and not IsValidGDIObject(AMask)
-  then begin
-    DebugLn('WARNING: [TGtk3WidgetSet.RawImage_FromBitmap] invalid Mask');
-    exit;
-  end;
-
-  try
-    // get rawimage for Bitmap
-    case GdiBitmap^.GDIBitmapType of
-      gbBitmap: begin
-        Drawable := GdiBitmap^.GDIBitmapObject;
-        Bitmap := nil;
-      end;
-      gbPixmap: begin
-        Drawable := GdiBitmap^.GDIPixmapObject.Image;
-        Bitmap := GdiBitmap^.GDIPixmapObject.Mask;
-      end;
-      gbPixbuf: begin
-        Result := RawImage_FromPixbuf(ARawImage, GdiBitmap^.GDIPixbufObject, ARect);
-        Exit;
-      end;
-    else
-      DebugLn('WARNING: [TGtk3WidgetSet.RawImage_FromBitmap] Unknown GDIBitmapType');
-      Exit;
-    end;
-    {$IFDEF VerboseRawImage}
-    DebugLn('TGtk3WidgetSet.RawImage_FromBitmap A GdkPixmap=',DbgS(Drawable),' SrcMaskBitmap=',DbgS(Bitmap));
-    {$ENDIF}
-
-    //DbgDumpPixmap(Drawable, 'RawImage_FromBitmap - drawable');
-    //DbgDumpBitmap(Bitmap, 'RawImage_FromBitmap - alpha');
-
-    Result := RawImage_FromDrawable(ARawImage, Drawable, Bitmap, ARect);
-    if Result and (AMask <> 0)
-    then begin
-      if GdiMask^.GDIBitmapType <> gbBitmap
-      then begin
-        DebugLn('WARNING: [TGtk3WidgetSet.RawImage_FromBitmap] Unsupported GDIBitmapType for mask');
-        Exit;
-      end;
-      
-      Bitmap := GdiMask^.GDIBitmapObject;
-      RawImage_AddMask(ARawImage, Bitmap, ARect);
-      //DbgDumpBitmap(Bitmap, 'RawImage_FromBitmap - mask');
-    end
-    else
-      ARawImage.Description.MaskBitsPerPixel := 0;
-
-    if not Result
-    then DebugLn('WARNING: [TGtk3WidgetSet.RawImage_FromBitmap] unable to GetRawImageFromGdkWindow Image');
-
-  except
-    ARawImage.FreeData;
-  end;
-  *)
 end;
 
 {------------------------------------------------------------------------------
@@ -1109,11 +1026,6 @@ begin
     begin
       try
         RawImage_FromImage(Pixmap);
-        // if you have dual monitors then getDeviceSize return
-        // more width than screen width, but grabWindow will only grab one
-        // screen, so its width will be less
-        // Solution: we can either pass prefered size to grabWindow or
-        // correct Description size after. I see the first solution as more correct.
       finally
         g_object_unref(Pixmap);
       end;
@@ -1138,11 +1050,6 @@ begin
       begin
         try
           RawImage_FromImage(Pixmap);
-          // if you have dual monitors then getDeviceSize return
-          // more width than screen width, but grabWindow will only grab one
-          // screen, so its width will be less
-          // Solution: we can either pass prefered size to grabWindow or
-          // correct Description size after. I see the first solution as more correct.
         finally
           g_object_unref(Pixmap);
         end;
@@ -1159,33 +1066,6 @@ begin
   {$ifdef VerboseGtk3WinApi}
   DebugLn('Trace:< [WinAPI GetRawImageFromDevice]');
   {$endif}
-
-  (*
-  DCOrigin := DevCtx.Offset;
-  {$IFDEF VerboseRawImage}
-  DebugLn('TGtk3WidgetSet.GetRawImageFromDevice A DCOrigin=',dbgs(DCOrigin.X),',',dbgs(DCOrigin.Y),' SrcRect=',dbgs(ARect.Left),',',dbgs(ARect.Top),',',dbgs(ARect.Right),',',dbgs(ARect.Bottom));
-  {$ENDIF}
-  R := ARect;
-  LPtoDP(ADC, R, 2);
-  OffSetRect(R, DCOrigin.x, DCOrigin.y);
-
-  Drawable := DevCtx.Widget;
-  if Drawable = nil then
-  begin
-    // get screen shot
-    // Drawable := gdk_cairo_set_source_window();
-    AWindow := gdk_screen_get_root_window(gdk_screen_get_default);
-    Drawable := gdk_cairo_create(AWindow);
-    // Result := RawImage_FromDrawable(ARawImage, Drawable, nil, @R);
-
-    cairo_destroy(Drawable);
-  end else
-  begin
-    // Result :=
-    // RawImage_FromDrawable(ARawImage, Drawable, nil, @R);
-  end;
-  *)
-
 end;
 
 {------------------------------------------------------------------------------
