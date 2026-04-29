@@ -19,7 +19,7 @@ unit Interfaces;
  
 {$mode objfpc}{$H+} 
 
-{$IFNDEF COCOA}
+{$IFNDEF LCLCOCOA}
 {$ERROR wrong interfaces source}
 {$ENDIF}
 
