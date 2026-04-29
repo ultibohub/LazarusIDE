@@ -573,11 +573,28 @@ end;
 
 class procedure TCocoaWSCustomListBox.SetTopIndex(const ACustomListBox: TCustomListBox; const NewTopIndex: integer);
 var
-  view: TCocoaTableListView;
+  listView: TCocoaTableListView;
+  scrollView: NSScrollView;
+  rect: NSRect;
+  spacing: Double;
 begin
-  view := TCocoaWSListBoxUtil.getTableListView(ACustomListBox);
-  if not Assigned(view) then Exit();
-  view.scrollRowToVisible(NewTopIndex);
+  listView := TCocoaWSListBoxUtil.getTableListView(ACustomListBox);
+  if not Assigned(listView) then
+    Exit;
+  if listView.numberOfRows = 0 then
+    Exit;
+
+  if NewTopIndex = 0 then begin
+    spacing:= 0;
+  end else begin
+    rect:= listView.rectOfRow( 0 );
+    spacing:= rect.origin.y;
+  end;
+
+  rect:= listView.rectOfRow( NewTopIndex );
+  scrollView:= listView.enclosingScrollView;
+  rect.origin.y:= rect.origin.y + scrollView.visibleRect.size.height + spacing;
+  scrollView.contentView.setBoundsOrigin( rect.origin );
 end;
 
 end.
