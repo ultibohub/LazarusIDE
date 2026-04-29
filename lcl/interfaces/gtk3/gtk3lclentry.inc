@@ -42,7 +42,8 @@ begin
   min_width^ := PANGO_PIXELS(min_width^) * 2 + 2;
   nat_width^ := min_width^;
 
-  if Assigned(AControl.LCLObject.Constraints) then
+  //apply constraints ONLY if we are primary widget, not eg our spin edit implemenation.
+  if (AControl.Widget = widget) and Assigned(AControl.LCLObject.Constraints) then
     with AControl.LCLObject.Constraints do
     begin
       if MaxWidth > 0 then
@@ -90,6 +91,13 @@ begin
   begin
     DebugLn('Error: LCLGtkEntryGetPreferredHeight cannot get TGtk3Widget for widget parameter.');
     Exit;
+  end;
+
+  if AControl.Widget <> widget then
+  begin
+    if nat_height^ < min_height^ then
+      nat_height^ := min_height^;
+    exit;
   end;
 
   if not AControl.LCLObject.AutoSize then
