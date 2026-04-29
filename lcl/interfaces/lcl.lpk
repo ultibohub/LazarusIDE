@@ -38,21 +38,15 @@ end;
 base := LCLWidgetType+&apos;/&apos;;
 if LCLWidgetType=&apos;gtk3&apos; then
 begin
-  CustomOptions := &apos;-dgtk3&apos;;
   UnitPath := base + &apos;gtk3bindings&apos;;
 end else
 if LCLWidgetType=&apos;gtk&apos; then
   CustomOptions := &apos;-dgtk1&apos;
 else if LCLWidgetType=&apos;carbon&apos; then begin
-  CustomOptions := &apos;-dcarbon&apos;;
   UnitPath := base+&apos;objc;&apos;
              +base+&apos;pascocoa/appkit;&apos;
              +base+&apos;pascocoa/foundation&apos;;
   IncPath := UnitPath;
-end else if LCLWidgetType=&apos;cocoa&apos; then begin
-  CustomOptions := &apos;-dcocoa&apos;;
-  if TargetCPU&lt;>&apos;i386&apos; then
-    CustomOptions += &apos; -dNoCarbon&apos;;
 end else if LCLWidgetType=&apos;wince&apos; then begin
   CustomOptions := &apos;-dDisableChecks&apos;;
 end else if LCLWidgetType=&apos;fpgui&apos; then begin
