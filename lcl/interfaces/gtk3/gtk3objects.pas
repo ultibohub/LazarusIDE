@@ -3301,7 +3301,7 @@ begin
   xInverted := (FWindowExt.X <> 0) and (FViewPortExt.X <> 0) and ((FWindowExt.X < 0) <> (FViewPortExt.X < 0));
   yInverted := (FWindowExt.Y <> 0) and (FViewPortExt.Y <> 0) and ((FWindowExt.Y < 0) <> (FViewPortExt.Y < 0));
 
-  useArcCW := xInverted xor yInverted;
+  useArcCW := xInverted xor yInverted xor (angle2_16 < 0);
   if xInverted then
     signX := -1.0
   else
