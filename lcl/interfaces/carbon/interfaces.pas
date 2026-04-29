@@ -19,7 +19,7 @@ unit Interfaces;
  
 {$mode objfpc}{$H+} 
 
-{$IFNDEF CARBON}
+{$IFNDEF LCLCARBON}
 {$ERROR wrong interfaces source}
 {$ENDIF}
 {$IFNDEF cpu32}
