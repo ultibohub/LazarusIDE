@@ -1832,6 +1832,11 @@ end;"/>
         <UnitName Value="gtk3widgets"/>
       </Item>
       <Item>
+        <Filename Value="gtk3/gtk3mdiemulator.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="gtk3mdiemulator"/>
+      </Item>
+      <Item>
         <Filename Value="gtk3/gtk3winapi.inc"/>
         <Type Value="Include"/>
       </Item>
