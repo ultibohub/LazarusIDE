@@ -259,35 +259,30 @@ var
   reason: TChildExitReason;
   status: integer;
   info: dword;
-  handler: PChildSignalEventHandler;
+  handler, nextHandler: PChildSignalEventHandler;
 begin
-  repeat
-    status:=0;
-    pid := fpwaitpid(-1, status, WNOHANG);
-    if pid <= 0 then break;
-    if wifexited(status) then
+  handler := FChildSignalHandlers;
+  while handler <> nil do
+  begin
+    nextHandler := handler^.NextHandler;
+    status := 0;
+    pid := fpwaitpid(handler^.pid, status, WNOHANG);
+    if (pid = handler^.pid) and (wifexited(status) or wifsignaled(status)) then
     begin
-      reason := cerExit;
-      info := wexitstatus(status);
-    end else
-    if wifsignaled(status) then
-    begin
-      reason := cerSignal;
-      info := wtermsig(status);
-    end else
-      continue;
-
-    handler := FChildSignalHandlers;
-    while handler <> nil do
-    begin
-      if handler^.pid = pid then
+      if wifexited(status) then
       begin
-        handler^.OnEvent(handler^.UserData, reason, info);
-        break;
+        reason := cerExit;
+        info := wexitstatus(status);
+      end
+      else
+      begin
+        reason := cerSignal;
+        info := wtermsig(status);
       end;
-      handler := handler^.NextHandler;
+      handler^.OnEvent(handler^.UserData, reason, info);
     end;
-  until false;
+    handler := nextHandler;
+  end;
 end;
 
 procedure TGtk3WidgetSet.PrepareSynchronize(AObject: TObject);
@@ -338,7 +333,7 @@ begin
 
   {$IFDEF UNIX}
   InitSynchronizeSupport;
-  // InstallSignalHandler;
+  InstallSignalHandler;
   {$ELSE}
   WakeMainThread := @DoWakeMainThread;
   {$ENDIF}

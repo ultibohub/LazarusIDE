@@ -1316,32 +1316,37 @@ type
     OnEvent: TPipeEvent;
   end;
 
+const
+  GIO_IN_FLAG = 1 shl Ord(G_IO_IN);
+  GIO_OUT_FLAG = 1 shl Ord(G_IO_OUT);
+  GIO_HUP_FLAG = 1 shl Ord(G_IO_HUP);
+
 function TGtk3WidgetSet.AddPipeEventHandler(AHandle: TLCLHandle;
   AEventHandler: TPipeEvent; AData: PtrInt): PPipeEventHandler;
 var
   lPipeEventInfo: PPipeEventInfo;
 begin
+  Result := nil;
   if AEventHandler = nil then exit;
   New(lPipeEventInfo);
   lPipeEventInfo^.UserData := AData;
   lPipeEventInfo^.OnEvent := AEventHandler;
-  // lPipeEventInfo^.Handler := AddEventHandler(AHandle, G_IO_IN or G_IO_HUP or G_IO_OUT,
-  //  @HandlePipeEvent, {%H-}PtrUInt(lPipeEventInfo));
+  lPipeEventInfo^.Handler := AddEventHandler(AHandle, GIO_IN_FLAG or GIO_HUP_FLAG or GIO_OUT_FLAG,
+    @HandlePipeEvent, {%H-}PtrUInt(lPipeEventInfo));
   Result := lPipeEventInfo;
 end;
 
-(*
 procedure TGtk3WidgetSet.HandlePipeEvent(AData: PtrInt; AFlags: dword);
 var
   lPipeEventInfo: PPipeEventInfo absolute AData;
   lReasons: TPipeReasons;
 begin
   lReasons := [];
-  if AFlags and G_IO_IN = G_IO_IN then
+  if AFlags and GIO_IN_FLAG <> 0 then
     Include(lReasons, prDataAvailable);
-  if AFlags and G_IO_OUT = G_IO_OUT then
+  if AFlags and GIO_OUT_FLAG <> 0 then
     Include(lReasons, prCanWrite);
-  if AFlags and G_IO_HUP = G_IO_HUP then
+  if AFlags and GIO_HUP_FLAG <> 0 then
     Include(lReasons, prBroken);
 
   lPipeEventInfo^.OnEvent(lPipeEventInfo^.UserData, lReasons);
@@ -1356,17 +1361,15 @@ begin
   Dispose(lPipeEventInfo);
   AHandler := nil;
 end;
-*)
 
 {$ifdef UNIX}
 function TGtk3WidgetSet.AddProcessEventHandler(AHandle: TLCLHandle;
   AEventHandler: TChildExitEvent; AData: PtrInt): PProcessEventHandler;
-// var
-//  lHandler: PChildSignalEventHandler;
+var
+  lHandler: PChildSignalEventHandler;
 begin
   Result := nil;
-  if AEventHandler = nil then exit(nil);
-  (*
+  if AEventHandler = nil then exit;
   New(lHandler);
   lHandler^.PID := TPid(AHandle);
   lHandler^.UserData := AData;
@@ -1377,15 +1380,13 @@ begin
     FChildSignalHandlers^.PrevHandler := lHandler;
   FChildSignalHandlers := lHandler;
   Result := lHandler;
-  *)
 end;
 
 procedure TGtk3WidgetSet.RemoveProcessEventHandler(var AHandler: PProcessEventHandler);
-// var
-//  lHandler: PChildSignalEventHandler absolute AHandler;
+var
+  lHandler: PChildSignalEventHandler absolute AHandler;
 begin
   if AHandler = nil then exit;
-  (*
   if lHandler^.PrevHandler = nil then
     FChildSignalHandlers := lHandler^.NextHandler
   else
@@ -1394,7 +1395,6 @@ begin
     lHandler^.NextHandler^.PrevHandler := lHandler^.PrevHandler;
   Dispose(lHandler);
   AHandler := nil;
-  *)
 end;
 {$else}
 {$IFDEF VerboseGtkToDos}{$warning TGtk3WidgetSet.RemoveProcessEventHandler and TGtk3WidgetSet.AddProcessEventHandler not implemented on this OS}{$ENDIF}

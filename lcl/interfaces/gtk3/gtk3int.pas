@@ -132,6 +132,7 @@ type
     function IsWayland: boolean;
     function CreateDCForWidget(AWidget: PGtkWidget; AWindow: PGdkWindow; cr: Pcairo_t): HDC;
     procedure AddWindow(AWindow: PGtkWindow);
+    procedure HandlePipeEvent(AData: PtrInt; AFlags: dword);
     {$IFDEF UNIX}
     procedure InitSynchronizeSupport;
     procedure ProcessChildSignal;
