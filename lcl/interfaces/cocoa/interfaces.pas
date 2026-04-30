@@ -19,10 +19,6 @@ unit Interfaces;
  
 {$mode objfpc}{$H+} 
 
-{$IFNDEF LCLCOCOA}
-{$ERROR wrong interfaces source}
-{$ENDIF}
-
 interface
 
 uses 
