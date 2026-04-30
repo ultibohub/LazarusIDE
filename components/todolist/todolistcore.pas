@@ -223,7 +223,9 @@ begin
     CurFile.ScanToDoFile;
   end
   else begin
-    Assert(aFileName=Tool.MainFilename, 'ScanFile: aFileName <> Tool.MainFilename');
+    if aFileName<>Tool.MainFilename then
+      DebugLn(Format('ScanFile: aFileName (%s) <> Tool.MainFilename (%s)!',
+                     [aFileName,Tool.MainFilename]));
     // save ChangeStep
     CurFile.FCodeChangeStep:=Tool.Scanner.ChangeStep;
     //DebugLn(['ScanFile saved ChangeStep ',CurFile.FCodeChangeStep,' ',Tool.Scanner.ChangeStep]);
@@ -374,7 +376,9 @@ var
   ToDoItem: TTodoItem;
 begin
   Src:=FTool.Src;
-  Assert(FCode.Filename=FTool.MainFilename, 'TTLScannedFile.ScanPascalToDos: aCode.Filename<>FTool.MainFilename');
+  if FCode.Filename<>FTool.MainFilename then
+    DebugLn(Format('TTLScannedFile.ScanPascalToDos: FCode.Filename (%s) <> FTool.MainFilename (%s)!',
+                   [FCode.Filename, FTool.MainFilename]));
   pStart:=1;
   NestedComment:=CodeToolBoss.GetNestedCommentsFlagForFile(FCode.Filename);
   repeat
