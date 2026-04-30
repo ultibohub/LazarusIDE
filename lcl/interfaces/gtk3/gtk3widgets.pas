@@ -592,6 +592,7 @@ type
 
   TGtk3MenuItem = class(TGtk3Bin)
   private
+    FImage: TBitmap;
     function GetCaption: string;
     procedure SetCaption(const AValue: string);
   strict private
@@ -607,6 +608,7 @@ type
     Lock:integer;
     MenuItem: TMenuItem;
     constructor Create(const AMenuItem: TMenuItem); virtual; overload;
+    destructor Destroy; override;
     procedure InitializeWidget; override;
     procedure ReplaceWidget;
     procedure SetCheck(ACheck:boolean);
@@ -8018,6 +8020,13 @@ var
   pmenu:PGtkMenuItem;
   pimgmenu:PgtkImageMenuItem absolute pmenu;
   img:TGtk3Image;
+  iml: TCustomImageList;
+  imw, APPI: Integer;
+  ASF: Double;
+  AForm: TCustomForm;
+  LMenu: TMenu;
+  Res: TScaledImageListResolution;
+  ImgPixbuf: PGdkPixbuf;
 begin
   Result:=nil;
   FWidgetType := [wtWidget, wtMenuItem];
@@ -8027,9 +8036,53 @@ begin
   if (MenuItem.HasIcon) then
   begin
     pimgmenu := LCLGtkImageMenuItemNew();
-    MenuItem.UpdateImage(true);
-    img:=Tgtk3Image(MenuItem.Bitmap.Handle);
-    picon := TGtkImage.new_from_pixbuf(img.Handle);
+    ImgPixbuf := nil;
+    iml := nil;
+    imw := 0;
+    MenuItem.GetImageList(iml, imw);
+    if (iml <> nil) and (MenuItem.ImageIndex >= 0)
+       and (MenuItem.ImageIndex < iml.Count) then
+    begin
+      if imw <= 0 then
+        imw := iml.Width;
+      APPI := 96;
+      ASF := 1;
+      AForm := nil;
+      LMenu := MenuItem.GetParentMenu;
+      if LMenu <> nil then
+      begin
+        if LMenu.Owner is TCustomForm then
+          AForm := TCustomForm(LMenu.Owner)
+        else
+        if LMenu.Parent is TCustomForm then
+          AForm := TCustomForm(LMenu.Parent);
+      end;
+      if AForm = nil then
+        AForm := Screen.ActiveCustomForm;
+      if AForm <> nil then
+      begin
+        APPI := AForm.PixelsPerInch;
+        ASF := AForm.GetCanvasScaleFactor;
+      end;
+      Res := iml.ResolutionForPPI[imw, APPI, ASF];
+      if Res.Resolution <> nil then
+      begin
+        if FImage = nil then
+          FImage := TBitmap.Create
+        else
+          FImage.Clear;
+        Res.Resolution.GetBitmap(MenuItem.ImageIndex, FImage);
+        if not FImage.Empty then
+          ImgPixbuf := TGtk3Image(FImage.Handle).Handle;
+      end;
+    end;
+    if ImgPixbuf = nil then
+    begin
+      MenuItem.UpdateImage(true);
+      img := Tgtk3Image(MenuItem.Bitmap.Handle);
+      ImgPixbuf := img.Handle;
+    end;
+    picon := TGtkImage.new_from_pixbuf(ImgPixbuf);
     pimgmenu^.set_image(picon);
     pimgmenu^.set_always_show_image(true);
     Result:=pimgmenu;
@@ -8086,6 +8139,12 @@ begin
 
   // FParams := AParams;
   InitializeWidget;
+end;
+
+destructor TGtk3MenuItem.Destroy;
+begin
+  FreeAndNil(FImage);
+  inherited Destroy;
 end;
 
 class function TGtk3MenuItem.MenuItemEvent({%H-}AWidget: PGtkWidget; event: PGdkEvent; {%H-}data: GPointer): gboolean; cdecl;
