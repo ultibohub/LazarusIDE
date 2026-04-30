@@ -2344,6 +2344,25 @@ begin
   if (ACharCode <> VK_UNKNOWN) and (ACharCode <= 255) then
     Gtk3WidgetSet.FGtk3KeyStates[ACharCode] := AKeyPress;
 
+  if not (GDK_CONTROL_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_CONTROL] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LCONTROL] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RCONTROL] := False;
+  end;
+  if not (GDK_SHIFT_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_SHIFT] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LSHIFT] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RSHIFT] := False;
+  end;
+  if not (GDK_MOD1_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_MENU] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LMENU] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RMENU] := False;
+  end;
+
   if (KeyValue >= GDK_KEY_exclam) and (KeyValue <= GDK_KEY_parenleft) and
      (ACharCode >= VK_0) and (ACharCode <= VK_9) and
      ((LCLModifiers and MK_SHIFT) = 0) then
