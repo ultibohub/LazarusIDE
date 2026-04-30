@@ -3105,6 +3105,61 @@ procedure TGtk3DeviceContext.drawImage1(targetRect: PRect; image: PGdkPixBuf;
   sourceRect: PRect; mask: PGdkPixBuf; maskRect: PRect);
 var
   M: Tcairo_matrix_t;
+  MaskSurface: Pcairo_surface_t;
+
+  function BuildMaskA8: Pcairo_surface_t;
+  var
+    MaskW, MaskH, MaskInStride, MaskOutStride: gint;
+    MaskInPixels, MaskOutPixels: PByte;
+    InRow, OutRow: PByte;
+    X, Y, ByteIdx, BitIdx: Integer;
+    Bit: Byte;
+  begin
+    Result := nil;
+    if mask = nil then
+      exit;
+
+    MaskInStride := mask^.get_rowstride;
+    MaskInPixels := PByte(mask^.get_pixels);
+    MaskH := mask^.get_height;
+    MaskW := MaskInStride * 8;
+
+    if MaskW > Image^.get_width then
+      MaskW := Image^.get_width;
+
+    if MaskW <= 0 then
+      exit;
+
+    Result := cairo_image_surface_create(CAIRO_FORMAT_A8, MaskW, MaskH);
+
+    if cairo_surface_status(Result) <> CAIRO_STATUS_SUCCESS then
+    begin
+      cairo_surface_destroy(Result);
+      exit(nil);
+    end;
+
+    cairo_surface_flush(Result);
+    MaskOutStride := cairo_image_surface_get_stride(Result);
+    MaskOutPixels := PByte(cairo_image_surface_get_data(Result));
+
+    for Y := 0 to MaskH - 1 do
+    begin
+      InRow := MaskInPixels + Y * MaskInStride;
+      OutRow := MaskOutPixels + Y * MaskOutStride;
+      for X := 0 to MaskW - 1 do
+      begin
+        ByteIdx := X shr 3;
+        BitIdx := 7 - (X and 7);
+        Bit := (InRow[ByteIdx] shr BitIdx) and 1;
+        if Bit = 0 then
+          OutRow[X] := $FF
+        else
+          OutRow[X] := $00;
+      end;
+    end;
+    cairo_surface_mark_dirty(Result);
+  end;
+
 begin
   {$IFDEF VerboseGtk3DeviceContext}
   DebugLn('TGtk3DeviceContext.DrawImage ');
@@ -3135,7 +3190,20 @@ begin
     cairo_pattern_set_filter(cairo_get_source(pcr), CAIRO_FILTER_NEAREST);
 
   cairo_clip(pcr);
-  cairo_paint(pcr);
+  if Assigned(mask) then
+  begin
+    //we must build cairo compatible mask, issue #42260 contains
+    //bitmaps examples.
+    MaskSurface := BuildMaskA8;
+    if MaskSurface <> nil then
+    begin
+      cairo_mask_surface(pcr, MaskSurface,
+        LToDX(targetRect^.Left), LToDY(targetRect^.Top));
+      cairo_surface_destroy(MaskSurface);
+    end else
+      cairo_paint(pcr);
+  end else
+    cairo_paint(pcr);
   cairo_restore(pcr);
 end;
 
