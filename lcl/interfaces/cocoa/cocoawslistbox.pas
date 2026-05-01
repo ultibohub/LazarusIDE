@@ -576,7 +576,6 @@ var
   listView: TCocoaTableListView;
   scrollView: NSScrollView;
   rect: NSRect;
-  spacing: Double;
 begin
   listView := TCocoaWSListBoxUtil.getTableListView(ACustomListBox);
   if not Assigned(listView) then
@@ -584,16 +583,9 @@ begin
   if listView.numberOfRows = 0 then
     Exit;
 
-  if NewTopIndex = 0 then begin
-    spacing:= 0;
-  end else begin
-    rect:= listView.rectOfRow( 0 );
-    spacing:= rect.origin.y;
-  end;
-
   rect:= listView.rectOfRow( NewTopIndex );
   scrollView:= listView.enclosingScrollView;
-  rect.origin.y:= rect.origin.y + scrollView.visibleRect.size.height + spacing;
+  rect.origin.y:= rect.origin.y + scrollView.frame.origin.y;
   scrollView.contentView.setBoundsOrigin( rect.origin );
 end;
 
