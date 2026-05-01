@@ -8824,10 +8824,6 @@ msgstr "Разделителем является точка с запятой"
 msgid "Delphi compatible resources. Recommended."
 msgstr "Ресурсы, совместимые с Delphi. Рекомендуется использовать именно их."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr "Редактор форм содержит несохранённые изменения"
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr "Пакет только времени разработки"
@@ -14409,11 +14405,6 @@ msgstr "Перекрыть подцель проекта."
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
 msgstr "Перекрыть библиотеку виджетов проекта. Например: %s. Значение по умолчанию: %s."
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
-msgstr "Несохранённые изменения в редакторе форм для файла \"%s\" будут утеряны. Перезаписать всё равно?"
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot
 msgid "'Owner' is already used by TReader/TWriter. Please choose another name."
