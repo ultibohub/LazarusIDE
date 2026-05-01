@@ -11896,8 +11896,6 @@ begin
 end;
 
 procedure TGtk3Button.setText(const AValue: String);
-var
-  AChild: PGtkWidget;
 
   procedure SetLabelJustifyRecursive(AWidget: PGtkWidget);
   var
@@ -11925,9 +11923,6 @@ begin
   if IsWidgetOk then
   begin
     {%H-}PGtkButton(FWidget)^.set_label(PgChar({%H-}ReplaceAmpersandsWithUnderscores(AValue)));
-    AChild := gtk_bin_get_child(PGtkBin(FWidget));
-    if Assigned(AChild) and not gtk_widget_get_visible(AChild) then
-      AChild^.show;
     SetLabelJustifyRecursive(FWidget);
     if LCLObject.AutoSize then
     begin
