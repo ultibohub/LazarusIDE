@@ -1583,17 +1583,17 @@ begin
     for i := c to t.Count-1 do
       t.Tests[i].Skip;
 
+    c := t.Count; // for FPC 3.3.1 and up
     AddWatches(t, 'glob TMyBaseClass class const',   'TMyBaseClass.cl_c_',  001, 'c', tlClassConst);
     AddWatches(t, 'glob TMyClass class const',   'TMyClass.cl_c_',  001, 'c', tlClassConst);
-    c := t.Count;
-    AddWatches(t, 'glob TMyBaseClass class var',     'TMyBaseClass.cl_v_',  007, 'v', tlClassVar);
-    AddWatches(t, 'glob TMyClass class var',     'TMyClass.cl_v_',  007, 'v', tlClassVar);
-    for i := c to t.Count-1 do
-      t.Tests[i].Skip;  // class var do not work => but ensure they do not crash
-
     AddWatches(t, 'glob MyClass2 class const',   'MyClass2.cl_c_',  001, 'c', tlClassConst);
     AddWatches(t, 'glob MyClass1 class const',   'MyClass1.cl_c_',  001, 'c', tlClassConst);
-    c := t.Count;
+    AddWatches(t, 'glob MyTestRec1.MyEmbedClass class const',   'MyTestRec1.MyEmbedClass.cl_c_',  001, 'c', tlClassConst);
+
+    if (Compiler.Version < 030300) then // before 3.3.1 class const were in dwarf
+      c := t.Count;
+    AddWatches(t, 'glob TMyBaseClass class var',     'TMyBaseClass.cl_v_',  007, 'v', tlClassVar);
+    AddWatches(t, 'glob TMyClass class var',     'TMyClass.cl_v_',  007, 'v', tlClassVar);
     AddWatches(t, 'glob MyClass2 class var',     'MyClass2.cl_v_',  007, 'v', tlClassVar);
     AddWatches(t, 'glob MyClass1 class var',     'MyClass1.cl_v_',  007, 'v', tlClassVar);
     for i := c to t.Count-1 do
@@ -1612,7 +1612,6 @@ begin
     AddWatches(t, 'glob MyTestRec1',     'MyTestRec1.rc_f_',  002, 'r');
     AddWatches(t, 'glob MyPTestRec1',     'MyPTestRec1^.rc_f_',  002, 'r');
 
-    AddWatches(t, 'glob MyTestRec1.MyEmbedClass class const',   'MyTestRec1.MyEmbedClass.cl_c_',  001, 'c', tlClassConst);
 
     AddWatches(t, 'glob var dyn array of [0]',   'gva', 005, 'K', tlArrayWrap, '[0]' );
     AddWatches(t, 'glob var dyn array of [1]',   'gva', 006, 'L', tlArrayWrap, '[1]');
