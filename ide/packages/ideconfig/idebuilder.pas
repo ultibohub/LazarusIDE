@@ -18,11 +18,13 @@
 *                                                                         *
 ***************************************************************************
 
- Code for building the Lazarus IDE. Split from unit BuildLazDialog.
+ Code for building the Lazarus IDE.
 }
 unit IdeBuilder;
 
 {$mode objfpc}{$H+}
+
+{off $DEFINE UseFPCForIDE}
 
 interface
 
@@ -290,7 +292,10 @@ var
       Tool.FreeData:=true;
       Tool.Process.Executable:=Executable;
       Tool.AddParsers(SubToolFPC);
+      {$IFDEF UseFPCForIDE}
+      {$ELSE}
       Tool.AddParsers(SubToolMake);
+      {$ENDIF}
       Tool.Process.CurrentDirectory:=fWorkingDir;
       Tool.EnvironmentOverrides:=EnvironmentOverrides;
       Tool.CmdLineParams:=MergeCmdLineParams(CmdLineParams);
@@ -313,6 +318,7 @@ begin
   // Get target files and directories.
   Result:=mrCancel;
   fProfile:=Profile;
+  fWorkingDir:=EnvironmentOptions.GetParsedLazarusDirectory;
   if CalcTargets(Flags)<>mrOk then exit;
 
   if Assigned(OnMainTitleChange) then
@@ -329,9 +335,20 @@ begin
     s:=EnvironmentOptions.GetParsedCompilerFilename;
     if s<>'' then
       EnvironmentOverrides.Values['PP']:=s;
-
+    {$IFDEF UseFPCForIDE}
+    // compile using fpc
+    Executable:=s;
+    // append target OS
+    if fTargetOS<>fCompilerTargetOS then begin
+      AddCmdLineParam('-T'+fTargetOS,true);
+    end;
+    // append target CPU
+    if fTargetCPU<>fCompilerTargetCPU then begin
+      AddCmdLineParam('-P'+fTargetCPU,true);
+    end;
+    {$ELSE}
+    // compile using make
     Executable:=SearchMakeExe(true);
-
     // add -w option to print leaving/entering messages of "make"
     AddCmdLineParam('-w',false);
     // append target OS
@@ -344,12 +361,11 @@ begin
       AddCmdLineParam('CPU_TARGET='+fTargetCPU,true);
       AddCmdLineParam('CPU_SOURCE='+fTargetCPU,true);
     end;
+    {$ENDIF}
 
     // create target directory and bundle
     Result:=PrepareTargetDir(Flags);
     if Result<>mrOk then exit;
-
-    fWorkingDir:=EnvironmentOptions.GetParsedLazarusDirectory;
 
     // clean up
     if (IdeBuildMode<>bmBuild) and (not (blfDontClean in Flags)) then begin
@@ -361,6 +377,8 @@ begin
         if (IdeBuildMode=bmCleanAllBuild) and (not (blfOnlyIDE in Flags)) then
           CleanLazarusSrcDir;
 
+        {$IFDEF UseFPCForIDE}
+        {$ELSE}
         // call make to clean up
         if (IdeBuildMode=bmCleanBuild) or (blfOnlyIDE in Flags) then
           Cmd:='cleanide'
@@ -368,6 +386,7 @@ begin
           Cmd:='cleanlaz';
         Result:=Run(lisCleanLazarusSource);
         if Result<>mrOk then exit;
+        {$ENDIF}
       end;
 
       // when cleaning, always clean up fallback output directory too
@@ -387,10 +406,16 @@ begin
     if not (blfDontBuild in Flags) then begin
       if blfDontClean in Flags then
         IdeBuildMode:=bmBuild;
+
+      {$IFDEF UseFPCForIDE}
+      if IdeBuildMode<>bmBuild then
+        AppendExtraOption('-B');
+      {$ELSE}
       if IdeBuildMode=bmBuild then
         Cmd:='ide'
       else
         Cmd:='cleanide ide';
+      {$ENDIF}
 
       if (not fOutputDirRedirected) and (not CheckDirectoryWritable(fWorkingDir)) then
         exit(mrCancel);
