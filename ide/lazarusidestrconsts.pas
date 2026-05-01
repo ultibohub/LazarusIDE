@@ -5367,8 +5367,6 @@ resourcestring
     +'%sProceed anyway?';
   lisRenamingAborted = 'Renaming aborted';
   lisRenamingConflict = 'Renaming conflict';
-  lisDesignerHasUnsavedChanges = 'Designer has unsaved changes';
-  lisOverwriteDesignerChangesAnyway = 'Unsaved designer changes for file "%s" will be lost. Overwrite anyway?';
   lisFileAlreadyExists = 'File "%s" already exists.';
   lisIdentifierIsAlreadyUsed = 'Identifier "%s" is already used';
   lisIdentifierIsAlreadyUsed2 = 'Identifier "%s" is already used.';
