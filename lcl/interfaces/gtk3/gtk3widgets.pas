@@ -1018,6 +1018,7 @@ type
     class procedure ButtonToggled(AWidget: PGtkToggleButton; AData: gPointer);
       cdecl; static;
   protected
+    FSetState: TCheckBoxState;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
     procedure InitializeWidget; override;
@@ -1027,7 +1028,6 @@ type
 
   TGtk3CheckBox = class(TGtk3ToggleButton)
   private
-    FSetState: TCheckBoxState;
     function GetState: TCheckBoxState;
     procedure SetState(AValue: TCheckBoxState);
   protected
@@ -6991,6 +6991,7 @@ begin
   FPageBox^.ref;
 
   Result := TGtkBox.new(GTK_ORIENTATION_HORIZONTAL, 0);
+  Result^.ref;
   FCentralWidget := TGtkLayout.new(nil, nil);
   FCentralWidget^.set_app_paintable(True);
   PGtkBox(Result)^.pack_start(FCentralWidget, True , True, 0);
@@ -7011,10 +7012,15 @@ begin
 end;
 
 procedure TGtk3Page.DestroyWidget;
+var
+  AContent: PGtkWidget;
 begin
   // unref it to allow it to be destroyed
   FPageBox^.unref;
+  AContent := FWidget;
   inherited DestroyWidget;
+  if AContent <> nil then
+    g_object_unref(PGObject(AContent));
 end;
 
 destructor TGtk3Page.Destroy;
@@ -7827,7 +7833,7 @@ begin
     TheNoteBook:=TCustomTabControl(LCLObject);
     HasIcon:=false;
     IconSize:=Size(0,0);
-    ImageIndex := TheNoteBook.GetImageIndex(AIndex);
+    ImageIndex := TheNoteBook.GetImageIndex(ACustomPage.PageIndex);
     Appi:=TheNoteBook.Font.PixelsPerInch;
     if (TheNoteBook.Images<>nil)
     and (ImageIndex >= 0)
@@ -7872,11 +7878,22 @@ begin
 end;
 
 procedure TGtk3NoteBook.SetPageIndex(AIndex: Integer);
+var
+  NB: PGtkNotebook;
+  APage: TCustomPage;
+  ARealIndex: gint;
 begin
-  if IsWidgetOK then
-  begin
-    PGtkNotebook(GetContainerWidget)^.set_current_page(AIndex);
-  end;
+  if not IsWidgetOK then
+    exit;
+  NB := PGtkNotebook(GetContainerWidget);
+  APage := TCustomTabControl(LCLObject).Page[AIndex];
+  if not Assigned(APage) or not APage.HandleAllocated then
+    exit;
+  ARealIndex := NB^.page_num(TGtk3Widget(APage.Handle).Widget);
+  if ARealIndex < 0 then
+    exit;
+  if NB^.get_current_page <> ARealIndex then
+    NB^.set_current_page(ARealIndex);
 end;
 
 procedure TGtk3NoteBook.SetShowTabs(const AShowTabs: Boolean);
@@ -9542,6 +9559,7 @@ var
   ABuffer: PGtkTextBuffer;
   AIter: TGtkTextIter;
   ALastIter: TGtkTextIter;
+  AStr: PChar;
 begin
   Result := '';
   if IsWidgetOk then
@@ -9549,7 +9567,12 @@ begin
     ABuffer := PGtkTextView(FCentralWidget)^.get_buffer;
     ABuffer^.get_start_iter(@AIter);
     ABuffer^.get_end_iter(@ALastIter);
-    Result := ABuffer^.get_text(@AIter, @ALastIter, False);
+    AStr := ABuffer^.get_text(@AIter, @ALastIter, False);
+    if AStr <> nil then
+    begin
+      Result := AStr;
+      g_free(AStr);
+    end;
   end;
   // DebugLn('TGtk3Memo.getText Result=',Result);
 end;
@@ -10911,11 +10934,26 @@ var
   Cell: PPGtkCellRenderer;
   APath: PGtkTreePath;
   AStr: PChar;
+  AStrConv: AnsiString;
+  CW: PGtkWidget;
+  ASel: PGtkTreeSelection;
 begin
   Result := False;
   AIsSet := False;
   if not IsWidgetOK then
     exit;
+  CW := GetContainerWidget;
+  if not Gtk3IsWidget(PGObject(CW)) then
+    exit;
+  if FIsTreeView then
+  begin
+    if not Gtk3WidgetIsA(CW, gtk_tree_view_get_type) then
+      exit;
+  end else
+  begin
+    if not Gtk3WidgetIsA(CW, gtk_icon_view_get_type) then
+      exit;
+  end;
   case AState of
     lisCut,
     lisDropTarget:
@@ -10927,16 +10965,19 @@ begin
       Path := nil;
       Column := nil;
       Cell := nil;
-      if IsTreeView then
-        PGtkTreeView(GetContainerWidget)^.get_cursor(@Path, Column)
+      if FIsTreeView then
+        PGtkTreeView(CW)^.get_cursor(@Path, Column)
       else
-        PGtkIconView(GetContainerWidget)^.get_cursor(@Path, Cell);
+        PGtkIconView(CW)^.get_cursor(@Path, Cell);
       if Assigned(Path) then
       begin
         AStr := gtk_tree_path_to_string(Path);
-        AIsSet := (StrToIntDef(AStr,-1) = AIndex);
         if AStr <> nil then
+        begin
+          AStrConv := AStr;
+          AIsSet := (StrToIntDef(AStrConv, -1) = AIndex);
           g_free(AStr);
+        end;
         gtk_tree_path_free(Path);
         Result := True;
       end;
@@ -10944,14 +10985,18 @@ begin
 
     lisSelected:
     begin
-      APath := gtk_tree_path_new_from_string(PChar(IntToStr(AIndex)));
-      if IsTreeView then
-        AIsSet := PGtkTreeView(GetContainerWidget)^.get_selection^.path_is_selected(APath)
-      else
-        AIsSet := PGtkIconView(GetContainerWidget)^.path_is_selected(APath);
-
-      if APath <> nil then
-        gtk_tree_path_free(APath);
+      AStrConv := IntToStr(AIndex);
+      APath := gtk_tree_path_new_from_string(PChar(AStrConv));
+      if APath = nil then
+        exit;
+      if FIsTreeView then
+      begin
+        ASel := PGtkTreeView(CW)^.get_selection;
+        if ASel <> nil then
+          AIsSet := ASel^.path_is_selected(APath);
+      end else
+        AIsSet := PGtkIconView(CW)^.path_is_selected(APath);
+      gtk_tree_path_free(APath);
       Result := True;
     end;
   end;
@@ -11849,6 +11894,8 @@ begin
 end;
 
 procedure TGtk3Button.setText(const AValue: String);
+var
+  AChild: PGtkWidget;
 
   procedure SetLabelJustifyRecursive(AWidget: PGtkWidget);
   var
@@ -11876,6 +11923,9 @@ begin
   if IsWidgetOk then
   begin
     {%H-}PGtkButton(FWidget)^.set_label(PgChar({%H-}ReplaceAmpersandsWithUnderscores(AValue)));
+    AChild := gtk_bin_get_child(PGtkBin(FWidget));
+    if Assigned(AChild) and not gtk_widget_get_visible(AChild) then
+      AChild^.show;
     SetLabelJustifyRecursive(FWidget);
     if LCLObject.AutoSize then
     begin

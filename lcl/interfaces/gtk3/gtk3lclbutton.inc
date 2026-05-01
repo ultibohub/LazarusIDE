@@ -190,6 +190,7 @@ var
   Padding, Border, Margin: TGtkBorder;
   ExtentsW, ExtentsH: Integer;
   NeedTight, HasTight: Boolean;
+  AChild: PGtkWidget;
 begin
   if not Gtk3IsWidget(widget) or not Assigned(allocation) then
     Exit;
@@ -223,6 +224,10 @@ begin
         StyleCtx^.remove_class(LCLBtnTightClass);
     end;
   end;
+
+  AChild := gtk_bin_get_child(PGtkBin(widget));
+  if Assigned(AChild) and not gtk_widget_get_visible(AChild) then
+    AChild^.show;
 
   ParentClass := PGtkWidgetClass(g_type_class_peek_parent(widget^.g_type_instance.g_class));
   if Assigned(ParentClass) and Assigned(ParentClass^.size_allocate) then
