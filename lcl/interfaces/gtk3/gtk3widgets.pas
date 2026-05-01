@@ -7886,6 +7886,8 @@ begin
   if not IsWidgetOK then
     exit;
   NB := PGtkNotebook(GetContainerWidget);
+  if (AIndex < 0) or (AIndex >= TCustomTabControl(LCLObject).PageCount) then
+    exit;
   APage := TCustomTabControl(LCLObject).Page[AIndex];
   if not Assigned(APage) or not APage.HandleAllocated then
     exit;
