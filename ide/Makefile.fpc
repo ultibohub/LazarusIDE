@@ -180,7 +180,16 @@ endif
 
 #-----------------------------------------------------------------------------
 [rules]
-.PHONY: ide bigide starter lazbuilder all clean cleanide purge
+.PHONY: ide bigide starter lazbuilder all clean cleanide purge revisioninc
+
+#-----------------------------------------------------------------------------
+revisioninc:
+ifneq ($(USESVN2REVISIONINC),0)
+ifeq ($(wildcard ../tools/svn2revisioninc$(SRCEXEEXT)),)
+	$(MAKE) -C ../tools svn2revisioninc$(SRCEXEEXT) OS_TARGET=$(OS_SOURCE) CPU_TARGET=$(CPU_SOURCE) OPT=''
+endif
+	../tools/svn2revisioninc$(SRCEXEEXT) .. revision.inc
+endif
 
 #-----------------------------------------------------------------------------
 # compile IDE without extra packages
@@ -193,12 +202,12 @@ idepackages:
 
 #-----------------------------------------------------------------------------
 # compile IDE without extra packages
-ide: $(COMPILER_UNITTARGETDIR)
+ide: $(COMPILER_UNITTARGETDIR) revisioninc
         $(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 
 #-----------------------------------------------------------------------------
 # compile IDE with some extra packages
-bigide: $(COMPILER_UNITTARGETDIR)
+bigide: $(COMPILER_UNITTARGETDIR) revisioninc
         -$(DEL) $(COMPILER_UNITTARGETDIR)/pkgmanager$(PPUEXT)
         $(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(BIG_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 
