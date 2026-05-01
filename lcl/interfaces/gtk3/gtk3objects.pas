@@ -968,22 +968,28 @@ var
   AGravity: TPangoGravity;
   stretch: TPangoStretch;
   weight: TPangoWeight;
+  AFamily: PChar;
+  AFaceStr: string;
 begin
   if not Assigned(fHandle) then exit;
   fillchar(fLogFont,sizeof(fLogFont),0);
   members:=fHandle^.get_set_fields;
+  AFamily := fHandle^.get_family;
   if PANGO_FONT_MASK_FAMILY in members then
   begin
-    fLogFont.lfFaceName:=PChar(fHandle^.get_family);
+    if AFamily <> nil then
+      StrLCopy(@fLogFont.lfFaceName[0], AFamily, LF_FACESIZE - 1);
   end else
   begin
     if PANGO_FONT_MASK_STRETCH in members then
       stretch := fHandle^.get_stretch
     else
       stretch := PANGO_STRETCH_NORMAL;
-
-    fLogFont.lfFaceName:=AppendPangoFontFaceSuffixes(
-      PChar(fHandle^.get_family), stretch, PANGO_WEIGHT_NORMAL);
+    if AFamily <> nil then
+    begin
+      AFaceStr := AppendPangoFontFaceSuffixes(AFamily, stretch, PANGO_WEIGHT_NORMAL);
+      StrPLCopy(@fLogFont.lfFaceName[0], AFaceStr, LF_FACESIZE - 1);
+    end;
   end;
   if PANGO_FONT_MASK_STYLE in members then
   begin
