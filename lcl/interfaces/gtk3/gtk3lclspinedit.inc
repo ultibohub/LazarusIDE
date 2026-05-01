@@ -95,21 +95,35 @@ begin
 end;
 
 function LCLSpinEditUpButtonPress(AWidget: PGtkWidget; AEvent: PGdkEventButton; AData: gpointer): gboolean; cdecl;
+var
+  Data: PLCLSpinEditData;
 begin
+  Result := False;
   if (AEvent <> nil) and
      (AEvent^.type_ in [GDK_BUTTON_PRESS, GDK_2BUTTON_PRESS, GDK_3BUTTON_PRESS]) and
      (AEvent^.button = 1) then
+  begin
     LCLSpinEditUpClicked(PGtkButton(AWidget), AData);
-  Result := False;
+    Data := PLCLSpinEditData(AData);
+    if Assigned(Data^.Entry) then
+      PGtkEditable(Data^.Entry)^.select_region(0, -1);
+  end;
 end;
 
 function LCLSpinEditDownButtonPress(AWidget: PGtkWidget; AEvent: PGdkEventButton; AData: gpointer): gboolean; cdecl;
+var
+  Data: PLCLSpinEditData;
 begin
+  Result := False;
   if (AEvent <> nil) and
      (AEvent^.type_ in [GDK_BUTTON_PRESS, GDK_2BUTTON_PRESS, GDK_3BUTTON_PRESS]) and
      (AEvent^.button = 1) then
+  begin
     LCLSpinEditDownClicked(PGtkButton(AWidget), AData);
-  Result := False;
+    Data := PLCLSpinEditData(AData);
+    if Assigned(Data^.Entry) then
+      PGtkEditable(Data^.Entry)^.select_region(0, -1);
+  end;
 end;
 
 procedure LCLSpinEditEntryChanged(AEditable: PGtkEditable; AData: gpointer); cdecl;
