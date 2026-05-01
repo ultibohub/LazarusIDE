@@ -34,7 +34,7 @@ uses
   Windows,
   {$ENDIF}
   // LazUtils
-  FPCAdds, FileUtil, LazFileUtils, LazUTF8, LazLoggerBase, LazFileCache, LazVersion,
+  FPCAdds, FileUtil, LazFileUtils, LazUTF8, LazLoggerBase, LazFileCache, LazVersion, LazVCSUtils,
   // Codetools
   CodeToolManager,
   // BuildIntf
@@ -77,6 +77,7 @@ type
     procedure CleanDir(Dir: string; Recursive: boolean = true);
     procedure CleanLazarusSrcDir;
     procedure CheckRevisionInc;
+    procedure OnLogVCSScout(Msg: string);
     procedure RestoreBackup;
     // Methods used by SaveIDEMakeOptions :
     function BreakExtraOptions: string;
@@ -92,8 +93,6 @@ type
     function PrepareTargetDir(Flags: TBuildLazarusFlags): TModalResult;
   public
     constructor Create;
-    //function ShowConfigBuildLazDlg(AProfiles: TBuildLazarusProfiles;
-    //                               ADisableCompilation: Boolean): TModalResult;
     function MakeLazarus(Profile: TBuildLazarusProfile; Flags: TBuildLazarusFlags): TModalResult;
     function MakeIDEUsingLazbuild(Clean: boolean): TModalResult;
     function IsWriteProtected(Profile: TBuildLazarusProfile): Boolean;
@@ -103,9 +102,6 @@ type
     property PackageOptions: string read fPackageOptions write fPackageOptions;
     property ProfileChanged: boolean read fProfileChanged write fProfileChanged;
   end;
-
-//function GetMakeIDEConfigFilename: string;
-//function GetBackupExeFilename(Filename: string): string;
 
 
 implementation
@@ -214,15 +210,34 @@ end;
 
 procedure TLazarusBuilder.CheckRevisionInc;
 var
-  RevisionIncFile: String;
+  RevisionIncFile, VersionStr: String;
   sl: TStringList;
+  Scout: TVCSScout;
+  RevFileExists: Boolean;
 begin
   RevisionIncFile:=AppendPathDelim(EnvironmentOptions.GetParsedLazarusDirectory)+'ide'+PathDelim+'revision.inc';
-  if not FileExistsUTF8(RevisionIncFile) then begin
+  VersionStr:=LazarusVersionStr;
+  RevFileExists:=FileExistsUTF8(RevisionIncFile);
+  if not RevFileExists then
     debugln(['Note: (lazarus) revision.inc file missing: ',RevisionIncFile]);
-    sl:=TStringList.Create;
+  if RevFileExists and not fUpdateRevInc then exit;
+
+  if fUpdateRevInc then
+  begin
+    Scout:=TVCSScout.Create(nil);
+    try
+      Scout.OnShow:=@OnLogVCSScout;
+      Scout.SourceDirectory:=fWorkingDir;
+      if Scout.FindRevision then
+        VersionStr:=Scout.RevisionStr;
+    finally
+      Scout.Free;
+    end;
+  end;
+  sl:=TStringList.Create;
+  try
     sl.Add('// Created by lazbuild');
-    sl.Add('const RevisionStr = '''+LazarusVersionStr+''';');
+    sl.Add('const RevisionStr = '''+VersionStr+''';');
     try
       sl.SaveToFile(RevisionIncFile);
     except
@@ -230,8 +245,14 @@ begin
         debugln(['Warning: (lazarus) unable to write ',RevisionIncFile,': ',E.Message]);
       end;
     end;
+  finally
     sl.Free;
   end;
+end;
+
+procedure TLazarusBuilder.OnLogVCSScout(Msg: string);
+begin
+  debugln(['Info: (lazarus) ',Msg]);
 end;
 
 procedure TLazarusBuilder.RestoreBackup;
@@ -428,12 +449,27 @@ begin
       if CreateRelativePath(fTargetFilename,fTargetDir) <> DefaultTargetFilename then
         AppendExtraOption('-o'+fTargetFilename);
 
+      {$IFDEF UseFPCForIDE}
+      CheckRevisionInc;
+      AppendExtraOption('-Fiide'+PathDelim+'include');
+      AppendExtraOption('-Fudesigner');
+      AppendExtraOption('-Fupackager');
+      AppendExtraOption('-Fupackager'+PathDelim+'frames');
+      AppendExtraOption('-Fudebugger');
+      AppendExtraOption('-Fudebugger'+PathDelim+'frames');
+      AppendExtraOption('-Fuconverter');
+      AppendExtraOption('-Fuide'+PathDelim+'frames');
+      AppendExtraOption('-Fuide');
+      AppendExtraOption('ide'+PathDelim+'lazarus.pp');
+      Cmd:=fExtraOptions;
+      {$ELSE}
       if fExtraOptions<>'' then
         EnvironmentOverrides.Values['OPT'] := fExtraOptions;
       if not fUpdateRevInc then begin
         CheckRevisionInc;
         EnvironmentOverrides.Values['USESVN2REVISIONINC'] := '0';
       end;
+      {$ENDIF}
       // run
       Result:=Run(lisBuildIDE);
       // clean only once. If building failed the user must first fix the error
