@@ -149,12 +149,6 @@ tools:
 	$(MAKE) -C tools
 
 #-----------------------------------------------------------------------------
-# create/update ide/revision.inc
-# requires tools
-revisioninc:
-	$(MAKE) -C ide revisioninc
-
-#-----------------------------------------------------------------------------
 # build lazarus exe with minimum of packages for the LCL_PLATFORM
 # requires basecomponents and tools
 ide:
@@ -191,16 +185,12 @@ starter:
 
 #-----------------------------------------------------------------------------
 # build lazbuild
-# for now: build tools as well (svnrevision2inc is needed for crosscompiling)
 lazbuild: registration
 	$(MAKE) -C components lazbuildpackages
 	$(MAKE) -C ide/packages/ideconfig
 	$(MAKE) -C ide/packages/idepackager
 	$(MAKE) -C ide/packages/ideproject
 	$(MAKE) -C ide lazbuilder
-	$(MAKE) -C components/freetype LCL_PLATFORM=nogui
-	$(MAKE) -C lcl LCL_PLATFORM=nogui
-	$(MAKE) -C tools
 
 #-----------------------------------------------------------------------------
 # build lhelp

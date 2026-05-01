@@ -3187,8 +3187,6 @@ tools:
 	$(MAKE) -C components/freetype LCL_PLATFORM=nogui
 	$(MAKE) -C lcl LCL_PLATFORM=nogui
 	$(MAKE) -C tools
-revisioninc:
-	$(MAKE) -C ide revisioninc
 ide:
 	$(MAKE) -C ide ide
 idebig:
@@ -3215,9 +3213,6 @@ lazbuild: registration
 	$(MAKE) -C ide/packages/idepackager
 	$(MAKE) -C ide/packages/ideproject
 	$(MAKE) -C ide lazbuilder
-	$(MAKE) -C components/freetype LCL_PLATFORM=nogui
-	$(MAKE) -C lcl LCL_PLATFORM=nogui
-	$(MAKE) -C tools
 lhelp:
 	$(MAKE) -C components/chmhelp/lhelp
 all: lazbuild tools lcl basecomponents ide starter
