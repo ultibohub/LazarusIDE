@@ -149,8 +149,8 @@ type
     // mouse
     procedure scrollWheel(event: NSEvent); override;
 
-    // key，it‘s no longer in use, see the description below
-    // procedure keyDown(event: NSEvent); override;
+    // key
+    procedure keyDown(event: NSEvent); override;
 
     // menu support
     procedure lclItemSelected(sender: id); message 'lclItemSelected:';
@@ -895,8 +895,8 @@ begin
     inherited scrollWheel(event);
 end;
 
-// according to the current key handling logic, TCocoaWindow.keyDown() will
-// no longer be executed.
+// according to the current key handling logic, there is no longer any need
+// to process in TCocoaWindow.keyDown().
 //
 // because TCocoaWindowContentDocument was changed to inherit from
 // TCocoaCustomControlWithBaseInputClient in 2024.
@@ -918,36 +918,9 @@ end;
 // Zoë Peterson provides a detailed explanation of the complete logic for
 // Cocoa Key handling:
 // https://gitlab.com/freepascal.org/lazarus/lazarus/-/work_items/35449
-{
 procedure TCocoaWindow.keyDown(event: NSEvent);
-var
-  mn : NSMenu;
-  allowcocoa : Boolean;
 begin
-  if CocoaWidgetSetState.CocoaOnlyState then
-  begin
-    inherited keyDown(event);
-    Exit;
-  end;
-
-  if performKeyEquivalent(event) then
-    Exit;
-
-  mn := NSApp.MainMenu;
-  if Assigned(mn) and mn.performKeyEquivalent(event) then
-    Exit;
-
-  if Assigned(_keyEvCallback) then
-  begin
-    allowcocoa := True;
-    _keyEvCallback.KeyEvAfterDown(allowcocoa);
-    if not allowcocoa then
-      Exit;
-  end;
-
-  inherited keyDown(event);
 end;
-}
 
 // return proper focused responder by kind of class of NSResponder
 function getProperFocusedResponder( const win : NSWindow; const aResponder : NSResponder ): NSResponder;
