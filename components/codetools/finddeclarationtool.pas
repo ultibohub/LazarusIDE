@@ -7027,6 +7027,7 @@ var
 
   function IsDeclarationNode(Node: TCodeTreeNode): boolean;
   begin
+    Result:=false;
     UseProcHead(Node);
     if (Node=DeclarationNode) or (Node=AliasDeclarationNode) or
     // forward class (ident = class)
@@ -7041,8 +7042,6 @@ var
       if ArrayHasNode(OverrideProcNodes,Node.Parent) then
         exit(true);
     end;
-
-    Result:=false;
   end;
 
   function CheckMethodOverride(Tool: TFindDeclarationTool; ProcNode: TCodeTreeNode): boolean;
@@ -7171,6 +7170,8 @@ var
     Node: TCodeTreeNode;
     IsDotted: boolean;
     dLen: integer;
+    ExprType: TExpressionType;
+    PropName: PChar;
   begin
     if (not IsComment) then
       UnitStartFound:=true;
@@ -7279,7 +7280,34 @@ var
         // search identifier also in comments -> if not found, this is no bug
         // => silently ignore
         try
-          Found:=FindDeclarationOfIdentAtParam(Params,DefaultResultNode);
+          if DeclarationNode.Desc=ctnProperty then begin // it needs additional checking
+            Params.Flags:=[fdfSearchInAncestors, fdfExceptionOnNotFound,
+                     fdfSearchInParentNodes, fdfIgnoreCurContextNode,
+                     fdfExceptionOnPredefinedIdent, fdfTopLvlResolving];
+            if FindDeclarationOfIdentAtParam(Params, ExprType) then begin
+              Found:= ExprType.Context.Node = DeclarationNode;
+              // first ancestor (if property found here) can be not enough
+              // debugln(
+              //  [ExprType.Context.Tool.ExtractProperty(ExprType.Context.Node,[phpWithResultType]),
+              //  '  Has Type = ',
+              //  not ExprType.Context.Tool.PropNodeIsTypeLess(ExprType.Context.Node)]);
+
+              if not Found  then begin
+                PropName:=ExprType.Context.Tool.GetPropertyNameIdentifier(ExprType.Context.Node);
+                Params.SetIdentifier(ExprType.Context.Tool, PropName,@CheckSrcIdentifier);
+                Params.ContextNode:=ExprType.Context.Node;
+                Params.IdentifierTool:=ExprType.Context.Tool;
+                Params.IdentifierNode:=ExprType.Context.Node;
+                Params.Flags:=[fdfSearchInAncestors,
+                              fdfExceptionOnNotFound,
+                              fdfSearchInParentNodes,
+                              fdfExceptionOnPredefinedIdent];
+                if ExprType.Context.Tool.FindDeclarationOfIdentAtParam(Params, ExprType) then
+                  Found:= ExprType.Context.Node = DeclarationNode;
+              end;
+            end;
+          end else
+            Found:=FindDeclarationOfIdentAtParam(Params,DefaultResultNode);
         except
           on E: ECodeToolError do begin
             if E.Sender<>Self then begin
@@ -7499,7 +7527,6 @@ var
   begin
     if DeclarationFound then exit(true);
     Result:=false;
-
     // find the main declaration node and identifier
     DeclarationTool.BuildTreeAndGetCleanPos(CursorPos,CleanDeclCursorPos);
     DeclarationNode:=DeclarationTool.BuildSubTreeAndFindDeepestNodeAtPos(
@@ -7586,7 +7613,6 @@ var
     if AliasDeclarationNode=nil then
       debugln(['FindReferences Has no Alias']);
     {$ENDIF}
-
     if frfMethodOverrides in Flags then begin
       if (DeclarationNode.Desc<>ctnProcedureHead)
           or (not NodeIsMethodDecl(DeclarationNode.Parent)) then
