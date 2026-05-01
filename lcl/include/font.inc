@@ -730,6 +730,22 @@ begin
     Result := True;
 end;
 
+function TFont.IsHorizontal(AllowReverse: Boolean = false): Boolean;
+var
+  absOrientation: Integer;
+begin
+  absOrientation := abs(Orientation) mod 3600;
+  Result := (absOrientation = 0) or (AllowReverse and (absOrientation = 1800));
+end;
+
+function TFont.IsVertical: Boolean;
+var
+  absOrientation: Integer;
+begin
+  absOrientation := abs(Orientation) mod 3600;
+  Result := (absOrientation = 900) or (absOrientation = 2700);
+end;
+
 procedure TFont.BeginUpdate;
 begin
   inc(FUpdateCount);
