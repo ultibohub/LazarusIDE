@@ -36,19 +36,23 @@ help:
 	@$(ECHO) "   bigide      build the extra packages for the bigide, requires lcl"
 
 #-----------------------------------------------------------------------------
-# build lazbuild non lcl packages, requires packager/registration
+# build packages needed by lazbuild, requires packager/registration
 lazbuildpackages:
 	$(MAKE) -C lazutils
 	$(MAKE) -C codetools
 	$(MAKE) -C buildintf
 	$(MAKE) -C lazdebuggers/lazdebuggerintf
 	$(MAKE) -C debuggerintf
+
+#-----------------------------------------------------------------------------
+# build packages needed by the lcl, requires packager/registration
+lclpackages:
+	$(MAKE) -C lazutils
 	$(MAKE) -C freetype
 
 #-----------------------------------------------------------------------------
-# build lazbuild lcl packages, requires lclbase and lazbuildpackages
-# Note: when building lazbuild the LCL_PLATFORM=nogui, when building the ide LCL_PLATFORM=
-lazbuildlclpackages:
+# build packages of the minimal ide, requires lcl
+idepackages:
 	$(MAKE) -C fpdebug
 	$(MAKE) -C lazcontrols
 	$(MAKE) -C lazedit
@@ -58,10 +62,6 @@ lazbuildlclpackages:
 	$(MAKE) -C lazdebuggers/lazdebuggerfplldb
 	$(MAKE) -C lazdebuggers/lazdebuggerfp
 	$(MAKE) -C synedit
-
-#-----------------------------------------------------------------------------
-# build packages of the minimal ide, requires lazbuildpackages and lcl
-idepackages: lazbuildlclpackages
 	$(MAKE) -C lazdebuggergdbmi
 	$(MAKE) -C lazcontrols/design
 	$(MAKE) -C lclextensions
