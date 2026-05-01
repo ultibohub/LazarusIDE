@@ -216,6 +216,7 @@ type
   public
     constructor Create;
     destructor Destroy; override;
+    procedure CreateDefaults;
     procedure Load;
     procedure Save;
     property Filename: string read GetFilename;
@@ -659,17 +660,7 @@ begin
       exit(fTranslatedProfileNames[i]);
   Result:=aName; // No translation, not a preconfigured profile.
 end;
-{
-function TBuildLazarusProfiles.Translated2DefaultProfile(aName: string): string;
-var
-  i: Integer;
-begin
-  for i:=Low(fTranslatedProfileNames) to High(fTranslatedProfileNames) do
-    if fTranslatedProfileNames[i]=aName then
-      exit(DefaultProfileNames[i]);
-  Result:=aName;  // Not a preconfigured profile.
-end;
-}
+
 function TBuildLazarusProfiles.GetCurrentProfile: TBuildLazarusProfile;
 begin
   Result:=Items[fCurrentIndex];
@@ -705,6 +696,11 @@ begin
   fBuildLazProfiles.Free;
   FFindRenameIdentifierOptions.Free;
   inherited Destroy;
+end;
+
+procedure TMiscellaneousOptions.CreateDefaults;
+begin
+  fBuildLazProfiles.CreateDefaults;
 end;
 
 function TMiscellaneousOptions.GetFilename: string;

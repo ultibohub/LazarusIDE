@@ -24,7 +24,7 @@ unit IdeBuilder;
 
 {$mode objfpc}{$H+}
 
-{off $DEFINE UseFPCForIDE}
+{$DEFINE UseFPCForIDE}
 
 interface
 
@@ -49,7 +49,8 @@ type
     blfOnlyIDE,             // skip all but IDE (for example build IDE, but not packages, not lazbuild, ...)
     blfDontClean,           // ignore clean up option in profile
     blfUseMakeIDECfg,       // append @idemake.cfg
-    blfBackupOldExe         // rename existing lazarus exe to lazarus.old
+    blfBackupOldExe,        // rename existing lazarus exe to lazarus.old
+    blfKeepInstallPkgs      // compile IDE with -dKeepInstalledPackages
     );
   TBuildLazarusFlags = set of TBuildLazarusFlag;
 
@@ -441,14 +442,6 @@ begin
       if (not fOutputDirRedirected) and (not CheckDirectoryWritable(fWorkingDir)) then
         exit(mrCancel);
 
-      // fTargetFilename may be lazarus.new.exe, append -o
-      // Note: FPC automatically changes the last extension (append or replace)
-      // For example under linux, where executables don't need any extension
-      // fpc removes the last extension of the -o option.
-      DefaultTargetFilename:='lazarus'+GetExecutableExt(fTargetOS);
-      if CreateRelativePath(fTargetFilename,fTargetDir) <> DefaultTargetFilename then
-        AppendExtraOption('-o'+fTargetFilename);
-
       {$IFDEF UseFPCForIDE}
       CheckRevisionInc;
       AppendExtraOption('-Fiide'+PathDelim+'include');
@@ -460,9 +453,19 @@ begin
       AppendExtraOption('-Fuconverter');
       AppendExtraOption('-Fuide'+PathDelim+'frames');
       AppendExtraOption('-Fuide');
+      if blfKeepInstallPkgs in Flags then
+        AppendExtraOption('-dKeepInstalledPackages');
       AppendExtraOption('ide'+PathDelim+'lazarus.pp');
+      AppendExtraOption('-o'+fTargetFilename);
       Cmd:=fExtraOptions;
       {$ELSE}
+      // fTargetFilename may be lazarus.new.exe, append -o
+      // Note: FPC automatically changes the last extension (append or replace)
+      // For example under linux, where executables don't need any extension
+      // fpc removes the last extension of the -o option.
+      DefaultTargetFilename:='lazarus'+GetExecutableExt(fTargetOS);
+      if CreateRelativePath(fTargetFilename,fTargetDir) <> DefaultTargetFilename then
+        AppendExtraOption('-o'+fTargetFilename);
       if fExtraOptions<>'' then
         EnvironmentOverrides.Values['OPT'] := fExtraOptions;
       if not fUpdateRevInc then begin
