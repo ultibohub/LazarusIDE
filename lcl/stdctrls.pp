@@ -27,7 +27,7 @@ interface
 uses
   Classes, SysUtils, types,
   // LCL
-  LCLStrConsts, LCLType, LCLProc, LCLIntf, LMessages, LResources, Graphics,
+  LCLStrConsts, LCLType, LCLProc, LCLIntf, LMessages, LResources, Graphics, GraphUtil,
   ActnList, Controls, Forms, Menus, Themes,
   // LazUtils
   TextStrings, ExtendedStrings, LazUTF8, LazMethodList, LazLoggerBase, LazTracer, LazUtilities;
@@ -1576,11 +1576,13 @@ type
     FOptimalFill: Boolean;
     FShowAccelChar: Boolean;
     FWordWrap: Boolean;
+    FWordWrapLength: Integer;
     FLayout: TTextLayout;
     FInternalSetBounds: Boolean;
-    FWordWrapTextLength: Integer;
+//    function IsStoredWordWrapLength: Boolean;
     procedure SetAlignment(Value: TAlignment);
     procedure SetOptimalFill(const AValue: Boolean);
+    procedure SetWordWrapLength(Value: Integer);
   protected
     class procedure WSRegisterClass; override;
     function  CanTab: boolean; override;
@@ -1591,6 +1593,9 @@ type
                          WithThemeSpace: Boolean); override;
     procedure CalculateSize(MaxWidth: integer;
                             var NeededWidth, NeededHeight: integer);
+    function  CalcWordWrapLength: Integer;
+    procedure DoAutoAdjustLayout(const AMode: TLayoutAdjustmentPolicy;
+      const AXProportion, AYProportion: Double); override;
     procedure DoAutoSize; override;
     function  DialogChar(var Message: TLMKey): boolean; override;
     procedure TextChanged; override;
@@ -1603,6 +1608,7 @@ type
 
     function  GetLabelText: string; virtual;
     function  GetTransparent: boolean;
+    procedure SetAlign(Value: TAlign); override;
     procedure SetFocusControl(Value: TWinControl);
     procedure SetLayout(Value: TTextLayout);
     procedure SetShowAccelChar(Value: Boolean);
@@ -1617,7 +1623,7 @@ type
     property ShowAccelChar: Boolean read FShowAccelChar write SetShowAccelChar default true;
     property Transparent: boolean read GetTransparent write SetTransparent default true;
     property WordWrap: Boolean read FWordWrap write SetWordWrap default false;
-    property WordWrapTextLength: Integer read FWordWrapTextlength write FWordWrapTextLength;
+    property WordWrapLength: Integer read FWordWrapLength write SetWordWrapLength default 0;
     property OptimalFill: Boolean read FOptimalFill write SetOptimalFill default false;
   public
     constructor Create(TheOwner: TComponent); override;
@@ -1663,6 +1669,7 @@ type
     property Transparent;
     property Visible;
     property WordWrap;
+    property WordWrapLength;
     property OnChangeBounds;
     property OnClick;
     property OnContextPopup;

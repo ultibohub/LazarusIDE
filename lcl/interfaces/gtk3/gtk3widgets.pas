@@ -30,7 +30,7 @@ uses
   GraphType,
   // GTK3
   LazGtk3, LazGdk3, LazGObject2, LazGLib2, LazCairo1, LazPango1, LazGdkPixbuf2,
-  gtk3objects, gtk3procs, gtk3private, Gtk3CellRenderer;
+  gtk3objects, gtk3procs, gtk3private, Gtk3CellRenderer, gtk3mdiemulator;
 
 type
   TByteSet = set of byte;
@@ -55,10 +55,13 @@ type
     wtGroupBox, wtCalendar, wtTrackBar, wtScrollBar,
     wtScrollingWin, wtListBox, wtListView, wtCheckListBox, wtMemo, wtTreeModel,
     wtCustomControl, wtToolbar, wtScrollingWinControl,
-    wtWindow, wtDialog, wtHintWindow, wtGLArea);
+    wtWindow, wtDialog, wtHintWindow, wtGLArea,
+    wtMDIForm, wtMDIChild);
   TGtk3WidgetTypes = set of TGtk3WidgetType;
 
   TGtk3GroupBoxType = (gbtGroupBox, gbtCheckGroup, gbtRadioGroup);
+
+  TGtk3MDIArea = class;
 
   { TGtk3MenuItemHelper }
 
@@ -395,6 +398,7 @@ type
     function GetTrackBarOrientation: TTrackBarOrientation;
     procedure SetScalePos(AValue: TTrackBarScalePos);
     procedure SetTickMarks(AValue: TTickMark; ATickStyle: TTickStyle);
+    procedure SetShowSelRange(AValue: Boolean);
     property Reversed: Boolean read GetReversed write SetReversed;
   end;
 
@@ -436,6 +440,9 @@ type
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
+    class function Gtk3CalendarBtnPress(AWidget: PGtkWidget; AEvent: PGdkEvent;
+      AData: gpointer): gboolean; cdecl; static;
+    procedure InitializeWidget; override;
     procedure GetDate(out AYear, AMonth, ADay: LongWord);
     procedure SetDate(const AYear, AMonth, ADay: LongWord);
     procedure SetDisplayOptions(const ADisplayOptions: TGtkCalendarDisplayOptions);
@@ -585,6 +592,7 @@ type
 
   TGtk3MenuItem = class(TGtk3Bin)
   private
+    FImage: TBitmap;
     function GetCaption: string;
     procedure SetCaption(const AValue: string);
   strict private
@@ -600,6 +608,7 @@ type
     Lock:integer;
     MenuItem: TMenuItem;
     constructor Create(const AMenuItem: TMenuItem); virtual; overload;
+    destructor Destroy; override;
     procedure InitializeWidget; override;
     procedure ReplaceWidget;
     procedure SetCheck(ACheck:boolean);
@@ -964,6 +973,7 @@ type
     procedure SetSelStart(const ANewStart: integer);
     procedure SetSelLength(const ANewLength: integer);
     procedure InitializeWidget; override;
+    procedure SetTextHint(const AHint: string);
     property DroppedDown: boolean read GetDroppedDown write SetDroppedDown;
     property ItemIndex: Integer read GetItemIndex write SetItemIndex;
   end;
@@ -1008,6 +1018,7 @@ type
     class procedure ButtonToggled(AWidget: PGtkToggleButton; AData: gPointer);
       cdecl; static;
   protected
+    FSetState: TCheckBoxState;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
     procedure InitializeWidget; override;
@@ -1017,7 +1028,6 @@ type
 
   TGtk3CheckBox = class(TGtk3ToggleButton)
   private
-    FSetState: TCheckBoxState;
     function GetState: TCheckBoxState;
     procedure SetState(AValue: TCheckBoxState);
   protected
@@ -1106,6 +1116,9 @@ type
     FScrollWin: PGtkScrolledWindow;
     FMenuBar: PGtkMenuBar;
     FBox: PGtkBox;
+
+    FMDIArea: TGtk3MDIArea; //available only when LCLObject is fsMDIForm
+
     {Deferred resize: when SetBounds is called from within the synchronous
      WindowSizeAllocate delivery, resize() is deferred to a g_idle_add callback
      that fires once the GDK event queue is empty  - no echo loop. }
@@ -1120,6 +1133,7 @@ type
     class function WindowFocusIn(AWidget: PGtkWidget; AEvent: PGdkEventFocus; AData: gpointer): gboolean; cdecl; static;
     class function WindowFocusOut(AWidget: PGtkWidget; AEvent: PGdkEventFocus; AData: gpointer): gboolean; cdecl; static;
     class procedure WindowHideSignal(AWidget: PGtkWidget; AData: gpointer); cdecl; static;
+    class procedure MDILayoutSizeAllocate(AWidget: PGtkWidget; AAlloc: PGdkRectangle; AData: gpointer); cdecl; static;
   strict private
     class function WindowMapEvent(awidget:PGtkWindow;AEvent: PGdkEventAny; adata: gpointer): gboolean; cdecl; static; //uses lcl-window-first-map data.
     class function WindowMoveEvent(awidget: PGtkWindow; AEvent: PGdkEventConfigure; adata: gpointer): gboolean; cdecl; static;
@@ -1165,6 +1179,17 @@ type
     property Icon: PGdkPixBuf read FIcon write SetIcon;
     property SkipTaskBarHint: Boolean read GetSkipTaskBarHint write SetSkipTaskBarHint;
     property Title: String read GetTitle write SetTitle;
+
+    // MDI support
+    function IsMdiForm: Boolean;
+    function IsMdiChild: Boolean;
+    property MDIArea: TGtk3MDIArea read FMDIArea;
+    function MDIWorkspace: TGtk3MDIWorkspace;
+    procedure MDIChildActivated(AFrame: TGtk3MDIChildFrame);
+    procedure MDIChildDeactivated(AFrame: TGtk3MDIChildFrame);
+    function MDIChildCloseQuery(AFrame: TGtk3MDIChildFrame): Boolean;
+    procedure MDIChildStateChanged(AFrame: TGtk3MDIChildFrame);
+    procedure MDINoActiveChild(Sender: TObject);
   end;
 
   { TGtk3HintWindow }
@@ -1172,6 +1197,37 @@ type
   TGtk3HintWindow = class(TGtk3Window)
   protected
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
+  end;
+
+  { TGtk3MDIChildWindow }
+
+  TGtk3MDIChildWindow = class(TGtk3Window)
+  private
+    FMDIFrame: TGtk3MDIChildFrame;
+    procedure ApplyMDIPosition(AForm: TCustomForm);
+  protected
+    function CreateWidget(const {%H-}Params: TCreateParams): PGtkWidget; override;
+    procedure setText(const AValue: String); override;
+  public
+    procedure InitializeWidget; override;
+    destructor Destroy; override;
+    procedure SetBounds(ALeft, ATop, AWidth, AHeight: Integer); override;
+    procedure Activate; override;
+    property MDIFrame: TGtk3MDIChildFrame read FMDIFrame;
+  end;
+
+  { TGtk3MDIArea }
+
+  TGtk3MDIArea = class(TGtk3Widget)
+  private
+    FWorkspace: TGtk3MDIWorkspace;
+    FAppliedX, FAppliedY: Integer;
+    FAppliedW, FAppliedH: Integer;
+  public
+    constructor Create(const AMDIForm: TWinControl); reintroduce;
+    destructor Destroy; override;
+    function getClientRect: TRect; override;
+    property Workspace: TGtk3MDIWorkspace read FWorkspace;
   end;
 
   { TGtk3Dialog }
@@ -1245,6 +1301,11 @@ type
   { TGtk3DesignWidget }
 
   TGtk3DesignWidget = class(TGtk3Window)
+  private
+    class function Gtk3DrawDesignerBg(AWidget: PGtkWidget; AContext: Pcairo_t;
+      AData: gpointer): gboolean; cdecl; static;
+    class function Gtk3DrawDesigner(AWidget: PGtkWidget; AContext: Pcairo_t;
+      Data: gpointer): gboolean; cdecl; static;
   protected
     FDesignContext: HDC;
     procedure BringDesignerToFront;
@@ -1265,7 +1326,7 @@ const
 implementation
 
 uses {$IFDEF GTK3DEBUGKEYPRESS}TypInfo,{$ENDIF}gtk3int, gtk3caret, imglist,
-  uriparser, lclproc, LazLogger;
+  uriparser, lclproc, LazLogger, WSControls;
 
 {$i gtk3lclcombobox.inc}
 {$i gtk3lclentry.inc}
@@ -1710,6 +1771,15 @@ begin
 
 
   if not Assigned(ACtl.LCLObject) then exit;
+
+  if Assigned(ACtl.LCLObject.Constraints) then
+    with ACtl.LCLObject.Constraints do
+    begin
+      if (MaxWidth > 0)  and (NewSize.cx > MaxWidth)  then NewSize.cx := MaxWidth;
+      if (MaxHeight > 0) and (NewSize.cy > MaxHeight) then NewSize.cy := MaxHeight;
+      if (MinWidth > 0)  and (NewSize.cx < MinWidth)  then NewSize.cx := MinWidth;
+      if (MinHeight > 0) and (NewSize.cy < MinHeight) then NewSize.cy := MinHeight;
+    end;
 
   // do not loop with LCL  !
   if not (csDesigning in ACtl.LCLObject.ComponentState) then
@@ -2247,7 +2317,8 @@ begin
 
   if length(AEventString) = 0 then
   begin
-    if KeyValue = GDK_KEY_Alt_L then
+    if (KeyValue = GDK_KEY_Alt_L) or (KeyValue = GDK_KEY_Alt_R) or
+       (KeyValue = GDK_KEY_ISO_Level3_Shift) then
       LCLModifiers := LCLModifiers or KF_ALTDOWN
     else
     if (KeyValue = GDK_KEY_Control_L) or (KeyValue = GDK_KEY_Control_R)  then
@@ -2255,7 +2326,6 @@ begin
     else
     if (KeyValue = GDK_KEY_Shift_L) or (KeyValue = GDK_KEY_Shift_R) then
       LCLModifiers := LCLModifiers or MK_SHIFT;
-    // writeln('MODIFIERS BY KEYS ',LCLModifiers);
   end;
 
   IsSysKey := LCLModifiers and KF_ALTDOWN <> 0;
@@ -2272,6 +2342,28 @@ begin
   ACharCode := Gtk3HwKeyToVKey(AEvent.hardware_keycode);
   if ACharCode = VK_UNKNOWN then
     ACharCode := GdkKeyToLCLKey(KeyValue);
+
+  if (ACharCode <> VK_UNKNOWN) and (ACharCode <= 255) then
+    Gtk3WidgetSet.FGtk3KeyStates[ACharCode] := AKeyPress;
+
+  if not (GDK_CONTROL_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_CONTROL] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LCONTROL] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RCONTROL] := False;
+  end;
+  if not (GDK_SHIFT_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_SHIFT] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LSHIFT] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RSHIFT] := False;
+  end;
+  if not (GDK_MOD1_MASK in AEvent.state) then
+  begin
+    Gtk3WidgetSet.FGtk3KeyStates[VK_MENU] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_LMENU] := False;
+    Gtk3WidgetSet.FGtk3KeyStates[VK_RMENU] := False;
+  end;
 
   if (KeyValue >= GDK_KEY_exclam) and (KeyValue <= GDK_KEY_parenleft) and
      (ACharCode >= VK_0) and (ACharCode <= VK_9) and
@@ -2523,19 +2615,19 @@ begin
         if MButton = GTK3_LEFT_BUTTON then
         begin
           Msg.Msg := LM_LBUTTONUP;
-          Msg.Keys := Msg.Keys or MK_LBUTTON;
+          Msg.Keys := Msg.Keys and not MK_LBUTTON;
         end
         else
         if MButton = GTK3_RIGHT_BUTTON then
         begin
           Msg.Msg := LM_RBUTTONUP;
-          Msg.Keys := Msg.Keys or MK_RBUTTON;
+          Msg.Keys := Msg.Keys and not MK_RBUTTON;
         end
         else
         if MButton = GTK3_MIDDLE_BUTTON then
         begin
           Msg.Msg := LM_MBUTTONUP;
-          Msg.Keys := Msg.Keys or MK_MBUTTON;
+          Msg.Keys := Msg.Keys and not MK_MBUTTON;
         end;
       end;
     else
@@ -2835,6 +2927,23 @@ begin
     gtk_style_context_add_provider(gtk_widget_get_style_context(ATargetWidget),
                                    PGtkStyleProvider(Provider),
                                    GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+    g_object_unref(Provider);
+  end else
+  if wtTrackBar in WidgetType then
+  begin
+    if AValue = clDefault then
+      CSSData := 'trough { background: initial; }'
+    else
+    begin
+      RGBA := ColorToRGB(AValue);
+      CSSData := Format('trough { background: #%.2x%.2x%.2x; }',
+        [Red(RGBA), Green(RGBA), Blue(RGBA)]);
+    end;
+    Provider := gtk_css_provider_new();
+    gtk_css_provider_load_from_data(Provider, PChar(CSSData), -1, nil);
+    gtk_style_context_add_provider(gtk_widget_get_style_context(FWidget),
+                                   PGtkStyleProvider(Provider),
+                                   GTK_STYLE_PROVIDER_PRIORITY_USER);
     g_object_unref(Provider);
   end else
   begin
@@ -4831,9 +4940,7 @@ end;
 function TGtk3WinControlPanel.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   Result := inherited CreateWidget(Params);
-  //Pure structural container - suppress LCL paint events.
-  //Drawing is handled by child controls.
-  FHasPaint := False;
+  FHasPaint := True;
 end;
 
 { TGtk3GroupBox }
@@ -5404,6 +5511,22 @@ begin
   NewSize.cx := AGdkRect^.width;
   NewSize.cy := AGdkRect^.height;
 
+  if Assigned(ACtl.LCLObject.Constraints) then
+    with ACtl.LCLObject.Constraints do
+    begin
+      if (MaxWidth > 0)  and (NewSize.cx > MaxWidth)  then NewSize.cx := MaxWidth;
+      if (MaxHeight > 0) and (NewSize.cy > MaxHeight) then NewSize.cy := MaxHeight;
+      if (MinWidth > 0)  and (NewSize.cx < MinWidth)  then NewSize.cx := MinWidth;
+      if (MinHeight > 0) and (NewSize.cy < MinHeight) then NewSize.cy := MinHeight;
+    end;
+  if (NewSize.cx <> AGdkRect^.width) or (NewSize.cy <> AGdkRect^.height) then
+  begin
+    AGdkRect^.width := NewSize.cx;
+    AGdkRect^.height := NewSize.cy;
+    Alloc.width := NewSize.cx;
+    Alloc.height := NewSize.cy;
+    AWidget^.set_size_request(NewSize.cx, NewSize.cy);
+  end;
 
   if not (csDesigning in ACtl.LCLObject.ComponentState) then
   begin
@@ -5583,7 +5706,31 @@ begin
 end;
 
 function disableMouseButtonEvent(widget: PGtkWidget; event: PGdkEvent; user_data: gpointer): gboolean; cdecl;
+var
+  AWinCtl: TWinControl;
+  WSClass: TWSWinControlClass;
+  Pt: TPoint;
 begin
+  if event^.type_ in [GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE] then
+  begin
+    if Assigned(TGtk3Widget(user_data).LCLObject) and
+       (TGtk3Widget(user_data).LCLObject is TWinControl) then
+    begin
+      AWinCtl := TWinControl(TGtk3Widget(user_data).LCLObject);
+      WSClass := TWSWinControlClass(AWinCtl.WidgetSetClass);
+      if Assigned(WSClass) then
+      begin
+        Pt.X := Round(event^.button.x);
+        Pt.Y := Round(event^.button.y);
+        TGtk3Widget(user_data).OffsetMousePos(event^.button.x_root, event^.button.y_root, @Pt);
+        if WSClass.GetDesignInteractive(AWinCtl, Pt) then
+        begin
+          Result := False;
+          Exit;
+        end;
+      end;
+    end;
+  end;
   Result := TGtk3Widget(user_data).GtkEventMouse(Widget, Event);
   if event^.type_ in [GDK_BUTTON_PRESS, GDK_BUTTON_RELEASE] then
     Result := True;
@@ -6150,6 +6297,12 @@ procedure TGtk3Range.InitializeWidget;
 begin
   inherited InitializeWidget;
   g_signal_connect_data(GetContainerWidget, 'value-changed', TGCallback(@RangeChanged), Self, nil, G_CONNECT_DEFAULT);
+  if IsDesigning then
+  begin
+    g_signal_connect_data(GetContainerWidget, 'button-press-event', TGCallback(@disableMouseButtonEvent), Self, nil, G_CONNECT_DEFAULT);
+    g_signal_connect_data(GetContainerWidget, 'button-release-event', TGCallback(@disableMouseButtonEvent), Self, nil, G_CONNECT_DEFAULT);
+    g_signal_connect_data(GetContainerWidget, 'motion-notify-event', TGCallback(@motionNotifyEvent), Self, nil, G_CONNECT_DEFAULT);
+  end;
 end;
 
 procedure TGtk3Range.SetStep(AStep: Integer; APageSize: Integer);
@@ -6208,39 +6361,62 @@ begin
     PGtkScale(Widget)^.set_value_pos(TGtkPositionType(AValue));
 end;
 
+procedure TGtk3TrackBar.SetShowSelRange(AValue: Boolean);
+begin
+  if IsWidgetOK then
+    PGtkScale(Widget)^.set_has_origin(AValue);
+end;
+
 procedure TGtk3TrackBar.SetTickMarks(AValue: TTickMark; ATickStyle: TTickStyle);
 var
-  i,cnt,fldw: Integer;
-  Track:TCustomTrackbar;
+  i, freq, cnt, fldw: Integer;
+  Track: TCustomTrackbar;
+  AddMarks: Boolean;
 const
   tick_map:array[TTrackBarOrientation,0..1] of TGtkPositionType =
     ((GTK_POS_TOP,GTK_POS_BOTTOM), // trHorizontal
      (GTK_POS_LEFT,GTK_POS_RIGHT) // trVertical
     );
+
+  procedure AddMark(AVal: Integer);
+  begin
+    if AValue in [tmBoth, tmTopLeft] then
+      PGtkScale(Widget)^.add_mark(gDouble(AVal), tick_map[Track.Orientation, 0], nil);
+    if AValue in [tmBoth, tmBottomRight] then
+      PGtkScale(Widget)^.add_mark(gDouble(AVal), tick_map[Track.Orientation, 1], nil);
+  end;
+
 begin
   if IsWidgetOK then
   begin
     PGtkScale(Widget)^.set_draw_value(ATickStyle <> tsNone);
-    if ATickStyle = tsNone then
-      PGtkScale(Widget)^.clear_marks
-    else
+    PGtkScale(Widget)^.clear_marks;
+    if ATickStyle <> tsNone then
     begin
-      PGtkScale(Widget)^.clear_marks;
-      Track:=TCustomTrackbar(LCLObject);
-      cnt:=round(abs(Track.max-Track.min)/Track.LineSize);
-      // highly-dense marks just enlarge GtkScale automatically
-      // it is up to user concent to do this
-      if Track.Orientation=trHorizontal then
-        fldw:=Track.Width
+      Track := TCustomTrackbar(LCLObject);
+      if Track.Frequency > 0 then
+        freq := Track.Frequency
       else
-        fldw:=Track.Height;
-      if cnt*Track.LineSize<fldw then
-      for i := Track.Min to Track.Max do
+        freq := 1;
+      cnt := round(abs(Track.Max - Track.Min) / freq);
+      if Track.Orientation = trHorizontal then
+        fldw := Track.Width
+      else
+        fldw := Track.Height;
+      AddMarks := cnt * freq < fldw;
+      if AddMarks then
       begin
-        if AValue in [tmBoth, tmTopLeft] then
-          PGtkScale(Widget)^.add_mark(gDouble(i), tick_map[Track.Orientation,0], nil);
-        if AValue in [tmBoth, tmBottomRight] then
-          PGtkScale(Widget)^.add_mark(gDouble(i), tick_map[Track.Orientation,1], nil);
+        i := Track.Min;
+        while i <= Track.Max do
+        begin
+          AddMark(i);
+          Inc(i, freq);
+        end;
+      end
+      else
+      begin
+        AddMark(Track.Min);
+        AddMark(Track.Max);
       end;
     end;
   end;
@@ -6335,6 +6511,35 @@ procedure TGtk3Calendar.SetDisplayOptions(
 begin
   if IsWidgetOK then
     PGtkCalendar(GetContainerWidget)^.set_display_options(ADisplayOptions);
+end;
+
+class function TGtk3Calendar.Gtk3CalendarBtnPress(AWidget: PGtkWidget;
+  AEvent: PGdkEvent; AData: gpointer): gboolean; cdecl;
+var
+  Inst: TGtk3Calendar;
+  Msg: TLMMouse;
+begin
+  Result := False;
+  if (AData = nil) or (AEvent = nil) then
+    exit;
+  if AEvent^.type_ <> GDK_2BUTTON_PRESS then
+    exit;
+  if AEvent^.button.button <> 1 then
+    exit;
+  Inst := TGtk3Calendar(AData);
+  if not Inst.IsWidgetOk then
+    exit;
+  FillChar(Msg{%H-}, SizeOf(Msg), #0);
+  Msg.Msg := LM_LBUTTONDBLCLK;
+  Msg.Keys := MK_LBUTTON;
+  Inst.DeliverMessage(Msg);
+end;
+
+procedure TGtk3Calendar.InitializeWidget;
+begin
+  inherited InitializeWidget;
+  g_signal_connect_data(GetContainerWidget, 'button-press-event',
+    TGCallback(@Gtk3CalendarBtnPress), Self, nil, G_CONNECT_DEFAULT);
 end;
 
 { TGtk3StaticText }
@@ -6786,6 +6991,7 @@ begin
   FPageBox^.ref;
 
   Result := TGtkBox.new(GTK_ORIENTATION_HORIZONTAL, 0);
+  Result^.ref;
   FCentralWidget := TGtkLayout.new(nil, nil);
   FCentralWidget^.set_app_paintable(True);
   PGtkBox(Result)^.pack_start(FCentralWidget, True , True, 0);
@@ -6806,10 +7012,15 @@ begin
 end;
 
 procedure TGtk3Page.DestroyWidget;
+var
+  AContent: PGtkWidget;
 begin
   // unref it to allow it to be destroyed
   FPageBox^.unref;
+  AContent := FWidget;
   inherited DestroyWidget;
+  if AContent <> nil then
+    g_object_unref(PGObject(AContent));
 end;
 
 destructor TGtk3Page.Destroy;
@@ -7622,7 +7833,7 @@ begin
     TheNoteBook:=TCustomTabControl(LCLObject);
     HasIcon:=false;
     IconSize:=Size(0,0);
-    ImageIndex := TheNoteBook.GetImageIndex(AIndex);
+    ImageIndex := TheNoteBook.GetImageIndex(ACustomPage.PageIndex);
     Appi:=TheNoteBook.Font.PixelsPerInch;
     if (TheNoteBook.Images<>nil)
     and (ImageIndex >= 0)
@@ -7667,11 +7878,24 @@ begin
 end;
 
 procedure TGtk3NoteBook.SetPageIndex(AIndex: Integer);
+var
+  NB: PGtkNotebook;
+  APage: TCustomPage;
+  ARealIndex: gint;
 begin
-  if IsWidgetOK then
-  begin
-    PGtkNotebook(GetContainerWidget)^.set_current_page(AIndex);
-  end;
+  if not IsWidgetOK then
+    exit;
+  NB := PGtkNotebook(GetContainerWidget);
+  if (AIndex < 0) or (AIndex >= TCustomTabControl(LCLObject).PageCount) then
+    exit;
+  APage := TCustomTabControl(LCLObject).Page[AIndex];
+  if not Assigned(APage) or not APage.HandleAllocated then
+    exit;
+  ARealIndex := NB^.page_num(TGtk3Widget(APage.Handle).Widget);
+  if ARealIndex < 0 then
+    exit;
+  if NB^.get_current_page <> ARealIndex then
+    NB^.set_current_page(ARealIndex);
 end;
 
 procedure TGtk3NoteBook.SetShowTabs(const AShowTabs: Boolean);
@@ -7815,6 +8039,13 @@ var
   pmenu:PGtkMenuItem;
   pimgmenu:PgtkImageMenuItem absolute pmenu;
   img:TGtk3Image;
+  iml: TCustomImageList;
+  imw, APPI: Integer;
+  ASF: Double;
+  AForm: TCustomForm;
+  LMenu: TMenu;
+  Res: TScaledImageListResolution;
+  ImgPixbuf: PGdkPixbuf;
 begin
   Result:=nil;
   FWidgetType := [wtWidget, wtMenuItem];
@@ -7824,9 +8055,53 @@ begin
   if (MenuItem.HasIcon) then
   begin
     pimgmenu := LCLGtkImageMenuItemNew();
-    MenuItem.UpdateImage(true);
-    img:=Tgtk3Image(MenuItem.Bitmap.Handle);
-    picon := TGtkImage.new_from_pixbuf(img.Handle);
+    ImgPixbuf := nil;
+    iml := nil;
+    imw := 0;
+    MenuItem.GetImageList(iml, imw);
+    if (iml <> nil) and (MenuItem.ImageIndex >= 0)
+       and (MenuItem.ImageIndex < iml.Count) then
+    begin
+      if imw <= 0 then
+        imw := iml.Width;
+      APPI := 96;
+      ASF := 1;
+      AForm := nil;
+      LMenu := MenuItem.GetParentMenu;
+      if LMenu <> nil then
+      begin
+        if LMenu.Owner is TCustomForm then
+          AForm := TCustomForm(LMenu.Owner)
+        else
+        if LMenu.Parent is TCustomForm then
+          AForm := TCustomForm(LMenu.Parent);
+      end;
+      if AForm = nil then
+        AForm := Screen.ActiveCustomForm;
+      if AForm <> nil then
+      begin
+        APPI := AForm.PixelsPerInch;
+        ASF := AForm.GetCanvasScaleFactor;
+      end;
+      Res := iml.ResolutionForPPI[imw, APPI, ASF];
+      if Res.Resolution <> nil then
+      begin
+        if FImage = nil then
+          FImage := TBitmap.Create
+        else
+          FImage.Clear;
+        Res.Resolution.GetBitmap(MenuItem.ImageIndex, FImage);
+        if not FImage.Empty then
+          ImgPixbuf := TGtk3Image(FImage.Handle).Handle;
+      end;
+    end;
+    if ImgPixbuf = nil then
+    begin
+      MenuItem.UpdateImage(true);
+      img := Tgtk3Image(MenuItem.Bitmap.Handle);
+      ImgPixbuf := img.Handle;
+    end;
+    picon := TGtkImage.new_from_pixbuf(ImgPixbuf);
     pimgmenu^.set_image(picon);
     pimgmenu^.set_always_show_image(true);
     Result:=pimgmenu;
@@ -7883,6 +8158,12 @@ begin
 
   // FParams := AParams;
   InitializeWidget;
+end;
+
+destructor TGtk3MenuItem.Destroy;
+begin
+  FreeAndNil(FImage);
+  inherited Destroy;
 end;
 
 class function TGtk3MenuItem.MenuItemEvent({%H-}AWidget: PGtkWidget; event: PGdkEvent; {%H-}data: GPointer): gboolean; cdecl;
@@ -8573,10 +8854,14 @@ begin
 
   if ARange^.adjustment^.page_size > 0 then
   begin
-    if Msg.Msg = LM_HSCROLL then
+    if (Msg.Msg = LM_HSCROLL) and Assigned(ACtl.LCLHAdj) and
+       (ACtl.LCLHAdj^.upper > 0) then
       MaxValue := ACtl.LCLHAdj^.upper - ACtl.LCLHAdj^.page_size + 1
+    else if (Msg.Msg = LM_VSCROLL) and Assigned(ACtl.LCLVAdj) and
+       (ACtl.LCLVAdj^.upper > 0) then
+      MaxValue := ACtl.LCLVAdj^.upper - ACtl.LCLVAdj^.page_size + 1
     else
-      MaxValue := ACtl.LCLVAdj^.upper - ACtl.LCLVAdj^.page_size + 1;
+      MaxValue := ARange^.adjustment^.upper - ARange^.adjustment^.page_size;
 
     if AAtGTKMax then
       AValue := MaxValue
@@ -8688,16 +8973,22 @@ begin
          (Adjustment^.upper > Control.LCLVAdj^.upper + 0.5) then
         CurrentValue := CurrentValue * Control.LCLVAdj^.upper / Adjustment^.upper;
 
-      if AAtGTKMax and Assigned(Control.LCLVAdj) and (Control.LCLVAdj^.page_size > 0) then
-        CurrentValue := Control.LCLVAdj^.upper - Control.LCLVAdj^.page_size + 1;
+      if AAtGTKMax and Assigned(Control.LCLVAdj) and
+         (Control.LCLVAdj^.upper > 0) and (Control.LCLVAdj^.page_size > 0) then
+        CurrentValue := Control.LCLVAdj^.upper - Control.LCLVAdj^.page_size + 1
+      else if AAtGTKMax then
+        CurrentValue := Adjustment^.upper - Adjustment^.page_size;
     end else
     begin
       if Assigned(Control.LCLHAdj) and (Control.LCLHAdj^.upper > 0) and
          (Adjustment^.upper > Control.LCLHAdj^.upper + 0.5) then
         CurrentValue := CurrentValue * Control.LCLHAdj^.upper / Adjustment^.upper;
 
-      if AAtGTKMax and Assigned(Control.LCLHAdj) and (Control.LCLHAdj^.page_size > 0) then
-        CurrentValue := Control.LCLHAdj^.upper - Control.LCLHAdj^.page_size + 1;
+      if AAtGTKMax and Assigned(Control.LCLHAdj) and
+         (Control.LCLHAdj^.upper > 0) and (Control.LCLHAdj^.page_size > 0) then
+        CurrentValue := Control.LCLHAdj^.upper - Control.LCLHAdj^.page_size + 1
+      else if AAtGTKMax then
+        CurrentValue := Adjustment^.upper - Adjustment^.page_size;
     end;
 
     Msg.Pos := Round(CurrentValue);
@@ -9270,6 +9561,7 @@ var
   ABuffer: PGtkTextBuffer;
   AIter: TGtkTextIter;
   ALastIter: TGtkTextIter;
+  AStr: PChar;
 begin
   Result := '';
   if IsWidgetOk then
@@ -9277,7 +9569,12 @@ begin
     ABuffer := PGtkTextView(FCentralWidget)^.get_buffer;
     ABuffer^.get_start_iter(@AIter);
     ABuffer^.get_end_iter(@ALastIter);
-    Result := ABuffer^.get_text(@AIter, @ALastIter, False);
+    AStr := ABuffer^.get_text(@AIter, @ALastIter, False);
+    if AStr <> nil then
+    begin
+      Result := AStr;
+      g_free(AStr);
+    end;
   end;
   // DebugLn('TGtk3Memo.getText Result=',Result);
 end;
@@ -10639,11 +10936,26 @@ var
   Cell: PPGtkCellRenderer;
   APath: PGtkTreePath;
   AStr: PChar;
+  AStrConv: AnsiString;
+  CW: PGtkWidget;
+  ASel: PGtkTreeSelection;
 begin
   Result := False;
   AIsSet := False;
   if not IsWidgetOK then
     exit;
+  CW := GetContainerWidget;
+  if not Gtk3IsWidget(PGObject(CW)) then
+    exit;
+  if FIsTreeView then
+  begin
+    if not Gtk3WidgetIsA(CW, gtk_tree_view_get_type) then
+      exit;
+  end else
+  begin
+    if not Gtk3WidgetIsA(CW, gtk_icon_view_get_type) then
+      exit;
+  end;
   case AState of
     lisCut,
     lisDropTarget:
@@ -10655,16 +10967,19 @@ begin
       Path := nil;
       Column := nil;
       Cell := nil;
-      if IsTreeView then
-        PGtkTreeView(GetContainerWidget)^.get_cursor(@Path, Column)
+      if FIsTreeView then
+        PGtkTreeView(CW)^.get_cursor(@Path, Column)
       else
-        PGtkIconView(GetContainerWidget)^.get_cursor(@Path, Cell);
+        PGtkIconView(CW)^.get_cursor(@Path, Cell);
       if Assigned(Path) then
       begin
         AStr := gtk_tree_path_to_string(Path);
-        AIsSet := (StrToIntDef(AStr,-1) = AIndex);
         if AStr <> nil then
+        begin
+          AStrConv := AStr;
+          AIsSet := (StrToIntDef(AStrConv, -1) = AIndex);
           g_free(AStr);
+        end;
         gtk_tree_path_free(Path);
         Result := True;
       end;
@@ -10672,14 +10987,18 @@ begin
 
     lisSelected:
     begin
-      APath := gtk_tree_path_new_from_string(PChar(IntToStr(AIndex)));
-      if IsTreeView then
-        AIsSet := PGtkTreeView(GetContainerWidget)^.get_selection^.path_is_selected(APath)
-      else
-        AIsSet := PGtkIconView(GetContainerWidget)^.path_is_selected(APath);
-
-      if APath <> nil then
-        gtk_tree_path_free(APath);
+      AStrConv := IntToStr(AIndex);
+      APath := gtk_tree_path_new_from_string(PChar(AStrConv));
+      if APath = nil then
+        exit;
+      if FIsTreeView then
+      begin
+        ASel := PGtkTreeView(CW)^.get_selection;
+        if ASel <> nil then
+          AIsSet := ASel^.path_is_selected(APath);
+      end else
+        AIsSet := PGtkIconView(CW)^.path_is_selected(APath);
+      gtk_tree_path_free(APath);
       Result := True;
     end;
   end;
@@ -10818,6 +11137,18 @@ begin
   if PGtkComboBox(Widget)^.has_entry then
   begin
     PGtkEntry(PGtkComboBox(Widget)^.get_child)^.set_max_length(AMaxLength);
+  end;
+end;
+
+procedure TGtk3ComboBox.SetTextHint(const AHint: string);
+var
+  Child: PGtkWidget;
+begin
+  if PGtkComboBox(Widget)^.has_entry then
+  begin
+    Child := PGtkComboBox(Widget)^.get_child;
+    if Gtk3IsEntry(Child) then
+      PGtkEntry(Child)^.set_placeholder_text(PgChar(AHint));
   end;
 end;
 
@@ -11905,8 +12236,10 @@ begin
 
   with PGtkScrolledWindow(Result)^.get_vadjustment^ do
     LCLVAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
+  g_object_ref_sink(PGObject(LCLVAdj));
   with PGtkScrolledWindow(Result)^.get_hadjustment^ do
     LCLHAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
+  g_object_ref_sink(PGObject(LCLHAdj));
 
   // Disconnect GtkLayout's bin_window from BOTH scroll adjustments for pure TCustomControl
   // TGtk3ScrollingWinControl.CreateWidget reconnects both after this call,
@@ -12232,6 +12565,150 @@ begin
     gtk_scrolled_window_get_hadjustment(PGtkScrolledWindow(Result)));
   PGtkScrollable(FCentralWidget)^.set_vadjustment(
     gtk_scrolled_window_get_vadjustment(PGtkScrolledWindow(Result)));
+end;
+
+
+//Find the fsMDIForm whose TGtk3MDIWorkspace should host this fsMDIChild.
+function FindMDIParentWorkspace(AChild: TCustomForm): TGtk3MDIWorkspace;
+var
+  i: Integer;
+  F: TCustomForm;
+  Win: TGtk3Window;
+begin
+  Result := nil;
+  //TODO: Better check for child mdiarea host.
+  if (Application <> nil) and (Application.MainForm <> nil)
+    and (Application.MainForm.FormStyle = fsMDIForm)
+    and Application.MainForm.HandleAllocated then
+  begin
+    Win := TGtk3Window(Application.MainForm.Handle);
+    if (Win <> nil) and (Win.MDIWorkspace <> nil) then
+      exit(Win.MDIWorkspace);
+  end;
+
+  if Screen <> nil then
+    for i := 0 to Screen.CustomFormCount - 1 do
+    begin
+      F := Screen.CustomForms[i];
+      if (F.FormStyle = fsMDIForm) and F.HandleAllocated and (F <> AChild) then
+      begin
+        Win := TGtk3Window(F.Handle);
+        if (Win <> nil) and (Win.MDIWorkspace <> nil) then
+          exit(Win.MDIWorkspace);
+      end;
+    end;
+end;
+
+function TGtk3Window.IsMdiForm: Boolean;
+begin
+  Result := (LCLObject is TCustomForm)
+    and (TCustomForm(LCLObject).FormStyle = fsMDIForm)
+    and not (csDesigning in LCLObject.ComponentState);
+end;
+
+function TGtk3Window.IsMdiChild: Boolean;
+begin
+  Result := (LCLObject is TCustomForm)
+    and (TCustomForm(LCLObject).FormStyle = fsMDIChild)
+    and not (csDesigning in LCLObject.ComponentState);
+end;
+
+function TGtk3Window.MDIWorkspace: TGtk3MDIWorkspace;
+begin
+  if FMDIArea <> nil then
+    Result := FMDIArea.Workspace
+  else
+    Result := nil;
+end;
+
+procedure TGtk3Window.MDIChildActivated(AFrame: TGtk3MDIChildFrame);
+var
+  ChildWin: TGtk3Window;
+  Msg: TLMessage;
+begin
+  if AFrame = nil then
+    exit;
+  ChildWin := TGtk3Window(AFrame.UserData);
+  if (ChildWin = nil) or (ChildWin.LCLObject = nil) then
+    exit;
+  FillChar(Msg, SizeOf(Msg), 0);
+  Msg.Msg := LM_ACTIVATE;
+  Msg.WParam := WA_ACTIVE;
+  ChildWin.DeliverMessage(Msg);
+end;
+
+procedure TGtk3Window.MDIChildDeactivated(AFrame: TGtk3MDIChildFrame);
+var
+  ChildWin: TGtk3Window;
+  Msg: TLMessage;
+begin
+  if AFrame = nil then
+    exit;
+  ChildWin := TGtk3Window(AFrame.UserData);
+  if (ChildWin = nil) or (ChildWin.LCLObject = nil) then
+    exit;
+  FillChar(Msg, SizeOf(Msg), 0);
+  Msg.Msg := LM_ACTIVATE;
+  Msg.WParam := WA_INACTIVE;
+  ChildWin.DeliverMessage(Msg);
+end;
+
+function TGtk3Window.MDIChildCloseQuery(AFrame: TGtk3MDIChildFrame): Boolean;
+var
+  ChildWin: TGtk3Window;
+  Msg: TLMessage;
+begin
+  Result := False;
+  if AFrame = nil then
+    exit;
+  ChildWin := TGtk3Window(AFrame.UserData);
+  if (ChildWin = nil) or (ChildWin.LCLObject = nil) then
+    exit;
+  FillChar(Msg, SizeOf(Msg), 0);
+  Msg.Msg := LM_CLOSEQUERY;
+  ChildWin.DeliverMessage(Msg);
+end;
+
+procedure TGtk3Window.MDIChildStateChanged(AFrame: TGtk3MDIChildFrame);
+var
+  ChildWin: TGtk3Window;
+  Msg: TLMSize;
+  Bnds: TRect;
+begin
+  if AFrame = nil then
+    exit;
+  ChildWin := TGtk3Window(AFrame.UserData);
+
+  if (ChildWin = nil) or (ChildWin.LCLObject = nil) then
+    exit;
+
+  FillChar(Msg, SizeOf(Msg), 0);
+  Msg.Msg := LM_SIZE;
+  case AFrame.State of
+    mwsMinimized: Msg.SizeType := SIZE_MINIMIZED;
+    mwsMaximized: Msg.SizeType := SIZE_MAXIMIZED;
+  else
+    Msg.SizeType := SIZE_RESTORED;
+  end;
+  Msg.SizeType := Msg.SizeType or Size_SourceIsInterface;
+  Bnds := AFrame.GetBounds;
+  Msg.Width := Word(Bnds.Right - Bnds.Left);
+  Msg.Height := Word(Bnds.Bottom - Bnds.Top);
+  ChildWin.DeliverMessage(Msg);
+end;
+
+procedure TGtk3Window.MDINoActiveChild(Sender: TObject);
+var
+  Msg: TLMessage;
+begin
+  if LCLObject = nil then
+    exit;
+  FillChar(Msg, SizeOf(Msg), 0);
+  Msg.Msg := LM_ACTIVATE;
+  Msg.WParam := WA_ACTIVE;
+  DeliverMessage(Msg);
+  if FWidget <> nil then
+    gtk_widget_grab_focus(FWidget);
 end;
 
 { TGtk3Window }
@@ -12914,7 +13391,7 @@ begin
   FMenuBar := nil;
   AForm := TCustomForm(LCLObject);
 
-  if not Assigned(LCLObject.Parent) then
+  if (not Assigned(LCLObject.Parent)) and (not (wtMDIChild in FWidgetType)) then
   begin
     if FWidgetType = [wtHintWindow] then
       Result := TGtkWindow.new(GTK_WINDOW_POPUP)
@@ -12957,7 +13434,10 @@ begin
   begin
     Result := PGtkScrolledWindow(LCLGtkScrolledWindowNew); // PGtkScrolledWindow(TGtkScrolledWindow.new(nil, nil));
     PGtkScrolledWindow(Result)^.set_policy(GTK_POLICY_NEVER, GTK_POLICY_NEVER);
-    FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtScrollingWinControl];
+    if wtMDIChild in FWidgetType then
+      FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtScrollingWinControl, wtMDIChild]
+    else
+      FWidgetType := [wtWidget, wtLayout, wtScrollingWin, wtScrollingWinControl];
   end;
   Text := Params.Caption;
 
@@ -12996,16 +13476,12 @@ begin
 
   with PGtkScrolledWindow(FScrollWin)^.get_vadjustment^ do
     LCLVAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
+  g_object_ref_sink(PGObject(LCLVAdj));
   with PGtkScrolledWindow(FScrollWin)^.get_hadjustment^ do
     LCLHAdj := gtk_adjustment_new(value, lower, upper, step_increment, page_increment, page_size);
+  g_object_ref_sink(PGObject(LCLHAdj));
 
-  {Embedded forms (LCLObject.Parent <> nil) create a GtkScrolledWindow as
-   their root widget; it has no parent yet at this point, so calling
-   gtk_widget_realize on it fires widget->priv->anchored assertion (cca 20 times
-   with anchordocked, once per dock panel).
-   Only realize top-level GtkWindows here, embedded GtkScrolledWindows will be realized automatically when they
-   are added to their parent widget tree.}
-  if not Assigned(LCLObject.Parent) then
+  if (not Assigned(LCLObject.Parent)) and (not (wtMDIChild in FWidgetType)) then
   begin
     // xdg-popup requires transient_for set BEFORE realize so the compositor
     // has a parent surface to anchor the popup to.
@@ -13019,7 +13495,7 @@ begin
 
   if not (wtHintWindow in FWidgetType) then
   begin
-    if not Assigned(LCLObject.Parent) then
+    if (not Assigned(LCLObject.Parent)) and (not (wtMDIChild in FWidgetType)) then
       gdk_window_set_decorations(Result^.window, decor);
     if not (csDesigning in AForm.ComponentState) then
       if AForm.WindowState <> wsNormal then // issue #42025
@@ -13582,6 +14058,101 @@ begin
 
     UpdateWindowFunctions;
   end;
+
+  if IsMdiForm and (FMDIArea = nil) then
+  begin
+    FMDIArea := TGtk3MDIArea.Create(LCLObject);
+    FMDIArea.Workspace.OnChildActivated := @MDIChildActivated;
+    FMDIArea.Workspace.OnChildDeactivated := @MDIChildDeactivated;
+    FMDIArea.Workspace.OnChildCloseQuery := @MDIChildCloseQuery;
+    FMDIArea.Workspace.OnChildStateChanged := @MDIChildStateChanged;
+    FMDIArea.Workspace.OnNoActiveChild := @MDINoActiveChild;
+    FMDIArea.Workspace.OwnerForm := LCLObject;
+    if FCentralWidget <> nil then
+    begin
+      gtk_layout_put(PGtkLayout(FCentralWidget), FMDIArea.Widget, 0, 0);
+      if (LCLObject.Width > 0) and (LCLObject.Height > 0) then
+        PGtkWidget(FMDIArea.Widget)^.set_size_request(
+          LCLObject.Width, LCLObject.Height);
+      if FScrollWin <> nil then
+        g_signal_connect_data(PGObject(FScrollWin), 'size-allocate',
+          TGCallback(@MDILayoutSizeAllocate), Self, nil, G_CONNECT_DEFAULT);
+    end;
+    FWidgetType := FWidgetType + [wtMDIForm];
+  end;
+end;
+
+class procedure TGtk3Window.MDILayoutSizeAllocate(AWidget: PGtkWidget;
+  AAlloc: PGdkRectangle; AData: gpointer); cdecl;
+var
+  Win: TGtk3Window absolute AData;
+  Parent: TWinControl;
+  Ctrl: TControl;
+  i, TopOff, BottomOff, LeftOff, RightOff: Integer;
+  WSX, WSY, WSW, WSH: Integer;
+  WS: TGtk3MDIWorkspace;
+  Frame: TGtk3MDIChildFrame;
+begin
+  if (Win = nil) or (Win.FMDIArea = nil) or (Win.LCLObject = nil) then
+    exit;
+
+  {Reserve space for sibling LCL controls aligned to the form edges e.g.TStatusBar alBottom, toolbars alTop etc
+   The MDI workspace must NOT cover them, minimised children dock to the workspace's bottom and wuld otherwise sit on top of the status bar.
+   //TODO: Better idea to do this ?}
+
+  Parent := TWinControl(Win.LCLObject);
+  TopOff := 0;
+  BottomOff := 0;
+  LeftOff := 0;
+  RightOff := 0;
+  for i := 0 to Parent.ControlCount - 1 do
+  begin
+    Ctrl := Parent.Controls[i];
+    if not Ctrl.Visible then
+      continue;
+    case Ctrl.Align of
+      alTop: Inc(TopOff, Ctrl.Height);
+      alBottom: Inc(BottomOff, Ctrl.Height);
+      alLeft: Inc(LeftOff, Ctrl.Width);
+      alRight: Inc(RightOff, Ctrl.Width);
+    end;
+  end;
+
+  WSX := LeftOff;
+  WSY := TopOff;
+  WSW := AAlloc^.width - LeftOff - RightOff;
+  WSH := AAlloc^.height - TopOff - BottomOff;
+
+  if WSW < 0 then
+    WSW := 0;
+  if WSH < 0 then
+    WSH := 0;
+
+  if (Win.FMDIArea.FAppliedX = WSX) and (Win.FMDIArea.FAppliedY = WSY)
+    and (Win.FMDIArea.FAppliedW = WSW) and (Win.FMDIArea.FAppliedH = WSH) then
+      exit;
+
+  Win.FMDIArea.FAppliedX := WSX;
+  Win.FMDIArea.FAppliedY := WSY;
+  Win.FMDIArea.FAppliedW := WSW;
+  Win.FMDIArea.FAppliedH := WSH;
+
+  if Win.FCentralWidget <> nil then
+    gtk_layout_move(PGtkLayout(Win.FCentralWidget), Win.FMDIArea.Widget, WSX, WSY);
+
+  PGtkWidget(Win.FMDIArea.Widget)^.set_size_request(WSW, WSH);
+
+  WS := Win.FMDIArea.Workspace;
+  if WS <> nil then
+  begin
+    for i := 0 to WS.Children.Count - 1 do
+    begin
+      Frame := TGtk3MDIChildFrame(WS.Children[i]);
+      if Frame.State = mwsMaximized then
+        Frame.RefitMaximized(WSW, WSH);
+    end;
+    WS.RelayoutMinimized;
+  end;
 end;
 
 destructor TGtk3Window.Destroy;
@@ -13596,7 +14167,10 @@ begin
     if Assigned(Application) and Application.Active then
     begin
       NextFocus := nil;
-      TransientFor := PGtkWindow(FWidget)^.get_transient_for;
+      if Gtk3IsGtkWindow(FWidget) then
+        TransientFor := PGtkWindow(FWidget)^.get_transient_for
+      else
+        TransientFor := nil;
       if TransientFor <> nil then
         NextFocus := PGtkWidget(TransientFor)
       else if Assigned(Application.MainForm) and Application.MainForm.HandleAllocated and
@@ -13628,6 +14202,11 @@ begin
   begin
     FIcon^.unref;
     FIcon := nil;
+  end;
+  if FMDIArea <> nil then
+  begin
+    FMDIArea.Free;
+    FMDIArea := nil;
   end;
   if IsValidHandle and Gtk3WidgetSet.IsWayland and
      (PGtkWindow(FWidget)^.get_window_type = GTK_WINDOW_POPUP) and
@@ -13729,6 +14308,172 @@ begin
   FHasPaint := True;
   FWidgetType := [wtHintWindow];
   Result := inherited CreateWidget(Params);
+end;
+
+{ TGtk3MDIChildWindow }
+
+function TGtk3MDIChildWindow.CreateWidget(const Params: TCreateParams): PGtkWidget;
+var
+  AForm: TCustomForm;
+  Workspace: TGtk3MDIWorkspace;
+  InnerForm: PGtkWidget;
+begin
+  AForm := TCustomForm(LCLObject);
+  Workspace := FindMDIParentWorkspace(AForm);
+  if Workspace = nil then
+  begin
+    //No MDI parent yet, so fallback to normal toplevel.
+    Result := inherited CreateWidget(Params);
+    exit;
+  end;
+  FWidgetType := FWidgetType + [wtMDIChild];
+  InnerForm := inherited CreateWidget(Params);
+
+  if InnerForm <> nil then
+    PGtkWidget(InnerForm)^.set_can_focus(False);
+
+  if FScrollWin <> nil then
+    PGtkWidget(FScrollWin)^.set_can_focus(False);
+
+  FMDIFrame := Workspace.AddChild(AForm.Caption);
+  FMDIFrame.UserData := Self;
+  FMDIFrame.SetBorderStyle(AForm.BorderStyle);
+
+  //here we are
+  FMDIFrame.AddClientHost(InnerForm);
+
+  AForm.Left := FMDIFrame.GetBounds.Left;
+  AForm.Top := FMDIFrame.GetBounds.Top;
+
+  ApplyMDIPosition(AForm);
+
+  Result := FMDIFrame.Frame;
+  FWidget := Result;
+end;
+
+procedure TGtk3MDIChildWindow.InitializeWidget;
+begin
+  inherited InitializeWidget;
+end;
+
+procedure TGtk3MDIChildWindow.ApplyMDIPosition(AForm: TCustomForm);
+var
+  WS: TGtkAllocation;
+  L, T: Integer;
+begin
+
+  if FMDIFrame = nil then
+    exit;
+
+  case AForm.Position of
+    poDesigned, poDefaultPosOnly:
+      FMDIFrame.SetBounds(AForm.Left, AForm.Top, AForm.Width, AForm.Height);
+    poScreenCenter, poWorkAreaCenter, poDesktopCenter,
+    poMainFormCenter, poOwnerFormCenter:
+    begin
+      if (FMDIFrame.Workspace = nil) or (FMDIFrame.Workspace.Widget = nil) then
+        exit;
+      PGtkWidget(FMDIFrame.Workspace.Widget)^.get_allocation(@WS);
+      L := (WS.width  - AForm.Width)  div 2;
+      T := (WS.height - AForm.Height) div 2;
+
+      if L < 0 then
+        L := 0;
+      if T < 0 then
+        T := 0;
+
+      FMDIFrame.SetBounds(L, T, AForm.Width, AForm.Height);
+
+      AForm.Left := L;
+      AForm.Top := T;
+
+    end;
+  end;
+end;
+
+procedure TGtk3MDIChildWindow.setText(const AValue: String);
+begin
+  FText := AValue;
+  if FMDIFrame <> nil then
+    FMDIFrame.Caption := AValue;
+end;
+
+destructor TGtk3MDIChildWindow.Destroy;
+var
+  WS: TGtk3MDIWorkspace;
+begin
+  if FMDIFrame <> nil then
+  begin
+    WS := FMDIFrame.Workspace;
+    if WS <> nil then
+      WS.RemoveChild(FMDIFrame);
+    FMDIFrame := nil;
+  end;
+  inherited Destroy;
+end;
+
+procedure TGtk3MDIChildWindow.SetBounds(ALeft, ATop, AWidth, AHeight: Integer);
+begin
+  if FMDIFrame <> nil then
+    FMDIFrame.SetBounds(ALeft, ATop, AWidth, AHeight)
+  else
+    inherited SetBounds(ALeft, ATop, AWidth, AHeight);
+end;
+
+procedure TGtk3MDIChildWindow.Activate;
+begin
+  if FMDIFrame <> nil then
+    FMDIFrame.BringToFront
+  else
+    inherited Activate;
+end;
+
+{ TGtk3MDIArea }
+
+constructor TGtk3MDIArea.Create(const AMDIForm: TWinControl);
+begin
+  FWorkspace := TGtk3MDIWorkspace.Create;
+  inherited CreateFrom(AMDIForm, FWorkspace.Widget);
+  FCentralWidget := FWorkspace.Container;
+  FHasPaint := True;
+  FWidgetType := [wtWidget, wtLayout, wtScrollingWin];
+
+  FAppliedX := MaxInt;
+  FAppliedY := MaxInt;
+  FAppliedW := -1;
+  FAppliedH := -1;
+  LCLIntf.SetProp(HWND(Self), 'lclwidget', Self);
+end;
+
+destructor TGtk3MDIArea.Destroy;
+begin
+  if FWorkspace <> nil then
+  begin
+    FWorkspace.Free;
+    FWorkspace := nil;
+  end;
+  //already destroyed in FWorkspace destructor, just nil to not propagate dangling pointer forward.
+  FWidget := nil;
+  FCentralWidget := nil;
+  FOwnWidget := False;
+  inherited Destroy;
+end;
+
+function TGtk3MDIArea.getClientRect: TRect;
+var
+  Alloc: TGtkAllocation;
+begin
+  if FCentralWidget <> nil then
+  begin
+    PGtkWidget(FCentralWidget)^.get_allocation(@Alloc);
+    Result := Rect(0, 0, Alloc.width, Alloc.height);
+  end else
+  if FWidget <> nil then
+  begin
+    PGtkWidget(FWidget)^.get_allocation(@Alloc);
+    Result := Rect(0, 0, Alloc.width, Alloc.height);
+  end else
+    Result := Rect(0, 0, 0, 0);
 end;
 
 { TGtk3Dialog }
@@ -14156,7 +14901,17 @@ end;
 function TGtk3GLArea.CreateWidget(const Params: TCreateParams): PGtkWidget;
 begin
   FWidgetType := [wtWidget, wtGLArea];
-  Result := TGtkGLArea.new;
+  if IsDesigning then
+  begin
+    Result := PGtkWidget(TGtkDrawingArea.new);
+    FHasPaint := True;
+  end
+  else
+  begin
+    Result := TGtkGLArea.new;
+    if Assigned(LCLObject) and not (csNoFocus in LCLObject.ControlStyle) then
+      Result^.set_can_focus(True);
+  end;
 end;
 
 { TGtk3DesignWidget }
@@ -14189,7 +14944,35 @@ begin
   end;
 end;
 
-function Gtk3DrawDesigner(AWidget: PGtkWidget; AContext: Pcairo_t; Data: gpointer): gboolean; cdecl;
+class function TGtk3DesignWidget.Gtk3DrawDesignerBg(AWidget: PGtkWidget;
+  AContext: Pcairo_t; AData: gpointer): gboolean; cdecl;
+var
+  This: TGtk3DesignWidget;
+  NColor: TColor;
+  RGB: LongInt;
+  W, H: gint;
+begin
+  Result := False;
+  if AData = nil then exit;
+  This := TGtk3DesignWidget(AData);
+  if This.LCLObject = nil then
+    exit;
+  if not This.Visible then
+    exit;
+  NColor := This.LCLObject.Color;
+  if (NColor = clNone) or (NColor = clDefault) or (NColor = clForm) then
+    exit;
+  RGB := ColorToRGB(NColor);
+  W := AWidget^.get_allocated_width;
+  H := AWidget^.get_allocated_height;
+  cairo_save(AContext);
+  cairo_set_source_rgb(AContext, Red(RGB) / 255.0, Green(RGB) / 255.0, Blue(RGB) / 255.0);
+  cairo_rectangle(AContext, 0, 0, W, H);
+  cairo_fill(AContext);
+  cairo_restore(AContext);
+end;
+
+class function TGtk3DesignWidget.Gtk3DrawDesigner(AWidget: PGtkWidget; AContext: Pcairo_t; Data: gpointer): gboolean; cdecl;
 var
   ARect: TGdkRectangle;
 begin
@@ -14239,8 +15022,9 @@ procedure TGtk3DesignWidget.InitializeWidget;
 begin
   inherited InitializeWidget;
   g_signal_handler_disconnect(getContainerWidget, FDrawSignal);
-  //we must run after default gtk draw of control.
-  g_signal_connect_data(getContainerWidget,'draw', TGCallback(@Gtk3DrawDesigner), Self, nil, [G_CONNECT_AFTER]);
+  //connect background draw before, so it won't repaint over forms children.
+  g_signal_connect_data(getContainerWidget, 'draw', TGCallback(@TGtk3DesignWidget.Gtk3DrawDesignerBg), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(getContainerWidget, 'draw', TGCallback(@TGtk3DesignWidget.Gtk3DrawDesigner), Self, nil, [G_CONNECT_AFTER]);
   BringDesignerToFront;
 end;
 
@@ -14305,7 +15089,6 @@ begin
 
       end;
 
-      //DoBeforeLCLPaint;
       {$IFDEF GTK3DEBUGDESIGNER}
       writeln('>TGtk3DesignWidget.Paint DC=',dbgHex(Msg.DC),' offset=',dbgs(P),' surface=',cairo_surface_get_type(cairo_get_target(AContext)));
       {$ENDIF}

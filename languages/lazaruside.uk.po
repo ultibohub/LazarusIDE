@@ -8913,10 +8913,6 @@ msgstr "Роздільник - крапка з комою."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Сирці, сумісні з Delphi. Рекомендовано."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr ""
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr ""
@@ -10296,8 +10292,9 @@ msgid "It is probably too old to create the configuration files."
 msgstr "Вона можлио занадто стара для створення файлів конфігурації."
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
-#, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+#, object-pascal-format, fuzzy
+#| msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr "Засіб конфігурування fpcmkcfg занадто старий [%s]."
 
 #: lazarusidestrconsts.lisfppkginstallationpath
@@ -10819,10 +10816,6 @@ msgstr "Якщо змінилась лише інформація про сеа�
 #, object-pascal-format
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Якщо ви хочете використовувати дві різні версії Lazarus ви повинні запустити інший Lazarus з параметром командного рядка primary-config-path чи pcp.%sНаприклад:"
-
-#: lazarusidestrconsts.lisignoreall
-msgid "Ignore all"
-msgstr "Знехтувати все"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -14560,11 +14553,6 @@ msgstr ""
 #: lazarusidestrconsts.lisoverridetheprojectwidgetsetegdefault
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
-msgstr ""
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
 msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot

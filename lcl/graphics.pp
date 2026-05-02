@@ -567,6 +567,8 @@ type
     property Handle: HFONT read GetHandle write SetHandle;
     function IsDefault: boolean;
     function IsEqual(AFont: TFont): boolean; virtual;
+    function IsHorizontal(AllowReverse: Boolean = false): Boolean;
+    function IsVertical: Boolean;
     property IsMonoSpace: boolean read GetIsMonoSpace;
     procedure SetDefault;
     property PixelsPerInch: Integer read FPixelsPerInch write SetPixelsPerInch;

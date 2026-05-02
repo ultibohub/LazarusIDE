@@ -869,6 +869,10 @@ msgstr "Önişlemci"
 msgid "Symbols defined for conditional compilation:"
 msgstr "Koşullu derleme için tanımlanan semboller:"
 
+#: jcfuiconsts.lisreplacecstyleoperators
+msgid "Replace C-style operators (+=, -=, *=, and /=), for example transform x+=y; to x:=x+y;"
+msgstr ""
+
 #: jcfuiconsts.lisreturnsafteruses
 msgid "After uses"
 msgstr "Uses den sonra"

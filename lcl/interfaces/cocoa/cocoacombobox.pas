@@ -209,10 +209,10 @@ type
 
   TCocoaComboBoxUtil = class
   public
-    class function isReadOnly(AStyle: TComboBoxStyle): Boolean; overload;
-    class function isReadOnly(cmb: TCustomComboBox): Boolean; overload;
-    class function isOwnerDrawn(AStyle: TComboBoxStyle): Boolean;
-    class function isVariable(AStyle: TComboBoxStyle): Boolean;
+    class function isReadOnly(AStyle: TComboBoxStyle): Boolean; overload; inline;
+    class function isReadOnly(cmb: TCustomComboBox): Boolean; overload; inline;
+    class function isOwnerDrawn(AStyle: TComboBoxStyle): Boolean; inline;
+    class function isVariable(AStyle: TComboBoxStyle): Boolean; inline;
 
     class function getCurrentIndex(const ACustomComboBox: TCustomComboBox): integer; overload;
     class function getCurrentIndex(const AObject: TObject): integer; overload;

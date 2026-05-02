@@ -8920,10 +8920,6 @@ msgstr "Erotin on puolipiste."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Delphi yhteensopivat resurssit. Suositus."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr ""
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr ""
@@ -10298,7 +10294,7 @@ msgstr ""
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
 #, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr ""
 
 #: lazarusidestrconsts.lisfppkginstallationpath
@@ -10811,10 +10807,6 @@ msgstr "Jos vain istunnon tiedot muuttuivat, kysy niiden tallentamisesta."
 #, object-pascal-format
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Haluttaessa kaksi eri Lazarus versiota, pitää toinen käynnistää parametrin primary-config-path tai pcp kanssa.%sEsimerkiksi:"
-
-#: lazarusidestrconsts.lisignoreall
-msgid "Ignore all"
-msgstr "Ohita kaikki"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -14499,11 +14491,6 @@ msgstr ""
 #: lazarusidestrconsts.lisoverridetheprojectwidgetsetegdefault
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
-msgstr ""
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
 msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot

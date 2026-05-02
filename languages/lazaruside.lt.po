@@ -9054,10 +9054,6 @@ msgstr "Skirtukas yra kabliataškis."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Su „Delphi“ suderinami ištekliai. Rekomenduojama."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr ""
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr ""
@@ -10443,7 +10439,7 @@ msgstr ""
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
 #, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr ""
 
 #: lazarusidestrconsts.lisfppkginstallationpath
@@ -10977,10 +10973,6 @@ msgstr "Atsiklausti ar įrašyti sesijos informaciją tik jei ji pakito."
 #, object-pascal-format
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Naudojant dvi „Lazarus“ laidas, antrasis „Lazarus“ turi būti startuojamas naudojant komandinės eilutės parametrą „primary-config-path“ (arba „pcp“).%sPavyzdžiui:"
-
-#: lazarusidestrconsts.lisignoreall
-msgid "Ignore all"
-msgstr "Visada ignoruoti"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -14795,11 +14787,6 @@ msgstr ""
 #: lazarusidestrconsts.lisoverridetheprojectwidgetsetegdefault
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
-msgstr ""
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
 msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot

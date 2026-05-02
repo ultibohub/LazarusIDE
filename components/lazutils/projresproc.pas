@@ -83,6 +83,11 @@ procedure LRSObjectTextToBinary(Input, Output: TStream;  // lfm to binary
 function CompareLRPositionLinkWithLFMPosition(Item1, Item2: Pointer): integer;
 function CompareLRPositionLinkWithLRSPosition(Item1, Item2: Pointer): integer;
 
+procedure ReverseBytes(p: Pointer; Count: integer);
+procedure ReverseByteOrderInWords(p: PWord; Count: integer);
+procedure ConvertEndianBigDoubleToLRSExtended(BigEndianDouble,LRSExtended: Pointer);
+procedure ConvertLEDoubleToLRSExtended(LEDouble, LRSExtended: Pointer);
+
 function ReadLRSShortInt(s: TStream): shortint;
 function ReadLRSByte(s: TStream): byte;
 function ReadLRSSmallInt(s: TStream): smallint;
@@ -110,6 +115,15 @@ procedure WriteLRSInt64(s: TStream; const i: int64);
 procedure WriteLRSCurrency(s: TStream; const c: Currency);
 procedure WriteLRSWideStringContent(s: TStream; const w: WideString);
 procedure WriteLRSInt64MB(s: TStream; const Value: int64);// multibyte
+procedure WriteLRSDoubleAsExtended(s: TStream; ADouble: PByte);
+
+procedure WriteLRSReversedWord(s: TStream; w: word);
+procedure WriteLRS4BytesReversed(s: TStream; p: Pointer);
+procedure WriteLRS8BytesReversed(s: TStream; p: Pointer);
+procedure WriteLRS10BytesReversed(s: TStream; p: Pointer);
+procedure WriteLRSNull(s: TStream; Count: integer);
+procedure WriteLRSEndianBigDoubleAsEndianLittleExtended(s: TStream; EndBigDouble: PByte);
+procedure WriteLRSReversedWords(s: TStream; p: Pointer; Count: integer);
 
 
 implementation
@@ -1206,6 +1220,112 @@ begin
     Result:=0;
 end;
 
+procedure ReverseBytes(p: Pointer; Count: integer);
+var
+  p1: PChar;
+  p2: PChar;
+  c: Char;
+begin
+  p1:=PChar(p);
+  p2:=PChar(p)+Count-1;
+  while p1<p2 do begin
+    c:=p1^;
+    p1^:=p2^;
+    p2^:=c;
+    inc(p1);
+    dec(p2);
+  end;
+end;
+
+procedure ReverseByteOrderInWords(p: PWord; Count: integer);
+var
+  i: Integer;
+  w: Word;
+begin
+  for i:=0 to Count-1 do begin
+    w:=p[i];
+    w:=(w shr 8) or ((w and $ff) shl 8);
+    p[i]:=w;
+  end;
+end;
+
+procedure ConvertEndianBigDoubleToLRSExtended(BigEndianDouble, LRSExtended: Pointer);
+// Floats consists of a sign bit, some exponent bits and the mantissa bits
+// A 0 is all bits 0
+// not 0 has always a leading 1, which exponent is stored
+// Single/Double does not save the leading 1, Extended does.
+//
+// Double is 8 bytes long, leftmost bit is sign,
+// then 11 bit exponent based $400, then 52 bit mantissa without leading 1
+//
+// Extended is 10 bytes long, leftmost bit is sign,
+// then 15 bit exponent based $4000, then 64 bit mantissa with leading 1
+// EndianLittle means reversed byte order
+var
+  e: array[0..9] of byte;
+  i: Integer;
+  Exponent: Word;
+  d: PByte;
+begin
+  d:=PByte(BigEndianDouble);
+  // convert ppc double to i386 extended
+  if (PCardinal(d)[0] or PCardinal(d)[1])=0 then begin
+    // 0
+    FillChar(LRSExtended^,10,#0);
+  end else begin
+    Exponent:=((d[0] and $7f) shl 4)+(d[1] shr 4);
+    inc(Exponent,$4000-$400);
+    if (d[0] and $80)>0 then
+      // signed
+      inc(Exponent,$8000);
+    e[9]:=Exponent shr 8;
+    e[8]:=Exponent and $ff;
+    e[7]:=($80 or (d[1] shl 3) or (d[2] shr 5)) and $ff;
+    for i:=3 to 7 do begin
+      e[9-i]:=((d[i-1] shl 3) or (d[i] shr 5)) and $ff;
+    end;
+    e[1]:=(d[7] shl 3) and $ff;
+    e[0]:=0;
+    System.Move(e[0],LRSExtended^,10);
+  end;
+end;
+
+procedure ConvertLEDoubleToLRSExtended(LEDouble, LRSExtended: Pointer);
+type
+  TMantissaWrap = record
+    case boolean of
+      True: (Q: QWord);
+      False: (B: array[0..7] of Byte);
+  end;
+
+  TExpWrap = packed record
+    Mantissa: TMantissaWrap;
+    Exp: Word;
+  end;
+
+var
+  Q: PQWord absolute LEDouble;
+  C: PCardinal absolute LEDouble;
+  W: PWord absolute LEDouble;
+  E: ^TExpWrap absolute LRSExtended;
+  {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
+  Mantissa: TMantissaWrap;
+  {$endif}
+begin
+  if W[3] and $7FF0 = $7FF0 // infinite or NaN
+  then E^.Exp := $7FFF
+  else E^.Exp := (W[3] and $7FFF) shr 4 - $3FF + $3FFF;
+  E^.Exp := E^.Exp or (W[3] and $8000); // sign
+  {$ifdef FPC_REQUIRES_PROPER_ALIGNMENT}
+  Mantissa.Q := (Q^ shl 11);
+  Mantissa.B[7] := Mantissa.B[7] or $80; // add ignored 1
+  System.Move(Mantissa, E^.Mantissa, 8);
+  {$else}
+  E^.Mantissa.Q := (Q^ shl 11);
+  E^.Mantissa.B[7] := E^.Mantissa.B[7] or $80; // add ignored 1
+  {$endif}
+end;
+
 function ReadLRSShortInt(s: TStream): shortint;
 begin
   Result:=0;
@@ -1478,6 +1598,84 @@ begin
     b:=byte(vaInt64);
     s.Write(b, 1);
     WriteLRSInt64(s,Value);
+  end;
+end;
+
+procedure WriteLRSDoubleAsExtended(s: TStream; ADouble: PByte);
+var
+  e: array[0..9] of byte;
+begin
+  {$ifdef FPC_LITTLE_ENDIAN}
+  ConvertLEDoubleToLRSExtended(ADouble,@e);
+  {$else}
+  ConvertEndianBigDoubleToLRSExtended(ADouble,@e);
+  {$endif}
+  s.Write(e[0],10);
+end;
+
+procedure WriteLRSReversedWord(s: TStream; w: word);
+begin
+  w:=(w shr 8) or ((w and $ff) shl 8);
+  s.Write(w,2);
+end;
+
+procedure WriteLRS4BytesReversed(s: TStream; p: Pointer);
+var
+  a: array[0..3] of char;
+  i: Integer;
+begin
+  for i:=0 to 3 do
+    a[i]:=PChar(p)[3-i];
+  s.Write(a[0],4);
+end;
+
+procedure WriteLRS8BytesReversed(s: TStream; p: Pointer);
+var
+  a: array[0..7] of char;
+  i: Integer;
+begin
+  for i:=0 to 7 do
+    a[i]:=PChar(p)[7-i];
+  s.Write(a[0],8);
+end;
+
+procedure WriteLRS10BytesReversed(s: TStream; p: Pointer);
+var
+  a: array[0..9] of char;
+  i: Integer;
+begin
+  for i:=0 to 9 do
+    a[i]:=PChar(p)[9-i];
+  s.Write(a[0],10);
+end;
+
+procedure WriteLRSNull(s: TStream; Count: integer);
+var
+  c: char;
+  i: Integer;
+begin
+  c:=#0;
+  for i:=0 to Count-1 do
+    s.Write(c,1);
+end;
+
+procedure WriteLRSEndianBigDoubleAsEndianLittleExtended(s: TStream; EndBigDouble: PByte);
+var
+  e: array[0..9] of byte;
+begin
+  ProjResProc.ConvertEndianBigDoubleToLRSExtended(EndBigDouble,@e);
+  s.Write(e[0],10);
+end;
+
+procedure WriteLRSReversedWords(s: TStream; p: Pointer; Count: integer);
+var
+  w: Word;
+  i: Integer;
+begin
+  for i:=0 to Count-1 do begin
+    w:=PWord(P)[i];
+    w:=(w shr 8) or ((w and $ff) shl 8);
+    s.Write(w,2);
   end;
 end;
 

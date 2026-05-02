@@ -95,21 +95,35 @@ begin
 end;
 
 function LCLSpinEditUpButtonPress(AWidget: PGtkWidget; AEvent: PGdkEventButton; AData: gpointer): gboolean; cdecl;
+var
+  Data: PLCLSpinEditData;
 begin
+  Result := False;
   if (AEvent <> nil) and
      (AEvent^.type_ in [GDK_BUTTON_PRESS, GDK_2BUTTON_PRESS, GDK_3BUTTON_PRESS]) and
      (AEvent^.button = 1) then
+  begin
     LCLSpinEditUpClicked(PGtkButton(AWidget), AData);
-  Result := False;
+    Data := PLCLSpinEditData(AData);
+    if Assigned(Data^.Entry) then
+      PGtkEditable(Data^.Entry)^.select_region(0, -1);
+  end;
 end;
 
 function LCLSpinEditDownButtonPress(AWidget: PGtkWidget; AEvent: PGdkEventButton; AData: gpointer): gboolean; cdecl;
+var
+  Data: PLCLSpinEditData;
 begin
+  Result := False;
   if (AEvent <> nil) and
      (AEvent^.type_ in [GDK_BUTTON_PRESS, GDK_2BUTTON_PRESS, GDK_3BUTTON_PRESS]) and
      (AEvent^.button = 1) then
+  begin
     LCLSpinEditDownClicked(PGtkButton(AWidget), AData);
-  Result := False;
+    Data := PLCLSpinEditData(AData);
+    if Assigned(Data^.Entry) then
+      PGtkEditable(Data^.Entry)^.select_region(0, -1);
+  end;
 end;
 
 procedure LCLSpinEditEntryChanged(AEditable: PGtkEditable; AData: gpointer); cdecl;
@@ -356,15 +370,26 @@ begin
   AControl := TGtk3Widget(HwndFromGtkWidget(widget));
   if not Assigned(AControl) then Exit;
 
-  if AControl.LCLWidth = 0 then
-  begin
-    min_width^ := Max(min_width^ div 2, AControl.LCLObject.Width);
-    nat_width^ := Max(min_width^, AControl.LCLObject.Width);
-  end else
-  begin
-    min_width^ := Max(min_width^ div 2, AControl.LCLWidth);
-    nat_width^ := Max(min_width^, AControl.LCLWidth);
-  end;
+  if AControl.LCLWidth > 0 then
+    nat_width^ := AControl.LCLWidth
+  else if AControl.LCLObject.Width > 0 then
+    nat_width^ := AControl.LCLObject.Width;
+
+  if Assigned(AControl.LCLObject.Constraints) then
+    with AControl.LCLObject.Constraints do
+    begin
+      if MaxWidth > 0 then
+      begin
+        if min_width^ > MaxWidth then min_width^ := MaxWidth;
+        if nat_width^ > MaxWidth then nat_width^ := MaxWidth;
+      end;
+      if MinWidth > 0 then
+      begin
+        if min_width^ < MinWidth then min_width^ := MinWidth;
+        if nat_width^ < MinWidth then nat_width^ := MinWidth;
+      end;
+    end;
+  if nat_width^ < min_width^ then nat_width^ := min_width^;
 end;
 
 procedure LCLSpinEditGetPreferredHeight(widget: PGtkWidget; min_height, nat_height: Pgint); cdecl;
@@ -392,19 +417,29 @@ begin
   AControl := TGtk3Widget(HwndFromGtkWidget(widget));
   if not Assigned(AControl) then Exit;
 
-  // Respect ws height if autosize is true
-  if AControl.LCLObject.AutoSize then
-    Exit;
-
-  if AControl.LCLHeight = 0 then
+  if not AControl.LCLObject.AutoSize then
   begin
-    min_height^ := Max(min_height^ div 2, AControl.LCLObject.Height);
-    nat_height^ := Max(min_height^, AControl.LCLObject.Height);
-  end else
-  begin
-    min_height^ := Max(min_height^ div 2, AControl.LCLHeight);
-    nat_height^ := Max(min_height^, AControl.LCLHeight);
+    if AControl.LCLHeight > 0 then
+      nat_height^ := AControl.LCLHeight
+    else if AControl.LCLObject.Height > 0 then
+      nat_height^ := AControl.LCLObject.Height;
   end;
+
+  if Assigned(AControl.LCLObject.Constraints) then
+    with AControl.LCLObject.Constraints do
+    begin
+      if MaxHeight > 0 then
+      begin
+        if min_height^ > MaxHeight then min_height^ := MaxHeight;
+        if nat_height^ > MaxHeight then nat_height^ := MaxHeight;
+      end;
+      if MinHeight > 0 then
+      begin
+        if min_height^ < MinHeight then min_height^ := MinHeight;
+        if nat_height^ < MinHeight then nat_height^ := MinHeight;
+      end;
+    end;
+  if nat_height^ < min_height^ then nat_height^ := min_height^;
 end;
 
 procedure LCLSpinEditSizeAllocate(widget: PGtkWidget; allocation: PGtkAllocation); cdecl;
@@ -511,6 +546,7 @@ var
   Adj: PGtkAdjustment;
   AStyleCtx: PGtkStyleContext;
   ACSSProvider: PGtkCssProvider;
+  AFocusChain: PGList;
 begin
   //HBox container is our FWidget, not focusable, works as focusProxy, but it is our ClientRect etc
   HBox := PGtkBox(g_object_new(LCLSpinEditGetType, 'orientation', [GTK_ORIENTATION_HORIZONTAL, 'spacing', 0, nil]));
@@ -607,7 +643,9 @@ begin
   g_signal_connect_data(PGObject(BtnDown), 'scroll-event',
     TGCallback(@LCLSpinEditEntryScroll), Data, nil, G_CONNECT_DEFAULT);
 
-  gtk_container_set_focus_chain(PGtkContainer(HBox), g_list_append(nil, Entry));
+  AFocusChain := g_list_append(nil, Entry);
+  gtk_container_set_focus_chain(PGtkContainer(HBox), AFocusChain);
+  g_list_free(AFocusChain);
 
   LCLSpinUpdateEntryFromAdj(Data);
 

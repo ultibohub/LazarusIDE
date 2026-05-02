@@ -7309,8 +7309,9 @@ begin
   Result.DbgBackendConverter := DbgBackendConverter;
   Result.DbgValueFormatter   := DbgValueFormatter;
   Result.FDisplayName := ADispName;
-  if (defClassAutoCast in EvaluateFlags) then
-    Result.EvaluateFlags := Result.EvaluateFlags + [defClassAutoCast];
+  Result.EvaluateFlags := Result.EvaluateFlags
+    + EvaluateFlags * [defClassAutoCast, defAllowFunctionCall, defFunctionCallRunAllThreads,
+                       defSkipValConv, defSkipValueFormatter];
 
   EndChildUpdate;
 end;

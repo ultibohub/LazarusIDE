@@ -8852,10 +8852,6 @@ msgstr "分隔符分号."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Delphi兼容资源.推荐."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr ""
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr ""
@@ -10210,8 +10206,9 @@ msgid "It is probably too old to create the configuration files."
 msgstr "它可能太旧，无法创建配置文件。"
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
-#, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+#, object-pascal-format, fuzzy
+#| msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr "fpcmkcfg 配置工具版本过旧 [%s]。"
 
 #: lazarusidestrconsts.lisfppkginstallationpath
@@ -10729,10 +10726,6 @@ msgstr "如果仅仅会话信息更改,询问是否保存它."
 #, object-pascal-format
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "如果您想使用两个不同版本的 Lazarus，您必需使用命令行参数 --primary-config-path 或 --pcp 来启动第二个 Lazarus。%s例如："
-
-#: lazarusidestrconsts.lisignoreall
-msgid "Ignore all"
-msgstr "忽略所有"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -14445,11 +14438,6 @@ msgstr "覆盖项目子目标。"
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
 msgstr "覆盖项目的小部件集。例如：%s。默认：%s。"
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
-msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot
 msgid "'Owner' is already used by TReader/TWriter. Please choose another name."

@@ -451,28 +451,59 @@ function FindResourceLFM(ResName: string): HRSRC;
 procedure DefineRectProperty(Filer: TFiler; const Name: string;
                              ARect, DefaultRect: PRect);
 
-procedure ReverseBytes(p: Pointer; Count: integer);
-procedure ReverseByteOrderInWords(p: PWord; Count: integer);
+procedure ReverseBytes(p: Pointer; Count: integer); deprecated 'Use from unit ProjResProc instead.';
+procedure ReverseByteOrderInWords(p: PWord; Count: integer); deprecated 'Use from unit ProjResProc instead.';
 procedure ConvertEndianBigDoubleToLRSExtended(BigEndianDouble,LRSExtended: Pointer);
-function ConvertLRSExtendedToDouble(p: Pointer): Double; deprecated 'Use from unit ProjResProc instead.';
-procedure ConvertLEDoubleToLRSExtended(LEDouble, LRSExtended: Pointer);
+                                  deprecated 'Use from unit ProjResProc instead.';
+//function ConvertLRSExtendedToDouble(p: Pointer): Double; deprecated 'Use from unit ProjResProc instead.';
+//procedure ConvertLEDoubleToLRSExtended(LEDouble, LRSExtended: Pointer);
 
-procedure WriteLRSReversedWord(s: TStream; w: word);
-procedure WriteLRS4BytesReversed(s: TStream; p: Pointer);
-procedure WriteLRS8BytesReversed(s: TStream; p: Pointer);
-procedure WriteLRS10BytesReversed(s: TStream; p: Pointer);
-procedure WriteLRSNull(s: TStream; Count: integer);
-procedure WriteLRSEndianBigDoubleAsEndianLittleExtended(s: TStream;
-  EndBigDouble: PByte);
+function ReadLRSShortInt(s: TStream): shortint; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSByte(s: TStream): byte; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSSmallInt(s: TStream): smallint; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSWord(s: TStream): word; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSInteger(s: TStream): integer; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSCardinal(s: TStream): cardinal; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSInt64(s: TStream): int64; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSSingle(s: TStream): Single; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSDouble(s: TStream): Double; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSExtended(s: TStream): Extended; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSCurrency(s: TStream): Currency; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSWideString(s: TStream): WideString; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSEndianLittleExtendedAsDouble(s: TStream): Double; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSValueType(s: TStream): TValueType; deprecated 'Use from unit ProjResProc instead.';
+function ReadLRSInt64MB(s: TStream): int64; deprecated 'Use from unit ProjResProc instead.';
+
+procedure WriteLRSSmallInt(s: TStream; const i: smallint); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSWord(s: TStream; const w: word); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSInteger(s: TStream; const i: integer); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSCardinal(s: TStream; const c: cardinal); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSSingle(s: TStream; const si: Single); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSDouble(s: TStream; const d: Double); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSExtended(s: TStream; const e: extended); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSInt64(s: TStream; const i: int64); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSCurrency(s: TStream; const c: Currency); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSWideStringContent(s: TStream; const w: WideString); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSInt64MB(s: TStream; const Value: int64); deprecated 'Use from unit ProjResProc instead.';
+
+procedure WriteLRSReversedWord(s: TStream; w: word); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRS4BytesReversed(s: TStream; p: Pointer); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRS8BytesReversed(s: TStream; p: Pointer); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRS10BytesReversed(s: TStream; p: Pointer); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSNull(s: TStream; Count: integer); deprecated 'Use from unit ProjResProc instead.';
+procedure WriteLRSEndianBigDoubleAsEndianLittleExtended(s: TStream; EndBigDouble: PByte);
+                                 deprecated 'Use from unit ProjResProc instead.';
 procedure WriteLRSDoubleAsExtended(s: TStream; ADouble: PByte);
+                                 deprecated 'Use from unit ProjResProc instead.';
 procedure WriteLRSReversedWords(s: TStream; p: Pointer; Count: integer);
+                                 deprecated 'Use from unit ProjResProc instead.';
 
 function FloatToLFMStr(const Value: extended; Precision, Digits: Integer): string;
 
 procedure RegisterPropertyToSkip(PersistentClass: TPersistentClass;
   const PropertyName, Note, HelpKeyWord: string);
-
 procedure Register;
+
 
 implementation
 
@@ -870,7 +901,7 @@ begin
     BinStream:=TMemoryStream.Create;
     WriteComponentAsBinaryToStream(BinStream,AComponent);
     BinStream.Position:=0;
-    LRSObjectBinaryToText(BinStream,AStream);
+    ProjResProc.LRSObjectBinaryToText(BinStream,AStream);
   finally
     BinStream.Free;
   end;
@@ -886,7 +917,7 @@ begin
   BinStream:=nil;
   try
     BinStream:=TMemoryStream.Create;
-    LRSObjectTextToBinary(AStream,BinStream);
+    ProjResProc.LRSObjectTextToBinary(AStream,BinStream);
     BinStream.Position:=0;
     ReadComponentFromBinaryStream(BinStream,RootComponent,OnFindComponentClass,
                                   TheOwner,Parent);
@@ -911,7 +942,7 @@ begin
     // convert it to human readable text format
     BinStream.Position:=0;
     TxtStream:=TMemoryStream.Create;
-    LRSObjectBinaryToText(BinStream,TxtStream);
+    ProjResProc.LRSObjectBinaryToText(BinStream,TxtStream);
     // convert stream to string
     SetLength(s,TxtStream.Size);
     TxtStream.Position:=0;
@@ -1068,12 +1099,12 @@ var FormClassName:ansistring;
 begin
   Result:=true;
   try
-    FormClassName:=FindLFMClassName(LFMStream);
+    FormClassName:=ProjResProc.FindLFMClassName(LFMStream);
     BinStream:=TMemoryStream.Create;
     try
-      LRSObjectTextToBinary(LFMStream,BinStream);
+      ProjResProc.LRSObjectTextToBinary(LFMStream,BinStream);
       BinStream.Position:=0;
-      BinaryToLazarusResourceCode(BinStream,LRSStream,FormClassName,'FORMDATA');
+      ProjResProc.BinaryToLazarusResourceCode(BinStream,LRSStream,FormClassName,'FORMDATA');
     finally
       BinStream.Free;
     end;
@@ -1822,7 +1853,7 @@ begin
     try
       // transform binary to text
       BinStream.Position:=0;
-      LRSObjectBinaryToText(BinStream,LFMStream);
+      ProjResProc.LRSObjectBinaryToText(BinStream,LFMStream);
     except
       Result:=-2;
       exit;
@@ -1991,7 +2022,7 @@ begin
   end else
     raise EInvalidImage.Create(SInvalidImage);
 
-  LRSObjectBinaryToText(Input, Output);
+  ProjResProc.LRSObjectBinaryToText(Input, Output);
 end;
 
 procedure FormDataToText(FormStream, TextStream: TStream; aFormat: TLRSStreamOriginalFormat);
@@ -2145,78 +2176,23 @@ end;
 { LRS format converter functions }
 
 procedure ReverseBytes(p: Pointer; Count: integer);
-var
-  p1: PChar;
-  p2: PChar;
-  c: Char;
 begin
-  p1:=PChar(p);
-  p2:=PChar(p)+Count-1;
-  while p1<p2 do begin
-    c:=p1^;
-    p1^:=p2^;
-    p2^:=c;
-    inc(p1);
-    dec(p2);
-  end;
+  ProjResProc.ReverseBytes(p, Count);
 end;
 
 procedure ReverseByteOrderInWords(p: PWord; Count: integer);
-var
-  i: Integer;
-  w: Word;
 begin
-  for i:=0 to Count-1 do begin
-    w:=p[i];
-    w:=(w shr 8) or ((w and $ff) shl 8);
-    p[i]:=w;
-  end;
-end;
-
-function ConvertLRSExtendedToDouble(p: Pointer): Double;
-begin
-  Result:=ProjResProc.ConvertLRSExtendedToDouble(p);
+  ProjResProc.ReverseByteOrderInWords(p, Count);
 end;
 
 procedure ConvertEndianBigDoubleToLRSExtended(BigEndianDouble, LRSExtended: Pointer);
-// Floats consists of a sign bit, some exponent bits and the mantissa bits
-// A 0 is all bits 0
-// not 0 has always a leading 1, which exponent is stored
-// Single/Double does not save the leading 1, Extended does.
-//
-// Double is 8 bytes long, leftmost bit is sign,
-// then 11 bit exponent based $400, then 52 bit mantissa without leading 1
-//
-// Extended is 10 bytes long, leftmost bit is sign,
-// then 15 bit exponent based $4000, then 64 bit mantissa with leading 1
-// EndianLittle means reversed byte order
-var
-  e: array[0..9] of byte;
-  i: Integer;
-  Exponent: Word;
-  d: PByte;
 begin
-  d:=PByte(BigEndianDouble);
-  // convert ppc double to i386 extended
-  if (PCardinal(d)[0] or PCardinal(d)[1])=0 then begin
-    // 0
-    FillChar(LRSExtended^,10,#0);
-  end else begin
-    Exponent:=((d[0] and $7f) shl 4)+(d[1] shr 4);
-    inc(Exponent,$4000-$400);
-    if (d[0] and $80)>0 then
-      // signed
-      inc(Exponent,$8000);
-    e[9]:=Exponent shr 8;
-    e[8]:=Exponent and $ff;
-    e[7]:=($80 or (d[1] shl 3) or (d[2] shr 5)) and $ff;
-    for i:=3 to 7 do begin
-      e[9-i]:=((d[i-1] shl 3) or (d[i] shr 5)) and $ff;
-    end;
-    e[1]:=(d[7] shl 3) and $ff;
-    e[0]:=0;
-    System.Move(e[0],LRSExtended^,10);
-  end;
+  ProjResProc.ConvertEndianBigDoubleToLRSExtended(BigEndianDouble, LRSExtended);
+end;
+{
+function ConvertLRSExtendedToDouble(p: Pointer): Double;
+begin
+  Result:=ProjResProc.ConvertLRSExtendedToDouble(p);
 end;
 
 procedure ConvertLEDoubleToLRSExtended(LEDouble, LRSExtended: Pointer);
@@ -2254,53 +2230,175 @@ begin
   E^.Mantissa.B[7] := E^.Mantissa.B[7] or $80; // add ignored 1
   {$endif}
 end;
+}
+function ReadLRSShortInt(s: TStream): shortint;
+begin
+  Result:=ProjResProc.ReadLRSShortInt(s);
+end;
+
+function ReadLRSByte(s: TStream): byte;
+begin
+  Result:=ProjResProc.ReadLRSByte(s);
+end;
+
+function ReadLRSSmallInt(s: TStream): smallint;
+begin
+  Result:=ProjResProc.ReadLRSSmallInt(s);
+end;
+
+function ReadLRSWord(s: TStream): word;
+begin
+  Result:=ProjResProc.ReadLRSWord(s);
+end;
+
+function ReadLRSInteger(s: TStream): integer;
+begin
+  Result:=ProjResProc.ReadLRSInteger(s);
+end;
+
+function ReadLRSCardinal(s: TStream): cardinal;
+begin
+  Result:=ProjResProc.ReadLRSCardinal(s);
+end;
+
+function ReadLRSInt64(s: TStream): int64;
+begin
+  Result:=ProjResProc.ReadLRSInt64(s);
+end;
+
+function ReadLRSSingle(s: TStream): Single;
+begin
+  Result:=ProjResProc.ReadLRSSingle(s);
+end;
+
+function ReadLRSDouble(s: TStream): Double;
+begin
+  Result:=ProjResProc.ReadLRSDouble(s);
+end;
+
+function ReadLRSExtended(s: TStream): Extended;
+begin
+  Result:=ProjResProc.ReadLRSExtended(s);
+end;
+
+function ReadLRSCurrency(s: TStream): Currency;
+begin
+  Result:=ProjResProc.ReadLRSCurrency(s);
+end;
+
+function ReadLRSWideString(s: TStream): WideString;
+begin
+  Result:=ProjResProc.ReadLRSWideString(s);
+end;
+
+function ReadLRSEndianLittleExtendedAsDouble(s: TStream): Double;
+begin
+  Result:=ProjResProc.ReadLRSEndianLittleExtendedAsDouble(s);
+end;
+
+function ReadLRSValueType(s: TStream): TValueType;
+begin
+  Result:=ProjResProc.ReadLRSValueType(s);
+end;
+
+function ReadLRSInt64MB(s: TStream): int64;
+begin
+  Result:=ProjResProc.ReadLRSInt64MB(s);
+end;
+
+procedure WriteLRSSmallInt(s: TStream; const i: smallint);
+begin
+  ProjResProc.WriteLRSSmallInt(s, i);
+end;
+
+procedure WriteLRSWord(s: TStream; const w: word);
+begin
+  ProjResProc.WriteLRSWord(s, w);
+end;
+
+procedure WriteLRSInteger(s: TStream; const i: integer);
+begin
+  ProjResProc.WriteLRSInteger(s, i);
+end;
+
+procedure WriteLRSCardinal(s: TStream; const c: cardinal);
+begin
+  ProjResProc.WriteLRSCardinal(s, c);
+end;
+
+procedure WriteLRSSingle(s: TStream; const si: Single);
+begin
+  ProjResProc.WriteLRSSingle(s, si);
+end;
+
+procedure WriteLRSDouble(s: TStream; const d: Double);
+begin
+  ProjResProc.WriteLRSDouble(s, d);
+end;
+
+procedure WriteLRSExtended(s: TStream; const e: extended);
+begin
+  ProjResProc.WriteLRSExtended(s, e);
+end;
+
+procedure WriteLRSInt64(s: TStream; const i: int64);
+begin
+  ProjResProc.WriteLRSInt64(s, i);
+end;
+
+procedure WriteLRSCurrency(s: TStream; const c: Currency);
+begin
+  ProjResProc.WriteLRSCurrency(s, c);
+end;
+
+procedure WriteLRSWideStringContent(s: TStream; const w: WideString);
+begin
+  ProjResProc.WriteLRSWideStringContent(s, w);
+end;
+
+procedure WriteLRSInt64MB(s: TStream; const Value: int64);
+begin
+  ProjResProc.WriteLRSInt64MB(s, Value);
+end;
 
 procedure WriteLRSReversedWord(s: TStream; w: word);
 begin
-  w:=(w shr 8) or ((w and $ff) shl 8);
-  s.Write(w,2);
+  ProjResProc.WriteLRSReversedWord(s, w);
 end;
 
 procedure WriteLRS4BytesReversed(s: TStream; p: Pointer);
-var
-  a: array[0..3] of char;
-  i: Integer;
 begin
-  for i:=0 to 3 do
-    a[i]:=PChar(p)[3-i];
-  s.Write(a[0],4);
+  ProjResProc.WriteLRS4BytesReversed(s, p);
 end;
 
 procedure WriteLRS8BytesReversed(s: TStream; p: Pointer);
-var
-  a: array[0..7] of char;
-  i: Integer;
 begin
-  for i:=0 to 7 do
-    a[i]:=PChar(p)[7-i];
-  s.Write(a[0],8);
+  ProjResProc.WriteLRS8BytesReversed(s, p);
 end;
 
 procedure WriteLRS10BytesReversed(s: TStream; p: Pointer);
-var
-  a: array[0..9] of char;
-  i: Integer;
 begin
-  for i:=0 to 9 do
-    a[i]:=PChar(p)[9-i];
-  s.Write(a[0],10);
+  ProjResProc.WriteLRS10BytesReversed(s, p);
+end;
+
+procedure WriteLRSNull(s: TStream; Count: integer);
+begin
+  ProjResProc.WriteLRSNull(s, Count);
+end;
+
+procedure WriteLRSEndianBigDoubleAsEndianLittleExtended(s: TStream; EndBigDouble: PByte);
+begin
+  ProjResProc.WriteLRSEndianBigDoubleAsEndianLittleExtended(s, EndBigDouble);
+end;
+
+procedure WriteLRSDoubleAsExtended(s: TStream; ADouble: PByte);
+begin
+  ProjResProc.WriteLRSDoubleAsExtended(s, ADouble);
 end;
 
 procedure WriteLRSReversedWords(s: TStream; p: Pointer; Count: integer);
-var
-  w: Word;
-  i: Integer;
 begin
-  for i:=0 to Count-1 do begin
-    w:=PWord(P)[i];
-    w:=(w shr 8) or ((w and $ff) shl 8);
-    s.Write(w,2);
-  end;
+  ProjResProc.WriteLRSReversedWords(s, p, Count);
 end;
 
 function FloatToLFMStr(const Value: extended; Precision, Digits: Integer): string;
@@ -2371,37 +2469,6 @@ end;
 procedure Register;
 begin
   RegisterComponents('System',[TLazComponentQueue]);
-end;
-
-procedure WriteLRSNull(s: TStream; Count: integer);
-var
-  c: char;
-  i: Integer;
-begin
-  c:=#0;
-  for i:=0 to Count-1 do
-    s.Write(c,1);
-end;
-
-procedure WriteLRSEndianBigDoubleAsEndianLittleExtended(s: TStream;
-  EndBigDouble: PByte);
-var
-  e: array[0..9] of byte;
-begin
-  ConvertEndianBigDoubleToLRSExtended(EndBigDouble,@e);
-  s.Write(e[0],10);
-end;
-
-procedure WriteLRSDoubleAsExtended(s: TStream; ADouble: PByte);
-var
-  e: array[0..9] of byte;
-begin
-  {$ifdef FPC_LITTLE_ENDIAN}
-  ConvertLEDoubleToLRSExtended(ADouble,@e);
-  {$else}
-  ConvertEndianBigDoubleToLRSExtended(ADouble,@e);
-  {$endif}
-  s.Write(e[0],10);
 end;
 
 { TLRSObjectReader }
@@ -3728,7 +3795,7 @@ begin
     WriteComponentAsBinaryToStream(AStream,AComponent);
 
     ComponentSize:=AStream.Size;
-    WriteLRSInt64MB(AStream,ComponentSize);
+    ProjResProc.WriteLRSInt64MB(AStream,ComponentSize);
     LengthSize:=AStream.Size-ComponentSize;
     //debugln('TCustomLazComponentQueue.ConvertComponentAsString ComponentSize=',ComponentSize,' LengthSize=',LengthSize);
 

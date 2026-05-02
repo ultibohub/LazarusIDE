@@ -453,6 +453,7 @@ type
     function SrcBasePackagesNeedLazbuild: string; // check if compiled-in and source base pkg list differ that a built using make is needed
     procedure LoadStaticBasePackages;
     procedure LoadAutoInstallPackages(PkgList: TStringList);
+    procedure LoadReleasePackages;
     procedure SortAutoInstallDependencies;
     function GetIDEInstallPackageOptions(
                  var InheritedOptionStrings: TInheritedCompOptsStrings): string;
@@ -2466,7 +2467,10 @@ var
 begin
   for i:=0 to PkgList.Count-1 do begin
     PackageName:=PkgList[i];
-    if not IsValidPkgName(PackageName) then continue;
+    if not IsValidPkgName(PackageName) then begin
+      debugln(['Error: (lazarus) TLazPackageGraph.LoadAutoInstallPackages invalid name "',PackageName,'"']);
+      continue;
+    end;
     Dependency:=FindDependencyByNameInList(FirstInstallDependency,
                                            pddRequires,PackageName);
     //DebugLn('TLazPackageGraph.LoadAutoInstallPackages ',dbgs(Dependency),' ',PackageName);
@@ -2486,6 +2490,21 @@ begin
       Dependency.RequiredPackage.AutoInstall:=pitStatic;
   end;
   SortAutoInstallDependencies;
+end;
+
+procedure TLazPackageGraph.LoadReleasePackages;
+var
+  sl: TStringList;
+  i: Integer;
+begin
+  sl:=TStringList.Create;
+  try
+    for i:=0 to High(LazarusIDEReleasePkgNames) do
+      sl.Add(LazarusIDEReleasePkgNames[i]);
+    LoadAutoInstallPackages(sl);
+  finally
+    sl.Free;
+  end;
 end;
 
 procedure TLazPackageGraph.SortAutoInstallDependencies;

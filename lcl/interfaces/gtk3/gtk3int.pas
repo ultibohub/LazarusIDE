@@ -29,7 +29,7 @@ uses
   LazTracer, LazUTF8, IntegerList, GraphType, LazUtilities,
   // LCL
   LCLPlatformDef, InterfaceBase, LCLProc, LCLType, LMessages, LCLMessageGlue,
-  LazLogger,
+  LazLogger, LCLStrConsts,
   Controls, Forms, Graphics, GraphUtil, IntfGraphics, StdCtrls, ComCtrls, Themes,
   LazGtk3, LazGdk3, LazGlib2, LazGObject2, LazCairo1, LazPango1, LazGio2,
   LazGdkPixbuf2, gtk3widgets, gtk3objects, gtk3procs;
@@ -122,6 +122,7 @@ type
     function CreateThemeServices: TThemeServices; override;
 
   public
+    FGtk3KeyStates: array[Byte] of Boolean;
     // LCL drag cursor state. Used by SetGlobalCursor in gtk3procs and ReleaseCapture.
     FDragIPCWidget: PGtkWidget;
     FDragSeatGrabActive: Boolean;
@@ -131,6 +132,7 @@ type
     function IsWayland: boolean;
     function CreateDCForWidget(AWidget: PGtkWidget; AWindow: PGdkWindow; cr: Pcairo_t): HDC;
     procedure AddWindow(AWindow: PGtkWindow);
+    procedure HandlePipeEvent(AData: PtrInt; AFlags: dword);
     {$IFDEF UNIX}
     procedure InitSynchronizeSupport;
     procedure ProcessChildSignal;

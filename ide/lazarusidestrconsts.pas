@@ -902,7 +902,7 @@ resourcestring
     'configuration tool.';
   lisFppkgFpcmkcfgNeeded = 'An up-to-date version is needed to create the ' +
     'configuration files.';
-  lisFppkgFpcmkcfgTooOld = 'The fpcmkcfg configuration tool it too old [%s].';
+  lisFppkgFpcmkcfgTooOld = 'The fpcmkcfg configuration tool is too old [%s].';
   lisFppkgFpcmkcfgProbTooOld = 'It is probably too old to create the configuration files.';
   lisFppkgFpcmkcfgMissing = 'Could not find the fpcmkcfg configuration tool, ' +
     'which is needed to create the configuration files.';
@@ -5397,8 +5397,6 @@ resourcestring
     +'%sProceed anyway?';
   lisRenamingAborted = 'Renaming aborted';
   lisRenamingConflict = 'Renaming conflict';
-  lisDesignerHasUnsavedChanges = 'Designer has unsaved changes';
-  lisOverwriteDesignerChangesAnyway = 'Unsaved designer changes for file "%s" will be lost. Overwrite anyway?';
   lisFileAlreadyExists = 'File "%s" already exists.';
   lisIdentifierIsAlreadyUsed = 'Identifier "%s" is already used';
   lisIdentifierIsAlreadyUsed2 = 'Identifier "%s" is already used.';

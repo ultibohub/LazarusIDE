@@ -57,12 +57,21 @@ type
     lpaAddPkgLinks // register, no build
     );
 
+  {$ScopedEnums on}
+  TBuildIDE = (
+    None,
+    User,
+    Minimal,
+    Release
+    );
+  {$ScopedEnums off}
+
   { TLazBuildApplication }
 
   TLazBuildApplication = class(TCustomApplication)
   private
     FBuildAll: boolean;
-    FBuildIDE: boolean;
+    FBuildIDE: TBuildIDE;
     FBuildIDEOptions: string;
     FBuildModeOverride: String;
     FBuildRecursive: boolean;
@@ -181,7 +190,7 @@ type
                                      write FBuildRecursive;
     property SkipDependencies: boolean read FSkipDependencies
                                             write FSkipDependencies;
-    property BuildIDE: boolean read FBuildIDE write FBuildIDE; // build IDE (as opposed to a project/package etc)
+    property BuildIDE: TBuildIDE read FBuildIDE write FBuildIDE; // build IDE (as opposed to a project/package etc)
     property BuildIDEOptions: string read FBuildIDEOptions write FBuildIDEOptions;
     property CreateMakefile: boolean read FCreateMakefile write FCreateMakefile;
     property WidgetSetOverride: String read FWidgetsetOverride write FWidgetsetOverride;
@@ -606,6 +615,7 @@ begin
   if not Init then exit;
 
   LoadMiscellaneousOptions;
+
   BuildLazProfiles:=MiscellaneousOptions.BuildLazProfiles;
   CurProf:=BuildLazProfiles.Current;
   if BuildModeOverride<>'' then
@@ -631,7 +641,14 @@ begin
     CurProf:=BuildLazProfiles[i];
     BuildLazProfiles.CurrentIndex:=i;
   end;
-  PrintHint('Building Lazarus IDE with profile "' + CurProf.Name + '"');
+  case BuildIDE of
+    TBuildIDE.Minimal:
+      PrintHint('Building MINIMAL Lazarus IDE with defaults');
+    TBuildIDE.Release:
+      PrintHint('Building RELEASE Lazarus IDE with defaults');
+  else
+    PrintHint('Building Lazarus IDE with profile "' + CurProf.Name + '"');
+  end;
 
   if (Length(OSOverride) <> 0) then
     CurProf.TargetOS:=OSOverride;
@@ -658,7 +675,18 @@ begin
   Flags:=[];
 
   // try loading install packages
-  PackageGraph.LoadAutoInstallPackages(BuildLazProfiles.StaticAutoInstallPackages);
+  case BuildIDE of
+    TBuildIDE.None,
+    TBuildIDE.User:
+      // load user installed packages
+      PackageGraph.LoadAutoInstallPackages(BuildLazProfiles.StaticAutoInstallPackages);
+    TBuildIDE.Minimal: ;
+    TBuildIDE.Release:
+      begin
+        PackageGraph.LoadReleasePackages;
+        Include(Flags,blfKeepInstallPkgs);
+      end;
+  end;
 
   // create target directory
   TargetDir:=CurProf.TargetDirectory;
@@ -1297,7 +1325,10 @@ procedure TLazBuildApplication.LoadMiscellaneousOptions;
 begin
   if MiscellaneousOptions<>nil then exit;
   MiscellaneousOptions:=TMiscellaneousOptions.Create;
-  MiscellaneousOptions.Load;
+  if BuildIDE in [TBuildIDE.None,TBuildIDE.User] then
+    MiscellaneousOptions.Load
+  else
+    MiscellaneousOptions.CreateDefaults;
 end;
 
 procedure TLazBuildApplication.SetupMacros;
@@ -1551,7 +1582,7 @@ begin
       PrintErrorAndHalt(ErrorBuildFailed, 'Adding package(s) links failed: "' + Files.Text + '"');
   end;
 
-  if BuildIDE then
+  if BuildIDE>TBuildIDE.None then
     if not BuildLazarusIDE then
       PrintErrorAndHalt(ErrorBuildFailed, '');
 end;
@@ -1638,6 +1669,8 @@ begin
     LongOptions.Add('add-package-link');
     LongOptions.Add('build-all');
     LongOptions.Add('build-ide::'); // value is optional
+    LongOptions.Add('build-ide-minimal');
+    LongOptions.Add('build-ide-release');
     LongOptions.Add('build-twice');
     LongOptions.Add('recursive');
     LongOptions.Add('skip-dependencies');
@@ -1699,9 +1732,22 @@ begin
 
     // building IDE
     if HasOpt_GetValue('build-ide', FBuildIDEOptions) then begin
-      BuildIDE:=true;
+      BuildIDE:=TBuildIDE.User;
       FilesNeeded:=false;
       PrintInfo('Parameter: --build-ide="' + BuildIDEOptions + '"');
+    end;
+    // Note: --build-ide can be combined with --build-ide-minimal or --build-ide-release
+    if HasOption('build-ide-minimal') then begin
+      BuildIDE:=TBuildIDE.Minimal;
+      FilesNeeded:=false;
+      PrintInfo('Parameter: --build-ide-minimal');
+    end;
+    if HasOption('build-ide-release') then begin
+      if BuildIDE=TBuildIDE.Minimal then
+        PrintErrorAndHalt(ErrorInvalidSyntax,'either --build-ide-minimal or --build-ide-release');
+      BuildIDE:=TBuildIDE.Release;
+      FilesNeeded:=false;
+      PrintInfo('Parameter: --build-ide-release');
     end;
 
     // files
@@ -1864,6 +1910,12 @@ begin
   writeln('');
   writeln('--build-ide=<options>');
   w(lisBuildIDEWithPackages);
+  writeln('');
+  writeln('--build-ide-minimal');
+  w('Build the minimal IDE with defaults.');
+  writeln('');
+  writeln('--build-ide-release');
+  w('Build the release IDE. Same as minimal plus a fixed set of extra packages.');
   writeln('');
   writeln('-v, --version');
   w(lisShowVersionAndExit);

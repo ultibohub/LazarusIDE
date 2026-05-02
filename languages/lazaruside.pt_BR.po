@@ -8953,10 +8953,6 @@ msgstr "Delimitador é ponto-e-vírgula"
 msgid "Delphi compatible resources. Recommended."
 msgstr "Recursos compatíveis com Delphi. Recomendado."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr ""
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr ""
@@ -10340,8 +10336,9 @@ msgid "It is probably too old to create the configuration files."
 msgstr "É provavelmente muito antigo para criar os arquivos de configuração."
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
-#, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+#, object-pascal-format, fuzzy
+#| msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr "A ferramenta de configuração \"fpcmkcfg\" é muito antiga [%s]."
 
 #: lazarusidestrconsts.lisfppkginstallationpath
@@ -10862,10 +10859,6 @@ msgstr "Se apenas alterada a informação de sessão, perguntar sobre salvar."
 #, object-pascal-format
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Se você deseja usar duas versões diferentes do Lazarus, você deve iniciar o segundo Lazarus com o parâmetro de linha de comando \"primary-config-path\" ou \"pcp.%sPor exemplo:"
-
-#: lazarusidestrconsts.lisignoreall
-msgid "Ignore all"
-msgstr "Ignorar tudo"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -14612,11 +14605,6 @@ msgstr ""
 #: lazarusidestrconsts.lisoverridetheprojectwidgetsetegdefault
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
-msgstr ""
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
 msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot

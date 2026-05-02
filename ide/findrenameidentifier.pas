@@ -137,7 +137,8 @@ function GatherIdentifierReferences(Files: TStringList;
   DeclTool: TCodeTool; // can be nil
   DeclNode: TCodeTreeNode; // can be nil
   SearchInComments: boolean;
-  out ListOfSrcNameRefs: TObjectList; const Flags: TFindRefsFlags): boolean;
+  out ListOfSrcNameRefs: TObjectList; const Flags: TFindRefsFlags;
+  out ModifiedDesigners: TArrayOfTEditableUnitInfo): boolean;
 function ShowIdentifierReferences(
   DeclFilename: string;
   ListOfSrcNameRefs: TObjectList;
@@ -623,6 +624,17 @@ var
     Result:=true;
   end;
 
+  function UnitIsModefiedByDesigner(AUnitInfo:TEditableUnitInfo;
+      SrcIfcs: TArrayOfTEditableUnitInfo): boolean;
+  var i: integer;
+  begin
+    Result:=false;
+    if AUnitInfo=nil then exit;
+    if SrcIfcs=nil then exit;
+    for i:=0 to high(SrcIfcs) do
+      if SrcIfcs[i]=AUnitInfo then exit(true);
+  end;
+
 var
   StartSrcEdit: TSourceEditorInterface;
   LastCode, Code: TCodeBuffer;
@@ -643,6 +655,7 @@ var
   TreeOfPCodeXYPosition, LFMTreeOfPCodeXYPosition: TAVLTree;
   Refs, OldRefs: TSrcNameRefs;
   AUnitInfo: TEditableUnitInfo;
+  SrcIfcsAtStart, SrcIfcs: TArrayOfTEditableUnitInfo;
 begin
   Result:=mrCancel;
   if not LazarusIDE.BeginCodeTools then exit(mrCancel);
@@ -695,6 +708,9 @@ begin
   NewFilename:='';
   NewFileCreated:=false;
   OldRefs:=nil;
+  SrcIfcs:=nil;
+  SrcIfcsAtStart:=nil;
+
   try
     // let user choose the search scope
     Result:=ShowFindRenameIdentifierDialog(DeclCodeXY.Code.Filename,DeclXY,
@@ -849,10 +865,26 @@ begin
     if Options.IncludeLFMs then
       Include(FindRefFlags,frfIncludingLFM);
     if not GatherIdentifierReferences(Files,DeclCodeXY,DeclTool,DeclNode,
-      Options.SearchInComments,PascalReferences,FindRefFlags) then
+      Options.SearchInComments,PascalReferences,FindRefFlags, SrcIfcsAtStart) then
     begin
       debugln('Error: 20250206162727 DoFindRenameIdentifier GatherIdentifierReferences failed');
       exit(mrCancel);
+    end;
+
+    if SrcIfcsAtStart<> nil then begin // pending changes in designers detected
+      for i:= 0 to high(SrcIfcsAtStart) do
+        SaveEditorFile(SrcIfcsAtStart[i].EditorInfo[0].EditorComponent, []);
+
+      // code is modified, previous  gathering not reliable, must be repeated
+      PascalReferences.Free;
+      PascalReferences:=nil;
+
+      if not GatherIdentifierReferences(Files,DeclCodeXY,DeclTool,DeclNode,
+      Options.SearchInComments,PascalReferences,FindRefFlags, SrcIfcs) then
+      begin
+        debugln('Error: 20250206162727 DoFindRenameIdentifier GatherIdentifierReferences failed');
+        exit(mrCancel);
+      end;
     end;
 
     // search references in lfm files
@@ -898,7 +930,7 @@ begin
       OldChange:=LazarusIDE.OpenEditorsOnCodeToolChange;
       LazarusIDE.OpenEditorsOnCodeToolChange:=true;
       try
-        // todo: check for conflicts and show user list
+        // todo: check for conflicts and show user list (some checking already done)
 
         IsConflicted:=false;
         Result:=mrOk;
@@ -964,31 +996,17 @@ begin
               if AUnitInfo=nil then
                 continue;
 
-              if AUnitInfo.EditorInfoCount>1 then
-                for j:= AUnitInfo.EditorInfoCount-1 downto 1 do
-                  CloseEditorFile(AUnitInfo.EditorInfo[j].EditorComponent,[cfQuiet,
-                    cfCloseDependencies]);
-
-              // save or skip saving in lfm,
-              // dialog to skip saving is opened if there are pending designer changes
-
-              if AUnitInfo.EditorInfo[0].EditorComponent.ModifiedDesign then begin
-                if IDEMessageDialog(lisDesignerHasUnsavedChanges,
-                  Format(lisOverwriteDesignerChangesAnyway,[Code.Filename]),
-                  mtWarning, [mbYes, mbNo]) <> mrYes then
-                begin
-                  debugln('Changes by a designer detected, lfm file left unsaved');
-                  //the project will be inconsistent but possibly valuable work
-                  //via designer will be preserved
-                  continue;
-                end;
+              if UnitIsModefiedByDesigner(AUnitInfo, SrcIfcsAtStart) then begin
+                if AUnitInfo.EditorInfoCount>1 then
+                  for j:= AUnitInfo.EditorInfoCount-1 downto 1 do
+                    CloseEditorFile(AUnitInfo.EditorInfo[j].EditorComponent,
+                    [cfQuiet, cfCloseDependencies]);
+                ReloadUnitComponent(AUnitInfo);
               end;
-
-              ReloadUnitComponent(AUnitInfo);
-
             end;
           end;
         end;
+
       finally
         LazarusIDE.OpenEditorsOnCodeToolChange:=OldChange;
       end;
@@ -1030,7 +1048,8 @@ end;
 
 function GatherIdentifierReferences(Files: TStringList; const DeclCodeXY: TCodeXYPosition;
   DeclTool: TCodeTool; DeclNode: TCodeTreeNode; SearchInComments: boolean; out
-  ListOfSrcNameRefs: TObjectList; const Flags: TFindRefsFlags): boolean;
+  ListOfSrcNameRefs: TObjectList; const Flags: TFindRefsFlags;
+  out ModifiedDesigners: TArrayOfTEditableUnitInfo): boolean;
 var
   i, DeclCleanPos: Integer;
   LoadResult: TModalResult;
@@ -1047,6 +1066,7 @@ begin
   ListOfPCodeXYPosition:=nil;
   TreeOfPCodeXYPosition:=nil;
   Cache:=nil;
+  ModifiedDesigners:=nil;
   try
     CleanUpFileList(Files);
     for i:=Files.Count-1 downto 0 do begin
@@ -1103,14 +1123,16 @@ begin
             TreeOfPCodeXYPosition:=CodeToolBoss.CreateTreeOfPCodeXYPosition;
           CodeToolBoss.AddListToTreeOfPCodeXYPosition(ListOfPCodeXYPosition,
                                                 TreeOfPCodeXYPosition,true,false);
+
           SrcEditor:=
             SourceEditorManagerIntf.SourceEditorIntfWithFilename(Files[i]);
 
           if (SrcEditor<>nil) and (SrcEditor.ModifiedDesign) then begin
-            debugln(['Modified designer of unit: ', Code.Scanner.SourceName]);
             if (frfIncludingLFM in Flags) and (frfRename in Flags) then begin
-              debugln(['Saving unit to protect designer changes']);
-              SaveEditorFile(SrcEditor,[]); // experiment
+              setlength(ModifiedDesigners, length(ModifiedDesigners)+1);
+              ModifiedDesigners[high(ModifiedDesigners)]:=
+               TEditableUnitInfo(Project1.ProjectUnitWithFilename(Files[i]));
+              debugln(['Added a unit modified by designer: ', Code.Scanner.SourceName]);
             end;
           end;
         end;

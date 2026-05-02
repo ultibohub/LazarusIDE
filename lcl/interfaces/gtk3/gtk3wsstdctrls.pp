@@ -101,6 +101,7 @@ type
     
     class function GetItemHeight(const ACustomComboBox: TCustomComboBox): Integer; override;
     class procedure SetItemHeight(const ACustomComboBox: TCustomComboBox; const AItemHeight: Integer); override;
+    class procedure SetTextHint(const ACustomComboBox: TCustomComboBox; const ATextHint: string); override;
   end;
   TGtk3WSCustomComboBoxClass = class of TGtk3WSCustomComboBox;
 
@@ -275,6 +276,8 @@ type
     class function RetrieveState(const ACustomCheckBox: TCustomCheckBox): TCheckBoxState; override;
     class procedure SetShortCut(const ACustomCheckBox: TCustomCheckBox; const ShortCutK1, ShortCutK2: TShortCut); override;
     class procedure SetState(const ACustomCheckBox: TCustomCheckBox; const NewState: TCheckBoxState); override;
+    class procedure SetAlignment(const ACustomCheckBox: TCustomCheckBox; const NewAlignment: TLeftRight); override;
+    class procedure SetBiDiMode(const AWinControl: TWinControl; UseRightToLeftAlign, UseRightToLeftReading, UseRightToLeftScrollBar: Boolean); override;
   end;
   TGtk3WSCustomCheckBoxClass = class of TGtk3WSCustomCheckBox;
 
@@ -333,6 +336,8 @@ var
   ARadioButton: TGtk3RadioButton;
 begin
   ARadioButton := TGtk3RadioButton.Create(AWinControl, AParams);
+  if TCustomCheckBox(AWinControl).Alignment = taLeftJustify then
+    gtk_widget_set_direction(ARadioButton.Widget, GTK_TEXT_DIR_RTL);
   Result := TLCLHandle(ARadioButton);
 end;
 
@@ -355,6 +360,8 @@ var
   ACheckBox: TGtk3CheckBox;
 begin
   ACheckBox := TGtk3CheckBox.Create(AWinControl, AParams);
+  if TCustomCheckBox(AWinControl).Alignment = taLeftJustify then
+    gtk_widget_set_direction(ACheckBox.Widget, GTK_TEXT_DIR_RTL);
   Result := TLCLHandle(ACheckBox);
 end;
 
@@ -698,6 +705,13 @@ end;
 
 class procedure TGtk3WSCustomComboBox.SetItemHeight(const ACustomComboBox: TCustomComboBox; const AItemHeight: Integer);
 begin
+end;
+
+class procedure TGtk3WSCustomComboBox.SetTextHint(const ACustomComboBox: TCustomComboBox; const ATextHint: string);
+begin
+  if not WSCheckHandleAllocated(ACustomComboBox, 'SetTextHint') then
+    Exit;
+  TGtk3ComboBox(ACustomComboBox.Handle).SetTextHint(ATextHint);
 end;
 
 { TGtk3WSCustomEdit }
@@ -1137,7 +1151,8 @@ var
   ACheckBox: TGtk3CheckBox;
 begin
   ACheckBox := TGtk3CheckBox.Create(AWinControl, AParams);
-
+  if TCustomCheckBox(AWinControl).Alignment = taLeftJustify then
+    gtk_widget_set_direction(ACheckBox.Widget, GTK_TEXT_DIR_RTL);
   Result := TLCLHandle(ACheckBox);
 end;
 
@@ -1169,6 +1184,39 @@ begin
   if not WSCheckHandleAllocated(ACustomCheckBox, 'SetState') then
     Exit;
   TGtk3CheckBox(ACustomCheckBox.Handle).State := NewState;
+end;
+
+class procedure TGtk3WSCustomCheckBox.SetAlignment(const ACustomCheckBox: TCustomCheckBox; const NewAlignment: TLeftRight);
+var
+  WantRTL: Boolean;
+begin
+  if not WSCheckHandleAllocated(ACustomCheckBox, 'SetAlignment') then
+    exit;
+  WantRTL := ACustomCheckBox.UseRightToLeftAlignment xor (NewAlignment = taLeftJustify);
+  if WantRTL then
+    gtk_widget_set_direction(TGtk3Widget(ACustomCheckBox.Handle).Widget, GTK_TEXT_DIR_RTL)
+  else
+    gtk_widget_set_direction(TGtk3Widget(ACustomCheckBox.Handle).Widget, GTK_TEXT_DIR_LTR);
+end;
+
+class procedure TGtk3WSCustomCheckBox.SetBiDiMode(const AWinControl: TWinControl;
+  UseRightToLeftAlign, UseRightToLeftReading, UseRightToLeftScrollBar: Boolean);
+const
+  WidgetDirection: array[Boolean] of TGtkTextDirection = (GTK_TEXT_DIR_LTR, GTK_TEXT_DIR_RTL);
+var
+  AWidget: TGtk3Widget;
+  ADir: TGtkTextDirection;
+begin
+  {$IFDEF GTK3DEBUGCORE}
+  DebugLn('TGtk3WSCustomCheckBox.SetBiDiMode');
+  {$ENDIF}
+  if not WSCheckHandleAllocated(AWinControl, 'SetBiDiMode') then
+    Exit;
+  AWidget := TGtk3Widget(AWinControl.Handle);
+  ADir := WidgetDirection[UseRightToLeftAlign];
+  gtk_widget_set_direction(AWidget.Widget, ADir);
+  if TCustomCheckBox(AWinControl).Alignment <> taRightJustify then
+    SetAlignment(TCustomCheckBox(AWinControl), TCustomCheckBox(AWinControl).Alignment);
 end;
 
 { TGtk3WSButtonControl }

@@ -651,9 +651,10 @@ begin
       end else begin
         DebugBoss.LockCommandProcessing;
         try
-          DebugBoss.DoCreateBreakPoint(FileName, Entry.Line, False, BreakPoint);
-          if Ctrl and (BreakPoint <> nil)
-          then BreakPoint.Enabled := False;
+          DebugBoss.DoCreateBreakPoint(FileName, Entry.Line, False, BreakPoint, True);
+          if Ctrl and (BreakPoint <> nil) then
+            BreakPoint.Enabled := False;
+          BreakPoint.EndUpdate;
         finally
           DebugBoss.UnLockCommandProcessing;
         end;

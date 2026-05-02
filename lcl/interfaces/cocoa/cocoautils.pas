@@ -154,7 +154,7 @@ type
     class function toLCL(const cocoaRect: NSRect): TRect; overload;
 
     class function primaryScreen: NSScreen;
-    class function primaryScreenFrame: NSRect;
+    class function primaryScreenFrame: NSRect; inline;
     class function globalScreenFrame: NSRect;
     class function globalScreenLCLFrame: NSRect;
     class function globalScreenBottom: CGFloat;

@@ -387,6 +387,56 @@ begin
     g_idle_add(@gtkWSPopupDelayedClose, TGtk3Menu(data).MenuObject);
 end;
 
+function gtkWSPopupMenuButtonPress(widget: PGtkWidget; event: PGdkEventButton;
+  data: gPointer): gboolean; cdecl;
+var
+  EventWidget, W: PGtkWidget;
+begin
+  Result := False;
+  if event = nil then
+    exit;
+  if not widget^.get_visible then
+    exit;
+  EventWidget := gtk_get_event_widget(PGdkEvent(event));
+  if EventWidget = nil then
+    exit;
+  W := EventWidget;
+  while W <> nil do
+  begin
+    if W = widget then
+      exit;
+    if Gtk3IsMenu(PGObject(W)) or Gtk3IsMenuBar(PGObject(W)) then
+      W := PGtkWidget(gtk_menu_shell_get_parent_shell(PGtkMenuShell(W)))
+    else
+      W := gtk_widget_get_parent(W);
+  end;
+  gtk_menu_popdown(PGtkMenu(widget));
+end;
+
+procedure gtkWSPopupMenuGrabNotify(widget: PGtkWidget; was_grabbed: gboolean;
+  data: gPointer); cdecl;
+var
+  NewGrab: PGtkWidget;
+  Shell: PGtkMenuShell;
+begin
+  if was_grabbed then
+    exit;
+  if not widget^.get_visible then
+    exit;
+  NewGrab := gtk_grab_get_current;
+  if (NewGrab <> nil) and Gtk3IsMenu(PGObject(NewGrab)) then
+  begin
+    Shell := PGtkMenuShell(NewGrab);
+    while Shell <> nil do
+    begin
+      if PGtkWidget(Shell) = widget then
+        exit;
+      Shell := PGtkMenuShell(gtk_menu_shell_get_parent_shell(Shell));
+    end;
+  end;
+  gtk_menu_popdown(PGtkMenu(widget));
+end;
+
 class function TGtk3WSPopupMenu.CreateHandle(const AMenu: TMenu): HMENU;
 begin
   {$IFDEF GTK3DEBUGMENUS}
@@ -395,24 +445,43 @@ begin
   Result := HMENU(TGtk3Menu.Create(AMenu, nil));
   g_signal_connect_data(TGtk3Menu(Result).Widget,'deactivate',
     TGCallback(@gtkWSPopupMenuDeactivate), TGtk3Menu(Result), nil, G_CONNECT_DEFAULT);
-
+  g_signal_connect_data(PGObject(TGtk3Menu(Result).Widget), 'grab-notify',
+    TGCallback(@gtkWSPopupMenuGrabNotify), nil, nil, [G_CONNECT_AFTER]);
+  g_signal_connect_data(PGObject(TGtk3Menu(Result).Widget), 'button-press-event',
+    TGCallback(@gtkWSPopupMenuButtonPress), nil, nil, []);
 end;
 
 class procedure TGtk3WSPopupMenu.Popup(const APopupMenu: TPopupMenu; const X,
   Y: integer);
 var
   AProc: Pointer;
-  // WidgetInfo: PWidgetInfo;
+  ThisMenu: PGtkWidget;
 begin
-  // ReleaseMouseCapture;
   TGtk3Menu(APopupMenu.Handle).PopupPoint := Point(X, Y);
   AProc := @GtkWS_Popup;
 
   {$IFDEF GTK3DEBUGMENUS}
   DebugLn('TGtk3WSPopupMenu.Popup X=',dbgs(X),' Y=',dbgs(Y));
   {$ENDIF}
-  PGtkMenu(TGtk3Menu(APopupMenu.Handle).Widget)^.popup(nil, nil,
-    TGtkMenuPositionFunc(AProc), APopupMenu, 0, Gtk3WidgetSet.LastUserEventTime);
+  ThisMenu := TGtk3Menu(APopupMenu.Handle).Widget;
+  MenuWidget := ThisMenu;
+  PGtkMenu(ThisMenu)^.popup(nil, nil,
+    TGtkMenuPositionFunc(AProc), APopupMenu, 0, gtk_get_current_event_time);
+
+  while ThisMenu^.get_visible do
+  begin
+    try
+      Application.ProcessMessages;
+    except
+      if Application.CaptureExceptions then
+        Application.HandleException(APopupMenu)
+      else
+        raise;
+    end;
+    if Application.Terminated then break;
+    if not ThisMenu^.get_visible then break;
+    Application.Idle(False);
+  end;
 end;
 
 end.

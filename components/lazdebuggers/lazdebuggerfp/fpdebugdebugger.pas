@@ -1127,9 +1127,11 @@ begin
   assert(system.ThreadID = classes.MainThreadID, 'TFpThreadWorkerBreakPointSetUpdate.UpdateBrkPoint_DecRef: system.ThreadID = classes.MainThreadID');
 
   if (FDbgBreakPoint <> nil) then begin
-    assert(FDbgBreakPoint.FThreadWorker = Self, 'TFpThreadWorkerBreakPointSetUpdate.UpdateBrkPoint_DecRef: FDbgBreakPoint.FThreadWorker = Self');
-    FDbgBreakPoint.FThreadWorker := nil;
-    DecRef;
+    assert((FDisableBreakPoint <> 0) or (FDbgBreakPoint.FThreadWorker = Self), 'TFpThreadWorkerBreakPointSetUpdate.UpdateBrkPoint_DecRef: FDbgBreakPoint.FThreadWorker = Self');
+    if FDbgBreakPoint.FThreadWorker <> nil then begin
+      FDbgBreakPoint.FThreadWorker := nil;
+      DecRef;
+    end;
   end
   else
     FResetBreakPoint := 1;

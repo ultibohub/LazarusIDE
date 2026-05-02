@@ -7301,7 +7301,7 @@ begin
       PreferredWidth:=cx;
       PreferredHeight:=cy;
       ButtonSizeCorrector(PreferredWidth,PreferredHeight);
-      {$IF defined(LCLGtk2) or defined(Carbon)}
+      {$IF defined(LCLGtk2) or defined(LCLCarbon)}
       inc(PreferredWidth,2);
       inc(PreferredHeight,2);
       {$ENDIF}
@@ -7348,7 +7348,7 @@ begin
       PreferredWidth:=cx;
       PreferredHeight:=cy;
       ButtonSizeCorrector(PreferredWidth,PreferredHeight);
-      {$IF defined(LCLGtk2) or defined(Carbon)}
+      {$IF defined(LCLGtk2) or defined(LCLCarbon)}
       inc(PreferredWidth,2);
       inc(PreferredHeight,2);
       {$ENDIF}

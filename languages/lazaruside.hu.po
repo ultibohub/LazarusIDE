@@ -8941,10 +8941,6 @@ msgstr "Elválasztás pontosvesszővel."
 msgid "Delphi compatible resources. Recommended."
 msgstr "Delphi kompatibilis erőforrások. Ajánlott."
 
-#: lazarusidestrconsts.lisdesignerhasunsavedchanges
-msgid "Designer has unsaved changes"
-msgstr ""
-
 #: lazarusidestrconsts.lisdesigntimeonlypkg
 msgid "Designtime-only package"
 msgstr ""
@@ -10326,8 +10322,9 @@ msgid "It is probably too old to create the configuration files."
 msgstr "Valószínűleg túl régi a beállítási fájlok létrehozásához."
 
 #: lazarusidestrconsts.lisfppkgfpcmkcfgtooold
-#, object-pascal-format
-msgid "The fpcmkcfg configuration tool it too old [%s]."
+#, object-pascal-format, fuzzy
+#| msgid "The fpcmkcfg configuration tool it too old [%s]."
+msgid "The fpcmkcfg configuration tool is too old [%s]."
 msgstr "Az fpcmkcfg beállítóeszköz túl régi (%s)."
 
 #: lazarusidestrconsts.lisfppkginstallationpath
@@ -10849,10 +10846,6 @@ msgstr "Kérdés a mentésről ha csak a munkamenet információ változtak meg.
 #, object-pascal-format
 msgid "If you want to use two different Lazarus versions you must start the second Lazarus with the command line parameter primary-config-path or pcp.%sFor example:"
 msgstr "Ha különböző Lazarus változatokat akar használni, a második Lazarus-t a primary-config-path vagy a pcp parancssori paraméterrel kell indítani.%sPéldául:"
-
-#: lazarusidestrconsts.lisignoreall
-msgid "Ignore all"
-msgstr "Összes kihagyása"
 
 #: lazarusidestrconsts.lisignoreuseasancestor
 #, object-pascal-format
@@ -14601,11 +14594,6 @@ msgstr ""
 #: lazarusidestrconsts.lisoverridetheprojectwidgetsetegdefault
 #, object-pascal-format
 msgid "Override the project widgetset. For example: %s. Default: %s."
-msgstr ""
-
-#: lazarusidestrconsts.lisoverwritedesignerchangesanyway
-#, object-pascal-format
-msgid "Unsaved designer changes for file \"%s\" will be lost. Overwrite anyway?"
 msgstr ""
 
 #: lazarusidestrconsts.lisownerisalreadyusedbytreadertwriterpleasechooseanot

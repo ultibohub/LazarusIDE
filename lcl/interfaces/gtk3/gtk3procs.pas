@@ -1044,8 +1044,10 @@ begin
     GDK_KEY_Control_R: Result := VK_CONTROL;
     GDK_KEY_Alt_L,
     GDK_KEY_Alt_R: Result := VK_MENU;
-    GDK_KEY_Super_L: Result := VK_LWIN;
-    GDK_KEY_Super_R: Result := VK_RWIN;
+    GDK_KEY_Super_L,
+    GDK_KEY_Meta_L: Result := VK_LWIN;
+    GDK_KEY_Super_R,
+    GDK_KEY_Meta_R: Result := VK_RWIN;
     GDK_KEY_Menu: Result := VK_APPS;
     GDK_KEY_F1..GDK_KEY_F24: Result := VK_F1 + (AKeySym - GDK_KEY_F1);
     //Numpad keys are intentionally omitted here. GdkKeyToLCLKey handles them
@@ -1571,7 +1573,8 @@ begin
         SysColorMap[COLOR_BTNFACE] := LookupThemeColor(ACtx, 'theme_bg_color', SysColorMap[COLOR_BTNFACE], '');
         SysColorMap[COLOR_BTNTEXT] := LookupThemeColor(ACtx, 'theme_fg_color', SysColorMap[COLOR_BTNTEXT], 'theme_bg_color');
         SysColorMap[COLOR_BTNSHADOW] := DecColor(SysColorMap[COLOR_BTNFACE], 60);
-        SysColorMap[COLOR_BTNHIGHLIGHT] := IncColor(SysColorMap[COLOR_BTNFACE], 40);
+        SysColorMap[COLOR_BTNHIGHLIGHT] := LookupThemeColor(ACtx, 'theme_base_color',
+          IncColor(SysColorMap[COLOR_BTNFACE], 40), '');
         SysColorMap[COLOR_3DDKSHADOW] := DecColor(SysColorMap[COLOR_BTNFACE], 120);
         SysColorMap[COLOR_3DLIGHT] := IncColor(SysColorMap[COLOR_BTNFACE], 20);
       end;
