@@ -2004,119 +2004,219 @@ end;
 procedure TGtk3DeviceContext.ApplyBitBltROP(SrcSurface: Pcairo_surface_t;
   const ADestRect, ASrcRect: TRect; Rop: DWORD);
 var
-  DestSurface, TempSurface: Pcairo_surface_t;
+  DestSurface, TempSurface, TempDestSurface, ReadSurface: Pcairo_surface_t;
   DstData, SrcData, TmpData: PByte;
   DstStride, SrcStride, TmpStride: Integer;
   DstW, DstH, SrcW, SrcH: Integer;
   CopyW, CopyH: Integer;
   X, Y, SrcOff, DstOff: Integer;
-  TempCairo: Pcairo_t;
+  TempCairo, TargetCairo: Pcairo_t;
+  R, G, B: Double;
+  BC: Cardinal;
+  BrushR, BrushG, BrushB: Byte;
+  NeedSource: Boolean;
+  AMatrix: Tcairo_matrix_t;
+  ReadOffsetX, ReadOffsetY: Double;
 begin
-  if not FOwnsSurface then
-    exit;
-
   DestSurface := cairo_get_target(FCairo);
   if DestSurface = nil then
     exit;
-  if cairo_surface_get_type(DestSurface) <> CAIRO_SURFACE_TYPE_IMAGE then
-    exit;
-
-  cairo_surface_flush(DestSurface);
-
-  DstW := cairo_image_surface_get_width(DestSurface);
-  DstH := cairo_image_surface_get_height(DestSurface);
-  DstData := PByte(cairo_image_surface_get_data(DestSurface));
-  DstStride := cairo_image_surface_get_stride(DestSurface);
-  if DstData = nil then
-    exit;
-
-  //For DSTINVERT we only need destination, no source
-  if Rop = DSTINVERT then
-  begin
-    CopyW := ADestRect.Right - ADestRect.Left;
-    CopyH := ADestRect.Bottom - ADestRect.Top;
-    if (CopyW <= 0) or (CopyH <= 0) then
-      exit;
-    for Y := 0 to CopyH - 1 do
-    begin
-      if (ADestRect.Top + Y < 0) or (ADestRect.Top + Y >= DstH) then
-        continue;
-      for X := 0 to CopyW - 1 do
-      begin
-        if (ADestRect.Left + X < 0) or (ADestRect.Left + X >= DstW) then
-          continue;
-        DstOff := (ADestRect.Top + Y) * DstStride + (ADestRect.Left + X) * 4;
-        //BGRA
-        DstData[DstOff + 0] := not DstData[DstOff + 0];
-        DstData[DstOff + 1] := not DstData[DstOff + 1];
-        DstData[DstOff + 2] := not DstData[DstOff + 2];
-        DstData[DstOff + 3] := 255;
-      end;
-    end;
-    cairo_surface_mark_dirty(DestSurface);
-    exit;
-  end;
-
-  if SrcSurface = nil then
-    exit;
-  cairo_surface_flush(SrcSurface);
-
-  if cairo_surface_get_type(SrcSurface) <> CAIRO_SURFACE_TYPE_IMAGE then
-  begin
-    SrcW := ASrcRect.Right - ASrcRect.Left;
-    SrcH := ASrcRect.Bottom - ASrcRect.Top;
-    TempSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, SrcW, SrcH);
-    TempCairo := cairo_create(TempSurface);
-    cairo_set_source_surface(TempCairo, SrcSurface, -ASrcRect.Left, -ASrcRect.Top);
-    cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
-    cairo_paint(TempCairo);
-    cairo_destroy(TempCairo);
-    cairo_surface_flush(TempSurface);
-    SrcData := PByte(cairo_image_surface_get_data(TempSurface));
-    SrcStride := cairo_image_surface_get_stride(TempSurface);
-    SrcW := cairo_image_surface_get_width(TempSurface);
-    SrcH := cairo_image_surface_get_height(TempSurface);
-  end else
-  begin
-    TempSurface := nil;
-    SrcData := PByte(cairo_image_surface_get_data(SrcSurface));
-    SrcStride := cairo_image_surface_get_stride(SrcSurface);
-    SrcW := cairo_image_surface_get_width(SrcSurface);
-    SrcH := cairo_image_surface_get_height(SrcSurface);
-  end;
-
-  if SrcData = nil then
-  begin
-    if TempSurface <> nil then
-      cairo_surface_destroy(TempSurface);
-    exit;
-  end;
 
   CopyW := ADestRect.Right - ADestRect.Left;
   CopyH := ADestRect.Bottom - ADestRect.Top;
-  if CopyW <= 0 then
-    CopyW := 0;
-  if CopyH <= 0 then
-    CopyH := 0;
+
+  if (CopyW <= 0) or (CopyH <= 0) then
+    exit;
+
+  if FBackTarget <> nil then
+    TargetCairo := FBackTarget
+  else
+    TargetCairo := FCairo;
+
+  if (Rop = BLACKNESS) or (Rop = WHITENESS) or (Rop = DSTINVERT) or (Rop = PATCOPY) then
+  begin
+
+    cairo_save(TargetCairo);
+    cairo_rectangle(TargetCairo, ADestRect.Left, ADestRect.Top, CopyW, CopyH);
+    cairo_clip(TargetCairo);
+
+    case Rop of
+      BLACKNESS:
+      begin
+        cairo_set_operator(TargetCairo, CAIRO_OPERATOR_SOURCE);
+        cairo_set_source_rgb(TargetCairo, 0, 0, 0);
+      end;
+      WHITENESS:
+      begin
+        cairo_set_operator(TargetCairo, CAIRO_OPERATOR_SOURCE);
+        cairo_set_source_rgb(TargetCairo, 1, 1, 1);
+      end;
+      DSTINVERT:
+      begin
+        cairo_set_operator(TargetCairo, CAIRO_OPERATOR_DIFFERENCE);
+        cairo_set_source_rgb(TargetCairo, 1, 1, 1);
+      end;
+      PATCOPY:
+      begin
+        cairo_set_operator(TargetCairo, CAIRO_OPERATOR_SOURCE);
+        ColorToCairoRGB(ColorToRgb(FCurrentBrush.Color), R, G, B);
+        cairo_set_source_rgb(TargetCairo, R, G, B);
+      end;
+    end;
+    cairo_paint(TargetCairo);
+    cairo_restore(TargetCairo);
+
+    if TargetCairo = FCairo then
+      EnsureDefaultOperator;
+    exit;
+
+  end;
+
+  NeedSource := not (Rop = PATINVERT);
+
+  TempSurface := nil;
+  SrcData := nil;
+  SrcStride := 0;
+  SrcW := 0;
+  SrcH := 0;
+  if NeedSource then
+  begin
+    if SrcSurface = nil then
+      exit;
+
+    cairo_surface_flush(SrcSurface);
+
+    if cairo_surface_get_type(SrcSurface) <> CAIRO_SURFACE_TYPE_IMAGE then
+    begin
+      SrcW := ASrcRect.Right - ASrcRect.Left;
+      SrcH := ASrcRect.Bottom - ASrcRect.Top;
+
+      TempSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, SrcW, SrcH);
+      TempCairo := cairo_create(TempSurface);
+      cairo_set_source_surface(TempCairo, SrcSurface, -ASrcRect.Left, -ASrcRect.Top);
+      cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
+      cairo_paint(TempCairo);
+      cairo_destroy(TempCairo);
+
+      cairo_surface_flush(TempSurface);
+
+      SrcData := PByte(cairo_image_surface_get_data(TempSurface));
+      SrcStride := cairo_image_surface_get_stride(TempSurface);
+      SrcW := cairo_image_surface_get_width(TempSurface);
+      SrcH := cairo_image_surface_get_height(TempSurface);
+    end else
+    begin
+      SrcData := PByte(cairo_image_surface_get_data(SrcSurface));
+      SrcStride := cairo_image_surface_get_stride(SrcSurface);
+      SrcW := cairo_image_surface_get_width(SrcSurface);
+      SrcH := cairo_image_surface_get_height(SrcSurface);
+    end;
+    if SrcData = nil then
+    begin
+      if TempSurface <> nil then
+        cairo_surface_destroy(TempSurface);
+      exit;
+    end;
+  end;
+
+  TempDestSurface := nil;
+
+  if FBackTarget <> nil then
+  begin
+    ReadSurface := cairo_get_target(FBackTarget);
+    cairo_get_matrix(FBackTarget, @AMatrix);
+    ReadOffsetX := -(AMatrix.x0 + ADestRect.Left);
+    ReadOffsetY := -(AMatrix.y0 + ADestRect.Top);
+    TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
+
+    TempCairo := cairo_create(TempDestSurface);
+    cairo_set_source_surface(TempCairo, ReadSurface, ReadOffsetX, ReadOffsetY);
+    cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
+    cairo_paint(TempCairo);
+    cairo_destroy(TempCairo);
+
+    cairo_surface_flush(TempDestSurface);
+
+    DstData := PByte(cairo_image_surface_get_data(TempDestSurface));
+    DstStride := cairo_image_surface_get_stride(TempDestSurface);
+    DstW := CopyW;
+    DstH := CopyH;
+  end else
+  if cairo_surface_get_type(DestSurface) = CAIRO_SURFACE_TYPE_IMAGE then
+  begin
+    cairo_surface_flush(DestSurface);
+    DstW := cairo_image_surface_get_width(DestSurface);
+    DstH := cairo_image_surface_get_height(DestSurface);
+    DstData := PByte(cairo_image_surface_get_data(DestSurface));
+    DstStride := cairo_image_surface_get_stride(DestSurface);
+  end else
+  begin
+
+    TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
+    TempCairo := cairo_create(TempDestSurface);
+
+    cairo_set_source_surface(TempCairo, DestSurface, -ADestRect.Left, -ADestRect.Top);
+    cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
+    cairo_paint(TempCairo);
+
+    cairo_destroy(TempCairo);
+    cairo_surface_flush(TempDestSurface);
+
+    DstData := PByte(cairo_image_surface_get_data(TempDestSurface));
+    DstStride := cairo_image_surface_get_stride(TempDestSurface);
+    DstW := CopyW;
+    DstH := CopyH;
+  end;
+
+  if DstData = nil then
+  begin
+    if TempSurface <> nil then
+      cairo_surface_destroy(TempSurface);
+    if TempDestSurface <> nil then
+      cairo_surface_destroy(TempDestSurface);
+    exit;
+  end;
+
+  BC := ColorToRgb(FCurrentBrush.Color);
+
+  BrushR := BC and $FF;
+  BrushG := (BC shr 8) and $FF;
+  BrushB := (BC shr 16) and $FF;
 
   for Y := 0 to CopyH - 1 do
   begin
-    if (ADestRect.Top + Y < 0) or (ADestRect.Top + Y >= DstH) then
-      continue;
-    if (ASrcRect.Top + Y < 0) or (ASrcRect.Top + Y >= SrcH) then
-      continue;
+    if TempDestSurface = nil then
+      if (ADestRect.Top + Y < 0) or (ADestRect.Top + Y >= DstH) then
+        continue;
+
+    if NeedSource and (TempSurface = nil) then
+      if (ASrcRect.Top + Y < 0) or (ASrcRect.Top + Y >= SrcH) then
+        continue;
+
     for X := 0 to CopyW - 1 do
     begin
-      if (ADestRect.Left + X < 0) or (ADestRect.Left + X >= DstW) then
-        continue;
-      if (ASrcRect.Left + X < 0) or (ASrcRect.Left + X >= SrcW) then
-        continue;
-      DstOff := (ADestRect.Top + Y) * DstStride + (ADestRect.Left + X) * 4;
-      if TempSurface <> nil then
-        SrcOff := Y * SrcStride + X * 4
+      if TempDestSurface = nil then
+        if (ADestRect.Left + X < 0) or (ADestRect.Left + X >= DstW) then
+          continue;
+
+      if NeedSource and (TempSurface = nil) then
+        if (ASrcRect.Left + X < 0) or (ASrcRect.Left + X >= SrcW) then
+          continue;
+
+      if TempDestSurface <> nil then
+        DstOff := Y * DstStride + X * 4
       else
-        SrcOff := (ASrcRect.Top + Y) * SrcStride + (ASrcRect.Left + X) * 4;
-      //BGRA
+        DstOff := (ADestRect.Top + Y) * DstStride + (ADestRect.Left + X) * 4;
+
+      SrcOff := 0;
+      if NeedSource then
+      begin
+        if TempSurface <> nil then
+          SrcOff := Y * SrcStride + X * 4
+        else
+          SrcOff := (ASrcRect.Top + Y) * SrcStride + (ASrcRect.Left + X) * 4;
+      end;
+      // BGRA
       case Rop of
         SRCAND:
         begin
@@ -2167,8 +2267,29 @@ begin
           DstData[DstOff + 2] := DstData[DstOff + 2] or (not SrcData[SrcOff + 2]);
           DstData[DstOff + 3] := 255;
         end;
+        MERGECOPY:
+        begin
+          DstData[DstOff + 0] := SrcData[SrcOff + 0] and BrushB;
+          DstData[DstOff + 1] := SrcData[SrcOff + 1] and BrushG;
+          DstData[DstOff + 2] := SrcData[SrcOff + 2] and BrushR;
+          DstData[DstOff + 3] := 255;
+        end;
+        PATINVERT:
+        begin
+          DstData[DstOff + 0] := DstData[DstOff + 0] xor BrushB;
+          DstData[DstOff + 1] := DstData[DstOff + 1] xor BrushG;
+          DstData[DstOff + 2] := DstData[DstOff + 2] xor BrushR;
+          DstData[DstOff + 3] := 255;
+        end;
+        PATPAINT:
+        begin
+          DstData[DstOff + 0] := DstData[DstOff + 0] or BrushB or (not SrcData[SrcOff + 0]);
+          DstData[DstOff + 1] := DstData[DstOff + 1] or BrushG or (not SrcData[SrcOff + 1]);
+          DstData[DstOff + 2] := DstData[DstOff + 2] or BrushR or (not SrcData[SrcOff + 2]);
+          DstData[DstOff + 3] := 255;
+        end;
       else
-        //SRCCOPY
+        // SRCCOPY
         DstData[DstOff + 0] := SrcData[SrcOff + 0];
         DstData[DstOff + 1] := SrcData[SrcOff + 1];
         DstData[DstOff + 2] := SrcData[SrcOff + 2];
@@ -2176,7 +2297,22 @@ begin
       end;
     end;
   end;
-  cairo_surface_mark_dirty(DestSurface);
+
+  if TempDestSurface <> nil then
+  begin
+    cairo_surface_mark_dirty(TempDestSurface);
+    //write back via x11 FBackTarget when X11-backed, else via FCairo.
+    cairo_save(TargetCairo);
+    cairo_set_operator(TargetCairo, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_surface(TargetCairo, TempDestSurface, ADestRect.Left, ADestRect.Top);
+    cairo_rectangle(TargetCairo, ADestRect.Left, ADestRect.Top, CopyW, CopyH);
+    cairo_fill(TargetCairo);
+    cairo_restore(TargetCairo);
+    if TargetCairo = FCairo then
+      EnsureDefaultOperator;
+    cairo_surface_destroy(TempDestSurface);
+  end else
+    cairo_surface_mark_dirty(DestSurface);
 
   if TempSurface <> nil then
     cairo_surface_destroy(TempSurface);
@@ -2486,6 +2622,7 @@ var
   AGdkRect: TGdkRectangle;
   W, H: Integer;
   ACanvasScale: gint;
+  AMatrix: Tcairo_matrix_t;
 begin
   {$ifdef VerboseGtk3DeviceContext}
     DebugLn('TGtk3DeviceContext.CreateFromCairo (',

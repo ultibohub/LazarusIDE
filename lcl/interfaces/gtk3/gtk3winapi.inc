@@ -5413,7 +5413,9 @@ begin
   begin
     case Rop of
       SRCAND, SRCPAINT, SRCINVERT, DSTINVERT,
-      NOTSRCCOPY, SRCERASE, NOTSRCERASE, MERGEPAINT:
+      NOTSRCCOPY, SRCERASE, NOTSRCERASE, MERGEPAINT,
+      BLACKNESS, WHITENESS,
+      PATCOPY, PATINVERT, PATPAINT, MERGECOPY:
         DestContext.ApplyBitBltROP(SrcContext.CairoSurface, ATargetRect, ASrcRect, Rop);
     else
       DestContext.drawSurface(@ATargetRect, SrcContext.CairoSurface, @ASrcRect, nil, nil, nil);
