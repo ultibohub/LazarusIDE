@@ -41,7 +41,7 @@ uses
   Classes, SysUtils, Math, Graphics, Controls, Forms, LCLType, LCLProc, LMessages,
 ////////////////////////////////////////////////////
   WSLCLClasses, WSControls, WSForms, WSProc,
-  LazGtk3, LazGdk3, LazGLib2, gtk3widgets, gtk3int, gtk3objects,
+  LazGtk3, LazGdk3, LazGLib2, LazGObject2, gtk3widgets, gtk3int, gtk3objects,
   gtk3wscontrols, gtk3mdiemulator;
 
 type
@@ -246,7 +246,7 @@ class procedure TGtk3WSCustomForm.SetBounds(const AWinControl: TWinControl;
 begin
   if not WSCheckHandleAllocated(AWinControl, 'SetBounds') then
     Exit;
-  {$IFDEF GTK3DEBUGCORE}
+  {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGSIZE)}
   DebugLn('TGtk3WSCustomForm.SetBounds ',dbgsName(AWinControl),Format(' ALeft %d ATop %d AWidth %d AHeight %d InUpdate %s',[ALeft, ATop, AWidth, AHeight, BoolToStr(TGtk3Widget(AWinControl.Handle).InUpdate, True)]));
   {$ENDIF}
   TGtk3Widget(AWinControl.Handle).SetBounds(ALeft,ATop,AWidth,AHeight);
@@ -276,12 +276,12 @@ var
   AForm, OtherForm: TCustomForm;
   AWindow, ATransient: PGtkWindow;
   i: Integer;
-  AGeom: TGdkGeometry;
-  AGeomMask: TGdkWindowHints;
+  SavedH: PtrInt;
   ShouldBeVisible: Boolean;
   AGtk3Widget: TGtk3Widget;
   OtherGtk3Window: TGtk3Window;
   LCLCanFocus: boolean;
+  ATime: guint32;
 
   procedure CheckAndFixGeometry;
   const
@@ -369,8 +369,11 @@ var
 
 
 begin
-  {$IFDEF GTK3DEBUGCORE}
-  DebugLn('TGtk3WSCustomForm.ShowHide handleAllocated=',dbgs(AWinControl.HandleAllocated));
+  {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGSIZE)}
+  DebugLn('TGtk3WSCustomForm.ShowHide ', dbgsName(AWinControl),
+    ' handleAllocated=', dbgs(AWinControl.HandleAllocated),
+    ' shouldBeVisible=', dbgs(AWinControl.HandleObjectShouldBeVisible),
+    ' bounds=', dbgs(AWinControl.BoundsRect));
   {$ENDIF}
   if not WSCheckHandleAllocated(AWinControl, 'ShowHide') then
     Exit;
@@ -387,6 +390,43 @@ begin
 
 
   ShouldBeVisible:=AForm.HandleObjectShouldBeVisible;
+
+  if Assigned(AWindow) and (AForm.Parent = nil) and not IsFormDesign(AForm) and
+     (AForm.BorderStyle <> bsNone) then
+  begin
+    if ShouldBeVisible then
+    begin
+      i := PtrInt(g_object_get_data(PGObject(AGtk3Widget.Widget), 'lcl-form-last-w'));
+      if i > 1 then
+      begin
+        SavedH := PtrInt(g_object_get_data(PGObject(AGtk3Widget.Widget), 'lcl-form-last-h'));
+        {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGSIZE)}
+        DebugLn('TGtk3WSCustomForm.ShowHide ', dbgsName(AWinControl),
+          ' RESTORE bounds from saved (', IntToStr(i), 'x', IntToStr(SavedH),
+          ') - LCL was ', IntToStr(AWinControl.Width), 'x', IntToStr(AWinControl.Height));
+        {$ENDIF}
+        AWinControl.SetBounds(AWinControl.Left, AWinControl.Top, i, SavedH);
+        //lcl-form-last-w/h is cleared by WindowSizeAllocate on the first WSA
+        //after show. KDE Plasma Wayland needs it kept armed as kwin-override
+        //protect target. We add a 100ms time bound for that.
+        //TODO: heavy test with 50ms timeout.
+        if Gtk3WidgetSet.IsKDEPlasmaWaylandSession then
+          g_object_set_data(PGObject(AGtk3Widget.Widget), 'lcl-kwin-protect-until',
+            Pointer(PtrUInt(GetTickCount64 + 100)));
+      end;
+    end else
+    if (AWinControl.Width > 1) and (AWinControl.Height > 1) then
+    begin
+      g_object_set_data(PGObject(AGtk3Widget.Widget), 'lcl-form-last-w', Pointer(PtrInt(AWinControl.Width)));
+      g_object_set_data(PGObject(AGtk3Widget.Widget), 'lcl-form-last-h', Pointer(PtrInt(AWinControl.Height)));
+      g_object_set_data(PGObject(AGtk3Widget.Widget), 'lcl-kwin-protect-until', nil);
+      {$IF DEFINED(GTK3DEBUGCORE) OR DEFINED(GTK3DEBUGSIZE)}
+      DebugLn('TGtk3WSCustomForm.ShowHide ', dbgsName(AWinControl),
+        ' SAVE bounds (', IntToStr(AWinControl.Width), 'x',
+        IntToStr(AWinControl.Height), ') for next show');
+      {$ENDIF}
+    end;
+  end;
 
   {$IFDEF GTK3DEBUGCORE}
   //use this if pure SetCapture(0) does not work under wayland.
@@ -502,7 +542,13 @@ begin
     begin
       //If LM_NCHITTEST=true, do not attack WM
       if not AWindow^.window^.get_pass_through and (AForm.BorderStyle <> bsNone) then
-        AWindow^.present_with_time(Gtk3WidgetSet.LastUserEventTime);
+      begin
+        ATime := gtk_get_current_event_time;
+        if ATime = 0 then
+          ATime := Gtk3WidgetSet.LastUserEventTime;
+        if ATime <> 0 then
+          AWindow^.present_with_time(ATime);
+      end;
 
       if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
         and not AWindow^.window^.get_pass_through and LCLCanFocus then

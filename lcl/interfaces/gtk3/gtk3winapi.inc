@@ -117,6 +117,7 @@ begin
     FreeMem(AData^.Formats);
     AData^.FormatCount := 0;
     AData^.Formats := nil;
+    Dispose(AData);
   end;
   AData := nil;
 end;
@@ -571,29 +572,69 @@ begin
 end;
 
 function TGtk3WidgetSet.CreateIconIndirect(IconInfo: PIconInfo): HICON;
-begin
-  Result := 0;
-  if IsValidGDIObject(IconInfo^.hbmColor) then
+
+  function ApplyMaskAsAlpha(AColor, AMask: PGdkPixbuf): PGdkPixbuf;
+  var
+    W, H: gint;
+    MaskStride, MaskChannels: gint;
+    DstStride: gint;
+    MaskPixels, DstPixels: Pguint8;
+    MSrc, DstRow, DstA: Pguint8;
+    X, Y: gint;
   begin
-    if IconInfo^.fIcon then
+    if AColor^.get_has_alpha then
+      Result := AColor^.copy
+    else
+      Result := gdk_pixbuf_add_alpha(AColor, gtk_false, 0, 0, 0);
+    if AMask = nil then
+      exit;
+    W := AColor^.get_width;
+    H := AColor^.get_height;
+    if (AMask^.get_width <> W) or (AMask^.get_height <> H) then
+      exit;
+    MaskPixels := AMask^.get_pixels;
+    MaskStride := AMask^.get_rowstride;
+    MaskChannels := AMask^.get_n_channels;
+    DstPixels := Result^.get_pixels;
+    DstStride := Result^.get_rowstride;
+    for Y := 0 to H - 1 do
     begin
-      Result := HICON(TGtk3Image.Create(TGtk3Image(IconInfo^.hbmColor).Handle));
-    end else
-    begin
-      Result := HCURSOR(TGtk3Cursor.Create(TGtk3Image(IconInfo^.hbmColor).Handle, IconInfo^.xHotSpot, IconInfo^.yHotSpot));
-        //HCURSOR({%H-}PtrUInt(gdk_cursor_new_from_pixbuf(gdk_display_get_default,
-        // TGtk3Image(IconInfo^.hbmColor).Handle, IconInfo^.xHotSpot, IconInfo^.yHotSpot)));
-      // create cursor from pixbuf
-     { W := gdk_pixbuf_get_width(TGtk3Image(IconInfo^.hbmColor).Handle);
-      H := gdk_pixbuf_get_height(TGtk3Image(IconInfo^.hbmColor).Handle);
-      DebugLn('TGtk3WidgetSet.CreateIconIndirect W=',dbgs(W),' H=',dbgs(H));
-      PixBuf := gdk_pixbuf_new_subpixbuf(TGtk3Image(IconInfo^.hbmColor).Handle, 0, 0, W, H);
-      Result := HCURSOR({%H-}PtrUInt(gdk_cursor_new_from_pixbuf(gdk_display_get_default,
-        pixbuf, IconInfo^.xHotSpot, IconInfo^.yHotSpot)));
-      if pixbuf <> nil then
-        g_object_unref(PixBuf); }
+      MSrc := MaskPixels + Y * MaskStride;
+      DstRow := DstPixels + Y * DstStride;
+      DstA := DstRow + 3;
+      for X := 0 to W - 1 do
+      begin
+        if MSrc^ > 127 then
+          DstA^ := 0
+        else
+          DstA^ := 255;
+        Inc(MSrc, MaskChannels);
+        Inc(DstA, 4);
+      end;
     end;
   end;
+
+var
+  ColorPB, MaskPB, MergedPB: PGdkPixbuf;
+begin
+  Result := 0;
+  if not IsValidGDIObject(IconInfo^.hbmColor) then
+    exit;
+  if IconInfo^.fIcon then
+  begin
+    Result := HICON(TGtk3Image.Create(TGtk3Image(IconInfo^.hbmColor).Handle));
+    exit;
+  end;
+  ColorPB := TGtk3Image(IconInfo^.hbmColor).Handle;
+  if IsValidGDIObject(IconInfo^.hbmMask) then
+    MaskPB := TGtk3Image(IconInfo^.hbmMask).Handle
+  else
+    MaskPB := nil;
+  MergedPB := ApplyMaskAsAlpha(ColorPB, MaskPB);
+  if MergedPB = nil then
+    exit;
+  Result := HCURSOR(TGtk3Cursor.Create(MergedPB, IconInfo^.xHotSpot, IconInfo^.yHotSpot));
+  g_object_unref(MergedPB);
 end;
 
 function TGtk3WidgetSet.CreatePalette(const LogPalette: TLogPalette): HPALETTE;
@@ -644,13 +685,27 @@ begin
       begin
         SrcByte := SrcRow[X shr 3];
         if (SrcByte and (1 shl (7 - (X and 7)))) <> 0 then
-          DstRow^ := $FF000000
+          DstRow^ := 0
         else
-          DstRow^ := 0;
+          DstRow^ := $FF000000;
         Inc(DstRow);
       end;
     end;
     cairo_surface_mark_dirty(Surface);
+
+    Pattern := cairo_pattern_create_for_surface(Surface);
+    cairo_pattern_set_extend(Pattern, CAIRO_EXTEND_REPEAT);
+    cairo_surface_destroy(Surface);
+
+    Brush := TGtk3Brush.Create;
+    Brush.LogBrush.lbStyle := BS_PATTERN;
+    Brush.LogBrush.lbHatch := ABitmap;
+    Brush.brush_pattern := Pattern;
+    Brush.Style := BS_PATTERN;
+    Brush.MonoPattern := True;
+
+    Result := HBRUSH(Brush);
+    Exit;
   end
   else
   begin
@@ -925,26 +980,26 @@ begin
     BOuter := False;
     if (Edge and BDR_RAISEDINNER) = BDR_RAISEDINNER then
     begin
-      InnerTL := TColorToTGdkRGBA(ColorToRGB(clBtnHighlight));
-      InnerBR := TColorToTGdkRGBA(ColorToRGB(clBtnShadow));
+      InnerTL := TColorToTGdkRGBA(clBtnHighlight);
+      InnerBR := TColorToTGdkRGBA(clBtnShadow);
       BInner := True;
     end;
     if (Edge and BDR_SUNKENINNER) = BDR_SUNKENINNER then
     begin
-      InnerTL := TColorToTGdkRGBA(ColorToRGB(clBtnShadow));
-      InnerBR := TColorToTGdkRGBA(ColorToRGB(clBtnHighlight));
+      InnerTL := TColorToTGdkRGBA(clBtnShadow);
+      InnerBR := TColorToTGdkRGBA(clBtnHighlight);
       BInner := True;
     end;
     if (Edge and BDR_RAISEDOUTER) = BDR_RAISEDOUTER then
     begin
-      OuterTL := TColorToTGdkRGBA(ColorToRGB(clBtnHighlight));
-      OuterBR := TColorToTGdkRGBA(ColorToRGB(cl3DDkShadow));
+      OuterTL := TColorToTGdkRGBA(clBtnHighlight);
+      OuterBR := TColorToTGdkRGBA(cl3DDkShadow);
       BOuter := True;
     end;
     if (Edge and BDR_SUNKENOUTER) = BDR_SUNKENOUTER then
     begin
-      OuterTL := TColorToTGdkRGBA(ColorToRGB(cl3DDkShadow));
-      OuterBR := TColorToTGdkRGBA(ColorToRGB(clBtnHighlight));
+      OuterTL := TColorToTGdkRGBA(cl3DDkShadow);
+      OuterBR := TColorToTGdkRGBA(clBtnHighlight);
       BOuter := True;
     end;
 
@@ -955,7 +1010,7 @@ begin
 
     if (grfFlags and BF_MIDDLE) = BF_MIDDLE then
     begin
-      Mid := TColorToTGdkRGBA(ColorToRGB(clBtnFace));
+      Mid := TColorToTGdkRGBA(clBtnFace);
       SetSrc(Mid);
       cairo_rectangle(cr, R.Left, R.Top, R.Right - R.Left, R.Bottom - R.Top);
       cairo_fill(cr);
@@ -2054,13 +2109,13 @@ begin
       end;
     bvRaised:
       begin
-        Color1 := TColorToTGdkRGBA(ColorToRGB(NColorLight));
-        Color2 := TColorToTGdkRGBA(ColorToRGB(NColorDark));
+        Color1 := TColorToTGdkRGBA(NColorLight);
+        Color2 := TColorToTGdkRGBA(NColorDark);
       end;
     bvLowered:
       begin
-        Color1 := TColorToTGdkRGBA(ColorToRGB(NColorDark));
-        Color2 := TColorToTGdkRGBA(ColorToRGB(NColorLight));
+        Color1 := TColorToTGdkRGBA(NColorDark);
+        Color2 := TColorToTGdkRGBA(NColorLight);
       end;
   end;
 
@@ -2274,13 +2329,14 @@ end;
 
 function TGtk3WidgetSet.GetClientRect(handle: HWND; var ARect: TRect): Boolean;
 begin
-  {$IF DEFINED(VerboseGtk3WinAPI) OR DEFINED(GTK3DEBUGSIZE)}
-  DebugLn('[Gtk3WinAPI GetClientRect]');
-  {$ENDIF}
   if Handle = 0 then
     Exit(False);
   ARect := TGtk3Widget(handle).getClientRect;
   Result := TGtk3Widget(Handle).WidgetMapped;
+  {$IF DEFINED(VerboseGtk3WinAPI) OR DEFINED(GTK3DEBUGSIZE)}
+  DebugLn(Format('[Gtk3WinAPI GetClientRect] %s mapped=%s rect=%s',
+    [dbgsName(TGtk3Widget(handle).LCLObject), BoolToStr(Result, True), dbgs(ARect)]));
+  {$ENDIF}
 end;
 
 function TGtk3WidgetSet.GetClipBox(DC: hDC; lpRect: PRect): Longint;
@@ -2726,10 +2782,10 @@ begin
       if GDK_BUTTON1_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_RBUTTON:
-      if GDK_BUTTON2_MASK in AModifiers  then
+      if GDK_BUTTON3_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_MBUTTON:
-      if GDK_BUTTON3_MASK in AModifiers  then
+      if GDK_BUTTON2_MASK in AModifiers  then
         Result := Result or StateDown;
     VK_XBUTTON1:
       if GDK_BUTTON4_MASK in AModifiers  then
@@ -4323,12 +4379,20 @@ begin
 end;
 
 function TGtk3WidgetSet.SetActiveWindow(Handle: HWND): HWND;
+var
+  ATime: guint32;
 begin
   Result := GetActiveWindow;
   if Handle <> 0 then
   begin
     if wtWindow in TGtk3Widget(Handle).WidgetType then
-      PGtkWindow(TGtk3Window(Handle).Widget)^.present_with_time(LastUserEventTime);
+    begin
+      ATime := gtk_get_current_event_time;
+      if ATime = 0 then
+        ATime := LastUserEventTime;
+      if ATime <> 0 then
+        PGtkWindow(TGtk3Window(Handle).Widget)^.present_with_time(ATime);
+    end;
   end;
 end;
 
@@ -5269,6 +5333,8 @@ begin
   gtk_widget_shape_combine_region(TGtk3Widget(hWnd).Widget, PCR);
   if bRedraw and Gtk3IsGtkWindow(TGtk3Widget(hWnd).Widget^.get_toplevel) then
     TGtk3Widget(hWnd).Widget^.realize;
+  if hRgn <> 0 then
+    DeleteObject(hRgn);
   Result:=1;
 end;
 
@@ -5383,11 +5449,15 @@ begin
     DebugLn('Trace:> [TGtk3WidgetSet.StretchMaskBlt]');
   {$endif}
 
+  if not IsValidDC(SrcDC) or not IsValidDC(DestDC) then
+    exit;
+
   if Assigned(SrcContext.pcr) and SrcContext.OwnsSurface then
   begin
     Width := Round(Width / SrcContext.CanvasScaleFactor);
     Height := Round(Height / SrcContext.CanvasScaleFactor);
   end;
+
   ATargetRect := Rect(X, Y, Width + X, Height + Y);
   ASrcRect := Rect(XSrc, YSrc, SrcWidth + XSrc, SrcHeight + YSrc);
   AMaskRect := Bounds(XMask, YMask, SrcWidth, SrcHeight);

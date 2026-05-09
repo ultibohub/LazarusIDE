@@ -170,6 +170,19 @@ begin
   Result := FIsWayland;
 end;
 
+function TGtk3WidgetSet.IsKDEPlasmaWaylandSession: boolean;
+var
+  s: string;
+begin
+  //NOTE: this is hack for Qt5 KDE Plasma wayland, so might
+  //be unnecessary with KDE Plasma 6.
+  Result := False;
+  if not FIsWayland then
+    exit;
+  s := SysUtils.GetEnvironmentVariable('XDG_CURRENT_DESKTOP');
+  Result := SameText(s, 'KDE') or SameText(s, 'PLASMA') or SameText(s, 'KDE-Plasma');
+end;
+
 {$IFNDEF UNIX}
 procedure TGtk3WidgetSet.DoWakeMainThread(Sender: TObject);
 begin
@@ -457,6 +470,90 @@ begin
 end;
 
 procedure TGtk3WidgetSet.AppInit(var ScreenInfo: TScreenInfo);
+
+  procedure StripArrowBindingsFromClass(AClassType: TGType);
+  var
+    AClass: PGTypeClass;
+    ABindingSet: PGtkBindingSet;
+  begin
+    AClass := g_type_class_ref(AClassType);
+    if AClass = nil then
+      exit;
+    ABindingSet := gtk_binding_set_by_class(AClass);
+    if ABindingSet = nil then
+      exit;
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Up, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Up, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Down, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Down, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Left, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Left, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Right, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_Right, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Up, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Up, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Down, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Down, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Left, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Left, [GDK_CONTROL_MASK]);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Right, []);
+    gtk_binding_entry_remove(ABindingSet, GDK_KEY_KP_Right, [GDK_CONTROL_MASK]);
+  end;
+
+  procedure DisableContainerArrowBindings;
+  begin
+    StripArrowBindingsFromClass(gtk_container_get_type);
+    StripArrowBindingsFromClass(gtk_window_get_type);
+    StripArrowBindingsFromClass(gtk_scrolled_window_get_type);
+  end;
+
+  procedure QueryIndicatorBoxSize(out W, H: gint);
+  var
+    Context: PGtkStyleContext;
+    Path: PGtkWidgetPath;
+    min_width, min_height: gint;
+    Pad, Bord: TGtkBorder;
+    CtxState: TGtkStateFlags;
+    ChildPos: gint;
+  begin
+    CtxState := GTK_STATE_FLAG_NORMAL;
+
+    Path := gtk_widget_path_new;
+    gtk_widget_path_append_type(Path, gtk_check_button_get_type);
+    gtk_widget_path_iter_set_object_name(Path, 0, 'checkbutton');
+    gtk_widget_path_iter_set_state(Path, 0, CtxState);
+
+    ChildPos := gtk_widget_path_append_type(Path, G_TYPE_NONE);
+    gtk_widget_path_iter_set_object_name(Path, ChildPos, 'check');
+    gtk_widget_path_iter_add_class(Path, ChildPos, 'check');
+    gtk_widget_path_iter_set_state(Path, ChildPos, CtxState);
+
+    Context := gtk_style_context_new;
+    gtk_style_context_set_path(Context, Path);
+    gtk_style_context_set_state(Context, CtxState);
+    gtk_widget_path_unref(Path);
+
+    min_width := 0;
+    min_height := 0;
+
+    gtk_style_context_get(Context, CtxState, ['min-width', @min_width, 'min-height', @min_height, nil]);
+
+    FillChar(Pad{%H-}, SizeOf(Pad), 0);
+    FillChar(Bord{%H-}, SizeOf(Bord), 0);
+
+    gtk_style_context_get_padding(Context, CtxState, @Pad);
+    gtk_style_context_get_border(Context, CtxState, @Bord);
+    g_object_unref(Context);
+
+    if min_width <= 0 then
+      min_width := 16;
+    if min_height <= 0 then
+      min_height := 16;
+
+    W := min_width + Pad.left + Pad.right + Bord.left + Bord.right;
+    H := min_height + Pad.top + Pad.bottom + Bord.top + Bord.bottom;
+  end;
+
 var
   ScreenDC: HDC;
   menuBar: PGtkMenuBar;
@@ -465,10 +562,12 @@ var
   scrollBarV: PGtkScrollbar;
   scrollBarH: PGtkScrollbar;
   MinH,PrefH:gint;
+  IndW, IndH: gint;
   window:PGtkWindow;
   box:PGtkBox;
   header:PGtkHeaderBar;
 begin
+  DisableContainerArrowBindings;
   {$IFDEF GTK3DEBUGCORE}
   DebugLn('TGtk3WidgetSet.AppInit');
   {$ENDIF}
@@ -526,22 +625,17 @@ begin
   FSystemMetricsList.Items[SM_CXMENUSIZE] := Max(MinH, PrefH);
 
 
-  checkBox^.get_preferred_height(@MinH, @PrefH);
-  FSystemMetricsList.Items[SM_CYMENUCHECK] := Max(MinH, PrefH);
-  checkBox^.get_preferred_width(@MinH, @PrefH);
-  FSystemMetricsList.Items[SM_CXMENUCHECK] := Max(MinH, PrefH);
+  QueryIndicatorBoxSize(IndW, IndH);
+  FSystemMetricsList.Items[SM_CXMENUCHECK] := IndW;
+  FSystemMetricsList.Items[SM_CYMENUCHECK] := IndH;
 
   scrollBarH^.get_preferred_height(@MinH, @PrefH);
-  FSystemMetricsList.Items[SM_CXHSCROLL] := Max(MinH, PrefH);
-
-  scrollBarH^.get_preferred_width(@MinH, @PrefH);
-  FSystemMetricsList.Items[SM_CYHSCROLL] := Max(MinH, PrefH);
-
-  scrollBarV^.get_preferred_height(@MinH, @PrefH);
-  FSystemMetricsList.Items[SM_CYVSCROLL] := Max(MinH, PrefH);
+  FSystemMetricsList.Items[SM_CYHSCROLL] := Max(MinH, PrefH) + 2;
+  FSystemMetricsList.Items[SM_CXHSCROLL] := FSystemMetricsList.Items[SM_CYHSCROLL];
 
   scrollBarV^.get_preferred_width(@MinH, @PrefH);
-  FSystemMetricsList.Items[SM_CXVSCROLL] := Max(MinH, PrefH);
+  FSystemMetricsList.Items[SM_CXVSCROLL] := Max(MinH, PrefH) + 2;
+  FSystemMetricsList.Items[SM_CYVSCROLL] := FSystemMetricsList.Items[SM_CXVSCROLL];
 
   //loading distance between scrollbars in corner, since
   //gtk3 does not have corner widget, we set it via css.
@@ -581,6 +675,8 @@ begin
     g_object_get_property(PGObject(ASettings), 'gtk-theme-name', @AValue);
     FThemeName := AValue.get_string;
     AValue.unset;
+    //TODO: gtk-entry-select-on-focus is TRUE by Default, should be false, so LCL only is doing selections.
+    //gtk-label-select-on-focus ? default is true too
 
     ACSSProvider := gtk_css_provider_get_named(PGChar(FThemeName), nil);
   end;
@@ -714,12 +810,17 @@ begin
 end;
 
 procedure TGtk3WidgetSet.AppBringToFront;
+var
+  ATime: guint32;
 begin
   if Assigned(Application.MainForm) and Application.MainForm.HandleAllocated then
   begin
     TGtk3Window(Application.MainForm.Handle).raiseWidget;
-    gdk_window_focus(TGtk3Window(Application.MainForm.Handle).Widget^.window,
-                                gtk_get_current_event_time);
+    ATime := gtk_get_current_event_time;
+    if ATime = 0 then
+      ATime := LastUserEventTime;
+    if ATime <> 0 then
+      gdk_window_focus(TGtk3Window(Application.MainForm.Handle).Widget^.window, ATime);
   end;
 end;
 procedure TGtk3WidgetSet.AppSetIcon(const Small, Big: HICON);

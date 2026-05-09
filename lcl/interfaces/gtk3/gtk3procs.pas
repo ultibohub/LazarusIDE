@@ -291,6 +291,7 @@ function Gtk3IsContainer(AWidget: PGObject): GBoolean;
 function Gtk3IsEditable(AWidget: PGObject): GBoolean;
 function Gtk3IsEntry(AWidget: PGObject): GBoolean;
 function Gtk3IsTextView(AWidget: PGObject): GBoolean;
+function Gtk3IsArrowKey(AKeyval: guint): Boolean;
 
 function Gtk3IsBox(AWidget: PGObject): GBoolean;
 function Gtk3IsEventBox(AWidget: PGObject): GBoolean;
@@ -326,8 +327,6 @@ function Gtk3IsPangoFontMetrics(APangoFontMetrics: PGObject): GBoolean;
 function Gtk3TranslateScrollStyle(const SS: TScrollStyle): TGtkScrollStyle;
 function Gtk3ScrollTypeToScrollCode(ScrollType: TGtkScrollType): LongWord;
 
-function TGDKColorToTColor(const value : TGDKColor) : TColor;
-function TColorToTGDKColor(const value : TColor) : TGDKColor;
 function TGdkRGBAToTColor(const value : TGdkRGBA; IgnoreAlpha: Boolean = True) : TColor;
 function TColortoTGdkRGBA(const value : TColor; IgnoreAlpha: Boolean = True) : TGdkRGBA;
 function ColorToCairoRGB(AColor: TColor; out ARed, AGreen, ABlue: Double): Boolean;
@@ -435,7 +434,7 @@ function GtkModifierStateToShiftState(AState: TGdkModifierType;
 function Gtk3IsPointerButtonDown(AWidget: PGtkWidget): Boolean;
 
 implementation
-uses LCLProc, gtk3objects, gtk3widgets, gtk3int, LazLogger;
+uses LCLProc, gtk3objects, gtk3widgets, gtk3int, LazLogger, Math;
 
 function PANGO_PIXELS(d:integer):integer;
 begin
@@ -603,32 +602,33 @@ begin
   result := TPangoStretch(GetFontFamilyDefaultStretch(AFamilyName));
 end;
 
-function TGdkRGBAToTColor(const value: TGdkRGBA; IgnoreAlpha: Boolean): TColor;
+function TGdkRGBAToTColor(const value: TGdkRGBA; {%H-}IgnoreAlpha: Boolean): TColor;
 begin
-  Result := Trunc(value.red * $FF)
-         or (Trunc(value.green * $FF) shl  8)
-         or (Trunc(value.blue * $FF) shl  16);
-  if not IgnoreAlpha then
-    Result := Result or (Trunc(value.alpha * $FF) shl  24);
+  Result := Round(EnsureRange(value.red,   0, 1) * $FF)
+         or (Round(EnsureRange(value.green, 0, 1) * $FF) shl 8)
+         or (Round(EnsureRange(value.blue,  0, 1) * $FF) shl 16);
 end;
 
 function TColortoTGdkRGBA(const value: TColor; IgnoreAlpha: Boolean): TGdkRGBA;
+var
+  RGB: LongInt;
 begin
-  Result.red := (value and $FF) / 255;
-  Result.green := ((value shr 8) and $FF) / 255;
-  Result.blue := ((value shr 16) and $FF) / 255;
-  if not IgnoreAlpha then
-    Result.alpha := ((value shr 24) and $FF) / 255
-  else
-    Result.alpha:=1;
+  RGB := ColorToRGB(Value);
+  Result.red := (RGB and $FF) / 255;
+  Result.green := ((RGB shr 8) and $FF) / 255;
+  Result.blue := ((RGB shr 16) and $FF) / 255;
+  Result.alpha:=1;
 end;
 
 function ColorToCairoRGB(AColor: TColor; out ARed, AGreen, ABlue: Double): Boolean;
+var
+  RGB: LongInt;
 begin
   Result := True;
-  ARed := (AColor and $FF) / 255;
-  AGreen := ((AColor shr 8) and $FF) / 255;
-  ABlue := ((AColor shr 16) and $FF) / 255;
+  RGB := ColorToRGB(AColor);
+  ARed   := (RGB and $FF) / 255;
+  AGreen := ((RGB shr 8) and $FF) / 255;
+  ABlue  := ((RGB shr 16) and $FF) / 255;
 end;
 
 function RectFromGtkAllocation(AGtkAllocation: TGtkAllocation): TRect;
@@ -751,6 +751,14 @@ end;
 function Gtk3IsTextView(AWidget: PGObject): GBoolean;
 begin
   Result := (AWidget <> nil) and  g_type_check_instance_is_a(PGTypeInstance(AWidget), gtk_text_view_get_type);
+end;
+
+function Gtk3IsArrowKey(AKeyval: guint): Boolean;
+begin
+  Result := (AKeyval = GDK_KEY_Up) or (AKeyval = GDK_KEY_Down) or
+    (AKeyval = GDK_KEY_Left) or (AKeyval = GDK_KEY_Right) or
+    (AKeyval = GDK_KEY_KP_Up) or (AKeyval = GDK_KEY_KP_Down) or
+    (AKeyval = GDK_KEY_KP_Left) or (AKeyval = GDK_KEY_KP_Right);
 end;
 
 function Gtk3IsBox(AWidget: PGObject): GBoolean;
@@ -952,31 +960,6 @@ begin
     GTK_SCROLL_PAGE_RIGHT {13}     : Result := SB_PAGERIGHT;
     GTK_SCROLL_START {14}          : Result := SB_TOP;
     GTK_SCROLL_END {15}            : Result := SB_BOTTOM;
-  end;
-end;
-
-function TGDKColorToTColor(const value : TGDKColor) : TColor;
-begin
-  Result := ((Value.Blue shr 8) shl 16) + ((Value.Green shr 8) shl 8)
-           + (Value.Red shr 8);
-end;
-
-function TColorToTGDKColor(const value : TColor) : TGDKColor;
-begin
-  if Value<0 then
-  begin
-    Result.blue := $FF;
-    Result.red := $FF;
-    Result.green := $FF;
-    Result.pixel := 0;
-    exit;
-  end;
-  with Result do
-  begin
-    pixel := 0;
-    red   := (value and $ff) * 257;
-    green := ((value shr 8) and $ff) * 257;
-    blue  := ((value shr 16) and $ff) * 257;
   end;
 end;
 
@@ -1307,10 +1290,10 @@ begin
     Include(Result, ssLeft);
 
   if GDK_BUTTON2_MASK in AState  then
-    Include(Result, ssRight);
+    Include(Result, ssMiddle);
 
   if GDK_BUTTON3_MASK in AState  then
-    Include(Result, ssMiddle);
+    Include(Result, ssRight);
 
   if GDK_BUTTON4_MASK in AState  then
     Include(Result, ssExtra1);
@@ -1806,13 +1789,15 @@ end;
 procedure SetWindowCursor(AWindow: PGdkWindow; Cursor: PGdkCursor; ASetDefault: Boolean);
 var
   OldCursor: PGdkCursor;
-  Data: gpointer;
+  SavedCursor: PGdkCursor;
 begin
   if ASetDefault then //and ((Cursor <> nil) or ( <> nil)) then
   begin
-    // Override any old default cursor
-    g_object_steal_data(PGObject(AWindow), 'havesavedcursor'); // OK?
-    g_object_steal_data(PGObject(AWindow), 'savedcursor');
+    // Override any old default cursor.
+    SavedCursor := PGdkCursor(g_object_steal_data(PGObject(AWindow), 'savedcursor'));
+    if SavedCursor <> nil then
+      g_object_unref(SavedCursor);
+    g_object_steal_data(PGObject(AWindow), 'havesavedcursor');
     gdk_window_set_cursor(AWindow, Cursor);
     Exit;
   end;
@@ -1821,6 +1806,8 @@ begin
     OldCursor := gdk_window_get_cursor(AWindow);
     if ASetDefault or (g_object_get_data(PGObject(AWindow), 'havesavedcursor') = nil) then
     begin
+      if OldCursor <> nil then
+        g_object_ref(OldCursor);
       g_object_set_data(PGObject(AWindow), 'havesavedcursor', gpointer(1));
       g_object_set_data(PGObject(AWindow), 'savedcursor', gpointer(OldCursor));
     end;
@@ -1829,8 +1816,10 @@ begin
   begin
     if g_object_steal_data(PGObject(AWindow), 'havesavedcursor') <> nil then
     begin
-      Cursor := g_object_steal_data(PGObject(AWindow), 'savedcursor');
-      gdk_window_set_cursor(AWindow, Cursor);
+      SavedCursor := PGdkCursor(g_object_steal_data(PGObject(AWindow), 'savedcursor'));
+      gdk_window_set_cursor(AWindow, SavedCursor);
+      if SavedCursor <> nil then
+        g_object_unref(SavedCursor);
     end;
   end;
 end;
@@ -2285,7 +2274,17 @@ begin
           SizeMsg.Width  := Word(ACtl.Width);
           SizeMsg.Height := Word(ACtl.Height);
         end;
+        {$IFDEF GTK3DEBUGSIZE}
+        DebugLn(Format('Gtk3DrainResizeQueue %s pre-LM_SIZE Msg=%dx%d LCL=%dx%d',
+          [ACtl.ClassName + ':' + ACtl.Name, SizeMsg.Width, SizeMsg.Height,
+           ACtl.Width, ACtl.Height]));
+        {$ENDIF}
         ACtl.WindowProc(TLMessage(SizeMsg));
+        {$IFDEF GTK3DEBUGSIZE}
+        DebugLn(Format('Gtk3DrainResizeQueue %s post-LM_SIZE Msg=%dx%d LCL=%dx%d',
+          [ACtl.ClassName + ':' + ACtl.Name, SizeMsg.Width, SizeMsg.Height,
+           ACtl.Width, ACtl.Height]));
+        {$ENDIF}
       end;
     end;
 

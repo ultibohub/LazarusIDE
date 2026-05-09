@@ -93,6 +93,7 @@ type
   public
     brush_pattern:pcairo_pattern_t;
     pat_buf:pdword;
+    MonoPattern: Boolean;
     LogBrush: TLogBrush;
     constructor Create; override;
     function Select(ACtx:TGtk3DeviceContext):TGtk3ContextObject; override;
@@ -2059,7 +2060,7 @@ begin
       PATCOPY:
       begin
         cairo_set_operator(TargetCairo, CAIRO_OPERATOR_SOURCE);
-        ColorToCairoRGB(ColorToRgb(FCurrentBrush.Color), R, G, B);
+        ColorToCairoRGB(FCurrentBrush.Color, R, G, B);
         cairo_set_source_rgb(TargetCairo, R, G, B);
       end;
     end;
@@ -2123,49 +2124,51 @@ begin
 
   if FBackTarget <> nil then
   begin
+    //x11 type, read from underlying X11 surface via FBackTarget matrix.
     ReadSurface := cairo_get_target(FBackTarget);
     cairo_get_matrix(FBackTarget, @AMatrix);
     ReadOffsetX := -(AMatrix.x0 + ADestRect.Left);
     ReadOffsetY := -(AMatrix.y0 + ADestRect.Top);
     TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
-
     TempCairo := cairo_create(TempDestSurface);
     cairo_set_source_surface(TempCairo, ReadSurface, ReadOffsetX, ReadOffsetY);
     cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
     cairo_paint(TempCairo);
     cairo_destroy(TempCairo);
-
     cairo_surface_flush(TempDestSurface);
-
     DstData := PByte(cairo_image_surface_get_data(TempDestSurface));
     DstStride := cairo_image_surface_get_stride(TempDestSurface);
     DstW := CopyW;
     DstH := CopyH;
   end else
-  if cairo_surface_get_type(DestSurface) = CAIRO_SURFACE_TYPE_IMAGE then
   begin
-    cairo_surface_flush(DestSurface);
-    DstW := cairo_image_surface_get_width(DestSurface);
-    DstH := cairo_image_surface_get_height(DestSurface);
-    DstData := PByte(cairo_image_surface_get_data(DestSurface));
-    DstStride := cairo_image_surface_get_stride(DestSurface);
-  end else
-  begin
-
-    TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
-    TempCairo := cairo_create(TempDestSurface);
-
-    cairo_set_source_surface(TempCairo, DestSurface, -ADestRect.Left, -ADestRect.Top);
-    cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
-    cairo_paint(TempCairo);
-
-    cairo_destroy(TempCairo);
-    cairo_surface_flush(TempDestSurface);
-
-    DstData := PByte(cairo_image_surface_get_data(TempDestSurface));
-    DstStride := cairo_image_surface_get_stride(TempDestSurface);
-    DstW := CopyW;
-    DstH := CopyH;
+    //wayland
+    cairo_get_matrix(FCairo, @AMatrix);
+    if (AMatrix.x0 <> 0) or (AMatrix.y0 <> 0) or
+       (cairo_surface_get_type(DestSurface) <> CAIRO_SURFACE_TYPE_IMAGE) then
+    begin
+      ReadOffsetX := -(AMatrix.x0 + ADestRect.Left);
+      ReadOffsetY := -(AMatrix.y0 + ADestRect.Top);
+      TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
+      TempCairo := cairo_create(TempDestSurface);
+      cairo_set_source_surface(TempCairo, DestSurface, ReadOffsetX, ReadOffsetY);
+      cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
+      cairo_paint(TempCairo);
+      cairo_destroy(TempCairo);
+      cairo_surface_flush(TempDestSurface);
+      DstData := PByte(cairo_image_surface_get_data(TempDestSurface));
+      DstStride := cairo_image_surface_get_stride(TempDestSurface);
+      DstW := CopyW;
+      DstH := CopyH;
+    end else
+    begin
+      //pure image
+      cairo_surface_flush(DestSurface);
+      DstW := cairo_image_surface_get_width(DestSurface);
+      DstH := cairo_image_surface_get_height(DestSurface);
+      DstData := PByte(cairo_image_surface_get_data(DestSurface));
+      DstStride := cairo_image_surface_get_stride(DestSurface);
+    end;
   end;
 
   if DstData = nil then
@@ -3052,12 +3055,12 @@ begin
     if ABgFilled then
     begin
       FCurrentFont.Layout^.get_pixel_size(@tw, nil);
-      ColorToCairoRGB(ColorToRgb(TColor(FBgBrush.Color)), R, G, B);
+      ColorToCairoRGB(TColor(FBgBrush.Color), R, G, B);
       cairo_set_source_rgb(pcr, R, G, B);
       cairo_rectangle(pcr, 0, 0, tw, FCurrentFont.FMetricsHeight + FCurrentFont.FInternalLeading);
       cairo_fill(pcr);
     end;
-    ColorToCairoRGB(ColorToRgb(TColor(CurrentTextColor)), R, G, B);
+    ColorToCairoRGB(TColor(CurrentTextColor), R, G, B);
     cairo_set_source_rgb(pcr, R, G, B);
     cairo_move_to(pcr, 0, 0);
     pango_cairo_show_layout(pcr, FCurrentFont.Layout);
@@ -3068,13 +3071,13 @@ begin
     if ABgFilled then
     begin
       FCurrentFont.Layout^.get_pixel_size(@tw, nil);
-      ColorToCairoRGB(ColorToRgb(TColor(FBgBrush.Color)), R, G, B);
+      ColorToCairoRGB(TColor(FBgBrush.Color), R, G, B);
       cairo_set_source_rgb(pcr, R, G, B);
       cairo_rectangle(pcr, LToDX(x), LToDY(y), tw, FCurrentFont.FMetricsHeight + FCurrentFont.FInternalLeading);
       cairo_fill(pcr);
     end;
     cairo_move_to(pcr, LToDX(x), LToDY(y));
-    ColorToCairoRGB(ColorToRgb(TColor(CurrentTextColor)), R, G, B);
+    ColorToCairoRGB(TColor(CurrentTextColor), R, G, B);
     cairo_set_source_rgb(pcr, R, G, B);
     pango_cairo_show_layout(pcr, FCurrentFont.Layout);
   end;
@@ -3672,9 +3675,13 @@ begin
 end;
 
 procedure TGtk3DeviceContext.fillRect(x, y, w, h: Integer; ABrush: HBRUSH);
+const
+  cMonoPatternAlpha = 1.0;
 var
   ATempBrush: TGtk3Brush;
   DevX, DevY, DevW, DevH: Integer;
+  PatMatrix: Tcairo_matrix_t;
+  MonoR, MonoG, MonoB: Double;
 begin
   {$ifdef VerboseGtk3DeviceContext}
   //DebugLn('TGtk3DeviceContext.fillRect ',Format('x %d y %d w %d h %d',[x, y, w, h]));
@@ -3698,12 +3705,28 @@ begin
   else
     ATempBrush := FCurrentBrush;
 
-  applyBrush;
-
   DevX := LToDX(x);
   DevY := LToDY(y);
   DevW := LToDX(x + w) - DevX;
   DevH := LToDY(y + h) - DevY;
+
+  if (CurrentBrush.Style = BS_PATTERN) and CurrentBrush.MonoPattern
+     and Assigned(CurrentBrush.brush_pattern) then
+  begin
+    cairo_matrix_init_identity(@PatMatrix);
+    cairo_pattern_set_matrix(CurrentBrush.brush_pattern, @PatMatrix);
+    cairo_save(pcr);
+    TColorToRGB(FCurrentTextColor, MonoR, MonoG, MonoB);
+    cairo_set_source_rgba(pcr, MonoR, MonoG, MonoB, cMonoPatternAlpha);
+    cairo_rectangle(pcr, DevX, DevY, DevW, DevH);
+    cairo_clip(pcr);
+    cairo_mask(pcr, CurrentBrush.brush_pattern);
+    cairo_restore(pcr);
+    CurrentBrush := ATempBrush;
+    Exit;
+  end;
+
+  applyBrush;
 
   if (w = 1) or (h = 1) then // #42049
   begin

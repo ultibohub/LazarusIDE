@@ -237,9 +237,7 @@ begin
   DebugLn('TGtk3WSWinControl.DestroyHandle ',dbgsName(AWinControl),' handle ',dbgs(AWinControl.HandleAllocated));
   {$ENDIF}
   if AWinControl.HandleAllocated then
-  begin
-    TGtk3Widget(AWinControl.Handle).Free;
-  end;
+    TGtk3Widget(AWinControl.Handle).Release;
 end;
 
 class procedure TGtk3WSWinControl.DefaultWndHandler(const AWinControl: TWinControl; var AMessage);
@@ -377,9 +375,12 @@ begin
   if not WSCheckHandleAllocated(AWinControl, 'SetBiDiMode') then
     Exit;
   AWidget := TGtk3Widget(AWinControl.Handle);
+  if (AWidget = nil) or not Gtk3IsWidget(AWidget.Widget) then
+    Exit;
   ADir := WidgetDirection[UseRightToLeftAlign];
   gtk_widget_set_direction(AWidget.Widget, ADir);
-  if (AWidget.GetContainerWidget <> nil) and (AWidget.GetContainerWidget <> AWidget.Widget) then
+  if (AWidget.GetContainerWidget <> nil) and (AWidget.GetContainerWidget <> AWidget.Widget)
+     and Gtk3IsWidget(AWidget.GetContainerWidget) then
     gtk_widget_set_direction(AWidget.GetContainerWidget, ADir);
 end;
 

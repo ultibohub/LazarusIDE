@@ -75,6 +75,7 @@ type
     FBuildIDEOptions: string;
     FBuildModeOverride: String;
     FBuildRecursive: boolean;
+    FBuildRelease: boolean;
     FBuildTwice: boolean;
     fCompilerInCfg: string;
     fCompilerOverride: String;
@@ -184,12 +185,12 @@ type
     procedure PrintErrorAndHalt(Code: Byte; const Msg: string);
 
     property PackageAction: TPkgAction read FPackageAction write FPackageAction;
-    property BuildAll: boolean read FBuildAll write FBuildAll;// build all files of project/package
+    property BuildAll: boolean read FBuildAll write FBuildAll;// build all files of project/package, option -B
     property BuildTwice: boolean read FBuildTwice write FBuildTwice;// build all packages twice
     property BuildRecursive: boolean read FBuildRecursive // apply BuildAll flag to dependencies
                                      write FBuildRecursive;
-    property SkipDependencies: boolean read FSkipDependencies
-                                            write FSkipDependencies;
+    property SkipDependencies: boolean read FSkipDependencies write FSkipDependencies;
+    property BuildRelease: boolean read FBuildRelease write FBuildRelease;
     property BuildIDE: TBuildIDE read FBuildIDE write FBuildIDE; // build IDE (as opposed to a project/package etc)
     property BuildIDEOptions: string read FBuildIDEOptions write FBuildIDEOptions;
     property CreateMakefile: boolean read FCreateMakefile write FCreateMakefile;
@@ -781,7 +782,7 @@ begin
   if APackage.Missing then
     PrintErrorAndHalt(ErrorBuildFailed, '"' + APackage.IDAsString + '": lpk file missing');
 
-  // check graph for circles and broken dependencies
+  // check graph for cycles and broken dependencies
   if not (pcfDoNotCompileDependencies in Flags) then begin
     CheckPackageGraphForCompilation(APackage,nil);
   end;
@@ -832,10 +833,10 @@ begin
     if PathList<>nil then
       PrintErrorAndHalt(ErrorLoadPackageFailed,'Broken dependency: '+PathListToString(PathList));
 
-    // check for circle dependencies
+    // check for cycle dependencies
     PathList:=PackageGraph.FindCycleDependencyPath(APackage,FirstDependency);
     if PathList<>nil then
-      PrintErrorAndHalt(ErrorLoadPackageFailed,'Circle dependency: '+PathListToString(PathList));
+      PrintErrorAndHalt(ErrorLoadPackageFailed,'Cycle dependency: '+PathListToString(PathList));
   finally
     PathList.Free;
   end;
@@ -1365,6 +1366,7 @@ begin
   PackageGraph.OnAddPackage:=@PackageGraphAddPackage;
   PackageGraph.OnCheckInterPkgFiles:=@PackageGraphCheckInterPkgFiles;
   PackageGraph.Verbosity:=PkgGraphVerbosity;
+  PackageGraph.BuildRelease:=BuildRelease;
 end;
 
 procedure TLazBuildApplication.SetupDialogs;
@@ -1672,6 +1674,7 @@ begin
     LongOptions.Add('build-ide-minimal');
     LongOptions.Add('build-ide-release');
     LongOptions.Add('build-twice');
+    LongOptions.Add('pkg-release');
     LongOptions.Add('recursive');
     LongOptions.Add('skip-dependencies');
     LongOptions.Add('widgetset:');
@@ -1748,6 +1751,12 @@ begin
       BuildIDE:=TBuildIDE.Release;
       FilesNeeded:=false;
       PrintInfo('Parameter: --build-ide-release');
+    end;
+
+    // release
+    if HasOption('pkg-release') then begin
+      BuildRelease:=true;
+      PrintInfo('Parameter: --pkg-release');
     end;
 
     // files
@@ -1908,7 +1917,7 @@ begin
   writeln('-d, --skip-dependencies');
   w(lisDoNotCompileDependencies);
   writeln('');
-  writeln('--build-ide=<options>');
+  writeln('--build-ide, --build-ide=<options>');
   w(lisBuildIDEWithPackages);
   writeln('');
   writeln('--build-ide-minimal');
@@ -1916,6 +1925,9 @@ begin
   writeln('');
   writeln('--build-ide-release');
   w('Build the release IDE. Same as minimal plus a fixed set of extra packages.');
+  writeln('');
+  writeln('--pkg-release');
+  w('Build release packages. Store compiler checksum instead of date in package.compiled files.');
   writeln('');
   writeln('-v, --version');
   w(lisShowVersionAndExit);

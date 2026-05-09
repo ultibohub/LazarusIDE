@@ -386,6 +386,25 @@ IDEVERSION=$(shell .\tools\install\get_lazarus_version.bat)
 else
 IDEVERSION=$(shell ./tools/install/get_lazarus_version.sh)
 endif
+LAZBUILDOPTS=--lazarusdir=.
+ifdef PP
+LAZBUILDOPTS+= --compiler=$(PP)
+endif
+ifdef CPU_TARGET
+LAZBUILDOPTS+= --cpu=$(CPU_TARGET)
+endif
+ifdef OS_TARGET
+LAZBUILDOPTS+= --os=$(OS_TARGET)
+endif
+ifdef LCL_PLATFORM
+LAZBUILDOPTS+= --ws=$(LCL_PLATFORM)
+endif
+ifdef LAZBUILDJOBS
+LAZBUILDOPTS+= --max-process-count=$(LAZBUILDJOBS)
+endif
+ifdef OPT
+LAZBUILDOPTS+= --opt="$(OPT)"
+endif
 ifeq ($(CPU_OS_TARGET),i386-linux)
 override TARGET_PROGRAMS+=lazarus startlazarus lazbuild
 endif
@@ -3110,7 +3129,7 @@ makefiles: fpc_makefiles
 ifneq ($(wildcard fpcmake.loc),)
 include fpcmake.loc
 endif
-.PHONY: help registration tools lcl basecomponents bigidecomponents lazbuild ide idebig cleanide bigide useride starter lhelp all clean purge distclean install
+.PHONY: help registration tools lcl basecomponents bigidecomponents lazbuild ide idebig cleanlazbuildpkg cleanide bigide useride starter lhelp all clean purge distclean install
 help:
 	@$(ECHO)
 	@$(ECHO) " Main targets"
@@ -3191,46 +3210,45 @@ basecomponents:
 bigidecomponents:
 	$(MAKE) -C components bigide
 tools:
-	$(MAKE) -C components/freetype LCL_PLATFORM=nogui
+	$(MAKE) -C components/freetype
 	$(MAKE) -C lcl LCL_PLATFORM=nogui
 	$(MAKE) -C tools
-revisioninc:
-	$(MAKE) -C ide revisioninc
+idemin:
+	./lazbuild$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
+idebig:
+	./lazbuild$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-release --pkg-release
+useride:
+	./lazbuild$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide --pkg-release
 ide:
 	$(MAKE) -C ide ide
-idebig:
-	$(MAKE) -C ide bigide
-useride: 
-ifdef LAZBUILDJOBS
-ifdef LCL_PLATFORM
-	./lazbuild$(SRCEXEEXT) --max-process-count=$(LAZBUILDJOBS) --lazarusdir=. --build-ide= --ws=$(LCL_PLATFORM)
-else
-	./lazbuild$(SRCEXEEXT) --max-process-count=$(LAZBUILDJOBS) --lazarusdir=. --build-ide=
-endif
-else
-ifdef LCL_PLATFORM
-	./lazbuild$(SRCEXEEXT) --lazarusdir=. --build-ide= --ws=$(LCL_PLATFORM)
-else
-	./lazbuild$(SRCEXEEXT) --lazarusdir=. --build-ide=
-endif
-endif
 starter:
 	$(MAKE) -C ide starter
 lazbuild: registration
-	$(MAKE) -C components lazbuildpackages
+	$(MAKE) -C components/lazutils
+	$(MAKE) -C components/codetools
+	$(MAKE) -C components/buildintf
+	$(MAKE) -C components/lazdebuggers/lazdebuggerintf
+	$(MAKE) -C components/debuggerintf
 	$(MAKE) -C ide/packages/ideconfig
 	$(MAKE) -C ide/packages/idepackager
 	$(MAKE) -C ide/packages/ideproject
 	$(MAKE) -C ide lazbuilder
-	$(MAKE) -C components/freetype LCL_PLATFORM=nogui
-	$(MAKE) -C lcl LCL_PLATFORM=nogui
-	$(MAKE) -C tools
 lhelp:
 	$(MAKE) -C components/chmhelp/lhelp
-all: lazbuild tools lcl basecomponents ide starter
-bigide: lazbuild tools lcl basecomponents bigidecomponents idebig starter lhelp
+all: lazbuild tools cleanlazbuildpkg idemin starter
+bigide: lazbuild tools cleanlazbuildpkg idebig starter lhelp
 cleanide:
 	$(MAKE) -C ide cleanide
+cleanlazbuildpkg:
+	$(MAKE) -C packager/registration clean
+	$(MAKE) -C components/lazutils clean
+	$(MAKE) -C components/codetools clean
+	$(MAKE) -C components/buildintf clean
+	$(MAKE) -C components/lazdebuggers/lazdebuggerintf clean
+	$(MAKE) -C components/debuggerintf clean
+	$(MAKE) -C ide/packages/ideconfig clean
+	$(MAKE) -C ide/packages/idepackager clean
+	$(MAKE) -C ide/packages/ideproject clean
 cleanlaz: cleanide
 	$(MAKE) -C packager/registration clean
 	$(MAKE) -C lcl cleanall
