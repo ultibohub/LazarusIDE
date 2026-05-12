@@ -383,8 +383,10 @@ INSTALL_MAN_DIR=$(INSTALL_PREFIX)/share/man
 endif
 ifneq ($(findstring $(OS_TARGET),win32 win64),)
 IDEVERSION=$(shell .\tools\install\get_lazarus_version.bat)
+LAZBUILDNAME=.\lazbuild
 else
 IDEVERSION=$(shell ./tools/install/get_lazarus_version.sh)
+LAZBUILDNAME=./lazbuild
 endif
 LAZBUILDOPTS=--lazarusdir=.
 ifdef PP
@@ -3214,11 +3216,11 @@ tools:
 	$(MAKE) -C lcl LCL_PLATFORM=nogui
 	$(MAKE) -C tools
 idemin:
-	./lazbuild$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
+	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
 idebig:
-	./lazbuild$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-release --pkg-release
+	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-release --pkg-release
 useride:
-	./lazbuild$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide --pkg-release
+	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide --pkg-release
 ide:
 	$(MAKE) -C ide ide
 starter:
@@ -3235,7 +3237,8 @@ lazbuild: registration
 	$(MAKE) -C ide lazbuilder
 lhelp:
 	$(MAKE) -C components/chmhelp/lhelp
-all: lazbuild tools cleanlazbuildpkg idemin starter
+# all: lazbuild tools cleanlazbuildpkg idemin starter
+all: lazbuild tools lcl basecomponents ide starter
 bigide: lazbuild tools cleanlazbuildpkg idebig starter lhelp
 cleanide:
 	$(MAKE) -C ide cleanide
