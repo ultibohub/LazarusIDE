@@ -121,6 +121,8 @@ type
     class function toColor(const Color: TColorRef; const Alpha: Byte): NSColor; overload;
     // convert to known NSColor or nil
     class function sysIndexToColor(nIndex: Integer): NSColor;
+
+    class procedure setSystemColorPanelSupportsAlpha(const supportsAlpha: Boolean);
   end;
 
   { TCocoaImageUtil }
@@ -134,6 +136,8 @@ type
     class function copyAndRotateCursor(
       const src: NSCursor;
       const degrees: Double ): NSCursor;
+    class function imageWithSystemSymbolString(
+      const symbolString: NSString ): NSImage;
   end;
 
   { TCocoaThemeUtil }
@@ -1009,6 +1013,12 @@ begin
   end;
 end;
 
+class procedure TCocoaColorUtil.setSystemColorPanelSupportsAlpha(
+  const supportsAlpha: Boolean );
+begin
+  NSColorPanel.sharedColorPanel.setShowsAlpha( supportsAlpha );
+end;
+
 { TCocoaImageUtil }
 
 {------------------------------------------------------------------------------
@@ -1112,6 +1122,51 @@ begin
     NSMakePoint(img.size.height / 2, img.size.width / 2)
   );
   img.release;
+end;
+
+class function TCocoaImageUtil.imageWithSystemSymbolString(
+  const symbolString: NSString ): NSImage;
+var
+  imageName: NSString;
+  config: NSImageSymbolConfiguration;
+
+  procedure parseEmphasize;
+  var
+    emphasizeLevel: Integer;
+  begin
+    emphasizeLevel:= 0;
+    imageName:= symbolString;
+    while imageName.hasPrefix( NSSTR_SYSTEM_SYMBOL_EMPHASIZE ) do begin
+      imageName:= imageName.substringFromIndex( 1 );
+      inc( emphasizeLevel );
+    end;
+
+    if emphasizeLevel > 0 then begin
+      config:= NSImageSymbolConfiguration.configurationWithPointSize(
+                 NSFont.systemFontSize + emphasizeLevel - 1,
+                 NSFontWeightBold );
+      // emphasize by alternateSelected color
+      if NSAppKitVersionNumber >= NSAppKitVersionNumber12_0 then begin
+        config:= config.configurationByApplyingConfiguration(
+                   NSImageSymbolConfiguration.configurationWithHierarchicalColor(
+                     NSColor.alternateSelectedControlColor ) );
+      end;
+    end;
+  end;
+
+begin
+  Result:= nil;
+  if symbolString.length <= 0 then
+    Exit;
+
+  config:= nil;
+  parseEmphasize;
+
+  Result:= NSImage.imageWithSystemSymbolName_accessibilityDescription(
+             imageName, nil );
+
+  if Assigned(config) then
+    Result:= Result.imageWithSymbolConfiguration( config );
 end;
 
 { TCocoaThemeUtil }

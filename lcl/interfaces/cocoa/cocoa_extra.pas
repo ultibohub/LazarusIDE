@@ -368,6 +368,10 @@ type
 const
   NSFontWeightRegular = 0.0;
 
+var
+  NSFontWeightBold: NSFontWeight; cvar; external;
+  NSFontWeightHeavy: NSFontWeight; cvar; external;
+
 type
   NSFontFix = objccategory external (NSFont)
     // available in 10.15+
@@ -460,10 +464,26 @@ type
     function CGContext: CGContextRef; message 'CGContext';
   end;
 
+  NSImageSymbolConfiguration = objcclass external (NSObject)
+    class function configurationWithPointSize(
+      pointSize: CGFloat;
+      weight: NSFontWeight ): id;
+      message 'configurationWithPointSize:weight:'; { available in 11.0 }
+    class function configurationWithHierarchicalColor(
+      hierarchicalColor: NSColor ): id;
+      message 'configurationWithHierarchicalColor:'; { available in 12.0 }
+    function configurationByApplyingConfiguration(
+      configuration: NSImageSymbolConfiguration ): id;
+      message 'configurationByApplyingConfiguration:'; { available in 12.0 }
+  end;
+
   NSImageFix = objccategory external (NSImage)
     class function imageWithSystemSymbolName_accessibilityDescription(
       aName: NSString; aAccessibilityDescription: NSString ): id;
       message 'imageWithSystemSymbolName:accessibilityDescription:'; { available in 11.0 }
+    function imageWithSymbolConfiguration(
+      configuration: NSImageSymbolConfiguration ): NSImage;
+      message 'imageWithSymbolConfiguration:'; { available in 11.0 }
   end;
 
   NSEventFix = objccategory external (NSEvent)
@@ -841,6 +861,20 @@ type
          options:NSFileManagerUnmountOptions;
          completionHandler:TCocoaCompletionHandlerWithNSError );
        message 'unmountVolumeAtURL:options:completionHandler:';  { available in 10_11 }
+  end;
+
+type
+  NSColorWellStyle = NSInteger;
+
+const
+  NSColorWellStyleDefault  = 0;
+  NSColorWellStyleMinimal  = 1;
+  NSColorWellStyleExpanded = 2;
+
+type
+  NSColorWellFix = objccategory external (NSColorWell)
+    procedure setColorWellStyle( newStyle: NSColorWellStyle );
+      message 'setColorWellStyle:';  { available in 13.0 }
   end;
 
 

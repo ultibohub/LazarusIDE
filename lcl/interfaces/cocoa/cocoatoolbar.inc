@@ -8,7 +8,7 @@ interface
 
 uses
   Classes, SysUtils,
-  Forms, Menus,
+  Graphics, Forms, Menus,
   CocoaAll, CocoaConfig, CocoaWindows, CocoaMenus, Cocoa_Extra, CocoaUtils;
 
 type
@@ -48,6 +48,7 @@ type
   TCocoaConfigToolBarItemClassWithUI = class( TCocoaConfigToolBarItemClassBase )
   protected
     _iconName: String;
+    _alternateIconName: String;
     _title: String;
     _tips: String;
     _bordered: Boolean;
@@ -56,6 +57,7 @@ type
   public
     procedure setItemAttribs( const item: NSToolBarItem ); override;
     function iconName: NSString; virtual;
+    function alternateIconName: NSString; virtual;
     function title: NSString; virtual;
     function tips: NSString; virtual;
   end;
@@ -75,6 +77,20 @@ type
 
   TCocoaConfigToolBarItemClass = class( TCocoaConfigToolBarItemClassWithAction )
     constructor Create( const itemConfig: TCocoaConfigToolBarItem );
+    function createItem: NSToolBarItem; override;
+  end;
+
+  { TCocoaConfigToolBarItemClassColorWell }
+
+  TCocoaConfigToolBarItemClassColorWell = class( TCocoaConfigToolBarItemClassWithAction )
+  protected
+    _wellStyle: NSColorWellStyle;
+    _sizeWithStyle: NSSize;
+    _sizeWithoutStyle: NSSize;
+    _supportsAlpha: Boolean;
+    _autoClose: Boolean;
+  public
+    constructor Create( const itemConfig: TCocoaConfigToolBarItemColorWell );
     function createItem: NSToolBarItem; override;
   end;
 
@@ -127,15 +143,55 @@ type
     function createItem: NSToolBarItem; override;
   end;
 
+  TCocoaToolBarItemStateProtocol = objcprotocol
+    procedure lclSetState( const state: Boolean );
+      message 'lclSetState:';
+    function lclGetState: Boolean;
+      message 'lclGetState';
+    procedure lclSetAlternateIcon( const icon: NSImage );
+      message 'lclSetAlternateIcon:';
+  end;
+
   { TCocoaToolBarItem }
 
-  TCocoaToolBarItem = objcclass( NSToolBarItem )
+  TCocoaToolBarItem = objcclass( NSToolBarItem, TCocoaToolBarItemStateProtocol )
+  private
+    _state: Boolean;  // off/on, up/down
+    _icon: NSImage;
+    _alternateIcon: NSImage;
+    _handler: TCocoaToolBarItemActionHandler;
+    procedure lclItemAction( const sender: id ); message 'lclItemAction:';
+  public
+    // TCocoaToolBarItemStateProtocol
+    procedure lclSetState( const state: Boolean );
+    function lclGetState: Boolean;
+    procedure lclSetAlternateIcon( const icon: NSImage );
+
+    procedure lclSetHandler( const handler: TCocoaToolBarItemActionHandler );
+      message 'lclSetHandler:';
+  public
+    procedure dealloc; override;
+  end;
+
+  { TCocoaToolBarItemColorWell }
+
+  TCocoaToolBarItemColorWell = objcclass( NSToolBarItem )
   private
     _handler: TCocoaToolBarItemActionHandler;
+    _supportsAlpha: Boolean;
+    _autoClose: Boolean;
     procedure lclItemAction( const sender: id ); message 'lclItemAction:';
   public
     procedure lclSetHandler( const handler: TCocoaToolBarItemActionHandler );
       message 'lclSetHandler:';
+    function lclGetColor: TColor;
+      message 'lclGetColor';
+    procedure lclGetColorAlpha( out AColor: TColor; out AAlpha: Byte );
+      message 'lclGetColor:AColor:';
+    procedure lclSetColor( const AColor: TColor );
+      message 'lclSetColor:';
+    procedure lclSetColorAlpha( const AColor: TColor; const AAlpha: Byte );
+      message 'lclSetColorAlpha:AColor:';
   end;
 
   { TCocoaToolBarItemSharing }
@@ -173,18 +229,29 @@ type
 
   { TCocoaToolBarItemMenu }
 
-  TCocoaToolBarItemMenu = objcclass( NSMenuToolBarItem )
+  TCocoaToolBarItemMenu = objcclass( NSMenuToolBarItem, TCocoaToolBarItemStateProtocol )
   private
+    _state: Boolean;  // off/on, up/down
+    _icon: NSImage;
+    _alternateIcon: NSImage;
+
     _handler: TCocoaToolBarItemActionHandler;
     _dynamic: Boolean;
     _onGetMenu: TCocoaToolBarItemMenuOnGetMenu;
     procedure lclItemAction( sender: id ); message 'lclItemAction:';
   public
+    // TCocoaToolBarItemStateProtocol
+    procedure lclSetState( const state: Boolean );
+    function lclGetState: Boolean;
+    procedure lclSetAlternateIcon( const icon: NSImage );
+
     procedure lclSetHandler( const handler: TCocoaToolBarItemActionHandler );
       message 'lclSetHandler:';
     procedure lclSetDynamic( const dynamic: Boolean ); message 'lclSetDynamic:';
     procedure lclSetOnGetMenu( const onGetMenu: TCocoaToolBarItemMenuOnGetMenu);
       message 'lclSetOnGetMenu:';
+  public
+    procedure dealloc; override;
   end;
 
   { TCocoaToolBarItemGroupWrapper }
@@ -238,6 +305,8 @@ type
   public
     class function toClass( const itemConfig: TCocoaConfigToolBarItem ):
       TCocoaConfigToolBarItemClassAbstract;
+    class function toClass( const itemConfig: TCocoaConfigToolBarItemColorWell ):
+      TCocoaConfigToolBarItemClassAbstract;
     class function toClass( const itemConfig: TCocoaConfigToolBarItemSharing ):
       TCocoaConfigToolBarItemClassAbstract;
     class function toClass( const itemConfig: TCocoaConfigToolBarItemSearch ):
@@ -278,10 +347,50 @@ type
 
 implementation
 
+type
+
+  { TCocoaColorWell }
+
+  TCocoaColorWell = objcclass( NSColorWell )
+  public
+    procedure drawRect(dirtyRect: NSRect); override;
+  end;
+
+procedure TCocoaColorWell.drawRect(dirtyRect: NSRect);
+var
+  path: NSBezierPath;
+  toolBarItem: NSToolBarItem;
+begin
+  path:= NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius(
+    NSInsetRect(self.bounds,1,1), 3, 3 );
+
+  toolBarItem:= NSToolBarItem( self.target );
+  if toolBarItem.isEnabled then begin
+    self.color.set_;
+    path.fill;
+  end;
+
+  if self.isBordered then begin
+    path.setLineWidth( 0.5 );
+    NSColor.textColor.colorWithAlphaComponent(0.5).set_;
+    path.stroke;
+  end;
+end;
+
+
+{ TCocoaToolBarUtils }
+
 class function TCocoaToolBarUtils.toClass( const itemConfig: TCocoaConfigToolBarItem
   ): TCocoaConfigToolBarItemClassAbstract;
 begin
   Result:= TCocoaConfigToolBarItemClass.Create( itemConfig );
+end;
+
+class function TCocoaToolBarUtils.toClass(
+  const itemConfig: TCocoaConfigToolBarItemColorWell
+  ): TCocoaConfigToolBarItemClassAbstract;
+begin
+  Result:= TCocoaConfigToolBarItemClassColorWell.Create( itemConfig );
 end;
 
 class function TCocoaToolBarUtils.toClass( const itemConfig: TCocoaConfigToolBarItemSharing
@@ -431,7 +540,7 @@ begin
     Exit;
   toolBar.insertItemWithItemIdentifier_atIndex(
     StrToNSString(identifier),
-    toolBar.items.Count-1 );
+    toolBar.items.Count );
 end;
 
 class procedure TCocoaToolBarUtils.removeItemByIndex(
@@ -459,12 +568,107 @@ end;
 
 procedure TCocoaToolBarItem.lclItemAction( const sender: id );
 begin
+  self.lclSetState( NOT _state );
   _handler( sender );
 end;
 
 procedure TCocoaToolBarItem.lclSetHandler( const handler: TCocoaToolBarItemActionHandler );
 begin
   _handler:= handler;
+end;
+
+procedure TCocoaToolBarItem.lclSetState(const state: Boolean);
+var
+  icon: NSImage;
+begin
+  if _state = state then
+    Exit;
+
+  _state:= state;
+  if Assigned(_alternateIcon) then begin
+    if NOT state then
+      icon:= _icon
+    else
+      icon:= _alternateIcon;
+    self.setImage( icon );
+  end;
+end;
+
+function TCocoaToolBarItem.lclGetState: Boolean;
+begin
+  Result:= _state;
+end;
+
+procedure TCocoaToolBarItem.lclSetAlternateIcon(const icon: NSImage);
+begin
+  _icon:= self.image;
+  _icon.retain;
+  _alternateIcon:= icon;
+  _alternateIcon.retain;
+end;
+
+procedure TCocoaToolBarItem.dealloc;
+begin
+  if Assigned(_icon) then
+    _icon.release;
+  if Assigned(_alternateIcon) then
+    _alternateIcon.release;
+end;
+
+{ TCocoaToolBarItemColorWell }
+
+procedure TCocoaToolBarItemColorWell.lclItemAction(const sender: id);
+begin
+  _handler( self );
+  TCocoaColorUtil.setSystemColorPanelSupportsAlpha( _supportsAlpha );
+  if _autoClose  then begin
+    if NOT _supportsAlpha then
+      NSColorPanel.sharedColorPanel.close;
+  end;
+end;
+
+procedure TCocoaToolBarItemColorWell.lclSetHandler(
+  const handler: TCocoaToolBarItemActionHandler);
+begin
+  _handler:= handler;
+end;
+
+function TCocoaToolBarItemColorWell.lclGetColor: TColor;
+var
+  colorWell: NSColorWell;
+begin
+  colorWell:= NSColorWell( self.view );
+  Result:= TCocoaColorUtil.toColorRefWithAnyColor( colorWell.color );
+end;
+
+procedure TCocoaToolBarItemColorWell.lclGetColorAlpha(
+  out AColor: TColor;
+  out AAlpha: Byte );
+var
+  colorWell: NSColorWell;
+begin
+  colorWell:= NSColorWell( self.view );
+  TCocoaColorUtil.toColorAlpha( colorWell.color, AColor, AAlpha );
+end;
+
+procedure TCocoaToolBarItemColorWell.lclSetColor(const AColor: TColor);
+var
+  colorWell: NSColorWell;
+begin
+  TCocoaColorUtil.setSystemColorPanelSupportsAlpha( _supportsAlpha );
+  colorWell:= NSColorWell( self.view );
+  colorWell.setColor( TCocoaColorUtil.toColor(AColor) );
+end;
+
+procedure TCocoaToolBarItemColorWell.lclSetColorAlpha(
+  const AColor: TColor;
+  const AAlpha: Byte );
+var
+  colorWell: NSColorWell;
+begin
+  TCocoaColorUtil.setSystemColorPanelSupportsAlpha( _supportsAlpha );
+  colorWell:= NSColorWell( self.view );
+  colorWell.setColor( TCocoaColorUtil.toColor(AColor,AAlpha) );
 end;
 
 { TCocoaToolBarItemSharing }
@@ -551,6 +755,44 @@ procedure TCocoaToolBarItemMenu.lclSetOnGetMenu(
   const onGetMenu: TCocoaToolBarItemMenuOnGetMenu);
 begin
   _onGetMenu:= onGetMenu;
+end;
+
+procedure TCocoaToolBarItemMenu.lclSetState(const state: Boolean);
+var
+  icon: NSImage;
+begin
+  if _state = state then
+    Exit;
+
+  _state:= state;
+  if Assigned(_alternateIcon) then begin
+    if NOT state then
+      icon:= _icon
+    else
+      icon:= _alternateIcon;
+    self.setImage( icon );
+  end;
+end;
+
+function TCocoaToolBarItemMenu.lclGetState: Boolean;
+begin
+  Result:= _state;
+end;
+
+procedure TCocoaToolBarItemMenu.lclSetAlternateIcon(const icon: NSImage);
+begin
+  _icon:= self.image;
+  _icon.retain;
+  _alternateIcon:= icon;
+  _alternateIcon.retain;
+end;
+
+procedure TCocoaToolBarItemMenu.dealloc;
+begin
+  if Assigned(_icon) then
+    _icon.release;
+  if Assigned(_alternateIcon) then
+    _alternateIcon.release;
 end;
 
 { TCocoaToolBarItemGroupWrapper }
@@ -692,6 +934,7 @@ procedure TCocoaConfigToolBarItemClassWithUI.toClassConfig(
 begin
   Inherited toClassConfig( pItemConfig );
   _iconName:= pItemConfig^.iconName;
+  _alternateIconName:= pItemConfig^.alternateIconName;
   _title:= pItemConfig^.title;
   _tips:= pItemConfig^.tips;
   _bordered:= pItemConfig^.bordered;
@@ -700,18 +943,27 @@ end;
 procedure TCocoaConfigToolBarItemClassWithUI.setItemAttribs(
   const item: NSToolBarItem );
 var
-  cocoaImageName: NSString;
+  cocoaIconName: NSString;
+  cocoaIcon: NSImage;
   cocoaLabel: NSString;
 begin
   Inherited;
 
-  cocoaImageName:= self.iconName;
-  cocoaLabel:= self.title;
-
-  if cocoaImageName.length > 0 then begin
-    item.setImage( NSImage.imageWithSystemSymbolName_accessibilityDescription(
-      cocoaImageName, nil ) );
+  cocoaIconName:= self.iconName;
+  if cocoaIconName.length > 0 then begin
+    cocoaIcon:= TCocoaImageUtil.imageWithSystemSymbolString(cocoaIconName);
+    item.setImage( cocoaIcon );
   end;
+
+  if item.conformsToProtocol(objcprotocol(TCocoaToolBarItemStateProtocol)) then begin
+    cocoaIconName:= self.alternateIconName;
+    if cocoaIconName.length > 0 then begin
+      cocoaIcon:= TCocoaImageUtil.imageWithSystemSymbolString(cocoaIconName);
+      TCocoaToolBarItemStateProtocol(item).lclSetAlternateIcon( cocoaIcon );
+    end;
+  end;
+
+  cocoaLabel:= self.title;
   item.setLabel( cocoaLabel );
   item.setPaletteLabel( cocoaLabel );
   item.setToolTip( self.tips );
@@ -721,6 +973,11 @@ end;
 function TCocoaConfigToolBarItemClassWithUI.iconName: NSString;
 begin
   Result:= StrToNSString( _iconName );
+end;
+
+function TCocoaConfigToolBarItemClassWithUI.alternateIconName: NSString;
+begin
+  Result:= StrToNSString( _alternateIconName );
 end;
 
 function TCocoaConfigToolBarItemClassWithUI.title: NSString;
@@ -768,6 +1025,61 @@ begin
   self.setItemAttribs( cocoaItem );
   cocoaItem.autorelease;
   Result:= cocoaItem;
+end;
+
+{ TCocoaConfigToolBarItemClassColorWell }
+
+constructor TCocoaConfigToolBarItemClassColorWell.Create(
+  const itemConfig: TCocoaConfigToolBarItemColorWell);
+begin
+  self.toClassConfig( @itemConfig );
+  _wellStyle:= itemConfig.wellStyle;
+  _sizeWithStyle:= itemConfig.sizeWithStyle;
+  _sizeWithoutStyle:= itemConfig.sizeWithoutStyle;
+  _supportsAlpha:= itemConfig.supportsAlpha;
+  _autoClose:= itemConfig.autoClose;
+end;
+
+function TCocoaConfigToolBarItemClassColorWell.createItem: NSToolBarItem;
+var
+  cocoaItem: TCocoaToolBarItemColorWell;
+  view: NSView;
+  size: NSSize;
+
+  function allocColorWell: NSColorWell;
+  var
+    colorWell: NSColorWell;
+    rect: NSRect;
+  begin
+    rect.origin:= NSZeroPoint;
+    if NSAppKitVersionNumber >= NSAppKitVersionNumber13_0 then begin
+      rect.size:= _sizeWithStyle;
+      colorWell:= NSColorWell.alloc.initWithFrame( rect );
+      colorWell.setColorWellStyle( _wellStyle );
+    end else begin
+      rect.size:= _sizeWithoutStyle;
+      colorWell:= TCocoaColorWell.alloc.initWithFrame( rect );
+    end;
+    colorWell.setTarget( cocoaItem );
+    colorWell.setAction( ObjCSelector('lclItemAction:') );
+    size:= rect.size;
+    Result:= colorWell;
+  end;
+
+begin
+  cocoaItem:= TCocoaToolBarItemColorWell.alloc.initWithItemIdentifier( self.identifier );
+  self.setItemAttribs( cocoaItem );
+  view:= allocColorWell;
+  cocoaItem.setView( view );
+  cocoaItem.setMinSize( size );
+  cocoaItem.setMaxSize( size );
+  cocoaItem._supportsAlpha:= _supportsAlpha;
+  cocoaItem._autoClose:= _autoClose;
+  view.release;
+  cocoaItem.autorelease;
+  Result:= cocoaItem;
+
+  TCocoaColorUtil.setSystemColorPanelSupportsAlpha( _supportsAlpha );
 end;
 
 { TCocoaConfigToolBarItemClassSharing }
@@ -902,8 +1214,8 @@ var
     images:= NSMutableArray.arrayWithCapacity( count );
     labels:= NSMutableArray.arrayWithCapacity( count );
     for i:=0 to count-1 do begin
-      images.addObject( NSImage.imageWithSystemSymbolName_accessibilityDescription(
-        TCocoaConfigToolBarItemClass(_subitems[i]).iconName, nil) );
+      images.addObject( TCocoaImageUtil.imageWithSystemSymbolString(
+                          TCocoaConfigToolBarItemClass(_subitems[i]).iconName) );
       labels.addObject( TCocoaConfigToolBarItemClass(_subitems[i]).title );
     end;
   end;

@@ -62,6 +62,9 @@ type
   TGtk3WidgetSet = class(TWidgetSet)
   private
     FIsWayland: boolean;
+    FWMName: string;
+    FWMNameCached: boolean;
+    FTrackBarKnobSize: Integer;
     FActivityCounter: integer;
     FLastUserEventTime: guint32;
     FAppFocusTimerID: guint;
@@ -131,6 +134,8 @@ type
     FLCLCaptureWidget: PGtkWidget;
     function IsWayland: boolean;
     function IsKDEPlasmaWaylandSession: boolean;
+    function GetWMName: string;
+    function IsMarcoWM: boolean;
     function CreateDCForWidget(AWidget: PGtkWidget; AWindow: PGdkWindow; cr: Pcairo_t): HDC;
     procedure AddWindow(AWindow: PGtkWindow);
     procedure HandlePipeEvent(AData: PtrInt; AFlags: dword);
@@ -204,6 +209,7 @@ type
     property DefaultAppFontName: String read FDefaultAppFontName;
     property Gtk3Application: PGtkApplication read FGtk3Application;
     property LastUserEventTime: guint32 read FLastUserEventTime write FLastUserEventTime;
+    property TrackBarKnobSize: Integer read FTrackBarKnobSize write FTrackBarKnobSize;
     property OverlayScrolling: gboolean read FOverlayScrolling write FOverlayScrolling;
 
     {$i gtk3winapih.inc}

@@ -267,8 +267,17 @@ begin
 end;
 
 function ModalFilter(xevent: PGdkXEvent; event: PGdkEvent; data: gpointer): TGdkFilterReturn;
+const
+  X11_ButtonPress = 4;
+  X11_ButtonRelease = 5;
+var
+  AXType: Integer;
 begin
-  Result := GDK_FILTER_REMOVE;
+  AXType := PInteger(xevent)^;
+  if (AXType = X11_ButtonPress) or (AXType = X11_ButtonRelease) then
+    Result := GDK_FILTER_REMOVE
+  else
+    Result := GDK_FILTER_CONTINUE;
 end;
 
 class procedure TGtk3WSCustomForm.ShowHide(const AWinControl: TWinControl);
@@ -282,6 +291,7 @@ var
   OtherGtk3Window: TGtk3Window;
   LCLCanFocus: boolean;
   ATime: guint32;
+  NeedSizeProtect: boolean;
 
   procedure CheckAndFixGeometry;
   const
@@ -391,8 +401,13 @@ begin
 
   ShouldBeVisible:=AForm.HandleObjectShouldBeVisible;
 
-  if Assigned(AWindow) and (AForm.Parent = nil) and not IsFormDesign(AForm) and
-     (AForm.BorderStyle <> bsNone) then
+  NeedSizeProtect :=
+    Assigned(AWindow) and (AForm.Parent = nil) and not IsFormDesign(AForm) and
+    ((AForm.BorderStyle <> bsNone) or
+     (Gtk3WidgetSet.IsMarcoWM and
+      (AForm.BorderStyle = bsNone) and
+      not (csNoFocus in AForm.ControlStyle)));
+  if NeedSizeProtect then
   begin
     if ShouldBeVisible then
     begin
