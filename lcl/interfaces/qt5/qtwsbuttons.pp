@@ -86,7 +86,7 @@ const
 
 var
   AIcon: QIconH;
-  APixmap: QPixmapH;
+  APixmap, AScaledPixmap: QPixmapH;
   AGlyph: TBitmap;
   AIndex: Integer;
   AEffect: TGraphicsDrawEffect;
@@ -98,36 +98,43 @@ begin
   if not WSCheckHandleAllocated(ABitBtn, 'SetGlyph') then
     Exit;
 
+  DPR := ABitBtn.GetCanvasScaleFactor;
+
   TQtBitBtn(ABitBtn.Handle).GlyphLayout := Ord(ABitBtn.Layout);
   AIcon := QIcon_create();
   if ABitBtn.CanShowGlyph(True) then
   begin
     AGlyph := TBitmap.Create;
-    APixmap := QPixmap_create();
+
 
     for Mode := QIconNormal to QIconSelected do
     begin
+      APixmap := QPixmap_create();
       AValue.GetImageIndexAndEffect(IconModeToButtonState[Mode],
-        ABitBtn.Font.PixelsPerInch, ABitBtn.GetCanvasScaleFactor,
+        ABitBtn.Font.PixelsPerInch, 1.0 {we must rescale and apply DPR !},
         AImageRes, AIndex, AEffect);
       AImageRes.GetBitmap(AIndex, AGlyph, AEffect);
       QPixmap_fromImage(APixmap, TQtImage(AGlyph.Handle).Handle);
       QIcon_addPixmap(AIcon, APixmap, Mode, QIconOn);
+
+      if DPR > 1.0 then
+      begin
+        if QPixmap_devicePixelRatio(APixmap) <> DPR then
+        begin
+          AScaledPixmap := QPixmap_Create();
+          QPixmap_scaled(APixmap, AScaledPixmap, Round(QPixmap_width(APixmap) * DPR), Round(QPixmap_height(APixmap) * DPR), QtIgnoreAspectRatio, QtSmoothTransformation);
+          QPixmap_setDevicePixelRatio(AScaledPixmap, DPR);
+          QIcon_addPixmap(AIcon, AScaledPixmap, Mode, QIconOn);
+          QPixmap_destroy(AScaledPixmap);
+        end;
+      end;
+      QPixmap_destroy(APixmap);
     end;
-    QPixmap_destroy(APixmap);
+
     AGlyph.Free;
 
     ASize.cx := AImageRes.Width;
     ASize.cy := AImageRes.Height;
-    if QCoreApplication_testAttribute(QtAA_UseHighDpiPixmaps) then
-    begin
-      DPR := ABitBtn.GetCanvasScaleFactor;
-      if DPR > 1.0 then
-      begin
-        ASize.cx := Round(ASize.cx / DPR);
-        ASize.cy := Round(ASize.cy / DPR);
-      end;
-    end;
     TQtBitBtn(ABitBtn.Handle).setIconSize(@ASize);
   end;
 

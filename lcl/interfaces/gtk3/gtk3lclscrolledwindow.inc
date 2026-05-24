@@ -132,7 +132,9 @@ var
   vscroll, hscroll: PGtkWidget;
   vpolicy, hpolicy: TGtkPolicyType;
   Last1W, Last1H, Last2W, Last2H: PtrInt;
+  FreezeW, FreezeH: PtrInt;
   threshH, threshW, minSize: gint;
+  negH, negW: gint;
   vActive, hActive: Boolean;
   {$IFDEF GTK3DEBUGSIZE}
   ADbgCtl: TGtk3Widget;
@@ -198,6 +200,11 @@ begin
     if minSize > 0 then
       inc(threshW, minSize);
   end;
+
+  negH := 0;
+  negW := 0;
+  ParentClass^.get_preferred_height(widget, @negH, @minSize);
+  ParentClass^.get_preferred_width(widget, @negW, @minSize);
   {$IFDEF GTK3DEBUGSIZE}
   ADbgCtl := TGtk3Widget(HwndFromGtkWidget(widget));
   if Assigned(ADbgCtl) and Assigned(ADbgCtl.LCLObject) then
@@ -213,11 +220,12 @@ begin
     ADbgName := 'nil';
   {$ENDIF}
 
-  if (allocation^.width = 0) or (allocation^.height <= 1) then
+  if (allocation^.width = 0) or (allocation^.height <= 1) or
+     (allocation^.height < negH) or (allocation^.width < negW) then
   begin
     {$IFDEF GTK3DEBUGSIZE}
-    DebugLn(Format('LCLGSW.SizeAllocate %s alloc=%dx%d SKIP collapse (thresh=%dx%d)',
-      [ADbgName, allocation^.width, allocation^.height, threshW, threshH]));
+    DebugLn(Format('LCLGSW.SizeAllocate %s alloc=%dx%d SKIP collapse (thresh=%dx%d neg=%dx%d)',
+      [ADbgName, allocation^.width, allocation^.height, threshW, threshH, negW, negH]));
     {$ENDIF}
     gtk_widget_set_allocation(widget, allocation);
     gtk_widget_set_clip(widget, allocation);
@@ -237,6 +245,11 @@ begin
     DebugLn(Format('LCLGSW.SizeAllocate %s alloc=%dx%d OSCILLATE-BELOW (prev %dx%d / prev2 %dx%d thresh=%dx%d) - SKIP parent',
       [ADbgName, allocation^.width, allocation^.height, Last1W, Last1H, Last2W, Last2H, threshW, threshH]));
     {$ENDIF}
+    if Gtk3WidgetSet.IsWayland then
+    begin
+      g_object_set_data(PGObject(widget), 'lcl-freeze-aw', Pointer(Last1W));
+      g_object_set_data(PGObject(widget), 'lcl-freeze-ah', Pointer(Last1H));
+    end;
     gtk_widget_set_allocation(widget, allocation);
     gtk_widget_set_clip(widget, allocation);
     exit;
@@ -247,6 +260,33 @@ begin
     g_object_set_data(PGObject(widget), 'lcl-prev2-ah', Pointer(PtrInt(Last1H)));
     g_object_set_data(PGObject(widget), 'lcl-prev-aw', Pointer(PtrInt(allocation^.width)));
     g_object_set_data(PGObject(widget), 'lcl-prev-ah', Pointer(PtrInt(allocation^.height)));
+  end;
+
+  if Gtk3WidgetSet.IsWayland then
+  begin
+    FreezeW := PtrInt(g_object_get_data(PGObject(widget), 'lcl-freeze-aw'));
+    FreezeH := PtrInt(g_object_get_data(PGObject(widget), 'lcl-freeze-ah'));
+    if (FreezeW <> 0) or (FreezeH <> 0) then
+    begin
+      if (allocation^.width >= threshW) and (allocation^.height >= threshH) then
+      begin
+        g_object_set_data(PGObject(widget), 'lcl-freeze-aw', nil);
+        g_object_set_data(PGObject(widget), 'lcl-freeze-ah', nil);
+      end else if (allocation^.width = FreezeW) and (allocation^.height = FreezeH) then
+      begin
+        {$IFDEF GTK3DEBUGSIZE}
+        DebugLn(Format('LCLGSW.SizeAllocate %s alloc=%dx%d WAYLAND-FREEZE-SKIP (freeze=%dx%d)',
+          [ADbgName, allocation^.width, allocation^.height, FreezeW, FreezeH]));
+        {$ENDIF}
+        gtk_widget_set_allocation(widget, allocation);
+        gtk_widget_set_clip(widget, allocation);
+        exit;
+      end else
+      begin
+        g_object_set_data(PGObject(widget), 'lcl-freeze-aw', nil);
+        g_object_set_data(PGObject(widget), 'lcl-freeze-ah', nil);
+      end;
+    end;
   end;
 
   {$IFDEF GTK3DEBUGSIZE}
@@ -314,10 +354,7 @@ begin
 
   {$IFDEF GTK3DEBUGHEIGHTZERO}
   writeln(Format('LCLGSW.GetPrefH: widget=%p lcl=%s LCLIntendedH=%d LCLHeight=%d child_vis=%s mapped=%s',
-    [widget,
-     IfThen(Assigned(AControl) and Assigned(AControl.LCLObject),
-       AControl.LCLObject.Name + ':' + AControl.LCLObject.ClassName, 'nil'),
-     LCLIntendedH,
+    [widget, dbgsName(AControl.LCLObject), LCLIntendedH,
      IfThen(Assigned(AControl), AControl.LCLHeight, -999),
      BoolToStr(widget^.get_child_visible, True),
      BoolToStr(widget^.get_mapped, True)]));
@@ -415,4 +452,68 @@ begin
     scroll^.set_no_show_all(True);
     scroll^.hide;
   end;
+end;
+
+procedure LCLGtkLayoutMapChild(child: PGtkWidget; {%H-}data: gpointer); cdecl;
+begin
+  if child^.get_visible and child^.get_child_visible then
+    if not child^.get_mapped then
+      gtk_widget_map(child);
+end;
+
+procedure LCLGtkLayoutMap(widget: PGtkWidget); cdecl;
+var
+  BinWin: PGdkWindow;
+  WinWin: PGdkWindow;
+begin
+  gtk_widget_set_mapped(widget, True);
+  gtk_container_foreach(PGtkContainer(widget), @LCLGtkLayoutMapChild, nil);
+  BinWin := gtk_layout_get_bin_window(PGtkLayout(widget));
+  if Assigned(BinWin) then
+    BinWin^.show;
+  WinWin := gtk_widget_get_window(widget);
+  if Assigned(WinWin) then
+    WinWin^.show;
+end;
+
+procedure LCLGtkLayoutClassInit(klass: PGTypeClass; {%H-}data: Pointer); cdecl;
+var
+  W: PGtkWidgetClass;
+begin
+  W := PGtkWidgetClass(klass);
+  W^.map := @LCLGtkLayoutMap;
+end;
+
+procedure LCLGtkLayoutInstanceInit({%H-}instance: PGTypeInstance;
+  {%H-}klass: PGTypeClass); cdecl;
+begin
+end;
+
+var
+  LCLGtkLayoutType: TGType = 0;
+
+function LCLGtkLayoutGetType: TGType;
+var
+  Query: TGTypeQuery;
+  Info: TGTypeInfo;
+  ParentType: TGType;
+begin
+  if LCLGtkLayoutType = 0 then
+  begin
+    ParentType := gtk_layout_get_type;
+    g_type_query(ParentType, @Query);
+    FillChar(Info{%H-}, SizeOf(Info), 0);
+    Info.class_size := guint16(Query.class_size);
+    Info.class_init := @LCLGtkLayoutClassInit;
+    Info.instance_size := guint16(Query.instance_size);
+    Info.instance_init := @LCLGtkLayoutInstanceInit;
+    LCLGtkLayoutType := g_type_register_static(ParentType,
+      'LCLGtkLayout', @Info, G_TYPE_FLAG_NONE);
+  end;
+  Result := LCLGtkLayoutType;
+end;
+
+function LCLGtkLayoutNew: PGtkLayout;
+begin
+  Result := PGtkLayout(g_object_newv(LCLGtkLayoutGetType, 0, nil));
 end;

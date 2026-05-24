@@ -951,7 +951,7 @@ begin
     width := ARect.Right - ARect.Left;
     height := ARect.Bottom - ARect.Top;
   end;
-  Result := cairo_region_contains_rectangle(FHandle, @ACairoRect) <> CAIRO_REGION_OVERLAP_IN;
+  Result := cairo_region_contains_rectangle(FHandle, @ACairoRect) <> CAIRO_REGION_OVERLAP_OUT;
 end;
 
 function TGtk3Region.ContainsPoint(APoint: TPoint): Boolean;
@@ -1201,6 +1201,8 @@ begin
   fContext:=ACtx;
   if not Assigned(fContext) then exit(nil);
   Result := fContext.CurrentFont;
+  if (Result <> nil) and (Result <> Self) then
+    Result.fContext := nil;
   fContext.CurrentFont:= Self;
 end;
 
@@ -1395,6 +1397,11 @@ begin
   fContext:=ACtx;
   if not Assigned(ACtx) then exit(nil);
   Result := fContext.CurrentImage;
+  if (Result <> nil) and (Result <> Self) then
+  begin
+    TGtk3Image(Result).UpdatePixbufFromSurface;
+    TGtk3Image(Result).fContext := nil;
+  end;
   fContext.SetImage(Self);
 end;
 
@@ -1535,6 +1542,8 @@ begin
   fContext:=ACtx;
   if not Assigned(fContext) then exit(nil);
   Result := FContext.CurrentPen;
+  if (Result <> nil) and (Result <> Self) then
+    Result.fContext := nil;
   fContext.CurrentPen := Self;
   Self.SetColor(fColor); // update Cairo
 end;
@@ -1615,6 +1624,8 @@ begin
   fContext:=ACtx;
   if not Assigned(fContext) then exit(nil);
   Result := fContext.CurrentBrush;
+  if (Result <> nil) and (Result <> Self) then
+    Result.fContext := nil;
   Self.UpdatePattern(ColorToRGB(FColor));
   fContext.CurrentBrush := Self;
 end;
@@ -1855,6 +1866,7 @@ var
   R: TGdkRectangle;
   TempCairo: Pcairo_t;
   BackMatrix: Tcairo_matrix_t;
+  asx, asy: Double;
 begin
   if xorSurface <> nil  then
     raise Exception.Create('TGtk3DeviceContext: xorSurface <> nil !');
@@ -1880,7 +1892,11 @@ begin
     gdk_cairo_get_clip_rectangle(FCairo, @R);
     if (R.width > 0) and (R.height > 0) then
     begin
-      FXorSnapshot := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, R.width, R.height);
+      asx := 1;
+      asy := 1;
+      cairo_surface_get_device_scale(cairo_get_target(FCairo), @asx, @asy);
+      FXorSnapshot := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, Round(R.width*asx), Round(R.height*asy));
+      cairo_surface_set_device_scale(FXorSnapshot, asx, asy);
       TempCairo := cairo_create(FXorSnapshot);
       cairo_set_source_surface(TempCairo, cairo_get_target(FCairo), -R.x-Self.fncOrigin.X, -R.y-Self.fncOrigin.Y);
       cairo_set_operator(TempCairo, CAIRO_OPERATOR_SOURCE);
@@ -1892,7 +1908,11 @@ begin
 
   gdk_cairo_get_clip_rectangle(FCairo, @R);
 
-  xorSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, R.width, R.height);
+  asx := 1;
+  asy := 1;
+  cairo_surface_get_device_scale(cairo_get_target(FCairo), @asx, @asy);
+  xorSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, Round(R.width*asx), Round(R.height*asy));
+  cairo_surface_set_device_scale(xorSurface, asx, asy);
   FXorCairo := cairo_create(xorSurface);
 
   cairo_translate(FXorCairo, -R.x, -R.y);
@@ -1915,6 +1935,7 @@ var
   X, Y, SrcOff, DstOff: Integer;
   TempCairo: Pcairo_t;
   IsNotXor: Boolean;
+  asx, asy: Double;
 begin
   cairo_surface_flush(xorSurface);
   gdk_cairo_get_clip_rectangle(FCairo, @R);
@@ -1932,6 +1953,12 @@ begin
   TargetSurface := cairo_get_target(FCairo);
 
   TempSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, SrcW, SrcH);
+
+  asx := 1;
+  asy := 1;
+
+  cairo_surface_get_device_scale(xorSurface, @asx, @asy);
+  cairo_surface_set_device_scale(TempSurface, asx, asy);
   TempCairo := cairo_create(TempSurface);
   if FOwnsSurface then
   begin
@@ -4185,7 +4212,7 @@ end;
 
 function TGtk3DeviceContext.SetClipRegion(ARgn: TGtk3Region): Integer;
 begin
-  Result := SimpleRegion;
+  Result := NullRegion;
   if Assigned(pcr) then
   begin
     cairo_reset_clip(pcr);
@@ -4194,6 +4221,13 @@ begin
     if FClipRegion <> nil then
       cairo_region_destroy(FClipRegion);
     FClipRegion := cairo_region_copy(ARgn.FHandle);
+    if (FClipRegion = nil) or cairo_region_is_empty(FClipRegion) then
+      Result := NullRegion
+    else
+    if cairo_region_num_rectangles(FClipRegion) > 1 then
+      Result := ComplexRegion
+    else
+      Result := SimpleRegion;
   end;
 end;
 
@@ -4287,7 +4321,7 @@ procedure TGtk3DeviceContext.Save;
 var
   SavedState: PGtk3DCSavedState;
 begin
-  cairo_save(pcr);
+  cairo_save(FCairo);
   //Push current FClipRegion so Restore can bring it back
   if FClipRegion <> nil then
     FClipStack.Add(cairo_region_copy(FClipRegion))
@@ -4337,7 +4371,7 @@ var
   SavedState: PGtk3DCSavedState;
 begin
   dec(FDCSaveCounter);
-  cairo_restore(pcr);
+  cairo_restore(FCairo);
   if FDCSaveCounter < 0 then
     DebugLn('WARNING: TGtk3DeviceContext: Cairo restore called without save.');
   //Pop saved WindowOrg, pushed in Save

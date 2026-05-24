@@ -381,12 +381,12 @@ endif
 ifndef INSTALL_MAN_DIR
 INSTALL_MAN_DIR=$(INSTALL_PREFIX)/share/man
 endif
-ifneq ($(findstring $(OS_TARGET),win32 win64),)
+ifneq ($(findstring $(OS_SOURCE),win32 win64),)
 IDEVERSION=$(shell .\tools\install\get_lazarus_version.bat)
-LAZBUILDNAME=.\lazbuild
+LAZBUILDEXE=lazbuild.exe
 else
 IDEVERSION=$(shell ./tools/install/get_lazarus_version.sh)
-LAZBUILDNAME=./lazbuild
+LAZBUILDEXE=./lazbuild$(SRCEXEEXT)
 endif
 LAZBUILDOPTS=--lazarusdir=.
 ifdef PP
@@ -3216,11 +3216,11 @@ tools:
 	$(MAKE) -C lcl LCL_PLATFORM=nogui
 	$(MAKE) -C tools
 idemin:
-	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
+	$(LAZBUILDEXE) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
 idebig:
-	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-release --pkg-release
+	$(LAZBUILDEXE) $(LAZBUILDOPTS) --build-ide-release --pkg-release
 useride:
-	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide --pkg-release
+	$(LAZBUILDEXE) $(LAZBUILDOPTS) --build-ide --pkg-release
 ide:
 	$(MAKE) -C ide ide
 starter:

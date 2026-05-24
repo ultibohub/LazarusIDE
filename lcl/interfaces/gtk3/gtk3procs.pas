@@ -433,8 +433,16 @@ function GtkModifierStateToShiftState(AState: TGdkModifierType;
  pass nil to query against the default root window.}
 function Gtk3IsPointerButtonDown(AWidget: PGtkWidget): Boolean;
 
+procedure Gtk3IMCommitCB({%H-}context: PGtkIMContext; str: Pgchar; data: gpointer); cdecl;
+
 implementation
 uses LCLProc, gtk3objects, gtk3widgets, gtk3int, LazLogger, Math;
+
+procedure Gtk3IMCommitCB({%H-}context: PGtkIMContext; str: Pgchar; data: gpointer); cdecl;
+begin
+  if data <> nil then
+    TGtk3WidgetSet(data).IMCommitStr := str;
+end;
 
 function PANGO_PIXELS(d:integer):integer;
 begin
@@ -1255,6 +1263,14 @@ begin
     GDK_KEY_Control_L, GDK_KEY_Control_R: Result := VK_CONTROL;
     GDK_KEY_F1 .. GDK_KEY_F30:
       Result:= VK_F1 + (AValue - GDK_KEY_F1);
+    GDK_KEY_KP_Add, GDK_KEY_plus:
+      Result := VK_ADD;
+    GDK_KEY_KP_Subtract, GDK_KEY_minus:
+      Result := VK_SUBTRACT;
+    GDK_KEY_KP_Multiply, GDK_KEY_multiply:
+      Result := VK_MULTIPLY;
+    GDK_KEY_division, GDK_KEY_KP_Divide:
+      Result := VK_DIVIDE;
   end;
 end;
 

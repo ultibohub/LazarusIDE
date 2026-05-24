@@ -42,13 +42,12 @@ ifndef INSTALL_MAN_DIR
 INSTALL_MAN_DIR=$(INSTALL_PREFIX)/share/man
 endif
 
-ifneq ($(findstring $(OS_TARGET),win32 win64),)
+ifneq ($(findstring $(OS_SOURCE),win32 win64),)
 IDEVERSION=$(shell .\tools\install\get_lazarus_version.bat)
-# Windows reports ./lazbuild as an error
-LAZBUILDNAME=.\lazbuild
+LAZBUILDEXE=lazbuild.exe
 else
 IDEVERSION=$(shell ./tools/install/get_lazarus_version.sh)
-LAZBUILDNAME=./lazbuild
+LAZBUILDEXE=./lazbuild$(SRCEXEEXT)
 endif
 
 LAZBUILDOPTS=--lazarusdir=.
@@ -182,19 +181,19 @@ tools:
 # calls lazbuild to build lazarus exe with minimum of packages for the LCL_PLATFORM
 # requires lazbuild
 idemin:
-	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
+	$(LAZBUILDEXE) $(LAZBUILDOPTS) --build-ide-minimal --pkg-release
 
 #-----------------------------------------------------------------------------
 # calls lazbuild to build lazarus exe with bigide packages for the LCL_PLATFORM
 # requires lazbuild
 idebig:
-	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide-release --pkg-release
+	$(LAZBUILDEXE) $(LAZBUILDOPTS) --build-ide-release --pkg-release
 
 #-----------------------------------------------------------------------------
 # calls lazbuild to build lazarus and packages with user's settings
 # requires lazbuild
 useride:
-	$(LAZBUILDNAME)$(SRCEXEEXT) $(LAZBUILDOPTS) --build-ide --pkg-release
+	$(LAZBUILDEXE) $(LAZBUILDOPTS) --build-ide --pkg-release
 
 #-----------------------------------------------------------------------------
 # For legacy IDE, which calls "make ide" to rebuild itself (and not packages)

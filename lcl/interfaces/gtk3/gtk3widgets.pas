@@ -1000,6 +1000,7 @@ type
     class function ButtonMouseEvent(aWidget: PGtkWidget; aEvent: PGdkEvent;
       aData: gpointer): gboolean; cdecl; static;
   protected
+    function GetDefaultTextJustification: TGtkJustification; virtual;
     procedure SetImage(AImage:TBitmap);
     function getText: String; override;
     procedure setText(const AValue: String); override;
@@ -1036,6 +1037,7 @@ type
     function GetState: TCheckBoxState;
     procedure SetState(AValue: TCheckBoxState);
   protected
+    function GetDefaultTextJustification: TGtkJustification; override;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
     procedure SetBounds(ALeft,ATop,AWidth,AHeight:integer); override;
@@ -1115,6 +1117,9 @@ type
     ShadowW: gint;
     ShadowH: gint;
     WaylandChromeApplied: Boolean;
+    HaveLastMove: Boolean;
+    LastMoveX: gint;
+    LastMoveY: gint;
   end;
 
   { TGtk3Window }
@@ -2209,7 +2214,16 @@ begin
   {$ENDIF}
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
   if Event^.focus_change.in_ <> 0 then
-    Msg.Msg := LM_SETFOCUS
+  begin
+    Msg.Msg := LM_SETFOCUS;
+    if (Gtk3WidgetSet.IMContext <> nil) and
+       not Gtk3IsEntry(PGObject(Sender)) and
+       not Gtk3IsTextView(PGObject(Sender)) then
+    begin
+      gtk_im_context_set_client_window(Gtk3WidgetSet.IMContext, Sender^.get_window);
+      gtk_im_context_focus_in(Gtk3WidgetSet.IMContext);
+    end;
+  end
   else
   begin
     if Sender^.get_toplevel^.is_toplevel then
@@ -2220,6 +2234,13 @@ begin
         Exit;
     end;
     Msg.Msg := LM_KILLFOCUS;
+    if (Gtk3WidgetSet.IMContext <> nil) and
+       not Gtk3IsEntry(PGObject(Sender)) and
+       not Gtk3IsTextView(PGObject(Sender)) then
+    begin
+      gtk_im_context_focus_out(Gtk3WidgetSet.IMContext);
+      gtk_im_context_set_client_window(Gtk3WidgetSet.IMContext, nil);
+    end;
   end;
 
   if HasCaret then
@@ -2364,6 +2385,15 @@ begin
   AEvent := Event^.key;
   FillChar(Msg{%H-}, SizeOf(Msg), 0);
   AEventString := AEvent.string_;
+  if AKeyPress and (Gtk3WidgetSet.IMContext <> nil) and
+     not Gtk3IsEntry(PGObject(Sender)) and
+     not Gtk3IsTextView(PGObject(Sender)) then
+  begin
+    Gtk3WidgetSet.IMCommitStr := '';
+    gtk_im_context_filter_keypress(Gtk3WidgetSet.IMContext, PGdkEventKey(Event));
+    if Gtk3WidgetSet.IMCommitStr <> '' then
+      AEventString := Gtk3WidgetSet.IMCommitStr;
+  end;
 
   TempWidget := HwndFromGtkWidget(Sender);
   {$IFDEF GTK3DEBUGKEYPRESS}
@@ -4147,7 +4177,7 @@ begin
   begin
     wtype:=prnt.getType; // parent widget type
     if (wtype<>gtk_fixed_get_type()) and
-       (wtype<>gtk_layout_get_type()) then
+       not Gtk3IsLayout(PGObject(prnt.GetContainerWidget)) then
     begin
       // widget is not on a normal client area. e.g. TPage
       Apoint.X:=0;
@@ -4245,17 +4275,39 @@ begin
     end else
     if (wtLayout in AParent.WidgetType) then
     begin
-      aWindow := PGtkLayout(AParent.GetContainerWidget)^.get_bin_window;
-      if Gtk3IsGdkWindow(aWindow) then
-        aWindow^.get_position(@XOffset, @YOffset);
-      GtkLeft := ALeft - XOffset;
-      GtkTop := ATop - YOffset;
-      //Compare actual GTK coordinates so scroll-offset changes are not missed.
-      if (GtkLeft = LCLLeft) and (GtkTop = LCLTop) then
-        Exit;
-      LCLLeft := GtkLeft;
-      LCLTop := GtkTop;
-      PGtkLayout(AParent.GetContainerWidget)^.move(FWidget, GtkLeft, GtkTop);
+      if Assigned(AParent.LCLObject) and
+         (AParent.LCLObject is TCustomForm) and
+         TCustomForm(AParent.LCLObject).AutoScroll then
+      begin
+        GtkLeft := ALeft;
+        GtkTop := ATop;
+
+        if (GtkLeft = LCLLeft) and (GtkTop = LCLTop) then
+          exit;
+
+        LCLLeft := GtkLeft;
+        LCLTop := GtkTop;
+
+        PGtkLayout(AParent.GetContainerWidget)^.move(FWidget, GtkLeft, GtkTop);
+      end else
+      begin
+        aWindow := PGtkLayout(AParent.GetContainerWidget)^.get_bin_window;
+
+        if Gtk3IsGdkWindow(aWindow) then
+          aWindow^.get_position(@XOffset, @YOffset);
+
+        GtkLeft := ALeft - XOffset;
+        GtkTop := ATop - YOffset;
+
+        //Compare actual GTK coordinates so scroll-offset changes are not missed.
+        if (GtkLeft = LCLLeft) and (GtkTop = LCLTop) then
+          exit;
+
+        LCLLeft := GtkLeft;
+        LCLTop := GtkTop;
+
+        PGtkLayout(AParent.GetContainerWidget)^.move(FWidget, GtkLeft, GtkTop);
+      end;
     end;
   end;
 end;
@@ -5048,7 +5100,7 @@ begin
   FBorderStyle := bsNone;
 
   FWidgetType := [wtWidget, wtLayout, wtPanel];
-  Result := TGtkLayout.new(nil, nil);
+  Result := PGtkWidget(LCLGtkLayoutNew);
   Result^.set_has_window(True);
   // as GtkFixed have no child control here - nobody triggers resizing
   // GNOME takes care of it, but other WM - not
@@ -5179,7 +5231,7 @@ begin
   FGroupBoxType := gbtGroupBox;
   FWidgetType := [wtWidget, wtLayout, wtGroupBox];
   Result := LCLGtkFrameNew;
-  FCentralWidget := TGtkLayout.new(nil, nil);
+  FCentralWidget := PGtkWidget(LCLGtkLayoutNew);
   PGtkBin(Result)^.add(FCentralWidget);
   FCentralWidget^.set_has_window(True);
   //PGtkFrame(result)^.set_label_align(0.1,0.5);
@@ -7919,7 +7971,7 @@ begin
 
   Result := TGtkBox.new(GTK_ORIENTATION_HORIZONTAL, 0);
   Result^.ref;
-  FCentralWidget := TGtkLayout.new(nil, nil);
+  FCentralWidget := PGtkWidget(LCLGtkLayoutNew);
   FCentralWidget^.set_app_paintable(True);
   PGtkBox(Result)^.pack_start(FCentralWidget, True, True, 0);
   FCentralWidget^.set_has_window(True);
@@ -8717,6 +8769,9 @@ begin
       Result := RectFromGtkAllocation(AAlloc);
       Types.OffsetRect(Result, -Result.Left, -Result.Top);
       Self.DefaultClientRect := Result;
+      {$IFDEF GTK3DEBUGSIZE}
+      writeln(Format('TGtk3Notebook.getClientRect page=%d/%d pageAllocWxH %dx%d -> ClientRect %s',[ACurrentPage, PGtkNoteBook(GetContainerWidget)^.get_n_pages, AAlloc.width, AAlloc.height, dbgs(Result)]));
+      {$ENDIF}
       {$IFDEF GTK3DEBUGLAYOUT}
       writeln('TGtk3Notebook.GetClientRect(3): Result=',dbgs(Result));
       {$ENDIF}
@@ -9588,7 +9643,6 @@ begin
       [GetTickCount64, dbgsName(ACtl.LCLObject), AGdkRect^.height, vadj^.upper, vadj^.page_size,
        VSize, uHeight, BoolToStr(ViewportChanged, True), HSize, uWidth]));
   {$ENDIF}
-
   if (uWidth <> HSize) or (uHeight <> VSize) then
     PGtkLayout(aWidget)^.set_size(HSize, VSize);
 
@@ -9848,6 +9902,8 @@ var
   APressed, AMouseOver: boolean;
   Adjustment: PGtkAdjustment;
   AAtGTKMax: Boolean;
+  ASBAlloc: TGtkAllocation;
+  AScrollBar: PGtkWidget;
 begin
   Control := TGtk3ScrollableWin(data);
   {$IFDEF GTK3DEBUGSCROLL}
@@ -9929,6 +9985,18 @@ begin
           ', Delta=', Delta:0:2, ', InUpdate=', Control.InUpdate, ' releasing lock ...');
   {$ENDIF}
   Control.EndUpdate;
+  if (wtWindow in Control.WidgetType) and
+     Assigned(Control.LCLObject) and
+     (Control.LCLObject is TCustomForm) and
+     TCustomForm(Control.LCLObject).AutoScroll then
+  begin
+    AScrollBar := PGtkWidget(range);
+    if AScrollBar^.get_realized and AScrollBar^.get_mapped then
+    begin
+      AScrollBar^.get_allocation(@ASBAlloc);
+      AScrollBar^.size_allocate(@ASBAlloc);
+    end;
+  end;
 end;
 
 procedure TGtk3ScrollableWin.SetColor(AValue: TColor);
@@ -10346,12 +10414,15 @@ procedure TGtk3Memo.setSelStart(AValue: Integer);
 var
   AIter: TGtkTextIter;
   ATextView: PGtkTextView;
+  ATextMark: PGtkTextMark;
 begin
   if not IsWidgetOk then
     exit;
   ATextView := PGtkTextView(GetContainerWidget);
   gtk_text_buffer_get_iter_at_offset(ATextView^.get_buffer, @AIter, AValue);
   gtk_text_buffer_place_cursor(ATextView^.get_buffer, @AIter);
+  ATextMark := gtk_text_buffer_get_insert(ATextView^.get_buffer);
+  gtk_text_view_scroll_to_mark(ATextView, ATextMark, 0, True, 0, 1);
 end;
 
 procedure TGtk3Memo.setSelLength(AValue: Integer);
@@ -12855,8 +12926,10 @@ procedure TGtk3Button.setText(const AValue: String);
   begin
     if not Gtk3IsWidget(AWidget) then
       Exit;
+
     if Gtk3WidgetIsA(AWidget, gtk_label_get_type) then
-      PGtkLabel(AWidget)^.set_justify(GTK_JUSTIFY_CENTER);
+      PGtkLabel(AWidget)^.set_justify(GetDefaultTextJustification);
+
     if Gtk3WidgetIsA(AWidget, gtk_container_get_type) then
     begin
       AChildList := PGtkContainer(AWidget)^.get_children;
@@ -12909,6 +12982,11 @@ end;
 class function TGtk3Button.ButtonMouseEvent(aWidget: PGtkWidget; aEvent: PGdkEvent; aData: gpointer): gboolean; cdecl;
 begin
   Result := TGtk3Widget(aData).GtkEventMouse(aWidget, aEvent);
+end;
+
+function TGtk3Button.GetDefaultTextJustification: TGtkJustification;
+begin
+  Result := GTK_JUSTIFY_CENTER;
 end;
 
 function ButtonMotionNotifyEvent(widget: PGtkWidget; event: PGdkEvent; user_data: gpointer): gboolean; cdecl;
@@ -13066,6 +13144,11 @@ begin
   end;
 end;
 
+function TGtk3CheckBox.GetDefaultTextJustification: TGtkJustification;
+begin
+  Result := GTK_JUSTIFY_LEFT;
+end;
+
 function TGtk3CheckBox.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   check: PGtkCheckButton;
@@ -13173,7 +13256,7 @@ begin
   // calls size_allocate(width,0).
   Result := PGtkScrolledWindow(LCLGtkScrolledWindowNew);
 
-  FCentralWidget := TGtkLayout.new(nil, nil);
+  FCentralWidget := PGtkWidget(LCLGtkLayoutNew);
 
   PGtkScrolledWindow(Result)^.add(FCentralWidget);
 
@@ -14310,12 +14393,25 @@ begin
     begin
       MoveMsg.XPos := SmallInt(AEvent^.x);
       MoveMsg.YPos := SmallInt(AEvent^.y);
-    end
-    else begin // #42039
+    end else
+    begin // #42039
       gtk_window_get_position(aWidget, @X, @Y);
       MoveMsg.XPos := SmallInt(X);
       MoveMsg.YPos := SmallInt(Y);
     end;
+
+    with TGtk3Window(aData).FResizeState do
+    begin
+      if HaveLastMove and (LastMoveX = MoveMsg.XPos) and (LastMoveY = MoveMsg.YPos) then
+      begin
+        Result := gtk_false;
+        exit;
+      end;
+      HaveLastMove := True;
+      LastMoveX := MoveMsg.XPos;
+      LastMoveY := MoveMsg.YPos;
+    end;
+
     Result := TGtk3Window(aData).DeliverMessage(MoveMsg) <> 0;
   end else
     Result := gtk_false;
@@ -14633,7 +14729,7 @@ begin
   g_object_set_data(FScrollWin,'lclscrollingwindow',GPointer(1));
   g_object_set_data(PGObject(FScrollWin), 'lclwidget', Self);
 
-  FCentralWidget := TGtkLayout.new(nil, nil);
+  FCentralWidget := PGtkWidget(LCLGtkLayoutNew);
   FScrollWin^.add(FCentralWidget);
   FScrollWin^.show;
   FBox^.pack_end(FScrollWin, True, True, 0);

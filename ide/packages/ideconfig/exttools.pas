@@ -278,8 +278,6 @@ begin
   if ErrorMessage<>'' then
     DebuglnThreadLog(['TExternalTool.ThreadStopped ',Title,' ErrorMessage=',ErrorMessage]);
   {$ENDIF}
-  if Thread<>nil then
-    Thread.Tool:=nil;
   EnterCriticalSection;
   try
     if (not Terminated) and (ErrorMessage='') then
@@ -1351,6 +1349,8 @@ begin
   try
     if fRunning.Count>0 then
       raise Exception.Create('TExternalTools.Destroy some tools still running');
+    if fOldThreads.Count>0 then
+      raise Exception.Create('TExternalTools.Destroy some threads were not freed');
     inherited Destroy;
     FreeAndNil(fRunning);
     FreeAndNil(fParsers);

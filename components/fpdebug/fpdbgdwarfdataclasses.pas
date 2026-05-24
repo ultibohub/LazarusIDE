@@ -635,7 +635,6 @@ type
                                     AInfo: PDwarfAddressInfo; AAddress: TDbgPtr; ADbgInfo: TFpDwarfInfo): TDbgDwarfSymbolBase; virtual; abstract;
     function CreateUnitSymbol(ACompilationUnit: TDwarfCompilationUnit;
                                     AInfoEntry: TDwarfInformationEntry; ADbgInfo: TFpDwarfInfo): TDbgDwarfSymbolBase; virtual; abstract;
-    procedure UpdateFpcVersion(ADwarfInfo: TFpDwarfInfo); virtual;
   end;
   TFpSymbolDwarfClassMapClass = class of TFpSymbolDwarfClassMap;
 
@@ -876,7 +875,6 @@ type
     FLineNumberMapDone: Boolean;
     FImageBase: QWord;
     FRelocationOffset: QWord;
-    FFpcCompilerVersion: Cardinal;
     function GetCompilationUnit(AIndex: Integer): TDwarfCompilationUnit; inline;
   protected
     function GetCompilationUnitClass: TDwarfCompilationUnitClass; virtual;
@@ -907,7 +905,6 @@ type
     property ImageBase: QWord read FImageBase;
     property RelocationOffset: QWord read FRelocationOffset;
     property WorkQueue: TFpGlobalThreadWorkerQueue read FWorkQueue;
-    property FpcCompilerVersion: Cardinal read FFpcCompilerVersion write FFpcCompilerVersion;
   end;
 
   TDwarfLocationExpression = class;
@@ -1192,11 +1189,6 @@ end;
 function TFpSymbolDwarfClassMap.IgnoreCfiStackEnd: boolean;
 begin
   Result := False;
-end;
-
-procedure TFpSymbolDwarfClassMap.UpdateFpcVersion(ADwarfInfo: TFpDwarfInfo);
-begin
-  //
 end;
 
 constructor TFpSymbolDwarfClassMap.Create(ACU: TDwarfCompilationUnit;
@@ -4584,7 +4576,6 @@ var
   var
     p: Pointer;
     Instructions: TDwarfCallFrameInformationInstructions;
-    BadFpcVersion: Boolean;
   begin
     if Version > 5 then
       DebugLn(FPDBG_DWARF_WARNINGS, ['Unsupported DWARF CFI version (' +IntToStr(Version)+ '). Only versions 1-5 are supported.']);
@@ -4592,9 +4583,7 @@ var
     Result := TDwarfCIE.Create(Version, String(Augmentation));
     p := Augmentation;
     Inc(p, Length(Result.Augmentation)+1);
-    BadFpcVersion := (FpcCompilerVersion <> 0) and
-      (PByte(p)[0] = 1) and (PByte(p)[1] = 124);  // fpc writes ULeb(1) / SLeb(-4)
-    if (Version > 3) and (not BadFpcVersion) then
+    if Version > 3 then
       begin
       Result.AddressSize := PByte(p)^;
       Inc(p);
@@ -4613,7 +4602,7 @@ var
       end;
     Result.CodeAlignmentFactor := ULEB128toOrdinal(p);
     Result.DataAlignmentFactor := SLEB128toOrdinal(p);
-    if (Version < 3) or BadFpcVersion then
+    if Version < 3 then
       begin
       Result.ReturnAddressRegister := PByte(p)^;
       Inc(p);
@@ -5655,6 +5644,9 @@ end;
 
 constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwarfDebugFile; ADataOffset: QWord; ALength: QWord; AVersion: Word; AAbbrevOffset: QWord; AAddressSize: Byte; AIsDwarf64: Boolean);
   procedure FillLineInfo(AData: Pointer);
+  var
+    Version: Word;
+
     function CheckOldFpc322: boolean;
     var
       s: String;
@@ -5728,7 +5720,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
             debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList unknown content type: ', FileDirFormatEncoding[i].ContentType]);
             exit;
           end;
-          if not SkipEntryDataForForm(AData, FileDirFormatEncoding[i].Form, FLineInfo.AddrSize, FIsDwarf64, FVersion) then begin
+          if not SkipEntryDataForForm(AData, FileDirFormatEncoding[i].Form, FLineInfo.AddrSize, FIsDwarf64, Version) then begin
             debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadDirectoryList failed skip: ', FileDirFormatEncoding[i].Form]);
             exit;
           end;
@@ -5792,7 +5784,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
             debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList unknown content type: ', FileDirFormatEncoding[i].ContentType]);
             exit;
           end;
-          if not SkipEntryDataForForm(AData, FileDirFormatEncoding[i].Form, FLineInfo.AddrSize, FIsDwarf64, FVersion) then begin
+          if not SkipEntryDataForForm(AData, FileDirFormatEncoding[i].Form, FLineInfo.AddrSize, FIsDwarf64, Version) then begin
             debugln(FPDBG_DWARF_ERRORS or FPDBG_DWARF_VERBOSE, ['ReadFileList failed skip: ', FileDirFormatEncoding[i].Form]);
             exit;
           end;
@@ -5826,7 +5818,6 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
     Info: PDwarfLNPInfoHeader;
 
     UnitLength: QWord;
-    Version: Word;
     HeaderLength: QWord;
     Name: PChar;
     diridx: Cardinal;
@@ -5840,12 +5831,12 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
 
     if LNP64^.Signature = DWARF_HEADER64_SIGNATURE
     then begin
-      if FVersion < 3 then
-        DebugLn(FPDBG_DWARF_WARNINGS, ['Unexpected 64 bit signature found for DWARF version 2']); // or version 1...
       UnitLength := LNP64^.UnitLength;
       FLineInfo.DataEnd := Pointer(@LNP64^.Version) + UnitLength;
       Version := LNP64^.Version;
-      if FVersion < 5 then begin
+      if Version < 3 then
+        DebugLn(FPDBG_DWARF_WARNINGS, ['Unexpected 64 bit signature found for DWARF version 2']); // or version 1...
+      if Version < 5 then begin
         HeaderLength := LNP64^.HeaderLength;
         Info := @LNP64^.Info;
       end
@@ -5859,7 +5850,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
       UnitLength := LNP32^.UnitLength;
       FLineInfo.DataEnd := Pointer(@LNP32^.Version) + UnitLength;
       Version := LNP32^.Version;
-      if FVersion < 5 then begin
+      if Version < 5 then begin
         HeaderLength := LNP32^.HeaderLength;
         Info := @LNP32^.Info;
       end
@@ -5882,7 +5873,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
       (* Version 4 up, has an extra field => adjust the pointer
          Except for older FPC, which erroneously did not add the field
       *)
-      if (FVersion <> 4) or not CheckOldFpc322 then begin
+      if (Version <> 4) or not CheckOldFpc322 then begin
         inc(PByte(Info)); // All fields move by 1 byte // Dwarf-4 has a new field
         FLineInfo.MaximumInstructionLength := Info^.MinimumInstructionLength;
       end;
@@ -5901,7 +5892,7 @@ constructor TDwarfCompilationUnit.Create(AOwner: TFpDwarfInfo; ADebugFile: PDwar
 
     Name := PChar(@Info^.StandardOpcodeLengths);
     Inc(Name, Info^.OpcodeBase-1);
-    if FVersion < 5 then begin
+    if Version < 5 then begin
       FLineInfo.Directories.Add(''); // current dir
 
       // directories
@@ -6012,7 +6003,6 @@ begin
 
   if not FAbbrevList.Valid then begin
     FDwarfSymbolClassMap := DwarfSymbolClassMapList.FDefaultMap.GetInstanceForCompUnit(Self);
-    FDwarfSymbolClassMap.UpdateFpcVersion(FOwner);
     exit;
   end;
 
@@ -6025,7 +6015,6 @@ begin
   if not Scope.IsValid then begin
     DebugLn(FPDBG_DWARF_WARNINGS, ['WARNING compilation unit has no compile_unit tag']);
     FDwarfSymbolClassMap := DwarfSymbolClassMapList.FDefaultMap.GetInstanceForCompUnit(Self);
-    FDwarfSymbolClassMap.UpdateFpcVersion(FOwner);
     Exit;
   end;
   FValid := True;
