@@ -197,6 +197,7 @@ type
 
     function DeliverMessage(var Msg; const AIsInputEvent: Boolean = False): LRESULT; virtual;
     function GtkEventKey(Sender: PGtkWidget; Event: PGdkEvent; AKeyPress: Boolean): Boolean; virtual; cdecl;
+    procedure DeliverIMCommit(const AStr: string);
     function GtkEventMouse(Sender: PGtkWidget; Event: PGdkEvent): Boolean; virtual; cdecl;
     function GtkEventMouseMove(Sender: PGtkWidget; Event: PGdkEvent): Boolean; virtual; cdecl;
     function GtkEventPaint(Sender: PGtkWidget; AContext: Pcairo_t): Boolean; virtual; cdecl;
@@ -2220,8 +2221,12 @@ begin
        not Gtk3IsEntry(PGObject(Sender)) and
        not Gtk3IsTextView(PGObject(Sender)) then
     begin
+      {$IFDEF GTK3DEBUGKEYPRESS}
+      writeln('GtkEventFocus IN ', dbgsName(LCLObject), ' clientWindow=', PtrUInt(Sender^.get_window), ' toplevelWindow=', PtrUInt(Sender^.get_toplevel^.get_window));
+      {$ENDIF}
       gtk_im_context_set_client_window(Gtk3WidgetSet.IMContext, Sender^.get_window);
       gtk_im_context_focus_in(Gtk3WidgetSet.IMContext);
+      Gtk3WidgetSet.IMTarget := Self;
     end;
   end
   else
@@ -2240,6 +2245,8 @@ begin
     begin
       gtk_im_context_focus_out(Gtk3WidgetSet.IMContext);
       gtk_im_context_set_client_window(Gtk3WidgetSet.IMContext, nil);
+      if Gtk3WidgetSet.IMTarget = Self then
+        Gtk3WidgetSet.IMTarget := nil;
     end;
   end;
 
@@ -2353,6 +2360,35 @@ begin
   Gtk3WidgetSet.FLCLCaptureWidget := GetContainerWidget;
 end;
 
+procedure TGtk3Widget.DeliverIMCommit(const AStr: string);
+var
+  UTF8Char: TUTF8Char;
+  CharMsg: TLMChar;
+begin
+  if (AStr = '') or not Assigned(LCLObject) then
+    exit;
+
+  {$IFDEF GTK3DEBUGKEYPRESS}
+  writeln('TGtk3Widget.DeliverIMCommit ', dbgsName(LCLObject), ' str="', AStr, '"');
+  {$ENDIF}
+
+  UTF8Char := AStr;
+  if LCLObject.IntfUTF8KeyPress(UTF8Char, 1, False) then
+    exit;
+
+  FillChar(CharMsg{%H-}, SizeOf(CharMsg), 0);
+  CharMsg.Msg := CN_CHAR;
+  CharMsg.CharCode := Word(AStr[1]);
+  NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
+
+  if DeliverMessage(CharMsg, True) <> 0 then
+    exit;
+
+  CharMsg.Msg := LM_CHAR;
+  NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
+  DeliverMessage(CharMsg, True);
+end;
+
 function TGtk3Widget.GtkEventKey(Sender: PGtkWidget; Event: PGdkEvent; AKeyPress: Boolean): Boolean;
   cdecl;
 const
@@ -2378,6 +2414,7 @@ var
   TempWidget: HWND;
   {$IFDEF GTK3DEBUGKEYPRESS}
   Info: PTypeInfo;
+  AFiltered: gboolean;
   {$ENDIF}
 begin
   //TODO: finish LCL messaging
@@ -2390,7 +2427,14 @@ begin
      not Gtk3IsTextView(PGObject(Sender)) then
   begin
     Gtk3WidgetSet.IMCommitStr := '';
+    Gtk3WidgetSet.IMInFilter := True;
+    {$IFDEF GTK3DEBUGKEYPRESS}
+    AFiltered := gtk_im_context_filter_keypress(Gtk3WidgetSet.IMContext, PGdkEventKey(Event));
+    writeln('GtkEventKey: filter_keypress=', Ord(AFiltered), ' commitStr="', Gtk3WidgetSet.IMCommitStr, '" keyval=', AEvent.keyval, ' widget=', dbgsName(LCLObject));
+    {$ELSE}
     gtk_im_context_filter_keypress(Gtk3WidgetSet.IMContext, PGdkEventKey(Event));
+    {$ENDIF}
+    Gtk3WidgetSet.IMInFilter := False;
     if Gtk3WidgetSet.IMCommitStr <> '' then
       AEventString := Gtk3WidgetSet.IMCommitStr;
   end;
@@ -5839,6 +5883,43 @@ begin
   PrivateSelection := -1;
 end;
 
+procedure Gtk3ClampEntryPadding(AEntryWidget: PGtkWidget);
+const
+  cMaxPad = 4;
+var
+  Provider: PGtkCssProvider;
+  Ctx: PGtkStyleContext;
+  Padding: TGtkBorder;
+  NewL, NewR: Integer;
+  CSS: AnsiString;
+begin
+  if AEntryWidget = nil then
+    exit;
+  Ctx := gtk_widget_get_style_context(AEntryWidget);
+  gtk_style_context_get_padding(Ctx, GTK_STATE_FLAG_NORMAL, @Padding);
+
+  if (Padding.left <= cMaxPad) and (Padding.right <= cMaxPad) then
+    exit;
+
+  if Padding.left > cMaxPad then
+    NewL := cMaxPad
+  else
+    NewL := Padding.left;
+
+  if Padding.right > cMaxPad then
+    NewR := cMaxPad
+  else
+    NewR := Padding.right;
+
+  CSS := Format('entry { padding-left:%dpx; padding-right:%dpx; }', [NewL, NewR]);
+
+  Provider := gtk_css_provider_new();
+  gtk_css_provider_load_from_data(Provider, PChar(CSS), -1, nil);
+  gtk_style_context_add_provider(Ctx,
+    PGtkStyleProvider(Provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  g_object_unref(Provider);
+end;
+
 procedure TGtk3Entry.InitializeWidget;
 begin
   inherited InitializeWidget;
@@ -5854,6 +5935,8 @@ begin
 
   Self.SetTextHint(TCustomEdit(Self.LCLObject).TextHint);
   Self.SetNumbersOnly(TCustomEdit(Self.LCLObject).NumbersOnly);
+
+  Gtk3ClampEntryPadding(Widget);
 
   g_signal_connect_data(Widget, 'changed', TGCallback(@EntryChanged), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(Widget, 'insert-text', TGCallback(@InsertText), Self, nil, G_CONNECT_DEFAULT);
@@ -6209,6 +6292,8 @@ begin
       TGCallback(@LCLSpinEditChildEnterLeave), Self, nil, G_CONNECT_DEFAULT);
     g_signal_connect_data(PGObject(Data^.Entry), 'leave-notify-event',
       TGCallback(@LCLSpinEditChildEnterLeave), Self, nil, G_CONNECT_DEFAULT);
+
+    Gtk3ClampEntryPadding(PGtkWidget(Data^.Entry));
   end;
 
   Widget^.set_size_request(fParams.Width, fParams.Height);
@@ -9603,6 +9688,8 @@ var
   uWidth, uHeight: guint;
   aCtl: TGtk3Widget;
   ViewportChanged, ClientRectMismatch: boolean;
+  ASW: PGtkScrolledWindow;
+  HPolicy, VPolicy: TGtkPolicyType;
 begin
 
   if not AWidget^.get_mapped then Exit;
@@ -9622,8 +9709,21 @@ begin
   vadj := PGtkScrollable(aWidget)^.get_vadjustment;
 
   aCtl := TGtk3Widget(Data);
-  HSize := Max(AGdkRect^.Width, Round(hAdj^.upper));
-  VSize := Max(AGdkRect^.Height, Round(vAdj^.upper));
+
+  HPolicy := GTK_POLICY_AUTOMATIC;
+  VPolicy := GTK_POLICY_AUTOMATIC;
+  ASW := PGtkScrolledWindow(AWidget^.get_parent);
+  if Gtk3IsScrolledWindow(ASW) then
+    gtk_scrolled_window_get_policy(ASW, @HPolicy, @VPolicy);
+  if HPolicy = GTK_POLICY_NEVER then
+    HSize := AGdkRect^.Width
+  else
+    HSize := Max(AGdkRect^.Width, Round(hAdj^.upper));
+
+  if VPolicy = GTK_POLICY_NEVER then
+    VSize := AGdkRect^.Height
+  else
+    VSize := Max(AGdkRect^.Height, Round(vAdj^.upper));
 
   PGtkLayout(aWidget)^.get_size(@uWidth, @uHeight);
 
@@ -12345,7 +12445,13 @@ begin
     with PGtkComboBox(Widget)^ do
     begin
       if has_entry then begin
-        {%H-}PGtkEntry(get_child)^.Text := Pgchar(AValue);
+        BeginUpdate;
+        try
+          {%H-}PGtkEntry(get_child)^.Text := Pgchar(AValue);
+          g_idle_remove_by_data(Self);
+        finally
+          EndUpdate;
+        end;
       end else begin
         //active_id := Pgchar(AValue); TODO: Wait until property becomes writeble
       end;
@@ -12659,6 +12765,8 @@ begin
     // not active, which clears the entry text via gtk_entry_set_text().
     g_signal_handlers_disconnect_matched(PGObject(PGtkComboBox(FWidget)^.get_child),
       [G_SIGNAL_MATCH_DATA], 0, 0, nil, nil, FWidget);
+
+    Gtk3ClampEntryPadding(PGtkComboBox(FWidget)^.get_child);
   end;
   if GetCellView <> nil then
   begin

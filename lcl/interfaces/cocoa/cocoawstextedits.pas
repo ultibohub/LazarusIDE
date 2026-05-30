@@ -191,11 +191,13 @@ begin
   end;
   SetTextFieldCell( TCustomEdit(AWinControl), field );
   Result:= TLCLHandle(field);
+  field.setDrawsBackground( True );
 end;
 
 class procedure TCocoaWSCustomEdit.SetColor(const AWinControl: TWinControl);
 var
   field : NSTextField;
+  backColor: NSColor;
 
   // maybe the bug of macOS, especially on macOS 26
   // changing the background color while editing may not work.
@@ -230,11 +232,18 @@ begin
   field := GetTextField(AWinControl);
   if not Assigned(field) then Exit;
 
-  if (AWinControl.Color = clDefault) or (AWinControl.Color = clWindow) or (AWinControl.Color = clBackground)  then
-    field.setBackgroundColor( NSColor.textBackgroundColor )
-  else
-    field.setBackgroundColor( TCocoaColorUtil.toColor(ColorToRGB(AWinControl.Color)));
-
+  case AWinControl.Color of
+    clNone:
+      backColor:= NSColor.clearColor;
+    clDefault,
+    clWindow,
+    clBackground:
+      backColor:= NSColor.textBackgroundColor;
+    else
+      backColor:= TCocoaColorUtil.toColor(AWinControl.Color);
+  end;
+  field.setBackgroundColor( backColor );
+  field.setDrawsBackground( AWinControl.Color <> clNone );
   ensureBackcolorApply;
 end;
 
@@ -782,7 +791,7 @@ begin
   if (AWinControl.Color = clDefault) or (AWinControl.Color = clWindow) or (AWinControl.Color = clBackground) then
     txt.setBackgroundColor( NSColor.textBackgroundColor )
   else
-    txt.setBackgroundColor( TCocoaColorUtil.toColor(ColorToRGB(AWinControl.Color)));
+    txt.setBackgroundColor( TCocoaColorUtil.toColor(AWinControl.Color));
 end;
 
 class procedure TCocoaWSCustomMemo.SetSelStart(const ACustomEdit: TCustomEdit;

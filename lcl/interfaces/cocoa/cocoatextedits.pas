@@ -638,7 +638,7 @@ begin
   end;
 
   if lclFont.Color <> clDefault then begin
-    cocoaColor:= TCocoaColorUtil.toColor(ColorToRGB(lclFont.Color));
+    cocoaColor:= TCocoaColorUtil.toColor(lclFont.Color);
     textField.setTextColor( cocoaColor );
   end;
 end;
@@ -722,6 +722,7 @@ begin
     bordered:= True;
   textField.setBordered( bordered );
   textField.setBezeled( bordered );
+  textField.setDrawsBackground( lclEdit.Color <> clNone );
 end;
 
 class procedure TCocoaTextControlUtil.setTextHint(
