@@ -50,6 +50,9 @@ var
   tooSmall: Boolean;
   Last1W, Last1H, Last2W, Last2H: PtrInt;
   PingCount: PtrInt;
+  StoredGen: PtrUInt;
+  TopLevel: PGtkWidget;
+  WinGen: PtrUInt;
 begin
   ParentClass := PGtkWidgetClass(g_type_class_peek_parent(widget^.g_type_instance.g_class));
   if not Assigned(ParentClass) or not Assigned(ParentClass^.size_allocate) then
@@ -60,6 +63,28 @@ begin
   Last2W := PtrInt(g_object_get_data(PGObject(widget), 'lcl-prev2-aw'));
   Last2H := PtrInt(g_object_get_data(PGObject(widget), 'lcl-prev2-ah'));
   PingCount := PtrInt(g_object_get_data(PGObject(widget), 'lcl-pingpong-cnt'));
+  StoredGen := PtrUInt(g_object_get_data(PGObject(widget), 'lcl-layout-gen'));
+
+  TopLevel := gtk_widget_get_toplevel(widget);
+  if gtk_widget_is_toplevel(TopLevel) then
+    WinGen := PtrUInt(g_object_get_data(PGObject(TopLevel), 'lcl-win-layout-gen'))
+  else
+    WinGen := 0;
+
+  if WinGen <> StoredGen then
+  begin
+    PingCount := 0;
+    Last1W := 0;
+    Last1H := 0;
+    Last2W := 0;
+    Last2H := 0;
+    g_object_set_data(PGObject(widget), 'lcl-pingpong-cnt', nil);
+    g_object_set_data(PGObject(widget), 'lcl-prev-aw',  nil);
+    g_object_set_data(PGObject(widget), 'lcl-prev-ah',  nil);
+    g_object_set_data(PGObject(widget), 'lcl-prev2-aw', nil);
+    g_object_set_data(PGObject(widget), 'lcl-prev2-ah', nil);
+    g_object_set_data(PGObject(widget), 'lcl-layout-gen', Pointer(PtrUInt(WinGen)));
+  end;
 
   if ((allocation^.width <> Last1W) or (allocation^.height <> Last1H)) and
      (allocation^.width = Last2W) and (allocation^.height = Last2H) and
@@ -115,12 +140,36 @@ begin
   ParentClass^.size_allocate(widget, allocation);
 end;
 
+procedure LCLGtkNotebookGetPreferredWidth(widget: PGtkWidget; min_width, nat_width: Pgint); cdecl;
+var
+  ParentClass: PGtkWidgetClass;
+  base_min, base_nat: gint;
+  {$IFDEF GTK3DEBUGSIZE}
+  ADbgWidget: TGtk3Widget;
+  {$ENDIF}
+begin
+  ParentClass := PGtkWidgetClass(g_type_class_peek_parent(widget^.g_type_instance.g_class));
+  base_min := 0;
+  base_nat := 0;
+  if Assigned(ParentClass) and Assigned(ParentClass^.get_preferred_width) then
+    ParentClass^.get_preferred_width(widget, @base_min, @base_nat);
+  {$IFDEF GTK3DEBUGSIZE}
+  ADbgWidget := TGtk3Widget(HwndFromGtkWidget(widget));
+  if Assigned(ADbgWidget) and Assigned(ADbgWidget.LCLObject) then
+    DebugLn(Format('LCLGtkNotebook.GetPreferredWidth %s base_min=%d base_nat=%d -> min=1 nat=%d',
+      [dbgsName(ADbgWidget.LCLObject), base_min, base_nat, base_nat]));
+  {$ENDIF}
+  min_width^ := 1;
+  nat_width^ := Max(base_nat, 1);
+end;
+
 procedure LCLGtkNotebookClassInit(klass: PGTypeClass; {%H-}data: Pointer); cdecl;
 var
   AWidgetClass: PGtkWidgetClass;
 begin
   AWidgetClass := PGtkWidgetClass(klass);
   AWidgetClass^.size_allocate := @LCLGtkNotebookSizeAllocate;
+  AWidgetClass^.get_preferred_width := @LCLGtkNotebookGetPreferredWidth;
   AWidgetClass^.get_preferred_height_for_width := @LCLGtkNotebookGetPreferredHeightForWidth;
   AWidgetClass^.get_preferred_width_for_height := @LCLGtkNotebookGetPreferredWidthForHeight;
 end;
