@@ -63,6 +63,7 @@ type
     function DbgThreadClass: TDbgThreadClass; override;
   public
     class function isSupported(ATargetInfo: TTargetDescriptor): boolean; override;
+    function CallParamDefaultLocation(AParamIdx: Integer): TFpDbgMemLocation; override;
   end;
 
 
@@ -356,6 +357,16 @@ begin
             (ATargetInfo.machineType in [mtARM64]);
 end;
 
+function TDbgLinuxAarch64Process.CallParamDefaultLocation(AParamIdx: Integer): TFpDbgMemLocation;
+begin
+  Result := InvalidLoc;
+  if (AParamIdx >= 0) and (AParamIdx <= 28) then
+  begin
+    Result.MType := mlfTargetRegister;
+    Result.Address := AParamIdx;
+  end;
+end;
+
 { TDbgAarch64StackUnwinder }
 
 constructor TDbgAarch64StackUnwinder.Create(AProcess: TDbgProcess);
@@ -399,21 +410,29 @@ function TDbgAarch64StackUnwinder.Unwind(AFrameIndex: integer; var CodePointer, 
   FrameBasePointer: TDBGPtr; ACurrentFrame: TDbgCallstackEntry; out ANewFrame: TDbgCallstackEntry
   ): TTDbgStackUnwindResult;
 var
-  R: TDbgRegisterValue;
+  OutSideFrame: Boolean;
+  X30: TDbgRegisterValue;
   NewLink, NewFrameBase: TDbgPtr;
 begin
   Result := suFailed;
   if StackPointer = 0 then
     exit;
 
-  //R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(30);
-  //if R = nil then
-  //  exit;
-  //
-  //CodePointer := R.NumValue;
-  //if CodePointer = 0 then
-  //  exit;
 
+  if FProcess.Disassembler.GetFunctionFrameInfo(CodePointer, OutSideFrame) and OutSideFrame then begin
+    // TODO, if we are half in...
+    X30 := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(30);
+    if X30 = nil then
+      exit;
+    CodePointer := X30.NumValue;
+
+    ANewFrame := TDbgCallstackEntry.Create(FThread, AFrameIndex, FrameBasePointer, CodePointer);
+    ANewFrame.RegisterValueList.Assign(ACurrentFrame.RegisterValueList);
+    ANewFrame.RegisterValueList.DbgRegisterAutoCreate['PC'].SetValue(CodePointer, IntToStr(CodePointer),8, 32);
+
+    Result := suSuccess;
+    exit;
+  end;
 
   if not FProcess.ReadData(FrameBasePointer + 8, 8, NewLink) then
     exit;
@@ -424,7 +443,6 @@ begin
 
   StackPointer := 0;
   if NewFrameBase <> 0 then
-    //StackPointer := NewFrameBase + 16;
     StackPointer := FrameBasePointer + 16;
 
   FrameBasePointer := NewFrameBase;
@@ -502,7 +520,8 @@ begin
     exit;
 
   FLastInstr.FIsReturnInstruction := CodeBin = $D65F03C0;
-  FLastInstr.FIsCallInstruction   := (CodeBin and $FC000000) = $94000000;
+  FLastInstr.FIsCallInstruction   := ((CodeBin and $FC000000) = $94000000)   // BL
+                                  or ((CodeBin and $FFFFFC1F) = $D63F0000);  // BLR
 end;
 
 function TAarch64AsmDecoder.GetFunctionFrameInfo(AnAddress: TDBGPtr; out AnIsOutsideFrame: Boolean
@@ -516,10 +535,22 @@ begin
   if not FProcess.ReadData(AnAddress, 4, CodeBin) then
     exit;
 
+(*
++ fd7b bfa9                 stp             x29, x30, [sp, #-16]!
++ fd03 0091                 mov             x29, sp
+- f34f bfa9                 stp             x19, x19, [sp, #-16]!
+- ffc3 0cd1                 sub             sp, sp, #0x330
+...
+- ffc3 0c91                 add             sp, sp, #0x330
+- f307 41f8                 ldr             x19, [sp], #16
+- fd7b c1a8                 ldp             x29, x30, [sp], #16
++ c003 5fd6                 ret
+*)
+
   Result := True;
   if (CodeBin = $A9BF7BFD) or  // stp             x29, x30, [sp, #-16]!
      (CodeBin = $910003FD) or  // mov             x29, sp
-     (CodeBin = $A8C17BFD)     // ldp             x29, x30, [sp], #16
+     (CodeBin = $D65F03C0)     // ret
   then
     AnIsOutsideFrame := True;
 end;

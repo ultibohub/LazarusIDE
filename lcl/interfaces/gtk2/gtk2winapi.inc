@@ -5208,7 +5208,7 @@ function TGtk2WidgetSet.GetObject(GDIObj: HGDIOBJ; BufSize: Integer; Buf: Pointe
           Visual := gdk_visual_get_system;
         SystemVisual := True; { This visual should not be referenced }
 
-        if Colormap <> nil then
+        if (Colormap <> nil) and (not SystemColormap) then
           gdk_colormap_unref(Colormap);
         ColorMap := gdk_colormap_new(Visual, GdkTrue);
       end
@@ -9109,12 +9109,21 @@ begin
 
   for n := 0 to cElements - 1 do
   begin
-    Element := PInteger(lpaElements)[n];
-    if (Element > MAX_SYS_COLORS) or (Element < 0) then 
+    Element := PInteger(@lpaElements)[n];
+    if (Element > MAX_SYS_COLORS) or (Element < 0) then
       Exit;
     SysColorMap[Element] := PDword(@lpaRgbValues)[n];
     //DebugLn(Format('Trace:[TGtk2WidgetSet.SetSysColor] Index %d (%8x) --> %8x', [PLongArray(lpaElements)^[n], SysColorMap[PLongArray(lpaElements)^[n]], PLongArray(lpaRgbValues)^[n]]));
   end;
+
+  Graphics.UpdateHandleObjects(True);
+
+  FreeSystemBrushes;
+  InitSystemBrushes;
+
+  for n := 0 to Screen.CustomFormCount - 1 do
+    if Screen.CustomForms[n].HandleAllocated then
+      Screen.CustomForms[n].Invalidate;
 
   //TODO send WM_SYSCOLORCHANGE
   Result := True;

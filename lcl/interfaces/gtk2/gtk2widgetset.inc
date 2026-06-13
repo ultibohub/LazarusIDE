@@ -3397,7 +3397,7 @@ begin
     ADesc.Depth := 32;
     ADesc.BitsPerPixel := 32;
     ADesc.LineEnd := rileDWordBoundary;
-    ADesc.ByteOrder := riboLSBFirst;
+    ADesc.ByteOrder := DefaultByteOrder;
 
     ADesc.RedPrec := 8;
     ADesc.RedShift := 0;
@@ -3415,10 +3415,11 @@ begin
   end
   else
   begin
+    ADesc.Format := ricfRGBA;
     ADesc.Depth := Depth;
     ADesc.BitsPerPixel := 32;
     ADesc.LineEnd := rileDWordBoundary;
-    ADesc.ByteOrder := riboLSBFirst;
+    ADesc.ByteOrder := DefaultByteOrder;
     ADesc.MaskBitsPerPixel := 0;
     ADesc.MaskShift := 0;
     ADesc.MaskLineEnd := rileByteBoundary;
