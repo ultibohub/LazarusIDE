@@ -2,7 +2,7 @@
 
 ## Ultibo Edition
 
-This repository contains the Ultibo Edition of the Lazarus IDE which is currently based on Lazarus 4.8 (Fixes 4.8 / Main 4.99).
+This repository contains the Ultibo Edition of the Lazarus IDE which is currently based on Lazarus 4.8 (Fixes 4.9 / Main 4.99).
 
 You can choose from either the [Stable](https://github.com/ultibohub/LazarusIDE/tree/ultibo-4.8.0), [Fixes](https://github.com/ultibohub/LazarusIDE/tree/ultibo-4.0) or [Main](https://github.com/ultibohub/LazarusIDE/tree/ultibo) branches.
 
