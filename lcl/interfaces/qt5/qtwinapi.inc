@@ -473,9 +473,17 @@ begin
 end;
 
 function TQtWidgetSet.CreateCaret(Handle: HWND; Bitmap: hBitmap; Width, Height: Integer): Boolean;
+var
+  APixmap: QPixmapH;
 begin
-  Result := (Handle <> 0) and
-    QtCaret.CreateCaret(TQtWidget(Handle), Bitmap, Width, Height);
+  if (Handle <> 0) and (Bitmap <> 0) then
+  begin
+    APixmap := TQtImage(Bitmap).AsPixmap;
+    Result := QtCaret.CreateCaret(TQtWidget(Handle), APixmap, Width, Height);
+    QPixmap_destroy(APixmap);
+  end else
+    Result := (Handle <> 0) and
+      QtCaret.CreateCaret(TQtWidget(Handle), Bitmap, Width, Height);
 end;
 
 {------------------------------------------------------------------------------
@@ -4220,8 +4228,8 @@ begin
   Size.cy := 0;
   if (Count <= 0) or (Str = nil) or (StrPas(Str) = '') then
     exit;
-  WideStr := Str;
-  Size.cx := QtDC.Metrics.width(@WideStr, UTF8Length(Str, Count));
+  WideStr := UTF8ToUTF16({%H-}Copy(Str, 1, Count));
+  Size.cx := QtDC.Metrics.width(@WideStr, Length(WideStr));
   Size.cy := QtDC.Metrics.height;
 
   Result := True;

@@ -221,27 +221,38 @@ type
     procedure SetUnwindFlags(AFlags: TDbgUnwinderFlags); virtual; // will be cleared by next InitForThread
   end;
 
-  { TDbgStackUnwinderX86Base }
-  // Avoid circular unit refs
+  { TDbgStackUnwinderEx }
 
-  TDbgStackUnwinderX86Base = class(TDbgStackUnwinder)
+  TDbgStackUnwinderEx = class(TDbgStackUnwinder)
   private
     FThread: TDbgThread;
     FProcess: TDbgProcess;
+  protected
+    property Thread: TDbgThread read FThread;
+    property Process: TDbgProcess read FProcess;
+  public
+    constructor Create(AProcess: TDbgProcess);
+    procedure InitForThread(AThread: TDbgThread); override;
+    procedure InitForFrame(ACurrentFrame: TDbgCallstackEntry; out CodePointer, StackPointer,
+      FrameBasePointer: TDBGPtr); override;
+    procedure GetTopFrame(out CodePointer, StackPointer, FrameBasePointer: TDBGPtr; out
+      ANewFrame: TDbgCallstackEntry); override;
+  end;
+
+  { TDbgStackUnwinderX86Base }
+  // Avoid circular unit refs
+
+  TDbgStackUnwinderX86Base = class(TDbgStackUnwinderEx)
+  private
     FAddressSize: Integer;
   protected
     FDwarfNumIP, FDwarfNumBP, FDwarfNumSP: integer;
     FNameIP, FNameBP, FNameSP: String;
-    property Process: TDbgProcess read FProcess;
-    property Thread: TDbgThread read FThread;
     property AddressSize: Integer read FAddressSize;
   public
     constructor Create(AProcess: TDbgProcess);
-    procedure InitForThread(AThread: TDbgThread); override;
     procedure InitForFrame(ACurrentFrame: TDbgCallstackEntry; out CodePointer,
       StackPointer, FrameBasePointer: TDBGPtr); override;
-    procedure GetTopFrame(out CodePointer, StackPointer, FrameBasePointer: TDBGPtr;
-      out ANewFrame: TDbgCallstackEntry); override;
   end;
 
   { TDbgThread }
@@ -856,6 +867,7 @@ type
     function FindProcSymbol(AAdress: TDbgPtr): TFpSymbol; overload;
   protected
     FDbgInfo: TDbgInfo;
+    function GetImageBase: QWord; virtual;
     procedure InitializeLoaders; virtual;
     procedure SetFileName(const AValue: String);
     procedure SetMode(AMode: TFPDMode); experimental; // for testcase
@@ -887,6 +899,7 @@ type
     property MemManager: TFpDbgMemManager read FMemManager;
     property MemModel: TFpDbgMemModel read FMemModel;
     property LoaderList: TDbgImageLoaderList read FLoaderList;
+    property ImageBase: QWord read GetImageBase;
   end;
 
   { TDbgLibrary }
@@ -923,6 +936,20 @@ type
     InstrTargetOffs: Int64; // offset from the START address of instruction
   end;
 
+  TDbgFrameBoundaryKind = (
+    bkUnknown,
+    bkBeforePrologue, bkInPrologue, bkMaybeInPrologue,
+    bkInEpilogue, bkMaybeInEpilogue, bkAfterEpiloge,
+    bkInBody
+  );
+
+  TDbgFrameBoundaryInfo = record
+    // mlfConstantDeref: can be used for the register itself, plus/minus an offset
+    ReturnAddressLocation: TFpDbgMemLocation;
+    StackPointerValue: TFpDbgMemLocation;
+    BasePointerValue: TFpDbgMemLocation;
+  end;
+
   { TDbgAsmDecoder }
 
   TDbgAsmDecoder = class
@@ -939,7 +966,8 @@ type
     procedure ReverseDisassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String); virtual;
 
     function GetInstructionInfo(AnAddress: TDBGPtr): TDbgAsmInstruction; virtual; abstract;
-    function GetFunctionFrameInfo(AnAddress: TDBGPtr; out AnIsOutsideFrame: Boolean): Boolean; virtual;
+    function GetFrameBoundaryInfo(AnAddress: TDBGPtr; out AFrameBoundaryInfo: TDbgFrameBoundaryInfo; ARoutineStartAddr: TDBGPtr = 0): TDbgFrameBoundaryKind; virtual;
+    function GetFunctionFrameInfo(AnAddress: TDBGPtr; out AnIsOutsideFrame: Boolean): Boolean; virtual; deprecated;
     function IsAfterCallInstruction(AnAddress: TDBGPtr): boolean; virtual;
     function UnwindFrame(var AnAddress, AStackPtr, AFramePtr: TDBGPtr; AQuick: boolean; ARegisterValueList: TDbgRegisterValueList): boolean; virtual;
 
@@ -1065,6 +1093,7 @@ type
     function  FindProcStartEndPC(const AAdress: TDbgPtr; out AStartPC, AEndPC: TDBGPtr): boolean;
     function FindCallFrameInfo(AnAddress: TDBGPtr; out CIE: TDwarfCIE; out Row: TDwarfCallFrameInformationRow): Boolean; reintroduce;
 
+    function  GetInstanceForAddress(AnAddress: TDBGPtr): TDbgInstance;
     function  GetLineAddresses(AFileName: String; ALine: Cardinal; var AResultList: TDBGPtrArray; ASymInstance: TDbgInstance = nil;
       AFindSibling: TGetLineAddrFindSibling = fsNone; AMaxSiblingDistance: integer = 0): Boolean;
     //function  ContextFromProc(AThreadId, AStackFrame: Integer; AProcSym: TFpSymbol): TFpDbgLocationContext; inline; deprecated 'use TFpDbgSimpleLocationContext.Create';
@@ -2409,6 +2438,13 @@ begin
   AAddress := AAddress - instrLen;
 end;
 
+function TDbgAsmDecoder.GetFrameBoundaryInfo(AnAddress: TDBGPtr; out
+  AFrameBoundaryInfo: TDbgFrameBoundaryInfo; ARoutineStartAddr: TDBGPtr): TDbgFrameBoundaryKind;
+begin
+  Result := bkUnknown;
+  AFrameBoundaryInfo := Default(TDbgFrameBoundaryInfo);
+end;
+
 function TDbgAsmDecoder.GetFunctionFrameInfo(AnAddress: TDBGPtr; out
   AnIsOutsideFrame: Boolean): Boolean;
 begin
@@ -2555,6 +2591,13 @@ end;
 function TDbgInstance.GetOSDbgClasses: TOSDbgClasses;
 begin
   Result := FProcess.OSDbgClasses;
+end;
+
+function TDbgInstance.GetImageBase: QWord;
+begin
+  Result := 0;
+  if LoaderList <> nil then
+    Result := LoaderList.ImageBase;
 end;
 
 procedure TDbgInstance.InitializeLoaders;
@@ -2927,6 +2970,16 @@ begin
     if Result then
       exit;
   end;
+end;
+
+function TDbgProcess.GetInstanceForAddress(AnAddress: TDBGPtr): TDbgInstance;
+var
+  Lib: TDbgLibrary;
+begin
+  if EnclosesAddress(AnAddress) then exit(Self);
+  for Lib in FLibMap do
+    if Lib.EnclosesAddress(AnAddress) then exit(Lib);
+  Result := nil;
 end;
 
 function TDbgProcess.GetLineAddresses(AFileName: String; ALine: Cardinal;
@@ -3707,12 +3760,43 @@ begin
   //
 end;
 
+{ TDbgStackUnwinderEx }
+
+constructor TDbgStackUnwinderEx.Create(AProcess: TDbgProcess);
+begin
+  FProcess := AProcess;
+end;
+
+procedure TDbgStackUnwinderEx.InitForThread(AThread: TDbgThread);
+begin
+  FThread := AThread;
+end;
+
+procedure TDbgStackUnwinderEx.InitForFrame(ACurrentFrame: TDbgCallstackEntry; out CodePointer,
+  StackPointer, FrameBasePointer: TDBGPtr);
+begin
+  CodePointer      := ACurrentFrame.AnAddress;
+  FrameBasePointer := ACurrentFrame.FrameAdress;
+  StackPointer     := 0;
+end;
+
+procedure TDbgStackUnwinderEx.GetTopFrame(out CodePointer, StackPointer,
+  FrameBasePointer: TDBGPtr; out ANewFrame: TDbgCallstackEntry);
+begin
+  CodePointer      := Thread.GetInstructionPointerRegisterValue;
+  StackPointer     := Thread.GetStackPointerRegisterValue;
+  FrameBasePointer := Thread.GetStackBasePointerRegisterValue;
+  ANewFrame        := TDbgCallstackEntry.Create(Thread, 0, FrameBasePointer, CodePointer);
+  ANewFrame.AutoFillRegisters := True;
+end;
+
 { TDbgStackUnwinderX86Base }
 
 constructor TDbgStackUnwinderX86Base.Create(AProcess: TDbgProcess);
 begin
-  FProcess := AProcess;
-  case AProcess.Mode of
+  inherited Create(AProcess);
+
+  case Process.Mode of
     dm32: begin
       FAddressSize := 4;
       FDwarfNumIP := 8; // Dwarf Reg Num EIP
@@ -3734,36 +3818,20 @@ begin
   end;
 end;
 
-procedure TDbgStackUnwinderX86Base.InitForThread(AThread: TDbgThread);
-begin
-  FThread := AThread;
-end;
-
 procedure TDbgStackUnwinderX86Base.InitForFrame(
   ACurrentFrame: TDbgCallstackEntry; out CodePointer, StackPointer,
   FrameBasePointer: TDBGPtr);
 var
   R: TDbgRegisterValue;
 begin
-    CodePointer      := ACurrentFrame.AnAddress;
-    FrameBasePointer := ACurrentFrame.FrameAdress;
-    R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(FDwarfNumBP);
-    if R <> nil then
-      FrameBasePointer := R.NumValue;
-    StackPointer     := 0;
-    R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(FDwarfNumSP);
-    if R = nil then exit;
-    StackPointer := R.NumValue;
-end;
-
-procedure TDbgStackUnwinderX86Base.GetTopFrame(out CodePointer, StackPointer,
-  FrameBasePointer: TDBGPtr; out ANewFrame: TDbgCallstackEntry);
-begin
-  CodePointer      := Thread.GetInstructionPointerRegisterValue;
-  StackPointer     := Thread.GetStackPointerRegisterValue;
-  FrameBasePointer := Thread.GetStackBasePointerRegisterValue;
-  ANewFrame        := TDbgCallstackEntry.create(Thread, 0, FrameBasePointer, CodePointer);
-  ANewFrame.AutoFillRegisters := True;
+  inherited InitForFrame(ACurrentFrame, CodePointer, StackPointer, FrameBasePointer);
+  R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(FDwarfNumBP);
+  if R <> nil then
+    FrameBasePointer := R.NumValue;
+  StackPointer     := 0;
+  R := ACurrentFrame.RegisterValueList.FindRegisterByDwarfIndex(FDwarfNumSP);
+  if R = nil then exit;
+  StackPointer := R.NumValue;
 end;
 
 { TDbgThread }

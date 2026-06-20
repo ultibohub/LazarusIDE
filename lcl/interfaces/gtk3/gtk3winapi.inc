@@ -1180,7 +1180,10 @@ var
           begin
             TextExtentPoint(Lines[J], StrLen(Lines[J]), AP);
             LineWidth := Max(LineWidth, AP.cX);
-            Inc(LineHeight, AP.cY);
+            if StrLen(Lines[J]) = 0 then
+              Inc(LineHeight, TM.tmHeight)
+            else
+              Inc(LineHeight, AP.cY);
           end;
         end;
         LineWidth := Min(MaxWidth, LineWidth);
@@ -1449,9 +1452,14 @@ begin
         l:=StrLen(Lines[i]);
         DrawLine(Lines[i], l, theRect.Top);
         dec(pIndex,l+length(LineEnding));
-        Size:=default(TSize);
-        GetTextExtentPoint(DC, Lines[i], l, Size);
-        LineHeight := Size.cY;
+        if l = 0 then
+          LineHeight := TM.tmHeight
+        else
+        begin
+          Size:=default(TSize);
+          GetTextExtentPoint(DC, Lines[i], l, Size);
+          LineHeight := Size.cY;
+        end;
       end
       else
         LineHeight := TM.tmHeight;
@@ -1996,7 +2004,7 @@ begin
   if (Options and ETO_CLIPPED = ETO_CLIPPED) or (Dx <> nil) then
   begin
     GtkDC.Save;
-    if Options and ETO_CLIPPED = ETO_CLIPPED then
+    if (Options and ETO_CLIPPED = ETO_CLIPPED) and (Rect <> nil) then
     begin
       ClipL := GtkDC.LToDX(Rect^.Left);
       ClipT := GtkDC.LToDY(Rect^.Top);
@@ -2020,7 +2028,7 @@ begin
       cairo_rectangle(GtkDc.pcr, ClipL, ClipT, ClipR - ClipL, ClipB - ClipT);
       cairo_clip(GtkDc.pcr);
     end;
-    if Options and ETO_OPAQUE = ETO_OPAQUE then
+    if (Rect <> nil) and (Options and ETO_OPAQUE = ETO_OPAQUE) then
       GtkDC.fillRect(Rect, HBRUSH(GtkDC.BgBrush));
     if Dx <> nil then
     begin
@@ -2048,7 +2056,7 @@ begin
     GtkDC.Restore;
   end else
   begin
-    if Options and ETO_OPAQUE = ETO_OPAQUE then
+    if (Rect <> nil) and (Options and ETO_OPAQUE = ETO_OPAQUE) then
       GtkDC.fillRect(Rect, HBRUSH(GtkDC.BgBrush));
     GtkDC.drawText(X,Y,Str,Count, (GtkDC.BkMode=OPAQUE) and Assigned(GtkDC.BgBrush));
   end;
@@ -4471,9 +4479,12 @@ begin
           ChildW3 := TGtk3Widget(HwndFromGtkWidget(ChildWidget));
         if (ALayout <> nil) and (ChildWidget <> nil) and (ChildW3 <> nil) then
         begin
-          ChildW3.LCLLeft := ChildW3.LCLLeft + dx;
-          ChildW3.LCLTop := ChildW3.LCLTop + dy;
-          ALayout^.move(ChildWidget, ChildW3.LCLLeft, ChildW3.LCLTop);
+          if gtk_widget_get_parent(ChildWidget) = PGtkWidget(ALayout) then
+          begin
+            ChildW3.LCLLeft := ChildW3.LCLLeft + dx;
+            ChildW3.LCLTop := ChildW3.LCLTop + dy;
+            ALayout^.move(ChildWidget, ChildW3.LCLLeft, ChildW3.LCLTop);
+          end;
         end else
         begin
           ChildWin^.get_position(@ChildX, @ChildY);

@@ -694,6 +694,10 @@ begin
   end;
   AGtk3Widget.EndUpdate;
 
+  if (not ShouldBeVisible) and (fsModal in AForm.FormState) and (AWindow <> nil)
+  and Gtk3IsGdkWindow(AWindow^.window) then
+    gdk_display_flush(gdk_window_get_display(AWindow^.window));
+
   if ShouldBeVisible and Gtk3WidgetSet.IsWayland and (AWindow <> nil) and
      (AForm.BorderStyle in [bsDialog, bsSingle, bsToolWindow]) then
   begin
