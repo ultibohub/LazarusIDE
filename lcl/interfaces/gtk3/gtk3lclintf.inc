@@ -176,7 +176,7 @@ end;
 function TGtk3WidgetSet.ExtUTF8Out(DC: HDC; X, Y: Integer; Options: Longint;
   Rect: PRect; Str: PChar; Count: Longint; Dx: PInteger): Boolean;
 begin
-  // all fonts are UTF-8 under gtk2 => no mapping needed
+  // all fonts are UTF-8 under gtk3 => no mapping needed
   Result:=ExtTextOut(DC,X,Y,Options,Rect,Str,Count,Dx);
 end;
 
@@ -535,32 +535,11 @@ begin
         ADesc.GreenPrec := 8;
         ADesc.BluePrec := 8;
         ADesc.AlphaShift := 24;
-        ADesc.RedShift := 0;
+        ADesc.RedShift := 16;
         ADesc.GreenShift := 8;
-        ADesc.BlueShift := 16;
+        ADesc.BlueShift := 0;
       end;
   end;
-  (*
-  if not IsValidGDIObject(ABitmap)
-  then begin
-    DebugLn('WARNING: [TGtk3WidgetSet.GetBitmapRawImageDescription] invalid Bitmap!');
-    exit;
-  end;
-
-  case GDIObject^.GDIBitmapType of
-    gbBitmap:
-      Result := RawImage_DescriptionFromDrawable(ADesc,
-        GdiObject^.GDIBitmapObject, False);
-    gbPixmap:
-      Result := RawImage_DescriptionFromDrawable(ADesc,
-        GdiObject^.GDIPixmapObject.Image, GdiObject^.GDIPixmapObject.Mask <> nil);
-    gbPixbuf:
-      Result := RawImage_DescriptionFromPixbuf(ADesc, GdiObject^.GDIPixbufObject);
-  else
-    DebugLn('WARNING: [TGtk3WidgetSet.RawImage_DescriptionFromBitmap] Unknown GDIBitmapType');
-    Exit;
-  end;
-  *)
 end;
 
 {------------------------------------------------------------------------------
@@ -865,17 +844,18 @@ function TGtk3WidgetSet.RawImage_QueryDescription(AFlags: TRawImageQueryFlags; v
 begin
   Result := inherited RawImage_QueryDescription(AFlags, ADesc);
   if ADesc.BitsPerPixel > 8 then
-    ADesc.BitsPerPixel := 32
+  begin
+    ADesc.BitsPerPixel := 32;
+    ADesc.RedPrec := 8;
+    ADesc.GreenPrec := 8;
+    ADesc.BluePrec := 8;
+    ADesc.RedShift := 16;
+    ADesc.GreenShift := 8;
+    ADesc.BlueShift := 0;
+  end
   else
   if ADesc.BitsPerPixel > 1 then
-    ADesc.BitsPerPixel := 8
-  else
-  if ADesc.BitsPerPixel = 32 then
-  begin
-    ADesc.Depth := 32;
-    ADesc.AlphaPrec := 8;
-    ADesc.AlphaShift := 24;
-  end;
+    ADesc.BitsPerPixel := 8;
 end;
 
 {------------------------------------------------------------------------------
@@ -899,6 +879,7 @@ var
   AMaskSrc: PByte;
   x, y: Integer;
   AByte: Byte;
+  ASwapPtr: PByte;
 begin
   Result := false;
 
@@ -948,7 +929,22 @@ begin
   ReAllocMem(ARawImage.Data, ARawImage.DataSize);
 
   if ARawImage.DataSize > 0 then
+  begin
     Move(WorkImage.bits^, ARawImage.Data^, ARawImage.DataSize);
+    if Desc.BitsPerPixel = 32 then
+    begin
+      ASwapPtr := ARawImage.Data;
+      APos := 0;
+      while APos + 3 < ARawImage.DataSize do
+      begin
+        AByte := ASwapPtr[0];
+        ASwapPtr[0] := ASwapPtr[2];
+        ASwapPtr[2] := AByte;
+        Inc(ASwapPtr, 4);
+        Inc(APos, 4);
+      end;
+    end;
+  end;
 
   AHasAlpha := False;
   if (WorkMask <> nil) and (Desc.AlphaPrec > 0) and
