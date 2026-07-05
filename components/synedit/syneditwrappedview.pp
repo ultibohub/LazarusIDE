@@ -1017,8 +1017,11 @@ begin
   FMarkupInfoWrapEol.Clear;
   FMarkupInfoWrapIndent.FrameEdges := sfeLeft;
   FMarkupInfoWrapIndent.AddChangeHandler(@DoMarkupChanged);
+  FMarkupInfoWrapSubLine.InternalSaveDefaultValues;
+  FMarkupInfoWrapIndent.InternalSaveDefaultValues;
+  FMarkupInfoWrapEol.InternalSaveDefaultValues;
 
-  FKeystrokes := TSynEditLineMapKeyStrokes.Create(Self);
+  FKeyStrokes := TSynEditLineMapKeyStrokes.Create(Self);
 
   FLineMapView := TLazSynWordWrapView.Create(Self);
 
@@ -1052,7 +1055,7 @@ begin
   FMarkupInfoWrapSubLine.Free;
   FMarkupInfoWrapIndent.Free;
   FMarkupInfoWrapEol.Free;
-  FKeystrokes.Free;
+  FKeyStrokes.Free;
 end;
 
 procedure TLazSynEditLineWrapPlugin.WrapAll;

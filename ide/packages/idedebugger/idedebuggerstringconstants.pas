@@ -14,6 +14,7 @@ resourcestring
   lisName = 'Name';
   lisValue = 'Value';
   lisPEFilename = 'Filename:';
+  lisExceptionClass = 'Class:';
   lisCCOErrorCaption = 'Error';
   lisKMEvaluateModify = 'Evaluate/Modify';
   dlgEnvType = 'Type';
@@ -173,6 +174,7 @@ resourcestring
   DbgWatchColorEvaluating = 'Evaluating';
   DbgWatchColorUnknown = 'Unknown';
   DbgWatchFoundStackFrame = 'Stack frame (found)';
+  DbgWatchColorShadowLast = 'From previous pause';
 
   // Mem viewer
   liswlMemView = 'Memory';
@@ -260,6 +262,7 @@ resourcestring
   lisColInstance = 'Object Instance';
 
   // Breakpoint
+  lisSkipException = 'Continue';
   lisHitCount = 'Hitcount';
   lisDisableBreakPoint = 'Disable Breakpoint';
   lisEnableBreakPoint = 'Enable Breakpoint';
@@ -303,6 +306,7 @@ resourcestring
   lisAddressBreakpoint = '&Address Breakpoint ...';
   lisWatchPoint = '&Data/Watch Breakpoint ...';
   lisWatchPointBreakpoint = '&Data/watch Breakpoint ...';
+  lisExceptionFilter = '&Exception filter ...';
   lisEnableAll = '&Enable All';
   lisDeleteAll = '&Delete All';
   lisDisableAllInSameSource = 'Disable All in same source';
@@ -312,6 +316,7 @@ resourcestring
   lisDeleteBreakpointAtLine = 'Delete breakpoint at%s"%s" line %d?';
   lisDeleteBreakpointForAddress = 'Delete breakpoint for address %s?';
   lisDeleteBreakpointForWatch = 'Delete watchpoint for "%s"?';
+  lisDeleteTracepointForException = 'Delete exception filter for "%s"?';
   lisDeleteAllBreakpoints = 'Delete all breakpoints?';
   lisDeleteAllBreakpoints2 = 'Delete all breakpoints in file "%s"?';
   lisGroupNameInput = 'Group name:';
@@ -322,7 +327,7 @@ resourcestring
   lisGroupSetNone = 'Clear group(s)';
   lisGroupEmptyDelete = 'No more breakpoints are assigned to group "%s", delete it?';
   lisGroupEmptyDeleteMore = '%sThere are %d more empty groups, delete all?';
-  lisMenuViewBreakPoints = 'BreakPoints';
+  lisMenuViewBreakPointsAndExceptions = 'BreakPoints/Exceptions';
   lisBrkPointState = 'State';
   lisBrkPointAction = 'Action';
 
@@ -624,6 +629,13 @@ resourcestring
   DbgWatchColorNever = 'Never';
   DbgWatchColorOnOutputOncePerDebugSessi = 'On output (once per debug session)';
   DbgWatchColorOnOutputAlways = 'On output (always)';
+
+  DbgValueDisabled  = 'Disabled';
+  DbgValueUnavailable  = 'Unavailable';
+  DbgValueEvaluating = 'Evaluating';
+  DbgValueNotEvaluated = 'Not evaluated';
+  DbgValueInvalid = 'Invalid';
+  DbgValueError = 'Error: %s';
 
 implementation
 

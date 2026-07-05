@@ -2093,6 +2093,10 @@ msgstr "ຄຳອະທິບາຍ { }"
 msgid "Case"
 msgstr "Case"
 
+#: lazarusidestrconsts.dlgfoldpascaseelse
+msgid "Otherwise/Else (Case)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasclass
 msgid "Class/Object"
 msgstr "Class/Object"
@@ -6488,6 +6492,11 @@ msgstr "ປ່ຽນການເຂົ້າລະຫັດ"
 #: lazarusidestrconsts.lischangefile
 msgid "Change file"
 msgstr "ປ່ຽນຟາຍລ໌"
+
+#: lazarusidestrconsts.lischangemethodvisibilityto
+#, object-pascal-format
+msgid "Change method visibility to \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lischangeparent
 msgid "Change Parent"
@@ -18466,6 +18475,11 @@ msgstr "ບໍ່ສາມາດລຶບ project scaled ອອກຈາກ sour
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "ບໍ່ສາມາດລຶບຫົວຂໍ້ໂປຣເຈັກອອກຈາກ source ໄດ້.%s%s"
+
+#: lazarusidestrconsts.lisunabletorenamefileto
+#, object-pascal-format
+msgid "Unable to rename file \"%s\" to \"%s\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."

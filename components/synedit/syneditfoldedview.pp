@@ -3069,16 +3069,19 @@ begin
   FMarkupInfoFoldedCode.Background := clNone;
   FMarkupInfoFoldedCode.Foreground := clDkGray;
   FMarkupInfoFoldedCode.FrameColor := clDkGray;
+  FMarkupInfoFoldedCode.InternalSaveDefaultValues;
 
   FMarkupInfoFoldedCodeLine := TSynSelectedColor.Create;
   FMarkupInfoFoldedCodeLine.Background := clNone;
   FMarkupInfoFoldedCodeLine.Foreground := clNone;
   FMarkupInfoFoldedCodeLine.FrameColor := clNone;
+  FMarkupInfoFoldedCodeLine.InternalSaveDefaultValues;
 
   FMarkupInfoHiddenCodeLine := TSynSelectedColor.Create;
   FMarkupInfoHiddenCodeLine.Background := clNone;
   FMarkupInfoHiddenCodeLine.Foreground := clNone;
   FMarkupInfoHiddenCodeLine.FrameColor := clNone;
+  FMarkupInfoHiddenCodeLine.InternalSaveDefaultValues;
 
   FOwner.RegisterStatusChangedHandler(@DoBlockSelChanged, [scSelection]);
   FOwner.RegisterCommandHandler(@ProcessMySynCommand, nil, [hcfPreExec]);
@@ -4528,7 +4531,7 @@ var
   procedure GetEndLvl(l: Integer);
   var i: integer;
   begin
-    if AType = 0 then begin;
+    if AType = 0 then begin
       for i := 1 to TypeCnt do begin
         EndLvl[i] := hl.FoldBlockEndLevel(l-1, i);
         EndLvl[i] := EndLvl[i] + FoldProvider.FoldOpenCount(l, i);

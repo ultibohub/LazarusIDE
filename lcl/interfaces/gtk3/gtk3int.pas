@@ -26,7 +26,7 @@ uses
   {$ENDIF}
   SysUtils, Classes, types, Math, FPImage,
   // LazUtils
-  LazTracer, LazUTF8, IntegerList, GraphType, LazUtilities,
+  LazTracer, LazUTF8, IntegerList, GraphType, LazUtilities, Maps,
   // LCL
   LCLPlatformDef, InterfaceBase, LCLProc, LCLType, LMessages, LCLMessageGlue,
   LazLogger, LCLStrConsts,
@@ -130,6 +130,7 @@ type
     function CreateThemeServices: TThemeServices; override;
 
   public
+    StayOnTopList: TMap;
     FGtk3KeyStates: array[Byte] of Boolean;
     // LCL drag cursor state. Used by SetGlobalCursor in gtk3procs and ReleaseCapture.
     FDragIPCWidget: PGtkWidget;
@@ -188,6 +189,8 @@ type
     procedure DCSetPixel(CanvasHandle: HDC; X, Y: integer; AColor: TGraphicsColor); override;
     procedure DCRedraw(CanvasHandle: HDC); override;
     procedure DCSetAntialiasing(CanvasHandle: HDC; AEnabled: Boolean); override;
+    procedure SetDCOpacity(DC: HDC; AOpacity: Byte); override;
+    function GetDCOpacity(DC: HDC): Byte; override;
     procedure SetDesigning(AComponent: TComponent); override;
     function  GetLCLCapability(ACapability: TLCLCapability): PtrUInt; override;
 

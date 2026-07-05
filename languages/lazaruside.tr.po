@@ -2083,6 +2083,10 @@ msgstr "Açıklama { }"
 msgid "Case"
 msgstr "Case"
 
+#: lazarusidestrconsts.dlgfoldpascaseelse
+msgid "Otherwise/Else (Case)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasclass
 msgid "Class/Object"
 msgstr "Class/Object"
@@ -6500,6 +6504,11 @@ msgstr "Kodlamayı Değiştir"
 #: lazarusidestrconsts.lischangefile
 msgid "Change file"
 msgstr "Dosyayı değiştir"
+
+#: lazarusidestrconsts.lischangemethodvisibilityto
+#, object-pascal-format
+msgid "Change method visibility to \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lischangeparent
 msgid "Change Parent"
@@ -18468,6 +18477,11 @@ msgstr "Kaynaktan ölçeklendirilen proje kaldırılamıyor.%s%s"
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "Proje başlığı kaynaktan kaldıramadı. %s%s"
+
+#: lazarusidestrconsts.lisunabletorenamefileto
+#, object-pascal-format
+msgid "Unable to rename file \"%s\" to \"%s\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."

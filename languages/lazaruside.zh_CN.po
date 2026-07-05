@@ -2095,6 +2095,10 @@ msgstr "注释：{ }"
 msgid "Case"
 msgstr "Case"
 
+#: lazarusidestrconsts.dlgfoldpascaseelse
+msgid "Otherwise/Else (Case)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasclass
 msgid "Class/Object"
 msgstr "Class/Object"
@@ -6499,6 +6503,11 @@ msgstr "更改编码"
 #: lazarusidestrconsts.lischangefile
 msgid "Change file"
 msgstr "改变文件"
+
+#: lazarusidestrconsts.lischangemethodvisibilityto
+#, object-pascal-format
+msgid "Change method visibility to \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lischangeparent
 msgid "Change Parent"
@@ -18489,6 +18498,11 @@ msgstr "无法从源码中删除项目的比例，%s%s"
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "无法从源码中删除项目的标题，%s%s"
+
+#: lazarusidestrconsts.lisunabletorenamefileto
+#, object-pascal-format
+msgid "Unable to rename file \"%s\" to \"%s\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."

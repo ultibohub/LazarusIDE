@@ -2106,6 +2106,10 @@ msgstr "Commentaire { }"
 msgid "Case"
 msgstr "Case"
 
+#: lazarusidestrconsts.dlgfoldpascaseelse
+msgid "Otherwise/Else (Case)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasclass
 msgid "Class/Object"
 msgstr "Class/Object"
@@ -6522,6 +6526,11 @@ msgstr "Changer l'encodage"
 #: lazarusidestrconsts.lischangefile
 msgid "Change file"
 msgstr "Changer de fichier"
+
+#: lazarusidestrconsts.lischangemethodvisibilityto
+#, object-pascal-format
+msgid "Change method visibility to \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lischangeparent
 msgid "Change Parent"
@@ -18537,6 +18546,11 @@ msgstr "Impossible de supprimer le projet mis à l'échelle depuis le code sourc
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "Impossible de supprimer du code source le titre du projet.%s%s"
+
+#: lazarusidestrconsts.lisunabletorenamefileto
+#, object-pascal-format
+msgid "Unable to rename file \"%s\" to \"%s\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."

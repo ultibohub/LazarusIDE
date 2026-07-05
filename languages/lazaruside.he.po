@@ -2204,6 +2204,10 @@ msgstr "הערה { }"
 msgid "Case"
 msgstr "Case"
 
+#: lazarusidestrconsts.dlgfoldpascaseelse
+msgid "Otherwise/Else (Case)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasclass
 msgid "Class/Object"
 msgstr "מחלקה/עצם"
@@ -6838,6 +6842,11 @@ msgstr "שנה קידוד"
 #: lazarusidestrconsts.lischangefile
 msgid "Change file"
 msgstr "שנה קובץ"
+
+#: lazarusidestrconsts.lischangemethodvisibilityto
+#, object-pascal-format
+msgid "Change method visibility to \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lischangeparent
 #, fuzzy
@@ -19450,6 +19459,11 @@ msgstr ""
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
 msgstr "לא יכול להסיר את כותרת הפרוייקט בקוד. %s%s"
+
+#: lazarusidestrconsts.lisunabletorenamefileto
+#, object-pascal-format
+msgid "Unable to rename file \"%s\" to \"%s\"."
+msgstr ""
 
 #: lazarusidestrconsts.lisunabletorenameforminsource
 msgid "Unable to rename form in source."

@@ -333,6 +333,11 @@ type
                               Flags: TSaveFlags): TModalResult; virtual; abstract;
     function DoSaveEditorFile(const Filename: string;
                               Flags: TSaveFlags): TModalResult; virtual; abstract;
+    function DoSaveEditorFileAs(AEditor: TSourceEditorInterface;
+                              NewFilename: string; // must be an absolute filename
+                              Flags: TSaveFlags): TModalResult; virtual; abstract;
+    function RenameIDEFile(OldFilename, NewFilename: string; // must be absolute filenames
+                              Flags: TSaveFlags): TModalResult; virtual; abstract;
     function DoSaveAll(Flags: TSaveFlags): TModalResult; virtual; abstract;
     function DoCloseEditorFile(AEditor: TSourceEditorInterface;
                                Flags: TCloseFlags):TModalResult; virtual; abstract;
@@ -365,6 +370,8 @@ type
     property ActiveProject: TLazProject read GetActiveProject;
     function DoNewProject(ProjectDesc: TProjectDescriptor): TModalResult; virtual; abstract;
     function DoSaveProject(Flags: TSaveFlags): TModalResult; virtual; abstract;
+    function DoSaveProjectAs(NewFilename: string; // must be an absolute filename, either .lpr, .pas, .pp, or .p
+                             Flags: TSaveFlags): TModalResult; virtual; abstract;
     function DoCloseProject: TModalResult; virtual; abstract;
     function DoOpenProjectFile(AFileName: string;
                                Flags: TOpenFlags): TModalResult; virtual; abstract;

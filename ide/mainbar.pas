@@ -41,7 +41,7 @@ uses
   Classes, SysUtils, Math, System.UITypes,
   // LCL
   Forms, Controls, Menus, ComCtrls, ExtCtrls, LMessages,
-{$IF DEFINED(LCLGtk) OR DEFINED(LCLQt) OR DEFINED(LCLGtk3)}
+{$IF DEFINED(LCLGtk) OR DEFINED(LCLQt)}
   LCLIntf,
 {$ENDIF}
   // LazUtils
@@ -527,7 +527,7 @@ begin
 end;
 
 function TMainIDEBar.CalcNonClientHeight: Integer;
-{$IF DEFINED(LCLGtk) OR DEFINED(LCLQt) OR DEFINED(LCLGtk3)}
+{$IF DEFINED(LCLGtk) OR DEFINED(LCLQt)}
 var
   WindowRect, WindowClientRect: TRect;
 {$ENDIF}
@@ -548,7 +548,7 @@ begin
   if not Showing then
     Exit(0);
 
-  {$IF DEFINED(LCLGtk) OR DEFINED(LCLQt) OR DEFINED(LCLGtk3)}
+  {$IF DEFINED(LCLGtk) OR DEFINED(LCLQt)}
   //Gtk + Qt + Gtk3
   //retrieve real main menu height because
   // - Gtk, Qt:  SM_CYMENU does not work

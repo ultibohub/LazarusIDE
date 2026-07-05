@@ -226,6 +226,7 @@ type
     procedure SetBounds(ALeft,ATop,AWidth,AHeight:integer); virtual;
     procedure SetLclFont(const AFont:TFont); virtual;
     procedure SetWindowShape(AShape: PGdkPixBuf; AWindow: PGdkWindow); virtual;
+    procedure UpdateShape; virtual;
 
     function GetContainerWidget: PGtkWidget; virtual;
     function GetPosition(out APoint: TPoint): Boolean; virtual;
@@ -1143,6 +1144,7 @@ type
     FResizeState: TGtk3WindowResizeState;
     function GetCSDShadowW: gint;
     function GetCSDShadowH: gint;
+    function GetMenuBarHeight: gint;
     function GetSkipTaskBarHint: Boolean;
     function GetTitle: String;
     procedure SetIcon(AValue: PGdkPixBuf);
@@ -1850,6 +1852,15 @@ begin
   //do not send sizes to lcl if widget is unmapped
   if not AWidget^.get_mapped then Exit;
 
+  // A shaped widget is first mapped at 1x1 and only gets its real size later,
+  // so re-apply the window shape once the gdk window has actually been resized
+  // (the default size-allocate handler runs before this one). Only widgets with
+  // their own window can be shaped.
+  if Assigned(ACtl.FShape) and AWidget^.get_has_window and
+     ((AGdkRect^.width <> PtrInt(g_object_get_data(PGObject(AWidget), 'lcl-szalloc-prev-w'))) or
+      (AGdkRect^.height <> PtrInt(g_object_get_data(PGObject(AWidget), 'lcl-szalloc-prev-h')))) then
+    ACtl.UpdateShape;
+
   if Assigned(ACtl.LCLObject) then
   begin
     LastW := PtrInt(g_object_get_data(PGObject(AWidget), 'lcl-szalloc-prev-w'));
@@ -1945,7 +1956,7 @@ begin
     if (Word(NewSize.cx) = Word(ACtl.LCLObject.Width)) and
        (Word(NewSize.cy) = Word(ACtl.LCLObject.Height)) then
       exit;
-    if csDesigning in ACtl.LCLObject.ComponentState then
+    if (csDesigning in ACtl.LCLObject.ComponentState) and ACtl.LCLObject.AutoSize then
     begin
       Msg.Width := Word(NewSize.cx);
       Msg.Height := Word(NewSize.cy);
@@ -3061,6 +3072,24 @@ begin
   if FShape <> nil then
     FShape^.unref;
   FShape := AValue;
+  UpdateShape;
+end;
+
+procedure TGtk3Widget.UpdateShape;
+var
+  AWindow: PGdkWindow;
+begin
+  if FWidget = nil then
+    Exit;
+  // A shape can only be applied to a widget that has its own window. Forms,
+  // panels and custom controls do; lightweight gtk3 widgets (e.g. GtkButton are
+  // windowless and draw on their parent) cannot be clipped on their own.
+  if FWidget^.get_has_window and FWidget^.get_realized then
+  begin
+    AWindow := FWidget^.get_window;
+    if Gtk3IsGdkWindow(AWindow) then
+      SetWindowShape(FShape, AWindow);
+  end;
 end;
 
 procedure TGtk3Widget.SetFontColor(AValue: TColor);
@@ -3452,7 +3481,14 @@ end;
 procedure TGtk3Widget.SetVisible(AValue: Boolean);
 begin
   if IsWidgetOK then
+  begin
+    if AValue then
+      FWidget^.set_no_show_all(False)
+    else
+    if [wtNotebook, wtWindow] * WidgetType = [] then
+      FWidget^.set_no_show_all(True);
     FWidget^.Visible := AValue;
+  end;
 end;
 
 function TGtk3Widget.QueryInterface(constref iid: TGuid; out obj): LongInt; {$IFDEF WINDOWS}stdcall{$ELSE}cdecl{$ENDIF};
@@ -4026,9 +4062,8 @@ begin
     p.x+=x;
     p.y+=y;
     gw := tw^.get_window;
-    if gw <> nil then
+    if Gtk3SafeWindowOrigin(gw, @x, @y) then
     begin
-      gw^.get_origin(@x,@y); // required for X11
       p.x+=x;
       p.y+=y;
     end;
@@ -4058,7 +4093,7 @@ begin
       if Gtk3IsGdkWindow(AToplevel^.get_window) then
       begin
         AGtkWidget^.translate_coordinates(AToplevel, 0, 0, @WX, @WY);
-        AToplevel^.get_window^.get_origin(@X, @Y);
+        Gtk3SafeWindowOrigin(AToplevel^.get_window, @X, @Y);
         dec(P.X, X + WX);
         dec(P.Y, Y + WY);
         Result := 0;
@@ -4067,17 +4102,17 @@ begin
     end;
     if not AGtkWidget^.get_has_window and (AGtkWidget^.get_parent <> nil) then
     begin
-      PGdkWindow(AWindow)^.get_origin(@X, @Y);
+      Gtk3SafeWindowOrigin(AWindow, @X, @Y);
       P.X := P.X - X - Allocation.x;
       P.Y := P.Y - Y - Allocation.y;
       exit;
     end;
-    PGdkWindow(AWindow)^.get_origin(@X, @Y);
+    Gtk3SafeWindowOrigin(AWindow, @X, @Y);
   end else
   if Gtk3IsGdkWindow(fWidget^.window) then
   begin
     AWindow := fWidget^.window;
-    PGdkWindow(AWindow)^.get_origin(@X, @Y);
+    Gtk3SafeWindowOrigin(AWindow, @X, @Y);
   end else
   begin
     fWidget^.get_allocation(@Allocation);
@@ -4380,6 +4415,7 @@ var
   imageSurface: Pcairo_surface_t;
   ARegion: Pcairo_region_t;
   ACairoRect: Tcairo_rectangle_int_t;
+  AlphaShape: PGdkPixbuf;
 begin
   if (AWindow = nil) or not Gtk3IsGdkWindow(AWindow) then
     exit;
@@ -4394,12 +4430,18 @@ begin
     cairo_region_destroy(ARegion);
   end else
   begin
+    // The shape is a monochrome mask (LCL convention: white = visible/mask color,
+    // black = transparent), stored as a fully opaque ARGB pixbuf. Make the black
+    // pixels transparent, then gdk_cairo_region_create_from_surface gives the
+    // region covering the white (visible) pixels.
+    AlphaShape := AShape^.add_alpha(True{substitute_color}, 0, 0, 0);
     //TODO: check on scaled displays.
-    imageSurface := gdk_cairo_surface_create_from_pixbuf(AShape, 1, AWindow);
+    imageSurface := gdk_cairo_surface_create_from_pixbuf(AlphaShape, 1, AWindow);
     ARegion := gdk_cairo_region_create_from_surface(imageSurface);
     gdk_window_shape_combine_region(AWindow, ARegion, 0, 0);
     cairo_region_destroy(ARegion);
     cairo_surface_destroy(imageSurface);
+    AlphaShape^.unref;
   end;
 end;
 
@@ -4458,7 +4500,7 @@ begin
     if (GdkWindow<>nil) and (Self.FWidget^.get_mapped) then
     begin
       // window is mapped = window manager has put the window somewhere
-      gdk_window_get_root_origin(GdkWindow, @GtkLeft, @GtkTop);
+      Gtk3SafeWindowRootOrigin(GdkWindow, @GtkLeft, @GtkTop);
       APoint.X := GtkLeft;
       APoint.Y := GtkTop;
       Result:=true;
@@ -4761,8 +4803,12 @@ begin
       if GetContainerWidget^.can_focus then
         FocusWidget := GetContainerWidget
       else
-        FocusWidget := FWidget;
-      PGtkWindow(TopLevel)^.set_focus(FocusWidget);
+      if FWidget^.can_focus then
+        FocusWidget := FWidget
+      else
+        FocusWidget := nil;
+      if FocusWidget <> nil then
+        PGtkWindow(TopLevel)^.set_focus(FocusWidget);
     end;
   end;
 end;
@@ -9400,7 +9446,8 @@ begin
       begin
         ParentMenu := menuItem.Parent.Items[ndx];
         if ParentMenu.RadioItem and (ParentMenu.GroupIndex = MenuItem.GroupIndex) and
-           ParentMenu.HandleAllocated then
+           ParentMenu.HandleAllocated and
+           Gtk3IsRadioMenuItem(PGObject(TGtk3MenuItem(ParentMenu.Handle).Widget)) then
         begin
           pl := PGtkRadioMenuItem(TGtk3MenuItem(ParentMenu.Handle).Widget)^.get_group;
           PGtkRadioMenuItem(Result)^.set_group(pl);
@@ -10020,7 +10067,7 @@ begin
     screen := gdk_screen_get_default;
 
   gdk_device_get_position(pointer, @screen, @x, @y);
-  gdk_window_get_origin(AWindow, @win_x, @win_y);
+  Gtk3SafeWindowOrigin(AWindow, @win_x, @win_y);
 
   // Translate the pointer position to the scrollbar's local coordinates
   x := x - win_x;
@@ -10080,7 +10127,7 @@ begin
   aWindow := GetContainerWidget^.get_window;
   if not Gtk3IsGdkWindow(aWindow) then
     exit;
-  gdk_window_get_origin(aWindow, @WinX, @WinY);
+  Gtk3SafeWindowOrigin(aWindow, @WinX, @WinY);
   LocalX := Trunc(aGlobalX) - WinX;
   LocalY := Trunc(aGlobalY) - WinY;
 
@@ -10358,9 +10405,8 @@ begin
   else
     AWindow := nil;
 
-  if Gtk3IsGdkWindow(AWindow) then
+  if Gtk3SafeWindowOrigin(AWindow, @gx, @gy) then
   begin
-    gdk_window_get_origin(AWindow, @gx, @gy);
     P := Point(P.X + gx, P.Y + gy);
     Result := True;
   end else
@@ -10380,9 +10426,8 @@ begin
   else
     AWindow := nil;
 
-  if Gtk3IsGdkWindow(AWindow) then
+  if Gtk3SafeWindowOrigin(AWindow, @gx, @gy) then
   begin
-    gdk_window_get_origin(AWindow, @gx, @gy);
     dec(P.X, gx);
     dec(P.Y, gy);
     Result := 0;
@@ -14498,6 +14543,7 @@ var
   KwinProtectUntil: PtrUInt;
   KwinResizeData: PKwinResizeIdleData;
   WinGen: PtrUInt;
+  MenuH: gint;
 begin
   if AWidget=nil then ;
 
@@ -14605,6 +14651,14 @@ begin
   if not (csDesigning in ACtl.LCLObject.ComponentState) and ACtl.InUpdate then
     exit;
 
+  MenuH := 0;
+  if Gtk3IsGtkWindow(AWidget) and not (csDesigning in ACtl.LCLObject.ComponentState) and
+     not Assigned(ACtl.LCLObject.Parent) and
+     (not (ACtl.LCLObject is TCustomForm) or (TCustomForm(ACtl.LCLObject).FormStyle <> fsMDIChild)) then
+    MenuH := ACtl.GetMenuBarHeight;
+  if MenuH > 0 then
+    NewSize.cy := Max(0, NewSize.cy - MenuH);
+
   {$IFDEF GTK3DEBUGSCROLLEDWIN}
   writeln(Format('[%d] WindowSizeAllocate %s gdk w=%d h=%d LCL w=%d h=%d InUpd=%s',
     [GetTickCount64, dbgsName(ACtl.LCLObject), NewSize.cx, NewSize.cy,
@@ -14685,7 +14739,10 @@ begin
        ((SzH < AGdkRect^.Height div 2) or (SzW < AGdkRect^.Width div 2)) then
       exit;
     NewSize.cx := SzW;
-    NewSize.cy := SzH;
+    if MenuH > 0 then
+      NewSize.cy := Max(0, SzH - MenuH)
+    else
+      NewSize.cy := SzH;
     Msg.Width := Word(NewSize.cx);
     Msg.Height := Word(NewSize.cy);
   end else
@@ -15553,9 +15610,16 @@ var
   Alloc:TGtkAllocation;
   x, y: gint;
   WSAInterval: Int64;
+  MenuH: gint;
 begin
   AForm := TCustomForm(LCLObject);
   BeginUpdate;
+  MenuH := 0;
+  if Gtk3IsGtkWindow(fWidget) and not (csDesigning in AForm.ComponentState) and
+     not Assigned(AForm.Parent) and (AForm.FormStyle <> fsMDIChild) then
+    MenuH := GetMenuBarHeight;
+  if MenuH > 0 then
+    Inc(AHeight, MenuH);
   ARect.x := ALeft;
   ARect.y := ATop;
   ARect.width := AWidth;
@@ -15617,20 +15681,20 @@ begin
         else
           max_width := 32767;
         if not AFixedWidthHeight and (AForm.Constraints.MinHeight > 0) then
-          min_height := AForm.Constraints.MinHeight + FResizeState.ShadowH
+          min_height := AForm.Constraints.MinHeight + FResizeState.ShadowH + MenuH
         else if AFixedWidthHeight then
-          min_height := AForm.Height
+          min_height := AForm.Height + MenuH
         else
           min_height := 1;
         if not AFixedWidthHeight and (AForm.Constraints.MaxHeight > 0) then
-          max_height := AForm.Constraints.MaxHeight + FResizeState.ShadowH
+          max_height := AForm.Constraints.MaxHeight + FResizeState.ShadowH + MenuH
         else if AFixedWidthHeight then
-          max_height := AForm.Height
+          max_height := AForm.Height + MenuH
         else
           max_height := 32767;
 
         base_width := AForm.Width;
-        base_height := AForm.Height;
+        base_height := AForm.Height + MenuH;
         width_inc := 1;
         height_inc := 1;
         min_aspect := 0;
@@ -15738,7 +15802,7 @@ begin
           x := 0;
           y := 0;
           if not PGtkWindow(Widget)^.get_decorated and (PGtkWindow(Widget)^.transient_for <> nil) then
-            PGtkWindow(Widget)^.transient_for^.window^.get_origin(@x, @y);
+            Gtk3SafeWindowOrigin(PGtkWindow(Widget)^.transient_for^.window, @x, @y);
           PGtkWindow(Widget)^.move(ALeft + x, ATop + y);
         end;
       end else
@@ -15761,7 +15825,7 @@ begin
         x := 0;
         y := 0;
         if not PGtkWindow(Widget)^.get_decorated and (PGtkWindow(Widget)^.transient_for <> nil) then
-          PGtkWindow(Widget)^.transient_for^.window^.get_origin(@x, @y);
+          Gtk3SafeWindowOrigin(PGtkWindow(Widget)^.transient_for^.window, @x, @y);
         PGtkWindow(Widget)^.move(ALeft + x, ATop + y);
       end;
     end;
@@ -16091,6 +16155,21 @@ begin
       PGdkCursor(TGtk3Cursor(CursorHdl).Handle));
 end;
 
+function TGtk3Window.GetMenuBarHeight: gint;
+var
+  MinH, NatH: gint;
+begin
+  Result := 0;
+  if not Assigned(FMenuBar) then
+    exit;
+  MinH := 0;
+  NatH := 0;
+  PGtkWidget(FMenuBar)^.get_preferred_height(@MinH, @NatH);
+  Result := NatH;
+  if Result <= 0 then
+    Result := GetSystemMetrics(SM_CYMENU);
+end;
+
 function TGtk3Window.GetMenuBar: PGtkMenuBar;
 var
   ABox:PGtkBox;
@@ -16110,6 +16189,9 @@ begin
       ABox^.pack_start(FMenuBar, False, False, 0);
       g_signal_connect_data(PGObject(FMenuBar), 'enter-notify-event',
         TGCallback(@MenuBarEnterNotify), Self, nil, G_CONNECT_DEFAULT);
+      if Assigned(LCLObject) and not (csDesigning in LCLObject.ComponentState) and
+         Gtk3IsGtkWindow(Widget) and not Assigned(LCLObject.Parent) then
+        SetBounds(LCLObject.Left, LCLObject.Top, LCLObject.Width, LCLObject.Height);
     end;
   end;
   Result := FMenuBar;

@@ -144,7 +144,6 @@ uses
   codetools_wordpolicy_options, codetools_linesplitting_options,
   codetools_space_options, codetools_identifiercompletion_options,
   debugger_general_options, debugger_class_options, debugger_eventlog_options,
-  debugger_language_exceptions_options, debugger_signals_options,
   codeexplorer_update_options, codeexplorer_categories_options,
   codeobserver_options, help_general_options, env_file_filters,
   // project option frames
@@ -791,6 +790,11 @@ type
                               Flags: TSaveFlags): TModalResult; override;
     function DoSaveEditorFile(const Filename: string;
                               Flags: TSaveFlags): TModalResult; override;
+    function DoSaveEditorFileAs(AEditor: TSourceEditorInterface;
+                              NewFilename: string;
+                              Flags: TSaveFlags): TModalResult; override;
+    function RenameIDEFile(OldFilename, NewFilename: string;
+                              Flags: TSaveFlags): TModalResult; override;
 
     function DoCloseEditorFile(AEditor: TSourceEditorInterface;
                                Flags: TCloseFlags): TModalResult; override;
@@ -842,6 +846,8 @@ type
                       FallbackProjectDesc: TProjectDescriptor): TProject; override;
     function DoNewProject(ProjectDesc: TProjectDescriptor): TModalResult; override;
     function DoSaveProject(Flags: TSaveFlags): TModalResult; override;
+    function DoSaveProjectAs(NewFilename: string;
+                             Flags: TSaveFlags): TModalResult; override;
     function DoCloseProject: TModalResult; override;
     procedure DoNoProjectWizard(Sender: TObject);
     function DoOpenProjectFile(AFileName: string;
@@ -5951,6 +5957,14 @@ begin
   Result:=SaveEditorFile(Filename, Flags);
 end;
 
+function TMainIDE.DoSaveEditorFileAs(AEditor: TSourceEditorInterface;
+  NewFilename: string; Flags: TSaveFlags): TModalResult;
+begin
+  if not FilenameIsAbsolute(NewFilename) then
+    raise Exception.Create('TMainIDE.DoSaveEditorFileAs: NewFilename must be absolute: '+NewFilename);
+  Result:=SaveEditorFile(AEditor, Flags+[sfSaveAs], NewFilename);
+end;
+
 function TMainIDE.DoCloseEditorFile(const Filename: string; Flags: TCloseFlags): TModalResult;
 begin
   Result:=CloseEditorFile(Filename, Flags);
@@ -6640,6 +6654,20 @@ end;
 function TMainIDE.DoSaveProject(Flags: TSaveFlags): TModalResult;
 begin
   Result:=SaveProject(Flags);
+end;
+
+function TMainIDE.DoSaveProjectAs(NewFilename: string;
+  Flags: TSaveFlags): TModalResult;
+begin
+  if not FilenameIsAbsolute(NewFilename) then
+    raise Exception.Create('TMainIDE.DoSaveProjectAs: NewFilename must be absolute: '+NewFilename);
+  Result:=SaveProject(Flags+[sfSaveAs], NewFilename);
+end;
+
+function TMainIDE.RenameIDEFile(OldFilename, NewFilename: string;
+  Flags: TSaveFlags): TModalResult;
+begin
+  Result:=SourceFileManager.RenameIDEFile(OldFilename, NewFilename, Flags);
 end;
 
 function TMainIDE.DoCloseProject: TModalResult;

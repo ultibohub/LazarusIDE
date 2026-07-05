@@ -2098,6 +2098,10 @@ msgstr ""
 msgid "Case"
 msgstr ""
 
+#: lazarusidestrconsts.dlgfoldpascaseelse
+msgid "Otherwise/Else (Case)"
+msgstr ""
+
 #: lazarusidestrconsts.dlgfoldpasclass
 msgid "Class/Object"
 msgstr ""
@@ -6529,6 +6533,11 @@ msgstr "Zmeniť kódovanie"
 #: lazarusidestrconsts.lischangefile
 msgid "Change file"
 msgstr "Zmeniť súbor"
+
+#: lazarusidestrconsts.lischangemethodvisibilityto
+#, object-pascal-format
+msgid "Change method visibility to \"%s\""
+msgstr ""
 
 #: lazarusidestrconsts.lischangeparent
 msgid "Change Parent"
@@ -18546,6 +18555,11 @@ msgstr ""
 #: lazarusidestrconsts.lisunabletoremoveprojecttitlefromsource
 #, object-pascal-format
 msgid "Unable to remove project title from source.%s%s"
+msgstr ""
+
+#: lazarusidestrconsts.lisunabletorenamefileto
+#, object-pascal-format
+msgid "Unable to rename file \"%s\" to \"%s\"."
 msgstr ""
 
 #: lazarusidestrconsts.lisunabletorenameforminsource

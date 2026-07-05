@@ -100,7 +100,7 @@ const
     lpNoGUI;
     {$ENDIF}
     {$IFNDEF WidgetSetDefined}
-    lpGtk2;
+    lpGtk3;
     {$ENDIF}
 
 function DirNameToLCLPlatform(const ADirName: string): TLCLPlatform;

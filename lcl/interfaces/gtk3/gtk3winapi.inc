@@ -2513,7 +2513,8 @@ begin
       // LCLObject := TGtk3Widget(HwndFromGtkWidget(DevCtx.Parent));
     end;
   end else
-    gdk_window_get_origin(DCWindow, @DCScreenOrigin.X, @DCScreenOrigin.Y);
+    if not Gtk3SafeWindowOrigin(DCWindow, @DCScreenOrigin.X, @DCScreenOrigin.Y) then
+      DCScreenOrigin := DevCtx.Offset;
 
   Widget := TGtk3Widget(WindowHandle).GetContainerWidget;
   if Widget = nil then
@@ -2522,9 +2523,7 @@ begin
     Exit;
   end;
 
-  if Gtk3IsGdkWindow(Widget^.window) then
-    gdk_window_get_origin(Widget^.window, @WindowScreenOrigin.X, @WindowScreenOrigin.Y)
-  else
+  if not Gtk3SafeWindowOrigin(Widget^.window, @WindowScreenOrigin.X, @WindowScreenOrigin.Y) then
     exit; // no valid window
 
   // Calculate the origin difference
@@ -3682,7 +3681,7 @@ begin
       begin
         // get_origin gives the screen position of the GDK client window.
         // On Wayland this is always 0,0 - no global screen coordinates.
-        AGdkWindow^.get_origin(@x, @y);
+        Gtk3SafeWindowOrigin(AGdkWindow, @x, @y);
         if IsWayland then
           AWindow^.get_size(@aWidth, @aHeight)
         else
@@ -3710,7 +3709,7 @@ begin
       AGdkWindow := TGtk3Widget(Handle).Widget^.get_window;
       if AGdkWindow <> nil then
       begin
-        AGdkWindow^.get_origin(@x, @y);
+        Gtk3SafeWindowOrigin(AGdkWindow, @x, @y);
         if TGtk3Widget(Handle).Widget^.get_has_window then
           ARect := Bounds(x, y, Allocation.width, Allocation.height)
         else
@@ -5675,6 +5674,9 @@ var
   Origin: TPoint;
   FreshSrcPixbuf: PGdkPixbuf;
   SrcW, SrcH: Integer;
+  ASrcSurface: Pcairo_surface_t;
+  ATempSurface: Pcairo_surface_t;
+  ATempCr: Pcairo_t;
 begin
   Result := False;
 
@@ -5696,15 +5698,39 @@ begin
   AMaskRect := Bounds(XMask, YMask, SrcWidth, SrcHeight);
   GetWindowOrgEx(SrcDC, @Origin);
   ASrcRect.Offset(SrcContext.fncOrigin.X - Origin.x, SrcContext.fncOrigin.Y - Origin.y);
+
+  ASrcSurface := SrcContext.CairoSurface;
+  ATempSurface := nil;
+  if (SrcDC = DestDC) and Assigned(ASrcSurface) and
+     (cairo_surface_get_type(ASrcSurface) = CAIRO_SURFACE_TYPE_IMAGE) then
+  begin
+    SrcW := ASrcRect.Right - ASrcRect.Left;
+    SrcH := ASrcRect.Bottom - ASrcRect.Top;
+    if (SrcW <= 0) or (SrcH <= 0) then
+    begin
+      Result := True;
+      exit;
+    end;
+    ATempSurface := cairo_surface_create_similar(SrcContext.CairoSurface,
+      CAIRO_CONTENT_COLOR_ALPHA, SrcW, SrcH);
+    ATempCr := cairo_create(ATempSurface);
+    cairo_set_operator(ATempCr, CAIRO_OPERATOR_SOURCE);
+    cairo_set_source_surface(ATempCr, SrcContext.CairoSurface, -ASrcRect.Left, -ASrcRect.Top);
+    cairo_paint(ATempCr);
+    cairo_destroy(ATempCr);
+    ASrcSurface := ATempSurface;
+    ASrcRect := Rect(0, 0, SrcW, SrcH);
+  end;
+
   if (mask <> 0) then
   begin
     FreshSrcPixbuf := nil;
-    if Assigned(SrcContext.CairoSurface) and
-       (cairo_surface_get_type(SrcContext.CairoSurface) = CAIRO_SURFACE_TYPE_IMAGE) then
+    if Assigned(ASrcSurface) and
+       (cairo_surface_get_type(ASrcSurface) = CAIRO_SURFACE_TYPE_IMAGE) then
     begin
-      SrcW := cairo_image_surface_get_width(SrcContext.CairoSurface);
-      SrcH := cairo_image_surface_get_height(SrcContext.CairoSurface);
-      FreshSrcPixbuf := gdk_pixbuf_get_from_surface(SrcContext.CairoSurface, 0, 0, SrcW, SrcH);
+      SrcW := cairo_image_surface_get_width(ASrcSurface);
+      SrcH := cairo_image_surface_get_height(ASrcSurface);
+      FreshSrcPixbuf := gdk_pixbuf_get_from_surface(ASrcSurface, 0, 0, SrcW, SrcH);
     end;
     if FreshSrcPixbuf = nil then
       FreshSrcPixbuf := SrcContext.CurrentImage.Handle;  // fallback
@@ -5719,11 +5745,14 @@ begin
       NOTSRCCOPY, SRCERASE, NOTSRCERASE, MERGEPAINT,
       BLACKNESS, WHITENESS,
       PATCOPY, PATINVERT, PATPAINT, MERGECOPY:
-        DestContext.ApplyBitBltROP(SrcContext.CairoSurface, ATargetRect, ASrcRect, Rop);
+        DestContext.ApplyBitBltROP(ASrcSurface, ATargetRect, ASrcRect, Rop);
     else
-      DestContext.drawSurface(@ATargetRect, SrcContext.CairoSurface, @ASrcRect, nil, nil, nil);
+      DestContext.drawSurface(@ATargetRect, ASrcSurface, @ASrcRect, nil, nil, nil);
     end;
   end;
+
+  if ATempSurface <> nil then
+    cairo_surface_destroy(ATempSurface);
 
   {$ifdef VerboseGtk3DeviceContext}
     DebugLn('Trace:< [TGtk3WidgetSet.StretchMaskBlt]');
