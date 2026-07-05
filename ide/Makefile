@@ -4962,9 +4962,9 @@ idepackages:
 	$(MAKE) -C packages/idepackager
 	$(MAKE) -C packages/ideproject
 	$(MAKE) -C packages/idedebugger
-ide: $(COMPILER_UNITTARGETDIR) revisioninc
+ide: $(COMPILER_UNITTARGETDIR)
 	$(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
-bigide: $(COMPILER_UNITTARGETDIR) revisioninc
+bigide: $(COMPILER_UNITTARGETDIR)
 	-$(DEL) $(COMPILER_UNITTARGETDIR)/pkgmanager$(PPUEXT)
 	$(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(BIG_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 starter: $(COMPILER_UNITTARGETDIR)

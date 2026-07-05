@@ -193,12 +193,12 @@ idepackages:
 
 #-----------------------------------------------------------------------------
 # compile IDE without extra packages
-ide: $(COMPILER_UNITTARGETDIR) revisioninc
+ide: $(COMPILER_UNITTARGETDIR)
         $(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 
 #-----------------------------------------------------------------------------
 # compile IDE with some extra packages
-bigide: $(COMPILER_UNITTARGETDIR) revisioninc
+bigide: $(COMPILER_UNITTARGETDIR)
         -$(DEL) $(COMPILER_UNITTARGETDIR)/pkgmanager$(PPUEXT)
         $(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(BIG_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 
