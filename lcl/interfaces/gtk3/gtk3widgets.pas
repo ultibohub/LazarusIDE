@@ -1144,7 +1144,6 @@ type
     FResizeState: TGtk3WindowResizeState;
     function GetCSDShadowW: gint;
     function GetCSDShadowH: gint;
-    function GetMenuBarHeight: gint;
     function GetSkipTaskBarHint: Boolean;
     function GetTitle: String;
     procedure SetIcon(AValue: PGdkPixBuf);
@@ -1172,6 +1171,7 @@ type
     class function MenuBarEnterNotify(AWidget: PGtkWidget; AEvent: PGdkEventCrossing; AData: gpointer): gboolean; cdecl; static;
   protected
     FFirstMapRect: TRect;
+    FInActivate: Boolean; // set while delivering LM_ACTIVATE, mirrors gtk2 wwiActivating
     procedure ConnectSizeAllocateSignal(ToWidget: PGtkWidget); override;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
@@ -1198,6 +1198,7 @@ type
     function CloseQuery: Boolean;
     function GetWindow: PGdkWindow; override;
     function GetMenuBar: PGtkMenuBar;
+    function GetMenuBarHeight: gint;
     function GetBox: PGtkBox;
     function GetWindowState: TGdkWindowState;
     property Icon: PGdkPixBuf read FIcon write SetIcon;
@@ -3543,6 +3544,12 @@ var
   AFocus: PGtkWidget;
   I: Integer;
 begin
+  if (Gtk3WidgetSet.IMContext <> nil) and (Gtk3WidgetSet.IMTarget = Self) then
+  begin
+    gtk_im_context_focus_out(Gtk3WidgetSet.IMContext);
+    gtk_im_context_set_client_window(Gtk3WidgetSet.IMContext, nil);
+    Gtk3WidgetSet.IMTarget := nil;
+  end;
   {$IFDEF GTK3USEDEFERREDRESIZING}
   if Assigned(LCLObject) then
     Gtk3RemoveFromResizeQueue(LCLObject);
@@ -4631,6 +4638,7 @@ procedure TGtk3Widget.preferredSize(var PreferredWidth,
 var
   AMinH: gint;
   AMinW: gint;
+  ASaveReqW, ASaveReqH: gint;
   AWidget:PGtkWidget;
   {$IFDEF GTK3DEBUGPREFERREDSIZE}
   ABorder: TGtkBorder;
@@ -4651,8 +4659,13 @@ begin
      AWidget^.get_size_request(@AMinW, @AMinH);
      DebugLn('>',dbgsName(LCLObject),'.preferredSize W=',dbgs(PreferredWidth),' H=',dbgs(PreferredHeight),' WithThemeSpace ',dbgs(WithThemeSpace),' AMinW=',dbgs(AMinW),' AMinH=',dbgs(AMinH));
     {$ENDIF}
+    ASaveReqW := -1;
+    ASaveReqH := -1;
+    AWidget^.get_size_request(@ASaveReqW, @ASaveReqH);
+    AWidget^.set_size_request(-1, -1);
     AWidget^.get_preferred_height(@AMinH, @PreferredHeight);
     AWidget^.get_preferred_width(@AMinW, @PreferredWidth);
+    AWidget^.set_size_request(ASaveReqW, ASaveReqH);
     {$IFDEF GTK3DEBUGPREFERREDSIZE}
     if WithThemeSpace then
     begin
@@ -4789,7 +4802,19 @@ procedure TGtk3Widget.SetFocus;
 var
   TopLevel: PGtkWidget;
   FocusWidget: PGtkWidget;
+  TopWidget: TGtk3Widget;
 begin
+  TopLevel := FWidget^.get_toplevel;
+  if Gtk3IsGtkWindow(TopLevel) and TopLevel^.get_mapped
+  and not PGtkWindow(TopLevel)^.is_active then
+  begin
+    TopWidget := TGtk3Widget(HwndFromGtkWidget(TopLevel));
+    if (TopWidget is TGtk3Window) and Assigned(TopWidget.LCLObject)
+    and (TopWidget.LCLObject is TCustomForm)
+    and not TGtk3Window(TopWidget).FInActivate then
+      TGtk3Window(TopWidget).Activate;
+  end;
+
   if GetContainerWidget^.can_focus and GetContainerWidget^.get_mapped then
     GetContainerWidget^.grab_focus
   else
@@ -5369,7 +5394,8 @@ begin
   if not ACtl.InUpdate then
   begin
     if ACtl.LCLObject.ClientRectNeedsInterfaceUpdate or
-       (ACtl.LCLObject.Height <> AGdkRect^.Height) then
+       (guint(HSize) <> uWidth) or
+       (guint(VSize) <> uHeight) then
     begin
       if not ACtl.LCLObject.ClientRectNeedsInterfaceUpdate then
         ACtl.LCLObject.InvalidateClientRectCache(False);
@@ -7352,7 +7378,7 @@ begin
   AStep := ATrack.LineSize;
 
   if AStep <= 0 then AStep := 1;
-  if Up then
+  if Up = ATrack.Reversed then
     NewPos := ATrack.Position + AStep
   else
     NewPos := ATrack.Position - AStep;
@@ -8096,10 +8122,10 @@ begin
   if not Visible then
     exit;
   DC := TGtk3DeviceContext(Context);
-  NColor := LCLObject.Color;
-  if (NColor <> clNone) and (NColor <> clDefault) then
+  NColor := LCLObject.GetRGBColorResolvingParent;
+  if NColor <> clNone then
   begin
-    DC.CurrentBrush.Color := ColorToRGB(NColor);
+    DC.CurrentBrush.Color := NColor;
     DC.fillRect(0, 0, LCLObject.Width, LCLObject.Height);
   end;
 end;
@@ -9987,6 +10013,9 @@ begin
     gtk_scrolled_window_get_policy(ASW, @HPolicy, @VPolicy);
   if HPolicy = GTK_POLICY_NEVER then
     HSize := AGdkRect^.Width
+  else
+  if Assigned(TGtk3ScrollableWin(aCtl).LCLHAdj) and (TGtk3ScrollableWin(aCtl).LCLHAdj^.upper > 0) then
+    HSize := Max(AGdkRect^.Width, Round(TGtk3ScrollableWin(aCtl).LCLHAdj^.upper))
   else
     HSize := Max(AGdkRect^.Width, Round(hAdj^.upper));
 
@@ -14652,11 +14681,12 @@ begin
     exit;
 
   MenuH := 0;
-  if Gtk3IsGtkWindow(AWidget) and not (csDesigning in ACtl.LCLObject.ComponentState) and
+  if Gtk3IsGtkWindow(AWidget) and
      not Assigned(ACtl.LCLObject.Parent) and
      (not (ACtl.LCLObject is TCustomForm) or (TCustomForm(ACtl.LCLObject).FormStyle <> fsMDIChild)) then
     MenuH := ACtl.GetMenuBarHeight;
-  if MenuH > 0 then
+  if (MenuH > 0)
+  and (AWidget^.get_mapped or (AGdkRect^.height >= ACtl.LCLObject.Height + MenuH)) then
     NewSize.cy := Max(0, NewSize.cy - MenuH);
 
   {$IFDEF GTK3DEBUGSCROLLEDWIN}
@@ -15096,7 +15126,15 @@ begin
     MsgActivate.Active := WA_INACTIVE;
   MsgActivate.ActiveWindow := HWND(TGtk3Window(Data).LCLObject.Handle);
 
-  TGtk3Window(Data).DeliverMessage(MsgActivate);
+  // Guard against SetFocus re-activating this window from within the activate
+  // cascade (would ping-pong window activation and flood the IM/ibus). Mirrors
+  // gtk2 wwiActivating (gtk2callback.inc / gtk2winapi.inc).
+  TGtk3Window(Data).FInActivate := True;
+  try
+    TGtk3Window(Data).DeliverMessage(MsgActivate);
+  finally
+    TGtk3Window(Data).FInActivate := False;
+  end;
 end;
 
 class function TGtk3Window.WindowFocusIn(AWidget: PGtkWidget; AEvent: PGdkEventFocus; AData: gpointer): gboolean; cdecl;
@@ -15615,7 +15653,7 @@ begin
   AForm := TCustomForm(LCLObject);
   BeginUpdate;
   MenuH := 0;
-  if Gtk3IsGtkWindow(fWidget) and not (csDesigning in AForm.ComponentState) and
+  if Gtk3IsGtkWindow(fWidget) and
      not Assigned(AForm.Parent) and (AForm.FormStyle <> fsMDIChild) then
     MenuH := GetMenuBarHeight;
   if MenuH > 0 then
@@ -16158,14 +16196,20 @@ end;
 function TGtk3Window.GetMenuBarHeight: gint;
 var
   MinH, NatH: gint;
+  HasMenu: Boolean;
 begin
   Result := 0;
-  if not Assigned(FMenuBar) then
+  HasMenu := Assigned(FMenuBar) or
+    ((LCLObject is TCustomForm) and (TCustomForm(LCLObject).Menu <> nil));
+  if not HasMenu then
     exit;
-  MinH := 0;
-  NatH := 0;
-  PGtkWidget(FMenuBar)^.get_preferred_height(@MinH, @NatH);
-  Result := NatH;
+  if Assigned(FMenuBar) then
+  begin
+    MinH := 0;
+    NatH := 0;
+    PGtkWidget(FMenuBar)^.get_preferred_height(@MinH, @NatH);
+    Result := NatH;
+  end;
   if Result <= 0 then
     Result := GetSystemMetrics(SM_CYMENU);
 end;
@@ -16189,7 +16233,7 @@ begin
       ABox^.pack_start(FMenuBar, False, False, 0);
       g_signal_connect_data(PGObject(FMenuBar), 'enter-notify-event',
         TGCallback(@MenuBarEnterNotify), Self, nil, G_CONNECT_DEFAULT);
-      if Assigned(LCLObject) and not (csDesigning in LCLObject.ComponentState) and
+      if Assigned(LCLObject) and
          Gtk3IsGtkWindow(Widget) and not Assigned(LCLObject.Parent) then
         SetBounds(LCLObject.Left, LCLObject.Top, LCLObject.Width, LCLObject.Height);
     end;

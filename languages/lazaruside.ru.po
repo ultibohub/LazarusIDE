@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: lazaruside\n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-07-03 02:10+0300\n"
+"PO-Revision-Date: 2026-07-10 23:12+0300\n"
 "Last-Translator: Maxim Ganetsky <maxkill@mail.ru>\n"
 "Language-Team: \n"
 "Language: ru\n"
@@ -1072,6 +1072,14 @@ msgstr "Выберите файл шаблонов кода (*.dci)"
 msgid "Show close buttons in notebook"
 msgstr "Показывать кнопки закрытия вкладок"
 
+#: lazarusidestrconsts.dlgcloseotherpagesmod
+msgid "Close all other tabs"
+msgstr "Закрытие всех прочих вкладок"
+
+#: lazarusidestrconsts.dlgcloserightpagesmod
+msgid "Close tabs on the right"
+msgstr "Закрытие вкладок справа"
+
 #: lazarusidestrconsts.dlgclrscheme
 msgid "Color Scheme"
 msgstr "Цветовая схема"
@@ -1862,10 +1870,6 @@ msgstr "Вкладки проекта"
 msgctxt "lazarusidestrconsts.dlgenvtype"
 msgid "Type"
 msgstr "Тип"
-
-#: lazarusidestrconsts.dlgeofocusmessagesatcompilation
-msgid "Focus messages at compilation"
-msgstr "Переводить фокус в окно сообщений при компиляции"
 
 #: lazarusidestrconsts.dlgextracharspacing
 msgid "Extra character spacing"
@@ -2965,14 +2969,6 @@ msgstr "Значение \"0\" соответствует неограничен
 #: lazarusidestrconsts.dlgmaxrecentprojs
 msgid "Max recent project files"
 msgstr "Максимальное количество недавних проектов"
-
-#: lazarusidestrconsts.dlgmiddletabcloseotherpagesmod
-msgid "Middle-click-modifier to close all other tabs"
-msgstr "Закрывать прочие вкладки средней кнопкой мыши при нажатии"
-
-#: lazarusidestrconsts.dlgmiddletabcloserightpagesmod
-msgid "Middle-click-modifier to close tabs on the right"
-msgstr "Закрывать вкладки справа средней кнопкой мыши при нажатии"
 
 #: lazarusidestrconsts.dlgmixmethodsandproperties
 msgid "Mix methods and properties"
@@ -4316,10 +4312,6 @@ msgstr "Отображение окон"
 msgctxt "lazarusidestrconsts.dlgshowlinenumbers"
 msgid "Show line numbers"
 msgstr "Показывать номера строк"
-
-#: lazarusidestrconsts.dlgshowmessagesicons
-msgid "Show Messages Icons"
-msgstr "Показывать значки для сообщений"
 
 #: lazarusidestrconsts.dlgshownotes
 msgid "Show notes"
@@ -10075,6 +10067,10 @@ msgstr "&Первая проверка"
 msgid "Fix LFM file"
 msgstr "Исправить файл LFM"
 
+#: lazarusidestrconsts.lisfocusatcompilation
+msgid "Focus at compilation"
+msgstr "Переводить в фокус при компиляции"
+
 #: lazarusidestrconsts.lisfocushint
 msgid "Focus hint"
 msgstr "Прикрепить подсказку"
@@ -11159,6 +11155,30 @@ msgstr "Перейти к процедуре %s"
 #, object-pascal-format
 msgid "%s KB"
 msgstr "%s кБ"
+
+#: lazarusidestrconsts.liskecbreakignoreoff
+msgid "Unset Ignore all Breakpoints"
+msgstr "Выключить игнорирование всех точек останова"
+
+#: lazarusidestrconsts.liskecbreakignoreon
+msgid "Set Ignore all Breakpoints"
+msgstr "Включить игнорирование всех точек останова"
+
+#: lazarusidestrconsts.liskecbreakignoretoggle
+msgid "Toggle Ignore all Breakpoints"
+msgstr "Переключить игнорирование всех точек останова"
+
+#: lazarusidestrconsts.liskecexceptignoreoff
+msgid "Unset Ignore all Exceptions"
+msgstr "Выключить игнорирование всех исключений"
+
+#: lazarusidestrconsts.liskecexceptignoreon
+msgid "Set Ignore all Exceptions"
+msgstr "Включить игнорирование всех исключений"
+
+#: lazarusidestrconsts.liskecexceptignoretoggle
+msgid "Toggle Ignore all Exceptions"
+msgstr "Переключить игнорирование всех исключений"
 
 #: lazarusidestrconsts.liskeep2
 msgid "Keep"
@@ -13461,6 +13481,10 @@ msgstr "Окно сообщений"
 msgid "Method class not found"
 msgstr "Класс метода не найден"
 
+#: lazarusidestrconsts.lismiddleclickmodifiers
+msgid "Middle-click-modifiers"
+msgstr "Модификаторы средней кнопки мыши"
+
 #: lazarusidestrconsts.lismissingevents
 msgid "Missing Events"
 msgstr "Отсутствующие события"
@@ -13842,6 +13866,10 @@ msgstr "Цвета сообщений"
 #: lazarusidestrconsts.lismultipledirectoriesareseparatedwithsemicolons
 msgid "Multiple directories are separated with semicolons"
 msgstr "Разделителем каталогов является точка с запятой"
+
+#: lazarusidestrconsts.lismustbeopenedmanually
+msgid "Must be opened manually from View -> Messages."
+msgstr "Следует открывать вручную через пункт меню Вид -> Сообщения."
 
 #: lazarusidestrconsts.lismvsavemessagestofiletxt
 msgid "Save messages to file (*.txt)"
@@ -16849,6 +16877,23 @@ msgstr "Отображать"
 msgid "Show abstract methods of \"%s\""
 msgstr "Показать абстрактные методы в \"%s\""
 
+#: lazarusidestrconsts.lisshowautomatically
+msgid "Show automatically"
+msgstr "Показывать автоматически"
+
+#: lazarusidestrconsts.lisshowautonever
+msgctxt "lazarusidestrconsts.lisshowautonever"
+msgid "Never"
+msgstr "Никогда"
+
+#: lazarusidestrconsts.lisshowautoonlywhenerrorsoccur
+msgid "Only when errors occur"
+msgstr "Только при возникновении ошибок"
+
+#: lazarusidestrconsts.lisshowautowhencompiling
+msgid "When compiling"
+msgstr "При компиляции"
+
 #: lazarusidestrconsts.lisshowcomponenttreeinobjectinspector
 msgid "Show component tree"
 msgstr "Показывать дерево компонентов"
@@ -16889,6 +16934,10 @@ msgstr "Показывать справку"
 msgctxt "lazarusidestrconsts.lisshowhintsinobjectinspector"
 msgid "Show hints"
 msgstr "Показывать всплывающие подсказки в инспекторе объектов"
+
+#: lazarusidestrconsts.lisshowicons
+msgid "Show Icons"
+msgstr "Показывать значки"
 
 #: lazarusidestrconsts.lisshowidentifiers
 msgid "Show identifiers"
@@ -17178,6 +17227,10 @@ msgstr "Начать новый проект"
 #: lazarusidestrconsts.lisstatusbarshowspropertysnameandclass
 msgid "Statusbar shows the property's name and the class where it is published."
 msgstr "В строке состояния выводятся имя свойства и класс, в котором оно опубликовано"
+
+#: lazarusidestrconsts.lisstayontop
+msgid "Stay on top"
+msgstr "Располагать поверх других окон"
 
 #: lazarusidestrconsts.lisstop
 msgctxt "lazarusidestrconsts.lisstop"
@@ -18902,10 +18955,6 @@ msgstr "Отображать в меню \"Окно\" имя разрабаты�
 #: lazarusidestrconsts.liswindowmenuwithnamefordesignedformhint
 msgid "Useful especially if the caption is left empty."
 msgstr "Параметр особенно полезен при пустом заголовке формы."
-
-#: lazarusidestrconsts.liswindowstaysontop
-msgid "Window stays on top"
-msgstr "Располагать поверх других окон"
 
 #: lazarusidestrconsts.liswithincludes2
 msgid ", with includes "

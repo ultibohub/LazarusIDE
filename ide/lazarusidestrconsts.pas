@@ -463,7 +463,12 @@ resourcestring
   lisMenuEvaluate = 'E&valuate/Modify ...';
   lisMenuAddWatch = 'Add &Watch ...';
   lisMenuAddBreakpoint = 'Add &Breakpoint';
-
+  liskecBreakIgnoreToggle =   'Toggle Ignore all Breakpoints';
+  liskecBreakIgnoreOn =       'Set Ignore all Breakpoints';
+  liskecBreakIgnoreOff =      'Unset Ignore all Breakpoints';
+  liskecExceptIgnoreToggle =  'Toggle Ignore all Exceptions';
+  liskecExceptIgnoreOn =      'Set Ignore all Exceptions';
+  liskecExceptIgnoreOff =     'Unset Ignore all Exceptions';
   lisMenuNewPackage = 'New Package ...';
   lisMenuOpenPackage = 'Open Loaded Package ...';
   lisMenuOpenRecentPkg = 'Open Recent Package';
@@ -1119,7 +1124,6 @@ resourcestring
   // Options dialog
   dlgIDEOptions = 'IDE Options';
   dlgBakNoSubDirectory = '(no subdirectory)';
-  dlgEOFocusMessagesAtCompilation = 'Focus messages at compilation';
   lisMaximumParallelProcesses0MeansDefault = 'Maximum parallel processes, 0 '
     +'means default (%s)';
   lisShowFPCMessageLinesCompiled = 'Show FPC message "lines compiled"';
@@ -1269,14 +1273,20 @@ resourcestring
     'before the IDE''s name and other info in the title. Example: project1 - Lazarus.';
 
   // Message window options
-  lisWindowStaysOnTop = 'Window stays on top';
-  dlgShowMessagesIcons = 'Show Messages Icons';
+  lisStayOnTop = 'Stay on top';
+  lisShowIcons = 'Show Icons';
   dlgAnIconForErrorWarningHintIsShown = 'An icon for error/warning/hint is shown '
     +'in front of a message. The same icon shows in source editor gutter in any case.';
+  lisFocusAtCompilation = 'Focus at compilation';
   lisAlwaysDrawSelectedItemsFocused = 'Always draw selected items focused';
   lisDrawTheSelectionFocusedEvenIfTheMessagesWindowHasN = 'Draw the selection '
     +'focused even if the Messages window has no focus. Use this if your '
     +'theme has a hardly visible unfocused drawing.';
+  lisShowAutomatically = 'Show automatically';
+  lisShowAutoWhenCompiling = 'When compiling';
+  lisShowAutoOnlyWhenErrorsOccur = 'Only when errors occur';
+  lisShowAutoNever = 'Never';
+  lisMustBeOpenedManually = 'Must be opened manually from View -> Messages.';
   lisEditorColors = 'Editor Colors';
   lisPastelColors = 'Pastel Colors';
 
@@ -1535,9 +1545,10 @@ resourcestring
   dlgScrollBarPastEOLFixed = 'Force 1024 columns minimum for horizontal scroll range';
   dlgScrollHint = 'Show scroll hint';
   lisShowSpecialCharacters = 'Show special characters';
+  lisMiddleClickModifiers = 'Middle-click-modifiers';
   dlgCloseButtonsNotebook = 'Show close buttons in notebook';
-  dlgMiddleTabCloseOtherPagesMod = 'Middle-click-modifier to close all other tabs';
-  dlgMiddleTabCloseRightPagesMod = 'Middle-click-modifier to close tabs on the right';
+  dlgCloseOtherPagesMod = 'Close all other tabs';
+  dlgCloseRightPagesMod = 'Close tabs on the right';
   dlgShowFileNameInCaption = 'Show file name in caption';
   dlgSourceEditTabMultiLine = 'Multiline tabs';
   dlgHideSingleTabInNotebook = 'Hide tab in single page windows';

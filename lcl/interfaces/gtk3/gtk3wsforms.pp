@@ -378,6 +378,8 @@ begin
 end;
 
 class procedure TGtk3WSCustomForm.ShowHide(const AWinControl: TWinControl);
+const
+  SplashPaintTimeoutMs = 120;
 var
   AForm, OtherForm: TCustomForm;
   AWindow, ATransient: PGtkWindow;
@@ -389,6 +391,9 @@ var
   LCLCanFocus: boolean;
   ATime: guint32;
   NeedSizeProtect: boolean;
+  SplashClock: PGdkFrameClock;
+  SplashFrame: gint64;
+  SplashDeadline: QWord;
 
   procedure CheckAndFixGeometry;
   const
@@ -399,9 +404,14 @@ var
     TargetOpacity: Double;
     GdkDisplay: PGdkDisplay;
     IsX11: Boolean;
+    MenuHFix: gint;
   begin
     GdkDisplay := gdk_window_get_display(AWindow^.window);
     IsX11 := not Gtk3WidgetSet.IsWayland;
+    MenuHFix := 0;
+    if (AGtk3Widget is TGtk3Window) and
+       not Assigned(AForm.Parent) and (AForm.FormStyle <> fsMDIChild) then
+      MenuHFix := TGtk3Window(AGtk3Widget).GetMenuBarHeight;
     IsBorderLess := (AForm.BorderStyle = bsNone) or (not AWindow^.get_decorated);
 
     if not IsX11 then
@@ -452,7 +462,7 @@ var
     end;
 
     with AWinControl do
-      AWindow^.window^.move_resize(Left, Top, Width, Height);
+      AWindow^.window^.move_resize(Left, Top, Width, Height + MenuHFix);
 
     gdk_display_flush(GdkDisplay);
 
@@ -708,6 +718,26 @@ begin
     while gtk_events_pending do
       gtk_main_iteration;
     TGtk3WSWinControl.ConstraintsChange(AWinControl);
+  end;
+
+  if ShouldBeVisible and (AForm.FormStyle = fsSplash) and (AWindow <> nil)
+  and Gtk3IsGdkWindow(AWindow^.window) then
+  begin
+    AGtk3Widget.Update(nil);
+    SplashClock := AWindow^.window^.get_frame_clock;
+    if Assigned(SplashClock) then
+    begin
+      SplashFrame := SplashClock^.get_frame_counter;
+      SplashClock^.request_phase([GDK_FRAME_CLOCK_PHASE_PAINT]);
+      SplashDeadline := GetTickCount64 + SplashPaintTimeoutMs;
+      while (SplashClock^.get_frame_counter = SplashFrame) and (GetTickCount64 < SplashDeadline) do
+        gtk_main_iteration_do(True);
+    end else
+    begin
+      while gtk_events_pending do
+        gtk_main_iteration_do(False);
+    end;
+    gdk_display_flush(gdk_window_get_display(AWindow^.window));
   end;
 
   {$IFDEF GTK3DEBUGCORE}

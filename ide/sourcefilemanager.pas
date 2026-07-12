@@ -237,7 +237,6 @@ procedure RemoveRecentProjectFile(const AFilename: string);
 procedure UpdateSourceNames;
 function CheckEditorNeedsSave(AEditor: TSourceEditorInterface;
     IgnoreSharedEdits: Boolean): Boolean;
-procedure ArrangeSourceEditorAndMessageView(PutOnTop: boolean);
 // files/units/projects
 function MaybeOpenProject(AFiles: TStrings): Boolean;
 function MaybeOpenEditorFiles(AFiles: TStrings; WindowIndex: integer): Boolean;
@@ -1409,7 +1408,8 @@ begin
     if Result<>mrOk then exit;
 
     // check readonly
-    FNewUnitInfo.FileReadOnly:=FileExistsCached(FNewUnitInfo.Filename)
+    FNewUnitInfo.FileReadOnly:=FilenameIsAbsolute(FNewUnitInfo.Filename)
+                              and FileExistsCached(FNewUnitInfo.Filename)
                               and (not FileIsWritable(FNewUnitInfo.Filename));
     //debugln('[TFileOpener.OpenEditorFile] B');
     // open file in source notebook
@@ -2222,20 +2222,6 @@ begin
   Result := (AEditor.Modified) or (AnUnitInfo.Modified);
 end;
 
-procedure ArrangeSourceEditorAndMessageView(PutOnTop: boolean);
-begin
-  if SourceEditorManager.SourceWindowCount > 0 then
-  begin
-    if PutOnTop then
-    begin
-      IDEWindowCreators.ShowForm(MessagesView,true);
-      SourceEditorManager.ShowActiveWindowOnTop(False);
-      exit;
-    end;
-  end;
-  MainIDE.DoShowMessagesView(PutOnTop);
-end;
-
 function MaybeOpenProject(AFiles: TStrings): Boolean;
 // Open a project if there is .lpi or .lpr file in AFiles[0].
 var
@@ -2519,6 +2505,9 @@ begin
     NewUnitInfo.GetClosedOrNewEditorInfo.EditorComponent := NewSrcEdit;
     NewSrcEdit.EditorComponent.CaretXY := Point(1,1);
 
+    // call handler
+    NewFileDescriptor.EditorCreated(NewUnitInfo);
+
     // create component
     AncestorType:=NewFileDescriptor.ResourceClass;
     if AncestorType <> nil then
@@ -2594,6 +2583,9 @@ begin
     if NewUnitInfo.Component<>nil then begin
       // show form
       MainIDE.DoShowDesignerFormOfCurrentSrc(False);
+
+      // call handler
+      NewFileDescriptor.DesignerCreated(NewUnitInfo);
     end else begin
       MainIDE.DisplayState:= dsSource;
     end;
@@ -3003,10 +2995,10 @@ begin
   OldFilename:=TrimFilename(OldFilename);
   NewFilename:=TrimFilename(NewFilename);
   if (OldFilename='') or (NewFilename='') then exit;
-  if not FilenameIsAbsolute(OldFilename) then
-    raise Exception.Create('RenameIDEFile: OldFilename must be absolute: '+OldFilename);
+  if not FileExistsInIDE(OldFilename,[pfsfOnlyVirtualFiles]) then
+    raise Exception.Create('RenameIDEFile: OldFilename not found: "'+OldFilename+'"');
   if not FilenameIsAbsolute(NewFilename) then
-    raise Exception.Create('RenameIDEFile: NewFilename must be absolute: '+NewFilename);
+    raise Exception.Create('RenameIDEFile: NewFilename must be absolute: "'+NewFilename+'"');
   if CompareFilenames(OldFilename,NewFilename)=0 then exit(mrOk);
 
   // renaming the project info file or the project main source
@@ -3019,9 +3011,9 @@ begin
   // if the file is already open in an editor let the source editor rename it
   SrcEdit:=SourceEditorManagerIntf.SourceEditorIntfWithFilename(OldFilename);
   if (SrcEdit=nil) and FilenameIsPascalSource(OldFilename)
-  and FileExistsUTF8(OldFilename) then begin
+  and FileExistsInIDE(OldFilename,[pfsfOnlyVirtualFiles]) then begin
     // a pascal source without an editor => open one first, so it is renamed as unit
-    Result:=OpenEditorFile(OldFilename,-1,-1,nil,[ofOnlyIfExists,ofRegularFile]);
+    Result:=OpenEditorFile(OldFilename,-1,-1,nil,[ofRegularFile]);
     if Result<>mrOk then exit;
     SrcEdit:=SourceEditorManagerIntf.SourceEditorIntfWithFilename(OldFilename);
   end;
@@ -6342,10 +6334,11 @@ begin
   if Result<>mrOk then exit;
 
   // open messages window
+  Assert(Assigned(MessagesView), 'MessagesView=Nil');
+  MessagesView.Clear;
+  if EnvironmentGuiOpts.MsgViewShowAutomatically <> mwsaNever then
+    MainIDE.DoShowMessagesView(false);
   SourceEditorManager.ClearErrorLines;
-  if MessagesView<>nil then
-    MessagesView.Clear;
-  ArrangeSourceEditorAndMessageView(false);
 
   // parse the LFM file and the pascal unit
   LFMChecker:=TLFMChecker.Create(PascalBuf,LFMUnitInfo.Source);

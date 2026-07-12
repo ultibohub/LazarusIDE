@@ -3742,6 +3742,13 @@ begin
   ecStopProgram:              mnuStopProjectClicked(self);
   ecBuildFile:                DoBuildFile(false);
   ecRunFile:                  DoRunFile;
+  ecBreakIgnoreToggle:  DebugbossMgr.BreakPoints.IgnoreAll := not DebugbossMgr.BreakPoints.IgnoreAll;
+  ecBreakIgnoreOn:      DebugbossMgr.BreakPoints.IgnoreAll := True;
+  ecBreakIgnoreOff:     DebugbossMgr.BreakPoints.IgnoreAll := False;
+  ecExceptIgnoreToggle: DebugbossMgr.Exceptions.IgnoreAll := not DebugbossMgr.Exceptions.IgnoreAll;
+  ecExceptIgnoreOn:     DebugbossMgr.Exceptions.IgnoreAll := True;
+  ecExceptIgnoreOff:    DebugbossMgr.Exceptions.IgnoreAll := False;
+
   ecFindInFiles:              DoFindInFiles;
   ecJumpToNextSearchResult:   DoJumpToNextSearchResult(true);
   ecJumpToPrevSearchResult:   DoJumpToNextSearchResult(false);
@@ -3944,13 +3951,12 @@ begin
     TControl(AComponent).ControlStyle:=
       TControl(AComponent).ControlStyle-[csNoDesignVisible];
   // create designer
-  aDesigner:=TDesigner.Create(DesignerForm, TheControlSelection);;
+  aDesigner:=TDesigner.Create(DesignerForm, AnUnitInfo, TheControlSelection);;
   DesignerForm.Designer := aDesigner;
-  aDesigner.SetProjectFile(AnUnitInfo);
   {$IFDEF IDE_DEBUG}
   debugln('[TMainIDE.CreateDesignerForComponent] B');
   {$ENDIF}
-  with TDesigner(DesignerForm.Designer) do begin
+  with aDesigner do begin
     TheFormEditor := FormEditor1;
     OnActivated:=@DesignerActivated;
     OnCloseQuery:=@DesignerCloseQuery;
@@ -3977,6 +3983,7 @@ begin
     ShowNonVisualComponents:=EnvironmentGuiOpts.ShowNonVisualComponents;
     ShowComponentCaptions:=EnvironmentGuiOpts.ShowComponentCaptions;
   end;
+
   if AnUnitInfo<>nil then
     AnUnitInfo.LoadedDesigner:=true;
 end;
@@ -5123,8 +5130,8 @@ begin
     DebugLn(['Hint: (lazarus) TMainIDE.LoadDesktopSettings']);
   if ObjectInspector1<>nil then
     aOptions.ObjectInspectorOptions.AssignTo(ObjectInspector1);
-  if MessagesView<>nil then
-    MessagesView.ApplyIDEOptions;
+  Assert(Assigned(MessagesView), 'MessagesView=Nil');
+  MessagesView.ApplyIDEOptions;
 end;
 
 procedure TMainIDE.SaveDesktopSettings(aOptions: TEnvGuiOptions);
@@ -7110,11 +7117,11 @@ begin
   end;
 
   // show messages
-  IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
-
+  MessagesView.ApplyIDEOptions;
+  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+    IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
-  ArrangeSourceEditorAndMessageView(false);
 
   // check common mistakes in search paths
   Result:=PkgBoss.CheckUserSearchPaths(Project1.CompilerOptions);
@@ -7431,7 +7438,8 @@ begin
     // check sources
     DoCheckFilesOnDisk;
   end;
-  IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
+  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+    IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
   if ConsoleVerbosity>=0 then
     debugln(['Info: (lazarus) [TMainIDE.DoBuildProject] Success']);
   Result:=mrOk;
@@ -7593,7 +7601,7 @@ begin
     end;
 
     if (dcrDwarfOnly in ReqOpts)
-    and (not (Project1.CompilerOptions.DebugInfoType in [dsDwarf2, dsDwarf2Set, dsDwarf3])) then
+    and (not (Project1.CompilerOptions.DebugInfoType in [dsDwarf2, dsDwarf2Set, dsDwarf3, dsDwarf4, dsDwarf5])) then
     begin
       // this debugger does ONLY support external debug symbols
       ChangeDebugInfoFormatDialog := TTaskDialog.Create(Self);
@@ -8200,11 +8208,11 @@ begin
   if DoAbortBuild(true)<>mrOK then exit;
 
   // show messages
-  IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
-
+  MessagesView.ApplyIDEOptions;
+  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+    IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
-  ArrangeSourceEditorAndMessageView(false);
 
   Result:=DoSaveAll([sfDoNotSaveVirtualFiles]);
   if Result<>mrOk then begin
@@ -8816,7 +8824,8 @@ begin
   if CodeToolBoss.CheckSyntax(ActiveUnitInfo.Source,NewCode,NewX,NewY,
     NewTopLine,ErrorMsg) then
   begin
-    ArrangeSourceEditorAndMessageView(false);
+    if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+      DoShowMessagesView(false);
     MessagesView.ClearCustomMessages;
     MessagesView.AddCustomMessage(mluImportant,lisMenuQuickSyntaxCheckOk);
   end else begin
@@ -9876,7 +9885,8 @@ begin
       TopLine:=LogCaretXY.Y-(SrcEdit.EditorComponent.LinesInWindow div 2);
       if TopLine<1 then TopLine:=1;
       if FocusEditor then begin
-        IDEWindowCreators.ShowForm(MessagesView,true);
+        if EnvironmentGuiOpts.MsgViewShowAutomatically <> mwsaNever then
+          DoShowMessagesView(true);
         SourceEditorManager.ShowActiveWindowOnTop(True);
       end;
       if IDETabMaster <> nil then
@@ -9961,7 +9971,11 @@ begin
         if LogCaretXY.Y>SrcEdit.EditorComponent.Lines.Count then
           LogCaretXY.Y:=SrcEdit.EditorComponent.Lines.Count;
         if FocusEditor then begin
-          IDEWindowCreators.ShowForm(SearchResultsView,true);
+          // Ensure the search results window is shown, but do NOT bring it to
+          // front: it is already the front window (the user just clicked it),
+          // and raising it here fights the source editor raise below for
+          // activation (endless bring-to-top loop on gtk3).
+          IDEWindowCreators.ShowForm(SearchResultsView,false);
           SourceEditorManager.ShowActiveWindowOnTop(True);
         end;
         if IDETabMaster <> nil then
@@ -10961,9 +10975,9 @@ begin
       debugln('Note: (lazarus) TMainIDE.DoJumpToCodeToolBossError No errormessage');
     exit;
   end;
-  // syntax error -> show error and jump
-  // show error in message view
-  ArrangeSourceEditorAndMessageView(false);
+  // syntax error -> show error in message view and jump
+  if EnvironmentGuiOpts.MsgViewShowAutomatically <> mwsaNever then
+    DoShowMessagesView(false);
   DoShowCodeToolBossError;
 
   // jump to error in source editor
@@ -10989,7 +11003,8 @@ begin
         ActiveSrcEdit:=SourceEditorManager.ActiveEditor;
     end;
     if ActiveSrcEdit<> nil then begin
-      IDEWindowCreators.ShowForm(MessagesView,true);
+      if EnvironmentGuiOpts.MsgViewShowAutomatically <> mwsaNever then
+        IDEWindowCreators.ShowForm(MessagesView,true);
       with ActiveSrcEdit.EditorComponent do begin
         LogicalCaretXY:=ErrorCaret;
         if ErrorTopLine>0 then
