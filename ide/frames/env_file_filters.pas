@@ -14,7 +14,7 @@ uses
   // LazUtils
   LazFileUtils, LazConfigStorage,
   // LCL
-  LCLType, Grids, Dialogs, Controls, StdCtrls, Menus,
+  LCLType, Grids, Dialogs, Controls, StdCtrls, CheckLst, Menus,
   // IdeIntf
   IDEOptionsIntf, IDEOptEditorIntf, BaseIDEIntf, IDEDialogs,
   // IDE
@@ -28,9 +28,15 @@ type
   { TFileFiltersOptionsFrame }
 
   TFileFiltersOptionsFrame = class(TAbstractIDEOptionsEditor)
+    btnDeleteTrustedCompiler: TButton;
+    btnDeleteTrustedCommand: TButton;
+    clbTrustedCompilers: TCheckListBox;
+    clbTrustedCommands: TCheckListBox;
     edStarDirExcludes: TEdit;
     grdFileFilters: TStringGrid;
     lblStarDirExcludes: TLabel;
+    lblTrustedCompilers: TLabel;
+    lblTrustedCommands: TLabel;
     MenuItem1: TMenuItem;
     SetDefaultMenuItem: TMenuItem;
     pmGrid: TPopupMenu;
@@ -38,6 +44,8 @@ type
     pmiDelRow: TMenuItem;
     pmiInsRow: TMenuItem;
     lblFileDlgFilters: TLabel;
+    procedure btnDeleteTrustedCompilerClick(Sender: TObject);
+    procedure btnDeleteTrustedCommandClick(Sender: TObject);
     procedure grdFileFiltersKeyDown(Sender: TObject; var Key: Word; {%H-}Shift: TShiftState);
     procedure pmiAddRowClick(Sender: TObject);
     procedure pmiDelRowClick(Sender: TObject);
@@ -247,6 +255,26 @@ end;
 
 { TFileFiltersOptionsFrame }
 
+procedure TFileFiltersOptionsFrame.btnDeleteTrustedCompilerClick(Sender: TObject);
+var
+  i: Integer;
+begin
+  // remove all checked (selected) trusted compilers
+  for i:=clbTrustedCompilers.Items.Count-1 downto 0 do
+    if clbTrustedCompilers.Checked[i] then
+      clbTrustedCompilers.Items.Delete(i);
+end;
+
+procedure TFileFiltersOptionsFrame.btnDeleteTrustedCommandClick(Sender: TObject);
+var
+  i: Integer;
+begin
+  // remove all checked (selected) trusted commands
+  for i:=clbTrustedCommands.Items.Count-1 downto 0 do
+    if clbTrustedCommands.Checked[i] then
+      clbTrustedCommands.Items.Delete(i);
+end;
+
 procedure TFileFiltersOptionsFrame.grdFileFiltersKeyDown(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
@@ -298,6 +326,12 @@ begin
   SetDefaultMenuItem.Caption := lisFileFiltersSetDefaults;
 
   lblStarDirExcludes.Caption:=lisExcludesForStars;
+
+  lblTrustedCompilers.Caption:=lisTrustedCompilers;
+  btnDeleteTrustedCompiler.Caption:=lisDeleteSelectedTrustedCompilers;
+
+  lblTrustedCommands.Caption:=lisTrustedCommands;
+  btnDeleteTrustedCommand.Caption:=lisDeleteSelectedTrustedCompilers;
 end;
 
 procedure TFileFiltersOptionsFrame.ReadSettings(AOptions: TAbstractIDEOptions);
@@ -308,6 +342,9 @@ begin
   LoadGridFromFileDialogFilter(grdFileFilters,EnvironmentOptions.FileDialogFilter,false);
 
   edStarDirExcludes.Text:=EnvironmentOptions.StarDirectoryExcludes;
+
+  clbTrustedCompilers.Items.Assign(EnvironmentOptions.TrustedCompilers);
+  clbTrustedCommands.Items.Assign(EnvironmentOptions.TrustedCommands);
 end;
 
 procedure TFileFiltersOptionsFrame.WriteSettings(AOptions: TAbstractIDEOptions);
@@ -326,6 +363,9 @@ begin
   end;
 
   EnvironmentOptions.StarDirectoryExcludes:=edStarDirExcludes.Text;
+
+  EnvironmentOptions.TrustedCompilers.Assign(clbTrustedCompilers.Items);
+  EnvironmentOptions.TrustedCommands.Assign(clbTrustedCommands.Items);
 end;
 
 class function TFileFiltersOptionsFrame.SupportedOptionsClass: TAbstractIDEOptionsClass;

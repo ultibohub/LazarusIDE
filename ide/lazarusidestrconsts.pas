@@ -1187,7 +1187,7 @@ resourcestring
   lisFilesNotInASCIINorUTF8Encoding = 'Files not in ASCII nor UTF-8 encoding';
   podAddPackageUnitToUsesSection = 'Add package unit to uses section';
   lisLPKCompatibilityModeCheckBox = 'Maximize compatibility of package file (LPK)';
-  lisLPKCompatibilityModeCheckBoxHint = 'Check this if you want to open your package in legacy (2.0 and older) Lazarus versions.';
+  lisLPKCompatibilityModeCheckBoxHint = 'Check this if you want to open your package in legacy (2.2 - 4.8) Lazarus versions.';
   lisCodeBrowser = 'Code Browser';
 
   // IDE General options
@@ -2456,6 +2456,34 @@ resourcestring
   lisDebugger = 'Debugger';
 
   lisToFPCPath = 'Path:';
+  lisTrustCompilerCaption = 'Trust project compiler?';
+  lisTheProjectWantsToUseTheCompiler = 'The project "%s" wants to use the compiler:%s%s%s'
+    +'This is not the default compiler configured in the IDE. Opening a project with a custom '
+    +'compiler can run arbitrary programs.%sDo you want to trust and use this compiler?';
+  lisTrustPkgCompilerCaption = 'Trust package compiler?';
+  lisThePackageWantsToUseTheCompiler = 'The package "%s" wants to use the compiler:%s%s%s'
+    +'This is not the default compiler configured in the IDE. Opening a package with a custom '
+    +'compiler can run arbitrary programs.%sDo you want to trust and use this compiler?';
+  lisTrustCompilerThisTime = 'Trust this time';
+  lisTrustCompilerAlways = 'Trust always';
+  lisDoNotTrustCompiler = 'Do not trust';
+  lisUseDefaultCompiler = 'Use default compiler';
+  lisTrustedCompilers = 'Trusted compilers';
+  lisDeleteSelectedTrustedCompilers = 'Delete selected';
+  lisTrustedCommands = 'Trusted commands';
+  lisTheProjectWantsToUseTheCompilerBuild = 'The project "%s" wants to use the compiler:%s%s%s'
+    +'This is not the default compiler configured in the IDE. Building with a custom '
+    +'compiler can run arbitrary programs.%sDo you want to trust and use this compiler?';
+  lisThePackageWantsToUseTheCompilerBuild = 'The package "%s" wants to use the compiler:%s%s%s'
+    +'This is not the default compiler configured in the IDE. Building with a custom '
+    +'compiler can run arbitrary programs.%sDo you want to trust and use this compiler?';
+  lisTrustCommandCaption = 'Trust build command?';
+  lisTheProjectWantsToRunTheCommand = 'The project "%s" wants to run the command:%s%s%s'
+    +'Building with a custom command can run arbitrary programs.%sDo you want to trust '
+    +'and run this command?';
+  lisThePackageWantsToRunTheCommand = 'The package "%s" wants to run the command:%s%s%s'
+    +'Building with a custom command can run arbitrary programs.%sDo you want to trust '
+    +'and run this command?';
   lisCOSkipCallingCompiler = 'Skip calling compiler';
   lisCOAmbiguousAdditionalCompilerConfigFile = 'Ambiguous additional compiler config file';
   lisCOWarningTheAdditionalCompilerConfigFileHasTheSameNa = 'Warning: The '
@@ -2722,7 +2750,7 @@ resourcestring
   lisUpdateApplicationScaledStatement = 'Update Application.Scaled statement in main unit';
   lisIdeMaintainsScaledInMainUnit = 'The IDE maintains Application.Scaled (Hi-DPI) in main unit.';
   lisLPICompatibilityModeCheckBox = 'Maximize compatibility of project files (LPI and LPS)';
-  lisLPICompatibilityModeCheckBoxHint = 'Check this if you want to open your project in legacy (2.0 and older) Lazarus versions.';
+  lisLPICompatibilityModeCheckBoxHint = 'Check this if you want to open your project in legacy (2.2 - 4.8) Lazarus versions.';
   lisProjectIsRunnable = 'Project is runnable';
   lisProjectIsRunnableHint = 'Generates a binary executable which can be run.';
   lisUseDesignTimePackages = 'Use design time packages';
@@ -5330,6 +5358,8 @@ resourcestring
     +'unit was compiled again.';
   lisApplyBuildFlagsBToDependenciesToo = 'Apply build flags (-B) to dependencies too.';
   lisDoNotCompileDependencies = 'Do not compile dependencies.';
+  lisAbortIfAnyCompilerPathOrExecut = 'Abort if any compiler path or execute-'
+    +'before/after command is missing in the IDE trust whitelist.';
   lisAddPackageSToListOfInstalledPackagesCombineWithBui = 'Add package(s) to the '
     +'list of installed packages (combine with --build-ide to rebuild IDE).';
   lisWriteWhatPackageFilesAreS = 'Write what package files are searched and '
@@ -5337,7 +5367,12 @@ resourcestring
   lisBuildIDEWithPackages = 'Build IDE with packages. Optional compiler options '+
     'will be passed after the options from used build mode and can be specified here or '+
     'with the --opt option.';
+  lisBuildTheMinimalIDEWithDefaults = 'Build the minimal IDE with defaults.';
+  lisBuildTheReleaseIDESameAsMinima = 'Build the release IDE. Same as minimal '
+    +'plus a fixed set of extra packages.';
   lisShowVersionAndExit = 'Show version and exit.';
+  lisBuildReleasePackagesStoreCompi = 'Build release packages. Store compiler '
+    +'checksum instead of date in package.compiled files.';
   lisBeLessVerboseCanBeGivenMultipleTimes = 'Be less verbose. Can be given '
     +'multiple times.';
   lisPassingQuietTwoTimesWillP = 'Passing --quiet two times will pass -vw-n-h-'

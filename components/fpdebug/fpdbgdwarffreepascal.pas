@@ -615,7 +615,7 @@ begin
   if LastInfo <> nil then
     exit;
 
-  if not (ADbgInfo is TFpDwarfInfo) then
+  if (ADbgInfo = nil) or (not (ADbgInfo is TFpDwarfInfo)) then
     exit;
 
   for i := 0 to TFpDwarfInfo(ADbgInfo).CompilationUnitsCount - 1 do
@@ -674,16 +674,24 @@ function TFpDwarfFreePascalSymbolClassMap.GetInstanceClassNameFromPVmt(
   APVmt: TDbgPtr; AContext: TFpDbgLocationContext; ASizeOfAddr: Integer;
   AClassName, AUnitName: PString; out AnError: TFpError): boolean;
 begin
-  Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceClassNameFromPVmt(APVmt,
-    AContext, ASizeOfAddr, AClassName, AUnitName, AnError, 0, FCompilerVersion);
+  if self = nil then
+    Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceClassNameFromPVmt(APVmt,
+      AContext, ASizeOfAddr, AClassName, AUnitName, AnError, 0, FALLBACK_CompilerVersion)
+  else
+    Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceClassNameFromPVmt(APVmt,
+      AContext, ASizeOfAddr, AClassName, AUnitName, AnError, 0, FCompilerVersion);
 end;
 
 function TFpDwarfFreePascalSymbolClassMap.GetInstanceSizeFromPVmt(APVmt: TDbgPtr;
   AContext: TFpDbgLocationContext; ASizeOfAddr: Integer; out AnInstSize: Int64; out
   AnError: TFpError; AParentClassIndex: integer): boolean;
 begin
-  Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceSizeFromPVmt(APVmt,
-    AContext, ASizeOfAddr, AnInstSize, AnError, AParentClassIndex, FCompilerVersion);
+  if Self = nil then
+    Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceSizeFromPVmt(APVmt,
+      AContext, ASizeOfAddr, AnInstSize, AnError, AParentClassIndex, FALLBACK_CompilerVersion)
+  else
+    Result := TFpSymbolDwarfFreePascalTypeStructure.GetInstanceSizeFromPVmt(APVmt,
+      AContext, ASizeOfAddr, AnInstSize, AnError, AParentClassIndex, FCompilerVersion);
 end;
 
 { TFpDwarfFreePascalSymbolClassMapDwarf2 }
@@ -2686,6 +2694,20 @@ end;
 function TFpSymbolDwarfFreePascalDataProc.ResolveInternalFinallySymbol(
   Process: Pointer): TFpSymbol;
 {$IfDef WINDOWS}
+
+  function MaybeRecurse(AFoundSym: TFpSymbolDwarfFreePascalDataProc): TFpSymbol;
+  begin
+    Result := nil;
+    if (StrLComp(PChar(AFoundSym.Name), PChar('$fin'), 4) = 0) and
+       (AFoundSym.Name <> Name) and
+       (AFoundSym.Address < Address) // a nested finally has a lower address / serves as recursion check
+    then begin
+      Result := AFoundSym.ResolveInternalFinallySymbol(Process);
+      if Result <> nil then
+        TFpSymbolDwarfFreePascalDataProc(Result).FOrigSymbol := Self;
+    end;
+  end;
+
 var
   StartPC, EndPC: TDBGPtr;
   HelpSymbol2: TFpSymbolDwarf;
@@ -2736,13 +2758,23 @@ begin
         if (AnAddresses[i] < StartPC) or (AnAddresses[i] > EndPC) then begin
           TFpSymbol(HelpSymbol2) := DbgInfo.FindProcSymbol(AnAddresses[i]);
           if (HelpSymbol2 <> nil) and (HelpSymbol2.CompilationUnit = CompilationUnit) and
-             (HelpSymbol2.InheritsFrom(TFpSymbolDwarfFreePascalDataProc)) and
-             ('$fin' <> copy(HelpSymbol2.Name,1, 4) )
+             (HelpSymbol2.InheritsFrom(TFpSymbolDwarfFreePascalDataProc))
           then begin
-            Result := HelpSymbol2;
-            // *** FOrigSymbol has now the reference that the caller had. ***
-            TFpSymbolDwarfFreePascalDataProc(Result).FOrigSymbol := Self;
-            exit;
+            if ('$fin' <> copy(HelpSymbol2.Name,1, 4) )
+            then begin
+              Result := HelpSymbol2;
+              // *** FOrigSymbol has now the reference that the caller had. ***
+              TFpSymbolDwarfFreePascalDataProc(Result).FOrigSymbol := Self;
+              exit;
+            end
+            else begin
+              Result := MaybeRecurse(TFpSymbolDwarfFreePascalDataProc(HelpSymbol2));
+              if Result <> nil then begin
+                HelpSymbol2.ReleaseReference;
+                exit;
+              end;
+              Result := Self;
+            end;
           end;
           HelpSymbol2.ReleaseReference;
         end;
@@ -2756,9 +2788,15 @@ begin
       if (HelpSymbol2 <> nil) and (HelpSymbol2.CompilationUnit = CompilationUnit) and
          (HelpSymbol2.InheritsFrom(TFpSymbolDwarfFreePascalDataProc))
       then begin
-        Result := HelpSymbol2;
-        // *** FOrigSymbol has now the reference that the caller had. ***
-        TFpSymbolDwarfFreePascalDataProc(Result).FOrigSymbol := Self;
+        Result := MaybeRecurse(TFpSymbolDwarfFreePascalDataProc(HelpSymbol2));
+        if Result <> nil then begin
+          HelpSymbol2.ReleaseReference;
+        end
+        else begin
+          Result := HelpSymbol2;
+          // *** FOrigSymbol has now the reference that the caller had. ***
+          TFpSymbolDwarfFreePascalDataProc(Result).FOrigSymbol := Self;
+        end;
         exit;
       end;
       HelpSymbol2.ReleaseReference;

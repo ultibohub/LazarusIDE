@@ -283,10 +283,10 @@ type
     function GetUsesUnitName: string;
     function CreateUnitName: string;
     procedure LoadFromXMLConfig(XMLConfig: TXMLConfig; const Path: string;
-                                Merge, IsExternalSessionFile: boolean;
+                                Merge, IsPartOfProjectDefValue: boolean;
                                 FileVersion: integer); virtual;
     procedure SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string;
-                              SaveData, SaveSession, IsExternalSessionFile: boolean;
+                              SaveData, SaveSession, IsPartOfProjectDefValue: boolean;
                               UsePathDelim: TPathDelimSwitch); virtual;
     procedure UpdateUsageCount(Min, IfBelowThis, IncIfBelow: extended);
     procedure UpdateUsageCount(TheUsage: TUnitUsage; const Factor: TDateTime);
@@ -610,7 +610,6 @@ type
     function GetSourceDirectories: TFileReferenceList;
     function GetTargetFilename: string;
     function GetUnits(Index: integer): TUnitInfo;
-    function GetUseLegacyLists: Boolean;
     procedure ClearSourceDirectories;
     procedure EmbeddedObjectModified(Sender: TObject);
     function FileBackupHandler(const Filename: string): TModalResult;
@@ -706,7 +705,7 @@ type
     procedure SaveSessionInfo(const Path: string); virtual;
     procedure SaveOtherDefines(const Path: string);
     procedure SaveToSession; virtual;
-    procedure SaveUnits(const Path: string; SaveSession, IsExternalSessionFile: boolean);
+    procedure SaveUnits(const Path: string; SaveSession, IsPartOfProjectDefValue: boolean);
   public
     constructor Create(ProjectDescription: TProjectDescriptor); override;
     destructor Destroy; override;
@@ -878,7 +877,6 @@ type
     property EnableI18NForLFM: boolean read FEnableI18NForLFM write SetEnableI18NForLFM;
     property I18NExcludedIdentifiers: TStrings read FI18NExcludedIdentifiers;
     property I18NExcludedOriginals: TStrings read FI18NExcludedOriginals;
-    property UseLegacyLists: Boolean read GetUseLegacyLists;
     property ForceUpdatePoFiles: Boolean read FForceUpdatePoFiles write FForceUpdatePoFiles;
     property FirstRemovedDependency: TPkgDependency read FFirstRemovedDependency;
     property FirstRequiredDependency: TPkgDependency read FFirstRequiredDependency;
@@ -1251,11 +1249,10 @@ end;
   TUnitInfo SaveToXMLConfig
  ------------------------------------------------------------------------------}
 procedure TUnitInfo.SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string;
-  SaveData, SaveSession, IsExternalSessionFile: boolean; UsePathDelim: TPathDelimSwitch);
+  SaveData, SaveSession, IsPartOfProjectDefValue: boolean; UsePathDelim: TPathDelimSwitch);
 var
   AFilename: String;
   s: String;
-  IsPartOfProjectDefValue: Boolean;
 begin
   // global data
   AFilename:=Filename;
@@ -1263,11 +1260,8 @@ begin
     fOnLoadSaveFilename(AFilename, False);
   XMLConfig.SetValue(Path+'Filename/Value',SwitchPathDelims(AFilename,UsePathDelim));
 
-  if SaveData and not IsExternalSessionFile then
-  begin
-    IsPartOfProjectDefValue:=not(pfCompatibilityMode in Project.Flags);
+  if SaveData then
     XMLConfig.SetDeleteValue(Path+'IsPartOfProject/Value',IsPartOfProject,IsPartOfProjectDefValue);
-  end;
 
   if SaveSession and Assigned(Project.OnSaveUnitSessionInfo) then
     Project.OnSaveUnitSessionInfo(Self);
@@ -1309,12 +1303,9 @@ end;
 {------------------------------------------------------------------------------
   TUnitInfo LoadFromXMLConfig
  ------------------------------------------------------------------------------}
-procedure TUnitInfo.LoadFromXMLConfig(XMLConfig: TXMLConfig;
-  const Path: string; Merge, IsExternalSessionFile: boolean;
-  FileVersion: integer);
+procedure TUnitInfo.LoadFromXMLConfig(XMLConfig: TXMLConfig; const Path: string; Merge, IsPartOfProjectDefValue: Boolean; FileVersion: integer);
 var
   AFilename: string;
-  IsPartOfProjectDefValue: Boolean;
 begin
   // project data
   if not Merge then begin
@@ -1333,11 +1324,7 @@ begin
                          XMLConfig.GetValue(Path+'ResourceBaseClass/Value',''));
     FResourceBaseClassname:=XMLConfig.GetValue(Path+'ResourceBaseClassname/Value',
                           DefaultResourceBaseClassnames[FResourceBaseClass]);
-    if not IsExternalSessionFile then
-    begin
-      IsPartOfProjectDefValue:=(FileVersion>=13) and not(pfCompatibilityMode in Project.Flags);
-      IsPartOfProject:=XMLConfig.GetValue(Path+'IsPartOfProject/Value',IsPartOfProjectDefValue);
-    end;
+    IsPartOfProject:=XMLConfig.GetValue(Path+'IsPartOfProject/Value',IsPartOfProjectDefValue);
     AFilename:=XMLConfig.GetValue(Path+'ResourceFilename/Value','');
     if (AFilename<>'') and Assigned(fOnLoadSaveFilename) then
       fOnLoadSaveFilename(AFilename,true);
@@ -1422,6 +1409,8 @@ begin
 end;
 
 procedure TUnitInfo.SetInternalFilename(const NewFilename: string);
+var
+  s: String;
 begin
   if fFileName=NewFilename then exit;
   //DebugLn('TUnitInfo.SetInternalFilename Old=',fFileName,' New=',NewFilename);
@@ -1433,9 +1422,11 @@ begin
     Project.SourceDirectories.RemoveFilename(fLastDirectoryReferenced);
     FSourceDirectoryReferenced:=false;
   end;
-  
+
+  s := fFileName;
   fFileName:=NewFilename;
   UpdateSourceDirectoryReference;
+  CallProjectFileRenamedHandler(s, fFileName);
 end;
 
 function TUnitInfo.GetFileName: string;
@@ -2282,6 +2273,8 @@ begin
   DefFlags:=DefaultProjectFlags;
   if FFileVersion<7 then
     Exclude(DefFlags,pfLRSFilesInOutputDirectory);
+  if FFileVersion<13 then
+    Exclude(DefFlags,pfCompatibilityMode);
   Flags:=[];
   for f:=Low(TProjectFlag) to High(TProjectFlag) do
     SetFlag(f,FXMLConfig.GetValue(Path+'General/Flags/'+ProjectFlagNames[f]+'/Value',f in DefFlags));
@@ -2294,9 +2287,8 @@ begin
     SetFlag(pfMainUnitHasScaledStatement,OldProjectType in [ptApplication]);
     SetFlag(pfRunnable, OldProjectType in [ptProgram,ptApplication,ptCustomProgram]);
   end;
-  if FFileVersion<=11 then begin
-    // set CompatibilityMode flag for legacy projects (this flag was added in FFileVersion=12 that changed
-    // item format so that LPI cannot be opened in legacy Lazarus unless pfCompatibilityMode is set)
+  if FFileVersion<13 then begin
+    // force CompatibilityMode flag when loading legacy projects (format changed again between version 12 and 13)
     SetFlag(pfCompatibilityMode, True);
   end;
   Flags:=Flags-[pfUseDefaultCompilerOptions];
@@ -2334,10 +2326,11 @@ var
   OldUnitInfo, NewUnitInfo: TUnitInfo;
   NewUnitCount, i: integer;
   SubPath, NewUnitFilename: String;
-  MergeUnitInfo, LegacyList: Boolean;
+  MergeUnitInfo, LegacyList, IsPartOfProjectDefValue: Boolean;
 begin
   {$IFDEF IDE_MEM_CHECK}CheckHeapWrtMemCnt('TProject.ReadProject D reading units');{$ENDIF}
   LegacyList:=(FFileVersion<=11) or FXMLConfig.IsLegacyList(Path+'Units/');
+  IsPartOfProjectDefValue:=FXMLConfig.GetValue(Path+'Units/IsPartOfProject',False);
   NewUnitCount:=FXMLConfig.GetListItemCount(Path+'Units/', 'Unit', LegacyList);
   for i := 0 to NewUnitCount - 1 do begin
     SubPath:=Path+'Units/'+FXMLConfig.GetListItemXPath('Unit', i, LegacyList)+'/';
@@ -2361,7 +2354,7 @@ begin
       MergeUnitInfo:=false;
     end;
 
-    NewUnitInfo.LoadFromXMLConfig(FXMLConfig,SubPath,MergeUnitInfo,Merge,FFileVersion);
+    NewUnitInfo.LoadFromXMLConfig(FXMLConfig,SubPath,MergeUnitInfo,IsPartOfProjectDefValue,FFileVersion);
     if i=FNewMainUnitID then begin
       MainUnitID:=IndexOf(NewUnitInfo);
       FNewMainUnitID:=-1;
@@ -2663,19 +2656,19 @@ begin
   end;
 end;
 
-procedure TProject.SaveUnits(const Path: string; SaveSession,IsExternalSessionFile: boolean);
+procedure TProject.SaveUnits(const Path: string; SaveSession,IsPartOfProjectDefValue: boolean);
 var
   i, SaveUnitCount: integer;
 begin
   SaveUnitCount:=0;
+  FXMLConfig.SetDeleteValue(Path+'Units/IsPartOfProject',IsPartOfProjectDefValue,False);
   for i:=0 to UnitCount-1 do
     if UnitMustBeSaved(Units[i],FProjectWriteFlags,SaveSession) then begin
       Units[i].SaveToXMLConfig(FXMLConfig,
-        Path+'Units/'+FXMLConfig.GetListItemXPath('Unit',SaveUnitCount,UseLegacyLists)+'/',
-                                                  True,SaveSession,IsExternalSessionFile,FCurStorePathDelim);
+        Path+'Units/'+FXMLConfig.GetListItemXPath('Unit',SaveUnitCount)+'/',
+                                                  True,SaveSession,IsPartOfProjectDefValue,FCurStorePathDelim);
       inc(SaveUnitCount);
     end;
-  FXMLConfig.SetListItemCount(Path+'Units/',SaveUnitCount,UseLegacyLists);
 end;
 
 procedure TProject.SaveOtherDefines(const Path: string);
@@ -2756,7 +2749,7 @@ begin
   // save custom data
   SaveCustomData(Self,CustomData,FXMLConfig,Path+'CustomData/');
   // Save the macro values and compiler options
-  BuildModes.SaveProjOptsToXMLConfig(FXMLConfig, Path, FSaveSessionInLPI, UseLegacyLists);
+  BuildModes.SaveProjOptsToXMLConfig(FXMLConfig, Path, FSaveSessionInLPI);
   BuildModes.SaveSharedMatrixOptions(Path);
   if FSaveSessionInLPI then
     BuildModes.SaveSessionData(Path);
@@ -2765,12 +2758,12 @@ begin
   // save the Run and Build parameter options
   if pfCompatibilityMode in Flags then
     RunParameterOptions.LegacySave(FXMLConfig,Path,FCurStorePathDelim);
-  RunParameterOptions.Save(FXMLConfig,Path+'RunParams/',FCurStorePathDelim,rpsLPI, UseLegacyLists);
+  RunParameterOptions.Save(FXMLConfig,Path+'RunParams/',FCurStorePathDelim,rpsLPI);
   // save dependencies
   SavePkgDependencyList(FXMLConfig,Path+'RequiredPackages/',
-    FFirstRequiredDependency,pddRequires,FCurStorePathDelim,pfCompatibilityMode in FFlags);
+    FFirstRequiredDependency,pddRequires,FCurStorePathDelim);
   // save units
-  SaveUnits(Path,FSaveSessionInLPI,False);
+  SaveUnits(Path,FSaveSessionInLPI,not(pfCompatibilityMode in Flags));
 
   if Assigned(FDebuggerLink) then
     FDebuggerLink.SaveToLPI(FXMLConfig, Path);
@@ -2787,7 +2780,7 @@ begin
     CurFlags:=FProjectWriteFlags;
     if not FSaveSessionInLPI then
       CurFlags:=CurFlags+[pwfSkipSeparateSessionInfo];
-    if UseLegacyLists then
+    if pfCompatibilityMode in Flags then
       CurFlags:=CurFlags+[pwfCompatibilityMode];
     OnSaveProjectInfo(Self,FXMLConfig,CurFlags);
   end;
@@ -3918,11 +3911,6 @@ begin
     Add(AnUnitInfo.Source);
     Add(AnUnitInfo.SourceLFM);
   end;
-end;
-
-function TProject.GetUseLegacyLists: Boolean;
-begin
-  Result:=pfCompatibilityMode in Flags;
 end;
 
 function TProject.HasProjectInfoFileChangedOnDisk: boolean;
@@ -5201,6 +5189,7 @@ begin
       FSourceDirectories.RemoveFilename(fProjectDirectoryReferenced);
     if fProjectDirectory<>'' then
       FSourceDirectories.AddFilename(fProjectDirectory);
+    CallProjectDirChangedHandler(fProjectDirectoryReferenced, fProjectDirectory);
     fProjectDirectoryReferenced:=fProjectDirectory;
   end;
 end;

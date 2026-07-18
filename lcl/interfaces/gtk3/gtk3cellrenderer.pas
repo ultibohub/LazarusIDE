@@ -187,8 +187,7 @@ begin
   {here we cheat cell renderer to paint eg. height 1 }
   aligned_area^.height := gint(MeasureItemStruct.itemHeight);
   cell_area^.height := gint(MeasureItemStruct.itemHeight);
-  DebugLn('**** Cell_Area ',dbgs(RectFromGdkRect(cell_area^)),' Aligned_Area ',dbgs(RectFromGdkRect(aligned_area^)));
-
+  // DebugLn('**** Cell_Area ',dbgs(RectFromGdkRect(cell_area^)),' Aligned_Area ',dbgs(RectFromGdkRect(aligned_area^)));
 end;
 
 function GTK_IS_CELL_RENDERER_TEXT(cell: PGtkCellRenderer): Boolean;
@@ -713,6 +712,13 @@ begin
 
   if ColumnIndex > -1 then // listview
   begin
+    if AWinControl = nil then
+    begin
+      Lw := TGtk3Widget(g_object_get_data(PGObject(cell), 'lclwidget'));
+      if Assigned(Lw) and (Lw.LCLObject is TWinControl) then
+        AWinControl := TWinControl(Lw.LCLObject);
+    end;
+    if AWinControl = nil then exit;
     // DebugLn('Paint 1 ', dbgsName(AWinControl));
     AreaRect := Bounds(background_area^.x, background_area^.y,
                      background_area^.Width, background_area^.Height);
@@ -932,14 +938,14 @@ const
   CR_NAME = 'LCLIntfCellRenderer';
   crType: TGType = 0;
   crInfo: TGTypeInfo = (
-    class_size: SizeOf(TLCLIntfCellRenderer) + 1024;
+    class_size: SizeOf(TLCLIntfCellRendererClass);
     base_init: nil; // TGBaseInitFunc;
     base_finalize: nil; // TGBaseFinalizeFunc;
     class_init: TGClassInitFunc(@LCLIntfCellRenderer_ClassInit);
     class_finalize: nil; // @LCLIntfCellRenderer_ClassFinalize; // nil; // TGClassFinalizeFunc;
     class_data: nil;
-    instance_size: SizeOf(TLCLIntfCellRenderer) + 1024;
-    n_preallocs: SizeOf(TLCLIntfCellRenderer) + 1024;
+    instance_size: SizeOf(TLCLIntfCellRenderer);
+    n_preallocs: 0;
     instance_init: nil; // TGInstanceInitFunc;
     value_table: nil;
   );
@@ -972,6 +978,8 @@ var
   Value: TGValue;
 begin
   if not Gtk3IsObject(cell) then
+    exit;
+  if not Assigned(Data) then
     exit;
 
   ListItem := nil;

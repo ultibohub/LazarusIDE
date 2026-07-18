@@ -105,10 +105,12 @@ type
     FThread: TDbgThread;
     FIsSymbolResolved: boolean;
     FSymbol: TFpSymbol;
+    FOrigProcSymbol: TFpSymbol;
     FRegisterValueList: TDbgRegisterValueList;
     FIndex: integer;
     function GetContext: TFpDbgSimpleLocationContext;
     function GetFunctionName: string;
+    function GetOrigProcSymbol: TFpSymbol;
     function GetProcSymbol: TFpSymbol;
     function GetLine: integer;
     function GetRegisterValueList: TDbgRegisterValueList;
@@ -126,6 +128,7 @@ type
     property Line: integer read GetLine;
     property RegisterValueList: TDbgRegisterValueList read GetRegisterValueList;
     property ProcSymbol: TFpSymbol read GetProcSymbol;
+    property OrigProcSymbol: TFpSymbol read GetOrigProcSymbol;
     property Index: integer read FIndex;
     property AutoFillRegisters: boolean read FAutoFillRegisters write FAutoFillRegisters;
     property Context: TFpDbgSimpleLocationContext read GetContext write SetContext;
@@ -197,11 +200,6 @@ type
     suGuessed      // Got a frame, but may be wrong
   );
 
-  TDbgUnwinderFlag = (
-    ufSkipArtificialFrames  // e.g. in finally $fin_* methods, find the caller of the outer method
-  );
-  TDbgUnwinderFlags = set of TDbgUnwinderFlag;
-
   { TDbgStackUnwinder }
 
   TDbgStackUnwinder = class
@@ -218,7 +216,6 @@ type
                     ACurrentFrame: TDbgCallstackEntry; // nil for top frame
                     out ANewFrame: TDbgCallstackEntry
                    ): TTDbgStackUnwindResult; virtual; abstract;
-    procedure SetUnwindFlags(AFlags: TDbgUnwinderFlags); virtual; // will be cleared by next InitForThread
   end;
 
   { TDbgStackUnwinderEx }
@@ -1111,6 +1108,11 @@ type
     procedure RemoveThread(const AID: DWord);
     function FormatAddress(const AAddress): String;
     function  Pause: boolean; virtual;
+    { Step-Out: may a genuine return leave the stack pointer unchanged?  True for
+      architectures whose "call" keeps the return address in a link register (e.g.
+      RISC-V ra), so a step-out before the prologue spills it returns with SP
+      unchanged.  Default False (x86: a real return always increases SP). }
+    function StepOutReturnMayKeepStackPointer: Boolean; virtual;
 
     function ReadData(const AAdress: TDbgPtr; const ASize: Cardinal; out AData): Boolean; virtual;
     function ReadData(const AAdress: TDbgPtr; const ASize: Cardinal; out AData; out APartSize: Cardinal): Boolean; virtual;
@@ -2002,17 +2004,14 @@ end;
 
 function TDbgCallstackEntry.GetProcSymbol: TFpSymbol;
 begin
-  if not FIsSymbolResolved then begin
-    if (FIndex > 0) and (FAnAddress <> 0) then
-      FSymbol := FThread.Process.FindProcSymbol(FAnAddress - 1) // -1 => inside the call instruction
-    else
-      FSymbol := FThread.Process.FindProcSymbol(FAnAddress);
-
-    if FSymbol is TFpSymbolDwarfDataProc then
+  if FSymbol = nil then begin
+    // FSymbol has no refcount of tis own.
+    FSymbol := GetOrigProcSymbol;
+    if (FSymbol <> nil) and (FSymbol is TFpSymbolDwarfDataProc) then begin
       FSymbol := TFpSymbolDwarfDataProc(FSymbol).ResolveInternalFinallySymbol(FThread.Process);
-
-
-    FIsSymbolResolved := FSymbol <> nil
+      if FSymbol = nil then
+        FSymbol := FOrigProcSymbol;
+    end;
   end;
   result := FSymbol;
 end;
@@ -2034,6 +2033,19 @@ begin
   end
   else
     result := '';
+end;
+
+function TDbgCallstackEntry.GetOrigProcSymbol: TFpSymbol;
+begin
+  if not FIsSymbolResolved then begin
+    if (FIndex > 0) and (FAnAddress <> 0) then
+      FOrigProcSymbol := FThread.Process.FindProcSymbol(FAnAddress - 1) // -1 => inside the call instruction
+    else
+      FOrigProcSymbol := FThread.Process.FindProcSymbol(FAnAddress);
+
+    FIsSymbolResolved := FOrigProcSymbol <> nil
+  end;
+  result := FOrigProcSymbol;
 end;
 
 function TDbgCallstackEntry.GetContext: TFpDbgSimpleLocationContext;
@@ -2110,7 +2122,8 @@ end;
 destructor TDbgCallstackEntry.Destroy;
 begin
   FreeAndNil(FRegisterValueList);
-  ReleaseRefAndNil(FSymbol);
+  FSymbol := nil;
+  ReleaseRefAndNil(FOrigProcSymbol);
   FContext.ReleaseReference;
   inherited Destroy;
 end;
@@ -3664,6 +3677,11 @@ begin
   Result := TFpWatchPointData.Create;
 end;
 
+function TDbgProcess.StepOutReturnMayKeepStackPointer: Boolean;
+begin
+  Result := False;
+end;
+
 procedure TDbgProcess.Init(const AProcessID, AThreadID: Integer);
 begin
   FProcessID := AProcessID;
@@ -3751,13 +3769,6 @@ end;
 procedure TDbgStackFrameInfo.FlagAsSteppedOut;
 begin
   FHasSteppedOut := True;
-end;
-
-{ TDbgStackUnwinder }
-
-procedure TDbgStackUnwinder.SetUnwindFlags(AFlags: TDbgUnwinderFlags);
-begin
-  //
 end;
 
 { TDbgStackUnwinderEx }

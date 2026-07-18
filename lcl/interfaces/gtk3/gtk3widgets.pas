@@ -101,6 +101,7 @@ type
     class function MoveTabFocus(aWidget: PGtkWidget;
       aDirection: TGtkDirectionType; aData: gPointer): gBoolean; cdecl; static;
     class function WidgetEvent(widget: PGtkWidget; event: PGdkEvent; data: GPointer): gboolean; cdecl; static; {main event filter of widget}
+    class procedure GrabNotify({%H-}widget: PGtkWidget; was_grabbed: gboolean; {%H-}data: GPointer); cdecl; static;
     class procedure DestroyWidgetEvent({%H-}w: PGtkWidget;{%H-}data:gpointer); cdecl; static;
   strict private
     FCentralWidgetRGBA: array [0{GTK_STATE_NORMAL}..4{GTK_STATE_INSENSITIVE}] of TDefaultRGBA;
@@ -1171,7 +1172,7 @@ type
     class function MenuBarEnterNotify(AWidget: PGtkWidget; AEvent: PGdkEventCrossing; AData: gpointer): gboolean; cdecl; static;
   protected
     FFirstMapRect: TRect;
-    FInActivate: Boolean; // set while delivering LM_ACTIVATE, mirrors gtk2 wwiActivating
+    FStateFlags: TGtk3WindowStateFlags;
     procedure ConnectSizeAllocateSignal(ToWidget: PGtkWidget); override;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
     function EatArrowKeys(const {%H-}AKey: Word): Boolean; override;
@@ -1201,6 +1202,7 @@ type
     function GetMenuBarHeight: gint;
     function GetBox: PGtkBox;
     function GetWindowState: TGdkWindowState;
+    property StateFlags: TGtk3WindowStateFlags read FStateFlags write FStateFlags;
     property Icon: PGdkPixBuf read FIcon write SetIcon;
     property SkipTaskBarHint: Boolean read GetSkipTaskBarHint write SetSkipTaskBarHint;
     property Title: String read GetTitle write SetTitle;
@@ -2336,7 +2338,12 @@ begin
   LWidgetType := WidgetType;
   LIsCombo := Self is TGtk3ComboBox;
 
-  DeliverMessage(Msg);
+  Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel + 1;
+  try
+    DeliverMessage(Msg);
+  finally
+    Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel - 1;
+  end;
 
   if Msg.Msg = LM_KILLFOCUS then
   begin
@@ -2556,8 +2563,8 @@ end;
 function TGtk3Widget.SetCapture: HWND;
 begin
   Result := HWND(GetCapture);
-  gtk_grab_add(GetContainerWidget);
-  Gtk3WidgetSet.FLCLCaptureWidget := GetContainerWidget;
+  gtk_grab_add(FWidget);
+  Gtk3WidgetSet.FLCLCaptureWidget := FWidget;
 end;
 
 procedure TGtk3Widget.DeliverIMCommit(const AStr: string);
@@ -2598,6 +2605,13 @@ const
   LM_KeyUpMsgs: array[Boolean] of UINT = (LM_KEYUP, LM_SYSKEYUP);
   CN_CharMsg: array[Boolean] of UINT = (CN_CHAR, CN_SYSCHAR);
   LM_CharMsg: array[Boolean] of UINT = (LM_CHAR, LM_SYSCHAR);
+
+
+function CheckWidget: boolean;
+begin
+  Result := (Gtk3WidgetFromGtkWidget(Sender) = Self) and CanSendLCLMessage;
+end;
+
 var
   AEvent: TGdkEventKey;
   Msg: TLMKey;
@@ -2624,7 +2638,8 @@ begin
   AEventString := AEvent.string_;
   if AKeyPress and (Gtk3WidgetSet.IMContext <> nil) and
      not Gtk3IsEntry(PGObject(Sender)) and
-     not Gtk3IsTextView(PGObject(Sender)) then
+     not Gtk3IsTextView(PGObject(Sender)) and
+     not ((GDK_CONTROL_MASK in AEvent.state) and not (GDK_MOD1_MASK in AEvent.state)) then
   begin
     Gtk3WidgetSet.IMCommitStr := '';
     Gtk3WidgetSet.IMInFilter := True;
@@ -2755,7 +2770,7 @@ begin
 
     NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     if (DeliverMessage(Msg, True) <> 0) or (Msg.CharCode = VK_UNKNOWN) then
@@ -2763,7 +2778,7 @@ begin
       {$IFDEF GTK3DEBUGKEYPRESS}
       writeln('<==== CN_KeyDownMsgs handled ... exiting');
       {$ENDIF}
-      if Gtk3WidgetFromGtkWidget(Sender) <> Self then
+      if not CheckWidget then
         exit(True);
       if IsEditableWidget and (Self.getText <> TextBeforeKey) then
         exit(True)
@@ -2773,7 +2788,7 @@ begin
         exit(True);
     end;
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     if AKeyPress then
@@ -2785,7 +2800,7 @@ begin
 
     NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     if IsArrowKey and ([wtListBox,wtListView,wtEntry,wtMemo,wtComboBox] * WidgetType <> []) then
@@ -2800,7 +2815,7 @@ begin
       exit;
     end;
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
   end;
 
@@ -2813,7 +2828,7 @@ begin
     // TODO: If not IsControlKey
     Result := LCLObject.IntfUTF8KeyPress(UTF8Char, 1, IsSysKey);
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     if Result then
@@ -2832,12 +2847,12 @@ begin
     CharMsg.CharCode := Word(AChar);
     NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     Result := (DeliverMessage(CharMsg, True) <> 0) or (CharMsg.CharCode = VK_UNKNOWN) or IsArrowKey;
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     if Result then
@@ -2853,12 +2868,12 @@ begin
 
     NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
 
     DeliverMessage(CharMsg, True);
 
-    if not CanSendLCLMessage then
+    if not CheckWidget then
       exit;
   end;
   if AKeyPress then
@@ -2883,8 +2898,13 @@ var
   MsgPopup : TLMMouse;
   MousePos: TPoint;
   MButton: guint;
-  SavedHandle: PtrUInt;
   AParentControl: TWinControl;
+
+  function CheckWidget: boolean;
+  begin
+    Result := (Gtk3WidgetFromGtkWidget(Sender) = Self) and CanSendLCLMessage;
+  end;
+
 begin
   Result := gtk_false;
   {$IF DEFINED(GTK3DEBUGEVENTS) OR DEFINED(GTK3DEBUGMOUSE)}
@@ -2894,8 +2914,6 @@ begin
   {$ENDIF}
   if Event^.button.send_event = NO_PROPAGATION_TO_PARENT then
     exit(gtk_true);
-
-  SavedHandle := PtrUInt(Self);
 
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
 
@@ -3003,7 +3021,7 @@ begin
   NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
   Event^.button.send_event := NO_PROPAGATION_TO_PARENT;
 
-  if (SavedHandle <> PtrUInt(Self)) or (LCLObject = nil) or (FWidget = nil) then
+  if not CheckWidget then
     exit;
   Result := DeliverMessage(Msg, True) <> 0;
 
@@ -3014,10 +3032,13 @@ begin
     MsgPopup.XPos := SmallInt(Round(Event^.button.x_root));
     MsgPopup.YPos := SmallInt(Round(Event^.button.y_root));
 
-    if (SavedHandle <> PtrUInt(Self)) or (LCLObject = nil) or (FWidget = nil) then
+    if not CheckWidget then
       exit;
 
     Result := DeliverMessage(MsgPopup, True) <> 0;
+
+    if not CheckWidget then
+      exit;
 
     // If still not handled and we are not a notebook (notebooks have their own
     // ActiveSheet.PopupMenu special path in the override), propagate
@@ -3037,6 +3058,9 @@ begin
       Result := MsgPopup.Result <> 0;
     end;
   end;
+
+  if not CheckWidget then
+    exit;
 
   if wtPanel in WidgetType then
     Result := GDK_EVENT_STOP;
@@ -3459,6 +3483,18 @@ begin
     GetContainerWidget^.set_style(AValue);}
 end;
 
+class procedure TGtk3Widget.GrabNotify(widget: PGtkWidget; was_grabbed: gboolean; data: GPointer); cdecl;
+var
+  CurGrab: PGtkWidget;
+begin
+  if not was_grabbed then
+    exit;
+  CurGrab := gtk_grab_get_current;
+  if (Gtk3WidgetSet.FLCLCaptureWidget <> nil) and
+     ((CurGrab = nil) or (CurGrab = Gtk3WidgetSet.FLCLCaptureWidget)) then
+    Gtk3WidgetSet.ReleaseCapture;
+end;
+
 class procedure TGtk3Widget.DestroyWidgetEvent(w: PGtkWidget; data: gpointer); cdecl;
 begin
   {$IFDEF GTK3DEBUGCORE}
@@ -3871,6 +3907,7 @@ begin
     FWidget^.set_events(GDK_DEFAULT_EVENTS_MASK);
   g_signal_connect_data(FWidget, 'destroy', TGCallback(@DestroyWidgetEvent), Self, nil, G_CONNECT_DEFAULT);
   g_signal_connect_data(FWidget, 'event', TGCallback(@WidgetEvent), Self, nil, G_CONNECT_DEFAULT);
+  g_signal_connect_data(FWidget, 'grab-notify', TGCallback(@GrabNotify), Self, nil, G_CONNECT_DEFAULT);
 
   if FWidgetType * [wtWindow, wtDialog, wtHintWindow] = [] then
   begin
@@ -4811,7 +4848,8 @@ begin
     TopWidget := TGtk3Widget(HwndFromGtkWidget(TopLevel));
     if (TopWidget is TGtk3Window) and Assigned(TopWidget.LCLObject)
     and (TopWidget.LCLObject is TCustomForm)
-    and not TGtk3Window(TopWidget).FInActivate then
+    and not (wwiActivating in TGtk3Window(TopWidget).FStateFlags)
+    and (Gtk3WidgetSet.MsgActivationLevel = 0) then
       TGtk3Window(TopWidget).Activate;
   end;
 
@@ -6627,9 +6665,15 @@ begin
 end;
 
 procedure TGtk3SpinEdit.DestroyWidget;
+var
+  Data: PLCLSpinEditData;
 begin
-  LCLSpinEditFreeData(Widget);
+  Data := LCLSpinEditGetData(Widget);
+  if Assigned(Data) and (Widget <> nil) then
+    g_object_set_data(PGObject(Widget), LCL_SPIN_DATA_KEY, nil);
   inherited DestroyWidget;
+  if Assigned(Data) then
+    Dispose(Data);
 end;
 
 function TGtk3SpinEdit.CanFocus: Boolean;
@@ -8394,6 +8438,7 @@ var
   OuterNotebook: PGtkWidget;
   Alloc: TGtkAllocation;
   vX, vY: integer;
+  Translated: Boolean;
 begin
   Alloc := Default(TGtkAllocation);
   Notebook := nil;
@@ -8402,6 +8447,7 @@ begin
   AParentObject := nil;
   vX := 0;
   vY := 0;
+  Translated := False;
 
   Result := Rect(0, 0, 0, 0);
 
@@ -8409,7 +8455,7 @@ begin
   //return clientRect which is 100% accurate, because of triggering
   //Parent.DoAdjustClientRect change when content size is changed in TabSheetLayoutSizeAllocate.
   //If Parent is not TCustomTabControl, then nuclear option below should trigger. zeljan
-  if not WidgetMapped or Assigned(LCLObject.Parent) and (LCLObject.Parent is TCustomTabControl) then
+  if (not WidgetMapped) or (Assigned(LCLObject.Parent) and (LCLObject.Parent is TCustomTabControl)) then
   begin
     if Assigned(LCLObject.Parent) and LCLObject.Parent.HandleAllocated then
       Exit(TGtk3Widget(LCLObject.Parent.Handle).getClientRect);
@@ -8447,8 +8493,9 @@ begin
   if Assigned(Notebook) then
     OuterNotebook := gtk_widget_get_ancestor(
       gtk_widget_get_parent(Notebook), gtk_notebook_get_type());
-  if Assigned(Notebook) and Assigned(OuterNotebook) and
-      gtk_widget_translate_coordinates(FCentralWidget, Notebook, 0, 0, @vX, @vY) then
+  Translated := Assigned(Notebook) and Assigned(OuterNotebook) and
+      gtk_widget_translate_coordinates(FCentralWidget, Notebook, 0, 0, @vX, @vY);
+  if Translated then
   begin
     Result := Rect(0, 0, Alloc.width - vX, Alloc.height - vY);
   end else
@@ -8459,7 +8506,7 @@ begin
     'CW_w=%d CW_h=%d  NB=%s OutNB=%s  vX=%d vY=%d  translated=%s  -> w=%d h=%d',
     [dbgsName(LCLObject), Alloc.width, Alloc.height,
      dbghex(PtrUInt(Notebook)), dbghex(PtrUInt(OuterNotebook)),
-     vX, vY, BoolToStr(ATranslated, 'YES', 'no'),
+     vX, vY, BoolToStr(Translated, 'YES', 'no'),
      Result.Right, Result.Bottom]));
   {$ENDIF}
 end;
@@ -8575,6 +8622,7 @@ var
   Pg: TCustomPage;
   ACtl: TWinControl;
   W: PGtkWidget;
+  OldW: PGtkWidget;
 begin
   if widget=nil then ;
   if TGtk3Widget(Data).InUpdate then
@@ -8621,6 +8669,9 @@ begin
    Gtk3FocusAfterTabSwitch handles W=nil correctly (clears flag and exits).}
   g_object_set_data(TGtk3NoteBook(Data).FCentralWidget,
     'lcl-tab-switch-active', Pointer(1));
+  OldW := PGtkWidget(g_object_get_data(TGtk3NoteBook(Data).FCentralWidget, 'lcl-tab-focus-widget'));
+  if OldW <> nil then
+    g_object_unref(PGObject(OldW));
   g_object_set_data(TGtk3NoteBook(Data).FCentralWidget,
     'lcl-tab-focus-widget', W);
   if W <> nil then
@@ -9777,6 +9828,7 @@ var
   APosition: gint;
   AVisible: gboolean;
   OldWidget: PGtkWidget;
+  OldSubmenu: PGtkWidget;
 begin
   if not Assigned(FWidget) then
     Exit;
@@ -9784,6 +9836,13 @@ begin
   OldWidget := FWidget;
   AParent := PGtkMenuShell(OldWidget^.get_parent);
   AVisible := OldWidget^.get_visible;
+
+  OldSubmenu := PGtkMenuItem(OldWidget)^.get_submenu;
+  if OldSubmenu <> nil then
+  begin
+    g_object_ref(PGObject(OldSubmenu));
+    PGtkMenuItem(OldWidget)^.set_submenu(nil);
+  end;
 
   APosition := -1;
   if Assigned(AParent) then
@@ -9819,6 +9878,12 @@ begin
   g_object_set_data(PGObject(FWidget), 'lclwidget', Self);
 
   ConnectMenuSignals;
+
+  if OldSubmenu <> nil then
+  begin
+    PGtkMenuItem(FWidget)^.set_submenu(PGtkMenu(OldSubmenu));
+    g_object_unref(PGObject(OldSubmenu));
+  end;
 
   if Assigned(AParent) and (APosition >= 0) then
     AParent^.insert(FWidget, APosition);
@@ -11205,6 +11270,8 @@ var
   Selection: PGtkTreeSelection;
   Rows: PGList;
   ListStoreModel: PGtkTreeModel;
+  TmpList: PGList;
+  Path: PGtkTreePath;
 begin
   Result := 0;
   if not Gtk3IsWidget(FWidget) then
@@ -11214,6 +11281,14 @@ begin
     exit;
   Rows := Selection^.get_selected_rows(@ListStoreModel);
   Result := g_list_length(Rows);
+  TmpList := Rows;
+  while TmpList <> nil do
+  begin
+    Path := PGtkTreePath(TmpList^.data);
+    if Assigned(Path) then
+      gtk_tree_path_free(Path);
+    TmpList := TmpList^.next;
+  end;
   g_list_free(Rows);
 end;
 
@@ -13089,7 +13164,7 @@ begin
     AValue.g_type := G_TYPE_BOOLEAN;
     g_object_get_property(AObject, pspec^.name, @AValue); // get property value
     if AValue.data[0].v_int = 0 then // if 0 = False then it is close up
-      g_timeout_add(0,@GtkPopupCloseUp, AData)
+      g_idle_add(@GtkPopupCloseUp, AData)
     else // in other case it is drop down
     begin
       ComboBox.IntfGetItems;
@@ -14477,6 +14552,7 @@ var
   AState: TGdkWindowState;
   //AScreen: PGdkScreen;
   msk: TGdkWindowState;
+  MenuH: gint;
 begin
   Result := False;
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
@@ -14523,8 +14599,14 @@ begin
 
   Msg.SizeType := Msg.SizeType or Size_SourceIsInterface;
 
+  MenuH := 0;
+  if Assigned(TGtk3Window(AData).LCLObject) and
+     not Assigned(TGtk3Window(AData).LCLObject.Parent) and
+     (not (TGtk3Window(AData).LCLObject is TCustomForm) or
+      (TCustomForm(TGtk3Window(AData).LCLObject).FormStyle <> fsMDIChild)) then
+    MenuH := TGtk3Window(AData).GetMenuBarHeight;
   Msg.Width := Word(AWidget^.window^.get_width);
-  Msg.Height := Word(AWidget^.window^.get_height);
+  Msg.Height := Word(Max(0, AWidget^.window^.get_height - MenuH));
   {$IFDEF GTK3DEBUGWINDOWSTATE}
   DebugLn('GetWindowState SizeType=',dbgs(Msg.SizeType),' realized ',dbgs(AWidget^.get_realized));
   {$ENDIF}
@@ -14555,6 +14637,8 @@ begin
     PGtkWindow(D^.Widget)^.set_default_size(D^.W, D^.H);
     PGtkWindow(D^.Widget)^.resize(D^.W, D^.H);
   end;
+  if D^.Widget <> nil then
+    g_object_unref(PGObject(D^.Widget));
   Dispose(D);
 end;
 
@@ -14637,6 +14721,7 @@ begin
       AGdkRect^.width  := KwinProtectW;
       AGdkRect^.height := KwinProtectH;
       New(KwinResizeData);
+      g_object_ref(PGObject(AWidget));
       KwinResizeData^.Widget := AWidget;
       KwinResizeData^.W := KwinProtectW;
       KwinResizeData^.H := KwinProtectH;
@@ -15126,14 +15211,19 @@ begin
     MsgActivate.Active := WA_INACTIVE;
   MsgActivate.ActiveWindow := HWND(TGtk3Window(Data).LCLObject.Handle);
 
-  // Guard against SetFocus re-activating this window from within the activate
-  // cascade (would ping-pong window activation and flood the IM/ibus). Mirrors
-  // gtk2 wwiActivating (gtk2callback.inc / gtk2winapi.inc).
-  TGtk3Window(Data).FInActivate := True;
+  if IsActive then
+    Include(TGtk3Window(Data).FStateFlags, wwiActivating)
+  else
+    Include(TGtk3Window(Data).FStateFlags, wwiDeactivating);
+  Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel + 1;
   try
     TGtk3Window(Data).DeliverMessage(MsgActivate);
   finally
-    TGtk3Window(Data).FInActivate := False;
+    Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel - 1;
+    if IsActive then
+      Exclude(TGtk3Window(Data).FStateFlags, wwiActivating)
+    else
+      Exclude(TGtk3Window(Data).FStateFlags, wwiDeactivating);
   end;
 end;
 
@@ -15453,6 +15543,7 @@ var
   y: gint;
   AViewPort: PGtkViewport;
   MenuSize:Integer;
+  Bar: PGtkScrollbar;
 begin
   AViewPort := PGtkViewPort(FCentralWidget^.get_parent);
   if WidgetMapped and Gtk3IsViewPort(AViewPort) and Gtk3IsGdkWindow(AViewPort^.get_view_window) then
@@ -15481,21 +15572,16 @@ begin
       // calculate our own client rect somehow.
       if (LCLObject is TCustomForm) then
       begin
-        MenuSize := 0;
-        if (TCustomForm(LCLObject).Menu <> nil) or (FMenuBar <> nil) then
-          MenuSize := GetSystemMetrics(SM_CYMENU)
-        else
-          MenuSize := 0;
         Allocation.x := LCLObject.Left;
         Allocation.y := LCLObject.Top;
         if Assigned(LCLObject.Parent) or (wtHintWindow in WidgetType) then
         begin
           Allocation.width := LCLObject.Width;
-          Allocation.Height := LCLObject.Height - MenuSize;
+          Allocation.Height := LCLObject.Height;
         end else
         begin
           Allocation.width := LCLObject.Width - 1; // border
-          Allocation.Height := LCLObject.Height - MenuSize - 1;
+          Allocation.Height := LCLObject.Height - 1;
         end;
       end else
       begin
@@ -15513,11 +15599,8 @@ begin
       if Assigned(LCLObject.Parent) and (LCLObject is TCustomForm) and
          (Allocation.Height < 2) then
       begin
-        MenuSize := 0;
-        if (TCustomForm(LCLObject).Menu <> nil) or (FMenuBar <> nil) then
-          MenuSize := GetSystemMetrics(SM_CYMENU);
         Allocation.width := LCLObject.Width;
-        Allocation.Height := LCLObject.Height - MenuSize;
+        Allocation.Height := LCLObject.Height;
       end else
       if Gtk3WidgetSet.IsWayland and Gtk3IsGtkWindow(FWidget) and
          not Assigned(LCLObject.Parent) and not (wtHintWindow in FWidgetType) and
@@ -15548,10 +15631,15 @@ begin
   Result := R;
   Types.OffsetRect(Result, -Result.Left, -Result.Top);
 
-  if GTK3WidgetSet.OverlayScrolling and getHorizontalScrollbar^.is_visible then
-    Result.Height := Result.Height - getHorizontalScrollbar^.get_allocated_height;
-  if GTK3WidgetSet.OverlayScrolling and getVerticalScrollbar^.is_visible then
-    Result.Width := Result.Width - getVerticalScrollbar^.get_allocated_width;
+  if GTK3WidgetSet.OverlayScrolling then
+  begin
+    Bar := getHorizontalScrollbar;
+    if (Bar <> nil) and Gtk3IsWidget(Bar) and Bar^.is_visible then
+      Result.Height := Result.Height - Bar^.get_allocated_height;
+    Bar := getVerticalScrollbar;
+    if (Bar <> nil) and Gtk3IsWidget(Bar) and Bar^.is_visible then
+      Result.Width := Result.Width - Bar^.get_allocated_width;
+  end;
 
   {$IF DEFINED(GTK3DEBUGFORMS) OR DEFINED(GTK3DEBUGSIZE)}
   DebugLn(Format('TGtk3Window.getClientRect %s Result=%s LCL=%dx%d Alloc=%dx%d shadow=%dx%d CW(real=%s map=%s)',
@@ -16223,7 +16311,7 @@ begin
     FMenuBar := TGtkMenuBar.new; // our menubar (needed for main menu)
 
     //min width 1 so GTK does not report full menu-item sum as WM min_width
-    PGtkWidget(FMenuBar)^.set_size_request(1, -1);
+    PGtkWidget(FMenuBar)^.set_size_request(1, GetSystemMetrics(SM_CYMENU));
 
     g_object_set_data(Widget,'lclmenubar',GPointer(1));
     if not (Assigned(LCLObject) and (csDesigning in LCLObject.ComponentState)
@@ -16231,6 +16319,7 @@ begin
     begin
       ABox := PGtkBox(PGtkWindow(Widget)^.get_child);
       ABox^.pack_start(FMenuBar, False, False, 0);
+      PGtkWidget(FMenuBar)^.show;
       g_signal_connect_data(PGObject(FMenuBar), 'enter-notify-event',
         TGCallback(@MenuBarEnterNotify), Self, nil, G_CONNECT_DEFAULT);
       if Assigned(LCLObject) and

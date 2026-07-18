@@ -195,7 +195,11 @@ begin
       bsdRightOrPartRight: x1 := ALogX-length(BracketToken)+1;
       bsdRight:            x1 := ALogX;
       bsdLeft:             x1 := ALogX-length(BracketToken);
-      bsdRightThenLeft:  begin
+      bsdRightThenLeft:  if ALogX > Length(Line) then begin
+                           // At eol, do left only
+                           x1 := ALogX-length(BracketToken);
+                         end
+                         else begin
                            x1 := ALogX;
                            x2 := ALogX;
                          end;
@@ -255,6 +259,7 @@ begin
 
       if (ASearchDirection = bsdRightThenLeft) and (x2 = ALogX) then begin
         x1 := ALogX-length(BracketToken);
+        if x1 < 1 then x1 := 1;
         x2 := ALogX-1;
         continue;
       end;

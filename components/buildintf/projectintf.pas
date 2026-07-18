@@ -65,6 +65,7 @@ type
     FIsPartOfProject: boolean;
   protected
     procedure SetIsPartOfProject(const AValue: boolean); virtual;
+    procedure CallProjectFileRenamedHandler(AnOldName, ANewName: String);
   public
     constructor Create;
     destructor Destroy; override;
@@ -622,6 +623,7 @@ type
     procedure SetSessionStorage(const AValue: TProjectSessionStorage); virtual;
     procedure SetTitle(const AValue: String); virtual;
     procedure SetUseManifest(AValue: boolean); virtual; abstract;
+    procedure CallProjectDirChangedHandler(AnOldName, ANewName: String);
   public
     constructor Create({%H-}ProjectDescription: TProjectDescriptor); virtual; reintroduce;
     destructor Destroy; override;
@@ -743,7 +745,8 @@ const
   DefaultProjectFlags = DefaultProjectNoApplicationFlags+[
                          pfMainUnitHasCreateFormStatements,
                          pfMainUnitHasTitleStatement,
-                         pfMainUnitHasScaledStatement];
+                         pfMainUnitHasScaledStatement,
+                         pfCompatibilityMode];
 
 function ProjectFlagsToStr(Flags: TProjectFlags): string;
 function StrToProjectSessionStorage(const s: string): TProjectSessionStorage;
@@ -779,8 +782,39 @@ procedure RegisterProjectDescriptor(ProjDesc: TProjectDescriptor;
   const Category, Caption, Description, Units: string);
 }
 
+type
+  //TLazProjectChangedHandler = procedure(ASender: TLazProject);
+  TLazProjectDirectoryChangedHandler = procedure(ASender: TLazProject; AnOldName, ANewName: String) of object;
+  TLazProjectFileRenamedChangedHandler = procedure(ASender: TLazProjectFile; AnOldName, ANewName: String) of object;
+
+  { TGlobalLazProjectHooks }
+
+  TGlobalLazProjectHooks = class
+  private class var
+    TheInstance: TGlobalLazProjectHooks;
+  private type
+    TDirChangedList = specialize TFPGList<TLazProjectDirectoryChangedHandler>;
+    TFileNameChangedList = specialize TFPGList<TLazProjectFileRenamedChangedHandler>;
+  private
+    FDirChangedList: TDirChangedList;
+    FFileNameChangedList: TFileNameChangedList;
+  protected
+    procedure CallProjectDirectoryChangedHandler(ASender: TLazProject; AnOldName, ANewName: String);
+    procedure CallProjectFileRenamedHandler(ASender: TLazProjectFile; AnOldName, ANewName: String);
+  public
+    destructor Destroy; override;
+    procedure RegisterProjectDirectoryChangedHandler(AHandler: TLazProjectDirectoryChangedHandler);
+    procedure UnregisterProjectDirectoryChangedHandler(AHandler: TLazProjectDirectoryChangedHandler);
+    procedure RegisterProjectFileRenamedHandler(AHandler: TLazProjectFileRenamedChangedHandler);
+    procedure UnregisterProjectFileRenamedHandler(AHandler: TLazProjectFileRenamedChangedHandler);
+  end;
+
+function GetGlobalLazProjectHooks: TGlobalLazProjectHooks;
+
 var
   LazProject1: TLazProject = nil; // the main project
+
+property GlobalLazProjectHooks: TGlobalLazProjectHooks read GetGlobalLazProjectHooks;
 
 implementation
 
@@ -1684,6 +1718,12 @@ begin
   Modified:=true;
 end;
 
+procedure TLazProject.CallProjectDirChangedHandler(AnOldName, ANewName: String);
+begin
+  if GlobalLazProjectHooks.TheInstance <> nil then
+    GlobalLazProjectHooks.TheInstance.CallProjectDirectoryChangedHandler(Self, AnOldName, ANewName);
+end;
+
 constructor TLazProject.Create(ProjectDescription: TProjectDescriptor);
 begin
   inherited Create(nil);
@@ -1775,6 +1815,12 @@ end;
 procedure TLazProjectFile.SetIsPartOfProject(const AValue: boolean);
 begin
   FIsPartOfProject:=AValue;
+end;
+
+procedure TLazProjectFile.CallProjectFileRenamedHandler(AnOldName, ANewName: String);
+begin
+  if GlobalLazProjectHooks.TheInstance <> nil then
+    GlobalLazProjectHooks.TheInstance.CallProjectFileRenamedHandler(Self, AnOldName, ANewName);
 end;
 
 constructor TLazProjectFile.Create;
@@ -1900,9 +1946,88 @@ begin
     Caption, Description, Units), Category);
 end;
 }
+
+{ TGlobalLazProjectHooks }
+
+function GetGlobalLazProjectHooks: TGlobalLazProjectHooks;
+begin
+  if TGlobalLazProjectHooks.TheInstance = nil then
+    TGlobalLazProjectHooks.TheInstance := TGlobalLazProjectHooks.Create;
+  Result := TGlobalLazProjectHooks.TheInstance;
+end;
+
+procedure TGlobalLazProjectHooks.CallProjectDirectoryChangedHandler(ASender: TLazProject;
+  AnOldName, ANewName: String);
+var
+  i: Integer;
+  h: TLazProjectDirectoryChangedHandler;
+begin
+  if FDirChangedList = nil then exit;
+  i := FDirChangedList.Count - 1;
+  while i >= 0 do begin
+    h := FDirChangedList[i];
+    h(ASender, AnOldName, ANewName);
+    dec(i);
+  end;
+end;
+
+procedure TGlobalLazProjectHooks.CallProjectFileRenamedHandler(ASender: TLazProjectFile;
+  AnOldName, ANewName: String);
+var
+  i: Integer;
+  h: TLazProjectFileRenamedChangedHandler;
+begin
+  if FFileNameChangedList = nil then exit;
+  i := FFileNameChangedList.Count - 1;
+  while i >= 0 do begin
+    h := FFileNameChangedList[i];
+    h(ASender, AnOldName, ANewName);
+    dec(i);
+  end;
+end;
+
+destructor TGlobalLazProjectHooks.Destroy;
+begin
+  inherited Destroy;
+  FDirChangedList.Free;
+  FFileNameChangedList.Free;
+end;
+
+procedure TGlobalLazProjectHooks.RegisterProjectDirectoryChangedHandler(
+  AHandler: TLazProjectDirectoryChangedHandler);
+begin
+  if FDirChangedList = nil then
+    FDirChangedList := TDirChangedList.Create;
+  FDirChangedList.Add(AHandler);
+end;
+
+procedure TGlobalLazProjectHooks.UnregisterProjectDirectoryChangedHandler(
+  AHandler: TLazProjectDirectoryChangedHandler);
+begin
+  if FDirChangedList = nil then exit;
+  FDirChangedList.Remove(AHandler);
+end;
+
+procedure TGlobalLazProjectHooks.RegisterProjectFileRenamedHandler(
+  AHandler: TLazProjectFileRenamedChangedHandler);
+begin
+  if FFileNameChangedList = nil then
+    FFileNameChangedList := TFileNameChangedList.Create;
+  FFileNameChangedList.Add(AHandler);
+end;
+
+procedure TGlobalLazProjectHooks.UnregisterProjectFileRenamedHandler(
+  AHandler: TLazProjectFileRenamedChangedHandler);
+begin
+  if FFileNameChangedList = nil then exit;
+  FFileNameChangedList.Remove(AHandler);
+end;
+
 initialization
   ProjectFileDescriptors:=nil;
-
+finalization
+  GlobalLazProjectHooks.TheInstance.Free;
+  GlobalLazProjectHooks.TheInstance := nil;
 end.
 
 

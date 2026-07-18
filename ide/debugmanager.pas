@@ -404,6 +404,7 @@ type
   private
     FManager: TDebugManager;
   protected
+    procedure SetIgnoreAll(AValue: boolean); override;
     procedure NotifyAdd(const ABreakPoint: TIDEBreakPoint); override;
     procedure NotifyRemove(const ABreakPoint: TIDEBreakPoint); override;
     procedure Update(Item: TCollectionItem); override;
@@ -594,6 +595,13 @@ begin
   inherited Create(TManagedBreakPoint);
 end;
 
+procedure TManagedBreakPoints.SetIgnoreAll(AValue: boolean);
+begin
+  if (IgnoreAll <> AValue) and (Project1 <> nil) then
+    Project1.Modified := True;
+  inherited SetIgnoreAll(AValue);
+end;
+
 procedure TManagedBreakPoints.NotifyAdd(const ABreakPoint: TIDEBreakPoint);
 begin
 {$ifdef VerboseDebugger}
@@ -736,17 +744,23 @@ end;
 procedure TManagedBreakPoint.UpdateSourceMarkImage;
 var
   Img: Integer;
+  Greyed: Boolean;
 begin
   if SourceMark = nil then Exit;
+  Greyed := DebugBossMgr.BreakPoints.IgnoreAll or
+    ( (Project1.CompilerOptions <> nil) and
+      Project1.CompilerOptions.RunWithoutDebug and
+      (DebugBoss.State in [dsNone, dsIdle, dsStop, dsDestroying])
+    );
   case Valid of
     vsValid:
-      Img := SourceEditorMarks.ActiveBreakPointImg[not DebugBossMgr.BreakPoints.IgnoreAll, Enabled];
+      Img := SourceEditorMarks.ActiveBreakPointImg[not Greyed, Enabled];
     vsInvalid:
-      Img := SourceEditorMarks.InvalidBreakPointImg[not DebugBossMgr.BreakPoints.IgnoreAll, Enabled];
+      Img := SourceEditorMarks.InvalidBreakPointImg[not Greyed, Enabled];
     vsPending:
-      Img := SourceEditorMarks.PendingBreakPointImg[not DebugBossMgr.BreakPoints.IgnoreAll, Enabled];
+      Img := SourceEditorMarks.PendingBreakPointImg[not Greyed, Enabled];
     else
-      Img := SourceEditorMarks.UnknownBreakPointImg[not DebugBossMgr.BreakPoints.IgnoreAll, Enabled];
+      Img := SourceEditorMarks.UnknownBreakPointImg[not Greyed, Enabled];
   end;
   SourceMark.ImageIndex := Img;
   SourceMark.Visible := True;
@@ -2160,6 +2174,7 @@ begin
   FRegisters := TIdeRegistersMonitor.Create;
 
   FWatches.Debugger := Self;
+  FBreakPoints.Debugger := Self;
 
   FCallStackNotification := TCallStackNotification.Create;
   FCallStackNotification.AddReference;
@@ -2487,6 +2502,8 @@ end;
 ------------------------------------------------------------------------------}
 procedure TDebugManager.LoadProjectSpecificInfo(XMLConfig: TXMLConfig;
   Merge: boolean);
+var
+  b: Boolean;
 begin
   FBreakPointGroups.LoadFromXMLConfig(XMLConfig,
                                      'Debugging/'+XMLBreakPointGroupsNode+'/',
@@ -2497,9 +2514,12 @@ begin
     FIdeExceptions.LoadFromXMLConfig(XMLConfig,'Debugging/'+XMLExceptionsNode+'/', @FBreakPointGroups.GetGroupByName);
   end;
   // keep it simple: just load from the session and don't merge
+  b := FBreakPoints.IgnoreAll;
   FBreakPoints.LoadFromXMLConfig(XMLConfig,'Debugging/'+XMLBreakPointsNode+'/',
                                  @Project1.ConvertFromLPIFilename,
                                  @FBreakPointGroups.GetGroupByName);
+  if Merge and b then
+    FBreakPoints.IgnoreAll := True;
   FWatches.LoadFromXMLConfig(XMLConfig,'Debugging/'+XMLWatchesNode+'/');
 end;
 
@@ -2514,16 +2534,14 @@ procedure TDebugManager.SaveProjectSpecificInfo(XMLConfig: TXMLConfig;
 begin
   if not (pwfSkipSeparateSessionInfo in Flags) then
   begin
-    FBreakPointGroups.SaveToXMLConfig(XMLConfig,
-                                      'Debugging/'+XMLBreakPointGroupsNode+'/', pwfCompatibilityMode in Flags);
-    FBreakPoints.SaveToXMLConfig(XMLConfig,'Debugging/'+XMLBreakPointsNode+'/',
-      pwfCompatibilityMode in Flags, @Project1.ConvertToLPIFilename);
-    FWatches.SaveToXMLConfig(XMLConfig,'Debugging/'+XMLWatchesNode+'/', pwfCompatibilityMode in Flags);
+    FBreakPointGroups.SaveToXMLConfig(XMLConfig, 'Debugging/'+XMLBreakPointGroupsNode+'/');
+    FBreakPoints.SaveToXMLConfig(XMLConfig,'Debugging/'+XMLBreakPointsNode+'/', @Project1.ConvertToLPIFilename);
+    FWatches.SaveToXMLConfig(XMLConfig,'Debugging/'+XMLWatchesNode+'/');
   end;
   if not (pwfSkipProjectInfo in Flags) then
   begin
     // exceptions are not part of the project info (#0015256)
-    FIdeExceptions.SaveToXMLConfig(XMLConfig,'Debugging/'+XMLExceptionsNode+'/', pwfCompatibilityMode in Flags);
+    FIdeExceptions.SaveToXMLConfig(XMLConfig,'Debugging/'+XMLExceptionsNode+'/');
   end;
 end;
 

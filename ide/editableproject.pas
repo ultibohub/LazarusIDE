@@ -14,11 +14,11 @@ uses
   CodeToolsConfig, ExprEval, DefineTemplates, BasicCodeTools,
   LinkScanner, CodeToolManager, CodeCache, StdCodeTools,
   // BuildIntf
-  ProjectIntf, PackageIntf, LazMsgWorker,
+  ProjectIntf, PackageIntf, LazMsgWorker, IDEOptionsIntf,
   // IdeConfig
   ProjectBuildMode, IdeXmlConfigProcs, RecentListProcs, IdeConfStrConsts,
   // IDEIntf
-  EditorSyntaxHighlighterDef, SrcEditorIntf,
+  EditorSyntaxHighlighterDef, SrcEditorIntf, IDEOptEditorIntf,
   // IdeProject
   Project, ProjectDefs, IdeBookmark, RunParamOptions, IdeProjectStrConsts;
 
@@ -153,9 +153,9 @@ type
     procedure DeleteBookmark(ID: integer);
     //
     procedure LoadFromXMLConfig(XMLConfig: TXMLConfig; const Path: string;
-        Merge, IsExternalSessionFile: boolean; FileVersion: integer); override;
+        Merge, IsPartOfProjectDefValue: boolean; FileVersion: integer); override;
     procedure SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string;
-        SaveData, SaveSession, IsExternalSessionFile: boolean; UsePathDelim: TPathDelimSwitch); override;
+        SaveData, SaveSession, IsPartOfProjectDefValue: boolean; UsePathDelim: TPathDelimSwitch); override;
     procedure SetSourceText(const SourceText: string; Beautify: boolean = false); override;
   public
     property Bookmarks: TFileBookmarkList read FBookmarks write FBookmarks;
@@ -729,11 +729,11 @@ begin
 end;
 
 procedure TEditableUnitInfo.LoadFromXMLConfig(XMLConfig: TXMLConfig;
-  const Path: string; Merge, IsExternalSessionFile: boolean; FileVersion: integer);
+  const Path: string; Merge, IsPartOfProjectDefValue: boolean; FileVersion: integer);
 var
   c, i: Integer;
 begin
-  inherited LoadFromXMLConfig(XMLConfig, Path, Merge, IsExternalSessionFile, FileVersion);
+  inherited LoadFromXMLConfig(XMLConfig, Path, Merge, IsPartOfProjectDefValue, FileVersion);
   FComponentState := TWindowState(XMLConfig.GetValue(Path+'ComponentState/Value',0));
   FEditorInfoList.Clear;
   FEditorInfoList.NewEditorInfo;
@@ -745,14 +745,14 @@ begin
   FBookmarks.LoadFromXMLConfig(XMLConfig,Path+'Bookmarks/');
 end;
 
-procedure TEditableUnitInfo.SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string; SaveData, SaveSession, IsExternalSessionFile: boolean;
+procedure TEditableUnitInfo.SaveToXMLConfig(XMLConfig: TXMLConfig; const Path: string; SaveData, SaveSession, IsPartOfProjectDefValue: boolean;
   UsePathDelim: TPathDelimSwitch);
 var
   i, X, Y, L, T: Integer;
   BM: TFileBookmark;
   ProjBM: TProjectBookmark;
 begin
-  inherited SaveToXMLConfig(XMLConfig, Path, SaveData, SaveSession, IsExternalSessionFile, UsePathDelim);
+  inherited SaveToXMLConfig(XMLConfig, Path, SaveData, SaveSession, IsPartOfProjectDefValue, UsePathDelim);
   if SaveSession then
   begin
     XMLConfig.SetDeleteValue(Path+'ComponentState/Value',Ord(FComponentState),0);
@@ -977,7 +977,7 @@ begin
   and Assigned(FJumpHistory) then begin
     if (pfSaveJumpHistory in Flags) then begin
       FJumpHistory.DeleteInvalidPositions;
-      FJumpHistory.SaveToXMLConfig(FXMLConfig,Path,UseLegacyLists);
+      FJumpHistory.SaveToXMLConfig(FXMLConfig,Path);
     end
     else
       FXMLConfig.DeletePath(Path+'JumpHistory');
@@ -998,10 +998,10 @@ begin
   FXMLConfig.SetValue(Path+'Version/Value',ProjectInfoFileVersion);
 
   // Save the session build modes
-  BuildModes.SaveSessionOptsToXMLConfig(FXMLConfig, Path, True, UseLegacyLists);
+  BuildModes.SaveSessionOptsToXMLConfig(FXMLConfig, Path, True);
   BuildModes.SaveSessionData(Path);
   // save all units
-  SaveUnits(Path,true,true);
+  SaveUnits(Path,true,false);
 
   if Assigned(FDebuggerLink) then
     FDebuggerLink.SaveToSession(FXMLConfig, Path);
@@ -1011,9 +1011,9 @@ begin
   // save session info
   SaveSessionInfo(Path);
   // save the Run and Build parameter options
-  RunParameterOptions.Save(FXMLConfig,Path+'RunParams/',fCurStorePathDelim,rpsLPS, UseLegacyLists);
+  RunParameterOptions.Save(FXMLConfig,Path+'RunParams/',fCurStorePathDelim,rpsLPS);
   // save history lists
-  FHistoryLists.SaveToXMLConfig(FXMLConfig,Path+'HistoryLists/', UseLegacyLists);
+  FHistoryLists.SaveToXMLConfig(FXMLConfig,Path+'HistoryLists/');
 
   // Notifiy hooks
   if Assigned(OnSaveProjectInfo) then
@@ -1147,6 +1147,10 @@ begin
   Bookmarks.Delete(i);
   SessionModified := true;
 end;
+
+initialization
+  RegisterIDEOptionsGroup(GroupProject, TProjectIDEOptions);
+  RegisterIDEOptionsGroup(GroupCompiler, TProjectCompilerOptions);
 
 end.
 

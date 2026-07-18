@@ -4686,6 +4686,8 @@ begin
     MainBuildBoss.SetBuildTargetProject1(false);
     UpdateCaption;
     UpdateDefineTemplates;
+    if DebugBossMgr <> nil then
+      DebugBossMgr.BreakPoints.TriggerChanged;
   end;
 end;
 
@@ -5358,6 +5360,8 @@ begin
                            mtWarning, [mbOk]);
     end;
     UpdateCaption;
+    if DebugBossMgr <> nil then
+      DebugBossMgr.BreakPoints.TriggerChanged;
     if Assigned(ProjInspector) then
       ProjInspector.UpdateTitle;
     if Project1.UseAsDefault then
@@ -7125,6 +7129,10 @@ begin
 
   // check common mistakes in search paths
   Result:=PkgBoss.CheckUserSearchPaths(Project1.CompilerOptions);
+  if Result<>mrOk then exit;
+
+  // ask the user about untrusted compilers/commands before building anything
+  Result:=PkgBoss.CheckCompileTrust(Project1,nil);
   if Result<>mrOk then exit;
 
   CompilerParams:=nil;

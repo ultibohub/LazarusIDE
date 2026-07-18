@@ -208,6 +208,13 @@ IF ERRORLEVEL 1 GOTO CLEANUP
 gmkdir -p %BUILDDIR%\image\components\buildintf\units
 cp -pr %BUILDDIR%\components\buildintf\units\%FPCFULLTARGET% %BUILDDIR%\image\components\buildintf\units\%FPCFULLTARGET%
 
+%GIT% -C %LAZGITDIR% --work-tree=%BUILDDIR% restore components\lazedit
+cd %BUILDDIR%\components\lazedit
+IF ERRORLEVEL 1 GOTO CLEANUP
+%MAKEEXE% FPC=%compiler%
+gmkdir -p %BUILDDIR%\image\components\lazedit\lib
+cp -pr %BUILDDIR%\components\lazedit\lib\%FPCFULLTARGET% %BUILDDIR%\image\components\lazedit\lib\%FPCFULLTARGET%
+
 gmkdir -p %BUILDDIR%\components
 %GIT% -C %LAZGITDIR% --work-tree=%BUILDDIR% restore components\ideintf
 cd %BUILDDIR%\components\ideintf
@@ -215,13 +222,6 @@ IF ERRORLEVEL 1 GOTO CLEANUP
 %MAKEEXE% FPC=%compiler%
 gmkdir -p %BUILDDIR%\image\components\ideintf\units
 cp -pr %BUILDDIR%\components\ideintf\units\%FPCFULLTARGET% %BUILDDIR%\image\components\ideintf\units\%FPCFULLTARGET%
-
-%GIT% -C %LAZGITDIR% --work-tree=%BUILDDIR% restore components\lazedit
-cd %BUILDDIR%\components\lazedit
-IF ERRORLEVEL 1 GOTO CLEANUP
-%MAKEEXE% FPC=%compiler%
-gmkdir -p %BUILDDIR%\image\components\lazedit\lib
-cp -pr %BUILDDIR%\components\lazedit\lib\%FPCFULLTARGET% %BUILDDIR%\image\components\lazedit\lib\%FPCFULLTARGET%
 
 %GIT% -C %LAZGITDIR% --work-tree=%BUILDDIR% restore components\synedit
 cd %BUILDDIR%\components\synedit
@@ -261,7 +261,7 @@ if not exist %LAZBUILD_REPLACE_TEXT% GOTO NO_REPLACE
 %LAZBUILD_REPLACE_TEXT% %BUILDDIR%\image\components\buildintf\units\%TARGETCPU%-%TARGETOS%\BuildIntf.compiled "-MObjFPC" "-T%TARGETOS% -P%TARGETCPU% -MObjFPC"
 %LAZBUILD_REPLACE_TEXT% %BUILDDIR%\image\components\ideintf\units\%TARGETCPU%-%TARGETOS%\%LCL_PLATFORM%\IDEIntf.compiled "-MObjFPC" "-T%TARGETOS% -P%TARGETCPU% -MObjFPC"
 
-:GOTO NO_REPLACE
+:NO_REPLACE
 
 %ISCC% lazarus-cross.iss 
 
