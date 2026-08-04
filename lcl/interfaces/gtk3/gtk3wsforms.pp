@@ -380,6 +380,8 @@ var
   LCLCanFocus: boolean;
   ATime: guint32;
   NeedSizeProtect: boolean;
+  MsgAct: TLMActivate;
+  MsgSF: TLMessage;
   SplashClock: PGdkFrameClock;
   SplashFrame: gint64;
   SplashDeadline: QWord;
@@ -670,8 +672,34 @@ begin
       begin
         //wayland, add grab
         //TODO: gdk_display_device_is_grabbed
-        gtk_device_grab_add(PGtkWidget(AWindow),
-          gdk_seat_get_keyboard(gdk_display_get_default_seat(gdk_display_get_default)), False);
+        gtk_grab_add(PGtkWidget(AWindow));
+        if (AGtk3Widget is TGtk3Window) and not AForm.Active and
+          (Gtk3WidgetSet.MsgActivationLevel = 0) then
+        begin
+          Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel + 1;
+          try
+            OtherForm := Screen.ActiveCustomForm;
+            if Assigned(OtherForm) and (OtherForm <> AForm) and
+              OtherForm.Active and OtherForm.HandleAllocated then
+            begin
+              FillChar(MsgAct{%H-}, SizeOf(MsgAct), 0);
+              MsgAct.Msg := LM_ACTIVATE;
+              MsgAct.Active := WA_INACTIVE;
+              MsgAct.ActiveWindow := HWND(AForm.Handle);
+              TGtk3Widget(OtherForm.Handle).DeliverMessage(MsgAct);
+            end;
+            FillChar(MsgAct{%H-}, SizeOf(MsgAct), 0);
+            MsgAct.Msg := LM_ACTIVATE;
+            MsgAct.Active := WA_ACTIVE;
+            MsgAct.ActiveWindow := HWND(AForm.Handle);
+            AGtk3Widget.DeliverMessage(MsgAct);
+            FillChar(MsgSF{%H-}, SizeOf(MsgSF), 0);
+            MsgSF.Msg := LM_SETFOCUS;
+            AGtk3Widget.DeliverMessage(MsgSF);
+          finally
+            Gtk3WidgetSet.MsgActivationLevel := Gtk3WidgetSet.MsgActivationLevel - 1;
+          end;
+        end;
       end;
     end;
   end else
@@ -684,8 +712,7 @@ begin
         //wayland, remove grab
         if Gtk3WidgetSet.IsWayland and (AWindow^.get_window_type = GTK_WINDOW_POPUP) and AWindow^.get_accept_focus
           and not AWindow^.window^.get_pass_through and LCLCanFocus then
-            gtk_device_grab_remove(PGtkWidget(AWindow),
-              gdk_seat_get_keyboard(gdk_display_get_default_seat(gdk_display_get_default)));
+            gtk_grab_remove(PGtkWidget(AWindow));
         if AWindow^.transient_for <> nil then
         begin
           if (fsModal in AForm.FormState) and Gtk3IsGdkWindow(AWindow^.transient_for^.window) then

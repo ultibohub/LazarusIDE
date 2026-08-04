@@ -815,14 +815,11 @@ begin
   {$ifdef VerboseGtk3DeviceContext}
   DebugLn('TGtk3WidgetSet.DeleteObject GDIObject: ', dbghex(GdiObject),' name ',dbgsName(TObject(GdiObject)));
   {$endif}
-  if TObject(GDIObject) is TGtk3ContextObject then
+  if not TGtk3ContextObject(GDIObject).Shared then
   begin
-    if TGtk3ContextObject(GDIOBJECT).Shared then
-      // DebugLn('ERROR: TGtk3WidgetSet.DeleteObject trial to delete shared object ',dbgsName(TGtk3ContextObject(GdiObject)))
-    else
-      TGtk3ContextObject(GDIObject).Free;
-  end else
-    TObject(GDIObject).Free;
+    TGtk3ContextObject(GDIObject).Free;
+    Result := True;
+  end;
 end;
 
 function TGtk3WidgetSet.DestroyCaret(Handle: HWND): Boolean;
@@ -2233,6 +2230,7 @@ var
   AData, AWidget: gpointer;
   Hndl: HWND;
   i: Integer;
+  AList, L: PGList;
 begin
   Result := 0;
   AWindow := gdk_screen_get_active_window(gdk_screen_get_default);
@@ -2258,6 +2256,45 @@ begin
         end;
       end;
     end;
+  end else
+  if IsWayland then
+  begin
+    AList := gtk_window_list_toplevels;
+    L := AList;
+    while L <> nil do
+    begin
+      if Gtk3IsGtkWindow(PGObject(L^.data)) then
+      begin
+        AGtkWin := PGtkWindow(L^.data);
+        if AGtkWin^.has_toplevel_focus then
+        begin
+          Result := HwndFromGtkWidget(PGtkWidget(AGtkWin));
+          if Result <> 0 then
+            break;
+        end;
+      end;
+      L := L^.next;
+    end;
+    if Result = 0 then
+    begin
+      L := AList;
+      while L <> nil do
+      begin
+        if Gtk3IsGtkWindow(PGObject(L^.data)) then
+        begin
+          AGtkWin := PGtkWindow(L^.data);
+          if AGtkWin^.is_active then
+          begin
+            Result := HwndFromGtkWidget(PGtkWidget(AGtkWin));
+            if Result <> 0 then
+              break;
+          end;
+        end;
+        L := L^.next;
+      end;
+    end;
+    if AList <> nil then
+      g_list_free(AList);
   end;
 end;
 
@@ -4521,7 +4558,8 @@ begin
           ChildW3 := TGtk3Widget(HwndFromGtkWidget(ChildWidget));
         if (ALayout <> nil) and (ChildWidget <> nil) and (ChildW3 <> nil) then
         begin
-          if gtk_widget_get_parent(ChildWidget) = PGtkWidget(ALayout) then
+          if (gtk_widget_get_parent(ChildWidget) = PGtkWidget(ALayout)) and
+            ChildWidget^.get_visible then
           begin
             ChildW3.LCLLeft := ChildW3.LCLLeft + dx;
             ChildW3.LCLTop := ChildW3.LCLTop + dy;
@@ -5637,6 +5675,7 @@ var
   PCR: Pcairo_region_t;
 begin
   if not IsValidHandle(hWnd) then exit(0);
+  if (hRgn <> 0) and not IsValidGDIObject(hRgn) then exit(0);
   if hRgn = 0 then
     PCR := nil
   else
@@ -5644,6 +5683,8 @@ begin
   gtk_widget_shape_combine_region(TGtk3Widget(hWnd).Widget, PCR);
   if bRedraw and Gtk3IsGtkWindow(TGtk3Widget(hWnd).Widget^.get_toplevel) then
     TGtk3Widget(hWnd).Widget^.realize;
+  if hRgn <> 0 then
+    DeleteObject(hRgn);
   Result:=1;
 end;
 

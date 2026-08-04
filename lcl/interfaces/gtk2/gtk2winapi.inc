@@ -1886,20 +1886,6 @@ end;
   are misleading. Marc tested with resource profiler under win XP.
  ------------------------------------------------------------------------------}
 function TGtk2WidgetSet.DeleteObject(GDIObject: HGDIOBJ): Boolean;
-
-  procedure RaiseInvalidGDIObject;
-  begin
-    {$ifdef TraceGdiCalls}
-    DebugLn();
-    DebugLn('TGtk2WidgetSet.DeleteObject: TraceCall for invalid object: ');
-    DumpBackTrace(PgdiObject(GdiObject)^.StackAddrs);
-    DebugLn();
-    DebugLn('Exception will follow:');
-    DebugLn();
-    {$endif}
-    RaiseGDBException('TGtk2WidgetSet.DeleteObject invalid GdiObject='+dbgs(GdiObject));
-  end;
-
 var
   GDIObjectExists: boolean;
 begin
@@ -1921,9 +1907,7 @@ begin
   GDIObjectExists := FGDIObjects.Contains({%H-}PGdiObject(GDIObject));
   Result := GDIObjectExists;
   if not GDIObjectExists then
-  begin
-    RaiseInvalidGDIObject;
-  end;
+    Exit;
 
   Result := ReleaseGDIObject({%H-}PGdiObject(GDIObject));
 end;
@@ -4257,13 +4241,12 @@ begin
     exit;
   end;
 
-  gdk_screen_get_monitor_geometry(AScreen, AMonitorIdx, @AMonitorRect);
-  AWmm := gdk_screen_get_monitor_width_mm(AScreen, AMonitorIdx);
-  AHmm := gdk_screen_get_monitor_height_mm(AScreen, AMonitorIdx);
-
   case dpiType of
     MDT_RAW_DPI:
     begin
+      gdk_screen_get_monitor_geometry(AScreen, AMonitorIdx, @AMonitorRect);
+      AWmm := gdk_screen_get_monitor_width_mm(AScreen, AMonitorIdx);
+      AHmm := gdk_screen_get_monitor_height_mm(AScreen, AMonitorIdx);
       if AWmm > 0 then
         dpiX := Round(AMonitorRect.width * 25.4 / AWmm)
       else
@@ -4275,21 +4258,8 @@ begin
     end;
     MDT_EFFECTIVE_DPI, MDT_ANGULAR_DPI:
     begin
-      if AFallback > 96 then
-      begin
-        dpiX := AFallback;
-        dpiY := AFallback;
-      end else
-      begin
-        if AWmm > 0 then
-          dpiX := Round(AMonitorRect.width * 25.4 / AWmm)
-        else
-          dpiX := AFallback;
-        if AHmm > 0 then
-          dpiY := Round(AMonitorRect.height * 25.4 / AHmm)
-        else
-          dpiY := AFallback;
-      end;
+      dpiX := AFallback;
+      dpiY := AFallback;
     end;
   end;
 end;
@@ -9491,6 +9461,8 @@ var
   ShapeRegion: PGdkRegion;
   LCLObject: TObject;
 begin
+  if (hRgn <> 0) and not IsValidGDIObject(hRgn) then
+    Exit(0);
   // For normal widgets we should use GetFixedWidget,
   // but for TForm we should apply the region in the raw hWnd
   LCLObject := GetLCLObject({%H-}PGtkWidget(hWnd));
@@ -9519,6 +9491,8 @@ begin
   gdk_window_shape_combine_region(Window, ShapeRegion, 0, 0);
   if bRedraw then
     gdk_window_invalidate_region(Window, ShapeRegion, True);
+  if hRgn <> 0 then
+    DeleteObject(hRgn);
   Result := 1;
 end;
 

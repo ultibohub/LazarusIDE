@@ -489,11 +489,6 @@ msgstr "Дерево згортань коду"
 msgid "Code folding (current)"
 msgstr ""
 
-#: lazarusidestrconsts.dlgaddhiattrcustom
-#, object-pascal-format
-msgid "Custom %d"
-msgstr ""
-
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Текст за замовчуванням"
@@ -647,11 +642,6 @@ msgstr "Змінений рядок"
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
 msgstr "Посилання при наведенні мишки"
-
-#: lazarusidestrconsts.dlgaddhiattrnestedbracket
-#, object-pascal-format
-msgid "Nested bracket %d"
-msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
 #, object-pascal-format
@@ -6018,7 +6008,7 @@ msgid "Build number"
 msgstr "Номер збірки"
 
 #: lazarusidestrconsts.lisbuildreleasepackagesstorecompi
-msgid "Build release packages. Store compiler checksum instead of date in package.compiled files."
+msgid "Build release packages. Store compiler checksum instead of date in package.compiled files. Ignore session and environment options."
 msgstr ""
 
 #: lazarusidestrconsts.lisbuildstage
@@ -12084,7 +12074,9 @@ msgid "Maximize compatibility of project files (LPI and LPS)"
 msgstr "Максимізувати сумісність файлів проєкту (LPI і LPS)"
 
 #: lazarusidestrconsts.lislpicompatibilitymodecheckboxhint
-msgid "Check this if you want to open your project in legacy (2.0 and older) Lazarus versions."
+#, fuzzy
+#| msgid "Check this if you want to open your project in legacy (2.0 and older) Lazarus versions."
+msgid "Check this if you want to open your project in legacy (2.2 - 4.8) Lazarus versions."
 msgstr "Позначте, якщо потрібно відкривати проєкт у застарілих (2.0 і нижче) версіях Lazarus."
 
 #: lazarusidestrconsts.lislpkcompatibilitymodecheckbox
@@ -12092,7 +12084,9 @@ msgid "Maximize compatibility of package file (LPK)"
 msgstr "Максимізувати сумісність файла пакунка (LPK)"
 
 #: lazarusidestrconsts.lislpkcompatibilitymodecheckboxhint
-msgid "Check this if you want to open your package in legacy (2.0 and older) Lazarus versions."
+#, fuzzy
+#| msgid "Check this if you want to open your package in legacy (2.0 and older) Lazarus versions."
+msgid "Check this if you want to open your package in legacy (2.2 - 4.8) Lazarus versions."
 msgstr "Позначте, якщо потрібно відкривати пакунок у застарілих (2.0 і нижче) версіях Lazarus."
 
 #: lazarusidestrconsts.lislpkhasvanishedondiskusingasalternative
@@ -19262,6 +19256,10 @@ msgstr "Робоча тека для збирання"
 msgid "Working directory for run"
 msgstr "Робоча тека для виконання"
 
+#: lazarusidestrconsts.liswraplongmessagelinesotherwisetheyareclippedandahi
+msgid "Wrap long message lines into several rows. Otherwise they are clipped and a hint shows the full text."
+msgstr ""
+
 #: lazarusidestrconsts.liswriteconfiginsteadofcommandlineparameters
 msgid "Write config instead of command line parameters"
 msgstr ""
@@ -21260,38 +21258,6 @@ msgstr "Змінити кнопки команди"
 msgid "Continue with next mouse up action"
 msgstr "Продовжити з наступним відпусканням кнопки миші"
 
-#: lazarusidestrconsts.synffoldcomments
-msgid "Fold comments"
-msgstr "Згорнути коментарі"
-
-#: lazarusidestrconsts.synffoldcommentsinselection
-msgid "Fold comments in selection"
-msgstr "Згорнути коментарі у вибраному"
-
-#: lazarusidestrconsts.synffoldinactiveifdef
-msgid "Fold inactive Ifdef"
-msgstr "Згорнути неактивний блок IFDEF"
-
-#: lazarusidestrconsts.synffoldinactiveifdefexcludemixedstate
-msgid "Fold inactive Ifdef (exclude mixed state)"
-msgstr "Згорнути неактивний блок IFDEF (крім умовно активних)"
-
-#: lazarusidestrconsts.synffoldinactiveifdefinselection
-msgid "Fold inactive Ifdef in selection"
-msgstr "Згорнути неактивний блок IFDEF у вибраному"
-
-#: lazarusidestrconsts.synffoldinactiveifdefinselectionexcludemixedstate
-msgid "Fold inactive Ifdef in selection (exclude mixed state)"
-msgstr "Згорнути неактивний блок IFDEF у вибраному (крім умовно активних)"
-
-#: lazarusidestrconsts.synfhidecomments
-msgid "Hide comments"
-msgstr "Приховати коментарі"
-
-#: lazarusidestrconsts.synfhidecommentsinselection
-msgid "Hide comments in selection"
-msgstr "Сховати коментарі у вибраному"
-
 #: lazarusidestrconsts.synfmatchactionbuttonofmousedown
 msgid "Match action button of mouse down"
 msgstr "Враховувати кнопку миші при її натисканні"
@@ -21311,47 +21277,6 @@ msgstr "Враховувати положення при натисканні к
 #: lazarusidestrconsts.synfsearchallactionofmousedown
 msgid "Search all action of mouse down"
 msgstr "Шукати всі дії при натисканні кнопки миші"
-
-#: lazarusidestrconsts.synfunfoldactiveifdef
-msgid "Unfold active Ifdef"
-msgstr "Розгорнути активний блок IFDEF"
-
-#: lazarusidestrconsts.synfunfoldactiveifdefinselection
-msgid "Unfold active Ifdef in selection"
-msgstr "Розгорнути активний блок IFDEF у вибраному"
-
-#: lazarusidestrconsts.synfunfoldall
-msgctxt "lazarusidestrconsts.synfunfoldall"
-msgid "Unfold all"
-msgstr "Розгорунти все"
-
-#: lazarusidestrconsts.synfunfoldallifdef
-msgid "Unfold all Ifdef"
-msgstr "Розгорнути всі блоки IFDEF"
-
-#: lazarusidestrconsts.synfunfoldallifdefinselection
-msgid "Unfold all Ifdef in selection"
-msgstr "Розгорнути всі блоки IFDEF у вибраному"
-
-#: lazarusidestrconsts.synfunfoldallinselection
-msgid "Unfold all in selection"
-msgstr "Розгорнути все у вибраному"
-
-#: lazarusidestrconsts.synfunfoldcomments
-msgid "Unfold comments"
-msgstr "Розгорнути коментарі"
-
-#: lazarusidestrconsts.synfunfoldcommentsinselection
-msgid "Unfold comments in selection"
-msgstr "Розгорнути коментарі у вибраному"
-
-#: lazarusidestrconsts.synfunfoldinactiveifdef
-msgid "Unfold inactive Ifdef"
-msgstr "Розгорнути неактивний блок IFDEF"
-
-#: lazarusidestrconsts.synfunfoldinactiveifdefinselection
-msgid "Unfold inactive Ifdef in selection"
-msgstr "Розгорнути неактивний блок IFDEF у вибраному"
 
 #: lazarusidestrconsts.synspelloptmousewheelchangestabs
 msgid "Mouse-wheel changes tabs"

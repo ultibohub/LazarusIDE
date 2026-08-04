@@ -488,11 +488,6 @@ msgstr "Arbre de pliage de code"
 msgid "Code folding (current)"
 msgstr "Pliage de code (en cours)"
 
-#: lazarusidestrconsts.dlgaddhiattrcustom
-#, object-pascal-format
-msgid "Custom %d"
-msgstr ""
-
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Texte par défaut"
@@ -646,11 +641,6 @@ msgstr "Ligne modifiée"
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
 msgstr "Lien souris"
-
-#: lazarusidestrconsts.dlgaddhiattrnestedbracket
-#, object-pascal-format
-msgid "Nested bracket %d"
-msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
 #, object-pascal-format
@@ -5984,7 +5974,7 @@ msgid "Build number"
 msgstr "Construction"
 
 #: lazarusidestrconsts.lisbuildreleasepackagesstorecompi
-msgid "Build release packages. Store compiler checksum instead of date in package.compiled files."
+msgid "Build release packages. Store compiler checksum instead of date in package.compiled files. Ignore session and environment options."
 msgstr ""
 
 #: lazarusidestrconsts.lisbuildstage
@@ -12014,7 +12004,9 @@ msgid "Maximize compatibility of project files (LPI and LPS)"
 msgstr "Maximiser la compatibilité des fichiers de projet (LPI et LPS)"
 
 #: lazarusidestrconsts.lislpicompatibilitymodecheckboxhint
-msgid "Check this if you want to open your project in legacy (2.0 and older) Lazarus versions."
+#, fuzzy
+#| msgid "Check this if you want to open your project in legacy (2.0 and older) Lazarus versions."
+msgid "Check this if you want to open your project in legacy (2.2 - 4.8) Lazarus versions."
 msgstr "Vérifiez ceci si vous souhaitez ouvrir votre projet avec les versions Lazarus (2.0 et plus) héritées."
 
 #: lazarusidestrconsts.lislpkcompatibilitymodecheckbox
@@ -12022,7 +12014,9 @@ msgid "Maximize compatibility of package file (LPK)"
 msgstr "Maximiser la compatibilité du fichier de paquet (LPK)"
 
 #: lazarusidestrconsts.lislpkcompatibilitymodecheckboxhint
-msgid "Check this if you want to open your package in legacy (2.0 and older) Lazarus versions."
+#, fuzzy
+#| msgid "Check this if you want to open your package in legacy (2.0 and older) Lazarus versions."
+msgid "Check this if you want to open your package in legacy (2.2 - 4.8) Lazarus versions."
 msgstr "Vérifiez ceci si vous souhaitez ouvrir votre paquet avec les versions Lazarus (2.0 et plus) héritées."
 
 #: lazarusidestrconsts.lislpkhasvanishedondiskusingasalternative
@@ -19170,6 +19164,10 @@ msgstr "Répertoire de construction"
 msgid "Working directory for run"
 msgstr "Répertoire d'exécution"
 
+#: lazarusidestrconsts.liswraplongmessagelinesotherwisetheyareclippedandahi
+msgid "Wrap long message lines into several rows. Otherwise they are clipped and a hint shows the full text."
+msgstr ""
+
 #: lazarusidestrconsts.liswriteconfiginsteadofcommandlineparameters
 msgid "Write config instead of command line parameters"
 msgstr "Écrire des paramètres de configuration au lieu de ceux de ligne de commande"
@@ -21160,38 +21158,6 @@ msgstr "Éditer les touches de commande"
 msgid "Continue with next mouse up action"
 msgstr "Continuer avec la prochaine action de bouton de souris relâché"
 
-#: lazarusidestrconsts.synffoldcomments
-msgid "Fold comments"
-msgstr "Replier les commentaires"
-
-#: lazarusidestrconsts.synffoldcommentsinselection
-msgid "Fold comments in selection"
-msgstr "Replier les commentaires de la sélection"
-
-#: lazarusidestrconsts.synffoldinactiveifdef
-msgid "Fold inactive Ifdef"
-msgstr "Replier les Ifdef inactifs"
-
-#: lazarusidestrconsts.synffoldinactiveifdefexcludemixedstate
-msgid "Fold inactive Ifdef (exclude mixed state)"
-msgstr "Replier les Ifdef inactifs (exclure les états mixtes)"
-
-#: lazarusidestrconsts.synffoldinactiveifdefinselection
-msgid "Fold inactive Ifdef in selection"
-msgstr "Replier les Ifdef inactifs de la sélection"
-
-#: lazarusidestrconsts.synffoldinactiveifdefinselectionexcludemixedstate
-msgid "Fold inactive Ifdef in selection (exclude mixed state)"
-msgstr "Replier les Ifdef inactifs de la sélection (exclure les états mixtes)"
-
-#: lazarusidestrconsts.synfhidecomments
-msgid "Hide comments"
-msgstr "Cacher les commentaires"
-
-#: lazarusidestrconsts.synfhidecommentsinselection
-msgid "Hide comments in selection"
-msgstr "Cacher les commentaires de la sélection"
-
 #: lazarusidestrconsts.synfmatchactionbuttonofmousedown
 msgid "Match action button of mouse down"
 msgstr "Dernier bouton pressé identique"
@@ -21211,47 +21177,6 @@ msgstr "Même action que sur clic à cet endroit"
 #: lazarusidestrconsts.synfsearchallactionofmousedown
 msgid "Search all action of mouse down"
 msgstr "Rechercher toutes les actions du bouton de la souris enfoncé"
-
-#: lazarusidestrconsts.synfunfoldactiveifdef
-msgid "Unfold active Ifdef"
-msgstr "Déplier les Ifdef actifs"
-
-#: lazarusidestrconsts.synfunfoldactiveifdefinselection
-msgid "Unfold active Ifdef in selection"
-msgstr "Déplier les Ifdef actifs de la sélection"
-
-#: lazarusidestrconsts.synfunfoldall
-msgctxt "lazarusidestrconsts.synfunfoldall"
-msgid "Unfold all"
-msgstr "Tout déplier"
-
-#: lazarusidestrconsts.synfunfoldallifdef
-msgid "Unfold all Ifdef"
-msgstr "Déplier tous les Ifdef"
-
-#: lazarusidestrconsts.synfunfoldallifdefinselection
-msgid "Unfold all Ifdef in selection"
-msgstr "Déplier tous les Ifdef de la sélection"
-
-#: lazarusidestrconsts.synfunfoldallinselection
-msgid "Unfold all in selection"
-msgstr "Tout déplier dans la sélection"
-
-#: lazarusidestrconsts.synfunfoldcomments
-msgid "Unfold comments"
-msgstr "Déplier les commentaires"
-
-#: lazarusidestrconsts.synfunfoldcommentsinselection
-msgid "Unfold comments in selection"
-msgstr "Déplier les commentaires de la sélection"
-
-#: lazarusidestrconsts.synfunfoldinactiveifdef
-msgid "Unfold inactive Ifdef"
-msgstr "Déplier les Ifdef inactifs"
-
-#: lazarusidestrconsts.synfunfoldinactiveifdefinselection
-msgid "Unfold inactive Ifdef in selection"
-msgstr "Déplier les Ifdef inactifs de la sélection"
 
 #: lazarusidestrconsts.synspelloptmousewheelchangestabs
 msgid "Mouse-wheel changes tabs"

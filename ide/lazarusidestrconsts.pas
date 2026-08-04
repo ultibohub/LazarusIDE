@@ -1282,6 +1282,9 @@ resourcestring
   lisDrawTheSelectionFocusedEvenIfTheMessagesWindowHasN = 'Draw the selection '
     +'focused even if the Messages window has no focus. Use this if your '
     +'theme has a hardly visible unfocused drawing.';
+  lisWrapLongMessageLinesOtherwiseTheyAreClippedAndAHi = 'Wrap long message '
+    +'lines into several rows. Otherwise they are clipped and a hint shows the '
+    +'full text.';
   lisShowAutomatically = 'Show automatically';
   lisShowAutoWhenCompiling = 'When compiling';
   lisShowAutoOnlyWhenErrorsOccur = 'Only when errors occur';
@@ -2161,8 +2164,6 @@ resourcestring
   dlgIfDefNodeInactive            = 'Inactive $IFDEF node';
   dlgIfDefNodeActive              = 'Active $IFDEF node';
   dlgIfDefNodeTmpActive           = 'Included mixed state $IFDEF node';
-  dlgAddHiAttrCustom              = 'Custom %d';
-  dlgAddHiAttrNestedBracket       = 'Nested bracket %d';
 
   dlgAddHiAttrGroupDefault  = 'Global';
   dlgAddHiAttrGroupText     = 'Text';
@@ -5372,7 +5373,7 @@ resourcestring
     +'plus a fixed set of extra packages.';
   lisShowVersionAndExit = 'Show version and exit.';
   lisBuildReleasePackagesStoreCompi = 'Build release packages. Store compiler '
-    +'checksum instead of date in package.compiled files.';
+    +'checksum instead of date in package.compiled files. Ignore session and environment options.';
   lisBeLessVerboseCanBeGivenMultipleTimes = 'Be less verbose. Can be given '
     +'multiple times.';
   lisPassingQuietTwoTimesWillP = 'Passing --quiet two times will pass -vw-n-h-'
@@ -5686,27 +5687,6 @@ resourcestring
   lisAllParametersOfThisFunctionAreAlreadySetAtThisCall = 'All parameters of '
     +'this function are already set at this call. Nothing to add.';
   lisIDECompileAndRestart = 'The IDE will be recompiled and restarted during installation/uninstallation of packages.';
-
-  synfUnfoldAllInSelection                          = 'Unfold all in selection';
-  synfUnfoldCommentsInSelection                     = 'Unfold comments in selection';
-  synfFoldCommentsInSelection                       = 'Fold comments in selection';
-  synfHideCommentsInSelection                       = 'Hide comments in selection';
-  synfUnfoldAllIfdefInSelection                     = 'Unfold all Ifdef in selection';
-  synfUnfoldActiveIfdefInSelection                  = 'Unfold active Ifdef in selection';
-  synfUnfoldInactiveIfdefInSelection                = 'Unfold inactive Ifdef in selection';
-  synfFoldInactiveIfdefInSelection                  = 'Fold inactive Ifdef in selection';
-  synfFoldInactiveIfdefInSelectionExcludeMixedState = 'Fold inactive Ifdef in selection ('
-    +'exclude mixed state)';
-
-  synfUnfoldAll                           = 'Unfold all';
-  synfUnfoldComments                      = 'Unfold comments';
-  synfFoldComments                        = 'Fold comments';
-  synfHideComments                        = 'Hide comments';
-  synfUnfoldAllIfdef                      = 'Unfold all Ifdef';
-  synfUnfoldActiveIfdef                   = 'Unfold active Ifdef';
-  synfUnfoldInactiveIfdef                 = 'Unfold inactive Ifdef';
-  synfFoldInactiveIfdef                   = 'Fold inactive Ifdef';
-  synfFoldInactiveIfdefExcludeMixedState  = 'Fold inactive Ifdef (exclude mixed state)';
 
   lisCanNotCompileProject = 'Cannot compile project';
   lisTheProjectHasNoMainSourceFile = 'The project has no main source file.';

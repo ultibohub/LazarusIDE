@@ -298,6 +298,7 @@ type
     FMsgViewStayOnTop: boolean;
     FMsgViewFocus: boolean;
     FMsgViewAlwaysDrawFocused: boolean;
+    FMsgViewWordWrap: boolean;
     FShowMessagesIcons: boolean;
     FMsgViewShowAutomatically: TMsgWndShowAutomatically;
     FMsgViewShowTranslations: boolean;
@@ -398,6 +399,7 @@ type
     property MsgViewFocus: boolean read FMsgViewFocus write FMsgViewFocus; // when showing the window, focus it
     property MsgViewAlwaysDrawFocused: boolean read FMsgViewAlwaysDrawFocused
                                               write FMsgViewAlwaysDrawFocused;
+    property MsgViewWordWrap: boolean read FMsgViewWordWrap write FMsgViewWordWrap;
     property ShowMessagesIcons: boolean read FShowMessagesIcons write FShowMessagesIcons;
     property MsgViewShowAutomatically: TMsgWndShowAutomatically read FMsgViewShowAutomatically
                                                                write FMsgViewShowAutomatically;
@@ -1014,6 +1016,7 @@ begin
   FMsgViewShowAutomatically:=mwsaCompiling;
   FMsgViewShowTranslations:=false;
   FMsgViewAlwaysDrawFocused:=false;
+  FMsgViewWordWrap:=true;
   FMsgViewFilenameStyle:=mwfsShort;
   for c:=low(TMsgWndColor) to high(TMsgWndColor) do
     fMsgViewColors[c]:=MsgWndDefaultColors[c];
@@ -1110,6 +1113,7 @@ begin
     Path+'MsgView/ShowAutomatically/Value',MsgWndShowAutoNames[mwsaCompiling]));
   FMsgViewShowTranslations:=XMLCfg.GetValue(Path+'MsgView/ShowTranslations/Value',false);
   FMsgViewAlwaysDrawFocused:=XMLCfg.GetValue(Path+'MsgView/AlwaysDrawFocused/Value',false);
+  FMsgViewWordWrap:=XMLCfg.GetValue(Path+'MsgView/WordWrap/Value',true);
   FMsgViewFilenameStyle:=StrToMsgWndFilenameStyle(XMLCfg.GetValue(
     Path+'MsgView/Filename/Style',MsgWndFileNameStyleNames[mwfsShort]));
   for mwc:=low(TMsgWndColor) to high(TMsgWndColor) do
@@ -1243,6 +1247,7 @@ begin
     MsgWndShowAutoNames[mwsaCompiling]);
   XMLCfg.SetDeleteValue(Path+'MsgView/ShowTranslations/Value',FMsgViewShowTranslations,false);
   XMLCfg.SetDeleteValue(Path+'MsgView/AlwaysDrawFocused/Value',FMsgViewAlwaysDrawFocused,false);
+  XMLCfg.SetDeleteValue(Path+'MsgView/WordWrap/Value',FMsgViewWordWrap,true);
   XMLCfg.SetDeleteValue(Path+'MsgView/Filename/Style',
     MsgWndFileNameStyleNames[FMsgViewFilenameStyle],
     MsgWndFileNameStyleNames[mwfsShort]);

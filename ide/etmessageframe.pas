@@ -178,14 +178,14 @@ type
 
   TMsgPoint = record
     View: TLMsgWndView;
-    LineNro: integer;
+    LineNumber: integer;
   end;
 
 const
   MCDefaultOptions = [mcoShowStats,mcoShowTranslated,
                       mcoAutoOpenFirstError,mcoShowMsgIcons,
                       mcoSrcEditPopupSelect];
-  MsgPointDefault: TMsgPoint = (View: nil; LineNro: 0);
+  MsgPointDefault: TMsgPoint = (View: nil; LineNumber: 0);
 
 type
 
@@ -217,20 +217,22 @@ type
     FOptions: TMsgCtrlOptions;
     FScrollLeft: integer;
     FScrollTop: integer;         // top of viewport as an approximate global visual-row index
+    FWordWrap: boolean;          // wrap long message lines into several visual rows
     fWrapStamp: int64;           // bumped whenever width/font/options/content change
     fWrapChunks: TAVLTree;       // of TWrapChunk, sorted by View.Index then FirstLine, ascending left to right
     fWrapWinStamp: int64;        // state for which fWrapChunks was last built...
     fWrapWinScrollTop: integer;  // ...so EnsureWrapWindows can skip redundant rebuilds
     fWrapWinWidth, fWrapWinHeight: integer;
     fArrowWidth: integer;        // Canvas.TextWidth(MsgWndWrapArrow)
-    fContIndentWidth: integer;   // pixel width of the 2-space continuation indent
-    fIconWidth: integer;         // horizontal space a message icon takes (0 if none)
+    fIconWidth: integer;         // horizontal space a message icon takes (0 if none), also the continuation row indent
     FSourceMarks: TETMarks;
     FTextColor: TColor;
     fUpdateLock: integer;
     FUpdateTimer: TTimer;
     fSomeViewsRunning: boolean;
     fHasHeaderHint: boolean;
+    // The View whose header is painted as hint over the first visual row.
+    fHeaderHintView: TLMsgWndView;
     fUrgencyStyles: array[TMessageLineUrgency] of TMsgCtrlUrgencyStyle;
     FAutoHeaderBackground: TColor;
     // The View with the first selected line (property SelLineFirst).
@@ -279,6 +281,7 @@ type
     procedure SetSearchText(AValue: string);
     procedure SetSourceMarks(AValue: TETMarks);
     procedure SetTextColor(AValue: TColor);
+    procedure SetWordWrap(AValue: boolean);
     procedure SetUrgencyStyles(Urgency: TMessageLineUrgency;
       AValue: TMsgCtrlUrgencyStyle);
     procedure SetAutoHeaderBackground(AValue: TColor);
@@ -287,6 +290,7 @@ type
     procedure WMMouseWheel(var Message: TLMMouseEvent); message LM_MOUSEWHEEL;
     procedure WMSetFocus(var Message: TLMSetFocus); message LM_SETFOCUS;
     procedure WMKillFocus(var Message: TLMKillFocus); message LM_KILLFOCUS;
+    procedure MsgCtrlShowHint(Sender: TObject; {%H-}HintInfo: PHintInfo);
     procedure ImageListChange(Sender: TObject);
     procedure OnIdle(Sender: TObject; var {%H-}Done: Boolean);
     procedure FilterChanged(Sender: TObject);
@@ -306,7 +310,7 @@ type
     function FindWrapChunk(View: TLMsgWndView; MsgLine: integer): TWrapChunk; // chunk covering the line, else nil
     function FirstWrapChunkNode(View: TLMsgWndView): TAVLTreeNode; // node of view's chunk with lowest FirstLine, else nil
     procedure InvalidateWrapCache;
-    procedure RefreshWrapMetrics; // recompute fArrowWidth/fContIndentWidth
+    procedure RefreshWrapMetrics; // recompute fArrowWidth/fIconWidth
     procedure EnsureWrapWindows;
     function ViewApproxVisualRows(View: TLMsgWndView): integer;
     function ApproxTotalVisualRows: integer;
@@ -400,6 +404,9 @@ type
     property SourceMarks: TETMarks read FSourceMarks write SetSourceMarks;
     property TextColor: TColor read FTextColor write SetTextColor default MsgWndDefTextColor;
     property UrgencyStyles[Urgency: TMessageLineUrgency]: TMsgCtrlUrgencyStyle read GetUrgencyStyles write SetUrgencyStyles;
+    // When false a message line is shown in a single, clipped visual row and a
+    // hint shows the full text when hovering it.
+    property WordWrap: boolean read FWordWrap write SetWordWrap default true;
   end;
 
   { TMessagesFrame }
@@ -551,7 +558,6 @@ implementation
 const
   cNotALineHint=low(integer);
   MsgWndWrapArrow = #$E2#$86#$B5; // U+21B5 ↵ , marks a wrapped (continued) visual row
-  MsgWndContIndent = '  ';        // 2 space indent for continuation rows
 
 type
   // search key for the fWrapChunks AVL tree
@@ -1374,13 +1380,14 @@ begin
   Filters.OnChanged:=@FilterChanged;
   FActiveFilter:=Filters[0];
   FViews:=TFPList.Create;
+  FWordWrap:=true;
   fWrapChunks:=TAVLTree.Create(@CompareMsgWrapChunks);
   FUpdateTimer:=TTimer.Create(Self);
   FUpdateTimer.Name:='MsgUpdateTimer';
   FUpdateTimer.Interval:=200;
   FUpdateTimer.OnTimer:=@MsgUpdateTimerTimer;
   FItemHeight:=20;
-  FHintLast.LineNro:=cNotALineHint;
+  FHintLast.LineNumber:=cNotALineHint;
   BorderWidth:=0;
   fBackgroundColor:=MsgWndDefBackgroundColor;
   FHeaderBackground[lmvtsRunning]:=MsgWndDefHeaderBackgroundRunning;
@@ -1394,8 +1401,9 @@ begin
   FImageChangeLink.OnChange:=@ImageListChange;
   for u:=Low(TMessageLineUrgency) to high(TMessageLineUrgency) do
     fUrgencyStyles[u]:=TMsgCtrlUrgencyStyle.Create(Self,u);
-  ShowHint:= False;
+  ShowHint:=true;
   OnMouseMove:=@MsgCtrlMouseMove;
+  OnShowHint:=@MsgCtrlShowHint;
 end;
 
 destructor TMessagesCtrl.Destroy;
@@ -1816,6 +1824,16 @@ begin
   Invalidate;
 end;
 
+procedure TMessagesCtrl.SetWordWrap(AValue: boolean);
+begin
+  if FWordWrap=AValue then Exit;
+  FWordWrap:=AValue;
+  // without wrapping long lines are clipped -> let a hint show the full text
+  InvalidateWrapCache;
+  UpdateScrollBar(true);
+  Invalidate;
+end;
+
 procedure TMessagesCtrl.SetUrgencyStyles(Urgency: TMessageLineUrgency;
   AValue: TMsgCtrlUrgencyStyle);
 begin
@@ -2064,6 +2082,10 @@ begin
         fLastSearchStart.View:=nil;
       if FTextCursorPoint.View=AComponent then
         FTextCursorPoint.View:=nil;
+      if fHeaderHintView=AComponent then begin
+        fHeaderHintView:=nil;
+        fHasHeaderHint:=false;
+      end;
       RemoveView(TLMsgWndView(AComponent));
     end
     else if AComponent=Images then
@@ -2094,7 +2116,7 @@ var
 begin
   Indent:=BorderWidth+2;
   FirstRowWidth:=ClientWidth-Indent-IconW-fArrowWidth;
-  ContRowWidth:=ClientWidth-Indent-fContIndentWidth-fArrowWidth;
+  ContRowWidth:=ClientWidth-Indent-fIconWidth-fArrowWidth;
   if FirstRowWidth<1 then FirstRowWidth:=1;
   if ContRowWidth<1 then ContRowWidth:=1;
 end;
@@ -2194,6 +2216,8 @@ var
   Len, p, w: integer;
 begin
   SetLength(RowStarts,1);
+  RowStarts[0]:=1;
+  if not FWordWrap then exit(1); // one clipped row
   Len:=length(aText);
   Result:=0;
   p:=1;
@@ -2216,6 +2240,7 @@ function TMessagesCtrl.MeasureRowCount(const aText: string; FirstRowWidth,
 var
   Len, p, w: integer;
 begin
+  if not FWordWrap then exit(1); // one clipped row
   Len:=length(aText);
   Result:=0;
   p:=1;
@@ -2310,7 +2335,6 @@ procedure TMessagesCtrl.RefreshWrapMetrics;
 begin
   if not HandleAllocated then exit;
   fArrowWidth:=Canvas.TextWidth(MsgWndWrapArrow)+2;
-  fContIndentWidth:=Canvas.TextWidth(MsgWndContIndent);
   if (Images<>nil) and (mcoShowMsgIcons in Options) then
     fIconWidth:=Images.ResolutionForControl[0, Self].Width+2
   else
@@ -2562,6 +2586,11 @@ var
 begin
   if not HandleAllocated then exit;
   if ClientWidth<=0 then exit;
+  if not FWordWrap then begin
+    // every line occupies exactly one visual row -> nothing to measure
+    fWrapChunks.FreeAndClear;
+    exit;
+  end;
   if fArrowWidth<=0 then
     RefreshWrapMetrics;
   // skip if the cache already matches the current state
@@ -2787,6 +2816,7 @@ begin
   Indent:=BorderWidth+2;
   LoSearchText:=fLastLoSearchText;
   fHasHeaderHint:=False;
+  fHeaderHintView:=nil;
 
   // make sure the wrap metrics and the measured heuristic windows are current
   RefreshWrapMetrics;
@@ -2850,7 +2880,7 @@ begin
         yTop:=y;
         for r:=0 to Rows-1 do begin
           RowLeft:=Indent;
-          if r>0 then inc(RowLeft,fContIndentWidth);
+          if r>0 then inc(RowLeft,fIconWidth);
           if (y+ItemHeight>0) and (y<ClientHeight) then begin
             if HasIcon and (r=0) then begin
               ImgRes := Images.ResolutionForControl[0, Self];
@@ -2878,7 +2908,7 @@ begin
           if y>ClientHeight then break;
         end;
         // cursor focus rectangle around the whole logical line
-        if (Msg=FTextCursorPoint.LineNro)
+        if (Msg=FTextCursorPoint.LineNumber)
         and (View=FTextCursorPoint.View) and (mcsFocused in FStates) then begin
           Canvas.Pen.Style:=psDot;
           Canvas.Pen.Color:=Font.Color;
@@ -2909,6 +2939,7 @@ begin
       // the first two visual Rows are normal messages, not selected
       // => paint view header hint
       fHasHeaderHint:=True;
+      fHeaderHintView:=View;
       NodeRect:=Rect(0,0,ClientWidth,ItemHeight div 2);
       Canvas.Brush.Color:=HeaderBackground[View.ToolState];
       Canvas.Brush.Style:=bsSolid;
@@ -2979,19 +3010,34 @@ procedure TMessagesCtrl.MsgCtrlMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Integer);
 var
   lLineFound: boolean;
-  loLine: integer;
+  logLine: integer;
 begin
-  lLineFound := GetLineAt(Y,{out}FHintLast.View, loLine);
+  lLineFound := GetLineAt(Y,{out}FHintLast.View, logLine);
   if lLineFound then begin
-    if loLine<>FHintLast.LineNro then
+    if logLine<>FHintLast.LineNumber then
       Application.CancelHint;
-    FHintLast.LineNro := loLine;
+    FHintLast.LineNumber := logLine;
   end
   else begin
-    if FHintLast.LineNro>cNotALineHint then
+    if FHintLast.LineNumber>cNotALineHint then
       Application.CancelHint;
-    FHintLast.LineNro := cNotALineHint;
+    FHintLast.LineNumber := cNotALineHint;
   end;
+end;
+
+procedure TMessagesCtrl.MsgCtrlShowHint(Sender: TObject; HintInfo: PHintInfo);
+begin
+  if fUpdateLock > 0 then
+    exit;
+  if (FHintLast.View=nil) or (FHintLast.LineNumber=cNotALineHint) then
+    // No selected 'view' or not specified line
+    Application.CancelHint
+  else
+    with HintInfo^ do begin
+      HintStr := FHintLast.View.AsHintString(FHintLast.LineNumber);
+      ReshowTimeout := 0;
+      HideTimeout := 5000;
+    end;
 end;
 
 procedure TMessagesCtrl.MouseDown(Button: TMouseButton; Shift: TShiftState;
@@ -3014,13 +3060,10 @@ begin
     else begin
       if (Button=mbLeft) or (View.FSelectedLines.IndexOf(LineNumber)=-1) then
       begin
-        if fHasHeaderHint and (Y<ItemHeight) then
-          // The header is drawn on top as a hint. Select the actual header line.
-          SelectOne(View,-1)
-        else begin
-          SelectOne(View,LineNumber);
-          StoreSelectedAsSearchStart;
-        end;
+        // note: GetLineAt already returns the header line if the header is
+        // drawn on top as a hint
+        SelectOne(View,LineNumber);
+        StoreSelectedAsSearchStart;
       end;
       if (Button=mbLeft) then begin
         if ((ssDouble in Shift) and (not (mcoSingleClickOpensFile in FOptions)))
@@ -3059,7 +3102,7 @@ begin
     // [Alt+C] - copy the displayed message hint
     if assigned(FHintLast.View) then
     begin
-      Clipboard.AsText := FHintLast.View.AsHintString(FHintLast.LineNro);
+      Clipboard.AsText := FHintLast.View.AsHintString(FHintLast.LineNumber);
       Key := 0;
     end;
   end
@@ -3260,7 +3303,7 @@ var
   begin
     CurView.ExtendSelection(LineNumber);
     FTextCursorPoint.View:=CurView;
-    FTextCursorPoint.LineNro:=LineNumber;
+    FTextCursorPoint.LineNumber:=LineNumber;
   end;
 
   procedure SelFromBeginningToLine;
@@ -3365,7 +3408,7 @@ begin
   Assert(Offset<>0, 'Offset=0');
   View:=FTextCursorPoint.View;
   if Assigned(View) then
-    TheLine:=FTextCursorPoint.LineNro
+    TheLine:=FTextCursorPoint.LineNumber
   else begin
     // No selection yet.
     if Offset>0 then begin
@@ -3417,7 +3460,7 @@ procedure TMessagesCtrl.MoveCursor(View: TLMsgWndView; LineNumber: integer);
 begin
   if View=nil then exit;
   FTextCursorPoint.View:=View;
-  FTextCursorPoint.LineNro:=LineNumber;
+  FTextCursorPoint.LineNumber:=LineNumber;
   ScrollToLine(FTextCursorPoint, True);
   Invalidate;
 end;
@@ -3425,7 +3468,7 @@ end;
 procedure TMessagesCtrl.ToggleCursorLine;
 begin
   if FTextCursorPoint.View=nil then exit;
-  FTextCursorPoint.View.ToggleCursorLine(FTextCursorPoint.LineNro);
+  FTextCursorPoint.View.ToggleCursorLine(FTextCursorPoint.LineNumber);
   Invalidate;
 end;
 
@@ -3448,7 +3491,7 @@ end;
 
 procedure TMessagesCtrl.SelectOne(MsgPoint: TMsgPoint);
 begin
-  SelectOne(MsgPoint.View, MsgPoint.LineNro);
+  SelectOne(MsgPoint.View, MsgPoint.LineNumber);
 end;
 
 procedure TMessagesCtrl.SelectOne(View: TLMsgWndView; LineNumber: integer);
@@ -3456,7 +3499,7 @@ begin
   if View = nil then exit;
   ClearSelections;
   FTextCursorPoint.View:=View;
-  FTextCursorPoint.LineNro:=LineNumber;
+  FTextCursorPoint.LineNumber:=LineNumber;
   FStartSelectionView:=View;
   View.SelLineFirst:=LineNumber;
   ScrollToLine(FTextCursorPoint,true);
@@ -3600,20 +3643,20 @@ var
 begin
   Result:=false;
   FoundPoint.View:=nil;
-  FoundPoint.LineNro:=-1;
+  FoundPoint.LineNumber:=-1;
   if ViewCount=0 then exit;
   if StartPoint.View=nil then begin
     // use default start
     if Downwards then begin
       StartPoint.View:=Views[0];
-      StartPoint.LineNro:=-1;
+      StartPoint.LineNumber:=-1;
     end else begin
       StartPoint.View:=Views[ViewCount-1];
-      StartPoint.LineNro:=StartPoint.View.GetShownLineCount(true,true);
+      StartPoint.LineNumber:=StartPoint.View.GetShownLineCount(true,true);
     end;
   end;
   CurView:=StartPoint.View;
-  CurLine:=StartPoint.LineNro;
+  CurLine:=StartPoint.LineNumber;
   CurViewLineCnt:=CurView.GetShownLineCount(true,true);
   // skip invalid line numbers
   if CurLine<-1 then begin
@@ -3648,7 +3691,7 @@ begin
     Txt:=UTF8LowerCase(Txt);
     if Pos(fLastLoSearchText,Txt)>0 then begin
       FoundPoint.View:=CurView;
-      FoundPoint.LineNro:=CurLine;
+      FoundPoint.LineNumber:=CurLine;
       exit(true);
     end;
   until not Next;
@@ -3698,20 +3741,20 @@ var
 begin
   Result:=false;
   FoundPoint.View:=nil;
-  FoundPoint.LineNro:=-1;
+  FoundPoint.LineNumber:=-1;
   if ViewCount=0 then exit;
   if StartPoint.View=nil then begin
     // use default start
     if Downwards then begin
       StartPoint.View:=Views[0];
-      StartPoint.LineNro:=-1;
+      StartPoint.LineNumber:=-1;
     end else begin
       StartPoint.View:=Views[ViewCount-1];
-      StartPoint.LineNro:=StartPoint.View.GetShownLineCount(true,true);
+      StartPoint.LineNumber:=StartPoint.View.GetShownLineCount(true,true);
     end;
   end;
   CurView:=StartPoint.View;
-  CurLine:=StartPoint.LineNro;
+  CurLine:=StartPoint.LineNumber;
   CurViewLineCnt:=CurView.GetShownLineCount(true,true);
   // skip invalid line numbers
   if CurLine<-1 then begin
@@ -3742,7 +3785,7 @@ begin
       if MsgLine.Urgency>=aMinUrgency then begin
         if (not WithSrcPos) or MsgLine.HasSourcePosition then begin
           FoundPoint.View:=CurView;
-          FoundPoint.LineNro:=CurLine;
+          FoundPoint.LineNumber:=CurLine;
           exit(true);
         end;
       end;
@@ -3831,7 +3874,7 @@ end;
 
 procedure TMessagesCtrl.ScrollToLine(MsgPoint: TMsgPoint; FullyVisible: boolean);
 begin
-  ScrollToLine(MsgPoint.View, MsgPoint.LineNro, FullyVisible);
+  ScrollToLine(MsgPoint.View, MsgPoint.LineNumber, FullyVisible);
 end;
 
 procedure TMessagesCtrl.ScrollToLine(View: TLMsgWndView; LineNumber: integer;
@@ -3949,6 +3992,7 @@ begin
   SetOption(mcoAlwaysDrawFocused,EnvironmentGuiOpts.MsgViewAlwaysDrawFocused);
   Options:=NewOptions;
   FilenameStyle:=EnvironmentGuiOpts.MsgViewFilenameStyle;
+  WordWrap:=EnvironmentGuiOpts.MsgViewWordWrap;
 end;
 
 function TMessagesCtrl.IndexOfView(View: TLMsgWndView): integer;
@@ -4019,6 +4063,13 @@ function TMessagesCtrl.GetLineAt(Y: integer; out View: TLMsgWndView;
 var
   i, k: Integer;
 begin
+  if fHasHeaderHint and (fHeaderHintView<>nil) and (Y>=0) and (Y<ItemHeight) then begin
+    // the view header is painted on top of the first visual row, hiding the
+    // message line below it => return the header line
+    View:=fHeaderHintView;
+    Line:=-1;
+    exit(true);
+  end;
   for i:=0 to ViewCount-1 do begin
     View:=Views[i];
     if View.FPaintStamp<>FPaintStamp then continue;

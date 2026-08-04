@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "POT-Creation-Date: \n"
-"PO-Revision-Date: 2026-06-24 14:12+0200\n"
+"PO-Revision-Date: 2026-07-22 11:49+0200\n"
 "Last-Translator: Karl-Michael Schindler <tonne1.schindler@web.de>\n"
 "Language-Team: Deutsch <lazarus@miraclec.com>\n"
 "Language: de_DE\n"
@@ -483,11 +483,6 @@ msgstr "Codefaltungs-Baum"
 msgid "Code folding (current)"
 msgstr ""
 
-#: lazarusidestrconsts.dlgaddhiattrcustom
-#, object-pascal-format
-msgid "Custom %d"
-msgstr ""
-
 #: lazarusidestrconsts.dlgaddhiattrdefault
 msgid "Default Text"
 msgstr "Standardtext"
@@ -641,11 +636,6 @@ msgstr "Geänderte Zeile"
 #: lazarusidestrconsts.dlgaddhiattrmouselink
 msgid "Mouse link"
 msgstr "Maus-Link"
-
-#: lazarusidestrconsts.dlgaddhiattrnestedbracket
-#, object-pascal-format
-msgid "Nested bracket %d"
-msgstr ""
 
 #: lazarusidestrconsts.dlgaddhiattroutlinelevelcolor
 #, object-pascal-format
@@ -1574,7 +1564,7 @@ msgstr "Antialiasing abschalten"
 
 #: lazarusidestrconsts.dlgdistancebetweengridpointsissmalleststep
 msgid "Distance between grid points is the smallest step when moving a control."
-msgstr ""
+msgstr "Abstand zwischen Gitterpunkten ist der kleinste Schritt beim Verschieben eines Steuerelements."
 
 #: lazarusidestrconsts.dlgdividercolordefault
 msgid "Use right margin color"
@@ -1832,7 +1822,7 @@ msgstr "Dateien"
 
 #: lazarusidestrconsts.dlgenvgrid
 msgid "Grid"
-msgstr "Grid"
+msgstr "Gitter"
 
 #: lazarusidestrconsts.dlgenvidestartup
 msgid "IDE Startup"
@@ -2313,27 +2303,27 @@ msgstr "Ausgegraute Desktops sind für die nicht-gedockte IDE."
 
 #: lazarusidestrconsts.dlggridcolor
 msgid "Grid color"
-msgstr "Grid-Farbe"
+msgstr "Gitter-Farbe"
 
 #: lazarusidestrconsts.dlggridconsistsofsmalldots
 msgid "Grid consists of small dots which help aligning controls."
-msgstr ""
+msgstr "Das Gitter besteht aus kleinen Punkten, die beim Ausrichten von Steuerelementen helfen."
 
 #: lazarusidestrconsts.dlggridx
 msgid "Grid size X"
-msgstr "Grid-Größe X"
+msgstr "Gitter-Weite X"
 
 #: lazarusidestrconsts.dlggridxhint
 msgid "Horizontal grid step size"
-msgstr "Waagrechte Grid-Schrittweite"
+msgstr "Waagrechte Gitter-Schrittweite"
 
 #: lazarusidestrconsts.dlggridy
 msgid "Grid size Y"
-msgstr "Grid-Größe Y"
+msgstr "Gitter-Weite Y"
 
 #: lazarusidestrconsts.dlggridyhint
 msgid "Vertical grid step size"
-msgstr "Senkrechte Grid-Schrittweite"
+msgstr "Senkrechte Gitter-Schrittweite"
 
 #: lazarusidestrconsts.dlggroupcodeexplorer
 msgctxt "lazarusidestrconsts.dlggroupcodeexplorer"
@@ -2408,7 +2398,7 @@ msgstr "Heap-Größe"
 
 #: lazarusidestrconsts.dlgheightofonepropertyingrid
 msgid "Height of one property in the grid."
-msgstr "Höhe einer Eigenschaft im Grid."
+msgstr "Zeilenhöhe im Objektinspektor."
 
 #: lazarusidestrconsts.dlgheightpos
 msgid "Height:"
@@ -3931,11 +3921,11 @@ msgstr "Abstand vom Rand"
 
 #: lazarusidestrconsts.dlgqshowgrid
 msgid "Show grid"
-msgstr "Grid anzeigen"
+msgstr "Gitter anzeigen"
 
 #: lazarusidestrconsts.dlgqsnaptogrid
 msgid "Snap to grid"
-msgstr "Am Grid ausrichten"
+msgstr "Am Gitter ausrichten"
 
 #: lazarusidestrconsts.dlgreallydeletedesktop
 #, object-pascal-format
@@ -4829,7 +4819,7 @@ msgstr "Größe"
 
 #: lazarusidestrconsts.fdmsnaptogridoption
 msgid "Option: Snap to grid"
-msgstr "Einstellung: Ans Grid kleben"
+msgstr "Einstellung: Am Gitter ausrichten"
 
 #: lazarusidestrconsts.fdmsnaptoguidelinesoption
 msgid "Option: Snap to guide lines"
@@ -5953,7 +5943,7 @@ msgid "Build number"
 msgstr "Nummer des Builds"
 
 #: lazarusidestrconsts.lisbuildreleasepackagesstorecompi
-msgid "Build release packages. Store compiler checksum instead of date in package.compiled files."
+msgid "Build release packages. Store compiler checksum instead of date in package.compiled files. Ignore session and environment options."
 msgstr ""
 
 #: lazarusidestrconsts.lisbuildstage
@@ -9152,7 +9142,7 @@ msgstr "Wirklich beenden?"
 
 #: lazarusidestrconsts.lisdrawgridlinesobjectinspector
 msgid "Draw grid lines"
-msgstr "Grid-Linien zeichnen"
+msgstr "Gitter-Linien zeichnen"
 
 #: lazarusidestrconsts.lisdrawtheselectionfocusedevenifthemessageswindowhasn
 msgid "Draw the selection focused even if the Messages window has no focus. Use this if your theme has a hardly visible unfocused drawing."
@@ -11926,7 +11916,9 @@ msgid "Maximize compatibility of project files (LPI and LPS)"
 msgstr "Kompatibilität von Projektdateien (LPI und LPS) maximieren"
 
 #: lazarusidestrconsts.lislpicompatibilitymodecheckboxhint
-msgid "Check this if you want to open your project in legacy (2.0 and older) Lazarus versions."
+#, fuzzy
+#| msgid "Check this if you want to open your project in legacy (2.0 and older) Lazarus versions."
+msgid "Check this if you want to open your project in legacy (2.2 - 4.8) Lazarus versions."
 msgstr "Prüfen, ob das Projekt in alten Lazarus-Versionen (2.0 oder älter) geöffnet werden kann."
 
 #: lazarusidestrconsts.lislpkcompatibilitymodecheckbox
@@ -11934,7 +11926,9 @@ msgid "Maximize compatibility of package file (LPK)"
 msgstr "Kompatibilität von Package-Dateien (LPK) maximieren"
 
 #: lazarusidestrconsts.lislpkcompatibilitymodecheckboxhint
-msgid "Check this if you want to open your package in legacy (2.0 and older) Lazarus versions."
+#, fuzzy
+#| msgid "Check this if you want to open your package in legacy (2.0 and older) Lazarus versions."
+msgid "Check this if you want to open your package in legacy (2.2 - 4.8) Lazarus versions."
 msgstr "Prüfen, ob das Package in alten Lazarus-Versionen (2.0 oder älter) geöffnet werden kann."
 
 #: lazarusidestrconsts.lislpkhasvanishedondiskusingasalternative
@@ -13688,7 +13682,7 @@ msgstr "Ausgabeverzeichnis -FU des Ziels ersetzen"
 
 #: lazarusidestrconsts.lismmredolastundotothisgrid
 msgid "Redo last undo to this grid"
-msgstr ""
+msgstr "Die widerrufene Änderung an dieser Tabelle erneut ausführen"
 
 #: lazarusidestrconsts.lismmsetanidemacroeglclwidgettypewin32
 msgid "Set an IDE macro, e.g.: LCLWidgetType:=win32"
@@ -13717,7 +13711,7 @@ msgstr "Ziele: "
 
 #: lazarusidestrconsts.lismmundolastchangetothisgrid
 msgid "Undo last change to this grid"
-msgstr ""
+msgstr "Die letzte Änderung an dieser Tabelle widerrufen"
 
 #: lazarusidestrconsts.lismmvalues
 #, object-pascal-format
@@ -19052,6 +19046,10 @@ msgstr "Arbeitsverzeichnis für das Kompilieren"
 msgid "Working directory for run"
 msgstr "Arbeitsverzeichnis für den Start"
 
+#: lazarusidestrconsts.liswraplongmessagelinesotherwisetheyareclippedandahi
+msgid "Wrap long message lines into several rows. Otherwise they are clipped and a hint shows the full text."
+msgstr ""
+
 #: lazarusidestrconsts.liswriteconfiginsteadofcommandlineparameters
 msgid "Write config instead of command line parameters"
 msgstr ""
@@ -21019,38 +21017,6 @@ msgstr "Taste für Befehl bearbeiten"
 msgid "Continue with next mouse up action"
 msgstr ""
 
-#: lazarusidestrconsts.synffoldcomments
-msgid "Fold comments"
-msgstr "Kommentare falten"
-
-#: lazarusidestrconsts.synffoldcommentsinselection
-msgid "Fold comments in selection"
-msgstr "Kommentare in Auswahl falten"
-
-#: lazarusidestrconsts.synffoldinactiveifdef
-msgid "Fold inactive Ifdef"
-msgstr "Inaktive Ifdef falten"
-
-#: lazarusidestrconsts.synffoldinactiveifdefexcludemixedstate
-msgid "Fold inactive Ifdef (exclude mixed state)"
-msgstr ""
-
-#: lazarusidestrconsts.synffoldinactiveifdefinselection
-msgid "Fold inactive Ifdef in selection"
-msgstr "Inaktive Ifdef in Auswahl falten"
-
-#: lazarusidestrconsts.synffoldinactiveifdefinselectionexcludemixedstate
-msgid "Fold inactive Ifdef in selection (exclude mixed state)"
-msgstr ""
-
-#: lazarusidestrconsts.synfhidecomments
-msgid "Hide comments"
-msgstr "Kommentare verbergen"
-
-#: lazarusidestrconsts.synfhidecommentsinselection
-msgid "Hide comments in selection"
-msgstr "Kommentare in Auswahl verbergen"
-
 #: lazarusidestrconsts.synfmatchactionbuttonofmousedown
 msgid "Match action button of mouse down"
 msgstr ""
@@ -21070,47 +21036,6 @@ msgstr ""
 #: lazarusidestrconsts.synfsearchallactionofmousedown
 msgid "Search all action of mouse down"
 msgstr ""
-
-#: lazarusidestrconsts.synfunfoldactiveifdef
-msgid "Unfold active Ifdef"
-msgstr "Aktive Ifdef entfalten"
-
-#: lazarusidestrconsts.synfunfoldactiveifdefinselection
-msgid "Unfold active Ifdef in selection"
-msgstr "Aktive Ifdef in Auswahl entfalten"
-
-#: lazarusidestrconsts.synfunfoldall
-msgctxt "lazarusidestrconsts.synfunfoldall"
-msgid "Unfold all"
-msgstr "Alle entfalten"
-
-#: lazarusidestrconsts.synfunfoldallifdef
-msgid "Unfold all Ifdef"
-msgstr "Alle Ifdef entfalten"
-
-#: lazarusidestrconsts.synfunfoldallifdefinselection
-msgid "Unfold all Ifdef in selection"
-msgstr "Alle Ifdef in Auswahl entfalten"
-
-#: lazarusidestrconsts.synfunfoldallinselection
-msgid "Unfold all in selection"
-msgstr "Alles in Auswahl entfalten"
-
-#: lazarusidestrconsts.synfunfoldcomments
-msgid "Unfold comments"
-msgstr "Kommentare entfalten"
-
-#: lazarusidestrconsts.synfunfoldcommentsinselection
-msgid "Unfold comments in selection"
-msgstr "Kommentare in Auswahl entfalten"
-
-#: lazarusidestrconsts.synfunfoldinactiveifdef
-msgid "Unfold inactive Ifdef"
-msgstr "Inaktive Ifdef entfalten"
-
-#: lazarusidestrconsts.synfunfoldinactiveifdefinselection
-msgid "Unfold inactive Ifdef in selection"
-msgstr "Inaktive Ifdef in Auswahl entfalten"
 
 #: lazarusidestrconsts.synspelloptmousewheelchangestabs
 msgid "Mouse-wheel changes tabs"

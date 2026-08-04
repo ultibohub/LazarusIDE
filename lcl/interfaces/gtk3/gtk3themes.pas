@@ -202,9 +202,9 @@ begin
   LineW  := Max(1.0, Size / 5.0 / Sqrt(2.0));
   cairo_save(Cr);
   cairo_set_line_width(Cr, LineW);
-  cairo_set_line_join(Cr, CAIRO_LINE_JOIN_ROUND);
+  cairo_set_line_join(Cr, CAIRO_LINE_JOIN_MITER);
   cairo_set_line_cap(Cr, CAIRO_LINE_CAP_ROUND);
-  cairo_translate(Cr, X + HalfSz, Y + HalfSz);
+  cairo_translate(Cr, X + HalfSz + 0.5, Y + HalfSz + 0.5);
   cairo_rotate(Cr, Angle - Pi);
   cairo_move_to(Cr, -HalfSz, -Size / 4.0);
   cairo_line_to(Cr,       0,  Size / 4.0);

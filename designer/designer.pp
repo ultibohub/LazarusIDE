@@ -44,6 +44,7 @@ uses
   Forms, Controls, Graphics, Dialogs, ExtCtrls, Menus, ClipBrd,
   // LazUtils
   GraphType, GraphMath, LazFileUtils, LazFileCache, LazLoggerBase, LazUtilities,
+  ProjResProc,
   // BuildIntf
   ProjectIntf, ComponentReg,
   // IDEIntf
@@ -706,7 +707,6 @@ begin
   if FForm is INonControlDesigner then begin
     LNonControlDesigner := FForm as INonControlDesigner;
     FLookupRoot := LNonControlDesigner.LookupRoot;
-
     // this can trigger events:
     Mediator := LNonControlDesigner.Mediator;
   end
@@ -716,6 +716,11 @@ begin
     FLookupRoot := FForm;
 
   Selection := AControlSelection;
+  {$IFDEF VerboseDesigner}
+  debugln(['TDesigner.Create End, FLookupRoot=', FLookupRoot]);
+  for i := 0 to FLookupRoot.ComponentCount-1 do
+    debugln(['TDesigner.Create Comp', i, '=', FLookupRoot.Components[i]]);
+  {$ENDIF}
 end;
 
 procedure TDesigner.AddComponent(
@@ -3960,7 +3965,6 @@ begin
       s.IgnoreHidden := IgnoreHidden;
       s.IgnoreNonVisual := not ShowNonVisualComponents;
       s.Search(FLookupRoot);
-      s.Mediator := Mediator;
       Result := s.Best;
     finally
       s.Free;

@@ -23,7 +23,7 @@ interface
 uses
   Classes, SysUtils, Types, math, FPCanvas,
   // LazUtils
-  LazUTF8, IntegerList, LazStringUtils,
+  LazUTF8, IntegerList, LazStringUtils, Maps,
   // LCL
   LCLType, LCLProc, Graphics,
   LazGtk3, LazGdk3, LazGObject2, LazGLib2, LazGdkPixbuf2,
@@ -53,6 +53,7 @@ type
     fContext:TGtk3DeviceContext;
   public
     constructor Create; override;
+    destructor Destroy; override;
     function Select(ACtx:TGtk3DeviceContext):TGtk3ContextObject; virtual;
     function Get(szbuf:integer;pbuf:pointer):integer; virtual;abstract;
     property Shared: Boolean read FShared write FShared;
@@ -418,6 +419,7 @@ procedure Gtk3WordWrap(DC: HDC; AText: PChar;
 
 function Gtk3DefaultContext: TGtk3DeviceContext;
 function Gtk3ScreenContext: TGtk3DeviceContext;
+function Gtk3IsValidGDIObject(const AGDIObj: PtrUInt): Boolean;
 
 function ReplaceAmpersandsWithUnderscores(const S: string): string; inline;
 function ReplaceUnderscoresWithAmpersands(const S: string): string; inline;
@@ -428,6 +430,36 @@ uses gtk3int, Controls;
 
 const
   PixelOffset = 0.5; // Cairo API needs 0.5 pixel offset to not make blurry lines
+
+var
+  FGDIHandles: TMap;
+
+procedure Gtk3AddGDIObject(AObject: TObject);
+var
+  Key: PtrUInt;
+begin
+  if (AObject = nil) or (FGDIHandles = nil) then
+    exit;
+  Key := PtrUInt(AObject);
+  if not FGDIHandles.HasId(Key) then
+    FGDIHandles.Add(Key, AObject);
+end;
+
+procedure Gtk3RemoveGDIObject(AObject: TObject);
+var
+  Key: PtrUInt;
+begin
+  if (AObject = nil) or (FGDIHandles = nil) then
+    exit;
+  Key := PtrUInt(AObject);
+  if FGDIHandles.HasId(Key) then
+    FGDIHandles.Delete(Key);
+end;
+
+function Gtk3IsValidGDIObject(const AGDIObj: PtrUInt): Boolean;
+begin
+  Result := (AGDIObj <> 0) and (FGDIHandles <> nil) and FGDIHandles.HasId(AGDIObj);
+end;
 
 const
   Dash_Dash:        array [0..1] of double = (3, 2);              //____ ____
@@ -787,6 +819,13 @@ constructor TGtk3ContextObject.Create;
 begin
   inherited Create;
   FShared := False;
+  Gtk3AddGDIObject(Self);
+end;
+
+destructor TGtk3ContextObject.Destroy;
+begin
+  Gtk3RemoveGDIObject(Self);
+  inherited Destroy;
 end;
 
 function TGtk3ContextObject.Select(ACtx:TGtk3DeviceContext): TGtk3ContextObject;
@@ -2090,18 +2129,22 @@ var
   NeedSource: Boolean;
   AMatrix: Tcairo_matrix_t;
   ReadOffsetX, ReadOffsetY: Double;
+  DRect: TRect;
 begin
   DestSurface := cairo_get_target(FCairo);
   if DestSurface = nil then
     exit;
 
-  CopyW := ADestRect.Right - ADestRect.Left;
-  CopyH := ADestRect.Bottom - ADestRect.Top;
+  DRect := Rect(LToDX(ADestRect.Left), LToDY(ADestRect.Top),
+    LToDX(ADestRect.Right), LToDY(ADestRect.Bottom));
+  CopyW := DRect.Right - DRect.Left;
+  CopyH := DRect.Bottom - DRect.Top;
 
   if (CopyW <= 0) or (CopyH <= 0) then
     exit;
 
-  if FBackTarget <> nil then
+  if (FBackTarget <> nil) and
+    (cairo_surface_get_type(DestSurface) <> CAIRO_SURFACE_TYPE_IMAGE) then
     TargetCairo := FBackTarget
   else
     TargetCairo := FCairo;
@@ -2110,7 +2153,7 @@ begin
   begin
 
     cairo_save(TargetCairo);
-    cairo_rectangle(TargetCairo, ADestRect.Left, ADestRect.Top, CopyW, CopyH);
+    cairo_rectangle(TargetCairo, DRect.Left, DRect.Top, CopyW, CopyH);
     cairo_clip(TargetCairo);
 
     case Rop of
@@ -2194,13 +2237,13 @@ begin
 
   TempDestSurface := nil;
 
-  if FBackTarget <> nil then
+  if TargetCairo = FBackTarget then
   begin
     //x11 type, read from underlying X11 surface via FBackTarget matrix.
     ReadSurface := cairo_get_target(FBackTarget);
     cairo_get_matrix(FBackTarget, @AMatrix);
-    ReadOffsetX := -(AMatrix.x0 + ADestRect.Left);
-    ReadOffsetY := -(AMatrix.y0 + ADestRect.Top);
+    ReadOffsetX := -(AMatrix.x0 + DRect.Left);
+    ReadOffsetY := -(AMatrix.y0 + DRect.Top);
     TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
     TempCairo := cairo_create(TempDestSurface);
     cairo_set_source_surface(TempCairo, ReadSurface, ReadOffsetX, ReadOffsetY);
@@ -2219,8 +2262,8 @@ begin
     if (AMatrix.x0 <> 0) or (AMatrix.y0 <> 0) or
        (cairo_surface_get_type(DestSurface) <> CAIRO_SURFACE_TYPE_IMAGE) then
     begin
-      ReadOffsetX := -(AMatrix.x0 + ADestRect.Left);
-      ReadOffsetY := -(AMatrix.y0 + ADestRect.Top);
+      ReadOffsetX := -(AMatrix.x0 + DRect.Left);
+      ReadOffsetY := -(AMatrix.y0 + DRect.Top);
       TempDestSurface := cairo_image_surface_create(CAIRO_FORMAT_ARGB32, CopyW, CopyH);
       TempCairo := cairo_create(TempDestSurface);
       cairo_set_source_surface(TempCairo, DestSurface, ReadOffsetX, ReadOffsetY);
@@ -2261,7 +2304,7 @@ begin
   for Y := 0 to CopyH - 1 do
   begin
     if TempDestSurface = nil then
-      if (ADestRect.Top + Y < 0) or (ADestRect.Top + Y >= DstH) then
+      if (DRect.Top + Y < 0) or (DRect.Top + Y >= DstH) then
         continue;
 
     if NeedSource and (TempSurface = nil) then
@@ -2271,7 +2314,7 @@ begin
     for X := 0 to CopyW - 1 do
     begin
       if TempDestSurface = nil then
-        if (ADestRect.Left + X < 0) or (ADestRect.Left + X >= DstW) then
+        if (DRect.Left + X < 0) or (DRect.Left + X >= DstW) then
           continue;
 
       if NeedSource and (TempSurface = nil) then
@@ -2281,7 +2324,7 @@ begin
       if TempDestSurface <> nil then
         DstOff := Y * DstStride + X * 4
       else
-        DstOff := (ADestRect.Top + Y) * DstStride + (ADestRect.Left + X) * 4;
+        DstOff := (DRect.Top + Y) * DstStride + (DRect.Left + X) * 4;
 
       SrcOff := 0;
       if NeedSource then
@@ -2379,8 +2422,8 @@ begin
     //write back via x11 FBackTarget when X11-backed, else via FCairo.
     cairo_save(TargetCairo);
     cairo_set_operator(TargetCairo, CAIRO_OPERATOR_SOURCE);
-    cairo_set_source_surface(TargetCairo, TempDestSurface, ADestRect.Left, ADestRect.Top);
-    cairo_rectangle(TargetCairo, ADestRect.Left, ADestRect.Top, CopyW, CopyH);
+    cairo_set_source_surface(TargetCairo, TempDestSurface, DRect.Left, DRect.Top);
+    cairo_rectangle(TargetCairo, DRect.Left, DRect.Top, CopyW, CopyH);
     cairo_fill(TargetCairo);
     cairo_restore(TargetCairo);
     if TargetCairo = FCairo then
@@ -4870,5 +4913,11 @@ begin
 
   LinesList.Free;
 end;
+
+initialization
+  FGDIHandles := TMap.Create(TMapIdType(ituPtrSize), SizeOf(TObject));
+
+finalization
+  FreeAndNil(FGDIHandles);
 
 end.

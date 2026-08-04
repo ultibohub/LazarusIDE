@@ -62,6 +62,7 @@ type
 
   TBuildManager = class(TBaseBuildManager)
   private
+    FBuildRelease: boolean;
     FUnitSetCache: TFPCUnitSetCache;
     fBuildLazExtraOptions: string; // last build lazarus extra options
     FUnitSetChangeStamp: integer;
@@ -150,6 +151,8 @@ type
     procedure SetBuildTargetIDE(aQuiet: boolean = false); override;
     function BuildTargetIDEIsDefault: boolean; override;
     property BuildTarget: TProject read GetBuildTarget; // TProject or nil
+    // used by lazbuild --pkg-release, true = ignore the IDE's extra build options
+    property BuildRelease: boolean read FBuildRelease write FBuildRelease;
   end;
 
 var
@@ -237,7 +240,7 @@ end;
 function TBuildManager.MacroFuncIDEBuildOptions(const Param: string;
   const Data: PtrInt; var Abort: boolean): string;
 begin
-  if Data=CompilerOptionMacroPlatformIndependent then
+  if (Data=CompilerOptionMacroPlatformIndependent) or BuildRelease then
     Result:=''
   else if (MiscellaneousOptions<>nil)
   and (MiscellaneousOptions.BuildLazOpts<>nil)
@@ -1948,6 +1951,9 @@ var
   Target: String;
   ActiveMode: String;
 begin
+  if BuildRelease then
+    // a release build must not depend on the IDE config or the project session
+    Types:=Types-[bmgtEnvironment,bmgtSession];
   Target:=GetModeMatrixTarget(Sender);
   ActiveMode:=GetActiveBuildModeName;
   if bmgtEnvironment in Types then
@@ -1966,6 +1972,9 @@ var
   Target: String;
   ActiveMode: String;
 begin
+  if BuildRelease then
+    // a release build must not depend on the IDE config or the project session
+    Types:=Types-[bmgtEnvironment,bmgtSession];
   Target:=GetModeMatrixTarget(Sender);
   ActiveMode:=GetActiveBuildModeName;
   if bmgtEnvironment in Types then
