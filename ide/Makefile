@@ -4572,7 +4572,7 @@ ifneq ($(wildcard fpcmake.loc),)
 include fpcmake.loc
 endif
 .PHONY: ide lazbuilder all clean cleanide purge
-ide: $(COMPILER_UNITTARGETDIR) revisioninc
+ide: $(COMPILER_UNITTARGETDIR)
 	$(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 lazbuilder: $(COMPILER_UNITTARGETDIR)
 	$(MAKE) --assume-new=lazbuild.lpr lazbuild$(EXEEXT) OPT='$(LAZBUILD_OPT) $(OPT)'
