@@ -1,0 +1,11 @@
+object MainForm: TMainForm
+  Left = 793
+  Height = 534
+  Top = 370
+  Width = 520
+  Caption = 'MainForm'
+  LCLVersion = '4.99.0.0'
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  OnPaint = FormPaint
+end

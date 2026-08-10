@@ -793,6 +793,7 @@ type
     function getVerticalScrollbar: PGtkScrollbar; override;
     function GetScrolledWindow: PGtkScrolledWindow; override;
     procedure ClearImages;
+    procedure SyncImages;
     procedure ColumnDelete(AIndex: Integer);
     function ColumnGetWidth(AIndex: Integer): Integer;
     procedure ColumnInsert(AIndex: Integer; AColumn: TListColumn);
@@ -1804,9 +1805,10 @@ begin
 
   FillChar(MessE{%H-},SizeOf(MessE),0);
   MessE.Msg := LM_MOUSEWHEEL;
+  // Note: negative is treated by the LCL as WheelDown
   case AEvent^.scroll.direction of
-    GDK_SCROLL_UP, GDK_SCROLL_RIGHT {0}: MessE.WheelDelta := -120;
-    GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := 120;
+    GDK_SCROLL_UP, GDK_SCROLL_RIGHT {0}: MessE.WheelDelta := 120;
+    GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := -120;
     GDK_SCROLL_SMOOTH:
       begin
         if AEvent^.scroll.delta_y <> 0 then
@@ -1827,22 +1829,19 @@ begin
         end;
         if (AEvent^.scroll.delta_x=0) and (AEvent^.scroll.delta_y=0) then
         begin
-          // the initial wheel smooth scroll has no delta -> get direction
-          gdk_event_get_scroll_direction(AEvent,@aDir);
-          case aDir of
-          GDK_SCROLL_UP, GDK_SCROLL_RIGHT {0}: MessE.WheelDelta := -120;
-          GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := 120;
-          end;
+          // the initial wheel smooth scroll has no delta
+          MessE.WheelDelta := -120;
+          // gdk_event_get_scroll_direction does not help here
         end;
+
         if MessE.WheelDelta=0 then
           exit;
       end;
   else
-  begin
     DebugLn('WARNING: ',dbgsName(aWinControl),' unhandled scrollDirection event ',dbgs(Ord(AEvent^.scroll.direction)));
     exit;
   end;
-  end;
+  //writeln('TGtk3Widget.ScrollEvent scroll.direction=',AEvent^.scroll.direction,' MappedXY=',MappedXY.X,',',MappedXY.Y,' delta_x=',FloatToStr(AEvent^.scroll.delta_x),' delta_y=',FloatToStr(AEvent^.scroll.delta_y),' WheelDelta=',MessE.WheelDelta);
   MessE.X := SmallInt(MappedXY.X);
   MessE.Y := SmallInt(MappedXY.Y);
   MessE.State := ShiftState;
@@ -6236,6 +6235,10 @@ begin
     exit;
 
   edt := TGtk3Entry(data);
+
+  if not Assigned(edt.LCLObject) then
+    exit;
+
   if [wtSpinEdit] * TGtk3Widget(data).WidgetType <> [] then
   begin
     (*
@@ -10970,6 +10973,8 @@ begin
   Mess := Default(TLMessage);
   if (aData = nil) then
     exit;
+  if not Assigned(TGtk3Widget(aData).LCLObject) then
+    exit;
   Mess.Msg := CM_TEXTCHANGED;
   LCLMessageGlue.DeliverMessage(TGtk3Widget(aData).LCLObject, Mess);
 end;
@@ -12124,6 +12129,42 @@ begin
   end;
 end;
 
+procedure TGtk3ListView.SyncImages;
+var
+  ALV: TCustomListViewHack;
+  ImgList: TCustomImageList;
+  ImgWidth: Integer;
+  i: Integer;
+  bmp: TBitmap;
+  pxb: PGdkPixbuf;
+begin
+  if (FImages = nil) or not Assigned(LCLObject) then
+    exit;
+  ALV := TCustomListViewHack(LCLObject);
+  if ALV.ViewStyle = vsIcon then
+  begin
+    ImgList := ALV.LargeImages;
+    ImgWidth := ALV.LargeImagesWidth;
+  end else
+  begin
+    ImgList := ALV.SmallImages;
+    ImgWidth := ALV.SmallImagesWidth;
+  end;
+  if ImgList = nil then
+    exit;
+  for i := FImages.Count to ImgList.Count - 1 do
+  begin
+    bmp := TBitmap.Create;
+    try
+      ImgList.ResolutionForPPI[ImgWidth, ALV.Font.PixelsPerInch, ALV.GetCanvasScaleFactor].Resolution.GetBitmap(i, bmp);
+      pxb := TGtk3Image(bmp.Handle).Handle^.copy;
+      FImages.Add(pxb);
+    finally
+      bmp.Free;
+    end;
+  end;
+end;
+
 procedure TGtk3ListView.ColumnDelete(AIndex: Integer);
 var
   AColumn: PGtkTreeViewColumn;
@@ -12193,6 +12234,9 @@ begin
   else
     if ColumnIndex - 1 <= ListItem.SubItems.Count - 1 then
       ImageIndex := ListItem.SubItemImages[ColumnIndex - 1];
+
+  if ImageIndex > AImages.Count - 1 then
+    TGtk3ListView(AData).SyncImages;
 
   if (ImageIndex > -1) and (ImageIndex <= AImages.Count-1) then
     pb := PGdkPixbuf(AImages.Items[ImageIndex])^.copy

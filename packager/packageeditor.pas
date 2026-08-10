@@ -3113,14 +3113,14 @@ end;
 
 procedure TPackageEditorForm.FilterEditAfterFilter(Sender: TObject);
 var
-  LPackage: TIDEPackage;
+  Pkg: TIDEPackage;
 begin
-  if Assigned(SourceEditorManagerIntf) and Assigned(PackageEditingInterface) and Assigned(SourceEditorManagerIntf.ActiveEditor) then
-  begin
-    PackageEditingInterface.GetPackageOfSourceEditor(LPackage, SourceEditorManagerIntf.ActiveEditor);
-    if (LPackage is TEditablePackage) and (TEditablePackage(LPackage).Editor = Self) then
-      SelectFileNode(SourceEditorManagerIntf.ActiveEditor.FileName);
-  end;
+  if (SourceEditorManagerIntf=nil) or (SourceEditorManagerIntf.ActiveEditor=nil)
+  or (PackageEditingInterface=nil) then
+    exit;
+  PackageEditingInterface.GetPackageOfSourceEditor(Pkg, SourceEditorManagerIntf.ActiveEditor);
+  if (Pkg is TEditablePackage) and (TEditablePackage(Pkg).Editor = Self) then
+    SelectFileNode(SourceEditorManagerIntf.ActiveEditor.FileName);
 end;
 
 function TPackageEditorForm.FirstRequiredDependency: TPkgDependency;

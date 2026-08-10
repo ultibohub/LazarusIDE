@@ -984,6 +984,7 @@ type
 
   TDbgProcess = class(TDbgInstance)
   private
+    FCheckingForConsoleOutputThread: TThread;
     FDisassembler: TDbgAsmDecoder;
     FExceptionClass: string;
     FExceptionMessage: string;
@@ -993,6 +994,7 @@ type
     FOnDebugOutputEvent: TDebugOutputEvent;
     FOSDbgClasses: TOSDbgClasses;
     FProcessID: Integer;
+    FStopCheckingForConsoleOutputRequested: boolean;
     FThreadID: Integer;
     FWatchPointData: TFpWatchPointData;
     FProcessConfig: TDbgProcessConfig;
@@ -1051,6 +1053,8 @@ type
     function CreateConfig: TDbgConfig;
     function CreateBreakPointTargetHandler: TFpBreakPointTargetHandler; virtual; abstract;
     procedure InitializeLoaders; override;
+    property CheckingForConsoleOutputThread: TThread read FCheckingForConsoleOutputThread;
+    property StopCheckingForConsoleOutputRequested: boolean read FStopCheckingForConsoleOutputRequested;
   public
     class function isSupported(ATargetInfo: TTargetDescriptor): boolean; virtual;
     constructor Create(const AFileName: string; AnOsClasses: TOSDbgClasses;
@@ -1140,6 +1144,9 @@ type
     procedure RemoveAllBreakPoints;
 
     function CheckForConsoleOutput(ATimeOutMs: integer): integer; virtual;
+    procedure SetCheckingForConsoleOutputThread(AThread: TThread);
+    procedure StopCheckingForConsoleOutput; virtual;
+    procedure ClearStopCheckingForConsoleOutputRequested;
     function GetConsoleOutput: string; virtual;
     procedure SendConsoleInput(AString: string); virtual;
 
@@ -3229,6 +3236,21 @@ end;
 function TDbgProcess.CheckForConsoleOutput(ATimeOutMs: integer): integer;
 begin
   result := -1;
+end;
+
+procedure TDbgProcess.SetCheckingForConsoleOutputThread(AThread: TThread);
+begin
+  FCheckingForConsoleOutputThread := AThread;
+end;
+
+procedure TDbgProcess.StopCheckingForConsoleOutput;
+begin
+  FStopCheckingForConsoleOutputRequested := True;
+end;
+
+procedure TDbgProcess.ClearStopCheckingForConsoleOutputRequested;
+begin
+  FStopCheckingForConsoleOutputRequested := False;
 end;
 
 function TDbgProcess.GetConsoleOutput: string;

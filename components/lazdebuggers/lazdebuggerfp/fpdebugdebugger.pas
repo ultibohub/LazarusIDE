@@ -678,6 +678,7 @@ type
     constructor Create(AFpDebugDebugger: TFpDebugDebugger);
     destructor Destroy; override;
     procedure Execute; override;
+    procedure StopWait;
   end;
 
 
@@ -1652,16 +1653,27 @@ var
 begin
   while not terminated do
   begin
-    res := FFpDebugDebugger.FDbgController.CurrentProcess.CheckForConsoleOutput(100);
+    res := FFpDebugDebugger.FDbgController.CurrentProcess.CheckForConsoleOutput(250);
     if res<0 then
       Terminate
     else if res>0 then
     begin
       RTLeventResetEvent(FHasConsoleOutputQueued);
       Application.QueueAsyncCall(@DoHasConsoleOutput, PtrInt(FFpDebugDebugger));
+      if Terminated then
+        break;
       RTLeventWaitFor(FHasConsoleOutputQueued);
     end;
   end;
+end;
+
+procedure TFpWaitForConsoleOutputThread.StopWait;
+begin
+  inherited Terminate;
+  if (FFpDebugDebugger.FDbgController <> nil) and
+     (FFpDebugDebugger.FDbgController.CurrentProcess <> nil)
+  then
+    FFpDebugDebugger.FDbgController.CurrentProcess.StopCheckingForConsoleOutput;
 end;
 
 { TFpDbgMemReader }
@@ -3593,7 +3605,7 @@ begin
     begin
     AThread := TFpWaitForConsoleOutputThread(FConsoleOutputThread);
     FConsoleOutputThread := nil;
-    AThread.Terminate;
+    AThread.StopWait;
     AThread.DoHasConsoleOutput(0);
     AThread.WaitFor;
     sleep(50);
@@ -4381,8 +4393,10 @@ begin
 
   FExceptionStepper.DoProcessLoaded;
 
-  if assigned(OnConsoleOutput) then
+  if assigned(OnConsoleOutput) then begin
     FConsoleOutputThread := TFpWaitForConsoleOutputThread.Create(self);
+    FDbgController.CurrentProcess.SetCheckingForConsoleOutputThread(FConsoleOutputThread);
+  end;
 
   case FStartupCommand of
     dcRunTo: begin
@@ -5398,23 +5412,24 @@ end;
 
 class function TFpDebugDebugger.SupportedFeatures: TDBGFeatures;
 begin
-  {$IF (defined(windows) or defined(linux)) and
-       (defined(CPU386) or defined(CPUI386) or defined(CPUX86_64) or defined(CPUX64))
-  }
-  Result := [dfEvalFunctionCalls, dfThreadSuspension];
-    {$IFDEF windows}
-    Result := Result + [dfConsoleWinPos];
-    {$ENDIF}
-    if DBG_PROCESS_HAS_REDIRECT then
-      Result := Result + [dfStdInOutRedirect];
-  {$ELSE}
-    {$IF (defined(linux)) and
-         (defined(CPUAARCH64))
-    }
-    result := [];
+  Result := [];
+  {$IF ( (defined(windows) or defined(linux)) ) }
+    {$IF ( (defined(CPU386) or defined(CPUI386) or defined(CPUX86_64) or defined(CPUX64)) ) }
+    Result := [dfEvalFunctionCalls, dfThreadSuspension];
+      {$IFDEF windows}
+      Result := Result + [dfConsoleWinPos];
+      {$ENDIF}
+      if DBG_PROCESS_HAS_REDIRECT then
+        Result := Result + [dfStdInOutRedirect];
     {$ELSE}
-    Result := [dfNotSuitableForOsArch];
+      {$IF (defined(CPUAARCH64)) }
+        Result := [];
+      {$ELSE}
+        Result := [dfNotSuitableForOsArch];
+      {$ENDIF}
     {$ENDIF}
+  {$ELSE}
+    Result := [dfNotSuitableForOsArch];
   {$ENDIF}
 end;
 
