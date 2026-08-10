@@ -315,6 +315,10 @@ msgctxt "idedebuggerstringconstants.dispformatcharord"
 msgid "Ordinal"
 msgstr "Числовое значение"
 
+#: idedebuggerstringconstants.dispformatdlgaddrprefix
+msgid "Address marker"
+msgstr "Маркер адреса"
+
 #: idedebuggerstringconstants.dispformatdlgarraycombine
 msgid "Combine lengths"
 msgstr "Складывать длины"
@@ -359,6 +363,10 @@ msgstr "Учитывать вложенные"
 #: idedebuggerstringconstants.dispformatdlgbtnadrformat
 msgid "Address"
 msgstr "Адрес"
+
+#: idedebuggerstringconstants.dispformatdlgbtnadrformatdata
+msgid "Data-address"
+msgstr "Адрес данных"
 
 #: idedebuggerstringconstants.dispformatdlgbtnall
 msgid "All"
@@ -449,6 +457,10 @@ msgstr "(Типизированный)"
 msgctxt "idedebuggerstringconstants.dispformatdlgindent"
 msgid "Multiline"
 msgstr "Многострочность"
+
+#: idedebuggerstringconstants.dispformatdlgnumprefix
+msgid "Number marker"
+msgstr "Маркер числа"
 
 #: idedebuggerstringconstants.dispformatenumname
 msgctxt "idedebuggerstringconstants.dispformatenumname"

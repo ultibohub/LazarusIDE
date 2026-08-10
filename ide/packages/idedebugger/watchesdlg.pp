@@ -58,7 +58,7 @@ uses
   Debugger, DebuggerTreeView, IdeDebuggerBase, DebuggerDlg, BaseDebugManager,
   IdeDebuggerWatchResult, IdeDebuggerWatchResPrinter, IdeDebuggerUtils,
   IdeDebuggerStringConstants, DbgTreeViewWatchData, EnvDebuggerOptions,
-  IdeDebuggerDisplayFormats, IdeDebuggerOpts, ProjectDebugLink, WatchPropertyDlg;
+  IdeDebuggerDisplayFormats, IdeDebuggerOpts, ProjectDebugLink, WatchPropertyDlg, CodeHelp;
 
 type
 
@@ -193,6 +193,8 @@ type
     procedure DoEditorOptsChanged(Sender: TObject);
     procedure DoFormatPresetClickedIde(Sender: TObject);
     procedure DoFormatPresetClickedProject(Sender: TObject);
+    procedure DoGetHintForCell(Sender: TDbgTreeView; const AHitInfo: THitInfo;
+      var AShowHint: boolean; var AHintText: String);
     procedure DoUnLockCommandProcessing(Data: PtrInt);
     function GetWatches: TIdeWatches;
     procedure ContextChanged(Sender: TObject);
@@ -211,10 +213,12 @@ type
     FUpdateAllNeeded, FInEndUpdate: Boolean;
     FWatchInUpDateItem, FCurrentWatchInUpDateItem: TIdeWatch;
     FStateFlags: TWatchesDlgStateFlags;
+    function GetHintTime: integer;
     function GetSelected: TIdeWatch; // The focused Selected Node
     function  GetThreadId: Integer;
     function  GetSelectedThreads(Snap: TSnapshot): TIdeThreads;
     function GetStackframe: Integer;
+    procedure SetHintTime(AValue: integer);
     procedure WatchAdd(const {%H-}ASender: TIdeWatches; const AWatch: TIdeWatch);
     procedure WatchUpdate(const ASender: TIdeWatches; const AWatch: TIdeWatch);
     procedure WatchRemove(const {%H-}ASender: TIdeWatches; const AWatch: TIdeWatch);
@@ -244,6 +248,7 @@ type
     property BreakPoints;
     property SnapshotManager;
     property WatchPrinter: TWatchResultPrinter read FWatchPrinter;
+    property HintTime: integer read GetHintTime write SetHintTime;
   end;
 
   { TDbgTreeViewWatchValueMgr }
@@ -414,6 +419,7 @@ begin
 
   //tvWatches.OnItemRemoved := @DoItemRemovedFromView;
   tvWatches.OnBeforeFreeNode := @DoBeforeFreeNode;
+  tvWatches.OnHintForCell := @DoGetHintForCell;
   DebugConfigChanged;
 end;
 
@@ -475,6 +481,11 @@ begin
   Result := TIdeWatch(tvWatches.FocusedItem(True));
 end;
 
+function TWatchesDlg.GetHintTime: integer;
+begin
+  Result := tvWatches.HintTime;
+end;
+
 function TWatchesDlg.GetThreadId: Integer;
 var
   Threads: TIdeThreads;
@@ -521,6 +532,11 @@ begin
   if Stack <> nil
   then Result := Stack.CurrentIndex
   else Result := 0;
+end;
+
+procedure TWatchesDlg.SetHintTime(AValue: integer);
+begin
+  tvWatches.HintTime := AValue;
 end;
 
 procedure TWatchesDlg.tvWatchesChange(Sender: TBaseVirtualTree;
@@ -1226,6 +1242,36 @@ begin
   ApplyPreset(DbgProjectLink.DisplayFormatConfigs.DisplayFormatPresets[i]);
 end;
 
+procedure TWatchesDlg.DoGetHintForCell(Sender: TDbgTreeView; const AHitInfo: THitInfo;
+  var AShowHint: boolean; var AHintText: String);
+var
+  AWatchAble: TIdeWatch;
+  AWatchAbleResult: IWatchAbleResultIntf;
+  s: String;
+begin
+  AShowHint := AHitInfo.HitNode <> nil;
+  if not AShowHint then
+    exit;
+
+  AWatchAble := TIdeWatch(tvWatches.NodeItem[AHitInfo.HitNode]);
+  AWatchAbleResult := FWatchTreeMgr.WatchAbleResultFromObject(AWatchAble);
+  if (AWatchAble = nil) or (AWatchAbleResult = nil) then begin
+    AHintText := CodeHelpBoss.TextToHTML(tvWatches.NodeText[AHitInfo.HitNode, 0]);
+    exit;
+  end;
+
+  if AWatchAble.DisplayName <> '' then
+    AHintText := '<b>' + CodeHelpBoss.TextToHTML(AWatchAble.DisplayName) + '</b>&nbsp;(&nbsp;' + CodeHelpBoss.TextToHTML(AWatchAble.Expression) + '&nbsp;)<br/>'
+  else
+    AHintText := '<b>' + CodeHelpBoss.TextToHTML(AWatchAble.Expression) + '</b><br/>';
+
+  s := FWatchTreeMgr.GetFieldAsText(AHitInfo.HitNode, AWatchAble, AWatchAbleResult, vdfDataAddress, []);
+  if s <> '' then
+    AHintText := AHintText + '<i>Address:&nbsp;' + s + '</i><br/>';
+
+  AHintText := AHintText + CodeHelpBoss.TextToHTML(FWatchTreeMgr.GetFieldAsText(AHitInfo.HitNode, AWatchAble, AWatchAbleResult, vdfValue, [vdoAllowMultiLine]));
+end;
+
 procedure TWatchesDlg.ApplyPreset(APreset: TWatchDisplayFormatPreset);
 var
   VNode: PVirtualNode;
@@ -1884,7 +1930,6 @@ function TDbgTreeViewWatchValueMgr.GetFieldAsText(Nd: PVirtualNode;
 var
   TheWatch: TIdeWatch absolute AWatchAble;
   ResData: TWatchResultData;
-  da: TDBGPtr;
   DispFormat: TWatchDisplayFormat;
   s: String;
 begin
@@ -1961,11 +2006,12 @@ begin
         end;
       end;
     vdfDataAddress: begin
-      if AWatchAbleResult.ResultData.HasDataAddress then begin
-        da := AWatchAbleResult.ResultData.DataAddress;
-        if da = 0
-        then Result := 'nil'
-        else Result := '$' + IntToHex(da, HexDigicCount(da, 4, True));
+      ResData :=  AWatchAbleResult.ResultData;
+      if (ResData <> nil) and ResData.HasDataAddress then begin
+        DispFormat := DefaultWatchDisplayFormat;
+        if AWatchAble <> nil then
+          DispFormat := TheWatch.DisplayFormat;
+        Result := FWatchDlg.FWatchPrinter.PrintWatchValueDataAddress(ResData, DispFormat);
       end;
     end;
   end;
@@ -1978,7 +2024,6 @@ var
   TheWatch: TIdeWatch absolute AWatchAble;
   ResData: TWatchResultData;
   WatchValueStr, s, StackPre: String;
-  da: TDBGPtr;
   DispFormat: TWatchDisplayFormat;
   CachedResIntf: IWatchAbleResultIntf;
   CacheColor: TIdeCustomHighlighterAttributesModifier;
@@ -2074,12 +2119,8 @@ begin
         WatchValueStr := LimitTextLength(WatchValueStr, FWatchDlg.MAX_GRID_VALUE_LEN);
         TreeView.NodeText[AVNode, COL_WATCH_VALUE-1] := StackPre + WatchValueStr;
 
-        if ResData.HasDataAddress then begin
-          da := ResData.DataAddress;
-          if da = 0
-          then TreeView.NodeText[AVNode, 2] := 'nil'
-          else TreeView.NodeText[AVNode, 2] := '$' + IntToHex(da, HexDigicCount(da, 4, True));
-        end
+        if ResData.HasDataAddress then
+          TreeView.NodeText[AVNode, 2] := FWatchDlg.FWatchPrinter.PrintWatchValueDataAddress(ResData, DispFormat);
       end
       else begin
         s := AnsiUpperCase(TheWatch.Expression);

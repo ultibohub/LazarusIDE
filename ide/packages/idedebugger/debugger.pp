@@ -6813,6 +6813,7 @@ begin
   end
   else begin
     FMaster.Assign(Self);
+    FMaster.IgnoreAll := FIgnoreAll;
   end;
 end;
 
@@ -6820,6 +6821,9 @@ procedure TIDEBreakPoints.SetIgnoreAll(AValue: boolean);
 var
   i: Integer;
 begin
+  if FMaster <> nil then
+    FMaster.IgnoreAll := AValue;
+
   if FIgnoreAll = AValue then Exit;
   FIgnoreAll := AValue;
   BeginUpdate;
@@ -8177,9 +8181,12 @@ var
   f: TWatchResultDataFieldInfo;
   i: int64;
 begin
+  Result := FValue <> nil;
+  if Result then
+    exit;
   ParentVal := FindParentValue;
   Result := (ParentVal <> nil) and (ParentVal.FValue <> nil);
-  if (not Result) or (FValue <> nil) then
+  if (not Result) then
     exit;
 
   if (ParentVal.FValue.ValueKind = rdkStruct) then begin
@@ -8389,6 +8396,9 @@ end;
 
 procedure TSubLocalsValue.RequestData;
 begin
+  if FValidity <> ddsUnknown then
+    exit;
+
   if MaybeCopyResultForChild and
      (FValue <> nil) and FValue.IsFullDephtEvaluated
   then begin
@@ -8396,9 +8406,7 @@ begin
     exit;
   end;
 
-  if(DebugBossManager <> nil) and
-     (FValidity = ddsUnknown) and
-     (TSubLocals(Owner).TopOwner is TCurrentLocals)
+  if (DebugBossManager <> nil) and (TSubLocals(Owner).TopOwner is TCurrentLocals)
   then begin
     FValidity := ddsRequested;
     DebugBossManager.RequestWatchData(Self);

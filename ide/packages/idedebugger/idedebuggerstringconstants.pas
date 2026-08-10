@@ -478,6 +478,7 @@ resourcestring
   DispFormatDlgBtnArray     = 'Array';
   DispFormatDlgBtnAdrFormat = 'Address';
   DispFormatDlgBtnOptions   = 'Options';
+  DispFormatDlgBtnAdrFormatData = 'Data-address';
 
   DispFormatDlgCaptionShowChar = '(Show Char)';
   DispFormatDlgCaptionAddress  = '(Address)';
@@ -539,6 +540,8 @@ resourcestring
   DispFormatPointerDerefOn       = 'Show deref data';
   DispFormatPointerDerefOnly     = 'Only deref data';
   DispFormatDlgIndent            = 'Multiline';
+  DispFormatDlgNumPrefix         = 'Number marker';
+  DispFormatDlgAddrPrefix        = 'Address marker';
   DispFormatIndentMaxWrap        = 'Max multiline level';
   DispFormatForceSingleLineToggle    = 'Keep singleline, if ...';
   DispFormatForceSingleLineArrayLen  = 'Max len';

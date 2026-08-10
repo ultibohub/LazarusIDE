@@ -5458,13 +5458,6 @@ msgstr ""
 msgid "Alpha"
 msgstr ""
 
-#: lazarusidestrconsts.lisalreadycontainsthehe
-#, object-pascal-format
-msgid ""
-"%s already contains the help:\n"
-"%s"
-msgstr ""
-
 #: lazarusidestrconsts.lisalternativekey
 msgid "Alternative key"
 msgstr ""
@@ -6185,10 +6178,6 @@ msgstr ""
 msgid "Follow cursor"
 msgstr ""
 
-#: lazarusidestrconsts.lisceisarootcontrol
-msgid "Is a root control"
-msgstr ""
-
 #: lazarusidestrconsts.liscelongparamlistcount
 msgid "Parameters count treated as \"many\""
 msgstr ""
@@ -6529,20 +6518,12 @@ msgstr ""
 msgid "Choose a file with CodeTools templates"
 msgstr ""
 
-#: lazarusidestrconsts.lischooseafpdoclink
-msgid "Choose a FPDoc link"
-msgstr ""
-
 #: lazarusidestrconsts.lischooseakey
 msgid "Choose a key ..."
 msgstr ""
 
 #: lazarusidestrconsts.lischooseanameforthecomponent
 msgid "Choose a name for the component"
-msgstr ""
-
-#: lazarusidestrconsts.lischooseanexamplefile
-msgid "Choose an example file"
 msgstr ""
 
 #: lazarusidestrconsts.lischooseanfpcmessagefile
@@ -6870,101 +6851,16 @@ msgstr ""
 msgid "Add path"
 msgstr ""
 
-#: lazarusidestrconsts.liscodehelpbrowseexamplebutton
-msgctxt "lazarusidestrconsts.liscodehelpbrowseexamplebutton"
-msgid "Browse"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpconfirmreplace
-msgid "Confirm replace"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpcreatebutton
-msgid "Create help item"
-msgstr ""
-
 #: lazarusidestrconsts.liscodehelpdeletepathbutton
 msgid "Remove path"
 msgstr ""
 
 #: lazarusidestrconsts.liscodehelpdescrtag
-msgctxt "lazarusidestrconsts.liscodehelpdescrtag"
 msgid "Description"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelperrorstag
-msgctxt "lazarusidestrconsts.liscodehelperrorstag"
-msgid "Errors"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpexampletag
-msgid "Example"
 msgstr ""
 
 #: lazarusidestrconsts.liscodehelpgroupbox
 msgid "FPDoc settings"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelphintboldformat
-msgid "Insert bold formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelphintinsertcodetag
-msgid "Insert code formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelphintitalicformat
-msgid "Insert italic formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelphintremarktag
-msgid "Insert remark formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelphintunderlineformat
-msgid "Insert underline formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelphintvartag
-msgid "Insert var formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpinherited
-msgctxt "lazarusidestrconsts.liscodehelpinherited"
-msgid "Inherited"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpinsertalink
-msgid "Insert a link ..."
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpinsertparagraphformattingtag
-msgid "Insert paragraph formatting tag"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpmainformcaption
-msgctxt "lazarusidestrconsts.liscodehelpmainformcaption"
-msgid "FPDoc Editor"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpnoinheriteddescriptionfound
-msgid "(no inherited description found)"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpnotagcaption
-msgid "<NONE>"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpseealsotag
-msgid "See also"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpshortdescriptionof
-msgid "Short description of"
-msgstr ""
-
-#: lazarusidestrconsts.liscodehelpshorttag
-msgid "Short"
 msgstr ""
 
 #: lazarusidestrconsts.liscodeobignoreconstinfuncs
@@ -8293,10 +8189,6 @@ msgstr ""
 msgid "Create function"
 msgstr ""
 
-#: lazarusidestrconsts.liscreatehelpnode
-msgid "Create Help node"
-msgstr ""
-
 #: lazarusidestrconsts.liscreateit
 msgid "Create it"
 msgstr ""
@@ -8525,6 +8417,10 @@ msgstr ""
 
 #: lazarusidestrconsts.lisdebugdialogconfirmdelwatches
 msgid "Confirm to delete all Watches"
+msgstr ""
+
+#: lazarusidestrconsts.lisdebugdialogshowwatcheshint
+msgid "Show hint for watches/locals (with same delay as source hint)"
 msgstr ""
 
 #: lazarusidestrconsts.lisdebugger
@@ -9019,11 +8915,6 @@ msgctxt "lazarusidestrconsts.lisdlgimport"
 msgid "Import ..."
 msgstr ""
 
-#: lazarusidestrconsts.lisdlgopen
-msgctxt "lazarusidestrconsts.lisdlgopen"
-msgid "Open ..."
-msgstr ""
-
 #: lazarusidestrconsts.lisdoesnotexists
 #, object-pascal-format
 msgid "%s does not exist: %s"
@@ -9239,10 +9130,6 @@ msgstr ""
 
 #: lazarusidestrconsts.liseditbuildmodes
 msgid "Edit build modes"
-msgstr ""
-
-#: lazarusidestrconsts.liseditcontexthelp
-msgid "Edit context help"
 msgstr ""
 
 #: lazarusidestrconsts.liseditfpcmessagehelp
@@ -9566,15 +9453,6 @@ msgstr ""
 msgid "Error reading package list from file%s%s%s%s"
 msgstr ""
 
-#: lazarusidestrconsts.liserrorreadingxml
-msgid "Error reading XML"
-msgstr ""
-
-#: lazarusidestrconsts.liserrorreadingxmlfile
-#, object-pascal-format
-msgid "Error reading xml file \"%s\"%s%s"
-msgstr ""
-
 #: lazarusidestrconsts.liserrors
 msgctxt "lazarusidestrconsts.liserrors"
 msgid "Errors"
@@ -9610,11 +9488,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lisexamplefile
 msgid "Example file:"
-msgstr ""
-
-#: lazarusidestrconsts.lisexamplesidentifiertmyenumenumunitnameidentifierpac
-#, object-pascal-format
-msgid "Examples:%sIdentifier%sTMyEnum.Enum%sUnitname.Identifier%s#PackageName.UnitName.Identifier"
 msgstr ""
 
 #: lazarusidestrconsts.lisexclude
@@ -10122,26 +9995,12 @@ msgctxt "lazarusidestrconsts.lisfpdoceditor"
 msgid "FPDoc Editor"
 msgstr ""
 
-#: lazarusidestrconsts.lisfpdocerrorwriting
-#, object-pascal-format
-msgid "Error writing \"%s\"%s%s"
-msgstr ""
-
-#: lazarusidestrconsts.lisfpdocfpdocsyntaxerror
-msgid "FPDoc syntax error"
-msgstr ""
-
 #: lazarusidestrconsts.lisfpdocpackagename
 msgid "FPDoc package name:"
 msgstr ""
 
 #: lazarusidestrconsts.lisfpdocpackagenamedefaultisprojectfilename
 msgid "FPDoc package name. Default is project file name."
-msgstr ""
-
-#: lazarusidestrconsts.lisfpdocthereisasyntaxerrorinthefpdocelement
-#, object-pascal-format
-msgid "There is a syntax error in the fpdoc element \"%s\":%s%s"
 msgstr ""
 
 #: lazarusidestrconsts.lisfppkgcompilerproblem
@@ -10407,20 +10266,12 @@ msgstr ""
 msgid "Width"
 msgstr ""
 
-#: lazarusidestrconsts.lishashelp
-msgid "Has Help"
-msgstr ""
-
 #: lazarusidestrconsts.lisheadercolors
 msgid "Header colors"
 msgstr ""
 
 #: lazarusidestrconsts.lisheadercommentforclass
 msgid "Header comment for class"
-msgstr ""
-
-#: lazarusidestrconsts.lishelpentries
-msgid "Help entries"
 msgstr ""
 
 #: lazarusidestrconsts.lishelpselectordialog
@@ -10574,10 +10425,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lisidemaintainsthetitleinmainunit
 msgid "The IDE maintains the title in main unit."
-msgstr ""
-
-#: lazarusidestrconsts.lisidentifier
-msgid "identifier"
 msgstr ""
 
 #: lazarusidestrconsts.lisidentifierbeginswith
@@ -10903,10 +10750,6 @@ msgstr ""
 msgid "Insert name of current procedure."
 msgstr ""
 
-#: lazarusidestrconsts.lisinsertprintshorttag2
-msgid "Insert printshort tag"
-msgstr ""
-
 #: lazarusidestrconsts.lisinsertprocedurehead
 msgid "insert procedure head"
 msgstr ""
@@ -10925,10 +10768,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lisinserttimeoptionalformatstring
 msgid "Insert time. Optional: format string."
-msgstr ""
-
-#: lazarusidestrconsts.lisinserturltag
-msgid "Insert url tag"
 msgstr ""
 
 #: lazarusidestrconsts.lisinsession
@@ -10974,10 +10813,6 @@ msgstr ""
 #: lazarusidestrconsts.lisinternalerror
 #, object-pascal-format
 msgid "internal error: %s"
-msgstr ""
-
-#: lazarusidestrconsts.lisinvaliddeclaration
-msgid "Invalid Declaration"
 msgstr ""
 
 #: lazarusidestrconsts.lisinvaliddelete
@@ -11699,32 +11534,6 @@ msgstr ""
 msgid "Package distributed with Lazarus"
 msgstr ""
 
-#: lazarusidestrconsts.lisldaddlinktoinherited
-msgid "Add link to inherited"
-msgstr ""
-
-#: lazarusidestrconsts.lisldcopyfrominherited
-msgid "Copy from inherited"
-msgstr ""
-
-#: lazarusidestrconsts.lislddoesnothaveanyvalidfpdocpathunabletocreatethefpdo
-#, object-pascal-format
-msgid "%s does not have any valid FPDoc path.%sUnable to create the fpdoc file for %s"
-msgstr ""
-
-#: lazarusidestrconsts.lisldmoveentriestoinherited
-msgid "Move entries to inherited"
-msgstr ""
-
-#: lazarusidestrconsts.lisldnovalidfpdocpath
-msgid "No valid FPDoc path"
-msgstr ""
-
-#: lazarusidestrconsts.lisldtheunitisnotownedbeanypackageorprojectpleaseaddthe
-#, object-pascal-format
-msgid "The unit %s is not owned be any package or project.%sPlease add the unit to a package or project.%sUnable to create the fpdoc file."
-msgstr ""
-
 #: lazarusidestrconsts.lisleft
 msgctxt "lazarusidestrconsts.lisleft"
 msgid "Left"
@@ -11806,16 +11615,8 @@ msgstr ""
 msgid "A Free Pascal shared library (.dll under Windows, .so under Linux, .dylib under macOS)."
 msgstr ""
 
-#: lazarusidestrconsts.lislink
-msgid "Link:"
-msgstr ""
-
 #: lazarusidestrconsts.lislinkeroptions
 msgid "linker options"
-msgstr ""
-
-#: lazarusidestrconsts.lislinktarget
-msgid "Link target"
 msgstr ""
 
 #: lazarusidestrconsts.lislistofallcasevalues
@@ -13922,10 +13723,6 @@ msgstr ""
 msgid "no hints"
 msgstr ""
 
-#: lazarusidestrconsts.lisnoidewindowselected
-msgid "No IDE window selected"
-msgstr ""
-
 #: lazarusidestrconsts.lisnolfmfile
 msgid "No LFM file"
 msgstr ""
@@ -13952,10 +13749,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lisnonewfilefound
 msgid "No new file found"
-msgstr ""
-
-#: lazarusidestrconsts.lisnonodeselected
-msgid "no node selected"
 msgstr ""
 
 #: lazarusidestrconsts.lisnopascalfile
@@ -14313,10 +14106,6 @@ msgstr ""
 msgid "Open URL"
 msgstr ""
 
-#: lazarusidestrconsts.lisopenxml
-msgid "Open XML"
-msgstr ""
-
 #: lazarusidestrconsts.lisoptions
 msgctxt "lazarusidestrconsts.lisoptions"
 msgid "Options"
@@ -14423,10 +14212,6 @@ msgstr ""
 msgid "packages=%s/%s units=%s/%s identifiers=%s/%s lines=%s bytes=%s"
 msgstr ""
 
-#: lazarusidestrconsts.lispackageunit
-msgid "package unit"
-msgstr ""
-
 #: lazarusidestrconsts.lispage
 msgctxt "lazarusidestrconsts.lispage"
 msgid "Page"
@@ -14473,10 +14258,6 @@ msgstr ""
 
 #: lazarusidestrconsts.lispastelcolors
 msgid "Pastel Colors"
-msgstr ""
-
-#: lazarusidestrconsts.lispath
-msgid "Path"
 msgstr ""
 
 #: lazarusidestrconsts.lispatheditbrowse
@@ -15540,10 +15321,6 @@ msgstr ""
 msgid "Please open a unit before run."
 msgstr ""
 
-#: lazarusidestrconsts.lispleaseplacetheeditorcaretonanidentifierifthisisane
-msgid "Please place the editor caret on an identifier. If this is a new unit, please save the file first."
-msgstr ""
-
 #: lazarusidestrconsts.lispleaseselectsomecodetoextractanewproceduremethod
 msgid "Please select some code to extract a new procedure/method."
 msgstr ""
@@ -15872,10 +15649,6 @@ msgstr ""
 msgid "%0:s%0:s In file '%1:s' at line %2:d:%0:s%3:s"
 msgstr ""
 
-#: lazarusidestrconsts.lisprojectunit
-msgid "project unit"
-msgstr ""
-
 #: lazarusidestrconsts.lisprojectwizard
 msgid "Project Wizard"
 msgstr ""
@@ -16026,6 +15799,14 @@ msgstr ""
 
 #: lazarusidestrconsts.lispwviewexampleprojects
 msgid "View &Example Projects"
+msgstr ""
+
+#: lazarusidestrconsts.lisquerycompilerfortargets
+msgid "Query installed compiler for available targets"
+msgstr ""
+
+#: lazarusidestrconsts.lisquerycompilerfortargetshint
+msgid "List only the targets, processors and controllers the configured compiler actually supports"
 msgstr ""
 
 #: lazarusidestrconsts.lisquickcheckfppkgconfigurationatstart
@@ -16745,10 +16526,6 @@ msgstr ""
 msgid "(Set up default indentation)"
 msgstr ""
 
-#: lazarusidestrconsts.lisshort
-msgid "Short:"
-msgstr ""
-
 #: lazarusidestrconsts.lisshortnopath
 msgid "Short, no path"
 msgstr ""
@@ -17267,6 +17044,10 @@ msgstr ""
 
 #: lazarusidestrconsts.listarget
 msgid "Target:"
+msgstr ""
+
+#: lazarusidestrconsts.listargetcontroller
+msgid "Target controller"
 msgstr ""
 
 #: lazarusidestrconsts.listargetfilenameemptyuseunitoutputdirectory
@@ -17869,11 +17650,6 @@ msgstr ""
 msgid "The unit filename \"%s\" is not lowercase.%sThe Free Pascal compiler does not search for all cases. It is recommended to use lowercase filename.%sRename file lowercase?"
 msgstr ""
 
-#: lazarusidestrconsts.listheunitispartofthefpcsourcesbutthecorrespondingfpd
-#, object-pascal-format
-msgid "The unit %s is part of the FPC sources but the corresponding fpdoc xml file was not found.%sEither you have not yet added the fpcdocs directory to the search path or the unit is not yet documented.%sThe fpdoc files for the FPC sources can be downloaded from: %s%sPlease add the directory in the fpdoc editor options.%sIn order to create a new file the directory must be writable."
-msgstr ""
-
 #: lazarusidestrconsts.listheunitisusedbyotherfilesupdatereferencesautomatic
 #, object-pascal-format
 msgid "The unit %s is used by other files.%sUpdate references automatically?"
@@ -17948,10 +17724,6 @@ msgstr ""
 
 #: lazarusidestrconsts.listitleintaskbarshowsforexampleproject1lpilazarus
 msgid "Show the custom IDE title before the IDE's name and other info in the title. Example: project1 - Lazarus."
-msgstr ""
-
-#: lazarusidestrconsts.listitleleaveemptyfordefault
-msgid "Title (leave empty for default)"
 msgstr ""
 
 #: lazarusidestrconsts.listofpcpath
@@ -19329,10 +19101,6 @@ msgstr ""
 
 #: lazarusidestrconsts.rsrevision
 msgid "&Revision:"
-msgstr ""
-
-#: lazarusidestrconsts.rsselectaninheritedentry
-msgid "Select an inherited entry"
 msgstr ""
 
 #: lazarusidestrconsts.rsshowabspath

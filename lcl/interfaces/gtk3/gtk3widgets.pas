@@ -457,14 +457,18 @@ type
   TGtk3StaticText = class(TGtk3Widget)
   private
     function GetAlignment: TAlignment;
+    function GetLabelWidget: PGtkLabel;
     function GetStaticBorderStyle: TStaticBorderStyle;
     procedure SetAlignment(AValue: TAlignment);
     procedure SetStaticBorderStyle(AValue: TStaticBorderStyle);
+    class function Gtk3StaticTextDrawBackground(aWidget: PGtkWidget; cr: Pcairo_t; data: gpointer): gboolean; cdecl; static;
   protected
     function getText: String; override;
     procedure setText(const AValue: String); override;
     function CreateWidget(const {%H-}Params: TCreateParams):PGtkWidget; override;
   public
+    procedure InitializeWidget; override;
+    procedure OffsetMousePos(const aGlobalX, aGlobalY: double; APoint: PPoint); override;
     property Alignment: TAlignment read GetAlignment write SetAlignment;
     property StaticBorderStyle: TStaticBorderStyle read GetStaticBorderStyle write SetStaticBorderStyle;
   end;
@@ -1775,6 +1779,7 @@ var
   ShiftState: TShiftState;
   MappedXY: TPoint;
   MessE : TLMMouseEvent;
+  aDir: TGdkScrollDirection;
 begin
   Result := False;
   if AWidget=nil then ;
@@ -1794,13 +1799,14 @@ begin
   if AState and MK_ALT <> 0 then
     ShiftState := ShiftState + [ssAlt];
 
+  //writeln('TGtk3Widget.ScrollEvent ',AEvent^.scroll.direction,' ',MappedXY.X,' ',MappedXY.Y,' ',FloatToStr(AEvent^.scroll.delta_x),' ',FloatToStr(AEvent^.scroll.delta_y));
   TGtk3Widget(AData).OffsetMousePos(AEvent^.scroll.x_root, AEvent^.scroll.y_root, @MappedXY);
 
   FillChar(MessE{%H-},SizeOf(MessE),0);
   MessE.Msg := LM_MOUSEWHEEL;
   case AEvent^.scroll.direction of
-    GDK_SCROLL_UP, GDK_SCROLL_RIGHT {0}: MessE.WheelDelta := 120;
-    GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := -120;
+    GDK_SCROLL_UP, GDK_SCROLL_RIGHT {0}: MessE.WheelDelta := -120;
+    GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := 120;
     GDK_SCROLL_SMOOTH:
       begin
         if AEvent^.scroll.delta_y <> 0 then
@@ -1811,14 +1817,24 @@ begin
             MessE.WheelDelta := 120;
           //TODO: find in settings default wheel scroll distance
           //MessE.WheelDelta := -Round((120 * AEvent^.scroll.delta_y) / 10);
-        end else
+        end;
         if AEvent^.scroll.delta_x <> 0 then
         begin
           if AEvent^.scroll.delta_x > 0 then
             MessE.WheelDelta := -120
           else
             MessE.WheelDelta := 120;
-        end else
+        end;
+        if (AEvent^.scroll.delta_x=0) and (AEvent^.scroll.delta_y=0) then
+        begin
+          // the initial wheel smooth scroll has no delta -> get direction
+          gdk_event_get_scroll_direction(AEvent,@aDir);
+          case aDir of
+          GDK_SCROLL_UP, GDK_SCROLL_RIGHT {0}: MessE.WheelDelta := -120;
+          GDK_SCROLL_DOWN, GDK_SCROLL_LEFT {1}: MessE.WheelDelta := 120;
+          end;
+        end;
+        if MessE.WheelDelta=0 then
           exit;
       end;
   else
@@ -3107,10 +3123,15 @@ end;
 procedure TGtk3Widget.SetFont(AValue: PPangoFontDescription);
 var
   NewFont: PPangoFontDescription;
+  ATargetWidget: PGtkWidget;
 begin
   if IsWidgetOk then
   begin
-    GetContainerWidget^.override_font(AValue);
+    if wtStaticText in WidgetType then
+      ATargetWidget := PGtkBin(GetContainerWidget)^.get_child
+    else
+      ATargetWidget := GetContainerWidget;
+    ATargetWidget^.override_font(AValue);
     NewFont := pango_font_description_copy(AValue); //keep description, otherwise we can easily crash in some circumstances
     if Assigned(FFont) then
       FFont^.free;
@@ -3243,10 +3264,11 @@ begin
   end else
   if wtStaticText in WidgetType then
   begin
+    ATargetWidget := PGtkBin(GetContainerWidget)^.get_child;
     if AValue = clDefault then
-      RemoveColorProvider(GetContainerWidget)
+      RemoveColorProvider(ATargetWidget)
     else
-      ApplyCSS(GetContainerWidget, Format('*:not(:disabled) { color: %s; }', [CSSColor]));
+      ApplyCSS(ATargetWidget, Format('*:not(:disabled) { color: %s; }', [CSSColor]));
   end else
   begin
     if AValue = clDefault then
@@ -3491,7 +3513,10 @@ begin
   Result := nil;
   if IsWidgetOK then
   begin
-    AContext := GetContainerWidget^.get_pango_context;
+    if wtStaticText in WidgetType then
+      AContext := PGtkBin(GetContainerWidget)^.get_child^.get_pango_context
+    else
+      AContext := GetContainerWidget^.get_pango_context;
     Result := pango_context_get_font_description(AContext);
   end;
 end;
@@ -4520,8 +4545,7 @@ begin
     AGtkFont^.set_family(PgChar(Family));
   end;
 
-  if Stretch <> PANGO_STRETCH_NORMAL then
-    AGtkFont^.set_stretch(Stretch);
+  AGtkFont^.set_stretch(Stretch);
 
   if AFont.Size <> 0 then
     AGtkFont^.set_size(Abs(AFont.Size) * PANGO_SCALE);
@@ -4529,7 +4553,7 @@ begin
   if (fsBold in AFont.Style) and (Weight < PANGO_WEIGHT_SEMIBOLD) then
     // bold is specified by the fsBold flag only
     AGtkFont^.set_weight(PANGO_WEIGHT_BOLD)
-  else if (Weight <> PANGO_WEIGHT_NORMAL) then
+  else
     AGtkFont^.set_weight(Weight);
 
   if fsItalic in AFont.Style then
@@ -8037,6 +8061,40 @@ end;
 
 { TGtk3StaticText }
 
+class function TGtk3StaticText.Gtk3StaticTextDrawBackground(aWidget: PGtkWidget; cr: Pcairo_t; data: gpointer): gboolean; cdecl;
+var
+  ALCL: TGtk3Widget;
+  BgColor: LongWord;
+  W, H: gint;
+begin
+  Result := False;
+  ALCL := TGtk3Widget(data);
+  if not Assigned(ALCL) or not Assigned(ALCL.LCLObject) then
+    exit;
+  W := aWidget^.get_allocated_width;
+  H := aWidget^.get_allocated_height;
+  if (W <= 0) or (H <= 0) then
+    exit;
+  if csOpaque in ALCL.LCLObject.ControlStyle then
+    BgColor := ColorToRGB(ALCL.LCLObject.GetColorResolvingParent)
+  else
+  if ALCL.LCLObject.Parent <> nil then
+    BgColor := ColorToRGB(ALCL.LCLObject.Parent.GetColorResolvingParent)
+  else
+    BgColor := ColorToRGB(clBtnFace);
+  cairo_set_source_rgba(cr, (BgColor and $FF) / 255, ((BgColor shr 8) and $FF) / 255,
+    ((BgColor shr 16) and $FF) / 255, 1.0);
+  cairo_rectangle(cr, 0, 0, W, H);
+  cairo_fill(cr);
+end;
+
+procedure TGtk3StaticText.InitializeWidget;
+begin
+  inherited InitializeWidget;
+  g_signal_connect_data(GetContainerWidget, 'draw',
+    TGCallback(@Gtk3StaticTextDrawBackground), Self, nil, G_CONNECT_DEFAULT);
+end;
+
 function TGtk3StaticText.GetAlignment: TAlignment;
 var
   X: gfloat;
@@ -8045,13 +8103,34 @@ begin
   Result := taLeftJustify;
   if IsWidgetOK then
   begin
-    PGtkLabel(GetContainerWidget)^.get_alignment(@X, @Y);
+    GetLabelWidget^.get_alignment(@X, @Y);
     if X = 1 then
       Result := taRightJustify
     else
     if X = 0.5 then
       Result := taCenter;
   end;
+end;
+
+function TGtk3StaticText.GetLabelWidget: PGtkLabel;
+begin
+  Result := PGtkLabel(PGtkBin(GetContainerWidget)^.get_child);
+end;
+
+procedure TGtk3StaticText.OffsetMousePos(const aGlobalX, aGlobalY: double;
+  APoint: PPoint);
+var
+  AWindow: PGdkWindow;
+  WinX, WinY: gint;
+begin
+  AWindow := GetContainerWidget^.get_window;
+  if Gtk3IsGdkWindow(AWindow) then
+  begin
+    Gtk3SafeWindowOrigin(AWindow, @WinX, @WinY);
+    APoint^.x := Trunc(aGlobalX) - WinX;
+    APoint^.y := Trunc(aGlobalY) - WinY;
+  end else
+    inherited OffsetMousePos(aGlobalX, aGlobalY, APoint);
 end;
 
 function TGtk3StaticText.GetStaticBorderStyle: TStaticBorderStyle;
@@ -8073,7 +8152,7 @@ end;
 procedure TGtk3StaticText.SetAlignment(AValue: TAlignment);
 begin
   if IsWidgetOk then
-    PGtkLabel(GetContainerWidget)^.set_alignment(AGtkJustificationF[AValue], 0);
+    GetLabelWidget^.set_alignment(AGtkJustificationF[AValue], 0);
 end;
 
 procedure TGtk3StaticText.SetStaticBorderStyle(AValue: TStaticBorderStyle);
@@ -8086,28 +8165,30 @@ function TGtk3StaticText.getText: String;
 begin
   Result := '';
   if IsWidgetOk then
-    Result := PGtkLabel(getContainerWidget)^.get_text;
+    Result := GetLabelWidget^.get_text;
 end;
 
 procedure TGtk3StaticText.setText(const AValue: String);
 begin
   if IsWidgetOk then
-    PGtkLabel(getContainerWidget)^.set_text(PgChar(AValue));
+    GetLabelWidget^.set_text(PgChar(AValue));
 end;
 
 function TGtk3StaticText.CreateWidget(const Params: TCreateParams): PGtkWidget;
 var
   AStaticText: TCustomStaticText;
+  ALabel: PGtkWidget;
 begin
   FWidgetType := FWidgetType + [wtStaticText];
   AStaticText := TCustomStaticText(LCLObject);
   Result := TGtkFrame.new('');
   PGtkFrame(Result)^.set_shadow_type(StaticBorderShadowMap[AStaticText.BorderStyle]);
-  FCentralWidget := TGtkLabel.new('');
-  FCentralWidget^.set_has_window(True);
   PGtkFrame(Result)^.set_label_widget(nil);
+  FCentralWidget := TGtkEventBox.new;
   PGtkFrame(Result)^.add(FCentralWidget);
-  PGtkLabel(FCentralWidget)^.set_alignment(AGtkJustificationF[AStaticText.Alignment], 0.0);
+  ALabel := TGtkLabel.new('');
+  PGtkEventBox(FCentralWidget)^.add(ALabel);
+  PGtkLabel(ALabel)^.set_alignment(AGtkJustificationF[AStaticText.Alignment], 0.0);
 end;
 
 { TGtk3ProgressBar }
@@ -11614,7 +11695,33 @@ var
   ListStore: PGtkTreeModel;
   Path: PGtkTreePath;
   AState: TCheckBoxState;
+  AEvent: PGdkEvent;
+  SkipToggle: Boolean;
+  ARect: TGdkRectangle;
+  Alloc: TGtkAllocation;
+  AX, AY: gint;
 begin
+  AEvent := gtk_get_current_event;
+  if AEvent <> nil then
+  begin
+    SkipToggle := AEvent^.type_ = GDK_KEY_PRESS;
+    gdk_event_free(AEvent);
+    if SkipToggle then
+    begin
+      Val(arg1, Param);
+      TreeView := PGtkTreeView(TGtk3CheckListBox(AData).GetContainerWidget);
+      Path := gtk_tree_path_new_from_indices(Param, [-1]);
+      if Path <> nil then
+      begin
+        TreeView^.get_background_area(Path, nil, @ARect);
+        TreeView^.convert_bin_window_to_widget_coords(0, ARect.y, @AX, @AY);
+        PGtkWidget(TreeView)^.get_allocation(@Alloc);
+        gtk_widget_queue_draw_area(PGtkWidget(TreeView), 0, AY, Alloc.width, ARect.height);
+        gtk_tree_path_free(Path);
+      end;
+      Exit;
+    end;
+  end;
   Val(arg1, Param);
 
   TreeView := PGtkTreeView(TGtk3CheckListBox(AData).GetContainerWidget);
@@ -13076,7 +13183,6 @@ begin
         BeginUpdate;
         try
           {%H-}PGtkEntry(get_child)^.Text := Pgchar(AValue);
-          g_idle_remove_by_data(Self);
         finally
           EndUpdate;
         end;
@@ -13286,28 +13392,17 @@ begin
   end;
 end;
 
-function GtkComboBoxEntryChangedIdle(AData: gpointer): gboolean; cdecl;
+class procedure TGtk3ComboBox.EntryChanged(AEntry: PGtkEntry; AData: gpointer); cdecl;
 var
   Msg: TLMessage;
 begin
-  Result := False; //G_SOURCE_REMOVE - one-shot
   if AData = nil then
-    Exit;
+    exit;
   if TGtk3Widget(AData).InUpdate then
-    Exit;
+    exit;
   FillChar(Msg{%H-}, SizeOf(Msg), #0);
   Msg.Msg := LM_CHANGED;
   TGtk3Widget(AData).DeliverMessage(Msg);
-end;
-
-class procedure TGtk3ComboBox.EntryChanged(AEntry: PGtkEntry; AData: gpointer); cdecl;
-begin
-  if AData = nil then
-    exit;
-  if TGtk3Widget(AData).InUpdate then
-    exit;
-  g_idle_remove_by_data(AData);
-  g_idle_add(@GtkComboBoxEntryChangedIdle, AData);
 end;
 
 

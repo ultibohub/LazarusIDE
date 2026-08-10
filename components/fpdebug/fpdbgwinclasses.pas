@@ -148,6 +148,8 @@ type
     FName: String;
     FUnwinder: TDbgStackUnwinderX86MultiMethod;
     FFailed_CONTEXT_EXTENDED_REGISTERS: boolean;
+    FAtHardCodeBreakpoint: boolean;
+    FLastHardcodedSize: integer;
   protected
     FThreadContextChanged: boolean;
     FThreadContextChangeFlags: TFpContextChangeFlags;
@@ -170,6 +172,7 @@ type
     function DetectHardwareWatchpoint: TFpInternalWatchpoint; override;
     procedure BeforeContinue; override;
     function ResetInstructionPointerAfterBreakpoint: boolean; override;
+    function GetAdjustedInstructionPointerRegisterValue: TDbgPtr; override;
     function ReadThreadState: boolean;
     procedure ClearExceptionSignal; override;
     property HasExceptionCleared: boolean read FHasExceptionCleared;
@@ -245,6 +248,12 @@ type
     function StartInstance(AParams, AnEnvironment: TStrings; AWorkingDirectory, AConsoleTty: string;
                       AFlags: TStartInstanceFlags; out AnError: TFpError): boolean; override;
     function AttachToInstance(APid: Integer; out AnError: TFpError): boolean; override;
+    { Program-I/O capture (RedirectConsoleOutput). Served from the launch
+      TProcess's pipes when siRediretOutput was requested at StartInstance;
+      the base no-ops apply otherwise. }
+    function CheckForConsoleOutput(ATimeOutMs: integer): integer; override;
+    function GetConsoleOutput: string; override;
+    procedure SendConsoleInput(AString: string); override;
 
     class function isSupported(ATargetInfo: TTargetDescriptor): boolean; override;
 
@@ -920,6 +929,24 @@ begin
     FProcProcess.Options:=[poDebugProcess, poDebugOnlyThisProcess, poNewProcessGroup];
     if siForceNewConsole in AFlags then
       FProcProcess.Options:=FProcProcess.Options+[poNewConsole];
+    { Capture the debuggee's stdio into pipes so the debugger can read/write it
+      (RedirectConsoleOutput / siRediretOutput) -- this is what fills
+      GetConsoleOutput / SendConsoleInput below.
+        - Skip when the caller asked for a SEPARATE console window
+          (siForceNewConsole): its stdio must stay visible in that console, not
+          be captured -- so Force New Console effectively turns capture off.
+        - Skip when explicit file redirection is configured.
+      stderr is merged into stdout for a single stream. poDetached
+      (DETACHED_PROCESS) gives the captured child no console at all, so no empty
+      console window appears; STARTF_USESTDHANDLES still routes its stdio to the
+      inherited pipe handles (InheritHandles stays True). NOTE: do NOT use
+      poNoConsole here -- CREATE_NO_WINDOW from a console-less (GUI) parent such
+      as the IDE allocates a hidden console and defeats the pipe capture (stdio
+      ends up on that fresh console instead of the inherited pipe handles). }
+    if (siRediretOutput in AFlags) and not (siForceNewConsole in AFlags) and
+       (Config.StdOutRedirFile = '') and (Config.StdErrRedirFile = '') and
+       (Config.StdInRedirFile = '') then
+      FProcProcess.Options := FProcProcess.Options + [poUsePipes, poStderrToOutPut, poDetached];
     FProcProcess.Executable:=Name;
     FProcProcess.Parameters:=AParams;
     FProcProcess.Environment:=AnEnvironment;
@@ -1006,6 +1033,59 @@ begin
 
   Result := true;
   // TODO: change the filename to the actual exe-filename. Load the correct dwarf info
+end;
+
+function TDbgWinProcess.CheckForConsoleOutput(ATimeOutMs: integer): integer;
+var
+  Avail: DWord;
+  Deadline: QWord;
+begin
+  // Launched without pipe capture -> report "no console" (< 0 stops the IDE
+  // reader thread; fpdmcp's pull just returns empty).
+  if (FProcProcess = nil) or (FProcProcess.Output = nil) then
+    Exit(-1);
+  Deadline := GetTickCount64 + QWord(ATimeOutMs);
+  repeat
+    try
+      Avail := FProcProcess.Output.NumBytesAvailable;
+    except
+      Exit(-1);  // pipe broken / process gone
+    end;
+    if Avail > 0 then
+      Exit(Integer(Avail));
+    if ATimeOutMs <= 0 then
+      Exit(0);
+    Sleep(10);
+  until GetTickCount64 >= Deadline;
+  Result := 0;
+end;
+
+function TDbgWinProcess.GetConsoleOutput: string;
+var
+  Avail: DWord;
+  Buf: array of Byte;
+  Got: LongInt;
+begin
+  Result := '';
+  if (FProcProcess = nil) or (FProcProcess.Output = nil) then
+    Exit;
+  try
+    Avail := FProcProcess.Output.NumBytesAvailable;
+  except
+    Exit;
+  end;
+  if Avail = 0 then
+    Exit;
+  SetLength(Buf, Avail);
+  Got := FProcProcess.Output.Read(Buf[0], Length(Buf));
+  if Got > 0 then
+    SetString(Result, PAnsiChar(@Buf[0]), Got);
+end;
+
+procedure TDbgWinProcess.SendConsoleInput(AString: string);
+begin
+  if (FProcProcess <> nil) and (FProcProcess.Input <> nil) and (AString <> '') then
+    FProcProcess.Input.Write(AString[1], Length(AString));
 end;
 
 class function TDbgWinProcess.isSupported(ATargetInfo: TTargetDescriptor
@@ -2394,6 +2474,7 @@ begin
   FThreadContextChangeFlags := [];
   FCurrentContext := nil;
   FHasResetInstructionPointerAfterBreakpoint := False;
+  FAtHardCodeBreakpoint := False;
 end;
 
 function TDbgWinThread.ResetInstructionPointerAfterBreakpoint: boolean;
@@ -2409,22 +2490,36 @@ begin
 
   assert(not FHasResetInstructionPointerAfterBreakpoint, 'TDbgWinThread.ResetInstructionPointerAfterBreakpoint: not FHasResetInstructionPointerAfterBreakpoint');
   {$ifdef cpui386}
-  if not CheckForHardcodeBreakPoint(FCurrentContext^.def.Eip - 1) then
+  FAtHardCodeBreakpoint := CheckForHardcodeBreakPoint(FCurrentContext^.def.Eip - 1);
+  if not FAtHardCodeBreakpoint then
     dec(FCurrentContext^.def.Eip);
   {$else}
   if (TDbgWinProcess(Process).FBitness = b32) then begin
-    if not CheckForHardcodeBreakPoint(FCurrentContext^.WOW.Eip - 1) then
+    FAtHardCodeBreakpoint := CheckForHardcodeBreakPoint(FCurrentContext^.WOW.Eip - 1);
+    if not FAtHardCodeBreakpoint then
       dec(FCurrentContext^.WOW.Eip);
   end
   else begin
-    if not CheckForHardcodeBreakPoint(FCurrentContext^.def.Rip - 1) then
+    FAtHardCodeBreakpoint := CheckForHardcodeBreakPoint(FCurrentContext^.def.Rip - 1);
+    if not FAtHardCodeBreakpoint then
       dec(FCurrentContext^.def.Rip);
   end;
   {$endif}
 
   FThreadContextChanged := True;
   FHasResetInstructionPointerAfterBreakpoint := True;
+  FLastHardcodedSize := 1;
+  if Process.BreakTargetHandler is TBreakPointx86Handler then
+    FLastHardcodedSize := TBreakPointx86Handler(Process.BreakTargetHandler).LastHardcodedSize;
   Result := True;
+end;
+
+function TDbgWinThread.GetAdjustedInstructionPointerRegisterValue: TDbgPtr;
+begin
+  Result := inherited GetAdjustedInstructionPointerRegisterValue;
+  if (Result <> 0) and FAtHardCodeBreakpoint then begin
+    dec(Result, FLastHardcodedSize); // must be set, if FAtHardCodeBreakpoint
+  end;
 end;
 
 function TDbgWinThread.ReadThreadState: boolean;
@@ -2447,6 +2542,7 @@ begin
   FThreadContextChangeFlags := [];
   FRegisterValueListValid:=False;
   FHasResetInstructionPointerAfterBreakpoint := False;
+  FAtHardCodeBreakpoint := False;
 end;
 
 procedure TDbgWinThread.ClearExceptionSignal;

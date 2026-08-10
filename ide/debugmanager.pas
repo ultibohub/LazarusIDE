@@ -40,7 +40,7 @@ uses
   {$IFDEF IDE_MEM_CHECK}
   MemCheck,
   {$ENDIF}
-  Classes, SysUtils,
+  Classes, SysUtils, Math,
   // LCL
   LCLType, LCLIntf, Forms, Controls, Dialogs, ExtCtrls,
   // LazUtils
@@ -81,7 +81,7 @@ uses
   ProjectDebugLink, IdeDebuggerExcludedRoutines,
   // IDE
   DebugEventsForm, LazarusIDEStrConsts, SourceEditor, SourceMarks, MemViewerDlg,
-  MainBar, MainIntf, MainBase, EditableProject, EnvGuiOptions;
+  MainBar, MainIntf, MainBase, EditableProject, EnvGuiOptions, EditorOptions, KeyMapping;
 
 type
 
@@ -317,6 +317,7 @@ type
     // Dialog routines
     procedure CreateDebugDialog(Sender: TObject; aFormName: string;
                           var AForm: TCustomForm; DoDisableAutoSizing: boolean); override;
+    procedure UpdateDebugDialogFromOptions;
     procedure ViewDebugDialog(const ADialogType: TDebugDialogType;
                               BringToFront: Boolean = true;
                               Show: Boolean = true;
@@ -1588,8 +1589,13 @@ begin
     SourceEditorManager.ClearExecutionLines;
 
   if (FDebugger.State in [dsPause, dsInit]) and (SourceEditorManager <> nil)
-  then
+  then begin
     SourceEditorManager.FillExecutionMarks;
+    if FDialogs[ddtWatches]  <> nil then TWatchesDlg(FDialogs[ddtWatches]).WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
+    if FDialogs[ddtLocals]   <> nil then TLocalsDlg(FDialogs[ddtLocals]).WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
+    if FDialogs[ddtInspect]  <> nil then TIDEInspectDlg(FDialogs[ddtInspect]).WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
+    if FDialogs[ddtEvaluate] <> nil then TEvaluateDlg(FDialogs[ddtEvaluate]).WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
+  end;
 
   if not (FDebugger.State in [dsRun, dsPause, dsInit]) and (SourceEditorManager <> nil)
   then begin
@@ -1665,7 +1671,7 @@ end;
 
 procedure TDebugManager.DebuggerCurrentLine(Sender: TObject; const ALocation: TDBGLocationRec);
 var
-  SrcLine, TId: Integer;
+  SrcLine, TId, StackIdx: Integer;
 begin
   FCallStackNotification.OnChange := nil;
   if (Sender<>FDebugger) or (Sender=nil) then exit;
@@ -1680,7 +1686,9 @@ begin
   and not FAsmStepping
   then begin
     TId := Threads.CurrentThreads.CurrentThreadId;
-    if CallStack.CurrentCallStackList.EntriesForThreads[TId].HasAtLeastCount(30) = nbUnknown then begin
+    StackIdx := 30;
+    if SrcLine = -3 then StackIdx := FCurrentLocation.StackIndex + 1;
+    if CallStack.CurrentCallStackList.EntriesForThreads[TId].HasAtLeastCount(StackIdx) = nbUnknown then begin
       FCallStackNotification.OnChange := @DoDebuggerCurrentLine;
 
       if FDialogs[ddtAssembler] <> nil
@@ -1709,7 +1717,7 @@ var
   NewSource: TCodeBuffer;
   Editor: TSourceEditor;
   SrcLine: Integer;
-  c, i, TId: Integer;
+  c, i, TId, StackIdx: Integer;
   StackEntry: TIdeCallStackEntry;
   Flags: TJumpToCodePosFlags;
   CurrentSourceUnitInfo: TDebuggerUnitInfo;
@@ -1728,14 +1736,20 @@ begin
   then begin
     // jump to the deepest stack frame with debugging info
     // TODO: Only below the frame supplied by debugger
-    i:=0;
+    StackIdx := 30;
+    if SrcLine = -3 then StackIdx := FCurrentLocation.StackIndex + 1;
     TId := Threads.CurrentThreads.CurrentThreadId;
-    if CallStack.CurrentCallStackList.EntriesForThreads[TId].HasAtLeastCount(30) = nbUnknown then begin
+    if CallStack.CurrentCallStackList.EntriesForThreads[TId].HasAtLeastCount(StackIdx) = nbUnknown then begin
       FCallStackNotification.OnChange := @DoDebuggerCurrentLine;
       exit;
     end;
 
-    c := CallStack.CurrentCallStackList.EntriesForThreads[TId].CountLimited(30);
+    c := CallStack.CurrentCallStackList.EntriesForThreads[TId].CountLimited(StackIdx);
+    i:=0;
+    if SrcLine = -3 then begin
+      i := FCurrentLocation.StackIndex;
+      c := Min(c, i+1);
+    end;
     while (i < c) do
     begin
       StackEntry := CallStack.CurrentCallStackList.EntriesForThreads[TId].Entries[i];
@@ -2040,6 +2054,12 @@ begin
   TheDialog.CallStackMonitor := FCallStack;
   TheDialog.BreakPoints := FBreakPoints;
   TheDialog.SnapshotManager := FSnapshots;
+  if FDebugger <> nil then
+    TheDialog.WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
+  if DebuggerOptions.ShowHintForWatches then
+    TheDialog.HintTime := EditorOpts.AutoHintDelayInMSec
+  else
+    TheDialog.HintTime := 0;
   TheDialog.EndUpdate;
 end;
 
@@ -2072,6 +2092,12 @@ begin
   TheDialog.ThreadsMonitor := FThreads;
   TheDialog.CallStackMonitor := FCallStack;
   TheDialog.SnapshotManager := FSnapshots;
+  if FDebugger <> nil then
+    TheDialog.WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
+  if DebuggerOptions.ShowHintForWatches then
+    TheDialog.HintTime := EditorOpts.AutoHintDelayInMSec
+  else
+    TheDialog.HintTime := 0;
   TheDialog.EndUpdate;
 end;
 
@@ -2096,6 +2122,7 @@ begin
   TheDialog.BreakPoints := FBreakPoints;
   TheDialog.Disassembler := FDisassembler;
   TheDialog.DebugManager := Self;
+  UpdateDebugDialogFromOptions;
   TheDialog.EndUpdate;
 end;
 
@@ -2114,6 +2141,8 @@ var
   TheDialog: TIDEInspectDlg;
 begin
   TheDialog := TIDEInspectDlg(FDialogs[ddtInspect]);
+  if FDebugger <> nil then
+    TheDialog.WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
 end;
 
 procedure TDebugManager.InitHistoryDlg;
@@ -2144,6 +2173,8 @@ var
   TheDialog: TEvaluateDlg;
 begin
   TheDialog := TEvaluateDlg(FDialogs[ddtEvaluate]);
+  if FDebugger <> nil then
+    TheDialog.WatchPrinter.TargetAddressSize := FDebugger.TargetWidth;
 end;
 
 constructor TDebugManager.Create(TheOwner: TComponent);
@@ -2616,6 +2647,29 @@ begin
   raise Exception.Create('TDebugManager.CreateDebugDialog invalid FormName "'+aFormName+'"');
 end;
 
+procedure TDebugManager.UpdateDebugDialogFromOptions;
+var
+  cmd: TKeyCommandRelation;
+begin
+  if DebuggerOptions.ShowHintForWatches then begin
+    if FDialogs[ddtWatches] <> nil then TWatchesDlg(FDialogs[ddtWatches]).HintTime := EditorOpts.AutoHintDelayInMSec;
+    if FDialogs[ddtLocals] <> nil  then TLocalsDlg(FDialogs[ddtLocals]).HintTime   := EditorOpts.AutoHintDelayInMSec;
+  end
+  else begin
+    if FDialogs[ddtWatches] <> nil then TWatchesDlg(FDialogs[ddtWatches]).HintTime := 0;
+    if FDialogs[ddtLocals] <> nil  then TLocalsDlg(FDialogs[ddtLocals]).HintTime   := 0;
+  end;
+
+  if FDialogs[ddtAssembler] <> nil  then begin
+    cmd := EditorOpts.KeyMap.FindByCommand(ecStepIntoInstr);
+    if (cmd <> nil) then
+      TAssemblerDlg(FDialogs[ddtAssembler]).actStepIntoInstr.ShortCut := cmd.AsShortCut;
+    cmd := EditorOpts.KeyMap.FindByCommand(ecStepOverInstr);
+    if (cmd <> nil) then
+      TAssemblerDlg(FDialogs[ddtAssembler]).actStepOverInstr.ShortCut := cmd.AsShortCut;
+  end;
+end;
+
 procedure TDebugManager.ClearDebugOutputLog;
 begin
   if FDialogs[ddtOutput] <> nil then
@@ -2890,23 +2944,38 @@ begin
         AMode := Project1.RunParameterOptions.GetActiveMode;
         if (AMode <> nil) then begin
           if AMode.RedirectStdIn <> rprOff then begin
-            FDebugger.FileNameStdIn := CreateAbsolutePath(AMode.FileNameStdIn, NewWorkingDir);
-            FDebugger.FileOverwriteStdIn := AMode.RedirectStdIn = rprOverwrite;
+            FDebugger.TargetIoStdInFileName := CreateAbsolutePath(AMode.FileNameStdIn, NewWorkingDir);
+            if AMode.RedirectStdIn = rprOverwrite then
+              FDebugger.TargetIoStdInMode := diomRedirectFileOverwrite
+            else
+              FDebugger.TargetIoStdInMode := diomRedirectFileAppend;
           end
-          else
-            FDebugger.FileNameStdIn := '';
+          else begin
+            FDebugger.TargetIoStdInFileName := '';
+            FDebugger.TargetIoStdInMode := diomDefault;
+          end;
           if AMode.RedirectStdOut <> rprOff then begin
-            FDebugger.FileNameStdOut := CreateAbsolutePath(AMode.FileNameStdOut, NewWorkingDir);
-            FDebugger.FileOverwriteStdOut := AMode.RedirectStdOut = rprOverwrite;
+            FDebugger.TargetIoStdOutFileName := CreateAbsolutePath(AMode.FileNameStdOut, NewWorkingDir);
+            if AMode.RedirectStdOut = rprOverwrite then
+              FDebugger.TargetIoStdOutMode := diomRedirectFileOverwrite
+            else
+              FDebugger.TargetIoStdOutMode := diomRedirectFileAppend;
           end
-          else
-            FDebugger.FileNameStdOut := '';
+          else begin
+            FDebugger.TargetIoStdOutFileName := '';
+            FDebugger.TargetIoStdOutMode := diomDefault;
+          end;
           if AMode.RedirectStdErr <> rprOff then begin
-            FDebugger.FileNameStdErr := CreateAbsolutePath(AMode.FileNameStdErr, NewWorkingDir);
-            FDebugger.FileOverwriteStdErr := AMode.RedirectStdErr = rprOverwrite;
+            FDebugger.TargetIoStdErrFileName := CreateAbsolutePath(AMode.FileNameStdErr, NewWorkingDir);
+            if AMode.RedirectStdErr = rprOverwrite then
+              FDebugger.TargetIoStdErrMode := diomRedirectFileOverwrite
+            else
+              FDebugger.TargetIoStdErrMode := diomRedirectFileAppend;
           end
-          else
-            FDebugger.FileNameStdErr := '';
+          else begin
+            FDebugger.TargetIoStdErrFileName := '';
+            FDebugger.TargetIoStdErrMode := diomDefault;
+          end;
 
           if AMode.UseConsoleWinPos then
             FDebugger.SetConsoleWinPos(AMode.ConsoleWinPos.X, AMode.ConsoleWinPos.Y)

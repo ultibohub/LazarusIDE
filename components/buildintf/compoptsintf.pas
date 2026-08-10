@@ -196,6 +196,7 @@ type
     procedure SetStackChecks(const AValue: Boolean);
     procedure SetStackSize(const AValue: Integer);
     procedure SetSubtarget(AValue: string);
+    procedure SetController(AValue: string);
     procedure SetTranslateMessages(AValue: Boolean);
     procedure SetTypedAddress(const AValue: Boolean);
     procedure SetStopAfterErrCount(const AValue: integer);
@@ -252,6 +253,7 @@ type
     fTargetProc: string;
 	fTargetController: string; //Ultibo
     FSubtarget: string;
+    FController: string;
     fOptLevel: Integer;
     fVarsInReg: Boolean;
     fUncertainOpt: Boolean;
@@ -431,6 +433,7 @@ type
     property TargetProcessor: String read fTargetProc write SetTargetProc; // specific
 	property TargetController: String read fTargetController write SetTargetController; //Ultibo
     property Subtarget: string read FSubtarget write SetSubtarget;
+    property Controller: string read FController write SetController; // embedded MCU (-Wp), empty for none
     property OptimizationLevel: Integer read fOptLevel write SetOptLevel;
     property VariablesInRegisters: Boolean read fVarsInReg write SetVarsInReg;
     property UncertainOptimizations: Boolean read fUncertainOpt write SetUncertainOpt;
@@ -846,6 +849,13 @@ procedure TLazCompilerOptions.SetSubtarget(AValue: string);
 begin
   if FSubtarget=AValue then Exit;
   FSubtarget:=AValue;
+  IncreaseChangeStamp;
+end;
+
+procedure TLazCompilerOptions.SetController(AValue: string);
+begin
+  if FController=AValue then Exit;
+  FController:=AValue;
   IncreaseChangeStamp;
 end;
 

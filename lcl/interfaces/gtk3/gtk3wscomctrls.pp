@@ -439,15 +439,30 @@ begin
   Result := TLCLHandle(AListView);
 end;
 
-procedure Gtk3_ItemCheckedChanged(renderer: PGtkCellRendererToggle; PathStr: Pgchar; aData: gPointer);cdecl;
+procedure Gtk3_ItemCheckedChanged({%H-}renderer: PGtkCellRendererToggle; PathStr: Pgchar; aData: gPointer);cdecl;
 var
   LV: TLVHack;
   Index: Integer;
   ListItem: TLVItemHack;
-  R: TRect;
-  x, y, cellw, cellh: gint;
-  AMinSize, ANaturalSize: TGtkRequisition;
+  AEvent: PGdkEvent;
+  SkipToggle: Boolean;
+  TreeView: PGtkTreeView;
+  Path: PGtkTreePath;
+  ARect: TGdkRectangle;
+  Alloc: TGtkAllocation;
+  AX, AY: gint;
 begin
+  AEvent := gtk_get_current_event;
+  if AEvent <> nil then
+  begin
+    SkipToggle := (AEvent^.type_ = GDK_KEY_PRESS) and
+      ((AEvent^.key.keyval = GDK_KEY_Return) or
+       (AEvent^.key.keyval = GDK_KEY_KP_Enter) or
+       (AEvent^.key.keyval = GDK_KEY_ISO_Enter));
+    gdk_event_free(AEvent);
+    if SkipToggle then
+      Exit;
+  end;
   LV := TLVHack(TGtk3ListView(aData).LCLObject);
   Index := StrToInt(PathStr);
   ListItem := TLVItemHack(LV.Items.Item[Index]);
@@ -457,15 +472,17 @@ begin
     if Assigned(LV.OnItemChecked) then
       LV.OnItemChecked(TGtk3ListView(aData).LCLObject, LV.Items.Item[Index]);
 
-    // we must update renderer row, otherwise visually it looks different
-    // if we change toggle state by keyboard (eg. pressing Space key)
-    R := ListItem.DisplayRect(drBounds);
-    // ARect := GdkRectFromRect(R);
-
-    gtk_cell_renderer_get_preferred_size(PGtkCellRenderer(renderer), TGtk3ListView(aData).getContainerWidget,
-      @AMinSize, @ANaturalSize);
-    with R do
-      gtk_widget_queue_draw_area(TGtk3ListView(aData).getContainerWidget, Left, Top, ANaturalSize.width, ANaturalSize.height);
+    TreeView := PGtkTreeView(TGtk3ListView(aData).getContainerWidget);
+    Path := gtk_tree_path_new_from_string(PathStr);
+    if Path <> nil then
+    begin
+      TreeView^.get_background_area(Path, nil, @ARect);
+      TreeView^.convert_bin_window_to_widget_coords(0, ARect.y, @AX, @AY);
+      PGtkWidget(TreeView)^.get_allocation(@Alloc);
+      gtk_widget_queue_draw_area(PGtkWidget(TreeView), 0, AY, Alloc.width, ARect.height);
+      gtk_tree_path_free(Path);
+    end else
+      gtk_widget_queue_draw(PGtkWidget(TreeView));
   end;
 end;
 

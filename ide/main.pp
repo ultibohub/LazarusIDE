@@ -69,7 +69,7 @@ uses
   StdCodeTools, EventCodeTool, CodeCreationDlg, IdentCompletionTool,
   // LazUtils
   // use lazutf8, lazfileutils and lazfilecache after FileProcs and FileUtil
-  FileUtil, LazFileUtils, LazUtilities, LazUTF8, UTF8Process, ProjResProc,
+  FileUtil, LazFileUtils, LazUtilities, LazUTF8, UTF8Process, ProjResConvert,
   LConvEncoding, Laz2_XMLCfg, LazLoggerBase, LazLogger, LazFileCache, AvgLvlTree,
   GraphType, LazStringUtils, LazVersion, LazTracer,
   LCLExceptionStacktrace,
@@ -5304,6 +5304,7 @@ begin
   finally
     SourceEditorManager.EndGlobalUpdate;
   end;
+  DebugBossMgr.UpdateDebugDialogFromOptions;
 end;
 
 procedure TMainIDE.CodetoolsOptionsAfterWrite(Sender: TObject; Restore: boolean);
@@ -5323,6 +5324,8 @@ procedure TMainIDE.ProjectOptionsBeforeRead(Sender: TObject);
 //var
 //  ActiveSrcEdit: TSourceEditor;
 //  ActiveUnitInfo: TUnitInfo;
+var
+  Cmd: TKeyCommandRelation;
 begin
   //DebugLn(['TMainIDE.DoProjectOptionsBeforeRead ',DbgSName(Sender)]);
   if not (Sender is TProjectIDEOptions) then exit;
@@ -5333,6 +5336,11 @@ begin
   Project1.UpdateExecutableType;
   Project1.UseAsDefault := False;
   TProjectIDEOptions(Sender).CheckLclApp;
+  if (CodeHelpBoss <> nil) then begin
+    Cmd:=EditorOpts.KeyMap.FindByCommand(ecFocusHint);
+    if (Cmd<>nil) then
+      CodeHelpBoss.FocusHintShortCut := Cmd.ShortcutA;
+  end;
 end;
 
 procedure TMainIDE.ProjectOptionsAfterWrite(Sender: TObject; Restore: boolean);
@@ -5519,6 +5527,7 @@ begin
     SaveDesktopSettings(EnvironmentGuiOpts);
     DebuggerOptions.Save; // before environment
     EnvironmentOptions.Save(false);
+    DebugBossMgr.UpdateDebugDialogFromOptions;
     EditorMacroListViewer.SaveGlobalInfo;
     (IDEMacros as TLazIDEMacros).SaveBuildMacros;
     //debugln('TMainIDE.SaveEnvironment A ',dbgsName(ObjectInspector1.Favorites));
