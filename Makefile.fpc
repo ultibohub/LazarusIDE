@@ -169,7 +169,8 @@ ide:
 
 #-----------------------------------------------------------------------------
 starter:
-	$(LAZBUILDEXE) $(LAZBUILDOPTS) --pkg-release --build-mode=release ide/startlazarus.lpi
+#	$(LAZBUILDEXE) $(LAZBUILDOPTS) --pkg-release --build-mode=release ide/startlazarus.lpi
+	$(MAKE) -C ide starter
 
 #-----------------------------------------------------------------------------
 # build lazbuild
@@ -192,7 +193,8 @@ lhelp:
 
 #-----------------------------------------------------------------------------
 # build lazarus,lazbuild,tools,startlazarus with base packages for the LCL_PLATFORM
-all: lazbuild tools cleanlazbuildpkg idemin starter
+# all: lazbuild tools cleanlazbuildpkg idemin starter
+all: lazbuild tools cleanlazbuildpkg ide starter
 
 #-----------------------------------------------------------------------------
 # build lazarus,lazbuild,tools,startlazarus,lhelp with bigide packages for the LCL_PLATFORM
