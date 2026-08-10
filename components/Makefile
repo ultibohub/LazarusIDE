@@ -1924,9 +1924,73 @@ endif
 help:
 	@$(ECHO)
 	@$(ECHO) " Targets"
-	@$(ECHO) "   all         nothing"
-	@$(ECHO) "   clean       deletes output files of all packages"
-all:
+	@$(ECHO) "   all         same as idepackages bigide, requires lazbuildpackages and lcl"
+	@$(ECHO) "   clean       deletes output files of base and bigide components"
+	@$(ECHO)
+	@$(ECHO) "   lazbuildpackages build non lcl packages needed by lazbuild and"
+	@$(ECHO) "                    the minimal ide, requires packager registration"
+	@$(ECHO) "   idepackages build packages of the minimal ide,"
+	@$(ECHO) "               requires lazbuildpackages and lcl"
+	@$(ECHO) "   bigide      build the extra packages for the bigide, requires lcl"
+lazbuildpackages:
+	$(MAKE) -C lazutils
+	$(MAKE) -C codetools
+	$(MAKE) -C buildintf
+	$(MAKE) -C lazdebuggers/lazdebuggerintf
+	$(MAKE) -C debuggerintf
+lclpackages:
+	$(MAKE) -C lazutils
+	$(MAKE) -C freetype
+idepackages:
+	$(MAKE) -C fpdebug
+	$(MAKE) -C lazcontrols
+	$(MAKE) -C lazedit
+	$(MAKE) -C ideintf
+	$(MAKE) -C lazdebuggers/cmdlinedebuggerbase
+	$(MAKE) -C lazdebuggers/lazdebuggerlldb
+	$(MAKE) -C lazdebuggers/lazdebuggerfplldb
+	$(MAKE) -C lazdebuggers/lazdebuggerfp
+	$(MAKE) -C synedit
+	$(MAKE) -C lazdebuggergdbmi
+	$(MAKE) -C lazcontrols/design
+	$(MAKE) -C lclextensions
+	$(MAKE) -C virtualtreeview
+bigide:
+	$(MAKE) -C rtticontrols
+	$(MAKE) -C cairocanvas
+	$(MAKE) -C printers
+	$(MAKE) -C printers/design
+	$(MAKE) -C turbopower_ipro
+	$(MAKE) -C turbopower_ipro/design
+	$(MAKE) -C fpcunit
+	$(MAKE) -C fpcunit/testinsight
+	$(MAKE) -C fpcunit/ide
+	$(MAKE) -C projecttemplates
+	$(MAKE) -C leakview
+	$(MAKE) -C memds
+	$(MAKE) -C sdf
+	$(MAKE) -C tachart
+	$(MAKE) -C todolist
+	$(MAKE) -C datetimectrls
+	$(MAKE) -C datetimectrls/design
+	$(MAKE) -C jcf2
+	$(MAKE) -C jcf2/IdePlugin/lazarus
+	$(MAKE) -C mouseandkeyinput
+	$(MAKE) -C chmhelp/packages/help
+	$(MAKE) -C chmhelp/packages/idehelp
+	$(MAKE) -C instantfpc
+	$(MAKE) -C externhelp
+	$(MAKE) -C tdbf
+	$(MAKE) -C sqldb
+	$(MAKE) -C PascalScript/Source
+	$(MAKE) -C macroscript
+	$(MAKE) -C simplewebservergui
+	$(MAKE) -C projectgroups
+	$(MAKE) -C pas2js
+	$(MAKE) -C charactermap
+	$(MAKE) -C charactermap/design
+	$(MAKE) -C dockedformeditor
+all: lazbuildpackages idepackages bigide
 clean:
 	${DELTREE} lazutils/lib/*
 	${DELTREE} lazedit/lib/*

@@ -192,7 +192,7 @@ endif
 endif
 ifeq ($(CPU_OS_TARGET),aarch64-embedded)
 endif
-ifdef SUB_TARGET 
+ifdef SUB_TARGET
 FPCOPT+=-t$(SUB_TARGET)
 FPMAKE_OPT+=--subtarget=$(SUB_TARGET)
 endif
@@ -426,7 +426,42 @@ DEFAULT_IDE_OPTIONS=  \
   -Fupackages/idepackager/lib/$(CPU_TARGET)-$(OS_TARGET) \
   -Fupackages/ideproject/lib/$(CPU_TARGET)-$(OS_TARGET) \
   -Fupackages/ideutils/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
-  -Fupackages/idedebugger/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM)
+  -Fupackages/idehelputils/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fupackages/idedebugger/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fupackages/idesynedit/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM)
+BIG_IDE_OPTIONS=-dBigIDE $(DEFAULT_IDE_OPTIONS) \
+  -Fu../components/lazedit/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/rtticontrols/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/cairocanvas/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/printers/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/printers/design/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/tdbf/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/turbopower_ipro/units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/turbopower_ipro/design/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/fpcunit/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/fpcunit/testinsight/lib/$(CPU_TARGET)-$(OS_TARGET) \
+  -Fu../components/fpcunit/ide/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/projecttemplates/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/sqldb/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/sdf/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/leakview/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/memds/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/tachart/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/todolist/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/datetimectrls/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/datetimectrls/design/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/chmhelp/packages/help/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/chmhelp/packages/idehelp/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/instantfpc/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/externhelp/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/PascalScript/Source/lib/$(CPU_TARGET)-$(OS_TARGET) \
+  -Fu../components/macroscript/lib/$(CPU_TARGET)-$(OS_TARGET) \
+  -Fu../components/simplewebservergui/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/projectgroups/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/pas2js/units/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/charactermap/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/charactermap/design/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM) \
+  -Fu../components/dockedformeditor/lib/$(CPU_TARGET)-$(OS_TARGET)/$(LCL_PLATFORM)
 LAZBUILD_OPT=$(LAZARUS_LIBPATHS) \
   -Fu../packager/units/$(CPU_TARGET)-$(OS_TARGET) \
   -Fu../components/lazutils/lib/$(CPU_TARGET)-$(OS_TARGET) \
@@ -4571,9 +4606,22 @@ makefiles: fpc_makefiles
 ifneq ($(wildcard fpcmake.loc),)
 include fpcmake.loc
 endif
-.PHONY: ide lazbuilder all clean cleanide purge
+.PHONY: ide bigide starter lazbuilder all clean cleanide purge
+idepackages:
+	$(MAKE) -C packages/ideconfig
+	$(MAKE) -C packages/ideutils
+	$(MAKE) -C packages/idepackager
+	$(MAKE) -C packages/ideproject
+	$(MAKE) -C packages/idehelputils
+	$(MAKE) -C packages/idedebugger
+	$(MAKE) -C packages/idesynedit
 ide: $(COMPILER_UNITTARGETDIR)
 	$(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
+bigide: $(COMPILER_UNITTARGETDIR)
+	-$(DEL) $(COMPILER_UNITTARGETDIR)/pkgmanager$(PPUEXT)
+	$(MAKE) --assume-new=lazarus.pp lazarus$(EXEEXT) OPT='$(BIG_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
+starter: $(COMPILER_UNITTARGETDIR)
+	$(MAKE) --assume-new=startlazarus.lpr startlazarus$(EXEEXT) OPT='$(DEFAULT_IDE_OPTIONS) $(LAZARUS_OPT) $(OPT)'
 lazbuilder: $(COMPILER_UNITTARGETDIR)
 	$(MAKE) --assume-new=lazbuild.lpr lazbuild$(EXEEXT) OPT='$(LAZBUILD_OPT) $(OPT)'
 all: lazbuilder ide starter
@@ -4598,9 +4646,9 @@ cleanlaz: clean cleanide
 	$(DELTREE) packages/idepackager/lib/*
 	$(DELTREE) packages/ideproject/lib/*
 	$(DELTREE) packages/ideutils/lib/*
+	$(DELTREE) packages/idehelputils/lib/*
 	$(DELTREE) packages/idedebugger/lib/*
 	$(DELTREE) packages/idesynedit/lib/*
-	$(DELTREE) packages/idehelputils/lib/*
 	${DELTREE} ../units/*
 purge: cleanlaz
 distclean: cleanlaz

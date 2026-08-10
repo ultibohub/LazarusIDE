@@ -72,7 +72,7 @@ endif
 
 #-----------------------------------------------------------------------------
 [rules]
-.PHONY: help registration tools lazbuild ide idebig cleanlazbuildpkg cleanide bigide useride starter lhelp all clean purge distclean install
+.PHONY: help registration tools lcl basecomponents bigidecomponents lazbuild ide idebig cleanlazbuildpkg cleanide bigide useride starter lhelp all clean purge distclean install
 
 #-----------------------------------------------------------------------------
 help:
@@ -91,7 +91,11 @@ help:
 	@$(ECHO)
 	@$(ECHO) " Sub targets"
 	@$(ECHO) "   registration   build package FCL"
-	@$(ECHO) "   tools          build lazres, svn2revisioninc, updatepofiles, lrstolfm"
+	@$(ECHO) "   basecomponents build packages needed by the minimal IDE for the LCL_PLATFORM"
+	@$(ECHO) "   bigidecomponents build many extra packages for the LCL_PLATFORM, requires basecomponents"
+	@$(ECHO) "   tools          build LCL with nogui widgetset, lazres, svn2revisioninc, updatepofiles, lrstolfm"
+	@$(ECHO) "   lhelp          build lhelp, requires bigidecomponents"
+	@$(ECHO) "   starter        build startlazarus, requires basecomponents"
 	@$(ECHO) "   ide            build ide with minimum of packages"
 	@$(ECHO) "   starter        build startlazarus"
 	@$(ECHO) "   lhelp          build lhelp"
@@ -138,10 +142,44 @@ registration:
 	$(MAKE) -C packager/registration
 
 #-----------------------------------------------------------------------------
+# build package LCLBase and LCL for LCL_PLATFORM
+# requires lazutils and freetypelaz
+lcl:
+	$(MAKE) -C components lclpackages
+	$(MAKE) -C lcl
+
+#-----------------------------------------------------------------------------
+# build required packages needed by the IDE
+basecomponents:
+	$(MAKE) -C components idepackages
+	$(MAKE) -C ide/packages/ideconfig
+	$(MAKE) -C ide/packages/ideutils
+	$(MAKE) -C ide/packages/idepackager
+	$(MAKE) -C ide/packages/ideproject
+	$(MAKE) -C ide/packages/idehelputils
+	$(MAKE) -C ide/packages/idedebugger
+	$(MAKE) -C ide/packages/idesynedit
+	$(MAKE) -C components/anchordocking
+	$(MAKE) -C components/anchordocking/design
+	$(MAKE) -C components/jcf2
+	$(MAKE) -C components/jcf2/IdePlugin/lazarus
+	$(MAKE) -C components/synedit/design
+	$(MAKE) -C components/onlinepackagemanager
+	$(MAKE) -C components/exampleswindow
+
+#-----------------------------------------------------------------------------
+# build a lot of extra packages
+# requires basecomponents
+bigidecomponents:
+	$(MAKE) -C components bigide
+
+#-----------------------------------------------------------------------------
 # build lazres, svn2revisioninc, updatepofiles, lrstolfm
 # requires lazbuild
 tools:
-	$(LAZBUILDEXE) $(LAZBUILDOPTS) --pkg-release lcl/lclbase.lpk
+#	$(LAZBUILDEXE) $(LAZBUILDOPTS) --pkg-release lcl/lclbase.lpk
+	$(MAKE) -C components/freetype
+	$(MAKE) -C lcl LCL_PLATFORM=nogui
 	$(MAKE) -C tools
 
 #-----------------------------------------------------------------------------
@@ -189,12 +227,13 @@ lazbuild: registration
 #-----------------------------------------------------------------------------
 # build lhelp
 lhelp:
-	$(LAZBUILDEXE) $(LAZBUILDOPTS) --pkg-release --build-mode=release components/chmhelp/lhelp/lhelp.lpi
+#	$(LAZBUILDEXE) $(LAZBUILDOPTS) --pkg-release --build-mode=release components/chmhelp/lhelp/lhelp.lpi
+	$(MAKE) -C components/chmhelp/lhelp
 
 #-----------------------------------------------------------------------------
 # build lazarus,lazbuild,tools,startlazarus with base packages for the LCL_PLATFORM
 # all: lazbuild tools cleanlazbuildpkg idemin starter
-all: lazbuild tools cleanlazbuildpkg ide starter
+all: lazbuild tools lcl basecomponents ide starter
 
 #-----------------------------------------------------------------------------
 # build lazarus,lazbuild,tools,startlazarus,lhelp with bigide packages for the LCL_PLATFORM
