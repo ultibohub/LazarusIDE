@@ -283,10 +283,11 @@ begin
   lblTargetController.Enabled := IsUltibo; //Ultibo
   TargetControllerComboBox.Enabled := IsUltibo; //Ultibo
 
-  lblTargetController.Visible := False; //IsUltibo; //Ultibo
+  lblTargetController.Caption := ''; //Ultibo
+  lblTargetController.Visible := IsUltibo; //Ultibo
   TargetControllerComboBox.Visible := IsUltibo; //Ultibo
   lblController.Visible := True; //not IsUltibo; //Ultibo
-  ControllerComboBox.Visible := not IsUltibo; //Ultibo
+  ControllerComboBox.Visible := True; //not IsUltibo; //Ultibo
 end;
 
 procedure TCompilerConfigTargetFrame.UpdateByTargetCPU(aTargetCPU: string);
