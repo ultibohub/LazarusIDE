@@ -282,6 +282,11 @@ begin
  
   lblTargetController.Enabled := IsUltibo; //Ultibo
   TargetControllerComboBox.Enabled := IsUltibo; //Ultibo
+
+  lblTargetController.Visible := False; //IsUltibo; //Ultibo
+  TargetControllerComboBox.Visible := IsUltibo; //Ultibo
+  lblController.Visible := True; //not IsUltibo; //Ultibo
+  ControllerComboBox.Visible := not IsUltibo; //Ultibo
 end;
 
 procedure TCompilerConfigTargetFrame.UpdateByTargetCPU(aTargetCPU: string);
@@ -325,26 +330,35 @@ end;
 procedure TCompilerConfigTargetFrame.UpdateByTargetCPUUltibo(aTargetCPU: string); //Ultibo
 var
   ParsingFrame: TCompilerParsingOptionsFrame;
-  sl: TStringList;
+  sl: TStringListUTF8Fast;
   i: Integer;
+  Info: TFPCTargetInfoCPU;
+  KeepProc: string;
   aTargetController: String;
 begin
   if aTargetCPU = '' then
   begin
     aTargetCPU := '$(TargetCPU)';
     if not GlobalMacroList.SubstituteStr(aTargetCPU) then
-      raise Exception.CreateFmt('Cannot substitute macro "%s".', [aTargetCPU]);
+      raise Exception.CreateFmt(lisCannotSubstituteMacroS, [aTargetCPU]);
   end;
 
-  // Update selection list for target processor
-  sl:=TStringList.Create;
-  GetTargetProcessors(aTargetCPU,sl);
+  // Update selection list for target processor (from the -ix cache in available mode, else static)
+  KeepProc := TargetProcComboBox.Text;
+  sl:=TStringListUTF8Fast.Create;
+  Info:=CurrentCPUInfo;
+  if OnlyAvailable and (Info<>nil) and (Info.InstructionSets.Count>0) then
+    sl.AddStrings(Info.InstructionSets)
+  else
+    GetTargetProcessors(aTargetCPU,sl);
   sl.Sort;
   sl.Insert(0,'('+lisDefault+')');
   for i:=0 to sl.Count-1 do
     sl[i]:=ProcessorToCaption(sl[i]);
   TargetProcComboBox.Items.Assign(sl);
   sl.Free;
+  // restore only if still valid for this CPU; otherwise revert to (Default) (do not insert)
+  SelectComboOrDefault(TargetProcComboBox,KeepProc);
   
   // Check for arm
   if aTargetCPU='arm' then
@@ -734,6 +748,9 @@ begin
   end;
   RefillCPUList;
   RefillOSList;
+  if CaptionToOS(TargetOSComboBox.Text) = 'ultibo' then //Ultibo
+    UpdateByTargetCPUUltibo(GetSelectedTargetCPU) //Ultibo
+  else //Ultibo 
   UpdateByTargetCPU(GetSelectedTargetCPU);
   RefillControllerList(ControllerComboBox.Text, False);
   RevertInvalidSubOptions;
@@ -941,6 +958,9 @@ begin
         i := 0;  // 0 is default
       TargetCPUComboBox.ItemIndex := i;
       // Target Processor
+      if CaptionToOS(TargetOSComboBox.Text) = 'ultibo' then //Ultibo
+        UpdateByTargetCPUUltibo(TargetCPU) //Ultibo
+      else //Ultibo
       UpdateByTargetCPU(TargetCPU);
       UpdateByTargetOS(TargetOS);
       TargetProcComboBox.Text := ProcessorToCaption(TargetProcessor);
@@ -967,6 +987,9 @@ begin
       begin
         RefillCPUList;
         RefillOSList;
+        if CaptionToOS(TargetOSComboBox.Text) = 'ultibo' then //Ultibo
+          UpdateByTargetCPUUltibo(GetSelectedTargetCPU) //Ultibo
+        else //Ultibo
         UpdateByTargetCPU(GetSelectedTargetCPU);
       end;
       RefillControllerList(Controller, True);
