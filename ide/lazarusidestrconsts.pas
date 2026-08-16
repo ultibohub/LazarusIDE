@@ -514,6 +514,7 @@ resourcestring
   lisToolStoppedWithExitStatusUseContextMenuToGetMoreInfo = 'tool stopped with '
     +'ExitCode 0 and ExitStatus %s. Use context menu to get more information.';
   lisErrors2 = ', Errors: %s';
+  lisErrorsCount = 'Errors: %s';
   lisWarnings = ', Warnings: %s';
   lisHints = ', Hints: %s';
   lisInternalError = 'internal error: %s';
@@ -1276,7 +1277,7 @@ resourcestring
   lisShowIcons = 'Show Icons';
   dlgAnIconForErrorWarningHintIsShown = 'An icon for error/warning/hint is shown '
     +'in front of a message. The same icon shows in source editor gutter in any case.';
-  lisFocusAtCompilation = 'Focus at compilation';
+  lisFocusWindow = 'Focus window';
   lisAlwaysDrawSelectedItemsFocused = 'Always draw selected items focused';
   lisDrawTheSelectionFocusedEvenIfTheMessagesWindowHasN = 'Draw the selection '
     +'focused even if the Messages window has no focus. Use this if your '
@@ -1284,10 +1285,10 @@ resourcestring
   lisWrapLongMessageLinesOtherwiseTheyAreClippedAndAHi = 'Wrap long message '
     +'lines into several rows. Otherwise they are clipped and a hint shows the '
     +'full text.';
-  lisShowAutomatically = 'Show automatically';
-  lisShowAutoWhenCompiling = 'When compiling';
-  lisShowAutoOnlyWhenErrorsOccur = 'Only when errors occur';
-  lisShowAutoNever = 'Never';
+  lisOpenAutomatically = 'Open automatically';
+  lisOpenAutoWhenCompiling = 'When getting messages';
+  lisOpenAutoOnlyWhenErrorsOccur = 'Only when errors occur';
+  lisOpenAutoNever = 'Never';
   lisMustBeOpenedManually = 'Must be opened manually from View -> Messages.';
   lisEditorColors = 'Editor Colors';
   lisPastelColors = 'Pastel Colors';
@@ -1396,7 +1397,6 @@ resourcestring
   lisToolHeaderRunning = 'Tool Header: Running';
   lisToolHeaderSuccess = 'Tool Header: Success';
   lisToolHeaderFailed = 'Tool Header: Failed';
-  lisToolHeaderScrolledUp = 'Tool Header: Scrolled up';
   dlgSubPropColor = 'SubProperties';
   dlgReferenceColor = 'Reference';
   lisAllBuildModes = '<All build modes>';
@@ -2801,6 +2801,12 @@ resourcestring
   dlgRedirInputEnd  = 'From file (at EOF)';
 
   dlgRedirStdNotSupported = 'Current debugger does not support redirection.';
+  dlgConsoleGroup = 'Console';
+  dlgConsoleModeOs = 'OS console';
+  dlgConsoleModeIde = 'Internal IDE consoles';
+  dlgConsoleUseIdeDefault = '-- Use IDE default console --';
+  dlgConsoleIdeWindow = 'IDE internal window';
+  dlgConsoleUnknown = 'Unknown console "%s"';
   dlgRunOSystemVariables = 'System variables';
   dlgRunOUserOverrides = 'User overrides';
   dlgIncludeSystemVariables = 'Include system variables';

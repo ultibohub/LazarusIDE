@@ -1358,8 +1358,33 @@ msgstr ""
 msgid "Config files"
 msgstr "Fitxers de configuració:"
 
+#: lazarusidestrconsts.dlgconsolegroup
+msgid "Console"
+msgstr ""
+
+#: lazarusidestrconsts.dlgconsoleidewindow
+msgid "IDE internal window"
+msgstr ""
+
+#: lazarusidestrconsts.dlgconsolemodeide
+msgid "Internal IDE consoles"
+msgstr ""
+
+#: lazarusidestrconsts.dlgconsolemodeos
+msgid "OS console"
+msgstr ""
+
 #: lazarusidestrconsts.dlgconsolesizenotsupported
 msgid "Current debugger does not support this."
+msgstr ""
+
+#: lazarusidestrconsts.dlgconsoleunknown
+#, object-pascal-format
+msgid "Unknown console \"%s\""
+msgstr ""
+
+#: lazarusidestrconsts.dlgconsoleuseidedefault
+msgid "-- Use IDE default console --"
 msgstr ""
 
 #: lazarusidestrconsts.dlgcootherdebugginginfo
@@ -9721,6 +9746,11 @@ msgstr ""
 msgid "Error saving form"
 msgstr ""
 
+#: lazarusidestrconsts.liserrorscount
+#, object-pascal-format
+msgid "Errors: %s"
+msgstr ""
+
 #: lazarusidestrconsts.liserrorsettingthenameofacomponentto
 #, object-pascal-format
 msgid "Error setting the name of a component %s to %s"
@@ -10194,12 +10224,12 @@ msgstr ""
 msgid "Fix LFM file"
 msgstr "Fixa el fitxer LFM"
 
-#: lazarusidestrconsts.lisfocusatcompilation
-msgid "Focus at compilation"
-msgstr ""
-
 #: lazarusidestrconsts.lisfocushint
 msgid "Focus hint"
+msgstr ""
+
+#: lazarusidestrconsts.lisfocuswindow
+msgid "Focus window"
 msgstr ""
 
 #: lazarusidestrconsts.lisforcerenaming
@@ -14456,6 +14486,24 @@ msgstr "Obre"
 msgid "Open as XML file"
 msgstr "Obre com arxiu XML"
 
+#: lazarusidestrconsts.lisopenautomatically
+msgid "Open automatically"
+msgstr ""
+
+#: lazarusidestrconsts.lisopenautonever
+msgctxt "lazarusidestrconsts.lisopenautonever"
+msgid "Never"
+msgstr ""
+
+#: lazarusidestrconsts.lisopenautoonlywhenerrorsoccur
+msgctxt "lazarusidestrconsts.lisopenautoonlywhenerrorsoccur"
+msgid "Only when errors occur"
+msgstr ""
+
+#: lazarusidestrconsts.lisopenautowhencompiling
+msgid "When getting messages"
+msgstr ""
+
 #: lazarusidestrconsts.lisopencontexthelpinbrowser
 msgid "Open context help in the browser"
 msgstr ""
@@ -17110,23 +17158,6 @@ msgstr ""
 msgid "Show abstract methods of \"%s\""
 msgstr ""
 
-#: lazarusidestrconsts.lisshowautomatically
-msgid "Show automatically"
-msgstr ""
-
-#: lazarusidestrconsts.lisshowautonever
-msgctxt "lazarusidestrconsts.lisshowautonever"
-msgid "Never"
-msgstr ""
-
-#: lazarusidestrconsts.lisshowautoonlywhenerrorsoccur
-msgid "Only when errors occur"
-msgstr ""
-
-#: lazarusidestrconsts.lisshowautowhencompiling
-msgid "When compiling"
-msgstr ""
-
 #: lazarusidestrconsts.lisshowcomponenttreeinobjectinspector
 msgid "Show component tree"
 msgstr ""
@@ -18333,10 +18364,6 @@ msgstr ""
 
 #: lazarusidestrconsts.listoolheaderrunning
 msgid "Tool Header: Running"
-msgstr ""
-
-#: lazarusidestrconsts.listoolheaderscrolledup
-msgid "Tool Header: Scrolled up"
 msgstr ""
 
 #: lazarusidestrconsts.listoolheadersuccess

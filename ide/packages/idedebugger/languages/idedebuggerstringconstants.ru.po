@@ -28,6 +28,26 @@ msgstr "- Добавить новую группу -"
 msgid "No group"
 msgstr "Не в группе"
 
+#: idedebuggerstringconstants.brkhandleignorebreakpoints
+msgid "Handle/Ignore breakpoints"
+msgstr "Обрабатывать/игнорировать точки останова"
+
+#: idedebuggerstringconstants.brkhandleignoreexceptions
+msgid "Handle/Ignore exceptions"
+msgstr "Обрабатывать/игнорировать исключения"
+
+#: idedebuggerstringconstants.brkshowbreakpointsandwatchpo
+msgid "Show breakpoints and watchpoints"
+msgstr "Показывать точки останова и наблюдения"
+
+#: idedebuggerstringconstants.brkshowbreakwatchpointsandex
+msgid "Show break/watchpoints and exception-filter"
+msgstr "Показывать точки останова, наблюдения и фильтр исключений"
+
+#: idedebuggerstringconstants.brkshowexceptionfilter
+msgid "Show exception-filter"
+msgstr "Показывать фильтр исключений"
+
 #: idedebuggerstringconstants.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr "Целевая строка ссылки"
@@ -1274,6 +1294,10 @@ msgstr "Видимость"
 #: idedebuggerstringconstants.liscondition
 msgid "Condition"
 msgstr "Условие"
+
+#: idedebuggerstringconstants.lisconsolelocalecho
+msgid "Echo typed input"
+msgstr "Эхо-вывод набираемых символов"
 
 #: idedebuggerstringconstants.liscopyall
 msgid "Copy All"

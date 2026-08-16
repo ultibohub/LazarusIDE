@@ -3150,7 +3150,7 @@ help:
 	@$(ECHO) "   registration   build package FCL"
 	@$(ECHO) "   basecomponents build packages needed by the minimal IDE for the LCL_PLATFORM"
 	@$(ECHO) "   bigidecomponents build many extra packages for the LCL_PLATFORM, requires basecomponents"
-	@$(ECHO) "   tools          build LCL with nogui widgetset, lazres, svn2revisioninc, updatepofiles, lrstolfm"
+	@$(ECHO) "   tools          build LCL with nogui widgetset, lazres, svn2revisioninc, updatepofiles, lrstolfm, lazdebugtargetstarter"
 	@$(ECHO) "   lhelp          build lhelp, requires bigidecomponents"
 	@$(ECHO) "   starter        build startlazarus, requires basecomponents"
 	@$(ECHO) "   ide            build ide with minimum of packages"
@@ -3179,7 +3179,7 @@ help:
 	@$(ECHO) "   git pull"
 	@$(ECHO) "   make clean all useride"
 	@$(ECHO)
-	@$(ECHO) " Clean up:"
+	@$(ECHO) " Clean up (beware, this action will irreversibly discard local source modifications):"
 	@$(ECHO) "   git restore ."
 	@$(ECHO) "   make distclean"
 	@$(ECHO)
@@ -3297,6 +3297,9 @@ else
 	ln -sf ../$(INSTALL_BASEDIR)/tools/lazres$(SRCEXEEXT) $(INSTALL_PREFIX)/bin/lazres$(SRCEXEEXT)
 	ln -sf ../$(INSTALL_BASEDIR)/tools/lrstolfm$(SRCEXEEXT) $(INSTALL_PREFIX)/bin/lrstolfm$(SRCEXEEXT)
 	ln -sf ../$(INSTALL_BASEDIR)/tools/updatepofiles$(SRCEXEEXT) $(INSTALL_PREFIX)/bin/updatepofiles$(SRCEXEEXT)
+ifeq ($(OS_TARGET),linux)
+	ln -sf ../$(INSTALL_BASEDIR)/tools/lazdebugtargetstarter $(INSTALL_PREFIX)/bin/lazdebugtargetstarter
+endif
 	$(MAKE) -C install/man install PREFIX=$(INSTALL_PREFIX) GINSTALL=$(GINSTALL)
 	$(INSTALL) install/lazarus.desktop $(INSTALL_PREFIX)/share/applications/lazarus.desktop
 	$(INSTALL) images/icons/lazarus128x128.png $(INSTALL_PREFIX)/share/pixmaps/lazarus.png

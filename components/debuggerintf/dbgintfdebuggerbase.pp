@@ -65,6 +65,15 @@ type
     dfThreadSuspension,
     dfConsoleWinPos,        // Able to set position of console Window
     dfStdInOutRedirect,     // Able to redirect StdIn/Out
+    dfAttachToExecStarter,  // Can attach to a starter, that will then execv the actual target app
+
+    (* dfStdInOutCapture:
+    Able to capture the debuggee's standard streams into the IDE, i.e. to
+    honour diomCaptureInternal. Whether that is on offer is a property of the
+    backend and not of the platform: on Windows FpDebug can, and a backend
+    driving an external debugger may not. The frontend must ask rather than
+    assume, or it will select a destination that silently receives nothing. *)
+    dfStdInOutCapture,
 
     (* dfNotSuitableForOsArch:
        If this is set, then this debugger can not be used on the current
@@ -102,6 +111,7 @@ type
     dcRunTo,
     dcJumpto,
     dcAttach,
+    dcAttachToTargetStarter, // wait for execv event
     dcDetach,
     dcBreak,
     dcWatch,
@@ -1731,6 +1741,7 @@ type
     procedure RunTo(const ASource: String; const ALine: Integer);                // Executes til a certain point
     procedure JumpTo(const ASource: String; const ALine: Integer);               // No execute, only set exec point
     procedure Attach(AProcessID: String);
+    procedure AttachToTargetStarter(AProcessID: String);
     procedure Detach;
     procedure SendConsoleInput(AText: String);
     function  Evaluate(const AExpression: String; ACallback: TDBGEvaluateResultCallback;
@@ -1867,9 +1878,9 @@ const
   COMMANDMAP: array[TDBGState] of TDBGCommands = (
   {dsNone } [],
   {dsIdle } [dcRun, dcStepOver, dcStepInto, dcStepOverInstr, dcStepIntoInstr, dcRunTo,
-             dcAttach, dcBreak, dcWatch, {dcEvaluate,} dcEnvironment],
+             dcAttach, dcAttachToTargetStarter, dcBreak, dcWatch, {dcEvaluate,} dcEnvironment],
   {dsStop } [dcRun, dcStepOver, dcStepInto, dcStepOverInstr, dcStepIntoInstr, dcRunTo,
-             dcAttach, dcBreak, dcWatch, {dcEvaluate,} dcEnvironment,
+             dcAttach, dcAttachToTargetStarter, dcBreak, dcWatch, {dcEvaluate,} dcEnvironment,
              dcSendConsoleInput],
   {dsPause} [dcRun, dcStop, dcStepOver, dcStepInto, dcStepOverInstr, dcStepIntoInstr,
              dcStepOut, dcStepTo, dcContinueLastStep,
@@ -5741,6 +5752,12 @@ procedure TDebuggerIntf.Attach(AProcessID: String);
 begin
   if State = dsIdle then SetState(dsStop);  // Needed, because no filename was set
   ReqCmd(dcAttach, [AProcessID]);
+end;
+
+procedure TDebuggerIntf.AttachToTargetStarter(AProcessID: String);
+begin
+  if State = dsIdle then SetState(dsStop);  // Needed, because no filename was set
+  ReqCmd(dcAttachToTargetStarter, [AProcessID]);
 end;
 
 procedure TDebuggerIntf.Detach;

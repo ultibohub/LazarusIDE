@@ -583,6 +583,7 @@ type
     function GetState: TFpDbgBreakpointState; virtual;
     function GetEnabled: boolean;
     procedure SetEnabled(AValue: boolean);
+    function GetCondition: String;
     function GetOn_Thread_StateChange: TFpDbgBreakpointStateChangeEvent;
     procedure SetOn_Thread_StateChange(AValue: TFpDbgBreakpointStateChangeEvent);
     procedure SetFreeByDbgProcess(AValue: Boolean); virtual;
@@ -602,6 +603,7 @@ type
 
     property State: TFpDbgBreakpointState read GetState;
     property Enabled: boolean read GetEnabled write SetEnabled;
+    property Condition: String read GetCondition write SetCondition;
     property FreeByDbgProcess: Boolean write SetFreeByDbgProcess;
     // Event runs in dbg-thread
     property On_Thread_StateChange: TFpDbgBreakpointStateChangeEvent read GetOn_Thread_StateChange write SetOn_Thread_StateChange;
@@ -632,6 +634,7 @@ type
     procedure SetOn_Thread_StateChange(AValue: TFpDbgBreakpointStateChangeEvent);
     function __FpDbgBrk: TFpDbgBreakpointBase;
     function GetEnabled: boolean;
+    function GetCondition: String;
     procedure SetProcessToNil;
   protected
     procedure ProcessAutoUpdate;
@@ -669,6 +672,7 @@ type
     // If the breakpoint does not have a process, it will be destroyed immediately
     property FreeByDbgProcess: Boolean read FFreeByDbgProcess write SetFreeByDbgProcess;
     property Enabled: boolean read FEnabled write SetEnabled;
+    property Condition: String read GetCondition write SetCondition;
     property State: TFpDbgBreakpointState read GetState;
     // Event runs in dbg-thread
     property On_Thread_StateChange: TFpDbgBreakpointStateChangeEvent read FOn_Thread_StateChange write FOn_Thread_StateChange;
@@ -930,8 +934,8 @@ type
   end;
 
   TDbgInstInfo = record
-    InstrType: (itAny, itJump);
-    InstrTargetOffs: Int64; // offset from the START address of instruction
+    InstrType: (itAny, itJump, itJumpAbs);
+    InstrTargetOffs: Int64; // offset from the START address of instruction, or absolute offset
   end;
 
   TDbgFrameBoundaryKind = (
@@ -961,7 +965,7 @@ type
 
     procedure Disassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String; out AnInfo: TDbgInstInfo); virtual; overload;
     procedure Disassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String); virtual; abstract; overload;
-    procedure ReverseDisassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String); virtual;
+    procedure ReverseDisassemble(var AAddress: Pointer; out ACodeBytes: String; out ACode: String; out AnInfo: TDbgInstInfo); virtual;
 
     function GetInstructionInfo(AnAddress: TDBGPtr): TDbgAsmInstruction; virtual; abstract;
     function GetFrameBoundaryInfo(AnAddress: TDBGPtr; out AFrameBoundaryInfo: TDbgFrameBoundaryInfo; ARoutineStartAddr: TDBGPtr = 0): TDbgFrameBoundaryKind; virtual;
@@ -993,6 +997,7 @@ type
     FLastLibraryUnloaded: TDbgLibrary;
     FOnDebugOutputEvent: TDebugOutputEvent;
     FOSDbgClasses: TOSDbgClasses;
+    FPreAttach: boolean;
     FProcessID: Integer;
     FStopCheckingForConsoleOutputRequested: boolean;
     FThreadID: Integer;
@@ -1165,6 +1170,7 @@ type
     procedure TerminateProcess; virtual; abstract;
     function Detach(AProcess: TDbgProcess; AThread: TDbgThread): boolean; virtual;
 
+    property PreAttach: boolean read FPreAttach write FPreAttach;
     property OSDbgClasses: TOSDbgClasses read FOSDbgClasses;
     property RequiresExecutionInDebuggerThread: boolean read GetRequiresExecutionInDebuggerThread;
     property Handle: THandle read GetHandle;
@@ -2442,7 +2448,7 @@ end;
 // Many pitfalls with X86 instruction encoding...
 // Avr may give 130/65535 = 0.2% errors per instruction reverse decoded
 procedure TDbgAsmDecoder.ReverseDisassemble(var AAddress: Pointer; out
-  ACodeBytes: String; out ACode: String);
+  ACodeBytes: String; out ACode: String; out AnInfo: TDbgInstInfo);
 var
   instrLen: integer;
   tmpAddress: PtrUint;
@@ -2452,7 +2458,7 @@ begin
   repeat
     dec(instrLen, MinInstructionSize);
     tmpAddress := PtrUInt(AAddress) - instrLen;
-    Disassemble(pointer(tmpAddress), ACodeBytes, ACode);
+    Disassemble(pointer(tmpAddress), ACodeBytes, ACode, AnInfo);
   until (tmpAddress >= PtrUInt(AAddress)) or (instrLen = MinInstructionSize);
 
   // After disassemble tmpAddress points to the starting address of next instruction
@@ -4522,6 +4528,17 @@ end;
 procedure TFpDbgBreakpointBase.SetCondition(ANewCondition: String);
 begin
   FCondition := ANewCondition;
+end;
+
+function TFpDbgBreakpointBase.GetCondition: String;
+begin
+  // Report a condition queued by SetAutoUpdateCondition, which is not applied
+  // to FCondition until the loop runs ProcessAutoUpdate. Same approach as
+  // GetEnabled, which reports a pending SetAutoDisable.
+  if bufNewCondition in FUpdateFlags then
+    Result := FNewCondition
+  else
+    Result := FCondition;
 end;
 
 function TFpDbgBreakpointBase.__FpDbgBrk: TFpDbgBreakpointBase;

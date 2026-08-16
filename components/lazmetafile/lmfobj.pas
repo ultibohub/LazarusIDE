@@ -7,15 +7,37 @@ unit lmfObj;
 interface
 
 uses
-  Classes, SysUtils, Types,
-  FPImage, Graphics,
-  LCLType, LCLIntf,
-  lmf;
+  Classes, SysUtils, Types, Math,
+  FPImage, Graphics, //GraphMath,
+  LCLType, LCLIntf, LConvEncoding,
+  lmf, lmfWMF;
 
 type
+  TPointArray = array of TPoint;
+
   TlmfObject = class(TComponent)
   public
     procedure Action(fImage: TlmfImage; ACanvas:TCanvas); virtual; abstract;
+  end;
+
+  TlmfBkColor = class(TlmfObject)
+  private
+    fColor: TColor;
+  public
+    constructor Create(AColor: TColor); virtual; reintroduce;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
+  published
+    property Color: TColor read fColor write fColor;
+  end;
+
+  TlmfBkMode = class(TlmfObject)
+  private
+    fMode: Word;
+  public
+    constructor Create(AMode: Word); virtual; reintroduce;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
+  published
+    property Mode: Word read fMode write fMode;
   end;
 
   TlmfAnchor = class(TlmfObject)
@@ -52,8 +74,6 @@ type
   TlmfText = class(TlmfAnchor)
   private
     fText: string;
-  protected
-    procedure DefineProperties(Filer: TFiler); override;
   public
     constructor Create(x,y:integer; const AText:string);overload;
     procedure Action(fImage:TlmfImage;ACanvas:TCanvas);override;
@@ -73,6 +93,10 @@ type
     constructor Create(const ARect: TRect; x, y: Integer; const AText: String;
       const AStyle: TTextStyle); overload;
     procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
+    property Left: Integer read fRect.Left write fRect.Left;
+    property Top: Integer read fRect.Top write fRect.Top;
+    property Right: Integer read fRect.Right write fRect.Right;
+    property Bottom: Integer read fRect.Bottom write fRect.Bottom;
     property TextStyle: TTextStyle read fStyle write fStyle;
   end;
 
@@ -108,19 +132,9 @@ type
     procedure Action(fImage: TlmfImage; ACanvas: TCanvas);override;
   end;
 
-  TlmfFillRect=class(TlmfRect)
-  public
-    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
-  end;
-
-  TlmfFrame = class(TlmfRect)
-  public
-    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
-  end;
-
   TlmfFrameRect = class(TlmfRect)
   public
-    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas);override;
   end;
 
   TlmfFrame3D = class(TlmfRect)
@@ -162,7 +176,7 @@ type
     property Direction: TGradientDirection read fDirection write fDirection;
   end;
 
-  TlmfEllipse=class(TlmfClip)
+  TlmfEllipse = class(TlmfClip)
   public
     procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
   end;
@@ -194,38 +208,39 @@ type
   TlmfFont=class(TlmfObject)
   private
     fFont: TFont;
-    fHeight, fRotation: integer;
-//    fName:string;
+    fHeight: integer;
+    function GetRotation: Integer;
+    procedure SetRotation(AValue: Integer);
   public
-    constructor Create(AnOwner:TComponent);override;
-    destructor Destroy;override;
-    procedure Action(fImage:TlmfImage;ACanvas:TCanvas);override;
+    constructor Create(AnOwner: TComponent); override;
+    destructor Destroy; override;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
   published
-    property Font:TFont read fFont write fFont;
-    property Height:integer read fHeight write fHeight;
-    property Rotation:integer read fRotation write fRotation;
+    property Font: TFont read fFont write fFont;
+    property Height: integer read fHeight write fHeight;
+    property Rotation: integer read GetRotation write SetRotation;
   end;
 
   TlmfBrush=class(TlmfObject)
   private
-    fBrush:TBrush;
+    fBrush: TBrush;
   public
     constructor Create(AnOwner:TComponent);override;
     destructor Destroy;override;
-    procedure Action({%H-}fImage:TlmfImage;ACanvas:TCanvas);override;
+    procedure Action({%H-}fImage: TlmfImage; ACanvas: TCanvas);override;
   published
     property Brush:TBrush read fBrush write fBrush;
   end;
 
   TlmfPen=class(TlmfObject)
   private
-    fPen:TPen;
+    fPen: TPen;
   public
-    constructor Create(AnOwner:TComponent);override;
-    destructor Destroy;override;
-    procedure Action(fImage:TlmfImage;ACanvas:TCanvas);override;
+    constructor Create(AnOwner:TComponent); override;
+    destructor Destroy; override;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
   published
-    property Pen:TPen read fPen write fPen;
+    property Pen: TPen read fPen write fPen;
   end;
 
   TlmfGraph=class(TlmfClip)
@@ -241,23 +256,24 @@ type
 
   TlmfPolyline=class(TlmfRect)
   private
-    pts:array of TPoint;
+    pts: TPointArray;
   protected
     procedure StorePoints(AStream:TStream);virtual;
     procedure LoadPoints(AStream:TStream);virtual;
     procedure DefineProperties(Afiler:TFiler);override;
   public
-    constructor Create(Points:PPoint; NumPts:integer); overload;
+    constructor Create(APoints:PPoint; NumPts:integer); overload;
     destructor Destroy;override;
     procedure Action(fImage:TlmfImage; ACanvas:TCanvas); override;
+    property Points: TPointArray read pts write pts;
   end;
 
   TlmfPolygon=class(TlmfPolyline)
   private
-    fWinding:boolean;
+    fWinding: boolean;
   public
-    constructor Create(Points: PPoint; NumPts: integer; Winding: boolean = false); overload;
-    procedure Action(fImage:TlmfImage;ACanvas:TCanvas); override;
+    constructor Create(APoints: PPoint; NumPts: integer; Winding: boolean = false); overload;
+    procedure Action(fImage: TlmfImage; ACanvas: TCanvas); override;
   published
     property Winding:boolean read fWinding write fWinding;
   end;
@@ -265,15 +281,43 @@ type
 
 implementation
 
-{ LMF object }
+{ TlmfBkColor (Text background color) }
+
+constructor TlmfBkColor.Create(AColor: TColor);
+begin
+  inherited Create(nil);
+  fColor := AColor;
+end;
+
+procedure TlmfBkColor.Action(fImage: TlmfImage; ACanvas: TCanvas);
+begin
+  SetBkColor(ACanvas.Handle, fColor);
+end;
+
+
+{ TlmfBkMode (Text background transparent or opaque) }
+
+constructor TlmfBkMode.Create(AMode: Word);
+begin
+  inherited Create(nil);
+  if not (AMode in [TRANSPARENT, OPAQUE]) then
+    raise Exception.Create('Illegal BkMode value');
+  fMode := AMode;
+end;
+
+procedure TlmfBkMode.Action(fImage: TlmfImage; ACanvas: TCanvas);
+begin
+  SetBkMode(ACanvas.Handle, fMode);
+end;
+
 
 { TlmfAnchor }
 
 constructor TlmfAnchor.Create(Ax,Ay:integer);
 begin
   inherited Create(nil);
-  fPos.X:=Ax;
-  fPos.Y:=Ay;
+  fPos.X := Ax;
+  fPos.Y := Ay;
 end;
 
 
@@ -302,7 +346,7 @@ begin
   fEndPos.Y:=y2;
 end;
 
-procedure TlmfLine.Action(fImage:TlmfImage;ACanvas:TCanvas);
+procedure TlmfLine.Action(fImage: TlmfImage; ACanvas: TCanvas);
 begin
   ACanvas.Line(
     fImage.ScaleX(fPos.X),
@@ -311,6 +355,8 @@ begin
     fImage.ScaleY(fEndPos.Y));
 end;
 
+
+{ TlmfText }
 
 constructor TlmfText.Create(x,y:integer; const AText:string);
 begin
@@ -346,11 +392,6 @@ begin
   ACanvas.TextOut(fImage.ScaleX(fPos.X),fImage.ScaleY(fPos.Y),fText);
 end;
 
-procedure TlmfText.DefineProperties(Filer: TFiler);
-begin
-  inherited DefineProperties(Filer);
-end;
-
 
 { TlmfTextInRect }
 
@@ -372,7 +413,7 @@ begin
     fImage.ScaleX(fRect.Right),
     fImage.ScaleY(fRect.bottom)
   );
-  ACanvas.TextRect(R, fImage.ScaleX(fPos.X), fImage.ScaleY(fPos.Y), fText, fStyle);
+  ACanvas.TextRect(R, R.Left, R.Top, fText, fStyle);
 end;
 
 procedure TlmfTextInRect.DefineProperties(Filer: TFiler);
@@ -392,7 +433,8 @@ begin
 end;
 
 
-// pixel mode
+{ TlmfColor (pixel mode) }
+
 constructor TlmfColor.Create(x,y:integer; AColor:TfpColor);
 begin
   inherited Create(x,y);
@@ -439,10 +481,11 @@ begin
   end;
 end;
 
-// rectangle
+
+{ TlmfRect (rectangle) }
+
 procedure TlmfRect.Action(fImage:TlmfImage; ACanvas:TCanvas);
 begin
- // ACanvas.Brush.Style:=bsClear;
   ACanvas.Rectangle(
     fImage.ScaleX(fClip.Left),
     fImage.ScaleY(fClip.Top),
@@ -451,38 +494,15 @@ begin
   );
 end;
 
-procedure TlmfFillRect.Action(fImage: TlmfImage; ACanvas: TCanvas);
-begin
-  ACanvas.FillRect(
-    fImage.ScaleX(fClip.Left),
-    fImage.ScaleY(fClip.Top),
-    fImage.Scalex(fClip.Right),
-    fImage.ScaleY(fClip.Bottom)
-  );
-end;
 
+{ TlmfFrameRect (rectangle drawn with brush settings) }
 
-{ TlmfFrame }
-
-procedure TlmfFrame.Action(fImage: TlmfImage; ACanvas: TCanvas);
-begin
-  ACanvas.Frame(
-    fImage.ScaleX(fClip.Left),
-    fImage.ScaleY(fClip.Top),
-    fImage.Scalex(fClip.Right),
-    fImage.ScaleY(fClip.Bottom)
-  );
-end;
-
-
-{ TlmfFrame }
-
-procedure TlmfFrameRect.Action(fImage: TlmfImage; ACanvas: TCanvas);
+procedure TlmfFrameRect.Action(fImage:TlmfImage; ACanvas:TCanvas);
 begin
   ACanvas.FrameRect(
     fImage.ScaleX(fClip.Left),
     fImage.ScaleY(fClip.Top),
-    fImage.Scalex(fClip.Right),
+    fImage.ScaleX(fClip.Right),
     fImage.ScaleY(fClip.Bottom)
   );
 end;
@@ -710,17 +730,22 @@ end;
 
 procedure TlmfFont.Action(fImage: TlmfImage; ACanvas: TCanvas);
 var
-  //AFont: TFont;
-  rot, ht: integer;
-//  ofh: Hfont;
+  ht: integer;
 begin
-  rot:=fRotation;//TRotFont(fFont).Rotation;
-
-  Acanvas.Font.Assign(fFont);
+  ACanvas.Font.Assign(fFont);
   ht := abs(fImage.ScaleSizeY(fHeight));
   if ht <= 0 then ht := 1;
   ACanvas.Font.Height := -ht;
-  ACanvas.Font.Orientation := rot;
+end;
+
+function TlmfFont.GetRotation: Integer;
+begin
+  Result := fFont.Orientation;
+end;
+
+procedure TlmfFont.SetRotation(AValue: Integer);
+begin
+  fFont.Orientation := AValue;
 end;
 
 
@@ -795,11 +820,11 @@ end;
 
 { TlmfPolyLine }
 
-constructor TlmfPolyLine.Create(Points:PPoint;NumPts:integer);
+constructor TlmfPolyLine.Create(APoints: PPoint; NumPts: integer);
 begin
   inherited Create(nil);
-  Setlength(pts,numPts);
-  System.Move(Points^,pts[0],NumPts*sizeof(pts[0]));
+  Setlength(pts, numPts);
+  System.Move(APoints^, pts[0], NumPts*SizeOf(pts[0]));
 end;
 
 destructor TlmfPolyLine.Destroy;
@@ -854,10 +879,10 @@ end;
 
 { TlmfPolygon }
 
-constructor TlmfPolygon.Create(Points: PPoint; NumPts: integer;
+constructor TlmfPolygon.Create(APoints: PPoint; NumPts: integer;
   Winding: boolean = false);
 begin
-  inherited Create(Points, NumPts);
+  inherited Create(APoints, NumPts);
   fWinding := Winding;
 end;
 
@@ -879,8 +904,7 @@ end;
 initialization
   RegisterClasses([TlmfAnchor,
     TlmfMoveTo, TlmfLineTo, TlmfLine, TlmfText, TlmfTextInRect, TlmfColor,
-    TlmfClip, TlmfRect, TlmfFillRect, TlmfFrame, TLmfFrameRect, TlmfRoundRect,
-    TlmfEllipse, TlmfArc, TlmfChord, TlmfPie,
+    TlmfClip, TlmfRect, TlmfRoundRect, TlmfEllipse, TlmfArc, TlmfChord, TlmfPie,
     TlmfGraph, TlmfPolyLine, TlmfPolygon,
     TlmfFont, TlmfBrush, TlmfPen
   ]);

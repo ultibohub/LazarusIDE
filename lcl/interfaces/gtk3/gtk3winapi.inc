@@ -4219,7 +4219,7 @@ begin
   if user_data <> nil then
   begin
     AMsg := TCustomGtk3Message(user_data^);
-    if AMsg.Handle <> 0 then
+    if Gtk3WidgetSet.IsValidHandle(AMsg.Handle) then
     begin
       FillChar(AMessage{%H-}, SizeOf(AMessage), #0);
       AMessage.Msg := AMsg.Msg;
@@ -4241,7 +4241,7 @@ var
   AEvent: PCustomGtk3Message;
 begin
   Result := False;
-  if Handle <> 0 then
+  if IsValidHandle(Handle) then
   begin
     AEvent := GetMem(SizeOf(TCustomGtk3Message));
     AEvent^.Handle := Handle;
@@ -4749,6 +4749,7 @@ var
   Caret: TGtk3Caret;
   Widget: TGtk3Widget;
   GtkWidget: PGtkWidget;
+  ACursorRect: TGdkRectangle;
 begin
   Result := False;
   if Handle = 0 then
@@ -4761,6 +4762,14 @@ begin
   if Assigned(Caret) then
   begin
     Caret.SetPosition(X, Y);
+    if Assigned(FIMContext) and (FIMTarget = TObject(Widget)) then
+    begin
+      ACursorRect.x := X;
+      ACursorRect.y := Y;
+      ACursorRect.width := 0;
+      ACursorRect.height := Caret.Height;
+      gtk_im_context_set_cursor_location(FIMContext, @ACursorRect);
+    end;
     Result := True;
   end;
 end;

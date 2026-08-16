@@ -1003,7 +1003,7 @@ type
     function DoJumpToCompilerMessage(FocusEditor: boolean; Msg: TMessageLine = nil
       ): boolean; override;
     procedure DoJumpToNextCompilerMessage(aMinUrgency: TMessageLineUrgency; DirectionDown: boolean); override;
-    procedure DoShowMessagesView(BringToFront: boolean = true); override;
+    procedure DoShowMessagesView; override;
 
     // methods for debugging, compiling and external tools
     function GetTestBuildDirectory: string; override;
@@ -4499,8 +4499,9 @@ end;
 
 procedure TMainIDE.mnuViewMessagesClick(Sender: TObject);
 begin
-  // it was already visible, but user does not see it, try to move in view
-  DoShowMessagesView;
+  MessagesView.ApplyIDEOptions;
+  // If it was already visible, but user does not see it, try to move in view
+  IDEWindowCreators.ShowForm(MessagesView, true);
 end;
 
 procedure TMainIDE.mnuViewSearchResultsClick(Sender: TObject);
@@ -7133,7 +7134,7 @@ begin
 
   // show messages
   MessagesView.ApplyIDEOptions;
-  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaDefault then
     IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
@@ -7457,7 +7458,7 @@ begin
     // check sources
     DoCheckFilesOnDisk;
   end;
-  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaDefault then
     IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
   if ConsoleVerbosity>=0 then
     debugln(['Info: (lazarus) [TMainIDE.DoBuildProject] Success']);
@@ -8228,7 +8229,7 @@ begin
 
   // show messages
   MessagesView.ApplyIDEOptions;
-  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
+  if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaDefault then
     IDEWindowCreators.ShowForm(MessagesView,EnvironmentGuiOpts.MsgViewFocus);
   // clear old error lines
   SourceEditorManager.ClearErrorLines;
@@ -8846,8 +8847,8 @@ begin
   if CodeToolBoss.CheckSyntax(ActiveUnitInfo.Source,NewCode,NewX,NewY,
     NewTopLine,ErrorMsg) then
   begin
-    if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaCompiling then
-      DoShowMessagesView(false);
+    if EnvironmentGuiOpts.MsgViewShowAutomatically = mwsaDefault then
+      DoShowMessagesView;
     MessagesView.ClearCustomMessages;
     MessagesView.AddCustomMessage(mluImportant,lisMenuQuickSyntaxCheckOk);
   end else begin
@@ -9908,7 +9909,7 @@ begin
       if TopLine<1 then TopLine:=1;
       if FocusEditor then begin
         if EnvironmentGuiOpts.MsgViewShowAutomatically <> mwsaNever then
-          DoShowMessagesView(true);
+          DoShowMessagesView;
         SourceEditorManager.ShowActiveWindowOnTop(True);
       end;
       if IDETabMaster <> nil then
@@ -10028,13 +10029,13 @@ begin
   end;//if
 end;
 
-procedure TMainIDE.DoShowMessagesView(BringToFront: boolean);
+procedure TMainIDE.DoShowMessagesView;
 begin
   //debugln('TMainIDE.DoShowMessagesView');
   MessagesView.ApplyIDEOptions;
 
   // don't move the messagesview, if it was already visible.
-  IDEWindowCreators.ShowForm(MessagesView,BringToFront);
+  IDEWindowCreators.ShowForm(MessagesView, EnvironmentGuiOpts.MsgViewFocus);
 end;
 
 procedure TMainIDE.DoShowSearchResultsView(State: TIWGetFormState);
@@ -10999,7 +11000,7 @@ begin
   end;
   // syntax error -> show error in message view and jump
   if EnvironmentGuiOpts.MsgViewShowAutomatically <> mwsaNever then
-    DoShowMessagesView(false);
+    DoShowMessagesView;
   DoShowCodeToolBossError;
 
   // jump to error in source editor

@@ -552,6 +552,7 @@ type
     procedure SetTabLabelText(AChild: TCustomPage; const AText: String);
     function GetTabLabelText(AChild: TCustomPage): String;
     property DefaultClientRect: TRect read FDefaultClientRect write FDefaultClientRect; //measured in gtk3wscomctrls.getDefaultClientRect
+    property RightClickUpPending: Boolean read FRightClickUpPending;
   end;
 
   { TGtk3Bin }
@@ -2279,6 +2280,18 @@ begin
   end;
 end;
 
+function Gtk3DeferredEntryUnselect(AData: gpointer): gboolean; cdecl;
+var
+  AWidget: PGtkWidget;
+begin
+  Result := gtk_false;
+  AWidget := PGtkWidget(AData);
+  if Gtk3IsWidget(AWidget) and not AWidget^.has_focus and
+    Gtk3IsEditable(PGObject(AWidget)) then
+    PGtkEditable(AWidget)^.select_region(0, 0);
+  g_object_unref(PGObject(AData));
+end;
+
 procedure TGtk3Widget.GtkEventFocus(Sender: PGtkWidget; Event: PGdkEvent);
   cdecl;
 var
@@ -2365,13 +2378,18 @@ begin
     if ([wtEntry, wtSpinEdit] * LWidgetType <> []) and
        Gtk3IsWidget(LContainer) and
        Gtk3IsEditable(PGObject(LContainer)) then
-        PGtkEditable(LContainer)^.select_region(0, 0)
-    else
+    begin
+      PGObject(LContainer)^.ref;
+      g_idle_add(@Gtk3DeferredEntryUnselect, LContainer);
+    end else
     if (wtComboBox in LWidgetType) and LIsCombo and
        Gtk3IsWidget(LWidget) and
        PGtkComboBox(LWidget)^.has_entry and
        Gtk3IsEditable(PGObject(PGtkComboBox(LWidget)^.get_child)) then
-         PGtkEditable(PGtkComboBox(LWidget)^.get_child)^.select_region(0, 0);
+    begin
+      PGObject(PGtkComboBox(LWidget)^.get_child)^.ref;
+      g_idle_add(@Gtk3DeferredEntryUnselect, PGtkComboBox(LWidget)^.get_child);
+    end;
   end;
 end;
 
@@ -2586,6 +2604,7 @@ procedure TGtk3Widget.DeliverIMCommit(const AStr: string);
 var
   UTF8Char: TUTF8Char;
   CharMsg: TLMChar;
+  APos, ALen, CharLen: Integer;
 begin
   if (AStr = '') or not Assigned(LCLObject) then
     exit;
@@ -2594,21 +2613,33 @@ begin
   writeln('TGtk3Widget.DeliverIMCommit ', dbgsName(LCLObject), ' str="', AStr, '"');
   {$ENDIF}
 
-  UTF8Char := AStr;
-  if LCLObject.IntfUTF8KeyPress(UTF8Char, 1, False) then
-    exit;
+  ALen := Length(AStr);
+  APos := 1;
+  while APos <= ALen do
+  begin
+    CharLen := UTF8CodepointSize(@AStr[APos]);
+    if (CharLen <= 0) or (APos + CharLen - 1 > ALen) then
+      exit;
+    UTF8Char := Copy(AStr, APos, CharLen);
+    Inc(APos, CharLen);
 
-  FillChar(CharMsg{%H-}, SizeOf(CharMsg), 0);
-  CharMsg.Msg := CN_CHAR;
-  CharMsg.CharCode := Word(AStr[1]);
-  NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
+    if not Assigned(LCLObject) then
+      exit;
+    if LCLObject.IntfUTF8KeyPress(UTF8Char, 1, False) then
+      continue;
 
-  if DeliverMessage(CharMsg, True) <> 0 then
-    exit;
+    FillChar(CharMsg{%H-}, SizeOf(CharMsg), 0);
+    CharMsg.Msg := CN_CHAR;
+    CharMsg.CharCode := Word(UTF8Char[1]);
+    NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
 
-  CharMsg.Msg := LM_CHAR;
-  NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
-  DeliverMessage(CharMsg, True);
+    if DeliverMessage(CharMsg, True) <> 0 then
+      continue;
+
+    CharMsg.Msg := LM_CHAR;
+    NotifyApplicationUserInput(LCLObject, PLMessage(@CharMsg)^);
+    DeliverMessage(CharMsg, True);
+  end;
 end;
 
 function TGtk3Widget.GtkEventKey(Sender: PGtkWidget; Event: PGdkEvent; AKeyPress: Boolean): Boolean;
@@ -2667,8 +2698,14 @@ begin
     {$ENDIF}
     Gtk3WidgetSet.IMInFilter := False;
     if Gtk3WidgetSet.IMCommitStr <> '' then
-      AEventString := Gtk3WidgetSet.IMCommitStr
-    else
+    begin
+      AEventString := Gtk3WidgetSet.IMCommitStr;
+      if Length(AEventString) > UTF8CodepointSize(PChar(AEventString)) then
+      begin
+        DeliverIMCommit(AEventString);
+        exit(True);
+      end;
+    end else
     if AFiltered then
       exit(True);
   end;
@@ -2941,6 +2978,8 @@ var
   MousePos: TPoint;
   MButton: guint;
   AParentControl: TWinControl;
+  AClip: PGtkClipboard;
+  AClipText: string;
 
   function CheckWidget: boolean;
   begin
@@ -3060,6 +3099,26 @@ begin
   DebugLn('TGtk3Widget.GtkEventMouse ',dbgsName(LCLObject),
     ' msg=',dbgs(msg.Msg), ' point=',dbgs(Msg.XPos),',',dbgs(Msg.YPos));
   {$ENDIF}
+
+  if ((Msg.Msg = LM_LBUTTONDOWN) or (Msg.Msg = LM_MBUTTONDOWN)) and
+    Assigned(LCLObject) and
+    ((LCLObject is TCustomEdit) or (LCLObject is TCustomComboBox)) and
+    not LCLObject.Focused and LCLObject.CanFocus and
+    not (csDesigning in LCLObject.ComponentState) then
+  begin
+    AClipText := '';
+    AClip := gtk_clipboard_get(gdk_atom_intern('PRIMARY', False));
+    if (AClip <> nil) and gtk_clipboard_wait_is_text_available(AClip) then
+      AClipText := gtk_clipboard_wait_for_text(AClip)
+    else
+      AClip := nil;
+    LCLIntf.SetFocus(LCLObject.Handle);
+    if AClip <> nil then
+      gtk_clipboard_set_text(AClip, PgChar(AClipText), Length(AClipText));
+    if not CheckWidget then
+      exit;
+  end;
+
   NotifyApplicationUserInput(LCLObject, PLMessage(@Msg)^);
   Event^.button.send_event := NO_PROPAGATION_TO_PARENT;
 
@@ -3774,6 +3833,7 @@ constructor TGtk3Widget.Create(const AWinControl: TWinControl;
   const AParams: TCreateParams);
 begin
   inherited Create;
+  Gtk3WidgetSet.AddHandle(Self);
   LCLWidth := 0;
   LCLHeight := 0;
   LCLLeft := -MaxInt;
@@ -3799,6 +3859,7 @@ constructor TGtk3Widget.CreateFrom(const AWinControl: TWinControl;
   AWidget: PGtkWidget);
 begin
   inherited Create;
+  Gtk3WidgetSet.AddHandle(Self);
   FContext := 0;
   FWidgetMapped := False;
   FHasPaint := False;
@@ -3969,6 +4030,11 @@ begin
   begin
     if g_object_get_data(AParent, 'lcl-tab-switch-active') <> nil then
       exit;
+    if g_object_get_data(AParent, 'lcl-setfocus-descend') <> nil then
+    begin
+      Result := gtk_false;
+      exit;
+    end;
     AParent := AParent^.get_parent;
   end;
   aForm := GetParentForm(TGtk3Widget(aData).LCLObject);
@@ -4126,6 +4192,7 @@ end;
 
 destructor TGtk3Widget.Destroy;
 begin
+  Gtk3WidgetSet.RemoveHandle(Self);
   DestroyWidget;
   inherited Destroy;
 end;
@@ -5041,7 +5108,14 @@ begin
         PGtkWindow(TopLevel)^.set_focus(FocusWidget);
     end else
     if GetContainerWidget^.get_mapped then
-      GetContainerWidget^.child_focus(GTK_DIR_TAB_FORWARD);
+    begin
+      g_object_set_data(GetContainerWidget, 'lcl-setfocus-descend', Pointer(1));
+      try
+        GetContainerWidget^.child_focus(GTK_DIR_TAB_FORWARD);
+      finally
+        g_object_set_data(GetContainerWidget, 'lcl-setfocus-descend', nil);
+      end;
+    end;
   end;
 end;
 
@@ -6443,6 +6517,7 @@ begin
 
   Self.SetTextHint(TCustomEdit(Self.LCLObject).TextHint);
   Self.SetNumbersOnly(TCustomEdit(Self.LCLObject).NumbersOnly);
+  Self.SetFrame(TCustomEdit(Self.LCLObject).BorderStyle <> bsNone);
 
   Gtk3ClampEntryPadding(Widget);
 
@@ -6486,9 +6561,33 @@ begin
 end;
 
 procedure TGtk3Entry.SetFrame(const aborder: boolean);
+var
+  AProvider: PGtkCssProvider;
 begin
-  if IsWidgetOk then
-    PGtkEntry(Widget)^.set_has_frame(aborder);
+  if not IsWidgetOk then
+    exit;
+  AProvider := PGtkCssProvider(g_object_get_data(PGObject(Widget), 'lcl-noframe-css'));
+  if aborder then
+  begin
+    if Assigned(AProvider) then
+    begin
+      gtk_style_context_remove_provider(Widget^.get_style_context,
+        PGtkStyleProvider(AProvider));
+      g_object_unref(gpointer(AProvider));
+      g_object_set_data(PGObject(Widget), 'lcl-noframe-css', nil);
+    end;
+  end else
+  begin
+    if not Assigned(AProvider) then
+    begin
+      AProvider := gtk_css_provider_new;
+      gtk_css_provider_load_from_data(AProvider,
+        'entry { border-style: none; box-shadow: none; }', -1, nil);
+      gtk_style_context_add_provider(Widget^.get_style_context,
+        PGtkStyleProvider(AProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+      g_object_set_data(PGObject(Widget), 'lcl-noframe-css', AProvider);
+    end;
+  end;
 end;
 
 procedure TGtk3Entry.SetSelText(const ASelText: string);
@@ -8434,7 +8533,7 @@ begin
   if Assigned(FPageLabel) then
   begin
     bs:=ReplaceAmpersandsWithUnderscores(Avalue);
-    FPageLabel^.set_markup_with_mnemonic(PChar(bs));
+    FPageLabel^.set_text_with_mnemonic(PChar(bs));
   end;
 end;
 
@@ -8622,7 +8721,7 @@ begin
   FCloseButton := nil;
 
   if Params.Caption <> '' then
-    FPageLabel := TGtkLabel.new(PChar(Params.Caption))
+    FPageLabel := TGtkLabel.new(PChar(ReplaceAmpersandsWithUnderscores(Params.Caption)))
   else
     FPageLabel := TGtkLabel.new(' ');
   FPageLabel^.set_use_underline(True);
@@ -9613,6 +9712,7 @@ end;
 constructor TGtk3MenuShell.Create(const AMenu: TMenu; AMenuBar: PGtkMenuBar);
 begin
   inherited Create;
+  Gtk3WidgetSet.AddHandle(Self);
   MenuObject := AMenu;
   FCentralWidget := nil;
   if AMenuBar <> nil then
@@ -9813,6 +9913,7 @@ end;
 constructor TGtk3MenuItem.Create(const AMenuItem: TMenuItem);
 begin
   inherited Create;
+  Gtk3WidgetSet.AddHandle(Self);
   MenuItem := AMenuItem;
   FOwnWidget := True;
   // Initializes the properties
@@ -10088,6 +10189,8 @@ var
   OldSubmenu: PGtkWidget;
 begin
   if not Assigned(FWidget) then
+    Exit;
+  if not Gtk3WidgetIsA(FWidget, gtk_menu_item_get_type) then
     Exit;
 
   OldWidget := FWidget;
@@ -17078,6 +17181,7 @@ begin
 
   // FHasPaint := False;
   CommonDialog := ACommonDialog;
+  Gtk3WidgetSet.AddHandle(Self);
   // Defines an action for the dialog and creates it
   Action := GTK_FILE_CHOOSER_ACTION_OPEN;
   Button1 := GTK_STOCK_OPEN;
@@ -17211,6 +17315,7 @@ begin
 
   // FHasPaint := False;
   CommonDialog := ACommonDialog;
+  Gtk3WidgetSet.AddHandle(Self);
   InitializeWidget;
   Self.SetCallbacks;
 end;
@@ -17244,6 +17349,7 @@ begin
 
   // FHasPaint := False;
   CommonDialog := ACommonDialog;
+  Gtk3WidgetSet.AddHandle(Self);
   TGtk3Widget(Self).InitializeWidget;
   Self.SetCallbacks;
 end;
@@ -17294,6 +17400,7 @@ begin
 
   // FHasPaint := False;
   CommonDialog := ACommonDialog;
+  Gtk3WidgetSet.AddHandle(Self);
   TGtk3Widget(Self).InitializeWidget;
   Self.SetCallbacks;
 end;

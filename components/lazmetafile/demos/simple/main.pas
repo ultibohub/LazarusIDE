@@ -5,7 +5,7 @@ unit main;
 interface
 
 uses
-  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, lmf;
+  Classes, SysUtils, Forms, Controls, Graphics, Dialogs, LCLType, lmf;
 
 type
 
@@ -14,6 +14,7 @@ type
   TMainForm = class(TForm)
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
     procedure FormPaint(Sender: TObject);
   private
     FLmfImg: TLmfImage;
@@ -32,29 +33,29 @@ implementation
 procedure TMainForm.FormCreate(Sender: TObject);
 var
   LmfCanvas: TlmfCanvas;
-  P: array[0..4] of TPoint;
+  P: array[0..5] of TPoint;
   P1, P2, C: TPoint;
   R: TRect;
   ts: TTextStyle;
   penPattern: TPenPattern = nil;
   bmp: TCustomBitmap;
 begin
-  Width := 510;
-  Height := 360;
+  Width := 610;
+  Height := 410;
 
   FLmfImg := TlmfImage.Create;
-  FLmfImg.Width := 500;
-  FLmfImg.Height := 350;
+  FLmfImg.Width := 600;
+  FLmfImg.Height := 400;
 
   LmfCanvas := TlmfCanvas.Create(FLmfImg);
   try
     // Rectangle
     LmfCanvas.Brush.Color := clSkyBlue;
-    LmfCanvas.Rectangle(0, 0, 500, 350);
+    LmfCanvas.Rectangle(0, 0, FlmfImg.Width, FLmfImg.Height);
 
     // Line
     LmfCanvas.Pen.Width := 1;
-    LmfCanvas.Line(0, 0, 500, 350);
+    LmfCanvas.Line(0, 0, FLmfImg.Width, FLmfImg.Height);
 
     // MoveTo + LineTo
     LmfCanvas.Pen.Width := 3;
@@ -77,12 +78,16 @@ begin
     LmfCanvas.Frame(25, 165, 75, 185);
 
     // FrameRect (border using brush)
+    // Incorrect wmf output (won't fix)
     LmfCanvas.Brush.Color := clRed;
+    LmfCanvas.Brush.Style := bsVertical;
     LmfCanvas.FrameRect(Rect(90, 165, 140, 185));
     LmfCanvas.FrameRect(95, 170, 145, 190);
 
     //Frame3D
+    // Incorrect wmf output (won't fix)
     R := Rect(270, 100, 310, 130);
+    lmfCanvas.Brush.Style := bsSolid;
     lmfCanvas.Brush.Color := clWhite;
     lmfCanvas.FillRect(R);
     LmfCanvas.Pen.Style := psSolid;
@@ -99,7 +104,7 @@ begin
     LmfCanvas.Pen.Width := 3;
     LmfCanvas.RoundRect(260, 40, 340, 80, 40, 40);
     LmfCanvas.RoundRect(Rect(270, 50, 350, 90), 40, 40);
-
+               (*
     // Draw an alpha-transparent bitmap
     bmp := TPortableNetworkGraphic.Create;
     try
@@ -108,6 +113,7 @@ begin
     finally
       bmp.Free;
     end;
+    *)
 
     // Ellipse
     LmfCanvas.Brush.Style := bsHorizontal;
@@ -160,8 +166,7 @@ begin
     LmfCanvas.Pen.Width := 2;
     LmfCanvas.MoveTo(C.X, C.Y);
     LmfCanvas.ArcTo(C.X-50, C.Y-30, C.X+50, C.Y+30, P1.X, P1.Y, P2.X, P2.Y);
-    LmfCanvas.Arc(C.X-50, C.Y-30, C.X+50, C.Y+30, P1.X, P1.Y, P2.X, P2.Y);
-    LmfCanvas.Pen.Width := 1;;
+    LmfCanvas.Pen.Width := 1;
     LmfCanvas.Frame(C.X-50, C.Y-30, C.X+50, C.Y+30);
     LmfCanvas.Line(C, P2);
 
@@ -176,22 +181,32 @@ begin
 
     // Polygon
     P[0] := Point(400, 0);
-    P[1] := Point(480, 100);
-    P[2] := Point(360, 50);
-    P[3] := Point(480, 0);
-    P[4] := Point(400, 100);
+    P[1] := Point(450, 70);
+    P[2] := Point(380, 40);
+    P[3] := Point(450, 0);
+    P[4] := Point(400, 70);
+    P[5] := P[0];  // used only by PolyLine demo
     LmfCanvas.Brush.Style := bsSolid;
     LmfCanvas.Brush.Color := clMoneygreen;
     Lmfcanvas.Pen.Color := clGreen;
     LmfCanvas.Polygon(@P[0], 5, false);
-    inc(P[0].Y, 110);
-    inc(P[1].Y, 110);
-    inc(P[2].Y, 110);
-    inc(P[3].Y, 110);
-    inc(P[4].Y, 110);
+    inc(P[0].Y, 75);
+    inc(P[1].Y, 75);
+    inc(P[2].Y, 75);
+    inc(P[3].Y, 75);
+    inc(P[4].Y, 75);
+    inc(P[5].Y, 75);
     LmfCanvas.Polygon(@P[0], 5, true);
+    inc(P[0].Y, 75);
+    inc(P[1].Y, 75);
+    inc(P[2].Y, 75);
+    inc(P[3].Y, 75);
+    inc(P[4].Y, 75);
+    inc(P[5].Y, 75);
+    LmfCanvas.PolyLine(@P[0], 6);
 
     // GradientFill
+    // Incorrect wmf output (won't fix)
     R := Rect(270, 250, 350, 290);
     LmfCanvas.GradientFill(R, clRed, clYellow, gdVertical);
     LmfCanvas.Pen.Width := 1;
@@ -203,6 +218,8 @@ begin
     LmfCanvas.Frame(R);
 
     // Text
+    LmfCanvas.SetBkMode(OPAQUE);
+    LmfCanvas.SetBkColor(clYellow);
     LmfCanvas.Font.Size := 10;
     LmfCanvas.Font.Color := clOlive;
     LmfCanvas.TextOut(20, 20, 'Text drawn by TextOut');
@@ -213,12 +230,28 @@ begin
     ts.Alignment := taCenter;
     ts.Layout := tlCenter;
     ts.SingleLine := false;
+    ts.Clipping := false;
+    LmfCanvas.SetBkMode(TRANSPARENT);
     LmfCanvas.Font.Color := clBlue;
     LmfCanvas.Font.Style := [fsBold, fsItalic];
     LmfCanvas.Font.Size := 16;
-    LmfCanvas.TextRect(R, 0, 0, 'Centered by TextRect' + LineEnding + 'in blue rectangle', ts);
+    LmfCanvas.TextRect(R, 0, 0, 'Text drawn by TextRect' + LineEnding + 'Centered in blue rectangle', ts);
+
+    // Rotated text
+    LmfCanvas.SetBkMode(TRANSPARENT);
+    LmfCanvas.Font.Size := 12;
+    LmfCanvas.Font.Color := clRed;
+    LmfCanvas.Font.Style := [];
+    while LmfCanvas.Font.Orientation < 3600 do
+    begin
+      LmfCanvas.TextOut(530, 80, 'abcdef');
+      LmfCanvas.Font.Orientation := LmfCanvas.Font.Orientation + 45*10;
+    end;
+    LmfCanvas.Font.Orientation := 0;
 
     // Pen styles
+    //LmfCanvas.SetBkMode(OPAQUE);
+    //LmfCanvas.SetBkColor(clRed);
     LmfCanvas.Pen.Color := clGreen;
     LmfCanvas.Pen.Width := 1;
     LmfCanvas.Brush.Style := bsClear;  // Clear the gaps
@@ -237,7 +270,7 @@ begin
     penPattern[1] := 1;  // space
     penPattern[2] := 4;  // line
     penPattern[3] := 4;  // space
-    LmfCanvas.Pen.Style := psPattern;
+    LmfCanvas.Pen.Style := psPattern;     // Incorrect wmf output
     LmfCanvas.Pen.SetPattern(penPattern);
     LmfCanvas.Line(10, 345, 110, 345);
 
@@ -249,6 +282,14 @@ end;
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FLmfImg.Free;
+end;
+
+procedure TMainForm.FormKeyUp(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  case Key of
+    VK_F2:
+      FLmfImg.SaveToLMFFile('test.wmf');
+  end;
 end;
 
 procedure TMainForm.FormPaint(Sender: TObject);

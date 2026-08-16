@@ -6,18 +6,28 @@ interface
 
 uses
   SysUtils, Classes, Types,
-  GraphMath, GraphType, Graphics, LCLType, LCLIntf, FPCanvas, FPImage, syncobjs;
+  LCLType, LCLIntf,
+  FPCanvas, FPImage, GraphMath, GraphType, Graphics, syncobjs;
 
 type
   TlmfList = class;
+  TlmfImage = class;
 
-  TlmfImage=class(TGraphic)
+  TlmfWriter = class
+  public
+    procedure WriteToStream(AStream: TStream; AImage: TlmfImage); virtual; abstract;
+  end;
+
+  { TlmfImage }
+
+  TlmfImage = class(TGraphic)
   private
     forgX,forgY,
     fWidth,fHeight:integer;
     kx,ky:double;
-    fList:TlmfList;
+    fList: TlmfList;
     fCrs:TCriticalSection;
+    fEnhanced: Boolean;
   protected
     procedure AssignTo(Dest:TPersistent);override;
     function GetWidth:integer;override;
@@ -28,7 +38,6 @@ type
     function GetTransparent: Boolean; override;
     procedure SetTransparent(Value: Boolean); override;
       //procedure Erase;override;
-
   public
     constructor Create;override;
     destructor Destroy;override;
@@ -40,15 +49,18 @@ type
     function ScaleX(ax: Integer): Integer;
     function ScaleY(ay:Integer): Integer;
 
+    procedure SaveToLMFFile(AFileName: String);
+    procedure SaveToLMFStream(Stream: TStream);
     procedure SaveToStream(Stream: TStream); override;
     procedure LoadFromStream(Stream: TStream); override;
 
-    property List:TlmfList read fList;
+    property Enhanced: Boolean read FEnhanced write FEnhanced;  // Write WMF or EMF stream
+    property List: TlmfList read fList;
   end;
 
   TlmfList = class(TComponent)
   private
-    fWidth,fHeight:integer;
+    fWidth, fHeight:integer;
   public
     procedure GetChildren(Proc: TGetChildProc; {%H-}Root: TComponent); override;
     function GetChildOwner: TComponent; override;
@@ -59,9 +71,9 @@ type
 
   TlmfCanvas = class(TCanvas)
   private
-    fClipRect:TRect;
-    fState:TCanvasState;
-    fImage:TlmfImage;
+    fClipRect: TRect;
+    fState: TCanvasState;
+    fImage: TlmfImage;
   protected
     procedure CreateFont;override;
     procedure CreateBrush;override;
@@ -104,8 +116,8 @@ type
 
     procedure GradientFill(const ARect: TRect; AStartColor, AEndColor: TColor; ADirection: TGradientDirection);
 
-    procedure TextOut (x,y:integer;const text:string); override; // already in fpcanvas
-    function TextExtent(const Text: string): TSize; override;
+    procedure TextOut(x, y: integer; const AText: string); override; // already in fpcanvas
+    function  TextExtent(const Text: string): TSize; override;
     procedure TextRect(ARect: TRect; X, Y: integer; const Text: string; const Style: TTextStyle); override;
 
     procedure Arc(ALeft, ATop, ARight, ABottom, SX, SY, EX, EY: Integer); override; overload;
@@ -114,13 +126,16 @@ type
     procedure Chord(ALeft, ATop, ARight, ABottom, Angle16Deg, Angle16DegLength: Integer); override; overload;
     procedure Pie(ALeft, ATop, ARight, ABottom, SX, SY, EX, EY: Integer); override;
     procedure RadialPie(ALeft, ATop, ARight, ABottom, Angle16Deg, Angle16DegLength: Integer); override;
+
+    procedure SetBkColor(AColor: TColor);
+    procedure SetBkMode(AMode: Word);  // 1 = TRANSPARENT, 2 = OPAQUE
   end;
 
 
 implementation
 
 uses
-  lmfObj;
+  lmfObj, lmfWMFWrite;
 
 constructor TlmfImage.Create;
 begin
@@ -219,16 +234,29 @@ end;
 procedure TlmfImage.Draw(ACanvas: TCanvas; const Rect: TRect);
 var
   i:integer;
+  item: TlmfObject;
+  bkMode: Word;
 begin
   fCrs.Acquire;
   try
+    bkMode := 1;  // Transparent
     fOrgX:=Rect.Left;
     fOrgY:=Rect.Top;
     kx:=(Rect.Right-Rect.Left)/Width;
     ky:=(Rect.Bottom-Rect.Top)/Height;
     ACanvas.MoveTo(ScaleX(Rect.Left), ScaleY(Rect.Top));
     for i:=0 to fList.ComponentCount-1 do
-      TlmfObject(fList.Components[i]).Action(Self, ACanvas);
+    begin
+      item := TlmfObject(fList.Components[i]);
+      // It seems that SetBkMode must be executed immediately before a command
+      // which depends on it (text, patterned line) is drawn.
+      if (item is TlmfBkMode) then
+        bkMode := TlmfBkMode(item).Mode
+      else
+      if (item is TlmfLine) or (item is TlmfLineTo) or (item is TlmfText) then
+        SetBkMode(ACanvas.Handle, bkMode);
+      item.Action(Self, ACanvas);
+    end;
   finally
     kx:=1;
     ky:=1;
@@ -249,6 +277,33 @@ end;
 procedure TlmfImage.SaveToStream(Stream: TStream);
 begin
   Stream.WriteComponent(fList);
+end;
+
+procedure TlmfImage.SaveToLMFFile(AFileName: String);
+var
+  stream: TFileStream;
+begin
+  stream := TFileStream.Create(AFileName, fmCreate or fmShareDenyWrite);
+  try
+    SaveToLMFStream(stream);
+  finally
+    stream.Free;
+  end;
+end;
+
+procedure TlmfImage.SaveToLMFStream(Stream: TStream);
+var
+  writer: TlmfWriter;
+begin
+  if FEnhanced then
+    //writer := TEMFWriter.Create  // to be completed...
+  else
+    writer := TWMFWriter.Create;
+  try
+    writer.WriteToStream(Stream, self);
+  finally
+    writer.Free;
+  end;
 end;
 
 procedure TlmfImage.LoadFromStream(Stream: TStream);
@@ -317,7 +372,7 @@ end;
 
 procedure TlmfCanvas.DoMoveTo(x, y: integer);
 var
-  item:TlmfMoveTo;
+  item: TlmfMoveTo;
 begin
   item := TlmfMoveTo.Create(x,y);
   fImage.fList.InsertComponent(item);
@@ -345,17 +400,17 @@ procedure TlmfCanvas.DoEllipse(const Bounds:TRect);
 var
   item:TlmfEllipse;
 begin
-  RequiredState([csPenValid,csBrushValid]);
+  RequiredState([csPenValid, csBrushValid]);
   item := TlmfEllipse.Create(Bounds);
   fImage.fList.InsertComponent(item);
 end;
 
-procedure TlmfCanvas.TextOut(x,y:integer;const text:string);
+procedure TlmfCanvas.TextOut(x, y: integer; const AText: string);
 var
-  item:TlmfText;
+  item: TlmfText;
 begin
-  RequiredState([csFontValid,csBrushValid]);
-  item := TlmfText.Create(x,y,text);
+  RequiredState([csFontValid, csBrushValid]);
+  item := TlmfText.Create(x, y, AText);
   fImage.fList.InsertComponent(item);
 end;
 
@@ -437,28 +492,46 @@ end;
 procedure TlmfCanvas.FillRect(const ARect: TRect);
 var
   item: TlmfObject;
+  ps: TPenStyle;
 begin
-  RequiredState([csBrushValid]);
-  item := TlmfFillRect.Create(ARect);
+  ps := Pen.Style;
+  Pen.Style := psClear;
+
+  RequiredState([csBrushValid, csPenValid]);
+  item := TlmfRect.Create(ARect);
   fImage.fList.InsertComponent(item);
+
+  Pen.Style := ps;
 end;
 
 procedure TlmfCanvas.Frame(const ARect: TRect);
 var
   item: TlmfObject;
+  bs: TBrushStyle;
 begin
-  RequiredState([csPenValid]);
-  item := TlmfFrame.Create(ARect);
+  bs := Brush.Style;
+  Brush.Style := bsClear;
+
+  RequiredState([csPenValid, csBrushValid]);
+  item := TlmfRect.Create(ARect);
   fImage.fList.InsertComponent(item);
+
+  Brush.Style := bs;
 end;
 
 procedure TlmfCanvas.FrameRect(const ARect: TRect);
 var
   item: TlmfObject;
+  ps: TPenStyle;
 begin
-  RequiredState([csBrushValid]);  // frame is drawn using current BRUSH settings
+  ps := Pen.Style;
+  Pen.Style := psClear;
+
+  RequiredState([csPenValid, csBrushValid]);
   item := TlmfFrameRect.Create(ARect);
   fImage.fList.InsertComponent(item);
+
+  Pen.Style := ps;
 end;
 
 procedure TlmfCanvas.Frame3D(var ARect: TRect; TopColor, BottomColor: TColor;
@@ -506,7 +579,7 @@ begin
   item.Rotation:=TFont(Font).Orientation;
   item.Font.Assign(Font);
   item.Height:=Font.Height;
-  item.Name:=Font.Name;
+//  item.Name:=Font.Name;
   item.Rotation:=TFont(item.Font).Orientation;
 
   //writems('Created font "%s" size=%d rot=%d',[item.Font.Name,item.Font.Size,TrotFont(item.Font).Rotation]);
@@ -692,9 +765,6 @@ begin
   Pie(ALeft, ATop, ARight, ABottom, SX, SY, EX, EY);
 end;
 
-
-{ TlmfGradientFill }
-
 procedure TlmfCanvas.GradientFill(const ARect: TRect;
   AStartColor, AEndColor: TColor; ADirection: TGradientDirection);
 var
@@ -702,6 +772,24 @@ var
 begin
   RequiredState([csBrushValid, csPenValid]);
   item := TlmfGradientFill.Create(ARect, AStartColor, AEndColor, ADirection);
+  fImage.fList.InsertComponent(item);
+end;
+
+procedure TlmfCanvas.SetBkColor(AColor: TColor);
+var
+  item: TlmfObject;
+begin
+  RequiredState([csBrushValid]);
+  item := TlmfBkColor.Create(AColor);
+  fImage.fList.InsertComponent(item);
+end;
+
+procedure TlmfCanvas.SetBkMode(AMode: Word);
+var
+  item: TlmfObject;
+begin
+  RequiredState([csBrushValid]);
+  item := TlmfBkMode.Create(AMode);
   fImage.fList.InsertComponent(item);
 end;
 

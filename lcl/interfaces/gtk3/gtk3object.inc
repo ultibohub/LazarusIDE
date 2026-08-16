@@ -81,9 +81,20 @@ procedure TGtk3WidgetSet.Gtk3Create;
 var
   AGtkThread: PGThread;
   AId: String;
+  ASettings: PGtkSettings;
+  AValue: TGValue;
 begin
   g_type_init;
   gtk_init(@argc, @argv);
+  ASettings := gtk_settings_get_default;
+  if Assigned(ASettings) then
+  begin
+    FillByte(AValue{%H-}, SizeOf(AValue), 0);
+    AValue.init(G_TYPE_BOOLEAN);
+    AValue.set_boolean(False);
+    ASettings^.set_property('gtk-entry-select-on-focus', @AValue);
+    AValue.unset;
+  end;
   AGtkThread := g_thread_self();
   if not IsLibrary then
   begin
@@ -369,6 +380,8 @@ var
 begin
   SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
   inherited Create;
+  System.InitCriticalSection(FHandlesCS);
+  FSavedHandlesList := TMap.Create(TMapIdType(ituPtrSize), SizeOf(TObject));
   FDockImage := nil;
 
   FDragImageList := nil;
@@ -475,6 +488,8 @@ begin
   FCSSTheme.Free;
   FSystemMetricsList.Free;
   DoneGtk3KeyboardTables;
+  FreeAndNil(FSavedHandlesList);
+  System.DoneCriticalSection(FHandlesCS);
   inherited Destroy;
 end;
 
@@ -1304,8 +1319,52 @@ begin
 end;
 
 function TGtk3WidgetSet.IsValidHandle(const AHandle: HWND): Boolean;
+var
+  Key: PtrUInt;
 begin
-  Result := AHandle <> 0;
+  if (AHandle = 0) or (FSavedHandlesList = nil) then
+    exit(False);
+  Key := PtrUInt(AHandle);
+  System.EnterCriticalSection(FHandlesCS);
+  try
+    Result := FSavedHandlesList.HasId(Key);
+  finally
+    System.LeaveCriticalSection(FHandlesCS);
+  end;
+end;
+
+procedure TGtk3WidgetSet.AddHandle(AHandle: TObject);
+var
+  Key: PtrUInt;
+  Obj: TObject;
+begin
+  if (AHandle = nil) or (FSavedHandlesList = nil) then
+    exit;
+  Key := PtrUInt(AHandle);
+  Obj := AHandle;
+  System.EnterCriticalSection(FHandlesCS);
+  try
+    if not FSavedHandlesList.HasId(Key) then
+      FSavedHandlesList.Add(Key, Obj);
+  finally
+    System.LeaveCriticalSection(FHandlesCS);
+  end;
+end;
+
+procedure TGtk3WidgetSet.RemoveHandle(AHandle: TObject);
+var
+  Key: PtrUInt;
+begin
+  if (AHandle = nil) or (FSavedHandlesList = nil) then
+    exit;
+  Key := PtrUInt(AHandle);
+  System.EnterCriticalSection(FHandlesCS);
+  try
+    if FSavedHandlesList.HasId(Key) then
+      FSavedHandlesList.Delete(Key);
+  finally
+    System.LeaveCriticalSection(FHandlesCS);
+  end;
 end;
 
 procedure TGtk3WidgetSet.InitStockItems;

@@ -22,6 +22,26 @@ msgstr ""
 msgid "No group"
 msgstr ""
 
+#: idedebuggerstringconstants.brkhandleignorebreakpoints
+msgid "Handle/Ignore breakpoints"
+msgstr ""
+
+#: idedebuggerstringconstants.brkhandleignoreexceptions
+msgid "Handle/Ignore exceptions"
+msgstr ""
+
+#: idedebuggerstringconstants.brkshowbreakpointsandwatchpo
+msgid "Show breakpoints and watchpoints"
+msgstr ""
+
+#: idedebuggerstringconstants.brkshowbreakwatchpointsandex
+msgid "Show break/watchpoints and exception-filter"
+msgstr ""
+
+#: idedebuggerstringconstants.brkshowexceptionfilter
+msgid "Show exception-filter"
+msgstr ""
+
 #: idedebuggerstringconstants.dbgasmwindowlinktarget
 msgid "Link target line"
 msgstr ""
@@ -1254,6 +1274,10 @@ msgstr ""
 
 #: idedebuggerstringconstants.liscondition
 msgid "Condition"
+msgstr ""
+
+#: idedebuggerstringconstants.lisconsolelocalecho
+msgid "Echo typed input"
 msgstr ""
 
 #: idedebuggerstringconstants.liscopyall
